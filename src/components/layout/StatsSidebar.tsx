@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CareerState, Character, EducationState } from '../../types';
 import { getEducationLabel, getSocialClassLabel, getStatColor } from '../../utils/formatters';
-import { Heart, Smile, Brain, Sparkles, Zap, ChevronDown, ChevronUp, ShieldAlert } from 'lucide-react';
+import { Heart, Smile, Brain, Sparkles, ChevronDown, ChevronUp, ShieldAlert } from 'lucide-react';
 
 interface StatsSidebarProps {
   personagem: Character;
@@ -22,27 +22,15 @@ export const StatsSidebar: React.FC<StatsSidebarProps> = ({
     { label: 'Felicidade', value: stats.felicidade, icon: <Smile size={16} /> },
     { label: 'Saúde', value: stats.saude, icon: <Heart size={16} /> },
     { label: 'Inteligência', value: stats.inteligencia, icon: <Brain size={16} /> },
-    { label: 'Aparência', value: stats.aparencia, icon: <Sparkles size={16} /> },
-    { label: 'Energia', value: stats.energia, icon: <Zap size={16} /> }
+    { label: 'Aparência', value: stats.aparencia, icon: <Sparkles size={16} /> }
   ];
-
-  const ocupacao = carreira.cargoAtual
-    ? carreira.cargoAtual.titulo
-    : educacao.emCurso
-    ? `${educacao.nomeCurso || 'Estudante'} (${educacao.instituicao || 'Escola'})`
-    : carreira.aposentado
-    ? 'Aposentado(a)'
-    : 'Sem ocupação formal';
 
   return (
     <aside className="stats-sidebar">
-      {/* Card de Informações Gerais */}
+      {/* Ficha do personagem (nome, idade e situação ficam no cabeçalho, sempre visíveis) */}
       <div className="card">
         <h3 className="card-title">
-          <span>{personagem.nome} {personagem.sobrenome}</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            {personagem.cidade}, {personagem.estado}
-          </span>
+          <span>Ficha</span>
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem' }}>
           <div>
@@ -50,13 +38,15 @@ export const StatsSidebar: React.FC<StatsSidebarProps> = ({
             <span>{getSocialClassLabel(personagem.classeSocial)}</span>
           </div>
           <div>
-            <strong style={{ color: 'var(--text-secondary)' }}>Ocupação: </strong>
-            <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{ocupacao}</span>
-          </div>
-          <div>
             <strong style={{ color: 'var(--text-secondary)' }}>Escolaridade: </strong>
             <span>{getEducationLabel(educacao.nivelAtual)}</span>
           </div>
+          {carreira.cargoAtual && (
+            <div>
+              <strong style={{ color: 'var(--text-secondary)' }}>Cargo: </strong>
+              <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{carreira.cargoAtual.titulo}</span>
+            </div>
+          )}
           {personagem.doencas.length > 0 && (
             <div style={{ color: 'var(--accent-rose)', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <ShieldAlert size={14} />
@@ -99,27 +89,15 @@ export const StatsSidebar: React.FC<StatsSidebarProps> = ({
         {/* Toggle para atributos internos */}
         <button
           onClick={() => setShowInternal(!showInternal)}
-          style={{
-            marginTop: '16px',
-            width: '100%',
-            padding: '8px',
-            borderRadius: 'var(--radius-sm)',
-            background: 'var(--bg-card-subtle)',
-            color: 'var(--text-secondary)',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px'
-          }}
+          className="btn-toggle-internal"
+          aria-expanded={showInternal}
         >
           {showInternal ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           {showInternal ? 'Ocultar Atributos Internos' : 'Ver Atributos Internos'}
         </button>
 
         {showInternal && (
-          <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-card)', paddingTop: '12px' }}>
+          <div className="internal-stats">
             <div className="stat-label-row">
               <span>Disciplina</span>
               <strong style={{ color: getStatColor(hidden.disciplina) }}>{hidden.disciplina}%</strong>

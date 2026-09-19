@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Character,
   EducationState,
@@ -26,18 +26,18 @@ import {
   aplicarConsequenciasEscolha
 } from '../systems/eventSystem';
 import {
-  FamilyInteractionType,
   gerarFamiliaInicial,
   interagirComFamiliar
 } from '../systems/familySystem';
 import {
-  acaoEscola,
   criarEducacaoInicial,
+  definirPosturaEscolar,
   ingressarCurso
 } from '../systems/educationSystem';
 import {
   candidatarEmprego,
   criarCarreiraInicial,
+  escolherBico,
   pedirAumento,
   pedirDemissao,
   trabalharMais
@@ -58,11 +58,20 @@ import {
   terminarRelacionamento,
   terFilho
 } from '../systems/relationshipSystem';
+import { construirResumoMorte } from '../systems/deathSystem';
+import {
+  ActionId,
+  ContextoAcao,
+  Disponibilidade,
+  ParametrosAcao,
+  getActionAvailability
+} from '../systems/availabilitySystem';
 import {
   carregarJogo,
   limparSave,
   registrarMorteNasEstatisticas,
-  salvarJogo
+  salvarJogo,
+  VERSAO_SAVE
 } from '../systems/saveSystem';
 import { gerarHistoriaNascimento } from '../utils/narrativeGenerator';
 import { clamp, generateId, randomChoice, randomInt } from '../utils/random';
@@ -85,16 +94,62 @@ export function useGame() {
   const [timeline, setTimeline] = useState<LifeLogEntry[]>([]);
   const [eventoAtivo, setEventoAtivo] = useState<GameEvent | null>(null);
   const [historicoEventos, setHistoricoEventos] = useState<string[]>([]);
+  // Ações únicas por ano (atividades, apostas, interações, aumentos); zeradas a cada passagem de ano
+  const [acoesRealizadasAno, setAcoesRealizadasAno] = useState<string[]>([]);
   const [isDead, setIsDead] = useState<boolean>(false);
   const [resumoMorte, setResumoMorte] = useState<PostMortemSummary | null>(null);
   const [feedbackMensagem, setFeedbackMensagem] = useState<{ tipo: 'sucesso' | 'info' | 'erro'; texto: string } | null>(null);
 
-  // Notificação com auto-dismiss
+  // Notificação com auto-dismiss (com cancelamento para não apagar feedback novo)
+  const timeoutFeedback = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mostrarFeedback = useCallback((texto: string, tipo: 'sucesso' | 'info' | 'erro' = 'info') => {
     setFeedbackMensagem({ texto, tipo });
-    setTimeout(() => {
+    if (timeoutFeedback.current) {
+      clearTimeout(timeoutFeedback.current);
+    }
+    timeoutFeedback.current = setTimeout(() => {
       setFeedbackMensagem(null);
     }, 4000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutFeedback.current) clearTimeout(timeoutFeedback.current);
+    };
+  }, []);
+
+  // Contexto completo para a política central de disponibilidade
+  const construirContexto = useCallback((): ContextoAcao | null => {
+    if (!personagem) return null;
+    return { personagem, educacao, carreira, economia, familia, acoesRealizadasAno };
+  }, [personagem, educacao, carreira, economia, familia, acoesRealizadasAno]);
+
+  // Porta única de validação: toda ação passa pela política central antes de tocar o motor
+  const verificarDisponibilidade = useCallback(
+    (actionId: ActionId, params: ParametrosAcao = {}): Disponibilidade | null => {
+      const ctx = construirContexto();
+      if (!ctx) return null;
+      const disp = getActionAvailability(ctx, actionId, params);
+      if (disp.kind === 'oculto') {
+        mostrarFeedback('Esta ação não está disponível para a sua fase da vida.', 'erro');
+        return null;
+      }
+      if (disp.kind === 'bloqueado') {
+        mostrarFeedback(disp.motivo, 'erro');
+        return null;
+      }
+      return disp;
+    },
+    [construirContexto, mostrarFeedback]
+  );
+
+  const registrarAcaoAnual = useCallback((idAcao: string) => {
+    setAcoesRealizadasAno(prev => [...prev, idAcao]);
+  }, []);
+
+  // Registra acontecimento na Linha da Vida (ordem cronológica; a exibição agrupa por ano)
+  const registrarLogs = useCallback((novos: LifeLogEntry[]) => {
+    setTimeline(prev => [...prev, ...novos]);
   }, []);
 
   // Verifica existência de save ao montar
@@ -109,6 +164,7 @@ export function useGame() {
   useEffect(() => {
     if (personagem && !isDead && screen === 'game') {
       const estadoParaSalvar: GameState = {
+        versao: VERSAO_SAVE,
         personagem,
         familia,
         educacao,
@@ -117,13 +173,14 @@ export function useGame() {
         timeline,
         eventoAtivo,
         historicoEventosDisparados: historicoEventos,
+        acoesRealizadasAno,
         emJogo: true,
         morto: false
       };
       salvarJogo(estadoParaSalvar);
       setHasSavedGame(true);
     }
-  }, [personagem, familia, educacao, carreira, economia, timeline, eventoAtivo, historicoEventos, isDead, screen]);
+  }, [personagem, familia, educacao, carreira, economia, timeline, eventoAtivo, historicoEventos, acoesRealizadasAno, isDead, screen]);
 
   // Alternar som
   const toggleSom = useCallback(() => {
@@ -167,8 +224,7 @@ export function useGame() {
         felicidade: randomInt(70, 95),
         saude: randomInt(75, 95),
         inteligencia: randomInt(40, 85),
-        aparencia: randomInt(40, 90),
-        energia: 100
+        aparencia: randomInt(40, 90)
       },
       hiddenStats: {
         disciplina: randomInt(35, 75),
@@ -180,9 +236,7 @@ export function useGame() {
         condicionamentoFisico: randomInt(40, 75)
       },
       doencas: [],
-      flags: {
-        escolaridade: 'nenhuma'
-      },
+      flags: {},
       marcos: []
     };
 
@@ -212,13 +266,20 @@ export function useGame() {
     setTimeline(logsIniciais);
     setEventoAtivo(null);
     setHistoricoEventos([]);
+    setAcoesRealizadasAno([]);
     setIsDead(false);
     setResumoMorte(null);
     setActiveTab('timeline');
     setScreen('game');
 
     sound.playSuccess();
-    mostrarFeedback(`Bem-vindo ao mundo, ${novoPersonagem.nome}!`, 'sucesso');
+    const boasVindas =
+      genero === 'masculino'
+        ? `Bem-vindo ao mundo, ${novoPersonagem.nome}!`
+        : genero === 'feminino'
+        ? `Bem-vinda ao mundo, ${novoPersonagem.nome}!`
+        : `Boas-vindas ao mundo, ${novoPersonagem.nome}!`;
+    mostrarFeedback(boasVindas, 'sucesso');
   }, [mostrarFeedback]);
 
   // Gerar Vida Aleatória
@@ -232,7 +293,7 @@ export function useGame() {
     criarVida(nome, sobrenome, genero, cidadeObj.cidade, cidadeObj.estado);
   }, [criarVida]);
 
-  // Carregar Jogo Salvo
+  // Carregar Jogo Salvo (normalizado/migrado pelo saveSystem)
   const continuarJogoSalvo = useCallback(() => {
     const save = carregarJogo();
     if (save && save.personagem) {
@@ -244,11 +305,14 @@ export function useGame() {
       setTimeline(save.timeline);
       setEventoAtivo(save.eventoAtivo);
       setHistoricoEventos(save.historicoEventosDisparados || []);
+      setAcoesRealizadasAno(save.acoesRealizadasAno || []);
       setIsDead(save.morto);
       setResumoMorte(save.resumoMorte || null);
       setScreen('game');
       sound.playClick();
       mostrarFeedback('Jogo carregado com sucesso!', 'sucesso');
+    } else {
+      mostrarFeedback('Não foi possível carregar a partida salva.', 'erro');
     }
   }, [mostrarFeedback]);
 
@@ -272,7 +336,9 @@ export function useGame() {
     setEducacao(resultado.educacaoAtualizada);
     setCarreira(resultado.carreiraAtualizada);
     setEconomia(resultado.economiaAtualizada);
-    setTimeline(prev => [...resultado.novosLogs, ...prev]);
+    setTimeline(prev => [...prev, ...resultado.novosLogs]);
+    // Ano novo: compromissos e ações únicas do ano anterior são liberados
+    setAcoesRealizadasAno([]);
 
     if (resultado.morreu && resultado.resumoMorte) {
       setIsDead(true);
@@ -309,53 +375,51 @@ export function useGame() {
       personagem.anoAtual
     );
 
+    // Requisito da opção não cumprido: o motor recusa sem efeitos e o evento continua aberto
+    if (res.recusado) {
+      mostrarFeedback(res.mensagemRecusa || 'Você não cumpre os requisitos para esta escolha.', 'erro');
+      return;
+    }
+
     setPersonagem(res.personagemAtualizado);
     setCarreira(res.carreiraAtualizada);
     setEducacao(res.educacaoAtualizada);
     setEconomia(res.economiaAtualizada);
     setFamilia(res.familiaAtualizada);
-    setTimeline(prev => [...res.novosLogs, ...prev]);
+    setTimeline(prev => [...prev, ...res.novosLogs]);
     setEventoAtivo(null);
 
     if (res.morreu) {
       setIsDead(true);
       const patFinal = calcularPatrimonioLiquido(res.economiaAtualizada);
-      const resumo: PostMortemSummary = {
-        nomeCompleto: `${res.personagemAtualizado.nome} ${res.personagemAtualizado.sobrenome}`,
-        idadeMorte: res.personagemAtualizado.idade,
-        anoNascimento: res.personagemAtualizado.anoNascimento,
-        anoMorte: res.personagemAtualizado.anoAtual,
-        cidade: res.personagemAtualizado.cidade,
-        estado: res.personagemAtualizado.estado,
-        causaMorte: res.causaMorte || 'Incidente inesperado',
-        patrimonioFinal: patFinal,
-        dinheiroTotalAcumulado: patFinal,
-        profissaoFinal: res.carreiraAtualizada.cargoAtual?.titulo || 'Sem profissão fixa',
-        nivelEducacao: res.educacaoAtualizada.nivelAtual,
-        quantidadeFilhos: res.familiaAtualizada.filter(f => f.tipo === 'filho' || f.tipo === 'filha').length,
-        quantidadeParceiros: res.familiaAtualizada.filter(f => ['namorado', 'namorada', 'noivo', 'noiva', 'esposo', 'esposa'].includes(f.tipo)).length,
-        principaisConquistas: ['Viveu intensamente até o seu último dia'],
-        epitafio: '"Partiu de forma marcante e inesperada."',
-        biografiaResumo: `${res.personagemAtualizado.nome} ${res.personagemAtualizado.sobrenome} faleceu aos ${res.personagemAtualizado.idade} anos decorrente de ${res.causaMorte || 'acontecimento fatídico'}.`,
-        statsFinais: res.personagemAtualizado.stats,
-        pontuacaoVida: Math.round(res.personagemAtualizado.idade * 35 + patFinal / 2000)
-      };
+      const resumo = construirResumoMorte(
+        res.personagemAtualizado,
+        res.familiaAtualizada,
+        res.carreiraAtualizada,
+        res.educacaoAtualizada,
+        patFinal,
+        res.causaMorte || 'Incidente inesperado'
+      );
       setResumoMorte(resumo);
       limparSave();
       registrarMorteNasEstatisticas(resumo);
       sound.playDeath();
     }
-  }, [eventoAtivo, personagem, carreira, educacao, economia, familia]);
+  }, [eventoAtivo, personagem, carreira, educacao, economia, familia, mostrarFeedback]);
 
   // Interagir com Familiar
   const acaoFamilia = useCallback((
     membroId: string,
-    tipoAcao: FamilyInteractionType,
+    tipoAcao: 'conversar' | 'passar_tempo' | 'dar_presente' | 'discutir' | 'pedir_dinheiro' | 'pedir_conselho',
     presenteTipo?: 'barato' | 'medio' | 'luxo'
   ) => {
     if (!personagem) return;
     const membro = familia.find(f => f.id === membroId);
     if (!membro) return;
+
+    if (!verificarDisponibilidade('interagir_familia', { membroId, tipoInteracao: tipoAcao })) {
+      return;
+    }
 
     const res = interagirComFamiliar(membro, personagem, tipoAcao, presenteTipo);
 
@@ -372,6 +436,7 @@ export function useGame() {
       ...prev,
       dinheiro: prev.dinheiro - res.custoDinheiro + res.dinheiroGanho
     }));
+    registrarAcaoAnual(`familia:${membroId}:${tipoAcao}`);
 
     const novoLog: LifeLogEntry = {
       id: generateId('log'),
@@ -381,39 +446,46 @@ export function useGame() {
       texto: res.mensagem,
       tipo: res.sucesso ? 'positivo' : 'negativo'
     };
-    setTimeline(prev => [novoLog, ...prev]);
+    registrarLogs([novoLog]);
     mostrarFeedback(res.mensagem, res.sucesso ? 'sucesso' : 'info');
-  }, [personagem, familia, economia.dinheiro, mostrarFeedback]);
+  }, [personagem, familia, economia.dinheiro, mostrarFeedback, verificarDisponibilidade, registrarAcaoAnual, registrarLogs]);
 
-  // Ações de Educação
+  // Definir a postura escolar do ano (compromisso; efeitos na virada do ano)
   const acaoEscolaExec = useCallback((acao: 'estudar' | 'matar_aula' | 'socializar') => {
     if (!personagem) return;
+    if (!verificarDisponibilidade('definir_postura_escolar', { postura: acao })) return;
+
     sound.playClick();
-    const res = acaoEscola(acao, personagem, educacao);
-    setPersonagem(res.personagemAtualizado);
-    setEducacao(res.educacaoAtualizada);
-    mostrarFeedback(res.mensagem, 'info');
-  }, [personagem, educacao, mostrarFeedback]);
+    const res = definirPosturaEscolar(acao, educacao);
+    if (res.sucesso && res.educacaoAtualizada) {
+      setEducacao(res.educacaoAtualizada);
+      mostrarFeedback(res.mensagem, 'info');
+    } else {
+      mostrarFeedback(res.mensagem, 'erro');
+    }
+  }, [personagem, educacao, mostrarFeedback, verificarDisponibilidade]);
 
   const matricularCursoExec = useCallback((cursoId: string, tipoInst: 'publica' | 'privada') => {
     if (!personagem) return;
     const curso = CURSOS_DISPONIVEIS.find(c => c.id === cursoId);
     if (!curso) return;
 
+    if (!verificarDisponibilidade('ingressar_curso', { cursoId })) return;
+
     sound.playClick();
-    const res = ingressarCurso(curso, tipoInst, personagem, personagem.anoAtual);
+    const res = ingressarCurso(curso, tipoInst, personagem, educacao, personagem.anoAtual);
 
     if (res.sucesso && res.educacaoAtualizada) {
       sound.playSuccess();
       setEducacao(prev => ({ ...prev, ...res.educacaoAtualizada }));
       if (res.novoLog) {
-        setTimeline(prev => [res.novoLog!, ...prev]);
+        registrarLogs([res.novoLog]);
       }
       mostrarFeedback(res.mensagem, 'sucesso');
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [personagem, mostrarFeedback]);
+  }, [personagem, educacao, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   // Ações de Carreira
   const candidatarVagaExec = useCallback((jobId: string) => {
@@ -421,8 +493,11 @@ export function useGame() {
     const job = TODAS_PROFISSOES.find(j => j.id === jobId);
     if (!job) return;
 
+    if (!verificarDisponibilidade('candidatar_emprego', { jobId })) return;
+
     sound.playClick();
-    const res = candidatarEmprego(job, personagem, personagem.anoAtual);
+    // O motor revalida idade e escolaridade (fonte de verdade: EducationState)
+    const res = candidatarEmprego(job, personagem, educacao, personagem.anoAtual);
 
     if (res.sucesso && res.novoCargo) {
       sound.playSuccess();
@@ -434,80 +509,71 @@ export function useGame() {
         desempenhoTrabalho: 60
       }));
       if (res.novoLog) {
-        setTimeline(prev => [res.novoLog!, ...prev]);
+        registrarLogs([res.novoLog]);
       }
       mostrarFeedback(res.mensagem, 'sucesso');
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [personagem, mostrarFeedback]);
+  }, [personagem, educacao, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const trabalharMaisExec = useCallback(() => {
     if (!personagem) return;
+    if (!verificarDisponibilidade('trabalhar_mais')) return;
+
     sound.playClick();
     const res = trabalharMais(carreira, personagem);
-    setCarreira(res.carreiraAtualizada);
-    setPersonagem(res.personagemAtualizado);
-    mostrarFeedback(res.mensagem, 'sucesso');
-  }, [personagem, carreira, mostrarFeedback]);
+    if (res.sucesso && res.carreiraAtualizada) {
+      setCarreira(res.carreiraAtualizada);
+      mostrarFeedback(res.mensagem, 'sucesso');
+    } else {
+      mostrarFeedback(res.mensagem, 'erro');
+    }
+  }, [personagem, carreira, mostrarFeedback, verificarDisponibilidade]);
 
   const pedirAumentoExec = useCallback(() => {
     if (!personagem) return;
+    if (!verificarDisponibilidade('pedir_aumento')) return;
+
     sound.playClick();
     const res = pedirAumento(carreira, personagem, personagem.anoAtual);
     setCarreira(res.carreiraAtualizada);
     setPersonagem(res.personagemAtualizado);
     if (res.novoLog) {
-      setTimeline(prev => [res.novoLog!, ...prev]);
+      registrarLogs([res.novoLog]);
     }
+    registrarAcaoAnual('pedir_aumento');
     mostrarFeedback(res.mensagem, res.sucesso ? 'sucesso' : 'erro');
-  }, [personagem, carreira, mostrarFeedback]);
+  }, [personagem, carreira, mostrarFeedback, verificarDisponibilidade, registrarAcaoAnual, registrarLogs]);
 
   const pedirDemissaoExec = useCallback(() => {
     if (!personagem) return;
+    if (!verificarDisponibilidade('pedir_demissao')) return;
+
     sound.playClick();
     const res = pedirDemissao(carreira, personagem.anoAtual, personagem.idade);
     setCarreira(res.carreiraAtualizada);
-    setTimeline(prev => [res.novoLog, ...prev]);
+    registrarLogs([res.novoLog]);
     mostrarFeedback('Você pediu demissão e agora está disponível para novos desafios.', 'info');
-  }, [personagem, carreira, mostrarFeedback]);
+  }, [personagem, carreira, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const fazerBicoExec = useCallback((bicoId: string) => {
     if (!personagem) return;
     const bico = BICOS_DISPONIVEIS.find(b => b.id === bicoId);
     if (!bico) return;
 
-    if (personagem.stats.energia < bico.energiaGasto) {
-      mostrarFeedback('Você está muito cansado(a) para fazer bicos no momento.', 'erro');
-      return;
+    if (!verificarDisponibilidade('fazer_bico', { bicoId })) return;
+
+    sound.playClick();
+    // Compromisso anual: o pagamento acontece na passagem do ano (uma única vez)
+    const res = escolherBico(bicoId, carreira, personagem, educacao, economia);
+    if (res.sucesso && res.carreiraAtualizada) {
+      setCarreira(res.carreiraAtualizada);
+      mostrarFeedback(res.mensagem, 'sucesso');
+    } else {
+      mostrarFeedback(res.mensagem, 'erro');
     }
-
-    sound.playMoney();
-    const ganho = bico.ganhoEstimadoAnual / 4;
-    setEconomia(prev => ({ ...prev, dinheiro: prev.dinheiro + ganho }));
-    setPersonagem(prev => prev ? ({
-      ...prev,
-      stats: {
-        ...prev.stats,
-        energia: clamp(prev.stats.energia - bico.energiaGasto, 0, 100)
-      },
-      hiddenStats: {
-        ...prev.hiddenStats,
-        estresse: clamp(prev.hiddenStats.estresse + bico.estresseGasto, 0, 100)
-      }
-    }) : null);
-
-    const log: LifeLogEntry = {
-      id: generateId('log'),
-      idade: personagem.idade,
-      ano: personagem.anoAtual,
-      categoria: 'financas',
-      texto: `Você realizou trabalhos autônomos (${bico.nome}) e faturou R$ ${ganho.toLocaleString('pt-BR')}!`,
-      tipo: 'positivo'
-    };
-    setTimeline(prev => [log, ...prev]);
-    mostrarFeedback(`Bico concluído! + R$ ${ganho.toLocaleString('pt-BR')}`, 'sucesso');
-  }, [personagem, mostrarFeedback]);
+  }, [personagem, carreira, educacao, economia, mostrarFeedback, verificarDisponibilidade]);
 
   // Ações de Economia & Bens
   const comprarBemExec = useCallback((itemId: string) => {
@@ -515,96 +581,98 @@ export function useGame() {
     const item = [...IMOVEIS_LOJA, ...VEICULOS_LOJA].find(i => i.id === itemId);
     if (!item) return;
 
+    if (!verificarDisponibilidade('comprar_bem', { itemId })) return;
+
     sound.playClick();
+    // O motor revalida idade e saldo antes de qualquer efeito
     const res = comprarBem(item, economia, personagem, personagem.anoAtual);
 
     if (res.sucesso && res.economiaAtualizada && res.personagemAtualizado) {
-      sound.playSuccess();
+      sound.playMoney();
       setEconomia(res.economiaAtualizada);
       setPersonagem(res.personagemAtualizado);
       if (res.novoLog) {
-        setTimeline(prev => [res.novoLog!, ...prev]);
+        registrarLogs([res.novoLog]);
       }
       mostrarFeedback(res.mensagem, 'sucesso');
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [personagem, economia, mostrarFeedback]);
+  }, [personagem, economia, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const venderBemExec = useCallback((propId: string) => {
     if (!personagem) return;
+    if (!verificarDisponibilidade('vender_bem', { propId })) return;
+
     sound.playClick();
     const res = venderBem(propId, economia, personagem, personagem.anoAtual);
     if (res.sucesso && res.economiaAtualizada) {
       sound.playMoney();
       setEconomia(res.economiaAtualizada);
       if (res.novoLog) {
-        setTimeline(prev => [res.novoLog!, ...prev]);
+        registrarLogs([res.novoLog]);
       }
       mostrarFeedback(res.mensagem, 'sucesso');
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [personagem, economia, mostrarFeedback]);
+  }, [personagem, economia, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const investirExec = useCallback((tipoId: 'poupanca' | 'tesouro_selic' | 'fundo_imobiliario' | 'acoes_b3' | 'cripto', valor: number) => {
+    if (!personagem) return;
+    if (!verificarDisponibilidade('investir', { itemId: tipoId })) return;
+
     sound.playClick();
-    const res = aplicarInvestimento(tipoId, valor, economia);
+    const res = aplicarInvestimento(tipoId, valor, economia, personagem);
     if (res.sucesso && res.economiaAtualizada) {
       setEconomia(res.economiaAtualizada);
       mostrarFeedback(res.mensagem, 'sucesso');
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [economia, mostrarFeedback]);
+  }, [personagem, economia, mostrarFeedback, verificarDisponibilidade]);
 
   const resgatarInvestimentoExec = useCallback((tipoId: string, valor: number) => {
+    if (!personagem) return;
+    if (!verificarDisponibilidade('resgatar_investimento', { itemId: tipoId })) return;
+
     sound.playClick();
-    const res = resgatarInvestimento(tipoId, valor, economia);
+    const res = resgatarInvestimento(tipoId, valor, economia, personagem);
     if (res.sucesso && res.economiaAtualizada) {
       setEconomia(res.economiaAtualizada);
       mostrarFeedback(res.mensagem, 'sucesso');
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [economia, mostrarFeedback]);
+  }, [personagem, economia, mostrarFeedback, verificarDisponibilidade]);
 
   const jogarLoteriaExec = useCallback(() => {
     if (!personagem) return;
+    if (!verificarDisponibilidade('jogar_loteria')) return;
+
     sound.playClick();
+    // O motor revalida idade e saldo; a aposta é uma decisão única por ano
     const res = jogarMegaSena(economia, personagem, personagem.anoAtual);
 
     if (res.sucesso && res.economiaAtualizada && res.personagemAtualizado) {
       setEconomia(res.economiaAtualizada);
       setPersonagem(res.personagemAtualizado);
+      registrarAcaoAnual('loteria_mega_sena');
       if (res.ganhou) {
         sound.playSuccess();
-        if (res.novoLog) setTimeline(prev => [res.novoLog!, ...prev]);
+        if (res.novoLog) registrarLogs([res.novoLog]);
       }
       mostrarFeedback(res.mensagem, res.ganhou ? 'sucesso' : 'info');
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [personagem, economia, mostrarFeedback]);
+  }, [personagem, economia, mostrarFeedback, verificarDisponibilidade, registrarAcaoAnual, registrarLogs]);
 
-  // Ações de Atividades & Saúde
+  // Ações de Atividades & Saúde (uma vez por ano por atividade)
   const executarAtividade = useCallback((atividade: ActivityOption) => {
     if (!personagem) return;
 
-    if (personagem.idade < atividade.idadeMinima) {
-      mostrarFeedback(`Você precisa ter pelo menos ${atividade.idadeMinima} anos para esta atividade.`, 'erro');
-      return;
-    }
-
-    if (atividade.custo > 0 && economia.dinheiro < atividade.custo) {
-      mostrarFeedback(`Saldo insuficiente para esta atividade (Custo: R$ ${atividade.custo.toLocaleString('pt-BR')}).`, 'erro');
-      return;
-    }
-
-    if (personagem.stats.energia < atividade.energiaGasto) {
-      mostrarFeedback('Você está sem energia para realizar esta atividade.', 'erro');
-      return;
-    }
+    if (!verificarDisponibilidade('executar_atividade', { atividadeId: atividade.id })) return;
 
     sound.playClick();
 
@@ -687,8 +755,7 @@ export function useGame() {
         felicidade: clamp(prev.stats.felicidade + deltaFel, 0, 100),
         saude: clamp(prev.stats.saude + deltaSaude, 0, 100),
         aparencia: clamp(prev.stats.aparencia + deltaAparencia, 0, 100),
-        inteligencia: clamp(prev.stats.inteligencia + deltaInteligencia, 0, 100),
-        energia: clamp(prev.stats.energia - atividade.energiaGasto, 0, 100)
+        inteligencia: clamp(prev.stats.inteligencia + deltaInteligencia, 0, 100)
       },
       hiddenStats: {
         ...prev.hiddenStats,
@@ -700,33 +767,64 @@ export function useGame() {
       }
     }) : null);
 
+    registrarAcaoAnual(`atividade:${atividade.id}`);
+
+    // Registro natural na Linha da Vida (uma vez por ano = decisão relevante)
+    const textosAtividade: Record<string, string> = {
+      act_consulta_sus: 'Você fez um check-up no posto de saúde do bairro.',
+      act_consulta_particular: 'Você consultou um médico particular.',
+      act_terapia: 'Você foi a uma sessão de terapia.',
+      act_academia: 'Você treinou na academia e cuidou do corpo.',
+      act_estetica: 'Você passou um dia cuidando da aparência no salão e na barbearia.',
+      act_ferias_praia: 'Você passou as férias relaxando no litoral.',
+      act_viagem_exterior: 'Você fez uma viagem internacional.',
+      act_balada_barzinho: 'Você saiu com os amigos para um barzinho.',
+      act_churrasco: 'Você organizou um churrasco em família.',
+      act_voluntariado: 'Você dedicou tempo ao trabalho voluntário.',
+      act_leitura: 'Você dedicou tempo à leitura.',
+      act_meditacao: 'Você manteve a prática de meditação.'
+    };
+    const textoAtividade =
+      personagem.idade < 6 && atividade.categoria === 'saude'
+        ? `Seus responsáveis te levaram para: ${atividade.nome.toLowerCase()}.`
+        : textosAtividade[atividade.id] || `Você dedicou tempo a: ${atividade.nome.toLowerCase()}.`;
+
     const log: LifeLogEntry = {
       id: generateId('log'),
       idade: personagem.idade,
       ano: personagem.anoAtual,
       categoria: 'saude',
-      texto: `Você realizou a atividade: ${atividade.nome}.`,
+      texto: textoAtividade,
       tipo: 'positivo'
     };
-    setTimeline(prev => [log, ...prev]);
+    registrarLogs([log]);
     mostrarFeedback(`${atividade.nome} concluída com sucesso!`, 'sucesso');
-  }, [personagem, economia.dinheiro, mostrarFeedback]);
+  }, [personagem, mostrarFeedback, verificarDisponibilidade, registrarAcaoAnual, registrarLogs]);
 
-  // Ações de Relacionamentos Românticos
+  // Ações de Relacionamentos Românticos (sistema adulto: 18+)
   const iniciarNamoroExec = useCallback((candidato: DatingCandidate) => {
     if (!personagem) return;
-    sound.playSuccess();
+    if (!verificarDisponibilidade('iniciar_namoro')) return;
+
     const res = iniciarNamoro(candidato, personagem, personagem.anoAtual);
-    setFamilia(prev => [...prev, res.novoMembro]);
+    if (!res.sucesso || !res.novoMembro || !res.personagemAtualizado || !res.novoLog) {
+      mostrarFeedback(res.mensagem, 'erro');
+      return;
+    }
+
+    sound.playSuccess();
+    setFamilia(prev => [...prev, res.novoMembro!]);
     setPersonagem(res.personagemAtualizado);
-    setTimeline(prev => [res.novoLog, ...prev]);
+    registrarLogs([res.novoLog]);
     mostrarFeedback(`Você e ${candidato.nome} agora estão namorando!`, 'sucesso');
-  }, [personagem, mostrarFeedback]);
+  }, [personagem, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const pedirCasamentoExec = useCallback((parceiroId: string) => {
     if (!personagem) return;
     const parceiro = familia.find(f => f.id === parceiroId);
     if (!parceiro) return;
+
+    if (!verificarDisponibilidade('pedir_casamento', { membroId: parceiroId })) return;
 
     sound.playClick();
     const res = pedirEmCasamento(parceiro, personagem, personagem.anoAtual);
@@ -735,37 +833,46 @@ export function useGame() {
       sound.playSuccess();
       setFamilia(prev => prev.map(f => f.id === parceiroId ? res.parceiroAtualizado! : f));
       setPersonagem(res.personagemAtualizado);
-      if (res.novoLog) setTimeline(prev => [res.novoLog!, ...prev]);
+      if (res.novoLog) registrarLogs([res.novoLog]);
       mostrarFeedback(res.mensagem, 'sucesso');
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [personagem, familia, mostrarFeedback]);
+  }, [personagem, familia, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const terFilhoExec = useCallback((parceiroId?: string, nome?: string, genero?: Gender) => {
     if (!personagem) return;
+    if (!verificarDisponibilidade('ter_filho', { membroId: parceiroId })) return;
+
     const parceiro = parceiroId ? (familia.find(f => f.id === parceiroId) || null) : null;
 
-    sound.playSuccess();
     const res = terFilho(parceiro, personagem, nome, genero, personagem.anoAtual);
-    setFamilia(prev => [...prev, res.novoFilho]);
+    if (!res.sucesso || !res.novoFilho || !res.personagemAtualizado || !res.novoLog) {
+      mostrarFeedback(res.mensagem, 'erro');
+      return;
+    }
+
+    sound.playSuccess();
+    setFamilia(prev => [...prev, res.novoFilho!]);
     setPersonagem(res.personagemAtualizado);
-    setTimeline(prev => [res.novoLog, ...prev]);
-    mostrarFeedback(`Parabéns! ${res.novoFilho.nome} nasceu com muita saúde!`, 'sucesso');
-  }, [personagem, familia, mostrarFeedback]);
+    registrarLogs([res.novoLog]);
+    mostrarFeedback(`${res.novoFilho.nome} nasceu com saúde!`, 'sucesso');
+  }, [personagem, familia, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const terminarRelacionamentoExec = useCallback((parceiroId: string) => {
     if (!personagem) return;
     const parceiro = familia.find(f => f.id === parceiroId);
     if (!parceiro) return;
 
+    if (!verificarDisponibilidade('terminar_relacionamento', { membroId: parceiroId })) return;
+
     sound.playClick();
     const res = terminarRelacionamento(parceiro, personagem, personagem.anoAtual);
     setFamilia(prev => prev.filter(f => f.id !== parceiroId));
     setPersonagem(res.personagemAtualizado);
-    setTimeline(prev => [res.novoLog, ...prev]);
+    registrarLogs([res.novoLog]);
     mostrarFeedback(`Relacionamento com ${parceiro.nome} encerrado.`, 'info');
-  }, [personagem, familia, mostrarFeedback]);
+  }, [personagem, familia, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   // Reiniciar Jogo
   const reiniciarJogo = useCallback(() => {
@@ -777,6 +884,7 @@ export function useGame() {
     setEconomia(criarEconomiaInicial('classe_media'));
     setTimeline([]);
     setEventoAtivo(null);
+    setAcoesRealizadasAno([]);
     setIsDead(false);
     setResumoMorte(null);
     setHasSavedGame(false);
@@ -799,10 +907,12 @@ export function useGame() {
     economia,
     timeline,
     eventoAtivo,
+    acoesRealizadasAno,
     isDead,
     resumoMorte,
     feedbackMensagem,
     mostrarFeedback,
+    construirContexto,
 
     // Ações
     criarVida,

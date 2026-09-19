@@ -1,3 +1,4 @@
+import { randomChoice } from './random';
 import { Character, FamilyMember, PostMortemSummary, VisibleStats } from '../types';
 import { getSocialClassLabel } from './formatters';
 
@@ -146,8 +147,8 @@ export function gerarTextoAnoTranquilo(idade: number): string {
     'Você desfrutou da paz de ver o tempo passar sem pressa.'
   ];
 
-  if (idade <= 11) return tranquilidadesInfancia[Math.floor(Math.random() * tranquilidadesInfancia.length)];
-  if (idade <= 17) return tranquilidadesAdolescencia[Math.floor(Math.random() * tranquilidadesAdolescencia.length)];
-  if (idade <= 59) return tranquilidadesAdulta[Math.floor(Math.random() * tranquilidadesAdulta.length)];
-  return tranquilidadesSenior[Math.floor(Math.random() * tranquilidadesSenior.length)];
+  if (idade <= 11) return randomChoice(tranquilidadesInfancia);
+  if (idade <= 17) return randomChoice(tranquilidadesAdolescencia);
+  if (idade <= 59) return randomChoice(tranquilidadesAdulta);
+  return randomChoice(tranquilidadesSenior);
 }

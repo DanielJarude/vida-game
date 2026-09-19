@@ -30,6 +30,19 @@ export interface AgingResult {
   resumoMorte?: PostMortemSummary;
 }
 
+/**
+ * Ordem explícita do avanço anual:
+ * 1. Idade/ano incrementados uma única vez (charBase).
+ * 2. Envelhecimento de atributos.
+ * 3. Educação (inclui resolução da postura escolar do ano).
+ * 4. Carreira (horas extras e bico do ano são resolvidos aqui, uma única vez).
+ * 5. Família.
+ * 6. Economia (salários, despesas, rendimentos sobre o estado já atualizado).
+ * 7. Mortalidade.
+ * 8. Sorteio de evento interativo.
+ * O rastreador de ações únicas do ano (acoesRealizadasAno) é zerado pela
+ * camada de comandos ao consumir este resultado.
+ */
 export function executarPassagemDeAno(
   personagem: Character,
   familia: FamilyMember[],
@@ -42,17 +55,7 @@ export function executarPassagemDeAno(
   const novoAno = personagem.anoAtual + 1;
   const novosLogs: LifeLogEntry[] = [];
 
-  // Log de cabeçalho do novo ano
-  novosLogs.push({
-    id: generateId('ano_head'),
-    idade: novaIdade,
-    ano: novoAno,
-    categoria: 'geral',
-    texto: `Ano ${novoAno} — Você completou ${novaIdade} ${novaIdade === 1 ? 'ano' : 'anos'}.`,
-    tipo: 'info'
-  });
-
-  // 1. Atualização e envelhecimento de atributos
+  // 1–2. Atualização de idade e envelhecimento de atributos
   const charBase: Character = {
     ...personagem,
     idade: novaIdade,
@@ -65,33 +68,34 @@ export function executarPassagemDeAno(
     hiddenStats
   };
 
-  // 2. Processamento da Educação
+  // 3. Processamento da Educação
   const resEdu = processarAnoEducacao(educacao, char, novoAno);
   let edu = resEdu.educacaoAtualizada;
   char = resEdu.personagemAtualizado;
   novosLogs.push(...resEdu.logsEducacao);
 
-  // 3. Processamento da Carreira
-  const resCar = processarAnoCarreira(carreira, char, novoAno);
+  // 4. Processamento da Carreira (inclui pagamento do bico e horas extras)
+  const resCar = processarAnoCarreira(carreira, char, novoAno, edu, economia);
   let car = resCar.carreiraAtualizada;
   char = resCar.personagemAtualizado;
+  let eco = resCar.economiaAtualizada;
   novosLogs.push(...resCar.logsCarreira);
 
-  // 4. Processamento da Família
+  // 5. Processamento da Família
   const resFam = processarEnvelhecimentoFamilia(familia, char, novoAno);
   const fam = resFam.familiaAtualizada;
   novosLogs.push(...resFam.logsFamilia);
 
-  // 5. Processamento da Economia
+  // 6. Processamento da Economia
   const resEco = processarAnoEconomia(
-    economia,
+    eco,
     char,
     fam,
     resCar.salarioTotalAnual,
     resEdu.mensalidadeAnual,
     novoAno
   );
-  let eco = resEco.economiaAtualizada;
+  eco = resEco.economiaAtualizada;
   novosLogs.push(...resEco.logsEconomia);
 
   // Se recebeu herança familiar

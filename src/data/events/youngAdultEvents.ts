@@ -48,7 +48,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Fantasiar-se, tomar glitter na cara e pular muito no meio da multidão',
         descricaoResultado: 'Você cantou marchinhas até perder a voz, beijou na boca e viveu a alma da cultura brasileira!',
         consequencias: {
-          stats: { felicidade: 25, energia: -20 },
+          stats: { felicidade: 25 },
           dinheiro: -350,
           hiddenStats: { sociabilidade: 25, reputacao: 10 }
         }
@@ -58,7 +58,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Fugir do barulho e maratonar séries em casa no feriadão',
         descricaoResultado: 'Você descansou plenamente, zerou suas séries favoritas e renovou as energias.',
         consequencias: {
-          stats: { saude: 10, energia: 25, felicidade: 10 },
+          stats: { saude: 10, felicidade: 10 },
           hiddenStats: { estresse: -20 }
         }
       }
@@ -114,7 +114,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Aceitar o desafio e mudar de cidade para alavancar a carreira',
         descricaoResultado: 'A mudança foi intensa, mas seu novo cargo trouxe grande reconhecimento profissional!',
         consequencias: {
-          stats: { felicidade: 12, energia: -10 },
+          stats: { felicidade: 12 },
           dinheiro: 2500,
           hiddenStats: { ambicao: 20, disciplina: 10, estresse: 10 },
           adicionarFlag: 'mudou_de_cidade_carreira'
@@ -145,7 +145,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Vestir branco, abrir champanhe na areia e pular as sete ondas à meia-noite',
         descricaoResultado: 'Os fogos de artifício no mar foram deslumbrantes! Você fez seus desejos para o novo ano com muita energia positiva.',
         consequencias: {
-          stats: { felicidade: 25, energia: -10 },
+          stats: { felicidade: 25 },
           dinheiro: -600,
           hiddenStats: { sociabilidade: 15, estresse: -25 }
         }

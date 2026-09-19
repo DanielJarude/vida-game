@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { valorAleatorio } from '../../utils/random';
 import { Gender } from '../../types';
 import { CIDADES_BRASILEIRAS, sortearNome, sortearSobrenome } from '../../data/brazilianData';
 import { ArrowLeft, Sparkles, Check } from 'lucide-react';
@@ -20,7 +21,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
   const handleSortearTudo = () => {
     const novoNome = sortearNome(genero);
     const novoSobrenome = sortearSobrenome();
-    const novaCidade = Math.floor(Math.random() * CIDADES_BRASILEIRAS.length);
+    const novaCidade = Math.floor(valorAleatorio() * CIDADES_BRASILEIRAS.length);
     setNome(novoNome);
     setSobrenome(novoSobrenome);
     setCidadeIndex(novaCidade);

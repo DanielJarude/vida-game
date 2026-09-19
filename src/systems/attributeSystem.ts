@@ -1,13 +1,12 @@
 import { Character, HiddenStats, VisibleStats } from '../types';
-import { clamp } from '../utils/random';
+import { clamp, valorAleatorio } from '../utils/random';
 
 export function normalizarStats(stats: VisibleStats): VisibleStats {
   return {
     felicidade: clamp(stats.felicidade, 0, 100),
     saude: clamp(stats.saude, 0, 100),
     inteligencia: clamp(stats.inteligencia, 0, 100),
-    aparencia: clamp(stats.aparencia, 0, 100),
-    energia: clamp(stats.energia, 0, 100)
+    aparencia: clamp(stats.aparencia, 0, 100)
   };
 }
 
@@ -31,16 +30,13 @@ export function aplicarEnvelhecimentoAtributos(personagem: Character): {
   const hidden = { ...personagem.hiddenStats };
   const idade = personagem.idade;
 
-  // Recupera energia a cada novo ano
-  stats.energia = 100;
-
   // Redução natural de saúde e aparência na velhice
   if (idade >= 50) {
     const fatorIdade = Math.floor((idade - 50) / 10);
-    const perdaSaude = 1 + fatorIdade + Math.random() * 2;
+    const perdaSaude = 1 + fatorIdade + valorAleatorio() * 2;
     stats.saude = clamp(stats.saude - perdaSaude, 0, 100);
 
-    const perdaAparencia = 1 + Math.random() * 2;
+    const perdaAparencia = 1 + valorAleatorio() * 2;
     stats.aparencia = clamp(stats.aparencia - perdaAparencia, 0, 100);
   }
 

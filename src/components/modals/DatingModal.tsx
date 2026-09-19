@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DatingCandidate, gerarCandidatosNamoro } from '../../systems/relationshipSystem';
 import { Character } from '../../types';
 import { getStatColor } from '../../utils/formatters';
-import { X, Heart, Briefcase } from 'lucide-react';
+import { X, Heart, Briefcase, RefreshCw } from 'lucide-react';
 
 interface DatingModalProps {
   personagem: Character;
@@ -101,17 +101,11 @@ export const DatingModal: React.FC<DatingModalProps> = ({
 
         <button
           onClick={atualizarCandidatos}
-          style={{
-            padding: '10px',
-            borderRadius: 'var(--radius-sm)',
-            background: 'var(--bg-card-hover)',
-            color: 'var(--text-primary)',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            textAlign: 'center'
-          }}
+          className="btn-acao-secundaria"
+          style={{ justifyContent: 'center', padding: '10px' }}
         >
-          🔄 Ver Outros Perfis
+          <RefreshCw size={16} />
+          <span>Ver Outros Perfis</span>
         </button>
       </div>
     </div>

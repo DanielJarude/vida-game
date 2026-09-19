@@ -9,8 +9,8 @@ import {
   LifeLogEntry
 } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
-import { getLifeStage } from '../utils/formatters';
-import { clamp, generateId } from '../utils/random';
+import { formatarDinheiro, getLifeStage, getRotuloAtributo } from '../utils/formatters';
+import { clamp, generateId, rollChance, valorAleatorio } from '../utils/random';
 import { normalizarHiddenStats, normalizarStats } from './attributeSystem';
 
 export function avaliarCondicoesEvento(
@@ -90,8 +90,8 @@ export function sortearEventoDoAno(
   familia: FamilyMember[],
   historicoDisparados: string[]
 ): GameEvent | null {
-  // Chance de 70% de ter um evento interativo no ano (alguns anos são mais calmos)
-  if (Math.random() > 0.75) {
+  // Chance de 75% de ter um evento interativo no ano (alguns anos são mais calmos)
+  if (!rollChance(75)) {
     return null;
   }
 
@@ -111,7 +111,7 @@ export function sortearEventoDoAno(
 
   // Sorteio ponderado por peso
   const pesoTotal = eventosElegiveis.reduce((sum, ev) => sum + ev.peso, 0);
-  let rolagem = Math.random() * pesoTotal;
+  let rolagem = valorAleatorio() * pesoTotal;
 
   for (const evento of eventosElegiveis) {
     if (rolagem < evento.peso) {
@@ -121,6 +121,42 @@ export function sortearEventoDoAno(
   }
 
   return eventosElegiveis[0];
+}
+
+/**
+ * Avalia o requisito de uma opção de evento (atributo, dinheiro ou flag).
+ * Usado pela interface (mostrar indisponibilidade e motivo) e pelo motor
+ * (recusar antes de aplicar consequências).
+ */
+export function avaliarRequisitoOpcao(
+  opcao: EventOption,
+  personagem: Character,
+  economia: EconomyState
+): { aprovado: boolean; motivo?: string } {
+  const requisito = opcao.requisito;
+  if (!requisito) return { aprovado: true };
+
+  if (requisito.dinheiroMinimo !== undefined && economia.dinheiro < requisito.dinheiroMinimo) {
+    return { aprovado: false, motivo: `Você precisa de ${formatarDinheiro(requisito.dinheiroMinimo)} disponíveis.` };
+  }
+
+  if (requisito.atributo && requisito.valorMinimo !== undefined) {
+    const valorAtual =
+      (personagem.stats as unknown as Record<string, number | undefined>)[requisito.atributo] ??
+      (personagem.hiddenStats as unknown as Record<string, number | undefined>)[requisito.atributo];
+    if (valorAtual === undefined || valorAtual < requisito.valorMinimo) {
+      return {
+        aprovado: false,
+        motivo: `Você precisa de ${getRotuloAtributo(requisito.atributo)} ${requisito.valorMinimo} ou mais.`
+      };
+    }
+  }
+
+  if (requisito.flagNecessaria && !personagem.flags[requisito.flagNecessaria]) {
+    return { aprovado: false, motivo: 'Você não cumpre os requisitos para esta escolha.' };
+  }
+
+  return { aprovado: true };
 }
 
 export function aplicarConsequenciasEscolha(
@@ -140,7 +176,25 @@ export function aplicarConsequenciasEscolha(
   novosLogs: LifeLogEntry[];
   morreu: boolean;
   causaMorte?: string;
+  recusado?: boolean;
+  mensagemRecusa?: string;
 } {
+  // Revalidação do requisito antes de qualquer efeito (sem efeitos parciais)
+  const requisito = avaliarRequisitoOpcao(opcao, personagem, economia);
+  if (!requisito.aprovado) {
+    return {
+      personagemAtualizado: personagem,
+      carreiraAtualizada: carreira,
+      educacaoAtualizada: educacao,
+      economiaAtualizada: economia,
+      familiaAtualizada: familia,
+      novosLogs: [],
+      morreu: false,
+      recusado: true,
+      mensagemRecusa: requisito.motivo || 'Você não cumpre os requisitos para esta escolha.'
+    };
+  }
+
   const cons = opcao.consequencias;
   const char = { ...personagem };
   let car = { ...carreira };

@@ -447,7 +447,6 @@ export interface FreelanceOption {
   id: string;
   nome: string;
   ganhoEstimadoAnual: number;
-  energiaGasto: number; // por execucao
   estresseGasto: number;
   requisito?: string;
   descricao: string;
@@ -458,7 +457,6 @@ export const BICOS_DISPONIVEIS: FreelanceOption[] = [
     id: 'bico_entregas',
     nome: 'Fazer Entregas de Moto/Bicicleta nos Fins de Semana',
     ganhoEstimadoAnual: 7200,
-    energiaGasto: 15,
     estresseGasto: 10,
     descricao: 'Trabalhar com entregas de aplicativo nas horas vagas.'
   },
@@ -466,7 +464,6 @@ export const BICOS_DISPONIVEIS: FreelanceOption[] = [
     id: 'bico_aulas',
     nome: 'Dar Aulas Particulares / Monitoria',
     ganhoEstimadoAnual: 9600,
-    energiaGasto: 10,
     estresseGasto: 5,
     requisito: 'medio_completo',
     descricao: 'Ensinar reforço escolar para crianças e jovens.'
@@ -475,7 +472,6 @@ export const BICOS_DISPONIVEIS: FreelanceOption[] = [
     id: 'bico_freela_design_ti',
     nome: 'Fazer Freelance de Design ou Programação',
     ganhoEstimadoAnual: 16000,
-    energiaGasto: 12,
     estresseGasto: 8,
     requisito: 'tecnico',
     descricao: 'Criar sites, identidades visuais e aplicativos sob demanda.'
@@ -484,7 +480,6 @@ export const BICOS_DISPONIVEIS: FreelanceOption[] = [
     id: 'bico_uber',
     nome: 'Rodar como Motorista de Aplicativo (Uber/99)',
     ganhoEstimadoAnual: 18000,
-    energiaGasto: 18,
     estresseGasto: 14,
     requisito: 'veiculo',
     descricao: 'Transportar passageiros pela cidade no horário noturno.'

@@ -1,14 +1,19 @@
 import React from 'react';
-import { GameEvent } from '../../types';
+import { Character, EconomyState, GameEvent } from '../../types';
+import { avaliarRequisitoOpcao } from '../../systems/eventSystem';
 import { HelpCircle, Sparkles, BookOpen, Briefcase, Heart, DollarSign, Activity } from 'lucide-react';
 
 interface EventModalProps {
   evento: GameEvent;
+  personagem: Character;
+  economia: EconomyState;
   onEscolherOpcao: (opcaoId: string) => void;
 }
 
 export const EventModal: React.FC<EventModalProps> = ({
   evento,
+  personagem,
+  economia,
   onEscolherOpcao
 }) => {
   const getCategoryIcon = (cat: string) => {
@@ -24,17 +29,31 @@ export const EventModal: React.FC<EventModalProps> = ({
     }
   };
 
+  const getCategoriaLabel = (cat: string) => {
+    const rotulos: Record<string, string> = {
+      infancia: 'Infância',
+      escola: 'Escola',
+      adolescencia: 'Adolescência',
+      familia: 'Família',
+      amizade: 'Amizade',
+      romance: 'Romance',
+      trabalho: 'Trabalho',
+      dinheiro: 'Dinheiro',
+      saude: 'Saúde',
+      cotidiano: 'Cotidiano'
+    };
+    return rotulos[cat] || cat;
+  };
+
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={evento.titulo}>
       <div className="modal-card">
         <div className="modal-header">
           <div className="modal-icon">
             {getCategoryIcon(evento.categoria)}
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--primary)', fontWeight: 700 }}>
-              {evento.categoria}
-            </div>
+            <div className="modal-categoria">{getCategoriaLabel(evento.categoria)}</div>
             <h2 className="modal-title">{evento.titulo}</h2>
           </div>
         </div>
@@ -42,15 +61,22 @@ export const EventModal: React.FC<EventModalProps> = ({
         <p className="modal-desc">{evento.descricao}</p>
 
         <div className="modal-options-list">
-          {evento.opcoes.map(opcao => (
-            <button
-              key={opcao.id}
-              className="option-btn"
-              onClick={() => onEscolherOpcao(opcao.id)}
-            >
-              <span className="option-title">{opcao.texto}</span>
-            </button>
-          ))}
+          {evento.opcoes.map(opcao => {
+            const requisito = avaliarRequisitoOpcao(opcao, personagem, economia);
+            return (
+              <button
+                key={opcao.id}
+                className="option-btn"
+                onClick={() => onEscolherOpcao(opcao.id)}
+                disabled={!requisito.aprovado}
+              >
+                <span className="option-title">{opcao.texto}</span>
+                {!requisito.aprovado && requisito.motivo && (
+                  <span className="option-motivo">{requisito.motivo}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

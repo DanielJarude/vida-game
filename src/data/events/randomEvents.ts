@@ -46,7 +46,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Tocar a campainha e pedir com educação para abaixar o volume',
         descricaoResultado: 'O vizinho percebeu o exagero, pediu desculpas cordiais e desligou o som.',
         consequencias: {
-          stats: { felicidade: 10, energia: 5 },
+          stats: { felicidade: 10 },
           hiddenStats: { sociabilidade: 10, empatia: 10 }
         }
       },
@@ -64,7 +64,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Colocar protetor auricular e tentar dormir',
         descricaoResultado: 'Você demorou para pegar no sono e acordou com olheiras no dia seguinte.',
         consequencias: {
-          stats: { felicidade: -10, energia: -15 },
+          stats: { felicidade: -10 },
           hiddenStats: { estresse: 15 }
         }
       }
@@ -142,7 +142,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Manter a calma e entregar o celular do ladrão sem reagir',
         descricaoResultado: 'Eles levaram o celular, mas você saiu são e salvo sem nenhum ferimento.',
         consequencias: {
-          stats: { felicidade: -15, energia: -15 },
+          stats: { felicidade: -15 },
           dinheiro: -800,
           hiddenStats: { estresse: 25 }
         }

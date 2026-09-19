@@ -102,19 +102,21 @@ export const PERSONALIDADES = [
   'criativo e sonhador'
 ];
 
+import { randomChoice } from '../utils/random';
+
 export function sortearNome(genero: Gender): string {
   if (genero === 'masculino') {
-    return NOMES_MASCULINOS[Math.floor(Math.random() * NOMES_MASCULINOS.length)];
+    return randomChoice(NOMES_MASCULINOS);
   } else if (genero === 'feminino') {
-    return NOMES_FEMININOS[Math.floor(Math.random() * NOMES_FEMININOS.length)];
+    return randomChoice(NOMES_FEMININOS);
   }
-  return NOMES_NAO_BINARIOS[Math.floor(Math.random() * NOMES_NAO_BINARIOS.length)];
+  return randomChoice(NOMES_NAO_BINARIOS);
 }
 
 export function sortearSobrenome(): string {
-  return SOBRENOMES[Math.floor(Math.random() * SOBRENOMES.length)];
+  return randomChoice(SOBRENOMES);
 }
 
 export function sortearCidade(): BrazilianCity {
-  return CIDADES_BRASILEIRAS[Math.floor(Math.random() * CIDADES_BRASILEIRAS.length)];
+  return randomChoice(CIDADES_BRASILEIRAS);
 }
