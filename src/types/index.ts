@@ -23,7 +23,6 @@ export interface VisibleStats {
   saude: number;        // Health
   inteligencia: number; // Smarts
   aparencia: number;    // Looks
-  energia: number;      // Energy
 }
 
 // Atributos Ocultos / Internos (0 a 100)
@@ -82,6 +81,16 @@ export type EducationLevel =
   | 'superior_completo'
   | 'pos_graduacao';
 
+export type FamilyInteractionType =
+  | 'conversar'
+  | 'passar_tempo'
+  | 'dar_presente'
+  | 'discutir'
+  | 'pedir_dinheiro'
+  | 'pedir_conselho';
+
+export type PosturaEscolar = 'estudar' | 'matar_aula' | 'socializar';
+
 export interface EducationState {
   nivelAtual: EducationLevel;
   emCurso: boolean;
@@ -94,6 +103,8 @@ export interface EducationState {
   desempenho: number; // 0 a 100 (notas)
   mensalidade?: number;
   anoIngresso?: number;
+  // Compromisso do ano corrente; efeitos processados na passagem de ano
+  posturaAno?: PosturaEscolar | null;
   cursosConcluidos: {
     nome: string;
     tipo: string;
@@ -120,6 +131,8 @@ export interface CareerState {
   anosNoCargo: number;
   desempenhoTrabalho: number; // 0 a 100
   horasExtras: boolean;
+  // Bico escolhido como compromisso do ano corrente; pago na passagem de ano
+  bicoAtivoId?: string | null;
   aposentado: boolean;
   rendaAposentadoria?: number;
   historicoEmpregos: {
@@ -264,6 +277,8 @@ export interface Character {
 }
 
 export interface GameState {
+  // Versão do schema de save; migrações em systems/saveSystem.ts
+  versao: number;
   personagem: Character | null;
   familia: FamilyMember[];
   educacao: EducationState;
@@ -272,6 +287,8 @@ export interface GameState {
   timeline: LifeLogEntry[];
   eventoAtivo: GameEvent | null;
   historicoEventosDisparados: string[];
+  // Ações únicas por ano (atividades, apostas, interações); zerada a cada passagem de ano
+  acoesRealizadasAno: string[];
   emJogo: boolean;
   morto: boolean;
   resumoMorte?: PostMortemSummary;

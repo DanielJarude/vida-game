@@ -16,7 +16,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
         texto: 'Pendurar as chuteiras e aproveitar o merecido descanso',
         descricaoResultado: 'Você reuniu a família para um almoço comemorativo e agora tem todo o tempo do mundo para seus hobbies!',
         consequencias: {
-          stats: { felicidade: 25, energia: 15 },
+          stats: { felicidade: 25 },
           hiddenStats: { estresse: -40, empatia: 10 },
           adicionarFlag: 'aposentado_inss'
         }

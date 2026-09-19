@@ -60,7 +60,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Pedir pizza, tomar café e liderar a força-tarefa até de madrugada',
         descricaoResultado: 'A entrega foi um sucesso retumbante e a empresa bateu o recorde de faturamento!',
         consequencias: {
-          stats: { felicidade: 10, energia: -25 },
+          stats: { felicidade: 10 },
           dinheiro: 1500,
           hiddenStats: { ambicao: 20, reputacao: 25, estresse: 20 }
         }

@@ -4,7 +4,6 @@ export interface ActivityOption {
   nome: string;
   custo: number;
   idadeMinima: number;
-  energiaGasto: number;
   descricao: string;
   efeitoResumo: string;
 }
@@ -17,7 +16,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Fazer Check-up no Posto de Saúde (SUS)',
     custo: 0,
     idadeMinima: 0,
-    energiaGasto: 15,
     descricao: 'Consultar médico e realizar exames preventivos pelo Sistema Único de Saúde.',
     efeitoResumo: '+ Saúde, cura pequenas enfermidades'
   },
@@ -27,7 +25,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Consulta com Médico Especialista Particular',
     custo: 450,
     idadeMinima: 0,
-    energiaGasto: 5,
     descricao: 'Atendimento rápido e detalhado em clínica médica particular conceituada.',
     efeitoResumo: '++ Saúde, diagnóstico preciso e alívio do estresse'
   },
@@ -37,7 +34,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Sessão de Terapia Psicológica',
     custo: 220,
     idadeMinima: 12,
-    energiaGasto: 10,
     descricao: 'Conversar com psicólogo para cuidar da mente, ansiedade e autoconhecimento.',
     efeitoResumo: '++ Felicidade, - Estresse, + Empatia'
   },
@@ -47,7 +43,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Treinar na Academia / Praticar Esportes',
     custo: 120,
     idadeMinima: 12,
-    energiaGasto: 15,
     descricao: 'Musculação, corrida e treinos funcionais para fortalecer o corpo.',
     efeitoResumo: '+ Saúde, + Aparência, + Condicionamento, - Estresse'
   },
@@ -57,7 +52,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Dia no Salão de Beleza / Barbearia e Estética',
     custo: 180,
     idadeMinima: 14,
-    energiaGasto: 5,
     descricao: 'Corte de cabelo, skincare e cuidados pessoais para renovar a autoestima.',
     efeitoResumo: '++ Aparência, + Felicidade'
   },
@@ -69,7 +63,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Viagem de Férias para o Litoral Brasileiro',
     custo: 2800,
     idadeMinima: 18,
-    energiaGasto: 10,
     descricao: 'Passar uma semana relaxando em praias paradisíacas do Nordeste ou litoral paulista/carioca.',
     efeitoResumo: '+++ Felicidade, -- Estresse'
   },
@@ -79,7 +72,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Viagem Internacional dos Sonhos',
     custo: 14000,
     idadeMinima: 18,
-    energiaGasto: 20,
     descricao: 'Conhecer novas culturas na Europa, América do Norte ou Ásia.',
     efeitoResumo: '++++ Felicidade, + Inteligência, -- Estresse'
   },
@@ -89,39 +81,17 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Sair para um Barzinho / Balada com Amigos',
     custo: 150,
     idadeMinima: 16,
-    energiaGasto: 20,
     descricao: 'Música ao vivo, risadas e uma cerveja gelada para relaxar no fim de semana.',
     efeitoResumo: '++ Felicidade, + Sociabilidade, - Energia'
   },
-  {
-    id: 'act_loteria',
-    categoria: 'lazer',
-    nome: 'Apostar na Mega-Sena (Sonho de Ficar Milionário)',
-    custo: 15,
-    idadeMinima: 18,
-    energiaGasto: 2,
-    descricao: 'Fazer um jogo na lotérica. As chances são mínimas, mas a esperança nunca morre!',
-    efeitoResumo: 'Chance de ganhar uma bolada de milhões de reais'
-  },
 
   // Social & Relacionamentos
-  {
-    id: 'act_tinder',
-    categoria: 'social',
-    nome: 'Usar Aplicativo de Namoro (Tinder / Bumble)',
-    custo: 0,
-    idadeMinima: 18,
-    energiaGasto: 10,
-    descricao: 'Deslizar para a direita e tentar conhecer alguém interessante para namorar.',
-    efeitoResumo: 'Chance de encontrar um(a) novo(a) parceiro(a)'
-  },
   {
     id: 'act_churrasco',
     categoria: 'social',
     nome: 'Organizar um Churrasco em Família no Domingo',
     custo: 350,
     idadeMinima: 16,
-    energiaGasto: 15,
     descricao: 'Carne na brasa, pagode e reunir parentes e amigos para confraternizar.',
     efeitoResumo: '++ Relacionamento com todos os familiares, + Felicidade'
   },
@@ -131,7 +101,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Fazer Trabalho Voluntário em ONG',
     custo: 0,
     idadeMinima: 14,
-    energiaGasto: 15,
     descricao: 'Ajudar em abrigos de animais ou distribuição de alimentos para pessoas necessitadas.',
     efeitoResumo: '++ Empatia, + Reputação, + Felicidade'
   },
@@ -143,7 +112,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Ler Livros e Cursos Online',
     custo: 60,
     idadeMinima: 10,
-    energiaGasto: 10,
     descricao: 'Dedicar horas de leitura e aprimoramento intelectual.',
     efeitoResumo: '++ Inteligência, + Disciplina'
   },
@@ -153,7 +121,6 @@ export const ATIVIDADES_DISPONIVEIS: ActivityOption[] = [
     nome: 'Praticar Meditação e Mindfulness',
     custo: 0,
     idadeMinima: 10,
-    energiaGasto: 5,
     descricao: 'Exercícios de respiração e foco no momento presente.',
     efeitoResumo: '- Estresse, + Felicidade, + Disciplina'
   }

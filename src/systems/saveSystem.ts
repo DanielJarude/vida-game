@@ -1,12 +1,24 @@
-import { GameState, GlobalStats, PastLifeRecord, PostMortemSummary } from '../types';
+import { GameState, GlobalStats, PastLifeRecord, PostMortemSummary, GameEvent } from '../types';
+import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
+import { clamp } from '../utils/random';
 
-const SAVE_KEY = 'VIDA_GAME_SAVE_V1';
+const SAVE_KEY = 'VIDA_GAME_SAVE_V1'; // chave mantida: a versão vive dentro do payload
 const STATS_KEY = 'VIDA_GLOBAL_STATS_V1';
+
+export const VERSAO_SAVE = 2;
+
+// Formato persistido: o evento ativo é referenciado por id (não serializado por inteiro)
+type EstadoSalvo = Omit<GameState, 'eventoAtivo'> & { eventoAtivoId?: string | null };
 
 export function salvarJogo(estado: GameState): boolean {
   try {
-    const dados = JSON.stringify(estado);
-    localStorage.setItem(SAVE_KEY, dados);
+    const { eventoAtivo, ...resto } = estado;
+    const dados: EstadoSalvo = {
+      ...resto,
+      versao: VERSAO_SAVE,
+      eventoAtivoId: eventoAtivo ? eventoAtivo.id : null
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(dados));
     return true;
   } catch (error) {
     console.warn('Erro ao salvar jogo no LocalStorage:', error);
@@ -18,11 +30,174 @@ export function carregarJogo(): GameState | null {
   try {
     const dados = localStorage.getItem(SAVE_KEY);
     if (!dados) return null;
-    return JSON.parse(dados) as GameState;
+    const bruto: unknown = JSON.parse(dados);
+    return migrarEstadoSalvo(bruto);
   } catch (error) {
     console.warn('Erro ao carregar jogo do LocalStorage:', error);
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Migração e normalização defensiva
+// Saves antigos (sem versão, com Energia, com eventoAtivo serializado) seguem
+// carregáveis: o campo obsoleto é descartado e os dados válidos preservados.
+// Se a partida não puder ser lida, retorna null SEM sobrescrever o dado original.
+// ---------------------------------------------------------------------------
+
+function comoObjeto(valor: unknown): Record<string, unknown> | null {
+  return typeof valor === 'object' && valor !== null ? (valor as Record<string, unknown>) : null;
+}
+
+function numero(valor: unknown, padrao: number): number {
+  return typeof valor === 'number' && Number.isFinite(valor) ? valor : padrao;
+}
+
+function lista(valor: unknown): unknown[] {
+  return Array.isArray(valor) ? valor : [];
+}
+
+function migrarEstadoSalvo(bruto: unknown): GameState | null {
+  const raiz = comoObjeto(bruto);
+  if (!raiz) return null;
+
+  const personagemBruto = comoObjeto(raiz.personagem);
+  if (!personagemBruto || typeof personagemBruto.nome !== 'string' || personagemBruto.nome === '') {
+    return null; // partida ilegível: preserva o dado original, não inventa estado vazio
+  }
+
+  const versaoAntiga = typeof raiz.versao === 'number' ? raiz.versao : 1;
+
+  // --- Personagem ---
+  const statsBruto = comoObjeto(personagemBruto.stats) ?? {};
+  const hiddenBruto = comoObjeto(personagemBruto.hiddenStats) ?? {};
+  const flagsBruto = comoObjeto(personagemBruto.flags) ?? {};
+  // flag legada "escolaridade" congelada: descartada (a fonte de verdade é EducationState)
+  const { escolaridade: _flagLegado, ...flagsValidas } = flagsBruto as Record<string, unknown>;
+
+  const personagem = {
+    ...personagemBruto,
+    idade: numero(personagemBruto.idade, 0),
+    anoAtual: numero(personagemBruto.anoAtual, new Date().getFullYear()),
+    anoNascimento: numero(personagemBruto.anoNascimento, new Date().getFullYear()),
+    stats: {
+      // Energia (campo obsoleto da versão 1) é simplesmente ignorado aqui
+      felicidade: clamp(numero(statsBruto.felicidade, 70)),
+      saude: clamp(numero(statsBruto.saude, 75)),
+      inteligencia: clamp(numero(statsBruto.inteligencia, 50)),
+      aparencia: clamp(numero(statsBruto.aparencia, 50))
+    },
+    hiddenStats: {
+      disciplina: clamp(numero(hiddenBruto.disciplina, 50)),
+      sociabilidade: clamp(numero(hiddenBruto.sociabilidade, 50)),
+      empatia: clamp(numero(hiddenBruto.empatia, 50)),
+      ambicao: clamp(numero(hiddenBruto.ambicao, 50)),
+      estresse: clamp(numero(hiddenBruto.estresse, 10)),
+      reputacao: clamp(numero(hiddenBruto.reputacao, 50)),
+      condicionamentoFisico: clamp(numero(hiddenBruto.condicionamentoFisico, 50))
+    },
+    doencas: lista(personagemBruto.doencas).filter(d => typeof d === 'string') as string[],
+    flags: flagsValidas as Record<string, boolean | number | string>,
+    marcos: lista(personagemBruto.marcos).filter(comoObjeto) as NonNullable<GameState['personagem']>['marcos']
+  } as GameState['personagem'];
+
+  // --- Família ---
+  const familia = lista(raiz.familia).map(m => {
+    const mBruto = comoObjeto(m);
+    if (!mBruto) return null;
+    return {
+      ...mBruto,
+      idade: numero(mBruto.idade, 0),
+      relacionamento: clamp(numero(mBruto.relacionamento, 50)),
+      vivo: mBruto.vivo !== false
+    };
+  }).filter(Boolean) as GameState['familia'];
+
+  // --- Educação ---
+  const eduBruto = comoObjeto(raiz.educacao) ?? {};
+  const niveisValidos = [
+    'nenhuma', 'fundamental_incompleto', 'fundamental_completo', 'medio_incompleto',
+    'medio_completo', 'tecnico', 'superior_incompleto', 'superior_completo', 'pos_graduacao'
+  ];
+  const educacao = {
+    ...eduBruto,
+    nivelAtual: (niveisValidos.includes(eduBruto.nivelAtual as string)
+      ? eduBruto.nivelAtual
+      : 'nenhuma') as GameState['educacao']['nivelAtual'],
+    emCurso: eduBruto.emCurso === true,
+    desempenho: clamp(numero(eduBruto.desempenho, 70)),
+    posturaAno: null,
+    cursosConcluidos: lista(eduBruto.cursosConcluidos).filter(comoObjeto)
+  } as GameState['educacao'];
+
+  // --- Carreira ---
+  const carBruto = comoObjeto(raiz.carreira) ?? {};
+  const carreira = {
+    ...carBruto,
+    empregado: carBruto.empregado === true,
+    anosNoCargo: numero(carBruto.anosNoCargo, 0),
+    desempenhoTrabalho: clamp(numero(carBruto.desempenhoTrabalho, 60)),
+    horasExtras: carBruto.horasExtras === true,
+    bicoAtivoId: null,
+    aposentado: carBruto.aposentado === true,
+    historicoEmpregos: lista(carBruto.historicoEmpregos).filter(comoObjeto)
+  } as GameState['carreira'];
+
+  // --- Economia ---
+  const ecoBruto = comoObjeto(raiz.economia) ?? {};
+  const padroesValidos = ['modesto', 'confortavel', 'luxuoso'];
+  const economia = {
+    ...ecoBruto,
+    dinheiro: numero(ecoBruto.dinheiro, 0),
+    dividas: numero(ecoBruto.dividas, 0),
+    padraoDeVida: (padroesValidos.includes(ecoBruto.padraoDeVida as string)
+      ? ecoBruto.padraoDeVida
+      : 'confortavel') as GameState['economia']['padraoDeVida'],
+    propriedades: lista(ecoBruto.propriedades).filter(comoObjeto),
+    investimentos: lista(ecoBruto.investimentos).filter(comoObjeto)
+  } as GameState['economia'];
+
+  // --- Linha da Vida ---
+  let timeline = lista(raiz.timeline).filter(e => {
+    const eBruto = comoObjeto(e);
+    return eBruto && typeof eBruto.texto === 'string';
+  }) as GameState['timeline'];
+  // Remove cabeçalhos de ano antigos (agora derivados na exibição)
+  timeline = timeline.filter(e => !e.id.startsWith('ano_head'));
+  // Saves da versão 1 armazenavam o mais novo no topo; inverte para ordem cronológica
+  if (versaoAntiga < 2) {
+    timeline = [...timeline].reverse();
+  }
+
+  // --- Evento ativo (por id) ---
+  const idEvento =
+    typeof raiz.eventoAtivoId === 'string'
+      ? raiz.eventoAtivoId
+      : (comoObjeto(raiz.eventoAtivo)?.id as string | undefined) ?? null;
+  const eventoAtivo: GameEvent | null =
+    (idEvento && MASTER_EVENTS_LIST.find(e => e.id === idEvento)) || null;
+
+  const historicoEventosDisparados = lista(raiz.historicoEventosDisparados).filter(
+    h => typeof h === 'string'
+  ) as string[];
+
+  const resumoMorte = comoObjeto(raiz.resumoMorte) as unknown as GameState['resumoMorte'];
+
+  return {
+    versao: VERSAO_SAVE,
+    personagem,
+    familia,
+    educacao,
+    carreira,
+    economia,
+    timeline,
+    eventoAtivo,
+    historicoEventosDisparados,
+    acoesRealizadasAno: lista(raiz.acoesRealizadasAno).filter(a => typeof a === 'string') as string[],
+    emJogo: raiz.emJogo !== false,
+    morto: raiz.morto === true,
+    resumoMorte
+  };
 }
 
 export function limparSave(): void {
@@ -34,28 +209,29 @@ export function limparSave(): void {
 }
 
 export function carregarEstatisticasGlobais(): GlobalStats {
+  const vazio: GlobalStats = {
+    vidasJogadas: 0,
+    totalAnosVividos: 0,
+    maiorIdade: 0,
+    maiorPatrimonio: 0,
+    totalFilhos: 0,
+    historicoVidas: []
+  };
   try {
     const dados = localStorage.getItem(STATS_KEY);
-    if (!dados) {
-      return {
-        vidasJogadas: 0,
-        totalAnosVividos: 0,
-        maiorIdade: 0,
-        maiorPatrimonio: 0,
-        totalFilhos: 0,
-        historicoVidas: []
-      };
-    }
-    return JSON.parse(dados) as GlobalStats;
-  } catch {
+    if (!dados) return vazio;
+    const bruto = comoObjeto(JSON.parse(dados));
+    if (!bruto) return vazio;
     return {
-      vidasJogadas: 0,
-      totalAnosVividos: 0,
-      maiorIdade: 0,
-      maiorPatrimonio: 0,
-      totalFilhos: 0,
-      historicoVidas: []
+      vidasJogadas: numero(bruto.vidasJogadas, 0),
+      totalAnosVividos: numero(bruto.totalAnosVividos, 0),
+      maiorIdade: numero(bruto.maiorIdade, 0),
+      maiorPatrimonio: numero(bruto.maiorPatrimonio, 0),
+      totalFilhos: numero(bruto.totalFilhos, 0),
+      historicoVidas: lista(bruto.historicoVidas).filter(comoObjeto) as PastLifeRecord[]
     };
+  } catch {
+    return vazio;
   }
 }
 

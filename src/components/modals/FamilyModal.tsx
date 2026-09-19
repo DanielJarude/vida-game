@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { FamilyMember } from '../../types';
-import { FamilyInteractionType } from '../../systems/familySystem';
-import { getStatColor } from '../../utils/formatters';
+import { FamilyInteractionType, FamilyMember } from '../../types';
+import { getStatColor, getRotuloParentesco } from '../../utils/formatters';
+import { Disponibilidade } from '../../systems/availabilitySystem';
 import { X, MessageCircle, Clock, Gift, MessageSquareWarning, DollarSign, HelpCircle, HeartHandshake, Baby, UserMinus } from 'lucide-react';
 
 interface FamilyModalProps {
@@ -12,6 +12,7 @@ interface FamilyModalProps {
   onTerFilho?: () => void;
   onTerminar?: () => void;
   idadeJogador: number;
+  verificarInteracao: (tipo: FamilyInteractionType) => Disponibilidade;
 }
 
 export const FamilyModal: React.FC<FamilyModalProps> = ({
@@ -21,23 +22,60 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
   onPedirCasamento,
   onTerFilho,
   onTerminar,
-  idadeJogador
+  idadeJogador,
+  verificarInteracao
 }) => {
   const [showPresenteMenu, setShowPresenteMenu] = useState(false);
   const isParceiro = ['namorado', 'namorada', 'noivo', 'noiva', 'esposo', 'esposa'].includes(membro.tipo);
   const isCasado = ['esposo', 'esposa'].includes(membro.tipo);
 
+  const estadoBotao = (tipo: FamilyInteractionType): { desabilitado: boolean; motivo?: string } => {
+    const disp = verificarInteracao(tipo);
+    return {
+      desabilitado: disp.kind !== 'disponivel',
+      motivo: disp.kind === 'bloqueado' ? disp.motivo : undefined
+    };
+  };
+
+  const AcaoFamiliar: React.FC<{
+    tipo: FamilyInteractionType;
+    icone: React.ReactNode;
+    titulo: string;
+    descricao: string;
+    corTitulo?: string;
+  }> = ({ tipo, icone, titulo, descricao, corTitulo }) => {
+    const { desabilitado, motivo } = estadoBotao(tipo);
+    return (
+      <button
+        className="option-btn"
+        onClick={() => { if (!desabilitado) { onInteragir(tipo); onClose(); } }}
+        disabled={desabilitado}
+        aria-label={`${titulo}${motivo ? ` — ${motivo}` : ''}`}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {icone}
+          <div>
+            <strong style={corTitulo ? { color: corTitulo } : undefined}>{titulo}</strong>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              {motivo || descricao}
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  };
+
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={membro.nome}>
       <div className="modal-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h2 className="modal-title">{membro.nome} {membro.sobrenome}</h2>
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '2px' }}>
-              {membro.tipo.toUpperCase()} • {membro.idade} anos • {membro.profissao || membro.situacaoAtual || 'Em casa'}
+              {getRotuloParentesco(membro.tipo)} • {membro.idade} anos • {membro.profissao || membro.situacaoAtual || 'Em casa'}
             </div>
           </div>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
@@ -56,33 +94,21 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
           </div>
         </div>
 
-        {/* Menu de Ações */}
+        {/* Menu de Ações (disponibilidade vem da política central) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button
-            className="option-btn"
-            onClick={() => { onInteragir('conversar'); onClose(); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MessageCircle size={18} color="var(--accent-blue)" />
-              <div>
-                <strong>Conversar</strong>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Bater um papo amigável sobre o dia</div>
-              </div>
-            </div>
-          </button>
+          <AcaoFamiliar
+            tipo="conversar"
+            icone={<MessageCircle size={18} color="var(--accent-blue)" />}
+            titulo="Conversar"
+            descricao="Bater um papo amigável sobre o dia"
+          />
 
-          <button
-            className="option-btn"
-            onClick={() => { onInteragir('passar_tempo'); onClose(); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Clock size={18} color="var(--primary)" />
-              <div>
-                <strong>Passar Tempo Juntos</strong>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Fazer um passeio ou almoço especial</div>
-              </div>
-            </div>
-          </button>
+          <AcaoFamiliar
+            tipo="passar_tempo"
+            icone={<Clock size={18} color="var(--primary)" />}
+            titulo="Passar Tempo Juntos"
+            descricao="Fazer um passeio ou almoço especial"
+          />
 
           {/* Dar Presente */}
           {!showPresenteMenu ? (
@@ -123,37 +149,27 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
           )}
 
           {/* Pedir Dinheiro (Pais) */}
-          {(membro.tipo === 'pai' || membro.tipo === 'mae') && (
-            <button
-              className="option-btn"
-              onClick={() => { onInteragir('pedir_dinheiro'); onClose(); }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <DollarSign size={18} color="var(--accent-amber)" />
-                <div>
-                  <strong>Pedir Dinheiro</strong>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Pedir uma ajuda financeira para suas despesas</div>
-                </div>
-              </div>
-            </button>
+          {(membro.tipo === 'pai' || membro.tipo === 'mae') && idadeJogador >= 6 && (
+            <AcaoFamiliar
+              tipo="pedir_dinheiro"
+              icone={<DollarSign size={18} color="var(--accent-amber)" />}
+              titulo="Pedir Dinheiro"
+              descricao="Pedir uma ajuda financeira para suas despesas"
+            />
           )}
 
           {/* Pedir Conselho */}
-          <button
-            className="option-btn"
-            onClick={() => { onInteragir('pedir_conselho'); onClose(); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <HelpCircle size={18} color="var(--accent-purple)" />
-              <div>
-                <strong>Pedir Conselho de Vida</strong>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Ouvir a sabedoria e experiência do familiar</div>
-              </div>
-            </div>
-          </button>
+          {idadeJogador >= 6 && (
+            <AcaoFamiliar
+              tipo="pedir_conselho"
+              icone={<HelpCircle size={18} color="var(--accent-purple)" />}
+              titulo="Pedir Conselho de Vida"
+              descricao="Ouvir a sabedoria e experiência do familiar"
+            />
+          )}
 
-          {/* Ações Especiais de Parceiro Romântico */}
-          {isParceiro && (
+          {/* Ações Especiais de Parceiro Romântico (adultos) */}
+          {isParceiro && idadeJogador >= 18 && (
             <>
               {!isCasado && onPedirCasamento && (
                 <button
@@ -170,7 +186,7 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
                 </button>
               )}
 
-              {onTerFilho && idadeJogador >= 18 && (
+              {onTerFilho && (
                 <button
                   className="option-btn"
                   onClick={() => { onTerFilho(); onClose(); }}
@@ -204,18 +220,13 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
           )}
 
           {/* Discutir */}
-          <button
-            className="option-btn"
-            onClick={() => { onInteragir('discutir'); onClose(); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MessageSquareWarning size={18} color="var(--accent-rose)" />
-              <div>
-                <strong>Discutir</strong>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Iniciar uma discussão acalorada</div>
-              </div>
-            </div>
-          </button>
+          <AcaoFamiliar
+            tipo="discutir"
+            icone={<MessageSquareWarning size={18} color="var(--accent-rose)" />}
+            titulo="Discutir"
+            descricao="Iniciar uma discussão acalorada"
+            corTitulo="var(--accent-rose)"
+          />
         </div>
       </div>
     </div>

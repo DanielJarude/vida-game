@@ -211,7 +211,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         texto: 'Tentar atravessar a enxurrada na pressa',
         descricaoResultado: 'Você chegou encharcado até os ossos e pegou um resfriado forte.',
         consequencias: {
-          stats: { saude: -15, felicidade: -12, energia: -20 },
+          stats: { saude: -15, felicidade: -12 },
           hiddenStats: { estresse: 15 }
         }
       }

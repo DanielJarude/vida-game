@@ -1,5 +1,7 @@
-import { Character, EducationState, LifeLogEntry } from '../types';
+import { Character, EducationLevel, EducationState, LifeLogEntry, PosturaEscolar } from '../types';
 import { CourseOption } from '../data/coursesData';
+import { formatarDinheiro, getEducationLabel } from '../utils/formatters';
+import { IDADE_MINIMA_FACULDADE, nivelEscolaridade } from './availabilitySystem';
 import { clamp, generateId, randomInt } from '../utils/random';
 
 export function criarEducacaoInicial(): EducationState {
@@ -7,6 +9,7 @@ export function criarEducacaoInicial(): EducationState {
     nivelAtual: 'nenhuma',
     emCurso: false,
     desempenho: 70,
+    posturaAno: null,
     cursosConcluidos: []
   };
 }
@@ -40,7 +43,7 @@ export function processarAnoEducacao(
       idade,
       ano: anoAtual,
       categoria: 'escola',
-      texto: 'Você ingressou no 1º ano do Ensino Fundamental. Uma nova jornada de aprendizado começou!',
+      texto: 'Você ingressou no 1º ano do Ensino Fundamental.',
       tipo: 'importante'
     });
   }
@@ -49,7 +52,9 @@ export function processarAnoEducacao(
   if (edu.emCurso && (edu.tipoCurso === 'fundamental' || edu.tipoCurso === 'medio')) {
     const notaBase = (char.stats.inteligencia * 0.5) + (char.hiddenStats.disciplina * 0.5);
     const variacao = randomInt(-5, 5);
-    edu.desempenho = clamp(Math.round(notaBase + variacao), 30, 100);
+    // A postura escolhida para o ano influi diretamente nas notas
+    const ajustePostura = edu.posturaAno === 'estudar' ? 12 : edu.posturaAno === 'matar_aula' ? -14 : 0;
+    edu.desempenho = clamp(Math.round(notaBase + variacao + ajustePostura), 10, 100);
 
     // Conclusão do Fundamental aos 14 anos
     if (idade === 14 && edu.tipoCurso === 'fundamental') {
@@ -67,7 +72,7 @@ export function processarAnoEducacao(
         idade,
         ano: anoAtual,
         categoria: 'escola',
-        texto: 'Você concluiu o Ensino Fundamental com sucesso e ingressou no Ensino Médio!',
+        texto: 'Você concluiu o Ensino Fundamental e ingressou no Ensino Médio.',
         tipo: 'positivo'
       });
     }
@@ -88,7 +93,7 @@ export function processarAnoEducacao(
         idade,
         ano: anoAtual,
         categoria: 'escola',
-        texto: 'PARABÉNS! Você se formou no Ensino Médio e recebeu seu tão esperado diploma!',
+        texto: 'Você se formou no Ensino Médio e recebeu seu diploma.',
         tipo: 'importante'
       });
     }
@@ -142,6 +147,51 @@ export function processarAnoEducacao(
     }
   }
 
+  // Resolução da postura escolar do ano (efeitos aplicados uma única vez)
+  if (edu.emCurso && edu.posturaAno) {
+    switch (edu.posturaAno) {
+      case 'estudar':
+        char.stats.inteligencia = clamp(char.stats.inteligencia + 3, 0, 100);
+        char.hiddenStats.disciplina = clamp(char.hiddenStats.disciplina + 4, 0, 100);
+        logs.push({
+          id: generateId('log'),
+          idade,
+          ano: anoAtual,
+          categoria: 'escola',
+          texto: 'Você dedicou o ano aos estudos: suas notas subiram e a disciplina ficou mais firme.',
+          tipo: 'positivo'
+        });
+        break;
+      case 'matar_aula':
+        char.stats.felicidade = clamp(char.stats.felicidade + 8, 0, 100);
+        char.hiddenStats.disciplina = clamp(char.hiddenStats.disciplina - 8, 0, 100);
+        char.hiddenStats.sociabilidade = clamp(char.hiddenStats.sociabilidade + 5, 0, 100);
+        logs.push({
+          id: generateId('log'),
+          idade,
+          ano: anoAtual,
+          categoria: 'escola',
+          texto: 'Você matou aula com frequência este ano. Foi divertido, mas as notas caíram.',
+          tipo: 'negativo'
+        });
+        break;
+      case 'socializar':
+        char.stats.felicidade = clamp(char.stats.felicidade + 12, 0, 100);
+        char.hiddenStats.sociabilidade = clamp(char.hiddenStats.sociabilidade + 10, 0, 100);
+        char.hiddenStats.reputacao = clamp(char.hiddenStats.reputacao + 5, 0, 100);
+        logs.push({
+          id: generateId('log'),
+          idade,
+          ano: anoAtual,
+          categoria: 'escola',
+          texto: 'Você aproveitou o ano para fortalecer as amizades da escola.',
+          tipo: 'positivo'
+        });
+        break;
+    }
+    edu.posturaAno = null;
+  }
+
   return {
     educacaoAtualizada: edu,
     personagemAtualizado: char,
@@ -154,6 +204,7 @@ export function ingressarCurso(
   curso: CourseOption,
   tipoInstituicao: 'publica' | 'privada',
   personagem: Character,
+  educacao: EducationState,
   anoAtual: number
 ): {
   sucesso: boolean;
@@ -161,6 +212,21 @@ export function ingressarCurso(
   educacaoAtualizada?: Partial<EducationState>;
   novoLog?: LifeLogEntry;
 } {
+  // Revalidação da política central no motor
+  if (educacao.emCurso) {
+    return { sucesso: false, mensagem: 'Você já está matriculado em um curso.' };
+  }
+  if (personagem.idade < IDADE_MINIMA_FACULDADE) {
+    return { sucesso: false, mensagem: `O vestibular e a faculdade abrem aos ${IDADE_MINIMA_FACULDADE} anos.` };
+  }
+  const nivelNecessario: EducationLevel = curso.tipo === 'pos' ? 'superior_completo' : 'medio_completo';
+  if (nivelEscolaridade(educacao.nivelAtual) < nivelEscolaridade(nivelNecessario)) {
+    return {
+      sucesso: false,
+      mensagem: `Você precisa concluir ${getEducationLabel(nivelNecessario)} para este curso.`
+    };
+  }
+
   let notaEnem = Math.round(
     personagem.stats.inteligencia * 7.5 +
     personagem.hiddenStats.disciplina * 2.0 +
@@ -185,14 +251,15 @@ export function ingressarCurso(
           totalSemestres: curso.duracaoSemestres,
           desempenho: 80,
           mensalidade: 0,
-          anoIngresso: anoAtual
+          anoIngresso: anoAtual,
+          posturaAno: null
         },
         novoLog: {
           id: generateId('log'),
           idade: personagem.idade,
           ano: anoAtual,
           categoria: 'escola',
-          texto: `Você foi APROVADO(A) no vestibular da ${instNome} em ${curso.nome}!`,
+          texto: `Você foi aprovado(a) no vestibular da ${instNome} em ${curso.nome}!`,
           tipo: 'importante'
         }
       };
@@ -206,7 +273,7 @@ export function ingressarCurso(
     if (personagem.stats.inteligencia >= curso.inteligenciaMinima) {
       return {
         sucesso: true,
-        mensagem: `Matrícula realizada com sucesso na Universidade Particular em ${curso.nome}! Mensalidade: R$ ${curso.mensalidadePrivada}/mês.`,
+        mensagem: `Matrícula realizada com sucesso na Universidade Particular em ${curso.nome}! Mensalidade: ${formatarDinheiro(curso.mensalidadePrivada)}/mês.`,
         educacaoAtualizada: {
           emCurso: true,
           tipoCurso: curso.tipo,
@@ -217,7 +284,8 @@ export function ingressarCurso(
           totalSemestres: curso.duracaoSemestres,
           desempenho: 75,
           mensalidade: curso.mensalidadePrivada,
-          anoIngresso: anoAtual
+          anoIngresso: anoAtual,
+          posturaAno: null
         },
         novoLog: {
           id: generateId('log'),
@@ -237,48 +305,35 @@ export function ingressarCurso(
   }
 }
 
-export function acaoEscola(
-  acao: 'estudar' | 'matar_aula' | 'socializar',
-  personagem: Character,
+/**
+ * Define a postura escolar do ano corrente (compromisso anual).
+ * Os efeitos são processados na passagem do ano; só é permitido escolher
+ * uma vez por ano.
+ */
+export function definirPosturaEscolar(
+  acao: PosturaEscolar,
   educacao: EducationState
 ): {
-  personagemAtualizado: Character;
-  educacaoAtualizada: EducationState;
+  sucesso: boolean;
   mensagem: string;
+  educacaoAtualizada?: EducationState;
 } {
-  const char = { ...personagem };
-  const edu = { ...educacao };
-  let msg = '';
-
-  switch (acao) {
-    case 'estudar':
-      edu.desempenho = clamp(edu.desempenho + randomInt(6, 12), 0, 100);
-      char.stats.inteligencia = clamp(char.stats.inteligencia + 3, 0, 100);
-      char.stats.energia = clamp(char.stats.energia - 15, 0, 100);
-      char.hiddenStats.disciplina = clamp(char.hiddenStats.disciplina + 4, 0, 100);
-      msg = 'Você dedicou horas de estudo na biblioteca e tirou dúvidas com os professores. Suas notas subiram!';
-      break;
-
-    case 'matar_aula':
-      edu.desempenho = clamp(edu.desempenho - randomInt(8, 16), 0, 100);
-      char.stats.felicidade = clamp(char.stats.felicidade + 8, 0, 100);
-      char.hiddenStats.disciplina = clamp(char.hiddenStats.disciplina - 8, 0, 100);
-      char.hiddenStats.sociabilidade = clamp(char.hiddenStats.sociabilidade + 5, 0, 100);
-      msg = 'Você matou aula para ficar passeando no pátio com os amigos. Foi divertido, mas suas notas caíram.';
-      break;
-
-    case 'socializar':
-      char.stats.felicidade = clamp(char.stats.felicidade + 12, 0, 100);
-      char.hiddenStats.sociabilidade = clamp(char.hiddenStats.sociabilidade + 10, 0, 100);
-      char.hiddenStats.reputacao = clamp(char.hiddenStats.reputacao + 5, 0, 100);
-      char.stats.energia = clamp(char.stats.energia - 10, 0, 100);
-      msg = 'Você conversou com a turma toda, contou piadas e estreitou laços de amizade no intervalo.';
-      break;
+  if (!educacao.emCurso) {
+    return { sucesso: false, mensagem: 'Você não está matriculado em nenhum curso.' };
+  }
+  if (educacao.posturaAno) {
+    return { sucesso: false, mensagem: 'Você já definiu sua postura para este ano.' };
   }
 
+  const mensagens: Record<PosturaEscolar, string> = {
+    estudar: 'Você vai dedicar este ano aos estudos. Os efeitos aparecem na virada do ano.',
+    socializar: 'Você vai aproveitar este ano para conviver com os colegas. Os efeitos aparecem na virada do ano.',
+    matar_aula: 'Você decidiu matar aula sempre que puder este ano. Os efeitos aparecem na virada do ano.'
+  };
+
   return {
-    personagemAtualizado: char,
-    educacaoAtualizada: edu,
-    mensagem: msg
+    sucesso: true,
+    mensagem: mensagens[acao],
+    educacaoAtualizada: { ...educacao, posturaAno: acao }
   };
 }

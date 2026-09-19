@@ -1,13 +1,32 @@
+// Fonte de aleatoriedade controlável (permite testes determinísticos)
+type FonteAleatoria = () => number;
+
+let fonteAleatoria: FonteAleatoria = Math.random;
+
+/** Define uma fonte determinística (testes). Passe null para voltar ao Math.random. */
+export function definirFonteAleatoria(fonte: FonteAleatoria | null): void {
+  fonteAleatoria = fonte ?? Math.random;
+}
+
+export function resetarFonteAleatoria(): void {
+  fonteAleatoria = Math.random;
+}
+
+/** Número uniforme entre 0 e 1 usando a fonte configurada. */
+export function valorAleatorio(): number {
+  return fonteAleatoria();
+}
+
 export function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(fonteAleatoria() * (max - min + 1)) + min;
 }
 
 export function randomChoice<T>(items: T[]): T {
-  return items[Math.floor(Math.random() * items.length)];
+  return items[Math.floor(fonteAleatoria() * items.length)];
 }
 
 export function rollChance(percentage: number): boolean {
-  return Math.random() * 100 < percentage;
+  return fonteAleatoria() * 100 < percentage;
 }
 
 export function clamp(value: number, min: number = 0, max: number = 100): number {

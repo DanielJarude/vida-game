@@ -1,6 +1,12 @@
 import { AssetShopItem, OPCOES_INVESTIMENTO } from '../data/assetsData';
 import { Character, EconomyState, FamilyMember, LifeLogEntry, Property } from '../types';
-import { generateId, randomInt } from '../utils/random';
+import {
+  IDADE_MINIMA_COMPRA_BENS,
+  IDADE_MINIMA_INVESTIMENTOS,
+  IDADE_MINIMA_LOTERIA,
+  IDADE_MINIMA_NEGOCIAR_BENS
+} from './availabilitySystem';
+import { generateId, randomInt, valorAleatorio } from '../utils/random';
 
 export function criarEconomiaInicial(classeSocial: string): EconomyState {
   let saldoInicial = 0;
@@ -83,7 +89,7 @@ export function processarAnoEconomia(
   let rendimentoTotal = 0;
   for (const inv of eco.investimentos) {
     const info = OPCOES_INVESTIMENTO.find(o => o.id === inv.tipo);
-    const taxa = info ? (info.rendimentoMin + Math.random() * (info.rendimentoMax - info.rendimentoMin)) : 0.08;
+    const taxa = info ? (info.rendimentoMin + valorAleatorio() * (info.rendimentoMax - info.rendimentoMin)) : 0.08;
     const rendimento = Math.round(inv.saldo * taxa);
     inv.saldo += rendimento;
     rendimentoTotal += rendimento;
@@ -123,6 +129,12 @@ export function comprarBem(
   personagemAtualizado?: Character;
   novoLog?: LifeLogEntry;
 } {
+  if (personagem.idade < IDADE_MINIMA_COMPRA_BENS) {
+    return {
+      sucesso: false,
+      mensagem: 'Você precisa ser maior de idade para comprar imóveis e veículos.'
+    };
+  }
   if (economia.dinheiro < item.preco) {
     return {
       sucesso: false,
@@ -187,6 +199,9 @@ export function venderBem(
   if (!prop) {
     return { sucesso: false, mensagem: 'Item não encontrado em seu patrimônio.' };
   }
+  if (personagem.idade < IDADE_MINIMA_NEGOCIAR_BENS) {
+    return { sucesso: false, mensagem: 'Você precisa ser maior de idade para negociar bens.' };
+  }
 
   const valorVenda = prop.valorAtual;
   const novaEco: EconomyState = {
@@ -213,12 +228,16 @@ export function venderBem(
 export function aplicarInvestimento(
   tipoId: 'poupanca' | 'tesouro_selic' | 'fundo_imobiliario' | 'acoes_b3' | 'cripto',
   valor: number,
-  economia: EconomyState
+  economia: EconomyState,
+  personagem: Character
 ): {
   sucesso: boolean;
   mensagem: string;
   economiaAtualizada?: EconomyState;
 } {
+  if (personagem.idade < IDADE_MINIMA_INVESTIMENTOS) {
+    return { sucesso: false, mensagem: 'Você precisa ser maior de idade para investir.' };
+  }
   if (valor <= 0) return { sucesso: false, mensagem: 'Informe um valor válido.' };
   if (economia.dinheiro < valor) return { sucesso: false, mensagem: 'Saldo insuficiente.' };
 
@@ -255,12 +274,16 @@ export function aplicarInvestimento(
 export function resgatarInvestimento(
   tipoId: string,
   valor: number,
-  economia: EconomyState
+  economia: EconomyState,
+  personagem: Character
 ): {
   sucesso: boolean;
   mensagem: string;
   economiaAtualizada?: EconomyState;
 } {
+  if (personagem.idade < IDADE_MINIMA_INVESTIMENTOS) {
+    return { sucesso: false, mensagem: 'Você precisa ser maior de idade para resgatar investimentos.' };
+  }
   const inv = economia.investimentos.find(i => i.tipo === tipoId);
   if (!inv || inv.saldo < valor) {
     return { sucesso: false, mensagem: 'Saldo insuficiente no investimento para esse resgate.' };
@@ -299,6 +322,14 @@ export function jogarMegaSena(
   personagemAtualizado?: Character;
   novoLog?: LifeLogEntry;
 } {
+  if (personagem.idade < IDADE_MINIMA_LOTERIA) {
+    return {
+      sucesso: false,
+      ganhou: false,
+      premio: 0,
+      mensagem: 'Você precisa ser maior de idade para apostar na loteria.'
+    };
+  }
   const custoBilhete = 15;
   if (economia.dinheiro < custoBilhete) {
     return {
@@ -309,7 +340,7 @@ export function jogarMegaSena(
     };
   }
 
-  const rolagem = Math.random() * 100;
+  const rolagem = valorAleatorio() * 100;
   let ganhou = false;
   let premio = 0;
   let msg = 'Você conferiu o bilhete na lotérica... não foi dessa vez. Quem sabe no próximo concurso!';

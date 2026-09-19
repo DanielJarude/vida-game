@@ -1,13 +1,15 @@
-import { EducationLevel, LifeStage, SocialClass } from '../types';
+import { EducationLevel, LifeLogCategory, LifeStage, RelationType, SocialClass } from '../types';
+
+// Formatador único reutilizado (criar Intl a cada chamada custa ~16× mais)
+const FORMATADOR_BRL = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 0
+});
 
 export function formatarDinheiro(valor: number): string {
   const isNegative = valor < 0;
-  const absVal = Math.abs(valor);
-  const formatted = absVal.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0
-  });
+  const formatted = FORMATADOR_BRL.format(Math.abs(valor));
   return isNegative ? `-${formatted}` : formatted;
 }
 
@@ -73,4 +75,87 @@ export function getStatClass(value: number): string {
   if (value >= 50) return 'stat-med-high';
   if (value >= 25) return 'stat-med-low';
   return 'stat-low';
+}
+
+// Rótulos em pt-BR exibidos ao jogador (nunca usar identificadores crus na interface)
+
+export function getRotuloCategoria(categoria: LifeLogCategory): string {
+  switch (categoria) {
+    case 'geral': return 'Geral';
+    case 'familia': return 'Família';
+    case 'escola': return 'Escola';
+    case 'carreira': return 'Carreira';
+    case 'amor': return 'Amor';
+    case 'saude': return 'Saúde';
+    case 'financas': return 'Finanças';
+    case 'evento': return 'Evento';
+    case 'morte': return 'Morte';
+    case 'cotidiano': return 'Cotidiano';
+  }
+}
+
+export function getRotuloParentesco(tipo: RelationType): string {
+  switch (tipo) {
+    case 'pai': return 'Pai';
+    case 'mae': return 'Mãe';
+    case 'irmao': return 'Irmão';
+    case 'irma': return 'Irmã';
+    case 'namorado': return 'Namorado';
+    case 'namorada': return 'Namorada';
+    case 'noivo': return 'Noivo';
+    case 'noiva': return 'Noiva';
+    case 'esposo': return 'Esposo';
+    case 'esposa': return 'Esposa';
+    case 'filho': return 'Filho';
+    case 'filha': return 'Filha';
+    case 'amigo': return 'Amigo';
+    case 'amiga': return 'Amiga';
+    case 'pet': return 'Pet';
+  }
+}
+
+/** Tratamento com artigo/possessivo para frases narrativas: "seu pai", "sua mãe"... */
+export function getTratamentoParentesco(tipo: RelationType): string {
+  switch (tipo) {
+    case 'pai': return 'seu pai';
+    case 'mae': return 'sua mãe';
+    case 'irmao': return 'seu irmão';
+    case 'irma': return 'sua irmã';
+    case 'namorado': return 'seu namorado';
+    case 'namorada': return 'sua namorada';
+    case 'noivo': return 'seu noivo';
+    case 'noiva': return 'sua noiva';
+    case 'esposo': return 'seu esposo';
+    case 'esposa': return 'sua esposa';
+    case 'filho': return 'seu filho';
+    case 'filha': return 'sua filha';
+    case 'amigo': return 'seu amigo';
+    case 'amiga': return 'sua amiga';
+    case 'pet': return 'seu pet';
+  }
+}
+
+export function getRotuloAtributo(atributo: string): string {
+  switch (atributo) {
+    case 'felicidade': return 'Felicidade';
+    case 'saude': return 'Saúde';
+    case 'inteligencia': return 'Inteligência';
+    case 'aparencia': return 'Aparência';
+    case 'disciplina': return 'Disciplina';
+    case 'sociabilidade': return 'Sociabilidade';
+    case 'empatia': return 'Empatia';
+    case 'ambicao': return 'Ambição';
+    case 'estresse': return 'Estresse';
+    case 'reputacao': return 'Reputação';
+    case 'condicionamentoFisico': return 'Condicionamento Físico';
+    default: return atributo;
+  }
+}
+
+export function getRotuloPosturaEscolar(postura: 'estudar' | 'matar_aula' | 'socializar'): string {
+  switch (postura) {
+    case 'estudar': return 'Estudar firme';
+    case 'matar_aula': return 'Matar aula';
+    case 'socializar': return 'Socializar';
+  }
 }

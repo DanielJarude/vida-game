@@ -15,7 +15,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Ir direto ao posto/UPA, tomar soro na veia e repousar totalmente',
         descricaoResultado: 'Com muito repouso, água de coco e cuidados médicos, você se recuperou completamente em duas semanas!',
         consequencias: {
-          stats: { saude: -10, felicidade: -5, energia: -15 },
+          stats: { saude: -10, felicidade: -5 },
           hiddenStats: { disciplina: 10 }
         }
       },
@@ -24,7 +24,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Tentar trabalhar mesmo passando mal com febre',
         descricaoResultado: 'Seu quadro se agravou e você precisou de vários dias de atestado médico.',
         consequencias: {
-          stats: { saude: -25, felicidade: -15, energia: -30 },
+          stats: { saude: -25, felicidade: -15 },
           hiddenStats: { estresse: 20 }
         }
       }
@@ -74,7 +74,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Calçar o tênis, correr 5 km e tomar água de coco gelada na saída',
         descricaoResultado: 'A endorfina tomou conta do seu corpo e você se sentiu com disposição infinita!',
         consequencias: {
-          stats: { saude: 12, felicidade: 18, energia: 10 },
+          stats: { saude: 12, felicidade: 18 },
           dinheiro: -15,
           hiddenStats: { condicionamentoFisico: 15, estresse: -20 }
         }

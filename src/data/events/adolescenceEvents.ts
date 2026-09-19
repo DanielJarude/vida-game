@@ -118,7 +118,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         texto: 'Fazer simulados todo fim de semana e focar na redação nota 1000',
         descricaoResultado: 'Seu empenho foi gigantesco! Você dominou o modelo de redação e os conteúdos do ENEM.',
         consequencias: {
-          stats: { inteligencia: 20, felicidade: -5, energia: -15 },
+          stats: { inteligencia: 20, felicidade: -5 },
           hiddenStats: { disciplina: 25, ambicao: 20, estresse: 15 },
           adicionarFlag: 'focou_enem'
         }

@@ -5,6 +5,11 @@ import { Character, EconomyState } from '../../types';
 import { calcularPatrimonioLiquido } from '../../systems/economySystem';
 import { formatarDinheiro } from '../../utils/formatters';
 import {
+  ContextoAcao,
+  getActionAvailability,
+  IDADE_MINIMA_COMPRA_BENS
+} from '../../systems/availabilitySystem';
+import {
   Building,
   Car,
   TrendingUp,
@@ -15,6 +20,7 @@ import {
 interface EconomyTabProps {
   personagem: Character;
   economia: EconomyState;
+  ctx: ContextoAcao;
   onComprarBem: (itemId: string) => void;
   onVenderBem: (propId: string) => void;
   onInvestir: (tipoId: 'poupanca' | 'tesouro_selic' | 'fundo_imobiliario' | 'acoes_b3' | 'cripto', valor: number) => void;
@@ -25,6 +31,7 @@ interface EconomyTabProps {
 export const EconomyTab: React.FC<EconomyTabProps> = ({
   personagem,
   economia,
+  ctx,
   onComprarBem,
   onVenderBem,
   onInvestir,
@@ -35,15 +42,39 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
   const [selectedInvTipo, setSelectedInvTipo] = useState<'poupanca' | 'tesouro_selic' | 'fundo_imobiliario' | 'acoes_b3' | 'cripto'>('tesouro_selic');
   const [investValor, setInvestValor] = useState<string>('1000');
 
+  const idade = personagem.idade;
   const patrimonioTotal = calcularPatrimonioLiquido(economia);
   const imoveis = economia.propriedades.filter(p => p.tipo === 'imovel');
   const veiculos = economia.propriedades.filter(p => p.tipo === 'veiculo');
+
+  const mostrarCompras = idade >= IDADE_MINIMA_COMPRA_BENS - 1;
+  const dispLoteria = getActionAvailability(ctx, 'jogar_loteria');
+  const podeLoteria = dispLoteria.kind === 'disponivel';
+  const motivoLoteria = dispLoteria.kind === 'bloqueado' ? dispLoteria.motivo : undefined;
 
   const handleAplicar = () => {
     const val = parseFloat(investValor);
     if (!isNaN(val) && val > 0) {
       onInvestir(selectedInvTipo, val);
     }
+  };
+
+  const renderBotaoVender = (propId: string) => {
+    const disp = getActionAvailability(ctx, 'vender_bem', { propId });
+    const pode = disp.kind === 'disponivel';
+    const motivo = disp.kind === 'bloqueado' ? disp.motivo : undefined;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+        <button
+          onClick={() => onVenderBem(propId)}
+          disabled={!pode}
+          className={pode ? 'btn-acao-perigo' : 'btn-acao-desabilitada'}
+        >
+          Vender
+        </button>
+        {motivo && <span className="acao-bloqueada-motivo">{motivo}</span>}
+      </div>
+    );
   };
 
   return (
@@ -65,48 +96,37 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
           </div>
         </div>
 
-        {/* Botão para Comprar Bens */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-          <button
-            onClick={() => setShowShopModal(true)}
-            style={{
-              flex: 1,
-              background: 'var(--primary)',
-              color: '#022c22',
-              padding: '10px',
-              borderRadius: 'var(--radius-md)',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px'
-            }}
-          >
-            <ShoppingBag size={18} />
-            <span>Comprar Imóveis & Carros</span>
-          </button>
+        {/* Botões de compra e loteria (política central) */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
+          {mostrarCompras && (
+            <button
+              onClick={() => setShowShopModal(true)}
+              disabled={idade < IDADE_MINIMA_COMPRA_BENS}
+              className={idade >= IDADE_MINIMA_COMPRA_BENS ? 'btn-acao-primaria' : 'btn-acao-desabilitada'}
+              style={{ flex: '1 1 200px' }}
+              title={idade < IDADE_MINIMA_COMPRA_BENS ? 'Compras de imóveis e veículos abrem aos 18 anos' : undefined}
+            >
+              <ShoppingBag size={18} />
+              <span>{idade >= IDADE_MINIMA_COMPRA_BENS ? 'Comprar Imóveis & Carros' : 'Compras aos 18 anos'}</span>
+            </button>
+          )}
 
-          {personagem.idade >= 18 && (
+          {idade >= 18 && (
             <button
               onClick={onJogarLoteria}
-              style={{
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: '#000',
-                padding: '10px 16px',
-                borderRadius: 'var(--radius-md)',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
+              disabled={!podeLoteria}
+              className={podeLoteria ? 'btn-acao-loteria' : 'btn-acao-desabilitada'}
+              style={{ flex: '1 1 200px' }}
+              title={motivoLoteria}
             >
               <Ticket size={18} />
               <span>Apostar na Mega-Sena (R$ 15)</span>
             </button>
           )}
         </div>
+        {idade >= 18 && motivoLoteria && (
+          <div className="acao-bloqueada-motivo" style={{ marginTop: '8px' }}>{motivoLoteria}</div>
+        )}
       </div>
 
       {/* Investimentos do Mercado Financeiro */}
@@ -130,7 +150,8 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
                   borderRadius: 'var(--radius-md)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  gap: '10px'
                 }}
               >
                 <div>
@@ -145,15 +166,7 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
 
                 <button
                   onClick={() => onResgatarInvestimento(inv.tipo, inv.saldo)}
-                  style={{
-                    background: 'var(--bg-card-hover)',
-                    border: '1px solid var(--border-light)',
-                    color: 'var(--text-primary)',
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600
-                  }}
+                  className="btn-acao-secundaria"
                 >
                   Resgatar Tudo
                 </button>
@@ -167,7 +180,7 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
         )}
 
         {/* Formulário de Aplicação */}
-        {personagem.idade >= 18 && (
+        {idade >= 18 && (
           <div style={{ background: 'var(--bg-card-subtle)', padding: '14px', borderRadius: 'var(--radius-md)' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>
               Fazer Nova Aplicação Financeira:
@@ -175,7 +188,8 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <select
                 value={selectedInvTipo}
-                onChange={e => setSelectedInvTipo(e.target.value as unknown as typeof selectedInvTipo)}
+                onChange={e => setSelectedInvTipo(e.target.value as typeof selectedInvTipo)}
+                aria-label="Tipo de investimento"
                 style={{
                   padding: '8px',
                   borderRadius: 'var(--radius-sm)',
@@ -197,6 +211,7 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
                   placeholder="Valor em R$"
                   value={investValor}
                   onChange={e => setInvestValor(e.target.value)}
+                  aria-label="Valor a aplicar"
                   style={{
                     flex: 1,
                     padding: '8px 12px',
@@ -205,17 +220,7 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
                     border: '1px solid var(--border-card)'
                   }}
                 />
-                <button
-                  onClick={handleAplicar}
-                  style={{
-                    background: 'var(--primary)',
-                    color: '#022c22',
-                    padding: '8px 18px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem'
-                  }}
-                >
+                <button onClick={handleAplicar} className="btn-acao-primaria">
                   Aplicar
                 </button>
               </div>
@@ -243,7 +248,8 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
                   borderRadius: 'var(--radius-md)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  gap: '10px'
                 }}
               >
                 <div>
@@ -255,20 +261,7 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
                     Valor de Mercado: {formatarDinheiro(prop.valorAtual)}
                   </div>
                 </div>
-                <button
-                  onClick={() => onVenderBem(prop.id)}
-                  style={{
-                    background: 'var(--bg-card-hover)',
-                    border: '1px solid var(--accent-rose)',
-                    color: 'var(--accent-rose)',
-                    padding: '6px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600
-                  }}
-                >
-                  Vender
-                </button>
+                {renderBotaoVender(prop.id)}
               </div>
             ))}
           </div>
@@ -294,7 +287,8 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
                   borderRadius: 'var(--radius-md)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  gap: '10px'
                 }}
               >
                 <div>
@@ -306,20 +300,7 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
                     Valor Atual: {formatarDinheiro(vec.valorAtual)}
                   </div>
                 </div>
-                <button
-                  onClick={() => onVenderBem(vec.id)}
-                  style={{
-                    background: 'var(--bg-card-hover)',
-                    border: '1px solid var(--accent-rose)',
-                    color: 'var(--accent-rose)',
-                    padding: '6px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600
-                  }}
-                >
-                  Vender
-                </button>
+                {renderBotaoVender(vec.id)}
               </div>
             ))}
           </div>

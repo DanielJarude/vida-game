@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useGame } from './hooks/useGame';
 import { Header } from './components/layout/Header';
 import { StatsSidebar } from './components/layout/StatsSidebar';
@@ -13,6 +13,7 @@ import { HomeScreen } from './components/screens/HomeScreen';
 import { CharacterCreationScreen } from './components/screens/CharacterCreationScreen';
 import { DeathScreen } from './components/screens/DeathScreen';
 import { StatsScreen } from './components/screens/StatsScreen';
+import { descreverSituacaoAtual, getAbasDisponiveis } from './systems/availabilitySystem';
 import {
   Calendar,
   Users,
@@ -43,6 +44,7 @@ export function App() {
     isDead,
     resumoMorte,
     feedbackMensagem,
+    construirContexto,
 
     // Ações
     criarVida,
@@ -121,11 +123,30 @@ export function App() {
     return null;
   }
 
+  // Contexto e política central: abas e ações derivadas da fase da vida
+  const ctx = construirContexto();
+  if (!ctx) return null;
+
+  const abasVisiveis = getAbasDisponiveis(ctx);
+  const abaAtiva = abasVisiveis.includes(activeTab) ? activeTab : 'timeline';
+  const situacaoAtual = descreverSituacaoAtual(ctx);
+
+  const rotulosAbas: Record<typeof abaAtiva, { icone: ReactNode; titulo: string }> = {
+    timeline: { icone: <Calendar size={16} />, titulo: 'Linha da Vida' },
+    familia: { icone: <Users size={16} />, titulo: 'Relacionamentos' },
+    carreira: { icone: <Briefcase size={16} />, titulo: 'Estudos & Carreira' },
+    financas: { icone: <Wallet size={16} />, titulo: 'Finanças' },
+    atividades: { icone: <Activity size={16} />, titulo: 'Atividades' }
+  };
+
   return (
     <div className="app-container">
       {/* Toast de Feedback */}
       {feedbackMensagem && (
-        <div className={`feedback-toast toast-${feedbackMensagem.tipo}`}>
+        <div
+          className={`feedback-toast toast-${feedbackMensagem.tipo}`}
+          role="status"
+        >
           {feedbackMensagem.tipo === 'sucesso' && <CheckCircle size={16} />}
           {feedbackMensagem.tipo === 'erro' && <AlertCircle size={16} />}
           {feedbackMensagem.tipo === 'info' && <Info size={16} />}
@@ -133,10 +154,11 @@ export function App() {
         </div>
       )}
 
-      {/* Header Superior */}
+      {/* Header Superior com identidade (nome, idade, local, situação, saldo) */}
       <Header
         personagem={personagem}
         economia={economia}
+        situacao={situacaoAtual}
         somLigado={somLigado}
         onToggleSom={toggleSom}
         onGoHome={() => setScreen('home')}
@@ -154,47 +176,22 @@ export function App() {
 
         {/* Área Central com Abas */}
         <main className="main-content-area">
-          {/* Navegação por Abas */}
-          <nav className="tabs-nav">
-            <button
-              className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`}
-              onClick={() => setActiveTab('timeline')}
-            >
-              <Calendar size={16} />
-              <span>Linha da Vida</span>
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'familia' ? 'active' : ''}`}
-              onClick={() => setActiveTab('familia')}
-            >
-              <Users size={16} />
-              <span>Relacionamentos</span>
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'carreira' ? 'active' : ''}`}
-              onClick={() => setActiveTab('carreira')}
-            >
-              <Briefcase size={16} />
-              <span>Carreira & Estudo</span>
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'financas' ? 'active' : ''}`}
-              onClick={() => setActiveTab('financas')}
-            >
-              <Wallet size={16} />
-              <span>Finanças</span>
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'atividades' ? 'active' : ''}`}
-              onClick={() => setActiveTab('atividades')}
-            >
-              <Activity size={16} />
-              <span>Atividades</span>
-            </button>
+          {/* Navegação por Abas (somente as pertinentes à fase da vida) */}
+          <nav className="tabs-nav" aria-label="Seções do jogo">
+            {abasVisiveis.map(aba => (
+              <button
+                key={aba}
+                className={`tab-btn ${abaAtiva === aba ? 'active' : ''}`}
+                onClick={() => setActiveTab(aba)}
+              >
+                {rotulosAbas[aba].icone}
+                <span>{rotulosAbas[aba].titulo}</span>
+              </button>
+            ))}
           </nav>
 
           {/* Conteúdo da Aba Ativa */}
-          {activeTab === 'timeline' && (
+          {abaAtiva === 'timeline' && (
             <TimelineTab
               timeline={timeline}
               onEnvelhecer={envelhecerAno}
@@ -202,10 +199,11 @@ export function App() {
             />
           )}
 
-          {activeTab === 'familia' && (
+          {abaAtiva === 'familia' && (
             <FamilyTab
               personagem={personagem}
               familia={familia}
+              ctx={ctx}
               onInteragir={acaoFamilia}
               onPedirCasamento={pedirCasamentoExec}
               onTerFilho={terFilhoExec}
@@ -214,11 +212,12 @@ export function App() {
             />
           )}
 
-          {activeTab === 'carreira' && (
+          {abaAtiva === 'carreira' && (
             <CareerTab
               personagem={personagem}
               educacao={educacao}
               carreira={carreira}
+              ctx={ctx}
               onAcaoEscola={acaoEscolaExec}
               onMatricularCurso={matricularCursoExec}
               onCandidatarVaga={candidatarVagaExec}
@@ -229,10 +228,11 @@ export function App() {
             />
           )}
 
-          {activeTab === 'financas' && (
+          {abaAtiva === 'financas' && (
             <EconomyTab
               personagem={personagem}
               economia={economia}
+              ctx={ctx}
               onComprarBem={comprarBemExec}
               onVenderBem={venderBemExec}
               onInvestir={investirExec}
@@ -241,10 +241,11 @@ export function App() {
             />
           )}
 
-          {activeTab === 'atividades' && (
+          {abaAtiva === 'atividades' && (
             <ActivitiesTab
               personagem={personagem}
               economia={economia}
+              ctx={ctx}
               onExecutarAtividade={executarAtividade}
             />
           )}
@@ -255,11 +256,13 @@ export function App() {
       {eventoAtivo && (
         <EventModal
           evento={eventoAtivo}
+          personagem={personagem}
+          economia={economia}
           onEscolherOpcao={responderEvento}
         />
       )}
 
-      {/* Modal de Conhecer Pessoas / Namoro */}
+      {/* Modal de Conhecer Pessoas / Namoro (adultos) */}
       {showDatingModal && (
         <DatingModal
           personagem={personagem}

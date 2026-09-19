@@ -1,11 +1,17 @@
-import { Character, FamilyMember, Gender, LifeLogEntry, SocialClass } from '../types';
+import { Character, FamilyInteractionType, FamilyMember, Gender, LifeLogEntry, SocialClass } from '../types';
 import {
   NOMES_FEMININOS,
   NOMES_MASCULINOS,
   PROFISSOES_PAIS,
   sortearNome
 } from '../data/brazilianData';
-import { clamp, generateId, randomChoice, randomInt, rollChance } from '../utils/random';
+import { getTratamentoParentesco } from '../utils/formatters';
+import { IDADE_MINIMA_PEDIR_CONSELHO, IDADE_MINIMA_PEDIR_DINHEIRO } from './availabilitySystem';
+import { clamp, generateId, randomChoice, randomInt, rollChance, valorAleatorio } from '../utils/random';
+
+function capitalizar(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
 
 export function gerarFamiliaInicial(
   sobrenomeFamilia: string,
@@ -51,7 +57,7 @@ export function gerarFamiliaInicial(
 
   // Chance de 40% de já ter um irmão mais velho
   if (rollChance(40)) {
-    const generoIrmao: Gender = Math.random() > 0.5 ? 'masculino' : 'feminino';
+    const generoIrmao: Gender = valorAleatorio() > 0.5 ? 'masculino' : 'feminino';
     const idadeIrmao = randomInt(1, 6);
     const irmao: FamilyMember = {
       id: generateId('irmao'),
@@ -118,7 +124,7 @@ export function processarEnvelhecimentoFamilia(
           idade: personagem.idade,
           ano: anoAtual,
           categoria: 'familia',
-          texto: `Seu ${membro.tipo} ${membro.nome} ${membro.sobrenome} faleceu pacificamente aos ${novaIdade} anos.${
+          texto: `${capitalizar(getTratamentoParentesco(membro.tipo))} ${membro.nome} ${membro.sobrenome} faleceu pacificamente aos ${novaIdade} anos.${
             herancaParente > 0 ? ` Você recebeu uma herança de R$ ${herancaParente.toLocaleString('pt-BR')}.` : ''
           }`,
           tipo: 'importante'
@@ -147,7 +153,7 @@ export function processarEnvelhecimentoFamilia(
 
   const mae = familiaAtualizada.find(f => f.tipo === 'mae' && f.vivo);
   if (personagem.idade >= 1 && personagem.idade <= 7 && mae && mae.idade < 42 && rollChance(18)) {
-    const generoNovo: Gender = Math.random() > 0.5 ? 'masculino' : 'feminino';
+    const generoNovo: Gender = valorAleatorio() > 0.5 ? 'masculino' : 'feminino';
     const novoIrmao: FamilyMember = {
       id: generateId('irmao'),
       nome: sortearNome(generoNovo),
@@ -165,7 +171,7 @@ export function processarEnvelhecimentoFamilia(
       idade: personagem.idade,
       ano: anoAtual,
       categoria: 'familia',
-      texto: `Nasceu seu novo ${novoIrmao.tipo}, ${novoIrmao.nome}! A casa está em festa com a chegada do bebê.`,
+      texto: `Nasceu ${getTratamentoParentesco(novoIrmao.tipo)}, ${novoIrmao.nome}! A casa está em festa com a chegada do bebê.`,
       tipo: 'positivo'
     });
   }
@@ -177,13 +183,7 @@ export function processarEnvelhecimentoFamilia(
   };
 }
 
-export type FamilyInteractionType =
-  | 'conversar'
-  | 'passar_tempo'
-  | 'dar_presente'
-  | 'discutir'
-  | 'pedir_dinheiro'
-  | 'pedir_conselho';
+export type { FamilyInteractionType } from '../types';
 
 export function interagirComFamiliar(
   membro: FamilyMember,
@@ -207,6 +207,29 @@ export function interagirComFamiliar(
   let ganho = 0;
   let msg = '';
   let sucesso = true;
+
+  // Revalidação da política central: interações que pressupõem autonomia
+  // maior do que a fase atual permite são recusadas sem efeitos.
+  if (interacao === 'pedir_dinheiro' && personagem.idade < IDADE_MINIMA_PEDIR_DINHEIRO) {
+    return {
+      membroAtualizado: membro,
+      personagemAtualizado: personagem,
+      custoDinheiro: 0,
+      dinheiroGanho: 0,
+      mensagem: 'Você ainda é muito pequeno(a) para pedir dinheiro.',
+      sucesso: false
+    };
+  }
+  if (interacao === 'pedir_conselho' && personagem.idade < IDADE_MINIMA_PEDIR_CONSELHO) {
+    return {
+      membroAtualizado: membro,
+      personagemAtualizado: personagem,
+      custoDinheiro: 0,
+      dinheiroGanho: 0,
+      mensagem: 'Você ainda é muito pequeno(a) para pedir conselhos de vida.',
+      sucesso: false
+    };
+  }
 
   switch (interacao) {
     case 'conversar':
@@ -256,7 +279,7 @@ export function interagirComFamiliar(
         ganho = randomInt(50, 300);
         deltaRel = -2;
         deltaFel = 8;
-        msg = `Seu ${membro.tipo} ${membro.nome} te deu R$ ${ganho} para ajudar nas suas despesas.`;
+        msg = `${capitalizar(getTratamentoParentesco(membro.tipo))} ${membro.nome} te deu R$ ${ganho} para ajudar nas suas despesas.`;
       } else {
         deltaRel = -5;
         sucesso = false;

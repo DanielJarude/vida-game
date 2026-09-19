@@ -1,38 +1,44 @@
 import React from 'react';
-import { Character, EducationState } from '../../types';
-import { obterVagasDisponiveis } from '../../systems/careerSystem';
+import { ContextoAcao, listarVagasCompativeis } from '../../systems/availabilitySystem';
 import { formatarDinheiro, getEducationLabel } from '../../utils/formatters';
 import { X } from 'lucide-react';
 
 interface JobMarketModalProps {
-  personagem: Character;
-  educacao: EducationState;
+  ctx: ContextoAcao;
   onClose: () => void;
   onCandidatar: (jobId: string) => void;
 }
 
 export const JobMarketModal: React.FC<JobMarketModalProps> = ({
-  personagem,
-  educacao,
+  ctx,
   onClose,
   onCandidatar
 }) => {
-  const vagas = obterVagasDisponiveis(educacao.nivelAtual, personagem.stats.inteligencia);
+  // A lista vem da política central (escolaridade, inteligência e idade)
+  const vagas = listarVagasCompativeis(ctx);
+  const idade = ctx.personagem.idade;
+  const notaJuvenil = idade < 18
+    ? 'Nesta fase, apenas vagas juvenis aparecem. As demais vagas abrem aos 18 anos.'
+    : null;
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Mercado de Trabalho">
       <div className="modal-card" style={{ maxWidth: '640px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 className="modal-title">Mercado de Trabalho</h2>
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-              Vagas compatíveis com sua escolaridade ({getEducationLabel(educacao.nivelAtual)})
+              Vagas compatíveis com sua escolaridade ({getEducationLabel(ctx.educacao.nivelAtual)})
             </div>
           </div>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
+
+        {notaJuvenil && (
+          <div className="acao-bloqueada-motivo" role="status">{notaJuvenil}</div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '60vh', overflowY: 'auto' }}>
           {vagas.length === 0 ? (
@@ -58,7 +64,7 @@ export const JobMarketModal: React.FC<JobMarketModalProps> = ({
                   <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
                     {job.titulo}
                   </div>
-                  <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
                     <span>Setor: {job.setor}</span>
                     <span>• {job.horasSemanais}h/sem</span>
                     <span>• Estresse: {job.estresseNivel}/5</span>
@@ -73,14 +79,7 @@ export const JobMarketModal: React.FC<JobMarketModalProps> = ({
                     onCandidatar(job.id);
                     onClose();
                   }}
-                  style={{
-                    background: 'var(--primary)',
-                    color: '#022c22',
-                    padding: '8px 16px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem'
-                  }}
+                  className="btn-acao-primaria"
                 >
                   Candidatar
                 </button>

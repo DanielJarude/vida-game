@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Character, FamilyMember, Gender } from '../../types';
-import { FamilyInteractionType } from '../../systems/familySystem';
+import { FamilyInteractionType } from '../../types';
 import { FamilyModal } from '../modals/FamilyModal';
-import { getStatColor } from '../../utils/formatters';
+import { getStatColor, getRotuloParentesco } from '../../utils/formatters';
+import { ContextoAcao, getActionAvailability, IDADE_MINIMA_RELACIONAMENTO_ADULTO } from '../../systems/availabilitySystem';
 import { Heart } from 'lucide-react';
 
 interface FamilyTabProps {
   personagem: Character;
   familia: FamilyMember[];
-  onInteragir: (membroId: string, tipo: FamilyInteractionType, presenteTipo?: 'barato' | 'medio' | 'luxo') => void;
+  ctx: ContextoAcao;
+  onInteragir: (membroId: string, tipoAcao: FamilyInteractionType, presenteTipo?: 'barato' | 'medio' | 'luxo') => void;
   onPedirCasamento: (parceiroId: string) => void;
   onTerFilho: (parceiroId?: string, nome?: string, genero?: Gender) => void;
   onTerminar: (parceiroId: string) => void;
@@ -18,6 +20,7 @@ interface FamilyTabProps {
 export const FamilyTab: React.FC<FamilyTabProps> = ({
   personagem,
   familia,
+  ctx,
   onInteragir,
   onPedirCasamento,
   onTerFilho,
@@ -34,27 +37,20 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   const paisEirmaos = vivos.filter(f => ['pai', 'mae', 'irmao', 'irma'].includes(f.tipo));
   const pets = vivos.filter(f => f.tipo === 'pet');
 
-  const getEmoji = (tipo: string) => {
-    switch (tipo) {
-      case 'pai': return '👨';
-      case 'mae': return '👩';
-      case 'irmao': return '👦';
-      case 'irma': return '👧';
-      case 'namorado':
-      case 'esposo': return '👨‍❤️‍💋‍👨';
-      case 'namorada':
-      case 'esposa': return '👩‍❤️‍💋‍👨';
-      case 'filho':
-      case 'filha': return '👶';
-      case 'pet': return '🐾';
-      default: return '👤';
-    }
+  const abrirModal = (membro: FamilyMember) => {
+    // Revalida ao abrir: se a tela deixou de ser válida, não abre
+    setSelectedMember(membro);
+  };
+
+  const verificarInteracao = (tipo: FamilyInteractionType) => {
+    if (!selectedMember) return { kind: 'oculto', reasonCode: 'sem_membro' } as const;
+    return getActionAvailability(ctx, 'interagir_familia', { membroId: selectedMember.id, tipoInteracao: tipo });
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Ações Rápidas de Relacionamento */}
-      {personagem.idade >= 18 && (
+      {/* Encontros: sistema adulto (18+) */}
+      {personagem.idade >= IDADE_MINIMA_RELACIONAMENTO_ADULTO && (
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             className="option-btn"
@@ -89,16 +85,15 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               <div
                 key={membro.id}
                 className="option-btn"
-                onClick={() => setSelectedMember(membro)}
+                onClick={() => abrirModal(membro)}
                 style={{ cursor: 'pointer' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '1.4rem' }}>{getEmoji(membro.tipo)}</span>
                     <div>
                       <strong>{membro.nome} {membro.sobrenome}</strong>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {membro.tipo.toUpperCase()} • {membro.idade} anos • {membro.profissao || 'Companheiro(a)'}
+                        {getRotuloParentesco(membro.tipo)} • {membro.idade} anos • {membro.profissao || 'Companheiro(a)'}
                       </div>
                     </div>
                   </div>
@@ -126,16 +121,15 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               <div
                 key={membro.id}
                 className="option-btn"
-                onClick={() => setSelectedMember(membro)}
+                onClick={() => abrirModal(membro)}
                 style={{ cursor: 'pointer' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '1.4rem' }}>👶</span>
                     <div>
                       <strong>{membro.nome} {membro.sobrenome}</strong>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {membro.tipo.toUpperCase()} • {membro.idade} {membro.idade === 1 ? 'ano' : 'anos'}
+                        {getRotuloParentesco(membro.tipo)} • {membro.idade} {membro.idade === 1 ? 'ano' : 'anos'}
                       </div>
                     </div>
                   </div>
@@ -159,16 +153,15 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             <div
               key={membro.id}
               className="option-btn"
-              onClick={() => setSelectedMember(membro)}
+              onClick={() => abrirModal(membro)}
               style={{ cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '1.4rem' }}>{getEmoji(membro.tipo)}</span>
                   <div>
                     <strong>{membro.nome} {membro.sobrenome}</strong>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      {membro.tipo.toUpperCase()} • {membro.idade} anos • {membro.profissao || 'Família'}
+                      {getRotuloParentesco(membro.tipo)} • {membro.idade} anos • {membro.profissao || 'Família'}
                     </div>
                   </div>
                 </div>
@@ -195,12 +188,11 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               <div
                 key={membro.id}
                 className="option-btn"
-                onClick={() => setSelectedMember(membro)}
+                onClick={() => abrirModal(membro)}
                 style={{ cursor: 'pointer' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '1.4rem' }}>🐾</span>
                     <div>
                       <strong>{membro.nome}</strong>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -227,7 +219,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {falecidos.map(m => (
               <div key={m.id} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', padding: '6px 0' }}>
-                • <strong>{m.nome} {m.sobrenome}</strong> ({m.tipo}) — Faleceu aos {m.idade} anos em {m.anoMorte} ({m.causaMorte}).
+                • <strong>{m.nome} {m.sobrenome}</strong> ({getRotuloParentesco(m.tipo)}) — Faleceu aos {m.idade} anos em {m.anoMorte} ({m.causaMorte}).
               </div>
             ))}
           </div>
@@ -244,6 +236,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
           onTerFilho={() => onTerFilho(selectedMember.id)}
           onTerminar={() => onTerminar(selectedMember.id)}
           idadeJogador={personagem.idade}
+          verificarInteracao={verificarInteracao}
         />
       )}
     </div>

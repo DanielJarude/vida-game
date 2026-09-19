@@ -6,6 +6,7 @@ import { Volume2, VolumeX, Home, Award } from 'lucide-react';
 interface HeaderProps {
   personagem: Character | null;
   economia: EconomyState | null;
+  situacao: string;
   somLigado: boolean;
   onToggleSom: () => void;
   onGoHome: () => void;
@@ -15,6 +16,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   personagem,
   economia,
+  situacao,
   somLigado,
   onToggleSom,
   onGoHome,
@@ -22,21 +24,27 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="main-header">
-      <div className="header-brand" onClick={onGoHome} style={{ cursor: 'pointer' }}>
-        <span>🌱</span>
+      <button
+        className="header-brand"
+        onClick={onGoHome}
+        title="Menu Principal"
+        style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+      >
+        <span aria-hidden>🌱</span>
         <span>VIDA</span>
-      </div>
+      </button>
 
       {personagem && (
-        <div className="header-char-info">
-          <span className="char-name-badge">
+        <div className="header-identity" aria-label="Identidade do personagem">
+          <span className="identity-name">
             {personagem.nome} {personagem.sobrenome}
           </span>
-          <span className="char-age-badge">
-            {formatarIdade(personagem.idade)}
+          <span className="identity-meta">
+            {formatarIdade(personagem.idade)} · {personagem.cidade}, {personagem.estado}
           </span>
+          <span className="identity-situacao">{situacao}</span>
           {economia && (
-            <span className="char-money-badge">
+            <span className="identity-money" title="Saldo em conta">
               {formatarDinheiro(economia.dinheiro)}
             </span>
           )}
@@ -48,6 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="btn-icon"
           onClick={onToggleSom}
           title={somLigado ? 'Desativar Sons' : 'Ativar Sons'}
+          aria-label={somLigado ? 'Desativar sons' : 'Ativar sons'}
         >
           {somLigado ? <Volume2 size={18} /> : <VolumeX size={18} />}
         </button>
@@ -55,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="btn-icon"
           onClick={onOpenStats}
           title="Estatísticas & Hall da Fama"
+          aria-label="Estatísticas e Hall da Fama"
         >
           <Award size={18} />
         </button>
@@ -62,6 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="btn-icon"
           onClick={onGoHome}
           title="Menu Principal"
+          aria-label="Menu principal"
         >
           <Home size={18} />
         </button>

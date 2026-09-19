@@ -141,7 +141,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Comprar a apostila, resolver provas anteriores e focar na aprovação',
         descricaoResultado: 'Sua preparação intensiva aumentou absurdamente seu conhecimento em legislação e administração pública!',
         consequencias: {
-          stats: { inteligencia: 15, energia: -15 },
+          stats: { inteligencia: 15 },
           dinheiro: -250,
           hiddenStats: { disciplina: 20, ambicao: 20, estresse: 12 },
           adicionarFlag: 'estudou_concurso'
@@ -290,7 +290,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Sentar na cadeira, estender o braço e doar sangue com alegria',
         descricaoResultado: 'Sua doação pode salvar até 4 vidas! Você ganhou um lanche caprichado e uma sensação indescritível de dever cumprido.',
         consequencias: {
-          stats: { felicidade: 20, saude: 2, energia: -10 },
+          stats: { felicidade: 20, saude: 2 },
           hiddenStats: { empatia: 25, reputacao: 15 }
         }
       },

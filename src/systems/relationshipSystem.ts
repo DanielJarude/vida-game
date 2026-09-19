@@ -1,6 +1,11 @@
 import { Character, FamilyMember, Gender, LifeLogEntry, RelationType } from '../types';
 import { sortearNome, sortearSobrenome } from '../data/brazilianData';
-import { clamp, generateId, randomChoice, randomInt } from '../utils/random';
+import {
+  IDADE_MINIMA_CASAMENTO,
+  IDADE_MINIMA_FILHOS,
+  IDADE_MINIMA_RELACIONAMENTO_ADULTO
+} from './availabilitySystem';
+import { clamp, generateId, randomChoice, randomInt, valorAleatorio } from '../utils/random';
 
 export interface DatingCandidate {
   nome: string;
@@ -39,7 +44,7 @@ export function gerarCandidatosNamoro(
   for (let i = 0; i < 3; i++) {
     let genero: Gender = 'feminino';
     if (generoPreferencia === 'homens') genero = 'masculino';
-    else if (generoPreferencia === 'todos') genero = Math.random() > 0.5 ? 'masculino' : 'feminino';
+    else if (generoPreferencia === 'todos') genero = valorAleatorio() > 0.5 ? 'masculino' : 'feminino';
 
     const idade = Math.max(18, idadeJogador + randomInt(-4, 5));
     const cand: DatingCandidate = {
@@ -69,10 +74,20 @@ export function iniciarNamoro(
   personagem: Character,
   anoAtual: number
 ): {
-  novoMembro: FamilyMember;
-  personagemAtualizado: Character;
-  novoLog: LifeLogEntry;
+  sucesso: boolean;
+  mensagem: string;
+  novoMembro?: FamilyMember;
+  personagemAtualizado?: Character;
+  novoLog?: LifeLogEntry;
 } {
+  // Revalidação da política central: sistema adulto de relacionamentos
+  if (personagem.idade < IDADE_MINIMA_RELACIONAMENTO_ADULTO) {
+    return {
+      sucesso: false,
+      mensagem: 'O sistema de encontros é para adultos. Relações na adolescência ainda não são modeladas neste jogo.'
+    };
+  }
+
   const tipo: RelationType = candidato.genero === 'masculino' ? 'namorado' : 'namorada';
 
   const novoMembro: FamilyMember = {
@@ -105,7 +120,7 @@ export function iniciarNamoro(
     tipo: 'importante'
   };
 
-  return { novoMembro, personagemAtualizado: char, novoLog: log };
+  return { sucesso: true, mensagem: `Você e ${candidato.nome} começaram a namorar.`, novoMembro, personagemAtualizado: char, novoLog: log };
 }
 
 export function pedirEmCasamento(
@@ -119,12 +134,25 @@ export function pedirEmCasamento(
   personagemAtualizado?: Character;
   novoLog?: LifeLogEntry;
 } {
+  if (personagem.idade < IDADE_MINIMA_CASAMENTO) {
+    return {
+      sucesso: false,
+      mensagem: 'Você precisa ser maior de idade para se casar.'
+    };
+  }
+  if (parceiro.idade < IDADE_MINIMA_CASAMENTO) {
+    return {
+      sucesso: false,
+      mensagem: `${parceiro.nome} ainda não tem idade para casar.`
+    };
+  }
   if (parceiro.relacionamento >= 65) {
     const novoTipo: RelationType = parceiro.genero === 'masculino' ? 'esposo' : 'esposa';
     const parceiroAtualizado: FamilyMember = {
       ...parceiro,
       tipo: novoTipo,
-      relacionamento: 100,
+      // progresso relativo: o casamento fortalece o vínculo, não o teleporta
+      relacionamento: clamp(parceiro.relacionamento + 15, 0, 100),
       situacaoAtual: 'Casado(a) feliz com você'
     };
 
@@ -132,7 +160,7 @@ export function pedirEmCasamento(
       ...personagem,
       stats: {
         ...personagem.stats,
-        felicidade: 100
+        felicidade: clamp(personagem.stats.felicidade + 30, 0, 100)
       },
       flags: {
         ...personagem.flags,
@@ -165,17 +193,37 @@ export function pedirEmCasamento(
 }
 
 export function terFilho(
-  _parceiro: FamilyMember | null,
+  parceiro: FamilyMember | null,
   personagem: Character,
   nomePersonalizado?: string,
   generoPersonalizado?: Gender,
   anoAtual?: number
 ): {
-  novoFilho: FamilyMember;
-  personagemAtualizado: Character;
-  novoLog: LifeLogEntry;
+  sucesso: boolean;
+  mensagem: string;
+  novoFilho?: FamilyMember;
+  personagemAtualizado?: Character;
+  novoLog?: LifeLogEntry;
 } {
-  const genero: Gender = generoPersonalizado || (Math.random() > 0.5 ? 'masculino' : 'feminino');
+  // Revalidação da política central: decisões familiares adultas
+  if (personagem.idade < IDADE_MINIMA_FILHOS) {
+    return {
+      sucesso: false,
+      mensagem: 'Ter filhos é uma decisão da vida adulta.'
+    };
+  }
+
+  // Revalidação no motor: a decisão de ter filhos pressupõe um relacionamento
+  // estável — chamar terFilho sem parceiro (via UI ou direto) não tem efeito.
+  const TIPOS_PARCEIRO: RelationType[] = ['namorado', 'namorada', 'noivo', 'noiva', 'esposo', 'esposa'];
+  if (!parceiro || !parceiro.vivo || !TIPOS_PARCEIRO.includes(parceiro.tipo)) {
+    return {
+      sucesso: false,
+      mensagem: 'Você precisa de um relacionamento estável para ter filhos.'
+    };
+  }
+
+  const genero: Gender = generoPersonalizado || (valorAleatorio() > 0.5 ? 'masculino' : 'feminino');
   const nome = nomePersonalizado || sortearNome(genero);
   const ano = anoAtual || personagem.anoAtual;
 
@@ -212,7 +260,7 @@ export function terFilho(
     tipo: 'importante'
   };
 
-  return { novoFilho, personagemAtualizado: char, novoLog: log };
+  return { sucesso: true, mensagem: `${novoFilho.nome} nasceu com saúde.`, novoFilho, personagemAtualizado: char, novoLog: log };
 }
 
 export function terminarRelacionamento(
