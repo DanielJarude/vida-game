@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VERSAO_SAVE, carregarJogo, salvarJogo, limparSave } from '../saveSystem';
 import { criarEstadoTeste } from './fixtures';
+import { criarPersonalidadeInicial, registrarEscolha } from '../personalitySystem';
 
 // Stub de localStorage (ambiente de teste não tem browser)
 function criarLocalStorageStub() {
@@ -170,6 +171,7 @@ describe('Save atual (versão 2): ida e volta', () => {
       educacao: estado.educacao,
       carreira: estado.carreira,
       economia: estado.economia,
+      personalidade: criarPersonalidadeInicial(),
       timeline: [{ id: 'l1', idade: 20, ano: 2026, categoria: 'geral' as const, texto: 'Feito' }],
       eventoAtivo: null,
       historicoEventosDisparados: [],
@@ -194,5 +196,142 @@ describe('Save atual (versão 2): ida e volta', () => {
 
     limparSave();
     expect(carregarJogo()).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// B2 — migração de saves do B1-FIX (versão 2, sem PersonalityState):
+// carregam normalmente com personalidade inicializada em branco.
+// Saves da versão 3 preservam personalidade e memória de escolhas.
+// ---------------------------------------------------------------------------
+describe('Migração de save B1-FIX (versão 2) para schema com personalidade', () => {
+  const saveB1FixV2 = {
+    versao: 2,
+    personagem: {
+      id: 'char_b1fix',
+      nome: 'Carla',
+      sobrenome: 'Mendes',
+      genero: 'feminino',
+      idade: 9,
+      anoAtual: 2035,
+      anoNascimento: 2026,
+      cidade: 'Curitiba',
+      estado: 'PR',
+      classeSocial: 'classe_media',
+      stats: { felicidade: 75, saude: 85, inteligencia: 60, aparencia: 65 },
+      hiddenStats: {
+        disciplina: 62, sociabilidade: 58, empatia: 66, ambicao: 55,
+        estresse: 15, reputacao: 60, condicionamentoFisico: 55
+      },
+      doencas: [],
+      flags: { tem_animal_estimacao: true },
+      marcos: []
+    },
+    familia: [
+      {
+        id: 'fam_mae_b1', nome: 'Sueli', sobrenome: 'Mendes', genero: 'feminino', tipo: 'mae',
+        idade: 38, relacionamento: 80, vivo: true
+      }
+    ],
+    educacao: { nivelAtual: 'fundamental_incompleto', emCurso: true, desempenho: 78, cursosConcluidos: [] },
+    carreira: { empregado: false, anosNoCargo: 0, desempenhoTrabalho: 60, horasExtras: false, aposentado: false, historicoEmpregos: [] },
+    economia: { dinheiro: 0, despesasAnuaisPadrao: 0, padraoDeVida: 'modesto', propriedades: [], investimentos: [], dividas: 0 },
+    timeline: [
+      { id: 'log_b1_1', idade: 8, ano: 2034, categoria: 'geral', texto: 'Aconteceu algo aos 8' },
+      { id: 'log_b1_2', idade: 9, ano: 2035, categoria: 'geral', texto: 'Aconteceu algo aos 9' }
+    ],
+    eventoAtivoId: null,
+    historicoEventosDisparados: ['inf_primeiro_dia_escola'],
+    acoesRealizadasAno: [],
+    emJogo: true,
+    morto: false
+  };
+
+  it('save do B1-FIX sem personalidade carrega normalmente e inicializa os novos campos', () => {
+    stub.setItem('VIDA_GAME_SAVE_V1', JSON.stringify(saveB1FixV2));
+    const estado = carregarJogo();
+
+    expect(estado).not.toBeNull();
+    expect(estado!.versao).toBe(VERSAO_SAVE);
+    // dados válidos do B1-FIX preservados (nada destruído)
+    expect(estado!.personagem!.nome).toBe('Carla');
+    expect(estado!.personagem!.idade).toBe(9);
+    expect(estado!.personagem!.flags['tem_animal_estimacao']).toBe(true);
+    expect(estado!.historicoEventosDisparados).toContain('inf_primeiro_dia_escola');
+    expect(estado!.timeline).toHaveLength(2);
+    // personalidade inicializada de forma segura (em branco, sem invenção)
+    expect(estado!.personalidade).toEqual(criarPersonalidadeInicial());
+    expect(estado!.personalidade.memorias).toEqual([]);
+  });
+
+  it('save novo (v3) preserva personalidade e memória de escolhas na ida e volta', () => {
+    const estado = criarEstadoTeste({ idade: 12 });
+    let personalidade = criarPersonalidadeInicial();
+    personalidade = registrarEscolha(personalidade, {
+      eventoId: 'inf_birra_brinquedo',
+      opcaoId: 'opt_aceitar',
+      idade: 5,
+      ano: 2031,
+      tagsComportamentais: { disciplina: 2 }
+    }).personalidade;
+    personalidade = registrarEscolha(personalidade, {
+      eventoId: 'inf_bullying_defesa',
+      opcaoId: 'opt_defender',
+      idade: 9,
+      ano: 2035,
+      tagsComportamentais: { coragem: 2, empatia: 2 }
+    }).personalidade;
+
+    const estadoCompleto = {
+      versao: VERSAO_SAVE,
+      personagem: estado.personagem,
+      familia: estado.familia,
+      educacao: estado.educacao,
+      carreira: estado.carreira,
+      economia: estado.economia,
+      personalidade,
+      timeline: [],
+      eventoAtivo: null,
+      historicoEventosDisparados: [],
+      acoesRealizadasAno: [],
+      emJogo: true,
+      morto: false
+    };
+
+    expect(salvarJogo(estadoCompleto)).toBe(true);
+    const recarregado = carregarJogo();
+
+    expect(recarregado!.personalidade).toEqual(personalidade);
+    expect(recarregado!.personalidade.tracos.coragem).toBe(2);
+    expect(recarregado!.personalidade.tracos.empatia).toBe(2);
+    expect(recarregado!.personalidade.tracos.disciplina).toBe(2);
+    expect(recarregado!.personalidade.memorias).toHaveLength(2);
+    expect(recarregado!.personalidade.memorias[0].opcaoId).toBe('opt_aceitar');
+    expect(recarregado!.personalidade.memorias[1].eventoId).toBe('inf_bullying_defesa');
+  });
+
+  it('save v3 com personalidade corrompida é normalizado sem descartar a partida', () => {
+    const saveCorrompido = {
+      ...saveB1FixV2,
+      versao: 3,
+      personalidade: {
+        tracos: { empatia: 'muito', generosidade: 7, traco_inexistente: 99 },
+        memorias: [
+          { eventoId: 'inf_gatinho_rua', opcaoId: 'opt_adotar', idade: 4, ano: 2030, tagsComportamentais: { empatia: 2 }, impactos: { empatia: 2 } },
+          { eventoId: 42, opcaoId: 'x' }, // registro inválido: descartado
+          'lixo'
+        ]
+      }
+    };
+    stub.setItem('VIDA_GAME_SAVE_V1', JSON.stringify(saveCorrompido));
+    const estado = carregarJogo();
+
+    expect(estado).not.toBeNull();
+    expect(estado!.personagem!.nome).toBe('Carla'); // partida preservada
+    expect(estado!.personalidade.tracos.generosidade).toBe(7);
+    expect(estado!.personalidade.tracos.empatia).toBe(0); // valor não numérico descartado
+    expect(estado!.personalidade.tracos).not.toHaveProperty('traco_inexistente');
+    expect(estado!.personalidade.memorias).toHaveLength(1);
+    expect(estado!.personalidade.memorias[0].eventoId).toBe('inf_gatinho_rua');
   });
 });

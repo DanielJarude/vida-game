@@ -1,22 +1,30 @@
 import React, { useState } from 'react';
-import { CareerState, Character, EducationState } from '../../types';
+import { CareerState, Character, EducationState, PersonalityState } from '../../types';
 import { getEducationLabel, getSocialClassLabel, getStatColor } from '../../utils/formatters';
+import { obterTracosPercebidos } from '../../systems/personalitySystem';
 import { Heart, Smile, Brain, Sparkles, ChevronDown, ChevronUp, ShieldAlert } from 'lucide-react';
 
 interface StatsSidebarProps {
   personagem: Character;
   carreira: CareerState;
   educacao: EducationState;
+  personalidade?: PersonalityState | null;
 }
 
 export const StatsSidebar: React.FC<StatsSidebarProps> = ({
   personagem,
   carreira,
-  educacao
+  educacao,
+  personalidade
 }) => {
   const [showInternal, setShowInternal] = useState(false);
   const stats = personagem.stats;
   const hidden = personagem.hiddenStats;
+
+  // Traços consolidados: rótulos qualitativos, nunca números crus
+  const tracosPercebidos = personalidade
+    ? obterTracosPercebidos(personalidade, personagem.genero)
+    : [];
 
   const statItems: { label: string; value: number; icon: React.ReactNode }[] = [
     { label: 'Felicidade', value: stats.felicidade, icon: <Smile size={16} /> },
@@ -55,6 +63,24 @@ export const StatsSidebar: React.FC<StatsSidebarProps> = ({
           )}
         </div>
       </div>
+
+      {/* Traços de personalidade percebidos (qualitativos; em formação enquanto não houver evidência suficiente) */}
+      {personalidade && (
+        <div className="card">
+          <h3 className="card-title">
+            <span>Traços Percebidos</span>
+          </h3>
+          {tracosPercebidos.length > 0 ? (
+            <ul className="traits-list">
+              {tracosPercebidos.map(t => (
+                <li key={t.traco} className="trait-item">{t.rotulo}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="traits-formando">Personalidade ainda em formação.</p>
+          )}
+        </div>
+      )}
 
       {/* Card de Atributos Principais */}
       <div className="card">

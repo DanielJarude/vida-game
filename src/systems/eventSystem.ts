@@ -1,17 +1,26 @@
 import {
   Character,
   CareerState,
+  CondicaoComportamental,
   EducationState,
   EconomyState,
   FamilyMember,
   GameEvent,
   EventOption,
-  LifeLogEntry
+  LifeLogEntry,
+  PersonalityState
 } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
 import { formatarDinheiro, getLifeStage, getRotuloAtributo } from '../utils/formatters';
 import { clamp, generateId, rollChance, valorAleatorio } from '../utils/random';
 import { normalizarHiddenStats, normalizarStats } from './attributeSystem';
+// Dependência em direção única: personalitySystem não importa eventSystem
+import {
+  atendeCondicaoComportamental,
+  atendeCondicoesComportamentais,
+  getNomeTraco,
+  registrarEscolha
+} from './personalitySystem';
 
 export function avaliarCondicoesEvento(
   evento: GameEvent,
@@ -20,7 +29,8 @@ export function avaliarCondicoesEvento(
   educacao: EducationState,
   economia: EconomyState,
   familia: FamilyMember[],
-  historicoDisparados: string[]
+  historicoDisparados: string[],
+  personalidade?: PersonalityState
 ): boolean {
   // Idade
   if (personagem.idade < evento.idadeMinima || personagem.idade > evento.idadeMaxima) {
@@ -79,6 +89,12 @@ export function avaliarCondicoesEvento(
     }
   }
 
+  // B2 — condições sobre personalidade/memória (recusa segura sem estado informado)
+  if (cond.personalidade && cond.personalidade.length > 0) {
+    if (!personalidade) return false;
+    if (!atendeCondicoesComportamentais(personalidade, cond.personalidade)) return false;
+  }
+
   return true;
 }
 
@@ -88,7 +104,8 @@ export function sortearEventoDoAno(
   educacao: EducationState,
   economia: EconomyState,
   familia: FamilyMember[],
-  historicoDisparados: string[]
+  historicoDisparados: string[],
+  personalidade?: PersonalityState
 ): GameEvent | null {
   // Chance de 75% de ter um evento interativo no ano (alguns anos são mais calmos)
   if (!rollChance(75)) {
@@ -103,7 +120,8 @@ export function sortearEventoDoAno(
       educacao,
       economia,
       familia,
-      historicoDisparados
+      historicoDisparados,
+      personalidade
     )
   );
 
@@ -123,15 +141,24 @@ export function sortearEventoDoAno(
   return eventosElegiveis[0];
 }
 
+/** Motivo em pt-BR quando uma exigência comportamental não é cumprida (qualitativo, sem números). */
+function motivoCondicaoComportamental(cond: CondicaoComportamental): string {
+  if (cond.traco && (cond.intensidadeMinima !== undefined || cond.intensidadeMaxima !== undefined)) {
+    return `Você ainda não tem histórico suficiente de ${getNomeTraco(cond.traco)}.`;
+  }
+  return 'Esta escolha depende de uma vivência que você ainda não teve.';
+}
+
 /**
- * Avalia o requisito de uma opção de evento (atributo, dinheiro ou flag).
- * Usado pela interface (mostrar indisponibilidade e motivo) e pelo motor
- * (recusar antes de aplicar consequências).
+ * Avalia o requisito de uma opção de evento (atributo, dinheiro, flag ou padrão
+ * comportamental acumulado). Usado pela interface (mostrar indisponibilidade e
+ * motivo) e pelo motor (recusar antes de aplicar consequências).
  */
 export function avaliarRequisitoOpcao(
   opcao: EventOption,
   personagem: Character,
-  economia: EconomyState
+  economia: EconomyState,
+  personalidade?: PersonalityState
 ): { aprovado: boolean; motivo?: string } {
   const requisito = opcao.requisito;
   if (!requisito) return { aprovado: true };
@@ -156,7 +183,19 @@ export function avaliarRequisitoOpcao(
     return { aprovado: false, motivo: 'Você não cumpre os requisitos para esta escolha.' };
   }
 
+  // B2 — padrão de comportamento acumulado (recusa segura sem estado de personalidade)
+  if (requisito.condicaoComportamental) {
+    if (!atendeCondicaoComportamental(personalidade, requisito.condicaoComportamental)) {
+      return { aprovado: false, motivo: motivoCondicaoComportamental(requisito.condicaoComportamental) };
+    }
+  }
+
   return { aprovado: true };
+}
+
+export interface ContextoPersonalidadeEscolha {
+  eventoId: string;
+  personalidade: PersonalityState;
 }
 
 export function aplicarConsequenciasEscolha(
@@ -166,13 +205,15 @@ export function aplicarConsequenciasEscolha(
   educacao: EducationState,
   economia: EconomyState,
   familia: FamilyMember[],
-  anoAtual: number
+  anoAtual: number,
+  contextoPersonalidade?: ContextoPersonalidadeEscolha
 ): {
   personagemAtualizado: Character;
   carreiraAtualizada: CareerState;
   educacaoAtualizada: EducationState;
   economiaAtualizada: EconomyState;
   familiaAtualizada: FamilyMember[];
+  personalidadeAtualizada?: PersonalityState;
   novosLogs: LifeLogEntry[];
   morreu: boolean;
   causaMorte?: string;
@@ -180,7 +221,12 @@ export function aplicarConsequenciasEscolha(
   mensagemRecusa?: string;
 } {
   // Revalidação do requisito antes de qualquer efeito (sem efeitos parciais)
-  const requisito = avaliarRequisitoOpcao(opcao, personagem, economia);
+  const requisito = avaliarRequisitoOpcao(
+    opcao,
+    personagem,
+    economia,
+    contextoPersonalidade?.personalidade
+  );
   if (!requisito.aprovado) {
     return {
       personagemAtualizado: personagem,
@@ -339,12 +385,27 @@ export function aplicarConsequenciasEscolha(
     });
   }
 
+  // B2 — registra a escolha na memória interna e move os traços. A memória
+  // alimentará condições futuras; a Linha da Vida continua recebendo apenas o
+  // texto narrativo acima (nunca dados técnicos da memória).
+  let personalidadeAtualizada: PersonalityState | undefined;
+  if (contextoPersonalidade) {
+    personalidadeAtualizada = registrarEscolha(contextoPersonalidade.personalidade, {
+      eventoId: contextoPersonalidade.eventoId,
+      opcaoId: opcao.id,
+      idade: personagem.idade,
+      ano: anoAtual,
+      tagsComportamentais: cons.impactosComportamentais
+    }).personalidade;
+  }
+
   return {
     personagemAtualizado: char,
     carreiraAtualizada: car,
     educacaoAtualizada: edu,
     economiaAtualizada: eco,
     familiaAtualizada: fam,
+    personalidadeAtualizada,
     novosLogs: logs,
     morreu,
     causaMorte

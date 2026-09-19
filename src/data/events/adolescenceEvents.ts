@@ -17,6 +17,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 8, inteligencia: -4 },
           hiddenStats: { disciplina: -15, reputacao: -5 },
+          impactosComportamentais: { disciplina: -2 },
           adicionarFlag: 'colou_na_escola'
         }
       },
@@ -26,7 +27,8 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você tirou uma nota 8 honesta pelo seu próprio esforço e sentiu orgulho de si mesmo.',
         consequencias: {
           stats: { inteligencia: 10, felicidade: 10 },
-          hiddenStats: { disciplina: 15, reputacao: 10 }
+          hiddenStats: { disciplina: 15, reputacao: 10 },
+          impactosComportamentais: { disciplina: 2 }
         }
       },
       {
@@ -35,7 +37,24 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         descricaoResultado: 'A coordenação cancelou a prova, mas a turma inteira descobriu e você virou o x9 da sala.',
         consequencias: {
           stats: { felicidade: -15 },
-          hiddenStats: { disciplina: 10, reputacao: -20, sociabilidade: -15 }
+          hiddenStats: { disciplina: 10, reputacao: -20, sociabilidade: -15 },
+          impactosComportamentais: { disciplina: 1 }
+        }
+      },
+      {
+        // B2 — opção que só existe para quem construiu histórico de disciplina
+        // na infância (padrão acumulado, não bônus automático)
+        id: 'opt_estudar_juntos',
+        texto: 'Recusar e chamar o colega para estudar junto antes da prova',
+        descricaoResultado: 'Vocês dois estudaram juntos na véspera e tiraram notas honestas. O colega agradece até hoje.',
+        consequencias: {
+          stats: { inteligencia: 8, felicidade: 12 },
+          hiddenStats: { disciplina: 10, sociabilidade: 10, reputacao: 10 },
+          impactosComportamentais: { disciplina: 2, generosidade: 2 },
+          relacionamentoDelta: { delta: 5 }
+        },
+        requisito: {
+          condicaoComportamental: { traco: 'disciplina', intensidadeMinima: 5 }
         }
       }
     ]

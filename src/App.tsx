@@ -39,6 +39,7 @@ export function App() {
     educacao,
     carreira,
     economia,
+    personalidade,
     timeline,
     eventoAtivo,
     isDead,
@@ -172,6 +173,7 @@ export function App() {
           personagem={personagem}
           carreira={carreira}
           educacao={educacao}
+          personalidade={personalidade}
         />
 
         {/* Área Central com Abas */}
@@ -258,6 +260,7 @@ export function App() {
           evento={eventoAtivo}
           personagem={personagem}
           economia={economia}
+          personalidade={personalidade}
           onEscolherOpcao={responderEvento}
         />
       )}

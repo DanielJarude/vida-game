@@ -1,5 +1,5 @@
 import React from 'react';
-import { Character, EconomyState, GameEvent } from '../../types';
+import { Character, EconomyState, GameEvent, PersonalityState } from '../../types';
 import { avaliarRequisitoOpcao } from '../../systems/eventSystem';
 import { HelpCircle, Sparkles, BookOpen, Briefcase, Heart, DollarSign, Activity } from 'lucide-react';
 
@@ -7,6 +7,7 @@ interface EventModalProps {
   evento: GameEvent;
   personagem: Character;
   economia: EconomyState;
+  personalidade?: PersonalityState | null;
   onEscolherOpcao: (opcaoId: string) => void;
 }
 
@@ -14,6 +15,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   evento,
   personagem,
   economia,
+  personalidade,
   onEscolherOpcao
 }) => {
   const getCategoryIcon = (cat: string) => {
@@ -62,7 +64,7 @@ export const EventModal: React.FC<EventModalProps> = ({
 
         <div className="modal-options-list">
           {evento.opcoes.map(opcao => {
-            const requisito = avaliarRequisitoOpcao(opcao, personagem, economia);
+            const requisito = avaliarRequisitoOpcao(opcao, personagem, economia, personalidade ?? undefined);
             return (
               <button
                 key={opcao.id}

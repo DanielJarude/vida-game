@@ -9,6 +9,7 @@ import {
   GameState,
   Gender,
   LifeLogEntry,
+  PersonalityState,
   PostMortemSummary,
   SocialClass
 } from '../types';
@@ -73,6 +74,7 @@ import {
   salvarJogo,
   VERSAO_SAVE
 } from '../systems/saveSystem';
+import { criarPersonalidadeInicial } from '../systems/personalitySystem';
 import { gerarHistoriaNascimento } from '../utils/narrativeGenerator';
 import { clamp, generateId, randomChoice, randomInt } from '../utils/random';
 import { sound } from '../utils/sound';
@@ -94,6 +96,8 @@ export function useGame() {
   const [timeline, setTimeline] = useState<LifeLogEntry[]>([]);
   const [eventoAtivo, setEventoAtivo] = useState<GameEvent | null>(null);
   const [historicoEventos, setHistoricoEventos] = useState<string[]>([]);
+  // B2 — personalidade emergente: acumula padrões de escolhas; nunca exibida como números
+  const [personalidade, setPersonalidade] = useState<PersonalityState>(criarPersonalidadeInicial());
   // Ações únicas por ano (atividades, apostas, interações, aumentos); zeradas a cada passagem de ano
   const [acoesRealizadasAno, setAcoesRealizadasAno] = useState<string[]>([]);
   const [isDead, setIsDead] = useState<boolean>(false);
@@ -170,6 +174,7 @@ export function useGame() {
         educacao,
         carreira,
         economia,
+        personalidade,
         timeline,
         eventoAtivo,
         historicoEventosDisparados: historicoEventos,
@@ -180,7 +185,7 @@ export function useGame() {
       salvarJogo(estadoParaSalvar);
       setHasSavedGame(true);
     }
-  }, [personagem, familia, educacao, carreira, economia, timeline, eventoAtivo, historicoEventos, acoesRealizadasAno, isDead, screen]);
+  }, [personagem, familia, educacao, carreira, economia, personalidade, timeline, eventoAtivo, historicoEventos, acoesRealizadasAno, isDead, screen]);
 
   // Alternar som
   const toggleSom = useCallback(() => {
@@ -264,6 +269,7 @@ export function useGame() {
     setCarreira(novaCarreira);
     setEconomia(novaEconomia);
     setTimeline(logsIniciais);
+    setPersonalidade(criarPersonalidadeInicial());
     setEventoAtivo(null);
     setHistoricoEventos([]);
     setAcoesRealizadasAno([]);
@@ -302,6 +308,7 @@ export function useGame() {
       setEducacao(save.educacao);
       setCarreira(save.carreira);
       setEconomia(save.economia);
+      setPersonalidade(save.personalidade);
       setTimeline(save.timeline);
       setEventoAtivo(save.eventoAtivo);
       setHistoricoEventos(save.historicoEventosDisparados || []);
@@ -328,7 +335,8 @@ export function useGame() {
       educacao,
       carreira,
       economia,
-      historicoEventos
+      historicoEventos,
+      personalidade
     );
 
     setPersonagem(resultado.personagemAtualizado);
@@ -354,7 +362,7 @@ export function useGame() {
       setHistoricoEventos(prev => [...prev, resultado.eventoDisparado!.id]);
       sound.playEvent();
     }
-  }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos]);
+  }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos, personalidade]);
 
   // Responder a Escolha de um Evento
   const responderEvento = useCallback((opcaoId: string) => {
@@ -372,7 +380,9 @@ export function useGame() {
       educacao,
       economia,
       familia,
-      personagem.anoAtual
+      personagem.anoAtual,
+      // B2 — memória de escolhas + traços de personalidade (idempotente por evento/opção/idade)
+      { eventoId: eventoAtivo.id, personalidade }
     );
 
     // Requisito da opção não cumprido: o motor recusa sem efeitos e o evento continua aberto
@@ -386,6 +396,9 @@ export function useGame() {
     setEducacao(res.educacaoAtualizada);
     setEconomia(res.economiaAtualizada);
     setFamilia(res.familiaAtualizada);
+    if (res.personalidadeAtualizada) {
+      setPersonalidade(res.personalidadeAtualizada);
+    }
     setTimeline(prev => [...prev, ...res.novosLogs]);
     setEventoAtivo(null);
 
@@ -405,7 +418,7 @@ export function useGame() {
       registrarMorteNasEstatisticas(resumo);
       sound.playDeath();
     }
-  }, [eventoAtivo, personagem, carreira, educacao, economia, familia, mostrarFeedback]);
+  }, [eventoAtivo, personagem, carreira, educacao, economia, familia, personalidade, mostrarFeedback]);
 
   // Interagir com Familiar
   const acaoFamilia = useCallback((
@@ -883,7 +896,9 @@ export function useGame() {
     setCarreira(criarCarreiraInicial());
     setEconomia(criarEconomiaInicial('classe_media'));
     setTimeline([]);
+    setPersonalidade(criarPersonalidadeInicial());
     setEventoAtivo(null);
+    setHistoricoEventos([]);
     setAcoesRealizadasAno([]);
     setIsDead(false);
     setResumoMorte(null);
@@ -905,6 +920,7 @@ export function useGame() {
     educacao,
     carreira,
     economia,
+    personalidade,
     timeline,
     eventoAtivo,
     acoesRealizadasAno,
