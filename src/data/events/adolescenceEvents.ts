@@ -207,11 +207,16 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 7 — auditoria de coerência etária encontrou este
+    // evento com idadeMinima 17, mas a CNH exige 18 anos pela política
+    // já estabelecida do projeto (mesma regra usada em availabilitySystem
+    // para carro/emprego adulto). Corrigido para não permitir a ação real
+    // (não é só uma prévia) um ano antes da idade correta.
     id: 'ado_tirar_cnh',
     titulo: 'Fazer 18 Anos e Tirar a CNH',
     descricao: 'Você completou a idade permitida para dar entrada na Autoescola e tirar sua Carteira Nacional de Habilitação (CNH).',
-    idadeMinima: 17,
-    idadeMaxima: 18,
+    idadeMinima: 18,
+    idadeMaxima: 20,
     categoria: 'cotidiano',
     peso: 85,
     unico: true,
