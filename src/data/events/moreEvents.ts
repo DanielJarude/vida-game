@@ -48,7 +48,8 @@ export const MORE_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 10 },
           relacionamentoDelta: { delta: 12 },
-          hiddenStats: { empatia: 15, disciplina: 8 }
+          hiddenStats: { empatia: 15, disciplina: 8 },
+          impactosComportamentais: { generosidade: 1, disciplina: 1 }
         }
       },
       {
@@ -58,7 +59,8 @@ export const MORE_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: -8 },
           relacionamentoDelta: { delta: -8 },
-          hiddenStats: { disciplina: 5 }
+          hiddenStats: { disciplina: 5 },
+          impactosComportamentais: { impulsividade: 1 }
         }
       }
     ]
@@ -320,7 +322,8 @@ export const MORE_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 25, saude: 5 },
           relacionamentoDelta: { delta: 25 },
-          hiddenStats: { empatia: 20, estresse: -25 }
+          hiddenStats: { empatia: 20, estresse: -25 },
+          impactosComportamentais: { empatia: 1, familia: 2 }
         }
       },
       {
@@ -329,7 +332,8 @@ export const MORE_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você respondeu mensagens, mas perdeu a chance de estar verdadeiramente presente.',
         consequencias: {
           stats: { felicidade: 2 },
-          relacionamentoDelta: { delta: -5 }
+          relacionamentoDelta: { delta: -5 },
+          impactosComportamentais: { familia: -1 }
         }
       }
     ]

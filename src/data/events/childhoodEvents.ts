@@ -14,20 +14,22 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       {
         id: 'opt_correr',
         texto: 'Correr tropeçando para os braços deles',
-        descricaoResultado: 'Você deu seus primeiros passos cambaleantes e todos na sala comemoraram com lágrimas de alegria!',
+        descricaoResultado: 'Você correu tropeçando para os braços dos seus pais e a sala inteira comemorou seus primeiros passos com lágrimas de alegria.',
         consequencias: {
           stats: { felicidade: 15, saude: 5 },
           hiddenStats: { sociabilidade: 10, condicionamentoFisico: 5 },
+          impactosComportamentais: { coragem: 2, sociabilidade: 1 },
           relacionamentoDelta: { delta: 15 }
         }
       },
       {
         id: 'opt_engatinhar',
         texto: 'Preferir continuar engatinhando no seu ritmo',
-        descricaoResultado: 'Você preferiu não se arriscar e continuou explorando o chão no seu próprio tempo.',
+        descricaoResultado: 'Você preferiu seguir engatinhando no seu próprio ritmo e só andou quando se sentiu seguro.',
         consequencias: {
           stats: { felicidade: 5 },
-          hiddenStats: { disciplina: 5 }
+          hiddenStats: { disciplina: 5 },
+          impactosComportamentais: { coragem: -1, independencia: 1 }
         }
       }
     ]
@@ -36,7 +38,8 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     id: 'inf_birra_brinquedo',
     titulo: 'O Brinquedo na Loja',
     descricao: 'No supermercado, você vê um brinquedo colorido na prateleira e quer desesperadamente que sua mãe ou seu pai compre.',
-    idadeMinima: 3,
+    // A negociação verbal das opções exige maturidade de pré-escolar: mínima de 4 anos
+    idadeMinima: 4,
     idadeMaxima: 5,
     categoria: 'infancia',
     peso: 80,
@@ -44,30 +47,33 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       {
         id: 'opt_espernear',
         texto: 'Fazer um escândalo e chorar no chão da loja',
-        descricaoResultado: 'Seus pais ficaram extremamente envergonhados e colocaram você de castigo ao chegar em casa.',
+        descricaoResultado: 'Você fez o maior escândalo no chão da loja e acabou de castigo em casa, para a vergonha dos seus pais.',
         consequencias: {
           stats: { felicidade: -10 },
           hiddenStats: { disciplina: -10, reputacao: -5 },
+          impactosComportamentais: { impulsividade: 2, disciplina: -1 },
           relacionamentoDelta: { delta: -10 }
         }
       },
       {
         id: 'opt_pedir_jeitinho',
         texto: 'Pedir com carinho e prometer comer todos os legumes',
-        descricaoResultado: 'Seus pais acharam você uma gracinha e acabaram comprando o brinquedo.',
+        descricaoResultado: 'Você pediu com carinho, prometeu comer os legumes e ganhou o brinquedo.',
         consequencias: {
           stats: { felicidade: 12 },
           hiddenStats: { empatia: 8, sociabilidade: 8 },
+          impactosComportamentais: { sociabilidade: 2 },
           relacionamentoDelta: { delta: 8 }
         }
       },
       {
         id: 'opt_aceitar',
         texto: 'Aceitar quando disseram "na volta a gente compra"',
-        descricaoResultado: 'Você aprendeu desde cedo a lidar com a frustração (e que na volta eles nunca compram).',
+        descricaoResultado: 'Você aceitou deixar o brinquedo para outra ocasião e aprendeu cedo a lidar com a frustração (e que na volta eles nunca compram).',
         consequencias: {
           stats: { felicidade: 0 },
-          hiddenStats: { disciplina: 12, empatia: 5 }
+          hiddenStats: { disciplina: 12, empatia: 5 },
+          impactosComportamentais: { disciplina: 2 }
         }
       }
     ]
@@ -85,10 +91,11 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       {
         id: 'opt_adotar',
         texto: 'Implorar para a família adotar o bichinho',
-        descricaoResultado: 'Seus pais cederam! O gatinho agora é o mais novo membro da família.',
+        descricaoResultado: 'Você implorou tanto que seus pais cederam: o gatinho agora é o mais novo membro da família.',
         consequencias: {
           stats: { felicidade: 20 },
           hiddenStats: { empatia: 15, sociabilidade: 10 },
+          impactosComportamentais: { empatia: 2, familia: 1 },
           adicionarFlag: 'tem_animal_estimacao',
           adicionarFamiliar: {
             nome: 'Mingau',
@@ -108,7 +115,8 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você cuidou do gatinho com carinho até que um vizinho o adotou.',
         consequencias: {
           stats: { felicidade: 10 },
-          hiddenStats: { empatia: 10 }
+          hiddenStats: { empatia: 10 },
+          impactosComportamentais: { empatia: 2, generosidade: 1 }
         }
       }
     ]
@@ -126,10 +134,11 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       {
         id: 'opt_fazer_amigos',
         texto: 'Conversar com todo mundo e dividir o lanche no recreio',
-        descricaoResultado: 'Você rapidamente virou a criança mais popular da turma e fez vários novos amiguinhos!',
+        descricaoResultado: 'Você conversou com todo mundo, dividiu o lanche no recreio e virou a criança mais popular da turma.',
         consequencias: {
           stats: { felicidade: 15 },
-          hiddenStats: { sociabilidade: 20, reputacao: 10 }
+          hiddenStats: { sociabilidade: 20, reputacao: 10 },
+          impactosComportamentais: { sociabilidade: 2, generosidade: 1 }
         }
       },
       {
@@ -138,16 +147,18 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         descricaoResultado: 'A professora elogiou sua atenção e você aprendeu a ler suas primeiras frases com perfeição.',
         consequencias: {
           stats: { inteligencia: 10, felicidade: 8 },
-          hiddenStats: { disciplina: 15 }
+          hiddenStats: { disciplina: 15 },
+          impactosComportamentais: { disciplina: 2 }
         }
       },
       {
         id: 'opt_chorar',
         texto: 'Chorar com saudades de casa',
-        descricaoResultado: 'A tia da escola te deu um abraço caloroso e aos poucos você foi se acostumando.',
+        descricaoResultado: 'Você chorou de saudade de casa, mas o abraço caloroso da tia da escola ajudou você a se acostumar.',
         consequencias: {
           stats: { felicidade: -5 },
-          hiddenStats: { empatia: 5 }
+          hiddenStats: { empatia: 5 },
+          impactosComportamentais: { empatia: 1 }
         }
       }
     ]
@@ -164,20 +175,22 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       {
         id: 'opt_jogar_raca',
         texto: 'Jogar descalço com muita garra e dar caneta no zagueiro',
-        descricaoResultado: 'Você marcou um golaço antológico e saiu ovacionado por todo o quarteirão!',
+        descricaoResultado: 'Você jogou descalço com garra, deu caneta no zagueiro e marcou um golaço antológico ovacionado pelo quarteirão!',
         consequencias: {
           stats: { felicidade: 18, saude: 5 },
           hiddenStats: { condicionamentoFisico: 15, sociabilidade: 10, reputacao: 10 },
+          impactosComportamentais: { coragem: 2, sociabilidade: 1 },
           adicionarFlag: 'jogou_futebol_infancia'
         }
       },
       {
         id: 'opt_goleiro',
         texto: 'Ficar no gol para ajudar o time',
-        descricaoResultado: 'Você fez defesas milagrosas, embora tenha ralado o joelho no chão.',
+        descricaoResultado: 'Você ficou no gol para ajudar o time e fez defesas milagrosas, embora tenha ralado o joelho no chão.',
         consequencias: {
           stats: { felicidade: 10, saude: -2 },
-          hiddenStats: { empatia: 10, disciplina: 8 }
+          hiddenStats: { empatia: 10, disciplina: 8 },
+          impactosComportamentais: { generosidade: 1, disciplina: 1 }
         }
       },
       {
@@ -186,7 +199,8 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você zerou uma fase super difícil no jogo, mas perdeu a diversão com a galera lá fora.',
         consequencias: {
           stats: { felicidade: 10, inteligencia: 4 },
-          hiddenStats: { sociabilidade: -8, condicionamentoFisico: -5 }
+          hiddenStats: { sociabilidade: -8, condicionamentoFisico: -5 },
+          impactosComportamentais: { independencia: 1, sociabilidade: -1 }
         }
       }
     ]
@@ -203,10 +217,11 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       {
         id: 'opt_vulcao',
         texto: 'Construir um vulcão com vinagre, bicarbonato e luzes LED',
-        descricaoResultado: 'A erupção foi espetacular e ganhou medalha de 1º lugar na feira!',
+        descricaoResultado: 'Seu vulcão de vinagre e bicarbonato entrou em erupção espetacular e ganhou a medalha de 1º lugar na feira!',
         consequencias: {
           stats: { inteligencia: 12, felicidade: 12 },
           hiddenStats: { disciplina: 10, reputacao: 15 },
+          impactosComportamentais: { disciplina: 2 },
           adicionarFlag: 'medalha_ciencias'
         }
       },
@@ -216,7 +231,8 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você apresentou o trabalho de forma aceitável e tirou uma nota razoável.',
         consequencias: {
           stats: { inteligencia: 4, felicidade: 2 },
-          hiddenStats: { disciplina: -5 }
+          hiddenStats: { disciplina: -5 },
+          impactosComportamentais: { disciplina: -1 }
         }
       }
     ]
@@ -233,20 +249,22 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       {
         id: 'opt_defender',
         texto: 'Intervir com coragem e mandar ele parar imediatamente',
-        descricaoResultado: 'O agressor se intimidou e recuou. O colega virou seu amigo leal para a vida toda!',
+        descricaoResultado: 'Você interveio e mandou ele parar: o agressor se intimidou e recuou, e o colega virou seu amigo leal para a vida toda!',
         consequencias: {
           stats: { felicidade: 10 },
           hiddenStats: { empatia: 15, reputacao: 15, sociabilidade: 10 },
+          impactosComportamentais: { coragem: 2, empatia: 2 },
           adicionarFlag: 'defendeu_amigo'
         }
       },
       {
         id: 'opt_chamar_professora',
         texto: 'Correr e avisar a diretora ou a inspetora de alunos',
-        descricaoResultado: 'A direção interveio a tempo e advertiu os pais do agressor.',
+        descricaoResultado: 'Você correu para avisar a direção; ela interveio a tempo e advertiu os pais do agressor.',
         consequencias: {
           stats: { felicidade: 5 },
-          hiddenStats: { disciplina: 10, empatia: 8 }
+          hiddenStats: { disciplina: 10, empatia: 8 },
+          impactosComportamentais: { empatia: 1, disciplina: 1 }
         }
       },
       {
@@ -255,7 +273,8 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você evitou a confusão, mas ficou com uma pontada de culpa na consciência.',
         consequencias: {
           stats: { felicidade: -8 },
-          hiddenStats: { empatia: -10, reputacao: -5 }
+          hiddenStats: { empatia: -10, reputacao: -5 },
+          impactosComportamentais: { empatia: -2 }
         }
       }
     ]
@@ -276,6 +295,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { inteligencia: 8, felicidade: 10 },
           hiddenStats: { disciplina: 8, sociabilidade: 8 },
+          impactosComportamentais: { disciplina: 2 },
           adicionarFlag: 'sabe_tocar_violao'
         }
       },

@@ -6,6 +6,7 @@ import {
   FamilyMember,
   GameEvent,
   LifeLogEntry,
+  PersonalityState,
   PostMortemSummary
 } from '../types';
 import { aplicarEnvelhecimentoAtributos } from './attributeSystem';
@@ -49,7 +50,8 @@ export function executarPassagemDeAno(
   educacao: EducationState,
   carreira: CareerState,
   economia: EconomyState,
-  historicoEventosDisparados: string[]
+  historicoEventosDisparados: string[],
+  personalidade?: PersonalityState
 ): AgingResult {
   const novaIdade = personagem.idade + 1;
   const novoAno = personagem.anoAtual + 1;
@@ -131,14 +133,15 @@ export function executarPassagemDeAno(
     };
   }
 
-  // 7. Sorteio de Evento Interativo
+  // 7. Sorteio de Evento Interativo (pode consultar personalidade/memória)
   const evento = sortearEventoDoAno(
     char,
     car,
     edu,
     eco,
     fam,
-    historicoEventosDisparados
+    historicoEventosDisparados,
+    personalidade
   );
 
   // Se nenhum evento interativo foi disparado e nenhum log narrativo específico ocorreu, adiciona flavor text de ano tranquilo

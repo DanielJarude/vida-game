@@ -18,7 +18,8 @@ export const EXTRA_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 18 },
           dinheiro: 80,
-          hiddenStats: { ambicao: 15, sociabilidade: 12, disciplina: 10 }
+          hiddenStats: { ambicao: 15, sociabilidade: 12, disciplina: 10 },
+          impactosComportamentais: { disciplina: 1, sociabilidade: 1 }
         }
       },
       {
@@ -27,7 +28,8 @@ export const EXTRA_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você teve uma deliciosa indigestão de chocolate e lucrou bem menos.',
         consequencias: {
           stats: { felicidade: 10, saude: -3 },
-          dinheiro: 20
+          dinheiro: 20,
+          impactosComportamentais: { impulsividade: 2 }
         }
       }
     ]

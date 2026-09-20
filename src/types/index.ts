@@ -36,6 +36,54 @@ export interface HiddenStats {
   condicionamentoFisico: number; // Fitness
 }
 
+// ---------------------------------------------------------------------------
+// B2 — Personalidade emergente e memória de escolhas
+// Traços são eixos assinados: valores positivos reforçam a tendência; valores
+// negativos indicam o polo oposto (ex.: generosidade negativa = egoísmo).
+// Uma escolha isolada move poucos pontos; padrões ao longo da vida constroem
+// traços fortes. Números crus nunca são exibidos ao jogador.
+// ---------------------------------------------------------------------------
+
+export type TracoComportamental =
+  | 'empatia'
+  | 'generosidade'
+  | 'disciplina'
+  | 'impulsividade'
+  | 'coragem'
+  | 'sociabilidade'
+  | 'independencia'
+  | 'familia';
+
+/** Registro estruturado de uma escolha relevante (memória interna, não a Linha da Vida). */
+export interface EscolhaRegistrada {
+  eventoId: string;
+  opcaoId: string;
+  idade: number;
+  ano: number;
+  /** Tags declaradas na opção escolhida (identificadores estáveis, nunca texto visível). */
+  tagsComportamentais: Partial<Record<TracoComportamental, number>>;
+  /** Deltas efetivamente aplicados aos traços (pode divergir das tags no futuro). */
+  impactos: Partial<Record<TracoComportamental, number>>;
+}
+
+/** Estado de personalidade do personagem: intensidades acumuladas + memória de escolhas. */
+export interface PersonalityState {
+  tracos: Record<TracoComportamental, number>;
+  memorias: EscolhaRegistrada[];
+}
+
+/**
+ * Condição comportamental consultável por eventos e opções (presente e futuro):
+ * traço mínimo/máximo, escolha anterior e quantidade de ocorrências de uma tag.
+ */
+export interface CondicaoComportamental {
+  traco?: TracoComportamental;
+  intensidadeMinima?: number;
+  intensidadeMaxima?: number;
+  escolheuAnteriormente?: { eventoId: string; opcaoId?: string };
+  minimoOcorrencias?: { tag: TracoComportamental; quantidade: number };
+}
+
 export type RelationType =
   | 'pai'
   | 'mae'
@@ -200,6 +248,8 @@ export interface LifeLogEntry {
 export interface EventConsequence {
   stats?: Partial<VisibleStats>;
   hiddenStats?: Partial<HiddenStats>;
+  // B2 — sinal comportamental de longo prazo (personalidade emergente); impacto pequeno por escolha
+  impactosComportamentais?: Partial<Record<TracoComportamental, number>>;
   dinheiro?: number;
   relacionamentoDelta?: { relationId?: string; relationType?: RelationType; delta: number };
   adicionarFlag?: string;
@@ -224,6 +274,8 @@ export interface EventOption {
     valorMinimo?: number;
     dinheiroMinimo?: number;
     flagNecessaria?: string;
+    // B2 — exigência de padrão de comportamento acumulado (ex.: histórico de disciplina)
+    condicaoComportamental?: CondicaoComportamental;
   };
 }
 
@@ -250,6 +302,8 @@ export interface GameEvent {
     flagsProibidas?: string[];
     saudeMinima?: number;
     saudeMaxima?: number;
+    // B2 — condições sobre personalidade/memória (todas devem ser atendidas)
+    personalidade?: CondicaoComportamental[];
   };
   opcoes: EventOption[];
 }
@@ -284,6 +338,8 @@ export interface GameState {
   educacao: EducationState;
   carreira: CareerState;
   economia: EconomyState;
+  // B2 — personalidade emergente e memória de escolhas
+  personalidade: PersonalityState;
   timeline: LifeLogEntry[];
   eventoAtivo: GameEvent | null;
   historicoEventosDisparados: string[];

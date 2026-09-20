@@ -1,11 +1,15 @@
 import { GameState, GlobalStats, PastLifeRecord, PostMortemSummary, GameEvent } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
+import { criarPersonalidadeInicial, normalizarPersonalidade } from './personalitySystem';
 import { clamp } from '../utils/random';
 
 const SAVE_KEY = 'VIDA_GAME_SAVE_V1'; // chave mantida: a versão vive dentro do payload
 const STATS_KEY = 'VIDA_GLOBAL_STATS_V1';
 
-export const VERSAO_SAVE = 2;
+// v3: personalidade emergente + memória de escolhas (B2).
+// Saves da v2 (B1-FIX) sem esses campos carregam normalmente: inicializados de
+// forma segura, sem destruir dados válidos.
+export const VERSAO_SAVE = 3;
 
 // Formato persistido: o evento ativo é referenciado por id (não serializado por inteiro)
 type EstadoSalvo = Omit<GameState, 'eventoAtivo'> & { eventoAtivoId?: string | null };
@@ -181,6 +185,12 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     h => typeof h === 'string'
   ) as string[];
 
+  // --- Personalidade (B2): saves das versões 1/2 não possuem o campo;
+  // inicializa em branco. Saves da v3 são normalizados defensivamente. ---
+  const personalidade = raiz.personalidade
+    ? normalizarPersonalidade(raiz.personalidade)
+    : criarPersonalidadeInicial();
+
   const resumoMorte = comoObjeto(raiz.resumoMorte) as unknown as GameState['resumoMorte'];
 
   return {
@@ -190,6 +200,7 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     educacao,
     carreira,
     economia,
+    personalidade,
     timeline,
     eventoAtivo,
     historicoEventosDisparados,
