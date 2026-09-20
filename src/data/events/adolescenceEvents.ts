@@ -42,6 +42,24 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         }
       },
       {
+        // B4-FIX2 item 11 — segunda consequência futura leve: quem
+        // defendeu um colega do bullying na infância (`defendeu_amigo`)
+        // já tem esse vínculo de confiança quando a tentação da cola
+        // aparece de novo, anos depois. Ligado por FLAG, não por texto.
+        id: 'opt_colega_retribui',
+        texto: 'Recusar a cola — o colega que você defendeu na infância se oferece pra estudar com você',
+        descricaoResultado: 'Você recusou a cola. Sem nem precisar pedir, aquele colega que você defendeu anos atrás apareceu com o material organizado: "Depois de tudo que você fez por mim, é o mínimo." Vocês dois tiraram notas honestas.',
+        requisito: {
+          flagNecessaria: 'defendeu_amigo'
+        },
+        consequencias: {
+          stats: { inteligencia: 12, felicidade: 14 },
+          hiddenStats: { disciplina: 12, reputacao: 8, sociabilidade: 8 },
+          impactosComportamentais: { disciplina: 2, empatia: 1 },
+          relacionamentoDelta: { delta: 10 }
+        }
+      },
+      {
         // B2 — opção que só existe para quem construiu histórico de disciplina
         // na infância (padrão acumulado, não bônus automático)
         id: 'opt_estudar_juntos',
@@ -216,6 +234,23 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 25, aparencia: 5 },
           hiddenStats: { sociabilidade: 20, reputacao: 15 }
+        }
+      },
+      {
+        // B4-FIX2 item 11 — terceira consequência futura leve: quem
+        // aprendeu violão na infância (`sabe_tocar_violao`) tem essa
+        // habilidade disponível anos depois, num momento em que ela
+        // realmente importa. Ligado por FLAG, nunca por texto.
+        id: 'opt_tocar_violao_festa',
+        texto: 'Pegar o violão e cantar com a turma no meio da festa',
+        descricaoResultado: 'Você pegou o violão que praticamente ninguém sabia que sabia tocar e puxou um coro com a turma inteira. Virou a lembrança mais contada da formatura.',
+        requisito: {
+          flagNecessaria: 'sabe_tocar_violao'
+        },
+        consequencias: {
+          stats: { felicidade: 28, aparencia: 3 },
+          hiddenStats: { sociabilidade: 22, reputacao: 20 },
+          impactosComportamentais: { sociabilidade: 2 }
         }
       },
       {
