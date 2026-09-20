@@ -57,10 +57,14 @@
   --rule: rgba(255, 255, 255, 0.07);
   --rule-strong: rgba(255, 255, 255, 0.13);
 
-  --text-primary: #eef4f2;
-  --text-secondary: #94a8a6;
-  --text-muted: #63797a;
-  --text-faint: #46595c;
+  /* Contraste verificado contra --bg-app (#0a1116). O B4-FIX elevou muted
+     e faint: em 4.12:1 e 2.57:1 eles reprovavam no WCAG AA e o playtest
+     reportou informação secundária difícil de ler. Nenhum texto legível
+     do produto fica abaixo de 4.5:1. */
+  --text-primary: #eef4f2;   /* 17.07:1 */
+  --text-secondary: #a8bcba; /* 9.73:1  */
+  --text-muted: #88a0a2;     /* 6.88:1  */
+  --text-faint: #7e9492;     /* 5.92:1  */
 
   /* Acento único e escasso. Carrega significado: ativo, escolhido, avançar. */
   --accent: #3ddc97;

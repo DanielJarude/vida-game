@@ -395,6 +395,7 @@ describe('B4 · nenhum dado do mockup de referência aparece na UI', () => {
         educacao={estado.educacao}
         carreira={estado.carreira}
         familia={estado.familia}
+        economia={estado.economia}
         situacao="Vive com os pais"
       />
     );

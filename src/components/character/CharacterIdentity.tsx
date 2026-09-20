@@ -3,17 +3,26 @@ import { MapPin, GraduationCap, Briefcase, HeartPulse, Users } from 'lucide-reac
 import type {
   CareerState,
   Character,
+  EconomyState,
   EducationState,
   FamilyMember
 } from '../../types';
-import { getEducationLabel, getSocialClassLabel } from '../../utils/formatters';
-import { obterPerfilDeFase } from '../../presentation/lifeStagePresentation';
+import {
+  formatarDinheiro,
+  getEducationLabel,
+  getSocialClassLabel
+} from '../../utils/formatters';
+import {
+  obterPerfilDeFase,
+  deveMostrarSaldoNaIdentidade
+} from '../../presentation/lifeStagePresentation';
 
 interface CharacterIdentityProps {
   personagem: Character;
   educacao: EducationState;
   carreira: CareerState;
   familia: FamilyMember[];
+  economia: EconomyState;
   /** Situação atual descrita pela política central (coerente com a fase). */
   situacao: string;
 }
@@ -33,6 +42,7 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
   educacao,
   carreira,
   familia,
+  economia,
   situacao
 }) => {
   const perfil = obterPerfilDeFase(personagem.idade);
@@ -52,6 +62,15 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
   // Convivência: quem realmente está vivo ao redor da pessoa.
   const vivos = familia.filter(m => m.vivo).length;
 
+  // Saldo junto da identidade quando o dinheiro já significa algo nesta
+  // fase — decisão da camada de apresentação, não deste componente.
+  const temPatrimonio =
+    economia.propriedades.length > 0 || economia.investimentos.length > 0;
+  const mostrarSaldo = deveMostrarSaldoNaIdentidade(
+    personagem.idade,
+    temPatrimonio
+  );
+
   return (
     <section className="identity" aria-label="Quem é você">
       <div className="identity__portrait" aria-hidden="true">
@@ -69,6 +88,21 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
             {unidadeIdade} · {perfil.rotulo}
           </span>
         </p>
+
+        {/* Saldo pessoal na mesma linha de leitura da identidade: fácil de
+            achar, sem virar um painel financeiro. */}
+        {mostrarSaldo && (
+          <p className="identity__balance">
+            <span className="identity__balance-label">Saldo</span>
+            <span
+              className={`identity__balance-value${
+                economia.dinheiro < 0 ? ' identity__balance-value--negativo' : ''
+              }`}
+            >
+              {formatarDinheiro(economia.dinheiro)}
+            </span>
+          </p>
+        )}
 
         <div className="identity__facts">
           <p className="identity__fact">

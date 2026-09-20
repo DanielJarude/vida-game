@@ -93,7 +93,41 @@
 
 .identity__age-unit {
   font-size: var(--type-caption);
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ Saldo
+   O dinheiro fica na mesma coluna de leitura da identidade — encontrável
+   num relance, sem virar um painel financeiro. Sem caixa, sem ícone: só
+   um rótulo pequeno e um número com peso. */
+.identity__balance {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+.identity__balance-label {
+  font-size: var(--type-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
   color: var(--text-muted);
+}
+
+.identity__balance-value {
+  font-family: var(--font-display);
+  font-size: var(--type-subheading);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+/* Saldo negativo é semântico, e o sinal no número já diferencia sem cor. */
+.identity__balance-value--negativo {
+  color: var(--danger);
 }
 
 /* Fatos secundários: lista sem rótulos redundantes, peso baixo. */
@@ -108,7 +142,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--type-caption);
+  /* Era --type-caption (13px). O playtest apontou contexto importante
+     passando despercebido; subiu para o corpo de texto normal. */
+  font-size: var(--type-body);
   color: var(--text-secondary);
   min-width: 0;
 }

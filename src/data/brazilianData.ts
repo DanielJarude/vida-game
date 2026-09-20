@@ -120,3 +120,62 @@ export function sortearSobrenome(): string {
 export function sortearCidade(): BrazilianCity {
   return randomChoice(CIDADES_BRASILEIRAS);
 }
+
+// ---------------------------------------------------------------------------
+// Consultas de localização (data-driven)
+//
+// A seleção de onde nascer é derivada de CIDADES_BRASILEIRAS, nunca
+// duplicada em componente. Acrescentar uma cidade à lista acima basta para
+// que ela apareça na criação de personagem.
+//
+// LIMITAÇÃO CONHECIDA: o jogo suporta 28 cidades, escolhidas para cobrir as
+// cinco regiões. Não é a lista completa dos municípios brasileiros, e o
+// `custoVidaRelativo` é um parâmetro de balanceamento do jogo — não um dado
+// socioeconômico de fonte externa. Cidades novas só devem ser adicionadas
+// com um custo coerente com as já existentes.
+// ---------------------------------------------------------------------------
+
+export interface EstadoBrasileiro {
+  sigla: string;
+  regiao: BrazilianCity['regiao'];
+  quantidadeCidades: number;
+}
+
+/** Estados que possuem ao menos uma cidade suportada, em ordem alfabética. */
+export function listarEstadosDisponiveis(): EstadoBrasileiro[] {
+  const mapa = new Map<string, EstadoBrasileiro>();
+
+  for (const cidade of CIDADES_BRASILEIRAS) {
+    const atual = mapa.get(cidade.estado);
+    if (atual) {
+      atual.quantidadeCidades += 1;
+    } else {
+      mapa.set(cidade.estado, {
+        sigla: cidade.estado,
+        regiao: cidade.regiao,
+        quantidadeCidades: 1
+      });
+    }
+  }
+
+  return Array.from(mapa.values()).sort((a, b) =>
+    a.sigla.localeCompare(b.sigla, 'pt-BR')
+  );
+}
+
+/** Cidades suportadas de um estado, em ordem alfabética. */
+export function listarCidadesPorEstado(sigla: string): BrazilianCity[] {
+  return CIDADES_BRASILEIRAS.filter(c => c.estado === sigla).sort((a, b) =>
+    a.cidade.localeCompare(b.cidade, 'pt-BR')
+  );
+}
+
+/** Busca exata de uma cidade suportada. */
+export function encontrarCidade(
+  nomeCidade: string,
+  sigla: string
+): BrazilianCity | undefined {
+  return CIDADES_BRASILEIRAS.find(
+    c => c.cidade === nomeCidade && c.estado === sigla
+  );
+}

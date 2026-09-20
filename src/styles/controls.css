@@ -81,7 +81,7 @@
 .action-row__detail {
   margin-top: 2px;
   font-size: var(--type-caption);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: var(--leading-snug);
 }
 
@@ -242,8 +242,8 @@
 /* ============================================================= ESTADO VAZIO */
 .empty-state {
   padding: var(--space-7) 0;
-  font-size: var(--type-caption);
-  color: var(--text-muted);
+  font-size: var(--type-body);
+  color: var(--text-secondary);
   line-height: var(--leading-normal);
   max-width: 52ch;
 }

@@ -120,6 +120,7 @@ export const GameShell: React.FC<GameShellProps> = ({
           educacao={educacao}
           carreira={carreira}
           familia={familia}
+          economia={economia}
           situacao={situacao}
         />
 

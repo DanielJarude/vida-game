@@ -151,8 +151,10 @@
   color: var(--text-faint);
 }
 
+/* O resumo é o conteúdo da lembrança, não uma legenda: o playtest apontou
+   texto pequeno demais para o que é, de fato, a leitura principal. */
 .timeline-entry__summary {
-  font-size: var(--type-caption);
+  font-size: var(--type-body);
   line-height: var(--leading-normal);
   color: var(--text-secondary);
   max-width: 68ch;
@@ -210,8 +212,8 @@
 /* -------------------------------------------------------- Estado vazio */
 .timeline-empty {
   padding: var(--space-7) 0;
-  color: var(--text-muted);
-  font-size: var(--type-caption);
+  color: var(--text-secondary);
+  font-size: var(--type-body);
   max-width: 48ch;
 }
 

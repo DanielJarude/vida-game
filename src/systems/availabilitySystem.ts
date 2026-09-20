@@ -23,6 +23,10 @@ import { BICOS_DISPONIVEIS, FreelanceOption, TODAS_PROFISSOES } from '../data/ca
 import { CURSOS_DISPONIVEIS } from '../data/coursesData';
 import { IMOVEIS_LOJA, VEICULOS_LOJA } from '../data/assetsData';
 import { formatarDinheiro, getEducationLabel } from '../utils/formatters';
+import {
+  avaliarCapacidadeInteracao,
+  deveOferecerInteracao
+} from './interactionCapabilitySystem';
 
 // ---------------------------------------------------------------------------
 // Constantes de política — fonte única de verdade para UI e motor
@@ -358,6 +362,16 @@ export function getActionAvailability(
       }
       if (tipo === 'pedir_conselho' && idade < IDADE_MINIMA_PEDIR_CONSELHO) {
         return OCULTO('idade_minima');
+      }
+      // Capacidade por idade: um bebê não conversa, não discute e não
+      // presenteia. Regra única em `interactionCapabilitySystem`, revalidada
+      // pelo motor — esconder o botão não é a proteção.
+      if (!deveOferecerInteracao(tipo, idade)) {
+        return OCULTO('idade_minima');
+      }
+      const capacidade = avaliarCapacidadeInteracao(tipo, idade);
+      if (!capacidade.permitido) {
+        return BLOQUEADO('idade_minima', capacidade.motivo);
       }
       if (jaRealizada(ctx, `familia:${membro.id}:${tipo}`)) {
         return BLOQUEADO('repeticao_anual', `Você já fez isto com ${membro.nome} neste ano.`);

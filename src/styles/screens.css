@@ -243,3 +243,35 @@
   font-variant-numeric: tabular-nums;
   color: var(--accent);
 }
+
+/* --------------------------------------------------- Barra superior da tela */
+.screen__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-7);
+}
+
+/* ------------------------------------------------------- Campos aninhados
+   Estado e cidade são um par: pertencem ao mesmo rótulo-mãe e recebem
+   sub-rótulos menores em vez de dois blocos independentes. */
+.field--nested {
+  margin-top: var(--space-2);
+}
+
+.field__sublabel {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--type-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.field__note {
+  margin-top: var(--space-2);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+}

@@ -7,7 +7,20 @@ import {
 } from '../data/brazilianData';
 import { getTratamentoParentesco } from '../utils/formatters';
 import { IDADE_MINIMA_PEDIR_CONSELHO, IDADE_MINIMA_PEDIR_DINHEIRO } from './availabilitySystem';
+import {
+  avaliarCapacidadeInteracao,
+  narrarInteracaoPorFase
+} from './interactionCapabilitySystem';
 import { clamp, generateId, randomChoice, randomInt, rollChance, valorAleatorio } from '../utils/random';
+
+/** Narrativa da interação conforme a fase da vida do personagem. */
+function narrarInteracao(
+  interacao: FamilyInteractionType,
+  membro: FamilyMember,
+  idade: number
+): string {
+  return narrarInteracaoPorFase(interacao, membro.nome, idade);
+}
 
 function capitalizar(texto: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
@@ -210,6 +223,22 @@ export function interagirComFamiliar(
 
   // Revalidação da política central: interações que pressupõem autonomia
   // maior do que a fase atual permite são recusadas sem efeitos.
+  //
+  // Esta checagem é a que realmente protege o estado. Esconder o botão é
+  // apresentação; aqui é onde uma chamada direta (save editado, código,
+  // teste) também falha, sem aplicar nenhum efeito parcial.
+  const capacidade = avaliarCapacidadeInteracao(interacao, personagem.idade);
+  if (!capacidade.permitido) {
+    return {
+      membroAtualizado: membro,
+      personagemAtualizado: personagem,
+      custoDinheiro: 0,
+      dinheiroGanho: 0,
+      mensagem: capacidade.motivo,
+      sucesso: false
+    };
+  }
+
   if (interacao === 'pedir_dinheiro' && personagem.idade < IDADE_MINIMA_PEDIR_DINHEIRO) {
     return {
       membroAtualizado: membro,
@@ -237,14 +266,14 @@ export function interagirComFamiliar(
       deltaFel = randomInt(3, 8);
       deltaEmpatia = 3;
       deltaEstresse = -4;
-      msg = `Você teve uma ótima conversa com ${membro.nome}. Vocês riram e compartilharam novidades.`;
+      msg = narrarInteracao('conversar', membro, personagem.idade);
       break;
 
     case 'passar_tempo':
       deltaRel = randomInt(8, 16);
       deltaFel = randomInt(8, 15);
       deltaEstresse = -8;
-      msg = `Você passou a tarde inteira com ${membro.nome}. O momento juntos foi maravilhoso!`;
+      msg = narrarInteracao('passar_tempo', membro, personagem.idade);
       break;
 
     case 'dar_presente':
@@ -271,7 +300,7 @@ export function interagirComFamiliar(
       deltaFel = -randomInt(8, 15);
       deltaEstresse = 15;
       sucesso = false;
-      msg = `Você e ${membro.nome} tiveram uma discussão áspera sobre assuntos do dia a dia. O clima ficou pesado.`;
+      msg = narrarInteracao('discutir', membro, personagem.idade);
       break;
 
     case 'pedir_dinheiro':

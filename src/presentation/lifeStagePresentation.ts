@@ -113,3 +113,33 @@ export function deveMostrarFinancasNaVisaoGeral(
 ): boolean {
   return obterPerfilDeFase(idade).mostrarFinancas || temPatrimonio;
 }
+
+// ---------------------------------------------------------------------------
+// Dinheiro na identidade
+// ---------------------------------------------------------------------------
+
+/**
+ * Idade a partir da qual o saldo pessoal passa a ser informação útil na
+ * linha de identidade. Coincide com a possibilidade de renda própria
+ * (bicos), definida em `availabilitySystem`.
+ */
+export const IDADE_SALDO_RELEVANTE = 15;
+
+/**
+ * O saldo deve aparecer junto da identidade?
+ *
+ * Princípio do B4-FIX: quando o dinheiro é relevante para a fase, o
+ * jogador precisa achá-lo rápido — sem que isso vire um painel financeiro.
+ * Para um bebê, saldo é ruído: a conta existe no modelo, mas não tem
+ * significado nenhum na vida dele.
+ *
+ * Também aparece antes dos 15 se houver patrimônio real ou dinheiro
+ * expressivo (herança, presente registrado pelo motor): nesse caso o valor
+ * deixou de ser abstrato.
+ */
+export function deveMostrarSaldoNaIdentidade(
+  idade: number,
+  temPatrimonio: boolean
+): boolean {
+  return idade >= IDADE_SALDO_RELEVANTE || temPatrimonio;
+}

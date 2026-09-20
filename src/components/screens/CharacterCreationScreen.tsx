@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { valorAleatorio } from '../../utils/random';
 import { Gender } from '../../types';
 import {
-  CIDADES_BRASILEIRAS,
+  listarEstadosDisponiveis,
+  listarCidadesPorEstado,
   sortearNome,
   sortearSobrenome
 } from '../../data/brazilianData';
@@ -25,19 +26,51 @@ const ROTULO_GENERO: Record<Gender, string> = {
   'nao-binario': 'Não binário'
 };
 
+/**
+ * Criação de uma nova vida.
+ *
+ * Tudo aqui é escolha do jogador. O sorteio existe como atalho explícito
+ * ("Sortear tudo"), nunca como algo que acontece por baixo: o que estiver
+ * selecionado na tela é exatamente o que o motor recebe.
+ *
+ * A localização é derivada dos dados (`brazilianData`), em dois passos —
+ * estado, depois cidade — para continuar escalável conforme a lista cresce.
+ */
 export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = ({
   onCriarVida,
   onVoltar
 }) => {
+  const estados = useMemo(() => listarEstadosDisponiveis(), []);
+
   const [genero, setGenero] = useState<Gender>('masculino');
   const [nome, setNome] = useState<string>(() => sortearNome('masculino'));
   const [sobrenome, setSobrenome] = useState<string>(() => sortearSobrenome());
-  const [cidadeIndex, setCidadeIndex] = useState<number>(0);
+  const [estado, setEstado] = useState<string>(() => estados[0].sigla);
+  const [cidade, setCidade] = useState<string>(
+    () => listarCidadesPorEstado(estados[0].sigla)[0].cidade
+  );
+
+  const cidadesDoEstado = useMemo(
+    () => listarCidadesPorEstado(estado),
+    [estado]
+  );
+
+  const handleTrocaEstado = (novoEstado: string) => {
+    setEstado(novoEstado);
+    // A cidade selecionada precisa pertencer ao novo estado.
+    setCidade(listarCidadesPorEstado(novoEstado)[0].cidade);
+  };
 
   const handleSortearTudo = () => {
     setNome(sortearNome(genero));
     setSobrenome(sortearSobrenome());
-    setCidadeIndex(Math.floor(valorAleatorio() * CIDADES_BRASILEIRAS.length));
+
+    const estadoSorteado =
+      estados[Math.floor(valorAleatorio() * estados.length)].sigla;
+    const cidades = listarCidadesPorEstado(estadoSorteado);
+
+    setEstado(estadoSorteado);
+    setCidade(cidades[Math.floor(valorAleatorio() * cidades.length)].cidade);
   };
 
   const handleTrocaGenero = (novoGen: Gender) => {
@@ -48,28 +81,14 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim() || !sobrenome.trim()) return;
-    const cidadeSel = CIDADES_BRASILEIRAS[cidadeIndex];
-    onCriarVida(
-      nome.trim(),
-      sobrenome.trim(),
-      genero,
-      cidadeSel.cidade,
-      cidadeSel.estado
-    );
+    // Exatamente o que está na tela — sem nenhuma randomização posterior.
+    onCriarVida(nome.trim(), sobrenome.trim(), genero, cidade, estado);
   };
 
   return (
     <div className="screen screen--scroll">
       <div className="screen__inner" style={{ paddingTop: 'var(--space-8)' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--space-3)',
-            marginBottom: 'var(--space-7)'
-          }}
-        >
+        <div className="screen__topbar">
           <button onClick={onVoltar} className="icon-button" aria-label="Voltar">
             <ArrowLeft size={20} />
           </button>
@@ -78,6 +97,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
             onClick={handleSortearTudo}
             className="icon-button"
             aria-label="Sortear tudo"
+            title="Sortear tudo"
           >
             <Shuffle size={18} />
           </button>
@@ -134,21 +154,47 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
           </div>
 
           <div className="field">
-            <label className="field__label" htmlFor="campo-cidade">
-              Onde você nasce
-            </label>
-            <select
-              id="campo-cidade"
-              className="field__control"
-              value={cidadeIndex}
-              onChange={e => setCidadeIndex(Number(e.target.value))}
-            >
-              {CIDADES_BRASILEIRAS.map((c, i) => (
-                <option key={`${c.cidade}-${c.estado}`} value={i}>
-                  {c.cidade}, {c.estado}
-                </option>
-              ))}
-            </select>
+            <span className="field__label">Onde você nasce</span>
+            <div className="creation-grid">
+              <div className="field field--nested">
+                <label className="field__sublabel" htmlFor="campo-estado">
+                  Estado
+                </label>
+                <select
+                  id="campo-estado"
+                  className="field__control"
+                  value={estado}
+                  onChange={e => handleTrocaEstado(e.target.value)}
+                >
+                  {estados.map(uf => (
+                    <option key={uf.sigla} value={uf.sigla}>
+                      {uf.sigla} · {uf.regiao}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field field--nested">
+                <label className="field__sublabel" htmlFor="campo-cidade">
+                  Cidade
+                </label>
+                <select
+                  id="campo-cidade"
+                  className="field__control"
+                  value={cidade}
+                  onChange={e => setCidade(e.target.value)}
+                >
+                  {cidadesDoEstado.map(c => (
+                    <option key={c.cidade} value={c.cidade}>
+                      {c.cidade}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="field__note">
+              Sua vida começa exatamente onde você escolher.
+            </p>
           </div>
 
           <button type="submit" className="btn btn--hero">

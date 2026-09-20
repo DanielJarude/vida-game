@@ -31,6 +31,10 @@ import {
 
 import { salvarJogo, carregarJogo, VERSAO_SAVE } from '../../systems/saveSystem';
 import { criarEstadoTeste, criarFamiliaTeste } from '../../systems/__tests__/fixtures';
+import {
+  CIDADES_BRASILEIRAS,
+  encontrarCidade
+} from '../../data/brazilianData';
 import { criarPersonalidadeInicial } from '../../systems/personalitySystem';
 import type { GameState, LifeLogEntry } from '../../types';
 
@@ -322,5 +326,51 @@ describe('B4 · o rework não afeta save e reload', () => {
 
     expect(grupos).toHaveLength(2);
     expect(grupos[1].idade).toBe(30);
+  });
+});
+
+/* ------------------------------------------------- B4-FIX: local de nascimento */
+
+describe('B4-FIX · o local escolhido sobrevive à criação e ao save', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('a cidade escolhida persiste no estado salvo e recarregado', () => {
+    // Simula exatamente o que o motor recebe da tela de criação.
+    const estado = criarEstadoTeste({
+      idade: 0,
+      personagem: { cidade: 'Feira de Santana', estado: 'BA' }
+    });
+
+    salvarJogo({
+      versao: VERSAO_SAVE,
+      personagem: estado.personagem,
+      familia: estado.familia,
+      educacao: estado.educacao,
+      carreira: estado.carreira,
+      economia: estado.economia,
+      personalidade: criarPersonalidadeInicial(),
+      timeline: [],
+      eventoAtivo: null,
+      historicoEventosDisparados: [],
+      acoesRealizadasAno: [],
+      emJogo: true,
+      morto: false
+    });
+
+    const carregado = carregarJogo();
+
+    expect(carregado!.personagem?.cidade).toBe('Feira de Santana');
+    expect(carregado!.personagem?.estado).toBe('BA');
+  });
+
+  it('nenhuma cidade suportada perde o vínculo com seu estado', () => {
+    // Guarda de integridade dos dados de localização.
+    for (const c of CIDADES_BRASILEIRAS) {
+      expect(encontrarCidade(c.cidade, c.estado)).toBeTruthy();
+      expect(c.estado).toMatch(/^[A-Z]{2}$/);
+      expect(c.custoVidaRelativo).toBeGreaterThan(0);
+    }
   });
 });

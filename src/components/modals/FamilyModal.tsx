@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { FamilyInteractionType, FamilyMember } from '../../types';
 import { Disponibilidade } from '../../systems/availabilitySystem';
 import { apresentarRelacionamento } from '../../presentation/relationshipPresentation';
+import {
+  rotularInteracao,
+  ordenarInteracoesPorFase
+} from '../../presentation/interactionPresentation';
 import { useModalBehavior } from '../common/useModalBehavior';
 import { X, Lock } from 'lucide-react';
 
@@ -19,6 +23,22 @@ interface FamilyModalProps {
   verificarInteracao: (tipo: FamilyInteractionType) => Disponibilidade;
 }
 
+const PRESENTES = [
+  { tipo: 'barato' as const, titulo: 'Lembrança simples', valor: 'R$ 50' },
+  { tipo: 'medio' as const, titulo: 'Presente especial', valor: 'R$ 250' },
+  { tipo: 'luxo' as const, titulo: 'Presente de luxo', valor: 'R$ 1.200' }
+];
+
+/**
+ * Interações com uma pessoa.
+ *
+ * A pessoa vem primeiro (quem é, que relação, em que contexto); as ações
+ * vêm depois, como linhas — não como cartões independentes.
+ *
+ * O componente **não decide** o que é permitido: toda linha passa por
+ * `verificarInteracao`, que consulta a política central. Rótulos vêm da
+ * camada de apresentação e mudam com a idade.
+ */
 export const FamilyModal: React.FC<FamilyModalProps> = ({
   membro,
   onClose,
@@ -50,7 +70,8 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
     tipo: FamilyInteractionType;
     titulo: string;
     descricao: string;
-  }> = ({ tipo, titulo, descricao }) => {
+    onClick?: () => void;
+  }> = ({ tipo, titulo, descricao, onClick }) => {
     const disp = verificarInteracao(tipo);
     if (disp.kind === 'oculto') return null;
 
@@ -61,10 +82,13 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
       <button
         className="event-choice"
         onClick={() => {
-          if (!desabilitado) {
-            onInteragir(tipo);
-            onClose();
+          if (desabilitado) return;
+          if (onClick) {
+            onClick();
+            return;
           }
+          onInteragir(tipo);
+          onClose();
         }}
         disabled={desabilitado}
       >
@@ -83,6 +107,68 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
     );
   };
 
+  /** Linha livre (casamento, filho, término) — já filtrada pelo chamador. */
+  const AcaoLivre: React.FC<{
+    titulo: string;
+    descricao: string;
+    onClick: () => void;
+  }> = ({ titulo, descricao, onClick }) => (
+    <button
+      className="event-choice"
+      onClick={() => {
+        onClick();
+        onClose();
+      }}
+    >
+      <span className="event-choice__indicator" aria-hidden="true" />
+      <span className="event-choice__body">
+        <span className="event-choice__title">{titulo}</span>
+        <span className="event-choice__hint">{descricao}</span>
+      </span>
+    </button>
+  );
+
+  /** Uma interação comum, com rótulo adequado à idade. */
+  const renderInteracao = (tipo: FamilyInteractionType) => {
+    // Pedir dinheiro só faz sentido com quem cria você.
+    if (
+      tipo === 'pedir_dinheiro' &&
+      membro.tipo !== 'pai' &&
+      membro.tipo !== 'mae'
+    ) {
+      return null;
+    }
+
+    const rotulo = rotularInteracao(tipo, idadeJogador);
+
+    // O presente abre um submenu em vez de agir direto — mas continua
+    // sujeito à mesma verificação de disponibilidade.
+    if (tipo === 'dar_presente') {
+      if (showPresenteMenu) return null;
+      return (
+        <Acao
+          key={tipo}
+          tipo={tipo}
+          titulo={rotulo.titulo}
+          descricao={rotulo.descricao}
+          onClick={() => setShowPresenteMenu(true)}
+        />
+      );
+    }
+
+    return (
+      <Acao
+        key={tipo}
+        tipo={tipo}
+        titulo={rotulo.titulo}
+        descricao={rotulo.descricao}
+      />
+    );
+  };
+
+  const ordem = ordenarInteracoesPorFase(idadeJogador);
+  const dispPresente = verificarInteracao('dar_presente');
+
   return (
     <div className="modal-overlay">
       <div
@@ -93,26 +179,18 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
         ref={containerRef}
         tabIndex={-1}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: 'var(--space-4)'
-          }}
-        >
-          <div>
-            <h2 className="event-scene__title" id={tituloId} style={{ marginBottom: 'var(--space-1)' }}>
+        {/* A pessoa antes das ações: quem é, que relação, que contexto. */}
+        <div className="person-head">
+          <div className="person-head__main">
+            <h2 className="person-head__name" id={tituloId}>
               {membro.nome} {membro.sobrenome}
             </h2>
-            <p className="action-row__detail">
-              {pessoa.relacao} ·{' '}
+            <p className="person-head__relation">{pessoa.relacao}</p>
+            <p className="person-head__context">
               {membro.idade === 1 ? '1 ano' : `${membro.idade} anos`}
               {membro.profissao ? ` · ${membro.profissao}` : ''}
-            </p>
-            {/* Proximidade em palavras, não percentual. */}
-            <p className="action-row__detail">
-              Relação {pessoa.rotuloProximidade.toLowerCase()}
+              {' · relação '}
+              {pessoa.rotuloProximidade.toLowerCase()}
             </p>
           </div>
 
@@ -124,32 +202,9 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
         <div className="event-scene__divider" role="presentation" />
 
         <div className="event-choices">
-          <Acao
-            tipo="conversar"
-            titulo="Conversar"
-            descricao="Bater um papo sobre o dia"
-          />
-          <Acao
-            tipo="passar_tempo"
-            titulo="Passar tempo junto"
-            descricao="Um passeio ou uma refeição sem pressa"
-          />
-
-          {!showPresenteMenu ? (
-            <button className="event-choice" onClick={() => setShowPresenteMenu(true)}>
-              <span className="event-choice__indicator" aria-hidden="true" />
-              <span className="event-choice__body">
-                <span className="event-choice__title">Dar um presente</span>
-                <span className="event-choice__hint">Escolher uma lembrança</span>
-              </span>
-            </button>
-          ) : (
+          {showPresenteMenu && dispPresente.kind === 'disponivel' ? (
             <>
-              {[
-                { tipo: 'barato' as const, titulo: 'Lembrança simples', valor: 'R$ 50' },
-                { tipo: 'medio' as const, titulo: 'Presente especial', valor: 'R$ 250' },
-                { tipo: 'luxo' as const, titulo: 'Presente de luxo', valor: 'R$ 1.200' }
-              ].map(p => (
+              {PRESENTES.map(p => (
                 <button
                   key={p.tipo}
                   className="event-choice"
@@ -165,80 +220,45 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
                   </span>
                 </button>
               ))}
+              <button
+                className="event-choice event-choice--quiet"
+                onClick={() => setShowPresenteMenu(false)}
+              >
+                <span className="event-choice__indicator" aria-hidden="true" />
+                <span className="event-choice__body">
+                  <span className="event-choice__title">Voltar</span>
+                </span>
+              </button>
             </>
+          ) : (
+            ordem.map(renderInteracao)
           )}
 
-          {(membro.tipo === 'pai' || membro.tipo === 'mae') && (
-            <Acao
-              tipo="pedir_dinheiro"
-              titulo="Pedir dinheiro"
-              descricao="Uma ajuda para suas despesas"
-            />
-          )}
-
-          <Acao
-            tipo="pedir_conselho"
-            titulo="Pedir um conselho"
-            descricao="Ouvir a experiência de quem já passou por isso"
-          />
-
-          {isParceiro && idadeJogador >= 18 && (
+          {!showPresenteMenu && isParceiro && idadeJogador >= 18 && (
             <>
               {!isCasado && onPedirCasamento && (
-                <button
-                  className="event-choice"
-                  onClick={() => {
-                    onPedirCasamento();
-                    onClose();
-                  }}
-                >
-                  <span className="event-choice__indicator" aria-hidden="true" />
-                  <span className="event-choice__body">
-                    <span className="event-choice__title">Pedir em casamento</span>
-                    <span className="event-choice__hint">Oficializar a relação</span>
-                  </span>
-                </button>
+                <AcaoLivre
+                  titulo="Pedir em casamento"
+                  descricao="Oficializar a relação"
+                  onClick={onPedirCasamento}
+                />
               )}
-
               {onTerFilho && (
-                <button
-                  className="event-choice"
-                  onClick={() => {
-                    onTerFilho();
-                    onClose();
-                  }}
-                >
-                  <span className="event-choice__indicator" aria-hidden="true" />
-                  <span className="event-choice__body">
-                    <span className="event-choice__title">Ter um filho</span>
-                    <span className="event-choice__hint">Aumentar a família</span>
-                  </span>
-                </button>
+                <AcaoLivre
+                  titulo="Ter um filho"
+                  descricao="Aumentar a família"
+                  onClick={onTerFilho}
+                />
               )}
-
               {onTerminar && (
-                <button
-                  className="event-choice"
-                  onClick={() => {
-                    onTerminar();
-                    onClose();
-                  }}
-                >
-                  <span className="event-choice__indicator" aria-hidden="true" />
-                  <span className="event-choice__body">
-                    <span className="event-choice__title">Terminar o relacionamento</span>
-                    <span className="event-choice__hint">Encerrar a relação</span>
-                  </span>
-                </button>
+                <AcaoLivre
+                  titulo="Terminar o relacionamento"
+                  descricao="Encerrar a relação"
+                  onClick={onTerminar}
+                />
               )}
             </>
           )}
-
-          <Acao
-            tipo="discutir"
-            titulo="Discutir"
-            descricao="Levantar a voz sobre algo mal resolvido"
-          />
         </div>
       </div>
     </div>

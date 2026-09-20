@@ -153,14 +153,17 @@
   display: block;
   margin-top: 2px;
   font-size: var(--type-caption);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: var(--leading-snug);
 }
 
 /* Indisponível: opacidade + motivo textual explícito (nunca só cor, e o
    motivo funciona no toque porque não depende de hover/title). */
+/* 0.55 derrubava o contraste efetivo abaixo do mínimo legível. O estado
+   desabilitado é comunicado pelo indicador tracejado e pelo motivo em
+   texto, então a opacidade pode ser suave. */
 .event-choice:disabled {
-  opacity: 0.55;
+  opacity: 0.8;
   cursor: not-allowed;
 }
 
@@ -234,4 +237,49 @@
 
 .event-result__continue {
   margin-top: var(--space-6);
+}
+
+/* ==========================================================================
+   Cabeçalho de pessoa (modal de relacionamento)
+   A pessoa vem antes das ações: quem é, que relação, em que contexto.
+   ========================================================================== */
+
+.person-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.person-head__main {
+  min-width: 0;
+}
+
+.person-head__name {
+  font-family: var(--font-display);
+  font-size: var(--type-heading);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+/* A relação é o segundo dado mais importante: quem essa pessoa é para você. */
+.person-head__relation {
+  margin-top: var(--space-1);
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+  color: var(--accent);
+}
+
+.person-head__context {
+  margin-top: var(--space-1);
+  font-size: var(--type-caption);
+  color: var(--text-secondary);
+}
+
+/* Ação de retorno dentro de um submenu: presente, mas sem competir. */
+.event-choice--quiet .event-choice__title {
+  color: var(--text-secondary);
+  font-weight: var(--weight-regular);
 }

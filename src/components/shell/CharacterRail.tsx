@@ -2,6 +2,7 @@ import React from 'react';
 import type {
   CareerState,
   Character,
+  EconomyState,
   EducationState,
   FamilyMember
 } from '../../types';
@@ -12,6 +13,7 @@ interface CharacterRailProps {
   educacao: EducationState;
   carreira: CareerState;
   familia: FamilyMember[];
+  economia: EconomyState;
   situacao: string;
 }
 
@@ -27,6 +29,7 @@ export const CharacterRail: React.FC<CharacterRailProps> = ({
   educacao,
   carreira,
   familia,
+  economia,
   situacao
 }) => {
   return (
@@ -36,6 +39,7 @@ export const CharacterRail: React.FC<CharacterRailProps> = ({
         educacao={educacao}
         carreira={carreira}
         familia={familia}
+        economia={economia}
         situacao={situacao}
       />
     </div>
