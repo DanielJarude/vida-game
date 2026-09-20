@@ -4,7 +4,7 @@ Correções derivadas do playtest humano feito após o B4-FIX. Base: commit
 `7873306`. Identidade visual do B4 preservada; nenhuma volta à interface
 antiga baseada em cards.
 
-**Resultado em números:** 509 testes passando (361 preservados + 148 novos),
+**Resultado em números:** 549 testes passando (361 preservados + 188 novos),
 `tsc` limpo, build OK. Pool de eventos aos 3 anos passou de **0 para 9**.
 Repetição máxima do mesmo evento numa vida caiu de **3 para 1**.
 
@@ -357,7 +357,7 @@ de clipping); o avatar ganhou **módulo próprio** em vez de engordá-lo.
 
 ## 22. Testes
 
-**509 no total** — 361 preservados, 148 novos.
+**549 no total** — 361 preservados, 188 novos.
 
 | Arquivo | Testes | Cobre |
 |---|---|---|
@@ -369,16 +369,71 @@ de clipping); o avatar ganhou **módulo próprio** em vez de engordá-lo.
 | `b4Fix1Interface.test.tsx` | 24 | avatar, criação, pets, +1 ANO |
 | `clippingB4Fix1.test.ts` | 19 | ellipsis, sticky, layout do avatar |
 | `playtestB4Fix1.test.ts` | 6 | variedade determinística |
+| `inspecaoVisualB4Fix1.test.tsx` | 40 | inspeção §38 no App real |
 
-## 23. Playtest humano
+## 23. Playtest humano / inspeção visual (§38)
 
 Verificado no preview: criação com as três seções; avatar alterando ao
 clicar nas amostras; Acre, São Paulo e Distrito Federal selecionáveis com
 cidades próprias; retrato aparecendo na identidade em vez de iniciais.
 
-**Coberto por teste automatizado em vez de olho:** todas as 27 UFs
-selecionáveis produzindo cidade válida, timeline de 60 anos mantendo o
-botão acessível, nome longo sem truncar, pet sem ações humanas.
+### Como a inspeção foi feita
+
+Playwright 1.63 está instalado, mas o sandbox não alcança o CDN do Chrome
+for Testing (`Download failure, code=1`), então não há screenshot. A
+inspeção foi convertida em `src/__playtest__/inspecaoVisualB4Fix1.test.tsx`
+(**40 testes**), que percorre o **App inteiro** — não componentes isolados —
+pelo mesmo caminho que uma pessoa faria com o mouse:
+
+`Nova Vida → escolher pele e cabelo → Acre → cidade → Começar a viver →
+30 anos de +1 ANO → Relacionamentos → abrir pai, mãe e pet`.
+
+### Roteiro pedido × resultado
+
+| Item do §38 | Resultado |
+|---|---|
+| Criação com avatar | OK — 3 seções na ordem certa; pele e cabelo alteram a prévia; sorteio não gera `NaN`; a escolha atravessa intacta até a identidade |
+| 27 UFs, incluindo **Acre** | OK — 27 opções; `Acre (AC)` por extenso e selecionável; as 8 UFs perdidas no B4-FIX de volta |
+| Estado → Cidade | OK — as 27 UFs dão cidade, nenhuma cidade vaza de outro estado, trocar de UF reseta a cidade |
+| Escolha manual não randomizada | OK — nascer em Roraima chega em Roraima |
+| Identidade com avatar | OK — SVG em `.identity__portrait`, `.identity__initials` não existe mais, retrato rotulado para leitor de tela, bebê com proporção de bebê |
+| Texto sem clipping | OK — nada truncado na tela; "Maria Aparecida Nascimento Silva" em "São José dos Campos" chega inteiro |
+| `+1 ANO` com timeline longa | OK — após 30 anos vividos o CTA continua **antes** dos registros; `sticky`, alcançável por teclado, com foco visível |
+| Pet com interações próprias | OK — sem conversar/discutir/conselho/dinheiro/presente; com carinho/brincar/passear |
+| Eventos 0–5 e repetição | OK — seções 17 e 19 |
+| Desktop e ~360px | OK — dock fixo com `safe-area-inset-bottom`, `.shell-main` reservando padding, identidade em `minmax(0, 1fr)`, retrato 56px em 380px |
+
+### Dois testes passavam por vazio — corrigido
+
+A primeira versão da suíte ficou verde em 31/31, o que era suspeito. A
+inspeção do DOM mostrou o motivo: os testes de pet procuravam `.action-row`
+numa tela onde a classe nem existia, e tinham saída de emergência
+(`if (!achouPet) return`). **Um teste que não encontra o alvo não pode
+passar.** Reescritos com os seletores reais (`.primary-nav__item`,
+`.action-row`, `.event-choice`) e sem escapatória: se o pet não aparecer, o
+teste falha.
+
+Como um pet só chega por evento aleatório, a vida com pet é semeada no
+`localStorage` e carregada por "Continuar sua vida" — mesmo caminho de UI,
+sem depender de sorte.
+
+### Prova de que a suíte detecta regressão
+
+Os dois pontos que mais importam foram verificados por mutação deliberada
+do código de produção, depois revertida:
+
+| Mutação | Esperado | Resultado |
+|---|---|---|
+| `<YearAdvance>` movido para **depois** de `<LifeTimeline>` | falhar | falhou |
+| `.year-advance` trocado para `position: fixed` | falhar | falhou |
+
+### O que esta inspeção **não** prova
+
+jsdom não calcula layout. Cor aplicada, tipografia renderizada, sobreposição
+real em pixels e o toque num aparelho físico continuam sem cobertura
+automatizada — o que o teste afirma sobre breakpoints é o **CSS compilado**,
+não o resultado pintado. Um passe humano num celular real segue recomendado
+antes de considerar o B4-FIX.1 visualmente fechado.
 
 ## 24. Regressões encontradas
 
@@ -406,9 +461,10 @@ no código com o motivo.
 ## 26. Pendências
 
 1. `useGame.ts` em 1015 linhas — OBSERVAR (justificado na seção 21).
-2. Verificação visual automatizada segue indisponível: Playwright não roda
-   no sandbox. Clipping e contraste têm teste sobre o CSS; a conferência
-   nos breakpoints 360/390/768/1366/1920 continua manual.
+2. Screenshot automatizado segue indisponível: Playwright está instalado mas
+   o sandbox não baixa o navegador. A inspeção §38 foi feita percorrendo o
+   App em jsdom (seção 23) e o CSS por breakpoint; **falta um passe humano
+   num aparelho real** para cor, tipografia e sobreposição em pixels.
 3. Três eventos adultos com opção única
    (`rnd_sorteio_shopping`, `car_exame_ordem_conselho`, `ext_banca_tcc`) —
    fora do escopo deste PR, não refatorados só por métrica.
@@ -428,7 +484,7 @@ no código com o motivo.
 `presentation/petPresentation.ts` ·
 `components/avatar/{AvatarPortrait,AvatarPicker}.tsx` ·
 `components/modals/PetModal.tsx` · `styles/avatar.css` ·
-5 arquivos de teste
+`__playtest__/inspecaoVisualB4Fix1.test.tsx` · 6 arquivos de teste
 
 **Modificados (26):** `types/index.ts` · `hooks/useGame.ts` · `App.tsx` ·
 `systems/{availabilitySystem,eventSystem,agingSystem,familySystem,saveSystem,interactionCapabilitySystem}.ts` ·
@@ -452,3 +508,4 @@ no código com o motivo.
 | Eventos repetem muito menos | ✅ repetição máxima 3 → 1 |
 | Linha da Vida mais variada | ✅ 100% de originalidade, 12% de sobreposição |
 | Nada virou monólito | ✅ 20 arquivos novos, maior sistema novo tem 197 linhas |
+| Inspeção visual §38 | ✅ 40 testes no App real; limite de layout documentado |
