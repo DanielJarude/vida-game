@@ -101,7 +101,14 @@ export type RelationType =
   | 'filha'
   | 'amigo'
   | 'amiga'
-  | 'pet';
+  | 'pet'
+  // B4-FIX3 item 13 — mundo social fora da família: pessoas que nascem de
+  // um evento (colega, paixão secreta, desafeto) e podem persistir,
+  // reaparecer e mudar de tipo ao longo da vida (ex.: amigo → namorado,
+  // quando idade/regras permitirem).
+  | 'rival'
+  | 'paixao'
+  | 'mentor';
 
 export interface FamilyMember {
   id: string;
@@ -118,6 +125,17 @@ export interface FamilyMember {
   situacaoAtual?: string;
   anoMorte?: number;
   causaMorte?: string;
+  // B4-FIX3 item 13 — infraestrutura leve de NPC persistente. Nenhum campo
+  // novo é obrigatório: membros de família tradicionais (pai/mãe/irmão)
+  // continuam sem precisar declarar nada disso.
+  //
+  // - `ativo`: a relação continua acontecendo (padrão implícito: true
+  //   quando ausente). Uma amizade que "encerrou" fica `ativo: false` sem
+  //   apagar a pessoa nem seu histórico — ela pode voltar a aparecer.
+  // - `origemEventoId`: qual evento criou esta pessoa, só para depuração/
+  //   rastreabilidade; nenhuma regra de jogo depende deste campo.
+  ativo?: boolean;
+  origemEventoId?: string;
 }
 
 export type EducationLevel =
@@ -269,6 +287,18 @@ export interface EventConsequence {
   adicionarFamiliar?: Partial<FamilyMember>;
   adicionarDoenca?: string;
   curarDoenca?: string;
+  // B4-FIX3 item 13/14 — mundo social: transformar o tipo de uma relação
+  // existente (ex.: amigo → namorado, quando um evento de romance
+  // encontra uma pessoa já conhecida) e encerrar uma relação sem apagar
+  // a pessoa nem seu histórico (fica `ativo: false`, pode reaparecer).
+  // Referenciam a pessoa por ID estável OU por `relationType` (mesmo
+  // padrão de `relacionamentoDelta`) — nunca por nome/texto.
+  // `relationType` é o único jeito de o CONTEÚDO do evento apontar para
+  // um NPC criado em tempo de execução, já que o dado do evento não
+  // conhece o id gerado; quando houver mais de uma pessoa do mesmo tipo,
+  // a mais recentemente adicionada é usada.
+  transformarRelacao?: { relationId?: string; relationType?: RelationType; novoTipo: RelationType };
+  encerrarRelacao?: { relationId?: string; relationType?: RelationType };
 }
 
 export interface EventOption {

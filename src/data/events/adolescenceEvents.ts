@@ -78,6 +78,14 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 13/14 — quando o jogador já teve o evento
+    // `ado_paixao_secreta` (NPC persistente `tipo: 'paixao'`), este é o
+    // MOMENTO daquela pessoa: a opção `opt_beijar_paixao_real` conecta por
+    // `relationType`, nunca por texto, e transforma a relação de
+    // "paixão" para "namorado(a)" só se o jogador topar avançar (mantém a
+    // liberdade — dá pra aproximar sem virar namoro). Sem essa história
+    // prévia, o evento continua existindo com a pessoa anônima original
+    // (nenhum jogador fica sem o evento por não ter cumprido um requisito).
     id: 'ado_primeiro_beijo',
     titulo: 'Festa de Aniversário e Primeiro Beijo',
     descricao: 'Em uma festa com música tocando e luzes apagadas, a pessoa por quem você tem uma paixão secreta se aproxima e puxa conversa.',
@@ -87,6 +95,18 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     peso: 90,
     unico: true,
     opcoes: [
+      {
+        id: 'opt_beijar_paixao_real',
+        texto: 'Tomar a iniciativa e beijar a pessoa por quem você é apaixonado há tempos',
+        descricaoResultado: 'Foi ela mesma, a pessoa que você secretamente admirava. O beijo foi inesquecível, e agora tudo entre vocês dois é diferente.',
+        requisito: { flagNecessaria: 'tem_paixao_secreta' },
+        consequencias: {
+          stats: { felicidade: 28, aparencia: 5 },
+          hiddenStats: { sociabilidade: 15, reputacao: 10 },
+          adicionarFlag: 'primeiro_beijo_inesquecivel',
+          transformarRelacao: { relationType: 'paixao', novoTipo: 'namorado' }
+        }
+      },
       {
         id: 'opt_beijar',
         texto: 'Tomar a iniciativa e dar um beijo apaixonado',

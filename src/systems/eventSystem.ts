@@ -251,10 +251,39 @@ export function aplicarConsequenciasEscolha(
     });
   }
 
+  // B4-FIX3 item 13/14 — transformar/encerrar uma relação existente, por
+  // ID estável OU por tipo (nunca por nome/texto). Uma amizade pode virar
+  // romance; uma relação pode ser encerrada sem apagar a pessoa nem seu
+  // histórico. Quando referenciado por tipo, resolve para a pessoa ATIVA
+  // mais recente daquele tipo (mesma convenção de `relacionamentoDelta`).
+  function resolverAlvoRelacao(ref: { relationId?: string; relationType?: string }): string | undefined {
+    if (ref.relationId) return ref.relationId;
+    if (ref.relationType) {
+      const candidatos = fam.filter(m => m.tipo === ref.relationType && m.ativo !== false);
+      return candidatos[candidatos.length - 1]?.id;
+    }
+    return undefined;
+  }
+
+  if (cons.transformarRelacao) {
+    const alvoId = resolverAlvoRelacao(cons.transformarRelacao);
+    if (alvoId) {
+      fam = fam.map(membro =>
+        membro.id === alvoId ? { ...membro, tipo: cons.transformarRelacao!.novoTipo } : membro
+      );
+    }
+  }
+  if (cons.encerrarRelacao) {
+    const alvoId = resolverAlvoRelacao(cons.encerrarRelacao);
+    if (alvoId) {
+      fam = fam.map(membro => (membro.id === alvoId ? { ...membro, ativo: false } : membro));
+    }
+  }
+
   // Novo familiar (ex: animal de estimação ou novo parente)
   if (cons.adicionarFamiliar) {
     const novoFamiliar: FamilyMember = {
-      id: generateId('fam'),
+      id: cons.adicionarFamiliar.id || generateId('fam'),
       nome: cons.adicionarFamiliar.nome || 'Novo Familiar',
       sobrenome: cons.adicionarFamiliar.sobrenome || char.sobrenome,
       genero: cons.adicionarFamiliar.genero || 'masculino',
@@ -262,7 +291,12 @@ export function aplicarConsequenciasEscolha(
       idade: cons.adicionarFamiliar.idade || 1,
       relacionamento: cons.adicionarFamiliar.relacionamento || 80,
       vivo: true,
-      situacaoAtual: cons.adicionarFamiliar.situacaoAtual || 'Em casa com a família'
+      situacaoAtual: cons.adicionarFamiliar.situacaoAtual || 'Em casa com a família',
+      // B4-FIX3 item 13 — NPC nascido de um evento fica marcado com o
+      // evento de origem (rastreabilidade; nenhuma regra depende disto)
+      // e `ativo: true` por padrão (a relação está em andamento).
+      origemEventoId: cons.adicionarFamiliar.origemEventoId ?? contextoPersonalidade?.eventoId,
+      ativo: cons.adicionarFamiliar.ativo ?? true
     };
     fam.push(novoFamiliar);
   }

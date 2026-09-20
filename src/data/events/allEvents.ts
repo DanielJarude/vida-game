@@ -10,6 +10,14 @@ import { ROMANCE_EVENTS } from './romanceEvents';
 import { RANDOM_EVENTS } from './randomEvents';
 import { MORE_EVENTS } from './moreEvents';
 import { EXTRA_EVENTS } from './extraEvents';
+// B4-FIX3 item 3/18 — conteúdo novo organizado por fase de vida, em
+// pastas próprias (earlyChildhood/childhood/adolescence), para não
+// inflar os arquivos já existentes nem criar um único arquivo gigante
+// de "mundo social". Cada arquivo tem um contexto coeso só seu.
+import { BABY_EVENTS } from './earlyChildhood/babyEvents';
+import { TODDLER_WORLD_EVENTS } from './earlyChildhood/toddlerWorldEvents';
+import { SCHOOL_WORLD_EVENTS } from './childhood/schoolWorldEvents';
+import { ADOLESCENCE_SOCIAL_EVENTS } from './adolescence/socialWorldEvents';
 
 export const MASTER_EVENTS_LIST: GameEvent[] = [
   ...CHILDHOOD_EVENTS,
@@ -22,7 +30,11 @@ export const MASTER_EVENTS_LIST: GameEvent[] = [
   ...ROMANCE_EVENTS,
   ...RANDOM_EVENTS,
   ...MORE_EVENTS,
-  ...EXTRA_EVENTS
+  ...EXTRA_EVENTS,
+  ...BABY_EVENTS,
+  ...TODDLER_WORLD_EVENTS,
+  ...SCHOOL_WORLD_EVENTS,
+  ...ADOLESCENCE_SOCIAL_EVENTS
 ];
 
 export function getEventCount(): number {

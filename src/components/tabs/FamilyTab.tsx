@@ -79,6 +79,14 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     ['pai', 'mae', 'irmao', 'irma'].includes(f.tipo)
   );
   const pets = vivos.filter(f => f.tipo === 'pet');
+  // B4-FIX3 item 13/15 — mundo social fora da família: só pessoas
+  // SIGNIFICATIVAS aparecem aqui (têm um NPC persistente de verdade,
+  // `ativo !== false`) — não lota a interface com todo mundo citado numa
+  // frase de evento. Relações encerradas (`ativo: false`) somem desta
+  // lista sem apagar a pessoa nem seu histórico.
+  const mundoSocial = vivos.filter(
+    f => ['amigo', 'amiga', 'rival', 'paixao', 'mentor'].includes(f.tipo) && f.ativo !== false
+  );
 
   const abrirModal = (membro: FamilyMember) => setSelectedMember(membro);
 
@@ -170,6 +178,24 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             <h3 className="subsection__title">Animais de estimação</h3>
             <div className="action-list">
               {pets.map(m => (
+                <PessoaRow
+                  key={m.id}
+                  membro={m}
+                  detalhe={idadeTexto(m.idade)}
+                  onAbrir={abrirModal}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {mundoSocial.length > 0 && (
+        <section className="section">
+          <div>
+            <h3 className="subsection__title">Fora de casa</h3>
+            <div className="action-list">
+              {mundoSocial.map(m => (
                 <PessoaRow
                   key={m.id}
                   membro={m}
