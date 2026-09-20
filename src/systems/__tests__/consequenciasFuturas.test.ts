@@ -1,8 +1,8 @@
 /**
- * B4-FIX2 item 11 — consequências futuras leves, ligadas por ID/flag.
+ * B4-FIX2/B4-FIX3 — consequências futuras leves, ligadas por ID/flag.
  *
  * O PR pede "poucas conexões boas" para provar a infraestrutura, não uma
- * árvore narrativa gigantesca. Este arquivo testa as três implementadas:
+ * árvore narrativa gigantesca. Este arquivo testa as implementadas:
  *
  * 1. `inf_primeiros_passos` (opt_correr) → `inf_bullying_defesa` ganha
  *    `opt_defender_com_confianca` (ligado por memória de escolha/id).
@@ -10,6 +10,9 @@
  *    ganha `opt_colega_retribui` (ligado por flag).
  * 3. `inf_aula_musica` (flag `sabe_tocar_violao`) → `ado_trote_festa`
  *    ganha `opt_tocar_violao_festa` (ligado por flag).
+ * 4. (B4-FIX3) `esc_achado_perdido_dinheiro` (flag
+ *    `reputacao_honestidade_infancia`) → `ado_grupo_amigos_turma` ganha
+ *    `opt_entrar_grupo_confianca` (ligado por flag).
  *
  * Em nenhum caso a ligação depende de comparar título/texto — sempre
  * `eventoId`/`opcaoId` (memória de personalidade) ou `flagNecessaria`.
@@ -18,6 +21,8 @@
 import { describe, it, expect } from 'vitest';
 import { CHILDHOOD_EVENTS } from '../../data/events/childhoodEvents';
 import { ADOLESCENCE_EVENTS } from '../../data/events/adolescenceEvents';
+import { SCHOOL_WORLD_EVENTS } from '../../data/events/childhood/schoolWorldEvents';
+import { ADOLESCENCE_SOCIAL_EVENTS } from '../../data/events/adolescence/socialWorldEvents';
 import { avaliarRequisitoOpcao } from '../eventSystem';
 import { criarPersonalidadeInicial, registrarEscolha } from '../personalitySystem';
 import { criarPersonagemTeste, criarEstadoTeste } from './fixtures';
@@ -129,6 +134,41 @@ describe('B4-FIX2 · consequência futura 3 — violão na infância → talento
     const economia = criarEstadoTeste({ idade: 17 }).economia;
 
     const resultado = avaliarRequisitoOpcao(opcaoViolao, personagem, economia);
+    expect(resultado.aprovado).toBe(true);
+  });
+});
+
+describe('B4-FIX3 · consequência futura 4 — honestidade na infância → confiança no grupo da escola', () => {
+  const eventoDinheiroAchado = encontrarEvento(SCHOOL_WORLD_EVENTS, 'esc_achado_perdido_dinheiro');
+  const opcaoHonesta = encontrarOpcao(eventoDinheiroAchado, 'opt_entregar_dinheiro_achado');
+
+  const eventoGrupo = encontrarEvento(ADOLESCENCE_SOCIAL_EVENTS, 'ado_grupo_amigos_turma');
+  const opcaoConfianca = encontrarOpcao(eventoGrupo, 'opt_entrar_grupo_confianca');
+
+  it('a escolha honesta produz a flag consumida anos depois', () => {
+    expect(opcaoHonesta.consequencias.adicionarFlag).toBe('reputacao_honestidade_infancia');
+  });
+
+  it('a opção do grupo está ligada por FLAG, nunca por texto', () => {
+    expect(opcaoConfianca.requisito?.flagNecessaria).toBe('reputacao_honestidade_infancia');
+  });
+
+  it('fica indisponível para quem nunca teve essa flag', () => {
+    const personagem = criarPersonagemTeste({ idade: 13, flags: {} });
+    const economia = criarEstadoTeste({ idade: 13 }).economia;
+
+    const resultado = avaliarRequisitoOpcao(opcaoConfianca, personagem, economia);
+    expect(resultado.aprovado).toBe(false);
+  });
+
+  it('fica disponível para quem devolveu o dinheiro achado na infância', () => {
+    const personagem = criarPersonagemTeste({
+      idade: 13,
+      flags: { reputacao_honestidade_infancia: true }
+    });
+    const economia = criarEstadoTeste({ idade: 13 }).economia;
+
+    const resultado = avaliarRequisitoOpcao(opcaoConfianca, personagem, economia);
     expect(resultado.aprovado).toBe(true);
   });
 });

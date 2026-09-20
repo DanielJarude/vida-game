@@ -69,6 +69,27 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
+        // B4-FIX3 item 12 — consequência futura de `esc_achado_perdido_dinheiro`
+        // (ver schoolWorldEvents.ts): quem já construiu fama de honesto na
+        // infância é convidado a cuidar do "caixinha" do grupo, ligado só
+        // pela flag `reputacao_honestidade_infancia`, nunca por texto.
+        id: 'opt_entrar_grupo_confianca',
+        texto: 'Aceitar entrar no grupo e ficar responsável pela vaquinha do lanche',
+        descricaoResultado: 'Ninguém nem discutiu quem ficaria com o dinheiro da vaquinha — todo mundo lembrava de você como "aquele que devolveu o dinheiro achado" anos atrás.',
+        requisito: { flagNecessaria: 'reputacao_honestidade_infancia' },
+        consequencias: {
+          stats: { felicidade: 16 },
+          hiddenStats: { sociabilidade: 12, reputacao: 10 },
+          adicionarFamiliar: {
+            tipo: 'amigo',
+            idade: 13,
+            relacionamento: 80,
+            situacaoAtual: 'Amigo do grupo da escola'
+          },
+          impactosComportamentais: { sociabilidade: 1, disciplina: 1 }
+        }
+      },
+      {
         id: 'opt_entrar_grupo_turma',
         texto: 'Aceitar de vez fazer parte do grupo',
         descricaoResultado: 'Vocês viraram um grupo fechado, com piadas internas e planos para o fim de semana.',
@@ -232,6 +253,81 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você não conseguiu se comprometer no momento, mas guardou a ideia para outra hora.',
         consequencias: {
           stats: { felicidade: 2 }
+        }
+      }
+    ]
+  },
+  {
+    id: 'ado_pressao_grupo_festa',
+    titulo: 'Pressão para Ir a uma Festa Não Autorizada',
+    descricao: 'O grupo de amigos combinou ir a uma festa numa casa sem supervisão de adultos, e todo mundo espera que você vá também.',
+    idadeMinima: 15,
+    idadeMaxima: 17,
+    categoria: 'amizade',
+    peso: 65,
+    repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
+    opcoes: [
+      {
+        id: 'opt_ir_festa_avisando',
+        texto: 'Ir à festa, mas avisar a família onde você vai estar',
+        descricaoResultado: 'Você aproveitou a festa com os amigos e voltou no horário combinado, sem drama nenhum.',
+        consequencias: {
+          stats: { felicidade: 14 },
+          hiddenStats: { sociabilidade: 8 },
+          relacionamentoDelta: { delta: 4 },
+          impactosComportamentais: { sociabilidade: 1 }
+        }
+      },
+      {
+        id: 'opt_recusar_festa',
+        texto: 'Recusar o convite mesmo sabendo que o grupo vai comentar',
+        descricaoResultado: 'Alguns colegas comentaram na segunda-feira, mas você não se abalou com isso.',
+        consequencias: {
+          stats: { felicidade: 4 },
+          hiddenStats: { disciplina: 6 },
+          impactosComportamentais: { independencia: 1, disciplina: 1 }
+        }
+      },
+      {
+        id: 'opt_ir_festa_escondido',
+        texto: 'Ir escondido, dizendo que ia dormir na casa de um amigo',
+        descricaoResultado: 'Deu tudo certo na festa, mas a mentira pesou na consciência — e um comentário desatento quase te entregou.',
+        consequencias: {
+          stats: { felicidade: 10 },
+          hiddenStats: { estresse: 8 },
+          relacionamentoDelta: { delta: -6 },
+          impactosComportamentais: { impulsividade: 1 }
+        }
+      }
+    ]
+  },
+  {
+    id: 'ado_escolha_futuro_profissional',
+    titulo: 'Feira de Profissões da Escola',
+    descricao: 'A escola organizou uma feira de profissões com estandes de diferentes áreas para ajudar os alunos do último ano a decidir o futuro.',
+    idadeMinima: 16,
+    idadeMaxima: 17,
+    categoria: 'escola',
+    peso: 70,
+    unico: true,
+    opcoes: [
+      {
+        id: 'opt_explorar_varios_estandes',
+        texto: 'Visitar vários estandes diferentes antes de decidir qualquer coisa',
+        descricaoResultado: 'Você saiu da feira com mais dúvidas do que entrou, mas também com ideias novas que nunca tinha considerado.',
+        consequencias: {
+          stats: { inteligencia: 6, felicidade: 8 },
+          hiddenStats: { ambicao: 6 }
+        }
+      },
+      {
+        id: 'opt_confirmar_area_ja_escolhida',
+        texto: 'Ir direto ao estande da área que você já tinha decidido seguir',
+        descricaoResultado: 'A conversa confirmou sua escolha e você saiu ainda mais motivado para os próximos passos.',
+        consequencias: {
+          stats: { felicidade: 10 },
+          hiddenStats: { disciplina: 8, ambicao: 8 },
+          impactosComportamentais: { disciplina: 1 }
         }
       }
     ]

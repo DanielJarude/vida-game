@@ -41,7 +41,7 @@ export function resolverPoliticaRepeticao(evento: GameEvent): RepeticaoEvento {
   return { tipo: 'recorrente', cooldownAnos: COOLDOWN_PADRAO_RECORRENTE };
 }
 
-function cooldownEfetivo(politica: RepeticaoEvento): number {
+export function cooldownEfetivo(politica: RepeticaoEvento): number {
   if (politica.cooldownAnos !== undefined) return politica.cooldownAnos;
   return politica.tipo === 'cooldown' ? COOLDOWN_PADRAO_EXPLICITO : COOLDOWN_PADRAO_RECORRENTE;
 }

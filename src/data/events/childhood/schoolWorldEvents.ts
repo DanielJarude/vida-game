@@ -153,6 +153,11 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 10 },
           hiddenStats: { reputacao: 15, empatia: 8 },
+          // B4-FIX3 item 12 — consequência futura leve: essa reputação de
+          // honestidade reaparece anos depois em `ado_grupo_amigos_turma`
+          // (ver socialWorldEvents.ts), ligada só por esta flag, nunca
+          // por texto.
+          adicionarFlag: 'reputacao_honestidade_infancia',
           impactosComportamentais: { empatia: 1 }
         }
       },

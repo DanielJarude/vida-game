@@ -33,13 +33,20 @@ export const MORE_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 5 — o playtest apontou este evento repetindo com
+    // frequência perceptível ao lado de "Tarde na Casa dos Avós". Antes
+    // deste PR não tinha `repeticao` explícita (caía no padrão recorrente
+    // com cooldown sistêmico de só 2 anos) — pequeno demais para um
+    // conflito doméstico repetitivo que não deveria dominar anos
+    // diferentes da infância. Mesma política aplicada a `fam_visita_avo`.
     id: 'fam_briga_controle_tv',
     titulo: 'Guerra pelo Controle da TV',
     descricao: 'Você e seu irmão estão disputando quem vai assistir à televisão na sala no sábado à tarde.',
     idadeMinima: 6,
     idadeMaxima: 14,
     categoria: 'familia',
-    peso: 80,
+    peso: 60,
+    repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
         id: 'opt_ceder_revezar',
