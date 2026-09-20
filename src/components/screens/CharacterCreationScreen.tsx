@@ -2,11 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { valorAleatorio } from '../../utils/random';
 import { Gender } from '../../types';
 import {
-  listarEstadosDisponiveis,
-  listarCidadesPorEstado,
-  sortearNome,
-  sortearSobrenome
-} from '../../data/brazilianData';
+  listarRegioesComEstados,
+  listarCidadesPorEstado
+} from '../../data/locations';
+import { sortearNome, sortearSobrenome } from '../../data/brazilianData';
 import { ArrowLeft, Shuffle } from 'lucide-react';
 
 interface CharacterCreationScreenProps {
@@ -40,14 +39,16 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
   onCriarVida,
   onVoltar
 }) => {
-  const estados = useMemo(() => listarEstadosDisponiveis(), []);
+  const regioes = useMemo(() => listarRegioesComEstados(), []);
+  // Lista achatada só para o sorteio — a apresentação continua agrupada.
+  const todosEstados = useMemo(() => regioes.flatMap(r => r.estados), [regioes]);
 
   const [genero, setGenero] = useState<Gender>('masculino');
   const [nome, setNome] = useState<string>(() => sortearNome('masculino'));
   const [sobrenome, setSobrenome] = useState<string>(() => sortearSobrenome());
-  const [estado, setEstado] = useState<string>(() => estados[0].sigla);
+  const [estado, setEstado] = useState<string>(() => todosEstados[0].sigla);
   const [cidade, setCidade] = useState<string>(
-    () => listarCidadesPorEstado(estados[0].sigla)[0].cidade
+    () => listarCidadesPorEstado(todosEstados[0].sigla)[0].cidade
   );
 
   const cidadesDoEstado = useMemo(
@@ -66,7 +67,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
     setSobrenome(sortearSobrenome());
 
     const estadoSorteado =
-      estados[Math.floor(valorAleatorio() * estados.length)].sigla;
+      todosEstados[Math.floor(valorAleatorio() * todosEstados.length)].sigla;
     const cidades = listarCidadesPorEstado(estadoSorteado);
 
     setEstado(estadoSorteado);
@@ -166,10 +167,14 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
                   value={estado}
                   onChange={e => handleTrocaEstado(e.target.value)}
                 >
-                  {estados.map(uf => (
-                    <option key={uf.sigla} value={uf.sigla}>
-                      {uf.sigla} · {uf.regiao}
-                    </option>
+                  {regioes.map(grupo => (
+                    <optgroup key={grupo.regiao} label={grupo.regiao}>
+                      {grupo.estados.map(uf => (
+                        <option key={uf.sigla} value={uf.sigla}>
+                          {uf.nome} ({uf.sigla})
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>

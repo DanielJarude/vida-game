@@ -98,6 +98,12 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 15,
     categoria: 'familia',
     peso: 80,
+    // B4-FIX2 — o playtest encontrou "seus pais cumpriram a promessa e
+    // compraram o celular" reaparecendo em outro ano, como se a promessa
+    // nunca tivesse existido. Ganhar o primeiro celular é um marco
+    // narrativamente irreversível: não faz sentido "primeiro celular" de
+    // novo, seja qual for a escolha.
+    unico: true,
     opcoes: [
       {
         id: 'opt_esforco_total',

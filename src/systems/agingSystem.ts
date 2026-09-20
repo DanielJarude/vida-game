@@ -3,6 +3,7 @@ import {
   Character,
   EconomyState,
   EducationState,
+  EventOccurrence,
   FamilyMember,
   GameEvent,
   LifeLogEntry,
@@ -51,7 +52,12 @@ export function executarPassagemDeAno(
   carreira: CareerState,
   economia: EconomyState,
   historicoEventosDisparados: string[],
-  personalidade?: PersonalityState
+  personalidade?: PersonalityState,
+  // B4-FIX2 — histórico rico (id + idade + ano) para checagem de
+  // cooldown/recorrência; opcional para não quebrar chamadas existentes
+  // (nesse caso, o sorteio se comporta como se não houvesse ocorrência
+  // anterior registrada com idade — ainda seguro, apenas menos preciso).
+  historicoOcorrenciasEventos: EventOccurrence[] = []
 ): AgingResult {
   const novaIdade = personagem.idade + 1;
   const novoAno = personagem.anoAtual + 1;
@@ -141,7 +147,8 @@ export function executarPassagemDeAno(
     eco,
     fam,
     historicoEventosDisparados,
-    personalidade
+    personalidade,
+    historicoOcorrenciasEventos
   );
 
   // Se nenhum evento interativo foi disparado e nenhum log narrativo específico ocorreu, adiciona flavor text de ano tranquilo

@@ -4,6 +4,7 @@ import {
   EducationState,
   CareerState,
   EconomyState,
+  EventOccurrence,
   FamilyInteractionType,
   FamilyMember,
   GameEvent,
@@ -103,6 +104,9 @@ export function useGame() {
   const [timeline, setTimeline] = useState<LifeLogEntry[]>([]);
   const [eventoAtivo, setEventoAtivo] = useState<GameEvent | null>(null);
   const [historicoEventos, setHistoricoEventos] = useState<string[]>([]);
+  // B4-FIX2 — histórico rico (id + idade + ano); é o que permite checar
+  // cooldown/recorrência de verdade, não só "já aconteceu alguma vez".
+  const [historicoOcorrencias, setHistoricoOcorrencias] = useState<EventOccurrence[]>([]);
   // B2 — personalidade emergente: acumula padrões de escolhas; nunca exibida como números
   const [personalidade, setPersonalidade] = useState<PersonalityState>(criarPersonalidadeInicial());
   // Ações únicas por ano (atividades, apostas, interações, aumentos); zeradas a cada passagem de ano
@@ -189,6 +193,7 @@ export function useGame() {
         timeline,
         eventoAtivo,
         historicoEventosDisparados: historicoEventos,
+        historicoOcorrenciasEventos: historicoOcorrencias,
         acoesRealizadasAno,
         emJogo: true,
         morto: false
@@ -196,7 +201,7 @@ export function useGame() {
       salvarJogo(estadoParaSalvar);
       setHasSavedGame(true);
     }
-  }, [personagem, familia, educacao, carreira, economia, personalidade, timeline, eventoAtivo, historicoEventos, acoesRealizadasAno, isDead, screen]);
+  }, [personagem, familia, educacao, carreira, economia, personalidade, timeline, eventoAtivo, historicoEventos, historicoOcorrencias, acoesRealizadasAno, isDead, screen]);
 
   // Alternar som
   const toggleSom = useCallback(() => {
@@ -283,6 +288,7 @@ export function useGame() {
     setPersonalidade(criarPersonalidadeInicial());
     setEventoAtivo(null);
     setHistoricoEventos([]);
+    setHistoricoOcorrencias([]);
     setAcoesRealizadasAno([]);
     setIsDead(false);
     setResumoMorte(null);
@@ -323,6 +329,7 @@ export function useGame() {
       setTimeline(save.timeline);
       setEventoAtivo(save.eventoAtivo);
       setHistoricoEventos(save.historicoEventosDisparados || []);
+      setHistoricoOcorrencias(save.historicoOcorrenciasEventos || []);
       setAcoesRealizadasAno(save.acoesRealizadasAno || []);
       setIsDead(save.morto);
       setResumoMorte(save.resumoMorte || null);
@@ -347,7 +354,8 @@ export function useGame() {
       carreira,
       economia,
       historicoEventos,
-      personalidade
+      personalidade,
+      historicoOcorrencias
     );
 
     // Variação dos atributos visíveis no ano — mantém perceptível a mudança
@@ -390,11 +398,17 @@ export function useGame() {
     );
 
     if (resultado.eventoDisparado) {
+      const idadeOcorrencia = resultado.personagemAtualizado.idade;
+      const anoOcorrencia = resultado.personagemAtualizado.anoAtual;
       setEventoAtivo(resultado.eventoDisparado);
       setHistoricoEventos(prev => [...prev, resultado.eventoDisparado!.id]);
+      setHistoricoOcorrencias(prev => [
+        ...prev,
+        { eventId: resultado.eventoDisparado!.id, idade: idadeOcorrencia, ano: anoOcorrencia }
+      ]);
       sound.playEvent();
     }
-  }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos, personalidade]);
+  }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos, historicoOcorrencias, personalidade]);
 
   // Fecha o resumo anual (apenas apresentação).
   const fecharResumoAnual = useCallback(() => {
@@ -871,6 +885,7 @@ export function useGame() {
     setPersonalidade(criarPersonalidadeInicial());
     setEventoAtivo(null);
     setHistoricoEventos([]);
+    setHistoricoOcorrencias([]);
     setAcoesRealizadasAno([]);
     setIsDead(false);
     setResumoMorte(null);

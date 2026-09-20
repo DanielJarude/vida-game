@@ -3,6 +3,7 @@ import { CourseOption } from '../data/coursesData';
 import { formatarDinheiro, getEducationLabel } from '../utils/formatters';
 import { IDADE_MINIMA_FACULDADE, nivelEscolaridade } from './availabilitySystem';
 import { clamp, generateId, randomInt } from '../utils/random';
+import { narrarPosturaEscolar } from './events/narrativeVariants';
 
 export function criarEducacaoInicial(): EducationState {
   return {
@@ -158,7 +159,7 @@ export function processarAnoEducacao(
           idade,
           ano: anoAtual,
           categoria: 'escola',
-          texto: 'Você dedicou o ano aos estudos: suas notas subiram e a disciplina ficou mais firme.',
+          texto: narrarPosturaEscolar('estudar'),
           tipo: 'positivo'
         });
         break;
@@ -171,7 +172,7 @@ export function processarAnoEducacao(
           idade,
           ano: anoAtual,
           categoria: 'escola',
-          texto: 'Você matou aula com frequência este ano. Foi divertido, mas as notas caíram.',
+          texto: narrarPosturaEscolar('matar_aula'),
           tipo: 'negativo'
         });
         break;
@@ -184,7 +185,7 @@ export function processarAnoEducacao(
           idade,
           ano: anoAtual,
           categoria: 'escola',
-          texto: 'Você aproveitou o ano para fortalecer as amizades da escola.',
+          texto: narrarPosturaEscolar('socializar'),
           tipo: 'positivo'
         });
         break;

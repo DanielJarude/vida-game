@@ -284,6 +284,40 @@ export interface EventOption {
   };
 }
 
+// ---------------------------------------------------------------------------
+// B4-FIX2 — taxonomia de repetição de eventos
+//
+// O playtest humano confirmou eventos reaparecendo sem controle (mesmo
+// título, mesma consequência, em anos próximos). A causa raiz: só existia
+// `unico?: boolean` — qualquer evento sem essa marca podia ser sorteado
+// livremente, ano após ano, sem nenhum intervalo mínimo. `repeticao` é a
+// política explícita e coerente; `unico` continua funcionando (mapeado para
+// 'unica') para não exigir reescrever eventos que já estavam corretos.
+//
+// - unica: uma vez na vida inteira (ex.: primeiros passos).
+// - cooldown: pode repetir, mas só depois de um intervalo mínimo de idade.
+// - recorrente: pode repetir com frequência, mas nunca em anos consecutivos
+//   (cooldown mínimo sistêmico de 1 ano já evita a repetição "porta ao
+//   lado" mesmo em eventos não auditados individualmente).
+// - marco: ligado a uma transição específica da vida; não é sorteado de
+//   novo depois de ocorrer (equivalente a 'unica', mas com significado
+//   distinto: representa uma passagem, não um acontecimento aleatório).
+// ---------------------------------------------------------------------------
+export type PoliticaRepeticao = 'unica' | 'cooldown' | 'recorrente' | 'marco';
+
+export interface RepeticaoEvento {
+  tipo: PoliticaRepeticao;
+  /** Anos mínimos de idade entre duas ocorrências do mesmo id (cooldown/recorrente). */
+  cooldownAnos?: number;
+}
+
+/** Uma ocorrência real de evento, registrada com idade e ano (para cooldown). */
+export interface EventOccurrence {
+  eventId: string;
+  idade: number;
+  ano: number;
+}
+
 export interface GameEvent {
   id: string;
   titulo: string;
@@ -292,7 +326,9 @@ export interface GameEvent {
   idadeMaxima: number;
   categoria: 'infancia' | 'escola' | 'adolescencia' | 'familia' | 'amizade' | 'romance' | 'trabalho' | 'dinheiro' | 'saude' | 'cotidiano';
   peso: number; // chance relativa
-  unico?: boolean; // apenas uma vez na vida
+  unico?: boolean; // apenas uma vez na vida (equivalente a repeticao: { tipo: 'unica' })
+  /** Política explícita de repetição (B4-FIX2). Ausente = infere de `unico`, senão 'recorrente'. */
+  repeticao?: RepeticaoEvento;
   condicoes?: {
     genero?: Gender;
     faseVida?: LifeStage;
@@ -348,6 +384,13 @@ export interface GameState {
   timeline: LifeLogEntry[];
   eventoAtivo: GameEvent | null;
   historicoEventosDisparados: string[];
+  // B4-FIX2 — histórico rico (id + idade + ano) para cooldown/recorrência.
+  // `historicoEventosDisparados` continua existindo (compatibilidade de save
+  // e checagem de 'unica'); este campo é o que permite calcular intervalo
+  // mínimo entre duas ocorrências do mesmo evento. Opcional: estados
+  // construídos antes desta mudança (testes, saves antigos) continuam
+  // válidos — ausência é tratada como "sem ocorrência anterior conhecida".
+  historicoOcorrenciasEventos?: EventOccurrence[];
   // Ações únicas por ano (atividades, apostas, interações); zerada a cada passagem de ano
   acoesRealizadasAno: string[];
   emJogo: boolean;

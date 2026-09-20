@@ -4,6 +4,7 @@ import {
   CondicaoComportamental,
   EducationState,
   EconomyState,
+  EventOccurrence,
   FamilyMember,
   GameEvent,
   EventOption,
@@ -11,92 +12,23 @@ import {
   PersonalityState
 } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
-import { formatarDinheiro, getLifeStage, getRotuloAtributo } from '../utils/formatters';
-import { clamp, generateId, rollChance, valorAleatorio } from '../utils/random';
+import { formatarDinheiro, getRotuloAtributo } from '../utils/formatters';
+import { clamp, generateId } from '../utils/random';
 import { normalizarHiddenStats, normalizarStats } from './attributeSystem';
 // Dependência em direção única: personalitySystem não importa eventSystem
 import {
   atendeCondicaoComportamental,
-  atendeCondicoesComportamentais,
-  getNomeTraco,
-  registrarEscolha
+  registrarEscolha,
+  getNomeTraco
 } from './personalitySystem';
+import { avaliarCondicoesEvento as avaliarCondicoesEventoImpl } from './events/eligibility';
+import { haEventoNesteAno, sortearPonderado } from './events/selection';
 
-export function avaliarCondicoesEvento(
-  evento: GameEvent,
-  personagem: Character,
-  carreira: CareerState,
-  educacao: EducationState,
-  economia: EconomyState,
-  familia: FamilyMember[],
-  historicoDisparados: string[],
-  personalidade?: PersonalityState
-): boolean {
-  // Idade
-  if (personagem.idade < evento.idadeMinima || personagem.idade > evento.idadeMaxima) {
-    return false;
-  }
-
-  // Evento único já disparado
-  if (evento.unico && historicoDisparados.includes(evento.id)) {
-    return false;
-  }
-
-  const cond = evento.condicoes;
-  if (!cond) return true;
-
-  if (cond.genero && cond.genero !== personagem.genero) return false;
-
-  if (cond.faseVida) {
-    const faseAtual = getLifeStage(personagem.idade);
-    if (faseAtual !== cond.faseVida) return false;
-  }
-
-  if (cond.empregado !== undefined && cond.empregado !== carreira.empregado) return false;
-  if (cond.emEscola !== undefined && cond.emEscola !== educacao.emCurso) return false;
-  if (cond.emFaculdade !== undefined) {
-    const isFaculdade = educacao.emCurso && (educacao.tipoCurso === 'superior' || educacao.tipoCurso === 'pos');
-    if (cond.emFaculdade !== isFaculdade) return false;
-  }
-
-  if (cond.temParceiro !== undefined) {
-    const temParc = familia.some(
-      f => f.vivo && ['namorado', 'namorada', 'noivo', 'noiva', 'esposo', 'esposa'].includes(f.tipo)
-    );
-    if (cond.temParceiro !== temParc) return false;
-  }
-
-  if (cond.temFilhos !== undefined) {
-    const temFil = familia.some(f => f.vivo && (f.tipo === 'filho' || f.tipo === 'filha'));
-    if (cond.temFilhos !== temFil) return false;
-  }
-
-  if (cond.dinheiroMinimo !== undefined && economia.dinheiro < cond.dinheiroMinimo) return false;
-  if (cond.dinheiroMaximo !== undefined && economia.dinheiro > cond.dinheiroMaximo) return false;
-
-  if (cond.saudeMinima !== undefined && personagem.stats.saude < cond.saudeMinima) return false;
-  if (cond.saudeMaxima !== undefined && personagem.stats.saude > cond.saudeMaxima) return false;
-
-  if (cond.flagsNecessarias) {
-    for (const flag of cond.flagsNecessarias) {
-      if (!personagem.flags[flag]) return false;
-    }
-  }
-
-  if (cond.flagsProibidas) {
-    for (const flag of cond.flagsProibidas) {
-      if (personagem.flags[flag]) return false;
-    }
-  }
-
-  // B2 — condições sobre personalidade/memória (recusa segura sem estado informado)
-  if (cond.personalidade && cond.personalidade.length > 0) {
-    if (!personalidade) return false;
-    if (!atendeCondicoesComportamentais(personalidade, cond.personalidade)) return false;
-  }
-
-  return true;
-}
+// Reexportado por compatibilidade: quem já importava `avaliarCondicoesEvento`
+// e `sortearEventoDoAno` de `eventSystem` continua funcionando. A regra em
+// si vive em `systems/events/eligibility` e `systems/events/selection`
+// (B4-FIX2) — não duplicada aqui.
+export const avaliarCondicoesEvento = avaliarCondicoesEventoImpl;
 
 export function sortearEventoDoAno(
   personagem: Character,
@@ -105,15 +37,16 @@ export function sortearEventoDoAno(
   economia: EconomyState,
   familia: FamilyMember[],
   historicoDisparados: string[],
-  personalidade?: PersonalityState
+  personalidade?: PersonalityState,
+  historicoOcorrencias: EventOccurrence[] = []
 ): GameEvent | null {
-  // Chance de 75% de ter um evento interativo no ano (alguns anos são mais calmos)
-  if (!rollChance(75)) {
+  // Chance de ter um evento interativo no ano (alguns anos são mais calmos)
+  if (!haEventoNesteAno()) {
     return null;
   }
 
   const eventosElegiveis = MASTER_EVENTS_LIST.filter(evento =>
-    avaliarCondicoesEvento(
+    avaliarCondicoesEventoImpl(
       evento,
       personagem,
       carreira,
@@ -121,24 +54,12 @@ export function sortearEventoDoAno(
       economia,
       familia,
       historicoDisparados,
-      personalidade
+      personalidade,
+      historicoOcorrencias
     )
   );
 
-  if (eventosElegiveis.length === 0) return null;
-
-  // Sorteio ponderado por peso
-  const pesoTotal = eventosElegiveis.reduce((sum, ev) => sum + ev.peso, 0);
-  let rolagem = valorAleatorio() * pesoTotal;
-
-  for (const evento of eventosElegiveis) {
-    if (rolagem < evento.peso) {
-      return evento;
-    }
-    rolagem -= evento.peso;
-  }
-
-  return eventosElegiveis[0];
+  return sortearPonderado(eventosElegiveis);
 }
 
 /** Motivo em pt-BR quando uma exigência comportamental não é cumprida (qualitativo, sem números). */

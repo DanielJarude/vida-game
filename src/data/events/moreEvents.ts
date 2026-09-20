@@ -314,6 +314,11 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 45,
     categoria: 'familia',
     peso: 80,
+    // B4-FIX2 — o playtest confirmou este evento repetindo em anos
+    // seguidos (a simulação forense mostrou até 5 ocorrências na mesma
+    // vida). Visitar os avós pode acontecer várias vezes na vida — não é
+    // 'unica' — mas precisa de um intervalo mínimo para não parecer bug.
+    repeticao: { tipo: 'cooldown', cooldownAnos: 4 },
     opcoes: [
       {
         id: 'opt_ouvir_historias',

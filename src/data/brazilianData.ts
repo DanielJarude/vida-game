@@ -1,50 +1,23 @@
 import { Gender, SocialClass } from '../types';
+import { randomChoice } from '../utils/random';
 
-export interface BrazilianCity {
-  cidade: string;
-  estado: string;
-  regiao: 'Sudeste' | 'Sul' | 'Nordeste' | 'Centro-Oeste' | 'Norte';
-  custoVidaRelativo: number; // 0.8 a 1.4
-}
-
-export const CIDADES_BRASILEIRAS: BrazilianCity[] = [
-  { cidade: 'São Paulo', estado: 'SP', regiao: 'Sudeste', custoVidaRelativo: 1.35 },
-  { cidade: 'Campinas', estado: 'SP', regiao: 'Sudeste', custoVidaRelativo: 1.15 },
-  { cidade: 'Ribeirão Preto', estado: 'SP', regiao: 'Sudeste', custoVidaRelativo: 1.05 },
-  { cidade: 'Santos', estado: 'SP', regiao: 'Sudeste', custoVidaRelativo: 1.1 },
-  { cidade: 'Rio de Janeiro', estado: 'RJ', regiao: 'Sudeste', custoVidaRelativo: 1.3 },
-  { cidade: 'Niterói', estado: 'RJ', regiao: 'Sudeste', custoVidaRelativo: 1.2 },
-  { cidade: 'Belo Horizonte', estado: 'MG', regiao: 'Sudeste', custoVidaRelativo: 1.05 },
-  { cidade: 'Uberlândia', estado: 'MG', regiao: 'Sudeste', custoVidaRelativo: 0.95 },
-  { cidade: 'Vitória', estado: 'ES', regiao: 'Sudeste', custoVidaRelativo: 1.05 },
-  { cidade: 'Curitiba', estado: 'PR', regiao: 'Sul', custoVidaRelativo: 1.1 },
-  { cidade: 'Londrina', estado: 'PR', regiao: 'Sul', custoVidaRelativo: 0.95 },
-  { cidade: 'Porto Alegre', estado: 'RS', regiao: 'Sul', custoVidaRelativo: 1.1 },
-  { cidade: 'Caxias do Sul', estado: 'RS', regiao: 'Sul', custoVidaRelativo: 1.0 },
-  { cidade: 'Florianópolis', estado: 'SC', regiao: 'Sul', custoVidaRelativo: 1.25 },
-  { cidade: 'Joinville', estado: 'SC', regiao: 'Sul', custoVidaRelativo: 1.0 },
-  { cidade: 'Salvador', estado: 'BA', regiao: 'Nordeste', custoVidaRelativo: 0.95 },
-  { cidade: 'Feira de Santana', estado: 'BA', regiao: 'Nordeste', custoVidaRelativo: 0.85 },
-  { cidade: 'Recife', estado: 'PE', regiao: 'Nordeste', custoVidaRelativo: 1.0 },
-  { cidade: 'Fortaleza', estado: 'CE', regiao: 'Nordeste', custoVidaRelativo: 0.95 },
-  { cidade: 'Natal', estado: 'RN', regiao: 'Nordeste', custoVidaRelativo: 0.9 },
-  { cidade: 'João Pessoa', estado: 'PB', regiao: 'Nordeste', custoVidaRelativo: 0.9 },
-  { cidade: 'Maceió', estado: 'AL', regiao: 'Nordeste', custoVidaRelativo: 0.9 },
-  { cidade: 'Brasília', estado: 'DF', regiao: 'Centro-Oeste', custoVidaRelativo: 1.3 },
-  { cidade: 'Goiânia', estado: 'GO', regiao: 'Centro-Oeste', custoVidaRelativo: 0.95 },
-  { cidade: 'Cuiabá', estado: 'MT', regiao: 'Centro-Oeste', custoVidaRelativo: 1.0 },
-  { cidade: 'Campo Grande', estado: 'MS', regiao: 'Centro-Oeste', custoVidaRelativo: 0.95 },
-  { cidade: 'Manaus', estado: 'AM', regiao: 'Norte', custoVidaRelativo: 0.95 },
-  { cidade: 'Belém', estado: 'PA', regiao: 'Norte', custoVidaRelativo: 0.9 },
-  { cidade: 'Rio Branco', estado: 'AC', regiao: 'Norte', custoVidaRelativo: 0.9 },
-  { cidade: 'Macapá', estado: 'AP', regiao: 'Norte', custoVidaRelativo: 0.85 },
-  { cidade: 'Porto Velho', estado: 'RO', regiao: 'Norte', custoVidaRelativo: 0.9 },
-  { cidade: 'Boa Vista', estado: 'RR', regiao: 'Norte', custoVidaRelativo: 0.85 },
-  { cidade: 'Palmas', estado: 'TO', regiao: 'Norte', custoVidaRelativo: 0.9 },
-  { cidade: 'São Luís', estado: 'MA', regiao: 'Nordeste', custoVidaRelativo: 0.85 },
-  { cidade: 'Teresina', estado: 'PI', regiao: 'Nordeste', custoVidaRelativo: 0.8 },
-  { cidade: 'Aracaju', estado: 'SE', regiao: 'Nordeste', custoVidaRelativo: 0.9 }
-];
+// ---------------------------------------------------------------------------
+// Localização (B4-FIX2): estados, regiões e municípios moraram aqui até o
+// item 16-18 do B4-FIX2. Passaram para `data/locations/` como domínio
+// próprio (estados/regiões separados de municípios, agrupamento editorial
+// por região). Reexportado aqui para não quebrar quem já importa
+// `brazilianData` — mas todo código novo deve importar de `data/locations`.
+// ---------------------------------------------------------------------------
+export type { Municipio as BrazilianCity } from './locations/municipios';
+export {
+  MUNICIPIOS_BRASILEIROS as CIDADES_BRASILEIRAS,
+  listarEstadosDisponiveis,
+  listarCidadesPorEstado,
+  encontrarCidade,
+  sortearCidade
+} from './locations';
+export type { Regiao, InfoEstado, EstadoBrasileiro } from './locations';
+export { listarRegioesComEstados, obterNomeEstado, obterRegiaoEstado } from './locations';
 
 export const NOMES_MASCULINOS = [
   'Lucas', 'Gabriel', 'Mateus', 'Felipe', 'Rafael', 'Bernardo', 'Pedro', 'Arthur',
@@ -110,8 +83,6 @@ export const PERSONALIDADES = [
   'criativo e sonhador'
 ];
 
-import { randomChoice } from '../utils/random';
-
 export function sortearNome(genero: Gender): string {
   if (genero === 'masculino') {
     return randomChoice(NOMES_MASCULINOS);
@@ -123,68 +94,4 @@ export function sortearNome(genero: Gender): string {
 
 export function sortearSobrenome(): string {
   return randomChoice(SOBRENOMES);
-}
-
-export function sortearCidade(): BrazilianCity {
-  return randomChoice(CIDADES_BRASILEIRAS);
-}
-
-// ---------------------------------------------------------------------------
-// Consultas de localização (data-driven)
-//
-// A seleção de onde nascer é derivada de CIDADES_BRASILEIRAS, nunca
-// duplicada em componente. Acrescentar uma cidade à lista acima basta para
-// que ela apareça na criação de personagem.
-//
-// COBERTURA: as 27 unidades federativas (26 estados + Distrito Federal) têm
-// ao menos uma cidade suportada — normalmente a capital. Não é a lista
-// completa dos municípios brasileiros (o jogo tem 36 cidades ao todo), e o
-// `custoVidaRelativo` é um parâmetro de balanceamento do jogo — não um dado
-// socioeconômico de fonte externa. Cidades novas só devem ser adicionadas
-// com um custo coerente com as já existentes.
-// ---------------------------------------------------------------------------
-
-export interface EstadoBrasileiro {
-  sigla: string;
-  regiao: BrazilianCity['regiao'];
-  quantidadeCidades: number;
-}
-
-/** Estados que possuem ao menos uma cidade suportada, em ordem alfabética. */
-export function listarEstadosDisponiveis(): EstadoBrasileiro[] {
-  const mapa = new Map<string, EstadoBrasileiro>();
-
-  for (const cidade of CIDADES_BRASILEIRAS) {
-    const atual = mapa.get(cidade.estado);
-    if (atual) {
-      atual.quantidadeCidades += 1;
-    } else {
-      mapa.set(cidade.estado, {
-        sigla: cidade.estado,
-        regiao: cidade.regiao,
-        quantidadeCidades: 1
-      });
-    }
-  }
-
-  return Array.from(mapa.values()).sort((a, b) =>
-    a.sigla.localeCompare(b.sigla, 'pt-BR')
-  );
-}
-
-/** Cidades suportadas de um estado, em ordem alfabética. */
-export function listarCidadesPorEstado(sigla: string): BrazilianCity[] {
-  return CIDADES_BRASILEIRAS.filter(c => c.estado === sigla).sort((a, b) =>
-    a.cidade.localeCompare(b.cidade, 'pt-BR')
-  );
-}
-
-/** Busca exata de uma cidade suportada. */
-export function encontrarCidade(
-  nomeCidade: string,
-  sigla: string
-): BrazilianCity | undefined {
-  return CIDADES_BRASILEIRAS.find(
-    c => c.cidade === nomeCidade && c.estado === sigla
-  );
 }
