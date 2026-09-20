@@ -1,278 +1,164 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useGame } from './hooks/useGame';
-import { Header } from './components/layout/Header';
-import { StatsSidebar } from './components/layout/StatsSidebar';
-import { EventModal } from './components/modals/EventModal';
+import { GameShell } from './components/shell/GameShell';
+import { SectionRouter } from './components/shell/SectionRouter';
+import { EventExperience } from './components/events/EventExperience';
+import { AnnualSummary } from './components/feedback/AnnualSummary';
 import { DatingModal } from './components/modals/DatingModal';
-import { TimelineTab } from './components/tabs/TimelineTab';
-import { FamilyTab } from './components/tabs/FamilyTab';
-import { CareerTab } from './components/tabs/CareerTab';
-import { EconomyTab } from './components/tabs/EconomyTab';
-import { ActivitiesTab } from './components/tabs/ActivitiesTab';
 import { HomeScreen } from './components/screens/HomeScreen';
 import { CharacterCreationScreen } from './components/screens/CharacterCreationScreen';
 import { DeathScreen } from './components/screens/DeathScreen';
 import { StatsScreen } from './components/screens/StatsScreen';
-import { descreverSituacaoAtual, getAbasDisponiveis } from './systems/availabilitySystem';
 import {
-  Calendar,
-  Users,
-  Briefcase,
-  Wallet,
-  Activity,
-  CheckCircle,
-  AlertCircle,
-  Info
-} from 'lucide-react';
+  descreverSituacaoAtual,
+  getAbasDisponiveis
+} from './systems/availabilitySystem';
 
+/**
+ * App — composição da aplicação.
+ *
+ * Responsabilidade: escolher a tela e montar o shell do jogo ativo.
+ * Não contém markup de seção, lógica de evento, regra de idade nem economia.
+ * Tudo isso vive em `systems/` (regras) e nos componentes de domínio (UI).
+ */
 export function App() {
-  const {
-    screen,
-    setScreen,
-    activeTab,
-    setActiveTab,
-    hasSavedGame,
-    somLigado,
-    toggleSom,
-    personagem,
-    familia,
-    educacao,
-    carreira,
-    economia,
-    personalidade,
-    timeline,
-    eventoAtivo,
-    isDead,
-    resumoMorte,
-    feedbackMensagem,
-    construirContexto,
+  const jogo = useGame();
+  const [mostrarEncontros, setMostrarEncontros] = useState(false);
 
-    // Ações
-    criarVida,
-    gerarVidaAleatoria,
-    continuarJogoSalvo,
-    envelhecerAno,
-    responderEvento,
-    acaoFamilia,
-    acaoEscolaExec,
-    matricularCursoExec,
-    candidatarVagaExec,
-    trabalharMaisExec,
-    pedirAumentoExec,
-    pedirDemissaoExec,
-    fazerBicoExec,
-    comprarBemExec,
-    venderBemExec,
-    investirExec,
-    resgatarInvestimentoExec,
-    jogarLoteriaExec,
-    executarAtividade,
-    iniciarNamoroExec,
-    pedirCasamentoExec,
-    terFilhoExec,
-    terminarRelacionamentoExec,
-    reiniciarJogo
-  } = useGame();
-
-  const [showDatingModal, setShowDatingModal] = useState(false);
-
-  // 1. Tela Inicial
-  if (screen === 'home') {
+  // ------------------------------------------------------------ Telas fora do jogo
+  if (jogo.screen === 'home') {
     return (
       <HomeScreen
-        hasSavedGame={hasSavedGame}
-        onNovaVida={() => setScreen('create')}
-        onContinuar={continuarJogoSalvo}
-        onEstatisticas={() => setScreen('stats')}
-        onGerarAleatorio={gerarVidaAleatoria}
+        hasSavedGame={jogo.hasSavedGame}
+        onNovaVida={() => jogo.setScreen('create')}
+        onContinuar={jogo.continuarJogoSalvo}
+        onEstatisticas={() => jogo.setScreen('stats')}
+        onGerarAleatorio={jogo.gerarVidaAleatoria}
       />
     );
   }
 
-  // 2. Tela de Criação de Personagem
-  if (screen === 'create') {
+  if (jogo.screen === 'create') {
     return (
       <CharacterCreationScreen
-        onCriarVida={criarVida}
-        onVoltar={() => setScreen('home')}
+        onCriarVida={jogo.criarVida}
+        onVoltar={() => jogo.setScreen('home')}
       />
     );
   }
 
-  // 3. Tela de Estatísticas / Hall da Fama
-  if (screen === 'stats') {
+  if (jogo.screen === 'stats') {
     return (
       <StatsScreen
-        onVoltar={() => setScreen(personagem ? 'game' : 'home')}
+        onVoltar={() => jogo.setScreen(jogo.personagem ? 'game' : 'home')}
       />
     );
   }
 
-  // 4. Tela de Morte / Obituário
-  if (isDead && resumoMorte) {
+  if (jogo.isDead && jogo.resumoMorte) {
     return (
       <DeathScreen
-        resumo={resumoMorte}
-        onJogarNovamente={reiniciarJogo}
-        onVerEstatisticas={() => setScreen('stats')}
+        resumo={jogo.resumoMorte}
+        onJogarNovamente={jogo.reiniciarJogo}
+        onVerEstatisticas={() => jogo.setScreen('stats')}
       />
     );
   }
 
-  // 5. Tela Principal de Jogo Ativo
-  if (!personagem) {
-    return null;
-  }
+  if (!jogo.personagem) return null;
 
-  // Contexto e política central: abas e ações derivadas da fase da vida
-  const ctx = construirContexto();
+  // ------------------------------------------------- Contexto e política central
+  const ctx = jogo.construirContexto();
   if (!ctx) return null;
 
+  // Navegação derivada exclusivamente da política de disponibilidade por idade.
   const abasVisiveis = getAbasDisponiveis(ctx);
-  const abaAtiva = abasVisiveis.includes(activeTab) ? activeTab : 'timeline';
-  const situacaoAtual = descreverSituacaoAtual(ctx);
+  const abaAtiva = abasVisiveis.includes(jogo.activeTab)
+    ? jogo.activeTab
+    : 'timeline';
+  const situacao = descreverSituacaoAtual(ctx);
 
-  const rotulosAbas: Record<typeof abaAtiva, { icone: ReactNode; titulo: string }> = {
-    timeline: { icone: <Calendar size={16} />, titulo: 'Linha da Vida' },
-    familia: { icone: <Users size={16} />, titulo: 'Relacionamentos' },
-    carreira: { icone: <Briefcase size={16} />, titulo: 'Estudos & Carreira' },
-    financas: { icone: <Wallet size={16} />, titulo: 'Finanças' },
-    atividades: { icone: <Activity size={16} />, titulo: 'Atividades' }
-  };
+  const eventoAberto = !!jogo.eventoAtivo;
 
   return (
-    <div className="app-container">
-      {/* Toast de Feedback */}
-      {feedbackMensagem && (
-        <div
-          className={`feedback-toast toast-${feedbackMensagem.tipo}`}
-          role="status"
-        >
-          {feedbackMensagem.tipo === 'sucesso' && <CheckCircle size={16} />}
-          {feedbackMensagem.tipo === 'erro' && <AlertCircle size={16} />}
-          {feedbackMensagem.tipo === 'info' && <Info size={16} />}
-          <span>{feedbackMensagem.texto}</span>
-        </div>
-      )}
+    <GameShell
+      personagem={jogo.personagem}
+      educacao={jogo.educacao}
+      carreira={jogo.carreira}
+      economia={jogo.economia}
+      familia={jogo.familia}
+      personalidade={jogo.personalidade}
+      situacao={situacao}
+      variacaoAtributos={jogo.variacaoAtributos}
+      abas={abasVisiveis}
+      abaAtiva={abaAtiva}
+      onSelecionarAba={jogo.setActiveTab}
+      somLigado={jogo.somLigado}
+      onToggleSom={jogo.toggleSom}
+      onGoHome={() => jogo.setScreen('home')}
+      onOpenStats={() => jogo.setScreen('stats')}
+      feedback={jogo.feedbackMensagem}
+      overlays={
+        <>
+          {jogo.eventoAtivo && (
+            <EventExperience
+              evento={jogo.eventoAtivo}
+              personagem={jogo.personagem}
+              economia={jogo.economia}
+              personalidade={jogo.personalidade}
+              onEscolherOpcao={jogo.responderEvento}
+              onContinuar={jogo.fecharEvento}
+            />
+          )}
 
-      {/* Header Superior com identidade (nome, idade, local, situação, saldo) */}
-      <Header
-        personagem={personagem}
-        economia={economia}
-        situacao={situacaoAtual}
-        somLigado={somLigado}
-        onToggleSom={toggleSom}
-        onGoHome={() => setScreen('home')}
-        onOpenStats={() => setScreen('stats')}
+          {/* O resumo anual espera o evento do ano ser resolvido. */}
+          {!eventoAberto && jogo.resumoAnual && (
+            <AnnualSummary
+              resumo={jogo.resumoAnual}
+              onFechar={jogo.fecharResumoAnual}
+            />
+          )}
+
+          {mostrarEncontros && (
+            <DatingModal
+              personagem={jogo.personagem}
+              onClose={() => setMostrarEncontros(false)}
+              onIniciarNamoro={jogo.iniciarNamoroExec}
+            />
+          )}
+        </>
+      }
+    >
+      <SectionRouter
+        aba={abaAtiva}
+        ctx={ctx}
+        personagem={jogo.personagem}
+        familia={jogo.familia}
+        educacao={jogo.educacao}
+        carreira={jogo.carreira}
+        economia={jogo.economia}
+        timeline={jogo.timeline}
+        eventoAberto={eventoAberto}
+        onEnvelhecer={jogo.envelhecerAno}
+        onInteragirFamilia={jogo.acaoFamilia}
+        onPedirCasamento={jogo.pedirCasamentoExec}
+        onTerFilho={jogo.terFilhoExec}
+        onTerminarRelacionamento={jogo.terminarRelacionamentoExec}
+        onAbrirEncontros={() => setMostrarEncontros(true)}
+        onAcaoEscola={jogo.acaoEscolaExec}
+        onMatricularCurso={jogo.matricularCursoExec}
+        onCandidatarVaga={jogo.candidatarVagaExec}
+        onTrabalharMais={jogo.trabalharMaisExec}
+        onPedirAumento={jogo.pedirAumentoExec}
+        onPedirDemissao={jogo.pedirDemissaoExec}
+        onFazerBico={jogo.fazerBicoExec}
+        onComprarBem={jogo.comprarBemExec}
+        onVenderBem={jogo.venderBemExec}
+        onInvestir={jogo.investirExec}
+        onResgatarInvestimento={jogo.resgatarInvestimentoExec}
+        onJogarLoteria={jogo.jogarLoteriaExec}
+        onExecutarAtividade={jogo.executarAtividade}
       />
-
-      {/* Grid Principal */}
-      <div className="game-layout">
-        {/* Painel Lateral / Stats */}
-        <StatsSidebar
-          personagem={personagem}
-          carreira={carreira}
-          educacao={educacao}
-          personalidade={personalidade}
-        />
-
-        {/* Área Central com Abas */}
-        <main className="main-content-area">
-          {/* Navegação por Abas (somente as pertinentes à fase da vida) */}
-          <nav className="tabs-nav" aria-label="Seções do jogo">
-            {abasVisiveis.map(aba => (
-              <button
-                key={aba}
-                className={`tab-btn ${abaAtiva === aba ? 'active' : ''}`}
-                onClick={() => setActiveTab(aba)}
-              >
-                {rotulosAbas[aba].icone}
-                <span>{rotulosAbas[aba].titulo}</span>
-              </button>
-            ))}
-          </nav>
-
-          {/* Conteúdo da Aba Ativa */}
-          {abaAtiva === 'timeline' && (
-            <TimelineTab
-              timeline={timeline}
-              onEnvelhecer={envelhecerAno}
-              bloqueado={!!eventoAtivo}
-            />
-          )}
-
-          {abaAtiva === 'familia' && (
-            <FamilyTab
-              personagem={personagem}
-              familia={familia}
-              ctx={ctx}
-              onInteragir={acaoFamilia}
-              onPedirCasamento={pedirCasamentoExec}
-              onTerFilho={terFilhoExec}
-              onTerminar={terminarRelacionamentoExec}
-              onOpenDatingModal={() => setShowDatingModal(true)}
-            />
-          )}
-
-          {abaAtiva === 'carreira' && (
-            <CareerTab
-              personagem={personagem}
-              educacao={educacao}
-              carreira={carreira}
-              ctx={ctx}
-              onAcaoEscola={acaoEscolaExec}
-              onMatricularCurso={matricularCursoExec}
-              onCandidatarVaga={candidatarVagaExec}
-              onTrabalharMais={trabalharMaisExec}
-              onPedirAumento={pedirAumentoExec}
-              onPedirDemissao={pedirDemissaoExec}
-              onFazerBico={fazerBicoExec}
-            />
-          )}
-
-          {abaAtiva === 'financas' && (
-            <EconomyTab
-              personagem={personagem}
-              economia={economia}
-              ctx={ctx}
-              onComprarBem={comprarBemExec}
-              onVenderBem={venderBemExec}
-              onInvestir={investirExec}
-              onResgatarInvestimento={resgatarInvestimentoExec}
-              onJogarLoteria={jogarLoteriaExec}
-            />
-          )}
-
-          {abaAtiva === 'atividades' && (
-            <ActivitiesTab
-              personagem={personagem}
-              economia={economia}
-              ctx={ctx}
-              onExecutarAtividade={executarAtividade}
-            />
-          )}
-        </main>
-      </div>
-
-      {/* Modal de Decisão de Evento Ativo */}
-      {eventoAtivo && (
-        <EventModal
-          evento={eventoAtivo}
-          personagem={personagem}
-          economia={economia}
-          personalidade={personalidade}
-          onEscolherOpcao={responderEvento}
-        />
-      )}
-
-      {/* Modal de Conhecer Pessoas / Namoro (adultos) */}
-      {showDatingModal && (
-        <DatingModal
-          personagem={personagem}
-          onClose={() => setShowDatingModal(false)}
-          onIniciarNamoro={iniciarNamoroExec}
-        />
-      )}
-    </div>
+    </GameShell>
   );
 }

@@ -1,0 +1,245 @@
+/* ==========================================================================
+   VIDA — Telas fora do jogo ativo: início, criação, estatísticas, obituário
+   Mesma identidade do shell: atmosfera, tipografia e acento escasso.
+   ========================================================================== */
+
+.screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--space-7) var(--space-5);
+  background:
+    radial-gradient(
+      120% 80% at 50% -10%,
+      rgba(61, 220, 151, 0.08) 0%,
+      transparent 55%
+    ),
+    linear-gradient(180deg, var(--bg-app) 0%, var(--bg-deep) 100%);
+}
+
+.screen::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    130% 95% at 50% 40%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+}
+
+.screen__inner {
+  position: relative;
+  z-index: var(--z-base);
+  width: 100%;
+  max-width: 560px;
+}
+
+.screen--wide .screen__inner {
+  max-width: 860px;
+}
+
+/* Telas com muito conteúdo rolam a partir do topo. */
+.screen--scroll {
+  justify-content: flex-start;
+}
+
+/* ------------------------------------------------------------------ Início */
+.title-mark {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 12vw, 4.5rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.22em;
+  line-height: 1;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.title-tagline {
+  margin-top: var(--space-4);
+  font-size: var(--type-caption);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.screen__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
+/* Ação de maior peso da tela inicial (nova vida / continuar). */
+.btn--hero {
+  min-height: 54px;
+  font-family: var(--font-display);
+  font-size: var(--type-subheading);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.03em;
+  color: var(--bg-deep);
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-accent);
+}
+
+.btn--hero:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+/* ---------------------------------------------------------------- Criação */
+.creation-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.creation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Escolha segmentada (gênero, etc.) sem virar grade de cards. */
+.choice-group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.choice-chip {
+  padding: var(--space-3) var(--space-4);
+  min-height: var(--touch-target);
+  font-size: var(--type-caption);
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  transition: color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+
+.choice-chip:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.choice-chip[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--accent-wash);
+  border-color: var(--accent-line);
+  font-weight: var(--weight-semibold);
+}
+
+/* --------------------------------------------------------------- Obituário */
+.obituary__name {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.obituary__dates {
+  margin-top: var(--space-2);
+  font-size: var(--type-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.obituary__epitaph {
+  margin: var(--space-6) auto 0;
+  padding: var(--space-4) var(--space-5);
+  max-width: 56ch;
+  font-family: var(--font-hand);
+  font-size: var(--type-subheading);
+  line-height: var(--leading-snug);
+  color: var(--text-secondary);
+  text-align: center;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.obituary__biography {
+  margin-top: var(--space-6);
+  font-size: var(--type-body);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.obituary__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-7);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--rule);
+}
+
+.obituary__stat-label {
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.obituary__stat-value {
+  margin-top: var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--type-subheading);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------- Estatísticas */
+.record-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.record-row:last-child {
+  border-bottom: 0;
+}
+
+.record-row__rank {
+  font-family: var(--font-display);
+  font-size: var(--type-caption);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  min-width: 2ch;
+}
+
+.record-row__name {
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.record-row__meta {
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+}
+
+.record-row__score {
+  font-family: var(--font-display);
+  font-size: var(--type-subheading);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}

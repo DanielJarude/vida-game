@@ -76,3 +76,66 @@ MUST executar os comandos de verificação disponíveis e relevantes: tipos, bui
 - [ ] Recarregar a aplicação restaura estado coerente e menus corretos.
 - [ ] Verificações relevantes passam; falhas preexistentes são separadas das introduzidas.
 - [ ] Entrega informa arquivos/áreas alterados, comportamento, validação real e limitações.
+
+## Modularidade: o arquivo que vira depósito
+
+Regra permanente, válida para qualquer tarefa neste repositório.
+
+O modo de falha mais comum em código gerado por IA não é o bug: é a
+**concentração**. Um arquivo que já existe e já funciona é o destino de
+menor atrito para qualquer adição, e em poucas iterações ele acumula
+responsabilidades que não são dele. O resultado é um arquivo que ninguém
+consegue ler inteiro, testar em partes ou alterar com segurança.
+
+MUST respeitar o papel declarado de cada camada. Antes de escrever, decida
+a que camada o código pertence e escreva **lá**, mesmo que dê mais
+trabalho:
+
+| Camada | Responsabilidade | Não pertence aqui |
+| --- | --- | --- |
+| Entrypoint / `index.*` | Inicialização e reexportação | Regra, estado, layout |
+| Componente raiz (`App`) | Composição e roteamento de telas | Regra de negócio, cálculo, estado de domínio |
+| Hook de orquestração | Ligar estado a chamadas de sistema | Tabela de balanceamento, fórmula, narrativa |
+| `systems/` | Regras, cálculo, validação, balanceamento | JSX, acesso ao DOM, `localStorage` direto |
+| `presentation/` | Traduzir estado do motor em algo exibível | Decidir o que é permitido; alterar estado |
+| Componentes | Renderizar e capturar intenção | Recalcular regra já existente |
+| Estilos | Aparência | Valores mágicos duplicados fora dos tokens |
+
+MUST tratar estes sinais como gatilho de extração imediata, não como
+dívida a revisitar:
+
+- um `switch` ou cadeia de `if` de balanceamento dentro de um componente
+  ou hook;
+- uma tabela de textos, preços, pesos ou efeitos declarada no meio de
+  lógica de estado;
+- um arquivo que precisa ser lido por inteiro para entender uma alteração
+  de uma linha;
+- o mesmo cálculo repetido em dois lugares "porque era mais rápido".
+
+Prefira **dados a ramificação**: uma tabela declarativa (`Record<id,
+receita>`) aceita um item novo em uma linha; um `switch` exige um ramo
+novo e tende a divergir da validação correspondente.
+
+MUST evitar o extremo oposto. Fragmentar em arquivos de poucas linhas que
+só repassam props, ou criar uma pasta por componente trivial, troca um
+problema de leitura por outro. O critério não é tamanho: é **coesão**.
+Um arquivo longo e coeso é aceitável; um arquivo médio que mistura três
+assuntos não é.
+
+DO NOT refatorar arquivos fora do escopo da tarefa apenas para melhorar
+uma métrica ou uma tabela de relatório. Extração se justifica quando a
+tarefa atual toca aquele código ou quando a concentração impede a
+mudança pedida.
+
+MUST, ao concluir, medir o que foi entregue: liste os arquivos maiores
+tocados, o que cada um faz e se a responsabilidade é única. Se um arquivo
+cresceu sem que sua responsabilidade tenha crescido junto, ele regrediu.
+
+### Critérios de aceite (modularidade)
+
+- [ ] Nenhuma regra nova foi adicionada ao componente raiz ou a um hook.
+- [ ] Balanceamento e texto narrativo vivem em módulo próprio e testável.
+- [ ] A camada de apresentação não decide permissão nem altera estado.
+- [ ] Não há lista paralela de permissões fora do sistema responsável.
+- [ ] Não foram criados arquivos que apenas repassam props.
+- [ ] Arquivos órfãos após a mudança foram removidos, não deixados para trás.

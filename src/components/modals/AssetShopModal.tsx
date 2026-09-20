@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { IMOVEIS_LOJA, VEICULOS_LOJA } from '../../data/assetsData';
 import { formatarDinheiro } from '../../utils/formatters';
-import { X, Home, Car } from 'lucide-react';
+import { useModalBehavior } from '../common/useModalBehavior';
+import { X } from 'lucide-react';
 
 interface AssetShopModalProps {
   saldoDisponivel: number;
@@ -14,93 +15,87 @@ export const AssetShopModal: React.FC<AssetShopModalProps> = ({
   onClose,
   onComprar
 }) => {
+  const containerRef = useModalBehavior<HTMLDivElement>({ onClose });
   const [tab, setTab] = useState<'imoveis' | 'veiculos'>('imoveis');
   const itens = tab === 'imoveis' ? IMOVEIS_LOJA : VEICULOS_LOJA;
 
+  const tituloId = 'loja-titulo';
+
   return (
     <div className="modal-overlay">
-      <div className="modal-card" style={{ maxWidth: '640px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        className="modal-surface"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={tituloId}
+        ref={containerRef}
+        tabIndex={-1}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 'var(--space-4)'
+          }}
+        >
           <div>
-            <h2 className="modal-title">Concessionária & Imobiliária</h2>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-              Saldo em Conta: <strong style={{ color: 'var(--accent-amber)' }}>{formatarDinheiro(saldoDisponivel)}</strong>
-            </div>
+            <h2 className="event-scene__title" id={tituloId} style={{ marginBottom: 'var(--space-1)' }}>
+              Imóveis e veículos
+            </h2>
+            <p className="action-row__detail">
+              Saldo disponível: {formatarDinheiro(saldoDisponivel)}
+            </p>
           </div>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="icon-button" aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
 
-        {/* Abas */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="choice-group" style={{ marginTop: 'var(--space-4)' }}>
           <button
-            className={`tab-btn ${tab === 'imoveis' ? 'active' : ''}`}
+            className="choice-chip"
+            aria-pressed={tab === 'imoveis'}
             onClick={() => setTab('imoveis')}
           >
-            <Home size={16} />
-            <span>Imóveis Residenciais</span>
+            Imóveis
           </button>
           <button
-            className={`tab-btn ${tab === 'veiculos' ? 'active' : ''}`}
+            className="choice-chip"
+            aria-pressed={tab === 'veiculos'}
             onClick={() => setTab('veiculos')}
           >
-            <Car size={16} />
-            <span>Carros & Motos</span>
+            Veículos
           </button>
         </div>
 
-        {/* Lista de Bens */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '55vh', overflowY: 'auto' }}>
+        <div className="event-scene__divider" role="presentation" />
+
+        <div className="action-list">
           {itens.map(item => {
             const podeComprar = saldoDisponivel >= item.preco;
             return (
-              <div
-                key={item.id}
-                style={{
-                  background: 'var(--bg-card-subtle)',
-                  border: '1px solid var(--border-card)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '14px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                    {item.nome}
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {item.descricao}
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Manutenção/IPTU/IPVA anual: {formatarDinheiro(item.custoAnualManutencao)}
-                  </div>
-                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--accent-amber)', marginTop: '4px' }}>
-                    {formatarDinheiro(item.preco)}
-                  </div>
+              <div key={item.id} className="action-row">
+                <div className="action-row__body">
+                  <p className="action-row__title">{item.nome}</p>
+                  <p className="action-row__detail">{item.descricao}</p>
+                  <p className="action-row__detail">
+                    {formatarDinheiro(item.preco)} · manutenção{' '}
+                    {formatarDinheiro(item.custoAnualManutencao)}/ano
+                  </p>
                 </div>
-
-                <button
-                  disabled={!podeComprar}
-                  onClick={() => {
-                    onComprar(item.id);
-                    onClose();
-                  }}
-                  style={{
-                    background: podeComprar ? 'var(--primary)' : 'var(--bg-card-hover)',
-                    color: podeComprar ? '#022c22' : 'var(--text-muted)',
-                    padding: '10px 18px',
-                    borderRadius: 'var(--radius-md)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: podeComprar ? 'pointer' : 'not-allowed'
-                  }}
-                >
-                  {podeComprar ? 'Comprar à Vista' : 'Sem Saldo'}
-                </button>
+                <div className="action-row__action">
+                  <button
+                    disabled={!podeComprar}
+                    onClick={() => {
+                      onComprar(item.id);
+                      onClose();
+                    }}
+                    className={`btn ${podeComprar ? 'btn--primary' : 'btn--ghost'}`}
+                  >
+                    {podeComprar ? 'Comprar' : 'Sem saldo'}
+                  </button>
+                </div>
               </div>
             );
           })}

@@ -9,4 +9,11 @@ export default defineConfig({
     port: 5173,
     allowedHosts: true,
   },
+  test: {
+    // Testes de motor rodam em Node; os testes de interface do B4 declaram
+    // `@vitest-environment jsdom` no topo do arquivo.
+    environment: 'node',
+    globals: false,
+    css: false,
+  },
 });

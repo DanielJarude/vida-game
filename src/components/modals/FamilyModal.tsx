@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { FamilyInteractionType, FamilyMember } from '../../types';
-import { getStatColor, getRotuloParentesco } from '../../utils/formatters';
 import { Disponibilidade } from '../../systems/availabilitySystem';
-import { X, MessageCircle, Clock, Gift, MessageSquareWarning, DollarSign, HelpCircle, HeartHandshake, Baby, UserMinus } from 'lucide-react';
+import { apresentarRelacionamento } from '../../presentation/relationshipPresentation';
+import { useModalBehavior } from '../common/useModalBehavior';
+import { X, Lock } from 'lucide-react';
 
 interface FamilyModalProps {
   membro: FamilyMember;
   onClose: () => void;
-  onInteragir: (tipo: FamilyInteractionType, presenteTipo?: 'barato' | 'medio' | 'luxo') => void;
+  onInteragir: (
+    tipo: FamilyInteractionType,
+    presenteTipo?: 'barato' | 'medio' | 'luxo'
+  ) => void;
   onPedirCasamento?: () => void;
   onTerFilho?: () => void;
   onTerminar?: () => void;
@@ -25,207 +29,215 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
   idadeJogador,
   verificarInteracao
 }) => {
+  const containerRef = useModalBehavior<HTMLDivElement>({ onClose });
   const [showPresenteMenu, setShowPresenteMenu] = useState(false);
-  const isParceiro = ['namorado', 'namorada', 'noivo', 'noiva', 'esposo', 'esposa'].includes(membro.tipo);
+
+  const isParceiro = [
+    'namorado',
+    'namorada',
+    'noivo',
+    'noiva',
+    'esposo',
+    'esposa'
+  ].includes(membro.tipo);
   const isCasado = ['esposo', 'esposa'].includes(membro.tipo);
 
-  const estadoBotao = (tipo: FamilyInteractionType): { desabilitado: boolean; motivo?: string } => {
-    const disp = verificarInteracao(tipo);
-    return {
-      desabilitado: disp.kind !== 'disponivel',
-      motivo: disp.kind === 'bloqueado' ? disp.motivo : undefined
-    };
-  };
+  const pessoa = apresentarRelacionamento(membro);
+  const tituloId = 'familia-modal-titulo';
 
-  const AcaoFamiliar: React.FC<{
+  /** Linha de interação; motivo de bloqueio sempre em texto. */
+  const Acao: React.FC<{
     tipo: FamilyInteractionType;
-    icone: React.ReactNode;
     titulo: string;
     descricao: string;
-    corTitulo?: string;
-  }> = ({ tipo, icone, titulo, descricao, corTitulo }) => {
-    const { desabilitado, motivo } = estadoBotao(tipo);
+  }> = ({ tipo, titulo, descricao }) => {
+    const disp = verificarInteracao(tipo);
+    if (disp.kind === 'oculto') return null;
+
+    const desabilitado = disp.kind !== 'disponivel';
+    const motivo = disp.kind === 'bloqueado' ? disp.motivo : undefined;
+
     return (
       <button
-        className="option-btn"
-        onClick={() => { if (!desabilitado) { onInteragir(tipo); onClose(); } }}
+        className="event-choice"
+        onClick={() => {
+          if (!desabilitado) {
+            onInteragir(tipo);
+            onClose();
+          }
+        }}
         disabled={desabilitado}
-        aria-label={`${titulo}${motivo ? ` — ${motivo}` : ''}`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {icone}
-          <div>
-            <strong style={corTitulo ? { color: corTitulo } : undefined}>{titulo}</strong>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              {motivo || descricao}
-            </div>
-          </div>
-        </div>
+        <span className="event-choice__indicator" aria-hidden="true" />
+        <span className="event-choice__body">
+          <span className="event-choice__title">{titulo}</span>
+          <span className="event-choice__hint">{descricao}</span>
+          {motivo && (
+            <span className="event-choice__reason">
+              <Lock size={12} aria-hidden="true" />
+              {motivo}
+            </span>
+          )}
+        </span>
       </button>
     );
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={membro.nome}>
-      <div className="modal-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div className="modal-overlay">
+      <div
+        className="modal-surface"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={tituloId}
+        ref={containerRef}
+        tabIndex={-1}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 'var(--space-4)'
+          }}
+        >
           <div>
-            <h2 className="modal-title">{membro.nome} {membro.sobrenome}</h2>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '2px' }}>
-              {getRotuloParentesco(membro.tipo)} • {membro.idade} anos • {membro.profissao || membro.situacaoAtual || 'Em casa'}
-            </div>
+            <h2 className="event-scene__title" id={tituloId} style={{ marginBottom: 'var(--space-1)' }}>
+              {membro.nome} {membro.sobrenome}
+            </h2>
+            <p className="action-row__detail">
+              {pessoa.relacao} ·{' '}
+              {membro.idade === 1 ? '1 ano' : `${membro.idade} anos`}
+              {membro.profissao ? ` · ${membro.profissao}` : ''}
+            </p>
+            {/* Proximidade em palavras, não percentual. */}
+            <p className="action-row__detail">
+              Relação {pessoa.rotuloProximidade.toLowerCase()}
+            </p>
           </div>
-          <button onClick={onClose} className="btn-icon" aria-label="Fechar">
+
+          <button onClick={onClose} className="icon-button" aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
 
-        {/* Nível de Relacionamento */}
-        <div style={{ background: 'var(--bg-card-subtle)', padding: '12px', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-            <span>Nível de Relacionamento</span>
-            <strong style={{ color: getStatColor(membro.relacionamento) }}>{membro.relacionamento}%</strong>
-          </div>
-          <div className="stat-bar-track">
-            <div
-              className="stat-bar-fill"
-              style={{ width: `${membro.relacionamento}%`, backgroundColor: getStatColor(membro.relacionamento) }}
-            />
-          </div>
-        </div>
+        <div className="event-scene__divider" role="presentation" />
 
-        {/* Menu de Ações (disponibilidade vem da política central) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <AcaoFamiliar
+        <div className="event-choices">
+          <Acao
             tipo="conversar"
-            icone={<MessageCircle size={18} color="var(--accent-blue)" />}
             titulo="Conversar"
-            descricao="Bater um papo amigável sobre o dia"
+            descricao="Bater um papo sobre o dia"
           />
-
-          <AcaoFamiliar
+          <Acao
             tipo="passar_tempo"
-            icone={<Clock size={18} color="var(--primary)" />}
-            titulo="Passar Tempo Juntos"
-            descricao="Fazer um passeio ou almoço especial"
+            titulo="Passar tempo junto"
+            descricao="Um passeio ou uma refeição sem pressa"
           />
 
-          {/* Dar Presente */}
           {!showPresenteMenu ? (
-            <button
-              className="option-btn"
-              onClick={() => setShowPresenteMenu(true)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Gift size={18} color="var(--accent-amber)" />
-                <div>
-                  <strong>Dar um Presente</strong>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Escolher uma lembrança carinhosa</div>
-                </div>
-              </div>
+            <button className="event-choice" onClick={() => setShowPresenteMenu(true)}>
+              <span className="event-choice__indicator" aria-hidden="true" />
+              <span className="event-choice__body">
+                <span className="event-choice__title">Dar um presente</span>
+                <span className="event-choice__hint">Escolher uma lembrança</span>
+              </span>
             </button>
           ) : (
-            <div style={{ background: 'var(--bg-card-subtle)', padding: '10px', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Escolha o Presente:</div>
-              <button
-                className="option-btn"
-                onClick={() => { onInteragir('dar_presente', 'barato'); onClose(); }}
-              >
-                <span>Lembrancinha Simples (R$ 50)</span>
-              </button>
-              <button
-                className="option-btn"
-                onClick={() => { onInteragir('dar_presente', 'medio'); onClose(); }}
-              >
-                <span>Presente Especial (R$ 250)</span>
-              </button>
-              <button
-                className="option-btn"
-                onClick={() => { onInteragir('dar_presente', 'luxo'); onClose(); }}
-              >
-                <span>Presente de Luxo (R$ 1.200)</span>
-              </button>
-            </div>
+            <>
+              {[
+                { tipo: 'barato' as const, titulo: 'Lembrança simples', valor: 'R$ 50' },
+                { tipo: 'medio' as const, titulo: 'Presente especial', valor: 'R$ 250' },
+                { tipo: 'luxo' as const, titulo: 'Presente de luxo', valor: 'R$ 1.200' }
+              ].map(p => (
+                <button
+                  key={p.tipo}
+                  className="event-choice"
+                  onClick={() => {
+                    onInteragir('dar_presente', p.tipo);
+                    onClose();
+                  }}
+                >
+                  <span className="event-choice__indicator" aria-hidden="true" />
+                  <span className="event-choice__body">
+                    <span className="event-choice__title">{p.titulo}</span>
+                    <span className="event-choice__hint">{p.valor}</span>
+                  </span>
+                </button>
+              ))}
+            </>
           )}
 
-          {/* Pedir Dinheiro (Pais) */}
-          {(membro.tipo === 'pai' || membro.tipo === 'mae') && idadeJogador >= 6 && (
-            <AcaoFamiliar
+          {(membro.tipo === 'pai' || membro.tipo === 'mae') && (
+            <Acao
               tipo="pedir_dinheiro"
-              icone={<DollarSign size={18} color="var(--accent-amber)" />}
-              titulo="Pedir Dinheiro"
-              descricao="Pedir uma ajuda financeira para suas despesas"
+              titulo="Pedir dinheiro"
+              descricao="Uma ajuda para suas despesas"
             />
           )}
 
-          {/* Pedir Conselho */}
-          {idadeJogador >= 6 && (
-            <AcaoFamiliar
-              tipo="pedir_conselho"
-              icone={<HelpCircle size={18} color="var(--accent-purple)" />}
-              titulo="Pedir Conselho de Vida"
-              descricao="Ouvir a sabedoria e experiência do familiar"
-            />
-          )}
+          <Acao
+            tipo="pedir_conselho"
+            titulo="Pedir um conselho"
+            descricao="Ouvir a experiência de quem já passou por isso"
+          />
 
-          {/* Ações Especiais de Parceiro Romântico (adultos) */}
           {isParceiro && idadeJogador >= 18 && (
             <>
               {!isCasado && onPedirCasamento && (
                 <button
-                  className="option-btn"
-                  onClick={() => { onPedirCasamento(); onClose(); }}
+                  className="event-choice"
+                  onClick={() => {
+                    onPedirCasamento();
+                    onClose();
+                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <HeartHandshake size={18} color="var(--accent-rose)" />
-                    <div>
-                      <strong>Pedir em Casamento</strong>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Oficializar o matrimônio</div>
-                    </div>
-                  </div>
+                  <span className="event-choice__indicator" aria-hidden="true" />
+                  <span className="event-choice__body">
+                    <span className="event-choice__title">Pedir em casamento</span>
+                    <span className="event-choice__hint">Oficializar a relação</span>
+                  </span>
                 </button>
               )}
 
               {onTerFilho && (
                 <button
-                  className="option-btn"
-                  onClick={() => { onTerFilho(); onClose(); }}
+                  className="event-choice"
+                  onClick={() => {
+                    onTerFilho();
+                    onClose();
+                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Baby size={18} color="var(--primary)" />
-                    <div>
-                      <strong>Ter um Bebê</strong>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Aumentar a família com um filho</div>
-                    </div>
-                  </div>
+                  <span className="event-choice__indicator" aria-hidden="true" />
+                  <span className="event-choice__body">
+                    <span className="event-choice__title">Ter um filho</span>
+                    <span className="event-choice__hint">Aumentar a família</span>
+                  </span>
                 </button>
               )}
 
               {onTerminar && (
                 <button
-                  className="option-btn"
-                  onClick={() => { onTerminar(); onClose(); }}
-                  style={{ borderColor: 'rgba(244, 63, 94, 0.4)' }}
+                  className="event-choice"
+                  onClick={() => {
+                    onTerminar();
+                    onClose();
+                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <UserMinus size={18} color="var(--accent-rose)" />
-                    <div>
-                      <strong style={{ color: 'var(--accent-rose)' }}>Terminar Relacionamento</strong>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Colocar um ponto final na relação</div>
-                    </div>
-                  </div>
+                  <span className="event-choice__indicator" aria-hidden="true" />
+                  <span className="event-choice__body">
+                    <span className="event-choice__title">Terminar o relacionamento</span>
+                    <span className="event-choice__hint">Encerrar a relação</span>
+                  </span>
                 </button>
               )}
             </>
           )}
 
-          {/* Discutir */}
-          <AcaoFamiliar
+          <Acao
             tipo="discutir"
-            icone={<MessageSquareWarning size={18} color="var(--accent-rose)" />}
             titulo="Discutir"
-            descricao="Iniciar uma discussão acalorada"
-            corTitulo="var(--accent-rose)"
+            descricao="Levantar a voz sobre algo mal resolvido"
           />
         </div>
       </div>

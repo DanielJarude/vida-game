@@ -11,8 +11,13 @@ import {
   LifeLogEntry,
   PersonalityState,
   PostMortemSummary,
-  SocialClass
+  SocialClass,
+  VisibleStats
 } from '../types';
+import {
+  construirResumoAnual,
+  type ResumoAnual
+} from '../presentation/outcomePresentation';
 import {
   sortearCidade,
   sortearNome,
@@ -22,6 +27,7 @@ import { CURSOS_DISPONIVEIS } from '../data/coursesData';
 import { BICOS_DISPONIVEIS, TODAS_PROFISSOES } from '../data/careersData';
 import { IMOVEIS_LOJA, VEICULOS_LOJA } from '../data/assetsData';
 import { ActivityOption } from '../data/activitiesData';
+import { calcularEfeitoAtividade, narrarAtividade } from '../systems/activitySystem';
 import { executarPassagemDeAno } from '../systems/agingSystem';
 import {
   aplicarConsequenciasEscolha
@@ -103,6 +109,10 @@ export function useGame() {
   const [isDead, setIsDead] = useState<boolean>(false);
   const [resumoMorte, setResumoMorte] = useState<PostMortemSummary | null>(null);
   const [feedbackMensagem, setFeedbackMensagem] = useState<{ tipo: 'sucesso' | 'info' | 'erro'; texto: string } | null>(null);
+  // B4 — apresentação: resumo do último ano vivido e variação dos atributos
+  // visíveis desde o ano anterior. Nenhum dos dois influencia o motor.
+  const [resumoAnual, setResumoAnual] = useState<ResumoAnual | null>(null);
+  const [variacaoAtributos, setVariacaoAtributos] = useState<Partial<VisibleStats>>({});
 
   // Notificação com auto-dismiss (com cancelamento para não apagar feedback novo)
   const timeoutFeedback = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -339,6 +349,17 @@ export function useGame() {
       personalidade
     );
 
+    // Variação dos atributos visíveis no ano — mantém perceptível a mudança
+    // produzida pela passagem de tempo, sem expor nada interno.
+    const statsAntes = personagem.stats;
+    const statsDepois = resultado.personagemAtualizado.stats;
+    setVariacaoAtributos({
+      felicidade: statsDepois.felicidade - statsAntes.felicidade,
+      saude: statsDepois.saude - statsAntes.saude,
+      inteligencia: statsDepois.inteligencia - statsAntes.inteligencia,
+      aparencia: statsDepois.aparencia - statsAntes.aparencia
+    });
+
     setPersonagem(resultado.personagemAtualizado);
     setFamilia(resultado.familiaAtualizada);
     setEducacao(resultado.educacaoAtualizada);
@@ -357,6 +378,16 @@ export function useGame() {
       return;
     }
 
+    // B4 — resumo do ano montado a partir dos logs que o motor acabou de
+    // gerar. É apresentação derivada: não cria acontecimento nem altera estado.
+    setResumoAnual(
+      construirResumoAnual(
+        resultado.personagemAtualizado.idade,
+        resultado.personagemAtualizado.anoAtual,
+        resultado.novosLogs
+      )
+    );
+
     if (resultado.eventoDisparado) {
       setEventoAtivo(resultado.eventoDisparado);
       setHistoricoEventos(prev => [...prev, resultado.eventoDisparado!.id]);
@@ -364,12 +395,22 @@ export function useGame() {
     }
   }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos, personalidade]);
 
+  // Fecha o resumo anual (apenas apresentação).
+  const fecharResumoAnual = useCallback(() => {
+    setResumoAnual(null);
+  }, []);
+
   // Responder a Escolha de um Evento
-  const responderEvento = useCallback((opcaoId: string) => {
-    if (!eventoAtivo || !personagem) return;
+  //
+  // Retorna `true` quando o motor aceitou a escolha e `false` quando recusou.
+  // B4: o evento NÃO é fechado aqui. A interface mostra o resultado no mesmo
+  // contexto e só então chama `fecharEvento`. Isso não altera nenhuma regra:
+  // os efeitos continuam sendo aplicados exatamente uma vez, no mesmo ponto.
+  const responderEvento = useCallback((opcaoId: string): boolean => {
+    if (!eventoAtivo || !personagem) return false;
 
     const opcao = eventoAtivo.opcoes.find(o => o.id === opcaoId);
-    if (!opcao) return;
+    if (!opcao) return false;
 
     sound.playClick();
 
@@ -388,7 +429,7 @@ export function useGame() {
     // Requisito da opção não cumprido: o motor recusa sem efeitos e o evento continua aberto
     if (res.recusado) {
       mostrarFeedback(res.mensagemRecusa || 'Você não cumpre os requisitos para esta escolha.', 'erro');
-      return;
+      return false;
     }
 
     setPersonagem(res.personagemAtualizado);
@@ -400,7 +441,8 @@ export function useGame() {
       setPersonalidade(res.personalidadeAtualizada);
     }
     setTimeline(prev => [...prev, ...res.novosLogs]);
-    setEventoAtivo(null);
+    // O evento permanece aberto para exibir o resultado; `fecharEvento`
+    // encerra o momento depois que o jogador lê a consequência.
 
     if (res.morreu) {
       setIsDead(true);
@@ -417,8 +459,18 @@ export function useGame() {
       limparSave();
       registrarMorteNasEstatisticas(resumo);
       sound.playDeath();
+      // A morte encerra o momento imediatamente: a tela de obituário assume.
+      setEventoAtivo(null);
     }
+
+    return true;
   }, [eventoAtivo, personagem, carreira, educacao, economia, familia, personalidade, mostrarFeedback]);
+
+  // Encerra o evento depois que o jogador leu o resultado (B4).
+  // Apenas apresentação: nenhum efeito de jogo é aplicado aqui.
+  const fecharEvento = useCallback(() => {
+    setEventoAtivo(null);
+  }, []);
 
   // Interagir com Familiar
   const acaoFamilia = useCallback((
@@ -689,125 +741,44 @@ export function useGame() {
 
     sound.playClick();
 
-    let deltaFel = 0;
-    let deltaSaude = 0;
-    let deltaAparencia = 0;
-    let deltaInteligencia = 0;
-    let deltaEstresse = 0;
-    let deltaSociabilidade = 0;
-    let deltaEmpatia = 0;
-    let deltaCond = 0;
-    let deltaRep = 0;
-
-    switch (atividade.id) {
-      case 'act_consulta_sus':
-        deltaSaude = randomInt(8, 15);
-        deltaFel = 5;
-        break;
-      case 'act_consulta_particular':
-        deltaSaude = randomInt(18, 30);
-        deltaFel = 10;
-        deltaEstresse = -15;
-        break;
-      case 'act_terapia':
-        deltaFel = 18;
-        deltaEstresse = -25;
-        deltaEmpatia = 8;
-        break;
-      case 'act_academia':
-        deltaSaude = 10;
-        deltaAparencia = 6;
-        deltaCond = 14;
-        deltaEstresse = -12;
-        deltaFel = 8;
-        break;
-      case 'act_estetica':
-        deltaAparencia = 14;
-        deltaFel = 12;
-        break;
-      case 'act_ferias_praia':
-        deltaFel = 30;
-        deltaEstresse = -35;
-        break;
-      case 'act_viagem_exterior':
-        deltaFel = 45;
-        deltaInteligencia = 8;
-        deltaEstresse = -40;
-        deltaRep = 10;
-        break;
-      case 'act_balada_barzinho':
-        deltaFel = 18;
-        deltaSociabilidade = 15;
-        deltaEstresse = -10;
-        break;
-      case 'act_churrasco':
-        deltaFel = 20;
-        deltaSociabilidade = 15;
-        deltaEmpatia = 10;
-        setFamilia(prev => prev.map(f => ({ ...f, relacionamento: clamp(f.relacionamento + 10, 0, 100) })));
-        break;
-      case 'act_voluntariado':
-        deltaEmpatia = 20;
-        deltaRep = 15;
-        deltaFel = 15;
-        break;
-      case 'act_leitura':
-        deltaInteligencia = 6;
-        deltaFel = 5;
-        break;
-      case 'act_meditacao':
-        deltaEstresse = -20;
-        deltaFel = 8;
-        break;
-    }
+    // O balanceamento vive em `activitySystem`; aqui só orquestramos o estado.
+    const efeito = calcularEfeitoAtividade(atividade.id);
 
     setEconomia(prev => ({ ...prev, dinheiro: prev.dinheiro - atividade.custo }));
+
+    if (efeito.relacionamentoFamiliar !== 0) {
+      setFamilia(prev => prev.map(f => ({
+        ...f,
+        relacionamento: clamp(f.relacionamento + efeito.relacionamentoFamiliar, 0, 100)
+      })));
+    }
+
     setPersonagem(prev => prev ? ({
       ...prev,
       stats: {
-        felicidade: clamp(prev.stats.felicidade + deltaFel, 0, 100),
-        saude: clamp(prev.stats.saude + deltaSaude, 0, 100),
-        aparencia: clamp(prev.stats.aparencia + deltaAparencia, 0, 100),
-        inteligencia: clamp(prev.stats.inteligencia + deltaInteligencia, 0, 100)
+        felicidade: clamp(prev.stats.felicidade + (efeito.stats.felicidade ?? 0), 0, 100),
+        saude: clamp(prev.stats.saude + (efeito.stats.saude ?? 0), 0, 100),
+        aparencia: clamp(prev.stats.aparencia + (efeito.stats.aparencia ?? 0), 0, 100),
+        inteligencia: clamp(prev.stats.inteligencia + (efeito.stats.inteligencia ?? 0), 0, 100)
       },
       hiddenStats: {
         ...prev.hiddenStats,
-        estresse: clamp(prev.hiddenStats.estresse + deltaEstresse, 0, 100),
-        sociabilidade: clamp(prev.hiddenStats.sociabilidade + deltaSociabilidade, 0, 100),
-        empatia: clamp(prev.hiddenStats.empatia + deltaEmpatia, 0, 100),
-        condicionamentoFisico: clamp(prev.hiddenStats.condicionamentoFisico + deltaCond, 0, 100),
-        reputacao: clamp(prev.hiddenStats.reputacao + deltaRep, 0, 100)
+        estresse: clamp(prev.hiddenStats.estresse + (efeito.hiddenStats.estresse ?? 0), 0, 100),
+        sociabilidade: clamp(prev.hiddenStats.sociabilidade + (efeito.hiddenStats.sociabilidade ?? 0), 0, 100),
+        empatia: clamp(prev.hiddenStats.empatia + (efeito.hiddenStats.empatia ?? 0), 0, 100),
+        condicionamentoFisico: clamp(prev.hiddenStats.condicionamentoFisico + (efeito.hiddenStats.condicionamentoFisico ?? 0), 0, 100),
+        reputacao: clamp(prev.hiddenStats.reputacao + (efeito.hiddenStats.reputacao ?? 0), 0, 100)
       }
     }) : null);
 
     registrarAcaoAnual(`atividade:${atividade.id}`);
-
-    // Registro natural na Linha da Vida (uma vez por ano = decisão relevante)
-    const textosAtividade: Record<string, string> = {
-      act_consulta_sus: 'Você fez um check-up no posto de saúde do bairro.',
-      act_consulta_particular: 'Você consultou um médico particular.',
-      act_terapia: 'Você foi a uma sessão de terapia.',
-      act_academia: 'Você treinou na academia e cuidou do corpo.',
-      act_estetica: 'Você passou um dia cuidando da aparência no salão e na barbearia.',
-      act_ferias_praia: 'Você passou as férias relaxando no litoral.',
-      act_viagem_exterior: 'Você fez uma viagem internacional.',
-      act_balada_barzinho: 'Você saiu com os amigos para um barzinho.',
-      act_churrasco: 'Você organizou um churrasco em família.',
-      act_voluntariado: 'Você dedicou tempo ao trabalho voluntário.',
-      act_leitura: 'Você dedicou tempo à leitura.',
-      act_meditacao: 'Você manteve a prática de meditação.'
-    };
-    const textoAtividade =
-      personagem.idade < 6 && atividade.categoria === 'saude'
-        ? `Seus responsáveis te levaram para: ${atividade.nome.toLowerCase()}.`
-        : textosAtividade[atividade.id] || `Você dedicou tempo a: ${atividade.nome.toLowerCase()}.`;
 
     const log: LifeLogEntry = {
       id: generateId('log'),
       idade: personagem.idade,
       ano: personagem.anoAtual,
       categoria: 'saude',
-      texto: textoAtividade,
+      texto: narrarAtividade(atividade, personagem),
       tipo: 'positivo'
     };
     registrarLogs([log]);
@@ -902,6 +873,8 @@ export function useGame() {
     setAcoesRealizadasAno([]);
     setIsDead(false);
     setResumoMorte(null);
+    setResumoAnual(null);
+    setVariacaoAtributos({});
     setHasSavedGame(false);
     setScreen('home');
     sound.playClick();
@@ -929,6 +902,11 @@ export function useGame() {
     feedbackMensagem,
     mostrarFeedback,
     construirContexto,
+    // B4 — estado de apresentação
+    resumoAnual,
+    fecharResumoAnual,
+    variacaoAtributos,
+    fecharEvento,
 
     // Ações
     criarVida,

@@ -1,0 +1,281 @@
+/* ==========================================================================
+   VIDA — Shell: atmosfera, cabeçalho, navegação e composição de regiões
+   ========================================================================== */
+
+/* --------------------------------------------------------------- Atmosfera
+   Profundidade por iluminação e vinheta, não por caixas. Duas fontes de luz
+   muito discretas e um degradê vertical que escurece o rodapé da tela. */
+.game-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(
+      120% 80% at 12% -10%,
+      rgba(61, 220, 151, 0.07) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 60% at 100% 0%,
+      rgba(70, 130, 170, 0.06) 0%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, var(--bg-app) 0%, var(--bg-deep) 100%);
+}
+
+/* Vinheta: fecha as bordas e concentra a leitura no centro. */
+.game-shell::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    130% 95% at 50% 40%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.42) 100%
+  );
+}
+
+.game-shell > * {
+  position: relative;
+  z-index: var(--z-base);
+}
+
+/* ---------------------------------------------------------------- Cabeçalho
+   Fino, fixo e com três âncoras: marca, navegação, relógio de vida. */
+.shell-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: var(--header-height);
+  padding: var(--space-2) var(--space-5);
+  background: rgba(10, 17, 22, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--rule);
+}
+
+.shell-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.shell-brand__word {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.18em;
+  color: var(--text-primary);
+}
+
+.shell-brand__tagline {
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+@media (max-width: 1100px) {
+  .shell-brand__tagline {
+    display: none;
+  }
+}
+
+/* Relógio de vida — idade é a variável mais importante do VIDA, por isso
+   ocupa o canto previsível e tem o maior número do cabeçalho. */
+.life-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+  margin-left: auto;
+  text-align: right;
+}
+
+.life-clock__age {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.life-clock__meta {
+  font-size: var(--type-meta);
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.shell-header__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out);
+}
+
+.icon-button:hover {
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+/* --------------------------------------------------------------- Navegação
+   Guias sublinhadas em vez de botões-cápsula: menos peso de "app admin". */
+.primary-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.primary-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.primary-nav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3);
+  white-space: nowrap;
+  font-size: var(--type-caption);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+
+.primary-nav__item:hover {
+  color: var(--text-secondary);
+}
+
+.primary-nav__item[aria-current='page'] {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+/* O item ativo não depende só de cor: ganha peso e uma régua inferior. */
+.primary-nav__item[aria-current='page'] .primary-nav__label {
+  font-weight: var(--weight-semibold);
+}
+
+/* ------------------------------------------------------------- Composição
+   Três regiões no desktop. Não são três cards: são colunas separadas por
+   régua vertical e espaço. */
+.shell-body {
+  display: grid;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--aside-width);
+  gap: 0;
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  flex: 1;
+  align-items: start;
+}
+
+.shell-rail {
+  position: sticky;
+  top: var(--header-height);
+  align-self: start;
+  max-height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-5);
+  border-right: 1px solid var(--rule);
+  scrollbar-width: thin;
+}
+
+.shell-main {
+  min-width: 0;
+  padding: var(--space-6) var(--space-6) var(--space-9);
+}
+
+.shell-aside {
+  position: sticky;
+  top: var(--header-height);
+  align-self: start;
+  max-height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-5);
+  border-left: 1px solid var(--rule);
+  scrollbar-width: thin;
+}
+
+/* Blocos laterais: separados por régua e espaço, sem moldura. */
+.aside-block + .aside-block {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--rule);
+}
+
+.aside-block__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+/* ------------------------------------------------------------------- Toast */
+.feedback-toast {
+  position: fixed;
+  top: calc(var(--header-height) + var(--space-3));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(520px, calc(100vw - var(--space-6)));
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--type-caption);
+  border-radius: var(--radius-pill);
+  background: var(--surface-strong);
+  border: 1px solid var(--rule-strong);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Cada tipo tem ícone próprio além da cor (não depender apenas de cor). */
+.feedback-toast--sucesso {
+  color: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+
+.feedback-toast--erro {
+  color: var(--danger);
+  border-color: rgba(228, 103, 92, 0.4);
+}
+
+.feedback-toast--info {
+  color: var(--text-secondary);
+}
+
+.feedback-toast__icon {
+  flex-shrink: 0;
+}

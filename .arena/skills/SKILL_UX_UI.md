@@ -64,3 +64,76 @@ MUST oferecer foco visível, controles semânticos, navegação por teclado e r�
 - [ ] Não há barra, custo ou texto de Energia.
 - [ ] Textos e decoração redundantes foram reduzidos com uma justificativa de uso.
 - [ ] Teclado, toque e estados desabilitados funcionam e têm feedback compreensível.
+
+## Identidade: isto é uma vida, não um painel
+
+Princípios permanentes, estabelecidos no B4.
+
+O produto mostra **uma vida sendo construída** — tempo, memória, pessoas,
+escolhas e consequências. Um painel de métricas com os mesmos dados está
+errado mesmo quando está bonito.
+
+MUST aplicar contenção antes de adicionar: **menos elementos, com mais
+significado**. Para cada container, borda ou fundo, pergunte se ele ajuda
+a hierarquia. Se não houver resposta evidente, ele não entra — separe com
+espaço e régua.
+
+MUST reservar superfície (card) a **unidades reais**: um evento, um
+resultado, uma pessoa, uma transação, um modal, um bloco interativo.
+DO NOT transformar seções, agrupamentos de rótulos ou pares
+"título + número" em cards. Se a maioria dos elementos da tela tem caixa,
+a hierarquia deixou de existir.
+
+MUST manter um acento único e escasso. Cor semântica (perda, atenção) é
+exceção justificada. DO NOT usar glow generalizado, glassmorphism pesado,
+partículas ou animação contínua.
+
+MUST fazer a interface **amadurecer com a fase da vida**, com pequenas
+mudanças no mesmo produto — não versões distintas por faixa etária. As
+permissões visuais MUST derivar do sistema de disponibilidade existente.
+DO NOT manter uma lista paralela de idades na camada visual.
+
+MUST separar, em qualquer resultado de ação: narrativa (o que aconteceu),
+efeito público (dinheiro, atributos visíveis, vínculos, emprego) e efeito
+interno. DO NOT exibir estado interno — nem valor, nem nome, nem
+indicador. Traço de personalidade é **qualitativo**; enquanto não houver
+evidência, a resposta honesta é declarar que ainda está em formação.
+
+MUST descrever vínculos entre pessoas de forma qualitativa. DO NOT usar
+percentual ou barra de progresso para afeto.
+
+MUST manter o fluxo de uma decisão em um único contexto:
+situação → escolha → resultado → continuar. O resultado não abre um
+segundo modal e não repete o histórico. A escolha feita permanece visível
+junto ao resultado.
+
+MUST explicar indisponibilidade **em texto**, junto do próprio controle,
+funcionando por toque e por leitor de tela.
+
+MUST tratar `prefers-reduced-motion` reduzindo movimento sem remover
+informação, e DO NOT bloquear o zoom do navegador.
+
+### Sobre imagens de referência
+
+Uma referência visual fornecida em uma tarefa indica **atmosfera,
+densidade e hierarquia**. Ela NOT é pixel-perfect, NOT contém dados reais
+e NOT define gameplay.
+
+DO NOT copiar dela: nomes, personagens, cidade, idade, ano, valores,
+saldos, percentuais, textos, eventos, opções, quantidade de abas ou de
+colunas, nem qualquer regra. Esses elementos são fictícios. A fonte de
+verdade do comportamento é sempre o código.
+
+DO NOT assumir recursos que a referência sugere mas o produto não tem —
+em particular, imagem dedicada por evento ou retrato fotográfico. Presença
+visual de uma pessoa deve ser construída com composição, tipografia,
+textura e cor.
+
+### Critérios de aceite (identidade)
+
+- [ ] A tela não poderia ser confundida com a dashboard de um SaaS.
+- [ ] O histórico de vida tem prioridade visual sobre indicadores.
+- [ ] Não há card sem unidade real por trás.
+- [ ] Nenhum estado interno vazou para a interface.
+- [ ] Afeto e personalidade são descritos sem número e sem barra.
+- [ ] Nenhum dado veio de uma imagem de referência.

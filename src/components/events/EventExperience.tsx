@@ -1,0 +1,177 @@
+import React, { useMemo, useState } from 'react';
+import {
+  BookOpen,
+  Briefcase,
+  Heart,
+  Wallet,
+  HeartPulse,
+  Users,
+  Sparkles,
+  Circle
+} from 'lucide-react';
+import type {
+  Character,
+  EconomyState,
+  GameEvent,
+  PersonalityState
+} from '../../types';
+import { avaliarRequisitoOpcao } from '../../systems/eventSystem';
+import { descreverEfeitosPublicos } from '../../presentation/outcomePresentation';
+import { useModalBehavior } from '../common/useModalBehavior';
+import { EventChoice } from './EventChoice';
+import { EventResult } from './EventResult';
+
+interface EventExperienceProps {
+  evento: GameEvent;
+  personagem: Character;
+  economia: EconomyState;
+  personalidade?: PersonalityState | null;
+  /**
+   * Aplica a escolha no motor. Retorna `true` quando a escolha foi aceita;
+   * `false` quando o motor recusou (requisito não cumprido), caso em que o
+   * evento continua aberto e nenhum resultado é mostrado.
+   */
+  onEscolherOpcao: (opcaoId: string) => boolean;
+  /** Fecha o evento depois que o jogador leu o resultado. */
+  onContinuar: () => void;
+}
+
+const ICONES_CATEGORIA: Record<GameEvent['categoria'], React.ReactNode> = {
+  infancia: <Sparkles size={14} />,
+  escola: <BookOpen size={14} />,
+  adolescencia: <Sparkles size={14} />,
+  familia: <Users size={14} />,
+  amizade: <Users size={14} />,
+  romance: <Heart size={14} />,
+  trabalho: <Briefcase size={14} />,
+  dinheiro: <Wallet size={14} />,
+  saude: <HeartPulse size={14} />,
+  cotidiano: <Circle size={14} />
+};
+
+const ROTULOS_CATEGORIA: Record<GameEvent['categoria'], string> = {
+  infancia: 'Infância',
+  escola: 'Escola',
+  adolescencia: 'Adolescência',
+  familia: 'Família',
+  amizade: 'Amizade',
+  romance: 'Relacionamento',
+  trabalho: 'Trabalho',
+  dinheiro: 'Dinheiro',
+  saude: 'Saúde',
+  cotidiano: 'Cotidiano'
+};
+
+/**
+ * Um momento da vida: SITUAÇÃO → ESCOLHA → RESULTADO → CONTINUAR.
+ *
+ * Tudo acontece na mesma superfície. A escolha feita permanece visível ao
+ * lado do resultado para o jogador lembrar o que decidiu.
+ */
+export const EventExperience: React.FC<EventExperienceProps> = ({
+  evento,
+  personagem,
+  economia,
+  personalidade,
+  onEscolherOpcao,
+  onContinuar
+}) => {
+  // Enquanto o evento estiver aberto ele é obrigatório: sem Escape.
+  const containerRef = useModalBehavior<HTMLDivElement>();
+
+  const [opcaoEscolhida, setOpcaoEscolhida] = useState<string | null>(null);
+
+  // Avaliado apenas antes de decidir: o resultado não recalcula requisitos.
+  const requisitos = useMemo(() => {
+    const mapa = new Map<string, { aprovado: boolean; motivo?: string }>();
+    evento.opcoes.forEach(opcao => {
+      mapa.set(
+        opcao.id,
+        avaliarRequisitoOpcao(opcao, personagem, economia, personalidade ?? undefined)
+      );
+    });
+    return mapa;
+    // Congela a avaliação ao abrir o evento para evitar que os efeitos já
+    // aplicados mudem a leitura das opções depois da decisão.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evento.id]);
+
+  const opcaoResolvida = opcaoEscolhida
+    ? evento.opcoes.find(o => o.id === opcaoEscolhida)
+    : undefined;
+
+  const efeitos = useMemo(
+    () => (opcaoResolvida ? descreverEfeitosPublicos(opcaoResolvida.consequencias) : []),
+    [opcaoResolvida]
+  );
+
+  const escolher = (opcaoId: string) => {
+    if (opcaoEscolhida) return;
+    const aceito = onEscolherOpcao(opcaoId);
+    if (aceito) {
+      setOpcaoEscolhida(opcaoId);
+    }
+  };
+
+  const tituloId = `evento-titulo-${evento.id}`;
+
+  return (
+    <div className="modal-overlay">
+      <div
+        className="modal-surface event-scene"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={tituloId}
+        ref={containerRef}
+        tabIndex={-1}
+      >
+        <p className="event-scene__context">
+          <span aria-hidden="true">{ICONES_CATEGORIA[evento.categoria]}</span>
+          <span className="event-scene__category">
+            {ROTULOS_CATEGORIA[evento.categoria]}
+          </span>
+        </p>
+
+        <h2 className="event-scene__title" id={tituloId}>
+          {evento.titulo}
+        </h2>
+
+        <p className="event-scene__narrative">{evento.descricao}</p>
+
+        <div className="event-scene__divider" role="presentation" />
+
+        {!opcaoEscolhida && (
+          <p className="event-scene__prompt">O que você faz?</p>
+        )}
+
+        <div className="event-choices">
+          {evento.opcoes
+            // Depois de decidir, só a escolha feita permanece em tela.
+            .filter(opcao => !opcaoEscolhida || opcao.id === opcaoEscolhida)
+            .map(opcao => {
+              const requisito = requisitos.get(opcao.id);
+              return (
+                <EventChoice
+                  key={opcao.id}
+                  opcao={opcao}
+                  disponivel={requisito?.aprovado ?? true}
+                  motivo={requisito?.motivo}
+                  selecionada={opcaoEscolhida === opcao.id}
+                  resolvido={!!opcaoEscolhida}
+                  onEscolher={escolher}
+                />
+              );
+            })}
+        </div>
+
+        {opcaoResolvida && (
+          <EventResult
+            narrativa={opcaoResolvida.descricaoResultado}
+            efeitos={efeitos}
+            onContinuar={onContinuar}
+          />
+        )}
+      </div>
+    </div>
+  );
+};

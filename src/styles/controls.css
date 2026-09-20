@@ -1,0 +1,285 @@
+/* ==========================================================================
+   VIDA — Seções de conteúdo e controles reutilizáveis
+   Agrupamento por régua, espaço e tipografia; card apenas em unidade real.
+   ========================================================================== */
+
+/* ================================================================== SEÇÕES */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.section + .section {
+  margin-top: var(--space-8);
+}
+
+.section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.section__title {
+  font-family: var(--font-display);
+  font-size: var(--type-heading);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+.section__subtitle {
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  max-width: 60ch;
+}
+
+/* Subgrupo dentro de uma seção: apenas um rótulo de metadado + espaço. */
+.subsection__title {
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* ============================================================ LISTA DE AÇÕES
+   Linhas separadas por régua. Unidade de informação + ação, sem virar card. */
+.action-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.action-row:last-child {
+  border-bottom: 0;
+}
+
+.action-row__body {
+  min-width: 0;
+}
+
+.action-row__title {
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
+}
+
+.action-row__detail {
+  margin-top: 2px;
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  line-height: var(--leading-snug);
+}
+
+/* Motivo de indisponibilidade: texto sempre presente, acessível no toque. */
+.action-row__reason {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--type-caption);
+  color: var(--warning);
+}
+
+@media (max-width: 560px) {
+  .action-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .action-row__action {
+    justify-self: stretch;
+  }
+
+  .action-row__action .btn {
+    width: 100%;
+  }
+}
+
+/* ================================================================= BOTÕES
+   Uma família, três intensidades. O acento sólido é reservado ao +1 ANO,
+   então aqui o "primário" usa contorno para não competir. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--type-caption);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: background-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+
+.btn--primary {
+  color: var(--accent);
+  background: var(--accent-wash);
+  border: 1px solid var(--accent-line);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: rgba(61, 220, 151, 0.2);
+}
+
+.btn--secondary {
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid transparent;
+}
+
+.btn--secondary:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.btn--ghost {
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--rule-strong);
+}
+
+.btn--danger {
+  color: var(--danger);
+  background: var(--danger-wash);
+  border: 1px solid rgba(228, 103, 92, 0.35);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: rgba(228, 103, 92, 0.2);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+/* ============================================================ LINHAS DE DADO
+   Par rótulo/valor para detalhes numéricos legítimos (Finanças). */
+.data-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.data-row:last-child {
+  border-bottom: 0;
+}
+
+.data-row__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-caption);
+  color: var(--text-secondary);
+}
+
+.data-row__label svg {
+  color: var(--text-faint);
+}
+
+.data-row__value {
+  font-size: var(--type-caption);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.data-row__value--positivo {
+  color: var(--accent);
+}
+
+.data-row__value--negativo {
+  color: var(--danger);
+}
+
+/* ==================================================== UNIDADE REAL EM CARTÃO
+   Reservado a: pessoa, transação importante, bloco interativo. */
+.unit-card {
+  padding: var(--space-4);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+}
+
+.unit-card--interactive {
+  width: 100%;
+  text-align: left;
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.unit-card--interactive:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+/* ============================================================= ESTADO VAZIO */
+.empty-state {
+  padding: var(--space-7) 0;
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+  max-width: 52ch;
+}
+
+/* ================================================================== GRADES */
+.grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+/* ================================================================== CAMPOS */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field__label {
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.field__control {
+  min-height: var(--touch-target);
+  padding: var(--space-3);
+  font-size: var(--type-body);
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--motion-fast) var(--ease-out);
+}
+
+.field__control:focus {
+  border-color: var(--accent-line);
+}
