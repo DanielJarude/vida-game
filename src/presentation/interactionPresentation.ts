@@ -140,6 +140,29 @@ const ROTULOS: Record<FamilyInteractionType, TabelaPorFase & { autonomo: RotuloI
       titulo: 'Pedir um conselho',
       descricao: 'Ouvir a experiência de quem já passou por isso'
     }
+  },
+
+  // Exclusivas de pet (B4-FIX1): não mudam por fase do jogador, porque o
+  // gesto com o animal é sempre o mesmo tipo de cena física e simples.
+  fazer_carinho: {
+    autonomo: {
+      titulo: 'Fazer carinho',
+      descricao: 'Um cafuné tranquilo, só para os dois'
+    }
+  },
+
+  alimentar: {
+    autonomo: {
+      titulo: 'Alimentar',
+      descricao: 'Encher o potinho de comida ou água'
+    }
+  },
+
+  passear: {
+    autonomo: {
+      titulo: 'Passear',
+      descricao: 'Dar uma volta juntos pela vizinhança'
+    }
   }
 };
 
@@ -151,6 +174,26 @@ export function rotularInteracao(
   const fase = obterFaseInteracao(idade);
   const tabela = ROTULOS[interacao];
   return tabela[fase] ?? tabela.autonomo;
+}
+
+/**
+ * Rótulo de uma interação com um PET (B4-FIX1).
+ *
+ * Diferente da versão humana, não varia pela fase do jogador: mesmo um
+ * bebê de colo já "passa tempo" com o animal do mesmo jeito simples —
+ * não faz sentido herdar o rótulo "Ficar no colo" (pensado para um adulto
+ * segurando o bebê) para essa relação.
+ */
+export function rotularInteracaoPet(
+  interacao: FamilyInteractionType
+): RotuloInteracao {
+  if (interacao === 'passar_tempo') {
+    return {
+      titulo: 'Passar tempo',
+      descricao: 'Ficar perto, observar e fazer companhia'
+    };
+  }
+  return ROTULOS[interacao].autonomo;
 }
 
 /**
@@ -176,4 +219,16 @@ export function ordenarInteracoesPorFase(
     'pedir_conselho',
     'discutir'
   ];
+}
+
+/**
+ * Ordem das interações com um PET (B4-FIX1).
+ *
+ * Não varia pela idade do jogador: as quatro ações fazem sentido desde
+ * cedo (`passar_tempo`) e vão se somando à lista conforme a capacidade
+ * permite — a ordem em si é fixa, quem decide o que aparece é
+ * `deveOferecerInteracao`/`avaliarCapacidadeInteracao`.
+ */
+export function ordenarInteracoesComPet(): FamilyInteractionType[] {
+  return ['passar_tempo', 'fazer_carinho', 'alimentar', 'passear'];
 }

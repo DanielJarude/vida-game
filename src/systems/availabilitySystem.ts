@@ -357,19 +357,22 @@ export function getActionAvailability(
       if (!membro) return BLOQUEADO('item_invalido', 'Familiar não encontrado.');
       const tipo = params.tipoInteracao;
       if (!tipo) return BLOQUEADO('item_invalido', 'Interação inválida.');
-      if (tipo === 'pedir_dinheiro' && idade < IDADE_MINIMA_PEDIR_DINHEIRO) {
+      const ehPet = membro.tipo === 'pet';
+      if (!ehPet && tipo === 'pedir_dinheiro' && idade < IDADE_MINIMA_PEDIR_DINHEIRO) {
         return OCULTO('idade_minima');
       }
-      if (tipo === 'pedir_conselho' && idade < IDADE_MINIMA_PEDIR_CONSELHO) {
+      if (!ehPet && tipo === 'pedir_conselho' && idade < IDADE_MINIMA_PEDIR_CONSELHO) {
         return OCULTO('idade_minima');
       }
       // Capacidade por idade: um bebê não conversa, não discute e não
-      // presenteia. Regra única em `interactionCapabilitySystem`, revalidada
-      // pelo motor — esconder o botão não é a proteção.
-      if (!deveOferecerInteracao(tipo, idade)) {
+      // presenteia. Um pet não faz nenhuma dessas três em nenhuma idade —
+      // o vínculo com ele é carinho, alimentação e passeio. Regra única em
+      // `interactionCapabilitySystem`, revalidada pelo motor — esconder o
+      // botão não é a proteção.
+      if (!deveOferecerInteracao(tipo, idade, ehPet)) {
         return OCULTO('idade_minima');
       }
-      const capacidade = avaliarCapacidadeInteracao(tipo, idade);
+      const capacidade = avaliarCapacidadeInteracao(tipo, idade, ehPet);
       if (!capacidade.permitido) {
         return BLOQUEADO('idade_minima', capacidade.motivo);
       }

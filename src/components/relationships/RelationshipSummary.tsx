@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FamilyMember } from '../../types';
 import { selecionarRelacionamentosDestaque } from '../../presentation/relationshipPresentation';
+import { PersonAvatar } from '../character/PersonAvatar';
 
 interface RelationshipSummaryProps {
   familia: FamilyMember[];
@@ -36,8 +37,13 @@ export const RelationshipSummary: React.FC<RelationshipSummaryProps> = ({
 
         return (
           <li key={pessoa.membro.id} className="relationship">
-            <span className="relationship__avatar" aria-hidden="true">
-              {pessoa.iniciais}
+            <span className="relationship__avatar">
+              <PersonAvatar
+                nome={pessoa.nome}
+                idade={pessoa.membro.idade}
+                tipo={pessoa.membro.tipo}
+                tamanho={34}
+              />
             </span>
 
             <span className="relationship__identity">

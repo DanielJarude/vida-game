@@ -16,6 +16,7 @@ import {
   obterPerfilDeFase,
   deveMostrarSaldoNaIdentidade
 } from '../../presentation/lifeStagePresentation';
+import { PersonAvatar } from './PersonAvatar';
 
 interface CharacterIdentityProps {
   personagem: Character;
@@ -34,8 +35,9 @@ interface CharacterIdentityProps {
  * Cada fato só aparece quando é relevante na fase; nada é exibido com o
  * mesmo peso de tudo o mais.
  *
- * O retrato não usa foto: presença vem de composição, iniciais e textura.
- * Não há geração de rosto, banco de imagens nem dependência externa.
+ * O retrato não usa foto: presença vem de composição, avatar simbólico
+ * (consistente com a fase da vida) e textura. Não há geração de rosto,
+ * banco de imagens nem dependência externa.
  */
 export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
   personagem,
@@ -46,7 +48,6 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
   situacao
 }) => {
   const perfil = obterPerfilDeFase(personagem.idade);
-  const iniciais = `${personagem.nome.charAt(0)}${personagem.sobrenome.charAt(0)}`.toUpperCase();
 
   const unidadeIdade = personagem.idade === 1 ? 'ano' : 'anos';
 
@@ -73,8 +74,12 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
 
   return (
     <section className="identity" aria-label="Quem é você">
-      <div className="identity__portrait" aria-hidden="true">
-        <span className="identity__initials">{iniciais}</span>
+      <div className="identity__portrait">
+        <PersonAvatar
+          nome={`${personagem.nome} ${personagem.sobrenome}`}
+          idade={personagem.idade}
+          tamanho={84}
+        />
       </div>
 
       <div>

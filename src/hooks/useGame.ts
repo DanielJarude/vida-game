@@ -4,6 +4,7 @@ import {
   EducationState,
   CareerState,
   EconomyState,
+  FamilyInteractionType,
   FamilyMember,
   GameEvent,
   GameState,
@@ -475,7 +476,7 @@ export function useGame() {
   // Interagir com Familiar
   const acaoFamilia = useCallback((
     membroId: string,
-    tipoAcao: 'conversar' | 'passar_tempo' | 'dar_presente' | 'discutir' | 'pedir_dinheiro' | 'pedir_conselho',
+    tipoAcao: FamilyInteractionType,
     presenteTipo?: 'barato' | 'medio' | 'luxo'
   ) => {
     if (!personagem) return;

@@ -4,7 +4,9 @@ import { Disponibilidade } from '../../systems/availabilitySystem';
 import { apresentarRelacionamento } from '../../presentation/relationshipPresentation';
 import {
   rotularInteracao,
-  ordenarInteracoesPorFase
+  rotularInteracaoPet,
+  ordenarInteracoesPorFase,
+  ordenarInteracoesComPet
 } from '../../presentation/interactionPresentation';
 import { useModalBehavior } from '../common/useModalBehavior';
 import { X, Lock } from 'lucide-react';
@@ -61,6 +63,7 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
     'esposa'
   ].includes(membro.tipo);
   const isCasado = ['esposo', 'esposa'].includes(membro.tipo);
+  const ehPet = membro.tipo === 'pet';
 
   const pessoa = apresentarRelacionamento(membro);
   const tituloId = 'familia-modal-titulo';
@@ -139,7 +142,9 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
       return null;
     }
 
-    const rotulo = rotularInteracao(tipo, idadeJogador);
+    const rotulo = ehPet
+      ? rotularInteracaoPet(tipo)
+      : rotularInteracao(tipo, idadeJogador);
 
     // O presente abre um submenu em vez de agir direto — mas continua
     // sujeito à mesma verificação de disponibilidade.
@@ -166,7 +171,9 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
     );
   };
 
-  const ordem = ordenarInteracoesPorFase(idadeJogador);
+  const ordem = ehPet
+    ? ordenarInteracoesComPet()
+    : ordenarInteracoesPorFase(idadeJogador);
   const dispPresente = verificarInteracao('dar_presente');
 
   return (

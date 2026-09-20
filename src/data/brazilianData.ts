@@ -35,7 +35,15 @@ export const CIDADES_BRASILEIRAS: BrazilianCity[] = [
   { cidade: 'Cuiabá', estado: 'MT', regiao: 'Centro-Oeste', custoVidaRelativo: 1.0 },
   { cidade: 'Campo Grande', estado: 'MS', regiao: 'Centro-Oeste', custoVidaRelativo: 0.95 },
   { cidade: 'Manaus', estado: 'AM', regiao: 'Norte', custoVidaRelativo: 0.95 },
-  { cidade: 'Belém', estado: 'PA', regiao: 'Norte', custoVidaRelativo: 0.9 }
+  { cidade: 'Belém', estado: 'PA', regiao: 'Norte', custoVidaRelativo: 0.9 },
+  { cidade: 'Rio Branco', estado: 'AC', regiao: 'Norte', custoVidaRelativo: 0.9 },
+  { cidade: 'Macapá', estado: 'AP', regiao: 'Norte', custoVidaRelativo: 0.85 },
+  { cidade: 'Porto Velho', estado: 'RO', regiao: 'Norte', custoVidaRelativo: 0.9 },
+  { cidade: 'Boa Vista', estado: 'RR', regiao: 'Norte', custoVidaRelativo: 0.85 },
+  { cidade: 'Palmas', estado: 'TO', regiao: 'Norte', custoVidaRelativo: 0.9 },
+  { cidade: 'São Luís', estado: 'MA', regiao: 'Nordeste', custoVidaRelativo: 0.85 },
+  { cidade: 'Teresina', estado: 'PI', regiao: 'Nordeste', custoVidaRelativo: 0.8 },
+  { cidade: 'Aracaju', estado: 'SE', regiao: 'Nordeste', custoVidaRelativo: 0.9 }
 ];
 
 export const NOMES_MASCULINOS = [
@@ -128,8 +136,9 @@ export function sortearCidade(): BrazilianCity {
 // duplicada em componente. Acrescentar uma cidade à lista acima basta para
 // que ela apareça na criação de personagem.
 //
-// LIMITAÇÃO CONHECIDA: o jogo suporta 28 cidades, escolhidas para cobrir as
-// cinco regiões. Não é a lista completa dos municípios brasileiros, e o
+// COBERTURA: as 27 unidades federativas (26 estados + Distrito Federal) têm
+// ao menos uma cidade suportada — normalmente a capital. Não é a lista
+// completa dos municípios brasileiros (o jogo tem 36 cidades ao todo), e o
 // `custoVidaRelativo` é um parâmetro de balanceamento do jogo — não um dado
 // socioeconômico de fonte externa. Cidades novas só devem ser adicionadas
 // com um custo coerente com as já existentes.

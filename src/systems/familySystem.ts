@@ -19,7 +19,7 @@ function narrarInteracao(
   membro: FamilyMember,
   idade: number
 ): string {
-  return narrarInteracaoPorFase(interacao, membro.nome, idade);
+  return narrarInteracaoPorFase(interacao, membro.nome, idade, membro.tipo === 'pet');
 }
 
 function capitalizar(texto: string): string {
@@ -221,13 +221,17 @@ export function interagirComFamiliar(
   let msg = '';
   let sucesso = true;
 
+  const ehPet = membro.tipo === 'pet';
+
   // Revalidação da política central: interações que pressupõem autonomia
   // maior do que a fase atual permite são recusadas sem efeitos.
   //
   // Esta checagem é a que realmente protege o estado. Esconder o botão é
   // apresentação; aqui é onde uma chamada direta (save editado, código,
-  // teste) também falha, sem aplicar nenhum efeito parcial.
-  const capacidade = avaliarCapacidadeInteracao(interacao, personagem.idade);
+  // teste) também falha, sem aplicar nenhum efeito parcial. Um pet usa a
+  // trilha própria: conversar, discutir e presente comprado não existem
+  // para ele em nenhuma idade.
+  const capacidade = avaliarCapacidadeInteracao(interacao, personagem.idade, ehPet);
   if (!capacidade.permitido) {
     return {
       membroAtualizado: membro,
@@ -239,7 +243,7 @@ export function interagirComFamiliar(
     };
   }
 
-  if (interacao === 'pedir_dinheiro' && personagem.idade < IDADE_MINIMA_PEDIR_DINHEIRO) {
+  if (!ehPet && interacao === 'pedir_dinheiro' && personagem.idade < IDADE_MINIMA_PEDIR_DINHEIRO) {
     return {
       membroAtualizado: membro,
       personagemAtualizado: personagem,
@@ -249,7 +253,7 @@ export function interagirComFamiliar(
       sucesso: false
     };
   }
-  if (interacao === 'pedir_conselho' && personagem.idade < IDADE_MINIMA_PEDIR_CONSELHO) {
+  if (!ehPet && interacao === 'pedir_conselho' && personagem.idade < IDADE_MINIMA_PEDIR_CONSELHO) {
     return {
       membroAtualizado: membro,
       personagemAtualizado: personagem,
@@ -322,6 +326,28 @@ export function interagirComFamiliar(
       deltaFel = 5;
       deltaEstresse = -5;
       msg = `${membro.nome} compartilhou valiosos conselhos de vida com você. Você se sentiu inspirado(a)!`;
+      break;
+
+    // Interações exclusivas de pet (B4-FIX1): o vínculo é físico, não verbal.
+    case 'fazer_carinho':
+      deltaRel = randomInt(6, 14);
+      deltaFel = randomInt(5, 10);
+      deltaEstresse = -6;
+      msg = narrarInteracao('fazer_carinho', membro, personagem.idade);
+      break;
+
+    case 'alimentar':
+      deltaRel = randomInt(4, 9);
+      deltaFel = randomInt(2, 5);
+      deltaEmpatia = 2;
+      msg = narrarInteracao('alimentar', membro, personagem.idade);
+      break;
+
+    case 'passear':
+      deltaRel = randomInt(8, 15);
+      deltaFel = randomInt(6, 12);
+      deltaEstresse = -8;
+      msg = narrarInteracao('passear', membro, personagem.idade);
       break;
   }
 

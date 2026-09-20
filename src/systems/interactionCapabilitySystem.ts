@@ -38,6 +38,30 @@ export const IDADE_MINIMA_CONFLITO = 3;
  */
 export const IDADE_MINIMA_DAR_PRESENTE = 12;
 
+/**
+ * Interações exclusivas de um pet (B4-FIX1).
+ *
+ * Um animal não conversa, não discute e não recebe presente comprado; o
+ * vínculo com ele é físico — carinho, alimentação, passeio. `passar_tempo`
+ * é compartilhada com o vínculo humano (é o mesmo gesto de companhia), mas
+ * ganha narrativa própria quando o alvo é um pet.
+ */
+export const PET_INTERACOES: readonly FamilyInteractionType[] = [
+  'passar_tempo',
+  'fazer_carinho',
+  'alimentar',
+  'passear'
+];
+
+/** Idade mínima para fazer carinho no pet por conta própria. */
+export const IDADE_MINIMA_CARINHO_PET = 1;
+
+/** Idade mínima para assumir a tarefa de alimentar o pet sozinho. */
+export const IDADE_MINIMA_ALIMENTAR_PET = 3;
+
+/** Idade mínima para levar o pet para passear sem supervisão direta. */
+export const IDADE_MINIMA_PASSEAR_PET = 6;
+
 /** Fases de capacidade. Usadas para escolher regra e texto. */
 export type FaseInteracao =
   | 'recem_nascido'
@@ -68,11 +92,21 @@ const PERMITIDO: Capacidade = { permitido: true };
  *
  * O motivo é sempre contextual e em linguagem humana — ele é exibido tal
  * como está, tanto na interface quanto na recusa do motor.
+ *
+ * `ehPet` desvia para a trilha própria do animal (B4-FIX1): um pet não
+ * conversa, não discute e não recebe presente comprado — o vínculo com
+ * ele é físico (carinho, alimentação, passeio). Sem esse parâmetro, a
+ * função mantém exatamente o comportamento anterior (pessoa humana).
  */
 export function avaliarCapacidadeInteracao(
   interacao: FamilyInteractionType,
-  idade: number
+  idade: number,
+  ehPet: boolean = false
 ): Capacidade {
+  if (ehPet) {
+    return avaliarCapacidadeInteracaoPet(interacao, idade);
+  }
+
   switch (interacao) {
     // Presença e afeto existem desde o primeiro dia. É o vínculo possível
     // para quem ainda não fala: colo, brincadeira, companhia.
@@ -131,6 +165,62 @@ export function avaliarCapacidadeInteracao(
 }
 
 /**
+ * Capacidade de interação com um PET, por idade do jogador.
+ *
+ * Um bebê de colo já pode estar perto do animal (é o adulto quem
+ * aproxima), mas as ações ativas de cuidado — fazer carinho sozinho,
+ * alimentar, passear — pressupõem coordenação motora e autonomia
+ * crescentes. Conversar, discutir e presente comprado nunca fazem
+ * sentido com um pet, em nenhuma idade: `deveOferecerInteracaoPet`
+ * garante que elas nem cheguem a ser avaliadas aqui.
+ */
+function avaliarCapacidadeInteracaoPet(
+  interacao: FamilyInteractionType,
+  idade: number
+): Capacidade {
+  switch (interacao) {
+    case 'passar_tempo':
+      // Ficar perto do animal é possível desde o primeiro dia.
+      return PERMITIDO;
+
+    case 'fazer_carinho':
+      if (idade < IDADE_MINIMA_CARINHO_PET) {
+        return {
+          permitido: false,
+          motivo: 'Você ainda não controla bem as mãos para fazer carinho sozinho(a).'
+        };
+      }
+      return PERMITIDO;
+
+    case 'alimentar':
+      if (idade < IDADE_MINIMA_ALIMENTAR_PET) {
+        return {
+          permitido: false,
+          motivo: 'Alguém ainda precisa segurar o potinho para você.'
+        };
+      }
+      return PERMITIDO;
+
+    case 'passear':
+      if (idade < IDADE_MINIMA_PASSEAR_PET) {
+        return {
+          permitido: false,
+          motivo: 'Você ainda é pequeno(a) para levar o pet na rua sozinho(a).'
+        };
+      }
+      return PERMITIDO;
+
+    default:
+      // conversar, discutir, dar_presente, pedir_dinheiro, pedir_conselho:
+      // nenhum faz sentido com um animal, em nenhuma idade.
+      return {
+        permitido: false,
+        motivo: 'Um pet não participa desse tipo de interação.'
+      };
+  }
+}
+
+/**
  * A interação deve sequer ser oferecida nesta fase?
  *
  * Diferença importante: algo **bloqueado** aparece explicando o motivo;
@@ -141,8 +231,20 @@ export function avaliarCapacidadeInteracao(
  */
 export function deveOferecerInteracao(
   interacao: FamilyInteractionType,
-  idade: number
+  idade: number,
+  ehPet: boolean = false
 ): boolean {
+  if (ehPet) {
+    // Só as interações de pet fazem sentido; conversar, discutir, presente
+    // comprado, pedir dinheiro/conselho nunca entram na lista de um animal.
+    return PET_INTERACOES.includes(interacao);
+  }
+
+  // Interações exclusivas de pet nunca aparecem para uma pessoa.
+  if (PET_INTERACOES.includes(interacao) && interacao !== 'passar_tempo') {
+    return false;
+  }
+
   if (interacao === 'dar_presente') {
     // Só passa a existir quando está perto de ser possível.
     return idade >= IDADE_MINIMA_DAR_PRESENTE - 2;
@@ -163,8 +265,13 @@ export function deveOferecerInteracao(
 export function narrarInteracaoPorFase(
   interacao: FamilyInteractionType,
   nome: string,
-  idade: number
+  idade: number,
+  ehPet: boolean = false
 ): string {
+  if (ehPet) {
+    return narrarInteracaoComPet(interacao, nome, idade);
+  }
+
   const fase = obterFaseInteracao(idade);
 
   if (interacao === 'passar_tempo') {
@@ -207,4 +314,36 @@ export function narrarInteracaoPorFase(
   }
 
   return '';
+}
+
+/**
+ * Narrativa das interações exclusivas de pet.
+ *
+ * Diferente do vínculo humano, não muda por fase do jogador — o gesto com
+ * o animal é sempre o mesmo tipo de cena, simples e física.
+ */
+function narrarInteracaoComPet(
+  interacao: FamilyInteractionType,
+  nome: string,
+  idade: number
+): string {
+  switch (interacao) {
+    case 'passar_tempo':
+      if (idade < 1) {
+        return `${nome} ficou deitado(a) bem perto de você enquanto você observava tudo.`;
+      }
+      return `Você passou um tempo só olhando ${nome} e imitando os sons que ele(a) fazia.`;
+
+    case 'fazer_carinho':
+      return `Você fez carinho em ${nome} com calma, e ele(a) ficou tranquilo(a) do seu lado.`;
+
+    case 'alimentar':
+      return `Você encheu o potinho de ${nome} e ficou vendo ele(a) comer com pressa.`;
+
+    case 'passear':
+      return `Você levou ${nome} para passear e voltou cheio(a) de histórias sobre o caminho.`;
+
+    default:
+      return '';
+  }
 }

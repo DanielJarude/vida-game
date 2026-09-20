@@ -135,7 +135,12 @@ export type FamilyInteractionType =
   | 'dar_presente'
   | 'discutir'
   | 'pedir_dinheiro'
-  | 'pedir_conselho';
+  | 'pedir_conselho'
+  // Exclusivas de pets (B4-FIX1) — um animal não conversa nem discute;
+  // o vínculo com ele acontece por cuidado e presença física.
+  | 'fazer_carinho'
+  | 'alimentar'
+  | 'passear';
 
 export type PosturaEscolar = 'estudar' | 'matar_aula' | 'socializar';
 

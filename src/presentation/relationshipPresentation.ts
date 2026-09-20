@@ -26,7 +26,6 @@ export interface RelacionamentoApresentado {
   relacao: string;
   proximidade: Proximidade;
   rotuloProximidade: string;
-  iniciais: string;
 }
 
 const ROTULOS: Record<Proximidade, string> = {
@@ -50,12 +49,6 @@ export function rotuloProximidade(proximidade: Proximidade): string {
   return ROTULOS[proximidade];
 }
 
-function extrairIniciais(nome: string, sobrenome: string): string {
-  const a = nome.trim().charAt(0);
-  const b = sobrenome.trim().charAt(0);
-  return `${a}${b}`.toUpperCase() || '·';
-}
-
 export function apresentarRelacionamento(
   membro: FamilyMember
 ): RelacionamentoApresentado {
@@ -65,8 +58,7 @@ export function apresentarRelacionamento(
     nome: membro.nome,
     relacao: getRotuloParentesco(membro.tipo),
     proximidade,
-    rotuloProximidade: ROTULOS[proximidade],
-    iniciais: extrairIniciais(membro.nome, membro.sobrenome)
+    rotuloProximidade: ROTULOS[proximidade]
   };
 }
 

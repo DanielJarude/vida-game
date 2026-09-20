@@ -8,9 +8,10 @@
   position: relative;
 }
 
-/* Retrato sem foto: presença por composição, tipografia e textura.
-   Iniciais sobre um degradê derivado da própria pessoa — nenhum asset,
-   nenhuma dependência externa, nenhum rosto inventado. */
+/* Retrato sem foto: presença por composição, avatar simbólico e textura.
+   O ícone muda com a fase da vida (bebê, criança, adolescente, adulto,
+   pessoa idosa) sobre um degradê — nenhum asset externo, nenhum rosto
+   inventado, nenhuma dependência de API de imagem. */
 .identity__portrait {
   position: relative;
   width: 84px;
@@ -54,12 +55,16 @@
   background-size: 3px 3px;
 }
 
-.identity__initials {
+/* O avatar simbólico (PersonAvatar) preenche o retrato inteiro; o ícone
+   fica acima da textura de fundo, na mesma cor discreta que as iniciais
+   usavam antes. */
+.person-avatar {
   position: relative;
-  font-family: var(--font-display);
-  font-size: 1.75rem;
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.02em;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-secondary);
 }
 
@@ -313,9 +318,6 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-family: var(--font-display);
-  font-size: var(--type-caption);
-  font-weight: var(--weight-semibold);
   color: var(--text-muted);
   background: var(--surface);
   border: 1px solid var(--rule);
