@@ -210,6 +210,23 @@
   box-shadow: 0 0 0 3px var(--bg-app), 0 0 0 5px var(--accent-wash);
 }
 
+/* B4-FIX2 item 24-26 — cor por SIGNIFICADO, restrita a duas categorias com
+   sentido claro (família/memória = tom quente; escola = azul frio). Só o
+   ícone muda de cor — nunca o fundo do cartão inteiro — para não recriar
+   um mosaico colorido por categoria. As demais categorias (carreira,
+   dinheiro, cotidiano, cada uma já distinta por ÍCONE + rótulo) continuam
+   monocromáticas: a paleta ganha um pouco mais de vida sem virar
+   arco-íris por evento. */
+/* `:not(--negativo)` preserva a prioridade do vermelho semântico: uma
+   perda ou problema na família continua vermelho, nunca terracota. */
+.timeline-entry[data-categoria='familia']:not(.timeline-entry--negativo) .timeline-entry__icon {
+  color: var(--warm-memory);
+}
+
+.timeline-entry[data-categoria='escola']:not(.timeline-entry--negativo) .timeline-entry__icon {
+  color: var(--cool-study);
+}
+
 /* -------------------------------------------------------- Estado vazio */
 .timeline-empty {
   padding: var(--space-7) 0;

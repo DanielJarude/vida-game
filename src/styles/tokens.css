@@ -44,14 +44,17 @@
      para dar profundidade sem virar ficção científica. */
   --bg-deep: #070c0f;
   --bg-app: #0a1116;
-  --bg-raised: #0e171d;
-  --bg-elevated: #121e25;
+  --bg-raised: #101b22;
+  --bg-elevated: #16242c;
   --bg-inset: rgba(255, 255, 255, 0.025);
 
-  /* Superfícies usadas apenas por unidades reais (evento, pessoa, modal) */
-  --surface: rgba(255, 255, 255, 0.032);
-  --surface-hover: rgba(255, 255, 255, 0.055);
-  --surface-strong: rgba(13, 24, 30, 0.92);
+  /* Superfícies usadas apenas por unidades reais (evento, pessoa, modal).
+     B4-FIX2 item 24-26 — leve aumento de opacidade para separar melhor
+     "interativo/hover" de "estático": profundidade por contraste real,
+     não por brilho ou glow. */
+  --surface: rgba(255, 255, 255, 0.038);
+  --surface-hover: rgba(255, 255, 255, 0.065);
+  --surface-strong: rgba(15, 27, 34, 0.94);
 
   /* Divisores discretos substituem bordas de card */
   --rule: rgba(255, 255, 255, 0.07);
@@ -79,6 +82,19 @@
   --success: var(--accent);
   --warning: #d9a441;
   --warning-wash: rgba(217, 164, 65, 0.12);
+
+  /* B4-FIX2 item 24-26 — riqueza atmosférica controlada: cor por
+     SIGNIFICADO, não por evento/categoria (nunca arco-íris). Só dois
+     matizes adicionais, de uso restrito:
+     - família/memória: tom quente (terracota), nunca decoração solta;
+     - estudo/conhecimento: azul frio, idem.
+     Continuam escassos — a base da interface permanece monocromática
+     escura; isto só reforça o significado onde ele já existia (ícone de
+     categoria na Linha da Vida), não cria novas superfícies coloridas. */
+  --warm-memory: #d99a5b;
+  --warm-memory-wash: rgba(217, 154, 91, 0.12);
+  --cool-study: #6f9bd1;
+  --cool-study-wash: rgba(111, 155, 209, 0.12);
 
   /* ------------------------------------------------------------- Espaçamento
      Escala de 4px. Usar os degraus, não valores intermediários. */

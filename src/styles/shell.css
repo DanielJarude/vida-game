@@ -179,9 +179,16 @@
   border-bottom-color: var(--accent);
 }
 
-/* O item ativo não depende só de cor: ganha peso e uma régua inferior. */
+/* O item ativo não depende só de cor: ganha peso e uma régua inferior.
+   B4-FIX2 item 24 — o ícone da aba ativa também usa o acento (o
+   playtest pediu mais presença do verde principal); continua um único
+   ponto de acento por vez, não um preenchimento novo. */
 .primary-nav__item[aria-current='page'] .primary-nav__label {
   font-weight: var(--weight-semibold);
+}
+
+.primary-nav__item[aria-current='page'] svg {
+  color: var(--accent);
 }
 
 /* ------------------------------------------------------------- Composição

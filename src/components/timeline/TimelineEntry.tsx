@@ -47,7 +47,10 @@ export const TimelineEntry: React.FC<TimelineEntryProps> = ({ item }) => {
     ICONES[entrada.categoria];
 
   return (
-    <article className={`timeline-entry timeline-entry--${enfase}`}>
+    <article
+      className={`timeline-entry timeline-entry--${enfase}`}
+      data-categoria={entrada.categoria}
+    >
       <span className="timeline-entry__marker" aria-hidden="true" />
 
       <div className="timeline-entry__head">

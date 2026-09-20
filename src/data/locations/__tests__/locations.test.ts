@@ -117,4 +117,16 @@ describe('B4-FIX2 · municípios expandidos (item 17-18)', () => {
       expect(c.custoVidaRelativo).toBeLessThanOrEqual(1.5);
     }
   });
+
+  it('a expansão de municípios é significativa em relação à base anterior (1 por UF = 36)', () => {
+    // Antes do B4-FIX2 havia exatamente 1 cidade por UF (36 no total, com
+    // 26 estados + DF). Este PR expandiu a cobertura mantendo as 27 UFs
+    // (incluindo Acre, item já aprovado no B4-FIX1). O número exato não é
+    // contrato — só a garantia de que a expansão é real, não cosmética.
+    expect(MUNICIPIOS_BRASILEIROS.length).toBeGreaterThanOrEqual(80);
+    // Toda UF tem pelo menos a capital cadastrada.
+    for (const uf of listarEstadosDisponiveis()) {
+      expect(listarCidadesPorEstado(uf.sigla).length).toBeGreaterThanOrEqual(1);
+    }
+  });
 });
