@@ -15,7 +15,7 @@
  * decidir o que faz sentido oferecer.
  */
 
-import { FamilyInteractionType } from '../types';
+import { Capacidade, FamilyInteractionType } from '../types';
 
 /**
  * Marco simplificado das primeiras falas.
@@ -56,10 +56,9 @@ export function obterFaseInteracao(idade: number): FaseInteracao {
   return 'autonomo';
 }
 
-/** Resultado da checagem de capacidade. */
-export type Capacidade =
-  | { permitido: true }
-  | { permitido: false; motivo: string };
+// `Capacidade` mora em `types` desde o B4-FIX.1: humanos e pets usam a
+// mesma forma de resultado. Reexportado para não quebrar importações.
+export type { Capacidade };
 
 const PERMITIDO: Capacidade = { permitido: true };
 

@@ -104,8 +104,11 @@
     gap: var(--space-5);
   }
 
-  /* +1 ANO fixo no rodapé: a ação mais importante nunca sai do alcance. */
+  /* +1 ANO fixo no rodapé: a ação mais importante nunca sai do alcance.
+     Aqui o sticky do desktop é substituído por fixed, e `.shell-main` já
+     reserva padding inferior equivalente para nada ficar encoberto. */
   .year-advance--docked {
+    margin-bottom: 0;
     position: fixed;
     left: 0;
     right: 0;

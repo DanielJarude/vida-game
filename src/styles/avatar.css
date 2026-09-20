@@ -1,0 +1,152 @@
+/* ===========================================================================
+   Avatar — retrato e personalização
+
+   O retrato é um SVG desenhado a partir dos dados de aparência. Aqui só
+   moram enquadramento e os controles de escolha; nenhuma cor de pele ou
+   cabelo é definida em CSS, para que os dados sigam sendo a fonte única.
+   =========================================================================== */
+
+.avatar-portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ------------------------------------------------------- Personalização */
+.avatar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
+.avatar-picker__preview {
+  flex: 0 0 auto;
+  width: 112px;
+  height: 112px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: linear-gradient(
+    150deg,
+    var(--bg-elevated) 0%,
+    var(--bg-raised) 55%,
+    var(--bg-deep) 100%
+  );
+}
+
+/* min-width: 0 para que a coluna possa encolher em telas estreitas em vez
+   de forçar overflow horizontal. */
+.avatar-picker__controls {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.avatar-picker__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.avatar-picker__label {
+  font-size: var(--type-caption);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.avatar-picker__swatches,
+.avatar-picker__styles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Amostra de cor: alvo de toque adequado sem virar um botão gigante. */
+.avatar-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform var(--motion-fast), border-color var(--motion-fast);
+}
+
+.avatar-swatch:hover {
+  transform: scale(1.08);
+}
+
+.avatar-swatch[data-selected='true'] {
+  border-color: var(--accent);
+  transform: scale(1.08);
+}
+
+.avatar-swatch:focus-visible,
+.avatar-style:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Estilos de cabelo são texto: o nome é a informação, não pode ser cortado. */
+.avatar-style {
+  padding: var(--space-2) var(--space-3);
+  min-height: var(--touch-target);
+  font-size: var(--type-caption);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: normal;
+  transition: color var(--motion-fast), border-color var(--motion-fast);
+}
+
+.avatar-style:hover {
+  color: var(--text-primary);
+  border-color: var(--rule-strong);
+}
+
+.avatar-style[data-selected='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-swatch,
+  .avatar-style {
+    transition: none;
+  }
+
+  .avatar-swatch:hover,
+  .avatar-swatch[data-selected='true'] {
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------- Seções da criação */
+.creation-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.creation-section:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.creation-section__title {
+  font-size: var(--type-caption);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}

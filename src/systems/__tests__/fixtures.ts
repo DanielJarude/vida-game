@@ -6,6 +6,7 @@ import {
   EducationState,
   FamilyMember
 } from '../../types';
+import { criarAvatarPadrao } from '../avatarSystem';
 import { criarCarreiraInicial } from '../careerSystem';
 import { criarEducacaoInicial } from '../educationSystem';
 import { criarEconomiaInicial } from '../economySystem';
@@ -22,6 +23,7 @@ export function criarPersonagemTeste(overrides: Partial<Character> = {}): Charac
     cidade: 'Marília',
     estado: 'SP',
     classeSocial: 'classe_media',
+    avatar: criarAvatarPadrao(),
     stats: {
       felicidade: 80,
       saude: 90,
@@ -71,6 +73,21 @@ export function criarFamiliaTeste(): FamilyMember[] {
       renda: 42000
     }
   ];
+}
+
+/** Um pet vivo, para exercitar a fronteira de entidade (B4-FIX.1). */
+export function criarPetTeste(overrides: Partial<FamilyMember> = {}): FamilyMember {
+  return {
+    id: 'pet_1',
+    nome: 'Bolinha',
+    sobrenome: '',
+    genero: 'masculino',
+    tipo: 'pet',
+    idade: 3,
+    relacionamento: 70,
+    vivo: true,
+    ...overrides
+  };
 }
 
 export interface EstadoTeste {

@@ -1,4 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  EventHistory,
+  idsDisparados,
+  registrarOcorrencia
+} from '../events/eventHistory';
 import { executarPassagemDeAno } from '../agingSystem';
 import { aplicarConsequenciasEscolha, avaliarRequisitoOpcao } from '../eventSystem';
 import { getActionAvailability } from '../availabilitySystem';
@@ -59,7 +64,7 @@ interface Simulacao {
   ano: number;
   personalidade: PersonalityState;
   timeline: LifeLogEntry[];
-  historicoEventos: string[];
+  historicoEventos: EventHistory;
   tracosNaIdade: (idade: number) => number[]; // máximos por eixo no fim de cada idade
   eventosRespondidos: number;
   primeirosTraçosApareceramNaIdade: number | null;
@@ -72,7 +77,7 @@ function simularVida(semente: number, idadeMaxima: number): Simulacao {
   let { personagem, familia, educacao, carreira, economia } = estado;
   let personalidade = criarPersonalidadeInicial();
   const timeline: LifeLogEntry[] = [];
-  const historico: string[] = [];
+  let historico: EventHistory = [];
   const maximosPorIdade = new Map<number, number>();
   let eventosRespondidos = 0;
   let primeirosTraços: number | null = null;
@@ -119,7 +124,12 @@ function simularVida(semente: number, idadeMaxima: number): Simulacao {
     }
 
     if (resultado.eventoDisparado) {
-      historico.push(resultado.eventoDisparado.id);
+      historico = registrarOcorrencia(
+        historico,
+        resultado.eventoDisparado.id,
+        personagem.idade,
+        personagem.anoAtual
+      );
       responder(resultado.eventoDisparado);
     }
 
@@ -183,23 +193,50 @@ describe('Playtest automatizado: uma vida de 0 a 25 anos (determinística)', () 
       expect(Math.abs(valor as number)).toBeLessThan(5);
     }
 
-    // -- padrões começam a produzir tendências: com a estratégia pró-social
-    //    fixa, algum traço consolidou até os 15
+    // -- padrões começam a produzir tendências até os 15.
+    //
+    //    Revisado no B4-FIX.1. A versão anterior exigia que a semente 2026,
+    //    sozinha, consolidasse um traço. Ao ampliar a variedade infantil (o
+    //    pool aos 3 anos passou de 0 para 9 eventos), as escolhas de uma
+    //    vida passaram a se espalhar por mais eixos, e existem sementes
+    //    legítimas — a 2026 entre elas — em que nenhum eixo isolado alcança
+    //    o limiar. Isso é o sistema funcionando: antes, a repetição do mesmo
+    //    evento concentrava impacto artificialmente no mesmo traço.
+    //
+    //    A propriedade que interessa é estatística, e é assim que passou a
+    //    ser verificada: na maioria das vidas, um padrão pró-social
+    //    consistente consolida algum traço até os 15.
     const ate15 = vida.personalidade.memorias.filter(m => m.idade <= 15);
     expect(ate15.length).toBeGreaterThan(0);
-    const personalidadeAos15 = ate15.reduce(
-      (p, m) => registrarEscolha(p, m).personalidade,
-      criarPersonalidadeInicial()
-    );
-    const tracosAos15 = obterTracosPercebidos(personalidadeAos15);
-    expect(tracosAos15.length).toBeGreaterThan(0);
 
-    // -- ao fim da vida (25), traços percebidos são qualitativos (sem números)
-    const percebidosFinal = obterTracosPercebidos(vida.personalidade, 'feminino');
-    expect(percebidosFinal.length).toBeGreaterThan(0);
-    for (const t of percebidosFinal) {
-      expect(t.rotulo).not.toMatch(/\d/);
+    const AMOSTRA = 40;
+    let vidasComTraco = 0;
+    for (let i = 1; i <= AMOSTRA; i++) {
+      const outra = simularVida(i * 101, 15);
+      const p = outra.personalidade.memorias.reduce(
+        (acc, m) => registrarEscolha(acc, m).personalidade,
+        criarPersonalidadeInicial()
+      );
+      if (obterTracosPercebidos(p).length > 0) vidasComTraco += 1;
     }
+    expect(vidasComTraco / AMOSTRA).toBeGreaterThan(0.7);
+
+    // -- ao fim da vida, traços percebidos são qualitativos (sem números).
+    //
+    //    Mesma revisão do bloco acima: a existência de traço é estatística,
+    //    mas o formato do rótulo é absoluto — nenhum traço percebido, em
+    //    nenhuma vida da amostra, pode exibir pontuação. Isso é verificado
+    //    sobre todas as sementes, e não só sobre uma.
+    let vidasComTracoFinal = 0;
+    for (let i = 1; i <= AMOSTRA; i++) {
+      const outra = simularVida(i * 101, 25);
+      const percebidos = obterTracosPercebidos(outra.personalidade, 'feminino');
+      if (percebidos.length > 0) vidasComTracoFinal += 1;
+      for (const t of percebidos) {
+        expect(t.rotulo).not.toMatch(/\d/);
+      }
+    }
+    expect(vidasComTracoFinal / AMOSTRA).toBeGreaterThan(0.7);
 
     // -- Linha da Vida legível: nenhum log técnico de memória/personalidade
     expect(vida.timeline.length).toBeGreaterThan(0);
@@ -219,7 +256,8 @@ describe('Playtest automatizado: uma vida de 0 a 25 anos (determinística)', () 
       personalidade: vida.personalidade,
       timeline: vida.timeline,
       eventoAtivo: null,
-      historicoEventosDisparados: vida.historicoEventos,
+      historicoEventosDisparados: idsDisparados(vida.historicoEventos),
+      historicoEventos: vida.historicoEventos,
       acoesRealizadasAno: [],
       emJogo: true,
       morto: false

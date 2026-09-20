@@ -1,6 +1,11 @@
 import { GameState, GlobalStats, PastLifeRecord, PostMortemSummary, GameEvent } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
 import { criarPersonalidadeInicial, normalizarPersonalidade } from './personalitySystem';
+import { normalizarAvatar } from './avatarSystem';
+import {
+  migrarDeListaDeIds,
+  normalizarHistorico
+} from './events/eventHistory';
 import { clamp } from '../utils/random';
 
 const SAVE_KEY = 'VIDA_GAME_SAVE_V1'; // chave mantida: a versão vive dentro do payload
@@ -81,6 +86,9 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
 
   const personagem = {
     ...personagemBruto,
+    // Saves anteriores ao B4-FIX.1 não têm avatar: recebem um padrão válido
+    // em vez de `undefined`, para que nenhum componente trate ausência.
+    avatar: normalizarAvatar(personagemBruto.avatar),
     idade: numero(personagemBruto.idade, 0),
     anoAtual: numero(personagemBruto.anoAtual, new Date().getFullYear()),
     anoNascimento: numero(personagemBruto.anoNascimento, new Date().getFullYear()),
@@ -185,6 +193,15 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     h => typeof h === 'string'
   ) as string[];
 
+  // Histórico de eventos (B4-FIX.1). Saves anteriores só guardavam a lista de
+  // IDs disparados; ela é convertida para o formato estruturado com idade
+  // desconhecida, o que deixa todo cooldown já vencido — conservador, nunca
+  // bloqueia conteúdo numa partida em andamento.
+  const historicoEventos =
+    raiz.historicoEventos !== undefined
+      ? normalizarHistorico(raiz.historicoEventos)
+      : migrarDeListaDeIds(historicoEventosDisparados);
+
   // --- Personalidade (B2): saves das versões 1/2 não possuem o campo;
   // inicializa em branco. Saves da v3 são normalizados defensivamente. ---
   const personalidade = raiz.personalidade
@@ -204,6 +221,7 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     timeline,
     eventoAtivo,
     historicoEventosDisparados,
+    historicoEventos,
     acoesRealizadasAno: lista(raiz.acoesRealizadasAno).filter(a => typeof a === 'string') as string[],
     emJogo: raiz.emJogo !== false,
     morto: raiz.morto === true,

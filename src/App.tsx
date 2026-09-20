@@ -141,6 +141,7 @@ export function App() {
         eventoAberto={eventoAberto}
         onEnvelhecer={jogo.envelhecerAno}
         onInteragirFamilia={jogo.acaoFamilia}
+        onInteragirPet={jogo.acaoPet}
         onPedirCasamento={jogo.pedirCasamentoExec}
         onTerFilho={jogo.terFilhoExec}
         onTerminarRelacionamento={jogo.terminarRelacionamentoExec}

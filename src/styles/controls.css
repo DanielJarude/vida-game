@@ -122,7 +122,10 @@
   font-size: var(--type-caption);
   font-weight: var(--weight-semibold);
   border-radius: var(--radius-sm);
-  white-space: nowrap;
+  /* Sem nowrap: rótulos longos ("Pedir conselho sobre a escola") devem
+     quebrar dentro do botão em telas estreitas, não vazar do container. */
+  white-space: normal;
+  text-align: center;
   transition: background-color var(--motion-fast) var(--ease-out),
     color var(--motion-fast) var(--ease-out),
     border-color var(--motion-fast) var(--ease-out);

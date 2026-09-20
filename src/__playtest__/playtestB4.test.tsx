@@ -104,6 +104,7 @@ function montar(idade: number, aba: TabId = 'timeline') {
         eventoAberto={false}
         onEnvelhecer={() => {}}
         onInteragirFamilia={() => {}}
+        onInteragirPet={() => {}}
         onPedirCasamento={() => {}}
         onTerFilho={() => {}}
         onTerminarRelacionamento={() => {}}

@@ -16,6 +16,7 @@ import {
   FamilyInteractionType,
   FamilyMember,
   Job,
+  PetInteractionType,
   PosturaEscolar
 } from '../types';
 import { ActivityOption, ATIVIDADES_DISPONIVEIS } from '../data/activitiesData';
@@ -27,6 +28,11 @@ import {
   avaliarCapacidadeInteracao,
   deveOferecerInteracao
 } from './interactionCapabilitySystem';
+import {
+  avaliarCapacidadePet,
+  deveOferecerInteracaoPet
+} from './petInteractionSystem';
+import { ehPet } from './relationEntitySystem';
 
 // ---------------------------------------------------------------------------
 // Constantes de política — fonte única de verdade para UI e motor
@@ -109,8 +115,9 @@ export interface ParametrosAcao {
   cursoId?: string;                      // ingressar_curso
   atividadeId?: string;                  // executar_atividade
   postura?: PosturaEscolar;              // definir_postura_escolar
-  membroId?: string;                     // interagir_familia / pedir_casamento / terminar_relacionamento / ter_filho
+  membroId?: string;                     // interagir_familia / interagir_pet / pedir_casamento / terminar_relacionamento / ter_filho
   tipoInteracao?: FamilyInteractionType; // interagir_familia
+  tipoInteracaoPet?: PetInteractionType; // interagir_pet
 }
 
 export type ActionId =
@@ -131,7 +138,8 @@ export type ActionId =
   | 'ter_filho'
   | 'terminar_relacionamento'
   | 'executar_atividade'
-  | 'interagir_familia';
+  | 'interagir_familia'
+  | 'interagir_pet';
 
 const OCULTO = (reasonCode: string): Disponibilidade => ({ kind: 'oculto', reasonCode });
 const BLOQUEADO = (reasonCode: string, motivo: string): Disponibilidade => ({ kind: 'bloqueado', reasonCode, motivo });
@@ -357,6 +365,9 @@ export function getActionAvailability(
       if (!membro) return BLOQUEADO('item_invalido', 'Familiar não encontrado.');
       const tipo = params.tipoInteracao;
       if (!tipo) return BLOQUEADO('item_invalido', 'Interação inválida.');
+      // Fronteira de entidade: o fluxo humano não se oferece para um animal.
+      // A espécie é decidida em `relationEntitySystem`, não com `=== 'pet'`.
+      if (ehPet(membro.tipo)) return OCULTO('especie_incompativel');
       if (tipo === 'pedir_dinheiro' && idade < IDADE_MINIMA_PEDIR_DINHEIRO) {
         return OCULTO('idade_minima');
       }
@@ -379,6 +390,29 @@ export function getActionAvailability(
       if (tipo === 'dar_presente' && membro) {
         // custos conferidos pelo motor antes de debitar
         return DISPONIVEL;
+      }
+      return DISPONIVEL;
+    }
+
+    case 'interagir_pet': {
+      const membro = familia.find(f => f.id === params.membroId);
+      if (!membro) return BLOQUEADO('item_invalido', 'Animal não encontrado.');
+      // Espelho exato da regra acima: ação de pet não se oferece a humano.
+      if (!ehPet(membro.tipo)) return OCULTO('especie_incompativel');
+      if (!membro.vivo) return OCULTO('falecido');
+
+      const tipo = params.tipoInteracaoPet;
+      if (!tipo) return BLOQUEADO('item_invalido', 'Interação inválida.');
+
+      if (!deveOferecerInteracaoPet(tipo, idade)) {
+        return OCULTO('idade_minima');
+      }
+      const capacidadePet = avaliarCapacidadePet(tipo, idade);
+      if (!capacidadePet.permitido) {
+        return BLOQUEADO('idade_minima', capacidadePet.motivo);
+      }
+      if (jaRealizada(ctx, `pet:${membro.id}:${tipo}`)) {
+        return BLOQUEADO('repeticao_anual', `Você já fez isto com ${membro.nome} neste ano.`);
       }
       return DISPONIVEL;
     }

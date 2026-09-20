@@ -1,12 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { valorAleatorio } from '../../utils/random';
-import { Gender } from '../../types';
-import {
-  listarEstadosDisponiveis,
-  listarCidadesPorEstado,
-  sortearNome,
-  sortearSobrenome
-} from '../../data/brazilianData';
+import { AvatarAppearance, Gender } from '../../types';
+import { sortearNome, sortearSobrenome } from '../../data/brazilianData';
+import { listarEstados, listarCidadesPorEstado } from '../../data/locations';
+import { criarAvatarPadrao, sortearAvatar } from '../../systems/avatarSystem';
+import { AvatarPicker } from '../avatar/AvatarPicker';
 import { ArrowLeft, Shuffle } from 'lucide-react';
 
 interface CharacterCreationScreenProps {
@@ -15,7 +13,8 @@ interface CharacterCreationScreenProps {
     sobrenome: string,
     genero: Gender,
     cidade: string,
-    estado: string
+    estado: string,
+    avatar: AvatarAppearance
   ) => void;
   onVoltar: () => void;
 }
@@ -40,7 +39,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
   onCriarVida,
   onVoltar
 }) => {
-  const estados = useMemo(() => listarEstadosDisponiveis(), []);
+  const estados = useMemo(() => listarEstados(), []);
 
   const [genero, setGenero] = useState<Gender>('masculino');
   const [nome, setNome] = useState<string>(() => sortearNome('masculino'));
@@ -49,6 +48,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
   const [cidade, setCidade] = useState<string>(
     () => listarCidadesPorEstado(estados[0].sigla)[0].cidade
   );
+  const [avatar, setAvatar] = useState<AvatarAppearance>(criarAvatarPadrao);
 
   const cidadesDoEstado = useMemo(
     () => listarCidadesPorEstado(estado),
@@ -71,6 +71,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
 
     setEstado(estadoSorteado);
     setCidade(cidades[Math.floor(valorAleatorio() * cidades.length)].cidade);
+    setAvatar(sortearAvatar());
   };
 
   const handleTrocaGenero = (novoGen: Gender) => {
@@ -82,7 +83,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
     e.preventDefault();
     if (!nome.trim() || !sobrenome.trim()) return;
     // Exatamente o que está na tela — sem nenhuma randomização posterior.
-    onCriarVida(nome.trim(), sobrenome.trim(), genero, cidade, estado);
+    onCriarVida(nome.trim(), sobrenome.trim(), genero, cidade, estado, avatar);
   };
 
   return (
@@ -104,60 +105,70 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
         </div>
 
         <form onSubmit={handleSubmit} className="creation-form">
-          <div className="field">
-            <span className="field__label" id="label-genero">
-              Gênero
-            </span>
-            <div className="choice-group" role="group" aria-labelledby="label-genero">
-              {(['masculino', 'feminino', 'nao-binario'] as Gender[]).map(g => (
-                <button
-                  type="button"
-                  key={g}
-                  className="choice-chip"
-                  aria-pressed={genero === g}
-                  onClick={() => handleTrocaGenero(g)}
-                >
-                  {ROTULO_GENERO[g]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="creation-grid">
-            <div className="field">
-              <label className="field__label" htmlFor="campo-nome">
-                Nome
-              </label>
-              <input
-                id="campo-nome"
-                className="field__control"
-                value={nome}
-                onChange={e => setNome(e.target.value)}
-                maxLength={20}
-                required
-              />
-            </div>
+          <section className="creation-section">
+            <h2 className="creation-section__title">Identidade</h2>
 
             <div className="field">
-              <label className="field__label" htmlFor="campo-sobrenome">
-                Sobrenome
-              </label>
-              <input
-                id="campo-sobrenome"
-                className="field__control"
-                value={sobrenome}
-                onChange={e => setSobrenome(e.target.value)}
-                maxLength={20}
-                required
-              />
+              <span className="field__label" id="label-genero">
+                Gênero
+              </span>
+              <div className="choice-group" role="group" aria-labelledby="label-genero">
+                {(['masculino', 'feminino', 'nao-binario'] as Gender[]).map(g => (
+                  <button
+                    type="button"
+                    key={g}
+                    className="choice-chip"
+                    aria-pressed={genero === g}
+                    onClick={() => handleTrocaGenero(g)}
+                  >
+                    {ROTULO_GENERO[g]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="field">
-            <span className="field__label">Onde você nasce</span>
             <div className="creation-grid">
-              <div className="field field--nested">
-                <label className="field__sublabel" htmlFor="campo-estado">
+              <div className="field">
+                <label className="field__label" htmlFor="campo-nome">
+                  Nome
+                </label>
+                <input
+                  id="campo-nome"
+                  className="field__control"
+                  value={nome}
+                  onChange={e => setNome(e.target.value)}
+                  maxLength={20}
+                  required
+                />
+              </div>
+
+              <div className="field">
+                <label className="field__label" htmlFor="campo-sobrenome">
+                  Sobrenome
+                </label>
+                <input
+                  id="campo-sobrenome"
+                  className="field__control"
+                  value={sobrenome}
+                  onChange={e => setSobrenome(e.target.value)}
+                  maxLength={20}
+                  required
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="creation-section">
+            <h2 className="creation-section__title">Aparência</h2>
+            <AvatarPicker avatar={avatar} onChange={setAvatar} />
+          </section>
+
+          <section className="creation-section">
+            <h2 className="creation-section__title">Nascimento</h2>
+
+            <div className="creation-grid">
+              <div className="field">
+                <label className="field__label" htmlFor="campo-estado">
                   Estado
                 </label>
                 <select
@@ -168,14 +179,14 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
                 >
                   {estados.map(uf => (
                     <option key={uf.sigla} value={uf.sigla}>
-                      {uf.sigla} · {uf.regiao}
+                      {uf.nome} ({uf.sigla})
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="field field--nested">
-                <label className="field__sublabel" htmlFor="campo-cidade">
+              <div className="field">
+                <label className="field__label" htmlFor="campo-cidade">
                   Cidade
                 </label>
                 <select
@@ -195,7 +206,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
             <p className="field__note">
               Sua vida começa exatamente onde você escolher.
             </p>
-          </div>
+          </section>
 
           <button type="submit" className="btn btn--hero">
             Começar a viver

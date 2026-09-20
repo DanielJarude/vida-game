@@ -257,7 +257,11 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMinima: 5,
     idadeMaxima: 95,
     categoria: 'familia',
-    peso: 80,
+    peso: 60,
+    // B4-FIX.1: tinha uma opção só — ou seja, não era uma decisão, era um
+    // aviso. Como está no pool da infância (que era minúsculo), aparecia
+    // demais e sem oferecer escolha. Ganhou alternativas reais.
+    repeticao: { modo: 'cooldown', anosCooldown: 5 },
     opcoes: [
       {
         id: 'opt_ajudar_cozinha_comer',
@@ -266,7 +270,30 @@ export const EXTRA_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 25, saude: 5 },
           relacionamentoDelta: { delta: 20 },
-          hiddenStats: { empatia: 15, estresse: -20 }
+          hiddenStats: { empatia: 15, estresse: -20 },
+          impactosComportamentais: { familia: 2, generosidade: 1 }
+        }
+      },
+      {
+        id: 'opt_mesa_das_criancas',
+        texto: 'Comer rápido e sumir para a mesa das crianças',
+        descricaoResultado: 'Você despachou o prato e passou o resto do almoço na mesa do fundo, onde as regras eram outras e ninguém perguntava nada sobre escola.',
+        consequencias: {
+          stats: { felicidade: 18 },
+          relacionamentoDelta: { delta: 6 },
+          hiddenStats: { sociabilidade: 10, estresse: -12 },
+          impactosComportamentais: { sociabilidade: 2, independencia: 1 }
+        }
+      },
+      {
+        id: 'opt_ouvir_fofoca_familia',
+        texto: 'Ficar na mesa dos adultos escutando as histórias da família',
+        descricaoResultado: 'Você ficou quieto(a) na ponta da mesa e ouviu tudo: brigas antigas, casamentos que quase não aconteceram e uma versão de um parente que ninguém tinha te contado.',
+        consequencias: {
+          stats: { felicidade: 12, inteligencia: 6 },
+          relacionamentoDelta: { delta: 10 },
+          hiddenStats: { empatia: 12, estresse: -10 },
+          impactosComportamentais: { empatia: 2, familia: 1 }
         }
       }
     ]
@@ -347,7 +374,10 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMinima: 15,
     idadeMaxima: 90,
     categoria: 'amizade',
-    peso: 75,
+    peso: 60,
+    // B4-FIX.1: tinha uma opção só. Uma festa surpresa é justamente o tipo de
+    // situação que revela temperamento — ganhou reações alternativas.
+    repeticao: { modo: 'cooldown', anosCooldown: 8 },
     opcoes: [
       {
         id: 'opt_emocionar_festa',
@@ -356,7 +386,30 @@ export const EXTRA_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 35 },
           relacionamentoDelta: { delta: 25 },
-          hiddenStats: { sociabilidade: 20, empatia: 20, estresse: -25 }
+          hiddenStats: { sociabilidade: 20, empatia: 20, estresse: -25 },
+          impactosComportamentais: { sociabilidade: 2, empatia: 1 }
+        }
+      },
+      {
+        id: 'opt_constrangido_festa',
+        texto: 'Sorrir sem graça e torcer para não ser o centro das atenções',
+        descricaoResultado: 'Você agradeceu todo mundo, um por um, e passou a festa inteira mais confortável na cozinha do que na sala. Gostou — só não do holofote.',
+        consequencias: {
+          stats: { felicidade: 15 },
+          relacionamentoDelta: { delta: 10 },
+          hiddenStats: { sociabilidade: -5, empatia: 10, estresse: 5 },
+          impactosComportamentais: { independencia: 2 }
+        }
+      },
+      {
+        id: 'opt_descobrir_quem_organizou',
+        texto: 'Procurar quem teve o trabalho de organizar tudo isso',
+        descricaoResultado: 'Enquanto todo mundo comemorava, você foi atrás de quem tinha passado semanas organizando aquilo em segredo. Essa conversa no corredor durou mais que a festa.',
+        consequencias: {
+          stats: { felicidade: 22 },
+          relacionamentoDelta: { delta: 30 },
+          hiddenStats: { empatia: 22, sociabilidade: 8, estresse: -18 },
+          impactosComportamentais: { empatia: 2, generosidade: 1 }
         }
       }
     ]

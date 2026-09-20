@@ -101,6 +101,20 @@ export type RelationType =
   | 'amiga'
   | 'pet';
 
+/**
+ * Aparência do avatar — puramente cosmética.
+ *
+ * Nenhum destes campos influencia atributo, personalidade, classe social
+ * ou qualquer regra de jogo. Guardam IDs de `data/avatar/avatarOptions`,
+ * não cores, para que a paleta possa mudar sem invalidar saves.
+ */
+export interface AvatarAppearance {
+  tomDePele: string;
+  estiloCabelo: string;
+  corCabelo: string;
+  corOlhos: string;
+}
+
 export interface FamilyMember {
   id: string;
   nome: string;
@@ -136,6 +150,39 @@ export type FamilyInteractionType =
   | 'discutir'
   | 'pedir_dinheiro'
   | 'pedir_conselho';
+
+/**
+ * Interações de pet.
+ *
+ * Conjunto **separado** de `FamilyInteractionType` de propósito: um pet não
+ * é uma pessoa pequena. Os dois tipos não se misturam, então o próprio
+ * compilador impede oferecer "pedir conselho" a um cachorro.
+ */
+export type PetInteractionType =
+  | 'fazer_carinho'
+  | 'brincar'
+  | 'dar_comida'
+  | 'passear'
+  | 'cuidar'
+  | 'ensinar_truque';
+
+/**
+ * Espécie de entidade de uma relação.
+ *
+ * A distinção existe no tipo, não em `if` espalhados: cada família de
+ * interação pertence a uma espécie e é validada pelo sistema dela.
+ */
+export type EspecieRelacao = 'humano' | 'pet';
+
+/**
+ * Resultado de uma checagem de capacidade.
+ *
+ * Compartilhado por humanos e pets: mesma forma, regras diferentes. O
+ * motivo é texto pronto para exibição — a interface não o reescreve.
+ */
+export type Capacidade =
+  | { permitido: true }
+  | { permitido: false; motivo: string };
 
 export type PosturaEscolar = 'estudar' | 'matar_aula' | 'socializar';
 
@@ -279,6 +326,20 @@ export interface EventOption {
   };
 }
 
+/**
+ * Registro de um evento no histórico.
+ *
+ * Chaveado por ID estável — nunca por título. `-1` em campos de idade/ano
+ * significa "veio de um save antigo que não guardava isso".
+ */
+export interface EventHistoryEntry {
+  eventoId: string;
+  ocorrencias: number;
+  primeiraIdade: number;
+  ultimaIdade: number;
+  ultimoAno: number;
+}
+
 export interface GameEvent {
   id: string;
   titulo: string;
@@ -287,7 +348,17 @@ export interface GameEvent {
   idadeMaxima: number;
   categoria: 'infancia' | 'escola' | 'adolescencia' | 'familia' | 'amizade' | 'romance' | 'trabalho' | 'dinheiro' | 'saude' | 'cotidiano';
   peso: number; // chance relativa
-  unico?: boolean; // apenas uma vez na vida
+  unico?: boolean; // apenas uma vez na vida (equivale a repeticao.modo 'unico')
+  /**
+   * Política de repetição. Omitir significa COOLDOWN padrão — antes do
+   * B4-FIX.1 o padrão era "pode repetir todo ano", que é o que fazia os
+   * mesmos eventos voltarem na infância.
+   */
+  repeticao?: {
+    modo: 'unico' | 'cooldown' | 'recorrente';
+    /** Só para 'cooldown'. Anos de espera antes de poder voltar. */
+    anosCooldown?: number;
+  };
   condicoes?: {
     genero?: Gender;
     faseVida?: LifeStage;
@@ -319,6 +390,8 @@ export interface Character {
   cidade: string;
   estado: string;
   classeSocial: SocialClass;
+  /** Aparência cosmética. Sempre presente: saves antigos recebem padrão. */
+  avatar: AvatarAppearance;
   stats: VisibleStats;
   hiddenStats: HiddenStats;
   doencas: string[];
@@ -342,7 +415,10 @@ export interface GameState {
   personalidade: PersonalityState;
   timeline: LifeLogEntry[];
   eventoAtivo: GameEvent | null;
+  /** Formato legado (v<5): apenas os IDs já disparados. Mantido para saves antigos. */
   historicoEventosDisparados: string[];
+  /** Histórico estruturado (v5+): ocorrências e última idade por ID estável. */
+  historicoEventos?: EventHistoryEntry[];
   // Ações únicas por ano (atividades, apostas, interações); zerada a cada passagem de ano
   acoesRealizadasAno: string[];
   emJogo: boolean;

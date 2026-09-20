@@ -11,8 +11,11 @@ import {
   PersonalityState
 } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
+import { EventHistory, idsDisparados } from './events/eventHistory';
+import { podeRepetirAgora } from './events/eventEligibility';
+import { sortearPonderado } from './events/eventSelection';
 import { formatarDinheiro, getLifeStage, getRotuloAtributo } from '../utils/formatters';
-import { clamp, generateId, rollChance, valorAleatorio } from '../utils/random';
+import { clamp, generateId, rollChance } from '../utils/random';
 import { normalizarHiddenStats, normalizarStats } from './attributeSystem';
 // Dependência em direção única: personalitySystem não importa eventSystem
 import {
@@ -98,13 +101,46 @@ export function avaliarCondicoesEvento(
   return true;
 }
 
+/**
+ * Pool elegível de um ano — consulta pura, sem sorteio.
+ *
+ * Exposta porque é o que o playtest determinístico e os testes precisam
+ * medir: "quantos eventos esta vida realmente poderia ter visto aos 5
+ * anos?". A resposta é o que explica a repetição, não a sorte.
+ */
+export function listarEventosElegiveis(
+  personagem: Character,
+  carreira: CareerState,
+  educacao: EducationState,
+  economia: EconomyState,
+  familia: FamilyMember[],
+  historico: EventHistory,
+  personalidade?: PersonalityState
+): GameEvent[] {
+  const disparados = idsDisparados(historico);
+
+  return MASTER_EVENTS_LIST.filter(
+    evento =>
+      avaliarCondicoesEvento(
+        evento,
+        personagem,
+        carreira,
+        educacao,
+        economia,
+        familia,
+        disparados,
+        personalidade
+      ) && podeRepetirAgora(evento, historico, personagem.idade)
+  );
+}
+
 export function sortearEventoDoAno(
   personagem: Character,
   carreira: CareerState,
   educacao: EducationState,
   economia: EconomyState,
   familia: FamilyMember[],
-  historicoDisparados: string[],
+  historico: EventHistory,
   personalidade?: PersonalityState
 ): GameEvent | null {
   // Chance de 75% de ter um evento interativo no ano (alguns anos são mais calmos)
@@ -112,33 +148,22 @@ export function sortearEventoDoAno(
     return null;
   }
 
-  const eventosElegiveis = MASTER_EVENTS_LIST.filter(evento =>
-    avaliarCondicoesEvento(
-      evento,
-      personagem,
-      carreira,
-      educacao,
-      economia,
-      familia,
-      historicoDisparados,
-      personalidade
-    )
+  const eventosElegiveis = listarEventosElegiveis(
+    personagem,
+    carreira,
+    educacao,
+    economia,
+    familia,
+    historico,
+    personalidade
   );
 
   if (eventosElegiveis.length === 0) return null;
 
-  // Sorteio ponderado por peso
-  const pesoTotal = eventosElegiveis.reduce((sum, ev) => sum + ev.peso, 0);
-  let rolagem = valorAleatorio() * pesoTotal;
-
-  for (const evento of eventosElegiveis) {
-    if (rolagem < evento.peso) {
-      return evento;
-    }
-    rolagem -= evento.peso;
-  }
-
-  return eventosElegiveis[0];
+  // Sorteio ponderado pelo peso **efetivo**: quem já apareceu nesta vida
+  // concorre com peso reduzido. Antes do B4-FIX.1 o peso era fixo, então
+  // um evento de peso alto num pool pequeno voltava ano após ano.
+  return sortearPonderado(eventosElegiveis, historico);
 }
 
 /** Motivo em pt-BR quando uma exigência comportamental não é cumprida (qualitativo, sem números). */

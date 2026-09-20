@@ -12,6 +12,7 @@ import {
   getEducationLabel,
   getSocialClassLabel
 } from '../../utils/formatters';
+import { AvatarPortrait } from '../avatar/AvatarPortrait';
 import {
   obterPerfilDeFase,
   deveMostrarSaldoNaIdentidade
@@ -34,8 +35,9 @@ interface CharacterIdentityProps {
  * Cada fato só aparece quando é relevante na fase; nada é exibido com o
  * mesmo peso de tudo o mais.
  *
- * O retrato não usa foto: presença vem de composição, iniciais e textura.
- * Não há geração de rosto, banco de imagens nem dependência externa.
+ * O retrato é o avatar escolhido pelo jogador, desenhado em SVG a partir
+ * dos dados de aparência. Não há foto, geração por IA, banco de imagens
+ * nem dependência externa — e a aparência não afeta nenhum atributo.
  */
 export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
   personagem,
@@ -46,8 +48,6 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
   situacao
 }) => {
   const perfil = obterPerfilDeFase(personagem.idade);
-  const iniciais = `${personagem.nome.charAt(0)}${personagem.sobrenome.charAt(0)}`.toUpperCase();
-
   const unidadeIdade = personagem.idade === 1 ? 'ano' : 'anos';
 
   // Escolaridade só interessa quando já existe alguma trajetória escolar.
@@ -73,8 +73,13 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
 
   return (
     <section className="identity" aria-label="Quem é você">
-      <div className="identity__portrait" aria-hidden="true">
-        <span className="identity__initials">{iniciais}</span>
+      <div className="identity__portrait">
+        <AvatarPortrait
+          avatar={personagem.avatar}
+          idade={personagem.idade}
+          tamanho={96}
+          rotulo={`${personagem.nome} ${personagem.sobrenome}`}
+        />
       </div>
 
       <div>

@@ -16,10 +16,10 @@ import { CharacterIdentity } from '../character/CharacterIdentity';
 
 import {
   CIDADES_BRASILEIRAS,
-  listarEstadosDisponiveis,
+  listarEstados,
   listarCidadesPorEstado,
   encontrarCidade
-} from '../../data/brazilianData';
+} from '../../data/locations';
 import { getActionAvailability } from '../../systems/availabilitySystem';
 import { criarEstadoTeste } from '../../systems/__tests__/fixtures';
 import { rotularInteracao } from '../../presentation/interactionPresentation';
@@ -32,19 +32,20 @@ afterEach(cleanup);
    Local de nascimento                                                     */
 
 describe('B4-FIX · local de nascimento', () => {
-  it('a lista de estados é derivada dos dados, não hardcodeada', () => {
-    const estados = listarEstadosDisponiveis();
-    const siglasReais = new Set(CIDADES_BRASILEIRAS.map(c => c.estado));
+  // Revisado no B4-FIX.1: a versão anterior deste teste comparava a lista de
+  // estados com as siglas presentes em CIDADES_BRASILEIRAS — ou seja,
+  // certificava exatamente o bug (UF inferida a partir das cidades). A UF é
+  // entidade própria; a relação correta é a inversa, testada abaixo.
+  it('toda cidade cadastrada pertence a uma UF do catálogo oficial', () => {
+    const siglasOficiais = new Set(listarEstados().map(uf => uf.sigla));
 
-    expect(estados.length).toBe(siglasReais.size);
-    for (const uf of estados) {
-      expect(siglasReais.has(uf.sigla)).toBe(true);
-      expect(uf.quantidadeCidades).toBeGreaterThan(0);
+    for (const cidade of CIDADES_BRASILEIRAS) {
+      expect(siglasOficiais.has(cidade.estado)).toBe(true);
     }
   });
 
   it('cada estado só lista cidades que realmente pertencem a ele', () => {
-    for (const uf of listarEstadosDisponiveis()) {
+    for (const uf of listarEstados()) {
       for (const cidade of listarCidadesPorEstado(uf.sigla)) {
         expect(cidade.estado).toBe(uf.sigla);
       }

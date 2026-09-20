@@ -7,6 +7,7 @@ import type {
   EducationState,
   FamilyMember,
   FamilyInteractionType,
+  PetInteractionType,
   Gender,
   LifeLogEntry
 } from '../../types';
@@ -35,6 +36,7 @@ export interface SectionRouterProps {
     tipoAcao: FamilyInteractionType,
     presenteTipo?: 'barato' | 'medio' | 'luxo'
   ) => void;
+  onInteragirPet: (membroId: string, tipoAcao: PetInteractionType) => void;
   onPedirCasamento: (parceiroId: string) => void;
   onTerFilho: (parceiroId?: string, nome?: string, genero?: Gender) => void;
   onTerminarRelacionamento: (parceiroId: string) => void;
@@ -88,6 +90,7 @@ export const SectionRouter: React.FC<SectionRouterProps> = props => {
           familia={props.familia}
           ctx={props.ctx}
           onInteragir={props.onInteragirFamilia}
+          onInteragirPet={props.onInteragirPet}
           onPedirCasamento={props.onPedirCasamento}
           onTerFilho={props.onTerFilho}
           onTerminar={props.onTerminarRelacionamento}

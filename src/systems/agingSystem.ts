@@ -15,6 +15,7 @@ import { verificarMortalidade, construirResumoMorte } from './deathSystem';
 import { calcularPatrimonioLiquido, processarAnoEconomia } from './economySystem';
 import { processarAnoEducacao } from './educationSystem';
 import { sortearEventoDoAno } from './eventSystem';
+import { EventHistory } from './events/eventHistory';
 import { processarEnvelhecimentoFamilia } from './familySystem';
 import { gerarTextoAnoTranquilo } from '../utils/narrativeGenerator';
 import { generateId } from '../utils/random';
@@ -50,7 +51,7 @@ export function executarPassagemDeAno(
   educacao: EducationState,
   carreira: CareerState,
   economia: EconomyState,
-  historicoEventosDisparados: string[],
+  historicoEventos: EventHistory,
   personalidade?: PersonalityState
 ): AgingResult {
   const novaIdade = personagem.idade + 1;
@@ -140,7 +141,7 @@ export function executarPassagemDeAno(
     edu,
     eco,
     fam,
-    historicoEventosDisparados,
+    historicoEventos,
     personalidade
   );
 

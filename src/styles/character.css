@@ -8,13 +8,12 @@
   position: relative;
 }
 
-/* Retrato sem foto: presença por composição, tipografia e textura.
-   Iniciais sobre um degradê derivado da própria pessoa — nenhum asset,
-   nenhuma dependência externa, nenhum rosto inventado. */
+/* Moldura do retrato. O avatar em si é desenhado em SVG (avatar.css);
+   aqui ficam o enquadramento, o degradê de fundo e a textura. */
 .identity__portrait {
   position: relative;
-  width: 84px;
-  height: 84px;
+  width: 96px;
+  height: 96px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -29,7 +28,7 @@
   border: 1px solid var(--rule);
 }
 
-/* Silhueta abstrata: um arco de luz atrás das iniciais dá volume sem figura. */
+/* Arco de luz atrás do avatar: dá volume e separa a figura do fundo. */
 .identity__portrait::before {
   content: '';
   position: absolute;
@@ -52,15 +51,13 @@
     transparent 0.5px
   );
   background-size: 3px 3px;
+  pointer-events: none;
 }
 
-.identity__initials {
+/* O SVG precisa ficar acima do degradê e da textura. */
+.identity__portrait .avatar-portrait {
   position: relative;
-  font-family: var(--font-display);
-  font-size: 1.75rem;
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.02em;
-  color: var(--text-secondary);
+  z-index: 1;
 }
 
 .identity__name {
@@ -154,10 +151,13 @@
   color: var(--text-faint);
 }
 
+/* Fase da vida, cidade, escolaridade, ocupação: informação essencial.
+   O B4-FIX cortava tudo isso com ellipsis ("Criança pequena — vive co..."),
+   deixando o sentido dependente de hover. Agora quebra em linha: a coluna
+   cresce em altura, que é barato, em vez de esconder texto. */
 .identity__fact-value {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* Condição de saúde é semântica, não decorativa. */
@@ -325,14 +325,14 @@
   min-width: 0;
 }
 
+/* Nome de uma pessoa nunca é conteúdo secundário — não pode ser cortado. */
 .relationship__name {
   display: block;
   font-size: var(--type-caption);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .relationship__relation {
@@ -342,12 +342,15 @@
   color: var(--text-faint);
 }
 
-/* Proximidade qualitativa em palavras — sem barra percentual dominante. */
+/* Proximidade qualitativa em palavras — sem barra percentual dominante.
+   Mantém-se em uma linha (são rótulos curtos e fixos), mas sem encolher
+   abaixo do próprio conteúdo. */
 .relationship__closeness {
   font-size: var(--type-caption);
   color: var(--text-secondary);
   text-align: right;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .relationship__closeness--proxima {
@@ -409,9 +412,23 @@
 
 /* ================================================================= +1 ANO
    A ação mais importante do jogo: posição previsível, peso visual claro,
-   nunca em menu. É o único elemento com preenchimento sólido de acento. */
+   nunca em menu. É o único elemento com preenchimento sólido de acento.
+
+   Abre a Linha da Vida e gruda abaixo do cabeçalho ao rolar. `sticky` mantém
+   o elemento em fluxo: ele reserva seu próprio espaço e nunca cobre um
+   registro da timeline — diferente de um botão flutuante. */
 .year-advance {
-  margin-top: var(--space-6);
+  position: sticky;
+  top: var(--header-height);
+  z-index: var(--z-sticky);
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) 0;
+  background: linear-gradient(
+    180deg,
+    var(--bg-deep) 0%,
+    var(--bg-deep) 68%,
+    transparent 100%
+  );
 }
 
 .year-advance__button {
@@ -454,6 +471,16 @@
   color: var(--text-muted);
   box-shadow: none;
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .year-advance__button {
+    transition: none;
+  }
+
+  .year-advance__button:hover:not(:disabled) {
+    transform: none;
+  }
 }
 
 /* Motivo do bloqueio em texto: não depende de cor nem de hover. */

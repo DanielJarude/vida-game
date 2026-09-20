@@ -7,6 +7,7 @@ import {
 } from '../data/brazilianData';
 import { getTratamentoParentesco } from '../utils/formatters';
 import { IDADE_MINIMA_PEDIR_CONSELHO, IDADE_MINIMA_PEDIR_DINHEIRO } from './availabilitySystem';
+import { ehPet } from './relationEntitySystem';
 import {
   avaliarCapacidadeInteracao,
   narrarInteracaoPorFase
@@ -227,6 +228,20 @@ export function interagirComFamiliar(
   // Esta checagem é a que realmente protege o estado. Esconder o botão é
   // apresentação; aqui é onde uma chamada direta (save editado, código,
   // teste) também falha, sem aplicar nenhum efeito parcial.
+  // Fronteira de entidade (B4-FIX.1): o fluxo humano não se aplica a um
+  // animal. Um pet tem interações próprias em `petSystem`; pedir conselho
+  // ou dinheiro a um cachorro é recusado pelo motor, não escondido pela UI.
+  if (ehPet(membro.tipo)) {
+    return {
+      membroAtualizado: membro,
+      personagemAtualizado: personagem,
+      custoDinheiro: 0,
+      dinheiroGanho: 0,
+      mensagem: `${membro.nome} é um animal: com ele(a) o vínculo é de outro tipo.`,
+      sucesso: false
+    };
+  }
+
   const capacidade = avaliarCapacidadeInteracao(interacao, personagem.idade);
   if (!capacidade.permitido) {
     return {

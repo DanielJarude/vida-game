@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  AvatarAppearance,
   Character,
   EducationState,
   CareerState,
@@ -10,6 +11,7 @@ import {
   Gender,
   LifeLogEntry,
   PersonalityState,
+  PetInteractionType,
   PostMortemSummary,
   SocialClass,
   VisibleStats
@@ -36,6 +38,12 @@ import {
   gerarFamiliaInicial,
   interagirComFamiliar
 } from '../systems/familySystem';
+import { interagirComPet } from '../systems/petSystem';
+import {
+  EventHistory,
+  idsDisparados,
+  registrarOcorrencia
+} from '../systems/events/eventHistory';
 import {
   criarEducacaoInicial,
   definirPosturaEscolar,
@@ -80,6 +88,7 @@ import {
   salvarJogo,
   VERSAO_SAVE
 } from '../systems/saveSystem';
+import { normalizarAvatar, sortearAvatar } from '../systems/avatarSystem';
 import { criarPersonalidadeInicial } from '../systems/personalitySystem';
 import { gerarHistoriaNascimento } from '../utils/narrativeGenerator';
 import { clamp, generateId, randomChoice, randomInt } from '../utils/random';
@@ -101,7 +110,9 @@ export function useGame() {
   const [economia, setEconomia] = useState<EconomyState>(criarEconomiaInicial('classe_media'));
   const [timeline, setTimeline] = useState<LifeLogEntry[]>([]);
   const [eventoAtivo, setEventoAtivo] = useState<GameEvent | null>(null);
-  const [historicoEventos, setHistoricoEventos] = useState<string[]>([]);
+  // Histórico estruturado (B4-FIX.1): IDs estáveis + nº de ocorrências +
+  // última idade. É o que sustenta cooldown e redução de peso por repetição.
+  const [historicoEventos, setHistoricoEventos] = useState<EventHistory>([]);
   // B2 — personalidade emergente: acumula padrões de escolhas; nunca exibida como números
   const [personalidade, setPersonalidade] = useState<PersonalityState>(criarPersonalidadeInicial());
   // Ações únicas por ano (atividades, apostas, interações, aumentos); zeradas a cada passagem de ano
@@ -187,7 +198,8 @@ export function useGame() {
         personalidade,
         timeline,
         eventoAtivo,
-        historicoEventosDisparados: historicoEventos,
+        historicoEventosDisparados: idsDisparados(historicoEventos),
+        historicoEventos,
         acoesRealizadasAno,
         emJogo: true,
         morto: false
@@ -212,6 +224,7 @@ export function useGame() {
     genero: Gender,
     cidade: string,
     estado: string,
+    avatar?: AvatarAppearance,
     classeSocialDefinida?: SocialClass
   ) => {
     const classes: SocialClass[] = [
@@ -235,6 +248,7 @@ export function useGame() {
       cidade,
       estado,
       classeSocial,
+      avatar: normalizarAvatar(avatar),
       stats: {
         felicidade: randomInt(70, 95),
         saude: randomInt(75, 95),
@@ -306,7 +320,14 @@ export function useGame() {
     const sobrenome = sortearSobrenome();
     const cidadeObj = sortearCidade();
 
-    criarVida(nome, sobrenome, genero, cidadeObj.cidade, cidadeObj.estado);
+    criarVida(
+      nome,
+      sobrenome,
+      genero,
+      cidadeObj.cidade,
+      cidadeObj.estado,
+      sortearAvatar()
+    );
   }, [criarVida]);
 
   // Carregar Jogo Salvo (normalizado/migrado pelo saveSystem)
@@ -321,7 +342,7 @@ export function useGame() {
       setPersonalidade(save.personalidade);
       setTimeline(save.timeline);
       setEventoAtivo(save.eventoAtivo);
-      setHistoricoEventos(save.historicoEventosDisparados || []);
+      setHistoricoEventos(save.historicoEventos ?? []);
       setAcoesRealizadasAno(save.acoesRealizadasAno || []);
       setIsDead(save.morto);
       setResumoMorte(save.resumoMorte || null);
@@ -390,7 +411,14 @@ export function useGame() {
 
     if (resultado.eventoDisparado) {
       setEventoAtivo(resultado.eventoDisparado);
-      setHistoricoEventos(prev => [...prev, resultado.eventoDisparado!.id]);
+      setHistoricoEventos(prev =>
+        registrarOcorrencia(
+          prev,
+          resultado.eventoDisparado!.id,
+          resultado.personagemAtualizado.idade,
+          resultado.personagemAtualizado.anoAtual
+        )
+      );
       sound.playEvent();
     }
   }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos, personalidade]);
@@ -513,6 +541,55 @@ export function useGame() {
     };
     registrarLogs([novoLog]);
     mostrarFeedback(res.mensagem, res.sucesso ? 'sucesso' : 'info');
+  }, [personagem, familia, economia.dinheiro, mostrarFeedback, verificarDisponibilidade, registrarAcaoAnual, registrarLogs]);
+
+  // Interagir com um pet.
+  //
+  // Caminho separado do humano porque a espécie é outra: validação,
+  // efeitos e narração vivem em `petSystem`. Aqui só se conecta o motor ao
+  // estado — nenhuma regra de domínio mora neste hook.
+  const acaoPet = useCallback((
+    membroId: string,
+    tipoAcao: PetInteractionType
+  ) => {
+    if (!personagem) return;
+    const membro = familia.find(f => f.id === membroId);
+    if (!membro) return;
+
+    if (!verificarDisponibilidade('interagir_pet', { membroId, tipoInteracaoPet: tipoAcao })) {
+      return;
+    }
+
+    const res = interagirComPet(membro, personagem, tipoAcao);
+
+    if (!res.sucesso) {
+      mostrarFeedback(res.mensagem, 'info');
+      return;
+    }
+
+    if (res.custoDinheiro > 0 && economia.dinheiro < res.custoDinheiro) {
+      mostrarFeedback('Você não tem dinheiro para os cuidados agora.', 'erro');
+      return;
+    }
+
+    sound.playClick();
+
+    setPersonagem(res.personagemAtualizado);
+    setFamilia(prev => prev.map(f => (f.id === membroId ? res.membroAtualizado : f)));
+    setEconomia(prev => ({ ...prev, dinheiro: prev.dinheiro - res.custoDinheiro }));
+    registrarAcaoAnual(`pet:${membroId}:${tipoAcao}`);
+
+    registrarLogs([
+      {
+        id: generateId('log'),
+        idade: personagem.idade,
+        ano: personagem.anoAtual,
+        categoria: 'familia',
+        texto: res.mensagem,
+        tipo: 'positivo'
+      }
+    ]);
+    mostrarFeedback(res.mensagem, 'sucesso');
   }, [personagem, familia, economia.dinheiro, mostrarFeedback, verificarDisponibilidade, registrarAcaoAnual, registrarLogs]);
 
   // Definir a postura escolar do ano (compromisso; efeitos na virada do ano)
@@ -915,6 +992,7 @@ export function useGame() {
     envelhecerAno,
     responderEvento,
     acaoFamilia,
+    acaoPet,
     acaoEscolaExec,
     matricularCursoExec,
     candidatarVagaExec,

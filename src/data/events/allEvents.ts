@@ -1,5 +1,7 @@
 import { GameEvent } from '../../types';
+import { EARLY_CHILDHOOD_EVENTS } from './earlyChildhoodEvents';
 import { CHILDHOOD_EVENTS } from './childhoodEvents';
+import { MIDDLE_CHILDHOOD_EVENTS } from './middleChildhoodEvents';
 import { ADOLESCENCE_EVENTS } from './adolescenceEvents';
 import { YOUNG_ADULT_EVENTS } from './youngAdultEvents';
 import { ADULT_EVENTS } from './adultEvents';
@@ -12,7 +14,9 @@ import { MORE_EVENTS } from './moreEvents';
 import { EXTRA_EVENTS } from './extraEvents';
 
 export const MASTER_EVENTS_LIST: GameEvent[] = [
+  ...EARLY_CHILDHOOD_EVENTS,
   ...CHILDHOOD_EVENTS,
+  ...MIDDLE_CHILDHOOD_EVENTS,
   ...ADOLESCENCE_EVENTS,
   ...YOUNG_ADULT_EVENTS,
   ...ADULT_EVENTS,

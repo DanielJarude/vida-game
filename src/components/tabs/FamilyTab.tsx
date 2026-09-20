@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Character, FamilyMember, Gender } from '../../types';
-import { FamilyInteractionType } from '../../types';
+import { FamilyInteractionType, PetInteractionType } from '../../types';
 import { FamilyModal } from '../modals/FamilyModal';
+import { PetModal } from '../modals/PetModal';
+import { ehPet } from '../../systems/relationEntitySystem';
 import {
   ContextoAcao,
   getActionAvailability,
@@ -18,6 +20,7 @@ interface FamilyTabProps {
     tipoAcao: FamilyInteractionType,
     presenteTipo?: 'barato' | 'medio' | 'luxo'
   ) => void;
+  onInteragirPet: (membroId: string, tipoAcao: PetInteractionType) => void;
   onPedirCasamento: (parceiroId: string) => void;
   onTerFilho: (parceiroId?: string, nome?: string, genero?: Gender) => void;
   onTerminar: (parceiroId: string) => void;
@@ -61,6 +64,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   familia,
   ctx,
   onInteragir,
+  onInteragirPet,
   onPedirCasamento,
   onTerFilho,
   onTerminar,
@@ -78,7 +82,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   const paisEirmaos = vivos.filter(f =>
     ['pai', 'mae', 'irmao', 'irma'].includes(f.tipo)
   );
-  const pets = vivos.filter(f => f.tipo === 'pet');
+  const pets = vivos.filter(f => ehPet(f.tipo));
 
   const abrirModal = (membro: FamilyMember) => setSelectedMember(membro);
 
@@ -87,6 +91,14 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     return getActionAvailability(ctx, 'interagir_familia', {
       membroId: selectedMember.id,
       tipoInteracao: tipo
+    });
+  };
+
+  const verificarInteracaoPet = (tipo: PetInteractionType) => {
+    if (!selectedMember) return { kind: 'oculto', reasonCode: 'sem_membro' } as const;
+    return getActionAvailability(ctx, 'interagir_pet', {
+      membroId: selectedMember.id,
+      tipoInteracaoPet: tipo
     });
   };
 
@@ -206,7 +218,18 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         </section>
       )}
 
-      {selectedMember && (
+      {/* A espécie decide o fluxo inteiro: um pet nunca abre o modal humano. */}
+      {selectedMember && ehPet(selectedMember.tipo) && (
+        <PetModal
+          membro={selectedMember}
+          onClose={() => setSelectedMember(null)}
+          onInteragir={tipo => onInteragirPet(selectedMember.id, tipo)}
+          idadeJogador={personagem.idade}
+          verificarInteracao={verificarInteracaoPet}
+        />
+      )}
+
+      {selectedMember && !ehPet(selectedMember.tipo) && (
         <FamilyModal
           membro={selectedMember}
           onClose={() => setSelectedMember(null)}

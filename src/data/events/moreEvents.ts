@@ -306,14 +306,25 @@ export const MORE_EVENTS: GameEvent[] = [
       }
     ]
   },
+  /**
+   * Tarde na Casa dos Avós — versão adolescente/adulta.
+   *
+   * B4-FIX.1: este evento ia dos 5 aos 45 anos com peso 80 e uma opção de
+   * "ficar no celular" — que não descreve uma criança de 5 anos, e num pool
+   * infantil de 4 eventos lhe dava 25,8% de chance por ano. A faixa foi
+   * cortada em 12, o peso reduzido e a infância ganhou versão própria
+   * (`fam_visita_avo_infancia`), com as coisas que uma criança pequena de
+   * fato faz na casa dos avós.
+   */
   {
     id: 'fam_visita_avo',
     titulo: 'Tarde na Casa dos Avós',
     descricao: 'Um cheiro gostoso de bolo de cenoura com cobertura de chocolate e café passado na hora te recebe na porta da casa dos avós.',
-    idadeMinima: 5,
+    idadeMinima: 12,
     idadeMaxima: 45,
     categoria: 'familia',
-    peso: 80,
+    peso: 50,
+    repeticao: { modo: 'cooldown', anosCooldown: 7 },
     opcoes: [
       {
         id: 'opt_ouvir_historias',
@@ -327,6 +338,17 @@ export const MORE_EVENTS: GameEvent[] = [
         }
       },
       {
+        id: 'opt_perguntar_passado',
+        texto: 'Perguntar como eles eram na sua idade',
+        descricaoResultado: 'Você descobriu que seu avô fugiu de casa uma vez e que sua avó trabalhava desde os catorze. Ninguém nunca tinha te contado isso.',
+        consequencias: {
+          stats: { felicidade: 18, inteligencia: 6 },
+          relacionamentoDelta: { delta: 20 },
+          hiddenStats: { empatia: 15, estresse: -15 },
+          impactosComportamentais: { empatia: 2, familia: 1 }
+        }
+      },
+      {
         id: 'opt_ficar_no_celular',
         texto: 'Ficar no celular enquanto eles conversam',
         descricaoResultado: 'Você respondeu mensagens, mas perdeu a chance de estar verdadeiramente presente.',
@@ -334,6 +356,62 @@ export const MORE_EVENTS: GameEvent[] = [
           stats: { felicidade: 2 },
           relacionamentoDelta: { delta: -5 },
           impactosComportamentais: { familia: -1 }
+        }
+      }
+    ]
+  },
+  {
+    id: 'fam_visita_avo_infancia',
+    titulo: 'Tarde na Casa dos Avós',
+    descricao: 'A casa cheira a bolo. Os adultos sentam para conversar de coisas que você não entende e a tarde inteira é sua.',
+    idadeMinima: 5,
+    idadeMaxima: 11,
+    categoria: 'familia',
+    peso: 55,
+    repeticao: { modo: 'cooldown', anosCooldown: 5 },
+    opcoes: [
+      {
+        id: 'opt_ouvir_historia_crianca',
+        texto: 'Grudar no colo e pedir a mesma história de sempre',
+        descricaoResultado: 'Você pediu a história que já sabia de cor e corrigiu cada parte que contaram diferente. Contaram de novo, do jeito certo.',
+        consequencias: {
+          stats: { felicidade: 20, saude: 3 },
+          relacionamentoDelta: { delta: 20 },
+          hiddenStats: { empatia: 12, estresse: -18 },
+          impactosComportamentais: { familia: 2, empatia: 1 }
+        }
+      },
+      {
+        id: 'opt_explorar_quintal',
+        texto: 'Sumir para o quintal e voltar só na hora do bolo',
+        descricaoResultado: 'Você passou a tarde no quintal, investigando cada canto. Voltou com o joelho ralado, terra na roupa e dois achados que precisou mostrar para todo mundo.',
+        consequencias: {
+          stats: { felicidade: 18, saude: -2 },
+          relacionamentoDelta: { delta: 8 },
+          hiddenStats: { condicionamentoFisico: 5, estresse: -12 },
+          impactosComportamentais: { independencia: 2, coragem: 1 }
+        }
+      },
+      {
+        id: 'opt_ajudar_cozinha',
+        texto: 'Ficar na cozinha ajudando a mexer a massa',
+        descricaoResultado: 'Deixaram você mexer a massa e lamber a colher. Você se achou parte essencial do bolo e, naquela tarde, era mesmo.',
+        consequencias: {
+          stats: { felicidade: 22, inteligencia: 3 },
+          relacionamentoDelta: { delta: 18 },
+          hiddenStats: { disciplina: 6, empatia: 8, estresse: -15 },
+          impactosComportamentais: { familia: 2, disciplina: 1 }
+        }
+      },
+      {
+        id: 'opt_entediar',
+        texto: 'Rodar pela sala repetindo que está entediado(a)',
+        descricaoResultado: 'Você deu voltas na sala anunciando o tédio até alguém perder a paciência e te mandar procurar o que fazer. Você achou, mas levou a tarde toda.',
+        consequencias: {
+          stats: { felicidade: 4 },
+          relacionamentoDelta: { delta: -4 },
+          hiddenStats: { estresse: 5 },
+          impactosComportamentais: { impulsividade: 1, familia: -1 }
         }
       }
     ]
