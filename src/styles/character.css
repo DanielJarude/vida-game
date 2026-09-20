@@ -416,6 +416,31 @@
   margin-top: var(--space-6);
 }
 
+/* Dock persistente: a ação mais importante do jogo não pode depender de
+   rolar até o fim da Linha da Vida — nem no desktop, nem no celular.
+   `position: sticky` (não `fixed`) porque o botão só precisa "grudar" ao
+   fundo da própria coluna de conteúdo (`.shell-main`), sem invadir a régua
+   lateral nem virar uma barra solta sobre toda a viewport. A margem
+   negativa cancela o padding do `.shell-main` para o fundo ficar rente à
+   borda; o padding interno devolve o respiro visual.
+   Ativo em TODOS os breakpoints — a versão anterior só funcionava em
+   telas <= 900px, deixando o desktop sem solução (bug real do playtest). */
+.year-advance--docked {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  margin: 0 calc(-1 * var(--space-6)) calc(-1 * var(--space-9));
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(7, 12, 15, 0.88) 32%,
+    var(--bg-deep) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 .year-advance__button {
   display: inline-flex;
   align-items: center;

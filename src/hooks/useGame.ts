@@ -25,6 +25,13 @@ import {
   sortearNome,
   sortearSobrenome
 } from '../data/brazilianData';
+import {
+  AparenciaAvatar,
+  CORES_CABELO,
+  CORES_OLHOS,
+  ESTILOS_CABELO,
+  TONS_PELE
+} from '../data/avatar/avatarData';
 import { CURSOS_DISPONIVEIS } from '../data/coursesData';
 import { BICOS_DISPONIVEIS, TODAS_PROFISSOES } from '../data/careersData';
 import { IMOVEIS_LOJA, VEICULOS_LOJA } from '../data/assetsData';
@@ -218,7 +225,8 @@ export function useGame() {
     genero: Gender,
     cidade: string,
     estado: string,
-    classeSocialDefinida?: SocialClass
+    classeSocialDefinida?: SocialClass,
+    aparenciaEscolhida?: AparenciaAvatar
   ) => {
     const classes: SocialClass[] = [
       'vulneravel',
@@ -228,6 +236,16 @@ export function useGame() {
       'classe_alta'
     ];
     const classeSocial = classeSocialDefinida || randomChoice(classes);
+    // Personalização visual (B4-FIX2): quando quem chama não escolheu
+    // (ex.: "Gerar vida aleatória"), sorteia um conjunto coerente em vez
+    // de cair silenciosamente no padrão neutro sempre igual.
+    const aparencia: AparenciaAvatar =
+      aparenciaEscolhida ?? {
+        tomPele: randomChoice(TONS_PELE.map(t => t.id)),
+        estiloCabelo: randomChoice(ESTILOS_CABELO.map(e => e.id)),
+        corCabelo: randomChoice(CORES_CABELO.map(c => c.id)),
+        corOlhos: randomChoice(CORES_OLHOS.map(c => c.id))
+      };
 
     // Atributos Iniciais (Primeira Infância)
     const novoPersonagem: Character = {
@@ -258,7 +276,8 @@ export function useGame() {
       },
       doencas: [],
       flags: {},
-      marcos: []
+      marcos: [],
+      aparencia
     };
 
     const novaFamilia = gerarFamiliaInicial(novoPersonagem.sobrenome, classeSocial);

@@ -138,6 +138,67 @@
   font-weight: var(--weight-semibold);
 }
 
+/* ------------------------------------------------------- Editor de avatar
+   Pré-visualização ao vivo + quatro escolhas simples (tom de pele, cabelo,
+   cor do cabelo, cor dos olhos). Nada de editor 3D nem grade de assets:
+   um punhado de swatches de cor e chips de estilo, coerente com o resto
+   da criação de personagem. */
+.avatar-editor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.avatar-editor__preview {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    150deg,
+    var(--bg-elevated) 0%,
+    var(--bg-raised) 55%,
+    var(--bg-deep) 100%
+  );
+  border: 1px solid var(--rule);
+}
+
+.avatar-editor__controls {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Amostra de cor: um círculo preenchido em vez de texto — a cor É a opção. */
+.choice-group--swatches {
+  gap: var(--space-3);
+}
+
+.swatch-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--rule);
+  transition: border-color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.swatch-chip:hover {
+  transform: scale(1.08);
+}
+
+.swatch-chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+
 /* --------------------------------------------------------------- Obituário */
 .obituary__name {
   font-family: var(--font-display);

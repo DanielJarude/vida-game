@@ -1,5 +1,7 @@
 // Tipos centrais do jogo VIDA
 
+import type { AparenciaAvatar } from '../data/avatar/avatarData';
+
 export type Gender = 'masculino' | 'feminino' | 'nao-binario';
 
 export type LifeStage =
@@ -369,6 +371,12 @@ export interface Character {
     titulo: string;
     descricao: string;
   }[];
+  // B4-FIX2 — personalização visual escolhida na criação da vida (tom de
+  // pele, cabelo, olhos). Puramente cosmética: nunca lida por nenhum
+  // sistema de jogo (economia, educação, eventos, personalidade). Opcional
+  // para que saves anteriores a este PR continuem válidos — a ausência cai
+  // no símbolo automático por fase de vida (fallback do B4-FIX1).
+  aparencia?: AparenciaAvatar;
 }
 
 export interface GameState {

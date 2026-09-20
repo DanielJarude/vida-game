@@ -6,6 +6,15 @@ import {
   listarCidadesPorEstado
 } from '../../data/locations';
 import { sortearNome, sortearSobrenome } from '../../data/brazilianData';
+import {
+  AparenciaAvatar,
+  APARENCIA_PADRAO,
+  CORES_CABELO,
+  CORES_OLHOS,
+  ESTILOS_CABELO,
+  TONS_PELE
+} from '../../data/avatar/avatarData';
+import { AvatarEditor } from '../character/AvatarEditor';
 import { ArrowLeft, Shuffle } from 'lucide-react';
 
 interface CharacterCreationScreenProps {
@@ -14,9 +23,23 @@ interface CharacterCreationScreenProps {
     sobrenome: string,
     genero: Gender,
     cidade: string,
-    estado: string
+    estado: string,
+    classeSocial?: import('../../types').SocialClass,
+    aparencia?: AparenciaAvatar
   ) => void;
   onVoltar: () => void;
+}
+
+function sortearAparencia(): AparenciaAvatar {
+  const escolher = <T,>(lista: T[]): T =>
+    lista[Math.floor(valorAleatorio() * lista.length)];
+
+  return {
+    tomPele: escolher(TONS_PELE).id,
+    estiloCabelo: escolher(ESTILOS_CABELO).id,
+    corCabelo: escolher(CORES_CABELO).id,
+    corOlhos: escolher(CORES_OLHOS).id
+  };
 }
 
 const ROTULO_GENERO: Record<Gender, string> = {
@@ -50,6 +73,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
   const [cidade, setCidade] = useState<string>(
     () => listarCidadesPorEstado(todosEstados[0].sigla)[0].cidade
   );
+  const [aparencia, setAparencia] = useState<AparenciaAvatar>(APARENCIA_PADRAO);
 
   const cidadesDoEstado = useMemo(
     () => listarCidadesPorEstado(estado),
@@ -72,6 +96,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
 
     setEstado(estadoSorteado);
     setCidade(cidades[Math.floor(valorAleatorio() * cidades.length)].cidade);
+    setAparencia(sortearAparencia());
   };
 
   const handleTrocaGenero = (novoGen: Gender) => {
@@ -83,7 +108,7 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
     e.preventDefault();
     if (!nome.trim() || !sobrenome.trim()) return;
     // Exatamente o que está na tela — sem nenhuma randomização posterior.
-    onCriarVida(nome.trim(), sobrenome.trim(), genero, cidade, estado);
+    onCriarVida(nome.trim(), sobrenome.trim(), genero, cidade, estado, undefined, aparencia);
   };
 
   return (
@@ -152,6 +177,16 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
                 required
               />
             </div>
+          </div>
+
+          <div className="field">
+            <span className="field__label" id="label-aparencia">
+              Como você se parece
+            </span>
+            <AvatarEditor aparencia={aparencia} onMudar={setAparencia} />
+            <p className="field__note">
+              Só aparência — não muda inteligência, saúde nem oportunidades.
+            </p>
           </div>
 
           <div className="field">

@@ -2,6 +2,7 @@ import { EventOccurrence, GameState, GlobalStats, PastLifeRecord, PostMortemSumm
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
 import { criarPersonalidadeInicial, normalizarPersonalidade } from './personalitySystem';
 import { clamp } from '../utils/random';
+import { normalizarAparencia } from '../data/avatar/avatarData';
 
 const SAVE_KEY = 'VIDA_GAME_SAVE_V1'; // chave mantida: a versão vive dentro do payload
 const STATS_KEY = 'VIDA_GLOBAL_STATS_V1';
@@ -102,7 +103,12 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     },
     doencas: lista(personagemBruto.doencas).filter(d => typeof d === 'string') as string[],
     flags: flagsValidas as Record<string, boolean | number | string>,
-    marcos: lista(personagemBruto.marcos).filter(comoObjeto) as NonNullable<GameState['personagem']>['marcos']
+    marcos: lista(personagemBruto.marcos).filter(comoObjeto) as NonNullable<GameState['personagem']>['marcos'],
+    // B4-FIX2 — saves de antes deste PR não têm `aparencia`: normalizada
+    // para um valor sempre válido (fallback do B4-FIX1 continua cobrindo
+    // a ausência na apresentação, mas o dado em si nunca fica indefinido
+    // aqui — evita checagens espalhadas pelo resto do código).
+    aparencia: normalizarAparencia(personagemBruto.aparencia)
   } as GameState['personagem'];
 
   // --- Família ---

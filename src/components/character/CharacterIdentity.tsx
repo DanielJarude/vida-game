@@ -79,6 +79,7 @@ export const CharacterIdentity: React.FC<CharacterIdentityProps> = ({
           nome={`${personagem.nome} ${personagem.sobrenome}`}
           idade={personagem.idade}
           tamanho={84}
+          aparencia={personagem.aparencia}
         />
       </div>
 
