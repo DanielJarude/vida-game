@@ -99,22 +99,36 @@ export const RANDOM_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 6 — tinha uma única opção ("torcer") sem decisão real:
+    // o resultado (ganhar) já estava garantido de qualquer jeito. A
+    // escolha genuína está no que fazer com o prêmio, não em "torcer".
     id: 'rnd_sorteio_shopping',
     titulo: 'Cupom de Sorteio do Shopping',
-    descricao: 'Após fazer compras de fim de ano, você deposita seus cupons na urna do shopping da cidade.',
+    descricao: 'Após fazer compras de fim de ano, você deposita seus cupons na urna do shopping da cidade e, para sua surpresa, seu nome é sorteado para um vale-compras de R$ 3.000!',
     idadeMinima: 18,
     idadeMaxima: 90,
     categoria: 'dinheiro',
     peso: 40,
     opcoes: [
       {
-        id: 'opt_torcer_sorte',
-        texto: 'Cruzar os dedos e esperar o resultado da apuração',
-        descricaoResultado: 'Inacreditável! Seu nome foi sorteado para um vale-compras de R$ 3.000!',
+        id: 'opt_gastar_vale_logo',
+        texto: 'Usar o vale-compras inteiro em uma única tarde de compras',
+        descricaoResultado: 'Você aproveitou tudo de uma vez e voltou para casa com sacolas novas e um sorriso enorme.',
         consequencias: {
-          stats: { felicidade: 25 },
+          stats: { felicidade: 25, aparencia: 5 },
           dinheiro: 3000,
           hiddenStats: { reputacao: 10 }
+        }
+      },
+      {
+        id: 'opt_guardar_vale',
+        texto: 'Trocar o vale por dinheiro e guardar para uma necessidade futura',
+        descricaoResultado: 'Você preferiu não gastar por impulso: o valor entrou direto na sua reserva.',
+        consequencias: {
+          stats: { felicidade: 12 },
+          dinheiro: 3000,
+          hiddenStats: { disciplina: 12, ambicao: 8 },
+          impactosComportamentais: { disciplina: 1 }
         }
       }
     ]

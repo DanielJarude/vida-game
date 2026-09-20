@@ -37,7 +37,7 @@ export function registrarOcorrencia(
 ): HistoricoEventos {
   return {
     disparados: [...historico.disparados, evento.id],
-    ocorrencias: [...historico.ocorrencias, { eventId: evento.id, idade, ano }]
+    ocorrencias: [...historico.ocorrencias, { eventId: evento.id, idade, ano, categoria: evento.categoria }]
   };
 }
 

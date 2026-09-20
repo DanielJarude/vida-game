@@ -2,31 +2,64 @@ import { GameEvent } from '../../types';
 
 export const HEALTH_EVENTS: GameEvent[] = [
   {
+    // B4-FIX3 item 7-9 — bug real do playtest: aos 8 anos apareceu a
+    // opção "tentar trabalhar mesmo passando mal com febre", incompatível
+    // com a idade, e a narrativa prescrevia tratamento médico específico
+    // ("soro na veia") como se fosse regra universal. Corrigido na causa:
+    // as opções agora variam por fase (infantil vs. adulta), com
+    // `requisito.idadeMinima` revalidado pelo motor, e a linguagem passou
+    // a descrever ATITUDES (avisar, procurar atendimento, descansar), não
+    // procedimentos médicos.
     id: 'sau_dengue_sazonal',
     titulo: 'Surto de Dengue no Bairro',
     descricao: 'Após semanas de chuva e calor no verão, você acorda com febre alta, dores fortes no corpo e manchas avermelhadas.',
-    idadeMinima: 8,
+    idadeMinima: 6,
     idadeMaxima: 90,
     categoria: 'saude',
     peso: 70,
     opcoes: [
       {
-        id: 'opt_upa_hidratacao',
-        texto: 'Ir direto ao posto/UPA, tomar soro na veia e repousar totalmente',
-        descricaoResultado: 'Com muito repouso, água de coco e cuidados médicos, você se recuperou completamente em duas semanas!',
+        id: 'opt_avisar_responsavel',
+        texto: 'Avisar imediatamente um adulto responsável e aceitar ficar de repouso',
+        descricaoResultado: 'Você avisou logo que passou mal. Levaram você para ser atendido e, com repouso e cuidado, você se recuperou.',
         consequencias: {
           stats: { saude: -10, felicidade: -5 },
           hiddenStats: { disciplina: 10 }
-        }
+        },
+        requisito: { idadeMaxima: 12 }
       },
       {
+        id: 'opt_esconder_mal_estar',
+        texto: 'Tentar esconder que está passando mal para não perder a brincadeira',
+        descricaoResultado: 'Você escondeu por um tempo, mas a febre piorou e acabou precisando de mais dias de repouso do que se tivesse avisado logo.',
+        consequencias: {
+          stats: { saude: -20, felicidade: -10 },
+          hiddenStats: { estresse: 10 }
+        },
+        requisito: { idadeMaxima: 12 }
+      },
+      {
+        id: 'opt_procurar_atendimento',
+        texto: 'Procurar atendimento médico e seguir a orientação recebida',
+        descricaoResultado: 'Com atendimento e repouso, você se recuperou completamente em duas semanas.',
+        consequencias: {
+          stats: { saude: -10, felicidade: -5 },
+          hiddenStats: { disciplina: 10 }
+        },
+        requisito: { idadeMinima: 13 }
+      },
+      {
+        // Continuar trabalhando só é uma opção coerente para quem já pode
+        // ter emprego (18+, mesma política do resto do jogo) — nunca para
+        // um adolescente, e muito menos para uma criança.
         id: 'opt_teimosia_trabalhar',
-        texto: 'Tentar trabalhar mesmo passando mal com febre',
+        texto: 'Ignorar os sintomas e continuar trabalhando mesmo com febre',
         descricaoResultado: 'Seu quadro se agravou e você precisou de vários dias de atestado médico.',
         consequencias: {
           stats: { saude: -25, felicidade: -15 },
           hiddenStats: { estresse: 20 }
-        }
+        },
+        requisito: { idadeMinima: 18 }
       }
     ]
   },

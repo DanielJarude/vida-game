@@ -283,6 +283,13 @@ export interface EventOption {
     flagNecessaria?: string;
     // B2 — exigência de padrão de comportamento acumulado (ex.: histórico de disciplina)
     condicaoComportamental?: CondicaoComportamental;
+    // B4-FIX3 item 7 — o EVENTO pode ser elegível numa idade, mas uma opção
+    // específica pode continuar incompatível (ex.: "tentar trabalhar" numa
+    // faixa etária que já vai até a vida adulta). Sem isso, cada opção
+    // herdava cegamente a janela inteira do evento. Ausente = sem restrição
+    // adicional além da janela do evento.
+    idadeMinima?: number;
+    idadeMaxima?: number;
   };
 }
 
@@ -318,6 +325,13 @@ export interface EventOccurrence {
   eventId: string;
   idade: number;
   ano: number;
+  // B4-FIX3 item 4/16 — categoria do evento no momento em que ocorreu.
+  // Permite ao sorteio (events/contextWeighting) enxergar se o histórico
+  // recente está dominado por uma única categoria (ex.: só família) sem
+  // precisar procurar o evento inteiro de volta em MASTER_EVENTS_LIST.
+  // Opcional: ocorrências de saves anteriores a este campo simplesmente
+  // não participam da ponderação por contexto (tratadas como neutras).
+  categoria?: GameEvent['categoria'];
 }
 
 export interface GameEvent {
@@ -326,7 +340,26 @@ export interface GameEvent {
   descricao: string;
   idadeMinima: number;
   idadeMaxima: number;
-  categoria: 'infancia' | 'escola' | 'adolescencia' | 'familia' | 'amizade' | 'romance' | 'trabalho' | 'dinheiro' | 'saude' | 'cotidiano';
+  // B4-FIX3 item 2/3 — quatro contextos novos para tirar a vida do
+  // personagem de dentro de casa: hobby (interesse pessoal, sem ser
+  // esporte nem escola), esporte (competição/atividade física),
+  // comunidade (vizinhança, bairro, eventos coletivos fora da escola/
+  // família) e tecnologia (internet/redes sociais, apropriado à idade).
+  categoria:
+    | 'infancia'
+    | 'escola'
+    | 'adolescencia'
+    | 'familia'
+    | 'amizade'
+    | 'romance'
+    | 'trabalho'
+    | 'dinheiro'
+    | 'saude'
+    | 'cotidiano'
+    | 'hobby'
+    | 'esporte'
+    | 'comunidade'
+    | 'tecnologia';
   peso: number; // chance relativa
   unico?: boolean; // apenas uma vez na vida (equivalente a repeticao: { tipo: 'unica' })
   /** Política explícita de repetição (B4-FIX2). Ausente = infere de `unico`, senão 'recorrente'. */

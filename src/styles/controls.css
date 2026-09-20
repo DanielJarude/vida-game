@@ -67,11 +67,22 @@
   border-bottom: 0;
 }
 
+/* B4-FIX3 item 21 — bug real do playtest: "Ensino Fundamental2040" sem
+   espaço. Causa: título e detalhe eram `<span>` inline sem `display`
+   próprio; quando o componente usa `<span className="action-row__body">`
+   (em vez de `<div>`), os dois textos ficam lado a lado sem quebra nem
+   espaço. Corrigido na causa — não com um `" "` na string — tornando
+   `.action-row__body` sempre um container de coluna com `gap`,
+   independentemente da tag HTML usada (`<div>` ou `<span>`). */
 .action-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
 .action-row__title {
+  display: block;
   font-size: var(--type-body);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
@@ -79,7 +90,7 @@
 }
 
 .action-row__detail {
-  margin-top: 2px;
+  display: block;
   font-size: var(--type-caption);
   color: var(--text-secondary);
   line-height: var(--leading-snug);

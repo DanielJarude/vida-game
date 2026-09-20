@@ -7,7 +7,11 @@ import {
   HeartPulse,
   Users,
   Sparkles,
-  Circle
+  Circle,
+  Palette,
+  Trophy,
+  Landmark,
+  Smartphone
 } from 'lucide-react';
 import type {
   Character,
@@ -17,6 +21,11 @@ import type {
 } from '../../types';
 import { avaliarRequisitoOpcao } from '../../systems/eventSystem';
 import { descreverEfeitosPublicos } from '../../presentation/outcomePresentation';
+import {
+  iconeCategoriaEvento,
+  rotuloCategoriaEvento,
+  type NomeIconeCategoria
+} from '../../presentation/eventCategoryPresentation';
 import { useModalBehavior } from '../common/useModalBehavior';
 import { EventChoice } from './EventChoice';
 import { EventResult } from './EventResult';
@@ -36,30 +45,21 @@ interface EventExperienceProps {
   onContinuar: () => void;
 }
 
-const ICONES_CATEGORIA: Record<GameEvent['categoria'], React.ReactNode> = {
-  infancia: <Sparkles size={14} />,
-  escola: <BookOpen size={14} />,
-  adolescencia: <Sparkles size={14} />,
-  familia: <Users size={14} />,
-  amizade: <Users size={14} />,
-  romance: <Heart size={14} />,
-  trabalho: <Briefcase size={14} />,
-  dinheiro: <Wallet size={14} />,
-  saude: <HeartPulse size={14} />,
-  cotidiano: <Circle size={14} />
-};
-
-const ROTULOS_CATEGORIA: Record<GameEvent['categoria'], string> = {
-  infancia: 'Infância',
-  escola: 'Escola',
-  adolescencia: 'Adolescência',
-  familia: 'Família',
-  amizade: 'Amizade',
-  romance: 'Relacionamento',
-  trabalho: 'Trabalho',
-  dinheiro: 'Dinheiro',
-  saude: 'Saúde',
-  cotidiano: 'Cotidiano'
+// B4-FIX3 — rótulo e nome do ícone vêm de `eventCategoryPresentation`
+// (dado puro, reutilizável); aqui só resolvemos o componente React do ícone.
+const COMPONENTES_ICONE: Record<NomeIconeCategoria, React.ReactNode> = {
+  sparkles: <Sparkles size={14} />,
+  'book-open': <BookOpen size={14} />,
+  users: <Users size={14} />,
+  heart: <Heart size={14} />,
+  briefcase: <Briefcase size={14} />,
+  wallet: <Wallet size={14} />,
+  'heart-pulse': <HeartPulse size={14} />,
+  circle: <Circle size={14} />,
+  palette: <Palette size={14} />,
+  trophy: <Trophy size={14} />,
+  landmark: <Landmark size={14} />,
+  smartphone: <Smartphone size={14} />
 };
 
 /**
@@ -126,9 +126,9 @@ export const EventExperience: React.FC<EventExperienceProps> = ({
         tabIndex={-1}
       >
         <p className="event-scene__context">
-          <span aria-hidden="true">{ICONES_CATEGORIA[evento.categoria]}</span>
+          <span aria-hidden="true">{COMPONENTES_ICONE[iconeCategoriaEvento(evento.categoria)]}</span>
           <span className="event-scene__category">
-            {ROTULOS_CATEGORIA[evento.categoria]}
+            {rotuloCategoriaEvento(evento.categoria)}
           </span>
         </p>
 

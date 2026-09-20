@@ -160,6 +160,8 @@ export const MORE_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 6 — só existia uma opção (aprovação garantida). Agora
+    // há uma escolha real de preparo, com risco genuíno de reprovação.
     id: 'car_exame_ordem_conselho',
     titulo: 'Exame de Registro Profissional',
     descricao: 'Chegou o momento de prestar o exame oficial do Conselho Profissional (OAB, CREA, CRM, CFC, COREN) para exercer a profissão.',
@@ -171,12 +173,21 @@ export const MORE_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_prestar_exame_focado',
-        texto: 'Fazer o exame com concentração máxima',
+        texto: 'Estudar intensamente nos meses antes da prova',
         descricaoResultado: 'APROVADO(A)! Seu registro profissional oficial foi emitido com honras!',
         consequencias: {
           stats: { felicidade: 30, inteligencia: 10 },
           hiddenStats: { reputacao: 25, ambicao: 20, disciplina: 15 },
           adicionarFlag: 'registro_profissional_aprovado'
+        }
+      },
+      {
+        id: 'opt_confiar_so_experiencia',
+        texto: 'Confiar só na experiência prática e não revisar o conteúdo teórico',
+        descricaoResultado: 'Você foi reprovado por pouco e precisou remarcar o exame para o próximo ano.',
+        consequencias: {
+          stats: { felicidade: -12 },
+          hiddenStats: { estresse: 15 }
         }
       }
     ]

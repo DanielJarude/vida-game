@@ -423,7 +423,12 @@ export function useGame() {
       setHistoricoEventos(prev => [...prev, resultado.eventoDisparado!.id]);
       setHistoricoOcorrencias(prev => [
         ...prev,
-        { eventId: resultado.eventoDisparado!.id, idade: idadeOcorrencia, ano: anoOcorrencia }
+        {
+          eventId: resultado.eventoDisparado!.id,
+          idade: idadeOcorrencia,
+          ano: anoOcorrencia,
+          categoria: resultado.eventoDisparado!.categoria
+        }
       ]);
       sound.playEvent();
     }

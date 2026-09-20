@@ -9,6 +9,7 @@
 
 import type { GameEvent } from '../../types';
 import { rollChance, valorAleatorio } from '../../utils/random';
+import type { EventoPonderado } from './contextWeighting';
 
 /** Chance de o ano ter algum evento interativo (alguns anos são mais calmos). */
 export const CHANCE_EVENTO_NO_ANO = 75;
@@ -26,6 +27,28 @@ export function sortearPonderado(eventosElegiveis: GameEvent[]): GameEvent | nul
   }
 
   return eventosElegiveis[0];
+}
+
+/**
+ * B4-FIX3 — sorteia por peso EFETIVO (já considerando contexto/anti-
+ * dominação, ver `events/contextWeighting`). Mesma mecânica de rolagem de
+ * `sortearPonderado`; separado porque a entrada é uma lista já ponderada,
+ * não a lista crua de eventos elegíveis.
+ */
+export function sortearPonderadoComContexto(
+  eventosPonderados: EventoPonderado[]
+): GameEvent | null {
+  if (eventosPonderados.length === 0) return null;
+
+  const pesoTotal = eventosPonderados.reduce((sum, ep) => sum + ep.pesoEfetivo, 0);
+  let rolagem = valorAleatorio() * pesoTotal;
+
+  for (const ep of eventosPonderados) {
+    if (rolagem < ep.pesoEfetivo) return ep.evento;
+    rolagem -= ep.pesoEfetivo;
+  }
+
+  return eventosPonderados[0].evento;
 }
 
 /** Decide se have um evento interativo neste ano (independente de qual). */

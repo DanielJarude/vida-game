@@ -163,6 +163,8 @@ export const EXTRA_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 6 — única opção, resultado já garantido (nota 10 com
+    // louvor certo). Agora existe uma escolha real de como se preparar.
     id: 'ext_banca_tcc',
     titulo: 'Defesa do Trabalho de Conclusão de Curso (TCC)',
     descricao: 'Você está diante dos professores doutores da banca examinadora para defender seu TCC após meses de pesquisa intensa.',
@@ -183,6 +185,15 @@ export const EXTRA_EVENTS: GameEvent[] = [
           stats: { felicidade: 35, inteligencia: 15 },
           hiddenStats: { reputacao: 30, disciplina: 25, ambicao: 20 },
           adicionarFlag: 'tcc_nota_dez'
+        }
+      },
+      {
+        id: 'opt_apresentacao_nervosa',
+        texto: 'Ler o slide nervosamente e torcer para ninguém fazer perguntas difíceis',
+        descricaoResultado: 'Você tropeçou em algumas respostas, mas passou com nota suficiente. O diploma valeu, mesmo sem aplausos de pé.',
+        consequencias: {
+          stats: { felicidade: 15 },
+          hiddenStats: { estresse: 10 }
         }
       }
     ]
@@ -251,6 +262,12 @@ export const EXTRA_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 5 — o playtest apontou que este evento era apresentado
+    // como decisão ("O que você faz?") com exatamente UMA opção, o que é
+    // pior do que simplesmente narrar o acontecimento. Corrigido com uma
+    // segunda opção genuinamente diferente (não uma variação cosmética da
+    // mesma escolha): também reduz o domínio de "família" no cooldown,
+    // já que agora existe um caminho que não reforça relação/empatia.
     id: 'ext_macarronada_domingo',
     titulo: 'A Tradicional Macarronada de Domingo',
     descricao: 'A casa está cheia de tios, primos e avós para o almoço dominical com macarronada caseira ao molho de tomate rústico.',
@@ -258,6 +275,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'familia',
     peso: 80,
+    repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
         id: 'opt_ajudar_cozinha_comer',
@@ -266,7 +284,19 @@ export const EXTRA_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 25, saude: 5 },
           relacionamentoDelta: { delta: 20 },
-          hiddenStats: { empatia: 15, estresse: -20 }
+          hiddenStats: { empatia: 15, estresse: -20 },
+          impactosComportamentais: { familia: 1 }
+        }
+      },
+      {
+        id: 'opt_comer_rapido_sair',
+        texto: 'Comer rápido e pedir para sair mais cedo para encontrar os amigos',
+        descricaoResultado: 'Você comeu correndo, ouviu um "sempre com pressa" da vovó, mas ainda deu tempo de aproveitar a tarde livre com a turma.',
+        consequencias: {
+          stats: { felicidade: 12 },
+          relacionamentoDelta: { delta: -5 },
+          hiddenStats: { sociabilidade: 8 },
+          impactosComportamentais: { independencia: 1, sociabilidade: 1 }
         }
       }
     ]
@@ -341,6 +371,9 @@ export const EXTRA_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 6 — única opção, sem decisão real. A surpresa em si é
+    // automática; a escolha genuína é como o personagem reage a ser o
+    // centro das atenções (nem todo mundo gosta de festa surpresa).
     id: 'ext_festa_surpresa',
     titulo: 'Festa Surpresa de Aniversário',
     descricao: 'Ao abrir a porta de casa no dia do seu aniversário, as luzes se acendem e todos gritam: "SURPRESA!"',
@@ -356,7 +389,19 @@ export const EXTRA_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 35 },
           relacionamentoDelta: { delta: 25 },
-          hiddenStats: { sociabilidade: 20, empatia: 20, estresse: -25 }
+          hiddenStats: { sociabilidade: 20, empatia: 20, estresse: -25 },
+          impactosComportamentais: { sociabilidade: 1 }
+        }
+      },
+      {
+        id: 'opt_constrangido_festa',
+        texto: 'Ficar sem graça com tanta atenção, mas agradecer baixinho a cada um',
+        descricaoResultado: 'Você não é fã de ser o centro das atenções, mas ficou visivelmente emocionado ao ver quem se lembrou de você.',
+        consequencias: {
+          stats: { felicidade: 20 },
+          relacionamentoDelta: { delta: 15 },
+          hiddenStats: { empatia: 10 },
+          impactosComportamentais: { independencia: 1 }
         }
       }
     ]

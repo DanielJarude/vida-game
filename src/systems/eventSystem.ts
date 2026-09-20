@@ -22,7 +22,8 @@ import {
   getNomeTraco
 } from './personalitySystem';
 import { avaliarCondicoesEvento as avaliarCondicoesEventoImpl } from './events/eligibility';
-import { haEventoNesteAno, sortearPonderado } from './events/selection';
+import { haEventoNesteAno, sortearPonderadoComContexto } from './events/selection';
+import { ponderarPorContexto } from './events/contextWeighting';
 
 // Reexportado por compatibilidade: quem já importava `avaliarCondicoesEvento`
 // e `sortearEventoDoAno` de `eventSystem` continua funcionando. A regra em
@@ -59,7 +60,10 @@ export function sortearEventoDoAno(
     )
   );
 
-  return sortearPonderado(eventosElegiveis);
+  // B4-FIX3 — o pool elegível é ajustado por contexto recente e por
+  // anti-dominação antes do sorteio (ver `events/contextWeighting`).
+  const ponderados = ponderarPorContexto(eventosElegiveis, historicoOcorrencias);
+  return sortearPonderadoComContexto(ponderados);
 }
 
 /** Motivo em pt-BR quando uma exigência comportamental não é cumprida (qualitativo, sem números). */
@@ -83,6 +87,18 @@ export function avaliarRequisitoOpcao(
 ): { aprovado: boolean; motivo?: string } {
   const requisito = opcao.requisito;
   if (!requisito) return { aprovado: true };
+
+  // B4-FIX3 item 7 — o evento pode ser elegível numa idade (janela ampla,
+  // ex.: 8-90 para um problema de saúde), mas uma opção específica dentro
+  // dele pode continuar incompatível (ex.: "tentar trabalhar mesmo doente"
+  // não faz sentido para uma criança de 8 anos). O motor recusa aqui —
+  // nunca confia que a UI já filtrou a opção antes de chamar.
+  if (requisito.idadeMinima !== undefined && personagem.idade < requisito.idadeMinima) {
+    return { aprovado: false, motivo: 'Você ainda não tem idade para essa escolha.' };
+  }
+  if (requisito.idadeMaxima !== undefined && personagem.idade > requisito.idadeMaxima) {
+    return { aprovado: false, motivo: 'Essa escolha não é mais compatível com sua idade.' };
+  }
 
   if (requisito.dinheiroMinimo !== undefined && economia.dinheiro < requisito.dinheiroMinimo) {
     return { aprovado: false, motivo: `Você precisa de ${formatarDinheiro(requisito.dinheiroMinimo)} disponíveis.` };
