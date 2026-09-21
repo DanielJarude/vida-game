@@ -7,6 +7,7 @@ import {
   IDADE_MINIMA_NEGOCIAR_BENS
 } from './availabilitySystem';
 import { generateId, randomInt, valorAleatorio } from '../utils/random';
+import { formatarDinheiro } from '../utils/formatters';
 
 export function criarEconomiaInicial(classeSocial: string): EconomyState {
   let saldoInicial = 0;
@@ -50,6 +51,12 @@ export function processarAnoEconomia(
 ): {
   economiaAtualizada: EconomyState;
   logsEconomia: LifeLogEntry[];
+  /**
+   * Efeito de PRIVAÇÃO no corpo e no ânimo, quando o dinheiro acabou e não
+   * há mais crédito. Aplicado pela passagem de ano em `agingSystem`.
+   * Ausente quando o ano fechou sem aperto.
+   */
+  efeitosPrivacao?: { saude: number; felicidade: number; estresse: number };
 } {
   const eco = {
     ...economia,
@@ -111,11 +118,154 @@ export function processarAnoEconomia(
 
   eco.dinheiro += fluxoLiquido;
 
+  // ====================================================================== //
+  //            QUANDO O DINHEIRO ACABA — antes isto não existia            //
+  // ====================================================================== //
+  //
+  // O saldo era simplesmente somado e podia ficar negativo para sempre, sem
+  // nenhuma consequência. A simulação de 60 vidas mediu o resultado: 60 de
+  // 60 ficavam negativas a partir dos 20 anos e chegavam aos 80 com uma
+  // mediana de −R$ 848.000. O jogador via um número vermelho crescendo e
+  // absolutamente nada acontecia por causa dele.
+  //
+  // Pior: `EconomyState.dividas` já existia, já era subtraído do patrimônio
+  // líquido e já tinha lugar em DUAS telas — e nenhum sistema jamais
+  // escrevia nele. `padraoDeVida` era lido para calcular despesa e nunca
+  // mudava. Duas peças prontas, desligadas.
+  //
+  // A regra agora é a que a vida usa: quando falta dinheiro, primeiro o
+  // padrão de vida cede — ninguém sustenta um padrão sem renda — e só o que
+  // ainda faltar vira dívida. Isso é um estabilizador de verdade: cair para
+  // um padrão modesto reduz a despesa do ano seguinte, então o buraco para
+  // de crescer no mesmo ritmo em vez de acelerar até o infinito.
+  let privacao: { saude: number; felicidade: number; estresse: number } | undefined;
+
+  const aplicarFaltaDeDinheiro = () => {
+    if (eco.dinheiro >= 0) return;
+    const falta = Math.round(-eco.dinheiro);
+    eco.dinheiro = 0;
+
+    if (eco.padraoDeVida === 'luxuoso') {
+      eco.padraoDeVida = 'confortavel';
+      logs.push({
+        id: generateId('log'),
+        idade,
+        ano: anoAtual,
+        categoria: 'financas',
+        texto: 'As contas não fecharam e você precisou cortar o padrão de vida. Saíram os supérfluos primeiro.',
+        tipo: 'negativo',
+        relevancia: 'normal'
+      });
+    } else if (eco.padraoDeVida === 'confortavel') {
+      eco.padraoDeVida = 'modesto';
+      logs.push({
+        id: generateId('log'),
+        idade,
+        ano: anoAtual,
+        categoria: 'financas',
+        texto: 'Você passou a viver com bem menos: trocou marca por preço e cortou o que dava para cortar.',
+        tipo: 'negativo',
+        relevancia: 'normal'
+      });
+    }
+
+    const antes = eco.dividas;
+
+    // TETO DE CRÉDITO. Na primeira versão desta correção a dívida
+    // simplesmente somava e rendia juros, e a medição mostrou algo pior do
+    // que o problema original: R$ 10 milhões aos 90 anos. Trocar um número
+    // negativo que cresce para sempre por um número positivo que cresce
+    // para sempre não conserta nada.
+    //
+    // Na vida real o crédito acaba. A partir do teto, a falta deixa de
+    // virar dívida e passa a ser PRIVAÇÃO: menos comida boa, menos
+    // cuidado, mais aperto — que é uma consequência de verdade, sentida no
+    // corpo, e não um dígito a mais na tela.
+    const espacoDeCredito = Math.max(0, TETO_DE_DIVIDA - eco.dividas);
+    const viraDivida = Math.min(falta, espacoDeCredito);
+    const semCobertura = falta - viraDivida;
+    eco.dividas = Math.round(eco.dividas + viraDivida);
+
+    if (semCobertura > 0) {
+      // Proporcional ao tamanho do aperto, com limite: privação desgasta,
+      // não executa.
+      const severidade = Math.min(1, semCobertura / 20000);
+      privacao = {
+        saude: -Math.round(severidade * 3),
+        felicidade: -Math.round(severidade * 6),
+        estresse: Math.round(severidade * 8)
+      };
+    }
+
+    // Um aviso por travessia de patamar, não um relatório todo ano: a Linha
+    // da Vida conta a história do endividamento, não o extrato dele.
+    for (const patamar of PATAMARES_DE_DIVIDA) {
+      if (antes < patamar && eco.dividas >= patamar) {
+        logs.push({
+          id: generateId('log'),
+          idade,
+          ano: anoAtual,
+          categoria: 'financas',
+          texto: `Suas dívidas passaram de ${formatarDinheiro(patamar)} e começaram a pesar em tudo.`,
+          tipo: 'alerta',
+          relevancia: 'marco'
+        });
+        break;
+      }
+    }
+  };
+
+  aplicarFaltaDeDinheiro();
+
+  // Sobrou dinheiro e existe dívida? Ela é paga antes de virar saldo. É o
+  // que qualquer pessoa endividada faz, e é o que impede o estado absurdo
+  // de alguém com poupança e dívida crescendo lado a lado.
+  if (eco.dividas > 0 && eco.dinheiro > 0) {
+    const abatido = Math.min(eco.dividas, eco.dinheiro);
+    eco.dividas -= abatido;
+    eco.dinheiro -= abatido;
+    if (eco.dividas === 0) {
+      logs.push({
+        id: generateId('log'),
+        idade,
+        ano: anoAtual,
+        categoria: 'financas',
+        texto: 'Você quitou o que devia. Pela primeira vez em muito tempo, o que entra é seu.',
+        tipo: 'positivo',
+        relevancia: 'marco'
+      });
+    }
+  }
+
+  // Juros sobre o que ficou. Dívida parada cresce — é justamente por isso
+  // que ela é uma limitação e não um número decorativo.
+  if (eco.dividas > 0) {
+    eco.dividas = Math.min(TETO_DE_DIVIDA, Math.round(eco.dividas * (1 + JUROS_ANUAIS_DIVIDA)));
+  }
+
   return {
     economiaAtualizada: eco,
-    logsEconomia: logs
+    logsEconomia: logs,
+    efeitosPrivacao: privacao
   };
 }
+
+/**
+ * Teto de crédito: o quanto uma pessoa consegue dever antes de ninguém
+ * mais lhe emprestar. Passado daqui, a falta vira privação, não saldo
+ * devedor — é o que impede a dívida de crescer sem limite.
+ */
+export const TETO_DE_DIVIDA = 250000;
+
+/**
+ * Juros anuais sobre a dívida acumulada. Deliberadamente moderado: o
+ * objetivo é que a dívida seja um peso real e difícil de sair, não uma
+ * espiral que torne qualquer tropeço irreversível.
+ */
+export const JUROS_ANUAIS_DIVIDA = 0.06;
+
+/** Patamares que merecem uma linha na biografia quando são atravessados. */
+export const PATAMARES_DE_DIVIDA = [10000, 50000, 150000, 400000];
 
 export function comprarBem(
   item: AssetShopItem,

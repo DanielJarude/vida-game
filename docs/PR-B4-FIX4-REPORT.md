@@ -553,3 +553,138 @@ npm run build       sucesso
 - A simulação mostra 32 de 40 vidas morrendo antes dos 80. Não foi
   investigado nesta etapa; fica registrado para a etapa de saúde e
   envelhecimento.
+
+---
+
+# Saúde, envelhecimento e economia de vida longa
+
+## Objetivo
+
+Fechar dois sistemas que tinham infraestrutura pronta e mecânica ausente, e
+que a medição da etapa anterior expôs.
+
+## Diagnóstico — 60 vidas simuladas até os 100 anos
+
+| Medida | Valor encontrado |
+| --- | --- |
+| Vidas com saldo negativo a partir dos 20 anos | **60 de 60** |
+| Saldo mediano aos 80 anos | **−R$ 848.000** |
+| Saúde mediana: 40 → 50 → 60 → 70 → 80 anos | 100 → 97 → 74 → 45 → **17** |
+| Idade mediana de morte | 80 |
+| Idade máxima alcançada, em 60 vidas | **87** |
+| Mortes por saúde zerada | 25 de 60 |
+
+Três problemas distintos:
+
+### 1. A economia não tinha fundo
+
+`eco.dinheiro += fluxoLiquido`, sem piso, sem dívida, sem consequência.
+E duas peças já existiam **desligadas**:
+
+- `EconomyState.dividas` era subtraído do patrimônio líquido e exibido em
+  **duas telas** — e nenhum sistema jamais escrevia nele.
+- `padraoDeVida` era lido para calcular a despesa e **nunca mudava**.
+
+O jogador via um número vermelho crescendo e absolutamente nada acontecia.
+
+### 2. Envelhecer era um relógio, não uma trajetória
+
+A perda de saúde dependia só da idade, em degraus por década.
+Condicionamento físico e estresse entravam como ±2 pontos fixos. Resultado:
+**como a pessoa viveu não mudava quanto ela viveria.** Longevidade era uma
+contagem regressiva igual para todos.
+
+### 3. O estresse era uma catraca
+
+Nada no motor reduzia estresse. Numa vida sem atividades ele subia até 100
+e ficava lá, drenando saúde para sempre.
+
+## O que foi implementado
+
+### Envelhecimento com resiliência
+
+`calcularResiliencia(personagem)` devolve um fator de 0,55 a 1,6 a partir de
+condicionamento físico, estresse e condições de saúde acumuladas. A perda
+anual de saúde é multiplicada por ele. A curva virou contínua — antes,
+completar 60 anos custava mais caro que os nove anos anteriores somados.
+
+A recuperação por bom condicionamento cede com a idade: manter a forma aos
+30 devolve saúde; aos 80, apenas segura a queda. Sem isso, um perfil muito
+cuidadoso ficava com saúde 100 aos 70 — imunidade ao tempo, que é o oposto
+de envelhecer bem.
+
+### Alívio natural de estresse
+
+3 pontos por ano quando nada o realimenta. Pequeno de propósito: pressão
+contínua continua vencendo. O que deixou de existir é a catraca.
+
+### Economia com limitação real
+
+Quando falta dinheiro, nesta ordem:
+
+1. **O padrão de vida cede** — ninguém sustenta um padrão sem renda. É um
+   estabilizador de verdade: cair para modesto reduz a despesa do ano
+   seguinte, então o buraco para de acelerar.
+2. **O que ainda falta vira dívida**, com juros de 6% ao ano, quitada
+   automaticamente quando sobra dinheiro.
+3. **Esgotado o crédito** (teto de R$ 250.000), a falta deixa de virar
+   número e vira **privação**: menos saúde, menos ânimo, mais estresse.
+
+O teto foi a segunda correção desta etapa, e nasceu de um erro meu: a
+primeira versão só somava e capitalizava, e a medição mostrou algo pior que
+o problema original — **R$ 10 milhões de dívida aos 90 anos**. Trocar um
+número negativo que cresce para sempre por um positivo que cresce para
+sempre não conserta nada.
+
+## Resultado medido — 60 vidas por perfil
+
+| Perfil | Morte mediana | ≥ 90 anos | Dívida aos 80 |
+| --- | --- | --- | --- |
+| **Com emprego (caso típico)** | **81** | 2/60 | **0 — quitada aos 40** |
+| Cuidadoso (forma e calma, sem renda) | 85 | 10/60 | teto |
+| Nunca trabalhou nem agiu | 76 | 0/60 | teto |
+| Descuidado extremo | 36 | 0/60 | teto |
+
+O perfil com emprego — o que um jogador comum produz — quita a dívida aos
+40, acumula reserva e morre aos 81, compatível com a expectativa de vida
+brasileira. A distância entre cuidar-se e não cuidar-se passou de **zero**
+para quase uma década.
+
+## Bug de UI corrigido de quebra
+
+Uma vida de 40 anos apareceu na captura de tela com **SALDO −R$ 293.143** em
+vermelho, e o jogo seguia como se nada fosse. Hoje esse estado é impossível:
+o saldo não fica negativo depois da passagem de ano, a dívida aparece
+nomeada como dívida, e o aperto é sentido.
+
+## Testes
+
+`systems/__tests__/vidaLonga.test.ts` — 17 testes: resiliência e seus
+limites, diferença acumulada entre trajetórias em 30 anos, continuidade da
+curva (nenhum aniversário custa uma década), alívio de estresse, piso de
+condicionamento, padrão de vida cedendo antes da dívida, saldo nunca
+negativo após o ano, amortização automática, teto de dívida em 120 anos
+simulados, privação chegando ao personagem, e três verificações ponta a
+ponta em sete vidas completas — incluindo "quem cuidou do corpo vive mais".
+
+## Resultados
+
+```
+npm test        716 testes / 44 arquivos — todos verdes
+npm run typecheck   sem erros
+npm run build       sucesso
+```
+
+## Limitações
+
+- Chegar aos 90 continua incomum (2/60 no perfil típico, 10/60 no
+  cuidadoso). É intencional, mas significa que o conteúdo escrito para 90+
+  é raramente visto.
+- O perfil "descuidado extremo" morre aos 36. É artefato do arreio de
+  simulação, que força estresse 82 e condicionamento 12 **desde o
+  nascimento** — inalcançável jogando. Não foi ajustado além disso.
+- A dívida não bloqueia ações nem aparece como restrição na interface além
+  do número. Conectar dívida a oportunidades negadas é trabalho de uma
+  etapa de economia/carreira.
+- Não há aposentadoria por tempo de contribuição modelada de verdade; a
+  renda de aposentadoria existente não foi revisada nesta etapa.

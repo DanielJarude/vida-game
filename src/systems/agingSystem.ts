@@ -10,7 +10,11 @@ import {
   PersonalityState,
   PostMortemSummary
 } from '../types';
-import { aplicarEnvelhecimentoAtributos } from './attributeSystem';
+import {
+  aplicarEnvelhecimentoAtributos,
+  normalizarHiddenStats,
+  normalizarStats
+} from './attributeSystem';
 import { processarAnoCarreira } from './careerSystem';
 import { verificarMortalidade, construirResumoMorte } from './deathSystem';
 import { calcularPatrimonioLiquido, processarAnoEconomia } from './economySystem';
@@ -148,6 +152,26 @@ export function executarPassagemDeAno(
   );
   eco = resEco.economiaAtualizada;
   novosLogs.push(...resEco.logsEconomia);
+
+  // Privação: quando o dinheiro acabou e o crédito também, o aperto deixa
+  // de ser um número e passa a ser sentido no corpo. Aplicado aqui porque
+  // `economySystem` é puro sobre o estado financeiro e não mexe no
+  // personagem — quem costura os dois é a passagem de ano.
+  if (resEco.efeitosPrivacao) {
+    const priv = resEco.efeitosPrivacao;
+    char = {
+      ...char,
+      stats: normalizarStats({
+        ...char.stats,
+        saude: char.stats.saude + priv.saude,
+        felicidade: char.stats.felicidade + priv.felicidade
+      }),
+      hiddenStats: normalizarHiddenStats({
+        ...char.hiddenStats,
+        estresse: char.hiddenStats.estresse + priv.estresse
+      })
+    };
+  }
 
   // Se recebeu herança familiar
   if (resFam.herancaDinheiro > 0) {
