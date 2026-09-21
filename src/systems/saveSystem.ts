@@ -1,5 +1,6 @@
 import { EventOccurrence, GameState, GlobalStats, PastLifeRecord, PostMortemSummary, GameEvent } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
+import { naturezaDoEvento } from './events/nature';
 import { criarPersonalidadeInicial, normalizarPersonalidade } from './personalitySystem';
 import { clamp } from '../utils/random';
 import { normalizarAparencia } from '../data/avatar/avatarData';
@@ -8,9 +9,12 @@ const SAVE_KEY = 'VIDA_GAME_SAVE_V1'; // chave mantida: a versão vive dentro do
 const STATS_KEY = 'VIDA_GLOBAL_STATS_V1';
 
 // v3: personalidade emergente + memória de escolhas (B2).
-// Saves da v2 (B1-FIX) sem esses campos carregam normalmente: inicializados de
-// forma segura, sem destruir dados válidos.
-export const VERSAO_SAVE = 3;
+// v4 (B4-FIX4): ocorrências de evento passam a carregar `natureza`
+//     (acontecimento × decisão), que é o que a camada de ritmo usa para
+//     medir fadiga de decisão separadamente de densidade de acontecimento.
+// Saves de qualquer versão anterior carregam normalmente: campos ausentes são
+// preenchidos de forma segura, sem destruir dados válidos.
+export const VERSAO_SAVE = 4;
 
 // Formato persistido: o evento ativo é referenciado por id (não serializado por inteiro)
 type EstadoSalvo = Omit<GameState, 'eventoAtivo'> & { eventoAtivoId?: string | null };
@@ -195,12 +199,32 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
   // mudança não têm o campo: começa vazio, sem inventar idade/ano para
   // ocorrências passadas (cooldown se comporta como "sem histórico
   // conhecido" para esses eventos — nunca bloqueia por engano).
-  const historicoOcorrenciasEventos = lista(raiz.historicoOcorrenciasEventos).filter(
+  const historicoOcorrenciasEventos = (lista(raiz.historicoOcorrenciasEventos).filter(
     (o): o is EventOccurrence => {
       const obj = comoObjeto(o);
       return !!obj && typeof obj.eventId === 'string' && typeof obj.idade === 'number' && typeof obj.ano === 'number';
     }
-  ) as EventOccurrence[];
+  ) as EventOccurrence[]).map(ocorrencia => {
+    // --- Migração v3 → v4 -------------------------------------------------
+    // Ocorrências gravadas antes do B4-FIX4 não têm `natureza` (e as mais
+    // antigas nem `categoria`). Em vez de assumir cegamente 'decisao',
+    // consultamos o catálogo atual: ele é a fonte de verdade sobre o que
+    // aquele evento É. Assim a camada de ritmo passa a enxergar o passado da
+    // vida com a mesma taxonomia do presente, e as penalidades por contexto
+    // (`events/contextWeighting`) recuperam a categoria perdida.
+    //
+    // Evento que não existe mais no catálogo (conteúdo removido entre
+    // versões) mantém o registro como está: a ocorrência aconteceu e não
+    // deve sumir do histórico só porque o evento saiu de cena.
+    if (ocorrencia.natureza && ocorrencia.categoria) return ocorrencia;
+    const evento = MASTER_EVENTS_LIST.find(e => e.id === ocorrencia.eventId);
+    if (!evento) return { ...ocorrencia, natureza: ocorrencia.natureza ?? 'decisao' };
+    return {
+      ...ocorrencia,
+      categoria: ocorrencia.categoria ?? evento.categoria,
+      natureza: ocorrencia.natureza ?? naturezaDoEvento(evento)
+    };
+  });
 
   // --- Personalidade (B2): saves das versões 1/2 não possuem o campo;
   // inicializa em branco. Saves da v3 são normalizados defensivamente. ---

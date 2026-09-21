@@ -18,8 +18,13 @@ const ICONE_TOM = {
  * Resumo anual — "O que este ano fez com a minha vida?"
  *
  * Acontecimentos e mudanças em linguagem humana, não extrato técnico.
- * Quando o ano foi silencioso, o resumo diz isso com honestidade em vez de
- * inventar drama.
+ *
+ * B4-FIX4 — este componente NÃO trata mais o ano silencioso. Ele existia
+ * para dizer "Um ano sem grandes acontecimentos. A vida seguiu seu curso."
+ * — ou seja, interrompia o jogador exatamente para avisar que nada merecia
+ * interrompê-lo. Agora quem decide é a camada de comandos: um ano sem nada
+ * a relatar simplesmente não abre resumo (ver `useGame.envelhecerAno`), e
+ * o tempo continua passando. Por isso `resumo.itens` aqui nunca é vazio.
  */
 export const AnnualSummary: React.FC<AnnualSummaryProps> = ({
   resumo,
@@ -45,23 +50,17 @@ export const AnnualSummary: React.FC<AnnualSummaryProps> = ({
           Você agora tem {idadeTexto}
         </h2>
 
-        {resumo.silencioso ? (
-          <p className="annual-summary__quiet">
-            Um ano sem grandes acontecimentos. A vida seguiu seu curso.
-          </p>
-        ) : (
-          <ul className="annual-summary__list">
-            {resumo.itens.map(item => (
-              <li
-                key={item.id}
-                className={`annual-summary__item annual-summary__item--${item.tom}`}
-              >
-                {ICONE_TOM[item.tom]}
-                <span>{item.texto}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className="annual-summary__list">
+          {resumo.itens.map(item => (
+            <li
+              key={item.id}
+              className={`annual-summary__item annual-summary__item--${item.tom}`}
+            >
+              {ICONE_TOM[item.tom]}
+              <span>{item.texto}</span>
+            </li>
+          ))}
+        </ul>
 
         <div className="event-result__continue">
           <button className="btn btn--primary btn--block" onClick={onFechar}>

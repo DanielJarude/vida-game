@@ -21,6 +21,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 15,
     categoria: 'romance',
     peso: 80,
+    natureza: 'acontecimento',
     unico: true,
     opcoes: [
       {
@@ -46,7 +47,6 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 10 },
           hiddenStats: { sociabilidade: 6 },
-          impactosComportamentais: { coragem: 1 },
           adicionarFlag: 'tem_paixao_secreta',
           adicionarFamiliar: {
             tipo: 'paixao',
@@ -66,6 +66,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 14,
     categoria: 'amizade',
     peso: 80,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -86,7 +87,6 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
             relacionamento: 80,
             situacaoAtual: 'Amigo do grupo da escola'
           },
-          impactosComportamentais: { sociabilidade: 1, disciplina: 1 }
         }
       },
       {
@@ -102,7 +102,6 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
             relacionamento: 75,
             situacaoAtual: 'Amigo do grupo da escola'
           },
-          impactosComportamentais: { sociabilidade: 1 }
         }
       },
       {
@@ -112,7 +111,6 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 8 },
           hiddenStats: { sociabilidade: -2 },
-          impactosComportamentais: { independencia: 1 }
         }
       }
     ]

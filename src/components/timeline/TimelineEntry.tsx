@@ -10,7 +10,9 @@ import {
   Sparkles,
   Star,
   Flower2,
-  Circle
+  Circle,
+  UsersRound,
+  Palette
 } from 'lucide-react';
 import type { LifeLogCategory } from '../../types';
 import type { EntradaApresentada } from '../../presentation/timelinePresentation';
@@ -28,6 +30,8 @@ interface TimelineEntryProps {
 const ICONES: Record<LifeLogCategory, React.ReactNode> = {
   geral: <Circle size={13} />,
   familia: <Users size={13} />,
+  amizade: <UsersRound size={13} />,
+  lazer: <Palette size={13} />,
   escola: <GraduationCap size={13} />,
   carreira: <Briefcase size={13} />,
   amor: <Heart size={13} />,

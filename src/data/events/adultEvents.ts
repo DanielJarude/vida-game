@@ -15,6 +15,7 @@ export const ADULT_EVENTS: GameEvent[] = [
         texto: 'Fazer a reforma completa com piso de porcelanato e pintura nova',
         descricaoResultado: 'Foram semanas de poeira e barulho de martelete, mas a casa ficou impecável e muito valorizada!',
         consequencias: {
+          impactosComportamentais: { impulsividade: 1 },
           stats: { felicidade: 18, aparencia: 5 },
           dinheiro: -12000,
           hiddenStats: { reputacao: 10 }
@@ -25,6 +26,7 @@ export const ADULT_EVENTS: GameEvent[] = [
         texto: 'Apenas pintar a sala e trocar duas lâmpadas você mesmo',
         descricaoResultado: 'Você economizou uma boa quantia e o ambiente ficou renovado.',
         consequencias: {
+          impactosComportamentais: { disciplina: 1 },
           stats: { felicidade: 8 },
           dinheiro: -800,
           hiddenStats: { disciplina: 5 }
@@ -47,6 +49,7 @@ export const ADULT_EVENTS: GameEvent[] = [
         texto: 'Começar a correr meia-maratona e cuidar do corpo',
         descricaoResultado: 'Você encontrou uma vitalidade que nem sabia que tinha! Seu condicionamento físico melhorou absurdamente.',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { saude: 15, felicidade: 15, aparencia: 10 },
           hiddenStats: { condicionamentoFisico: 20, disciplina: 15, estresse: -15 }
         }
@@ -56,6 +59,7 @@ export const ADULT_EVENTS: GameEvent[] = [
         texto: 'Comprar um carro mais esportivo para curtir a vida',
         descricaoResultado: 'Você desfilou de vidros abertos sentindo o vento no rosto e um sorriso no rosto!',
         consequencias: {
+          impactosComportamentais: { impulsividade: 2 },
           stats: { felicidade: 20, aparencia: 8 },
           dinheiro: -15000,
           hiddenStats: { reputacao: 10 }
@@ -66,6 +70,7 @@ export const ADULT_EVENTS: GameEvent[] = [
         texto: 'Abraçar a maturidade com gratidão e serenidade',
         descricaoResultado: 'Você alcançou uma paz interior sólida e valorizou cada momento com quem ama.',
         consequencias: {
+          impactosComportamentais: { empatia: 1 },
           stats: { felicidade: 18 },
           hiddenStats: { empatia: 15, estresse: -25 }
         }
@@ -89,6 +94,7 @@ export const ADULT_EVENTS: GameEvent[] = [
         texto: 'Investir R$ 20.000 e tornar-se sócio do empreendimento',
         descricaoResultado: 'A franquia foi um sucesso retumbante no primeiro ano e gerou dividendos generosos!',
         consequencias: {
+          impactosComportamentais: { coragem: 2, impulsividade: 1 },
           stats: { felicidade: 20 },
           dinheiro: 35000,
           hiddenStats: { ambicao: 25, reputacao: 15, estresse: 10 },
@@ -100,6 +106,7 @@ export const ADULT_EVENTS: GameEvent[] = [
         texto: 'Agradecer o convite e manter seu dinheiro seguro em investimentos conservadores',
         descricaoResultado: 'Você preferiu não arriscar seu patrimônio e manteve a tranquilidade.',
         consequencias: {
+          impactosComportamentais: { disciplina: 1, coragem: -1 },
           stats: { felicidade: 5 },
           hiddenStats: { disciplina: 10 }
         }
@@ -114,6 +121,7 @@ export const ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'familia',
     peso: 75,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_apaziguar_festa',

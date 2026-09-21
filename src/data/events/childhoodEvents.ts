@@ -9,6 +9,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 90,
+    natureza: 'acontecimento',
     unico: true,
     // B4-FIX2 item 10 — marco de desenvolvimento, não sorteio aleatório
     // repetível: ligado a uma transição específica (aprender a andar).
@@ -21,7 +22,6 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 15, saude: 5 },
           hiddenStats: { sociabilidade: 10, condicionamentoFisico: 5 },
-          impactosComportamentais: { coragem: 2, sociabilidade: 1 },
           relacionamentoDelta: { delta: 15 }
           // B4-FIX2 item 11 — a escolha já fica registrada na memória
           // interna (personalitySystem.registrarEscolha, por eventoId +
@@ -38,7 +38,6 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 5 },
           hiddenStats: { disciplina: 5 },
-          impactosComportamentais: { coragem: -1, independencia: 1 }
         }
       }
     ]
@@ -138,6 +137,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 7,
     categoria: 'escola',
     peso: 100,
+    natureza: 'acontecimento',
     unico: true,
     opcoes: [
       {
@@ -147,7 +147,6 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 15 },
           hiddenStats: { sociabilidade: 20, reputacao: 10 },
-          impactosComportamentais: { sociabilidade: 2, generosidade: 1 }
         }
       },
       {
@@ -157,7 +156,6 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { inteligencia: 10, felicidade: 8 },
           hiddenStats: { disciplina: 15 },
-          impactosComportamentais: { disciplina: 2 }
         }
       },
       {
@@ -167,7 +165,6 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: -5 },
           hiddenStats: { empatia: 5 },
-          impactosComportamentais: { empatia: 1 }
         }
       }
     ]
@@ -180,6 +177,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 11,
     categoria: 'infancia',
     peso: 75,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_jogar_raca',
@@ -188,7 +186,6 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 18, saude: 5 },
           hiddenStats: { condicionamentoFisico: 15, sociabilidade: 10, reputacao: 10 },
-          impactosComportamentais: { coragem: 2, sociabilidade: 1 },
           adicionarFlag: 'jogou_futebol_infancia'
         }
       },
@@ -199,7 +196,6 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 10, saude: -2 },
           hiddenStats: { empatia: 10, disciplina: 8 },
-          impactosComportamentais: { generosidade: 1, disciplina: 1 }
         }
       },
       {
@@ -209,7 +205,6 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 10, inteligencia: 4 },
           hiddenStats: { sociabilidade: -8, condicionamentoFisico: -5 },
-          impactosComportamentais: { independencia: 1, sociabilidade: -1 }
         }
       }
     ]

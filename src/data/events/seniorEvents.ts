@@ -16,6 +16,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
         texto: 'Pendurar as chuteiras e aproveitar o merecido descanso',
         descricaoResultado: 'Você reuniu a família para um almoço comemorativo e agora tem todo o tempo do mundo para seus hobbies!',
         consequencias: {
+          impactosComportamentais: { familia: 1 },
           stats: { felicidade: 25 },
           hiddenStats: { estresse: -40, empatia: 10 },
           adicionarFlag: 'aposentado_inss'
@@ -26,6 +27,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
         texto: 'Continuar prestando consultorias ocasionais para se manter ativo',
         descricaoResultado: 'Você manteve a mente afiada e uma renda extra agradável todos os meses.',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { felicidade: 15, inteligencia: 8 },
           dinheiro: 2000,
           hiddenStats: { disciplina: 10, ambicao: 10 }
@@ -41,6 +43,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
     idadeMaxima: 88,
     categoria: 'cotidiano',
     peso: 75,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_dancar_forro',
@@ -70,6 +73,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'cotidiano',
     peso: 70,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_viajar_excursao',
@@ -107,6 +111,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
         texto: 'Escrever as memórias e conselhos com todo o carinho',
         descricaoResultado: 'Seus familiares se emocionaram profundamente com suas palavras e seu exemplo de vida.',
         consequencias: {
+          impactosComportamentais: { familia: 2, generosidade: 1 },
           stats: { felicidade: 25 },
           relacionamentoDelta: { delta: 25 },
           hiddenStats: { empatia: 20, reputacao: 20 },
@@ -118,6 +123,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
         texto: 'Focar apenas em viver intensamente cada dia no presente',
         descricaoResultado: 'Você aproveitou a brisa da tarde tomando um cafezinho fresco com bolo de fubá.',
         consequencias: {
+          impactosComportamentais: { independencia: 1 },
           stats: { felicidade: 15 },
           hiddenStats: { estresse: -15 }
         }

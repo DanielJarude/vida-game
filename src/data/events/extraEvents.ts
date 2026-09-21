@@ -42,6 +42,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 16,
     categoria: 'escola',
     peso: 80,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_liderar_gincana',
@@ -71,6 +72,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'cotidiano',
     peso: 85,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_dancar_quadrilha',
@@ -111,6 +113,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         texto: 'Guardar e investir 80% na reserva financeira',
         descricaoResultado: 'Sua disciplina financeira garantiu paz de espírito para o ano seguinte!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { felicidade: 15 },
           dinheiro: 2500,
           hiddenStats: { disciplina: 20, ambicao: 10 }
@@ -121,6 +124,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         texto: 'Comprar presentes de Natal para toda a família e fazer uma ceia farta',
         descricaoResultado: 'O sorriso no rosto da sua família ao abrir os presentes não tem preço!',
         consequencias: {
+          impactosComportamentais: { generosidade: 2, familia: 1 },
           stats: { felicidade: 25 },
           dinheiro: 500,
           relacionamentoDelta: { delta: 20 },
@@ -137,6 +141,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'trabalho',
     peso: 75,
+    natureza: 'acontecimento',
     condicoes: {
       empregado: true
     },
@@ -182,6 +187,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         texto: 'Apresentar com oratória impecável e responder todas as arguições',
         descricaoResultado: 'NOTA 10 COM LOUVOR! A banca aplaudiu de pé e recomendou seu artigo para publicação científica!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2, coragem: 1 },
           stats: { felicidade: 35, inteligencia: 15 },
           hiddenStats: { reputacao: 30, disciplina: 25, ambicao: 20 },
           adicionarFlag: 'tcc_nota_dez'
@@ -192,6 +198,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         texto: 'Ler o slide nervosamente e torcer para ninguém fazer perguntas difíceis',
         descricaoResultado: 'Você tropeçou em algumas respostas, mas passou com nota suficiente. O diploma valeu, mesmo sem aplausos de pé.',
         consequencias: {
+          impactosComportamentais: { coragem: -1 },
           stats: { felicidade: 15 },
           hiddenStats: { estresse: 10 }
         }
@@ -208,6 +215,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'cotidiano',
     peso: 70,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_esperar_chuva_passar',
@@ -238,6 +246,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'cotidiano',
     peso: 75,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_fazer_feira_completa',
@@ -275,6 +284,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'familia',
     peso: 80,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -285,7 +295,6 @@ export const EXTRA_EVENTS: GameEvent[] = [
           stats: { felicidade: 25, saude: 5 },
           relacionamentoDelta: { delta: 20 },
           hiddenStats: { empatia: 15, estresse: -20 },
-          impactosComportamentais: { familia: 1 }
         }
       },
       {
@@ -296,7 +305,6 @@ export const EXTRA_EVENTS: GameEvent[] = [
           stats: { felicidade: 12 },
           relacionamentoDelta: { delta: -5 },
           hiddenStats: { sociabilidade: 8 },
-          impactosComportamentais: { independencia: 1, sociabilidade: 1 }
         }
       }
     ]
@@ -315,6 +323,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         texto: 'Dar banho quentinho, comida e adotá-lo como fiel escudeiro',
         descricaoResultado: 'O caramelo se tornou o cão mais leal e amoroso do mundo, sempre te esperando no portão!',
         consequencias: {
+          impactosComportamentais: { empatia: 2, generosidade: 1 },
           stats: { felicidade: 25 },
           hiddenStats: { empatia: 25, sociabilidade: 10 },
           adicionarFamiliar: {
@@ -334,6 +343,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         texto: 'Tirar fotos e postar em grupos de adoção responsável',
         descricaoResultado: 'Uma família amorosa adotou o cãozinho graças à sua postagem!',
         consequencias: {
+          impactosComportamentais: { empatia: 1, disciplina: 1 },
           stats: { felicidade: 15 },
           hiddenStats: { empatia: 15, reputacao: 10 }
         }
@@ -348,6 +358,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'cotidiano',
     peso: 70,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_curtir_serra',
@@ -381,6 +392,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'amizade',
     peso: 75,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_emocionar_festa',
@@ -390,7 +402,6 @@ export const EXTRA_EVENTS: GameEvent[] = [
           stats: { felicidade: 35 },
           relacionamentoDelta: { delta: 25 },
           hiddenStats: { sociabilidade: 20, empatia: 20, estresse: -25 },
-          impactosComportamentais: { sociabilidade: 1 }
         }
       },
       {
@@ -401,7 +412,6 @@ export const EXTRA_EVENTS: GameEvent[] = [
           stats: { felicidade: 20 },
           relacionamentoDelta: { delta: 15 },
           hiddenStats: { empatia: 10 },
-          impactosComportamentais: { independencia: 1 }
         }
       }
     ]

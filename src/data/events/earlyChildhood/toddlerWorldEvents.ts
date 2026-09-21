@@ -19,6 +19,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 4,
     categoria: 'escola',
     peso: 90,
+    natureza: 'acontecimento',
     unico: true,
     opcoes: [
       {
@@ -28,7 +29,6 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 12 },
           hiddenStats: { sociabilidade: 10 },
-          impactosComportamentais: { sociabilidade: 1, independencia: 1 }
         }
       },
       {
@@ -92,6 +92,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 5,
     categoria: 'cotidiano',
     peso: 75,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'recorrente', cooldownAnos: 2 },
     opcoes: [
       {
@@ -110,7 +111,6 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 10 },
           hiddenStats: { estresse: -3 },
-          impactosComportamentais: { coragem: 2 }
         }
       }
     ]
@@ -155,6 +155,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 5,
     categoria: 'amizade',
     peso: 70,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
@@ -185,6 +186,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 6,
     categoria: 'infancia',
     peso: 65,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
@@ -194,7 +196,6 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { inteligencia: 5, felicidade: 6 },
           hiddenStats: { empatia: 2 },
-          impactosComportamentais: { coragem: 1 }
         }
       },
       {

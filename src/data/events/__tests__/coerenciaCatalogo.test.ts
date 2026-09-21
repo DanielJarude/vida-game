@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import { MASTER_EVENTS_LIST } from '../allEvents';
 import { resolverPoliticaRepeticao } from '../../../systems/events/repetitionPolicy';
+import { exigeAcontecimentoPorIdade, naturezaDoEvento } from '../../../systems/events/nature';
 
 describe('B4-FIX3 · coerência estrutural do catálogo de eventos', () => {
   it('todo evento tem um ID único', () => {
@@ -52,13 +53,17 @@ describe('B4-FIX3 · coerência estrutural do catálogo de eventos', () => {
     }
   });
 
-  it('evento de decisão (2+ opções aparentes na UI) nunca tem exatamente 1 opção — falsa escolha', () => {
-    // B4-FIX3 item 5/6 — regra explícita do PR: um evento com apenas uma
-    // opção não é uma decisão, é uma falsa liberdade. Cada um precisa ou
-    // ter 2+ opções REALMENTE distintas ou não ser apresentado como
-    // pergunta. Como o motor sempre pergunta "O que você faz?" quando o
-    // evento tem opções, qualquer evento com 1 opção só viola a regra.
-    const comUmaOpcaoSo = MASTER_EVENTS_LIST.filter(e => e.opcoes.length === 1);
+  it('evento de DECISÃO nunca tem exatamente 1 opção — falsa escolha', () => {
+    // B4-FIX3 item 5/6 — um evento com apenas uma opção não é uma decisão,
+    // é uma falsa liberdade.
+    //
+    // B4-FIX4 — a regra passou a valer só para eventos de DECISÃO. Um
+    // ACONTECIMENTO com um único desfecho é legítimo: ele não pergunta
+    // nada, apenas narra o que houve. A falsa escolha que esta regra combate
+    // é a pergunta com uma resposta só, e um acontecimento nunca pergunta.
+    const comUmaOpcaoSo = MASTER_EVENTS_LIST.filter(
+      e => naturezaDoEvento(e) === 'decisao' && e.opcoes.length === 1
+    );
     expect(
       comUmaOpcaoSo.map(e => e.id),
       'eventos com exatamente 1 opção (falsa escolha) — ver lista de ids'
@@ -212,6 +217,89 @@ describe('B4-FIX3 · coerência estrutural do catálogo de eventos', () => {
 
     const orfas = [...flagsConsultadas].filter(f => !flagsProduzidas.has(f));
     expect(orfas, 'flags consultadas mas nunca produzidas por nenhuma opção do catálogo').toEqual([]);
+  });
+
+  /* ====================================================================== */
+  /*        B4-FIX4 — acontecimento × decisão como regra de conteúdo         */
+  /* ====================================================================== */
+
+  it('nenhum evento cuja janela inteira cabe em 0-2 anos é apresentado como decisão', () => {
+    // Autonomia por idade, virada regra automatizada: um bebê não delibera.
+    const violacoes = MASTER_EVENTS_LIST.filter(
+      e => exigeAcontecimentoPorIdade(e) && naturezaDoEvento(e) !== 'acontecimento'
+    );
+    expect(violacoes.map(e => e.id)).toEqual([]);
+  });
+
+  it('nenhum ACONTECIMENTO declara impacto comportamental', () => {
+    // A personalidade do VIDA nasce de escolhas. Um acontecimento não foi
+    // escolhido, então não caracteriza ninguém — e o dado do evento não pode
+    // sugerir o contrário para quem lê o catálogo. O motor também remove
+    // esses campos em tempo de execução (`events/happenings`), mas conteúdo
+    // enganoso é um bug de conteúdo.
+    const violacoes: string[] = [];
+    for (const evento of MASTER_EVENTS_LIST) {
+      if (naturezaDoEvento(evento) !== 'acontecimento') continue;
+      for (const opcao of evento.opcoes) {
+        if (opcao.consequencias.impactosComportamentais) violacoes.push(`${evento.id}/${opcao.id}`);
+      }
+    }
+    expect(violacoes).toEqual([]);
+  });
+
+  it('todo ACONTECIMENTO tem texto de resultado em cada desfecho — é o que vai para a Linha da Vida', () => {
+    // Num acontecimento, `texto` (rótulo de botão) nunca é mostrado: o que
+    // o jogador lê é `descricaoResultado`. Um desfecho sem esse texto seria
+    // um acontecimento mudo — aplicaria efeitos sem contar o que houve.
+    const mudos: string[] = [];
+    for (const evento of MASTER_EVENTS_LIST) {
+      if (naturezaDoEvento(evento) !== 'acontecimento') continue;
+      for (const opcao of evento.opcoes) {
+        if (!opcao.descricaoResultado?.trim()) mudos.push(`${evento.id}/${opcao.id}`);
+      }
+    }
+    expect(mudos).toEqual([]);
+  });
+
+  it('peso de desfecho, quando declarado, é positivo', () => {
+    for (const evento of MASTER_EVENTS_LIST) {
+      for (const opcao of evento.opcoes) {
+        if (opcao.peso !== undefined) {
+          expect(opcao.peso, `${evento.id}/${opcao.id}`).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it('cada fase da vida tem pool suficiente das DUAS naturezas — nenhuma faixa vira só pergunta ou só narração', () => {
+    // Sem isso, o ritmo pode pedir "acontecimento" e não achar nada para
+    // narrar (ano vira silêncio por falta de conteúdo, não por design) ou
+    // pedir "decisão" e rebaixar sempre. O mínimo é deliberadamente baixo:
+    // é um piso de sanidade estrutural, não uma meta de conteúdo.
+    const FAIXAS: [string, number, number][] = [
+      ['0-2', 0, 2], ['3-5', 3, 5], ['6-11', 6, 11], ['12-17', 12, 17],
+      ['18-29', 18, 29], ['30-59', 30, 59], ['60-90', 60, 90]
+    ];
+    for (const [rotulo, min, max] of FAIXAS) {
+      const naFaixa = MASTER_EVENTS_LIST.filter(e => e.idadeMinima <= max && e.idadeMaxima >= min);
+      const acontecimentos = naFaixa.filter(e => naturezaDoEvento(e) === 'acontecimento');
+      expect(acontecimentos.length, `faixa ${rotulo} sem acontecimentos suficientes`).toBeGreaterThanOrEqual(4);
+      if (min >= 3) {
+        const decisoes = naFaixa.filter(e => naturezaDoEvento(e) === 'decisao');
+        expect(decisoes.length, `faixa ${rotulo} sem decisões suficientes`).toBeGreaterThanOrEqual(4);
+      }
+    }
+  });
+
+  it('a faixa 0-2 anos é composta EXCLUSIVAMENTE por acontecimentos', () => {
+    const elegiveisAosDois = MASTER_EVENTS_LIST.filter(e => e.idadeMinima <= 2);
+    const decisoes = elegiveisAosDois.filter(e => naturezaDoEvento(e) === 'decisao');
+    // Um evento de janela larga (ex.: 0-10) pode ser decisão, desde que o
+    // motor nunca a apresente antes dos 3 — o que a camada de ritmo garante
+    // estruturalmente. O que este teste exige é que, se existir, isso seja
+    // consciente: nenhum evento exclusivamente de bebê pode ser decisão.
+    const soDeBebe = decisoes.filter(e => e.idadeMaxima <= 2);
+    expect(soDeBebe.map(e => e.id)).toEqual([]);
   });
 
   it('categoria do evento é sempre um valor reconhecido pelo sistema de apresentação', () => {

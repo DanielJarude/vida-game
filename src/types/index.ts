@@ -252,6 +252,13 @@ export interface EconomyState {
 export type LifeLogCategory =
   | 'geral'
   | 'familia'
+  // B4-FIX4 — o mundo social fora da família e o tempo livre existiam no
+  // catálogo de eventos (categorias 'amizade', 'comunidade', 'hobby',
+  // 'esporte', 'tecnologia') mas não tinham para onde ir na Linha da Vida:
+  // caíam todos em 'evento', rotulado "Escolha". Duas categorias novas
+  // dão a esses acontecimentos o lugar que já era deles.
+  | 'amizade'
+  | 'lazer'
   | 'escola'
   | 'carreira'
   | 'amor'
@@ -261,6 +268,24 @@ export type LifeLogCategory =
   | 'morte'
   | 'cotidiano';
 
+/**
+ * B4-FIX4 — relevância explícita de uma entrada da Linha da Vida.
+ *
+ * Antes, o que entrava no resumo anual era decidido por heurística sobre
+ * `categoria` + `tipo` ("se for cotidiano, ignore"). Isso fazia a curadoria
+ * depender de coincidência: um acontecimento real de categoria 'cotidiano'
+ * sumia do resumo, e texto de preenchimento de categoria 'geral' entrava.
+ *
+ * - 'marco'   : muda a trajetória. Sempre aparece, sempre com ênfase.
+ * - 'normal'  : aconteceu e vale ser lembrado. O padrão.
+ * - 'textura' : rotina de fundo. Fica na Linha da Vida se alguém quiser ler,
+ *               mas nunca interrompe nem entra no resumo do ano.
+ *
+ * Ausente = comportamento anterior (heurística por categoria/tipo), para
+ * que nenhuma entrada já persistida mude de sentido ao carregar um save.
+ */
+export type RelevanciaLog = 'marco' | 'normal' | 'textura';
+
 export interface LifeLogEntry {
   id: string;
   idade: number;
@@ -268,6 +293,7 @@ export interface LifeLogEntry {
   categoria: LifeLogCategory;
   texto: string;
   tipo?: 'info' | 'positivo' | 'negativo' | 'importante' | 'alerta';
+  relevancia?: RelevanciaLog;
 }
 
 export interface EventConsequence {
@@ -306,6 +332,13 @@ export interface EventOption {
   texto: string;
   descricaoResultado?: string;
   consequencias: EventConsequence;
+  /**
+   * Peso relativo deste desfecho quando o evento é um ACONTECIMENTO
+   * (`natureza: 'acontecimento'`). O motor resolve o desfecho sozinho,
+   * sorteando entre as opções por este peso. Ignorado em eventos de
+   * DECISÃO — lá quem escolhe é o jogador, não o dado. Ausente = 1.
+   */
+  peso?: number;
   requisito?: {
     atributo?: keyof VisibleStats | keyof HiddenStats;
     valorMinimo?: number;
@@ -350,6 +383,30 @@ export interface RepeticaoEvento {
   cooldownAnos?: number;
 }
 
+// ---------------------------------------------------------------------------
+// B4-FIX4 — natureza do evento: ACONTECIMENTO × DECISÃO
+//
+// "A vida acontece. Às vezes você decide." Até o B4-FIX3 o catálogo inteiro
+// era decisão: qualquer evento sorteado abria um modal perguntando "o que
+// você faz?", inclusive para um bebê de 1 ano diante do próprio reflexo no
+// espelho. Isso transformava textura de vida em escolha artificial e fazia
+// o jogo perguntar mais do que acontecer.
+//
+// - 'decisao'        : uma encruzilhada real. O jogador escolhe; a escolha
+//                      move a personalidade (impactosComportamentais) e é
+//                      registrada na memória de escolhas.
+// - 'acontecimento'  : algo que acontece COM a pessoa. O motor resolve
+//                      sozinho, sorteando um desfecho entre `opcoes` pelo
+//                      `peso` de cada uma, narra na Linha da Vida e NÃO
+//                      abre modal. Regra dura: um acontecimento NUNCA
+//                      atribui traço comportamental ao jogador — ele não
+//                      escolheu nada (ver `events/happenings`).
+//
+// Ausente = 'decisao', para que todo evento escrito antes deste PR continue
+// se comportando exatamente como antes até ser classificado.
+// ---------------------------------------------------------------------------
+export type NaturezaEvento = 'decisao' | 'acontecimento';
+
 /** Uma ocorrência real de evento, registrada com idade e ano (para cooldown). */
 export interface EventOccurrence {
   eventId: string;
@@ -362,6 +419,13 @@ export interface EventOccurrence {
   // Opcional: ocorrências de saves anteriores a este campo simplesmente
   // não participam da ponderação por contexto (tratadas como neutras).
   categoria?: GameEvent['categoria'];
+  // B4-FIX4 — natureza da ocorrência. É o que permite à camada de ritmo
+  // (`systems/pacing/lifeRhythm`) medir fadiga de DECISÃO separadamente de
+  // densidade de acontecimento: três acontecimentos seguidos são vida
+  // acontecendo; três decisões seguidas são um questionário. Opcional:
+  // ocorrências de saves anteriores são lidas como 'decisao' (o que elas
+  // de fato eram naquele momento do jogo).
+  natureza?: NaturezaEvento;
 }
 
 export interface GameEvent {
@@ -391,6 +455,11 @@ export interface GameEvent {
     | 'comunidade'
     | 'tecnologia';
   peso: number; // chance relativa
+  /**
+   * B4-FIX4 — acontecimento (o motor resolve e narra) ou decisão (o jogador
+   * escolhe). Ausente = 'decisao'. Ver `NaturezaEvento`.
+   */
+  natureza?: NaturezaEvento;
   unico?: boolean; // apenas uma vez na vida (equivalente a repeticao: { tipo: 'unica' })
   /** Política explícita de repetição (B4-FIX2). Ausente = infere de `unico`, senão 'recorrente'. */
   repeticao?: RepeticaoEvento;

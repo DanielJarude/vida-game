@@ -16,6 +16,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Dedicar cada minuto para resolver com raciocínio apurado',
         descricaoResultado: 'Você conquistou Medalha de Prata na OBMEP com direito a certificado e bolsa de estudos!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { inteligencia: 18, felicidade: 15 },
           hiddenStats: { disciplina: 15, ambicao: 15, reputacao: 15 },
           adicionarFlag: 'medalha_obmep'
@@ -26,6 +27,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Chutar as questões difíceis e ir embora mais cedo',
         descricaoResultado: 'Você aproveitou a tarde livre, mas ficou sem pontuação.',
         consequencias: {
+          impactosComportamentais: { disciplina: -2, impulsividade: 1 },
           stats: { felicidade: 5 },
           hiddenStats: { disciplina: -5 }
         }
@@ -46,6 +48,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 14,
     categoria: 'familia',
     peso: 60,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -56,7 +59,6 @@ export const MORE_EVENTS: GameEvent[] = [
           stats: { felicidade: 10 },
           relacionamentoDelta: { delta: 12 },
           hiddenStats: { empatia: 15, disciplina: 8 },
-          impactosComportamentais: { generosidade: 1, disciplina: 1 }
         }
       },
       {
@@ -67,7 +69,6 @@ export const MORE_EVENTS: GameEvent[] = [
           stats: { felicidade: -8 },
           relacionamentoDelta: { delta: -8 },
           hiddenStats: { disciplina: 5 },
-          impactosComportamentais: { impulsividade: 1 }
         }
       }
     ]
@@ -86,6 +87,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Levar imediatamente à clínica veterinária para fazer exames',
         descricaoResultado: 'O veterinário medicou a tempo e o bichinho voltou a pular e abanar o rabo cheio de energia!',
         consequencias: {
+          impactosComportamentais: { empatia: 2, generosidade: 1 },
           stats: { felicidade: 15 },
           dinheiro: -280,
           hiddenStats: { empatia: 20 }
@@ -96,6 +98,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Esperar mais um dia para ver se passa sozinho',
         descricaoResultado: 'Ele melhorou devagar, mas você passou a noite preocupado.',
         consequencias: {
+          impactosComportamentais: { empatia: -1 },
           stats: { felicidade: -5 },
           hiddenStats: { estresse: 10 }
         }
@@ -121,6 +124,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Vestir a camisa, pedir doações nos semáforos e doar sangue',
         descricaoResultado: 'A campanha bateu recordes de arrecadação e você fez amizades que durarão por toda a graduação!',
         consequencias: {
+          impactosComportamentais: { generosidade: 2, sociabilidade: 1 },
           stats: { felicidade: 20, saude: 5 },
           hiddenStats: { empatia: 20, sociabilidade: 25, reputacao: 15 }
         }
@@ -130,6 +134,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Ficar apenas nas aulas teóricas e não se envolver',
         descricaoResultado: 'Você manteve o foco estritamente acadêmico.',
         consequencias: {
+          impactosComportamentais: { sociabilidade: -1 },
           stats: { inteligencia: 5 },
           hiddenStats: { disciplina: 5 }
         }
@@ -150,6 +155,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Comprar a apostila, resolver provas anteriores e focar na aprovação',
         descricaoResultado: 'Sua preparação intensiva aumentou absurdamente seu conhecimento em legislação e administração pública!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { inteligencia: 15 },
           dinheiro: -250,
           hiddenStats: { disciplina: 20, ambicao: 20, estresse: 12 },
@@ -161,6 +167,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Preferir a flexibilidade e dinamismo do setor privado',
         descricaoResultado: 'Você continuou trilhando seus passos no mercado corporativo.',
         consequencias: {
+          impactosComportamentais: { independencia: 1 },
           stats: { felicidade: 5 }
         }
       }
@@ -183,6 +190,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Estudar intensamente nos meses antes da prova',
         descricaoResultado: 'APROVADO(A)! Seu registro profissional oficial foi emitido com honras!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { felicidade: 30, inteligencia: 10 },
           hiddenStats: { reputacao: 25, ambicao: 20, disciplina: 15 },
           adicionarFlag: 'registro_profissional_aprovado'
@@ -193,6 +201,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Confiar só na experiência prática e não revisar o conteúdo teórico',
         descricaoResultado: 'Você foi reprovado por pouco e precisou remarcar o exame para o próximo ano.',
         consequencias: {
+          impactosComportamentais: { disciplina: -2, impulsividade: 1 },
           stats: { felicidade: -12 },
           hiddenStats: { estresse: 15 }
         }
@@ -218,6 +227,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Juntar todos os comprovantes médicos e informes de rendimento com rigor',
         descricaoResultado: 'Declaração aprovada sem pendências e você ainda recebeu R$ 1.800 de restituição!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { felicidade: 15 },
           dinheiro: 1800,
           hiddenStats: { disciplina: 15 }
@@ -228,6 +238,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Fazer correndo no último dia às 23:50',
         descricaoResultado: 'Você quase perdeu o prazo e teve que pagar uma pequena multa por atraso.',
         consequencias: {
+          impactosComportamentais: { disciplina: -2 },
           stats: { felicidade: -8 },
           dinheiro: -160,
           hiddenStats: { estresse: 15 }
@@ -249,6 +260,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Aceitar com orgulho, discursar no brinde e presentear os noivos',
         descricaoResultado: 'Foi uma cerimônia inesquecível! Seu discurso fez todo mundo chorar e sorrir.',
         consequencias: {
+          impactosComportamentais: { generosidade: 2, sociabilidade: 1 },
           stats: { felicidade: 25 },
           dinheiro: -600,
           hiddenStats: { sociabilidade: 20, empatia: 20, reputacao: 15 }
@@ -259,6 +271,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Agradecer, mas pedir para ir apenas como convidado comum',
         descricaoResultado: 'Você curtiu a festa sem a pressão do altar.',
         consequencias: {
+          impactosComportamentais: { sociabilidade: -1 },
           stats: { felicidade: 10 }
         }
       }
@@ -281,6 +294,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Dar a entrada de R$ 15.000 para investimento futuro',
         descricaoResultado: 'A região se desenvolveu rapidamente e o valor do terreno dobrou em poucos anos!',
         consequencias: {
+          impactosComportamentais: { coragem: 1, impulsividade: 1 },
           stats: { felicidade: 15 },
           dinheiro: 15000,
           hiddenStats: { ambicao: 15, reputacao: 10 }
@@ -291,6 +305,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Não comprar e manter o dinheiro em caixa',
         descricaoResultado: 'Você manteve sua liquidez financeira.',
         consequencias: {
+          impactosComportamentais: { disciplina: 1 },
           stats: { felicidade: 0 }
         }
       }
@@ -310,6 +325,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Sentar na cadeira, estender o braço e doar sangue com alegria',
         descricaoResultado: 'Sua doação pode salvar até 4 vidas! Você ganhou um lanche caprichado e uma sensação indescritível de dever cumprido.',
         consequencias: {
+          impactosComportamentais: { generosidade: 2, coragem: 1 },
           stats: { felicidade: 20, saude: 2 },
           hiddenStats: { empatia: 25, reputacao: 15 }
         }
@@ -319,6 +335,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Ter medo de agulha e passar batido',
         descricaoResultado: 'Você seguiu seu caminho.',
         consequencias: {
+          impactosComportamentais: { coragem: -1 },
           stats: { felicidade: 0 }
         }
       }
@@ -332,6 +349,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 45,
     categoria: 'familia',
     peso: 80,
+    natureza: 'acontecimento',
     // B4-FIX2 — o playtest confirmou este evento repetindo em anos
     // seguidos (a simulação forense mostrou até 5 ocorrências na mesma
     // vida). Visitar os avós pode acontecer várias vezes na vida — não é
@@ -346,7 +364,6 @@ export const MORE_EVENTS: GameEvent[] = [
           stats: { felicidade: 25, saude: 5 },
           relacionamentoDelta: { delta: 25 },
           hiddenStats: { empatia: 20, estresse: -25 },
-          impactosComportamentais: { empatia: 1, familia: 2 }
         }
       },
       {
@@ -356,7 +373,6 @@ export const MORE_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 2 },
           relacionamentoDelta: { delta: -5 },
-          impactosComportamentais: { familia: -1 }
         }
       }
     ]
@@ -375,6 +391,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Abraçar o jovem, passar sua sabedoria de vida e encorajá-lo a seguir a sua vocação',
         descricaoResultado: 'Suas palavras trouxeram uma serenidade enorme! Ele(a) se sentiu acolhido e confiante para vencer o desafio.',
         consequencias: {
+          impactosComportamentais: { empatia: 2, familia: 2 },
           stats: { felicidade: 25 },
           relacionamentoDelta: { delta: 25 },
           hiddenStats: { empatia: 25, reputacao: 20 }
@@ -385,6 +402,7 @@ export const MORE_EVENTS: GameEvent[] = [
         texto: 'Dizer que na sua época era muito mais difícil e mandar estudar mais',
         descricaoResultado: 'Ele ouviu calado e foi embora um pouco chateado.',
         consequencias: {
+          impactosComportamentais: { empatia: -1, disciplina: 1 },
           stats: { felicidade: -5 },
           relacionamentoDelta: { delta: -10 }
         }

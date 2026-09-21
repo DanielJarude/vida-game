@@ -1,36 +1,52 @@
 import {
   Character,
   CareerState,
-  CondicaoComportamental,
   EducationState,
   EconomyState,
   EventOccurrence,
   FamilyMember,
   GameEvent,
   EventOption,
+  LifeLogCategory,
   LifeLogEntry,
-  PersonalityState
+  NaturezaEvento,
+  PersonalityState,
+  RelevanciaLog
 } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
-import { formatarDinheiro, getRotuloAtributo } from '../utils/formatters';
 import { clamp, generateId } from '../utils/random';
 import { normalizarHiddenStats, normalizarStats } from './attributeSystem';
 // Dependência em direção única: personalitySystem não importa eventSystem
-import {
-  atendeCondicaoComportamental,
-  registrarEscolha,
-  getNomeTraco
-} from './personalitySystem';
+import { registrarEscolha } from './personalitySystem';
 import { avaliarCondicoesEvento as avaliarCondicoesEventoImpl } from './events/eligibility';
-import { haEventoNesteAno, sortearPonderadoComContexto } from './events/selection';
+import { sortearPonderadoComContexto } from './events/selection';
 import { ponderarPorContexto } from './events/contextWeighting';
+import { naturezaDoEvento } from './events/nature';
+import { tomDoDesfecho } from './events/happenings';
+import { avaliarRequisitoOpcao as avaliarRequisitoOpcaoImpl } from './events/optionRequirements';
 
-// Reexportado por compatibilidade: quem já importava `avaliarCondicoesEvento`
-// e `sortearEventoDoAno` de `eventSystem` continua funcionando. A regra em
-// si vive em `systems/events/eligibility` e `systems/events/selection`
-// (B4-FIX2) — não duplicada aqui.
+// Reexportado por compatibilidade: quem já importava `avaliarCondicoesEvento`,
+// `avaliarRequisitoOpcao` ou `sortearEventoDoAno` de `eventSystem` continua
+// funcionando. As regras vivem em `systems/events/eligibility`,
+// `systems/events/optionRequirements` e `systems/events/selection` — nunca
+// duplicadas aqui.
 export const avaliarCondicoesEvento = avaliarCondicoesEventoImpl;
+export const avaliarRequisitoOpcao = avaliarRequisitoOpcaoImpl;
 
+/**
+ * Sorteia um evento da natureza pedida entre os que o personagem pode
+ * receber agora.
+ *
+ * B4-FIX4 — mudança importante de responsabilidade: esta função NÃO decide
+ * mais SE o ano terá evento. Essa é a pergunta do ritmo
+ * (`systems/pacing/lifeRhythm`), que lê idade, fase, densidade do ano e
+ * fadiga de decisão. Aqui só sobrou "qual evento", que é o que o nome
+ * sempre prometeu. A antiga `haEventoNesteAno()` (porcentagem global de
+ * 75%, igual aos 0 e aos 80 anos) deixou de ser consultada.
+ *
+ * `natureza` ausente = qualquer natureza (usado por testes e simulações que
+ * só querem saber se existe conteúdo elegível).
+ */
 export function sortearEventoDoAno(
   personagem: Character,
   carreira: CareerState,
@@ -39,15 +55,12 @@ export function sortearEventoDoAno(
   familia: FamilyMember[],
   historicoDisparados: string[],
   personalidade?: PersonalityState,
-  historicoOcorrencias: EventOccurrence[] = []
+  historicoOcorrencias: EventOccurrence[] = [],
+  natureza?: NaturezaEvento
 ): GameEvent | null {
-  // Chance de ter um evento interativo no ano (alguns anos são mais calmos)
-  if (!haEventoNesteAno()) {
-    return null;
-  }
-
-  const eventosElegiveis = MASTER_EVENTS_LIST.filter(evento =>
-    avaliarCondicoesEventoImpl(
+  const eventosElegiveis = MASTER_EVENTS_LIST.filter(evento => {
+    if (natureza && naturezaDoEvento(evento) !== natureza) return false;
+    return avaliarCondicoesEventoImpl(
       evento,
       personagem,
       carreira,
@@ -57,8 +70,8 @@ export function sortearEventoDoAno(
       historicoDisparados,
       personalidade,
       historicoOcorrencias
-    )
-  );
+    );
+  });
 
   // B4-FIX3 — o pool elegível é ajustado por contexto recente e por
   // anti-dominação antes do sorteio (ver `events/contextWeighting`).
@@ -66,73 +79,23 @@ export function sortearEventoDoAno(
   return sortearPonderadoComContexto(ponderados);
 }
 
-/** Motivo em pt-BR quando uma exigência comportamental não é cumprida (qualitativo, sem números). */
-function motivoCondicaoComportamental(cond: CondicaoComportamental): string {
-  if (cond.traco && (cond.intensidadeMinima !== undefined || cond.intensidadeMaxima !== undefined)) {
-    return `Você ainda não tem histórico suficiente de ${getNomeTraco(cond.traco)}.`;
-  }
-  return 'Esta escolha depende de uma vivência que você ainda não teve.';
-}
-
-/**
- * Avalia o requisito de uma opção de evento (atributo, dinheiro, flag ou padrão
- * comportamental acumulado). Usado pela interface (mostrar indisponibilidade e
- * motivo) e pelo motor (recusar antes de aplicar consequências).
- */
-export function avaliarRequisitoOpcao(
-  opcao: EventOption,
-  personagem: Character,
-  economia: EconomyState,
-  personalidade?: PersonalityState
-): { aprovado: boolean; motivo?: string } {
-  const requisito = opcao.requisito;
-  if (!requisito) return { aprovado: true };
-
-  // B4-FIX3 item 7 — o evento pode ser elegível numa idade (janela ampla,
-  // ex.: 8-90 para um problema de saúde), mas uma opção específica dentro
-  // dele pode continuar incompatível (ex.: "tentar trabalhar mesmo doente"
-  // não faz sentido para uma criança de 8 anos). O motor recusa aqui —
-  // nunca confia que a UI já filtrou a opção antes de chamar.
-  if (requisito.idadeMinima !== undefined && personagem.idade < requisito.idadeMinima) {
-    return { aprovado: false, motivo: 'Você ainda não tem idade para essa escolha.' };
-  }
-  if (requisito.idadeMaxima !== undefined && personagem.idade > requisito.idadeMaxima) {
-    return { aprovado: false, motivo: 'Essa escolha não é mais compatível com sua idade.' };
-  }
-
-  if (requisito.dinheiroMinimo !== undefined && economia.dinheiro < requisito.dinheiroMinimo) {
-    return { aprovado: false, motivo: `Você precisa de ${formatarDinheiro(requisito.dinheiroMinimo)} disponíveis.` };
-  }
-
-  if (requisito.atributo && requisito.valorMinimo !== undefined) {
-    const valorAtual =
-      (personagem.stats as unknown as Record<string, number | undefined>)[requisito.atributo] ??
-      (personagem.hiddenStats as unknown as Record<string, number | undefined>)[requisito.atributo];
-    if (valorAtual === undefined || valorAtual < requisito.valorMinimo) {
-      return {
-        aprovado: false,
-        motivo: `Você precisa de ${getRotuloAtributo(requisito.atributo)} ${requisito.valorMinimo} ou mais.`
-      };
-    }
-  }
-
-  if (requisito.flagNecessaria && !personagem.flags[requisito.flagNecessaria]) {
-    return { aprovado: false, motivo: 'Você não cumpre os requisitos para esta escolha.' };
-  }
-
-  // B2 — padrão de comportamento acumulado (recusa segura sem estado de personalidade)
-  if (requisito.condicaoComportamental) {
-    if (!atendeCondicaoComportamental(personalidade, requisito.condicaoComportamental)) {
-      return { aprovado: false, motivo: motivoCondicaoComportamental(requisito.condicaoComportamental) };
-    }
-  }
-
-  return { aprovado: true };
-}
-
 export interface ContextoPersonalidadeEscolha {
   eventoId: string;
   personalidade: PersonalityState;
+}
+
+/**
+ * B4-FIX4 — onde o desfecho deste evento entra na Linha da Vida.
+ *
+ * Sem este contexto, todo resultado de evento virava `categoria: 'evento'`
+ * (rotulada "Escolha" na apresentação) — errado para um acontecimento, que
+ * não foi escolha nenhuma, e pobre para uma decisão, cujo assunto real
+ * (escola, saúde, dinheiro) ficava escondido atrás de um rótulo genérico.
+ * Ausente = comportamento anterior, para não alterar chamadas existentes.
+ */
+export interface ContextoNarrativoDesfecho {
+  categoriaLog: LifeLogCategory;
+  relevancia?: RelevanciaLog;
 }
 
 export function aplicarConsequenciasEscolha(
@@ -143,7 +106,8 @@ export function aplicarConsequenciasEscolha(
   economia: EconomyState,
   familia: FamilyMember[],
   anoAtual: number,
-  contextoPersonalidade?: ContextoPersonalidadeEscolha
+  contextoPersonalidade?: ContextoPersonalidadeEscolha,
+  contextoNarrativo?: ContextoNarrativoDesfecho
 ): {
   personagemAtualizado: Character;
   carreiraAtualizada: CareerState;
@@ -344,15 +308,21 @@ export function aplicarConsequenciasEscolha(
     causaMorte = causaMorte || (char.stats.saude <= 0 ? 'Problemas graves de saúde' : 'Incidente fatal');
   }
 
-  // Log do resultado
+  // Log do resultado.
+  //
+  // Bug corrigido no B4-FIX4: o tipo era `'positivo'` fixo. Um desfecho em
+  // que a pessoa se machucou, perdeu dinheiro ou foi demitida entrava na
+  // Linha da Vida com a ênfase visual de boa notícia. O tom agora vem das
+  // consequências reais (`events/happenings.tomDoDesfecho`).
   if (opcao.descricaoResultado) {
     logs.push({
       id: generateId('log'),
       idade: char.idade,
       ano: anoAtual,
-      categoria: 'evento',
+      categoria: contextoNarrativo?.categoriaLog ?? 'evento',
       texto: opcao.descricaoResultado,
-      tipo: 'positivo'
+      tipo: tomDoDesfecho(cons),
+      relevancia: contextoNarrativo?.relevancia ?? 'normal'
     });
   }
 
