@@ -1,7 +1,8 @@
-import { GameState, GlobalStats, PastLifeRecord, PostMortemSummary, GameEvent } from '../types';
+import { EventOccurrence, GameState, GlobalStats, PastLifeRecord, PostMortemSummary, GameEvent } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
 import { criarPersonalidadeInicial, normalizarPersonalidade } from './personalitySystem';
 import { clamp } from '../utils/random';
+import { normalizarAparencia } from '../data/avatar/avatarData';
 
 const SAVE_KEY = 'VIDA_GAME_SAVE_V1'; // chave mantida: a versão vive dentro do payload
 const STATS_KEY = 'VIDA_GLOBAL_STATS_V1';
@@ -102,7 +103,12 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     },
     doencas: lista(personagemBruto.doencas).filter(d => typeof d === 'string') as string[],
     flags: flagsValidas as Record<string, boolean | number | string>,
-    marcos: lista(personagemBruto.marcos).filter(comoObjeto) as NonNullable<GameState['personagem']>['marcos']
+    marcos: lista(personagemBruto.marcos).filter(comoObjeto) as NonNullable<GameState['personagem']>['marcos'],
+    // B4-FIX2 — saves de antes deste PR não têm `aparencia`: normalizada
+    // para um valor sempre válido (fallback do B4-FIX1 continua cobrindo
+    // a ausência na apresentação, mas o dado em si nunca fica indefinido
+    // aqui — evita checagens espalhadas pelo resto do código).
+    aparencia: normalizarAparencia(personagemBruto.aparencia)
   } as GameState['personagem'];
 
   // --- Família ---
@@ -185,6 +191,17 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     h => typeof h === 'string'
   ) as string[];
 
+  // B4-FIX2 — histórico rico (id + idade + ano). Saves anteriores a esta
+  // mudança não têm o campo: começa vazio, sem inventar idade/ano para
+  // ocorrências passadas (cooldown se comporta como "sem histórico
+  // conhecido" para esses eventos — nunca bloqueia por engano).
+  const historicoOcorrenciasEventos = lista(raiz.historicoOcorrenciasEventos).filter(
+    (o): o is EventOccurrence => {
+      const obj = comoObjeto(o);
+      return !!obj && typeof obj.eventId === 'string' && typeof obj.idade === 'number' && typeof obj.ano === 'number';
+    }
+  ) as EventOccurrence[];
+
   // --- Personalidade (B2): saves das versões 1/2 não possuem o campo;
   // inicializa em branco. Saves da v3 são normalizados defensivamente. ---
   const personalidade = raiz.personalidade
@@ -204,6 +221,7 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     timeline,
     eventoAtivo,
     historicoEventosDisparados,
+    historicoOcorrenciasEventos,
     acoesRealizadasAno: lista(raiz.acoesRealizadasAno).filter(a => typeof a === 'string') as string[],
     emJogo: raiz.emJogo !== false,
     morto: raiz.morto === true,

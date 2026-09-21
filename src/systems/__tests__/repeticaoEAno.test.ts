@@ -196,7 +196,13 @@ describe('Passagem de ano (avanço de tempo)', () => {
     expect(resMatar.educacaoAtualizada.desempenho).toBeLessThan(resNeutro.educacaoAtualizada.desempenho);
     // postura consumida (reset para o próximo ano)
     expect(resEstudar.educacaoAtualizada.posturaAno ?? null).toBeNull();
-    expect(resEstudar.logsEducacao.some(l => l.texto.includes('dedicou o ano'))).toBe(true);
+    // B4-FIX2 — o texto agora varia entre algumas frases (item 6: evitar
+    // repetição textual idêntica em anos próximos); o teste verifica que
+    // existe um log de escola positivo sobre o ano, não uma frase fixa.
+    const logEscola = resEstudar.logsEducacao.find(l => l.categoria === 'escola');
+    expect(logEscola).toBeTruthy();
+    expect(logEscola!.tipo).toBe('positivo');
+    expect(logEscola!.texto.length).toBeGreaterThan(10);
     definirFonteAleatoria(null);
   });
 

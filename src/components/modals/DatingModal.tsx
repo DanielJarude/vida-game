@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { DatingCandidate, gerarCandidatosNamoro } from '../../systems/relationshipSystem';
+import {
+  DatingCandidate,
+  gerarCandidatosNamoro
+} from '../../systems/relationshipSystem';
 import { Character } from '../../types';
-import { getStatColor } from '../../utils/formatters';
-import { X, Heart, Briefcase, RefreshCw } from 'lucide-react';
+import { useModalBehavior } from '../common/useModalBehavior';
+import { X } from 'lucide-react';
 
 interface DatingModalProps {
   personagem: Character;
@@ -15,6 +18,8 @@ export const DatingModal: React.FC<DatingModalProps> = ({
   onClose,
   onIniciarNamoro
 }) => {
+  const containerRef = useModalBehavior<HTMLDivElement>({ onClose });
+
   const [candidatos, setCandidatos] = useState<DatingCandidate[]>(() =>
     gerarCandidatosNamoro('todos', personagem.idade)
   );
@@ -23,90 +28,73 @@ export const DatingModal: React.FC<DatingModalProps> = ({
     setCandidatos(gerarCandidatosNamoro('todos', personagem.idade));
   };
 
+  const tituloId = 'encontros-titulo';
+
   return (
     <div className="modal-overlay">
-      <div className="modal-card" style={{ maxWidth: '580px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        className="modal-surface"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={tituloId}
+        ref={containerRef}
+        tabIndex={-1}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 'var(--space-4)'
+          }}
+        >
           <div>
-            <h2 className="modal-title">Encontros & Relacionamentos</h2>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-              Pessoas interessantes da sua região procurando um relacionamento
-            </div>
+            <h2 className="event-scene__title" id={tituloId} style={{ marginBottom: 'var(--space-1)' }}>
+              Conhecer pessoas
+            </h2>
+            <p className="action-row__detail">
+              Pessoas da sua região abertas a um relacionamento.
+            </p>
           </div>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="icon-button" aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {candidatos.map((cand, idx) => (
-            <div
-              key={idx}
-              style={{
-                background: 'var(--bg-card-subtle)',
-                border: '1px solid var(--border-card)',
-                borderRadius: 'var(--radius-md)',
-                padding: '16px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '12px'
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
-                  {cand.nome} {cand.sobrenome}, {cand.idade} anos
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--accent-amber)' }}>
-                  <Briefcase size={14} />
-                  <span>{cand.profissao}</span>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                  "{cand.personalidade}"
-                </div>
-                <div style={{ display: 'flex', gap: '14px', marginTop: '4px', fontSize: '0.8rem' }}>
-                  <span style={{ color: getStatColor(cand.aparencia) }}>
-                    Aparência: {cand.aparencia}%
-                  </span>
-                  <span style={{ color: getStatColor(cand.inteligencia) }}>
-                    Inteligência: {cand.inteligencia}%
-                  </span>
-                </div>
-              </div>
+        <div className="event-scene__divider" role="presentation" />
 
-              <button
-                onClick={() => {
-                  onIniciarNamoro(cand);
-                  onClose();
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
-                  color: '#fff',
-                  padding: '10px 18px',
-                  borderRadius: 'var(--radius-md)',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 4px 12px rgba(244, 63, 94, 0.3)'
-                }}
-              >
-                <Heart size={16} fill="#fff" />
-                <span>Namorar</span>
-              </button>
+        <div className="action-list">
+          {candidatos.map((cand, idx) => (
+            <div key={idx} className="action-row">
+              <div className="action-row__body">
+                <p className="action-row__title">
+                  {cand.nome} {cand.sobrenome}
+                </p>
+                <p className="action-row__detail">
+                  {cand.idade} anos · {cand.profissao}
+                </p>
+                <p className="action-row__detail">{cand.personalidade}</p>
+              </div>
+              <div className="action-row__action">
+                <button
+                  className="btn btn--primary"
+                  onClick={() => {
+                    onIniciarNamoro(cand);
+                    onClose();
+                  }}
+                >
+                  Se aproximar
+                </button>
+              </div>
             </div>
           ))}
         </div>
 
-        <button
-          onClick={atualizarCandidatos}
-          className="btn-acao-secundaria"
-          style={{ justifyContent: 'center', padding: '10px' }}
-        >
-          <RefreshCw size={16} />
-          <span>Ver Outros Perfis</span>
-        </button>
+        <div style={{ marginTop: 'var(--space-5)' }}>
+          <button onClick={atualizarCandidatos} className="btn btn--ghost btn--block">
+            Ver outras pessoas
+          </button>
+        </div>
       </div>
     </div>
   );

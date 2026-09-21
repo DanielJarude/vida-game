@@ -33,13 +33,20 @@ export const MORE_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 5 — o playtest apontou este evento repetindo com
+    // frequência perceptível ao lado de "Tarde na Casa dos Avós". Antes
+    // deste PR não tinha `repeticao` explícita (caía no padrão recorrente
+    // com cooldown sistêmico de só 2 anos) — pequeno demais para um
+    // conflito doméstico repetitivo que não deveria dominar anos
+    // diferentes da infância. Mesma política aplicada a `fam_visita_avo`.
     id: 'fam_briga_controle_tv',
     titulo: 'Guerra pelo Controle da TV',
     descricao: 'Você e seu irmão estão disputando quem vai assistir à televisão na sala no sábado à tarde.',
     idadeMinima: 6,
     idadeMaxima: 14,
     categoria: 'familia',
-    peso: 80,
+    peso: 60,
+    repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
         id: 'opt_ceder_revezar',
@@ -160,6 +167,8 @@ export const MORE_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 6 — só existia uma opção (aprovação garantida). Agora
+    // há uma escolha real de preparo, com risco genuíno de reprovação.
     id: 'car_exame_ordem_conselho',
     titulo: 'Exame de Registro Profissional',
     descricao: 'Chegou o momento de prestar o exame oficial do Conselho Profissional (OAB, CREA, CRM, CFC, COREN) para exercer a profissão.',
@@ -171,12 +180,21 @@ export const MORE_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_prestar_exame_focado',
-        texto: 'Fazer o exame com concentração máxima',
+        texto: 'Estudar intensamente nos meses antes da prova',
         descricaoResultado: 'APROVADO(A)! Seu registro profissional oficial foi emitido com honras!',
         consequencias: {
           stats: { felicidade: 30, inteligencia: 10 },
           hiddenStats: { reputacao: 25, ambicao: 20, disciplina: 15 },
           adicionarFlag: 'registro_profissional_aprovado'
+        }
+      },
+      {
+        id: 'opt_confiar_so_experiencia',
+        texto: 'Confiar só na experiência prática e não revisar o conteúdo teórico',
+        descricaoResultado: 'Você foi reprovado por pouco e precisou remarcar o exame para o próximo ano.',
+        consequencias: {
+          stats: { felicidade: -12 },
+          hiddenStats: { estresse: 15 }
         }
       }
     ]
@@ -314,6 +332,11 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 45,
     categoria: 'familia',
     peso: 80,
+    // B4-FIX2 — o playtest confirmou este evento repetindo em anos
+    // seguidos (a simulação forense mostrou até 5 ocorrências na mesma
+    // vida). Visitar os avós pode acontecer várias vezes na vida — não é
+    // 'unica' — mas precisa de um intervalo mínimo para não parecer bug.
+    repeticao: { tipo: 'cooldown', cooldownAnos: 4 },
     opcoes: [
       {
         id: 'opt_ouvir_historias',

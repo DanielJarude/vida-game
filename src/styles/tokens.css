@@ -1,0 +1,153 @@
+/* ==========================================================================
+   VIDA — Design tokens (B4)
+   Fonte central de verdade visual. Nenhum componente deve repetir valores
+   mágicos de cor, espaçamento, raio, sombra ou tipografia.
+   ========================================================================== */
+
+:root {
+  /* ---------------------------------------------------------------- Fontes
+     A fonte remota é um reforço, não um requisito. A pilha local abaixo
+     mantém o produto legível e proporcional se o Google Fonts falhar. */
+  --font-sans:
+    'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display:
+    'Outfit', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI Semibold', 'Segoe UI', Roboto, sans-serif;
+  --font-hand:
+    'Segoe Script', 'Bradley Hand', 'Brush Script MT', cursive;
+
+  /* ------------------------------------------------------- Escala tipográfica
+     Sete degraus nomeados por papel. Não introduzir tamanhos avulsos. */
+  --type-display: 2.25rem;
+  --type-heading: 1.375rem;
+  --type-subheading: 1.0625rem;
+  --type-body: 0.9375rem;
+  --type-caption: 0.8125rem;
+  --type-meta: 0.6875rem;
+  --type-number: 1.5rem;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.6;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --tracking-meta: 0.11em;
+  --tracking-tight: -0.02em;
+
+  /* ------------------------------------------------------------------ Cores
+     Base petróleo profundo. Não é preto puro: guarda um leve azul-esverdeado
+     para dar profundidade sem virar ficção científica. */
+  --bg-deep: #070c0f;
+  --bg-app: #0a1116;
+  --bg-raised: #101b22;
+  --bg-elevated: #16242c;
+  --bg-inset: rgba(255, 255, 255, 0.025);
+
+  /* Superfícies usadas apenas por unidades reais (evento, pessoa, modal).
+     B4-FIX2 item 24-26 — leve aumento de opacidade para separar melhor
+     "interativo/hover" de "estático": profundidade por contraste real,
+     não por brilho ou glow. */
+  --surface: rgba(255, 255, 255, 0.038);
+  --surface-hover: rgba(255, 255, 255, 0.065);
+  --surface-strong: rgba(15, 27, 34, 0.94);
+
+  /* Divisores discretos substituem bordas de card */
+  --rule: rgba(255, 255, 255, 0.07);
+  --rule-strong: rgba(255, 255, 255, 0.13);
+
+  /* Contraste verificado contra --bg-app (#0a1116). O B4-FIX elevou muted
+     e faint: em 4.12:1 e 2.57:1 eles reprovavam no WCAG AA e o playtest
+     reportou informação secundária difícil de ler. Nenhum texto legível
+     do produto fica abaixo de 4.5:1. */
+  --text-primary: #eef4f2;   /* 17.07:1 */
+  --text-secondary: #a8bcba; /* 9.73:1  */
+  --text-muted: #88a0a2;     /* 6.88:1  */
+  --text-faint: #7e9492;     /* 5.92:1  */
+
+  /* Acento único e escasso. Carrega significado: ativo, escolhido, avançar. */
+  --accent: #3ddc97;
+  --accent-soft: #7ef0bd;
+  --accent-deep: #1f9e6b;
+  --accent-wash: rgba(61, 220, 151, 0.12);
+  --accent-line: rgba(61, 220, 151, 0.38);
+
+  /* Semânticos — uso restrito ao significado, nunca decoração */
+  --danger: #e4675c;
+  --danger-wash: rgba(228, 103, 92, 0.12);
+  --success: var(--accent);
+  --warning: #d9a441;
+  --warning-wash: rgba(217, 164, 65, 0.12);
+
+  /* B4-FIX2 item 24-26 — riqueza atmosférica controlada: cor por
+     SIGNIFICADO, não por evento/categoria (nunca arco-íris). Só dois
+     matizes adicionais, de uso restrito:
+     - família/memória: tom quente (terracota), nunca decoração solta;
+     - estudo/conhecimento: azul frio, idem.
+     Continuam escassos — a base da interface permanece monocromática
+     escura; isto só reforça o significado onde ele já existia (ícone de
+     categoria na Linha da Vida), não cria novas superfícies coloridas. */
+  --warm-memory: #d99a5b;
+  --warm-memory-wash: rgba(217, 154, 91, 0.12);
+  --cool-study: #6f9bd1;
+  --cool-study-wash: rgba(111, 155, 209, 0.12);
+
+  /* ------------------------------------------------------------- Espaçamento
+     Escala de 4px. Usar os degraus, não valores intermediários. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 72px;
+
+  /* ------------------------------------------------------------------ Raios */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* ---------------------------------------------------------------- Sombras
+     Controladas. Profundidade vem de contraste e escala, não de glow. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px -12px rgba(0, 0, 0, 0.75);
+  --shadow-lg: 0 24px 60px -24px rgba(0, 0, 0, 0.85);
+  --shadow-accent: 0 12px 32px -14px rgba(61, 220, 151, 0.45);
+
+  /* --------------------------------------------------------------- Movimento
+     Curto e discreto. Toda transição respeita prefers-reduced-motion. */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 380ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* -------------------------------------------------------------- Dimensões */
+  --rail-width: 272px;
+  --aside-width: 296px;
+  --content-max: 1600px;
+  --header-height: 60px;
+  --touch-target: 44px;
+
+  --z-base: 1;
+  --z-sticky: 40;
+  --z-overlay: 80;
+  --z-toast: 90;
+}
+
+/* Fallback tipográfico: se a fonte de display remota não carregar, a pilha
+   local assume sem quebrar a proporção do título. */
+@supports not (font-variation-settings: normal) {
+  :root {
+    --tracking-tight: -0.015em;
+  }
+}

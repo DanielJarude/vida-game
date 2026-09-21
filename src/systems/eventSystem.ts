@@ -4,6 +4,7 @@ import {
   CondicaoComportamental,
   EducationState,
   EconomyState,
+  EventOccurrence,
   FamilyMember,
   GameEvent,
   EventOption,
@@ -11,92 +12,24 @@ import {
   PersonalityState
 } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
-import { formatarDinheiro, getLifeStage, getRotuloAtributo } from '../utils/formatters';
-import { clamp, generateId, rollChance, valorAleatorio } from '../utils/random';
+import { formatarDinheiro, getRotuloAtributo } from '../utils/formatters';
+import { clamp, generateId } from '../utils/random';
 import { normalizarHiddenStats, normalizarStats } from './attributeSystem';
 // Dependência em direção única: personalitySystem não importa eventSystem
 import {
   atendeCondicaoComportamental,
-  atendeCondicoesComportamentais,
-  getNomeTraco,
-  registrarEscolha
+  registrarEscolha,
+  getNomeTraco
 } from './personalitySystem';
+import { avaliarCondicoesEvento as avaliarCondicoesEventoImpl } from './events/eligibility';
+import { haEventoNesteAno, sortearPonderadoComContexto } from './events/selection';
+import { ponderarPorContexto } from './events/contextWeighting';
 
-export function avaliarCondicoesEvento(
-  evento: GameEvent,
-  personagem: Character,
-  carreira: CareerState,
-  educacao: EducationState,
-  economia: EconomyState,
-  familia: FamilyMember[],
-  historicoDisparados: string[],
-  personalidade?: PersonalityState
-): boolean {
-  // Idade
-  if (personagem.idade < evento.idadeMinima || personagem.idade > evento.idadeMaxima) {
-    return false;
-  }
-
-  // Evento único já disparado
-  if (evento.unico && historicoDisparados.includes(evento.id)) {
-    return false;
-  }
-
-  const cond = evento.condicoes;
-  if (!cond) return true;
-
-  if (cond.genero && cond.genero !== personagem.genero) return false;
-
-  if (cond.faseVida) {
-    const faseAtual = getLifeStage(personagem.idade);
-    if (faseAtual !== cond.faseVida) return false;
-  }
-
-  if (cond.empregado !== undefined && cond.empregado !== carreira.empregado) return false;
-  if (cond.emEscola !== undefined && cond.emEscola !== educacao.emCurso) return false;
-  if (cond.emFaculdade !== undefined) {
-    const isFaculdade = educacao.emCurso && (educacao.tipoCurso === 'superior' || educacao.tipoCurso === 'pos');
-    if (cond.emFaculdade !== isFaculdade) return false;
-  }
-
-  if (cond.temParceiro !== undefined) {
-    const temParc = familia.some(
-      f => f.vivo && ['namorado', 'namorada', 'noivo', 'noiva', 'esposo', 'esposa'].includes(f.tipo)
-    );
-    if (cond.temParceiro !== temParc) return false;
-  }
-
-  if (cond.temFilhos !== undefined) {
-    const temFil = familia.some(f => f.vivo && (f.tipo === 'filho' || f.tipo === 'filha'));
-    if (cond.temFilhos !== temFil) return false;
-  }
-
-  if (cond.dinheiroMinimo !== undefined && economia.dinheiro < cond.dinheiroMinimo) return false;
-  if (cond.dinheiroMaximo !== undefined && economia.dinheiro > cond.dinheiroMaximo) return false;
-
-  if (cond.saudeMinima !== undefined && personagem.stats.saude < cond.saudeMinima) return false;
-  if (cond.saudeMaxima !== undefined && personagem.stats.saude > cond.saudeMaxima) return false;
-
-  if (cond.flagsNecessarias) {
-    for (const flag of cond.flagsNecessarias) {
-      if (!personagem.flags[flag]) return false;
-    }
-  }
-
-  if (cond.flagsProibidas) {
-    for (const flag of cond.flagsProibidas) {
-      if (personagem.flags[flag]) return false;
-    }
-  }
-
-  // B2 — condições sobre personalidade/memória (recusa segura sem estado informado)
-  if (cond.personalidade && cond.personalidade.length > 0) {
-    if (!personalidade) return false;
-    if (!atendeCondicoesComportamentais(personalidade, cond.personalidade)) return false;
-  }
-
-  return true;
-}
+// Reexportado por compatibilidade: quem já importava `avaliarCondicoesEvento`
+// e `sortearEventoDoAno` de `eventSystem` continua funcionando. A regra em
+// si vive em `systems/events/eligibility` e `systems/events/selection`
+// (B4-FIX2) — não duplicada aqui.
+export const avaliarCondicoesEvento = avaliarCondicoesEventoImpl;
 
 export function sortearEventoDoAno(
   personagem: Character,
@@ -105,15 +38,16 @@ export function sortearEventoDoAno(
   economia: EconomyState,
   familia: FamilyMember[],
   historicoDisparados: string[],
-  personalidade?: PersonalityState
+  personalidade?: PersonalityState,
+  historicoOcorrencias: EventOccurrence[] = []
 ): GameEvent | null {
-  // Chance de 75% de ter um evento interativo no ano (alguns anos são mais calmos)
-  if (!rollChance(75)) {
+  // Chance de ter um evento interativo no ano (alguns anos são mais calmos)
+  if (!haEventoNesteAno()) {
     return null;
   }
 
   const eventosElegiveis = MASTER_EVENTS_LIST.filter(evento =>
-    avaliarCondicoesEvento(
+    avaliarCondicoesEventoImpl(
       evento,
       personagem,
       carreira,
@@ -121,24 +55,15 @@ export function sortearEventoDoAno(
       economia,
       familia,
       historicoDisparados,
-      personalidade
+      personalidade,
+      historicoOcorrencias
     )
   );
 
-  if (eventosElegiveis.length === 0) return null;
-
-  // Sorteio ponderado por peso
-  const pesoTotal = eventosElegiveis.reduce((sum, ev) => sum + ev.peso, 0);
-  let rolagem = valorAleatorio() * pesoTotal;
-
-  for (const evento of eventosElegiveis) {
-    if (rolagem < evento.peso) {
-      return evento;
-    }
-    rolagem -= evento.peso;
-  }
-
-  return eventosElegiveis[0];
+  // B4-FIX3 — o pool elegível é ajustado por contexto recente e por
+  // anti-dominação antes do sorteio (ver `events/contextWeighting`).
+  const ponderados = ponderarPorContexto(eventosElegiveis, historicoOcorrencias);
+  return sortearPonderadoComContexto(ponderados);
 }
 
 /** Motivo em pt-BR quando uma exigência comportamental não é cumprida (qualitativo, sem números). */
@@ -162,6 +87,18 @@ export function avaliarRequisitoOpcao(
 ): { aprovado: boolean; motivo?: string } {
   const requisito = opcao.requisito;
   if (!requisito) return { aprovado: true };
+
+  // B4-FIX3 item 7 — o evento pode ser elegível numa idade (janela ampla,
+  // ex.: 8-90 para um problema de saúde), mas uma opção específica dentro
+  // dele pode continuar incompatível (ex.: "tentar trabalhar mesmo doente"
+  // não faz sentido para uma criança de 8 anos). O motor recusa aqui —
+  // nunca confia que a UI já filtrou a opção antes de chamar.
+  if (requisito.idadeMinima !== undefined && personagem.idade < requisito.idadeMinima) {
+    return { aprovado: false, motivo: 'Você ainda não tem idade para essa escolha.' };
+  }
+  if (requisito.idadeMaxima !== undefined && personagem.idade > requisito.idadeMaxima) {
+    return { aprovado: false, motivo: 'Essa escolha não é mais compatível com sua idade.' };
+  }
 
   if (requisito.dinheiroMinimo !== undefined && economia.dinheiro < requisito.dinheiroMinimo) {
     return { aprovado: false, motivo: `Você precisa de ${formatarDinheiro(requisito.dinheiroMinimo)} disponíveis.` };
@@ -314,10 +251,39 @@ export function aplicarConsequenciasEscolha(
     });
   }
 
+  // B4-FIX3 item 13/14 — transformar/encerrar uma relação existente, por
+  // ID estável OU por tipo (nunca por nome/texto). Uma amizade pode virar
+  // romance; uma relação pode ser encerrada sem apagar a pessoa nem seu
+  // histórico. Quando referenciado por tipo, resolve para a pessoa ATIVA
+  // mais recente daquele tipo (mesma convenção de `relacionamentoDelta`).
+  function resolverAlvoRelacao(ref: { relationId?: string; relationType?: string }): string | undefined {
+    if (ref.relationId) return ref.relationId;
+    if (ref.relationType) {
+      const candidatos = fam.filter(m => m.tipo === ref.relationType && m.ativo !== false);
+      return candidatos[candidatos.length - 1]?.id;
+    }
+    return undefined;
+  }
+
+  if (cons.transformarRelacao) {
+    const alvoId = resolverAlvoRelacao(cons.transformarRelacao);
+    if (alvoId) {
+      fam = fam.map(membro =>
+        membro.id === alvoId ? { ...membro, tipo: cons.transformarRelacao!.novoTipo } : membro
+      );
+    }
+  }
+  if (cons.encerrarRelacao) {
+    const alvoId = resolverAlvoRelacao(cons.encerrarRelacao);
+    if (alvoId) {
+      fam = fam.map(membro => (membro.id === alvoId ? { ...membro, ativo: false } : membro));
+    }
+  }
+
   // Novo familiar (ex: animal de estimação ou novo parente)
   if (cons.adicionarFamiliar) {
     const novoFamiliar: FamilyMember = {
-      id: generateId('fam'),
+      id: cons.adicionarFamiliar.id || generateId('fam'),
       nome: cons.adicionarFamiliar.nome || 'Novo Familiar',
       sobrenome: cons.adicionarFamiliar.sobrenome || char.sobrenome,
       genero: cons.adicionarFamiliar.genero || 'masculino',
@@ -325,7 +291,12 @@ export function aplicarConsequenciasEscolha(
       idade: cons.adicionarFamiliar.idade || 1,
       relacionamento: cons.adicionarFamiliar.relacionamento || 80,
       vivo: true,
-      situacaoAtual: cons.adicionarFamiliar.situacaoAtual || 'Em casa com a família'
+      situacaoAtual: cons.adicionarFamiliar.situacaoAtual || 'Em casa com a família',
+      // B4-FIX3 item 13 — NPC nascido de um evento fica marcado com o
+      // evento de origem (rastreabilidade; nenhuma regra depende disto)
+      // e `ativo: true` por padrão (a relação está em andamento).
+      origemEventoId: cons.adicionarFamiliar.origemEventoId ?? contextoPersonalidade?.eventoId,
+      ativo: cons.adicionarFamiliar.ativo ?? true
     };
     fam.push(novoFamiliar);
   }

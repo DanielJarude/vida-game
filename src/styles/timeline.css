@@ -1,0 +1,263 @@
+/* ==========================================================================
+   VIDA — Linha da Vida
+   Eixo vertical contínuo com marcadores. Não é uma lista de logs nem uma
+   pilha de cards: é uma biografia sendo escrita de cima para baixo.
+   ========================================================================== */
+
+.life-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.life-timeline__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.life-timeline__intro {
+  color: var(--text-muted);
+  font-size: var(--type-caption);
+  max-width: 52ch;
+}
+
+/* --------------------------------------------------------------- O eixo
+   Uma única linha vertical percorre toda a vida. Ela desvanece no topo e
+   na base para não parecer uma borda de tabela. */
+.timeline {
+  position: relative;
+  padding-left: var(--space-7);
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: var(--space-2);
+  bottom: var(--space-2);
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--rule-strong) 8%,
+    var(--rule-strong) 92%,
+    transparent 100%
+  );
+}
+
+/* ----------------------------------------------------------- Grupo por ano */
+.timeline-year {
+  position: relative;
+}
+
+.timeline-year + .timeline-year {
+  margin-top: var(--space-6);
+}
+
+/* Cabeçalho do ano: idade em destaque, ano como metadado. A idade é a
+   variável estruturante do VIDA, então recebe o peso tipográfico. */
+.timeline-year__header {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  margin-left: calc(-1 * var(--space-7));
+  padding-left: var(--space-7);
+}
+
+.timeline-year__age {
+  font-family: var(--font-display);
+  font-size: var(--type-subheading);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.timeline-year__year {
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  color: var(--text-faint);
+}
+
+/* Marcador do ano no eixo — anel maior que o dos acontecimentos. */
+.timeline-year__header::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  width: 9px;
+  height: 9px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--bg-app);
+  border: 1.5px solid var(--rule-strong);
+}
+
+/* ---------------------------------------------------------- Acontecimento */
+.timeline-entry {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.timeline-entry + .timeline-entry {
+  margin-top: var(--space-1);
+}
+
+/* Marcador do acontecimento: ponto pequeno sobre o eixo. */
+.timeline-entry__marker {
+  position: absolute;
+  left: calc(-1 * var(--space-7) + 4px);
+  top: calc(var(--space-3) + 6px);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  box-shadow: 0 0 0 3px var(--bg-app);
+}
+
+.timeline-entry__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+}
+
+/* Ícone de categoria: diferencia o tipo sem recorrer a cor. */
+.timeline-entry__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.timeline-entry__title {
+  font-family: var(--font-display);
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
+}
+
+.timeline-entry__category {
+  font-size: var(--type-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* O resumo é o conteúdo da lembrança, não uma legenda: o playtest apontou
+   texto pequeno demais para o que é, de fato, a leitura principal. */
+.timeline-entry__summary {
+  font-size: var(--type-body);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+  max-width: 68ch;
+}
+
+/* ------------------------------------------------------------ Ênfases
+   Diferenças sutis, nunca arco-íris. Momentos importantes ganham presença
+   por peso e por uma barra de acento à esquerda; não por fundo colorido. */
+
+/* Marco / transição de fase — o único que recebe superfície própria,
+   porque representa uma unidade real da biografia. */
+.timeline-entry--marco {
+  padding: var(--space-4);
+  margin-left: calc(-1 * var(--space-4));
+  background: var(--surface);
+  border-left: 2px solid var(--accent-line);
+  border-radius: var(--radius-sm);
+}
+
+.timeline-entry--marco .timeline-entry__marker {
+  left: calc(-1 * var(--space-7) + 0px);
+  top: calc(var(--space-4) + 6px);
+  width: 9px;
+  height: 9px;
+  background: var(--accent);
+}
+
+.timeline-entry--marco .timeline-entry__title {
+  font-size: var(--type-subheading);
+}
+
+/* Acontecimento positivo: marcador com o acento, texto inalterado. */
+.timeline-entry--positivo .timeline-entry__marker {
+  background: var(--accent-deep);
+}
+
+/* Acontecimento adverso: marcador semântico + ícone próprio no título. */
+.timeline-entry--negativo .timeline-entry__marker {
+  background: var(--danger);
+}
+
+.timeline-entry--negativo .timeline-entry__icon {
+  color: var(--danger);
+}
+
+/* Nascimento: abre a vida, então tem tratamento de abertura. */
+.timeline-entry--nascimento .timeline-entry__marker {
+  width: 11px;
+  height: 11px;
+  left: calc(-1 * var(--space-7) + 2px);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--bg-app), 0 0 0 5px var(--accent-wash);
+}
+
+/* B4-FIX2 item 24-26 — cor por SIGNIFICADO, restrita a duas categorias com
+   sentido claro (família/memória = tom quente; escola = azul frio). Só o
+   ícone muda de cor — nunca o fundo do cartão inteiro — para não recriar
+   um mosaico colorido por categoria. As demais categorias (carreira,
+   dinheiro, cotidiano, cada uma já distinta por ÍCONE + rótulo) continuam
+   monocromáticas: a paleta ganha um pouco mais de vida sem virar
+   arco-íris por evento. */
+/* `:not(--negativo)` preserva a prioridade do vermelho semântico: uma
+   perda ou problema na família continua vermelho, nunca terracota. */
+.timeline-entry[data-categoria='familia']:not(.timeline-entry--negativo) .timeline-entry__icon {
+  color: var(--warm-memory);
+}
+
+.timeline-entry[data-categoria='escola']:not(.timeline-entry--negativo) .timeline-entry__icon {
+  color: var(--cool-study);
+}
+
+/* -------------------------------------------------------- Estado vazio */
+.timeline-empty {
+  padding: var(--space-7) 0;
+  color: var(--text-secondary);
+  font-size: var(--type-body);
+  max-width: 48ch;
+}
+
+/* --------------------------------------------------------- Filtro discreto */
+.timeline-filters {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.timeline-filter {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  transition: color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out);
+}
+
+.timeline-filter:hover {
+  color: var(--text-secondary);
+  background: var(--surface);
+}
+
+.timeline-filter[aria-pressed='true'] {
+  color: var(--bg-deep);
+  background: var(--accent);
+  font-weight: var(--weight-semibold);
+}

@@ -200,6 +200,100 @@ describe('Save atual (versão 2): ida e volta', () => {
 });
 
 // ---------------------------------------------------------------------------
+// B4-FIX3 item 35 — NPCs persistentes (RelationType 'rival'/'paixao'/
+// 'mentor', campos `ativo`/`origemEventoId`) são OPCIONAIS em
+// FamilyMember. Saves gravados antes deste PR não têm esses campos:
+// devem continuar carregando normalmente, sem quebrar e sem inventar
+// dado ausente (a leitura trata a ausência de `ativo` como "verdadeiro"
+// em toda a UI, já verificado em FamilyTab.tsx).
+// ---------------------------------------------------------------------------
+describe('B4-FIX3 · save anterior aos NPCs persistentes continua carregando', () => {
+  it('familia sem campos `ativo`/`origemEventoId` (save pré-B4-FIX3) carrega normalmente', () => {
+    const estado = criarEstadoTeste({ idade: 20 });
+    const familiaAntiga = [
+      {
+        id: 'fam_amigo_antigo',
+        nome: 'Beto',
+        sobrenome: 'Lima',
+        genero: 'masculino' as const,
+        tipo: 'amigo' as const,
+        idade: 20,
+        relacionamento: 70,
+        vivo: true
+        // SEM `ativo`, SEM `origemEventoId` — formato antigo.
+      }
+    ];
+    const estadoCompleto = {
+      versao: VERSAO_SAVE,
+      personagem: estado.personagem,
+      familia: familiaAntiga,
+      educacao: estado.educacao,
+      carreira: estado.carreira,
+      economia: estado.economia,
+      personalidade: criarPersonalidadeInicial(),
+      timeline: [],
+      eventoAtivo: null,
+      historicoEventosDisparados: [],
+      acoesRealizadasAno: [],
+      emJogo: true,
+      morto: false
+    };
+
+    expect(salvarJogo(estadoCompleto)).toBe(true);
+    const recarregado = carregarJogo();
+    expect(recarregado).not.toBeNull();
+    expect(recarregado!.familia).toHaveLength(1);
+    expect(recarregado!.familia[0].nome).toBe('Beto');
+    expect(recarregado!.familia[0].tipo).toBe('amigo');
+    // Campo ausente: não foi inventado como `false` nem quebrou o carregamento.
+    expect(recarregado!.familia[0].ativo).toBeUndefined();
+
+    limparSave();
+  });
+
+  it('familia com NPC persistente completo (ativo=false, origemEventoId) preserva os campos após reload', () => {
+    const estado = criarEstadoTeste({ idade: 20 });
+    const familiaComNpc = [
+      {
+        id: 'fam_rival_1',
+        nome: 'Caio',
+        sobrenome: 'Rocha',
+        genero: 'masculino' as const,
+        tipo: 'rival' as const,
+        idade: 20,
+        relacionamento: 25,
+        vivo: true,
+        ativo: false,
+        origemEventoId: 'ado_rivalidade_escolar'
+      }
+    ];
+    const estadoCompleto = {
+      versao: VERSAO_SAVE,
+      personagem: estado.personagem,
+      familia: familiaComNpc,
+      educacao: estado.educacao,
+      carreira: estado.carreira,
+      economia: estado.economia,
+      personalidade: criarPersonalidadeInicial(),
+      timeline: [],
+      eventoAtivo: null,
+      historicoEventosDisparados: [],
+      acoesRealizadasAno: [],
+      emJogo: true,
+      morto: false
+    };
+
+    expect(salvarJogo(estadoCompleto)).toBe(true);
+    const recarregado = carregarJogo();
+    expect(recarregado!.familia[0].tipo).toBe('rival');
+    expect(recarregado!.familia[0].ativo).toBe(false);
+    expect(recarregado!.familia[0].origemEventoId).toBe('ado_rivalidade_escolar');
+
+    limparSave();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // B2 — migração de saves do B1-FIX (versão 2, sem PersonalityState):
 // carregam normalmente com personalidade inicializada em branco.
 // Saves da versão 3 preservam personalidade e memória de escolhas.

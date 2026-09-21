@@ -42,6 +42,24 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         }
       },
       {
+        // B4-FIX2 item 11 — segunda consequência futura leve: quem
+        // defendeu um colega do bullying na infância (`defendeu_amigo`)
+        // já tem esse vínculo de confiança quando a tentação da cola
+        // aparece de novo, anos depois. Ligado por FLAG, não por texto.
+        id: 'opt_colega_retribui',
+        texto: 'Recusar a cola — o colega que você defendeu na infância se oferece pra estudar com você',
+        descricaoResultado: 'Você recusou a cola. Sem nem precisar pedir, aquele colega que você defendeu anos atrás apareceu com o material organizado: "Depois de tudo que você fez por mim, é o mínimo." Vocês dois tiraram notas honestas.',
+        requisito: {
+          flagNecessaria: 'defendeu_amigo'
+        },
+        consequencias: {
+          stats: { inteligencia: 12, felicidade: 14 },
+          hiddenStats: { disciplina: 12, reputacao: 8, sociabilidade: 8 },
+          impactosComportamentais: { disciplina: 2, empatia: 1 },
+          relacionamentoDelta: { delta: 10 }
+        }
+      },
+      {
         // B2 — opção que só existe para quem construiu histórico de disciplina
         // na infância (padrão acumulado, não bônus automático)
         id: 'opt_estudar_juntos',
@@ -60,6 +78,14 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 13/14 — quando o jogador já teve o evento
+    // `ado_paixao_secreta` (NPC persistente `tipo: 'paixao'`), este é o
+    // MOMENTO daquela pessoa: a opção `opt_beijar_paixao_real` conecta por
+    // `relationType`, nunca por texto, e transforma a relação de
+    // "paixão" para "namorado(a)" só se o jogador topar avançar (mantém a
+    // liberdade — dá pra aproximar sem virar namoro). Sem essa história
+    // prévia, o evento continua existindo com a pessoa anônima original
+    // (nenhum jogador fica sem o evento por não ter cumprido um requisito).
     id: 'ado_primeiro_beijo',
     titulo: 'Festa de Aniversário e Primeiro Beijo',
     descricao: 'Em uma festa com música tocando e luzes apagadas, a pessoa por quem você tem uma paixão secreta se aproxima e puxa conversa.',
@@ -69,6 +95,18 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     peso: 90,
     unico: true,
     opcoes: [
+      {
+        id: 'opt_beijar_paixao_real',
+        texto: 'Tomar a iniciativa e beijar a pessoa por quem você é apaixonado há tempos',
+        descricaoResultado: 'Foi ela mesma, a pessoa que você secretamente admirava. O beijo foi inesquecível, e agora tudo entre vocês dois é diferente.',
+        requisito: { flagNecessaria: 'tem_paixao_secreta' },
+        consequencias: {
+          stats: { felicidade: 28, aparencia: 5 },
+          hiddenStats: { sociabilidade: 15, reputacao: 10 },
+          adicionarFlag: 'primeiro_beijo_inesquecivel',
+          transformarRelacao: { relationType: 'paixao', novoTipo: 'namorado' }
+        }
+      },
       {
         id: 'opt_beijar',
         texto: 'Tomar a iniciativa e dar um beijo apaixonado',
@@ -98,6 +136,12 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 15,
     categoria: 'familia',
     peso: 80,
+    // B4-FIX2 — o playtest encontrou "seus pais cumpriram a promessa e
+    // compraram o celular" reaparecendo em outro ano, como se a promessa
+    // nunca tivesse existido. Ganhar o primeiro celular é um marco
+    // narrativamente irreversível: não faz sentido "primeiro celular" de
+    // novo, seja qual for a escolha.
+    unico: true,
     opcoes: [
       {
         id: 'opt_esforco_total',
@@ -163,11 +207,16 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     ]
   },
   {
+    // B4-FIX3 item 7 — auditoria de coerência etária encontrou este
+    // evento com idadeMinima 17, mas a CNH exige 18 anos pela política
+    // já estabelecida do projeto (mesma regra usada em availabilitySystem
+    // para carro/emprego adulto). Corrigido para não permitir a ação real
+    // (não é só uma prévia) um ano antes da idade correta.
     id: 'ado_tirar_cnh',
     titulo: 'Fazer 18 Anos e Tirar a CNH',
     descricao: 'Você completou a idade permitida para dar entrada na Autoescola e tirar sua Carteira Nacional de Habilitação (CNH).',
-    idadeMinima: 17,
-    idadeMaxima: 18,
+    idadeMinima: 18,
+    idadeMaxima: 20,
     categoria: 'cotidiano',
     peso: 85,
     unico: true,
@@ -210,6 +259,23 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 25, aparencia: 5 },
           hiddenStats: { sociabilidade: 20, reputacao: 15 }
+        }
+      },
+      {
+        // B4-FIX2 item 11 — terceira consequência futura leve: quem
+        // aprendeu violão na infância (`sabe_tocar_violao`) tem essa
+        // habilidade disponível anos depois, num momento em que ela
+        // realmente importa. Ligado por FLAG, nunca por texto.
+        id: 'opt_tocar_violao_festa',
+        texto: 'Pegar o violão e cantar com a turma no meio da festa',
+        descricaoResultado: 'Você pegou o violão que praticamente ninguém sabia que sabia tocar e puxou um coro com a turma inteira. Virou a lembrança mais contada da formatura.',
+        requisito: {
+          flagNecessaria: 'sabe_tocar_violao'
+        },
+        consequencias: {
+          stats: { felicidade: 28, aparencia: 3 },
+          hiddenStats: { sociabilidade: 22, reputacao: 20 },
+          impactosComportamentais: { sociabilidade: 2 }
         }
       },
       {

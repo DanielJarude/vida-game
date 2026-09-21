@@ -1,30 +1,102 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { valorAleatorio } from '../../utils/random';
 import { Gender } from '../../types';
-import { CIDADES_BRASILEIRAS, sortearNome, sortearSobrenome } from '../../data/brazilianData';
-import { ArrowLeft, Sparkles, Check } from 'lucide-react';
+import {
+  listarRegioesComEstados,
+  listarCidadesPorEstado
+} from '../../data/locations';
+import { sortearNome, sortearSobrenome } from '../../data/brazilianData';
+import {
+  AparenciaAvatar,
+  APARENCIA_PADRAO,
+  CORES_CABELO,
+  CORES_OLHOS,
+  ESTILOS_CABELO,
+  TONS_PELE
+} from '../../data/avatar/avatarData';
+import { AvatarEditor } from '../character/AvatarEditor';
+import { ArrowLeft, Shuffle } from 'lucide-react';
 
 interface CharacterCreationScreenProps {
-  onCriarVida: (nome: string, sobrenome: string, genero: Gender, cidade: string, estado: string) => void;
+  onCriarVida: (
+    nome: string,
+    sobrenome: string,
+    genero: Gender,
+    cidade: string,
+    estado: string,
+    classeSocial?: import('../../types').SocialClass,
+    aparencia?: AparenciaAvatar
+  ) => void;
   onVoltar: () => void;
 }
 
+function sortearAparencia(): AparenciaAvatar {
+  const escolher = <T,>(lista: T[]): T =>
+    lista[Math.floor(valorAleatorio() * lista.length)];
+
+  return {
+    tomPele: escolher(TONS_PELE).id,
+    estiloCabelo: escolher(ESTILOS_CABELO).id,
+    corCabelo: escolher(CORES_CABELO).id,
+    corOlhos: escolher(CORES_OLHOS).id
+  };
+}
+
+const ROTULO_GENERO: Record<Gender, string> = {
+  masculino: 'Masculino',
+  feminino: 'Feminino',
+  'nao-binario': 'Não binário'
+};
+
+/**
+ * Criação de uma nova vida.
+ *
+ * Tudo aqui é escolha do jogador. O sorteio existe como atalho explícito
+ * ("Sortear tudo"), nunca como algo que acontece por baixo: o que estiver
+ * selecionado na tela é exatamente o que o motor recebe.
+ *
+ * A localização é derivada dos dados (`brazilianData`), em dois passos —
+ * estado, depois cidade — para continuar escalável conforme a lista cresce.
+ */
 export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = ({
   onCriarVida,
   onVoltar
 }) => {
+  const regioes = useMemo(() => listarRegioesComEstados(), []);
+  // Lista achatada só para o sorteio — a apresentação continua agrupada.
+  const todosEstados = useMemo(() => regioes.flatMap(r => r.estados), [regioes]);
+
   const [genero, setGenero] = useState<Gender>('masculino');
   const [nome, setNome] = useState<string>(() => sortearNome('masculino'));
   const [sobrenome, setSobrenome] = useState<string>(() => sortearSobrenome());
-  const [cidadeIndex, setCidadeIndex] = useState<number>(0);
+  const [estado, setEstado] = useState<string>(() => todosEstados[0].sigla);
+  const [cidade, setCidade] = useState<string>(
+    () => listarCidadesPorEstado(todosEstados[0].sigla)[0].cidade
+  );
+  const [aparencia, setAparencia] = useState<AparenciaAvatar>(APARENCIA_PADRAO);
+
+  const cidadesDoEstado = useMemo(
+    () => listarCidadesPorEstado(estado),
+    [estado]
+  );
+
+  const handleTrocaEstado = (novoEstado: string) => {
+    setEstado(novoEstado);
+    // A cidade selecionada precisa pertencer ao novo estado.
+    setCidade(listarCidadesPorEstado(novoEstado)[0].cidade);
+  };
 
   const handleSortearTudo = () => {
-    const novoNome = sortearNome(genero);
-    const novoSobrenome = sortearSobrenome();
-    const novaCidade = Math.floor(valorAleatorio() * CIDADES_BRASILEIRAS.length);
-    setNome(novoNome);
-    setSobrenome(novoSobrenome);
-    setCidadeIndex(novaCidade);
+    setNome(sortearNome(genero));
+    setSobrenome(sortearSobrenome());
+
+    const estadoSorteado =
+      todosEstados[Math.floor(valorAleatorio() * todosEstados.length)].sigla;
+    const cidades = listarCidadesPorEstado(estadoSorteado);
+
+    setEstado(estadoSorteado);
+    setCidade(cidades[Math.floor(valorAleatorio() * cidades.length)].cidade);
+    setAparencia(sortearAparencia());
   };
 
   const handleTrocaGenero = (novoGen: Gender) => {
@@ -35,156 +107,138 @@ export const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = (
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim() || !sobrenome.trim()) return;
-    const cidadeSel = CIDADES_BRASILEIRAS[cidadeIndex];
-    onCriarVida(nome.trim(), sobrenome.trim(), genero, cidadeSel.cidade, cidadeSel.estado);
+    // Exatamente o que está na tela — sem nenhuma randomização posterior.
+    onCriarVida(nome.trim(), sobrenome.trim(), genero, cidade, estado, undefined, aparencia);
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-        background: 'radial-gradient(circle at top center, #13273e 0%, #090d16 80%)'
-      }}
-    >
-      <div style={{ maxWidth: '480px', width: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Cabeçalho */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button onClick={onVoltar} className="btn-icon">
+    <div className="screen screen--scroll">
+      <div className="screen__inner" style={{ paddingTop: 'var(--space-8)' }}>
+        <div className="screen__topbar">
+          <button onClick={onVoltar} className="icon-button" aria-label="Voltar">
             <ArrowLeft size={20} />
           </button>
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', fontWeight: 800 }}>
-            Criar Personagem
-          </h2>
-          <button onClick={handleSortearTudo} className="btn-icon" title="Sortear Tudo">
-            <Sparkles size={18} color="var(--accent-amber)" />
+          <h1 className="section__title">Quem você vai ser</h1>
+          <button
+            onClick={handleSortearTudo}
+            className="icon-button"
+            aria-label="Sortear tudo"
+            title="Sortear tudo"
+          >
+            <Shuffle size={18} />
           </button>
         </div>
 
-        {/* Formulário */}
-        <form onSubmit={handleSubmit} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Escolha do Gênero */}
-          <div>
-            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Gênero:
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+        <form onSubmit={handleSubmit} className="creation-form">
+          <div className="field">
+            <span className="field__label" id="label-genero">
+              Gênero
+            </span>
+            <div className="choice-group" role="group" aria-labelledby="label-genero">
               {(['masculino', 'feminino', 'nao-binario'] as Gender[]).map(g => (
                 <button
                   type="button"
                   key={g}
+                  className="choice-chip"
+                  aria-pressed={genero === g}
                   onClick={() => handleTrocaGenero(g)}
-                  style={{
-                    padding: '10px 4px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: genero === g ? 'var(--primary)' : 'var(--bg-card-subtle)',
-                    color: genero === g ? '#022c22' : 'var(--text-primary)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    textTransform: 'capitalize'
-                  }}
                 >
-                  {g === 'nao-binario' ? 'Não-Binário' : g}
+                  {ROTULO_GENERO[g]}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Nome */}
-          <div>
-            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Primeiro Nome:
-            </label>
-            <input
-              type="text"
-              required
-              value={nome}
-              onChange={e => setNome(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--bg-card-subtle)',
-                border: '1px solid var(--border-light)',
-                fontSize: '1rem',
-                fontWeight: 600
-              }}
-            />
+          <div className="creation-grid">
+            <div className="field">
+              <label className="field__label" htmlFor="campo-nome">
+                Nome
+              </label>
+              <input
+                id="campo-nome"
+                className="field__control"
+                value={nome}
+                onChange={e => setNome(e.target.value)}
+                maxLength={20}
+                required
+              />
+            </div>
+
+            <div className="field">
+              <label className="field__label" htmlFor="campo-sobrenome">
+                Sobrenome
+              </label>
+              <input
+                id="campo-sobrenome"
+                className="field__control"
+                value={sobrenome}
+                onChange={e => setSobrenome(e.target.value)}
+                maxLength={20}
+                required
+              />
+            </div>
           </div>
 
-          {/* Sobrenome */}
-          <div>
-            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Sobrenome de Família:
-            </label>
-            <input
-              type="text"
-              required
-              value={sobrenome}
-              onChange={e => setSobrenome(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--bg-card-subtle)',
-                border: '1px solid var(--border-light)',
-                fontSize: '1rem',
-                fontWeight: 600
-              }}
-            />
+          <div className="field">
+            <span className="field__label" id="label-aparencia">
+              Como você se parece
+            </span>
+            <AvatarEditor aparencia={aparencia} onMudar={setAparencia} />
+            <p className="field__note">
+              Só aparência — não muda inteligência, saúde nem oportunidades.
+            </p>
           </div>
 
-          {/* Cidade e Estado */}
-          <div>
-            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Cidade e Estado de Nascimento:
-            </label>
-            <select
-              value={cidadeIndex}
-              onChange={e => setCidadeIndex(parseInt(e.target.value))}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--bg-card-subtle)',
-                border: '1px solid var(--border-light)',
-                fontSize: '0.95rem',
-                fontWeight: 600,
-                color: '#fff'
-              }}
-            >
-              {CIDADES_BRASILEIRAS.map((c, idx) => (
-                <option key={idx} value={idx}>
-                  {c.cidade}, {c.estado} ({c.regiao})
-                </option>
-              ))}
-            </select>
+          <div className="field">
+            <span className="field__label">Onde você nasce</span>
+            <div className="creation-grid">
+              <div className="field field--nested">
+                <label className="field__sublabel" htmlFor="campo-estado">
+                  Estado
+                </label>
+                <select
+                  id="campo-estado"
+                  className="field__control"
+                  value={estado}
+                  onChange={e => handleTrocaEstado(e.target.value)}
+                >
+                  {regioes.map(grupo => (
+                    <optgroup key={grupo.regiao} label={grupo.regiao}>
+                      {grupo.estados.map(uf => (
+                        <option key={uf.sigla} value={uf.sigla}>
+                          {uf.nome} ({uf.sigla})
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field field--nested">
+                <label className="field__sublabel" htmlFor="campo-cidade">
+                  Cidade
+                </label>
+                <select
+                  id="campo-cidade"
+                  className="field__control"
+                  value={cidade}
+                  onChange={e => setCidade(e.target.value)}
+                >
+                  {cidadesDoEstado.map(c => (
+                    <option key={c.cidade} value={c.cidade}>
+                      {c.cidade}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="field__note">
+              Sua vida começa exatamente onde você escolher.
+            </p>
           </div>
 
-          {/* Botão de Criação */}
-          <button
-            type="submit"
-            style={{
-              marginTop: '10px',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#022c22',
-              padding: '16px',
-              borderRadius: 'var(--radius-md)',
-              fontWeight: 800,
-              fontSize: '1.1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: 'var(--shadow-glow)'
-            }}
-          >
-            <Check size={20} strokeWidth={3} />
-            <span>NASCER & COMEÇAR VIDA</span>
+          <button type="submit" className="btn btn--hero">
+            Começar a viver
           </button>
         </form>
       </div>

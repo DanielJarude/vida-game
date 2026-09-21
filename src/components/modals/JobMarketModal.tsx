@@ -1,6 +1,10 @@
 import React from 'react';
-import { ContextoAcao, listarVagasCompativeis } from '../../systems/availabilitySystem';
+import {
+  ContextoAcao,
+  listarVagasCompativeis
+} from '../../systems/availabilitySystem';
 import { formatarDinheiro, getEducationLabel } from '../../utils/formatters';
+import { useModalBehavior } from '../common/useModalBehavior';
 import { X } from 'lucide-react';
 
 interface JobMarketModalProps {
@@ -14,79 +18,90 @@ export const JobMarketModal: React.FC<JobMarketModalProps> = ({
   onClose,
   onCandidatar
 }) => {
+  const containerRef = useModalBehavior<HTMLDivElement>({ onClose });
+
   // A lista vem da política central (escolaridade, inteligência e idade)
   const vagas = listarVagasCompativeis(ctx);
   const idade = ctx.personagem.idade;
-  const notaJuvenil = idade < 18
-    ? 'Nesta fase, apenas vagas juvenis aparecem. As demais vagas abrem aos 18 anos.'
-    : null;
+  const notaJuvenil =
+    idade < 18
+      ? 'Nesta fase aparecem apenas vagas juvenis. As demais abrem aos 18 anos.'
+      : null;
+
+  const tituloId = 'vagas-titulo';
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Mercado de Trabalho">
-      <div className="modal-card" style={{ maxWidth: '640px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="modal-overlay">
+      <div
+        className="modal-surface"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={tituloId}
+        ref={containerRef}
+        tabIndex={-1}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 'var(--space-4)'
+          }}
+        >
           <div>
-            <h2 className="modal-title">Mercado de Trabalho</h2>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-              Vagas compatíveis com sua escolaridade ({getEducationLabel(ctx.educacao.nivelAtual)})
-            </div>
+            <h2 className="event-scene__title" id={tituloId} style={{ marginBottom: 'var(--space-1)' }}>
+              Vagas de trabalho
+            </h2>
+            <p className="action-row__detail">
+              Compatíveis com {getEducationLabel(ctx.educacao.nivelAtual)}
+            </p>
           </div>
-          <button onClick={onClose} className="btn-icon" aria-label="Fechar">
+          <button onClick={onClose} className="icon-button" aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
 
         {notaJuvenil && (
-          <div className="acao-bloqueada-motivo" role="status">{notaJuvenil}</div>
+          <p className="action-row__reason" role="status">
+            {notaJuvenil}
+          </p>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '60vh', overflowY: 'auto' }}>
-          {vagas.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-              Nenhuma vaga encontrada no momento. Aumente seus estudos e inteligência!
-            </div>
-          ) : (
-            vagas.map(job => (
-              <div
-                key={job.id}
-                style={{
-                  background: 'var(--bg-card-subtle)',
-                  border: '1px solid var(--border-card)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '14px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                    {job.titulo}
-                  </div>
-                  <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
-                    <span>Setor: {job.setor}</span>
-                    <span>• {job.horasSemanais}h/sem</span>
-                    <span>• Estresse: {job.estresseNivel}/5</span>
-                  </div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
-                    {formatarDinheiro(job.salarioMensal)} /mês (CLT)
-                  </div>
-                </div>
+        <div className="event-scene__divider" role="presentation" />
 
-                <button
-                  onClick={() => {
-                    onCandidatar(job.id);
-                    onClose();
-                  }}
-                  className="btn-acao-primaria"
-                >
-                  Candidatar
-                </button>
+        {vagas.length === 0 ? (
+          <p className="empty-state">
+            Nenhuma vaga compatível no momento. Estudar e ganhar experiência abre
+            novas portas.
+          </p>
+        ) : (
+          <div className="action-list">
+            {vagas.map(job => (
+              <div key={job.id} className="action-row">
+                <div className="action-row__body">
+                  <p className="action-row__title">{job.titulo}</p>
+                  <p className="action-row__detail">
+                    {job.setor} · {job.horasSemanais}h por semana
+                  </p>
+                  <p className="action-row__detail">
+                    {formatarDinheiro(job.salarioMensal)} por mês
+                  </p>
+                </div>
+                <div className="action-row__action">
+                  <button
+                    onClick={() => {
+                      onCandidatar(job.id);
+                      onClose();
+                    }}
+                    className="btn btn--primary"
+                  >
+                    Candidatar
+                  </button>
+                </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

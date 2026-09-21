@@ -111,6 +111,9 @@ export function getRotuloParentesco(tipo: RelationType): string {
     case 'amigo': return 'Amigo';
     case 'amiga': return 'Amiga';
     case 'pet': return 'Pet';
+    case 'rival': return 'Rival';
+    case 'paixao': return 'Paixão';
+    case 'mentor': return 'Mentor(a)';
   }
 }
 
@@ -132,6 +135,9 @@ export function getTratamentoParentesco(tipo: RelationType): string {
     case 'amigo': return 'seu amigo';
     case 'amiga': return 'sua amiga';
     case 'pet': return 'seu pet';
+    case 'rival': return 'seu rival';
+    case 'paixao': return 'sua paixão';
+    case 'mentor': return 'seu mentor';
   }
 }
 

@@ -1,0 +1,183 @@
+/* ==========================================================================
+   VIDA — Base: reset, tipografia, foco e utilitários de acessibilidade
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  /* Evita o "zoom" automático de fonte no iOS em orientação paisagem */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--type-body);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background-color: var(--bg-deep);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* A seleção de texto é liberada em conteúdo narrativo: a Linha da Vida e os
+   eventos são leitura, não apenas controles. */
+body {
+  user-select: none;
+}
+
+.timeline-entry__summary,
+.timeline-entry__title,
+.event-scene__narrative,
+.event-result__narrative,
+.annual-summary,
+.poetic-note {
+  user-select: text;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  outline: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* ------------------------------------------------------------------- Foco
+   Foco sempre visível e com contraste próprio. Nunca removido. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* ------------------------------------------------------- Papéis tipográficos */
+.t-display {
+  font-family: var(--font-display);
+  font-size: var(--type-display);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+.t-heading {
+  font-family: var(--font-display);
+  font-size: var(--type-heading);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+}
+
+.t-subheading {
+  font-family: var(--font-display);
+  font-size: var(--type-subheading);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+}
+
+.t-body {
+  font-size: var(--type-body);
+  line-height: var(--leading-normal);
+}
+
+.t-caption {
+  font-size: var(--type-caption);
+  line-height: var(--leading-snug);
+  color: var(--text-secondary);
+}
+
+/* Metadados: único lugar onde caixa alta é aceitável, e sempre pequeno. */
+.t-meta {
+  font-size: var(--type-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.t-number {
+  font-family: var(--font-display);
+  font-size: var(--type-number);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+}
+
+.t-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------- Utilitários */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Divisor discreto — substitui a borda de card como forma de agrupar */
+.rule {
+  height: 1px;
+  background: var(--rule);
+  border: 0;
+}
+
+/* --------------------------------------------------- Preferência de movimento
+   Informação nunca depende de animação: desligar o movimento não pode
+   esconder nada. Aqui apenas neutralizamos durações e transições. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

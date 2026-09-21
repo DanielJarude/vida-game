@@ -10,6 +10,9 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     categoria: 'infancia',
     peso: 90,
     unico: true,
+    // B4-FIX2 item 10 — marco de desenvolvimento, não sorteio aleatório
+    // repetível: ligado a uma transição específica (aprender a andar).
+    repeticao: { tipo: 'marco' },
     opcoes: [
       {
         id: 'opt_correr',
@@ -20,6 +23,12 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
           hiddenStats: { sociabilidade: 10, condicionamentoFisico: 5 },
           impactosComportamentais: { coragem: 2, sociabilidade: 1 },
           relacionamentoDelta: { delta: 15 }
+          // B4-FIX2 item 11 — a escolha já fica registrada na memória
+          // interna (personalitySystem.registrarEscolha, por eventoId +
+          // opcaoId, automático para todo evento resolvido). Um evento
+          // futuro pode consultar `escolheuAnteriormente` por id — nunca
+          // por texto — sem precisar de flag extra aqui. Ver
+          // `inf_bullying_defesa` → `opt_defender_com_confianca`.
         }
       },
       {
@@ -246,6 +255,27 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     categoria: 'escola',
     peso: 65,
     opcoes: [
+      {
+        // B4-FIX2 item 11 — consequência futura leve: quem já demonstrou
+        // coragem aos primeiros passos ("correu para os braços deles")
+        // encara esta cena com mais confiança, sem intimidação nenhuma.
+        // A ligação é por id de escolha (memória interna), nunca por
+        // texto — ver `personalitySystem.atendeCondicaoComportamental`.
+        id: 'opt_defender_com_confianca',
+        texto: 'Encarar o agressor sem hesitar — você já sabe que consegue',
+        descricaoResultado: 'Você não hesitou: encarou o agressor de igual para igual, sem gritar nem se abalar, e ele recuou sem entender por quê. O colega ficou impressionado.',
+        requisito: {
+          condicaoComportamental: {
+            escolheuAnteriormente: { eventoId: 'inf_primeiros_passos', opcaoId: 'opt_correr' }
+          }
+        },
+        consequencias: {
+          stats: { felicidade: 12 },
+          hiddenStats: { empatia: 15, reputacao: 20, sociabilidade: 10 },
+          impactosComportamentais: { coragem: 3, empatia: 2 },
+          adicionarFlag: 'defendeu_amigo'
+        }
+      },
       {
         id: 'opt_defender',
         texto: 'Intervir com coragem e mandar ele parar imediatamente',

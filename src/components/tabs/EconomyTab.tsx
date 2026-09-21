@@ -9,13 +9,7 @@ import {
   getActionAvailability,
   IDADE_MINIMA_COMPRA_BENS
 } from '../../systems/availabilitySystem';
-import {
-  Building,
-  Car,
-  TrendingUp,
-  ShoppingBag,
-  Ticket
-} from 'lucide-react';
+import { Lock } from 'lucide-react';
 
 interface EconomyTabProps {
   personagem: Character;
@@ -23,7 +17,10 @@ interface EconomyTabProps {
   ctx: ContextoAcao;
   onComprarBem: (itemId: string) => void;
   onVenderBem: (propId: string) => void;
-  onInvestir: (tipoId: 'poupanca' | 'tesouro_selic' | 'fundo_imobiliario' | 'acoes_b3' | 'cripto', valor: number) => void;
+  onInvestir: (
+    tipoId: 'poupanca' | 'tesouro_selic' | 'fundo_imobiliario' | 'acoes_b3' | 'cripto',
+    valor: number
+  ) => void;
   onResgatarInvestimento: (tipoId: string, valor: number) => void;
   onJogarLoteria: () => void;
 }
@@ -39,7 +36,9 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
   onJogarLoteria
 }) => {
   const [showShopModal, setShowShopModal] = useState(false);
-  const [selectedInvTipo, setSelectedInvTipo] = useState<'poupanca' | 'tesouro_selic' | 'fundo_imobiliario' | 'acoes_b3' | 'cripto'>('tesouro_selic');
+  const [selectedInvTipo, setSelectedInvTipo] = useState<
+    'poupanca' | 'tesouro_selic' | 'fundo_imobiliario' | 'acoes_b3' | 'cripto'
+  >('tesouro_selic');
   const [investValor, setInvestValor] = useState<string>('1000');
 
   const idade = personagem.idade;
@@ -48,9 +47,13 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
   const veiculos = economia.propriedades.filter(p => p.tipo === 'veiculo');
 
   const mostrarCompras = idade >= IDADE_MINIMA_COMPRA_BENS - 1;
+  const podeComprar = idade >= IDADE_MINIMA_COMPRA_BENS;
+
   const dispLoteria = getActionAvailability(ctx, 'jogar_loteria');
   const podeLoteria = dispLoteria.kind === 'disponivel';
-  const motivoLoteria = dispLoteria.kind === 'bloqueado' ? dispLoteria.motivo : undefined;
+  const motivoLoteria =
+    dispLoteria.kind === 'bloqueado' ? dispLoteria.motivo : undefined;
+  const loteriaVisivel = dispLoteria.kind !== 'oculto';
 
   const handleAplicar = () => {
     const val = parseFloat(investValor);
@@ -64,250 +67,230 @@ export const EconomyTab: React.FC<EconomyTabProps> = ({
     const pode = disp.kind === 'disponivel';
     const motivo = disp.kind === 'bloqueado' ? disp.motivo : undefined;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+      <div className="action-row__action">
         <button
           onClick={() => onVenderBem(propId)}
           disabled={!pode}
-          className={pode ? 'btn-acao-perigo' : 'btn-acao-desabilitada'}
+          className={`btn ${pode ? 'btn--danger' : 'btn--ghost'}`}
         >
           Vender
         </button>
-        {motivo && <span className="acao-bloqueada-motivo">{motivo}</span>}
+        {motivo && (
+          <p className="action-row__reason">
+            <Lock size={12} aria-hidden="true" />
+            {motivo}
+          </p>
+        )}
       </div>
     );
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Resumo Financeiro Geral */}
-      <div className="card" style={{ background: 'linear-gradient(135deg, #111827 0%, #1e293b 100%)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          <div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Saldo em Conta Corrente</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
-              {formatarDinheiro(economia.dinheiro)}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Patrimônio Líquido Total</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)' }}>
-              {formatarDinheiro(patrimonioTotal)}
-            </div>
-          </div>
-        </div>
+    <div>
+      <header className="section__header">
+        <h2 className="section__title">Finanças</h2>
+      </header>
 
-        {/* Botões de compra e loteria (política central) */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
-          {mostrarCompras && (
-            <button
-              onClick={() => setShowShopModal(true)}
-              disabled={idade < IDADE_MINIMA_COMPRA_BENS}
-              className={idade >= IDADE_MINIMA_COMPRA_BENS ? 'btn-acao-primaria' : 'btn-acao-desabilitada'}
-              style={{ flex: '1 1 200px' }}
-              title={idade < IDADE_MINIMA_COMPRA_BENS ? 'Compras de imóveis e veículos abrem aos 18 anos' : undefined}
+      {/* Situação — valores reais do motor, nunca do mockup de referência */}
+      <section className="section">
+        <div>
+          <p className="t-meta">Saldo em conta</p>
+          <p className="finance-summary__balance">
+            <span
+              className={`finance-summary__amount${
+                economia.dinheiro < 0 ? ' finance-summary__amount--negativo' : ''
+              }`}
             >
-              <ShoppingBag size={18} />
-              <span>{idade >= IDADE_MINIMA_COMPRA_BENS ? 'Comprar Imóveis & Carros' : 'Compras aos 18 anos'}</span>
-            </button>
+              {formatarDinheiro(economia.dinheiro)}
+            </span>
+          </p>
+
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <div className="data-row">
+              <span className="data-row__label">Patrimônio líquido</span>
+              <span className="data-row__value">
+                {formatarDinheiro(patrimonioTotal)}
+              </span>
+            </div>
+            <div className="data-row">
+              <span className="data-row__label">Despesas anuais</span>
+              <span className="data-row__value data-row__value--negativo">
+                {formatarDinheiro(economia.despesasAnuaisPadrao)}
+              </span>
+            </div>
+            {economia.dividas > 0 && (
+              <div className="data-row">
+                <span className="data-row__label">Dívidas</span>
+                <span className="data-row__value data-row__value--negativo">
+                  {formatarDinheiro(economia.dividas)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: 'var(--space-2)',
+              marginTop: 'var(--space-5)',
+              flexWrap: 'wrap'
+            }}
+          >
+            {mostrarCompras && (
+              <button
+                onClick={() => setShowShopModal(true)}
+                disabled={!podeComprar}
+                className={`btn ${podeComprar ? 'btn--primary' : 'btn--ghost'}`}
+              >
+                {podeComprar ? 'Imóveis e veículos' : 'Compras a partir dos 18 anos'}
+              </button>
+            )}
+
+            {loteriaVisivel && (
+              <button
+                onClick={onJogarLoteria}
+                disabled={!podeLoteria}
+                className={`btn ${podeLoteria ? 'btn--secondary' : 'btn--ghost'}`}
+              >
+                Apostar na Mega-Sena
+              </button>
+            )}
+          </div>
+
+          {loteriaVisivel && motivoLoteria && (
+            <p className="action-row__reason">
+              <Lock size={12} aria-hidden="true" />
+              {motivoLoteria}
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Investimentos */}
+      <section className="section">
+        <div>
+          <h3 className="subsection__title">Investimentos</h3>
+
+          {economia.investimentos.length > 0 ? (
+            <div className="action-list">
+              {economia.investimentos.map(inv => (
+                <div key={inv.id} className="action-row">
+                  <div className="action-row__body">
+                    <p className="action-row__title">{inv.nome}</p>
+                    <p className="action-row__detail">
+                      {formatarDinheiro(inv.saldo)} ·{' '}
+                      {(inv.rendimentoMedioAnual * 100).toFixed(1)}% ao ano
+                    </p>
+                  </div>
+                  <div className="action-row__action">
+                    <button
+                      onClick={() => onResgatarInvestimento(inv.tipo, inv.saldo)}
+                      className="btn btn--secondary"
+                    >
+                      Resgatar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">
+              Você ainda não tem investimentos.
+            </p>
           )}
 
           {idade >= 18 && (
-            <button
-              onClick={onJogarLoteria}
-              disabled={!podeLoteria}
-              className={podeLoteria ? 'btn-acao-loteria' : 'btn-acao-desabilitada'}
-              style={{ flex: '1 1 200px' }}
-              title={motivoLoteria}
-            >
-              <Ticket size={18} />
-              <span>Apostar na Mega-Sena (R$ 15)</span>
-            </button>
-          )}
-        </div>
-        {idade >= 18 && motivoLoteria && (
-          <div className="acao-bloqueada-motivo" style={{ marginTop: '8px' }}>{motivoLoteria}</div>
-        )}
-      </div>
-
-      {/* Investimentos do Mercado Financeiro */}
-      <div className="card">
-        <h3 className="card-title">
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TrendingUp size={20} color="var(--primary)" />
-            Investimentos & Rendimentos
-          </span>
-        </h3>
-
-        {/* Investimentos Ativos */}
-        {economia.investimentos.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-            {economia.investimentos.map(inv => (
-              <div
-                key={inv.id}
-                style={{
-                  background: 'var(--bg-card-subtle)',
-                  padding: '12px',
-                  borderRadius: 'var(--radius-md)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{inv.nome}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Rendimento estimado: {(inv.rendimentoMedioAnual * 100).toFixed(1)}% ao ano
-                  </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--primary)' }}>
-                    {formatarDinheiro(inv.saldo)}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => onResgatarInvestimento(inv.tipo, inv.saldo)}
-                  className="btn-acao-secundaria"
+            <div style={{ marginTop: 'var(--space-5)' }}>
+              <div className="field">
+                <label className="field__label" htmlFor="tipo-investimento">
+                  Nova aplicação
+                </label>
+                <select
+                  id="tipo-investimento"
+                  className="field__control"
+                  value={selectedInvTipo}
+                  onChange={e =>
+                    setSelectedInvTipo(e.target.value as typeof selectedInvTipo)
+                  }
                 >
-                  Resgatar Tudo
-                </button>
+                  {OPCOES_INVESTIMENTO.map(op => (
+                    <option key={op.id} value={op.id}>
+                      {op.nome} ({op.riscoDesc})
+                    </option>
+                  ))}
+                </select>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '16px' }}>
-            Você não possui investimentos ativos no momento. Aplique seu saldo para render juros compostos.
-          </div>
-        )}
 
-        {/* Formulário de Aplicação */}
-        {idade >= 18 && (
-          <div style={{ background: 'var(--bg-card-subtle)', padding: '14px', borderRadius: 'var(--radius-md)' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>
-              Fazer Nova Aplicação Financeira:
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <select
-                value={selectedInvTipo}
-                onChange={e => setSelectedInvTipo(e.target.value as typeof selectedInvTipo)}
-                aria-label="Tipo de investimento"
+              <div
                 style={{
-                  padding: '8px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-card)',
-                  color: '#fff'
+                  display: 'flex',
+                  gap: 'var(--space-2)',
+                  marginTop: 'var(--space-3)'
                 }}
               >
-                {OPCOES_INVESTIMENTO.map(op => (
-                  <option key={op.id} value={op.id}>
-                    {op.nome} ({op.riscoDesc})
-                  </option>
-                ))}
-              </select>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="number"
+                  className="field__control"
                   placeholder="Valor em R$"
                   value={investValor}
                   onChange={e => setInvestValor(e.target.value)}
                   aria-label="Valor a aplicar"
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border-card)'
-                  }}
+                  style={{ flex: 1 }}
                 />
-                <button onClick={handleAplicar} className="btn-acao-primaria">
+                <button onClick={handleAplicar} className="btn btn--primary">
                   Aplicar
                 </button>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </section>
 
-      {/* Imóveis Próprios */}
       {imoveis.length > 0 && (
-        <div className="card">
-          <h3 className="card-title">
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Building size={20} color="var(--accent-blue)" />
-              Imóveis Próprios ({imoveis.length})
-            </span>
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {imoveis.map(prop => (
-              <div
-                key={prop.id}
-                style={{
-                  background: 'var(--bg-card-subtle)',
-                  padding: '12px',
-                  borderRadius: 'var(--radius-md)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{prop.nome}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Comprado em {prop.anoCompra} • Manutenção: {formatarDinheiro(prop.custoAnualManutencao)}/ano
+        <section className="section">
+          <div>
+            <h3 className="subsection__title">Imóveis</h3>
+            <div className="action-list">
+              {imoveis.map(prop => (
+                <div key={prop.id} className="action-row">
+                  <div className="action-row__body">
+                    <p className="action-row__title">{prop.nome}</p>
+                    <p className="action-row__detail">
+                      {formatarDinheiro(prop.valorAtual)} · comprado em{' '}
+                      {prop.anoCompra} · manutenção{' '}
+                      {formatarDinheiro(prop.custoAnualManutencao)}/ano
+                    </p>
                   </div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
-                    Valor de Mercado: {formatarDinheiro(prop.valorAtual)}
-                  </div>
+                  {renderBotaoVender(prop.id)}
                 </div>
-                {renderBotaoVender(prop.id)}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Veículos Próprios */}
       {veiculos.length > 0 && (
-        <div className="card">
-          <h3 className="card-title">
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Car size={20} color="var(--accent-amber)" />
-              Garagem & Veículos ({veiculos.length})
-            </span>
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {veiculos.map(vec => (
-              <div
-                key={vec.id}
-                style={{
-                  background: 'var(--bg-card-subtle)',
-                  padding: '12px',
-                  borderRadius: 'var(--radius-md)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{vec.nome}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    IPVA/Manutenção: {formatarDinheiro(vec.custoAnualManutencao)}/ano
+        <section className="section">
+          <div>
+            <h3 className="subsection__title">Veículos</h3>
+            <div className="action-list">
+              {veiculos.map(vec => (
+                <div key={vec.id} className="action-row">
+                  <div className="action-row__body">
+                    <p className="action-row__title">{vec.nome}</p>
+                    <p className="action-row__detail">
+                      {formatarDinheiro(vec.valorAtual)} · IPVA e manutenção{' '}
+                      {formatarDinheiro(vec.custoAnualManutencao)}/ano
+                    </p>
                   </div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
-                    Valor Atual: {formatarDinheiro(vec.valorAtual)}
-                  </div>
+                  {renderBotaoVender(vec.id)}
                 </div>
-                {renderBotaoVender(vec.id)}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Modal de Compras */}
       {showShopModal && (
         <AssetShopModal
           saldoDisponivel={economia.dinheiro}

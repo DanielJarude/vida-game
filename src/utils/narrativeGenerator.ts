@@ -2,28 +2,39 @@ import { randomChoice } from './random';
 import { Character, FamilyMember, PostMortemSummary, VisibleStats } from '../types';
 import { getSocialClassLabel } from './formatters';
 
+/**
+ * B4-FIX2 item 13 — o marco de nascimento estava fragmentado em 4-5
+ * entradas independentes na Linha da Vida (nasceu / nome / pai / mãe /
+ * classe social), criando comprimento e scroll antes de a história
+ * sequer começar. Consolidado em UM único parágrafo editorial — mesmos
+ * dados, sem perder nenhum, apenas lidos como uma abertura de biografia
+ * em vez de uma lista de campos de formulário.
+ *
+ * Retorna sempre 1 string (mantém o tipo array por compatibilidade de
+ * quem já itera o retorno para criar entradas de log).
+ */
 export function gerarHistoriaNascimento(
   personagem: Character,
   pai?: FamilyMember,
   mae?: FamilyMember
 ): string[] {
-  const logs: string[] = [];
+  const classeDesc = getSocialClassLabel(personagem.classeSocial).toLowerCase();
 
-  logs.push(`Você nasceu em ${personagem.cidade}, ${personagem.estado}.`);
-  logs.push(`Seu nome completo é ${personagem.nome} ${personagem.sobrenome}.`);
+  let paragrafo =
+    `${personagem.nome} ${personagem.sobrenome} nasceu em ${personagem.cidade}, ${personagem.estado}, ` +
+    `em uma família de ${classeDesc}.`;
 
-  if (pai) {
-    logs.push(`Seu pai, ${pai.nome} ${pai.sobrenome}, tem ${pai.idade} anos e trabalha como ${pai.profissao || 'trabalhador'}.`);
+  if (pai && mae) {
+    paragrafo +=
+      ` Seu pai, ${pai.nome} ${pai.sobrenome} (${pai.idade} anos), trabalha como ${pai.profissao || 'trabalhador'}; ` +
+      `sua mãe, ${mae.nome} ${mae.sobrenome} (${mae.idade} anos), como ${mae.profissao || 'trabalhadora'}.`;
+  } else if (pai) {
+    paragrafo += ` Seu pai, ${pai.nome} ${pai.sobrenome} (${pai.idade} anos), trabalha como ${pai.profissao || 'trabalhador'}.`;
+  } else if (mae) {
+    paragrafo += ` Sua mãe, ${mae.nome} ${mae.sobrenome} (${mae.idade} anos), trabalha como ${mae.profissao || 'trabalhadora'}.`;
   }
 
-  if (mae) {
-    logs.push(`Sua mãe, ${mae.nome} ${mae.sobrenome}, tem ${mae.idade} anos e trabalha como ${mae.profissao || 'trabalhadora'}.`);
-  }
-
-  const classeDesc = getSocialClassLabel(personagem.classeSocial);
-  logs.push(`Você nasceu em uma família de ${classeDesc.toLowerCase()}.`);
-
-  return logs;
+  return [paragrafo];
 }
 
 export function gerarResumoMorte(

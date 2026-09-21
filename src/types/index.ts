@@ -1,5 +1,7 @@
 // Tipos centrais do jogo VIDA
 
+import type { AparenciaAvatar } from '../data/avatar/avatarData';
+
 export type Gender = 'masculino' | 'feminino' | 'nao-binario';
 
 export type LifeStage =
@@ -99,7 +101,14 @@ export type RelationType =
   | 'filha'
   | 'amigo'
   | 'amiga'
-  | 'pet';
+  | 'pet'
+  // B4-FIX3 item 13 — mundo social fora da família: pessoas que nascem de
+  // um evento (colega, paixão secreta, desafeto) e podem persistir,
+  // reaparecer e mudar de tipo ao longo da vida (ex.: amigo → namorado,
+  // quando idade/regras permitirem).
+  | 'rival'
+  | 'paixao'
+  | 'mentor';
 
 export interface FamilyMember {
   id: string;
@@ -116,6 +125,17 @@ export interface FamilyMember {
   situacaoAtual?: string;
   anoMorte?: number;
   causaMorte?: string;
+  // B4-FIX3 item 13 — infraestrutura leve de NPC persistente. Nenhum campo
+  // novo é obrigatório: membros de família tradicionais (pai/mãe/irmão)
+  // continuam sem precisar declarar nada disso.
+  //
+  // - `ativo`: a relação continua acontecendo (padrão implícito: true
+  //   quando ausente). Uma amizade que "encerrou" fica `ativo: false` sem
+  //   apagar a pessoa nem seu histórico — ela pode voltar a aparecer.
+  // - `origemEventoId`: qual evento criou esta pessoa, só para depuração/
+  //   rastreabilidade; nenhuma regra de jogo depende deste campo.
+  ativo?: boolean;
+  origemEventoId?: string;
 }
 
 export type EducationLevel =
@@ -135,7 +155,12 @@ export type FamilyInteractionType =
   | 'dar_presente'
   | 'discutir'
   | 'pedir_dinheiro'
-  | 'pedir_conselho';
+  | 'pedir_conselho'
+  // Exclusivas de pets (B4-FIX1) — um animal não conversa nem discute;
+  // o vínculo com ele acontece por cuidado e presença física.
+  | 'fazer_carinho'
+  | 'alimentar'
+  | 'passear';
 
 export type PosturaEscolar = 'estudar' | 'matar_aula' | 'socializar';
 
@@ -262,6 +287,18 @@ export interface EventConsequence {
   adicionarFamiliar?: Partial<FamilyMember>;
   adicionarDoenca?: string;
   curarDoenca?: string;
+  // B4-FIX3 item 13/14 — mundo social: transformar o tipo de uma relação
+  // existente (ex.: amigo → namorado, quando um evento de romance
+  // encontra uma pessoa já conhecida) e encerrar uma relação sem apagar
+  // a pessoa nem seu histórico (fica `ativo: false`, pode reaparecer).
+  // Referenciam a pessoa por ID estável OU por `relationType` (mesmo
+  // padrão de `relacionamentoDelta`) — nunca por nome/texto.
+  // `relationType` é o único jeito de o CONTEÚDO do evento apontar para
+  // um NPC criado em tempo de execução, já que o dado do evento não
+  // conhece o id gerado; quando houver mais de uma pessoa do mesmo tipo,
+  // a mais recentemente adicionada é usada.
+  transformarRelacao?: { relationId?: string; relationType?: RelationType; novoTipo: RelationType };
+  encerrarRelacao?: { relationId?: string; relationType?: RelationType };
 }
 
 export interface EventOption {
@@ -276,7 +313,55 @@ export interface EventOption {
     flagNecessaria?: string;
     // B2 — exigência de padrão de comportamento acumulado (ex.: histórico de disciplina)
     condicaoComportamental?: CondicaoComportamental;
+    // B4-FIX3 item 7 — o EVENTO pode ser elegível numa idade, mas uma opção
+    // específica pode continuar incompatível (ex.: "tentar trabalhar" numa
+    // faixa etária que já vai até a vida adulta). Sem isso, cada opção
+    // herdava cegamente a janela inteira do evento. Ausente = sem restrição
+    // adicional além da janela do evento.
+    idadeMinima?: number;
+    idadeMaxima?: number;
   };
+}
+
+// ---------------------------------------------------------------------------
+// B4-FIX2 — taxonomia de repetição de eventos
+//
+// O playtest humano confirmou eventos reaparecendo sem controle (mesmo
+// título, mesma consequência, em anos próximos). A causa raiz: só existia
+// `unico?: boolean` — qualquer evento sem essa marca podia ser sorteado
+// livremente, ano após ano, sem nenhum intervalo mínimo. `repeticao` é a
+// política explícita e coerente; `unico` continua funcionando (mapeado para
+// 'unica') para não exigir reescrever eventos que já estavam corretos.
+//
+// - unica: uma vez na vida inteira (ex.: primeiros passos).
+// - cooldown: pode repetir, mas só depois de um intervalo mínimo de idade.
+// - recorrente: pode repetir com frequência, mas nunca em anos consecutivos
+//   (cooldown mínimo sistêmico de 1 ano já evita a repetição "porta ao
+//   lado" mesmo em eventos não auditados individualmente).
+// - marco: ligado a uma transição específica da vida; não é sorteado de
+//   novo depois de ocorrer (equivalente a 'unica', mas com significado
+//   distinto: representa uma passagem, não um acontecimento aleatório).
+// ---------------------------------------------------------------------------
+export type PoliticaRepeticao = 'unica' | 'cooldown' | 'recorrente' | 'marco';
+
+export interface RepeticaoEvento {
+  tipo: PoliticaRepeticao;
+  /** Anos mínimos de idade entre duas ocorrências do mesmo id (cooldown/recorrente). */
+  cooldownAnos?: number;
+}
+
+/** Uma ocorrência real de evento, registrada com idade e ano (para cooldown). */
+export interface EventOccurrence {
+  eventId: string;
+  idade: number;
+  ano: number;
+  // B4-FIX3 item 4/16 — categoria do evento no momento em que ocorreu.
+  // Permite ao sorteio (events/contextWeighting) enxergar se o histórico
+  // recente está dominado por uma única categoria (ex.: só família) sem
+  // precisar procurar o evento inteiro de volta em MASTER_EVENTS_LIST.
+  // Opcional: ocorrências de saves anteriores a este campo simplesmente
+  // não participam da ponderação por contexto (tratadas como neutras).
+  categoria?: GameEvent['categoria'];
 }
 
 export interface GameEvent {
@@ -285,9 +370,30 @@ export interface GameEvent {
   descricao: string;
   idadeMinima: number;
   idadeMaxima: number;
-  categoria: 'infancia' | 'escola' | 'adolescencia' | 'familia' | 'amizade' | 'romance' | 'trabalho' | 'dinheiro' | 'saude' | 'cotidiano';
+  // B4-FIX3 item 2/3 — quatro contextos novos para tirar a vida do
+  // personagem de dentro de casa: hobby (interesse pessoal, sem ser
+  // esporte nem escola), esporte (competição/atividade física),
+  // comunidade (vizinhança, bairro, eventos coletivos fora da escola/
+  // família) e tecnologia (internet/redes sociais, apropriado à idade).
+  categoria:
+    | 'infancia'
+    | 'escola'
+    | 'adolescencia'
+    | 'familia'
+    | 'amizade'
+    | 'romance'
+    | 'trabalho'
+    | 'dinheiro'
+    | 'saude'
+    | 'cotidiano'
+    | 'hobby'
+    | 'esporte'
+    | 'comunidade'
+    | 'tecnologia';
   peso: number; // chance relativa
-  unico?: boolean; // apenas uma vez na vida
+  unico?: boolean; // apenas uma vez na vida (equivalente a repeticao: { tipo: 'unica' })
+  /** Política explícita de repetição (B4-FIX2). Ausente = infere de `unico`, senão 'recorrente'. */
+  repeticao?: RepeticaoEvento;
   condicoes?: {
     genero?: Gender;
     faseVida?: LifeStage;
@@ -328,6 +434,12 @@ export interface Character {
     titulo: string;
     descricao: string;
   }[];
+  // B4-FIX2 — personalização visual escolhida na criação da vida (tom de
+  // pele, cabelo, olhos). Puramente cosmética: nunca lida por nenhum
+  // sistema de jogo (economia, educação, eventos, personalidade). Opcional
+  // para que saves anteriores a este PR continuem válidos — a ausência cai
+  // no símbolo automático por fase de vida (fallback do B4-FIX1).
+  aparencia?: AparenciaAvatar;
 }
 
 export interface GameState {
@@ -343,6 +455,13 @@ export interface GameState {
   timeline: LifeLogEntry[];
   eventoAtivo: GameEvent | null;
   historicoEventosDisparados: string[];
+  // B4-FIX2 — histórico rico (id + idade + ano) para cooldown/recorrência.
+  // `historicoEventosDisparados` continua existindo (compatibilidade de save
+  // e checagem de 'unica'); este campo é o que permite calcular intervalo
+  // mínimo entre duas ocorrências do mesmo evento. Opcional: estados
+  // construídos antes desta mudança (testes, saves antigos) continuam
+  // válidos — ausência é tratada como "sem ocorrência anterior conhecida".
+  historicoOcorrenciasEventos?: EventOccurrence[];
   // Ações únicas por ano (atividades, apostas, interações); zerada a cada passagem de ano
   acoesRealizadasAno: string[];
   emJogo: boolean;
