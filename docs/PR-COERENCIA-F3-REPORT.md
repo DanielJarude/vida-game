@@ -410,16 +410,224 @@ narrativa.
 
 ---
 
+## 8-B. Composição do ano — marco não significa saturação
+
+Esta seção documenta a **F3-FIX**: a correção da regressão estrutural que a própria Fase 3 criou e
+que a auditoria de alcançabilidade encontrou.
+
+### A regressão encontrada
+
+Sete acontecimentos da faixa 0-2 anos nunca apareciam em 105 vidas, e **dobrar a amostra para 210 não
+revelava nenhum deles** — o que já eliminava "azar de sorteio" como explicação:
+
+```
+idade 0: 0 anos vividos (o motor começa a contar em 1)
+idade 1: 105 anos · 105× "marco testemunhado: marco_primeiros_passos"
+idade 2: 105 anos · 105× "marco com escolha: marco_primeira_palavra"
+eventos DO SORTEIO que apareceram em 0-2: NENHUM
+```
+
+A faixa 0-2 tem **dois anos jogáveis** e os dois estavam 100% ocupados por marcos garantidos.
+
+### A causa
+
+O bloco de calendário em `agingSystem` fazia **retorno antecipado**: quando havia marco, a função
+devolvia o resultado ali mesmo e o motor nunca chegava ao sorteio. Na prática, o código afirmava:
+
+```
+houve marco → ano ocupado → nada mais acontece
+```
+
+O erro conceitual por trás disso é tratar como equivalentes duas grandezas diferentes:
+
+| | densidade biográfica | interrupção / atenção |
+|---|---|---|
+| **o que mede** | quanto o ano pesa na história da pessoa | quanto o ano exige do jogador, em cliques |
+| *Primeiros Passos* | máxima | **zero** — é narrado, ninguém clica |
+| *A Primeira Palavra* | máxima | uma (o modal biográfico) |
+| decisão contextual | média | uma, e cara |
+| textura / pequena memória | nenhuma | zero |
+
+*Primeiros Passos* é o caso extremo: densidade máxima com atenção zero. Tratá-lo como "ano cheio"
+fazia um marco **apagar o mundo ao redor dele** — e no ano em que alguém dá os primeiros passos, a
+família também recebe visita, o bebê também tem febre à noite.
+
+### A solução
+
+Geral, declarativa, e sem exceção por idade ou por id. Duas funções puras novas em `types`, ao lado
+das três perguntas que já existiam sobre cada conteúdo:
+
+| pergunta | função | responde `true` para |
+|---|---|---|
+| permite escolher? | `taxonomiaPermiteEscolha` | comportamental, biográfica |
+| move personalidade? | `taxonomiaMovePersonalidade` | comportamental |
+| consome cota de decisão? | `taxonomiaConsomeCotaDeDecisao` | comportamental |
+| **interrompe o jogador?** | **`taxonomiaInterrompe`** | comportamental, biográfica |
+| **comporta companhia?** | **`taxonomiaPermiteComposicao`** | **marco testemunhado, escolha biográfica** |
+
+Nenhum sistema de pontos foi criado — a arquitetura existente resolveu com propriedades semânticas
+booleanas, como pedido.
+
+No motor, `acontecimentoDeCompanhia()` substitui o retorno antecipado, com três guardas estruturais:
+
+1. **só compõe se a taxonomia permitir** — marco comporta companhia; acontecimento e decisão fecham
+   o ano sozinhos, senão o ano vira uma lista;
+2. **o companheiro é sempre um ACONTECIMENTO**, nunca uma decisão — é isto que garante *uma
+   interrupção por ano* e mantém teto e fadiga de decisão contextual intactos;
+3. **a saturação normal continua valendo** — se o ano já produziu conteúdo estrutural por conta
+   própria (formou-se, foi contratado), não há companhia.
+
+O retorno do motor ganhou `ocorrenciasDoAno[]`. Sem isso o acompanhante escaparia do controle de
+repetição e voltaria no ano seguinte; `useGame`, o simulador e todos os harnesses passaram a gravar
+a lista inteira. `ocorrencia` (singular) continua existindo e aponta para o conteúdo principal.
+
+### Os 7 eventos afetados — antes e depois
+
+Todos são `acontecimento_puro`, sem condições declaradas, e nenhum é conteúdo de marco. Nenhum foi
+reescrito, reclassificado ou removido: eles estavam corretos, o motor é que não os alcançava.
+
+| id | janela | peso | resumo | antes | depois (105 vidas) |
+|---|---|---|---|---|---|
+| `bb_estranhamento_visita` | 0-1 | 70 | parente desconhecido chega e o bebê estranha | **0** | 14 |
+| `bb_descoberta_espelho` | 0-2 | 65 | o bebê se reconhece no espelho | **0** | 27 |
+| `bb_febre_noite` | 0-2 | 60 | febre de madrugada, casa acordada | **0** | 42 |
+| `bb_cachorro_familia` | 0-2 | 40 | o cachorro da família se aproxima | **0** | 23 |
+| `bb_parquinho_bebes` | 1-2 | 60 | tarde no parquinho | **0** | 38 |
+| `bb_musica_dança` | 1-2 | 55 | música alta na cozinha | **0** | 36 |
+| `bb_queda_leve` | 1-2 | 60 | tombo aprendendo a andar | **0** | 30 |
+
+Todos **devem** coexistir com marco (são textura de primeira infância, não concorrentes dele), todos
+**devem** permanecer no catálogo, e nenhum tinha bloqueio adicional além do estrutural.
+
+### Impacto 0-2
+
+| métrica | antes | depois |
+|---|---|---|
+| eventos do sorteio que aparecem | **nenhum** | 7 de 7 |
+| ocorrências do sorteio em 210 anos | 0 | 210 |
+| anos com acontecimento | 50,0%\* | **100,0%** |
+| escolha biográfica | 50,0% | 50,0% (inalterada) |
+| marcos cumpridos | 105/105 | 105/105 (inalterado) |
+| modais por ano | ≤ 1 | **≤ 1** |
+
+\* O valor "antes" contava o próprio marco testemunhado como acontecimento.
+
+### Impacto 3-5 e adulto
+
+| faixa | decisões antes da F3-FIX | depois |
+|---|---|---|
+| 3-5 | 3,8% | 3,8% |
+| 6-11 | 8,6% | 9,4% |
+| 15-17 | 21,0% | 19,4% |
+| 18-29 | 19,4% | 21,0% |
+| 30-44 | 15,5% | 16,3% |
+
+Variação dentro do ruído esperado de uma mudança de ordem do RNG. O que importa é que **a agência não
+caiu**: decisões contextuais apresentadas subiram de 1.153 para **1.170**, a conversão do scheduler
+continua em **100,0%** e as falhas continuam em **0**.
+
+Para o adulto, a composição **ainda não tem efeito prático** — e isso é correto, não uma falha: não
+existe nenhum marco adulto no catálogo ainda (formatura, casamento, aposentadoria são fases futuras).
+O teste (I) prova, com um cenário sintético, que a regra já os atenderá sem nenhuma linha nova.
+
+### Número de popups / interrupções
+
+Esta era a preocupação explícita, e é a métrica que mais importa:
+
+| métrica | valor |
+|---|---|
+| anos com 2+ conteúdos | 301/7.731 (**3,9%**) |
+| média de conteúdos por ano | **0,45** |
+| **anos com 2+ interrupções obrigatórias** | **0** |
+| anos com mais de um modal | **0** |
+
+Medido também em coortes de 280 e 420 vidas: 3,8% de anos compostos, 0 interrupções duplas. Dois
+conteúdos no mesmo ano **não** significam dois modais — o acompanhante é sempre um acontecimento, que
+se resolve sozinho e entra direto na Linha da Vida. Densidade sem popup, como pedido.
+
+### Alcançabilidade — estado final
+
+| | 105 vidas | 280 vidas | 420 vidas |
+|---|---|---|---|
+| eventos vistos | 130/134 | **132/134** | **132/134** |
+
+Nenhum peso, densidade ou RNG foi alterado para melhorar cobertura. Os 2 eventos que permanecem sem
+aparecer são **condicionais, com causa documentada e alcançáveis por construção**:
+
+- **`hob_banda_garagem`** — exige a flag `sabe_tocar_violao`, que só nasce se o jogador sortear
+  `inf_aula_musica` (9-11) **e** escolher a opção do violão. Na amostra, o evento de origem apareceu
+  em 1/105 vidas. Cadeia de dois passos improváveis, funcionando como projetado.
+- **`lat_tempo_que_sobra`** — exige `empregado: false` a partir dos 60, e **0 dos 1.543 anos 60+ tem
+  o personagem sem cargo**, porque o jogo ainda não tem sistema de aposentadoria (`SEM_APOSENTADORIA`,
+  já registrado como pendência). O evento está correto e ficará alcançável de graça quando a
+  aposentadoria existir.
+
+`inf_birra_brinquedo` e `ado_preparacao_enem` aparecem ou não conforme a amostra — ambos são visíveis
+em 280 vidas. Cobertura observada e alcançabilidade estrutural são coisas diferentes: **nenhum evento
+está morto por acidente**.
+
+### Testes permanentes (A-J)
+
+13 testes em `src/systems/pacing/__tests__/composicaoDoAno.test.ts`:
+
+| # | contrato |
+|---|---|
+| A | marco sem escolha não impede automaticamente um acontecimento compatível |
+| B | marco com escolha biográfica não consome cota de decisão contextual |
+| C | marco com escolha biográfica não bloqueia todo acontecimento compatível |
+| D | decisão contextual continua respeitando teto e fadiga |
+| E | textura não satura |
+| F | pequena memória não satura nem vira ocorrência |
+| G | dois conteúdos coexistentes são ordenados corretamente na Linha da Vida |
+| H | save/reload preserva ambos sem duplicação |
+| I | **a solução funciona fora de 0-2, com cenário adulto sintético** |
+| J | **nenhuma regra depende dos ids dos marcos de bebê — nem olha idade** |
+
+O teste J varre `src/systems`, `src/hooks`, `src/presentation` e `src/components` ignorando
+comentários, e ainda inspeciona o corpo de `acontecimentoDeCompanhia` para garantir que ele não
+contém nenhuma comparação de idade. Três testes de apoio verificam que acontecimento e decisão **não**
+compõem, que nenhum ano abre dois modais, e que o resumo anual não duplica entradas.
+
+### Expectativas de teste alteradas — classificadas antes
+
+| teste | classificação | o que foi feito |
+|---|---|---|
+| `anosTranquilos` (saturação) | **correção de medição** | O teste inferia "o ano saturou" contando logs não-'geral'/'cotidiano'. Com a composição, esses 2 logs passaram a ser, em alguns anos, o próprio resultado que ele deveria vigiar — ele acusava a si mesmo. Passou a ler o diagnóstico do ritmo (`motivoRitmo`), que é onde a saturação sempre morou. Contrato **idêntico e mais duro**: ano saturado não sorteia nada, nem modal, nem companhia. |
+| `personalidadeEntreVidas` (diversidade de eixos) | **fragilidade estatística** | Numa varredura de 10 janelas independentes de 20 seeds, **9 atingiam 4+ eixos e 1 não**. A amostra estava no limite. Ampliada de 20 para 30 seeds, **acrescentando** ao fim sem trocar as 20 originais; N=30/40/60/80 passam nas duas asserções de distribuição. Nenhum limiar afrouxado. |
+| `cicloVida` (seed 79 → 122) | **RNG reordenado, não regressão** | A composição consome números em anos que antes não consumiam. Das 200 primeiras sementes, **76 satisfazem todos os critérios** com o código atual — o contrato continua comum. A 122 foi escolhida por maior folga. |
+
+A troca anterior (23 → 79) permanece documentada na seção 7, como pedido.
+
+### Limitações
+
+- **Nenhum marco adulto existe ainda**, então a composição só tem efeito observável em 0-2 e, via
+  `marco_primeiro_dia_escola`, em 6-11 (14,4% dos anos daquela faixa têm dois conteúdos). O
+  comportamento adulto está provado por cenário sintético, não por conteúdo real.
+- **A composição adiciona no máximo um acompanhante.** Não há suporte a três conteúdos no mesmo ano,
+  e não foi criado — não há necessidade demonstrada.
+- **O acompanhante nunca é uma decisão.** É uma restrição deliberada para preservar a regra de uma
+  interrupção por ano; se algum dia um marco precisar coexistir com uma decisão, isso exigirá
+  reavaliar o orçamento de interrupção e deve ser decisão de design.
+- **Um acontecimento de companhia não pode matar.** A morte do ano já foi decidida antes; deixá-la
+  reabrir ali criaria uma saída de óbito que os chamadores não esperam neste ponto.
+- `bb_estranhamento_visita` aparece 14 vezes em 105 vidas — o menor dos sete. Janela 0-1 e idade 0
+  inexistente deixam-lhe **um** ano de oportunidade. É baixo por geometria da janela, não por bloqueio.
+
+---
+
 ## 9. Estado final
 
 ```
-npm test       51 arquivos · 843 testes · 100% verdes
+npm test            52 arquivos · 856 testes · 100% verdes
 npm run typecheck   limpo
 npm run build       ok
 harness 105 vidas   executado, métricas acima
-coorte 210 vidas    executada (cobertura confirmada como estrutural)
-guardas F1/F2       preservadas
+coortes 280 e 420   executadas (alcançabilidade confirmada: 132/134)
+auditoria 0-5       executada (os 7 eventos mortos voltaram)
+guardas F1/F2/F3    preservadas
 ```
 
-A Fase 3 está entregue. **Parando aqui**, conforme instruído: sem merge em `main`, sem force-push,
-sem avançar para a Fase 4. A regressão dos 7 acontecimentos de 0-2 anos aguarda decisão de design.
+A Fase 3 e a F3-FIX estão entregues. **Parando aqui**, conforme instruído: sem merge em `main`, sem
+force-push, sem Fase 4, sem Desafios de Vida e sem conteúdo novo para mascarar cobertura.
+
+Aguardando aprovação para playtest humano.
