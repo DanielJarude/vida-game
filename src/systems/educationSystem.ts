@@ -6,6 +6,43 @@ import { clamp, generateId, randomInt } from '../utils/random';
 import { narrarPosturaEscolar } from './events/narrativeVariants';
 import { possuiFormacaoEm } from './plausibility/formacaoConcluida';
 import { rotularAreas } from '../data/formacao/areasFormacao';
+import { instanteDe } from './tempo/instante';
+import {
+  criarMatricula,
+  matriculaConcluida,
+  semestreEmCurso,
+  type Matricula
+} from './tempo/matricula';
+
+/**
+ * Obtém a matrícula de um estado de educação, reconstruindo-a quando o save é
+ * anterior à Fase 2.
+ *
+ * COMPATIBILIDADE DE SAVE — a parte delicada desta fase.
+ *
+ * Um save antigo tem `semestreAtual` (contador defeituoso) mas não tem
+ * `matriculaInicio`. Reconstruímos o início retroagindo o progresso já
+ * registrado, e o fazemos de forma CONSERVADORA: usamos `semestreAtual - 1`
+ * porque naquele modelo o contador começava em 1 sem que nenhum semestre
+ * tivesse sido cursado.
+ *
+ * O efeito para o jogador é que ele nunca perde progresso e nunca ganha
+ * progresso que não viveu. Na pior hipótese, um aluno que estava a um passo da
+ * formatura pelo contador antigo cursa meio ano a mais — o que é preferível a
+ * receber um diploma que o novo modelo considera não cumprido.
+ */
+function reconstruirMatricula(edu: EducationState, idadeAtual: number): Matricula {
+  const duracao = edu.totalSemestres ?? 8;
+
+  if (typeof edu.matriculaInicio === 'number' && Number.isFinite(edu.matriculaInicio)) {
+    return criarMatricula(edu.matriculaInicio, duracao);
+  }
+
+  // Save anterior à Fase 2: retroage a partir do progresso registrado.
+  const progressoAntigo = Math.max(0, (edu.semestreAtual ?? 1) - 1);
+  const inicioReconstruido = instanteDe(idadeAtual) - progressoAntigo;
+  return criarMatricula(inicioReconstruido, duracao);
+}
 
 export function criarEducacaoInicial(): EducationState {
   return {
@@ -104,7 +141,42 @@ export function processarAnoEducacao(
 
   // Se está na Faculdade / Curso Técnico
   if (edu.emCurso && (edu.tipoCurso === 'superior' || edu.tipoCurso === 'tecnico' || edu.tipoCurso === 'pos')) {
-    edu.semestreAtual = (edu.semestreAtual || 0) + 2;
+    // A conclusão é consequência do TEMPO CUMPRIDO desde a matrícula, não de
+    // um contador que alguém incrementa. Ver `tempo/matricula.ts` para a
+    // anatomia do off-by-one que isto substitui.
+    //
+    // `idade` aqui já é a idade NOVA (a passagem de ano acontece antes), então
+    // ela é o instante "agora" do fim deste ano de vida.
+    const matricula = reconstruirMatricula(edu, idade);
+    const agora = instanteDe(idade);
+
+    // Espelha o progresso no estado para exibição e compatibilidade de save.
+    edu.semestreAtual = semestreEmCurso(matricula, agora);
+    edu.totalSemestres = matricula.duracaoSemestres;
+    edu.matriculaInicio = matricula.inicio;
+
+    // NÍVEL INTERMEDIÁRIO — 'superior_incompleto'
+    //
+    // A auditoria (E-04/R10) mostrou que este nível nunca era atribuído, o que
+    // tornava Estagiário Universitário e Dev Júnior inalcançáveis: duas vagas
+    // que EXIGEM superior incompleto, num jogo onde ninguém jamais o tinha.
+    //
+    // ATENÇÃO — ESTE É O PONTO DE MAIOR RISCO DA FASE 2 PARA A FASE 1:
+    // 'superior_incompleto' vale 6 na hierarquia e 'medio_completo' vale 4,
+    // ou seja, matricular-se ELEVA a escolaridade. Isso é correto para vagas
+    // que pedem "cursando o superior" e seria catastrófico se destravasse
+    // vagas que exigem formação CONCLUÍDA.
+    //
+    // O que garante que não destrava: a elegibilidade profissional confere
+    // formação por `cursosConcluidos` (via `plausibility/formacaoConcluida`),
+    // e uma matrícula em curso NÃO entra nessa lista — ela só é escrita na
+    // formatura. Um estudante de Medicina sobe para 'superior_incompleto' e
+    // continua sem CRM, sem área de formação em medicina e sem o nível
+    // 'superior_completo' que a vaga de médico exige. Coberto por teste
+    // explícito.
+    if (edu.tipoCurso === 'superior' && nivelEscolaridade(edu.nivelAtual) < nivelEscolaridade('superior_incompleto')) {
+      edu.nivelAtual = 'superior_incompleto';
+    }
 
     if (!edu.isPublica && edu.mensalidade) {
       mensalidadeAnual = edu.mensalidade * 12;
@@ -112,8 +184,8 @@ export function processarAnoEducacao(
 
     char.stats.inteligencia = clamp(char.stats.inteligencia + 2, 0, 100);
 
-    // Formatura
-    if (edu.semestreAtual >= (edu.totalSemestres || 8)) {
+    // Formatura — só quando a duração declarada foi realmente cumprida.
+    if (matriculaConcluida(matricula, agora)) {
       const nomeConcluido = edu.nomeCurso || 'Graduação';
       if (edu.tipoCurso === 'superior') {
         edu.nivelAtual = 'superior_completo';
@@ -134,6 +206,7 @@ export function processarAnoEducacao(
       edu.nomeCurso = undefined;
       edu.semestreAtual = undefined;
       edu.totalSemestres = undefined;
+      edu.matriculaInicio = undefined;
       edu.mensalidade = undefined;
 
       char.stats.felicidade = clamp(char.stats.felicidade + 25, 0, 100);
@@ -245,13 +318,45 @@ export function ingressarCurso(
     }
   }
 
-  let notaEnem = Math.round(
-    personagem.stats.inteligencia * 7.5 +
-    personagem.hiddenStats.disciplina * 2.0 +
-    (personagem.flags['focou_enem'] ? 60 : 0) +
-    randomInt(-20, 20)
-  );
-  notaEnem = clamp(notaEnem, 350, 990);
+  // ---------------------------------------------------------------------
+  // A PROVA DO ANO
+  //
+  // Antes, esta nota era sorteada a cada chamada e jogada fora: o ENEM era um
+  // botão de re-roll, e o jogador clicava até passar (23 aprovações medidas na
+  // segunda tentativa do mesmo ano).
+  //
+  // A correção ataca a CAUSA, não o botão: a prova passa a ser um FATO do ano
+  // de vida do personagem. Prestou, tirou 640 — 640 é a sua nota deste ano.
+  // Tentar de novo não re-sorteia nada, porque não há nada a sortear.
+  //
+  // Isso preserva um comportamento legítimo que um bloqueio destruiria: não
+  // passar na federal e se matricular numa particular com a MESMA nota é o
+  // caminho real de milhões de estudantes, e a própria mensagem de recusa já
+  // sugeria isso. O que deixa de existir é a repetição que fabricava nota
+  // nova.
+  //
+  // A nota vive em `EducationState`, que é persistido — logo, recarregar o
+  // save não devolve a tentativa.
+  // ---------------------------------------------------------------------
+  const anoDeVida = personagem.idade;
+  const provaJaPrestada =
+    educacao.vestibular !== undefined && educacao.vestibular.anoDeVida === anoDeVida;
+
+  const notaEnem = provaJaPrestada
+    ? educacao.vestibular!.nota
+    : clamp(
+        Math.round(
+          personagem.stats.inteligencia * 7.5 +
+          personagem.hiddenStats.disciplina * 2.0 +
+          (personagem.flags['focou_enem'] ? 60 : 0) +
+          randomInt(-20, 20)
+        ),
+        350,
+        990
+      );
+
+  /** Carimbo da prova deste ano, presente em toda resposta desta função. */
+  const registroDaProva = { anoDeVida, nota: notaEnem };
 
   if (tipoInstituicao === 'publica') {
     if (notaEnem >= curso.notaCorteEnem) {
@@ -265,12 +370,17 @@ export function ingressarCurso(
           nomeCurso: curso.nome,
           instituicao: instNome,
           isPublica: true,
+          // Progresso ZERO: o aluno acabou de se matricular e ainda não
+          // cursou semestre nenhum. O modelo antigo gravava 1 aqui, e esse
+          // meio ano fantasma era metade do off-by-one.
           semestreAtual: 1,
           totalSemestres: curso.duracaoSemestres,
+          matriculaInicio: instanteDe(personagem.idade),
           desempenho: 80,
           mensalidade: 0,
           anoIngresso: anoAtual,
-          posturaAno: null
+          posturaAno: null,
+          vestibular: registroDaProva
         },
         novoLog: {
           id: generateId('log'),
@@ -282,9 +392,12 @@ export function ingressarCurso(
         }
       };
     } else {
+      // A nota é gravada MESMO na reprovação — é justamente isso que fecha o
+      // re-roll: a próxima tentativa deste ano encontrará esta mesma nota.
       return {
         sucesso: false,
-        mensagem: `Sua nota no ENEM (${notaEnem}) ficou abaixo da nota de corte (${curso.notaCorteEnem}) para a universidade pública. Você pode tentar em uma faculdade privada ou estudar mais.`
+        mensagem: `Sua nota no ENEM (${notaEnem}) ficou abaixo da nota de corte (${curso.notaCorteEnem}) para a universidade pública. Você pode tentar em uma faculdade privada ou estudar mais.`,
+        educacaoAtualizada: { vestibular: registroDaProva }
       };
     }
   } else {
@@ -300,10 +413,12 @@ export function ingressarCurso(
           isPublica: false,
           semestreAtual: 1,
           totalSemestres: curso.duracaoSemestres,
+          matriculaInicio: instanteDe(personagem.idade),
           desempenho: 75,
           mensalidade: curso.mensalidadePrivada,
           anoIngresso: anoAtual,
-          posturaAno: null
+          posturaAno: null,
+          vestibular: registroDaProva
         },
         novoLog: {
           id: generateId('log'),
@@ -317,7 +432,8 @@ export function ingressarCurso(
     } else {
       return {
         sucesso: false,
-        mensagem: 'Você não atingiu o conhecimento mínimo necessário para a admissão neste curso.'
+        mensagem: 'Você não atingiu o conhecimento mínimo necessário para a admissão neste curso.',
+        educacaoAtualizada: { vestibular: registroDaProva }
       };
     }
   }

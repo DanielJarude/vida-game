@@ -32,6 +32,7 @@ import { aplicarConsequenciasEscolha } from '../../src/systems/eventSystem';
 import { criarPersonalidadeInicial } from '../../src/systems/personalitySystem';
 import { criarEducacaoInicial, definirPosturaEscolar, ingressarCurso } from '../../src/systems/educationSystem';
 import { candidatarEmprego, criarCarreiraInicial, escolherBico, pedirAumento, trabalharMais } from '../../src/systems/careerSystem';
+import { criarRegistroTemporal, type RegistroTemporal } from '../../src/systems/tempo/registroTemporal';
 import { calcularPatrimonioLiquido, comprarBem, criarEconomiaInicial, jogarMegaSena } from '../../src/systems/economySystem';
 import { gerarFamiliaInicial } from '../../src/systems/familySystem';
 import { gerarCandidatosNamoro, iniciarNamoro, pedirEmCasamento, terFilho } from '../../src/systems/relationshipSystem';
@@ -129,6 +130,9 @@ interface Ctx {
   carreira: CareerState;
   economia: EconomyState;
   personalidade: PersonalityState;
+  // Fase 2 — consumo temporal persistente (vestibular, processos seletivos,
+  // concepções). Acompanha a vida inteira; não é zerado na virada do ano.
+  registroTemporal: RegistroTemporal;
 }
 
 /** Perfis: com que frequência o perfil age voluntariamente em cada domínio. */
@@ -192,7 +196,8 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
     educacao: criarEducacaoInicial(),
     carreira: criarCarreiraInicial(),
     economia: criarEconomiaInicial(classeSocial),
-    personalidade: criarPersonalidadeInicial()
+    personalidade: criarPersonalidadeInicial(),
+    registroTemporal: criarRegistroTemporal()
   };
 
   let historicoDisparados: string[] = [];
@@ -245,17 +250,48 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
       if (candidatos.length > 0) {
         const curso = candidatos[Math.floor(rng() * candidatos.length)];
         // Tenta pública e depois privada — no máximo 4 tentativas/ano, para
-        // MEDIR se o jogo permite vestibular ilimitado no mesmo ano.
+        // MEDIR se o jogo permite re-rolar o vestibular no mesmo ano.
+        //
+        // CORREÇÃO SEMÂNTICA (Fase 2): a métrica antiga acusava QUALQUER
+        // aprovação após a primeira tentativa, mas "não passei na federal e
+        // me matriculei na particular" é o caminho real de milhões de
+        // estudantes — e usa a MESMA nota. Isso nunca foi exploit.
+        //
+        // O exploit é re-rolar: insistir na MESMA via até sair nota diferente.
+        // É isso que passamos a medir, comparando a nota entre tentativas.
+        let notaDaPrimeiraProva: number | undefined;
+        const viasTentadas = new Set<string>();
+
         for (let tentativa = 0; tentativa < 4; tentativa++) {
-          const r = ingressarCurso(curso, tentativa % 2 === 0 ? 'publica' : 'privada', ctx.personagem, ctx.educacao, ano);
-          if (r.sucesso && r.educacaoAtualizada) {
+          const via = tentativa % 2 === 0 ? 'publica' : 'privada';
+          const jaTentouEstaVia = viasTentadas.has(via);
+          viasTentadas.add(via);
+
+          const r = ingressarCurso(curso, via, ctx.personagem, ctx.educacao, ano);
+
+          // A nota é gravada mesmo na reprovação — propagar é o que faz a
+          // próxima tentativa encontrar a prova já prestada.
+          if (r.educacaoAtualizada) {
             ctx.educacao = { ...ctx.educacao, ...r.educacaoAtualizada };
+          }
+          const notaAgora = ctx.educacao.vestibular?.nota;
+          if (notaDaPrimeiraProva === undefined) notaDaPrimeiraProva = notaAgora;
+
+          if (notaAgora !== undefined && notaDaPrimeiraProva !== undefined && notaAgora !== notaDaPrimeiraProva) {
+            violacoes.push({
+              codigo: 'VESTIBULAR_MULTIPLAS_TENTATIVAS_MESMO_ANO',
+              idade,
+              detalhe: `nota re-sorteada no mesmo ano (${notaDaPrimeiraProva} → ${notaAgora}) em ${curso.nome}`
+            });
+          }
+
+          if (r.sucesso && r.educacaoAtualizada) {
             acoesVoluntarias.push(`curso:${curso.id}:tentativa${tentativa + 1}`);
-            if (tentativa > 0) {
+            if (jaTentouEstaVia) {
               violacoes.push({
                 codigo: 'VESTIBULAR_MULTIPLAS_TENTATIVAS_MESMO_ANO',
                 idade,
-                detalhe: `aprovado em ${curso.nome} na tentativa ${tentativa + 1} do MESMO ano`
+                detalhe: `aprovado em ${curso.nome} repetindo a via "${via}" no MESMO ano`
               });
             }
             break;
@@ -278,7 +314,8 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
       if (alvo) {
         // Até 5 candidaturas no mesmo ano (mede se o jogo permite spam)
         for (let t = 0; t < 5; t++) {
-          const r = candidatarEmprego(alvo, ctx.personagem, ctx.educacao, ano, ctx.carreira);
+          const r = candidatarEmprego(alvo, ctx.personagem, ctx.educacao, ano, ctx.carreira, ctx.registroTemporal);
+          if (r.registroTemporalAtualizado) ctx.registroTemporal = r.registroTemporalAtualizado;
           if (r.sucesso && r.novoCargo) {
             const anosExpAnteriores = ctx.carreira.historicoEmpregos.reduce(
               (s, h) => s + ((h.anoFim ?? ano) - h.anoInicio), 0
@@ -296,11 +333,36 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
                 : ctx.carreira.historicoEmpregos
             };
             acoesVoluntarias.push(`emprego:${alvo.id}:tentativa${t + 1}`);
-            if (alvo.experienciaNecessaria > anosExpAnteriores) {
+            // CORREÇÃO SEMÂNTICA (Fase 2) — esta métrica foi escrita ANTES da
+            // Fase 1 e não conhecia a faixa `improvavel`.
+            //
+            // A Fase 1 decidiu deliberadamente (e o relatório documentou) que
+            // faltar ATÉ 1 ano de experiência não bloqueia: vira `improvavel`,
+            // com a chance multiplicada por 0,75. Uma empresa abrir exceção
+            // para quem está a um ano do perfil é comportamento de mercado
+            // real, e removê-lo tornaria a carreira mecânica.
+            //
+            // A métrica antiga contava esses casos como violação. Na Fase 1 ela
+            // marcou zero POR ACASO — nenhuma das 105 vidas caiu na faixa. Ao
+            // deslocar as trajetórias no tempo, a Fase 2 fez a faixa aparecer,
+            // e a métrica passou a acusar como furo um comportamento aprovado.
+            //
+            // Passa a medir o que a regra de fato proíbe: contratação com
+            // experiência faltando MAIS de um ano (grau `requisito`, que
+            // bloqueia). A faixa improvável é contada à parte, para não
+            // desaparecer da observação.
+            const faltando = alvo.experienciaNecessaria - anosExpAnteriores;
+            if (faltando > 1) {
               violacoes.push({
                 codigo: 'EMPREGO_SEM_EXPERIENCIA_EXIGIDA',
                 idade,
                 detalhe: `contratado como "${alvo.titulo}" (exige ${alvo.experienciaNecessaria} anos de experiência; tinha ${anosExpAnteriores}) por R$ ${alvo.salarioMensal}/mês`
+              });
+            } else if (faltando > 0) {
+              violacoes.push({
+                codigo: 'CONTRATACAO_IMPROVAVEL_POR_EXPERIENCIA',
+                idade,
+                detalhe: `contratado como "${alvo.titulo}" faltando ${faltando} ano para o perfil (faixa improvável aprovada na Fase 1)`
               });
             }
             if (t > 0) {
@@ -365,7 +427,8 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
       let nascidosNoAno = 0;
       for (let k = 0; k < 3; k++) {
         if (!chance(0.6) && k > 0) break;
-        const r = terFilho(parceiro, ctx.personagem, undefined, undefined, ano);
+        const r = terFilho(parceiro, ctx.personagem, undefined, undefined, ano, ctx.registroTemporal);
+        if (r.registroTemporalAtualizado) ctx.registroTemporal = r.registroTemporalAtualizado;
         if (r.sucesso && r.novoFilho && r.personagemAtualizado) {
           ctx.familia = [...ctx.familia, r.novoFilho];
           ctx.personagem = r.personagemAtualizado;
@@ -551,6 +614,20 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
   };
 }
 
+/**
+ * Duração declarada do último curso concluído, em semestres.
+ *
+ * Lê do catálogo pelo nome registrado em `cursosConcluidos` — a mesma ponte
+ * que o motor usa. Educação básica não está no catálogo e devolve undefined,
+ * caso em que a checagem cai no piso conservador de 2 anos.
+ */
+function ultimaDuracaoEmSemestres(ctx: Ctx): number | undefined {
+  const ultimo = ctx.educacao.cursosConcluidos[ctx.educacao.cursosConcluidos.length - 1];
+  if (!ultimo) return undefined;
+  const norm = (n: string) => n.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return CURSOS_DISPONIVEIS.find(c => norm(c.nome) === norm(ultimo.nome))?.duracaoSemestres;
+}
+
 function verificarCoerencia(ctx: Ctx, ano: AnoDaVida, violacoes: Violacao[], historico: AnoDaVida[]) {
   const idade = ano.idade;
 
@@ -559,8 +636,23 @@ function verificarCoerencia(ctx: Ctx, ano: AnoDaVida, violacoes: Violacao[], his
     if (/FORMATURA/i.test(log.texto)) {
       const inicio = ctx.educacao.anoIngresso;
       const anosDeCurso = inicio ? ano.ano - inicio : undefined;
-      if (anosDeCurso !== undefined && anosDeCurso <= 1) {
-        violacoes.push({ codigo: 'FORMACAO_RAPIDA_DEMAIS', idade, detalhe: `${log.texto} após ${anosDeCurso} ano(s)` });
+      // CORREÇÃO SEMÂNTICA (Fase 2) — a métrica antiga acusava "rápido demais"
+      // sempre que o curso durasse <= 1 ano, o que é um PROXY, não a regra.
+      // Com durações ímpares representáveis, um curso legítimo de 3 semestres
+      // (1 ano e meio) conclui no 2º ano e um de 1 ano seria válido se
+      // existisse — a comparação certa é contra a duração DECLARADA do curso,
+      // não contra uma constante. Sem esta correção, a Fase 2 produziria
+      // falsos positivos exatamente nos cursos que ela consertou.
+      const duracaoDeclarada = ultimaDuracaoEmSemestres(ctx);
+      const minimoEsperado = duracaoDeclarada
+        ? Math.ceil(duracaoDeclarada / 2)
+        : 2;
+      if (anosDeCurso !== undefined && anosDeCurso < minimoEsperado) {
+        violacoes.push({
+          codigo: 'FORMACAO_RAPIDA_DEMAIS',
+          idade,
+          detalhe: `${log.texto} após ${anosDeCurso} ano(s); duração declarada ${duracaoDeclarada ?? '?'} semestres (mínimo ${minimoEsperado} ano(s))`
+        });
       }
     }
   }

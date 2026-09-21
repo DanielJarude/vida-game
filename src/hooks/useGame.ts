@@ -89,6 +89,7 @@ import {
   salvarJogo,
   VERSAO_SAVE
 } from '../systems/saveSystem';
+import { criarRegistroTemporal, type RegistroTemporal } from '../systems/tempo/registroTemporal';
 import { criarPersonalidadeInicial } from '../systems/personalitySystem';
 import { gerarHistoriaNascimento } from '../utils/narrativeGenerator';
 import { clamp, generateId, randomChoice, randomInt } from '../utils/random';
@@ -118,6 +119,14 @@ export function useGame() {
   const [personalidade, setPersonalidade] = useState<PersonalityState>(criarPersonalidadeInicial());
   // Ações únicas por ano (atividades, apostas, interações, aumentos); zeradas a cada passagem de ano
   const [acoesRealizadasAno, setAcoesRealizadasAno] = useState<string[]>([]);
+  // Fase 2 — consumo temporal PERSISTENTE (vestibular, processos seletivos,
+  // concepções). Diferente de `acoesRealizadasAno`, NÃO é zerado na virada do
+  // ano: cada uso fica carimbado com o instante em que ocorreu. É o que impede
+  // que recarregar o save devolva uma tentativa já gasta.
+  //
+  // A regra de repetição vive no motor (`systems/tempo/registroTemporal`);
+  // este hook apenas guarda e repassa o registro.
+  const [registroTemporal, setRegistroTemporal] = useState<RegistroTemporal>(criarRegistroTemporal());
   const [isDead, setIsDead] = useState<boolean>(false);
   const [resumoMorte, setResumoMorte] = useState<PostMortemSummary | null>(null);
   const [feedbackMensagem, setFeedbackMensagem] = useState<{ tipo: 'sucesso' | 'info' | 'erro'; texto: string } | null>(null);
@@ -202,13 +211,14 @@ export function useGame() {
         historicoEventosDisparados: historicoEventos,
         historicoOcorrenciasEventos: historicoOcorrencias,
         acoesRealizadasAno,
+        registroTemporal: { usos: registroTemporal.usos as Record<string, number[]> },
         emJogo: true,
         morto: false
       };
       salvarJogo(estadoParaSalvar);
       setHasSavedGame(true);
     }
-  }, [personagem, familia, educacao, carreira, economia, personalidade, timeline, eventoAtivo, historicoEventos, historicoOcorrencias, acoesRealizadasAno, isDead, screen]);
+  }, [personagem, familia, educacao, carreira, economia, personalidade, timeline, eventoAtivo, historicoEventos, historicoOcorrencias, acoesRealizadasAno, registroTemporal, isDead, screen]);
 
   // Alternar som
   const toggleSom = useCallback(() => {
@@ -350,6 +360,7 @@ export function useGame() {
       setHistoricoEventos(save.historicoEventosDisparados || []);
       setHistoricoOcorrencias(save.historicoOcorrenciasEventos || []);
       setAcoesRealizadasAno(save.acoesRealizadasAno || []);
+      setRegistroTemporal(save.registroTemporal ? { usos: save.registroTemporal.usos } : criarRegistroTemporal());
       setIsDead(save.morto);
       setResumoMorte(save.resumoMorte || null);
       setScreen('game');
@@ -606,7 +617,10 @@ export function useGame() {
     // O motor revalida a elegibilidade completa (idade, escolaridade, formação,
     // licença profissional e experiência) antes de abrir o processo seletivo.
     // A carreira entra porque a experiência acumulada é requisito real da vaga.
-    const res = candidatarEmprego(job, personagem, educacao, personagem.anoAtual, carreira);
+    const res = candidatarEmprego(job, personagem, educacao, personagem.anoAtual, carreira, registroTemporal);
+    // A tentativa é consumida mesmo quando a empresa recusa — é o que impede
+    // insistir na mesma vaga até a rolagem cair.
+    if (res.registroTemporalAtualizado) setRegistroTemporal(res.registroTemporalAtualizado);
 
     if (res.sucesso && res.novoCargo) {
       sound.playSuccess();
@@ -640,7 +654,7 @@ export function useGame() {
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [personagem, educacao, carreira, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
+  }, [personagem, educacao, carreira, registroTemporal, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const trabalharMaisExec = useCallback(() => {
     if (!personagem) return;
@@ -890,18 +904,19 @@ export function useGame() {
 
     const parceiro = parceiroId ? (familia.find(f => f.id === parceiroId) || null) : null;
 
-    const res = terFilho(parceiro, personagem, nome, genero, personagem.anoAtual);
+    const res = terFilho(parceiro, personagem, nome, genero, personagem.anoAtual, registroTemporal);
     if (!res.sucesso || !res.novoFilho || !res.personagemAtualizado || !res.novoLog) {
       mostrarFeedback(res.mensagem, 'erro');
       return;
     }
+    if (res.registroTemporalAtualizado) setRegistroTemporal(res.registroTemporalAtualizado);
 
     sound.playSuccess();
     setFamilia(prev => [...prev, res.novoFilho!]);
     setPersonagem(res.personagemAtualizado);
     registrarLogs([res.novoLog]);
     mostrarFeedback(`${res.novoFilho.nome} nasceu com saúde!`, 'sucesso');
-  }, [personagem, familia, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
+  }, [personagem, familia, registroTemporal, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const terminarRelacionamentoExec = useCallback((parceiroId: string) => {
     if (!personagem) return;

@@ -66,6 +66,34 @@ function lista(valor: unknown): unknown[] {
   return Array.isArray(valor) ? valor : [];
 }
 
+/**
+ * Migração do registro temporal (Fase 2).
+ *
+ * Default conservador: save anterior à Fase 2 não tem o campo e é lido como
+ * "nada consumido neste ano" — o jogador não perde nem ganha tentativas, e
+ * nenhum personagem é invalidado.
+ *
+ * A direção do risco é deliberada. Tratar a ausência como "tudo consumido"
+ * puniria retroativamente quem já jogava; tratá-la como "nada consumido"
+ * apenas concede um ano de tentativas na primeira virada após a atualização.
+ * Entre punir um save existente e ser generoso uma única vez, a escolha é
+ * clara.
+ */
+function migrarRegistroTemporal(valor: unknown): { usos: Record<string, number[]> } {
+  const bruto = comoObjeto(valor);
+  const usosBrutos = bruto ? comoObjeto(bruto.usos) : null;
+  if (!usosBrutos) return { usos: {} };
+
+  const usos: Record<string, number[]> = {};
+  for (const [chave, instantes] of Object.entries(usosBrutos)) {
+    const limpos = lista(instantes).filter(
+      (i): i is number => typeof i === 'number' && Number.isFinite(i)
+    );
+    if (limpos.length > 0) usos[chave] = limpos;
+  }
+  return { usos };
+}
+
 function migrarEstadoSalvo(bruto: unknown): GameState | null {
   const raiz = comoObjeto(bruto);
   if (!raiz) return null;
@@ -247,6 +275,7 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     historicoEventosDisparados,
     historicoOcorrenciasEventos,
     acoesRealizadasAno: lista(raiz.acoesRealizadasAno).filter(a => typeof a === 'string') as string[],
+    registroTemporal: migrarRegistroTemporal(raiz.registroTemporal),
     emJogo: raiz.emJogo !== false,
     morto: raiz.morto === true,
     resumoMorte

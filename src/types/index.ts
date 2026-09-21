@@ -171,13 +171,48 @@ export interface EducationState {
   nomeCurso?: string;
   instituicao?: string;
   isPublica?: boolean;
+  /**
+   * Semestre em que o aluno está, 1-based. DERIVADO de `matriculaInicio` +
+   * `totalSemestres` a cada passagem de ano; mantido no estado apenas para
+   * exibição e compatibilidade com saves anteriores à Fase 2.
+   *
+   * Não é fonte de verdade: quem decide a conclusão é o tempo decorrido desde
+   * `matriculaInicio` (ver `systems/tempo/matricula.ts`). Antes da Fase 2 este
+   * campo ERA a fonte de verdade, e foi exatamente isso que produziu o
+   * off-by-one em que um curso de 3 semestres formava em 1 ano.
+   */
   semestreAtual?: number;
   totalSemestres?: number;
+  /**
+   * Instante (em semestres, ancorado na IDADE) em que a matrícula começou.
+   * Fonte de verdade da duração do curso.
+   *
+   * Opcional para não invalidar saves anteriores à Fase 2: quando ausente, é
+   * reconstruído de forma conservadora a partir do progresso já registrado —
+   * ver `reconstruirMatricula` em `educationSystem`.
+   */
+  matriculaInicio?: number;
   desempenho: number; // 0 a 100 (notas)
   mensalidade?: number;
   anoIngresso?: number;
   // Compromisso do ano corrente; efeitos processados na passagem de ano
   posturaAno?: PosturaEscolar | null;
+  /**
+   * Resultado do vestibular/ENEM prestado, com o ano de vida em que foi feito.
+   *
+   * Antes da Fase 2 a nota era sorteada a cada chamada de `ingressarCurso` e
+   * descartada — o ENEM era um botão de re-roll, e a auditoria mediu 23
+   * aprovações na segunda tentativa do mesmo ano. Persistir a nota é o que
+   * torna a prova um FATO da vida do personagem em vez de um sorteio repetível.
+   *
+   * Ausente = ainda não prestou. Saves antigos caem neste caso.
+   */
+  vestibular?: {
+    /** Idade em que a prova foi prestada. */
+    anoDeVida: number;
+    /** Nota obtida (350-990). Reusada em toda tentativa do mesmo ano. */
+    nota: number;
+  };
   cursosConcluidos: {
     nome: string;
     tipo: string;
@@ -533,6 +568,18 @@ export interface GameState {
   historicoOcorrenciasEventos?: EventOccurrence[];
   // Ações únicas por ano (atividades, apostas, interações); zerada a cada passagem de ano
   acoesRealizadasAno: string[];
+  /**
+   * Consumo temporal persistente (Fase 2): tentativas de vestibular, processos
+   * seletivos já disputados, concepções.
+   *
+   * Distinto de `acoesRealizadasAno`, que é zerado na virada do ano e serve a
+   * limites de conveniência da interface. Este registro NÃO é zerado: cada uso
+   * fica carimbado com o instante em que ocorreu, e é isso que impede que
+   * recarregar o save devolva uma tentativa já gasta.
+   *
+   * Opcional: save anterior à Fase 2 é lido como "nada consumido".
+   */
+  registroTemporal?: { usos: Record<string, number[]> };
   emJogo: boolean;
   morto: boolean;
   resumoMorte?: PostMortemSummary;

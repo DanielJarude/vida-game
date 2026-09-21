@@ -4,6 +4,7 @@
  */
 import { definirFonteAleatoria, resetarFonteAleatoria } from '../../src/utils/random';
 import { criarEducacaoInicial, ingressarCurso, processarAnoEducacao } from '../../src/systems/educationSystem';
+import { instanteDe } from '../../src/systems/tempo/instante';
 import { candidatarEmprego, criarCarreiraInicial } from '../../src/systems/careerSystem';
 import { criarEconomiaInicial, processarAnoEconomia } from '../../src/systems/economySystem';
 import { listarVagasCompativeis } from '../../src/systems/availabilitySystem';
@@ -25,14 +26,20 @@ H('R1 — duração real de cada curso do catálogo (anos de jogo até a formatu
 L('| curso | tipo | semestres declarados | anos esperados | ANOS MEDIDOS |');
 L('| --- | --- | --- | --- | --- |');
 for (const curso of CURSOS_DISPONIVEIS) {
+  // Fase 2 — a matrícula é um FATO TEMPORAL: precisa de `matriculaInicio`.
+  // Antes esta reprodução montava o estado à mão sem esse campo, o que fazia o
+  // motor tratá-la como save legado e retroagir o início de forma
+  // conservadora, custando um ano extra em TODOS os cursos. Medir o motor real
+  // exige matricular como o jogo matricula.
+  let char = criarPersonagemTeste({ idade: 18 });
   let edu: EducationState = {
     ...criarEducacaoInicial(),
     nivelAtual: curso.tipo === 'pos' ? 'superior_completo' : 'medio_completo',
     emCurso: true, tipoCurso: curso.tipo, nomeCurso: curso.nome,
     instituicao: 'X', isPublica: true, semestreAtual: 1,
+    matriculaInicio: instanteDe(char.idade),
     totalSemestres: curso.duracaoSemestres, desempenho: 80, anoIngresso: 2044
   };
-  let char = criarPersonagemTeste({ idade: 18 });
   let anosDecorridos = 0;
   for (let i = 0; i < 20; i++) {
     anosDecorridos++;

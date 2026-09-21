@@ -164,6 +164,10 @@ for (const r of resultados) {
 primeiroEmprego.sort((a, b) => a - b);
 const linhasCarreira = [
   `idade do primeiro emprego: mín ${primeiroEmprego[0]} · mediana ${med(primeiroEmprego)} · máx ${primeiroEmprego[primeiroEmprego.length - 1]}`,
+  // GUARDA DE BLOQUEIO (Fase 2): ninguém pode ficar fora do mercado por efeito
+  // das novas regras temporais. Se este número deixar de ser 0, o limite de
+  // processos seletivos está apertado demais.
+  `vidas que NUNCA tiveram emprego: ${resultados.length - primeiroEmprego.length}/${resultados.length}`,
   `saltos salariais >2x num ano: ${saltoSalarial.length}`
 ];
 linhasCarreira.forEach(l => console.log(l));

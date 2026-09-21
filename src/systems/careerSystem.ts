@@ -10,6 +10,14 @@ import {
 } from './plausibility/elegibilidadeProfissional';
 import { podeTentar, type Veredito } from './plausibility/types';
 import { resolverProcessoSeletivo } from './career/processoSeletivo';
+import { instanteDe } from './tempo/instante';
+import {
+  avaliarDisponibilidadeTemporal,
+  chaveProcessoSeletivo,
+  criarRegistroTemporal,
+  registrarUso,
+  type RegistroTemporal
+} from './tempo/registroTemporal';
 
 export function criarCarreiraInicial(): CareerState {
   return {
@@ -38,13 +46,36 @@ export function criarCarreiraInicial(): CareerState {
  * `carreira` passou a ser parâmetro porque a experiência acumulada é um
  * requisito real da vaga — e era justamente o dado que existia em 22 das 36
  * profissões e nunca era lido.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * FASE 2 — UM PROCESSO SELETIVO POR VAGA, POR ANO
+ *
+ * O exploit medido não era "candidatar-se muito": era rolar o dado DE NOVO NA
+ * MESMA VAGA até ela cair. O limite, portanto, é por OPORTUNIDADE, não global.
+ *
+ * Procurar trabalho em cinco empresas diferentes no mesmo ano continua
+ * permitido — é comportamento humano normal, e travá-lo deixaria o mercado
+ * artificialmente imóvel, que é o oposto do objetivo. O que deixa de existir é
+ * insistir na mesma vaga no mesmo ano.
+ *
+ * Isto é DISPONIBILIDADE TEMPORAL, não elegibilidade: quem já disputou a vaga
+ * este ano continua perfeitamente elegível a ela. Por isso o resultado não é
+ * um `Veredito` e não ganhou grau novo em `GrauDePlausibilidade`.
+ *
+ * LIMITAÇÃO CONHECIDA: `Job` é um cargo de catálogo, não uma vaga de uma
+ * empresa específica. "Disputar de novo a mesma oportunidade" é, hoje,
+ * "disputar de novo o mesmo cargo" — a aproximação mais fiel que o catálogo
+ * atual permite. Quando existirem empregadores distintos, a chave passa a
+ * incluir o empregador e nada mais muda.
+ * ────────────────────────────────────────────────────────────────────────────
  */
 export function candidatarEmprego(
   job: Job,
   personagem: Character,
   educacao: EducationState,
   anoAtual: number,
-  carreira: CareerState = criarCarreiraInicial()
+  carreira: CareerState = criarCarreiraInicial(),
+  registroTemporal: RegistroTemporal = criarRegistroTemporal()
 ): {
   sucesso: boolean;
   mensagem: string;
@@ -52,6 +83,12 @@ export function candidatarEmprego(
   novoLog?: LifeLogEntry;
   /** Exposto para teste e depuração; a interface não precisa consumir. */
   veredito?: Veredito;
+  /**
+   * Registro com o processo seletivo consumido. O chamador DEVE persistir
+   * este valor — é ele que impede a repetição, inclusive após recarregar.
+   * Ausente quando nenhuma tentativa chegou a ser gasta.
+   */
+  registroTemporalAtualizado?: RegistroTemporal;
 } {
   const ctx = { personagem, educacao, carreira };
   const veredito = avaliarElegibilidadeProfissional(job, ctx);
@@ -64,6 +101,29 @@ export function candidatarEmprego(
     };
   }
 
+  // Disponibilidade temporal: esta MESMA vaga já foi disputada neste ano?
+  const chave = chaveProcessoSeletivo(job.id);
+  const disponibilidade = avaliarDisponibilidadeTemporal(
+    registroTemporal,
+    chave,
+    { tipo: 'uma_vez_por_ano' },
+    personagem.idade,
+    `O processo seletivo para ${job.titulo}`
+  );
+  if (!disponibilidade.disponivel) {
+    return {
+      sucesso: false,
+      mensagem:
+        disponibilidade.motivo ??
+        `Você já disputou esta vaga neste ano. Avance o ano para tentar de novo.`,
+      veredito
+    };
+  }
+
+  // A tentativa é consumida AQUI, antes de saber o resultado. É o que impede
+  // que uma reprovação saia de graça — e o que torna o risco real.
+  const registroTemporalAtualizado = registrarUso(registroTemporal, chave, instanteDe(personagem.idade));
+
   const resultado = resolverProcessoSeletivo({
     job,
     personagem,
@@ -74,6 +134,7 @@ export function candidatarEmprego(
   if (resultado.aprovado) {
     return {
       sucesso: true,
+      registroTemporalAtualizado,
       mensagem: `Parabéns! Você foi contratado(a) como ${job.titulo} com salário de ${formatarDinheiro(job.salarioMensal)}/mês!`,
       novoCargo: job,
       veredito,
@@ -91,6 +152,7 @@ export function candidatarEmprego(
   return {
     sucesso: false,
     veredito,
+    registroTemporalAtualizado,
     mensagem:
       veredito.grau === 'improvavel'
         ? 'A empresa achou seu perfil interessante, mas escolheu alguém mais experiente desta vez.'
