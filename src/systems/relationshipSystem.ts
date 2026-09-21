@@ -6,6 +6,14 @@ import {
   IDADE_MINIMA_RELACIONAMENTO_ADULTO
 } from './availabilitySystem';
 import { clamp, generateId, randomChoice, randomInt, valorAleatorio } from '../utils/random';
+import { instanteDe } from './tempo/instante';
+import {
+  avaliarDisponibilidadeTemporal,
+  CHAVE_CONCEPCAO,
+  criarRegistroTemporal,
+  registrarUso,
+  type RegistroTemporal
+} from './tempo/registroTemporal';
 
 export interface DatingCandidate {
   nome: string;
@@ -117,7 +125,8 @@ export function iniciarNamoro(
     ano: anoAtual,
     categoria: 'amor',
     texto: `Você começou a namorar com ${candidato.nome} ${candidato.sobrenome} (${candidato.profissao})!`,
-    tipo: 'importante'
+    tipo: 'importante',
+    relevancia: 'marco'
   };
 
   return { sucesso: true, mensagem: `Você e ${candidato.nome} começaram a namorar.`, novoMembro, personagemAtualizado: char, novoLog: log };
@@ -174,7 +183,8 @@ export function pedirEmCasamento(
       ano: anoAtual,
       categoria: 'amor',
       texto: `CASAMENTO! Você e ${parceiro.nome} se casaram em uma linda cerimônia com a bênção dos amigos e da família!`,
-      tipo: 'importante'
+      tipo: 'importante',
+      relevancia: 'marco'
     };
 
     return {
@@ -192,18 +202,51 @@ export function pedirEmCasamento(
   }
 }
 
+/**
+ * A decisão de ter um filho.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * FASE 2 — UMA CONCEPÇÃO POR ANO, NÃO "UM FILHO POR ANO"
+ *
+ * O harness mediu 1.259 ocorrências de múltiplos nascimentos no mesmo ano, em
+ * 99 de 105 vidas — até três filhos no mesmo ano, repetidamente. A causa é que
+ * nada limitava quantas vezes esta função podia ser chamada.
+ *
+ * A proteção é deliberadamente uma CONCEPÇÃO por ano, e não um NASCIMENTO por
+ * ano. A diferença não é semântica:
+ *
+ *   · gêmeos são UMA concepção que produz DOIS filhos — continuarão cabendo
+ *     nesta regra sem que ela precise mudar;
+ *   · o que se limita é a DECISÃO ser repetida em laço, que é o que o motor
+ *     permitia e o harness mediu.
+ *
+ * Escrever "um ser humano só pode ter um filho por ano" seria uma regra
+ * ontológica falsa, e ela bloquearia a gestação múltipla legítima quando a
+ * fase de relacionamentos chegar.
+ *
+ * NÃO é gestação: não há nove meses, descoberta, risco nem nascimento
+ * agendado. Isso é a fase de relacionamentos. Aqui existe apenas o teto
+ * temporal, que é a mesma regra de consumo das demais ações desta fase.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
 export function terFilho(
   parceiro: FamilyMember | null,
   personagem: Character,
   nomePersonalizado?: string,
   generoPersonalizado?: Gender,
-  anoAtual?: number
+  anoAtual?: number,
+  registroTemporal: RegistroTemporal = criarRegistroTemporal()
 ): {
   sucesso: boolean;
   mensagem: string;
   novoFilho?: FamilyMember;
   personagemAtualizado?: Character;
   novoLog?: LifeLogEntry;
+  /**
+   * Registro com a concepção consumida. O chamador DEVE persistir este valor.
+   * Ausente quando nenhuma concepção ocorreu.
+   */
+  registroTemporalAtualizado?: RegistroTemporal;
 } {
   // Revalidação da política central: decisões familiares adultas
   if (personagem.idade < IDADE_MINIMA_FILHOS) {
@@ -222,6 +265,27 @@ export function terFilho(
       mensagem: 'Você precisa de um relacionamento estável para ter filhos.'
     };
   }
+
+  const disponibilidade = avaliarDisponibilidadeTemporal(
+    registroTemporal,
+    CHAVE_CONCEPCAO,
+    { tipo: 'uma_vez_por_ano' },
+    personagem.idade,
+    'A chegada de um filho'
+  );
+  if (!disponibilidade.disponivel) {
+    return {
+      sucesso: false,
+      mensagem:
+        'Vocês já receberam um filho neste ano. Dê tempo à família antes de pensar no próximo.'
+    };
+  }
+
+  const registroTemporalAtualizado = registrarUso(
+    registroTemporal,
+    CHAVE_CONCEPCAO,
+    instanteDe(personagem.idade)
+  );
 
   const genero: Gender = generoPersonalizado || (valorAleatorio() > 0.5 ? 'masculino' : 'feminino');
   const nome = nomePersonalizado || sortearNome(genero);
@@ -257,10 +321,11 @@ export function terFilho(
     ano,
     categoria: 'familia',
     texto: `Nasceu seu(sua) ${novoFilho.tipo}, ${nome} ${personagem.sobrenome}! O amor da sua vida em forma de bebê!`,
-    tipo: 'importante'
+    tipo: 'importante',
+    relevancia: 'marco'
   };
 
-  return { sucesso: true, mensagem: `${novoFilho.nome} nasceu com saúde.`, novoFilho, personagemAtualizado: char, novoLog: log };
+  return { sucesso: true, mensagem: `${novoFilho.nome} nasceu com saúde.`, novoFilho, personagemAtualizado: char, novoLog: log, registroTemporalAtualizado };
 }
 
 export function terminarRelacionamento(
@@ -285,7 +350,8 @@ export function terminarRelacionamento(
     ano: anoAtual,
     categoria: 'amor',
     texto: `Você e ${parceiro.nome} terminaram o relacionamento e decidiram seguir caminhos separados.`,
-    tipo: 'negativo'
+    tipo: 'negativo',
+    relevancia: 'marco'
   };
 
   return { personagemAtualizado: char, novoLog: log };

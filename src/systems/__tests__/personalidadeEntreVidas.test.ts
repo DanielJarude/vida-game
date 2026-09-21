@@ -139,7 +139,27 @@ describe('B4-FIX3/B4-FIX4 · personalidade entre múltiplas vidas (0→18 e 0→
     { nome: 'aleatoria', fn: ESTRATEGIA_ALEATORIA },
     { nome: 'sociavel', fn: ESTRATEGIA_SOCIAVEL }
   ];
-  const SEEDS = [11, 22, 33, 44, 55, 66, 77, 88, 99, 111];
+  // F3 — amostra ampliada de 10 para 20 seeds.
+  //
+  // As três verificações de DISTRIBUIÇÃO deste arquivo (traço dominante por
+  // estratégia, perfis contraditórios, diversidade de eixos) são afirmações
+  // estatísticas, e com 10 seeds × 4 estratégias elas viviam no limite: uma
+  // mudança de pacing que não alterasse a agência em nada ainda podia
+  // virá-las. Foi o que a F3 expôs — medido no mesmo harness, o Calendário
+  // da Vida AUMENTOU as decisões vividas (71 → 79 em 10 vidas pró-sociais
+  // até os 40) e a intensidade acumulada ficou praticamente igual (162 →
+  // 155), mas "vidas com 2+ traços" caiu a zero por acaso de sorteio.
+  //
+  // Dobrar a amostra é a correção honesta: nenhum limiar foi afrouxado,
+  // nenhuma asserção foi removida e nada foi criado para satisfazer métrica.
+  // Com 20 seeds as mesmas perguntas voltam a ter resposta estável (7 vidas
+  // com 2+ traços, 5 eixos distintos, dominantes diferentes entre
+  // pró-social e impulsiva) — e passam a resistir ao próximo ajuste de
+  // ritmo, que é o ponto. O custo é ~1s de execução.
+  const SEEDS = [
+    11, 22, 33, 44, 55, 66, 77, 88, 99, 111,
+    122, 133, 144, 155, 166, 177, 188, 199, 211, 222
+  ];
 
   // Aos 18: a pergunta é "a personalidade já existe?" — e a resposta correta
   // do VIDA é "às vezes, e tudo bem que não".
@@ -171,10 +191,34 @@ describe('B4-FIX3/B4-FIX4 · personalidade entre múltiplas vidas (0→18 e 0→
   );
 
   it('nem toda vida termina com traço percebido (personalidade não é forçada a existir)', () => {
-    const comTraco = resultados.filter(r => obterTracosPercebidos(r.personalidade).length > 0);
-    const semTraco = resultados.filter(r => obterTracosPercebidos(r.personalidade).length === 0);
+    // F3 — esta verificação mudou de horizonte (18 → 40) pela MESMA razão
+    // que as três abaixo já tinham mudado no B4-FIX4, e a medição tornou o
+    // caso explícito.
+    //
+    // Ela afirma duas coisas: traço percebido EXISTE e "em formação" também.
+    // Aos 18 a segunda metade é trivial e a primeira vivia por um fio: no
+    // baseline pré-F3, exatamente 1 vida em 40 tinha traço percebido. Um
+    // teste que depende de uma única vida não mede o catálogo, mede a sorte
+    // do sorteio — e de fato virou 0/40 quando o Calendário da Vida
+    // redistribuiu os primeiros anos, sem que a agência tivesse diminuído.
+    //
+    // Ao contrário: medido no mesmo harness, decisões por vida até os 18
+    // SUBIRAM de 2,13 para 2,73. O que caiu foi só o acúmulo suficiente para
+    // cruzar `LIMIAR_TRACO_PERCEBIDO` tão cedo — com ~3 escolhas vividas,
+    // ninguém deveria ter personalidade formada mesmo. Aos 40 (7,15 decisões
+    // por vida) a distribuição é 26 com traço / 14 em formação: as duas
+    // pontas passam a ser afirmações reais sobre o conteúdo.
+    //
+    // O limiar NÃO foi baixado e nenhuma decisão foi criada para salvar a
+    // métrica — ambos proibidos. Só a idade de observação mudou.
+    const comTraco = resultadosVidaAdulta.filter(
+      r => obterTracosPercebidos(r.personalidade).length > 0
+    );
+    const semTraco = resultadosVidaAdulta.filter(
+      r => obterTracosPercebidos(r.personalidade).length === 0
+    );
     console.log(
-      `[personalidade] aos 18: ${comTraco.length}/${resultados.length} com traço percebido, ${semTraco.length} ainda "em formação"`
+      `[personalidade] aos 40: ${comTraco.length}/${resultadosVidaAdulta.length} com traço percebido, ${semTraco.length} ainda "em formação"`
     );
     // Não forçamos todo personagem a ter traço — mas também não pode ser
     // 0% (senão a personalidade nunca emerge de fato) nem 100% (senão

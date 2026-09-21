@@ -127,10 +127,19 @@ describe('B4-FIX3 · regressão — "Guerra pelo Controle da TV" (fam_briga_cont
 describe('B4-FIX3 · regressão — "A Tradicional Macarronada de Domingo" não é mais falsa escolha', () => {
   const evento = encontrarEventoReal('ext_macarronada_domingo');
 
-  it('tem 2+ opções genuinamente diferentes (antes tinha exatamente 1 — falsa decisão)', () => {
+  it('tem 2+ desfechos genuinamente diferentes (antes tinha exatamente 1 — falsa decisão)', () => {
     expect(evento.opcoes.length).toBeGreaterThanOrEqual(2);
-    const textos = evento.opcoes.map(o => o.texto.trim().toLowerCase());
-    expect(new Set(textos).size).toBe(textos.length);
+    // F3 — a distinção passou a ser medida em `descricaoResultado` e não em
+    // `texto`. Este é um ACONTECIMENTO: o motor sorteia o desfecho e o
+    // jogador nunca vê um botão, então `texto` foi esvaziado no passo 8 (o
+    // rótulo de botão num evento que não pergunta nada era justamente o que
+    // convidava a escrever deliberação onde não houve escolha).
+    //
+    // O que o teste protege continua idêntico: o evento não pode ter um
+    // desfecho só, e os desfechos não podem ser o mesmo texto repetido.
+    // Agora ele mede o texto que o jogador realmente lê.
+    const desfechos = evento.opcoes.map(o => (o.descricaoResultado ?? '').trim().toLowerCase());
+    expect(new Set(desfechos).size).toBe(desfechos.length);
   });
 
   it('as opções têm consequências realmente diferentes entre si (não é a mesma escolha maquiada)', () => {

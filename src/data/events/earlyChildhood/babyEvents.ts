@@ -29,12 +29,13 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 1,
     categoria: 'familia',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
     opcoes: [
       {
         id: 'opt_chorar_estranho',
-        texto: 'Chorar e virar o rosto procurando o colo conhecido',
+        texto: '',
         descricaoResultado: 'Você chorou e se agarrou em quem já conhecia. Depois de um tempo, curioso, voltou a olhar para a visita de longe.',
         consequencias: {
           stats: { felicidade: -3 },
@@ -43,7 +44,7 @@ export const BABY_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_sorrir_visita',
-        texto: 'Sorrir e esticar os braços de volta',
+        texto: '',
         descricaoResultado: 'Você foi no colo sem estranhar nem um pouco, para a alegria de toda a família reunida.',
         consequencias: {
           stats: { felicidade: 8 },
@@ -61,12 +62,13 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 65,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
     opcoes: [
       {
         id: 'opt_rir_espelho',
-        texto: 'Rir e bater as mãozinhas no vidro',
+        texto: '',
         descricaoResultado: 'Você riu tanto do "outro bebê" que toda a casa veio ver a cena.',
         consequencias: {
           stats: { felicidade: 10, inteligencia: 3 },
@@ -75,7 +77,7 @@ export const BABY_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_ignorar_espelho',
-        texto: 'Perder o interesse rápido e engatinhar para outro canto',
+        texto: '',
         descricaoResultado: 'O espelho não te prendeu por muito tempo: um brinquedo no chão chamou mais sua atenção.',
         consequencias: {
           stats: { felicidade: 3, inteligencia: 1 },
@@ -91,12 +93,13 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'saude',
     peso: 60,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
     opcoes: [
       {
         id: 'opt_colo_acalma',
-        texto: 'Acalmar no colo até o remédio fazer efeito',
+        texto: '',
         descricaoResultado: 'No colo, entre cochilos, você foi se acalmando até a febre ceder já de manhã.',
         consequencias: {
           stats: { saude: 6, felicidade: 4 },
@@ -106,7 +109,7 @@ export const BABY_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_chorar_muito',
-        texto: 'Chorar bastante antes de finalmente conseguir dormir de novo',
+        texto: '',
         descricaoResultado: 'Foi uma noite difícil para todo mundo, mas pela manhã a febre já tinha passado.',
         consequencias: {
           stats: { saude: 4, felicidade: -4 },
@@ -123,6 +126,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 40,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     // Sem exigir a flag `tem_animal_estimacao` (que só é concedida por um
     // evento de infância tardia): aqui assume-se que a família já pode
@@ -132,7 +136,7 @@ export const BABY_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_estender_mao_cachorro',
-        texto: 'Estender a mãozinha para tocar o pelo do cachorro',
+        texto: '',
         descricaoResultado: 'Vocês dois se entenderam bem: o cachorro deitou do seu lado, protetor.',
         consequencias: {
           stats: { felicidade: 8 },
@@ -141,7 +145,7 @@ export const BABY_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_assustar_cachorro',
-        texto: 'Se assustar e chorar com a aproximação',
+        texto: '',
         descricaoResultado: 'Você chorou, o cachorro recuou na hora, e seus pais vieram acalmar os dois.',
         consequencias: {
           stats: { felicidade: -3 },
@@ -158,12 +162,13 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'amizade',
     peso: 60,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
     opcoes: [
       {
         id: 'opt_brincar_outros_bebes',
-        texto: 'Engatinhar até os outros bebês e disputar um brinquedo colorido',
+        texto: '',
         descricaoResultado: 'Teve choro e disputa pelo brinquedo, mas também muita risada — sua primeira lembrança de "outras crianças".',
         consequencias: {
           stats: { felicidade: 8 },
@@ -172,8 +177,8 @@ export const BABY_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_observar_de_longe',
-        texto: 'Ficar observando os outros bebês de longe, agarrado à perna de quem cuida de você',
-        descricaoResultado: 'Você preferiu observar por um tempo antes de se aproximar de qualquer coisa nova.',
+        texto: '',
+        descricaoResultado: 'Você passou a tarde agarrado à perna de quem cuida de você, observando os outros bebês de longe antes de se aproximar.',
         consequencias: {
           stats: { felicidade: 4 },
           hiddenStats: { sociabilidade: 1 },
@@ -189,12 +194,13 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'cotidiano',
     peso: 55,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'recorrente', cooldownAnos: 2 },
     opcoes: [
       {
         id: 'opt_dancar_musica',
-        texto: 'Balançar o corpo tentando dançar sem cair',
+        texto: '',
         descricaoResultado: 'Sua dancinha desengonçada arrancou risada de todo mundo em casa.',
         consequencias: {
           stats: { felicidade: 10, saude: 2 },
@@ -203,7 +209,7 @@ export const BABY_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_bater_palma_musica',
-        texto: 'Ficar batendo palmas sentado, sem se arriscar a levantar',
+        texto: '',
         descricaoResultado: 'Você marcou o ritmo com as mãozinhas, satisfeito só de participar do jeito seguro.',
         consequencias: {
           stats: { felicidade: 6 },
@@ -220,6 +226,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 85,
+    taxonomia: 'escolha_biografica',
     natureza: 'acontecimento',
     unico: true,
     repeticao: { tipo: 'marco' },
@@ -251,12 +258,13 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 60,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'recorrente', cooldownAnos: 1 },
     opcoes: [
       {
         id: 'opt_levantar_tentar_de_novo',
-        texto: 'Levantar sozinho e tentar de novo sem chorar',
+        texto: '',
         descricaoResultado: 'Você se levantou na mesma hora e tentou outra vez, para o orgulho de quem estava assistindo.',
         consequencias: {
           stats: { felicidade: 6, saude: -1 },
@@ -265,7 +273,7 @@ export const BABY_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_chorar_colo_tombo',
-        texto: 'Chorar e pedir colo antes de tentar de novo',
+        texto: '',
         descricaoResultado: 'Você chorou um pouco, recebeu um colo de conforto, e só depois voltou a tentar andar.',
         consequencias: {
           stats: { felicidade: 2 },

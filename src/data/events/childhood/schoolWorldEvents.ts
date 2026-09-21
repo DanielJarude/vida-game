@@ -19,6 +19,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 11,
     categoria: 'esporte',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
@@ -51,6 +52,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 12,
     categoria: 'hobby',
     peso: 65,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -82,6 +84,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 14,
     categoria: 'comunidade',
     peso: 60,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -112,12 +115,13 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 10,
     categoria: 'tecnologia',
     peso: 65,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
         id: 'opt_seguir_regras_tempo_tela',
-        texto: 'Jogar só pelo tempo combinado e devolver o tablet sem reclamar',
+        texto: '',
         descricaoResultado: 'Você jogou uma fase animada e devolveu o tablet na hora combinada, ganhando confiança para usar de novo.',
         consequencias: {
           stats: { felicidade: 8, inteligencia: 3 },
@@ -126,7 +130,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_pedir_mais_tempo_tela',
-        texto: 'Implorar por "só mais um pouquinho" várias vezes',
+        texto: '',
         descricaoResultado: 'Você conseguiu alguns minutos extras, mas na próxima vez o tempo de tela ficou mais curto.',
         consequencias: {
           stats: { felicidade: 6 },
@@ -143,6 +147,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 11,
     categoria: 'escola',
     peso: 55,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -181,6 +186,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 11,
     categoria: 'amizade',
     peso: 75,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
@@ -217,12 +223,13 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 13,
     categoria: 'esporte',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
         id: 'opt_capitao_time_rua',
-        texto: 'Se oferecer como capitão do time da sua rua',
+        texto: '',
         descricaoResultado: 'Seu time perdeu na final, mas você foi eleito o capitão mais dedicado do torneio pelos próprios adversários.',
         consequencias: {
           stats: { felicidade: 14, saude: 4 },
@@ -231,7 +238,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_jogar_qualquer_posicao',
-        texto: 'Aceitar jogar em qualquer posição, sem se importar com protagonismo',
+        texto: '',
         descricaoResultado: 'Você jogou tranquilo em qualquer posição que precisassem, e o time se divertiu do início ao fim.',
         consequencias: {
           stats: { felicidade: 10, saude: 3 },
@@ -248,12 +255,13 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 12,
     categoria: 'hobby',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
         id: 'opt_trocar_figurinhas_justo',
-        texto: 'Organizar trocas justas com os colegas até completar o álbum',
+        texto: '',
         descricaoResultado: 'Você completou o álbum inteiro fazendo amizades novas em cada troca.',
         consequencias: {
           stats: { felicidade: 14 },
@@ -263,7 +271,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_nao_colecionar_figurinhas',
-        texto: 'Não se interessar pelo álbum e ficar de fora das trocas',
+        texto: '',
         descricaoResultado: 'Você não ligou muito para a febre das figurinhas e usou o tempo com outras coisas.',
         consequencias: {
           stats: { felicidade: 4 },
@@ -279,6 +287,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 13,
     categoria: 'comunidade',
     peso: 55,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {

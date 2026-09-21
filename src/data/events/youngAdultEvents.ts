@@ -9,6 +9,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 26,
     categoria: 'cotidiano',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -44,11 +45,12 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 30,
     categoria: 'cotidiano',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_folia_total',
-        texto: 'Fantasiar-se, tomar glitter na cara e pular muito no meio da multidão',
+        texto: '',
         descricaoResultado: 'Você cantou marchinhas até perder a voz, beijou na boca e viveu a alma da cultura brasileira!',
         consequencias: {
           stats: { felicidade: 25 },
@@ -58,7 +60,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_feriado_descanso',
-        texto: 'Fugir do barulho e maratonar séries em casa no feriadão',
+        texto: '',
         descricaoResultado: 'Você descansou plenamente, zerou suas séries favoritas e renovou as energias.',
         consequencias: {
           stats: { saude: 10, felicidade: 10 },
@@ -75,6 +77,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 32,
     categoria: 'amizade',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       dinheiroMinimo: 800
     },
@@ -110,6 +113,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 35,
     categoria: 'trabalho',
     peso: 65,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       empregado: true
     },
@@ -146,11 +150,12 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 29,
     categoria: 'cotidiano',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_pular_ondas',
-        texto: 'Vestir branco, abrir champanhe na areia e pular as sete ondas à meia-noite',
+        texto: '',
         descricaoResultado: 'Os fogos de artifício no mar foram deslumbrantes! Você fez seus desejos para o novo ano com muita energia positiva.',
         consequencias: {
           stats: { felicidade: 25 },
@@ -160,7 +165,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_passar_em_familia',
-        texto: 'Passar a ceia de Réveillon em família com rabanada e pernil',
+        texto: '',
         descricaoResultado: 'Foi uma ceia acolhedora, com abraços apertados e muito afeto.',
         consequencias: {
           stats: { felicidade: 15 },

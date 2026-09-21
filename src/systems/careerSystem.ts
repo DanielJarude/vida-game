@@ -1,8 +1,23 @@
 import { CareerState, Character, EducationState, EconomyState, EducationLevel, Job, LifeLogEntry } from '../types';
 import { BICOS_DISPONIVEIS, FreelanceOption, TODAS_PROFISSOES } from '../data/careersData';
 import { formatarDinheiro, getEducationLabel } from '../utils/formatters';
-import { nivelEscolaridade, obterJanelaIdadeEmprego, IDADE_MINIMA_BICOS } from './availabilitySystem';
+import { nivelEscolaridade, IDADE_MINIMA_BICOS } from './availabilitySystem';
 import { clamp, generateId, randomInt, rollChance } from '../utils/random';
+import {
+  avaliarElegibilidadeProfissional,
+  calcularAnosDeExperiencia,
+  podeSerPromovidoPara
+} from './plausibility/elegibilidadeProfissional';
+import { podeTentar, type Veredito } from './plausibility/types';
+import { resolverProcessoSeletivo } from './career/processoSeletivo';
+import { instanteDe } from './tempo/instante';
+import {
+  avaliarDisponibilidadeTemporal,
+  chaveProcessoSeletivo,
+  criarRegistroTemporal,
+  registrarUso,
+  type RegistroTemporal
+} from './tempo/registroTemporal';
 
 export function criarCarreiraInicial(): CareerState {
   return {
@@ -16,68 +31,134 @@ export function criarCarreiraInicial(): CareerState {
   };
 }
 
+/**
+ * Candidatura a uma vaga.
+ *
+ * Duas etapas explicitamente separadas (ver `career/processoSeletivo`):
+ *
+ *   1. ELEGIBILIDADE — pode tentar? Regra única em
+ *      `plausibility/elegibilidadeProfissional`, a mesma que a interface usa.
+ *      É defesa em profundidade real: mesmo chamando esta função diretamente,
+ *      sem passar por tela nenhuma, um estado inválido é recusado.
+ *   2. PROCESSO SELETIVO — como se saiu? Hoje uma rolagem ponderada; amanhã,
+ *      um Desafio de Vida. Nenhum chamador precisa saber a diferença.
+ *
+ * `carreira` passou a ser parâmetro porque a experiência acumulada é um
+ * requisito real da vaga — e era justamente o dado que existia em 22 das 36
+ * profissões e nunca era lido.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * FASE 2 — UM PROCESSO SELETIVO POR VAGA, POR ANO
+ *
+ * O exploit medido não era "candidatar-se muito": era rolar o dado DE NOVO NA
+ * MESMA VAGA até ela cair. O limite, portanto, é por OPORTUNIDADE, não global.
+ *
+ * Procurar trabalho em cinco empresas diferentes no mesmo ano continua
+ * permitido — é comportamento humano normal, e travá-lo deixaria o mercado
+ * artificialmente imóvel, que é o oposto do objetivo. O que deixa de existir é
+ * insistir na mesma vaga no mesmo ano.
+ *
+ * Isto é DISPONIBILIDADE TEMPORAL, não elegibilidade: quem já disputou a vaga
+ * este ano continua perfeitamente elegível a ela. Por isso o resultado não é
+ * um `Veredito` e não ganhou grau novo em `GrauDePlausibilidade`.
+ *
+ * LIMITAÇÃO CONHECIDA: `Job` é um cargo de catálogo, não uma vaga de uma
+ * empresa específica. "Disputar de novo a mesma oportunidade" é, hoje,
+ * "disputar de novo o mesmo cargo" — a aproximação mais fiel que o catálogo
+ * atual permite. Quando existirem empregadores distintos, a chave passa a
+ * incluir o empregador e nada mais muda.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
 export function candidatarEmprego(
   job: Job,
   personagem: Character,
   educacao: EducationState,
-  anoAtual: number
+  anoAtual: number,
+  carreira: CareerState = criarCarreiraInicial(),
+  registroTemporal: RegistroTemporal = criarRegistroTemporal()
 ): {
   sucesso: boolean;
   mensagem: string;
   novoCargo?: Job;
   novoLog?: LifeLogEntry;
+  /** Exposto para teste e depuração; a interface não precisa consumir. */
+  veredito?: Veredito;
+  /**
+   * Registro com o processo seletivo consumido. O chamador DEVE persistir
+   * este valor — é ele que impede a repetição, inclusive após recarregar.
+   * Ausente quando nenhuma tentativa chegou a ser gasta.
+   */
+  registroTemporalAtualizado?: RegistroTemporal;
 } {
-  // Revalidação da política central: idade (janela da vaga)
-  const janela = obterJanelaIdadeEmprego(job.id);
-  if (personagem.idade < janela.minima) {
+  const ctx = { personagem, educacao, carreira };
+  const veredito = avaliarElegibilidadeProfissional(job, ctx);
+
+  if (!podeTentar(veredito)) {
     return {
       sucesso: false,
-      mensagem: `Esta vaga exige ${janela.minima} anos ou mais.`
-    };
-  }
-  if (janela.maxima !== null && personagem.idade > janela.maxima) {
-    return {
-      sucesso: false,
-      mensagem: `Esta vaga é para jovens de ${janela.minima} a ${janela.maxima} anos.`
+      mensagem: veredito.motivo ?? 'Você ainda não reúne os requisitos desta vaga.',
+      veredito
     };
   }
 
-  // Fonte de verdade da escolaridade: estado real de educação (não flags congeladas)
-  const nivelJogador = nivelEscolaridade(educacao.nivelAtual);
-  const nivelReq = nivelEscolaridade(job.escolaridadeMinima);
-  if (nivelJogador < nivelReq) {
+  // Disponibilidade temporal: esta MESMA vaga já foi disputada neste ano?
+  const chave = chaveProcessoSeletivo(job.id);
+  const disponibilidade = avaliarDisponibilidadeTemporal(
+    registroTemporal,
+    chave,
+    { tipo: 'uma_vez_por_ano' },
+    personagem.idade,
+    `O processo seletivo para ${job.titulo}`
+  );
+  if (!disponibilidade.disponivel) {
     return {
       sucesso: false,
-      mensagem: `Esta vaga exige ${getEducationLabel(job.escolaridadeMinima)}. Sua escolaridade atual: ${getEducationLabel(educacao.nivelAtual)}.`
+      mensagem:
+        disponibilidade.motivo ??
+        `Você já disputou esta vaga neste ano. Avance o ano para tentar de novo.`,
+      veredito
     };
   }
 
-  let chance = 60;
-  if (personagem.stats.inteligencia >= job.inteligenciaMinima) chance += 20;
-  if (personagem.hiddenStats.reputacao >= 60) chance += 10;
-  if (personagem.stats.aparencia >= 60) chance += 5;
-  if (nivelJogador > nivelReq) chance += 15;
+  // A tentativa é consumida AQUI, antes de saber o resultado. É o que impede
+  // que uma reprovação saia de graça — e o que torna o risco real.
+  const registroTemporalAtualizado = registrarUso(registroTemporal, chave, instanteDe(personagem.idade));
 
-  if (rollChance(chance)) {
+  const resultado = resolverProcessoSeletivo({
+    job,
+    personagem,
+    veredito,
+    anosDeExperiencia: calcularAnosDeExperiencia(carreira)
+  });
+
+  if (resultado.aprovado) {
     return {
       sucesso: true,
+      registroTemporalAtualizado,
       mensagem: `Parabéns! Você foi contratado(a) como ${job.titulo} com salário de ${formatarDinheiro(job.salarioMensal)}/mês!`,
       novoCargo: job,
+      veredito,
       novoLog: {
         id: generateId('log'),
         idade: personagem.idade,
         ano: anoAtual,
         categoria: 'carreira',
         texto: `Você começou a trabalhar como ${job.titulo} (Salário: ${formatarDinheiro(job.salarioMensal)}/mês).`,
-        tipo: 'importante'
+        tipo: 'importante',
+        relevancia: 'marco'
       }
     };
-  } else {
-    return {
-      sucesso: false,
-      mensagem: 'Infelizmente a empresa optou por outro candidato no momento. Continue tentando!'
-    };
   }
+
+  return {
+    sucesso: false,
+    veredito,
+    registroTemporalAtualizado,
+    mensagem:
+      veredito.grau === 'improvavel'
+        ? 'A empresa achou seu perfil interessante, mas escolheu alguém mais experiente desta vez.'
+        : 'Infelizmente a empresa optou por outro candidato no momento. Continue tentando!'
+  };
 }
 
 /**
@@ -189,7 +270,8 @@ export function pedirAumento(
         ano: anoAtual,
         categoria: 'carreira',
         texto: `Seu pedido de aumento salarial foi aceito! Novo salário: ${formatarDinheiro(novoCargoAtual.salarioMensal)}/mês.`,
-        tipo: 'positivo'
+        tipo: 'positivo',
+        relevancia: 'normal'
       }
     };
   } else {
@@ -239,7 +321,8 @@ export function pedirDemissao(
       ano: anoAtual,
       categoria: 'carreira',
       texto: `Você pediu demissão do cargo de ${cargoAnterior} para buscar novos rumos na vida.`,
-      tipo: 'info'
+      tipo: 'info',
+      relevancia: 'marco'
     }
   };
 }
@@ -293,15 +376,26 @@ export function processarAnoCarreira(
         ano: anoAtual,
         categoria: 'carreira',
         texto: 'As horas extras deste ano renderam reconhecimento: seu desempenho no trabalho subiu, mas o cansaço também.',
-        tipo: 'positivo'
+        tipo: 'positivo',
+        relevancia: 'textura'
       });
       car.horasExtras = false;
     }
 
-    // Promoção automática por mérito
+    // Promoção automática por mérito.
+    //
+    // Mérito não dispensa habilitação. A auditoria mediu escadas como
+    // "Gerente de Loja → COO" e "Médico Clínico → Cirurgião Especialista"
+    // percorridas sem nenhum diploma, porque a promoção não conferia nada
+    // além de desempenho e tempo de casa. Agora ela consulta a MESMA regra
+    // de elegibilidade da contratação — exceto experiência, que é justamente
+    // o que se está adquirindo no cargo (ver `podeSerPromovidoPara`).
     if (cargoAtual.progressaoPara && car.desempenhoTrabalho >= 80 && car.anosNoCargo >= 2 && rollChance(40)) {
       const proximoCargo = TODAS_PROFISSOES.find(p => p.id === cargoAtual.progressaoPara);
-      if (proximoCargo) {
+      const habilitado =
+        proximoCargo !== undefined &&
+        podeSerPromovidoPara(proximoCargo, { personagem: char, educacao, carreira: car });
+      if (proximoCargo && habilitado) {
         const cargoVelho = cargoAtual.titulo;
         car = {
           ...car,
@@ -327,7 +421,8 @@ export function processarAnoCarreira(
           ano: anoAtual,
           categoria: 'carreira',
           texto: `Você foi promovido(a) a ${proximoCargo.titulo}! (Novo salário: ${formatarDinheiro(proximoCargo.salarioMensal)}/mês).`,
-          tipo: 'importante'
+          tipo: 'importante',
+          relevancia: 'marco'
         });
       }
     }
@@ -359,7 +454,8 @@ export function processarAnoCarreira(
         ano: anoAtual,
         categoria: 'carreira',
         texto: `Você foi demitido(a) do cargo de ${cargoPerdido} devido ao baixo rendimento nas avaliações.`,
-        tipo: 'negativo'
+        tipo: 'negativo',
+        relevancia: 'marco'
       });
     }
   }
@@ -403,7 +499,8 @@ function resolverBicoDoAno(
         ano: anoAtual,
         categoria: 'financas',
         texto: `Você não pôde continuar com o bico "${bico.nome}" porque não cumpre mais o requisito de escolaridade.`,
-        tipo: 'negativo'
+        tipo: 'negativo',
+        relevancia: 'normal'
       });
       return { carreira: { ...carreira, bicoAtivoId: null }, economia };
     }
@@ -415,7 +512,8 @@ function resolverBicoDoAno(
       ano: anoAtual,
       categoria: 'financas',
       texto: `Você não pôde continuar com o bico "${bico.nome}" porque não possui mais um veículo.`,
-      tipo: 'negativo'
+      tipo: 'negativo',
+      relevancia: 'normal'
     });
     return { carreira: { ...carreira, bicoAtivoId: null }, economia };
   }
@@ -427,7 +525,8 @@ function resolverBicoDoAno(
     ano: anoAtual,
     categoria: 'financas',
     texto: `O ano dedicado ao bico "${bico.nome}" rendeu ${formatarDinheiro(bico.ganhoEstimadoAnual)}.`,
-    tipo: 'positivo'
+    tipo: 'positivo',
+    relevancia: 'textura'
   });
 
   return {

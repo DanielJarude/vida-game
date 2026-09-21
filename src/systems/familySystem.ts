@@ -122,7 +122,8 @@ export function processarEnvelhecimentoFamilia(
           ano: anoAtual,
           categoria: 'familia',
           texto: `Seu querido pet ${membro.nome} faleceu em paz aos ${novaIdade} anos. Sua companhia deixará saudades eternas.`,
-          tipo: 'negativo'
+          tipo: 'negativo',
+          relevancia: 'marco'
         });
       }
     } else {
@@ -140,7 +141,8 @@ export function processarEnvelhecimentoFamilia(
           texto: `${capitalizar(getTratamentoParentesco(membro.tipo))} ${membro.nome} ${membro.sobrenome} faleceu pacificamente aos ${novaIdade} anos.${
             herancaParente > 0 ? ` Você recebeu uma herança de R$ ${herancaParente.toLocaleString('pt-BR')}.` : ''
           }`,
-          tipo: 'importante'
+          tipo: 'importante',
+          relevancia: 'marco'
         });
       }
     }
@@ -185,7 +187,8 @@ export function processarEnvelhecimentoFamilia(
       ano: anoAtual,
       categoria: 'familia',
       texto: `Nasceu ${getTratamentoParentesco(novoIrmao.tipo)}, ${novoIrmao.nome}! A casa está em festa com a chegada do bebê.`,
-      tipo: 'positivo'
+      tipo: 'positivo',
+      relevancia: 'marco'
     });
   }
 

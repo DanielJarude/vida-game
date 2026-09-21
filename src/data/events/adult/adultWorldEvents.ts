@@ -45,6 +45,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 27,
     categoria: 'dinheiro',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
     condicoes: { empregado: true },
@@ -73,6 +74,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 30,
     categoria: 'cotidiano',
     peso: 55,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
@@ -100,6 +102,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 36,
     categoria: 'amizade',
     peso: 60,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
@@ -127,6 +130,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 60,
     categoria: 'cotidiano',
     peso: 45,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 8 },
     opcoes: [
@@ -158,6 +162,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 64,
     categoria: 'trabalho',
     peso: 60,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: { empregado: true },
     repeticao: { tipo: 'cooldown', cooldownAnos: 5 },
@@ -193,6 +198,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 64,
     categoria: 'trabalho',
     peso: 55,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: { empregado: true },
     repeticao: { tipo: 'cooldown', cooldownAnos: 6 },
@@ -221,6 +227,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 62,
     categoria: 'trabalho',
     peso: 50,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: { empregado: true },
     unico: true,
@@ -255,6 +262,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 64,
     categoria: 'trabalho',
     peso: 45,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: { empregado: true },
     repeticao: { tipo: 'cooldown', cooldownAnos: 7 },
@@ -283,6 +291,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 62,
     categoria: 'trabalho',
     peso: 42,
+    taxonomia: 'decisao_comportamental',
     condicoes: { empregado: true },
     repeticao: { tipo: 'cooldown', cooldownAnos: 8 },
     opcoes: [
@@ -319,6 +328,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'dinheiro',
     peso: 55,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 4 },
     opcoes: [
@@ -346,6 +356,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 88,
     categoria: 'cotidiano',
     peso: 50,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 6 },
     opcoes: [
@@ -376,6 +387,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 92,
     categoria: 'comunidade',
     peso: 48,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 5 },
     opcoes: [
@@ -403,6 +415,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'comunidade',
     peso: 40,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 6 },
     opcoes: [
       {
@@ -435,6 +448,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 88,
     categoria: 'amizade',
     peso: 45,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 7 },
     opcoes: [
@@ -462,6 +476,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 88,
     categoria: 'comunidade',
     peso: 45,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 10 },
     opcoes: [
@@ -493,6 +508,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 88,
     categoria: 'familia',
     peso: 48,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 5 },
     opcoes: [
@@ -520,6 +536,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 66,
     categoria: 'familia',
     peso: 55,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
@@ -555,6 +572,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 75,
     categoria: 'amizade',
     peso: 42,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 12 },
     opcoes: [
@@ -586,6 +604,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 58,
     categoria: 'amizade',
     peso: 45,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 5 },
     opcoes: [
@@ -617,6 +636,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'saude',
     peso: 48,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 6 },
     opcoes: [
@@ -644,6 +664,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 72,
     categoria: 'saude',
     peso: 50,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
@@ -671,6 +692,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 82,
     categoria: 'saude',
     peso: 45,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 7 },
     opcoes: [
       {
@@ -703,6 +725,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 62,
     categoria: 'amizade',
     peso: 42,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
@@ -730,6 +753,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 78,
     categoria: 'cotidiano',
     peso: 42,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 12 },
     opcoes: [
@@ -757,6 +781,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 78,
     categoria: 'hobby',
     peso: 40,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 10 },
     opcoes: [
       {

@@ -109,7 +109,8 @@ export function processarAnoEconomia(
       ano: anoAtual,
       categoria: 'financas',
       texto: `Seus investimentos renderam R$ ${rendimentoTotal.toLocaleString('pt-BR')} no último ano.`,
-      tipo: 'positivo'
+      tipo: 'positivo',
+      relevancia: 'textura'
     });
   }
 
@@ -329,7 +330,8 @@ export function comprarBem(
       ano: anoAtual,
       categoria: 'financas',
       texto: `Você comprou um(a) ${item.nome} por R$ ${item.preco.toLocaleString('pt-BR')}.`,
-      tipo: 'importante'
+      tipo: 'importante',
+      relevancia: 'normal'
     }
   };
 }
@@ -370,7 +372,8 @@ export function venderBem(
       ano: anoAtual,
       categoria: 'financas',
       texto: `Você vendeu seu(sua) ${prop.nome} por R$ ${valorVenda.toLocaleString('pt-BR')}.`,
-      tipo: 'info'
+      tipo: 'info',
+      relevancia: 'normal'
     }
   };
 }
@@ -526,7 +529,8 @@ export function jogarMegaSena(
       ano: anoAtual,
       categoria: 'financas',
       texto: msg,
-      tipo: 'importante'
+      tipo: 'importante',
+      relevancia: 'normal'
     };
   }
 

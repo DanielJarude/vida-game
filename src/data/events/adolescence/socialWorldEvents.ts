@@ -21,12 +21,13 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 15,
     categoria: 'romance',
     peso: 80,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
       {
         id: 'opt_admirar_de_longe',
-        texto: 'Admirar de longe por enquanto, sem se arriscar a falar',
+        texto: '',
         descricaoResultado: 'Você guardou esse sentimento só para você — por enquanto. Talvez o momento certo apareça.',
         consequencias: {
           stats: { felicidade: 6 },
@@ -42,7 +43,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_puxar_assunto_paixao',
-        texto: 'Juntar coragem e puxar assunto de qualquer jeito',
+        texto: '',
         descricaoResultado: 'A conversa saiu mais desajeitada do que você planejou, mas vocês dois riram bastante e ficou tudo bem mais leve.',
         consequencias: {
           stats: { felicidade: 10 },
@@ -66,6 +67,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 14,
     categoria: 'amizade',
     peso: 80,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
@@ -75,7 +77,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
         // infância é convidado a cuidar do "caixinha" do grupo, ligado só
         // pela flag `reputacao_honestidade_infancia`, nunca por texto.
         id: 'opt_entrar_grupo_confianca',
-        texto: 'Aceitar entrar no grupo e ficar responsável pela vaquinha do lanche',
+        texto: '',
         descricaoResultado: 'Ninguém nem discutiu quem ficaria com o dinheiro da vaquinha — todo mundo lembrava de você como "aquele que devolveu o dinheiro achado" anos atrás.',
         requisito: { flagNecessaria: 'reputacao_honestidade_infancia' },
         consequencias: {
@@ -91,7 +93,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_entrar_grupo_turma',
-        texto: 'Aceitar de vez fazer parte do grupo',
+        texto: '',
         descricaoResultado: 'Vocês viraram um grupo fechado, com piadas internas e planos para o fim de semana.',
         consequencias: {
           stats: { felicidade: 14 },
@@ -106,8 +108,8 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_manter_distancia_grupo',
-        texto: 'Manter uma certa distância e continuar com poucos amigos próximos',
-        descricaoResultado: 'Você preferiu ter menos amigos, mas mais próximos, e não se arrependeu.',
+        texto: '',
+        descricaoResultado: 'A turma se formou sem você por perto: sobraram os poucos amigos de sempre, e estava bom assim.',
         consequencias: {
           stats: { felicidade: 8 },
           hiddenStats: { sociabilidade: -2 },
@@ -123,6 +125,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'amizade',
     peso: 65,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -167,6 +170,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 15,
     categoria: 'tecnologia',
     peso: 75,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -200,6 +204,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'esporte',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -232,6 +237,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'comunidade',
     peso: 60,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -263,6 +269,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'amizade',
     peso: 65,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
@@ -307,6 +314,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'escola',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -338,6 +346,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'hobby',
     peso: 60,
+    taxonomia: 'decisao_comportamental',
     condicoes: { flagsNecessarias: ['sabe_tocar_violao'] },
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [

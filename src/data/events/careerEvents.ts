@@ -9,6 +9,7 @@ export const CAREER_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'trabalho',
     peso: 85,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       empregado: true
     },
@@ -54,6 +55,7 @@ export const CAREER_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'trabalho',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       empregado: true
     },
@@ -89,6 +91,7 @@ export const CAREER_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'trabalho',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: {
       empregado: true
@@ -96,7 +99,7 @@ export const CAREER_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_mudar_assunto',
-        texto: 'Mudar habilmente de assunto e focar no trabalho do dia',
+        texto: '',
         descricaoResultado: 'Você demonstrou maturidade corporativa e não se queimou com ninguém.',
         consequencias: {
           stats: { felicidade: 5 },
@@ -105,7 +108,7 @@ export const CAREER_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_participar_fofoca',
-        texto: 'Entrar na fofoca e soltar um segredo que você sabia',
+        texto: '',
         descricaoResultado: 'A fofoca vazou e criou um climão desconfortável na reunião de equipe!',
         consequencias: {
           stats: { felicidade: -10 },
@@ -122,6 +125,7 @@ export const CAREER_EVENTS: GameEvent[] = [
     idadeMaxima: 60,
     categoria: 'trabalho',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       empregado: true
     },

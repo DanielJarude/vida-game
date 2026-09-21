@@ -9,6 +9,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'cotidiano',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_devolver_dono',
@@ -42,6 +43,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'cotidiano',
     peso: 75,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_conversar_educado',
@@ -83,11 +85,12 @@ export const RANDOM_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'cotidiano',
     peso: 65,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_feijao_perfeito',
-        texto: 'Esperar a pressão sair naturalmente e temperar caprichado',
+        texto: '',
         descricaoResultado: 'O feijão ficou grosso, perfumado e maravilhoso! O melhor prato do dia!',
         consequencias: {
           stats: { felicidade: 15, saude: 5 },
@@ -96,7 +99,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_levantar_valvula',
-        texto: 'Levantar a válvula com o garfo embaixo da torneira',
+        texto: '',
         descricaoResultado: 'Deu certo sem explodir o teto da cozinha, mas o susto com o chiado foi grande!',
         consequencias: {
           stats: { felicidade: 8 }
@@ -115,11 +118,12 @@ export const RANDOM_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'dinheiro',
     peso: 40,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_gastar_vale_logo',
-        texto: 'Usar o vale-compras inteiro em uma única tarde de compras',
+        texto: '',
         descricaoResultado: 'Você aproveitou tudo de uma vez e voltou para casa com sacolas novas e um sorriso enorme.',
         consequencias: {
           stats: { felicidade: 25, aparencia: 5 },
@@ -129,8 +133,8 @@ export const RANDOM_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_guardar_vale',
-        texto: 'Trocar o vale por dinheiro e guardar para uma necessidade futura',
-        descricaoResultado: 'Você preferiu não gastar por impulso: o valor entrou direto na sua reserva.',
+        texto: '',
+        descricaoResultado: 'O vale acabou trocado por dinheiro e o valor entrou direto na reserva.',
         consequencias: {
           stats: { felicidade: 12 },
           dinheiro: 3000,
@@ -147,6 +151,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'cotidiano',
     peso: 60,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_entrar_padaria',

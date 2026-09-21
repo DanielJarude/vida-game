@@ -10,6 +10,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 15,
     categoria: 'dinheiro',
     peso: 75,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_vender_tudo',
@@ -42,11 +43,12 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 16,
     categoria: 'escola',
     peso: 80,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_liderar_gincana',
-        texto: 'Liderar a equipe e organizar o grito de guerra',
+        texto: '',
         descricaoResultado: 'Sua equipe venceu o troféu da gincana e a turma comemorou cantando no pátio!',
         consequencias: {
           stats: { felicidade: 22 },
@@ -55,7 +57,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_provas_conhecimento',
-        texto: 'Focar na prova de conhecimentos gerais de história e geografia',
+        texto: '',
         descricaoResultado: 'Você acertou todas as perguntas e garantiu pontos preciosos para sua equipe.',
         consequencias: {
           stats: { inteligencia: 12, felicidade: 12 },
@@ -72,11 +74,12 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'cotidiano',
     peso: 85,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_dancar_quadrilha',
-        texto: 'Vestir camisa xadrez, chapéu de palha e dançar na quadrilha principal',
+        texto: '',
         descricaoResultado: 'Você dançou a quadrilha com muita alegria e recebeu um bilhetinho carinhoso no correio elegante!',
         consequencias: {
           stats: { felicidade: 20, aparencia: 5 },
@@ -85,7 +88,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_pescaria_comidas',
-        texto: 'Focar nas barraquinhas de pescaria, pastel e canjica doce',
+        texto: '',
         descricaoResultado: 'Você ganhou um brinde na pescaria e se empanturrou de comidas típicas deliciosas.',
         consequencias: {
           stats: { felicidade: 15 },
@@ -104,6 +107,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 68,
     categoria: 'dinheiro',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       empregado: true
     },
@@ -141,6 +145,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'trabalho',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: {
       empregado: true
@@ -148,7 +153,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_presente_criativo',
-        texto: 'Pesquisar o gosto dele e dar um presente elegante e personalizado',
+        texto: '',
         descricaoResultado: 'Ele adorou o presente e a convivência diária na equipe melhorou 100%!',
         consequencias: {
           stats: { felicidade: 15 },
@@ -158,7 +163,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_par_de_meias',
-        texto: 'Dar um par de meias genérico comprado de última hora',
+        texto: '',
         descricaoResultado: 'Ele abriu o pacote com uma risada amarela e todos riram da situação.',
         consequencias: {
           stats: { felicidade: 5 },
@@ -177,6 +182,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 35,
     categoria: 'escola',
     peso: 85,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       emFaculdade: true
     },
@@ -215,11 +221,12 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'cotidiano',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_esperar_chuva_passar',
-        texto: 'Parar em uma lanchonete, pedir um café com pão de queijo e esperar a água baixar',
+        texto: '',
         descricaoResultado: 'Você evitou engarrafamento, comeu bem e voltou tranquilo para casa.',
         consequencias: {
           stats: { felicidade: 10, saude: 5 },
@@ -229,7 +236,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_enfrentar_agua',
-        texto: 'Tentar atravessar a enxurrada na pressa',
+        texto: '',
         descricaoResultado: 'Você chegou encharcado até os ossos e pegou um resfriado forte.',
         consequencias: {
           stats: { saude: -15, felicidade: -12 },
@@ -246,11 +253,12 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'cotidiano',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_fazer_feira_completa',
-        texto: 'Comprar frutas frescas da estação e comer um pastel de queijo na hora',
+        texto: '',
         descricaoResultado: 'Sua despensa ficou cheia de alimentos saudáveis e o passeio foi uma delícia cultural!',
         consequencias: {
           stats: { saude: 10, felicidade: 15 },
@@ -260,7 +268,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_pedir_desconto_xepa',
-        texto: 'Ir no horário da xepa para negociar os melhores preços',
+        texto: '',
         descricaoResultado: 'Você conseguiu caixas inteiras de frutas por uma pechincha inacreditável!',
         consequencias: {
           stats: { felicidade: 12 },
@@ -284,12 +292,13 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'familia',
     peso: 80,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
         id: 'opt_ajudar_cozinha_comer',
-        texto: 'Ajudar a ralar o queijo, servir as mesas e repetir o prato duas vezes',
+        texto: '',
         descricaoResultado: 'O sabor estava divino e os laços afetivos com a família ficaram mais fortes do que nunca!',
         consequencias: {
           stats: { felicidade: 25, saude: 5 },
@@ -299,7 +308,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_comer_rapido_sair',
-        texto: 'Comer rápido e pedir para sair mais cedo para encontrar os amigos',
+        texto: '',
         descricaoResultado: 'Você comeu correndo, ouviu um "sempre com pressa" da vovó, mas ainda deu tempo de aproveitar a tarde livre com a turma.',
         consequencias: {
           stats: { felicidade: 12 },
@@ -317,6 +326,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'familia',
     peso: 65,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_acolher_caramelo',
@@ -358,11 +368,12 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'cotidiano',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_curtir_serra',
-        texto: 'Tomar chocolate quente, comer fondue e curtir o friozinho',
+        texto: '',
         descricaoResultado: 'Passeio espetacular! As fotos ficaram lindas e você relaxou profundamente.',
         consequencias: {
           stats: { felicidade: 25, aparencia: 5 },
@@ -372,7 +383,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_ficar_em_casa_coberta',
-        texto: 'Fazer pipoca e assistir filmes debaixo das cobertas em casa',
+        texto: '',
         descricaoResultado: 'Um fim de semana super aconchegante sem gastar quase nada.',
         consequencias: {
           stats: { felicidade: 15 },
@@ -392,11 +403,12 @@ export const EXTRA_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'amizade',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_emocionar_festa',
-        texto: 'Abraçar todo mundo com lágrimas de felicidade nos olhos e apagar as velinhas',
+        texto: '',
         descricaoResultado: 'Foi uma celebração inesquecível de amor, amizade e gratidão pela sua vida!',
         consequencias: {
           stats: { felicidade: 35 },
@@ -406,7 +418,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_constrangido_festa',
-        texto: 'Ficar sem graça com tanta atenção, mas agradecer baixinho a cada um',
+        texto: '',
         descricaoResultado: 'Você não é fã de ser o centro das atenções, mas ficou visivelmente emocionado ao ver quem se lembrou de você.',
         consequencias: {
           stats: { felicidade: 20 },

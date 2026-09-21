@@ -13,6 +13,7 @@ import {
   IDADE_MINIMA_FACULDADE
 } from '../../systems/availabilitySystem';
 import { Lock } from 'lucide-react';
+import { descreverDuracaoEmSemestres } from '../../systems/tempo/instante';
 
 interface EducationSectionProps {
   personagem: Character;
@@ -84,6 +85,12 @@ export const EducationSection: React.FC<EducationSectionProps> = ({
                 : ` · ${formatarDinheiro(educacao.mensalidade || 0)}/mês`}
               {educacao.semestreAtual
                 ? ` · semestre ${educacao.semestreAtual} de ${educacao.totalSemestres}`
+                : ''}
+              {/* Duração total em linguagem humana. O motor entende semestres;
+                  o jogador lê "1 ano e 6 meses" — e continua avançando de ano
+                  em ano, sem nenhum clique a mais. */}
+              {educacao.totalSemestres
+                ? ` · curso de ${descreverDuracaoEmSemestres(educacao.totalSemestres)}`
                 : ''}
             </p>
 

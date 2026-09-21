@@ -120,9 +120,9 @@ describe('B4-FIX4 · ritmo da vida — nenhuma decisão obrigatória por ano', (
     // Três decisões nos últimos anos de um adolescente: por mais favorável
     // que seja a rolagem, o ano não pode ser mais uma pergunta.
     const historico: RegistroRitmo[] = [
-      { idade: 13, natureza: 'decisao' },
-      { idade: 14, natureza: 'decisao' },
-      { idade: 15, natureza: 'decisao' }
+      { idade: 13, natureza: 'decisao', consomeCota: true },
+      { idade: 14, natureza: 'decisao', consomeCota: true },
+      { idade: 15, natureza: 'decisao', consomeCota: true }
     ];
     const d = definirPulsoDoAno(ctx({ idade: 16, historico }), sempre(0));
     expect(d.pulso).toBe('acontecimento');
@@ -131,10 +131,10 @@ describe('B4-FIX4 · ritmo da vida — nenhuma decisão obrigatória por ano', (
 
   it('acontecimentos seguidos NÃO consomem o teto de decisões — vida acontecendo não é interrogatório', () => {
     const soAcontecimentos: RegistroRitmo[] = [
-      { idade: 30, natureza: 'acontecimento' },
-      { idade: 31, natureza: 'acontecimento' },
-      { idade: 32, natureza: 'acontecimento' },
-      { idade: 33, natureza: 'acontecimento' }
+      { idade: 30, natureza: 'acontecimento', consomeCota: false },
+      { idade: 31, natureza: 'acontecimento', consomeCota: false },
+      { idade: 32, natureza: 'acontecimento', consomeCota: false },
+      { idade: 33, natureza: 'acontecimento', consomeCota: false }
     ];
     const d = definirPulsoDoAno(ctx({ idade: 34, historico: soAcontecimentos }), sempre(0));
     expect(d.decisoesNaJanela).toBe(0);
@@ -144,7 +144,7 @@ describe('B4-FIX4 · ritmo da vida — nenhuma decisão obrigatória por ano', (
   it('decidir num ano reduz a chance de decidir no ano seguinte', () => {
     const semDecisao = definirPulsoDoAno(ctx({ idade: 30 }), sempre(0)).chanceDeSerDecisao;
     const comDecisao = definirPulsoDoAno(
-      ctx({ idade: 30, historico: [{ idade: 29, natureza: 'decisao' }] }),
+      ctx({ idade: 30, historico: [{ idade: 29, natureza: 'decisao', consomeCota: true }] }),
       sempre(0)
     ).chanceDeSerDecisao;
     expect(comDecisao).toBeLessThan(semDecisao);
@@ -161,7 +161,7 @@ describe('B4-FIX4 · ritmo da vida — nenhuma decisão obrigatória por ano', (
     const historico: RegistroRitmo[] = [];
     for (let idade = 1; idade <= 80; idade++) {
       const d = definirPulsoDoAno(ctx({ idade, historico }), rng);
-      if (d.pulso !== 'silencio') historico.push({ idade, natureza: d.pulso });
+      if (d.pulso !== 'silencio') historico.push({ idade, natureza: d.pulso, consomeCota: d.pulso === 'decisao' });
     }
     const decisoesEm = (fim: number, anos: number) =>
       historico.filter(r => r.natureza === 'decisao' && r.idade > fim - anos && r.idade <= fim).length;
@@ -200,16 +200,16 @@ describe('B4-FIX4 · ritmo da vida — anos tranquilos e densidade', () => {
 
   it('anos densos recentes deixam o ano seguinte mais calmo (fadiga)', () => {
     const descansado = definirPulsoDoAno(
-      ctx({ idade: 40, historico: [{ idade: 36, natureza: 'acontecimento' }] }),
+      ctx({ idade: 40, historico: [{ idade: 36, natureza: 'acontecimento', consomeCota: false }] }),
       sempre(0.99)
     ).chanceDeAlgoAcontecer;
     const cansado = definirPulsoDoAno(
       ctx({
         idade: 40,
         historico: [
-          { idade: 37, natureza: 'acontecimento' },
-          { idade: 38, natureza: 'decisao' },
-          { idade: 39, natureza: 'acontecimento' }
+          { idade: 37, natureza: 'acontecimento', consomeCota: false },
+          { idade: 38, natureza: 'decisao', consomeCota: true },
+          { idade: 39, natureza: 'acontecimento', consomeCota: false }
         ]
       }),
       sempre(0.99)
@@ -219,11 +219,11 @@ describe('B4-FIX4 · ritmo da vida — anos tranquilos e densidade', () => {
 
   it('silêncio prolongado acaba sendo quebrado (secura empurra de volta)', () => {
     const recente = definirPulsoDoAno(
-      ctx({ idade: 45, historico: [{ idade: 44, natureza: 'acontecimento' }] }),
+      ctx({ idade: 45, historico: [{ idade: 44, natureza: 'acontecimento', consomeCota: false }] }),
       sempre(0.99)
     ).chanceDeAlgoAcontecer;
     const seco = definirPulsoDoAno(
-      ctx({ idade: 45, historico: [{ idade: 38, natureza: 'acontecimento' }] }),
+      ctx({ idade: 45, historico: [{ idade: 38, natureza: 'acontecimento', consomeCota: false }] }),
       sempre(0.99)
     ).chanceDeAlgoAcontecer;
     expect(seco).toBeGreaterThan(recente);
@@ -271,8 +271,8 @@ describe('B4-FIX4 · ritmo da vida — leitura do histórico persistido', () => 
       { idade: 12, natureza: 'acontecimento' }
     ]);
     expect(lido).toEqual([
-      { idade: 10, natureza: 'decisao' },
-      { idade: 12, natureza: 'acontecimento' }
+      { idade: 10, natureza: 'decisao', consomeCota: true },
+      { idade: 12, natureza: 'acontecimento', consomeCota: false }
     ]);
   });
 });

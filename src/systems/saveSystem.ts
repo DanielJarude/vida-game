@@ -1,9 +1,14 @@
 import { EventOccurrence, GameState, GlobalStats, PastLifeRecord, PostMortemSummary, GameEvent } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
 import { naturezaDoEvento } from './events/nature';
+import { classificacaoDoEvento } from './events/taxonomia';
 import { criarPersonalidadeInicial, normalizarPersonalidade } from './personalitySystem';
 import { clamp } from '../utils/random';
 import { normalizarAparencia } from '../data/avatar/avatarData';
+import { fecharMarcosDoPassado } from './calendario/calendario';
+import { criarCalendarioInicial, type CompromissoAgendado, type EstadoCalendario } from './calendario/tipos';
+import { instanteDe } from './tempo/instante';
+import { MARCOS_DE_VIDA } from '../data/calendario/marcosDeVida';
 
 const SAVE_KEY = 'VIDA_GAME_SAVE_V1'; // chave mantida: a versão vive dentro do payload
 const STATS_KEY = 'VIDA_GLOBAL_STATS_V1';
@@ -12,9 +17,13 @@ const STATS_KEY = 'VIDA_GLOBAL_STATS_V1';
 // v4 (B4-FIX4): ocorrências de evento passam a carregar `natureza`
 //     (acontecimento × decisão), que é o que a camada de ritmo usa para
 //     medir fadiga de decisão separadamente de densidade de acontecimento.
+// v5 (F3): Calendário da Vida — marcos cumpridos e compromissos agendados.
+//     Um save v4 não tem calendário, e criá-lo vazio faria uma pessoa de 30
+//     anos "dever" os primeiros passos e a primeira palavra. A migração
+//     fecha os marcos do passado (ver `calendarioDoSave`).
 // Saves de qualquer versão anterior carregam normalmente: campos ausentes são
 // preenchidos de forma segura, sem destruir dados válidos.
-export const VERSAO_SAVE = 4;
+export const VERSAO_SAVE = 5;
 
 // Formato persistido: o evento ativo é referenciado por id (não serializado por inteiro)
 type EstadoSalvo = Omit<GameState, 'eventoAtivo'> & { eventoAtivoId?: string | null };
@@ -64,6 +73,91 @@ function numero(valor: unknown, padrao: number): number {
 
 function lista(valor: unknown): unknown[] {
   return Array.isArray(valor) ? valor : [];
+}
+
+/**
+ * Migração do registro temporal (Fase 2).
+ *
+ * Default conservador: save anterior à Fase 2 não tem o campo e é lido como
+ * "nada consumido neste ano" — o jogador não perde nem ganha tentativas, e
+ * nenhum personagem é invalidado.
+ *
+ * A direção do risco é deliberada. Tratar a ausência como "tudo consumido"
+ * puniria retroativamente quem já jogava; tratá-la como "nada consumido"
+ * apenas concede um ano de tentativas na primeira virada após a atualização.
+ * Entre punir um save existente e ser generoso uma única vez, a escolha é
+ * clara.
+ */
+function migrarRegistroTemporal(valor: unknown): { usos: Record<string, number[]> } {
+  const bruto = comoObjeto(valor);
+  const usosBrutos = bruto ? comoObjeto(bruto.usos) : null;
+  if (!usosBrutos) return { usos: {} };
+
+  const usos: Record<string, number[]> = {};
+  for (const [chave, instantes] of Object.entries(usosBrutos)) {
+    const limpos = lista(instantes).filter(
+      (i): i is number => typeof i === 'number' && Number.isFinite(i)
+    );
+    if (limpos.length > 0) usos[chave] = limpos;
+  }
+  return { usos };
+}
+
+/**
+ * Reconstrói o Calendário da Vida de um save.
+ *
+ * O caso difícil é o save legado (v4 e anteriores), que não tem calendário
+ * nenhum. Começá-lo vazio seria destrutivo de um jeito silencioso: todos os
+ * marcos cujas janelas já passaram apareceriam como pendentes, e um
+ * personagem adulto poderia receber "A Primeira Palavra" no próximo ano.
+ *
+ * `fecharMarcosDoPassado` resolve isso sem reescrever a biografia: fecha o
+ * que a vida já viveu (consultando o histórico de eventos) e também o que
+ * ela deixou passar. Uma vida que atravessou a infância antes da F3 não
+ * ganha marcos retroativos — ela simplesmente não os deve mais.
+ */
+function migrarCalendario(
+  bruto: unknown,
+  idadeAtual: number,
+  historicoEventosDisparados: string[]
+): EstadoCalendario {
+  const raiz = comoObjeto(bruto);
+  const agora = instanteDe(idadeAtual);
+
+  if (raiz) {
+    const cumpridosBruto = comoObjeto(raiz.marcosCumpridos) ?? {};
+    const marcosCumpridos: Record<string, number> = {};
+    for (const [id, valor] of Object.entries(cumpridosBruto)) {
+      if (typeof valor === 'number' && Number.isFinite(valor)) marcosCumpridos[id] = valor;
+    }
+    const compromissos = lista(raiz.compromissos).filter(
+      (c): c is CompromissoAgendado => comoObjeto(c) !== null
+    );
+    return { compromissos, marcosCumpridos };
+  }
+
+  const disparados = new Set(historicoEventosDisparados);
+  return fecharMarcosDoPassado(
+    criarCalendarioInicial(),
+    MARCOS_DE_VIDA,
+    idadeAtual,
+    agora,
+    conteudoId => disparados.has(conteudoId)
+  );
+}
+
+/**
+ * Calendário pronto para uso a partir de um `GameState` já carregado.
+ *
+ * Existe para que a camada de comandos não precise saber que saves antigos
+ * podem não ter calendário — a regra de migração fica aqui, num lugar só.
+ */
+export function calendarioDoSave(estado: GameState): EstadoCalendario {
+  return migrarCalendario(
+    estado.calendario,
+    estado.personagem?.idade ?? 0,
+    estado.historicoEventosDisparados ?? []
+  );
 }
 
 function migrarEstadoSalvo(bruto: unknown): GameState | null {
@@ -216,13 +310,17 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     // Evento que não existe mais no catálogo (conteúdo removido entre
     // versões) mantém o registro como está: a ocorrência aconteceu e não
     // deve sumir do histórico só porque o evento saiu de cena.
-    if (ocorrencia.natureza && ocorrencia.categoria) return ocorrencia;
+    // F3 — `taxonomia` entrou na mesma reidratação: sem ela, um save antigo
+    // faria toda escolha biográfica já vivida voltar a consumir orçamento de
+    // decisão contextual depois de um reload.
+    if (ocorrencia.natureza && ocorrencia.categoria && ocorrencia.taxonomia) return ocorrencia;
     const evento = MASTER_EVENTS_LIST.find(e => e.id === ocorrencia.eventId);
     if (!evento) return { ...ocorrencia, natureza: ocorrencia.natureza ?? 'decisao' };
     return {
       ...ocorrencia,
       categoria: ocorrencia.categoria ?? evento.categoria,
-      natureza: ocorrencia.natureza ?? naturezaDoEvento(evento)
+      natureza: ocorrencia.natureza ?? naturezaDoEvento(evento),
+      taxonomia: ocorrencia.taxonomia ?? classificacaoDoEvento(evento)
     };
   });
 
@@ -233,6 +331,14 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     : criarPersonalidadeInicial();
 
   const resumoMorte = comoObjeto(raiz.resumoMorte) as unknown as GameState['resumoMorte'];
+
+  // --- Calendário da Vida (F3) ---
+  // Lido tal como salvo quando existe; reconstruído com cuidado quando não.
+  const calendario = migrarCalendario(
+    raiz.calendario,
+    numero(personagemBruto.idade, 0),
+    historicoEventosDisparados
+  );
 
   return {
     versao: VERSAO_SAVE,
@@ -246,7 +352,9 @@ function migrarEstadoSalvo(bruto: unknown): GameState | null {
     eventoAtivo,
     historicoEventosDisparados,
     historicoOcorrenciasEventos,
+    calendario,
     acoesRealizadasAno: lista(raiz.acoesRealizadasAno).filter(a => typeof a === 'string') as string[],
+    registroTemporal: migrarRegistroTemporal(raiz.registroTemporal),
     emJogo: raiz.emJogo !== false,
     morto: raiz.morto === true,
     resumoMorte

@@ -9,6 +9,7 @@ export const ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 55,
     categoria: 'dinheiro',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_reformar_completo',
@@ -42,6 +43,7 @@ export const ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 52,
     categoria: 'cotidiano',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -85,6 +87,7 @@ export const ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 58,
     categoria: 'trabalho',
     peso: 65,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       dinheiroMinimo: 20000
     },
@@ -121,11 +124,12 @@ export const ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'familia',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_apaziguar_festa',
-        texto: 'Contar uma piada engraçada, servir mais pudim e tocar música para descontrair',
+        texto: '',
         descricaoResultado: 'Todo mundo caiu na gargalhada e a festa terminou com um abraço coletivo emocionado!',
         consequencias: {
           stats: { felicidade: 20 },
@@ -135,7 +139,7 @@ export const ADULT_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_entrar_no_debate',
-        texto: 'Entrar na discussão com argumentos inflamados',
+        texto: '',
         descricaoResultado: 'A discussão rendeu até a madrugada e um tio saiu emburrado antes do amigo secreto.',
         consequencias: {
           stats: { felicidade: -8 },

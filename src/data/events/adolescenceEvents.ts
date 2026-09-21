@@ -9,6 +9,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 16,
     categoria: 'escola',
     peso: 85,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_aceitar_cola',
@@ -93,6 +94,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 16,
     categoria: 'romance',
     peso: 90,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -139,6 +141,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 15,
     categoria: 'familia',
     peso: 80,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     // B4-FIX2 — o playtest encontrou "seus pais cumpriram a promessa e
     // compraram o celular" reaparecendo em outro ano, como se a promessa
@@ -149,7 +152,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_esforco_total',
-        texto: 'Limpar a casa toda e tirar só notas acima de 9',
+        texto: '',
         descricaoResultado: 'Seus pais cumpriram a promessa e compraram o celular! Você agora passa horas nas redes sociais.',
         consequencias: {
           stats: { felicidade: 20, inteligencia: 6 },
@@ -160,7 +163,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_pedir_insistente',
-        texto: 'Reclamar que todos os seus amigos já têm celular',
+        texto: '',
         descricaoResultado: 'Seus pais acharam você mimado e adiaram o presente.',
         consequencias: {
           stats: { felicidade: -10 },
@@ -178,6 +181,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'escola',
     peso: 95,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -226,6 +230,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 20,
     categoria: 'cotidiano',
     peso: 85,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -259,12 +264,13 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'escola',
     peso: 90,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
       {
         id: 'opt_dancar_noite_toda',
-        texto: 'Dançar até o amanhecer e tirar dezenas de fotos com a turma',
+        texto: '',
         descricaoResultado: 'Foi uma noite mágica que encerrou com chave de ouro a sua jornada na escola!',
         consequencias: {
           stats: { felicidade: 25, aparencia: 5 },
@@ -277,7 +283,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         // habilidade disponível anos depois, num momento em que ela
         // realmente importa. Ligado por FLAG, nunca por texto.
         id: 'opt_tocar_violao_festa',
-        texto: 'Pegar o violão e cantar com a turma no meio da festa',
+        texto: '',
         descricaoResultado: 'Você pegou o violão que praticamente ninguém sabia que sabia tocar e puxou um coro com a turma inteira. Virou a lembrança mais contada da formatura.',
         requisito: {
           flagNecessaria: 'sabe_tocar_violao'
@@ -289,7 +295,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_economizar_festa',
-        texto: 'Preferir não gastar com a festa e guardar o dinheiro',
+        texto: '',
         descricaoResultado: 'Você poupou uma grana boa, mas ficou vendo os stories dos colegas no dia seguinte.',
         consequencias: {
           stats: { felicidade: -5 },

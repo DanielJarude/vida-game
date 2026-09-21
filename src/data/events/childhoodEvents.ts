@@ -9,6 +9,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 90,
+    taxonomia: 'marco_testemunhado',
     natureza: 'acontecimento',
     unico: true,
     // B4-FIX2 item 10 — marco de desenvolvimento, não sorteio aleatório
@@ -17,7 +18,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_correr',
-        texto: 'Correr tropeçando para os braços deles',
+        texto: '',
         descricaoResultado: 'Você correu tropeçando para os braços dos seus pais e a sala inteira comemorou seus primeiros passos com lágrimas de alegria.',
         consequencias: {
           stats: { felicidade: 15, saude: 5 },
@@ -33,8 +34,8 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_engatinhar',
-        texto: 'Preferir continuar engatinhando no seu ritmo',
-        descricaoResultado: 'Você preferiu seguir engatinhando no seu próprio ritmo e só andou quando se sentiu seguro.',
+        texto: '',
+        descricaoResultado: 'Os primeiros passos vieram no seu tempo: mais engatinhada, algumas quedas, e só depois a sala inteira viu você atravessar o cômodo de pé.',
         consequencias: {
           stats: { felicidade: 5 },
           hiddenStats: { disciplina: 5 },
@@ -51,6 +52,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 5,
     categoria: 'infancia',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_espernear',
@@ -94,6 +96,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 10,
     categoria: 'infancia',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -137,12 +140,13 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 7,
     categoria: 'escola',
     peso: 100,
+    taxonomia: 'marco_testemunhado',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
       {
         id: 'opt_fazer_amigos',
-        texto: 'Conversar com todo mundo e dividir o lanche no recreio',
+        texto: '',
         descricaoResultado: 'Você conversou com todo mundo, dividiu o lanche no recreio e virou a criança mais popular da turma.',
         consequencias: {
           stats: { felicidade: 15 },
@@ -151,7 +155,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_estudar_atento',
-        texto: 'Sentar na primeira carteira e prestar atenção na professora',
+        texto: '',
         descricaoResultado: 'A professora elogiou sua atenção e você aprendeu a ler suas primeiras frases com perfeição.',
         consequencias: {
           stats: { inteligencia: 10, felicidade: 8 },
@@ -160,7 +164,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_chorar',
-        texto: 'Chorar com saudades de casa',
+        texto: '',
         descricaoResultado: 'Você chorou de saudade de casa, mas o abraço caloroso da tia da escola ajudou você a se acostumar.',
         consequencias: {
           stats: { felicidade: -5 },
@@ -177,11 +181,12 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 11,
     categoria: 'infancia',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_jogar_raca',
-        texto: 'Jogar descalço com muita garra e dar caneta no zagueiro',
+        texto: '',
         descricaoResultado: 'Você jogou descalço com garra, deu caneta no zagueiro e marcou um golaço antológico ovacionado pelo quarteirão!',
         consequencias: {
           stats: { felicidade: 18, saude: 5 },
@@ -191,7 +196,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_goleiro',
-        texto: 'Ficar no gol para ajudar o time',
+        texto: '',
         descricaoResultado: 'Você ficou no gol para ajudar o time e fez defesas milagrosas, embora tenha ralado o joelho no chão.',
         consequencias: {
           stats: { felicidade: 10, saude: -2 },
@@ -200,7 +205,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_ficar_videogame',
-        texto: 'Preferir ficar em casa jogando videogame',
+        texto: '',
         descricaoResultado: 'Você zerou uma fase super difícil no jogo, mas perdeu a diversão com a galera lá fora.',
         consequencias: {
           stats: { felicidade: 10, inteligencia: 4 },
@@ -217,6 +222,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 11,
     categoria: 'escola',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_vulcao',
@@ -249,6 +255,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 11,
     categoria: 'escola',
     peso: 65,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         // B4-FIX2 item 11 — consequência futura leve: quem já demonstrou
@@ -312,6 +319,7 @@ export const CHILDHOOD_EVENTS: GameEvent[] = [
     idadeMaxima: 11,
     categoria: 'infancia',
     peso: 60,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_aprender_violao',

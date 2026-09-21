@@ -45,7 +45,7 @@
  * simulável sem depender de sorte.
  */
 
-import type { NaturezaEvento } from '../../types';
+import { taxonomiaConsomeCotaDeDecisao, type NaturezaEvento, type TaxonomiaConteudo } from '../../types';
 import { valorAleatorio } from '../../utils/random';
 
 /** O que um ano merece. */
@@ -55,6 +55,16 @@ export type PulsoDoAno = 'silencio' | 'acontecimento' | 'decisao';
 export interface RegistroRitmo {
   idade: number;
   natureza: NaturezaEvento;
+  /**
+   * F3 — esta ocorrência gastou orçamento de DECISÃO CONTEXTUAL?
+   *
+   * Separado de `natureza` porque as duas perguntas são diferentes: a
+   * natureza diz se o jogador foi consultado, isto diz se a consulta foi
+   * uma tomada de posição. Uma escolha biográfica ("qual foi sua primeira
+   * palavra?") é consultada e NÃO gasta orçamento — ela não é uma posição
+   * sobre nada, então não causa fadiga nem bloqueia decisões posteriores.
+   */
+  consomeCota: boolean;
 }
 
 export interface ContextoRitmo {
@@ -258,11 +268,13 @@ export function definirPulsoDoAno(
   const faixa = obterFaixaDeRitmo(ctx.idade);
   const perfil = PERFIS[faixa];
 
+  // Só decisão CONTEXTUAL entra na conta do teto. Escolha biográfica é
+  // agência, mas de outra espécie: não disputa este orçamento.
   const decisoesNaJanela = contarNaJanela(
     ctx.historico,
     ctx.idade - 1,
     perfil.janela,
-    r => r.natureza === 'decisao'
+    r => r.consomeCota
   );
   const anosDeSecura = anosDesdeUltimaOcorrencia(ctx.historico, ctx.idade - 1);
 
@@ -335,7 +347,7 @@ export function definirPulsoDoAno(
   // Decisão no ano imediatamente anterior espaça a próxima — é o que evita
   // a sensação de interrogatório anual sem precisar de teto artificial.
   const decidiuAnoPassado = ctx.historico.some(
-    r => r.idade === ctx.idade - 1 && r.natureza === 'decisao'
+    r => r.idade === ctx.idade - 1 && r.consomeCota
   );
   if (decidiuAnoPassado) {
     chanceDecisao *= 0.40;
@@ -369,12 +381,22 @@ export function definirPulsoDoAno(
  * consome. Ocorrências anteriores ao B4-FIX4 não têm `natureza` gravada e
  * são lidas como 'decisao' — que é exatamente o que elas eram quando
  * aconteceram, já que o catálogo inteiro era decisão até aqui.
+ *
+ * F3 — `consomeCota` é derivado da TAXONOMIA da ocorrência, nunca de um id.
+ * Quando a taxonomia não foi gravada (save antigo), cai na natureza, que
+ * reproduz o comportamento que aquela ocorrência tinha quando foi criada.
  */
 export function historicoDeRitmo(
-  ocorrencias: { idade: number; natureza?: NaturezaEvento }[]
+  ocorrencias: { idade: number; natureza?: NaturezaEvento; taxonomia?: TaxonomiaConteudo }[]
 ): RegistroRitmo[] {
-  return ocorrencias.map(o => ({
-    idade: o.idade,
-    natureza: o.natureza ?? 'decisao'
-  }));
+  return ocorrencias.map(o => {
+    const natureza = o.natureza ?? 'decisao';
+    return {
+      idade: o.idade,
+      natureza,
+      consomeCota: o.taxonomia
+        ? taxonomiaConsomeCotaDeDecisao(o.taxonomia)
+        : natureza === 'decisao'
+    };
+  });
 }

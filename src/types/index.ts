@@ -171,13 +171,48 @@ export interface EducationState {
   nomeCurso?: string;
   instituicao?: string;
   isPublica?: boolean;
+  /**
+   * Semestre em que o aluno está, 1-based. DERIVADO de `matriculaInicio` +
+   * `totalSemestres` a cada passagem de ano; mantido no estado apenas para
+   * exibição e compatibilidade com saves anteriores à Fase 2.
+   *
+   * Não é fonte de verdade: quem decide a conclusão é o tempo decorrido desde
+   * `matriculaInicio` (ver `systems/tempo/matricula.ts`). Antes da Fase 2 este
+   * campo ERA a fonte de verdade, e foi exatamente isso que produziu o
+   * off-by-one em que um curso de 3 semestres formava em 1 ano.
+   */
   semestreAtual?: number;
   totalSemestres?: number;
+  /**
+   * Instante (em semestres, ancorado na IDADE) em que a matrícula começou.
+   * Fonte de verdade da duração do curso.
+   *
+   * Opcional para não invalidar saves anteriores à Fase 2: quando ausente, é
+   * reconstruído de forma conservadora a partir do progresso já registrado —
+   * ver `reconstruirMatricula` em `educationSystem`.
+   */
+  matriculaInicio?: number;
   desempenho: number; // 0 a 100 (notas)
   mensalidade?: number;
   anoIngresso?: number;
   // Compromisso do ano corrente; efeitos processados na passagem de ano
   posturaAno?: PosturaEscolar | null;
+  /**
+   * Resultado do vestibular/ENEM prestado, com o ano de vida em que foi feito.
+   *
+   * Antes da Fase 2 a nota era sorteada a cada chamada de `ingressarCurso` e
+   * descartada — o ENEM era um botão de re-roll, e a auditoria mediu 23
+   * aprovações na segunda tentativa do mesmo ano. Persistir a nota é o que
+   * torna a prova um FATO da vida do personagem em vez de um sorteio repetível.
+   *
+   * Ausente = ainda não prestou. Saves antigos caem neste caso.
+   */
+  vestibular?: {
+    /** Idade em que a prova foi prestada. */
+    anoDeVida: number;
+    /** Nota obtida (350-990). Reusada em toda tentativa do mesmo ano. */
+    nota: number;
+  };
   cursosConcluidos: {
     nome: string;
     tipo: string;
@@ -407,6 +442,107 @@ export interface RepeticaoEvento {
 // ---------------------------------------------------------------------------
 export type NaturezaEvento = 'decisao' | 'acontecimento';
 
+// ---------------------------------------------------------------------------
+// F3 — TAXONOMIA DE CONTEÚDO
+//
+// `NaturezaEvento` responde "o jogador escolhe ou não?". Essa pergunta é
+// necessária e continua governando o motor, mas ela é grossa demais para
+// duas distinções que a Fase 3 precisa fazer.
+//
+// PRIMEIRA: escolher NÃO é a mesma coisa que revelar caráter.
+//
+//   ESCOLHA COMPORTAMENTAL — expressa valor, atitude, intenção ou modo de
+//   agir. Colar na prova, emprestar dinheiro a um amigo, devolver uma
+//   carteira achada. É EVIDÊNCIA de como a pessoa age, e por isso pode
+//   mover `impactosComportamentais`.
+//
+//   ESCOLHA BIOGRÁFICA — o jogador participa da construção da própria
+//   história sem que isso constitua evidência comportamental. Qual foi a
+//   primeira palavra; um gosto; um detalhe de memória. Responder "mamãe"
+//   em vez de "bola" não torna ninguém mais empático nem mais corajoso.
+//   Por padrão NÃO move personalidade — e a regra é imposta pelo motor,
+//   não pela boa vontade de quem escreve o catálogo.
+//
+// Sem essa distinção, o caminho fácil seria supor que todo marco com
+// escolha alimenta o `personalitySystem`, e a personalidade emergente
+// passaria a ser diluída por escolhas que não dizem nada sobre a pessoa.
+//
+// SEGUNDA: um MARCO pode não ter escolha nenhuma. Os primeiros passos de
+// uma criança de 1 ano são um marco garantido da vida dela e não são uma
+// decisão de ninguém — nem do jogador, nem do bebê. O calendário precisa
+// sustentar marco COM escolha e marco SEM escolha com a mesma naturalidade.
+//
+// Ausente = `acontecimento_puro` para acontecimentos e
+// `decisao_comportamental` para decisões (o comportamento atual do jogo),
+// para que nenhum evento mude de sentido antes de ser classificado.
+// ---------------------------------------------------------------------------
+
+export type TaxonomiaConteudo =
+  /** A vida acontece; o motor resolve e narra. Nunca move personalidade. */
+  | 'acontecimento_puro'
+  /** Encruzilhada que revela valor/atitude. Move personalidade. */
+  | 'decisao_comportamental'
+  /**
+   * O jogador define um detalhe da própria história. NÃO move personalidade:
+   * participar da biografia não é demonstrar caráter.
+   */
+  | 'escolha_biografica'
+  /** Marco de trajetória sem escolha: acontece e é testemunhado. */
+  | 'marco_testemunhado';
+
+/**
+ * Esta classificação permite que o jogador escolha?
+ *
+ * Função de domínio (não de apresentação): o motor usa isto para decidir se
+ * abre modal ou resolve sozinho.
+ */
+export function taxonomiaPermiteEscolha(taxonomia: TaxonomiaConteudo): boolean {
+  return taxonomia === 'decisao_comportamental' || taxonomia === 'escolha_biografica';
+}
+
+/**
+ * Esta classificação pode mover a personalidade?
+ *
+ * Só uma responde sim. É o ponto único da Revisão 1 e o alvo estável do
+ * teste que a protege: quem adicionar uma taxonomia nova no futuro precisa
+ * passar por aqui e decidir conscientemente.
+ */
+export function taxonomiaMovePersonalidade(taxonomia: TaxonomiaConteudo): boolean {
+  return taxonomia === 'decisao_comportamental';
+}
+
+/**
+ * Esta classificação consome o ORÇAMENTO DE DECISÃO CONTEXTUAL do ritmo?
+ *
+ * Terceira pergunta independente sobre uma interação, e a que faltava. As
+ * outras duas já existiam: "permite escolher?" e "move personalidade?". Sem
+ * esta, o `lifeRhythm` só sabia perguntar `natureza === 'decisao'` — e para
+ * ele *A Primeira Palavra* aos 2 anos era indistinguível de uma encruzilhada
+ * moral aos 15.
+ *
+ * O efeito medido do defeito: a escolha biográfica aos 2 anos consumia a
+ * cota da faixa 3-5 (`tetoDecisoes: 1` numa janela de 5 anos), e as decisões
+ * daquela faixa caíam de 6,7% para 0%. Um marco garantido apagava, por
+ * efeito colateral, toda a agência dos três anos seguintes.
+ *
+ * A distinção é sistêmica, não cosmética:
+ *
+ *   - DECISÃO CONTEXTUAL/COMPORTAMENTAL — o jogador toma posição, assume
+ *     risco, escolhe entre valores. É a categoria que não pode dominar o
+ *     jogo, então é ela que tem orçamento, teto e fadiga.
+ *   - ESCOLHA BIOGRÁFICA — o jogador participa da construção da própria
+ *     história (qual foi a primeira palavra). É agência real e é registrada
+ *     como tal, mas não é uma posição sobre nada: não gasta orçamento, não
+ *     causa fadiga e nunca bloqueia uma decisão posterior.
+ *
+ * Ambas são agência. Elas apenas cumprem funções diferentes no sistema — e é
+ * por isso que as métricas de agência as contam separadamente em vez de
+ * somá-las num único número de "decisões".
+ */
+export function taxonomiaConsomeCotaDeDecisao(taxonomia: TaxonomiaConteudo): boolean {
+  return taxonomia === 'decisao_comportamental';
+}
+
 /** Uma ocorrência real de evento, registrada com idade e ano (para cooldown). */
 export interface EventOccurrence {
   eventId: string;
@@ -426,6 +562,19 @@ export interface EventOccurrence {
   // ocorrências de saves anteriores são lidas como 'decisao' (o que elas
   // de fato eram naquele momento do jogo).
   natureza?: NaturezaEvento;
+  /**
+   * F3 — classificação da ocorrência (ver `TaxonomiaConteudo`).
+   *
+   * `natureza` diz se o jogador foi consultado; `taxonomia` diz o que aquela
+   * consulta SIGNIFICA. A camada de ritmo precisa da segunda para não tratar
+   * "qual foi sua primeira palavra?" como uma encruzilhada moral ao cobrar
+   * orçamento de decisão.
+   *
+   * Opcional: ocorrências de saves anteriores caem na derivação por
+   * `natureza` (ver `historicoDeRitmo`), que é exatamente o comportamento
+   * que elas tinham quando foram gravadas.
+   */
+  taxonomia?: TaxonomiaConteudo;
 }
 
 export interface GameEvent {
@@ -460,6 +609,15 @@ export interface GameEvent {
    * escolhe). Ausente = 'decisao'. Ver `NaturezaEvento`.
    */
   natureza?: NaturezaEvento;
+  /**
+   * F3 — classificação semântica auditada (ver `TaxonomiaConteudo`).
+   *
+   * Refina `natureza` sem substituí-la: é o que distingue uma escolha que
+   * revela caráter de uma que só preenche a biografia. Ausente = derivada de
+   * `natureza` (ver `classificacaoDoEvento` em `systems/events/taxonomia`),
+   * de modo que evento não classificado se comporta exatamente como hoje.
+   */
+  taxonomia?: TaxonomiaConteudo;
   unico?: boolean; // apenas uma vez na vida (equivalente a repeticao: { tipo: 'unica' })
   /** Política explícita de repetição (B4-FIX2). Ausente = infere de `unico`, senão 'recorrente'. */
   repeticao?: RepeticaoEvento;
@@ -533,6 +691,45 @@ export interface GameState {
   historicoOcorrenciasEventos?: EventOccurrence[];
   // Ações únicas por ano (atividades, apostas, interações); zerada a cada passagem de ano
   acoesRealizadasAno: string[];
+  /**
+   * Consumo temporal persistente (Fase 2): tentativas de vestibular, processos
+   * seletivos já disputados, concepções.
+   *
+   * Distinto de `acoesRealizadasAno`, que é zerado na virada do ano e serve a
+   * limites de conveniência da interface. Este registro NÃO é zerado: cada uso
+   * fica carimbado com o instante em que ocorreu, e é isso que impede que
+   * recarregar o save devolva uma tentativa já gasta.
+   *
+   * Opcional: save anterior à Fase 2 é lido como "nada consumido".
+   */
+  registroTemporal?: { usos: Record<string, number[]> };
+  /**
+   * Calendário da Vida (Fase 3): marcos já cumpridos e compromissos
+   * agendados para o futuro.
+   *
+   * Opcional porque saves até a v4 não o possuem. Ausência NÃO significa
+   * "nenhum marco cumprido": significa "esta vida é anterior ao calendário",
+   * e a migração fecha os marcos cujas janelas já passaram em vez de
+   * ressuscitá-los (ver `saveSystem.calendarioDoSave`).
+   */
+  calendario?: {
+    // Espelha `CompromissoAgendado` de `systems/calendario/tipos`. A forma é
+    // repetida aqui, e não importada, porque aquele módulo importa `types`:
+    // importar de volta criaria o ciclo que a Fase 1 gastou tempo quebrando.
+    // O typecheck garante que as duas não divirjam — se `CompromissoAgendado`
+    // mudar, a atribuição em `saveSystem` para de compilar.
+    readonly compromissos: readonly {
+      readonly id: string;
+      readonly tipo: string;
+      readonly alvoId?: string;
+      readonly agendadoEm: number;
+      readonly venceEm: number;
+      readonly expiraEm?: number;
+      readonly cumpridoEm?: number;
+      readonly dados?: Readonly<Record<string, string | number | boolean>>;
+    }[];
+    readonly marcosCumpridos: Readonly<Record<string, number>>;
+  };
   emJogo: boolean;
   morto: boolean;
   resumoMorte?: PostMortemSummary;

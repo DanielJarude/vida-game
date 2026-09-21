@@ -19,12 +19,13 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 4,
     categoria: 'escola',
     peso: 90,
+    taxonomia: 'marco_testemunhado',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
       {
         id: 'opt_explorar_creche',
-        texto: 'Largar a mão de quem te deixou lá e ir direto para os brinquedos',
+        texto: '',
         descricaoResultado: 'Você nem olhou para trás — foi direto brincar e voltou para casa contando tudo animado.',
         consequencias: {
           stats: { felicidade: 12 },
@@ -33,7 +34,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_chorar_creche',
-        texto: 'Chorar agarrado até a professora se aproximar com carinho',
+        texto: '',
         descricaoResultado: 'Você chorou bastante na despedida, mas a professora conseguiu te acalmar com uma brincadeira.',
         consequencias: {
           stats: { felicidade: -5 },
@@ -50,6 +51,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 6,
     categoria: 'amizade',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
@@ -92,12 +94,13 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 5,
     categoria: 'cotidiano',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'recorrente', cooldownAnos: 2 },
     opcoes: [
       {
         id: 'opt_pedir_luz_acesa',
-        texto: 'Pedir para deixar uma luzinha acesa e dormir tranquilo',
+        texto: '',
         descricaoResultado: 'Com a luzinha de plantão, você dormiu tranquilo a noite inteira.',
         consequencias: {
           stats: { felicidade: 6 },
@@ -106,7 +109,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_encarar_armario',
-        texto: 'Levantar sozinho e abrir o armário para provar que não tem nada lá',
+        texto: '',
         descricaoResultado: 'Você encarou o "monstro" e descobriu que era só um casaco pendurado. Ficou orgulhoso de si mesmo.',
         consequencias: {
           stats: { felicidade: 10 },
@@ -123,6 +126,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 6,
     categoria: 'amizade',
     peso: 75,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
@@ -155,12 +159,13 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 5,
     categoria: 'amizade',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
         id: 'opt_brincar_pulapula',
-        texto: 'Passar a festa inteira pulando no pula-pula com as outras crianças',
+        texto: '',
         descricaoResultado: 'Você voltou para casa exausto e feliz, cheirando a bolo de chocolate.',
         consequencias: {
           stats: { felicidade: 15, saude: 2 },
@@ -169,7 +174,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_ficar_perto_pais',
-        texto: 'Ficar perto de quem te levou, observando a festa de longe',
+        texto: '',
         descricaoResultado: 'Você levou um tempo para se soltar, mas no fim comeu um pedaço de bolo bem tranquilo.',
         consequencias: {
           stats: { felicidade: 6 },
@@ -186,12 +191,13 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 6,
     categoria: 'infancia',
     peso: 65,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
         id: 'opt_observar_inseto',
-        texto: 'Agachar bem de perto para observar cada detalhe',
+        texto: '',
         descricaoResultado: 'Você ficou minutos observando o inseto andar, fazendo perguntas sobre ele para quem estava por perto.',
         consequencias: {
           stats: { inteligencia: 5, felicidade: 6 },
@@ -200,7 +206,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_fugir_inseto',
-        texto: 'Sair correndo e gritando por causa do bicho',
+        texto: '',
         descricaoResultado: 'Você saiu correndo e só voltou ao quintal depois que alguém prometeu que o inseto tinha ido embora.',
         consequencias: {
           stats: { felicidade: -2 },
@@ -217,6 +223,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 5,
     categoria: 'cotidiano',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'recorrente', cooldownAnos: 2 },
     opcoes: [
       {

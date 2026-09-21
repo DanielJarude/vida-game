@@ -32,6 +32,7 @@ import { aplicarConsequenciasEscolha } from '../eventSystem';
 import { resolverPoliticaRepeticao, COOLDOWN_PADRAO_RECORRENTE } from '../events/repetitionPolicy';
 import { criarEstadoTeste } from './fixtures';
 import { criarPersonalidadeInicial } from '../personalitySystem';
+import { criarCalendarioInicial } from '../calendario/tipos';
 import type { EventOccurrence, PersonalityState } from '../../types';
 
 function mulberry32(seed: number) {
@@ -66,6 +67,9 @@ function simularVida(seed: number, idadeFinal: number): ResultadoVida {
   let historicoDisparados: string[] = [];
   let historicoOcorrencias: EventOccurrence[] = [];
 
+  // F3 — o Calendário da Vida é estado da vida e atravessa os anos.
+  let calendario = criarCalendarioInicial();
+
   const faltasDeCooldown: ResultadoVida['faltasDeCooldown'] = [];
   const repeticoesUnicoOuMarco: string[] = [];
   const repeticoesConsecutivas: ResultadoVida['repeticoesConsecutivas'] = [];
@@ -79,9 +83,11 @@ function simularVida(seed: number, idadeFinal: number): ResultadoVida {
       economia,
       historicoDisparados,
       personalidade,
-      historicoOcorrencias
+      historicoOcorrencias,
+      calendario
     );
 
+    calendario = resultado.calendario;
     personagem = resultado.personagemAtualizado;
     familia = resultado.familiaAtualizada;
     educacao = resultado.educacaoAtualizada;

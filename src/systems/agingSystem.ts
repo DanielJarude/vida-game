@@ -32,6 +32,18 @@ import {
   obterFaixaDeRitmo,
   type DiagnosticoRitmo
 } from './pacing/lifeRhythm';
+import { avaliarCondicoesEstruturais } from './events/eligibility';
+import { marcarMarcoCumprido, marcosDevidos } from './calendario/calendario';
+import {
+  criarCalendarioInicial,
+  type EstadoCalendario,
+  type MarcoDeVida
+} from './calendario/tipos';
+import { MARCOS_DE_VIDA } from '../data/calendario/marcosDeVida';
+import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
+import { instanteDe } from './tempo/instante';
+import { classificacaoDoEvento } from './events/taxonomia';
+import { gerarPequenaMemoria } from './memorias/pequenaMemoria';
 import { generateId } from '../utils/random';
 
 export interface AgingResult {
@@ -62,6 +74,19 @@ export interface AgingResult {
   ocorrencia: EventOccurrence | null;
   /** Diagnóstico do ritmo do ano — depuração, testes e simulação. Nunca exibido. */
   ritmo: DiagnosticoRitmo;
+  /**
+   * F3 — estado do Calendário da Vida depois do ano. Vem sempre preenchido:
+   * a camada de comandos grava isto em vez de remontar por conta própria,
+   * que é o que faria um marco cumprido reocorrer depois de um reload.
+   */
+  calendario: EstadoCalendario;
+  /**
+   * F3 — marco que o calendário disparou neste ano, se houve. Serve a
+   * teste, simulação e histórico; as consequências já estão aplicadas
+   * (marco testemunhado) ou o evento subiu em `eventoDisparado` (marco com
+   * escolha).
+   */
+  marcoDoAno: MarcoDeVida | null;
   morreu: boolean;
   resumoMorte?: PostMortemSummary;
 }
@@ -70,8 +95,44 @@ export interface AgingResult {
  * Categorias que NÃO contam como acontecimento estrutural do ano.
  * 'geral' é enquadramento e 'cotidiano' é textura de fundo: nenhuma das
  * duas ocupa o ano a ponto de dispensar um evento interativo.
+ *
+ * F3 — este conjunto continua valendo apenas como FALLBACK, para entradas
+ * que não declaram `relevancia` (saves antigos). Ver `ocupaOAno` abaixo.
  */
 const CATEGORIAS_NAO_ESTRUTURAIS = new Set(['geral', 'cotidiano']);
+
+/**
+ * Esta entrada da Linha da Vida ocupa o ano?
+ *
+ * F3 — a correção central desta fase, e a que a medição apontou como causa
+ * do silêncio adulto.
+ *
+ * Até aqui, "ocupa o ano" era decidido pela CATEGORIA do log: qualquer coisa
+ * que não fosse 'geral'/'cotidiano' contava como acontecimento estrutural, e
+ * dois deles silenciavam o ano inteiro por regra dura (`SATURACAO_ESTRUTURAL`
+ * em `pacing/lifeRhythm`). A intenção era certa — um ano que já entregou
+ * "você se formou" e "você foi contratado" não precisa de um modal em cima.
+ *
+ * O efeito colateral não era: os dois textos mais frequentes do jogo inteiro
+ * são o rendimento anual do bico (2.384 ocorrências em 105 vidas) e as horas
+ * extras (1.975), ambos de categoria 'financas'/'carreira'. Juntos, eles
+ * saturavam o ano de qualquer adulto empregado — todo ano, pela vida inteira.
+ * Medido: 41% dos anos adultos morriam por saturação, e 89,2% dessas mortes
+ * vinham só de rotina financeira e profissional. Quanto mais o personagem
+ * trabalhava, menos vida ele tinha.
+ *
+ * A distinção correta não é de assunto, é de RELEVÂNCIA: 'marco' e 'normal'
+ * são biografia e ocupam o ano; 'textura' é rotina de fundo e não ocupa.
+ * Receber salário não é um acontecimento da vida de alguém — é o pano de
+ * fundo contra o qual os acontecimentos aparecem.
+ *
+ * Compatibilidade: entrada sem `relevancia` (persistida antes da F3) cai na
+ * heurística antiga por categoria, então nenhuma vida salva muda de ritmo.
+ */
+function ocupaOAno(log: LifeLogEntry): boolean {
+  if (log.relevancia) return log.relevancia !== 'textura';
+  return !CATEGORIAS_NAO_ESTRUTURAIS.has(log.categoria);
+}
 
 /**
  * Ordem explícita do avanço anual:
@@ -104,7 +165,11 @@ export function executarPassagemDeAno(
   // cooldown/recorrência; opcional para não quebrar chamadas existentes
   // (nesse caso, o sorteio se comporta como se não houvesse ocorrência
   // anterior registrada com idade — ainda seguro, apenas menos preciso).
-  historicoOcorrenciasEventos: EventOccurrence[] = []
+  historicoOcorrenciasEventos: EventOccurrence[] = [],
+  // F3 — estado do Calendário da Vida. Opcional para não quebrar chamadas
+  // existentes (testes, simulações): ausência = calendário vazio, e nenhum
+  // marco é considerado cumprido, o que é o correto para uma vida nova.
+  calendarioAtual: EstadoCalendario = criarCalendarioInicial()
 ): AgingResult {
   const novaIdade = personagem.idade + 1;
   const novoAno = personagem.anoAtual + 1;
@@ -190,7 +255,8 @@ export function executarPassagemDeAno(
       ano: novoAno,
       categoria: 'morte',
       texto: `Você faleceu aos ${novaIdade} anos devido a ${checkMorte.causaMorte.toLowerCase()}.`,
-      tipo: 'negativo'
+      tipo: 'negativo',
+      relevancia: 'marco'
     });
 
     return {
@@ -204,9 +270,118 @@ export function executarPassagemDeAno(
       acontecimentoResolvido: null,
       ocorrencia: null,
       ritmo: ritmoSilencioso(novaIdade, 'morte no ano'),
+      calendario: calendarioAtual,
+      marcoDoAno: null,
       morreu: true,
       resumoMorte
     };
+  }
+
+  // -------------------------------------------------------------- CALENDÁRIO
+  //
+  // F3 — este bloco vem ANTES do ritmo e NÃO consulta aleatoriedade. É a
+  // diferença estrutural entre "este marco tem peso alto no sorteio" e "este
+  // marco vai acontecer".
+  //
+  // O que ele conserta, medido: `repeticao: 'marco'` só controlava repetição,
+  // então *A Primeira Palavra* disputava o sorteio ponderado com todo o resto
+  // da faixa e saía em 17% das vidas. Aqui não há disputa: há janela,
+  // condição e modo.
+  const instanteAgora = instanteDe(novaIdade);
+  const devidos = marcosDevidos(
+    calendarioAtual,
+    MARCOS_DE_VIDA,
+    novaIdade,
+    marco =>
+      avaliarCondicoesEstruturais(marco.condicao, char, car, edu, eco, fam, personalidade)
+  ).filter(
+    // Defesa em profundidade. O calendário é a memória primária de que um
+    // marco já aconteceu, mas ele não pode ser a ÚNICA: um save da v4 não
+    // tem calendário nenhum, e um chamador que esqueça de propagar o estado
+    // faria a pessoa dar os primeiros passos outra vez. O histórico de
+    // eventos disparados é a segunda testemunha, e já existia desde o
+    // B4-FIX2. Se qualquer uma das duas lembra, o marco não se repete.
+    marco => !historicoEventosDisparados.includes(marco.conteudoId)
+  );
+
+  // Um marco por ano, no máximo. Dois marcos garantidos no mesmo ano seriam
+  // dois modais seguidos — o que `idadeTipica` já distribui no catálogo, mas
+  // que precisa de uma trava também aqui: condições podem passar a valer
+  // tarde e empurrar dois marcos para a mesma virada. Os demais continuam
+  // pendentes e saem nos anos seguintes, enquanto a janela permitir.
+  const marcoDoAno = devidos[0] ?? null;
+
+  if (marcoDoAno) {
+    const conteudo = MASTER_EVENTS_LIST.find(e => e.id === marcoDoAno.conteudoId);
+
+    if (conteudo) {
+      const calendarioDepois = marcarMarcoCumprido(
+        calendarioAtual,
+        marcoDoAno.id,
+        instanteAgora
+      );
+      const ocorrenciaMarco: EventOccurrence = {
+        eventId: conteudo.id,
+        idade: novaIdade,
+        ano: novoAno,
+        categoria: conteudo.categoria,
+        natureza: marcoDoAno.temEscolha ? 'decisao' : 'acontecimento',
+        // A taxonomia é o que impede um marco biográfico de gastar o
+        // orçamento de decisão contextual da faixa seguinte.
+        taxonomia: classificacaoDoEvento(conteudo)
+      };
+
+      // MARCO COM ESCOLHA — sobe para a interface. O jogador participa da
+      // própria biografia. Não move personalidade: quem garante isso é
+      // `aplicarConsequenciasEscolha`, que consulta a taxonomia do evento
+      // (ver a Revisão 1 e `taxonomiaMovePersonalidade`).
+      if (marcoDoAno.temEscolha) {
+        return {
+          personagemAtualizado: char,
+          familiaAtualizada: fam,
+          educacaoAtualizada: edu,
+          carreiraAtualizada: car,
+          economiaAtualizada: eco,
+          novosLogs,
+          eventoDisparado: conteudo,
+          acontecimentoResolvido: null,
+          ocorrencia: ocorrenciaMarco,
+          ritmo: ritmoSilencioso(novaIdade, `marco com escolha: ${marcoDoAno.id}`),
+          calendario: calendarioDepois,
+          marcoDoAno,
+          morreu: false
+        };
+      }
+
+      // MARCO TESTEMUNHADO — acontece, é narrado, não pergunta nada.
+      // Primeiros passos são disso: um bebê de 1 ano não delibera sobre
+      // quando vai andar.
+      const desfechoMarco = sortearDesfecho(conteudo, char, eco, personalidade);
+      if (desfechoMarco) {
+        const resMarco = aplicarConsequenciasEscolha(
+          desfechoSemMarcaDeEscolha(desfechoMarco),
+          char, car, edu, eco, fam, novoAno,
+          undefined,
+          { categoriaLog: categoriaDeLogDoEvento(conteudo), relevancia: 'marco' }
+        );
+
+        return {
+          personagemAtualizado: resMarco.personagemAtualizado,
+          familiaAtualizada: resMarco.familiaAtualizada,
+          educacaoAtualizada: resMarco.educacaoAtualizada,
+          carreiraAtualizada: resMarco.carreiraAtualizada,
+          economiaAtualizada: resMarco.economiaAtualizada,
+          novosLogs: [...novosLogs, ...resMarco.novosLogs],
+          eventoDisparado: null,
+          acontecimentoResolvido: conteudo,
+          ocorrencia: ocorrenciaMarco,
+          ritmo: ritmoSilencioso(novaIdade, `marco testemunhado: ${marcoDoAno.id}`),
+          calendario: calendarioDepois,
+          marcoDoAno,
+          morreu: false
+        };
+      }
+    }
   }
 
   // ------------------------------------------------------------------ RITMO
@@ -215,15 +390,33 @@ export function executarPassagemDeAno(
   // que entregou "você se formou" e "você foi contratado" já contou a
   // própria história — interromper com um evento sorteado em cima disso é
   // ruído, não conteúdo.
-  const densidadeEstrutural = novosLogs.filter(
-    log => !CATEGORIAS_NAO_ESTRUTURAIS.has(log.categoria)
-  ).length;
+  const densidadeEstrutural = novosLogs.filter(ocupaOAno).length;
 
   const ritmo = definirPulsoDoAno({
     idade: novaIdade,
     historico: historicoDeRitmo(historicoOcorrenciasEventos),
     densidadeEstrutural
   });
+
+  /**
+   * F3 passo 7 — a última coisa que o ano tenta, e só quando ele terminaria
+   * em branco.
+   *
+   * Depois do passo 3, 14% dos anos adultos ficaram completamente sem linha:
+   * a rotina parou (com razão) de ocupar o ano, mas nada tomou o lugar dela
+   * como registro. Esta função preenche esse vazio com uma frase derivada do
+   * estado real — e só isso. Se não houver nada verdadeiro a dizer, devolve
+   * os logs como estavam e o ano segue em silêncio, que continua permitido.
+   */
+  const comPequenaMemoria = (logs: LifeLogEntry[]): LifeLogEntry[] => {
+    const memoria = gerarPequenaMemoria(
+      { personagem: char, carreira: car, educacao: edu, economia: eco, familia: fam },
+      logs,
+      novaIdade,
+      novoAno
+    );
+    return memoria ? [...logs, memoria] : logs;
+  };
 
   const estadoBase = {
     personagemAtualizado: char,
@@ -232,19 +425,31 @@ export function executarPassagemDeAno(
     carreiraAtualizada: car,
     economiaAtualizada: eco,
     ritmo,
+    // Nenhum marco coube neste ponto do ano: o calendário atravessa
+    // inalterado. Ele faz parte do estado base para que TODA saída o
+    // devolva — esquecer de propagá-lo numa saída seria perder a memória
+    // de marcos cumpridos naquela virada.
+    calendario: calendarioAtual,
+    marcoDoAno: null as MarcoDeVida | null,
     morreu: false as boolean
   };
 
   // ---------------------------------------------------------- Ano tranquilo
   //
-  // Silêncio é silêncio: nenhum log, nenhum modal, nenhuma linha de
-  // preenchimento. O texto "Um ano sem grandes acontecimentos" que existia
-  // aqui até o B4-FIX3 interrompia o jogador exatamente para dizer que nada
-  // merecia interrompê-lo.
+  // Silêncio continua sendo silêncio: nenhum modal, nenhum acontecimento
+  // sorteado, nenhuma decisão. O texto genérico "Um ano sem grandes
+  // acontecimentos" que existia aqui até o B4-FIX3 interrompia o jogador
+  // exatamente para dizer que nada merecia interrompê-lo, e não voltou.
+  //
+  // F3 — o que pode acontecer aqui é uma PEQUENA MEMÓRIA: uma linha discreta
+  // derivada do estado real (cidade, trabalho, filhos, dívida), e somente se
+  // o ano fosse terminar sem nenhuma linha. Ela não é sorteada de uma lista
+  // de frases, não abre modal, não move nada, e não existe quando o estado
+  // não tem nada verdadeiro a dizer.
   if (ritmo.pulso === 'silencio') {
     return {
       ...estadoBase,
-      novosLogs,
+      novosLogs: comPequenaMemoria(novosLogs),
       eventoDisparado: null,
       acontecimentoResolvido: null,
       ocorrencia: null
@@ -270,7 +475,8 @@ export function executarPassagemDeAno(
           idade: novaIdade,
           ano: novoAno,
           categoria: decisao.categoria,
-          natureza: 'decisao'
+          natureza: 'decisao',
+          taxonomia: classificacaoDoEvento(decisao)
         }
       };
     }
@@ -290,7 +496,7 @@ export function executarPassagemDeAno(
   if (!acontecimento) {
     return {
       ...estadoBase,
-      novosLogs,
+      novosLogs: comPequenaMemoria(novosLogs),
       eventoDisparado: null,
       acontecimentoResolvido: null,
       ocorrencia: null
@@ -303,7 +509,7 @@ export function executarPassagemDeAno(
     // simplesmente não se aplica. Nada é narrado e nada é registrado.
     return {
       ...estadoBase,
-      novosLogs,
+      novosLogs: comPequenaMemoria(novosLogs),
       eventoDisparado: null,
       acontecimentoResolvido: null,
       ocorrencia: null
@@ -327,7 +533,8 @@ export function executarPassagemDeAno(
     idade: novaIdade,
     ano: novoAno,
     categoria: acontecimento.categoria,
-    natureza: 'acontecimento'
+    natureza: 'acontecimento',
+    taxonomia: classificacaoDoEvento(acontecimento)
   };
 
   if (res.morreu) {
@@ -358,6 +565,8 @@ export function executarPassagemDeAno(
       acontecimentoResolvido: acontecimento,
       ocorrencia,
       ritmo,
+      calendario: calendarioAtual,
+      marcoDoAno: null,
       morreu: true,
       resumoMorte: construirResumoMorte(
         res.personagemAtualizado,
@@ -381,6 +590,8 @@ export function executarPassagemDeAno(
     acontecimentoResolvido: acontecimento,
     ocorrencia,
     ritmo,
+    calendario: calendarioAtual,
+    marcoDoAno: null,
     morreu: false
   };
 }

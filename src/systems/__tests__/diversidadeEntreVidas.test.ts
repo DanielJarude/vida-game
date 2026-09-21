@@ -22,6 +22,8 @@ import { aplicarConsequenciasEscolha } from '../eventSystem';
 import { resolverPoliticaRepeticao, cooldownEfetivo } from '../events/repetitionPolicy';
 import { criarEstadoTeste } from './fixtures';
 import { criarPersonalidadeInicial } from '../personalitySystem';
+import { criarCalendarioInicial } from '../calendario/tipos';
+import { ehConteudoDeMarco } from '../../data/calendario/marcosDeVida';
 import type { EventOccurrence, GameEvent, PersonalityState } from '../../types';
 
 function mulberry32(seed: number) {
@@ -37,6 +39,18 @@ function mulberry32(seed: number) {
 
 interface ResultadoVida {
   acontecimentos: EventOccurrence[];
+  /**
+   * F3 — só o que veio do SORTEIO, sem o conteúdo conduzido pelo Calendário
+   * da Vida.
+   *
+   * É sobre esta lista que a diversidade deve ser medida. Os marcos são
+   * deliberadamente iguais em todas as vidas: toda pessoa dá os primeiros
+   * passos e diz a primeira palavra, e essa universalidade é a correção que
+   * a F3 entrega, não um defeito a detectar. Medir variedade incluindo-os
+   * responderia "as vidas começam parecidas?" com um "sim" que não diz nada
+   * sobre o pool aleatório — que é o que este arquivo nasceu para vigiar.
+   */
+  sorteados: EventOccurrence[];
   faltasDeCooldown: { eventId: string; idadeAnterior: number; idadeAtual: number; minimo: number }[];
   repeticoesUnicoOuMarco: string[];
   repeticoesConsecutivas: { eventId: string; idade: number }[];
@@ -57,6 +71,11 @@ function simularVida(seed: number, idadeFinal: number): ResultadoVida {
   let historicoOcorrencias: EventOccurrence[] = [];
   const contextos: string[] = [];
 
+  // F3 — o Calendário da Vida é estado da vida e precisa atravessar os anos
+  // como qualquer outro. Sem propagá-lo, cada ano recomeçaria com um
+  // calendário vazio e os marcos já cumpridos voltariam a vencer.
+  let calendario = criarCalendarioInicial();
+
   const faltasDeCooldown: ResultadoVida['faltasDeCooldown'] = [];
   const repeticoesUnicoOuMarco: string[] = [];
   const repeticoesConsecutivas: ResultadoVida['repeticoesConsecutivas'] = [];
@@ -70,9 +89,11 @@ function simularVida(seed: number, idadeFinal: number): ResultadoVida {
       economia,
       historicoDisparados,
       personalidade,
-      historicoOcorrencias
+      historicoOcorrencias,
+      calendario
     );
 
+    calendario = resultado.calendario;
     personagem = resultado.personagemAtualizado;
     familia = resultado.familiaAtualizada;
     educacao = resultado.educacaoAtualizada;
@@ -166,6 +187,7 @@ function simularVida(seed: number, idadeFinal: number): ResultadoVida {
 
   return {
     acontecimentos: historicoOcorrencias,
+    sorteados: historicoOcorrencias.filter(o => !ehConteudoDeMarco(o.eventId)),
     faltasDeCooldown,
     repeticoesUnicoOuMarco,
     repeticoesConsecutivas,
@@ -198,7 +220,7 @@ describe('B4-FIX3 · diversidade entre 60 vidas simuladas (0→17 anos)', () => 
   });
 
   it('a sequência dos primeiros 3 acontecimentos NÃO é a mesma em todas as vidas (bug do playtest corrigido)', () => {
-    const primeiros3 = resultados.map(r => r.acontecimentos.slice(0, 3).map(a => a.eventId).join('>'));
+    const primeiros3 = resultados.map(r => r.sorteados.slice(0, 3).map(a => a.eventId).join('>'));
     const distintos = new Set(primeiros3);
     // Antes da expansão de conteúdo, era comum a sequência
     // "Primeiros Passos > Casa dos Avós > Macarronada" dominar quase
@@ -218,7 +240,7 @@ describe('B4-FIX3 · diversidade entre 60 vidas simuladas (0→17 anos)', () => 
   });
 
   it('a sequência dos primeiros 5 acontecimentos tem diversidade real', () => {
-    const primeiros5 = resultados.map(r => r.acontecimentos.slice(0, 5).map(a => a.eventId).join('>'));
+    const primeiros5 = resultados.map(r => r.sorteados.slice(0, 5).map(a => a.eventId).join('>'));
     const distintos = new Set(primeiros5);
     // Com 5 acontecimentos o espaço de combinações já é grande o
     // suficiente para esperar bem mais variedade que só 3.
@@ -226,7 +248,7 @@ describe('B4-FIX3 · diversidade entre 60 vidas simuladas (0→17 anos)', () => 
   });
 
   it('quantas sequências (3 primeiros) são idênticas — reportado, não um bug em si se pequeno', () => {
-    const primeiros3 = resultados.map(r => r.acontecimentos.slice(0, 3).map(a => a.eventId).join('>'));
+    const primeiros3 = resultados.map(r => r.sorteados.slice(0, 3).map(a => a.eventId).join('>'));
     const contagem = new Map<string, number>();
     for (const seq of primeiros3) contagem.set(seq, (contagem.get(seq) ?? 0) + 1);
     const duplicadas = [...contagem.values()].filter(c => c > 1).reduce((s, c) => s + c, 0);
@@ -239,7 +261,7 @@ describe('B4-FIX3 · diversidade entre 60 vidas simuladas (0→17 anos)', () => 
   it('evento mais frequente por idade não é sempre o mesmo id em todas as vidas', () => {
     const porIdade = new Map<number, Map<string, number>>();
     for (const r of resultados) {
-      for (const a of r.acontecimentos) {
+      for (const a of r.sorteados) {
         if (!porIdade.has(a.idade)) porIdade.set(a.idade, new Map());
         const mapa = porIdade.get(a.idade)!;
         mapa.set(a.eventId, (mapa.get(a.eventId) ?? 0) + 1);

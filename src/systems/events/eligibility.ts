@@ -21,6 +21,7 @@ import {
 import { atendeCondicoesComportamentais } from '../personalitySystem';
 import { getLifeStage } from '../../utils/formatters';
 import { eventoDisponivelPorRepeticao } from './repetitionPolicy';
+import { ehConteudoDeMarco } from '../../data/calendario/marcosDeVida';
 
 export function avaliarCondicoesEvento(
   evento: GameEvent,
@@ -38,13 +39,54 @@ export function avaliarCondicoesEvento(
     return false;
   }
 
+  // F3 — conteúdo conduzido pelo Calendário da Vida sai do sorteio.
+  //
+  // Sem esta linha, *A Primeira Palavra* teria dois caminhos até o jogador:
+  // a janela do calendário (garantida) e o sorteio da faixa etária (sorte).
+  // Duas fontes para o mesmo fato é como um marco "único" acaba narrado duas
+  // vezes. O calendário é a única porta desse conteúdo; o sorteio cuida de
+  // todo o resto — que continua sendo a maior parte do catálogo.
+  if (ehConteudoDeMarco(evento.id)) return false;
+
   // B4-FIX2 — política de repetição (unica/marco/cooldown/recorrente),
   // não apenas o antigo `unico`.
   if (!eventoDisponivelPorRepeticao(evento, personagem.idade, historicoDisparados, historicoOcorrencias)) {
     return false;
   }
 
-  const cond = evento.condicoes;
+  return avaliarCondicoesEstruturais(
+    evento.condicoes,
+    personagem,
+    carreira,
+    educacao,
+    economia,
+    familia,
+    personalidade
+  );
+}
+
+/**
+ * Avalia só o bloco `condicoes`, sem idade nem política de repetição.
+ *
+ * Extraído de `avaliarCondicoesEvento` na F3 porque o Calendário da Vida
+ * precisa fazer exatamente esta pergunta — "a trajetória desta pessoa criou
+ * a condição para este marco existir?" — sobre um `MarcoDeVida`, que não é
+ * um `GameEvent` e não tem janela de sorteio nem histórico de repetição.
+ *
+ * A alternativa seria o calendário reimplementar a avaliação de condições, e
+ * aí passariam a existir duas verdades sobre o que significa `emEscola` —
+ * exatamente o tipo de duplicação que as Fases 1 e 2 evitaram centralizando
+ * regra. Aqui há uma implementação só, usada pelos dois.
+ */
+export function avaliarCondicoesEstruturais(
+  cond: GameEvent['condicoes'],
+  personagem: Character,
+  carreira: CareerState,
+  educacao: EducationState,
+  economia: EconomyState,
+  familia: FamilyMember[],
+  personalidade?: PersonalityState
+): boolean {
   if (!cond) return true;
 
   if (cond.genero && cond.genero !== personagem.genero) return false;

@@ -14,6 +14,7 @@ import {
   tomDoDesfecho
 } from '../happenings';
 import { naturezaDoEvento, exigeAcontecimentoPorIdade, IDADE_SEM_DECISAO_CONSCIENTE } from '../nature';
+import { classificacaoDoEvento } from '../taxonomia';
 import { executarPassagemDeAno } from '../../agingSystem';
 import { criarEstadoTeste } from '../../__tests__/fixtures';
 import { criarPersonalidadeInicial } from '../../personalitySystem';
@@ -131,7 +132,23 @@ describe('B4-FIX4 · um acontecimento nunca caracteriza quem não escolheu', () 
       const r = executarPassagemDeAno(p, f, e, c, eco, disparados, personalidade, ocorrencias);
       p = r.personagemAtualizado; f = r.familiaAtualizada; e = r.educacaoAtualizada;
       c = r.carreiraAtualizada; eco = r.economiaAtualizada;
-      expect(r.eventoDisparado, `um bebê de ${p.idade} ano(s) recebeu uma pergunta`).toBeNull();
+      // F3 — o que esta linha protege continua valendo, mas ficou mais
+      // preciso. A promessa nunca foi "nada aparece na tela antes dos 3
+      // anos"; foi "nada CARACTERIZA um bebê que não deliberou". O Calendário
+      // da Vida introduziu a escolha biográfica (`bb_primeira_palavra`, janela
+      // 1-2): o jogador escolhe qual foi a primeira palavra, e isso é do
+      // jogador, não do bebê — por isso não move traço nenhum, como as duas
+      // asserções ao fim deste teste continuam exigindo.
+      //
+      // Então: um bebê pode receber um marco biográfico, e não pode receber
+      // uma decisão comportamental. É a mesma regra do catálogo em
+      // `taxonomiaCatalogo.test.ts`, verificada aqui no motor real.
+      if (r.eventoDisparado) {
+        expect(
+          classificacaoDoEvento(r.eventoDisparado),
+          `um bebê de ${p.idade} ano(s) recebeu "${r.eventoDisparado.id}" como deliberação`
+        ).toBe('escolha_biografica');
+      }
       if (r.acontecimentoResolvido) acontecimentosVividos++;
       if (r.ocorrencia) {
         disparados = [...disparados, r.ocorrencia.eventId];

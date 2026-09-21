@@ -13,6 +13,7 @@ import {
   PersonalityState,
   RelevanciaLog
 } from '../types';
+import { taxonomiaMovePersonalidade } from '../types';
 import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
 import { clamp, generateId } from '../utils/random';
 import { normalizarHiddenStats, normalizarStats } from './attributeSystem';
@@ -22,6 +23,7 @@ import { avaliarCondicoesEvento as avaliarCondicoesEventoImpl } from './events/e
 import { sortearPonderadoComContexto } from './events/selection';
 import { ponderarPorContexto } from './events/contextWeighting';
 import { naturezaDoEvento } from './events/nature';
+import { classificacaoDoEvento } from './events/taxonomia';
 import { tomDoDesfecho } from './events/happenings';
 import { avaliarRequisitoOpcao as avaliarRequisitoOpcaoImpl } from './events/optionRequirements';
 
@@ -298,7 +300,8 @@ export function aplicarConsequenciasEscolha(
       ano: anoAtual,
       categoria: 'carreira',
       texto: `Você foi demitido(a) do cargo de ${cargoAnterior}.`,
-      tipo: 'negativo'
+      tipo: 'negativo',
+      relevancia: 'marco'
     });
   }
 
@@ -331,12 +334,29 @@ export function aplicarConsequenciasEscolha(
   // texto narrativo acima (nunca dados técnicos da memória).
   let personalidadeAtualizada: PersonalityState | undefined;
   if (contextoPersonalidade) {
+    // F3 / Revisão 1 — a classificação do conteúdo decide se esta escolha
+    // caracteriza a pessoa. Escolher a primeira palavra é biográfico: é do
+    // jogador, é memorável, e não diz nada sobre quem a pessoa é. Tentar ler
+    // caráter numa escolha dessas é como deduzir a personalidade de alguém
+    // pelo nome que os pais lhe deram.
+    //
+    // A trava fica AQUI, no único ponto por onde toda escolha passa, e não
+    // na boa vontade de cada entrada do catálogo. Um autor que esqueça de
+    // limpar `impactosComportamentais` de um marco biográfico não consegue
+    // mover traço nenhum: o motor recusa antes de olhar as tags.
+    const evento = MASTER_EVENTS_LIST.find(e => e.id === contextoPersonalidade.eventoId);
+    const podeMover = evento ? taxonomiaMovePersonalidade(classificacaoDoEvento(evento)) : true;
+
     personalidadeAtualizada = registrarEscolha(contextoPersonalidade.personalidade, {
       eventoId: contextoPersonalidade.eventoId,
       opcaoId: opcao.id,
       idade: personagem.idade,
       ano: anoAtual,
-      tagsComportamentais: cons.impactosComportamentais
+      // A escolha continua sendo REGISTRADA na memória mesmo quando não move
+      // traço: `escolheuAnteriormente` precisa dela para dar continuidade
+      // narrativa (é assim que `inf_bullying_defesa` se lembra). O que a
+      // taxonomia governa é só o movimento dos traços.
+      tagsComportamentais: podeMover ? cons.impactosComportamentais : undefined
     }).personalidade;
   }
 

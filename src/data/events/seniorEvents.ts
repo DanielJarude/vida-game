@@ -9,6 +9,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
     idadeMaxima: 72,
     categoria: 'trabalho',
     peso: 90,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -43,11 +44,12 @@ export const SENIOR_EVENTS: GameEvent[] = [
     idadeMaxima: 88,
     categoria: 'cotidiano',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_dancar_forro',
-        texto: 'Tirar o sapato de dança do armário e forrozear a noite toda',
+        texto: '',
         descricaoResultado: 'Você foi a sensação da pista! Seus passos de dança arrancaram aplausos de todos os presentes.',
         consequencias: {
           stats: { felicidade: 22, saude: 5, aparencia: 5 },
@@ -56,7 +58,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_jogar_dominio',
-        texto: 'Ficar na mesa jogando dominó e contando histórias de antigamente',
+        texto: '',
         descricaoResultado: 'Você deu muitas risadas relembrando causos da juventude.',
         consequencias: {
           stats: { felicidade: 15 },
@@ -73,11 +75,12 @@ export const SENIOR_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'cotidiano',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_viajar_excursao',
-        texto: 'Embarcar na excursão e aproveitar a hidromassagem',
+        texto: '',
         descricaoResultado: 'As águas minerais fizeram maravilhas para suas articulações e sua alma voltou renovada!',
         consequencias: {
           stats: { saude: 12, felicidade: 20 },
@@ -87,7 +90,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_ficar_plantinhas',
-        texto: 'Preferir ficar em casa cuidando da horta e das plantas',
+        texto: '',
         descricaoResultado: 'Suas orquídeas floresceram de forma deslumbrante no jardim.',
         consequencias: {
           stats: { felicidade: 10 },
@@ -104,6 +107,7 @@ export const SENIOR_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'familia',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {

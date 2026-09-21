@@ -9,6 +9,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'romance',
     peso: 80,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: {
       temParceiro: true
@@ -16,7 +17,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_restaurante_especial',
-        texto: 'Reservar um restaurante charmoso com vinho e sobremesa especial',
+        texto: '',
         descricaoResultado: 'A noite foi mágica e apaixonada! A cumplicidade entre vocês se fortaleceu ainda mais.',
         consequencias: {
           stats: { felicidade: 25 },
@@ -27,7 +28,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_cozinhar_em_casa',
-        texto: 'Cozinhar um prato caprichado em casa e colocar música ambiente',
+        texto: '',
         descricaoResultado: 'O jantar caseiro foi íntimo, delicioso e cheio de risadas carinhosas.',
         consequencias: {
           stats: { felicidade: 20 },
@@ -46,6 +47,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'romance',
     peso: 70,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: {
       temParceiro: true
@@ -53,7 +55,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
     opcoes: [
       {
         id: 'opt_conversar_calmo',
-        texto: 'Sentar para conversar com calma e alinhar a rotina juntos',
+        texto: '',
         descricaoResultado: 'Vocês se entenderam, riram da situação e criaram uma rotina justa para os dois.',
         consequencias: {
           stats: { felicidade: 10 },
@@ -63,7 +65,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_bater_boca',
-        texto: 'Reclamar em tom áspero e jogar coisas do passado na conversa',
+        texto: '',
         descricaoResultado: 'Ficaram sem se falar o fim de semana inteiro em um silêncio pesado.',
         consequencias: {
           stats: { felicidade: -15 },
@@ -81,6 +83,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
     idadeMaxima: 70,
     categoria: 'romance',
     peso: 85,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       temParceiro: true
     },

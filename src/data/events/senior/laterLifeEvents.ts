@@ -32,6 +32,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 92,
     categoria: 'saude',
     peso: 55,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 4 },
     opcoes: [
@@ -49,7 +50,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
         id: 'opt_caminhada_sozinho',
         texto: '',
         peso: 2,
-        descricaoResultado: 'Você preferiu ir sozinho, com o rádio no ouvido. Uma hora por dia em que ninguém precisa de nada de você.',
+        descricaoResultado: 'A caminhada seguiu solitária, com o rádio no ouvido. Uma hora por dia em que ninguém precisa de nada de você.',
         consequencias: {
           stats: { saude: 6, felicidade: 6 },
           hiddenStats: { condicionamentoFisico: 6, estresse: -8 }
@@ -65,6 +66,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 92,
     categoria: 'familia',
     peso: 50,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 5 },
     opcoes: [
@@ -100,6 +102,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 98,
     categoria: 'amizade',
     peso: 48,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 6 },
     opcoes: [
@@ -133,6 +136,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'saude',
     peso: 50,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 5 },
     opcoes: [
@@ -167,6 +171,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'tecnologia',
     peso: 45,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 4 },
     opcoes: [
@@ -201,6 +206,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 92,
     categoria: 'cotidiano',
     peso: 42,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
     opcoes: [
@@ -235,6 +241,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'cotidiano',
     peso: 48,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     condicoes: { empregado: false },
     repeticao: { tipo: 'cooldown', cooldownAnos: 8 },
@@ -269,6 +276,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'comunidade',
     peso: 42,
+    taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 8 },
     opcoes: [
       {
@@ -301,6 +309,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'familia',
     peso: 40,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 10 },
     opcoes: [
@@ -335,6 +344,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'cotidiano',
     peso: 40,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 5 },
     opcoes: [

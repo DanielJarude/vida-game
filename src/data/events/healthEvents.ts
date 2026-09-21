@@ -17,6 +17,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'saude',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_avisar_responsavel',
@@ -75,6 +76,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'saude',
     peso: 75,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_pilates_alongamento',
@@ -107,11 +109,12 @@ export const HEALTH_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'saude',
     peso: 75,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_correr_5k',
-        texto: 'Calçar o tênis, correr 5 km e tomar água de coco gelada na saída',
+        texto: '',
         descricaoResultado: 'A endorfina tomou conta do seu corpo e você se sentiu com disposição infinita!',
         consequencias: {
           stats: { saude: 12, felicidade: 18 },
@@ -121,7 +124,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_pastel_feira',
-        texto: 'Fazer uma caminhada leve e parar na feira para comer pastel com caldo de cana',
+        texto: '',
         descricaoResultado: 'Uma verdadeira iguaria da cultura brasileira! A alma ficou feliz da vida!',
         consequencias: {
           stats: { felicidade: 20, saude: 2 },

@@ -10,6 +10,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'escola',
     peso: 75,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_resolver_logica',
@@ -48,12 +49,13 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 14,
     categoria: 'familia',
     peso: 60,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
         id: 'opt_ceder_revezar',
-        texto: 'Propor um revezamento justo de 30 minutos para cada um',
+        texto: '',
         descricaoResultado: 'A diplomacia venceu! Vocês dois assistiram e acabaram comendo pipoca juntos.',
         consequencias: {
           stats: { felicidade: 10 },
@@ -63,7 +65,7 @@ export const MORE_EVENTS: GameEvent[] = [
       },
       {
         id: 'opt_gritar_mae',
-        texto: 'Gritar chamando sua mãe para resolver',
+        texto: '',
         descricaoResultado: 'Sua mãe desligou a TV e mandou os dois limparem o quarto.',
         consequencias: {
           stats: { felicidade: -8 },
@@ -81,6 +83,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'familia',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_levar_veterinario',
@@ -115,6 +118,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 25,
     categoria: 'escola',
     peso: 85,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       emFaculdade: true
     },
@@ -149,6 +153,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 55,
     categoria: 'trabalho',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_inscrever_estudar_edital',
@@ -183,6 +188,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 35,
     categoria: 'trabalho',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     unico: true,
     opcoes: [
       {
@@ -218,6 +224,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 75,
     categoria: 'dinheiro',
     peso: 75,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       empregado: true
     },
@@ -254,6 +261,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 60,
     categoria: 'amizade',
     peso: 70,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_aceitar_honrado',
@@ -285,6 +293,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'dinheiro',
     peso: 60,
+    taxonomia: 'decisao_comportamental',
     condicoes: {
       dinheiroMinimo: 15000
     },
@@ -319,6 +328,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 68,
     categoria: 'cotidiano',
     peso: 65,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_doar_sangue',
@@ -349,17 +359,30 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 45,
     categoria: 'familia',
     peso: 80,
+    taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     // B4-FIX2 — o playtest confirmou este evento repetindo em anos
     // seguidos (a simulação forense mostrou até 5 ocorrências na mesma
     // vida). Visitar os avós pode acontecer várias vezes na vida — não é
     // 'unica' — mas precisa de um intervalo mínimo para não parecer bug.
     repeticao: { tipo: 'cooldown', cooldownAnos: 4 },
+    // F3 — reescrito. Era o caso mais grave da auditoria semântica: com 62
+    // ocorrências (o 2º evento mais frequente do jogo), o motor sorteava
+    // "Ficar no celular enquanto eles conversam" e gravava na biografia que
+    // a pessoa perdeu a chance de estar presente. Ninguém escolheu isso — o
+    // dado escolheu, e a Linha da Vida atribuía desinteresse pela família a
+    // um jogador que nunca foi consultado.
+    //
+    // Não virou decisão: visitar os avós acontece dezenas de vezes numa
+    // vida, e transformar cada visita num modal seria trocar um defeito por
+    // outro. Os desfechos foram reescritos como OBSERVAÇÕES da tarde — o que
+    // aconteceu, não o que a pessoa quis. A tarde varia; o caráter dela não
+    // é julgado. Mecânica preservada, incluindo os pesos relativos.
     opcoes: [
       {
         id: 'opt_ouvir_historias',
-        texto: 'Comer dois pedaços de bolo e ouvir com carinho as histórias de antigamente',
-        descricaoResultado: 'Foi uma tarde de paz profunda e muito carinho que ficará gravada para sempre no seu coração.',
+        texto: '',
+        descricaoResultado: 'A tarde rendeu dois pedaços de bolo e as histórias de antigamente de sempre — aquelas que ficam.',
         consequencias: {
           stats: { felicidade: 25, saude: 5 },
           relacionamentoDelta: { delta: 25 },
@@ -367,9 +390,9 @@ export const MORE_EVENTS: GameEvent[] = [
         }
       },
       {
-        id: 'opt_ficar_no_celular',
-        texto: 'Ficar no celular enquanto eles conversam',
-        descricaoResultado: 'Você respondeu mensagens, mas perdeu a chance de estar verdadeiramente presente.',
+        id: 'opt_tarde_corrida',
+        texto: '',
+        descricaoResultado: 'Foi uma visita curta: o café mal esfriou e já era hora de ir embora.',
         consequencias: {
           stats: { felicidade: 2 },
           relacionamentoDelta: { delta: -5 },
@@ -385,6 +408,7 @@ export const MORE_EVENTS: GameEvent[] = [
     idadeMaxima: 95,
     categoria: 'familia',
     peso: 80,
+    taxonomia: 'decisao_comportamental',
     opcoes: [
       {
         id: 'opt_conselho_acolhedor',
