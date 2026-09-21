@@ -170,3 +170,121 @@ npm run build       sucesso
    não como um log.
 4. Confirmar que um ano com formatura ou emprego novo **não** abre um evento
    sorteado por cima.
+
+---
+
+# Avatar 2.0 — retrato vetorial editorial
+
+## Objetivo
+
+Trocar o "rosto" anterior — uma elipse com círculos — por um retrato que
+pareça uma pessoa, preservando integralmente o schema, a persistência e as
+opções já existentes.
+
+## Diagnóstico
+
+| Elemento | Antes |
+| --- | --- |
+| Rosto | uma `<ellipse>` |
+| Orelhas | dois `<circle>` |
+| Olhos | dois `<circle>` da cor escolhida |
+| Sobrancelhas | dois arcos de traço fino |
+| Nariz | **não existia** |
+| Boca | um arco de círculo (sorriso de desenho infantil) |
+| Pescoço e ombros | **não existiam** — uma cabeça flutuando |
+| Implantação do cabelo | **não existia** — o cabelo começava no topo do crânio |
+| Cabelo cacheado | `a6 6 0 1 1` × 6 — seis arcos circulares de raio idêntico: bolinhas coladas |
+| Envelhecimento | trocar a cor do cabelo aos 65 e duas ruguinhas |
+
+## O que foi implementado
+
+### Arquitetura (`src/presentation/avatar/`)
+
+| Módulo | Responsabilidade |
+| --- | --- |
+| `faceProportions.ts` | O rosto descrito por MEDIDAS, com seis quadros-chave etários interpolados ano a ano |
+| `facePaths.ts` | Geometria: silhueta com mandíbula, orelha com hélice, olho amendoado, nariz sugerido, boca com lábios, busto, marcas de idade |
+| `hairPaths.ts` | Cabelo com implantação real, gerador de volume por silhueta contínua, barba |
+| `avatarRenderer.ts` | Monta a especificação completa (puro, testável) |
+| `AvatarFace.tsx` | Só a ordem de pintura — nenhuma decisão de desenho |
+
+### O cacheado
+
+A silhueta é gerada amostrando a elipse do crânio com raio variável por
+amostra e controles empurrados para FORA entre as amostras — os lóbulos se
+fundem numa massa única em vez de ficarem tangentes como moedas. Somam-se
+traços em S internos: é a combinação de contorno irregular com movimento
+interno que lê como cacho. Um teste permanente falha se um comando de arco
+(`A`/`a`) voltar a aparecer na silhueta.
+
+### Envelhecimento contínuo
+
+Proporções interpoladas (nenhuma medida pula mais de 1 unidade em 100 por
+aniversário — verificado em teste) mais marcas em faixas próprias: sulcos
+nasogenianos a partir de 38, pés de galinha e olheiras a partir de 50,
+linhas de testa a partir de 58 (uma terceira aos 70), recuo gradual da
+implantação a partir de 55, grisalho aos 65.
+
+### Barba e NPCs
+
+- `AparenciaAvatar.barba` (opcional): bigode, cavanhaque, barba cheia,
+  seguindo a mandíbula real. Só renderiza a partir dos 16.
+- `derivarAparenciaDeSemente(id)`: rosto determinístico a partir do id
+  estável do NPC. Toda a família e todo NPC persistente ganham rosto
+  próprio, igual entre sessões, **sem um byte de persistência nova e sem
+  migração**.
+
+## Validação visual — feita de verdade
+
+Diferente das etapas anteriores, esta teve inspeção visual real: o
+`AvatarFace` foi renderizado em servidor para uma folha de contato
+(`src/__visual__/gerarAvatares.test.tsx`) e capturado em navegador via
+Playwright. A folha está em `docs/references/avatar-2.0.png`.
+
+Três rodadas de correção saíram dessa inspeção, e nenhuma delas teria sido
+detectada por teste automatizado:
+
+1. **O bebê não parecia bebê** — as proporções mudavam pouco demais.
+   Corrigido: crânio muito mais largo, queixo arredondado em vez de
+   afunilado, olhos maiores, cabelo ralo sem costeleta.
+2. **Os "ombros" pareciam um monte marrom** — a forma era um domo no rodapé
+   e a cor derivava do tom de pele (a camisa mudava de cor conforme a
+   pele). Corrigido: trapézio com gola e cor neutra fixa.
+3. **Todo retrato nascia emburrado** — os cantos da boca ficavam abaixo do
+   centro. Corrigido: cantos levemente acima.
+4. **As orelhas viraram abas retangulares escuras** — borda interna reta e
+   cor destacada. Corrigido: hélice com borda curva, cor do próprio rosto,
+   encaixada mais para dentro do crânio.
+
+## Preservado
+
+Schema de `AparenciaAvatar` (as quatro escolhas originais), persistência,
+normalização defensiva, catálogo de opções, `AvatarEditor`, integração com
+`PersonAvatar`, regra de envelhecimento do cabelo, e todos os campos que o
+renderer anterior exportava (`corPele`, `corCabelo`, `corOlhos`, `cabelo`,
+`escalaRosto`, `mostrarRugas`, `simplificado`).
+
+## Testes
+
+`presentation/avatar/__tests__/retrato.test.ts` — 25 testes:
+integridade geométrica (todo path desenhável em 20 idades × 6 cabelos × 4
+barbas; nenhum `NaN` silencioso), proporção que realmente envelhece,
+continuidade sem degraus, o cacheado sem arcos, implantação que deixa a
+testa à mostra, barba por idade, rostos de NPC determinísticos e variados.
+
+## Resultados
+
+```
+npm test        680 testes / 42 arquivos — todos verdes
+npm run typecheck   sem erros
+npm run build       sucesso
+```
+
+## Limitações
+
+- **Acessórios (óculos, brincos) não foram implementados** — a arquitetura
+  está pronta (tudo se posiciona pelas medidas do rosto), mas entregar mal
+  seria pior que não entregar.
+- O coque ainda lê pequeno; o traço do nariz tem uma leve curvatura de
+  gancho; a borda entre pescoço e ombro é visível de perto.
+- Não há variação de expressão: todo retrato é neutro.

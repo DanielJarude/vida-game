@@ -29,12 +29,20 @@ export type CorCabelo = 'preto' | 'castanho' | 'castanho_claro' | 'loiro' | 'rui
 
 export type CorOlhos = 'castanho' | 'preto' | 'verde' | 'azul' | 'mel';
 
+/**
+ * Avatar 2.0 — pelo facial. Opcional no schema: saves anteriores
+ * simplesmente não têm o campo e são normalizados para 'nenhuma'.
+ */
+export type EstiloBarba = 'nenhuma' | 'bigode' | 'cavanhaque' | 'cheia';
+
 /** Preferência cosmética salva junto do save — nunca lida por sistemas de jogo. */
 export interface AparenciaAvatar {
   tomPele: TomPele;
   estiloCabelo: EstiloCabelo;
   corCabelo: CorCabelo;
   corOlhos: CorOlhos;
+  /** Avatar 2.0 — ausente equivale a 'nenhuma' (compatibilidade de save). */
+  barba?: EstiloBarba;
 }
 
 export const TONS_PELE: { id: TomPele; rotulo: string; hex: string }[] = [
@@ -65,6 +73,13 @@ export const ESTILOS_CABELO: { id: EstiloCabelo; rotulo: string }[] = [
   { id: 'coque', rotulo: 'Coque' }
 ];
 
+export const ESTILOS_BARBA: { id: EstiloBarba; rotulo: string }[] = [
+  { id: 'nenhuma', rotulo: 'Sem barba' },
+  { id: 'bigode', rotulo: 'Bigode' },
+  { id: 'cavanhaque', rotulo: 'Cavanhaque' },
+  { id: 'cheia', rotulo: 'Barba cheia' }
+];
+
 export const CORES_OLHOS: { id: CorOlhos; rotulo: string; hex: string }[] = [
   { id: 'castanho', rotulo: 'Castanho', hex: '#5b3a22' },
   { id: 'preto', rotulo: 'Preto', hex: '#241f1c' },
@@ -78,7 +93,8 @@ export const APARENCIA_PADRAO: AparenciaAvatar = {
   tomPele: 'media',
   estiloCabelo: 'curto',
   corCabelo: 'castanho',
-  corOlhos: 'castanho'
+  corOlhos: 'castanho',
+  barba: 'nenhuma'
 };
 
 export function corHexTomPele(tom: TomPele): string {
@@ -126,5 +142,90 @@ export function normalizarAparencia(bruto: unknown): AparenciaAvatar {
     ? (obj.corOlhos as CorOlhos)
     : APARENCIA_PADRAO.corOlhos;
 
-  return { tomPele, estiloCabelo, corCabelo, corOlhos };
+  // Avatar 2.0 — campo novo: save anterior não tem, e 'nenhuma' é o valor
+  // que reproduz exatamente a aparência que a pessoa já tinha.
+  const barba = ESTILOS_BARBA.some(b => b.id === obj.barba)
+    ? (obj.barba as EstiloBarba)
+    : 'nenhuma';
+
+  return { tomPele, estiloCabelo, corCabelo, corOlhos, barba };
+}
+
+/* ========================================================================== */
+/*                       CORES DERIVADAS (sombra e luz)                       */
+/* ========================================================================== */
+
+function comoRgb(hex: string): [number, number, number] {
+  const limpo = hex.replace('#', '');
+  const cheio = limpo.length === 3 ? limpo.split('').map(c => c + c).join('') : limpo;
+  return [
+    parseInt(cheio.slice(0, 2), 16),
+    parseInt(cheio.slice(2, 4), 16),
+    parseInt(cheio.slice(4, 6), 16)
+  ];
+}
+
+function comoHex(rgb: [number, number, number]): string {
+  return '#' + rgb.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Mistura uma cor com preto ou branco.
+ *
+ * Avatar 2.0 usa isto para derivar sombra e luz do PRÓPRIO tom de pele
+ * escolhido, em vez de sobrepor um preto translúcido fixo. A diferença é
+ * concreta: preto translúcido acinzenta peles escuras e some em peles
+ * claras; misturar mantém a temperatura da cor em todos os tons.
+ */
+export function escurecer(hex: string, intensidade: number): string {
+  const [r, g, b] = comoRgb(hex);
+  const f = 1 - Math.max(0, Math.min(1, intensidade));
+  return comoHex([r * f, g * f, b * f]);
+}
+
+export function clarear(hex: string, intensidade: number): string {
+  const [r, g, b] = comoRgb(hex);
+  const f = Math.max(0, Math.min(1, intensidade));
+  return comoHex([r + (255 - r) * f, g + (255 - g) * f, b + (255 - b) * f]);
+}
+
+/* ========================================================================== */
+/*                        APARÊNCIA DERIVADA (NPCs)                           */
+/* ========================================================================== */
+
+/** Hash estável e pequeno — mesma semente, sempre a mesma aparência. */
+function embaralhar(semente: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < semente.length; i++) {
+    h ^= semente.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Aparência determinística a partir de uma semente (normalmente o id
+ * estável do NPC).
+ *
+ * Avatar 2.0 — até aqui só o personagem do jogador tinha rosto; toda a
+ * família e todo NPC caíam no ícone genérico por fase de vida, o que faz
+ * as pessoas ao redor parecerem linhas numa lista. Derivando a aparência
+ * do id, cada pessoa da vida ganha um rosto próprio, estável entre sessões
+ * e entre recarregamentos do save, sem custar um byte de persistência e
+ * sem exigir migração.
+ *
+ * Continua puramente cosmético: nada aqui é lido por nenhuma regra.
+ */
+export function derivarAparenciaDeSemente(semente: string): AparenciaAvatar {
+  const h = embaralhar(semente);
+  const escolher = <T,>(itens: readonly T[], deslocamento: number): T =>
+    itens[(h >>> deslocamento) % itens.length];
+
+  return {
+    tomPele: escolher(TONS_PELE, 0).id,
+    estiloCabelo: escolher(ESTILOS_CABELO, 5).id,
+    corCabelo: escolher(CORES_CABELO, 11).id,
+    corOlhos: escolher(CORES_OLHOS, 17).id,
+    barba: 'nenhuma'
+  };
 }

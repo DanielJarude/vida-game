@@ -80,7 +80,17 @@ describe('B4-FIX2 · dados do avatar personalizável', () => {
         corCabelo: 'ruivo' as const,
         corOlhos: 'verde' as const
       };
-      expect(normalizarAparencia(valida)).toEqual(valida);
+      // Avatar 2.0 — `barba` é campo novo e OPCIONAL. Uma aparência
+      // anterior a ele continua válida e nada dela é alterado; o campo é
+      // apenas completado com 'nenhuma', que é exatamente a aparência que
+      // a pessoa já tinha.
+      expect(normalizarAparencia(valida)).toEqual({ ...valida, barba: 'nenhuma' });
+    });
+
+    it('barba é preservada quando declarada, e vira "nenhuma" quando inválida ou ausente', () => {
+      expect(normalizarAparencia({ ...APARENCIA_PADRAO, barba: 'cheia' }).barba).toBe('cheia');
+      expect(normalizarAparencia({ ...APARENCIA_PADRAO, barba: 'costeleta_gigante' }).barba).toBe('nenhuma');
+      expect(normalizarAparencia({}).barba).toBe('nenhuma');
     });
 
     it('aceita "grisalho" para corCabelo mesmo fora do catálogo de criação', () => {

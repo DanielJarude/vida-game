@@ -41,7 +41,8 @@ describe('B4-FIX2 · persistência da aparência do avatar', () => {
       tomPele: 'escura' as const,
       estiloCabelo: 'coque' as const,
       corCabelo: 'loiro' as const,
-      corOlhos: 'mel' as const
+      corOlhos: 'mel' as const,
+      barba: 'nenhuma' as const
     };
     const personagemComAparencia = { ...estado.personagem, aparencia: aparenciaEscolhida };
 

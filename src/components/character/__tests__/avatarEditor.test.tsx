@@ -69,7 +69,10 @@ describe('B4-FIX2 · aparência escolhida chega ao motor na criação da vida', 
       tomPele: 'negra',
       estiloCabelo: 'cacheado',
       corCabelo: 'ruivo',
-      corOlhos: 'azul'
+      corOlhos: 'azul',
+      // Avatar 2.0 — a tela passou a enviar também o pelo facial; sem
+      // escolha explícita, 'nenhuma'.
+      barba: 'nenhuma'
     });
   });
 
