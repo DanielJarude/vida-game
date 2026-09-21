@@ -174,6 +174,46 @@ describe('B4-FIX4 · o jogo não pergunta todo ano', () => {
   });
 });
 
+describe('B4-FIX4 · a vida acontece mais do que pergunta — no motor real', () => {
+  it('em toda vida simulada, acontecimentos superam decisões', () => {
+    // A frase de abertura do VIDA, medida ponta a ponta. Diferente do
+    // teste da camada de ritmo (que mede a REGRA), este passa pelo motor
+    // inteiro e portanto também falha se faltar CONTEÚDO de acontecimento:
+    // um ano que o ritmo destina a narrar e não encontra nada para narrar
+    // vira silêncio, e a proporção desaba sem que nenhum parâmetro tenha
+    // mudado.
+    for (const semente of SEMENTES) {
+      const anos = simularAnos(semente, 80);
+      const decisoes = anos.filter(a => a.abriuModalDeEvento).length;
+      const acontecimentos = anos.filter(
+        a => !a.abriuModalDeEvento && a.pulso !== 'silencio' && a.logs.length > 0
+      ).length;
+      expect(
+        acontecimentos,
+        `semente ${semente}: ${decisoes} decisões contra ${acontecimentos} acontecimentos`
+      ).toBeGreaterThanOrEqual(decisoes);
+    }
+  });
+
+  it('nenhuma década adulta fica sem nada acontecendo por falta de conteúdo', () => {
+    // Guarda contra o buraco de acervo que a simulação encontrou: entre 20
+    // e 79 anos havia 15 acontecimentos elegíveis contra 23 decisões, e
+    // décadas inteiras passavam com um único acontecimento narrado.
+    for (const semente of SEMENTES) {
+      const anos = simularAnos(semente, 80);
+      for (let decada = 20; decada < 70; decada += 10) {
+        const naDecada = anos.filter(a => a.idade >= decada && a.idade < decada + 10);
+        if (naDecada.length < 10) continue; // a pessoa morreu antes
+        const vividos = naDecada.filter(a => a.pulso !== 'silencio').length;
+        expect(
+          vividos,
+          `semente ${semente}, década dos ${decada}: só ${vividos} anos com algo`
+        ).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+});
+
 describe('B4-FIX4 · um ano que já tem história não é interrompido', () => {
   it('quando o próprio ano produziu 2+ acontecimentos estruturais, nada é sorteado por cima', () => {
     for (const semente of SEMENTES) {

@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   definirPulsoDoAno,
   ehAberturaDeFase,
+  FATIA_MAXIMA_DE_DECISAO,
   historicoDeRitmo,
   obterFaixaDeRitmo,
   SATURACAO_ESTRUTURAL,
@@ -72,6 +73,18 @@ describe('B4-FIX4 · ritmo da vida — autonomia por idade', () => {
     }
   });
 
+  it('em NENHUMA idade a decisão é a maioria do conteúdo interativo', () => {
+    // A tradução mecânica de "às vezes você decide". A primeira versão
+    // desta camada dava 0,85 ao adulto — e a simulação mediu três decisões
+    // por acontecimento na vida adulta, ou seja, o VIDA perguntava muito
+    // mais do que narrava. Autonomia plena é sobre PODER deliberar, não
+    // sobre a vida virar uma sequência de encruzilhadas.
+    for (let idade = 0; idade <= 95; idade++) {
+      const chance = definirPulsoDoAno(ctx({ idade }), sempre(0)).chanceDeSerDecisao;
+      expect(chance, `idade ${idade}`).toBeLessThanOrEqual(FATIA_MAXIMA_DE_DECISAO);
+    }
+  });
+
   it('a partir dos 3 anos a decisão passa a ser possível, e cresce com a idade', () => {
     const chance = (idade: number) =>
       definirPulsoDoAno(ctx({ idade }), sempre(0)).chanceDeSerDecisao;
@@ -80,16 +93,25 @@ describe('B4-FIX4 · ritmo da vida — autonomia por idade', () => {
     expect(chance(8)).toBeGreaterThan(chance(4));
     expect(chance(13)).toBeGreaterThan(chance(8));
     expect(chance(16)).toBeGreaterThan(chance(13));
-    expect(chance(25)).toBeGreaterThan(chance(16));
+    expect(chance(25)).toBeGreaterThanOrEqual(chance(16));
   });
 
-  it('crianças pequenas recebem majoritariamente acontecimentos; adultos, majoritariamente decisões', () => {
-    const bebe = distribuir(1);
-    expect(bebe.decisao).toBe(0);
-    expect(bebe.acontecimento).toBeGreaterThan(0);
+  it('em toda idade a vida ACONTECE mais do que pergunta', () => {
+    // O teste original afirmava o contrário para adultos ("adultos,
+    // majoritariamente decisões") — era a expectativa errada, escrita
+    // junto com o parâmetro errado. Em nenhuma fase o jogo deve perguntar
+    // mais do que narrar; é a frase de abertura do produto virada regra.
+    for (const idade of [1, 4, 9, 13, 16, 22, 35, 50, 68, 80]) {
+      const d = distribuir(idade);
+      expect(
+        d.acontecimento,
+        `aos ${idade} anos o jogo pergunta mais do que narra (${d.decisao} decisões x ${d.acontecimento} acontecimentos)`
+      ).toBeGreaterThanOrEqual(d.decisao);
+    }
 
-    const adulto = distribuir(35);
-    expect(adulto.decisao).toBeGreaterThan(adulto.acontecimento);
+    // E a faixa de bebê continua sendo 100% acontecimento.
+    expect(distribuir(1).decisao).toBe(0);
+    expect(distribuir(1).acontecimento).toBeGreaterThan(0);
   });
 });
 

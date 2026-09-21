@@ -20,8 +20,12 @@
  *
  * Quatro forças decidem o pulso, e nenhuma delas é uma porcentagem global:
  *
- *  1. AUTONOMIA POR IDADE — quanto do conteúdo interativo pode ser decisão.
- *     Um bebê não decide nada (0%); um adulto decide quase tudo (85%).
+ *  1. FATIA DE DECISÃO POR IDADE — quanto do conteúdo interativo é
+ *     encruzilhada. Um bebê não decide nada (0%); e mesmo um adulto, com
+ *     autonomia plena, nunca passa de metade — decisão é minoria do que
+ *     acontece em qualquer idade. Ver a nota longa em `PerfilDeRitmo`:
+ *     tratar "autonomia plena" como "pergunta quase sempre" foi o erro da
+ *     primeira versão desta camada, e o que o fez virar questionário adulto.
  *  2. DENSIDADE ESTRUTURAL DO ANO — quantos acontecimentos o próprio motor
  *     (educação, carreira, família, economia) já produziu neste ano. Um ano
  *     que já entregou "você se formou" não precisa de interrupção extra.
@@ -91,8 +95,9 @@ export interface DiagnosticoRitmo {
 
 /**
  * As faixas de ritmo NÃO são as mesmas de `LifeStage`: elas recortam a vida
- * por AUTONOMIA e por densidade de acontecimentos, não por rótulo social.
- * 12-14 e 15-17 são a mesma adolescência, mas têm autonomia bem diferente.
+ * por capacidade de deliberar e por densidade de acontecimentos, não por
+ * rótulo social. 12-14 e 15-17 são a mesma adolescência, mas a autonomia
+ * de uma pessoa de 13 e de uma de 17 não é a mesma.
  */
 export type FaixaDeRitmo =
   | 'bebe'          // 0-2
@@ -107,8 +112,34 @@ export type FaixaDeRitmo =
 interface PerfilDeRitmo {
   /** Chance-base de o ano ter algo interativo, antes de qualquer modulação. */
   densidadeBase: number;
-  /** Fatia do conteúdo interativo que pode ser DECISÃO nesta faixa. */
-  autonomia: number;
+  /**
+   * Fatia do conteúdo interativo que é DECISÃO nesta faixa.
+   *
+   * CORREÇÃO importante sobre a primeira versão desta camada: o campo se
+   * chamava `autonomia` e a faixa adulta valia 0,85, porque "adulto tem
+   * autonomia plena". Isso confundia duas coisas diferentes:
+   *
+   *   1. a pessoa É CAPAZ de deliberar? (capacidade por idade)
+   *   2. com que frequência a vida COLOCA uma encruzilhada na frente dela?
+   *
+   * A primeira é uma regra de coerência etária e continua absoluta — um
+   * bebê tem 0 e nada muda isso. A segunda é desenho de ritmo, e 0,85
+   * respondia a pergunta errada: um adulto ter autonomia plena sobre as
+   * decisões que enfrenta não significa que 85% dos anos notáveis dele
+   * sejam encruzilhadas.
+   *
+   * A simulação de 40 vidas media, por década adulta, 3,0 decisões contra
+   * 1,0 acontecimento — o VIDA perguntava três vezes mais do que narrava,
+   * exatamente o oposto de "a vida acontece, às vezes você decide". Note
+   * que ampliar o acervo adulto de 15 para 35 acontecimentos NÃO mexeu
+   * nessa proporção: a natureza do ano é decidida antes de o conteúdo ser
+   * consultado. Era parâmetro, não conteúdo.
+   *
+   * Nenhuma faixa passa de 0,5: decisão é minoria do que acontece em
+   * qualquer idade. O que a idade governa é o quanto dessa minoria existe
+   * — e o teto por janela, logo abaixo.
+   */
+  fatiaDeDecisao: number;
   /** Teto duro de decisões dentro da janela móvel. */
   tetoDecisoes: number;
   /** Anos da janela móvel usada para o teto e para a fadiga de decisão. */
@@ -118,12 +149,14 @@ interface PerfilDeRitmo {
 /**
  * Autonomia por idade, literal e auditável:
  *
- *  0-2   nenhuma decisão consciente  → autonomia 0, teto 0
- *  3-5   poucas decisões simples     → autonomia baixa, no máximo 1 por 5 anos
- *  6-11  escola, amigos, interesses  → autonomia média
+ *  0-2   nenhuma decisão consciente  → fatia 0, teto 0
+ *  3-5   poucas decisões simples     → fatia baixa, no máximo 1 por 5 anos
+ *  6-11  escola, amigos, interesses  → fatia média
  *  12-14 autonomia social crescente
  *  15-17 preparação para a vida adulta
- *  18+   autonomia adulta
+ *  18+   autonomia adulta plena — o que muda depois dos 18 é o TETO por
+ *        janela e a densidade, não a promessa de que a vida vira um
+ *        questionário. A fatia de decisão nunca passa de metade.
  *
  * A densidade base cai na vida adulta estável e sobe de novo levemente na
  * juventude e na velhice — não porque "idoso tem mais eventos", mas porque
@@ -131,15 +164,22 @@ interface PerfilDeRitmo {
  * adulto de 45 anos empregado é, honestamente, rotina.
  */
 const PERFIS: Record<FaixaDeRitmo, PerfilDeRitmo> = {
-  bebe:         { densidadeBase: 0.50, autonomia: 0.00, tetoDecisoes: 0, janela: 4 },
-  primeira:     { densidadeBase: 0.52, autonomia: 0.20, tetoDecisoes: 1, janela: 5 },
-  infancia:     { densidadeBase: 0.55, autonomia: 0.45, tetoDecisoes: 2, janela: 4 },
-  adolescencia: { densidadeBase: 0.60, autonomia: 0.60, tetoDecisoes: 2, janela: 4 },
-  juventude:    { densidadeBase: 0.62, autonomia: 0.75, tetoDecisoes: 2, janela: 3 },
-  jovem_adulto: { densidadeBase: 0.58, autonomia: 0.85, tetoDecisoes: 3, janela: 4 },
-  adulto:       { densidadeBase: 0.45, autonomia: 0.85, tetoDecisoes: 3, janela: 4 },
-  madureza:     { densidadeBase: 0.48, autonomia: 0.80, tetoDecisoes: 3, janela: 4 }
+  bebe:         { densidadeBase: 0.50, fatiaDeDecisao: 0.00, tetoDecisoes: 0, janela: 4 },
+  primeira:     { densidadeBase: 0.52, fatiaDeDecisao: 0.15, tetoDecisoes: 1, janela: 5 },
+  infancia:     { densidadeBase: 0.55, fatiaDeDecisao: 0.30, tetoDecisoes: 2, janela: 4 },
+  adolescencia: { densidadeBase: 0.60, fatiaDeDecisao: 0.40, tetoDecisoes: 2, janela: 4 },
+  juventude:    { densidadeBase: 0.62, fatiaDeDecisao: 0.48, tetoDecisoes: 2, janela: 3 },
+  jovem_adulto: { densidadeBase: 0.58, fatiaDeDecisao: 0.50, tetoDecisoes: 3, janela: 4 },
+  adulto:       { densidadeBase: 0.45, fatiaDeDecisao: 0.46, tetoDecisoes: 3, janela: 4 },
+  madureza:     { densidadeBase: 0.48, fatiaDeDecisao: 0.40, tetoDecisoes: 3, janela: 4 }
 };
+
+/**
+ * Nenhuma faixa pode transformar a vida num questionário. Verificado em
+ * teste: decisão é, no máximo, metade do conteúdo interativo — em qualquer
+ * idade. É a tradução mecânica de "às vezes você decide".
+ */
+export const FATIA_MAXIMA_DE_DECISAO = 0.5;
 
 export function obterFaixaDeRitmo(idade: number): FaixaDeRitmo {
   if (idade <= 2) return 'bebe';
@@ -289,8 +329,8 @@ export function definirPulsoDoAno(
   }
 
   // -------------------------------------------- 3. Acontecimento ou decisão?
-  let chanceDecisao = perfil.autonomia;
-  const razoesDecisao: string[] = [`autonomia ${faixa}`];
+  let chanceDecisao = perfil.fatiaDeDecisao;
+  const razoesDecisao: string[] = [`fatia de decisão ${faixa}`];
 
   // Decisão no ano imediatamente anterior espaça a próxima — é o que evita
   // a sensação de interrogatório anual sem precisar de teto artificial.

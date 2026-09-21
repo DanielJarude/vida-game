@@ -70,11 +70,33 @@ describe('B4-FIX3 · coerência estrutural do catálogo de eventos', () => {
     ).toEqual([]);
   });
 
-  it('opções dentro do mesmo evento têm texto distinto entre si (não são a mesma escolha duplicada)', () => {
+  it('numa DECISÃO, cada opção tem um texto próprio e não-vazio', () => {
+    // Em decisão, `texto` é o que o jogador lê no botão: precisa existir e
+    // precisa distinguir uma escolha da outra.
     for (const evento of MASTER_EVENTS_LIST) {
+      if (naturezaDoEvento(evento) !== 'decisao') continue;
       const textos = evento.opcoes.map(o => o.texto.trim().toLowerCase());
-      const unicos = new Set(textos);
-      expect(unicos.size, `evento ${evento.id} tem opções com texto idêntico`).toBe(textos.length);
+      for (const texto of textos) {
+        expect(texto.length, `evento ${evento.id} tem opção sem texto`).toBeGreaterThan(0);
+      }
+      expect(new Set(textos).size, `evento ${evento.id} tem opções com texto idêntico`).toBe(
+        textos.length
+      );
+    }
+  });
+
+  it('num ACONTECIMENTO, cada desfecho tem uma narração própria', () => {
+    // Em acontecimento o `texto` nunca é exibido (não há botão), então a
+    // verificação de duplicidade muda de campo: o que o jogador lê é
+    // `descricaoResultado`, e dois desfechos com a mesma narração seriam
+    // dois desfechos que o jogador não consegue distinguir.
+    for (const evento of MASTER_EVENTS_LIST) {
+      if (naturezaDoEvento(evento) !== 'acontecimento') continue;
+      const narracoes = evento.opcoes.map(o => (o.descricaoResultado ?? '').trim().toLowerCase());
+      expect(
+        new Set(narracoes).size,
+        `evento ${evento.id} tem desfechos com narração idêntica`
+      ).toBe(narracoes.length);
     }
   });
 

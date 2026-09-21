@@ -425,3 +425,131 @@ sete larguras.
 - Não há tema claro nem alternância.
 - A faixa 1181–1366px empilha a lateral como rodapé; funciona, mas a
   composição de tablet em paisagem merece um olhar humano.
+
+---
+
+# A vida adulta acontece — conteúdo e correção de ritmo
+
+## Objetivo
+
+Fazer a vida adulta cumprir a frase de abertura do VIDA. Esta etapa começou
+com uma medição, não com uma intenção.
+
+## Diagnóstico — medido em 40 vidas de 0 a 80 anos
+
+| Década | Decisões | Acontecimentos | Anos em silêncio | Ids distintos vistos |
+| --- | --- | --- | --- | --- |
+| 0-9 | 1,1 | 3,3 | 4,5 | 35 |
+| 10-19 | 2,7 | 2,0 | 5,2 | 44 |
+| 20-29 | 3,0 | 1,3 | 5,7 | **24** |
+| 30-39 | 2,9 | 1,1 | 6,0 | **23** |
+| 40-49 | 3,0 | 1,1 | 6,0 | **22** |
+| 50-59 | 3,0 | 1,1 | 5,8 | **21** |
+| 60-69 | 2,7 | 1,2 | 5,5 | 23 |
+| 70-79 | 1,4 | 1,0 | 4,1 | 19 |
+
+Dois problemas distintos, e eu diagnostiquei o segundo errado de início:
+
+1. **Pobreza de variedade adulta.** 21-24 identificadores distintos por
+   década, em 40 vidas, contra 35-44 na infância. Isso É acervo: a faixa
+   20-79 tinha 12-15 acontecimentos elegíveis.
+2. **Inversão da proporção.** ~3 decisões para 1 acontecimento em toda a
+   vida adulta — o oposto de "a vida acontece, às vezes você decide".
+
+## A correção que não funcionou, e o que ela ensinou
+
+Ampliei o acervo adulto primeiro, supondo que a inversão viesse da falta de
+material. A variedade subiu (21-24 → 33-41 ids distintos por década), e **a
+proporção não mudou nada**: continuou 2,8 decisões contra 1,0.
+
+O motivo é estrutural: a camada de ritmo decide a natureza do ano **antes**
+de consultar o conteúdo. A proporção era parâmetro, não acervo.
+
+## A causa real: um erro de modelagem meu, no B4-FIX4
+
+O perfil de ritmo tinha um campo chamado `autonomia`, e a faixa adulta valia
+**0,85** — com o raciocínio "adulto tem autonomia plena". Esse campo
+confundia duas perguntas diferentes:
+
+1. a pessoa **é capaz** de deliberar? (coerência etária)
+2. com que frequência a vida **coloca uma encruzilhada** na frente dela?
+   (desenho de ritmo)
+
+A primeira é absoluta e continua: um bebê é 0 e nada muda isso. A segunda
+é design — e 0,85 respondia à pergunta errada. Autonomia plena é sobre poder
+escolher quando se escolhe, não sobre a vida virar uma sequência de
+escolhas.
+
+O campo foi renomeado para `fatiaDeDecisao` e nenhuma faixa passa de 0,5,
+verificado em teste: **decisão é minoria do que acontece em qualquer idade.**
+
+## Resultado medido depois das duas correções
+
+| Década | Decisões | Acontecimentos | Anos em silêncio | Ids distintos |
+| --- | --- | --- | --- | --- |
+| 0-9 | 1,0 | 3,4 | 4,7 | 36 |
+| 10-19 | 1,7 | 3,0 | 5,2 | 44 |
+| 20-29 | 1,9 | 2,7 | 5,4 | 33 |
+| 30-39 | 1,9 | 2,1 | 6,0 | 39 |
+| 40-49 | 1,6 | 2,3 | 6,1 | 38 |
+| 50-59 | 1,6 | 2,1 | 6,2 | 41 |
+| 60-69 | 1,7 | 2,3 | 5,5 | 44 |
+| 70-79 | 0,9 | 1,6 | 4,0 | 34 |
+
+Em **todas** as décadas a vida agora acontece mais do que pergunta, e a
+variedade adulta ficou no mesmo patamar da infância.
+
+## Conteúdo novo — 32 eventos
+
+`data/events/adult/adultWorldEvents.ts` (22 eventos, 20-64 anos) e
+`data/events/senior/laterLifeEvents.ts` (10 eventos, 57-98 anos). Vinte e
+cinco são acontecimentos; sete são decisões reais.
+
+Brasil sem caricatura: boleto de condomínio, assembleia na garagem, feira de
+domingo, grupo da família no celular, apagão que enche a calçada, fila que
+consome a manhã, a obra do vizinho, o aplicativo do banco que mudou de novo.
+
+Dois princípios explícitos no conteúdo:
+
+- **Idade avançada não é uma coleção de penalidades.** O que muda é o
+  contexto: o que ocupa o dia, quem está por perto, o que o corpo pede. Há
+  tanto a perda de alguém da mesma geração quanto a caminhada das sete que
+  virou a melhor parte do dia.
+- **Saúde é experiência vivida, não diagnóstico.** "A escada ficou mais
+  comprida", "a letra miúda ficou difícil" — nunca o jogo narrando uma
+  consulta ou prescrevendo conduta.
+
+## Bugs corrigidos nas ferramentas de verificação
+
+| Onde | Problema |
+| --- | --- |
+| `diversidadeEntreVidas` | A simulação contava só `eventoDisparado`. Como acontecimentos são resolvidos pelo motor e chegam em `ocorrencia`, o teste media uma fatia cada vez menor da vida — e uma semente apareceu com "1 evento na vida inteira" tendo vivido uma dúzia |
+| `coerenciaCatalogo` | A regra "opções têm texto distinto" valia para tudo. Num acontecimento o `texto` não é exibido; o que precisa ser distinto é a narração do desfecho. A regra foi dividida por natureza |
+
+## Testes
+
+- `anosTranquilos`: +2 testes de ponta a ponta — acontecimentos superam
+  decisões em toda vida simulada, e nenhuma década adulta fica vazia por
+  falta de conteúdo (falha tanto por parâmetro quanto por acervo).
+- `lifeRhythm`: +1 teste de que nenhuma idade passa da metade em fatia de
+  decisão. O teste que afirmava "adultos, majoritariamente decisões" foi
+  invertido — era a expectativa errada, escrita junto com o parâmetro errado.
+- `coerenciaCatalogo`: a regra de texto distinto agora vale por natureza.
+
+## Resultados
+
+```
+npm test        699 testes / 43 arquivos — todos verdes
+npm run typecheck   sem erros
+npm run build       sucesso
+```
+
+## Limitações
+
+- O conteúdo novo **não foi lido em tela** evento a evento; foi validado
+  estruturalmente pela auditoria de catálogo e por simulação.
+- Faltam eventos ligados a **filhos adultos** e a **trajetórias de carreira
+  específicas** — o conteúdo adulto novo é, de propósito, transversal.
+- A simulação mostra 32 de 40 vidas morrendo antes dos 80. Não foi
+  investigado nesta etapa; fica registrado para a etapa de saúde e
+  envelhecimento.
