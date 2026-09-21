@@ -101,6 +101,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         descricaoResultado: 'Foi ela mesma, a pessoa que você secretamente admirava. O beijo foi inesquecível, e agora tudo entre vocês dois é diferente.',
         requisito: { flagNecessaria: 'tem_paixao_secreta' },
         consequencias: {
+          impactosComportamentais: { coragem: 2, sociabilidade: 1 },
           stats: { felicidade: 28, aparencia: 5 },
           hiddenStats: { sociabilidade: 15, reputacao: 10 },
           adicionarFlag: 'primeiro_beijo_inesquecivel',
@@ -112,6 +113,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         texto: 'Tomar a iniciativa e dar um beijo apaixonado',
         descricaoResultado: 'Foi incrível! Seu coração disparou e o momento foi inesquecível.',
         consequencias: {
+          impactosComportamentais: { coragem: 1, impulsividade: 1 },
           stats: { felicidade: 25, aparencia: 5 },
           hiddenStats: { sociabilidade: 15, reputacao: 10 },
           adicionarFlag: 'primeiro_beijo_inesquecivel'
@@ -122,6 +124,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         texto: 'Ficar muito envergonhado e disfarçar comendo salgadinho',
         descricaoResultado: 'O clima esfriou um pouco, mas vocês continuaram grandes amigos.',
         consequencias: {
+          impactosComportamentais: { sociabilidade: -1 },
           stats: { felicidade: 2 },
           hiddenStats: { sociabilidade: 2 }
         }
@@ -136,6 +139,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 15,
     categoria: 'familia',
     peso: 80,
+    natureza: 'acontecimento',
     // B4-FIX2 — o playtest encontrou "seus pais cumpriram a promessa e
     // compraram o celular" reaparecendo em outro ano, como se a promessa
     // nunca tivesse existido. Ganhar o primeiro celular é um marco
@@ -181,6 +185,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         texto: 'Fazer simulados todo fim de semana e focar na redação nota 1000',
         descricaoResultado: 'Seu empenho foi gigantesco! Você dominou o modelo de redação e os conteúdos do ENEM.',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { inteligencia: 20, felicidade: -5 },
           hiddenStats: { disciplina: 25, ambicao: 20, estresse: 15 },
           adicionarFlag: 'focou_enem'
@@ -191,6 +196,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         texto: 'Estudar moderadamente sem abrir mão dos amigos e do lazer',
         descricaoResultado: 'Você manteve a saúde mental equilibrada e conseguiu aprender o essencial.',
         consequencias: {
+          impactosComportamentais: { sociabilidade: 1 },
           stats: { inteligencia: 10, felicidade: 10 },
           hiddenStats: { disciplina: 10, sociabilidade: 10 }
         }
@@ -200,6 +206,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         texto: 'Deixar para estudar só na última semana antes da prova',
         descricaoResultado: 'O resultado foi desanimador e você sentiu que desperdiçou o ano letivo.',
         consequencias: {
+          impactosComportamentais: { disciplina: -2, impulsividade: 1 },
           stats: { inteligencia: -5, felicidade: -12 },
           hiddenStats: { disciplina: -20, estresse: 20 }
         }
@@ -226,6 +233,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         texto: 'Pagar as aulas e passar de primeira no exame prático de baliza',
         descricaoResultado: 'Parabéns! Você passou na baliza sem encostar no cone e recebeu sua Permissão para Dirigir!',
         consequencias: {
+          impactosComportamentais: { independencia: 2, disciplina: 1 },
           stats: { felicidade: 20 },
           dinheiro: -1800,
           hiddenStats: { disciplina: 10, reputacao: 10 },
@@ -237,6 +245,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         texto: 'Deixar para tirar a CNH mais para frente quando tiver mais dinheiro',
         descricaoResultado: 'Você economizou dinheiro e continuou usando transporte público e bicicleta.',
         consequencias: {
+          impactosComportamentais: { independencia: -1 },
           stats: { felicidade: 0 }
         }
       }
@@ -250,6 +259,7 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     idadeMaxima: 17,
     categoria: 'escola',
     peso: 90,
+    natureza: 'acontecimento',
     unico: true,
     opcoes: [
       {
@@ -275,7 +285,6 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 28, aparencia: 3 },
           hiddenStats: { sociabilidade: 22, reputacao: 20 },
-          impactosComportamentais: { sociabilidade: 2 }
         }
       },
       {

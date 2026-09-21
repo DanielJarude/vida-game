@@ -408,28 +408,31 @@ export function useGame() {
 
     // B4 — resumo do ano montado a partir dos logs que o motor acabou de
     // gerar. É apresentação derivada: não cria acontecimento nem altera estado.
-    setResumoAnual(
-      construirResumoAnual(
-        resultado.personagemAtualizado.idade,
-        resultado.personagemAtualizado.anoAtual,
-        resultado.novosLogs
-      )
+    //
+    // B4-FIX4 — um ano sem nada a relatar NÃO abre resumo. Antes disto o
+    // modal subia todo santo ano, e num ano silencioso ele existia apenas
+    // para dizer "Um ano sem grandes acontecimentos" — uma interrupção cujo
+    // único conteúdo era avisar que não havia conteúdo. Agora, quando o
+    // resumo sairia vazio, a passagem do tempo simplesmente continua.
+    const resumo = construirResumoAnual(
+      resultado.personagemAtualizado.idade,
+      resultado.personagemAtualizado.anoAtual,
+      resultado.novosLogs
     );
+    setResumoAnual(resumo.silencioso ? null : resumo);
+
+    // O histórico é alimentado pelo registro que o motor devolve — vale
+    // tanto para decisão quanto para acontecimento. Remontá-lo aqui a
+    // partir de `eventoDisparado` deixaria todo acontecimento fora do
+    // controle de repetição/cooldown.
+    if (resultado.ocorrencia) {
+      const ocorrencia = resultado.ocorrencia;
+      setHistoricoEventos(prev => [...prev, ocorrencia.eventId]);
+      setHistoricoOcorrencias(prev => [...prev, ocorrencia]);
+    }
 
     if (resultado.eventoDisparado) {
-      const idadeOcorrencia = resultado.personagemAtualizado.idade;
-      const anoOcorrencia = resultado.personagemAtualizado.anoAtual;
       setEventoAtivo(resultado.eventoDisparado);
-      setHistoricoEventos(prev => [...prev, resultado.eventoDisparado!.id]);
-      setHistoricoOcorrencias(prev => [
-        ...prev,
-        {
-          eventId: resultado.eventoDisparado!.id,
-          idade: idadeOcorrencia,
-          ano: anoOcorrencia,
-          categoria: resultado.eventoDisparado!.categoria
-        }
-      ]);
       sound.playEvent();
     }
   }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos, historicoOcorrencias, personalidade]);

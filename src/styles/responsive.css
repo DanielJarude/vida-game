@@ -193,6 +193,24 @@
     padding-right: var(--space-3);
   }
 
+  /* O +1 ANO ancorado "sangra" para fora da coluna com margem negativa
+     igual ao padding dela. Nesta faixa o padding caiu para --space-3, mas
+     a margem negativa continuava em --space-4: sobravam 8px de largura e
+     a página inteira ganhava 4px de rolagem horizontal em 320px — medido
+     no navegador, não estimado. */
+  .year-advance--docked {
+    margin-left: calc(-1 * var(--space-3));
+    margin-right: calc(-1 * var(--space-3));
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  /* A marca é clicável (volta ao início): precisa do alvo de toque
+     mínimo mesmo quando o texto encolhe. */
+  .shell-brand {
+    min-height: var(--touch-target);
+  }
+
   .shell-brand__word {
     font-size: 1.125rem;
     letter-spacing: 0.12em;

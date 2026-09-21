@@ -18,6 +18,7 @@ import {
   avaliarRequisitoOpcao
 } from '../eventSystem';
 import { MASTER_EVENTS_LIST } from '../../data/events/allEvents';
+import { naturezaDoEvento } from '../events/nature';
 import { criarEstadoTeste } from './fixtures';
 import { EscolhaRegistrada, GameEvent, PersonalityState, TracoComportamental } from '../../types';
 
@@ -323,12 +324,34 @@ describe('Coerência dos eventos e da taxonomia', () => {
     }
   });
 
-  it('eventos infantis marcados têm opções com tags coerentes (amostra auditada)', () => {
+  it('um ACONTECIMENTO nunca declara tag comportamental — quem não escolheu não é caracterizado', () => {
+    // B4-FIX4 — `inf_primeiros_passos` era a amostra auditada deste teste e
+    // premiava "coragem: 2" no bebê que correu atrás do brinquedo. Um bebê
+    // de 1-2 anos não escolhe ser corajoso: ele anda. Desde que o evento
+    // passou a ser acontecimento (a vida acontecendo, sem pergunta), a tag
+    // deixou de existir no conteúdo — e o motor, por garantia redundante,
+    // também a removeria antes de aplicar
+    // (`events/happenings.desfechoSemMarcaDeEscolha`).
+    //
+    // A verificação vale para o catálogo inteiro, não para uma amostra: é a
+    // regra que sustenta a personalidade emergente do VIDA.
+    const violacoes: string[] = [];
+    for (const evento of MASTER_EVENTS_LIST) {
+      if (naturezaDoEvento(evento) !== 'acontecimento') continue;
+      for (const opcao of evento.opcoes) {
+        if (opcao.consequencias.impactosComportamentais) {
+          violacoes.push(`${evento.id}/${opcao.id}`);
+        }
+      }
+    }
+    expect(violacoes, 'acontecimentos que atribuiriam traço a uma não-escolha').toEqual([]);
+
+    const primeirosPassos = MASTER_EVENTS_LIST.find(e => e.id === 'inf_primeiros_passos')!;
+    expect(naturezaDoEvento(primeirosPassos)).toBe('acontecimento');
+  });
+
+  it('eventos de DECISÃO infantis marcados têm opções com tags coerentes (amostra auditada)', () => {
     const esperados: Record<string, Record<string, Partial<Record<TracoComportamental, number>>>> = {
-      inf_primeiros_passos: {
-        opt_correr: { coragem: 2, sociabilidade: 1 },
-        opt_engatinhar: { coragem: -1, independencia: 1 }
-      },
       inf_birra_brinquedo: {
         opt_espernear: { impulsividade: 2, disciplina: -1 },
         opt_aceitar: { disciplina: 2 }

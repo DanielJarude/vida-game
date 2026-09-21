@@ -81,8 +81,20 @@ function simularVida(seed: number, idadeFinal: number): ResultadoVida {
 
     if (resultado.morreu) break;
 
-    if (resultado.eventoDisparado) {
-      const evento: GameEvent = resultado.eventoDisparado;
+    // B4-FIX4 — a diversidade que este arquivo mede é a do que a pessoa
+    // VIVEU, e a maior parte disso deixou de passar por `eventoDisparado`:
+    // acontecimentos são resolvidos pelo próprio motor e chegam aqui em
+    // `ocorrencia`. Ler só as decisões media uma fatia cada vez menor da
+    // vida — e foi o que fez uma semente aparecer com "1 evento na vida
+    // inteira" quando, de fato, ela tinha vivido uma dúzia.
+    //
+    // As checagens de repetição valem para as DUAS naturezas: cooldown e
+    // unicidade nunca dependeram de quem resolveu o evento.
+    const eventoDoAno: GameEvent | null =
+      resultado.eventoDisparado ?? resultado.acontecimentoResolvido;
+
+    if (eventoDoAno) {
+      const evento: GameEvent = eventoDoAno;
       const politica = resolverPoliticaRepeticao(evento);
       contextos.push(evento.categoria);
 
@@ -116,10 +128,19 @@ function simularVida(seed: number, idadeFinal: number): ResultadoVida {
       historicoDisparados = [...historicoDisparados, evento.id];
       historicoOcorrencias = [
         ...historicoOcorrencias,
-        { eventId: evento.id, idade: personagem.idade, ano: personagem.anoAtual, categoria: evento.categoria }
+        resultado.ocorrencia ?? {
+          eventId: evento.id,
+          idade: personagem.idade,
+          ano: personagem.anoAtual,
+          categoria: evento.categoria
+        }
       ];
 
-      const opcao = evento.opcoes.find(o => !o.requisito) ?? evento.opcoes[0];
+      // Só DECISÃO precisa de resposta: o acontecimento o motor já
+      // resolveu e já aplicou antes de devolver o resultado do ano.
+      const opcao = resultado.eventoDisparado
+        ? evento.opcoes.find(o => !o.requisito) ?? evento.opcoes[0]
+        : undefined;
       if (opcao) {
         const res = aplicarConsequenciasEscolha(
           opcao,

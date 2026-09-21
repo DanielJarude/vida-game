@@ -588,12 +588,25 @@ describe('B4 · resumo anual', () => {
     expect(screen.queryByText('Um dia comum.')).toBeNull();
   });
 
-  it('assume o silêncio quando o ano não teve acontecimentos relevantes', () => {
+  it('um ano sem acontecimentos relevantes é marcado como silencioso — e não vira modal', () => {
+    // B4-FIX4 — antes, o resumo anual subia TODO ano e, num ano silencioso,
+    // existia apenas para dizer "Um ano sem grandes acontecimentos. A vida
+    // seguiu seu curso." — uma interrupção cujo único conteúdo era avisar
+    // que não havia conteúdo. Agora o modelo marca o silêncio e quem decide
+    // não abrir o modal é a camada de comandos (`useGame.envelhecerAno`).
+    const resumo = construirResumoAnual(4, 2030, []);
+    expect(resumo.silencioso).toBe(true);
+    expect(resumo.itens).toEqual([]);
+  });
+
+  it('o resumo anual não inventa texto de preenchimento para ano vazio', () => {
+    // Blindagem de regressão: mesmo que alguém volte a renderizar o resumo
+    // com um ano vazio, ele não pode reintroduzir o texto de ano tranquilo.
     render(
       <AnnualSummary resumo={construirResumoAnual(4, 2030, [])} onFechar={() => {}} />
     );
-
-    expect(screen.getByText(/sem grandes acontecimentos/i)).toBeTruthy();
+    expect(screen.queryByText(/sem grandes acontecimentos/i)).toBeNull();
+    expect(screen.queryByText(/a vida seguiu seu curso/i)).toBeNull();
   });
 
   it('anuncia a idade alcançada', () => {

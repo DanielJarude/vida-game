@@ -95,14 +95,16 @@ function simularVidaComEstrategia(
 
     if (resultado.morreu) break;
 
+    // B4-FIX4 — acontecimentos resolvidos pelo motor também ocupam a vida:
+    // entram no histórico como qualquer outra ocorrência, para que cooldown,
+    // anti-dominação e fadiga de ritmo enxerguem a vida inteira.
+    if (resultado.ocorrencia) {
+      historicoDisparados = [...historicoDisparados, resultado.ocorrencia.eventId];
+      historicoOcorrencias = [...historicoOcorrencias, resultado.ocorrencia];
+    }
+
     if (resultado.eventoDisparado) {
       const evento = resultado.eventoDisparado;
-      historicoDisparados = [...historicoDisparados, evento.id];
-      historicoOcorrencias = [
-        ...historicoOcorrencias,
-        { eventId: evento.id, idade: personagem.idade, ano: personagem.anoAtual, categoria: evento.categoria }
-      ];
-
       const elegiveis = evento.opcoes.filter(
         o => avaliarRequisitoOpcao(o, personagem, economia, personalidade).aprovado
       );
@@ -130,7 +132,7 @@ function simularVidaComEstrategia(
 
 afterEach(resetarFonteAleatoria);
 
-describe('B4-FIX3 · personalidade entre múltiplas vidas (0→18 anos, estratégias diferentes)', () => {
+describe('B4-FIX3/B4-FIX4 · personalidade entre múltiplas vidas (0→18 e 0→40, estratégias diferentes)', () => {
   const ESTRATEGIAS: { nome: string; fn: Estrategia }[] = [
     { nome: 'prosocial', fn: ESTRATEGIA_PROSOCIAL },
     { nome: 'impulsiva', fn: ESTRATEGIA_IMPULSIVA },
@@ -139,11 +141,32 @@ describe('B4-FIX3 · personalidade entre múltiplas vidas (0→18 anos, estraté
   ];
   const SEEDS = [11, 22, 33, 44, 55, 66, 77, 88, 99, 111];
 
+  // Aos 18: a pergunta é "a personalidade já existe?" — e a resposta correta
+  // do VIDA é "às vezes, e tudo bem que não".
   const resultados = ESTRATEGIAS.flatMap(({ nome, fn }) =>
     SEEDS.map(seed => ({
       estrategia: nome,
       seed,
       personalidade: simularVidaComEstrategia(seed, 18, fn)
+    }))
+  );
+
+  // B4-FIX4 — as verificações de DISTRIBUIÇÃO (viés de eixo, diversidade,
+  // perfis contraditórios) mudaram de horizonte, de 18 para 40 anos.
+  //
+  // Não é para "fazer o teste passar": é porque a pergunta que elas fazem
+  // mudou de endereço. Com o ritmo real, uma vida chega aos 18 com ~4
+  // decisões, e medir "qual eixo domina" sobre 4 escolhas mede sorte de
+  // sorteio, não viés de conteúdo — que é o que este arquivo nasceu para
+  // detectar. Aos 40, com ~16 decisões vividas, a distribuição volta a ser
+  // uma medida honesta do catálogo. O risco original (o eixo "família"
+  // dominar porque o conteúdo estava concentrado em eventos familiares)
+  // continua sendo vigiado, agora onde ele é observável.
+  const resultadosVidaAdulta = ESTRATEGIAS.flatMap(({ nome, fn }) =>
+    SEEDS.map(seed => ({
+      estrategia: nome,
+      seed,
+      personalidade: simularVidaComEstrategia(seed, 40, fn)
     }))
   );
 
@@ -163,7 +186,7 @@ describe('B4-FIX3 · personalidade entre múltiplas vidas (0→18 anos, estraté
   it('a distribuição de traços percebidos NÃO é dominada por "familia" (Ligado à família)', () => {
     const contagemPorTraco = new Map<TracoComportamental, number>();
     let totalTracosPercebidos = 0;
-    for (const r of resultados) {
+    for (const r of resultadosVidaAdulta) {
       for (const t of obterTracosPercebidos(r.personalidade)) {
         contagemPorTraco.set(t.traco, (contagemPorTraco.get(t.traco) ?? 0) + 1);
         totalTracosPercebidos++;
@@ -186,7 +209,7 @@ describe('B4-FIX3 · personalidade entre múltiplas vidas (0→18 anos, estraté
 
   it('diversidade real de eixos: pelo menos 4 traços diferentes aparecem no conjunto simulado', () => {
     const tracosVistos = new Set<TracoComportamental>();
-    for (const r of resultados) {
+    for (const r of resultadosVidaAdulta) {
       for (const t of obterTracosPercebidos(r.personalidade)) tracosVistos.add(t.traco);
     }
     console.log('[personalidade] eixos distintos percebidos no total:', [...tracosVistos]);
@@ -196,7 +219,7 @@ describe('B4-FIX3 · personalidade entre múltiplas vidas (0→18 anos, estraté
   it('estratégias diferentes produzem PERFIS diferentes (o conteúdo permite personalidades distintas)', () => {
     // Agrega, por estratégia, quais traços apareceram com mais frequência.
     const porEstrategia = new Map<string, Map<TracoComportamental, number>>();
-    for (const r of resultados) {
+    for (const r of resultadosVidaAdulta) {
       if (!porEstrategia.has(r.estrategia)) porEstrategia.set(r.estrategia, new Map());
       const mapa = porEstrategia.get(r.estrategia)!;
       for (const t of obterTracosPercebidos(r.personalidade)) {
@@ -234,9 +257,9 @@ describe('B4-FIX3 · personalidade entre múltiplas vidas (0→18 anos, estraté
   it('perfis contraditórios continuam possíveis (uma vida pode ter traços "opostos" simultâneos)', () => {
     // Confirma que a combinação emergente (ex.: Sociável + Impulsivo)
     // continua sendo suportada pelo motor — sem arquétipos rígidos.
-    const comMultiplosTracos = resultados.filter(r => obterTracosPercebidos(r.personalidade).length >= 2);
+    const comMultiplosTracos = resultadosVidaAdulta.filter(r => obterTracosPercebidos(r.personalidade).length >= 2);
     console.log(
-      `[personalidade] vidas com 2+ traços percebidos simultâneos: ${comMultiplosTracos.length}/${resultados.length}`
+      `[personalidade] vidas com 2+ traços percebidos simultâneos: ${comMultiplosTracos.length}/${resultadosVidaAdulta.length}`
     );
     expect(comMultiplosTracos.length).toBeGreaterThan(0);
   });

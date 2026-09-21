@@ -1,4 +1,4 @@
-import { randomChoice } from './random';
+
 import { Character, FamilyMember, PostMortemSummary, VisibleStats } from '../types';
 import { getSocialClassLabel } from './formatters';
 
@@ -133,33 +133,13 @@ export function gerarResumoMorte(
   };
 }
 
-export function gerarTextoAnoTranquilo(idade: number): string {
-  const tranquilidadesInfancia = [
-    'Você passou o ano brincando, assistindo desenhos animados e crescendo com saúde.',
-    'Foi um ano calmo e seguro ao lado de sua família.',
-    'Você aprendeu novas brincadeiras e fez pequenas descobertas pelo bairro.'
-  ];
-
-  const tranquilidadesAdolescencia = [
-    'Você seguiu sua rotina escolar entre aulas, conversas no recreio e tarefas de casa.',
-    'O ano passou com tranquilidade, ouvindo suas músicas favoritas e convivendo com amigos.',
-    'Você aproveitou os fins de semana para descansar e recarregar as energias.'
-  ];
-
-  const tranquilidadesAdulta = [
-    'Você manteve sua rotina diária equilibrada, cuidando das responsabilidades com serenidade.',
-    'Foi um ano sem grandes sobressaltos, com foco no trabalho e momentos de descanso.',
-    'Você desfrutou da tranquilidade do seu lar e manteve suas contas em ordem.'
-  ];
-
-  const tranquilidadesSenior = [
-    'Você aproveitou a calma da vida madura, tomando um cafezinho da tarde e curtindo o sossego.',
-    'Foi um ano sereno, com caminhadas leves e conversas agradáveis.',
-    'Você desfrutou da paz de ver o tempo passar sem pressa.'
-  ];
-
-  if (idade <= 11) return randomChoice(tranquilidadesInfancia);
-  if (idade <= 17) return randomChoice(tranquilidadesAdolescencia);
-  if (idade <= 59) return randomChoice(tranquilidadesAdulta);
-  return randomChoice(tranquilidadesSenior);
-}
+/*
+ * `gerarTextoAnoTranquilo` foi REMOVIDA no B4-FIX4.
+ *
+ * Ela existia para preencher um ano em que nada aconteceu — escrevia na
+ * Linha da Vida frases como "Foi um ano sem grandes sobressaltos". Isso é
+ * exatamente o ruído que a Linha da Vida não pode ter: ao olhar uma vida
+ * aos 80 anos, o jogador precisa ver a história de uma pessoa, não dezenas
+ * de linhas dizendo que nada aconteceu. Anos tranquilos agora passam em
+ * silêncio de verdade — sem log, sem modal, sem entrada.
+ */

@@ -16,6 +16,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Mudar com as malas, cozinhar seu próprio rango e bancar as contas',
         descricaoResultado: 'A liberdade é maravilhosa, embora lavar louça e pagar boleto seja um choque de realidade!',
         consequencias: {
+          impactosComportamentais: { independencia: 2 },
           stats: { felicidade: 15 },
           dinheiro: -1500,
           hiddenStats: { disciplina: 20, ambicao: 15 },
@@ -27,6 +28,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Continuar morando com os pais para economizar dinheiro',
         descricaoResultado: 'Você aproveitou a comidinha caseira e juntou mais dinheiro na conta.',
         consequencias: {
+          impactosComportamentais: { familia: 2, independencia: -1 },
           stats: { felicidade: 5 },
           dinheiro: 1000,
           relacionamentoDelta: { delta: 10 }
@@ -42,6 +44,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 30,
     categoria: 'cotidiano',
     peso: 75,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_folia_total',
@@ -81,6 +84,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Emprestar o dinheiro por consideração à amizade',
         descricaoResultado: 'Ele ficou imensamente agradecido e te pagou de volta alguns meses depois com um chocolate.',
         consequencias: {
+          impactosComportamentais: { generosidade: 2 },
           stats: { felicidade: 10 },
           dinheiro: 0,
           hiddenStats: { empatia: 15, reputacao: 15 }
@@ -91,6 +95,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Dizer que está apertado e não pode ajudar no momento',
         descricaoResultado: 'Ele compreendeu, mas o clima entre vocês ficou um pouco mais distante.',
         consequencias: {
+          impactosComportamentais: { generosidade: -1 },
           stats: { felicidade: -2 },
           hiddenStats: { empatia: -5 }
         }
@@ -114,6 +119,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Aceitar o desafio e mudar de cidade para alavancar a carreira',
         descricaoResultado: 'A mudança foi intensa, mas seu novo cargo trouxe grande reconhecimento profissional!',
         consequencias: {
+          impactosComportamentais: { independencia: 2, coragem: 1 },
           stats: { felicidade: 12 },
           dinheiro: 2500,
           hiddenStats: { ambicao: 20, disciplina: 10, estresse: 10 },
@@ -125,6 +131,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         texto: 'Recusar para ficar perto da família e dos amigos',
         descricaoResultado: 'Você valorizou suas raízes e continuou sua vida na sua cidade natal.',
         consequencias: {
+          impactosComportamentais: { familia: 2 },
           stats: { felicidade: 8 },
           hiddenStats: { empatia: 10 }
         }
@@ -139,6 +146,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
     idadeMaxima: 29,
     categoria: 'cotidiano',
     peso: 75,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_pular_ondas',

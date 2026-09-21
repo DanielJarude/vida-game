@@ -2,6 +2,7 @@ import React from 'react';
 import { Baby, PersonStanding, User, UserRound, PawPrint } from 'lucide-react';
 import type { RelationType } from '../../types';
 import type { AparenciaAvatar } from '../../data/avatar/avatarData';
+import { derivarAparenciaDeSemente } from '../../data/avatar/avatarData';
 import {
   obterCategoriaAvatar,
   obterRotuloAvatar,
@@ -22,6 +23,17 @@ interface PersonAvatarProps {
    * FALLBACK, não mais o comportamento principal.
    */
   aparencia?: AparenciaAvatar;
+  /**
+   * Avatar 2.0 — semente estável (normalmente o id do NPC) para DERIVAR um
+   * rosto quando não há aparência salva.
+   *
+   * Até aqui só o personagem do jogador tinha rosto: pai, mãe, irmãos,
+   * amigos e colegas caíam todos no mesmo ícone genérico por fase de vida,
+   * o que faz as pessoas da vida parecerem linhas numa lista em vez de
+   * personagens. Derivando do id, cada uma ganha um rosto próprio, igual em
+   * todas as sessões, sem um byte de persistência e sem migração de save.
+   */
+  semente?: string;
 }
 
 const ICONE_POR_CATEGORIA: Record<CategoriaAvatar, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
@@ -51,11 +63,18 @@ export const PersonAvatar: React.FC<PersonAvatarProps> = ({
   idade,
   tipo,
   tamanho = 84,
-  aparencia
+  aparencia,
+  semente
 }) => {
   const categoria = obterCategoriaAvatar(idade, tipo);
   const rotulo = obterRotuloAvatar(nome, categoria);
-  const usaRostoPersonalizado = !!aparencia && categoria !== 'pet';
+  // Prioridade: aparência salva > rosto derivado da semente > ícone por fase.
+  // Um pet nunca recebe rosto humano, por mais que tenha id.
+  const aparenciaEfetiva =
+    categoria === 'pet'
+      ? undefined
+      : aparencia ?? (semente ? derivarAparenciaDeSemente(semente) : undefined);
+  const usaRostoPersonalizado = !!aparenciaEfetiva;
   const Icone = ICONE_POR_CATEGORIA[categoria];
 
   return (
@@ -68,7 +87,7 @@ export const PersonAvatar: React.FC<PersonAvatarProps> = ({
       data-personalizado={usaRostoPersonalizado || undefined}
     >
       {usaRostoPersonalizado ? (
-        <AvatarFace idade={idade} aparencia={aparencia!} tamanho={tamanho} />
+        <AvatarFace idade={idade} aparencia={aparenciaEfetiva!} tamanho={tamanho} />
       ) : (
         <Icone
           size={Math.round(tamanho * 0.5)}

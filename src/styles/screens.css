@@ -15,7 +15,7 @@
   background:
     radial-gradient(
       120% 80% at 50% -10%,
-      rgba(61, 220, 151, 0.08) 0%,
+      var(--glow-quente-forte) 0%,
       transparent 55%
     ),
     linear-gradient(180deg, var(--bg-app) 0%, var(--bg-deep) 100%);
@@ -51,7 +51,7 @@
 
 /* ------------------------------------------------------------------ Início */
 .title-mark {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: clamp(2.75rem, 12vw, 4.5rem);
   font-weight: var(--weight-bold);
   letter-spacing: 0.22em;
@@ -77,15 +77,18 @@
 }
 
 /* Ação de maior peso da tela inicial (nova vida / continuar). */
+/* Ação principal de uma tela. Bloco de canto discreto, igual ao +1 ANO:
+   a pílula totalmente arredondada é assinatura de aplicativo, e a
+   identidade do VIDA é de página. Sans, porque é mobília. */
 .btn--hero {
   min-height: 54px;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: var(--type-subheading);
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.03em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.01em;
   color: var(--bg-deep);
   background: var(--accent);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-accent);
 }
 
@@ -120,7 +123,7 @@
   color: var(--text-secondary);
   background: var(--surface);
   border: 1px solid transparent;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   transition: color var(--motion-fast) var(--ease-out),
     background-color var(--motion-fast) var(--ease-out),
     border-color var(--motion-fast) var(--ease-out);
@@ -203,7 +206,7 @@
 
 /* --------------------------------------------------------------- Obituário */
 .obituary__name {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: clamp(1.75rem, 6vw, 2.5rem);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
@@ -258,7 +261,7 @@
 
 .obituary__stat-value {
   margin-top: var(--space-1);
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--type-subheading);
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
@@ -280,7 +283,7 @@
 }
 
 .record-row__rank {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--type-caption);
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
@@ -300,7 +303,7 @@
 }
 
 .record-row__score {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--type-subheading);
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;

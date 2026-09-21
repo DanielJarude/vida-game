@@ -11,21 +11,23 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  background: rgba(4, 8, 10, 0.78);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  /* Véu quente, coerente com a base de tinta, e menos opaco: o fundo
+     continua legível atrás do momento em vez de sumir num preto chapado. */
+  background: var(--veu-modal);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
   overflow-y: auto;
 }
 
 .modal-surface {
   width: 100%;
-  max-width: 620px;
+  max-width: 640px;
   max-height: 90vh;
   overflow-y: auto;
-  padding: var(--space-6);
+  padding: var(--space-7);
   background: var(--bg-elevated);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
 }
 
@@ -51,22 +53,24 @@
 
 /* Título forte: é o momento da vida, não o cabeçalho de um formulário. */
 .event-scene__title {
-  font-family: var(--font-display);
-  font-size: 1.75rem;
-  font-weight: var(--weight-bold);
+  font-family: var(--font-serif);
+  font-size: var(--type-title);
+  font-weight: var(--weight-semibold);
   line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
+  letter-spacing: var(--tracking-display);
   color: var(--text-primary);
   margin-bottom: var(--space-4);
   text-wrap: balance;
 }
 
-/* Narrativa: largura de leitura controlada e entrelinha generosa. */
+/* Narrativa: é a cena da vida — serifa, corpo de leitura, medida
+   controlada. Era sans em 15px, que lê como texto de ajuda de aplicativo. */
 .event-scene__narrative {
-  font-size: var(--type-body);
-  line-height: var(--leading-normal);
+  font-family: var(--font-serif);
+  font-size: var(--type-lead);
+  line-height: var(--leading-prose);
   color: var(--text-secondary);
-  max-width: 62ch;
+  max-width: var(--measure-prosa);
 }
 
 .event-scene__divider {
@@ -85,7 +89,13 @@
 
 /* -------------------------------------------------------------- Escolhas
    Linhas interativas de largura total. Não são botões administrativos:
-   têm título, consequência insinuada e um indicador à esquerda. */
+   têm um indicador à esquerda e a escolha em texto corrido.
+
+   NOTA de design, ligada ao bug corrigido em `EventChoice.tsx`: a escolha
+   NÃO antecipa a consequência. Antes, cada opção trazia por baixo a
+   narração do desfecho — em passado — e o jogador decidia já sabendo o que
+   ia acontecer nos dois caminhos, o que anula a decisão. A opção é a
+   intenção; o desfecho vem depois, em `EventResult`. */
 .event-choices {
   display: flex;
   flex-direction: column;
@@ -98,9 +108,9 @@
   align-items: flex-start;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   text-align: left;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   border: 1px solid transparent;
   transition: background-color var(--motion-fast) var(--ease-out),
@@ -143,19 +153,21 @@
 
 .event-choice__title {
   display: block;
-  font-size: var(--type-body);
-  font-weight: var(--weight-semibold);
+  font-family: var(--font-serif);
+  font-size: var(--type-lead);
+  font-weight: var(--weight-regular);
   color: var(--text-primary);
   line-height: var(--leading-snug);
 }
 
-.event-choice__hint {
-  display: block;
-  margin-top: 2px;
-  font-size: var(--type-caption);
-  color: var(--text-secondary);
-  line-height: var(--leading-snug);
-}
+/*
+  `.event-choice__hint` foi REMOVIDA do componente no rework visual.
+  Ela mostrava `descricaoResultado` — a narração do desfecho, no passado —
+  embaixo de cada opção, antes de o jogador escolher. Ver o comentário em
+  `components/events/EventChoice.tsx`. A regra sai daqui junto com o
+  elemento para que ninguém a reintroduza por inércia ao ver um seletor
+  órfão no CSS.
+*/
 
 /* Indisponível: opacidade + motivo textual explícito (nunca só cor, e o
    motivo funciona no toque porque não depende de hover/title). */
@@ -229,10 +241,11 @@
 
 /* Resultado narrativo — o que aconteceu, em linguagem humana. */
 .event-result__narrative {
-  font-size: var(--type-body);
-  line-height: var(--leading-normal);
+  font-family: var(--font-serif);
+  font-size: var(--type-lead);
+  line-height: var(--leading-prose);
   color: var(--text-primary);
-  max-width: 62ch;
+  max-width: var(--measure-prosa);
 }
 
 .event-result__continue {
@@ -256,7 +269,7 @@
 }
 
 .person-head__name {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--type-heading);
   font-weight: var(--weight-bold);
   line-height: var(--leading-tight);

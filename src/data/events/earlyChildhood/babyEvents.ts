@@ -29,6 +29,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 1,
     categoria: 'familia',
     peso: 70,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
     opcoes: [
       {
@@ -38,7 +39,6 @@ export const BABY_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: -3 },
           hiddenStats: { sociabilidade: -3 },
-          impactosComportamentais: { independencia: 1 }
         }
       },
       {
@@ -49,7 +49,6 @@ export const BABY_EVENTS: GameEvent[] = [
           stats: { felicidade: 8 },
           hiddenStats: { sociabilidade: 6 },
           relacionamentoDelta: { delta: 8 },
-          impactosComportamentais: { sociabilidade: 1 }
         }
       }
     ]
@@ -62,6 +61,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 65,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
     opcoes: [
       {
@@ -79,7 +79,6 @@ export const BABY_EVENTS: GameEvent[] = [
         descricaoResultado: 'O espelho não te prendeu por muito tempo: um brinquedo no chão chamou mais sua atenção.',
         consequencias: {
           stats: { felicidade: 3, inteligencia: 1 },
-          impactosComportamentais: { independencia: 1 }
         }
       }
     ]
@@ -92,6 +91,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'saude',
     peso: 60,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
     opcoes: [
       {
@@ -123,6 +123,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 40,
+    natureza: 'acontecimento',
     // Sem exigir a flag `tem_animal_estimacao` (que só é concedida por um
     // evento de infância tardia): aqui assume-se que a família já pode
     // ter um animal antes do jogo começar — situação comum e plausível,
@@ -136,7 +137,6 @@ export const BABY_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 8 },
           hiddenStats: { empatia: 5 },
-          impactosComportamentais: { empatia: 1 }
         }
       },
       {
@@ -158,6 +158,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'amizade',
     peso: 60,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
     opcoes: [
       {
@@ -167,7 +168,6 @@ export const BABY_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 8 },
           hiddenStats: { sociabilidade: 6 },
-          impactosComportamentais: { sociabilidade: 1, impulsividade: 1 }
         }
       },
       {
@@ -177,7 +177,6 @@ export const BABY_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 4 },
           hiddenStats: { sociabilidade: 1 },
-          impactosComportamentais: { independencia: 1 }
         }
       }
     ]
@@ -190,6 +189,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'cotidiano',
     peso: 55,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'recorrente', cooldownAnos: 2 },
     opcoes: [
       {
@@ -220,6 +220,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 85,
+    natureza: 'acontecimento',
     unico: true,
     repeticao: { tipo: 'marco' },
     opcoes: [
@@ -230,7 +231,6 @@ export const BABY_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 15, inteligencia: 5 },
           relacionamentoDelta: { delta: 12 },
-          impactosComportamentais: { familia: 1 }
         }
       },
       {
@@ -239,7 +239,6 @@ export const BABY_EVENTS: GameEvent[] = [
         descricaoResultado: 'Sua primeira palavra foi bem prática: o nome exato da coisa que você queria naquele momento.',
         consequencias: {
           stats: { felicidade: 12, inteligencia: 6 },
-          impactosComportamentais: { independencia: 1 }
         }
       }
     ]
@@ -252,6 +251,7 @@ export const BABY_EVENTS: GameEvent[] = [
     idadeMaxima: 2,
     categoria: 'infancia',
     peso: 60,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'recorrente', cooldownAnos: 1 },
     opcoes: [
       {
@@ -261,7 +261,6 @@ export const BABY_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 6, saude: -1 },
           hiddenStats: { condicionamentoFisico: 4 },
-          impactosComportamentais: { coragem: 1 }
         }
       },
       {

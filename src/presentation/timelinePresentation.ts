@@ -39,6 +39,10 @@ export interface GrupoAnoApresentado {
 const ROTULOS_CATEGORIA: Record<LifeLogCategory, string> = {
   geral: 'Vida',
   familia: 'Família',
+  // B4-FIX4 — o mundo fora de casa e o tempo livre deixam de cair no
+  // rótulo genérico "Escolha".
+  amizade: 'Amizade',
+  lazer: 'Lazer',
   escola: 'Escola',
   carreira: 'Carreira',
   amor: 'Relacionamento',

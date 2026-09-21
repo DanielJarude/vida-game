@@ -42,6 +42,7 @@ export const RelationshipSummary: React.FC<RelationshipSummaryProps> = ({
                 nome={pessoa.nome}
                 idade={pessoa.membro.idade}
                 tipo={pessoa.membro.tipo}
+                semente={pessoa.membro.id}
                 tamanho={34}
               />
             </span>

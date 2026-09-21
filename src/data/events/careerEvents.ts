@@ -18,6 +18,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Apresentar gráficos detalhados e mostrar o valor gerado',
         descricaoResultado: 'A chefia ficou muito impressionada com sua postura profissional e prometeu priorizar sua promoção!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { felicidade: 15 },
           hiddenStats: { ambicao: 15, reputacao: 20, disciplina: 10 }
         }
@@ -27,6 +28,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Cobrar diretamente um aumento salarial condizente com sua carga horária',
         descricaoResultado: 'Sua firmeza surtiu efeito! O gestor autorizou um bônus no seu próximo holerite.',
         consequencias: {
+          impactosComportamentais: { coragem: 2 },
           stats: { felicidade: 12 },
           dinheiro: 3000,
           hiddenStats: { ambicao: 15 }
@@ -37,6 +39,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Apenas concordar e agradecer o feedback com humildade',
         descricaoResultado: 'Você manteve seu emprego com estabilidade e sem atritos.',
         consequencias: {
+          impactosComportamentais: { sociabilidade: -1 },
           stats: { felicidade: 5 },
           hiddenStats: { disciplina: 5 }
         }
@@ -60,6 +63,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Pedir pizza, tomar café e liderar a força-tarefa até de madrugada',
         descricaoResultado: 'A entrega foi um sucesso retumbante e a empresa bateu o recorde de faturamento!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { felicidade: 10 },
           dinheiro: 1500,
           hiddenStats: { ambicao: 20, reputacao: 25, estresse: 20 }
@@ -70,6 +74,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Cumprir rigorosamente seu horário de contrato e ir para casa',
         descricaoResultado: 'Você preservou seu descanso, embora o chefe tenha olhado torto.',
         consequencias: {
+          impactosComportamentais: { independencia: 2 },
           stats: { felicidade: 8, saude: 5 },
           hiddenStats: { estresse: -15, reputacao: -10 }
         }
@@ -84,6 +89,7 @@ export const CAREER_EVENTS: GameEvent[] = [
     idadeMaxima: 65,
     categoria: 'trabalho',
     peso: 75,
+    natureza: 'acontecimento',
     condicoes: {
       empregado: true
     },
@@ -125,6 +131,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Aceitar a oportunidade para dar um salto de carreira',
         descricaoResultado: 'Você negociou um excelente pacote de benefícios e assumiu o novo desafio!',
         consequencias: {
+          impactosComportamentais: { coragem: 2, independencia: 1 },
           stats: { felicidade: 20 },
           dinheiro: 4000,
           hiddenStats: { ambicao: 20, reputacao: 15 }
@@ -135,6 +142,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Levar a proposta ao seu chefe atual e pedir contraproposta',
         descricaoResultado: 'Seu chefe cobriu a oferta com um belo reajuste para não perder você da equipe.',
         consequencias: {
+          impactosComportamentais: { coragem: 1 },
           stats: { felicidade: 18 },
           dinheiro: 3500,
           hiddenStats: { reputacao: 15 }
@@ -145,6 +153,7 @@ export const CAREER_EVENTS: GameEvent[] = [
         texto: 'Recusar por amor ao seu time atual',
         descricaoResultado: 'Você manteve seu ambiente de trabalho estável e familiar.',
         consequencias: {
+          impactosComportamentais: { familia: 1, generosidade: 1 },
           stats: { felicidade: 5 },
           hiddenStats: { empatia: 10 }
         }

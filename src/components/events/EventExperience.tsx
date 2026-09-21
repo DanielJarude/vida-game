@@ -19,7 +19,10 @@ import type {
   GameEvent,
   PersonalityState
 } from '../../types';
-import { avaliarRequisitoOpcao } from '../../systems/eventSystem';
+import {
+  avaliarRequisitoOpcao,
+  type ResultadoRequisito
+} from '../../systems/events/optionRequirements';
 import { descreverEfeitosPublicos } from '../../presentation/outcomePresentation';
 import {
   iconeCategoriaEvento,
@@ -83,7 +86,7 @@ export const EventExperience: React.FC<EventExperienceProps> = ({
 
   // Avaliado apenas antes de decidir: o resultado não recalcula requisitos.
   const requisitos = useMemo(() => {
-    const mapa = new Map<string, { aprovado: boolean; motivo?: string }>();
+    const mapa = new Map<string, ResultadoRequisito>();
     evento.opcoes.forEach(opcao => {
       mapa.set(
         opcao.id,
@@ -148,6 +151,11 @@ export const EventExperience: React.FC<EventExperienceProps> = ({
           {evento.opcoes
             // Depois de decidir, só a escolha feita permanece em tela.
             .filter(opcao => !opcaoEscolhida || opcao.id === opcaoEscolhida)
+            // Opção recusada em definitivo (a idade já passou) não é
+            // mostrada nem cinza: ela não informa nada que o jogador possa
+            // usar. Uma recusa reversível — dinheiro, atributo, histórico —
+            // continua visível COM o motivo, porque aí o bloqueio ensina.
+            .filter(opcao => !requisitos.get(opcao.id)?.permanente)
             .map(opcao => {
               const requisito = requisitos.get(opcao.id);
               return (

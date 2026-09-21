@@ -112,6 +112,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 10,
     categoria: 'tecnologia',
     peso: 65,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 2 },
     opcoes: [
       {
@@ -121,7 +122,6 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 8, inteligencia: 3 },
           hiddenStats: { disciplina: 6 },
-          impactosComportamentais: { disciplina: 1 }
         }
       },
       {
@@ -131,7 +131,6 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 6 },
           hiddenStats: { disciplina: -4 },
-          impactosComportamentais: { impulsividade: 1 }
         }
       }
     ]
@@ -218,6 +217,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 13,
     categoria: 'esporte',
     peso: 70,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -227,7 +227,6 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 14, saude: 4 },
           hiddenStats: { sociabilidade: 10, reputacao: 10, condicionamentoFisico: 8 },
-          impactosComportamentais: { sociabilidade: 1, coragem: 1 }
         }
       },
       {
@@ -237,7 +236,6 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 10, saude: 3 },
           hiddenStats: { empatia: 5, condicionamentoFisico: 5 },
-          impactosComportamentais: { generosidade: 1 }
         }
       }
     ]
@@ -250,6 +248,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
     idadeMaxima: 12,
     categoria: 'hobby',
     peso: 70,
+    natureza: 'acontecimento',
     repeticao: { tipo: 'cooldown', cooldownAnos: 3 },
     opcoes: [
       {
@@ -260,7 +259,6 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
           stats: { felicidade: 14 },
           hiddenStats: { sociabilidade: 10 },
           dinheiro: -40,
-          impactosComportamentais: { sociabilidade: 1 }
         }
       },
       {
@@ -269,7 +267,6 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         descricaoResultado: 'Você não ligou muito para a febre das figurinhas e usou o tempo com outras coisas.',
         consequencias: {
           stats: { felicidade: 4 },
-          impactosComportamentais: { independencia: 1 }
         }
       }
     ]

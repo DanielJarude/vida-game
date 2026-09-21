@@ -23,6 +23,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Avisar imediatamente um adulto responsável e aceitar ficar de repouso',
         descricaoResultado: 'Você avisou logo que passou mal. Levaram você para ser atendido e, com repouso e cuidado, você se recuperou.',
         consequencias: {
+          impactosComportamentais: { familia: 1, disciplina: 1 },
           stats: { saude: -10, felicidade: -5 },
           hiddenStats: { disciplina: 10 }
         },
@@ -33,6 +34,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Tentar esconder que está passando mal para não perder a brincadeira',
         descricaoResultado: 'Você escondeu por um tempo, mas a febre piorou e acabou precisando de mais dias de repouso do que se tivesse avisado logo.',
         consequencias: {
+          impactosComportamentais: { impulsividade: 2, disciplina: -1 },
           stats: { saude: -20, felicidade: -10 },
           hiddenStats: { estresse: 10 }
         },
@@ -43,6 +45,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Procurar atendimento médico e seguir a orientação recebida',
         descricaoResultado: 'Com atendimento e repouso, você se recuperou completamente em duas semanas.',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { saude: -10, felicidade: -5 },
           hiddenStats: { disciplina: 10 }
         },
@@ -56,6 +59,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Ignorar os sintomas e continuar trabalhando mesmo com febre',
         descricaoResultado: 'Seu quadro se agravou e você precisou de vários dias de atestado médico.',
         consequencias: {
+          impactosComportamentais: { impulsividade: 2, disciplina: -1 },
           stats: { saude: -25, felicidade: -15 },
           hiddenStats: { estresse: 20 }
         },
@@ -77,6 +81,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Comprar uma cadeira ergonômica e começar aulas de pilates/alongamento',
         descricaoResultado: 'Suas dores sumiram e sua postura corporal ficou ereta e elegante!',
         consequencias: {
+          impactosComportamentais: { disciplina: 2 },
           stats: { saude: 15, felicidade: 10, aparencia: 5 },
           dinheiro: -650,
           hiddenStats: { condicionamentoFisico: 12, estresse: -15 }
@@ -87,6 +92,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
         texto: 'Apenas tomar analgésico e ignorar a postura',
         descricaoResultado: 'O remédio aliviou na hora, mas a dor volta sempre que você senta.',
         consequencias: {
+          impactosComportamentais: { disciplina: -1 },
           stats: { saude: -5, felicidade: -5 },
           dinheiro: -40
         }
@@ -101,6 +107,7 @@ export const HEALTH_EVENTS: GameEvent[] = [
     idadeMaxima: 85,
     categoria: 'saude',
     peso: 75,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_correr_5k',

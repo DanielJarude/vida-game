@@ -20,13 +20,25 @@ export function verificarMortalidade(
     };
   }
 
-  // Idade avançada (curva de longevidade)
+  // ------------------------------------------------- Curva de longevidade
+  //
+  // A curva entre 80 e 100 foi suavizada depois de uma medição: com o
+  // desgaste de saúde anterior, 60 vidas simuladas tinham mediana de morte
+  // aos 80 e NENHUMA passava dos 87. Consertado o envelhecimento (ver
+  // `attributeSystem.calcularResiliencia`), a mediana subiu para 82 e o
+  // teto para 90 — mas ainda era um teto: o conteúdo escrito para 90+
+  // simplesmente nunca era alcançado por ninguém.
+  //
+  // A suavização é modesta e continua vigiada pelo fator de saúde, que é o
+  // que faz a diferença entre trajetórias: chegar aos 85 com saúde 70 é
+  // muito diferente de chegar com 30. Envelhecer bem passou a comprar anos
+  // de verdade, em vez de só adiar a mesma conta.
   if (idade >= 70) {
     let chanceMorte = 0;
     if (idade < 80) chanceMorte = (idade - 70) * 0.8;
-    else if (idade < 90) chanceMorte = 8 + (idade - 80) * 2.5;
-    else if (idade < 100) chanceMorte = 33 + (idade - 90) * 5.0;
-    else chanceMorte = 90;
+    else if (idade < 90) chanceMorte = 7 + (idade - 80) * 1.8;
+    else if (idade < 100) chanceMorte = 25 + (idade - 90) * 4.5;
+    else chanceMorte = 85;
 
     const fatorSaude = (100 - saude) / 50;
     chanceMorte *= Math.max(0.3, fatorSaude);

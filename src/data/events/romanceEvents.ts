@@ -9,6 +9,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'romance',
     peso: 80,
+    natureza: 'acontecimento',
     condicoes: {
       temParceiro: true
     },
@@ -45,6 +46,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
     idadeMaxima: 80,
     categoria: 'romance',
     peso: 70,
+    natureza: 'acontecimento',
     condicoes: {
       temParceiro: true
     },
@@ -89,6 +91,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
         texto: 'Comprar um par de alianças e fazer uma proposta emocionante de joelhos',
         descricaoResultado: 'Com lágrimas nos olhos, a resposta foi SIM! A família inteira comemorou a união!',
         consequencias: {
+          impactosComportamentais: { familia: 2, coragem: 1 },
           stats: { felicidade: 35 },
           dinheiro: -2200,
           relacionamentoDelta: { delta: 30 },
@@ -100,6 +103,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
         texto: 'Continuar como está sem pressa para oficializar papéis',
         descricaoResultado: 'Vocês continuaram curtindo o namoro com leveza.',
         consequencias: {
+          impactosComportamentais: { independencia: 1 },
           stats: { felicidade: 5 }
         }
       }

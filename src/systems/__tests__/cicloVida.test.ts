@@ -13,13 +13,23 @@ import { carregarJogo, salvarJogo } from '../saveSystem';
 import { definirFonteAleatoria, resetarFonteAleatoria } from '../../utils/random';
 import { IMOVEIS_LOJA } from '../../data/assetsData';
 import { criarEstadoTeste } from './fixtures';
-import { GameEvent, LifeLogEntry, PersonalityState, TracoComportamental } from '../../types';
+import { EventOccurrence, GameEvent, LifeLogEntry, PersonalityState, TracoComportamental } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Playtest automatizado de uma vida completa (B2), determinístico:
-// percorre 0 → 25+ anos pelo motor real (agingSystem + eventSystem),
+// percorre 0 → 40 anos pelo motor real (agingSystem + eventSystem),
 // respondendo eventos com uma estratégia fixa "pró-social", e verifica os
 // marcos pedidos na validação final do PR.
+//
+// B4-FIX4 — o horizonte era 0 → 25 e o marco de consolidação era "aos 15".
+// Isso fazia sentido quando o jogo perguntava algo em ~75% dos anos: uma
+// criança acumulava mais de dez escolhas antes dos 15. Com o ritmo real
+// (autonomia por idade + teto de decisões por janela), uma vida chega aos
+// 18 com ~4 decisões — e a personalidade NÃO deve estar formada aí; o
+// próprio VIDA pede que ninguém seja forçado a ter um traço cedo. O que o
+// teste protege continua idêntico: um padrão sustentado de escolhas produz
+// tendência, e uma escolha isolada não define ninguém. Só o horizonte mudou
+// para onde o padrão realmente tem tempo de existir.
 // ---------------------------------------------------------------------------
 
 // Estratégia de resposta: prefere opções com tags pró-sociais positivas
@@ -73,6 +83,7 @@ function simularVida(semente: number, idadeMaxima: number): Simulacao {
   let personalidade = criarPersonalidadeInicial();
   const timeline: LifeLogEntry[] = [];
   const historico: string[] = [];
+  const ocorrencias: EventOccurrence[] = [];
   const maximosPorIdade = new Map<number, number>();
   let eventosRespondidos = 0;
   let primeirosTraços: number | null = null;
@@ -106,7 +117,9 @@ function simularVida(semente: number, idadeMaxima: number): Simulacao {
   };
 
   while (personagem.idade < idadeMaxima) {
-    const resultado = executarPassagemDeAno(personagem, familia, educacao, carreira, economia, historico, personalidade);
+    const resultado = executarPassagemDeAno(
+      personagem, familia, educacao, carreira, economia, historico, personalidade, ocorrencias
+    );
     personagem = resultado.personagemAtualizado;
     familia = resultado.familiaAtualizada;
     educacao = resultado.educacaoAtualizada;
@@ -118,8 +131,16 @@ function simularVida(semente: number, idadeMaxima: number): Simulacao {
       throw new Error(`Personagem morreu aos ${personagem.idade} na simulação (semente ${semente})`);
     }
 
+    // B4-FIX4 — o histórico é alimentado pelo registro devolvido pelo motor:
+    // acontecimentos resolvidos automaticamente TAMBÉM ocupam a vida e contam
+    // para repetição, cooldown e fadiga de ritmo. Registrar só as decisões
+    // faria a simulação divergir do jogo real.
+    if (resultado.ocorrencia) {
+      historico.push(resultado.ocorrencia.eventId);
+      ocorrencias.push(resultado.ocorrencia);
+    }
+
     if (resultado.eventoDisparado) {
-      historico.push(resultado.eventoDisparado.id);
       responder(resultado.eventoDisparado);
     }
 
@@ -145,7 +166,7 @@ function simularVida(semente: number, idadeMaxima: number): Simulacao {
   };
 }
 
-describe('Playtest automatizado: uma vida de 0 a 25 anos (determinística)', () => {
+describe('Playtest automatizado: uma vida de 0 a 40 anos (determinística)', () => {
   let stub: ReturnType<typeof criarLocalStorageStub>;
 
   beforeEach(() => {
@@ -167,10 +188,10 @@ describe('Playtest automatizado: uma vida de 0 a 25 anos (determinística)', () 
     // regressão: é o efeito pretendido. Trocada por uma seed que ainda
     // converge dentro de 25 anos simulados com a MESMA estratégia
     // pró-social fixa, preservando o que o teste verifica de verdade.
-    const vida = simularVida(8, 25);
+    const vida = simularVida(8, 40);
 
     // -- 0 anos: personalidade começa em formação
-    expect(vida.idade).toBe(25);
+    expect(vida.idade).toBe(40);
 
     // -- escolhas infantis registradas: houve eventos respondidos até os 11
     expect(vida.eventosRespondidos).toBeGreaterThan(3);
@@ -191,18 +212,28 @@ describe('Playtest automatizado: uma vida de 0 a 25 anos (determinística)', () 
       expect(Math.abs(valor as number)).toBeLessThan(5);
     }
 
-    // -- padrões começam a produzir tendências: com a estratégia pró-social
-    //    fixa, algum traço consolidou até os 15
-    const ate15 = vida.personalidade.memorias.filter(m => m.idade <= 15);
-    expect(ate15.length).toBeGreaterThan(0);
-    const personalidadeAos15 = ate15.reduce(
+    // -- aos 18 a personalidade AINDA não precisa estar formada: com ~4
+    //    decisões vividas, o esperado é uma pessoa em formação, não um
+    //    arquétipo fechado. Verificamos o limite superior, não o inferior.
+    const ate18 = vida.personalidade.memorias.filter(m => m.idade <= 18);
+    const personalidadeAos18 = ate18.reduce(
       (p, m) => registrarEscolha(p, m).personalidade,
       criarPersonalidadeInicial()
     );
-    const tracosAos15 = obterTracosPercebidos(personalidadeAos15);
-    expect(tracosAos15.length).toBeGreaterThan(0);
+    expect(obterTracosPercebidos(personalidadeAos18).length).toBeLessThanOrEqual(2);
 
-    // -- ao fim da vida (25), traços percebidos são qualitativos (sem números)
+    // -- padrões sustentados produzem tendência: com a estratégia pró-social
+    //    fixa mantida por décadas, algum traço consolidou até os 30
+    const ate30 = vida.personalidade.memorias.filter(m => m.idade <= 30);
+    expect(ate30.length).toBeGreaterThan(0);
+    const personalidadeAos30 = ate30.reduce(
+      (p, m) => registrarEscolha(p, m).personalidade,
+      criarPersonalidadeInicial()
+    );
+    const tracosAos30 = obterTracosPercebidos(personalidadeAos30);
+    expect(tracosAos30.length).toBeGreaterThan(0);
+
+    // -- ao fim da vida simulada (40), traços percebidos são qualitativos (sem números)
     const percebidosFinal = obterTracosPercebidos(vida.personalidade, 'feminino');
     expect(percebidosFinal.length).toBeGreaterThan(0);
     for (const t of percebidosFinal) {

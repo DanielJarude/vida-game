@@ -154,8 +154,15 @@ export function construirResumoAnual(
   ano: number,
   logsDoAno: LifeLogEntry[]
 ): ResumoAnual {
-  // Cotidiano e ruído de rotina não entram no resumo do ano.
+  // Ruído de rotina não entra no resumo do ano.
+  //
+  // B4-FIX4 — quando a entrada declara `relevancia`, ela manda: 'textura' é
+  // fundo e fica de fora, qualquer outro valor entra. Sem o campo (entradas
+  // já persistidas em saves antigos), vale a heurística anterior por
+  // categoria/tipo, para que nenhuma linha antiga mude de sentido ao ser
+  // recarregada.
   const relevantes = logsDoAno.filter(log => {
+    if (log.relevancia) return log.relevancia !== 'textura';
     if (log.categoria === 'cotidiano') return false;
     if (log.tipo === 'info' && log.categoria === 'geral') return false;
     return true;

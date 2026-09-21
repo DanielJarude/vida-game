@@ -83,6 +83,8 @@ export function getRotuloCategoria(categoria: LifeLogCategory): string {
   switch (categoria) {
     case 'geral': return 'Geral';
     case 'familia': return 'Família';
+    case 'amizade': return 'Amizade';
+    case 'lazer': return 'Lazer';
     case 'escola': return 'Escola';
     case 'carreira': return 'Carreira';
     case 'amor': return 'Amor';

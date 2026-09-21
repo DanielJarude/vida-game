@@ -52,12 +52,17 @@ export const EventChoice: React.FC<EventChoiceProps> = ({
         <span className="event-choice__title">{opcao.texto}</span>
 
         {/*
-          Consequência insinuada em linguagem humana — nunca "+5 INT".
-          Só é exibida antes de decidir; depois, o resultado real assume.
+          BUG CORRIGIDO no rework visual (encontrado em playtest real de
+          navegador): aqui era exibido `opcao.descricaoResultado` como
+          "consequência insinuada". Só que `descricaoResultado` não é uma
+          insinuação — é a NARRAÇÃO DO DESFECHO, escrita no passado. O
+          jogador lia "O dono, um senhor aposentado, chorou de emoção e te
+          agradeceu pela sua honestidade!" ANTES de escolher se devolveria
+          a carteira.
+          Isso não enfraquecia a decisão: eliminava a decisão. Escolher
+          conhecendo o resultado das duas opções é preencher formulário,
+          não decidir. O desfecho agora só aparece depois, em `EventResult`.
         */}
-        {!resolvido && opcao.descricaoResultado && (
-          <span className="event-choice__hint">{opcao.descricaoResultado}</span>
-        )}
 
         {!disponivel && motivo && (
           <span className="event-choice__reason">

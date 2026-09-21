@@ -3,10 +3,12 @@ import {
   AparenciaAvatar,
   CORES_CABELO,
   CORES_OLHOS,
+  ESTILOS_BARBA,
   ESTILOS_CABELO,
   TONS_PELE,
   CorCabelo,
   CorOlhos,
+  EstiloBarba,
   EstiloCabelo,
   TomPele
 } from '../../data/avatar/avatarData';
@@ -20,10 +22,15 @@ interface AvatarEditorProps {
 /**
  * Editor de aparência na criação de Nova Vida (B4-FIX2 item 17).
  *
- * Quatro escolhas simples — tom de pele, estilo de cabelo, cor do cabelo,
- * cor dos olhos — com uma pré-visualização ao vivo. Nada aqui é IA, upload
- * ou editor 3D: é seleção entre um catálogo pequeno e fixo de opções
+ * Escolhas simples — tom de pele, estilo e cor do cabelo, cor dos olhos e
+ * (Avatar 2.0) pelo facial — com pré-visualização ao vivo. Nada aqui é IA,
+ * upload ou editor 3D: é seleção entre um catálogo pequeno e fixo de opções
  * vetoriais. Puramente cosmético — a tela não lê nem grava nenhum stat.
+ *
+ * A prévia mostra o rosto aos 24 anos, idade em que as proporções já são
+ * adultas: é o retrato que o jogador verá pela maior parte da vida. O
+ * mesmo rosto atravessa a infância e a velhice sozinho, porque a proporção
+ * é interpolada por idade no renderer.
  */
 export const AvatarEditor: React.FC<AvatarEditorProps> = ({
   aparencia,
@@ -37,7 +44,7 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
   return (
     <div className="avatar-editor">
       <div className="avatar-editor__preview">
-        <AvatarFace idade={20} aparencia={aparencia} tamanho={96} />
+        <AvatarFace idade={24} aparencia={aparencia} tamanho={112} />
       </div>
 
       <div className="avatar-editor__controls">
@@ -108,6 +115,29 @@ export const AvatarEditor: React.FC<AvatarEditorProps> = ({
                 title={c.rotulo}
                 onClick={() => atualizar('corCabelo', c.id as CorCabelo)}
               />
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <span className="field__label" id="label-barba">
+            Pelo facial
+          </span>
+          <div
+            className="choice-group"
+            role="group"
+            aria-labelledby="label-barba"
+          >
+            {ESTILOS_BARBA.map(b => (
+              <button
+                type="button"
+                key={b.id}
+                className="choice-chip"
+                aria-pressed={(aparencia.barba ?? 'nenhuma') === b.id}
+                onClick={() => atualizar('barba', b.id as EstiloBarba)}
+              >
+                {b.rotulo}
+              </button>
             ))}
           </div>
         </div>

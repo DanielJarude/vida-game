@@ -15,6 +15,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Procurar o dono pelos documentos e devolver tudo intacto',
         descricaoResultado: 'O dono, um senhor aposentado, chorou de emoção e te agradeceu com um abraço caloroso pela sua honestidade!',
         consequencias: {
+          impactosComportamentais: { generosidade: 2, empatia: 1 },
           stats: { felicidade: 20 },
           hiddenStats: { empatia: 25, reputacao: 25, disciplina: 15 },
           adicionarFlag: 'pessoa_honesta'
@@ -25,6 +26,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Ficar com o dinheiro e descartar a carteira',
         descricaoResultado: 'Você embolsou os R$ 450, mas a sua consciência pesou toda vez que lembrou do ocorrido.',
         consequencias: {
+          impactosComportamentais: { generosidade: -2 },
           stats: { felicidade: -10 },
           dinheiro: 450,
           hiddenStats: { empatia: -20, reputacao: -10 }
@@ -46,6 +48,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Tocar a campainha e pedir com educação para abaixar o volume',
         descricaoResultado: 'O vizinho percebeu o exagero, pediu desculpas cordiais e desligou o som.',
         consequencias: {
+          impactosComportamentais: { coragem: 1, empatia: 1 },
           stats: { felicidade: 10 },
           hiddenStats: { sociabilidade: 10, empatia: 10 }
         }
@@ -55,6 +58,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Ligar para a polícia reclamando de perturbação do sossego (190)',
         descricaoResultado: 'A viatura passou, o som foi desligado, mas o clima com a vizinhança ficou tenso.',
         consequencias: {
+          impactosComportamentais: { impulsividade: 1 },
           stats: { felicidade: 5 },
           hiddenStats: { estresse: 10 }
         }
@@ -64,6 +68,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Colocar protetor auricular e tentar dormir',
         descricaoResultado: 'Você demorou para pegar no sono e acordou com olheiras no dia seguinte.',
         consequencias: {
+          impactosComportamentais: { coragem: -1 },
           stats: { felicidade: -10 },
           hiddenStats: { estresse: 15 }
         }
@@ -78,6 +83,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'cotidiano',
     peso: 65,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_feijao_perfeito',
@@ -109,6 +115,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     idadeMaxima: 90,
     categoria: 'dinheiro',
     peso: 40,
+    natureza: 'acontecimento',
     opcoes: [
       {
         id: 'opt_gastar_vale_logo',
@@ -128,7 +135,6 @@ export const RANDOM_EVENTS: GameEvent[] = [
           stats: { felicidade: 12 },
           dinheiro: 3000,
           hiddenStats: { disciplina: 12, ambicao: 8 },
-          impactosComportamentais: { disciplina: 1 }
         }
       }
     ]
@@ -147,6 +153,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Apertar o passo e entrar rápido na padaria iluminada da esquina',
         descricaoResultado: 'Sua percepção aguçada te salvou! A moto seguiu reto sem parar.',
         consequencias: {
+          impactosComportamentais: { independencia: 1 },
           stats: { felicidade: 12, saude: 5 },
           hiddenStats: { disciplina: 10, estresse: -10 }
         }
@@ -156,6 +163,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         texto: 'Manter a calma e entregar o celular do ladrão sem reagir',
         descricaoResultado: 'Eles levaram o celular, mas você saiu são e salvo sem nenhum ferimento.',
         consequencias: {
+          impactosComportamentais: { disciplina: 1 },
           stats: { felicidade: -15 },
           dinheiro: -800,
           hiddenStats: { estresse: 25 }
