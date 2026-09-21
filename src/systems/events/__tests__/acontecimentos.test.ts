@@ -150,9 +150,9 @@ describe('B4-FIX4 · um acontecimento nunca caracteriza quem não escolheu', () 
         ).toBe('escolha_biografica');
       }
       if (r.acontecimentoResolvido) acontecimentosVividos++;
-      if (r.ocorrencia) {
-        disparados = [...disparados, r.ocorrencia.eventId];
-        ocorrencias = [...ocorrencias, r.ocorrencia];
+      for (const oc of r.ocorrenciasDoAno) {
+        disparados = [...disparados, oc.eventId];
+        ocorrencias = [...ocorrencias, oc];
       }
       if (r.morreu) break;
     }
@@ -197,9 +197,9 @@ describe('B4-FIX4 · um acontecimento nunca caracteriza quem não escolheu', () 
         resetarFonteAleatoria();
         return;
       }
-      if (r.ocorrencia) {
-        disparados = [...disparados, r.ocorrencia.eventId];
-        ocorrencias = [...ocorrencias, r.ocorrencia];
+      for (const oc of r.ocorrenciasDoAno) {
+        disparados = [...disparados, oc.eventId];
+        ocorrencias = [...ocorrencias, oc];
       }
       if (r.morreu) break;
     }

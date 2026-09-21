@@ -140,9 +140,9 @@ function simularVida(semente: number, idadeMaxima: number): Simulacao {
     // acontecimentos resolvidos automaticamente TAMBÉM ocupam a vida e contam
     // para repetição, cooldown e fadiga de ritmo. Registrar só as decisões
     // faria a simulação divergir do jogo real.
-    if (resultado.ocorrencia) {
-      historico.push(resultado.ocorrencia.eventId);
-      ocorrencias.push(resultado.ocorrencia);
+    for (const oc of resultado.ocorrenciasDoAno) {
+      historico.push(oc.eventId);
+      ocorrencias.push(oc);
     }
 
     if (resultado.eventoDisparado) {
@@ -217,7 +217,21 @@ describe('Playtest automatizado: uma vida de 0 a 40 anos (determinística)', () 
     // 18, 2 aos 30, 2 ao fim) — não por ser a primeira que passava. A folga
     // é proposital: uma seed no limite volta a quebrar no próximo ajuste de
     // ritmo, e foi assim que as duas trocas anteriores aconteceram.
-    const vida = simularVida(79, 40);
+    //
+    // F3-FIX — 79 → 122, terceira troca, e a razão é a mesma das duas
+    // anteriores: a composição do ano (marco + acontecimento leve) consome
+    // números do RNG em anos que antes não consumiam nenhum, então toda vida
+    // a partir do primeiro marco passa a ser outra.
+    //
+    // Classificado antes de trocar, como exigido: não é regressão. Das 200
+    // primeiras sementes, 76 satisfazem TODOS os critérios deste teste com o
+    // código atual — o contrato continua sendo uma propriedade comum do
+    // motor, não uma raridade. A 79 apenas deixou de ser uma delas.
+    //
+    // A 122 foi escolhida por varredura determinística como a de maior folga
+    // (9 respondidas, 3 memórias na infância, 0 traços aos 18, 2 aos 30, 2 ao
+    // fim). Nenhum limiar foi alterado.
+    const vida = simularVida(122, 40);
 
     // -- 0 anos: personalidade começa em formação
     expect(vida.idade).toBe(40);

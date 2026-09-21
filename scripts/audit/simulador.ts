@@ -87,6 +87,12 @@ export interface AnoDaVida {
   logs: { categoria: string; texto: string; tipo?: string; relevancia?: string }[];
   eventoDecisao?: { id: string; titulo: string; opcaoEscolhida: string; taxonomia: TaxonomiaConteudo };
   acontecimento?: { id: string; titulo: string };
+  /**
+   * F3-FIX — ids de TODAS as ocorrências do ano, na ordem. Um ano de marco
+   * pode trazer um acontecimento leve junto, e as auditorias de cobertura e
+   * de composição precisam enxergar os dois.
+   */
+  ocorrenciasDoAno: string[];
   acoesVoluntarias: string[];
   saldo: number;
   dividas: number;
@@ -538,6 +544,7 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
       pulso: resultado.ritmo.pulso,
       motivoRitmo: resultado.ritmo.motivo,
       logs: resultado.novosLogs.map(l => ({ categoria: l.categoria, texto: l.texto, tipo: l.tipo, relevancia: l.relevancia })),
+      ocorrenciasDoAno: [],
       acoesVoluntarias,
       saldo: Math.round(ctx.economia.dinheiro),
       dividas: Math.round(ctx.economia.dividas),
@@ -558,6 +565,8 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
 
     if (resultado.ritmo.pulso === 'silencio') anosSilenciosos++;
 
+    registroAno.ocorrenciasDoAno = resultado.ocorrenciasDoAno.map(o => o.eventId);
+
     if (resultado.acontecimentoResolvido) {
       acontecimentosTotais++;
       registroAno.acontecimento = {
@@ -566,8 +575,9 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
       };
     }
 
-    if (resultado.ocorrencia) {
-      const oc = resultado.ocorrencia;
+    // F3-FIX — todas as ocorrências do ano, não só a principal: um ano com
+    // marco pode trazer um acontecimento leve junto.
+    for (const oc of resultado.ocorrenciasDoAno) {
       historicoDisparados = [...historicoDisparados, oc.eventId];
       historicoOcorrencias = [...historicoOcorrencias, oc];
     }

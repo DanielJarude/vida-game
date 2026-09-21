@@ -196,9 +196,9 @@ describe('GUARDA 3 — uma pequena memória nunca move nada', () => {
       e = r.educacaoAtualizada;
       c = r.carreiraAtualizada;
       eco = r.economiaAtualizada;
-      if (r.ocorrencia) {
-        hist = [...hist, r.ocorrencia.eventId];
-        occ = [...occ, r.ocorrencia];
+      for (const oc of r.ocorrenciasDoAno) {
+        hist = [...hist, oc.eventId];
+        occ = [...occ, oc];
       }
       if (r.morreu) break;
     }

@@ -253,9 +253,9 @@ describe('Vida longa · comportamento ao longo de 100 anos', () => {
       const r = executarPassagemDeAno(p, f, edu, c, eco, disparados, criarPersonalidadeInicial(), ocorrencias);
       p = r.personagemAtualizado; f = r.familiaAtualizada; edu = r.educacaoAtualizada;
       c = r.carreiraAtualizada; eco = r.economiaAtualizada;
-      if (r.ocorrencia) {
-        disparados = [...disparados, r.ocorrencia.eventId];
-        ocorrencias = [...ocorrencias, r.ocorrencia];
+      for (const oc of r.ocorrenciasDoAno) {
+        disparados = [...disparados, oc.eventId];
+        ocorrencias = [...ocorrencias, oc];
       }
       if (r.morreu) { idadeMorte = p.idade; break; }
     }

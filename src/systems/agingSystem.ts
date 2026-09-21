@@ -8,7 +8,8 @@ import {
   GameEvent,
   LifeLogEntry,
   PersonalityState,
-  PostMortemSummary
+  PostMortemSummary,
+  taxonomiaPermiteComposicao
 } from '../types';
 import {
   aplicarEnvelhecimentoAtributos,
@@ -30,6 +31,7 @@ import {
   definirPulsoDoAno,
   historicoDeRitmo,
   obterFaixaDeRitmo,
+  SATURACAO_ESTRUTURAL,
   type DiagnosticoRitmo
 } from './pacing/lifeRhythm';
 import { avaliarCondicoesEstruturais } from './events/eligibility';
@@ -72,6 +74,19 @@ export interface AgingResult {
    * ficarem fora do controle de repetição).
    */
   ocorrencia: EventOccurrence | null;
+  /**
+   * F3-FIX — TODAS as ocorrências do ano, na ordem em que entraram na vida.
+   *
+   * Um ano podia conter no máximo um conteúdo, então `ocorrencia` (singular)
+   * bastava. Desde que marco e acontecimento leve podem coexistir, ele não
+   * basta mais: registrar só o primeiro faria o segundo escapar do controle
+   * de repetição e cooldown, e ele voltaria a sair no ano seguinte.
+   *
+   * `ocorrencia` continua existindo e apontando para a PRIMEIRA — é o
+   * conteúdo principal do ano, e nenhum chamador antigo quebra. Quem grava
+   * histórico deve usar esta lista.
+   */
+  ocorrenciasDoAno: EventOccurrence[];
   /** Diagnóstico do ritmo do ano — depuração, testes e simulação. Nunca exibido. */
   ritmo: DiagnosticoRitmo;
   /**
@@ -269,6 +284,7 @@ export function executarPassagemDeAno(
       eventoDisparado: null,
       acontecimentoResolvido: null,
       ocorrencia: null,
+      ocorrenciasDoAno: [],
       ritmo: ritmoSilencioso(novaIdade, 'morte no ano'),
       calendario: calendarioAtual,
       marcoDoAno: null,
@@ -287,6 +303,103 @@ export function executarPassagemDeAno(
   // então *A Primeira Palavra* disputava o sorteio ponderado com todo o resto
   // da faixa e saía em 17% das vidas. Aqui não há disputa: há janela,
   // condição e modo.
+  /**
+   * F3-FIX — o ano já tem um marco; ele comporta um acontecimento leve junto?
+   *
+   * Esta é a regra geral que substitui a equivalência "houve marco → ano
+   * saturado". Ela não conhece idade, não conhece id e não tem exceção: quem
+   * responde é a taxonomia do conteúdo que já ocupou o ano, via
+   * `taxonomiaPermiteComposicao`.
+   *
+   * Três guardas, todas estruturais:
+   *
+   *   1. só compõe se a taxonomia permitir (marco, com ou sem escolha);
+   *   2. o companheiro é sempre um ACONTECIMENTO — nunca uma decisão. Isso
+   *      preserva a regra de uma interrupção por ano e mantém intactos o
+   *      teto e a fadiga de decisão contextual;
+   *   3. a saturação normal continua valendo: se o ano já produziu conteúdo
+   *      estrutural por conta própria (formou-se, foi contratado), não há
+   *      companhia. É o mesmo `SATURACAO_ESTRUTURAL` de sempre, medido sobre
+   *      os logs que o ano gerou.
+   *
+   * Devolve `null` quando o ano fecha sozinho — que continua sendo o caso
+   * mais comum, porque o sorteio de acontecimento pode não achar nada
+   * elegível e o silêncio segue permitido.
+   */
+  const acontecimentoDeCompanhia = (
+    conteudoDoMarco: GameEvent,
+    estadoApos?: {
+      personagem: Character;
+      familia: FamilyMember[];
+      educacao: EducationState;
+      carreira: CareerState;
+      economia: EconomyState;
+    }
+  ): {
+    evento: GameEvent;
+    ocorrencia: EventOccurrence;
+    logs: LifeLogEntry[];
+    personagem: Character;
+    familia: FamilyMember[];
+    educacao: EducationState;
+    carreira: CareerState;
+    economia: EconomyState;
+  } | null => {
+    if (!taxonomiaPermiteComposicao(classificacaoDoEvento(conteudoDoMarco))) return null;
+
+    const p = estadoApos?.personagem ?? char;
+    const f = estadoApos?.familia ?? fam;
+    const ed = estadoApos?.educacao ?? edu;
+    const ca = estadoApos?.carreira ?? car;
+    const ec = estadoApos?.economia ?? eco;
+
+    // O ano já se contou sozinho? Então nem o marco nem nada mais cabe.
+    if (novosLogs.filter(ocupaOAno).length >= SATURACAO_ESTRUTURAL) return null;
+
+    // O marco entra no histórico ANTES do sorteio: sem isso o companheiro
+    // poderia ser o próprio conteúdo do marco outra vez.
+    const historicoComMarco = [...historicoEventosDisparados, conteudoDoMarco.id];
+
+    const candidato = sortearEventoDoAno(
+      p, ca, ed, ec, f,
+      historicoComMarco, personalidade, historicoOcorrenciasEventos,
+      'acontecimento'
+    );
+    if (!candidato) return null;
+
+    const bruto = sortearDesfecho(candidato, p, ec, personalidade);
+    if (!bruto) return null;
+
+    const res = aplicarConsequenciasEscolha(
+      desfechoSemMarcaDeEscolha(bruto),
+      p, ca, ed, ec, f, novoAno,
+      undefined,
+      { categoriaLog: categoriaDeLogDoEvento(candidato), relevancia: 'normal' }
+    );
+    // Um acontecimento de companhia nunca mata: a morte do ano já foi
+    // decidida acima, e deixá-la ser reaberta aqui criaria uma saída de
+    // óbito que os chamadores não esperam neste ponto.
+    if (res.morreu) return null;
+
+    return {
+      evento: candidato,
+      ocorrencia: {
+        eventId: candidato.id,
+        idade: novaIdade,
+        ano: novoAno,
+        categoria: candidato.categoria,
+        natureza: 'acontecimento',
+        taxonomia: classificacaoDoEvento(candidato)
+      },
+      logs: res.novosLogs,
+      personagem: res.personagemAtualizado,
+      familia: res.familiaAtualizada,
+      educacao: res.educacaoAtualizada,
+      carreira: res.carreiraAtualizada,
+      economia: res.economiaAtualizada
+    };
+  };
+
   const instanteAgora = instanteDe(novaIdade);
   const devidos = marcosDevidos(
     calendarioAtual,
@@ -336,16 +449,23 @@ export function executarPassagemDeAno(
       // `aplicarConsequenciasEscolha`, que consulta a taxonomia do evento
       // (ver a Revisão 1 e `taxonomiaMovePersonalidade`).
       if (marcoDoAno.temEscolha) {
+        // O marco já gastou a ÚNICA interrupção do ano (o modal está subindo
+        // agora). O que ele não gastou foi o mundo ao redor: se a taxonomia
+        // permite composição, o ano ainda pode narrar um acontecimento leve
+        // — sem segundo modal, porque acontecimento se resolve sozinho.
+        const companhia = acontecimentoDeCompanhia(conteudo);
+
         return {
-          personagemAtualizado: char,
-          familiaAtualizada: fam,
-          educacaoAtualizada: edu,
-          carreiraAtualizada: car,
-          economiaAtualizada: eco,
-          novosLogs,
+          personagemAtualizado: companhia?.personagem ?? char,
+          familiaAtualizada: companhia?.familia ?? fam,
+          educacaoAtualizada: companhia?.educacao ?? edu,
+          carreiraAtualizada: companhia?.carreira ?? car,
+          economiaAtualizada: companhia?.economia ?? eco,
+          novosLogs: [...novosLogs, ...(companhia?.logs ?? [])],
           eventoDisparado: conteudo,
-          acontecimentoResolvido: null,
+          acontecimentoResolvido: companhia?.evento ?? null,
           ocorrencia: ocorrenciaMarco,
+          ocorrenciasDoAno: [ocorrenciaMarco, ...(companhia ? [companhia.ocorrencia] : [])],
           ritmo: ritmoSilencioso(novaIdade, `marco com escolha: ${marcoDoAno.id}`),
           calendario: calendarioDepois,
           marcoDoAno,
@@ -365,16 +485,35 @@ export function executarPassagemDeAno(
           { categoriaLog: categoriaDeLogDoEvento(conteudo), relevancia: 'marco' }
         );
 
+        // Marco testemunhado não interrompe NADA: ele é narrado e pronto.
+        // Este é o caso mais claro de densidade alta com atenção zero, e o
+        // que mais sofria com a regra antiga — *Primeiros Passos* calava o
+        // ano inteiro sem nunca ter pedido um clique.
+        const companhia = acontecimentoDeCompanhia(
+          conteudo,
+          {
+            personagem: resMarco.personagemAtualizado,
+            familia: resMarco.familiaAtualizada,
+            educacao: resMarco.educacaoAtualizada,
+            carreira: resMarco.carreiraAtualizada,
+            economia: resMarco.economiaAtualizada
+          }
+        );
+
         return {
-          personagemAtualizado: resMarco.personagemAtualizado,
-          familiaAtualizada: resMarco.familiaAtualizada,
-          educacaoAtualizada: resMarco.educacaoAtualizada,
-          carreiraAtualizada: resMarco.carreiraAtualizada,
-          economiaAtualizada: resMarco.economiaAtualizada,
-          novosLogs: [...novosLogs, ...resMarco.novosLogs],
+          personagemAtualizado: companhia?.personagem ?? resMarco.personagemAtualizado,
+          familiaAtualizada: companhia?.familia ?? resMarco.familiaAtualizada,
+          educacaoAtualizada: companhia?.educacao ?? resMarco.educacaoAtualizada,
+          carreiraAtualizada: companhia?.carreira ?? resMarco.carreiraAtualizada,
+          economiaAtualizada: companhia?.economia ?? resMarco.economiaAtualizada,
+          novosLogs: [...novosLogs, ...resMarco.novosLogs, ...(companhia?.logs ?? [])],
           eventoDisparado: null,
+          // Continua sendo o MARCO: ele é o conteúdo principal do ano e é o
+          // que testes e auditorias esperam encontrar aqui. O acompanhante
+          // aparece em `ocorrenciasDoAno` e já está narrado em `novosLogs`.
           acontecimentoResolvido: conteudo,
           ocorrencia: ocorrenciaMarco,
+          ocorrenciasDoAno: [ocorrenciaMarco, ...(companhia ? [companhia.ocorrencia] : [])],
           ritmo: ritmoSilencioso(novaIdade, `marco testemunhado: ${marcoDoAno.id}`),
           calendario: calendarioDepois,
           marcoDoAno,
@@ -452,7 +591,8 @@ export function executarPassagemDeAno(
       novosLogs: comPequenaMemoria(novosLogs),
       eventoDisparado: null,
       acontecimentoResolvido: null,
-      ocorrencia: null
+      ocorrencia: null,
+      ocorrenciasDoAno: []
     };
   }
 
@@ -465,19 +605,21 @@ export function executarPassagemDeAno(
     );
 
     if (decisao) {
+      const ocorrenciaDecisao: EventOccurrence = {
+        eventId: decisao.id,
+        idade: novaIdade,
+        ano: novoAno,
+        categoria: decisao.categoria,
+        natureza: 'decisao',
+        taxonomia: classificacaoDoEvento(decisao)
+      };
       return {
         ...estadoBase,
         novosLogs,
         eventoDisparado: decisao,
         acontecimentoResolvido: null,
-        ocorrencia: {
-          eventId: decisao.id,
-          idade: novaIdade,
-          ano: novoAno,
-          categoria: decisao.categoria,
-          natureza: 'decisao',
-          taxonomia: classificacaoDoEvento(decisao)
-        }
+        ocorrencia: ocorrenciaDecisao,
+        ocorrenciasDoAno: [ocorrenciaDecisao]
       };
     }
     // Sem decisão elegível, o ano rebaixa para acontecimento. O caminho
@@ -499,7 +641,8 @@ export function executarPassagemDeAno(
       novosLogs: comPequenaMemoria(novosLogs),
       eventoDisparado: null,
       acontecimentoResolvido: null,
-      ocorrencia: null
+      ocorrencia: null,
+      ocorrenciasDoAno: []
     };
   }
 
@@ -512,7 +655,8 @@ export function executarPassagemDeAno(
       novosLogs: comPequenaMemoria(novosLogs),
       eventoDisparado: null,
       acontecimentoResolvido: null,
-      ocorrencia: null
+      ocorrencia: null,
+      ocorrenciasDoAno: []
     };
   }
 
@@ -564,6 +708,7 @@ export function executarPassagemDeAno(
       eventoDisparado: null,
       acontecimentoResolvido: acontecimento,
       ocorrencia,
+      ocorrenciasDoAno: [ocorrencia],
       ritmo,
       calendario: calendarioAtual,
       marcoDoAno: null,
@@ -589,6 +734,7 @@ export function executarPassagemDeAno(
     eventoDisparado: null,
     acontecimentoResolvido: acontecimento,
     ocorrencia,
+    ocorrenciasDoAno: [ocorrencia],
     ritmo,
     calendario: calendarioAtual,
     marcoDoAno: null,

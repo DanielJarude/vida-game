@@ -450,10 +450,13 @@ export function useGame() {
     // tanto para decisão quanto para acontecimento. Remontá-lo aqui a
     // partir de `eventoDisparado` deixaria todo acontecimento fora do
     // controle de repetição/cooldown.
-    if (resultado.ocorrencia) {
-      const ocorrencia = resultado.ocorrencia;
-      setHistoricoEventos(prev => [...prev, ocorrencia.eventId]);
-      setHistoricoOcorrencias(prev => [...prev, ocorrencia]);
+    // F3-FIX — o ano pode ter produzido MAIS DE UM conteúdo (um marco e um
+    // acontecimento leve ao lado dele). Gravar só o primeiro faria o segundo
+    // escapar do controle de repetição e reaparecer no ano seguinte.
+    if (resultado.ocorrenciasDoAno.length > 0) {
+      const ocorrenciasDoAno = resultado.ocorrenciasDoAno;
+      setHistoricoEventos(prev => [...prev, ...ocorrenciasDoAno.map(o => o.eventId)]);
+      setHistoricoOcorrencias(prev => [...prev, ...ocorrenciasDoAno]);
     }
 
     if (resultado.eventoDisparado) {

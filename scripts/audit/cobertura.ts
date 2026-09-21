@@ -14,6 +14,7 @@ import { PERFIS, Perfil, ResultadoVida, simularVida } from './simulador';
 import { MASTER_EVENTS_LIST } from '../../src/data/events/allEvents';
 import { classificacaoDoEvento } from '../../src/systems/events/taxonomia';
 import { MARCOS_DE_VIDA, ehConteudoDeMarco } from '../../src/data/calendario/marcosDeVida';
+import { taxonomiaPermiteEscolha as taxonomiaPermiteEscolhaLocal } from '../../src/types';
 
 const VIDAS_POR_PERFIL = Number(process.env.VIDAS ?? 15);
 const resultados: ResultadoVida[] = [];
@@ -27,9 +28,12 @@ for (const perfil of PERFIS) {
 const N = resultados.length;
 const L = (s = '') => console.log(s);
 
+// F3-FIX — lê TODAS as ocorrências do ano. Antes disto, o acontecimento que
+// acompanha um marco ficava invisível para a cobertura.
 const vistos = new Set<string>();
 for (const r of resultados) {
   for (const a of r.anos) {
+    for (const id of a.ocorrenciasDoAno) vistos.add(id);
     if (a.eventoDecisao) vistos.add(a.eventoDecisao.id);
     if (a.acontecimento) vistos.add(a.acontecimento.id);
   }
@@ -83,8 +87,7 @@ for (const [nome, min, max] of faixasSuspeitas) {
   for (const r of resultados) for (const a of r.anos) {
     if (a.idade < min || a.idade > max) continue;
     anos++;
-    const id = a.eventoDecisao?.id ?? a.acontecimento?.id;
-    if (id) {
+    for (const id of a.ocorrenciasDoAno) {
       comSorteio++;
       idsVistos.set(id, (idsVistos.get(id) ?? 0) + 1);
       if (ehConteudoDeMarco(id)) marco++;
@@ -138,3 +141,41 @@ for (const idade of [0, 1, 2]) {
     L(`    ${n}× ${motivo}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// F3-FIX — composição do ano: quantos conteúdos, quantas interrupções.
+// ---------------------------------------------------------------------------
+L('\n===== COMPOSIÇÃO DO ANO =====');
+L('A meta NÃO é maximizar múltiplos conteúdos. É provar que um marco não mata');
+L('a vida ao redor dele, sem transformar o ano num carrossel de popups.');
+L('');
+const porFaixaComp: [string, number, number][] = [
+  ['0-2', 0, 2], ['3-5', 3, 5], ['6-11', 6, 11], ['12-17', 12, 17],
+  ['18-44', 18, 44], ['45+', 45, 200]
+];
+L('faixa  |  anos | 0 conteúdos | 1 conteúdo | 2+ conteúdos | média | anos c/ 2+ interrupções');
+let totalAnos = 0, total2 = 0, totalInterrup2 = 0, somaConteudos = 0;
+for (const [nome, min, max] of porFaixaComp) {
+  let anos = 0, c0 = 0, c1 = 0, c2 = 0, soma = 0, inter2 = 0;
+  for (const r of resultados) for (const a of r.anos) {
+    if (a.idade < min || a.idade > max) continue;
+    anos++;
+    const n = a.ocorrenciasDoAno.length;
+    soma += n;
+    if (n === 0) c0++; else if (n === 1) c1++; else c2++;
+    // Interrupção = conteúdo que abre modal (decisão contextual ou escolha
+    // biográfica). Marco testemunhado e acontecimento resolvem-se sozinhos.
+    const interrupcoes = a.ocorrenciasDoAno.filter(id => {
+      const e = MASTER_EVENTS_LIST.find(x => x.id === id);
+      return e ? taxonomiaPermiteEscolhaLocal(classificacaoDoEvento(e)) : false;
+    }).length;
+    if (interrupcoes >= 2) inter2++;
+  }
+  totalAnos += anos; total2 += c2; totalInterrup2 += inter2; somaConteudos += soma;
+  const p = (n: number) => `${((100 * n) / Math.max(1, anos)).toFixed(1)}%`;
+  L(`${nome.padEnd(6)} | ${String(anos).padStart(5)} | ${p(c0).padStart(11)} | ${p(c1).padStart(10)} | ${p(c2).padStart(12)} | ${(soma / Math.max(1, anos)).toFixed(2).padStart(5)} | ${String(inter2).padStart(23)}`);
+}
+L('');
+L(`anos com 2+ conteúdos: ${total2}/${totalAnos} (${((100 * total2) / totalAnos).toFixed(1)}%)`);
+L(`média de conteúdos por ano: ${(somaConteudos / totalAnos).toFixed(3)}`);
+L(`ANOS COM 2+ INTERRUPÇÕES OBRIGATÓRIAS: ${totalInterrup2} (precisa ser 0)`);

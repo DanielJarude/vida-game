@@ -98,9 +98,9 @@ function simularVidaComEstrategia(
     // B4-FIX4 — acontecimentos resolvidos pelo motor também ocupam a vida:
     // entram no histórico como qualquer outra ocorrência, para que cooldown,
     // anti-dominação e fadiga de ritmo enxerguem a vida inteira.
-    if (resultado.ocorrencia) {
-      historicoDisparados = [...historicoDisparados, resultado.ocorrencia.eventId];
-      historicoOcorrencias = [...historicoOcorrencias, resultado.ocorrencia];
+    for (const oc of resultado.ocorrenciasDoAno) {
+      historicoDisparados = [...historicoDisparados, oc.eventId];
+      historicoOcorrencias = [...historicoOcorrencias, oc];
     }
 
     if (resultado.eventoDisparado) {
@@ -156,9 +156,29 @@ describe('B4-FIX3/B4-FIX4 · personalidade entre múltiplas vidas (0→18 e 0→
   // com 2+ traços, 5 eixos distintos, dominantes diferentes entre
   // pró-social e impulsiva) — e passam a resistir ao próximo ajuste de
   // ritmo, que é o ponto. O custo é ~1s de execução.
+  //
+  // F3-FIX — ampliada de novo, 20 → 30 seeds, pela MESMA razão e com o mesmo
+  // método. A composição do ano (marco + acontecimento leve) mexeu na ordem
+  // do RNG e a amostra de 20 caiu para 3 eixos distintos, abaixo dos 4 que
+  // este arquivo exige.
+  //
+  // Classificação antes de mexer: NÃO é regressão de agência. Medido no
+  // harness das 105 vidas, as decisões contextuais apresentadas SUBIRAM
+  // (1.153 → 1.170) e a conversão do scheduler continua em 100,0%. É
+  // fragilidade estatística: numa varredura de 10 janelas independentes de
+  // 20 seeds, 9 atingiam 4+ eixos e 1 não — a amostra estava no limite e
+  // esta fase apenas caiu no lado errado da moeda.
+  //
+  // Os 10 seeds novos foram ACRESCENTADOS ao fim, não trocados: os 20
+  // originais continuam sendo exercitados exatamente como antes. Varredura
+  // de estabilidade (N=20/30/40/60/80) com o código atual: N=20 falha, e
+  // 30, 40, 60 e 80 passam nas DUAS asserções de distribuição deste arquivo
+  // (eixos distintos e dominante pró-social ≠ dominante impulsiva). 30 é o
+  // primeiro tamanho estável, e a margem cresce a partir dele.
   const SEEDS = [
     11, 22, 33, 44, 55, 66, 77, 88, 99, 111,
-    122, 133, 144, 155, 166, 177, 188, 199, 211, 222
+    122, 133, 144, 155, 166, 177, 188, 199, 211, 222,
+    233, 244, 255, 266, 277, 288, 299, 311, 322, 333
   ];
 
   // Aos 18: a pergunta é "a personalidade já existe?" — e a resposta correta

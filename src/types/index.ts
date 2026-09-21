@@ -543,6 +543,57 @@ export function taxonomiaConsomeCotaDeDecisao(taxonomia: TaxonomiaConteudo): boo
   return taxonomia === 'decisao_comportamental';
 }
 
+/**
+ * Esta classificação INTERROMPE o jogador?
+ *
+ * Quarta e última pergunta do modelo de custo, e ela separa duas coisas que
+ * o motor vinha tratando como uma só:
+ *
+ *   DENSIDADE BIOGRÁFICA — o quanto o ano pesa na história da pessoa.
+ *   INTERRUPÇÃO/ATENÇÃO  — o quanto o ano exige do jogador agora, em cliques.
+ *
+ * *Primeiros Passos* é densidade máxima e interrupção zero: acontece, é
+ * narrado, entra na Linha da Vida, e o jogador não precisa fazer nada. Uma
+ * encruzilhada moral aos 15 é o oposto. Confundir as duas foi o que fez o
+ * motor concluir que um marco importante deveria calar o ano inteiro.
+ *
+ * A regra que esta função sustenta: **um ano tem no máximo UMA interrupção**.
+ * Dois conteúdos no mesmo ano não significam dois modais.
+ */
+export function taxonomiaInterrompe(taxonomia: TaxonomiaConteudo): boolean {
+  return taxonomiaPermiteEscolha(taxonomia);
+}
+
+/**
+ * Depois deste conteúdo, o ano ainda comporta um acontecimento leve?
+ *
+ * A regressão que motivou esta função: a faixa 0-2 tem dois anos jogáveis e
+ * ambos são ocupados por marcos garantidos (*Primeiros Passos* aos 1,
+ * *A Primeira Palavra* aos 2). Como o motor tratava "houve marco" como
+ * "o ano acabou", o sorteio nunca rodava ali e SETE acontecimentos de bebê
+ * ficaram inalcançáveis por acidente — conteúdo morto sem intenção.
+ *
+ * A resposta não é uma exceção para bebês. O mesmo problema reaparece em
+ * toda vida: formatura, casamento, nascimento, mudança, aposentadoria. Um
+ * marco é um ponto alto da biografia, não um apagão do mundo ao redor — no
+ * ano em que alguém dá os primeiros passos, a família também recebe visita.
+ *
+ * Por isso a composição é propriedade da TAXONOMIA:
+ *
+ *   - MARCO (testemunhado ou com escolha biográfica) — é um ponto da
+ *     trajetória, não o acontecimento do ano. Comporta companhia.
+ *   - ACONTECIMENTO PURO — já É o acontecimento do ano. Não se soma a outro,
+ *     senão o ano vira uma lista.
+ *   - DECISÃO CONTEXTUAL — gastou a interrupção e o orçamento. Fecha o ano.
+ *
+ * Isto NÃO garante que o acontecimento extra vá ocorrer: quem decide é o
+ * ritmo, com a saturação e os tetos de sempre. Esta função só diz que a
+ * porta não está trancada por definição.
+ */
+export function taxonomiaPermiteComposicao(taxonomia: TaxonomiaConteudo): boolean {
+  return taxonomia === 'marco_testemunhado' || taxonomia === 'escolha_biografica';
+}
+
 /** Uma ocorrência real de evento, registrada com idade e ano (para cooldown). */
 export interface EventOccurrence {
   eventId: string;

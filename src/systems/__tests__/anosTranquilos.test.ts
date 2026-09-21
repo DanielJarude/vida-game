@@ -28,6 +28,10 @@ afterEach(resetarFonteAleatoria);
 interface AnoSimulado {
   idade: number;
   pulso: string;
+  /** Diagnóstico textual do ritmo — é o contrato que o motor de fato expõe. */
+  motivoRitmo: string;
+  /** Todas as ocorrências do ano (F3-FIX: pode haver marco + acompanhante). */
+  ocorrencias: EventOccurrence[];
   logs: LifeLogEntry[];
   abriuModalDeEvento: boolean;
   /**
@@ -77,15 +81,17 @@ function simularAnos(semente: number, ateIdade: number): AnoSimulado[] {
     anos.push({
       idade: p.idade,
       pulso: r.ritmo.pulso,
+      motivoRitmo: r.ritmo.motivo,
+      ocorrencias: r.ocorrenciasDoAno,
       logs: r.novosLogs,
       abriuModalDeEvento: r.eventoDisparado !== null,
       marcoBiografico:
         r.eventoDisparado !== null &&
         classificacaoDoEvento(r.eventoDisparado) === 'escolha_biografica'
     });
-    if (r.ocorrencia) {
-      disparados = [...disparados, r.ocorrencia.eventId];
-      ocorrencias = [...ocorrencias, r.ocorrencia];
+    for (const oc of r.ocorrenciasDoAno) {
+      disparados = [...disparados, oc.eventId];
+      ocorrencias = [...ocorrencias, oc];
     }
     if (r.morreu) break;
   }
@@ -282,25 +288,28 @@ describe('B4-FIX4 · a vida acontece mais do que pergunta — no motor real', ()
 
 describe('B4-FIX4 · um ano que já tem história não é interrompido', () => {
   it('quando o próprio ano produziu 2+ acontecimentos estruturais, nada é sorteado por cima', () => {
+    // F3-FIX — correção de MEDIÇÃO, não de contrato.
+    //
+    // O teste inferia "o ano saturou" contando logs não-'geral'/'cotidiano'.
+    // Isso funcionava enquanto um ano só podia produzir um conteúdo. Desde
+    // que marco e acontecimento leve coexistem, aqueles 2 logs estruturais
+    // passaram a ser, em alguns anos, o PRÓPRIO resultado da composição — o
+    // teste media o efeito que ele deveria vigiar e acusava a si mesmo.
+    //
+    // A saturação sempre foi um diagnóstico do ritmo, não uma contagem de
+    // logs a posteriori. Agora é isso que se lê. O contrato vigiado é
+    // idêntico e continua duro: ano que o ritmo declarou saturado não
+    // sorteia NADA — nem modal, nem acontecimento, nem companhia.
+    let anosSaturados = 0;
     for (const semente of SEMENTES) {
       for (const ano of simularAnos(semente, 80)) {
-        const estruturais = ano.logs.filter(
-          l => l.categoria !== 'geral' && l.categoria !== 'cotidiano'
-        ).length;
-        if (estruturais >= 2 && ano.pulso === 'silencio') {
-          // É o caso esperado — o ano se bastou.
-          expect(ano.abriuModalDeEvento).toBe(false);
-        }
+        if (!/ano saturado/.test(ano.motivoRitmo)) continue;
+        anosSaturados++;
+        expect(ano.abriuModalDeEvento, `semente ${semente}, idade ${ano.idade}`).toBe(false);
+        expect(ano.ocorrencias.length, `semente ${semente}, idade ${ano.idade}`).toBe(0);
       }
     }
     // Sanidade: o caminho de saturação é realmente exercitado em alguma vida.
-    const houveSaturacao = SEMENTES.some(semente =>
-      simularAnos(semente, 80).some(
-        a =>
-          a.pulso === 'silencio' &&
-          a.logs.filter(l => l.categoria !== 'geral' && l.categoria !== 'cotidiano').length >= 2
-      )
-    );
-    expect(houveSaturacao).toBe(true);
+    expect(anosSaturados).toBeGreaterThan(0);
   });
 });
