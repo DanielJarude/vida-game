@@ -4,6 +4,8 @@ import { formatarDinheiro, getEducationLabel } from '../utils/formatters';
 import { IDADE_MINIMA_FACULDADE, nivelEscolaridade } from './availabilitySystem';
 import { clamp, generateId, randomInt } from '../utils/random';
 import { narrarPosturaEscolar } from './events/narrativeVariants';
+import { possuiFormacaoEm } from './plausibility/formacaoConcluida';
+import { rotularAreas } from '../data/formacao/areasFormacao';
 
 export function criarEducacaoInicial(): EducationState {
   return {
@@ -226,6 +228,21 @@ export function ingressarCurso(
       sucesso: false,
       mensagem: `Você precisa concluir ${getEducationLabel(nivelNecessario)} para este curso.`
     };
+  }
+
+  // Pré-requisito de ÁREA, além do nível.
+  //
+  // "Tem superior completo" não basta para uma pós de área regulamentada: a
+  // auditoria reproduziu uma pedagoga matriculada em Residência Médica. Só
+  // cursos que declaram `preRequisitoAreas` restringem — o MBA, por exemplo,
+  // segue aberto a formados de qualquer área, como no Brasil real.
+  if (curso.preRequisitoAreas && curso.preRequisitoAreas.length > 0) {
+    if (!possuiFormacaoEm(educacao, curso.preRequisitoAreas, 'superior')) {
+      return {
+        sucesso: false,
+        mensagem: `${curso.nome} é destinado a quem já tem graduação em ${rotularAreas(curso.preRequisitoAreas)}.`
+      };
+    }
   }
 
   let notaEnem = Math.round(

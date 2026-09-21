@@ -66,7 +66,7 @@ H('R2 — o emprego ignora QUAL curso a pessoa fez (só o nível)');
   }
   const medico = TODAS_PROFISSOES.find(j => j.id === 'medico_geral')!;
   definirFonteAleatoria(() => 0.0); // garante sucesso na rolagem
-  const r = candidatarEmprego(medico, char, edu, 2048);
+  const r = candidatarEmprego(medico, char, edu, 2048, criarCarreiraInicial());
   L(`\nCandidatura a "${medico.titulo}" (R$ ${medico.salarioMensal}/mês) com diploma de Pedagogia: ${r.sucesso ? 'APROVADA ⚠️' : 'recusada'}`);
   L(`  → ${r.mensagem}`);
   definirFonteAleatoria(() => 0.5);
@@ -82,7 +82,7 @@ H('R3 — o caso relatado no playtest humano: "Mestre de Obras e Empreiteiro" ao
   const char = criarPersonagemTeste({ idade: 18, stats: { felicidade: 80, saude: 90, inteligencia: 60, aparencia: 70 } });
   const mestre = TODAS_PROFISSOES.find(j => j.id === 'mestre_obras')!;
   definirFonteAleatoria(() => 0.0);
-  const r = candidatarEmprego(mestre, char, edu, 2044);
+  const r = candidatarEmprego(mestre, char, edu, 2044, criarCarreiraInicial());
   L(`18 anos · técnico em TI · 0 anos de experiência`);
   L(`Vaga exige: escolaridade "${mestre.escolaridadeMinima}", ${mestre.experienciaNecessaria} anos de experiência`);
   L(`Resultado: ${r.sucesso ? 'CONTRATADO ⚠️' : 'recusado'} — R$ ${mestre.salarioMensal}/mês`);

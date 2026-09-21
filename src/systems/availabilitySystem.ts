@@ -27,6 +27,23 @@ import {
   avaliarCapacidadeInteracao,
   deveOferecerInteracao
 } from './interactionCapabilitySystem';
+// Fatos-base de trabalho/escolaridade vivem em `politicaTrabalho` (módulo sem
+// dependências) e são REEXPORTADOS aqui: este arquivo segue sendo o ponto de
+// entrada único da política para todo o resto do jogo.
+export {
+  HIERARQUIA_EDUCACAO,
+  IDADE_MAXIMA_JOVEM_APRENDIZ,
+  IDADE_MINIMA_EMPREGO_ADULTO,
+  IDADE_MINIMA_TRABALHO_JUVENIL,
+  nivelEscolaridade,
+  obterJanelaIdadeEmprego
+} from './politicaTrabalho';
+import { nivelEscolaridade, obterJanelaIdadeEmprego } from './politicaTrabalho';
+import {
+  avaliarElegibilidadeProfissional,
+  podeSeCandidatar
+} from './plausibility/elegibilidadeProfissional';
+import { podeTentar, type Veredito } from './plausibility/types';
 
 // ---------------------------------------------------------------------------
 // Constantes de política — fonte única de verdade para UI e motor
@@ -36,14 +53,11 @@ export const IDADE_MINIMA_COMPRA_BENS = 18;
 export const IDADE_MINIMA_NEGOCIAR_BENS = 18;
 export const IDADE_MINIMA_INVESTIMENTOS = 18;
 export const IDADE_MINIMA_LOTERIA = 18;
-export const IDADE_MINIMA_EMPREGO_ADULTO = 18;
 export const IDADE_MINIMA_BICOS = 18;
 export const IDADE_MINIMA_FACULDADE = 18;
 export const IDADE_MINIMA_RELACIONAMENTO_ADULTO = 18;
 export const IDADE_MINIMA_CASAMENTO = 18;
 export const IDADE_MINIMA_FILHOS = 18;
-export const IDADE_MINIMA_TRABALHO_JUVENIL = 16;
-export const IDADE_MAXIMA_JOVEM_APRENDIZ = 24;
 export const IDADE_MINIMA_PEDIR_DINHEIRO = 6;
 export const IDADE_MINIMA_PEDIR_CONSELHO = 6;
 export const IDADE_MINIMA_ESCOLA = 6;
@@ -51,37 +65,7 @@ export const IDADE_MINIMA_ESCOLA = 6;
 /** Distância (em anos) até o desbloqueio que justifica uma prévia "bloqueada" com motivo. */
 export const DISTANCIA_PREVIA_ATIVIDADE = 2;
 
-// Hieraquia de escolaridade (única para UI e motor)
-export const HIERARQUIA_EDUCACAO: Record<EducationLevel, number> = {
-  nenhuma: 0,
-  fundamental_incompleto: 1,
-  fundamental_completo: 2,
-  medio_incompleto: 3,
-  medio_completo: 4,
-  tecnico: 5,
-  superior_incompleto: 6,
-  superior_completo: 7,
-  pos_graduacao: 8
-};
 
-export function nivelEscolaridade(nivel: EducationLevel): number {
-  return HIERARQUIA_EDUCACAO[nivel] ?? 0;
-}
-
-// Modalidades de trabalho juvenil explicitamente modeladas no jogo.
-// Fora desta lista, todo emprego é adulto (18+) por padrão.
-const MODALIDADES_JUVENIS: Record<string, { idadeMinima: number; idadeMaxima: number }> = {
-  jovem_aprendiz: {
-    idadeMinima: IDADE_MINIMA_TRABALHO_JUVENIL,
-    idadeMaxima: IDADE_MAXIMA_JOVEM_APRENDIZ
-  }
-};
-
-export function obterJanelaIdadeEmprego(jobId: string): { minima: number; maxima: number | null } {
-  const juvenil = MODALIDADES_JUVENIS[jobId];
-  if (juvenil) return { minima: juvenil.idadeMinima, maxima: juvenil.idadeMaxima };
-  return { minima: IDADE_MINIMA_EMPREGO_ADULTO, maxima: null };
-}
 
 // ---------------------------------------------------------------------------
 // Contrato de disponibilidade
@@ -227,20 +211,23 @@ export function getActionAvailability(
     case 'candidatar_emprego': {
       const job = TODAS_PROFISSOES.find(j => j.id === params.jobId);
       if (!job) return BLOQUEADO('item_invalido', 'Vaga não encontrada.');
+
+      // A vaga distante da fase da vida continua OCULTA (não polui a tela de
+      // uma criança com vagas adultas); o resto é delegado à regra única de
+      // elegibilidade, a mesma que o motor revalida na contratação.
       const janela = obterJanelaIdadeEmprego(job.id);
-      if (idade < janela.minima) {
-        if (janela.minima - idade <= 1) {
-          return BLOQUEADO('idade_minima', `Esta vaga abre aos ${janela.minima} anos.`);
-        }
+      if (idade < janela.minima && janela.minima - idade > 1) {
         return OCULTO('acao_adulta');
       }
-      if (janela.maxima !== null && idade > janela.maxima) {
-        return BLOQUEADO('idade_maxima', `Esta vaga é para jovens de ${janela.minima} a ${janela.maxima} anos.`);
-      }
-      if (nivelEscolaridade(educacao.nivelAtual) < nivelEscolaridade(job.escolaridadeMinima)) {
-        return BLOQUEADO('escolaridade_insuficiente', motivoEscolaridadeInsuficiente(job.escolaridadeMinima));
-      }
-      return DISPONIVEL;
+
+      const veredito = avaliarElegibilidadeProfissional(job, { personagem, educacao, carreira });
+      if (podeTentar(veredito)) return DISPONIVEL;
+
+      const faltante = veredito.requisitosFaltantes[0];
+      return BLOQUEADO(
+        faltante?.codigo ?? 'requisito_nao_atendido',
+        veredito.motivo ?? 'Você ainda não reúne os requisitos desta vaga.'
+      );
     }
 
     case 'trabalhar_mais': {
@@ -442,16 +429,34 @@ export function getAtividadesVisiveis(ctx: ContextoAcao): {
 }
 
 /** Vagas compatíveis com escolaridade, inteligência e idade (mercado de trabalho). */
+/**
+ * Vagas às quais o personagem pode SE CANDIDATAR agora.
+ *
+ * Usa exatamente a mesma regra que o motor aplica na contratação — esconder
+ * uma vaga aqui nunca foi a proteção, e agora as duas pontas consultam a
+ * mesma função. Inclui vagas de grau `improvavel`: candidatura arriscada é
+ * uma escolha legítima do jogador, e é ela que mantém as histórias
+ * improváveis possíveis.
+ */
 export function listarVagasCompativeis(ctx: ContextoAcao): Job[] {
-  const { personagem, educacao } = ctx;
-  const nivelJogador = nivelEscolaridade(educacao.nivelAtual);
-  return TODAS_PROFISSOES.filter(job => {
-    const janela = obterJanelaIdadeEmprego(job.id);
-    if (personagem.idade < janela.minima) return false;
-    if (janela.maxima !== null && personagem.idade > janela.maxima) return false;
-    if (nivelJogador < nivelEscolaridade(job.escolaridadeMinima)) return false;
-    return job.inteligenciaMinima <= personagem.stats.inteligencia + 15;
-  });
+  const { personagem, educacao, carreira } = ctx;
+  return TODAS_PROFISSOES.filter(job =>
+    podeSeCandidatar(job, { personagem, educacao, carreira })
+  );
+}
+
+/**
+ * Vagas com o veredito completo — para a interface poder mostrar o que falta
+ * em vez de apenas omitir a vaga. Não é usada pelo motor.
+ */
+export function listarVagasComVeredito(
+  ctx: ContextoAcao
+): { job: Job; veredito: Veredito }[] {
+  const { personagem, educacao, carreira } = ctx;
+  return TODAS_PROFISSOES.map(job => ({
+    job,
+    veredito: avaliarElegibilidadeProfissional(job, { personagem, educacao, carreira })
+  }));
 }
 
 /** Bicos visíveis para o estado atual (adultos, requisito atendido ou com motivo). */

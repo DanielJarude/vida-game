@@ -278,14 +278,22 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
       if (alvo) {
         // Até 5 candidaturas no mesmo ano (mede se o jogo permite spam)
         for (let t = 0; t < 5; t++) {
-          const r = candidatarEmprego(alvo, ctx.personagem, ctx.educacao, ano);
+          const r = candidatarEmprego(alvo, ctx.personagem, ctx.educacao, ano, ctx.carreira);
           if (r.sucesso && r.novoCargo) {
             const anosExpAnteriores = ctx.carreira.historicoEmpregos.reduce(
               (s, h) => s + ((h.anoFim ?? ano) - h.anoInicio), 0
             );
             ctx.carreira = {
               ...ctx.carreira, empregado: true, cargoAtual: r.novoCargo,
-              anosNoCargo: 0, desempenhoTrabalho: 60
+              anosNoCargo: 0, desempenhoTrabalho: 60,
+              historicoEmpregos: ctx.carreira.empregado && ctx.carreira.cargoAtual
+                ? [...ctx.carreira.historicoEmpregos, {
+                    cargo: ctx.carreira.cargoAtual.titulo,
+                    salario: ctx.carreira.cargoAtual.salarioMensal,
+                    anoInicio: ano - ctx.carreira.anosNoCargo,
+                    anoFim: ano, motivoSaida: 'Mudança de emprego'
+                  }]
+                : ctx.carreira.historicoEmpregos
             };
             acoesVoluntarias.push(`emprego:${alvo.id}:tentativa${t + 1}`);
             if (alvo.experienciaNecessaria > anosExpAnteriores) {

@@ -603,8 +603,10 @@ export function useGame() {
     if (!verificarDisponibilidade('candidatar_emprego', { jobId })) return;
 
     sound.playClick();
-    // O motor revalida idade e escolaridade (fonte de verdade: EducationState)
-    const res = candidatarEmprego(job, personagem, educacao, personagem.anoAtual);
+    // O motor revalida a elegibilidade completa (idade, escolaridade, formação,
+    // licença profissional e experiência) antes de abrir o processo seletivo.
+    // A carreira entra porque a experiência acumulada é requisito real da vaga.
+    const res = candidatarEmprego(job, personagem, educacao, personagem.anoAtual, carreira);
 
     if (res.sucesso && res.novoCargo) {
       sound.playSuccess();
@@ -613,7 +615,23 @@ export function useGame() {
         empregado: true,
         cargoAtual: res.novoCargo,
         anosNoCargo: 0,
-        desempenhoTrabalho: 60
+        desempenhoTrabalho: 60,
+        // Trocar de emprego não apaga o tempo já trabalhado: o cargo anterior
+        // entra no histórico, que é a base do cálculo de experiência. Antes,
+        // quem mudava de vaga perdia silenciosamente a própria trajetória.
+        historicoEmpregos:
+          prev.empregado && prev.cargoAtual
+            ? [
+                ...prev.historicoEmpregos,
+                {
+                  cargo: prev.cargoAtual.titulo,
+                  salario: prev.cargoAtual.salarioMensal,
+                  anoInicio: personagem.anoAtual - prev.anosNoCargo,
+                  anoFim: personagem.anoAtual,
+                  motivoSaida: 'Mudança de emprego'
+                }
+              ]
+            : prev.historicoEmpregos
       }));
       if (res.novoLog) {
         registrarLogs([res.novoLog]);
@@ -622,7 +640,7 @@ export function useGame() {
     } else {
       mostrarFeedback(res.mensagem, 'erro');
     }
-  }, [personagem, educacao, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
+  }, [personagem, educacao, carreira, mostrarFeedback, verificarDisponibilidade, registrarLogs]);
 
   const trabalharMaisExec = useCallback(() => {
     if (!personagem) return;
