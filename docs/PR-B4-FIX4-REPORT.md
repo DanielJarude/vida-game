@@ -288,3 +288,140 @@ npm run build       sucesso
 - O coque ainda lê pequeno; o traço do nariz tem uma leve curvatura de
   gancho; a borda entre pescoço e ombro é visível de perto.
 - Não há variação de expressão: todo retrato é neutro.
+
+---
+
+# Rework visual — de painel para página
+
+## Objetivo
+
+Dar identidade ao VIDA: editorial, contemplativa, humana, adulta, ligada à
+memória e à passagem do tempo. Sair de "estou administrando um dashboard"
+para "estou acompanhando a história de uma pessoa".
+
+## Diagnóstico — feito no navegador, não no editor
+
+Esta etapa começou com o produto rodando em Chromium e capturado em sete
+larguras. O diagnóstico não é estético, é de composição:
+
+| Achado | Natureza |
+| --- | --- |
+| **As opções de evento mostravam o desfecho antes da escolha** | bug grave |
+| Três colunas com barras de progresso numeradas à direita | dashboard |
+| Verde-esmeralda saturado como marca (botão, barras, estados, idade) | fintech |
+| Rótulos em caixa alta espalhados (ATRIBUTOS, TRAÇOS, PESSOAS, e um por entrada da Linha da Vida) | ruído |
+| Linha da Vida em sans de 15px, uma linha por entrada, perdida numa coluna de 1200px | sem peso |
+| Sans geométrico que poderia ser de qualquer produto | sem identidade |
+
+## Bug crítico corrigido
+
+`EventChoice` renderizava `opcao.descricaoResultado` como "consequência
+insinuada" abaixo de cada opção. Mas `descricaoResultado` **é a narração do
+desfecho, escrita no passado**. O jogador lia *"O dono, um senhor
+aposentado, chorou de emoção e te agradeceu pela sua honestidade!"* antes de
+decidir se devolveria a carteira — e lia também o desfecho da outra opção.
+
+Isso não enfraquecia a decisão: **eliminava a decisão**. Escolher conhecendo
+os dois resultados é preencher formulário. O desfecho agora só aparece em
+`EventResult`, depois da escolha.
+
+## Identidade — três decisões, nesta ordem de efeito
+
+### 1. Tipografia
+
+Uma serifa editorial (**Newsreader**, com Georgia/Charter como reserva
+local real) assume TODA a voz narrativa: Linha da Vida, descrição de
+acontecimento, resultado, nomes, títulos. Um sans neutro (**Inter**) fica
+só com a mobília: rótulos, botões, navegação, números.
+
+É a mudança que mais distancia o VIDA de um painel, e não custa um pixel de
+decoração. Há teste permanente para os dois lados da regra: os elementos de
+conteúdo têm de usar `--font-serif`, e a mobília, `--font-sans`.
+
+### 2. Cor como memória
+
+O acento deixou de ser `#3ddc97` (esmeralda) e virou `#d9a05b` (âmbar
+terroso) — luz de fim de tarde, papel guardado. O verde sobreviveu apenas
+como `--success`, sinal semântico de "melhorou", nunca marca.
+
+O teste de paleta pegou um efeito colateral antes de virar bug visual: o tom
+de "família/memória" era terracota e ficou indistinguível do âmbar novo. Foi
+trocado por um rosa empoeirado.
+
+### 3. Base quente
+
+O fundo saiu do petróleo azulado para um quase-preto de tinta. Azul frio
+empurra para ficção científica; marrom-tinta empurra para arquivo e
+lembrança. Há teste: todo tom de fundo tem de ter vermelho ≥ azul.
+
+## Composição
+
+- **A Linha da Vida virou a página.** Idade como número de capítulo em
+  serifa; entradas em corpo de leitura; medida limitada a ~62 caracteres; o
+  rótulo de categoria repetido saiu da composição (continua no HTML para
+  leitor de tela).
+- **Os atributos deixaram de ser um painel.** As quatro barras verdes
+  numeradas viraram uma lista de linhas finas com o número recuado. A
+  informação é a mesma; o peso visual, não.
+- **A coluna de conteúdo virou uma página**, com medida máxima e centrada,
+  em vez de uma faixa esticada até a borda do monitor.
+- **Raios reduzidos** e a pílula do `+1 ANO` virou um bloco. Continua sendo
+  o único preenchimento sólido de acento — impossível de não achar.
+- **Opção morta não é mais exibida.** Uma opção recusada em definitivo (a
+  idade já passou) some; uma recusa reversível — dinheiro, atributo,
+  histórico — continua visível com o motivo, porque aí o bloqueio ensina.
+
+## Responsividade — medida, não estimada
+
+`scripts/playtest/auditoria.mjs` percorre 320, 390, 430, 768, 1024, 1366 e
+1920 px com uma vida real em andamento.
+
+| Verificação | Antes | Depois |
+| --- | --- | --- |
+| Rolagem horizontal | 4px em 320px | nenhuma em nenhuma largura |
+| Alvos de toque < 40×32 | 1 (a marca, 62×36) | nenhum |
+| Controles sem nome acessível | 0 | 0 |
+| `+1 ANO` visível | sim | sim em todas as sete |
+
+## Acessibilidade
+
+Preservada e verificada por teste: foco sempre visível e nunca removido,
+`prefers-reduced-motion` ativo, alvo de toque mínimo definido e em uso,
+contraste AA de todos os tokens de texto (o teste existente continua
+passando com a paleta nova), diferenciação por ícone + rótulo textual além
+de cor.
+
+## Testes
+
+`styles/__tests__/identidadeEditorial.test.ts` — 15 testes que transformam
+as decisões de identidade em regras: serifa no conteúdo e sans na mobília,
+medida de leitura limitada, nenhuma cor literal fora de `tokens.css`, acento
+não-verde e quente, base quente, rótulo de categoria oculto, medidor de
+atributo fino e sem cor de marca, caixa alta restrita a metadados, teto de
+superfícies sólidas de acento, foco/reduced-motion/alvo de toque.
+
+Esse arquivo pagou por si na primeira execução: apontou sete valores rgba
+coloridos ainda cravados em componentes e um uso a mais do acento sólido.
+
+## Resultados
+
+```
+npm test        695 testes / 43 arquivos — todos verdes
+npm run typecheck   sem erros
+npm run build       sucesso
+```
+
+## Verificado visualmente
+
+Sim — em navegador real, com capturas de início, criação, bebê, adolescente,
+adulto, Linha da Vida de 38 anos e celular, mais a auditoria estrutural nas
+sete larguras.
+
+## Limitações
+
+- A tela de morte/obituário e a tela de estatísticas **não foram revisadas
+  visualmente** nesta etapa; herdaram os tokens novos, mas a composição
+  delas não foi auditada.
+- Não há tema claro nem alternância.
+- A faixa 1181–1366px empilha a lateral como rodapé; funciona, mas a
+  composição de tablet em paisagem merece um olhar humano.

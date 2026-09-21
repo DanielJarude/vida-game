@@ -37,6 +37,7 @@ body {
 
 .timeline-entry__summary,
 .timeline-entry__title,
+.prosa,
 .event-scene__narrative,
 .event-result__narrative,
 .annual-summary,
@@ -69,14 +70,27 @@ ol {
   list-style: none;
 }
 
+/* Todo título é serifa. É a regra que mantém a voz do produto coesa sem
+   que cada componente precise lembrar de pedir a fonte certa. */
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-tight);
+}
+
+/* -------------------------------------------------------- Voz narrativa
+   A classe que marca texto como CONTEÚDO da vida, e não como interface.
+   Serifa, corpo de leitura, entrelinha generosa e medida limitada. */
+.prosa {
+  font-family: var(--font-serif);
+  font-size: var(--type-lead);
+  line-height: var(--leading-prose);
+  color: var(--text-secondary);
+  max-width: var(--measure-prosa);
 }
 
 /* ------------------------------------------------------------------- Foco
@@ -93,23 +107,38 @@ h4 {
 
 /* ------------------------------------------------------- Papéis tipográficos */
 .t-display {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--type-display);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.t-title {
+  font-family: var(--font-serif);
+  font-size: var(--type-title);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
 }
 
 .t-heading {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--type-heading);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-snug);
   letter-spacing: var(--tracking-tight);
 }
 
+.t-lead {
+  font-family: var(--font-serif);
+  font-size: var(--type-lead);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-prose);
+}
+
 .t-subheading {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--type-subheading);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-snug);
@@ -126,20 +155,22 @@ h4 {
   color: var(--text-secondary);
 }
 
-/* Metadados: único lugar onde caixa alta é aceitável, e sempre pequeno. */
+/* Metadados: único lugar onde caixa alta é aceitável, e sempre pequeno,
+   em sans e em cor recuada. Caixa alta é mobília, nunca conteúdo. */
 .t-meta {
+  font-family: var(--font-sans);
   font-size: var(--type-meta);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
   letter-spacing: var(--tracking-meta);
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 
 .t-number {
-  font-family: var(--font-display);
+  font-family: var(--font-serif);
   font-size: var(--type-number);
-  font-weight: var(--weight-bold);
-  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: lining-nums tabular-nums;
   letter-spacing: var(--tracking-tight);
 }
 

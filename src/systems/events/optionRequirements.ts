@@ -39,12 +39,31 @@ function motivoCondicaoComportamental(cond: CondicaoComportamental): string {
  * consequências) e pela resolução automática de acontecimentos (um desfecho
  * cujo requisito não é cumprido simplesmente não pode ser sorteado).
  */
+export interface ResultadoRequisito {
+  aprovado: boolean;
+  motivo?: string;
+  /**
+   * A recusa é DEFINITIVA para este personagem — nada que ele faça daqui
+   * para frente a reverteria.
+   *
+   * Hoje só acontece quando a idade já passou do limite da opção. A
+   * distinção importa para a interface: uma opção bloqueada por dinheiro
+   * ou por atributo ensina alguma coisa ao ficar visível ("dá para chegar
+   * lá"); uma opção bloqueada porque a pessoa envelheceu é só ruído, e o
+   * playtest de navegador mostrou um evento de saúde exibindo duas de
+   * quatro opções cinzentas repetindo "não é mais compatível com sua
+   * idade". O motor continua recusando as duas de qualquer forma — isto
+   * só diz à apresentação o que vale a pena mostrar.
+   */
+  permanente?: boolean;
+}
+
 export function avaliarRequisitoOpcao(
   opcao: EventOption,
   personagem: Character,
   economia: EconomyState,
   personalidade?: PersonalityState
-): { aprovado: boolean; motivo?: string } {
+): ResultadoRequisito {
   const requisito = opcao.requisito;
   if (!requisito) return { aprovado: true };
 
@@ -57,7 +76,11 @@ export function avaliarRequisitoOpcao(
     return { aprovado: false, motivo: 'Você ainda não tem idade para essa escolha.' };
   }
   if (requisito.idadeMaxima !== undefined && personagem.idade > requisito.idadeMaxima) {
-    return { aprovado: false, motivo: 'Essa escolha não é mais compatível com sua idade.' };
+    return {
+      aprovado: false,
+      motivo: 'Essa escolha não é mais compatível com sua idade.',
+      permanente: true
+    };
   }
 
   if (requisito.dinheiroMinimo !== undefined && economia.dinheiro < requisito.dinheiroMinimo) {
