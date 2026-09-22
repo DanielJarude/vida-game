@@ -11,6 +11,8 @@ export const MORE_EVENTS: GameEvent[] = [
     categoria: 'escola',
     peso: 75,
     taxonomia: 'decisao_comportamental',
+    // F4 — "sua escola inscreveu os alunos" pressupõe matrícula ativa.
+    condicoes: { emEscola: true },
     opcoes: [
       {
         id: 'opt_resolver_logica',
@@ -84,6 +86,8 @@ export const MORE_EVENTS: GameEvent[] = [
     categoria: 'familia',
     peso: 70,
     taxonomia: 'decisao_comportamental',
+    // F4 — o texto diz "seu pet": a vida precisa ter um.
+    condicoes: { temPet: true },
     opcoes: [
       {
         id: 'opt_levar_veterinario',
@@ -190,6 +194,10 @@ export const MORE_EVENTS: GameEvent[] = [
     peso: 80,
     taxonomia: 'decisao_comportamental',
     unico: true,
+    // F4 — prestar o exame do conselho pressupõe exercer/ingressar na
+    // profissão. `empregado` é o estado que o texto assume; a habilitação
+    // por formação é assunto da F1 (elegibilidade profissional), não daqui.
+    condicoes: { empregado: true },
     opcoes: [
       {
         id: 'opt_prestar_exame_focado',
@@ -262,6 +270,11 @@ export const MORE_EVENTS: GameEvent[] = [
     categoria: 'amizade',
     peso: 70,
     taxonomia: 'decisao_comportamental',
+    // F4 — "seu melhor amigo de infância" pressupõe um amigo real na vida.
+    // Hoje isso torna o evento raro (poucas vidas têm amigos); a criação de
+    // amizades por convivência é F6. Raro por falta de amigo é honesto —
+    // narrar um melhor amigo que não existe, não é.
+    condicoes: { temAmigos: true },
     opcoes: [
       {
         id: 'opt_aceitar_honrado',

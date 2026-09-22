@@ -267,6 +267,18 @@ export const ADOLESCENCE_EVENTS: GameEvent[] = [
     taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
     unico: true,
+    // F4 — SEM requisito `emEscola`, e a razão é cronológica.
+    //
+    // O baile de formatura acontece no ano em que o Ensino Médio TERMINA, e
+    // nesse exato ano `emCurso` já é false: `processarAnoEducacao` conclui o
+    // curso antes de o evento ser sorteado. Medido: aos 17 anos, 0 de 105
+    // vidas estão matriculadas — exigir matrícula zerava o evento.
+    //
+    // O pressuposto verdadeiro não é "está na escola" e sim "chegou ao fim do
+    // Ensino Médio", que é escolaridade alcançada, não matrícula ativa. O
+    // vocabulário de elegibilidade não tem um predicado de nível de
+    // escolaridade, e criar um é mudança maior do que a F4 comporta. Fica
+    // registrado como item para a F5/F8.
     opcoes: [
       {
         id: 'opt_dancar_noite_toda',

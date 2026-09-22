@@ -688,6 +688,35 @@ export interface GameEvent {
     saudeMaxima?: number;
     // B2 — condições sobre personalidade/memória (todas devem ser atendidas)
     personalidade?: CondicaoComportamental[];
+    // ---------------------------------------------------------------------
+    // F4 — CONTEXTO DO MUNDO.
+    //
+    // Um evento cujo texto afirma que algo existe precisa poder EXIGIR que
+    // aquilo exista. Antes da F4 este vocabulário tinha 14 predicados e
+    // nenhum falava de pet, casa, carro, irmão, amigo ou dívida — por isso
+    // o jogo narrava a ida do pet ao veterinário para quem nunca teve pet.
+    //
+    // Todos são DERIVADOS do estado (ver `systems/contexto/contextoDaVida`).
+    // Nenhum campo novo é persistido e o save não muda de versão.
+    //
+    // Estes predicados respondem "o estado necessário existe?" — não
+    // "o jogador pode fazer isso". Permissão continua sendo assunto de
+    // plausibilidade/elegibilidade profissional (F1) e das regras etárias.
+    // ---------------------------------------------------------------------
+    /** Animal de estimação vivo na família. */
+    temPet?: boolean;
+    /** Parceria formalizada (esposo/esposa), mais estrita que `temParceiro`. */
+    temConjuge?: boolean;
+    /** Irmão ou irmã vivo. */
+    temIrmaos?: boolean;
+    /** Alguém do tipo amigo/amiga vivo. */
+    temAmigos?: boolean;
+    /** Possui ao menos um imóvel. */
+    temImovel?: boolean;
+    /** Possui ao menos um veículo. */
+    temVeiculo?: boolean;
+    /** Tem dívida em aberto (qualquer valor acima de zero). */
+    temDivida?: boolean;
   };
   opcoes: EventOption[];
 }

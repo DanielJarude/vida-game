@@ -93,6 +93,14 @@ export interface AnoDaVida {
    * de composição precisam enxergar os dois.
    */
   ocorrenciasDoAno: string[];
+  /**
+   * F4 — estado do mundo no instante em que o ano foi resolvido. Permite
+   * medir se um evento ocorreu pressupondo algo que a vida não tinha.
+   */
+  contexto?: {
+    temPet: boolean; temImovel: boolean; temVeiculo: boolean; temAmigo: boolean;
+    emEscola: boolean; empregado: boolean; estudouAlgumaVez: boolean;
+  };
   acoesVoluntarias: string[];
   saldo: number;
   dividas: number;
@@ -551,6 +559,15 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
       motivoRitmo: resultado.ritmo.motivo,
       logs: resultado.novosLogs.map(l => ({ categoria: l.categoria, texto: l.texto, tipo: l.tipo, relevancia: l.relevancia })),
       ocorrenciasDoAno: [],
+      contexto: {
+        temPet: ctx.familia.some(f => f.vivo && f.tipo === 'pet'),
+        temImovel: ctx.economia.propriedades.some(pr => pr.tipo === 'imovel'),
+        temVeiculo: ctx.economia.propriedades.some(pr => pr.tipo === 'veiculo'),
+        temAmigo: ctx.familia.some(f => f.vivo && (f.tipo === 'amigo' || f.tipo === 'amiga')),
+        emEscola: ctx.educacao.emCurso,
+        empregado: ctx.carreira.empregado,
+        estudouAlgumaVez: ctx.educacao.nivelAtual !== 'nenhuma'
+      },
       acoesVoluntarias,
       saldo: Math.round(ctx.economia.dinheiro),
       dividas: Math.round(ctx.economia.dividas),

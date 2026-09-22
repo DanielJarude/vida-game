@@ -417,6 +417,8 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
     peso: 40,
     taxonomia: 'decisao_comportamental',
     repeticao: { tipo: 'cooldown', cooldownAnos: 6 },
+    // F4 — assembleia de condomínio pressupõe morar em imóvel próprio.
+    condicoes: { temImovel: true },
     opcoes: [
       {
         id: 'opt_assembleia_ir_falar',

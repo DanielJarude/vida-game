@@ -19,6 +19,18 @@ import {
   PersonalityState
 } from '../../types';
 import { atendeCondicoesComportamentais } from '../personalitySystem';
+import {
+  temAmigo,
+  temConjuge,
+  temDivida,
+  temFilho,
+  temImovel,
+  temIrmao,
+  temParceiro,
+  temPet,
+  temVeiculo,
+  type FatiasDoMundo
+} from '../contexto/contextoDaVida';
 import { getLifeStage } from '../../utils/formatters';
 import { eventoDisponivelPorRepeticao } from './repetitionPolicy';
 import { ehConteudoDeMarco } from '../../data/calendario/marcosDeVida';
@@ -103,17 +115,25 @@ export function avaliarCondicoesEstruturais(
     if (cond.emFaculdade !== isFaculdade) return false;
   }
 
-  if (cond.temParceiro !== undefined) {
-    const temParc = familia.some(
-      f => f.vivo && ['namorado', 'namorada', 'noivo', 'noiva', 'esposo', 'esposa'].includes(f.tipo)
-    );
-    if (cond.temParceiro !== temParc) return false;
-  }
+  // F4 — as perguntas sobre o mundo passam a ter UMA interpretação canônica,
+  // em `systems/contexto/contextoDaVida`. Antes, "tem parceiro?" era uma lista
+  // de tipos escrita à mão aqui, outra em `availabilitySystem`, outra em
+  // `relationshipSystem` e outra em `pequenaMemoria` — quatro cópias que
+  // divergiriam no dia em que um tipo novo de vínculo existisse.
+  const mundo: FatiasDoMundo = { personagem, familia, carreira, educacao, economia };
 
-  if (cond.temFilhos !== undefined) {
-    const temFil = familia.some(f => f.vivo && (f.tipo === 'filho' || f.tipo === 'filha'));
-    if (cond.temFilhos !== temFil) return false;
-  }
+  if (cond.temParceiro !== undefined && cond.temParceiro !== temParceiro(mundo)) return false;
+  if (cond.temFilhos !== undefined && cond.temFilhos !== temFilho(mundo)) return false;
+
+  // Predicados de contexto introduzidos pela F4. Todos seguem a mesma forma:
+  // ausente = o evento não se importa; presente = o estado tem de bater.
+  if (cond.temPet !== undefined && cond.temPet !== temPet(mundo)) return false;
+  if (cond.temConjuge !== undefined && cond.temConjuge !== temConjuge(mundo)) return false;
+  if (cond.temIrmaos !== undefined && cond.temIrmaos !== temIrmao(mundo)) return false;
+  if (cond.temAmigos !== undefined && cond.temAmigos !== temAmigo(mundo)) return false;
+  if (cond.temImovel !== undefined && cond.temImovel !== temImovel(mundo)) return false;
+  if (cond.temVeiculo !== undefined && cond.temVeiculo !== temVeiculo(mundo)) return false;
+  if (cond.temDivida !== undefined && cond.temDivida !== temDivida(mundo)) return false;
 
   if (cond.dinheiroMinimo !== undefined && economia.dinheiro < cond.dinheiroMinimo) return false;
   if (cond.dinheiroMaximo !== undefined && economia.dinheiro > cond.dinheiroMaximo) return false;

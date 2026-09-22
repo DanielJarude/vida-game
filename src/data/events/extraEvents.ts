@@ -76,6 +76,8 @@ export const EXTRA_EVENTS: GameEvent[] = [
     peso: 85,
     taxonomia: 'acontecimento_puro',
     natureza: 'acontecimento',
+    // F4 — "festa junina do colégio" pressupõe estar na escola.
+    condicoes: { emEscola: true },
     opcoes: [
       {
         id: 'opt_dancar_quadrilha',

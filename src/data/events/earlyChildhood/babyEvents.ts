@@ -133,6 +133,20 @@ export const BABY_EVENTS: GameEvent[] = [
     // ter um animal antes do jogo começar — situação comum e plausível,
     // sem inventar um sistema de "pet desde o nascimento".
     repeticao: { tipo: 'cooldown', cooldownAnos: 1 },
+    // F4 — SEM requisito de pet, e a razão está documentada porque a
+    // tentação de adicionar um é real.
+    //
+    // O texto diz "o cachorro da casa", não "seu cachorro": é um animal que
+    // já vivia com a família quando o bebê nasceu, não um pet que o
+    // personagem adotou. Exigir `temPet` aqui tornou o evento ESTRUTURALMENTE
+    // INALCANÇÁVEL — medido: as duas únicas formas de adquirir pet no jogo
+    // (`inf_gatinho_rua`, 4-10, e `ext_resgate_cachorro`, 10-80) começam
+    // muito depois da janela 0-2 deste evento. O requisito zerava o evento em
+    // 280 vidas.
+    //
+    // Representar "a família já tinha um cachorro antes de você nascer"
+    // exigiria pet na composição inicial da família, que é mudança de
+    // modelagem familiar — fora do escopo da F4.
     opcoes: [
       {
         id: 'opt_estender_mao_cachorro',
