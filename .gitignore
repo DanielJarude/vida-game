@@ -4,3 +4,12 @@ dist-ssr
 *.local
 .vscode
 .DS_Store
+
+# Artefatos da build HTML5 para o itch.io.
+# Código, configuração e scripts são versionados; o pacote é GERADO com
+# `npm run package:itch` sempre que for preciso publicar. Versionar o ZIP
+# encheria o histórico de binários de 180 kB a cada build, sem ganho.
+vida-itch.zip
+# Simulação local da hospedagem do itch.io (subdiretório + iframe), usada
+# para conferir a build no navegador antes do upload.
+.itch-sim/
