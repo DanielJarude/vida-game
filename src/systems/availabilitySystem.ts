@@ -44,6 +44,7 @@ import {
   podeSeCandidatar
 } from './plausibility/elegibilidadeProfissional';
 import { podeTentar, type Veredito } from './plausibility/types';
+import { ehVinculoSocial } from './contexto/contextoDaVida';
 
 // ---------------------------------------------------------------------------
 // Constantes de política — fonte única de verdade para UI e motor
@@ -356,8 +357,12 @@ export function getActionAvailability(
       // o vínculo com ele é carinho, alimentação e passeio. Regra única em
       // `interactionCapabilitySystem`, revalidada pelo motor — esconder o
       // botão não é a proteção.
-      if (!deveOferecerInteracao(tipo, idade, ehPet)) {
-        return OCULTO('idade_minima');
+      // F6-FIX — um colega/amigo não é família: o motor recusa aqui pedir
+      // dinheiro, pedir conselho e discutir com quem não é de casa, mesmo
+      // que alguma interface venha a oferecer por engano.
+      const ehSocial = ehVinculoSocial(membro.tipo);
+      if (!deveOferecerInteracao(tipo, idade, ehPet, ehSocial)) {
+        return OCULTO('vinculo_incompativel');
       }
       const capacidade = avaliarCapacidadeInteracao(tipo, idade, ehPet);
       if (!capacidade.permitido) {

@@ -20,9 +20,9 @@ import type {
   Character,
   EducationState,
   FamilyMember,
-  PersonalityState,
-  RelationType
+  PersonalityState
 } from '../../types';
+import { TIPOS_VINCULO_SOCIAL } from '../contexto/contextoDaVida';
 
 /* ========================================================================== */
 /*                          AMBIENTES DE CONVÍVIO                             */
@@ -257,9 +257,11 @@ export function temperamentoSocial(f: FatiasSociais): number {
 /*                              CONSULTAS                                     */
 /* ========================================================================== */
 
-export const TIPOS_VINCULO_SOCIAL: readonly RelationType[] = [
-  'amigo', 'amiga', 'colega', 'rival', 'mentor'
-];
+// F6-FIX — a taxonomia do vínculo social é UMA só, e mora em
+// `contexto/contextoDaVida`. Aqui apenas se reexporta para quem já
+// importava deste módulo: manter duas listas foi exatamente o que deixou
+// 'colega' fora da aba Relacionamentos.
+export { TIPOS_VINCULO_SOCIAL } from '../contexto/contextoDaVida';
 
 /** Pessoas não familiares que ainda estão na vida. */
 export function vinculosSociaisAtivos(f: FatiasSociais): FamilyMember[] {

@@ -236,11 +236,24 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
     categoria: 'escola',
     quando: ctx =>
       ctx.personagem.idade >= 6 && ctx.personagem.idade <= 14 && estaEstudando(fatias(ctx)),
+    /**
+     * F6-FIX achado D — a terceira variante era "Um ano escolar sem nada de
+     * extraordinário, do jeito que a maioria é." e foi removida.
+     *
+     * As outras duas dizem alguma coisa: descrevem a FORMA do dia (aula de
+     * manhã, tarefa à tarde / caderno, recreio, caminho de volta). A
+     * terceira só afirmava que nada aconteceu — o que o silêncio já diz, de
+     * graça e melhor. Era filler puro: existia para ocupar o ano.
+     *
+     * Não foi substituída por outra frase genérica. A lista encolheu para
+     * duas, e `variar` alterna entre elas; quando não houver nada melhor a
+     * dizer, o pulso do ano pode simplesmente escolher o silêncio, que
+     * continua sendo resultado legítimo (§13).
+     */
     texto: ctx =>
       variar(ctx.personagem.idade, [
         'Um ano comum de escola: aula de manhã, tarefa à tarde, rua no fim do dia.',
-        'Um ano de caderno, recreio e caminho de volta da escola.',
-        'Um ano escolar sem nada de extraordinário, do jeito que a maioria é.'
+        'Um ano de caderno, recreio e caminho de volta da escola.'
       ])
   },
   {

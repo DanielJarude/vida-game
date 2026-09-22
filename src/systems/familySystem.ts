@@ -9,9 +9,11 @@ import { getTratamentoParentesco } from '../utils/formatters';
 import { IDADE_MINIMA_PEDIR_CONSELHO, IDADE_MINIMA_PEDIR_DINHEIRO } from './availabilitySystem';
 import {
   avaliarCapacidadeInteracao,
+  deveOferecerInteracao,
   narrarInteracaoPorFase
 } from './interactionCapabilitySystem';
 import { clamp, generateId, randomChoice, randomInt, rollChance, valorAleatorio } from '../utils/random';
+import { ehVinculoSocial } from './contexto/contextoDaVida';
 
 /** Narrativa da interação conforme a fase da vida do personagem. */
 function narrarInteracao(
@@ -19,7 +21,13 @@ function narrarInteracao(
   membro: FamilyMember,
   idade: number
 ): string {
-  return narrarInteracaoPorFase(interacao, membro.nome, idade, membro.tipo === 'pet');
+  return narrarInteracaoPorFase(
+    interacao,
+    membro.nome,
+    idade,
+    membro.tipo === 'pet',
+    ehVinculoSocial(membro.tipo)
+  );
 }
 
 function capitalizar(texto: string): string {
@@ -234,6 +242,21 @@ export function interagirComFamiliar(
   // teste) também falha, sem aplicar nenhum efeito parcial. Um pet usa a
   // trilha própria: conversar, discutir e presente comprado não existem
   // para ele em nenhuma idade.
+  // F6-FIX — o motor também recusa interação que não cabe no VÍNCULO (pedir
+  // dinheiro a um colega de sala, por exemplo), não só a que não cabe na
+  // idade. Defesa em profundidade: a UI já não oferece, e aqui também não
+  // passa.
+  if (!deveOferecerInteracao(interacao, personagem.idade, ehPet, ehVinculoSocial(membro.tipo))) {
+    return {
+      membroAtualizado: membro,
+      personagemAtualizado: personagem,
+      custoDinheiro: 0,
+      dinheiroGanho: 0,
+      mensagem: `Isso não faz sentido na sua relação com ${membro.nome}.`,
+      sucesso: false
+    };
+  }
+
   const capacidade = avaliarCapacidadeInteracao(interacao, personagem.idade, ehPet);
   if (!capacidade.permitido) {
     return {

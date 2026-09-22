@@ -6,8 +6,10 @@ import {
   rotularInteracao,
   rotularInteracaoPet,
   ordenarInteracoesPorFase,
-  ordenarInteracoesComPet
+  ordenarInteracoesComPet,
+  ordenarInteracoesSociais
 } from '../../presentation/interactionPresentation';
+import { ehVinculoSocial } from '../../systems/contexto/contextoDaVida';
 import { useModalBehavior } from '../common/useModalBehavior';
 import { X, Lock } from 'lucide-react';
 
@@ -171,8 +173,12 @@ export const FamilyModal: React.FC<FamilyModalProps> = ({
     );
   };
 
+  // F6-FIX — três repertórios distintos: pet, vínculo social e família.
+  const ehSocial = ehVinculoSocial(membro.tipo);
   const ordem = ehPet
     ? ordenarInteracoesComPet()
+    : ehSocial
+    ? ordenarInteracoesSociais(idadeJogador)
     : ordenarInteracoesPorFase(idadeJogador);
   const dispPresente = verificarInteracao('dar_presente');
 

@@ -104,6 +104,7 @@ export const MORE_EVENTS: GameEvent[] = [
         id: 'opt_esperar_melhorar',
         texto: 'Esperar mais um dia para ver se passa sozinho',
         descricaoResultado: 'Ele melhorou devagar, mas você passou a noite preocupado.',
+        descricaoMemoria: 'Esperou o bichinho de estimação melhorar em casa e passou a noite preocupado.',
         consequencias: {
           impactosComportamentais: { empatia: -1 },
           stats: { felicidade: -5 },
@@ -280,6 +281,7 @@ export const MORE_EVENTS: GameEvent[] = [
         id: 'opt_aceitar_honrado',
         texto: 'Aceitar com orgulho, discursar no brinde e presentear os noivos',
         descricaoResultado: 'Foi uma cerimônia inesquecível! Seu discurso fez todo mundo chorar e sorrir.',
+        descricaoMemoria: 'Foi padrinho num casamento e fez um discurso que emocionou a cerimônia.',
         consequencias: {
           impactosComportamentais: { generosidade: 2, sociabilidade: 1 },
           stats: { felicidade: 25 },
@@ -396,6 +398,7 @@ export const MORE_EVENTS: GameEvent[] = [
         id: 'opt_ouvir_historias',
         texto: '',
         descricaoResultado: 'A tarde rendeu dois pedaços de bolo e as histórias de antigamente de sempre — aquelas que ficam.',
+        descricaoMemoria: 'Passou a tarde na casa dos avós ouvindo as histórias de antigamente.',
         consequencias: {
           stats: { felicidade: 25, saude: 5 },
           relacionamentoDelta: { delta: 25 },
@@ -406,6 +409,7 @@ export const MORE_EVENTS: GameEvent[] = [
         id: 'opt_tarde_corrida',
         texto: '',
         descricaoResultado: 'Foi uma visita curta: o café mal esfriou e já era hora de ir embora.',
+        descricaoMemoria: 'Passou uma tarde curta na casa dos avós — mal deu tempo de tomar o café.',
         consequencias: {
           stats: { felicidade: 2 },
           relacionamentoDelta: { delta: -5 },
@@ -438,6 +442,7 @@ export const MORE_EVENTS: GameEvent[] = [
         id: 'opt_mandar_estudar_mais',
         texto: 'Dizer que na sua época era muito mais difícil e mandar estudar mais',
         descricaoResultado: 'Ele ouviu calado e foi embora um pouco chateado.',
+        descricaoMemoria: 'Deu um conselho duro ao neto sobre o vestibular e ele saiu chateado.',
         consequencias: {
           impactosComportamentais: { empatia: -1, disciplina: 1 },
           stats: { felicidade: -5 },

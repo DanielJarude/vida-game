@@ -608,6 +608,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
         texto: '',
         peso: 3,
         descricaoResultado: 'A conversa foi boa enquanto durou, mas fora as lembranças vocês não tinham mais muito em comum. Ficou o carinho pelo que foi.',
+        descricaoMemoria: 'Reencontrou alguém da infância e descobriu que só restavam as lembranças em comum.',
         consequencias: { stats: { felicidade: 5 } }
       }
     ]

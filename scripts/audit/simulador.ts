@@ -30,7 +30,7 @@ import {
 import { definirFonteAleatoria, resetarFonteAleatoria } from '../../src/utils/random';
 import { executarPassagemDeAno } from '../../src/systems/agingSystem';
 import { aplicarConsequenciasEscolha } from '../../src/systems/eventSystem';
-import { criarPersonalidadeInicial } from '../../src/systems/personalitySystem';
+import { aplicarImpactosComportamentais, criarPersonalidadeInicial } from '../../src/systems/personalitySystem';
 import { classificacaoDoEvento } from '../../src/systems/events/taxonomia';
 import { criarCalendarioInicial } from '../../src/systems/calendario/tipos';
 import { criarEducacaoInicial, definirPosturaEscolar, ingressarCurso } from '../../src/systems/educationSystem';
@@ -555,6 +555,16 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
         .map(a => a.slice('atividade:'.length))
     );
     calendario = resultado.calendario;
+
+    // F6-FIX — a rotina do ano alimenta o traço comportamental, igual ao
+    // que a camada de comandos faz. Sem isto o harness mede uma disciplina
+    // que o jogo real constrói e a auditoria não enxerga.
+    if (resultado.impactoComportamentalDoAno) {
+      ctx.personalidade = aplicarImpactosComportamentais(
+        ctx.personalidade,
+        resultado.impactoComportamentalDoAno
+      );
+    }
 
     ctx.personagem = resultado.personagemAtualizado;
     ctx.familia = resultado.familiaAtualizada;

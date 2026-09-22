@@ -13,7 +13,8 @@
 import { FamilyInteractionType } from '../types';
 import {
   FaseInteracao,
-  obterFaseInteracao
+  obterFaseInteracao,
+  SOCIAL_INTERACOES
 } from '../systems/interactionCapabilitySystem';
 
 export interface RotuloInteracao {
@@ -229,6 +230,22 @@ export function ordenarInteracoesPorFase(
  * permite — a ordem em si é fixa, quem decide o que aparece é
  * `deveOferecerInteracao`/`avaliarCapacidadeInteracao`.
  */
+/**
+ * F6-FIX — a ordem das ações com um vínculo social não familiar.
+ *
+ * Deriva de `SOCIAL_INTERACOES` (a regra mora no domínio); aqui só se decide
+ * a ORDEM de apresentação, que é assunto de interface.
+ */
+export function ordenarInteracoesSociais(
+  idade: number
+): FamilyInteractionType[] {
+  const base: FamilyInteractionType[] =
+    idade <= 11
+      ? ['passar_tempo', 'conversar', 'dar_presente']
+      : ['conversar', 'passar_tempo', 'dar_presente'];
+  return base.filter(i => SOCIAL_INTERACOES.includes(i));
+}
+
 export function ordenarInteracoesComPet(): FamilyInteractionType[] {
   return ['passar_tempo', 'fazer_carinho', 'alimentar', 'passear'];
 }

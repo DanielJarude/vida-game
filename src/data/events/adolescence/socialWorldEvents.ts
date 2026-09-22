@@ -47,6 +47,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
         id: 'opt_puxar_assunto_paixao',
         texto: '',
         descricaoResultado: 'A conversa saiu mais desajeitada do que você planejou, mas vocês dois riram bastante e ficou tudo bem mais leve.',
+        descricaoMemoria: 'Puxou conversa com a pessoa da sala ao lado e, de tão desajeitado, os dois acabaram rindo.',
         consequencias: {
           stats: { felicidade: 10 },
           hiddenStats: { sociabilidade: 6 },
@@ -344,6 +345,7 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
         id: 'opt_confirmar_area_ja_escolhida',
         texto: 'Ir direto ao estande da área que você já tinha decidido seguir',
         descricaoResultado: 'A conversa confirmou sua escolha e você saiu ainda mais motivado para os próximos passos.',
+        descricaoMemoria: 'Conversou na feira de profissões da escola e saiu com a escolha de carreira confirmada.',
         consequencias: {
           stats: { felicidade: 10 },
           hiddenStats: { disciplina: 8, ambicao: 8 },

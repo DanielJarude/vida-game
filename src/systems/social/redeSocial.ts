@@ -113,6 +113,14 @@ const GANHO_CONVIVIO_MAX = 9;
 
 /** Idade até a qual o convívio diário da turma aproxima mais depressa. */
 const IDADE_CONVIVIO_INTENSO = 17;
+/**
+ * Até onde a convivência sozinha, sem nenhuma ação do jogador, consegue
+ * levar uma relação. Fica acima de `LIMIAR_AMIZADE` (55) de propósito: a
+ * amizade continua podendo nascer só de viver junto. O que exige agência é
+ * a proximidade profunda.
+ */
+export const TETO_CONVIVIO_PASSIVO = 70;
+
 const GANHO_JOVEM_MIN = 6;
 const GANHO_JOVEM_MAX = 15;
 
@@ -203,7 +211,15 @@ export function criarConhecido(
  * que é literalmente inventar um passado que não houve (o erro que a F5-FIX
  * corrigiu na economia). A leitura de timelines pegou o caso.
  */
-function fraseDeAmizade(origem: AmbienteSocial | undefined, nome: string): string {
+function fraseDeAmizade(
+  origem: AmbienteSocial | undefined,
+  nome: string,
+  // F6-FIX — a leitura de timelines pegou "Giovanna acabou virando amigo
+  // seu". O gênero da pessoa já está no estado; não concordar com ele é
+  // deixar o texto denunciar que é template.
+  genero: FamilyMember['genero']
+): string {
+  const f = genero === 'feminino';
   switch (origem) {
     case 'escola':
       return `O que era colégio virou amizade: ${nome} passou a ser presença certa.`;
@@ -214,9 +230,13 @@ function fraseDeAmizade(origem: AmbienteSocial | undefined, nome: string): strin
     case 'atividade':
       return `O que começou como companhia na atividade virou amizade: ${nome}.`;
     case 'vizinhanca':
-      return `De vizinho a amigo: ${nome} passou a fazer parte dos seus dias.`;
+      return f
+        ? `De vizinha a amiga: ${nome} passou a fazer parte dos seus dias.`
+        : `De vizinho a amigo: ${nome} passou a fazer parte dos seus dias.`;
     case 'amigo_de_amigo':
-      return `Apresentado por gente em comum, ${nome} acabou virando amigo seu também.`;
+      return f
+        ? `Apresentada por gente em comum, ${nome} acabou virando amiga sua também.`
+        : `Apresentado por gente em comum, ${nome} acabou virando amigo seu também.`;
     case 'familia_estendida':
       return `Parente que virou amizade: ${nome} passou a ser presença certa.`;
     default:
@@ -333,7 +353,22 @@ export function processarAnoSocial(
       const afinidade = afinidadeDaPessoa(pessoa);
       const ganho = afinidade < FRACAO_SEM_QUIMICA ? Math.round(bruto * 0.25) : bruto;
       const antes = pessoa.relacionamento;
-      pessoa.relacionamento = Math.min(100, pessoa.relacionamento + ganho);
+
+      // F6-FIX §11 — TETO DA CONVIVÊNCIA PASSIVA.
+      //
+      // A vida aproxima pessoas sem clique nenhum, e isso é o que a F6 tem
+      // de melhor: ninguém precisa "jogar" a amizade para ela existir. Mas
+      // sem teto, o ano social sozinho levava um colega de sala a
+      // proximidade 100 — "Distante → Melhor amigo" sem uma única decisão
+      // do jogador, que é o que o playtest apontou.
+      //
+      // O convívio, então, leva até a AMIZADE (o vínculo real, acima do
+      // limiar) e um pouco além — não até a intimidade máxima. O que passa
+      // daqui tem de vir de agência: interação deliberada, ou um evento em
+      // que a pessoa escolheu estar presente. Não é um bloqueio da relação;
+      // é um limite do que a inércia consegue construir sozinha.
+      const tetoPassivo = Math.max(pessoa.relacionamento, TETO_CONVIVIO_PASSIVO);
+      pessoa.relacionamento = Math.min(tetoPassivo, pessoa.relacionamento + ganho);
       pessoa.ultimoContatoIdade = idade;
 
       // Promoção a amizade: o degrau que torna a amizade CONQUISTADA.
@@ -354,7 +389,11 @@ export function processarAnoSocial(
             idade,
             ano: anoAtual,
             categoria: 'familia',
-            texto: fraseDeAmizade(pessoa.origemSocial as AmbienteSocial, pessoa.nome),
+            texto: fraseDeAmizade(
+              pessoa.origemSocial as AmbienteSocial,
+              pessoa.nome,
+              pessoa.genero
+            ),
             relevancia: 'normal'
           });
         }

@@ -23,6 +23,32 @@ import type {
 } from '../../types';
 import { formatarDinheiro, getRotuloAtributo } from '../../utils/formatters';
 import { atendeCondicaoComportamental, getNomeTraco } from '../personalitySystem';
+import { MASTER_EVENTS_LIST } from '../../data/events/allEvents';
+
+/**
+ * Índice flag → eventos que podem concedê-la, derivado do catálogo uma vez.
+ *
+ * Derivado, e não escrito à mão, por uma razão prática: uma lista paralela
+ * se desatualiza no primeiro evento novo, e o defeito reapareceria em
+ * silêncio. Aqui, adicionar um evento que concede a flag já conta.
+ */
+let indiceConcessores: Map<string, string[]> | null = null;
+
+function eventosQueConcedem(flag: string): readonly string[] {
+  if (!indiceConcessores) {
+    indiceConcessores = new Map();
+    for (const evento of MASTER_EVENTS_LIST) {
+      for (const opcao of evento.opcoes) {
+        const concedida = opcao.consequencias.adicionarFlag;
+        if (!concedida) continue;
+        const atual = indiceConcessores.get(concedida) ?? [];
+        if (!atual.includes(evento.id)) atual.push(evento.id);
+        indiceConcessores.set(concedida, atual);
+      }
+    }
+  }
+  return indiceConcessores.get(flag) ?? [];
+}
 
 /** Motivo em pt-BR quando uma exigência comportamental não é cumprida (qualitativo, sem números). */
 function motivoCondicaoComportamental(cond: CondicaoComportamental): string {
@@ -56,13 +82,78 @@ export interface ResultadoRequisito {
    * só diz à apresentação o que vale a pena mostrar.
    */
   permanente?: boolean;
+  /**
+   * F6-FIX §5 — POR QUE esta opção está fechada.
+   *
+   * O playtest recebeu "Você não cumpre os requisitos para esta escolha."
+   * numa opção que dizia "o colega que você defendeu na infância se oferece
+   * pra estudar com você" — sem nunca ter recebido a chance de defender
+   * colega nenhum. Medido nas 105 vidas: 39 opções bloqueadas por flag, e
+   * em 39 delas o evento antecedente JAMAIS foi apresentado.
+   *
+   * - 'trajetoria': o jogo ofereceu a oportunidade e a vida seguiu outro
+   *   caminho. É consequência, e é desejável que doa.
+   * - 'nunca_oferecido': o antecedente nunca apareceu. Não é escolha do
+   *   jogador; apresentar como se fosse é mentira sobre a própria história.
+   * - 'estado': depende de algo do presente (dinheiro, idade, atributo) e
+   *   não conta história nenhuma sobre o passado.
+   */
+  origemDoBloqueio?: 'trajetoria' | 'nunca_oferecido' | 'estado';
+}
+
+/**
+ * F6-FIX — a recusa por flag, classificada.
+ *
+ * A pergunta é: o jogo chegou a OFERECER a cena que concede esta flag?
+ * `eventosQueConcedem` é derivado do próprio catálogo (nenhuma lista
+ * paralela para manter à mão, nenhum `if (eventId === ...)`), e o histórico
+ * de eventos disparados já existe no save.
+ */
+function recusaPorFlag(
+  flag: string,
+  historicoEventos?: readonly string[]
+): ResultadoRequisito {
+  if (!historicoEventos) {
+    return {
+      aprovado: false,
+      motivo: 'Você não cumpre os requisitos para esta escolha.',
+      origemDoBloqueio: 'trajetoria'
+    };
+  }
+
+  const fontes = eventosQueConcedem(flag);
+  const teveOportunidade = fontes.some(id => historicoEventos.includes(id));
+
+  if (teveOportunidade) {
+    // O jogador esteve nessa cena e decidiu outra coisa. Isso é história.
+    return {
+      aprovado: false,
+      motivo: 'Sua história seguiu por outro caminho.',
+      origemDoBloqueio: 'trajetoria'
+    };
+  }
+
+  // Nunca apareceu. A opção não deve ser exibida como se fosse culpa de
+  // alguma escolha — quem decide o que fazer com isso é a apresentação.
+  return {
+    aprovado: false,
+    motivo: 'Isso dependia de algo que não aconteceu na sua vida.',
+    origemDoBloqueio: 'nunca_oferecido'
+  };
 }
 
 export function avaliarRequisitoOpcao(
   opcao: EventOption,
   personagem: Character,
   economia: EconomyState,
-  personalidade?: PersonalityState
+  personalidade?: PersonalityState,
+  /**
+   * F6-FIX — ids de tudo que o jogo já apresentou a esta pessoa
+   * (`historicoEventosDisparados`, que já existe no save desde sempre).
+   * Sem isto não dá para saber se um requisito não cumprido é trajetória ou
+   * azar. Opcional: quem não passa continua recebendo a avaliação antiga.
+   */
+  historicoEventos?: readonly string[]
 ): ResultadoRequisito {
   const requisito = opcao.requisito;
   if (!requisito) return { aprovado: true };
@@ -102,7 +193,7 @@ export function avaliarRequisitoOpcao(
   }
 
   if (requisito.flagNecessaria && !personagem.flags[requisito.flagNecessaria]) {
-    return { aprovado: false, motivo: 'Você não cumpre os requisitos para esta escolha.' };
+    return recusaPorFlag(requisito.flagNecessaria, historicoEventos);
   }
 
   // B2 — padrão de comportamento acumulado (recusa segura sem estado de personalidade)

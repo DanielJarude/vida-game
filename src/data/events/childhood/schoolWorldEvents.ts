@@ -133,6 +133,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_pedir_mais_tempo_tela',
         texto: '',
         descricaoResultado: 'Você conseguiu alguns minutos extras, mas na próxima vez o tempo de tela ficou mais curto.',
+        descricaoMemoria: 'Pediu mais tempo no tablet da casa e acabou com a hora de tela encurtada depois.',
         consequencias: {
           stats: { felicidade: 6 },
           hiddenStats: { disciplina: -4 },

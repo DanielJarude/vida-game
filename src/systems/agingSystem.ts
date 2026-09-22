@@ -91,6 +91,17 @@ export interface AgingResult {
   /** Diagnóstico do ritmo do ano — depuração, testes e simulação. Nunca exibido. */
   ritmo: DiagnosticoRitmo;
   /**
+   * F6-FIX §6 — impacto comportamental produzido pela ROTINA do ano (hoje,
+   * a postura escolar). Vem separado dos impactos de evento porque a
+   * camada de comandos é quem possui o `PersonalityState`; o motor apenas
+   * informa o que o ano acumulou.
+   *
+   * Sem isto, estudar todos os anos — a escolha mais disciplinada que o
+   * jogo oferece — não construía traço de disciplina nenhum, e o jogador
+   * levava "você não tem histórico suficiente de disciplina" na cara.
+   */
+  impactoComportamentalDoAno?: Partial<Record<'disciplina', number>>;
+  /**
    * F3 — estado do Calendário da Vida depois do ano. Vem sempre preenchido:
    * a camada de comandos grava isto em vez de remontar por conta própria,
    * que é o que faria um marco cumprido reocorrer depois de um reload.
@@ -217,6 +228,7 @@ export function executarPassagemDeAno(
 
   // 3. Processamento da Educação
   const resEdu = processarAnoEducacao(educacao, char, novoAno);
+  const impactoComportamentalDoAno = resEdu.impactoComportamental;
   let edu = resEdu.educacaoAtualizada;
   char = resEdu.personagemAtualizado;
   novosLogs.push(...resEdu.logsEducacao);
@@ -604,6 +616,7 @@ export function executarPassagemDeAno(
     carreiraAtualizada: car,
     economiaAtualizada: eco,
     ritmo,
+    impactoComportamentalDoAno,
     // Nenhum marco coube neste ponto do ano: o calendário atravessa
     // inalterado. Ele faz parte do estado base para que TODA saída o
     // devolva — esquecer de propagá-lo numa saída seria perder a memória
@@ -750,6 +763,7 @@ export function executarPassagemDeAno(
       ocorrencia,
       ocorrenciasDoAno: [ocorrencia],
       ritmo,
+      impactoComportamentalDoAno,
       calendario: calendarioAtual,
       marcoDoAno: null,
       morreu: true,
@@ -776,6 +790,7 @@ export function executarPassagemDeAno(
     ocorrencia,
     ocorrenciasDoAno: [ocorrencia],
     ritmo,
+    impactoComportamentalDoAno,
     calendario: calendarioAtual,
     marcoDoAno: null,
     morreu: false

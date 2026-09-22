@@ -63,11 +63,30 @@ export function processarAnoEducacao(
   personagemAtualizado: Character;
   logsEducacao: LifeLogEntry[];
   mensalidadeAnual: number;
+  /**
+   * F6-FIX §6 — impacto COMPORTAMENTAL da postura escolar do ano.
+   *
+   * A postura escolar é uma escolha deliberada, repetida todo ano letivo, e
+   * era a fonte mais consistente de disciplina que o jogo tinha — mas movia
+   * apenas o atributo oculto `hiddenStats.disciplina`. O requisito
+   * "histórico de disciplina" lê o TRAÇO de personalidade, que é outra
+   * coisa, alimentada só por escolhas de evento.
+   *
+   * Resultado medido: 76/105 vidas chegavam aos 12 anos sem NENHUMA
+   * oportunidade de construir o traço, e o jogo dizia a elas que lhes
+   * faltava histórico de disciplina. Estudar todo ano não contava.
+   *
+   * Isto não INVENTA disciplina: é a mesma escolha que o jogador já fazia,
+   * finalmente chegando ao sistema que a julga. Quem mata aula recebe o
+   * delta negativo pelo mesmo caminho.
+   */
+  impactoComportamental?: Partial<Record<'disciplina', number>>;
 } {
   const edu = { ...educacao };
   const char = { ...personagem };
   const logs: LifeLogEntry[] = [];
   let mensalidadeAnual = 0;
+  let impactoComportamental: Partial<Record<'disciplina', number>> | undefined;
   const idade = char.idade;
 
   // Entrada automática no Ensino Fundamental aos 6 anos
@@ -233,6 +252,7 @@ export function processarAnoEducacao(
       case 'estudar':
         char.stats.inteligencia = clamp(char.stats.inteligencia + 3, 0, 100);
         char.hiddenStats.disciplina = clamp(char.hiddenStats.disciplina + 4, 0, 100);
+        impactoComportamental = { disciplina: 1 };
         logs.push({
           id: generateId('log'),
           idade,
@@ -246,6 +266,7 @@ export function processarAnoEducacao(
       case 'matar_aula':
         char.stats.felicidade = clamp(char.stats.felicidade + 8, 0, 100);
         char.hiddenStats.disciplina = clamp(char.hiddenStats.disciplina - 8, 0, 100);
+        impactoComportamental = { disciplina: -1 };
         char.hiddenStats.sociabilidade = clamp(char.hiddenStats.sociabilidade + 5, 0, 100);
         logs.push({
           id: generateId('log'),
@@ -279,7 +300,8 @@ export function processarAnoEducacao(
     educacaoAtualizada: edu,
     personagemAtualizado: char,
     logsEducacao: logs,
-    mensalidadeAnual
+    mensalidadeAnual,
+    impactoComportamental
   };
 }
 

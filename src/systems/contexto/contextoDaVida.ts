@@ -86,6 +86,43 @@ export const TIPOS_IRMAO: readonly RelationType[] = ['irmao', 'irma'];
 export const TIPOS_RESPONSAVEL: readonly RelationType[] = ['pai', 'mae'];
 export const TIPOS_AMIZADE: readonly RelationType[] = ['amigo', 'amiga'];
 
+/**
+ * F6-FIX — TAXONOMIA CANÔNICA DO VÍNCULO SOCIAL NÃO FAMILIAR.
+ *
+ * O playtest mostrou Luiz ("Colega", "Distante") no painel Pessoas e ausente
+ * da aba Relacionamentos. A causa não foi uma string esquecida: a lista de
+ * "quem é vínculo social" existia DUPLICADA em três lugares que discordavam
+ * entre si — `FamilyTab` (sem 'colega'), `contextoSocial` (com) e
+ * `relationshipSystem` (com, mas sem 'rival'/'mentor'). Qualquer tipo novo
+ * teria que ser lembrado em três arquivos, e 'colega' — introduzido pela F6
+ * — foi lembrado em dois.
+ *
+ * Fonte única: quem quiser saber se alguém é vínculo social pergunta aqui.
+ *
+ * `TIPOS_AMIZADE` continua sendo coisa diferente e mais estrita: colega NÃO
+ * é amigo, e nenhuma memória/evento de amizade passa a valer por causa
+ * disto (§21 da F6 e o cooldown da F5-FIX seguem intactos).
+ */
+export const TIPOS_VINCULO_SOCIAL: readonly RelationType[] = [
+  'amigo', 'amiga', 'colega', 'rival', 'mentor', 'paixao'
+];
+
+/** É uma relação social não familiar (amizade, colega, rival, mentor, paixão)? */
+export function ehVinculoSocial(tipo: RelationType): boolean {
+  return TIPOS_VINCULO_SOCIAL.includes(tipo);
+}
+
+/**
+ * As pessoas do mundo social que devem aparecer para o jogador: vivas e com
+ * a relação em andamento. Uma relação encerrada (`ativo: false`) não some da
+ * história — só deixa de ocupar a lista do presente.
+ */
+export function vinculosSociaisVisiveis(
+  familia: readonly FamilyMember[]
+): FamilyMember[] {
+  return familia.filter(m => m.vivo && m.ativo !== false && ehVinculoSocial(m.tipo));
+}
+
 /** Membros vivos de um dos tipos pedidos. Base de quase tudo aqui. */
 function vivosDoTipo(
   familia: readonly FamilyMember[],

@@ -53,6 +53,22 @@ export const PET_INTERACOES: readonly FamilyInteractionType[] = [
   'passear'
 ];
 
+/**
+ * F6-FIX §9 — O QUE SE FAZ COM UM COLEGA/AMIGO.
+ *
+ * Um vínculo social não familiar não é um pai nem um pet. Pedir dinheiro e
+ * pedir conselho pressupõem quem cria você; "discutir" na fase infantil é
+ * narrado como birra, que é gesto de filho, não de colega de sala.
+ *
+ * Sobram os gestos que de fato existem entre amigos: estar junto, conversar
+ * e — quando já se tem idade para isso — dar um presente.
+ */
+export const SOCIAL_INTERACOES: readonly FamilyInteractionType[] = [
+  'passar_tempo',
+  'conversar',
+  'dar_presente'
+];
+
 /** Idade mínima para fazer carinho no pet por conta própria. */
 export const IDADE_MINIMA_CARINHO_PET = 1;
 
@@ -232,12 +248,20 @@ function avaliarCapacidadeInteracaoPet(
 export function deveOferecerInteracao(
   interacao: FamilyInteractionType,
   idade: number,
-  ehPet: boolean = false
+  ehPet: boolean = false,
+  ehVinculoSocial: boolean = false
 ): boolean {
   if (ehPet) {
     // Só as interações de pet fazem sentido; conversar, discutir, presente
     // comprado, pedir dinheiro/conselho nunca entram na lista de um animal.
     return PET_INTERACOES.includes(interacao);
+  }
+
+  // F6-FIX — com um colega/amigo, só o repertório social.
+  if (ehVinculoSocial) {
+    if (!SOCIAL_INTERACOES.includes(interacao)) return false;
+    if (interacao === 'dar_presente') return idade >= IDADE_MINIMA_DAR_PRESENTE - 2;
+    return true;
   }
 
   // Interações exclusivas de pet nunca aparecem para uma pessoa.
@@ -266,10 +290,18 @@ export function narrarInteracaoPorFase(
   interacao: FamilyInteractionType,
   nome: string,
   idade: number,
-  ehPet: boolean = false
+  ehPet: boolean = false,
+  ehVinculoSocial: boolean = false
 ): string {
   if (ehPet) {
     return narrarInteracaoComPet(interacao, nome, idade);
+  }
+
+  // F6-FIX — a narrativa familiar não serve para um colega: ela pressupõe
+  // convivência doméstica ("engatinhou atrás de", "fez birra"). Com um
+  // amigo, o gesto acontece no ambiente que os aproximou.
+  if (ehVinculoSocial) {
+    return narrarInteracaoSocial(interacao, nome, idade);
   }
 
   const fase = obterFaseInteracao(idade);
@@ -311,6 +343,39 @@ export function narrarInteracaoPorFase(
       default:
         return `Você e ${nome} tiveram uma discussão áspera sobre assuntos do dia a dia. O clima ficou pesado.`;
     }
+  }
+
+  return '';
+}
+
+/**
+ * F6-FIX — a mesma ação, vivida com alguém de fora de casa.
+ *
+ * Varia por fase porque brincar aos 7 e sair aos 30 não são o mesmo gesto,
+ * mas nunca invoca papel de família.
+ */
+function narrarInteracaoSocial(
+  interacao: FamilyInteractionType,
+  nome: string,
+  idade: number
+): string {
+  const crianca = idade <= 11;
+  const adolescente = idade >= 12 && idade <= 17;
+
+  if (interacao === 'passar_tempo') {
+    if (crianca) return `Você passou o recreio inteiro brincando com ${nome}.`;
+    if (adolescente) return `Você e ${nome} ficaram à toa depois da aula, sem pressa de ir embora.`;
+    return `Você e ${nome} deram um jeito de se encontrar e passar um tempo juntos.`;
+  }
+
+  if (interacao === 'conversar') {
+    if (crianca) return `Você contou suas novidades para ${nome} e ouviu as dele(a) também.`;
+    if (adolescente) return `Você e ${nome} conversaram sobre tudo o que estava acontecendo na escola.`;
+    return `Você pôs a conversa em dia com ${nome}.`;
+  }
+
+  if (interacao === 'dar_presente') {
+    return `Você deu uma lembrança para ${nome}, que não estava esperando.`;
   }
 
   return '';

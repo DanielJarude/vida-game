@@ -37,6 +37,7 @@ export const BABY_EVENTS: GameEvent[] = [
         id: 'opt_chorar_estranho',
         texto: '',
         descricaoResultado: 'Você chorou e se agarrou em quem já conhecia. Depois de um tempo, curioso, voltou a olhar para a visita de longe.',
+        descricaoMemoria: 'Estranhou um parente que não conhecia e só foi se soltando aos poucos.',
         consequencias: {
           stats: { felicidade: -3 },
           hiddenStats: { sociabilidade: -3 },

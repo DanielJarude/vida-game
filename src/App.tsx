@@ -106,6 +106,7 @@ export function App() {
               personagem={jogo.personagem}
               economia={jogo.economia}
               personalidade={jogo.personalidade}
+              historicoEventos={jogo.historicoEventos}
               onEscolherOpcao={jogo.responderEvento}
               onContinuar={jogo.fecharEvento}
             />

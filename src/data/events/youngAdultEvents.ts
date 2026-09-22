@@ -86,6 +86,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         id: 'opt_emprestar_confiante',
         texto: 'Emprestar o dinheiro por consideração à amizade',
         descricaoResultado: 'Ele ficou imensamente agradecido e te pagou de volta alguns meses depois com um chocolate.',
+        descricaoMemoria: 'Emprestou dinheiro a um amigo e recebeu de volta meses depois, com um chocolate junto.',
         consequencias: {
           impactosComportamentais: { generosidade: 2 },
           stats: { felicidade: 10 },
@@ -97,6 +98,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         id: 'opt_dar_desculpa',
         texto: 'Dizer que está apertado e não pode ajudar no momento',
         descricaoResultado: 'Ele compreendeu, mas o clima entre vocês ficou um pouco mais distante.',
+        descricaoMemoria: 'Não emprestou o dinheiro que um amigo pediu e a relação esfriou um pouco.',
         consequencias: {
           impactosComportamentais: { generosidade: -1 },
           stats: { felicidade: -2 },
@@ -167,6 +169,7 @@ export const YOUNG_ADULT_EVENTS: GameEvent[] = [
         id: 'opt_passar_em_familia',
         texto: '',
         descricaoResultado: 'Foi uma ceia acolhedora, com abraços apertados e muito afeto.',
+        descricaoMemoria: 'Passou o Réveillon em casa, com a família, numa ceia tranquila.',
         consequencias: {
           stats: { felicidade: 15 },
           relacionamentoDelta: { delta: 15 },

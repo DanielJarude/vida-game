@@ -157,6 +157,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         id: 'opt_presente_criativo',
         texto: '',
         descricaoResultado: 'Ele adorou o presente e a convivência diária na equipe melhorou 100%!',
+        descricaoMemoria: 'Acertou em cheio no presente do amigo secreto da empresa.',
         consequencias: {
           stats: { felicidade: 15 },
           dinheiro: -120,
@@ -167,6 +168,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         id: 'opt_par_de_meias',
         texto: '',
         descricaoResultado: 'Ele abriu o pacote com uma risada amarela e todos riram da situação.',
+        descricaoMemoria: 'Tirou um par de meias como presente no amigo secreto da empresa e a sala inteira riu.',
         consequencias: {
           stats: { felicidade: 5 },
           dinheiro: -25
@@ -412,6 +414,7 @@ export const EXTRA_EVENTS: GameEvent[] = [
         id: 'opt_emocionar_festa',
         texto: '',
         descricaoResultado: 'Foi uma celebração inesquecível de amor, amizade e gratidão pela sua vida!',
+        descricaoMemoria: 'Ganhou uma festa surpresa de aniversário e se emocionou com quem apareceu.',
         consequencias: {
           stats: { felicidade: 35 },
           relacionamentoDelta: { delta: 25 },

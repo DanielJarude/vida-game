@@ -8,6 +8,8 @@ import {
   IDADE_MINIMA_RELACIONAMENTO_ADULTO
 } from '../../systems/availabilitySystem';
 import { apresentarRelacionamento } from '../../presentation/relationshipPresentation';
+import { vinculosSociaisVisiveis } from '../../systems/contexto/contextoDaVida';
+import { ROTULO_AMBIENTE } from '../../systems/social/contextoSocial';
 
 interface FamilyTabProps {
   personagem: Character;
@@ -84,8 +86,17 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   // `ativo !== false`) — não lota a interface com todo mundo citado numa
   // frase de evento. Relações encerradas (`ativo: false`) somem desta
   // lista sem apagar a pessoa nem seu histórico.
-  const mundoSocial = vivos.filter(
-    f => ['amigo', 'amiga', 'rival', 'paixao', 'mentor'].includes(f.tipo) && f.ativo !== false
+  //
+  // F6-FIX achado B — esta lista era literal e NÃO continha 'colega', o
+  // tipo que a F6 introduziu. Resultado no playtest: Luiz aparecia no
+  // painel Pessoas e sumia da aba Relacionamentos. A UI não mantém mais
+  // taxonomia própria; pergunta ao domínio.
+  const mundoSocial = vinculosSociaisVisiveis(familia);
+
+  // Amigos de verdade primeiro, depois colegas e o resto: a lista fica
+  // ordenada por quanto a relação importa hoje, não por ordem de chegada.
+  const mundoSocialOrdenado = [...mundoSocial].sort(
+    (a, b) => b.relacionamento - a.relacionamento
   );
 
   const abrirModal = (membro: FamilyMember) => setSelectedMember(membro);
@@ -99,6 +110,23 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   };
 
   const idadeTexto = (n: number) => (n === 1 ? '1 ano' : `${n} anos`);
+
+  /**
+   * F6-FIX §6 — a relação tem HISTÓRIA, e ela cabe numa linha: de onde a
+   * pessoa veio e desde quando. Sem isso a aba listava nomes soltos e o
+   * jogador não tinha como saber quem era Luiz.
+   */
+  const detalheSocial = (m: FamilyMember) => {
+    const partes = [idadeTexto(m.idade)];
+    // `origemSocial` é `string` no tipo (types/ não importa de systems/,
+    // para não criar ciclo), então a tradução é uma consulta tolerante:
+    // origem desconhecida simplesmente não vira texto.
+    const rotulos: Record<string, string> = ROTULO_AMBIENTE;
+    const origem = m.origemSocial ? rotulos[m.origemSocial] : undefined;
+    if (origem) partes.push(origem);
+    if (m.idadeEntrada !== undefined) partes.push(`desde os seus ${m.idadeEntrada}`);
+    return partes.join(' · ');
+  };
 
   return (
     <div>
@@ -201,16 +229,16 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         </section>
       )}
 
-      {mundoSocial.length > 0 && (
+      {mundoSocialOrdenado.length > 0 && (
         <section className="section">
           <div>
-            <h3 className="subsection__title">Fora de casa</h3>
+            <h3 className="subsection__title">Amigos e colegas</h3>
             <div className="action-list">
-              {mundoSocial.map(m => (
+              {mundoSocialOrdenado.map(m => (
                 <PessoaRow
                   key={m.id}
                   membro={m}
-                  detalhe={idadeTexto(m.idade)}
+                  detalhe={detalheSocial(m)}
                   onAbrir={abrirModal}
                 />
               ))}

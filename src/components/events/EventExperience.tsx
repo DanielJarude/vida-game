@@ -39,6 +39,11 @@ interface EventExperienceProps {
   economia: EconomyState;
   personalidade?: PersonalityState | null;
   /**
+   * F6-FIX — tudo que o jogo já apresentou a esta pessoa. Permite separar
+   * "você escolheu diferente" de "isso nunca te foi oferecido".
+   */
+  historicoEventos?: readonly string[];
+  /**
    * Aplica a escolha no motor. Retorna `true` quando a escolha foi aceita;
    * `false` quando o motor recusou (requisito não cumprido), caso em que o
    * evento continua aberto e nenhum resultado é mostrado.
@@ -76,6 +81,7 @@ export const EventExperience: React.FC<EventExperienceProps> = ({
   personagem,
   economia,
   personalidade,
+  historicoEventos,
   onEscolherOpcao,
   onContinuar
 }) => {
@@ -90,7 +96,13 @@ export const EventExperience: React.FC<EventExperienceProps> = ({
     evento.opcoes.forEach(opcao => {
       mapa.set(
         opcao.id,
-        avaliarRequisitoOpcao(opcao, personagem, economia, personalidade ?? undefined)
+        avaliarRequisitoOpcao(
+          opcao,
+          personagem,
+          economia,
+          personalidade ?? undefined,
+          historicoEventos
+        )
       );
     });
     return mapa;
@@ -156,6 +168,15 @@ export const EventExperience: React.FC<EventExperienceProps> = ({
             // usar. Uma recusa reversível — dinheiro, atributo, histórico —
             // continua visível COM o motivo, porque aí o bloqueio ensina.
             .filter(opcao => !requisitos.get(opcao.id)?.permanente)
+            // F6-FIX achado E — uma opção cujo antecedente NUNCA foi
+            // apresentado não é consequência de nada: exibi-la cinza
+            // ("o colega que você defendeu na infância...") conta ao
+            // jogador uma história que ele não teve a chance de viver e
+            // ainda sugere que a culpa foi dele. Ela some. O lock que
+            // PERMANECE visível é o de trajetória — esse ensina.
+            .filter(
+              opcao => requisitos.get(opcao.id)?.origemDoBloqueio !== 'nunca_oferecido'
+            )
             .map(opcao => {
               const requisito = requisitos.get(opcao.id);
               return (

@@ -92,7 +92,10 @@ import {
   VERSAO_SAVE
 } from '../systems/saveSystem';
 import { criarRegistroTemporal, type RegistroTemporal } from '../systems/tempo/registroTemporal';
-import { criarPersonalidadeInicial } from '../systems/personalitySystem';
+import {
+  criarPersonalidadeInicial,
+  aplicarImpactosComportamentais
+} from '../systems/personalitySystem';
 import { gerarHistoriaNascimento } from '../utils/narrativeGenerator';
 import { clamp, generateId, randomChoice, randomInt } from '../utils/random';
 import { sound } from '../utils/sound';
@@ -418,6 +421,15 @@ export function useGame() {
       inteligencia: statsDepois.inteligencia - statsAntes.inteligencia,
       aparencia: statsDepois.aparencia - statsAntes.aparencia
     });
+
+    // F6-FIX §6 — a rotina do ano (postura escolar) alimenta o traço de
+    // disciplina. É a mesma escolha que o jogador já fazia; ela só não
+    // chegava ao sistema que depois cobra "histórico de disciplina".
+    if (resultado.impactoComportamentalDoAno) {
+      setPersonalidade(atual =>
+        aplicarImpactosComportamentais(atual, resultado.impactoComportamentalDoAno!)
+      );
+    }
 
     setPersonagem(resultado.personagemAtualizado);
     setFamilia(resultado.familiaAtualizada);
@@ -1006,6 +1018,9 @@ export function useGame() {
     carreira,
     economia,
     personalidade,
+    // F6-FIX — a apresentação precisa saber o que já foi oferecido para
+    // distinguir lock de trajetória de lock de RNG.
+    historicoEventos,
     timeline,
     eventoAtivo,
     acoesRealizadasAno,

@@ -19,6 +19,7 @@ export const ROMANCE_EVENTS: GameEvent[] = [
         id: 'opt_restaurante_especial',
         texto: '',
         descricaoResultado: 'A noite foi mágica e apaixonada! A cumplicidade entre vocês se fortaleceu ainda mais.',
+        descricaoMemoria: 'Teve uma noite de jantar à luz de velas que aproximou vocês dois.',
         consequencias: {
           stats: { felicidade: 25 },
           dinheiro: -350,
