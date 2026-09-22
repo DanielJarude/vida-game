@@ -40,6 +40,7 @@ import type {
   LifeLogEntry
 } from '../../types';
 import { generateId } from '../../utils/random';
+import { temIrmao, temAmigo, temPet, estaEstudando } from '../contexto/contextoDaVida';
 
 /**
  * Uma memória candidata.
@@ -53,6 +54,25 @@ interface MemoriaCandidata {
   readonly categoria: LifeLogCategory;
   readonly quando: (ctx: ContextoMemoria) => boolean;
   readonly texto: (ctx: ContextoMemoria) => string;
+  /**
+   * F5 — com que frequência esta memória pode aparecer.
+   *
+   * `'anual'` (padrão): sempre que for verdadeira e o ano estiver vazio.
+   *
+   * `'alternada'`: no máximo em anos alternados. Serve às memórias de ÉPOCA —
+   * "um ano comum de escola", "um ano com os irmãos" —, que são verdadeiras
+   * TODO ano e, por isso, se deixadas soltas, preenchem toda a infância.
+   *
+   * A primeira versão desta fase não tinha cadência, e a medição mostrou o
+   * problema: os anos 6-11 sem nenhuma linha caíram de 27,1% para 0,3%. Zerar
+   * silêncio não é o objetivo — uma memória de época marca a EPÓCA, não cada
+   * ano dela, e uma infância inteira narrada ano a ano vira o relatório que o
+   * projeto recusa.
+   *
+   * A alternância é pela paridade da IDADE, não por sorteio: o módulo
+   * continua sendo uma função pura do estado.
+   */
+  readonly cadencia?: 'anual' | 'alternada';
 }
 
 export interface ContextoMemoria {
@@ -61,6 +81,39 @@ export interface ContextoMemoria {
   readonly educacao: EducationState;
   readonly economia: EconomyState;
   readonly familia: readonly FamilyMember[];
+}
+
+/**
+ * F5 — adapta o contexto desta camada para as FatiasDoMundo que os selectors
+ * da F4 esperam. É de propósito que a memória NÃO reimplemente "tem irmão?":
+ * a F4 estabeleceu que essa pergunta tem uma interpretação canônica só, e
+ * uma memória que inventasse a sua própria seria exatamente a divergência
+ * que aquela fase eliminou.
+ */
+function fatias(ctx: ContextoMemoria) {
+  return {
+    personagem: ctx.personagem,
+    familia: ctx.familia,
+    carreira: ctx.carreira,
+    educacao: ctx.educacao,
+    economia: ctx.economia
+  };
+}
+
+/**
+ * F5 — escolhe entre redações equivalentes usando a IDADE como índice.
+ *
+ * O teste qualitativo pegou o que a métrica não pegava: uma criança com
+ * irmãos passava os anos 8 e 9 com a MESMA frase, palavra por palavra. Duas
+ * linhas idênticas coladas leem como bug, não como biografia.
+ *
+ * A variação é por idade, e não sorteada, por uma razão de contrato: este
+ * módulo é uma função pura `estado -> frase`, e duas vidas no mesmo estado
+ * devem produzir o mesmo texto. Introduzir RNG aqui quebraria a
+ * reprodutibilidade das simulações e tornaria o módulo dependente de semente.
+ */
+function variar(idade: number, redacoes: readonly string[]): string {
+  return redacoes[idade % redacoes.length];
 }
 
 /** Filhos vivos, ordenados do mais velho para o mais novo. */
@@ -85,6 +138,110 @@ function parceiroVivo(ctx: ContextoMemoria): FamilyMember | undefined {
  * Nenhuma frase aqui inventa fato. Cada uma só afirma o que o estado já diz.
  */
 const MEMORIAS: readonly MemoriaCandidata[] = [
+  // ------------------------------------------------------------------
+  // F5 — INFÂNCIA E ADOLESCÊNCIA
+  //
+  // A auditoria mediu 37,1% dos anos 1-5 sem nenhuma linha, porque as dez
+  // candidatas originais descreviam uma vida adulta (trabalho, curso
+  // superior, filhos, dívida, aposentadoria) e a própria rede final,
+  // `mem_cidade`, exigia idade >= 18. Para uma criança, esta função sempre
+  // devolvia null — o salto "7 anos -> 10 anos" do playtest.
+  //
+  // O que estas candidatas NÃO são: eventos disfarçados. Nenhuma abre modal,
+  // pede escolha, move atributo, cria NPC, dinheiro ou estado. São frases
+  // derivadas do estado que JÁ existe, no mesmo contrato `textura` das
+  // adultas, e só aparecem em ano que ficaria vazio.
+  //
+  // Cada condição passa pelos selectors da F4. Uma memória de irmão exige
+  // irmão; uma de amigo exige amigo. Isso não é zelo redundante: é
+  // precisamente o erro que a F4 existe para impedir, aplicado à narrativa.
+  // ------------------------------------------------------------------
+  {
+    // Bebê. Não há nada a relatar além do próprio crescer, e tentar dizer
+    // mais do que isso seria inventar.
+    id: 'mem_bebe_crescendo',
+    categoria: 'geral',
+    quando: ctx => ctx.personagem.idade <= 2,
+    texto: ctx =>
+      variar(ctx.personagem.idade, [
+        'Um ano de colo, papinha e sono trocado, do jeito que essa idade é.',
+        'Um ano de descobrir o mundo no ritmo de quem ainda cabe no colo.'
+      ])
+  },
+  {
+    id: 'mem_infancia_irmaos',
+    cadencia: 'alternada',
+    categoria: 'familia',
+    quando: ctx => ctx.personagem.idade <= 11 && temIrmao(fatias(ctx)),
+    texto: ctx =>
+      variar(ctx.personagem.idade, [
+        'Um ano de brincadeira e briga com os irmãos dentro de casa.',
+        'Um ano dividindo quarto, brinquedo e paciência com os irmãos.',
+        'Um ano em que a casa cheia de irmãos não deixou o tédio entrar.'
+      ])
+  },
+  {
+    id: 'mem_infancia_pet',
+    cadencia: 'alternada',
+    categoria: 'familia',
+    quando: ctx => ctx.personagem.idade <= 14 && temPet(fatias(ctx)),
+    texto: ctx =>
+      variar(ctx.personagem.idade, [
+        'Um ano em que boa parte das tardes foi passada com o bicho de estimação por perto.',
+        'Um ano com o animal de estimação grudado em você o dia inteiro.',
+        'Um ano de companhia garantida: onde você estava, o bicho estava junto.'
+      ])
+  },
+  {
+    id: 'mem_infancia_escola',
+    cadencia: 'alternada',
+    categoria: 'escola',
+    quando: ctx =>
+      ctx.personagem.idade >= 6 && ctx.personagem.idade <= 14 && estaEstudando(fatias(ctx)),
+    texto: ctx =>
+      variar(ctx.personagem.idade, [
+        'Um ano comum de escola: aula de manhã, tarefa à tarde, rua no fim do dia.',
+        'Um ano de caderno, recreio e caminho de volta da escola.',
+        'Um ano escolar sem nada de extraordinário, do jeito que a maioria é.'
+      ])
+  },
+  // NÃO EXISTE aqui uma rede final incondicional para a infância, e a
+  // ausência é deliberada. A primeira versão desta lista tinha uma —
+  // "Um ano de infância em <cidade>, sem grandes acontecimentos" — e ela
+  // levava os anos 1-5 sem linha de 37,1% a 0,0%. Zero é a resposta errada:
+  // é o retorno do "Um ano sem grandes acontecimentos" que o B4-FIX4 removeu,
+  // uma frase que interrompe o jogador para dizer que nada merecia
+  // interrompê-lo. Uma infância PODE ter anos silenciosos; o que ela não pode
+  // ter é o buraco sistemático de 3+ anos que o playtest encontrou.
+  {
+    id: 'mem_adolescencia_amigo',
+    cadencia: 'alternada',
+    categoria: 'geral',
+    quando: ctx =>
+      ctx.personagem.idade >= 12 && ctx.personagem.idade <= 17 && temAmigo(fatias(ctx)),
+    texto: ctx =>
+      variar(ctx.personagem.idade, [
+        'Um ano de conversa longa e tempo perdido com os amigos, do jeito certo.',
+        'Um ano em que quase tudo o que importava acontecia junto dos amigos.',
+        'Um ano de planos com os amigos combinados na esquina e desfeitos no dia seguinte.'
+      ])
+  },
+  {
+    id: 'mem_adolescencia_escola',
+    cadencia: 'alternada',
+    categoria: 'escola',
+    quando: ctx =>
+      ctx.personagem.idade >= 15 && ctx.personagem.idade <= 17 && estaEstudando(fatias(ctx)),
+    texto: ctx =>
+      variar(ctx.personagem.idade, [
+        'Um ano de escola, com a pergunta sobre o que fazer depois já rondando.',
+        'Um ano de aula e de gente perguntando o que você vai ser.',
+        'Um ano de ensino médio, com o futuro ainda sem formato definido.'
+      ])
+  },
+  // ------------------------------------------------------------------
+  // VIDA ADULTA (originais da F3, inalteradas)
+  // ------------------------------------------------------------------
   {
     // Criar filho pequeno é a coisa que mais ocupa uma vida sem "acontecer".
     id: 'mem_filhos_pequenos',
@@ -187,7 +344,14 @@ export function gerarPequenaMemoria(
   // GUARDA 1 — só em ano que ficaria sem nenhuma linha.
   if (logsDoAno.length > 0) return null;
 
-  const escolhida = MEMORIAS.find(m => m.quando(ctx));
+  const escolhida = MEMORIAS.find(m => {
+    if (!m.quando(ctx)) return false;
+    // Memória de época só em ano alternado — ver `cadencia`. O silêncio nos
+    // anos ímpares é deliberado: é o que impede a infância de virar um
+    // registro contínuo de "mais um ano igual ao anterior".
+    if (m.cadencia === 'alternada' && idade % 2 !== 0) return false;
+    return true;
+  });
   if (!escolhida) return null;
 
   return {

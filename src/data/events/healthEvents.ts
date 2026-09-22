@@ -125,7 +125,12 @@ export const HEALTH_EVENTS: GameEvent[] = [
       {
         id: 'opt_pastel_feira',
         texto: '',
-        descricaoResultado: 'Uma verdadeira iguaria da cultura brasileira! A alma ficou feliz da vida!',
+        // F5 — este texto falava de pastel de feira num evento cuja situação é
+        // uma corrida no parque: resíduo da época em que era uma DECISÃO com
+        // a opção "ir comer pastel". Como acontecimento, o motor sorteia o
+        // desfecho e a pessoa não escolheu trocar corrida por pastel.
+        descricaoResultado: 'Você foi devagar, sem pressa de bater recorde, e voltou do parque leve.',
+        descricaoMemoria: 'Pegou o hábito de caminhar no parque nas manhãs de domingo, sem pressa nenhuma.',
         consequencias: {
           stats: { felicidade: 20, saude: 2 },
           dinheiro: -25,

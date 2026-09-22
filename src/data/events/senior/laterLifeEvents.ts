@@ -215,6 +215,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
         texto: '',
         peso: 2,
         descricaoResultado: 'Você transformou o quarto vazio no que sempre quis ter e nunca teve espaço: ateliê, oficina, biblioteca. A casa voltou a ser do tamanho certo.',
+        descricaoMemoria: 'Transformou um quarto que estava vazio havia meses no cômodo que sempre quis ter.',
         consequencias: {
           dinheiro: -600,
           stats: { felicidade: 10 },
@@ -329,6 +330,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
         texto: '',
         peso: 2,
         descricaoResultado: 'Você não conseguiu passar da terceira foto. Guardou a caixa de volta e ficou o resto do dia quieto, num lugar que não era bem tristeza.',
+        descricaoMemoria: 'Tentou organizar uma caixa de fotos antigas, não passou da terceira e guardou tudo de volta.',
         consequencias: {
           stats: { felicidade: -3 },
           hiddenStats: { empatia: 5 }
@@ -353,6 +355,7 @@ export const LATER_LIFE_EVENTS: GameEvent[] = [
         texto: '',
         peso: 2,
         descricaoResultado: 'A fila não andava, mas a conversa com a pessoa da frente andou muito. Vocês saíram de lá rindo de uma burocracia que continuava sem resolver.',
+        descricaoMemoria: 'Perdeu uma manhã inteira numa fila de banco e saiu de lá sem resolver nada, mas rindo com a pessoa da frente.',
         consequencias: {
           stats: { felicidade: 4 },
           hiddenStats: { sociabilidade: 4, estresse: 3 }

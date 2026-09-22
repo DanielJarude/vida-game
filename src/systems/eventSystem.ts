@@ -23,6 +23,7 @@ import { avaliarCondicoesEvento as avaliarCondicoesEventoImpl } from './events/e
 import { sortearPonderadoComContexto } from './events/selection';
 import { ponderarPorContexto } from './events/contextWeighting';
 import { naturezaDoEvento } from './events/nature';
+import { memoriaDoDesfecho } from './narrativa/memoriaDoEvento';
 import { classificacaoDoEvento } from './events/taxonomia';
 import { tomDoDesfecho } from './events/happenings';
 import { avaliarRequisitoOpcao as avaliarRequisitoOpcaoImpl } from './events/optionRequirements';
@@ -317,13 +318,21 @@ export function aplicarConsequenciasEscolha(
   // que a pessoa se machucou, perdeu dinheiro ou foi demitida entrava na
   // Linha da Vida com a ênfase visual de boa notícia. O tom agora vem das
   // consequências reais (`events/happenings.tomDoDesfecho`).
-  if (opcao.descricaoResultado) {
+  //
+  // F5 — o texto que vai para a BIOGRAFIA não é necessariamente o que foi
+  // exibido ao vivo. Um desfecho de acontecimento automático costuma ser
+  // compreensível na hora (porque a situação estava na tela logo acima) e
+  // opaco meses depois na Linha da Vida ("devolveu o tablet" — que tablet?).
+  // `memoriaDoDesfecho` é a fonte única dessa decisão; ver
+  // systems/narrativa/memoriaDoEvento.
+  const textoBiografico = memoriaDoDesfecho(opcao);
+  if (textoBiografico) {
     logs.push({
       id: generateId('log'),
       idade: char.idade,
       ano: anoAtual,
       categoria: contextoNarrativo?.categoriaLog ?? 'evento',
-      texto: opcao.descricaoResultado,
+      texto: textoBiografico,
       tipo: tomDoDesfecho(cons),
       relevancia: contextoNarrativo?.relevancia ?? 'normal'
     });

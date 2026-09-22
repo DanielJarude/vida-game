@@ -102,6 +102,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_pedir_luz_acesa',
         texto: '',
         descricaoResultado: 'Com a luzinha de plantão, você dormiu tranquilo a noite inteira.',
+        descricaoMemoria: 'Teve uma fase de medo do escuro, resolvida por uma luzinha de plantão que ficava acesa a noite toda.',
         consequencias: {
           stats: { felicidade: 6 },
           hiddenStats: { estresse: -5 }
@@ -111,6 +112,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_encarar_armario',
         texto: '',
         descricaoResultado: 'Você encarou o "monstro" e descobriu que era só um casaco pendurado. Ficou orgulhoso de si mesmo.',
+        descricaoMemoria: 'Enfrentou sozinho um medo do escuro ao descobrir que o vulto no armário do quarto era só um casaco pendurado.',
         consequencias: {
           stats: { felicidade: 10 },
           hiddenStats: { estresse: -3 },
@@ -199,6 +201,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_observar_inseto',
         texto: '',
         descricaoResultado: 'Você ficou minutos observando o inseto andar, fazendo perguntas sobre ele para quem estava por perto.',
+        descricaoMemoria: 'Passou uma tarde agachado no quintal observando um inseto, cheio de perguntas sobre o bicho.',
         consequencias: {
           stats: { inteligencia: 5, felicidade: 6 },
           hiddenStats: { empatia: 2 },
@@ -208,6 +211,7 @@ export const TODDLER_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_fugir_inseto',
         texto: '',
         descricaoResultado: 'Você saiu correndo e só voltou ao quintal depois que alguém prometeu que o inseto tinha ido embora.',
+        descricaoMemoria: 'Levou um susto com um inseto grande no quintal e só voltou a brincar lá depois que garantiram que ele tinha ido embora.',
         consequencias: {
           stats: { felicidade: -2 },
           hiddenStats: { estresse: 3 }

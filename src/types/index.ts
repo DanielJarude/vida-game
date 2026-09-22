@@ -366,6 +366,28 @@ export interface EventOption {
   id: string;
   texto: string;
   descricaoResultado?: string;
+  /**
+   * F5 — como esta experiência fica registrada na BIOGRAFIA, quando o texto
+   * de desfecho não se sustenta sozinho.
+   *
+   * Três textos, três funções distintas:
+   *   `descricao`          SITUAÇÃO — o que aconteceu (mostrado ao vivo)
+   *   `descricaoResultado` RESULTADO — como terminou (mostrado ao vivo)
+   *   `descricaoMemoria`   MEMÓRIA — como isso fica na Linha da Vida
+   *
+   * POR QUE NÃO BASTA CONCATENAR os dois primeiros: as situações são escritas
+   * no PRESENTE, porque são exibidas enquanto acontecem ("o quarto fica
+   * escuro"), e os resultados no PASSADO ("você encarou"). Colar um no outro
+   * produz texto com tempo verbal quebrado e comprimento de parágrafo numa
+   * lista que precisa ser escaneável. Além disso, a memória raramente é a
+   * soma: ela é o resumo que sobra depois, e às vezes enfatiza outra coisa.
+   *
+   * Preencher SÓ quando o resultado for incompreensível isolado — tipicamente
+   * quando ele usa artigo definido para algo que só a situação apresentou
+   * ("devolveu o tablet", "completou o álbum"). Ausente = o resultado já se
+   * explica e vai para a Linha da Vida como está, que é o caso da maioria.
+   */
+  descricaoMemoria?: string;
   consequencias: EventConsequence;
   /**
    * Peso relativo deste desfecho quando o evento é um ACONTECIMENTO

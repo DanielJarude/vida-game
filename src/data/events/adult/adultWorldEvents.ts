@@ -55,6 +55,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
         texto: '',
         peso: 3,
         descricaoResultado: 'O dinheiro durou menos do que você imaginava: conta, transporte, um agrado para casa e acabou. Mesmo assim, olhar o extrato e ver que veio do seu trabalho foi diferente de tudo.',
+        descricaoMemoria: 'Recebeu o primeiro salário da vida e viu o dinheiro acabar em contas antes do fim do mês.',
         consequencias: { stats: { felicidade: 8 }, hiddenStats: { ambicao: 4 } }
       },
       {
@@ -62,6 +63,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
         texto: '',
         peso: 2,
         descricaoResultado: 'Você separou uma parte antes de gastar qualquer coisa. Não foi muito, mas foi a primeira vez que sobrou dinheiro seu no fim do mês.',
+        descricaoMemoria: 'Recebeu o primeiro salário da vida e conseguiu guardar uma parte antes de gastar o resto.',
         consequencias: { dinheiro: 400, stats: { felicidade: 6 }, hiddenStats: { disciplina: 4 } }
       }
     ]
@@ -146,6 +148,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
         texto: '',
         peso: 2,
         descricaoResultado: 'Choveu no meio da tarde, uma caixa de louça não sobreviveu e o caminhão atrasou duas horas. Você dormiu entre caixas, exausto.',
+        descricaoMemoria: 'Mudou de casa num sábado de chuva: o caminhão atrasou, uma caixa de louça se perdeu e a primeira noite foi entre caixas.',
         consequencias: { dinheiro: -700, stats: { felicidade: -4 }, hiddenStats: { estresse: 8 } }
       }
     ]
@@ -337,6 +340,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
         texto: '',
         peso: 2,
         descricaoResultado: 'Era erro de leitura. Depois de duas ligações e um protocolo anotado num papel, o valor foi corrigido na fatura seguinte.',
+        descricaoMemoria: 'Contestou uma conta de luz que veio dobrada, e depois de duas ligações conseguiu a correção.',
         consequencias: { dinheiro: -60, hiddenStats: { estresse: 5 } }
       },
       {
@@ -682,6 +686,7 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
         texto: '',
         peso: 2,
         descricaoResultado: 'Você foi empurrando com o braço esticado e a lanterna do celular. Deu para levar, com uma dor de cabeça a mais no fim do dia.',
+        descricaoMemoria: 'Começou a ler tudo de braço esticado, adiando os óculos de leitura por mais um ano.',
         consequencias: { stats: { saude: -3 }, hiddenStats: { estresse: 4 } }
       }
     ]

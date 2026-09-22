@@ -91,7 +91,11 @@ export const SENIOR_EVENTS: GameEvent[] = [
       {
         id: 'opt_ficar_plantinhas',
         texto: '',
-        descricaoResultado: 'Suas orquídeas floresceram de forma deslumbrante no jardim.',
+        // F5 — mesma origem: o texto descrevia ter FICADO EM CASA cuidando das
+        // plantas, num evento que já narra a viagem acontecendo. Reescrito
+        // para um desfecho da própria excursão.
+        descricaoResultado: 'A viagem foi tranquila: muita conversa no ônibus, água quente e cochilo à tarde.',
+        descricaoMemoria: 'Viajou de excursão com o grupo para umas águas termais e voltou renovado.',
         consequencias: {
           stats: { felicidade: 10 },
           hiddenStats: { disciplina: 5 }

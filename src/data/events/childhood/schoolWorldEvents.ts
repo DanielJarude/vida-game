@@ -123,6 +123,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_seguir_regras_tempo_tela',
         texto: '',
         descricaoResultado: 'Você jogou uma fase animada e devolveu o tablet na hora combinada, ganhando confiança para usar de novo.',
+        descricaoMemoria: 'Ganhou os primeiros minutos sozinho no tablet da casa e devolveu na hora combinada.',
         consequencias: {
           stats: { felicidade: 8, inteligencia: 3 },
           hiddenStats: { disciplina: 6 },
@@ -231,6 +232,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_capitao_time_rua',
         texto: '',
         descricaoResultado: 'Seu time perdeu na final, mas você foi eleito o capitão mais dedicado do torneio pelos próprios adversários.',
+        descricaoMemoria: 'Perdeu a final do torneio de futebol do bairro, mas saiu de lá eleito o capitão mais dedicado pelos adversários.',
         consequencias: {
           stats: { felicidade: 14, saude: 4 },
           hiddenStats: { sociabilidade: 10, reputacao: 10, condicionamentoFisico: 8 },
@@ -240,6 +242,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_jogar_qualquer_posicao',
         texto: '',
         descricaoResultado: 'Você jogou tranquilo em qualquer posição que precisassem, e o time se divertiu do início ao fim.',
+        descricaoMemoria: 'Jogou um torneio de futebol entre as ruas do bairro, em qualquer posição que precisassem.',
         consequencias: {
           stats: { felicidade: 10, saude: 3 },
           hiddenStats: { empatia: 5, condicionamentoFisico: 5 },
@@ -263,6 +266,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_trocar_figurinhas_justo',
         texto: '',
         descricaoResultado: 'Você completou o álbum inteiro fazendo amizades novas em cada troca.',
+        descricaoMemoria: 'Completou o álbum de figurinhas da Copa inteiro, trocando repetidas no pátio da escola.',
         consequencias: {
           stats: { felicidade: 14 },
           hiddenStats: { sociabilidade: 10 },
@@ -273,6 +277,7 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
         id: 'opt_nao_colecionar_figurinhas',
         texto: '',
         descricaoResultado: 'Você não ligou muito para a febre das figurinhas e usou o tempo com outras coisas.',
+        descricaoMemoria: 'Passou ao largo da febre de figurinhas que tomou conta da escola naquele ano.',
         consequencias: {
           stats: { felicidade: 4 },
         }
