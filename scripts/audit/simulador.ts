@@ -546,7 +546,13 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
     const resultado = executarPassagemDeAno(
       ctx.personagem, ctx.familia, ctx.educacao, ctx.carreira, ctx.economia,
       historicoDisparados, ctx.personalidade, historicoOcorrencias, calendario,
-      timelineAcumulada
+      timelineAcumulada,
+      // F6 — atividades praticadas no ano, para que o ano social saiba se
+      // houve exposição social por hobby. O harness já registra cada uma
+      // como `atividade:<id>`; aqui extraio só o id.
+      acoesVoluntarias
+        .filter(a => a.startsWith('atividade:'))
+        .map(a => a.slice('atividade:'.length))
     );
     calendario = resultado.calendario;
 

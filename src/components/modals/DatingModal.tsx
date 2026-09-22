@@ -3,29 +3,35 @@ import {
   DatingCandidate,
   gerarCandidatosNamoro
 } from '../../systems/relationshipSystem';
-import { Character } from '../../types';
+import { Character, FamilyMember } from '../../types';
 import { useModalBehavior } from '../common/useModalBehavior';
+import { ROTULO_AMBIENTE, type AmbienteSocial } from '../../systems/social/contextoSocial';
 import { X } from 'lucide-react';
 
 interface DatingModalProps {
   personagem: Character;
+  /** F6 — quem já faz parte da vida tem prioridade sobre desconhecidos. */
+  familia: FamilyMember[];
   onClose: () => void;
   onIniciarNamoro: (candidato: DatingCandidate) => void;
 }
 
 export const DatingModal: React.FC<DatingModalProps> = ({
   personagem,
+  familia,
   onClose,
   onIniciarNamoro
 }) => {
   const containerRef = useModalBehavior<HTMLDivElement>({ onClose });
 
+  // F6 §16 — pessoas que já fazem parte da vida aparecem primeiro; só o que
+  // faltar é completado com gente nova.
   const [candidatos, setCandidatos] = useState<DatingCandidate[]>(() =>
-    gerarCandidatosNamoro('todos', personagem.idade)
+    gerarCandidatosNamoro('todos', personagem.idade, familia)
   );
 
   const atualizarCandidatos = () => {
-    setCandidatos(gerarCandidatosNamoro('todos', personagem.idade));
+    setCandidatos(gerarCandidatosNamoro('todos', personagem.idade, familia));
   };
 
   const tituloId = 'encontros-titulo';
@@ -53,7 +59,7 @@ export const DatingModal: React.FC<DatingModalProps> = ({
               Conhecer pessoas
             </h2>
             <p className="action-row__detail">
-              Pessoas da sua região abertas a um relacionamento.
+              Gente que você já conhece, e algumas pessoas novas.
             </p>
           </div>
           <button onClick={onClose} className="icon-button" aria-label="Fechar">
@@ -72,6 +78,9 @@ export const DatingModal: React.FC<DatingModalProps> = ({
                 </p>
                 <p className="action-row__detail">
                   {cand.idade} anos · {cand.profissao}
+                  {/* F6 — quem já faz parte da vida diz de onde veio; a
+                      relação deixa de parecer um perfil de aplicativo. */}
+                  {cand.conhecidoDe ? ` · da sua ${ROTULO_AMBIENTE[cand.conhecidoDe as AmbienteSocial] ?? 'convivência'}` : ''}
                 </p>
                 <p className="action-row__detail">{cand.personalidade}</p>
               </div>

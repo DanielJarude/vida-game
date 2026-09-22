@@ -116,6 +116,7 @@ export function getRotuloParentesco(tipo: RelationType): string {
     case 'rival': return 'Rival';
     case 'paixao': return 'Paixão';
     case 'mentor': return 'Mentor(a)';
+    case 'colega': return 'Colega';
   }
 }
 
@@ -140,6 +141,7 @@ export function getTratamentoParentesco(tipo: RelationType): string {
     case 'rival': return 'seu rival';
     case 'paixao': return 'sua paixão';
     case 'mentor': return 'seu mentor';
+    case 'colega': return 'seu colega';
   }
 }
 

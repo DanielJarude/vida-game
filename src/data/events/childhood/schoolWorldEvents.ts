@@ -200,7 +200,12 @@ export const SCHOOL_WORLD_EVENTS: GameEvent[] = [
           adicionarFamiliar: {
             tipo: 'amigo',
             idade: 9,
+            // F6 — a amizade nasce da ESCOLA, e isso agora fica registrado.
+            // A proximidade 70 é declarada pelo evento (uma amizade que o
+            // jogador escolheu ativamente), então o default novo não se aplica.
             relacionamento: 70,
+            origemSocial: 'escola',
+            estudante: true,
             situacaoAtual: 'Colega de turma'
           },
           impactosComportamentais: { sociabilidade: 1, generosidade: 1 }

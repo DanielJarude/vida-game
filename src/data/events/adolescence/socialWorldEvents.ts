@@ -35,6 +35,8 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
           adicionarFlag: 'tem_paixao_secreta',
           adicionarFamiliar: {
             tipo: 'paixao',
+            origemSocial: 'escola',
+            estudante: true,
             idade: 14,
             relacionamento: 55,
             situacaoAtual: 'Colega de turma que você secretamente admira'
@@ -51,6 +53,8 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
           adicionarFlag: 'tem_paixao_secreta',
           adicionarFamiliar: {
             tipo: 'paixao',
+            origemSocial: 'escola',
+            estudante: true,
             idade: 14,
             relacionamento: 65,
             situacaoAtual: 'Colega de turma que você secretamente admira'
@@ -86,6 +90,9 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
           adicionarFamiliar: {
             tipo: 'amigo',
             idade: 13,
+            // F6 — origem declarada: estes amigos vêm do grupo da escola.
+            origemSocial: 'escola',
+            estudante: true,
             relacionamento: 80,
             situacaoAtual: 'Amigo do grupo da escola'
           },
@@ -101,6 +108,9 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
           adicionarFamiliar: {
             tipo: 'amigo',
             idade: 13,
+            // F6 — origem declarada: estes amigos vêm do grupo da escola.
+            origemSocial: 'escola',
+            estudante: true,
             relacionamento: 75,
             situacaoAtual: 'Amigo do grupo da escola'
           },
@@ -137,6 +147,8 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
           hiddenStats: { disciplina: 5 },
           adicionarFamiliar: {
             tipo: 'rival',
+            origemSocial: 'escola',
+            estudante: true,
             idade: 14,
             relacionamento: 30,
             situacaoAtual: 'Colega sempre competindo com você'
@@ -153,6 +165,8 @@ export const ADOLESCENCE_SOCIAL_EVENTS: GameEvent[] = [
           hiddenStats: { ambicao: 8, estresse: 8 },
           adicionarFamiliar: {
             tipo: 'rival',
+            origemSocial: 'escola',
+            estudante: true,
             idade: 14,
             relacionamento: 20,
             situacaoAtual: 'Colega sempre competindo com você'

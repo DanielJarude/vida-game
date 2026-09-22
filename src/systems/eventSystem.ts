@@ -11,6 +11,7 @@ import {
   LifeLogEntry,
   NaturezaEvento,
   PersonalityState,
+  RelationType,
   RelevanciaLog
 } from '../types';
 import { taxonomiaMovePersonalidade } from '../types';
@@ -24,6 +25,16 @@ import { sortearPonderadoComContexto } from './events/selection';
 import { ponderarPorContexto } from './events/contextWeighting';
 import { naturezaDoEvento } from './events/nature';
 import { memoriaDoDesfecho } from './narrativa/memoriaDoEvento';
+import { sortearNome, sortearSobrenome } from '../data/brazilianData';
+import { PROXIMIDADE_INICIAL_MAX } from './social/redeSocial';
+
+/**
+ * F6 — parentes de sangue compartilham o sobrenome do jogador; amigos,
+ * colegas e rivais, não. Lista pequena e local porque é usada só aqui.
+ */
+const TIPOS_FAMILIA_CONSANGUINEA: RelationType[] = [
+  'pai', 'mae', 'irmao', 'irma', 'filho', 'filha'
+];
 import { classificacaoDoEvento } from './events/taxonomia';
 import { tomDoDesfecho } from './events/happenings';
 import { avaliarRequisitoOpcao as avaliarRequisitoOpcaoImpl } from './events/optionRequirements';
@@ -227,7 +238,21 @@ export function aplicarConsequenciasEscolha(
     if (ref.relationId) return ref.relationId;
     if (ref.relationType) {
       const candidatos = fam.filter(m => m.tipo === ref.relationType && m.ativo !== false);
-      return candidatos[candidatos.length - 1]?.id;
+      // F6 — desempate por PROXIMIDADE, não por ordem de chegada.
+      //
+      // Enquanto existia no máximo um amigo por vida, "o mais recente" era
+      // inofensivo. Com a rede social da F6 uma pessoa pode ter vários
+      // amigos, e um evento de afastamento passou a encerrar justamente a
+      // amizade mais recente — que costuma ser a mais próxima. A leitura de
+      // timelines mostrou amizades de proximidade 86 sendo encerradas.
+      //
+      // Um evento de perder contato deve atingir o vínculo MENOS próximo:
+      // é o que a vida faz, e é o que não destrói a relação que o jogador
+      // acompanhou construir.
+      const maisDistante = [...candidatos].sort(
+        (a, b) => a.relacionamento - b.relacionamento
+      )[0];
+      return maisDistante?.id;
     }
     return undefined;
   }
@@ -249,21 +274,53 @@ export function aplicarConsequenciasEscolha(
 
   // Novo familiar (ex: animal de estimação ou novo parente)
   if (cons.adicionarFamiliar) {
+    const tipoNovo = cons.adicionarFamiliar.tipo || 'pet';
+    const ehPessoa = tipoNovo !== 'pet';
+    const generoNovo = cons.adicionarFamiliar.genero || 'masculino';
+
+    // F6 §14 — TODA pessoa persistente tem identidade mínima coerente.
+    // O default anterior era o literal 'Novo Familiar', que vazava para a
+    // aba Pessoas como se fosse nome (38 ocorrências nas 105 vidas). Agora
+    // um evento que não nomeia alguém recebe um nome brasileiro de verdade,
+    // coerente com o gênero. Pet mantém o comportamento antigo: o evento
+    // sempre nomeia o bicho, e 'Novo Familiar' nunca foi usado para eles.
+    const nomeNovo =
+      cons.adicionarFamiliar.nome || (ehPessoa ? sortearNome(generoNovo) : 'Novo Familiar');
+
     const novoFamiliar: FamilyMember = {
       id: cons.adicionarFamiliar.id || generateId('fam'),
-      nome: cons.adicionarFamiliar.nome || 'Novo Familiar',
-      sobrenome: cons.adicionarFamiliar.sobrenome || char.sobrenome,
-      genero: cons.adicionarFamiliar.genero || 'masculino',
-      tipo: cons.adicionarFamiliar.tipo || 'pet',
+      nome: nomeNovo,
+      // Pessoa de fora da família não herda o sobrenome do jogador.
+      sobrenome:
+        cons.adicionarFamiliar.sobrenome ||
+        (ehPessoa && !TIPOS_FAMILIA_CONSANGUINEA.includes(tipoNovo)
+          ? sortearSobrenome()
+          : char.sobrenome),
+      genero: generoNovo,
+      tipo: tipoNovo,
       idade: cons.adicionarFamiliar.idade || 1,
-      relacionamento: cons.adicionarFamiliar.relacionamento || 80,
+      // F6 §5 — relação não nasce "Muito próxima". O default anterior era 80,
+      // que a camada de apresentação lê exatamente como "Muito próxima" para
+      // alguém que se acabou de conhecer. Eventos que declaram o valor
+      // continuam mandando; só o DEFAULT mudou, e apenas para pessoas.
+      relacionamento:
+        cons.adicionarFamiliar.relacionamento ?? (ehPessoa ? PROXIMIDADE_INICIAL_MAX : 80),
       vivo: true,
       situacaoAtual: cons.adicionarFamiliar.situacaoAtual || 'Em casa com a família',
       // B4-FIX3 item 13 — NPC nascido de um evento fica marcado com o
       // evento de origem (rastreabilidade; nenhuma regra depende disto)
       // e `ativo: true` por padrão (a relação está em andamento).
       origemEventoId: cons.adicionarFamiliar.origemEventoId ?? contextoPersonalidade?.eventoId,
-      ativo: cons.adicionarFamiliar.ativo ?? true
+      ativo: cons.adicionarFamiliar.ativo ?? true,
+      // F6 — a HISTÓRIA da relação declarada pelo evento precisa atravessar.
+      // Este objeto é montado campo a campo, então todo campo novo de
+      // `FamilyMember` é silenciosamente DESCARTADO até ser listado aqui: o
+      // catálogo declarava `origemSocial` e a pessoa chegava sem origem
+      // nenhuma na aba Pessoas.
+      origemSocial: cons.adicionarFamiliar.origemSocial,
+      estudante: cons.adicionarFamiliar.estudante,
+      idadeEntrada: cons.adicionarFamiliar.idadeEntrada ?? char.idade,
+      ultimoContatoIdade: cons.adicionarFamiliar.ultimoContatoIdade ?? char.idade
     };
     fam.push(novoFamiliar);
   }

@@ -24,6 +24,10 @@ export interface DatingCandidate {
   aparencia: number;
   inteligencia: number;
   personalidade: string;
+  /** F6 — ambiente em que vocês se conheceram, quando não é um desconhecido. */
+  conhecidoDe?: string;
+  /** F6 — id da relação já existente, para não duplicar a pessoa. */
+  relacaoAtualId?: string;
 }
 
 const PROFISSOES_PRETENDENTES = [
@@ -43,13 +47,62 @@ const PROFISSOES_PRETENDENTES = [
   'Fotógrafo'
 ];
 
-export function gerarCandidatosNamoro(
-  generoPreferencia: 'homens' | 'mulheres' | 'todos',
+/**
+ * F6 §16 — integração mínima do romance com a rede social.
+ *
+ * Antes, todo pretendente era inventado na hora: três desconhecidos gerados
+ * do nada, com profissão sorteada de uma lista de fantasia. Agora, quem já
+ * faz parte da vida tem prioridade — a relação que vira namoro costuma
+ * começar como alguém que você conheceu na escola, no trabalho ou por um
+ * amigo.
+ *
+ * Esta fase NÃO reescreve namoro/casamento/filhos: o formato do candidato,
+ * a idade mínima e todo o resto do fluxo continuam exatamente como estavam.
+ * A única mudança é DE ONDE as pessoas vêm.
+ */
+export function candidatosConhecidos(
+  familia: readonly FamilyMember[],
   idadeJogador: number
 ): DatingCandidate[] {
-  const candidatos: DatingCandidate[] = [];
+  return familia
+    .filter(m => {
+      if (!m.vivo || m.ativo === false) return false;
+      // Só vínculos sociais não familiares e não românticos.
+      if (!['amigo', 'amiga', 'colega', 'paixao'].includes(m.tipo)) return false;
+      // A política de idade adulta do jogo vale para os dois lados.
+      if (m.idade < IDADE_MINIMA_RELACIONAMENTO_ADULTO) return false;
+      if (idadeJogador < IDADE_MINIMA_RELACIONAMENTO_ADULTO) return false;
+      return true;
+    })
+    .map(m => ({
+      nome: m.nome,
+      sobrenome: m.sobrenome,
+      genero: m.genero,
+      idade: m.idade,
+      // Pessoa real da vida: a profissão é a que ela já tem, não uma sorteada.
+      profissao: m.profissao ?? 'Não informado',
+      aparencia: randomInt(40, 95),
+      inteligencia: randomInt(40, 95),
+      personalidade: m.personalidade ?? 'Alguém que você já conhece',
+      /** F6 — de onde essa pessoa veio, para a interface poder dizer. */
+      conhecidoDe: m.origemSocial,
+      relacaoAtualId: m.id
+    }));
+}
 
-  for (let i = 0; i < 3; i++) {
+export function gerarCandidatosNamoro(
+  generoPreferencia: 'homens' | 'mulheres' | 'todos',
+  idadeJogador: number,
+  // F6 — quando a vida já tem pessoas, elas vêm primeiro. Opcional para não
+  // quebrar chamadas existentes (testes, telas antigas).
+  familia: readonly FamilyMember[] = []
+): DatingCandidate[] {
+  const conhecidos = candidatosConhecidos(familia, idadeJogador);
+  const candidatos: DatingCandidate[] = [...conhecidos].slice(0, 3);
+
+  // Completa com desconhecidos só o que faltar: a vida adulta também
+  // apresenta gente nova, mas ela deixou de ser a única fonte possível.
+  for (let i = candidatos.length; i < 3; i++) {
     let genero: Gender = 'feminino';
     if (generoPreferencia === 'homens') genero = 'masculino';
     else if (generoPreferencia === 'todos') genero = valorAleatorio() > 0.5 ? 'masculino' : 'feminino';
@@ -98,8 +151,12 @@ export function iniciarNamoro(
 
   const tipo: RelationType = candidato.genero === 'masculino' ? 'namorado' : 'namorada';
 
+  // F6 — se o namoro começou com alguém que JÁ estava na vida, a pessoa é a
+  // mesma: reaproveitamos o id para que a relação mude de tipo em vez de
+  // criar um clone. Sem isto a aba Pessoas mostraria duas vezes a mesma
+  // pessoa (uma como amiga, outra como namorada).
   const novoMembro: FamilyMember = {
-    id: generateId('parceiro'),
+    id: candidato.relacaoAtualId ?? generateId('parceiro'),
     nome: candidato.nome,
     sobrenome: candidato.sobrenome,
     genero: candidato.genero,
@@ -108,7 +165,8 @@ export function iniciarNamoro(
     relacionamento: 85,
     vivo: true,
     profissao: candidato.profissao,
-    situacaoAtual: 'Namorando apaixonadamente com você'
+    situacaoAtual: 'Namorando apaixonadamente com você',
+    ativo: true
   };
 
   const char: Character = {

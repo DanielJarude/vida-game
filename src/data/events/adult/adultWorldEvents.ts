@@ -378,7 +378,14 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
         descricaoResultado: 'Numa das reclamações vocês acabaram conversando de verdade pela primeira vez em anos. A obra terminou e a conversa continuou.',
         consequencias: {
           hiddenStats: { estresse: 4, sociabilidade: 5 },
-          adicionarFamiliar: { tipo: 'amigo', nome: 'Seu vizinho', relacionamento: 58, idade: 44 }
+          // F6 — 'Seu vizinho' era um rótulo ocupando o campo NOME: a aba
+          // Pessoas exibia literalmente "Seu vizinho, 44 anos". Sem `nome`,
+          // o eventSystem agora sorteia um nome brasileiro coerente com o
+          // gênero, e a vizinhança fica registrada como ORIGEM da relação.
+          adicionarFamiliar: {
+            tipo: 'amigo', relacionamento: 58, idade: 44,
+            origemSocial: 'vizinhanca', situacaoAtual: 'Vizinho de porta'
+          }
         }
       }
     ]
@@ -590,7 +597,10 @@ export const ADULT_WORLD_EVENTS: GameEvent[] = [
         consequencias: {
           stats: { felicidade: 12 },
           hiddenStats: { sociabilidade: 6 },
-          adicionarFamiliar: { tipo: 'amigo', relacionamento: 72, idade: 38 }
+          // F6 — amizade de infância que reaparece: a origem é a escola.
+          adicionarFamiliar: {
+            tipo: 'amigo', relacionamento: 72, idade: 38, origemSocial: 'escola'
+          }
         }
       },
       {

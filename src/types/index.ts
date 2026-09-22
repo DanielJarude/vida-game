@@ -108,7 +108,13 @@ export type RelationType =
   // quando idade/regras permitirem).
   | 'rival'
   | 'paixao'
-  | 'mentor';
+  | 'mentor'
+  // F6 — degrau anterior à amizade. Alguém com quem se convive (turma,
+  // trabalho, atividade) e que ainda NÃO é amigo. Existe para que amizade
+  // não nasça pronta: a progressão é colega -> amigo -> amigo próximo.
+  // `temAmigo` (F4) continua exigindo 'amigo'/'amiga', de modo que um colega
+  // não satisfaz nenhum pressuposto de amizade.
+  | 'colega';
 
 export interface FamilyMember {
   id: string;
@@ -136,6 +142,24 @@ export interface FamilyMember {
   //   rastreabilidade; nenhuma regra de jogo depende deste campo.
   ativo?: boolean;
   origemEventoId?: string;
+  /**
+   * F6 — a HISTÓRIA MÍNIMA de uma relação não familiar. Todos opcionais:
+   * saves v5 e membros de família não declaram nada disso, e a ausência é
+   * sempre lida como "não se aplica" (nunca como valor default enganoso).
+   *
+   * - `origemSocial`: de onde a pessoa veio (escola, trabalho, vizinhança...).
+   *   É o que impede relação sem causa. Tipado como `string` porque
+   *   `types/index.ts` não pode importar de `systems/` — o valor canônico é
+   *   `AmbienteSocial`, e há teste garantindo que só ambientes válidos chegam.
+   * - `idadeEntrada`: com que idade do JOGADOR essa pessoa entrou na vida.
+   * - `ultimoContatoIdade`: idade do jogador no último contato relevante.
+   *   Base do afastamento gradual — sem barra drenando por turno.
+   * - `estudante`: a pessoa estuda (logo, não tem profissão adulta).
+   */
+  origemSocial?: string;
+  idadeEntrada?: number;
+  ultimoContatoIdade?: number;
+  estudante?: boolean;
 }
 
 export type EducationLevel =

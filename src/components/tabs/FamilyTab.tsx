@@ -109,11 +109,22 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         </p>
       </header>
 
-      {/* Encontros: sistema adulto (18+), conforme a política de idade */}
+      {/*
+        F6 §9 — o playtest achou este botão artificial, e com razão: ele era
+        a ÚNICA porta de entrada social do jogo, o que fazia a vida social
+        parecer um catálogo. Agora a maior parte das pessoas chega pela vida
+        (escola, trabalho, atividades, vizinhança), e o botão deixou de ser
+        o caminho principal: virou uma ação secundária de quem quer procurar
+        alguém de propósito.
+
+        Não foi removido porque o fluxo adulto de namoro/casamento depende
+        dele, e apagá-lo seria quebrar um sistema existente para resolver um
+        problema de apresentação.
+      */}
       {personagem.idade >= IDADE_MINIMA_RELACIONAMENTO_ADULTO && (
         <section className="section">
-          <button className="btn btn--primary" onClick={onOpenDatingModal}>
-            Conhecer novas pessoas
+          <button className="btn btn--ghost" onClick={onOpenDatingModal}>
+            Procurar um relacionamento
           </button>
         </section>
       )}

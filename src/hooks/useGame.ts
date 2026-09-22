@@ -397,7 +397,10 @@ export function useGame() {
       calendario,
       // F5-FIX — a Linha da Vida acumulada alimenta a política de
       // continuidade e o cooldown temático das pequenas memórias.
-      timeline
+      timeline,
+      // F6 — o que a pessoa fez neste ano. Uma atividade social cria
+      // exposição social (nunca amizade garantida).
+      acoesRealizadasAno
     );
 
     // O calendário volta do motor já atualizado (marco cumprido neste ano).
@@ -466,7 +469,12 @@ export function useGame() {
       setEventoAtivo(resultado.eventoDisparado);
       sound.playEvent();
     }
-  }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos, historicoOcorrencias, personalidade]);
+  // F6 — `timeline`, `calendario` e `acoesRealizadasAno` ENTRARAM nas
+  // dependências. O corpo já lia os três, mas eles não estavam declarados:
+  // o callback memoizado capturava um valor velho, então a passagem de ano
+  // podia rodar com a Linha da Vida e as atividades do ano anterior. Com o
+  // ano social lendo as atividades, isso deixaria de ser latente.
+  }, [personagem, isDead, eventoAtivo, familia, educacao, carreira, economia, historicoEventos, historicoOcorrencias, personalidade, timeline, calendario, acoesRealizadasAno]);
 
   // Fecha o resumo anual (apenas apresentação).
   const fecharResumoAnual = useCallback(() => {
@@ -891,7 +899,14 @@ export function useGame() {
     }
 
     sound.playSuccess();
-    setFamilia(prev => [...prev, res.novoMembro!]);
+    // F6 — o namoro pode ter começado com alguém que JÁ estava na vida
+    // (uma amiga do trabalho, por exemplo). Nesse caso a pessoa muda de
+    // tipo, em vez de virar uma segunda entrada com o mesmo nome.
+    setFamilia(prev =>
+      prev.some(m => m.id === res.novoMembro!.id)
+        ? prev.map(m => (m.id === res.novoMembro!.id ? res.novoMembro! : m))
+        : [...prev, res.novoMembro!]
+    );
     setPersonagem(res.personagemAtualizado);
     registrarLogs([res.novoLog]);
     mostrarFeedback(`Você e ${candidato.nome} agora estão namorando!`, 'sucesso');

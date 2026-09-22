@@ -122,6 +122,7 @@ export function App() {
           {mostrarEncontros && (
             <DatingModal
               personagem={jogo.personagem}
+              familia={jogo.familia}
               onClose={() => setMostrarEncontros(false)}
               onIniciarNamoro={jogo.iniciarNamoroExec}
             />

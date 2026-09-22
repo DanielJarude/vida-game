@@ -46,6 +46,7 @@ import { MASTER_EVENTS_LIST } from '../data/events/allEvents';
 import { instanteDe } from './tempo/instante';
 import { classificacaoDoEvento } from './events/taxonomia';
 import { gerarPequenaMemoria } from './memorias/pequenaMemoria';
+import { processarAnoSocial } from './social/redeSocial';
 import { generateId } from '../utils/random';
 
 export interface AgingResult {
@@ -190,7 +191,12 @@ export function executarPassagemDeAno(
   // um contador persistido: o save continua na versão 5. Opcional para não
   // quebrar chamadas existentes (testes, simulações) — sem ela o
   // comportamento é o da F5.
-  timelineAteAqui: readonly LifeLogEntry[] = []
+  timelineAteAqui: readonly LifeLogEntry[] = [],
+  // F6 — atividades praticadas no ano (ids de `activitiesData`). Uma
+  // atividade social cria EXPOSIÇÃO social, nunca amizade garantida.
+  // Opcional: sem ela, o ano social ainda acontece por escola/trabalho/
+  // vizinhança, apenas sem a origem 'atividade'.
+  atividadesDoAno: readonly string[] = []
 ): AgingResult {
   const novaIdade = personagem.idade + 1;
   const novoAno = personagem.anoAtual + 1;
@@ -224,7 +230,9 @@ export function executarPassagemDeAno(
 
   // 5. Processamento da Família
   const resFam = processarEnvelhecimentoFamilia(familia, char, novoAno);
-  const fam = resFam.familiaAtualizada;
+  // F6 — reatribuída pelo ano social mais abaixo (novas relações, evolução
+  // e afastamentos). Até a F5 esta lista não mudava depois daqui.
+  let fam = resFam.familiaAtualizada;
   novosLogs.push(...resFam.logsFamilia);
 
   // 6. Processamento da Economia
@@ -553,6 +561,31 @@ export function executarPassagemDeAno(
    * estado real — e só isso. Se não houver nada verdadeiro a dizer, devolve
    * os logs como estavam e o ano segue em silêncio, que continua permitido.
    */
+  /**
+   * F6 — O ANO SOCIAL.
+   *
+   * Roda ANTES da pequena memória de propósito: se uma amizade nasceu ou
+   * acabou neste ano, a memória do ano já deve enxergar a rede atualizada
+   * (e a memória de amizade da F5-FIX só pode existir havendo amigo real).
+   *
+   * Não abre modal, não move atributos, não toca em dinheiro nem em
+   * personalidade: devolve a família atualizada e, no máximo, uma linha
+   * quando a relação passou a importar de verdade.
+   */
+  const socialDoAno = processarAnoSocial(
+    {
+      personagem: char,
+      educacao: edu,
+      carreira: car,
+      familia: fam,
+      personalidade,
+      atividadesDoAno: atividadesDoAno
+    },
+    novoAno
+  );
+  fam = socialDoAno.familiaAtualizada;
+  novosLogs.push(...socialDoAno.logs);
+
   const comPequenaMemoria = (logs: LifeLogEntry[]): LifeLogEntry[] => {
     const memoria = gerarPequenaMemoria(
       { personagem: char, carreira: car, educacao: edu, economia: eco, familia: fam },
