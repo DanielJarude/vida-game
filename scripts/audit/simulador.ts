@@ -130,6 +130,12 @@ export interface ResultadoVida {
   decisoesTotais: number;
   acontecimentosTotais: number;
   anosSilenciosos: number;
+  /**
+   * Auditoria pós-playtest — quem restou na vida no fim. Necessário para medir
+   * vida social (Achado 6): o estado final é a única fonte de quantas pessoas
+   * não-familiares a vida acumulou.
+   */
+  familiaFinal: FamilyMember[];
 }
 
 interface Ctx {
@@ -633,7 +639,8 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
     anos, razao, violacoes,
     idadeFinal: ctx.personagem.idade,
     causaMorte,
-    decisoesTotais, acontecimentosTotais, anosSilenciosos
+    decisoesTotais, acontecimentosTotais, anosSilenciosos,
+    familiaFinal: ctx.familia
   };
 }
 
