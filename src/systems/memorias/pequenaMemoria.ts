@@ -40,7 +40,7 @@ import type {
   LifeLogEntry
 } from '../../types';
 import { generateId } from '../../utils/random';
-import { temIrmao, temAmigo, temPet, estaEstudando } from '../contexto/contextoDaVida';
+import { temIrmao, temAmigo, temPet, estaEstudando, temResponsavel } from '../contexto/contextoDaVida';
 
 /**
  * Uma memória candidata.
@@ -49,8 +49,42 @@ import { temIrmao, temAmigo, temPet, estaEstudando } from '../contexto/contextoD
  * estado atual. `texto` a redige. Manter os dois juntos e declarativos é o
  * que evita a alternativa: uma cascata de `if` dentro do motor.
  */
+/**
+ * F5-FIX — TEMA SEMÂNTICO de uma memória.
+ *
+ * O playtest mostrou duas memórias em anos próximos:
+ *
+ *   8 anos: "Um ano em que a casa cheia de irmãos não deixou o tédio entrar."
+ *  10 anos: "Um ano dividindo quarto, brinquedo e paciência com os irmãos."
+ *
+ * As strings são diferentes; a biografia é a mesma — convivência com irmãos.
+ * A F5 resolveu repetição LITERAL e deixou passar a SEMÂNTICA.
+ *
+ * O tema é dado DECLARATIVO, nunca inferido do texto em runtime: "duas
+ * strings diferentes" não significa "duas memórias diferentes", e um regex
+ * sobre o texto seria justamente tratar a redação como se fosse o assunto.
+ *
+ * A taxonomia é mínima de propósito — só os temas que o catálogo REAL usa.
+ * Dezenas de categorias dariam a cada memória um tema próprio, e um cooldown
+ * temático em que nada nunca colide não é um cooldown.
+ */
+export type TemaDeMemoria =
+  | 'primeira_infancia'
+  | 'familia_irmaos'
+  | 'familia_pet'
+  | 'familia_filhos'
+  | 'familia_parceiro'
+  | 'amizade'
+  | 'escola'
+  | 'estudo_superior'
+  | 'trabalho'
+  | 'financeiro'
+  | 'cidade';
+
 interface MemoriaCandidata {
   readonly id: string;
+  /** Assunto biográfico. Duas memórias do mesmo tema contam a mesma coisa. */
+  readonly tema: TemaDeMemoria;
   readonly categoria: LifeLogCategory;
   readonly quando: (ctx: ContextoMemoria) => boolean;
   readonly texto: (ctx: ContextoMemoria) => string;
@@ -160,6 +194,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
     // Bebê. Não há nada a relatar além do próprio crescer, e tentar dizer
     // mais do que isso seria inventar.
     id: 'mem_bebe_crescendo',
+    tema: 'primeira_infancia',
     categoria: 'geral',
     quando: ctx => ctx.personagem.idade <= 2,
     texto: ctx =>
@@ -170,6 +205,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   },
   {
     id: 'mem_infancia_irmaos',
+    tema: 'familia_irmaos',
     cadencia: 'alternada',
     categoria: 'familia',
     quando: ctx => ctx.personagem.idade <= 11 && temIrmao(fatias(ctx)),
@@ -182,6 +218,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   },
   {
     id: 'mem_infancia_pet',
+    tema: 'familia_pet',
     cadencia: 'alternada',
     categoria: 'familia',
     quando: ctx => ctx.personagem.idade <= 14 && temPet(fatias(ctx)),
@@ -194,6 +231,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   },
   {
     id: 'mem_infancia_escola',
+    tema: 'escola',
     cadencia: 'alternada',
     categoria: 'escola',
     quando: ctx =>
@@ -203,6 +241,32 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
         'Um ano comum de escola: aula de manhã, tarefa à tarde, rua no fim do dia.',
         'Um ano de caderno, recreio e caminho de volta da escola.',
         'Um ano escolar sem nada de extraordinário, do jeito que a maioria é.'
+      ])
+  },
+  {
+    /**
+     * F5-FIX — a faixa 3-5 é a mais pobre em contexto do jogo: a criança não
+     * estuda, raramente tem pet, e pode ainda não ter irmãos (eles nascem ao
+     * longo da vida). Foi exatamente aí que o playtest viu "2 anos → 6 anos".
+     *
+     * Esta memória usa a única coisa que continua verdadeira nessa idade:
+     * existe alguém criando essa criança. Não é rede incondicional — exige
+     * `temResponsavel`, e uma criança órfã não a recebe.
+     *
+     * Vem DEPOIS de irmãos, pet e escola: se houver algo mais específico a
+     * dizer, diz-se aquilo. A ordem da lista é a regra de prioridade.
+     */
+    id: 'mem_primeira_infancia_casa',
+    tema: 'primeira_infancia',
+    cadencia: 'alternada',
+    categoria: 'familia',
+    quando: ctx =>
+      ctx.personagem.idade >= 3 && ctx.personagem.idade <= 5 && temResponsavel(fatias(ctx)),
+    texto: ctx =>
+      variar(ctx.personagem.idade, [
+        'Um ano de quintal, desenho na TV e pergunta atrás de pergunta em casa.',
+        'Um ano de brincadeira inventada no chão da sala e sono cedo.',
+        'Um ano pequeno, do tamanho da casa e das pessoas que cuidavam de você.'
       ])
   },
   // NÃO EXISTE aqui uma rede final incondicional para a infância, e a
@@ -215,6 +279,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   // ter é o buraco sistemático de 3+ anos que o playtest encontrou.
   {
     id: 'mem_adolescencia_amigo',
+    tema: 'amizade',
     cadencia: 'alternada',
     categoria: 'geral',
     quando: ctx =>
@@ -228,6 +293,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   },
   {
     id: 'mem_adolescencia_escola',
+    tema: 'escola',
     cadencia: 'alternada',
     categoria: 'escola',
     quando: ctx =>
@@ -245,6 +311,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   {
     // Criar filho pequeno é a coisa que mais ocupa uma vida sem "acontecer".
     id: 'mem_filhos_pequenos',
+    tema: 'familia_filhos',
     categoria: 'familia',
     quando: ctx => filhosVivos(ctx).some(f => f.idade <= 6),
     texto: ctx => {
@@ -257,6 +324,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   },
   {
     id: 'mem_filhos_escola',
+    tema: 'familia_filhos',
     categoria: 'familia',
     quando: ctx => filhosVivos(ctx).some(f => f.idade >= 7 && f.idade <= 17),
     texto: ctx => {
@@ -269,12 +337,14 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   {
     // Dívida alta é uma presença constante mesmo quando nada "acontece".
     id: 'mem_divida',
+    tema: 'financeiro',
     categoria: 'financas',
     quando: ctx => ctx.economia.dividas > 0 && ctx.economia.dividas > ctx.economia.dinheiro,
     texto: () => 'Um ano de contas apertadas, fechando o mês com cuidado.'
   },
   {
     id: 'mem_estudo',
+    tema: 'estudo_superior',
     categoria: 'escola',
     quando: ctx => ctx.educacao.emCurso && ctx.personagem.idade >= 18,
     texto: ctx =>
@@ -284,6 +354,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   },
   {
     id: 'mem_trabalho_longo',
+    tema: 'trabalho',
     categoria: 'carreira',
     quando: ctx => ctx.carreira.empregado && ctx.carreira.anosNoCargo >= 5,
     texto: ctx =>
@@ -291,6 +362,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   },
   {
     id: 'mem_trabalho',
+    tema: 'trabalho',
     categoria: 'carreira',
     quando: ctx => ctx.carreira.empregado,
     texto: ctx =>
@@ -300,18 +372,21 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   },
   {
     id: 'mem_aposentado_parceiro',
+    tema: 'familia_parceiro',
     categoria: 'familia',
     quando: ctx => ctx.carreira.aposentado && parceiroVivo(ctx) !== undefined,
     texto: ctx => `Os dias sem pressa, quase sempre ao lado de ${parceiroVivo(ctx)!.nome}.`
   },
   {
     id: 'mem_aposentado',
+    tema: 'cidade',
     categoria: 'geral',
     quando: ctx => ctx.carreira.aposentado,
     texto: ctx => `Os dias em ${ctx.personagem.cidade} foram passando sem pressa.`
   },
   {
     id: 'mem_desempregado',
+    tema: 'trabalho',
     categoria: 'carreira',
     quando: ctx => !ctx.carreira.empregado && !ctx.carreira.aposentado && ctx.personagem.idade >= 25,
     texto: () => 'Um ano procurando o que fazer, sem muita notícia boa.'
@@ -319,6 +394,7 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
   {
     // A última rede: onde a pessoa mora é sempre verdade.
     id: 'mem_cidade',
+    tema: 'cidade',
     categoria: 'geral',
     quando: ctx => ctx.personagem.cidade.length > 0 && ctx.personagem.idade >= 18,
     texto: ctx => `Um ano sem grandes novidades em ${ctx.personagem.cidade}.`
@@ -335,23 +411,117 @@ const MEMORIAS: readonly MemoriaCandidata[] = [
  * Note o que NÃO entra: aleatoriedade. Duas vidas no mesmo estado produzem a
  * mesma memória, e isso é desejável — a frase descreve a vida, não o dado.
  */
+/**
+ * F5-FIX — quantos anos seguidos, imediatamente antes deste, ficaram sem
+ * NENHUMA linha na Linha da Vida.
+ *
+ * Derivado da timeline que o jogo já persiste. Foi a alternativa escolhida
+ * em vez de guardar um contador no estado: o save continua na versão 5,
+ * saves antigos funcionam sem migração, e não há um segundo lugar afirmando
+ * o que a Linha da Vida já afirma.
+ */
+export function anosSilenciososAntesDe(
+  timeline: readonly LifeLogEntry[],
+  idade: number
+): number {
+  // Timeline vazia significa AUSÊNCIA DE INFORMAÇÃO, não uma vida inteira em
+  // silêncio. É uma distinção que custou um teste: sem ela, um chamador que
+  // não passa a Linha da Vida (testes antigos, simulações parciais) fazia a
+  // função concluir que todos os anos anteriores foram vazios, a política de
+  // continuidade disparava sempre, e a cadência era ignorada em toda parte —
+  // ou seja, exatamente o preenchimento que esta fase quer evitar.
+  if (timeline.length === 0) return 0;
+
+  const comLinha = new Set(timeline.map(l => l.idade));
+  let n = 0;
+  for (let i = idade - 1; i >= 0; i--) {
+    if (comLinha.has(i)) break;
+    n++;
+  }
+  return n;
+}
+
+/**
+ * F5-FIX — o tema já foi usado nos últimos `JANELA_TEMATICA` anos?
+ *
+ * Reconstruído da própria Linha da Vida: as memórias emitidas carregam o
+ * tema em `temaDeMemoria`, campo OPCIONAL de `LifeLogEntry` (compatível com
+ * save v5 — entradas antigas simplesmente não o têm e contam como
+ * desconhecidas, o que só torna a política mais permissiva no passado).
+ */
+function temaUsadoRecentemente(
+  timeline: readonly LifeLogEntry[],
+  tema: TemaDeMemoria,
+  idade: number
+): boolean {
+  return timeline.some(
+    l => l.temaDeMemoria === tema && idade - l.idade > 0 && idade - l.idade <= JANELA_TEMATICA
+  );
+}
+
+/**
+ * Janela do cooldown temático, em anos.
+ *
+ * Três é o menor número que resolve o caso do playtest (irmãos aos 8 e aos
+ * 10, distância 2) sem bloquear um tema para sempre. Irmãos voltam a ser
+ * assunto legítimo alguns anos depois — o que se quer evitar é a sensação de
+ * que a biografia só sabe contar uma história.
+ */
+const JANELA_TEMATICA = 3;
+
+/**
+ * A partir de quantos anos silenciosos seguidos a continuidade passa a
+ * TENTAR uma memória mesmo que o tema esteja em cooldown.
+ *
+ * O playtest estabeleceu a escala: 1 ano silencioso é normal; 2 é aceitável;
+ * 3+ na infância fazem parecer que um pedaço da vida sumiu (o caso 2→6). A
+ * política age quando o buraco já tem 2 anos, para impedir que ele chegue a
+ * 3 — e não age antes disso, porque silêncio curto é parte do desenho.
+ */
+const SILENCIO_QUE_VIRA_BURACO = 2;
+
 export function gerarPequenaMemoria(
   ctx: ContextoMemoria,
   logsDoAno: readonly LifeLogEntry[],
   idade: number,
-  ano: number
+  ano: number,
+  // F5-FIX — a Linha da Vida até aqui. Opcional para não quebrar chamadas
+  // existentes: sem ela, o comportamento é o da F5 (sem cooldown temático e
+  // sem política de continuidade), que continua sendo seguro.
+  timeline: readonly LifeLogEntry[] = []
 ): LifeLogEntry | null {
   // GUARDA 1 — só em ano que ficaria sem nenhuma linha.
   if (logsDoAno.length > 0) return null;
 
-  const escolhida = MEMORIAS.find(m => {
-    if (!m.quando(ctx)) return false;
-    // Memória de época só em ano alternado — ver `cadencia`. O silêncio nos
-    // anos ímpares é deliberado: é o que impede a infância de virar um
-    // registro contínuo de "mais um ano igual ao anterior".
-    if (m.cadencia === 'alternada' && idade % 2 !== 0) return false;
-    return true;
-  });
+  const silencioAcumulado = anosSilenciososAntesDe(timeline, idade);
+  // A continuidade está em risco: o buraco já é grande o bastante para
+  // começar a parecer que a vida sumiu. Neste caso vale relaxar o cooldown
+  // temático — repetir um assunto é melhor do que perder três anos seguidos.
+  const buracoSeFormando = silencioAcumulado >= SILENCIO_QUE_VIRA_BURACO;
+
+  const verdadeiras = MEMORIAS.filter(m => m.quando(ctx));
+
+  const passaCadencia = (m: MemoriaCandidata) =>
+    // Memória de época só em ano alternado — ver `cadencia`. Quando um buraco
+    // está se formando a cadência cede: ela existe para evitar monotonia, não
+    // para criar lacuna.
+    !(m.cadencia === 'alternada' && idade % 2 !== 0) || buracoSeFormando;
+
+  // PREFERÊNCIA 1 — tema novo, respeitando a cadência. O caso normal.
+  let escolhida = verdadeiras.find(
+    m => passaCadencia(m) && !temaUsadoRecentemente(timeline, m.tema, idade)
+  );
+
+  // PREFERÊNCIA 2 — só quando um buraco está se formando: aceita repetir um
+  // tema recente, porque a alternativa é um terceiro ano em branco.
+  //
+  // Note o que NÃO acontece aqui: se não houver nenhuma memória VERDADEIRA,
+  // nada é emitido. A política tenta preencher o buraco com o que existe, e
+  // nunca inventa contexto para consegui-lo. Silêncio é melhor que mentira.
+  if (!escolhida && buracoSeFormando) {
+    escolhida = verdadeiras.find(m => passaCadencia(m));
+  }
+
   if (!escolhida) return null;
 
   return {
@@ -361,6 +531,9 @@ export function gerarPequenaMemoria(
     categoria: escolhida.categoria,
     texto: escolhida.texto(ctx),
     tipo: 'info',
+    // F5-FIX — o tema viaja com a entrada para que o cooldown possa ser
+    // reconstruído da Linha da Vida, sem estado paralelo.
+    temaDeMemoria: escolhida.tema,
     // GUARDA 3 — textura: discreta na Linha da Vida, fora do resumo anual,
     // e (desde o passo 3) incapaz de saturar o ano.
     relevancia: 'textura'
@@ -369,3 +542,13 @@ export function gerarPequenaMemoria(
 
 /** Exposto para teste: quantas memórias o catálogo oferece. */
 export const TOTAL_MEMORIAS_CANDIDATAS = MEMORIAS.length;
+
+/**
+ * F5-FIX — os temas declarados, na ordem do catálogo.
+ *
+ * Exposto para que o teste permanente verifique duas coisas que nenhuma
+ * checagem em runtime pega: que TODA memória declara tema, e que a taxonomia
+ * é mínima (menos temas do que memórias — caso contrário o cooldown nunca
+ * colidiria e seria decorativo).
+ */
+export const TEMAS_DO_CATALOGO: readonly TemaDeMemoria[] = MEMORIAS.map(m => m.tema);

@@ -329,6 +329,23 @@ export interface LifeLogEntry {
   texto: string;
   tipo?: 'info' | 'positivo' | 'negativo' | 'importante' | 'alerta';
   relevancia?: RelevanciaLog;
+  /**
+   * F5-FIX — assunto biográfico, quando esta entrada é uma pequena memória.
+   *
+   * Existe para que o cooldown temático possa ser reconstruído a partir da
+   * própria Linha da Vida, em vez de um contador persistido em paralelo.
+   *
+   * OPCIONAL de propósito: entradas de saves anteriores (v5) não o têm, e a
+   * ausência é tratada como "tema desconhecido" — o que apenas torna a
+   * política mais permissiva para o passado, nunca incorreta. Por isso a
+   * versão do save NÃO mudou.
+   *
+   * O tipo é `string` e não `TemaDeMemoria` porque `types/index.ts` não pode
+   * importar de `systems/` (dependência circular). A fonte da verdade do
+   * vocabulário é `systems/memorias/pequenaMemoria`, e um teste permanente
+   * garante que só temas válidos chegam aqui.
+   */
+  temaDeMemoria?: string;
 }
 
 export interface EventConsequence {

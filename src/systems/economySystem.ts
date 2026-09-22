@@ -153,6 +153,14 @@ export function processarAnoEconomia(
         idade,
         ano: anoAtual,
         categoria: 'financas',
+        // F5-FIX — este ramo afirma uma transição ('cortar o padrão de vida'),
+        // e a transição só é honesta se a pessoa tiver de fato vivido no
+        // padrão anterior. Verificado: NADA no motor atribui 'luxuoso' a
+        // ninguém — `criarEconomiaInicial` sempre começa em 'confortavel' e
+        // não há caminho de subida. Portanto este ramo é hoje INALCANÇÁVEL, e
+        // o texto fica como está: no dia em que a F7 criar uma forma de
+        // ascender ao luxo, a transição passará a ser verdadeira e a frase
+        // estará correta. Registrado no relatório como F7-P2.
         texto: 'As contas não fecharam e você precisou cortar o padrão de vida. Saíram os supérfluos primeiro.',
         tipo: 'negativo',
         relevancia: 'normal'
@@ -164,7 +172,20 @@ export function processarAnoEconomia(
         idade,
         ano: anoAtual,
         categoria: 'financas',
-        texto: 'Você passou a viver com bem menos: trocou marca por preço e cortou o que dava para cortar.',
+        // F5-FIX — o texto anterior era "Você passou a viver com bem menos:
+        // trocou marca por preço". Ele afirmava uma TRANSIÇÃO, e transição
+        // exige um ANTES comprovável: que a pessoa vivesse com mais e
+        // comprasse por marca. O jogo nunca estabeleceu isso — `padraoDeVida`
+        // nasce 'confortavel' por PADRÃO em `criarEconomiaInicial`, para todo
+        // mundo, e nada no jogo jamais o eleva. O playtest pegou a frase num
+        // personagem de 18 anos recém-saído do Ensino Médio, desempregado e
+        // com saldo zero: um rebaixamento a partir de um padrão que ele nunca
+        // viveu.
+        //
+        // Reescrito como ESTADO verdadeiro do ano — o aperto é real (o saldo
+        // ficou negativo de fato), só não é uma mudança de hábito de consumo.
+        // Nenhum valor econômico foi alterado aqui; a causa do aperto é F7.
+        texto: 'As contas do ano não fecharam, e o que dava para cortar foi cortado.',
         tipo: 'negativo',
         relevancia: 'normal'
       });

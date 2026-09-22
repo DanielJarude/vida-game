@@ -82,6 +82,8 @@ export const TIPOS_CONJUGE: readonly RelationType[] = ['esposo', 'esposa'];
 
 export const TIPOS_FILHO: readonly RelationType[] = ['filho', 'filha'];
 export const TIPOS_IRMAO: readonly RelationType[] = ['irmao', 'irma'];
+/** F5-FIX — quem cria a criança. Usado pelas memórias de primeira infância. */
+export const TIPOS_RESPONSAVEL: readonly RelationType[] = ['pai', 'mae'];
 export const TIPOS_AMIZADE: readonly RelationType[] = ['amigo', 'amiga'];
 
 /** Membros vivos de um dos tipos pedidos. Base de quase tudo aqui. */
@@ -122,6 +124,21 @@ export function quantidadeFilhos(f: FatiasDoMundo): number {
 
 export function temIrmao(f: FatiasDoMundo): boolean {
   return vivosDoTipo(f.familia, TIPOS_IRMAO).length > 0;
+}
+
+/**
+ * F5-FIX — há pai ou mãe vivo?
+ *
+ * Criado porque a auditoria de lacunas mostrou que a criança de 3 a 5 anos é
+ * a faixa mais pobre em contexto do jogo: não estuda, raramente tem pet, e
+ * pode ainda não ter irmãos (eles nascem ao longo da vida). Restava uma coisa
+ * verdadeira e não consultada — ela mora com alguém que cuida dela.
+ *
+ * Note que isto NÃO é um predicado especulativo: existe uma memória concreta
+ * que o consome. A regra da F4 continua valendo — nada de predicado sem uso.
+ */
+export function temResponsavel(f: FatiasDoMundo): boolean {
+  return vivosDoTipo(f.familia, TIPOS_RESPONSAVEL).length > 0;
 }
 
 /**

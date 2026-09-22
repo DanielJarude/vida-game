@@ -5,11 +5,13 @@
 import { simularVida, PERFIS } from './simulador';
 
 const RECORTES: { titulo: string; seed: number; de: number; ate: number }[] = [
-  { titulo: 'INFÂNCIA 0-5', seed: 3, de: 0, ate: 5 },
-  { titulo: 'INFÂNCIA 0-10', seed: 11, de: 0, ate: 10 },
-  { titulo: 'ATÉ A MAIORIDADE 0-18', seed: 27, de: 0, ate: 18 },
-  { titulo: 'JOVEM ADULTO 18-30', seed: 42, de: 18, ate: 30 },
-  { titulo: 'ADULTO 30-45', seed: 58, de: 30, ate: 45 }
+  // F5-FIX seção 20 — 10 timelines 0-10 e 10 timelines 0-18, para LEITURA.
+  ...[3, 6, 11, 17, 27, 38, 39, 42, 58, 73].map(seed => ({
+    titulo: `0-10 (seed ${seed})`, seed, de: 0, ate: 10
+  })),
+  ...[5, 9, 14, 21, 33, 44, 51, 66, 80, 97].map(seed => ({
+    titulo: `0-18 (seed ${seed})`, seed, de: 0, ate: 18
+  }))
 ];
 
 for (const r of RECORTES) {

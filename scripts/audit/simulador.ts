@@ -84,7 +84,7 @@ export interface AnoDaVida {
   ano: number;
   pulso: string;
   motivoRitmo: string;
-  logs: { categoria: string; texto: string; tipo?: string; relevancia?: string }[];
+  logs: { categoria: string; texto: string; tipo?: string; relevancia?: string; temaDeMemoria?: string }[];
   eventoDecisao?: { id: string; titulo: string; opcaoEscolhida: string; taxonomia: TaxonomiaConteudo };
   acontecimento?: { id: string; titulo: string };
   /**
@@ -227,6 +227,9 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
   let historicoOcorrencias: EventOccurrence[] = [];
   // F3 — o Calendário da Vida atravessa os anos, como no jogo real.
   let calendario = criarCalendarioInicial();
+  // F5-FIX — a Linha da Vida acumulada, também como no jogo real: é dela que
+  // a política de continuidade e o cooldown temático são derivados.
+  const timelineAcumulada: LifeLogEntry[] = [];
   const anos: AnoDaVida[] = [];
   const razao: LancamentoFinanceiro[] = [];
   const violacoes: Violacao[] = [];
@@ -542,7 +545,8 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
     const saldoAntesDoAno = ctx.economia.dinheiro;
     const resultado = executarPassagemDeAno(
       ctx.personagem, ctx.familia, ctx.educacao, ctx.carreira, ctx.economia,
-      historicoDisparados, ctx.personalidade, historicoOcorrencias, calendario
+      historicoDisparados, ctx.personalidade, historicoOcorrencias, calendario,
+      timelineAcumulada
     );
     calendario = resultado.calendario;
 
@@ -552,12 +556,14 @@ export function simularVida(seed: number, perfil: Perfil, idadeMaxima = 100): Re
     ctx.carreira = resultado.carreiraAtualizada;
     ctx.economia = resultado.economiaAtualizada;
 
+    timelineAcumulada.push(...resultado.novosLogs);
+
     const registroAno: AnoDaVida = {
       idade: ctx.personagem.idade,
       ano: ctx.personagem.anoAtual,
       pulso: resultado.ritmo.pulso,
       motivoRitmo: resultado.ritmo.motivo,
-      logs: resultado.novosLogs.map(l => ({ categoria: l.categoria, texto: l.texto, tipo: l.tipo, relevancia: l.relevancia })),
+      logs: resultado.novosLogs.map(l => ({ categoria: l.categoria, texto: l.texto, tipo: l.tipo, relevancia: l.relevancia, temaDeMemoria: l.temaDeMemoria })),
       ocorrenciasDoAno: [],
       contexto: {
         temPet: ctx.familia.some(f => f.vivo && f.tipo === 'pet'),

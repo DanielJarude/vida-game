@@ -394,7 +394,10 @@ export function useGame() {
       historicoEventos,
       personalidade,
       historicoOcorrencias,
-      calendario
+      calendario,
+      // F5-FIX — a Linha da Vida acumulada alimenta a política de
+      // continuidade e o cooldown temático das pequenas memórias.
+      timeline
     );
 
     // O calendário volta do motor já atualizado (marco cumprido neste ano).

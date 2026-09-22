@@ -217,12 +217,21 @@ describe('F5 · pequena memória — o que ela NUNCA faz', () => {
   });
 
   it('o silêncio continua possível: estado sem nada a dizer devolve null', () => {
-    // Criança de 4 anos, sem irmão, sem pet, sem escola. Não há memória
-    // verdadeira a emitir — e inventar uma seria o texto de preenchimento
-    // que o B4-FIX4 removeu.
+    // CONTRATO ATUALIZADO NO F5-FIX, com o motivo registrado:
+    //
+    // Na F5 este teste usava uma criança de 4 anos COM pai e mãe e esperava
+    // silêncio. O playtest humano mostrou que era justamente essa a faixa do
+    // buraco "2 anos -> 6 anos", e o F5-FIX passou a reconhecer uma verdade
+    // que já existia no estado e não era consultada: alguém está criando essa
+    // criança (`mem_primeira_infancia_casa`, que exige `temResponsavel`).
+    //
+    // O contrato que continua valendo — e que este teste agora verifica de
+    // forma mais honesta — é: sem NENHUM contexto verdadeiro, nada é emitido.
+    // Por isso a família aqui está vazia: criança sem responsável vivo, sem
+    // irmão, sem pet e sem escola não recebe memória nenhuma.
     const ctx = ctxBase({
       personagem: criarPersonagemTeste({ idade: 4 }),
-      familia: criarFamiliaTeste() // só pai e mãe
+      familia: []
     });
     expect(gerarPequenaMemoria(ctx, [], 4, 2030)).toBeNull();
   });
@@ -372,15 +381,26 @@ describe('F5 · cobertura de memória por faixa etária', () => {
   });
 
   it('a infância NÃO é preenchida incondicionalmente (silêncio preservado)', () => {
-    // 3-5 anos sem irmão, sem pet, sem escola: deve haver silêncio. Se este
-    // teste falhar, alguém adicionou uma rede final incondicional — que é
-    // exatamente o texto de preenchimento removido pelo B4-FIX4.
-    const semNada = [4, 5].map(idade =>
+    // Nenhuma memória de infância pode ser uma rede INCONDICIONAL — esse foi
+    // o texto de preenchimento removido pelo B4-FIX4 e recusado de novo na F5.
+    //
+    // O F5-FIX acrescentou `mem_primeira_infancia_casa` para a faixa 3-5, mas
+    // ela exige `temResponsavel`. A prova de que não é rede incondicional é
+    // esta: sem nenhum vínculo vivo, o silêncio permanece.
+    const semVinculo = [3, 4, 5].map(idade =>
       gerarPequenaMemoria(
-        ctxBase({ personagem: criarPersonagemTeste({ idade }) }), [], idade, 2030
+        ctxBase({ personagem: criarPersonagemTeste({ idade }), familia: [] }), [], idade, 2030
       )
     );
-    expect(semNada.every(m => m === null)).toBe(true);
+    expect(semVinculo.every(m => m === null)).toBe(true);
+
+    // E a cadência continua produzindo silêncio em ano ímpar, mesmo com
+    // contexto verdadeiro disponível, quando não há buraco se formando.
+    const anoImpar = gerarPequenaMemoria(
+      ctxBase({ personagem: criarPersonagemTeste({ idade: 5 }) }), [], 5, 2031,
+      [{ id: 'l', idade: 4, ano: 2030, categoria: 'geral', texto: 'algo' }]
+    );
+    expect(anoImpar).toBeNull();
   });
 });
 

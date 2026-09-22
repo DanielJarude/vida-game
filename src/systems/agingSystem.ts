@@ -184,7 +184,13 @@ export function executarPassagemDeAno(
   // F3 — estado do Calendário da Vida. Opcional para não quebrar chamadas
   // existentes (testes, simulações): ausência = calendário vazio, e nenhum
   // marco é considerado cumprido, o que é o correto para uma vida nova.
-  calendarioAtual: EstadoCalendario = criarCalendarioInicial()
+  calendarioAtual: EstadoCalendario = criarCalendarioInicial(),
+  // F5-FIX — a Linha da Vida acumulada até aqui. A política de continuidade e
+  // o cooldown temático das pequenas memórias são DERIVADOS dela, em vez de
+  // um contador persistido: o save continua na versão 5. Opcional para não
+  // quebrar chamadas existentes (testes, simulações) — sem ela o
+  // comportamento é o da F5.
+  timelineAteAqui: readonly LifeLogEntry[] = []
 ): AgingResult {
   const novaIdade = personagem.idade + 1;
   const novoAno = personagem.anoAtual + 1;
@@ -552,7 +558,8 @@ export function executarPassagemDeAno(
       { personagem: char, carreira: car, educacao: edu, economia: eco, familia: fam },
       logs,
       novaIdade,
-      novoAno
+      novoAno,
+      timelineAteAqui
     );
     return memoria ? [...logs, memoria] : logs;
   };
