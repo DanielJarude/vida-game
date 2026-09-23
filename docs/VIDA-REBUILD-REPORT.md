@@ -189,6 +189,8 @@ Ordem guiada por dependência:
 | Negociação salarial como desafio; "Perto de você" no celular | feito | `338fa97` |
 | Faculdade: aperto vira decisão, destrancar, cancelamento após 4 anos, condições de estudo em casa | feito | `094614f` |
 | Variedade de texto (recessão pela situação de cada um etc.); obituário | feito | `c1b21e0`, `3933b39` |
+| Calibração de separações; testes de interface (negociação, destrancar) | feito | `98a14f6`, `72fbc65` |
+| Trajetória dos filhos (vestibular, faculdade, formatura, emprego) | feito | `a0ea3b3` |
 
 ## 7. Arquitetura depois
 
@@ -365,8 +367,12 @@ Nenhum teste foi afrouxado para passar uma regressão real.
   "apertado" talvez gaste pouco demais para uma família com filhos.
 - **Faixa 3–5 anos** tem 16% de anos sem nenhuma linha (aceito: fase de pouca
   memória), mas poderia ter mais conteúdo cotidiano.
-- **Filhos do jogador** têm escola e idade, mas não trajetória educacional e
-  profissional própria tão rica quanto a do personagem.
+- **Filhos do jogador** agora têm vestibular (chance pela casa: escola
+  particular, renda per capita, proximidade), faculdade pública/particular/FIES
+  com formatura e emprego conforme o curso — mas não têm carreira que evolui
+  depois do primeiro emprego, nem ENEM/cota detalhados como o personagem.
+- `fil_volta_casa` ainda diz que o filho "perdeu o emprego" sem checar se ele
+  tinha emprego nem zerar a renda dele.
 - **Estratégias do simulador** são jogadores determinados; não medem a evasão
   "natural" de um jogador que responde ao acaso.
 - **Sem inflação** (reais constantes, por decisão de design).
@@ -387,7 +393,42 @@ Nenhum teste foi afrouxado para passar uma regressão real.
    outro extremo da separação.
 2. Estilo "apertado" com filhos: piso de despesa por dependente em
    `despesasMensais` (`src/motor/sistemas/dinheiro.ts`).
-3. Trajetória dos filhos: ENEM/curso/emprego simplificados para `Pessoa`
-   filho adulto, com eventos de formatura e primeiro emprego já existentes.
 4. Conteúdo cotidiano para 3–5 anos (`src/motor/conteudo/primeiros.ts`).
 5. Separar `acoes.ts` por domínio mantendo a mesma interface `executar`.
+
+## 18. Estado ao fim da sessão (2026-09-23)
+
+**Concluído e enviado** (branch `claude/vida-rebuild`, nada só local): motor
+novo completo, UI nova, save v6 com migração, 41 testes passando, `npm run
+typecheck` e `npm run build` limpos, simulação de 200 vidas sem violações de
+coerência, playtest de navegador em 1440/390/320 px sem problemas estruturais.
+
+**Decisões arquiteturais desta etapa**
+- Trajetória dos filhos mora em `sistemas/familia.ts` (`trajetoriaDoFilho`),
+  com estado em `Pessoa.estudo` / `Pessoa.formacao` (opcionais — saves antigos
+  continuam válidos) e fatos por id (`fil_quer_*`, `fil_vest_privada_*`,
+  `fil_curso_*`, `paga_faculdade_*` guardando o valor da mensalidade).
+- O sistema decide o que acontece COM o filho (passou ou não na pública);
+  pagar a particular, sugerir FIES, pedir nova tentativa ou mandar trabalhar é
+  decisão do jogador (`fil_faculdade`, prioritária).
+- Os acontecimentos antigos `adu_filho_vestibular` e `adu_filho_formatura`
+  foram removidos: contradiziam o estado (formatura de quem nunca estudou).
+- Evasão universitária: o mundo aperta (dinheiro, bebê, jornada integral,
+  notas), a decisão "O curso pesa" é do jogador; trancado por 4 anos, a
+  instituição cancela.
+
+**Problemas conhecidos em aberto**: ver seção 15 (separações abaixo da média
+geral, poupador extremo, 3–5 anos esparso, `fil_volta_casa` incoerente).
+
+**Próximo passo EXATO para amanhã**
+1. `cd ~/projetos/vida-game && git pull && nvm use 22 && npm ci && npm test`.
+2. Corrigir `fil_volta_casa` em `src/motor/conteudo/vinculos.ts`: `quando`
+   exige `c.p.filho.renda > 0` (e peso maior em recessão, `emRecessao`); todas
+   as opções aplicam a premissa (`c.p.filho.renda = 0; c.p.filho.ocupacao =
+   flex(genero, 'desempregado', 'desempregada', 'desempregade')`) — o
+   `trajetoriaDoFilho` já recoloca desempregados (50%/ano).
+3. Rodar o simulador (`npx esbuild scripts/sim/simular.ts --bundle
+   --platform=node --outfile=/tmp/sim.cjs && VIDAS=20 SAIDA=/tmp/sim node
+   /tmp/sim.cjs`) e conferir "Violações de coerência: nenhuma".
+4. Seguir a lista da seção 17 (estratégia "desatento", piso de despesa por
+   dependente, conteúdo 3–5 anos, separar `acoes.ts`).
