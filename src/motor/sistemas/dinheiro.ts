@@ -310,6 +310,12 @@ export function processarDinheiro(v: Vida, r: Rng): void {
     escrever(v, { texto: primeira ? 'A fatura do cartão ficou sem pagar e o nome foi parar no Serasa.' : 'Nome sujo de novo, por causa do cartão.', relevancia: primeira ? 'biografia' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
   }
   const quitadas = f.dividas.filter(d => d.saldo <= 0);
+  // Pagou o que devia: o nome sai do Serasa.
+  if (f.negativado && !f.dividas.some(d => d.saldo > 0 && (d.tipo === 'cartao' || d.tipo === 'emprestimo'))) {
+    f.negativado = false;
+    delete v.fatos['negativado_desde'];
+    escrever(v, { texto: 'Com as dívidas pagas, o nome saiu do Serasa.', relevancia: 'cotidiano', tema: 'dinheiro', tom: 'bom' });
+  }
   for (const d of quitadas) {
     if (d.tipo === 'financiamento_imovel') escrever(v, { texto: 'Pagou a última parcela da casa. O imóvel agora é todo seu.', relevancia: 'marco', tema: 'casa', tom: 'bom' });
     else if (d.tipo === 'cartao' && d.saldo <= 0 && temFato(v, 'teve_divida_cartao')) escrever(v, { texto: 'Conseguiu zerar a dívida do cartão.', relevancia: 'biografia', tema: 'dinheiro', tom: 'bom' });
