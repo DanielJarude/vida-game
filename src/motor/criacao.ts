@@ -87,6 +87,7 @@ function empregarPai(v: Vida, r: Rng, p: Pessoa, classe: Classe, municipioId: st
   const oc = r.pick(possiveis);
   const bruto = salarioLocal(oc, municipioId, 0.85 + r.next() * 0.3);
   p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
+  p.ocupacaoId = oc.id;
   p.renda = liquido(bruto, oc.contrato);
 }
 

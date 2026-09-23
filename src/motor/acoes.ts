@@ -238,10 +238,13 @@ function disponibilidadePessoa(v: Vida, id: string, x: InteracaoPessoa): Veredit
       }
       if (parceiro(v)) return { grau: 'irregular', motivo: 'Você está num relacionamento. Isso seria traição.' };
       return { grau: 'permitido', chance: chanceConvite(v, id) };
-    case 'pedir_namoro':
+    case 'pedir_namoro': {
       if (rom?.estagio !== 'saindo') return bloqueio('incompativel', 'Primeiro, saiam juntos.');
+      const atual = parceiro(v);
+      if (atual && atual.p.id !== id) return bloqueio('incompativel', `Você está com ${atual.p.nome}. Para namorar ${p.nome}, seria preciso terminar antes.`);
       if (v.t - rom.tEstagio < 3) return bloqueio('requisito', 'Cedo demais.');
       return PERMITIDO;
+    }
     case 'morar_junto':
       if (rom?.estagio !== 'namoro') return bloqueio('incompativel', 'Só para quem namora.');
       if (i < 18 || idadePessoa(v, p) < 18) return bloqueio('ilegal', 'Os dois precisam ser maiores de idade.');

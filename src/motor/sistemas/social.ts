@@ -159,9 +159,10 @@ export function conhecerGente(v: Vida, r: Rng): void {
 
 /** Gente que nunca chegou a importar e não convive mais sai da memória do jogo. */
 function podarDesconhecidos(v: Vida): void {
+  const citados = new Set(v.biografia.flatMap(e => e.pessoas ?? []));
   for (const { p, vin } of vinculosVivos(v)) {
     if (vin.parentesco || vin.romance) continue;
-    if (vin.convivio.length > 0) continue;
+    if (vin.convivio.length > 0 || citados.has(p.id)) continue;
     if ((vin.estagio === 'conhecido' || vin.estagio === 'colega') && vin.historia.length === 0 && vin.proximidade < 25) {
       delete v.vinculos[p.id];
       delete v.pessoas[p.id];

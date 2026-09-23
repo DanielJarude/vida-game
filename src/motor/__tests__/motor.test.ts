@@ -234,7 +234,8 @@ describe('dinheiro', () => {
   });
 
   it('não existe riqueza automática: quem não trabalha não acumula', () => {
-    const v = viver(nova({ semente: 99 }), 50);
+    // Família pobre: sem herança relevante, o único dinheiro seria o do próprio trabalho.
+    const v = viver(nova({ semente: 99, classe: 'vulneravel' }), 50);
     expect(v.financas.conta + v.financas.reserva).toBeLessThan(100000);
   });
 });

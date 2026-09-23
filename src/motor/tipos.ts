@@ -40,6 +40,8 @@ export interface Pessoa {
   temperamento: Temperamento;
   /** Rótulo do que a pessoa faz hoje ("professora", "estudante", "aposentado"). */
   ocupacao?: string;
+  /** Ocupação de referência (catálogo), quando a pessoa tem uma — dá continuidade à carreira dela. */
+  ocupacaoId?: string;
   /** Renda mensal líquida (0 quando não tem). Entra no domicílio se morar junto. */
   renda: number;
   /** Onde a pessoa mora. Distância pesa em toda relação. */

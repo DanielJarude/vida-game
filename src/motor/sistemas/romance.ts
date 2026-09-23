@@ -116,16 +116,27 @@ export function processarRomance(v: Vida, r: Rng): void {
     if (rom.estagio === 'ex') continue;
 
     const c = compatibilidade(v, p);
-    const juntos = vin.convivio.includes('casa');
     const longe = p.municipioId !== v.moradia.municipioId;
     const cuidou = v.anoAtual.acoes.some(a => a.endsWith(`:${p.id}`));
-    let delta = c * 8 + (cuidou ? 7 : -3) + (juntos ? 1 : 0) - (longe ? 9 : 0);
-    delta -= vin.tensao / 8;
-    if (v.financas.negativado) delta -= 4;
-    if (v.mente.estresse > 70) delta -= 3;
-    if (v.personalidade.tracos.empatia > 20) delta += 2;
-    if (v.personalidade.tracos.impulsividade > 30) delta -= 2;
-    rom.envolvimento = clamp(Math.round(rom.envolvimento + delta + r.normal() * 5));
+    // Para onde a relação tende a ir: compatibilidade e cuidado definem o
+    // patamar; desgaste, dinheiro curto, estresse e filhos pequenos puxam
+    // para baixo. O envolvimento anda em direção a esse alvo, com ruído.
+    const anosJuntos = (v.t - vin.tInicio) / 12;
+    const pequenos = vinculosVivos(v).filter(x => x.vin.parentesco === 'filho' && idadePessoa(v, x.p) < 5).length;
+    let alvo = 52 + c * 30 + (cuidou ? 10 : -8) + (v.rotinas.some(x => x.id === 'tempo_familia') ? 6 : 0) - (longe ? 15 : 0);
+    alvo -= vin.tensao / 4;
+    if (v.financas.negativado) alvo -= 8;
+    if (v.mente.estresse > 65) alvo -= 6;
+    if (v.personalidade.tracos.empatia > 20) alvo += 4;
+    if (v.personalidade.tracos.impulsividade > 30) alvo -= 5;
+    if (anosJuntos > 5) alvo -= Math.min(12, 3 + (anosJuntos - 5) * 0.4);
+    alvo -= pequenos * 4;
+    // Crises que vêm de fora: a outra pessoa também muda, adoece, se apaixona.
+    if (rom.estagio !== 'saindo' && r.chance(0.08)) {
+      vin.tensao = clamp(vin.tensao + r.int(25, 45));
+      alvo -= 15;
+    }
+    rom.envolvimento = clamp(Math.round(rom.envolvimento + (alvo - rom.envolvimento) * 0.3 + r.normal() * 6));
     vin.proximidade = clamp(Math.round(vin.proximidade * 0.6 + rom.envolvimento * 0.4));
     vin.tensao = Math.round(vin.tensao * 0.7);
     vin.tUltimoContato = v.t;
@@ -139,8 +150,9 @@ export function processarRomance(v: Vida, r: Rng): void {
       continue;
     }
 
-    // Namoro em diante: a outra pessoa pode terminar.
-    if (rom.envolvimento < 18 || vin.tensao >= 85) {
+    // Namoro em diante: a outra pessoa pode terminar — de vez, ou na zona morna.
+    const morno = rom.envolvimento < 42 && r.chance(rom.estagio === 'namoro' ? 0.3 : 0.16);
+    if (rom.envolvimento < 18 || vin.tensao >= 85 || morno) {
       terminar(v, p, vin, 'ela');
     }
   }

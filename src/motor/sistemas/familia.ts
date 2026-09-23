@@ -20,7 +20,7 @@ import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { processarCorpoDePessoa } from './corpo';
 import { flex, ge, rotuloParentesco } from '../texto';
 import { MESES, mesDe } from '../tempo';
-import { OCUPACOES_POR_CLASSE, ocupacao } from '../dados/ocupacoes';
+import { OCUPACOES, OCUPACOES_POR_CLASSE, ocupacao } from '../dados/ocupacoes';
 import { liquido, salarioLocal } from './renda';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { sortearNome } from '../dados/nomes';
@@ -95,7 +95,10 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     }
     if (p.ocupacao?.startsWith('aposentad') || ip < 18) continue;
     // Emprego dos pais oscila: é daqui que vêm os anos apertados da infância.
-    if (p.renda > 0 && r.chance(0.06)) {
+    // Servidor quase nunca perde o cargo; informal e autônomo, com mais frequência.
+    const ocAtual = p.ocupacaoId ? ocupacao(p.ocupacaoId) : undefined;
+    const riscoPerda = !ocAtual ? 0.05 : ocAtual.contrato === 'servidor' ? 0.003 : ocAtual.contrato === 'clt' ? 0.045 : 0.06;
+    if (p.renda > 0 && r.chance(riscoPerda)) {
       p.renda = 0;
       const antes = p.ocupacao;
       p.ocupacao = flex(p.genero, 'desempregado', 'desempregada');
@@ -104,8 +107,11 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
         v.mente.estresse = clamp(v.mente.estresse + 6);
       }
     } else if (p.renda === 0 && p.ocupacao?.startsWith('desempregad') && r.chance(0.55)) {
-      const oc = ocupacao(r.pick(OCUPACOES_POR_CLASSE[v.origem.classe]));
+      // Recoloca-se na mesma área, quase sempre; às vezes num degrau abaixo.
+      const mesmaArea = ocAtual ? OCUPACOES.filter(o => o.trilha === ocAtual.trilha && Math.abs(o.nivel - ocAtual.nivel) <= 1 && !o.concurso && o.contrato !== 'estagio' && o.contrato !== 'aprendiz') : [];
+      const oc = mesmaArea.length && r.chance(0.8) ? (r.chance(0.6) ? ocAtual! : r.pick(mesmaArea)) : ocupacao(r.pick(OCUPACOES_POR_CLASSE[v.origem.classe]));
       if (oc.idadeMin <= ip) {
+        p.ocupacaoId = oc.id;
         p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
         p.renda = liquido(salarioLocal(oc, p.municipioId, 0.85 + r.next() * 0.3), oc.contrato);
         if (i < 25 && moraComFamiliaDeOrigem(v)) escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} arrumou trabalho de novo, como ${p.ocupacao}.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [p.id] });

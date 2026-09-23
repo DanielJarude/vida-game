@@ -33,10 +33,12 @@ export function nomesParaBebe(c: Ctx): string[] {
   const b = c.p.bebe;
   const r = criarRng(hash(b.id + c.v.id));
   const g = b.genero === 'feminino' ? 'feminino' : 'masculino';
+  // Não sugerir o nome de alguém que já está na vida (nem o do próprio jogador).
+  const usados = new Set([c.v.eu.nome, ...Object.values(c.v.vinculos).filter(x => c.v.pessoas[x.pessoaId]?.vivo).map(x => c.v.pessoas[x.pessoaId].nome)]);
   const nomes: string[] = [];
-  for (let k = 0; k < 30 && nomes.length < 3; k++) {
+  for (let k = 0; k < 60 && nomes.length < 3; k++) {
     const n = sortearNome(r, g, anoDe(b.tNasc));
-    if (!nomes.includes(n)) nomes.push(n);
+    if (!nomes.includes(n) && !usados.has(n)) nomes.push(n);
   }
   return nomes;
 }
@@ -101,7 +103,7 @@ export const SISTEMICOS: Conteudo[] = [
   {
     id: 'rom_pedido_namoro', tipo: 'decisao', idade: [14, 90], tema: 'amor', prioritario: true, repetir: 1,
     papeis: { pessoa: P.saindoCom },
-    quando: c => mesesNoEstagio(c, 'pessoa') >= 6 && envolv(c, 'pessoa') >= 55,
+    quando: c => mesesNoEstagio(c, 'pessoa') >= 6 && envolv(c, 'pessoa') >= 55 && P.parceiro(c.v).length === 0,
     titulo: 'É sério?',
     texto: c => `Faz meses que você e ${c.p.pessoa.nome} saem juntos. Hoje, meio sem jeito, ${c.p.pessoa.genero === 'feminino' ? 'ela' : 'ele'} perguntou se vocês estão namorando.`,
     opcoes: [

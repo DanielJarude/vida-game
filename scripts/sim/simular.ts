@@ -42,7 +42,30 @@ interface AnoSim {
   diag: string;
 }
 
-interface VidaSim { semente: number; estrategia: string; vida: Vida; anos: AnoSim[]; }
+interface VidaSim { semente: number; estrategia: string; vida: Vida; anos: AnoSim[]; violacoes: string[]; }
+
+/** Checagens de coerência feitas a cada ano simulado. */
+function checar(v: Vida, out: string[]): void {
+  const i = idade(v);
+  const vivos = vinculosVivos(v);
+  const serios = vivos.filter(x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio));
+  if (serios.length > 1) out.push(`${i}: ${serios.length} relacionamentos sérios ao mesmo tempo`);
+  for (const x of vivos) {
+    const ip = Math.floor((v.t - x.p.tNasc) / 12);
+    // Namoro que começou entre dois adolescentes e continua quando um faz 18 é legal; o resto não.
+    if (x.vin.romance && x.vin.romance.estagio !== 'ex' && x.vin.romance.estagio !== 'interesse' && ((i >= 18) !== (ip >= 18)) && Math.min(i, ip) < 18 && (Math.abs(i - ip) > 3 || Math.min(i, ip) < 14)) out.push(`${i}: romance adulto-menor (${x.p.nome}, ${ip})`);
+    if (x.vin.parentesco === 'mae' && ip - i < 14) out.push(`${i}: mãe com ${ip}`);
+  }
+  if (v.trabalho.atual && i < 14) out.push(`${i}: trabalho formal com ${i} anos`);
+  if (v.trabalho.atual && i < 16 && v.trabalho.atual.contrato !== 'aprendiz') out.push(`${i}: ${v.trabalho.atual.contrato} aos ${i}`);
+  const nFilhos = Object.values(v.vinculos).filter(x => x.parentesco === 'filho').length;
+  if (nFilhos > 6) out.push(`${i}: ${nFilhos} filhos`);
+  const nomes = new Map<string, string[]>();
+  for (const x of vivos) if (!x.p.especie && (x.vin.parentesco || x.vin.romance || x.vin.proximidade >= 45)) nomes.set(x.p.nome, [...(nomes.get(x.p.nome) ?? []), x.vin.parentesco ?? x.vin.romance?.estagio ?? x.vin.estagio ?? '?']);
+  for (const [n, k] of nomes) if (k.length > 1 && n) out.push(`${i}: ${k.length} pessoas próximas chamadas ${n} (${k.join('+')})`);
+  const ultima = v.biografia[v.biografia.length - 1];
+  if (ultima?.pessoas) for (const id of ultima.pessoas) if (!v.pessoas[id]) out.push(`${i}: biografia cita pessoa inexistente`);
+}
 
 export function simular(semente: number, nomeEstrategia: string): VidaSim {
   const est = estrategia(nomeEstrategia);
@@ -51,6 +74,7 @@ export function simular(semente: number, nomeEstrategia: string): VidaSim {
   const genero = semente % 3 === 0 ? 'feminino' : semente % 3 === 1 ? 'masculino' : (semente % 7 === 0 ? 'nao_binario' : 'feminino');
   let v = criarVida({ nome: 'Sim', sobrenome: 'Vida', genero, municipioId: m.id, semente });
   const anos: AnoSim[] = [];
+  const violacoes: string[] = [];
   let guarda = 0;
   while (!v.morte && idade(v) < 115 && guarda++ < 130) {
     const antes = v.biografia.length;
@@ -72,6 +96,7 @@ export function simular(semente: number, nomeEstrategia: string): VidaSim {
       resultado = ret.resultado;
       v = ret.vida;
     }
+    checar(v, violacoes);
     const s = saldoMensal(v);
     anos.push({
       idade: idade(v),
@@ -82,7 +107,7 @@ export function simular(semente: number, nomeEstrategia: string): VidaSim {
       diag: `renda ${s.renda} · desp ${s.despesa} · conta ${Math.round(v.financas.conta)} · res ${Math.round(v.financas.reserva + v.financas.acoes)} · dív ${Math.round(v.financas.dividas.reduce((x, d) => x + d.saldo, 0))}${v.financas.negativado ? ' NEG' : ''} · saúde ${v.corpo.saude} · feliz ${v.mente.felicidade} · estr ${v.mente.estresse} · ${descricaoEmprego(v)} · mora ${v.moradia.tipo}`
     });
   }
-  return { semente, estrategia: nomeEstrategia, vida: v, anos };
+  return { semente, estrategia: nomeEstrategia, vida: v, anos, violacoes };
 }
 
 function biografia(s: VidaSim): string {
@@ -190,6 +215,24 @@ for (const classe of ['vulneravel', 'trabalhadora', 'media_baixa', 'media', 'alt
   const r40 = vs.map(s => s.anos.find(a => a.idade === 40)?.renda).filter((x): x is number => x !== undefined);
   log(`- ${classe}: ${vs.length} vidas · superior ${sup} (${(100 * sup / vs.length).toFixed(0)}%) · renda aos 40 mediana R$ ${pct(r40, 0.5).toLocaleString('pt-BR')} · p90 R$ ${pct(r40, 0.9).toLocaleString('pt-BR')}`);
 }
+
+log('');
+log('## Violações de coerência');
+const tipos = new Map<string, { n: number; ex: string }>();
+for (const s of todas) for (const vv of s.violacoes) {
+  const k = vv.replace(/^\d+: /, '').replace(/\d+/g, '#').replace(/chamadas [^(]*/, 'chamadas X ').replace(/romance adulto-menor \(.*\)/, 'romance adulto-menor');
+  const t = tipos.get(k) ?? { n: 0, ex: `[${s.estrategia} ${s.semente}] ${vv}` };
+  t.n++;
+  tipos.set(k, t);
+}
+if (tipos.size === 0) log('nenhuma');
+for (const [k, t] of [...tipos.entries()].sort((a, b) => b[1].n - a[1].n)) log(`- ${t.n}× ${k} — ex.: ${t.ex}`);
+const casamentos = todas.filter(s => s.vida.biografia.some(b => /^Casou-se/.test(b.texto))).length;
+const divorcios = todas.filter(s => s.vida.biografia.some(b => /divórcio/.test(b.texto))).length;
+const separacoes = todas.filter(s => s.vida.biografia.some(b => /divórcio|fez as malas|se separar de|Decidiu se separar/.test(b.texto))).length;
+const juntaram = todas.filter(s => s.vida.biografia.some(b => /^Casou-se|morar junto|morar com/.test(b.texto))).length;
+const terminos = todas.reduce((n, s) => n + s.vida.biografia.filter(b => /terminou o namoro|Terminou o namoro|divórcio|fez as malas|se separar/.test(b.texto)).length, 0);
+log(`- casamentos: ${casamentos} vidas · divórcios: ${divorcios} · separações de quem morava junto (inclui divórcio): ${separacoes} de ${juntaram} vidas que moraram junto · términos de namoro/relação no total: ${terminos}`);
 
 log('');
 log('## Repetição de textos (mesmo texto na mesma vida)');
