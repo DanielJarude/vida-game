@@ -114,7 +114,8 @@ describe('texto', () => {
       const v = viver(nova({ semente: s * 17, genero: 'feminino' }), 70, vv => idade(vv) >= 18 && !vv.trabalho.atual ? [{ tipo: 'candidatar', ocupacaoId: 'atendente' }] : []);
       for (const e of v.biografia) {
         expect(e.texto).not.toMatch(/\([ao]\)|\bo\(a\)/);
-        expect(e.texto).not.toMatch(/\b(promovido|demitido|aprovado|aposentado|contratado|casado|nascido)\b/);
+        // Frases sem sujeito falam da própria personagem ("Foi demitida...").
+        expect(e.texto).not.toMatch(/(^|\. )(Foi )?(promovido|demitido|aprovado|aposentado|contratado|casado|nascido|pego|descoberto)\b/);
       }
     }
   });

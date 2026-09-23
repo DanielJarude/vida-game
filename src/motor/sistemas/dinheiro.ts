@@ -164,6 +164,8 @@ export function despesasMensais(v: Vida, estiloForcado?: Vida['financas']['estil
     add(m[1] === 'ajuda_mensal' ? `Ajuda para ${p.nome}` : m[1] === 'paga_cuidadora' ? `Cuidadora de ${p.nome}` : `Casa de repouso de ${p.nome}`, valor * c, 'outros');
   }
 
+  if (v.fatos['aposta_online'] !== undefined && i >= 18) add('Apostas', Math.max(300, Math.min(2500, (rendasMensais(v).reduce((s, l) => s + l.valor, 0)) * 0.15)), 'lazer');
+
   // Padrão de vida acompanha a renda: quem ganha mais passa a gastar mais
   // (restaurante, roupa, viagem, carro melhor). Só o estilo apertado resiste.
   const propria = rendasMensais(v).filter(l => l.grupo === 'renda' && !l.rotulo.startsWith('Renda de') && l.rotulo !== 'Mesada').reduce((s, l) => s + l.valor, 0);
