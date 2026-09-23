@@ -458,3 +458,54 @@ geral, poupador extremo, 3–5 anos esparso, `fil_volta_casa` incoerente).
   e cada opção aplica a premissa (`renda = 0`, `ocupacao` = desempregado
   com concordância via `flex`). Rodar o simulador e conferir "Violações de
   coerência: nenhuma". Em seguida, seguir a seção 17.
+
+## CHECKPOINT PARA PLAYTEST HUMANO
+
+**Estado:** reconstrução funcional de ponta a ponta. `npm test` 41/41,
+`npm run typecheck` e `npm run build` passando. Working tree limpa.
+
+**Sistemas reconstruídos:** motor puro com estado único e RNG por semente;
+família de origem por classe/lugar; escola, ENEM, cursos por oferta local/EAD,
+evasão como decisão; trabalho com requisitos legais, entrevista e negociação
+como desafios; economia do domicílio (cortes, cartão → nome sujo, caducar,
+despejo, financiamento); relações (amizade e romance com envolvimento);
+gestação/adoção/filhos com trajetória própria; mundo (recessões, regiões);
+plausibilidade graduada; Linha da Vida em capítulos; retrato por fase;
+save v6 com migração v5; UI editorial com mobile.
+
+**Últimas alterações desta sessão:** negociação salarial; "Perto de você" no
+celular; decisão "O curso pesa", destrancar e cancelamento após 4 anos;
+condições de estudo em casa; variedade de textos; obituário; calibração de
+separações; trajetória dos filhos; testes de interface novos.
+
+**Problemas conhecidos:** `fil_volta_casa` não verifica se o filho tinha
+emprego; separações abaixo da média geral; poupadores extremos acumulam muito;
+faixa 3–5 anos esparsa.
+
+**Pendências não críticas:** estratégia "desatento" no simulador; piso de
+despesa por dependente; conteúdo 3–5 anos; separar `acoes.ts`; rodar simulador
+com 200 vidas e `scripts/playtest/viver.mjs` de novo.
+
+**Observar no playtest humano:**
+- Alguma decisão parece tomada pelo jogo em nome do personagem?
+- Ritmo: anos vazios ou decisões demais (sobretudo 18–29 e 30–44)?
+- Dinheiro faz sentido (aperto, dívida, compra de carro/casa)?
+- Pessoas: nomes repetidos, relações que mudam sem motivo, filhos coerentes.
+- Mobile (320–390 px): botões alcançáveis, diálogos, barra inferior.
+- Textos repetidos ou com concordância errada; retrato por idade/gênero.
+- Carregar a vida depois de fechar a aba (save).
+
+**Branch:** `claude/vida-rebuild`. **Último commit:** ver `git log -1`
+(checkpoint para playtest humano).
+
+**Rodar em outro computador:**
+```
+git clone https://github.com/DanielJarude/vida-game.git
+cd vida-game
+git checkout claude/vida-rebuild
+nvm install 22 && nvm use 22
+npm ci
+npm test
+npm run dev        # abre em http://localhost:5173
+# ou: npm run build && npx vite preview   (http://localhost:4173)
+```
