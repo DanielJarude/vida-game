@@ -432,3 +432,29 @@ geral, poupador extremo, 3–5 anos esparso, `fil_volta_casa` incoerente).
    /tmp/sim.cjs`) e conferir "Violações de coerência: nenhuma".
 4. Seguir a lista da seção 17 (estratégia "desatento", piso de despesa por
    dependente, conteúdo 3–5 anos, separar `acoes.ts`).
+
+## CHECKPOINT DA SESSÃO
+
+- **Branch:** `claude/vida-rebuild` (nunca mergeada na main, sem force-push).
+- **Último trabalho concluído:** trajetória coerente dos filhos (`a0ea3b3`):
+  vestibular decidido pela casa, `fil_faculdade` como decisão do jogador
+  (pagar / FIES / tentar de novo / trabalhar), formatura com curso real,
+  emprego conforme formação, mensalidade no orçamento. Removidos
+  `adu_filho_vestibular` e `adu_filho_formatura` (contradiziam o estado).
+- **Em andamento quando parou:** nada aberto; tudo commitado e enviado.
+- **Incompleto / problemas conhecidos:**
+  - `fil_volta_casa` (`src/motor/conteudo/vinculos.ts`) diz que o filho
+    "perdeu o emprego" sem checar se ele tinha emprego nem zerar a renda.
+  - Demais limitações na seção 15 (separações abaixo da média geral,
+    poupador extremo, faixa 3–5 anos esparsa).
+- **Validação desta etapa:** `npm run typecheck` e `npm run build` passaram;
+  `npm test` com 41/41 e simulação de 100 vidas sem violações rodaram antes
+  do último commit.
+- **Testes a rodar amanhã:** `npm test` completo, simulador com 200 vidas
+  (`VIDAS=20`) e `scripts/playtest/jogar.mjs` + `viver.mjs` (build + `vite
+  preview` na porta 4173).
+- **Próximo passo EXATO:** `git pull && nvm use 22 && npm ci && npm test`;
+  depois corrigir `fil_volta_casa`: `quando` exige `c.p.filho.renda > 0`,
+  e cada opção aplica a premissa (`renda = 0`, `ocupacao` = desempregado
+  com concordância via `flex`). Rodar o simulador e conferir "Violações de
+  coerência: nenhuma". Em seguida, seguir a seção 17.
