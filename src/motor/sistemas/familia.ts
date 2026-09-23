@@ -73,7 +73,7 @@ function heranca(v: Vida, r: Rng, falecido: Pessoa): void {
   const valor = Math.round(base * (0.5 + r.next()) / herdeiros / 1000) * 1000;
   if (valor <= 0) return;
   v.financas.conta += valor;
-  escrever(v, { texto: `A partilha do inventário deixou R$ ${valor.toLocaleString('pt-BR')} de herança.`, relevancia: 'biografia', tema: 'dinheiro' });
+  escrever(v, { texto: `O inventário de ${falecido.nome} terminou meses depois: R$ ${valor.toLocaleString('pt-BR')} de herança${herdeiros > 1 ? `, a mesma parte que coube a cada irmão` : ''}.`, relevancia: 'biografia', tema: 'dinheiro' });
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

@@ -3,7 +3,7 @@
  * o calendário. E mais cenas de adolescência e juventude.
  */
 
-import type { Conteudo } from './base';
+import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, estresse, fato, feliz, gp, prox, tensao } from './efeitos';
 import { emRecessao, idadePessoa, temFato } from '../nucleo';
@@ -13,6 +13,19 @@ import { anoDe } from '../tempo';
 import { curso } from '../dados/cursos';
 
 
+/** A recessão contada a partir de onde a pessoa está: empregada, estudando, aposentada. */
+function textoDeRecessao(c: Ctx): string {
+  const v = c.v;
+  const e = v.trabalho.atual;
+  const abertura = c.vezes === 0 ? 'O país entrou em recessão' : c.r.pick(['Mais uma crise econômica', 'O país voltou a entrar em recessão', 'Veio outra recessão']);
+  if (v.trabalho.aposentadoria) return `${abertura}. A aposentadoria não mudou, mas o supermercado sim: a lista do mês encolheu.`;
+  if (e && e.contrato === 'servidor') return `${abertura}. No serviço público o emprego ficou, mas o reajuste foi congelado e os colegas de fora começaram a ser demitidos.`;
+  if (e && (e.contrato === 'autonomo' || e.contrato === 'informal')) return `${abertura}. Os clientes sumiram primeiro: quem pagava à vista passou a pedir fiado.`;
+  if (e) return `${abertura}. Em ${e.empregador}, a palavra "corte" começou a aparecer nas reuniões.`;
+  if (v.educacao.matricula) return `${abertura}. Os estágios minguaram, e os veteranos formados voltaram para a casa dos pais.`;
+  return `${abertura}: fábricas demitindo, lojas fechando, e as vagas que sobraram pedindo experiência.`;
+}
+
 export const MUNDO: Conteudo[] = [
   /* ============================================================== ECONOMIA */
   {
@@ -21,7 +34,7 @@ export const MUNDO: Conteudo[] = [
     narrar: c => ({
       texto: c.idade < 16
         ? 'O país entrou em recessão. Em casa, a palavra apareceu no jornal da noite e depois na conta do mercado.'
-        : c.r.pick(['A economia do país entrou em recessão: fábricas demitindo, lojas fechando, todo mundo com medo.', 'Veio uma crise econômica. O desemprego subiu e as empresas congelaram contratações.']),
+        : textoDeRecessao(c),
       relevancia: 'biografia', tom: 'ruim',
       efeito: () => { c.v.fatos['recessao_ate'] = c.v.t + 24; estresse(c, 5); }
     })
@@ -29,7 +42,12 @@ export const MUNDO: Conteudo[] = [
   {
     id: 'mun_recuperacao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true,
     quando: c => c.v.fatos['recessao_ate'] !== undefined && !emRecessao(c.v) && c.v.t - (c.v.fatos['recessao_ate'] ?? 0) < 12,
-    narrar: c => ({ texto: 'A economia voltou a respirar. Os anúncios de vaga reapareceram nos postes.', relevancia: 'cotidiano', efeito: () => { delete c.v.fatos['recessao_ate']; } })
+    narrar: c => ({ texto: [
+      'A economia voltou a respirar. Os anúncios de vaga reapareceram nos postes.',
+      'A crise foi passando sem aviso: o shopping encheu de novo, as obras paradas voltaram a ter barulho.',
+      'O jornal anunciou o fim da recessão. Na rua, a notícia chegou em forma de "contrata-se" na vitrine.',
+      'Depois de dois anos de aperto, o comércio voltou a contratar e o preço do dólar parou de ser assunto no almoço.'
+    ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: 'cotidiano', efeito: () => { delete c.v.fatos['recessao_ate']; } })
   },
   {
     id: 'mun_chuva_cidade', tipo: 'acontecimento', idade: [5, 110], tema: 'lugar', repetir: 10,
@@ -39,7 +57,12 @@ export const MUNDO: Conteudo[] = [
   {
     id: 'mun_seca', tipo: 'acontecimento', idade: [5, 110], tema: 'lugar', repetir: 10,
     quando: c => municipio(c.v.moradia.municipioId).regiao === 'Nordeste' && municipio(c.v.moradia.municipioId).perfil !== 'metropole',
-    narrar: c => ({ texto: 'Um ano de seca: caminhão-pipa na rua, torneira seca dia sim, dia não, e o preço do feijão lá em cima.', relevancia: 'cotidiano', efeito: () => estresse(c, 3) })
+    narrar: c => ({ texto: [
+      'Um ano de seca: caminhão-pipa na rua, torneira seca dia sim, dia não, e o preço do feijão lá em cima.',
+      'A chuva não veio de novo. O açude baixou até aparecer a torre da igreja velha, e a água passou a ser racionada.',
+      'Seca outra vez. Quem tinha cisterna dividia com o vizinho; quem não tinha esperava o carro-pipa da prefeitura.',
+      'O sertão ficou cinza. Na feira, o preço do milho e da farinha dobrou em poucos meses.'
+    ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: 'cotidiano', efeito: () => estresse(c, 3) })
   },
   {
     id: 'mun_sao_joao', tipo: 'acontecimento', idade: [5, 90], tema: 'lazer', repetir: 6,

@@ -141,7 +141,9 @@ export function processarEscola(v: Vida, r: Rng): void {
   if (reprova) {
     b.reprovacoes += 1;
     escrever(v, {
-      texto: `Repetiu ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)}.` + (b.reprovacoes > 1 ? ' De novo.' : ''),
+      texto: b.reprovacoes === 1 ? `Repetiu ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)}.`
+        : b.reprovacoes === 2 ? `Repetiu de ano pela segunda vez, agora ${b.etapa === 'medio' ? 'na' : 'no'} ${rotuloSerie(b)}.`
+          : `${b.reprovacoes}ª reprovação: ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)} de novo, com colegas cada vez mais novos.`,
       relevancia: 'biografia', tema: 'escola', tom: 'ruim'
     });
     v.mente.felicidade = clamp(v.mente.felicidade - 6);
@@ -398,7 +400,10 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
   const chance = o.veredito.chance ?? 0.9;
   const nome = o.curso.nome;
   if (!r.chance(chance)) {
-    const texto = o.via === 'sisu'
+    const antes = v.biografia.filter(b => b.texto.includes(nome) && b.tom === 'ruim' && b.tema === 'estudo').length;
+    const texto = antes > 0
+      ? r.pick([`Tentou ${nome} de novo e ficou de fora outra vez.`, `Mais uma lista de aprovados em ${nome} sem o seu nome.`, `A ${antes + 1}ª tentativa em ${nome} também não deu.`])
+      : o.via === 'sisu'
       ? `Não passou em ${nome} pelo SISU. A nota ficou perto, mas não o bastante.`
       : o.via === 'prouni' ? `Não conseguiu a bolsa do ProUni para ${nome}.`
         : o.via === 'selecao_publica' ? `Não passou na seleção para ${nome}.`

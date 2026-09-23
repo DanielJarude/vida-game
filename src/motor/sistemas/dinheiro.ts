@@ -235,7 +235,15 @@ export function processarDinheiro(v: Vida, r: Rng): void {
       v.mente.felicidade = clamp(v.mente.felicidade - Math.min(8, Math.round(corte / 250)));
       if (v.fatos['aperto_desde'] === undefined || v.t - (v.fatos['ultimo_aperto'] ?? 0) > 36) {
         v.fatos['aperto_desde'] = v.t;
-        escrever(v, { texto: 'O dinheiro não fechava. Saíram o lazer, a marca boa do supermercado, o que dava para cortar.', relevancia: 'cotidiano', tema: 'dinheiro', tom: 'ruim' });
+        const n = (v.fatos['apertos'] ?? 0) + 1;
+        v.fatos['apertos'] = n;
+        const textos = [
+          'O dinheiro não fechava. Saíram o lazer, a marca boa do supermercado, o que dava para cortar.',
+          'De novo o mês maior que o salário: carne virou ovo, a assinatura de streaming foi cancelada.',
+          'Voltou o tempo das contas na ponta do lápis. Nada de pedir comida, nada de sair no fim de semana.',
+          'O aperto voltou. A lista do mercado encolheu e o cartão ficou na gaveta.'
+        ];
+        escrever(v, { texto: textos[(n - 1) % textos.length], relevancia: 'cotidiano', tema: 'dinheiro', tom: 'ruim' });
       }
       v.fatos['ultimo_aperto'] = v.t;
     }

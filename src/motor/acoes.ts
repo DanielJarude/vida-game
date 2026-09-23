@@ -410,7 +410,12 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const id = `v${v.seq++}`;
       financiarOuPagar(v, m.preco, a.financiar, 48, 0.019, 0.2, 'financiamento_veiculo', `Financiamento: ${m.nome}`, id);
       v.financas.bens.push({ id, tipo: 'veiculo', modeloId: m.id, nome: m.nome, valor: m.preco, tCompra: v.t, estado: m.id.includes('usad') ? 60 : 100 });
-      escrever(v, { texto: `Comprou ${m.nome.startsWith('bicicleta') || m.nome.startsWith('moto') ? 'uma' : 'um'} ${m.nome}${a.financiar ? ', financiad' + (m.nome.startsWith('bicicleta') || m.nome.startsWith('moto') ? 'a' : 'o') + ' em 48 vezes' : ''}.`, relevancia: m.preco > 30000 ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
+      const nVeiculos = (v.fatos['veiculos_comprados'] ?? 0) + 1;
+      v.fatos['veiculos_comprados'] = nVeiculos;
+      const fem = m.nome.startsWith('bicicleta') || m.nome.startsWith('moto');
+      const aindaTem = v.financas.bens.filter(b => b.tipo === 'veiculo' && b.id !== id).length > 0;
+      const verbo = nVeiculos === 1 ? `Comprou ${fem ? 'a primeira' : 'o primeiro'}` : aindaTem ? `Comprou também ${fem ? 'uma' : 'um'}` : `Trocou de veículo: agora ${fem ? 'uma' : 'um'}`;
+      escrever(v, { texto: `${verbo} ${m.nome}${a.financiar ? ', financiad' + (m.nome.startsWith('bicicleta') || m.nome.startsWith('moto') ? 'a' : 'o') + ' em 48 vezes' : ''}.`, relevancia: m.preco > 30000 ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
       return ok(`Você comprou: ${m.nome}.`, 'bom');
     }
     case 'comprar_imovel': {
@@ -469,7 +474,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const acordos = (v.fatos['acordos'] ?? 0) + 1;
       v.fatos['acordos'] = acordos;
       v.fatos['ultimo_acordo'] = v.t;
-      escrever(v, { texto: acordos === 1 ? 'Fechou um acordo para renegociar as dívidas e limpar o nome.' : 'Mais um acordo com o banco, mais uma tentativa de limpar o nome.', relevancia: acordos === 1 ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
+      escrever(v, { texto: acordos === 1 ? 'Fechou um acordo para renegociar as dívidas e limpar o nome.' : [`Mais um acordo com o banco — o ${acordos}º —, mais uma tentativa de limpar o nome.`, 'Sentou de novo com o gerente e trocou uma dívida por outra, com parcela menor.', 'Outro feirão de renegociação, outra assinatura, a mesma esperança de sair do vermelho.'][acordos % 3], relevancia: acordos === 1 ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
       return ok('Acordo fechado: parcelas fixas, juros menores, nome limpo.', 'bom');
     }
     case 'atracao':
