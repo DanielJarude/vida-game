@@ -89,7 +89,9 @@ export const ADOLESCENCIA: Conteudo[] = [
     id: 'ado_assalto', tipo: 'acontecimento', idade: [12, 70], tema: 'lugar', repetir: 10,
     quando: c => ['metropole', 'metropolitana', 'capital'].includes(municipio(c.v.moradia.municipioId).perfil),
     narrar: c => ({
-      texto: c.idade < 18 ? 'Foi assaltad' + c.g('o', 'a', 'e') + ' no ponto de ônibus voltando da escola. Levaram o celular.' : 'Levaram seu celular num assalto rápido, à luz do dia, numa esquina movimentada.',
+      texto: c.vezes > 0
+        ? c.r.pick(['Mais um celular levado na rua. Você passou a andar com um aparelho velho só para isso.', 'Outro assalto, dessa vez dentro do ônibus.', 'Levaram sua carteira num arrastão perto do terminal.'])
+        : c.idade < 18 ? 'Foi assaltad' + c.g('o', 'a', 'e') + ' no ponto de ônibus voltando da escola. Levaram o celular.' : 'Levaram seu celular num assalto rápido, à luz do dia, numa esquina movimentada.',
       relevancia: 'biografia', tom: 'ruim',
       efeito: () => { estresse(c, 8); if (c.idade >= 18) dinheiro(c, -1500); }
     })

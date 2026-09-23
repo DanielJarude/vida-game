@@ -23,11 +23,19 @@ export const ADULTO: Conteudo[] = [
     quando: empregado,
     narrar: c => {
       const bom = c.r.chance(0.5);
+      const e = c.v.trabalho.atual!;
+      const chefe = criarPessoa(c.v, c.r, { idade: c.r.int(Math.max(28, c.idade - 5), Math.min(62, c.idade + 18)), municipioId: c.v.moradia.municipioId });
+      chefe.ocupacao = chefe.genero === 'feminino' ? 'gestora' : 'gestor';
+      chefe.renda = Math.round(e.salario * 1.8);
+      const vin = vincular(c.v, chefe, { origem: 'trabalho', proximidade: bom ? 30 : 12, convivio: ['trabalho'], estagio: 'colega' });
+      vin.ambiente = `trabalho:${e.empregador}:${e.tInicio}`;
+      if (!bom) vin.tensao = 25;
+      const jeito = bom
+        ? c.r.pick(['passou a elogiar em público e cobrar em particular', 'chegou ouvindo todo mundo antes de mudar qualquer coisa', 'brigou pela equipe na primeira reunião com a diretoria'])
+        : c.r.pick(['chegou mudando tudo e desconfiando de todo mundo', 'começou a mandar mensagem às dez da noite', 'passou a controlar o horário de almoço no relógio']);
       return {
-        texto: bom
-          ? `Entrou ${c.r.chance(0.5) ? 'um gestor novo' : 'uma gestora nova'} no setor, que passou a elogiar em público e cobrar em particular.`
-          : `Trocaram a chefia do setor. A pessoa nova chegou mudando tudo e desconfiando de todo mundo.`,
-        relevancia: 'cotidiano', efeito: () => { if (c.v.trabalho.atual) c.v.trabalho.atual.desempenho += bom ? 5 : -5; estresse(c, bom ? -2 : 6); }
+        texto: `${chefe.nome} assumiu a chefia do setor e ${jeito}.`,
+        relevancia: 'cotidiano', efeito: () => { e.desempenho += bom ? 5 : -5; estresse(c, bom ? -2 : 6); }
       };
     }
   },
@@ -153,12 +161,19 @@ export const ADULTO: Conteudo[] = [
     ]
   },
   {
-    id: 'adu_carro_quebra', tipo: 'acontecimento', idade: [18, 85], tema: 'dinheiro', repetir: 3,
-    quando: temCarro,
+    id: 'adu_carro_quebra', tipo: 'acontecimento', idade: [18, 85], tema: 'dinheiro', repetir: 4,
+    quando: c => temCarro(c) && c.v.financas.bens.some(b => b.tipo === 'veiculo' && b.modeloId.startsWith('carro') && b.estado < 70),
     narrar: c => {
       const carro = c.v.financas.bens.find(b => b.tipo === 'veiculo' && b.modeloId.startsWith('carro'))!;
-      const custo = carro.estado < 40 ? c.r.int(2500, 6000) : c.r.int(800, 2200);
-      return { texto: carro.estado < 40 ? `O ${carro.nome} deixou você na mão no meio da avenida. O mecânico falou em motor: R$ ${custo.toLocaleString('pt-BR')}.` : `O ${carro.nome} precisou de embreagem nova: R$ ${custo.toLocaleString('pt-BR')}.`, relevancia: 'cotidiano', tom: 'ruim', efeito: () => { dinheiro(c, -custo); carro.estado = Math.min(100, carro.estado + 30); } };
+      const grave = carro.estado < 40;
+      const custo = grave ? c.r.int(2500, 6000) : c.r.int(800, 2200);
+      const peca = c.r.pick(['a embreagem', 'a suspensão', 'o radiador', 'a bomba de combustível', 'os freios']);
+      const texto = c.vezes === 0
+        ? grave ? `O ${carro.nome} deixou você na mão no meio da avenida. O mecânico falou em motor: R$ ${custo.toLocaleString('pt-BR')}.` : `O ${carro.nome} foi para a oficina trocar ${peca}: R$ ${custo.toLocaleString('pt-BR')}.`
+        : grave
+          ? c.r.pick([`De novo na oficina, e desta vez era o motor. O ${carro.nome} já não era o mesmo.`, `O ${carro.nome} ferveu na estrada e voltou de guincho.`, `O mecânico já chamava você pelo nome. Mais R$ ${custo.toLocaleString('pt-BR')} no ${carro.nome}.`])
+          : `Mais uma ida à oficina: ${peca}, R$ ${custo.toLocaleString('pt-BR')}.`;
+      return { texto, relevancia: 'cotidiano', tom: 'ruim', efeito: () => { dinheiro(c, -custo); carro.estado = Math.min(100, carro.estado + 30); } };
     }
   },
   {
@@ -168,21 +183,39 @@ export const ADULTO: Conteudo[] = [
     narrar: c => {
       const moto = c.v.financas.bens.some(b => b.tipo === 'veiculo' && b.modeloId.startsWith('moto'));
       return {
-        texto: moto ? 'Um carro fechou a moto num cruzamento. Foram dois meses de gesso na perna e fisioterapia pelo SUS.' : 'Um motorista avançou o sinal e bateu na lateral do carro. Ninguém se machucou; o conserto levou três semanas.',
-        relevancia: 'biografia', tom: 'ruim',
+        texto: moto
+          ? c.vezes === 0 ? 'Um carro fechou a moto num cruzamento. Foram dois meses de gesso na perna e fisioterapia pelo SUS.' : 'Outro tombo de moto, outra vez no asfalto. Desta vez foi o braço.'
+          : c.vezes === 0 ? 'Um motorista avançou o sinal e bateu na lateral do carro. Ninguém se machucou; o conserto levou três semanas.' : 'Levou uma batida na traseira parado no semáforo. Mais três semanas sem carro.',
+        relevancia: c.vezes === 0 || moto ? 'biografia' : 'cotidiano', tom: 'ruim',
         efeito: () => { if (moto) { saude(c, -8); estresse(c, 8); } else dinheiro(c, -1800); }
       };
     }
   },
   {
-    id: 'adu_infiltracao', tipo: 'acontecimento', idade: [20, 90], tema: 'casa', repetir: 5,
+    id: 'adu_infiltracao', tipo: 'acontecimento', idade: [20, 90], tema: 'casa', repetir: 7,
     quando: c => c.v.moradia.tipo === 'propria' && temImovel(c),
-    narrar: c => { const custo = c.r.int(3000, 12000); return { texto: `Uma infiltração apareceu na parede do quarto. Trocar o encanamento custou R$ ${custo.toLocaleString('pt-BR')} e um mês de pó.`, relevancia: 'cotidiano', tom: 'ruim', efeito: () => dinheiro(c, -custo) }; }
+    narrar: c => {
+      const custo = c.r.int(3000, 12000);
+      const problema = c.r.pick([
+        ['Uma infiltração apareceu na parede do quarto', 'trocar o encanamento'],
+        ['O telhado começou a pingar nas chuvas', 'refazer o telhado'],
+        ['O piso da cozinha estufou', 'trocar o piso'],
+        ['A fiação velha derrubou a energia da casa', 'refazer a parte elétrica']
+      ]);
+      return { texto: `${problema[0]}. ${problema[1][0].toUpperCase() + problema[1].slice(1)} custou R$ ${custo.toLocaleString('pt-BR')} e um mês de pó.`, relevancia: 'cotidiano', tom: 'ruim', efeito: () => dinheiro(c, -custo) };
+    }
   },
   {
-    id: 'adu_aluguel_reajuste', tipo: 'acontecimento', idade: [18, 90], tema: 'casa', repetir: 3,
+    id: 'adu_aluguel_reajuste', tipo: 'acontecimento', idade: [18, 90], tema: 'casa', repetir: 5,
     quando: c => c.v.moradia.tipo === 'aluguel',
-    narrar: c => ({ texto: 'O dono do imóvel mandou o reajuste anual: o aluguel subiu acima da inflação.', relevancia: 'cotidiano', efeito: () => { c.v.moradia.aluguel = Math.round(c.v.moradia.aluguel * 1.06 / 10) * 10; } })
+    narrar: c => {
+      const alto = c.r.chance(0.4);
+      return {
+        texto: alto ? `O dono do imóvel pediu um reajuste de ${c.r.int(12, 20)}% no aluguel. Não teve conversa.` : 'Veio o reajuste do aluguel, um pouco acima da inflação.',
+        relevancia: alto ? 'cotidiano' : 'tecnico',
+        efeito: () => { c.v.moradia.aluguel = Math.round(c.v.moradia.aluguel * (alto ? 1.14 : 1.05) / 10) * 10; }
+      };
+    }
   },
   {
     id: 'adu_vizinho', tipo: 'decisao', idade: [18, 90], tema: 'casa', repetir: 6,

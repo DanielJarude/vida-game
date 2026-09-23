@@ -173,4 +173,44 @@ Ordem guiada por dependência:
 
 ## 6. Progresso
 
-(atualizado a cada etapa)
+| Etapa | Estado | Commit |
+| --- | --- | --- |
+| Baseline, diagnóstico, auditoria de agência | feito | `docs: baseline...` |
+| Motor novo (`src/motor`) + simulador por estratégia | feito | `e41d20d` |
+| Testes de contrato do motor, recalibração saúde/economia | feito | — |
+| Save v6 + migração v5 testada com saves reais | feito | — |
+| Interface nova, retrato refeito, remoção do código antigo | feito | `5170588` |
+
+## 7. Arquitetura depois
+
+```
+src/
+  motor/                 regras puras, sem React
+    tipos.ts             o modelo: uma Vida (JSON puro)
+    rng.ts               gerador por semente, estado salvo na vida
+    nucleo.ts            transação, consultas, escrita na biografia
+    criacao.ts           nascer: família de origem coerente com classe e lugar
+    ano.ts               um ano: sistemas → morte → conteúdo (marcos, estado, mundo)
+    acoes.ts             comandos do jogador com disponibilidade graduada
+    plausibilidade.ts    impossível / incompatível / ilegal / requisito / irregular / improvável / permitido
+    pessoas.ts           pessoas, vínculos, visual herdado
+    personalidade.ts     traços só por escolhas comportamentais e rotinas mantidas
+    save.ts              v6, validação, backup, migração v5→v6, estatísticas
+    dados/               lugares (perfil urbano × região), cursos, ocupações, bens, nomes por geração
+    sistemas/            corpo, escola, trabalho, renda, dinheiro, domicílio, moradia,
+                         social, romance, família (gestação), rotinas, processos
+    conteudo/            base (acontecimento × decisão), papéis, catálogo por fase,
+                         sistêmicos (disparados por estado), desafios (entrevista)
+  ui/                    React fino sobre o motor
+    useVida.ts           o único estado: a vida; toda mudança passa pelo motor
+    telas/ jogo/ avatar/ comum.tsx apresentar.ts vida.css tokens.css
+scripts/
+  sim/                   simulador com 10 estratégias de jogador (métricas + biografias)
+  playtest/              jogar.mjs (navegador, 3 larguras), retratos.tsx, foto.mjs
+  itch/                  empacotamento e smoke do pacote
+```
+
+Antes: 50.500 linhas, 15 `useState`, motor anual com 10 parâmetros posicionais,
+RNG global, 134 eventos (65% dos desfechos sorteados decidindo comportamento).
+Depois: estado único serializável, comandos puros, RNG por semente
+(mesma semente + mesmos comandos = mesma vida, testado).

@@ -29,6 +29,8 @@ export interface Ctx {
   p: Record<string, Pessoa>;
   /** Concordância com o gênero do jogador: `c.g('cansado', 'cansada')`. */
   g: (masc: string, fem: string, neutro?: string) => string;
+  /** Quantas vezes este conteúdo já aconteceu nesta vida (0 = primeira). */
+  vezes: number;
 }
 
 export type Papel = (v: Vida) => Pessoa[];
@@ -102,7 +104,7 @@ export type Conteudo = Acontecimento | Decisao;
 
 export function contexto(v: Vida, r: Rng, p: Record<string, Pessoa> = {}): Ctx {
   const genero: Genero = v.eu.tratamento ?? v.eu.genero;
-  return { v, r, idade: idade(v), p, g: (m, f, n) => flex(genero, m, f, n) };
+  return { v, r, idade: idade(v), p, g: (m, f, n) => flex(genero, m, f, n), vezes: 0 };
 }
 
 export const txt = (x: string | ((c: Ctx) => string), c: Ctx) => (typeof x === 'string' ? x : x(c));

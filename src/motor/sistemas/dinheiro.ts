@@ -235,7 +235,9 @@ export function processarDinheiro(v: Vida, r: Rng): void {
     f.negativado = false;
     f.dividas = f.dividas.filter(d => d.tipo !== 'cartao');
     delete v.fatos['negativado_desde'];
-    escrever(v, { texto: 'Cinco anos depois, a dívida velha caducou e o nome saiu do Serasa.', relevancia: 'cotidiano', tema: 'dinheiro' });
+    const vezes = (v.fatos['caducou'] ?? 0) + 1;
+    v.fatos['caducou'] = vezes;
+    escrever(v, { texto: vezes === 1 ? 'Cinco anos depois, a dívida velha caducou e o nome saiu do Serasa.' : 'Mais uma dívida velha caducou.', relevancia: vezes === 1 ? 'cotidiano' : 'tecnico', tema: 'dinheiro' });
   }
 
   // Rendimentos
@@ -333,7 +335,9 @@ function cobrirRombo(v: Vida, falta: number): void {
       v.fatos['negativado_desde'] = v.t;
       const primeira = v.fatos['ja_foi_negativado'] === undefined;
       v.fatos['ja_foi_negativado'] = v.t;
-      escrever(v, { texto: primeira ? 'Contas atrasadas viraram nome sujo no Serasa. Crédito, agora, só depois de renegociar.' : 'O nome voltou para o Serasa.', relevancia: primeira ? 'marco' : 'cotidiano', tema: 'dinheiro', tom: 'ruim' });
+      const vezes = (v.fatos['negativacoes'] ?? 0) + 1;
+      v.fatos['negativacoes'] = vezes;
+      escrever(v, { texto: primeira ? 'Contas atrasadas viraram nome sujo no Serasa. Crédito, agora, só depois de renegociar.' : vezes === 2 ? 'O nome voltou para o Serasa.' : 'Nome sujo de novo.', relevancia: primeira ? 'marco' : vezes === 2 ? 'cotidiano' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
     }
     v.mente.estresse = clamp(v.mente.estresse + 6);
     v.corpo.saude = clamp(v.corpo.saude - Math.min(2, Math.round(semCobertura / 10000)));

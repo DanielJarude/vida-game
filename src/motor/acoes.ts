@@ -178,7 +178,12 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'plano_saude': return i < 18 ? bloqueio('impossivel', 'O plano das crianças é decisão dos pais.') : PERMITIDO;
     case 'renegociar': {
       const cartao = v.financas.dividas.find(d => d.tipo === 'cartao');
-      return cartao || v.financas.negativado ? PERMITIDO : bloqueio('incompativel', 'Não há dívida cara para renegociar.');
+      if (!cartao && !v.financas.negativado) return bloqueio('incompativel', 'Não há dívida cara para renegociar.');
+      if (v.fatos['ultimo_acordo'] !== undefined && v.t - v.fatos['ultimo_acordo'] < 24) return bloqueio('incompativel', 'O banco não aceita outro acordo tão cedo.');
+      const parcela = cartao ? parcelaPrice(cartao.saldo, 0.022, 48) : 0;
+      const renda = saldoMensal(v).renda;
+      if (parcela > renda * 0.35) return bloqueio('requisito', `A parcela do acordo (R$ ${Math.round(parcela).toLocaleString('pt-BR')}) não cabe na sua renda. O banco não fecha acordo que vai quebrar.`);
+      return PERMITIDO;
     }
     case 'atracao': return i >= 13 ? PERMITIDO : bloqueio('impossivel', 'Ainda é cedo para isso.');
     case 'cnh':
@@ -350,7 +355,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const e = v.trabalho.atual!;
       if (r.chance(clamp((e.desempenho - 40) / 60, 0.05, 0.8))) {
         e.salario = Math.round(e.salario * 1.08 / 10) * 10;
-        escrever(v, { texto: `Pediu aumento e conseguiu: o salário foi para R$ ${e.salario.toLocaleString('pt-BR')}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
+        const aumentos = (v.fatos['aumentos'] ?? 0) + 1;
+        v.fatos['aumentos'] = aumentos;
+        escrever(v, { texto: aumentos === 1 ? `Pediu aumento e conseguiu: o salário foi para R$ ${e.salario.toLocaleString('pt-BR')}.` : `Mais um aumento negociado: R$ ${e.salario.toLocaleString('pt-BR')}.`, relevancia: aumentos === 1 ? 'biografia' : 'tecnico', tema: 'trabalho', tom: 'bom', escolha: true });
         return { resultado: `Aumento aprovado. Novo salário: R$ ${e.salario.toLocaleString('pt-BR')}.` };
       }
       e.desempenho = clamp(e.desempenho - 3);
@@ -445,7 +452,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         cartao.descricao = 'Acordo de renegociação';
       }
       if (v.financas.negativado) v.financas.negativado = false;
-      escrever(v, { texto: 'Fechou um acordo para renegociar as dívidas e limpar o nome.', relevancia: 'biografia', tema: 'dinheiro', escolha: true });
+      const acordos = (v.fatos['acordos'] ?? 0) + 1;
+      v.fatos['acordos'] = acordos;
+      v.fatos['ultimo_acordo'] = v.t;
+      escrever(v, { texto: acordos === 1 ? 'Fechou um acordo para renegociar as dívidas e limpar o nome.' : 'Mais um acordo com o banco, mais uma tentativa de limpar o nome.', relevancia: acordos === 1 ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
       return ok('Acordo fechado: parcelas fixas, juros menores, nome limpo.', 'bom');
     }
     case 'atracao':

@@ -41,6 +41,7 @@ export function preparar(c: Conteudo, v: Vida, r: Rng): Ctx | null {
     }
   }
   const ctx = contexto(v, r, p);
+  ctx.vezes = v.ocorrencias.filter(o => o.id === c.id).length;
   if (c.quando && !c.quando(ctx)) return null;
   return ctx;
 }
@@ -76,9 +77,11 @@ export function aplicarAcontecimento(v: Vida, a: Acontecimento, ctx: Ctx): boole
   registrarOcorrencia(v, a.id);
   if (!n) return false;
   n.efeito?.(ctx);
+  // A segunda vez de algo comum já não é biografia: é textura.
+  const relevancia = n.relevancia ?? (ctx.vezes > 0 ? 'cotidiano' : 'biografia');
   escrever(v, {
     texto: n.texto,
-    relevancia: n.relevancia ?? 'biografia',
+    relevancia,
     tema: a.tema,
     tom: n.tom,
     pessoas: Object.values(ctx.p).map(p => p.id)

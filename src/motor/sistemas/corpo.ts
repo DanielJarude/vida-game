@@ -56,7 +56,7 @@ const MODELOS: ModeloCondicao[] = [
   },
   {
     id: 'cancer', nome: 'câncer', cronica: true, gravidade: 3, perda: [9, 3],
-    risco: (v, i) => i < 35 ? 0.0002 : (0.0008 + (i - 35) * 0.00025) * (v.corpo.habitos.fuma ? 2.2 : 1),
+    risco: (v, i) => i < 35 ? 0.00015 : (0.0005 + (i - 35) * 0.00018) * (v.corpo.habitos.fuma ? 2.2 : 1),
     descoberta: 'Um nódulo, uma biópsia, uma palavra que ninguém quer ouvir: câncer.'
   },
   {
@@ -80,8 +80,8 @@ export function processarCorpo(v: Vida, r: Rng): void {
   let delta = i < 18 ? (90 - c.saude) * 0.25
     : i < 35 ? (84 - c.saude) * 0.12
     : i < 50 ? (80 - c.saude) * 0.07 - 0.3
-    : i < 65 ? (74 - c.saude) * 0.04 - 0.5
-    : i < 80 ? -1 : -1.8;
+    : i < 65 ? (76 - c.saude) * 0.05 - 0.3
+    : i < 80 ? -0.75 : -1.4;
   delta += (c.forma - 45) / 70;
   if (c.habitos.fuma) delta -= 1.6;
   if (c.habitos.bebe === 'muito') delta -= 1.4;
@@ -119,9 +119,15 @@ export function processarCorpo(v: Vida, r: Rng): void {
     if (r.chance(m.risco(v, i))) {
       const nova: Condicao = { id: m.id, nome: m.nome, tInicio: v.t, cronica: m.cronica, gravidade: m.gravidade, tratando: v.financas.planoDeSaude && m.cronica };
       c.condicoes.push(nova);
+      const vezes = v.fatos[`teve_${m.id}`] ?? 0;
+      v.fatos[`teve_${m.id}`] = vezes + 1;
+      const repetida = !m.cronica && vezes > 0;
+      if (repetida && m.id === 'dengue') c.saude = clamp(c.saude - 3); // a segunda dengue costuma ser pior
       escrever(v, {
-        texto: m.descoberta + (nova.tratando ? ' O plano de saúde cobriu o tratamento.' : m.cronica ? ' Tratar ia depender de fila no SUS ou de pagar do bolso.' : ''),
-        relevancia: m.gravidade >= 2 ? 'marco' : 'biografia',
+        texto: repetida
+          ? m.id === 'dengue' ? `Dengue outra vez${vezes === 1 ? ' — e a segunda foi pior que a primeira' : ''}.` : `${m.nome[0].toUpperCase() + m.nome.slice(1)} de novo.`
+          : m.descoberta + (nova.tratando ? ' O plano de saúde cobriu o tratamento.' : m.cronica ? ' Tratar ia depender de fila no SUS ou de pagar do bolso.' : ''),
+        relevancia: repetida ? 'cotidiano' : m.gravidade >= 2 ? 'marco' : 'biografia',
         tema: 'saude',
         tom: 'ruim'
       });
@@ -138,7 +144,7 @@ export function processarCorpo(v: Vida, r: Rng): void {
  * no risco e causas externas pesando sobre homens jovens.
  */
 function riscoBase(i: number, saude: number, masculino: boolean, condicoes: { id: string; tratando: boolean }[] = []): number {
-  const gompertz = 0.000012 * Math.exp(0.1 * i) * (masculino ? 1.35 : 1);
+  const gompertz = 0.0000085 * Math.exp(0.1 * i) * (masculino ? 1.35 : 1);
   const externas = i >= 15 && i <= 34 ? (masculino ? 0.0018 : 0.0004) : 0;
   const infantil = i <= 1 ? 0.003 : 0;
   const fatorSaude = Math.exp((70 - saude) / 22);
@@ -154,7 +160,7 @@ export function causaDaMorte(r: Rng, i: number, masculino: boolean, condicoes: s
   if (condicoes.includes('cancer') && r.chance(0.7)) return 'câncer';
   if (i >= 15 && i <= 34 && r.chance(0.6)) return r.chance(masculino ? 0.45 : 0.25) ? 'violência urbana' : 'acidente de trânsito';
   if (i >= 88 && r.chance(0.5)) return 'causas naturais, dormindo';
-  if (condicoes.includes('diabetes') && r.chance(0.35)) return 'complicações do diabetes';
+  if (condicoes.includes('diabetes') && r.chance(0.2)) return 'complicações do diabetes';
   if (condicoes.includes('hipertensao') && r.chance(0.5)) return r.chance(0.5) ? 'infarto' : 'AVC';
   return r.weighted(['infarto', 'AVC', 'pneumonia', 'câncer', 'insuficiência renal'], c => ({ infarto: 3, AVC: 2.5, pneumonia: 2, 'câncer': 2, 'insuficiência renal': 1 } as Record<string, number>)[c])!;
 }
@@ -163,7 +169,7 @@ export function causaDaMorte(r: Rng, i: number, masculino: boolean, condicoes: s
 export function morreEsteAno(v: Vida, r: Rng): string | null {
   const i = idade(v);
   const risco = riscoBase(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes)
-    + v.corpo.condicoes.reduce((s, c) => s + (c.id === 'cancer' ? (c.tratando ? 0.04 : 0.12) : 0), 0);
+    + v.corpo.condicoes.reduce((s, c) => s + (c.id === 'cancer' ? (c.tratando ? 0.025 : 0.08) : 0), 0);
   if (!r.chance(Math.min(0.95, risco))) return null;
   return causaDaMorte(r, i, v.eu.genero === 'masculino', v.corpo.condicoes.map(c => c.id));
 }
