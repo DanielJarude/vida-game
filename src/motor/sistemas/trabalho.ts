@@ -20,9 +20,9 @@ import { ROTULO_AREA } from '../dados/cursos';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { contribui, liquido, salarioLocal, SALARIO_MINIMO, TETO_INSS } from './renda';
 import { nivelEsc, ROTULO_ESCOLARIDADE, temEscolaridade } from './escola';
-import { flex } from '../texto';
+import { flex, ge } from '../texto';
 
-export const nomeOcupacao = (v: Vida, oc: Ocupacao) => (v.eu.genero === 'feminino' ? oc.nome[1] : oc.nome[0]);
+export const nomeOcupacao = (v: Vida, oc: Ocupacao) => (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
 export const nomeOcupacaoId = (v: Vida, id: string) => nomeOcupacao(v, ocupacao(id));
 
 export function experienciaNaTrilha(v: Vida, trilha: string): number {
@@ -186,7 +186,7 @@ export function encerrarEmprego(v: Vida, motivo: string): void {
 export function textoDeContratacao(v: Vida, oc: Ocupacao, e: Emprego): string {
   const nome = nomeOcupacao(v, oc);
   const primeira = v.trabalho.historico.length === 0;
-  if (oc.concurso) return `${flex(v.eu.genero, 'Aprovado', 'Aprovada')} no concurso: ${nome} em ${e.empregador.replace(/^(a|o) /, '')}, com estabilidade.`;
+  if (oc.concurso) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: ${nome} em ${e.empregador.replace(/^(a|o) /, '')}, com estabilidade.`;
   if (e.contrato === 'autonomo' || e.contrato === 'informal') return `${primeira ? 'Começou a ganhar a vida' : 'Passou a trabalhar'} como ${nome}.`;
   return `${primeira ? 'Primeiro emprego' : 'Novo emprego'}: ${nome} em ${e.empregador}.`;
 }
@@ -261,7 +261,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     encerrarEmprego(v, 'fim do contrato de aprendiz');
     if (efetiva) {
       const novo = contratar(v, r, ocupacao('aux_adm'));
-      escrever(v, { texto: `O contrato de aprendiz acabou e a empresa ${flex(v.eu.genero, 'o', 'a')} efetivou como auxiliar administrativ${flex(v.eu.genero, 'o', 'a')}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+      escrever(v, { texto: `O contrato de aprendiz acabou e a empresa ${flex(ge(v), 'o', 'a')} efetivou como auxiliar administrativ${flex(ge(v), 'o', 'a')}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
       void novo;
     } else {
       escrever(v, { texto: 'O contrato de jovem aprendiz chegou ao fim.', relevancia: 'biografia', tema: 'trabalho' });
@@ -292,7 +292,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
       const fgts = Math.round(e.salario * 0.08 * 12 * anos * 1.4);
       const seguro = Math.round(Math.min(2400, Math.max(SALARIO_MINIMO, e.salario * 0.8)) * (anos >= 2 ? 5 : 3));
       v.financas.conta += fgts + seguro;
-      escrever(v, { texto: e.desempenho < 35 ? `Foi ${flex(v.eu.genero, 'demitido', 'demitida')} de ${e.empregador}, onde era ${nome}. O desempenho vinha caindo.` : `Foi ${flex(v.eu.genero, 'demitido', 'demitida')} num corte de pessoal em ${e.empregador}, depois de ${anos} ${anos === 1 ? 'ano' : 'anos'} como ${nome}.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+      escrever(v, { texto: e.desempenho < 35 ? `Foi ${flex(ge(v), 'demitido', 'demitida')} de ${e.empregador}, onde era ${nome}. O desempenho vinha caindo.` : `Foi ${flex(ge(v), 'demitido', 'demitida')} num corte de pessoal em ${e.empregador}, depois de ${anos} ${anos === 1 ? 'ano' : 'anos'} como ${nome}.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     } else {
       escrever(v, { texto: `O trabalho como ${nome} minguou até acabar.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     }
@@ -313,7 +313,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     e.contrato = proximo.contrato === 'autonomo' ? e.contrato : proximo.contrato;
     e.salario = Math.max(Math.round(salarioAntigo * 1.12 / 10) * 10, salarioLocal(proximo, e.municipioId));
     e.tInicio = v.t;
-    escrever(v, { texto: `${flex(v.eu.genero, 'Promovido', 'Promovida')} de ${anterior} a ${nomeOcupacao(v, proximo)} em ${e.empregador}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: `${flex(ge(v), 'Promovido', 'Promovida')} de ${anterior} a ${nomeOcupacao(v, proximo)} em ${e.empregador}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     v.mente.felicidade = clamp(v.mente.felicidade + 6);
   }
 }
@@ -346,7 +346,7 @@ export function aposentar(v: Vida): void {
   if (v.trabalho.atual) encerrarEmprego(v, 'aposentadoria');
   v.trabalho.desempregadoDesde = undefined;
   v.trabalho.aposentadoria = { t: v.t, beneficio };
-  escrever(v, { texto: `${flex(v.eu.genero, 'Aposentou-se', 'Aposentou-se')} depois de ${Math.floor(v.trabalho.contribuicao / 12)} anos de contribuição, com um benefício de R$ ${beneficio.toLocaleString('pt-BR')} por mês.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
+  escrever(v, { texto: `${flex(ge(v), 'Aposentou-se', 'Aposentou-se')} depois de ${Math.floor(v.trabalho.contribuicao / 12)} anos de contribuição, com um benefício de R$ ${beneficio.toLocaleString('pt-BR')} por mês.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
 }
 
 /** Quem nunca contribuiu o bastante recebe o BPC aos 65 se a renda for baixa. */
@@ -363,7 +363,7 @@ function aposentadoriaAutomatica(v: Vida): void {
 
 export function descricaoEmprego(v: Vida): string {
   const e = v.trabalho.atual;
-  if (!e) return v.trabalho.aposentadoria ? flex(v.eu.genero, 'aposentado', 'aposentada') : 'sem trabalho';
+  if (!e) return v.trabalho.aposentadoria ? flex(ge(v), 'aposentado', 'aposentada') : 'sem trabalho';
   return `${nomeOcupacaoId(v, e.ocupacaoId)} · ${e.empregador}`;
 }
 

@@ -12,7 +12,7 @@ import { economiaLocal, municipio, nomeLugar } from '../dados/lugares';
 import { encerrarEmprego } from './trabalho';
 import { modeloMoradia } from '../dados/bens';
 import { aluguelDe } from './moradia';
-import { flex } from '../texto';
+import { flex, ge } from '../texto';
 
 export function processarProcessos(v: Vida, r: Rng): void {
   for (const p of [...v.processos]) {
@@ -129,7 +129,7 @@ function concluirAdocao(v: Vida, r: Rng, p: Extract<Processo, { tipo: 'adocao' }
   crianca.ocupacao = idadeCrianca >= 4 ? 'estudante' : undefined;
   vincular(v, crianca, { parentesco: 'filho', origem: 'familia', proximidade: 55, convivio: ['casa'] });
   marcarFato(v, `adotado_${crianca.id}`);
-  escrever(v, { texto: `Depois de ${Math.round((v.t - p.tInicio) / 12)} anos de espera, ${crianca.nome}, de ${idadeCrianca} ${idadeCrianca === 1 ? 'ano' : 'anos'}, chegou em casa. ${flex(v.eu.genero, 'Pai', 'Mãe', 'Mãe')} por adoção aos ${idade(v)}.`, relevancia: 'marco', tema: 'filhos', tom: 'bom', pessoas: [crianca.id] });
+  escrever(v, { texto: `Depois de ${Math.round((v.t - p.tInicio) / 12)} anos de espera, ${crianca.nome}, de ${idadeCrianca} ${idadeCrianca === 1 ? 'ano' : 'anos'}, chegou em casa. ${flex(ge(v), 'Pai', 'Mãe', 'Mãe')} por adoção aos ${idade(v)}.`, relevancia: 'marco', tema: 'filhos', tom: 'bom', pessoas: [crianca.id] });
   v.mente.felicidade = clamp(v.mente.felicidade + 12);
 }
 

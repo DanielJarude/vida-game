@@ -37,7 +37,7 @@ const ROTULOS: Record<Traco, [string, string, string, string]> = {
 
 /** Até três traços marcantes, em palavras. Nunca números. */
 export function tracosMarcantes(v: Vida): string[] {
-  const fem = v.eu.genero === 'feminino';
+  const fem = (v.eu.tratamento ?? v.eu.genero) === 'feminino';
   return (Object.entries(v.personalidade.tracos) as [Traco, number][])
     .filter(([, val]) => Math.abs(val) >= 15)
     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))

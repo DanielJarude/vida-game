@@ -118,7 +118,8 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   }
 
   // 2. Situações disparadas pelo estado.
-  const prioritarios = candidatos(v, r, c => !!c.prioritario && !c.garantido);
+  const prioritarios = candidatos(v, r, c => !!c.prioritario && !c.garantido)
+    .sort((a, b) => (b.c.prioridade ?? 1) - (a.c.prioridade ?? 1));
   const decisaoPrioritaria = prioritarios.find(x => x.c.tipo === 'decisao');
   if (decisaoPrioritaria && !v.momento && decisaoPrioritaria.c.tipo === 'decisao') abrirDecisao(v, decisaoPrioritaria.c, decisaoPrioritaria.ctx);
   for (const x of prioritarios) {

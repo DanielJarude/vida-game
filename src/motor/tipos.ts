@@ -416,6 +416,12 @@ export interface Personagem {
   municipioNatal: string;
   atracao?: Atracao;
   visual: Visual;
+  /**
+   * Como o texto se refere ao personagem (concordância). Escolha do jogador:
+   * uma pessoa não binária pode preferir formas masculinas, femininas ou
+   * neutras. Ausente = segue o gênero.
+   */
+  tratamento?: Genero;
 }
 
 export interface Ocorrencia {

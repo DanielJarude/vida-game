@@ -116,7 +116,7 @@ export function processarEscola(v: Vida, r: Rng): void {
     b.rede = redeIdeal;
     escrever(v, {
       texto: antes === 'privada'
-        ? `O dinheiro em casa apertou e foi preciso trocar a escola particular por ${escola(v, 'publica', b.etapa)}.`
+        ? `O dinheiro em casa apertou e foi preciso trocar a escola particular ${escola(v, 'publica', b.etapa).replace(/^a /, 'pela ').replace(/^o /, 'pelo ').replace(/^uma /, 'por uma ')}.`
         : `Com a casa mais folgada, a família passou a pagar ${escola(v, 'privada', b.etapa)}.`,
       relevancia: 'biografia', tema: 'escola', tom: antes === 'privada' ? 'ruim' : 'neutro'
     });
@@ -413,7 +413,7 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
   v.educacao.matricula = m;
   v.educacao.cursinho = false;
   if (o.curso.nivel === 'superior') subir(v, 'superior_incompleto');
-  const g = v.eu.genero;
+  const g = v.eu.tratamento ?? v.eu.genero;
   const texto = `${flex(g, 'Aprovado', 'Aprovada')} em ${nome}, ${em(m.instituicao)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
   return { entrou: true, texto };

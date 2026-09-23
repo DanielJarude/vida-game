@@ -18,7 +18,7 @@ import {
 } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { processarCorpoDePessoa } from './corpo';
-import { flex, rotuloParentesco } from '../texto';
+import { flex, ge, rotuloParentesco } from '../texto';
 import { MESES, mesDe } from '../tempo';
 import { OCUPACOES_POR_CLASSE, ocupacao } from '../dados/ocupacoes';
 import { liquido, salarioLocal } from './renda';
@@ -46,7 +46,7 @@ export function processarMortes(v: Vida, r: Rng): void {
     if (!importante && vin.proximidade < 40) continue;
     let texto: string;
     if (par === 'pet') texto = `${p.nome} morreu de velhice, depois de ${idadePessoa(v, p)} anos na família.`;
-    else if (vin.romance && vin.romance.estagio !== 'ex') texto = `${p.nome} morreu (${causa}). ${flex(v.eu.genero, 'Viúvo', 'Viúva')} aos ${idade(v)}.`;
+    else if (vin.romance && vin.romance.estagio !== 'ex') texto = `${p.nome} morreu (${causa}). ${flex(ge(v), 'Viúvo', 'Viúva')} aos ${idade(v)}.`;
     else if (rotulo) texto = `${capital(seuSua(p, rotulo))} ${p.nome} morreu, aos ${idadePessoa(v, p)} anos (${causa}).`;
     else texto = `${p.nome}, que você conheceu ${descricaoOrigem(v, vin)}, morreu aos ${idadePessoa(v, p)} anos (${causa}).`;
     escrever(v, { texto, relevancia: importante ? 'marco' : 'biografia', tema: 'perda', tom: 'ruim', pessoas: [p.id] });
@@ -218,7 +218,7 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
   const outro = g.gestanteId === 'eu' ? v.pessoas[g.outroId!] : v.pessoas[g.gestanteId];
   if (!g.descoberta && g.tConcepcao + 2 <= v.t) {
     g.descoberta = true;
-    const quemGesta = g.gestanteId === 'eu' ? 'Você está grávid' + flex(v.eu.genero, 'o', 'a', 'e') : `${outro?.nome ?? 'Sua parceira'} está grávida`;
+    const quemGesta = g.gestanteId === 'eu' ? 'Você está grávid' + flex(ge(v), 'o', 'a', 'e') : `${outro?.nome ?? 'Sua parceira'} está grávida`;
     const jaTem = filhos(v).length > 0;
     escrever(v, {
       t: g.tConcepcao + 2,
@@ -258,7 +258,7 @@ export function registrarNascimento(v: Vida, bebe: Pessoa, nome: string): void {
   const primeiro = filhos(v).filter(f => f.id !== bebe.id).length === 0;
   escrever(v, {
     t: bebe.tNasc,
-    texto: `Em ${mes}, nasceu ${nome}. ${primeiro ? `${flex(v.eu.genero, 'Pai', 'Mãe', 'Mãe')} pela primeira vez, aos ${idade(v)}.` : `Mais ${flex(bebe.genero, 'um filho', 'uma filha')} na casa.`}`.replace(/Pai pela|Mãe pela/, m => m),
+    texto: `Em ${mes}, nasceu ${nome}. ${primeiro ? `${flex(ge(v), 'Pai', 'Mãe', 'Mãe')} pela primeira vez, aos ${idade(v)}.` : `Mais ${flex(bebe.genero, 'um filho', 'uma filha')} na casa.`}`.replace(/Pai pela|Mãe pela/, m => m),
     relevancia: 'marco', tema: 'filhos', tom: 'bom', pessoas: [bebe.id]
   });
   lembrarCom(v, bebe.id, 'Nasceu.');

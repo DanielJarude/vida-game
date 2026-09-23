@@ -27,6 +27,8 @@ export interface OpcoesCriacao {
   /** Só relevante para pessoas não binárias; nos demais casos deriva do gênero. */
   podeGestar?: boolean;
   visual?: Visual;
+  /** Concordância usada no texto (pessoas não binárias escolhem). */
+  tratamento?: Genero;
   semente: number;
   ano?: number;
 }
@@ -111,7 +113,8 @@ export function criarVida(o: OpcoesCriacao): Vida {
       genero: o.genero,
       tNasc: t,
       municipioNatal: o.municipioId,
-      visual: o.visual ?? visualAleatorio(r, o.genero)
+      visual: o.visual ?? visualAleatorio(r, o.genero),
+      tratamento: o.genero === 'nao_binario' ? o.tratamento ?? 'nao_binario' : undefined
     },
     corpo: {
       saude: Math.round(88 + r.normal() * 5 - (classe === 'vulneravel' ? 4 : 0)),
@@ -264,7 +267,7 @@ function escreverNascimento(
   r: Rng,
   c: { mae: Pessoa; pai?: Pessoa; arranjo: Origem['arranjo']; irmaos: Pessoa[]; avos: Pessoa[]; classe: Classe }
 ): void {
-  const g = v.eu.genero;
+  const g = v.eu.tratamento ?? v.eu.genero;
   const mes = MESES[mesDe(v.t)];
   const nascido = flex(g, 'Nasceu', 'Nasceu');
   const lugar = nomeLugar(v.eu.municipioNatal);

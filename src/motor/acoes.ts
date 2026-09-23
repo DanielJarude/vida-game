@@ -25,7 +25,7 @@ import { economiaLocal, nomeLugar } from './dados/lugares';
 import { limiteDeCredito, saldoMensal } from './sistemas/dinheiro';
 import { moraComFamiliaDeOrigem, rendaDomiciliar } from './sistemas/domicilio';
 import { gestacaoEmCurso } from './sistemas/familia';
-import { flex } from './texto';
+import { flex, ge } from './texto';
 
 export type InteracaoPessoa =
   | 'tempo' | 'conversar' | 'ajudar' | 'reaproximar'
@@ -225,7 +225,7 @@ function disponibilidadePessoa(v: Vida, id: string, x: InteracaoPessoa): Veredit
         if (vin.parentesco) return bloqueio('impossivel', 'É da família.');
         if (i < 14 || idadePessoa(v, p) < 14) return bloqueio('ilegal', 'Ninguém namora antes dos 14.');
         if ((i >= 18) !== (idadePessoa(v, p) >= 18)) return bloqueio('ilegal', 'Adulto e menor de idade: não.');
-        if (!atraiGenero(p.atracao, v.eu.genero)) return bloqueio('impossivel', `${p.nome} não se interessa por ${flex(v.eu.genero, 'homens', 'mulheres', 'pessoas como você')}.`);
+        if (!atraiGenero(p.atracao, v.eu.genero)) return bloqueio('impossivel', `${p.nome} não se interessa por ${flex(ge(v), 'homens', 'mulheres', 'pessoas como você')}.`);
         return bloqueio('impossivel', 'Não vai rolar.');
       }
       if (parceiro(v)) return { grau: 'irregular', motivo: 'Você está num relacionamento. Isso seria traição.' };

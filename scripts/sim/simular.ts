@@ -53,6 +53,7 @@ export function simular(semente: number, nomeEstrategia: string): VidaSim {
   const anos: AnoSim[] = [];
   let guarda = 0;
   while (!v.morte && idade(v) < 115 && guarda++ < 130) {
+    const antes = v.biografia.length;
     for (const a of est.agir(v, r)) {
       const ret = executar(v, a);
       v = ret.vida;
@@ -61,7 +62,6 @@ export function simular(semente: number, nomeEstrategia: string): VidaSim {
         v = executar(v, { tipo: 'decidir', opcaoId: op }).vida;
       }
     }
-    const antes = v.biografia.length;
     v = avancarAno(v).vida;
     let decisao: string | undefined, opcao: string | undefined, resultado: string | undefined;
     if (v.momento) {

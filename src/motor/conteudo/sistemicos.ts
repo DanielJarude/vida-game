@@ -140,7 +140,7 @@ export const SISTEMICOS: Conteudo[] = [
     ]
   },
   {
-    id: 'rom_casamento', tipo: 'decisao', idade: [18, 95], tema: 'amor', prioritario: true,
+    id: 'rom_casamento', tipo: 'decisao', idade: [18, 95], tema: 'amor', prioritario: true, prioridade: 5, repetir: 0,
     papeis: { pessoa: P.parceiro },
     quando: c => temFato(c.v, `noivado_${c.p.pessoa.id}`) && c.v.vinculos[c.p.pessoa.id].romance?.estagio !== 'casamento' && c.v.t - (c.v.fatos[`noivado_${c.p.pessoa.id}`] ?? c.v.t) >= 12,
     titulo: 'Como vai ser o casamento',
@@ -173,7 +173,7 @@ export const SISTEMICOS: Conteudo[] = [
 
   /* ============================================================== FILHOS */
   {
-    id: 'fam_nome_bebe', tipo: 'decisao', idade: [12, 70], tema: 'filhos', prioritario: true, biografica: true,
+    id: 'fam_nome_bebe', tipo: 'decisao', idade: [12, 70], tema: 'filhos', prioritario: true, prioridade: 10, biografica: true, repetir: 0,
     papeis: { bebe: P.bebeSemNome },
     titulo: c => (c.p.bebe.genero === 'feminino' ? 'Uma menina' : 'Um menino'),
     texto: c => {
@@ -190,7 +190,7 @@ export const SISTEMICOS: Conteudo[] = [
     }))
   },
   {
-    id: 'fam_gravidez_surpresa', tipo: 'decisao', idade: [14, 50], tema: 'filhos', prioritario: true, repetir: 1,
+    id: 'fam_gravidez_surpresa', tipo: 'decisao', idade: [14, 50], tema: 'filhos', prioritario: true, prioridade: 6, repetir: 1,
     quando: c => c.v.processos.some(p => p.tipo === 'gestacao' && p.descoberta && !p.planejada && c.v.fatos[`gravidez_descoberta_${p.id}`] === c.v.t),
     titulo: 'Fora dos planos',
     texto: c => c.idade < 20

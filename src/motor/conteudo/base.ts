@@ -47,6 +47,8 @@ interface Base {
    * bebê que nasceu). Passa na frente do sorteio.
    */
   prioritario?: boolean;
+  /** Entre prioritários, o maior vence (padrão 1). O nome do bebê não pode esperar. */
+  prioridade?: number;
   /** Marco garantido: acontece na janela de idade se as condições valerem. */
   garantido?: boolean;
   /** Só abre por comando do jogador (ex.: entrevista de emprego). Nunca sorteado. */
@@ -99,7 +101,7 @@ export interface Decisao extends Base {
 export type Conteudo = Acontecimento | Decisao;
 
 export function contexto(v: Vida, r: Rng, p: Record<string, Pessoa> = {}): Ctx {
-  const genero: Genero = v.eu.genero;
+  const genero: Genero = v.eu.tratamento ?? v.eu.genero;
   return { v, r, idade: idade(v), p, g: (m, f, n) => flex(genero, m, f, n) };
 }
 

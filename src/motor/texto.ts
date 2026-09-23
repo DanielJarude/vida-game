@@ -9,6 +9,9 @@
 
 import type { Genero, Pessoa } from './tipos';
 
+/** Gênero gramatical usado para falar do personagem (escolha do jogador). */
+export const ge = (v: { eu: { genero: Genero; tratamento?: Genero } }): Genero => v.eu.tratamento ?? v.eu.genero;
+
 export function flex(genero: Genero, masc: string, fem: string, neutro?: string): string {
   if (genero === 'masculino') return masc;
   if (genero === 'feminino') return fem;
