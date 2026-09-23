@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { criarRng } from '../../motor/rng';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from '../App';
 import { criarVida } from '../../motor/criacao';
@@ -10,8 +11,11 @@ beforeEach(() => {
   localStorage.clear();
   window.scrollTo = () => {};
   window.confirm = () => true;
+  // Semente fixa: a vida sorteada ao nascer é sempre a mesma nos testes.
+  const r = criarRng(20260922);
+  vi.spyOn(Math, 'random').mockImplementation(() => r.next());
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function resolverMomentos() {
   for (let k = 0; k < 5; k++) {
