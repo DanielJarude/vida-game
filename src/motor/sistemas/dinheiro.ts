@@ -272,17 +272,42 @@ export function processarDinheiro(v: Vida, r: Rng): void {
   if (f.acoes > 0 || variacaoAcoes !== 0) f.razao.push({ rotulo: 'Variação das ações', valor: variacaoAcoes, grupo: 'renda' });
   // Inflação corrói o que fica parado na conta.
   if (f.conta > 0) f.conta = Math.round(f.conta * 0.975);
+  // Efeito riqueza: quem acumula muito passa a gastar parte do acumulado
+  // (viagens, reformas, ajuda à família, carro melhor).
+  const financeiro = Math.max(0, f.conta) + f.reserva + f.acoes;
+  if (financeiro > 300000 && i >= 30) {
+    const taxa = { apertado: 0.005, modesto: 0.015, confortavel: 0.03, folgado: 0.05 }[f.estilo];
+    const gasto = Math.round((financeiro - 300000) * taxa);
+    f.razao.push({ rotulo: 'Gastos que vieram com o patrimônio', valor: -gasto, grupo: 'lazer' });
+    const daConta = Math.min(Math.max(0, f.conta), gasto);
+    f.conta -= daConta;
+    const resto = gasto - daConta;
+    const daReserva = Math.min(f.reserva, resto);
+    f.reserva -= daReserva;
+    f.acoes = Math.max(0, f.acoes - (resto - daReserva));
+  }
 
   f.conta += (renda - despesa) * 12;
 
   // Pagar dívidas caras com o que sobrou (mantendo um mês de colchão).
   const colchao = despesa;
+  let pagoNoCartao = 0;
   for (const d of [...f.dividas].sort((a, b) => b.jurosMes - a.jurosMes)) {
     if (f.conta <= colchao || d.saldo <= 0) continue;
     if (d.tipo === 'financiamento_imovel') continue; // amortizar imóvel é decisão do jogador
     const pago = Math.min(d.saldo, f.conta - colchao);
     d.saldo -= pago;
     f.conta -= pago;
+    if (d.tipo === 'cartao') pagoNoCartao += pago;
+  }
+  // Cartão que passa um ano sem nenhum pagamento vai para o Serasa.
+  const cartaoAberto = f.dividas.find(d => d.tipo === 'cartao' && d.saldo > 0);
+  if (cartaoAberto && pagoNoCartao === 0 && !f.negativado && i >= 18) {
+    f.negativado = true;
+    v.fatos['negativado_desde'] = v.t;
+    const primeira = v.fatos['ja_foi_negativado'] === undefined;
+    v.fatos['ja_foi_negativado'] = v.t;
+    escrever(v, { texto: primeira ? 'A fatura do cartão ficou sem pagar e o nome foi parar no Serasa.' : 'Nome sujo de novo, por causa do cartão.', relevancia: primeira ? 'biografia' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
   }
   const quitadas = f.dividas.filter(d => d.saldo <= 0);
   for (const d of quitadas) {
