@@ -154,6 +154,16 @@ export function despesasMensais(v: Vida, estiloForcado?: Vida['financas']['estil
     if (custo && !(naCasaDosPais && i < 18)) add(ROTULO_ROTINA_CUSTO[rot.id] ?? rot.id, custo * c, 'lazer');
   }
 
+  // Compromissos com a família: ajuda mensal, cuidadora, casa de repouso.
+  for (const [chave] of Object.entries(v.fatos)) {
+    const m = chave.match(/^(ajuda_mensal|paga_cuidadora|casa_repouso)_(.+)$/);
+    if (!m) continue;
+    const p = v.pessoas[m[2]];
+    if (!p || !p.vivo) continue;
+    const valor = m[1] === 'ajuda_mensal' ? 600 : m[1] === 'paga_cuidadora' ? 2800 : 1900;
+    add(m[1] === 'ajuda_mensal' ? `Ajuda para ${p.nome}` : m[1] === 'paga_cuidadora' ? `Cuidadora de ${p.nome}` : `Casa de repouso de ${p.nome}`, valor * c, 'outros');
+  }
+
   // Padrão de vida acompanha a renda: quem ganha mais passa a gastar mais
   // (restaurante, roupa, viagem, carro melhor). Só o estilo apertado resiste.
   const propria = rendasMensais(v).filter(l => l.grupo === 'renda' && !l.rotulo.startsWith('Renda de') && l.rotulo !== 'Mesada').reduce((s, l) => s + l.valor, 0);

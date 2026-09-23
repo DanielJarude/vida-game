@@ -22,7 +22,7 @@ export const INFANCIA: Conteudo[] = [
       texto: c.r.pick([
         `Deu os primeiros passos na sala, em direção a ${c.p.quem.nome}. ${gp(c, 'quem', 'Ele', 'Ela')} conta essa história até hoje.`,
         `Os primeiros passos vieram tarde, depois de muito tempo engatinhando — e vieram de uma vez: atravessou a cozinha sem cair.`,
-        `Aprendeu a andar agarrado${c.g('', 'a', 'e')} nos móveis. ${c.p.quem.nome} filmou o primeiro passo sozinho${c.g('', 'a', 'e')} e mandou para a família inteira.`
+        `Aprendeu a andar ${c.g('agarrado', 'agarrada', 'agarrade')} nos móveis. ${c.p.quem.nome} filmou o primeiro passo sem apoio e mandou para a família inteira.`
       ]),
       relevancia: 'marco', tom: 'bom'
     })

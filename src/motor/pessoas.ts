@@ -69,9 +69,16 @@ export interface NovaPessoa {
 export function criarPessoa(v: Vida, r: Rng, n: NovaPessoa): Pessoa {
   const genero = n.genero ?? (r.chance(0.5) ? 'masculino' : 'feminino');
   const tNasc = v.t - n.idade * 12 - r.int(0, 11);
+  // Duas pessoas importantes com o mesmo nome confundem a história: um
+  // nome novo nunca repete o de alguém vivo e relevante na vida.
+  const ocupados = new Set([v.eu.nome, ...Object.values(v.vinculos)
+    .filter(x => v.pessoas[x.pessoaId]?.vivo && (x.parentesco || x.romance || x.proximidade >= 30 || x.convivio.length > 0))
+    .map(x => v.pessoas[x.pessoaId].nome)]);
+  let nome = n.nome ?? sortearNome(r, genero, anoDe(tNasc));
+  for (let k = 0; k < 8 && !n.nome && ocupados.has(nome); k++) nome = sortearNome(r, genero, anoDe(tNasc));
   const p: Pessoa = {
     id: novoId(v, 'p'),
-    nome: n.nome ?? sortearNome(r, genero, anoDe(tNasc)),
+    nome,
     sobrenome: n.sobrenome ?? sortearSobrenome(r),
     genero,
     tNasc,

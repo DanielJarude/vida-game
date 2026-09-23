@@ -285,11 +285,11 @@ export const SISTEMICOS: Conteudo[] = [
       { id: 'trazer', texto: 'Trazer para morar com você', disponivel: c => (c.v.moradia.tipo === 'pais' ? false : true), comportamento: { familia: 2, generosidade: 1 },
         resolver: c => ({ texto: `${c.p.pai.nome} veio com duas malas e uma caixa de fotografias.`, memoria: `Levou ${c.p.pai.nome} para morar junto na velhice.`, relevancia: 'marco', efeito: () => { const vin = c.v.vinculos[c.p.pai.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.pai.municipioId = c.v.moradia.municipioId; prox(c, 'pai', 12); estresse(c, 10); for (const par of P.conjuge(c.v)) tensaoPessoa(c, par.id, 15); } }) },
       { id: 'cuidadora', texto: 'Pagar uma cuidadora', comportamento: { familia: 1 },
-        resolver: c => ({ texto: 'Uma cuidadora passou a dormir lá. O custo entrou no orçamento de todo mês.', memoria: `Contratou uma cuidadora para ${c.p.pai.nome}.`, efeito: () => { fato(c, `paga_cuidadora_${c.p.pai.id}`); dinheiro(c, -2800 * 12); prox(c, 'pai', 4); } }) },
+        resolver: c => ({ texto: 'Uma cuidadora passou a dormir lá. O custo entrou no orçamento de todo mês.', memoria: `Contratou uma cuidadora para ${c.p.pai.nome}.`, efeito: () => { fato(c, `paga_cuidadora_${c.p.pai.id}`); prox(c, 'pai', 4); } }) },
       { id: 'irmaos', texto: 'Dividir a responsabilidade com os irmãos', disponivel: c => (P.irmao(c.v).length > 0 ? true : 'Você não tem irmãos para dividir.'),
         resolver: c => ({ texto: 'Fizeram uma escala. Nem sempre ela foi cumprida.', memoria: null, efeito: () => { for (const i of P.irmao(c.v)) tensaoPessoa(c, i.id, 10); } }) },
       { id: 'asilo', texto: 'Procurar uma casa de repouso', comportamento: { familia: -1 },
-        resolver: c => ({ texto: `${c.p.pai.nome} não disse nada no dia da mudança.`, memoria: `Levou ${c.p.pai.nome} para uma casa de repouso.`, efeito: () => { prox(c, 'pai', -10); dinheiro(c, -1800 * 12); } }) }
+        resolver: c => ({ texto: `${c.p.pai.nome} não disse nada no dia da mudança.`, memoria: `Levou ${c.p.pai.nome} para uma casa de repouso.`, efeito: () => { prox(c, 'pai', -10); fato(c, `casa_repouso_${c.p.pai.id}`); } }) }
     ]
   },
 

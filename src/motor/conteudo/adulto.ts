@@ -335,12 +335,13 @@ export const ADULTO: Conteudo[] = [
   {
     id: 'adu_pais_ajuda', tipo: 'decisao', idade: [22, 70], tema: 'familia', repetir: 6,
     papeis: { pai: P.genitor },
-    quando: c => c.p.pai.renda < 2500 && idadePessoa(c.v, c.p.pai) >= 55 && c.v.moradia.tipo !== 'pais' && c.v.financas.conta > 1500,
+    quando: c => c.p.pai.renda < 2500 && idadePessoa(c.v, c.p.pai) >= 55 && c.v.moradia.tipo !== 'pais' && c.v.financas.conta > 1500
+      && !c.v.vinculos[c.p.pai.id].convivio.includes('casa') && c.v.fatos[`ajuda_mensal_${c.p.pai.id}`] === undefined,
     titulo: c => `${c.p.pai.nome}`,
     texto: c => `${c.p.pai.nome} ligou com a voz baixa: a aposentadoria não está fechando o mês e os remédios subiram.`,
     opcoes: [
       { id: 'mensal', texto: 'Mandar um valor todo mês', comportamento: { familia: 2, generosidade: 1 },
-        resolver: c => ({ texto: `Todo começo de mês, um Pix para ${c.p.pai.nome}.`, memoria: `Passou a ajudar ${c.p.pai.nome} com dinheiro todo mês.`, efeito: () => { dinheiro(c, -600 * 12); prox(c, 'pai', 10); } }) },
+        resolver: c => ({ texto: `Todo começo de mês, um Pix para ${c.p.pai.nome}.`, memoria: `Passou a ajudar ${c.p.pai.nome} com dinheiro todo mês.`, efeito: () => { prox(c, 'pai', 10); fato(c, `ajuda_mensal_${c.p.pai.id}`); } }) },
       { id: 'uma_vez', texto: 'Ajudar desta vez', comportamento: { familia: 1 }, resolver: c => ({ texto: 'Você mandou o suficiente para aquele mês.', memoria: null, efeito: () => { dinheiro(c, -1200); prox(c, 'pai', 4); } }) },
       { id: 'nao', texto: 'Explicar que não dá', resolver: c => ({ texto: `${c.p.pai.nome} disse que se virava.`, memoria: null, efeito: () => prox(c, 'pai', -5) }) }
     ]
@@ -417,8 +418,11 @@ export const ADULTO: Conteudo[] = [
 ];
 
 function destinoDaProposta(c: Ctx) {
-  const aqui = c.v.moradia.municipioId;
-  const opcoes = MUNICIPIOS.filter(m => m.id !== aqui && (m.perfil === 'metropole' || m.perfil === 'capital'));
+  const aqui = municipio(c.v.moradia.municipioId);
+  // Propostas vêm de centros maiores, de preferência na mesma região.
+  const pontuar = (m: typeof aqui) => (m.regiao === aqui.regiao ? 3 : 0) + (m.perfil === 'metropole' ? 3 : m.perfil === 'capital' ? 1 : 0) + (m.uf === aqui.uf ? 1 : 0) + (m.id === 'sao-paulo-sp' ? 1 : 0);
+  const opcoes = MUNICIPIOS.filter(m => m.id !== aqui.id && (m.perfil === 'metropole' || m.perfil === 'capital'))
+    .sort((a, b) => pontuar(b) - pontuar(a)).slice(0, 6);
   // Estável entre abrir e resolver a decisão: depende só da vida e do ano.
   let h = anoDe(c.v.t) * 31;
   for (const ch of c.v.id) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
