@@ -113,7 +113,41 @@ amigos, do jeito certo"). Auditoria completa na seção 4.
 
 ## 4. Auditoria de agência implícita
 
-(preenchida abaixo quando a auditoria completa terminar)
+Relatório completo, evento por evento: `docs/AUDITORIA-AGENCIA-IMPLICITA.md`.
+
+Catálogo antigo: 134 eventos, 289 opções; 73 "acontecimentos" resolvidos pelo
+dado com 149 desfechos possíveis.
+
+| | |
+| --- | --- |
+| Desfechos sorteados que decidem como o personagem agiu | **97 / 149 (65%)** |
+| Limítrofes | 27 |
+| Corretos | 25 |
+
+| Faixa | Violações |
+| --- | --- |
+| 0–2 | 1/16 (reações involuntárias de bebê são aceitáveis) |
+| 3–5 | **12/12** |
+| 6–11 | 16/18 |
+| 12–17 | 17/22 |
+| 18+ | 51/81 |
+
+Categorias: comportamento decidido (77), preferência (21), emoção/reação (18),
+valor (14), pessoa inventada (10 — "a vovó" num jogo sem avós), passado
+inventado (10), concordância de gênero (21).
+
+**Causa raiz: estrutura, não redação.** ~30 "acontecimentos" são decisões
+antigas cujas opções nunca foram reescritas (`opt_encarar_armario`,
+`opt_conversar_calmo`). O dado também aplica as consequências dessas escolhas
+fantasmas: cobra R$ 350 do Carnaval, R$ 1.800 da excursão, tira 20 de relação
+por "bateu boca", cria NPC de paixão sempre masculino (`genero` padrão
+`'masculino'` em `eventSystem.ts:279`, decidindo orientação).
+
+**Decisão:** o formato novo separa estruturalmente ACONTECIMENTO (função que
+narra o mundo e só aplica efeitos do mundo) de DECISÃO (opções do jogador).
+Um acontecimento não tem opções para sortear. O conteúdo é reescrito, não
+migrado; o antigo serve de referência temática. Um teste de catálogo proíbe
+padrões de agência em textos de acontecimento.
 
 ## 5. Plano de reconstrução
 

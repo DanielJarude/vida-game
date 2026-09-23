@@ -1,0 +1,152 @@
+/**
+ * Um ano de vida.
+ *
+ * O ano é preenchido primeiro pela VIDA SISTÊMICA — o corpo, a escola, o
+ * trabalho, a casa, as pessoas, os processos em curso — e só depois pelo
+ * conteúdo: marcos garantidos, situações disparadas pelo estado (um pedido de
+ * namoro, um bebê que nasceu) e, se sobrar espaço, algo sorteado do mundo.
+ * Silêncio é permitido: nem todo ano precisa de uma história.
+ */
+
+import type { Rng } from './rng';
+import { clamp } from './rng';
+import type { Retorno, Vida } from './tipos';
+import { amigos, escrever, idade, parceiro, transacao } from './nucleo';
+import { morreEsteAno, processarCorpo } from './sistemas/corpo';
+import { processarFamiliaDeOrigem, processarConcepcao, processarFilhos, processarGestacoes, processarMortes } from './sistemas/familia';
+import { processarCurso, processarEscola, processarOab } from './sistemas/escola';
+import { processarTrabalho } from './sistemas/trabalho';
+import { processarRotinas } from './sistemas/rotinas';
+import { conhecerGente, envelhecerConhecidos, processarSocial, recalcularConvivio } from './sistemas/social';
+import { processarRomance, surgirInteresse } from './sistemas/romance';
+import { processarProcessos } from './sistemas/processos';
+import { processarDinheiro } from './sistemas/dinheiro';
+import { abrirDecisao, aplicarAcontecimento, candidatos, preparar, sortear } from './conteudo/motor';
+import { CATALOGO } from './conteudo/catalogo';
+import type { Conteudo } from './conteudo/base';
+
+export interface ResumoDoAno {
+  idade: number;
+  entradas: string[];
+}
+
+export function avancarAno(vida: Vida): Retorno {
+  if (vida.morte) return { vida, aviso: { texto: 'Esta vida terminou.', tom: 'neutro' } };
+  if (vida.momento) return { vida, aviso: { texto: 'Há uma decisão esperando por você.', tom: 'neutro' } };
+  const { vida: nova } = transacao(vida, (v, r) => viverAno(v, r));
+  return { vida: nova };
+}
+
+function viverAno(v: Vida, r: Rng): void {
+  const inicioBio = v.biografia.length;
+  v.t += 12;
+
+  processarCorpo(v, r);
+  processarMortes(v, r);
+  processarFamiliaDeOrigem(v, r);
+  processarEscola(v, r);
+  processarCurso(v, r);
+  processarOab(v, r);
+  processarTrabalho(v, r);
+  processarRotinas(v, r);
+  processarProcessos(v, r);
+  recalcularConvivio(v);
+  conhecerGente(v, r);
+  envelhecerConhecidos(v, r);
+  processarSocial(v, r);
+  processarRomance(v, r);
+  surgirInteresse(v, r);
+  processarConcepcao(v, r);
+  processarGestacoes(v, r);
+  processarFilhos(v, r);
+  recalcularConvivio(v);
+  processarDinheiro(v, r);
+  equilibrarMente(v);
+
+  const causa = morreEsteAno(v, r);
+  if (causa) {
+    v.morte = { t: v.t, causa };
+    escrever(v, { texto: `Morreu aos ${idade(v)} anos (${causa}).`, relevancia: 'marco', tema: 'morte' });
+    v.anoAtual = { acoes: [] };
+    return;
+  }
+
+  faseDeConteudo(v, r, v.biografia.length - inicioBio);
+  v.anoAtual = { acoes: [] };
+}
+
+/**
+ * Felicidade e estresse tendem a um ponto de equilíbrio que depende da vida
+ * real: gente por perto, saúde, dinheiro, trabalho. Eventos empurram; o
+ * equilíbrio puxa de volta.
+ */
+function equilibrarMente(v: Vida): void {
+  const i = idade(v);
+  const m = v.mente;
+  const nAmigos = Math.min(4, amigos(v).length);
+  const par = parceiro(v);
+  let alvo = 52 + nAmigos * 3 + (v.corpo.saude - 60) / 5;
+  if (par?.vin.romance) alvo += (par.vin.romance.envolvimento - 50) / 6 + 4;
+  if (v.financas.negativado) alvo -= 8;
+  if (i >= 18 && !v.trabalho.atual && !v.trabalho.aposentadoria && !v.educacao.matricula) alvo -= 6;
+  alvo -= Math.max(0, m.estresse - 50) / 4;
+  m.felicidade = clamp(Math.round(m.felicidade * 0.65 + alvo * 0.35));
+  m.estresse = clamp(Math.round(m.estresse * 0.7 + (i < 12 ? 10 : 18) * 0.3));
+}
+
+/* ---------------------------------------------------------------- Conteúdo */
+
+const FAIXA_DECISAO: [number, number][] = [
+  [2, 0], [5, 0.12], [11, 0.3], [17, 0.45], [29, 0.5], [59, 0.42], [200, 0.35]
+];
+const chanceDeDecisao = (i: number) => FAIXA_DECISAO.find(([max]) => i <= max)![1];
+
+function decidiuRecentemente(v: Vida): boolean {
+  return v.biografia.some(e => e.escolha && e.t === v.t - 12 && !e.texto.startsWith('Fez o ENEM'));
+}
+
+function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
+  const i = idade(v);
+  let acontecimentos = 0;
+
+  // 1. Marcos garantidos (desenvolvimento, passagens).
+  const garantidos = candidatos(v, r, c => !!c.garantido);
+  for (const { c, ctx } of garantidos) {
+    if (c.tipo === 'decisao') {
+      if (!v.momento) abrirDecisao(v, c, ctx);
+    } else if (aplicarAcontecimento(v, c, ctx)) acontecimentos++;
+  }
+
+  // 2. Situações disparadas pelo estado.
+  const prioritarios = candidatos(v, r, c => !!c.prioritario && !c.garantido);
+  const decisaoPrioritaria = prioritarios.find(x => x.c.tipo === 'decisao');
+  if (decisaoPrioritaria && !v.momento && decisaoPrioritaria.c.tipo === 'decisao') abrirDecisao(v, decisaoPrioritaria.c, decisaoPrioritaria.ctx);
+  for (const x of prioritarios) {
+    if (x.c.tipo === 'acontecimento' && acontecimentos < 2 && preparar(x.c, v, r)) {
+      if (aplicarAcontecimento(v, x.c, x.ctx)) acontecimentos++;
+    }
+  }
+
+  // 3. O mundo: acontecimento sorteado, se o ano ainda comporta.
+  const cheio = linhasSistemicas + acontecimentos;
+  const chanceAcontecimento = i <= 2 ? 0.45 : cheio >= 4 ? 0.12 : cheio >= 2 ? 0.35 : 0.6;
+  if (acontecimentos < 2 && r.chance(chanceAcontecimento)) {
+    const x = sortear(v, r, c => c.tipo === 'acontecimento' && !c.prioritario && !c.garantido);
+    if (x && x.c.tipo === 'acontecimento') aplicarAcontecimento(v, x.c, x.ctx);
+  }
+
+  // 4. Uma decisão sorteada, no máximo — e só se o ano ainda não pediu nada.
+  if (!v.momento) {
+    let chance = chanceDeDecisao(i);
+    if (decidiuRecentemente(v)) chance *= 0.55;
+    if (r.chance(chance)) {
+      const x = sortear(v, r, c => c.tipo === 'decisao' && !c.prioritario && !c.garantido);
+      if (x && x.c.tipo === 'decisao') abrirDecisao(v, x.c, x.ctx);
+    }
+  }
+}
+
+export function totalDeConteudo(): { acontecimentos: number; decisoes: number } {
+  const acontecimentos = CATALOGO.filter((c: Conteudo) => c.tipo === 'acontecimento').length;
+  return { acontecimentos, decisoes: CATALOGO.length - acontecimentos };
+}
