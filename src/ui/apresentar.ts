@@ -127,6 +127,7 @@ export function ondeMora(v: Vida): string {
     return principais.length ? `mora com ${listaNatural(principais)}` : 'mora com a família';
   }
   const base = m.tipo === 'propria' ? 'em casa própria' : m.tipo === 'republica' ? 'numa república' : m.tipo === 'cedida' ? 'de favor' : 'de aluguel';
+  if (!nomes.length && m.tipo === 'republica') return 'mora numa república, dividindo a casa';
   return nomes.length ? `mora ${base} com ${listaNatural(nomes)}` : `mora sozinh${flex(v.eu.tratamento ?? v.eu.genero, 'o', 'a', 'e')}, ${base}`;
 }
 

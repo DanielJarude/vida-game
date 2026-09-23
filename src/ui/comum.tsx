@@ -46,7 +46,7 @@ export function Secao({ titulo, children, recolhivel, aberta: abertaInicial = tr
       <header className="secao__cabeca">
         {recolhivel ? (
           <button type="button" className="secao__titulo secao__titulo--botao" aria-expanded={aberta} aria-controls={idConteudo} onClick={() => setAberta(a => !a)}>
-            {titulo}<span className="secao__seta" aria-hidden>{aberta ? '−' : '+'}</span>
+            {titulo}<svg className={`secao__seta${aberta ? ' secao__seta--aberta' : ''}`} viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
           </button>
         ) : <h2 className="secao__titulo">{titulo}</h2>}
         {extra}

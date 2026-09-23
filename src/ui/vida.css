@@ -96,7 +96,9 @@ details summary { cursor: pointer; }
 .secao__cabeca { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
 .secao__titulo { font-size: var(--type-heading); color: var(--text-primary); }
 .secao__titulo--botao { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-target); text-align: left; font-family: var(--font-serif); font-weight: var(--weight-semibold); }
-.secao__seta { color: var(--text-faint); font-family: var(--font-sans); font-weight: 400; }
+.secao__seta { color: var(--text-faint); transition: transform 160ms ease; flex: none; }
+.secao__seta--aberta { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .secao__seta { transition: none; } }
 
 /* =================================================================== Início */
 .inicio { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: var(--space-8) var(--space-4); text-align: center; }

@@ -20,7 +20,10 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
   const empregos = [...vida.trabalho.historico.map(h => h.ocupacaoId), ...(vida.trabalho.atual ? [vida.trabalho.atual.ocupacaoId] : [])];
   const principal = empregos.length ? nomeOcupacaoId(vida, empregos.sort((a, b) => empregos.filter(x => x === b).length - empregos.filter(x => x === a).length)[0]) : null;
   const cidades = new Set(vida.biografia.filter(e => e.tema === 'lugar' && /Mudou-se/.test(e.texto)).map(e => e.texto));
-  const perto = vinculosVivos(vida).filter(x => !x.p.especie).sort((a, b) => b.vin.proximidade - a.vin.proximidade).slice(0, 5);
+  // Família e parceria primeiro; depois quem era mais próximo.
+  const peso = (x: { vin: { parentesco?: string; romance?: { estagio: string }; proximidade: number } }) =>
+    (x.vin.parentesco ? (['filho', 'enteado'].includes(x.vin.parentesco) ? 160 : ['mae', 'pai', 'irmao', 'meio_irmao', 'neto'].includes(x.vin.parentesco) ? 110 : 60) : x.vin.romance && x.vin.romance.estagio !== 'ex' && x.vin.romance.estagio !== 'interesse' ? 120 : 0) + x.vin.proximidade;
+  const perto = vinculosVivos(vida).filter(x => !x.p.especie && x.vin.proximidade >= 30).sort((a, b) => peso(b) - peso(a)).slice(0, 6);
   const tracos = tracosMarcantes(vida);
   const anos = anosDaBiografia(vida, false);
   return (
@@ -44,7 +47,7 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
           <>
             <h2>Quem ficou</h2>
             <ul className="fim__pessoas">
-              {perto.map(({ p, vin }) => <li key={p.id}>{p.nome} — {rotuloDe(vida, p, vin)}</li>)}
+              {perto.map(({ p, vin }) => <li key={p.id}>{p.nome} — {rotuloDe(vida, p, vin).replace(/^(seu|sua|sue) /, '')}</li>)}
             </ul>
           </>
         )}
