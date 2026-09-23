@@ -8,5 +8,6 @@ import { DESAFIOS } from './desafios';
 import { VINCULOS } from './vinculos';
 import { ESCOLHAS } from './escolhas';
 import { PRIMEIROS } from './primeiros';
+import { MUNDO } from './mundo';
 
-export const CATALOGO: readonly Conteudo[] = [...SISTEMICOS, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS];
+export const CATALOGO: readonly Conteudo[] = [...SISTEMICOS, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO];

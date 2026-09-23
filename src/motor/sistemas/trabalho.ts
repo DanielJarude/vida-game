@@ -13,7 +13,7 @@
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Emprego, Vida } from '../tipos';
-import { escrever, idade, marcarFato, temFato } from '../nucleo';
+import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
 import { OCUPACOES, ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { economiaLocal, municipio, nivelDeOferta, nomeLugar } from '../dados/lugares';
 import { ROTULO_AREA } from '../dados/cursos';
@@ -140,6 +140,7 @@ function chanceBase(v: Vida, oc: Ocupacao): number {
   c += v.personalidade.tracos.sociabilidade / 600;
   c -= oc.nivel * 0.04;
   if (v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde > 24) c -= 0.1;
+  if (emRecessao(v) && !oc.concurso) c -= 0.15;
   if (idade(v) > 50 && oc.nivel < 4) c -= (idade(v) - 50) / 60; // etarismo real no mercado
   if (oc.concurso) c = clamp(0.06 + (v.mente.cognicao - 50) / 400 + (temFato(v, 'estudando_concurso') ? 0.1 : 0), 0.02, 0.4);
   return clamp(c, 0.05, 0.92);
@@ -283,7 +284,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   }
 
   // Demissão
-  const risco = e.contrato === 'servidor' ? 0.002 : e.desempenho < 35 ? 0.3 : e.contrato === 'clt' ? 0.05 : 0.03;
+  const risco = (e.contrato === 'servidor' ? 0.002 : e.desempenho < 35 ? 0.3 : e.contrato === 'clt' ? 0.05 : 0.03) * (emRecessao(v) && e.contrato !== 'servidor' ? 2.2 : 1);
   if (r.chance(risco)) {
     const anos = Math.max(1, Math.floor((v.t - e.tInicio) / 12));
     const nome = nomeOcupacao(v, oc);
@@ -306,7 +307,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   const proximo = OCUPACOES
     .filter(x => x.trilha === oc.trilha && x.nivel === oc.nivel + 1 && !x.concurso && x.contrato !== 'estagio')
     .find(x => elegibilidade(v, x).grau === 'permitido');
-  if (proximo && e.desempenho >= 62 && v.t - e.tInicio >= 18 && r.chance(0.3 + (e.desempenho - 62) / 100)) {
+  if (proximo && e.desempenho >= 62 && v.t - e.tInicio >= 18 && r.chance((0.3 + (e.desempenho - 62) / 100) * (emRecessao(v) ? 0.4 : 1))) {
     const anterior = nomeOcupacao(v, oc);
     const salarioAntigo = e.salario;
     e.ocupacaoId = proximo.id;

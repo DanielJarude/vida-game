@@ -14,7 +14,7 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Pessoa, Processo, Vida } from '../tipos';
 import {
-  escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, vinculosVivos
+  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, vinculosVivos
 } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { processarCorpoDePessoa } from './corpo';
@@ -97,7 +97,7 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     // Emprego dos pais oscila: é daqui que vêm os anos apertados da infância.
     // Servidor quase nunca perde o cargo; informal e autônomo, com mais frequência.
     const ocAtual = p.ocupacaoId ? ocupacao(p.ocupacaoId) : undefined;
-    const riscoPerda = !ocAtual ? 0.05 : ocAtual.contrato === 'servidor' ? 0.003 : ocAtual.contrato === 'clt' ? 0.045 : 0.06;
+    const riscoPerda = (!ocAtual ? 0.05 : ocAtual.contrato === 'servidor' ? 0.003 : ocAtual.contrato === 'clt' ? 0.045 : 0.06) * (emRecessao(v) ? 2 : 1);
     if (p.renda > 0 && r.chance(riscoPerda)) {
       p.renda = 0;
       const antes = p.ocupacao;
