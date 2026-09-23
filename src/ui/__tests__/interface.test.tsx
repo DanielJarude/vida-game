@@ -6,6 +6,17 @@ import { App } from '../App';
 import { criarVida } from '../../motor/criacao';
 import { avancarAno } from '../../motor/ano';
 import { salvar } from '../../motor/save';
+import { contratar } from '../../motor/sistemas/trabalho';
+import { ocupacao } from '../../motor/dados/ocupacoes';
+import type { Vida } from '../../motor/tipos';
+
+/** Uma adulta salva, já com a vida resolvida até ali (sem momento aberto). */
+function adultaSalva(ajuste: (v: Vida) => void): void {
+  let v = criarVida({ nome: 'Rita', sobrenome: 'Lopes', genero: 'feminino', municipioId: 'recife-pe', semente: 5 });
+  for (let i = 0; i < 26; i++) { v = avancarAno(v).vida; v.momento = undefined; }
+  ajuste(v);
+  salvar(v);
+}
 
 beforeEach(() => {
   localStorage.clear();
@@ -84,6 +95,36 @@ describe('interface', () => {
     avancar(8);
     fireEvent.click(screen.getAllByRole('button', { name: /Tempo/ })[0]);
     expect(screen.getByText('Sua semana')).toBeTruthy();
+  });
+
+  it('pedir aumento abre a conversa com a chefia e o resultado aparece', () => {
+    adultaSalva(v => {
+      v.educacao.escolaridade = 'medio';
+      const e = contratar(v, criarRng(1), ocupacao('atendente'));
+      e.tInicio = v.t - 24;
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Rumo|Estudo e trabalho/ })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Pedir aumento/ }));
+    const dialogo = screen.getByRole('dialog');
+    expect(within(dialogo).getByText('A conversa do aumento')).toBeTruthy();
+    fireEvent.click(within(dialogo).getByRole('button', { name: /Mostrar números/ }));
+    expect(screen.getByText(/aprovou|orçamento|clima azedou/)).toBeTruthy();
+  });
+
+  it('curso trancado mostra como voltar', () => {
+    adultaSalva(v => {
+      v.educacao.basica = undefined;
+      v.educacao.escolaridade = 'medio';
+      v.educacao.matricula = { cursoId: 'pedagogia', instituicao: 'uma faculdade', rede: 'privada', modalidade: 'ead', tInicio: v.t - 12, mesesRestantes: 36, mensalidade: 0, desempenho: 60, trancado: true, tTrancou: v.t - 6, municipioId: v.moradia.municipioId };
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Rumo|Estudo e trabalho/ })[0]);
+    expect(screen.getByText(/\(trancado\)/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Voltar ao curso/ }));
+    expect(screen.queryByText(/\(trancado\)/)).toBeNull();
   });
 
   it('retoma uma vida salva', () => {

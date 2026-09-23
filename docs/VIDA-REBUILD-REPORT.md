@@ -318,8 +318,8 @@ Depois: estado único serializável, comandos puros, RNG por semente
 
 ## 12. Testes
 
-39 testes (Vitest, Node 22): 22 de contrato do motor, 4 de consequência
-econômica/mundo, 8 de save/migração, 5 de interface (jsdom, `Math.random`
+41 testes (Vitest, Node 22): 22 de contrato do motor, 4 de consequência
+econômica/mundo, 8 de save/migração, 7 de interface (jsdom, `Math.random`
 fixado). Todos passam.
 
 Falhas encontradas durante a sessão e como foram classificadas:
@@ -391,4 +391,3 @@ Nenhum teste foi afrouxado para passar uma regressão real.
    filho adulto, com eventos de formatura e primeiro emprego já existentes.
 4. Conteúdo cotidiano para 3–5 anos (`src/motor/conteudo/primeiros.ts`).
 5. Separar `acoes.ts` por domínio mantendo a mesma interface `executar`.
-6. Teste de interface para a negociação e para destrancar curso.
