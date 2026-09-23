@@ -17,6 +17,9 @@ export default defineConfig({
   // `npm run dev`, que continua servindo da raiz.
   base: './',
   plugins: [react()],
+  // O pacote é react-dom + o conteúdo do jogo (~600 kB, ~185 kB gzip). Um
+  // único arquivo é o que o itch.io serve melhor; não vale fatiar.
+  build: { chunkSizeWarningLimit: 800 },
   server: {
     host: '0.0.0.0',
     port: 5173,
