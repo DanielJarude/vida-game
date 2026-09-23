@@ -33,12 +33,12 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
       </header>
       <section className="fim__resumo">
         <ul>
-          <li>{ROTULO_ESCOLARIDADE[vida.educacao.escolaridade][0].toUpperCase() + ROTULO_ESCOLARIDADE[vida.educacao.escolaridade].slice(1)}{vida.educacao.concluidos.length ? ` — ${vida.educacao.concluidos.map(c => c.nome).join(', ')}` : ''}.</li>
-          {principal && <li>Trabalhou sobretudo como {principal}.</li>}
+          <li>{vida.educacao.concluidos.length ? `Estudou ${vida.educacao.concluidos.map(c => c.nome).join(', ')}.` : `Escolaridade: ${ROTULO_ESCOLARIDADE[vida.educacao.escolaridade]}.`}</li>
+          <li>{principal ? `Trabalhou sobretudo como ${principal}.` : empregos.length === 0 ? 'Nunca teve emprego fixo.' : ''}</li>
           <li>{nFilhos === 0 ? 'Não teve filhos.' : nFilhos === 1 ? `Teve um filho: ${filhos(vida)[0]?.nome ?? ''}.` : `Teve ${nFilhos} filhos.`}</li>
           {cidades.size > 0 && <li>Mudou de cidade {cidades.size === 1 ? 'uma vez' : `${cidades.size} vezes`}.</li>}
-          <li>Deixou {dinheiroCurto(Math.max(0, patrimonio(vida)))}{patrimonio(vida) < 0 ? ' e dívidas' : ''}.</li>
-          {tracos.length > 0 && <li>Quem conviveu lembra de alguém {tracos.join(', ').replace(/, ([^,]*)$/, ' e $1')}.</li>}
+          <li>{patrimonio(vida) > 1000 ? `Deixou ${dinheiroCurto(patrimonio(vida))}.` : patrimonio(vida) < -1000 ? 'Deixou dívidas.' : 'Não deixou bens.'}</li>
+          {tracos.length > 0 && <li>Quem conviveu {flex(g, 'lembra dele', 'lembra dela', 'lembra delu')} como {tracos.join(', ').replace(/, ([^,]*)$/, ' e $1')}.</li>}
         </ul>
         {perto.length > 0 && (
           <>

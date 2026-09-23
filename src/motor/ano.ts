@@ -21,6 +21,7 @@ import { conhecerGente, envelhecerConhecidos, processarSocial, recalcularConvivi
 import { processarRomance, surgirInteresse } from './sistemas/romance';
 import { processarProcessos } from './sistemas/processos';
 import { processarDinheiro } from './sistemas/dinheiro';
+import { verificarDespejo } from './sistemas/moradia';
 import { abrirDecisao, aplicarAcontecimento, candidatos, preparar, sortear } from './conteudo/motor';
 import { CATALOGO } from './conteudo/catalogo';
 import type { Conteudo } from './conteudo/base';
@@ -61,6 +62,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarFilhos(v, r);
   recalcularConvivio(v);
   processarDinheiro(v, r);
+  verificarDespejo(v);
   equilibrarMente(v);
 
   const causa = morreEsteAno(v, r);

@@ -41,7 +41,7 @@ function Moradia({ vida, agir }: Props) {
   return (
     <Secao titulo="Onde você mora">
       <p className="lugar">{lugarDescrito(m.municipioId)}</p>
-      <p className="nota">{ondeMora(vida)[0].toUpperCase() + ondeMora(vida).slice(1)}{modelo ? `, num${modelo.nome.startsWith('casa') ? 'a' : ''} ${modelo.nome}` : ''}{m.aluguel > 0 ? ` · aluguel de ${dinheiroCurto(m.aluguel)}` : ''}.</p>
+      <p className="nota">{ondeMora(vida)[0].toUpperCase() + ondeMora(vida).slice(1)}{modelo && m.tipo !== 'republica' ? `, num${modelo.nome.startsWith('casa') ? 'a' : ''} ${modelo.nome}` : ''}{m.aluguel > 0 ? ` · aluguel de ${dinheiroCurto(m.aluguel)}` : ''}.</p>
       {idade(vida) >= 18 && (
         <>
           <button type="button" className="botao botao--secundario" aria-expanded={ver} onClick={() => setVer(v => !v)}>{naFamilia ? 'Sair de casa' : 'Mudar de casa'}</button>

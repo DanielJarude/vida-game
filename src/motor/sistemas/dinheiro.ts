@@ -86,6 +86,17 @@ export function despesasMensais(v: Vida, estiloForcado?: Vida['financas']['estil
   if (naCasaDosPais) {
     if (i < 16) return out; // criança: quem paga a casa são os adultos
     const renda = rendasMensais(v).filter(l => l.rotulo !== 'Mesada').reduce((s, l) => s + l.valor, 0);
+    // Sem renda nenhuma, os gastos pequenos (condução, atividades) ficam com a
+    // família; só dívidas e mensalidade continuam sendo do jogador.
+    if (renda === 0) {
+      const m = v.educacao.matricula;
+      if (m && !m.trancado && m.mensalidade > 0 && m.financiamento !== 'fies') {
+        const pago = Math.min(m.mensalidade, PAIS_PAGAM_ESTUDO[v.origem.classe]);
+        add('Mensalidade da faculdade', m.mensalidade - pago, 'educacao');
+      }
+      for (const d of f.dividas) if (d.parcela > 0) add(d.descricao, Math.min(d.parcela, d.saldo), 'dividas');
+      return out;
+    }
     if (renda > 0) add('Ajuda nas contas de casa', renda * CONTRIBUICAO_EM_CASA[v.origem.classe], 'moradia');
     if (i >= 18 && renda > 0) add('Gastos pessoais e lazer', (estilo.lazer + estilo.basico * 0.25) * c, 'lazer');
   } else {

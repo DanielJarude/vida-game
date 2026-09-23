@@ -34,7 +34,7 @@ export const DESAFIOS: Conteudo[] = [
     texto: c => {
       const oc = vagaDaEntrevista(c);
       const inicio = c.v.trabalho.historico.length === 0 && !c.v.trabalho.atual;
-      return `Sala pequena, ar-condicionado forte. ${c.r.chance(0.5) ? 'A entrevistadora' : 'O entrevistador'} folheia seu currículo${inicio ? ' — quase em branco' : ''} e pergunta por que deveriam escolher você${oc && oc.nivel >= 4 ? ' para liderar' : ''}.`;
+      return `Sala pequena, ar-condicionado forte. ${c.r.chance(0.5) ? 'A entrevistadora' : 'O entrevistador'} folheia seu currículo${inicio ? ' — quase em branco —' : ''} e pergunta por que deveriam escolher você${oc && oc.nivel >= 4 ? ' para liderar' : ''}.`;
     },
     opcoes: [
       {

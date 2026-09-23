@@ -126,7 +126,7 @@ export function ondeMora(v: Vida): string {
     const principais = nomes.filter(n => n.startsWith('a ') || n.startsWith('o '));
     return principais.length ? `mora com ${listaNatural(principais)}` : 'mora com a família';
   }
-  const base = m.tipo === 'propria' ? 'em casa própria' : m.tipo === 'republica' ? 'numa república' : 'de aluguel';
+  const base = m.tipo === 'propria' ? 'em casa própria' : m.tipo === 'republica' ? 'numa república' : m.tipo === 'cedida' ? 'de favor' : 'de aluguel';
   return nomes.length ? `mora ${base} com ${listaNatural(nomes)}` : `mora sozinh${flex(v.eu.tratamento ?? v.eu.genero, 'o', 'a', 'e')}, ${base}`;
 }
 

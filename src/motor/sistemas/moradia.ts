@@ -78,3 +78,27 @@ export function morarJuntos(v: Vida, p: Pessoa): void {
 }
 
 export const moradores = moraCom;
+
+/**
+ * Despejo: aluguel sem renda nenhuma, sem reserva e com o nome sujo há mais
+ * de um ano. A pessoa volta para a família — ou vai para o sofá de alguém.
+ */
+export function verificarDespejo(v: Vida): void {
+  const m = v.moradia;
+  if (m.tipo !== 'aluguel' && m.tipo !== 'republica') return;
+  const f = v.financas;
+  const semNada = saldoMensal(v).renda === 0 && f.conta <= 0 && f.reserva <= 0;
+  const desde = v.fatos['negativado_desde'];
+  if (!semNada || !f.negativado || desde === undefined || v.t - desde < 12) return;
+  if (voltarParaCasaDosPais(v)) {
+    escrever(v, { texto: 'O aluguel atrasado virou ação de despejo. As coisas couberam num carro emprestado.', relevancia: 'biografia', tema: 'casa', tom: 'ruim' });
+    return;
+  }
+  const amigo = vinculosVivos(v).find(x => !x.vin.parentesco && (x.vin.estagio === 'amigo_proximo' || x.vin.estagio === 'amigo') && x.p.municipioId === m.municipioId);
+  v.moradia = { tipo: 'cedida', municipioId: m.municipioId, aluguel: 0, padrao: 1, tInicio: v.t };
+  escrever(v, {
+    texto: amigo ? `Despejo. ${amigo.p.nome} ofereceu o sofá da sala "por uns dias", que viraram meses.` : 'Despejo. Sem ter para onde ir, foi dormir de favor num quartinho nos fundos da casa de um conhecido.',
+    relevancia: 'marco', tema: 'casa', tom: 'ruim', pessoas: amigo ? [amigo.p.id] : []
+  });
+  v.mente.estresse = Math.min(100, v.mente.estresse + 15);
+}
