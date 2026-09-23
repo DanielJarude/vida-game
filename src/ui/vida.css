@@ -184,6 +184,8 @@ details summary { cursor: pointer; }
 .avancar__idade { font-family: var(--font-serif); font-size: var(--type-lead); }
 
 .barra { display: none; }
+.trilho__agora { display: none; margin-top: var(--space-5); }
+@media (max-width: 1180px) { .trilho__agora { display: block; } }
 
 /* -------------------------------------------------------------- Linha da Vida */
 .linha-da-vida__controles { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
@@ -341,6 +343,12 @@ details summary { cursor: pointer; }
   .identidade__linha { font-size: var(--type-body); grid-column: 1 / -1; }
   .identidade__linha:first-of-type { grid-column: 2; }
   .estado, .identidade__tracos, .identidade__condicoes { grid-column: 1 / -1; }
+  .trilho__agora { margin-top: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--rule); }
+  .trilho__agora .agora-pessoas { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .trilho__agora .agora-pessoa { display: flex; flex-direction: column; align-items: center; width: 64px; text-align: center; }
+  .trilho__agora .agora-pessoa__rotulo { display: none; }
+  .trilho__agora .agora-pessoa__nome { font-size: var(--type-caption); }
+  .trilho__agora .painel-agora__titulo:not(:first-child), .trilho__agora .agora-dinheiro, .trilho__agora .agora-processos { display: none; }
   .conteudo__titulo { font-size: var(--type-heading); margin-bottom: var(--space-4); }
   .avancar { bottom: calc(60px + env(safe-area-inset-bottom)); padding-bottom: var(--space-2); background: linear-gradient(to top, var(--bg-app) 60%, transparent); }
   .barra {

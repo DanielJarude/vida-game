@@ -68,6 +68,7 @@ export function Jogo({ c }: { c: ControleVida }) {
       <div className={`regioes regioes--${aba}`}>
         <aside className="trilho" aria-label="Quem você é">
           <Identidade vida={vida} />
+          <div className="trilho__agora"><Agora vida={vida} irPara={setAba} /></div>
         </aside>
 
         <main className="conteudo" ref={conteudo}>

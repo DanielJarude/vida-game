@@ -355,16 +355,11 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok('Horas extras combinadas para este ano: mais dinheiro, mais cansaço.');
     case 'pedir_aumento': {
       v.anoAtual.acoes.push('aumento');
-      const e = v.trabalho.atual!;
-      if (r.chance(clamp((e.desempenho - 40) / 60, 0.05, 0.8))) {
-        e.salario = Math.round(e.salario * 1.08 / 10) * 10;
-        const aumentos = (v.fatos['aumentos'] ?? 0) + 1;
-        v.fatos['aumentos'] = aumentos;
-        escrever(v, { texto: aumentos === 1 ? `Pediu aumento e conseguiu: o salário foi para R$ ${e.salario.toLocaleString('pt-BR')}.` : `Mais um aumento negociado: R$ ${e.salario.toLocaleString('pt-BR')}.`, relevancia: aumentos === 1 ? 'biografia' : 'tecnico', tema: 'trabalho', tom: 'bom', escolha: true });
-        return { resultado: `Aumento aprovado. Novo salário: R$ ${e.salario.toLocaleString('pt-BR')}.` };
-      }
-      e.desempenho = clamp(e.desempenho - 3);
-      return { resultado: 'Disseram que não havia orçamento para aumentos este ano.' };
+      // Negociar é um desafio: a abordagem escolhida pesa no resultado.
+      const d = conteudoPorId('trab_negociacao')!;
+      const ctx = preparar(d, v, r);
+      if (ctx && d.tipo === 'decisao') abrirDecisao(v, d, ctx);
+      return {};
     }
     case 'aposentar': aposentar(v); return ok('Aposentadoria concedida.', 'bom');
     case 'pessoa': return interagir(v, r, a.pessoaId, a.interacao);

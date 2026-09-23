@@ -27,7 +27,39 @@ function resolverEntrevista(c: Ctx, bonus: number): { texto: string; memoria: st
   return { texto: 'O e-mail veio educado: "decidimos seguir com outro candidato".', memoria: null, tom: 'ruim' };
 }
 
+function resolverNegociacao(c: Ctx, bonus: number, arriscado: boolean): { texto: string; memoria: string | null; tom: 'bom' | 'ruim' } {
+  const e = c.v.trabalho.atual;
+  if (!e) return { texto: 'Não havia mais o que negociar.', memoria: null, tom: 'ruim' };
+  const chance = clamp((e.desempenho - 40) / 60 + bonus, 0.05, 0.9);
+  if (c.r.chance(chance)) {
+    const pct = arriscado ? 0.15 : 0.08;
+    e.salario = Math.round(e.salario * (1 + pct) / 10) * 10;
+    const n = (c.v.fatos['aumentos'] ?? 0) + 1;
+    c.v.fatos['aumentos'] = n;
+    return { texto: `A chefia pensou dois dias e aprovou: o salário foi para R$ ${e.salario.toLocaleString('pt-BR')}.`, memoria: n === 1 ? `Negociou um aumento e conseguiu: R$ ${e.salario.toLocaleString('pt-BR')}.` : null, tom: 'bom' };
+  }
+  if (arriscado && c.r.chance(0.35)) {
+    e.desempenho = clamp(e.desempenho - 10);
+    return { texto: 'A resposta veio seca: "se tem proposta melhor, fique à vontade". O clima azedou.', memoria: null, tom: 'ruim' };
+  }
+  e.desempenho = clamp(e.desempenho - 2);
+  return { texto: 'Disseram que não havia orçamento este ano. Talvez no próximo.', memoria: null, tom: 'ruim' };
+}
+
 export const DESAFIOS: Conteudo[] = [
+  {
+    id: 'trab_negociacao', tipo: 'decisao', idade: [16, 80], tema: 'trabalho', manual: true, repetir: 0,
+    titulo: 'A conversa do aumento',
+    texto: c => `Você marcou quinze minutos com a chefia${c.v.trabalho.atual ? ` em ${c.v.trabalho.atual.empregador}` : ''}. Sala fechada, café frio. É a sua vez de falar.`,
+    opcoes: [
+      { id: 'resultados', texto: 'Mostrar números: o que você entregou este ano', comportamento: { disciplina: 1 },
+        resolver: c => ({ ...resolverNegociacao(c, 0.05 + Math.max(0, c.v.personalidade.tracos.disciplina) / 300, false), relevancia: 'biografia' }) },
+      { id: 'proposta', texto: 'Dizer que tem uma proposta de fora', comportamento: { coragem: 1, impulsividade: 1 },
+        resolver: c => ({ ...resolverNegociacao(c, c.v.personalidade.tracos.coragem / 250, true), relevancia: 'biografia' }) },
+      { id: 'jeito', texto: 'Pedir com jeito, lembrando o tempo de casa', comportamento: { sociabilidade: 1 },
+        resolver: c => ({ ...resolverNegociacao(c, c.v.personalidade.tracos.sociabilidade / 300 + Math.min(0.1, (c.v.t - (c.v.trabalho.atual?.tInicio ?? c.v.t)) / 600), false), relevancia: 'biografia' }) }
+    ]
+  },
   {
     id: 'trab_entrevista', tipo: 'decisao', idade: [14, 80], tema: 'trabalho', manual: true, repetir: 0,
     titulo: c => `Entrevista: ${vagaDaEntrevista(c) ? nomeOcupacao(c.v, vagaDaEntrevista(c)!) : 'vaga'}`,

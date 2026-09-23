@@ -347,16 +347,21 @@ export const ADULTO: Conteudo[] = [
     ]
   },
   {
-    id: 'adu_natal_familia', tipo: 'acontecimento', idade: [18, 80], tema: 'familia', repetir: 4,
+    id: 'adu_natal_familia', tipo: 'acontecimento', idade: [18, 80], tema: 'familia', repetir: 5,
     papeis: { quem: P.qualquer(P.genitor, P.irmao) },
-    narrar: c => ({
-      texto: c.r.pick([
+    narrar: c => {
+      const criancas = P.filho(0, 10)(c.v);
+      const cenas = [
         `O Natal foi na casa de ${c.p.quem.nome}: amigo-secreto, uva-passa no arroz e uma discussão sobre política que ninguém venceu.`,
         `Passou o Ano-Novo com a família de ${c.p.quem.nome}, na praia, todo mundo de branco num apartamento alugado para doze.`,
-        `O almoço de Páscoa juntou a família toda pela primeira vez em anos, na casa de ${c.p.quem.nome}.`
-      ]),
-      relevancia: 'cotidiano', efeito: () => prox(c, 'quem', 5)
-    })
+        `O almoço de Páscoa juntou a família toda pela primeira vez em anos, na casa de ${c.p.quem.nome}.`,
+        criancas.length ? `No Natal, ${criancas[0].nome} descobriu quem era o Papai Noel: ${c.p.quem.nome}, com a barba de algodão torta.` : `O Natal na casa de ${c.p.quem.nome} foi pequeno este ano: pouca gente, muita comida, conversa até tarde.`,
+        `A ceia de Natal acabou em briga por causa de uma herança antiga. ${c.p.quem.nome} foi a primeira pessoa a pedir desculpas.`,
+        `O aniversário de ${c.p.quem.nome} virou festa-surpresa organizada no grupo da família, com bolo de padaria e parente que ninguém via fazia anos.`,
+        `Passaram o réveillon na laje de ${c.p.quem.nome}, vendo os fogos da cidade inteira.`
+      ];
+      return { texto: cenas[(c.vezes * 3 + c.r.int(0, 2)) % cenas.length], relevancia: 'cotidiano', efeito: () => prox(c, 'quem', 5) };
+    }
   },
   {
     id: 'adu_heranca_briga', tipo: 'decisao', idade: [30, 90], tema: 'familia',
