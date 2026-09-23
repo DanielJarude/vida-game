@@ -210,6 +210,51 @@ scripts/
   itch/                  empacotamento e smoke do pacote
 ```
 
+## 8. Métricas antes × depois
+
+Motor antigo: `scripts/audit` (105 vidas, 7 perfis). Motor novo: `scripts/sim`
+(150 vidas, 10 estratégias). Os instrumentos diferem; as grandezas são comparáveis.
+
+| Métrica | Antes | Depois |
+| --- | --- | --- |
+| Patrimônio mediano aos 60 | R$ 7,97 mi (todas as vidas) | de R$ 1,6 mil (passivo) a R$ 12,4 mi (poupador que ascende) — depende do jeito de viver |
+| Quem não trabalha acumula | sim (riqueza automática) | não: passivo termina com mediana de R$ 56 mil |
+| Mudou de cidade | 0/105 | 0–75% conforme a estratégia (proposta de trabalho, estudo, cônjuge, escolha) |
+| Namoro instantâneo em "85" | 103/105 | inexistente: interesse → saindo → namoro → morar junto → casamento, com recusa possível |
+| Filho instantâneo | sim | gestação com concepção, descoberta, 9 meses, aborto espontâneo possível, nome escolhido |
+| Aposentadoria | não existia | INSS por idade e contribuição, BPC para quem não contribuiu |
+| Desfechos sorteados decidindo comportamento | 97/149 (65%) | 0 (estrutural: acontecimento não tem opções) + teste de linguagem |
+| Texto no masculino fixo / "(a)" | 21 ocorrências | 0 (teste), com tratamento escolhido por pessoas não binárias |
+| Repetição de texto por vida | alta, não medida | 9,4 por vida (a maioria rebaixada a cotidiano/técnico) |
+| Longevidade (mediana) | 74 | 73, variando com o jeito de viver: impulsivo 64, poupador 87 |
+| Vidas que chegam aos 18 sem decisão | 0% | 0% |
+| Anos sem nenhuma linha (30–44) | ~61% | 10% |
+
+## 9. Decisões de design
+
+- **Acontecimento × decisão é estrutura, não rótulo.** Acontecimento é uma
+  função que narra o mundo e aplica efeitos do mundo; decisão tem opções do
+  jogador. Reação de criança ou adulto que importa vira decisão.
+- **Personalidade só por escolha comportamental e rotina mantida por anos.**
+  Escolha biográfica (primeira palavra, nome do filho, padrinho) não move nada.
+  Personalidade tem efeito: compatibilidade com pessoas, chances em entrevista,
+  romance, vício.
+- **Pessoas antes de eventos.** O ano é preenchido primeiro por sistemas (escola,
+  trabalho, casa, pessoas, processos); conteúdo usa papéis ligados a pessoas
+  reais. Chefe novo, vizinho novo, companheiro de excursão viram pessoas.
+- **Dinheiro é do domicílio.** O orçamento é derivado de quem mora junto, da
+  casa, do carro, dos filhos, da cidade. Quem não tem, corta o supérfluo antes
+  de se endividar; cartão sem pagamento suja o nome; dívida caduca em 5 anos;
+  despejo existe.
+- **Lugar por perfil urbano × região**, não por lista de cursos: Medicina
+  presencial não existe em cidade pequena; EAD existe em qualquer lugar;
+  região metropolitana acessa a oferta da metrópole.
+- **Plausibilidade graduada**: impossível, incompatível, ilegal, requisito,
+  irregular, improvável, permitido. Criança vendendo doce na rua é irregular
+  e o Conselho Tutelar pode aparecer.
+- **Reais constantes**: sem inflação no jogo; mobilidade vem de trajetória.
+- **Silêncio permitido**, mas a repetição de algo comum é rebaixada a cotidiano.
+
 Antes: 50.500 linhas, 15 `useState`, motor anual com 10 parâmetros posicionais,
 RNG global, 134 eventos (65% dos desfechos sorteados decidindo comportamento).
 Depois: estado único serializável, comandos puros, RNG por semente
