@@ -69,7 +69,7 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Nascer' }));
     avancar(6);
     fireEvent.click(screen.getAllByRole('button', { name: /Pessoas/ })[0]);
-    const mae = screen.getAllByText(/sua mãe/)[0].closest('button')!;
+    const mae = within(screen.getByRole('main')).getAllByText(/sua mãe/)[0].closest('button')!;
     fireEvent.click(mae);
     const ficha = screen.getByRole('dialog');
     expect(within(ficha).getByRole('button', { name: /Passar um tempo junto/ })).toBeTruthy();
