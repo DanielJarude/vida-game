@@ -13,7 +13,7 @@ import type { Vida } from '../../motor/tipos';
 /** Uma adulta salva, já com a vida resolvida até ali (sem momento aberto). */
 function adultaSalva(ajuste: (v: Vida) => void): void {
   let v = criarVida({ nome: 'Rita', sobrenome: 'Lopes', genero: 'feminino', municipioId: 'recife-pe', semente: 5 });
-  for (let i = 0; i < 26; i++) { v = avancarAno(v).vida; v.momento = undefined; }
+  for (let i = 0; i < 26; i++) { v = avancarAno(v).vida; v.momento = null; }
   ajuste(v);
   salvar(v);
 }

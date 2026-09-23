@@ -14,7 +14,7 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Pessoa, Processo, Vida } from '../tipos';
 import {
-  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, vinculosVivos
+  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, temFato, vinculosVivos
 } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { processarCorpoDePessoa } from './corpo';
@@ -22,7 +22,7 @@ import { flex, ge, rotuloParentesco } from '../texto';
 import { MESES, mesDe } from '../tempo';
 import { OCUPACOES, OCUPACOES_POR_CLASSE, ocupacao } from '../dados/ocupacoes';
 import { liquido, salarioLocal } from './renda';
-import { moraComFamiliaDeOrigem } from './domicilio';
+import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
 import { sortearNome } from '../dados/nomes';
 import { descricaoOrigem } from './social';
 
@@ -287,22 +287,89 @@ export function processarFilhos(v: Vida, r: Rng): void {
   for (const f of filhos(v)) {
     const vin = v.vinculos[f.id];
     const i = idadePessoa(v, f);
-    f.ocupacao = i >= 4 && i < 18 ? 'estudante' : f.ocupacao;
+    if (i >= 4 && i < 18) f.ocupacao = 'estudante';
     const tempo = v.anoAtual.acoes.some(a => a.endsWith(`:${f.id}`)) || v.rotinas.some(rot => rot.id === 'tempo_familia');
     const alvo = vin.convivio.includes('casa') ? (tempo ? 85 : 62) : tempo ? 60 : 30;
     vin.proximidade = clamp(Math.round(vin.proximidade + (alvo - vin.proximidade) * 0.2 + r.normal() * 2));
     if (i >= 13 && i <= 17 && !tempo && r.chance(0.3)) vin.tensao = clamp(vin.tensao + 15);
-    // Sair de casa
-    if (i >= 18 && vin.convivio.includes('casa') && r.chance(0.08 + (i - 18) * 0.04)) {
+    trajetoriaDoFilho(v, r, f, i);
+    // Sair de casa: quem tem renda própria sai mais cedo.
+    const chanceSair = 0.06 + Math.max(0, i - 18) * 0.04 + (f.renda > 0 && !f.estudo ? 0.08 : 0);
+    if (i >= 18 && vin.convivio.includes('casa') && r.chance(chanceSair)) {
       marcarFato(v, `saiu_de_casa_${f.id}`);
       vin.convivio = vin.convivio.filter(c => c !== 'casa');
-      escrever(v, { texto: `${f.nome} saiu de casa, aos ${i}.`, relevancia: 'biografia', tema: 'filhos', pessoas: [f.id] });
-    }
-    if (i >= 18 && !f.ocupacao?.length || (i >= 18 && f.ocupacao === 'estudante' && r.chance(0.3))) {
-      const oc = ocupacao(r.pick(OCUPACOES_POR_CLASSE[classeDoFilho(v)]));
-      if (oc.idadeMin <= i) { f.ocupacao = f.genero === 'feminino' ? oc.nome[1] : oc.nome[0]; f.renda = liquido(salarioLocal(oc, f.municipioId), oc.contrato); }
+      escrever(v, { texto: `${f.nome} saiu de casa, aos ${i}${f.renda > 0 && f.ocupacao ? `, já trabalhando como ${f.ocupacao}` : ''}.`, relevancia: 'biografia', tema: 'filhos', pessoas: [f.id] });
     }
   }
+}
+
+/** Curso → ocupação de entrada de quem se forma. */
+const CURSOS_DOS_FILHOS: [curso: string, ocupacaoId: string][] = [
+  ['Direito', 'advogado_jr'], ['Enfermagem', 'enfermeiro'], ['Engenharia Civil', 'eng_jr'], ['Administração', 'analista_adm'],
+  ['Pedagogia', 'professor_fund'], ['Ciência da Computação', 'dev_jr'], ['Psicologia', 'psicologo'], ['Ciências Contábeis', 'contador']
+];
+
+/**
+ * A vida escolar e profissional de um filho, até ele seguir a própria vida.
+ * O vestibular depende da casa (escola, renda, atenção); a faculdade paga
+ * pelo jogador é decisão dele (conteúdo `fil_faculdade`), não do sistema.
+ */
+function trajetoriaDoFilho(v: Vida, r: Rng, f: Pessoa, i: number): void {
+  const k = f.id;
+  // Formatura
+  if (f.estudo && v.t >= f.estudo.tFim) {
+    const curso = f.estudo.curso;
+    if (f.estudo.paga === 'familia') delete v.fatos[`paga_faculdade_${k}`];
+    const fies = f.estudo.paga === 'fies';
+    f.estudo = undefined;
+    f.formacao = curso;
+    const oc = ocupacao(CURSOS_DOS_FILHOS.find(c => c[0] === curso)?.[1] ?? 'analista_adm');
+    empregarFilho(f, oc);
+    const primeiro = !v.educacao.concluidos.some(c => c.nivel === 'superior');
+    escrever(v, { texto: `${f.nome} se formou em ${curso}${primeiro ? ` — ${flex(f.genero, 'o primeiro', 'a primeira', 'e primeire')} da casa com diploma` : ''}${fies ? ', com o FIES para pagar' : ''}. Você aplaudiu até doer a mão.`, relevancia: 'biografia', tema: 'filhos', tom: 'bom', pessoas: [k] });
+    v.mente.felicidade = clamp(v.mente.felicidade + 6);
+    return;
+  }
+  if (f.estudo) { f.ocupacao = 'estudante universitário'; return; }
+
+  const emCasa = v.vinculos[k].convivio.includes('casa');
+  // Vestibular: 17 a 19 anos, para quem quer e mora com o jogador.
+  if (i >= 17 && i <= 19 && emCasa && !f.formacao) {
+    if (v.fatos[`fil_quer_${k}`] === undefined) {
+      const pc = rendaPerCapita(v);
+      v.fatos[`fil_quer_${k}`] = r.chance(pc > 2600 ? 0.8 : pc > 1200 ? 0.6 : 0.45) ? 1 : 0;
+    }
+    if (v.fatos[`fil_quer_${k}`] === 1 && v.fatos[`fil_vest_privada_${k}`] === undefined) {
+      const pc = rendaPerCapita(v);
+      const aptidao = ((parseInt(k.replace(/\D/g, ''), 10) || 7) * 37 % 21 - 10) / 100;
+      const chance = clamp(0.16 + (temFato(v, 'filhos_escola_privada') ? 0.25 : 0) + (pc > 2600 ? 0.1 : 0) + (v.vinculos[k].proximidade > 70 ? 0.07 : 0) + aptidao, 0.05, 0.75);
+      const curso = r.pick(CURSOS_DOS_FILHOS)[0];
+      if (r.chance(chance)) {
+        f.estudo = { curso, paga: 'publica', tFim: v.t + 48 };
+        f.ocupacao = 'estudante universitário';
+        escrever(v, { texto: `${f.nome} passou no vestibular da federal para ${curso}. A lista saiu de madrugada; a casa acordou gritando.`, relevancia: 'biografia', tema: 'filhos', tom: 'bom', pessoas: [k] });
+        v.mente.felicidade = clamp(v.mente.felicidade + 5);
+        return;
+      }
+      // Não passou na pública: a particular fica na mesa (decisão do jogador).
+      v.fatos[`fil_vest_privada_${k}`] = v.t;
+      v.fatos[`fil_curso_${k}`] = CURSOS_DOS_FILHOS.findIndex(c => c[0] === curso);
+      return;
+    }
+  }
+  // Trabalho: quem não está estudando, a partir dos 18.
+  if (i >= 18 && (!f.ocupacao || f.ocupacao === 'estudante' || f.ocupacao === 'desempregado' || f.ocupacao === 'desempregada') && r.chance(f.ocupacao?.startsWith('desempregad') ? 0.5 : 0.8)) {
+    if (f.formacao) { empregarFilho(f, ocupacao(CURSOS_DOS_FILHOS.find(c => c[0] === f.formacao)?.[1] ?? 'analista_adm')); return; }
+    const semDiploma = OCUPACOES_POR_CLASSE[classeDoFilho(v)].map(id => ocupacao(id)).filter(o => !o.nivelCurso && !o.area && o.escolaridade !== 'superior' && o.idadeMin <= i && !o.concurso);
+    const lista = semDiploma.length ? semDiploma : OCUPACOES_POR_CLASSE.trabalhadora.map(id => ocupacao(id)).filter(o => !o.area && o.idadeMin <= i);
+    empregarFilho(f, r.pick(lista));
+  }
+}
+
+function empregarFilho(f: Pessoa, oc: ReturnType<typeof ocupacao>): void {
+  f.ocupacao = f.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
+  f.ocupacaoId = oc.id;
+  f.renda = liquido(salarioLocal(oc, f.municipioId), oc.contrato);
 }
 
 function classeDoFilho(v: Vida): string {

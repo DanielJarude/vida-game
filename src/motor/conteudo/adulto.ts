@@ -294,12 +294,6 @@ export const ADULTO: Conteudo[] = [
     narrar: c => ({ texto: c.v.financas.planoDeSaude ? `${c.p.filho.nome} teve pneumonia e passou três dias internad${gp(c, 'filho', 'o', 'a')}. O plano cobriu o hospital.` : `${c.p.filho.nome} teve pneumonia. Foram duas noites no corredor do hospital público até sair o leito.`, relevancia: 'biografia', tom: 'ruim', efeito: () => estresse(c, 10) })
   },
   {
-    id: 'adu_filho_formatura', tipo: 'acontecimento', idade: [35, 90], tema: 'filhos',
-    papeis: { filho: P.filho(21, 30) },
-    quando: c => !temFato(c.v, `formatura_${c.p.filho.id}`) && c.r.chance(0.5),
-    narrar: c => ({ texto: `${c.p.filho.nome} se formou${c.r.chance(0.5) ? ' — primeir' + gp(c, 'filho', 'o', 'a') + ' da família com diploma de faculdade' : ''}. Você aplaudiu até doer a mão.`, relevancia: 'biografia', tom: 'bom', efeito: () => { fato(c, `formatura_${c.p.filho.id}`); feliz(c, 6); } })
-  },
-  {
     id: 'adu_neto', tipo: 'acontecimento', idade: [38, 95], tema: 'filhos', repetir: 3,
     papeis: { filho: P.filho(20, 45) },
     quando: c => c.r.chance(0.5),

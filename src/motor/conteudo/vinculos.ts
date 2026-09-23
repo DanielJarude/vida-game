@@ -5,12 +5,19 @@
 
 import type { Conteudo, Ctx } from './base';
 import { mudarAgora } from '../sistemas/processos';
-import { MUNICIPIOS, municipio } from '../dados/lugares';
+import { MUNICIPIOS, economiaLocal, municipio } from '../dados/lugares';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa, temFato } from '../nucleo';
 import { anoDe } from '../tempo';
 import { criarPessoa, vincular } from '../pessoas';
+
+const CURSOS_FILHO = ['Direito', 'Enfermagem', 'Engenharia Civil', 'Administração', 'Pedagogia', 'Ciência da Computação', 'Psicologia', 'Ciências Contábeis'];
+const cursoDoFilho = (c: Ctx) => CURSOS_FILHO[c.v.fatos[`fil_curso_${c.p.filho.id}`] ?? 3] ?? 'Administração';
+const mensalidadeFilho = (c: Ctx) => {
+  const base = ({ Direito: 1500, Enfermagem: 1300, 'Engenharia Civil': 1700, 'Ciência da Computação': 1400, Psicologia: 1400 } as Record<string, number>)[cursoDoFilho(c)] ?? 1000;
+  return Math.round(base * economiaLocal(c.v.moradia.municipioId).custo / 10) * 10;
+};
 
 export const VINCULOS: Conteudo[] = [
   /* ================================================================ CÔNJUGE */
@@ -165,16 +172,21 @@ export const VINCULOS: Conteudo[] = [
     ]
   },
   {
-    id: 'fil_faculdade', tipo: 'decisao', idade: [36, 80], tema: 'filhos', repetir: 0,
+    // Só existe porque o filho não passou na pública e quer estudar (sistema de família).
+    id: 'fil_faculdade', tipo: 'decisao', idade: [34, 80], tema: 'filhos', prioritario: true, repetir: 0,
     papeis: { filho: P.filhoEmCasa(17, 20) },
-    quando: c => !temFato(c.v, `faculdade_filho_${c.p.filho.id}`),
+    quando: c => { const t = c.v.fatos[`fil_vest_privada_${c.p.filho.id}`]; return t !== undefined && c.v.t - t < 12 && !c.p.filho.estudo; },
     titulo: c => `A faculdade de ${c.p.filho.nome}`,
-    texto: c => `${c.p.filho.nome} não passou na federal, mas passou numa faculdade particular. A mensalidade é de R$ 1.300. ${gp(c, 'filho', 'Ele', 'Ela', 'Elu')} olha para você esperando uma resposta.`,
+    texto: c => `${c.p.filho.nome} não passou na federal, mas passou em ${cursoDoFilho(c)} numa faculdade particular. A mensalidade é de R$ ${mensalidadeFilho(c).toLocaleString('pt-BR')}. ${gp(c, 'filho', 'Ele', 'Ela', 'Elu')} olha para você esperando uma resposta.`,
     opcoes: [
       { id: 'pagar', texto: 'Pagar, nem que aperte', comportamento: { familia: 2, generosidade: 1 },
-        resolver: c => ({ texto: `Você assinou o contrato como fiador. ${c.p.filho.nome} te abraçou no estacionamento.`, memoria: `Pagou a faculdade de ${c.p.filho.nome}.`, efeito: () => { fato(c, `faculdade_filho_${c.p.filho.id}`); fato(c, `ajuda_mensal_${c.p.filho.id}`); prox(c, 'filho', 12); } }) },
-      { id: 'fies', texto: 'Sugerir o FIES', resolver: c => ({ texto: `${c.p.filho.nome} fez o FIES. Vai começar a vida adulta devendo.`, memoria: null, efeito: () => fato(c, `faculdade_filho_${c.p.filho.id}`) }) },
-      { id: 'tentar', texto: 'Pedir para tentar a federal de novo', resolver: c => ({ texto: `${c.p.filho.nome} topou mais um ano de cursinho, meio a contragosto.`, memoria: null, efeito: () => { fato(c, `faculdade_filho_${c.p.filho.id}`); tensao(c, 'filho', 8); } }) }
+        resolver: c => ({ texto: `Você assinou o contrato como responsável financeiro. ${c.p.filho.nome} te abraçou no estacionamento.`, memoria: `Pagou a faculdade de ${c.p.filho.nome}.`, efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'familia', tFim: c.v.t + 48 }; c.v.fatos[`paga_faculdade_${c.p.filho.id}`] = mensalidadeFilho(c); prox(c, 'filho', 12); } }) },
+      { id: 'fies', texto: 'Sugerir o FIES',
+        resolver: c => ({ texto: `${c.p.filho.nome} fez o FIES. Vai começar a vida adulta devendo.`, memoria: null, efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'fies', tFim: c.v.t + 48 }; } }) },
+      { id: 'tentar', texto: 'Pedir para tentar a federal de novo', disponivel: c => (idadePessoa(c.v, c.p.filho) < 19 ? true : 'Já foram tentativas demais.'),
+        resolver: c => ({ texto: `${c.p.filho.nome} topou mais um ano de cursinho, meio a contragosto.`, memoria: null, efeito: () => { delete c.v.fatos[`fil_vest_privada_${c.p.filho.id}`]; tensao(c, 'filho', 8); } }) },
+      { id: 'trabalhar', texto: 'Dizer que agora não dá; é hora de trabalhar', comportamento: { independencia: 1 },
+        resolver: c => ({ texto: `${c.p.filho.nome} guardou o resultado numa pasta e começou a mandar currículo.`, memoria: null, efeito: () => { c.v.fatos[`fil_quer_${c.p.filho.id}`] = 0; tensao(c, 'filho', 10); prox(c, 'filho', -4); } }) }
     ]
   },
   {

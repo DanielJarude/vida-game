@@ -54,6 +54,10 @@ export interface Pessoa {
   parceiroId?: string;
   saude: number;
   visual?: Visual;
+  /** Faculdade em curso (filhos do jogador): quem paga e quando termina. */
+  estudo?: { curso: string; paga: 'publica' | 'familia' | 'fies'; tFim: number };
+  /** Formou-se em (nome do curso). */
+  formacao?: string;
   /** Pet: animal, não gente. Nunca conversa, nunca namora. */
   especie?: 'cachorro' | 'gato';
 }

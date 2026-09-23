@@ -175,6 +175,13 @@ export function despesasMensais(v: Vida, estiloForcado?: Vida['financas']['estil
     add(m[1] === 'ajuda_mensal' ? `Ajuda para ${p.nome}` : m[1] === 'paga_cuidadora' ? `Cuidadora de ${p.nome}` : `Casa de repouso de ${p.nome}`, valor * c, 'outros');
   }
 
+  // Faculdade particular de filho paga pelo jogador (valor da mensalidade guardado no fato).
+  for (const [chave, valor] of Object.entries(v.fatos)) {
+    const m = chave.match(/^paga_faculdade_(.+)$/);
+    const p = m && v.pessoas[m[1]];
+    if (p && p.vivo && p.estudo?.paga === 'familia') add(`Faculdade de ${p.nome}`, valor, 'filhos');
+  }
+
   if (v.fatos['aposta_online'] !== undefined && i >= 18) add('Apostas', Math.max(300, Math.min(2500, (rendasMensais(v).reduce((s, l) => s + l.valor, 0)) * 0.15)), 'lazer');
 
   // Padrão de vida acompanha a renda: quem ganha mais passa a gastar mais

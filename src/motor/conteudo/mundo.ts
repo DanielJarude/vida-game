@@ -237,18 +237,6 @@ export const MUNDO: Conteudo[] = [
     ]
   },
   {
-    id: 'adu_filho_vestibular', tipo: 'acontecimento', idade: [35, 80], tema: 'filhos',
-    papeis: { filho: P.filhoEmCasa(17, 19) },
-    quando: c => !temFato(c.v, `vestibular_${c.p.filho.id}`),
-    narrar: c => {
-      const passou = c.r.chance(c.v.origem.classe === 'alta' || temFato(c.v, 'filhos_escola_privada') ? 0.6 : 0.35);
-      return {
-        texto: passou ? `${c.p.filho.nome} passou no vestibular${c.r.chance(0.5) ? ' da federal' : ''}. A lista saiu de madrugada; a casa acordou gritando.` : `${c.p.filho.nome} não passou no vestibular desta vez. Trancou-se no quarto por dois dias.`,
-        tom: passou ? 'bom' : 'ruim', efeito: () => { fato(c, `vestibular_${c.p.filho.id}`); if (passou) { c.p.filho.ocupacao = 'estudante universitário'; feliz(c, 6); } }
-      };
-    }
-  },
-  {
     id: 'adu_amigo_divorcio', tipo: 'decisao', idade: [30, 70], tema: 'amizade', repetir: 10,
     papeis: { amigo: P.comIdade(P.amigo, 28, 75) },
     quando: c => !!c.p.amigo.parceiroId,
