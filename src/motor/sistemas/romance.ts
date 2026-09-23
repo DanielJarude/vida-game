@@ -129,10 +129,10 @@ export function processarRomance(v: Vida, r: Rng): void {
     if (v.mente.estresse > 65) alvo -= 6;
     if (v.personalidade.tracos.empatia > 20) alvo += 4;
     if (v.personalidade.tracos.impulsividade > 30) alvo -= 5;
-    if (anosJuntos > 5) alvo -= Math.min(12, 3 + (anosJuntos - 5) * 0.4);
+    if (anosJuntos > 4) alvo -= Math.min(16, 4 + (anosJuntos - 4) * 0.6);
     alvo -= pequenos * 4;
     // Crises que vêm de fora: a outra pessoa também muda, adoece, se apaixona.
-    if (rom.estagio !== 'saindo' && r.chance(0.08)) {
+    if (rom.estagio !== 'saindo' && r.chance(0.11)) {
       vin.tensao = clamp(vin.tensao + r.int(25, 45));
       alvo -= 15;
     }
@@ -151,7 +151,7 @@ export function processarRomance(v: Vida, r: Rng): void {
     }
 
     // Namoro em diante: a outra pessoa pode terminar — de vez, ou na zona morna.
-    const morno = rom.envolvimento < 42 && r.chance(rom.estagio === 'namoro' ? 0.3 : 0.16);
+    const morno = rom.envolvimento < 45 && r.chance(rom.estagio === 'namoro' ? 0.3 : 0.2);
     if (rom.envolvimento < 18 || vin.tensao >= 85 || morno) {
       terminar(v, p, vin, 'ela');
     }

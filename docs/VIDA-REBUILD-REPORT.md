@@ -288,7 +288,7 @@ Depois: estado único serializável, comandos puros, RNG por semente
 
 - Violações de coerência (romance adulto-menor, emprego sem requisito, filho
   sem gestação, pessoa morta agindo, etc.): **nenhuma**.
-- Separações: 14–16 de ~110 vidas que moraram junto (≈13%); divórcios 7–8.
+- Separações: 21 de 111 vidas que moraram junto (≈19%); divórcios 14 de 96 casamentos.
 - Patrimônio final mediano: passivo R$ 23 mil, gastador R$ 0, social R$ 425 mil,
   familiar R$ 1,7 mi, poupador que ascende R$ 12,9 mi.
 - Classe de origem × formatura: quem vem de família vulnerável forma mais tarde
@@ -356,8 +356,10 @@ Nenhum teste foi afrouxado para passar uma regressão real.
 
 ## 15. Limitações conhecidas
 
-- **Separação/divórcio abaixo do real** (≈13% de quem morou junto, contra ~30–40%
-  no Brasil ao longo da vida). O modelo existe; falta calibrar desgaste.
+- **Separação/divórcio**: calibrado para ≈19% de quem morou junto e 15% dos
+  casamentos *entre jogadores que cuidam da relação todo ano* (as estratégias do
+  simulador fazem isso). Quem negligencia a parceria tem alvo 18 pontos menor e
+  separa bem mais. Ainda abaixo da média brasileira geral (~30%+).
 - **Poupadores extremos acumulam muito** (mediana R$ 10–13 mi): é consequência
   de poupar ~70% da renda por 40 anos com rendimento real de 3%; o estilo
   "apertado" talvez gaste pouco demais para uma família com filhos.
@@ -381,8 +383,8 @@ Nenhum teste foi afrouxado para passar uma regressão real.
 
 ## 17. Próximos passos executáveis
 
-1. Calibrar desgaste do romance (`src/motor/sistemas/romance.ts`): meta de
-   25–35% de separações entre quem morou junto; conferir com o simulador.
+1. Estratégia de simulador "desatento" (não investe na parceria) para medir o
+   outro extremo da separação.
 2. Estilo "apertado" com filhos: piso de despesa por dependente em
    `despesasMensais` (`src/motor/sistemas/dinheiro.ts`).
 3. Trajetória dos filhos: ENEM/curso/emprego simplificados para `Pessoa`
