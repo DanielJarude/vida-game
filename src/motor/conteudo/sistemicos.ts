@@ -21,6 +21,8 @@ import { anoDe } from '../tempo';
 import { descricaoOrigem } from '../sistemas/social';
 import { ROTINAS } from '../sistemas/rotinas';
 import { economiaLocal } from '../dados/lugares';
+import { curso } from '../dados/cursos';
+import { saldoMensal } from '../sistemas/dinheiro';
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -41,6 +43,22 @@ export function nomesParaBebe(c: Ctx): string[] {
     if (!nomes.includes(n) && !usados.has(n)) nomes.push(n);
   }
   return nomes;
+}
+
+const nomeCurso = (c: Ctx) => curso(c.v.educacao.matricula!.cursoId).nome;
+
+/** O que está apertando quem faz faculdade (ou nada). */
+function motivoDeAperto(c: Ctx): 'dinheiro' | 'trabalho' | 'bebe' | 'notas' | null {
+  const m = c.v.educacao.matricula;
+  if (!m || m.trancado || c.v.t - m.tInicio < 10) return null;
+  const nivel = curso(m.cursoId).nivel;
+  if (nivel !== 'superior' && nivel !== 'tecnico') return null;
+  const s = saldoMensal(c.v);
+  if (m.mensalidade > 0 && !m.financiamento && s.renda - s.despesa < 0) return 'dinheiro';
+  if (P.filho(0, 0)(c.v).length > 0) return 'bebe';
+  if (c.v.trabalho.atual?.carga === 'integral' && m.modalidade === 'presencial' && m.desempenho < 50) return 'trabalho';
+  if (m.desempenho < 38) return 'notas';
+  return null;
 }
 
 const mesesNoEstagio = (c: Ctx, papel: string) => c.v.t - (c.v.vinculos[c.p[papel].id].romance?.tEstagio ?? c.v.t);
@@ -261,6 +279,28 @@ export const SISTEMICOS: Conteudo[] = [
         resolver: c => ({ texto: 'Você continuou. Não ficou mais fácil, mas você continuou.', memoria: null, efeito: () => estresse(c, 5) }) },
       { id: 'largar', texto: 'Largar a escola', comportamento: { impulsividade: 1, independencia: 1 },
         resolver: c => ({ texto: 'Você parou de ir. A escola mandou uma carta; ninguém respondeu.', memoria: null, tom: 'ruim', efeito: () => largarEscola(c.v) }) }
+    ]
+  },
+
+  {
+    // A evasão é o grande filtro do ensino superior brasileiro. O mundo aperta;
+    // quem decide se fica, tranca ou larga é o jogador.
+    id: 'esc_faculdade_aperto', tipo: 'decisao', idade: [17, 45], tema: 'estudo', repetir: 2, prioritario: true,
+    quando: c => !!motivoDeAperto(c),
+    titulo: 'O curso pesa',
+    texto: c => ({
+      dinheiro: `A mensalidade de ${nomeCurso(c)} vence todo dia 10, e o dinheiro do mês já acabou no dia 3.`,
+      trabalho: 'O expediente termina às seis; a aula começa às sete. Você dorme no ônibus e acorda na prova.',
+      bebe: 'O bebê acorda de duas em duas horas. O trabalho de grupo é para sexta.',
+      notas: `As notas em ${nomeCurso(c)} desceram, e a coordenação mandou um e-mail sobre risco de reprovação.`
+    })[motivoDeAperto(c)!],
+    opcoes: [
+      { id: 'ficar', texto: 'Seguir no curso, mesmo apertado', comportamento: { disciplina: 2 },
+        resolver: c => ({ texto: 'Você seguiu. Sem folga, sem fim de semana, mas seguiu.', memoria: null, efeito: () => { estresse(c, 8); feliz(c, -2); } }) },
+      { id: 'trancar', texto: 'Trancar e voltar quando der',
+        resolver: c => ({ texto: 'Você trancou a matrícula. A instituição guarda a vaga por quatro anos.', memoria: `Trancou ${nomeCurso(c)}.`, relevancia: 'biografia', efeito: () => { const m = c.v.educacao.matricula!; m.trancado = true; m.tTrancou = c.v.t; estresse(c, -6); } }) },
+      { id: 'largar', texto: 'Largar o curso de vez', comportamento: { impulsividade: 1 },
+        resolver: c => ({ texto: 'Você cancelou a matrícula. O alívio veio antes do arrependimento.', memoria: `Largou ${nomeCurso(c)} no meio.`, relevancia: 'marco', tom: 'ruim', efeito: () => { c.v.educacao.matricula = undefined; estresse(c, -8); } }) }
     ]
   },
 

@@ -63,12 +63,23 @@ function escola(v: Vida, rede: 'publica' | 'privada', etapa: EscolaBasica['etapa
 
 /* ------------------------------------------------------------ Desempenho */
 
+/**
+ * Condições de estudo em casa: comida no prato, um canto quieto, alguém com
+ * tempo para olhar o caderno. Vem da renda atual da casa, não de um carimbo
+ * de origem — muda se a família sobe ou desce.
+ */
+export function condicoesDeEstudo(v: Vida): number {
+  if (idade(v) >= 18) return 0;
+  const pc = rendaPerCapita(v);
+  return pc < 600 ? -7 : pc < 1200 ? -3 : pc < 2600 ? 0 : pc < 6000 ? 3 : 5;
+}
+
 export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number): number {
   const d = v.personalidade.tracos.disciplina;
   const postura = v.educacao.postura === 'dedicada' ? 12 : v.educacao.postura === 'relaxada' ? -12 : 0;
   const casa = (v.mente.felicidade - 50) * 0.1 - Math.max(0, v.mente.estresse - 60) * 0.25;
   const trabalhoPesa = v.trabalho.atual ? (v.trabalho.atual.carga === 'integral' ? -10 : -4) : 0;
-  const base = 22 + v.mente.cognicao * 0.55 + d * 0.12 + postura + bonusRede + casa + trabalhoPesa;
+  const base = 22 + v.mente.cognicao * 0.55 + d * 0.12 + postura + bonusRede + casa + trabalhoPesa + condicoesDeEstudo(v);
   return clamp(Math.round(base + r.normal() * 7), 5, 100);
 }
 
@@ -189,7 +200,7 @@ export function voltarAEstudar(v: Vida): void {
 
 export function notaEnem(v: Vida, r: Rng): number {
   const hist = v.educacao.basica?.desempenho ?? 55;
-  const privada = v.educacao.basica?.rede === 'privada' ? 30 : 0;
+  const privada = v.educacao.basica?.rede === 'privada' ? 40 : 0;
   const cursinho = v.educacao.cursinho ? 40 : 0;
   const idadeFora = v.educacao.basica ? 0 : Math.min(40, Math.max(0, idade(v) - 18) * 4);
   const postura = v.educacao.postura === 'dedicada' ? 20 : v.educacao.postura === 'relaxada' ? -20 : 0;
@@ -424,7 +435,13 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
 export function processarCurso(v: Vida, r: Rng): void {
   const m = v.educacao.matricula;
   if (!m) return;
-  if (m.trancado) return;
+  if (m.trancado) {
+    if (v.t - (m.tTrancou ?? v.t) >= 48) {
+      v.educacao.matricula = undefined;
+      escrever(v, { texto: `Depois de quatro anos trancada, a matrícula em ${curso(m.cursoId).nome} foi cancelada pela instituição.`, relevancia: 'biografia', tema: 'estudo', tom: 'ruim' });
+    }
+    return;
+  }
   const c = curso(m.cursoId);
   m.desempenho = calcularDesempenho(v, r, c.nivel === 'residencia' || c.nivel === 'mestrado' ? 8 : 0);
   let atraso = 0;
@@ -440,7 +457,7 @@ export function processarCurso(v: Vida, r: Rng): void {
 function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   const e = v.educacao;
   e.matricula = undefined;
-  e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: m.instituicao });
+  e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined });
   const nivelEsc: Record<NivelCurso, Escolaridade> = { tecnico: 'tecnico', superior: 'superior', pos: 'pos', residencia: 'pos', mestrado: 'mestrado', doutorado: 'doutorado' };
   subir(v, nivelEsc[c.nivel]);
   const g = v.eu.genero;

@@ -109,6 +109,7 @@ export function estrategia(nome: string): Estrategia {
       if (p.filhos && par && i >= 26 && i <= 40 && filhos(v).length < 2) out.push({ tipo: 'filhos', plano: 'tentando' });
       if (par && filhos(v).length >= 2) out.push({ tipo: 'filhos', plano: 'evitando' });
 
+      if (v.educacao.matricula?.trancado && p.estudo !== 'baixo' && saldoMensal(v).renda >= saldoMensal(v).despesa && tenta(v, { tipo: 'destrancar' })) out.push({ tipo: 'destrancar' });
       // Faculdade: escolher uma opção viável
       if (i >= 17 && p.estudo !== 'baixo' && !v.educacao.matricula) {
         const opcoes = opcoesDeCurso(v).map((o, idx) => ({ o, idx }))
@@ -117,7 +118,10 @@ export function estrategia(nome: string): Estrategia {
           .filter(x => x.o.curso.nivel !== 'tecnico' || !v.educacao.concluidos.some(c => c.nivel === 'tecnico' || c.nivel === 'superior'))
           .filter(x => x.o.curso.nivel === 'superior' || x.o.curso.nivel === 'tecnico' || i < 32)
           .filter(x => x.o.mensalidade <= Math.max(400, saldoMensal(v).renda * 0.3) || x.o.via === 'sisu' || x.o.via === 'prouni' || x.o.via === 'fies' || x.o.via === 'selecao_publica');
-        const preferidas = opcoes.sort((a, b) => (b.o.veredito.chance ?? 0) - (a.o.veredito.chance ?? 0));
+        // Quem pode tenta a pública presencial; EAD paga é o plano B.
+        const ordemVia = p.estudo === 'alto' ? { sisu: 5, prouni: 4, selecao_publica: 4, fies: 3, privada: 2, ead: 1 } : { sisu: 4, selecao_publica: 4, prouni: 3, ead: 3, fies: 2, privada: 2 };
+        const nota = (x: typeof opcoes[number]) => ordemVia[x.o.via] + (x.o.veredito.chance ?? 0) * 2;
+        const preferidas = opcoes.sort((a, b) => nota(b) - nota(a));
         if (preferidas.length) out.push({ tipo: 'matricular', indice: preferidas[0].idx });
       }
       // Trabalho

@@ -21,7 +21,8 @@ import { compatibilidade } from './sistemas/social';
 import { alugar, morarJuntos, opcoesDeAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
 import { custoDeMudanca, iniciarAdocao, iniciarCnh, mudarAgora } from './sistemas/processos';
 import { modeloMoradia, modeloVeiculo, precoImovel } from './dados/bens';
-import { economiaLocal, nomeLugar } from './dados/lugares';
+import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
+import { curso } from './dados/cursos';
 import { limiteDeCredito, saldoMensal } from './sistemas/dinheiro';
 import { moraComFamiliaDeOrigem, rendaDomiciliar } from './sistemas/domicilio';
 import { gestacaoEmCurso } from './sistemas/familia';
@@ -38,6 +39,7 @@ export type Acao =
   | { tipo: 'enem' }
   | { tipo: 'matricular'; indice: number }
   | { tipo: 'trancar' }
+  | { tipo: 'destrancar' }
   | { tipo: 'abandonar_curso' }
   | { tipo: 'largar_escola' }
   | { tipo: 'voltar_a_estudar' }
@@ -89,6 +91,12 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return o.veredito;
     }
     case 'trancar': return v.educacao.matricula && !v.educacao.matricula.trancado ? PERMITIDO : bloqueio('incompativel', 'Não há curso para trancar.');
+    case 'destrancar': {
+      const m = v.educacao.matricula;
+      if (!m?.trancado) return bloqueio('incompativel', 'Não há curso trancado.');
+      if (m.modalidade === 'presencial' && m.municipioId !== v.moradia.municipioId) return bloqueio('incompativel', `O curso é presencial em ${municipio(m.municipioId).nome}; você mora em outra cidade.`);
+      return PERMITIDO;
+    }
     case 'abandonar_curso': return v.educacao.matricula ? PERMITIDO : bloqueio('incompativel', 'Não há curso.');
     case 'largar_escola':
       if (!v.educacao.basica) return bloqueio('incompativel', 'Você não está na escola.');
@@ -318,8 +326,16 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'trancar':
       v.educacao.matricula!.trancado = true;
+      v.educacao.matricula!.tTrancou = v.t;
       escrever(v, { texto: 'Trancou a matrícula da faculdade.', relevancia: 'biografia', tema: 'estudo', escolha: true });
       return ok('Matrícula trancada. Dá para voltar depois.');
+    case 'destrancar': {
+      const m = v.educacao.matricula!;
+      m.trancado = false;
+      m.tTrancou = undefined;
+      escrever(v, { texto: `Destrancou a matrícula e voltou para ${conteudoCurso(m.cursoId)}.`, relevancia: 'biografia', tema: 'estudo', escolha: true });
+      return ok('De volta ao curso.', 'bom');
+    }
     case 'abandonar_curso': {
       const m = v.educacao.matricula!;
       v.educacao.matricula = undefined;
@@ -467,7 +483,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
 }
 
 function conteudoCurso(id: string): string {
-  return ({ medicina: 'Medicina' } as Record<string, string>)[id] ?? id.replace(/_/g, ' ');
+  return curso(id).nome;
 }
 
 function pagar(v: Vida, valor: number): void {

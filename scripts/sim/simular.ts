@@ -213,7 +213,11 @@ for (const classe of ['vulneravel', 'trabalhadora', 'media_baixa', 'media', 'alt
   if (!vs.length) continue;
   const sup = vs.filter(s => ['superior', 'pos', 'mestrado', 'doutorado'].includes(s.vida.educacao.escolaridade)).length;
   const r40 = vs.map(s => s.anos.find(a => a.idade === 40)?.renda).filter((x): x is number => x !== undefined);
-  log(`- ${classe}: ${vs.length} vidas · superior ${sup} (${(100 * sup / vs.length).toFixed(0)}%) · renda aos 40 mediana R$ ${pct(r40, 0.5).toLocaleString('pt-BR')} · p90 R$ ${pct(r40, 0.9).toLocaleString('pt-BR')}`);
+  const grads = vs.map(s => ({ s, g: s.vida.educacao.concluidos.find(c => c.nivel === 'superior') })).filter(x => x.g);
+  const idadeGrad = grads.map(x => Math.floor((x.g!.tFim - x.s.vida.eu.tNasc) / 12));
+  const pub = grads.filter(x => x.g!.rede === 'publica').length, ead = grads.filter(x => x.g!.modalidade === 'ead').length;
+  const largou = vs.filter(s => s.vida.biografia.some(e => /^Largou .* no meio|^Abandonou o curso|foi cancelada pela instituição/.test(e.texto))).length;
+  log(`- ${classe}: ${vs.length} vidas · superior ${sup} (${(100 * sup / vs.length).toFixed(0)}%) · formatura aos ${pct(idadeGrad, 0.5)} (mediana) · pública ${pub} · EAD ${ead} · largou/perdeu curso ${largou} · renda aos 40 mediana R$ ${pct(r40, 0.5).toLocaleString('pt-BR')} · p90 R$ ${pct(r40, 0.9).toLocaleString('pt-BR')}`);
 }
 
 log('');

@@ -195,6 +195,8 @@ export interface Matricula {
   financiamento?: 'fies' | 'prouni';
   desempenho: number;
   trancado: boolean;
+  /** Quando trancou (a instituição cancela depois de quatro anos). */
+  tTrancou?: number;
   municipioId: string;
 }
 
@@ -204,7 +206,7 @@ export interface Educacao {
   /** Largou a escola básica sem concluir. */
   evadiu: boolean;
   matricula?: Matricula;
-  concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string }[];
+  concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean }[];
   enem: { t: number; nota: number }[];
   /** Postura do ano na escola/curso (escolha comportamental do jogador). */
   postura: 'dedicada' | 'normal' | 'relaxada';

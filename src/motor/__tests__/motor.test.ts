@@ -255,4 +255,40 @@ describe('ações', () => {
     expect(r.vida.momento?.situacaoId).toBe('trab_entrevista');
     expect(r.vida.trabalho.atual?.ocupacaoId).not.toBe('atendente');
   });
+
+  it('curso trancado pode ser retomado; depois de quatro anos a instituição cancela', () => {
+    let v = viverAte(nova({ semente: 21 }), 19);
+    v.educacao.basica = undefined;
+    v.educacao.escolaridade = 'medio';
+    v.educacao.matricula = { cursoId: 'pedagogia', instituicao: 'x', rede: 'privada', modalidade: 'ead', tInicio: v.t, mesesRestantes: 48, mensalidade: 0, desempenho: 60, trancado: false, municipioId: v.moradia.municipioId };
+    v = executar(v, { tipo: 'trancar' }).vida;
+    expect(v.educacao.matricula!.trancado).toBe(true);
+    v = executar(v, { tipo: 'destrancar' }).vida;
+    expect(v.educacao.matricula!.trancado).toBe(false);
+    v = executar(v, { tipo: 'trancar' }).vida;
+    v = viver(v, 5);
+    expect(v.educacao.matricula).toBeUndefined();
+    expect(v.biografia.some(e => /cancelada pela instituição/.test(e.texto))).toBe(true);
+  });
+
+  it('pedir aumento abre uma negociação; o jeito de pedir é escolha do jogador', () => {
+    let aumentos = 0, azedou = 0, testadas = 0;
+    for (let s = 1; s <= 30; s++) {
+      const v = viverAte(nova({ semente: s }), 30, vv => idade(vv) >= 18 && !vv.trabalho.atual ? [{ tipo: 'candidatar', ocupacaoId: 'atendente' }] : []);
+      if (!v.trabalho.atual || ['informal', 'autonomo'].includes(v.trabalho.atual.contrato)) continue;
+      v.trabalho.atual.tInicio = v.t - 24;
+      testadas++;
+      const antes = v.trabalho.atual.salario, desempenho = v.trabalho.atual.desempenho;
+      const r = executar(v, { tipo: 'pedir_aumento' });
+      expect(r.vida.momento?.situacaoId).toBe('trab_negociacao');
+      expect(r.vida.trabalho.atual!.salario).toBe(antes);
+      const depois = responder(r.vida, 'proposta');
+      expect(depois.momento).toBeFalsy();
+      if (depois.trabalho.atual!.salario > antes) aumentos++;
+      if (depois.trabalho.atual!.desempenho < desempenho - 5) azedou++;
+      expect(disponibilidade(depois, { tipo: 'pedir_aumento' }).grau).not.toBe('permitido');
+    }
+    expect(testadas).toBeGreaterThan(5);
+    expect(aumentos + azedou).toBeGreaterThan(0);
+  }, 60000);
 });
