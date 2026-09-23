@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Entrada, Vida } from '../../motor/tipos';
-import { anosDaBiografia } from '../apresentar';
+import { anosDaBiografia, faseDaVida } from '../apresentar';
 
 export function LinhaDaVida({ vida, marca }: { vida: Vida; marca: number }) {
   const [doComeco, setDoComeco] = useState(false);
@@ -32,9 +32,12 @@ export function LinhaDaVida({ vida, marca }: { vida: Vida; marca: number }) {
         {ordem.map((a, k) => {
           const anterior = ordem[k - 1];
           const salto = anterior ? Math.abs(anterior.idade - a.idade) : 1;
+          const fase = faseDaVida(a.idade);
+          const novoCapitulo = !anterior || faseDaVida(anterior.idade) !== fase;
           return (
             <li key={a.idade} className="ano">
-              {salto > 2 && <p className="ano__silencio" aria-hidden>· · ·</p>}
+              {novoCapitulo && <p className="ano__capitulo">{fase}</p>}
+              {!novoCapitulo && salto > 2 && <p className="ano__silencio" aria-hidden>· · ·</p>}
               <h3 className="ano__cabeca">
                 <span className="ano__idade">{a.idade === 0 ? 'Nascimento' : `${a.idade} ${a.idade === 1 ? 'ano' : 'anos'}`}</span>
                 <span className="ano__calendario">{a.ano}</span>
