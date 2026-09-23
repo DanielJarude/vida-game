@@ -280,6 +280,8 @@ details summary { cursor: pointer; }
 .momento__pessoas { display: flex; gap: var(--space-3); }
 .momento__pessoa { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); font-size: var(--type-caption); color: var(--text-muted); }
 .momento__pessoa .retrato { background: var(--bg-elevated); border-radius: 50%; }
+.momento__pessoa figcaption { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 120px; }
+.momento__relacao { font-size: var(--type-meta); color: var(--text-faint); }
 .momento__texto { font-family: var(--font-serif); font-size: var(--type-lead); line-height: var(--leading-prose); color: var(--text-secondary); user-select: text; }
 .momento__pergunta { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-faint); padding-top: var(--space-2); border-top: 1px solid var(--rule); }
 .momento__opcoes { display: flex; flex-direction: column; gap: var(--space-2); }

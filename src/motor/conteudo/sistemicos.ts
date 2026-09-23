@@ -282,7 +282,7 @@ export const SISTEMICOS: Conteudo[] = [
     titulo: c => `${c.p.pai.nome}`,
     texto: c => `${c.p.pai.nome} caiu em casa e passou a noite no chão até alguém chegar. O médico foi claro: não dá mais para morar sozinh${c.p.pai.genero === 'feminino' ? 'a' : 'o'}.`,
     opcoes: [
-      { id: 'trazer', texto: 'Trazer para morar com você', disponivel: c => (c.v.moradia.tipo === 'pais' ? false : true), comportamento: { familia: 2, generosidade: 1 },
+      { id: 'trazer', texto: 'Trazer para morar com você', disponivel: c => (c.v.moradia.tipo === 'pais' ? false : c.v.moradia.tipo === 'republica' || c.v.moradia.tipo === 'cedida' || c.v.moradia.padrao <= 2 ? 'Onde você mora não cabe mais ninguém.' : true), comportamento: { familia: 2, generosidade: 1 },
         resolver: c => ({ texto: `${c.p.pai.nome} veio com duas malas e uma caixa de fotografias.`, memoria: `Levou ${c.p.pai.nome} para morar junto na velhice.`, relevancia: 'marco', efeito: () => { const vin = c.v.vinculos[c.p.pai.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.pai.municipioId = c.v.moradia.municipioId; prox(c, 'pai', 12); estresse(c, 10); for (const par of P.conjuge(c.v)) tensaoPessoa(c, par.id, 15); } }) },
       { id: 'cuidadora', texto: 'Pagar uma cuidadora', comportamento: { familia: 1 },
         resolver: c => ({ texto: 'Uma cuidadora passou a dormir lá. O custo entrou no orçamento de todo mês.', memoria: `Contratou uma cuidadora para ${c.p.pai.nome}.`, efeito: () => { fato(c, `paga_cuidadora_${c.p.pai.id}`); prox(c, 'pai', 4); } }) },

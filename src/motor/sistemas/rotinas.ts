@@ -16,6 +16,7 @@ import { ROTINAS_SOCIAIS } from './social';
 import { CUSTO_ROTINA, ROTULO_ROTINA_CUSTO } from './dinheiro';
 import { aplicarPersonalidade } from '../personalidade';
 import { moraComFamiliaDeOrigem } from './domicilio';
+import { economiaLocal } from '../dados/lugares';
 
 export interface ModeloRotina {
   id: string;
@@ -175,6 +176,10 @@ export function tempoLivre(v: Vida): number {
   if (m && !m.trancado) t -= m.modalidade === 'ead' ? 0.5 : m.cursoId && ['medicina', 'residencia', 'eng_civil', 'computacao', 'arquitetura', 'enfermagem', 'agronomia', 'mestrado', 'doutorado'].includes(m.cursoId) ? 1.5 : 0.75;
   const pequenos = filhos(v).filter(f => idadePessoa(v, f) < 6 && v.vinculos[f.id].convivio.includes('casa')).length;
   t -= Math.min(1.5, pequenos * 0.75);
+  // Condução própria devolve as horas perdidas no ônibus, onde o transporte é ruim.
+  const temConducao = v.financas.bens.some(b => b.tipo === 'veiculo' && !b.modeloId.startsWith('bike'));
+  if (temConducao && (e || m) && economiaLocal(v.moradia.municipioId).transporte !== 'bom') t += 0.5;
+  else if (!temConducao && (e || m) && economiaLocal(v.moradia.municipioId).transporte === 'ruim' && i >= 18) t -= 0.25;
   return Math.max(0.5, t);
 }
 

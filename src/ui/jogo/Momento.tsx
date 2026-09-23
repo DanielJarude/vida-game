@@ -8,6 +8,7 @@ import type { Acao } from '../../motor/acoes';
 import { Folha } from '../comum';
 import { Retrato } from '../avatar/Retrato';
 import { idadePessoa } from '../../motor/nucleo';
+import { rotuloDe } from '../apresentar';
 
 const TEMA_ROTULO: Record<string, string> = {
   infancia: 'Infância', familia: 'Família', amizade: 'Amizade', amor: 'Amor', escola: 'Escola', estudo: 'Estudos',
@@ -28,7 +29,10 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
             {pessoas.map(p => (
               <figure key={p.id} className="momento__pessoa">
                 <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={56} especie={p.especie} rotulo={p.nome || 'Bebê'} />
-                <figcaption>{p.nome || 'bebê'}</figcaption>
+                <figcaption>
+                  <span>{p.nome || 'bebê'}</span>
+                  {vida.vinculos[p.id] && <span className="momento__relacao">{rotuloDe(vida, p, vida.vinculos[p.id])}</span>}
+                </figcaption>
               </figure>
             ))}
           </div>
