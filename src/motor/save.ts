@@ -131,12 +131,6 @@ const ESCOLARIDADE: Record<string, Escolaridade> = {
   medio_incompleto: 'medio_incompleto', medio_completo: 'medio', tecnico: 'tecnico',
   superior_incompleto: 'superior_incompleto', superior_completo: 'superior', pos_graduacao: 'pos'
 };
-const CURSO: Record<string, string> = {
-  tec_ti: 'tec_informatica', tec_eletrotecnica: 'tec_eletrotecnica', tec_enfermagem: 'tec_enfermagem', tec_adm: 'tec_administracao',
-  sup_medicina: 'medicina', sup_direito: 'direito', sup_eng_software: 'computacao', sup_eng_civil: 'eng_civil', sup_adm: 'administracao',
-  sup_enfermagem: 'enfermagem', sup_psicologia: 'psicologia', sup_pedagogia: 'pedagogia', sup_design: 'design', sup_ed_fisica: 'ed_fisica',
-  sup_economia: 'economia', pos_mba_executivo: 'mba', pos_especializacao_medica: 'residencia'
-};
 const CURSO_POR_NOME: [RegExp, string][] = [
   [/medicina/i, 'medicina'], [/direito/i, 'direito'], [/software|computa/i, 'computacao'], [/civil/i, 'eng_civil'],
   [/administra/i, 'administracao'], [/enfermagem/i, 'enfermagem'], [/psicolog/i, 'psicologia'], [/pedagog|licencia/i, 'pedagogia'],

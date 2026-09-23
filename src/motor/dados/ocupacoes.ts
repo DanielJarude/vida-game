@@ -164,6 +164,14 @@ export const ocupacaoOuNula = (id: string) => POR_ID.get(id);
 
 export const ROTULO_NIVEL = ['aprendiz', 'entrada', 'intermediário', 'profissional', 'sênior', 'liderança'];
 
+export const ROTULO_TRILHA: Record<string, string> = {
+  informal: 'trabalho informal', cuidado: 'cuidado de pessoas', transporte: 'transporte', beleza: 'beleza', comercio: 'comércio',
+  alimentacao: 'alimentação', administrativo: 'administração', ti: 'tecnologia', enfermagem: 'enfermagem', medicina: 'medicina',
+  psicologia: 'psicologia', nutricao: 'nutrição', educacao_fisica: 'educação física', direito: 'direito', engenharia: 'engenharia',
+  educacao: 'educação', construcao: 'construção', manutencao: 'manutenção', agro: 'agropecuária', design: 'design',
+  financas: 'finanças', publico: 'serviço público'
+};
+
 /** Ocupações típicas dos pais por classe — para gerar a família de origem. */
 export const OCUPACOES_POR_CLASSE: Record<string, string[]> = {
   vulneravel: ['ambulante', 'diarista', 'ajudante_obras', 'trabalhador_rural', 'manicure', 'aux_cozinha', 'entregador_app', 'cuidador'],

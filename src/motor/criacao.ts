@@ -29,6 +29,8 @@ export interface OpcoesCriacao {
   visual?: Visual;
   /** Concordância usada no texto (pessoas não binárias escolhem). */
   tratamento?: Genero;
+  /** Pele, olhos e cor do cabelo vêm dos pais (o estilo de cabelo continua o escolhido). */
+  herdarCores?: boolean;
   semente: number;
   ano?: number;
 }
@@ -170,7 +172,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const pai = temPai ? criarPessoa(v, r, { genero: 'masculino', idade: idadePai, municipioId: cidade, sobrenome: sob }) : undefined;
 
   // Traços herdados: o bebê puxa os pais (salvo se o jogador escolheu a aparência).
-  if (!o.visual) {
+  if (!o.visual || o.herdarCores) {
     const herd = visualHerdado(r, o.genero, mae.visual, pai?.visual);
     v.eu.visual = { ...v.eu.visual, pele: herd.pele, corCabelo: herd.corCabelo, olhos: herd.olhos };
   }

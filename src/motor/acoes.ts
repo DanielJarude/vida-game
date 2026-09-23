@@ -61,7 +61,9 @@ export type Acao =
   | { tipo: 'estilo'; valor: EstiloDeVida }
   | { tipo: 'plano_saude'; ativo: boolean }
   | { tipo: 'renegociar' }
-  | { tipo: 'cnh' };
+  | { tipo: 'cnh' }
+  /** Por quem o personagem se interessa — identidade, não comportamento. */
+  | { tipo: 'atracao'; valor?: Vida['eu']['atracao'] };
 
 export const LIMITE_INTERACOES = 5;
 export const LIMITE_CANDIDATURAS = 3;
@@ -178,6 +180,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const cartao = v.financas.dividas.find(d => d.tipo === 'cartao');
       return cartao || v.financas.negativado ? PERMITIDO : bloqueio('incompativel', 'Não há dívida cara para renegociar.');
     }
+    case 'atracao': return i >= 13 ? PERMITIDO : bloqueio('impossivel', 'Ainda é cedo para isso.');
     case 'cnh':
       if (i < 18) return bloqueio('ilegal', 'A CNH é a partir dos 18.');
       if (v.trabalho.licencas.includes('cnh')) return bloqueio('incompativel', 'Você já tem carteira.');
@@ -445,6 +448,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       escrever(v, { texto: 'Fechou um acordo para renegociar as dívidas e limpar o nome.', relevancia: 'biografia', tema: 'dinheiro', escolha: true });
       return ok('Acordo fechado: parcelas fixas, juros menores, nome limpo.', 'bom');
     }
+    case 'atracao':
+      v.eu.atracao = a.valor;
+      return ok('Anotado.');
     case 'cnh':
       pagar(v, custoCnh(v));
       iniciarCnh(v);

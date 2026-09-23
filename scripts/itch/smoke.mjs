@@ -161,10 +161,11 @@ const CHAVE = 'VIDA_GAME_SAVE_V1'; // igual a SAVE_KEY em saveSystem.ts
 // Save REAL, produzido pelos construtores do jogo (scripts/itch/gerarSaveReal.ts).
 // Um objeto inventado à mão seria descartado por `migrarEstadoSalvo` e o teste
 // estaria medindo a rejeição do save, não a retomada da partida.
-const saveReal = execFileSync('npx', ['tsx', 'scripts/itch/gerarSaveReal.ts'], {
+const bundleSave = execFileSync('npx', ['esbuild', 'scripts/itch/gerarSaveReal.ts', '--bundle', '--platform=node', '--log-level=error'], {
   cwd: raiz,
   encoding: 'utf-8'
-}).trim();
+});
+const saveReal = execFileSync('node', ['-'], { cwd: raiz, input: bundleSave, encoding: 'utf-8' }).trim();
 window.localStorage.setItem(CHAVE, saveReal);
 
 const dom2 = montar();
