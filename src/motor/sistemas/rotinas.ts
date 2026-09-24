@@ -131,7 +131,8 @@ export const ROTINAS: readonly ModeloRotina[] = [
     id: 'futebol', nome: 'Jogar bola', descricao: 'Pelada no campinho, futsal na quadra, time do bairro.', categoria: 'esporte', idadeMin: 5,
     niveis: [
       { rotulo: 'Pelada, por diversão', tempo: 0.5, custo: 0, qualidade: 0.8 },
-      { rotulo: 'Escolinha ou time', tempo: 1, custo: 90, qualidade: 1.15, requer: pago(90, 'futebol') },
+      // Todo bairro tem um time: o futebol regular não depende de dinheiro em casa (a chuteira, sim, um pouco).
+      { rotulo: 'Escolinha ou time do bairro', tempo: 1, custo: 40, qualidade: 1.1 },
       { rotulo: 'Treino de base, todo dia', tempo: 2, custo: 0, qualidade: 1.45, requer: naBase('futebol') }
     ],
     pratica: { futebol: 1 }, social: { onde: 'no futebol', fluxo: 1.2, amplitude: 4 },

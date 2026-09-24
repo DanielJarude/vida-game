@@ -3,6 +3,8 @@
  * Existe para que quem entrou na história continue nela.
  */
 
+import { CURSOS_NPC } from '../sistemas/filhos';
+import { curso } from '../dados/cursos';
 import type { Conteudo, Ctx } from './base';
 import { mudarAgora } from '../sistemas/processos';
 import { MUNICIPIOS, economiaLocal, municipio } from '../dados/lugares';
@@ -12,10 +14,9 @@ import { idadePessoa, lembrarCom, temFato } from '../nucleo';
 import { anoDe } from '../tempo';
 import { criarPessoa, vincular } from '../pessoas';
 
-const CURSOS_FILHO = ['Direito', 'Enfermagem', 'Engenharia Civil', 'Administração', 'Pedagogia', 'Ciência da Computação', 'Psicologia', 'Ciências Contábeis'];
-const cursoDoFilho = (c: Ctx) => CURSOS_FILHO[c.v.fatos[`fil_curso_${c.p.filho.id}`] ?? 3] ?? 'Administração';
+const cursoDoFilho = (c: Ctx) => curso(CURSOS_NPC[c.v.fatos[`fil_curso_${c.p.filho.id}`] ?? 0] ?? 'administracao').nome;
 const mensalidadeFilho = (c: Ctx) => {
-  const base = ({ Direito: 1500, Enfermagem: 1300, 'Engenharia Civil': 1700, 'Ciência da Computação': 1400, Psicologia: 1400 } as Record<string, number>)[cursoDoFilho(c)] ?? 1000;
+  const base = curso(CURSOS_NPC[c.v.fatos[`fil_curso_${c.p.filho.id}`] ?? 0] ?? 'administracao').mensalidade;
   return Math.round(base * economiaLocal(c.v.moradia.municipioId).custo / 10) * 10;
 };
 

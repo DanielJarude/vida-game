@@ -20,7 +20,8 @@ import type { Pessoa, TipoEvento, TipoTrajetoria, Vida, Vinculo, Relevancia } fr
 import { emRecessao, escrever, idade, idadePessoa, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { OCUPACOES, OCUPACOES_POR_CLASSE, ocupacao, type Ocupacao } from '../dados/ocupacoes';
-import type { AreaFormacao } from '../dados/cursos';
+import { ORDEM_NIVEL, curso, cursoPorNome, type AreaFormacao } from '../dados/cursos';
+import { degrausAcima } from './trabalho';
 import { liquido, salarioLocal } from './renda';
 import { rendaPerCapita } from './domicilio';
 import { sortearNome } from '../dados/nomes';
@@ -29,16 +30,30 @@ import { flex, ge } from '../texto';
 import { anoDe, MESES, mesDe } from '../tempo';
 import { faseDeIdade, mesmaCidade, moraJunto } from './vinculos';
 
-/** Cursos que os descendentes fazem: nome, ocupação de entrada, área de formação. */
-export const CURSOS_DOS_FILHOS: [curso: string, ocupacaoId: string, area: AreaFormacao][] = [
-  ['Direito', 'advogado_jr', 'direito'], ['Enfermagem', 'enfermeiro', 'enfermagem'], ['Engenharia Civil', 'eng_jr', 'engenharia_civil'],
-  ['Administração', 'analista_adm', 'administracao'], ['Pedagogia', 'professor_fund', 'educacao'], ['Ciência da Computação', 'dev_jr', 'computacao'],
-  ['Psicologia', 'psicologo', 'psicologia'], ['Ciências Contábeis', 'contador', 'contabilidade']
+/**
+ * Os descendentes usam o MESMO catálogo do jogador (cursos, ocupações,
+ * escadas) — numa trajetória simplificada, sem rodar o motor inteiro.
+ * Os cursos mais comuns aparecem mais vezes na lista (é o peso do sorteio).
+ */
+export const CURSOS_NPC: string[] = [
+  'administracao', 'administracao', 'direito', 'direito', 'pedagogia', 'pedagogia', 'enfermagem', 'contabeis', 'contabeis', 'computacao',
+  'ads', 'eng_civil', 'psicologia', 'ed_fisica', 'fisioterapia', 'nutricao', 'licenciatura', 'letras', 'jornalismo', 'publicidade',
+  'design', 'arquitetura', 'farmacia', 'odontologia', 'veterinaria', 'agronomia', 'economia', 'eng_producao', 'eng_mecanica', 'medicina'
 ];
-const TECNICOS: [curso: string, ocupacaoId: string, area: AreaFormacao][] = [
-  ['Técnico em Enfermagem', 'tec_enfermagem', 'enfermagem'], ['Técnico em Informática', 'suporte_ti', 'computacao'], ['Técnico em Eletrotécnica', 'tecnico_industrial', 'eletrotecnica']
-];
-const areaDoCurso = (curso?: string) => [...CURSOS_DOS_FILHOS, ...TECNICOS].find(c => c[0] === curso)?.[2];
+const TECNICOS_NPC = ['tec_enfermagem', 'tec_informatica', 'tec_eletrotecnica', 'tec_administracao', 'tec_mecanica', 'tec_logistica', 'tec_edificacoes', 'tec_seguranca', 'tec_agropecuaria', 'tec_radiologia'];
+const OFICIOS_NPC = ['q_barbeiro', 'q_cabeleireiro', 'q_eletricista', 'q_solda', 'q_mecanica', 'q_cozinha', 'q_confeitaria', 'q_empilhadeira'];
+const nomeCurso = (id: string) => curso(id).nome;
+const areaDoCurso = (nome?: string): AreaFormacao | undefined => cursoPorNome(nome)?.area;
+const nivelDoCurso = (nome?: string) => cursoPorNome(nome)?.nivel;
+
+/** A ocupação de entrada que uma formação abre (a mesma regra do jogador: área e nível, sem estrada exigida). */
+export function entradaDaFormacao(cursoNome?: string): Ocupacao | undefined {
+  const c = cursoPorNome(cursoNome);
+  if (!c) return undefined;
+  const lista = OCUPACOES.filter(oc => oc.area?.includes(c.area) && !oc.experiencia && !oc.concurso && !oc.entrada && oc.contrato !== 'estagio' && oc.contrato !== 'aprendiz'
+    && ORDEM_NIVEL[oc.nivelCurso ?? 'livre'] <= ORDEM_NIVEL[c.nivel]);
+  return lista.sort((a, b) => b.nivel - a.nivel || b.salario - a.salario)[0];
+}
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -238,9 +253,15 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
     v.fatos[`fil_quer_${k}`] = quer ? 1 : 0;
     if (!quer) {
       if (r.chance(0.3 + Math.max(0, vida.aptidao) * 0.3)) {
-        const [curso] = r.pick(TECNICOS);
-        f.estudo = { curso, paga: 'publica', tFim: v.t + 24, nivel: 'tecnico' };
-        comunicar(v, f, cota, { texto: `${f.nome} entrou num curso técnico: ${curso}.`, tipo: 'estudo', relevancia: rel, marco: doJogador ? `Entrou no ${curso}.` : undefined });
+        const cursoT = nomeCurso(r.pick(TECNICOS_NPC));
+        f.estudo = { curso: cursoT, paga: 'publica', tFim: v.t + 24, nivel: 'tecnico' };
+        comunicar(v, f, cota, { texto: `${f.nome} entrou num curso técnico: ${cursoT}.`, tipo: 'estudo', relevancia: rel, marco: doJogador ? `Entrou no ${cursoT}.` : undefined });
+      } else if (r.chance(0.35)) {
+        // Aprender um ofício: um curso curto de qualificação e o mundo do trabalho.
+        const q = curso(r.pick(OFICIOS_NPC));
+        vida.parouDeEstudar = true;
+        f.formacao = q.nome;
+        comunicar(v, f, cota, { texto: `${f.nome} não quis faculdade: fez um curso de ${q.nome.replace(/^Curso de /, '').toLowerCase()} e foi trabalhar.`, tipo: 'estudo', relevancia: 'cotidiano' });
       } else {
         vida.parouDeEstudar = true;
         comunicar(v, f, cota, { texto: `${f.nome} não quis fazer faculdade: foi trabalhar.`, tipo: 'estudo', relevancia: 'cotidiano' });
@@ -250,8 +271,8 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
   }
   if (i >= 17 && i <= 21 && v.fatos[`fil_quer_${k}`] === 1 && !f.formacao && v.fatos[`fil_vest_privada_${k}`] === undefined && !f.estudo) {
     const pc = doJogador && moraJunto(vin) ? rendaPerCapita(v) : 1500;
-    const idx = Math.floor(hash(k + 'curso') * CURSOS_DOS_FILHOS.length);
-    const [curso] = CURSOS_DOS_FILHOS[idx];
+    const idx = Math.floor(hash(k + 'curso') * CURSOS_NPC.length);
+    const curso = nomeCurso(CURSOS_NPC[idx]);
     const escolaPrivada = doJogador && temFato(v, 'filhos_escola_privada') ? 0.22 : 0;
     const chancePublica = clamp(0.16 + escolaPrivada + (pc > 2600 ? 0.08 : 0) + vida.aptidao * 0.3 + ((vin.presenca ?? 30) > 60 ? 0.05 : 0), 0.04, 0.8);
     if (r.chance(chancePublica)) {
@@ -305,8 +326,7 @@ function formar(v: Vida, f: Pessoa, cota: Cota, rel: Relevancia, doJogador: bool
   f.estudo = undefined;
   f.formacao = e.curso;
   vida.escolaridade = e.nivel === 'tecnico' ? 'tecnico' : 'superior';
-  const entrada = [...CURSOS_DOS_FILHOS, ...TECNICOS].find(c => c[0] === e.curso)?.[1] ?? 'analista_adm';
-  const oc = ocupacao(entrada);
+  const oc = entradaDaFormacao(e.curso) ?? ocupacao('aux_adm');
   const primeiro = doJogador && e.nivel !== 'tecnico' && !v.educacao.concluidos.some(c => c.nivel === 'superior');
   const foi = doJogador && v.vinculos[f.id]?.proximidade >= 40;
   comunicar(v, f, cota, {
@@ -331,7 +351,9 @@ function empregar(v: Vida, f: Pessoa, oc: Ocupacao): void {
 /** Ocupações a que a pessoa tem acesso pela formação, experiência e idade. */
 function acessivel(f: Pessoa, o: Ocupacao, i: number): boolean {
   const vida = f.vida!;
-  if (o.concurso || o.contrato === 'estagio' || o.contrato === 'aprendiz' || o.idadeMin > i) return false;
+  if (o.concurso || o.entrada || o.contrato === 'estagio' || o.contrato === 'aprendiz' || o.idadeMin > i || o.forma) return false;
+  // Ofício que pede habilidade (música, desenho): NPC sem frentes só chega pela formação equivalente.
+  if (o.habilidade && !(o.habilidade.ouFormacao && o.area)) return false;
   const mesmaTrilha = !!f.ocupacaoId && ocupacao(f.ocupacaoId).trilha === o.trilha;
   if (o.experiencia && (!mesmaTrilha || o.experiencia > vida.experiencia)) return false;
   if (o.escolaridade === 'superior' && vida.escolaridade !== 'superior') return false;
@@ -339,7 +361,7 @@ function acessivel(f: Pessoa, o: Ocupacao, i: number): boolean {
   if (o.area && !o.area.includes('qualquer')) {
     const area = areaDoCurso(f.formacao);
     if (!area || !o.area.includes(area)) return false;
-    if (o.nivelCurso === 'superior' && vida.escolaridade !== 'superior') return false;
+    if (ORDEM_NIVEL[nivelDoCurso(f.formacao) ?? 'livre'] < ORDEM_NIVEL[o.nivelCurso ?? 'livre']) return false;
   }
   if (o.veiculo || (o.licenca && o.licenca !== 'oab' && o.licenca !== 'crea' && o.licenca !== 'coren' && o.licenca !== 'crp')) return false;
   return true;
@@ -361,10 +383,16 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
   if (f.renda === 0 && !f.estudo?.nivel) {
     const chance = f.aperto?.tipo === 'desemprego' ? 0.55 : 0.8;
     if (!r.chance(chance * (emRecessao(v) ? 0.7 : 1))) return;
-    const naArea = f.formacao ? ocupacao([...CURSOS_DOS_FILHOS, ...TECNICOS].find(c => c[0] === f.formacao)?.[1] ?? 'analista_adm') : undefined;
+    const naArea = entradaDaFormacao(f.formacao);
     let escolhida = naArea && acessivel(f, naArea, i) ? naArea : undefined;
+    // Concurso: alguns descendentes estudam e passam (a mesma taxonomia de cargos públicos).
+    if (!escolhida && i >= 19 && i <= 40 && vida.escolaridade !== 'fundamental' && r.chance(0.08 + Math.max(0, vida.aptidao) * 0.1)) {
+      const cargos = ['tecnico_publico', 'agente_saude', 'professor_concursado', 'soldado_pm', 'escriturario_banco', 'guarda_municipal'].map(ocupacao)
+        .filter(o => (o.escolaridade ? (o.escolaridade === 'superior' ? vida.escolaridade === 'superior' : vida.escolaridade !== 'fundamental') : true) && (!o.area || areaDoCurso(f.formacao) && o.area.includes(areaDoCurso(f.formacao)!)));
+      if (cargos.length) escolhida = r.pick(cargos);
+    }
     if (!escolhida) {
-      const base = OCUPACOES_POR_CLASSE[vida.escolaridade === 'fundamental' ? 'vulneravel' : vida.escolaridade === 'medio' ? 'trabalhadora' : 'media_baixa'].map(id => ocupacao(id));
+      const base = OCUPACOES_POR_CLASSE[vida.escolaridade === 'fundamental' ? 'vulneravel' : vida.escolaridade === 'medio' || vida.escolaridade === 'tecnico' ? 'trabalhadora' : 'media_baixa'].map(id => ocupacao(id));
       const lista = base.filter(o => acessivel(f, o, i) && o.nivel <= 2);
       escolhida = lista.length ? r.pick(lista) : ocupacao('atendente');
     }
@@ -391,7 +419,8 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
     return;
   }
   // Promoção: depende do tempo no cargo, da experiência e da pessoa — não só da idade.
-  const proximos = OCUPACOES.filter(o => o.trilha === oc.trilha && o.nivel === oc.nivel + 1 && acessivel(f, o, i));
+  // A mesma escada do jogador (degraus da trilha), com os mesmos requisitos de formação e estrada.
+  const proximos = degrausAcima(oc).filter(o => acessivel(f, o, i) || (oc.promocao === 'antiguidade' && o.promocao === 'antiguidade'));
   if (proximos.length && anosNoCargo >= 2) {
     const chance = clamp(0.22 + vida.aptidao * 0.15 + Math.min(0.15, (anosNoCargo - 2) * 0.04) - (emRecessao(v) ? 0.1 : 0), 0.05, 0.6);
     if (r.chance(chance)) {
@@ -405,7 +434,7 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
   const jaExplicado = v.fatos[`parado_${f.id}`] === vida.tCargo;
   if (anosNoCargo >= 5 && !jaExplicado && i < 58) {
     v.fatos[`parado_${f.id}`] = vida.tCargo ?? v.t;
-    const acima = OCUPACOES.filter(o => o.trilha === oc.trilha && o.nivel === oc.nivel + 1 && !o.concurso);
+    const acima = degrausAcima(oc);
     if (proximos.length) {
       // Existe o degrau e ela pode subir: a espera conta a favor na próxima chance.
       comunicar(v, f, cota, { texto: `${f.nome} segue como ${f.ocupacao}, esperando uma vaga acima que não abre.`, tipo: 'trabalho', relevancia: 'tecnico' });
@@ -416,7 +445,7 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
     const pedeDiploma = acima.some(o => o.area || o.escolaridade === 'superior');
     const troca = !f.formacao && vida.aptidao > -0.1 && r.chance(0.35);
     if (troca && pedeDiploma) {
-      f.estudo = { curso: CURSOS_DOS_FILHOS[Math.floor(hash(f.id + 'volta') * CURSOS_DOS_FILHOS.length)][0], paga: 'propria', tFim: v.t + 60, nivel: 'superior' };
+      f.estudo = { curso: nomeCurso(CURSOS_NPC[Math.floor(hash(f.id + 'volta') * CURSOS_NPC.length)]), paga: 'propria', tFim: v.t + 60, nivel: 'superior' };
       vida.parouDeEstudar = false;
       comunicar(v, f, cota, { texto: `${f.nome}, depois de anos como ${f.ocupacao}, voltou a estudar à noite: ${f.estudo.curso}.`, tipo: 'estudo', relevancia: doJogador ? 'biografia' : 'cotidiano', marco: doJogador ? `Voltou a estudar, adult${flex(f.genero, 'o', 'a', 'e')}.` : undefined });
       return;

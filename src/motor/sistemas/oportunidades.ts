@@ -81,7 +81,8 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   // Indicação: gente que você conhece, trabalhando em algum lugar.
   if (i >= 17 && i <= 64 && (semTrabalho(v) || trabalhoFraco(v)) && !v.trabalho.aposentadoria && podeGerar(v, 'indicacao', 1)) {
     const conhecidos = vinculosVivos(v).filter(x => x.p.ocupacaoId && x.p.renda > 0 && x.p.municipioId === v.moradia.municipioId && idadePessoa(v, x.p) >= 18 && x.vin.proximidade >= 40 && !x.p.especie);
-    const chance = clamp(0.1 + conhecidos.length * 0.05, 0, 0.55) * (semTrabalho(v) ? 1 : 0.5);
+    // Quem está sem trabalho ou no informal é quem mais recebe indicação (e quem mais precisa).
+    const chance = clamp(0.1 + conhecidos.length * 0.05, 0, 0.55) * (semTrabalho(v) ? 1 : v.trabalho.atual?.contrato === 'informal' ? 0.8 : 0.5);
     if (conhecidos.length && r.chance(chance)) {
       const quem = r.pick(conhecidos);
       const trilha = ocupacao(quem.p.ocupacaoId!).trilha;

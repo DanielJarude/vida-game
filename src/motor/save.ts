@@ -32,6 +32,7 @@ import { visualAleatorio } from './pessoas';
 import { capitalDoEstado, nivelEsc } from './sistemas/escola';
 import { aptidao, MATERIAS } from './sistemas/frentes';
 import { modeloRotina } from './sistemas/rotinas';
+import { CURSOS_NPC } from './sistemas/filhos';
 
 export const VERSAO_SAVE = 8;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
@@ -233,6 +234,13 @@ export function migrarV7(v: Vida): Vida {
     if (!x.caminhos.marcas.some(m => m.tipo === 'formacao' && m.t === c.tFim)) x.caminhos.marcas.push({ t: c.tFim, tipo: 'formacao', texto: `Concluiu ${c.nome}.`, peso: c.nivel === 'superior' || c.nivel === 'tecnico' ? 3 : 2 });
   }
   x.caminhos.marcas.sort((a, b) => a.t - b.t);
+  // O curso pendente de um filho (decisão da particular) apontava para a lista antiga de 8 cursos.
+  const ANTIGOS = ['direito', 'enfermagem', 'eng_civil', 'administracao', 'pedagogia', 'computacao', 'psicologia', 'contabeis'];
+  for (const k of Object.keys(x.fatos)) {
+    if (!k.startsWith('fil_curso_')) continue;
+    const novo = CURSOS_NPC.indexOf(ANTIGOS[x.fatos[k]] ?? 'administracao');
+    x.fatos[k] = novo >= 0 ? novo : 0;
+  }
   return x;
 }
 
