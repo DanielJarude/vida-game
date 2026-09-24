@@ -13,6 +13,7 @@ import { municipio } from '../dados/lugares';
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 import { curso } from '../dados/cursos';
+import { em } from '../sistemas/escola';
 
 
 /** A recessão contada a partir de onde a pessoa está: empregada, estudando, aposentada. */
@@ -23,7 +24,7 @@ function textoDeRecessao(c: Ctx): string {
   if (v.trabalho.aposentadoria) return `${abertura}. A aposentadoria não mudou, mas o supermercado sim: a lista do mês encolheu.`;
   if (e && e.contrato === 'servidor') return `${abertura}. No serviço público o emprego ficou, mas o reajuste foi congelado e os colegas de fora começaram a ser demitidos.`;
   if (e && (e.contrato === 'autonomo' || e.contrato === 'informal')) return `${abertura}. Os clientes sumiram primeiro: quem pagava à vista passou a pedir fiado.`;
-  if (e) return `${abertura}. Em ${e.empregador}, a palavra "corte" começou a aparecer nas reuniões.`;
+  if (e) return `${abertura}. ${em(e.empregador).charAt(0).toUpperCase()}${em(e.empregador).slice(1)}, a palavra "corte" começou a aparecer nas reuniões.`;
   if (v.educacao.matricula) return `${abertura}. Os estágios minguaram, e os veteranos formados voltaram para a casa dos pais.`;
   return `${abertura}: fábricas demitindo, lojas fechando, e as vagas que sobraram pedindo experiência.`;
 }

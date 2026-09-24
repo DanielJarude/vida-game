@@ -310,7 +310,7 @@ export const CAMINHOS: Conteudo[] = [
     narrar: c => {
       const e = c.v.trabalho.atual!;
       const texto = c.r.pick([
-        `Na reunião de fim de ano, ${e.empregador.replace(/^(uma|um|a|o) /, 'a chefia de ')} citou o seu trabalho como exemplo. O nome entrou na conversa da próxima promoção.`,
+        `Na reunião de fim de ano, a chefia ${e.empregador.replace(/^o /, 'do ').replace(/^a /, 'da ').replace(/^(uma|um) /, 'de $1 ')} citou o seu trabalho como exemplo. O nome entrou na conversa da próxima promoção.`,
         'Um projeto difícil saiu bem por sua causa, e todo mundo ficou sabendo.',
         'Passaram a mandar os casos mais complicados direto para você.'
       ]);

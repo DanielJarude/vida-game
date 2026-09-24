@@ -757,7 +757,7 @@ export type TipoMarcaCaminho =
   | 'primeiro_emprego' | 'formacao' | 'ingresso' | 'promocao' | 'demissao' | 'mudanca_carreira'
   | 'aprovacao' | 'reprovacao' | 'profissional' | 'fim_carreira' | 'negocio_aberto' | 'negocio_fechado'
   | 'volta_estudos' | 'aposentadoria' | 'lideranca' | 'estagnacao' | 'mudanca_cidade'
-  | 'transferencia' | 'reserva' | 'pausa' | 'retorno' | 'prisao' | 'saida_prisao' | 'recomeco';
+  | 'transferencia' | 'reserva' | 'pausa' | 'retorno' | 'prisao' | 'saida_prisao' | 'recomeco' | 'desvio';
 
 /** Um marco do caminho profissional/educacional, estruturado (dado para a Linha da Vida). */
 export interface MarcaCaminho {

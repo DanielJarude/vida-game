@@ -152,7 +152,7 @@ export function processarConcursos(v: Vida, r: Rng): void {
     if (oc.forma && v.corpo.forma < oc.forma) {
       v.fatos[`concurso_${oc.id}`] = tentativas;
       escrever(v, { texto: `Passou na prova escrita para ${nomeOcupacao(v, oc)}, mas não no teste físico.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
-      marcar(v, 'reprovacao', `Reprovado no teste físico: ${nomeOcupacao(v, oc)}.`, 1, { ocupacaoId: oc.id });
+      marcar(v, 'reprovacao', `${flex(ge(v), 'Reprovado', 'Reprovada', 'Reprovade')} no teste físico: ${nomeOcupacao(v, oc)}.`, 1, { ocupacaoId: oc.id });
       continue;
     }
     const sorte = r.next();
@@ -176,7 +176,7 @@ export function processarConcursos(v: Vida, r: Rng): void {
         : `Mais uma reprovação no concurso para ${nomeOcupacao(v, oc)} — a ${tentativas}ª${perto ? ', agora mais perto' : ''}.`,
       relevancia: tentativas === 1 || tentativas % 3 === 0 || perto ? 'cotidiano' : 'tecnico', tema: 'trabalho', tom: 'ruim'
     });
-    marcar(v, 'reprovacao', `Reprovado no concurso para ${nomeOcupacao(v, oc)} (${tentativas}ª vez).`, 1, { ocupacaoId: oc.id });
+    marcar(v, 'reprovacao', `${flex(ge(v), 'Reprovado', 'Reprovada', 'Reprovade')} no concurso para ${nomeOcupacao(v, oc)} (${tentativas}ª vez).`, 1, { ocupacaoId: oc.id });
     // O resultado vem com a nota: dá para saber o que pesou.
     const p = perfilConcurso(oc.id);
     const fraca = [...p.materias].sort((a, b) => habilidade(v, a) - habilidade(v, b))[0];

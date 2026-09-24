@@ -29,7 +29,7 @@ import { ORDEM_NIVEL, ROTULO_AREA, cursoOuNulo } from '../dados/cursos';
 import { forcaDoSetor, sobraNaEpoca } from '../dados/mercado';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { contribui, liquido, salarioLocal, SALARIO_MINIMO, TETO_INSS } from './renda';
-import { nivelEsc, ROTULO_ESCOLARIDADE, temEscolaridade } from './escola';
+import { em, nivelEsc, ROTULO_ESCOLARIDADE, temEscolaridade } from './escola';
 import { habilidade, praticar } from './frentes';
 import { marcar } from './marcas';
 import { chanceNoConcurso, editalAberto } from './concurso';
@@ -259,6 +259,14 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   const t = v.trabalho;
   const primeiro = !temFato(v, 'primeiro_emprego');
   if (t.atual) encerrarEmprego(v, 'trocou de emprego');
+  // Quem estava fora do mercado cuidando de alguém, voltou: a pausa acaba com o primeiro emprego.
+  if (t.pausa?.intensidade === 'total') {
+    const anos = Math.max(1, Math.round((v.t - t.pausa.tInicio) / 12));
+    t.pausa = undefined;
+    delete v.fatos['pausa_voltar'];
+    marcarFato(v, 'voltou_ao_mercado');
+    marcar(v, 'retorno', `Voltou ao trabalho pago depois de ${anos} ${anos === 1 ? 'ano' : 'anos'} cuidando.`, 3, { ocupacaoId: oc.id });
+  }
   const clientela = oc.promocao === 'clientela' ? clientelaInicial(v, oc) : undefined;
   if (eDasForcas(oc)) aoEntrarNasForcas(v, r, oc);
   const e: Emprego = {
@@ -318,9 +326,9 @@ export function encerrarEmprego(v: Vida, motivo: string): void {
 export function textoDeContratacao(v: Vida, oc: Ocupacao, e: Emprego): string {
   const nome = nomeOcupacao(v, oc);
   const primeira = v.trabalho.historico.length === 0;
-  if (oc.formacaoInicial) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: começou o curso de formação em ${e.empregador.replace(/^(a|o) /, '')}.`;
+  if (oc.formacaoInicial) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: começou o curso de formação ${em(e.empregador)}.`;
   if (oc.concurso && oc.duracao) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no processo seletivo: ${nome}, com contrato de ${Math.round(oc.duracao / 12)} anos.`;
-  if (oc.concurso) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: ${nome} em ${e.empregador.replace(/^(a|o) /, '')}, com estabilidade.`;
+  if (oc.concurso) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: ${nome} ${em(e.empregador)}, com estabilidade.`;
   if (e.contrato === 'autonomo' || e.contrato === 'informal') return `${primeira ? 'Começou a ganhar a vida' : 'Passou a trabalhar'} como ${nome}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
   return `${primeira ? 'Primeiro emprego' : 'Novo emprego'}: ${nome} em ${e.empregador}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
 }
@@ -622,7 +630,7 @@ function progressaoDoServidor(v: Vida, e: Emprego, oc: Ocupacao): void {
     e.salario = Math.round(Math.min(teto, e.salario * 1.035) / 10) * 10;
     if (anos === 3) escrever(v, { texto: `Passou do estágio probatório: servidor${flex(ge(v), '', 'a', 'e')} estável, com a primeira progressão na carreira.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
   }
-  const titulo = v.educacao.concluidos.filter(c => ['pos', 'mestrado', 'doutorado'].includes(c.nivel) && c.tFim > v.t - 12 && c.tFim >= e.tInicio && !temFato(v, `titulacao_${c.cursoId}`)).pop();
+  const titulo = v.educacao.concluidos.filter(c => ['pos', 'mestrado', 'doutorado'].includes(c.nivel) && c.tFim >= v.t - 12 && c.tFim >= e.tInicio && !temFato(v, `titulacao_${c.cursoId}`)).pop();
   if (titulo) {
     marcarFato(v, `titulacao_${titulo.cursoId}`);
     const ganho = titulo.nivel === 'doutorado' ? 0.2 : titulo.nivel === 'mestrado' ? 0.12 : 0.06;

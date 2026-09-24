@@ -74,11 +74,11 @@ export const TRAJETORIAS: Conteudo[] = [
     titulo: c => (categoria(c) === 'fraude' ? 'Uma brecha' : 'Uma proposta'),
     texto: c => CENA[categoria(c)](c),
     opcoes: [
-      { id: 'recusar', texto: 'Recusar', comportamento: { disciplina: 1 },
+      { id: 'recusar_proposta', texto: 'Recusar', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Você disse que não. A conversa morreu ali.', memoria: categoria(c) === 'fraude' ? 'Viu uma brecha para uma fraude e não entrou.' : 'Recusou entrar num esquema ilegal.', relevancia: 'biografia', efeito: () => fato(c, 'recusou_ilicito') }) },
-      { id: 'afastar', texto: c => (quem(c) ? `Recusar e se afastar de ${quem(c)!.nome}` : 'Recusar e mudar de função para longe disso'), comportamento: { disciplina: 1, independencia: 1 },
+      { id: 'afastar_proposta', texto: c => (quem(c) ? `Recusar e se afastar de ${quem(c)!.nome}` : 'Recusar e mudar de função para longe disso'), comportamento: { disciplina: 1, independencia: 1 },
         resolver: c => ({ texto: 'Você cortou a conversa e, aos poucos, a convivência.', memoria: null, efeito: () => { fato(c, 'recusou_ilicito'); const p = quem(c); if (p && c.v.vinculos[p.id]) { c.v.vinculos[p.id].proximidade = clamp(c.v.vinculos[p.id].proximidade - 25); c.v.vinculos[p.id].estagio = 'afastado'; } } }) },
-      { id: 'aceitar', texto: c => (categoria(c) === 'pequenos' ? 'Ir junto' : categoria(c) === 'fraude' ? 'Usar a brecha' : 'Aceitar'), comportamento: { impulsividade: 1 }, resolver: c => aceitar(c, categoria(c)) }
+      { id: 'aceitar_proposta', texto: c => (categoria(c) === 'pequenos' ? 'Ir junto' : categoria(c) === 'fraude' ? 'Usar a brecha' : 'Aceitar'), comportamento: { impulsividade: 1 }, resolver: c => aceitar(c, categoria(c)) }
     ]
   },
   {
@@ -92,12 +92,12 @@ export const TRAJETORIAS: Conteudo[] = [
       return `${anos === 1 ? 'Um ano' : `${anos} anos`} disso. Entraram ${fmt(e.ganhos)} por fora${e.exposicao >= 45 ? ', e gente demais já sabe' : ''}. ${par ? `${par.p.nome} desconfia de onde vem o dinheiro.` : ''} ${e.nivel < 3 ? 'Quem está acima oferece mais — mais dinheiro, mais compromisso.' : 'O grupo conta com você.'}`;
     },
     opcoes: [
-      { id: 'parar', texto: 'Parar de vez', comportamento: { disciplina: 1 },
+      { id: 'parar_esquema', texto: 'Parar de vez', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: c.v.caminhos.envolvimento!.nivel >= 3 ? 'Você avisou que estava fora. Ninguém disse nada — e isso era o que dava medo.' : 'Você parou. O dinheiro fácil fez falta no primeiro mês; o sono voltou no segundo.', memoria: null, efeito: () => parar(c.v, 'decidiu sair') }) },
-      { id: 'mudar', texto: 'Parar e mudar de cidade, para longe de todo mundo', comportamento: { coragem: 1 },
+      { id: 'mudar_de_vez', texto: 'Parar e mudar de cidade, para longe de todo mundo', comportamento: { coragem: 1 },
         disponivel: c => (idade(c.v) >= 18 && disponivel(c.v) >= custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)) ? true : 'Não há dinheiro nem idade para recomeçar longe.'),
         resolver: c => ({ texto: 'Uma mala, um número de telefone novo, uma cidade onde ninguém sabe o seu nome.', memoria: null, efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : 'sao-paulo-sp'; parar(c.v, 'mudou de cidade para cortar os contatos'); pagar(c.v, custoDeMudanca(aqui, d)); mudarAgora(c.v, d, 'para recomeçar longe dos contatos de antes'); delete c.v.fatos['pressao_grupo']; } }) },
-      { id: 'seguir', texto: 'Seguir do mesmo jeito', resolver: () => ({ texto: 'Você seguiu. Cada ano parece o último sem problema.', memoria: null }) },
+      { id: 'seguir_esquema', texto: 'Seguir do mesmo jeito', resolver: () => ({ texto: 'Você seguiu. Cada ano parece o último sem problema.', memoria: null }) },
       { id: 'fundo', texto: 'Ir mais fundo', comportamento: { impulsividade: 1, coragem: 1 }, disponivel: c => ((c.v.caminhos.envolvimento?.nivel ?? 3) < 3 ? true : false),
         resolver: c => ({ texto: 'Mais dinheiro, mais gente em volta, mais coisa para esconder.', memoria: 'Foi mais fundo no esquema.', relevancia: 'marco', tom: 'ruim', efeito: () => escalar(c.v) }) }
     ]
@@ -239,13 +239,13 @@ export const TRAJETORIAS: Conteudo[] = [
     },
     opcoes: [
       { id: 'familia', texto: c => (parceiro(c.v) || filhos(c.v).some(f => c.v.vinculos[f.id]?.convivio.includes('casa')) ? 'Ir com a família' : 'Ir'),
-        resolver: c => { const d = MUNIC_POR_INDICE(c.v.fatos['mil_destino']!)!; const funcional = c.r.chance(0.55); return { texto: funcional ? 'Um caminhão, três dias de estrada e uma casa na vila militar.' : 'Um caminhão, três dias de estrada e um apartamento alugado perto da unidade.', memoria: null, efeito: () => { delete c.v.fatos['mil_destino']; transferir(c.v, d, true, funcional); for (const f of filhos(c.v)) if (idadePessoa(c.v, f) >= 8 && idadePessoa(c.v, f) < 18 && c.v.vinculos[f.id]?.convivio.includes('casa')) { tensaoPessoa(c.v, f.id, 10); } } }; } },
+        resolver: c => { const d = MUNIC_POR_INDICE(c.v.fatos['mil_destino']!)!; const funcional = c.r.chance(0.55); return { texto: funcional ? 'Um caminhão, três dias de estrada e uma casa na vila militar.' : 'Um caminhão, três dias de estrada e um apartamento alugado perto da unidade.', memoria: null, efeito: () => { delete c.v.fatos['mil_destino']; delete c.v.fatos['mil_transferencia']; transferir(c.v, d, true, funcional); for (const f of filhos(c.v)) if (idadePessoa(c.v, f) >= 8 && idadePessoa(c.v, f) < 18 && c.v.vinculos[f.id]?.convivio.includes('casa')) { tensaoPessoa(c.v, f.id, 10); } } }; } },
       { id: 'sozinho', texto: 'Ir sozinho; a família fica', disponivel: c => (parceiro(c.v) || filhos(c.v).some(f => c.v.vinculos[f.id]?.convivio.includes('casa')) ? true : false),
-        resolver: c => { const d = MUNIC_POR_INDICE(c.v.fatos['mil_destino']!)!; return { texto: 'Casa em dois lugares, saudade nos dois, a estrada nos feriados.', memoria: `Transferid${c.g('o', 'a', 'e')} para ${municipio(d).nome}, foi sozinh${c.g('o', 'a', 'e')}: a família ficou.`, relevancia: 'marco', efeito: () => { delete c.v.fatos['mil_destino']; transferir(c.v, d, false, false); const par = parceiro(c.v); if (par) par.vin.tensao = clamp(par.vin.tensao + 10); } }; } },
+        resolver: c => { const d = MUNIC_POR_INDICE(c.v.fatos['mil_destino']!)!; return { texto: 'Casa em dois lugares, saudade nos dois, a estrada nos feriados.', memoria: `Transferid${c.g('o', 'a', 'e')} para ${municipio(d).nome}, foi sozinh${c.g('o', 'a', 'e')}: a família ficou.`, relevancia: 'marco', efeito: () => { delete c.v.fatos['mil_destino']; delete c.v.fatos['mil_transferencia']; transferir(c.v, d, false, false); const par = parceiro(c.v); if (par) par.vin.tensao = clamp(par.vin.tensao + 10); } }; } },
       { id: 'adiar', texto: 'Pedir para ficar mais um tempo (motivo de família)', disponivel: c => (!temFato(c.v, `mil_adiou_${c.v.caminhos.militar!.tGuarnicao}`) ? true : 'Já pediu uma vez nesta guarnição.'),
-        resolver: c => { const deu = c.r.chance(0.45); return { texto: deu ? 'O pedido foi aceito: mais um ano, talvez dois.' : 'O pedido foi negado. A movimentação fica para o ano que vem, sem apelação.', memoria: null, efeito: () => { marcarFato(c.v, `mil_adiou_${c.v.caminhos.militar!.tGuarnicao}`); if (deu) { c.v.caminhos.militar!.tGuarnicao = c.v.t - 6; delete c.v.fatos['mil_destino']; } else { c.v.caminhos.militar!.tGuarnicao = c.v.t - 30; } } }; } },
+        resolver: c => { const deu = c.r.chance(0.45); return { texto: deu ? 'O pedido foi aceito: mais um ano, talvez dois.' : 'O pedido foi negado. A movimentação fica para o ano que vem, sem apelação.', memoria: null, efeito: () => { delete c.v.fatos['mil_transferencia']; marcarFato(c.v, `mil_adiou_${c.v.caminhos.militar!.tGuarnicao}`); if (deu) { c.v.caminhos.militar!.tGuarnicao = c.v.t - 6; delete c.v.fatos['mil_destino']; } else { c.v.caminhos.militar!.tGuarnicao = c.v.t - 30; } } }; } },
       { id: 'sair', texto: c => ((c.v.trabalho.contribuicao >= 0 && Math.floor((c.v.t - c.v.caminhos.militar!.tIngresso) / 12) >= 35) ? 'Pedir a reserva' : 'Pedir para sair da Força'), comportamento: { independencia: 1 },
-        resolver: c => ({ texto: 'Você pediu para sair. Dezenas de formulários depois, a farda ficou no armário.', memoria: null, efeito: () => { delete c.v.fatos['mil_destino']; if (Math.floor((c.v.t - c.v.caminhos.militar!.tIngresso) / 12) >= 35) irParaReserva(c.v, 'pedido'); else { const ind = sairDasForcas(c.v); if (ind) pagar(c.v, Math.min(ind, disponivel(c.v))); } } }) }
+        resolver: c => ({ texto: 'Você pediu para sair. Dezenas de formulários depois, a farda ficou no armário.', memoria: null, efeito: () => { delete c.v.fatos['mil_destino']; delete c.v.fatos['mil_transferencia']; if (Math.floor((c.v.t - c.v.caminhos.militar!.tIngresso) / 12) >= 35) irParaReserva(c.v, 'pedido'); else { const ind = sairDasForcas(c.v); if (ind) pagar(c.v, Math.min(ind, disponivel(c.v))); } } }) }
     ]
   },
   {
@@ -279,9 +279,9 @@ export const TRAJETORIAS: Conteudo[] = [
     texto: c => { const o = ondaAgora(c.v)!; const ts = TEXTO_ONDA[o.familia.id] ?? ['O jeito de trabalhar mudou.']; return `${ts[o.ano % ts.length]} ${idade(c.v) >= 45 ? 'Gente da sua idade anda dizendo que já não compensa aprender tudo de novo.' : ''}`; },
     opcoes: [
       { id: 'atualizar', texto: 'Fazer um curso de atualização (alguns meses, à noite)', comportamento: { disciplina: 1 }, disponivel: c => (disponivel(c.v) >= 1500 ? true : 'O curso custa uns R$ 1.500 que não sobram agora.'),
-        resolver: c => ({ texto: 'Três meses de aula à noite. No fim, o que parecia outra língua virou ferramenta.', memoria: 'Fez um curso de atualização quando o trabalho mudou.', efeito: () => { pagar(c.v, 1500); const e = c.v.trabalho.atual!; e.tAtualizacao = c.v.t; e.desempenho = clamp(e.desempenho + 8); if (e.clientela !== undefined) e.clientela = clamp(e.clientela + 8); estresse(c, 4); } }) },
+        resolver: c => ({ texto: 'Três meses de aula à noite. No fim, o que parecia outra língua virou ferramenta.', memoria: 'Fez um curso de atualização quando o trabalho mudou.', efeito: () => { pagar(c.v, 1500); const e = c.v.trabalho.atual; if (!e) return; e.tAtualizacao = c.v.t; e.desempenho = clamp(e.desempenho + 8); if (e.clientela !== undefined) e.clientela = clamp(e.clientela + 8); estresse(c, 4); } }) },
       { id: 'no_trabalho', texto: 'Aprender no próprio trabalho, errando', comportamento: { coragem: 1 },
-        resolver: c => { const deu = c.r.chance(0.5 + c.v.mente.cognicao / 250); return { texto: deu ? 'Você foi aprendendo no susto. Deu certo, com alguns tropeços.' : 'Você tentou aprender sozinho. Ficou pela metade.', memoria: null, efeito: () => { if (deu) c.v.trabalho.atual!.tAtualizacao = c.v.t; } }; } },
+        resolver: c => { const deu = c.r.chance(0.5 + c.v.mente.cognicao / 250); return { texto: deu ? 'Você foi aprendendo no susto. Deu certo, com alguns tropeços.' : 'Você tentou aprender sozinho. Ficou pela metade.', memoria: null, efeito: () => { if (deu && c.v.trabalho.atual) c.v.trabalho.atual.tAtualizacao = c.v.t; } }; } },
       { id: 'seguir', texto: 'Seguir do jeito que sabe', resolver: () => ({ texto: 'Você seguiu como sempre. Por um tempo, deu.', memoria: null }) },
       { id: 'mudar', texto: 'Aproveitar para mudar de área', comportamento: { coragem: 1 },
         resolver: c => ({ texto: 'Se era para aprender tudo de novo, que fosse outra coisa.', memoria: 'Quando o trabalho mudou, decidiu mudar de área.', efeito: () => { fato(c, 'plano_estudar'); fato(c, 'quis_mudar_area'); } }) }
@@ -296,7 +296,7 @@ export const TRAJETORIAS: Conteudo[] = [
     texto: c => `Duas safras ruins seguidas. ${c.v.caminhos.rural!.terra === 'arrendada' ? 'O arrendamento vence de qualquer jeito.' : 'A terra continua lá; o dinheiro, não.'} ${parceiro(c.v) ? `${parceiro(c.v)!.p.nome} pergunta se não é hora de mudar alguma coisa.` : ''}`,
     opcoes: [
       { id: 'diversificar', texto: 'Diversificar: horta, criação, venda direta na feira', comportamento: { coragem: 1 },
-        resolver: c => ({ texto: 'Você plantou o que não plantava e foi vender na feira da cidade.', memoria: 'Diversificou a produção depois de duas safras ruins.', efeito: () => { const ru = c.v.caminhos.rural!; ru.cultura = 'misto'; ru.anosRuins = 0; const e = c.v.trabalho.atual!; if (e.clientela !== undefined) e.clientela = clamp(e.clientela + 10); c.v.trabalho.experiencia['informal'] = (c.v.trabalho.experiencia['informal'] ?? 0) + 6; } }) },
+        resolver: c => ({ texto: 'Você plantou o que não plantava e foi vender na feira da cidade.', memoria: 'Diversificou a produção depois de duas safras ruins.', efeito: () => { const ru = c.v.caminhos.rural!; ru.cultura = 'misto'; ru.anosRuins = 0; const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + 10); c.v.trabalho.experiencia['informal'] = (c.v.trabalho.experiencia['informal'] ?? 0) + 6; } }) },
       { id: 'cooperativa', texto: 'Entrar para a cooperativa', disponivel: c => (!c.v.caminhos.rural!.cooperativa ? true : false),
         resolver: c => ({ texto: 'Na cooperativa, o preço é combinado e a perda é dividida.', memoria: 'Entrou para a cooperativa agrícola.', efeito: () => { c.v.caminhos.rural!.cooperativa = true; c.v.caminhos.rural!.anosRuins = 0; } }) },
       { id: 'largar', texto: 'Largar a terra e ir trabalhar na cidade',
@@ -349,8 +349,8 @@ export const TRAJETORIAS: Conteudo[] = [
     texto: c => { const oc = ocupacao(c.v.trabalho.atual!.ocupacaoId); return oc.trilha === 'educacao' ? 'A escola vai eleger uma nova direção, e colegas querem o seu nome na chapa. Mais salário, muito mais problema — e a sala de aula ficaria para depois.' : 'Ofereceram uma função de chefia no setor: gratificação no salário, a responsabilidade pelos outros e as reuniões que ninguém quer.'; },
     opcoes: [
       { id: 'aceitar', texto: 'Aceitar', comportamento: { coragem: 1 },
-        resolver: c => ({ texto: 'Mesa nova, telefone que não para, gratificação no contracheque.', memoria: null, efeito: () => { const e = c.v.trabalho.atual!; const oc = ocupacao(e.ocupacaoId); marcarFato(c.v, `funcao_${oc.id}`); if (oc.trilha === 'educacao' && oc.id !== 'diretor_escola') { e.ocupacaoId = 'diretor_escola'; e.tPosto = c.v.t; } e.salario = Math.round(e.salario * 1.22 / 10) * 10; const texto = oc.trilha === 'educacao' ? 'Eleito para a direção da escola.'.replace('Eleito', c.g('Eleito', 'Eleita', 'Eleite')) : 'Assumiu uma função de chefia no serviço público.'; escrever(c.v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); marcar(c.v, 'lideranca', texto, 2); estresse(c, 6); } }) },
-      { id: 'recusar', texto: 'Recusar: o trabalho de agora é o que gosto', resolver: c => ({ texto: 'Você agradeceu e ficou onde estava.', memoria: null, efeito: () => marcarFato(c.v, `funcao_${c.v.trabalho.atual!.ocupacaoId}`) }) }
+        resolver: c => ({ texto: 'Mesa nova, telefone que não para, gratificação no contracheque.', memoria: null, efeito: () => { const e = c.v.trabalho.atual; if (!e) return; const oc = ocupacao(e.ocupacaoId); marcarFato(c.v, `funcao_${oc.id}`); if (oc.trilha === 'educacao' && oc.id !== 'diretor_escola') { e.ocupacaoId = 'diretor_escola'; e.tPosto = c.v.t; } e.salario = Math.round(e.salario * 1.22 / 10) * 10; const texto = oc.trilha === 'educacao' ? 'Eleito para a direção da escola.'.replace('Eleito', c.g('Eleito', 'Eleita', 'Eleite')) : 'Assumiu uma função de chefia no serviço público.'; escrever(c.v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); marcar(c.v, 'lideranca', texto, 2); estresse(c, 6); } }) },
+      { id: 'recusar', texto: 'Recusar: o trabalho de agora é o que gosto', resolver: c => ({ texto: 'Você agradeceu e ficou onde estava.', memoria: null, efeito: () => { if (c.v.trabalho.atual) marcarFato(c.v, `funcao_${c.v.trabalho.atual.ocupacaoId}`); } }) }
     ]
   },
 

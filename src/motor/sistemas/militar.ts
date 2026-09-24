@@ -125,7 +125,8 @@ export function aoEntrarNasForcas(v: Vida, r: Rng, oc: Ocupacao): void {
   const quadro = QUADRO[oc.id] ?? 'temporario';
   const atual = v.caminhos.militar;
   if (atual && atual.quadro === quadro) return;
-  const forca = atual?.forca && (quadro === 'temporario' || r.chance(0.7)) ? atual.forca : forcaProvavel(v);
+  // Concurso de carreira é nacional (e a formação é longe de qualquer jeito): a Força é a do edital que se prestou.
+  const forca = atual?.forca && (quadro === 'temporario' || r.chance(0.6)) ? atual.forca : quadro === 'temporario' ? forcaProvavel(v) : (['exercito', 'exercito', 'exercito', 'aeronautica', 'aeronautica', 'marinha', 'marinha'] as Forca[])[r.int(0, 6)];
   const escola = quadro === 'praca' ? ESCOLA[forca].pracas : quadro === 'oficial' ? ESCOLA[forca].oficiais : undefined;
   const guarnicao = escola && oc.formacaoInicial && oc.id !== 'aluno_oficial_tecnico' ? escola[1] : guarnicaoInicial(v, forca);
   v.caminhos.militar = {
@@ -225,7 +226,8 @@ export function processarMilitar(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): voi
     }
   }
 
-  // Movimentação: de tempos em tempos, outra cidade.
+  // Movimentação: de tempos em tempos, outra cidade. (Um aviso que não virou decisão expira.)
+  for (const k of ['mil_transferencia', 'mil_curso_oferta']) if (v.fatos[k] !== undefined && v.t - v.fatos[k] >= 12) delete v.fatos[k];
   if (v.t - m.tGuarnicao >= 30 && r.chance(0.32) && v.fatos['mil_transferencia'] === undefined) {
     const opcoes = GUARNICOES[m.forca].filter(g => g !== m.guarnicao && g !== v.moradia.municipioId);
     v.fatos['mil_transferencia'] = v.t;
@@ -350,3 +352,13 @@ export function horizonteMilitar(v: Vida): string {
 }
 
 export { NOME_FORCA, salarioLiquidoAtual };
+
+/** A escada do quadro em que a pessoa está (para a tela): postos, onde está, o próximo. */
+export function escadaMilitar(v: Vida): { nome: string; estado: 'foi' | 'agora' | 'acima' }[] {
+  const m = v.caminhos.militar;
+  const e = v.trabalho.atual;
+  if (!m || !e || m.quadro === 'temporario') return [];
+  const ids = m.quadro === 'praca' ? ['sargento', 'subtenente'] : ['tenente', 'capitao', 'major', 'tenente_coronel', 'coronel'];
+  const k = ids.indexOf(e.ocupacaoId);
+  return ids.map((id, i) => ({ nome: nomeOcupacao(v, ocupacao(id)), estado: k < 0 ? 'acima' : i < k ? 'foi' : i === k ? 'agora' : 'acima' }));
+}

@@ -107,7 +107,7 @@ const comProjeto = (d: Dominio, minimo: number) => (v: Vida) => (v.caminhos.arte
 /** Trilha → frente que o trabalho da família ensina. */
 const OFICIO_DA_TRILHA: Record<string, Dominio> = {
   mecanica: 'manual', manutencao: 'manual', eletrica: 'manual', construcao: 'manual', beleza: 'beleza', alimentacao: 'cozinha',
-  confeitaria: 'cozinha', comercio: 'vendas', informal: 'vendas', agro: 'campo', campo: 'campo', artesanato: 'manual'
+  confeitaria: 'cozinha', comercio: 'vendas', informal: 'vendas', agro: 'campo', campo: 'campo', pesca: 'campo', artesanato: 'manual', marcenaria: 'manual', hidraulica: 'manual', costura: 'manual'
 };
 
 /** Um adulto da família com um ofício que se aprende ajudando. */

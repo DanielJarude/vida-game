@@ -56,7 +56,7 @@ function temAcesso(v: Vida): boolean {
   if (!e) return false;
   const oc = ocupacaoOuNula(e.ocupacaoId);
   if (!oc) return false;
-  return ['financas', 'contabil', 'publico', 'fiscal', 'judiciario'].includes(oc.trilha) || (['administrativo', 'comercio', 'logistica'].includes(oc.trilha) && oc.nivel >= 3);
+  return ['financas', 'contabil', 'publico', 'fiscal', 'judiciario'].includes(oc.trilha) || (['administrativo', 'logistica'].includes(oc.trilha) && oc.nivel >= 2) || (oc.trilha === 'comercio' && oc.nivel >= 3);
 }
 
 /** Quem, da vida real do jogador, poderia trazer a proposta. */
@@ -79,23 +79,23 @@ export function chanceDeProposta(v: Vida): number {
   if (ult !== undefined && v.t - ult < (egresso ? 36 : 60)) return 0;
   const t = v.personalidade.tracos;
   const e = v.trabalho.atual;
-  let p = 0.003;
-  if (i >= 14 && i <= 22) p += 0.008;
-  if (!e && v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde >= 12 && i >= 18) p += 0.01;
-  if (seguranca(v).nivel === 'no_vermelho') p += 0.01;
-  p += 0.009 * clamp(t.impulsividade / 40, -0.5, 1.5);
-  if (v.moradia.padrao <= 2) p += 0.005;
-  if (nivelDeOferta(v.moradia.municipioId) >= 2) p += 0.004;
-  if (egresso || v.caminhos.envolvimento) p += 0.016;
-  if (contatoPossivel(v)) p += 0.008;
+  let p = 0.0012;
+  if (i >= 14 && i <= 22) p += 0.004;
+  if (!e && v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde >= 12 && i >= 18) p += 0.006;
+  if (seguranca(v).nivel === 'no_vermelho') p += 0.006;
+  p += 0.006 * clamp(t.impulsividade / 40, -0.5, 1.5);
+  if (v.moradia.padrao <= 2) p += 0.002;
+  if (nivelDeOferta(v.moradia.municipioId) >= 2) p += 0.0015;
+  if (egresso || v.caminhos.envolvimento) p += 0.012;
+  if (contatoPossivel(v)) p += 0.004;
   if (temAcesso(v)) p += 0.004;
   // O que protege.
-  if (e && ['clt', 'servidor', 'militar'].includes(e.contrato)) p -= 0.006;
-  if (redeDeApoio(v) >= 2) p -= 0.005;
-  if (v.educacao.basica && v.educacao.basica.desempenho >= 60) p -= 0.005;
-  p -= 0.004 * clamp(t.disciplina / 40, -0.5, 1.5);
-  p -= 0.003 * clamp(t.empatia / 40, -0.5, 1.5);
-  return clamp(p, 0, 0.07);
+  if (e && ['clt', 'servidor', 'militar'].includes(e.contrato)) p -= 0.003;
+  if (redeDeApoio(v) >= 2) p -= 0.002;
+  if (v.educacao.basica && v.educacao.basica.desempenho >= 60) p -= 0.002;
+  p -= 0.003 * clamp(t.disciplina / 40, -0.5, 1.5);
+  p -= 0.002 * clamp(t.empatia / 40, -0.5, 1.5);
+  return clamp(p, 0, 0.05);
 }
 
 /** Qual tipo de porta faz sentido nesta vida (a cena, não o método). */
@@ -181,7 +181,7 @@ export function entrar(v: Vida, cat: CategoriaIlicita, contatoId: string | undef
   v.fatos['vezes_envolvido'] = (v.fatos['vezes_envolvido'] ?? 0) + 1;
   marcarFato(v, 'envolveu_se');
   if (antes) marcarFato(v, 'reincidiu');
-  marcar(v, 'mudanca_carreira', antes ? 'Voltou a se envolver com o que tinha deixado.' : 'Entrou num esquema ilegal.', 2);
+  marcar(v, 'desvio', antes ? 'Voltou a se envolver com o que tinha deixado.' : 'Entrou num esquema ilegal.', 2);
 }
 
 export function escalar(v: Vida): void {

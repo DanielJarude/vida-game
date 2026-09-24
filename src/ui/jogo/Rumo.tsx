@@ -24,11 +24,19 @@ import { editaisAbertos, leituraDoPreparo } from '../../motor/sistemas/concurso'
 import { negociosPossiveis } from '../../motor/sistemas/negocio';
 import { liquido } from '../../motor/sistemas/renda';
 import { podeTentar } from '../../motor/plausibilidade';
+import { disponibilidade } from '../../motor/acoes';
 import { anoDe } from '../../motor/tempo';
 import { BotaoAcao, Escolha, Linha, Secao, Vazio } from '../comum';
 import { cursosParaVoce, vagasParaVoce, type CursoOpcoes } from '../../motor/sistemas/relevancia';
 import { O_QUE_TRABALHAR } from '../../motor/sistemas/devolutivas';
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
+import { situacaoNaJustica } from '../../motor/sistemas/justica';
+import { leituraDaPausa } from '../../motor/sistemas/pausa';
+import { leituraDoEnvolvimento } from '../../motor/sistemas/ilicito';
+import { leituraRural } from '../../motor/sistemas/rural';
+import { escadaMilitar } from '../../motor/sistemas/militar';
+import { familiaDaTrilha } from '../../motor/dados/carreiras';
+import { eDasForcas } from '../../motor/sistemas/trabalho';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean }
 
@@ -78,11 +86,12 @@ export function Rumo({ vida, agir }: Props) {
         </div>
       ) : (
         <div role="tabpanel" aria-label="Trabalho" className="rumo__painel">
+          <Situacao vida={vida} agir={agir} />
           <Escada vida={vida} />
           <Trabalho vida={vida} agir={agir} />
           <Devolutivas vida={vida} />
           <Vagas vida={vida} agir={agir} />
-          {i >= 17 && <Concursos vida={vida} agir={agir} />}
+          {i >= 17 && !vida.justica?.prisao && <Concursos vida={vida} agir={agir} />}
           {(vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <Trajetoria vida={vida} />}
         </div>
       )}
@@ -144,6 +153,24 @@ function Escada({ vida }: { vida: Vida }) {
   const e = vida.trabalho.atual;
   const oc = e ? ocupacao(e.ocupacaoId) : undefined;
   if (!oc || e?.clientela !== undefined || e?.posAposentadoria) return null;
+  if (eDasForcas(oc)) {
+    const postos = escadaMilitar(vida);
+    if (postos.length < 2) return horizonte(vida) ? <p className="escada__horizonte">{horizonte(vida)}</p> : null;
+    return (
+      <section className="escada" aria-label="Sua carreira militar">
+        <h2 className="escada__titulo">A sua carreira militar</h2>
+        <ol className="escada__degraus">
+          {[...postos].reverse().map(x => (
+            <li key={x.nome} className={`escada__degrau escada__degrau--${x.estado === 'agora' ? 'agora' : x.estado === 'foi' ? 'foi' : 'acima'}`} aria-current={x.estado === 'agora' ? 'step' : undefined}>
+              <span className="escada__nome">{x.nome}</span>
+              <span className="escada__nota">{x.estado === 'agora' ? 'você está aqui' : x.estado === 'foi' ? 'já foi' : ''}</span>
+            </li>
+          ))}
+        </ol>
+        {horizonte(vida) && <p className="escada__horizonte">{horizonte(vida)}</p>}
+      </section>
+    );
+  }
   const degraus = [...new Map(OCUPACOES.filter(x => x.trilha === oc.trilha && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && (x.nivel <= oc.nivel || degrausAcima(oc).some(d => d.id === x.id) || x.nivel === oc.nivel + 2)).sort((a, b) => a.nivel - b.nivel).map(x => [x.nivel, x] as const)).values()];
   if (degraus.length < 2) return null;
   const jaFoi = new Set(vida.trabalho.historico.map(h => h.ocupacaoId));
@@ -354,13 +381,16 @@ function Trabalho({ vida, agir }: Props) {
             {horizonte(vida) && (e.clientela !== undefined || e.posAposentadoria) && <p>{horizonte(vida)}</p>}
             {n && n.estado !== 'fechado' && <p>{n.nome}: {n.estado === 'firme' ? 'firme, com freguesia certa' : n.estado === 'apertado' ? 'no aperto, o movimento está fraco' : 'ainda começando'}.</p>}
             {esporte?.fase === 'profissional' && <p>{esporte.lesoes > 1 ? `${esporte.lesoes} lesões na carreira. ` : ''}O corpo tem prazo: poucas carreiras passam dos 35.</p>}
+            {comoSeCresce(vida) && <p className="nota">{comoSeCresce(vida)}</p>}
           </div>
           <div className="grupo-acoes">
             <BotaoAcao vida={vida} acao={{ tipo: 'horas_extras' }} agir={agir} ocultarImpossivel>Fazer horas extras este ano</BotaoAcao>
             <BotaoAcao vida={vida} acao={{ tipo: 'pedir_aumento' }} agir={agir} ocultarImpossivel>Pedir aumento</BotaoAcao>
             <BotaoAcao vida={vida} acao={{ tipo: 'aposentar' }} agir={agir} ocultarImpossivel>{ocupacao(e.ocupacaoId).contrato === 'militar' ? 'Ir para a reserva' : 'Aposentar'}</BotaoAcao>
-            <BotaoAcao vida={vida} acao={{ tipo: 'pedir_demissao' }} agir={agir} variante="perigo">{e.clientela !== undefined ? 'Parar com isso' : 'Pedir demissão'}</BotaoAcao>
+            <BotaoAcao vida={vida} acao={{ tipo: 'mei' }} agir={agir} ocultarImpossivel>Formalizar como MEI</BotaoAcao>
+            <BotaoAcao vida={vida} acao={{ tipo: 'pedir_demissao' }} agir={agir} variante="perigo">{e.clientela !== undefined ? 'Parar com isso' : eDasForcas(ocupacao(e.ocupacaoId)) ? 'Deixar a Força' : 'Pedir demissão'}</BotaoAcao>
           </div>
+          <Ritmo vida={vida} agir={agir} />
         </>
       ) : t.aposentadoria ? (
         <Linha rotulo="Aposentadoria" valor={`${dinheiroCurto(t.aposentadoria.beneficio)} por mês, desde ${anoDe(t.aposentadoria.t)}`} />
@@ -488,4 +518,61 @@ function Trajetoria({ vida }: { vida: Vida }) {
       <p className="nota">INSS: {Math.floor(t.contribuicao / 12)} anos de contribuição.{t.licencas.length ? ` Registros: ${t.licencas.map(l => l.toUpperCase()).join(', ')}.` : ''}</p>
     </Secao>
   );
+}
+
+/* ------------------------------------------------------------- Situação */
+
+/** O que está acontecendo com a vida de trabalho agora, quando não é "um emprego": pena, pausa, campo, por fora. */
+function Situacao({ vida, agir }: Props) {
+  const justica = situacaoNaJustica(vida);
+  const pausa = leituraDaPausa(vida);
+  const fora = leituraDoEnvolvimento(vida);
+  const campo = leituraRural(vida);
+  if (!justica && !pausa && !fora && !campo) return null;
+  const pa = vida.trabalho.pausa;
+  return (
+    <Secao titulo={vida.justica?.prisao ? 'Cumprindo pena' : pa ? 'Cuidando' : 'Agora'}>
+      {justica && <p>{justica}</p>}
+      {pausa && <p>{pausa}</p>}
+      {campo && <p>{campo}</p>}
+      {fora && <p className="nota">{fora}</p>}
+      <div className="grupo-acoes">
+        {pa && <BotaoAcao vida={vida} acao={{ tipo: 'voltar_mercado' }} agir={agir}>{pa.intensidade === 'parcial' ? 'Voltar à jornada inteira' : 'Voltar ao mercado'}</BotaoAcao>}
+        {pa?.intensidade === 'total' && <BotaoAcao vida={vida} acao={{ tipo: 'facultativo', ativo: !pa.facultativo }} agir={agir} variante="discreto">{pa.facultativo ? 'Parar de pagar o INSS facultativo' : 'Pagar o INSS como facultativo'}</BotaoAcao>}
+        {fora && <BotaoAcao vida={vida} acao={{ tipo: 'parar_por_fora' }} agir={agir}>Largar isso de vez</BotaoAcao>}
+      </div>
+    </Secao>
+  );
+}
+
+/** Reduzir ou parar para cuidar da casa e da família: recolhido, porque não é decisão de todo ano. */
+function Ritmo({ vida, agir }: Props) {
+  const [aberto, setAberto] = useState(false);
+  const reduzir = podeTentar(disponibilidadeRitmo(vida, 'parcial'));
+  const parar = podeTentar(disponibilidadeRitmo(vida, 'total'));
+  if (!reduzir && !parar) return null;
+  return (
+    <div className="explorar">
+      <button type="button" className="botao botao--discreto" aria-expanded={aberto} onClick={() => setAberto(x => !x)}>{aberto ? 'Recolher' : 'Mudar o ritmo do trabalho'}</button>
+      {aberto && (
+        <div className="grupo-acoes">
+          <p className="dica">Para cuidar da casa, dos filhos ou de alguém da família. Menos renda; o tempo de INSS também sente.</p>
+          <BotaoAcao vida={vida} acao={{ tipo: 'cuidar_da_casa', intensidade: 'parcial' }} agir={agir} ocultarImpossivel>Reduzir a jornada</BotaoAcao>
+          <BotaoAcao vida={vida} acao={{ tipo: 'cuidar_da_casa', intensidade: 'total' }} agir={agir} ocultarImpossivel variante="discreto">Parar de trabalhar por um tempo</BotaoAcao>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const disponibilidadeRitmo = (v: Vida, intensidade: 'parcial' | 'total') => disponibilidade(v, { tipo: 'cuidar_da_casa', intensidade });
+
+/** Como se cresce nesse tipo de trabalho, em palavras (identidade da família de carreira). */
+function comoSeCresce(v: Vida): string | undefined {
+  const e = v.trabalho.atual;
+  if (!e || e.posAposentadoria) return undefined;
+  const f = familiaDaTrilha(ocupacao(e.ocupacaoId).trilha);
+  if (!f.degraus.length || f.progressao === 'empresa' || f.progressao === 'militar') return undefined;
+  const renda = f.renda === 'variavel' ? ' A renda varia com a freguesia.' : f.renda === 'sazonal' ? ' A renda vem da safra, não do mês.' : f.renda === 'projeto' ? ' A renda vem por projeto: há anos bons e anos magros.' : '';
+  return `Nesse caminho, cresce-se assim: ${f.degraus.join(' → ')}.${renda}`;
 }
