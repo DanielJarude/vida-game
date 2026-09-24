@@ -25,11 +25,12 @@ import { encerrarEmprego, nomeOcupacao, tetoSalarial } from './trabalho';
 import { ocupacao } from '../dados/ocupacoes';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
-import { SALARIO_MINIMO } from './renda';
+import { CUSTO_FACULTATIVO } from './renda';
 import { novaOportunidade } from './oportunidades';
 import { flex, ge } from '../texto';
+import { anoDe } from '../tempo';
 
-export const CUSTO_FACULTATIVO = Math.round(SALARIO_MINIMO * 0.11);
+export { CUSTO_FACULTATIVO };
 
 export function podeReduzir(v: Vida): true | string {
   const e = v.trabalho.atual;
@@ -42,6 +43,7 @@ export function podeReduzir(v: Vida): true | string {
 }
 
 export function iniciarPausa(v: Vida, motivo: PausaDeCuidado['motivo'], intensidade: PausaDeCuidado['intensidade'], pessoaId?: string): void {
+  if (v.trabalho.pausa) return; // uma pausa por vez: quem já cuida, segue cuidando
   const e = v.trabalho.atual;
   const p = pessoaId ? v.pessoas[pessoaId] : undefined;
   const quem = motivo === 'casa' ? 'da casa e da família' : p ? `de ${p.nome}` : motivo === 'filhos' ? 'dos filhos' : 'de quem precisava';
@@ -52,7 +54,7 @@ export function iniciarPausa(v: Vida, motivo: PausaDeCuidado['motivo'], intensid
     escrever(v, { texto: `Reduziu a jornada de ${nomeOcupacao(v, ocupacao(e.ocupacaoId))} para cuidar ${quem}. O salário encolheu junto.`, relevancia: 'marco', tema: 'familia', escolha: true, pessoas: p ? [p.id] : undefined });
   } else {
     if (e) encerrarEmprego(v, 'parou para cuidar');
-    escrever(v, { texto: `Parou de trabalhar para cuidar ${quem}.`, relevancia: 'marco', tema: 'familia', escolha: true, pessoas: p ? [p.id] : undefined });
+    escrever(v, { texto: e ? `Parou de trabalhar para cuidar ${quem}.` : `Passou a cuidar ${quem} em tempo integral.`, relevancia: 'marco', tema: 'familia', escolha: true, pessoas: p ? [p.id] : undefined });
     intensidade = 'total';
   }
   v.trabalho.desempregadoDesde = undefined;
@@ -123,9 +125,9 @@ export function leituraDaPausa(v: Vida): string | undefined {
   const pa = v.trabalho.pausa;
   if (!pa) return undefined;
   const p = pa.pessoaId ? v.pessoas[pa.pessoaId] : undefined;
-  const quem = pa.motivo === 'casa' ? 'da casa e da família' : p ? `de ${p.nome}` : 'dos filhos';
+  const quem = pa.motivo === 'casa' ? 'da casa e da família' : p ? `de ${p.nome}` : ({ filhos: 'dos filhos', pais: 'de quem é da família', parceiro: 'da parceria', familiar: 'de quem é da família', casa: 'da casa' } as const)[pa.motivo];
   const inss = pa.intensidade === 'total' ? (pa.facultativo ? ' O INSS segue, pago como facultativo.' : ' O tempo de contribuição do INSS parou.') : '';
-  return pa.intensidade === 'total' ? `Sem trabalho pago desde ${Math.floor(pa.tInicio / 12)}: cuidando ${quem}.${inss}` : `Jornada reduzida para cuidar ${quem}.`;
+  return pa.intensidade === 'total' ? `Sem trabalho pago desde ${anoDe(pa.tInicio)}: cuidando ${quem}.${inss}` : `Jornada reduzida para cuidar ${quem}.`;
 }
 
 export { flex, ge };

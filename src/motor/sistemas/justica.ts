@@ -60,7 +60,7 @@ export function penaDeAntecedentes(v: Vida): number {
 }
 
 const NOME_CATEGORIA: Record<CategoriaIlicita, string> = {
-  pequenos: 'coisas erradas com a turma', patrimonial: 'mercadoria de origem ilegal', fraude: 'fraude', mercado: 'o comércio ilegal', grupo: 'envolvimento com um grupo criminoso'
+  pequenos: 'coisas erradas com a turma', patrimonial: 'receptação de mercadoria de origem ilegal', fraude: 'fraude', mercado: 'comércio ilegal', grupo: 'envolvimento com um grupo criminoso'
 };
 
 /* ------------------------------------------------------------- Descoberta */
@@ -276,7 +276,8 @@ export function situacaoNaJustica(v: Vida): string | undefined {
   if (!j) return undefined;
   if (j.prisao) {
     const regime = j.prisao.regime === 'fechado' ? 'regime fechado' : 'semiaberto';
-    return idade(v) < 18 ? `Internação socioeducativa, até ${anoDe(j.prisao.tFim)}.` : `Cumprindo pena em ${regime}; a saída prevista é por volta de ${anoDe(j.prisao.tFim)}. Estudar e trabalhar dentro encurtam o tempo.`;
+    const dentro = [v.fatos['remicao_estudo'] !== undefined ? 'estuda' : '', v.fatos['remicao_trabalho'] !== undefined ? 'trabalha' : ''].filter(Boolean).join(' e ');
+    return idade(v) < 18 ? `Internação socioeducativa, até ${anoDe(j.prisao.tFim)}.` : `Regime ${regime === 'regime fechado' ? 'fechado' : 'semiaberto'}; a saída prevista é por volta de ${anoDe(j.prisao.tFim)}. ${dentro ? `Você ${dentro} na unidade — cada ano assim desconta meses da pena.` : 'Estudar e trabalhar dentro encurtam o tempo.'}`;
   }
   if (j.processo) return `Respondendo a processo; o julgamento deve sair em ${anoDe(j.processo.tJulgamento)}.`;
   if (j.alternativa) return `Cumprindo pena alternativa até ${anoDe(j.alternativa.tFim)}: algumas horas por semana de serviço à comunidade.`;

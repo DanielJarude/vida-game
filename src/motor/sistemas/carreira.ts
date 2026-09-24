@@ -26,8 +26,7 @@ import { familiaDaTrilha, FAMILIAS, pesoDaAutomacao, pesoDaExpansao, type Famili
 import { economiaLocal } from '../dados/lugares';
 import { habilidade } from './frentes';
 import { anoDe } from '../tempo';
-import { SALARIO_MINIMO } from './renda';
-import { CUSTO_FACULTATIVO } from './pausa';
+import { CUSTO_FACULTATIVO, SALARIO_MINIMO } from './renda';
 import { arrendamentoMensal } from './rural';
 
 export const familiaDe = (oc: Ocupacao): FamiliaCarreira => familiaDaTrilha(oc.trilha);

@@ -39,7 +39,7 @@ export type Setor =
   | 'construcao' | 'manutencao' | 'agro' | 'saude' | 'educacao' | 'tecnologia' | 'criativo'
   | 'comunicacao' | 'esporte' | 'seguranca' | 'publico' | 'financas' | 'juridico' | 'administrativo' | 'engenharia';
 
-export type Licenca = 'crm' | 'oab' | 'crea' | 'coren' | 'crp' | 'cnh' | 'cro' | 'crefito' | 'crf' | 'crmv' | 'creci';
+export type Licenca = 'crm' | 'oab' | 'crea' | 'coren' | 'crp' | 'cnh' | 'cro' | 'crefito' | 'crf' | 'crmv' | 'creci' | 'crc';
 
 export interface Ocupacao {
   id: string;
@@ -211,8 +211,8 @@ export const OCUPACOES: readonly Ocupacao[] = [
   o({ id: 'analista_rh', nome: ['analista de RH', 'analista de RH'], trilha: 'administrativo', setor: 'administrativo', nivel: 3, salario: 4300, contrato: 'clt', carga: 'integral', idadeMin: 21, area: ['administracao', 'psicologia'], nivelCurso: 'superior', oferta: 1, estresse: 3 }),
   o({ id: 'coordenador_adm', nome: ['coordenador administrativo', 'coordenadora administrativa'], trilha: 'administrativo', setor: 'administrativo', nivel: 4, salario: 7200, contrato: 'clt', carga: 'integral', idadeMin: 26, escolaridade: 'superior', experiencia: 72, oferta: 1, estresse: 4, anosNoPosto: 3 }),
   o({ id: 'gerente_adm', nome: ['gerente', 'gerente'], trilha: 'administrativo', setor: 'administrativo', nivel: 5, salario: 12500, contrato: 'clt', carga: 'integral', idadeMin: 30, escolaridade: 'superior', experiencia: 120, oferta: 2, estresse: 5, anosNoPosto: 4, jornada: 'longa' }),
-  o({ id: 'contador', nome: ['contador', 'contadora'], trilha: 'contabil', setor: 'financas', nivel: 3, salario: 5200, contrato: 'clt', carga: 'integral', idadeMin: 21, area: ['contabilidade'], nivelCurso: 'superior', oferta: 0, estresse: 3, fundamento: 'Decreto-Lei 9.295/1946: contador exige bacharelado e registro no CRC.' }),
-  o({ id: 'contador_socio', nome: ['contador com escritório próprio', 'contadora com escritório próprio'], trilha: 'contabil', setor: 'financas', nivel: 4, salario: 8800, contrato: 'autonomo', carga: 'integral', idadeMin: 27, area: ['contabilidade'], nivelCurso: 'superior', experiencia: 60, oferta: 0, estresse: 4, promocao: 'clientela' }),
+  o({ id: 'contador', nome: ['contador', 'contadora'], trilha: 'contabil', setor: 'financas', nivel: 3, salario: 5200, contrato: 'clt', carga: 'integral', idadeMin: 21, area: ['contabilidade'], nivelCurso: 'superior', licenca: 'crc', oferta: 0, estresse: 3, fundamento: 'Decreto-Lei 9.295/1946: contador exige bacharelado e registro no CRC.' }),
+  o({ id: 'contador_socio', nome: ['contador com escritório próprio', 'contadora com escritório próprio'], trilha: 'contabil', setor: 'financas', nivel: 4, salario: 8800, contrato: 'autonomo', carga: 'integral', idadeMin: 27, area: ['contabilidade'], nivelCurso: 'superior', licenca: 'crc', experiencia: 60, oferta: 0, estresse: 4, promocao: 'clientela' }),
   o({ id: 'estagio_adm', nome: ['estagiário administrativo', 'estagiária administrativa'], trilha: 'administrativo', setor: 'administrativo', nivel: 0, salario: 1300, contrato: 'estagio', carga: 'parcial', idadeMin: 16, matriculado: 'qualquer', oferta: 1, estresse: 1, fundamento: 'Lei do Estágio (11.788/2008): exige matrícula e frequência escolar.' }),
 
   // ------------------------------------------------------ Logística

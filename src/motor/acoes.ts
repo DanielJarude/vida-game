@@ -292,9 +292,10 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'atracao': return i >= 13 ? PERMITIDO : bloqueio('impossivel', 'Ainda é cedo para isso.');
     case 'mei': {
       const e = v.trabalho.atual;
-      if (!e || (e.contrato !== 'informal' && e.contrato !== 'autonomo')) return bloqueio('incompativel', 'Só para quem trabalha por conta.');
-      if (e.mei) return bloqueio('incompativel', 'Já é MEI.');
-      if (e.contrato === 'autonomo' && e.clientela === undefined) return bloqueio('incompativel', 'Não se aplica.');
+      if (!e || (e.contrato !== 'informal' && e.contrato !== 'autonomo')) return bloqueio('impossivel', 'Só para quem trabalha por conta.');
+      if (e.mei) return bloqueio('impossivel', 'Já é MEI.');
+      if (e.contrato === 'autonomo' && e.clientela === undefined) return bloqueio('impossivel', 'Não se aplica.');
+      if (e.ocupacaoId === 'produtor_rural' || e.ocupacaoId === 'pescador') return bloqueio('impossivel', 'Produtor rural e pescador têm registro próprio, não MEI.');
       if (e.salario > 6750) return bloqueio('requisito', 'O faturamento passa do limite do MEI (cerca de R$ 81 mil por ano).');
       return PERMITIDO;
     }

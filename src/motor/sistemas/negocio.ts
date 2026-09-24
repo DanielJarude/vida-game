@@ -50,7 +50,7 @@ export const NEGOCIOS: readonly TipoNegocio[] = [
   { id: 'marcenaria', nome: 'uma marcenaria', ocupacaoId: 'dono_marcenaria', capital: 28000, trilhas: ['marcenaria'], meses: 48, dominio: 'manual', habilidade: 66 },
   { id: 'estudio', nome: 'um estúdio de foto e vídeo', ocupacaoId: 'dono_estudio', capital: 26000, trilhas: ['imagem', 'conteudo'], meses: 36, dominio: 'fotografia', habilidade: 66 },
   { id: 'consultoria_ti', nome: 'uma consultoria de tecnologia', ocupacaoId: 'consultor_ti', capital: 12000, trilhas: ['ti', 'dados'], meses: 60 },
-  { id: 'escritorio_contabil', nome: 'um escritório de contabilidade', ocupacaoId: 'contador_socio', capital: 15000, trilhas: ['contabil'], meses: 60, licenca: 'contabil' },
+  { id: 'escritorio_contabil', nome: 'um escritório de contabilidade', ocupacaoId: 'contador_socio', capital: 15000, trilhas: ['contabil'], meses: 60, licenca: 'crc' },
   { id: 'consultorio_psicologia', nome: 'um consultório de psicologia', ocupacaoId: 'psicologo_clinico', capital: 14000, trilhas: ['psicologia'], meses: 36, licenca: 'crp' },
   { id: 'clinica_fisio', nome: 'uma clínica de fisioterapia', ocupacaoId: 'fisio_clinica', capital: 45000, trilhas: ['fisioterapia'], meses: 48, licenca: 'crefito' },
   { id: 'clinica_vet', nome: 'uma clínica veterinária', ocupacaoId: 'veterinario_clinica', capital: 60000, trilhas: ['veterinaria'], meses: 48, licenca: 'crmv' }
@@ -69,8 +69,7 @@ export function podeAbrirNegocio(v: Vida, id: string): Veredito {
   const estrada = Math.max(...t.trilhas.map(tr => experienciaNaTrilha(v, tr)));
   const oficio = t.dominio ? habilidade(v, t.dominio) : 0;
   if (estrada < t.meses && oficio < (t.habilidade ?? 101)) return bloqueio('requisito', `Falta conhecer o ramo: pede uns ${Math.round(t.meses / 12)} anos na área${t.habilidade ? ' ou saber fazer o trabalho muito bem' : ''}.`);
-  if (t.licenca === 'contabil' && !v.educacao.concluidos.some(c => c.area === 'contabilidade' && c.nivel === 'superior')) return bloqueio('requisito', 'Escritório de contabilidade pede graduação em Ciências Contábeis e registro no CRC.');
-  if (t.licenca && t.licenca !== 'contabil' && !v.trabalho.licencas.includes(t.licenca)) return bloqueio('requisito', `Exige registro profissional (${t.licenca.toUpperCase()}).`);
+  if (t.licenca && !v.trabalho.licencas.includes(t.licenca)) return bloqueio('requisito', `Exige registro profissional (${t.licenca.toUpperCase()}).`);
   if (v.justica?.prisao) return bloqueio('impossivel', 'Não enquanto cumpre pena.');
   const custo = custoLocal(v, t);
   if (disponivel(v) < custo) return bloqueio('requisito', `Para começar, uns R$ ${custo.toLocaleString('pt-BR')} (ponto, equipamento, primeiro estoque).`);

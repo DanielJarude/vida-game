@@ -1,5 +1,6 @@
 /** Vida adulta (18–59). */
 
+import { familiaDaTrilha } from '../dados/carreiras';
 import { disponivel as guardado, pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
@@ -104,7 +105,15 @@ export const ADULTO: Conteudo[] = [
     id: 'adu_empresa_fecha', tipo: 'acontecimento', idade: [18, 64], tema: 'trabalho', repetir: 15,
     quando: c => !!c.v.trabalho.atual && ['clt'].includes(c.v.trabalho.atual.contrato) && c.r.chance(0.3),
     narrar: c => ({
-      texto: `${c.v.trabalho.atual!.empregador.charAt(0).toUpperCase()}${c.v.trabalho.atual!.empregador.slice(1)} fechou as portas. A notícia veio por e-mail numa sexta-feira.`,
+      texto: (() => {
+        const e = c.v.trabalho.atual!;
+        const lugar = `${e.empregador.charAt(0).toUpperCase()}${e.empregador.slice(1)}`;
+        const fam = familiaDaTrilha(ocupacao(e.ocupacaoId).trilha).id;
+        if (fam === 'rural') return `${lugar} foi vendida, e o dono novo trouxe a própria gente.`;
+        if (fam === 'industria') return `${lugar} fechou a unidade da cidade e levou a produção para outro estado.`;
+        if (fam === 'cuidado') return 'A família para quem você trabalhava se mudou de cidade. O acerto veio com um abraço.';
+        return c.r.pick([`${lugar} fechou as portas. A notícia veio por e-mail numa sexta-feira.`, `${lugar} fechou. A notícia veio numa reunião de cinco minutos.`, `${lugar} foi vendida, e a nova dona fechou o seu setor.`]);
+      })(),
       relevancia: 'marco', tom: 'ruim',
       efeito: () => { const s = c.v.trabalho.atual!.salario; encerrarEmprego(c.v, 'empresa fechou'); dinheiro(c, s * 3); estresse(c, 12); }
     })

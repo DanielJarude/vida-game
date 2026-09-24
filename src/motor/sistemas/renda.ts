@@ -12,6 +12,8 @@ import type { Ocupacao } from '../dados/ocupacoes';
 
 export const SALARIO_MINIMO = 1620;
 export const TETO_INSS = 8160;
+/** Contribuinte facultativo (plano simplificado): 11% do salário mínimo. */
+export const CUSTO_FACULTATIVO = Math.round(SALARIO_MINIMO * 0.11);
 
 /** Contribuição ao INSS (aproximação da tabela progressiva). */
 export function inss(bruto: number): number {

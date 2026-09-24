@@ -547,7 +547,7 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
 
   // Registros profissionais que vêm com o diploma.
   const lic = v.trabalho.licencas;
-  const reg: Record<string, string> = { medicina: 'crm', enfermagem: 'coren', psicologia: 'crp', engenharia_civil: 'crea', engenharia: 'crea', agro: 'crea', odontologia: 'cro', fisioterapia: 'crefito', farmacia: 'crf', veterinaria: 'crmv' };
+  const reg: Record<string, string> = { contabilidade: 'crc', medicina: 'crm', enfermagem: 'coren', psicologia: 'crp', engenharia_civil: 'crea', engenharia: 'crea', agro: 'crea', odontologia: 'cro', fisioterapia: 'crefito', farmacia: 'crf', veterinaria: 'crmv' };
   if (c.nivel === 'superior' && reg[c.area] && !lic.includes(reg[c.area])) lic.push(reg[c.area]);
   if (c.area === 'imoveis' && !lic.includes('creci')) lic.push('creci');
   if (c.area === 'direito' && c.nivel === 'superior') marcarFato(v, 'pode_prestar_oab');

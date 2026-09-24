@@ -44,8 +44,12 @@ const NOME_CULTURA: Record<VidaRural['cultura'], string> = { lavoura: 'a lavoura
 export function iniciarRural(v: Vida, terra: VidaRural['terra']): VidaRural {
   const cultura = CULTURA_DA_REGIAO[municipio(v.moradia.municipioId).regiao] ?? 'misto';
   v.caminhos.rural = { terra, cultura, cooperativa: false, tInicio: v.t, anosRuins: 0 };
+  const e = v.trabalho.atual;
+  if (e?.ocupacaoId === 'produtor_rural') e.empregador = ONDE_PRODUZ[terra];
   return v.caminhos.rural;
 }
+
+const ONDE_PRODUZ: Record<VidaRural['terra'], string> = { familia: 'o sítio da família', arrendada: 'uma terra arrendada', propria: 'o próprio sítio' };
 
 export const produzindo = (v: Vida) => v.trabalho.atual?.ocupacaoId === 'produtor_rural' && !!v.caminhos.rural;
 export const pescando = (v: Vida) => v.trabalho.atual?.ocupacaoId === 'pescador';
@@ -103,6 +107,7 @@ export function comprarSitio(v: Vida, financiar: boolean): { preco: number; entr
     v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'financiamento_imovel', saldo, jurosMes: j, parcela, bemId: id, descricao: 'Crédito rural: o sítio', tInicio: v.t, prazo: n });
   }
   if (v.caminhos.rural) v.caminhos.rural.terra = 'propria';
+  if (v.trabalho.atual?.ocupacaoId === 'produtor_rural') v.trabalho.atual.empregador = ONDE_PRODUZ.propria;
   return { preco, entrada };
 }
 

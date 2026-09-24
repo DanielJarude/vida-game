@@ -40,6 +40,7 @@ import { NOME_FORCA, OCUPACOES_DAS_FORCAS, nomeDoPosto } from '../dados/forcas';
 import { pertoDaAgua } from '../dados/lugares';
 import { antecedenteAdulto, penaDeAntecedentes } from './justica';
 import { fatorDaEpoca, riscoDaEpoca } from './carreira';
+import { familiaDaTrilha } from '../dados/carreiras';
 import { aoEntrarNasForcas, aoFormarNasForcas, horizonteMilitar, processarMilitar } from './militar';
 
 export const nomeOcupacao = (v: Vida, oc: Ocupacao) => nomeDoPosto(oc.id, v.caminhos?.militar?.forca, ge(v) === 'feminino') ?? (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
@@ -330,7 +331,7 @@ export function textoDeContratacao(v: Vida, oc: Ocupacao, e: Emprego): string {
   if (oc.concurso && oc.duracao) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no processo seletivo: ${nome}, com contrato de ${Math.round(oc.duracao / 12)} anos.`;
   if (oc.concurso) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: ${nome} ${em(e.empregador)}, com estabilidade.`;
   if (e.contrato === 'autonomo' || e.contrato === 'informal') return `${primeira ? 'Começou a ganhar a vida' : 'Passou a trabalhar'} como ${nome}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
-  return `${primeira ? 'Primeiro emprego' : 'Novo emprego'}: ${nome} em ${e.empregador}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
+  return `${primeira ? 'Primeiro emprego' : 'Novo emprego'}: ${nome} ${em(e.empregador)}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
 }
 
 /* ----------------------------------------------------------- Clientela */
@@ -485,6 +486,12 @@ function ajustarSalario(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
     e.salario = Math.round(clamp(e.salario * (0.88 + r.next() * 0.24), ref * 0.6, ref * 1.3) / 10) * 10;
     return;
   }
+  // Quem vende vive de comissão: fixo baixo, variável que acompanha a mão para vender e o ano do comércio.
+  if (oc.trilha === 'comercio' && oc.nivel === 2 || oc.trilha === 'vendas') {
+    const mao = (habilidade(v, 'vendas') - 50) / 250;
+    e.salario = Math.round(clamp(ref * (0.95 + mao + reajusteReal(v) * 2 + (r.next() - 0.5) * 0.25), ref * 0.7, teto) / 10) * 10;
+    return;
+  }
   // Reajuste real: acima da inflação na expansão, abaixo na crise (o servidor, por lei, só repõe).
   let fator = 1.01 + (e.contrato === 'servidor' || e.contrato === 'militar' ? Math.min(0, reajusteReal(v)) * 0.5 : reajusteReal(v));
   if (oc.promocao === 'antiguidade') fator += 0.005;
@@ -555,14 +562,16 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 + riscoDaEpoca(oc, anoDe(v.t)) : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
   if (!r.chance(risco)) return false;
   const anos = Math.max(1, Math.floor((v.t - e.tInicio) / 12));
+  const noPosto = Math.max(1, Math.floor((v.t - (e.tPosto ?? e.tInicio)) / 12));
   const nome = nomeOcupacao(v, oc);
+  const tempo = noPosto < anos ? `${anos} anos ali, ${noPosto} ${noPosto === 1 ? 'deles' : 'deles'} como ${nome}` : `${anos} ${anos === 1 ? 'ano' : 'anos'} como ${nome}`;
   if (e.contrato === 'clt') {
     // Rescisão: saldo do FGTS + multa de 40% (aprox.) e seguro-desemprego.
     const fgts = Math.round(e.salario * 0.08 * 12 * anos * 1.4);
     const seguro = Math.round(Math.min(2400, Math.max(SALARIO_MINIMO, e.salario * 0.8)) * (anos >= 2 ? 5 : 3));
     v.financas.conta += fgts + seguro;
     const motivo = e.desempenho < 35 ? 'O desempenho vinha caindo.' : epoca > 0.2 && r.chance(0.6) ? 'A função vinha sendo automatizada.' : '';
-    escrever(v, { texto: e.desempenho < 35 ? `Foi ${flex(ge(v), 'demitido', 'demitida')} de ${e.empregador}, onde era ${nome}. ${motivo}` : `Foi ${flex(ge(v), 'demitido', 'demitida')} num corte de pessoal em ${e.empregador}, depois de ${anos} ${anos === 1 ? 'ano' : 'anos'} como ${nome}.${motivo ? ' ' + motivo : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: e.desempenho < 35 ? `Foi ${flex(ge(v), 'demitido', 'demitida')} de ${e.empregador}, onde era ${nome}. ${motivo}` : `Foi ${flex(ge(v), 'demitido', 'demitida')} num corte de pessoal ${em(e.empregador)}, depois de ${tempo}.${motivo ? ' ' + motivo : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', `${flex(ge(v), 'Demitido', 'Demitida', 'Demitide')} de ${e.empregador} depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}.`, anos >= 5 ? 3 : 2, { trilha: oc.trilha, ocupacaoId: oc.id });
   } else {
     escrever(v, { texto: `O trabalho como ${nome} minguou até acabar.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
@@ -657,6 +666,9 @@ export function horizonte(v: Vida): string | undefined {
   if (e.contrato === 'servidor' && oc.promocao === 'antiguidade' && !degrausAcima(oc).length) return 'A carreira anda pela tabela: progressão a cada três anos e adicional quando conclui pós, mestrado ou doutorado. Mudar de cargo é outro concurso.';
   if (e.clientela !== undefined) {
     const c = e.clientela;
+    const fam = familiaDaTrilha(oc.trilha);
+    if (fam.id === 'rural') return c < 20 ? 'A produção ainda mal paga os custos.' : c < 45 ? 'A produção vem rendendo mais a cada safra.' : c < 70 ? 'Já tem compradores certos para o que produz.' : 'A produção paga bem: comprador disputa o que sai da terra.';
+    if (fam.progressao === 'arte') return c < 20 ? 'Os trabalhos ainda são poucos: cada convite conta.' : c < 45 ? 'Os trabalhos vêm aparecendo, devagar.' : c < 70 ? 'Já tem quem chame você de novo.' : 'Não falta trabalho: a agenda está cheia.';
     return c < 20 ? 'A freguesia ainda é pouca: cada cliente conta.' : c < 45 ? 'A freguesia vem crescendo, devagar.' : c < 70 ? 'Já tem clientela fiel.' : 'Não falta trabalho: a agenda está cheia.';
   }
   const acima = degrausAcima(oc);

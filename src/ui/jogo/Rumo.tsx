@@ -88,9 +88,9 @@ export function Rumo({ vida, agir }: Props) {
         <div role="tabpanel" aria-label="Trabalho" className="rumo__painel">
           <Situacao vida={vida} agir={agir} />
           <Escada vida={vida} />
-          <Trabalho vida={vida} agir={agir} />
+          {!(vida.justica?.prisao?.regime === 'fechado') && <Trabalho vida={vida} agir={agir} />}
           <Devolutivas vida={vida} />
-          <Vagas vida={vida} agir={agir} />
+          {!(vida.justica?.prisao?.regime === 'fechado') && <Vagas vida={vida} agir={agir} />}
           {i >= 17 && !vida.justica?.prisao && <Concursos vida={vida} agir={agir} />}
           {(vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <Trajetoria vida={vida} />}
         </div>
@@ -373,7 +373,7 @@ function Trabalho({ vida, agir }: Props) {
         <>
           <Linha rotulo="O que faz" valor={nomeOcupacao(vida, ocupacao(e.ocupacaoId))} />
           <Linha rotulo="Onde" valor={e.empregador} />
-          <Linha rotulo="Ganha" valor={`${dinheiroCurto(e.salario)} bruto · ${dinheiroCurto(liquido(e.salario, e.contrato))} no bolso${e.clientela !== undefined ? ' · varia com a freguesia' : ''}`} />
+          <Linha rotulo="Ganha" valor={`${dinheiroCurto(e.salario)} bruto · ${dinheiroCurto(liquido(e.salario, e.contrato))} no bolso${e.clientela !== undefined ? ({ sazonal: ' · varia com a safra', projeto: ' · varia com os trabalhos', variavel: ' · varia com a freguesia', estavel: ' · varia com a freguesia' } as const)[familiaDaTrilha(ocupacao(e.ocupacaoId).trilha).renda] : ''}`} />
           <Linha rotulo="Desde" valor={`${anoDe(e.tInicio)}${e.contrato === 'clt' ? ' · carteira assinada' : e.contrato === 'servidor' ? ' · servidor público' : e.contrato === 'militar' ? ' · carreira militar' : e.contrato === 'informal' ? ' · informal' : e.contrato === 'autonomo' ? ' · por conta própria' : e.contrato === 'estagio' ? ' · estágio' : e.contrato === 'temporario' ? ' · temporário' : ' · aprendiz'}`} />
           {e.clientela === undefined && <Linha rotulo="Como vai" valor={palavraDesempenho(e.desempenho)} tom={e.desempenho >= 62 ? 'bom' : e.desempenho < 40 ? 'ruim' : undefined} />}
           <div className="carreira">

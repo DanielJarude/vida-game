@@ -265,6 +265,8 @@ export function migrarV10(v: Vida): Vida {
     const tIngresso = Math.min(...militares.map(h => h.tInicio));
     x.caminhos.militar = { forca: 'exercito', quadro: QUADRO_V10[e.ocupacaoId], tIngresso, guarnicao: x.moradia.municipioId, tGuarnicao: x.t, cursos: e.ocupacaoId === 'major' ? ['aperfeicoamento'] : [], transferencias: 0 };
   }
+  // O registro de contador (CRC) passou a existir como licença: quem se formou em Contábeis já o tinha.
+  if (x.educacao.concluidos.some(c => c.area === 'contabilidade' && c.nivel === 'superior') && !x.trabalho.licencas.includes('crc')) x.trabalho.licencas.push('crc');
   if (e?.ocupacaoId === 'produtor_rural' && !x.caminhos.rural) {
     const rural = Object.values(x.pessoas).some(p => p.vivo && p.ocupacaoId && ['trabalhador_rural', 'produtor_rural', 'operador_maquinas', 'gerente_fazenda'].includes(p.ocupacaoId) && x.vinculos[p.id]?.parentesco);
     const regiao = municipioPorId(x.moradia.municipioId)?.regiao;
