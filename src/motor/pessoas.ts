@@ -72,8 +72,13 @@ export function criarPessoa(v: Vida, r: Rng, n: NovaPessoa): Pessoa {
   // Duas pessoas importantes com o mesmo nome confundem a história: um
   // nome novo nunca repete o de alguém vivo e relevante na vida.
   const ocupados = new Set([v.eu.nome, ...Object.values(v.vinculos)
-    .filter(x => v.pessoas[x.pessoaId]?.vivo && (x.parentesco || x.romance || x.estagio === 'amigo' || x.estagio === 'amigo_proximo' || x.convivio.length > 0 || x.proximidade >= 25))
-    .map(x => v.pessoas[x.pessoaId].nome)]);
+    .filter(x => v.pessoas[x.pessoaId]?.vivo)
+    .flatMap(x => {
+      const p = v.pessoas[x.pessoaId];
+      // O parceiro de alguém da família também está na história (futuro genro, nora).
+      const par = p.parceiroId ? v.pessoas[p.parceiroId] : undefined;
+      return par?.vivo ? [p.nome, par.nome] : [p.nome];
+    })]);
   let nome = n.nome ?? sortearNome(r, genero, anoDe(tNasc));
   for (let k = 0; k < 14 && !n.nome && ocupados.has(nome); k++) nome = sortearNome(r, genero, anoDe(tNasc));
   const p: Pessoa = {

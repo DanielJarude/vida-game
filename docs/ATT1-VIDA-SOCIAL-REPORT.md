@@ -302,8 +302,11 @@ VIDAS=20 SAIDA=/tmp/social node /tmp/social.cjs
 | Mesma frase social 3+ vezes na vida | 5,3 por vida (era 14,4 no começo da ATT) |
 | Relações de 20+ anos que importam com ≤ 2 marcos | 165/867 (19%; era 51% na primeira rodada), quase todas de jogadores passivos |
 
-`scripts/sim/simular.ts` (o simulador geral) continua rodando; estratégias
-atualizadas para as ações contextuais.
+`scripts/sim/simular.ts` (o simulador geral, 120 vidas): **violações de
+coerência: nenhuma**; separações de quem morou junto 30/101 (o relatório
+anterior registrava ≈19% e apontava estar abaixo da média brasileira — as
+crises com causa, a estratégia "desatento" e os casos trazem a taxa para
+perto dela).
 
 ## 13. Playtest visual
 
@@ -338,6 +341,7 @@ da mesma cidade enchendo a Família.
 | `par_mudar_cidade` mandava sempre para São Paulo | destino fixo | destino da região |
 | `fil_volta_casa` sem checar desemprego (pendência do relatório anterior) | premissa não verificada | exige filho desempregado de fato, sem parceria |
 | Amiga de 30 anos "de todo dia" de uma criança de 5 | amplitude da rotina | ±2 anos até 13, ±4 até 17 |
+| Homônimos (genro e colega "Antônio"; nova parceria e colega "Ana Clara") | a checagem de nomes ignorava parceiros de filhos e vínculos pouco próximos | checa todos os vivos com vínculo e seus parceiros |
 
 ## 15. Limitações conhecidas
 
