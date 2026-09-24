@@ -10,5 +10,6 @@ import { ESCOLHAS } from './escolhas';
 import { PRIMEIROS } from './primeiros';
 import { MUNDO } from './mundo';
 import { SOCIAL } from './social';
+import { CAMINHOS } from './caminhos';
 
-export const CATALOGO: readonly Conteudo[] = [...SISTEMICOS, ...SOCIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO];
+export const CATALOGO: readonly Conteudo[] = [...SISTEMICOS, ...SOCIAL, ...CAMINHOS, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO];

@@ -249,6 +249,8 @@ export interface EscolaBasica {
   /** Ano dentro do ensino fundamental (1..9) ou médio (1..3); 0 na educação infantil. */
   serie: number;
   rede: 'publica' | 'privada';
+  /** Médio integrado ao técnico (instituto federal, escola técnica): o curso técnico que vem junto. */
+  integrado?: string;
   desempenho: number;  // 0..100
   reprovacoes: number;
 }
@@ -277,17 +279,23 @@ export interface Educacao {
   evadiu: boolean;
   matricula?: Matricula;
   concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean }[];
-  enem: { t: number; nota: number }[];
+  enem: { t: number; nota: number; areas?: Partial<Record<'exatas' | 'linguagens' | 'ciencias' | 'humanas', number>> }[];
   /** Postura do ano na escola/curso (escolha comportamental do jogador). */
   postura: 'dedicada' | 'normal' | 'relaxada';
   cursinho: boolean;
 }
 
-export type NivelCurso = 'tecnico' | 'superior' | 'pos' | 'mestrado' | 'doutorado' | 'residencia';
+/** `livre`: qualificação profissional curta (SENAI, SENAC, cursos de ofício) — não muda a escolaridade. */
+export type NivelCurso = 'livre' | 'tecnico' | 'superior' | 'pos' | 'mestrado' | 'doutorado' | 'residencia';
 
 /* ---------------------------------------------------------------- Trabalho */
 
-export type Contrato = 'aprendiz' | 'estagio' | 'clt' | 'servidor' | 'informal' | 'autonomo';
+/**
+ * Vínculo de trabalho. `temporario` é o contrato de safra ou de fim de ano;
+ * `militar` é a carreira das Forças Armadas e das polícias e bombeiros
+ * militares (regime próprio: reserva por tempo de serviço, não INSS).
+ */
+export type Contrato = 'aprendiz' | 'estagio' | 'clt' | 'servidor' | 'informal' | 'autonomo' | 'temporario' | 'militar';
 
 export interface Emprego {
   ocupacaoId: string;
@@ -301,6 +309,16 @@ export interface Emprego {
   municipioId: string;
   /** Carga: integral ou parcial (afeta tempo livre). */
   carga: 'integral' | 'parcial';
+  /** Curso de formação pago (escola de sargentos, academia de polícia): termina em `destino`. */
+  formacaoAte?: number;
+  /** Trabalho depois de aposentado: não entra na escada de promoções. */
+  posAposentadoria?: boolean;
+  /** Como chegou aqui (indicação, estágio, concurso...) — dado para a Linha da Vida. */
+  via?: string;
+  /** Autônomos: clientela, 0..100 (o que faz a renda de quem trabalha por conta). */
+  clientela?: number;
+  /** Desde quando está neste posto (promoção reinicia; `tInicio` guarda a entrada no emprego). */
+  tPosto?: number;
 }
 
 export interface Candidatura {
@@ -501,6 +519,155 @@ export interface Momento {
 export interface Rotina {
   id: string;
   tInicio: number;
+  /** Intensidade: 1 leve (por diversão) · 2 regular (aulas, treino) · 3 a sério (base, banda, preparação pesada). */
+  nivel?: 1 | 2 | 3;
+}
+
+/* ---------------------------------------------------------------- Caminhos */
+
+/**
+ * Frentes: aquilo em que uma pessoa pode ficar boa — um esporte, uma arte,
+ * uma matéria, um ofício. Cada frente separa quatro coisas que a vida real
+ * separa: a FACILIDADE (aptidão, sorte de nascença, derivada da semente e
+ * nunca guardada), o INTERESSE (vontade de continuar), a EXPERIÊNCIA (meses
+ * de prática de verdade) e a HABILIDADE (o resultado). Nada disso aparece
+ * como número: a interface fala em frases.
+ */
+export type Dominio =
+  // esporte
+  | 'futebol' | 'volei' | 'natacao' | 'atletismo' | 'lutas'
+  // arte
+  | 'musica' | 'teatro' | 'danca' | 'desenho' | 'escrita' | 'fotografia'
+  // escola e estudo
+  | 'exatas' | 'linguagens' | 'ciencias' | 'humanas' | 'xadrez' | 'programacao' | 'idiomas'
+  // social
+  | 'lideranca' | 'comunidade'
+  // ofício
+  | 'cozinha' | 'manual' | 'beleza' | 'vendas' | 'campo';
+
+export interface Frente {
+  /** Vontade de continuar, 0..100. Cresce com a prática que dá certo; esfria quando para. */
+  interesse: number;
+  /** Meses de prática, ponderados pela intensidade. */
+  meses: number;
+  /** O que foi desenvolvido, 0..100. */
+  habilidade: number;
+  tInicio: number;
+  /** Última vez que praticou (ano de vida). */
+  tUltimo: number;
+  /** Quantas vezes parou e voltou. */
+  retomadas: number;
+  /** Maior habilidade já alcançada (para "já tocou bem, um dia"). */
+  auge: number;
+}
+
+export type TipoMarcaCaminho =
+  | 'comecou' | 'destaque' | 'conquista' | 'fracasso' | 'oportunidade' | 'estreia' | 'abandono' | 'retomada'
+  | 'primeiro_emprego' | 'formacao' | 'ingresso' | 'promocao' | 'demissao' | 'mudanca_carreira'
+  | 'aprovacao' | 'reprovacao' | 'profissional' | 'fim_carreira' | 'negocio_aberto' | 'negocio_fechado'
+  | 'volta_estudos' | 'aposentadoria' | 'lideranca' | 'estagnacao' | 'mudanca_cidade';
+
+/** Um marco do caminho profissional/educacional, estruturado (dado para a Linha da Vida). */
+export interface MarcaCaminho {
+  t: number;
+  tipo: TipoMarcaCaminho;
+  texto: string;
+  /** 1 corriqueiro · 2 importante · 3 muda a vida. */
+  peso: 1 | 2 | 3;
+  dominio?: Dominio;
+  trilha?: string;
+  ocupacaoId?: string;
+  pessoaId?: string;
+}
+
+export type TipoOportunidade =
+  | 'vaga' | 'indicacao' | 'aprendiz' | 'estagio' | 'temporario' | 'peneira' | 'seletiva' | 'banda' | 'grupo'
+  | 'clientela' | 'convite' | 'retomar' | 'bolsa' | 'selecao_tecnico' | 'proposta';
+
+/**
+ * Uma porta que a vida abriu AGORA, por um motivo (a escola divulgou, um
+ * amigo indicou, o treinador viu jogar). Expira. Aceitar é escolha.
+ */
+export interface Oportunidade {
+  id: string;
+  tipo: TipoOportunidade;
+  titulo: string;
+  texto: string;
+  tInicio: number;
+  tFim: number;
+  ocupacaoId?: string;
+  dominio?: Dominio;
+  pessoaId?: string;
+  municipioId?: string;
+  /** Bônus de chance que a porta dá (indicação pesa). */
+  bonus?: number;
+}
+
+/** Carreira esportiva: base, profissional, encerrada. */
+export interface CarreiraEsportiva {
+  modalidade: Dominio;
+  fase: 'base' | 'profissional' | 'encerrada';
+  clube: string;
+  /** 1 amador/regional · 2 divisões de acesso · 3 segunda divisão nacional · 4 elite. */
+  nivel: 1 | 2 | 3 | 4;
+  tInicio: number;
+  tFase: number;
+  lesoes: number;
+  /** Onde o clube fica (a base pode ser longe de casa). */
+  municipioId: string;
+  tFim?: number;
+  motivoFim?: 'dispensa' | 'lesao' | 'idade' | 'escolha' | 'sem_contrato';
+}
+
+/** Um projeto artístico coletivo (banda, grupo de teatro, companhia). */
+export interface ProjetoArtistico {
+  linguagem: Dominio;
+  nome: string;
+  tipo: 'banda' | 'grupo' | 'companhia' | 'canal';
+  tInicio: number;
+  /** Quanta gente conhece o trabalho, 0..100. */
+  publico: number;
+  membros: string[];
+  ativo: boolean;
+  tFim?: number;
+}
+
+/** Preparação para concurso: meses de estudo acumulados (esfriam se parar). */
+export interface PreparoConcurso {
+  meses: number;
+  tentativas: number;
+  aprovacoes: number;
+  ultimaTentativa?: number;
+  /** Aprovado fora das vagas: pode ser chamado até `tAte`. */
+  reserva?: { ocupacaoId: string; tAte: number };
+}
+
+/** Um pequeno negócio ou trabalho por conta com clientela. */
+export interface Negocio {
+  tipo: string;
+  nome: string;
+  ocupacaoId: string;
+  tInicio: number;
+  /** Dinheiro posto no começo. */
+  capital: number;
+  /** Clientela / movimento, 0..100. */
+  clientela: number;
+  estado: 'comecando' | 'firme' | 'apertado' | 'fechado';
+  anosNoVermelho: number;
+  socioId?: string;
+  tFim?: number;
+}
+
+export interface Caminhos {
+  frentes: Partial<Record<Dominio, Frente>>;
+  marcas: MarcaCaminho[];
+  oportunidades: Oportunidade[];
+  concurso: PreparoConcurso;
+  esporte?: CarreiraEsportiva;
+  arte?: ProjetoArtistico;
+  negocio?: Negocio;
+  /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
+  ultimas: Record<string, number>;
 }
 
 /* ---------------------------------------------------------------------- Vida */
@@ -528,7 +695,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 7;
+  versao: 8;
   id: string;
   rng: number;
   seq: number;
@@ -555,6 +722,8 @@ export interface Vida {
   anoAtual: { acoes: string[] };
   /** Perdas recentes, ainda sendo atravessadas. */
   luto: Luto[];
+  /** O que a pessoa pratica, conquista e tenta: frentes, marcas, portas abertas, carreiras especiais. */
+  caminhos: Caminhos;
   morte?: { t: number; causa: string };
 }
 

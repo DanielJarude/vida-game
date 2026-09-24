@@ -7,6 +7,7 @@
  * cachorro no quintal. Tudo isso é coerente com a classe e o lugar.
  */
 
+import { caminhosVazios } from './sistemas/marcas';
 import { criarRng, type Rng } from './rng';
 import type { Classe, Genero, Origem, Pessoa, Vida, Visual } from './tipos';
 import { tDe, MESES, mesDe, anoDe } from './tempo';
@@ -105,7 +106,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const podeGestar = o.genero === 'feminino' ? true : o.genero === 'masculino' ? false : !!o.podeGestar;
 
   const v: Vida = {
-    versao: 7,
+    versao: 8,
     id: `vida-${o.semente.toString(36)}`,
     rng: 0,
     seq: 0,
@@ -159,7 +160,8 @@ export function criarVida(o: OpcoesCriacao): Vida {
     momento: null,
     ocorrencias: [],
     anoAtual: { acoes: [] },
-    luto: []
+    luto: [],
+    caminhos: caminhosVazios()
   };
   v.eu.visual = o.visual ?? v.eu.visual;
 

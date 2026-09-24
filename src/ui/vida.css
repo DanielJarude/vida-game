@@ -286,6 +286,36 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .medidor__bloco { width: 28px; height: 10px; border-radius: 3px; background: var(--surface-hover); }
 .medidor__bloco--cheio { background: var(--accent); }
 .medidor__bloco--excesso { background: var(--danger); }
+.medidor { flex-wrap: wrap; }
+
+/* ------------------------------------------------------------- Caminhos (ATT 2) */
+.semana-fixos { display: flex; flex-direction: column; margin: var(--space-2) 0 var(--space-3); }
+.semana-fixos li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); font-size: var(--type-body); color: var(--text-secondary); }
+.semana-fixos__dose { font-size: var(--type-caption); color: var(--text-muted); white-space: nowrap; }
+.semana-fixos__ganho { color: var(--text-muted); }
+.rotina__leitura { font-family: var(--font-serif); font-style: italic; color: var(--text-secondary) !important; font-size: var(--type-body) !important; }
+.rotina__acoes { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); flex: none; max-width: 50%; }
+.rotina__acoes .acao { align-items: flex-end; }
+.rotina__acoes .acao__motivo { text-align: right; }
+.frentes { display: flex; flex-direction: column; }
+.frentes li { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.frentes strong { font-family: var(--font-serif); font-weight: 500; color: var(--text-primary); }
+.frentes span { font-family: var(--font-serif); color: var(--text-secondary); }
+.grupo-atividades { margin-top: var(--space-4); }
+.grupo-atividades:first-child { margin-top: 0; }
+.grupo-atividades__titulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-faint); margin-bottom: var(--space-1); }
+.portas { display: flex; flex-direction: column; gap: var(--space-3); }
+.porta { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.porta__texto { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.porta__texto strong { font-family: var(--font-serif); font-weight: 500; font-size: var(--type-subheading); color: var(--text-primary); }
+.porta__texto p { font-family: var(--font-serif); color: var(--text-secondary); line-height: var(--leading-normal); max-width: 60ch; }
+.porta__prazo { font-size: var(--type-caption); color: var(--text-faint); }
+.porta__acoes { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); flex: none; }
+.carreira { margin: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.carreira p { font-family: var(--font-serif); color: var(--text-secondary); line-height: var(--leading-normal); max-width: 62ch; }
+.marcos-caminho { display: flex; flex-direction: column; margin-bottom: var(--space-3); }
+.marcos-caminho li { display: flex; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); font-family: var(--font-serif); color: var(--text-secondary); }
+.marcos-caminho__ano { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-faint); min-width: 3.2em; padding-top: 2px; }
 
 /* ------------------------------------------------------------ Folha e momento */
 .veu { position: fixed; inset: 0; z-index: var(--z-overlay); background: var(--veu-modal); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: var(--space-4); }
@@ -394,6 +424,10 @@ button.agora-sinal:hover { color: var(--text-primary); }
   .via, .vaga, .bem, .rotina { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .via > .acao, .vaga > .acao, .bem > .acao, .rotina > .acao { max-width: none; align-items: flex-start; }
   .via > .acao .acao__motivo, .vaga > .acao .acao__motivo, .rotina > .acao .acao__motivo { text-align: left; }
+  .rotina__acoes, .porta__acoes { max-width: none; align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+  .rotina__acoes .acao, .porta__acoes .acao { align-items: flex-start; }
+  .rotina__acoes .acao__motivo { text-align: left; }
+  .porta { flex-direction: column; gap: var(--space-2); }
   .via__botoes { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
 }
 

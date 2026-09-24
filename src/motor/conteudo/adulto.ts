@@ -5,7 +5,10 @@ import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa, temFato, marcarFato, lembrarCom } from '../nucleo';
 import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
-import { nomeOcupacaoId, contratar, encerrarEmprego } from '../sistemas/trabalho';
+import { nomeOcupacaoId, contratar, encerrarEmprego, elegibilidade } from '../sistemas/trabalho';
+import { editaisAbertos } from '../sistemas/concurso';
+import { abrirNegocio, NEGOCIOS } from '../sistemas/negocio';
+import { marcar } from '../sistemas/marcas';
 import { ocupacao, OCUPACOES } from '../dados/ocupacoes';
 import { mudarAgora } from '../sistemas/processos';
 import { criarPessoa, vincular } from '../pessoas';
@@ -53,34 +56,30 @@ export const ADULTO: Conteudo[] = [
   },
   {
     id: 'adu_proposta_outra_cidade', tipo: 'decisao', idade: [22, 55], tema: 'trabalho', repetir: 8,
-    quando: c => empregado(c) && c.v.trabalho.atual!.contrato !== 'servidor' && ocupacao(c.v.trabalho.atual!.ocupacaoId).nivel >= 2,
+    quando: c => empregado(c) && c.v.trabalho.atual!.contrato !== 'servidor' && c.v.trabalho.atual!.contrato !== 'militar' && !c.v.caminhos.negocio?.estado?.match(/firme|comecando|apertado/) && ocupacao(c.v.trabalho.atual!.ocupacaoId).nivel >= 2,
     titulo: 'A proposta',
     texto: c => {
       const destino = destinoDaProposta(c);
-      return `Uma empresa de ${destino.nome} ofereceu um cargo melhor, com salário uns 30% maior. Seria preciso mudar de cidade em poucos meses${P.conjuge(c.v)[0] ? ` — e convencer ${P.conjuge(c.v)[0].nome}` : ''}.`;
+      const par = P.conjuge(c.v)[0];
+      const topa = par ? parceriaTopa(c) : true;
+      const filhosEscola = Object.values(c.v.vinculos).some(x => x.parentesco === 'filho' && x.convivio.includes('casa'));
+      return `Uma empresa de ${destino.nome} ofereceu um cargo melhor, com salário uns 30% maior. Seria preciso mudar de cidade em poucos meses.${par ? (topa ? ` ${par.nome} topa ir${filhosEscola ? ', mesmo com as crianças mudando de escola' : ''}.` : ` ${par.nome} não quer sair da cidade: ${par.renda > 0 ? `o trabalho ${par.genero === 'feminino' ? 'dela' : par.genero === 'masculino' ? 'dele' : 'delu'} está aqui` : 'a família e a vida estão aqui'}.`) : ''}`;
     },
+    papeis: {},
     opcoes: [
-      { id: 'aceitar', texto: 'Aceitar e se mudar', comportamento: { coragem: 1, independencia: 1 },
-        disponivel: c => (P.conjuge(c.v)[0] && c.v.vinculos[P.conjuge(c.v)[0].id].romance!.envolvimento < 50 ? 'Seu relacionamento não sobreviveria a essa mudança agora.' : true),
+      { id: 'aceitar', texto: c => (P.conjuge(c.v)[0] ? 'Aceitar e ir todos juntos' : 'Aceitar e se mudar'), comportamento: { coragem: 1 },
         resolver: c => {
           const destino = destinoDaProposta(c);
+          const par = P.conjuge(c.v)[0];
+          const vai = !par || parceriaTopa(c) || c.v.vinculos[par.id].romance!.envolvimento >= 55;
           return {
-            texto: `Caixas, despedidas, um caminhão de mudança. Recomeço em ${destino.nome}.`,
+            texto: vai ? `Caixas, despedidas, um caminhão de mudança. Recomeço em ${destino.nome}.` : `${par!.nome} disse que não ia. Você foi assim mesmo, com uma mala e uma conversa pendente.`,
             memoria: null,
-            efeito: () => {
-              const e = c.v.trabalho.atual!;
-              const oc = ocupacao(e.ocupacaoId);
-              const prox = OCUPACOES.find(x => x.trilha === oc.trilha && x.nivel === oc.nivel + 1) ?? oc;
-              const salario = Math.round(e.salario * 1.3 * economiaLocal(destino.id).salario / economiaLocal(c.v.moradia.municipioId).salario / 10) * 10;
-              marcarFato(c.v, 'mudou_por_trabalho');
-              encerrarEmprego(c.v, 'mudança de cidade');
-              mudarAgora(c.v, destino.id, 'por causa de uma proposta de trabalho');
-              const novo = contratar(c.v, c.r, prox);
-              novo.salario = Math.max(salario, novo.salario);
-              for (const par of P.conjuge(c.v)) { const vin = c.v.vinculos[par.id]; vin.tensao += 10; }
-            }
+            efeito: () => mudarPorProposta(c, destino.id, vai)
           };
         } },
+      { id: 'sozinho', texto: 'Aceitar e ir na frente, sem a família por enquanto', disponivel: c => (P.conjuge(c.v)[0] ? true : false), comportamento: { independencia: 1 },
+        resolver: c => ({ texto: 'Semana lá, fim de semana cá — pelo menos no começo.', memoria: null, efeito: () => mudarPorProposta(c, destinoDaProposta(c).id, false) }) },
       { id: 'recusar', texto: 'Ficar onde está', comportamento: { familia: 1 }, resolver: () => ({ texto: 'Você agradeceu e recusou. A vida seguiu no mesmo endereço.', memoria: null }) },
       { id: 'negociar', texto: 'Usar a proposta para pedir aumento', comportamento: { coragem: 1 },
         resolver: c => c.r.chance(0.45)
@@ -125,9 +124,13 @@ export const ADULTO: Conteudo[] = [
     ]
   },
   {
-    id: 'adu_concurso_aberto', tipo: 'acontecimento', idade: [18, 50], tema: 'trabalho', repetir: 4,
-    quando: c => !temFato(c.v, 'aviso_concurso') || c.r.chance(0.3),
-    narrar: c => ({ texto: `Saiu o edital de um concurso ${c.r.pick(['da prefeitura', 'do Tribunal Regional', 'de um banco público', 'da rede estadual de ensino'])}. Os grupos de estudo lotaram.`, relevancia: 'cotidiano', efeito: () => fato(c, 'aviso_concurso') })
+    id: 'adu_concurso_aberto', tipo: 'acontecimento', idade: [17, 55], tema: 'trabalho', repetir: 3,
+    quando: c => editaisAbertos(c.v).some(oc => elegibilidade(c.v, oc).grau !== 'requisito' || c.v.rotinas.some(r => r.id === 'estudar_concurso')),
+    narrar: c => {
+      const lista = editaisAbertos(c.v).filter(oc => elegibilidade(c.v, oc).grau !== 'requisito');
+      const oc = lista.length ? c.r.pick(lista) : c.r.pick(editaisAbertos(c.v));
+      return { texto: `Saiu o edital para ${nomeOcupacaoId(c.v, oc.id)}. Os grupos de estudo lotaram.`, relevancia: 'cotidiano', efeito: () => fato(c, 'aviso_concurso') };
+    }
   },
 
   /* ============================================================= DINHEIRO */
@@ -380,24 +383,48 @@ export const ADULTO: Conteudo[] = [
   {
     id: 'adu_negocio_proprio', tipo: 'decisao', idade: [23, 60], tema: 'trabalho', repetir: 10,
     papeis: { socio: P.qualquer(P.amigo, P.irmao) },
-    quando: c => c.v.financas.conta + c.v.financas.reserva > 15000,
+    quando: c => !c.v.caminhos.negocio || c.v.caminhos.negocio.estado === 'fechado',
     titulo: 'O negócio',
-    texto: c => `${c.p.socio.nome} quer abrir ${c.r.pick(['uma hamburgueria', 'uma loja de açaí', 'uma oficina', 'um salão', 'uma loja de roupas online'])} e chama você para sócio${c.g('', 'a', 'e')}: entrar com R$ 15.000 e trabalhar nos fins de semana.`,
+    texto: c => { const t = tipoDoSocio(c); return `${c.p.socio.nome} quer abrir ${t.nome} e chama você para sócio${c.g('', 'a', 'e')}: entrar com uns R$ ${Math.round(t.capital * 0.5 / 1000)} mil e trabalhar junto. ${c.p.socio.nome} entende do ramo; você entraria com o dinheiro e o braço.`; },
     opcoes: [
-      { id: 'entrar', texto: 'Entrar no negócio', comportamento: { coragem: 2 },
-        resolver: c => {
-          const deu = c.r.chance(0.35);
-          return {
-            texto: deu ? 'Os primeiros meses foram de prejuízo. No segundo ano, começou a sobrar dinheiro.' : 'Em um ano e meio, as portas fecharam. Sobraram dívidas com fornecedor e um estoque encalhado.',
-            memoria: deu ? `Abriu um negócio com ${c.p.socio.nome}, que deu certo.` : `Abriu um negócio com ${c.p.socio.nome}, que fechou em um ano e meio.`,
-            relevancia: 'marco', tom: deu ? 'bom' : 'ruim',
-            efeito: () => { dinheiro(c, -15000); if (deu) { fato(c, 'negocio_proprio'); c.v.financas.conta += 30000; prox(c, 'socio', 10); } else { tensao(c, 'socio', 30); estresse(c, 10); } }
-          };
-        } },
+      { id: 'entrar', texto: 'Entrar de sócio e tocar junto', comportamento: { coragem: 2 },
+        disponivel: c => (c.v.financas.conta + c.v.financas.reserva >= tipoDoSocio(c).capital * 0.5 ? true : 'Não há dinheiro guardado para a sua parte.'),
+        resolver: c => ({ texto: 'Vocês assinaram o contrato social numa lanchonete, com um guardanapo de testemunha.', memoria: null, efeito: () => { const t = tipoDoSocio(c); const extra = t.capital * 0.5; c.v.financas.conta += extra; abrirNegocio(c.v, c.r, t.id, c.p.socio.id); lembrarCom(c.v, c.p.socio.id, `Abriram ${t.nome} juntos.`, 'trabalho', 3); } }) },
       { id: 'recusar', texto: 'Recusar', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você desejou boa sorte e não entrou.', memoria: null }) }
     ]
   }
 ];
+
+function tipoDoSocio(c: Ctx) {
+  const i = Math.floor(((c.p.socio?.id.length ?? 3) + anoDe(c.v.t)) % NEGOCIOS.length);
+  return NEGOCIOS[i];
+}
+
+/** A parceria topa mudar? Depende do envolvimento, do trabalho dela e das raízes — não do jogador. */
+function parceriaTopa(c: Ctx): boolean {
+  const par = P.conjuge(c.v)[0];
+  if (!par) return true;
+  const rom = c.v.vinculos[par.id].romance!;
+  const raiz = par.renda > 4000 ? 20 : par.renda > 0 ? 10 : 0;
+  return rom.envolvimento - raiz >= 58;
+}
+
+function mudarPorProposta(c: Ctx, destinoId: string, juntos: boolean): void {
+  const e = c.v.trabalho.atual!;
+  const oc = ocupacao(e.ocupacaoId);
+  const prox = OCUPACOES.find(x => x.trilha === oc.trilha && x.nivel === oc.nivel + 1 && !x.concurso && !x.entrada) ?? oc;
+  const salario = Math.round(e.salario * 1.3 * economiaLocal(destinoId).salario / economiaLocal(c.v.moradia.municipioId).salario / 10) * 10;
+  const par = P.conjuge(c.v)[0];
+  marcarFato(c.v, 'mudou_por_trabalho');
+  encerrarEmprego(c.v, 'mudança de cidade');
+  // Quem não vai fica: tira a parceria da casa antes da mudança levar todo mundo.
+  if (par && !juntos) { const vin = c.v.vinculos[par.id]; vin.convivio = vin.convivio.filter(x => x !== 'casa'); vin.tensao = Math.min(100, vin.tensao + 25); for (const x of Object.values(c.v.vinculos)) if (x.parentesco === 'filho' && x.convivio.includes('casa') && c.v.pessoas[x.pessoaId] && idadePessoa(c.v, c.v.pessoas[x.pessoaId]) < 18) x.convivio = x.convivio.filter(y => y !== 'casa'); }
+  mudarAgora(c.v, destinoId, 'por causa de uma proposta de trabalho');
+  const novo = contratar(c.v, c.r, prox, 'proposta');
+  novo.salario = Math.max(salario, novo.salario);
+  if (par && juntos) { const vin = c.v.vinculos[par.id]; vin.tensao = Math.min(100, vin.tensao + (parceriaTopa(c) ? 5 : 18)); lembrarCom(c.v, par.id, `Mudaram juntos para ${municipio(destinoId).nome}.`, 'casa', 2); }
+  marcar(c.v, 'mudanca_cidade', `Mudou-se para ${municipio(destinoId).nome} por uma proposta de trabalho${par && !juntos ? `, sem ${par.nome}` : ''}.`, 3, { trilha: prox.trilha });
+}
 
 function destinoDaProposta(c: Ctx) {
   const aqui = municipio(c.v.moradia.municipioId);

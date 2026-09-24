@@ -13,7 +13,7 @@
 
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { LinhaRazao, Vida } from '../tipos';
+import type { LinhaRazao, Rotina, Vida } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, marcarFato, moraCom, parceiro, pets, temFato } from '../nucleo';
 import { economiaLocal } from '../dados/lugares';
 import { modeloMoradia, modeloVeiculo } from '../dados/bens';
@@ -161,8 +161,8 @@ export function despesasMensais(v: Vida, estiloForcado?: Vida['financas']['estil
 
   // Rotinas pagas
   for (const rot of v.rotinas) {
-    const custo = CUSTO_ROTINA[rot.id];
-    if (custo && !(naCasaDosPais && i < 18)) add(ROTULO_ROTINA_CUSTO[rot.id] ?? rot.id, custo * c, 'lazer');
+    const custo = CUSTO_ROTINA.de(v, rot);
+    if (custo && !(naCasaDosPais && i < 18)) add(CUSTO_ROTINA.rotulo(rot), custo * c, 'lazer');
   }
 
   // Compromissos com a família: ajuda mensal, cuidadora, casa de repouso.
@@ -197,9 +197,8 @@ export function despesasMensais(v: Vida, estiloForcado?: Vida['financas']['estil
   return out;
 }
 
-/** Custos mensais das rotinas pagas (sobrescritos pelo módulo de rotinas). */
-export const CUSTO_ROTINA: Record<string, number> = {};
-export const ROTULO_ROTINA_CUSTO: Record<string, string> = {};
+/** Custo mensal de uma rotina (preenchido pelo módulo de rotinas, que conhece os níveis). */
+export const CUSTO_ROTINA: { de: (v: Vida, r: Rotina) => number; rotulo: (r: Rotina) => string } = { de: () => 0, rotulo: r => r.id };
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 

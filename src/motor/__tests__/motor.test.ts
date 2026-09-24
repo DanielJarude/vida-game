@@ -276,7 +276,7 @@ describe('ações', () => {
     let aumentos = 0, azedou = 0, testadas = 0;
     for (let s = 1; s <= 30; s++) {
       const v = viverAte(nova({ semente: s }), 30, vv => idade(vv) >= 18 && !vv.trabalho.atual ? [{ tipo: 'candidatar', ocupacaoId: 'atendente' }] : []);
-      if (!v.trabalho.atual || ['informal', 'autonomo'].includes(v.trabalho.atual.contrato)) continue;
+      if (v.morte || !v.trabalho.atual || ['informal', 'autonomo'].includes(v.trabalho.atual.contrato)) continue;
       v.trabalho.atual.tInicio = v.t - 24;
       testadas++;
       const antes = v.trabalho.atual.salario, desempenho = v.trabalho.atual.desempenho;

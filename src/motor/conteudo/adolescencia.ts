@@ -130,16 +130,6 @@ export const ADOLESCENCIA: Conteudo[] = [
     ]
   },
   {
-    id: 'ado_time_escola', tipo: 'acontecimento', idade: [11, 17], tema: 'lazer',
-    quando: c => c.v.rotinas.some(r => r.id === 'futebol') && c.v.corpo.forma >= 65,
-    narrar: c => ({ texto: 'Foi chamad' + c.g('o', 'a', 'e') + ' para o time da escola no campeonato entre colégios da cidade. Perderam a semifinal nos pênaltis.', relevancia: 'biografia', efeito: () => feliz(c, 4) })
-  },
-  {
-    id: 'ado_alistamento', tipo: 'acontecimento', idade: [18, 18], tema: 'lugar', garantido: true,
-    quando: c => c.v.eu.genero === 'masculino',
-    narrar: c => ({ texto: c.r.chance(0.94) ? 'Fez o alistamento militar obrigatório e foi dispensado por excesso de contingente.' : 'No alistamento militar, foi selecionado para servir no quartel da região por um ano.', relevancia: 'cotidiano' })
-  },
-  {
     id: 'ado_irmao_mais_velho_sai', tipo: 'acontecimento', idade: [10, 17], tema: 'familia',
     papeis: { irmao: P.comIdade(P.irmao, 18, 40) },
     quando: c => temFato(c.v, `saiu_de_casa_${c.p.irmao.id}`) && c.v.t - (c.v.fatos[`saiu_de_casa_${c.p.irmao.id}`] ?? 0) <= 12,

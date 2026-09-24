@@ -104,6 +104,8 @@ export function ocupacaoAtual(v: Vida): string {
   const m = v.educacao.matricula;
   if (m) partes.push(`${m.trancado ? 'curso trancado: ' : ''}${curso(m.cursoId).nome}`);
   const e = v.trabalho.atual;
+  const esp = v.caminhos?.esporte;
+  if (esp?.fase === 'base') partes.push(`${esp.modalidade === 'futebol' ? 'na base' : 'na equipe'} do ${esp.clube}`);
   if (e) partes.push(nomeOcupacaoId(v, e.ocupacaoId));
   else if (v.trabalho.aposentadoria) partes.push(flex(v.eu.tratamento ?? v.eu.genero, 'aposentado', 'aposentada', 'aposentade'));
   else if (i >= 18 && !m) partes.push('sem trabalho');

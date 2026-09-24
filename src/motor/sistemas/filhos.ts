@@ -243,7 +243,7 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
         comunicar(v, f, cota, { texto: `${f.nome} entrou num curso técnico: ${curso}.`, tipo: 'estudo', relevancia: rel, marco: doJogador ? `Entrou no ${curso}.` : undefined });
       } else {
         vida.parouDeEstudar = true;
-        comunicar(v, f, cota, { texto: `${f.nome} decidiu não fazer faculdade e ir trabalhar.`, tipo: 'estudo', relevancia: 'cotidiano' });
+        comunicar(v, f, cota, { texto: `${f.nome} não quis fazer faculdade: foi trabalhar.`, tipo: 'estudo', relevancia: 'cotidiano' });
       }
       return;
     }

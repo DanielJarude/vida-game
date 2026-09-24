@@ -142,6 +142,12 @@ function Agora({ vida, irPara, abrirPessoa }: { vida: Vida; irPara: (a: Aba) => 
   const s = saldoMensal(vida);
   const i = idade(vida);
   const processos = vida.processos.filter(p => p.tipo !== 'gestacao');
+  const andamento: string[] = processos.map(p => (p.tipo === 'cnh' ? 'Autoescola' : p.tipo === 'adocao' ? 'Processo de adoção' : p.tipo === 'tratamento' ? 'Na fila de tratamento do SUS' : 'Mudança marcada'));
+  if (vida.trabalho.candidaturas.length) andamento.push('Esperando o resultado do concurso');
+  if (vida.trabalho.atual?.formacaoAte) andamento.push(`Curso de formação até ${anoDe(vida.trabalho.atual.formacaoAte)}`);
+  if (vida.caminhos.esporte?.fase === 'base') andamento.push(`Na base do ${vida.caminhos.esporte.clube}`);
+  if (vida.caminhos.arte?.ativo) andamento.push(`${vida.caminhos.arte.tipo === 'banda' ? 'Banda' : 'Grupo'} ${vida.caminhos.arte.nome}`);
+  const portas = vida.caminhos.oportunidades.filter(o => o.tFim > vida.t);
   return (
     <div className="painel-agora">
       <h2 className="painel-agora__titulo">Em casa</h2>
@@ -179,13 +185,19 @@ function Agora({ vida, irPara, abrirPessoa }: { vida: Vida; irPara: (a: Aba) => 
           </button>
         </>
       )}
-      {processos.length > 0 && (
+      {portas.length > 0 && (
+        <>
+          <h2 className="painel-agora__titulo">Portas abertas</h2>
+          <ul className="agora-sinais">
+            {portas.map(o => <li key={o.id}><button type="button" className="agora-sinal" onClick={() => irPara('rumo')}>{o.titulo}</button></li>)}
+          </ul>
+        </>
+      )}
+      {andamento.length > 0 && (
         <>
           <h2 className="painel-agora__titulo painel-agora__titulo--secundario">Em andamento</h2>
           <ul className="agora-processos">
-            {processos.map(p => (
-              <li key={p.id}>{p.tipo === 'cnh' ? 'Autoescola' : p.tipo === 'adocao' ? 'Processo de adoção' : p.tipo === 'tratamento' ? 'Na fila de tratamento do SUS' : 'Mudança marcada'}</li>
-            ))}
+            {andamento.map((p, k) => <li key={k}>{p}</li>)}
           </ul>
         </>
       )}

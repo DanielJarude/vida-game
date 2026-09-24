@@ -65,7 +65,8 @@ describe('o mundo acontece', () => {
         const r = criarRng(s);
         contratar(v, r, ocupacao('atendente'));
         v.trabalho.atual!.desempenho = 60;
-        if (recessao) v.fatos['recessao_ate'] = v.t + 36;
+        // O mundo da vida-base pode já estar em crise: o teste controla os dois lados.
+        v.fatos['recessao_ate'] = recessao ? v.t + 36 : 0;
         v.t += 12;
         processarTrabalho(v, r);
         if (!v.trabalho.atual) demitidos++;

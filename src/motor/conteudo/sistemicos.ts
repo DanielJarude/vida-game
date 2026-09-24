@@ -9,7 +9,7 @@
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao } from './efeitos';
-import { idadePessoa, lembrarCom, marcarFato, temFato } from '../nucleo';
+import { idade, idadePessoa, lembrarCom, marcarFato, temFato } from '../nucleo';
 import { iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
 import { morarJuntos } from '../sistemas/moradia';
 import { registrarNascimento } from '../sistemas/familia';
@@ -265,7 +265,9 @@ export const SISTEMICOS: Conteudo[] = [
       } },
       { id: 'cursinho', texto: 'Um ano de cursinho antes de tentar', resolver: c => ({ texto: 'Um ano de cursinho: manhã de aula, tarde de exercício.', memoria: 'Decidiu passar um ano no cursinho antes de tentar o ENEM.', efeito: () => { fato(c, 'plano_faculdade'); if (!c.v.rotinas.some(r => r.id === 'cursinho')) c.v.rotinas.push({ id: 'cursinho', tInicio: c.v.t }); } }) },
       { id: 'trabalhar', texto: 'Arrumar um emprego', resolver: c => ({ texto: 'Você começou a mandar currículo.', memoria: 'Terminou o médio decidid' + c.g('o', 'a', 'e') + ' a trabalhar.', efeito: () => fato(c, 'plano_trabalho') }) },
-      { id: 'tecnico', texto: 'Fazer um curso técnico', resolver: c => ({ texto: 'Você foi pesquisar os cursos técnicos da cidade.', memoria: null, efeito: () => fato(c, 'plano_tecnico') }) }
+      { id: 'tecnico', texto: 'Fazer um curso técnico ou aprender um ofício', resolver: c => ({ texto: 'Você foi pesquisar os cursos técnicos e de qualificação da cidade.', memoria: null, efeito: () => fato(c, 'plano_tecnico') }) },
+      { id: 'concurso', texto: 'Estudar para concurso', disponivel: c => (idade(c.v) >= 17 ? true : false),
+        resolver: c => ({ texto: 'Apostila na mesa da cozinha, videoaula no celular. O próximo edital é o alvo.', memoria: 'Terminou o médio decidid' + c.g('o', 'a', 'e') + ' a estudar para concurso.', efeito: () => { fato(c, 'plano_concurso'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 2 }); } }) }
     ]
   },
   {

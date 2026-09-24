@@ -9,7 +9,7 @@
 
 import type { Conteudo } from './base';
 import * as P from './papeis';
-import { art, cognicao, dinheiro, estresse, fato, feliz, forma, gp, prox, saude, tensao } from './efeitos';
+import { art, dinheiro, estresse, fato, feliz, forma, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa } from '../nucleo';
 import { municipio } from '../dados/lugares';
 
@@ -302,11 +302,6 @@ export const INFANCIA: Conteudo[] = [
     papeis: { quem: P.genitorEmCasa },
     quando: c => (c.v.educacao.basica?.desempenho ?? 100) < 45,
     narrar: c => ({ texto: `O boletim veio com notas vermelhas. ${c.p.quem.nome} foi chamad${gp(c, 'quem', 'o', 'a')} na escola para uma conversa com a coordenação.`, relevancia: 'cotidiano', tom: 'ruim', efeito: () => estresse(c, 5) })
-  },
-  {
-    id: 'inf_olimpiada', tipo: 'acontecimento', idade: [10, 17], tema: 'escola',
-    quando: c => (c.v.educacao.basica?.desempenho ?? 0) >= 78 && c.v.mente.cognicao >= 65,
-    narrar: c => ({ texto: `Ganhou uma medalha de bronze na OBMEP. O nome saiu num cartaz na entrada da escola.`, relevancia: 'biografia', tom: 'bom', efeito: () => { fato(c, 'medalha_obmep'); feliz(c, 5); cognicao(c, 1); } })
   },
   {
     id: 'inf_enchente', tipo: 'acontecimento', idade: [3, 70], tema: 'lugar',

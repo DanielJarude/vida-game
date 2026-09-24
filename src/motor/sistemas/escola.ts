@@ -14,7 +14,12 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { EscolaBasica, Escolaridade, Matricula, NivelCurso, Vida } from '../tipos';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
-import { CURSOS, curso, type Curso, ROTULO_AREA } from '../dados/cursos';
+import { CURSOS, curso, cursoOuNulo, type Curso, type Materia, ROTULO_AREA } from '../dados/cursos';
+import { estudarMaterias, habilidade, materiasExtremas, mediaEscolar, praticar } from './frentes';
+
+export const NOME_MATERIA: Record<string, string> = { exatas: 'matemática', linguagens: 'português', ciencias: 'ciências', humanas: 'história' };
+import { marcar } from './marcas';
+import type { Dominio } from '../tipos';
 import { economiaLocal, municipio, nivelDeOferta, nomeLugar } from '../dados/lugares';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { rendaPerCapita } from './domicilio';
@@ -74,13 +79,20 @@ export function condicoesDeEstudo(v: Vida): number {
   return pc < 600 ? -7 : pc < 1200 ? -3 : pc < 2600 ? 0 : pc < 6000 ? 3 : 5;
 }
 
-export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number): number {
+/**
+ * Desempenho: não há uma inteligência universal que faça alguém bom em tudo.
+ * A nota vem principalmente das MATÉRIAS (cada uma com sua facilidade, seu
+ * gosto e a prática de cada ano), e só um pouco da cabeça em geral; depois,
+ * a postura, a casa, o trabalho e a escola.
+ */
+export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?: Materia[]): number {
   const d = v.personalidade.tracos.disciplina;
-  const postura = v.educacao.postura === 'dedicada' ? 12 : v.educacao.postura === 'relaxada' ? -12 : 0;
+  const postura = v.educacao.postura === 'dedicada' ? 10 : v.educacao.postura === 'relaxada' ? -10 : 0;
   const casa = (v.mente.felicidade - 50) * 0.1 - Math.max(0, v.mente.estresse - 60) * 0.25;
   const trabalhoPesa = v.trabalho.atual ? (v.trabalho.atual.carga === 'integral' ? -10 : -4) : 0;
-  const base = 22 + v.mente.cognicao * 0.55 + d * 0.12 + postura + bonusRede + casa + trabalhoPesa + condicoesDeEstudo(v);
-  return clamp(Math.round(base + r.normal() * 7), 5, 100);
+  const media = materias?.length ? materias.reduce((s, m) => s + habilidade(v, m), 0) / materias.length : mediaEscolar(v);
+  const base = 24 + media * 0.5 + (v.mente.cognicao - 50) * 0.18 + d * 0.1 + postura + bonusRede + casa + trabalhoPesa + condicoesDeEstudo(v);
+  return clamp(Math.round(base + r.normal() * 6), 5, 100);
 }
 
 /* ------------------------------------------------------ Educação básica */
@@ -122,7 +134,8 @@ export function processarEscola(v: Vida, r: Rng): void {
 
   // Mudança de rede quando a renda da casa muda de patamar.
   const redeIdeal = redeParaCasa(v);
-  if (redeIdeal !== b.rede && i < 17 && (b.serie === 1 || b.serie === 6 || b.etapa === 'medio' && b.serie === 1 || r.chance(0.3))) {
+  const fixa = b.integrado || (b.rede === 'privada' && temFato(v, 'bolsa_escola'));
+  if (!fixa && redeIdeal !== b.rede && i < 17 && (b.serie === 1 || b.serie === 6 || b.etapa === 'medio' && b.serie === 1 || r.chance(0.3))) {
     const antes = b.rede;
     b.rede = redeIdeal;
     escrever(v, {
@@ -133,8 +146,16 @@ export function processarEscola(v: Vida, r: Rng): void {
     });
   }
 
+  // As matérias do ano: a escola exercita todas; a particular, com mais estrutura.
+  estudarMaterias(v, r, (b.rede === 'privada' ? 1.12 : 1) * (b.etapa === 'fundamental1' ? 0.85 : 1));
+  if (b.integrado) { const c = cursoOuNulo(b.integrado); if (c?.pratica) for (const [dd, w] of Object.entries(c.pratica) as [Dominio, number][]) praticar(v, r, dd, w * 0.8, 1.1); }
   b.desempenho = calcularDesempenho(v, r, b.rede === 'privada' ? 6 : 0);
   if (b.rede === 'privada' && b.etapa === 'medio') marcarFato(v, 'estudou_privada');
+  // A matéria difícil às vezes vira recuperação — textura, não tragédia.
+  if (b.etapa !== 'fundamental1' && b.desempenho >= 38) {
+    const { fraca } = materiasExtremas(v);
+    if (fraca && habilidade(v, fraca) < 30 && r.chance(0.25)) escrever(v, { texto: `Ficou de recuperação em ${NOME_MATERIA[fraca]}, e passou raspando.`, relevancia: 'cotidiano', tema: 'escola', tom: 'ruim' });
+  }
 
   // Reprovação: nunca no 1º ano (progressão continuada), mais comum no fundamental II e médio.
   const reprova = b.serie > 1 && b.desempenho < 38 && r.chance(b.desempenho < 28 ? 0.7 : 0.35);
@@ -170,6 +191,15 @@ export function processarEscola(v: Vida, r: Rng): void {
       subir(v, 'medio');
       e.basica = undefined;
       marcarFato(v, 'concluiu_medio');
+      if (b.integrado) {
+        const c = cursoOuNulo(b.integrado);
+        if (c) {
+          e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: 'o instituto federal', rede: 'publica', modalidade: 'presencial' });
+          subir(v, 'tecnico');
+          escrever(v, { texto: `Terminou o médio integrado: saiu com o diploma de ${c.nome.replace(/^Técnico em /, 'técnico em ')}.`, relevancia: 'marco', tema: 'escola', tom: 'bom' });
+          marcar(v, 'formacao', `Técnico em ${c.nome.replace(/^Técnico em /, '')}, pelo médio integrado.`, 3);
+        }
+      }
       escrever(v, {
         texto: `Concluiu o ensino médio${b.reprovacoes > 0 ? `, com ${b.reprovacoes === 1 ? 'uma repetência' : `${b.reprovacoes} repetências`} no caminho` : ''}.`,
         relevancia: 'marco', tema: 'escola', tom: 'bom'
@@ -200,14 +230,42 @@ export function voltarAEstudar(v: Vida): void {
 
 /* ------------------------------------------------------------------ ENEM */
 
-export function notaEnem(v: Vida, r: Rng): number {
+const AREAS_ENEM: Materia[] = ['exatas', 'linguagens', 'ciencias', 'humanas'];
+
+/** Nota do ENEM por área: cada matéria vai para um lado. */
+export function notasEnem(v: Vida, r: Rng): Record<Materia, number> {
   const hist = v.educacao.basica?.desempenho ?? 55;
-  const privada = v.educacao.basica?.rede === 'privada' ? 40 : 0;
+  const privada = v.educacao.basica?.rede === 'privada' ? 35 : 0;
   const cursinho = v.educacao.cursinho ? 40 : 0;
   const idadeFora = v.educacao.basica ? 0 : Math.min(40, Math.max(0, idade(v) - 18) * 4);
   const postura = v.educacao.postura === 'dedicada' ? 20 : v.educacao.postura === 'relaxada' ? -20 : 0;
-  const nota = 250 + hist * 3.4 + (v.mente.cognicao - 50) * 2.6 + privada + cursinho + postura - idadeFora + r.normal() * 45;
-  return Math.round(clamp(nota, 320, 920));
+  const dia = r.normal() * 25;
+  const out = {} as Record<Materia, number>;
+  for (const a of AREAS_ENEM) {
+    const nota = 250 + habilidade(v, a) * 4.4 + hist * 1.2 + (v.mente.cognicao - 50) * 1.2 + privada + cursinho + postura - idadeFora + dia + r.normal() * 30;
+    out[a] = Math.round(clamp(nota, 320, 950));
+  }
+  return out;
+}
+
+export function notaEnem(v: Vida, r: Rng): number {
+  const n = notasEnem(v, r);
+  return Math.round(AREAS_ENEM.reduce((s, a) => s + n[a], 0) / AREAS_ENEM.length);
+}
+
+/** Nota ponderada para um curso (o SISU usa os pesos do curso). */
+export function notaParaCurso(v: Vida, c: Curso): number {
+  const recentes = v.educacao.enem.filter(x => x.t > v.t - 36);
+  if (!recentes.length) return 0;
+  const pesos = c.pesos ?? {};
+  let melhor = 0;
+  for (const x of recentes) {
+    if (!x.areas) { melhor = Math.max(melhor, x.nota); continue; }
+    let soma = 0, total = 0;
+    for (const a of AREAS_ENEM) { const w = 1 + (pesos[a] ?? 0); soma += (x.areas[a] ?? x.nota) * w; total += w; }
+    melhor = Math.max(melhor, Math.round(soma / total));
+  }
+  return melhor;
 }
 
 export function podeFazerEnem(v: Vida): Veredito {
@@ -225,9 +283,10 @@ export function podeFazerEnem(v: Vida): Veredito {
 }
 
 export function fazerEnem(v: Vida, r: Rng): number {
-  const nota = notaEnem(v, r);
+  const areas = notasEnem(v, r);
+  const nota = Math.round(AREAS_ENEM.reduce((s, a) => s + areas[a], 0) / AREAS_ENEM.length);
   const anterior = v.educacao.enem.reduce((m, x) => Math.max(m, x.nota), 0);
-  v.educacao.enem.push({ t: v.t, nota });
+  v.educacao.enem.push({ t: v.t, nota, areas });
   const faixa = nota >= 750 ? 'uma nota que abre quase qualquer porta' : nota >= 650 ? 'uma boa nota' : nota >= 520 ? 'uma nota mediana' : 'uma nota baixa';
   const texto = anterior === 0
     ? `Fez o ENEM pela primeira vez e tirou ${nota} — ${faixa}.`
@@ -269,6 +328,12 @@ function requisitoDoCurso(v: Vida, c: Curso): Veredito | null {
   const e = v.educacao;
   if (e.matricula) return bloqueio('incompativel', `Já está cursando ${curso(e.matricula.cursoId).nome}.`);
   if (e.concluidos.some(x => x.cursoId === c.id)) return bloqueio('incompativel', 'Já concluiu este curso.');
+  if (c.idadeMin && i < c.idadeMin) return bloqueio('requisito', `A partir dos ${c.idadeMin} anos.`);
+  if (c.teste && habilidade(v, c.teste.dominio) < c.teste.minimo) return bloqueio('requisito', `O curso tem prova de habilidade específica, e ainda falta preparo em ${c.teste.dominio === 'musica' ? 'música' : 'interpretação'}.`);
+  if (c.nivel === 'livre') {
+    if (i < 15) return bloqueio('impossivel', 'Os cursos de qualificação são a partir dos 15.');
+    return null;
+  }
   if (c.nivel === 'tecnico') {
     if (i < 15) return bloqueio('impossivel', 'Curso técnico é a partir do ensino médio.');
     if (!temEscolaridade(v, 'medio') && !(e.basica?.etapa === 'medio' && e.basica.serie >= 2)) {
@@ -294,7 +359,6 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
   const aqui = v.moradia.municipioId;
   const oferta = nivelDeOferta(aqui);
   const local = economiaLocal(aqui);
-  const nota = melhorNotaRecente(v);
   const cota = temCota(v);
   const pc = rendaPerCapita(v);
   const opcoes: OpcaoCurso[] = [];
@@ -311,6 +375,7 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
       const lugar = existeAqui ? aqui : capitalDoEstado(aqui);
       const observacao = existeAqui ? undefined : `Não existe aqui — só em ${nomeLugar(lugar)}. Exige mudar de cidade.`;
       if (c.nivel === 'superior') {
+        const nota = notaParaCurso(v, c);
         const corte = c.corte - (cota ? 45 : 0);
         const veredito: Veredito = nota === 0
           ? bloqueio('requisito', 'Precisa de uma nota do ENEM dos últimos três anos.')
@@ -321,8 +386,8 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
               : bloqueio('requisito', `Nota ${nota} muito abaixo do corte (~${corte}${cota ? ', já com cota' : ''}).`);
         add({ via: 'sisu', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito, municipioId: lugar, observacao: [observacao, cota ? 'Concorre por cota.' : ''].filter(Boolean).join(' ') || undefined });
       } else {
-        // técnico público, residência, mestrado, doutorado: processo seletivo próprio
-        const base = c.nivel === 'tecnico' ? 0.5 : c.nivel === 'residencia' ? 0.35 : 0.45;
+        // qualificação e técnico públicos, residência, mestrado, doutorado: processo seletivo próprio
+        const base = c.nivel === 'livre' ? 0.6 : c.nivel === 'tecnico' ? 0.5 : c.nivel === 'residencia' ? 0.35 : 0.45;
         const desempenho = v.educacao.basica?.desempenho ?? ultimoDesempenho(v);
         const chance = clamp(base + (desempenho - 60) / 100, 0.08, 0.9);
         add({ via: 'selecao_publica', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito: { grau: chance < 0.3 ? 'improvavel' : 'permitido', chance }, municipioId: lugar, observacao });
@@ -337,6 +402,7 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
       add({ via: 'privada', modalidade: 'presencial', rede: 'privada', mensalidade: mens, veredito: { grau: 'permitido', chance: c.id === 'medicina' ? 0.6 : 0.95 }, municipioId: lugar, observacao });
       if (c.nivel === 'superior') {
         // ProUni: bolsa integral para renda per capita até 1,5 SM e ENEM razoável.
+        const nota = notaParaCurso(v, c);
         const prouni: Veredito = pc > 1.5 * SALARIO_MINIMO
           ? bloqueio('requisito', 'ProUni é para renda familiar de até 1,5 salário mínimo por pessoa.')
           : nota < 450 ? bloqueio('requisito', 'ProUni exige ENEM recente com pelo menos 450 pontos.')
@@ -388,8 +454,8 @@ function ultimoDesempenho(v: Vida): number {
 
 const INSTITUICOES: Record<Via, (c: Curso, v: Vida, lugar: string) => string> = {
   sisu: (c, _v, lugar) => (c.nivel === 'superior' ? `a universidade federal em ${municipio(lugar).nome}` : `o instituto federal`),
-  selecao_publica: (c, _v, lugar) => c.nivel === 'tecnico' ? `o instituto federal em ${municipio(lugar).nome}` : c.nivel === 'residencia' ? `o hospital universitário em ${municipio(lugar).nome}` : `a universidade federal em ${municipio(lugar).nome}`,
-  privada: (_c, _v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}`,
+  selecao_publica: (c, _v, lugar) => c.nivel === 'livre' ? `um curso gratuito do Sistema S em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? `o instituto federal em ${municipio(lugar).nome}` : c.nivel === 'residencia' ? `o hospital universitário em ${municipio(lugar).nome}` : `a universidade federal em ${municipio(lugar).nome}`,
+  privada: (c, _v, lugar) => c.nivel === 'livre' ? `uma escola de cursos livres em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? `uma escola técnica particular em ${municipio(lugar).nome}` : `uma faculdade particular em ${municipio(lugar).nome}`,
   prouni: (_c, _v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}, com bolsa do ProUni`,
   fies: (_c, _v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}, pelo FIES`,
   ead: () => 'uma faculdade a distância'
@@ -448,10 +514,14 @@ export function processarCurso(v: Vida, r: Rng): void {
     return;
   }
   const c = curso(m.cursoId);
-  m.desempenho = calcularDesempenho(v, r, c.nivel === 'residencia' || c.nivel === 'mestrado' ? 8 : 0);
+  // O curso exercita o que ensina: quem faz Design desenha; quem faz Computação programa.
+  for (const [d, w] of Object.entries(c.pratica ?? {}) as [Dominio, number][]) praticar(v, r, d, w * (m.modalidade === 'ead' ? 0.6 : 1), 1.15);
+  for (const [d, w] of Object.entries(c.pesos ?? {}) as [Materia, number][]) praticar(v, r, d, Math.min(1, w * 0.3), 1);
+  const materias = Object.keys(c.pesos ?? {}) as Materia[];
+  m.desempenho = calcularDesempenho(v, r, c.nivel === 'residencia' || c.nivel === 'mestrado' ? 8 : c.nivel === 'livre' ? 10 : 0, materias);
   let atraso = 0;
   if (m.desempenho < 35 && r.chance(0.6)) atraso = 6;
-  m.mesesRestantes -= 12 - atraso;
+  m.mesesRestantes -= Math.min(12, m.mesesRestantes + atraso) - atraso;
   if (atraso > 0) {
     escrever(v, { texto: `Reprovou em matérias de ${c.nome} e o curso ficou mais comprido.`, relevancia: 'cotidiano', tema: 'estudo', tom: 'ruim' });
   }
@@ -463,16 +533,20 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   const e = v.educacao;
   e.matricula = undefined;
   e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined });
-  const nivelEsc: Record<NivelCurso, Escolaridade> = { tecnico: 'tecnico', superior: 'superior', pos: 'pos', residencia: 'pos', mestrado: 'mestrado', doutorado: 'doutorado' };
-  subir(v, nivelEsc[c.nivel]);
+  const nivelEsc: Partial<Record<NivelCurso, Escolaridade>> = { tecnico: 'tecnico', superior: 'superior', pos: 'pos', residencia: 'pos', mestrado: 'mestrado', doutorado: 'doutorado' };
+  const esc = nivelEsc[c.nivel];
+  if (esc) subir(v, esc);
   const g = v.eu.genero;
-  const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? 'Terminou a residência médica' : `Concluiu ${c.nivel === 'pos' ? 'a pós' : `o ${c.nome.toLowerCase()}`} (${c.nome})`;
-  escrever(v, { texto: `${titulo}.`, relevancia: 'marco', tema: 'estudo', tom: 'bom' });
+  const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'livre' ? `Terminou o curso de qualificação: ${c.nome.replace(/^Curso de /, '').toLowerCase()}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? 'Terminou a residência médica' : `Concluiu ${c.nivel === 'pos' ? 'a pós' : `o ${c.nome.toLowerCase()}`} (${c.nome})`;
+  const voltou = idade(v) >= 30 && c.nivel !== 'pos' && c.nivel !== 'mestrado' && c.nivel !== 'doutorado' && c.nivel !== 'residencia';
+  escrever(v, { texto: `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, relevancia: c.nivel === 'livre' ? 'biografia' : 'marco', tema: 'estudo', tom: 'bom' });
+  marcar(v, 'formacao', `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, c.nivel === 'livre' ? 1 : c.nivel === 'superior' || c.nivel === 'tecnico' ? 3 : 2);
 
   // Registros profissionais que vêm com o diploma.
   const lic = v.trabalho.licencas;
-  const reg: Record<string, string> = { medicina: 'crm', enfermagem: 'coren', psicologia: 'crp', engenharia_civil: 'crea', agro: 'crea' };
+  const reg: Record<string, string> = { medicina: 'crm', enfermagem: 'coren', psicologia: 'crp', engenharia_civil: 'crea', engenharia: 'crea', agro: 'crea', odontologia: 'cro', fisioterapia: 'crefito', farmacia: 'crf', veterinaria: 'crmv' };
   if (c.nivel === 'superior' && reg[c.area] && !lic.includes(reg[c.area])) lic.push(reg[c.area]);
+  if (c.area === 'imoveis' && !lic.includes('creci')) lic.push('creci');
   if (c.area === 'direito' && c.nivel === 'superior') marcarFato(v, 'pode_prestar_oab');
 
   // FIES vira dívida.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { interpretar, ler, salvar, CHAVE_BACKUP, CHAVE_SAVE, type Armazenamento } from '../save';
+import { interpretar, ler, salvar, CHAVE_BACKUP, CHAVE_SAVE, VERSAO_SAVE, type Armazenamento } from '../save';
 import { nova, viver } from './ajuda';
 import { avancarAno } from '../ano';
 import { idade, vinculosVivos } from '../nucleo';
@@ -98,6 +98,6 @@ describe('migração v5 → v6', () => {
     const r = ler(s);
     expect(r.tipo).toBe('ok');
     expect(s.dados[CHAVE_BACKUP]).toBe(bruto);
-    expect(JSON.parse(s.dados[CHAVE_SAVE]).versao).toBe(7);
+    expect(JSON.parse(s.dados[CHAVE_SAVE]).versao).toBe(VERSAO_SAVE);
   });
 });

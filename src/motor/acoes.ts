@@ -7,13 +7,21 @@
  */
 
 import type { Rng } from './rng';
-import type { EstiloDeVida, Retorno, Vida } from './tipos';
+import type { EstiloDeVida, Pessoa, Retorno, Vida } from './tipos';
 import { escrever, idade, parceiro, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import { abrirDecisao, conteudoPorId, preparar, resolverDecisao } from './conteudo/motor';
-import { modeloRotina, podeComecarRotina } from './sistemas/rotinas';
+import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso } from './sistemas/escola';
-import { aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar } from './sistemas/trabalho';
+import { aposentar, contratar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria, textoDeContratacao } from './sistemas/trabalho';
+import { inscrever, leituraDoPreparo } from './sistemas/concurso';
+import { aceitarOportunidade, recusarOportunidade } from './sistemas/oportunidades';
+import { abrirNegocio, podeAbrirNegocio } from './sistemas/negocio';
+import { marcar } from './sistemas/marcas';
+import { aplicarPersonalidade } from './personalidade';
+import { contexto } from './conteudo/base';
+import { VIAS } from './conteudo/desafios';
+import { ge } from './texto';
 import { OCUPACOES, ocupacao } from './dados/ocupacoes';
 import { alugar, marcarSaidaDeCasa, opcoesDeAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
 import { custoDeMudanca, iniciarAdocao, iniciarCnh, mudarAgora } from './sistemas/processos';
@@ -29,7 +37,11 @@ export type InteracaoPessoa = string;
 
 export type Acao =
   | { tipo: 'decidir'; opcaoId: string }
-  | { tipo: 'rotina'; id: string; ativa: boolean }
+  /** Começar, mudar a intensidade (nivel) ou parar uma atividade. */
+  | { tipo: 'rotina'; id: string; ativa: boolean; nivel?: 1 | 2 | 3 }
+  /** Aceitar ou deixar passar uma porta que a vida abriu. */
+  | { tipo: 'oportunidade'; id: string; aceitar: boolean }
+  | { tipo: 'abrir_negocio'; negocio: string }
   | { tipo: 'postura'; valor: Vida['educacao']['postura'] }
   | { tipo: 'enem' }
   | { tipo: 'matricular'; indice: number }
@@ -74,7 +86,23 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
   const i = idade(v);
   switch (a.tipo) {
     case 'decidir': return v.momento ? PERMITIDO : bloqueio('incompativel', 'Não há decisão aberta.');
-    case 'rotina': return a.ativa ? podeComecarRotina(v, a.id) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
+    case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
+    case 'oportunidade': {
+      const o = v.caminhos.oportunidades.find(x => x.id === a.id);
+      if (!o) return bloqueio('incompativel', 'Essa porta já fechou.');
+      if (!a.aceitar) return PERMITIDO;
+      if (o.ocupacaoId && ['aprendiz', 'estagio', 'indicacao', 'vaga', 'proposta'].includes(o.tipo)) {
+        const d = elegibilidade(v, ocupacao(o.ocupacaoId), 'curriculo', o.bonus ?? 0);
+        if (!podeTentar(d)) return d;
+      }
+      if (o.tipo === 'convite' && o.ocupacaoId && !['jogador_futebol', 'atleta'].includes(o.ocupacaoId)) {
+        const d = elegibilidade(v, ocupacao(o.ocupacaoId), 'oportunidade');
+        if (!podeTentar(d)) return d;
+      }
+      if ((o.tipo === 'peneira' || o.tipo === 'seletiva') && i >= 14 && v.trabalho.atual?.carga === 'integral') return bloqueio('incompativel', 'Com trabalho integral, não dá para treinar numa base.');
+      return PERMITIDO;
+    }
+    case 'abrir_negocio': return podeAbrirNegocio(v, a.negocio);
     case 'postura': return v.educacao.basica || v.educacao.matricula ? PERMITIDO : bloqueio('impossivel', 'Você não está estudando.');
     case 'enem': return podeFazerEnem(v);
     case 'matricular': {
@@ -100,7 +128,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'candidatar': {
       const oc = OCUPACOES.find(o => o.id === a.ocupacaoId);
       if (!oc) return bloqueio('impossivel', 'Vaga desconhecida.');
-      if (v.anoAtual.acoes.filter(x => x.startsWith('candidatura:')).length >= LIMITE_CANDIDATURAS) return bloqueio('incompativel', 'Já foram três processos seletivos neste ano.');
+      if (!porContaPropria(oc) && v.anoAtual.acoes.filter(x => x.startsWith('candidatura:')).length >= LIMITE_CANDIDATURAS) return bloqueio('incompativel', 'Já foram três processos seletivos neste ano.');
       if (jaFez(v, `candidatura:${oc.id}`)) return bloqueio('incompativel', 'Você já tentou esta vaga neste ano.');
       return elegibilidade(v, oc);
     }
@@ -230,12 +258,55 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'rotina': {
       const m = modeloRotina(a.id)!;
+      const atual = v.rotinas.find(x => x.id === a.id);
       if (a.ativa) {
-        v.rotinas.push({ id: a.id, tInicio: v.t });
-        return ok(`${m.nome} entrou na sua rotina.`);
+        const nivel = a.nivel ?? atual?.nivel ?? 1;
+        if (atual) {
+          const antes = atual.nivel ?? 1;
+          atual.nivel = nivel;
+          return ok(nivel > antes ? `${m.nome}: agora ${nivelModelo(m, nivel).rotulo.toLowerCase()}.` : `${m.nome}: mais leve, ${nivelModelo(m, nivel).rotulo.toLowerCase()}.`);
+        }
+        const f = v.caminhos.frentes[a.id as keyof typeof v.caminhos.frentes];
+        const retomada = f && f.meses >= 12 && v.t - f.tUltimo >= 24;
+        v.rotinas.push({ id: a.id, tInicio: v.t, nivel });
+        if (retomada) {
+          const anos = Math.floor((v.t - f!.tUltimo) / 12);
+          escrever(v, { texto: `Voltou a ${m.nome.toLowerCase()} depois de ${anos} anos parad${ge(v) === 'feminino' ? 'a' : ge(v) === 'masculino' ? 'o' : 'e'}.`, relevancia: 'cotidiano', tema: 'lazer', escolha: true });
+          marcar(v, 'retomada', `Retomou: ${m.nome.toLowerCase()}.`, 1, { dominio: a.id as never });
+        } else if (m.pratica && i < 18) {
+          marcar(v, 'comecou', `Começou: ${m.nome.toLowerCase()}, aos ${i}.`, 1, { dominio: Object.keys(m.pratica)[0] as never });
+        }
+        return ok(`${m.nome} entrou na sua semana (${nivelModelo(m, nivel).rotulo.toLowerCase()}).`);
       }
       v.rotinas = v.rotinas.filter(x => x.id !== a.id);
-      return ok(`${m.nome} saiu da sua rotina.`);
+      if (atual && m.pratica && v.t - atual.tInicio >= 24) {
+        const anos = Math.floor((v.t - atual.tInicio) / 12);
+        escrever(v, { texto: `Parou de ${m.nome.toLowerCase().replace(/^jogar bola$/, 'jogar bola')} depois de ${anos} anos.`.replace('Parou de tocar um instrumento', 'Parou de tocar'), relevancia: anos >= 5 ? 'biografia' : 'cotidiano', tema: 'lazer', escolha: true });
+        marcar(v, 'abandono', `Parou: ${m.nome.toLowerCase()}, depois de ${anos} anos.`, anos >= 5 ? 2 : 1, { dominio: Object.keys(m.pratica)[0] as never });
+      }
+      return ok(`${m.nome} saiu da sua semana.`);
+    }
+    case 'oportunidade': {
+      if (!a.aceitar) { recusarOportunidade(v, a.id); return ok('Você deixou essa passar.'); }
+      const o = v.caminhos.oportunidades.find(x => x.id === a.id)!;
+      const pessoaId = o.pessoaId;
+      const res = aceitarOportunidade(v, r, a.id);
+      if (res.entrevista) return abrirEntrevista(v, r, res.entrevista.ocupacaoId, res.entrevista.bonus, res.entrevista.via);
+      if (res.decisao) {
+        const d = conteudoPorId(res.decisao);
+        if (d && d.tipo === 'decisao') {
+          const p: Record<string, Pessoa> = {};
+          if (pessoaId && v.pessoas[pessoaId]?.vivo) p.amigo = v.pessoas[pessoaId];
+          const ctx = contexto(v, r, p);
+          abrirDecisao(v, d, ctx);
+        }
+        return {};
+      }
+      return ok(res.texto, res.tom ?? 'neutro');
+    }
+    case 'abrir_negocio': {
+      const n = abrirNegocio(v, r, a.negocio);
+      return ok(`${n.nome} abriu as portas.`, 'bom');
     }
     case 'postura':
       v.educacao.postura = a.valor;
@@ -275,16 +346,18 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const oc = ocupacao(a.ocupacaoId);
       v.anoAtual.acoes.push(`candidatura:${oc.id}`);
       if (oc.concurso) {
-        const chance = elegibilidade(v, oc).chance ?? 0.1;
-        v.trabalho.candidaturas.push({ id: `c${v.seq++}`, ocupacaoId: oc.id, tInicio: v.t, tResultado: v.t + 6, chance, concurso: true });
-        escrever(v, { texto: `Inscreveu-se no concurso para ${nomeOcupacao(v, oc)}.`, relevancia: 'tecnico', tema: 'trabalho', escolha: true });
-        return { resultado: 'Inscrição feita. A prova é daqui a alguns meses — o resultado sai no próximo ano.' };
+        const reprovou = v.caminhos.concurso.tentativas > v.caminhos.concurso.aprovacoes;
+        inscrever(v, oc);
+        // Tentar de novo depois de reprovar é comportamento do jogador: persistência.
+        if (reprovou) aplicarPersonalidade(v, 'acao:persistir', { disciplina: 1 });
+        return { resultado: `Inscrição feita. A prova é daqui a alguns meses — o resultado sai no próximo ano. ${leituraDoPreparo(v, oc)}` };
       }
-      v.fatos['entrevista_oc'] = OCUPACOES.indexOf(oc);
-      const d = conteudoPorId('trab_entrevista')!;
-      const ctx = preparar(d, v, r);
-      if (ctx && d.tipo === 'decisao') abrirDecisao(v, d, ctx);
-      return {};
+      if (porContaPropria(oc)) {
+        const e = contratar(v, r, oc, 'por_conta');
+        escrever(v, { texto: textoDeContratacao(v, oc, e), relevancia: 'marco', tema: 'trabalho', escolha: true });
+        return { resultado: `Você começou a pegar trabalho como ${nomeOcupacao(v, oc)}. No começo, a freguesia é pouca.` };
+      }
+      return abrirEntrevista(v, r, oc.id, 0, 'curriculo');
     }
     case 'pedir_demissao': {
       const nome = nomeOcupacao(v, ocupacao(v.trabalho.atual!.ocupacaoId));
@@ -397,6 +470,16 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       iniciarCnh(v);
       return ok('Matrícula na autoescola feita. A prova é em alguns meses.');
   }
+}
+
+function abrirEntrevista(v: Vida, r: Rng, ocupacaoId: string, bonus: number, via: string): Saida {
+  v.fatos['entrevista_oc'] = OCUPACOES.findIndex(x => x.id === ocupacaoId);
+  v.fatos['entrevista_bonus'] = Math.round(bonus * 100);
+  v.fatos['entrevista_via'] = Math.max(0, VIAS.indexOf(via));
+  const d = conteudoPorId('trab_entrevista')!;
+  const ctx = preparar(d, v, r);
+  if (ctx && d.tipo === 'decisao') abrirDecisao(v, d, ctx);
+  return {};
 }
 
 function conteudoCurso(id: string): string {

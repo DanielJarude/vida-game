@@ -12,16 +12,23 @@ import { contratar, elegibilidade, nomeOcupacao, textoDeContratacao } from '../s
 import { escrever } from '../nucleo';
 import { clamp } from '../rng';
 
+/** Como a pessoa chegou à entrevista (guardado como índice num fato). */
+export const VIAS = ['curriculo', 'indicacao', 'estagio', 'aprendiz', 'proposta', 'vaga'];
+
 export const vagaDaEntrevista = (c: Ctx): Ocupacao | undefined => OCUPACOES[c.v.fatos['entrevista_oc'] ?? -1];
 
 function resolverEntrevista(c: Ctx, bonus: number): { texto: string; memoria: string | null; tom: 'bom' | 'ruim' } {
   const oc = vagaDaEntrevista(c);
+  const porta = (c.v.fatos['entrevista_bonus'] ?? 0) / 100;
+  const via = VIAS[c.v.fatos['entrevista_via'] ?? 0] ?? 'curriculo';
   delete c.v.fatos['entrevista_oc'];
+  delete c.v.fatos['entrevista_bonus'];
+  delete c.v.fatos['entrevista_via'];
   if (!oc) return { texto: 'A vaga já tinha sido preenchida.', memoria: null, tom: 'ruim' };
   const base = elegibilidade(c.v, oc).chance ?? 0.4;
-  const chance = clamp(base + bonus, 0.03, 0.95);
+  const chance = clamp(base + bonus + porta, 0.03, 0.95);
   if (c.r.chance(chance)) {
-    const e = contratar(c.v, c.r, oc);
+    const e = contratar(c.v, c.r, oc, via);
     return { texto: `Ligaram dois dias depois: a vaga é sua. ${nomeOcupacao(c.v, oc)} em ${e.empregador}, R$ ${e.salario.toLocaleString('pt-BR')} por mês.`, memoria: textoDeContratacao(c.v, oc, e), tom: 'bom' };
   }
   return { texto: 'O e-mail veio educado: "decidimos seguir com outro candidato".', memoria: null, tom: 'ruim' };

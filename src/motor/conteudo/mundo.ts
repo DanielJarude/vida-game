@@ -88,6 +88,10 @@ export const MUNDO: Conteudo[] = [
     quando: c => !!c.v.educacao.basica,
     narrar: c => {
       const materia = c.r.pick(['História', 'Matemática', 'Português', 'Biologia', 'Química', 'Artes']);
+      // Um professor marcante acende o gosto pela matéria dele.
+      const frente = ({ História: 'humanas', Matemática: 'exatas', Português: 'linguagens', Biologia: 'ciencias', Química: 'ciencias', Artes: 'desenho' } as const)[materia as 'História'];
+      const fr = c.v.caminhos.frentes[frente];
+      if (fr) fr.interesse = Math.min(100, fr.interesse + 15);
       const p = criarPessoa(c.v, c.r, { idade: c.r.int(28, 58), municipioId: c.v.moradia.municipioId });
       p.ocupacao = p.genero === 'feminino' ? `professora de ${materia}` : `professor de ${materia}`;
       const vin = vincular(c.v, p, { origem: 'escola', proximidade: 35, convivio: ['escola'], estagio: 'colega' });

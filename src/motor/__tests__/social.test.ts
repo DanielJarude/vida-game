@@ -21,7 +21,7 @@ import { garantirVida, processarDescendentes, processarPartosDaFamilia } from '.
 import { processarConcepcao } from '../sistemas/familia';
 import { recalcularConvivio } from '../sistemas/social';
 import { abrirDecisao, conteudoPorId, preparar } from '../conteudo/motor';
-import { interpretar, ler, salvar, type Armazenamento } from '../save';
+import { interpretar, ler, salvar, type Armazenamento, VERSAO_SAVE } from '../save';
 import type { Genero, Pessoa, Vida, Vinculo } from '../tipos';
 
 /* ---------------------------------------------------------------- Cenários */
@@ -489,7 +489,7 @@ describe('save v7', () => {
       if (r.tipo !== 'ok') continue;
       const v = r.vida;
       expect(r.migrado).toBe(true);
-      expect(v.versao).toBe(7);
+      expect(v.versao).toBe(VERSAO_SAVE);
       expect(Array.isArray(v.luto)).toBe(true);
       for (const vin of Object.values(v.vinculos)) {
         expect(Number.isFinite(vin.confianca)).toBe(true);
