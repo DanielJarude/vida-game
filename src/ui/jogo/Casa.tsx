@@ -15,7 +15,7 @@ import type { Aplicacao, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { economiaLocal, MUNICIPIOS, NOMES_UF, nomeLugar } from '../../motor/dados/lugares';
-import { balanco } from '../../motor/sistemas/dinheiro';
+import { arranjoDaCasa, balanco } from '../../motor/sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../../motor/sistemas/domicilio';
 import { custoDeMudanca } from '../../motor/sistemas/processos';
 import { produto, PALAVRA_RISCO } from '../../motor/dados/investimentos';
@@ -64,7 +64,7 @@ function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
         {i >= 18 && (
           <div className="lar__acoes">
             <button type="button" className="botao botao--secundario" onClick={() => abrir('alugar')}>{naFamilia ? 'Procurar um lugar para morar' : 'Procurar outro lugar'}</button>
-            {!naFamilia && <BotaoAcao vida={vida} acao={{ tipo: 'voltar_pais' }} agir={agir} variante="discreto" ocultarBloqueado>Voltar para a casa da família</BotaoAcao>}
+            {!naFamilia && !['casados', 'juntos'].includes(arranjoDaCasa(vida)) && <BotaoAcao vida={vida} acao={{ tipo: 'voltar_pais' }} agir={agir} variante="discreto" ocultarBloqueado>Voltar para a casa da família</BotaoAcao>}
           </div>
         )}
       </div>
@@ -112,16 +112,16 @@ function OMes({ vida, agir }: Props) {
         <div className="balanca" role="group" aria-label="Quanto entra e quanto sai por mês">
           <div className="balanca__linha">
             <span className="balanca__rotulo">Entra</span>
-            <div className="barra" aria-hidden>
-              {m.entradas.map((e, k) => <span key={e.origem} className={`barra__parte barra__parte--entra-${k}`} style={{ width: `${(e.valor / total) * 100}%` }} />)}
+            <div className="mes-barra" aria-hidden>
+              {m.entradas.map((e, k) => <span key={e.origem} className={`mes-barra__parte mes-barra__parte--entra-${k}`} style={{ width: `${(e.valor / total) * 100}%` }} />)}
             </div>
             <span className="balanca__valor">{dinheiroCurto(m.orcamento.renda)}</span>
           </div>
           <div className="balanca__linha">
             <span className="balanca__rotulo">Sai</span>
-            <div className="barra" aria-hidden>
-              {principais.map((s, k) => <span key={s.grupo} className={`barra__parte barra__parte--${TONS[k]}`} style={{ width: `${(s.valor / total) * 100}%` }} />)}
-              {outrasValor > 0 && <span className="barra__parte barra__parte--t6" style={{ width: `${(outrasValor / total) * 100}%` }} />}
+            <div className="mes-barra" aria-hidden>
+              {principais.map((s, k) => <span key={s.grupo} className={`mes-barra__parte mes-barra__parte--${TONS[k]}`} style={{ width: `${(s.valor / total) * 100}%` }} />)}
+              {outrasValor > 0 && <span className="mes-barra__parte mes-barra__parte--t6" style={{ width: `${(outrasValor / total) * 100}%` }} />}
             </div>
             <span className="balanca__valor">{dinheiroCurto(m.orcamento.despesa)}</span>
           </div>
@@ -129,9 +129,9 @@ function OMes({ vida, agir }: Props) {
             {m.sobra >= 0 ? 'Sobra' : 'Falta'} <strong>{dinheiroCheio(Math.abs(m.sobra))}</strong> por mês
           </p>
           <ul className="legenda">
-            {m.entradas.map((e, k) => <li key={e.origem}><span className={`legenda__cor barra__parte--entra-${k}`} aria-hidden />{e.origem}<span className="legenda__valor">+ {dinheiroCurto(e.valor)}</span></li>)}
-            {principais.map((s, k) => <li key={s.grupo}><span className={`legenda__cor barra__parte--${TONS[k]}`} aria-hidden />{s.rotulo}<span className="legenda__valor">− {dinheiroCurto(s.valor)}</span></li>)}
-            {outrasValor > 0 && <li><span className="legenda__cor barra__parte--t6" aria-hidden />{outras.map(o => o.rotulo.toLowerCase()).join(', ').replace(/^./, c => c.toUpperCase())}<span className="legenda__valor">− {dinheiroCurto(outrasValor)}</span></li>}
+            {m.entradas.map((e, k) => <li key={e.origem}><span className={`legenda__cor mes-barra__parte--entra-${k}`} aria-hidden />{e.origem}<span className="legenda__valor">+ {dinheiroCurto(e.valor)}</span></li>)}
+            {principais.map((s, k) => <li key={s.grupo}><span className={`legenda__cor mes-barra__parte--${TONS[k]}`} aria-hidden />{s.rotulo}<span className="legenda__valor">− {dinheiroCurto(s.valor)}</span></li>)}
+            {outrasValor > 0 && <li><span className="legenda__cor mes-barra__parte--t6" aria-hidden />{outras.map(o => o.rotulo.toLowerCase()).join(', ').replace(/^./, c => c.toUpperCase())}<span className="legenda__valor">− {dinheiroCurto(outrasValor)}</span></li>}
           </ul>
           <details className="detalhes">
             <summary>Ver cada linha</summary>
@@ -186,9 +186,9 @@ function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void 
     { id: 'conta', rotulo: 'Na conta', valor: Math.max(0, b.conta) }
   ].filter(x => x.valor > 0);
   const deve = [
-    { id: 'financiamentos', rotulo: 'Financiamentos (presos a um bem)', valor: b.financiamentos, tipo: 'financiamento' },
-    { id: 'emprestimos', rotulo: 'Empréstimos e acordos', valor: b.emprestimos, tipo: 'parcela' },
-    { id: 'cartao', rotulo: 'Cartão e cobrança', valor: b.cartao, tipo: 'problema' }
+    { id: 'financiamentos', rotulo: 'Financiamentos', valor: b.financiamentos, tipo: 'financiamento' },
+    { id: 'emprestimos', rotulo: 'Empréstimos', valor: b.emprestimos, tipo: 'parcela' },
+    { id: 'cartao', rotulo: 'Cartão, cobrança', valor: b.cartao, tipo: 'problema' }
   ].filter(x => x.valor > 0);
   const maior = Math.max(b.ativos, b.obrigacoes, 1);
   return (
@@ -211,6 +211,7 @@ function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void 
               ) : <p className="nota balanco__nada">Nenhuma dívida.</p>}
             </div>
           </div>
+          {b.financiamentos > 0 && <p className="nota">Financiamento é obrigação presa a um bem: enquanto paga, a parte que já é sua cresce.</p>}
           <p className="balanco__liquido">Descontado o que deve: <strong>{dinheiroCheio(b.liquido)}</strong> <span className="nota">(patrimônio líquido)</span></p>
           {hist.length >= 3 && <Evolucao valores={hist} rotulo={`Patrimônio líquido ao longo dos últimos ${hist.length} anos: de ${dinheiroCurto(hist[0])} para ${dinheiroCurto(hist[hist.length - 1])}.`} />}
           <p className="nota">{seg.texto}</p>

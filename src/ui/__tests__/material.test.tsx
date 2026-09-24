@@ -75,7 +75,7 @@ describe('Casa e dinheiro', () => {
     const linha = screen.getByText(/Descontado o que deve/);
     expect(linha.textContent).toContain(dinheiroCheio(esperado));
     // Financiamento aparece como obrigação presa ao bem, não como "dívida" vermelha genérica.
-    expect(screen.getByText(/Financiamentos \(presos a um bem\)/)).toBeTruthy();
+    expect(screen.getByText(/obrigação presa a um bem/)).toBeTruthy();
     expect(screen.getByText('Já é seu')).toBeTruthy();
   });
 

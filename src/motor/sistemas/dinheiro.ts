@@ -460,7 +460,7 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
   const financeiro = Math.max(0, f.conta) + totalAplicado(v);
   const limiar = Math.max(300000, despesa * 12 * 8);
   if (financeiro > limiar && i >= 30) {
-    const taxa = { apertado: 0.01, modesto: 0.02, confortavel: 0.03, folgado: 0.05 }[f.estilo];
+    const taxa = { apertado: 0.015, modesto: 0.02, confortavel: 0.03, folgado: 0.05 }[f.estilo];
     const gasto = Math.round((financeiro - limiar) * taxa);
     f.razao.push({ rotulo: 'Viagens, reformas e presentes que o patrimônio permitiu', valor: -gasto, grupo: 'lazer' });
     f.conta -= gasto;

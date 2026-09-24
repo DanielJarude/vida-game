@@ -31,6 +31,8 @@ export function processarObrigacoes(v: Vida): void {
   // Aluguel
   const ha = (desde: number | undefined, meses: number) => desde !== undefined && v.t - desde >= meses;
   if ((v.moradia.tipo === 'aluguel' || v.moradia.tipo === 'republica') && (v.moradia.atraso ?? 0) >= 4 && ha(v.moradia.atrasoDesde, 12)) despejo(v);
+  // A casa da família sem a família: quem ficou passa a sustentar a própria casa.
+  if ((v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') && idade(v) >= 18 && !vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && !x.p.especie && ['mae', 'pai', 'avo', 'tio', 'madrasta', 'padrasto'].includes(x.vin.parentesco ?? ''))) casaSemFamilia(v);
   // Morar de favor tem prazo: depois de uns anos, é preciso ir — para a família ou para o aluguel mais barato.
   if (v.moradia.tipo === 'cedida' && v.t - v.moradia.tInicio >= 36) fimDoFavor(v);
   for (const d of [...f.dividas]) {
@@ -80,6 +82,19 @@ function despejo(v: Vida): void {
     if (amigo) lembrarCom(v, amigo.p.id, 'Abriu a casa quando você foi despejado.', 'apoio', 3);
   }
   abalar(v, 'o despejo', -8, 15);
+}
+
+function casaSemFamilia(v: Vida): void {
+  const herdada = v.financas.bens.find(b => b.tipo === 'imovel' && b.herdado && b.municipioId === v.moradia.municipioId && !b.alugadoPor);
+  if (herdada && herdada.tipo === 'imovel') {
+    const m = modeloMoradia(herdada.modeloId);
+    v.moradia = { tipo: 'propria', municipioId: herdada.municipioId, imovelId: herdada.id, modeloId: m.id, aluguel: 0, padrao: m.padrao, tInicio: v.t, aceitaPet: true };
+    escrever(v, { texto: 'A casa onde você cresceu passou a ser a sua casa: as contas, agora, são suas.', relevancia: 'cotidiano', tema: 'casa' });
+    return;
+  }
+  const m = modeloMoradia('casa_simples');
+  v.moradia = { tipo: 'aluguel', municipioId: v.moradia.municipioId, modeloId: m.id, aluguel: aluguelDe(v, m, v.moradia.municipioId), padrao: m.padrao, tInicio: v.t, aceitaPet: true };
+  escrever(v, { texto: 'Sem os pais, a casa da família não se sustentava sozinha. Você ficou num lugar simples, pagando aluguel.', relevancia: 'cotidiano', tema: 'casa' });
 }
 
 function fimDoFavor(v: Vida): void {

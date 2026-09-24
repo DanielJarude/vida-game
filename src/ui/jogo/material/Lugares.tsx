@@ -38,7 +38,7 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
   const agirEFechar = (a: Acao) => { const ok = agir(a); if (ok) aoFechar(); return ok; };
   return (
     <Folha titulo={TITULO[qual]} rotulo={TITULO[qual]} aoFechar={aoFechar} largura="larga">
-      <div className="lugar">
+      <div className="lugar-folha">
         {(qual === 'alugar' || qual === 'comprar') && (
           <>
             <Escolha rotulo="Alugar ou comprar" valor={qual} aoMudar={x => trocar(x)} opcoes={[{ id: 'alugar', rotulo: 'Alugar' }, { id: 'comprar', rotulo: 'Comprar' }]} />
@@ -71,11 +71,20 @@ function Imobiliaria({ vida, agir, modo }: { vida: Vida; agir: (a: Acao) => bool
           <h3 className="subtitulo">Para você, agora</h3>
           <ul className="ofertas">{para.map(x => <li key={x.item.id}><CartaoImovel o={x.item} motivo={x.motivo} abrir={() => setAberta(x.item.id)} vida={vida} /></li>)}</ul>
         </>
-      ) : <p className="nota">Nada que caiba no orçamento agora.</p>}
+      ) : <p className="nota">{modo === 'venda' ? faltaParaComprar(vida, resto) : 'Nada que caiba no orçamento agora.'}</p>}
       <button type="button" className="botao botao--discreto" aria-expanded={verTudo} onClick={() => setVerTudo(x => !x)}>{verTudo ? 'Esconder as outras' : `Ver as outras ${resto.length} ofertas`}</button>
       {verTudo && <ul className="ofertas ofertas--resto">{resto.map(o => <li key={o.id}><CartaoImovel o={o} abrir={() => setAberta(o.id)} vida={vida} /></li>)}</ul>}
     </>
   );
+}
+
+/** Quando nada cabe: quanto a compra mais barata pede agora. */
+function faltaParaComprar(vida: Vida, ofertas: OfertaImovel[]): string {
+  const barata = [...ofertas].sort((a, b) => a.preco - b.preco)[0];
+  if (!barata) return 'Nada à venda agora.';
+  const c = condicoesImovel(vida, barata.preco, true);
+  const precisa = c.entradaMinima + c.custos;
+  return `Nada cabe ainda. A mais barata (${dinheiroCurto(barata.preco)}) pede uns ${dinheiroCurto(precisa)} de entrada e escritura, e uma parcela de ${dinheiroCurto(c.parcela)} por mês.`;
 }
 
 function CartaoImovel({ o, motivo, abrir, vida }: { o: OfertaImovel; motivo?: string; abrir: () => void; vida: Vida }) {
@@ -305,7 +314,7 @@ function Guardar({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
             <span className="campo__rotulo">Quanto</span>
             <input type="number" inputMode="numeric" min={0} step={100} value={valor || ''} placeholder="valor em reais" onChange={e => setValor(Math.max(0, Math.round(Number(e.target.value))))} />
           </label>
-          {sugestoes.length > 0 && <div className="fichas">{sugestoes.map(x => <button key={x} type="button" className="ficha" onClick={() => setValor(x)}>{dinheiroCurto(x)}</button>)}<button type="button" className="ficha" onClick={() => setValor(conta)}>Tudo ({dinheiroCurto(conta)})</button></div>}
+          {sugestoes.length > 0 && <div className="fichas-valor">{sugestoes.map(x => <button key={x} type="button" className="ficha-valor" onClick={() => setValor(x)}>{dinheiroCurto(x)}</button>)}<button type="button" className="ficha-valor" onClick={() => setValor(conta)}>Tudo ({dinheiroCurto(conta)})</button></div>}
           <div className="grupo-acoes grupo-acoes--linha">
             <BotaoAcao vida={vida} acao={{ tipo: 'investir', destino: p.id, valor }} agir={agir} aoAgir={() => setValor(0)}>Aplicar</BotaoAcao>
             {ap && <BotaoAcao vida={vida} acao={{ tipo: 'resgatar', origem: p.id, valor: Math.min(valor || ap.valor, ap.valor) }} agir={agir} variante="discreto" aoAgir={() => setValor(0)}>{valor ? `Tirar ${dinheiroCurto(Math.min(valor, ap.valor))}` : `Tirar tudo (${dinheiroCurto(ap.valor)})`}</BotaoAcao>}

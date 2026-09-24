@@ -4,7 +4,7 @@
  * bicho adoeceu) — nunca é um "imposto aleatório".
  */
 
-import type { Conteudo, Ctx } from './base';
+import type { Conteudo, Ctx, Resultado } from './base';
 import type { Veiculo } from '../tipos';
 import { vinculosVivos, idadePessoa, lembrarCom } from '../nucleo';
 import { dinheiro as fmt, flex } from '../texto';
@@ -21,9 +21,14 @@ import { nomeDePet } from '../sistemas/mercado';
 
 const financiamentoAtrasado = (c: Ctx) => c.v.financas.dividas.filter(d => (d.tipo === 'financiamento_imovel' || d.tipo === 'financiamento_veiculo') && (d.atraso ?? 0) >= 3).sort((a, b) => (b.atraso ?? 0) - (a.atraso ?? 0))[0];
 
-const carroParado = (c: Ctx) => c.v.financas.bens.find((b): b is Veiculo => b.tipo === 'veiculo' && !!b.problema && b.problema.gravidade === 3 && b.problema.desde === c.v.t && !b.parado);
+const carroParado = (c: Ctx) => c.v.financas.bens.find((b): b is Veiculo => b.tipo === 'veiculo' && !!b.problema && b.problema.gravidade === 3 && b.problema.desde === c.v.t && !b.parado)
+  ?? c.v.financas.bens.find((b): b is Veiculo => b.tipo === 'veiculo' && !!b.problema && b.problema.gravidade === 3 && !b.parado);
 
 const petMuitoDoente = (c: Ctx) => vinculosVivos(c.v).find(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu' && x.p.pet.doenca?.gravidade === 3 && !x.p.pet.doenca.tratando && c.v.fatos[`paliativo_${x.p.id}`] === undefined)?.p;
+
+/** A situação pode ter mudado entre abrir e responder a decisão: então não há o que decidir. */
+const mudou = { texto: 'A situação já tinha mudado: não havia mais o que decidir.', memoria: null };
+const com = <T>(alvo: (c: Ctx) => T | undefined, f: (c: Ctx, x: T) => Resultado) => (c: Ctx): Resultado => { const x = alvo(c); return x ? f(c, x) : mudou; };
 
 export const MATERIAL: Conteudo[] = [
   {
@@ -37,11 +42,10 @@ export const MATERIAL: Conteudo[] = [
     },
     opcoes: [
       { id: 'renegociar', texto: 'Renegociar: parcela menor, mais anos pagando',
-        disponivel: c => { const d = podeRenegociarFinanciamento(c.v, financiamentoAtrasado(c)); return d.ok ? true : d.motivo!; },
-        resolver: c => ({ texto: renegociarFinanciamento(c.v, financiamentoAtrasado(c)!), memoria: null }) },
+        disponivel: c => { const d = podeRenegociarFinanciamento(c.v, financiamentoAtrasado(c)); return d.ok ? true : d.motivo ?? false; },
+        resolver: com(financiamentoAtrasado, (c, d) => ({ texto: renegociarFinanciamento(c.v, d), memoria: null })) },
       { id: 'vender', texto: c => (financiamentoAtrasado(c)!.tipo === 'financiamento_imovel' ? 'Vender antes de perder' : 'Vender o carro e quitar'),
-        resolver: c => {
-          const d = financiamentoAtrasado(c)!;
+        resolver: com(financiamentoAtrasado, (c, d) => {
           const b = c.v.financas.bens.find(x => x.id === d.bemId);
           const bruto = b ? (b.tipo === 'veiculo' ? valorDeVenda(b) : valorDeVendaImovel(b)) : 0;
           const liquido = bruto - d.saldo;
@@ -55,7 +59,7 @@ export const MATERIAL: Conteudo[] = [
             c.v.moradia = { tipo: 'aluguel', municipioId: c.v.moradia.municipioId, modeloId: menor.id, aluguel: aluguelDe(c.v, menor, c.v.moradia.municipioId), padrao: menor.padrao, tInicio: c.v.t, aceitaPet: true };
           }
           return { texto: liquido >= 0 ? `Vendeu. Pagou o banco e sobraram ${fmt(liquido)}.` : `Vendeu, mas não cobriu tudo: ficaram ${fmt(-liquido)} para acertar.`, memoria: d.tipo === 'financiamento_imovel' ? 'Vendeu a casa para não perdê-la para o banco.' : 'Vendeu o carro para quitar o financiamento atrasado.', relevancia: d.tipo === 'financiamento_imovel' ? 'marco' : 'biografia', tom: 'ruim' };
-        } },
+        }) },
       { id: 'apertar', texto: 'Cortar tudo o que der e tentar pôr em dia', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Padrão de vida no mínimo, cada real contado. O atraso continua — mas agora há um plano.', memoria: null, efeito: () => { c.v.financas.estilo = 'apertado'; estresse(c, 4); } }) }
     ]
@@ -71,18 +75,17 @@ export const MATERIAL: Conteudo[] = [
     },
     opcoes: [
       { id: 'consertar', texto: c => `Consertar (${fmt(carroParado(c)!.problema!.custo)})`,
-        disponivel: c => (disponivel(c.v) >= carroParado(c)!.problema!.custo ? true : 'Não há esse dinheiro.'),
-        resolver: c => { const b = carroParado(c)!; const p = b.problema!; pagar(c.v, p.custo); b.problema = undefined; b.estado = Math.min(b.usado ? 92 : 100, b.estado + 30); (b.historia ??= []).push({ t: c.v.t, texto: `Consertou ${p.texto} (${fmt(p.custo)}).` }); return { texto: 'Duas semanas depois, voltou a rodar.', memoria: null }; } },
-      { id: 'vender', texto: 'Vender como está', resolver: c => {
-        const b = carroParado(c)!;
+        disponivel: c => (!carroParado(c) ? false : disponivel(c.v) >= carroParado(c)!.problema!.custo ? true : 'Não há esse dinheiro.'),
+        resolver: com(carroParado, (c, b) => { const p = b.problema!; pagar(c.v, p.custo); b.problema = undefined; b.estado = Math.min(b.usado ? 92 : 100, b.estado + 30); (b.historia ??= []).push({ t: c.v.t, texto: `Consertou ${p.texto} (${fmt(p.custo)}).` }); return { texto: 'Duas semanas depois, voltou a rodar.', memoria: null }; }) },
+      { id: 'vender', texto: 'Vender como está', resolver: com(carroParado, (c, b) => {
         const d = c.v.financas.dividas.find(x => x.bemId === b.id);
         const liquido = valorDeVenda(b) - (d?.saldo ?? 0);
         c.v.financas.bens = c.v.financas.bens.filter(x => x.id !== b.id);
         c.v.financas.dividas = c.v.financas.dividas.filter(x => x.bemId !== b.id);
         c.v.financas.conta += liquido;
         return { texto: `Vendeu para um mecânico por ${fmt(Math.max(0, valorDeVenda(b)))}.`, memoria: `Vendeu ${textoVeiculo(b)} quebrado, depois de ${Math.max(1, Math.round((c.v.t - b.tCompra) / 12))} anos.`, relevancia: 'cotidiano' };
-      } },
-      { id: 'parar', texto: 'Deixar parado por enquanto', resolver: c => { const b = carroParado(c)!; b.parado = true; return { texto: 'Ficou na garagem. Sem conserto, sem condução — e sem gastar com ele, por ora.', memoria: null }; } }
+      }) },
+      { id: 'parar', texto: 'Deixar parado por enquanto', resolver: com(carroParado, (_c, b) => { b.parado = true; return { texto: 'Ficou na garagem. Sem conserto, sem condução — e sem gastar com ele, por ora.', memoria: null }; }) }
     ]
   },
   {
@@ -97,9 +100,8 @@ export const MATERIAL: Conteudo[] = [
     },
     opcoes: [
       { id: 'tratar', texto: c => `Tratar (${fmt(custoDoTratamento(c.v, petMuitoDoente(c)!, true))})`,
-        disponivel: c => (disponivel(c.v) >= custoDoTratamento(c.v, petMuitoDoente(c)!, true) ? true : 'Não há esse dinheiro.'),
-        resolver: c => {
-          const p = petMuitoDoente(c)!;
+        disponivel: c => (!petMuitoDoente(c) ? false : disponivel(c.v) >= custoDoTratamento(c.v, petMuitoDoente(c)!, true) ? true : 'Não há esse dinheiro.'),
+        resolver: com(petMuitoDoente, (c, p) => {
           const info = infoPet(c.v, p);
           const d = info.doenca!;
           pagar(c.v, custoDoTratamento(c.v, p, true));
@@ -108,9 +110,9 @@ export const MATERIAL: Conteudo[] = [
           if (sarou) { info.doenca = undefined; lembrarCom(c.v, p.id, `Sobreviveu a ${d.nome}.`, 'apoio', 2); }
           else d.tratando = true;
           return { texto: sarou ? `Semanas de remédio e retorno. ${p.nome} se recuperou.` : `O tratamento começou. ${p.nome} tem dias bons e dias ruins.`, memoria: sarou ? `Pagou o tratamento de ${p.nome}, que se recuperou.` : null };
-        } },
+        }) },
       { id: 'conforto', texto: 'Cuidar para que não sofra', comportamento: { empatia: 1 },
-        resolver: c => { const p = petMuitoDoente(c)!; c.v.fatos[`paliativo_${p.id}`] = c.v.t; infoPet(c.v, p).doenca!.tratando = true; lembrarCom(c.v, p.id, 'Os últimos tempos foram de colo e cuidado.', 'perda', 2); return { texto: `Remédio para a dor, a caminha perto da sua. ${p.nome} vai ter os dias que tiver, sem sofrer.`, memoria: null }; } }
+        resolver: com(petMuitoDoente, (c, p) => { c.v.fatos[`paliativo_${p.id}`] = c.v.t; infoPet(c.v, p).doenca!.tratando = true; lembrarCom(c.v, p.id, 'Os últimos tempos foram de colo e cuidado.', 'perda', 2); return { texto: `Remédio para a dor, a caminha perto da sua. ${p.nome} vai ter os dias que tiver, sem sofrer.`, memoria: null }; }) }
     ]
   },
   {
