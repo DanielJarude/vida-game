@@ -406,8 +406,10 @@ export const ADULTO: Conteudo[] = [
 ];
 
 function tipoDoSocio(c: Ctx) {
-  const i = Math.floor(((c.p.socio?.id.length ?? 3) + anoDe(c.v.t)) % NEGOCIOS.length);
-  return NEGOCIOS[i];
+  // Sociedade com um amigo é em ramo livre: consultório e escritório de profissão regulamentada pedem o registro de quem abre.
+  const livres = NEGOCIOS.filter(n => !n.licenca && n.id !== 'consultoria_ti');
+  const i = Math.floor(((c.p.socio?.id.length ?? 3) + anoDe(c.v.t)) % livres.length);
+  return livres[i];
 }
 
 /** A parceria topa mudar? Depende do envolvimento, do trabalho dela e das raízes — não do jogador. */

@@ -261,7 +261,7 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   const primeiro = !temFato(v, 'primeiro_emprego');
   if (t.atual) encerrarEmprego(v, 'trocou de emprego');
   // Quem estava fora do mercado cuidando de alguém, voltou: a pausa acaba com o primeiro emprego.
-  if (t.pausa?.intensidade === 'total') {
+  if (t.pausa) {
     const anos = Math.max(1, Math.round((v.t - t.pausa.tInicio) / 12));
     t.pausa = undefined;
     delete v.fatos['pausa_voltar'];
@@ -321,7 +321,9 @@ export function encerrarEmprego(v: Vida, motivo: string): void {
   t.historico.push({ ...t.atual, tFim: v.t, motivo });
   t.atual = undefined;
   t.horasExtras = false;
-  t.desempregadoDesde = v.t;
+  // Sem emprego, a jornada reduzida para cuidar vira cuidado em tempo integral.
+  if (t.pausa?.intensidade === 'parcial') { t.pausa.intensidade = 'total'; t.desempregadoDesde = undefined; return; }
+  t.desempregadoDesde = t.pausa ? undefined : v.t;
 }
 
 export function textoDeContratacao(v: Vida, oc: Ocupacao, e: Emprego): string {

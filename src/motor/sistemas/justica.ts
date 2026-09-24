@@ -84,7 +84,7 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaIlicita): voi
   // Fraude descoberta no emprego: justa causa, sem multa nem seguro.
   if (categoria === 'fraude' && e) {
     encerrarEmprego(v, 'justa causa');
-    escrever(v, { texto: `Descobriram o esquema em ${e.empregador}. Saiu por justa causa, sem acerto — e com um processo pela frente.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `A fraude veio à tona. Saiu ${e.empregador.replace(/^(uma|a) /, 'da ').replace(/^(um|o) /, 'do ')} por justa causa, sem acerto — e com um processo pela frente.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', 'Demitido por justa causa: a fraude foi descoberta.'.replace('Demitido', flex(ge(v), 'Demitido', 'Demitida', 'Demitide')), 3);
   } else {
     escrever(v, { texto: `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder a um processo por ${NOME_CATEGORIA[categoria]}.${particular ? ' A família juntou dinheiro para um advogado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });

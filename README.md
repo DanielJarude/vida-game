@@ -33,7 +33,7 @@ src/
     ano.ts               um ano de vida: sistemas → morte → conteúdo
     acoes.ts             comandos do jogador, com disponibilidade graduada
     criacao.ts           nascer (família de origem coerente com classe e lugar)
-    save.ts              save v10, validação, backup, migração dos saves antigos (v5→…→v10)
+    save.ts              save v11, validação, backup, migração dos saves antigos (v5→…→v11)
     dados/               lugares, cursos, ocupações, bens, nomes por geração
     sistemas/            corpo, escola, trabalho, dinheiro, casa, pessoas,
                          romance, família e gestação, rotinas, processos;
@@ -49,7 +49,13 @@ src/
                          × casal, balanço, segurança), investimentos, mercado
                          (ofertas de imóveis, veículos, abrigo), veiculos,
                          imoveis, obrigacoes (atraso gradual), partilha
-                         (casal, separação, herança), pets
+                         (casal, separação, herança), pets;
+                         caminhos de vida: carreira (família de carreira: peso
+                         contextual, sentido, custos, ondas de transformação),
+                         militar (três Forças, formação, especialidade,
+                         transferências, reserva), justica e ilicito (proposta,
+                         risco, processo, prisão, saída), pausa (cuidado não
+                         remunerado), rural (terra, safra, cooperativa, pesca)
     conteudo/            acontecimentos (o mundo narra) e decisões (você escolhe)
   ui/                    React fino: um estado (a vida), tudo passa pelo motor
 scripts/
@@ -61,6 +67,7 @@ docs/
   ATT1-VIDA-SOCIAL-REPORT.md  ATT 1: pessoas, família, filhos, gerações, luto
   FIX-PLAYTEST-2-REPORT.md    FIX pós-playtest 2: Você, relações, processos, UX
   ATT3-VIDA-MATERIAL-REPORT.md  ATT 3: dinheiro, casa, bens, investimentos, pets
+  AUDITORIA-CAMINHOS-DE-VIDA-REPORT.md  auditoria e expansão dos caminhos de vida
 ```
 
 ### Regras que o código garante
@@ -129,6 +136,25 @@ de bicho, migrante, na casa dos pais):
 ```bash
 npx esbuild scripts/sim/material.ts --bundle --platform=node --outfile=/tmp/mat.cjs
 VIDAS=20 SAIDA=/tmp/vida-mat node /tmp/mat.cjs
+```
+
+Caminhos de vida (20 estratégias: acadêmico, técnico, ofício, informal, servidor,
+militar, segurança, artista, atleta, empreendedor, autônomo, rural, cuidador,
+crime, crime com saída, convencional, mudança tardia, volta aos estudos, tentado,
+pouco engajado) e a inspeção de diversidade funcional:
+
+```bash
+npx esbuild scripts/sim/trajetorias.ts --bundle --platform=node --outfile=/tmp/traj.cjs
+VIDAS=20 SAIDA=/tmp/traj node /tmp/traj.cjs
+npx esbuild scripts/sim/diversidade.ts --bundle --platform=node --outfile=/tmp/div.cjs && node /tmp/div.cjs
+```
+
+Playtest visual dos caminhos (Chromium, 320/390/820/1440, 14 cenários):
+
+```bash
+npx esbuild scripts/playtest/gerarTrajetorias.ts --bundle --platform=node --outfile=/tmp/gt.cjs && SP=/tmp/vida-traj node /tmp/gt.cjs
+npm run build && npx vite preview --port 4173 &
+SP=/tmp/vida-traj node scripts/playtest/trajetorias.mjs
 ```
 
 Playtest visual da vida material (Chromium, 320/390/820/1440, 14 cenários):
