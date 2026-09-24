@@ -22,6 +22,9 @@ import { flex, ge } from '../texto';
 import { MESES, mesDe } from '../tempo';
 import { OCUPACOES, OCUPACOES_POR_CLASSE, ocupacao } from '../dados/ocupacoes';
 import { liquido, salarioLocal } from './renda';
+import { modeloMoradia } from '../dados/bens';
+import { precoDeImovel } from './mercado';
+import { dinheiro as fmt } from '../texto';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { sortearNome } from '../dados/nomes';
 import { registrarMortes } from './luto';
@@ -46,16 +49,37 @@ function seuSua(p: Pessoa, rotulo: string): string {
   return `${flex(p.genero, 'seu', 'sua', 'sue')} ${rotulo}`;
 }
 
+/**
+ * Herança dos pais (simplificada, sem inventário jurídico): o que a família
+ * tinha — algum dinheiro guardado e, muitas vezes, a casa — divide-se entre
+ * os filhos. Filho único herda a casa; com irmãos, a casa é vendida e o
+ * dinheiro, repartido. O cônjuge vivo fica com tudo enquanto viver.
+ */
 function heranca(v: Vida, r: Rng, falecido: Pessoa): void {
   const conjugeVivo = falecido.parceiroId && v.pessoas[falecido.parceiroId]?.vivo;
   if (conjugeVivo) return; // o cônjuge fica com a casa; a herança vem depois
-  const base = { vulneravel: 0, trabalhadora: 8000, media_baixa: 45000, media: 220000, alta: 1300000 }[v.origem.classe];
-  if (base === 0) return;
-  const herdeiros = 1 + irmaos(v).filter(i => i.vivo).length;
-  const valor = Math.round(base * (0.5 + r.next()) / herdeiros / 1000) * 1000;
-  if (valor <= 0) return;
-  v.financas.conta += valor;
-  escrever(v, { texto: `O inventário de ${falecido.nome} terminou meses depois: R$ ${valor.toLocaleString('pt-BR')} de herança${herdeiros > 1 ? `, a mesma parte que coube a cada irmão` : ''}.`, relevancia: 'biografia', tema: 'dinheiro' });
+  const classe = v.origem.classe;
+  const guardado = { vulneravel: 0, trabalhadora: 6000, media_baixa: 25000, media: 110000, alta: 900000 }[classe] * (0.4 + r.next());
+  const temCasa = r.chance({ vulneravel: 0.3, trabalhadora: 0.55, media_baixa: 0.7, media: 0.8, alta: 0.95 }[classe]);
+  const modelo = modeloMoradia({ vulneravel: 'casa_simples', trabalhadora: 'casa_simples', media_baixa: 'casa_2q', media: 'casa_3q', alta: 'casa_grande' }[classe]);
+  const valorCasa = temCasa ? Math.round(precoDeImovel(v, modelo, falecido.municipioId) * 0.85 / 1000) * 1000 : 0;
+  const irmaosVivos = irmaos(v).filter(i => i.vivo).length;
+  const herdeiros = 1 + irmaosVivos;
+  const dinheiroParte = Math.round(guardado / herdeiros / 1000) * 1000;
+  const unico = herdeiros === 1 && valorCasa > 0;
+  const parte = unico ? dinheiroParte : dinheiroParte + Math.round(valorCasa * 0.92 / herdeiros / 1000) * 1000;
+  if (parte <= 0 && !unico) return;
+  v.financas.conta += parte;
+  let total = parte;
+  if (unico) {
+    v.financas.bens.push({ id: `i${v.seq++}`, tipo: 'imovel', modeloId: modelo.id, nome: 'casa da família', valor: valorCasa, tCompra: v.t, municipioId: falecido.municipioId, estado: 55, herdado: true, dono: 'eu', historia: [{ t: v.t, texto: `Herdada de ${falecido.nome}.` }] });
+    total += valorCasa;
+  }
+  v.fatos['herdado_total'] = (v.fatos['herdado_total'] ?? 0) + total;
+  const texto = unico
+    ? `O inventário de ${falecido.nome} terminou meses depois. A casa onde você cresceu ficou para você${parte > 0 ? `, com ${fmt(parte)} que estavam guardados` : ''}.`
+    : `O inventário de ${falecido.nome} terminou meses depois: ${fmt(parte)} de herança${herdeiros > 1 ? `, a mesma parte que coube a cada irmão${valorCasa > 0 ? ' depois de vender a casa' : ''}` : ''}.`;
+  escrever(v, { texto, relevancia: 'biografia', tema: 'dinheiro' });
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

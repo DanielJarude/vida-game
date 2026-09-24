@@ -13,7 +13,8 @@
  */
 
 import type { Vida } from '../tipos';
-import { filhos, idade, idadePessoa, moraCom } from '../nucleo';
+import { filhos, idade, idadePessoa, moraCom, vinculosVivos } from '../nucleo';
+import { veiculoUtil } from './veiculos';
 import { economiaLocal } from '../dados/lugares';
 import { curso } from '../dados/cursos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
@@ -87,7 +88,12 @@ export function semana(v: Vida): Semana {
     });
     if (cuidar.length) fixos.push({ id: 'cuidar', rotulo: `Cuidar de ${listaNatural(cuidar.map(p => p.nome))}`, peso: 0.5 * cuidar.length, tipo: 'cuidado' });
   }
-  const temConducao = v.financas.bens.some(x => x.tipo === 'veiculo' && !x.modeloId.startsWith('bike'));
+  // Um cachorro pede passeio todo dia (quem cuida é a casa inteira, mas o tempo sai de alguém).
+  if (i >= 18) {
+    const caes = vinculosVivos(v).filter(x => x.p.especie === 'cachorro' && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu').map(x => x.p);
+    if (caes.length) fixos.push({ id: 'pets', rotulo: caes.length === 1 ? `Passear com ${caes[0].nome}` : `Passear com ${listaNatural(caes.map(p => p.nome))}`, peso: Math.min(0.5, 0.25 * caes.length) * (moraCom(v).some(p => idadePessoa(v, p) >= 12) ? 0.5 : 1), tipo: 'cuidado' });
+  }
+  const temConducao = v.financas.bens.some(x => x.tipo === 'veiculo' && !x.modeloId.startsWith('bike') && veiculoUtil(x));
   const transporte = economiaLocal(v.moradia.municipioId).transporte;
   if ((e || m) && i >= 18) {
     if (temConducao && transporte !== 'bom') ganhos.push({ id: 'conducao', rotulo: 'Condução própria (menos tempo no ônibus)', peso: 0.5, tipo: 'deslocamento' });

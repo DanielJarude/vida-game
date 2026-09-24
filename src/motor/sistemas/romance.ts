@@ -23,6 +23,7 @@
  * descoberto (a reação do jogador é decisão dele; a da outra pessoa, dela).
  */
 
+import { comecarVidaEmComum, separarVidaMaterial } from './partilha';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { EstagioRomance, Genero, Pessoa, Romance, Vida, Vinculo } from '../tipos';
@@ -92,6 +93,7 @@ export function mudarEstagio(v: Vida, vin: Vinculo, estagio: EstagioRomance, fim
   rom.tEstagio = v.t;
   if (estagio !== 'ex') rom.fim = undefined;
   if (estagio === 'namoro' && !rom.planoFilhos) rom.planoFilhos = 'evitando';
+  if ((estagio === 'morando_junto' || estagio === 'casamento') && v.pessoas[vin.pessoaId]) comecarVidaEmComum(v, v.pessoas[vin.pessoaId]);
   if (estagio === 'ex') {
     rom.fim = fim ?? 'termino';
     rom.secreto = undefined;
@@ -298,21 +300,11 @@ export function terminar(v: Vida, p: Pessoa, vin: Vinculo, quem: 'jogador' | 'el
     if (i >= 6 && i < 25) f.aperto = { tipo: 'separacao', t: v.t };
     if (motivo === 'traicao' && i >= 10) { vf.tensao = clamp(vf.tensao + 20); vf.confianca = clamp(vf.confianca - 15); }
   }
-  if (moravam) dividirVida(v, p);
+  if (moravam) dividirVida(v, p, era);
 }
 
-/** Separação de quem morava junto: bens, casa e filhos. */
-function dividirVida(v: Vida, p: Pessoa): void {
-  const f = v.financas;
-  // Partilha simplificada: metade do que foi construído junto fica com a outra pessoa.
-  const imovel = f.bens.find(b => b.tipo === 'imovel' && b.id === v.moradia.imovelId);
-  if (imovel) {
-    const divida = f.dividas.find(d => d.bemId === imovel.id)?.saldo ?? 0;
-    const metade = Math.max(0, Math.round((imovel.valor - divida) / 2));
-    f.conta -= metade;
-    if (f.conta < 0) { f.reserva += f.conta; f.conta = 0; }
-  }
-  f.reserva = Math.round(f.reserva * 0.5);
+/** Separação de quem morava junto: partilha, casa e filhos. */
+function dividirVida(v: Vida, p: Pessoa, era: string): void {
   // Filhos menores: ficam com quem gestou na maioria das vezes.
   for (const { p: filho, vin } of vinculosVivos(v)) {
     if (vin.parentesco !== 'filho' || idadePessoa(v, filho) >= 18) continue;
@@ -324,6 +316,7 @@ function dividirVida(v: Vida, p: Pessoa): void {
       v.fatos[`guarda_outro_${filho.id}`] = v.t;
     }
   }
+  separarVidaMaterial(v, p, era);
 }
 
 /* ---------------------------------------------------------------- Casos */

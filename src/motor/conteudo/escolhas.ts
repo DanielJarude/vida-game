@@ -3,6 +3,7 @@
  * o cigarro experimentado aos 15 pode virar o maço de todo dia aos 40.
  */
 
+import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { lembrarCom } from '../nucleo';
@@ -237,7 +238,7 @@ export const ESCOLHAS: Conteudo[] = [
   },
   {
     id: 'mat_excursao', tipo: 'decisao', idade: [60, 88], tema: 'lazer', repetir: 4,
-    quando: c => c.v.financas.conta + c.v.financas.reserva > 2000,
+    quando: c => guardado(c.v) > 2000,
     titulo: 'A excursão',
     texto: c => `O grupo do bairro está fechando uma excursão de ônibus para ${c.r.pick(['Aparecida', 'Gramado', 'Porto Seguro', 'Caldas Novas', 'Juazeiro do Norte'])}. Quatro dias, R$ 1.500.`,
     opcoes: [

@@ -7,8 +7,8 @@
  */
 
 import type { Rng } from './rng';
-import type { EstiloDeVida, Pessoa, Retorno, Vida } from './tipos';
-import { escrever, idade, parceiro, transacao, vinculosVivos } from './nucleo';
+import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, Veiculo, Vida } from './tipos';
+import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import { abrirDecisao, conteudoPorId, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
@@ -23,13 +23,22 @@ import { contexto } from './conteudo/base';
 import { iniciarEntrevista } from './conteudo/desafios';
 import { ge } from './texto';
 import { OCUPACOES, ocupacao } from './dados/ocupacoes';
-import { alugar, marcarSaidaDeCasa, opcoesDeAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
+import { aluguelDe, alugar, amigoParaDividir, marcarSaidaDeCasa, opcoesDeAluguel, vereditoAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
 import { custoDeMudanca, iniciarAdocao, iniciarCnh, mudarAgora } from './sistemas/processos';
-import { modeloMoradia, modeloVeiculo, precoImovel } from './dados/bens';
+import { modeloMoradia, modeloVeiculo, VEICULO_ANTIGO } from './dados/bens';
 import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
 import { curso } from './dados/cursos';
-import { limiteDeCredito, saldoMensal } from './sistemas/dinheiro';
-import { moraComFamiliaDeOrigem, rendaDomiciliar } from './sistemas/domicilio';
+import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, rendaPropriaMensal, saldoMensal } from './sistemas/dinheiro';
+import { animalDoAbrigo, nomeImovel, ofertaDeImovel, ofertaDeVeiculo, ofertaPorModelo, ofertaVeiculoPorModelo } from './sistemas/mercado';
+import { disponibilidadeVeiculo, executarVeiculo, textoVeiculo, valorDeVenda, type AcaoVeiculo } from './sistemas/veiculos';
+import { disponibilidadeImovel, executarImovel, valorDeVendaImovel, type AcaoImovel } from './sistemas/imoveis';
+import { aplicacao, aplicar, resgatar } from './sistemas/investimentos';
+import { PRODUTOS, produto } from './dados/investimentos';
+import { podeRenegociarFinanciamento, renegociarFinanciamento } from './sistemas/obrigacoes';
+import { adotarPet, disponibilidadeVeterinario, executarVeterinario, infoPet, podeTerPet, type OpcaoVeterinario } from './sistemas/pets';
+import { juroDeFinanciamento } from './sistemas/economia';
+import { dinheiro as fmt } from './texto';
+import { moraComFamiliaDeOrigem } from './sistemas/domicilio';
 import { disponibilidadeInteracao, executarInteracao, LIMITE_INTERACOES } from './sistemas/interacoes';
 import { disponibilidadeCuidado, executarCuidado, type TipoCuidado } from './sistemas/cuidados';
 
@@ -60,19 +69,35 @@ export type Acao =
   | { tipo: 'aposentar' }
   | { tipo: 'pessoa'; pessoaId: string; interacao: InteracaoPessoa }
   | { tipo: 'adotar' }
-  | { tipo: 'sair_de_casa'; modeloId: string }
-  | { tipo: 'trocar_moradia'; modeloId: string }
+  /** Alugar: uma oferta do mercado (ou, nos comandos antigos, só o tipo). Dá para dividir com um amigo. */
+  | { tipo: 'sair_de_casa'; modeloId?: string; ofertaId?: string; dividirCom?: string }
+  | { tipo: 'trocar_moradia'; modeloId?: string; ofertaId?: string; dividirCom?: string }
   | { tipo: 'voltar_pais' }
   | { tipo: 'mudar_cidade'; municipioId: string }
-  | { tipo: 'comprar_veiculo'; modeloId: string; financiar: boolean }
-  | { tipo: 'comprar_imovel'; modeloId: string; financiar: boolean; morar: boolean }
+  /** Comprar um veículo de uma oferta (novo ou usado); `entrada` em reais, quando financia. */
+  | { tipo: 'comprar_veiculo'; modeloId?: string; ofertaId?: string; financiar: boolean; entrada?: number }
+  /** Comprar um imóvel: à vista ou financiado (entrada em reais, prazo em anos). */
+  | { tipo: 'comprar_imovel'; modeloId?: string; ofertaId?: string; financiar: boolean; morar: boolean; entrada?: number; prazo?: number }
   | { tipo: 'vender_bem'; bemId: string }
-  | { tipo: 'investir'; destino: 'reserva' | 'acoes'; valor: number }
-  | { tipo: 'resgatar'; origem: 'reserva' | 'acoes'; valor: number }
+  /** Oficina e cuidados de um veículo. */
+  | { tipo: 'veiculo'; bemId: string; oque: AcaoVeiculo }
+  /** Reparo, aluguel para terceiros, morar num imóvel próprio. */
+  | { tipo: 'imovel'; bemId: string; oque: AcaoImovel }
+  | { tipo: 'investir'; destino: Produto; valor: number }
+  | { tipo: 'resgatar'; origem: Produto; valor: number }
+  /** Pagar parte (ou tudo) de um financiamento ou empréstimo antes da hora. */
+  | { tipo: 'amortizar'; dividaId: string; valor: number }
+  | { tipo: 'emprestimo'; valor: number; meses: number }
+  | { tipo: 'renegociar_financiamento'; dividaId: string }
   | { tipo: 'estilo'; valor: EstiloDeVida }
   | { tipo: 'plano_saude'; ativo: boolean }
   | { tipo: 'renegociar' }
   | { tipo: 'cnh' }
+  /** Adotar um animal do abrigo da cidade. */
+  | { tipo: 'adotar_pet'; animalId: string }
+  | { tipo: 'veterinario'; petId: string; opcao: OpcaoVeterinario }
+  /** Levar o bicho que ficou na casa dos pais para a sua casa. */
+  | { tipo: 'levar_pet'; petId: string }
   /** Por quem o personagem se interessa — identidade, não comportamento. */
   | { tipo: 'atracao'; valor?: Vida['eu']['atracao'] };
 
@@ -146,6 +171,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'cuidar': return disponibilidadeCuidado(v, a.cuidado);
     case 'pedir_aumento':
       if (!v.trabalho.atual || v.trabalho.atual.contrato === 'informal' || v.trabalho.atual.contrato === 'autonomo') return bloqueio('incompativel', 'Não há a quem pedir.');
+      if (['servidor', 'militar'].includes(v.trabalho.atual.contrato)) return bloqueio('incompativel', 'No serviço público, o salário é o da carreira: sobe com a progressão, não com conversa.');
+      if (['aprendiz', 'estagio'].includes(v.trabalho.atual.contrato)) return bloqueio('incompativel', 'Bolsa de estágio e salário de aprendiz são fixos no contrato.');
       if (v.t - v.trabalho.atual.tInicio < 12) return bloqueio('requisito', 'Espere completar um ano no cargo.');
       return jaFez(v, 'aumento') ? bloqueio('incompativel', 'Você já pediu neste ano.') : PERMITIDO;
     case 'aposentar': return podeAposentar(v);
@@ -156,15 +183,16 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (moraComFamiliaDeOrigem(v)) return bloqueio('requisito', 'A Vara da Infância exige casa própria (alugada ou não).');
       if (saldoMensal(v).renda < 1600) return bloqueio('requisito', 'É preciso comprovar renda.');
       return PERMITIDO;
-    case 'sair_de_casa': {
-      if (!moraComFamiliaDeOrigem(v)) return bloqueio('incompativel', 'Você já não mora com a família.');
-      const o = opcoesDeAluguel(v).find(x => x.m.id === a.modeloId);
-      return o ? o.veredito : bloqueio('impossivel', 'Moradia desconhecida.');
-    }
-    case 'trocar_moradia': {
-      if (moraComFamiliaDeOrigem(v)) return bloqueio('incompativel', 'Primeiro é preciso sair de casa.');
-      const o = opcoesDeAluguel(v).find(x => x.m.id === a.modeloId);
-      return o ? o.veredito : bloqueio('impossivel', 'Moradia desconhecida.');
+    case 'sair_de_casa': case 'trocar_moradia': {
+      if (a.tipo === 'sair_de_casa' && !moraComFamiliaDeOrigem(v)) return bloqueio('incompativel', 'Você já não mora com a família.');
+      if (a.tipo === 'trocar_moradia' && moraComFamiliaDeOrigem(v)) return bloqueio('incompativel', 'Primeiro é preciso sair de casa.');
+      const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId) : a.modeloId ? ofertaPorModelo(v, 'aluguel', a.modeloId) : undefined;
+      if (!o || o.modo !== 'aluguel') return bloqueio('impossivel', 'Essa oferta já saiu do mercado.');
+      const amigo = a.dividirCom ? v.pessoas[a.dividirCom] : undefined;
+      if (a.dividirCom && (!amigo || amigoParaDividir(v)?.id !== amigo.id)) return bloqueio('incompativel', 'Não há com quem dividir.');
+      if (amigo && (o.modeloId === 'republica' || o.quartos < 2)) return bloqueio('incompativel', 'Para dividir, precisa de dois quartos.');
+      if (parceiro(v) && v.vinculos[parceiro(v)!.p.id].convivio.includes('casa') && o.modeloId === 'republica') return bloqueio('incompativel', 'Numa república não cabe um casal.');
+      return vereditoAluguel(v, o, amigo ? 1 : 0);
     }
     case 'voltar_pais': {
       if (moraComFamiliaDeOrigem(v)) return bloqueio('incompativel', 'Você já mora com a família.');
@@ -175,43 +203,100 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (i < 18) return bloqueio('ilegal', 'Menor de idade não muda de cidade sozinho.');
       if (a.municipioId === v.moradia.municipioId) return bloqueio('incompativel', 'Você já mora aqui.');
       const custo = custoDeMudanca(v.moradia.municipioId, a.municipioId);
-      if (v.financas.conta + v.financas.reserva < custo) return bloqueio('requisito', `A mudança custa cerca de R$ ${custo.toLocaleString('pt-BR')}.`);
+      if (disponivel(v) < custo) return bloqueio('requisito', `A mudança custa cerca de R$ ${custo.toLocaleString('pt-BR')}.`);
       return PERMITIDO;
     }
     case 'comprar_veiculo': {
-      const m = modeloVeiculo(a.modeloId);
-      if (!m) return bloqueio('impossivel', 'Modelo desconhecido.');
+      const o = a.ofertaId ? ofertaDeVeiculo(v, a.ofertaId) : a.modeloId ? ofertaVeiculoPorModelo(v, a.modeloId, VEICULO_ANTIGO[a.modeloId]?.usado) : undefined;
+      if (!o) return bloqueio('impossivel', 'Esse veículo já foi vendido.');
+      const m = modeloVeiculo(o.modeloId);
       if (i < m.idadeMin) return bloqueio(m.cnh ? 'ilegal' : 'impossivel', `A partir dos ${m.idadeMin}.`);
       if (m.cnh && !v.trabalho.licencas.includes('cnh')) return bloqueio('requisito', 'Precisa de carteira de motorista.');
-      return podeFinanciar(v, m.preco, a.financiar, 48, 0.019, 0.2);
+      if (i < 18 && moraComFamiliaDeOrigem(v) && o.preco > v.financas.conta) return bloqueio('requisito', `Custa ${fmt(o.preco)}; você tem ${fmt(Math.max(0, v.financas.conta))}.`);
+      return condicoesVeiculo(v, o.preco, a.financiar, a.entrada).veredito;
     }
     case 'comprar_imovel': {
       if (i < 18) return bloqueio('ilegal', 'Compra de imóvel exige maioridade.');
-      const m = modeloMoradia(a.modeloId);
-      if (!m || !m.preco) return bloqueio('impossivel', 'Não está à venda.');
-      const preco = precoImovel(m, economiaLocal(v.moradia.municipioId).custo);
-      const prazo = Math.min(360, (80 - i) * 12);
-      if (a.financiar && prazo < 60) return bloqueio('requisito', 'Nenhum banco financia com esse prazo na sua idade.');
-      const mcmv = rendaDomiciliar(v) <= 8600 && !v.financas.bens.some(b => b.tipo === 'imovel');
-      return podeFinanciar(v, preco, a.financiar, prazo, mcmv ? 0.0042 : 0.006, mcmv ? 0.1 : 0.2);
+      const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId) : a.modeloId ? ofertaPorModelo(v, 'venda', a.modeloId) : undefined;
+      if (!o || o.modo !== 'venda') return bloqueio('impossivel', 'Esse imóvel já foi vendido.');
+      return condicoesImovel(v, o.preco, a.financiar, a.entrada, a.prazo).veredito;
     }
-    case 'vender_bem': return v.financas.bens.some(b => b.id === a.bemId) ? (i < 18 ? bloqueio('ilegal', 'Exige maioridade.') : PERMITIDO) : bloqueio('impossivel', 'Bem não encontrado.');
-    case 'investir':
+    case 'vender_bem': {
+      const b = v.financas.bens.find(x => x.id === a.bemId);
+      if (!b) return bloqueio('impossivel', 'Bem não encontrado.');
+      if (i < 18) return bloqueio('ilegal', 'Exige maioridade.');
+      const d = v.financas.dividas.find(x => x.bemId === b.id);
+      const vale = b.tipo === 'veiculo' ? valorDeVenda(b) : valorDeVendaImovel(b);
+      if (d && d.saldo > vale + disponivel(v)) return bloqueio('requisito', `A venda (${fmt(vale)}) não cobre o que falta do financiamento (${fmt(d.saldo)}).`);
+      return PERMITIDO;
+    }
+    case 'veiculo': {
+      const b = v.financas.bens.find(x => x.id === a.bemId);
+      const d = disponibilidadeVeiculo(v, b?.tipo === 'veiculo' ? b : undefined, a.oque);
+      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+    }
+    case 'imovel': {
+      const b = v.financas.bens.find(x => x.id === a.bemId);
+      const d = disponibilidadeImovel(v, b?.tipo === 'imovel' ? b : undefined, a.oque);
+      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+    }
+    case 'investir': {
       if (i < 18) return bloqueio('ilegal', 'Investir exige maioridade (ou um responsável).');
-      return a.valor > 0 && a.valor <= v.financas.conta ? PERMITIDO : bloqueio('requisito', 'Saldo insuficiente.');
-    case 'resgatar': return a.valor > 0 && a.valor <= v.financas[a.origem] ? PERMITIDO : bloqueio('requisito', 'Saldo insuficiente.');
+      const pr = PRODUTOS.find(x => x.id === (a.destino as string));
+      if (!pr) return bloqueio('impossivel', 'Produto desconhecido.');
+      if (a.valor < pr.minimo) return bloqueio('requisito', `O mínimo é ${fmt(pr.minimo)}.`);
+      return a.valor > 0 && a.valor <= v.financas.conta ? PERMITIDO : bloqueio('requisito', 'Não há esse dinheiro na conta.');
+    }
+    case 'resgatar': {
+      const ap = aplicacao(v, a.origem);
+      return ap && a.valor > 0 && a.valor <= ap.valor + 0.5 ? PERMITIDO : bloqueio('requisito', 'Não há esse valor aplicado.');
+    }
+    case 'amortizar': {
+      const d = v.financas.dividas.find(x => x.id === a.dividaId);
+      if (!d) return bloqueio('impossivel', 'Dívida não encontrada.');
+      if (d.tipo === 'cartao') return bloqueio('incompativel', 'O cartão se paga sozinho com o que sobra no ano.');
+      return a.valor > 0 && a.valor <= v.financas.conta ? PERMITIDO : bloqueio('requisito', 'Não há esse dinheiro na conta.');
+    }
+    case 'emprestimo': return condicoesEmprestimo(v, a.valor, a.meses).veredito;
+    case 'renegociar_financiamento': {
+      const d = podeRenegociarFinanciamento(v, v.financas.dividas.find(x => x.id === a.dividaId));
+      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+    }
     case 'estilo': return moraComFamiliaDeOrigem(v) && i < 18 ? bloqueio('impossivel', 'Quem decide os gastos da casa são os adultos.') : PERMITIDO;
     case 'plano_saude': return i < 18 ? bloqueio('impossivel', 'O plano das crianças é decisão dos pais.') : PERMITIDO;
     case 'renegociar': {
-      const cartao = v.financas.dividas.find(d => d.tipo === 'cartao');
-      if (!cartao && !v.financas.negativado) return bloqueio('incompativel', 'Não há dívida cara para renegociar.');
+      const caras = v.financas.dividas.filter(d => d.tipo === 'cartao' && d.saldo > 0);
+      const atrasadas = v.financas.dividas.some(d => (d.atraso ?? 0) > 0);
+      if (!caras.length && !v.financas.negativado) return bloqueio('incompativel', atrasadas ? 'Financiamento atrasado se renegocia no banco do financiamento.' : 'Não há dívida cara para renegociar.');
       if (v.fatos['ultimo_acordo'] !== undefined && v.t - v.fatos['ultimo_acordo'] < 24) return bloqueio('incompativel', 'O banco não aceita outro acordo tão cedo.');
-      const parcela = cartao ? parcelaPrice(cartao.saldo, 0.022, 48) : 0;
-      const renda = saldoMensal(v).renda;
+      const parcela = parcelaPrice(caras.reduce((x, d) => x + d.saldo, 0), 0.022, 48);
+      const renda = rendaPropriaMensal(v);
+      if (renda <= 0 && caras.length) return bloqueio('requisito', 'Sem renda, o banco não fecha acordo.');
       if (parcela > renda * 0.35) return bloqueio('requisito', `A parcela do acordo (R$ ${Math.round(parcela).toLocaleString('pt-BR')}) não cabe na sua renda. O banco não fecha acordo que vai quebrar.`);
       return PERMITIDO;
     }
     case 'atracao': return i >= 13 ? PERMITIDO : bloqueio('impossivel', 'Ainda é cedo para isso.');
+    case 'adotar_pet': {
+      const an = animalDoAbrigo(v, a.animalId);
+      if (!an) return bloqueio('impossivel', 'Esse bicho já foi adotado.');
+      if (jaFez(v, 'adotou_pet')) return bloqueio('incompativel', 'Um bicho novo por ano já é bastante.');
+      const d = podeTerPet(v, an.especie, an.porte);
+      return d.grau === 'permitido' ? PERMITIDO : d.grau === 'improvavel' ? { grau: 'improvavel', motivo: d.motivo, chance: 0.5 } : bloqueio(d.grau, d.motivo!);
+    }
+    case 'veterinario': {
+      const d = disponibilidadeVeterinario(v, v.pessoas[a.petId], a.opcao);
+      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+    }
+    case 'levar_pet': {
+      const p = v.pessoas[a.petId];
+      if (!p?.especie || !p.vivo) return bloqueio('impossivel', 'Não há esse animal.');
+      if (moraComFamiliaDeOrigem(v)) return bloqueio('incompativel', 'Vocês já moram na mesma casa.');
+      if (p.pet?.tutor === 'eu' && v.vinculos[p.id].convivio.includes('casa')) return bloqueio('incompativel', 'Já mora com você.');
+      if (p.municipioId !== v.moradia.municipioId) return bloqueio('requisito', 'Mora em outra cidade.');
+      if (v.moradia.aceitaPet === false) return bloqueio('requisito', 'O contrato do aluguel não aceita animais.');
+      if (v.moradia.tipo === 'cedida') return bloqueio('requisito', 'Morando de favor, não dá para levar um bicho.');
+      return v.vinculos[p.id].proximidade >= 30 ? PERMITIDO : bloqueio('incompativel', 'Vocês não são tão próximos.');
+    }
     case 'cnh':
       if (i < 18) return bloqueio('ilegal', 'A CNH é a partir dos 18.');
       if (v.trabalho.licencas.includes('cnh')) return bloqueio('incompativel', 'Você já tem carteira.');
@@ -222,21 +307,100 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
 
 const custoCnh = (v: Vida) => Math.round(3200 * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
 
-function podeFinanciar(v: Vida, preco: number, financiar: boolean, meses: number, juros: number, entradaPct: number): Veredito {
-  const disponivel = v.financas.conta + v.financas.reserva;
-  if (!financiar) return disponivel >= preco ? PERMITIDO : bloqueio('requisito', `Custa R$ ${preco.toLocaleString('pt-BR')}; você tem R$ ${Math.round(disponivel).toLocaleString('pt-BR')}.`);
-  if (v.financas.negativado) return bloqueio('requisito', 'Com o nome sujo, nenhum banco financia.');
-  const entrada = preco * entradaPct;
-  if (disponivel < entrada) return bloqueio('requisito', `A entrada é de R$ ${Math.round(entrada).toLocaleString('pt-BR')}.`);
-  const parcela = parcelaPrice(preco - entrada, juros, meses);
-  const renda = rendaDomiciliar(v);
-  if (parcela > renda * 0.3) return bloqueio('requisito', `A parcela (R$ ${Math.round(parcela).toLocaleString('pt-BR')}) passaria de 30% da renda da casa.`);
-  return PERMITIDO;
+/* ------------------------------------------------------------ Condições de compra */
+
+export interface Condicoes {
+  veredito: Veredito;
+  preco: number;
+  entrada: number;
+  entradaMinima: number;
+  financiado: number;
+  parcela: number;
+  meses: number;
+  jurosMes: number;
+  /** Custos da compra (escritura, impostos) — só imóveis. */
+  custos: number;
+  /** Quanto a parcela pesa na renda considerada. */
+  peso: number;
+  /** Total pago ao fim (entrada + parcelas). */
+  total: number;
+  social: boolean;
+  prazoMaximo: number;
 }
 
-export function parcelaPrice(valor: number, juros: number, meses: number): number {
-  if (juros === 0) return valor / meses;
-  return (valor * juros) / (1 - Math.pow(1 + juros, -meses));
+/** Renda que o banco considera: a sua e, morando junto, a da parceria (composição de renda). */
+function rendaParaCredito(v: Vida): number {
+  const par = parceiro(v);
+  const junto = par && v.vinculos[par.p.id].convivio.includes('casa');
+  return rendaPropriaMensal(v) + (junto ? par!.p.renda : 0);
+}
+
+/** Condições para comprar um imóvel: entrada, prazo, parcela, peso no orçamento. */
+export function condicoesImovel(v: Vida, preco: number, financiar: boolean, entrada?: number, prazoAnos?: number): Condicoes {
+  const i = idade(v);
+  const custos = Math.round(preco * 0.04 / 100) * 100;
+  const tem = disponivel(v);
+  const renda = rendaParaCredito(v);
+  const social = renda <= 8600 && !v.financas.bens.some(b => b.tipo === 'imovel') && preco <= 350000 * Math.pow(economiaLocal(v.moradia.municipioId).custo, 1.2);
+  const prazoMaximo = Math.max(0, Math.min(35, 80 - i));
+  const entradaMinima = Math.round(preco * (social ? 0.1 : 0.2));
+  const base: Omit<Condicoes, 'veredito'> = { preco, entrada: preco, entradaMinima, financiado: 0, parcela: 0, meses: 0, jurosMes: 0, custos, peso: 0, total: preco + custos, social, prazoMaximo };
+  if (!financiar) {
+    return { ...base, veredito: tem >= preco + custos ? PERMITIDO : bloqueio('requisito', `À vista: ${fmt(preco)} mais ${fmt(custos)} de escritura e impostos. Você tem ${fmt(tem)}.`) };
+  }
+  const meses = Math.round(Math.min(prazoAnos ?? 30, prazoMaximo) * 12);
+  const ent = Math.round(Math.max(entradaMinima, Math.min(preco, entrada ?? entradaMinima)));
+  const jurosMes = juroDeFinanciamento(v, social ? 'imovel_social' : 'imovel');
+  const financiado = preco - ent;
+  const parcela = meses > 0 ? Math.round(parcelaPrice(financiado, jurosMes, meses)) : 0;
+  const peso = parcela / Math.max(1, renda);
+  const out = { ...base, entrada: ent, financiado, parcela, meses, jurosMes, peso, total: ent + custos + parcela * meses };
+  if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco financia.') };
+  if (prazoMaximo < 5) return { ...out, veredito: bloqueio('requisito', 'Nenhum banco financia com esse prazo na sua idade.') };
+  if (renda <= 0) return { ...out, veredito: bloqueio('requisito', 'Sem renda comprovada, não há financiamento.') };
+  if (tem < ent + custos) return { ...out, veredito: bloqueio('requisito', `A entrada é de ${fmt(ent)}, mais ${fmt(custos)} de escritura. Você tem ${fmt(tem)}.`) };
+  if (peso > 0.3) return { ...out, veredito: bloqueio('requisito', `A parcela (${fmt(parcela)}) passaria de 30% da renda${renda !== rendaPropriaMensal(v) ? ' de vocês' : ''}.`) };
+  if (comprometimento(v, parcela) > 0.45) return { ...out, veredito: bloqueio('requisito', 'Somada às parcelas que você já tem, não cabe na renda.') };
+  return { ...out, veredito: PERMITIDO };
+}
+
+/** Condições para comprar um veículo. */
+export function condicoesVeiculo(v: Vida, preco: number, financiar: boolean, entrada?: number): Condicoes {
+  const tem = disponivel(v);
+  const base: Omit<Condicoes, 'veredito'> = { preco, entrada: preco, entradaMinima: Math.round(preco * 0.2), financiado: 0, parcela: 0, meses: 0, jurosMes: 0, custos: 0, peso: 0, total: preco, social: false, prazoMaximo: 5 };
+  if (!financiar || preco < 8000) return { ...base, veredito: tem >= preco ? PERMITIDO : bloqueio('requisito', `Custa ${fmt(preco)}; você tem ${fmt(tem)}.`) };
+  const meses = 48;
+  const ent = Math.round(Math.max(base.entradaMinima, Math.min(preco, entrada ?? base.entradaMinima)));
+  const jurosMes = juroDeFinanciamento(v, 'veiculo');
+  const financiado = preco - ent;
+  const parcela = Math.round(parcelaPrice(financiado, jurosMes, meses));
+  const renda = rendaPropriaMensal(v);
+  const out = { ...base, entrada: ent, financiado, parcela, meses, jurosMes, peso: parcela / Math.max(1, renda), total: ent + parcela * meses };
+  if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco financia.') };
+  if (renda <= 0) return { ...out, veredito: bloqueio('requisito', 'Sem renda, não há financiamento.') };
+  if (tem < ent) return { ...out, veredito: bloqueio('requisito', `A entrada é de ${fmt(ent)}.`) };
+  if (out.peso > 0.3) return { ...out, veredito: bloqueio('requisito', `A parcela (${fmt(parcela)}) passaria de 30% da sua renda.`) };
+  if (comprometimento(v, parcela) > 0.45) return { ...out, veredito: bloqueio('requisito', 'Somada às parcelas que você já tem, não cabe na renda.') };
+  return { ...out, veredito: PERMITIDO };
+}
+
+/** Empréstimo pessoal (ou consignado, para quem tem salário garantido ou aposentadoria). */
+export function condicoesEmprestimo(v: Vida, valor: number, meses: number): Condicoes & { consignado: boolean; maximo: number } {
+  const e = v.trabalho.atual;
+  const consignado = !!v.trabalho.aposentadoria || e?.contrato === 'servidor' || e?.contrato === 'militar' || e?.contrato === 'clt';
+  const renda = rendaPropriaMensal(v);
+  const maximo = Math.round(renda * (consignado ? 18 : 6) / 100) * 100;
+  const jurosMes = juroDeFinanciamento(v, consignado ? 'consignado' : 'emprestimo');
+  const prazo = Math.max(6, Math.min(consignado ? 84 : 48, meses));
+  const parcela = Math.round(parcelaPrice(valor, jurosMes, prazo));
+  const base = { preco: valor, entrada: 0, entradaMinima: 0, financiado: valor, parcela, meses: prazo, jurosMes, custos: 0, peso: parcela / Math.max(1, renda), total: parcela * prazo, social: false, prazoMaximo: consignado ? 7 : 4, consignado, maximo };
+  if (idade(v) < 18) return { ...base, veredito: bloqueio('ilegal', 'Empréstimo exige maioridade.') };
+  if (v.financas.negativado) return { ...base, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco empresta.') };
+  if (renda <= 0) return { ...base, veredito: bloqueio('requisito', 'Sem renda, ninguém empresta.') };
+  if (valor < 500) return { ...base, veredito: bloqueio('requisito', 'O mínimo é R$ 500.') };
+  if (valor > maximo) return { ...base, veredito: bloqueio('requisito', `Pela sua renda, o banco empresta até ${fmt(maximo)}.`) };
+  if (comprometimento(v, parcela) > (consignado ? 0.35 : 0.4)) return { ...base, veredito: bloqueio('requisito', 'A parcela não cabe junto com as que você já tem.') };
+  return { ...base, veredito: PERMITIDO };
 }
 
 /* ================================================================= Execução */
@@ -247,16 +411,18 @@ export function executar(vida: Vida, a: Acao): Retorno {
   let resultado: string | undefined;
   let aviso: Retorno['aviso'];
   let titulo: string | undefined;
+  let pessoaId: string | undefined;
   const { vida: nova } = transacao(vida, (v, r) => {
     const out = executarNaTransacao(v, r, a);
     resultado = out.resultado;
     aviso = out.aviso;
     titulo = out.titulo;
+    pessoaId = out.pessoaId;
   });
-  return { vida: nova, resultado, aviso, titulo, pessoaId: a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined };
+  return { vida: nova, resultado, aviso, titulo, pessoaId: pessoaId ?? (a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined) };
 }
 
-interface Saida { resultado?: string; aviso?: Retorno['aviso']; titulo?: string }
+interface Saida { resultado?: string; aviso?: Retorno['aviso']; titulo?: string; pessoaId?: string }
 const ok = (texto: string, tom: 'bom' | 'ruim' | 'neutro' = 'neutro'): Saida => ({ aviso: { texto, tom } });
 
 function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
@@ -405,66 +571,123 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'aposentar': aposentar(v); return ok('Aposentadoria concedida.', 'bom');
     case 'pessoa': return executarInteracao(v, r, a.pessoaId, a.interacao);
     case 'adotar': iniciarAdocao(v, parceiro(v)?.p.id); return ok('Processo de adoção iniciado.');
-    case 'sair_de_casa': alugar(v, a.modeloId); return ok(`Casa nova: ${modeloMoradia(a.modeloId).nome}.`, 'bom');
-    case 'trocar_moradia': alugar(v, a.modeloId); return ok(`Casa nova: ${modeloMoradia(a.modeloId).nome}.`);
+    case 'sair_de_casa': case 'trocar_moradia': {
+      const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId)! : ofertaPorModelo(v, 'aluguel', a.modeloId!)!;
+      const amigo = a.dividirCom ? v.pessoas[a.dividirCom] : undefined;
+      alugar(v, o, undefined, false, amigo);
+      return ok(`Casa nova: ${nomeImovel(o)}${amigo ? `, dividindo com ${amigo.nome}` : ''}.`, a.tipo === 'sair_de_casa' ? 'bom' : 'neutro');
+    }
     case 'voltar_pais': voltarParaCasaDosPais(v); return ok('De volta à casa da família.');
     case 'mudar_cidade': {
       const custo = custoDeMudanca(v.moradia.municipioId, a.municipioId);
-      pagar(v, custo);
+      pagarTudo(v, custo);
       mudarAgora(v, a.municipioId, '');
       return ok(`Mudança para ${nomeLugar(a.municipioId)} feita.`);
     }
     case 'comprar_veiculo': {
-      const m = modeloVeiculo(a.modeloId);
+      const o = a.ofertaId ? ofertaDeVeiculo(v, a.ofertaId)! : ofertaVeiculoPorModelo(v, a.modeloId!, VEICULO_ANTIGO[a.modeloId!]?.usado)!;
+      const m = modeloVeiculo(o.modeloId);
+      const cond = condicoesVeiculo(v, o.preco, a.financiar, a.entrada);
       const id = `v${v.seq++}`;
-      financiarOuPagar(v, m.preco, a.financiar, 48, 0.019, 0.2, 'financiamento_veiculo', `Financiamento: ${m.nome}`, id);
-      v.financas.bens.push({ id, tipo: 'veiculo', modeloId: m.id, nome: m.nome, valor: m.preco, tCompra: v.t, estado: m.id.includes('usad') ? 60 : 100 });
+      const financiou = a.financiar && cond.financiado > 0;
+      pagarTudo(v, financiou ? cond.entrada : o.preco);
+      if (financiou) v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'financiamento_veiculo', saldo: cond.financiado, jurosMes: cond.jurosMes, parcela: cond.parcela, bemId: id, descricao: `Financiamento: ${m.nome}`, tInicio: v.t, prazo: cond.meses });
+      const casal = arranjoDaCasa(v) === 'casados';
+      const anterior = v.financas.bens.filter(b => b.tipo === 'veiculo');
+      v.financas.bens.push({ id, tipo: 'veiculo', modeloId: m.id, nome: m.nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: casal ? 'casal' : 'eu', historia: [{ t: v.t, texto: o.usado ? `Comprado usado, ano ${o.anoFabricacao}${o.historico ? ` (${o.historico})` : ''}, por ${fmt(o.preco)}.` : `Comprado zero, por ${fmt(o.preco)}.` }] });
       const nVeiculos = (v.fatos['veiculos_comprados'] ?? 0) + 1;
       v.fatos['veiculos_comprados'] = nVeiculos;
-      const fem = m.nome.startsWith('bicicleta') || m.nome.startsWith('moto');
-      const aindaTem = v.financas.bens.filter(b => b.tipo === 'veiculo' && b.id !== id).length > 0;
-      const verbo = nVeiculos === 1 ? `Comprou ${fem ? 'a primeira' : 'o primeiro'}` : aindaTem ? `Comprou também ${fem ? 'uma' : 'um'}` : `Trocou de veículo: agora ${fem ? 'uma' : 'um'}`;
-      escrever(v, { texto: `${verbo} ${m.nome}${a.financiar ? ', financiad' + (m.nome.startsWith('bicicleta') || m.nome.startsWith('moto') ? 'a' : 'o') + ' em 48 vezes' : ''}.`, relevancia: m.preco > 30000 ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
-      return ok(`Você comprou: ${m.nome}.`, 'bom');
+      const fem = m.categoria !== 'carro';
+      const primeiro = nVeiculos === 1 || !v.biografia.some(e => e.texto.includes(m.categoria === 'carro' ? 'carro' : m.nome));
+      const verbo = anterior.length ? `Comprou também ${fem ? 'uma' : 'um'}` : nVeiculos === 1 || primeiro && m.categoria === 'carro' ? `Comprou ${fem ? 'a primeira' : 'o primeiro'}` : `Comprou ${fem ? 'uma' : 'um'}`;
+      escrever(v, { texto: `${verbo} ${m.nome}${o.usado ? `, usad${fem ? 'a' : 'o'}, de ${o.anoFabricacao}` : ' zero'}${financiou ? `, financiad${fem ? 'a' : 'o'} em ${cond.meses} vezes` : ''}.`, relevancia: m.categoria === 'carro' && (primeiro || o.preco > 60000) ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
+      return ok(`${m.nome.charAt(0).toUpperCase() + m.nome.slice(1)} ${o.usado ? `de ${o.anoFabricacao}` : 'zero'} na garagem.`, 'bom');
     }
     case 'comprar_imovel': {
-      const m = modeloMoradia(a.modeloId);
-      const preco = precoImovel(m, economiaLocal(v.moradia.municipioId).custo);
-      const prazo = Math.min(360, (80 - i) * 12);
-      const mcmv = rendaDomiciliar(v) <= 8600 && !v.financas.bens.some(b => b.tipo === 'imovel');
+      const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId)! : ofertaPorModelo(v, 'venda', a.modeloId!)!;
+      const m = modeloMoradia(o.modeloId);
+      const cond = condicoesImovel(v, o.preco, a.financiar, a.entrada, a.prazo);
       const id = `i${v.seq++}`;
-      financiarOuPagar(v, preco, a.financiar, prazo, mcmv ? 0.0042 : 0.006, mcmv ? 0.1 : 0.2, 'financiamento_imovel', `Financiamento da casa${mcmv ? ' (Minha Casa Minha Vida)' : ''}`, id);
-      v.financas.bens.push({ id, tipo: 'imovel', modeloId: m.id, nome: m.nome, valor: preco, tCompra: v.t, municipioId: v.moradia.municipioId, estado: 85, alugadoPor: a.morar ? undefined : Math.round(economiaLocal(v.moradia.municipioId).aluguel * m.fatorAluguel * 0.85) });
-      if (a.morar) {
-        const saiuDosPais = moraComFamiliaDeOrigem(v);
-        if (saiuDosPais) marcarSaidaDeCasa(v);
-        if (saiuDosPais) for (const { vin } of vinculosVivos(v)) if (vin.parentesco && ['mae', 'pai', 'irmao', 'meio_irmao', 'avo', 'pet'].includes(vin.parentesco)) vin.convivio = vin.convivio.filter(c => c !== 'casa');
-        v.moradia = { tipo: 'propria', municipioId: v.moradia.municipioId, imovelId: id, modeloId: m.id, aluguel: 0, padrao: m.padrao, tInicio: v.t };
-      }
-      escrever(v, { texto: `Comprou ${m.nome.startsWith('casa') ? 'uma' : 'um'} ${m.nome}${a.financiar ? `, financiad${m.nome.startsWith('casa') ? 'a' : 'o'} em ${Math.round(prazo / 12)} anos${mcmv ? ' pelo Minha Casa Minha Vida' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: 'marco', tema: 'casa', tom: 'bom', escolha: true });
-      return ok('Imóvel comprado.', 'bom');
+      const financiou = a.financiar && cond.financiado > 0;
+      pagarTudo(v, (financiou ? cond.entrada : o.preco) + cond.custos);
+      if (financiou) v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'financiamento_imovel', saldo: cond.financiado, jurosMes: cond.jurosMes, parcela: cond.parcela, bemId: id, descricao: `Financiamento ${m.casa ? 'da casa' : 'do apartamento'}${cond.social ? ' (programa habitacional)' : ''}`, tInicio: v.t, prazo: cond.meses });
+      const casal = arranjoDaCasa(v) === 'casados';
+      const alugadoPor = a.morar ? undefined : Math.round(o.aluguel * 0.9 / 10) * 10;
+      v.financas.bens.push({ id, tipo: 'imovel', modeloId: m.id, nome: m.nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, municipioId: v.moradia.municipioId, estado: o.estado === 'novo' ? 100 : o.estado === 'bom' ? 82 : 55, bairro: o.bairro, alugadoPor, dono: casal ? 'casal' : 'eu', tManutencao: v.t, historia: [{ t: v.t, texto: `Comprado ${financiou ? `com ${fmt(cond.entrada)} de entrada, financiado em ${Math.round(cond.meses / 12)} anos` : 'à vista'}, por ${fmt(o.preco)}.` }] });
+      if (o.estado === 'reforma') v.financas.bens[v.financas.bens.length - 1].problema = { id: `pb${v.seq++}`, texto: 'a reforma que já vinha com ele', custo: Math.round(o.preco * 0.08 / 100) * 100, desde: v.t, gravidade: 2, adiado: 0 };
+      const primeira = !v.financas.bens.some(b => b.tipo === 'imovel' && b.id !== id && !b.herdado) && !temFato(v, 'comprou_imovel');
+      marcarFato(v, 'comprou_imovel');
+      if (a.morar) morarNoImovel(v, id);
+      const artigoM = m.nome.startsWith('casa') ? 'a' : 'o';
+      escrever(v, { texto: `${primeira ? `Comprou ${artigoM === 'a' ? 'a primeira casa' : 'o primeiro imóvel'}: ` : 'Comprou '}${artigoM === 'a' ? 'uma' : 'um'} ${m.nome} ${o.bairro}${financiou ? `, financiad${artigoM} em ${Math.round(cond.meses / 12)} anos${cond.social ? ' por um programa habitacional' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: primeira || a.morar ? 'marco' : 'biografia', tema: 'casa', tom: 'bom', escolha: true });
+      return ok(a.morar ? 'A chave é sua.' : `Imóvel comprado. Alugado, deve render ${fmt(alugadoPor ?? 0)} por mês.`, 'bom');
     }
     case 'vender_bem': {
       const b = v.financas.bens.find(x => x.id === a.bemId)!;
       const divida = v.financas.dividas.find(d => d.bemId === b.id);
-      const liquido = Math.round(b.valor * 0.95) - (divida?.saldo ?? 0);
+      const bruto = b.tipo === 'veiculo' ? valorDeVenda(b) : valorDeVendaImovel(b);
+      const liquido = bruto - (divida?.saldo ?? 0);
       v.financas.conta += liquido;
+      if (v.financas.conta < 0) pagarTudo(v, 0);
       v.financas.bens = v.financas.bens.filter(x => x.id !== b.id);
       v.financas.dividas = v.financas.dividas.filter(d => d.bemId !== b.id);
+      const anos = Math.max(0, Math.round((v.t - b.tCompra) / 12));
       if (v.moradia.imovelId === b.id) {
-        v.moradia = { tipo: 'aluguel', municipioId: v.moradia.municipioId, modeloId: b.modeloId, aluguel: Math.round(economiaLocal(v.moradia.municipioId).aluguel * modeloMoradia(b.modeloId).fatorAluguel), padrao: v.moradia.padrao, tInicio: v.t };
+        const m = modeloMoradia(b.modeloId);
+        v.moradia = { tipo: 'aluguel', municipioId: v.moradia.municipioId, modeloId: b.modeloId, aluguel: aluguelDe(v, m, v.moradia.municipioId), padrao: v.moradia.padrao, tInicio: v.t, aceitaPet: true, bairro: b.tipo === 'imovel' ? b.bairro : undefined };
       }
-      escrever(v, { texto: `Vendeu ${b.tipo === 'imovel' ? 'o imóvel' : `o ${b.nome}`}.`, relevancia: b.tipo === 'imovel' ? 'marco' : 'cotidiano', tema: 'dinheiro', escolha: true });
-      return ok(`Venda feita: R$ ${liquido.toLocaleString('pt-BR')} livres.`);
+      const oque = b.tipo === 'imovel' ? (b.herdado ? 'a casa da família' : v.moradia.imovelId === b.id ? 'a casa' : 'o imóvel') : textoVeiculo(b);
+      escrever(v, { texto: `Vendeu ${oque}${anos >= 2 ? `, depois de ${anos} anos` : ''}${divida ? ', e o banco ficou com a parte do financiamento' : ''}.`, relevancia: b.tipo === 'imovel' ? 'marco' : anos >= 5 ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
+      return ok(`Venda feita: ${fmt(Math.max(0, liquido))} livres${divida ? ' depois de quitar o financiamento' : ''}.`);
     }
-    case 'investir':
-      v.financas.conta -= a.valor;
-      v.financas[a.destino] += a.valor;
-      return ok(`R$ ${a.valor.toLocaleString('pt-BR')} aplicados.`);
-    case 'resgatar':
-      v.financas[a.origem] -= a.valor;
+    case 'veiculo': {
+      const b = v.financas.bens.find(x => x.id === a.bemId) as Veiculo;
+      return { resultado: executarVeiculo(v, b, a.oque), titulo: a.oque === 'consertar' || a.oque === 'revisao' ? 'Na oficina' : undefined };
+    }
+    case 'imovel': {
+      const b = v.financas.bens.find(x => x.id === a.bemId) as Imovel;
+      if (a.oque === 'morar') { morarNoImovel(v, b.id); escrever(v, { texto: `Foi morar ${b.herdado ? 'na casa da família' : `n${b.nome.startsWith('casa') ? 'a' : 'o'} ${b.nome} que era seu`}.`, relevancia: 'biografia', tema: 'casa', escolha: true }); return ok('Mudança feita.'); }
+      return ok(executarImovel(v, b, a.oque));
+    }
+    case 'investir': {
+      aplicar(v, a.destino, a.valor);
+      marcarFato(v, `investiu_${a.destino}`);
+      if (!temFato(v, 'primeiro_investimento') && a.destino !== 'reserva') { marcarFato(v, 'primeiro_investimento'); }
+      return ok(`${fmt(a.valor)} em ${produto(a.destino).nome.toLowerCase()}.`);
+    }
+    case 'resgatar': {
+      const ap = aplicacao(v, a.origem)!;
+      const perda = ap.valor < ap.aportado;
+      const tirado = resgatar(v, ap.id, a.valor);
+      return ok(`${fmt(tirado)} de volta na conta${perda && produto(a.origem).risco >= 3 ? ' — vendendo abaixo do que você pôs' : ''}.`);
+    }
+    case 'amortizar': {
+      const d = v.financas.dividas.find(x => x.id === a.dividaId)!;
+      const valor = Math.min(a.valor, d.saldo);
+      v.financas.conta -= valor;
+      const restantes = mesesRestantes(v, d);
+      d.saldo -= valor;
+      if (d.saldo <= 0) {
+        v.financas.dividas = v.financas.dividas.filter(x => x.id !== d.id);
+        if (d.tipo === 'financiamento_imovel') escrever(v, { texto: 'Quitou o financiamento antes do prazo. A casa agora é toda sua.', relevancia: 'marco', tema: 'casa', tom: 'bom', escolha: true });
+        return ok('Quitado.', 'bom');
+      }
+      d.parcela = Math.round(parcelaPrice(d.saldo, d.jurosMes, restantes));
+      d.prazo = restantes;
+      d.tInicio = v.t;
+      return ok(`Amortizou ${fmt(valor)}: a parcela caiu para ${fmt(d.parcela)}.`, 'bom');
+    }
+    case 'emprestimo': {
+      const c = condicoesEmprestimo(v, a.valor, a.meses);
       v.financas.conta += a.valor;
-      return ok(`R$ ${a.valor.toLocaleString('pt-BR')} resgatados.`);
+      v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'emprestimo', saldo: a.valor, jurosMes: c.jurosMes, parcela: c.parcela, descricao: c.consignado ? 'Empréstimo consignado' : 'Empréstimo pessoal', tInicio: v.t, prazo: c.meses });
+      if (!temFato(v, 'pegou_emprestimo')) { marcarFato(v, 'pegou_emprestimo'); escrever(v, { texto: `Pegou um empréstimo de ${fmt(a.valor)}${c.consignado ? ', descontado no pagamento' : ''}.`, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true }); }
+      return ok(`${fmt(a.valor)} na conta. ${c.meses} parcelas de ${fmt(c.parcela)}.`);
+    }
+    case 'renegociar_financiamento': {
+      const d = v.financas.dividas.find(x => x.id === a.dividaId)!;
+      return { resultado: renegociarFinanciamento(v, d), titulo: 'No banco' };
+    }
     case 'estilo':
       v.financas.estilo = a.valor;
       return ok('Padrão de vida ajustado.');
@@ -473,13 +696,11 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (a.ativo) for (const c of v.corpo.condicoes) if (c.cronica) c.tratando = true;
       return ok(a.ativo ? 'Plano de saúde contratado.' : 'Plano de saúde cancelado.');
     case 'renegociar': {
-      const cartao = v.financas.dividas.find(d => d.tipo === 'cartao');
-      if (cartao) {
-        cartao.tipo = 'emprestimo';
-        cartao.jurosMes = 0.022;
-        cartao.parcela = Math.round(parcelaPrice(cartao.saldo, 0.022, 48));
-        cartao.descricao = 'Acordo de renegociação';
-      }
+      // Tudo o que está no rotativo ou em cobrança vira um acordo só, com parcela fixa.
+      const caras = v.financas.dividas.filter(d => d.tipo === 'cartao' && d.saldo > 0);
+      const total = caras.reduce((x, d) => x + d.saldo, 0);
+      v.financas.dividas = v.financas.dividas.filter(d => !caras.includes(d));
+      if (total > 0) v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'acordo', saldo: Math.round(total), jurosMes: 0.022, parcela: Math.round(parcelaPrice(total, 0.022, 48)), descricao: 'Acordo de renegociação', tInicio: v.t, prazo: 48, atraso: 0 });
       if (v.financas.negativado) v.financas.negativado = false;
       const acordos = (v.fatos['acordos'] ?? 0) + 1;
       v.fatos['acordos'] = acordos;
@@ -490,8 +711,27 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'atracao':
       v.eu.atracao = a.valor;
       return ok('Anotado.');
+    case 'adotar_pet': {
+      const an = animalDoAbrigo(v, a.animalId)!;
+      v.anoAtual.acoes.push('adotou_pet');
+      const pet = adotarPet(v, r, an, 'abrigo');
+      return { resultado: `${pet.nome} chegou em casa. ${an.jeito.charAt(0).toUpperCase() + an.jeito.slice(1)}.`, titulo: 'Um bicho em casa', pessoaId: pet.id };
+    }
+    case 'veterinario': {
+      const p = v.pessoas[a.petId];
+      return { resultado: executarVeterinario(v, r, p, a.opcao), titulo: 'No veterinário', pessoaId: p.id };
+    }
+    case 'levar_pet': {
+      const p = v.pessoas[a.petId];
+      infoPet(v, p).tutor = 'eu';
+      p.municipioId = v.moradia.municipioId;
+      const vin = v.vinculos[p.id];
+      if (!vin.convivio.includes('casa')) vin.convivio.push('casa');
+      lembrarCom(v, p.id, 'Veio morar com você.', 'casa', 2);
+      return ok(`${p.nome} veio morar com você.`, 'bom');
+    }
     case 'cnh':
-      pagar(v, custoCnh(v));
+      pagarTudo(v, custoCnh(v));
       iniciarCnh(v);
       return ok('Matrícula na autoescola feita. A prova é em alguns meses.');
   }
@@ -508,19 +748,20 @@ function conteudoCurso(id: string): string {
   return curso(id).nome;
 }
 
-function pagar(v: Vida, valor: number): void {
-  const f = v.financas;
-  const daConta = Math.min(f.conta, valor);
-  f.conta -= daConta;
-  f.reserva -= valor - daConta;
-}
+/** Paga com a conta e, se faltar, com as aplicações. */
+const pagarTudo = (v: Vida, valor: number) => pagarComGuardado(v, valor);
 
-function financiarOuPagar(v: Vida, preco: number, financiar: boolean, meses: number, juros: number, entradaPct: number, tipo: 'financiamento_imovel' | 'financiamento_veiculo', descricao: string, bemId: string): void {
-  if (!financiar) { pagar(v, preco); return; }
-  const entrada = Math.round(preco * entradaPct);
-  pagar(v, entrada);
-  const valor = preco - entrada;
-  v.financas.dividas.push({ id: `d${v.seq++}`, tipo, saldo: valor, jurosMes: juros, parcela: Math.round(parcelaPrice(valor, juros, meses)), bemId, descricao });
+/** Passa a morar num imóvel próprio (saindo da casa dos pais ou de um aluguel). */
+function morarNoImovel(v: Vida, id: string): void {
+  const b = v.financas.bens.find(x => x.id === id) as Imovel;
+  const m = modeloMoradia(b.modeloId);
+  const saiuDosPais = moraComFamiliaDeOrigem(v);
+  if (saiuDosPais) {
+    marcarSaidaDeCasa(v);
+    for (const { p, vin } of vinculosVivos(v)) if (vin.parentesco && (['mae', 'pai', 'irmao', 'meio_irmao', 'avo'].includes(vin.parentesco) || (vin.parentesco === 'pet' && p.pet?.tutor !== 'eu'))) vin.convivio = vin.convivio.filter(c => c !== 'casa');
+  }
+  b.alugadoPor = undefined;
+  v.moradia = { tipo: 'propria', municipioId: b.municipioId, imovelId: id, modeloId: m.id, aluguel: 0, padrao: m.padrao, tInicio: v.t, bairro: b.bairro, aceitaPet: true };
 }
 
 export { opcoesDeCurso, opcoesDeAluguel, limiteDeCredito };

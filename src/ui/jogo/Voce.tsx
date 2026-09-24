@@ -19,7 +19,7 @@ import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
 import { expressaoDe, lerDimensao, momentoAtual, palavraTendencia, type LeituraDimensao } from '../estadoPessoal';
 
-export type Destino = 'tempo' | 'rumo' | 'pessoas';
+export type Destino = 'tempo' | 'rumo' | 'pessoas' | 'casa';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void }
 

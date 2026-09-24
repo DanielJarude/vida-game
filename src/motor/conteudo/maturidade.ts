@@ -1,5 +1,6 @@
 /** Maturidade (60+). */
 
+import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { dinheiro, estresse, fato, feliz, prox, saude } from './efeitos';
@@ -58,7 +59,7 @@ export const MATURIDADE: Conteudo[] = [
   },
   {
     id: 'mat_testamento', tipo: 'decisao', idade: [68, 100], tema: 'familia',
-    quando: c => c.v.financas.bens.length > 0 || c.v.financas.reserva > 50000,
+    quando: c => c.v.financas.bens.length > 0 || guardado(c.v) > 50000,
     titulo: 'O que fica',
     texto: () => 'Um advogado amigo da família sugere organizar o testamento "enquanto está tudo bem".',
     opcoes: [

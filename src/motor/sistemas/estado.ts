@@ -24,7 +24,7 @@
 
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { abalar, type Abalo } from './abalo';
-import { idade, idadePessoa, moraCom, parceiro, vinculosVivos } from '../nucleo';
+import { filhos, idade, idadePessoa, moraCom, parceiro, vinculosVivos } from '../nucleo';
 import { listaNatural } from '../texto';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { modeloCondicao } from './corpo';
@@ -33,7 +33,8 @@ import { semana } from './semana';
 import { papelDe } from './vinculos';
 import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
 import { pesoDoLuto } from './luto';
-import { saldoMensal } from './dinheiro';
+import { obrigacoesAtrasadas, seguranca } from './dinheiro';
+import { casaApertada } from './imoveis';
 
 export { abalar, type Abalo };
 
@@ -196,8 +197,15 @@ export function fatoresHumor(v: Vida): Fator[] {
     const e = (par.vin.romance.envolvimento - 50) / 6 + 2;
     out.push({ id: 'parceria', texto: e >= 0 ? `a vida com ${par.p.nome}` : `a distância de ${par.p.nome}`, efeito: e, pessoaId: par.p.id });
   }
-  if (v.financas.negativado || dividaPesada(v)) out.push({ id: 'dividas', texto: v.financas.negativado ? 'o nome sujo e as contas atrasadas' : 'a dívida do cartão', efeito: v.financas.negativado ? -14 : -8 });
-  else if (!moraComFamiliaDeOrigem(v) && v.financas.estilo === 'folgado') out.push({ id: 'folga', texto: 'dinheiro sobrando para o que gosta', efeito: 3 });
+  const seg = seguranca(v);
+  if (seg.nivel === 'no_vermelho') out.push({ id: 'dividas', texto: obrigacoesAtrasadas(v) > 0 ? 'as contas atrasadas' : v.financas.negativado ? 'o nome sujo e as contas atrasadas' : 'a dívida do cartão', efeito: obrigacoesAtrasadas(v) >= 3 || v.financas.negativado ? -12 : -7 });
+  else if (seg.nivel === 'apertado' && v.fatos['sem_sobra_desde'] !== undefined && v.t - v.fatos['sem_sobra_desde'] >= 24) out.push({ id: 'aperto', texto: 'anos de dinheiro contado', efeito: -4 });
+  else if (!moraComFamiliaDeOrigem(v) && (v.financas.estilo === 'folgado' || seg.nivel === 'folgado')) out.push({ id: 'folga', texto: 'dinheiro sobrando para o que gosta', efeito: 3 });
+  const apertada = casaApertada(v);
+  if (apertada) out.push({ id: 'casa_pequena', texto: apertada, efeito: -2 });
+  // A companhia de um bicho: pesa mais para quem mora sozinho.
+  const bicho = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa')).sort((a, b) => b.vin.proximidade - a.vin.proximidade)[0];
+  if (bicho && i >= 6) out.push({ id: 'pet', texto: `a companhia de ${bicho.p.nome}`, efeito: moraCom(v).length === 0 ? 4 : 2, pessoaId: bicho.p.id });
   if (i >= 18 && !v.trabalho.atual && !v.trabalho.aposentadoria && !v.educacao.matricula) out.push({ id: 'sem_trabalho', texto: 'estar sem trabalho', efeito: -6 });
   if (i >= 18 && somaRede < 1 && moraCom(v).length === 0) out.push({ id: 'solidao', texto: 'ninguém por perto no dia a dia', efeito: -6 });
   const luto = pesoDoLuto(v);
@@ -240,7 +248,14 @@ export function fatoresCabeca(v: Vida): Fator[] {
   if (pequenos) out.push({ id: 'bebe', texto: pequenos === 1 ? 'as noites curtas com uma criança pequena' : 'as noites curtas com crianças pequenas', efeito: Math.min(10, pequenos * 6) });
   const cuidar = semana(v).fixos.find(f => f.id === 'cuidar');
   if (cuidar) out.push({ id: 'cuidar', texto: cuidar.rotulo.charAt(0).toLowerCase() + cuidar.rotulo.slice(1), efeito: 6 });
-  if (v.financas.negativado || dividaPesada(v)) out.push({ id: 'dividas', texto: 'as contas que não fecham', efeito: 16 });
+  const seg = seguranca(v);
+  if (seg.nivel === 'no_vermelho') out.push({ id: 'dividas', texto: obrigacoesAtrasadas(v) > 0 ? 'as parcelas e contas atrasadas' : 'as contas que não fecham', efeito: obrigacoesAtrasadas(v) >= 3 || v.financas.negativado ? 16 : 10 });
+  else if (seg.nivel === 'apertado') out.push({ id: 'aperto', texto: 'o mês que não fecha', efeito: 6 });
+  else if (i >= 25 && (seg.nivel === 'seguro' || seg.nivel === 'folgado') && !moraComFamiliaDeOrigem(v)) out.push({ id: 'reserva', texto: 'saber que há uma reserva', efeito: -3 });
+  const apertada = casaApertada(v);
+  if (apertada) out.push({ id: 'casa_pequena', texto: apertada, efeito: 4 });
+  const quebrado = v.financas.bens.find(b => b.tipo === 'veiculo' && (b.problema?.gravidade ?? 0) >= 3 && !b.parado);
+  if (quebrado && (v.trabalho.atual || filhos(v).some(f => v.vinculos[f.id]?.convivio.includes('casa')))) out.push({ id: 'carro_parado', texto: 'o carro parado na oficina', efeito: 3 });
   if (moraComFamiliaDeOrigem(v) && i < 18 && rendaPerCapita(v) < 500) out.push({ id: 'aperto_casa', texto: 'o dinheiro curto em casa', efeito: 7 });
   const desde = v.trabalho.desempregadoDesde;
   if (!e && desde !== undefined && i >= 18 && !v.trabalho.aposentadoria && v.t - desde >= 12) out.push({ id: 'procura', texto: 'procurar trabalho há tanto tempo', efeito: 6 });
@@ -318,12 +333,6 @@ export function leituraDoEstado(v: Vida, d: Dimensao, limite = 3): LeituraEstado
 
 /* --------------------------------------------------------- Auxiliares */
 
-function dividaPesada(v: Vida): boolean {
-  const cartao = v.financas.dividas.find(d => d.tipo === 'cartao');
-  if (!cartao) return false;
-  const renda = saldoMensal(v).renda;
-  return renda > 0 && cartao.saldo > renda * 6;
-}
 
 function atritoEmCasa(v: Vida): { soma: number; nome: string; pessoaId?: string } {
   const casa = vinculosVivos(v).filter(x => x.vin.convivio.includes('casa') && !x.p.especie && x.vin.tensao > 40);

@@ -21,11 +21,12 @@
 import type {
   Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, Tema, Vida, Vinculo
 } from './tipos';
-import { tDe, idadeEm } from './tempo';
+import { anoDe, tDe, idadeEm } from './tempo';
 import { municipioPorNome, MUNICIPIOS } from './dados/lugares';
 import { cursoOuNulo } from './dados/cursos';
 import { ocupacaoOuNula } from './dados/ocupacoes';
-import { modeloVeiculo } from './dados/bens';
+import { modeloVeiculo, VEICULO_ANTIGO } from './dados/bens';
+import { economiaInicial } from './sistemas/economia';
 import { temperamentoAleatorio } from './nucleo';
 import { criarRng } from './rng';
 import { visualAleatorio } from './pessoas';
@@ -34,7 +35,7 @@ import { aptidao, MATERIAS } from './sistemas/frentes';
 import { modeloRotina } from './sistemas/rotinas';
 import { CURSOS_NPC } from './sistemas/filhos';
 
-export const VERSAO_SAVE = 9;
+export const VERSAO_SAVE = 10;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -96,12 +97,24 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
+  if (d.versao === 9) {
+    // v9 → v10: vida material (aplicações por produto, economia do país, bens com história, pets com cuidado).
+    const erro9 = validar(d, 9);
+    if (erro9) return { tipo: 'invalido', motivo: erro9 };
+    try {
+      const v = migrarV9(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
   if (d.versao === 8) {
     // v8 → v9: estado pessoal com causas (abalos, histórico), processos seletivos em etapas, devolutivas.
     const erro8 = validar(d, 8);
     if (erro8) return { tipo: 'invalido', motivo: erro8 };
     try {
-      const v = migrarV8(d as unknown as Vida);
+      const v = migrarV9(migrarV8(d as unknown as Vida));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -113,7 +126,7 @@ export function interpretar(bruto: string): Leitura {
     const erro7 = validar(d, 7);
     if (erro7) return { tipo: 'invalido', motivo: erro7 };
     try {
-      const v = migrarV8(migrarV7(d as unknown as Vida));
+      const v = migrarV9(migrarV8(migrarV7(d as unknown as Vida)));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -125,7 +138,7 @@ export function interpretar(bruto: string): Leitura {
     const erro6 = validarBase(d);
     if (erro6) return { tipo: 'invalido', motivo: erro6 };
     try {
-      const v = migrarV8(migrarV7(migrarV6(d as unknown as Vida)));
+      const v = migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -136,7 +149,7 @@ export function interpretar(bruto: string): Leitura {
     try {
       const v5 = migrarV5(d);
       if (!v5) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
-      const v = migrarV8(migrarV7(migrarV6(v5)));
+      const v = migrarV9(migrarV8(migrarV7(migrarV6(v5))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -183,6 +196,15 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (!c.entrevistas || !Array.isArray(c.entrevistas.recentes) || !finito(c.entrevistas.feitas) || !Array.isArray(c.devolutivas)) return 'Processos seletivos inválidos.';
     if (c.processo && (!Array.isArray(c.processo.etapas) || !finito(c.processo.atual))) return 'Processo seletivo em andamento inválido.';
   }
+  if (versao >= 10) {
+    const f = d.financas as Vida['financas'];
+    if (!Array.isArray(f.investimentos) || !Array.isArray(f.dividas) || !Array.isArray(f.bens) || !Array.isArray(f.historico) || !finito(f.conta)) return 'Finanças inválidas.';
+    if (f.investimentos.some(a => !a || !finito(a.valor) || !finito(a.aportado) || typeof a.produto !== 'string' || !Array.isArray(a.historico))) return 'Aplicação inválida.';
+    if (f.dividas.some(x => !x || !finito(x.saldo) || !finito(x.parcela) || !finito(x.jurosMes))) return 'Dívida inválida.';
+    if (f.bens.some(b => !b || !finito(b.valor) || (b.tipo !== 'veiculo' && b.tipo !== 'imovel'))) return 'Bem inválido.';
+    const e = d.economia as Vida['economia'];
+    if (!e || typeof e !== 'object' || !finito(e.semente) || !finito(e.juroReal) || !finito(e.imoveis) || !finito(e.bolsa) || !finito(e.precos) || typeof e.fase !== 'string' || !Array.isArray(e.historico)) return 'Economia inválida.';
+  }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -194,6 +216,82 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (p.genitores && p.genitores.some(g => g !== 'eu' && !pessoas[g])) return 'Árvore da família aponta para pessoa inexistente.';
   }
   return null;
+}
+
+/* =================================================================== v9 → v10 */
+
+/** As finanças como eram até o save v9. */
+type FinancasV9 = Omit<Vida['financas'], 'investimentos' | 'historico'> & { reserva: number; acoes: number; investimentos?: Vida['financas']['investimentos']; historico?: Vida['financas']['historico'] };
+
+/**
+ * Migra um save v9 (FIX pós-playtest 2) para v10 (ATT 3, vida material),
+ * sem inventar patrimônio:
+ *  - reserva e ações viram aplicações (o que foi posto é desconhecido: a
+ *    base de custo começa igual ao valor de hoje — sem ganho nem perda
+ *    fictícios);
+ *  - a economia do país começa "estável" hoje (ou em crise, se o save
+ *    estava no meio de uma recessão), com semente derivada da vida;
+ *  - veículos antigos ganham o modelo de hoje (o "carro popular usado" vira
+ *    um compacto usado de cinco anos antes da compra), preço pago = valor;
+ *  - dívidas ganham prazo (o que falta pela parcela atual) e nenhum atraso;
+ *  - o renegociado vira "acordo";
+ *  - pets ganham porte, tutor (quem mora com eles) e um limite de vida que
+ *    nunca é menor que a idade atual + 1;
+ *  - a moradia alugada aceita animais (o save não sabia).
+ */
+export function migrarV9(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 10;
+  const f = x.financas as unknown as FinancasV9;
+  const invest: Vida['financas']['investimentos'] = Array.isArray(f.investimentos) ? f.investimentos : [];
+  const reserva = Number.isFinite(f.reserva) ? f.reserva : 0;
+  const acoes = Number.isFinite(f.acoes) ? f.acoes : 0;
+  if (reserva > 0) invest.push({ id: 'apl_reserva', produto: 'reserva', aportado: Math.round(reserva), valor: Math.round(reserva), tInicio: x.t, historico: [Math.round(reserva)], pico: Math.round(reserva) });
+  if (acoes > 0) invest.push({ id: 'apl_acoes', produto: 'acoes', aportado: Math.round(acoes), valor: Math.round(acoes), tInicio: x.t, historico: [Math.round(acoes)], pico: Math.round(acoes) });
+  delete (f as Partial<FinancasV9>).reserva;
+  delete (f as Partial<FinancasV9>).acoes;
+  f.investimentos = invest;
+  if (!Array.isArray(f.historico)) f.historico = [];
+  if (!x.economia) {
+    x.economia = economiaInicial(hashTexto(x.id) + 17, x.t);
+    if ((x.fatos['recessao_ate'] ?? 0) > x.t) { x.economia.fase = 'crise'; x.economia.tFase = x.t; }
+  }
+  for (const b of f.bens) {
+    if (b.tipo === 'veiculo') {
+      const antigo = VEICULO_ANTIGO[b.modeloId];
+      if (antigo) { b.modeloId = antigo.id; b.usado = antigo.usado; }
+      b.nome = modeloVeiculo(b.modeloId).nome;
+      b.anoFabricacao ??= anoDe(b.tCompra) - (b.usado ? 5 : 0);
+      b.precoPago ??= b.valor;
+      b.historia ??= [{ t: b.tCompra, texto: 'Comprado.' }];
+      b.dono ??= 'eu';
+    } else {
+      b.precoPago ??= b.valor;
+      b.tManutencao ??= b.tCompra;
+      b.historia ??= [{ t: b.tCompra, texto: 'Comprado.' }];
+      b.dono ??= 'eu';
+    }
+  }
+  for (const d of f.dividas) {
+    if (d.tipo === 'emprestimo' && d.descricao === 'Acordo de renegociação') d.tipo = 'acordo';
+    d.atraso ??= 0;
+    if (d.parcela > 0 && d.prazo === undefined) {
+      const j = d.jurosMes;
+      const q = 1 - d.saldo * j / d.parcela;
+      d.prazo = q <= 0 ? 360 : Math.max(1, Math.ceil(-Math.log(q) / Math.log(1 + j)));
+      d.tInicio = x.t;
+    }
+  }
+  if ((x.moradia.tipo === 'aluguel' || x.moradia.tipo === 'republica') && x.moradia.aceitaPet === undefined) x.moradia.aceitaPet = true;
+  for (const p of Object.values(x.pessoas)) {
+    if (!p.especie || p.pet) continue;
+    const vin = x.vinculos[p.id];
+    const idadeP = Math.floor((x.t - p.tNasc) / 12);
+    const emCasa = !!vin?.convivio.includes('casa');
+    const naFamilia = x.moradia.tipo === 'pais' || x.moradia.tipo === 'parente';
+    p.pet = { porte: p.especie === 'gato' ? 'pequeno' : 'medio', origem: 'familia', tChegada: vin?.tInicio ?? x.t, tutor: emCasa && !naFamilia ? 'eu' : 'familia', jeito: p.especie === 'gato' ? 'dono da casa' : 'fiel', vidaMax: Math.max(idadeP + 1, p.especie === 'gato' ? 16 : 13) };
+  }
+  return x;
 }
 
 /* =================================================================== v8 → v9 */
@@ -433,7 +531,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 9,
+    versao: 7 as unknown as 10,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,
@@ -459,7 +557,8 @@ export function migrarV5(a: Antigo): Vida | null {
     financas: {
       conta: num(a.economia?.dinheiro, 0, -1e9, 1e12), reserva: 0, acoes: 0, dividas: [], bens: [],
       estilo: ESTILO[a.economia?.padraoDeVida] ?? 'modesto', planoDeSaude: classe === 'media' || classe === 'alta', negativado: false, razao: []
-    },
+    } as unknown as Vida['financas'],
+    economia: undefined as unknown as Vida['economia'],
     processos: [],
     rotinas: [],
     fatos: {},
@@ -571,7 +670,8 @@ export function migrarV5(a: Antigo): Vida | null {
   // Dinheiro e bens
   for (const inv of Array.isArray(a.economia?.investimentos) ? a.economia.investimentos : []) {
     const saldo = num(inv.saldo, 0, 0, 1e12);
-    if (inv.tipo === 'acoes_b3' || inv.tipo === 'cripto') v.financas.acoes += saldo; else v.financas.reserva += saldo;
+    const fv9 = v.financas as unknown as FinancasV9;
+    if (inv.tipo === 'acoes_b3' || inv.tipo === 'cripto') fv9.acoes += saldo; else fv9.reserva += saldo;
   }
   const divida = num(a.economia?.dividas, 0, 0, 1e9);
   if (divida > 0) v.financas.dividas.push({ id: 'dm', tipo: 'cartao', saldo: divida, jurosMes: 0.045, parcela: 0, descricao: 'Dívida antiga' });

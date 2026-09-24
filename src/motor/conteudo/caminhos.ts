@@ -10,6 +10,7 @@
  * fracasso, arriscar, voltar atrás — isso é comportamento.
  */
 
+import { disponivel as guardado, pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
 import { estresse, fato, feliz } from './efeitos';
@@ -269,7 +270,7 @@ export const CAMINHOS: Conteudo[] = [
       { id: 'estudar', texto: 'Voltar a estudar', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Um curso técnico, uma qualificação, uma faculdade à noite: você foi ver o que cabia.', memoria: 'Desempregado, decidiu voltar a estudar.'.replace('Desempregado', c.g('Desempregado', 'Desempregada', 'Desempregade')), efeito: () => fato(c, 'plano_estudar') }) },
       { id: 'cidade', texto: 'Tentar a vida numa cidade maior', comportamento: { coragem: 1 },
-        disponivel: c => (nivelDeOferta(c.v.moradia.municipioId) >= 2 ? false : c.v.financas.conta + c.v.financas.reserva >= custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)) ? true : 'Não há dinheiro nem para a mudança.'),
+        disponivel: c => (nivelDeOferta(c.v.moradia.municipioId) >= 2 ? false : guardado(c.v) >= custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)) ? true : 'Não há dinheiro nem para a mudança.'),
         resolver: c => ({ texto: 'Uma mala, um endereço de conhecido, a rodoviária de madrugada.', memoria: null, efeito: () => { const d = capitalDoEstado(c.v.moradia.municipioId); c.v.financas.conta -= custoDeMudanca(c.v.moradia.municipioId, d); mudarAgora(c.v, d, 'atrás de trabalho'); marcar(c.v, 'mudanca_cidade', `Mudou-se para ${municipio(d).nome} atrás de trabalho.`, 2); marcarFato(c.v, 'mudou_por_trabalho'); } }) },
       { id: 'conta', texto: 'Trabalhar por conta', disponivel: c => (autonomoPossivel(c) ? true : false),
         resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: `Você imprimiu uns cartões e avisou todo mundo: ${nomeOcupacao(c.v, oc)}, atende em casa.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'por_conta'); escrever(c.v, { texto: textoDeContratacao(c.v, oc, e), relevancia: 'marco', tema: 'trabalho' }); } }; } },
@@ -284,8 +285,8 @@ export const CAMINHOS: Conteudo[] = [
     opcoes: [
       { id: 'fechar', texto: 'Fechar', resolver: c => ({ texto: 'Você baixou a porta de ferro pela última vez numa terça-feira.', memoria: null, efeito: () => { fecharNegocio(c.v, 'o movimento não pagou as contas'); encerrarEmprego(c.v, 'fechou o negócio'); estresse(c, 6); } }) },
       { id: 'insistir', texto: 'Insistir, com o dinheiro guardado', comportamento: { disciplina: 1 },
-        disponivel: c => (c.v.financas.conta + c.v.financas.reserva >= 5000 ? true : 'Não há dinheiro guardado para isso.'),
-        resolver: c => ({ texto: 'Você pôs mais dinheiro e mais horas. O movimento reagiu um pouco.', memoria: null, efeito: () => { c.v.financas.reserva -= Math.min(c.v.financas.reserva, 5000); if (c.v.financas.reserva < 0) c.v.financas.conta += c.v.financas.reserva; const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + 16); c.v.caminhos.negocio!.anosNoVermelho = 0; estresse(c, 8); } }) },
+        disponivel: c => (guardado(c.v) >= 5000 ? true : 'Não há dinheiro guardado para isso.'),
+        resolver: c => ({ texto: 'Você pôs mais dinheiro e mais horas. O movimento reagiu um pouco.', memoria: null, efeito: () => { pagarGuardado(c.v, 5000); const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + 16); c.v.caminhos.negocio!.anosNoVermelho = 0; estresse(c, 8); } }) },
       { id: 'mudar', texto: 'Mudar o jeito de vender', comportamento: { coragem: 1 },
         resolver: c => { const deu = c.r.chance(0.5); return { texto: deu ? 'Entrega por aplicativo, promoção no bairro, cardápio novo: funcionou mais do que você esperava.' : 'Você mudou tudo. O movimento não mudou.', memoria: null, efeito: () => { const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + (deu ? 20 : 3)); c.v.caminhos.negocio!.anosNoVermelho = deu ? 0 : 1; } }; } }
     ]

@@ -148,6 +148,14 @@ function textoDaMorte(v: Vida, p: Pessoa, vin: Vinculo, causa: string, nivel: Ni
   if (papel === 'filho') {
     return `${capital(quem(v, p, vin))} ${p.nome} morreu em ${mes}, aos ${ip} anos (${causa}). Não existe palavra para quem perde ${flex(p.genero, 'um filho', 'uma filha', 'um filho')}.`;
   }
+  if (p.especie) {
+    const anos = Math.max(1, Math.round((v.t - (p.pet?.tChegada ?? vin.tInicio)) / 12));
+    const bicho = p.especie === 'gato' ? flex(p.genero, 'o gato', 'a gata') : flex(p.genero, 'o cachorro', 'a cachorra');
+    const paliativo = v.fatos[`paliativo_${p.id}`] !== undefined;
+    const vazio = p.especie === 'gato' ? 'A almofada da janela ficou vazia.' : 'A casa ficou estranha sem o barulho das patas no corredor.';
+    const velhice = causa === 'velhice';
+    return `${capital(bicho)} ${p.nome} morreu em ${mes}, aos ${ip} anos${velhice ? ', de velhice' : ` (${causa})`}${paliativo ? ', sem sofrer, perto de quem cuidava' : ''}. Foram ${anos} ${anos === 1 ? 'ano' : 'anos'} juntos. ${vazio}`;
+  }
   const rotulo = quem(v, p, vin);
   if (vin.parentesco === 'mae' || vin.parentesco === 'pai') {
     const perto = vin.proximidade >= 55 ? ` ${idade(v)} anos com ${flex(p.genero, 'ele', 'ela', 'elu')} na sua vida.` : '';

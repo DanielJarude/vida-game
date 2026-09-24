@@ -6,6 +6,7 @@
  * existe porque um bebê nasceu.
  */
 
+import { disponivel as guardado, pagar as pagarGuardado, parcelaPrice, rendaPropriaMensal } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao } from './efeitos';
@@ -171,8 +172,8 @@ export const SISTEMICOS: Conteudo[] = [
     opcoes: [
       { id: 'cartorio', texto: 'Só o cartório e um almoço com os mais próximos', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Assinaram no cartório de manhã. O almoço foi na casa de um parente, com churrasco.', memoria: `Casou-se com ${c.p.pessoa.nome} no cartório, com almoço para os mais próximos.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, 2500) }) },
-      { id: 'festa', texto: 'Festa num salão, para uns cem convidados', resolver: c => ({ texto: 'Teve DJ, bolo de três andares e tio dançando até o fim.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa para cem convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(28000 * economiaLocal(c.v.moradia.municipioId).custo)) }) },
-      { id: 'festao', texto: 'O casamento dos sonhos, nem que seja parcelado', comportamento: { impulsividade: 1 },
+      { id: 'festa', texto: 'Festa num salão, para uns cem convidados', disponivel: c => cabeFesta(c, 28000), resolver: c => ({ texto: 'Teve DJ, bolo de três andares e tio dançando até o fim.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa para cem convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(28000 * economiaLocal(c.v.moradia.municipioId).custo)) }) },
+      { id: 'festao', texto: 'O casamento dos sonhos, nem que seja parcelado', comportamento: { impulsividade: 1 }, disponivel: c => cabeFesta(c, 75000),
         resolver: c => ({ texto: 'Igreja cheia, trezentos convidados, fotos lindas — e um carnê de doze vezes.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa de trezentos convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(75000 * economiaLocal(c.v.moradia.municipioId).custo)) }) }
     ]
   },
@@ -354,7 +355,7 @@ export const SISTEMICOS: Conteudo[] = [
         const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando)!;
         return { texto: 'Você saiu do posto com um papel de encaminhamento e uma estimativa vaga.', memoria: `Entrou na fila do SUS para tratar ${cond.nome}.`, relevancia: 'cotidiano', efeito: () => c.v.processos.push({ tipo: 'tratamento', id: `trat${c.v.seq++}`, condicaoId: cond.id, tFim: c.v.t + (cond.id === 'cancer' ? 4 : 10), rede: 'sus' }) };
       } },
-      { id: 'particular', texto: 'Pagar particular', disponivel: c => (c.v.financas.conta + c.v.financas.reserva >= 6000 ? true : 'Não há dinheiro para pagar particular.'),
+      { id: 'particular', texto: 'Pagar particular', disponivel: c => (guardado(c.v) >= 6000 ? true : 'Não há dinheiro para pagar particular.'),
         resolver: c => {
           const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando)!;
           const custo = cond.id === 'cancer' ? 45000 : 6000;
@@ -365,18 +366,30 @@ export const SISTEMICOS: Conteudo[] = [
   }
 ];
 
+/** A festa cabe? O que faltar vira parcela, e a parcela precisa caber na renda do casal. */
+function cabeFesta(c: Ctx, base: number): true | string {
+  const custo = Math.round(base * economiaLocal(c.v.moradia.municipioId).custo);
+  const parte = Math.round(custo * (c.p.pessoa.renda > 0 ? 0.55 : 0.8));
+  const falta = Math.max(0, parte - guardado(c.v));
+  if (falta === 0) return true;
+  const renda = rendaPropriaMensal(c.v) + c.p.pessoa.renda;
+  return parcelaPrice(falta, 0.025, 24) <= renda * 0.25 ? true : 'Não cabe: nem juntando o que têm, a parcela da festa caberia na renda de vocês.';
+}
+
 function casar(c: Ctx, custo: number): void {
   const p = c.p.pessoa;
   const vin = c.v.vinculos[p.id];
   mudarEstagio(c.v, vin, 'casamento');
   if (!vin.convivio.includes('casa')) morarJuntos(c.v, p);
   const f = c.v.financas;
-  f.conta -= custo;
-  if (f.conta < 0 && custo > 20000) {
-    // O que faltou vira parcelamento.
-    const falta = -f.conta;
-    f.conta = 0;
-    f.dividas.push({ id: `festa${c.v.seq++}`, tipo: 'emprestimo', saldo: falta, jurosMes: 0.035, parcela: Math.round(falta / 12 * 1.2), descricao: 'Parcelas da festa de casamento' });
+  // A família e a outra pessoa ajudam com uma parte; o resto sai do guardado e, se faltar, vira parcelamento.
+  const parte = Math.round(custo * (p.renda > 0 ? 0.55 : 0.8));
+  const tem = guardado(c.v);
+  pagarGuardado(c.v, Math.min(parte, tem));
+  const falta = parte - Math.min(parte, tem);
+  if (falta > 0) {
+    const jurosMes = 0.025;
+    f.dividas.push({ id: `festa${c.v.seq++}`, tipo: 'emprestimo', saldo: falta, jurosMes, parcela: Math.round(parcelaPrice(falta, jurosMes, 24)), descricao: 'Parcelas da festa de casamento', tInicio: c.v.t, prazo: 24 });
   }
   feliz(c, 12);
   lembrarCom(c.v, p.id, 'Casaram-se.', 'casamento', 3);

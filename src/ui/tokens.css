@@ -154,6 +154,22 @@
   --cool-study: #85a7c9;
   --cool-study-wash: rgba(133, 167, 201, 0.13);
 
+  /* Degraus neutros da balança do mês (o que sai): do mais pesado ao mais
+     leve, distinguíveis pela luminosidade — e sempre com legenda escrita. */
+  --neutro-1: #cfc5b7;
+  --neutro-2: #a99f93;
+  --neutro-3: #857c72;
+  --neutro-4: #655e56;
+  --neutro-5: #4c4640;
+  --neutro-6: #2e2a27;
+  --patrimonio-imovel: rgba(217, 160, 91, 0.3);
+  --patrimonio-veiculo: rgba(217, 160, 91, 0.18);
+  --patrimonio-aplicado: rgba(133, 167, 201, 0.25);
+  --patrimonio-conta: rgba(255, 249, 240, 0.08);
+  --patrimonio-obrigacao: rgba(255, 249, 240, 0.08);
+  --patrimonio-obrigacao-fraca: rgba(255, 249, 240, 0.03);
+  --aviso-borda: rgba(207, 160, 63, 0.35);
+
   /* ------------------------------------------------------------- Espaçamento
      Escala de 4px. Usar os degraus, não valores intermediários. */
   --space-1: 4px;

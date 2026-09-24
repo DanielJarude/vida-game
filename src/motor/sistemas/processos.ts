@@ -8,7 +8,7 @@ import { clamp } from '../rng';
 import type { Processo, Vida } from '../tipos';
 import { escrever, idade, marcarFato, moraCom, novoId, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
-import { economiaLocal, municipio, nomeLugar } from '../dados/lugares';
+import { municipio, nomeLugar } from '../dados/lugares';
 import { encerrarEmprego } from './trabalho';
 import { modeloMoradia } from '../dados/bens';
 import { aluguelDe, marcarSaidaDeCasa } from './moradia';
@@ -55,12 +55,23 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
   if (v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') {
     marcarSaidaDeCasa(v);
     for (const { p: pessoa, vin } of vinculosVivos(v)) {
-      if (vin.parentesco && vin.parentesco !== 'filho') vin.convivio = vin.convivio.filter(c => c !== 'casa');
-      void pessoa;
+      if (vin.parentesco && vin.parentesco !== 'filho' && (vin.parentesco !== 'pet' || pessoa.pet?.tutor !== 'eu')) vin.convivio = vin.convivio.filter(c => c !== 'casa');
     }
     const kit = modeloMoradia(idade(v) < 26 ? 'republica' : 'kitnet');
-    v.moradia = { tipo: kit.id === 'republica' ? 'republica' : 'aluguel', municipioId: origem, modeloId: kit.id, aluguel: aluguelDe(kit, p.destinoId), padrao: kit.padrao, tInicio: v.t };
+    v.moradia = { tipo: kit.id === 'republica' ? 'republica' : 'aluguel', municipioId: origem, modeloId: kit.id, aluguel: aluguelDe(v, kit, p.destinoId), padrao: kit.padrao, tInicio: v.t, aceitaPet: true };
     escrever(v, { texto: 'Saiu da casa da família.', relevancia: 'biografia', tema: 'casa' });
+  } else if (v.moradia.tipo === 'propria') {
+    // A casa própria fica na cidade de origem (dá para alugar ou vender); no destino, aluga-se algo parecido.
+    const casa = v.financas.bens.find(b => b.id === v.moradia.imovelId);
+    const m = modeloMoradia(v.moradia.modeloId ?? 'apto_2q');
+    if (casa && casa.tipo === 'imovel') (casa.historia ??= []).push({ t: v.t, texto: `Ficou para trás na mudança para ${municipio(p.destinoId).nome}.` });
+    v.moradia = { tipo: 'aluguel', municipioId: origem, modeloId: m.id, aluguel: aluguelDe(v, m, p.destinoId), padrao: m.padrao, tInicio: v.t, aceitaPet: true };
+    escrever(v, { texto: `A casa em ${municipio(origem).nome} ficou fechada: dá para alugar ou vender. Em ${municipio(p.destinoId).nome}, por enquanto, aluguel.`, relevancia: 'cotidiano', tema: 'casa' });
+  } else if (v.moradia.tipo === 'aluguel' || v.moradia.tipo === 'republica') {
+    const m = modeloMoradia(v.moradia.modeloId ?? 'kitnet');
+    v.moradia.aluguel = aluguelDe(v, m, p.destinoId);
+    v.moradia.atraso = 0;
+    v.moradia.bairro = undefined;
   }
   const juntos = moraCom(v);
   for (const x of juntos) x.municipioId = p.destinoId;
@@ -76,9 +87,7 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
     escrever(v, { texto: 'A mudança interrompeu a faculdade: o curso presencial ficou para trás.', relevancia: 'biografia', tema: 'estudo', tom: 'ruim' });
     v.educacao.matricula = undefined;
   }
-  const custoAntes = economiaLocal(origem).custo;
-  const custoDepois = economiaLocal(p.destinoId).custo;
-  if (v.moradia.tipo === 'aluguel' || v.moradia.tipo === 'republica') v.moradia.aluguel = Math.round(v.moradia.aluguel * custoDepois / custoAntes / 10) * 10;
+  for (const b of v.financas.bens) if (b.tipo === 'veiculo') (b.historia ??= []).push({ t: v.t, texto: `Foi junto na mudança para ${municipio(p.destinoId).nome}.` });
   v.moradia.municipioId = p.destinoId;
   v.moradia.tInicio = v.t;
   marcarFato(v, 'mudou_de_cidade');

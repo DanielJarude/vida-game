@@ -14,6 +14,8 @@
  */
 
 import { useState } from 'react';
+import { custoDaConsulta, custoDoTratamento, estadoDoPet, infoPet } from '../../motor/sistemas/pets';
+import { dinheiroCurto } from '../leituraMaterial';
 import type { Atracao, Marco, Pessoa, Vida, Vinculo } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { LIMITE_INTERACOES } from '../../motor/acoes';
@@ -256,6 +258,8 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
         {esperando && gest && <p className="ficha__nota">Um bebê a caminho — o parto é previsto para {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</p>}
         {ultima && <p className="ficha__ultima"><span className="ficha__ano">{anoDe(ultima.t)}</span> {ultima.texto}</p>}
 
+        {p.vivo && p.especie && <FichaPet vida={vida} agir={agir} p={p} />}
+
         {p.vivo && acoes.length > 0 && (
           <div className="ficha__acoes">
             <h3 className="ficha__subtitulo">O que fazer junto</h3>
@@ -306,5 +310,27 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
         )}
       </div>
     </Folha>
+  );
+}
+
+/** O que só um bicho tem na ficha: como está de saúde, de quem cuida, o veterinário. */
+function FichaPet({ vida, agir, p }: { vida: Vida; agir: (a: Acao) => boolean; p: Vida['pessoas'][string] }) {
+  const info = infoPet(vida, p);
+  const d = info.doenca;
+  const emCasa = vida.vinculos[p.id]?.convivio.includes('casa');
+  const chegou = anoDe(info.tChegada);
+  const origem = { abrigo: 'Veio do abrigo', doacao: 'Veio de alguém que não podia ficar', ninhada: 'Veio de uma ninhada', rua: 'Apareceu na porta', criador: 'Veio de um criador', familia: 'Já era da família' }[info.origem];
+  return (
+    <div className="ficha-pet">
+      <p className="ficha-pet__estado">{estadoDoPet(vida, p).charAt(0).toUpperCase() + estadoDoPet(vida, p).slice(1)}.</p>
+      <p className="nota">{origem}{info.origem === 'familia' ? '' : `, em ${chegou}`}. {info.jeito.charAt(0).toUpperCase() + info.jeito.slice(1)}.{info.tutor === 'familia' ? ' Quem cuida é a família.' : ''}</p>
+      <div className="grupo-acoes grupo-acoes--linha">
+        {d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'tratar' }} agir={agir}>{`Tratar (${dinheiroCurto(custoDoTratamento(vida, p, true))})`}</BotaoAcao>}
+        {d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'basico' }} agir={agir} variante="discreto" ocultarBloqueado>{`O tratamento possível (${dinheiroCurto(custoDoTratamento(vida, p, false))})`}</BotaoAcao>}
+        {d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'paliativo' }} agir={agir} variante="discreto" ocultarBloqueado>Cuidar para que não sofra</BotaoAcao>}
+        {!d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'consulta' }} agir={agir} variante="discreto" ocultarBloqueado>{`Levar ao veterinário (${dinheiroCurto(custoDaConsulta(vida))})`}</BotaoAcao>}
+        {!emCasa && <BotaoAcao vida={vida} acao={{ tipo: 'levar_pet', petId: p.id }} agir={agir} variante="discreto" ocultarBloqueado>Trazer para a sua casa</BotaoAcao>}
+      </div>
+    </div>
   );
 }

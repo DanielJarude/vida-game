@@ -111,7 +111,8 @@ export function importancia(v: Vida, p: Pessoa, vin: Vinculo): number {
   const casa = moraJunto(vin) ? 10 : 0;
   const tempo = Math.min(10, anos / 3);
   const historia = Math.min(12, vin.historia.reduce((s, h) => s + (h.peso ?? 1), 0) * 0.8);
-  return Math.max(0, Math.min(100, Math.round(base * afeto + casa + tempo + historia)));
+  // Um bicho pesa, mas nunca como um filho ou uma parceria: no máximo, um marco na Linha da Vida.
+  return Math.max(0, Math.min(papel === 'pet' ? 50 : 100, Math.round(base * afeto + casa + tempo + historia)));
 }
 
 /** Parceria romântica viva (namoro ou mais), sem contar casos escondidos. */

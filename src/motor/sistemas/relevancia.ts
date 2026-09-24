@@ -23,6 +23,14 @@ import { OCUPACOES, ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { degrausAcima, elegibilidade, experienciaNaTrilha, porContaPropria } from './trabalho';
 import { cursoOuNulo, type Curso } from '../dados/cursos';
 import { opcoesDeCurso, type OpcaoCurso } from './escola';
+import { animaisDoAbrigo, ofertasDeImoveis, ofertasDeVeiculos, type AnimalDoAbrigo, type OfertaImovel, type OfertaVeiculo } from './mercado';
+import { disponivel, rendaPropriaMensal, seguranca } from './dinheiro';
+import { quartosNecessarios } from './imoveis';
+import { podeTerPet, seusPets } from './pets';
+import { modeloMoradia, modeloVeiculo } from '../dados/bens';
+import { produto, type ProdutoInvestimento } from '../dados/investimentos';
+import { condicoesImovel, condicoesVeiculo } from '../acoes';
+import { semana } from './semana';
 
 export interface Relevante<T> { item: T; motivo: string; pontos: number }
 
@@ -176,4 +184,125 @@ export function cursosParaVoce(v: Vida): { para: Relevante<CursoOpcoes>[]; resto
   const r = primarias(lista, MAX_PRIMARIAS.cursos);
   const usados = new Set(r.para.map(x => x.item.curso.id));
   return { para: r.para, resto: cursosAgrupados(v).filter(c => !usados.has(c.curso.id)) };
+}
+
+/* ------------------------------------------------------------ Vida material */
+
+export const MAX_PRIMARIAS_MATERIAL = { imoveis: 4, veiculos: 4, investimentos: 3, animais: 3 } as const;
+
+/** Renda que conta para a moradia: a sua e a da parceria que mora (ou vai morar) junto. */
+function rendaDaMoradia(v: Vida): number {
+  const par = parceiro(v);
+  return rendaPropriaMensal(v) + (par && (v.vinculos[par.p.id].convivio.includes('casa') || par.vin.romance?.estagio === 'casamento') ? par.p.renda : 0);
+}
+
+/**
+ * Imóveis para alugar ou comprar, na ordem do que faz sentido: cabe no
+ * orçamento, cabe a família, aceita o bicho, tem a ver com o momento.
+ */
+export function imoveisParaVoce(v: Vida, modo: 'aluguel' | 'venda'): { para: Relevante<OfertaImovel>[]; resto: OfertaImovel[] } {
+  const ofertas = ofertasDeImoveis(v, modo);
+  const renda = rendaDaMoradia(v);
+  const i = idade(v);
+  const junto = parceiro(v);
+  const precisa = Math.max(quartosNecessarios(v), junto ? 1 : 1);
+  const pets = seusPets(v).length > 0;
+  const estilo = v.financas.estilo;
+  const tem = disponivel(v);
+  const cabem = ofertas.map(o => {
+    const custo = modo === 'aluguel' ? o.aluguel : condicoesImovel(v, o.preco, true).parcela;
+    const acessivel = modo === 'aluguel' ? renda > 0 ? o.aluguel <= renda * 0.35 : tem >= o.aluguel * 8 : podeTentar(condicoesImovel(v, o.preco, true).veredito) || podeTentar(condicoesImovel(v, o.preco, false).veredito);
+    return { o, custo, acessivel };
+  });
+  const maisBarataQueCabe = cabem.filter(x => x.acessivel && x.o.quartos >= precisa && (!pets || x.o.aceitaPet)).sort((a, b) => a.custo - b.custo)[0]?.o;
+  const lista: Relevante<OfertaImovel>[] = cabem.map(({ o, acessivel }) => {
+    let pontos = 0;
+    let motivo = '';
+    const dar = (p: number, m: string) => { pontos += p; if (!motivo && p > 0) motivo = m; };
+    if (!acessivel) pontos -= 6;
+    if (pets && !o.aceitaPet) pontos -= 6;
+    if (o === maisBarataQueCabe) dar(2.2, modo === 'aluguel' ? 'O que melhor cabe no orçamento agora.' : 'A compra que cabe na sua renda.');
+    if (o.quartos >= precisa && precisa >= 2) dar(1.6, precisa >= 3 ? 'Um quarto para cada filho.' : 'Cabe a família.');
+    if (o.quartos > precisa + 1) pontos -= 1.2;
+    if (o.quartos < precisa) pontos -= 3;
+    if (pets && o.aceitaPet) dar(0.8, 'Aceita animais.');
+    if (modo === 'aluguel' && i < 26 && !junto && (o.modeloId === 'republica' || o.modeloId === 'kitnet')) dar(1.4, 'Um bom primeiro lugar só seu.');
+    if ((estilo === 'confortavel' || estilo === 'folgado') && modeloMoradia(o.modeloId).padrao >= 4) dar(1, 'Do jeito que você gosta de viver.');
+    if (estilo === 'apertado' && modeloMoradia(o.modeloId).padrao <= 2) dar(0.8, 'Simples e barato.');
+    if (modo === 'venda' && o.estado === 'reforma') dar(0.4, 'Mais barato — mas vem com obra.');
+    if (junto && o.modeloId === 'republica') pontos -= 5;
+    if (!motivo) motivo = modo === 'aluguel' ? 'Disponível na cidade.' : 'À venda na cidade.';
+    return { item: o, motivo, pontos };
+  });
+  return primarias(lista, MAX_PRIMARIAS_MATERIAL.imoveis);
+}
+
+/** Veículos de um lugar (concessionária, usados, motos), pelo que faz sentido para esta vida. */
+export function veiculosParaVoce(v: Vida, lugar: OfertaVeiculo['lugar']): { para: Relevante<OfertaVeiculo>[]; resto: OfertaVeiculo[] } {
+  const ofertas = ofertasDeVeiculos(v, lugar);
+  const renda = rendaPropriaMensal(v);
+  const familia = filhos(v).filter(f => v.vinculos[f.id]?.convivio.includes('casa')).length;
+  const primeiro = !v.financas.bens.some(b => b.tipo === 'veiculo');
+  const cnh = v.trabalho.licencas.includes('cnh');
+  const lista: Relevante<OfertaVeiculo>[] = ofertas.map(o => {
+    const m = modeloVeiculo(o.modeloId);
+    let pontos = 0;
+    let motivo = '';
+    const dar = (p: number, t: string) => { pontos += p; if (!motivo && p > 0) motivo = t; };
+    const aVista = podeTentar(condicoesVeiculo(v, o.preco, false).veredito);
+    const financiado = podeTentar(condicoesVeiculo(v, o.preco, true).veredito);
+    if (!aVista && !financiado) pontos -= 6;
+    if (m.cnh && !cnh) pontos -= 6;
+    if (aVista) dar(1.2, 'Dá para pagar à vista.');
+    else if (financiado) dar(0.6, 'Cabe financiado.');
+    if (primeiro && o.usado && m.categoria === 'carro' && o.preco <= Math.max(30000, renda * 10)) dar(1.6, 'Um bom primeiro carro.');
+    if (familia >= 2 && m.lugares >= 5 && m.conforto >= 3) dar(1.2, 'Cabe a família com folga.');
+    if (familia >= 3 && m.lugares >= 7) dar(1.4, 'Sete lugares.');
+    if (o.usado && o.estado >= 80) dar(0.8, 'Usado bem conservado.');
+    if (o.usado && o.estado < 50) pontos -= 0.8;
+    if (m.categoria !== 'carro' && renda > 0 && renda < 3500) dar(1.2, 'Barata de manter.');
+    if (m.id === 'carro_luxo' && renda < 25000) pontos -= 2;
+    if (!motivo) motivo = o.usado ? 'Usado à venda.' : 'Zero quilômetro.';
+    return { item: o, motivo, pontos };
+  });
+  return primarias(lista, MAX_PRIMARIAS_MATERIAL.veiculos);
+}
+
+/**
+ * Onde guardar, pelo momento: sem reserva, primeiro a reserva; com reserva e
+ * tempo pela frente, algo de longo prazo; perto de parar de trabalhar, renda
+ * e proteção. Nunca "sempre ações".
+ */
+export function investimentosParaVoce(v: Vida): Relevante<ProdutoInvestimento>[] {
+  const i = idade(v);
+  const seg = seguranca(v);
+  const out: Relevante<ProdutoInvestimento>[] = [];
+  const add = (id: ProdutoInvestimento['id'], motivo: string, pontos: number) => out.push({ item: produto(id), motivo, pontos });
+  if (seg.meses < 6) add('reserva', seg.meses < 1 ? 'Primeiro, uma reserva para emergência: seis meses de despesa.' : 'A reserva ainda não chega a seis meses de despesa.', 5);
+  else {
+    add('pos_fixado', 'Para o que você vai usar em poucos anos.', 2.5);
+    if (i < 55) add('acoes', 'Para dinheiro que pode esperar dez anos ou mais — e aguentar anos ruins.', 2.2);
+    if (i < 60) add('inflacao', 'Para um objetivo longo: aposentadoria, o estudo dos filhos.', 2);
+    if (i >= 50) add('imobiliario', 'Para quem quer uma renda caindo todo mês.', 2.4);
+  }
+  return out.sort((a, b) => b.pontos - a.pontos).slice(0, MAX_PRIMARIAS_MATERIAL.investimentos);
+}
+
+/** Animais do abrigo, pelo que cabe na casa e na rotina. */
+export function animaisParaVoce(v: Vida): { para: Relevante<AnimalDoAbrigo>[]; resto: AnimalDoAbrigo[] } {
+  const semana_ = semanaLivre(v);
+  const lista: Relevante<AnimalDoAbrigo>[] = animaisDoAbrigo(v).map(a => {
+    const d = podeTerPet(v, a.especie, a.porte);
+    let pontos = d.grau === 'permitido' ? 2 : d.grau === 'improvavel' ? 0.5 : -5;
+    let motivo = d.grau === 'permitido' ? '' : d.motivo ?? '';
+    if (a.especie === 'gato' && semana_ < 0.5) { pontos += 1; motivo ||= 'Um gato pede menos tempo que um cachorro.'; }
+    if (a.idade >= 6) { pontos += 0.3; motivo ||= 'Os mais velhos são os que menos são adotados.'; }
+    if (a.idade === 0) { pontos += 0.4; motivo ||= 'Filhote: dá trabalho, cresce com a casa.'; }
+    return { item: a, motivo: motivo || 'Esperando uma casa.', pontos };
+  });
+  return primarias(lista, MAX_PRIMARIAS_MATERIAL.animais);
+}
+
+function semanaLivre(v: Vida): number {
+  return semana(v).livre;
 }

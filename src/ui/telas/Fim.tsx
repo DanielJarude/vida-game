@@ -43,7 +43,7 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
           <li>{nFilhos === 0 ? 'Não teve filhos.' : nFilhos === 1 ? `Teve um filho: ${filhos(vida)[0]?.nome ?? ''}.` : `Teve ${nFilhos} filhos.`}{netos ? ` ${netos === 1 ? 'Um neto' : `${netos} netos`}${bisnetos ? ` e ${bisnetos === 1 ? 'um bisneto' : `${bisnetos} bisnetos`}` : ''}.` : ''}</li>
           {situacaoAfetiva(vida) && <li>Ao fim, {situacaoAfetiva(vida)}.</li>}
           {cidades.size > 0 && <li>Mudou de cidade {cidades.size === 1 ? 'uma vez' : `${cidades.size} vezes`}.</li>}
-          <li>{patrimonio(vida) > 1000 ? `Deixou ${dinheiroCurto(patrimonio(vida))}.` : patrimonio(vida) < -1000 ? 'Deixou dívidas.' : 'Não deixou bens.'}</li>
+          <li>{textoDaHeranca(vida)}</li>
           {tracos.length > 0 && <li>Quem conviveu {flex(g, 'lembra dele', 'lembra dela', 'lembra delu')} como {tracos.join(', ').replace(/, ([^,]*)$/, ' e $1')}.</li>}
         </ul>
         {perto.length > 0 && (
@@ -70,4 +70,14 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
       </div>
     </div>
   );
+}
+
+/** O que ficou, em palavras (ATT 4 aprofunda a apresentação). */
+function textoDaHeranca(vida: Vida): string {
+  const h = vida.morte?.heranca;
+  const liq = h?.liquido ?? patrimonio(vida);
+  if (!h || liq <= 1000) return patrimonio(vida) < -1000 ? 'As dívidas foram pagas com o que havia; não sobrou herança.' : 'Não deixou bens.';
+  const nomes = h.partes.filter(p => p.valor > 0).map(p => `${vida.pessoas[p.pessoaId]?.nome ?? 'alguém'}${p.meacao ? ' (a metade do que construíram juntos, e mais uma parte)' : ''}`);
+  const unicos = [...new Set(nomes)];
+  return `Deixou ${dinheiroCurto(liq)}${h.bens.length ? ` — ${h.bens.slice(0, 3).join(', ')}` : ''}${unicos.length ? `, para ${unicos.slice(0, 4).join(', ').replace(/, ([^,]*)$/, ' e $1')}` : ''}.`;
 }

@@ -1,5 +1,6 @@
 /** Vida adulta (18–59). */
 
+import { disponivel as guardado, pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
@@ -14,8 +15,6 @@ import { mudarAgora } from '../sistemas/processos';
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 
-const temCarro = (c: Ctx) => c.v.financas.bens.some(b => b.tipo === 'veiculo' && b.modeloId.startsWith('carro'));
-const temImovel = (c: Ctx) => c.v.financas.bens.some(b => b.tipo === 'imovel');
 const empregado = (c: Ctx) => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal';
 const mora = (c: Ctx) => municipio(c.v.moradia.municipioId);
 
@@ -164,8 +163,9 @@ export const ADULTO: Conteudo[] = [
     ]
   },
   {
+    // Substituído pelo sistema de veículos (problemas com conserto, adiamento, venda): fica para saves antigos.
     id: 'adu_carro_quebra', tipo: 'acontecimento', idade: [18, 85], tema: 'dinheiro', repetir: 4,
-    quando: c => temCarro(c) && c.v.financas.bens.some(b => b.tipo === 'veiculo' && b.modeloId.startsWith('carro') && b.estado < 70),
+    quando: () => false,
     narrar: c => {
       const carro = c.v.financas.bens.find(b => b.tipo === 'veiculo' && b.modeloId.startsWith('carro'))!;
       const grave = carro.estado < 40;
@@ -196,7 +196,8 @@ export const ADULTO: Conteudo[] = [
   },
   {
     id: 'adu_infiltracao', tipo: 'acontecimento', idade: [20, 90], tema: 'casa', repetir: 7,
-    quando: c => c.v.moradia.tipo === 'propria' && temImovel(c),
+    // Substituído pela manutenção espaçada dos imóveis (`sistemas/imoveis`).
+    quando: () => false,
     narrar: c => {
       const custo = c.r.int(3000, 12000);
       const problema = c.r.pick([
@@ -214,9 +215,9 @@ export const ADULTO: Conteudo[] = [
     narrar: c => {
       const alto = c.r.chance(0.4);
       return {
-        texto: alto ? `O dono do imóvel pediu um reajuste de ${c.r.int(12, 20)}% no aluguel. Não teve conversa.` : 'Veio o reajuste do aluguel, um pouco acima da inflação.',
+        texto: alto ? `O dono do imóvel pediu um reajuste bem acima da inflação no aluguel. Não teve conversa.` : 'Veio o reajuste do aluguel, um pouco acima da inflação.',
         relevancia: alto ? 'cotidiano' : 'tecnico',
-        efeito: () => { c.v.moradia.aluguel = Math.round(c.v.moradia.aluguel * (alto ? 1.14 : 1.05) / 10) * 10; }
+        efeito: () => { c.v.moradia.aluguel = Math.round(c.v.moradia.aluguel * (alto ? 1.08 : 1.01) / 10) * 10; }
       };
     }
   },
@@ -351,8 +352,8 @@ export const ADULTO: Conteudo[] = [
     texto: c => `Com os pais já falecidos, sobrou a casa da família. ${c.p.irmao.nome} quer vender logo; você cresceu naquela casa.`,
     opcoes: [
       { id: 'vender', texto: 'Aceitar vender e dividir', resolver: c => ({ texto: 'A casa foi vendida para uma família com crianças pequenas.', memoria: 'A casa da família foi vendida e o dinheiro, dividido entre os irmãos.', efeito: () => { fato(c, 'partilha_feita'); dinheiro(c, Math.round(({ media_baixa: 60000, media: 180000, alta: 600000 } as Record<string, number>)[c.v.origem.classe] / (1 + P.irmao(c.v).length))); } }) },
-      { id: 'comprar', texto: c => `Comprar a parte de ${c.p.irmao.nome}`, disponivel: c => (c.v.financas.conta + c.v.financas.reserva > 80000 ? true : 'Não há dinheiro para comprar a parte.'), comportamento: { familia: 1 },
-        resolver: c => ({ texto: 'A casa continuou na família — agora sua.', memoria: 'Comprou dos irmãos a casa onde cresceu.', efeito: () => { fato(c, 'partilha_feita'); dinheiro(c, -80000); c.v.financas.bens.push({ id: `imovel${c.v.seq++}`, tipo: 'imovel', modeloId: 'casa_3q', nome: 'casa da família', valor: 200000, tCompra: c.v.t, municipioId: c.v.eu.municipioNatal, estado: 55 }); } }) },
+      { id: 'comprar', texto: c => `Comprar a parte de ${c.p.irmao.nome}`, disponivel: c => (guardado(c.v) > 80000 ? true : 'Não há dinheiro para comprar a parte.'), comportamento: { familia: 1 },
+        resolver: c => ({ texto: 'A casa continuou na família — agora sua.', memoria: 'Comprou dos irmãos a casa onde cresceu.', efeito: () => { fato(c, 'partilha_feita'); pagarGuardado(c.v, 80000); c.v.financas.bens.push({ id: `imovel${c.v.seq++}`, tipo: 'imovel', modeloId: 'casa_3q', nome: 'casa da família', valor: 200000, precoPago: 80000, tCompra: c.v.t, municipioId: c.v.eu.municipioNatal, estado: 55, herdado: true, dono: 'eu', historia: [{ t: c.v.t, texto: 'Comprou dos irmãos a parte deles.' }] }); } }) },
       { id: 'brigar', texto: 'Não aceitar vender', comportamento: { familia: -1, impulsividade: 1 },
         resolver: c => ({ texto: 'Virou inventário na Justiça. Vocês passaram a se falar por advogado.', memoria: `Brigou na Justiça com ${c.p.irmao.nome} pela casa dos pais.`, efeito: () => { fato(c, 'partilha_feita'); tensao(c, 'irmao', 60); prox(c, 'irmao', -30); } }) }
     ]
@@ -388,7 +389,7 @@ export const ADULTO: Conteudo[] = [
     texto: c => { const t = tipoDoSocio(c); return `${c.p.socio.nome} quer abrir ${t.nome} e chama você para sócio${c.g('', 'a', 'e')}: entrar com uns R$ ${Math.round(t.capital * 0.5 / 1000)} mil e trabalhar junto. ${c.p.socio.nome} entende do ramo; você entraria com o dinheiro e o braço.`; },
     opcoes: [
       { id: 'entrar', texto: 'Entrar de sócio e tocar junto', comportamento: { coragem: 2 },
-        disponivel: c => (c.v.financas.conta + c.v.financas.reserva >= tipoDoSocio(c).capital * 0.5 ? true : 'Não há dinheiro guardado para a sua parte.'),
+        disponivel: c => (guardado(c.v) >= tipoDoSocio(c).capital * 0.5 ? true : 'Não há dinheiro guardado para a sua parte.'),
         resolver: c => ({ texto: 'Vocês assinaram o contrato social numa lanchonete, com um guardanapo de testemunha.', memoria: null, efeito: () => { const t = tipoDoSocio(c); const extra = t.capital * 0.5; c.v.financas.conta += extra; abrirNegocio(c.v, c.r, t.id, c.p.socio.id); lembrarCom(c.v, c.p.socio.id, `Abriram ${t.nome} juntos.`, 'trabalho', 3); } }) },
       { id: 'recusar', texto: 'Recusar', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você desejou boa sorte e não entrou.', memoria: null }) }
     ]

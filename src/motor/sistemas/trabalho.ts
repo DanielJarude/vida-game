@@ -21,6 +21,8 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Emprego, Vida } from '../tipos';
 import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
+import { ajusteClientela, ajusteContratacao, fatorDemissao, reajusteReal } from './economia';
+import { veiculoUtil } from './veiculos';
 import { OCUPACOES, AFINS, daTrilha, ocupacao, ocupacaoOuNula, ROTULO_TRILHA, type Ocupacao } from '../dados/ocupacoes';
 import { economiaLocal, municipio, nivelDeOferta, nomeLugar } from '../dados/lugares';
 import { ORDEM_NIVEL, ROTULO_AREA, cursoOuNulo } from '../dados/cursos';
@@ -155,7 +157,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   }
   if (oc.licenca === 'cnh' && !t.licencas.includes('cnh')) return bloqueio('requisito', 'Exige carteira de motorista.');
   if (oc.veiculo) {
-    const bens = v.financas.bens.filter(b => b.tipo === 'veiculo');
+    const bens = v.financas.bens.filter(b => b.tipo === 'veiculo' && veiculoUtil(b));
     const temCarro = bens.some(b => b.modeloId.startsWith('carro'));
     const temMoto = bens.some(b => b.modeloId.startsWith('moto'));
     const temBike = bens.some(b => b.modeloId.startsWith('bike'));
@@ -225,7 +227,7 @@ function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   c *= 0.7 + setor * 0.3;
   c *= sobraNaEpoca(oc.declinio, anoDe(v.t));
   if (v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde > 24) c -= 0.1;
-  if (emRecessao(v)) c -= 0.15;
+  c += ajusteContratacao(v);
   if (i > 50 && oc.nivel < 4) c -= (i - 50) / 60; // etarismo real no mercado
   c += bonus;
   return clamp(c, 0.05, 0.92);
@@ -385,7 +387,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   }
 
   // Salário: anda dentro da faixa do cargo.
-  ajustarSalario(r, e, oc);
+  ajustarSalario(v, r, e, oc);
 
   // Aprendiz: contrato de no máximo dois anos.
   if (e.contrato === 'aprendiz' && v.t - e.tInicio >= 24) {
@@ -436,18 +438,25 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   promover(v, r, e, oc, tPosto);
 }
 
-function ajustarSalario(r: Rng, e: Emprego, oc: Ocupacao): void {
+/** O quanto um cargo costuma pagar no máximo, nesta cidade (negociar acima disso não cola). */
+export function tetoSalarial(e: Emprego): number {
+  const oc = ocupacao(e.ocupacaoId);
+  return salarioLocal(oc, e.municipioId) * (oc.promocao === 'antiguidade' ? 1.5 : 1.45);
+}
+
+function ajustarSalario(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
   if (e.clientela !== undefined) return;
   const ref = salarioLocal(oc, e.municipioId);
-  const teto = ref * (oc.promocao === 'antiguidade' ? 1.6 : 1.45);
+  const teto = tetoSalarial(e);
   const piso = ref * 0.85;
   if (e.contrato === 'informal') {
     e.salario = Math.round(clamp(e.salario * (0.88 + r.next() * 0.24), ref * 0.6, ref * 1.3) / 10) * 10;
     return;
   }
-  let fator = 1.01;
-  if (oc.promocao === 'antiguidade') fator = 1.015;
-  else if (e.desempenho >= 70 && r.chance(0.5)) fator = 1.035;
+  // Reajuste real: acima da inflação na expansão, abaixo na crise (o servidor, por lei, só repõe).
+  let fator = 1.01 + (e.contrato === 'servidor' || e.contrato === 'militar' ? Math.min(0, reajusteReal(v)) * 0.5 : reajusteReal(v));
+  if (oc.promocao === 'antiguidade') fator += 0.005;
+  else if (e.desempenho >= 70 && r.chance(0.5)) fator += 0.025;
   e.salario = Math.round(clamp(e.salario * fator, piso, Math.max(teto, e.salario)) / 10) * 10;
   if (e.salario > teto) e.salario = Math.round(Math.max(teto, e.salario * 0.995) / 10) * 10;
 }
@@ -458,7 +467,7 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   const setor = forcaDoSetor(e.municipioId, oc.setor, anoDe(v.t));
   const porte = nivelDeOferta(e.municipioId);
   const delta = (hab - 50) / 12 + Math.min(4, exp / 3) + v.personalidade.tracos.sociabilidade / 40 + (setor - 1) * 8 + (porte - 1.5) * 1.5
-    - (emRecessao(v) ? 8 : 0) - Math.max(0, (e.clientela ?? 0) - 70) / 6 + r.normal() * 6 + 1;
+    + ajusteClientela(v) - Math.max(0, (e.clientela ?? 0) - 70) / 6 + r.normal() * 6 + 1;
   e.clientela = Math.round(clamp((e.clientela ?? 20) + delta, 0, 100));
   e.salario = rendaDeClientela(v, oc, e.clientela);
   if (e.clientela <= 6 && v.t - e.tInicio >= 24) {
@@ -511,7 +520,7 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   const i = idade(v);
   const epoca = 1 - sobraNaEpoca(oc.declinio, anoDe(v.t));
   const base = e.contrato === 'servidor' ? 0.002 : e.contrato === 'militar' ? 0.003 : e.desempenho < 35 ? 0.3 : e.contrato === 'clt' ? 0.045 : 0.03;
-  const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 : 0)) * (emRecessao(v) && e.contrato !== 'servidor' && e.contrato !== 'militar' ? 2.2 : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
+  const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
   if (!r.chance(risco)) return false;
   const anos = Math.max(1, Math.floor((v.t - e.tInicio) / 12));
   const nome = nomeOcupacao(v, oc);

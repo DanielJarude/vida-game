@@ -17,6 +17,7 @@ import { Casa } from '../jogo/Casa';
 import { Tempo } from '../jogo/Tempo';
 import { Voce } from '../jogo/Voce';
 import { expressaoDe, sinalPessoal } from '../estadoPessoal';
+import { leituraDaSeguranca } from '../leituraMaterial';
 import { Fim } from './Fim';
 import { dinheiroCurto, faseDaVida, ocupacaoAtual, ondeMora, palavraEstresse, palavraHumor, palavraSaude } from '../apresentar';
 import { emCasa, lutoVisivel, sinaisSociais, situacaoAfetiva } from '../leitura';
@@ -187,16 +188,22 @@ function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPar
           </ul>
         </>
       )}
-      {(i >= 16 || s.renda > 0) && (
+      {i >= 18 || (i >= 16 && s.renda > 0) ? (
         <>
           <h2 className="painel-agora__titulo painel-agora__titulo--secundario">O mês</h2>
           <button type="button" className="agora-dinheiro" onClick={() => irPara('casa')}>
             <span>Entra {dinheiroCurto(s.renda)}</span>
             <span>Sai {dinheiroCurto(s.despesa)}</span>
             <strong className={s.renda - s.despesa >= 0 ? 'bom' : 'ruim'}>{s.renda - s.despesa >= 0 ? 'Sobra' : 'Falta'} {dinheiroCurto(Math.abs(s.renda - s.despesa))}</strong>
+            <span className="agora-dinheiro__seguranca">{leituraDaSeguranca(vida).palavra}</span>
           </button>
         </>
-      )}
+      ) : vida.financas.conta >= 1 ? (
+        <>
+          <h2 className="painel-agora__titulo painel-agora__titulo--secundario">Seu dinheiro</h2>
+          <button type="button" className="agora-dinheiro" onClick={() => irPara('casa')}><span>{dinheiroCurto(vida.financas.conta)} guardados</span></button>
+        </>
+      ) : null}
       {portas.length > 0 && (
         <>
           <h2 className="painel-agora__titulo">Portas abertas</h2>

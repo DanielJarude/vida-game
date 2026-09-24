@@ -171,4 +171,4 @@ export function marcarFato(v: Vida, chave: string): void {
 export const generoEu = (v: Vida): Genero => v.eu.genero;
 
 /** O país está em recessão? (estado do mundo, não da pessoa) */
-export const emRecessao = (v: Vida) => (v.fatos['recessao_ate'] ?? 0) > v.t;
+export const emRecessao = (v: Vida) => v.economia?.fase === 'crise' || (v.fatos['recessao_ate'] ?? 0) > v.t;

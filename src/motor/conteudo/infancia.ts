@@ -311,9 +311,13 @@ export const INFANCIA: Conteudo[] = [
 ];
 
 import { criarPessoa, vincular } from '../pessoas';
+import { criarRng } from '../rng';
 import type { Ctx } from './base';
 function criarPetInfancia(c: Ctx, nome: string) {
   const pet = criarPessoa(c.v, c.r, { especie: 'cachorro', idade: 0, municipioId: c.v.moradia.municipioId, nome, sobrenome: '' });
+  const rp = criarRng((c.v.seq * 2654435761) >>> 0);
+  const porte = rp.pick(['pequeno', 'medio', 'grande'] as const);
+  pet.pet = { porte, origem: 'ninhada', tChegada: c.v.t, tutor: 'familia', jeito: 'filhote, rói tudo que acha', vidaMax: porte === 'pequeno' ? rp.int(13, 16) : porte === 'medio' ? rp.int(11, 14) : rp.int(9, 12) };
   vincular(c.v, pet, { parentesco: 'pet', origem: 'familia', proximidade: 70, convivio: ['casa'] });
 }
 void art;

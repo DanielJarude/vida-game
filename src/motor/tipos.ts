@@ -60,6 +60,8 @@ export interface Pessoa {
   formacao?: string;
   /** Pet: animal, não gente. Nunca conversa, nunca namora. */
   especie?: 'cachorro' | 'gato';
+  /** O que só um animal tem: de onde veio, de quem é, como está. */
+  pet?: InfoPet;
   /** Pai e mãe (ids; `'eu'` é o jogador). Mantém a árvore da família coerente entre gerações. */
   genitores?: string[];
   /** Um momento difícil pelo qual a pessoa está passando (abre "estar junto" como ação). */
@@ -68,6 +70,24 @@ export interface Pessoa {
   vida?: VidaNpc;
   /** Gestação de uma pessoa que não é o jogador (filha, nora, genro...). */
   gestacao?: { tParto: number; outroId?: string; anunciada: boolean };
+}
+
+/** Um animal da casa. Não é patrimônio: é alguém que mora junto e depende de cuidado. */
+export interface InfoPet {
+  porte: 'pequeno' | 'medio' | 'grande';
+  /** Como chegou: abrigo, alguém que doou, ninhada, rua, criador, já era da família. */
+  origem: 'abrigo' | 'doacao' | 'ninhada' | 'rua' | 'criador' | 'familia';
+  tChegada: number;
+  /** Quem cuida: o jogador ou a família de origem (o cachorro da casa dos pais). */
+  tutor: 'eu' | 'familia';
+  /** Jeito, em poucas palavras ("tímida, gosta de colo"). */
+  jeito: string;
+  /** Doença em curso (sempre com ação possível: veterinário). */
+  doenca?: { nome: string; desde: number; gravidade: 1 | 2 | 3; tratando: boolean; tratavel: boolean };
+  /** Última ida ao veterinário. */
+  tVeterinario?: number;
+  /** Idade máxima que o corpo aguenta (derivada ao chegar, não aparece). */
+  vidaMax: number;
 }
 
 export interface Aperto {
@@ -358,18 +378,45 @@ export interface Trabalho {
 
 /* ---------------------------------------------------------------- Dinheiro */
 
-export type TipoDivida = 'cartao' | 'emprestimo' | 'financiamento_imovel' | 'financiamento_veiculo' | 'fies';
+/**
+ * Obrigações não são uma coisa só. Um financiamento é uma obrigação presa a
+ * um bem (a casa, o carro); um empréstimo é dinheiro adiantado com parcela
+ * fixa; o cartão rotativo é a dívida cara; o acordo é a dívida renegociada.
+ * O que torna uma obrigação PROBLEMÁTICA é o atraso, não o tipo.
+ */
+export type TipoDivida = 'cartao' | 'emprestimo' | 'financiamento_imovel' | 'financiamento_veiculo' | 'fies' | 'acordo';
 
 export interface Divida {
   id: string;
   tipo: TipoDivida;
   saldo: number;
-  /** Juros ao mês (0.02 = 2% a.m.). */
+  /** Juros ao mês (0.02 = 2% a.m.), em termos reais. */
   jurosMes: number;
   /** Parcela mensal (0 = rotativo, paga o que der). */
   parcela: number;
   bemId?: string;
   descricao: string;
+  /** Quando foi contratada. */
+  tInicio?: number;
+  /** Prazo contratado, em meses. */
+  prazo?: number;
+  /** Meses de parcela sem pagar (0 = em dia). É o que faz uma obrigação virar problema. */
+  atraso?: number;
+}
+
+/** Um episódio na vida de um bem (a compra, o conserto, a mudança). Só o que importa. */
+export interface EpisodioBem { t: number; texto: string }
+
+/** Um problema material que tem solução (conserto, reparo). Nunca fica sem ação. */
+export interface ProblemaBem {
+  id: string;
+  texto: string;
+  custo: number;
+  desde: number;
+  /** 1 incomoda · 2 atrapalha o uso · 3 parou. */
+  gravidade: 1 | 2 | 3;
+  /** Quantas vezes já foi adiado (o custo e o risco crescem). */
+  adiado: number;
 }
 
 export interface Veiculo {
@@ -381,6 +428,21 @@ export interface Veiculo {
   tCompra: number;
   /** 0..100 — estado de conservação. */
   estado: number;
+  /** Ano de fabricação (um usado chega com anos de estrada). */
+  anoFabricacao?: number;
+  /** Comprado usado. */
+  usado?: boolean;
+  /** Quanto custou. */
+  precoPago?: number;
+  /** Um conserto pendente. */
+  problema?: ProblemaBem;
+  /** Deixou de usar (parado na garagem): sem custo de uso, sem mobilidade. */
+  parado?: boolean;
+  /** Última revisão preventiva. */
+  tRevisao?: number;
+  historia?: EpisodioBem[];
+  /** De quem é: só seu ou do casal (comprado durante o casamento). */
+  dono?: 'eu' | 'casal';
 }
 
 export interface Imovel {
@@ -391,25 +453,78 @@ export interface Imovel {
   valor: number;
   tCompra: number;
   municipioId: string;
-  /** Alugado para terceiros (renda) ou usado como moradia. */
+  /** Alugado para terceiros (renda mensal) ou usado como moradia. */
   alugadoPor?: number;
   estado: number;
+  precoPago?: number;
+  /** Onde fica, em palavras ("perto do centro", "num bairro novo"). */
+  bairro?: string;
+  problema?: ProblemaBem;
+  /** Última reforma ou manutenção grande (as grandes são espaçadas). */
+  tManutencao?: number;
+  historia?: EpisodioBem[];
+  dono?: 'eu' | 'casal';
+  /** Herdado (não comprado). */
+  herdado?: boolean;
 }
 
 export type Bem = Veiculo | Imovel;
 
 export type EstiloDeVida = 'apertado' | 'modesto' | 'confortavel' | 'folgado';
 
+export type GrupoRazao = 'renda' | 'moradia' | 'casa' | 'filhos' | 'transporte' | 'saude' | 'educacao' | 'dividas' | 'lazer' | 'animais' | 'outros';
+
 export interface LinhaRazao {
   rotulo: string;
-  valor: number; // positivo = entrada, negativo = saída (anual)
-  grupo: 'renda' | 'moradia' | 'casa' | 'filhos' | 'transporte' | 'saude' | 'educacao' | 'dividas' | 'lazer' | 'outros';
+  valor: number; // positivo = entrada, negativo = saída (mensal em `saldoMensal`, anual em `razao`)
+  grupo: GrupoRazao;
+  /** De quem é a entrada: sua, da parceria, da família, do patrimônio. */
+  de?: 'eu' | 'parceria' | 'familia' | 'patrimonio' | 'governo';
+}
+
+/** Produtos de investimento (catálogo em `dados/investimentos`). */
+export type Produto = 'reserva' | 'pos_fixado' | 'inflacao' | 'multimercado' | 'acoes' | 'imobiliario' | 'acao_unica';
+
+/**
+ * Uma aplicação. Guarda o que foi posto (aportado) e o que vale hoje: a
+ * diferença é ganho ou perda. Renda (juros pagos, dividendos, aluguéis do
+ * fundo) só existe para os produtos que pagam — e vai para a conta.
+ */
+export interface Aplicacao {
+  id: string;
+  produto: Produto;
+  /** Total posto, descontado o que foi resgatado (base de custo). */
+  aportado: number;
+  valor: number;
+  tInicio: number;
+  /** Valor em cada aniversário (os últimos anos), para ver a evolução. */
+  historico: number[];
+  /** O que pagou em dinheiro no último ano (dividendos, rendimentos distribuídos). */
+  rendaAno?: number;
+  /** Para títulos atrelados à inflação: a taxa real travada na compra. */
+  taxa?: number;
+  /** Maior valor já alcançado (para "já valeu mais"). */
+  pico?: number;
+  /** Quanto o preço variou no último ano (sem contar aportes e resgates). */
+  retornoAno?: number;
+}
+
+/** Como estava o dinheiro a cada aniversário (para a evolução e as métricas). */
+export interface FotoFinanceira {
+  t: number;
+  /** Ativos: conta + aplicações + bens. */
+  ativos: number;
+  /** Obrigações: todas as dívidas. */
+  obrigacoes: number;
+  /** Renda e despesa mensais. */
+  renda: number;
+  despesa: number;
 }
 
 export interface Financas {
+  /** Dinheiro SEU, disponível. Na casa dos pais, não é o dinheiro da casa. */
   conta: number;
-  reserva: number;       // poupança/tesouro
-  acoes: number;         // renda variável
+  investimentos: Aplicacao[];
   dividas: Divida[];
   bens: Bem[];
   estilo: EstiloDeVida;
@@ -418,6 +533,39 @@ export interface Financas {
   negativado: boolean;
   /** Razão do último ano (para a interface). */
   razao: LinhaRazao[];
+  historico: FotoFinanceira[];
+}
+
+/**
+ * A economia do país, em termos abstratos. Muda devagar, em fases, e é a
+ * mesma para quem joga de novo com a mesma semente (não depende do que o
+ * jogador faz). Ninguém lê um indicador: a pessoa sente pelo emprego, pelo
+ * preço do aluguel, pelo rendimento do que guardou.
+ *
+ * Unidade de conta: REAIS DE HOJE. Todo valor do motor está corrigido pela
+ * inflação (um salário de R$ 3.000 compra a mesma coisa em 2030 e em 2090).
+ * A inflação existe e pesa — corrói o dinheiro parado, muda o rendimento
+ * real da renda fixa —, mas não infla os números da tela.
+ */
+export type FaseEconomica = 'expansao' | 'normal' | 'desaceleracao' | 'crise' | 'recuperacao';
+
+export interface Economia {
+  /** Semente própria: o caminho da economia não depende das escolhas. */
+  semente: number;
+  fase: FaseEconomica;
+  tFase: number;
+  /** Inflação do último ano (0.045 = 4,5%). */
+  inflacao: number;
+  /** Juro básico real ao ano. */
+  juroReal: number;
+  /** Índice real de preço dos imóveis (1 = 2026). */
+  imoveis: number;
+  /** Índice real da bolsa (1 = 2026). */
+  bolsa: number;
+  /** Nível de preços acumulado desde 2026 (só para contar a inflação). */
+  precos: number;
+  /** Ano a ano (o último século cabe: ~100 linhas pequenas). */
+  historico: { ano: number; fase: FaseEconomica; inflacao: number; bolsa: number; imoveis: number; juroReal: number }[];
 }
 
 /* ----------------------------------------------------------------- Moradia */
@@ -434,6 +582,14 @@ export interface Moradia {
   /** 1 (precária) .. 5 (muito boa). */
   padrao: number;
   tInicio: number;
+  /** Onde fica, em palavras. */
+  bairro?: string;
+  /** O contrato de aluguel aceita animais. */
+  aceitaPet?: boolean;
+  /** Com quantas pessoas divide o aluguel (república, dividir apartamento). */
+  divide?: number;
+  /** Aluguel atrasado (meses). */
+  atraso?: number;
 }
 
 /** A casa de origem enquanto o jogador mora com a família. */
@@ -664,6 +820,10 @@ export interface Negocio {
   anosNoVermelho: number;
   socioId?: string;
   tFim?: number;
+  /** Resultado do último ano além da sua retirada: lucro (+) ou o que saiu do seu bolso (−). */
+  resultadoAno?: number;
+  /** Soma dos resultados desde a abertura (sem contar a retirada mensal). */
+  acumulado?: number;
 }
 
 /** Uma etapa de um processo seletivo em andamento (uma pergunta, um momento do teste). */
@@ -751,7 +911,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 9;
+  versao: 10;
   id: string;
   rng: number;
   seq: number;
@@ -767,6 +927,8 @@ export interface Vida {
   educacao: Educacao;
   trabalho: Trabalho;
   financas: Financas;
+  /** A economia do país ao longo da vida. */
+  economia: Economia;
   processos: Processo[];
   rotinas: Rotina[];
   /** Fatos biográficos consultáveis por conteúdo ("fato" → instante). */
@@ -780,7 +942,18 @@ export interface Vida {
   luto: Luto[];
   /** O que a pessoa pratica, conquista e tenta: frentes, marcas, portas abertas, carreiras especiais. */
   caminhos: Caminhos;
-  morte?: { t: number; causa: string };
+  morte?: { t: number; causa: string; heranca?: Heranca };
+}
+
+/** O que ficou para quem ficou (simplificado; não é inventário jurídico). */
+export interface Heranca {
+  /** Patrimônio líquido deixado. */
+  liquido: number;
+  partes: { pessoaId: string; valor: number; papel: 'conjuge' | 'filho' | 'neto' | 'outro'; meacao?: boolean }[];
+  /** Os bens que existiam, em palavras. */
+  bens: string[];
+  /** Obrigações que o patrimônio pagou. */
+  dividas: number;
 }
 
 /** Resultado de um comando do jogador. */

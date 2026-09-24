@@ -11,7 +11,7 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import type { Rng } from '../rng';
 import type { Vida } from '../tipos';
 import { OCUPACOES, ocupacao, ocupacaoOuNula, type Ocupacao, type Setor } from '../dados/ocupacoes';
-import { contratar, elegibilidade, nomeOcupacao, textoDeContratacao } from '../sistemas/trabalho';
+import { contratar, elegibilidade, nomeOcupacao, tetoSalarial, textoDeContratacao } from '../sistemas/trabalho';
 import { avaliar, ctxEntrevista, escolherPerguntas, notaDaResposta, perguntaPorId, reacao, type Pergunta } from '../sistemas/entrevista';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
 import { novaOportunidade } from '../sistemas/oportunidades';
@@ -152,9 +152,15 @@ function concluirEntrevista(c: Ctx): Resultado {
 function resolverNegociacao(c: Ctx, bonus: number, arriscado: boolean): { texto: string; memoria: string | null; tom: 'bom' | 'ruim' } {
   const e = c.v.trabalho.atual;
   if (!e) return { texto: 'Não havia mais o que negociar.', memoria: null, tom: 'ruim' };
-  const chance = clamp((e.desempenho - 40) / 60 + bonus, 0.05, 0.9);
+  // O que o cargo paga tem limite: quanto mais perto do teto, menor a chance e o tamanho do aumento.
+  const teto = tetoSalarial(e);
+  const folga = clamp((teto - e.salario) / (teto * 0.35), 0, 1);
+  if (folga <= 0) {
+    return { texto: 'A resposta foi direta: você já ganha no topo do que esse cargo paga. Para ganhar mais, só mudando de cargo.', memoria: null, tom: 'ruim' };
+  }
+  const chance = clamp(((e.desempenho - 40) / 60 + bonus) * (0.4 + 0.6 * folga), 0.05, 0.9);
   if (c.r.chance(chance)) {
-    const pct = arriscado ? 0.15 : 0.08;
+    const pct = Math.min(arriscado ? 0.15 : 0.08, (teto - e.salario) / e.salario);
     e.salario = Math.round(e.salario * (1 + pct) / 10) * 10;
     const n = (c.v.fatos['aumentos'] ?? 0) + 1;
     c.v.fatos['aumentos'] = n;

@@ -3,10 +3,12 @@
  * o calendário. E mais cenas de adolescência e juventude.
  */
 
+import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, estresse, fato, feliz, gp, prox, tensao } from './efeitos';
 import { emRecessao, idadePessoa, temFato } from '../nucleo';
+import { entrouEmCrise, saiuDaCrise } from '../sistemas/economia';
 import { municipio } from '../dados/lugares';
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
@@ -29,25 +31,26 @@ function textoDeRecessao(c: Ctx): string {
 export const MUNDO: Conteudo[] = [
   /* ============================================================== ECONOMIA */
   {
-    id: 'mun_recessao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, peso: 0.6,
-    quando: c => !emRecessao(c.v),
+    // A crise vem da economia do país (`sistemas/economia`): a biografia só conta quando ela chega.
+    id: 'mun_recessao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true,
+    quando: c => entrouEmCrise(c.v) || (!c.v.economia && !emRecessao(c.v) && false),
     narrar: c => ({
       texto: c.idade < 16
         ? 'O país entrou em recessão. Em casa, a palavra apareceu no jornal da noite e depois na conta do mercado.'
         : textoDeRecessao(c),
       relevancia: 'biografia', tom: 'ruim',
-      efeito: () => { c.v.fatos['recessao_ate'] = c.v.t + 24; estresse(c, 5); }
+      efeito: () => { estresse(c, 5); }
     })
   },
   {
     id: 'mun_recuperacao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true,
-    quando: c => c.v.fatos['recessao_ate'] !== undefined && !emRecessao(c.v) && c.v.t - (c.v.fatos['recessao_ate'] ?? 0) < 12,
+    quando: c => saiuDaCrise(c.v),
     narrar: c => ({ texto: [
       'A economia voltou a respirar. Os anúncios de vaga reapareceram nos postes.',
       'A crise foi passando sem aviso: o shopping encheu de novo, as obras paradas voltaram a ter barulho.',
       'O jornal anunciou o fim da recessão. Na rua, a notícia chegou em forma de "contrata-se" na vitrine.',
       'Depois de dois anos de aperto, o comércio voltou a contratar e o preço do dólar parou de ser assunto no almoço.'
-    ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: 'cotidiano', efeito: () => { delete c.v.fatos['recessao_ate']; } })
+    ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: 'cotidiano' })
   },
   {
     id: 'mun_chuva_cidade', tipo: 'acontecimento', idade: [5, 110], tema: 'lugar', repetir: 10,
@@ -215,7 +218,7 @@ export const MUNDO: Conteudo[] = [
   },
   {
     id: 'adu_reforma', tipo: 'decisao', idade: [28, 80], tema: 'casa', repetir: 12,
-    quando: c => c.v.moradia.tipo === 'propria' && c.v.financas.conta + c.v.financas.reserva > 15000,
+    quando: c => c.v.moradia.tipo === 'propria' && guardado(c.v) > 15000,
     titulo: 'A reforma',
     texto: () => 'A casa está pedindo reforma: banheiro velho, pintura descascando, a cozinha que nunca foi como você queria.',
     opcoes: [

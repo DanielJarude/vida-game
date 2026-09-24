@@ -15,6 +15,7 @@ import { criarPessoa, vincular, visualAleatorio, visualHerdado } from './pessoas
 import { escrever } from './nucleo';
 import { OCUPACOES_POR_CLASSE, ocupacao } from './dados/ocupacoes';
 import { liquido, salarioLocal } from './sistemas/renda';
+import { economiaInicial } from './sistemas/economia';
 import { municipio, nomeLugar } from './dados/lugares';
 import { NOMES_PET_CACHORRO, NOMES_PET_GATO } from './dados/nomes';
 import { flex, listaNatural, artigo } from './texto';
@@ -106,7 +107,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const podeGestar = o.genero === 'feminino' ? true : o.genero === 'masculino' ? false : !!o.podeGestar;
 
   const v: Vida = {
-    versao: 9,
+    versao: 10,
     id: `vida-${o.semente.toString(36)}`,
     rng: 0,
     seq: 0,
@@ -152,9 +153,11 @@ export function criarVida(o: OpcoesCriacao): Vida {
     educacao: { escolaridade: 'nenhuma', evadiu: false, concluidos: [], enem: [], postura: 'normal', cursinho: false },
     trabalho: { historico: [], experiencia: {}, candidaturas: [], contribuicao: 0, licencas: [], horasExtras: false },
     financas: {
-      conta: 0, reserva: 0, acoes: 0, dividas: [], bens: [],
-      estilo: 'modesto', planoDeSaude: classe === 'media' || classe === 'alta', negativado: false, razao: []
+      conta: 0, investimentos: [], dividas: [], bens: [],
+      estilo: 'modesto', planoDeSaude: classe === 'media' || classe === 'alta', negativado: false, razao: [], historico: []
     },
+    // A economia tem semente própria, derivada — criar a vida não consome o gerador dela.
+    economia: economiaInicial(((o.semente ^ 0x6a09e667) >>> 0) % 2 ** 30 + 1, t),
     processos: [],
     rotinas: [],
     fatos: {},
@@ -260,6 +263,9 @@ export function criarVida(o: OpcoesCriacao): Vida {
   if (arranjo !== 'avos' && r.chance(chancePet)) {
     const especie = r.chance(0.72) ? 'cachorro' : 'gato';
     const pet = criarPessoa(v, r, { especie, idade: r.int(1, 6), municipioId: cidade, nome: r.pick(especie === 'cachorro' ? NOMES_PET_CACHORRO : NOMES_PET_GATO), sobrenome: '' });
+    const rp = criarRng((o.semente ^ 0x5bd1e995) >>> 0);
+    const porte = especie === 'gato' ? 'pequeno' : rp.pick(['pequeno', 'medio', 'grande'] as const);
+    pet.pet = { porte, origem: 'familia', tChegada: t - (Math.floor((t - pet.tNasc) / 12) * 12), tutor: 'familia', jeito: especie === 'gato' ? 'dono da casa' : 'fiel, late para o carteiro', vidaMax: especie === 'gato' ? rp.int(13, 18) : porte === 'pequeno' ? rp.int(13, 16) : porte === 'medio' ? rp.int(11, 14) : rp.int(9, 12) };
     vincular(v, pet, { parentesco: 'pet', origem: 'familia', proximidade: 60, convivio: ['casa'] });
   }
 

@@ -23,6 +23,8 @@ import { habilidade } from './frentes';
 import { marcar } from './marcas';
 import { contratar, experienciaNaTrilha, nomeOcupacao } from './trabalho';
 import { bloqueio, type Veredito } from '../plausibilidade';
+import { disponivel, pagar } from './dinheiro';
+import { dinheiro as fmt } from '../texto';
 
 export interface TipoNegocio {
   id: string;
@@ -57,7 +59,7 @@ export function podeAbrirNegocio(v: Vida, id: string): Veredito {
   const oficio = t.dominio ? habilidade(v, t.dominio) : 0;
   if (estrada < t.meses && oficio < (t.habilidade ?? 101)) return bloqueio('requisito', `Falta conhecer o ramo: pede uns ${Math.round(t.meses / 12)} anos na área ou saber fazer o trabalho muito bem.`);
   const custo = custoLocal(v, t);
-  if (v.financas.conta + v.financas.reserva < custo) return bloqueio('requisito', `Para começar, uns R$ ${custo.toLocaleString('pt-BR')} (ponto, equipamento, primeiro estoque).`);
+  if (disponivel(v) < custo) return bloqueio('requisito', `Para começar, uns R$ ${custo.toLocaleString('pt-BR')} (ponto, equipamento, primeiro estoque).`);
   if (v.financas.negativado) return { grau: 'improvavel', chance: 0.4, motivo: 'Com o nome sujo, fornecedor não vende a prazo.' };
   return { grau: 'permitido', chance: 0.6 };
 }
@@ -65,9 +67,7 @@ export function podeAbrirNegocio(v: Vida, id: string): Veredito {
 export function abrirNegocio(v: Vida, r: Rng, id: string, socioId?: string): Negocio {
   const t = tipoNegocio(id)!;
   const custo = custoLocal(v, t);
-  const daConta = Math.min(v.financas.conta, custo);
-  v.financas.conta -= daConta;
-  v.financas.reserva -= custo - daConta;
+  pagar(v, custo);
   const oc = ocupacao(t.ocupacaoId);
   const e = contratar(v, r, oc, 'negocio');
   const estrada = Math.max(...t.trilhas.map(tr => experienciaNaTrilha(v, tr)));
@@ -102,6 +102,21 @@ export function processarNegocio(v: Vida): boolean {
   n.clientela = e.clientela ?? n.clientela;
   if (n.clientela < 20) { n.anosNoVermelho += 1; n.estado = 'apertado'; }
   else { n.anosNoVermelho = 0; n.estado = n.clientela >= 45 ? 'firme' : 'comecando'; }
+  // O resultado além da retirada: movimento fraco não paga o aluguel do ponto (sai do bolso);
+  // movimento forte sobra (lucro distribuído). Nunca uma máquina de dinheiro: o lucro tem teto no porte do negócio.
+  const socio = n.socioId ? 0.5 : 1;
+  let resultado = 0;
+  if (n.clientela < 20) resultado = -Math.round(n.capital * 0.3 * (20 - n.clientela) / 20 * socio / 100) * 100;
+  else if (n.clientela >= 60) resultado = Math.round(n.capital * 0.7 * (n.clientela - 60) / 40 * socio / 100) * 100;
+  n.resultadoAno = resultado;
+  n.acumulado = (n.acumulado ?? 0) + resultado;
+  if (resultado !== 0) {
+    v.financas.conta += resultado;
+    if (resultado < 0 && !v.fatos[`negocio_bolso_${n.tInicio}`]) {
+      v.fatos[`negocio_bolso_${n.tInicio}`] = v.t;
+      escrever(v, { texto: `O movimento de ${n.nome} não pagou o aluguel do ponto: saíram ${fmt(-resultado)} do seu bolso para fechar o ano.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
+    }
+  }
   if (n.estado === 'firme' && !v.caminhos.marcas.some(m => m.tipo === 'conquista' && m.ocupacaoId === n.ocupacaoId)) {
     const texto = `${n.nome} firmou: freguesia certa, contas em dia.`;
     escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
@@ -116,7 +131,10 @@ export function fecharNegocio(v: Vida, motivo: string): void {
   n.estado = 'fechado';
   n.tFim = v.t;
   const anos = Math.max(1, Math.round((v.t - n.tInicio) / 12));
-  const texto = `${n.nome} fechou as portas depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}: ${motivo}.`;
+  // O que se recupera: equipamento e estoque vendidos a preço de ocasião.
+  const recupera = Math.round(n.capital * 0.25 * (n.socioId ? 0.5 : 1) / 100) * 100;
+  v.financas.conta += recupera;
+  const texto = `${n.nome} fechou as portas depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}: ${motivo}.${recupera > 0 ? ` A venda dos equipamentos rendeu ${fmt(recupera)}.` : ''}`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
   marcar(v, 'negocio_fechado', texto, 3, { ocupacaoId: n.ocupacaoId });
 }

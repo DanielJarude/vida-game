@@ -28,8 +28,13 @@ import { processarOportunidades } from './sistemas/oportunidades';
 import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, recalcularConvivio } from './sistemas/social';
 import { processarRomance, surgirInteresse } from './sistemas/romance';
 import { processarProcessos } from './sistemas/processos';
-import { processarDinheiro } from './sistemas/dinheiro';
-import { verificarDespejo } from './sistemas/moradia';
+import { fotografar, processarDinheiro } from './sistemas/dinheiro';
+import { avancarEconomia } from './sistemas/economia';
+import { processarVeiculos } from './sistemas/veiculos';
+import { processarImoveis } from './sistemas/imoveis';
+import { processarPets } from './sistemas/pets';
+import { processarObrigacoes } from './sistemas/obrigacoes';
+import { calcularHeranca } from './sistemas/partilha';
 import { abrirDecisao, aplicarAcontecimento, candidatos, preparar, sortear } from './conteudo/motor';
 import { CATALOGO } from './conteudo/catalogo';
 import type { Conteudo } from './conteudo/base';
@@ -53,10 +58,13 @@ export function avancarAno(vida: Vida): Retorno {
 function viverAno(v: Vida, r: Rng): void {
   const inicioBio = v.biografia.length;
   v.t += 12;
+  // A economia do país anda antes de tudo (e não depende de nada que a pessoa fez).
+  const ec = avancarEconomia(v.economia, v.t);
 
   processarCorpo(v, r);
   processarLuto(v);
   limparApertos(v);
+  processarPets(v, r);
   processarMortes(v, r);
   processarFamiliaDeOrigem(v, r);
   processarEscola(v, r);
@@ -82,14 +90,17 @@ function viverAno(v: Vida, r: Rng): void {
   processarDescendentes(v, r);
   recalcularConvivio(v);
   processarOportunidades(v, r);
-  processarDinheiro(v, r);
-  verificarDespejo(v);
+  processarVeiculos(v, r);
+  processarImoveis(v, r, ec);
+  processarDinheiro(v, r, ec);
+  processarObrigacoes(v);
   equilibrarMente(v);
   registrarEstado(v);
+  fotografar(v);
 
   const causa = morreEsteAno(v, r);
   if (causa) {
-    v.morte = { t: v.t, causa };
+    v.morte = { t: v.t, causa, heranca: calcularHeranca(v) };
     escrever(v, { texto: `Morreu aos ${idade(v)} anos (${causa}).`, relevancia: 'marco', tema: 'morte' });
     v.anoAtual = { acoes: [] };
     return;

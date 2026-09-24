@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { nova, viverAte } from './ajuda';
 import { criarRng } from '../rng';
 import { processarDinheiro } from '../sistemas/dinheiro';
-import { verificarDespejo } from '../sistemas/moradia';
+import { processarObrigacoes } from '../sistemas/obrigacoes';
 import { processarTrabalho, contratar } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
 import { vinculosVivos } from '../nucleo';
@@ -14,7 +14,7 @@ function adultaSozinha(semente = 7): Vida {
   v.moradia = { tipo: 'aluguel', municipioId: v.moradia.municipioId, modeloId: 'kitnet', aluguel: 900, padrao: 2, tInicio: v.t };
   v.trabalho.atual = undefined;
   v.financas.conta = 0;
-  v.financas.reserva = 0;
+  v.financas.investimentos = [];
   return v;
 }
 
@@ -45,11 +45,11 @@ describe('dinheiro com consequência', () => {
     expect(v.financas.negativado).toBe(false);
   });
 
-  it('sem renda, sem reserva e com nome sujo há mais de um ano: despejo', () => {
+  it('aluguel atrasado há quatro meses ou mais: despejo (e a dívida do aluguel não some)', () => {
     const v = adultaSozinha();
-    v.financas.negativado = true;
-    v.fatos['negativado_desde'] = v.t - 24;
-    verificarDespejo(v);
+    v.moradia.atraso = 5;
+    processarObrigacoes(v);
+    expect(v.financas.dividas.some(d => /aluguel/.test(d.descricao))).toBe(true);
     expect(['pais', 'cedida']).toContain(v.moradia.tipo);
     expect(v.biografia[v.biografia.length - 1].texto).toMatch(/despejo/i);
   });
@@ -67,6 +67,7 @@ describe('o mundo acontece', () => {
         v.trabalho.atual!.desempenho = 60;
         // O mundo da vida-base pode já estar em crise: o teste controla os dois lados.
         v.fatos['recessao_ate'] = recessao ? v.t + 36 : 0;
+        v.economia.fase = recessao ? 'crise' : 'normal';
         v.t += 12;
         processarTrabalho(v, r);
         if (!v.trabalho.atual) demitidos++;
