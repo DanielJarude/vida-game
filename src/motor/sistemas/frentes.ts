@@ -84,8 +84,11 @@ export function praticar(v: Vida, r: Rng, d: Dominio, peso: number, qualidade = 
   const vontade = 0.75 + f.interesse / 200;
   let corpo = 1;
   if (m.categoria === 'esporte') corpo = 0.7 + v.corpo.forma / 170 - Math.max(0, 55 - v.corpo.saude) / 120;
-  // Rende menos perto do topo: 90 é raríssimo mesmo com anos de prática.
-  const teto = Math.max(0.05, 1 - f.habilidade / 104);
+  // Rende menos perto do topo. O topo de cada um sobe com a facilidade e com
+  // os anos de prática intensa: sem facilidade, a raça leva longe (70 e
+  // poucos); com facilidade e anos de treino, chega-se ao que é raro.
+  const topo = Math.min(97, 70 + apt * 18 + Math.min(12, f.meses / 24));
+  const teto = Math.max(0.03, 1 - f.habilidade / (topo + 4));
   const ganho = 7.2 * peso * velocidade * vontade * fatorIdade(d, i) * qualidade * corpo * teto * (0.8 + r.next() * 0.4);
   f.habilidade = clamp(Math.round((f.habilidade + ganho) * 10) / 10);
   f.meses += Math.round(12 * peso);

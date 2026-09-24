@@ -271,8 +271,8 @@ export const SISTEMICOS: Conteudo[] = [
     ]
   },
   {
-    id: 'esc_largar', tipo: 'decisao', idade: [15, 17], tema: 'escola', repetir: 1,
-    quando: c => !!c.v.educacao.basica && (c.v.educacao.basica.reprovacoes >= 2 || (['vulneravel'].includes(c.v.origem.classe) && c.v.educacao.basica.desempenho < 45) || (!!c.v.trabalho.atual && c.v.trabalho.atual.carga === 'integral')),
+    id: 'esc_largar', tipo: 'decisao', idade: [15, 17], tema: 'escola', repetir: 1, prioritario: true,
+    quando: c => !!c.v.educacao.basica && c.v.educacao.basica.etapa !== 'fundamental1' && (c.v.educacao.basica.reprovacoes >= 2 || (['vulneravel', 'trabalhadora'].includes(c.v.origem.classe) && c.v.educacao.basica.desempenho < 42) || (!!c.v.trabalho.atual && c.v.trabalho.atual.carga === 'integral')),
     titulo: 'A escola ou o resto',
     texto: c => c.v.trabalho.atual
       ? 'O trabalho ocupa o dia; a escola, a noite. Você chega na aula dormindo, e a matéria não entra.'

@@ -115,7 +115,7 @@ function anoDoProjeto(v: Vida, r: Rng, p: ProjetoArtistico): void {
   const cena = forcaDoSetor(v.moradia.municipioId, 'criativo', anoDe(v.t));
   const n = ensaiando?.nivel ?? 0;
   // Público cresce devagar e cansa de quem para.
-  const delta = n === 0 ? -8 : (h - 45) / 9 + (n >= 3 ? 3 : 0) + (cena - 1) * 6 + v.personalidade.tracos.sociabilidade / 50 + r.normal() * 4 - p.publico / 18;
+  const delta = n === 0 ? -8 : (h - 50) / 10 + (n >= 3 ? 2 : 0) + (cena - 1) * 6 + v.personalidade.tracos.sociabilidade / 50 + r.normal() * 4 - p.publico / 14;
   p.publico = Math.round(clamp(p.publico + delta, 0, 100));
   // Marcos de quem insiste.
   if (p.publico >= 20 && !temFato(v, `show_pago_${p.nome}`) && r.chance(0.5)) {
@@ -132,9 +132,9 @@ function anoDoProjeto(v: Vida, r: Rng, p: ProjetoArtistico): void {
   }
   // Um convite para viver disso: raro, e só para quem construiu.
   const oc = p.linguagem === 'musica' ? 'musico_profissional' : p.linguagem === 'teatro' ? (p.publico >= 80 && h >= 75 && cena > 1.2 ? 'ator_reconhecido' : 'ator') : 'bailarino';
-  const minimoH = p.linguagem === 'musica' ? 68 : p.linguagem === 'teatro' ? 58 : 72;
-  if (h >= minimoH && p.publico >= (p.linguagem === 'teatro' ? 38 : 52) && v.trabalho.atual?.ocupacaoId !== oc && !(p.linguagem === 'danca' && i > 27)
-    && (v.caminhos.ultimas['convite_arte'] === undefined || v.t - v.caminhos.ultimas['convite_arte'] >= 36) && r.chance(clamp((p.publico - 45) / 120 + (h - minimoH) / 150, 0.02, 0.3))) {
+  const minimoH = p.linguagem === 'musica' ? 78 : p.linguagem === 'teatro' ? 68 : 78;
+  if (h >= minimoH && p.publico >= (p.linguagem === 'teatro' ? 58 : 72) && v.trabalho.atual?.ocupacaoId !== oc && !(p.linguagem === 'danca' && i > 27)
+    && (v.caminhos.ultimas['convite_arte'] === undefined || v.t - v.caminhos.ultimas['convite_arte'] >= 36) && r.chance(clamp((p.publico - 66) / 300 + (h - minimoH) / 350, 0.01, 0.045))) {
     novaOportunidade(v, {
       tipo: 'convite', ocupacaoId: oc, dominio: p.linguagem, meses: 12, chave: 'convite_arte',
       titulo: p.linguagem === 'musica' ? 'Um convite para viver de música' : p.linguagem === 'teatro' ? 'Um papel' : 'Uma audição',

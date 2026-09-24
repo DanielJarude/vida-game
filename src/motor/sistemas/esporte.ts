@@ -87,9 +87,9 @@ export function processarEsporte(v: Vida, r: Rng): void {
     const ultimaPeneira = v.caminhos.ultimas[`peneira_${mod.d}`];
     const tentativas = v.fatos[`peneiras_${mod.d}`] ?? 0;
     const janela = mod.d === 'futebol' ? i >= 11 && i <= 17 : i >= 12 && i <= 18;
-    if (janela && h >= 46 && tentativas < 3 && (ultimaPeneira === undefined || v.t - ultimaPeneira >= 24)) {
+    if (janela && h >= 42 && tentativas < 3 && (ultimaPeneira === undefined || v.t - ultimaPeneira >= 24)) {
       const serio = mod.nivel >= 2 ? 1 : 0.35;
-      const chance = clamp((h - 44) / 50, 0, 0.55) * serio * (0.55 + estruturaEsportiva(v.moradia.municipioId) * 0.2);
+      const chance = clamp((h - 36) / 32, 0, 0.6) * serio * (0.6 + estruturaEsportiva(v.moradia.municipioId) * 0.15);
       if (r.chance(chance)) {
         const lugar = ondeTreina(v);
         const clube = nomeDeClube(lugar, `${v.id}:${i}`, mod.d);
@@ -112,7 +112,7 @@ export function processarEsporte(v: Vida, r: Rng): void {
 export function fazerPeneira(v: Vida, r: Rng, d: Dominio, ajuste: number): boolean {
   const h = habilidade(v, d);
   v.fatos[`peneiras_${d}`] = (v.fatos[`peneiras_${d}`] ?? 0) + 1;
-  const chance = clamp((h - 60) / 26 + ajuste, 0.02, 0.8);
+  const chance = clamp((h - 58) / 27 + ajuste, 0.02, 0.75);
   const passou = r.chance(chance);
   if (!passou) marcar(v, 'fracasso', `Não passou na ${d === 'futebol' ? 'peneira' : 'seletiva'} (${NOME_MOD[d]}).`, 2, { dominio: d });
   return passou;
@@ -145,8 +145,8 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   }
   // Contrato profissional: só para quem segue evoluindo.
   const idadeContrato = e.modalidade === 'futebol' ? [17, 20] : [17, 22];
-  const limiar = e.modalidade === 'futebol' ? 77 : 79;
-  if (i >= idadeContrato[0] && i <= idadeContrato[1] && h >= limiar && r.chance(clamp((h - limiar + 3) / 14, 0.1, 0.8))) {
+  const limiar = e.modalidade === 'futebol' ? 79 : 82;
+  if (i >= idadeContrato[0] && i <= idadeContrato[1] && h >= limiar && r.chance(clamp((h - limiar + 2) / 16, 0.08, 0.6))) {
     const nivel = nivelPelaHabilidade(h);
     novaOportunidade(v, {
       tipo: 'convite', ocupacaoId: e.modalidade === 'futebol' ? 'jogador_futebol' : 'atleta', dominio: e.modalidade, meses: 12, chave: 'contrato_esporte',
@@ -157,7 +157,7 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     return;
   }
   // Dispensa: o destino da maioria.
-  const risco = clamp(0.3 - (h - 66) / 45 + e.lesoes * 0.05 + (i > idadeContrato[1] ? 0.5 : 0), 0.04, 0.95);
+  const risco = clamp(0.4 - (h - 72) / 40 + e.lesoes * 0.05 + (i > idadeContrato[1] ? 0.5 : 0), 0.1, 0.95);
   if (anos >= 1 && r.chance(risco)) encerrarCarreira(v, e, 'dispensa');
 }
 

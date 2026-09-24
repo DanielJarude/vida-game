@@ -92,7 +92,11 @@ export function processarNegocio(v: Vida): boolean {
   if (!n || n.estado === 'fechado') return false;
   const e = v.trabalho.atual;
   if (!e || e.ocupacaoId !== n.ocupacaoId) {
-    fecharNegocio(v, 'o movimento não pagou as contas');
+    const ultimo = v.trabalho.historico[v.trabalho.historico.length - 1];
+    const motivo = ultimo?.ocupacaoId === n.ocupacaoId && ultimo.motivo === 'falta de clientela' ? 'o movimento não pagou as contas'
+      : ultimo?.ocupacaoId === n.ocupacaoId && ultimo.motivo === 'mudança de cidade' ? 'a mudança de cidade levou você para longe do ponto'
+        : 'você foi seguir outro caminho';
+    fecharNegocio(v, motivo);
     return false;
   }
   n.clientela = e.clientela ?? n.clientela;

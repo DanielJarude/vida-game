@@ -254,19 +254,19 @@ export const OCUPACOES: readonly Ocupacao[] = [
 
   // -------------------------------------------------------- Música, cena e dança
   o({ id: 'musico_noite', nome: ['músico da noite', 'musicista da noite'], trilha: 'musica', setor: 'criativo', nivel: 2, salario: 2300, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, habilidade: { dominio: 'musica', minimo: 52 }, oferta: 0, estresse: 3, promocao: 'clientela' }),
-  o({ id: 'professor_musica', nome: ['professor de música', 'professora de música'], trilha: 'musica', setor: 'educacao', nivel: 3, salario: 2900, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, habilidade: { dominio: 'musica', minimo: 62 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
+  o({ id: 'professor_musica', nome: ['professor de música', 'professora de música'], trilha: 'ensino_musica', setor: 'educacao', nivel: 3, salario: 2900, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, habilidade: { dominio: 'musica', minimo: 62 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
   o({ id: 'musico_profissional', nome: ['músico profissional', 'musicista profissional'], trilha: 'musica', setor: 'criativo', nivel: 4, salario: 6500, contrato: 'autonomo', carga: 'integral', idadeMin: 18, habilidade: { dominio: 'musica', minimo: 70 }, entrada: 'oportunidade', oferta: 1, estresse: 4, jornada: 'fora', promocao: 'clientela' }),
   o({ id: 'musico_orquestra', nome: ['músico de orquestra', 'musicista de orquestra'], trilha: 'orquestra', setor: 'criativo', nivel: 4, salario: 8200, contrato: 'servidor', carga: 'integral', idadeMin: 18, habilidade: { dominio: 'musica', minimo: 80 }, concurso: true, oferta: 2, estresse: 3, promocao: 'antiguidade' }),
   o({ id: 'produtor_musical', nome: ['produtor musical', 'produtora musical'], trilha: 'musica', setor: 'criativo', nivel: 4, salario: 5200, contrato: 'autonomo', carga: 'integral', idadeMin: 22, habilidade: { dominio: 'musica', minimo: 62 }, experiencia: 36, oferta: 1, estresse: 3, promocao: 'clientela' }),
   o({ id: 'ator', nome: ['ator', 'atriz'], trilha: 'cena', setor: 'criativo', nivel: 3, salario: 2600, contrato: 'autonomo', carga: 'integral', idadeMin: 16, habilidade: { dominio: 'teatro', minimo: 58 }, entrada: 'oportunidade', oferta: 1, estresse: 4, promocao: 'clientela' }),
   o({ id: 'ator_reconhecido', nome: ['ator conhecido', 'atriz conhecida'], trilha: 'cena', setor: 'criativo', nivel: 5, salario: 15000, contrato: 'autonomo', carga: 'integral', idadeMin: 20, habilidade: { dominio: 'teatro', minimo: 75 }, entrada: 'oportunidade', oferta: 3, estresse: 4 }),
-  o({ id: 'professor_danca', nome: ['professor de dança', 'professora de dança'], trilha: 'danca', setor: 'educacao', nivel: 3, salario: 2600, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, habilidade: { dominio: 'danca', minimo: 60 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
+  o({ id: 'professor_danca', nome: ['professor de dança', 'professora de dança'], trilha: 'ensino_danca', setor: 'educacao', nivel: 3, salario: 2600, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, habilidade: { dominio: 'danca', minimo: 60 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
   o({ id: 'bailarino', nome: ['bailarino profissional', 'bailarina profissional'], trilha: 'danca', setor: 'criativo', nivel: 4, salario: 4200, contrato: 'clt', carga: 'integral', idadeMin: 17, habilidade: { dominio: 'danca', minimo: 72 }, entrada: 'oportunidade', oferta: 2, estresse: 4 }),
 
   // ------------------------------------------------------------- Esporte
   o({ id: 'jogador_futebol', nome: ['jogador de futebol', 'jogadora de futebol'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 3200, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Lei Pelé (9.615/1998): contrato especial de trabalho desportivo, com prazo.' }),
   o({ id: 'atleta', nome: ['atleta profissional', 'atleta profissional'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 2800, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora' }),
-  o({ id: 'treinador_escolinha', nome: ['treinador de escolinha', 'treinadora de escolinha'], trilha: 'treino', setor: 'esporte', nivel: 2, salario: 2200, contrato: 'autonomo', carga: 'parcial', idadeMin: 20, habilidade: { dominio: 'futebol', minimo: 55 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
+  o({ id: 'treinador_escolinha', nome: ['treinador de escolinha', 'treinadora de escolinha'], trilha: 'treino', setor: 'esporte', nivel: 2, salario: 2200, contrato: 'autonomo', carga: 'parcial', idadeMin: 22, habilidade: { dominio: 'futebol', minimo: 62 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
   o({ id: 'auxiliar_tecnico', nome: ['auxiliar técnico', 'auxiliar técnica'], trilha: 'treino', setor: 'esporte', nivel: 4, salario: 6500, contrato: 'clt', carga: 'integral', idadeMin: 28, entrada: 'oportunidade', oferta: 1, estresse: 4, jornada: 'fora' }),
   o({ id: 'arbitro', nome: ['árbitro de futebol', 'árbitra de futebol'], trilha: 'arbitragem', setor: 'esporte', nivel: 2, salario: 1800, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, area: ['arbitragem'], nivelCurso: 'livre', escolaridade: 'medio', forma: 55, oferta: 1, estresse: 4 }),
   o({ id: 'personal', nome: ['personal trainer', 'personal trainer'], trilha: 'educacao_fisica', setor: 'esporte', nivel: 3, salario: 3800, contrato: 'autonomo', carga: 'integral', idadeMin: 22, area: ['educacao_fisica'], nivelCurso: 'superior', oferta: 0, estresse: 2, promocao: 'clientela', fundamento: 'Lei 9.696/1998: profissional de Educação Física exige graduação e CREF.' }),
@@ -334,7 +334,7 @@ export const AFINS: Record<string, string[]> = {
   construcao: ['manutencao'], atleta: ['treino'], treino: ['atleta', 'educacao_fisica'],
   enfermagem: ['cuidado', 'saude_publica'], cuidado: ['enfermagem'], ti: ['dados'], dados: ['ti', 'financas'],
   design: ['ilustracao', 'imagem'], ilustracao: ['design'], imagem: ['design', 'conteudo'], conteudo: ['imagem', 'comunicacao'],
-  comunicacao: ['conteudo', 'literatura'], musica: ['orquestra'], orquestra: ['musica'],
+  comunicacao: ['conteudo', 'literatura'], musica: ['orquestra', 'ensino_musica'], orquestra: ['musica', 'ensino_musica'], ensino_musica: ['musica'], danca: ['ensino_danca'], ensino_danca: ['danca'],
   exercito_praca: ['exercito_sargento', 'pm', 'vigilancia', 'guarda'], pm: ['guarda', 'vigilancia'], guarda: ['pm', 'vigilancia'],
   agro: ['campo', 'veterinaria'], campo: ['agro'], educacao: ['ensino_tecnico', 'idiomas'], publico: ['administrativo']
 };
@@ -350,7 +350,7 @@ export const ROTULO_TRILHA: Record<string, string> = {
   manutencao: 'manutenção', eletrica: 'elétrica', mecanica: 'mecânica', industria: 'indústria', tecnico_industrial: 'indústria (técnica)',
   seguranca_trabalho: 'segurança do trabalho', agro: 'agropecuária', campo: 'produção rural', design: 'design', ilustracao: 'ilustração',
   artesanato: 'artesanato', imagem: 'fotografia e vídeo', comunicacao: 'comunicação', conteudo: 'internet', literatura: 'literatura',
-  musica: 'música', orquestra: 'música de orquestra', cena: 'teatro e audiovisual', danca: 'dança', atleta: 'esporte profissional',
+  musica: 'música', orquestra: 'música de orquestra', ensino_musica: 'ensino de música', cena: 'teatro e audiovisual', danca: 'dança', ensino_danca: 'ensino de dança', atleta: 'esporte profissional',
   treino: 'treino esportivo', arbitragem: 'arbitragem', vigilancia: 'segurança privada', exercito_praca: 'Exército',
   exercito_sargento: 'Exército', exercito_oficial: 'Exército', pm: 'Polícia Militar', bombeiro: 'Corpo de Bombeiros', guarda: 'guarda municipal',
   policia_civil: 'Polícia Civil', financas: 'finanças', publico: 'serviço público', judiciario: 'Judiciário', fiscal: 'fiscalização'

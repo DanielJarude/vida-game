@@ -21,7 +21,7 @@ import { contratar, degrausAcima, elegibilidade, encerrarEmprego, experienciaNaT
 import { OCUPACOES, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { curso, CURSOS } from '../dados/cursos';
 import { capitalDoEstado } from '../sistemas/escola';
-import { mediaEscolar, habilidade } from '../sistemas/frentes';
+import { habilidade } from '../sistemas/frentes';
 import { marcar } from '../sistemas/marcas';
 import { abrirNegocio, fecharNegocio, NEGOCIOS } from '../sistemas/negocio';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
@@ -41,9 +41,17 @@ function melhorEntrada(c: Ctx) {
     .sort((a, b) => (b.d.chance ?? 0) * (1 + b.oc.salario / 8000) - (a.d.chance ?? 0) * (1 + a.oc.salario / 8000))[0]?.oc;
 }
 
+/**
+ * Trabalho por conta ao alcance: não há entrevista, então conta o requisito,
+ * não a chance — e só o que tem a ver com a vida da pessoa (estrada na
+ * área, ofício aprendido ou formação). Ninguém vira diarista "por conta" por
+ * acaso depois de trinta anos de auditoria.
+ */
 function autonomoPossivel(c: Ctx) {
+  const areas = new Set(c.v.educacao.concluidos.map(x => x.area));
   return OCUPACOES.filter(oc => porContaPropria(oc) && oc.promocao === 'clientela')
-    .filter(oc => elegibilidade(c.v, oc).grau === 'permitido')
+    .filter(oc => (c.v.trabalho.experiencia[oc.trilha] ?? 0) >= 24 || (!!oc.habilidade && habilidade(c.v, oc.habilidade.dominio) >= oc.habilidade.minimo) || !!oc.area?.some(a => areas.has(a)))
+    .filter(oc => { const d = elegibilidade(c.v, oc); return d.grau === 'permitido' || d.grau === 'improvavel'; })
     .sort((a, b) => b.salario - a.salario)[0];
 }
 
@@ -232,14 +240,14 @@ export const CAMINHOS: Conteudo[] = [
     texto: c => `Currículo enviado para tudo quanto é lugar. ${c.v.rotinas.some(r => r.id === 'bico') ? 'Os bicos seguram parte das contas.' : 'As contas chegam do mesmo jeito.'} ${parceiro(c.v) ? `${parceiro(c.v)!.p.nome} pergunta, com cuidado, o que você pensa fazer.` : ''}`,
     opcoes: [
       { id: 'qualquer', texto: 'Aceitar o que aparecer', disponivel: c => (melhorEntrada(c) ? true : 'Nem isso apareceu por aqui.'),
-        resolver: c => { const oc = melhorEntrada(c)!; return { texto: `Você aceitou a primeira vaga que disse sim: ${nomeOcupacao(c.v, oc)}.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'necessidade'); escrever(c.v, { texto: `${textoDeContratacao(c.v, oc, e)} Abaixo do que esperava, acima de nada.`, relevancia: 'marco', tema: 'trabalho' }); } }; } },
+        resolver: c => { const oc = melhorEntrada(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: `Você aceitou a primeira vaga que disse sim: ${nomeOcupacao(c.v, oc)}.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'necessidade'); escrever(c.v, { texto: `${textoDeContratacao(c.v, oc, e)} Abaixo do que esperava, acima de nada.`, relevancia: 'marco', tema: 'trabalho' }); } }; } },
       { id: 'estudar', texto: 'Voltar a estudar', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Um curso técnico, uma qualificação, uma faculdade à noite: você foi ver o que cabia.', memoria: 'Desempregado, decidiu voltar a estudar.'.replace('Desempregado', c.g('Desempregado', 'Desempregada', 'Desempregade')), efeito: () => fato(c, 'plano_estudar') }) },
       { id: 'cidade', texto: 'Tentar a vida numa cidade maior', comportamento: { coragem: 1 },
         disponivel: c => (nivelDeOferta(c.v.moradia.municipioId) >= 2 ? false : c.v.financas.conta + c.v.financas.reserva >= custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)) ? true : 'Não há dinheiro nem para a mudança.'),
         resolver: c => ({ texto: 'Uma mala, um endereço de conhecido, a rodoviária de madrugada.', memoria: null, efeito: () => { const d = capitalDoEstado(c.v.moradia.municipioId); c.v.financas.conta -= custoDeMudanca(c.v.moradia.municipioId, d); mudarAgora(c.v, d, 'atrás de trabalho'); marcar(c.v, 'mudanca_cidade', `Mudou-se para ${municipio(d).nome} atrás de trabalho.`, 2); marcarFato(c.v, 'mudou_por_trabalho'); } }) },
       { id: 'conta', texto: 'Trabalhar por conta', disponivel: c => (autonomoPossivel(c) ? true : false),
-        resolver: c => { const oc = autonomoPossivel(c)!; return { texto: `Você imprimiu uns cartões e avisou todo mundo: ${nomeOcupacao(c.v, oc)}, atende em casa.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'por_conta'); escrever(c.v, { texto: textoDeContratacao(c.v, oc, e), relevancia: 'marco', tema: 'trabalho' }); } }; } },
+        resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: `Você imprimiu uns cartões e avisou todo mundo: ${nomeOcupacao(c.v, oc)}, atende em casa.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'por_conta'); escrever(c.v, { texto: textoDeContratacao(c.v, oc, e), relevancia: 'marco', tema: 'trabalho' }); } }; } },
       { id: 'procurar', texto: 'Continuar procurando', resolver: () => ({ texto: 'Mais um mês de currículo. Mais um.', memoria: null }) }
     ]
   },
@@ -258,6 +266,54 @@ export const CAMINHOS: Conteudo[] = [
     ]
   },
 
+  /* ============================================== O TRABALHO ACONTECE (mundo) */
+  {
+    id: 'car_reconhecimento', tipo: 'acontecimento', idade: [20, 64], tema: 'trabalho', repetir: 6, peso: 3,
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
+    narrar: c => {
+      const e = c.v.trabalho.atual!;
+      const texto = c.r.pick([
+        `Na reunião de fim de ano, ${e.empregador.replace(/^(uma|um|a|o) /, 'a chefia de ')} citou o seu trabalho como exemplo. O nome entrou na conversa da próxima promoção.`,
+        'Um projeto difícil saiu bem por sua causa, e todo mundo ficou sabendo.',
+        'Passaram a mandar os casos mais complicados direto para você.'
+      ]);
+      return { texto, relevancia: 'biografia', tom: 'bom', efeito: () => { fato(c, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); feliz(c, 3); } };
+    }
+  },
+  {
+    id: 'car_novato', tipo: 'acontecimento', idade: [30, 64], tema: 'trabalho', repetir: 10, peso: 2,
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela === undefined && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
+    narrar: c => ({ texto: c.r.pick(['Puseram um novato para aprender o serviço com você. Na primeira semana, você se viu repetindo frases que ouviu vinte anos atrás.', 'Uma estagiária nova passou a andar atrás de você com um caderninho.', 'Chamaram você para treinar a turma que acabava de entrar.']), relevancia: 'biografia', efeito: () => { const f = c.v.caminhos.frentes.lideranca; if (f) f.interesse = clamp(f.interesse + 5); } })
+  },
+  {
+    id: 'car_automacao', tipo: 'acontecimento', idade: [18, 64], tema: 'trabalho', repetir: 8,
+    quando: c => { const e = c.v.trabalho.atual; const oc = e && ocupacao(e.ocupacaoId); return !!oc?.declinio && anoDe(c.v.t) >= oc.declinio; },
+    narrar: c => ({ texto: ocupacao(c.v.trabalho.atual!.ocupacaoId).trilha === 'comercio' ? 'Chegaram os caixas de autoatendimento. Metade da equipe foi remanejada; a outra metade, dispensada.' : 'A linha ganhou máquinas novas que fazem sozinhas o que três pessoas faziam. Os colegas passaram a contar quem sobraria.', relevancia: 'biografia', tom: 'ruim', efeito: () => estresse(c, 6) })
+  },
+  {
+    id: 'car_curso_empresa', tipo: 'acontecimento', idade: [20, 58], tema: 'trabalho', repetir: 7,
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && e.desempenho >= 55 && c.r.chance(0.5); },
+    narrar: c => {
+      const oc = ocupacao(c.v.trabalho.atual!.ocupacaoId);
+      return { texto: c.r.pick([`A empresa pagou um curso de atualização em ${ROTULO_TRILHA[oc.trilha] ?? 'na área'}. Três semanas de aula à noite.`, 'Veio uma certificação nova obrigatória; a turma inteira estudou junta nas sextas.', 'Um sistema novo chegou ao trabalho. Quem aprendeu primeiro virou referência.']), relevancia: 'cotidiano', efeito: () => { const e = c.v.trabalho.atual!; e.desempenho = clamp(e.desempenho + 4); } };
+    }
+  },
+  {
+    id: 'aut_cliente_grande', tipo: 'acontecimento', idade: [20, 75], tema: 'trabalho', repetir: 6, peso: 2,
+    quando: c => { const e = c.v.trabalho.atual; return !!e && (e.clientela ?? 0) >= 45; },
+    narrar: c => ({ texto: c.r.pick(['Um cliente grande fechou com você e indicou outros três.', 'Um mês de agenda cheia por causa de um único cliente satisfeito que falou bem de você.', 'Apareceu um trabalho grande, desses que pagam o ano. Deu conta.']), relevancia: 'biografia', tom: 'bom', efeito: () => { const e = c.v.trabalho.atual!; e.clientela = clamp((e.clientela ?? 40) + 6); c.v.financas.conta += Math.round(e.salario * 1.5); } })
+  },
+  {
+    id: 'aut_mes_fraco', tipo: 'acontecimento', idade: [20, 75], tema: 'trabalho', repetir: 5,
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela !== undefined && (e.clientela < 35 || c.r.chance(0.3)); },
+    narrar: c => ({ texto: c.r.pick(['Três meses fracos seguidos. Você aprendeu a guardar dinheiro nos meses bons.', 'Um cliente antigo sumiu sem pagar.', 'Apareceu concorrência na mesma rua, cobrando mais barato.']), relevancia: 'cotidiano', tom: 'ruim', efeito: () => { const e = c.v.trabalho.atual!; e.clientela = clamp((e.clientela ?? 30) - 5); } })
+  },
+  {
+    id: 'car_vendas_meta', tipo: 'acontecimento', idade: [18, 64], tema: 'trabalho', repetir: 5,
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['comercio', 'vendas'].includes(ocupacao(e.ocupacaoId).trilha) && habilidade(c.v, 'vendas') >= 50 && e.desempenho >= 60; },
+    narrar: c => ({ texto: 'Bateu a meta do ano antes de novembro. A comissão pagou as férias.', relevancia: 'cotidiano', tom: 'bom', efeito: () => { c.v.financas.conta += Math.round(c.v.trabalho.atual!.salario * 1.2); } })
+  },
+
   /* ========================================================= APOSENTADORIA */
   {
     id: 'apo_segunda_feira', tipo: 'decisao', idade: [50, 90], tema: 'trabalho', prioritario: true, prioridade: 2,
@@ -266,11 +322,11 @@ export const CAMINHOS: Conteudo[] = [
     texto: c => `O despertador tocou por costume e você não tinha para onde ir. ${c.v.trabalho.historico.length ? `Foram muitos anos de ${ROTULO_TRILHA[ocupacao(c.v.trabalho.historico[c.v.trabalho.historico.length - 1].ocupacaoId).trilha] ?? 'trabalho'}.` : ''} O dia inteiro pela frente.`,
     opcoes: [
       { id: 'antiga', texto: c => { const d = frenteAntiga(c); return d ? `Voltar a ${VERBOS[d] ?? 'fazer o que fazia'}` : 'Voltar a uma coisa antiga'; }, disponivel: c => (frenteAntiga(c) ? true : false),
-        resolver: c => { const d = frenteAntiga(c)!; return { texto: 'As mãos lembraram antes da cabeça.', memoria: `Aposentado, voltou a ${VERBOS[d] ?? 'praticar'}.`.replace('Aposentado', c.g('Aposentado', 'Aposentada', 'Aposentade')), efeito: () => { if (!c.v.rotinas.some(r => r.id === d)) c.v.rotinas.push({ id: d, tInicio: c.v.t, nivel: 1 }); marcar(c.v, 'retomada', `Voltou a ${VERBOS[d] ?? 'praticar'} depois de aposentar.`, 2, { dominio: d as never }); } }; } },
+        resolver: c => { const d = frenteAntiga(c); if (!d) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: 'As mãos lembraram antes da cabeça.', memoria: `Aposentado, voltou a ${VERBOS[d] ?? 'praticar'}.`.replace('Aposentado', c.g('Aposentado', 'Aposentada', 'Aposentade')), efeito: () => { if (!c.v.rotinas.some(r => r.id === d)) c.v.rotinas.push({ id: d, tInicio: c.v.t, nivel: 1 }); marcar(c.v, 'retomada', `Voltou a ${VERBOS[d] ?? 'praticar'} depois de aposentar.`, 2, { dominio: d as never }); } }; } },
       { id: 'voluntario', texto: 'Oferecer o que sabe como voluntário', comportamento: { generosidade: 1 },
         resolver: c => ({ texto: 'A associação do bairro aceitou na hora. Tinha fila de coisas para fazer.', memoria: null, efeito: () => { if (!c.v.rotinas.some(r => r.id === 'voluntariado')) c.v.rotinas.push({ id: 'voluntariado', tInicio: c.v.t, nivel: 1 }); } }) },
       { id: 'conta', texto: 'Continuar trabalhando por conta', disponivel: c => (autonomoPossivel(c) ? true : false),
-        resolver: c => { const oc = autonomoPossivel(c)!; return { texto: 'Aposentado no papel; na agenda, nem tanto.'.replace('Aposentado', c.g('Aposentado', 'Aposentada', 'Aposentade')), memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'aposentado'); e.posAposentadoria = true; escrever(c.v, { texto: `Depois de aposentar, seguiu trabalhando por conta como ${nomeOcupacao(c.v, oc)}.`, relevancia: 'biografia', tema: 'trabalho' }); } }; } },
+        resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: 'Aposentado no papel; na agenda, nem tanto.'.replace('Aposentado', c.g('Aposentado', 'Aposentada', 'Aposentade')), memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'aposentado'); e.posAposentadoria = true; escrever(c.v, { texto: `Depois de aposentar, seguiu trabalhando por conta como ${nomeOcupacao(c.v, oc)}.`, relevancia: 'biografia', tema: 'trabalho' }); } }; } },
       { id: 'descansar', texto: 'Descansar, sem plano', resolver: c => ({ texto: 'Café sem pressa, jornal inteiro, cochilo depois do almoço. Por enquanto, basta.', memoria: null, efeito: () => feliz(c, 3) }) }
     ]
   }
@@ -310,7 +366,8 @@ function cursosDoIf(c: Ctx) {
 
 function selecaoIf(c: Ctx, k: number) {
   const cc = cursosDoIf(c)[k];
-  const chance = clamp(0.12 + (mediaEscolar(c.v) - 40) / 45 + (c.v.educacao.postura === 'dedicada' ? 0.08 : 0), 0.05, 0.8);
+  // A prova compara com quem está na mesma série: vai bem quem vai bem na escola.
+  const chance = clamp(0.3 + ((c.v.educacao.basica?.desempenho ?? 50) - 55) / 40 + (c.v.educacao.postura === 'dedicada' ? 0.08 : 0), 0.05, 0.8);
   if (c.r.chance(chance) && c.v.educacao.basica) {
     return {
       texto: `Passou. Em fevereiro, começa o médio integrado em ${cc.nome.replace(/^Técnico em /, '')}.`,

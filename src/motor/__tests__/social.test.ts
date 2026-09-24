@@ -28,7 +28,10 @@ import type { Genero, Pessoa, Vida, Vinculo } from '../tipos';
 
 /** Uma vida adulta, sem romance nenhum (o cenário acrescenta o que precisar). */
 function adulto(i: number, o: { semente?: number; genero?: Genero } = {}): Vida {
-  const v = viverAte(nova({ semente: o.semente ?? 11, genero: o.genero ?? 'feminino' }), i);
+  // Um adulto VIVO na idade pedida: se a vida da semente terminou antes, tenta a próxima.
+  let s = o.semente ?? 11;
+  let v = viverAte(nova({ semente: s, genero: o.genero ?? 'feminino' }), i);
+  while (v.morte) v = viverAte(nova({ semente: ++s, genero: o.genero ?? 'feminino' }), i);
   v.momento = null;
   for (const vin of Object.values(v.vinculos)) if (vin.romance) vin.romance = undefined;
   // Sai da casa dos pais, para os cenários adultos serem de quem já tem casa.

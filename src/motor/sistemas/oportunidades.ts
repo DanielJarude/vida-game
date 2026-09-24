@@ -27,6 +27,7 @@ import { contratar, elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPr
 import { mediaEscolar } from './frentes';
 import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
+import { voltarAEstudar } from './escola';
 import { anoDe } from '../tempo';
 import { flex, ge } from '../texto';
 
@@ -148,6 +149,20 @@ export function processarOportunidades(v: Vida, r: Rng): void {
     novaOportunidade(v, { tipo: 'selecao_tecnico', meses: 12, chave: 'selecao_tecnico', titulo: 'Seleção do instituto federal', texto: `O instituto federal ${nivelDeOferta(v.moradia.municipioId) >= 1 ? 'da cidade' : 'da região'} abriu a prova para o ensino médio integrado ao técnico: três anos, dia inteiro, e um diploma de técnico junto com o do médio.` });
   }
 
+  // Ensinar o ofício: quem tem técnico e muitos anos de estrada vira instrutor.
+  if (i >= 32 && i <= 62 && podeGerar(v, 'instrutor', 8) && v.trabalho.atual?.ocupacaoId !== 'instrutor_tecnico') {
+    const oc = ocupacao('instrutor_tecnico');
+    const d = elegibilidade(v, oc);
+    if ((d.grau === 'permitido' || d.grau === 'improvavel') && r.chance(0.15)) {
+      novaOportunidade(v, { tipo: 'vaga', ocupacaoId: oc.id, meses: 12, chave: 'instrutor', bonus: 0.3, titulo: 'Ensinar o ofício', texto: 'A escola técnica da cidade procura instrutores com muitos anos de prática. Alguém lembrou do seu nome.' });
+    }
+  }
+
+  // Quem largou a escola: a EJA à noite.
+  if (v.educacao.evadiu && !b && i >= 18 && i <= 60 && podeGerar(v, 'eja', 5) && r.chance(0.3)) {
+    novaOportunidade(v, { tipo: 'convite', meses: 12, chave: 'eja', titulo: 'Terminar a escola', texto: 'A escola do bairro abriu turma de EJA à noite: dá para terminar o ensino que ficou pela metade, sem largar o trabalho.' });
+  }
+
   // Pesquisa depois do doutorado.
   if (v.educacao.concluidos.some(c => c.nivel === 'doutorado') && semTrabalho(v) && podeGerar(v, 'posdoc', 3) && r.chance(0.5)) {
     novaOportunidade(v, { tipo: 'bolsa', ocupacaoId: 'pesquisador', meses: 12, chave: 'posdoc', titulo: 'Bolsa de pesquisa', texto: 'Um programa de pós-graduação abriu bolsa de pós-doutorado na sua área. Dois anos de pesquisa, sem vínculo.' });
@@ -231,6 +246,7 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       v.fatos['peneira_lugar'] = municipioIndex(o.municipioId ?? v.moradia.municipioId);
       return { texto: '', decisao: 'esp_peneira' };
     case 'convite': {
+      if (!oc && v.educacao.evadiu && !v.educacao.basica && o.titulo === 'Terminar a escola') { voltarAEstudar(v); return { texto: 'Caderno novo, turma cansada e adulta, aula das sete às dez.', tom: 'bom' }; }
       if (!oc) return { texto: 'O convite não se confirmou.' };
       if (oc.id === 'jogador_futebol' || oc.id === 'atleta') { v.fatos['contrato_nivel'] = o.bonus ?? 1; return { texto: '', decisao: 'esp_contrato' }; }
       const e = contratar(v, r, oc, 'oportunidade');

@@ -40,8 +40,9 @@ export const nomeOcupacaoId = (v: Vida, id: string) => nomeOcupacao(v, ocupacao(
 /** Experiência que conta numa trilha: a própria, mais metade das afins. */
 export function experienciaNaTrilha(v: Vida, trilha: string): number {
   const x = v.trabalho.experiencia;
+  // A estrada afim conta pela metade — e só até certo ponto: vinte anos de rua não fazem ninguém gerente de loja.
   const afins = (AFINS[trilha] ?? []).reduce((s, t) => s + (x[t] ?? 0), 0);
-  return (x[trilha] ?? 0) + Math.round(afins * 0.5);
+  return (x[trilha] ?? 0) + Math.min(48, Math.round(afins * 0.5));
 }
 
 const MILITARES = new Set(['exercito_praca', 'exercito_sargento', 'exercito_oficial', 'pm', 'bombeiro']);
@@ -172,7 +173,8 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   }
 
   // Experiência: requisito duro abaixo da metade; improvável entre metade e o total.
-  const exp = experienciaNaTrilha(v, oc.trilha);
+  // Para liderar, só conta a estrada na própria área: afins ajudam a entrar, não a chefiar.
+  const exp = oc.nivel >= 4 ? (v.trabalho.experiencia[oc.trilha] ?? 0) : experienciaNaTrilha(v, oc.trilha);
   let chance = chanceBase(v, oc, bonus);
   if (oc.experiencia && via !== 'promocao') {
     if (exp < oc.experiencia / 2) return bloqueio('requisito', `Pedem ${anosTxt(oc.experiencia)} de experiência na área; você tem ${anosTxt(exp)}.`);
@@ -266,13 +268,14 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   } else {
     const ultima = t.historico[t.historico.length - 1];
     const antes = ultima ? ocupacaoOuNula(ultima.ocupacaoId) : undefined;
-    if (antes && antes.setor !== oc.setor && antes.contrato !== 'estagio' && antes.contrato !== 'aprendiz' && (t.experiencia[antes.trilha] ?? 0) >= 36) {
+    const mesmaFamilia = antes && (antes.trilha === oc.trilha || (AFINS[antes.trilha] ?? []).includes(oc.trilha) || ROTULO_TRILHA[antes.trilha] === ROTULO_TRILHA[oc.trilha]);
+    if (antes && !mesmaFamilia && antes.setor !== oc.setor && antes.contrato !== 'estagio' && antes.contrato !== 'aprendiz' && (t.experiencia[antes.trilha] ?? 0) >= 36) {
       marcar(v, 'mudanca_carreira', `Deixou ${ROTULO_TRILHA[antes.trilha] ?? antes.trilha} para ${ROTULO_TRILHA[oc.trilha] ?? oc.trilha}, aos ${idade(v)}.`, 3, { trilha: oc.trilha, ocupacaoId: oc.id });
       marcarFato(v, 'mudou_de_carreira');
       v.fatos['mudancas_de_carreira'] = (v.fatos['mudancas_de_carreira'] ?? 0) + 1;
     }
   }
-  if (oc.concurso) marcar(v, 'aprovacao', `Aprovado no concurso: ${nomeOcupacao(v, oc)}.`, 3, { trilha: oc.trilha, ocupacaoId: oc.id });
+  if (oc.concurso) marcar(v, 'aprovacao', `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso: ${nomeOcupacao(v, oc)}.`, 3, { trilha: oc.trilha, ocupacaoId: oc.id });
   return e;
 }
 
@@ -359,9 +362,10 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   if (contribui(e.contrato)) t.contribuicao += 12;
   if (eMilitar(oc)) v.corpo.forma = clamp(v.corpo.forma + 4);
 
-  // Desempenho: disciplina, estresse, saúde, esforço — e o ofício, quando o trabalho é um.
+  // Desempenho: disciplina, estresse, saúde, esforço, os anos no ofício — e o ofício, quando o trabalho é um.
   const oficio = oc.habilidade ? (habilidade(v, oc.habilidade.dominio) - oc.habilidade.minimo) * 0.25 : 0;
-  const alvo = 45 + (v.mente.cognicao - 50) * 0.2 + v.personalidade.tracos.disciplina * 0.2 + oficio
+  const estrada = Math.min(8, (v.trabalho.experiencia[oc.trilha] ?? 0) / 18);
+  const alvo = 54 + estrada + (v.mente.cognicao - 50) * 0.2 + v.personalidade.tracos.disciplina * 0.25 + oficio
     + (t.horasExtras ? 10 : 0) - Math.max(0, v.mente.estresse - 65) * 0.4 - Math.max(0, 50 - v.corpo.saude) * 0.3;
   e.desempenho = clamp(Math.round(e.desempenho * 0.5 + alvo * 0.5 + r.normal() * 8));
 
@@ -388,7 +392,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
 
   // Aprendiz: contrato de no máximo dois anos.
   if (e.contrato === 'aprendiz' && v.t - e.tInicio >= 24) {
-    const efetiva = e.desempenho >= 60 && i >= 18 && r.chance(0.45);
+    const efetiva = e.desempenho >= 60 && i >= 18 && ['permitido', 'improvavel'].includes(elegibilidade(v, ocupacao('aux_adm')).grau) && r.chance(0.45);
     encerrarEmprego(v, 'fim do contrato de aprendiz');
     if (efetiva) {
       contratar(v, r, ocupacao('aux_adm'), 'efetivacao');
@@ -420,10 +424,15 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     return;
   }
 
-  // Autônomos: a freguesia cresce ou míngua.
+  // Autônomos: a freguesia cresce ou míngua. Quem trabalha por conta não é "promovido";
+  // com a clientela madura, às vezes dá um passo (abrir o próprio escritório).
   if (e.clientela !== undefined) {
     if (processarClientela(v, r, e, oc)) return;
+    if (!e.posAposentadoria) passoDeClientela(v, r, e, oc);
+    marcoDeEstrada(v, oc);
+    return;
   } else if (demissao(v, r, e, oc)) return;
+  marcoDeEstrada(v, oc);
 
   // Aposentado que voltou a trabalhar não entra na escada.
   if (e.posAposentadoria) return;
@@ -469,6 +478,38 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   return false;
 }
 
+/** Autônomo com clientela madura sobe um degrau que exista na trilha (advogado → sócio). */
+function passoDeClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
+  if ((e.clientela ?? 0) < 75 || v.t - (e.tPosto ?? e.tInicio) < 60) return;
+  const x = degrausAcima(oc).find(d => d.promocao !== 'clientela' || d.contrato === 'autonomo');
+  if (!x || elegibilidade(v, x, 'promocao').grau !== 'permitido' || !r.chance(0.2)) return;
+  const antes = nomeOcupacao(v, oc);
+  e.ocupacaoId = x.id;
+  e.tPosto = v.t;
+  e.clientela = Math.round((e.clientela ?? 50) * 0.8);
+  e.salario = rendaDeClientela(v, x, e.clientela);
+  const texto = `Com a clientela que construiu como ${antes}, passou a ${nomeOcupacao(v, x)}.`;
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+  marcar(v, 'promocao', texto, 3, { trilha: x.trilha, ocupacaoId: x.id });
+  v.fatos['promocoes'] = (v.fatos['promocoes'] ?? 0) + 1;
+}
+
+/** Anos de estrada que viram marco: dez, vinte, trinta anos na mesma área. */
+function marcoDeEstrada(v: Vida, oc: Ocupacao): void {
+  const anos = (v.trabalho.experiencia[oc.trilha] ?? 0) / 12;
+  const area = ROTULO_TRILHA[oc.trilha] ?? oc.trilha;
+  for (const alvo of [10, 20, 30]) {
+    if (anos >= alvo && anos < alvo + 1 && !temFato(v, `estrada_${oc.trilha}_${alvo}`)) {
+      marcarFato(v, `estrada_${oc.trilha}_${alvo}`);
+      const texto = alvo === 10 ? `Dez anos de ${area}. Já não é ${flex(ge(v), 'o novato', 'a novata', 'e novate')} de ninguém.`
+        : alvo === 20 ? `Vinte anos de ${area}. Muita gente aprendeu o ofício com você.`
+          : `Trinta anos de ${area}. Não há canto desse trabalho que você não conheça.`;
+      escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho' });
+      marcar(v, 'lideranca', texto, alvo === 10 ? 1 : 2, { trilha: oc.trilha });
+    }
+  }
+}
+
 function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   const i = idade(v);
   const epoca = 1 - sobraNaEpoca(oc.declinio, anoDe(v.t));
@@ -484,7 +525,7 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
     v.financas.conta += fgts + seguro;
     const motivo = e.desempenho < 35 ? 'O desempenho vinha caindo.' : epoca > 0.2 && r.chance(0.6) ? 'A função vinha sendo automatizada.' : '';
     escrever(v, { texto: e.desempenho < 35 ? `Foi ${flex(ge(v), 'demitido', 'demitida')} de ${e.empregador}, onde era ${nome}. ${motivo}` : `Foi ${flex(ge(v), 'demitido', 'demitida')} num corte de pessoal em ${e.empregador}, depois de ${anos} ${anos === 1 ? 'ano' : 'anos'} como ${nome}.${motivo ? ' ' + motivo : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
-    marcar(v, 'demissao', `Demitido de ${e.empregador} depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}.`, anos >= 5 ? 3 : 2, { trilha: oc.trilha, ocupacaoId: oc.id });
+    marcar(v, 'demissao', `${flex(ge(v), 'Demitido', 'Demitida', 'Demitide')} de ${e.empregador} depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}.`, anos >= 5 ? 3 : 2, { trilha: oc.trilha, ocupacaoId: oc.id });
   } else {
     escrever(v, { texto: `O trabalho como ${nome} minguou até acabar.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
   }
@@ -494,9 +535,15 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   return true;
 }
 
-/** O próximo degrau da trilha (quando existe). */
+/**
+ * O próximo degrau da trilha (quando existe). Promoção nunca leva para uma
+ * ocupação que só se alcança por oportunidade (viver de música, jogar
+ * profissionalmente) a partir de um trabalho comum — só dentro de uma
+ * carreira que já é assim (soldado → cabo, tenente → capitão).
+ */
 export function degrausAcima(oc: Ocupacao): Ocupacao[] {
-  return daTrilha(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && !x.formacaoInicial);
+  return daTrilha(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && !x.formacaoInicial
+    && (x.entrada !== 'oportunidade' || oc.entrada === 'oportunidade' || !!oc.formacaoInicial || eMilitar(oc)));
 }
 
 function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): void {
@@ -625,6 +672,7 @@ export function aposentar(v: Vida): void {
   const oc = e ? ocupacao(e.ocupacaoId) : undefined;
   const militar = oc && eMilitar(oc);
   const trilha = maiorTrilha(v);
+  if (v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado' && e?.ocupacaoId === v.caminhos.negocio.ocupacaoId) fecharNegocioAposentando(v);
   if (e) encerrarEmprego(v, 'aposentadoria');
   v.trabalho.desempregadoDesde = undefined;
   v.trabalho.aposentadoria = { t: v.t, beneficio };
@@ -635,6 +683,16 @@ export function aposentar(v: Vida): void {
     : `Aposentou-se depois de ${Math.floor(v.trabalho.contribuicao / 12)} anos de contribuição${vida}, com um benefício de R$ ${beneficio.toLocaleString('pt-BR')} por mês.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'aposentadoria', texto, 3, { trilha });
+}
+
+function fecharNegocioAposentando(v: Vida): void {
+  const n = v.caminhos.negocio!;
+  n.estado = 'fechado';
+  n.tFim = v.t;
+  const anos = Math.max(1, Math.round((v.t - n.tInicio) / 12));
+  const texto = `Passou ${n.nome} adiante ao se aposentar, depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}.`;
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho' });
+  marcar(v, 'negocio_fechado', texto, 2, { ocupacaoId: n.ocupacaoId });
 }
 
 /** A trilha em que a pessoa passou mais tempo. */

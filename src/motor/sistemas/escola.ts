@@ -90,8 +90,10 @@ export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?
   const postura = v.educacao.postura === 'dedicada' ? 10 : v.educacao.postura === 'relaxada' ? -10 : 0;
   const casa = (v.mente.felicidade - 50) * 0.1 - Math.max(0, v.mente.estresse - 60) * 0.25;
   const trabalhoPesa = v.trabalho.atual ? (v.trabalho.atual.carga === 'integral' ? -10 : -4) : 0;
+  // A nota compara o que a pessoa sabe com o que se espera na série (ou no curso).
   const media = materias?.length ? materias.reduce((s, m) => s + habilidade(v, m), 0) / materias.length : mediaEscolar(v);
-  const base = 24 + media * 0.5 + (v.mente.cognicao - 50) * 0.18 + d * 0.1 + postura + bonusRede + casa + trabalhoPesa + condicoesDeEstudo(v);
+  const esperado = materias?.length ? 52 : Math.min(60, Math.max(6, 5 * (idade(v) - 5)));
+  const base = 52 + (media - esperado) * 0.9 + (v.mente.cognicao - 50) * 0.18 + d * 0.1 + postura + bonusRede + casa + trabalhoPesa + condicoesDeEstudo(v);
   return clamp(Math.round(base + r.normal() * 6), 5, 100);
 }
 

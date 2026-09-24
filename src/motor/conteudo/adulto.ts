@@ -5,11 +5,11 @@ import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa, temFato, marcarFato, lembrarCom } from '../nucleo';
 import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
-import { nomeOcupacaoId, contratar, encerrarEmprego, elegibilidade } from '../sistemas/trabalho';
+import { nomeOcupacaoId, contratar, encerrarEmprego, elegibilidade, degrausAcima } from '../sistemas/trabalho';
 import { editaisAbertos } from '../sistemas/concurso';
 import { abrirNegocio, NEGOCIOS } from '../sistemas/negocio';
 import { marcar } from '../sistemas/marcas';
-import { ocupacao, OCUPACOES } from '../dados/ocupacoes';
+import { ocupacao } from '../dados/ocupacoes';
 import { mudarAgora } from '../sistemas/processos';
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
@@ -56,7 +56,7 @@ export const ADULTO: Conteudo[] = [
   },
   {
     id: 'adu_proposta_outra_cidade', tipo: 'decisao', idade: [22, 55], tema: 'trabalho', repetir: 8,
-    quando: c => empregado(c) && c.v.trabalho.atual!.contrato !== 'servidor' && c.v.trabalho.atual!.contrato !== 'militar' && !c.v.caminhos.negocio?.estado?.match(/firme|comecando|apertado/) && ocupacao(c.v.trabalho.atual!.ocupacaoId).nivel >= 2,
+    quando: c => empregado(c) && c.v.trabalho.atual!.contrato === 'clt' && !c.v.caminhos.negocio?.estado?.match(/firme|comecando|apertado/) && ocupacao(c.v.trabalho.atual!.ocupacaoId).nivel >= 2,
     titulo: 'A proposta',
     texto: c => {
       const destino = destinoDaProposta(c);
@@ -412,7 +412,8 @@ function parceriaTopa(c: Ctx): boolean {
 function mudarPorProposta(c: Ctx, destinoId: string, juntos: boolean): void {
   const e = c.v.trabalho.atual!;
   const oc = ocupacao(e.ocupacaoId);
-  const prox = OCUPACOES.find(x => x.trilha === oc.trilha && x.nivel === oc.nivel + 1 && !x.concurso && !x.entrada) ?? oc;
+  // O cargo melhor precisa caber no que a pessoa tem (formação, registro): a proposta não fura requisito.
+  const prox = degrausAcima(oc).find(x => ['permitido', 'improvavel'].includes(elegibilidade(c.v, x, 'promocao').grau)) ?? oc;
   const salario = Math.round(e.salario * 1.3 * economiaLocal(destinoId).salario / economiaLocal(c.v.moradia.municipioId).salario / 10) * 10;
   const par = P.conjuge(c.v)[0];
   marcarFato(c.v, 'mudou_por_trabalho');
