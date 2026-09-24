@@ -259,6 +259,9 @@ export function criarVida(o: OpcoesCriacao): Vida {
     vincular(v, pet, { parentesco: 'pet', origem: 'familia', proximidade: 60, convivio: ['casa'] });
   }
 
+  // O nascimento é o primeiro marco da história com os pais.
+  for (const g of [mae, pai]) if (g) v.vinculos[g.id].historia.push({ t: v.t, texto: `Você nasceu, em ${MESES[mesDe(v.t)]} de ${anoDe(v.t)}.`, tipo: 'inicio', peso: 3 });
+
   // -------------------------------------------------------- Nascimento
   escreverNascimento(v, r, { mae, pai, arranjo, irmaos: irmaosCriados, avos: avosCriados, classe });
 

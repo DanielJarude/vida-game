@@ -54,7 +54,7 @@ export function Jogo({ c }: { c: ControleVida }) {
         <button type="button" className="marca" onClick={() => setMenu(true)} aria-label="Menu">VIDA</button>
         <nav className="abas" aria-label="Seções">
           {ABAS.map(a => (
-            <button key={a.id} type="button" className={`aba${aba === a.id ? ' aba--ativa' : ''}`} aria-current={aba === a.id ? 'page' : undefined} onClick={() => setAba(a.id)}>
+            <button key={a.id} type="button" className={`aba${aba === a.id ? ' aba--ativa' : ''}`} aria-label={a.rotulo} aria-current={aba === a.id ? 'page' : undefined} onClick={() => setAba(a.id)}>
               <Icone d={a.icone} /><span>{a.rotulo}</span>
             </button>
           ))}

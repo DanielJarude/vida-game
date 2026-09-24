@@ -93,7 +93,11 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
       }
     }
     if (papel === 'filho') for (const x of Object.values(v.pessoas)) if (x.genitores?.includes(p.id) && x.vivo) x.aperto = { tipo: 'luto', t: v.t, pessoaId: p.id };
-    if (vin.parentesco === 'mae' || vin.parentesco === 'pai') heranca(p);
+    if (vin.parentesco === 'mae' || vin.parentesco === 'pai') {
+      heranca(p);
+      // Irmãos perdem juntos.
+      for (const x of vinculosVivos(v)) if (x.vin.parentesco === 'irmao' || (x.vin.parentesco === 'meio_irmao' && x.p.genitores?.includes(p.id))) lembrarCom(v, x.p.id, `Perderam ${vin.parentesco === 'mae' ? 'a mãe' : 'o pai'} juntos.`, 'perda', 2);
+    }
 
     // O humor sente, na medida do vínculo. Não é uma reação decidida pelo jogo.
     if (peso >= 16) {

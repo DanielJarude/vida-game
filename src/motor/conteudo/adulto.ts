@@ -246,7 +246,7 @@ export const ADULTO: Conteudo[] = [
     id: 'adu_amigo_filho', tipo: 'acontecimento', idade: [22, 60], tema: 'amizade',
     papeis: { amigo: P.amigo },
     quando: c => idadePessoa(c.v, c.p.amigo) >= 23 && idadePessoa(c.v, c.p.amigo) <= 42,
-    narrar: c => ({ texto: `${c.p.amigo.nome} teve ${c.r.chance(0.5) ? 'um filho' : 'uma filha'}. As mensagens no grupo passaram a ser fotos de bebê.`, relevancia: 'cotidiano', efeito: () => { c.v.vinculos[c.p.amigo.id].tensao = 0; } })
+    narrar: c => { const f = c.r.chance(0.5) ? 'um filho' : 'uma filha'; return { texto: `${c.p.amigo.nome} teve ${f}. As mensagens no grupo passaram a ser fotos de bebê.`, relevancia: 'cotidiano', efeito: () => { c.v.vinculos[c.p.amigo.id].tensao = 0; }, lembrar: ['amigo', `Teve ${f}.`, 'antigo'] }; }
   },
   {
     id: 'adu_reencontro', tipo: 'acontecimento', idade: [25, 90], tema: 'amizade', repetir: 6,

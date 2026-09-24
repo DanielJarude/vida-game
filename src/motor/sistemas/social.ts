@@ -261,13 +261,25 @@ export function processarSocial(v: Vida, r: Rng): void {
         linhas.push({ prioridade: 2, fazer: () => { escrever(v, { texto: `A amizade com ${p.nome} voltou a ser o que era.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id], evento: { tipo: 'reconciliacao', pessoaId: p.id, peso: 20 } }); lembrarCom(v, p.id, 'A amizade voltou.', 'reconciliacao', 2); } });
       } else if (depois === 'amigo_proximo') {
         linhas.push({ prioridade: 3, fazer: () => {
-          escrever(v, { texto: `${p.nome} passou a ser das pessoas mais próximas da sua vida.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id], evento: { tipo: 'amizade', pessoaId: p.id, peso: 35 } });
+          escrever(v, { texto: variante(v, 'proximo', [
+            `${p.nome} passou a ser das pessoas mais próximas da sua vida.`,
+            `Em algum momento, sem aviso, ${p.nome} virou a primeira pessoa para quem você liga.`,
+            `${p.nome} já sabia das coisas antes de você contar para qualquer outra pessoa.`,
+            `A amizade com ${p.nome} virou daquelas que não precisam de explicação.`,
+            `${p.nome} entrou para a lista curta de quem você chamaria às três da manhã.`
+          ]), relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id], evento: { tipo: 'amizade', pessoaId: p.id, peso: 35 } });
           lembrarCom(v, p.id, 'Viraram amigos de verdade.', 'amizade', 3);
         } });
       } else if (depois === 'afastado' && antes === 'amigo_proximo') {
         linhas.push({ prioridade: 3, fazer: () => { escrever(v, { texto: textoAfastamento(v, p, outraCidade), relevancia: 'biografia', tema: 'amizade', tom: 'ruim', pessoas: [p.id], evento: { tipo: 'amizade_fim', pessoaId: p.id, peso: 25 } }); lembrarCom(v, p.id, outraCidade ? 'A distância afastou vocês.' : 'Foram se afastando.', 'distancia', 1); } });
       } else if (depois === 'afastado' && antes === 'amigo') {
-        linhas.push({ prioridade: 1, fazer: () => escrever(v, { texto: `Você e ${p.nome} foram se perdendo de vista.`, relevancia: 'cotidiano', tema: 'amizade', pessoas: [p.id] }) });
+        linhas.push({ prioridade: 1, fazer: () => escrever(v, { texto: variante(v, 'perdendo', [
+          `Você e ${p.nome} foram se perdendo de vista.`,
+          `As mensagens com ${p.nome} foram ficando mais espaçadas, até pararem.`,
+          `${p.nome} virou alguém de quem você lembra no aniversário, e só.`,
+          `A amizade com ${p.nome} ficou para trás, sem briga nenhuma.`,
+          `Você e ${p.nome} deixaram de combinar coisas. Ninguém percebeu quando.`
+        ]), relevancia: 'cotidiano', tema: 'amizade', pessoas: [p.id] }) });
       }
     }
   }
@@ -299,12 +311,27 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
       p.ocupacao = p.genero === 'feminino' ? 'aposentada' : 'aposentado';
     }
     if (p.aperto?.tipo === 'desemprego' && p.renda > 0) p.aperto = undefined;
+    // A vida de um amigo próximo também acontece — e fica na história de vocês.
+    if (vin.estagio === 'amigo_proximo' && !vin.romance) {
+      if (!p.parceiroId && i >= 22 && i <= 50 && r.chance(0.07)) {
+        p.parceiroId = 'fora';
+        lembrarCom(v, p.id, `Casou${r.chance(0.5) ? ', e você estava lá' : ''}.`, 'romance', 1);
+      }
+      const anos = Math.floor((v.t - vin.tInicio) / 12);
+      if ((anos === 25 || anos === 50) && !vin.historia.some(h => h.texto.startsWith(anos === 25 ? 'Vinte e cinco anos' : 'Cinquenta anos'))) {
+        lembrarCom(v, p.id, anos === 25 ? 'Vinte e cinco anos de amizade.' : 'Cinquenta anos de amizade.', 'amizade', 2);
+      }
+    }
     // Amigos também mudam de cidade — e a amizade passa a ser à distância.
     const amigo = vin.estagio === 'amigo' || vin.estagio === 'amigo_proximo';
     if (amigo && i >= 20 && i <= 60 && !vin.romance && p.municipioId === v.moradia.municipioId && r.chance(0.02)) {
       const destino = r.pick(MUNICIPIOS.filter(m => m.id !== p.municipioId && (m.perfil === 'metropole' || m.perfil === 'capital')));
       p.municipioId = destino.id;
-      escrever(v, { texto: `${p.nome} se mudou para ${destino.nome}. A amizade passou a caber no celular.`, relevancia: vin.estagio === 'amigo_proximo' ? 'biografia' : 'cotidiano', tema: 'amizade', pessoas: [p.id] });
+      escrever(v, { texto: variante(v, 'amigo_mudou', [
+        `${p.nome} se mudou para ${destino.nome}. A amizade passou a caber no celular.`,
+        `${p.nome} arrumou as malas para ${destino.nome}. Fizeram uma despedida no bar de sempre.`,
+        `${p.nome} foi morar em ${destino.nome}. Prometeram se visitar.`
+      ]), relevancia: vin.estagio === 'amigo_proximo' ? 'biografia' : 'cotidiano', tema: 'amizade', pessoas: [p.id] });
       lembrarCom(v, p.id, `Mudou-se para ${destino.nome}.`, 'distancia', 1);
     }
   }
@@ -329,9 +356,25 @@ function textoNovaAmizade(v: Vida, p: Pessoa, onde: string): string {
   return `${p.nome}, que você conheceu ${onde}, virou ${amigo} de verdade.`;
 }
 
-function textoAfastamento(_v: Vida, p: Pessoa, outraCidade: boolean): string {
-  if (outraCidade) return `A distância fez o que a distância faz: você e ${p.nome} deixaram de ser próximos.`;
-  return `Sem que ninguém decidisse nada, você e ${p.nome} deixaram de se ver.`;
+function textoAfastamento(v: Vida, p: Pessoa, outraCidade: boolean): string {
+  if (outraCidade) return variante(v, 'distancia', [
+    `A distância fez o que a distância faz: você e ${p.nome} deixaram de ser próximos.`,
+    `Cidades diferentes, rotinas diferentes: a amizade com ${p.nome} foi ficando no passado.`,
+    `${p.nome} longe, você aqui. As ligações rarearam até sumirem.`
+  ]);
+  return variante(v, 'afastou', [
+    `Sem que ninguém decidisse nada, você e ${p.nome} deixaram de se ver.`,
+    `A vida puxou você e ${p.nome} para lados diferentes.`,
+    `Você e ${p.nome} continuaram na mesma cidade e, de algum jeito, pararam de se encontrar.`
+  ]);
+}
+
+/** A n-ésima vez de uma mesma transição na vida usa a n-ésima frase (sem repetir cedo). */
+function variante(v: Vida, chave: string, frases: string[]): string {
+  const k = `frase_${chave}`;
+  const n = (v.fatos[k] ?? 0) as number;
+  v.fatos[k] = n + 1;
+  return frases[n % frases.length];
 }
 
 /** Pessoa conhecida "por aí" — usada por conteúdo que apresenta alguém. */

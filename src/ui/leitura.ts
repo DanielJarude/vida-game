@@ -47,7 +47,7 @@ export function circulos(v: Vida): Circulos {
     const papel = papelDe(x.p, x.vin);
     if (c === 'nucleo') out.nucleo.push(x);
     else if (c === 'familia') {
-      const distante = (papel === 'parente' || papel === 'sogro') && x.vin.proximidade < 45 && x.vin.convivio.length === 0;
+      const distante = (papel === 'parente' || papel === 'sogro') && x.vin.proximidade < 65 && !x.vin.convivio.includes('casa');
       (distante ? out.familiaExtensa : out.familia).push(x);
     } else if (c === 'amigos') out.amigos.push(x);
     else if (c === 'contexto') out.contexto.push(x);
@@ -95,7 +95,6 @@ export function etiqueta(v: Vida, p: Pessoa, vin: Vinculo): string {
 /** Quem é essa pessoa para você, e desde quando. */
 export function quemE(v: Vida, p: Pessoa, vin: Vinculo): string {
   const papel = papelDe(p, vin);
-  const i = idade(v);
   const tempo = Math.max(0, Math.floor((v.t - vin.tInicio) / 12));
   if (papel === 'filho') {
     const idadeNoNasc = Math.max(0, Math.floor((p.tNasc - v.eu.tNasc) / 12));
@@ -104,7 +103,7 @@ export function quemE(v: Vida, p: Pessoa, vin: Vinculo): string {
     const adotado = v.fatos[`adotado_${p.id}`] !== undefined;
     return adotado
       ? `Chegou à sua vida por adoção, em ${anoDe(vin.tInicio)}${outroP ? `, quando você estava com ${outroP.nome}` : ''}.`
-      : `Nasceu em ${MESES[mesDe(p.tNasc)]} de ${anoDe(p.tNasc)}, quando você tinha ${idadeNoNasc}${outroP ? `. ${capital(flex(p.genero, 'filho', 'filha', 'filhe'))} seu e de ${outroP.nome}` : ''}.`;
+      : `Nasceu em ${MESES[mesDe(p.tNasc)]} de ${anoDe(p.tNasc)}, quando você tinha ${idadeNoNasc}${outroP ? `. ${flex(p.genero, 'Filho seu', 'Filha sua', 'Filhe sue')} e de ${outroP.nome}` : ''}.`;
   }
   if (papel === 'neto' || papel === 'bisneto') {
     const pai = p.genitores?.map(g => v.pessoas[g]).find(Boolean);
@@ -134,7 +133,7 @@ export function quemE(v: Vida, p: Pessoa, vin: Vinculo): string {
   }
   if (papel === 'pet') return `Na família desde ${anoDe(vin.tInicio)}.`;
   const onde = descricaoOrigem(v, vin);
-  return `Vocês se conheceram ${onde}, em ${anoDe(vin.tInicio)}${tempo >= 2 ? ` — há ${anos(tempo)}` : ''}.${i < 0 ? '' : ''}`;
+  return `Vocês se conheceram ${onde}, em ${anoDe(vin.tInicio)}${tempo >= 2 ? ` — há ${anos(tempo)}` : ''}.`;
 }
 
 /** Onde a pessoa está em relação à sua vida: em casa, na mesma cidade, longe. */
@@ -240,7 +239,7 @@ function comoFoi(v: Vida, p: Pessoa, vin: Vinculo): string {
 
 /** A vida própria de um descendente, em linhas (mais recente primeiro). */
 export function vidaPropria(p: Pessoa): string[] {
-  return (p.vida?.trajetoria ?? []).slice().reverse().slice(0, 8).map(t => `${anoDe(t.t)} — ${t.texto.replace(new RegExp(`^${p.nome} `), '')}`);
+  return (p.vida?.trajetoria ?? []).slice().reverse().slice(0, 8).map(t => `${anoDe(t.t)} — ${t.texto}`);
 }
 
 /* -------------------------------------------------------------- Você */

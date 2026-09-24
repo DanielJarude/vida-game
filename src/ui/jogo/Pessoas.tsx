@@ -41,7 +41,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
       </p>
 
       {c.nucleo.length > 0 && (
-        <Secao titulo={moraComPais && !parceiro(vida) ? 'Em casa' : 'Com você'}>
+        <Secao titulo={tituloNucleo(vida, c.nucleo, moraComPais)}>
           <ul className="nucleo">
             {c.nucleo.map(x => <li key={x.p.id}><CartaoNucleo vida={vida} x={x} abrir={abrir} /></li>)}
           </ul>
@@ -64,6 +64,14 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
       {pessoa && <FichaPessoa vida={vida} p={pessoa} vin={vida.vinculos[pessoa.id]} agir={agir} aoFechar={() => abrir(null)} />}
     </div>
   );
+}
+
+/** O título diz a verdade: "Com você" só quando alguém divide a vida (casa ou parceria). */
+function tituloNucleo(vida: Vida, nucleo: Par[], moraComPais: boolean): string {
+  const par = parceiro(vida);
+  if (moraComPais && !par) return 'Em casa';
+  if (par || nucleo.some(x => x.vin.convivio.includes('casa'))) return 'Com você';
+  return nucleo.every(x => papelDe(x.p, x.vin) === 'filho') ? (nucleo.length === 1 ? flex(nucleo[0].p.genero, 'Seu filho', 'Sua filha', 'Sue filhe') : 'Seus filhos') : 'Os seus';
 }
 
 /** Parceria e filhos: peso proporcional ao papel que têm na vida. */
@@ -137,7 +145,8 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   const [historiaToda, setHistoriaToda] = useState(false);
   const ip = idadePessoa(vida, p);
   const papel = papelDe(p, vin);
-  const acoes = p.vivo ? interacoesPara(vida, p.id) : [];
+  const ordem = (x: { variante?: string }) => (x.variante === 'principal' ? 0 : x.variante === 'perigo' ? 2 : 1);
+  const acoes = p.vivo ? [...interacoesPara(vida, p.id)].sort((a, b) => ordem(a) - ordem(b)) : [];
   const principais = todas ? acoes : acoes.slice(0, MAX_ACOES);
   const quem = quemE(vida, p, vin);
   const onde = ondeEsta(vida, p, vin);

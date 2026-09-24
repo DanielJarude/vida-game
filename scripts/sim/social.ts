@@ -151,6 +151,8 @@ const humorViuvez = viuvos.map(s => {
   const dois = s.fotos.find(f => f.idade === i0 + 2)?.felicidade;
   return antes !== undefined && depois !== undefined ? [antes, depois, dois ?? depois] : null;
 }).filter((x): x is number[] => !!x);
+const recuperacao = viuvos.map(s => { const i0 = s.vida.biografia.find(e => e.evento?.tipo === 'viuvez')!.idade; return s.fotos.find(f => f.idade === i0 + 5)?.felicidade; }).filter((x): x is number => x !== undefined);
+if (recuperacao.length) log(`- humor cinco anos depois da viuvez: média ${f1(media(recuperacao))} (n=${recuperacao.length})`);
 if (humorViuvez.length) log(`- humor ao enviuvar (média): antes ${f1(media(humorViuvez.map(x => x[0])))} → no ano ${f1(media(humorViuvez.map(x => x[1])))} → dois anos depois ${f1(media(humorViuvez.map(x => x[2])))}`);
 
 log('');
@@ -172,11 +174,12 @@ const congelados = adultos.filter(({ s, f }) => {
   const vd = f.vida;
   if (!vd?.tCargo || !f.vivo) return false;
   const anos = (s.vida.t - vd.tCargo) / 12;
-  const explicado = vd.trajetoria.some(t => s.vida.t - t.t <= 96 && (t.tipo === 'trabalho' || t.tipo === 'promocao' || t.tipo === 'estudo'));
+  // Explicado: algo aconteceu no trabalho nos últimos 8 anos, ou a estagnação deste cargo já foi contada.
+  const explicado = vd.trajetoria.some(t => (s.vida.t - t.t <= 96 || t.t >= (vd.tCargo ?? 0)) && (t.tipo === 'trabalho' || t.tipo === 'promocao' || t.tipo === 'estudo' || t.tipo === 'desemprego'));
   return anos > 8 && !explicado && Math.floor((s.vida.t - f.tNasc) / 12) < 60;
 });
 log(`- carreiras congeladas sem explicação (mesmo cargo 8+ anos, nenhum marco): ${congelados.length}`);
-for (const { s, f } of congelados.slice(0, 3)) log(`    ex.: [${s.estrategia} ${s.semente}] ${f.nome}, ${Math.floor((s.vida.t - f.tNasc) / 12)} anos, ${f.ocupacao}`);
+for (const { s, f } of congelados.slice(0, 3)) log(`    ex.: [${s.estrategia} ${s.semente}] ${f.nome}, ${Math.floor((s.vida.t - f.tNasc) / 12)} anos, ${f.ocupacao}, cargo desde ${Math.floor((f.vida!.tCargo ?? 0) / 12)}: ${f.vida!.trajetoria.slice(-4).map(t => `${Math.floor(t.t / 12)} ${t.texto}`).join(' | ')}`);
 const netos = todas.map(s => Object.values(s.vida.vinculos).filter(x => x.parentesco === 'neto').length);
 const bisnetos = todas.map(s => Object.values(s.vida.vinculos).filter(x => x.parentesco === 'bisneto').length);
 log(`- netos: vidas com neto ${netos.filter(n => n > 0).length} · mediana entre quem tem ${pct(netos.filter(n => n > 0), 0.5)} · máx ${Math.max(...netos)} · bisnetos em ${bisnetos.filter(n => n > 0).length} vidas`);
@@ -223,6 +226,13 @@ const repet = todas.map(s => {
   return [...vistos.values()].filter(n => n > 2).reduce((a, n) => a + n - 2, 0);
 });
 log(`- repetições sociais (mesma frase 3+ vezes na vida): média ${f1(media(repet))} · máx ${Math.max(...repet)}`);
+const frases = new Map<string, number>();
+for (const s of todas) {
+  const vistos = new Map<string, number>();
+  for (const e of s.vida.biografia) if (social.has(e.tema) && e.relevancia !== 'tecnico') { const k = e.texto.replace(/[A-ZÁÉÍÓÚÂÊÔÃÕ][a-záéíóúâêôãõç]+/g, 'N').replace(/\d+/g, '#'); vistos.set(k, (vistos.get(k) ?? 0) + 1); }
+  for (const [k, n] of vistos) if (n > 2) frases.set(k, (frases.get(k) ?? 0) + n - 2);
+}
+for (const [k, n] of [...frases.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)) log(`    ${n}× ${k.slice(0, 140)}`);
 
 log('');
 log('## Relações longas com pouca história');
@@ -253,13 +263,16 @@ for (const [k, t] of [...tipos.entries()].sort((a, b) => b[1].n - a[1].n)) log(`
 
 log('');
 log('## Por estratégia');
-log('| estratégia | morte (med) | casou | separou | viuvez | caso | filhos (med) | netos (med) | amigos aos 60 (med) | humor aos 70 (med) |');
-log('|---|---|---|---|---|---|---|---|---|---|');
+log('| estratégia | morte (med) | casou | separou | viuvez | caso | filhos (med) | netos (med) | amigos aos 60 (med) | humor aos 70 (med) | afeto filho adulto (med) | marcos filho adulto (med) |');
+log('|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const e of ESTRATEGIAS) {
   const vs = todas.filter(s => s.estrategia === e);
   const a60 = vs.map(s => s.fotos.find(f => f.idade === 60)?.amigos).filter((x): x is number => x !== undefined);
   const h70 = vs.map(s => s.fotos.find(f => f.idade === 70)?.felicidade).filter((x): x is number => x !== undefined);
-  log(`| ${e} | ${pct(vs.map(s => idade(s.vida)), 0.5)} | ${vs.filter(s => bio(s, /^Casou-se/) > 0).length} | ${vs.filter(s => ev(s, 'divorcio') + ev(s, 'termino') > 0 && s.vida.biografia.some(b => /se separar|fez as malas|divórcio/.test(b.texto))).length} | ${vs.filter(s => ev(s, 'viuvez') > 0).length} | ${vs.filter(s => ev(s, 'traicao') > 0).length} | ${pct(vs.map(s => filhosDe(s).length), 0.5)} | ${pct(vs.map(s => Object.values(s.vida.vinculos).filter(x => x.parentesco === 'neto').length), 0.5)} | ${pct(a60, 0.5)} | ${pct(h70, 0.5)} |`);
+  const fa = vs.flatMap(s => filhosDe(s).filter(f => f && f.vivo && Math.floor((s.vida.t - f.tNasc) / 12) >= 20).map(f => s.vida.vinculos[f.id]));
+  const afeto = fa.length ? pct(fa.map(x => x.proximidade), 0.5) : '—';
+  const marcos = fa.length ? pct(fa.map(x => x.historia.length), 0.5) : '—';
+  log(`| ${e} | ${pct(vs.map(s => idade(s.vida)), 0.5)} | ${vs.filter(s => bio(s, /^Casou-se/) > 0).length} | ${vs.filter(s => ev(s, 'divorcio') + ev(s, 'termino') > 0 && s.vida.biografia.some(b => /se separar|fez as malas|divórcio/.test(b.texto))).length} | ${vs.filter(s => ev(s, 'viuvez') > 0).length} | ${vs.filter(s => ev(s, 'traicao') > 0).length} | ${pct(vs.map(s => filhosDe(s).length), 0.5)} | ${pct(vs.map(s => Object.values(s.vida.vinculos).filter(x => x.parentesco === 'neto').length), 0.5)} | ${pct(a60, 0.5)} | ${pct(h70, 0.5)} | ${afeto} | ${marcos} |`);
 }
 
 writeFileSync(`${SAIDA}/resumo.md`, out.join('\n'));
