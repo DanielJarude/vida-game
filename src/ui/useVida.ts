@@ -27,7 +27,7 @@ export function useVida() {
   const [vida, setVida] = useState<Vida | null>(null);
   const [salva, setSalva] = useState<{ nome: string; idade: number } | null>(null);
   const [aviso, setAviso] = useState<Aviso | null>(null);
-  const [resultado, setResultado] = useState<{ titulo: string; texto: string } | null>(null);
+  const [resultado, setResultado] = useState<{ titulo: string; texto: string; pessoaId?: string } | null>(null);
   /** Primeira entrada da biografia gerada pelo último ano vivido (para destacar). */
   const [marcaAno, setMarcaAno] = useState<number>(0);
   const [avisoSave, setAvisoSave] = useState<string | null>(null);
@@ -100,7 +100,8 @@ export function useVida() {
 
   const agir = useCallback((a: Acao): boolean => {
     if (!vida) return false;
-    const titulo = vida.momento?.titulo ?? '';
+    // O título do resultado é o do processo, sem a etapa ("Entrevista: vendedora", não "· 3 de 3").
+    const titulo = (vida.momento?.titulo ?? '').replace(/ · .*$/, '');
     const r = executar(vida, a);
     if (r.vida === vida) {
       if (r.aviso) avisar(r.aviso.texto, 'ruim');
@@ -111,6 +112,7 @@ export function useVida() {
       // Resultado de decisão aparece dentro do próprio momento (o modal decide);
       // resultado de ação que não abriu decisão vira aviso.
       if (a.tipo === 'decidir') setResultado({ titulo, texto: r.resultado });
+      else if (r.titulo) setResultado({ titulo: r.titulo, texto: r.resultado, pessoaId: r.pessoaId });
       else avisar(r.resultado, 'neutro');
     } else if (r.aviso) avisar(r.aviso.texto, r.aviso.tom);
     sound.playClick();

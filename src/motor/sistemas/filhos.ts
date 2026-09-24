@@ -29,6 +29,7 @@ import { MUNICIPIOS, municipio } from '../dados/lugares';
 import { flex, ge } from '../texto';
 import { anoDe, MESES, mesDe } from '../tempo';
 import { faseDeIdade, mesmaCidade, moraJunto } from './vinculos';
+import { abalar } from './abalo';
 
 /**
  * Os descendentes usam o MESMO catálogo do jogador (cursos, ocupações,
@@ -281,7 +282,7 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
         texto: doJogador && moraJunto(vin) ? `${f.nome} passou no vestibular da federal para ${curso}. A lista saiu de madrugada; a casa acordou gritando.` : `${f.nome} passou na federal para ${curso}.`,
         tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 30, marco: `Passou na federal para ${curso}.`, pesoMarco: 2
       });
-      if (doJogador) v.mente.felicidade = clamp(v.mente.felicidade + 5);
+      if (doJogador) abalar(v, `${f.nome} na federal`, 5, 0);
       return;
     }
     if (pc < 2200 && vida.aptidao > -0.1 && r.chance(0.4)) {
@@ -333,7 +334,7 @@ function formar(v: Vida, f: Pessoa, cota: Cota, rel: Relevancia, doJogador: bool
     texto: `${f.nome} ${e.nivel === 'tecnico' ? `concluiu o curso ${e.curso.replace(/^Técnico em /, 'técnico de ')}` : `se formou em ${e.curso}`}${primeiro ? ` — ${flex(f.genero, 'o primeiro', 'a primeira', 'e primeire')} da casa com diploma` : ''}${e.paga === 'fies' ? ', com o FIES para pagar' : ''}.${foi ? ' Você aplaudiu até doer a mão.' : ''}`,
     tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 35, marco: foi ? `Formatura ${e.nivel === 'tecnico' ? 'do curso técnico' : `em ${e.curso}`}. Você estava lá.` : `Formou-se em ${e.curso}.`, pesoMarco: 2
   });
-  if (doJogador) v.mente.felicidade = clamp(v.mente.felicidade + 6);
+  if (doJogador) abalar(v, `a formatura de ${f.nome}`, 6, 0);
   empregar(v, f, oc);
   vida.trajetoria.push({ t: v.t, texto: `Primeiro emprego na área: ${nomeOc(f, oc)}.`, tipo: 'trabalho' });
 }
@@ -578,7 +579,7 @@ function nascerDescendente(v: Vida, r: Rng, pai: Pessoa, outro: Pessoa | undefin
   const vidaPai = garantirVida(pai);
   vidaPai.trajetoria.push({ t: tParto, texto: `Nasceu ${nome}.`, tipo: 'filho' });
   if (grauPai === 'filho' || grauPai === 'enteado') lembrarCom(v, pai.id, primeiroNeto ? `${nome} nasceu, e você virou ${flex(g, 'avô', 'avó', 'avó')}.` : `Nasceu ${nome}, ${flex(bebe.genero, 'seu neto', 'sua neta', 'sue nete')}.`, 'filho', primeiroNeto ? 3 : 2, tParto);
-  v.mente.felicidade = clamp(v.mente.felicidade + (primeiroNeto ? 8 : 3));
+  abalar(v, primeiroNeto ? `o primeiro neto, ${nome}` : `o nascimento de ${nome}`, primeiroNeto ? 8 : 3, 0);
 }
 
 /* ------------------------------------------------------------ Casa e lugar */

@@ -436,3 +436,225 @@ button.agora-sinal:hover { color: var(--text-primary); }
   .avancar__botao { padding: 0 var(--space-4); }
   .avancar__rotulo { font-size: var(--type-body); }
 }
+
+/* ============================================================ FIX pós-playtest 2
+   Cada área tem composição própria dentro da mesma identidade: Você é um
+   rosto e três leituras; Pessoas, rostos; Estudo, uma trajetória; Trabalho,
+   uma escada; Tempo livre, a semana desenhada. Cor nunca é o único sinal. */
+
+.link { color: inherit; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; text-align: left; }
+.link:hover { text-decoration-color: var(--accent); }
+
+/* ------------------------------------------------------------------- Você */
+.voce { display: flex; flex-direction: column; gap: var(--space-7); }
+.voce-rosto { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-6); align-items: center; }
+.voce-rosto .retrato { background: radial-gradient(circle at 50% 38%, var(--bg-elevated), var(--bg-raised) 70%); border-radius: 50%; box-shadow: 0 0 0 1px var(--rule), 0 18px 40px -24px var(--glow-quente-forte); }
+.voce-rosto__texto { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.voce-rosto__fase { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--accent); }
+.voce-rosto__momento { font-family: var(--font-serif); font-size: 1.55rem; line-height: 1.3; color: var(--text-primary); letter-spacing: var(--tracking-tight); max-width: 30ch; }
+.voce-rosto__linha { font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-subheading); line-height: var(--leading-snug); }
+
+.estados { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule); }
+.estados--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.estado-bloco { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-5) var(--space-5) var(--space-6); min-width: 0; }
+.estado-bloco + .estado-bloco { border-left: 1px solid var(--rule); }
+.estado-bloco:first-child { padding-left: 0; }
+.estado-bloco__cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+.estado-bloco__nome { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-medium); }
+.estado-bloco__tendencia { font-size: var(--type-caption); color: var(--text-muted); white-space: nowrap; }
+.estado-bloco__tendencia--melhorando { color: var(--success); }
+.estado-bloco__tendencia--piorando { color: var(--warm-memory); }
+.estado-bloco__palavra { font-family: var(--font-serif); font-size: var(--type-title); line-height: 1.05; color: var(--text-primary); }
+.estado-bloco--n1 .estado-bloco__palavra, .estado-bloco--n2 .estado-bloco__palavra { color: var(--warm-memory); font-style: italic; }
+.escala { display: inline-flex; gap: 4px; margin-bottom: var(--space-2); }
+.escala__marca { width: 18px; height: 6px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.escala__marca--cheia { background: var(--text-secondary); box-shadow: none; }
+.estado-bloco--n4 .escala__marca--cheia, .estado-bloco--n5 .escala__marca--cheia { background: var(--accent); }
+.estado-bloco__lista h3 { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); font-weight: var(--weight-medium); margin: var(--space-2) 0 var(--space-1); }
+.estado-bloco__lista li { font-family: var(--font-serif); color: var(--text-secondary); line-height: var(--leading-snug); padding: 2px 0 2px var(--space-4); position: relative; }
+.estado-bloco__lista li::before { content: '−'; position: absolute; left: 0; color: var(--warm-memory); }
+.estado-bloco__lista--bom li::before { content: '+'; color: var(--success); }
+.estado-bloco__quando { font-family: var(--font-sans); font-size: var(--type-meta); color: var(--text-faint); }
+.estado-bloco__cuidar { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-top: auto; padding-top: var(--space-4); }
+.estado-bloco__cuidar .botao { min-height: 40px; font-size: var(--type-caption); text-align: left; }
+.estado-bloco__motivo { font-size: var(--type-caption); color: var(--text-faint); font-style: italic; font-family: var(--font-serif); max-width: 32ch; }
+.voce-subtitulo { font-size: var(--type-heading); margin-bottom: var(--space-3); }
+.voce-condicoes ul { display: flex; flex-direction: column; }
+.voce-condicoes li { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); font-family: var(--font-serif); color: var(--text-secondary); }
+.voce-condicoes li strong { font-weight: 500; color: var(--text-primary); }
+.voce-condicoes li span { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); text-align: right; }
+.voce-tracos { font-family: var(--font-serif); font-style: italic; color: var(--text-muted); font-size: var(--type-subheading); max-width: 58ch; }
+
+/* O resumo do estado no trilho vira um atalho para "Você". */
+button.estado { text-align: left; border-radius: var(--radius-md); padding: var(--space-2) 0; margin-left: 0; }
+button.estado:hover .estado__dd { color: var(--text-primary); }
+.estado > span { display: flex; flex-direction: column; }
+.estado__dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-faint); }
+.estado__dd { font-family: var(--font-serif); color: var(--text-secondary); }
+.regioes--voce .trilho .identidade { display: none; }
+.estado-bloco__lista .link { display: inline-block; min-height: 32px; padding: 5px 0; }
+@media (max-width: 1180px) { .regioes--voce .trilho__agora { margin-top: 0; } }
+.agora-voce { display: grid; grid-template-columns: 34px 1fr; gap: var(--space-3); align-items: center; text-align: left; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule); font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-caption); line-height: var(--leading-snug); min-height: var(--touch-target); }
+.agora-voce .retrato { background: var(--bg-raised); border-radius: 50%; }
+.agora-voce:hover { color: var(--text-primary); background: var(--surface-hover); }
+
+@media (max-width: 760px) {
+  .voce { gap: var(--space-6); }
+  .voce-rosto { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: var(--space-4); }
+  .voce-rosto .retrato { width: 148px; height: 148px; }
+  .voce-rosto__momento { font-size: var(--type-heading); margin: 0 auto; }
+  .estados, .estados--2 { grid-template-columns: 1fr; }
+  .estado-bloco { padding: var(--space-5) 0; }
+  .estado-bloco + .estado-bloco { border-left: 0; border-top: 1px solid var(--rule); }
+  .barra { grid-template-columns: repeat(6, 1fr); }
+  .barra__item { font-size: 0.625rem; }
+}
+@media (min-width: 761px) and (max-width: 1180px) {
+  .estados { grid-template-columns: 1fr; }
+  .estado-bloco { padding: var(--space-5) 0; display: grid; grid-template-columns: 180px minmax(0, 1fr); column-gap: var(--space-5); }
+  .estado-bloco > * { grid-column: 2; }
+  .estado-bloco__cabeca, .estado-bloco__palavra, .estado-bloco > .escala { grid-column: 1; }
+  .estado-bloco__cabeca { grid-row: 1; } .estado-bloco__palavra { grid-row: 2; } .estado-bloco > .escala { grid-row: 3; }
+  .estado-bloco + .estado-bloco { border-left: 0; border-top: 1px solid var(--rule); }
+}
+
+/* ---------------------------------------------------------------- Pessoas */
+.atencao { margin-bottom: var(--space-6); padding: var(--space-4) var(--space-4) var(--space-3); border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--warm-memory-wash), transparent 70%); box-shadow: inset 0 0 0 1px var(--rule); }
+.atencao__titulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--warm-memory); font-weight: var(--weight-medium); margin-bottom: var(--space-2); }
+.atencao__lista { display: flex; flex-direction: column; }
+.atencao__item { display: grid; grid-template-columns: 40px 1fr; gap: var(--space-3); align-items: center; width: 100%; text-align: left; padding: var(--space-2) 0; min-height: var(--touch-target); font-family: var(--font-serif); color: var(--text-primary); font-size: var(--type-subheading); line-height: var(--leading-snug); }
+.atencao__item .retrato { background: var(--bg-raised); border-radius: 50%; }
+.atencao__item:hover span { text-decoration: underline; text-decoration-color: var(--warm-memory); text-underline-offset: 3px; }
+
+.nucleo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-5); }
+.nucleo--1 { grid-template-columns: 1fr; }
+.nucleo .cartao-pessoa { grid-template-columns: 84px 1fr; border-left: 0; padding: var(--space-3) var(--space-2); border-radius: var(--radius-lg); align-items: start; height: 100%; }
+.nucleo .cartao-pessoa .retrato { width: 84px; height: 84px; box-shadow: 0 0 0 2px var(--accent-line); }
+.nucleo .cartao-pessoa--tenso .retrato { box-shadow: 0 0 0 2px var(--danger-line); }
+.cartao-pessoa__nome { font-size: var(--type-heading) !important; }
+
+.rostos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--space-3); }
+.rosto { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; text-align: center; padding: var(--space-3) var(--space-2); border-radius: var(--radius-lg); min-height: var(--touch-target); }
+.rosto:hover { background: var(--surface); }
+.rosto .retrato { background: var(--bg-raised); border-radius: 50%; margin-bottom: var(--space-1); }
+.rosto__nome { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); }
+.rosto__rotulo { font-size: var(--type-meta); color: var(--text-muted); line-height: 1.3; }
+.rosto__prox { font-size: var(--type-caption); color: var(--text-secondary); font-family: var(--font-serif); font-style: italic; }
+.rosto--tenso .rosto__prox { color: var(--danger); }
+.pessoas__tempo { margin-top: var(--space-5); }
+
+.ficha__subtitulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-faint); font-weight: var(--weight-medium); margin: var(--space-2) 0 var(--space-1); }
+.ficha__prox { color: var(--text-primary) !important; font-size: 1.3rem !important; line-height: 1.4; }
+.ficha__ultima { font-family: var(--font-serif); color: var(--text-secondary); padding-left: var(--space-3); border-left: 2px solid var(--accent-line); }
+.ficha__acoes { padding: var(--space-3) 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.ficha__acoes .grupo-acoes { margin-top: var(--space-2); }
+.ficha__retrato-dela { display: flex; flex-direction: column; gap: var(--space-1); }
+.ficha__sabe li, .ficha__costumes li { font-family: var(--font-serif); color: var(--text-secondary); padding: 2px 0 2px var(--space-4); position: relative; }
+.ficha__sabe li::before { content: '·'; position: absolute; left: 4px; color: var(--cool-study); font-weight: 700; }
+.ficha__costumes li::before { content: '♥'; position: absolute; left: 0; font-size: 0.7em; top: 0.45em; color: var(--warm-memory); }
+
+@media (max-width: 760px) {
+  .nucleo { grid-template-columns: 1fr; }
+  .nucleo .cartao-pessoa { grid-template-columns: 64px 1fr; }
+  .nucleo .cartao-pessoa .retrato { width: 64px; height: 64px; }
+  .rostos { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--space-2); }
+  .rosto .retrato { width: 52px; height: 52px; }
+  .atencao { padding: var(--space-3); }
+}
+
+/* ------------------------------------------------------------ Tempo livre */
+.tempo-semana { padding-bottom: var(--space-6); border-bottom: 1px solid var(--rule); margin-bottom: var(--space-2); }
+.tempo-semana .secao__titulo { margin-bottom: var(--space-3); }
+.semana { display: flex; flex-direction: column; gap: var(--space-3); }
+.semana__fixos { font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-subheading); }
+.semana__faixa { display: flex; height: 56px; border-radius: var(--radius-md); overflow: hidden; box-shadow: inset 0 0 0 1px var(--rule-strong); background: var(--bg-inset); }
+.semana__pedaco { position: relative; display: flex; align-items: flex-end; min-width: 6px; padding: 0 var(--space-2) var(--space-2); box-shadow: inset -2px 0 0 var(--bg-app); overflow: hidden; }
+.semana__pedaco:last-child { box-shadow: none; }
+.semana__rotulo { font-size: var(--type-meta); letter-spacing: 0.04em; font-weight: var(--weight-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1a120a; }
+.semana__pedaco--trabalho { background: #8d857b; }
+.semana__pedaco--estudo { background: var(--cool-study); }
+.semana__pedaco--casa { background: var(--warm-memory); }
+.semana__pedaco--atividade { background: var(--accent); }
+.semana__pedaco--livre { background: repeating-linear-gradient(90deg, transparent 0 10px, var(--rule) 10px 11px); }
+.semana__pedaco--livre .semana__rotulo { color: var(--text-secondary); }
+.semana__pedaco--excesso { background: repeating-linear-gradient(135deg, var(--danger-fill) 0 6px, var(--accent) 6px 10px); }
+.semana__alem { font-size: var(--type-caption); color: var(--danger); }
+.semana__legenda ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-1) var(--space-5); }
+.semana__legenda li { display: grid; grid-template-columns: 14px 1fr; column-gap: var(--space-2); align-items: baseline; font-size: var(--type-caption); padding: 2px 0; }
+.semana__amostra { width: 12px; height: 12px; border-radius: 3px; align-self: center; box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.semana__nome { color: var(--text-secondary); }
+.semana__dose { grid-column: 2; color: var(--text-faint); font-size: var(--type-meta); }
+.semana__ganho .semana__amostra { background: var(--success-wash); }
+.tempo-semana__resumo { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-primary); margin-top: var(--space-4); max-width: 60ch; }
+.rotina__motivo { font-family: var(--font-serif); font-style: italic; color: var(--text-secondary) !important; font-size: var(--type-body) !important; }
+.rotina__retorno { font-family: var(--font-serif); color: var(--warm-memory) !important; font-size: var(--type-caption) !important; }
+.lista-rotinas--sugestoes .rotina { padding: var(--space-4) 0; }
+.explorar { margin-top: var(--space-3); display: flex; flex-direction: column; align-items: flex-start; }
+.explorar > .grupo-atividades, .explorar > ul { width: 100%; }
+@media (max-width: 760px) {
+  .semana__faixa { height: 48px; }
+  .semana__legenda ul { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------------- Rumo */
+.lados { display: inline-flex; gap: 0; margin: var(--space-2) 0 var(--space-5); border-radius: var(--radius-pill); box-shadow: inset 0 0 0 1px var(--rule-strong); padding: 3px; }
+.lados__item { min-height: 40px; padding: 0 var(--space-5); border-radius: var(--radius-pill); color: var(--text-secondary); font-size: var(--type-caption); font-weight: var(--weight-medium); }
+.lados__item--ativo { background: var(--bg-elevated); color: var(--text-primary); box-shadow: 0 1px 0 var(--rule-strong); }
+.rumo__painel { display: flex; flex-direction: column; }
+
+/* Estudo: a trajetória, da esquerda para a direita (no celular, de cima para baixo). */
+.trajeto { margin-bottom: var(--space-5); }
+.trajeto__linha { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(130px, 1fr); gap: 0; overflow-x: auto; padding-bottom: var(--space-2); }
+.trajeto__passo { position: relative; display: flex; flex-direction: column; gap: 2px; padding: var(--space-6) var(--space-4) 0 0; min-width: 0; }
+.trajeto__passo::before { content: ''; position: absolute; top: 9px; left: 0; right: 0; height: 2px; background: var(--rule-strong); }
+.trajeto__passo::after { content: ''; position: absolute; top: 4px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-app); box-shadow: inset 0 0 0 2px var(--text-faint); }
+.trajeto__passo--passado::after { background: var(--text-faint); }
+.trajeto__passo--agora::before { background: linear-gradient(90deg, var(--rule-strong), var(--cool-study)); }
+.trajeto__passo--agora::after { width: 16px; height: 16px; top: 2px; background: var(--cool-study); box-shadow: 0 0 0 4px var(--cool-study-wash); }
+.trajeto__passo--porta::before { background: repeating-linear-gradient(90deg, var(--rule-strong) 0 6px, transparent 6px 11px); }
+.trajeto__passo--porta::after { box-shadow: inset 0 0 0 2px var(--cool-study); }
+.trajeto__ano { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-faint); }
+.trajeto__passo--agora .trajeto__ano { color: var(--cool-study); }
+.trajeto__texto { font-family: var(--font-serif); color: var(--text-secondary); line-height: var(--leading-snug); }
+.trajeto__passo--agora .trajeto__texto { color: var(--text-primary); font-size: var(--type-lead); }
+.trajeto__detalhe { font-size: var(--type-caption); color: var(--text-muted); line-height: var(--leading-snug); }
+
+/* Trabalho: a escada da estrada. */
+.escada { margin-bottom: var(--space-5); padding: var(--space-4) var(--space-5); border-radius: var(--radius-lg); background: linear-gradient(180deg, var(--accent-wash), transparent 80%); box-shadow: inset 0 0 0 1px var(--rule); }
+.escada__titulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--accent); font-weight: var(--weight-medium); margin-bottom: var(--space-3); }
+.escada__degraus { display: flex; flex-direction: column; }
+.escada__degrau { display: grid; grid-template-columns: 22px 1fr auto; column-gap: var(--space-3); align-items: baseline; padding: var(--space-2) 0; position: relative; }
+.escada__degrau::before { content: ''; width: 14px; height: 3px; border-radius: 2px; background: var(--rule-strong); align-self: center; }
+.escada__degrau--acima .escada__nome { color: var(--text-secondary); }
+.escada__degrau--acima::before { background: transparent; box-shadow: inset 0 0 0 1px var(--rule-strong); height: 8px; }
+.escada__degrau--agora::before { background: var(--accent); height: 8px; width: 22px; }
+.escada__degrau--agora .escada__nome { color: var(--text-primary); font-size: var(--type-lead); }
+.escada__degrau--foi::before, .escada__degrau--abaixo::before { background: var(--text-faint); }
+.escada__degrau--abaixo .escada__nome, .escada__degrau--foi .escada__nome { color: var(--text-muted); }
+.escada__nome { font-family: var(--font-serif); }
+.escada__nota { font-size: var(--type-caption); color: var(--text-faint); white-space: nowrap; }
+.escada__degrau--agora .escada__nota { color: var(--accent); }
+.escada__horizonte { font-family: var(--font-serif); color: var(--text-secondary); margin-top: var(--space-3); max-width: 60ch; }
+.vaga__motivo { font-family: var(--font-serif); font-style: italic; color: var(--text-secondary) !important; font-size: var(--type-body) !important; }
+.devolutivas { display: flex; flex-direction: column; }
+.devolutiva { display: grid; grid-template-columns: 3.2em 1fr; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.devolutiva__ano { font-size: var(--type-caption); color: var(--text-faint); padding-top: 3px; }
+.devolutiva strong { font-family: var(--font-serif); font-weight: 500; color: var(--text-primary); }
+.devolutiva p { font-family: var(--font-serif); color: var(--text-secondary); }
+.devolutiva__dica { font-size: var(--type-caption) !important; color: var(--text-muted) !important; font-family: var(--font-sans) !important; margin-top: 2px; }
+@media (max-width: 760px) {
+  .trajeto__linha { grid-auto-flow: row; grid-auto-columns: auto; overflow: visible; }
+  .trajeto__passo { padding: 0 0 var(--space-4) var(--space-6); }
+  .trajeto__passo::before { top: 0; bottom: 0; left: 5px; right: auto; width: 2px; height: auto; }
+  .trajeto__passo--agora::before { background: linear-gradient(180deg, var(--rule-strong), var(--cool-study)); }
+  .trajeto__passo--porta::before { background: repeating-linear-gradient(180deg, var(--rule-strong) 0 6px, transparent 6px 11px); }
+  .trajeto__passo::after { top: 3px; left: 0; }
+  .trajeto__passo--agora::after { left: -2px; }
+  .escada { padding: var(--space-3) var(--space-4); }
+  .escada__degrau { grid-template-columns: 22px 1fr; }
+  .escada__nota { grid-column: 2; }
+}
+
+.semana__faixa { position: relative; }
+.semana__alem-faixa { position: absolute; top: 0; bottom: 0; right: 0; border-left: 2px dashed var(--text-primary); background: repeating-linear-gradient(135deg, rgba(11, 10, 9, 0.55) 0 6px, transparent 6px 11px); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px 5px; }
+.semana__alem-faixa span { font-size: var(--type-meta); color: var(--text-primary); background: var(--bg-deep); padding: 0 4px; border-radius: 3px; white-space: nowrap; }

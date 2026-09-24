@@ -19,8 +19,9 @@ import { economiaLocal } from '../dados/lugares';
 import { modeloMoradia, modeloVeiculo } from '../dados/bens';
 import { curso } from '../dados/cursos';
 import { liquido, mesesPagos } from './renda';
-import { moraComFamiliaDeOrigem, rendaDosOutros } from './domicilio';
+import { moraComFamiliaDeOrigem } from './domicilio';
 import { dinheiro as fmt } from '../texto';
+import { abalar } from './abalo';
 
 const POR_ESTILO = {
   apertado: { basico: 520, lazer: 60, contas: 230 },
@@ -238,7 +239,7 @@ export function processarDinheiro(v: Vida, r: Rng): void {
     if (corte > 0) {
       despesa -= corte;
       linhas.push({ rotulo: 'Cortes no mercado, no lazer e nos extras', valor: Math.round(corte), grupo: 'lazer' });
-      v.mente.felicidade = clamp(v.mente.felicidade - Math.min(8, Math.round(corte / 250)));
+      abalar(v, 'os cortes para o dinheiro fechar', -Math.min(8, Math.round(corte / 250)), 0);
       if (v.fatos['aperto_desde'] === undefined || v.t - (v.fatos['ultimo_aperto'] ?? 0) > 36) {
         v.fatos['aperto_desde'] = v.t;
         const n = (v.fatos['apertos'] ?? 0) + 1;
@@ -350,19 +351,8 @@ export function processarDinheiro(v: Vida, r: Rng): void {
     }
   }
 
-  // Aperto sentido no corpo.
-  const cartao = f.dividas.find(d => d.tipo === 'cartao');
-  if (f.negativado || (cartao && cartao.saldo > renda * 6 && renda > 0)) {
-    v.mente.estresse = clamp(v.mente.estresse + 10);
-    v.mente.felicidade = clamp(v.mente.felicidade - 6);
-  }
-  if (!moraComFamiliaDeOrigem(v) && f.estilo === 'folgado') v.mente.felicidade = clamp(v.mente.felicidade + 2);
-
-  // Na casa dos pais, a pobreza da família também é sentida.
-  if (moraComFamiliaDeOrigem(v) && i < 18) {
-    const pc = (rendaDosOutros(v) + renda) / (moraCom(v).length + 1);
-    if (pc < 500) v.mente.estresse = clamp(v.mente.estresse + 3);
-  }
+  // O aperto (dívida pesada, nome sujo, pobreza em casa) e a folga pesam na
+  // cabeça e no humor pelo equilíbrio anual — ver `estado.ts`.
 }
 
 function cobrirRombo(v: Vida, falta: number): void {
@@ -407,7 +397,7 @@ function cobrirRombo(v: Vida, falta: number): void {
       v.fatos['negativacoes'] = vezes;
       escrever(v, { texto: primeira ? 'Contas atrasadas viraram nome sujo no Serasa. Crédito, agora, só depois de renegociar.' : vezes === 2 ? 'O nome voltou para o Serasa.' : 'Nome sujo de novo.', relevancia: primeira ? 'marco' : vezes === 2 ? 'cotidiano' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
     }
-    v.mente.estresse = clamp(v.mente.estresse + 6);
+    abalar(v, 'as contas atrasadas', 0, 6);
     v.corpo.saude = clamp(v.corpo.saude - Math.min(2, Math.round(semCobertura / 10000)));
   }
 }

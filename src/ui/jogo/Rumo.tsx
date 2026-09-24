@@ -1,16 +1,18 @@
 /**
- * Rumo: estudo e trabalho.
+ * Rumo: estudo e trabalho — duas composições, não uma lista.
  *
- * O jogador não vê um catálogo de profissões: vê as portas que a vida abriu
- * agora, o que a formação e a estrada permitem, e o que está fora de alcance
- * perto de onde ele está — sempre com o motivo. A carreira é contada em
- * palavras (anos de estrada, o que falta para o próximo passo), não em níveis.
+ * No topo, as portas que a vida abriu agora (valem para os dois lados).
+ * ESTUDO é uma trajetória: o que já ficou para trás, onde você está, e as
+ * portas seguintes (poucas, com motivo); o resto do catálogo fica em
+ * "explorar". TRABALHO é uma escada: os degraus da sua estrada, onde você
+ * está, o próximo passo e o que falta; depois as vagas que fazem sentido
+ * para você, e o resto recolhido por área. Devolutivas das últimas
+ * tentativas dizem o que pesou. Nunca "nível 2": sempre palavras.
  */
 
 import { useMemo, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
-import { opcoesDeCurso } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { curso, cursoOuNulo } from '../../motor/dados/cursos';
 import { OCUPACOES, ROTULO_TRILHA, ROTULO_SETOR, ocupacao, type Ocupacao } from '../../motor/dados/ocupacoes';
@@ -24,6 +26,8 @@ import { liquido } from '../../motor/sistemas/renda';
 import { podeTentar } from '../../motor/plausibilidade';
 import { anoDe } from '../../motor/tempo';
 import { BotaoAcao, Escolha, Linha, Secao, Vazio } from '../comum';
+import { cursosParaVoce, vagasParaVoce, type CursoOpcoes } from '../../motor/sistemas/relevancia';
+import { O_QUE_TRABALHAR } from '../../motor/sistemas/devolutivas';
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean }
@@ -38,19 +42,149 @@ const NIVEL_CURSO: { id: string; rotulo: string }[] = [
   { id: 'pos', rotulo: 'Pós-graduação' }, { id: 'residencia', rotulo: 'Pós-graduação' }, { id: 'mestrado', rotulo: 'Pós-graduação' }, { id: 'doutorado', rotulo: 'Pós-graduação' }
 ];
 
+type Lado = 'estudo' | 'trabalho';
+
+/** Qual lado abre primeiro: o que ocupa a vida agora. */
+function ladoInicial(v: Vida): Lado {
+  const i = idade(v);
+  if (i < 14) return 'estudo';
+  if (v.trabalho.atual || v.trabalho.aposentadoria) return 'trabalho';
+  if (v.educacao.basica || v.educacao.matricula) return 'estudo';
+  return 'trabalho';
+}
+
 export function Rumo({ vida, agir }: Props) {
   const i = idade(vida);
+  const [lado, setLado] = useState<Lado>(() => ladoInicial(vida));
+  const temTrabalho = i >= 14;
   return (
-    <div className="rumo">
+    <div className={`rumo rumo--${lado}`}>
       <Portas vida={vida} agir={agir} />
-      <Estudo vida={vida} agir={agir} />
-      {i >= 15 && <Cursos vida={vida} agir={agir} />}
-      {i >= 14 && <Trabalho vida={vida} agir={agir} />}
-      {i >= 17 && <Concursos vida={vida} agir={agir} />}
-      {i >= 14 && <Vagas vida={vida} agir={agir} />}
-      {(vida.trabalho.historico.length > 0 || vida.educacao.concluidos.length > 0 || vida.caminhos.marcas.length > 0) && <Trajetoria vida={vida} />}
-      {i < 14 && !vida.educacao.basica && <Vazio>Por enquanto, o rumo é crescer.</Vazio>}
+      {temTrabalho && (
+        <div className="lados" role="tablist" aria-label="Estudo ou trabalho">
+          {(['estudo', 'trabalho'] as Lado[]).map(l => (
+            <button key={l} type="button" role="tab" aria-selected={lado === l} className={`lados__item${lado === l ? ' lados__item--ativo' : ''}`} onClick={() => setLado(l)}>
+              {l === 'estudo' ? 'Estudo' : 'Trabalho'}
+            </button>
+          ))}
+        </div>
+      )}
+      {(lado === 'estudo' || !temTrabalho) ? (
+        <div role="tabpanel" aria-label="Estudo" className="rumo__painel">
+          <TrajetoriaDeEstudo vida={vida} />
+          <Estudo vida={vida} agir={agir} />
+          {i >= 15 && <Cursos vida={vida} agir={agir} />}
+          {i < 14 && !vida.educacao.basica && <Vazio>Por enquanto, o rumo é crescer.</Vazio>}
+        </div>
+      ) : (
+        <div role="tabpanel" aria-label="Trabalho" className="rumo__painel">
+          <Escada vida={vida} />
+          <Trabalho vida={vida} agir={agir} />
+          <Devolutivas vida={vida} />
+          <Vagas vida={vida} agir={agir} />
+          {i >= 17 && <Concursos vida={vida} agir={agir} />}
+          {(vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <Trajetoria vida={vida} />}
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------ Estudo: trajetória */
+
+/** Passado → agora → próximo: a formação como um caminho, em poucas linhas. */
+function TrajetoriaDeEstudo({ vida }: { vida: Vida }) {
+  const e = vida.educacao;
+  const i = idade(vida);
+  const passado: { ano: number; texto: string }[] = [];
+  // O que a biografia já registra (nada é inventado aqui).
+  for (const x of vida.biografia) {
+    if (x.tema !== 'escola') continue;
+    if (/^Terminou o fundamental/.test(x.texto)) passado.push({ ano: anoDe(x.t), texto: 'Fundamental completo' });
+    else if (/^Concluiu o ensino médio/.test(x.texto)) passado.push({ ano: anoDe(x.t), texto: 'Ensino médio completo' });
+    else if (/^Largou a escola/.test(x.texto)) passado.push({ ano: anoDe(x.t), texto: x.texto.replace(/\.$/, '') });
+  }
+  for (const c of e.concluidos) passado.push({ ano: anoDe(c.tFim), texto: c.nome });
+  passado.sort((a, b) => a.ano - b.ano);
+  const b = e.basica;
+  const m = e.matricula;
+  const agora = b ? `${rotuloSerie(b)}, escola ${b.rede === 'publica' ? 'pública' : 'particular'}` : m ? `${curso(m.cursoId).nome}${m.trancado ? ' (trancado)' : ''}` : i < 4 ? 'Ainda não é hora da escola' : 'Sem estudar agora';
+  const detalhe = b && b.etapa !== 'creche' && b.etapa !== 'pre' ? `Notas: ${palavraDesempenho(b.desempenho)}` : m ? `${m.mesesRestantes <= 12 ? 'Último ano' : `Faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`} · desempenho ${palavraDesempenho(m.desempenho)}` : ROTULO_ESCOLARIDADE[e.escolaridade];
+  const { para } = i >= 15 && !m ? cursosParaVoce(vida) : { para: [] };
+  const proximo = b ? (b.etapa === 'medio' ? 'Depois do médio: faculdade, técnico, trabalho — ou os três.' : 'Seguir na escola.') : m ? portasDoCurso(vida, m.cursoId) : '';
+  return (
+    <section className="trajeto" aria-label="Sua trajetória nos estudos">
+      <ol className="trajeto__linha">
+        {passado.slice(-4).map((x, k) => (
+          <li key={k} className="trajeto__passo trajeto__passo--passado"><span className="trajeto__ano">{x.ano}</span><span className="trajeto__texto">{x.texto}</span></li>
+        ))}
+        <li className="trajeto__passo trajeto__passo--agora" aria-current="step">
+          <span className="trajeto__ano">Agora</span>
+          <span className="trajeto__texto">{agora}</span>
+          <span className="trajeto__detalhe">{detalhe}</span>
+        </li>
+        {para.length > 0 ? para.map(x => (
+          <li key={x.item.curso.id} className="trajeto__passo trajeto__passo--porta">
+            <span className="trajeto__ano">Porta</span>
+            <span className="trajeto__texto">{x.item.curso.nome}</span>
+            <span className="trajeto__detalhe">{x.motivo}</span>
+          </li>
+        )) : proximo ? (
+          <li className="trajeto__passo trajeto__passo--porta"><span className="trajeto__ano">Depois</span><span className="trajeto__texto">{proximo}</span></li>
+        ) : null}
+      </ol>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------- Trabalho: escada */
+
+/** Os degraus da estrada atual: onde você esteve, onde está, o que vem. */
+function Escada({ vida }: { vida: Vida }) {
+  const e = vida.trabalho.atual;
+  const oc = e ? ocupacao(e.ocupacaoId) : undefined;
+  if (!oc || e?.clientela !== undefined || e?.posAposentadoria) return null;
+  const degraus = [...new Map(OCUPACOES.filter(x => x.trilha === oc.trilha && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && (x.nivel <= oc.nivel || degrausAcima(oc).some(d => d.id === x.id) || x.nivel === oc.nivel + 2)).sort((a, b) => a.nivel - b.nivel).map(x => [x.nivel, x] as const)).values()];
+  if (degraus.length < 2) return null;
+  const jaFoi = new Set(vida.trabalho.historico.map(h => h.ocupacaoId));
+  return (
+    <section className="escada" aria-label={`Sua estrada em ${ROTULO_TRILHA[oc.trilha] ?? oc.trilha}`}>
+      <h2 className="escada__titulo">A sua estrada em {ROTULO_TRILHA[oc.trilha] ?? oc.trilha}</h2>
+      <ol className="escada__degraus">
+        {[...degraus].reverse().map(x => {
+          const estado = x.id === oc.id ? 'agora' : x.nivel < oc.nivel ? (jaFoi.has(x.id) ? 'foi' : 'abaixo') : 'acima';
+          return (
+            <li key={x.id} className={`escada__degrau escada__degrau--${estado}`} aria-current={estado === 'agora' ? 'step' : undefined}>
+              <span className="escada__nome">{nomeOcupacao(vida, x)}</span>
+              <span className="escada__nota">{estado === 'agora' ? 'você está aqui' : estado === 'foi' ? 'já foi' : estado === 'acima' ? (x.nivel === oc.nivel + 1 ? 'o próximo passo' : 'mais adiante') : ''}</span>
+            </li>
+          );
+        })}
+      </ol>
+      {horizonte(vida) && <p className="escada__horizonte">{horizonte(vida)}</p>}
+    </section>
+  );
+}
+
+/** O que ficou das últimas tentativas: o que pesou e o que dá para fazer. */
+function Devolutivas({ vida }: { vida: Vida }) {
+  const lista = vida.caminhos.devolutivas.filter(d => !d.passou && vida.t - d.t <= 36).slice(-3).reverse();
+  if (!lista.length) return null;
+  return (
+    <Secao titulo="O que ficou das últimas tentativas">
+      <ul className="devolutivas">
+        {lista.map((d, k) => (
+          <li key={k} className="devolutiva">
+            <span className="devolutiva__ano">{anoDe(d.t)}</span>
+            <div>
+              <strong>{d.titulo}</strong>
+              <p>{d.texto}{d.perto ? ' Ficou perto.' : ''}</p>
+              {d.falta && <p className="devolutiva__dica">{O_QUE_TRABALHAR[d.falta]}</p>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Secao>
   );
 }
 
@@ -90,25 +224,22 @@ function Estudo({ vida, agir }: Props) {
   const i = idade(vida);
   const estudando = !!b || !!m;
   const { forte, fraca } = materiasExtremas(vida);
+  // Série, curso, notas e o tempo que falta já estão na trajetória acima; aqui fica o resto.
+  const temAlgo = estudando || e.evadiu || i >= 15;
+  if (!temAlgo) return null;
   return (
-    <Secao titulo="Estudo">
-      <Linha rotulo="Escolaridade" valor={ROTULO_ESCOLARIDADE[e.escolaridade]} />
+    <Secao titulo={estudando ? 'Os estudos agora' : 'Estudar'}>
       {b && (
         <>
-          <Linha rotulo="Agora" valor={`${rotuloSerie(b)}, escola ${b.rede === 'publica' ? 'pública' : 'particular'}${b.integrado ? ` · integrado ao ${cursoOuNulo(b.integrado)?.nome ?? 'técnico'}` : ''}`} />
-          {b.etapa !== 'creche' && b.etapa !== 'pre' && <Linha rotulo="Notas" valor={palavraDesempenho(b.desempenho)} tom={b.desempenho >= 62 ? 'bom' : b.desempenho < 40 ? 'ruim' : undefined} />}
+          {b.integrado && <Linha rotulo="Integrado" valor={cursoOuNulo(b.integrado)?.nome ?? 'técnico'} />}
           {forte && fraca && b.etapa !== 'creche' && b.etapa !== 'pre' && <p className="nota">Vai melhor em {NOME_MATERIA[forte]}; {NOME_MATERIA[fraca]} é onde mais sofre.</p>}
           {b.reprovacoes > 0 && <Linha rotulo="Repetências" valor={String(b.reprovacoes)} />}
         </>
       )}
       {m && (
         <>
-          <Linha rotulo="Curso" valor={`${curso(m.cursoId).nome}${m.trancado ? ' (trancado)' : ''}`} />
-          <Linha rotulo="Onde" valor={`${m.instituicao}${m.modalidade === 'ead' ? '' : ` · ${nomeLugar(m.municipioId)}`}`} />
-          <Linha rotulo="Falta" valor={m.mesesRestantes <= 12 ? 'o último ano' : `cerca de ${Math.ceil(m.mesesRestantes / 12)} anos`} />
+          <Linha rotulo="Onde" valor={`${m.instituicao}${m.modalidade === 'ead' ? ' · a distância' : ` · ${nomeLugar(m.municipioId)}`}`} />
           {m.mensalidade > 0 && <Linha rotulo={m.financiamento === 'fies' ? 'Mensalidade (FIES)' : 'Mensalidade'} valor={dinheiroCurto(m.mensalidade)} />}
-          <Linha rotulo="Desempenho" valor={palavraDesempenho(m.desempenho)} />
-          <p className="nota">{portasDoCurso(vida, m.cursoId)}</p>
         </>
       )}
       {e.evadiu && !b && <p className="nota">Você largou a escola. Dá para voltar pelo supletivo.</p>}
@@ -142,59 +273,61 @@ function portasDoCurso(v: Vida, cursoId: string): string {
 }
 
 function Cursos({ vida, agir }: Props) {
+  const [explorar, setExplorar] = useState(false);
   const [todos, setTodos] = useState(false);
   const [aberto, setAberto] = useState<string | null>(null);
-  const opcoes = useMemo(() => opcoesDeCurso(vida).map((o, indice) => ({ o, indice })), [vida]);
+  const { para, resto } = useMemo(() => cursosParaVoce(vida), [vida]);
   if (vida.educacao.matricula) return null;
-  const porCurso = new Map<string, typeof opcoes>();
-  for (const x of opcoes) {
-    const lista = porCurso.get(x.o.curso.id) ?? [];
-    lista.push(x);
-    porCurso.set(x.o.curso.id, lista);
-  }
-  const cursos = [...porCurso.entries()]
-    .map(([id, lista]) => ({ id, lista, possivel: lista.some(x => podeTentar(x.o.veredito)) }))
-    .filter(c => todos || c.possivel)
-    .filter(c => !c.lista.every(x => x.o.veredito.grau === 'incompativel' && /concluiu/.test(x.o.veredito.motivo ?? '')));
-  const grupos = [...new Set(NIVEL_CURSO.map(n => n.rotulo))].map(rotulo => ({ rotulo, lista: cursos.filter(c => NIVEL_CURSO.find(n => n.id === curso(c.id).nivel)?.rotulo === rotulo) })).filter(g => g.lista.length);
+  const restoMostrado = resto.filter(c => todos || c.possivel);
+  const grupos = [...new Set(NIVEL_CURSO.map(n => n.rotulo))].map(rotulo => ({ rotulo, lista: restoMostrado.filter(c => NIVEL_CURSO.find(n => n.id === c.curso.nivel)?.rotulo === rotulo) })).filter(g => g.lista.length);
+  const item = (c: CursoOpcoes, motivo?: string) => {
+    const cc = c.curso;
+    const melhores = [...c.opcoes].sort((a, b) => Number(podeTentar(b.o.veredito)) - Number(podeTentar(a.o.veredito)) || (b.o.veredito.chance ?? 0) - (a.o.veredito.chance ?? 0)).slice(0, 4);
+    const aberta = aberto === cc.id;
+    return (
+      <li key={cc.id} className="opcao-curso">
+        <button type="button" className="opcao-curso__cabeca" aria-expanded={aberta} onClick={() => setAberto(aberta ? null : cc.id)}>
+          <span className="opcao-curso__nome">{cc.nome}</span>
+          <span className="opcao-curso__meta">{motivo ? `${motivo} · ` : ''}{cc.meses >= 24 ? `${cc.meses / 12} anos` : `${cc.meses} meses`}{c.possivel ? '' : ' · fora de alcance'}</span>
+        </button>
+        {aberta && (
+          <div className="opcao-curso__corpo">
+            <p className="nota">{cc.descricao} {portasDoCurso(vida, cc.id)}</p>
+            {melhores.map(({ o, indice }) => (
+              <div key={indice} className="via">
+                <div className="via__texto">
+                  <strong>{VIA[o.via]}</strong>
+                  <span>{o.modalidade === 'ead' ? 'de casa' : nomeLugar(o.municipioId)}{o.mensalidade > 0 ? ` · ${dinheiroCurto(o.mensalidade)}/mês` : o.via === 'fies' ? ' · paga depois de formado' : ' · sem mensalidade'}</span>
+                  {o.observacao && <span className="via__obs">{o.observacao}</span>}
+                </div>
+                <BotaoAcao vida={vida} acao={{ tipo: 'matricular', indice }} agir={agir} mostrarChance>Tentar</BotaoAcao>
+              </div>
+            ))}
+          </div>
+        )}
+      </li>
+    );
+  };
   return (
-    <Secao titulo="Cursos" recolhivel aberta={idade(vida) >= 17} extra={<button type="button" className="botao botao--discreto" onClick={() => setTodos(t => !t)}>{todos ? 'Só os possíveis' : 'Ver todos'}</button>}>
-      {cursos.length === 0 && <Vazio>Nenhum curso ao alcance agora. {melhorNotaRecente(vida) === 0 && idade(vida) >= 16 ? 'Uma nota do ENEM abre portas.' : ''}</Vazio>}
-      {grupos.map(g => (
-        <div key={g.rotulo} className="grupo-atividades">
-          <h3 className="grupo-atividades__titulo">{g.rotulo}</h3>
-          <ul className="lista-opcoes">
-            {g.lista.map(c => {
-              const cc = curso(c.id);
-              const melhores = [...c.lista].sort((a, b) => Number(podeTentar(b.o.veredito)) - Number(podeTentar(a.o.veredito)) || (b.o.veredito.chance ?? 0) - (a.o.veredito.chance ?? 0)).slice(0, 4);
-              const aberta = aberto === c.id;
-              return (
-                <li key={c.id} className="opcao-curso">
-                  <button type="button" className="opcao-curso__cabeca" aria-expanded={aberta} onClick={() => setAberto(aberta ? null : c.id)}>
-                    <span className="opcao-curso__nome">{cc.nome}</span>
-                    <span className="opcao-curso__meta">{cc.meses >= 24 ? `${cc.meses / 12} anos` : `${cc.meses} meses`}{c.possivel ? '' : ' · fora de alcance'}</span>
-                  </button>
-                  {aberta && (
-                    <div className="opcao-curso__corpo">
-                      <p className="nota">{cc.descricao} {portasDoCurso(vida, cc.id)}</p>
-                      {melhores.map(({ o, indice }) => (
-                        <div key={indice} className="via">
-                          <div className="via__texto">
-                            <strong>{VIA[o.via]}</strong>
-                            <span>{o.modalidade === 'ead' ? 'de casa' : nomeLugar(o.municipioId)}{o.mensalidade > 0 ? ` · ${dinheiroCurto(o.mensalidade)}/mês` : o.via === 'fies' ? ' · paga depois de formado' : ' · sem mensalidade'}</span>
-                            {o.observacao && <span className="via__obs">{o.observacao}</span>}
-                          </div>
-                          <BotaoAcao vida={vida} acao={{ tipo: 'matricular', indice }} agir={agir} mostrarChance>Tentar</BotaoAcao>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+    <Secao titulo="Próximos passos">
+      {para.length === 0 && <Vazio>Nenhum curso claramente no seu caminho agora. {melhorNotaRecente(vida) === 0 && idade(vida) >= 16 ? 'Uma nota do ENEM abre portas.' : ''}</Vazio>}
+      {para.length > 0 && <ul className="lista-opcoes">{para.map(x => item(x.item, x.motivo))}</ul>}
+      {resto.length > 0 && (
+        <div className="explorar">
+          <button type="button" className="botao botao--discreto" aria-expanded={explorar} onClick={() => setExplorar(x => !x)}>{explorar ? 'Recolher' : `Explorar outros cursos (${resto.filter(c => c.possivel).length})`}</button>
+          {explorar && (
+            <>
+              <button type="button" className="botao botao--discreto" onClick={() => setTodos(t => !t)}>{todos ? 'Só os que estão ao alcance' : 'Incluir os fora de alcance'}</button>
+              {grupos.map(g => (
+                <div key={g.rotulo} className="grupo-atividades">
+                  <h3 className="grupo-atividades__titulo">{g.rotulo}</h3>
+                  <ul className="lista-opcoes">{g.lista.map(c => item(c))}</ul>
+                </div>
+              ))}
+            </>
+          )}
         </div>
-      ))}
+      )}
     </Secao>
   );
 }
@@ -218,7 +351,7 @@ function Trabalho({ vida, agir }: Props) {
           {e.clientela === undefined && <Linha rotulo="Como vai" valor={palavraDesempenho(e.desempenho)} tom={e.desempenho >= 62 ? 'bom' : e.desempenho < 40 ? 'ruim' : undefined} />}
           <div className="carreira">
             {estradaNaArea(vida) && <p>{estradaNaArea(vida)}</p>}
-            {horizonte(vida) && <p>{horizonte(vida)}</p>}
+            {horizonte(vida) && (e.clientela !== undefined || e.posAposentadoria) && <p>{horizonte(vida)}</p>}
             {n && n.estado !== 'fechado' && <p>{n.nome}: {n.estado === 'firme' ? 'firme, com freguesia certa' : n.estado === 'apertado' ? 'no aperto, o movimento está fraco' : 'ainda começando'}.</p>}
             {esporte?.fase === 'profissional' && <p>{esporte.lesoes > 1 ? `${esporte.lesoes} lesões na carreira. ` : ''}O corpo tem prazo: poucas carreiras passam dos 35.</p>}
           </div>
@@ -267,50 +400,33 @@ function Concursos({ vida, agir }: Props) {
 /* ------------------------------------------------------ Procurar trabalho */
 
 function Vagas({ vida, agir }: Props) {
-  const [mais, setMais] = useState(false);
+  const [explorar, setExplorar] = useState(false);
   const [bloqueadas, setBloqueadas] = useState(false);
   const atual = vida.trabalho.atual?.ocupacaoId;
-  const exp = vida.trabalho.experiencia;
+  const { para, resto } = vagasParaVoce(vida);
   const areas = new Set(vida.educacao.concluidos.map(c => c.area));
-  const todas = OCUPACOES.filter(oc => !oc.concurso && oc.id !== atual).map(oc => ({ oc, d: elegibilidade(vida, oc) }));
-  const alcance = todas.filter(x => podeTentar(x.d));
-  const minhaArea = (oc: Ocupacao) => (exp[oc.trilha] ?? 0) >= 12 || !!oc.area?.some(a => areas.has(a)) || !!oc.habilidade;
-  const naArea = alcance.filter(x => minhaArea(x.oc) && !porContaPropria(x.oc)).sort((a, b) => b.oc.nivel - a.oc.nivel || b.oc.salario - a.oc.salario).slice(0, 6);
-  const porConta = alcance.filter(x => porContaPropria(x.oc) && !naArea.includes(x)).sort((a, b) => b.oc.salario - a.oc.salario).slice(0, 5);
-  const usados = new Set([...naArea, ...porConta].map(x => x.oc.id));
-  // Para começar: uma de cada setor, as mais prováveis.
-  const setores = new Set<string>();
-  const comecar = alcance.filter(x => !usados.has(x.oc.id) && x.oc.nivel <= 2).sort((a, b) => (b.d.chance ?? 0) - (a.d.chance ?? 0)).filter(x => (setores.has(x.oc.setor) ? false : (setores.add(x.oc.setor), true))).slice(0, 6);
-  comecar.forEach(x => usados.add(x.oc.id));
-  const outras = alcance.filter(x => !usados.has(x.oc.id)).sort((a, b) => b.oc.salario - a.oc.salario).slice(0, 12);
+  const minhaArea = (oc: Ocupacao) => (vida.trabalho.experiencia[oc.trilha] ?? 0) >= 12 || !!oc.area?.some(a => areas.has(a)) || !!oc.habilidade;
   // Fora de alcance: só o que está perto do caminho (próximo degrau, a sua formação, o seu ofício).
   const perto = new Set<string>();
   if (atual) for (const x of degrausAcima(ocupacao(atual))) perto.add(x.id);
-  for (const { oc } of todas) if (minhaArea(oc) && oc.nivel >= 2) perto.add(oc.id);
-  const fora = todas.filter(x => !podeTentar(x.d) && x.d.grau !== 'ilegal' && x.d.grau !== 'impossivel' && perto.has(x.oc.id) && !/currículo|oportunidade|peneira|carreira militar|negócio/.test(x.d.motivo ?? '')).slice(0, 8);
+  const todas = OCUPACOES.filter(oc => !oc.concurso && oc.id !== atual);
+  for (const oc of todas) if (minhaArea(oc) && oc.nivel >= 2) perto.add(oc.id);
+  const fora = todas.map(oc => ({ oc, d: elegibilidade(vida, oc) })).filter(x => !podeTentar(x.d) && x.d.grau !== 'ilegal' && x.d.grau !== 'impossivel' && perto.has(x.oc.id) && !/currículo|oportunidade|peneira|carreira militar|negócio/.test(x.d.motivo ?? '')).slice(0, 8);
   const negocios = negociosPossiveis(vida).filter(n => podeTentar(n.veredito) || /R\$/.test(n.veredito.motivo ?? ''));
   const usadas = vida.anoAtual.acoes.filter(a => a.startsWith('candidatura:')).length;
-  const grupo = (titulo: string, lista: typeof alcance, dica?: string) => lista.length > 0 && (
-    <div className="grupo-atividades">
-      <h3 className="grupo-atividades__titulo">{titulo}</h3>
-      {dica && <p className="nota">{dica}</p>}
-      <ul className="lista-vagas">
-        {lista.map(({ oc }) => (
-          <li key={oc.id} className="vaga">
-            <div className="vaga__texto"><strong>{nomeOcupacao(vida, oc)}</strong><span>{ROTULO_SETOR[oc.setor]}{oc.experiencia ? ' · pede estrada' : oc.nivel <= 1 ? ' · para começar' : ''} · a partir de {dinheiroCurto(oc.salario)}{oc.jornada === 'fora' ? ' · dias fora de casa' : oc.jornada === 'longa' ? ' · jornada longa' : ''}</span></div>
-            <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={!porContaPropria(oc)}>{porContaPropria(oc) ? 'Começar por conta' : 'Candidatar-se'}</BotaoAcao>
-          </li>
-        ))}
-      </ul>
-    </div>
+  const porSetor = [...new Set(resto.map(x => x.oc.setor))].map(setor => ({ setor, lista: resto.filter(x => x.oc.setor === setor).sort((a, b) => a.oc.nivel - b.oc.nivel || b.oc.salario - a.oc.salario) }));
+  const linha = ({ oc }: { oc: Ocupacao }, motivo?: string) => (
+    <li key={oc.id} className="vaga">
+      <div className="vaga__texto"><strong>{nomeOcupacao(vida, oc)}</strong>{motivo && <span className="vaga__motivo">{motivo}</span>}<span>{ROTULO_SETOR[oc.setor]}{oc.experiencia ? ' · pede estrada' : oc.nivel <= 1 ? ' · para começar' : ''} · a partir de {dinheiroCurto(oc.salario)}{oc.jornada === 'fora' ? ' · dias fora de casa' : oc.jornada === 'longa' ? ' · jornada longa' : ''}</span></div>
+      <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={!porContaPropria(oc)}>{porContaPropria(oc) ? 'Começar por conta' : 'Candidatar-se'}</BotaoAcao>
+    </li>
   );
+  if (idade(vida) < 14) return null;
   return (
-    <Secao titulo="Procurar trabalho" recolhivel aberta={!vida.trabalho.atual && idade(vida) >= 16}>
-      <p className="dica">Cada candidatura leva a uma entrevista. Dá para tentar até três processos por ano ({Math.max(0, 3 - usadas)} restantes). Trabalhar por conta não passa por entrevista: a freguesia é que decide.</p>
-      {alcance.length === 0 && <Vazio>Nenhuma vaga ao seu alcance agora.</Vazio>}
-      {grupo('Na sua área', naArea)}
-      {grupo('Por conta própria', porConta, 'Com ofício, dá para atender por conta. Começa com pouca freguesia.')}
-      {grupo('Para começar', comecar)}
+    <Secao titulo={vida.trabalho.atual ? 'Outros caminhos' : 'Procurar trabalho'}>
+      <p className="dica">Candidatar-se leva a uma entrevista de duas ou três perguntas. Até três processos por ano ({Math.max(0, 3 - usadas)} restantes). Trabalhar por conta não passa por entrevista: a freguesia é que decide.</p>
+      {para.length === 0 && resto.length === 0 && <Vazio>Nenhuma vaga ao seu alcance agora.</Vazio>}
+      {para.length > 0 && <ul className="lista-vagas lista-vagas--sugestoes">{para.map(x => linha(x.item, x.motivo))}</ul>}
       {negocios.length > 0 && (
         <div className="grupo-atividades">
           <h3 className="grupo-atividades__titulo">Abrir um negócio</h3>
@@ -324,14 +440,19 @@ function Vagas({ vida, agir }: Props) {
           </ul>
         </div>
       )}
-      {outras.length > 0 && (
-        <>
-          <button type="button" className="botao botao--discreto" aria-expanded={mais} onClick={() => setMais(x => !x)}>{mais ? 'Esconder' : 'Ver'} outras portas ({outras.length})</button>
-          {mais && grupo('Outras portas', outras)}
-        </>
+      {resto.length > 0 && (
+        <div className="explorar">
+          <button type="button" className="botao botao--discreto" aria-expanded={explorar} onClick={() => setExplorar(x => !x)}>{explorar ? 'Recolher' : `Explorar outras vagas (${resto.length})`}</button>
+          {explorar && porSetor.map(g => (
+            <div key={g.setor} className="grupo-atividades">
+              <h3 className="grupo-atividades__titulo">{ROTULO_SETOR[g.setor]}</h3>
+              <ul className="lista-vagas">{g.lista.map(x => linha(x))}</ul>
+            </div>
+          ))}
+        </div>
       )}
       {fora.length > 0 && (
-        <>
+        <div className="explorar">
           <button type="button" className="botao botao--discreto" aria-expanded={bloqueadas} onClick={() => setBloqueadas(x => !x)}>{bloqueadas ? 'Esconder' : 'Ver'} o próximo passo e o que falta ({fora.length})</button>
           {bloqueadas && (
             <ul className="lista-vagas lista-vagas--bloqueadas">
@@ -342,7 +463,7 @@ function Vagas({ vida, agir }: Props) {
               ))}
             </ul>
           )}
-        </>
+        </div>
       )}
     </Secao>
   );
@@ -355,7 +476,7 @@ function Trajetoria({ vida }: { vida: Vida }) {
   const trilhas = Object.entries(t.experiencia).filter(([, m]) => m >= 12).sort((a, b) => b[1] - a[1]);
   const marcos = vida.caminhos.marcas.filter(m => m.peso === 3).slice(-8);
   return (
-    <Secao titulo="Trajetória" recolhivel aberta={false}>
+    <Secao titulo="Por onde você passou" recolhivel aberta={false}>
       {marcos.length > 0 && (
         <ul className="marcos-caminho">
           {marcos.map((m, k) => <li key={k}><span className="marcos-caminho__ano">{anoDe(m.t)}</span><span>{m.texto}</span></li>)}

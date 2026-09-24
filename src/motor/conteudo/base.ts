@@ -82,6 +82,8 @@ export interface Resultado {
   efeito?: (c: Ctx) => void;
   lembrar?: [papel: string, texto: string, tipo?: TipoMarco];
   evento?: EventoSocial;
+  /** Reabre a mesma decisão (próxima etapa de um processo seletivo em andamento). */
+  reabrir?: boolean;
 }
 
 export interface Opcao {

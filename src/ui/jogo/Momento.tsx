@@ -38,7 +38,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
           </div>
         )}
         <p className="momento__texto">{m.texto}</p>
-        <p className="momento__pergunta">O que você faz?</p>
+        <p className="momento__pergunta">{m.situacaoId === 'trab_entrevista' ? 'O que você responde?' : m.situacaoId === 'esp_peneira' ? 'Como você joga?' : 'O que você faz?'}</p>
         <ul className="momento__opcoes">
           {m.opcoes.map(o => (
             <li key={o.id}>
@@ -54,10 +54,19 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
   );
 }
 
-export function Resultado({ titulo, texto, aoFechar }: { titulo: string; texto: string; aoFechar: () => void }) {
+export function Resultado({ titulo, texto, aoFechar, vida, pessoaId }: { titulo: string; texto: string; aoFechar: () => void; vida?: Vida; pessoaId?: string }) {
+  const p = pessoaId && vida ? vida.pessoas[pessoaId] : undefined;
   return (
     <Folha rotulo={`Resultado: ${titulo}`} aoFechar={aoFechar} fechavel>
       <div className="momento momento--resultado">
+        {p && vida && (
+          <div className="momento__pessoas">
+            <figure className="momento__pessoa">
+              <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={64} rotulo={p.nome} />
+              <figcaption><span>{p.nome}</span>{vida.vinculos[p.id] && <span className="momento__relacao">{rotuloDe(vida, p, vida.vinculos[p.id])}</span>}</figcaption>
+            </figure>
+          </div>
+        )}
         <p className="momento__tema">{titulo}</p>
         <p className="momento__resultado">{texto}</p>
         <button type="button" className="botao botao--principal" onClick={aoFechar}>Continuar</button>

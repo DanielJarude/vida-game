@@ -592,8 +592,9 @@ describe('coerência de caminhos', () => {
   }, 240000);
 
   it('35. uma vida sem faculdade continua cheia de caminho: trabalho, ofício, portas', () => {
+    // 12 vidas, e o mesmo patamar de antes (≥ 83%): com 6, o resultado dependia de uma semente só.
     let ricas = 0;
-    for (let s = 1; s <= 6; s++) {
+    for (let s = 1; s <= 12; s++) {
       const v = ate(40, s * 17, vv => {
         const out: Acao[] = [...praticar('consertar', 1, 12)(vv)];
         if (idade(vv) >= 17 && !vv.trabalho.atual) {
@@ -609,6 +610,6 @@ describe('coerência de caminhos', () => {
       const portas = Object.keys(v.caminhos.ultimas).length;
       if (v.trabalho.historico.length + (v.trabalho.atual ? 1 : 0) >= 1 && marcas.length >= 2 && portas >= 3) ricas++;
     }
-    expect(ricas).toBeGreaterThanOrEqual(5);
-  }, 120000);
+    expect(ricas).toBeGreaterThanOrEqual(10);
+  }, 240000);
 });

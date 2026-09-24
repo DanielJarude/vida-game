@@ -30,6 +30,7 @@ import { contratar, encerrarEmprego } from './trabalho';
 import { capitalDoEstado } from './escola';
 import { flex, ge } from '../texto';
 import { novaOportunidade } from './oportunidades';
+import { abalar } from './abalo';
 
 export const MODALIDADES: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas'];
 
@@ -232,8 +233,7 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
   escrever(v, { texto, relevancia: 'marco', tema: eraPro ? 'trabalho' : 'lazer', tom: 'ruim' });
   marcar(v, eraPro ? 'fim_carreira' : 'fracasso', texto, 3, { dominio: e.modalidade });
   marcarFato(v, eraPro ? 'fim_carreira_esportiva' : 'dispensado_base');
-  v.mente.felicidade = clamp(v.mente.felicidade - (eraPro ? 8 : 10));
-  v.mente.estresse = clamp(v.mente.estresse + 6);
+  abalar(v, eraPro ? 'o fim da carreira no esporte' : `a dispensa ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'}`, -(eraPro ? 8 : 10), 6);
 }
 
 /** Continua praticando o esporte como profissional (o treino do clube). */

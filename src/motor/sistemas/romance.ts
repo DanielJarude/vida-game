@@ -32,6 +32,7 @@ import { flex } from '../texto';
 import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidade';
 import { aplicarPersonalidade } from '../personalidade';
 import { filhosEmComum } from './vinculos';
+import { abalar } from './abalo';
 
 const ESTAGIOS_ATIVOS: EstagioRomance[] = ['saindo', 'namoro', 'morando_junto', 'casamento'];
 
@@ -147,6 +148,9 @@ export function processarRomance(v: Vida, r: Rng): void {
     const meses = v.t - rom.tEstagio;
 
     if (rom.estagio === 'interesse') {
+      // Quem pediu um tempo responde — a resposta é dela, e nasce do que
+      // aconteceu entre vocês nesse meio-tempo.
+      if (rom.pediuTempo !== undefined && v.t - rom.pediuTempo >= 6) { responderDepoisDoTempo(v, r, p, vin); continue; }
       // Interesse sem atitude se dissolve.
       if (meses >= 24) vin.romance = rom.tInicio !== undefined ? { ...rom, estagio: 'ex', fim: rom.fim ?? 'termino' } : undefined;
       continue;
@@ -192,8 +196,8 @@ export function processarRomance(v: Vida, r: Rng): void {
     if (rom.segredo) {
       const caso = v.vinculos[rom.segredo.pessoaId]?.romance;
       const acabou = !caso || caso.estagio === 'ex';
+      // O peso de guardar o segredo entra na cabeça pelo equilíbrio (`estado.ts`).
       if (acabou && v.t - (caso?.tEstagio ?? rom.segredo.t) > 60) rom.segredo = undefined;
-      else v.mente.estresse = clamp(v.mente.estresse + (acabou ? 1 : 3));
     }
 
     if (rom.estagio === 'saindo') {
@@ -211,6 +215,31 @@ export function processarRomance(v: Vida, r: Rng): void {
       terminar(v, p, vin, 'ela');
     }
   }
+}
+
+/**
+ * A resposta de quem pediu um tempo. Estar por perto nesse meio-tempo
+ * (qualquer momento juntos no ano) pesa a favor; o resto é quem ela é.
+ */
+function responderDepoisDoTempo(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): void {
+  const rom = vin.romance!;
+  const perto = v.anoAtual.acoes.some(a => a.endsWith(`:${p.id}`));
+  const valor = rom.envolvimento + (perto ? 8 : -4) + compatibilidade(v, p) * 6 + r.normal() * 6;
+  const ele = flex(p.genero, 'ele', 'ela', 'elu');
+  if (valor >= 56 && !parceiro(v) && !p.parceiroId) {
+    mudarEstagio(v, vin, 'saindo');
+    rom.envolvimento = Math.max(rom.envolvimento, 58);
+    rom.pediuTempo = undefined;
+    escrever(v, { texto: `${p.nome} procurou você: pensou e quer tentar. Começaram a sair.`, relevancia: 'biografia', tema: 'amor', tom: 'bom', pessoas: [p.id], evento: { tipo: 'namoro', pessoaId: p.id, peso: 15 } });
+    lembrarCom(v, p.id, `Depois de pensar, ${ele} disse sim.`, 'romance', 2);
+    abalar(v, `o sim de ${p.nome}`, 6, 0);
+    return;
+  }
+  vin.romance = undefined;
+  v.fatos[`recusa_romance_${p.id}`] = v.t;
+  escrever(v, { texto: `${p.nome} respondeu, com cuidado, que prefere continuar só amizade.`, relevancia: 'cotidiano', tema: 'amor', pessoas: [p.id] });
+  lembrarCom(v, p.id, `Depois de pensar, ${ele} preferiu a amizade.`, 'romance', 1);
+  abalar(v, `a resposta de ${p.nome}`, -4, 2);
 }
 
 /** Uma crise com causa. A causa é do mundo; o que fazer com ela é do jogador. */
@@ -254,8 +283,7 @@ export function terminar(v: Vida, p: Pessoa, vin: Vinculo, quem: 'jogador' | 'el
     evento: { tipo: era === 'casamento' ? 'divorcio' : 'termino', pessoaId: p.id, peso: moravam ? 70 : 30 }
   });
   lembrarCom(v, p.id, era === 'casamento' ? 'Divorciaram-se.' : moravam ? 'Separaram-se.' : 'Terminaram.', 'conflito', moravam ? 3 : 2);
-  v.mente.felicidade = clamp(v.mente.felicidade - (era === 'casamento' ? 18 : 10));
-  v.mente.estresse = clamp(v.mente.estresse + (moravam ? 14 : 6));
+  abalar(v, era === 'casamento' ? `o divórcio de ${p.nome}` : moravam ? `a separação de ${p.nome}` : `o fim do namoro com ${p.nome}`, -(era === 'casamento' ? 18 : 10), moravam ? 14 : 6);
   vin.confianca = clamp(vin.confianca - (motivo === 'traicao' ? 40 : 15));
 
   // Os filhos atravessam a separação dos pais.

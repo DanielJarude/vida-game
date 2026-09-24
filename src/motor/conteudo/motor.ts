@@ -154,5 +154,7 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
     if (pessoa) lembrarCom(v, pessoa.id, res.lembrar[1], res.lembrar[2], 2);
   }
   v.momento = null;
+  // Processo em etapas: a mesma decisão volta, com a próxima pergunta.
+  if (res.reabrir) abrirDecisao(v, d, contexto(v, r, p));
   return { texto: res.texto };
 }

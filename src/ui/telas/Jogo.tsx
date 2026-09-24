@@ -15,14 +15,17 @@ import { Pessoas } from '../jogo/Pessoas';
 import { Rumo } from '../jogo/Rumo';
 import { Casa } from '../jogo/Casa';
 import { Tempo } from '../jogo/Tempo';
+import { Voce } from '../jogo/Voce';
+import { expressaoDe, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
 import { dinheiroCurto, faseDaVida, ocupacaoAtual, ondeMora, palavraEstresse, palavraHumor, palavraSaude } from '../apresentar';
 import { emCasa, lutoVisivel, sinaisSociais, situacaoAfetiva } from '../leitura';
 
-type Aba = 'vida' | 'pessoas' | 'rumo' | 'casa' | 'tempo';
+type Aba = 'vida' | 'voce' | 'pessoas' | 'rumo' | 'casa' | 'tempo';
 
 const ABAS: { id: Aba; rotulo: string; curto: string; icone: string }[] = [
   { id: 'vida', rotulo: 'Linha da Vida', curto: 'Vida', icone: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4V4zm0 12a4 4 0 0 0 4 4' },
+  { id: 'voce', rotulo: 'Você', curto: 'Você', icone: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm-7.5 9a7.5 7.5 0 0 1 15 0' },
   { id: 'pessoas', rotulo: 'Pessoas', curto: 'Pessoas', icone: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M17 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3' },
   { id: 'rumo', rotulo: 'Estudo e trabalho', curto: 'Rumo', icone: 'M12 3l10 5-10 5L2 8l10-5zm-6 7.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5' },
   { id: 'casa', rotulo: 'Casa e dinheiro', curto: 'Casa', icone: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z' },
@@ -60,7 +63,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           ))}
         </nav>
         <div className="cabecalho__idade">
-          <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={36} rotulo={vida.eu.nome} />
+          <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={36} rotulo={vida.eu.nome} expressao={expressaoDe(vida)} />
           <div>
             <strong>{vida.eu.nome}, {i} {i === 1 ? 'ano' : 'anos'}</strong>
             <span>{anoDe(vida.t)} · {m.nome}, {m.uf}</span>
@@ -70,13 +73,14 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       <div className={`regioes regioes--${aba}`}>
         <aside className="trilho" aria-label="Quem você é">
-          <Identidade vida={vida} />
-          <div className="trilho__agora"><Agora vida={vida} irPara={setAba} abrirPessoa={abrirPessoa} /></div>
+          <Identidade vida={vida} irParaVoce={() => setAba('voce')} />
+          <div className="trilho__agora"><Agora vida={vida} aba={aba} irPara={setAba} abrirPessoa={abrirPessoa} /></div>
         </aside>
 
         <main className="conteudo" ref={conteudo}>
           <h1 className="conteudo__titulo">{ABAS.find(a => a.id === aba)!.rotulo}</h1>
           {aba === 'vida' && <LinhaDaVida vida={vida} marca={c.marcaAno} />}
+          {aba === 'voce' && <Voce vida={vida} agir={c.agir} irPara={setAba} abrirPessoa={abrirPessoa} />}
           {aba === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={setPessoaAberta} />}
           {aba === 'rumo' && <Rumo vida={vida} agir={c.agir} />}
           {aba === 'casa' && <Casa vida={vida} agir={c.agir} />}
@@ -84,7 +88,7 @@ export function Jogo({ c }: { c: ControleVida }) {
         </main>
 
         <aside className="agora" aria-label="Agora">
-          <Agora vida={vida} irPara={setAba} abrirPessoa={abrirPessoa} />
+          <Agora vida={vida} aba={aba} irPara={setAba} abrirPessoa={abrirPessoa} />
         </aside>
       </div>
 
@@ -104,28 +108,28 @@ export function Jogo({ c }: { c: ControleVida }) {
       </nav>
 
       {vida.momento && <Momento vida={vida} agir={c.agir} />}
-      {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} />}
+      {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} />}
       {menu && <Menu c={c} aoFechar={() => setMenu(false)} />}
     </div>
   );
 }
 
-function Identidade({ vida }: { vida: Vida }) {
+function Identidade({ vida, irParaVoce }: { vida: Vida; irParaVoce: () => void }) {
   const i = idade(vida);
   const tracos = tracosMarcantes(vida);
   return (
     <div className="identidade">
-      <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={132} rotulo={`${vida.eu.nome} aos ${i}`} />
+      <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={132} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
       <h2 className="identidade__nome">{vida.eu.nome} <span>{vida.eu.sobrenome}</span></h2>
       <p className="identidade__idade"><strong>{i}</strong> {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
       <p className="identidade__linha">{ocupacaoAtual(vida)}</p>
       <p className="identidade__linha">{ondeMora(vida)}</p>
       {situacaoAfetiva(vida) && <p className="identidade__linha identidade__linha--afeto">{situacaoAfetiva(vida)}{lutoVisivel(vida) ? ` · ${lutoVisivel(vida)}` : ''}</p>}
-      <dl className="estado">
-        <div><dt>Saúde</dt><dd>{palavraSaude(vida.corpo.saude)}</dd></div>
-        <div><dt>Humor</dt><dd>{palavraHumor(vida.mente.felicidade)}</dd></div>
-        {i >= 10 && <div><dt>Cabeça</dt><dd>{palavraEstresse(vida.mente.estresse)}</dd></div>}
-      </dl>
+      <button type="button" className="estado" onClick={irParaVoce} aria-label="Como você está: ver Humor, Cabeça e Saúde">
+        <span><span className="estado__dt">Saúde</span><span className="estado__dd">{palavraSaude(vida.corpo.saude)}</span></span>
+        <span><span className="estado__dt">Humor</span><span className="estado__dd">{palavraHumor(vida.mente.felicidade)}</span></span>
+        {i >= 10 && <span><span className="estado__dt">Cabeça</span><span className="estado__dd">{palavraEstresse(vida.mente.estresse)}</span></span>}
+      </button>
       {tracos.length > 0 && <p className="identidade__tracos">Quem convive diz que você é {tracos.join(', ').replace(/, ([^,]*)$/, ' e $1')}.</p>}
       {vida.corpo.condicoes.length > 0 && <p className="identidade__condicoes">{vida.corpo.condicoes.map(c => `${c.nome}${c.tratando ? ' (em tratamento)' : ''}`).join(' · ')}</p>}
     </div>
@@ -136,9 +140,11 @@ function Identidade({ vida }: { vida: Vida }) {
  * O painel lateral: o que está acontecendo agora. Não repete a lista de
  * Pessoas — diz quem mora com você e o que, na vida social, pede atenção.
  */
-function Agora({ vida, irPara, abrirPessoa }: { vida: Vida; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }) {
+function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }) {
   const casa = emCasa(vida);
-  const sinais = sinaisSociais(vida);
+  const pessoal = sinalPessoal(vida);
+  // Na tela Pessoas, o que pede atenção já está no topo dela; aqui não repete.
+  const sinais = aba === 'pessoas' ? [] : sinaisSociais(vida);
   const s = saldoMensal(vida);
   const i = idade(vida);
   const processos = vida.processos.filter(p => p.tipo !== 'gestacao');
@@ -150,6 +156,12 @@ function Agora({ vida, irPara, abrirPessoa }: { vida: Vida; irPara: (a: Aba) => 
   const portas = vida.caminhos.oportunidades.filter(o => o.tFim > vida.t);
   return (
     <div className="painel-agora">
+      {pessoal && aba !== 'voce' && (
+        <button type="button" className="agora-voce" onClick={() => irPara('voce')}>
+          <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={34} rotulo="Você" expressao={expressaoDe(vida)} />
+          <span>{pessoal}</span>
+        </button>
+      )}
       <h2 className="painel-agora__titulo">Em casa</h2>
       {casa.pessoas.length ? (
         <ul className="agora-pessoas">

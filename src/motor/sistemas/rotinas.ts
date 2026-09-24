@@ -26,7 +26,7 @@ import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
 import { nivelDeOferta } from '../dados/lugares';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { esquecerFrentes, habilidade, praticar } from './frentes';
-import { cabeNaSemana, semana } from './semana';
+import { cabeNaSemana } from './semana';
 import type { Categoria } from '../dados/frentes';
 
 export type CategoriaAtividade = Categoria | 'corpo' | 'lazer' | 'renda' | 'cuidado';
@@ -136,7 +136,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Treino de base, todo dia', tempo: 2, custo: 0, qualidade: 1.45, requer: naBase('futebol') }
     ],
     pratica: { futebol: 1 }, social: { onde: 'no futebol', fluxo: 1.2, amplitude: 4 },
-    efeito: (v, _r, n) => { v.corpo.forma = clamp(v.corpo.forma + 5 + n * 3); v.mente.felicidade = clamp(v.mente.felicidade + 2); v.mente.estresse = clamp(v.mente.estresse - 3); }
+    efeito: (v, _r, n) => { v.corpo.forma = clamp(v.corpo.forma + 5 + n * 3); }
   },
   {
     id: 'volei', nome: 'Vôlei', descricao: 'Quadra da escola, treino de equipe.', categoria: 'esporte', idadeMin: 8,
@@ -147,7 +147,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Equipe de competição', tempo: 1.8, custo: 0, qualidade: 1.4, requer: naBase('volei') }
     ],
     pratica: { volei: 1 }, social: { onde: 'no vôlei', fluxo: 1, amplitude: 4 },
-    efeito: (v, _r, n) => { v.corpo.forma = clamp(v.corpo.forma + 4 + n * 3); v.mente.felicidade = clamp(v.mente.felicidade + 2); }
+    efeito: (v, _r, n) => { v.corpo.forma = clamp(v.corpo.forma + 4 + n * 3); }
   },
   {
     id: 'natacao', nome: 'Natação', descricao: 'Piscina do clube, do SESC ou da prefeitura.', categoria: 'esporte', idadeMin: 4,
@@ -158,7 +158,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Treino de alto rendimento', tempo: 2, custo: 0, qualidade: 1.45, requer: naBase('natacao') }
     ],
     pratica: { natacao: 1 }, social: { onde: 'na natação', fluxo: 0.6, amplitude: 4 },
-    efeito: (v, _r, n) => { v.corpo.forma = clamp(v.corpo.forma + 5 + n * 3); v.mente.estresse = clamp(v.mente.estresse - 3); }
+    efeito: (v, _r, n) => { v.corpo.forma = clamp(v.corpo.forma + 5 + n * 3); }
   },
   {
     id: 'atletismo', nome: 'Atletismo', descricao: 'Pista, corrida, salto. Projeto da escola ou clube.', categoria: 'esporte', idadeMin: 9, idadeMax: 40,
@@ -179,19 +179,19 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Treino de competição', tempo: 1.5, custo: 130, qualidade: 1.3, requer: pago(130, 'lutas', v => (habilidade(v, 'lutas') >= 42 ? true : 'Competição é para quem já tem algumas faixas.')) }
     ],
     pratica: { lutas: 1 }, social: { onde: 'no tatame', fluxo: 0.8, amplitude: 5 }, comportamento: { disciplina: 1 },
-    efeito: (v, _r, n) => { v.corpo.forma = clamp(v.corpo.forma + 5 + n * 3); v.mente.estresse = clamp(v.mente.estresse - 3); }
+    efeito: (v, _r, n) => { v.corpo.forma = clamp(v.corpo.forma + 5 + n * 3); }
   },
   {
     id: 'academia', nome: 'Academia', descricao: 'Musculação e esteira, três vezes por semana.', categoria: 'corpo', idadeMin: 15,
     niveis: [{ rotulo: 'Três vezes por semana', tempo: 1, custo: 110 }],
     social: { onde: 'na academia', fluxo: 0.5, amplitude: 10 }, comportamento: { disciplina: 1 },
-    efeito: v => { v.corpo.forma = clamp(v.corpo.forma + 11); v.corpo.aparencia = clamp(v.corpo.aparencia + 2); v.mente.estresse = clamp(v.mente.estresse - 4); }
+    efeito: v => { v.corpo.forma = clamp(v.corpo.forma + 11); v.corpo.aparencia = clamp(v.corpo.aparencia + 2); }
   },
   {
     id: 'corrida', nome: 'Correr ou caminhar', descricao: 'Na praça, na orla, no parque. De graça.', categoria: 'corpo', idadeMin: 12,
     niveis: [{ rotulo: 'Algumas vezes por semana', tempo: 0.5, custo: 0 }],
     comportamento: { disciplina: 1 }, pratica: { atletismo: 0.25 },
-    efeito: v => { v.corpo.forma = clamp(v.corpo.forma + 7); v.mente.estresse = clamp(v.mente.estresse - 3); }
+    efeito: v => { v.corpo.forma = clamp(v.corpo.forma + 7); }
   },
 
   // ---------------------------------------------------------------- arte
@@ -203,7 +203,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Ensaiar a sério', tempo: 1.6, custo: 50, qualidade: 1.35, requer: comProjeto('musica', 60) }
     ],
     pratica: { musica: 1 }, social: { onde: 'na música', fluxo: 0.6, amplitude: 8 }, comportamento: { disciplina: 1 },
-    efeito: v => { v.mente.felicidade = clamp(v.mente.felicidade + 2); marcarAnos(v, 'musica'); }
+    efeito: v => { marcarAnos(v, 'musica'); }
   },
   {
     id: 'danca', nome: 'Dança', descricao: 'Balé, jazz, forró, hip-hop, dança de salão.', categoria: 'arte', idadeMin: 4,
@@ -212,7 +212,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Grupo ou companhia', tempo: 1.6, custo: 180, qualidade: 1.35, requer: pago(180, 'danca', v => (habilidade(v, 'danca') >= 48 ? true : 'O grupo pede quem já dança bem.')) }
     ],
     pratica: { danca: 1 }, social: { onde: 'nas aulas de dança', fluxo: 1, amplitude: 5 },
-    efeito: v => { v.corpo.forma = clamp(v.corpo.forma + 6); v.corpo.aparencia = clamp(v.corpo.aparencia + 1); v.mente.felicidade = clamp(v.mente.felicidade + 2); }
+    efeito: v => { v.corpo.forma = clamp(v.corpo.forma + 6); v.corpo.aparencia = clamp(v.corpo.aparencia + 1); }
   },
   {
     id: 'teatro', nome: 'Teatro', descricao: 'Grupo da escola, da igreja ou um curso livre.', categoria: 'arte', idadeMin: 9,
@@ -222,8 +222,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Curso livre de teatro', tempo: 1, custo: 160, qualidade: 1.2, requer: pago(160, 'teatro', v => (cidade(v) >= 1 ? true : 'Não há curso de teatro na cidade.')) },
       { rotulo: 'Grupo de teatro, ensaio sério', tempo: 1.5, custo: 40, qualidade: 1.35, requer: comProjeto('teatro', 58) }
     ],
-    pratica: { teatro: 1, linguagens: 0.2 }, social: { onde: 'no teatro', fluxo: 1, amplitude: 6 }, comportamento: { coragem: 1 },
-    efeito: v => { v.mente.felicidade = clamp(v.mente.felicidade + 2); }
+    pratica: { teatro: 1, linguagens: 0.2 }, social: { onde: 'no teatro', fluxo: 1, amplitude: 6 }, comportamento: { coragem: 1 }
   },
   {
     id: 'desenho', nome: 'Desenhar', descricao: 'Caderno, lápis, depois tablet.', categoria: 'arte', idadeMin: 5,
@@ -231,8 +230,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Por conta própria', tempo: 0.5, custo: 15, qualidade: 0.85 },
       { rotulo: 'Curso de desenho', tempo: 1, custo: 130, qualidade: 1.2, requer: pago(130, 'desenho') }
     ],
-    pratica: { desenho: 1 },
-    efeito: v => { v.mente.estresse = clamp(v.mente.estresse - 2); }
+    pratica: { desenho: 1 }
   },
   {
     id: 'escrever', nome: 'Escrever', descricao: 'Contos, poemas, um blog, um caderno que ninguém lê.', categoria: 'arte', idadeMin: 10,
@@ -266,7 +264,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     id: 'leitura', nome: 'Ler', descricao: 'Livros emprestados, da biblioteca ou do celular.', categoria: 'estudo', idadeMin: 7,
     niveis: [{ rotulo: 'Um livro por mês', tempo: 0.5, custo: 30 }],
     pratica: { linguagens: 0.5, escrita: 0.25, humanas: 0.3 },
-    efeito: v => { v.mente.cognicao = clamp(v.mente.cognicao + 1); v.mente.estresse = clamp(v.mente.estresse - 2); }
+    efeito: v => { v.mente.cognicao = clamp(v.mente.cognicao + 1); }
   },
   {
     id: 'ingles', nome: 'Inglês', descricao: 'Séries, aplicativos, um curso de idiomas.', categoria: 'estudo', idadeMin: 8,
@@ -307,7 +305,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     social: { onde: 'no cursinho', fluxo: 1, amplitude: 3 },
     requer: v => (v.educacao.matricula ? 'Já está fazendo faculdade.' : true),
     pratica: { exatas: 0.5, linguagens: 0.5, ciencias: 0.5, humanas: 0.5 },
-    efeito: v => { v.educacao.cursinho = true; v.mente.estresse = clamp(v.mente.estresse + 5); }
+    efeito: v => { v.educacao.cursinho = true; }
   },
   {
     id: 'estudar_concurso', nome: 'Estudar para concurso', descricao: 'Apostilas, videoaulas e simulados à noite.', categoria: 'estudo', idadeMin: 17,
@@ -320,7 +318,6 @@ export const ROTINAS: readonly ModeloRotina[] = [
     efeito: (v, _r, n) => {
       marcarFato(v, 'estudando_concurso');
       v.caminhos.concurso.meses += [6, 12, 20][n - 1];
-      v.mente.estresse = clamp(v.mente.estresse + 2 + n * 2);
     }
   },
 
@@ -334,21 +331,18 @@ export const ROTINAS: readonly ModeloRotina[] = [
   {
     id: 'igreja', nome: 'Frequentar a igreja', descricao: 'Cultos ou missas, grupo de jovens, festas da comunidade.', categoria: 'social', idadeMin: 0,
     niveis: [{ rotulo: 'Toda semana', tempo: 0.5, custo: 0 }],
-    pratica: { comunidade: 0.4 }, social: { onde: 'na igreja', fluxo: 1.2, amplitude: 25 },
-    efeito: v => { v.mente.felicidade = clamp(v.mente.felicidade + 2); v.mente.estresse = clamp(v.mente.estresse - 3); }
+    pratica: { comunidade: 0.4 }, social: { onde: 'na igreja', fluxo: 1.2, amplitude: 25 }
   },
   {
     id: 'voluntariado', nome: 'Voluntariado', descricao: 'ONG, cozinha comunitária, projeto social do bairro.', categoria: 'social', idadeMin: 14,
     niveis: [{ rotulo: 'Algumas vezes por mês', tempo: 0.5, custo: 0 }, { rotulo: 'Toda semana, com responsabilidade', tempo: 1, custo: 0 }],
-    pratica: { comunidade: 1, lideranca: 0.3 }, social: { onde: 'no voluntariado', fluxo: 0.8, amplitude: 25 }, comportamento: { generosidade: 1, empatia: 1 },
-    efeito: v => { v.mente.felicidade = clamp(v.mente.felicidade + 3); }
+    pratica: { comunidade: 1, lideranca: 0.3 }, social: { onde: 'no voluntariado', fluxo: 0.8, amplitude: 25 }, comportamento: { generosidade: 1, empatia: 1 }
   },
   {
     id: 'sair_noite', nome: 'Sair à noite', descricao: 'Bar, balada, show. Gente nova toda semana.', categoria: 'lazer', idadeMin: 18,
     niveis: [{ rotulo: 'Fins de semana', tempo: 1, custo: 280 }],
     social: { onde: 'na noite', fluxo: 1.5, amplitude: 8 }, comportamento: { sociabilidade: 1 },
     efeito: (v, r) => {
-      v.mente.felicidade = clamp(v.mente.felicidade + 4);
       v.corpo.saude = clamp(v.corpo.saude - 1);
       if (v.corpo.habitos.bebe === 'nao' && r.chance(0.35)) v.corpo.habitos.bebe = 'social';
       else if (v.corpo.habitos.bebe === 'social' && r.chance(0.06 + Math.max(0, v.personalidade.tracos.impulsividade) / 400)) v.corpo.habitos.bebe = 'muito';
@@ -358,14 +352,12 @@ export const ROTINAS: readonly ModeloRotina[] = [
     id: 'videogame', nome: 'Jogar videogame', descricao: 'Horas no console, no PC ou no celular.', categoria: 'lazer', idadeMin: 6,
     niveis: [{ rotulo: 'Umas horas por semana', tempo: 0.5, custo: 50 }],
     social: { onde: 'jogando online', fluxo: 0.4, amplitude: 6 },
-    efeito: v => { v.mente.felicidade = clamp(v.mente.felicidade + 3); v.corpo.forma = clamp(v.corpo.forma - 2); }
+    efeito: v => { v.corpo.forma = clamp(v.corpo.forma - 2); }
   },
   {
     id: 'terapia', nome: 'Terapia', descricao: 'Sessão semanal com psicólogo (particular ou pelo SUS, com fila).', categoria: 'cuidado', idadeMin: 12,
     niveis: [{ rotulo: 'Uma sessão por semana', tempo: 0.5, custo: 280 }],
     efeito: v => {
-      v.mente.estresse = clamp(v.mente.estresse - 10);
-      v.mente.felicidade = clamp(v.mente.felicidade + 3);
       for (const c of v.corpo.condicoes) if (c.id === 'depressao' || c.id === 'ansiedade') c.tratando = true;
     }
   },
@@ -378,7 +370,6 @@ export const ROTINAS: readonly ModeloRotina[] = [
       for (const f of filhos(v)) v.vinculos[f.id].proximidade = clamp(v.vinculos[f.id].proximidade + 5);
       const par = parceiro(v);
       if (par?.vin.romance) par.vin.romance.envolvimento = clamp(par.vin.romance.envolvimento + 6);
-      v.mente.felicidade = clamp(v.mente.felicidade + 2);
     }
   },
 
@@ -420,7 +411,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     id: 'bico', nome: 'Fazer bicos', descricao: 'Trabalho avulso nos fins de semana: entrega, evento, faxina, obra.', categoria: 'renda', idadeMin: 16,
     niveis: [{ rotulo: 'Fins de semana', tempo: 1, custo: 0 }],
     renda: () => 750,
-    efeito: v => { v.mente.estresse = clamp(v.mente.estresse + 5); v.corpo.forma = clamp(v.corpo.forma + 1); }
+    efeito: v => { v.corpo.forma = clamp(v.corpo.forma + 1); }
   },
   {
     id: 'tocar_na_noite', nome: 'Tocar em bares e festas', descricao: 'Voz e violão, banda de baile, casamento. Paga por noite.', categoria: 'renda', idadeMin: 16,
@@ -471,7 +462,6 @@ export const ROTINAS: readonly ModeloRotina[] = [
     pratica: { vendas: 0.5 },
     renda: () => 220,
     efeito: (v, r) => {
-      v.mente.estresse = clamp(v.mente.estresse + 4);
       if (v.educacao.basica) v.educacao.basica.desempenho = clamp(v.educacao.basica.desempenho - 8);
       if (!temFato(v, 'conselho_tutelar') && r.chance(0.25)) {
         marcarFato(v, 'conselho_tutelar');
@@ -544,8 +534,6 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
 /* ---------------------------------------------------------------- O ano */
 
 export function processarRotinas(v: Vida, r: Rng): void {
-  const s = semana(v);
-  const excesso = s.ocupado - s.capacidade;
   const praticadas = new Set<Dominio>();
   for (const rot of [...v.rotinas]) {
     const m = modeloRotina(rot.id);
@@ -581,7 +569,6 @@ export function processarRotinas(v: Vida, r: Rng): void {
   // Frentes praticadas por outras vias (escola, curso, trabalho) são registradas por quem as pratica.
   for (const [d, f] of Object.entries(v.caminhos.frentes)) if (f && v.t - f.tUltimo < 12) praticadas.add(d as Dominio);
   esquecerFrentes(v, praticadas);
-  if (excesso > 0.01) v.mente.estresse = clamp(v.mente.estresse + Math.round(excesso * 10));
   v.corpo.habitos.sedentario = !v.rotinas.some(x => ['futebol', 'academia', 'corrida', 'danca', 'volei', 'natacao', 'atletismo', 'lutas'].includes(x.id)) && idade(v) >= 12;
   if (!v.rotinas.some(x => x.id === 'cursinho')) v.educacao.cursinho = false;
   if (!v.rotinas.some(x => x.id === 'estudar_concurso')) delete v.fatos['estudando_concurso'];

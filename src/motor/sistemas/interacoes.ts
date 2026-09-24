@@ -24,6 +24,7 @@ import {
 import { morarJuntos } from './moradia';
 import { gestacaoEmCurso } from './familia';
 import { aplicarPersonalidade } from '../personalidade';
+import { abalar } from './abalo';
 import { flex, ge } from '../texto';
 import { ehDescendente, faseDeIdade, mesmaCidade, moraJunto, papelDe, type Fase, type Papel } from './vinculos';
 
@@ -43,7 +44,7 @@ export interface CtxI {
   longe: boolean;
 }
 
-export interface Saida { resultado?: string; aviso?: { texto: string; tom: 'bom' | 'ruim' | 'neutro' } }
+export interface Saida { resultado?: string; aviso?: { texto: string; tom: 'bom' | 'ruim' | 'neutro' }; titulo?: string }
 
 export interface Interacao {
   id: string;
@@ -55,6 +56,14 @@ export interface Interacao {
   variante?: 'principal' | 'secundario' | 'discreto' | 'perigo';
   /** Mostrar a chance em palavras. */
   chance?: boolean;
+  /**
+   * O quanto isso importa AGORA com esta pessoa (além da variante). A ficha
+   * mostra primeiro o que é mais relevante — o aniversário de dez anos, a
+   * pessoa em quem você anda pensando — e recolhe o resto.
+   */
+  prioridade?: (c: CtxI) => number;
+  /** O resultado merece ser lido com calma (abre uma folha em vez de um aviso). */
+  destaque?: boolean;
   executar: (c: CtxI, r: Rng) => Saida;
 }
 
@@ -306,6 +315,26 @@ export const INTERACOES: Interacao[] = [
     }
   },
   {
+    id: 'desabafar', destaque: true,
+    quando: c => humano(c) && c.eu >= 12 && c.ip >= 14 && precisaDesabafar(c.v) && ouve(c),
+    prioridade: () => 2.2,
+    rotulo: c => (c.longe && !c.casa ? `Ligar para ${c.p.nome} e desabafar` : c.eu < 18 && c.papel === 'genitor' ? `Contar para ${c.p.nome} o que anda pesando` : `Desabafar com ${c.p.nome}`),
+    executar: c => {
+      const n = habito(c, 'desabafar');
+      const comp = compatibilidade(c.v, c.p);
+      const confia = c.vin.confianca >= 45;
+      abalar(c.v, `desabafar com ${c.p.nome}`, confia ? 3 + comp * 2 : 1, confia ? -(6 + c.vin.confianca / 20) : -3);
+      afeto(c, 3); confiar(c, 4);
+      if (!c.vin.historia.some(h => h.tipo === 'apoio' && h.texto.startsWith('Esteve do seu lado') && c.v.t - h.t < 36)) lembrarCom(c.v, c.p.id, 'Esteve do seu lado quando a vida pesou.', 'apoio', 2);
+      if (!confia) return { resultado: `${c.p.nome} ouviu, mas pareceu não saber o que dizer. Mesmo assim, falar em voz alta ajudou um pouco.` };
+      return { resultado: variar(n, [
+        `Você falou mais do que pretendia. ${c.p.nome} não tentou resolver nada — só ficou.`,
+        `${c.p.nome} escutou até o fim e depois contou de uma fase difícil ${dele(c.p)}. Você não se sentiu tão sozinh${flex(ge(c.v), 'o', 'a', 'e')}.`,
+        `Uma conversa longa, café esfriando na mesa. Nada mudou lá fora; aqui dentro, um pouco.`
+      ]) };
+    }
+  },
+  {
     id: 'dinheiro',
     quando: c => humano(c) && c.eu >= 18 && c.ip >= 18 && !c.casa && !emRomance(c) && precisaDeDinheiro(c),
     disponivel: c => (c.v.financas.conta >= 500 ? { grau: 'permitido' } : bloqueio('requisito', 'Não sobra dinheiro para ajudar agora.')),
@@ -359,29 +388,57 @@ export const INTERACOES: Interacao[] = [
   },
 
   /* ========================================================== ROMANCE: COMEÇO */
+  /*
+   * Iniciativa: UMA de cada vez, conforme o quanto vocês se conhecem.
+   *  - mal se conhecem → demonstrar interesse (um sinal, sem risco grande);
+   *  - se conhecem, ou já há um interesse no ar → chamar para sair;
+   *  - amizade de verdade → dizer o que sente (arrisca mais, pode ganhar mais).
+   * A resposta é da outra pessoa e nasce do que existe entre vocês
+   * (`interesseDoOutro`): proximidade, confiança, história, afinidade, o
+   * momento dela — com um pouco de acaso, nunca só acaso.
+   */
   {
-    id: 'convidar', chance: true,
-    quando: c => humano(c) && !c.vin.parentesco && c.eu >= 13 && c.ip >= 13 && (!c.vin.romance || c.vin.romance.estagio === 'interesse' || (c.vin.romance.estagio === 'ex' && c.vin.romance.fim !== 'morte')),
+    id: 'flertar', destaque: true,
+    quando: c => iniciativaPossivel(c) && !c.vin.romance && c.vin.proximidade < 35 && !c.longe && c.vin.convivio.length > 0,
+    prioridade: c => (c.vin.proximidade >= 25 ? 1.5 : 0.6),
+    rotulo: c => (c.eu < 18 ? `Puxar conversa com ${c.p.nome}, com segundas intenções` : `Demonstrar interesse por ${c.p.nome}`),
+    executar: (c, r) => flertar(c, r)
+  },
+  {
+    id: 'declarar', destaque: true,
+    quando: c => iniciativaPossivel(c) && !c.vin.romance && (c.vin.estagio === 'amigo' || c.vin.estagio === 'amigo_proximo') && c.vin.proximidade >= 55,
+    prioridade: () => 2.5,
+    rotulo: c => (c.longe ? `Ligar e dizer a ${c.p.nome} o que sente` : c.eu < 18 ? `Contar para ${c.p.nome} que gosta ${dele(c.p)}` : `Dizer a ${c.p.nome} o que sente`),
+    executar: (c, r) => declarar(c, r)
+  },
+  {
+    id: 'convidar', chance: true, destaque: true,
+    quando: c => {
+      if (!humano(c) || c.vin.parentesco || c.eu < 13 || c.ip < 13) return false;
+      const rom = c.vin.romance;
+      if (parceiro(c.v)) return !rom || rom.estagio === 'interesse' || (rom.estagio === 'ex' && rom.fim !== 'morte');
+      if (!iniciativaPossivel(c) || c.longe) return false;
+      if (rom?.estagio === 'interesse') return !rom.pediuTempo;
+      if (rom?.estagio === 'ex') return rom.fim !== 'morte' && c.v.t - rom.tEstagio >= 24 && c.vin.proximidade >= 35;
+      if (rom) return false;
+      return c.vin.proximidade >= 35 && !((c.vin.estagio === 'amigo' || c.vin.estagio === 'amigo_proximo') && c.vin.proximidade >= 55);
+    },
     disponivel: c => disponibilidadeConvite(c),
     variante: 'secundario',
-    rotulo: c => (parceiro(c.v) ? `Chamar ${c.p.nome} para sair, escondido` : c.eu < 18 ? `Chamar ${c.p.nome} para sair depois da aula` : `Chamar ${c.p.nome} para sair`),
+    prioridade: c => (c.vin.romance?.estagio === 'interesse' ? 4 : c.vin.romance?.estagio === 'ex' ? 0.8 : 2),
+    rotulo: c => (parceiro(c.v) ? `Chamar ${c.p.nome} para sair, escondido` : c.vin.romance?.estagio === 'ex' ? `Tentar de novo com ${c.p.nome}` : c.eu < 18 ? `Chamar ${c.p.nome} para sair depois da aula` : `Chamar ${c.p.nome} para sair`),
     executar: (c, r) => {
       const traicao = !!parceiro(c.v);
       if (!c.v.eu.atracao) c.v.eu.atracao = c.p.genero === 'masculino' ? 'homens' : c.p.genero === 'feminino' ? 'mulheres' : 'ambos';
-      if (!r.chance(chanceConvite(c))) {
-        if (c.vin.romance?.estagio === 'interesse') c.vin.romance = undefined;
-        return { resultado: `${c.p.nome} agradeceu o convite e disse que prefere deixar as coisas como estão.` };
-      }
       if (traicao) {
+        if (!r.chance(chanceConvite(c))) {
+          if (c.vin.romance?.estagio === 'interesse') c.vin.romance = undefined;
+          return { resultado: `${c.p.nome} agradeceu o convite e disse que prefere deixar as coisas como estão.` };
+        }
         iniciarCaso(c.v, c.p, c.vin);
         return { resultado: `${c.p.nome} topou. Ninguém mais sabe.` };
       }
-      const ex = c.vin.romance?.estagio === 'ex';
-      mudarEstagio(c.v, c.vin, 'saindo');
-      c.vin.romance!.envolvimento = Math.max(c.vin.romance!.envolvimento, 50);
-      escrever(c.v, { texto: ex ? `Voltou a sair com ${c.p.nome}.` : `Começou a sair com ${c.p.nome}.`, relevancia: 'biografia', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id], evento: { tipo: ex ? 'reconciliacao' : 'namoro', pessoaId: c.p.id, peso: 15 } });
-      lembrarCom(c.v, c.p.id, ex ? 'Voltaram a sair.' : 'Começaram a sair.', 'romance', ex ? 2 : 1);
-      return { resultado: c.eu < 18 ? `${c.p.nome} topou. Foram ao shopping e dividiram uma batata frita.` : `${c.p.nome} topou. O primeiro encontro terminou mais tarde do que o combinado.` };
+      return responderConvite(c, r);
     }
   },
   {
@@ -421,10 +478,17 @@ export const INTERACOES: Interacao[] = [
   {
     id: 'sair_juntos', variante: 'principal',
     quando: c => (parceriaAtiva(c) || c.papel === 'saindo' || c.papel === 'caso') && pertoOuEmCasa(c),
-    rotulo: c => (romanceAdolescente(c.v, c.p) ? 'Ir ao cinema juntos' : c.papel === 'caso' ? `Encontrar ${c.p.nome}` : 'Sair só vocês dois'),
-    executar: c => {
+    prioridade: c => (c.papel === 'saindo' ? 2 : 0),
+    rotulo: c => {
+      const ja = c.vin.habitos?.['sair'] ?? 0;
+      if (c.papel === 'saindo' && ja === 0) return romanceAdolescente(c.v, c.p) ? `Primeiro encontro com ${c.p.nome}` : `Marcar o primeiro encontro com ${c.p.nome}`;
+      if (parceriaAtiva(c) && ja >= 4) return romanceAdolescente(c.v, c.p) ? 'Manter o cinema de sábado' : 'Manter as saídas só de vocês';
+      return romanceAdolescente(c.v, c.p) ? 'Ir ao cinema juntos' : c.papel === 'caso' ? `Encontrar ${c.p.nome}` : 'Sair só vocês dois';
+    },
+    executar: (c, r) => {
       const n = habito(c, 'sair');
       envolver(c, 6); afeto(c, 4); acalmar(c, 4); cuidou(c);
+      if (c.papel === 'saindo' && n === 1) return primeiroEncontro(c, r);
       if (parceriaAtiva(c)) costume(c, n, 4, romanceAdolescente(c.v, c.p) ? 'O cinema de sábado era de vocês.' : 'Mantiveram as saídas só de vocês dois, mesmo com a vida corrida.');
       return { resultado: variar(n, romanceAdolescente(c.v, c.p)
         ? ['Pipoca grande, filme ruim, e a melhor tarde do mês.', 'Andaram pelo shopping sem comprar nada, conversando.']
@@ -469,6 +533,117 @@ export const INTERACOES: Interacao[] = [
     }
   },
   {
+    id: 'conhecer',
+    quando: c => (c.papel === 'saindo' || (parceriaAtiva(c) && c.v.t - (c.vin.romance?.tInicio ?? c.vin.tInicio) < 36)) && descobertasPendentes(c).length > 0 && pertoOuEmCasa(c),
+    prioridade: c => (c.papel === 'saindo' ? 1.5 : 0.5),
+    rotulo: c => `Conhecer melhor ${c.p.nome}`,
+    destaque: true,
+    executar: c => {
+      const d = descobertasPendentes(c)[0];
+      habito(c, `conhecer:${d.id}`);
+      const comp = compatibilidade(c.v, c.p);
+      envolver(c, 3 + comp * 4); afeto(c, 3); confiar(c, 2); cuidou(c);
+      lembrarCom(c.v, c.p.id, d.marco, 'descoberta', 1);
+      return { resultado: d.texto + (comp < -0.2 ? ' Vocês descobriram também que discordam de muita coisa.' : comp > 0.35 ? ' Quanto mais conversam, mais parece que se conhecem há tempo.' : '') };
+    }
+  },
+  {
+    id: 'visitar_par', variante: 'principal',
+    quando: c => (parceriaAtiva(c) || c.papel === 'saindo') && c.longe && !c.casa && c.eu >= 16,
+    disponivel: c => (c.v.financas.conta >= custoViagem(c) ? PERMITIDO : bloqueio('requisito', `A viagem custa cerca de R$ ${custoViagem(c).toLocaleString('pt-BR')}.`)),
+    rotulo: c => `Viajar para ver ${c.p.nome}`,
+    executar: c => {
+      const n = habito(c, 'visitar_par');
+      c.v.financas.conta -= custoViagem(c);
+      envolver(c, 9); afeto(c, 5); acalmar(c, 6); cuidou(c);
+      costume(c, n, 3, 'As viagens para se ver viraram parte do namoro.');
+      return { resultado: variar(n, [`Rodoviária de madrugada e ${c.p.nome} esperando no desembarque. O fim de semana passou rápido demais.`, `Três dias na cidade de ${c.p.nome}, conhecendo a vida ${dele(c.p)} de perto.`, `A despedida no domingo foi a parte difícil. A distância ficou mais curta por uns dias.`]) };
+    }
+  },
+  {
+    id: 'ligar_par',
+    quando: c => (parceriaAtiva(c) || c.papel === 'saindo') && c.longe && !c.casa,
+    rotulo: c => `Chamada de vídeo com ${c.p.nome} toda noite`,
+    executar: c => {
+      const n = habito(c, 'ligar_par');
+      envolver(c, 4); acalmar(c, 3); cuidou(c);
+      return { resultado: variar(n, [`Uma semana de chamadas até alguém dormir no meio da frase.`, `${c.p.nome} mostrou a casa nova pela câmera, cômodo por cômodo.`, `Vocês viram o mesmo filme ao mesmo tempo, cada um na sua cidade.`]) };
+    }
+  },
+  {
+    id: 'comemorar', variante: 'principal', destaque: true,
+    quando: c => parceriaAtiva(c) && (aniversarioRedondo(c) > 0 || !!conquistaRecente(c.v)) && !c.v.fatos[`comemorou_${c.p.id}_${Math.floor(c.v.t / 12)}`] && pertoOuEmCasa(c),
+    prioridade: () => 3,
+    rotulo: c => (aniversarioRedondo(c) > 0 ? `Comemorar os ${aniversarioRedondo(c)} anos com ${c.p.nome}` : `Comemorar ${conquistaRecente(c.v)!} com ${c.p.nome}`),
+    executar: c => {
+      c.v.fatos[`comemorou_${c.p.id}_${Math.floor(c.v.t / 12)}`] = c.v.t;
+      envolver(c, 7); afeto(c, 4); acalmar(c, 6); cuidou(c);
+      const anos = aniversarioRedondo(c);
+      if (anos > 0) {
+        lembrarCom(c.v, c.p.id, `Comemoraram ${anos} anos juntos.`, 'ritual', anos >= 20 ? 3 : 2);
+        return { resultado: anos >= 25 ? `${anos} anos. Reuniram quem importa; alguém lembrou do dia em que vocês se conheceram e todo mundo riu da mesma parte.` : anos >= 10 ? `${anos} anos juntos: um jantar no lugar de sempre e uma lista, meio de brincadeira, do que ainda querem fazer.` : `${anos} anos. Um bolo pequeno, uma foto torta, e a sensação de que foi ontem.` };
+      }
+      const o = conquistaRecente(c.v)!;
+      lembrarCom(c.v, c.p.id, `Comemoraram juntos ${o}.`, 'apoio', 1);
+      abalar(c.v, `comemorar com ${c.p.nome}`, 3, -2);
+      return { resultado: `${c.p.nome} fez questão de comemorar ${o}. Pizza, vinho barato e um brinde meio sem jeito.` };
+    }
+  },
+  {
+    id: 'futuro_casal',
+    quando: c => parceriaAtiva(c) && c.eu >= 18 && c.ip >= 18 && c.v.t - (c.vin.romance?.tInicio ?? c.vin.tInicio) >= 12 && !c.vin.historia.some(h => h.tipo === 'descoberta' && h.texto.startsWith('Conversaram sobre o futuro') && c.v.t - h.t < 48),
+    rotulo: () => 'Conversar sobre o futuro',
+    destaque: true,
+    executar: c => {
+      envolver(c, 3); confiar(c, 3); cuidou(c);
+      const partes: string[] = [];
+      const temFilhos = filhosDoCasal(c) > 0;
+      const quer = c.p.querFilhos ?? 'talvez';
+      if (!temFilhos) partes.push(quer === 'sim' ? `${capital(ele(c.p))} quer ter filhos — e perguntou de você.` : quer === 'nao' ? `${capital(ele(c.p))} foi honest${o(c.p)}: não se vê com filhos.` : `Sobre filhos, ${ele(c.p)} disse que ainda não sabe.`);
+      const rom = c.vin.romance!;
+      if (rom.estagio !== 'casamento') partes.push(rom.envolvimento >= 70 ? `${capital(ele(c.p))} deixou escapar que pensa em casar.` : `Casamento? ${capital(ele(c.p))} riu e mudou de assunto.`);
+      if (c.p.renda > 0 && c.v.trabalho.atual) partes.push('Falaram de trabalho, de dinheiro, de onde querem estar daqui a dez anos.');
+      else partes.push('Falaram de onde querem estar daqui a dez anos.');
+      lembrarCom(c.v, c.p.id, `Conversaram sobre o futuro. ${partes[0]}`, 'descoberta', 1);
+      return { resultado: partes.join(' ') };
+    }
+  },
+  {
+    id: 'dinheiro_casal',
+    quando: c => parceriaAtiva(c) && c.casa && c.eu >= 18 && (c.v.financas.negativado || c.v.financas.conta < 0 || (c.v.fatos['aperto_desde'] !== undefined && c.v.t - (c.v.fatos['aperto_desde'] ?? 0) <= 12)),
+    prioridade: () => 1.5,
+    rotulo: c => `Sentar com ${c.p.nome} para falar de dinheiro`,
+    destaque: true,
+    executar: c => {
+      const comp = compatibilidade(c.v, c.p);
+      cuidou(c);
+      if (comp > -0.1 || c.vin.confianca >= 60) {
+        acalmar(c, 12); confiar(c, 4); envolver(c, 3);
+        lembrarCom(c.v, c.p.id, 'Enfrentaram juntos um aperto de dinheiro.', 'apoio', 2);
+        abalar(c.v, `dividir o aperto com ${c.p.nome}`, 1, -4);
+        return { resultado: 'Planilha na mesa da cozinha, lista do que dá para cortar. Não fechou a conta, mas vocês ficaram do mesmo lado dela.' };
+      }
+      c.vin.tensao = clamp(c.vin.tensao + 8);
+      lembrarCom(c.v, c.p.id, 'Brigaram por dinheiro.', 'conflito', 1);
+      return { resultado: 'Virou briga: cada um lembrou o gasto do outro. A conta continuou sem fechar.' };
+    }
+  },
+  {
+    id: 'desculpas', variante: 'principal',
+    quando: c => humano(c) && c.eu >= 8 && c.ip >= 6 && c.vin.tensao >= 45 && (parceriaAtiva(c) || ehDescendente(c.papel) || c.papel === 'genitor' || c.papel === 'irmao' || c.papel === 'amigo' || c.papel === 'amigo_proximo') && (!c.longe || c.casa),
+    prioridade: () => 2,
+    rotulo: c => `Pedir desculpas a ${c.p.nome}`,
+    destaque: true,
+    executar: c => {
+      aplicarPersonalidade(c.v, 'acao:desculpas', { empatia: 1 });
+      const confia = c.vin.confianca >= 45;
+      acalmar(c, confia ? 26 : 14); confiar(c, confia ? 6 : 3); afeto(c, 2);
+      if (c.vin.romance) envolver(c, 4);
+      lembrarCom(c.v, c.p.id, 'Você pediu desculpas, e as coisas voltaram a andar.', 'reconciliacao', 1);
+      return { resultado: confia ? `${c.p.nome} ouviu, ficou quiet${o(c.p)} um tempo e disse "tá bom". Não precisou de mais.` : `${c.p.nome} aceitou as desculpas — do jeito de quem ainda está esperando para ver.` };
+    }
+  },
+  {
     id: 'contar_verdade', variante: 'perigo',
     quando: c => parceriaAtiva(c) && !!c.vin.romance?.segredo,
     rotulo: () => 'Contar a verdade sobre o caso',
@@ -485,6 +660,8 @@ export const INTERACOES: Interacao[] = [
   {
     id: 'planejar_filhos',
     quando: c => parceriaAtiva(c) && c.eu >= 18 && c.ip >= 18 && !gestacaoEmCurso(c.v) && c.vin.romance!.planoFilhos !== 'tentando',
+    // Decisão do casal que não deve ficar escondida atrás de "Mais".
+    prioridade: c => (filhosDoCasal(c) === 0 && c.eu <= 45 ? 0.8 : 0.3),
     disponivel: c => {
       if (!c.v.corpo.podeGestar && c.p.genero !== 'feminino') return bloqueio('impossivel', 'Vocês dois não podem gestar. A adoção é um caminho.');
       return PERMITIDO;
@@ -683,6 +860,12 @@ function temFatoRecente(v: Vida, chave: string, meses: number): boolean {
 /* --------------------------------------------------------- Convite (romance) */
 
 function disponibilidadeConvite(c: CtxI): Veredito {
+  // Solteiro: a idade decide se existe; o resto (orientação, compromisso) é a resposta da outra pessoa.
+  if (!parceiro(c.v)) {
+    const idadeV = regraDeIdade(c.eu, c.ip);
+    if (idadeV.grau !== 'permitido') return idadeV;
+    return { grau: 'permitido', motivo: idadeV.motivo };
+  }
   if (!podeTerRomance(c.v, c.p, c.vin)) {
     const idadeV = regraDeIdade(c.eu, c.ip);
     if (idadeV.grau !== 'permitido') return idadeV;
@@ -690,9 +873,7 @@ function disponibilidadeConvite(c: CtxI): Veredito {
     if (c.p.parceiroId) return bloqueio('impossivel', `${c.p.nome} está com outra pessoa.`);
     return bloqueio('impossivel', 'Não vai rolar.');
   }
-  if (parceiro(c.v)) return { grau: 'irregular', motivo: 'Você está num relacionamento. Seria traição.', chance: chanceConvite(c) };
-  const idadeV = regraDeIdade(c.eu, c.ip);
-  return { grau: 'permitido', chance: chanceConvite(c), motivo: idadeV.motivo };
+  return { grau: 'irregular', motivo: 'Você está num relacionamento. Seria traição.', chance: chanceConvite(c) };
 }
 
 export function chanceConvite(c: CtxI): number {
@@ -700,15 +881,223 @@ export function chanceConvite(c: CtxI): number {
   return clamp((base + c.vin.proximidade * 0.3 - 30) / 60, 0.05, 0.9);
 }
 
+/* -------------------------------------------------- Iniciativa romântica */
+
+/**
+ * A regra de quem pode receber uma iniciativa: idade graduada (ATT 1),
+ * ninguém da família, o jogador sem parceria (com parceria, só o caminho
+ * escondido do convite), e não logo depois de um "não" da mesma pessoa.
+ * Orientação e compromisso da OUTRA pessoa não escondem o botão — o
+ * jogador não sabe disso de antemão; a resposta é que diz.
+ */
+function iniciativaPossivel(c: CtxI): boolean {
+  if (!humano(c) || c.vin.parentesco || !c.p.vivo) return false;
+  if (!podeTentarIdade(c)) return false;
+  if (parceiro(c.v)) return false;
+  if (c.papel === 'parceiro' || c.papel === 'saindo' || c.papel === 'caso') return false;
+  if (c.v.eu.atracao && !atraiGenero(c.v.eu.atracao, c.p.genero)) return false;
+  const recusa = c.v.fatos[`recusa_romance_${c.p.id}`];
+  if (recusa !== undefined && c.v.t - recusa < 36) return false;
+  return true;
+}
+
+const podeTentarIdade = (c: CtxI) => { const g = regraDeIdade(c.eu, c.ip).grau; return g === 'permitido' || g === 'improvavel'; };
+
+/**
+ * O quanto a outra pessoa quer o mesmo — do que existe entre vocês:
+ * afinidade e aparência (`interesseInicial`), proximidade, confiança,
+ * história, atrito e o momento dela. Um pouco de acaso por cima.
+ */
+export function interesseDoOutro(c: CtxI, r?: Rng): { valor: number; motivo?: 'orientacao' | 'compromisso' | 'momento' } {
+  let x = Math.max(c.vin.romance?.envolvimento ?? 0, interesseInicial(c.v, c.p));
+  x += c.vin.proximidade * 0.25 - 10;
+  x += (c.vin.confianca - 50) * 0.12;
+  x += Math.min(8, c.vin.historia.length * 1.2);
+  x -= c.vin.tensao * 0.3;
+  let motivo: 'orientacao' | 'compromisso' | 'momento' | undefined;
+  if (c.p.aperto && c.v.t - c.p.aperto.t <= 18 && (c.p.aperto.tipo === 'separacao' || c.p.aperto.tipo === 'luto')) { x -= 12; motivo = 'momento'; }
+  if (r) x += r.normal() * 6;
+  if (!atraiGenero(c.p.atracao, c.v.eu.genero)) { x = Math.min(x, 28); motivo = 'orientacao'; }
+  if (c.p.parceiroId) { x = Math.min(x, 24); motivo = 'compromisso'; }
+  return { valor: clamp(Math.round(x)), motivo };
+}
+
+function recusar(c: CtxI): void {
+  c.v.fatos[`recusa_romance_${c.p.id}`] = c.v.t;
+  if (c.vin.romance?.estagio === 'interesse' || c.vin.romance?.estagio === 'ex') c.vin.romance = c.vin.romance.estagio === 'ex' ? c.vin.romance : undefined;
+}
+
+function motivoDoNao(c: CtxI, m?: 'orientacao' | 'compromisso' | 'momento'): string {
+  if (m === 'compromisso') return ` ${capital(ele(c.p))} está com outra pessoa.`;
+  if (m === 'orientacao') return ` ${capital(ele(c.p))} gosta de você — mas não desse jeito.`;
+  if (m === 'momento') return ` Não é o momento: ${ele(c.p)} está atravessando ${c.p.aperto?.tipo === 'luto' ? 'um luto' : 'uma separação'}.`;
+  return '';
+}
+
+function comecarASair(c: CtxI, envolvimento: number, marco: string, texto: string, peso = 1): Saida {
+  const ex = c.vin.romance?.estagio === 'ex';
+  mudarEstagio(c.v, c.vin, 'saindo');
+  c.vin.romance!.envolvimento = Math.max(c.vin.romance!.envolvimento, envolvimento);
+  c.vin.romance!.pediuTempo = undefined;
+  escrever(c.v, { texto: ex ? `Voltou a sair com ${c.p.nome}.` : marco, relevancia: 'biografia', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id], evento: { tipo: ex ? 'reconciliacao' : 'namoro', pessoaId: c.p.id, peso: 15 } });
+  lembrarCom(c.v, c.p.id, ex ? 'Voltaram a sair.' : 'Começaram a sair.', 'romance', ex ? 2 : peso);
+  abalar(c.v, `o sim de ${c.p.nome}`, 6, 0);
+  return { resultado: texto, titulo: c.p.nome };
+}
+
+function flertar(c: CtxI, r: Rng): Saida {
+  if (!c.v.eu.atracao) c.v.eu.atracao = c.p.genero === 'masculino' ? 'homens' : c.p.genero === 'feminino' ? 'mulheres' : 'ambos';
+  const { valor, motivo } = interesseDoOutro(c, r);
+  if (valor >= 55) {
+    c.vin.romance = { estagio: 'interesse', tEstagio: c.v.t, envolvimento: Math.min(100, valor + 6) };
+    afeto(c, 6);
+    return { resultado: `${c.p.nome} retribuiu o olhar, riu das suas piadas — até das ruins. Ficou claro que tem alguma coisa ali.`, titulo: c.p.nome };
+  }
+  if (valor >= 40) {
+    c.vin.romance = { estagio: 'interesse', tEstagio: c.v.t, envolvimento: valor + 3 };
+    afeto(c, 3);
+    return { resultado: `${c.p.nome} sorriu, conversou, e não deu para saber se entendeu a intenção. Talvez sim.`, titulo: c.p.nome };
+  }
+  if (valor < 25 && c.vin.convivio.includes('trabalho')) {
+    c.vin.tensao = clamp(c.vin.tensao + 10); afeto(c, -6);
+    c.v.fatos[`recusa_romance_${c.p.id}`] = c.v.t;
+    return { resultado: `${c.p.nome} ficou sem graça e, nos dias seguintes, passou a manter distância no trabalho.${motivoDoNao(c, motivo)}`, titulo: c.p.nome };
+  }
+  c.v.fatos[`recusa_romance_${c.p.id}`] = c.v.t - 24; // um tempo curto: dá para tentar de novo mais adiante
+  return { resultado: `${c.p.nome} não pareceu perceber — ou preferiu não perceber.${motivoDoNao(c, motivo)}`, titulo: c.p.nome };
+}
+
+function responderConvite(c: CtxI, r: Rng): Saida {
+  const { valor, motivo } = interesseDoOutro(c, r);
+  const jovem = c.eu < 18;
+  if (valor >= 58) {
+    return comecarASair(c, Math.max(50, valor), `Começou a sair com ${c.p.nome}.`, jovem ? `${c.p.nome} topou. Foram ao shopping e dividiram uma batata frita.` : `${c.p.nome} topou. Marcaram para sexta — e você passou a semana ensaiando o que dizer.`);
+  }
+  if (valor >= 48 && !motivo) {
+    c.vin.romance = { ...(c.vin.romance ?? { tEstagio: c.v.t, envolvimento: valor }), estagio: 'interesse', tEstagio: c.v.t, envolvimento: valor, pediuTempo: c.v.t };
+    lembrarCom(c.v, c.p.id, `Você chamou ${c.p.nome} para sair; ${ele(c.p)} pediu um tempo.`, 'romance', 1);
+    return { resultado: `${c.p.nome} ficou vermelh${o(c.p)}, disse que gostou do convite — e que precisava pensar. Não foi um não.`, titulo: c.p.nome };
+  }
+  recusar(c);
+  if (valor >= 36 || c.vin.confianca >= 55) {
+    lembrarCom(c.v, c.p.id, `Você chamou ${c.p.nome} para sair; ${ele(c.p)} preferiu a amizade.`, 'romance', 1);
+    abalar(c.v, `o não de ${c.p.nome}`, -4, 2);
+    return { resultado: `${c.p.nome} agradeceu, com cuidado, e disse que prefere deixar as coisas como estão.${motivoDoNao(c, motivo)}`, titulo: c.p.nome };
+  }
+  c.vin.tensao = clamp(c.vin.tensao + 8); afeto(c, -5);
+  abalar(c.v, `o não de ${c.p.nome}`, -5, 2);
+  return { resultado: `${c.p.nome} disse que não, sem rodeio. Ficou um silêncio esquisito entre vocês.${motivoDoNao(c, motivo)}`, titulo: c.p.nome };
+}
+
+function declarar(c: CtxI, r: Rng): Saida {
+  if (!c.v.eu.atracao) c.v.eu.atracao = c.p.genero === 'masculino' ? 'homens' : c.p.genero === 'feminino' ? 'mulheres' : 'ambos';
+  aplicarPersonalidade(c.v, 'acao:declarar', { coragem: 1 });
+  const { valor, motivo } = interesseDoOutro(c, r);
+  const anos = Math.max(1, Math.floor((c.v.t - c.vin.tInicio) / 12));
+  if (valor >= 60) {
+    const s = comecarASair(c, Math.max(62, valor), `Da amizade de ${anos} ${anos === 1 ? 'ano' : 'anos'} com ${c.p.nome} nasceu outra coisa: começaram a sair.`,
+      `${c.p.nome} ficou em silêncio um segundo e depois riu, nervos${o(c.p)}: "eu achava que era só eu".`, 3);
+    lembrarCom(c.v, c.p.id, 'Da amizade, algo mais.', 'romance', 3);
+    return s;
+  }
+  if (valor >= 50 && !motivo) {
+    c.vin.romance = { estagio: 'interesse', tEstagio: c.v.t, envolvimento: valor, pediuTempo: c.v.t };
+    lembrarCom(c.v, c.p.id, `Você disse o que sentia; ${c.p.nome} pediu um tempo para pensar.`, 'romance', 2);
+    return { resultado: `${c.p.nome} não respondeu na hora. Disse que a amizade de vocês importa demais para responder sem pensar — e pediu um tempo.`, titulo: c.p.nome };
+  }
+  recusar(c);
+  if (c.vin.confianca >= 60 || valor >= 38) {
+    c.vin.tensao = clamp(c.vin.tensao + 5);
+    lembrarCom(c.v, c.p.id, `Você disse o que sentia; ${c.p.nome} preferiu a amizade. A amizade ficou.`, 'romance', 2);
+    abalar(c.v, `o não de ${c.p.nome}`, -6, 3);
+    return { resultado: `${c.p.nome} segurou sua mão e disse, com todo o cuidado, que não sente o mesmo.${motivoDoNao(c, motivo)} Pediu para a amizade continuar. Por enquanto, está esquisito; depois, passa.`, titulo: c.p.nome };
+  }
+  c.vin.tensao = clamp(c.vin.tensao + 14); afeto(c, -12);
+  if (c.vin.proximidade < 45 && c.vin.estagio === 'amigo_proximo') c.vin.estagio = 'amigo';
+  lembrarCom(c.v, c.p.id, `Você disse o que sentia; ${c.p.nome} não sentia o mesmo, e a amizade esfriou.`, 'conflito', 2);
+  abalar(c.v, `o não de ${c.p.nome}`, -8, 4);
+  return { resultado: `${c.p.nome} ficou sem saber onde pôr as mãos. Disse que não, e nos dias seguintes as mensagens ficaram mais curtas.${motivoDoNao(c, motivo)}`, titulo: c.p.nome };
+}
+
+const LUGARES_ENCONTRO_JOVEM = ['uma sorveteria perto da escola', 'o cinema do shopping, filme escolhido às pressas', 'a praça, dividindo um açaí', 'uma festa junina da escola'];
+const LUGARES_ENCONTRO = ['um bar pequeno onde a música deixava conversar', 'um restaurante japonês que nenhum dos dois conhecia', 'um show de uma banda que só um de vocês gostava', 'uma feira de domingo, andando sem pressa', 'um café que fechou antes de a conversa acabar'];
+
+function primeiroEncontro(c: CtxI, r: Rng): Saida {
+  const jovem = romanceAdolescente(c.v, c.p);
+  const lugar = r.pick(jovem ? LUGARES_ENCONTRO_JOVEM : LUGARES_ENCONTRO);
+  const comp = compatibilidade(c.v, c.p);
+  envolver(c, comp * 8);
+  lembrarCom(c.v, c.p.id, `O primeiro encontro: ${lugar}.`, 'romance', 2);
+  const fim = comp > 0.3 ? 'Na volta, os dois já estavam marcando o próximo.' : comp < -0.2 ? 'Foi simpático — e um pouco longo demais. Nenhum dos dois sabe se vai ter outro.' : 'No fim, ficou aquela dúvida boa de quem quer ver de novo.';
+  return { resultado: `O primeiro encontro foi em ${lugar}. ${fim}`, titulo: c.p.nome };
+}
+
+/** O que dá para descobrir sobre alguém convivendo (e ainda não foi descoberto). */
+function descobertasPendentes(c: CtxI): { id: string; texto: string; marco: string }[] {
+  const t = c.p.temperamento;
+  const nome = c.p.nome;
+  const todas: { id: string; texto: string; marco: string }[] = [];
+  const ocup = c.p.ocupacao && c.p.ocupacao !== 'estudante' ? c.p.ocupacao : undefined;
+  todas.push({ id: 'origem', texto: `${nome} contou da cidade onde cresceu, da família, de uma infância que você não imaginava.`, marco: `Descobriu de onde ${nome} veio.` });
+  if (t.abertura > 0.3) todas.push({ id: 'curiosa', texto: `${nome} tem uma lista enorme de lugares para conhecer e de coisas para aprender. Falou disso com os olhos brilhando.`, marco: `Descobriu a curiosidade de ${nome}.` });
+  else if (t.abertura < -0.3) todas.push({ id: 'rotina', texto: `${nome} gosta das coisas do jeito de sempre: o mesmo café, o mesmo caminho, a mesma série revista.`, marco: `Descobriu que ${nome} gosta de rotina.` });
+  if (t.extroversao > 0.3) todas.push({ id: 'gente', texto: `${nome} conhece meio mundo e fica mais feliz no meio de gente.`, marco: `Descobriu que ${nome} vive no meio de gente.` });
+  else if (t.extroversao < -0.3) todas.push({ id: 'quieta', texto: `${nome} é de pouca gente: poucos amigos, e para a vida toda.`, marco: `Descobriu que ${nome} é de poucos e bons.` });
+  if (t.estabilidade < -0.3) todas.push({ id: 'ansiosa', texto: `${nome} carrega mais preocupação do que mostra. Contou isso baixinho, quase pedindo desculpa.`, marco: `Descobriu as preocupações de ${nome}.` });
+  if (ocup) todas.push({ id: 'trabalho', texto: `${nome} explicou o que faz como ${ocup} — as partes boas e as que ninguém vê.`, marco: `Entendeu o trabalho de ${nome}.` });
+  const feitas = new Set(Object.keys(c.vin.habitos ?? {}).filter(k => k.startsWith('conhecer:')).map(k => k.slice(9)));
+  return todas.filter(d => !feitas.has(d.id)).slice(0, 3 - Math.min(3, feitas.size));
+}
+
+/** 5, 10, 15... anos juntos neste ano (0 se não é ano redondo). */
+function aniversarioRedondo(c: CtxI): number {
+  const ini = c.vin.romance?.tInicio ?? c.vin.tInicio;
+  const anos = Math.floor((c.v.t - ini) / 12);
+  return anos >= 5 && anos % 5 === 0 ? anos : 0;
+}
+
+/** Uma conquista do ano (abalo bom recente) que vale comemorar. */
+function conquistaRecente(v: Vida): string | undefined {
+  const a = [...(v.mente.abalos ?? [])].reverse().find(x => x.humor >= 5 && v.t - x.t <= 12 && !/^(o sim|comemorar|desabafar|os dias)/.test(x.texto));
+  return a?.texto;
+}
+
+const filhosDoCasal = (c: CtxI) => Object.values(c.v.pessoas).filter(p => p.vivo && p.genitores?.includes('eu') && p.genitores.includes(c.p.id)).length;
+
+/** O jogador está num momento em que desabafar faz sentido. */
+function precisaDesabafar(v: Vida): boolean {
+  if (v.mente.estresse >= 45 || v.mente.felicidade < 48) return true;
+  if (v.luto.some(l => l.peso >= 25 && v.t - l.t <= 36)) return true;
+  return (v.mente.abalos ?? []).some(a => (a.humor <= -6 || a.cabeca >= 8) && v.t - a.t <= 12);
+}
+
+/** Essa pessoa escuta: alguém próximo o bastante, e não uma criança. */
+function ouve(c: CtxI): boolean {
+  if (c.papel === 'parceiro') return true;
+  if (c.papel === 'amigo_proximo') return true;
+  if (c.papel === 'amigo' && c.vin.proximidade >= 55) return true;
+  if ((c.papel === 'genitor' || c.papel === 'avo') && c.vin.proximidade >= 45) return true;
+  if ((c.papel === 'irmao' || c.papel === 'filho') && c.ip >= 16 && c.vin.proximidade >= 55) return true;
+  return false;
+}
+
 /* -------------------------------------------------------------- Interface */
 
 const porId = new Map(INTERACOES.map(x => [x.id, x]));
 
-/** As interações que fazem sentido com esta pessoa agora, na ordem do catálogo. */
+const PESO_VARIANTE = { principal: 3, secundario: 2, discreto: 1, perigo: 0 } as const;
+
+/**
+ * As interações que fazem sentido com esta pessoa agora, da mais relevante
+ * para a menos: a variante dá a base; o momento (um aniversário redondo, uma
+ * briga, alguém em quem você anda pensando) sobe o que importa agora.
+ */
 export function interacoesPara(v: Vida, id: string): Interacao[] {
   const c = ctxPessoa(v, id);
   if (!c || !c.p.vivo) return [];
-  return INTERACOES.filter(x => x.quando(c));
+  const lista = INTERACOES.filter(x => x.quando(c));
+  const rel = (x: Interacao) => (x.variante === 'perigo' ? -1 : PESO_VARIANTE[x.variante ?? 'secundario'] + (x.prioridade?.(c) ?? 0));
+  return lista.map((x, k) => ({ x, k, r: rel(x) })).sort((a, b) => b.r - a.r || a.k - b.k).map(y => y.x);
 }
 
 const interacoesNoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('pessoa:')).length;
@@ -728,7 +1117,9 @@ export function executarInteracao(v: Vida, r: Rng, id: string, interacao: string
   const def = porId.get(interacao)!;
   v.anoAtual.acoes.push(`pessoa:${interacao}:${id}`);
   c.vin.tUltimoContato = v.t;
-  return def.executar(c, r);
+  const out = def.executar(c, r);
+  if (def.destaque && out.resultado && !out.titulo) out.titulo = c.p.nome;
+  return out;
 }
 
 export const rotuloInteracao = (v: Vida, id: string, interacao: string) => {

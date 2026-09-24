@@ -25,5 +25,5 @@ export const temMarca = (v: Vida, tipo: TipoMarcaCaminho, filtro?: (m: MarcaCami
 
 /** Estado vazio dos caminhos (vida nova). */
 export function caminhosVazios(): Vida['caminhos'] {
-  return { frentes: {}, marcas: [], oportunidades: [], concurso: { meses: 0, tentativas: 0, aprovacoes: 0 }, ultimas: {} };
+  return { frentes: {}, marcas: [], oportunidades: [], concurso: { meses: 0, tentativas: 0, aprovacoes: 0 }, ultimas: {}, entrevistas: { recentes: [], feitas: 0 }, devolutivas: [] };
 }

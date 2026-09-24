@@ -14,6 +14,7 @@ import type { Condicao, Pessoa, Vida } from '../tipos';
 import { escrever, idade, novoId } from '../nucleo';
 import { municipio } from '../dados/lugares';
 import { idadeEm } from '../tempo';
+import { derivaDaSaude } from './estado';
 
 export interface ModeloCondicao {
   id: string;
@@ -76,23 +77,14 @@ export function processarCorpo(v: Vida, r: Rng): void {
   const i = idade(v);
   const c = v.corpo;
 
-  // Deriva natural por idade. Corpo jovem se recupera; depois dos 50, cobra.
-  let delta = i < 18 ? (90 - c.saude) * 0.25
-    : i < 35 ? (84 - c.saude) * 0.12
-    : i < 50 ? (80 - c.saude) * 0.07 - 0.3
-    : i < 65 ? (76 - c.saude) * 0.05 - 0.3
-    : i < 80 ? -0.75 : -1.4;
-  delta += (c.forma - 45) / 70;
-  if (c.habitos.fuma) delta -= 1.6;
-  if (c.habitos.bebe === 'muito') delta -= 1.4;
-  if (v.mente.estresse > 75) delta -= 0.8;
-  if (v.mente.felicidade < 25) delta -= 0.5;
+  // Deriva do ano: idade, movimento, hábitos, cabeça e condições — a mesma
+  // soma que a tela "Você" mostra como o que ajuda e o que pesa na saúde.
+  const delta = derivaDaSaude(v);
 
   // Condições em curso
   for (const cond of c.condicoes) {
     const m = modeloCondicao(cond.id);
     if (!m) continue;
-    delta -= (cond.tratando ? m.perda[1] : m.perda[0]) * (i < 45 ? 0.5 : 1);
     if (cond.id === 'depressao' || cond.id === 'ansiedade') {
       v.mente.felicidade = clamp(v.mente.felicidade - (cond.tratando ? 2 : 6));
       // Transtornos mentais melhoram com o tempo e com a vida melhorando.

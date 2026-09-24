@@ -242,10 +242,15 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       escrever(v, { texto: agro ? 'Trabalhou três meses na colheita. Dinheiro no bolso e as costas doendo.' : 'Trabalhou como temporário no fim de ano. Em janeiro, o contrato acabou.', relevancia: 'biografia', tema: 'trabalho', escolha: true });
       return { texto: 'Três meses de trabalho, dinheiro no bolso. Depois, acabou.' };
     }
-    case 'peneira': case 'seletiva':
-      v.fatos['peneira_mod'] = MODS.indexOf(o.dominio ?? 'futebol');
-      v.fatos['peneira_lugar'] = municipioIndex(o.municipioId ?? v.moradia.municipioId);
+    case 'peneira': case 'seletiva': {
+      const d = o.dominio ?? 'futebol';
+      const lugar = o.municipioId ?? v.moradia.municipioId;
+      v.fatos['peneira_mod'] = MODS.indexOf(d);
+      v.fatos['peneira_lugar'] = municipioIndex(lugar);
+      const clube = o.titulo.replace(/^(Peneira no |Seletiva: )/, '');
+      v.caminhos.processo = { tipo: 'peneira', dominio: d, municipioId: lugar, bonus: 0, via: o.pessoaId ? 'indicacao' : 'oportunidade', etapas: [], atual: 0, lugar: clube };
       return { texto: '', decisao: 'esp_peneira' };
+    }
     case 'convite': {
       if (!oc && v.educacao.evadiu && !v.educacao.basica && o.titulo === 'Terminar a escola') { voltarAEstudar(v); return { texto: 'Caderno novo, turma cansada e adulta, aula das sete às dez.', tom: 'bom' }; }
       if (!oc) return { texto: 'O convite não se confirmou.' };
@@ -316,6 +321,7 @@ export const MODS_ARTE: Dominio[] = ['musica', 'teatro', 'danca'];
 import { MUNICIPIOS } from '../dados/lugares';
 const municipioIndex = (id: string) => Math.max(0, MUNICIPIOS.findIndex(m => m.id === id));
 export const municipioPorIndice = (n: number) => MUNICIPIOS[n]?.id;
+export const municipioIndice = municipioIndex;
 
 export function recusarOportunidade(v: Vida, id: string): void {
   v.caminhos.oportunidades = v.caminhos.oportunidades.filter(x => x.id !== id);

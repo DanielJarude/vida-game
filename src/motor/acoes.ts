@@ -20,7 +20,7 @@ import { abrirNegocio, podeAbrirNegocio } from './sistemas/negocio';
 import { marcar } from './sistemas/marcas';
 import { aplicarPersonalidade } from './personalidade';
 import { contexto } from './conteudo/base';
-import { VIAS } from './conteudo/desafios';
+import { iniciarEntrevista } from './conteudo/desafios';
 import { ge } from './texto';
 import { OCUPACOES, ocupacao } from './dados/ocupacoes';
 import { alugar, marcarSaidaDeCasa, opcoesDeAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
@@ -31,6 +31,7 @@ import { curso } from './dados/cursos';
 import { limiteDeCredito, saldoMensal } from './sistemas/dinheiro';
 import { moraComFamiliaDeOrigem, rendaDomiciliar } from './sistemas/domicilio';
 import { disponibilidadeInteracao, executarInteracao, LIMITE_INTERACOES } from './sistemas/interacoes';
+import { disponibilidadeCuidado, executarCuidado, type TipoCuidado } from './sistemas/cuidados';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -52,7 +53,9 @@ export type Acao =
   | { tipo: 'voltar_a_estudar' }
   | { tipo: 'candidatar'; ocupacaoId: string }
   | { tipo: 'pedir_demissao' }
-  | { tipo: 'horas_extras' }
+  | { tipo: 'horas_extras'; parar?: boolean }
+  /** Cuidar de si: descansar, ir ao médico, tentar largar um hábito. */
+  | { tipo: 'cuidar'; cuidado: TipoCuidado }
   | { tipo: 'pedir_aumento' }
   | { tipo: 'aposentar' }
   | { tipo: 'pessoa'; pessoaId: string; interacao: InteracaoPessoa }
@@ -74,6 +77,8 @@ export type Acao =
   | { tipo: 'atracao'; valor?: Vida['eu']['atracao'] };
 
 export { LIMITE_INTERACOES };
+
+const TITULO_CUIDADO: Record<TipoCuidado, string> = { descansar: 'Uns dias de descanso', consulta: 'No médico', parar_fumar: 'Parar de fumar', beber_menos: 'Beber menos' };
 export const LIMITE_CANDIDATURAS = 3;
 
 const jaFez = (v: Vida, chave: string) => v.anoAtual.acoes.includes(chave);
@@ -134,8 +139,11 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'pedir_demissao': return v.trabalho.atual ? PERMITIDO : bloqueio('incompativel', 'Você não tem emprego.');
     case 'horas_extras':
+      if (a.parar) return v.trabalho.horasExtras ? PERMITIDO : bloqueio('incompativel', 'Não há horas extras combinadas.');
       if (!v.trabalho.atual || !['clt', 'servidor'].includes(v.trabalho.atual.contrato)) return bloqueio('incompativel', 'Só para quem tem emprego formal.');
+      if (jaFez(v, 'horas_extras_parou')) return bloqueio('incompativel', 'Você desistiu das horas extras este ano.');
       return jaFez(v, 'horas_extras') ? bloqueio('incompativel', 'Já combinado para este ano.') : PERMITIDO;
+    case 'cuidar': return disponibilidadeCuidado(v, a.cuidado);
     case 'pedir_aumento':
       if (!v.trabalho.atual || v.trabalho.atual.contrato === 'informal' || v.trabalho.atual.contrato === 'autonomo') return bloqueio('incompativel', 'Não há a quem pedir.');
       if (v.t - v.trabalho.atual.tInicio < 12) return bloqueio('requisito', 'Espere completar um ano no cargo.');
@@ -238,15 +246,17 @@ export function executar(vida: Vida, a: Acao): Retorno {
   if (!podeTentar(disp)) return { vida, aviso: { texto: disp.motivo ?? 'Não é possível agora.', tom: 'ruim' } };
   let resultado: string | undefined;
   let aviso: Retorno['aviso'];
+  let titulo: string | undefined;
   const { vida: nova } = transacao(vida, (v, r) => {
     const out = executarNaTransacao(v, r, a);
     resultado = out.resultado;
     aviso = out.aviso;
+    titulo = out.titulo;
   });
-  return { vida: nova, resultado, aviso };
+  return { vida: nova, resultado, aviso, titulo, pessoaId: a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined };
 }
 
-interface Saida { resultado?: string; aviso?: Retorno['aviso'] }
+interface Saida { resultado?: string; aviso?: Retorno['aviso']; titulo?: string }
 const ok = (texto: string, tom: 'bom' | 'ruim' | 'neutro' = 'neutro'): Saida => ({ aviso: { texto, tom } });
 
 function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
@@ -366,9 +376,24 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok('Você está sem emprego agora.');
     }
     case 'horas_extras':
+      if (a.parar) {
+        v.trabalho.horasExtras = false;
+        v.anoAtual.acoes = v.anoAtual.acoes.filter(x => x !== 'horas_extras');
+        v.anoAtual.acoes.push('horas_extras_parou');
+        return ok('Sem horas extras este ano: menos dinheiro, mais noite livre.');
+      }
       v.anoAtual.acoes.push('horas_extras');
       v.trabalho.horasExtras = true;
       return ok('Horas extras combinadas para este ano: mais dinheiro, mais cansaço.');
+    case 'cuidar': {
+      const res = executarCuidado(v, r, a.cuidado);
+      if (res.decisao) {
+        const d = conteudoPorId(res.decisao);
+        if (d && d.tipo === 'decisao') abrirDecisao(v, d, preparar(d, v, r) ?? contexto(v, r));
+        return {};
+      }
+      return { resultado: res.resultado, titulo: TITULO_CUIDADO[a.cuidado] };
+    }
     case 'pedir_aumento': {
       v.anoAtual.acoes.push('aumento');
       // Negociar é um desafio: a abordagem escolhida pesa no resultado.
@@ -473,12 +498,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
 }
 
 function abrirEntrevista(v: Vida, r: Rng, ocupacaoId: string, bonus: number, via: string): Saida {
-  v.fatos['entrevista_oc'] = OCUPACOES.findIndex(x => x.id === ocupacaoId);
-  v.fatos['entrevista_bonus'] = Math.round(bonus * 100);
-  v.fatos['entrevista_via'] = Math.max(0, VIAS.indexOf(via));
+  iniciarEntrevista(v, r, ocupacao(ocupacaoId), bonus, via);
   const d = conteudoPorId('trab_entrevista')!;
-  const ctx = preparar(d, v, r);
-  if (ctx && d.tipo === 'decisao') abrirDecisao(v, d, ctx);
+  if (d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r));
   return {};
 }
 

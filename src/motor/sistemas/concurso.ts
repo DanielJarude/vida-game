@@ -27,6 +27,10 @@ import { marcar } from './marcas';
 import { contratar, nomeOcupacao, textoDeContratacao } from './trabalho';
 import { anoDe } from '../tempo';
 import { flex, ge } from '../texto';
+import { registrarDevolutiva } from './devolutivas';
+import { abalar } from './abalo';
+
+const NOME_DA_PROVA: Record<string, string> = { exatas: 'matemática e raciocínio lógico', linguagens: 'português', humanas: 'conhecimentos gerais e legislação', ciencias: 'conhecimentos específicos', idiomas: 'língua estrangeira', musica: 'a prova prática' };
 
 interface PerfilConcurso {
   /** Meses de estudo sério que a aprovação costuma pedir. */
@@ -166,6 +170,16 @@ export function processarConcursos(v: Vida, r: Rng): void {
       relevancia: tentativas === 1 || tentativas % 3 === 0 || perto ? 'cotidiano' : 'tecnico', tema: 'trabalho', tom: 'ruim'
     });
     marcar(v, 'reprovacao', `Reprovado no concurso para ${nomeOcupacao(v, oc)} (${tentativas}ª vez).`, 1, { ocupacaoId: oc.id });
+    // O resultado vem com a nota: dá para saber o que pesou.
+    const p = perfilConcurso(oc.id);
+    const fraca = [...p.materias].sort((a, b) => habilidade(v, a) - habilidade(v, b))[0];
+    const falta = preparoPara(v, oc) < p.preparo ? 'preparo' : 'concorrencia';
+    const nomeFraca = fraca ? NOME_DA_PROVA[fraca] ?? fraca : undefined;
+    registrarDevolutiva(v, {
+      tipo: 'concurso', titulo: `Concurso para ${nomeOcupacao(v, oc)}`, passou: false, perto, falta, ocupacaoId: oc.id,
+      texto: falta === 'preparo' ? `Faltou preparo${nomeFraca ? `; a nota mais baixa foi em ${nomeFraca}` : ''}.${perto ? ' Ficou perto da nota de corte.' : ''}` : `A nota foi boa, mas a concorrência foi maior${perto ? ' — ficou a poucas questões' : ''}.`
+    });
+    abalar(v, `a reprovação no concurso`, perto ? -3 : -4, 2);
   }
 
   // Cadastro reserva: às vezes chamam.

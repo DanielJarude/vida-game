@@ -17,13 +17,16 @@ interface BotaoAcaoProps {
   aoAgir?: () => void;
   /** Esconde o botão quando a ação é impossível (em vez de mostrar bloqueado). */
   ocultarImpossivel?: boolean;
+  /** Esconde sempre que não der para fazer (opções secundárias que só poluiriam). */
+  ocultarBloqueado?: boolean;
 }
 
 /** Botão ligado ao motor: pergunta a disponibilidade e explica o bloqueio. */
-export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario', mostrarChance, aoAgir, ocultarImpossivel }: BotaoAcaoProps) {
+export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario', mostrarChance, aoAgir, ocultarImpossivel, ocultarBloqueado }: BotaoAcaoProps) {
   const d = disponibilidade(vida, acao);
   const pode = podeTentar(d);
   if (ocultarImpossivel && d.grau === 'impossivel') return null;
+  if (ocultarBloqueado && !pode) return null;
   const aviso = d.grau === 'irregular' || d.grau === 'improvavel' ? d.motivo : undefined;
   const chance = mostrarChance && pode && d.chance !== undefined ? palavraChance(d.chance) : undefined;
   return (

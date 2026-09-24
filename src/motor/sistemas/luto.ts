@@ -18,13 +18,14 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, vinculosVivos } from '../nucleo';
 import { flex, ge, listaNatural, rotuloParentesco } from '../texto';
 import { MESES, anoDe, mesDe } from '../tempo';
 import { descricaoOrigem } from './social';
 import { filhosEmComum, importancia, papelDe } from './vinculos';
+import { redeDeApoio } from './estado';
+import { abalar } from './abalo';
 
 export type NivelPerda = 'interrompe' | 'destaque' | 'discreto' | 'registro';
 
@@ -102,8 +103,7 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
     // O humor sente, na medida do vínculo. Não é uma reação decidida pelo jogo.
     if (peso >= 16) {
       v.luto.push({ pessoaId: p.id, t: v.t, peso });
-      v.mente.felicidade = clamp(Math.round(v.mente.felicidade - peso * 0.15));
-      v.mente.estresse = clamp(Math.round(v.mente.estresse + peso * 0.1));
+      abalar(v, `a morte de ${p.nome}`, -peso * 0.15, peso * 0.1);
     }
 
     if (nivel === 'interrompe') v.fatos[`despedida:${p.id}`] = v.t;
@@ -175,20 +175,7 @@ export function processarLuto(v: Vida): void {
 }
 
 /** Quantas pessoas próximas estão, de fato, presentes (parceria, amigos, filhos, irmãos). */
-export function redeDeApoio(v: Vida): number {
-  let n = 0;
-  for (const { p, vin } of vinculosVivos(v)) {
-    if (p.especie) continue;
-    const recente = v.t - vin.tUltimoContato < 24 || vin.convivio.length > 0;
-    if (!recente) continue;
-    const papel = papelDe(p, vin);
-    if (papel === 'parceiro') n += 1.5;
-    else if (papel === 'amigo_proximo') n += 1;
-    else if ((papel === 'filho' || papel === 'irmao' || papel === 'genitor' || papel === 'neto') && vin.proximidade >= 55 && idadePessoa(v, p) >= 12) n += 0.8;
-    else if (papel === 'amigo' && vin.proximidade >= 50) n += 0.4;
-  }
-  return n;
-}
+export { redeDeApoio };
 
 /** Peso do luto ainda sendo atravessado (0..~100). */
 export const pesoDoLuto = (v: Vida) => (v.luto ?? []).reduce((s, l) => s + l.peso, 0);

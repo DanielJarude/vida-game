@@ -57,16 +57,27 @@ interface Props {
   rotulo?: string;
   especie?: 'cachorro' | 'gato';
   falecido?: boolean;
+  /**
+   * Como a pessoa está (do estado real, não sorteado): muda boca,
+   * sobrancelha, pálpebra e cor do rosto — o mesmo rosto, noutro dia.
+   */
+  expressao?: Expressao;
 }
 
-export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido }: Props) {
+export type Expressao = 'bem' | 'neutro' | 'cansado' | 'abatido' | 'tenso' | 'doente';
+
+export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido, expressao = 'neutro' }: Props) {
   if (especie) return <RetratoPet especie={especie} tamanho={tamanho} rotulo={rotulo} semente={semente} />;
   const v: Visual = visual ?? { pele: 'p3', cabelo: 'curto', corCabelo: 'castanho', olhos: 'castanho' };
   const f = faseDe(idade);
   const fem = genero === 'feminino';
   const masc = genero === 'masculino';
   const h = hash(semente || v.pele + v.cabelo);
-  const [pele, sombra] = PELE[v.pele] ?? PELE.p3;
+  const [peleBase, sombraBase] = PELE[v.pele] ?? PELE.p3;
+  // Doença tira a cor do rosto; um pouco, sem virar caricatura.
+  const pele = expressao === 'doente' ? misturar(peleBase, '#b7b3ab', 0.22) : peleBase;
+  const sombra = expressao === 'doente' ? misturar(sombraBase, '#9d978e', 0.2) : sombraBase;
+  const x = expressao;
 
   // Cabelo envelhece
   let cor = CABELO[v.corCabelo] ?? CABELO.castanho;
@@ -111,7 +122,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
 
   return (
     <svg
-      className={`retrato retrato--${f}${falecido ? ' retrato--falecido' : ''}`}
+      className={`retrato retrato--${f}${falecido ? ' retrato--falecido' : ''} retrato--${expressao}`}
       viewBox="10 8 80 80" width={tamanho} height={tamanho}
       role="img" aria-label={rotulo ?? 'Retrato'}
     >
@@ -146,8 +157,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {f !== 'bebe' && (
         <g stroke={f === 'idoso' ? misturar(cor, '#8a8580', 0.3) : misturar(cor, '#000000', 0.15)} strokeLinecap="round" fill="none"
            strokeWidth={masc && adultoOuAdol ? 1.9 : 1.25}>
-          <path d={`M ${cx - esp - 3.4} ${olhoY - 4.6} Q ${cx - esp} ${olhoY - 6.2} ${cx - esp + 3.2} ${olhoY - 4.8}`} />
-          <path d={`M ${cx + esp - 3.2} ${olhoY - 4.8} Q ${cx + esp} ${olhoY - 6.2} ${cx + esp + 3.4} ${olhoY - 4.6}`} />
+          {/* Sobrancelha: o canto de dentro sobe na tristeza, desce na tensão. */}
+          <path d={`M ${cx - esp - 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)} Q ${cx - esp} ${olhoY - 6.2 - (x === 'bem' ? 0.6 : 0)} ${cx - esp + 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)}`} />
+          <path d={`M ${cx + esp - 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)} Q ${cx + esp} ${olhoY - 6.2 - (x === 'bem' ? 0.6 : 0)} ${cx + esp + 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)}`} />
         </g>
       )}
 
@@ -161,6 +173,14 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
           {fem && adultoOuAdol && (
             <path d={`M ${cx + lado * (esp + G.olho * 1.05)} ${olhoY - 0.6} l ${lado * 1.6} -1.4`} stroke="#1c1917" strokeWidth={0.9} strokeLinecap="round" />
           )}
+        </g>
+      ))}
+
+      {/* Cansaço: pálpebra caída e olheira. */}
+      {f !== 'bebe' && (x === 'cansado' || x === 'doente' || x === 'abatido') && [-1, 1].map(lado => (
+        <g key={`p${lado}`}>
+          <path d={`M ${cx + lado * esp - G.olho * 1.25} ${olhoY - G.olho * 0.2} Q ${cx + lado * esp} ${olhoY - G.olho * (x === 'abatido' ? 1.05 : 1.3)} ${cx + lado * esp + G.olho * 1.25} ${olhoY - G.olho * 0.2} L ${cx + lado * esp + G.olho * 1.25} ${olhoY - G.olho * 1.3} L ${cx + lado * esp - G.olho * 1.25} ${olhoY - G.olho * 1.3} Z`} fill={pele} />
+          <path d={`M ${cx + lado * esp - G.olho * 1.05} ${olhoY + G.olho * 1.15} q ${G.olho * 1.05} ${G.olho * 0.7} ${G.olho * 2.1} 0`} fill="none" stroke={misturar(sombra, '#4a3a4a', 0.35)} strokeWidth={0.7} opacity={x === 'abatido' ? 0.35 : 0.6} strokeLinecap="round" />
         </g>
       ))}
 
@@ -184,8 +204,14 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {/* Boca */}
       {f === 'bebe'
         ? <ellipse cx={cx} cy={olhoY + 11} rx={2.4} ry={1.4} fill="#c7707a" />
-        : <path d={`M ${cx - (fem ? 3.6 : 3.8)} ${olhoY + 12.2} Q ${cx} ${olhoY + (fem ? 14.6 : 13.8)} ${cx + (fem ? 3.6 : 3.8)} ${olhoY + 12.2}`}
-            fill={fem && adultoOuAdol ? '#b9606b' : 'none'} stroke={fem && adultoOuAdol ? '#a85460' : misturar(sombra, '#6a2e2e', 0.45)} strokeWidth={fem && adultoOuAdol ? 0.8 : 1.3} strokeLinecap="round" />}
+        : (() => {
+            // A boca muda de curva: sorriso, reta de quem aperta os dentes, canto que cai.
+            const larg = (fem ? 3.6 : 3.8) * (x === 'tenso' ? 0.85 : x === 'bem' ? 1.08 : 1);
+            const curva = x === 'bem' ? (fem ? 3.4 : 2.8) : x === 'tenso' ? 0.3 : x === 'abatido' ? -1.6 : x === 'doente' ? -0.7 : x === 'cansado' ? 0.8 : fem ? 2.4 : 1.6;
+            const cantos = olhoY + 12.2 + (x === 'abatido' ? 0.8 : 0);
+            return <path d={`M ${cx - larg} ${cantos} Q ${cx} ${cantos + curva} ${cx + larg} ${cantos}`}
+              fill={fem && adultoOuAdol && curva > 1 ? '#b9606b' : 'none'} stroke={fem && adultoOuAdol ? '#a85460' : misturar(sombra, '#6a2e2e', 0.45)} strokeWidth={fem && adultoOuAdol ? (curva > 1 ? 0.8 : 1.2) : 1.3} strokeLinecap="round" />;
+          })()}
 
       {/* Barba e bigode (só homens adultos) */}
       {masc && (f === 'adulto' || f === 'meia' || f === 'idoso') && v.barba && (

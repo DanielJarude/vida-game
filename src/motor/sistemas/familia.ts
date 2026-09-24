@@ -26,6 +26,7 @@ import { moraComFamiliaDeOrigem } from './domicilio';
 import { sortearNome } from '../dados/nomes';
 import { registrarMortes } from './luto';
 import { garantirVida } from './filhos';
+import { abalar } from './abalo';
 
 /* ----------------------------------------------------------------- Mortes */
 
@@ -128,7 +129,7 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     });
     lembrarCom(v, p1.id, i < 18 ? `Seus pais se separaram quando você tinha ${i} anos.` : 'Seus pais se separaram.', 'conflito', 2);
     lembrarCom(v, p2.id, i < 18 ? `Seus pais se separaram quando você tinha ${i} anos.` : 'Seus pais se separaram.', 'conflito', 2);
-    if (i < 18) { v.mente.felicidade = clamp(v.mente.felicidade - 10); v.mente.estresse = clamp(v.mente.estresse + 12); }
+    if (i < 18) abalar(v, 'a separação dos pais', -10, 12);
   }
 
   // Irmão mais novo
@@ -275,7 +276,7 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
   v.processos = v.processos.filter(p => p.id !== g.id);
   if (r.chance(0.12)) {
     escrever(v, { t: g.tConcepcao + 3, texto: 'A gravidez foi interrompida por um aborto espontâneo no terceiro mês.', relevancia: 'marco', tema: 'filhos', tom: 'ruim' });
-    v.mente.felicidade = clamp(v.mente.felicidade - 12);
+    abalar(v, 'a gravidez que não seguiu', -12, 4);
     return null;
   }
   const genero = r.chance(0.5) ? 'masculino' : 'feminino';
@@ -293,7 +294,7 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
   garantirVida(bebe);
   v.fatos[`outro_genitor_${bebe.id}`] = outro ? 1 : 0;
   if (g.gestanteId === 'eu') v.corpo.saude = clamp(v.corpo.saude - 3);
-  v.mente.estresse = clamp(v.mente.estresse + 8);
+  abalar(v, 'a chegada do bebê', 0, 8);
   return bebe;
 }
 
@@ -313,7 +314,7 @@ export function registrarNascimento(v: Vida, bebe: Pessoa, nome: string): void {
   for (const x of vinculosVivos(v)) if (x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai') lembrarCom(v, x.p.id, primeiro ? `Viraram avós: nasceu ${nome}.` : `Nasceu ${nome}, mais um neto.`, 'filho', primeiro ? 2 : 1, bebe.tNasc);
   lembrarCom(v, bebe.id, `Nasceu em ${mes} de ${Math.floor(bebe.tNasc / 12)}${outro ? `, ${flex(bebe.genero, 'filho seu', 'filha sua', 'filhe sue')} e de ${outro.nome}` : ''}. Você tinha ${idade(v)} anos.`, 'inicio', 3, bebe.tNasc);
   if (outro && v.vinculos[outro.id]) lembrarCom(v, outro.id, `Nasceu ${nome}, ${primeiro ? 'o primeiro filho de vocês' : 'mais um filho de vocês'}.`.replace('o primeiro filho', flex(bebe.genero, 'o primeiro filho', 'a primeira filha', 'e primeire filhe')), 'filho', 3, bebe.tNasc);
-  v.mente.felicidade = clamp(v.mente.felicidade + 12);
+  abalar(v, `o nascimento de ${nome}`, 12, 0);
 }
 
 export const NOMES_SUGERIDOS = (r: Rng, g: 'masculino' | 'feminino', ano: number) => {

@@ -11,11 +11,12 @@
 import type { Rng } from './rng';
 import { clamp } from './rng';
 import type { Retorno, Vida } from './tipos';
-import { escrever, idade, moraCom, parceiro, transacao, vinculosVivos } from './nucleo';
+import { escrever, idade, transacao } from './nucleo';
 import { morreEsteAno, processarCorpo } from './sistemas/corpo';
 import { processarFamiliaDeOrigem, processarConcepcao, processarGestacoes, processarMortes } from './sistemas/familia';
 import { processarDescendentes, processarPartosDaFamilia } from './sistemas/filhos';
-import { pesoDoLuto, processarLuto, redeDeApoio } from './sistemas/luto';
+import { processarLuto } from './sistemas/luto';
+import { alvoCabeca, alvoHumor, registrarEstado } from './sistemas/estado';
 import { processarCurso, processarEscola, processarOab } from './sistemas/escola';
 import { processarTrabalho } from './sistemas/trabalho';
 import { processarRotinas } from './sistemas/rotinas';
@@ -41,7 +42,11 @@ export interface ResumoDoAno {
 export function avancarAno(vida: Vida): Retorno {
   if (vida.morte) return { vida, aviso: { texto: 'Esta vida terminou.', tom: 'neutro' } };
   if (vida.momento) return { vida, aviso: { texto: 'Há uma decisão esperando por você.', tom: 'neutro' } };
-  const { vida: nova } = transacao(vida, (v, r) => viverAno(v, r));
+  const { vida: nova } = transacao(vida, (v, r) => {
+    // Um processo seletivo só existe com a etapa aberta; sem ela, acabou.
+    if (v.caminhos.processo) v.caminhos.processo = undefined;
+    viverAno(v, r);
+  });
   return { vida: nova };
 }
 
@@ -80,6 +85,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarDinheiro(v, r);
   verificarDespejo(v);
   equilibrarMente(v);
+  registrarEstado(v);
 
   const causa = morreEsteAno(v, r);
   if (causa) {
@@ -95,32 +101,19 @@ function viverAno(v: Vida, r: Rng): void {
 
 /**
  * Felicidade e estresse tendem a um ponto de equilíbrio que depende da vida
- * real: gente por perto, saúde, dinheiro, trabalho, perdas recentes, atrito
- * dentro de casa. Eventos empurram; o equilíbrio puxa de volta.
+ * real: gente por perto, saúde, dinheiro, trabalho, a semana, perdas
+ * recentes, atrito dentro de casa, o que se faz com o tempo livre.
+ * Acontecimentos empurram (abalos); o equilíbrio puxa de volta, devagar.
  *
- * Morar sozinho não é, por si, infelicidade: o que pesa é não ter ninguém
- * presente (parceria, amigos próximos, filhos e irmãos com quem se fala).
+ * As causas e seus pesos moram em `sistemas/estado.ts` — a mesma conta que
+ * a tela "Você" lê para dizer o que tem ajudado e o que tem pesado.
  */
 function equilibrarMente(v: Vida): void {
-  const i = idade(v);
   const m = v.mente;
-  const par = parceiro(v);
-  const rede = redeDeApoio(v);
-  let alvo = 52 + Math.min(12, rede * 3) + (v.corpo.saude - 60) / 5;
-  if (par?.vin.romance) alvo += (par.vin.romance.envolvimento - 50) / 6 + 2;
-  if (v.financas.negativado) alvo -= 8;
-  if (i >= 18 && !v.trabalho.atual && !v.trabalho.aposentadoria && !v.educacao.matricula) alvo -= 6;
-  // Solidão: ninguém em casa e ninguém presente.
-  if (i >= 18 && rede < 1 && moraCom(v).length === 0) alvo -= 6;
-  // Luto: pesa na medida do vínculo e vai passando com o tempo e com a rede.
-  const luto = pesoDoLuto(v);
-  alvo -= Math.min(20, luto * 0.22);
-  // Atrito com quem mora junto pesa todo dia.
-  const atrito = vinculosVivos(v).filter(x => x.vin.convivio.includes('casa') && !x.p.especie).reduce((s, x) => s + Math.max(0, x.vin.tensao - 40), 0);
-  alvo -= Math.min(10, atrito / 8);
-  alvo -= Math.max(0, m.estresse - 50) / 4;
-  m.felicidade = clamp(Math.round(m.felicidade * 0.65 + alvo * 0.35));
-  m.estresse = clamp(Math.round(m.estresse * 0.7 + ((i < 12 ? 10 : 18) + luto * 0.08 + Math.min(12, atrito / 10)) * 0.3));
+  const humor = alvoHumor(v);
+  const cabeca = alvoCabeca(v);
+  m.felicidade = clamp(Math.round(m.felicidade * 0.65 + humor * 0.35));
+  m.estresse = clamp(Math.round(m.estresse * 0.7 + cabeca * 0.3));
 }
 
 /* ---------------------------------------------------------------- Conteúdo */

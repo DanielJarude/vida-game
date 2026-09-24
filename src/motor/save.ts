@@ -34,7 +34,7 @@ import { aptidao, MATERIAS } from './sistemas/frentes';
 import { modeloRotina } from './sistemas/rotinas';
 import { CURSOS_NPC } from './sistemas/filhos';
 
-export const VERSAO_SAVE = 8;
+export const VERSAO_SAVE = 9;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -96,12 +96,24 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
+  if (d.versao === 8) {
+    // v8 → v9: estado pessoal com causas (abalos, histórico), processos seletivos em etapas, devolutivas.
+    const erro8 = validar(d, 8);
+    if (erro8) return { tipo: 'invalido', motivo: erro8 };
+    try {
+      const v = migrarV8(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
   if (d.versao === 7) {
     // v7 → v8: caminhos de vida (frentes, marcas, oportunidades, concurso, esporte, arte, negócio).
     const erro7 = validar(d, 7);
     if (erro7) return { tipo: 'invalido', motivo: erro7 };
     try {
-      const v = migrarV7(d as unknown as Vida);
+      const v = migrarV8(migrarV7(d as unknown as Vida));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -113,7 +125,7 @@ export function interpretar(bruto: string): Leitura {
     const erro6 = validarBase(d);
     if (erro6) return { tipo: 'invalido', motivo: erro6 };
     try {
-      const v = migrarV7(migrarV6(d as unknown as Vida));
+      const v = migrarV8(migrarV7(migrarV6(d as unknown as Vida)));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -124,7 +136,7 @@ export function interpretar(bruto: string): Leitura {
     try {
       const v5 = migrarV5(d);
       if (!v5) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
-      const v = migrarV7(migrarV6(v5));
+      const v = migrarV8(migrarV7(migrarV6(v5)));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -163,6 +175,14 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     for (const f of Object.values(c.frentes)) if (!f || !finito(f.habilidade) || !finito(f.interesse) || !finito(f.meses)) return 'Frente com valores inválidos.';
     if (!Array.isArray(d.rotinas)) return 'Rotinas inválidas.';
   }
+  if (versao >= 9) {
+    const m = d.mente as Vida['mente'];
+    if (!Array.isArray(m.abalos) || !Array.isArray(m.historico)) return 'Estado pessoal inválido.';
+    if (m.abalos.some(a => !a || !finito(a.t) || !finito(a.humor) || !finito(a.cabeca) || typeof a.texto !== 'string')) return 'Abalo inválido.';
+    const c = d.caminhos as Vida['caminhos'];
+    if (!c.entrevistas || !Array.isArray(c.entrevistas.recentes) || !finito(c.entrevistas.feitas) || !Array.isArray(c.devolutivas)) return 'Processos seletivos inválidos.';
+    if (c.processo && (!Array.isArray(c.processo.etapas) || !finito(c.processo.atual))) return 'Processo seletivo em andamento inválido.';
+  }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -174,6 +194,31 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (p.genitores && p.genitores.some(g => g !== 'eu' && !pessoas[g])) return 'Árvore da família aponta para pessoa inexistente.';
   }
   return null;
+}
+
+/* =================================================================== v8 → v9 */
+
+/**
+ * Migra um save v8 (ATT 2) para v9 (FIX pós-playtest 2), sem inventar nada:
+ *  - o estado pessoal ganha o registro de abalos (vazio: os acontecimentos
+ *    antigos não tinham nome) e o histórico (começa com o estado de hoje,
+ *    então a tendência aparece depois do próximo ano);
+ *  - os processos seletivos ganham memória de perguntas (vazia) e as
+ *    devolutivas começam vazias; as tentativas antigas continuam na
+ *    Linha da Vida e nas marcas do caminho;
+ *  - uma entrevista antiga aberta no momento do save (formato de uma
+ *    pergunta só) continua funcionando: o momento aberto é o mesmo.
+ */
+export function migrarV8(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 9;
+  const m = x.mente as Partial<Vida['mente']> & Vida['mente'];
+  if (!Array.isArray(m.abalos)) m.abalos = [];
+  if (!Array.isArray(m.historico)) m.historico = [{ t: x.t, humor: m.felicidade, cabeca: m.estresse, saude: x.corpo.saude }];
+  const c = x.caminhos as Partial<Vida['caminhos']> & Vida['caminhos'];
+  if (!c.entrevistas) c.entrevistas = { recentes: [], feitas: 0 };
+  if (!Array.isArray(c.devolutivas)) c.devolutivas = [];
+  return x;
 }
 
 /* =================================================================== v7 → v8 */
@@ -196,7 +241,7 @@ const NIVEL_ANTIGO: Record<string, 1 | 2> = { musica: 2, ingles: 2, danca: 1, es
 export function migrarV7(v: Vida): Vida {
   const x = v;
   (x as { versao: number }).versao = 8;
-  if (!x.caminhos) x.caminhos = { frentes: {}, marcas: [], oportunidades: [], concurso: { meses: 0, tentativas: 0, aprovacoes: 0 }, ultimas: {} };
+  if (!x.caminhos) x.caminhos = { frentes: {}, marcas: [], oportunidades: [], concurso: { meses: 0, tentativas: 0, aprovacoes: 0 }, ultimas: {}, entrevistas: { recentes: [], feitas: 0 }, devolutivas: [] };
   const idadeAgora = idadeEm(x.eu.tNasc, x.t);
   for (const r of x.rotinas ?? []) {
     if (r.nivel === undefined) r.nivel = NIVEL_ANTIGO[r.id] ?? 1;
@@ -388,7 +433,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 8,
+    versao: 7 as unknown as 9,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,
@@ -403,7 +448,7 @@ export function migrarV5(a: Antigo): Vida | null {
       saude: num(p.stats?.saude, 80), forma: num(p.hiddenStats?.condicionamentoFisico, 50), aparencia: num(p.stats?.aparencia, 55),
       condicoes: [], habitos: { fuma: false, bebe: 'nao', sedentario: false }, podeGestar: genero === 'feminino'
     },
-    mente: { felicidade: num(p.stats?.felicidade, 70), estresse: num(p.hiddenStats?.estresse, 20), cognicao: num(p.stats?.inteligencia, 55) },
+    mente: { felicidade: num(p.stats?.felicidade, 70), estresse: num(p.hiddenStats?.estresse, 20), cognicao: num(p.stats?.inteligencia, 55), abalos: [], historico: [] },
     personalidade: { tracos, evidencias: [] },
     pessoas: {},
     vinculos: {},

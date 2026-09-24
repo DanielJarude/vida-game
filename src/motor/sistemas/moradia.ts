@@ -10,6 +10,7 @@ import { MORADIAS, modeloMoradia, type ModeloMoradia } from '../dados/bens';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { saldoMensal } from './dinheiro';
+import { abalar } from './abalo';
 
 export function aluguelDe(m: ModeloMoradia, municipioId: string): number {
   return Math.round(economiaLocal(municipioId).aluguel * m.fatorAluguel / 10) * 10;
@@ -112,5 +113,5 @@ export function verificarDespejo(v: Vida): void {
     texto: amigo ? `Despejo. ${amigo.p.nome} ofereceu o sofá da sala "por uns dias", que viraram meses.` : 'Despejo. Sem ter para onde ir, foi dormir de favor num quartinho nos fundos da casa de um conhecido.',
     relevancia: 'marco', tema: 'casa', tom: 'ruim', pessoas: amigo ? [amigo.p.id] : []
   });
-  v.mente.estresse = Math.min(100, v.mente.estresse + 15);
+  abalar(v, 'o despejo', -6, 15);
 }

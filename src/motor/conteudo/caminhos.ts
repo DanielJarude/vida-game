@@ -10,12 +10,15 @@
  * fracasso, arriscar, voltar atrás — isso é comportamento.
  */
 
-import type { Conteudo, Ctx } from './base';
+import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
 import { estresse, fato, feliz } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
-import { encerrarCarreira, entrarNaBase, fazerPeneira, nomeDeClube, profissionalizar } from '../sistemas/esporte';
-import { MODS, MODS_ARTE, municipioPorIndice, novaOportunidade } from '../sistemas/oportunidades';
+import { encerrarCarreira, entrarNaBase, fazerPeneira, NOME_MOD, nomeDeClube, profissionalizar } from '../sistemas/esporte';
+import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador } from '../sistemas/peneira';
+import { registrarDevolutiva } from '../sistemas/devolutivas';
+import { abalar } from '../sistemas/abalo';
+import { MODS, MODS_ARTE, municipioIndice, municipioPorIndice, novaOportunidade } from '../sistemas/oportunidades';
 import { criarProjeto } from '../sistemas/arte';
 import { contratar, degrausAcima, elegibilidade, encerrarEmprego, experienciaNaTrilha, horizonte, nomeOcupacao, porContaPropria, textoDeContratacao } from '../sistemas/trabalho';
 import { OCUPACOES, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
@@ -59,13 +62,35 @@ export const CAMINHOS: Conteudo[] = [
   /* ============================================================= ESPORTE */
   {
     id: 'esp_peneira', tipo: 'decisao', idade: [10, 19], tema: 'lazer', manual: true, repetir: 0,
-    titulo: c => (mod(c) === 'futebol' ? 'A peneira' : 'A seletiva'),
-    texto: c => `${municipio(lugarPeneira(c)).nome}, oito da manhã. ${mod(c) === 'futebol' ? 'Duzentos garotos de colete, três treinadores de prancheta' : 'Dezenas de atletas, cronômetro na mão dos técnicos'}. Você tem uma chance de mostrar o que sabe.`,
+    titulo: c => {
+      const pr = c.v.caminhos.processo;
+      const nome = mod(c) === 'futebol' ? 'A peneira' : 'A seletiva';
+      return pr?.tipo === 'peneira' ? `${nome} · ${pr.atual === 0 ? 'o começo' : 'o fim do dia'}` : nome;
+    },
+    texto: c => {
+      const pr = c.v.caminhos.processo;
+      const etapa = pr?.tipo === 'peneira' ? ETAPAS_PENEIRA[pr.atual] : undefined;
+      if (!etapa) return `${municipio(lugarPeneira(c)).nome}, oito da manhã. ${mod(c) === 'futebol' ? 'Duzentos garotos de colete, três treinadores de prancheta' : 'Dezenas de atletas, cronômetro na mão dos técnicos'}. Você tem uma chance de mostrar o que sabe.`;
+      const lugar = pr?.lugar ?? municipio(lugarPeneira(c)).nome;
+      const junto = pr?.via === 'familia' && pr.atual > 0 && P.genitor(c.v)[0] ? ` ${P.genitor(c.v)[0].nome} continua na arquibancada.` : '';
+      return etapa.texto(mod(c), lugar) + junto;
+    },
     opcoes: [
-      { id: 'simples', texto: 'Jogar simples, sem errar', resolver: c => peneira(c, 0.02) },
-      { id: 'arriscar', texto: 'Arriscar para aparecer', comportamento: { coragem: 1 }, resolver: c => peneira(c, habilidade(c.v, mod(c)) >= 70 ? 0.08 : -0.06) },
-      { id: 'nervoso', texto: 'Pedir para alguém de casa ir junto', disponivel: c => (P.genitor(c.v).length ? true : false), comportamento: { familia: 1 },
-        resolver: c => { const g = P.genitor(c.v)[0]; if (g) lembrarCom(c.v, g.id, `Foi junto na ${mod(c) === 'futebol' ? 'peneira' : 'seletiva'}.`, 'apoio', 2); return peneira(c, 0); } }
+      ...[0, 1, 2, 3].map(k => ({
+        id: `p${k}`,
+        texto: (c: Ctx) => { const pr = c.v.caminhos.processo; return pr?.tipo === 'peneira' ? ETAPAS_PENEIRA[pr.atual]?.opcoes[k]?.texto(mod(c)) ?? '—' : '—'; },
+        disponivel: (c: Ctx) => {
+          const pr = c.v.caminhos.processo;
+          const op = pr?.tipo === 'peneira' ? ETAPAS_PENEIRA[pr.atual]?.opcoes[k] : undefined;
+          if (!op) return false;
+          return op.id === 'familia' ? P.genitor(c.v).length > 0 : true;
+        },
+        resolver: (c: Ctx) => etapaDaPeneira(c, k)
+      })),
+      // Saves de antes das etapas: a peneira de um clique continua resolvível.
+      { id: 'simples', texto: 'Jogar simples, sem errar', disponivel: () => false, resolver: c => peneira(c, 0.02) },
+      { id: 'arriscar', texto: 'Arriscar para aparecer', disponivel: () => false, resolver: c => peneira(c, habilidade(c.v, mod(c)) >= 70 ? 0.08 : -0.06) },
+      { id: 'nervoso', texto: 'Pedir para alguém de casa ir junto', disponivel: () => false, resolver: c => peneira(c, 0) }
     ]
   },
   {
@@ -346,6 +371,7 @@ function semanaCheia(c: Ctx): boolean {
   return podeComecarRotina(c.v, d, 3).grau === 'incompativel';
 }
 
+/** Peneira antiga (save anterior às etapas): um clique, pela habilidade. */
 function peneira(c: Ctx, ajuste: number) {
   const d = mod(c);
   const passou = fazerPeneira(c.v, c.r, d, ajuste);
@@ -356,6 +382,50 @@ function peneira(c: Ctx, ajuste: number) {
     return { texto: 'No fim do dia, chamaram seu nome. Poucos nomes foram chamados.', memoria: `${texto} Chamaram poucos nomes; o seu foi um deles.`, relevancia: 'marco' as const, tom: 'bom' as const };
   }
   return { texto: 'Chamaram outros nomes. Na volta, o ônibus pareceu mais comprido.', memoria: `Não passou na ${d === 'futebol' ? 'peneira' : 'seletiva'} do clube.`, relevancia: 'biografia' as const, tom: 'ruim' as const };
+}
+
+/** Uma etapa da peneira em andamento; no fim, o resultado com a fala do treinador. */
+function etapaDaPeneira(c: Ctx, k: number): Resultado {
+  const pr = c.v.caminhos.processo;
+  if (!pr || pr.tipo !== 'peneira') return { texto: 'O teste já tinha acabado.', memoria: null };
+  const etapa = ETAPAS_PENEIRA[pr.atual];
+  pr.etapas[pr.atual] = { id: etapa.id, resposta: etapa.opcoes[k].id };
+  if (etapa.opcoes[k].id === 'familia') pr.via = 'familia';
+  pr.atual += 1;
+  if (pr.atual < ETAPAS_PENEIRA.length) return { texto: '', memoria: null, reabrir: true };
+  const d = pr.dominio ?? mod(c);
+  const lugar = pr.municipioId ?? lugarPeneira(c);
+  const notas = { comeco: pr.etapas[0]?.resposta, final: pr.etapas[1]?.resposta };
+  c.v.caminhos.processo = undefined;
+  c.v.fatos[`peneiras_${d}`] = (c.v.fatos[`peneiras_${d}`] ?? 0) + 1;
+  const res = avaliarPeneira(c.v, c.r, d, lugar, notas, pr.bonus);
+  const fala = falaDoTreinador(d, res);
+  const nome = d === 'futebol' ? 'peneira' : 'seletiva';
+  if (pr.via === 'familia') { const g = P.genitor(c.v)[0]; if (g) lembrarCom(c.v, g.id, `Foi junto na ${nome}.`, 'apoio', 2); }
+  // Um dia de teste também é treino.
+  const f = c.v.caminhos.frentes[d];
+  if (f) f.meses += 2;
+  registrarDevolutiva(c.v, { tipo: 'peneira', titulo: `A ${nome} do ${pr.lugar ?? 'clube'}`, texto: fala, passou: res.passou, perto: res.perto, falta: res.passou ? undefined : res.falta, dominio: d });
+  if (res.passou) {
+    c.v.fatos['convite_base'] = c.v.t;
+    c.v.fatos['peneira_lugar'] = municipioIndice(lugar);
+    const texto = `Passou na ${nome}.`;
+    marcar(c.v, 'oportunidade', texto, 3, { dominio: d });
+    return { texto: `No fim do dia, chamaram seu nome. Poucos nomes foram chamados. ${fala}`, memoria: `${texto} Chamaram poucos nomes; o seu foi um deles.`, relevancia: 'marco', tom: 'bom' };
+  }
+  const tentativas = c.v.fatos[`peneiras_${d}`] ?? 1;
+  marcar(c.v, 'fracasso', `Não passou na ${nome} (${NOME_MOD[d] ?? d}). ${fala}`, 2, { dominio: d });
+  abalar(c.v, `a ${nome} que não deu`, -5, 3);
+  // Quem ficou perto pode ser chamado de novo mais cedo.
+  if (res.perto) c.v.caminhos.ultimas[`peneira_${d}`] = c.v.t - 12;
+  const depois = res.perto
+    ? tentativas < 3 ? ' Pediram para você voltar no ano que vem.' : ''
+    : res.falta === 'idade' ? '' : ' Ainda dá para treinar e tentar outra.';
+  return {
+    texto: `Chamaram outros nomes. ${fala}${depois}`,
+    memoria: `Não passou na ${nome} do clube. ${fala}`,
+    relevancia: 'biografia', tom: 'ruim'
+  };
 }
 
 function cursosDoIf(c: Ctx) {

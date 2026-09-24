@@ -33,6 +33,7 @@ import { marcar } from './marcas';
 import { chanceNoConcurso, editalAberto } from './concurso';
 import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
+import { abalar } from './abalo';
 
 export const nomeOcupacao = (v: Vida, oc: Ocupacao) => (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
 export const nomeOcupacaoId = (v: Vida, id: string) => nomeOcupacao(v, ocupacao(id));
@@ -342,10 +343,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   if (!e) {
     if (t.desempregadoDesde !== undefined && i >= 18 && !t.aposentadoria && !v.educacao.matricula) {
       const anos = Math.floor((v.t - t.desempregadoDesde) / 12);
-      if (anos === 1) {
-        v.mente.felicidade = clamp(v.mente.felicidade - 6);
-        v.mente.estresse = clamp(v.mente.estresse + 8);
-      }
+      if (anos === 1) abalar(v, 'um ano inteiro sem trabalho', -6, 8);
     }
     aposentadoriaAutomatica(v);
     return;
@@ -370,7 +368,6 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   e.desempenho = clamp(Math.round(e.desempenho * 0.5 + alvo * 0.5 + r.normal() * 8));
 
   // Estresse do cargo
-  v.mente.estresse = clamp(v.mente.estresse + (oc.estresse - 2.5) * 2.5 + (t.horasExtras ? 6 : 0) - 2);
   t.horasExtras = false;
 
   // Curso de formação (escola de sargentos, academia de polícia): termina e vira o posto.
@@ -530,8 +527,7 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
     escrever(v, { texto: `O trabalho como ${nome} minguou até acabar.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
   }
   encerrarEmprego(v, 'demissão');
-  v.mente.felicidade = clamp(v.mente.felicidade - 10);
-  v.mente.estresse = clamp(v.mente.estresse + 12);
+  abalar(v, 'a demissão', -10, 12);
   return true;
 }
 
@@ -577,7 +573,7 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
   escrever(v, { texto, relevancia: proximo.nivel >= 4 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
   marcar(v, proximo.nivel >= 5 ? 'lideranca' : 'promocao', texto, proximo.nivel >= 4 ? 3 : 2, { trilha: proximo.trilha, ocupacaoId: proximo.id });
   v.fatos['promocoes'] = (v.fatos['promocoes'] ?? 0) + 1;
-  v.mente.felicidade = clamp(v.mente.felicidade + 6);
+  abalar(v, 'a promoção', 6, 0);
 }
 
 /* ------------------------------------------------------------ Horizonte */

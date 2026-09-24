@@ -106,7 +106,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const podeGestar = o.genero === 'feminino' ? true : o.genero === 'masculino' ? false : !!o.podeGestar;
 
   const v: Vida = {
-    versao: 8,
+    versao: 9,
     id: `vida-${o.semente.toString(36)}`,
     rng: 0,
     seq: 0,
@@ -131,7 +131,9 @@ export function criarVida(o: OpcoesCriacao): Vida {
     mente: {
       felicidade: 75,
       estresse: 8,
-      cognicao: Math.max(15, Math.min(95, Math.round(55 + r.normal() * 13)))
+      cognicao: Math.max(15, Math.min(95, Math.round(55 + r.normal() * 13))),
+      abalos: [],
+      historico: []
     },
     personalidade: {
       tracos: { empatia: 0, generosidade: 0, disciplina: 0, impulsividade: 0, coragem: 0, sociabilidade: 0, independencia: 0, familia: 0 },

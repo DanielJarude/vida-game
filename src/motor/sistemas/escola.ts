@@ -26,6 +26,7 @@ import { rendaPerCapita } from './domicilio';
 import { SALARIO_MINIMO } from './renda';
 import { flex } from '../texto';
 import { anoDe } from '../tempo';
+import { abalar } from './abalo';
 
 const ORDEM_ESCOLARIDADE: Escolaridade[] = [
   'nenhuma', 'fundamental_incompleto', 'fundamental', 'medio_incompleto', 'medio',
@@ -169,7 +170,7 @@ export function processarEscola(v: Vida, r: Rng): void {
           : `${b.reprovacoes}ª reprovação: ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)} de novo, com colegas cada vez mais novos.`,
       relevancia: 'biografia', tema: 'escola', tom: 'ruim'
     });
-    v.mente.felicidade = clamp(v.mente.felicidade - 6);
+    abalar(v, 'a repetência', -6, 3);
     return;
   }
 

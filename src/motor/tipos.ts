@@ -149,6 +149,8 @@ export interface Romance {
   secreto?: boolean;
   /** Na relação principal: o que a outra pessoa não sabe (o caso, e desde quando). */
   segredo?: { pessoaId: string; t: number };
+  /** Quem ouviu a declaração pediu um tempo para pensar (desde quando). A resposta é dela. */
+  pediuTempo?: number;
 }
 
 /** Um marco da história compartilhada. Só o que importa — nunca "um ano normal". */
@@ -162,7 +164,9 @@ export interface Marco {
 
 export type TipoMarco =
   | 'inicio' | 'amizade' | 'romance' | 'casamento' | 'filho' | 'casa' | 'escola' | 'trabalho'
-  | 'conflito' | 'reconciliacao' | 'apoio' | 'ritual' | 'distancia' | 'traicao' | 'perda' | 'antigo';
+  | 'conflito' | 'reconciliacao' | 'apoio' | 'ritual' | 'distancia' | 'traicao' | 'perda' | 'antigo'
+  /** Algo que o jogador descobriu sobre a pessoa, convivendo. */
+  | 'descoberta';
 
 export interface Vinculo {
   pessoaId: string;
@@ -221,6 +225,10 @@ export interface Mente {
   felicidade: number;  // 0..100
   estresse: number;    // 0..100
   cognicao: number;    // 0..100 — facilidade de aprender, raciocínio
+  /** Acontecimentos que mexeram com a pessoa, com nome (o equilíbrio vai absorvendo). */
+  abalos: { t: number; texto: string; humor: number; cabeca: number }[];
+  /** Como estava a cada aniversário (para a tendência: melhorando, piorando). */
+  historico: { t: number; humor: number; cabeca: number; saude: number }[];
 }
 
 /* -------------------------------------------------------------- Personalidade */
@@ -658,7 +666,55 @@ export interface Negocio {
   tFim?: number;
 }
 
+/** Uma etapa de um processo seletivo em andamento (uma pergunta, um momento do teste). */
+export interface EtapaProcesso {
+  id: string;
+  /** Qual abordagem o jogador escolheu. */
+  resposta?: string;
+  /** Como a abordagem caiu naquele contexto (−1..1). Nunca aparece como número. */
+  nota?: number;
+}
+
+/**
+ * Um processo seletivo em andamento: a entrevista de emprego, a peneira.
+ * Tentar é uma pequena experiência em etapas, não um sorteio num clique.
+ */
+export interface ProcessoSeletivo {
+  tipo: 'entrevista' | 'peneira';
+  ocupacaoId?: string;
+  dominio?: Dominio;
+  municipioId?: string;
+  /** Peso da porta (indicação, estágio, convite do treinador). */
+  bonus: number;
+  via: string;
+  etapas: EtapaProcesso[];
+  atual: number;
+  /** Nome do lugar (empresa, clube) — fixo durante o processo. */
+  lugar?: string;
+}
+
+/** O que ficou de uma tentativa: o retorno que a pessoa recebeu. */
+export interface Devolutiva {
+  t: number;
+  tipo: 'entrevista' | 'peneira' | 'concurso';
+  titulo: string;
+  texto: string;
+  passou: boolean;
+  /** Ficou perto: vale tentar de novo. */
+  perto?: boolean;
+  /** O que mais pesou contra (para o jogador saber o que trabalhar). */
+  falta?: 'experiencia' | 'formacao' | 'entrevista' | 'tecnica' | 'fisico' | 'leitura' | 'nervos' | 'idade' | 'concorrencia' | 'preparo';
+  ocupacaoId?: string;
+  dominio?: Dominio;
+}
+
 export interface Caminhos {
+  /** Processo seletivo em andamento (a decisão aberta é uma etapa dele). */
+  processo?: ProcessoSeletivo;
+  /** Perguntas de entrevista usadas recentemente (para não repetir) e quantas entrevistas já fez. */
+  entrevistas: { recentes: string[]; feitas: number };
+  /** Os retornos das últimas tentativas. */
+  devolutivas: Devolutiva[];
   frentes: Partial<Record<Dominio, Frente>>;
   marcas: MarcaCaminho[];
   oportunidades: Oportunidade[];
@@ -695,7 +751,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 8;
+  versao: 9;
   id: string;
   rng: number;
   seq: number;
@@ -734,4 +790,8 @@ export interface Retorno {
   aviso?: { texto: string; tom: 'bom' | 'ruim' | 'neutro' };
   /** Resultado de uma decisão (mostrado no mesmo contexto do momento). */
   resultado?: string;
+  /** O resultado de uma ação merece uma folha (com este título), não um aviso passageiro. */
+  titulo?: string;
+  /** Quem aparece na folha do resultado. */
+  pessoaId?: string;
 }
