@@ -161,6 +161,46 @@ describe('interface', () => {
     expect(ficha.getAllByRole('button', { name: /Brincar|Dar banho/ }).length).toBeGreaterThan(0);
   });
 
+  it('tempo livre: a semana diz o que a ocupa e o bloqueio explica o que teria de sair', () => {
+    adultaSalva(v => {
+      v.educacao.escolaridade = 'medio';
+      contratar(v, criarRng(1), ocupacao('atendente'));
+      v.educacao.matricula = { cursoId: 'eng_civil', instituicao: 'a universidade federal', rede: 'publica', modalidade: 'presencial', tInicio: v.t, mesesRestantes: 48, mensalidade: 0, desempenho: 60, trancado: false, municipioId: v.moradia.municipioId };
+      v.rotinas = [{ id: 'leitura', tInicio: v.t - 24, nivel: 1 }];
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
+    resolverMomentos();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Tempo livre$|^Tempo$/ })[0]);
+    const main = screen.getByRole('main');
+    expect(within(main).getByText(/Antes de qualquer escolha, a semana já tem/)).toBeTruthy();
+    expect(within(main).getAllByText(/Trabalho \(/).length).toBeGreaterThan(0);
+    expect(within(main).getAllByText(/Faculdade \(/).length).toBeGreaterThan(0);
+    // Uma atividade que não cabe mostra o motivo com o que ocupa a semana.
+    expect(within(main).getAllByText(/Sua semana já está cheia: .*trabalho.*faculdade/i).length).toBe(1);
+    expect(within(main).getByRole('button', { name: /o que caberia com mais tempo/ })).toBeTruthy();
+  });
+
+  it('rumo: as portas abertas aparecem com o motivo, e a carreira é contada em palavras', () => {
+    adultaSalva(v => {
+      v.educacao.escolaridade = 'medio';
+      contratar(v, criarRng(2), ocupacao('assistente_adm'));
+      v.trabalho.experiencia['administrativo'] = 60;
+      v.caminhos.oportunidades = [{ id: 'op1', tipo: 'indicacao', titulo: 'Indicação de uma amiga', texto: 'Uma amiga que trabalha numa loja pode indicar você para vendedora.', tInicio: v.t, tFim: v.t + 12, ocupacaoId: 'vendedor', bonus: 0.2 }];
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
+    resolverMomentos();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Estudo e trabalho$|^Rumo$/ })[0]);
+    const main = screen.getByRole('main');
+    expect(within(main).getByText('Ao seu alcance agora')).toBeTruthy();
+    expect(within(main).getByText(/pode indicar você/)).toBeTruthy();
+    expect(within(main).getByRole('button', { name: 'Aceitar' })).toBeTruthy();
+    // Estrada e próximo passo, em frases — nunca "nível 2" ou "sênior" por conta do número interno.
+    expect(within(main).getAllByText(/anos em escritório|Começando em escritório|Um ano em escritório/).length).toBeGreaterThan(0);
+    expect(within(main).queryByText(/nível \d/i)).toBeNull();
+  });
+
   it('retoma uma vida salva', () => {
     let v = criarVida({ nome: 'Rita', sobrenome: 'Lopes', genero: 'feminino', municipioId: 'recife-pe', semente: 5 });
     for (let i = 0; i < 20; i++) { v = avancarAno(v).vida; if (v.momento) break; }

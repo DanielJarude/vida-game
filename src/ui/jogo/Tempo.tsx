@@ -14,7 +14,11 @@ import { frentesDaVida, leituraDaFrente } from '../../motor/sistemas/frentes';
 import { economiaLocal } from '../../motor/dados/lugares';
 import { idade } from '../../motor/nucleo';
 import type { Dominio } from '../../motor/tipos';
+import { useState } from 'react';
 import { BotaoAcao, Secao, Vazio } from '../comum';
+import { disponibilidade } from '../../motor/acoes';
+import { podeTentar } from '../../motor/plausibilidade';
+import { cabeNaSemana } from '../../motor/sistemas/semana';
 import { dinheiroCurto } from '../apresentar';
 
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
@@ -96,30 +100,64 @@ export function Tempo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
         </Secao>
       )}
 
-      <Secao titulo="Dá para começar">
-        {outras.length === 0 && <Vazio>Nada novo por aqui agora.</Vazio>}
-        {GRUPOS.map(g => {
-          const lista = outras.filter(m => m.categoria === g.id);
-          if (!lista.length) return null;
-          return (
-            <div key={g.id} className="grupo-atividades">
-              <h3 className="grupo-atividades__titulo">{g.rotulo}</h3>
-              <ul className="lista-rotinas">
-                {lista.map(m => {
-                  const n1 = m.niveis[0];
-                  const renda = m.renda?.(vida, 1);
-                  return (
-                    <li key={m.id} className="rotina">
-                      <div className="rotina__texto"><strong>{m.nome}</strong><span>{m.descricao} {dose(n1.tempo)}{n1.custo ? ` · ${dinheiroCurto(n1.custo * custo)}/mês` : ' · de graça'}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span></div>
-                      <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir}>{m.niveis.length > 1 ? `Começar: ${n1.rotulo.toLowerCase()}` : 'Começar'}</BotaoAcao>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          );
-        })}
-      </Secao>
+      <Comecar vida={vida} agir={agir} outras={outras} custo={custo} />
     </div>
+  );
+}
+
+/**
+ * O que dá para começar. Quando a semana está cheia, o motivo aparece UMA
+ * vez (o que ocupa a semana e o que teria de sair) e o que não cabe fica
+ * recolhido — sem repetir o mesmo aviso em cada atividade.
+ */
+function Comecar({ vida, agir, outras, custo }: { vida: Vida; agir: (a: Acao) => boolean; outras: ModeloRotina[]; custo: number }) {
+  const [verSemTempo, setVerSemTempo] = useState(false);
+  const [verFora, setVerFora] = useState(false);
+  const itens = outras.map(m => ({ m, d: disponibilidade(vida, { tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }) }));
+  const possiveis = itens.filter(x => podeTentar(x.d));
+  const semTempo = itens.filter(x => !podeTentar(x.d) && x.d.grau === 'incompativel' && /semana/.test(x.d.motivo ?? ''));
+  const fora = itens.filter(x => !possiveis.includes(x) && !semTempo.includes(x));
+  const cheia = cabeNaSemana(vida, 0.5);
+  const linha = (m: ModeloRotina, comBotao: boolean) => {
+    const n1 = m.niveis[0];
+    const renda = m.renda?.(vida, 1);
+    return (
+      <li key={m.id} className="rotina">
+        <div className="rotina__texto"><strong>{m.nome}</strong><span>{m.descricao} {dose(n1.tempo)}{n1.custo ? ` · ${dinheiroCurto(n1.custo * custo)}/mês` : ' · de graça'}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span></div>
+        {comBotao && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir}>{m.niveis.length > 1 ? `Começar: ${n1.rotulo.toLowerCase()}` : 'Começar'}</BotaoAcao>}
+      </li>
+    );
+  };
+  return (
+    <Secao titulo="Dá para começar">
+      {itens.length === 0 && <Vazio>Nada novo por aqui agora.</Vazio>}
+      {!cheia.cabe && <p className="nota">{cheia.motivo.replace(/Isso pede [^.]*\./, 'Uma atividade nova, mesmo leve, não cabe.')}</p>}
+      {GRUPOS.map(g => {
+        const lista = possiveis.filter(x => x.m.categoria === g.id);
+        if (!lista.length) return null;
+        return (
+          <div key={g.id} className="grupo-atividades">
+            <h3 className="grupo-atividades__titulo">{g.rotulo}</h3>
+            <ul className="lista-rotinas">{lista.map(x => linha(x.m, true))}</ul>
+          </div>
+        );
+      })}
+      {semTempo.length > 0 && (
+        <>
+          <button type="button" className="botao botao--discreto" aria-expanded={verSemTempo} onClick={() => setVerSemTempo(x => !x)}>{verSemTempo ? 'Esconder' : 'Ver'} o que caberia com mais tempo ({semTempo.length})</button>
+          {verSemTempo && <ul className="lista-rotinas lista-vagas--bloqueadas">{semTempo.map(x => linha(x.m, false))}</ul>}
+        </>
+      )}
+      {fora.length > 0 && (
+        <>
+          <button type="button" className="botao botao--discreto" aria-expanded={verFora} onClick={() => setVerFora(x => !x)}>{verFora ? 'Esconder' : 'Ver'} o que ainda está fora de alcance ({fora.length})</button>
+          {verFora && (
+            <ul className="lista-vagas lista-vagas--bloqueadas">
+              {fora.map(x => <li key={x.m.id} className="vaga vaga--bloqueada"><div className="vaga__texto"><strong>{x.m.nome}</strong><span>{x.d.motivo}</span></div></li>)}
+            </ul>
+          )}
+        </>
+      )}
+    </Secao>
   );
 }
