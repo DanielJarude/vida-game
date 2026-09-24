@@ -107,8 +107,8 @@ export function recalcularConvivio(v: Vida): void {
     const conv: Convivio[] = [];
     // Casa
     if (moraJunto(v, p, vin, naCasaDosPais)) conv.push('casa');
-    // Ambiente de origem ainda frequentado
-    if (vin.ambiente && chaves.has(vin.ambiente)) conv.push(chaves.get(vin.ambiente)!);
+    // Ambiente de origem ainda frequentado — por quem ainda está na cidade (ou online).
+    if (vin.ambiente && chaves.has(vin.ambiente) && (p.municipioId === cidade || chaves.get(vin.ambiente) === 'online')) conv.push(chaves.get(vin.ambiente)!);
     // Mesma cidade, família: contato de fim de semana
     if (!conv.includes('casa') && vin.parentesco && p.municipioId === cidade && vin.parentesco !== 'pet') conv.push('vizinhanca');
     vin.convivio = conv;
@@ -117,7 +117,8 @@ export function recalcularConvivio(v: Vida): void {
 
 function moraJunto(v: Vida, p: Pessoa, vin: Vinculo, naCasaDosPais: boolean): boolean {
   const par = vin.parentesco;
-  if (vin.romance && (vin.romance.estagio === 'morando_junto' || vin.romance.estagio === 'casamento')) return true;
+  // Casal mora junto — a não ser que um dos dois esteja em outra cidade (relação à distância).
+  if (vin.romance && (vin.romance.estagio === 'morando_junto' || vin.romance.estagio === 'casamento') && !vin.romance.secreto) return p.municipioId === v.moradia.municipioId;
   if (naCasaDosPais) {
     if (vin.convivio.includes('casa')) return p.municipioId === v.moradia.municipioId && !saiuDeCasa(v, p, vin);
     return false;

@@ -250,12 +250,12 @@ export const ADULTO: Conteudo[] = [
   },
   {
     id: 'adu_reencontro', tipo: 'acontecimento', idade: [25, 90], tema: 'amizade', repetir: 6,
-    papeis: { antigo: (v) => Object.values(v.vinculos).filter(x => x.estagio === 'afastado' && v.pessoas[x.pessoaId]?.vivo && x.historia.length > 0).map(x => v.pessoas[x.pessoaId]) },
+    papeis: { antigo: (v) => Object.values(v.vinculos).filter(x => x.estagio === 'afastado' && v.pessoas[x.pessoaId]?.vivo && x.historia.length > 0 && !x.historia.some(h => h.tipo === 'reconciliacao' && v.t - h.t < 180)).map(x => v.pessoas[x.pessoaId]) },
     narrar: c => ({
       texto: `Esbarrou em ${c.p.antigo.nome} ${c.r.pick(['numa fila de banco', 'num velório de um conhecido', 'numa festa de aniversário', 'no mercado'])}. Anos sem se ver; conversaram como se tivesse sido ontem, e trocaram telefone.`,
       relevancia: 'biografia', tom: 'bom',
       efeito: () => { const vin = c.v.vinculos[c.p.antigo.id]; vin.proximidade = Math.max(vin.proximidade, 40); vin.tUltimoContato = c.v.t; vin.estagio = 'amigo'; },
-      lembrar: ['antigo', 'Reencontraram-se por acaso depois de anos.']
+      lembrar: ['antigo', 'Reencontraram-se por acaso depois de anos.', 'reconciliacao']
     })
   },
   {

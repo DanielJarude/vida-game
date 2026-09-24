@@ -35,8 +35,8 @@ const pessoasDaDespedida = (c: Ctx) => quemFicou(c.v, c.p.falecido.id).filter(p 
 function lembrancaDe(c: Ctx): string {
   const p = c.p.falecido;
   const papel = papelDe(p, c.v.vinculos[p.id]);
-  if (papel === 'parceiro') return c.r.pick(['a aliança', 'as cartas guardadas numa caixa de sapato', `o relógio ${flex(p.genero, 'dele', 'dela', 'delu')}`]);
-  if (papel === 'genitor') return c.r.pick(['a receita escrita à mão', 'a velha caixa de fotografias', `o chapéu ${flex(p.genero, 'dele', 'dela', 'delu')}`]);
+  if (papel === 'parceiro') return c.r.pick(['a aliança', 'as cartas guardadas numa caixa de sapato', 'o relógio']);
+  if (papel === 'genitor') return c.r.pick(['a receita escrita à mão', 'a velha caixa de fotografias', 'o chapéu']);
   if (papel === 'filho') return c.r.pick(['o primeiro desenho', 'a camiseta preferida', 'as fotos da infância']);
   if (papel === 'avo') return c.r.pick(['o terço', 'a xícara de sempre', 'uma foto antiga no quintal']);
   return c.r.pick(['uma foto de vocês dois', 'a última mensagem', 'um livro emprestado que nunca voltou']);
@@ -97,7 +97,7 @@ export const SOCIAL: Conteudo[] = [
           const o = lembrancaDe(c);
           return {
             texto: `Você guardou ${o}. Ficou numa gaveta que você abre de vez em quando.`,
-            memoria: `Guardou ${o} de ${c.p.falecido.nome}.`, relevancia: 'biografia', evento: { tipo: 'despedida', pessoaId: c.p.falecido.id },
+            memoria: `Guardou ${o} de ${c.p.falecido.nome}.`.replace('a última mensagem de', 'a última mensagem de').replace('uma foto de vocês dois de', 'uma foto de vocês dois, de'), relevancia: 'biografia', evento: { tipo: 'despedida', pessoaId: c.p.falecido.id },
             efeito: () => { marcarComo(c, 'lembranca'); lembrarCom(c.v, c.p.falecido.id, `Você guardou ${o}.`, 'perda', 2); }
           };
         }
@@ -266,13 +266,14 @@ export const SOCIAL: Conteudo[] = [
     id: 'soc_amigo_mensagem', tipo: 'decisao', idade: [22, 100], tema: 'amizade', repetir: 5, peso: 1.4,
     papeis: {
       amigo: v => vinculosVivos(v).filter(x => !x.vin.parentesco && !x.vin.romance && !x.p.especie && x.vin.historia.some(h => (h.peso ?? 1) >= 2)
-        && (x.vin.estagio === 'afastado' || x.vin.proximidade < 45) && v.t - x.vin.tUltimoContato >= 36 && idadePessoa(v, x.p) >= 18).map(x => x.p)
+        && (x.vin.estagio === 'afastado' || x.vin.proximidade < 45) && v.t - x.vin.tUltimoContato >= 36 && idadePessoa(v, x.p) >= 18
+        && !x.vin.historia.some(h => h.tipo === 'reconciliacao' && v.t - h.t < 180)).map(x => x.p)
     },
     titulo: c => c.p.amigo.nome,
     texto: c => `Uma mensagem de ${c.p.amigo.nome}, depois de anos: "Lembrei de você hoje, ${c.r.pick(['passando na frente da escola', 'ouvindo aquela música', 'vendo uma foto antiga'])}. Tudo bem por aí?"`,
     opcoes: [
       { id: 'encontrar', texto: 'Responder e marcar um café', comportamento: { sociabilidade: 1 },
-        resolver: c => ({ texto: `O café durou três horas. ${c.p.amigo.nome} está diferente e igual.`, memoria: `Reencontrou ${c.p.amigo.nome} depois de anos.`, lembrar: ['amigo', 'Voltaram a se ver depois de anos.'], evento: { tipo: 'reencontro', pessoaId: c.p.amigo.id, peso: 20 },
+        resolver: c => ({ texto: `O café durou três horas. ${c.p.amigo.nome} está diferente e igual.`, memoria: `Reencontrou ${c.p.amigo.nome} depois de anos.`, lembrar: ['amigo', 'Voltaram a se ver depois de anos.', 'reconciliacao'], evento: { tipo: 'reencontro', pessoaId: c.p.amigo.id, peso: 20 },
           efeito: () => { prox(c, 'amigo', 18); const vin = c.v.vinculos[c.p.amigo.id]; if (vin.proximidade >= 40) vin.estagio = 'amigo'; } }) },
       { id: 'responder', texto: 'Responder com carinho, sem marcar nada', resolver: c => ({ texto: 'Trocaram fotos e prometeram se ver. Talvez.', memoria: null, efeito: () => prox(c, 'amigo', 6) }) },
       { id: 'ignorar', texto: 'Deixar para responder depois', resolver: () => ({ texto: 'O depois não chegou.', memoria: null }) }
@@ -293,7 +294,7 @@ export const SOCIAL: Conteudo[] = [
     texto: c => `${c.p.pessoa.nome} disse, sem briga, só cansaço: "A gente virou dois colegas de apartamento." Faz tempo que vocês não fazem nada só os dois.`,
     opcoes: [
       { id: 'viagem', texto: 'Propor uma viagem só de vocês', disponivel: c => (c.v.financas.conta >= 2500 ? true : 'Não há dinheiro para viajar agora.'), comportamento: { familia: 1 },
-        resolver: c => ({ texto: 'Três dias numa pousada. Na segunda noite, riram como não riam havia anos.', memoria: `Viajou só com ${c.p.pessoa.nome} para recomeçar.`, lembrar: ['pessoa', 'Uma viagem só de vocês, para recomeçar.'], efeito: () => { dinheiro(c, -2500); envolvimento(c, 'pessoa', 14); feliz(c, 5); } }) },
+        resolver: c => ({ texto: 'Três dias numa pousada. Na segunda noite, riram como não riam havia anos.', memoria: `Viajou só com ${c.p.pessoa.nome} para recomeçar.`, lembrar: ['pessoa', 'Uma viagem só de vocês, para recomeçar.', 'reconciliacao'], efeito: () => { dinheiro(c, -2500); envolvimento(c, 'pessoa', 14); feliz(c, 5); } }) },
       { id: 'rotina', texto: 'Combinar uma noite por semana só de vocês', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Quinta-feira virou a noite de vocês. Na terceira semana, você quase esqueceu. Não esqueceu.', memoria: null, lembrar: ['pessoa', 'Combinaram uma noite por semana só de vocês.'], efeito: () => { envolvimento(c, 'pessoa', 9); const vin = c.v.vinculos[c.p.pessoa.id]; (vin.habitos ??= {}).sair = (vin.habitos.sair ?? 0) + 1; } }) },
       { id: 'fase', texto: 'Dizer que é só uma fase', resolver: c => ({ texto: `${c.p.pessoa.nome} disse "tá bom" e foi dormir primeiro.`, memoria: null, efeito: () => { envolvimento(c, 'pessoa', -6); tensao(c, 'pessoa', 10); } }) }
@@ -316,10 +317,10 @@ export const SOCIAL: Conteudo[] = [
     texto: c => `${c.p.pessoa.nome} esperou você terminar o café e disse que não quer mais esperar: quer ter um filho com você. "E você?"`,
     opcoes: [
       { id: 'tentar', texto: 'Começar a tentar', comportamento: { familia: 1 },
-        resolver: c => ({ texto: `${c.p.pessoa.nome} sorriu com o rosto inteiro.`, memoria: `Decidiu com ${c.p.pessoa.nome} tentar ter um filho.`, lembrar: ['pessoa', 'Decidiram tentar ter um filho.'], efeito: () => { const rom = c.v.vinculos[c.p.pessoa.id].romance!; rom.planoFilhos = 'tentando'; envolvimento(c, 'pessoa', 8); } }) },
+        resolver: c => ({ texto: `${c.p.pessoa.nome} sorriu com o rosto inteiro.`, memoria: `Decidiu com ${c.p.pessoa.nome} tentar ter um filho.`, lembrar: ['pessoa', 'Decidiram tentar ter um filho.', 'filho'], efeito: () => { const rom = c.v.vinculos[c.p.pessoa.id].romance!; rom.planoFilhos = 'tentando'; envolvimento(c, 'pessoa', 8); } }) },
       { id: 'esperar', texto: 'Pedir mais um tempo', resolver: c => ({ texto: `${c.p.pessoa.nome} disse que espera. Perguntou quanto.`, memoria: null, efeito: () => tensao(c, 'pessoa', 6) }) },
       { id: 'nunca', texto: 'Dizer que não quer ter filhos', comportamento: { independencia: 1 },
-        resolver: c => ({ texto: `${c.p.pessoa.nome} ficou muito tempo olhando a xícara vazia.`, memoria: `Disse a ${c.p.pessoa.nome} que não quer ter filhos.`, lembrar: ['pessoa', 'Você disse que não quer ter filhos.'], efeito: () => { c.v.fatos[`recusou_filhos_${c.p.pessoa.id}`] = c.v.t; tensao(c, 'pessoa', 22); envolvimento(c, 'pessoa', -10); } }) }
+        resolver: c => ({ texto: `${c.p.pessoa.nome} ficou muito tempo olhando a xícara vazia.`, memoria: `Disse a ${c.p.pessoa.nome} que não quer ter filhos.`, lembrar: ['pessoa', 'Você disse que não quer ter filhos.', 'conflito'], efeito: () => { c.v.fatos[`recusou_filhos_${c.p.pessoa.id}`] = c.v.t; tensao(c, 'pessoa', 22); envolvimento(c, 'pessoa', -10); } }) }
     ]
   },
   {
@@ -351,11 +352,11 @@ export const SOCIAL: Conteudo[] = [
     texto: c => `${c.p.pessoa.nome} ligou. Faz tempo que vocês não se falam direito — desde ${anoDe(c.v.vinculos[c.p.pessoa.id].historia.filter(h => h.tipo === 'conflito').slice(-1)[0].t)}. A voz do outro lado estava diferente.`,
     opcoes: [
       { id: 'pazes', texto: 'Fazer as pazes', comportamento: { empatia: 1, familia: 1 },
-        resolver: c => ({ texto: 'Ninguém pediu desculpas direito. Mas no fim, combinaram um almoço.', memoria: `Fez as pazes com ${c.p.pessoa.nome}.`, lembrar: ['pessoa', 'Fizeram as pazes, anos depois.'], evento: { tipo: 'reconciliacao', pessoaId: c.p.pessoa.id, peso: 30 },
+        resolver: c => ({ texto: 'Ninguém pediu desculpas direito. Mas no fim, combinaram um almoço.', memoria: `Fez as pazes com ${c.p.pessoa.nome}.`, lembrar: ['pessoa', 'Fizeram as pazes, anos depois.', 'reconciliacao'], evento: { tipo: 'reconciliacao', pessoaId: c.p.pessoa.id, peso: 30 },
           efeito: () => { tensao(c, 'pessoa', -45); prox(c, 'pessoa', 15); const vin = c.v.vinculos[c.p.pessoa.id]; vin.confianca = Math.min(100, vin.confianca + 10); } }) },
       { id: 'ouvir', texto: 'Ouvir, sem prometer nada', resolver: c => ({ texto: 'Vocês falaram de amenidades. Foi mais do que nada.', memoria: null, efeito: () => { tensao(c, 'pessoa', -15); prox(c, 'pessoa', 5); } }) },
       { id: 'desligar', texto: 'Dizer que não tem nada para conversar', comportamento: { independencia: 1 },
-        resolver: c => ({ texto: 'A ligação durou quarenta segundos.', memoria: null, lembrar: ['pessoa', 'Tentou reatar; você não quis.'], efeito: () => { tensao(c, 'pessoa', 10); prox(c, 'pessoa', -6); } }) }
+        resolver: c => ({ texto: 'A ligação durou quarenta segundos.', memoria: null, lembrar: ['pessoa', 'Tentou reatar; você não quis.', 'conflito'], efeito: () => { tensao(c, 'pessoa', 10); prox(c, 'pessoa', -6); } }) }
     ]
   }
 ];

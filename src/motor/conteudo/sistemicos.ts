@@ -378,6 +378,7 @@ function casar(c: Ctx, custo: number): void {
   }
   feliz(c, 12);
   lembrarCom(c.v, p.id, 'Casaram-se.', 'casamento', 3);
+  for (const g of [...P.genitor(c.v), ...P.irmao(c.v)]) if (c.v.vinculos[g.id].proximidade >= 40) lembrarCom(c.v, g.id, `Esteve no seu casamento com ${p.nome}.`, 'casamento', 1);
 }
 
 function tensaoPessoa(c: Ctx, id: string, n: number): void {

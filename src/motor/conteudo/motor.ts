@@ -89,7 +89,7 @@ export function aplicarAcontecimento(v: Vida, a: Acontecimento, ctx: Ctx): boole
   });
   if (n.lembrar) {
     const pessoa = ctx.p[n.lembrar[0]];
-    if (pessoa) lembrarCom(v, pessoa.id, n.lembrar[1], undefined, 1);
+    if (pessoa) lembrarCom(v, pessoa.id, n.lembrar[1], n.lembrar[2], 1);
   }
   return true;
 }
@@ -151,7 +151,7 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
   }
   if (res.lembrar) {
     const pessoa = p[res.lembrar[0]];
-    if (pessoa) lembrarCom(v, pessoa.id, res.lembrar[1], undefined, 2);
+    if (pessoa) lembrarCom(v, pessoa.id, res.lembrar[1], res.lembrar[2], 2);
   }
   v.momento = null;
   return { texto: res.texto };

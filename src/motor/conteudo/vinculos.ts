@@ -88,7 +88,7 @@ export const VINCULOS: Conteudo[] = [
     texto: c => `${c.p.pessoa.nome} teve um problema no coração e vai ficar internad${gp(c, 'pessoa', 'o', 'a', 'e')} alguns dias. ${c.v.trabalho.atual ? 'O trabalho não para por isso.' : ''}`,
     opcoes: [
       { id: 'ficar', texto: 'Dormir no hospital todas as noites', comportamento: { familia: 2, empatia: 1 },
-        resolver: c => ({ texto: 'Cadeira de acompanhante, café de máquina, a mão segurada até ela dormir.'.replace('ela', gp(c, 'pessoa', 'ele', 'ela', 'elu')), memoria: `Passou as noites no hospital com ${c.p.pessoa.nome}.`, lembrar: ['pessoa', 'Você dormiu no hospital todas as noites.'], efeito: () => { envolvimento(c, 'pessoa', 12); estresse(c, 10); if (c.v.trabalho.atual) c.v.trabalho.atual.desempenho -= 6; c.p.pessoa.saude = Math.max(20, c.p.pessoa.saude - 10); } }) },
+        resolver: c => ({ texto: 'Cadeira de acompanhante, café de máquina, a mão segurada até ela dormir.'.replace('ela', gp(c, 'pessoa', 'ele', 'ela', 'elu')), memoria: `Passou as noites no hospital com ${c.p.pessoa.nome}.`, lembrar: ['pessoa', 'Você dormiu no hospital todas as noites.', 'apoio'], efeito: () => { envolvimento(c, 'pessoa', 12); estresse(c, 10); if (c.v.trabalho.atual) c.v.trabalho.atual.desempenho -= 6; c.p.pessoa.saude = Math.max(20, c.p.pessoa.saude - 10); } }) },
       { id: 'revezar', texto: 'Revezar com a família', comportamento: { familia: 1 },
         resolver: c => ({ texto: 'Fizeram uma escala no grupo da família. Deu certo.', memoria: null, efeito: () => { envolvimento(c, 'pessoa', 5); c.p.pessoa.saude = Math.max(20, c.p.pessoa.saude - 10); } }) },
       { id: 'trabalho', texto: 'Visitar depois do trabalho', resolver: c => ({ texto: `Você ia no horário de visita. ${c.p.pessoa.nome} esperava na porta.`, memoria: null, efeito: () => { envolvimento(c, 'pessoa', -3); c.p.pessoa.saude = Math.max(20, c.p.pessoa.saude - 10); } }) }
@@ -199,11 +199,11 @@ export const VINCULOS: Conteudo[] = [
     texto: c => `${c.p.filho.nome} perdeu o emprego e não está conseguindo pagar o aluguel. Pergunta, com vergonha, se pode voltar para casa por uns meses.`,
     opcoes: [
       { id: 'sim', texto: 'Abrir a porta', comportamento: { familia: 2 },
-        resolver: c => ({ texto: 'O quarto antigo virou quarto de novo. Os meses viraram um ano e meio.', memoria: `${c.p.filho.nome} voltou a morar com você por um tempo.`, lembrar: ['filho', 'Voltou para casa depois de perder o emprego.'], efeito: () => { const vin = c.v.vinculos[c.p.filho.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.filho.municipioId = c.v.moradia.municipioId; delete c.v.fatos[`saiu_de_casa_${c.p.filho.id}`]; prox(c, 'filho', 10); vin.confianca = Math.min(100, vin.confianca + 8); } }) },
+        resolver: c => ({ texto: 'O quarto antigo virou quarto de novo. Os meses viraram um ano e meio.', memoria: `${c.p.filho.nome} voltou a morar com você por um tempo.`, lembrar: ['filho', 'Voltou para casa depois de perder o emprego.', 'casa'], efeito: () => { const vin = c.v.vinculos[c.p.filho.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.filho.municipioId = c.v.moradia.municipioId; delete c.v.fatos[`saiu_de_casa_${c.p.filho.id}`]; prox(c, 'filho', 10); vin.confianca = Math.min(100, vin.confianca + 8); } }) },
       { id: 'dinheiro', texto: 'Ajudar com o aluguel por uns meses', disponivel: c => (c.v.financas.conta > 5000 ? true : 'Não há dinheiro para isso.'), comportamento: { generosidade: 1 },
-        resolver: c => ({ texto: 'Três meses de aluguel pagos. Foi o tempo de arrumar outro emprego.', memoria: null, lembrar: ['filho', 'Você pagou o aluguel num aperto.'], efeito: () => { dinheiro(c, -5000); prox(c, 'filho', 6); } }) },
+        resolver: c => ({ texto: 'Três meses de aluguel pagos. Foi o tempo de arrumar outro emprego.', memoria: null, lembrar: ['filho', 'Você pagou o aluguel num aperto.', 'apoio'], efeito: () => { dinheiro(c, -5000); prox(c, 'filho', 6); } }) },
       { id: 'nao', texto: 'Dizer que é hora de se virar', comportamento: { independencia: 1 },
-        resolver: c => ({ texto: `${c.p.filho.nome} foi dividir apartamento com um amigo. Demorou a ligar de novo.`, memoria: null, lembrar: ['filho', 'Pediu para voltar para casa; você disse não.'], efeito: () => { prox(c, 'filho', -12); tensao(c, 'filho', 15); } }) }
+        resolver: c => ({ texto: `${c.p.filho.nome} foi dividir apartamento com um amigo. Demorou a ligar de novo.`, memoria: null, lembrar: ['filho', 'Pediu para voltar para casa; você disse não.', 'conflito'], efeito: () => { prox(c, 'filho', -12); tensao(c, 'filho', 15); } }) }
     ]
   },
   {

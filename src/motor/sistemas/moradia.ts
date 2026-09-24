@@ -3,7 +3,8 @@
  */
 
 import type { Pessoa, Vida } from '../tipos';
-import { escrever, idade, moraCom, vinculosVivos } from '../nucleo';
+import { escrever, idade, lembrarCom, moraCom, vinculosVivos } from '../nucleo';
+import { anoDe } from '../tempo';
 import { economiaLocal } from '../dados/lugares';
 import { MORADIAS, modeloMoradia, type ModeloMoradia } from '../dados/bens';
 import { bloqueio, type Veredito } from '../plausibilidade';
@@ -28,10 +29,21 @@ export function opcoesDeAluguel(v: Vida): { m: ModeloMoradia; aluguel: number; v
   });
 }
 
+/** Sair da casa da família fica na história de quem ficou lá. */
+export function marcarSaidaDeCasa(v: Vida): void {
+  const i = idade(v);
+  for (const { vin } of vinculosVivos(v)) {
+    if (!vin.convivio.includes('casa')) continue;
+    if (vin.parentesco === 'mae' || vin.parentesco === 'pai' || vin.parentesco === 'avo') lembrarCom(v, vin.pessoaId, `Você saiu de casa, aos ${i}.`, 'casa', 2);
+    else if (vin.parentesco === 'irmao' || vin.parentesco === 'meio_irmao') lembrarCom(v, vin.pessoaId, `Dividiram a casa da infância até ${anoDe(v.t)}.`, 'casa', 2);
+  }
+}
+
 /** Passa a morar num lugar alugado (saindo da casa dos pais ou trocando de casa). */
 export function alugar(v: Vida, modeloId: string, motivo?: string, silencioso = false): void {
   const m = modeloMoradia(modeloId);
   const saiuDosPais = moraComFamiliaDeOrigem(v);
+  if (saiuDosPais) marcarSaidaDeCasa(v);
   v.moradia = {
     tipo: m.id === 'republica' ? 'republica' : 'aluguel',
     municipioId: v.moradia.municipioId,

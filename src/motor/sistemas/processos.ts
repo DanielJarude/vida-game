@@ -11,7 +11,7 @@ import { criarPessoa, vincular } from '../pessoas';
 import { economiaLocal, municipio, nomeLugar } from '../dados/lugares';
 import { encerrarEmprego } from './trabalho';
 import { modeloMoradia } from '../dados/bens';
-import { aluguelDe } from './moradia';
+import { aluguelDe, marcarSaidaDeCasa } from './moradia';
 import { flex, ge } from '../texto';
 
 export function processarProcessos(v: Vida, r: Rng): void {
@@ -52,6 +52,7 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
   if (origem === p.destinoId) return;
   // Quem morava com a família de origem vai sozinho: a família fica.
   if (v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') {
+    marcarSaidaDeCasa(v);
     for (const { p: pessoa, vin } of vinculosVivos(v)) {
       if (vin.parentesco && vin.parentesco !== 'filho') vin.convivio = vin.convivio.filter(c => c !== 'casa');
       void pessoa;

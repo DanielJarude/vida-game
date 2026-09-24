@@ -310,8 +310,8 @@ function formar(v: Vida, f: Pessoa, cota: Cota, rel: Relevancia, doJogador: bool
   const primeiro = doJogador && e.nivel !== 'tecnico' && !v.educacao.concluidos.some(c => c.nivel === 'superior');
   const foi = doJogador && v.vinculos[f.id]?.proximidade >= 40;
   comunicar(v, f, cota, {
-    texto: `${f.nome} se formou em ${e.curso}${primeiro ? ` — ${flex(f.genero, 'o primeiro', 'a primeira', 'e primeire')} da casa com diploma` : ''}${e.paga === 'fies' ? ', com o FIES para pagar' : ''}.${foi ? ' Você aplaudiu até doer a mão.' : ''}`,
-    tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 35, marco: foi ? `Formatura em ${e.curso}. Você estava lá.` : `Formou-se em ${e.curso}.`, pesoMarco: 2
+    texto: `${f.nome} ${e.nivel === 'tecnico' ? `concluiu o curso ${e.curso.replace(/^Técnico em /, 'técnico de ')}` : `se formou em ${e.curso}`}${primeiro ? ` — ${flex(f.genero, 'o primeiro', 'a primeira', 'e primeire')} da casa com diploma` : ''}${e.paga === 'fies' ? ', com o FIES para pagar' : ''}.${foi ? ' Você aplaudiu até doer a mão.' : ''}`,
+    tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 35, marco: foi ? `Formatura ${e.nivel === 'tecnico' ? 'do curso técnico' : `em ${e.curso}`}. Você estava lá.` : `Formou-se em ${e.curso}.`, pesoMarco: 2
   });
   if (doJogador) v.mente.felicidade = clamp(v.mente.felicidade + 6);
   empregar(v, f, oc);
@@ -369,8 +369,8 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
       escolhida = lista.length ? r.pick(lista) : ocupacao('atendente');
     }
     const antes = f.aperto?.tipo === 'desemprego';
+    const primeiro = !vida.tCargo && !vida.trajetoria.some(t => t.tipo === 'trabalho' || t.tipo === 'promocao' || t.tipo === 'desemprego');
     empregar(v, f, escolhida);
-    const primeiro = !vida.trajetoria.some(t => t.tipo === 'trabalho');
     comunicar(v, f, cota, {
       texto: primeiro ? `${f.nome} arrumou o primeiro emprego: ${f.ocupacao}.` : antes ? `${f.nome} arrumou trabalho de novo, como ${f.ocupacao}.` : `${f.nome} começou a trabalhar como ${f.ocupacao}.`,
       tipo: 'trabalho', relevancia: primeiro ? rel : 'cotidiano', tom: 'bom', marco: primeiro && doJogador ? `Primeiro emprego: ${f.ocupacao}.` : undefined
@@ -401,23 +401,28 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
       return;
     }
   }
-  // Muitos anos parado no mesmo lugar: a vida explica (ou muda).
-  const semNovidade = !vida.trajetoria.some(t => v.t - t.t < 60 && (t.tipo === 'trabalho' || t.tipo === 'promocao' || t.tipo === 'desemprego'));
-  if (anosNoCargo >= 5 && semNovidade && i < 58) {
-    if (!proximos.length) {
-      const falta = oc.area && !f.formacao ? 'sem diploma, o próximo degrau não abre' : oc.nivel >= 4 ? 'já chegou onde a carreira costuma chegar' : 'a empresa não promove ninguém há anos';
-      const troca = !f.formacao && vida.aptidao > 0 && r.chance(0.3);
-      if (troca) {
-        f.estudo = { curso: CURSOS_DOS_FILHOS[Math.floor(hash(f.id + 'volta') * CURSOS_DOS_FILHOS.length)][0], paga: 'propria', tFim: v.t + 60, nivel: 'superior' };
-        vida.parouDeEstudar = false;
-        comunicar(v, f, cota, { texto: `${f.nome}, depois de anos como ${f.ocupacao}, voltou a estudar à noite: ${f.estudo.curso}.`, tipo: 'estudo', relevancia: doJogador ? 'biografia' : 'cotidiano', marco: doJogador ? `Voltou a estudar, adult${flex(f.genero, 'o', 'a', 'e')}.` : undefined });
-      } else {
-        comunicar(v, f, cota, { texto: `${f.nome} segue como ${f.ocupacao}: ${falta}.`, tipo: 'trabalho', relevancia: 'cotidiano' });
-      }
-    } else {
+  // Muitos anos parado no mesmo lugar: a vida explica (ou muda) — uma vez por cargo.
+  const jaExplicado = v.fatos[`parado_${f.id}`] === vida.tCargo;
+  if (anosNoCargo >= 5 && !jaExplicado && i < 58) {
+    v.fatos[`parado_${f.id}`] = vida.tCargo ?? v.t;
+    const acima = OCUPACOES.filter(o => o.trilha === oc.trilha && o.nivel === oc.nivel + 1 && !o.concurso);
+    if (proximos.length) {
+      // Existe o degrau e ela pode subir: a espera conta a favor na próxima chance.
       comunicar(v, f, cota, { texto: `${f.nome} segue como ${f.ocupacao}, esperando uma vaga acima que não abre.`, tipo: 'trabalho', relevancia: 'tecnico' });
-      vida.tCargo = (vida.tCargo ?? v.t) + 12; // a espera conta: a próxima chance é maior
+      vida.tCargo = (vida.tCargo ?? v.t) - 12;
+      v.fatos[`parado_${f.id}`] = vida.tCargo;
+      return;
     }
+    const pedeDiploma = acima.some(o => o.area || o.escolaridade === 'superior');
+    const troca = !f.formacao && vida.aptidao > -0.1 && r.chance(0.35);
+    if (troca && pedeDiploma) {
+      f.estudo = { curso: CURSOS_DOS_FILHOS[Math.floor(hash(f.id + 'volta') * CURSOS_DOS_FILHOS.length)][0], paga: 'propria', tFim: v.t + 60, nivel: 'superior' };
+      vida.parouDeEstudar = false;
+      comunicar(v, f, cota, { texto: `${f.nome}, depois de anos como ${f.ocupacao}, voltou a estudar à noite: ${f.estudo.curso}.`, tipo: 'estudo', relevancia: doJogador ? 'biografia' : 'cotidiano', marco: doJogador ? `Voltou a estudar, adult${flex(f.genero, 'o', 'a', 'e')}.` : undefined });
+      return;
+    }
+    const falta = !acima.length ? 'já chegou onde a carreira costuma chegar' : pedeDiploma ? 'sem diploma, o próximo degrau não abre' : 'a empresa não promove ninguém há anos';
+    comunicar(v, f, cota, { texto: `${f.nome} segue como ${f.ocupacao}: ${falta}.`, tipo: 'trabalho', relevancia: 'cotidiano' });
   }
 }
 

@@ -9,6 +9,7 @@ import type { Acao } from '../../src/motor/acoes';
 import { disponibilidade, opcoesDeCurso, opcoesDeAluguel } from '../../src/motor/acoes';
 import { podeTentar } from '../../src/motor/plausibilidade';
 import { idade, idadePessoa, parceiro, vinculosVivos, filhos } from '../../src/motor/nucleo';
+import { interacoesPara } from '../../src/motor/sistemas/interacoes';
 import { OCUPACOES } from '../../src/motor/dados/ocupacoes';
 import { saldoMensal } from '../../src/motor/sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../../src/motor/sistemas/domicilio';
@@ -56,6 +57,8 @@ const PERFIS: Perfil[] = [
   { nome: 'antissocial', rotinas: ['videogame', 'leitura'], postura: 'normal', estudo: 'medio', trilhas: ['ti', 'administrativo', 'manutencao'], social: 0, romance: false, filhos: false, estilo: 'modesto', poupa: true, preferencias: ['guardar', 'soltar', 'passar', 'fones', 'ficar', 'nada', 'ignorar', 'coberta', 'olhar', 'sinceridade'], saiDeCasaAos: 30 },
   { nome: 'economico', rotinas: ['corrida'], postura: 'dedicada', estudo: 'medio', trilhas: ['administrativo', 'publico', 'financas', 'manutencao'], social: 1, romance: true, filhos: true, estilo: 'apertado', poupa: true, preferencias: ['cartorio', 'guardar', 'desligar', 'recusar', 'publica', 'negar', 'sus', 'preparo'], saiDeCasaAos: 27 },
   { nome: 'gastador', rotinas: ['sair_noite', 'academia'], postura: 'relaxada', estudo: 'baixo', trilhas: ['comercio', 'administrativo', 'beleza'], social: 3, romance: true, filhos: true, estilo: 'folgado', poupa: false, preferencias: ['festao', 'praia', 'entrar', 'emprestar', 'confianca', 'particular', 'privada'], saiDeCasaAos: 20 },
+  { nome: 'infiel', rotinas: ['sair_noite', 'academia'], postura: 'normal', estudo: 'medio', trilhas: ['comercio', 'administrativo'], social: 3, romance: true, filhos: true, estilo: 'confortavel', poupa: false, preferencias: ['trair', 'negar', 'adiar', 'chamar', 'aceitar', 'cafe', 'festa', 'ofender'], saiDeCasaAos: 21 },
+  { nome: 'desatento', rotinas: ['videogame'], postura: 'normal', estudo: 'medio', trilhas: ['administrativo', 'ti', 'comercio'], social: 0, romance: true, filhos: true, estilo: 'modesto', poupa: true, preferencias: ['sim', 'chamar', 'fase', 'trabalho', 'rotina', 'nao', 'ignorar', 'aceitar'], saiDeCasaAos: 24 },
   { nome: 'ascensao', rotinas: ['estudar_concurso', 'ingles'], postura: 'dedicada', estudo: 'alto', trilhas: ['publico', 'ti', 'administrativo', 'enfermagem', 'direito'], social: 1, romance: true, filhos: true, estilo: 'apertado', poupa: true, preferencias: ['enem', 'ficar', 'preparo', 'aceitar', 'cartorio', 'recusar', 'desligar', 'publica', 'sus'], saiDeCasaAos: 25 }
 ];
 
@@ -80,23 +83,35 @@ export function estrategia(nome: string): Estrategia {
       if (i >= 17 && i <= 30 && p.estudo !== 'baixo' && !v.educacao.matricula && !v.educacao.concluidos.some(c => c.nivel === 'superior')) {
         if (tenta(v, { tipo: 'enem' })) out.push({ tipo: 'enem' });
       }
-      // Pessoas
-      const gente = vinculosVivos(v).filter(x => !x.p.especie && (x.vin.parentesco || x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo' || x.vin.estagio === 'colega' || x.vin.romance));
+      // Pessoas: a ação que a relação oferece agora (a primeira do catálogo), não um "tempo" genérico.
+      const acao = (id: string, preferir?: string[]): Acao | null => {
+        const lista = interacoesPara(v, id).filter(x => !['terminar', 'contar_verdade', 'encerrar_caso', 'convidar', 'pedir_namoro', 'morar_junto', 'pedir_casamento', 'planejar_filhos', 'evitar_filhos', 'limite'].includes(x.id));
+        const x = (preferir && lista.find(l => preferir.includes(l.id))) ?? lista[0];
+        return x ? { tipo: 'pessoa', pessoaId: id, interacao: x.id } : null;
+      };
+      const gente = vinculosVivos(v).filter(x => !x.p.especie && x.p.nome && (x.vin.parentesco || x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo' || x.vin.estagio === 'colega') && !x.vin.romance);
       const alvos = r.pick([true, false]) ? gente.sort((a, b) => b.vin.proximidade - a.vin.proximidade) : gente;
       let n = 0;
       const par = parceiro(v);
-      if (par && p.social > 0) { out.push({ tipo: 'pessoa', pessoaId: par.p.id, interacao: 'tempo' }); n++; }
-      for (const f of filhos(v)) if (p.filhos && n < p.social + 1) { out.push({ tipo: 'pessoa', pessoaId: f.id, interacao: 'tempo' }); n++; }
+      const cuidaDoPar = p.nome !== 'desatento' && p.social > 0;
+      if (par && cuidaDoPar) { const a = acao(par.p.id, ['apoiar', 'relacao', 'sair_juntos']); if (a) { out.push(a); n++; } }
+      for (const f of filhos(v)) if (p.filhos && p.nome !== 'desatento' && n < p.social + 2) { const a = acao(f.id, ['apoiar', 'cuidar', 'brincar', 'estudos', 'conversar']); if (a) { out.push(a); n++; } }
       for (const x of alvos) {
         if (n >= p.social) break;
-        out.push({ tipo: 'pessoa', pessoaId: x.p.id, interacao: r.chance(0.7) ? 'tempo' : 'conversar' });
-        n++;
+        const a = acao(x.p.id, ['apoiar', 'tempo', 'visitar', 'ligar', 'conversar']);
+        if (a) { out.push(a); n++; }
       }
+      if (p.nome === 'infiel' && par && r.chance(0.35)) {
+        const alvo = vinculosVivos(v).find(x => !x.vin.parentesco && !x.vin.romance && (x.vin.estagio === 'amigo' || x.vin.estagio === 'colega'));
+        if (alvo) out.push({ tipo: 'pessoa', pessoaId: alvo.p.id, interacao: 'convidar' });
+      }
+      const caso = vinculosVivos(v).find(x => x.vin.romance?.secreto && x.vin.romance.estagio !== 'ex');
+      if (caso) out.push({ tipo: 'pessoa', pessoaId: caso.p.id, interacao: 'sair_juntos' });
       // Romance: avançar etapas
       if (p.romance) {
         for (const x of vinculosVivos(v)) {
           const rom = x.vin.romance;
-          if (!rom) continue;
+          if (!rom || rom.secreto) continue;
           if (rom.estagio === 'saindo') out.push({ tipo: 'pessoa', pessoaId: x.p.id, interacao: 'pedir_namoro' });
           if (rom.estagio === 'namoro' && i >= 22) out.push({ tipo: 'pessoa', pessoaId: x.p.id, interacao: 'morar_junto' });
           if ((rom.estagio === 'namoro' || rom.estagio === 'morando_junto') && i >= 25 && p.nome !== 'antissocial') out.push({ tipo: 'pessoa', pessoaId: x.p.id, interacao: 'pedir_casamento' });
@@ -106,8 +121,8 @@ export function estrategia(nome: string): Estrategia {
           if (alvo) out.push({ tipo: 'pessoa', pessoaId: alvo.p.id, interacao: 'convidar' });
         }
       }
-      if (p.filhos && par && i >= 26 && i <= 40 && filhos(v).length < 2) out.push({ tipo: 'filhos', plano: 'tentando' });
-      if (par && filhos(v).length >= 2) out.push({ tipo: 'filhos', plano: 'evitando' });
+      if (p.filhos && par && i >= 26 && i <= 40 && filhos(v).length < 2) out.push({ tipo: 'pessoa', pessoaId: par.p.id, interacao: 'planejar_filhos' });
+      if (par && filhos(v).length >= 2) out.push({ tipo: 'pessoa', pessoaId: par.p.id, interacao: 'evitar_filhos' });
 
       if (v.educacao.matricula?.trancado && p.estudo !== 'baixo' && saldoMensal(v).renda >= saldoMensal(v).despesa && tenta(v, { tipo: 'destrancar' })) out.push({ tipo: 'destrancar' });
       // Faculdade: escolher uma opção viável

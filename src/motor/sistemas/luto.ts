@@ -87,7 +87,10 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
     if (p.parceiroId && v.pessoas[p.parceiroId]) {
       const viuvo = v.pessoas[p.parceiroId];
       viuvo.parceiroId = undefined;
-      if (viuvo.vivo && v.vinculos[viuvo.id]) viuvo.aperto = { tipo: 'luto', t: v.t, pessoaId: p.id };
+      if (viuvo.vivo && v.vinculos[viuvo.id]) {
+        viuvo.aperto = { tipo: 'luto', t: v.t, pessoaId: p.id };
+        if (['mae', 'pai'].includes(v.vinculos[viuvo.id].parentesco ?? '')) lembrarCom(v, viuvo.id, `Ficou ${flex(viuvo.genero, 'viúvo', 'viúva', 'viúve')} de ${p.nome}.`, 'perda', 2);
+      }
     }
     if (papel === 'filho') for (const x of Object.values(v.pessoas)) if (x.genitores?.includes(p.id) && x.vivo) x.aperto = { tipo: 'luto', t: v.t, pessoaId: p.id };
     if (vin.parentesco === 'mae' || vin.parentesco === 'pai') heranca(p);
@@ -95,8 +98,8 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
     // O humor sente, na medida do vínculo. Não é uma reação decidida pelo jogo.
     if (peso >= 16) {
       v.luto.push({ pessoaId: p.id, t: v.t, peso });
-      v.mente.felicidade = clamp(Math.round(v.mente.felicidade - peso * 0.22));
-      v.mente.estresse = clamp(Math.round(v.mente.estresse + peso * 0.12));
+      v.mente.felicidade = clamp(Math.round(v.mente.felicidade - peso * 0.15));
+      v.mente.estresse = clamp(Math.round(v.mente.estresse + peso * 0.1));
     }
 
     if (nivel === 'interrompe') v.fatos[`despedida:${p.id}`] = v.t;
@@ -114,11 +117,11 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
   // Várias perdas menores no mesmo ano viram uma linha só (a velhice não é uma lista de óbitos).
   if (discretos.length === 1) {
     const { p, vin, causa, peso } = discretos[0];
-    escrever(v, { t: p.tMorte, texto: textoDaMorte(v, p, vin, causa, 'discreto'), relevancia: 'biografia', tema: 'perda', tom: 'ruim', pessoas: [p.id], evento: { tipo: 'morte', pessoaId: p.id, peso } });
+    escrever(v, { t: p.tMorte, texto: textoDaMorte(v, p, vin, causa, 'discreto'), relevancia: peso >= 28 ? 'biografia' : 'cotidiano', tema: 'perda', tom: 'ruim', pessoas: [p.id], evento: { tipo: 'morte', pessoaId: p.id, peso } });
   } else if (discretos.length > 1) {
     const nomes = discretos.map(({ p, vin }) => `${quem(v, p, vin) || 'o conhecido'} ${p.nome}`.trim());
     const havia = lista.some(x => nivelDaPerda(x.peso) === 'interrompe' || nivelDaPerda(x.peso) === 'destaque');
-    escrever(v, { texto: `${havia ? 'Também se foram, naquele ano' : 'Se foram, naquele ano'}: ${listaNatural(nomes)}.`, relevancia: havia ? 'cotidiano' : 'biografia', tema: 'perda', tom: 'ruim', pessoas: discretos.map(d => d.p.id), evento: { tipo: 'morte', peso: Math.max(...discretos.map(d => d.peso)) } });
+    escrever(v, { texto: `${havia ? 'Também se foram, naquele ano' : 'Se foram, naquele ano'}: ${listaNatural(nomes)}.`, relevancia: havia || Math.max(...discretos.map(d => d.peso)) < 28 ? 'cotidiano' : 'biografia', tema: 'perda', tom: 'ruim', pessoas: discretos.map(d => d.p.id), evento: { tipo: 'morte', peso: Math.max(...discretos.map(d => d.peso)) } });
   }
 }
 

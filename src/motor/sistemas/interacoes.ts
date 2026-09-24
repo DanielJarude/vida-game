@@ -297,7 +297,8 @@ export const INTERACOES: Interacao[] = [
       afeto(c, 10); confiar(c, 10); acalmar(c, 10);
       if (c.vin.romance) envolver(c, 6);
       const tipo = c.p.aperto!.tipo;
-      lembrarCom(c.v, c.p.id, textoApoio(c), 'apoio', 2);
+      // Um marco por momento difícil (estar junto de novo no mesmo aperto não é um marco novo).
+      if (!c.vin.historia.some(h => h.tipo === 'apoio' && h.t >= c.p.aperto!.t)) lembrarCom(c.v, c.p.id, textoApoio(c), 'apoio', 2);
       aplicarPersonalidade(c.v, 'acao:apoiar', { empatia: 1 });
       // Quem tem apoio atravessa o aperto mais rápido.
       if (c.p.aperto && (tipo === 'fase' || tipo === 'luto' || tipo === 'separacao')) c.p.aperto.t -= 8;
@@ -499,8 +500,9 @@ export const INTERACOES: Interacao[] = [
         return { resultado: `${c.p.nome} não quer ter filhos${quer === 'talvez' ? ' agora' : ''}. A conversa terminou tensa.` };
       }
       rom.planoFilhos = 'tentando';
-      escrever(c.v, { texto: `Decidiu com ${c.p.nome} tentar ter um filho.`, relevancia: 'biografia', tema: 'filhos', escolha: true, pessoas: [c.p.id] });
-      lembrarCom(c.v, c.p.id, 'Decidiram tentar ter um filho.', 'filho', 2);
+      const deNovo = c.vin.historia.some(h => h.tipo === 'filho');
+      escrever(c.v, { texto: deNovo ? `Decidiu com ${c.p.nome} tentar de novo.` : `Decidiu com ${c.p.nome} tentar ter um filho.`, relevancia: deNovo ? 'cotidiano' : 'biografia', tema: 'filhos', escolha: true, pessoas: [c.p.id] });
+      if (!deNovo) lembrarCom(c.v, c.p.id, 'Decidiram tentar ter um filho.', 'filho', 2);
       return { resultado: `${c.p.nome} topou. Vocês começaram a tentar.` };
     }
   },

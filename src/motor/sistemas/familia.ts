@@ -160,7 +160,10 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     if (vin.convivio.includes('casa') && ii >= 19 && r.chance(0.12 + (ii - 19) * 0.03)) {
       marcarFato(v, `saiu_de_casa_${irmao.id}`);
       vin.convivio = vin.convivio.filter(c => c !== 'casa');
-      if (moraComFamiliaDeOrigem(v)) escrever(v, { texto: `${irmao.nome} saiu de casa. O quarto ficou vazio.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [irmao.id] });
+      if (moraComFamiliaDeOrigem(v)) {
+        escrever(v, { texto: `${irmao.nome} saiu de casa. O quarto ficou vazio.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [irmao.id] });
+        lembrarCom(v, irmao.id, `Dividiram a casa da infância até ${Math.floor(v.t / 12)}, quando ${flex(irmao.genero, 'ele', 'ela', 'elu')} saiu.`, 'casa', 2);
+      }
     }
   }
 }
@@ -306,6 +309,8 @@ export function registrarNascimento(v: Vida, bebe: Pessoa, nome: string): void {
     relevancia: 'marco', tema: 'filhos', tom: 'bom', pessoas: [bebe.id, ...(outro ? [outro.id] : [])],
     evento: { tipo: 'filho_nasceu', pessoaId: bebe.id, peso: 80 }
   });
+  // Os pais do jogador viram avós: isso também é história deles com você.
+  for (const x of vinculosVivos(v)) if (x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai') lembrarCom(v, x.p.id, primeiro ? `Viraram avós: nasceu ${nome}.` : `Nasceu ${nome}, mais um neto.`, 'filho', primeiro ? 2 : 1, bebe.tNasc);
   lembrarCom(v, bebe.id, `Nasceu em ${mes} de ${Math.floor(bebe.tNasc / 12)}${outro ? `, ${flex(bebe.genero, 'filho', 'filha', 'filhe')} seu e de ${outro.nome}` : ''}. Você tinha ${idade(v)} anos.`, 'inicio', 3, bebe.tNasc);
   if (outro && v.vinculos[outro.id]) lembrarCom(v, outro.id, `Nasceu ${nome}, ${primeiro ? 'o primeiro filho de vocês' : 'mais um filho de vocês'}.`.replace('o primeiro filho', flex(bebe.genero, 'o primeiro filho', 'a primeira filha', 'e primeire filhe')), 'filho', 3, bebe.tNasc);
   v.mente.felicidade = clamp(v.mente.felicidade + 12);

@@ -103,7 +103,7 @@ function equilibrarMente(v: Vida): void {
   if (i >= 18 && rede < 1 && moraCom(v).length === 0) alvo -= 6;
   // Luto: pesa na medida do vínculo e vai passando com o tempo e com a rede.
   const luto = pesoDoLuto(v);
-  alvo -= Math.min(26, luto * 0.3);
+  alvo -= Math.min(20, luto * 0.22);
   // Atrito com quem mora junto pesa todo dia.
   const atrito = vinculosVivos(v).filter(x => x.vin.convivio.includes('casa') && !x.p.especie).reduce((s, x) => s + Math.max(0, x.vin.tensao - 40), 0);
   alvo -= Math.min(10, atrito / 8);

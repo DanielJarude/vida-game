@@ -15,7 +15,7 @@ import { modeloRotina, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso } from './sistemas/escola';
 import { aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar } from './sistemas/trabalho';
 import { OCUPACOES, ocupacao } from './dados/ocupacoes';
-import { alugar, opcoesDeAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
+import { alugar, marcarSaidaDeCasa, opcoesDeAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
 import { custoDeMudanca, iniciarAdocao, iniciarCnh, mudarAgora } from './sistemas/processos';
 import { modeloMoradia, modeloVeiculo, precoImovel } from './dados/bens';
 import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
@@ -339,6 +339,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       v.financas.bens.push({ id, tipo: 'imovel', modeloId: m.id, nome: m.nome, valor: preco, tCompra: v.t, municipioId: v.moradia.municipioId, estado: 85, alugadoPor: a.morar ? undefined : Math.round(economiaLocal(v.moradia.municipioId).aluguel * m.fatorAluguel * 0.85) });
       if (a.morar) {
         const saiuDosPais = moraComFamiliaDeOrigem(v);
+        if (saiuDosPais) marcarSaidaDeCasa(v);
         if (saiuDosPais) for (const { vin } of vinculosVivos(v)) if (vin.parentesco && ['mae', 'pai', 'irmao', 'meio_irmao', 'avo', 'pet'].includes(vin.parentesco)) vin.convivio = vin.convivio.filter(c => c !== 'casa');
         v.moradia = { tipo: 'propria', municipioId: v.moradia.municipioId, imovelId: id, modeloId: m.id, aluguel: 0, padrao: m.padrao, tInicio: v.t };
       }
