@@ -58,14 +58,28 @@ export function semana(v: Vida): Semana {
   const ganhos: Compromisso[] = [];
 
   const e = v.trabalho.atual;
+  const j = v.justica;
+  if (j?.prisao) {
+    // A unidade toma a semana quase inteira; sobra ler, escrever, rezar, estudar lá dentro.
+    fixos.push({ id: 'prisao', rotulo: j.prisao.regime === 'fechado' ? 'A rotina da unidade prisional' : 'O semiaberto (trabalho de dia, a unidade à noite)', peso: Math.max(0, base - (j.prisao.regime === 'fechado' ? 1 : 1.25)), tipo: 'cuidado' });
+  }
+  if (j?.alternativa) fixos.push({ id: 'pena', rotulo: 'Prestação de serviços à comunidade', peso: 0.5, tipo: 'cuidado' });
+  const pa = v.trabalho.pausa;
+  if (pa) {
+    const quem = pa.pessoaId ? v.pessoas[pa.pessoaId] : undefined;
+    fixos.push({ id: 'cuidado_pausa', rotulo: pa.motivo === 'casa' ? 'A casa e a família' : `Cuidar de ${quem?.nome ?? 'quem depende de você'}`, peso: pa.intensidade === 'total' ? 1.5 : 0.75, tipo: 'cuidado' });
+  }
   if (e) {
     const oc = ocupacaoOuNula(e.ocupacaoId);
     const nome = oc ? (v.eu.genero === 'feminino' ? oc.nome[1] : oc.nome[0]) : 'trabalho';
     let peso = e.carga === 'integral' ? 1.5 : 0.75;
+    if (e.reduzida) peso = 0.9;
     if (oc?.jornada === 'longa') peso += 0.5;
     if (oc?.jornada === 'fora') peso += 0.75;
+    // Plantão: menos dias, mas noites e fins de semana (um pouco mais que o expediente).
+    if (oc?.jornada === 'plantao') peso += 0.25;
     if (e.formacaoAte) peso = 2;
-    fixos.push({ id: 'trabalho', rotulo: e.formacaoAte ? `Curso de formação (${nome})` : `Trabalho (${nome}${oc?.jornada === 'fora' ? ', dias fora de casa' : oc?.jornada === 'longa' ? ', jornada longa' : e.carga === 'parcial' ? ', meio período' : ''})`, peso, tipo: 'trabalho' });
+    fixos.push({ id: 'trabalho', rotulo: e.formacaoAte ? `Curso de formação (${nome})` : `Trabalho (${nome}${oc?.jornada === 'fora' ? ', dias fora de casa' : oc?.jornada === 'longa' ? ', jornada longa' : oc?.jornada === 'plantao' ? ', em plantões' : e.reduzida ? ', jornada reduzida' : e.carga === 'parcial' ? ', meio período' : ''})`, peso, tipo: 'trabalho' });
     if (v.trabalho.horasExtras) fixos.push({ id: 'horas_extras', rotulo: 'Horas extras', peso: 0.5, tipo: 'trabalho' });
   }
   const b = v.educacao.basica;
@@ -86,7 +100,7 @@ export function semana(v: Vida): Semana {
       const par = v.vinculos[p.id]?.parentesco;
       return (par === 'mae' || par === 'pai' || par === 'avo' || par === 'sogro') && idadePessoa(v, p) >= 75 && p.saude < 45;
     });
-    if (cuidar.length) fixos.push({ id: 'cuidar', rotulo: `Cuidar de ${listaNatural(cuidar.map(p => p.nome))}`, peso: 0.5 * cuidar.length, tipo: 'cuidado' });
+    if (cuidar.length && !(pa && cuidar.some(p => p.id === pa.pessoaId))) fixos.push({ id: 'cuidar', rotulo: `Cuidar de ${listaNatural(cuidar.map(p => p.nome))}`, peso: 0.5 * cuidar.length, tipo: 'cuidado' });
   }
   // Um cachorro pede passeio todo dia (quem cuida é a casa inteira, mas o tempo sai de alguém).
   if (i >= 18) {

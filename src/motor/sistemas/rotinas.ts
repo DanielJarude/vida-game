@@ -496,8 +496,12 @@ function marcarAnos(v: Vida, chave: string): number {
 /* ------------------------------------------------------- Disponibilidade */
 
 /** A atividade existe para esta pessoa, aqui e agora (mesmo que não caiba)? */
+/** O que cabe numa unidade prisional (ler, escrever, desenhar, xadrez, o culto). */
+export const NA_PRISAO = new Set(['leitura', 'escrever', 'desenho', 'xadrez', 'igreja']);
+
 export function atividadeExiste(v: Vida, m: ModeloRotina): boolean {
   const i = idade(v);
+  if (v.justica?.prisao && !NA_PRISAO.has(m.id)) return false;
   if (i < m.idadeMin || (m.idadeMax && i > m.idadeMax)) return false;
   if (v.rotinas.some(r => r.id === m.id)) return true;
   if (v.caminhos.frentes && m.pratica && Object.keys(m.pratica).some(d => (v.caminhos.frentes[d as Dominio]?.meses ?? 0) >= 12)) return true;

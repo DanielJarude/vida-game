@@ -67,6 +67,7 @@ export function ofertasDeImoveis(v: Vida, modo: 'aluguel' | 'venda', municipioId
   const out: OfertaImovel[] = [];
   let k = 0;
   for (const m of MORADIAS) {
+    if (m.rural) continue;
     if (m.id === 'republica' && modo === 'venda') continue;
     if (m.id === 'alto_padrao' && pequena) continue;
     const quantas = m.id === 'republica' ? 1 : m.padrao >= 5 ? 1 : 2;

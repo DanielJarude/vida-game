@@ -36,13 +36,24 @@ export interface TipoNegocio {
   meses: number;
   dominio?: Dominio;
   habilidade?: number;
+  /** Registro profissional exigido (consultório, escritório de profissão regulamentada). */
+  licenca?: string;
 }
 
 export const NEGOCIOS: readonly TipoNegocio[] = [
   { id: 'salao', nome: 'um salão', ocupacaoId: 'dono_salao', capital: 12000, trilhas: ['beleza'], meses: 24, dominio: 'beleza', habilidade: 55 },
   { id: 'oficina', nome: 'uma oficina', ocupacaoId: 'dono_oficina', capital: 25000, trilhas: ['mecanica', 'manutencao'], meses: 36, dominio: 'manual', habilidade: 62 },
   { id: 'lanchonete', nome: 'uma lanchonete', ocupacaoId: 'dono_lanchonete', capital: 20000, trilhas: ['alimentacao', 'confeitaria'], meses: 12, dominio: 'cozinha', habilidade: 52 },
-  { id: 'comercio', nome: 'um comércio', ocupacaoId: 'dono_comercio', capital: 30000, trilhas: ['comercio', 'vendas'], meses: 24, dominio: 'vendas', habilidade: 52 }
+  { id: 'comercio', nome: 'um comércio', ocupacaoId: 'dono_comercio', capital: 30000, trilhas: ['comercio', 'vendas'], meses: 24, dominio: 'vendas', habilidade: 52 },
+  { id: 'loja_online', nome: 'uma loja on-line', ocupacaoId: 'dono_loja_online', capital: 9000, trilhas: ['comercio', 'vendas', 'informal', 'conteudo'], meses: 12, dominio: 'vendas', habilidade: 48 },
+  { id: 'empreiteira', nome: 'uma empreiteira', ocupacaoId: 'empreiteiro', capital: 22000, trilhas: ['construcao'], meses: 72 },
+  { id: 'marcenaria', nome: 'uma marcenaria', ocupacaoId: 'dono_marcenaria', capital: 28000, trilhas: ['marcenaria'], meses: 48, dominio: 'manual', habilidade: 66 },
+  { id: 'estudio', nome: 'um estúdio de foto e vídeo', ocupacaoId: 'dono_estudio', capital: 26000, trilhas: ['imagem', 'conteudo'], meses: 36, dominio: 'fotografia', habilidade: 66 },
+  { id: 'consultoria_ti', nome: 'uma consultoria de tecnologia', ocupacaoId: 'consultor_ti', capital: 12000, trilhas: ['ti', 'dados'], meses: 60 },
+  { id: 'escritorio_contabil', nome: 'um escritório de contabilidade', ocupacaoId: 'contador_socio', capital: 15000, trilhas: ['contabil'], meses: 60, licenca: 'contabil' },
+  { id: 'consultorio_psicologia', nome: 'um consultório de psicologia', ocupacaoId: 'psicologo_clinico', capital: 14000, trilhas: ['psicologia'], meses: 36, licenca: 'crp' },
+  { id: 'clinica_fisio', nome: 'uma clínica de fisioterapia', ocupacaoId: 'fisio_clinica', capital: 45000, trilhas: ['fisioterapia'], meses: 48, licenca: 'crefito' },
+  { id: 'clinica_vet', nome: 'uma clínica veterinária', ocupacaoId: 'veterinario_clinica', capital: 60000, trilhas: ['veterinaria'], meses: 48, licenca: 'crmv' }
 ];
 
 export const tipoNegocio = (id: string) => NEGOCIOS.find(n => n.id === id);
@@ -57,7 +68,10 @@ export function podeAbrirNegocio(v: Vida, id: string): Veredito {
   if (v.trabalho.atual?.ocupacaoId === t.ocupacaoId) return bloqueio('incompativel', 'É o que você já faz.');
   const estrada = Math.max(...t.trilhas.map(tr => experienciaNaTrilha(v, tr)));
   const oficio = t.dominio ? habilidade(v, t.dominio) : 0;
-  if (estrada < t.meses && oficio < (t.habilidade ?? 101)) return bloqueio('requisito', `Falta conhecer o ramo: pede uns ${Math.round(t.meses / 12)} anos na área ou saber fazer o trabalho muito bem.`);
+  if (estrada < t.meses && oficio < (t.habilidade ?? 101)) return bloqueio('requisito', `Falta conhecer o ramo: pede uns ${Math.round(t.meses / 12)} anos na área${t.habilidade ? ' ou saber fazer o trabalho muito bem' : ''}.`);
+  if (t.licenca === 'contabil' && !v.educacao.concluidos.some(c => c.area === 'contabilidade' && c.nivel === 'superior')) return bloqueio('requisito', 'Escritório de contabilidade pede graduação em Ciências Contábeis e registro no CRC.');
+  if (t.licenca && t.licenca !== 'contabil' && !v.trabalho.licencas.includes(t.licenca)) return bloqueio('requisito', `Exige registro profissional (${t.licenca.toUpperCase()}).`);
+  if (v.justica?.prisao) return bloqueio('impossivel', 'Não enquanto cumpre pena.');
   const custo = custoLocal(v, t);
   if (disponivel(v) < custo) return bloqueio('requisito', `Para começar, uns R$ ${custo.toLocaleString('pt-BR')} (ponto, equipamento, primeiro estoque).`);
   if (v.financas.negativado) return { grau: 'improvavel', chance: 0.4, motivo: 'Com o nome sujo, fornecedor não vende a prazo.' };
@@ -83,7 +97,8 @@ export function abrirNegocio(v: Vida, r: Rng, id: string, socioId?: string): Neg
 
 function nomeDoNegocio(v: Vida, t: TipoNegocio): string {
   const nome = v.eu.nome;
-  return ({ salao: `Salão ${nome}`, oficina: `Auto Mecânica ${nome}`, lanchonete: `Lanchonete da ${v.eu.genero === 'feminino' ? nome : 'Esquina'}`, comercio: `Empório ${nome}` } as Record<string, string>)[t.id] ?? `${t.nome} de ${nome}`;
+  const sob = v.eu.sobrenome;
+  return ({ salao: `Salão ${nome}`, oficina: `Auto Mecânica ${nome}`, lanchonete: `Lanchonete da ${v.eu.genero === 'feminino' ? nome : 'Esquina'}`, comercio: `Empório ${nome}`, loja_online: `Loja ${nome} (on-line)`, empreiteira: `${sob} Construções`, marcenaria: `Marcenaria ${nome}`, estudio: `Estúdio ${nome}`, consultoria_ti: `${sob} Tecnologia`, escritorio_contabil: `${sob} Contabilidade`, consultorio_psicologia: `Consultório de ${nome} ${sob}`, clinica_fisio: `Clínica ${sob} de Fisioterapia`, clinica_vet: `Clínica Veterinária ${nome}` } as Record<string, string>)[t.id] ?? `${t.nome} de ${nome}`;
 }
 
 /** Depois do ano de trabalho: o negócio acompanha a freguesia. Devolve true se abriu a hora de decidir. */

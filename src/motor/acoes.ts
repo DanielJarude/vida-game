@@ -8,12 +8,12 @@
 
 import type { Rng } from './rng';
 import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, Veiculo, Vida } from './tipos';
-import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
+import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import { abrirDecisao, conteudoPorId, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso } from './sistemas/escola';
-import { aposentar, contratar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria, textoDeContratacao } from './sistemas/trabalho';
+import { eDasForcas, aposentar, contratar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria, textoDeContratacao } from './sistemas/trabalho';
 import { inscrever, leituraDoPreparo } from './sistemas/concurso';
 import { aceitarOportunidade, recusarOportunidade } from './sistemas/oportunidades';
 import { abrirNegocio, podeAbrirNegocio } from './sistemas/negocio';
@@ -41,6 +41,10 @@ import { dinheiro as fmt } from './texto';
 import { moraComFamiliaDeOrigem } from './sistemas/domicilio';
 import { disponibilidadeInteracao, executarInteracao, LIMITE_INTERACOES } from './sistemas/interacoes';
 import { disponibilidadeCuidado, executarCuidado, type TipoCuidado } from './sistemas/cuidados';
+import { encerrarPausa, iniciarPausa, podeReduzir } from './sistemas/pausa';
+import { parar as pararIlicito } from './sistemas/ilicito';
+import { irParaReserva, sairDasForcas } from './sistemas/militar';
+import { formalizar } from './conteudo/trajetorias';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -99,7 +103,17 @@ export type Acao =
   /** Levar o bicho que ficou na casa dos pais para a sua casa. */
   | { tipo: 'levar_pet'; petId: string }
   /** Por quem o personagem se interessa — identidade, não comportamento. */
-  | { tipo: 'atracao'; valor?: Vida['eu']['atracao'] };
+  | { tipo: 'atracao'; valor?: Vida['eu']['atracao'] }
+  /** Formalizar o trabalho informal como MEI. */
+  | { tipo: 'mei' }
+  /** Pagar (ou parar de pagar) o INSS como facultativo durante uma pausa de cuidado. */
+  | { tipo: 'facultativo'; ativo: boolean }
+  /** Reduzir a jornada (ou parar) para cuidar da casa e da família. */
+  | { tipo: 'cuidar_da_casa'; intensidade: 'parcial' | 'total' }
+  /** Encerrar a pausa de cuidado: voltar à jornada inteira ou ao mercado. */
+  | { tipo: 'voltar_mercado' }
+  /** Largar o que se faz por fora. */
+  | { tipo: 'parar_por_fora' };
 
 export { LIMITE_INTERACOES };
 
@@ -121,7 +135,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const o = v.caminhos.oportunidades.find(x => x.id === a.id);
       if (!o) return bloqueio('incompativel', 'Essa porta já fechou.');
       if (!a.aceitar) return PERMITIDO;
-      if (o.ocupacaoId && ['aprendiz', 'estagio', 'indicacao', 'vaga', 'proposta'].includes(o.tipo)) {
+      if (o.ocupacaoId && ['aprendiz', 'estagio', 'indicacao', 'vaga', 'proposta', 'reinsercao'].includes(o.tipo)) {
         const d = elegibilidade(v, ocupacao(o.ocupacaoId), 'curriculo', o.bonus ?? 0);
         if (!podeTentar(d)) return d;
       }
@@ -276,6 +290,32 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return PERMITIDO;
     }
     case 'atracao': return i >= 13 ? PERMITIDO : bloqueio('impossivel', 'Ainda é cedo para isso.');
+    case 'mei': {
+      const e = v.trabalho.atual;
+      if (!e || (e.contrato !== 'informal' && e.contrato !== 'autonomo')) return bloqueio('incompativel', 'Só para quem trabalha por conta.');
+      if (e.mei) return bloqueio('incompativel', 'Já é MEI.');
+      if (e.contrato === 'autonomo' && e.clientela === undefined) return bloqueio('incompativel', 'Não se aplica.');
+      if (e.salario > 6750) return bloqueio('requisito', 'O faturamento passa do limite do MEI (cerca de R$ 81 mil por ano).');
+      return PERMITIDO;
+    }
+    case 'facultativo': {
+      const pa = v.trabalho.pausa;
+      if (!pa || pa.intensidade !== 'total') return bloqueio('incompativel', 'Só durante uma pausa no trabalho.');
+      return (!!pa.facultativo) === a.ativo ? bloqueio('incompativel', 'Já está assim.') : PERMITIDO;
+    }
+    case 'cuidar_da_casa': {
+      if (v.trabalho.pausa) return bloqueio('incompativel', 'Você já está cuidando.');
+      if (i < 18) return bloqueio('impossivel', 'Não se aplica.');
+      if (a.intensidade === 'parcial') { const r = podeReduzir(v); return r === true ? PERMITIDO : bloqueio('incompativel', r); }
+      if (!v.trabalho.atual) return bloqueio('incompativel', 'Você não está trabalhando.');
+      if (v.trabalho.atual.contrato === 'militar') return bloqueio('incompativel', 'A carreira militar não tem pausa assim.');
+      const par = parceiro(v);
+      const casa = filhos(v).some(f => v.vinculos[f.id]?.convivio.includes('casa') && idadePessoa(v, f) < 14);
+      if (!(par && par.vin.convivio.includes('casa') && par.p.renda > 0) && !casa) return bloqueio('requisito', 'Sem outra renda em casa, parar de trabalhar não se sustenta.');
+      return { grau: 'permitido', motivo: 'Sem renda própria, o INSS para — a não ser que pague como facultativo.' };
+    }
+    case 'voltar_mercado': return v.trabalho.pausa ? PERMITIDO : bloqueio('incompativel', 'Não há pausa para encerrar.');
+    case 'parar_por_fora': return v.caminhos.envolvimento && v.caminhos.envolvimento.parou === undefined ? PERMITIDO : bloqueio('incompativel', 'Não se aplica.');
     case 'adotar_pet': {
       const an = animalDoAbrigo(v, a.animalId);
       if (!an) return bloqueio('impossivel', 'Esse bicho já foi adotado.');
@@ -536,6 +576,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return abrirEntrevista(v, r, oc.id, 0, 'curriculo');
     }
     case 'pedir_demissao': {
+      if (eDasForcas(ocupacao(v.trabalho.atual!.ocupacaoId))) { const ind = sairDasForcas(v); if (ind) pagarComGuardado(v, Math.min(ind, disponivel(v))); return ok(ind ? 'Você saiu da Força — e indenizou a formação.' : 'Você saiu da Força.'); }
       const nome = nomeOcupacao(v, ocupacao(v.trabalho.atual!.ocupacaoId));
       encerrarEmprego(v, 'pediu demissão');
       escrever(v, { texto: `Pediu demissão do trabalho de ${nome}.`, relevancia: 'marco', tema: 'trabalho', escolha: true });
@@ -568,7 +609,16 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (ctx && d.tipo === 'decisao') abrirDecisao(v, d, ctx);
       return {};
     }
-    case 'aposentar': aposentar(v); return ok('Aposentadoria concedida.', 'bom');
+    case 'aposentar':
+      if (v.trabalho.atual && eDasForcas(ocupacao(v.trabalho.atual.ocupacaoId))) { irParaReserva(v, 'pedido'); return ok('Transferência para a reserva concedida.', 'bom'); }
+      aposentar(v); return ok('Aposentadoria concedida.', 'bom');
+    case 'mei': formalizar(v); escrever(v, { texto: 'Formalizou o trabalho como MEI: CNPJ, nota fiscal e a guia do mês.', relevancia: 'biografia', tema: 'trabalho', escolha: true }); return ok('Agora é MEI: uma guia por mês, tempo de INSS contando.', 'bom');
+    case 'facultativo':
+      v.trabalho.pausa!.facultativo = a.ativo;
+      return ok(a.ativo ? 'O INSS volta a contar, pago como facultativo.' : 'Sem pagar o INSS, o tempo de contribuição para.');
+    case 'cuidar_da_casa': iniciarPausa(v, 'casa', a.intensidade); return ok(a.intensidade === 'parcial' ? 'Jornada reduzida.' : 'Você parou de trabalhar para cuidar da casa e da família.');
+    case 'voltar_mercado': encerrarPausa(v, 'procurar'); return ok('Hora de voltar.');
+    case 'parar_por_fora': pararIlicito(v, ''); return ok('Você saiu. O que ficou para trás ainda pode aparecer.');
     case 'pessoa': return executarInteracao(v, r, a.pessoaId, a.interacao);
     case 'adotar': iniciarAdocao(v, parceiro(v)?.p.id); return ok('Processo de adoção iniciado.');
     case 'sair_de_casa': case 'trocar_moradia': {

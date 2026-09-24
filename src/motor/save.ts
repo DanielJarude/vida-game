@@ -35,7 +35,7 @@ import { aptidao, MATERIAS } from './sistemas/frentes';
 import { modeloRotina } from './sistemas/rotinas';
 import { CURSOS_NPC } from './sistemas/filhos';
 
-export const VERSAO_SAVE = 10;
+export const VERSAO_SAVE = 11;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -97,12 +97,24 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
+  if (d.versao === 10) {
+    // v10 → v11: caminhos de vida (carreira militar, campo, justiça, cuidado, MEI, ondas do trabalho).
+    const erro10 = validar(d, 10);
+    if (erro10) return { tipo: 'invalido', motivo: erro10 };
+    try {
+      const v = migrarV10(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
   if (d.versao === 9) {
     // v9 → v10: vida material (aplicações por produto, economia do país, bens com história, pets com cuidado).
     const erro9 = validar(d, 9);
     if (erro9) return { tipo: 'invalido', motivo: erro9 };
     try {
-      const v = migrarV9(d as unknown as Vida);
+      const v = migrarV10(migrarV9(d as unknown as Vida));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -114,7 +126,7 @@ export function interpretar(bruto: string): Leitura {
     const erro8 = validar(d, 8);
     if (erro8) return { tipo: 'invalido', motivo: erro8 };
     try {
-      const v = migrarV9(migrarV8(d as unknown as Vida));
+      const v = migrarV10(migrarV9(migrarV8(d as unknown as Vida)));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -126,7 +138,7 @@ export function interpretar(bruto: string): Leitura {
     const erro7 = validar(d, 7);
     if (erro7) return { tipo: 'invalido', motivo: erro7 };
     try {
-      const v = migrarV9(migrarV8(migrarV7(d as unknown as Vida)));
+      const v = migrarV10(migrarV9(migrarV8(migrarV7(d as unknown as Vida))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -138,7 +150,7 @@ export function interpretar(bruto: string): Leitura {
     const erro6 = validarBase(d);
     if (erro6) return { tipo: 'invalido', motivo: erro6 };
     try {
-      const v = migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida))));
+      const v = migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida)))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -149,7 +161,7 @@ export function interpretar(bruto: string): Leitura {
     try {
       const v5 = migrarV5(d);
       if (!v5) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
-      const v = migrarV9(migrarV8(migrarV7(migrarV6(v5))));
+      const v = migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(v5)))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -205,6 +217,15 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     const e = d.economia as Vida['economia'];
     if (!e || typeof e !== 'object' || !finito(e.semente) || !finito(e.juroReal) || !finito(e.imoveis) || !finito(e.bolsa) || !finito(e.precos) || typeof e.fase !== 'string' || !Array.isArray(e.historico)) return 'Economia inválida.';
   }
+  if (versao >= 11) {
+    const j = d.justica as Vida['justica'];
+    if (j !== undefined && (typeof j !== 'object' || !Array.isArray(j.antecedentes) || (j.prisao && (!finito(j.prisao.tInicio) || !finito(j.prisao.tFim))))) return 'Justiça inválida.';
+    const c = d.caminhos as Vida['caminhos'];
+    if (c.militar && (typeof c.militar.forca !== 'string' || !finito(c.militar.tIngresso) || !Array.isArray(c.militar.cursos))) return 'Carreira militar inválida.';
+    if (c.envolvimento && (!finito(c.envolvimento.exposicao) || !finito(c.envolvimento.nivel))) return 'Envolvimento inválido.';
+    const t = d.trabalho as Vida['trabalho'];
+    if (t.pausa && (!finito(t.pausa.tInicio) || typeof t.pausa.motivo !== 'string')) return 'Pausa inválida.';
+  }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -217,6 +238,42 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
   }
   return null;
 }
+
+/* ================================================================== v10 → v11 */
+
+const QUADRO_V10: Record<string, 'temporario' | 'praca' | 'oficial'> = { soldado_ep: 'temporario', cabo_ep: 'temporario', aluno_sargento: 'praca', sargento: 'praca', subtenente: 'praca', cadete: 'oficial', tenente: 'oficial', capitao: 'oficial', major: 'oficial' };
+
+/**
+ * Migra um save v10 (ATT 3) para v11 (caminhos de vida), sem inventar
+ * passado:
+ *  - quem está nas Forças Armadas ganha a carreira militar: Exército (o
+ *    único que existia), o quadro pelo posto, o ingresso pelo primeiro
+ *    posto militar da história, a guarnição onde mora hoje, nenhuma
+ *    transferência; majores já contam com o curso de aperfeiçoamento
+ *    (sem ele não teriam chegado lá);
+ *  - quem produz no campo ganha a vida rural: terra da família se algum
+ *    parente vive disso, senão arrendada; cultura pela região;
+ *  - justiça, envolvimento, pausa de cuidado, MEI: começam vazios (o
+ *    motor antigo não tinha nada disso).
+ */
+export function migrarV10(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 11;
+  const e = x.trabalho.atual;
+  if (e && QUADRO_V10[e.ocupacaoId] && !x.caminhos.militar) {
+    const militares = [...x.trabalho.historico, e].filter(h => QUADRO_V10[h.ocupacaoId]);
+    const tIngresso = Math.min(...militares.map(h => h.tInicio));
+    x.caminhos.militar = { forca: 'exercito', quadro: QUADRO_V10[e.ocupacaoId], tIngresso, guarnicao: x.moradia.municipioId, tGuarnicao: x.t, cursos: e.ocupacaoId === 'major' ? ['aperfeicoamento'] : [], transferencias: 0 };
+  }
+  if (e?.ocupacaoId === 'produtor_rural' && !x.caminhos.rural) {
+    const rural = Object.values(x.pessoas).some(p => p.vivo && p.ocupacaoId && ['trabalhador_rural', 'produtor_rural', 'operador_maquinas', 'gerente_fazenda'].includes(p.ocupacaoId) && x.vinculos[p.id]?.parentesco);
+    const regiao = municipioPorId(x.moradia.municipioId)?.regiao;
+    x.caminhos.rural = { terra: rural ? 'familia' : 'arrendada', cultura: regiao === 'Sul' || regiao === 'Centro-Oeste' ? 'lavoura' : regiao === 'Sudeste' ? 'leite' : 'misto', cooperativa: false, tInicio: e.tInicio, anosRuins: 0 };
+  }
+  return x;
+}
+
+const municipioPorId = (id: string) => MUNICIPIOS.find(m => m.id === id);
 
 /* =================================================================== v9 → v10 */
 
@@ -531,7 +588,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 10,
+    versao: 7 as unknown as 11,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,

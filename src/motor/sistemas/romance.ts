@@ -174,6 +174,11 @@ export function processarRomance(v: Vida, r: Rng): void {
     alvo -= vin.tensao / 4;
     alvo += (vin.confianca - 60) / 8;
     if (v.financas.negativado) alvo -= 8;
+    // Desemprego longo pesa na relação; uma pausa combinada para cuidar da casa, não.
+    const semTrabalho = !v.trabalho.atual && !v.trabalho.aposentadoria && !v.trabalho.pausa && !v.educacao.matricula && v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde >= 24;
+    if (semTrabalho) alvo -= 5;
+    // O que se esconde da parceria (um dinheiro por fora) também.
+    if (v.caminhos.envolvimento && v.caminhos.envolvimento.parou === undefined) alvo -= 4;
     if (v.mente.estresse > 65) alvo -= 6;
     if (v.personalidade.tracos.empatia > 20) alvo += 4;
     if (v.personalidade.tracos.impulsividade > 30) alvo -= 5;

@@ -26,7 +26,6 @@ import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { abalar, type Abalo } from './abalo';
 import { filhos, idade, idadePessoa, moraCom, parceiro, vinculosVivos } from '../nucleo';
 import { listaNatural } from '../texto';
-import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { modeloCondicao } from './corpo';
 import { modeloRotina, nivelDa } from './rotinas';
 import { semana } from './semana';
@@ -35,6 +34,7 @@ import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
 import { pesoDoLuto } from './luto';
 import { obrigacoesAtrasadas, seguranca } from './dinheiro';
 import { casaApertada } from './imoveis';
+import { pesoDoTrabalhoNaCabeca, sentidoDoTrabalho } from './carreira';
 
 export { abalar, type Abalo };
 
@@ -206,7 +206,15 @@ export function fatoresHumor(v: Vida): Fator[] {
   // A companhia de um bicho: pesa mais para quem mora sozinho.
   const bicho = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa')).sort((a, b) => b.vin.proximidade - a.vin.proximidade)[0];
   if (bicho && i >= 6) out.push({ id: 'pet', texto: `a companhia de ${bicho.p.nome}`, efeito: moraCom(v).length === 0 ? 4 : 2, pessoaId: bicho.p.id });
-  if (i >= 18 && !v.trabalho.atual && !v.trabalho.aposentadoria && !v.educacao.matricula) out.push({ id: 'sem_trabalho', texto: 'estar sem trabalho', efeito: -6 });
+  if (i >= 18 && !v.trabalho.atual && !v.trabalho.aposentadoria && !v.educacao.matricula && !v.trabalho.pausa && !v.justica?.prisao) out.push({ id: 'sem_trabalho', texto: 'estar sem trabalho', efeito: -6 });
+  const sentido = sentidoDoTrabalho(v);
+  if (sentido) out.push({ id: 'sentido', texto: sentido.texto, efeito: sentido.efeito });
+  const pa = v.trabalho.pausa;
+  if (pa) {
+    const p = pa.pessoaId ? v.pessoas[pa.pessoaId] : undefined;
+    out.push({ id: 'presenca', texto: pa.motivo === 'filhos' ? 'estar perto dos filhos enquanto são pequenos' : p ? `estar perto de ${p.nome} quando mais precisa` : 'cuidar de quem importa', efeito: 4, pessoaId: p?.id });
+  }
+  if (v.justica?.prisao) out.push({ id: 'prisao', texto: 'a liberdade que falta', efeito: -14 });
   if (i >= 18 && somaRede < 1 && moraCom(v).length === 0) out.push({ id: 'solidao', texto: 'ninguém por perto no dia a dia', efeito: -6 });
   const luto = pesoDoLuto(v);
   if (luto > 0) {
@@ -235,10 +243,22 @@ export function fatoresCabeca(v: Vida): Fator[] {
   const out: Fator[] = [];
   const e = v.trabalho.atual;
   if (e) {
-    const oc = ocupacaoOuNula(e.ocupacaoId);
-    const peso = oc ? (oc.estresse - 2) * 4 : 0;
-    if (Math.abs(peso) >= 1) out.push({ id: 'trabalho', texto: peso > 0 ? 'um trabalho que exige muito' : 'um trabalho sem grandes sustos', efeito: peso });
+    // O peso do trabalho é contextual: a função, a estrada, o momento (`carreira.ts`).
+    const t = pesoDoTrabalhoNaCabeca(v);
+    if (t) out.push({ id: 'trabalho', texto: t.texto, efeito: t.efeito });
     if (v.trabalho.horasExtras) out.push({ id: 'horas_extras', texto: 'as horas extras', efeito: 16 });
+  }
+  const j = v.justica;
+  if (j?.prisao) out.push({ id: 'prisao', texto: idade(v) < 18 ? 'a internação' : 'a vida atrás das grades', efeito: j.prisao.regime === 'fechado' ? 20 : 12 });
+  else if (j?.processo) out.push({ id: 'processo', texto: 'o processo que ainda não terminou', efeito: 9 });
+  else if (j?.tSaida !== undefined && v.t - j.tSaida < 48) out.push({ id: 'ficha', texto: 'a ficha que pesa em toda porta', efeito: 5 });
+  const env = v.caminhos.envolvimento;
+  if (env && env.parou === undefined) out.push({ id: 'por_fora', texto: 'o medo de o que se faz por fora vir à tona', efeito: 4 + env.nivel * 3 });
+  else if (env?.parou !== undefined && v.fatos['pressao_grupo'] !== undefined && v.t - v.fatos['pressao_grupo'] < 36) out.push({ id: 'pressao', texto: 'a pressão de quem não aceitou a saída', efeito: 8 });
+  const pa = v.trabalho.pausa;
+  if (pa) {
+    const p = pa.pessoaId ? v.pessoas[pa.pessoaId] : undefined;
+    out.push({ id: 'cuidando', texto: pa.motivo === 'casa' ? 'o trabalho de casa, que não acaba' : `cuidar de ${p?.nome ?? 'quem depende de você'} todo dia`, efeito: pa.intensidade === 'total' ? 6 : 4, pessoaId: p?.id });
   }
   const s = sobrecargaDaSemana(v);
   if (s.fixos > 0.01) out.push({ id: 'semana_fixa', texto: `compromissos que não cabem na semana: ${listaNatural(s.rotulos.slice(0, 3))}`, efeito: Math.round(s.fixos * 36) });

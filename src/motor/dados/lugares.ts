@@ -177,3 +177,13 @@ export function sortearMunicipio(rnd: () => number): Municipio {
   }
   return MUNICIPIOS[0];
 }
+
+const LITORAL = new Set(['AP', 'PA', 'MA', 'PI', 'CE', 'RN', 'PB', 'PE', 'AL', 'SE', 'BA', 'ES', 'RJ', 'SP', 'PR', 'SC', 'RS', 'AM']);
+
+/** Há mar ou rio grande de pesca por perto? (Pesca artesanal, Marinha.) Plausibilidade, não geografia fina. */
+export function pertoDaAgua(id: string): boolean {
+  const m = municipio(id);
+  if (m.uf === 'DF' || m.uf === 'GO' || ['sao-paulo-sp', 'campinas-sp', 'curitiba-pr', 'goiania-go'].includes(m.id)) return false;
+  if (m.perfil === 'metropolitana' || (m.perfil === 'metropole' && !m.capital)) return false;
+  return LITORAL.has(m.uf) || m.perfil === 'pequena' || m.perfil === 'polo';
+}

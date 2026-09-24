@@ -34,7 +34,14 @@ export function processarObrigacoes(v: Vida): void {
   // A casa da família sem a família: quem ficou passa a sustentar a própria casa.
   if ((v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') && idade(v) >= 18 && !vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && !x.p.especie && ['mae', 'pai', 'avo', 'tio', 'madrasta', 'padrasto', ...(v.moradia.tipo === 'parente' ? ['irmao', 'meio_irmao'] : [])].includes(x.vin.parentesco ?? ''))) casaSemFamilia(v);
   // Morar de favor tem prazo: depois de uns anos, é preciso ir — para a família ou para o aluguel mais barato.
-  if (v.moradia.tipo === 'cedida' && v.t - v.moradia.tInicio >= 36) fimDoFavor(v);
+  if (v.justica?.prisao) return;
+  if (v.moradia.tipo === 'cedida' && !v.moradia.funcional && v.t - v.moradia.tInicio >= 36) fimDoFavor(v);
+  // Imóvel funcional acaba com o vínculo: quem saiu da Força devolve a casa.
+  if (v.moradia.funcional && v.fatos['sair_funcional'] !== undefined) {
+    delete v.fatos['sair_funcional'];
+    v.moradia.funcional = undefined;
+    fimDoFavor(v, 'Devolveu o imóvel funcional — a vila é de quem está na ativa — e voltou a pagar aluguel');
+  }
   for (const d of [...f.dividas]) {
     const atraso = d.atraso ?? 0;
     if (d.tipo === 'financiamento_veiculo' && atraso >= 5 && ha(d.atrasoDesde, 12)) buscaEApreensao(v, d);
@@ -108,12 +115,12 @@ function casaSemFamilia(v: Vida): void {
   escrever(v, { texto: 'Sem os pais, a casa da família não se sustentava sozinha. Você ficou num lugar simples, pagando aluguel.', relevancia: 'cotidiano', tema: 'casa' });
 }
 
-function fimDoFavor(v: Vida): void {
+function fimDoFavor(v: Vida, motivo = 'O favor tinha prazo. Depois de três anos de favor, voltou a pagar aluguel'): void {
   if (voltarParaCasaDosPais(v)) return;
   const barata = ofertasDeImoveis(v, 'aluguel').filter(o => o.modeloId !== 'republica' || idade(v) < 35).sort((a, b) => a.aluguel - b.aluguel)[0];
   const m = modeloMoradia(barata?.modeloId ?? 'casa_simples');
   v.moradia = { tipo: m.id === 'republica' ? 'republica' : 'aluguel', municipioId: v.moradia.municipioId, modeloId: m.id, aluguel: barata?.aluguel ?? aluguelDe(v, m, v.moradia.municipioId), padrao: m.padrao, tInicio: v.t, aceitaPet: barata?.aceitaPet ?? true, bairro: barata?.bairro };
-  escrever(v, { texto: `O favor tinha prazo. Depois de três anos de favor, voltou a pagar aluguel: ${m.id === 'republica' ? 'um quarto numa república' : `${m.nome.startsWith('casa') || m.nome.startsWith('kitnet') ? 'uma' : 'um'} ${m.nome}`}${barata?.bairro ? ` ${barata.bairro}` : ''}.`, relevancia: 'cotidiano', tema: 'casa' });
+  escrever(v, { texto: `${motivo}: ${m.id === 'republica' ? 'um quarto numa república' : `${m.nome.startsWith('casa') || m.nome.startsWith('kitnet') ? 'uma' : 'um'} ${m.nome}`}${barata?.bairro ? ` ${barata.bairro}` : ''}.`, relevancia: 'cotidiano', tema: 'casa' });
 }
 
 function buscaEApreensao(v: Vida, d: Divida): void {

@@ -36,8 +36,13 @@ import { chanceNoConcurso, editalAberto } from './concurso';
 import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
 import { abalar } from './abalo';
+import { NOME_FORCA, OCUPACOES_DAS_FORCAS, nomeDoPosto } from '../dados/forcas';
+import { pertoDaAgua } from '../dados/lugares';
+import { antecedenteAdulto, penaDeAntecedentes } from './justica';
+import { fatorDaEpoca, riscoDaEpoca } from './carreira';
+import { aoEntrarNasForcas, aoFormarNasForcas, horizonteMilitar, processarMilitar } from './militar';
 
-export const nomeOcupacao = (v: Vida, oc: Ocupacao) => (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
+export const nomeOcupacao = (v: Vida, oc: Ocupacao) => nomeDoPosto(oc.id, v.caminhos?.militar?.forca, ge(v) === 'feminino') ?? (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
 export const nomeOcupacaoId = (v: Vida, id: string) => nomeOcupacao(v, ocupacao(id));
 
 /** Experiência que conta numa trilha: a própria, mais metade das afins. */
@@ -48,8 +53,10 @@ export function experienciaNaTrilha(v: Vida, trilha: string): number {
   return (x[trilha] ?? 0) + Math.min(48, Math.round(afins * 0.5));
 }
 
-const MILITARES = new Set(['exercito_praca', 'exercito_sargento', 'exercito_oficial', 'pm', 'bombeiro']);
+const MILITARES = new Set(['exercito_praca', 'exercito_sargento', 'exercito_oficial', 'pm', 'pm_oficial', 'bombeiro']);
 export const eMilitar = (oc: Ocupacao) => MILITARES.has(oc.trilha);
+/** Forças Armadas (não PM nem bombeiros): a carreira tem sistema próprio (`militar.ts`). */
+export const eDasForcas = (oc: Ocupacao) => OCUPACOES_DAS_FORCAS.has(oc.id);
 export const anosDeServicoMilitar = (v: Vida) => Math.floor([...MILITARES].reduce((s, t) => s + (v.trabalho.experiencia[t] ?? 0), 0) / 12);
 
 const EMPREGADORES: Record<string, string[]> = {
@@ -120,8 +127,11 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   if (via !== 'promocao' && oc.idadeMaxIngresso && i > oc.idadeMaxIngresso) return bloqueio('requisito', `A seleção tem limite de idade (até ${oc.idadeMaxIngresso} anos).`);
   if (t.atual?.ocupacaoId === oc.id) return bloqueio('incompativel', 'Você já trabalha nisso.');
   if (t.candidaturas.some(c => c.ocupacaoId === oc.id)) return bloqueio('incompativel', 'Já está no processo seletivo desta vaga.');
-  if (t.aposentadoria && oc.concurso) return bloqueio('incompativel', 'Aposentados não prestam concurso para cargo efetivo.');
+  if (t.aposentadoria && oc.concurso && i >= 60) return bloqueio('incompativel', 'Depois de aposentado e dos 60, os editais que valem a pena já não cabem na vida.');
   if (t.aposentadoria && eMilitar(oc)) return bloqueio('incompativel', 'Carreira militar não recebe quem já se aposentou.');
+  if (v.justica?.prisao && v.justica.prisao.regime === 'fechado') return bloqueio('impossivel', 'Cumprindo pena em regime fechado, o trabalho possível é o da unidade.');
+  if (oc.idoneidade && via !== 'promocao' && antecedenteAdulto(v)) return bloqueio('requisito', 'A investigação social pede ficha limpa: os antecedentes fecham esta porta.');
+  if (oc.lugar === 'agua' && !pertoDaAgua(v.moradia.municipioId)) return bloqueio('requisito', `Não há mar nem rio de pesca por perto de ${municipio(v.moradia.municipioId).nome}.`);
 
   if (oc.entrada === 'oportunidade' && via !== 'oportunidade' && via !== 'promocao') {
     return bloqueio('requisito', MOTIVO_ENTRADA[oc.trilha] ?? 'Não se entra por currículo: depende de uma oportunidade concreta.');
@@ -225,10 +235,12 @@ function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   if (!oc.area && v.educacao.concluidos.some(x => x.nivel !== 'livre' && x.tFim > v.t - 60)) c += 0.04;
   const setor = forcaDoSetor(v.moradia.municipioId, oc.setor, anoDe(v.t));
   c *= 0.7 + setor * 0.3;
-  c *= sobraNaEpoca(oc.declinio, anoDe(v.t));
+  c *= sobraNaEpoca(oc.declinio, anoDe(v.t)) * fatorDaEpoca(oc, anoDe(v.t));
   if (v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde > 24) c -= 0.1;
   c += ajusteContratacao(v);
   if (i > 50 && oc.nivel < 4) c -= (i - 50) / 60; // etarismo real no mercado
+  // Antecedentes pesam em quem contrata com carteira (o autônomo não passa por isso).
+  if (oc.contrato === 'clt' || oc.contrato === 'estagio' || oc.contrato === 'aprendiz') c -= penaDeAntecedentes(v);
   c += bonus;
   return clamp(c, 0.05, 0.92);
 }
@@ -248,9 +260,10 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   const primeiro = !temFato(v, 'primeiro_emprego');
   if (t.atual) encerrarEmprego(v, 'trocou de emprego');
   const clientela = oc.promocao === 'clientela' ? clientelaInicial(v, oc) : undefined;
+  if (eDasForcas(oc)) aoEntrarNasForcas(v, r, oc);
   const e: Emprego = {
     ocupacaoId: oc.id,
-    empregador: oc.concurso ? orgaoDoConcurso(oc) : r.pick(EMPREGADORES[oc.trilha] ?? ['uma empresa']),
+    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(EMPREGADORES[oc.trilha] ?? ['uma empresa']),
     contrato: oc.contrato,
     salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2),
     tInicio: v.t,
@@ -278,7 +291,7 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
       v.fatos['mudancas_de_carreira'] = (v.fatos['mudancas_de_carreira'] ?? 0) + 1;
     }
   }
-  if (oc.concurso) marcar(v, 'aprovacao', `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso: ${nomeOcupacao(v, oc)}.`, 3, { trilha: oc.trilha, ocupacaoId: oc.id });
+  if (oc.concurso && !oc.duracao) marcar(v, 'aprovacao', `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso: ${nomeOcupacao(v, oc)}.`, 3, { trilha: oc.trilha, ocupacaoId: oc.id });
   return e;
 }
 
@@ -287,7 +300,9 @@ function orgaoDoConcurso(oc: Ocupacao): string {
     tecnico_publico: 'a prefeitura', analista_judiciario: 'o Tribunal Regional', auditor_fiscal: 'a Receita', professor_concursado: 'a rede pública de ensino',
     escriturario_banco: 'um banco público', professor_univ: 'a universidade federal', agente_saude: 'a Unidade Básica de Saúde', guarda_municipal: 'a prefeitura',
     policial_civil: 'a Polícia Civil', delegado: 'a Polícia Civil', aluno_pm: 'a Polícia Militar', aluno_bombeiro: 'o Corpo de Bombeiros',
-    aluno_sargento: 'o Exército', cadete: 'o Exército', musico_orquestra: 'a orquestra sinfônica'
+    aluno_sargento: 'o Exército', cadete: 'o Exército', musico_orquestra: 'a orquestra sinfônica', professor_substituto: 'a rede pública de ensino',
+    pesquisador_instituto: 'um instituto público de pesquisa', policial_penal: 'a Polícia Penal', perito_criminal: 'a Polícia Científica', policial_rodoviario: 'a Polícia Rodoviária Federal',
+    aluno_oficial_pm: 'a Polícia Militar', aluno_oficial_tecnico: 'o Exército'
   } as Record<string, string>)[oc.id] ?? 'o serviço público';
 }
 
@@ -304,6 +319,7 @@ export function textoDeContratacao(v: Vida, oc: Ocupacao, e: Emprego): string {
   const nome = nomeOcupacao(v, oc);
   const primeira = v.trabalho.historico.length === 0;
   if (oc.formacaoInicial) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: começou o curso de formação em ${e.empregador.replace(/^(a|o) /, '')}.`;
+  if (oc.concurso && oc.duracao) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no processo seletivo: ${nome}, com contrato de ${Math.round(oc.duracao / 12)} anos.`;
   if (oc.concurso) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: ${nome} em ${e.empregador.replace(/^(a|o) /, '')}, com estabilidade.`;
   if (e.contrato === 'autonomo' || e.contrato === 'informal') return `${primeira ? 'Começou a ganhar a vida' : 'Passou a trabalhar'} como ${nome}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
   return `${primeira ? 'Primeiro emprego' : 'Novo emprego'}: ${nome} em ${e.empregador}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
@@ -382,7 +398,20 @@ export function processarTrabalho(v: Vida, r: Rng): void {
       e.salario = salarioLocal(destino, e.municipioId);
       escrever(v, { texto: `Concluiu o curso de formação: agora é ${nomeOcupacao(v, destino)}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
       marcar(v, 'ingresso', `Formado no curso de formação: ${nomeOcupacao(v, destino)}.`, 3, { trilha: destino.trilha, ocupacaoId: destino.id });
+      if (eDasForcas(destino)) aoFormarNasForcas(v, r, destino);
     }
+    return;
+  }
+
+  // Forças Armadas: antiguidade, cursos, teste físico, transferências e reserva (`militar.ts`).
+  if (eDasForcas(oc)) { ajustarSalario(v, r, e, oc); processarMilitar(v, r, e, oc); return; }
+
+  // Contrato com prazo (professor substituto, pós-doutorado): acaba — e aí é procurar o próximo.
+  if (oc.duracao && v.t - e.tInicio >= oc.duracao) {
+    const nome = nomeOcupacao(v, oc);
+    encerrarEmprego(v, 'fim do contrato');
+    escrever(v, { texto: oc.id === 'pesquisador' ? 'A bolsa de pós-doutorado acabou. O projeto terminou; o próximo edital, ninguém sabe quando sai.' : `O contrato de ${nome} chegou ao fim, como estava escrito desde o começo.`, relevancia: 'biografia', tema: 'trabalho' });
+    marcar(v, 'fim_carreira', `Fim do contrato: ${nome}.`, 1, { trilha: oc.trilha, ocupacaoId: oc.id });
     return;
   }
 
@@ -415,13 +444,8 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     return;
   }
 
-  // Serviço militar temporário: o tempo máximo acaba.
-  if (oc.idadeMax && i > oc.idadeMax && eMilitar(oc)) {
-    encerrarEmprego(v, 'baixa do serviço militar');
-    escrever(v, { texto: 'O tempo máximo de serviço temporário acabou: deu baixa do Exército.', relevancia: 'biografia', tema: 'trabalho' });
-    marcar(v, 'fim_carreira', 'Deu baixa do Exército.', 2, { trilha: oc.trilha });
-    return;
-  }
+  // Serviço público: progressão por tempo e por titulação (não por conversa).
+  if (e.contrato === 'servidor') progressaoDoServidor(v, e, oc);
 
   // Autônomos: a freguesia cresce ou míngua. Quem trabalha por conta não é "promovido";
   // com a clientela madura, às vezes dá um passo (abrir o próprio escritório).
@@ -520,7 +544,7 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   const i = idade(v);
   const epoca = 1 - sobraNaEpoca(oc.declinio, anoDe(v.t));
   const base = e.contrato === 'servidor' ? 0.002 : e.contrato === 'militar' ? 0.003 : e.desempenho < 35 ? 0.3 : e.contrato === 'clt' ? 0.045 : 0.03;
-  const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
+  const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 + riscoDaEpoca(oc, anoDe(v.t)) : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
   if (!r.chance(risco)) return false;
   const anos = Math.max(1, Math.floor((v.t - e.tInicio) / 12));
   const nome = nomeOcupacao(v, oc);
@@ -555,7 +579,8 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
   const anosNoPosto = (v.t - tPosto) / 12;
   const acima = degrausAcima(oc).filter(x => x.id !== oc.id);
   if (!acima.length) return;
-  const possiveis = acima.filter(x => elegibilidade(v, x, 'promocao').grau === 'permitido' || elegibilidade(v, x, 'promocao').grau === 'improvavel');
+  // Servidor não vira empregado de empresa por "promoção": a carreira dele é o plano de carreira.
+  const possiveis = acima.filter(x => (e.contrato !== 'servidor' || x.contrato === 'servidor') && (elegibilidade(v, x, 'promocao').grau === 'permitido' || elegibilidade(v, x, 'promocao').grau === 'improvavel'));
   if (!possiveis.length) return;
   const proximo = possiveis[0];
   let chance: number;
@@ -585,6 +610,27 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
   abalar(v, 'a promoção', 6, 0);
 }
 
+/**
+ * Servidor: a cada três anos, a progressão da carreira (um passo na tabela);
+ * ao concluir pós, mestrado ou doutorado, o adicional de titulação (o
+ * professor da rede pública sobe assim — não virando "gerente").
+ */
+function progressaoDoServidor(v: Vida, e: Emprego, oc: Ocupacao): void {
+  const anos = Math.floor((v.t - e.tInicio) / 12);
+  const teto = tetoSalarial(e);
+  if (anos > 0 && anos % 3 === 0 && e.salario < teto) {
+    e.salario = Math.round(Math.min(teto, e.salario * 1.035) / 10) * 10;
+    if (anos === 3) escrever(v, { texto: `Passou do estágio probatório: servidor${flex(ge(v), '', 'a', 'e')} estável, com a primeira progressão na carreira.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+  }
+  const titulo = v.educacao.concluidos.filter(c => ['pos', 'mestrado', 'doutorado'].includes(c.nivel) && c.tFim > v.t - 12 && c.tFim >= e.tInicio && !temFato(v, `titulacao_${c.cursoId}`)).pop();
+  if (titulo) {
+    marcarFato(v, `titulacao_${titulo.cursoId}`);
+    const ganho = titulo.nivel === 'doutorado' ? 0.2 : titulo.nivel === 'mestrado' ? 0.12 : 0.06;
+    e.salario = Math.round(e.salario * (1 + ganho) / 10) * 10;
+    escrever(v, { texto: `Com ${titulo.nivel === 'pos' ? 'a especialização' : `o ${titulo.nivel}`}, o salário de ${nomeOcupacao(v, oc)} subiu um degrau na tabela da carreira.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+  }
+}
+
 /* ------------------------------------------------------------ Horizonte */
 
 /**
@@ -598,6 +644,9 @@ export function horizonte(v: Vida): string | undefined {
   const oc = ocupacao(e.ocupacaoId);
   if (e.formacaoAte && oc.formacaoInicial) return `Em formação até ${anoDe(e.formacaoAte)}. Depois, ${nomeOcupacaoId(v, oc.formacaoInicial.destino)}.`;
   if (e.posAposentadoria) return 'Trabalho depois da aposentadoria: sem escada, pelo gosto ou pela conta.';
+  if (oc.duracao && !eDasForcas(oc)) return `Contrato com prazo: termina por volta de ${anoDe(e.tInicio + oc.duracao)}. Depois, é outro edital, outra seleção.`;
+  if (eDasForcas(oc)) return horizonteMilitar(v);
+  if (e.contrato === 'servidor' && oc.promocao === 'antiguidade' && !degrausAcima(oc).length) return 'A carreira anda pela tabela: progressão a cada três anos e adicional quando conclui pós, mestrado ou doutorado. Mudar de cargo é outro concurso.';
   if (e.clientela !== undefined) {
     const c = e.clientela;
     return c < 20 ? 'A freguesia ainda é pouca: cada cliente conta.' : c < 45 ? 'A freguesia vem crescendo, devagar.' : c < 70 ? 'Já tem clientela fiel.' : 'Não falta trabalho: a agenda está cheia.';
@@ -687,7 +736,9 @@ export function aposentar(v: Vida): void {
     ? `Foi para a reserva depois de ${anosDeServicoMilitar(v)} anos de serviço, como ${nomeOcupacao(v, oc)}.`
     : `Aposentou-se depois de ${Math.floor(v.trabalho.contribuicao / 12)} anos de contribuição${vida}, com um benefício de R$ ${beneficio.toLocaleString('pt-BR')} por mês.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
-  marcar(v, 'aposentadoria', texto, 3, { trilha });
+  marcar(v, militar ? 'reserva' : 'aposentadoria', texto, 3, { trilha });
+  if (militar && oc && eDasForcas(oc)) v.fatos['mil_reserva'] = v.t;
+  if (v.moradia.funcional) v.fatos['sair_funcional'] = v.t;
 }
 
 function fecharNegocioAposentando(v: Vida): void {

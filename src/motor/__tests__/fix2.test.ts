@@ -186,9 +186,15 @@ describe('iniciativa romântica', () => {
     const a = amigo(v, { proximidade: 50, confianca: 40 });
     const b = amigo(v, { proximidade: 90, confianca: 85 });
     b.p.temperamento = { ...a.p.temperamento };
-    const ca = ctxPessoa(v, a.p.id)!;
-    const cb = ctxPessoa(v, b.p.id)!;
-    expect(interesseDoOutro(cb).valor).toBeGreaterThan(interesseDoOutro(ca).valor);
+    // O mesmo gosto e a mesma disponibilidade: só a relação muda.
+    a.p.atracao = b.p.atracao = 'ambos';
+    a.p.parceiroId = b.p.parceiroId = undefined;
+    a.p.aperto = b.p.aperto = undefined;
+    // A mesma pessoa, antes e depois de a relação crescer (a química entre duas pessoas é dela; o que muda é a relação).
+    const antes = interesseDoOutro(ctxPessoa(v, a.p.id)!).valor;
+    Object.assign(a.vin, { proximidade: b.vin.proximidade, confianca: b.vin.confianca, historia: [...b.vin.historia] });
+    const depois = interesseDoOutro(ctxPessoa(v, a.p.id)!).valor;
+    expect(depois).toBeGreaterThan(antes);
   });
 
   it('quem pediu um tempo responde no ano seguinte — sim ou amizade, nunca fica pendurado', () => {
@@ -689,13 +695,13 @@ describe('divulgação progressiva', () => {
 
 describe('save v9', () => {
   it('saves v8 reais (ATT 2) migram, validam, guardam o estado e continuam sendo vividos', () => {
-    expect(VERSAO_SAVE).toBe(10);
+    expect(VERSAO_SAVE).toBe(11);
     for (const nome of ['save-v8-adolescente.json', 'save-v8-adulta.json', 'save-v8-meia-idade.json']) {
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');
       if (r.tipo !== 'ok') continue;
       expect(r.migrado).toBe(true);
-      expect(r.vida.versao).toBe(10);
+      expect(r.vida.versao).toBe(11);
       expect(Array.isArray(r.vida.mente.abalos)).toBe(true);
       expect(r.vida.mente.historico.length).toBe(1);
       expect(r.vida.caminhos.entrevistas).toEqual({ recentes: [], feitas: 0 });
@@ -714,7 +720,7 @@ describe('save v9', () => {
     for (const nome of ['save-v7-adolescente.json', 'save-v6-familia.json', 'save-v5-adulta.json']) {
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');
-      if (r.tipo === 'ok') expect(r.vida.versao).toBe(10);
+      if (r.tipo === 'ok') expect(r.vida.versao).toBe(11);
     }
   });
 

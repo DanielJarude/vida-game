@@ -55,6 +55,8 @@ export const VEICULO_ANTIGO: Record<string, { id: string; usado: boolean }> = {
 
 export interface ModeloMoradia {
   id: string;
+  /** Propriedade rural (terra para produzir): não entra nas ofertas da cidade. */
+  rural?: boolean;
   nome: string;
   padrao: number;
   quartos: number;
@@ -78,6 +80,7 @@ export const MORADIAS: readonly ModeloMoradia[] = [
   { id: 'apto_3q', nome: 'apartamento de três quartos', padrao: 4, quartos: 3, fatorAluguel: 1.45, preco: 520000, condominio: 750, casa: false, descricao: 'Um quarto para cada filho, varanda.' },
   { id: 'casa_3q', nome: 'casa de três quartos', padrao: 4, quartos: 3, fatorAluguel: 1.5, preco: 540000, condominio: 0, casa: true, descricao: 'Quintal, espaço para família.' },
   { id: 'casa_grande', nome: 'casa grande', padrao: 5, quartos: 4, fatorAluguel: 2.4, preco: 980000, condominio: 0, casa: true, descricao: 'Quatro quartos, área de churrasco, espaço de sobra.' },
+  { id: 'sitio', nome: 'sítio', padrao: 2, quartos: 3, fatorAluguel: 0.5, preco: 240000, condominio: 0, casa: true, rural: true, descricao: 'Casa simples e uns hectares de terra: dá para morar e produzir.' },
   { id: 'alto_padrao', nome: 'apartamento de alto padrão', padrao: 5, quartos: 3, fatorAluguel: 2.9, preco: 1400000, condominio: 1600, casa: false, descricao: 'Portaria, piscina, bairro nobre.' }
 ];
 

@@ -100,6 +100,8 @@ export function compatibilidade(v: Vida, p: Pessoa): number {
 /* ------------------------------------------------------------- Convívio */
 
 export function recalcularConvivio(v: Vida): void {
+  // Na prisão não há casa, escola nem trabalho de fora: só as visitas (que são contato, não convívio).
+  if (v.justica?.prisao) { for (const { vin } of vinculosVivos(v)) vin.convivio = []; return; }
   const chaves = new Map(ambientesAtuais(v).map(a => [a.chave, a.tipo]));
   const naCasaDosPais = moraComFamiliaDeOrigem(v);
   const cidade = v.moradia.municipioId;

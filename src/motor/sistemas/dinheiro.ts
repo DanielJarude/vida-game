@@ -30,6 +30,7 @@ import { economiaLocal } from '../dados/lugares';
 import { modeloMoradia } from '../dados/bens';
 import { curso } from '../dados/cursos';
 import { liquido, mesesPagos, SALARIO_MINIMO } from './renda';
+import { custosDoTrabalho } from './carreira';
 import { moraComFamiliaDeOrigem, rendaDosOutros } from './domicilio';
 import { dinheiro as fmt, flex } from '../texto';
 import { abalar } from './abalo';
@@ -137,6 +138,14 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
   const sai = (rotulo: string, valor: number, grupo: LinhaRazao['grupo']) => { if (valor >= 1) saidas.push({ rotulo, valor: -Math.round(valor), grupo }); };
   const naFamilia = arranjo === 'familia';
   const propria = entradas.reduce((s, l) => s + l.valor, 0);
+
+  /* ------------------------------------------------------------- Na prisão */
+  // A casa segue com quem ficou; da pessoa, sai o que a família leva nas visitas e o que ela devia.
+  if (v.justica?.prisao && !v.trabalho.atual) {
+    sai('O que a família leva nas visitas', 180 * c, 'outros');
+    for (const d of f.dividas) if (d.parcela > 0 && d.saldo > 0) sai(d.descricao, Math.min(d.parcela, d.saldo), 'dividas');
+    return fechar(v, arranjo, entradas, saidas);
+  }
 
   /* ---------------------------------------------- Na casa da família de origem */
   if (naFamilia) {
@@ -265,6 +274,7 @@ function comuns(v: Vida, sai: (r: string, x: number, g: LinhaRazao['grupo']) => 
     const p = x && v.pessoas[x[1]];
     if (p && p.vivo && p.estudo?.paga === 'familia') sai(`Faculdade de ${p.nome}`, valor, 'filhos');
   }
+  for (const l of custosDoTrabalho(v)) sai(l.rotulo, l.valor, 'outros');
   if (v.fatos['aposta_online'] !== undefined && i >= 18) sai('Apostas', Math.max(300, Math.min(2500, rendaPropriaMensal(v) * 0.15)), 'lazer');
   if (naFamilia && i >= 18) sai('Animais: ração, vacina, areia', custoDosPets(v, c, 'eu'), 'animais');
   for (const d of f.dividas) if (d.parcela > 0 && d.saldo > 0) sai(d.descricao, Math.min(d.parcela, d.saldo), 'dividas');

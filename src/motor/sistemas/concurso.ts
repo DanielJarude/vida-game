@@ -60,7 +60,14 @@ const PERFIS: Record<string, PerfilConcurso> = {
   delegado: { preparo: 40, teto: 0.07, frequencia: 0.2, materias: ['linguagens', 'humanas'], esfera: 'estadual' },
   auditor_fiscal: { preparo: 48, teto: 0.06, frequencia: 0.15, materias: ['exatas', 'linguagens'], esfera: 'federal' },
   professor_univ: { preparo: 14, teto: 0.22, frequencia: 0.3, materias: ['linguagens'], esfera: 'federal' },
-  musico_orquestra: { preparo: 6, teto: 0.25, frequencia: 0.12, materias: ['musica'], esfera: 'estadual' }
+  musico_orquestra: { preparo: 6, teto: 0.25, frequencia: 0.12, materias: ['musica'], esfera: 'estadual' },
+  professor_substituto: { preparo: 3, teto: 0.45, frequencia: 0.8, materias: ['linguagens'], esfera: 'estadual' },
+  pesquisador_instituto: { preparo: 12, teto: 0.14, frequencia: 0.2, materias: ['ciencias', 'linguagens'], esfera: 'federal' },
+  policial_penal: { preparo: 10, teto: 0.18, frequencia: 0.35, materias: ['linguagens', 'humanas'], esfera: 'estadual' },
+  perito_criminal: { preparo: 26, teto: 0.09, frequencia: 0.2, materias: ['ciencias', 'exatas', 'linguagens'], esfera: 'estadual' },
+  policial_rodoviario: { preparo: 24, teto: 0.08, frequencia: 0.2, materias: ['linguagens', 'humanas', 'exatas'], esfera: 'federal' },
+  aluno_oficial_pm: { preparo: 22, teto: 0.09, frequencia: 0.3, materias: ['linguagens', 'humanas'], esfera: 'estadual' },
+  aluno_oficial_tecnico: { preparo: 18, teto: 0.12, frequencia: 0.8, materias: ['ciencias', 'linguagens'], esfera: 'federal' }
 };
 
 const PADRAO: PerfilConcurso = { preparo: 10, teto: 0.35, frequencia: 0.3, materias: ['linguagens'], esfera: 'estadual' };

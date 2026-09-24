@@ -151,6 +151,10 @@ export const CAMINHOS: Conteudo[] = [
       { id: 'comissao', texto: 'Aceitar o convite para a comissão técnica',
         disponivel: c => ((c.v.caminhos.esporte?.nivel ?? 1) >= 3 && idade(c.v) >= 28 ? true : false),
         resolver: c => ({ texto: 'Do outro lado da linha lateral, o jogo parece outro.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('auxiliar_tecnico'), 'oportunidade'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('auxiliar_tecnico'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
+      { id: 'preparo', texto: 'Trabalhar na preparação física de um clube', disponivel: c => (elegibilidade(c.v, ocupacao('preparador_fisico')).grau === 'permitido' ? true : false),
+        resolver: c => ({ texto: 'Agora é você quem cobra o treino dos outros.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('preparador_fisico'), 'transicao'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('preparador_fisico'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
+      { id: 'lutas', texto: 'Abrir turmas de luta', disponivel: c => (c.v.caminhos.esporte?.modalidade === 'lutas' && elegibilidade(c.v, ocupacao('instrutor_lutas')).grau === 'permitido' ? true : false),
+        resolver: c => ({ texto: 'Tatame alugado, turma das seis e das oito.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('instrutor_lutas'), 'transicao'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('instrutor_lutas'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
       { id: 'estudar', texto: 'Voltar a estudar',
         resolver: c => ({ texto: 'Você foi atrás dos cursos. Sentar numa carteira de novo pareceu estranho.', memoria: 'Depois do esporte, decidiu voltar a estudar.', efeito: () => fato(c, 'plano_estudar') }) },
       { id: 'recomecar', texto: 'Recomeçar em outra coisa, sem pressa', resolver: () => ({ texto: 'Você tirou um tempo. Depois, veria.', memoria: null }) }
@@ -207,22 +211,29 @@ export const CAMINHOS: Conteudo[] = [
   /* ============================================================= MILITAR */
   {
     id: 'mil_alistamento', tipo: 'decisao', idade: [18, 18], tema: 'lugar', garantido: true,
-    quando: c => c.v.eu.genero === 'masculino',
+    quando: c => !c.v.justica?.prisao,
     titulo: 'O alistamento',
-    texto: () => 'Fila na junta militar, formulário, exame. Na ficha, uma pergunta: você deseja servir?',
+    texto: c => (c.v.eu.genero === 'masculino'
+      ? 'Fila na junta militar, formulário, exame. Na ficha, uma pergunta: você deseja servir?'
+      : 'Desde 2025, mulheres podem se alistar voluntariamente no ano em que fazem 18. O site abre em janeiro; as vagas são poucas e há seleção.'),
     opcoes: [
-      { id: 'servir', texto: 'Dizer que quer servir', resolver: c => alistar(c, 0.45) },
-      { id: 'tanto_faz', texto: 'Não fazer questão', resolver: c => alistar(c, 0.05) }
+      { id: 'servir', texto: c => (c.v.eu.genero === 'masculino' ? 'Dizer que quer servir' : 'Alistar-se como voluntári' + c.g('o', 'a', 'e')), resolver: c => alistar(c, c.v.eu.genero === 'masculino' ? 0.45 : 0.3) },
+      { id: 'tanto_faz', texto: c => (c.v.eu.genero === 'masculino' ? 'Não fazer questão' : 'Não se alistar'), resolver: c => (c.v.eu.genero === 'masculino' ? alistar(c, 0.05) : { texto: 'Você deixou o site fechado.', memoria: null }) }
     ]
   },
   {
-    id: 'mil_engajar', tipo: 'decisao', idade: [18, 27], tema: 'trabalho', prioritario: true, prioridade: 2, repetir: 1,
-    quando: c => ['soldado_ep', 'cabo_ep'].includes(c.v.trabalho.atual?.ocupacaoId ?? '') && c.v.t - c.v.trabalho.atual!.tInicio >= 12 && idade(c.v) <= 25,
-    titulo: 'Fim do ano no quartel',
-    texto: c => `O ano de serviço acabou. O sargento perguntou quem quer engajar e ficar mais um ano. ${c.v.educacao.escolaridade === 'medio' ? 'Alguns colegas vão prestar a escola de sargentos.' : ''}`,
+    id: 'mil_engajar', tipo: 'decisao', idade: [18, 29], tema: 'trabalho', prioritario: true, prioridade: 2, repetir: 1,
+    quando: c => ['soldado_ep', 'cabo_ep'].includes(c.v.trabalho.atual?.ocupacaoId ?? '') && c.v.t - c.v.trabalho.atual!.tInicio >= 12 && (c.v.t - (c.v.caminhos.militar?.tIngresso ?? c.v.trabalho.atual!.tInicio)) < 96,
+    titulo: c => ((c.v.t - (c.v.caminhos.militar?.tIngresso ?? c.v.t)) < 24 ? 'Fim do ano no quartel' : 'Mais um ano de farda?'),
+    texto: c => {
+      const anos = Math.floor((c.v.t - (c.v.caminhos.militar?.tIngresso ?? c.v.t)) / 12);
+      return `${anos <= 1 ? 'O ano de serviço acabou.' : `${anos} anos de temporário, de um máximo de oito.`} O sargento perguntou quem quer engajar e ficar mais um ano. ${['medio', 'tecnico', 'superior_incompleto', 'superior'].includes(c.v.educacao.escolaridade) ? 'Alguns colegas estudam à noite para a escola de sargentos — lá, a carreira tem estabilidade.' : 'Sem o ensino médio, a escola de sargentos fica fora de alcance.'}`;
+    },
     opcoes: [
       { id: 'engajar', texto: 'Engajar por mais um ano', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Mais um ano de farda, de formatura às seis e de soldo no fim do mês.', memoria: null }) },
-      { id: 'baixa', texto: 'Dar baixa', resolver: c => ({ texto: 'Você devolveu a farda e saiu pelo portão de sempre, agora sem voltar.', memoria: 'Deu baixa do Exército depois do serviço militar.', efeito: () => { encerrarEmprego(c.v, 'baixa do serviço militar'); marcar(c.v, 'fim_carreira', 'Deu baixa do Exército.', 2); } }) }
+      { id: 'carreira', texto: 'Engajar e estudar para a escola de sargentos', comportamento: { disciplina: 2 }, disponivel: c => (['medio', 'tecnico', 'superior_incompleto', 'superior'].includes(c.v.educacao.escolaridade) && idade(c.v) <= 24 ? true : 'Pede ensino médio e menos de 25 anos.'),
+        resolver: c => ({ texto: 'Apostila no armário do alojamento, estudo depois do toque de silêncio.', memoria: 'No quartel, começou a estudar para seguir carreira.', efeito: () => { fato(c, 'plano_carreira_militar'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 1 }); } }) },
+      { id: 'baixa', texto: 'Dar baixa', resolver: c => ({ texto: 'Você devolveu a farda e saiu pelo portão de sempre, agora sem voltar.', memoria: 'Deu baixa depois do serviço militar.', efeito: () => { encerrarEmprego(c.v, 'baixa do serviço militar'); marcar(c.v, 'fim_carreira', 'Deu baixa do serviço militar.', 2); c.v.fatos['mil_baixa'] = c.v.t; } }) }
     ]
   },
 
@@ -456,17 +467,18 @@ function alistar(c: Ctx, chance: number) {
   if (aptoFisico && c.r.chance(chance)) {
     return {
       texto: 'Na lista de convocados, o seu nome. Um ano de quartel pela frente.',
-      memoria: 'Foi convocado para o serviço militar: um ano no quartel da região.',
+      memoria: c.v.eu.genero === 'masculino' ? 'Foi convocado para o serviço militar: um ano no quartel da região.' : 'Foi incorporada ao serviço militar voluntário: um ano de quartel.'.replace('incorporada', c.g('incorporado', 'incorporada', 'incorporade')),
       relevancia: 'marco' as const,
       efeito: () => {
         const m = c.v.educacao.matricula;
         if (m && !m.trancado) { m.trancado = true; m.tTrancou = c.v.t; escrever(c.v, { texto: 'Trancou o curso para servir.', relevancia: 'cotidiano', tema: 'estudo' }); }
         const oc = ocupacao('soldado_ep');
         contratar(c.v, c.r, oc, 'oportunidade');
-        marcar(c.v, 'ingresso', 'Serviço militar: soldado do Exército.', 2, { trilha: oc.trilha });
+        marcar(c.v, 'ingresso', `Serviço militar: ${nomeOcupacao(c.v, oc)}.`, 2, { trilha: oc.trilha });
       }
     };
   }
+  if (c.v.eu.genero !== 'masculino') return { texto: 'A seleção foi concorrida. O seu nome não saiu na lista de incorporação.', memoria: 'Alistou-se voluntariamente, mas não foi selecionad' + c.g('o', 'a', 'e') + ' para o serviço militar.', relevancia: 'biografia' as const };
   return { texto: 'Dispensado por excesso de contingente. O certificado veio pelo correio.', memoria: 'Fez o alistamento militar e foi dispensado por excesso de contingente.', relevancia: 'cotidiano' as const };
 }
 

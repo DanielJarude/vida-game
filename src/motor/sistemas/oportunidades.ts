@@ -29,6 +29,7 @@ import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
 import { voltarAEstudar } from './escola';
 import { anoDe } from '../tempo';
+import { iniciarRural } from './rural';
 import { flex, ge } from '../texto';
 
 export const LIMITE_OPORTUNIDADES = 4;
@@ -217,7 +218,7 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
   v.caminhos.oportunidades = v.caminhos.oportunidades.filter(x => x.id !== id);
   const oc = o.ocupacaoId ? ocupacaoOuNula(o.ocupacaoId) : undefined;
   switch (o.tipo) {
-    case 'aprendiz': case 'estagio': case 'indicacao': case 'vaga': case 'proposta': {
+    case 'aprendiz': case 'estagio': case 'indicacao': case 'vaga': case 'proposta': case 'reinsercao': {
       if (!oc) return { texto: 'A vaga sumiu.' };
       if (o.pessoaId) lembrarCom(v, o.pessoaId, `Indicou você para um trabalho: ${nomeOcupacao(v, oc)}.`, 'apoio', 2);
       if (porContaPropria(oc)) {
@@ -256,6 +257,7 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       if (!oc) return { texto: 'O convite não se confirmou.' };
       if (oc.id === 'jogador_futebol' || oc.id === 'atleta') { v.fatos['contrato_nivel'] = o.bonus ?? 1; return { texto: '', decisao: 'esp_contrato' }; }
       const e = contratar(v, r, oc, 'oportunidade');
+      if (oc.id === 'produtor_rural') iniciarRural(v, o.pessoaId ? 'familia' : 'arrendada');
       if (o.pessoaId) lembrarCom(v, o.pessoaId, `Passou para você: ${nomeOcupacao(v, oc)}.`, 'trabalho', 2);
       if (oc.id === 'musico_profissional' || oc.id === 'ator' || oc.id === 'ator_reconhecido' || oc.id === 'bailarino' || oc.id === 'criador_conteudo' || oc.id === 'escritor') {
         marcar(v, 'profissional', `Passou a viver da arte: ${nomeOcupacao(v, oc)}, aos ${idade(v)}.`, 3, { ocupacaoId: oc.id, dominio: oc.habilidade?.dominio });

@@ -347,6 +347,12 @@ export interface Emprego {
   clientela?: number;
   /** Desde quando está neste posto (promoção reinicia; `tInicio` guarda a entrada no emprego). */
   tPosto?: number;
+  /** Jornada reduzida por escolha (para cuidar de alguém): menos renda, mais semana. */
+  reduzida?: boolean;
+  /** Formalizado como MEI (quem trabalhava na informalidade passa a contribuir). */
+  mei?: boolean;
+  /** Última atualização profissional (curso que acompanhou uma mudança do ofício). */
+  tAtualizacao?: number;
 }
 
 export interface Candidatura {
@@ -374,6 +380,22 @@ export interface Trabalho {
   /** Horas extras neste ano (escolha). */
   horasExtras: boolean;
   desempregadoDesde?: number;
+  /**
+   * Uma pausa (ou redução) do trabalho pago para cuidar de alguém ou da casa.
+   * Não é profissão: é uma trajetória de vida, com custo e sentido.
+   */
+  pausa?: PausaDeCuidado;
+}
+
+export interface PausaDeCuidado {
+  motivo: 'filhos' | 'pais' | 'parceiro' | 'familiar' | 'casa';
+  /** Quem recebe o cuidado (quando é uma pessoa). */
+  pessoaId?: string;
+  tInicio: number;
+  /** Parou de vez ou reduziu a jornada. */
+  intensidade: 'parcial' | 'total';
+  /** Paga o INSS como contribuinte facultativo durante a pausa. */
+  facultativo?: boolean;
 }
 
 /* ---------------------------------------------------------------- Dinheiro */
@@ -588,6 +610,8 @@ export interface Moradia {
   bairro?: string;
   /** O contrato de aluguel aceita animais. */
   aceitaPet?: boolean;
+  /** Imóvel funcional (vila militar): cedido enquanto durar o vínculo. */
+  funcional?: boolean;
   /** Com quantas pessoas divide o aluguel (república, dividir apartamento). */
   divide?: number;
   /** Aluguel atrasado (meses). */
@@ -732,7 +756,8 @@ export type TipoMarcaCaminho =
   | 'comecou' | 'destaque' | 'conquista' | 'fracasso' | 'oportunidade' | 'estreia' | 'abandono' | 'retomada'
   | 'primeiro_emprego' | 'formacao' | 'ingresso' | 'promocao' | 'demissao' | 'mudanca_carreira'
   | 'aprovacao' | 'reprovacao' | 'profissional' | 'fim_carreira' | 'negocio_aberto' | 'negocio_fechado'
-  | 'volta_estudos' | 'aposentadoria' | 'lideranca' | 'estagnacao' | 'mudanca_cidade';
+  | 'volta_estudos' | 'aposentadoria' | 'lideranca' | 'estagnacao' | 'mudanca_cidade'
+  | 'transferencia' | 'reserva' | 'pausa' | 'retorno' | 'prisao' | 'saida_prisao' | 'recomeco';
 
 /** Um marco do caminho profissional/educacional, estruturado (dado para a Linha da Vida). */
 export interface MarcaCaminho {
@@ -749,7 +774,8 @@ export interface MarcaCaminho {
 
 export type TipoOportunidade =
   | 'vaga' | 'indicacao' | 'aprendiz' | 'estagio' | 'temporario' | 'peneira' | 'seletiva' | 'banda' | 'grupo'
-  | 'clientela' | 'convite' | 'retomar' | 'bolsa' | 'selecao_tecnico' | 'proposta';
+  | 'clientela' | 'convite' | 'retomar' | 'bolsa' | 'selecao_tecnico' | 'proposta'
+  | 'edital_cultura' | 'reinsercao' | 'atualizacao' | 'funcao';
 
 /**
  * Uma porta que a vida abriu AGORA, por um motivo (a escola divulgou, um
@@ -885,8 +911,70 @@ export interface Caminhos {
   esporte?: CarreiraEsportiva;
   arte?: ProjetoArtistico;
   negocio?: Negocio;
+  /** Carreira nas Forças Armadas (força, quadro, especialidade, guarnição). */
+  militar?: CarreiraMilitar;
+  /** Produção rural: de onde vem a terra, o que se produz, como foi a safra. */
+  rural?: VidaRural;
+  /** Envolvimento com atividade ilegal (abstrato: risco e consequência, nunca procedimento). */
+  envolvimento?: Envolvimento;
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
+}
+
+export type Forca = 'exercito' | 'marinha' | 'aeronautica';
+
+/**
+ * Carreira militar: a mesma arquitetura para as três Forças (formação,
+ * antiguidade, cursos, transferências, reserva), com nomes e lugares próprios.
+ */
+export interface CarreiraMilitar {
+  forca: Forca;
+  /** Temporário (serviço inicial, engajamento), praça de carreira ou oficial. */
+  quadro: 'temporario' | 'praca' | 'oficial';
+  tIngresso: number;
+  /** Especialidade escolhida na formação (o que se leva para a vida civil). */
+  especialidade?: Especialidade;
+  /** Onde serve agora e desde quando (transferências vêm de tempos em tempos). */
+  guarnicao: string;
+  tGuarnicao: number;
+  /** Cursos de carreira feitos (aperfeiçoamento, altos estudos). */
+  cursos: string[];
+  transferencias: number;
+  /** Último teste físico em que não passou (atrasa promoção). */
+  tafFalhou?: number;
+}
+
+export type Especialidade = 'combatente' | 'saude' | 'manutencao' | 'comunicacoes' | 'administracao' | 'musica';
+
+export interface VidaRural {
+  terra: 'familia' | 'arrendada' | 'propria';
+  cultura: 'lavoura' | 'leite' | 'horta' | 'misto';
+  cooperativa: boolean;
+  tInicio: number;
+  ultimaSafra?: 'boa' | 'normal' | 'ruim';
+  /** Anos seguidos de safra ruim (o que leva a vender, arrendar ou largar). */
+  anosRuins: number;
+}
+
+/**
+ * Envolvimento com atividade ilegal. O jogo trabalha com oportunidade →
+ * decisão → risco → consequência; nada aqui descreve como fazer.
+ */
+export type CategoriaIlicita = 'pequenos' | 'patrimonial' | 'fraude' | 'mercado' | 'grupo';
+
+export interface Envolvimento {
+  categoria: CategoriaIlicita;
+  /** 1 de vez em quando · 2 frequente · 3 preso a um grupo. */
+  nivel: 1 | 2 | 3;
+  tInicio: number;
+  /** Quanto o que se faz está à vista (0..100). Cresce com o tempo e a escalada. */
+  exposicao: number;
+  /** Quem trouxe (a pessoa da vida que abriu a porta). */
+  contatoId?: string;
+  /** Dinheiro que entrou por esse caminho (para a biografia e as métricas). */
+  ganhos: number;
+  /** Parou (e desde quando). O passado não some: a exposição ainda pode chegar. */
+  parou?: number;
 }
 
 /* ---------------------------------------------------------------------- Vida */
@@ -914,7 +1002,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 10;
+  versao: 11;
   id: string;
   rng: number;
   seq: number;
@@ -945,7 +1033,25 @@ export interface Vida {
   luto: Luto[];
   /** O que a pessoa pratica, conquista e tenta: frentes, marcas, portas abertas, carreiras especiais. */
   caminhos: Caminhos;
+  /** Antecedentes, processo em andamento, pena. Ausente = nunca teve problema com a Justiça. */
+  justica?: Justica;
   morte?: { t: number; causa: string; heranca?: Heranca };
+}
+
+/**
+ * Justiça, na medida mínima: processo, pena, antecedentes, saída. Não é um
+ * simulador jurídico; é o que muda a vida de quem passa por isso.
+ */
+export interface Justica {
+  antecedentes: { t: number; categoria: CategoriaIlicita; desfecho: 'socioeducativa' | 'alternativa' | 'prisao' | 'absolvicao'; anos?: number }[];
+  /** Processo em andamento (a sentença sai em `tJulgamento`). */
+  processo?: { tInicio: number; tJulgamento: number; categoria: CategoriaIlicita; defesa: 'publica' | 'particular' };
+  /** Pena de prisão em cumprimento. */
+  prisao?: { tInicio: number; tFim: number; regime: 'fechado' | 'semiaberto' };
+  /** Pena alternativa em cumprimento (prestação de serviços). */
+  alternativa?: { tFim: number };
+  /** Saiu da prisão em (a volta tem suas próprias portas e barreiras). */
+  tSaida?: number;
 }
 
 /** O que ficou para quem ficou (simplificado; não é inventário jurídico). */

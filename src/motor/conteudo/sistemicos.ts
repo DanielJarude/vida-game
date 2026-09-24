@@ -9,6 +9,7 @@
 import { disponivel as guardado, pagar as pagarGuardado, parcelaPrice, rendaPropriaMensal } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
+import { iniciarPausa, podeReduzir } from '../sistemas/pausa';
 import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao } from './efeitos';
 import { idade, idadePessoa, lembrarCom, marcarFato, temFato } from '../nucleo';
 import { iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
@@ -332,6 +333,8 @@ export const SISTEMICOS: Conteudo[] = [
     opcoes: [
       { id: 'trazer', texto: 'Trazer para morar com você', disponivel: c => (c.v.moradia.tipo === 'pais' ? false : c.v.moradia.tipo === 'republica' || c.v.moradia.tipo === 'cedida' || c.v.moradia.padrao <= 2 ? 'Onde você mora não cabe mais ninguém.' : true), comportamento: { familia: 2, generosidade: 1 },
         resolver: c => ({ texto: `${c.p.pai.nome} veio com duas malas e uma caixa de fotografias.`, memoria: `Levou ${c.p.pai.nome} para morar junto na velhice.`, relevancia: 'marco', efeito: () => { const vin = c.v.vinculos[c.p.pai.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.pai.municipioId = c.v.moradia.municipioId; prox(c, 'pai', 12); estresse(c, 10); for (const par of P.conjuge(c.v)) tensaoPessoa(c, par.id, 15); } }) },
+      { id: 'parar', texto: 'Parar (ou reduzir) o trabalho e cuidar de perto', comportamento: { familia: 2, empatia: 1 }, disponivel: c => (c.v.trabalho.pausa ? false : c.v.moradia.tipo === 'republica' || c.v.moradia.tipo === 'cedida' || c.v.moradia.padrao <= 1 ? 'Onde você mora não cabe mais ninguém.' : true),
+        resolver: c => ({ texto: `${c.p.pai.nome} veio morar com você. O trabalho ficou menor para caber.`, memoria: `Reduziu o trabalho e levou ${c.p.pai.nome} para morar junto, para cuidar de perto.`, relevancia: 'marco', efeito: () => { const vin = c.v.vinculos[c.p.pai.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.pai.municipioId = c.v.moradia.municipioId; prox(c, 'pai', 14); iniciarPausa(c.v, 'pais', podeReduzir(c.v) === true ? 'parcial' : 'total', c.p.pai.id); } }) },
       { id: 'cuidadora', texto: 'Pagar uma cuidadora', comportamento: { familia: 1 },
         resolver: c => ({ texto: 'Uma cuidadora passou a dormir lá. O custo entrou no orçamento de todo mês.', memoria: `Contratou uma cuidadora para ${c.p.pai.nome}.`, efeito: () => { fato(c, `paga_cuidadora_${c.p.pai.id}`); prox(c, 'pai', 4); } }) },
       { id: 'irmaos', texto: 'Dividir a responsabilidade com os irmãos', disponivel: c => (P.irmao(c.v).length > 0 ? true : 'Você não tem irmãos para dividir.'),

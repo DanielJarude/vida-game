@@ -57,6 +57,11 @@ function sozinha(i = 30, semente = 21, genero: Genero = 'feminino'): Vida {
   v.educacao.cursinho = false;
   v.rotinas = [];
   for (const k of Object.keys(v.fatos)) if (/^(ajuda_mensal|paga_cuidadora|casa_repouso|paga_faculdade|aposta)/.test(k)) delete v.fatos[k];
+  // "Sozinha": morando só, de aluguel (a vida sorteada pode ainda estar na casa dos pais).
+  if (v.moradia.tipo !== 'aluguel') v.moradia = { tipo: 'aluguel', municipioId: v.moradia.municipioId, modeloId: 'kitnet', aluguel: 1200, padrao: 2, tInicio: v.t, aceitaPet: true };
+  v.justica = undefined;
+  v.caminhos.envolvimento = undefined;
+  v.trabalho.pausa = undefined;
   v.moradia = { tipo: 'aluguel', municipioId: v.moradia.municipioId, modeloId: 'apto_1q', aluguel: 1200, padrao: 3, tInicio: v.t, aceitaPet: true };
   v.anoAtual = { acoes: [] };
   return v;
@@ -288,7 +293,8 @@ describe('moradia', () => {
   it('dividir com um amigo: metade do aluguel', () => {
     const v = sozinha(24, 61);
     const amigo = criarPessoa(v, criarRng(4), { idade: 25, genero: 'masculino', municipioId: v.moradia.municipioId });
-    vincular(v, amigo, { origem: 'trabalho', proximidade: 70, convivio: [] });
+    // O amigo mais próximo (a vida sorteada pode ter outros amigos).
+    vincular(v, amigo, { origem: 'trabalho', proximidade: 100, convivio: [] });
     v.vinculos[amigo.id].estagio = 'amigo_proximo';
     const o = ofertasDeImoveis(v, 'aluguel').find(x => x.quartos >= 2 && x.aluguel < 5000)!;
     const d = executar(v, { tipo: 'trocar_moradia', ofertaId: o.id, dividirCom: amigo.id }).vida;
@@ -810,14 +816,14 @@ describe('renda com teto: o bug do milionário por aumento', () => {
 
 describe('save v10', () => {
   it('saves v9 reais migram para v10: reserva e ações viram aplicações, valores preservados, a vida continua 5 anos e volta a ler', () => {
-    expect(VERSAO_SAVE).toBe(10);
+    expect(VERSAO_SAVE).toBe(11);
     for (const nome of ['save-v9-adolescente-pet.json', 'save-v9-jovem-carro.json', 'save-v9-familia-financiada.json', 'save-v9-endividado.json', 'save-v9-aposentada-acoes.json']) {
       const antes = JSON.parse(fixture(nome));
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');
       if (r.tipo !== 'ok') continue;
       const v = r.vida;
-      expect(v.versao).toBe(10);
+      expect(v.versao).toBe(11);
       expect(r.migrado).toBe(true);
       expect(v.financas.conta).toBe(antes.financas.conta);
       const aplicado = v.financas.investimentos.reduce((s, a) => s + a.valor, 0);
@@ -839,7 +845,7 @@ describe('save v10', () => {
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');
       if (r.tipo === 'ok') {
-        expect(r.vida.versao).toBe(10);
+        expect(r.vida.versao).toBe(11);
         expect(Array.isArray(r.vida.financas.investimentos)).toBe(true);
         let w = r.vida; if (w.momento) w = responder(w);
         w = avancarAno(w).vida;
