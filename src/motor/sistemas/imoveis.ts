@@ -49,7 +49,7 @@ export function processarImoveis(v: Vida, r: Rng, ec?: AnoEconomico): void {
       const custo = Math.round(Math.max(2500, b.valor * x.pct) / 100) * 100;
       b.problema = { id: `pb${v.seq++}`, texto: x.texto, custo, desde: v.t, gravidade: 2, adiado: 0 };
       const aqui = v.moradia.imovelId === b.id;
-      escrever(v, { texto: aqui ? `A casa começou a cobrar os anos: ${x.texto}. O orçamento do conserto veio em ${fmt(custo)}.` : `${b.nome.charAt(0).toUpperCase() + b.nome.slice(1)} alugado precisa de reparo: ${x.texto} (${fmt(custo)}).`, relevancia: 'cotidiano', tema: 'casa', tom: 'ruim' });
+      escrever(v, { texto: aqui ? `A casa começou a cobrar os anos: ${x.texto}. O orçamento do conserto veio em ${fmt(custo)}.` : `${b.nome.charAt(0).toUpperCase() + b.nome.slice(1)} ${b.nome.startsWith('casa') || b.nome.startsWith('kitnet') ? 'alugada' : 'alugado'} precisa de reparo: ${x.texto} (${fmt(custo)}).`, relevancia: 'cotidiano', tema: 'casa', tom: 'ruim' });
     }
   }
 }
@@ -110,9 +110,10 @@ export function executarImovel(v: Vida, b: Imovel, oque: AcaoImovel): string {
 
 /** Quantos quartos a família que mora junto precisa (o casal num, até duas crianças por quarto). */
 export function quartosNecessarios(v: Vida): number {
+  // Quem iria junto numa mudança: a parceria e os filhos (não a família de origem).
   const junto = moraCom(v);
-  const criancas = junto.filter(p => idadePessoa(v, p) < 18 && v.vinculos[p.id]?.parentesco === 'filho').length;
-  const outrosAdultos = junto.filter(p => idadePessoa(v, p) >= 18 && !v.vinculos[p.id]?.romance).length;
+  const criancas = junto.filter(p => idadePessoa(v, p) < 18 && ['filho', 'enteado'].includes(v.vinculos[p.id]?.parentesco ?? '')).length;
+  const outrosAdultos = junto.filter(p => idadePessoa(v, p) >= 18 && !v.vinculos[p.id]?.romance && ['filho', 'enteado', 'sogro'].includes(v.vinculos[p.id]?.parentesco ?? '')).length;
   return 1 + Math.ceil(criancas / 2) + outrosAdultos;
 }
 

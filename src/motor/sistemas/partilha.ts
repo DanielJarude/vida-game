@@ -26,7 +26,8 @@ export function comecarVidaEmComum(v: Vida, p: Pessoa): void {
   const chave = `uniao_${p.id}`;
   if (v.fatos[chave] !== undefined) return;
   v.fatos[chave] = v.t;
-  v.fatos[`patrimonio_uniao_${p.id}`] = Math.max(0, balanco(v).liquido - (v.fatos['herdado_total'] ?? 0));
+  v.fatos[`patrimonio_uniao_${p.id}`] = Math.max(0, balanco(v).liquido);
+  v.fatos[`herdado_ate_uniao_${p.id}`] = v.fatos['herdado_total'] ?? 0;
 }
 
 /** Quanto o casal construiu junto até agora (a metade disso é da outra pessoa, numa separação). */

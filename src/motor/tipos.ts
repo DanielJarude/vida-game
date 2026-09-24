@@ -402,6 +402,8 @@ export interface Divida {
   prazo?: number;
   /** Meses de parcela sem pagar (0 = em dia). É o que faz uma obrigação virar problema. */
   atraso?: number;
+  /** Desde quando está atrasada (as consequências pedem tempo: ninguém perde a casa no primeiro mês). */
+  atrasoDesde?: number;
 }
 
 /** Um episódio na vida de um bem (a compra, o conserto, a mudança). Só o que importa. */
@@ -590,6 +592,7 @@ export interface Moradia {
   divide?: number;
   /** Aluguel atrasado (meses). */
   atraso?: number;
+  atrasoDesde?: number;
 }
 
 /** A casa de origem enquanto o jogador mora com a família. */

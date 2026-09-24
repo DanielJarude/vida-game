@@ -618,8 +618,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const primeira = !v.financas.bens.some(b => b.tipo === 'imovel' && b.id !== id && !b.herdado) && !temFato(v, 'comprou_imovel');
       marcarFato(v, 'comprou_imovel');
       if (a.morar) morarNoImovel(v, id);
-      const artigoM = m.nome.startsWith('casa') ? 'a' : 'o';
-      escrever(v, { texto: `${primeira ? `Comprou ${artigoM === 'a' ? 'a primeira casa' : 'o primeiro imóvel'}: ` : 'Comprou '}${artigoM === 'a' ? 'uma' : 'um'} ${m.nome} ${o.bairro}${financiou ? `, financiad${artigoM} em ${Math.round(cond.meses / 12)} anos${cond.social ? ' por um programa habitacional' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: primeira || a.morar ? 'marco' : 'biografia', tema: 'casa', tom: 'bom', escolha: true });
+      const artigoM = m.nome.startsWith('casa') || m.nome.startsWith('kitnet') ? 'a' : 'o';
+      escrever(v, { texto: `${primeira ? `Comprou ${m.nome.startsWith('casa') ? 'a primeira casa' : 'o primeiro imóvel'}: ` : 'Comprou '}${artigoM === 'a' ? 'uma' : 'um'} ${m.nome} ${o.bairro}${financiou ? `, financiad${artigoM} em ${Math.round(cond.meses / 12)} anos${cond.social ? ' por um programa habitacional' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: primeira || a.morar ? 'marco' : 'biografia', tema: 'casa', tom: 'bom', escolha: true });
       return ok(a.morar ? 'A chave é sua.' : `Imóvel comprado. Alugado, deve render ${fmt(alugadoPor ?? 0)} por mês.`, 'bom');
     }
     case 'vender_bem': {

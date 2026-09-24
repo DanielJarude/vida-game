@@ -45,9 +45,10 @@ describe('dinheiro com consequência', () => {
     expect(v.financas.negativado).toBe(false);
   });
 
-  it('aluguel atrasado há quatro meses ou mais: despejo (e a dívida do aluguel não some)', () => {
+  it('aluguel atrasado (quatro meses ou mais, há um ano): despejo — e a dívida do aluguel não some', () => {
     const v = adultaSozinha();
     v.moradia.atraso = 5;
+    v.moradia.atrasoDesde = v.t - 12;
     processarObrigacoes(v);
     expect(v.financas.dividas.some(d => /aluguel/.test(d.descricao))).toBe(true);
     expect(['pais', 'cedida']).toContain(v.moradia.tipo);

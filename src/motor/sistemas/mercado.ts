@@ -17,7 +17,6 @@ import { anoDe } from '../tempo';
 import { economiaLocal, municipio } from '../dados/lugares';
 import { MORADIAS, VEICULOS, depreciacao, modeloMoradia, modeloVeiculo, precoImovel, type ModeloMoradia, type ModeloVeiculo } from '../dados/bens';
 import { indiceImoveis } from './economia';
-import { NOMES_PET_CACHORRO, NOMES_PET_GATO } from '../dados/nomes';
 
 function rngDe(v: Vida, chave: string): Rng {
   let h = (v.economia?.semente ?? 1) >>> 0;
@@ -180,23 +179,56 @@ export interface AnimalDoAbrigo {
   historia: string;
 }
 
-const JEITOS_CAO = ['agitado, quer brincar o tempo todo', 'calmo, deita no pé de quem estiver perto', 'desconfiado no começo, grudado depois', 'late para tudo que passa', 'come qualquer coisa que cair no chão', 'dorme metade do dia'];
-const JEITOS_GATO = ['tímida, gosta de colo quando ninguém está olhando', 'curioso, entra em toda caixa', 'independente, aparece para comer e sumir', 'conversa miando', 'dorme no sol da janela', 'ciumento de quem chega'];
-const HISTORIAS = ['resgatado de um terreno baldio', 'devolvido por uma família que se mudou', 'nasceu no abrigo', 'achado numa caixa na porta de uma padaria', 'recolhido da rua depois de um atropelamento, já recuperado', 'de uma ninhada que ninguém quis'];
+// [masculino, feminino]
+const JEITOS_CAO: [string, string][] = [
+  ['agitado, quer brincar o tempo todo', 'agitada, quer brincar o tempo todo'],
+  ['calmo, deita no pé de quem estiver perto', 'calma, deita no pé de quem estiver perto'],
+  ['desconfiado no começo, grudado depois', 'desconfiada no começo, grudada depois'],
+  ['late para tudo que passa', 'late para tudo que passa'],
+  ['come qualquer coisa que cair no chão', 'come qualquer coisa que cair no chão'],
+  ['dorminhoco, dorme metade do dia', 'dorminhoca, dorme metade do dia']
+];
+const JEITOS_GATO: [string, string][] = [
+  ['tímido, gosta de colo quando ninguém está olhando', 'tímida, gosta de colo quando ninguém está olhando'],
+  ['curioso, entra em toda caixa', 'curiosa, entra em toda caixa'],
+  ['independente, aparece para comer e some', 'independente, aparece para comer e some'],
+  ['conversa miando', 'conversa miando'],
+  ['dorme no sol da janela', 'dorme no sol da janela'],
+  ['ciumento de quem chega', 'ciumenta de quem chega']
+];
+const HISTORIAS: [string, string][] = [
+  ['resgatado de um terreno baldio', 'resgatada de um terreno baldio'],
+  ['devolvido por uma família que se mudou', 'devolvida por uma família que se mudou'],
+  ['nasceu no abrigo', 'nasceu no abrigo'],
+  ['achado numa caixa na porta de uma padaria', 'achada numa caixa na porta de uma padaria'],
+  ['recolhido da rua depois de um atropelamento, já recuperado', 'recolhida da rua depois de um atropelamento, já recuperada'],
+  ['de uma ninhada que ninguém quis', 'de uma ninhada que ninguém quis']
+];
+const NOMES: Record<'cachorro' | 'gato', [string[], string[]]> = {
+  cachorro: [['Thor', 'Bidu', 'Bob', 'Scooby', 'Fred', 'Tobias', 'Faísca', 'Pingo'], ['Mel', 'Luna', 'Pretinha', 'Nina', 'Belinha', 'Paçoca', 'Pipoca', 'Estrela']],
+  gato: [['Frajola', 'Mingau', 'Salem', 'Tom', 'Chico', 'Garfield', 'Café'], ['Mia', 'Nala', 'Amora', 'Jade', 'Mimi', 'Lua', 'Canela']]
+};
+
+/** Um nome de bicho que combina com o gênero dele. */
+export const nomeDePet = (r: Rng, especie: 'cachorro' | 'gato', genero: 'masculino' | 'feminino' | 'nao_binario') => r.pick(NOMES[especie][genero === 'feminino' ? 1 : 0]);
 
 export function animaisDoAbrigo(v: Vida): AnimalDoAbrigo[] {
   const ano = anoDe(v.t);
   const r = rngDe(v, `abrigo:${ano}:${v.moradia.municipioId}`);
   const n = r.int(3, 5);
   const out: AnimalDoAbrigo[] = [];
+  const usados = new Set<string>();
   for (let k = 0; k < n; k++) {
     const especie = r.chance(0.58) ? 'cachorro' : 'gato';
     const genero = r.chance(0.5) ? 'masculino' : 'feminino';
+    const g = genero === 'feminino' ? 1 : 0;
     const idade = r.weighted([0, 1, 2, 3, 4, 6, 8, 10], x => (x === 0 ? 3 : x <= 3 ? 2 : 1))!;
     const porte = especie === 'gato' ? 'pequeno' : r.weighted(['pequeno', 'medio', 'grande'] as const, p => (p === 'medio' ? 2 : 1))!;
-    const jeito = r.pick(especie === 'cachorro' ? JEITOS_CAO : JEITOS_GATO);
-    const nome = r.pick(especie === 'cachorro' ? NOMES_PET_CACHORRO : NOMES_PET_GATO);
-    out.push({ id: `ab-${ano}-${k}`, especie, nome, genero, idade, porte, jeito: genero === 'feminino' ? jeito : jeito.replace('tímida', 'tímido'), historia: genero === 'feminino' ? r.pick(HISTORIAS).replace(/(resgatad|devolvid|achad|recolhid)o/, '$1a') : r.pick(HISTORIAS) });
+    const jeito = r.pick(especie === 'cachorro' ? JEITOS_CAO : JEITOS_GATO)[g];
+    let nome = r.pick(NOMES[especie][g]);
+    for (let t = 0; t < 5 && usados.has(nome); t++) nome = r.pick(NOMES[especie][g]);
+    usados.add(nome);
+    out.push({ id: `ab-${ano}-${k}`, especie, nome, genero, idade, porte, jeito, historia: r.pick(HISTORIAS)[g] });
   }
   return out;
 }

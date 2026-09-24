@@ -76,7 +76,7 @@ function sortearProblema(v: Vida, r: Rng, b: Veiculo): ProblemaBem {
   const grave = b.estado < 40 || anosDoVeiculo(v, b) > 12;
   const p = r.weighted(lista, x => (x.gravidade === 3 ? (grave ? 1.2 : 0.35) : x.gravidade === 2 ? 1 : 1.4))!;
   const fator = m.id === 'carro_luxo' ? 2.4 : m.id === 'carro_suv_grande' ? 1.4 : m.id === 'carro_suv' || m.id === 'carro_sedan' ? 1.2 : 1;
-  const custo = Math.round(r.int(p.custo[0], p.custo[1]) * fator * Math.sqrt(economiaLocal(v.moradia.municipioId).custo) / 10) * 10;
+  const custo = Math.round(Math.min(r.int(p.custo[0], p.custo[1]) * fator * Math.sqrt(economiaLocal(v.moradia.municipioId).custo), m.preco * 0.45) / 10) * 10;
   return { id: `pb${v.seq++}`, texto: p.texto, custo, desde: v.t, gravidade: p.gravidade, adiado: 0 };
 }
 
@@ -97,10 +97,13 @@ export function processarVeiculos(v: Vida, r: Rng): void {
       const p = b.problema;
       if (v.t - p.desde >= 12) {
         p.custo = Math.round(p.custo * 1.25 / 10) * 10;
-        if (p.gravidade < 3 && !b.parado && r.chance(p.gravidade === 1 ? 0.35 : 0.4)) {
+        // Bicicleta não "quebra de vez": o problema fica, mas não vira motor fundido.
+        const teto = m.categoria === 'bicicleta' ? 2 : 3;
+        p.custo = Math.min(p.custo, Math.round(m.preco * 0.45 / 10) * 10);
+        if (p.gravidade < teto && !b.parado && r.chance(p.gravidade === 1 ? 0.35 : 0.4)) {
           p.gravidade = (p.gravidade + 1) as 1 | 2 | 3;
           if (p.gravidade === 3) {
-            p.custo = Math.round(Math.max(p.custo * 1.6, 3000) / 10) * 10;
+            p.custo = Math.round(Math.min(Math.max(p.custo * 1.6, m.preco * 0.05), m.preco * 0.45) / 10) * 10;
             escrever(v, { texto: `${cap(textoVeiculo(b))} parou de vez: o que era ${p.texto} virou coisa grande. Na oficina, ${fmt(p.custo)}.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'ruim' });
             abalar(v, `${textoVeiculo(b)} parado`, -2, 5);
           }

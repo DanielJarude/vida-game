@@ -520,12 +520,13 @@ function narrarAperto(v: Vida): void {
 function quitada(v: Vida, d: Divida): void {
   if (d.tipo === 'financiamento_imovel') {
     const im = v.financas.bens.find(b => b.id === d.bemId);
-    escrever(v, { texto: `Pagou a última parcela ${im && v.moradia.imovelId === im.id ? 'da casa' : 'do imóvel'}. É todo seu${im?.dono === 'casal' ? ' — de vocês' : ''}.`, relevancia: 'marco', tema: 'casa', tom: 'bom' });
+    escrever(v, { texto: `Pagou a última parcela ${im && v.moradia.imovelId === im.id ? 'da casa' : 'do imóvel'}. ${im?.dono === 'casal' ? 'Agora é de vocês, sem banco no meio.' : 'Agora é todo seu.'}`, relevancia: 'marco', tema: 'casa', tom: 'bom' });
     if (im) (im.historia ??= []).push({ t: v.t, texto: 'Quitado.' });
   } else if (d.tipo === 'financiamento_veiculo') {
     const vei = v.financas.bens.find(b => b.id === d.bemId);
     if (vei) (vei.historia ??= []).push({ t: v.t, texto: 'Última parcela paga.' });
-  } else if (d.tipo === 'cartao' && temFato(v, 'teve_divida_cartao')) {
+  } else if (d.tipo === 'cartao' && temFato(v, 'teve_divida_cartao') && d.descricao.startsWith('Cartão') && v.fatos['zerou_cartao'] !== v.t) {
+    v.fatos['zerou_cartao'] = v.t;
     escrever(v, { texto: 'Conseguiu zerar a dívida do cartão.', relevancia: 'biografia', tema: 'dinheiro', tom: 'bom' });
   }
 }
@@ -546,9 +547,9 @@ function negativar(v: Vida, texto: string): void {
 function pagarAtrasos(v: Vida): void {
   const f = v.financas;
   const itens: { valor: number; quitar: () => void }[] = [];
-  if ((v.moradia.atraso ?? 0) > 0) itens.push({ valor: v.moradia.atraso! * v.moradia.aluguel, quitar: () => { v.moradia.atraso = 0; } });
+  if ((v.moradia.atraso ?? 0) > 0) itens.push({ valor: v.moradia.atraso! * v.moradia.aluguel, quitar: () => { v.moradia.atraso = 0; v.moradia.atrasoDesde = undefined; } });
   // O saldo da dívida já inclui as parcelas que ficaram para trás: pagar o atraso abate dele.
-  for (const d of f.dividas) if ((d.atraso ?? 0) > 0) { const valor = Math.round(d.atraso! * d.parcela); itens.push({ valor, quitar: () => { d.atraso = 0; d.saldo = Math.max(0, d.saldo - valor); } }); }
+  for (const d of f.dividas) if ((d.atraso ?? 0) > 0) { const valor = Math.round(d.atraso! * d.parcela); itens.push({ valor, quitar: () => { d.atraso = 0; d.atrasoDesde = undefined; d.saldo = Math.max(0, d.saldo - valor); } }); }
   for (const it of itens.sort((a, b) => a.valor - b.valor)) {
     if (f.conta < it.valor) continue;
     f.conta -= it.valor;
@@ -588,7 +589,7 @@ function cobrirRombo(v: Vida, r: Rng): void {
     }
     const antes = cartao.saldo;
     cartao.saldo += Math.round(noCredito);
-    if (!temFato(v, 'teve_divida_cartao')) {
+    if (!temFato(v, 'teve_divida_cartao') && cartao.saldo >= 300) {
       marcarFato(v, 'teve_divida_cartao');
       escrever(v, { texto: `As contas não fecharam e o buraco foi para o cartão de crédito: ${fmt(cartao.saldo)} rodando a juros altos.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
     } else if (antes < 20000 && cartao.saldo >= 20000) {
@@ -604,8 +605,8 @@ function cobrirRombo(v: Vida, r: Rng): void {
   const obrigacoesMes = parceladas.reduce((s, d) => s + d.parcela, 0) + aluguel;
   if (obrigacoesMes > 0) {
     const meses = Math.min(12, Math.round(falta / obrigacoesMes * 10) / 10);
-    for (const d of parceladas) { d.atraso = Math.round(((d.atraso ?? 0) + meses) * 10) / 10; d.saldo += Math.round(d.parcela * meses * 1.02); }
-    if (aluguel) v.moradia.atraso = Math.round(((v.moradia.atraso ?? 0) + meses) * 10) / 10;
+    for (const d of parceladas) { if (!(d.atraso ?? 0)) d.atrasoDesde = v.t; d.atraso = Math.round(((d.atraso ?? 0) + meses) * 10) / 10; d.saldo += Math.round(d.parcela * meses * 1.02); }
+    if (aluguel) { if (!(v.moradia.atraso ?? 0)) v.moradia.atrasoDesde = v.t; v.moradia.atraso = Math.round(((v.moradia.atraso ?? 0) + meses) * 10) / 10; }
     if (!temFato(v, 'teve_atraso')) {
       marcarFato(v, 'teve_atraso');
       escrever(v, { texto: `Pela primeira vez, as parcelas${aluguel ? ' e o aluguel' : ''} atrasaram. Chegou a primeira carta de cobrança.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });

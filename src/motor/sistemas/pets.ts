@@ -72,7 +72,7 @@ export function adotarPet(v: Vida, r: Rng, a: Omit<AnimalDoAbrigo, 'id'>, origem
   const bicho = a.especie === 'gato' ? flex(a.genero, 'um gato', 'uma gata') : flex(a.genero, 'um cachorro', 'uma cachorra');
   const idadeTxt = a.idade === 0 ? 'filhote' : `de ${a.idade} ${a.idade === 1 ? 'ano' : 'anos'}`;
   const como = origem === 'abrigo' ? `no abrigo${a.historia ? ` (${a.historia})` : ''}` : origem === 'doacao' ? `de ${deQuem ?? 'um conhecido'}, que não podia ficar` : origem === 'ninhada' ? `de uma ninhada${deQuem ? ` de ${deQuem}` : ''}` : origem === 'rua' ? 'da rua: apareceu na porta e foi ficando' : 'de um criador';
-  escrever(v, { texto: `${a.nome} chegou: ${bicho} ${idadeTxt}, adotad${a.genero === 'feminino' ? 'a' : 'o'} ${como}. ${cap(a.jeito)}.`, relevancia: 'biografia', tema: 'casa', tom: 'bom', escolha: origem !== 'rua', pessoas: [pet.id] });
+  escrever(v, { texto: `${a.nome} chegou: ${bicho} ${idadeTxt}, ${origem === 'rua' ? 'que veio' : `adotad${a.genero === 'feminino' ? 'a' : 'o'}`} ${como}. ${cap(a.jeito)}.`, relevancia: 'biografia', tema: 'casa', tom: 'bom', escolha: origem !== 'rua', pessoas: [pet.id] });
   lembrarCom(v, pet.id, `Chegou em casa ${como.startsWith('da rua') ? 'vind' + (a.genero === 'feminino' ? 'a' : 'o') + ' da rua' : `adotad${a.genero === 'feminino' ? 'a' : 'o'} ${como.split(' (')[0]}`}.`, 'inicio', 2);
   for (const p of moraCom(v)) if (idadePessoa(v, p) < 14 && v.vinculos[p.id]?.parentesco === 'filho') lembrarCom(v, p.id, `A chegada de ${a.nome} em casa.`, 'ritual', 1);
   abalar(v, `a chegada de ${a.nome}`, 5, 0);

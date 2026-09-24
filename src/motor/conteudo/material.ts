@@ -17,7 +17,7 @@ import { aluguelDe } from '../sistemas/mercado';
 import { modeloMoradia } from '../dados/bens';
 import { adotarPet, custoDoTratamento, infoPet, podeTerPet, seusPets } from '../sistemas/pets';
 import { moraComFamiliaDeOrigem } from '../sistemas/domicilio';
-import { NOMES_PET_GATO } from '../dados/nomes';
+import { nomeDePet } from '../sistemas/mercado';
 
 const financiamentoAtrasado = (c: Ctx) => c.v.financas.dividas.filter(d => (d.tipo === 'financiamento_imovel' || d.tipo === 'financiamento_veiculo') && (d.atraso ?? 0) >= 3).sort((a, b) => (b.atraso ?? 0) - (a.atraso ?? 0))[0];
 
@@ -129,7 +129,7 @@ export const MATERIAL: Conteudo[] = [
         resolver: c => {
           const o = OFERTAS[c.v.fatos['oferta_pet'] ?? 0] ?? OFERTAS[0];
           const quem = conhecido(c);
-          const nome = o.nome || c.r.pick(NOMES_PET_GATO);
+          const nome = o.nome || nomeDePet(c.r, 'gato', o.genero);
           const pet = adotarPet(c.v, c.r, { especie: o.especie, nome, genero: o.genero, idade: o.idade, porte: o.porte, jeito: o.jeito, historia: '' }, o.especie === 'gato' ? 'ninhada' : 'doacao', quem?.nome);
           if (quem) lembrarCom(c.v, quem.id, `Você ficou com ${pet.nome}.`, 'apoio', 1);
           return { texto: `${pet.nome} chegou com um saco de ração pela metade e um brinquedo roído.`, memoria: null };

@@ -29,14 +29,15 @@ export const dividaDoBem = (v: Vida, bemId: string) => v.financas.dividas.find(d
 export function processarObrigacoes(v: Vida): void {
   const f = v.financas;
   // Aluguel
-  if ((v.moradia.tipo === 'aluguel' || v.moradia.tipo === 'republica') && (v.moradia.atraso ?? 0) >= 4) despejo(v);
+  const ha = (desde: number | undefined, meses: number) => desde !== undefined && v.t - desde >= meses;
+  if ((v.moradia.tipo === 'aluguel' || v.moradia.tipo === 'republica') && (v.moradia.atraso ?? 0) >= 4 && ha(v.moradia.atrasoDesde, 12)) despejo(v);
   // Morar de favor tem prazo: depois de uns anos, é preciso ir — para a família ou para o aluguel mais barato.
   if (v.moradia.tipo === 'cedida' && v.t - v.moradia.tInicio >= 36) fimDoFavor(v);
   for (const d of [...f.dividas]) {
     const atraso = d.atraso ?? 0;
-    if (d.tipo === 'financiamento_veiculo' && atraso >= 5) buscaEApreensao(v, d);
-    else if (d.tipo === 'financiamento_imovel' && atraso >= 12) retomada(v, d);
-    else if ((d.tipo === 'emprestimo' || d.tipo === 'acordo' || d.tipo === 'fies') && atraso >= 6) emCobranca(v, d);
+    if (d.tipo === 'financiamento_veiculo' && atraso >= 5 && ha(d.atrasoDesde, 12)) buscaEApreensao(v, d);
+    else if (d.tipo === 'financiamento_imovel' && atraso >= 12 && ha(d.atrasoDesde, 24)) retomada(v, d);
+    else if ((d.tipo === 'emprestimo' || d.tipo === 'acordo' || d.tipo === 'fies') && atraso >= 6 && ha(d.atrasoDesde, 12)) emCobranca(v, d);
   }
 }
 
@@ -49,6 +50,7 @@ function emCobranca(v: Vida, d: Divida): void {
   d.tipo = 'cartao';
   d.parcela = 0;
   d.atraso = 0;
+  d.atrasoDesde = undefined;
   d.jurosMes = 0.01;
   d.descricao = `Em cobrança: ${d.descricao.toLowerCase()}`;
   if (!v.financas.negativado) {
@@ -65,6 +67,7 @@ function despejo(v: Vida): void {
   // A dívida do aluguel não some: vira cobrança.
   if (devido > 0) v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'emprestimo', saldo: devido, jurosMes: 0.01, parcela: Math.max(150, Math.round(devido / 24)), descricao: 'Acordo do aluguel atrasado', tInicio: v.t, prazo: 24 });
   m.atraso = 0;
+  m.atrasoDesde = undefined;
   if (voltarParaCasaDosPais(v)) {
     escrever(v, { texto: 'O aluguel atrasado virou ação de despejo. As coisas couberam num carro emprestado.', relevancia: 'biografia', tema: 'casa', tom: 'ruim' });
   } else {
@@ -140,6 +143,7 @@ export function renegociarFinanciamento(v: Vida, d: Divida): string {
   d.prazo = novoPrazo;
   d.tInicio = v.t;
   d.atraso = 0;
+  d.atrasoDesde = undefined;
   v.fatos[`renegociou_${d.id}`] = v.t;
   escrever(v, { texto: `Renegociou o ${d.tipo === 'financiamento_imovel' ? 'financiamento da casa' : 'financiamento do veículo'}: parcela de ${fmt(antes)} para ${fmt(d.parcela)}, mais anos pagando.`, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true });
   return `Acordo fechado: a parcela caiu para ${fmt(d.parcela)} e o prazo ficou mais longo. No fim, vai custar mais — mas cabe agora.`;
