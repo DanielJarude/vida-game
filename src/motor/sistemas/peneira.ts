@@ -69,7 +69,7 @@ export function aspectos(v: Vida, d: Dominio): Aspectos {
   return {
     h,
     forma: v.corpo.forma,
-    tecnica: (h - 58) / 26,
+    tecnica: (h - 66) / 20,
     fisico: (v.corpo.forma - 52) / 40,
     leitura: Math.min(1, anosDePratica / 6) - 0.35 + ((v.rotinas.find(x => x.id === d)?.nivel ?? 1) >= 2 ? 0.1 : 0),
     nervos: clamp(-(v.mente.estresse - 40) / 60, -0.6, 0.4)
@@ -100,8 +100,8 @@ export function avaliarPeneira(v: Vida, r: Rng, d: Dominio, municipioId: string,
   const idadeAjuste = futebol(d) ? (i <= 12 ? -0.05 : i >= 17 ? -0.15 : 0) : i >= 18 ? -0.1 : 0;
   const concorrencia = estruturaEsportiva(municipioId) >= 2 ? 0.06 : 0;
   const dia = r.normal() * 0.14;
-  const pontos = 0.48 * a.tecnica + 0.14 * fisico + 0.14 * a.leitura + 0.06 * a.nervos + 0.18 * abordagem + idadeAjuste + bonus + dia;
-  const limiar = 0.24 + concorrencia;
+  const pontos = 0.5 * a.tecnica + 0.14 * fisico + 0.14 * a.leitura + 0.06 * a.nervos + 0.18 * abordagem + idadeAjuste + bonus + dia;
+  const limiar = 0.28 + concorrencia;
   const valores: Record<Aspecto, number> = { tecnica: a.tecnica, fisico, leitura: a.leitura, nervos: a.nervos * 1.5 };
   const ordem = (Object.entries(valores) as [Aspecto, number][]).sort((x, y) => y[1] - x[1]);
   const forte = ordem[0][0];
@@ -125,8 +125,9 @@ const CRITICA: Record<Aspecto, (d: Dominio) => string> = {
 };
 
 /** A fala do treinador, em uma frase — sem fórmula. */
-export function falaDoTreinador(d: Dominio, res: ResultadoPeneira): string {
-  if (res.passou) return `O treinador gostou ${ELOGIO[res.forte](d)}.`;
+export function falaDoTreinador(d: Dominio, res: ResultadoPeneira, anterior?: Aspecto): string {
+  if (res.passou) return anterior ? `O treinador gostou ${ELOGIO[res.forte](d)}. O que pesou da outra vez já não apareceu.` : `O treinador gostou ${ELOGIO[res.forte](d)}.`;
+  if (anterior && anterior === res.fraco && res.falta === res.fraco) return `De novo, ${CRITICA[res.fraco](d)} — o que ${ELOGIO[res.forte](d).replace(/^d[oa] /, m => (m === 'do ' ? 'o ' : 'a '))} não compensou.`;
   if (res.falta === 'idade') return `O treinador gostou ${ELOGIO[res.forte](d)}, mas disse que, nessa idade, a base procura quem já está pronto.`;
   if (res.falta === 'concorrencia') return `O treinador gostou ${ELOGIO[res.forte](d)}; ficou entre os últimos cortados. Eram poucas vagas.`;
   if (res.forte === res.fraco) return `O treinador disse que ${CRITICA[res.fraco](d)}.`;

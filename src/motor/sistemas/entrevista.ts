@@ -132,7 +132,83 @@ export const PERGUNTAS: Pergunta[] = [
     ]
   },
 
+  {
+    id: 'mot_futuro', familia: 'motivacao',
+    texto: () => '"Onde você se vê daqui a alguns anos?"',
+    respostas: [
+      { id: 'aqui', texto: 'Crescendo aqui dentro, em algo maior', ajuste: c => (c.junior ? 0.5 : 0.2), bom: 'gostaram de ver que você quer ficar e crescer', ruim: 'soou como resposta pronta' },
+      { id: 'proprio', texto: 'Com o próprio negócio, um dia', ajuste: c => (em(c, ['comercio', 'beleza', 'alimentacao']) ? 0 : -0.35), bom: 'a ambição foi notada', ruim: 'ficou a impressão de que você está de passagem' },
+      { id: 'especialista', texto: 'Sabendo muito mais do que sabe hoje, na área', ajuste: c => (em(c, CRIATIVO) || em(c, REGULADO) || c.oc.nivel >= 2 ? 0.55 : 0.3), bom: 'a vontade de se aprofundar contou', ruim: 'faltou dizer como chegaria lá' },
+      { id: 'nao_sei', texto: 'Ser honesto: não sabe ainda', ajuste: c => (c.primeiro ? 0.1 : -0.3), bom: 'a honestidade foi notada', ruim: 'esperavam alguém com mais rumo' }
+    ]
+  },
+  {
+    id: 'exp_dificil', familia: 'experiencia',
+    quando: c => !c.primeiro,
+    texto: () => '"Conte de uma situação difícil que você resolveu no trabalho."',
+    respostas: [
+      { id: 'concreta', texto: 'Contar uma de verdade, com começo, meio e fim', ajuste: c => (c.exp >= 12 ? 0.7 : 0.1), bom: 'a história que você contou convenceu', ruim: 'a história ficou pequena para a vaga' },
+      { id: 'equipe', texto: 'Contar uma que resolveu com a equipe', ajuste: c => (em(c, ['saude', 'industria', 'construcao', 'alimentacao']) ? 0.55 : 0.3), bom: 'o jeito de falar do time contou', ruim: 'não ficou claro o que foi você' },
+      { id: 'heroi', texto: 'Contar como salvou tudo sozinho', ajuste: c => (c.lidera ? -0.1 : -0.3), bom: 'a iniciativa apareceu', ruim: 'soou como quem não divide o trabalho' },
+      { id: 'vida', texto: 'Contar uma de fora do trabalho, da vida', ajuste: c => (c.exp < 12 ? 0.3 : -0.1), bom: 'a história de vida contou', ruim: 'queriam um exemplo de trabalho' }
+    ]
+  },
+  {
+    id: 'exp_saida', familia: 'experiencia',
+    quando: c => !c.primeiro && c.v.trabalho.historico.length > 0,
+    texto: () => '"Por que você saiu — ou quer sair — do último trabalho?"',
+    respostas: [
+      { id: 'crescer', texto: 'Queria crescer e lá não dava mais', ajuste: () => 0.45, bom: 'a razão da saída fez sentido', ruim: '—' },
+      { id: 'chefe', texto: 'O chefe era difícil', ajuste: () => -0.45, bom: '—', ruim: 'falar mal do chefe antigo pesou contra' },
+      { id: 'dinheiro', texto: 'O salário não fechava as contas', ajuste: c => (c.junior ? 0.15 : -0.1), bom: 'a franqueza foi aceita', ruim: 'pareceu que qualquer oferta maior te leva' },
+      { id: 'fechou', texto: 'Explicar o que aconteceu, sem drama', ajuste: () => 0.35, bom: 'a calma ao falar da saída contou', ruim: '—' }
+    ]
+  },
+  {
+    id: 'primeiro_rotina', familia: 'primeiro',
+    quando: c => c.primeiro || c.exp < 6,
+    texto: () => '"Como é a sua rotina hoje? Daria para encaixar este trabalho?"',
+    respostas: [
+      { id: 'organizada', texto: 'Explicar a rotina e como o trabalho cabe nela', ajuste: () => 0.5, bom: 'mostrou que pensou em como daria conta', ruim: '—' },
+      { id: 'tudo', texto: 'Dizer que se vira, dá conta de tudo', ajuste: c => (c.v.educacao.matricula ? -0.3 : 0), bom: 'a disposição foi notada', ruim: 'não convenceu que caberia com o estudo' },
+      { id: 'estudo', texto: 'Dizer que o estudo vem primeiro, mas cabe', ajuste: c => (c.oc.contrato === 'estagio' || c.oc.contrato === 'aprendiz' ? 0.6 : -0.1), bom: 'para estágio, era a resposta certa', ruim: 'queriam prioridade para o trabalho' },
+      { id: 'flexivel', texto: 'Perguntar sobre os horários antes de responder', ajuste: c => (em(c, ['comercio', 'alimentacao', 'saude']) ? 0.3 : 0.1), bom: 'a pergunta mostrou cuidado', ruim: 'pareceu fugir da pergunta' }
+    ]
+  },
+
   /* ------------------------------------------------------ situações */
+  {
+    id: 'atraso', familia: 'responsabilidade',
+    texto: () => '"Você vai se atrasar e tem gente te esperando. O que faz?"',
+    respostas: [
+      { id: 'avisa', texto: 'Avisa na hora e diz quando chega', ajuste: () => 0.5, bom: 'a responsabilidade com o horário contou', ruim: '—' },
+      { id: 'corre', texto: 'Corre e explica quando chegar', ajuste: () => -0.1, bom: 'o esforço foi notado', ruim: 'não avisar pesou' },
+      { id: 'compensa', texto: 'Avisa e compensa o tempo depois', ajuste: c => (em(c, ['comercio', 'alimentacao', 'industria', 'saude']) ? 0.55 : 0.35), bom: 'a ideia de compensar o tempo foi bem vista', ruim: '—' },
+      { id: 'nunca', texto: 'Diz que nunca se atrasa', ajuste: () => -0.4, bom: '—', ruim: '"nunca" não convenceu ninguém' }
+    ]
+  },
+  {
+    id: 'novato', familia: 'equipe',
+    texto: () => '"Chega alguém novo e perdido na equipe. O que você faz?"',
+    peso: c => (c.oc.nivel >= 2 ? 1.2 : 0.8),
+    respostas: [
+      { id: 'ensina', texto: 'Mostra como as coisas funcionam, sem esperar pedirem', ajuste: c => (c.oc.nivel >= 2 ? 0.6 : 0.35), bom: 'a disposição para ajudar quem chega contou', ruim: '—' },
+      { id: 'chefe', texto: 'Deixa com o chefe: é ele quem treina', ajuste: c => (c.lidera ? -0.5 : -0.15), bom: 'o respeito à hierarquia apareceu', ruim: 'pareceu pouco envolvido com a equipe' },
+      { id: 'pergunta', texto: 'Pergunta o que ele precisa', ajuste: () => 0.4, bom: 'perguntar antes de ensinar foi bem visto', ruim: '—' },
+      { id: 'foco', texto: 'Foca no próprio trabalho; cada um aprende', ajuste: () => -0.3, bom: '—', ruim: 'soou individualista' }
+    ]
+  },
+  {
+    id: 'critica', familia: 'conflito',
+    texto: () => '"O chefe critica seu trabalho na frente de todo mundo. Como você reage?"',
+    peso: () => 0.9,
+    respostas: [
+      { id: 'depois', texto: 'Ouve na hora e conversa com ele depois, a sós', ajuste: () => 0.55, bom: 'o jeito de lidar com a crítica impressionou', ruim: '—' },
+      { id: 'rebate', texto: 'Rebate na hora, se não concordar', ajuste: c => (c.lidera ? 0 : -0.45), bom: 'a firmeza foi notada', ruim: 'rebater em público pesou contra' },
+      { id: 'engole', texto: 'Engole e segue', ajuste: c => (c.junior ? 0.05 : -0.2), bom: 'a calma foi notada', ruim: 'pareceu que você guardaria tudo até estourar' },
+      { id: 'aprende', texto: 'Pergunta o que pode melhorar', ajuste: () => 0.45, bom: 'a vontade de melhorar contou', ruim: '—' }
+    ]
+  },
   {
     id: 'erro_ninguem', familia: 'erro',
     texto: () => '"Você percebe um erro que ninguém mais notou. O que faz?"',
@@ -281,7 +357,7 @@ export const PERGUNTAS: Pergunta[] = [
 const POR_ID = new Map(PERGUNTAS.map(p => [p.id, p]));
 export const perguntaPorId = (id: string) => POR_ID.get(id);
 
-const LIMITE_RECENTES = 10;
+const LIMITE_RECENTES = 16;
 
 /* -------------------------------------------------------------- Contexto */
 

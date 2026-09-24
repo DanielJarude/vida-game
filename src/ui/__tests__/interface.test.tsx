@@ -201,6 +201,84 @@ describe('interface', () => {
     expect(within(main).queryByText(/nível \d/i)).toBeNull();
   });
 
+  it('você: a pessoa primeiro — palavras, causas e um cuidado possível, sem números', () => {
+    adultaSalva(v => {
+      v.educacao.escolaridade = 'medio';
+      v.educacao.matricula = undefined;
+      contratar(v, criarRng(1), ocupacao('gerente_loja'));
+      v.trabalho.horasExtras = true;
+      v.anoAtual = { acoes: ['horas_extras'] };
+      v.mente.estresse = 66;
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
+    resolverMomentos();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Você$/ })[0]);
+    const main = within(screen.getByRole('main'));
+    expect(main.getByRole('heading', { name: 'Cabeça' })).toBeTruthy();
+    expect(main.getByText('sob pressão')).toBeTruthy();
+    expect(main.getAllByText(/Tem pesado/).length).toBeGreaterThan(0);
+    expect(main.getByText('as horas extras')).toBeTruthy();
+    expect(main.getByRole('img', { name: /Cabeça: \d de 5/ })).toBeTruthy();
+    expect(main.getByRole('button', { name: /Desistir das horas extras/ })).toBeTruthy();
+    // Nenhum número de estado na tela.
+    expect(screen.getByRole('main').textContent).not.toMatch(/\b66\b/);
+  });
+
+  it('tempo livre: poucas sugestões com motivo; o resto do catálogo abre em "explorar"', () => {
+    adultaSalva(v => { v.rotinas = []; v.trabalho.atual = undefined; v.educacao.matricula = undefined; });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
+    resolverMomentos();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Tempo livre$|^Tempo$/ })[0]);
+    const main = screen.getByRole('main');
+    const antes = within(main).queryAllByRole('button', { name: /^Começar/ }).length;
+    expect(antes).toBeLessThanOrEqual(4);
+    expect(within(main).getByRole('img', { name: /A semana:/ })).toBeTruthy();
+    fireEvent.click(within(main).getByRole('button', { name: /Explorar outras atividades/ }));
+    expect(within(main).queryAllByRole('button', { name: /^Começar/ }).length).toBeGreaterThan(antes + 5);
+  });
+
+  it('pessoas: amizade próxima e elegível mostra a iniciativa na ficha', () => {
+    adultaSalva(v => {
+      for (const vin of Object.values(v.vinculos)) if (vin.romance) vin.romance = undefined;
+      v.eu.atracao = 'homens';
+      const p = criarPessoa(v, criarRng(9), { idade: 27, genero: 'masculino', municipioId: v.moradia.municipioId, nome: 'Bruno' });
+      p.atracao = 'mulheres';
+      const vin = vincular(v, p, { origem: 'escola', proximidade: 80, convivio: ['rotina'] });
+      vin.estagio = 'amigo_proximo';
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
+    resolverMomentos();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Pessoas$/ })[0]);
+    fireEvent.click(within(screen.getByRole('main')).getAllByText('Bruno')[0].closest('button')!);
+    const ficha = within(screen.getByRole('dialog'));
+    expect(ficha.getByRole('button', { name: /Dizer a Bruno o que sente/ })).toBeTruthy();
+    fireEvent.click(ficha.getByRole('button', { name: /Dizer a Bruno o que sente/ }));
+    // A resposta abre numa folha com o rosto de quem respondeu, não num aviso que some.
+    expect(screen.getByRole('dialog', { name: /Resultado: Bruno/ })).toBeTruthy();
+  });
+
+  it('entrevista: duas ou três perguntas em sequência e um resultado com motivo', () => {
+    adultaSalva(v => { v.educacao.escolaridade = 'medio'; v.trabalho.atual = undefined; v.educacao.matricula = undefined; });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
+    resolverMomentos();
+    fireEvent.click(screen.getAllByRole('button', { name: /^Estudo e trabalho$|^Rumo$/ })[0]);
+    fireEvent.click(screen.getByRole('tab', { name: 'Trabalho' }));
+    fireEvent.click(within(screen.getByRole('main')).getAllByRole('button', { name: /Candidatar-se/ })[0]);
+    let etapas = 0;
+    while (screen.queryByText('O que você responde?') && etapas < 5) {
+      const d = within(screen.getByRole('dialog'));
+      expect(d.getByRole('heading', { level: 2 }).textContent).toMatch(new RegExp(`${etapas + 1} de [23]`));
+      fireEvent.click(d.getAllByRole('button').find(b => b.classList.contains('opcao'))!);
+      etapas++;
+    }
+    expect([2, 3]).toContain(etapas);
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Continuar' })).toBeTruthy();
+  });
+
   it('retoma uma vida salva', () => {
     let v = criarVida({ nome: 'Rita', sobrenome: 'Lopes', genero: 'feminino', municipioId: 'recife-pe', semente: 5 });
     for (let i = 0; i < 20; i++) { v = avancarAno(v).vida; if (v.momento) break; }

@@ -189,7 +189,10 @@ export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vi
       const a: Acao = { tipo: 'rotina', id: 'terapia', ativa: true, nivel: 1 };
       out.push({ id: 'terapia', texto: 'Procurar terapia', motivo: 'Quando a pressão dura, ajuda ter alguém de fora.', acao: a });
     }
-    return out.slice(0, 3);
+    const possiveis = out.filter(x => !x.acao || junto(x.acao));
+    // Nunca sem saída: se nada direto cabe agora, sobra procurar alguém.
+    if (!possiveis.length) possiveis.push({ id: 'procurar', texto: 'Procurar alguém para conversar', motivo: 'Às vezes começa por uma mensagem.', aba: 'pessoas' });
+    return possiveis.slice(0, 3);
   }
 
   if (d === 'humor') {
@@ -214,7 +217,11 @@ export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vi
       if (social) out.push({ id: 'gente', texto: `Começar: ${modeloRotina(social)!.nome.toLowerCase()}`, motivo: 'Lugar com gente toda semana.', acao: { tipo: 'rotina', id: social, ativa: true, nivel: 1 } });
       else out.push({ id: 'gente', texto: 'Procurar alguém de antes', aba: 'pessoas' });
     }
-    return out.filter(x => !x.acao || junto(x.acao)).slice(0, 3);
+    // Se a cabeça também pesa, o descanso já aparece lá (não duplica).
+    if (v.mente.estresse < 35 && junto({ tipo: 'cuidar', cuidado: 'descansar' }) && out.length < 2) out.push({ id: 'descansar', texto: 'Tirar uns dias para você', acao: { tipo: 'cuidar', cuidado: 'descansar' } });
+    const possiveis = out.filter(x => !x.acao || junto(x.acao));
+    if (!possiveis.length) possiveis.push({ id: 'procurar', texto: 'Procurar alguém de antes', motivo: 'Gente por perto é o que mais segura o humor.', aba: 'pessoas' });
+    return possiveis.slice(0, 3);
   }
 
   // Saúde

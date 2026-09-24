@@ -33,13 +33,17 @@ src/
     ano.ts               um ano de vida: sistemas → morte → conteúdo
     acoes.ts             comandos do jogador, com disponibilidade graduada
     criacao.ts           nascer (família de origem coerente com classe e lugar)
-    save.ts              save v7, validação, backup, migração dos saves antigos (v5→v6→v7)
+    save.ts              save v9, validação, backup, migração dos saves antigos (v5→…→v9)
     dados/               lugares, cursos, ocupações, bens, nomes por geração
     sistemas/            corpo, escola, trabalho, dinheiro, casa, pessoas,
                          romance, família e gestação, rotinas, processos;
                          vida social: vinculos (papel, fase, círculo, importância),
                          interacoes (ações contextuais), filhos (parentalidade,
-                         trajetória dos descendentes, netos), luto
+                         trajetória dos descendentes, netos), luto;
+                         estado pessoal: estado (causas de humor, cabeça e
+                         saúde — fonte única), cuidados, abalo; processos:
+                         entrevista e peneira em etapas, devolutivas;
+                         relevancia (o que a tela mostra primeiro)
     conteudo/            acontecimentos (o mundo narra) e decisões (você escolhe)
   ui/                    React fino: um estado (a vida), tudo passa pelo motor
 scripts/
@@ -49,6 +53,7 @@ scripts/
 docs/
   VIDA-REBUILD-REPORT.md relatório da reconstrução (diagnóstico, decisões, métricas)
   ATT1-VIDA-SOCIAL-REPORT.md  ATT 1: pessoas, família, filhos, gerações, luto
+  FIX-PLAYTEST-2-REPORT.md    FIX pós-playtest 2: Você, relações, processos, UX
 ```
 
 ### Regras que o código garante
@@ -68,6 +73,11 @@ docs/
 - **Ações nascem da relação**: o que dá para fazer com alguém depende do papel,
   da fase de vida da pessoa, de morar junto ou longe e do que está acontecendo
   com ela. Vínculos são lidos em frases, nunca em números.
+- **Causa → estado → ação**: humor, cabeça e saúde são somas de fatores com
+  nome (`sistemas/estado.ts`); o equilíbrio anual e a tela "Você" usam a mesma
+  conta. Nenhum cuidado é instantâneo.
+- **Tentar é uma pequena experiência**: entrevista (2–3 perguntas contextuais,
+  sem resposta certa universal) e peneira (duas etapas) terminam com devolutiva.
 - **Autonomia não é opacidade**: filhos e netos seguem a própria vida, e o
   jogador fica sabendo.
 
@@ -88,4 +98,19 @@ Vida social (outliers de relações, filhos, netos, luto, repetição):
 ```bash
 npx esbuild scripts/sim/social.ts --bundle --platform=node --outfile=/tmp/social.cjs
 VIDAS=20 SAIDA=/tmp/social node /tmp/social.cjs
+```
+
+FIX pós-playtest 2 (iniciativas, estado pessoal, entrevistas, peneiras, listas):
+
+```bash
+npx esbuild scripts/sim/fix2.ts --bundle --platform=node --outfile=/tmp/fix2.cjs
+VIDAS=20 SAIDA=/tmp/fix2 node /tmp/fix2.cjs
+```
+
+Playtest visual dos cenários do FIX (Chromium, 320/390/820/1440):
+
+```bash
+npx esbuild scripts/playtest/gerarFix2.ts --bundle --platform=node --outfile=/tmp/g2.cjs && SP=/tmp/vida-fix2 node /tmp/g2.cjs
+npm run build && npx vite preview --port 4173 &
+SP=/tmp/vida-fix2 node scripts/playtest/fix2.mjs
 ```

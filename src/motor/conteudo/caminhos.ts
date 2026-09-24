@@ -399,7 +399,8 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   c.v.caminhos.processo = undefined;
   c.v.fatos[`peneiras_${d}`] = (c.v.fatos[`peneiras_${d}`] ?? 0) + 1;
   const res = avaliarPeneira(c.v, c.r, d, lugar, notas, pr.bonus);
-  const fala = falaDoTreinador(d, res);
+  const antes = [...c.v.caminhos.devolutivas].reverse().find(x => x.tipo === 'peneira' && x.dominio === d && !x.passou);
+  const fala = falaDoTreinador(d, res, antes?.falta && ['tecnica', 'fisico', 'leitura', 'nervos'].includes(antes.falta) ? antes.falta as 'tecnica' : undefined);
   const nome = d === 'futebol' ? 'peneira' : 'seletiva';
   if (pr.via === 'familia') { const g = P.genitor(c.v)[0]; if (g) lembrarCom(c.v, g.id, `Foi junto na ${nome}.`, 'apoio', 2); }
   // Um dia de teste também é treino.

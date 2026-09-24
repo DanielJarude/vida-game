@@ -32,7 +32,9 @@ const MINIMO = 1.5;
 
 function primarias<T>(lista: Relevante<T>[], max: number): { para: Relevante<T>[]; resto: T[] } {
   const ordenada = [...lista].sort((a, b) => b.pontos - a.pontos);
-  const para = ordenada.filter(x => x.pontos >= MINIMO).slice(0, max);
+  // Variedade: no máximo duas primárias pelo mesmo motivo.
+  const porMotivo: Record<string, number> = {};
+  const para = ordenada.filter(x => x.pontos >= MINIMO).filter(x => (porMotivo[x.motivo] = (porMotivo[x.motivo] ?? 0) + 1) <= 2).slice(0, max);
   const usados = new Set(para.map(x => x.item));
   return { para, resto: ordenada.filter(x => !usados.has(x.item)).map(x => x.item) };
 }
@@ -40,6 +42,7 @@ function primarias<T>(lista: Relevante<T>[], max: number): { para: Relevante<T>[
 /* ------------------------------------------------------------- Atividades */
 
 const CATEGORIA_MOVIMENTO = new Set(['esporte', 'corpo']);
+const MATERIAS_ESCOLA = new Set<Dominio>(['exatas', 'linguagens', 'ciencias', 'humanas']);
 
 /**
  * Atividades que cabem e existem aqui, ordenadas pelo que faz sentido: o que
@@ -61,13 +64,15 @@ export function atividadesParaVoce(v: Vida): { para: Relevante<ModeloRotina>[]; 
     const dominios = Object.keys(m.pratica ?? {}) as Dominio[];
     for (const d of dominios) {
       const f = v.caminhos.frentes[d];
-      if (!f) continue;
-      if (f.auge >= 30 && v.t - f.tUltimo >= 12) add(3, 'Você já fez isso, e fazia bem.');
+      // Matérias da escola não são hobby: "já fez isso" vale para o que se escolheu fazer.
+      if (!f || MATERIAS_ESCOLA.has(d)) continue;
+      if (f.auge >= 30 && v.t - f.tUltimo >= 12) add(4.5, 'Você já fez isso, e fazia bem.');
       else if (f.interesse >= 60) add(f.interesse / 30, 'Você gosta disso.');
     }
     const bem = BEM_ESTAR[m.id];
     const alivio = typeof bem?.cabeca === 'number' ? bem.cabeca : 0;
     if (cabeca >= 45 && alivio < 0) add(-alivio / 3, 'Ajuda a desanuviar a cabeça.');
+    if (cabeca >= 45 && alivio > 0) pontos -= alivio / 3;
     if (humor < 50 && (bem?.humor ?? 0) > 0) add((bem!.humor ?? 0) / 2, 'Anima.');
     if (v.corpo.forma < 40 && CATEGORIA_MOVIMENTO.has(m.categoria) && i >= 12) add(i >= 30 ? 2.5 : 1.5, 'O corpo anda pedindo movimento.');
     if (solidao && m.social && m.social.fluxo >= 0.8) add(2.5, 'Um lugar com gente toda semana.');

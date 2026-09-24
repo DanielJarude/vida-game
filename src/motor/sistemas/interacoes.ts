@@ -887,8 +887,9 @@ export function chanceConvite(c: CtxI): number {
  * A regra de quem pode receber uma iniciativa: idade graduada (ATT 1),
  * ninguém da família, o jogador sem parceria (com parceria, só o caminho
  * escondido do convite), e não logo depois de um "não" da mesma pessoa.
- * Orientação e compromisso da OUTRA pessoa não escondem o botão — o
- * jogador não sabe disso de antemão; a resposta é que diz.
+ * Orientação e compromisso da OUTRA pessoa: quem é próximo sabe (se ela
+ * namora, por quem se interessa) — com essas pessoas a iniciativa nem
+ * aparece. Com quem mal se conhece, não se sabe: a resposta é que diz.
  */
 function iniciativaPossivel(c: CtxI): boolean {
   if (!humano(c) || c.vin.parentesco || !c.p.vivo) return false;
@@ -896,6 +897,10 @@ function iniciativaPossivel(c: CtxI): boolean {
   if (parceiro(c.v)) return false;
   if (c.papel === 'parceiro' || c.papel === 'saindo' || c.papel === 'caso') return false;
   if (c.v.eu.atracao && !atraiGenero(c.v.eu.atracao, c.p.genero)) return false;
+  if (c.p.parceiroId && c.vin.proximidade >= 35) return false;
+  // Uma história de cada vez: saindo com alguém (ou esperando uma resposta), não se começa outra.
+  if (Object.values(c.v.vinculos).some(x => x.pessoaId !== c.p.id && c.v.pessoas[x.pessoaId]?.vivo && x.romance && !x.romance.secreto && (x.romance.estagio === 'saindo' || x.romance.pediuTempo !== undefined))) return false;
+  if (!atraiGenero(c.p.atracao, c.v.eu.genero) && c.vin.proximidade >= 55) return false;
   const recusa = c.v.fatos[`recusa_romance_${c.p.id}`];
   if (recusa !== undefined && c.v.t - recusa < 36) return false;
   return true;

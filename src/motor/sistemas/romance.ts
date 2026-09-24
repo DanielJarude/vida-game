@@ -123,6 +123,8 @@ export function surgirInteresse(v: Vida, r: Rng): void {
   const candidatos = vinculosVivos(v).filter(({ p, vin }) =>
     !vin.parentesco && (!vin.romance || vin.romance.estagio === 'ex' && vin.romance.fim !== 'morte') &&
     (vin.convivio.length > 0 || vin.estagio === 'amigo' || vin.estagio === 'amigo_proximo') &&
+    // Quem acabou de dizer "prefiro a amizade" não vira, de novo, a pessoa em quem você pensa.
+    !(v.fatos[`recusa_romance_${p.id}`] !== undefined && v.t - v.fatos[`recusa_romance_${p.id}`] < 36) &&
     podeTerRomanceSemOrientacaoDoJogador(v, p, vin));
   const escolhido = r.weighted(candidatos, ({ p }) => 1 + Math.max(0, compatibilidade(v, p) + 0.5) * 2);
   if (!escolhido) return;
@@ -226,7 +228,8 @@ function responderDepoisDoTempo(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): void 
   const perto = v.anoAtual.acoes.some(a => a.endsWith(`:${p.id}`));
   const valor = rom.envolvimento + (perto ? 8 : -4) + compatibilidade(v, p) * 6 + r.normal() * 6;
   const ele = flex(p.genero, 'ele', 'ela', 'elu');
-  if (valor >= 56 && !parceiro(v) && !p.parceiroId) {
+  const outra = vinculosVivos(v).some(x => x.p.id !== p.id && x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto);
+  if (valor >= 56 && !parceiro(v) && !p.parceiroId && !outra) {
     mudarEstagio(v, vin, 'saindo');
     rom.envolvimento = Math.max(rom.envolvimento, 58);
     rom.pediuTempo = undefined;

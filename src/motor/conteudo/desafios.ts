@@ -144,7 +144,9 @@ function concluirEntrevista(c: Ctx): Resultado {
   registrarDevolutiva(c.v, { tipo: 'entrevista', titulo: `Entrevista para ${nome}`, texto: `Não passou: ${motivo}.`, passou: false, perto, falta: a.falta, ocupacaoId: oc.id });
   marcar(c.v, 'reprovacao', `Entrevista para ${nome}: não passou (${motivo}).`, 1, { ocupacaoId: oc.id, trilha: oc.trilha });
   abalar(c.v, `a entrevista para ${nome}`, -3, 2);
-  return { texto, memoria: `Fez entrevista para ${nome} e não passou: ${motivo}.`, tom: 'ruim', relevancia: 'cotidiano' };
+  // A primeira reprovação entra na Linha da Vida; as seguintes ficam nas devolutivas (não viram ruído).
+  const primeira = c.v.caminhos.devolutivas.filter(x => x.tipo === 'entrevista' && !x.passou).length === 1;
+  return { texto, memoria: `Fez entrevista para ${nome} e não passou: ${motivo}.`, tom: 'ruim', relevancia: primeira ? 'cotidiano' : 'tecnico' };
 }
 
 function resolverNegociacao(c: Ctx, bonus: number, arriscado: boolean): { texto: string; memoria: string | null; tom: 'bom' | 'ruim' } {
