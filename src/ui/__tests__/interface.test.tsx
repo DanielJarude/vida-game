@@ -9,6 +9,7 @@ import { salvar } from '../../motor/save';
 import { contratar } from '../../motor/sistemas/trabalho';
 import { ocupacao } from '../../motor/dados/ocupacoes';
 import type { Vida } from '../../motor/tipos';
+import { criarPessoa, vincular } from '../../motor/pessoas';
 
 /** Uma adulta salva, já com a vida resolvida até ali (sem momento aberto). */
 function adultaSalva(ajuste: (v: Vida) => void): void {
@@ -126,6 +127,38 @@ describe('interface', () => {
     expect(screen.getByText(/\(trancado\)/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Voltar ao curso/ }));
     expect(screen.queryByText(/\(trancado\)/)).toBeNull();
+  });
+
+  it('pessoas: parceria e filhos no topo, com leitura humana; bebê não tem ação de adulto', () => {
+    adultaSalva(v => {
+      v.moradia = { tipo: 'aluguel', municipioId: v.moradia.municipioId, modeloId: 'apto_2q', aluguel: 1500, padrao: 3, tInicio: v.t };
+      for (const vin of Object.values(v.vinculos)) { vin.convivio = vin.convivio.filter(c => c !== 'casa'); vin.romance = undefined; }
+      const r = criarRng(3);
+      const par = criarPessoa(v, r, { idade: 27, genero: 'masculino', municipioId: v.moradia.municipioId, nome: 'Tiago' });
+      const vp = vincular(v, par, { origem: 'trabalho', proximidade: 80, convivio: ['casa'] });
+      vp.romance = { estagio: 'casamento', tEstagio: v.t - 36, tInicio: v.t - 60, envolvimento: 80 };
+      vp.historia.push({ t: v.t - 36, texto: 'Casaram-se.', tipo: 'casamento', peso: 3 });
+      const bebe = criarPessoa(v, r, { idade: 1, genero: 'feminino', municipioId: v.moradia.municipioId, nome: 'Lia' });
+      bebe.genitores = ['eu', par.id];
+      vincular(v, bebe, { parentesco: 'filho', origem: 'familia', proximidade: 80, convivio: ['casa'] });
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Pessoas/ })[0]);
+    const main = within(screen.getByRole('main'));
+    expect(main.getByText('Com você')).toBeTruthy();
+    const cartoes = screen.getByRole('main').querySelectorAll('.cartao-pessoa');
+    expect(cartoes[0].textContent).toMatch(/Tiago/);
+    expect(cartoes[0].textContent).toMatch(/seu marido/);
+    fireEvent.click(cartoes[0]);
+    expect(within(screen.getByRole('dialog')).getByText(/casados há 3 anos/)).toBeTruthy();
+    expect(within(screen.getByRole('dialog')).getByText('O que viveram juntos')).toBeTruthy();
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: /Conversar sobre ter um filho/ })).toBeTruthy();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar' }));
+    fireEvent.click(screen.getByRole('main').querySelectorAll('.cartao-pessoa')[1]);
+    const ficha = within(screen.getByRole('dialog'));
+    expect(ficha.queryByRole('button', { name: /dinheiro|conversa/i })).toBeNull();
+    expect(ficha.getAllByRole('button', { name: /Brincar|Dar banho/ }).length).toBeGreaterThan(0);
   });
 
   it('retoma uma vida salva', () => {

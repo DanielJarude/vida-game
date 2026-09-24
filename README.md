@@ -33,10 +33,13 @@ src/
     ano.ts               um ano de vida: sistemas → morte → conteúdo
     acoes.ts             comandos do jogador, com disponibilidade graduada
     criacao.ts           nascer (família de origem coerente com classe e lugar)
-    save.ts              save v6, validação, backup, migração dos saves antigos
+    save.ts              save v7, validação, backup, migração dos saves antigos (v5→v6→v7)
     dados/               lugares, cursos, ocupações, bens, nomes por geração
     sistemas/            corpo, escola, trabalho, dinheiro, casa, pessoas,
-                         romance, família e gestação, rotinas, processos
+                         romance, família e gestação, rotinas, processos;
+                         vida social: vinculos (papel, fase, círculo, importância),
+                         interacoes (ações contextuais), filhos (parentalidade,
+                         trajetória dos descendentes, netos), luto
     conteudo/            acontecimentos (o mundo narra) e decisões (você escolhe)
   ui/                    React fino: um estado (a vida), tudo passa pelo motor
 scripts/
@@ -45,6 +48,7 @@ scripts/
   itch/                  empacotamento e smoke test
 docs/
   VIDA-REBUILD-REPORT.md relatório da reconstrução (diagnóstico, decisões, métricas)
+  ATT1-VIDA-SOCIAL-REPORT.md  ATT 1: pessoas, família, filhos, gerações, luto
 ```
 
 ### Regras que o código garante
@@ -61,6 +65,11 @@ docs/
 - **Plausibilidade graduada**: impossível, incompatível, ilegal, requisito,
   irregular, improvável, permitido — e o jogo explica o bloqueio.
 - **Mesma semente + mesmos comandos = mesma vida** (testado).
+- **Ações nascem da relação**: o que dá para fazer com alguém depende do papel,
+  da fase de vida da pessoa, de morar junto ou longe e do que está acontecendo
+  com ela. Vínculos são lidos em frases, nunca em números.
+- **Autonomia não é opacidade**: filhos e netos seguem a própria vida, e o
+  jogador fica sabendo.
 
 ## Simular
 
@@ -70,5 +79,13 @@ VIDAS=15 SAIDA=/tmp/vida-sim node /tmp/sim.cjs
 ```
 
 Imprime ritmo por faixa etária, resultados por estratégia (familiar, ambicioso,
-estudioso, impulsivo, social, antissocial, econômico, gastador, passivo,
-ascensão), violações de coerência e repetição; grava biografias legíveis.
+estudioso, impulsivo, social, antissocial, econômico, gastador, infiel,
+desatento, passivo, ascensão), violações de coerência e repetição; grava
+biografias legíveis.
+
+Vida social (outliers de relações, filhos, netos, luto, repetição):
+
+```bash
+npx esbuild scripts/sim/social.ts --bundle --platform=node --outfile=/tmp/social.cjs
+VIDAS=20 SAIDA=/tmp/social node /tmp/social.cjs
+```
