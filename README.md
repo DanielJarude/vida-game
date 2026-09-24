@@ -33,7 +33,7 @@ src/
     ano.ts               um ano de vida: sistemas → morte → conteúdo
     acoes.ts             comandos do jogador, com disponibilidade graduada
     criacao.ts           nascer (família de origem coerente com classe e lugar)
-    save.ts              save v9, validação, backup, migração dos saves antigos (v5→…→v9)
+    save.ts              save v10, validação, backup, migração dos saves antigos (v5→…→v10)
     dados/               lugares, cursos, ocupações, bens, nomes por geração
     sistemas/            corpo, escola, trabalho, dinheiro, casa, pessoas,
                          romance, família e gestação, rotinas, processos;
@@ -43,7 +43,13 @@ src/
                          estado pessoal: estado (causas de humor, cabeça e
                          saúde — fonte única), cuidados, abalo; processos:
                          entrevista e peneira em etapas, devolutivas;
-                         relevancia (o que a tela mostra primeiro)
+                         relevancia (o que a tela mostra primeiro);
+                         vida material: economia (fases, inflação, juro,
+                         imóveis, bolsa), dinheiro (orçamento pessoal × casa
+                         × casal, balanço, segurança), investimentos, mercado
+                         (ofertas de imóveis, veículos, abrigo), veiculos,
+                         imoveis, obrigacoes (atraso gradual), partilha
+                         (casal, separação, herança), pets
     conteudo/            acontecimentos (o mundo narra) e decisões (você escolhe)
   ui/                    React fino: um estado (a vida), tudo passa pelo motor
 scripts/
@@ -54,6 +60,7 @@ docs/
   VIDA-REBUILD-REPORT.md relatório da reconstrução (diagnóstico, decisões, métricas)
   ATT1-VIDA-SOCIAL-REPORT.md  ATT 1: pessoas, família, filhos, gerações, luto
   FIX-PLAYTEST-2-REPORT.md    FIX pós-playtest 2: Você, relações, processos, UX
+  ATT3-VIDA-MATERIAL-REPORT.md  ATT 3: dinheiro, casa, bens, investimentos, pets
 ```
 
 ### Regras que o código garante
@@ -65,8 +72,16 @@ docs/
   Escolhas biográficas — a primeira palavra, o nome de um filho — não movem nada.
 - **Pessoas persistem.** Quem entra na história tem origem (a turma, o trabalho,
   a igreja), convivência e passado compartilhado.
-- **Dinheiro tem origem e destino**: orçamento do domicílio, derivado de quem mora
-  junto, casa, carro, filhos, cidade. Reais constantes, sem inflação.
+- **Dinheiro tem origem e destino**: o dinheiro da pessoa não é o da casa; o
+  orçamento é derivado de quem mora junto (família de origem, sozinho,
+  dividindo, morando junto, casados), da casa, dos bens, dos filhos, da cidade.
+  Valores em **reais de hoje**: a inflação existe e pesa (corrói o dinheiro
+  parado, muda o rendimento real), mas não infla os números da tela.
+- **Obrigação não é uma coisa só**: financiamento (preso a um bem), empréstimo,
+  acordo, cartão rotativo. O que vira problema é o atraso — com consequências
+  graduais, nunca dívida infinita silenciosa.
+- **Todo estado material solucionável tem ação**: carro na oficina (consertar,
+  adiar, parar, vender), casa pedindo reparo, bicho doente (veterinário).
 - **Plausibilidade graduada**: impossível, incompatível, ilegal, requisito,
   irregular, improvável, permitido — e o jogo explica o bloqueio.
 - **Mesma semente + mesmos comandos = mesma vida** (testado).
@@ -105,6 +120,23 @@ FIX pós-playtest 2 (iniciativas, estado pessoal, entrevistas, peneiras, listas)
 ```bash
 npx esbuild scripts/sim/fix2.ts --bundle --platform=node --outfile=/tmp/fix2.cjs
 VIDAS=20 SAIDA=/tmp/fix2 node /tmp/fix2.cjs
+```
+
+Vida material (14 perfis: poupador, consumidor, conservador, arrojado, inquilino,
+comprador, sem patrimônio, família, solteiro, empreendedor, renda instável, tutor
+de bicho, migrante, na casa dos pais):
+
+```bash
+npx esbuild scripts/sim/material.ts --bundle --platform=node --outfile=/tmp/mat.cjs
+VIDAS=20 SAIDA=/tmp/vida-mat node /tmp/mat.cjs
+```
+
+Playtest visual da vida material (Chromium, 320/390/820/1440, 14 cenários):
+
+```bash
+npx esbuild scripts/playtest/gerarMaterial.ts --bundle --platform=node --outfile=/tmp/gm.cjs && SP=/tmp/vida-mat node /tmp/gm.cjs
+npm run build && npx vite preview --port 4173 &
+SP=/tmp/vida-mat node scripts/playtest/material.mjs
 ```
 
 Playtest visual dos cenários do FIX (Chromium, 320/390/820/1440):

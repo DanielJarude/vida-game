@@ -50,7 +50,7 @@ export const MUNDO: Conteudo[] = [
       'A crise foi passando sem aviso: o shopping encheu de novo, as obras paradas voltaram a ter barulho.',
       'O jornal anunciou o fim da recessão. Na rua, a notícia chegou em forma de "contrata-se" na vitrine.',
       'Depois de dois anos de aperto, o comércio voltou a contratar e o preço do dólar parou de ser assunto no almoço.'
-    ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: 'cotidiano' })
+    ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: c.vezes < 3 ? 'cotidiano' : 'tecnico' })
   },
   {
     id: 'mun_chuva_cidade', tipo: 'acontecimento', idade: [5, 110], tema: 'lugar', repetir: 10,

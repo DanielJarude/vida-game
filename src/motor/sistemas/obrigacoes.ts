@@ -32,7 +32,7 @@ export function processarObrigacoes(v: Vida): void {
   const ha = (desde: number | undefined, meses: number) => desde !== undefined && v.t - desde >= meses;
   if ((v.moradia.tipo === 'aluguel' || v.moradia.tipo === 'republica') && (v.moradia.atraso ?? 0) >= 4 && ha(v.moradia.atrasoDesde, 12)) despejo(v);
   // A casa da família sem a família: quem ficou passa a sustentar a própria casa.
-  if ((v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') && idade(v) >= 18 && !vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && !x.p.especie && ['mae', 'pai', 'avo', 'tio', 'madrasta', 'padrasto'].includes(x.vin.parentesco ?? ''))) casaSemFamilia(v);
+  if ((v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') && idade(v) >= 18 && !vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && !x.p.especie && ['mae', 'pai', 'avo', 'tio', 'madrasta', 'padrasto', ...(v.moradia.tipo === 'parente' ? ['irmao', 'meio_irmao'] : [])].includes(x.vin.parentesco ?? ''))) casaSemFamilia(v);
   // Morar de favor tem prazo: depois de uns anos, é preciso ir — para a família ou para o aluguel mais barato.
   if (v.moradia.tipo === 'cedida' && v.t - v.moradia.tInicio >= 36) fimDoFavor(v);
   for (const d of [...f.dividas]) {
@@ -71,7 +71,9 @@ function despejo(v: Vida): void {
   m.atraso = 0;
   m.atrasoDesde = undefined;
   if (voltarParaCasaDosPais(v)) {
-    escrever(v, { texto: 'O aluguel atrasado virou ação de despejo. As coisas couberam num carro emprestado.', relevancia: 'biografia', tema: 'casa', tom: 'ruim' });
+    const n = (v.fatos['despejos'] ?? 0) + 1;
+    v.fatos['despejos'] = n;
+    escrever(v, { texto: ['O aluguel atrasado virou ação de despejo. As coisas couberam num carro emprestado.', 'Outro despejo. Desta vez, as caixas já estavam meio prontas.', 'O oficial de justiça bateu na porta de novo. Voltou para a família com o que coube nas mãos.'][(n - 1) % 3], relevancia: n <= 2 ? 'biografia' : 'cotidiano', tema: 'casa', tom: 'ruim' });
   } else {
     const amigo = vinculosVivos(v).find(x => !x.vin.parentesco && (x.vin.estagio === 'amigo_proximo' || x.vin.estagio === 'amigo') && x.p.municipioId === m.municipioId);
     v.moradia = { tipo: 'cedida', municipioId: m.municipioId, aluguel: 0, padrao: 1, tInicio: v.t };
@@ -90,6 +92,15 @@ function casaSemFamilia(v: Vida): void {
     const m = modeloMoradia(herdada.modeloId);
     v.moradia = { tipo: 'propria', municipioId: herdada.municipioId, imovelId: herdada.id, modeloId: m.id, aluguel: 0, padrao: m.padrao, tInicio: v.t, aceitaPet: true };
     escrever(v, { texto: 'A casa onde você cresceu passou a ser a sua casa: as contas, agora, são suas.', relevancia: 'cotidiano', tema: 'casa' });
+    return;
+  }
+  // Sem renda, um irmão próximo às vezes abre a casa.
+  const irmao = rendaPropriaMensal(v) <= 0 ? vinculosVivos(v).filter(x => (x.vin.parentesco === 'irmao' || x.vin.parentesco === 'meio_irmao') && x.p.municipioId === v.moradia.municipioId && x.vin.proximidade >= 40 && x.p.renda > 0).sort((a, b) => b.vin.proximidade - a.vin.proximidade)[0] : undefined;
+  if (irmao) {
+    if (!irmao.vin.convivio.includes('casa')) irmao.vin.convivio.push('casa');
+    v.moradia = { tipo: 'parente', municipioId: v.moradia.municipioId, aluguel: 0, padrao: v.moradia.padrao, tInicio: v.t, aceitaPet: true };
+    escrever(v, { texto: `Sem os pais, foi morar com ${irmao.p.nome}.`, relevancia: 'biografia', tema: 'casa', pessoas: [irmao.p.id] });
+    lembrarCom(v, irmao.p.id, 'Abriu a casa depois que os pais se foram.', 'apoio', 2);
     return;
   }
   const m = modeloMoradia('casa_simples');

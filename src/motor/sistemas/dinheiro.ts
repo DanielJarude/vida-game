@@ -644,7 +644,15 @@ function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
     falta -= valor;
     v.fatos[`ajudou_${x.p.id}`] = v.t;
     const papel = x.vin.parentesco === 'filho' ? flex(x.p.genero, 'O filho', 'A filha', 'Filhe') : x.vin.parentesco === 'mae' ? 'A mãe' : x.vin.parentesco === 'pai' ? 'O pai' : x.vin.parentesco === 'avo' ? flex(x.p.genero, 'O avô', 'A avó') : flex(x.p.genero, 'O irmão', 'A irmã', 'Irmane');
-    escrever(v, { texto: `${papel}${x.vin.parentesco === 'filho' || x.vin.parentesco === 'irmao' ? `, ${x.p.nome},` : ''} cobriu ${fmt(valor)} do buraco do ano${x.vin.parentesco === 'filho' ? ' — sem cobrar nada' : ''}.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [x.p.id], tom: 'bom' });
+    const vezes = (v.fatos['ajudas_recebidas'] ?? 0) + 1;
+    v.fatos['ajudas_recebidas'] = vezes;
+    const quem = `${papel}${x.vin.parentesco === 'filho' || x.vin.parentesco === 'irmao' ? `, ${x.p.nome},` : ''}`;
+    const textos = [
+      `${quem} cobriu ${fmt(valor)} do buraco do ano${x.vin.parentesco === 'filho' ? ' — sem cobrar nada' : ''}.`,
+      `De novo, ${quem.charAt(0).toLowerCase() + quem.slice(1)} ajudou a fechar as contas: ${fmt(valor)}.`,
+      `${quem} mandou ${fmt(valor)} "para ajudar", sem perguntar muito.`
+    ];
+    escrever(v, { texto: textos[(vezes - 1) % textos.length], relevancia: vezes <= 2 ? 'cotidiano' : 'tecnico', tema: 'familia', pessoas: [x.p.id], tom: 'bom' });
     lembrarCom(v, x.p.id, x.vin.parentesco === 'filho' ? 'Ajudou você com dinheiro quando apertou.' : 'Ajudou com dinheiro num ano apertado.', 'apoio', 2);
     x.vin.proximidade = Math.min(100, x.vin.proximidade + 2);
   }

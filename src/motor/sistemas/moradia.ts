@@ -120,7 +120,10 @@ export function voltarParaCasaDosPais(v: Vida): boolean {
   for (const x of pais) if (x.p.municipioId === v.moradia.municipioId && (!x.p.parceiroId || pais.some(o => o.p.id === x.p.parceiroId))) x.vin.convivio.push('casa');
   for (const { p, vin } of vinculosVivos(v)) if (p.especie && p.municipioId === v.moradia.municipioId && p.pet?.tutor !== 'eu' && vin.proximidade > 0 && !vin.convivio.includes('casa') && p.pet?.origem === 'familia') vin.convivio.push('casa');
   v.moradia = { tipo: 'pais', municipioId: v.moradia.municipioId, aluguel: 0, padrao: Math.max(1, v.moradia.padrao - 1), tInicio: v.t, aceitaPet: true };
-  escrever(v, { texto: `Voltou a morar com ${casa.vin.parentesco === 'mae' ? 'a mãe' : 'o pai'}.`, relevancia: 'marco', tema: 'casa' });
+  const vezes = (v.fatos['voltas_para_os_pais'] ?? 0) + 1;
+  v.fatos['voltas_para_os_pais'] = vezes;
+  const quem = casa.vin.parentesco === 'mae' ? 'a mãe' : 'o pai';
+  escrever(v, { texto: vezes === 1 ? `Voltou a morar com ${quem}.` : vezes === 2 ? `Mais uma vez, voltou para a casa d${quem === 'a mãe' ? 'a' : 'o'} ${quem.slice(2)}.` : `De volta à casa d${quem === 'a mãe' ? 'a' : 'o'} ${quem.slice(2)}, outra vez.`, relevancia: vezes === 1 ? 'marco' : 'biografia', tema: 'casa' });
   v.fatos['voltou_para_os_pais'] = v.t;
   return true;
 }

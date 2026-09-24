@@ -749,9 +749,9 @@ describe('casal, separação, herança, apoio entre gerações', () => {
         mae.p.tNasc = v.t - 55 * 12;
         v.trabalho.atual = undefined;
         v.financas.conta = 0;
-        const antes = v.biografia.length;
+        const antes = v.fatos['ajudas_recebidas'] ?? 0;
         processarDinheiro(v, criarRng(s + 1), ANO_NORMAL);
-        if (v.biografia.slice(antes).some(e => /cobriu/.test(e.texto))) ajudou++;
+        if ((v.fatos['ajudas_recebidas'] ?? 0) > antes) ajudou++;
       }
       return ajudou;
     };
