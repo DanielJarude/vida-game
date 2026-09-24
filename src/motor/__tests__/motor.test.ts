@@ -91,7 +91,8 @@ describe('regra de agência', () => {
       const v = viver(nova({ semente: s * 31 }), 60, vv => (idade(vv) >= 6 ? [{ tipo: 'rotina', id: 'futebol', ativa: true }] : []));
       for (const ev of v.personalidade.evidencias) {
         const [origem] = ev.origem.split(':');
-        expect(origem === 'rotina' || idsDecisaoComportamental.has(origem)).toBe(true);
+        // Rotina mantida, decisão comportamental ou ação do próprio jogador ('acao:...').
+        expect(origem === 'rotina' || origem === 'acao' || idsDecisaoComportamental.has(origem)).toBe(true);
       }
     }
   });
@@ -207,7 +208,7 @@ describe('família', () => {
     const par = criarPessoa(v, r, { idade: 26, genero: 'masculino', municipioId: v.moradia.municipioId });
     vincular(v, par, { origem: 'romance', proximidade: 80 });
     v.vinculos[par.id].romance = { estagio: 'namoro', tEstagio: v.t - 24, envolvimento: 80 };
-    expect(disponibilidade(v, { tipo: 'filhos', plano: 'tentando' }).grau).toBe('impossivel');
+    expect(disponibilidade(v, { tipo: 'pessoa', pessoaId: par.id, interacao: 'planejar_filhos' }).grau).toBe('impossivel');
     expect(disponibilidade(v, { tipo: 'adotar' }).grau).not.toBe('impossivel');
   });
 });

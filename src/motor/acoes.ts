@@ -7,30 +7,25 @@
  */
 
 import type { Rng } from './rng';
-import { clamp } from './rng';
 import type { EstiloDeVida, Retorno, Vida } from './tipos';
-import { escrever, idade, idadePessoa, marcarFato, parceiro, transacao, vinculosVivos } from './nucleo';
+import { escrever, idade, parceiro, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import { abrirDecisao, conteudoPorId, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso } from './sistemas/escola';
 import { aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar } from './sistemas/trabalho';
 import { OCUPACOES, ocupacao } from './dados/ocupacoes';
-import { atraiGenero, interesseInicial, mudarEstagio, podeTerRomance, terminar } from './sistemas/romance';
-import { compatibilidade } from './sistemas/social';
-import { alugar, morarJuntos, opcoesDeAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
+import { alugar, opcoesDeAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
 import { custoDeMudanca, iniciarAdocao, iniciarCnh, mudarAgora } from './sistemas/processos';
 import { modeloMoradia, modeloVeiculo, precoImovel } from './dados/bens';
 import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
 import { curso } from './dados/cursos';
 import { limiteDeCredito, saldoMensal } from './sistemas/dinheiro';
 import { moraComFamiliaDeOrigem, rendaDomiciliar } from './sistemas/domicilio';
-import { gestacaoEmCurso } from './sistemas/familia';
-import { flex, ge } from './texto';
+import { disponibilidadeInteracao, executarInteracao, LIMITE_INTERACOES } from './sistemas/interacoes';
 
-export type InteracaoPessoa =
-  | 'tempo' | 'conversar' | 'ajudar' | 'reaproximar'
-  | 'convidar' | 'pedir_namoro' | 'morar_junto' | 'pedir_casamento' | 'terminar';
+/** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
+export type InteracaoPessoa = string;
 
 export type Acao =
   | { tipo: 'decidir'; opcaoId: string }
@@ -49,7 +44,6 @@ export type Acao =
   | { tipo: 'pedir_aumento' }
   | { tipo: 'aposentar' }
   | { tipo: 'pessoa'; pessoaId: string; interacao: InteracaoPessoa }
-  | { tipo: 'filhos'; plano: 'tentando' | 'evitando' }
   | { tipo: 'adotar' }
   | { tipo: 'sair_de_casa'; modeloId: string }
   | { tipo: 'trocar_moradia'; modeloId: string }
@@ -67,10 +61,9 @@ export type Acao =
   /** Por quem o personagem se interessa — identidade, não comportamento. */
   | { tipo: 'atracao'; valor?: Vida['eu']['atracao'] };
 
-export const LIMITE_INTERACOES = 5;
+export { LIMITE_INTERACOES };
 export const LIMITE_CANDIDATURAS = 3;
 
-const interacoesNoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('pessoa:')).length;
 const jaFez = (v: Vida, chave: string) => v.anoAtual.acoes.includes(chave);
 
 /* ============================================================ Disponibilidade */
@@ -120,18 +113,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (v.t - v.trabalho.atual.tInicio < 12) return bloqueio('requisito', 'Espere completar um ano no cargo.');
       return jaFez(v, 'aumento') ? bloqueio('incompativel', 'Você já pediu neste ano.') : PERMITIDO;
     case 'aposentar': return podeAposentar(v);
-    case 'pessoa': return disponibilidadePessoa(v, a.pessoaId, a.interacao);
-    case 'filhos': {
-      const par = parceiro(v);
-      if (!par) return bloqueio('requisito', 'Precisa de uma parceria.');
-      if (!v.corpo.podeGestar && par.p.genero !== 'feminino') return bloqueio('impossivel', 'Vocês dois não podem gestar. A adoção é um caminho.');
-      if (a.plano === 'tentando') {
-        if (i < 18) return bloqueio('requisito', 'Planejar filho é coisa para depois dos 18.');
-        if (gestacaoEmCurso(v)) return bloqueio('incompativel', 'Já há uma gestação em curso.');
-        if (par.vin.romance?.planoFilhos === 'tentando') return bloqueio('incompativel', 'Vocês já estão tentando.');
-      }
-      return PERMITIDO;
-    }
+    case 'pessoa': return disponibilidadeInteracao(v, a.pessoaId, a.interacao);
     case 'adotar':
       if (i < 18) return bloqueio('ilegal', 'Adoção exige maioridade.');
       if (v.processos.some(p => p.tipo === 'adocao')) return bloqueio('incompativel', 'Já há um processo de adoção em andamento.');
@@ -219,61 +201,6 @@ function podeFinanciar(v: Vida, preco: number, financiar: boolean, meses: number
 export function parcelaPrice(valor: number, juros: number, meses: number): number {
   if (juros === 0) return valor / meses;
   return (valor * juros) / (1 - Math.pow(1 + juros, -meses));
-}
-
-function disponibilidadePessoa(v: Vida, id: string, x: InteracaoPessoa): Veredito {
-  const p = v.pessoas[id];
-  const vin = v.vinculos[id];
-  if (!p || !vin || !p.vivo) return bloqueio('impossivel', 'Essa pessoa não está mais na sua vida.');
-  if (interacoesNoAno(v) >= LIMITE_INTERACOES) return bloqueio('incompativel', 'O ano não tem mais tempo para isso. Avance o ano.');
-  if (jaFez(v, `pessoa:${x}:${id}`)) return bloqueio('incompativel', 'Você já fez isso neste ano.');
-  const i = idade(v);
-  const rom = vin.romance;
-  if (p.especie && !['tempo'].includes(x)) return bloqueio('impossivel', 'É um bicho.');
-  switch (x) {
-    case 'tempo': return i < 3 ? bloqueio('impossivel', 'Ainda muito pequeno.') : PERMITIDO;
-    case 'conversar': return i < 4 ? bloqueio('impossivel', 'Ainda não fala direito.') : idadePessoa(v, p) < 3 ? bloqueio('impossivel', 'Ainda não fala direito.') : PERMITIDO;
-    case 'ajudar': return i < 14 ? bloqueio('impossivel', 'Criança não tem como ajudar com dinheiro.') : v.financas.conta >= 300 ? PERMITIDO : bloqueio('requisito', 'Sem dinheiro para ajudar.');
-    case 'reaproximar': return vin.estagio === 'afastado' ? PERMITIDO : bloqueio('incompativel', 'Vocês não estão afastados.');
-    case 'convidar':
-      if (rom && rom.estagio !== 'interesse' && rom.estagio !== 'ex') return bloqueio('incompativel', 'Vocês já estão juntos.');
-      if (!podeTerRomance(v, p, vin)) {
-        if (vin.parentesco) return bloqueio('impossivel', 'É da família.');
-        if (i < 14 || idadePessoa(v, p) < 14) return bloqueio('ilegal', 'Ninguém namora antes dos 14.');
-        if ((i >= 18) !== (idadePessoa(v, p) >= 18)) return bloqueio('ilegal', 'Adulto e menor de idade: não.');
-        if (!atraiGenero(p.atracao, v.eu.genero)) return bloqueio('impossivel', `${p.nome} não se interessa por ${flex(ge(v), 'homens', 'mulheres', 'pessoas como você')}.`);
-        return bloqueio('impossivel', 'Não vai rolar.');
-      }
-      if (parceiro(v)) return { grau: 'irregular', motivo: 'Você está num relacionamento. Isso seria traição.' };
-      return { grau: 'permitido', chance: chanceConvite(v, id) };
-    case 'pedir_namoro': {
-      if (rom?.estagio !== 'saindo') return bloqueio('incompativel', 'Primeiro, saiam juntos.');
-      const atual = parceiro(v);
-      if (atual && atual.p.id !== id) return bloqueio('incompativel', `Você está com ${atual.p.nome}. Para namorar ${p.nome}, seria preciso terminar antes.`);
-      if (v.t - rom.tEstagio < 3) return bloqueio('requisito', 'Cedo demais.');
-      return PERMITIDO;
-    }
-    case 'morar_junto':
-      if (rom?.estagio !== 'namoro') return bloqueio('incompativel', 'Só para quem namora.');
-      if (i < 18 || idadePessoa(v, p) < 18) return bloqueio('ilegal', 'Os dois precisam ser maiores de idade.');
-      if (v.t - rom.tEstagio < 12) return bloqueio('requisito', 'Namoram há pouco tempo.');
-      return PERMITIDO;
-    case 'pedir_casamento':
-      if (!rom || !['namoro', 'morando_junto'].includes(rom.estagio)) return bloqueio('incompativel', 'Só para quem está junto.');
-      if (i < 18 || idadePessoa(v, p) < 18) return bloqueio('ilegal', 'Casamento exige maioridade (16 com autorização dos pais, na lei; no jogo, 18).');
-      if (v.t - vin.tInicio < 18) return bloqueio('requisito', 'Estão juntos há pouco tempo.');
-      if (v.fatos[`noivado_${id}`] !== undefined) return bloqueio('incompativel', 'Vocês já estão noivos.');
-      return PERMITIDO;
-    case 'terminar':
-      return rom && ['saindo', 'namoro', 'morando_junto', 'casamento'].includes(rom.estagio) ? PERMITIDO : bloqueio('incompativel', 'Não há relacionamento.');
-  }
-}
-
-function chanceConvite(v: Vida, id: string): number {
-  const p = v.pessoas[id];
-  const vin = v.vinculos[id];
-  const base = vin.romance?.envolvimento ?? interesseInicial(v, p);
-  return clamp((base + vin.proximidade * 0.3 - 30) / 60, 0.05, 0.9);
 }
 
 /* ================================================================= Execução */
@@ -378,23 +305,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return {};
     }
     case 'aposentar': aposentar(v); return ok('Aposentadoria concedida.', 'bom');
-    case 'pessoa': return interagir(v, r, a.pessoaId, a.interacao);
-    case 'filhos': {
-      const par = parceiro(v)!;
-      const rom = par.vin.romance!;
-      if (a.plano === 'evitando') {
-        rom.planoFilhos = 'evitando';
-        return ok('Vocês combinaram evitar filhos por agora.');
-      }
-      const quer = par.p.querFilhos ?? 'talvez';
-      if (quer === 'nao' || (quer === 'talvez' && rom.envolvimento < 65)) {
-        par.vin.tensao = clamp(par.vin.tensao + 15);
-        return { resultado: `${par.p.nome} não quer ter filhos${quer === 'talvez' ? ' agora' : ''}. A conversa terminou tensa.` };
-      }
-      rom.planoFilhos = 'tentando';
-      escrever(v, { texto: `Decidiu com ${par.p.nome} tentar ter um filho.`, relevancia: 'biografia', tema: 'filhos', escolha: true, pessoas: [par.p.id] });
-      return { resultado: `${par.p.nome} topou. Vocês começaram a tentar.` };
-    }
+    case 'pessoa': return executarInteracao(v, r, a.pessoaId, a.interacao);
     case 'adotar': iniciarAdocao(v, parceiro(v)?.p.id); return ok('Processo de adoção iniciado.');
     case 'sair_de_casa': alugar(v, a.modeloId); return ok(`Casa nova: ${modeloMoradia(a.modeloId).nome}.`, 'bom');
     case 'trocar_moradia': alugar(v, a.modeloId); return ok(`Casa nova: ${modeloMoradia(a.modeloId).nome}.`);
@@ -504,101 +415,6 @@ function financiarOuPagar(v: Vida, preco: number, financiar: boolean, meses: num
   pagar(v, entrada);
   const valor = preco - entrada;
   v.financas.dividas.push({ id: `d${v.seq++}`, tipo, saldo: valor, jurosMes: juros, parcela: Math.round(parcelaPrice(valor, juros, meses)), bemId, descricao });
-}
-
-/* ------------------------------------------------------------ Interações */
-
-function interagir(v: Vida, r: Rng, id: string, x: InteracaoPessoa): Saida {
-  const p = v.pessoas[id];
-  const vin = v.vinculos[id];
-  v.anoAtual.acoes.push(`pessoa:${x}:${id}`);
-  vin.tUltimoContato = v.t;
-  const c = compatibilidade(v, p);
-  const nome = p.nome;
-  switch (x) {
-    case 'tempo': {
-      vin.proximidade = clamp(vin.proximidade + Math.round(6 + c * 6));
-      if (vin.romance) vin.romance.envolvimento = clamp(vin.romance.envolvimento + 5);
-      const frases = p.especie
-        ? [`Longo passeio com ${nome}.`, `Uma tarde inteira brincando com ${nome}.`]
-        : idadePessoa(v, p) < 12
-          ? [`Uma tarde de parque com ${nome}.`, `Montaram um quebra-cabeça de mil peças, você e ${nome}.`]
-          : [`Um dia inteiro com ${nome}, sem pressa.`, `Saíram para comer e perderam a hora conversando.`, `Um fim de semana com ${nome} que ficou na memória.`];
-      return { resultado: r.pick(frases) };
-    }
-    case 'conversar': {
-      vin.tensao = clamp(vin.tensao - 18);
-      vin.proximidade = clamp(vin.proximidade + Math.round(3 + c * 4));
-      return { resultado: c > 0 ? `A conversa com ${nome} foi longe e fez bem aos dois.` : `Vocês conversaram. Nem tudo ficou resolvido, mas o clima melhorou.` };
-    }
-    case 'ajudar': {
-      const valor = Math.min(v.financas.conta, 500);
-      v.financas.conta -= valor;
-      vin.proximidade = clamp(vin.proximidade + 8);
-      return { resultado: `Você ajudou ${nome} com R$ ${valor.toLocaleString('pt-BR')} num aperto. ${p.genero === 'feminino' ? 'Ela' : 'Ele'} não esqueceu.` };
-    }
-    case 'reaproximar': {
-      vin.proximidade = clamp(vin.proximidade + 14);
-      if (vin.proximidade >= 40) vin.estagio = 'amigo';
-      escrever(v, { texto: `Procurou ${nome} depois de muito tempo sem se falar.`, relevancia: 'cotidiano', tema: 'amizade', escolha: true, pessoas: [id] });
-      return { resultado: vin.proximidade >= 40 ? `${nome} respondeu na hora. Parecia estar esperando isso.` : `${nome} respondeu com educação. Vai levar tempo.` };
-    }
-    case 'convidar': {
-      const traicao = !!parceiro(v);
-      if (!v.eu.atracao) v.eu.atracao = p.genero === 'masculino' ? 'homens' : p.genero === 'feminino' ? 'mulheres' : 'ambos';
-      if (!r.chance(chanceConvite(v, id))) {
-        vin.romance = undefined;
-        return { resultado: `${nome} agradeceu o convite e disse que prefere deixar as coisas como estão.` };
-      }
-      if (traicao) {
-        const atual = parceiro(v)!;
-        if (r.chance(0.4)) atual.vin.tensao = 95;
-        v.personalidade.tracos.impulsividade = clamp(v.personalidade.tracos.impulsividade + 6, -100, 100);
-      }
-      mudarEstagio(v, vin, 'saindo');
-      vin.romance!.envolvimento = Math.max(vin.romance!.envolvimento, 50);
-      escrever(v, { texto: `Começou a sair com ${nome}.`, relevancia: 'biografia', tema: 'amor', tom: 'bom', escolha: true, pessoas: [id] });
-      return { resultado: `${nome} topou. O primeiro encontro terminou mais tarde do que o combinado.` };
-    }
-    case 'pedir_namoro': {
-      const rom = vin.romance!;
-      if (r.chance(clamp((rom.envolvimento - 30) / 45, 0.05, 0.95))) {
-        mudarEstagio(v, vin, 'namoro');
-        escrever(v, { texto: `Começou a namorar ${nome}.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [id] });
-        vin.historia.push({ t: v.t, texto: 'Começaram a namorar.' });
-        return { resultado: `${nome} disse sim antes de você terminar a frase.` };
-      }
-      rom.envolvimento = clamp(rom.envolvimento - 8);
-      return { resultado: `${nome} disse que ainda não está pront${p.genero === 'feminino' ? 'a' : 'o'} para isso.` };
-    }
-    case 'morar_junto': {
-      const rom = vin.romance!;
-      if (r.chance(clamp((rom.envolvimento - 35) / 40, 0.05, 0.95))) {
-        mudarEstagio(v, vin, 'morando_junto');
-        morarJuntos(v, p);
-        escrever(v, { texto: `Foi morar com ${nome}.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [id] });
-        vin.historia.push({ t: v.t, texto: 'Foram morar juntos.' });
-        return { resultado: `${nome} topou. A primeira compra da casa nova foi um jogo de panelas.` };
-      }
-      rom.envolvimento = clamp(rom.envolvimento - 6);
-      return { resultado: `${nome} achou cedo demais.` };
-    }
-    case 'pedir_casamento': {
-      const rom = vin.romance!;
-      if (r.chance(clamp((rom.envolvimento - 40) / 35, 0.05, 0.95))) {
-        marcarFato(v, `noivado_${id}`);
-        escrever(v, { texto: `Pediu ${nome} em casamento. A resposta foi sim.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [id] });
-        return { resultado: `Sim. ${nome} chorou, você chorou, o garçom bateu palmas.` };
-      }
-      rom.envolvimento = clamp(rom.envolvimento - 15);
-      vin.tensao = clamp(vin.tensao + 25);
-      escrever(v, { texto: `Pediu ${nome} em casamento e ouviu um não.`, relevancia: 'biografia', tema: 'amor', tom: 'ruim', escolha: true, pessoas: [id] });
-      return { resultado: `${nome} ficou em silêncio por muito tempo. Depois disse que não.` };
-    }
-    case 'terminar':
-      terminar(v, p, vin, 'jogador');
-      return { resultado: `Acabou com ${nome}.` };
-  }
 }
 
 export { opcoesDeCurso, opcoesDeAluguel, limiteDeCredito };

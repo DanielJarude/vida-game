@@ -12,6 +12,8 @@ import { tracosMarcantes } from '../../motor/personalidade';
 import { flex } from '../../motor/texto';
 import { Retrato } from '../avatar/Retrato';
 import { anosDaBiografia, dinheiroCurto, rotuloDe } from '../apresentar';
+import { importancia } from '../../motor/sistemas/vinculos';
+import { situacaoAfetiva } from '../leitura';
 
 export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
   const i = idade(vida);
@@ -20,10 +22,10 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
   const empregos = [...vida.trabalho.historico.map(h => h.ocupacaoId), ...(vida.trabalho.atual ? [vida.trabalho.atual.ocupacaoId] : [])];
   const principal = empregos.length ? nomeOcupacaoId(vida, empregos.sort((a, b) => empregos.filter(x => x === b).length - empregos.filter(x => x === a).length)[0]) : null;
   const cidades = new Set(vida.biografia.filter(e => e.tema === 'lugar' && /Mudou-se/.test(e.texto)).map(e => e.texto));
-  // Família e parceria primeiro; depois quem era mais próximo.
-  const peso = (x: { vin: { parentesco?: string; romance?: { estagio: string }; proximidade: number } }) =>
-    (x.vin.parentesco ? (['filho', 'enteado'].includes(x.vin.parentesco) ? 160 : ['mae', 'pai', 'irmao', 'meio_irmao', 'neto'].includes(x.vin.parentesco) ? 110 : 60) : x.vin.romance && x.vin.romance.estagio !== 'ex' && x.vin.romance.estagio !== 'interesse' ? 120 : 0) + x.vin.proximidade;
-  const perto = vinculosVivos(vida).filter(x => !x.p.especie && x.vin.proximidade >= 30).sort((a, b) => peso(b) - peso(a)).slice(0, 6);
+  // Quem mais pesava na vida (papel, afeto, casa, anos, história), não só quem era parente.
+  const perto = vinculosVivos(vida).filter(x => !x.p.especie && x.p.nome && importancia(vida, x.p, x.vin) >= 20).sort((a, b) => importancia(vida, b.p, b.vin) - importancia(vida, a.p, a.vin)).slice(0, 8);
+  const netos = Object.values(vida.vinculos).filter(v => v.parentesco === 'neto').length;
+  const bisnetos = Object.values(vida.vinculos).filter(v => v.parentesco === 'bisneto').length;
   const tracos = tracosMarcantes(vida);
   const anos = anosDaBiografia(vida, false);
   return (
@@ -38,7 +40,8 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
         <ul>
           <li>{vida.educacao.concluidos.length ? `Estudou ${vida.educacao.concluidos.map(c => c.nome).join(', ')}.` : `Escolaridade: ${ROTULO_ESCOLARIDADE[vida.educacao.escolaridade]}.`}</li>
           <li>{principal ? `Trabalhou sobretudo como ${principal}.` : empregos.length === 0 ? 'Nunca teve emprego fixo.' : ''}</li>
-          <li>{nFilhos === 0 ? 'Não teve filhos.' : nFilhos === 1 ? `Teve um filho: ${filhos(vida)[0]?.nome ?? ''}.` : `Teve ${nFilhos} filhos.`}</li>
+          <li>{nFilhos === 0 ? 'Não teve filhos.' : nFilhos === 1 ? `Teve um filho: ${filhos(vida)[0]?.nome ?? ''}.` : `Teve ${nFilhos} filhos.`}{netos ? ` ${netos === 1 ? 'Um neto' : `${netos} netos`}${bisnetos ? ` e ${bisnetos === 1 ? 'um bisneto' : `${bisnetos} bisnetos`}` : ''}.` : ''}</li>
+          {situacaoAfetiva(vida) && <li>Ao fim, {situacaoAfetiva(vida)}.</li>}
           {cidades.size > 0 && <li>Mudou de cidade {cidades.size === 1 ? 'uma vez' : `${cidades.size} vezes`}.</li>}
           <li>{patrimonio(vida) > 1000 ? `Deixou ${dinheiroCurto(patrimonio(vida))}.` : patrimonio(vida) < -1000 ? 'Deixou dívidas.' : 'Não deixou bens.'}</li>
           {tracos.length > 0 && <li>Quem conviveu {flex(g, 'lembra dele', 'lembra dela', 'lembra delu')} como {tracos.join(', ').replace(/, ([^,]*)$/, ' e $1')}.</li>}

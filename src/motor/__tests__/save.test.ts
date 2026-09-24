@@ -98,6 +98,6 @@ describe('migração v5 → v6', () => {
     const r = ler(s);
     expect(r.tipo).toBe('ok');
     expect(s.dados[CHAVE_BACKUP]).toBe(bruto);
-    expect(JSON.parse(s.dados[CHAVE_SAVE]).versao).toBe(6);
+    expect(JSON.parse(s.dados[CHAVE_SAVE]).versao).toBe(7);
   });
 });

@@ -83,9 +83,10 @@ describe('interface', () => {
     const mae = within(screen.getByRole('main')).getAllByText(/sua mãe/)[0].closest('button')!;
     fireEvent.click(mae);
     const ficha = screen.getByRole('dialog');
-    expect(within(ficha).getByRole('button', { name: /Passar um tempo junto/ })).toBeTruthy();
-    // criança não ajuda com dinheiro: o botão nem aparece antes dos 14
-    expect(within(ficha).queryByRole('button', { name: /Ajudar com dinheiro/ })).toBeNull();
+    // A ação nasce da relação: criança de 6 anos com a mãe "passa a tarde com" ela.
+    expect(within(ficha).getByRole('button', { name: /Passar a tarde com/ })).toBeTruthy();
+    // criança não ajuda com dinheiro: o botão nem aparece
+    expect(within(ficha).queryByRole('button', { name: /dinheiro/i })).toBeNull();
   });
 
   it('ação bloqueada explica o motivo (menor não muda de cidade)', () => {

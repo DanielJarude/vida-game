@@ -3,7 +3,11 @@
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { dinheiro, estresse, fato, feliz, prox, saude } from './efeitos';
-import { idadePessoa, temFato, amigos } from '../nucleo';
+import { idadePessoa, lembrarCom, temFato, amigos } from '../nucleo';
+import type { Ctx } from './base';
+
+/** Anos desde que o casal começou (a primeira saída), não desde que se conheceram. */
+const anosJuntos = (c: Ctx) => { const vin = c.v.vinculos[c.p.pessoa.id]; return Math.floor((c.v.t - (vin.romance?.tInicio ?? vin.tInicio)) / 12); };
 import { mudarAgora } from '../sistemas/processos';
 
 export const MATURIDADE: Conteudo[] = [
@@ -20,25 +24,16 @@ export const MATURIDADE: Conteudo[] = [
   {
     id: 'mat_bodas', tipo: 'acontecimento', idade: [45, 100], tema: 'amor', repetir: 25,
     papeis: { pessoa: P.conjuge },
-    quando: c => { const anos = Math.floor((c.v.t - c.v.vinculos[c.p.pessoa.id].tInicio) / 12); return anos === 25 || anos === 50; },
+    quando: c => { const anos = anosJuntos(c); return anos === 25 || anos === 50; },
     narrar: c => {
-      const anos = Math.floor((c.v.t - c.v.vinculos[c.p.pessoa.id].tInicio) / 12);
-      return { texto: anos === 50 ? `Bodas de ouro com ${c.p.pessoa.nome}: cinquenta anos juntos.` : `Vinte e cinco anos ao lado de ${c.p.pessoa.nome}. Bodas de prata.`, relevancia: 'biografia', tom: 'bom', lembrar: ['pessoa', `${anos} anos juntos.`] };
+      const anos = anosJuntos(c);
+      return { texto: anos === 50 ? `Bodas de ouro com ${c.p.pessoa.nome}: cinquenta anos juntos.` : `Vinte e cinco anos ao lado de ${c.p.pessoa.nome}. Bodas de prata.`, relevancia: 'biografia', tom: 'bom', efeito: () => lembrarCom(c.v, c.p.pessoa.id, anos === 50 ? 'Bodas de ouro.' : 'Bodas de prata.', 'casamento', 3) };
     }
   },
   {
     id: 'mat_memoria', tipo: 'acontecimento', idade: [72, 100], tema: 'saude', repetir: 6,
     quando: c => c.v.corpo.saude < 55,
     narrar: c => ({ texto: 'Os nomes começaram a sumir no meio da frase. O médico pediu exames e falou em "acompanhar".', relevancia: 'biografia', tom: 'ruim', efeito: () => { c.v.mente.cognicao = Math.max(10, c.v.mente.cognicao - 8); estresse(c, 5); } })
-  },
-  {
-    id: 'mat_amigo_morre', tipo: 'acontecimento', idade: [65, 100], tema: 'perda', repetir: 4,
-    papeis: { amigo: P.comIdade(P.amigo, 60) },
-    narrar: c => ({
-      texto: `${c.p.amigo.nome} morreu, aos ${idadePessoa(c.v, c.p.amigo)} anos. No velório, a turma antiga se reencontrou e ficou contando histórias até fecharem a capela.`,
-      relevancia: 'marco', tom: 'ruim',
-      efeito: () => { c.p.amigo.vivo = false; c.p.amigo.tMorte = c.v.t; feliz(c, -10); }
-    })
   },
   {
     id: 'mat_voltar_estudar', tipo: 'decisao', idade: [60, 85], tema: 'estudo',

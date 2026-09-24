@@ -14,51 +14,32 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Pessoa, Processo, Vida } from '../tipos';
 import {
-  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, temFato, vinculosVivos
+  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, vinculosVivos
 } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { processarCorpoDePessoa } from './corpo';
-import { flex, ge, rotuloParentesco } from '../texto';
+import { flex, ge } from '../texto';
 import { MESES, mesDe } from '../tempo';
 import { OCUPACOES, OCUPACOES_POR_CLASSE, ocupacao } from '../dados/ocupacoes';
 import { liquido, salarioLocal } from './renda';
-import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
+import { moraComFamiliaDeOrigem } from './domicilio';
 import { sortearNome } from '../dados/nomes';
-import { descricaoOrigem } from './social';
+import { registrarMortes } from './luto';
+import { garantirVida } from './filhos';
 
 /* ----------------------------------------------------------------- Mortes */
 
-const PESO_LUTO: Record<string, number> = { mae: 22, pai: 20, filho: 35, irmao: 14, avo: 8, pet: 6, tio: 3, primo: 2 };
-
+/** Quem morre neste ano: o corpo de cada pessoa decide; o luto conta. */
 export function processarMortes(v: Vida, r: Rng): void {
+  const mortes: { p: Pessoa; vin: Vida['vinculos'][string]; causa: string }[] = [];
   for (const { p, vin } of vinculosVivos(v)) {
     const causa = processarCorpoDePessoa(v, r, p);
-    if (!causa) continue;
-    p.vivo = false;
-    p.tMorte = v.t;
-    p.causaMorte = causa;
-    const par = vin.parentesco;
-    const rotulo = par ? rotuloParentesco(p, par) : undefined;
-    const importante = !!par && ['mae', 'pai', 'filho', 'irmao', 'avo', 'pet'].includes(par) || vin.estagio === 'amigo_proximo' || !!vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(vin.romance.estagio);
-    const luto = par ? PESO_LUTO[par] ?? 2 : vin.romance ? 30 : vin.estagio === 'amigo_proximo' ? 12 : 2;
-    v.mente.felicidade = clamp(v.mente.felicidade - Math.round(luto * vin.proximidade / 80));
-    v.mente.estresse = clamp(v.mente.estresse + Math.round(luto / 3));
-    if (!importante && vin.proximidade < 40) continue;
-    let texto: string;
-    if (par === 'pet') texto = `${p.nome} morreu de velhice, depois de ${idadePessoa(v, p)} anos na família.`;
-    else if (vin.romance && vin.romance.estagio !== 'ex') texto = `${p.nome} morreu (${causa}). ${flex(ge(v), 'Viúvo', 'Viúva')} aos ${idade(v)}.`;
-    else if (rotulo) texto = `${capital(seuSua(p, rotulo))} ${p.nome} morreu, aos ${idadePessoa(v, p)} anos (${causa}).`;
-    else texto = `${p.nome}, que você conheceu ${descricaoOrigem(v, vin)}, morreu aos ${idadePessoa(v, p)} anos (${causa}).`;
-    escrever(v, { texto, relevancia: importante ? 'marco' : 'biografia', tema: 'perda', tom: 'ruim', pessoas: [p.id] });
-    if (vin.romance && vin.romance.estagio !== 'ex') {
-      vin.romance.estagio = 'ex';
-      vin.convivio = [];
-    }
-    if (par === 'mae' || par === 'pai') heranca(v, r, p);
-    // O outro genitor fica viúvo.
-    if (p.parceiroId && v.pessoas[p.parceiroId]) v.pessoas[p.parceiroId].parceiroId = undefined;
+    if (causa) mortes.push({ p, vin, causa });
   }
+  registrarMortes(v, r, mortes, falecido => heranca(v, r, falecido));
 }
+
+const rotuloDeFamilia = (v: Vida, p: Pessoa) => ({ mae: 'mãe', pai: 'pai', avo: flex(p.genero, 'avô', 'avó') } as Record<string, string>)[v.vinculos[p.id]?.parentesco ?? ''] ?? 'parente';
 
 function seuSua(p: Pessoa, rotulo: string): string {
   return `${flex(p.genero, 'seu', 'sua', 'sue')} ${rotulo}`;
@@ -84,8 +65,14 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
   const i = idade(v);
   const [p1, p2] = [pais(v).find(p => p.genero === 'feminino'), pais(v).find(p => p.genero === 'masculino')];
 
-  for (const p of pais(v)) {
+  for (const p of [...pais(v), ...vinculosVivos(v).filter(x => x.vin.parentesco === 'avo').map(x => x.p)]) {
     const ip = idadePessoa(v, p);
+    // A saúde de quem envelhece piora — e isso vira um momento difícil em que dá para estar junto.
+    if (ip >= 65 && p.saude < 42 && (!p.aperto || v.t - p.aperto.t > 36) && r.chance(0.35)) {
+      p.aperto = { tipo: 'doenca', t: v.t };
+      if (v.vinculos[p.id].proximidade >= 40) escrever(v, { texto: `${capital(seuSua(p, rotuloDeFamilia(v, p)))} ${p.nome} ficou internad${flex(p.genero, 'o', 'a', 'e')} por uns dias. Voltou para casa mais devagar.`, relevancia: 'cotidiano', tema: 'familia', tom: 'ruim', pessoas: [p.id] });
+    }
+    if (v.vinculos[p.id].parentesco === 'avo') continue;
     // Aposentadoria dos pais
     if (p.ocupacao && !p.ocupacao.startsWith('aposentad') && ip >= (p.genero === 'feminino' ? 62 : 65) && r.chance(0.6)) {
       p.ocupacao = flex(p.genero, 'aposentado', 'aposentada');
@@ -102,6 +89,7 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       p.renda = 0;
       const antes = p.ocupacao;
       p.ocupacao = flex(p.genero, 'desempregado', 'desempregada');
+      p.aperto = { tipo: 'desemprego', t: v.t };
       if (i < 25 && moraComFamiliaDeOrigem(v)) {
         escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} perdeu o emprego${antes ? ` de ${antes}` : ''}. O dinheiro em casa encurtou.`, relevancia: 'biografia', tema: 'familia', tom: 'ruim', pessoas: [p.id] });
         v.mente.estresse = clamp(v.mente.estresse + 6);
@@ -114,6 +102,7 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
         p.ocupacaoId = oc.id;
         p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
         p.renda = liquido(salarioLocal(oc, p.municipioId, 0.85 + r.next() * 0.3), oc.contrato);
+        if (p.aperto?.tipo === 'desemprego') p.aperto = undefined;
         if (i < 25 && moraComFamiliaDeOrigem(v)) escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} arrumou trabalho de novo, como ${p.ocupacao}.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [p.id] });
       }
     }
@@ -123,6 +112,8 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
   if (p1 && p2 && p1.parceiroId === p2.id && r.chance(i < 18 ? 0.018 : 0.008)) {
     p1.parceiroId = undefined;
     p2.parceiroId = undefined;
+    p1.aperto = { tipo: 'separacao', t: v.t };
+    p2.aperto = { tipo: 'separacao', t: v.t };
     const saiDeCasa = r.chance(0.8) ? p2 : p1;
     const vinSai = v.vinculos[saiDeCasa.id];
     if (moraComFamiliaDeOrigem(v) && vinSai) {
@@ -133,8 +124,10 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       texto: i < 18
         ? `Seus pais se separaram. ${saiDeCasa.nome} saiu de casa${i < 10 ? ' e a rotina passou a ser de fins de semana alternados' : ''}.`
         : `Seus pais se separaram depois de décadas juntos.`,
-      relevancia: 'marco', tema: 'familia', tom: 'ruim', pessoas: [p1.id, p2.id]
+      relevancia: 'marco', tema: 'familia', tom: 'ruim', pessoas: [p1.id, p2.id], evento: { tipo: 'ruptura', peso: i < 18 ? 55 : 30 }
     });
+    lembrarCom(v, p1.id, i < 18 ? `Seus pais se separaram quando você tinha ${i} anos.` : 'Seus pais se separaram.', 'conflito', 2);
+    lembrarCom(v, p2.id, i < 18 ? `Seus pais se separaram quando você tinha ${i} anos.` : 'Seus pais se separaram.', 'conflito', 2);
     if (i < 18) { v.mente.felicidade = clamp(v.mente.felicidade - 10); v.mente.estresse = clamp(v.mente.estresse + 12); }
   }
 
@@ -147,8 +140,9 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       const g = r.chance(0.5) ? 'masculino' : 'feminino';
       const outro = v.pessoas[maeCasa.parceiroId];
       const bebe = criarPessoa(v, r, { genero: g, idade: 0, municipioId: maeCasa.municipioId, sobrenome: v.eu.sobrenome, visual: visualHerdado(r, g, maeCasa.visual, outro?.visual) });
-      const vin = vincular(v, bebe, { parentesco: outro && v.vinculos[outro.id]?.parentesco === 'pai' ? 'irmao' : 'meio_irmao', origem: 'familia', proximidade: 60, convivio: ['casa'] });
-      void vin;
+      vincular(v, bebe, { parentesco: outro && v.vinculos[outro.id]?.parentesco === 'pai' ? 'irmao' : 'meio_irmao', origem: 'familia', proximidade: 60, convivio: ['casa'] });
+      bebe.genitores = [maeCasa.id, ...(outro ? [outro.id] : [])];
+      lembrarCom(v, bebe.id, `Nasceu quando você tinha ${i} anos.`, 'inicio', 2);
       escrever(v, { texto: `Nasceu ${flex(g, 'seu irmão', 'sua irmã')}, ${bebe.nome}.`, relevancia: 'marco', tema: 'familia', tom: 'bom', pessoas: [bebe.id] });
     }
   }
@@ -162,11 +156,41 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       if (oc.idadeMin <= ii) { irmao.ocupacao = irmao.genero === 'feminino' ? oc.nome[1] : oc.nome[0]; irmao.renda = liquido(salarioLocal(oc, irmao.municipioId), oc.contrato); }
     }
     const vin = v.vinculos[irmao.id];
+    vidaDoIrmao(v, r, irmao, ii);
     if (vin.convivio.includes('casa') && ii >= 19 && r.chance(0.12 + (ii - 19) * 0.03)) {
       marcarFato(v, `saiu_de_casa_${irmao.id}`);
       vin.convivio = vin.convivio.filter(c => c !== 'casa');
       if (moraComFamiliaDeOrigem(v)) escrever(v, { texto: `${irmao.nome} saiu de casa. O quarto ficou vazio.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [irmao.id] });
     }
+  }
+}
+
+/**
+ * Irmãos também têm vida: namoram, casam, se separam, perdem emprego. O
+ * jogador não decide nada disso — fica sabendo, e pode estar junto.
+ */
+function vidaDoIrmao(v: Vida, r: Rng, irmao: Pessoa, ii: number): void {
+  if (ii < 20 || ii > 70) return;
+  const vin = v.vinculos[irmao.id];
+  const par = irmao.parceiroId ? v.pessoas[irmao.parceiroId] : undefined;
+  if (!par) {
+    if (ii < 50 && r.chance(ii < 35 ? 0.12 : 0.05)) {
+      const p = criarPessoa(v, r, { genero: irmao.genero === 'feminino' ? 'masculino' : 'feminino', idade: ii + r.int(-3, 3), municipioId: irmao.municipioId });
+      p.parceiroId = irmao.id;
+      irmao.parceiroId = p.id;
+      v.fatos[`irmao_uniao_${irmao.id}`] = v.t;
+      if (vin.proximidade >= 45) escrever(v, { texto: `${irmao.nome} ${r.chance(0.5) ? 'casou' : 'foi morar'} com ${p.nome}.`, relevancia: 'cotidiano', tema: 'familia', tom: 'bom', pessoas: [irmao.id] });
+      lembrarCom(v, irmao.id, `Casou com ${p.nome}.`, 'romance', 1);
+    }
+    return;
+  }
+  if (!par.vivo) { irmao.parceiroId = undefined; return; }
+  if (r.chance(0.02)) {
+    irmao.parceiroId = undefined;
+    par.parceiroId = undefined;
+    irmao.aperto = { tipo: 'separacao', t: v.t };
+    escrever(v, { texto: `${irmao.nome} e ${par.nome} se separaram. ${flex(irmao.genero, 'Ele', 'Ela', 'Elu')} passou uns tempos mal.`, relevancia: vin.proximidade >= 50 ? 'biografia' : 'cotidiano', tema: 'familia', tom: 'ruim', pessoas: [irmao.id] });
+    lembrarCom(v, irmao.id, `Separou-se de ${par.nome}.`, 'conflito', 1);
   }
 }
 
@@ -194,8 +218,11 @@ function gestanteDoCasal(v: Vida, p: Pessoa): 'eu' | 'parceiro' | null {
 
 export function processarConcepcao(v: Vida, r: Rng): void {
   if (gestacaoEmCurso(v)) return;
-  const par = parceiro(v) ?? vinculosVivos(v).find(x => x.vin.romance?.estagio === 'saindo');
+  const par = parceiro(v) ?? vinculosVivos(v).find(x => x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto);
   if (!par || !par.vin.romance) return;
+  // Sem gravidez entre adolescente e adulto, nem antes dos 16.
+  const [a, b] = [idade(v), idadePessoa(v, par.p)];
+  if (Math.min(a, b) < 16 || (Math.min(a, b) < 18 && Math.max(a, b) >= 18)) return;
   const quem = gestanteDoCasal(v, par.p);
   if (!quem) return;
   const idadeG = quem === 'eu' ? idade(v) : idadePessoa(v, par.p);
@@ -231,9 +258,14 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
       texto: g.planejada
         ? jaTem ? `${quemGesta} de novo. Desta vez, a notícia veio sem susto.` : `${quemGesta}. Depois de meses tentando, o teste deu positivo.`
         : jaTem ? `${quemGesta} outra vez — sem planejar.` : `${quemGesta}. Não estava nos planos.`,
-      relevancia: 'marco', tema: 'filhos', tom: g.planejada ? 'bom' : 'neutro', pessoas: outro ? [outro.id] : []
+      relevancia: 'marco', tema: 'filhos', tom: g.planejada ? 'bom' : 'neutro', pessoas: outro ? [outro.id] : [],
+      evento: { tipo: 'gravidez', pessoaId: outro?.id, peso: 50 }
     });
     marcarFato(v, `gravidez_descoberta_${g.id}`);
+    if (outro && v.vinculos[outro.id]) {
+      lembrarCom(v, outro.id, g.planejada ? 'O teste deu positivo, depois de tentarem.' : 'Uma gravidez que não estava nos planos.', 'filho', 2, g.tConcepcao + 2);
+      if (v.vinculos[outro.id].romance) v.vinculos[outro.id].romance!.planoFilhos = 'evitando';
+    }
   }
   if (g.tParto > v.t) return null;
   // Parto
@@ -251,7 +283,11 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
   bebe.tNasc = g.tParto;
   bebe.nome = '';
   const moraComigo = g.gestanteId === 'eu' || (!!outro && v.vinculos[outro.id]?.convivio.includes('casa')) || moraComFamiliaDeOrigem(v);
-  vincular(v, bebe, { parentesco: 'filho', origem: 'familia', proximidade: moraComigo ? 80 : 35, convivio: moraComigo ? ['casa'] : [] });
+  const vinBebe = vincular(v, bebe, { parentesco: 'filho', origem: 'familia', proximidade: moraComigo ? 80 : 35, convivio: moraComigo ? ['casa'] : [] });
+  vinBebe.tInicio = g.tParto;
+  vinBebe.presenca = moraComigo ? 50 : 15;
+  bebe.genitores = ['eu', ...(outro ? [outro.id] : [])];
+  garantirVida(bebe);
   v.fatos[`outro_genitor_${bebe.id}`] = outro ? 1 : 0;
   if (g.gestanteId === 'eu') v.corpo.saude = clamp(v.corpo.saude - 3);
   v.mente.estresse = clamp(v.mente.estresse + 8);
@@ -262,12 +298,16 @@ export function registrarNascimento(v: Vida, bebe: Pessoa, nome: string): void {
   bebe.nome = nome;
   const mes = MESES[mesDe(bebe.tNasc)];
   const primeiro = filhos(v).filter(f => f.id !== bebe.id).length === 0;
+  const outroId = bebe.genitores?.find(x => x !== 'eu');
+  const outro = outroId ? v.pessoas[outroId] : undefined;
   escrever(v, {
     t: bebe.tNasc,
-    texto: `Em ${mes}, nasceu ${nome}. ${primeiro ? `${flex(ge(v), 'Pai', 'Mãe', 'Mãe')} pela primeira vez, aos ${idade(v)}.` : `Mais ${flex(bebe.genero, 'um filho', 'uma filha')} na casa.`}`.replace(/Pai pela|Mãe pela/, m => m),
-    relevancia: 'marco', tema: 'filhos', tom: 'bom', pessoas: [bebe.id]
+    texto: `Em ${mes}, nasceu ${nome}. ${primeiro ? `${flex(ge(v), 'Pai', 'Mãe', 'Mãe')} pela primeira vez, aos ${idade(v)}.` : `Mais ${flex(bebe.genero, 'um filho', 'uma filha')} na casa.`}`,
+    relevancia: 'marco', tema: 'filhos', tom: 'bom', pessoas: [bebe.id, ...(outro ? [outro.id] : [])],
+    evento: { tipo: 'filho_nasceu', pessoaId: bebe.id, peso: 80 }
   });
-  lembrarCom(v, bebe.id, 'Nasceu.');
+  lembrarCom(v, bebe.id, `Nasceu em ${mes} de ${Math.floor(bebe.tNasc / 12)}${outro ? `, ${flex(bebe.genero, 'filho', 'filha', 'filhe')} seu e de ${outro.nome}` : ''}. Você tinha ${idade(v)} anos.`, 'inicio', 3, bebe.tNasc);
+  if (outro && v.vinculos[outro.id]) lembrarCom(v, outro.id, `Nasceu ${nome}, ${primeiro ? 'o primeiro filho de vocês' : 'mais um filho de vocês'}.`.replace('o primeiro filho', flex(bebe.genero, 'o primeiro filho', 'a primeira filha', 'e primeire filhe')), 'filho', 3, bebe.tNasc);
   v.mente.felicidade = clamp(v.mente.felicidade + 12);
 }
 
@@ -281,98 +321,3 @@ function criarNomeBebe(r: Rng, g: 'masculino' | 'feminino', ano: number): string
   return sortearNome(r, g, ano);
 }
 
-/* --------------------------------------------------------------- Filhos */
-
-export function processarFilhos(v: Vida, r: Rng): void {
-  for (const f of filhos(v)) {
-    const vin = v.vinculos[f.id];
-    const i = idadePessoa(v, f);
-    if (i >= 4 && i < 18) f.ocupacao = 'estudante';
-    const tempo = v.anoAtual.acoes.some(a => a.endsWith(`:${f.id}`)) || v.rotinas.some(rot => rot.id === 'tempo_familia');
-    const alvo = vin.convivio.includes('casa') ? (tempo ? 85 : 62) : tempo ? 60 : 30;
-    vin.proximidade = clamp(Math.round(vin.proximidade + (alvo - vin.proximidade) * 0.2 + r.normal() * 2));
-    if (i >= 13 && i <= 17 && !tempo && r.chance(0.3)) vin.tensao = clamp(vin.tensao + 15);
-    trajetoriaDoFilho(v, r, f, i);
-    // Sair de casa: quem tem renda própria sai mais cedo.
-    const chanceSair = 0.06 + Math.max(0, i - 18) * 0.04 + (f.renda > 0 && !f.estudo ? 0.08 : 0);
-    if (i >= 18 && vin.convivio.includes('casa') && r.chance(chanceSair)) {
-      marcarFato(v, `saiu_de_casa_${f.id}`);
-      vin.convivio = vin.convivio.filter(c => c !== 'casa');
-      escrever(v, { texto: `${f.nome} saiu de casa, aos ${i}${f.renda > 0 && f.ocupacao ? `, já trabalhando como ${f.ocupacao}` : ''}.`, relevancia: 'biografia', tema: 'filhos', pessoas: [f.id] });
-    }
-  }
-}
-
-/** Curso → ocupação de entrada de quem se forma. */
-const CURSOS_DOS_FILHOS: [curso: string, ocupacaoId: string][] = [
-  ['Direito', 'advogado_jr'], ['Enfermagem', 'enfermeiro'], ['Engenharia Civil', 'eng_jr'], ['Administração', 'analista_adm'],
-  ['Pedagogia', 'professor_fund'], ['Ciência da Computação', 'dev_jr'], ['Psicologia', 'psicologo'], ['Ciências Contábeis', 'contador']
-];
-
-/**
- * A vida escolar e profissional de um filho, até ele seguir a própria vida.
- * O vestibular depende da casa (escola, renda, atenção); a faculdade paga
- * pelo jogador é decisão dele (conteúdo `fil_faculdade`), não do sistema.
- */
-function trajetoriaDoFilho(v: Vida, r: Rng, f: Pessoa, i: number): void {
-  const k = f.id;
-  // Formatura
-  if (f.estudo && v.t >= f.estudo.tFim) {
-    const curso = f.estudo.curso;
-    if (f.estudo.paga === 'familia') delete v.fatos[`paga_faculdade_${k}`];
-    const fies = f.estudo.paga === 'fies';
-    f.estudo = undefined;
-    f.formacao = curso;
-    const oc = ocupacao(CURSOS_DOS_FILHOS.find(c => c[0] === curso)?.[1] ?? 'analista_adm');
-    empregarFilho(f, oc);
-    const primeiro = !v.educacao.concluidos.some(c => c.nivel === 'superior');
-    escrever(v, { texto: `${f.nome} se formou em ${curso}${primeiro ? ` — ${flex(f.genero, 'o primeiro', 'a primeira', 'e primeire')} da casa com diploma` : ''}${fies ? ', com o FIES para pagar' : ''}. Você aplaudiu até doer a mão.`, relevancia: 'biografia', tema: 'filhos', tom: 'bom', pessoas: [k] });
-    v.mente.felicidade = clamp(v.mente.felicidade + 6);
-    return;
-  }
-  if (f.estudo) { f.ocupacao = 'estudante universitário'; return; }
-
-  const emCasa = v.vinculos[k].convivio.includes('casa');
-  // Vestibular: 17 a 19 anos, para quem quer e mora com o jogador.
-  if (i >= 17 && i <= 19 && emCasa && !f.formacao) {
-    if (v.fatos[`fil_quer_${k}`] === undefined) {
-      const pc = rendaPerCapita(v);
-      v.fatos[`fil_quer_${k}`] = r.chance(pc > 2600 ? 0.8 : pc > 1200 ? 0.6 : 0.45) ? 1 : 0;
-    }
-    if (v.fatos[`fil_quer_${k}`] === 1 && v.fatos[`fil_vest_privada_${k}`] === undefined) {
-      const pc = rendaPerCapita(v);
-      const aptidao = ((parseInt(k.replace(/\D/g, ''), 10) || 7) * 37 % 21 - 10) / 100;
-      const chance = clamp(0.16 + (temFato(v, 'filhos_escola_privada') ? 0.25 : 0) + (pc > 2600 ? 0.1 : 0) + (v.vinculos[k].proximidade > 70 ? 0.07 : 0) + aptidao, 0.05, 0.75);
-      const curso = r.pick(CURSOS_DOS_FILHOS)[0];
-      if (r.chance(chance)) {
-        f.estudo = { curso, paga: 'publica', tFim: v.t + 48 };
-        f.ocupacao = 'estudante universitário';
-        escrever(v, { texto: `${f.nome} passou no vestibular da federal para ${curso}. A lista saiu de madrugada; a casa acordou gritando.`, relevancia: 'biografia', tema: 'filhos', tom: 'bom', pessoas: [k] });
-        v.mente.felicidade = clamp(v.mente.felicidade + 5);
-        return;
-      }
-      // Não passou na pública: a particular fica na mesa (decisão do jogador).
-      v.fatos[`fil_vest_privada_${k}`] = v.t;
-      v.fatos[`fil_curso_${k}`] = CURSOS_DOS_FILHOS.findIndex(c => c[0] === curso);
-      return;
-    }
-  }
-  // Trabalho: quem não está estudando, a partir dos 18.
-  if (i >= 18 && (!f.ocupacao || f.ocupacao === 'estudante' || f.ocupacao === 'desempregado' || f.ocupacao === 'desempregada') && r.chance(f.ocupacao?.startsWith('desempregad') ? 0.5 : 0.8)) {
-    if (f.formacao) { empregarFilho(f, ocupacao(CURSOS_DOS_FILHOS.find(c => c[0] === f.formacao)?.[1] ?? 'analista_adm')); return; }
-    const semDiploma = OCUPACOES_POR_CLASSE[classeDoFilho(v)].map(id => ocupacao(id)).filter(o => !o.nivelCurso && !o.area && o.escolaridade !== 'superior' && o.idadeMin <= i && !o.concurso);
-    const lista = semDiploma.length ? semDiploma : OCUPACOES_POR_CLASSE.trabalhadora.map(id => ocupacao(id)).filter(o => !o.area && o.idadeMin <= i);
-    empregarFilho(f, r.pick(lista));
-  }
-}
-
-function empregarFilho(f: Pessoa, oc: ReturnType<typeof ocupacao>): void {
-  f.ocupacao = f.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
-  f.ocupacaoId = oc.id;
-  f.renda = liquido(salarioLocal(oc, f.municipioId), oc.contrato);
-}
-
-function classeDoFilho(v: Vida): string {
-  const renda = v.trabalho.atual?.salario ?? 0;
-  return renda > 12000 ? 'alta' : renda > 6000 ? 'media' : renda > 3500 ? 'media_baixa' : renda > 1800 ? 'trabalhadora' : 'vulneravel';
-}

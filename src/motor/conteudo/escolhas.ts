@@ -5,6 +5,7 @@
 
 import type { Conteudo } from './base';
 import * as P from './papeis';
+import { lembrarCom } from '../nucleo';
 import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa, temFato } from '../nucleo';
 import { encerrarEmprego } from '../sistemas/trabalho';
@@ -204,7 +205,8 @@ export const ESCOLHAS: Conteudo[] = [
   /* ============================================================= MATURIDADE */
   {
     id: 'mat_novo_amor', tipo: 'decisao', idade: [58, 90], tema: 'amor', repetir: 8,
-    quando: c => !P.parceiro(c.v).length && c.idade >= 58 && Object.values(c.v.vinculos).some(v => v.romance?.estagio === 'ex' && !c.v.pessoas[v.pessoaId]?.vivo) || (!P.parceiro(c.v).length && c.r.chance(0.3)),
+    // Viuvez, separação ou uma vida inteira sem parceria: o convite pode vir aos 60 também.
+    quando: c => !P.parceiro(c.v).length && !P.saindoCom(c.v).length && (Object.values(c.v.vinculos).some(v => v.romance?.fim === 'morte' && c.v.t - (c.v.fatos['viuvez'] ?? 0) >= 24) || c.r.chance(0.3)),
     titulo: 'Um convite',
     texto: c => `No ${c.v.rotinas.some(r => r.id === 'igreja') ? 'grupo da igreja' : 'baile da terceira idade'}, alguém tem puxado conversa toda semana e hoje convidou você para tomar um café.`,
     opcoes: [
@@ -213,7 +215,8 @@ export const ESCOLHAS: Conteudo[] = [
           const g = c.v.eu.atracao === 'mulheres' ? 'feminino' : c.v.eu.atracao === 'homens' ? 'masculino' : c.v.eu.genero === 'feminino' ? 'masculino' : 'feminino';
           const p = criarPessoa(c.v, c.r, { idade: c.r.int(Math.max(55, c.idade - 6), c.idade + 5), municipioId: c.v.moradia.municipioId, genero: g });
           const vin = vincular(c.v, p, { origem: 'rotina', proximidade: 45 });
-          vin.romance = { estagio: 'saindo', tEstagio: c.v.t, envolvimento: 62 };
+          vin.romance = { estagio: 'saindo', tEstagio: c.v.t, tInicio: c.v.t, envolvimento: 62 };
+          lembrarCom(c.v, p.id, 'Começaram a sair, depois de um café.', 'romance', 2);
           p.atracao = c.v.eu.genero === 'feminino' ? 'mulheres' : 'homens';
           if (c.v.eu.genero === 'nao_binario') p.atracao = 'ambos';
           return { texto: `O café virou almoço. ${p.nome} ri das mesmas coisas que você.`, memoria: `Começou a sair com ${p.nome}, aos ${c.idade}.`, tom: 'bom', efeito: () => feliz(c, 8) };

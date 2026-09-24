@@ -222,6 +222,26 @@ details summary { cursor: pointer; }
 .pessoa__prox { grid-row: 1 / span 2; grid-column: 3; font-size: var(--type-caption); color: var(--text-secondary); text-align: right; }
 .pessoa__prox--tensa { color: var(--danger); }
 .pessoa--falecida { opacity: 0.6; }
+
+/* Núcleo: quem divide a vida com você tem peso próprio, sem virar card de painel. */
+.nucleo { display: flex; flex-direction: column; gap: var(--space-2); }
+.cartao-pessoa { display: grid; grid-template-columns: 60px 1fr; column-gap: var(--space-4); row-gap: 2px; width: 100%; text-align: left; padding: var(--space-3) 0 var(--space-3) var(--space-3); border-left: 2px solid var(--accent-line); }
+.cartao-pessoa:hover { background: var(--surface); }
+.cartao-pessoa .retrato { grid-row: span 4; background: var(--bg-raised); border-radius: 50%; align-self: start; }
+.cartao-pessoa__nome { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-primary); }
+.cartao-pessoa__papel { font-size: var(--type-caption); color: var(--accent); }
+.cartao-pessoa__leitura { font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-body); line-height: var(--leading-snug); }
+.cartao-pessoa__nota { font-size: var(--type-caption); color: var(--warm-memory); }
+.cartao-pessoa--tenso { border-left-color: var(--danger-line); }
+.dobra { margin-top: var(--space-2); }
+.dobra__botao { color: var(--text-muted); font-size: var(--type-caption); min-height: var(--touch-target); text-decoration: underline; text-underline-offset: 3px; }
+.ficha__nota { color: var(--warm-memory); font-family: var(--font-serif); }
+.ficha__historia li.ficha__marco { color: var(--text-primary); }
+.identidade__linha--afeto { color: var(--text-muted); font-size: var(--type-body); }
+.agora-nota { color: var(--text-muted); font-family: var(--font-serif); font-size: var(--type-caption); }
+.agora-sinais { display: flex; flex-direction: column; gap: var(--space-1); }
+.agora-sinal { display: block; text-align: left; font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-caption); line-height: var(--leading-snug); padding: var(--space-1) 0; min-height: 32px; }
+button.agora-sinal:hover { color: var(--text-primary); }
 .retrato--falecido { filter: grayscale(0.85); }
 
 .ficha { display: flex; flex-direction: column; gap: var(--space-3); }
@@ -350,7 +370,9 @@ details summary { cursor: pointer; }
   .trilho__agora .agora-pessoa { display: flex; flex-direction: column; align-items: center; width: 64px; text-align: center; }
   .trilho__agora .agora-pessoa__rotulo { display: none; }
   .trilho__agora .agora-pessoa__nome { font-size: var(--type-caption); }
-  .trilho__agora .painel-agora__titulo:not(:first-child), .trilho__agora .agora-dinheiro, .trilho__agora .agora-processos { display: none; }
+  .trilho__agora .painel-agora__titulo--secundario, .trilho__agora .agora-dinheiro, .trilho__agora .agora-processos { display: none; }
+  .cartao-pessoa { grid-template-columns: 52px 1fr; column-gap: var(--space-3); padding-left: var(--space-2); }
+  .cartao-pessoa .retrato { width: 52px; height: 52px; }
   .conteudo__titulo { font-size: var(--type-heading); margin-bottom: var(--space-4); }
   .avancar { bottom: calc(60px + env(safe-area-inset-bottom)); padding-bottom: var(--space-2); background: linear-gradient(to top, var(--bg-app) 60%, transparent); }
   .barra {

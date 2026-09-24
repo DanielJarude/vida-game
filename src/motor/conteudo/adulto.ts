@@ -3,7 +3,7 @@
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
-import { idadePessoa, temFato, marcarFato } from '../nucleo';
+import { idadePessoa, temFato, marcarFato, lembrarCom } from '../nucleo';
 import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
 import { nomeOcupacaoId, contratar, encerrarEmprego } from '../sistemas/trabalho';
 import { ocupacao, OCUPACOES } from '../dados/ocupacoes';
@@ -260,15 +260,15 @@ export const ADULTO: Conteudo[] = [
   },
   {
     id: 'adu_ex_reaparece', tipo: 'decisao', idade: [20, 70], tema: 'amor', repetir: 8,
-    papeis: { ex: (v) => Object.values(v.vinculos).filter(x => x.romance?.estagio === 'ex' && v.pessoas[x.pessoaId]?.vivo && x.proximidade >= 25).map(x => v.pessoas[x.pessoaId]) },
-    quando: c => !P.parceiro(c.v).length,
+    papeis: { ex: (v) => Object.values(v.vinculos).filter(x => x.romance?.estagio === 'ex' && x.romance.fim !== 'morte' && v.pessoas[x.pessoaId]?.vivo && x.proximidade >= 25 && !v.pessoas[x.pessoaId].parceiroId).map(x => v.pessoas[x.pessoaId]) },
+    quando: c => !P.parceiro(c.v).length && !P.saindoCom(c.v).length,
     titulo: c => `${c.p.ex.nome}`,
     texto: c => `Mensagem de ${c.p.ex.nome}, depois de muito tempo: "Tava pensando em você. Café?"`,
     opcoes: [
       { id: 'cafe', texto: 'Aceitar o café', resolver: c => {
         const vin = c.v.vinculos[c.p.ex.id];
         const volta = c.r.chance(0.4);
-        return { texto: volta ? 'O café virou jantar. O jantar virou outra coisa.' : 'Foi bom, e foi só isso. Cada um seguiu.', memoria: volta ? `Reatou com ${c.p.ex.nome}.` : null, efeito: () => { if (volta) { vin.romance = { estagio: 'saindo', tEstagio: c.v.t, envolvimento: 58 }; } else prox(c, 'ex', 5); } };
+        return { texto: volta ? 'O café virou jantar. O jantar virou outra coisa.' : 'Foi bom, e foi só isso. Cada um seguiu.', memoria: volta ? `Reatou com ${c.p.ex.nome}.` : null, efeito: () => { if (volta) { vin.romance = { ...vin.romance!, estagio: 'saindo', tEstagio: c.v.t, envolvimento: 58, fim: undefined }; lembrarCom(c.v, c.p.ex.id, 'Voltaram, anos depois.', 'reconciliacao', 2); } else prox(c, 'ex', 5); } };
       } },
       { id: 'ignorar', texto: 'Visualizar e não responder', comportamento: { independencia: 1 }, resolver: () => ({ texto: 'O "visto" ficou lá.', memoria: null }) }
     ]
@@ -280,35 +280,18 @@ export const ADULTO: Conteudo[] = [
     papeis: { filho: P.filho(1, 1) },
     repetir: 0,
     quando: c => !temFato(c.v, `passos_${c.p.filho.id}`),
-    narrar: c => ({ texto: `${c.p.filho.nome} deu os primeiros passos na sala, na sua direção.`, relevancia: 'biografia', tom: 'bom', efeito: () => { fato(c, `passos_${c.p.filho.id}`); prox(c, 'filho', 6); feliz(c, 5); } })
+    narrar: c => ({ texto: `${c.p.filho.nome} deu os primeiros passos na sala, na sua direção.`, relevancia: 'biografia', tom: 'bom', efeito: () => { fato(c, `passos_${c.p.filho.id}`); prox(c, 'filho', 6); feliz(c, 5); }, lembrar: ['filho', 'Deu os primeiros passos na sua direção.'] })
   },
   {
     id: 'adu_filho_escola', tipo: 'acontecimento', idade: [18, 75], tema: 'filhos', repetir: 0,
     papeis: { filho: P.filhoEmCasa(6, 6) },
     quando: c => !temFato(c.v, `escola_${c.p.filho.id}`),
-    narrar: c => ({ texto: `Primeiro dia de aula de ${c.p.filho.nome}. ${gp(c, 'filho', 'Ele', 'Ela')} entrou sem olhar para trás; quem ficou no portão foi você.`, relevancia: 'biografia', efeito: () => fato(c, `escola_${c.p.filho.id}`) })
+    narrar: c => ({ texto: `Primeiro dia de aula de ${c.p.filho.nome}. ${gp(c, 'filho', 'Ele', 'Ela')} entrou sem olhar para trás; quem ficou no portão foi você.`, relevancia: 'biografia', efeito: () => fato(c, `escola_${c.p.filho.id}`), lembrar: ['filho', 'O primeiro dia de aula: você ficou no portão.'] })
   },
   {
     id: 'adu_filho_doente', tipo: 'acontecimento', idade: [18, 75], tema: 'filhos', repetir: 4,
     papeis: { filho: P.filhoEmCasa(0, 10) },
     narrar: c => ({ texto: c.v.financas.planoDeSaude ? `${c.p.filho.nome} teve pneumonia e passou três dias internad${gp(c, 'filho', 'o', 'a')}. O plano cobriu o hospital.` : `${c.p.filho.nome} teve pneumonia. Foram duas noites no corredor do hospital público até sair o leito.`, relevancia: 'biografia', tom: 'ruim', efeito: () => estresse(c, 10) })
-  },
-  {
-    id: 'adu_neto', tipo: 'acontecimento', idade: [38, 95], tema: 'filhos', repetir: 3,
-    papeis: { filho: P.filho(20, 45) },
-    quando: c => c.r.chance(0.5),
-    narrar: c => {
-      const g = c.r.chance(0.5) ? 'masculino' : 'feminino';
-      return {
-        texto: `${c.p.filho.nome} teve ${g === 'feminino' ? 'uma filha' : 'um filho'}. ${c.g('Avô', 'Avó', 'Avó')} aos ${c.idade}.`,
-        relevancia: 'marco', tom: 'bom',
-        efeito: () => {
-          const neto = criarPessoa(c.v, c.r, { genero: g, idade: 0, municipioId: c.p.filho.municipioId, sobrenome: c.p.filho.sobrenome });
-          vincular(c.v, neto, { parentesco: 'neto', origem: 'familia', proximidade: 55 });
-          feliz(c, 8);
-        }
-      };
-    }
   },
   {
     id: 'adu_filho_briga_escola', tipo: 'decisao', idade: [25, 70], tema: 'filhos', repetir: 4,

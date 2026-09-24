@@ -8,7 +8,7 @@
 
 import { criarRng, type Rng } from './rng';
 import type {
-  Entrada, Genero, Parentesco, Pessoa, Relevancia, Tema, Temperamento, Vida, Vinculo
+  Entrada, EventoSocial, Genero, Marco, Parentesco, Pessoa, Relevancia, Tema, Temperamento, TipoMarco, Vida, Vinculo
 } from './tipos';
 import { idadeEm } from './tempo';
 
@@ -55,16 +55,16 @@ export const avos = (v: Vida) => parentes(v, 'avo');
 export const filhos = (v: Vida) => parentes(v, 'filho', 'enteado');
 export const pets = (v: Vida) => parentes(v, 'pet');
 
-/** Parceria romântica atual (namoro ou mais). */
+/** Parceria romântica atual (namoro ou mais). Um caso escondido não é a parceria. */
 export function parceiro(v: Vida): { p: Pessoa; vin: Vinculo } | undefined {
   return vinculosVivos(v).find(
-    x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio)
+    x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !x.vin.romance.secreto
   );
 }
 
 /** Alguém com quem está saindo (antes do namoro). */
 export function saindoCom(v: Vida): { p: Pessoa; vin: Vinculo }[] {
-  return vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'saindo');
+  return vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto);
 }
 
 export function amigos(v: Vida, minimo: 'amigo' | 'amigo_proximo' = 'amigo'): Pessoa[] {
@@ -116,6 +116,8 @@ export interface NovaEntrada {
   escolha?: boolean;
   /** Mês dentro do ano de vida (0..11) — para ordenar processos. */
   t?: number;
+  /** Acontecimento social estruturado. */
+  evento?: EventoSocial;
 }
 
 export function escrever(v: Vida, e: NovaEntrada): Entrada {
@@ -129,18 +131,33 @@ export function escrever(v: Vida, e: NovaEntrada): Entrada {
     tema: e.tema,
     tom: e.tom,
     pessoas: e.pessoas,
-    escolha: e.escolha
+    escolha: e.escolha,
+    evento: e.evento
   };
   v.biografia.push(entrada);
   return entrada;
 }
 
-/** Acrescenta um fato à história compartilhada com alguém. */
-export function lembrarCom(v: Vida, pessoaId: string, texto: string): void {
+/** Quantos marcos a história com uma pessoa guarda (os menos importantes saem primeiro). */
+export const LIMITE_HISTORIA = 30;
+
+/**
+ * Acrescenta um marco à história compartilhada com alguém. Só o que importa:
+ * quem chama decide o peso (1 corriqueiro, 2 importante, 3 marcante). Quando
+ * a história enche, sai o marco mais antigo entre os de menor peso.
+ */
+export function lembrarCom(v: Vida, pessoaId: string, texto: string, tipo?: TipoMarco, peso = 1, t = v.t): void {
   const vin = v.vinculos[pessoaId];
   if (!vin) return;
-  vin.historia.push({ t: v.t, texto });
-  if (vin.historia.length > 12) vin.historia.splice(0, vin.historia.length - 12);
+  if (vin.historia.some(h => h.texto === texto && Math.abs(h.t - t) < 12)) return;
+  const m: Marco = { t, texto, tipo, peso };
+  vin.historia.push(m);
+  vin.historia.sort((a, b) => a.t - b.t);
+  while (vin.historia.length > LIMITE_HISTORIA) {
+    const menor = Math.min(...vin.historia.map(h => h.peso ?? 1));
+    const idx = vin.historia.findIndex(h => (h.peso ?? 1) === menor);
+    vin.historia.splice(idx, 1);
+  }
 }
 
 /* ------------------------------------------------------------------- Fatos */

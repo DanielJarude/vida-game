@@ -40,16 +40,24 @@ export const genteDe = (tipo: Convivio): Papel => v =>
   vinculosVivos(v).filter(x => !x.vin.parentesco && x.vin.convivio.includes(tipo) && !x.vin.romance).map(x => x.p);
 
 export const parceiro: Papel = v =>
-  vinculosVivos(v).filter(x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio)).map(x => x.p);
+  vinculosVivos(v).filter(x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !x.vin.romance.secreto).map(x => x.p);
 
 export const conjuge: Papel = v =>
-  vinculosVivos(v).filter(x => x.vin.romance && ['morando_junto', 'casamento'].includes(x.vin.romance.estagio)).map(x => x.p);
+  vinculosVivos(v).filter(x => x.vin.romance && ['morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !x.vin.romance.secreto).map(x => x.p);
 
 export const namorado: Papel = v =>
-  vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'namoro').map(x => x.p);
+  vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'namoro' && !x.vin.romance.secreto).map(x => x.p);
 
 export const saindoCom: Papel = v =>
-  vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'saindo').map(x => x.p);
+  vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto).map(x => x.p);
+
+/** O caso escondido (quando há). */
+export const caso: Papel = v =>
+  vinculosVivos(v).filter(x => x.vin.romance?.secreto && x.vin.romance.estagio !== 'ex').map(x => x.p);
+
+/** Netos (e bisnetos) vivos, de qualquer idade. */
+export const neto = (min = 0, max = 200): Papel => v =>
+  vinculosVivos(v).filter(x => (x.vin.parentesco === 'neto' || x.vin.parentesco === 'bisneto') && x.p.nome && idadePessoa(v, x.p) >= min && idadePessoa(v, x.p) <= max).map(x => x.p);
 
 export const interesse: Papel = v =>
   vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'interesse').map(x => x.p);

@@ -19,7 +19,7 @@
  */
 
 import type {
-  Classe, Entrada, Escolaridade, EstiloDeVida, Genero, Parentesco, Pessoa, Relevancia, Tema, Vida, Vinculo
+  Classe, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, Tema, Vida, Vinculo
 } from './tipos';
 import { tDe, idadeEm } from './tempo';
 import { municipioPorNome, MUNICIPIOS } from './dados/lugares';
@@ -31,7 +31,7 @@ import { criarRng } from './rng';
 import { visualAleatorio } from './pessoas';
 import { capitalDoEstado } from './sistemas/escola';
 
-export const VERSAO_SAVE = 6;
+export const VERSAO_SAVE = 7;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -90,14 +90,27 @@ export function interpretar(bruto: string): Leitura {
   if (!dados || typeof dados !== 'object') return { tipo: 'invalido', motivo: 'Formato desconhecido.' };
   const d = dados as Record<string, unknown>;
   if (d.versao === VERSAO_SAVE) {
-    const erro = validarV6(d);
+    const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
-  if (typeof d.versao === 'number' && d.versao < VERSAO_SAVE || d.personagem) {
+  if (d.versao === 6) {
+    // v6 → v7: o modelo social ganhou confiança, história estruturada, árvore da família e luto.
+    const erro6 = validarBase(d);
+    if (erro6) return { tipo: 'invalido', motivo: erro6 };
     try {
-      const v = migrarV5(d);
-      if (!v) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
-      const erro = validarV6(v as unknown as Record<string, unknown>);
+      const v = migrarV6(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
+  if (typeof d.versao === 'number' && d.versao < 6 || d.personagem) {
+    try {
+      const v5 = migrarV5(d);
+      if (!v5) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
+      const v = migrarV6(v5);
+      const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível migrar o save antigo (${(e as Error).message}).` };
@@ -106,7 +119,7 @@ export function interpretar(bruto: string): Leitura {
   return { tipo: 'invalido', motivo: 'Versão de save desconhecida.' };
 }
 
-function validarV6(d: Record<string, unknown>): string | null {
+function validarBase(d: Record<string, unknown>): string | null {
   const obrig = ['eu', 'corpo', 'mente', 'pessoas', 'vinculos', 'moradia', 'educacao', 'trabalho', 'financas', 'biografia'];
   for (const k of obrig) if (!d[k] || typeof d[k] !== 'object') return `Campo ausente: ${k}.`;
   if (typeof d.t !== 'number' || !Number.isFinite(d.t)) return 'Tempo inválido.';
@@ -115,11 +128,109 @@ function validarV6(d: Record<string, unknown>): string | null {
   if (!Array.isArray(d.biografia)) return 'Linha da Vida inválida.';
   const vinculos = d.vinculos as Record<string, { pessoaId: string }>;
   const pessoas = d.pessoas as Record<string, unknown>;
-  for (const vin of Object.values(vinculos)) if (!pessoas[vin.pessoaId]) return 'Vínculo aponta para pessoa inexistente.';
+  for (const vin of Object.values(vinculos)) if (!vin || !pessoas[vin.pessoaId]) return 'Vínculo aponta para pessoa inexistente.';
   return null;
 }
 
+const finito = (x: unknown) => typeof x === 'number' && Number.isFinite(x);
+
+/**
+ * Validação do save v7. Relações corrompidas não entram: um save que passa
+ * por aqui tem vínculos com números válidos, história em lista e uma árvore
+ * da família que só aponta para quem existe.
+ */
+function validar(d: Record<string, unknown>): string | null {
+  const base = validarBase(d);
+  if (base) return base;
+  if (!Array.isArray(d.luto)) return 'Luto inválido.';
+  const pessoas = d.pessoas as Record<string, Pessoa>;
+  for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
+    if (!finito(vin.proximidade) || !finito(vin.tensao) || !finito(vin.confianca)) return 'Vínculo com valores inválidos.';
+    if (!Array.isArray(vin.historia) || !Array.isArray(vin.convivio)) return 'Vínculo sem história.';
+    if (vin.romance && (!finito(vin.romance.envolvimento) || typeof vin.romance.estagio !== 'string')) return 'Relacionamento inválido.';
+  }
+  for (const p of Object.values(pessoas)) {
+    if (p.genitores && p.genitores.some(g => g !== 'eu' && !pessoas[g])) return 'Árvore da família aponta para pessoa inexistente.';
+  }
+  return null;
+}
+
+/* =================================================================== v6 → v7 */
+
+const TIPO_ANTIGO: [RegExp, Marco['tipo'], number][] = [
+  [/^Casaram-se/, 'casamento', 3], [/^Foram morar juntos/, 'casa', 3], [/^Começaram a namorar/, 'romance', 2], [/^Começaram a sair/, 'romance', 1],
+  [/^Nasceu/, 'inicio', 2], [/^Viraram amigos de verdade/, 'amizade', 3], [/^Viraram amigos/, 'amizade', 2],
+  [/^Divorciaram-se|^Terminaram/, 'conflito', 2], [/hospital|esteve lá/i, 'apoio', 2]
+];
+
+/**
+ * Migra um save v6 (melhor esforço, sem inventar história):
+ *  - confiança nasce do afeto e do atrito que já havia;
+ *  - a história compartilhada ganha tipo e peso pelo texto;
+ *  - quem morreu enquanto era parceria deixa de ser "ex": vira viuvez;
+ *  - filhos ganham genitores (o jogador e a parceria da época do nascimento);
+ *  - netos ganham o filho de quem são filhos (pelo sobrenome e cidade);
+ *  - o luto começa vazio (perdas antigas já foram vividas).
+ */
+export function migrarV6(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  x.versao = 7;
+  if (!Array.isArray(x.luto)) x.luto = [];
+  for (const vin of Object.values(x.vinculos)) {
+    const p = x.pessoas[vin.pessoaId];
+    if (!finito(vin.confianca)) vin.confianca = Math.max(0, Math.min(100, Math.round((vin.parentesco ? 45 + vin.proximidade * 0.4 : 20 + vin.proximidade * 0.3) - vin.tensao / 3)));
+    vin.historia = (Array.isArray(vin.historia) ? vin.historia : []).filter(h => h && typeof h.texto === 'string' && finito(h.t)).map(h => {
+      if (h.tipo) return h;
+      const m = TIPO_ANTIGO.find(([re]) => re.test(h.texto));
+      return { ...h, tipo: m?.[1] ?? 'antigo', peso: m?.[2] ?? 1 };
+    });
+    const rom = vin.romance;
+    if (rom) {
+      if (rom.tInicio === undefined) rom.tInicio = vin.historia.find(h => h.tipo === 'romance')?.t ?? vin.tInicio;
+      if (rom.estagio === 'ex' && !rom.fim) {
+        const viuvo = p && !p.vivo && x.biografia.some(e => e.pessoas?.includes(p.id) && /Viúv/.test(e.texto));
+        if (viuvo) {
+          rom.estagio = vin.historia.some(h => h.tipo === 'casamento') ? 'casamento' : vin.historia.some(h => h.tipo === 'casa') ? 'morando_junto' : 'namoro';
+          rom.fim = 'morte';
+        } else {
+          rom.fim = x.biografia.some(e => e.pessoas?.includes(vin.pessoaId) && /divórcio/.test(e.texto)) ? 'divorcio' : 'termino';
+        }
+      }
+    }
+    if ((vin.parentesco === 'filho' || vin.parentesco === 'enteado') && p && vin.presenca === undefined) {
+      vin.presenca = Math.round(vin.convivio.includes('casa') ? vin.proximidade * 0.6 : vin.proximidade * 0.35);
+    }
+  }
+  // Árvore: filhos do jogador.
+  const parcerias = Object.values(x.vinculos).filter(vin => vin.romance && vin.romance.estagio !== 'interesse');
+  for (const vin of Object.values(x.vinculos)) {
+    const p = x.pessoas[vin.pessoaId];
+    if (!p || p.genitores || vin.parentesco !== 'filho') continue;
+    const naEpoca = parcerias
+      .filter(pr => (pr.romance!.tInicio ?? pr.tInicio) <= p.tNasc && (x.pessoas[pr.pessoaId]?.tMorte ?? Infinity) >= p.tNasc - 9)
+      .sort((a, b) => (b.romance!.tInicio ?? b.tInicio) - (a.romance!.tInicio ?? a.tInicio))[0];
+    p.genitores = ['eu', ...(naEpoca && x.fatos[`outro_genitor_${p.id}`] !== 0 ? [naEpoca.pessoaId] : [])];
+  }
+  // Árvore: netos (o motor antigo não guardava de quem eram filhos).
+  const filhosVivos = Object.values(x.vinculos).filter(vin => vin.parentesco === 'filho').map(vin => x.pessoas[vin.pessoaId]).filter(Boolean);
+  for (const vin of Object.values(x.vinculos)) {
+    const n = x.pessoas[vin.pessoaId];
+    if (!n || n.genitores || vin.parentesco !== 'neto') continue;
+    const pai = filhosVivos.find(f => f.sobrenome === n.sobrenome && f.municipioId === n.municipioId && f.tNasc + 16 * 12 <= n.tNasc)
+      ?? filhosVivos.find(f => f.tNasc + 16 * 12 <= n.tNasc);
+    if (pai) n.genitores = [pai.id];
+  }
+  // Referências soltas nunca entram no save novo.
+  for (const p of Object.values(x.pessoas)) {
+    if (p.genitores) p.genitores = p.genitores.filter(g => g === 'eu' || x.pessoas[g]);
+    if (p.parceiroId && p.parceiroId !== 'fora' && !x.pessoas[p.parceiroId]) p.parceiroId = undefined;
+  }
+  return x;
+}
+
 /* =================================================================== v5 → v6 */
+
+/** O v5 é convertido para o formato atual e depois passa pela migração v6 → v7. */
 
 type Antigo = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -188,7 +299,8 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 6,
+    versao: 7,
+    luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,
     rng: r.estado(),
     seq: 5000,
@@ -234,7 +346,7 @@ export function migrarV5(a: Antigo): Vida | null {
       especie: tipo === 'pet' ? 'cachorro' : undefined, visual: tipo === 'pet' ? undefined : visualAleatorio(r, generoNovo(m.genero))
     };
     const vin: Vinculo = {
-      pessoaId: pessoa.id, origem: 'familia', tInicio: t, proximidade: num(m.relacionamento, 50), tensao: 0,
+      pessoaId: pessoa.id, origem: 'familia', tInicio: t, proximidade: num(m.relacionamento, 50), confianca: 50, tensao: 0,
       convivio: [], tUltimoContato: t, historia: []
     };
     const parentesco: Record<string, Parentesco> = { pai: 'pai', mae: 'mae', irmao: 'irmao', irma: 'irmao', filho: 'filho', filha: 'filho', pet: 'pet' };

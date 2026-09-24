@@ -11,13 +11,15 @@
 import type { Rng } from './rng';
 import { clamp } from './rng';
 import type { Retorno, Vida } from './tipos';
-import { amigos, escrever, idade, parceiro, transacao } from './nucleo';
+import { escrever, idade, moraCom, parceiro, transacao, vinculosVivos } from './nucleo';
 import { morreEsteAno, processarCorpo } from './sistemas/corpo';
-import { processarFamiliaDeOrigem, processarConcepcao, processarFilhos, processarGestacoes, processarMortes } from './sistemas/familia';
+import { processarFamiliaDeOrigem, processarConcepcao, processarGestacoes, processarMortes } from './sistemas/familia';
+import { processarDescendentes, processarPartosDaFamilia } from './sistemas/filhos';
+import { pesoDoLuto, processarLuto, redeDeApoio } from './sistemas/luto';
 import { processarCurso, processarEscola, processarOab } from './sistemas/escola';
 import { processarTrabalho } from './sistemas/trabalho';
 import { processarRotinas } from './sistemas/rotinas';
-import { conhecerGente, envelhecerConhecidos, processarSocial, recalcularConvivio } from './sistemas/social';
+import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, recalcularConvivio } from './sistemas/social';
 import { processarRomance, surgirInteresse } from './sistemas/romance';
 import { processarProcessos } from './sistemas/processos';
 import { processarDinheiro } from './sistemas/dinheiro';
@@ -43,6 +45,8 @@ function viverAno(v: Vida, r: Rng): void {
   v.t += 12;
 
   processarCorpo(v, r);
+  processarLuto(v);
+  limparApertos(v);
   processarMortes(v, r);
   processarFamiliaDeOrigem(v, r);
   processarEscola(v, r);
@@ -59,7 +63,8 @@ function viverAno(v: Vida, r: Rng): void {
   surgirInteresse(v, r);
   processarConcepcao(v, r);
   processarGestacoes(v, r);
-  processarFilhos(v, r);
+  processarPartosDaFamilia(v, r);
+  processarDescendentes(v, r);
   recalcularConvivio(v);
   processarDinheiro(v, r);
   verificarDespejo(v);
@@ -79,21 +84,32 @@ function viverAno(v: Vida, r: Rng): void {
 
 /**
  * Felicidade e estresse tendem a um ponto de equilíbrio que depende da vida
- * real: gente por perto, saúde, dinheiro, trabalho. Eventos empurram; o
- * equilíbrio puxa de volta.
+ * real: gente por perto, saúde, dinheiro, trabalho, perdas recentes, atrito
+ * dentro de casa. Eventos empurram; o equilíbrio puxa de volta.
+ *
+ * Morar sozinho não é, por si, infelicidade: o que pesa é não ter ninguém
+ * presente (parceria, amigos próximos, filhos e irmãos com quem se fala).
  */
 function equilibrarMente(v: Vida): void {
   const i = idade(v);
   const m = v.mente;
-  const nAmigos = Math.min(4, amigos(v).length);
   const par = parceiro(v);
-  let alvo = 52 + nAmigos * 3 + (v.corpo.saude - 60) / 5;
-  if (par?.vin.romance) alvo += (par.vin.romance.envolvimento - 50) / 6 + 4;
+  const rede = redeDeApoio(v);
+  let alvo = 52 + Math.min(12, rede * 3) + (v.corpo.saude - 60) / 5;
+  if (par?.vin.romance) alvo += (par.vin.romance.envolvimento - 50) / 6 + 2;
   if (v.financas.negativado) alvo -= 8;
   if (i >= 18 && !v.trabalho.atual && !v.trabalho.aposentadoria && !v.educacao.matricula) alvo -= 6;
+  // Solidão: ninguém em casa e ninguém presente.
+  if (i >= 18 && rede < 1 && moraCom(v).length === 0) alvo -= 6;
+  // Luto: pesa na medida do vínculo e vai passando com o tempo e com a rede.
+  const luto = pesoDoLuto(v);
+  alvo -= Math.min(26, luto * 0.3);
+  // Atrito com quem mora junto pesa todo dia.
+  const atrito = vinculosVivos(v).filter(x => x.vin.convivio.includes('casa') && !x.p.especie).reduce((s, x) => s + Math.max(0, x.vin.tensao - 40), 0);
+  alvo -= Math.min(10, atrito / 8);
   alvo -= Math.max(0, m.estresse - 50) / 4;
   m.felicidade = clamp(Math.round(m.felicidade * 0.65 + alvo * 0.35));
-  m.estresse = clamp(Math.round(m.estresse * 0.7 + (i < 12 ? 10 : 18) * 0.3));
+  m.estresse = clamp(Math.round(m.estresse * 0.7 + ((i < 12 ? 10 : 18) + luto * 0.08 + Math.min(12, atrito / 10)) * 0.3));
 }
 
 /* ---------------------------------------------------------------- Conteúdo */

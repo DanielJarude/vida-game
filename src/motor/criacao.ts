@@ -105,7 +105,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const podeGestar = o.genero === 'feminino' ? true : o.genero === 'masculino' ? false : !!o.podeGestar;
 
   const v: Vida = {
-    versao: 6,
+    versao: 7,
     id: `vida-${o.semente.toString(36)}`,
     rng: 0,
     seq: 0,
@@ -158,7 +158,8 @@ export function criarVida(o: OpcoesCriacao): Vida {
     biografia: [],
     momento: null,
     ocorrencias: [],
-    anoAtual: { acoes: [] }
+    anoAtual: { acoes: [] },
+    luto: []
   };
   v.eu.visual = o.visual ?? v.eu.visual;
 

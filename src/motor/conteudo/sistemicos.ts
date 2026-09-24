@@ -9,8 +9,8 @@
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao } from './efeitos';
-import { idadePessoa, marcarFato, temFato } from '../nucleo';
-import { mudarEstagio, terminar } from '../sistemas/romance';
+import { idadePessoa, lembrarCom, marcarFato, temFato } from '../nucleo';
+import { iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
 import { morarJuntos } from '../sistemas/moradia';
 import { registrarNascimento } from '../sistemas/familia';
 import { fazerEnem, largarEscola, podeFazerEnem, temEscolaridade } from '../sistemas/escola';
@@ -98,16 +98,19 @@ export const SISTEMICOS: Conteudo[] = [
       {
         id: 'trair', texto: c => `Arriscar algo com ${c.p.pessoa.nome}, escondido`,
         disponivel: c => (P.parceiro(c.v).length > 0 ? true : false),
-        comportamento: { impulsividade: 2, empatia: -1 },
         resolver: c => {
+          // O caso começa escondido. Pode durar, acabar ou aparecer — o sistema de romance cuida.
           const atual = P.parceiro(c.v)[0];
-          const vinAtual = c.v.vinculos[atual.id];
+          return { texto: `Aconteceu. ${atual.nome} não sabe.`, memoria: null, efeito: () => { iniciarCaso(c.v, c.p.pessoa, c.v.vinculos[c.p.pessoa.id]); estresse(c, 6); } };
+        }
+      },
+      {
+        id: 'afastar', texto: c => `Se afastar de ${c.p.pessoa.nome}`,
+        disponivel: c => (P.parceiro(c.v).length > 0 ? true : false),
+        comportamento: { familia: 1 },
+        resolver: c => {
           c.v.vinculos[c.p.pessoa.id].romance = undefined;
-          if (c.r.chance(0.45)) {
-            vinAtual.tensao = 95;
-            return { texto: `Aconteceu — e ${atual.nome} descobriu por uma mensagem.`, memoria: `Traiu ${atual.nome} com ${c.p.pessoa.nome}, e ${atual.nome} descobriu.`, tom: 'ruim', relevancia: 'marco', efeito: () => estresse(c, 15) };
-          }
-          return { texto: 'Aconteceu uma vez. Ninguém ficou sabendo. Você sabe.', memoria: null, efeito: () => estresse(c, 8) };
+          return { texto: `Você passou a evitar ficar a sós com ${c.p.pessoa.nome}. Deu trabalho. Passou.`, memoria: null, efeito: () => prox(c, 'pessoa', -12) };
         }
       },
       {
@@ -230,7 +233,7 @@ export const SISTEMICOS: Conteudo[] = [
     texto: c => `${c.p.filho.nome} chegou em casa às três da manhã, sem avisar, com o celular desligado. Você passou a noite acordad${c.g('o', 'a', 'e')}.`,
     opcoes: [
       { id: 'castigo', texto: 'Castigo: sem celular e sem sair por um mês', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: `${c.p.filho.nome} cumpriu o castigo em silêncio absoluto.`, memoria: null, efeito: () => { prox(c, 'filho', -5); tensao(c, 'filho', 15); } }) },
+        resolver: c => ({ texto: `${c.p.filho.nome} cumpriu o castigo em silêncio absoluto.`, memoria: null, efeito: () => { prox(c, 'filho', -5); tensao(c, 'filho', 15); fato(c, `fil_problema_${c.p.filho.id}`); } }) },
       { id: 'conversar', texto: 'Esperar a raiva passar e conversar', comportamento: { empatia: 1 },
         resolver: c => ({ texto: `No dia seguinte, ${c.p.filho.nome} contou que tinha brigado com ${c.p.filho.genero === 'feminino' ? 'a' : 'o'} melhor amig${c.p.filho.genero === 'feminino' ? 'a' : 'o'} e não queria voltar para casa.`, memoria: null, efeito: () => { prox(c, 'filho', 6); tensao(c, 'filho', -10); } }) },
       { id: 'gritar', texto: 'Gritar na porta', comportamento: { impulsividade: 1 },
@@ -374,7 +377,7 @@ function casar(c: Ctx, custo: number): void {
     f.dividas.push({ id: `festa${c.v.seq++}`, tipo: 'emprestimo', saldo: falta, jurosMes: 0.035, parcela: Math.round(falta / 12 * 1.2), descricao: 'Parcelas da festa de casamento' });
   }
   feliz(c, 12);
-  c.v.vinculos[p.id].historia.push({ t: c.v.t, texto: 'Casaram-se.' });
+  lembrarCom(c.v, p.id, 'Casaram-se.', 'casamento', 3);
 }
 
 function tensaoPessoa(c: Ctx, id: string, n: number): void {

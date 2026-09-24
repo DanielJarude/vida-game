@@ -84,11 +84,12 @@ export function aplicarAcontecimento(v: Vida, a: Acontecimento, ctx: Ctx): boole
     relevancia,
     tema: a.tema,
     tom: n.tom,
-    pessoas: Object.values(ctx.p).map(p => p.id)
+    pessoas: Object.values(ctx.p).map(p => p.id),
+    evento: n.evento
   });
   if (n.lembrar) {
     const pessoa = ctx.p[n.lembrar[0]];
-    if (pessoa) lembrarCom(v, pessoa.id, n.lembrar[1]);
+    if (pessoa) lembrarCom(v, pessoa.id, n.lembrar[1], undefined, 1);
   }
   return true;
 }
@@ -143,13 +144,14 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
       relevancia: res.relevancia ?? 'biografia',
       tema: d.tema,
       tom: res.tom,
-      pessoas: Object.values(p).map(x => x.id),
-      escolha: true
+      pessoas: Object.values(p).map(x => x.id).filter(id => v.pessoas[id]),
+      escolha: true,
+      evento: res.evento
     });
   }
   if (res.lembrar) {
     const pessoa = p[res.lembrar[0]];
-    if (pessoa) lembrarCom(v, pessoa.id, res.lembrar[1]);
+    if (pessoa) lembrarCom(v, pessoa.id, res.lembrar[1], undefined, 2);
   }
   v.momento = null;
   return { texto: res.texto };

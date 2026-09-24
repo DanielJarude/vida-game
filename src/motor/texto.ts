@@ -50,6 +50,8 @@ export function rotuloParentesco(p: Pessoa, parentesco: string): string {
     filho: ['filho', 'filha', 'filhe'],
     enteado: ['enteado', 'enteada', 'enteade'],
     neto: ['neto', 'neta', 'nete'],
+    bisneto: ['bisneto', 'bisneta', 'bisnete'],
+    genro: ['genro', 'nora', 'genre'],
     sogro: ['sogro', 'sogra', 'sogre'],
     pet: [p.especie === 'gato' ? 'gato' : 'cachorro', p.especie === 'gato' ? 'gata' : 'cachorra', 'bichinho']
   };

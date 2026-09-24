@@ -55,12 +55,47 @@ export interface Pessoa {
   saude: number;
   visual?: Visual;
   /** Faculdade em curso (filhos do jogador): quem paga e quando termina. */
-  estudo?: { curso: string; paga: 'publica' | 'familia' | 'fies'; tFim: number };
+  estudo?: { curso: string; paga: 'publica' | 'familia' | 'fies' | 'bolsa' | 'propria'; tFim: number; nivel?: 'tecnico' | 'superior' };
   /** Formou-se em (nome do curso). */
   formacao?: string;
   /** Pet: animal, não gente. Nunca conversa, nunca namora. */
   especie?: 'cachorro' | 'gato';
+  /** Pai e mãe (ids; `'eu'` é o jogador). Mantém a árvore da família coerente entre gerações. */
+  genitores?: string[];
+  /** Um momento difícil pelo qual a pessoa está passando (abre "estar junto" como ação). */
+  aperto?: Aperto;
+  /** Vida própria simplificada (descendentes e quem importa): formação, trabalho, marcos. */
+  vida?: VidaNpc;
+  /** Gestação de uma pessoa que não é o jogador (filha, nora, genro...). */
+  gestacao?: { tParto: number; outroId?: string; anunciada: boolean };
 }
+
+export interface Aperto {
+  tipo: 'desemprego' | 'separacao' | 'doenca' | 'luto' | 'dinheiro' | 'fase';
+  t: number;
+  /** Quem foi perdido, no luto. */
+  pessoaId?: string;
+}
+
+/**
+ * A vida própria de um NPC que importa (filhos, netos): não é uma segunda
+ * simulação completa, é uma trajetória coerente — formação, entrada no
+ * trabalho, progressão ou tropeço — com os marcos guardados para o jogador ver.
+ */
+export interface VidaNpc {
+  /** Facilidade estável da pessoa (−1..1), sorte que não se escolhe. */
+  aptidao: number;
+  escolaridade: 'fundamental' | 'medio' | 'tecnico' | 'superior';
+  /** Desde quando está no cargo atual. */
+  tCargo?: number;
+  /** Meses de experiência na trilha atual. */
+  experiencia: number;
+  /** Largou os estudos (não volta a ser 'estudante' sem motivo). */
+  parouDeEstudar?: boolean;
+  trajetoria: { t: number; texto: string; tipo: TipoTrajetoria }[];
+}
+
+export type TipoTrajetoria = 'escola' | 'estudo' | 'trabalho' | 'promocao' | 'desemprego' | 'casa' | 'amor' | 'filho' | 'lugar' | 'saude';
 
 export type Atracao = 'homens' | 'mulheres' | 'ambos';
 
@@ -80,7 +115,9 @@ export type Parentesco =
   | 'mae' | 'pai' | 'madrasta' | 'padrasto'
   | 'irmao' | 'meio_irmao'
   | 'avo' | 'tio' | 'primo'
-  | 'filho' | 'enteado' | 'neto'
+  | 'filho' | 'enteado' | 'neto' | 'bisneto'
+  /** Cônjuge de um filho (genro ou nora). */
+  | 'genro'
   | 'sogro'
   | 'pet';
 
@@ -97,26 +134,51 @@ export type EstagioRomance =
   | 'casamento'
   | 'ex';
 
+export interface Romance {
+  estagio: EstagioRomance;
+  tEstagio: number;
+  /** Quando começou (a primeira saída). */
+  tInicio?: number;
+  /** O quanto a outra pessoa está envolvida (0..100). Não é visível como número. */
+  envolvimento: number;
+  /** Planejamento de filhos do casal — pertence à relação, não ao jogador. */
+  planoFilhos?: 'evitando' | 'tentando' | 'sem_planejar';
+  /** Como terminou (quando `ex`). A morte não faz de ninguém um "ex". */
+  fim?: 'termino' | 'divorcio' | 'morte';
+  /** Um caso escondido, paralelo à relação principal. */
+  secreto?: boolean;
+  /** Na relação principal: o que a outra pessoa não sabe (o caso, e desde quando). */
+  segredo?: { pessoaId: string; t: number };
+}
+
+/** Um marco da história compartilhada. Só o que importa — nunca "um ano normal". */
+export interface Marco {
+  t: number;
+  texto: string;
+  tipo?: TipoMarco;
+  /** 1 corriqueiro · 2 importante · 3 marcante. */
+  peso?: number;
+}
+
+export type TipoMarco =
+  | 'inicio' | 'amizade' | 'romance' | 'casamento' | 'filho' | 'casa' | 'escola' | 'trabalho'
+  | 'conflito' | 'reconciliacao' | 'apoio' | 'ritual' | 'distancia' | 'traicao' | 'perda' | 'antigo';
+
 export interface Vinculo {
   pessoaId: string;
   parentesco?: Parentesco;
   /** De onde a pessoa veio para a vida do jogador. */
   origem: Convivio | 'familia' | 'apresentado' | 'romance';
   tInicio: number;
-  /** Carinho/proximidade afetiva, 0..100. */
+  /** Vínculo afetivo, 0..100. */
   proximidade: number;
+  /** Confiança, 0..100. Sobe devagar com o tempo e o apoio; cai de uma vez com traição e abandono. */
+  confianca: number;
   /** Atrito acumulado, 0..100. Decai com o tempo; cresce com conflitos. */
   tensao: number;
   /** Só para vínculos não familiares. */
   estagio?: EstagioSocial;
-  romance?: {
-    estagio: EstagioRomance;
-    tEstagio: number;
-    /** O quanto a outra pessoa está envolvida (0..100). Não é visível como número. */
-    envolvimento: number;
-    /** Planejamento de filhos do casal. */
-    planoFilhos?: 'evitando' | 'tentando' | 'sem_planejar';
-  };
+  romance?: Romance;
   /**
    * O lugar específico onde se conheceram ("escola:municipal-2", "trabalho:...").
    * Enquanto o jogador frequenta esse lugar, os dois convivem.
@@ -125,8 +187,12 @@ export interface Vinculo {
   /** Contextos em que convivem AGORA (recalculado a cada ano). */
   convivio: Convivio[];
   tUltimoContato: number;
-  /** Pequena história compartilhada — só fatos que aconteceram. */
-  historia: { t: number; texto: string }[];
+  /** Presença (0..100): tempo dedicado ao longo dos anos. É daqui que nasce o jeito de uma relação de pai/mãe e filho. */
+  presenca?: number;
+  /** Quantas vezes cada interação já foi feita — o que se repete vira costume ("ler antes de dormir"). */
+  habitos?: Record<string, number>;
+  /** História compartilhada — só fatos que aconteceram. */
+  historia: Marco[];
 }
 
 /* ------------------------------------------------------------------- Corpo */
@@ -386,6 +452,29 @@ export interface Entrada {
   pessoas?: string[];
   /** Foi uma escolha do jogador (e não algo que aconteceu). */
   escolha?: boolean;
+  /** O acontecimento social, estruturado (para continuidade e para a Linha da Vida). */
+  evento?: EventoSocial;
+}
+
+export type TipoEvento =
+  | 'amizade' | 'amizade_fim' | 'reencontro' | 'namoro' | 'termino' | 'reconciliacao' | 'uniao' | 'casamento' | 'divorcio'
+  | 'traicao' | 'traicao_descoberta' | 'gravidez' | 'filho_nasceu' | 'filho_saiu' | 'filho_voltou' | 'filho_marco'
+  | 'neto_nasceu' | 'virou_avo' | 'virou_bisavo' | 'morte' | 'viuvez' | 'despedida' | 'ruptura';
+
+export interface EventoSocial {
+  tipo: TipoEvento;
+  pessoaId?: string;
+  /** Peso narrativo 0..100 (a morte do cônjuge pesa mais que a de um primo distante). */
+  peso?: number;
+}
+
+/** Uma perda sendo atravessada. O peso diminui com os anos; a rede de apoio ajuda. */
+export interface Luto {
+  pessoaId: string;
+  t: number;
+  peso: number;
+  /** Como o jogador escolheu atravessar a despedida (quando escolheu). */
+  como?: string;
 }
 
 /* ---------------------------------------------------------------- Momentos */
@@ -439,7 +528,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 6;
+  versao: 7;
   id: string;
   rng: number;
   seq: number;
@@ -464,6 +553,8 @@ export interface Vida {
   ocorrencias: Ocorrencia[];
   /** O que já foi feito neste ano de vida (ações pontuais). */
   anoAtual: { acoes: string[] };
+  /** Perdas recentes, ainda sendo atravessadas. */
+  luto: Luto[];
   morte?: { t: number; causa: string };
 }
 

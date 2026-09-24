@@ -4,7 +4,7 @@
  */
 
 import type { Entrada, Pessoa, Vida, Vinculo } from '../motor/tipos';
-import { idade, idadePessoa, moraCom, parceiro, vinculosVivos } from '../motor/nucleo';
+import { idade, idadePessoa, moraCom, parceiro } from '../motor/nucleo';
 import { anoDe } from '../motor/tempo';
 import { flex, rotuloParentesco, listaNatural } from '../motor/texto';
 import { descreverEstagio } from '../motor/sistemas/romance';
@@ -54,6 +54,8 @@ export function faseDaVida(i: number): string {
 /* -------------------------------------------------------------- Pessoas */
 
 export function rotuloDe(v: Vida, p: Pessoa, vin: Vinculo): string {
+  if (vin.romance?.secreto && vin.romance.estagio !== 'ex') return 'alguém que você vê escondido';
+  if (!vin.parentesco && v.fatos[`ex_genro_${p.id}`] !== undefined) return flex(p.genero, 'ex-genro', 'ex-nora', 'ex-genre');
   if (vin.parentesco) {
     const r = rotuloParentesco(p, vin.parentesco);
     return `${flex(p.genero, 'seu', 'sua', 'sue')} ${r}`;
@@ -71,43 +73,6 @@ export function rotuloDe(v: Vida, p: Pessoa, vin: Vinculo): string {
     case 'afastado': return `já foi ${flex(p.genero, 'próximo', 'próxima', 'próxime')}`;
     default: return `conhecid${flex(p.genero, 'o', 'a', 'e')} ${onde}`;
   }
-}
-
-export function palavraProximidade(p: Pessoa, vin: Vinculo): string {
-  if (p.especie) return vin.proximidade >= 60 ? 'grudado em você' : 'por perto';
-  const n = vin.proximidade;
-  const g = (m: string, f: string) => flex(p.genero, m, f);
-  if (vin.tensao >= 55) return 'relação tensa';
-  if (n >= 80) return g('muito próximo', 'muito próxima');
-  if (n >= 60) return g('próximo', 'próxima');
-  if (n >= 40) return 'se dão bem';
-  if (n >= 22) return g('distante', 'distante');
-  return 'quase estranhos';
-}
-
-export interface GrupoPessoas { titulo: string; pessoas: { p: Pessoa; vin: Vinculo }[]; recolhido?: boolean }
-
-export function gruposDePessoas(v: Vida): GrupoPessoas[] {
-  const vivos = vinculosVivos(v);
-  const familia = vivos.filter(x => x.vin.parentesco && !x.p.especie);
-  const pets = vivos.filter(x => x.p.especie);
-  const amor = vivos.filter(x => x.vin.romance && ['saindo', 'namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio));
-  const amigos = vivos.filter(x => !x.vin.parentesco && !amor.includes(x) && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo'));
-  const convivio = vivos.filter(x => !x.vin.parentesco && !amor.includes(x) && !amigos.includes(x) && x.vin.convivio.length > 0);
-  const outros = vivos.filter(x => !x.vin.parentesco && !amor.includes(x) && !amigos.includes(x) && !convivio.includes(x) && (x.vin.historia.length > 0 || x.vin.romance?.estagio === 'ex' || x.vin.estagio === 'afastado'));
-  const mortos = Object.values(v.vinculos)
-    .map(vin => ({ p: v.pessoas[vin.pessoaId], vin }))
-    .filter(x => x.p && !x.p.vivo && (x.vin.parentesco || x.vin.estagio === 'amigo_proximo' || x.vin.romance));
-  const ordem = (a: { vin: Vinculo }, b: { vin: Vinculo }) => b.vin.proximidade - a.vin.proximidade;
-  const ordemFamilia: Record<string, number> = { mae: 0, pai: 1, madrasta: 2, padrasto: 2, filho: 3, enteado: 4, irmao: 5, meio_irmao: 5, avo: 6, neto: 7, tio: 8, primo: 9, sogro: 10 };
-  return [
-    { titulo: 'Amor', pessoas: amor.sort(ordem) },
-    { titulo: 'Família', pessoas: [...familia.sort((a, b) => (ordemFamilia[a.vin.parentesco!] ?? 20) - (ordemFamilia[b.vin.parentesco!] ?? 20) || ordem(a, b)), ...pets] },
-    { titulo: 'Amigos', pessoas: amigos.sort(ordem) },
-    { titulo: 'No dia a dia', pessoas: convivio.sort(ordem), recolhido: convivio.length > 6 },
-    { titulo: 'Gente que passou', pessoas: outros.sort(ordem), recolhido: true },
-    { titulo: 'Quem se foi', pessoas: mortos.sort((a, b) => (b.p.tMorte ?? 0) - (a.p.tMorte ?? 0)), recolhido: true }
-  ].filter(gr => gr.pessoas.length > 0);
 }
 
 /* -------------------------------------------------------------- Situação */

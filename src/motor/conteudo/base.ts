@@ -17,7 +17,7 @@
  */
 
 import type { Rng } from '../rng';
-import type { Genero, Pessoa, Relevancia, Tema, Traco, Vida } from '../tipos';
+import type { EventoSocial, Genero, Pessoa, Relevancia, Tema, Traco, Vida } from '../tipos';
 import { flex } from '../texto';
 import { idade } from '../nucleo';
 
@@ -64,6 +64,7 @@ export interface Narrativa {
   efeito?: (c: Ctx) => void;
   /** Guarda o fato na história compartilhada com uma das pessoas do papel. */
   lembrar?: [papel: string, texto: string];
+  evento?: EventoSocial;
 }
 
 export interface Acontecimento extends Base {
@@ -80,6 +81,7 @@ export interface Resultado {
   tom?: 'bom' | 'ruim' | 'neutro';
   efeito?: (c: Ctx) => void;
   lembrar?: [papel: string, texto: string];
+  evento?: EventoSocial;
 }
 
 export interface Opcao {

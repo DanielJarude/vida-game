@@ -17,7 +17,7 @@ import { clamp } from '../rng';
 import type { Convivio, Pessoa, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
-import { municipio } from '../dados/lugares';
+import { MUNICIPIOS, municipio } from '../dados/lugares';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { flex } from '../texto';
 
@@ -60,7 +60,10 @@ export function ambientesAtuais(v: Vida): Ambiente[] {
   }
   for (const rot of v.rotinas) {
     const social = ROTINAS_SOCIAIS[rot.id];
-    if (social) out.push({ chave: `rotina:${rot.id}:${cidade}`, tipo: 'rotina', idade: [Math.max(6, i - social.amplitude), i + social.amplitude], fluxo: social.fluxo, descricao: social.onde });
+    if (!social) continue;
+    // Criança faz amizade com criança: na igreja há adultos, mas o amigo de uma criança de 6 anos tem 6 anos.
+    const amplitude = i < 14 ? Math.min(2, social.amplitude) : i < 18 ? Math.min(4, social.amplitude) : social.amplitude;
+    out.push({ chave: `rotina:${rot.id}:${cidade}`, tipo: 'rotina', idade: [Math.max(i < 18 ? 3 : 16, i - amplitude), i + amplitude], fluxo: social.fluxo, descricao: social.onde });
   }
   if (i >= 4 && i <= 16 && moraComFamiliaDeOrigem(v)) {
     out.push({ chave: `vizinhanca:${cidade}:${v.moradia.tInicio}`, tipo: 'vizinhanca', idade: [i - 2, i + 2], fluxo: 0.6, descricao: 'na rua de casa' });
@@ -130,6 +133,11 @@ function saiuDeCasa(v: Vida, p: Pessoa, vin: Vinculo): boolean {
   return v.fatos[`saiu_de_casa_${p.id}`] !== undefined;
 }
 
+/** Um momento difícil passa (ou deixa de ser "recente"). */
+export function limparApertos(v: Vida): void {
+  for (const p of Object.values(v.pessoas)) if (p.aperto && v.t - p.aperto.t > 36) p.aperto = undefined;
+}
+
 /* ------------------------------------------------------ Gente nova */
 
 function populacaoAtiva(v: Vida): number {
@@ -192,6 +200,7 @@ export function processarSocial(v: Vida, r: Rng): void {
     if (p.especie) continue;
     vin.tensao = Math.round(vin.tensao * 0.65);
 
+    if (vin.parentesco && ['filho', 'enteado', 'neto', 'bisneto'].includes(vin.parentesco)) continue; // sistema de filhos
     if (vin.parentesco) {
       // Família: proximidade anda devagar; distância pesa pouco, ausência de contato pesa.
       const junto = vin.convivio.length > 0;
@@ -218,6 +227,9 @@ export function processarSocial(v: Vida, r: Rng): void {
     }
     delta -= vin.tensao / 12;
     vin.proximidade = clamp(Math.round(vin.proximidade + clamp(delta, -15, 10)));
+    // Colega é colega: o afeto de quem ainda não virou amigo tem teto.
+    if ((vin.estagio === 'colega' || vin.estagio === 'conhecido') && vin.proximidade > 58) vin.proximidade = 58;
+    if (junto && vin.tensao < 30) vin.confianca = clamp(Math.round(vin.confianca + ((vin.estagio === 'amigo_proximo' ? 80 : vin.estagio === 'amigo' ? 65 : 40) - vin.confianca) * 0.08));
 
     const conhecidosHa = (v.t - vin.tInicio) / 12;
     const antes = vin.estagio ?? 'conhecido';
@@ -241,18 +253,18 @@ export function processarSocial(v: Vida, r: Rng): void {
       const onde = descricaoOrigem(v, vin);
       if (depois === 'amigo' && antes !== 'afastado') {
         linhas.push({ prioridade: 2, fazer: () => {
-          escrever(v, { texto: textoNovaAmizade(v, p, onde), relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id] });
-          lembrarCom(v, p.id, `Viraram amigos ${onde}.`);
+          escrever(v, { texto: textoNovaAmizade(v, p, onde), relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id], evento: { tipo: 'amizade', pessoaId: p.id, peso: 20 } });
+          lembrarCom(v, p.id, `Viraram amigos ${onde}.`, 'amizade', 2);
         } });
       } else if (depois === 'amigo' && antes === 'afastado') {
-        linhas.push({ prioridade: 2, fazer: () => escrever(v, { texto: `A amizade com ${p.nome} voltou a ser o que era.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id] }) });
+        linhas.push({ prioridade: 2, fazer: () => { escrever(v, { texto: `A amizade com ${p.nome} voltou a ser o que era.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id], evento: { tipo: 'reconciliacao', pessoaId: p.id, peso: 20 } }); lembrarCom(v, p.id, 'A amizade voltou.', 'reconciliacao', 2); } });
       } else if (depois === 'amigo_proximo') {
         linhas.push({ prioridade: 3, fazer: () => {
-          escrever(v, { texto: `${p.nome} passou a ser das pessoas mais próximas da sua vida.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id] });
-          lembrarCom(v, p.id, 'Viraram amigos de verdade.');
+          escrever(v, { texto: `${p.nome} passou a ser das pessoas mais próximas da sua vida.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id], evento: { tipo: 'amizade', pessoaId: p.id, peso: 35 } });
+          lembrarCom(v, p.id, 'Viraram amigos de verdade.', 'amizade', 3);
         } });
       } else if (depois === 'afastado' && antes === 'amigo_proximo') {
-        linhas.push({ prioridade: 3, fazer: () => escrever(v, { texto: textoAfastamento(v, p, outraCidade), relevancia: 'biografia', tema: 'amizade', tom: 'ruim', pessoas: [p.id] }) });
+        linhas.push({ prioridade: 3, fazer: () => { escrever(v, { texto: textoAfastamento(v, p, outraCidade), relevancia: 'biografia', tema: 'amizade', tom: 'ruim', pessoas: [p.id], evento: { tipo: 'amizade_fim', pessoaId: p.id, peso: 25 } }); lembrarCom(v, p.id, outraCidade ? 'A distância afastou vocês.' : 'Foram se afastando.', 'distancia', 1); } });
       } else if (depois === 'afastado' && antes === 'amigo') {
         linhas.push({ prioridade: 1, fazer: () => escrever(v, { texto: `Você e ${p.nome} foram se perdendo de vista.`, relevancia: 'cotidiano', tema: 'amizade', pessoas: [p.id] }) });
       }
@@ -278,11 +290,21 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
       }
     } else if (p.renda > 0 && i < 65 && r.chance(0.05)) {
       p.renda = 0;
+      p.aperto = { tipo: 'desemprego', t: v.t };
     } else if (p.renda === 0 && i >= 18 && i < 65 && r.chance(0.5)) {
       p.renda = Math.round((1500 + hash(p.id) * 6500) / 10) * 10;
     } else if (i >= 65 && p.renda > 0 && r.chance(0.3)) {
       p.renda = Math.max(1620, Math.round(p.renda * 0.7));
       p.ocupacao = p.genero === 'feminino' ? 'aposentada' : 'aposentado';
+    }
+    if (p.aperto?.tipo === 'desemprego' && p.renda > 0) p.aperto = undefined;
+    // Amigos também mudam de cidade — e a amizade passa a ser à distância.
+    const amigo = vin.estagio === 'amigo' || vin.estagio === 'amigo_proximo';
+    if (amigo && i >= 20 && i <= 60 && !vin.romance && p.municipioId === v.moradia.municipioId && r.chance(0.02)) {
+      const destino = r.pick(MUNICIPIOS.filter(m => m.id !== p.municipioId && (m.perfil === 'metropole' || m.perfil === 'capital')));
+      p.municipioId = destino.id;
+      escrever(v, { texto: `${p.nome} se mudou para ${destino.nome}. A amizade passou a caber no celular.`, relevancia: vin.estagio === 'amigo_proximo' ? 'biografia' : 'cotidiano', tema: 'amizade', pessoas: [p.id] });
+      lembrarCom(v, p.id, `Mudou-se para ${destino.nome}.`, 'distancia', 1);
     }
   }
 }

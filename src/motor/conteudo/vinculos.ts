@@ -8,7 +8,7 @@ import { mudarAgora } from '../sistemas/processos';
 import { MUNICIPIOS, economiaLocal, municipio } from '../dados/lugares';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
-import { idadePessoa, temFato } from '../nucleo';
+import { idadePessoa, lembrarCom, temFato } from '../nucleo';
 import { anoDe } from '../tempo';
 import { criarPessoa, vincular } from '../pessoas';
 
@@ -88,7 +88,7 @@ export const VINCULOS: Conteudo[] = [
     texto: c => `${c.p.pessoa.nome} teve um problema no coração e vai ficar internad${gp(c, 'pessoa', 'o', 'a', 'e')} alguns dias. ${c.v.trabalho.atual ? 'O trabalho não para por isso.' : ''}`,
     opcoes: [
       { id: 'ficar', texto: 'Dormir no hospital todas as noites', comportamento: { familia: 2, empatia: 1 },
-        resolver: c => ({ texto: 'Cadeira de acompanhante, café de máquina, a mão segurada até ela dormir.'.replace('ela', gp(c, 'pessoa', 'ele', 'ela', 'elu')), memoria: `Passou as noites no hospital com ${c.p.pessoa.nome}.`, efeito: () => { envolvimento(c, 'pessoa', 12); estresse(c, 10); if (c.v.trabalho.atual) c.v.trabalho.atual.desempenho -= 6; c.p.pessoa.saude = Math.max(20, c.p.pessoa.saude - 10); } }) },
+        resolver: c => ({ texto: 'Cadeira de acompanhante, café de máquina, a mão segurada até ela dormir.'.replace('ela', gp(c, 'pessoa', 'ele', 'ela', 'elu')), memoria: `Passou as noites no hospital com ${c.p.pessoa.nome}.`, lembrar: ['pessoa', 'Você dormiu no hospital todas as noites.'], efeito: () => { envolvimento(c, 'pessoa', 12); estresse(c, 10); if (c.v.trabalho.atual) c.v.trabalho.atual.desempenho -= 6; c.p.pessoa.saude = Math.max(20, c.p.pessoa.saude - 10); } }) },
       { id: 'revezar', texto: 'Revezar com a família', comportamento: { familia: 1 },
         resolver: c => ({ texto: 'Fizeram uma escala no grupo da família. Deu certo.', memoria: null, efeito: () => { envolvimento(c, 'pessoa', 5); c.p.pessoa.saude = Math.max(20, c.p.pessoa.saude - 10); } }) },
       { id: 'trabalho', texto: 'Visitar depois do trabalho', resolver: c => ({ texto: `Você ia no horário de visita. ${c.p.pessoa.nome} esperava na porta.`, memoria: null, efeito: () => { envolvimento(c, 'pessoa', -3); c.p.pessoa.saude = Math.max(20, c.p.pessoa.saude - 10); } }) }
@@ -104,7 +104,7 @@ export const VINCULOS: Conteudo[] = [
       { id: 'ir', texto: 'Topar ir junto', comportamento: { familia: 1, coragem: 1 },
         resolver: c => ({ texto: 'Vocês fizeram as malas.', memoria: null, efeito: () => { c.p.pessoa.renda = Math.round(c.p.pessoa.renda * 1.35); envolvimento(c, 'pessoa', 10); fato(c, 'seguiu_conjuge'); moverCasal(c); } }) },
       { id: 'longe', texto: 'Sugerir que vá e vocês fiquem à distância por um tempo', comportamento: { independencia: 1 },
-        resolver: c => ({ texto: `${c.p.pessoa.nome} foi. Os fins de semana viraram rodoviária.`, memoria: `Passou a viver um relacionamento à distância com ${c.p.pessoa.nome}.`, efeito: () => { c.p.pessoa.municipioId = 'sao-paulo-sp'; const vin = c.v.vinculos[c.p.pessoa.id]; vin.convivio = vin.convivio.filter(x => x !== 'casa'); envolvimento(c, 'pessoa', -8); } }) },
+        resolver: c => ({ texto: `${c.p.pessoa.nome} foi. Os fins de semana viraram rodoviária.`, memoria: `Passou a viver um relacionamento à distância com ${c.p.pessoa.nome}.`, efeito: () => { c.p.pessoa.municipioId = destinoDoCasal(c).id; const vin = c.v.vinculos[c.p.pessoa.id]; vin.convivio = vin.convivio.filter(x => x !== 'casa'); envolvimento(c, 'pessoa', -8); lembrarCom(c.v, c.p.pessoa.id, `Um tempo à distância: ${c.p.pessoa.nome} em ${destinoDoCasal(c).nome}.`, 'distancia', 2); } }) },
       { id: 'ficar', texto: 'Pedir para recusar', comportamento: { familia: 1 },
         resolver: c => ({ texto: `${c.p.pessoa.nome} recusou. Nunca mais tocou no assunto.`, memoria: null, efeito: () => { envolvimento(c, 'pessoa', -10); tensao(c, 'pessoa', 15); } }) }
     ]
@@ -162,11 +162,11 @@ export const VINCULOS: Conteudo[] = [
     texto: c => `O boletim de ${c.p.filho.nome} veio com três notas vermelhas. A professora escreveu: "parece distraíd${gp(c, 'filho', 'o', 'a', 'e')}".`,
     opcoes: [
       { id: 'sentar', texto: 'Sentar para estudar junto todas as noites', comportamento: { familia: 1, disciplina: 1 },
-        resolver: c => ({ texto: 'Um mês de tabuada e redação na mesa da cozinha. As notas subiram.', memoria: null, efeito: () => { prox(c, 'filho', 8); estresse(c, 4); } }) },
+        resolver: c => ({ texto: 'Um mês de tabuada e redação na mesa da cozinha. As notas subiram.', memoria: null, lembrar: ['filho', 'Um boletim vermelho, um mês estudando juntos, notas que subiram.'], efeito: () => { prox(c, 'filho', 8); estresse(c, 4); if (c.p.filho.vida) c.p.filho.vida.aptidao = Math.min(1, c.p.filho.vida.aptidao + 0.05); } }) },
       { id: 'reforco', texto: 'Pagar aula de reforço', disponivel: c => (c.v.financas.conta > 1500 ? true : 'Não sobra dinheiro para isso.'),
         resolver: c => ({ texto: 'Duas vezes por semana, uma professora aposentada do bairro.', memoria: null, efeito: () => dinheiro(c, -1500) }) },
       { id: 'conversar', texto: 'Perguntar o que está acontecendo', comportamento: { empatia: 1 },
-        resolver: c => ({ texto: `${c.p.filho.nome} demorou, mas contou que não estava enxergando o quadro. Precisava de óculos.`, memoria: null, efeito: () => prox(c, 'filho', 6) }) },
+        resolver: c => ({ texto: `${c.p.filho.nome} demorou, mas contou que não estava enxergando o quadro. Precisava de óculos.`, memoria: null, lembrar: ['filho', 'Descobriram juntos que o problema na escola era de óculos.'], efeito: () => prox(c, 'filho', 6) }) },
       { id: 'castigo', texto: 'Castigo até melhorar', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'As notas melhoraram um pouco. A conversa em casa, não.', memoria: null, efeito: () => tensao(c, 'filho', 12) }) }
     ]
@@ -180,9 +180,9 @@ export const VINCULOS: Conteudo[] = [
     texto: c => `${c.p.filho.nome} não passou na federal, mas passou em ${cursoDoFilho(c)} numa faculdade particular. A mensalidade é de R$ ${mensalidadeFilho(c).toLocaleString('pt-BR')}. ${gp(c, 'filho', 'Ele', 'Ela', 'Elu')} olha para você esperando uma resposta.`,
     opcoes: [
       { id: 'pagar', texto: 'Pagar, nem que aperte', comportamento: { familia: 2, generosidade: 1 },
-        resolver: c => ({ texto: `Você assinou o contrato como responsável financeiro. ${c.p.filho.nome} te abraçou no estacionamento.`, memoria: `Pagou a faculdade de ${c.p.filho.nome}.`, efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'familia', tFim: c.v.t + 48 }; c.v.fatos[`paga_faculdade_${c.p.filho.id}`] = mensalidadeFilho(c); prox(c, 'filho', 12); } }) },
+        resolver: c => ({ texto: `Você assinou o contrato como responsável financeiro. ${c.p.filho.nome} te abraçou no estacionamento.`, memoria: `Pagou a faculdade de ${c.p.filho.nome}.`, lembrar: ['filho', `Você pagou a faculdade de ${cursoDoFilho(c)}.`], efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'familia', tFim: c.v.t + 48, nivel: 'superior' }; c.v.fatos[`paga_faculdade_${c.p.filho.id}`] = mensalidadeFilho(c); prox(c, 'filho', 12); } }) },
       { id: 'fies', texto: 'Sugerir o FIES',
-        resolver: c => ({ texto: `${c.p.filho.nome} fez o FIES. Vai começar a vida adulta devendo.`, memoria: null, efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'fies', tFim: c.v.t + 48 }; } }) },
+        resolver: c => ({ texto: `${c.p.filho.nome} fez o FIES. Vai começar a vida adulta devendo.`, memoria: null, efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'fies', tFim: c.v.t + 48, nivel: 'superior' }; } }) },
       { id: 'tentar', texto: 'Pedir para tentar a federal de novo', disponivel: c => (idadePessoa(c.v, c.p.filho) < 19 ? true : 'Já foram tentativas demais.'),
         resolver: c => ({ texto: `${c.p.filho.nome} topou mais um ano de cursinho, meio a contragosto.`, memoria: null, efeito: () => { delete c.v.fatos[`fil_vest_privada_${c.p.filho.id}`]; tensao(c, 'filho', 8); } }) },
       { id: 'trabalhar', texto: 'Dizer que agora não dá; é hora de trabalhar', comportamento: { independencia: 1 },
@@ -190,18 +190,20 @@ export const VINCULOS: Conteudo[] = [
     ]
   },
   {
-    id: 'fil_volta_casa', tipo: 'decisao', idade: [40, 85], tema: 'filhos', repetir: 10,
-    papeis: { filho: P.filho(22, 45) },
-    quando: c => !c.v.vinculos[c.p.filho.id].convivio.includes('casa') && c.v.moradia.tipo !== 'pais',
+    // Só existe se o filho de fato perdeu o emprego (a vida própria dele diz isso).
+    id: 'fil_volta_casa', tipo: 'decisao', idade: [40, 85], tema: 'filhos', repetir: 6, prioritario: true,
+    papeis: { filho: P.filho(20, 50) },
+    quando: c => !c.v.vinculos[c.p.filho.id].convivio.includes('casa') && c.v.moradia.tipo !== 'pais' && c.v.moradia.tipo !== 'republica'
+      && c.p.filho.aperto?.tipo === 'desemprego' && c.v.t - c.p.filho.aperto.t <= 12 && c.p.filho.renda === 0 && !c.p.filho.parceiroId,
     titulo: c => `${c.p.filho.nome} quer voltar`,
     texto: c => `${c.p.filho.nome} perdeu o emprego e não está conseguindo pagar o aluguel. Pergunta, com vergonha, se pode voltar para casa por uns meses.`,
     opcoes: [
       { id: 'sim', texto: 'Abrir a porta', comportamento: { familia: 2 },
-        resolver: c => ({ texto: 'O quarto antigo virou quarto de novo. Os meses viraram um ano e meio.', memoria: `${c.p.filho.nome} voltou a morar com você por um tempo.`, efeito: () => { const vin = c.v.vinculos[c.p.filho.id]; vin.convivio.push('casa'); c.p.filho.municipioId = c.v.moradia.municipioId; delete c.v.fatos[`saiu_de_casa_${c.p.filho.id}`]; prox(c, 'filho', 10); } }) },
+        resolver: c => ({ texto: 'O quarto antigo virou quarto de novo. Os meses viraram um ano e meio.', memoria: `${c.p.filho.nome} voltou a morar com você por um tempo.`, lembrar: ['filho', 'Voltou para casa depois de perder o emprego.'], efeito: () => { const vin = c.v.vinculos[c.p.filho.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.filho.municipioId = c.v.moradia.municipioId; delete c.v.fatos[`saiu_de_casa_${c.p.filho.id}`]; prox(c, 'filho', 10); vin.confianca = Math.min(100, vin.confianca + 8); } }) },
       { id: 'dinheiro', texto: 'Ajudar com o aluguel por uns meses', disponivel: c => (c.v.financas.conta > 5000 ? true : 'Não há dinheiro para isso.'), comportamento: { generosidade: 1 },
-        resolver: c => ({ texto: 'Três meses de aluguel pagos. Foi o tempo de arrumar outro emprego.', memoria: null, efeito: () => { dinheiro(c, -5000); prox(c, 'filho', 6); } }) },
+        resolver: c => ({ texto: 'Três meses de aluguel pagos. Foi o tempo de arrumar outro emprego.', memoria: null, lembrar: ['filho', 'Você pagou o aluguel num aperto.'], efeito: () => { dinheiro(c, -5000); prox(c, 'filho', 6); } }) },
       { id: 'nao', texto: 'Dizer que é hora de se virar', comportamento: { independencia: 1 },
-        resolver: c => ({ texto: `${c.p.filho.nome} foi dividir apartamento com um amigo. Demorou a ligar de novo.`, memoria: null, efeito: () => { prox(c, 'filho', -12); tensao(c, 'filho', 15); } }) }
+        resolver: c => ({ texto: `${c.p.filho.nome} foi dividir apartamento com um amigo. Demorou a ligar de novo.`, memoria: null, lembrar: ['filho', 'Pediu para voltar para casa; você disse não.'], efeito: () => { prox(c, 'filho', -12); tensao(c, 'filho', 15); } }) }
     ]
   },
   {
@@ -270,11 +272,14 @@ export const VINCULOS: Conteudo[] = [
   }
 ];
 
-function moverCasal(c: Ctx): void {
+function destinoDoCasal(c: Ctx) {
   const aqui = municipio(c.v.moradia.municipioId);
   const destinos = MUNICIPIOS.filter(m => m.id !== aqui.id && m.regiao === aqui.regiao && (m.perfil === 'metropole' || m.perfil === 'capital'));
-  const destino = destinos[(anoDe(c.v.t) + c.v.seq) % Math.max(1, destinos.length)] ?? MUNICIPIOS.find(m => m.id === 'sao-paulo-sp')!;
-  mudarAgora(c.v, destino.id, `acompanhando ${c.p.pessoa.nome}`);
+  return destinos[anoDe(c.v.t) % Math.max(1, destinos.length)] ?? MUNICIPIOS.find(m => m.id === 'sao-paulo-sp')!;
+}
+
+function moverCasal(c: Ctx): void {
+  mudarAgora(c.v, destinoDoCasal(c).id, `acompanhando ${c.p.pessoa.nome}`);
 }
 
 void saude;

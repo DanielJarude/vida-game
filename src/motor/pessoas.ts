@@ -107,6 +107,8 @@ export interface NovoVinculo {
   parentesco?: Parentesco;
   origem: Vinculo['origem'];
   proximidade: number;
+  /** Confiança inicial. Ausente: família começa confiando; quem acabou de chegar, não. */
+  confianca?: number;
   convivio?: Convivio[];
   estagio?: Vinculo['estagio'];
 }
@@ -118,6 +120,7 @@ export function vincular(v: Vida, p: Pessoa, n: NovoVinculo): Vinculo {
     origem: n.origem,
     tInicio: v.t,
     proximidade: n.proximidade,
+    confianca: n.confianca ?? (n.parentesco ? Math.round(45 + n.proximidade * 0.4) : Math.round(20 + n.proximidade * 0.3)),
     tensao: 0,
     estagio: n.parentesco ? undefined : n.estagio ?? 'conhecido',
     convivio: n.convivio ?? [],
