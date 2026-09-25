@@ -31,5 +31,7 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     css: false,
+    // Os testes que vivem muitas vidas (média de várias sementes) passam de 5 s em máquina carregada.
+    testTimeout: 20000,
   },
 });

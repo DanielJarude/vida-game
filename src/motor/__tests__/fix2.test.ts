@@ -403,8 +403,9 @@ describe('estado pessoal: causas como fonte única', () => {
 
   it('parar de fumar pode não dar certo de primeira — e dá, para alguém, tentando', () => {
     let falhas = 0, sucessos = 0;
+    const base = adulto(40, { semente: 100 });
     for (let k = 0; k < 40; k++) {
-      const v = adulto(40, { semente: 100 });
+      const v = structuredClone(base);
       v.corpo.habitos.fuma = true;
       v.rng = 5 + k * 131;
       const d = executar(v, { tipo: 'cuidar', cuidado: 'parar_fumar' }).vida;
