@@ -77,7 +77,7 @@ function candidatar(v: Vida, cargo: CargoEletivo, rua = 'rua_redes', fin = 'fin_
 
 /** Vive até sair o resultado (e a posse, se houver). */
 function apurar(v: Vida, forcar?: 'ganha' | 'perde'): Vida {
-  if (forcar) v = transacao(v, x => { const p = x.caminhos.politica!; if (forcar === 'ganha') { p.apoio = 95; p.reputacao = 90; p.campanha!.nota = 40; } else { p.apoio = 0; p.reputacao = 0; p.desgaste = 100; p.campanha!.nota = -60; } }).vida;
+  if (forcar) v = transacao(v, x => { const p = x.caminhos.politica!; if (forcar === 'ganha') { p.apoio = 100; p.reputacao = 100; p.desgaste = 0; p.campanha!.nota = 120; } else { p.apoio = 0; p.reputacao = 0; p.desgaste = 100; p.campanha!.nota = -60; } }).vida;
   for (let k = 0; k < 3 && (v.caminhos.politica?.campanha || v.caminhos.politica?.posse); k++) {
     v = avancarAno(v).vida;
     while (v.momento) v = responder(v, v.momento.situacaoId === 'pol_eleicao' ? 'nao' : 'ficar');

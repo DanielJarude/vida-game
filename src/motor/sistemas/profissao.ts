@@ -345,9 +345,11 @@ function comoVai(v: Vida, e: Emprego, oc: Ocupacao): string[] {
   const noPosto = (v.t - (e.tPosto ?? e.tInicio)) / 12;
   const f = familiaDaTrilha(oc.trilha);
   if (e.clientela === undefined && !e.formacaoAte) {
+    // Os mesmos limiares da promoção (62) e do corte (40): a leitura não contradiz o horizonte.
     if (d >= 76) out.push('O trabalho vai muito bem: é de você que lembram quando aparece algo difícil.');
-    else if (d >= 60) out.push('O trabalho vai bem.');
-    else if (d < 40) out.push('O trabalho vem indo mal, e todo mundo percebe.');
+    else if (d >= 62) out.push('O trabalho vai bem.');
+    else if (d >= 40) out.push('O trabalho vai, sem destaque.');
+    else out.push('O trabalho vem indo mal, e todo mundo percebe.');
   }
   const sentido = (f.sentido ?? []).some(x => (v.caminhos.frentes[x]?.interesse ?? 0) >= 55);
   if (sentido) out.push('É um trabalho que tem a ver com o que você gosta de fazer.');
@@ -566,7 +568,6 @@ function separar(lista: AcaoProfissional[]): { agora: AcaoProfissional[]; mais: 
   // Agora: o que pesa de verdade (2 a 5). Se pouco pesa, completa com o que tem algum motivo — nunca com o que não tem nenhum.
   const fortes = resto.filter(x => x.peso >= 3);
   const agora = (fortes.length >= 2 ? fortes : [...fortes, ...resto.filter(x => x.peso >= 1 && x.peso < 3)].slice(0, 3)).slice(0, 5);
-  if (!agora.length) agora.push(...resto.slice(0, 2));
   const mais = resto.filter(x => !agora.includes(x));
   return { agora, mais, saidas };
 }

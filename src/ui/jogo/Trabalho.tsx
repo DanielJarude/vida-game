@@ -18,7 +18,7 @@ import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, type Ocupacao } from '../../motor/dados/ocupacoes';
 import { familiaDaTrilha } from '../../motor/dados/carreiras';
-import { NOME_FORCA, ESPECIALIDADES } from '../../motor/dados/forcas';
+import { ESPECIALIDADES } from '../../motor/dados/forcas';
 import { degrausAcima, elegibilidade, horizonte, nomeOcupacao, porContaPropria, estradaNaArea } from '../../motor/sistemas/trabalho';
 import { acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
 import { leituraDoNegocio, negocioAtivo, negociosPossiveis, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
@@ -68,7 +68,7 @@ export function Trabalho({ vida, agir, irPara }: Props) {
 
       {e && modo !== 'politica' && (
         <dl className="ficha-trabalho">
-          {l.onde && <Dado rotulo="Onde">{l.onde}</Dado>}
+          {l.onde && !/^Por conta própria$|^A internet$|^Por encomenda$/i.test(l.onde) && <Dado rotulo="Onde">{l.onde}</Dado>}
           {l.renda && <Dado rotulo="No bolso">{l.renda.replace(' por mês no bolso', '/mês')}</Dado>}
           {l.jornada && <Dado rotulo="Jornada">{l.jornada}</Dado>}
           {l.vinculo && <Dado rotulo="Vínculo">{l.vinculo}</Dado>}
@@ -241,7 +241,6 @@ function PainelFarda({ vida }: { vida: Vida }) {
       )}
       {m && (
         <dl className="dados">
-          <Dado rotulo="Força">{NOME_FORCA[m.forca].replace(/^(o|a) /, '')}</Dado>
           <Dado rotulo="Guarnição">{vida.moradia.municipioId === m.guarnicao ? 'na cidade onde mora' : 'longe de casa'}{m.transferencias ? ` · ${m.transferencias} ${m.transferencias === 1 ? 'transferência' : 'transferências'}` : ''}</Dado>
           {m.especialidade && <Dado rotulo="Especialidade">{ESPECIALIDADES[m.especialidade]?.nome ?? m.especialidade}</Dado>}
           <Dado rotulo="Tempo de serviço">{Math.floor((vida.t - m.tIngresso) / 12)} anos</Dado>

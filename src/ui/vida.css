@@ -290,7 +290,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .pessoa__rotulo { font-size: var(--type-caption); color: var(--text-muted); grid-column: 2; }
 .pessoa__prox { grid-row: 1 / span 2; grid-column: 3; font-size: var(--type-caption); color: var(--text-secondary); text-align: right; }
 .pessoa__prox--tensa { color: var(--danger); }
-.pessoa__prox--tensa::before { content: '⚡ '; }
+.pessoa__prox--tensa::before { content: '! '; font-weight: 700; }
 .pessoa--falecida { opacity: 0.65; }
 
 .nucleo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-5); }
@@ -377,7 +377,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .estado-bloco__lista li { font-family: var(--font-serif); color: var(--text-secondary); line-height: var(--leading-snug); padding: 2px 0 2px var(--space-4); position: relative; }
 .estado-bloco__lista li::before { content: '−'; position: absolute; left: 0; color: var(--danger); font-weight: 700; }
 .estado-bloco__lista--bom li::before { content: '+'; color: var(--success); }
-.estado-bloco__lista .link { display: inline-block; min-height: 32px; padding: 5px 0; }
+.estado-bloco__lista .link { display: inline-block; min-height: 40px; padding: 9px 0; }
 .estado-bloco__quando { font-family: var(--font-sans); font-size: var(--type-meta); color: var(--text-muted); }
 .estado-bloco__cuidar { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-top: auto; padding-top: var(--space-4); }
 .estado-bloco__cuidar .botao { min-height: 44px; font-size: var(--type-caption); text-align: left; --tom: var(--tom-e); }
@@ -444,7 +444,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .clima__rotulo { font-family: var(--font-sans); font-size: var(--type-caption); font-weight: 600; color: var(--text-muted); }
 .clima--bom .clima__rotulo { color: var(--success); }
 .clima--ruim .clima__rotulo { color: var(--danger); }
-.clima--ruim .clima__rotulo::before { content: '⚡ '; }
+.clima--ruim .clima__rotulo::before { content: '! '; }
 
 .equipe { margin-top: var(--space-4); }
 .equipe__titulo { font-family: var(--font-serif); color: var(--text-secondary); margin-bottom: var(--space-2); }
@@ -530,7 +530,6 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .porta__texto strong { font-family: var(--font-serif); font-weight: 500; font-size: var(--type-lead); color: var(--text-primary); }
 .porta__texto p { font-family: var(--font-serif); color: var(--text-secondary); line-height: var(--leading-normal); max-width: 60ch; }
 .porta__prazo { font-size: var(--type-caption); color: var(--text-muted); }
-.porta__prazo::before { content: '⏳ '; }
 .porta__acoes { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); flex: none; padding-right: var(--space-3); }
 .carreira { margin: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .marcos-caminho { display: flex; flex-direction: column; margin-bottom: var(--space-3); }

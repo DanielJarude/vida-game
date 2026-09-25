@@ -22,7 +22,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
   return (
     <Folha rotulo={m.titulo} fechavel={false} papel>
       <div className="momento">
-        <p className="momento__tema">{TEMA_ROTULO[m.tema] ?? ''}</p>
+        <p className="momento__tema">{/^pol_/.test(m.situacaoId) ? 'Vida pública' : /^neg_/.test(m.situacaoId) ? 'O negócio' : /^esp_/.test(m.situacaoId) ? 'Esporte' : /^mil_/.test(m.situacaoId) ? 'A farda' : TEMA_ROTULO[m.tema] ?? ''}</p>
         <h2 className="momento__titulo">{m.titulo}</h2>
         {pessoas.length > 0 && (
           <div className="momento__pessoas">

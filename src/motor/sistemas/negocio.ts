@@ -188,7 +188,7 @@ function nomeDoNegocio(v: Vida, t: TipoNegocio): string {
 
 /* ---------------------------------------------------------- A conta */
 
-const ESCALA_MARGEM = [0, 1, 2.2, 3.0];
+const ESCALA_MARGEM = [0, 1, 1.95, 2.6];
 const ESCALA_CUSTO = [0, 1, 2.0, 3.2];
 /** Quanta gente cabe (e é preciso) em cada porte. */
 export const EQUIPE_MAXIMA = [0, 2, 4, 7];
@@ -212,7 +212,7 @@ function escala(n: Negocio, tabela: number[]): number {
   const extras = Math.max(0, u - 1);
   const gentePorUnidade = Math.max(0, tamanhoDaEquipe(n) - EQUIPE_MAXIMA[porte] / 2);
   const cobertas = Math.min(extras, Math.floor(gentePorUnidade / 2));
-  return tabela[porte] * (1 + 0.7 * cobertas + 0.35 * (extras - cobertas));
+  return tabela[porte] * (1 + 0.55 * cobertas + 0.25 * (extras - cobertas));
 }
 
 const FATOR_ESTRATEGIA: Record<NonNullable<Negocio['estrategia']>, { margem: number; custo: number; movimento: number; reputacao: number }> = {
@@ -275,6 +275,7 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
   // O que o motor do trabalho já moveu (ofício, estrada, economia) ganha o que é só do negócio.
   let extra = (n.reputacao - 50) / 15 + est.movimento + Math.min(3, equipe) * 0.6 - tamanho * 1.5 + Math.min(2, v.fatos['negocio_aprendizado'] ?? 0);
   if (n.semEstrada && anos < 3) extra -= 3;
+  if (emCrise(v)) extra -= 2 + tamanho * 2;
   if (e.ritmo === 'puxado') extra += 2.5;
   if (e.ritmo === 'leve') extra -= equipe >= 2 ? 0.5 : 2;
   e.clientela = Math.round(clamp((e.clientela ?? n.clientela) + extra + (r ? r.normal() * 2 : 0), 0, tetoDoMovimento(n)));
@@ -311,11 +312,33 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
     escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'conquista', texto, 2, { ocupacaoId: n.ocupacaoId });
   }
-  if (r) anoDaEquipe(v, r, n);
+  if (r) { anoDaEquipe(v, r, n); tombo(v, r, n); }
   return n.anosNoVermelho >= 2;
 }
 
 const emCrise = (v: Vida) => v.economia?.fase === 'crise';
+
+/**
+ * O que derruba negócio de verdade (e derruba mais o que é maior): um
+ * concorrente grande na mesma rua, dinheiro que some na mão de quem cuidava
+ * de um dos pontos, um assalto, uma obra que fecha a rua. Acontece — não é
+ * escolha; a reação (insistir, enxugar, vender) é.
+ */
+function tombo(v: Vida, r: Rng, n: Negocio): void {
+  const tamanho = (n.porte ?? 1) - 1 + (n.unidades ?? 1) - 1;
+  const chance = 0.04 + tamanho * 0.05 + (emCrise(v) ? 0.06 : 0);
+  if (!r.chance(chance)) return;
+  const tipo = r.pick([...(tamanho > 0 ? ['desvio'] : []), 'concorrente', 'assalto', 'obra']);
+  const perda = Math.round(n.capital * (tipo === 'desvio' ? 0.25 : tipo === 'assalto' ? 0.08 : 0.05) / 100) * 100;
+  const queda = tipo === 'concorrente' ? 14 + tamanho * 4 : tipo === 'obra' ? 8 : tipo === 'desvio' ? 6 : 3;
+  n.clientela = Math.max(0, n.clientela - queda);
+  if (v.trabalho.atual) v.trabalho.atual.clientela = n.clientela;
+  pagarPeloCaixa(v, n, perda);
+  n.reputacao = clamp((n.reputacao ?? 40) - (tipo === 'desvio' ? 4 : 2));
+  const texto = { desvio: `Quem cuidava de um dos pontos de ${n.nome} desviou dinheiro durante meses. Quando você descobriu, faltavam ${fmt(perda)}.`, concorrente: `Uma rede grande abriu a duas quadras de ${n.nome}, com preço que você não consegue cobrir.`, assalto: `${n.nome} foi assaltado num sábado à noite. Levaram o caixa e parte do equipamento.`, obra: `Uma obra fechou a rua de ${n.nome} por meses. A freguesia foi para outro lugar.` }[tipo]!;
+  escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+  abalar(v, tipo === 'desvio' ? 'o dinheiro desviado do negócio' : 'o golpe no negócio', -4, 6);
+}
 
 /** Quem trabalha para você também vive: pede para sair, cresce junto, conta que vai ter filho. */
 function anoDaEquipe(v: Vida, r: Rng, n: Negocio): void {
@@ -413,7 +436,7 @@ export function podeAmpliar(v: Vida): Veredito {
   if (!n) return bloqueio('impossivel', 'Não há negócio.');
   if (n.emCasa) return (n.clientela >= 45 ? { grau: 'permitido' } : bloqueio('requisito', 'Primeiro, a freguesia de casa precisa pedir mais espaço.')) as Veredito;
   if ((n.porte ?? 1) >= 3) return bloqueio('impossivel', 'Já é do maior tamanho que um negócio assim costuma ter.');
-  if (n.clientela < 55) return bloqueio('requisito', 'Com a casa ainda meio vazia, crescer só aumenta a conta.');
+  if (n.clientela < 60) return bloqueio('requisito', 'Com a casa ainda meio vazia, crescer só aumenta a conta.');
   const custo = custoDeAmpliar(v, n);
   if (!cabeNoCaixaEBolso(v, n, custo)) return bloqueio('requisito', `Ampliar custa uns ${fmt(custo)} (entre o caixa e o seu bolso, não há).`);
   return { grau: 'permitido' };
@@ -438,7 +461,7 @@ export function ampliar(v: Vida): void {
   n.capital += custo;
   n.porte = ((n.porte ?? 1) + 1) as 2 | 3;
   // O lugar maior começa com cadeira vazia.
-  n.clientela = Math.round(n.clientela * 0.65);
+  n.clientela = Math.round(n.clientela * 0.6);
   v.trabalho.atual!.clientela = n.clientela;
   const texto = n.porte === 2 ? `Ampliou ${n.nome}: o ponto ao lado, mais espaço, mais conta. Custou ${fmt(custo)}.` : `${n.nome} virou um negócio grande: outro andar, outro tamanho. Custou ${fmt(custo)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', escolha: true });

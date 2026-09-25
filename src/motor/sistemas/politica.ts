@@ -291,8 +291,10 @@ export function registrarCandidatura(v: Vida, cargo: CargoEletivo, tEleicao: num
 export function forcaDaCandidatura(v: Vida, cargo: CargoEletivo): number {
   const p = v.caminhos.politica!;
   const c = p.campanha;
-  let f = p.apoio * 0.45 + p.reputacao * 0.35 + (c?.nota ?? 0) - p.desgaste * 0.15;
-  if (p.mandato?.cargo === cargo) f += (p.mandato.aprovacao - 50) * 0.5 + 6;
+  // A trajetória pesa mais que a campanha: base, nome (no alcance do cargo) e o que o mandato mostrou.
+  const nome = CARGOS[cargo].escopo === 'municipio' ? Math.min(p.reputacao, 60) : p.reputacao;
+  let f = p.apoio * 0.45 + nome * 0.22 + (c?.nota ?? 0) * 0.5 - p.desgaste * 0.2;
+  if (p.mandato?.cargo === cargo) f += (p.mandato.aprovacao - 50) * 0.4 - Math.max(0, p.consecutivos - 1) * 3;
   if (p.historico.some(h => h.resultado === 'derrotado')) f += 3;
   // O tamanho do partido: o grande tem estrutura; o pequeno, pouca.
   f += [3, 1, -2][v.fatos['pol_partido_porte'] ?? 1] ?? 0;
@@ -304,19 +306,20 @@ export function forcaDaCandidatura(v: Vida, cargo: CargoEletivo): number {
 export function dificuldade(v: Vida, cargo: CargoEletivo): number {
   const porte = municipio(v.moradia.municipioId).perfil;
   const tam = porte === 'metropole' ? 2 : porte === 'capital' ? 1.4 : porte === 'metropolitana' ? 1 : 0;
-  return { vereador: 28 + tam * 6, prefeito: 44 + tam * 10, deputado_estadual: 48, deputado_federal: 56, senador: 72, governador: 70 }[cargo];
+  // Muito mais candidatos do que vagas: a maioria perde (vereador em cidade pequena é o degrau mais alcançável).
+  return { vereador: 40 + tam * 8, prefeito: 54 + tam * 10, deputado_estadual: 50, deputado_federal: 58, senador: 74, governador: 72 }[cargo];
 }
 
 /** Um número do ano e do partido (a força do partido naquela eleição): o mundo, não o jogador. */
 function sorteDoPartido(v: Vida, ano: number): number {
   let h = ano * 131;
   for (const ch of (v.caminhos.politica?.partido ?? '') + v.moradia.municipioId) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
-  return (h % 1000) / 1000 * 10 - 3;
+  return (h % 1000) / 1000 * 12 - 6;
 }
 
 export function chanceDeVitoria(v: Vida, cargo: CargoEletivo, tEleicao: number): number {
   const x = forcaDaCandidatura(v, cargo) + sorteDoPartido(v, Math.floor(tEleicao / 12)) - dificuldade(v, cargo);
-  return 1 / (1 + Math.exp(-x / 6));
+  return 1 / (1 + Math.exp(-x / 5));
 }
 
 /** A apuração. */
@@ -330,7 +333,7 @@ function apurar(v: Vida, r: Rng): void {
   p.historico.push({ t: c.tEleicao, cargo, resultado: ganhou ? 'eleito' : 'derrotado' });
   p.campanha = undefined;
   // A campanha deixa gente conhecida — e conhecida de você.
-  p.reputacao = clamp(p.reputacao + (ganhou ? 12 : 6));
+  p.reputacao = clamp(p.reputacao + (ganhou ? 3 : 1));
   if (ganhou) {
     const mesmo = p.mandato?.cargo === cargo;
     p.posse = { cargo, t: tDaPosse(Math.floor(c.tEleicao / 12)) };
@@ -516,12 +519,13 @@ export function processarPolitica(v: Vida, r: Rng): void {
     const m = p.mandato;
     const c = CARGOS[m.cargo];
     // A aprovação: o que se fez, a economia, o desgaste de quem governa.
-    const delta = (m.feito > 0 ? 3 : -2) + (c.executivo && v.economia?.fase === 'crise' ? -6 : 0) + (c.executivo ? -2 : 0) - p.desgaste / 40 + r.normal() * 4 + (50 - m.aprovacao) * 0.08;
+    // Aprovação: o que se fez ajuda, mas a rua esquece depressa e cobra de quem está há muito tempo.
+    const delta = (m.feito > 0 ? 1.5 : -2) + (c.executivo && v.economia?.fase === 'crise' ? -6 : 0) + (c.executivo ? -2 : -0.5) - p.desgaste / 30 + r.normal() * 5 + (50 - m.aprovacao) * 0.2;
     m.aprovacao = Math.round(clamp(m.aprovacao + delta));
     m.feito = Math.max(0, m.feito - 1);
-    p.apoio = Math.round(clamp(p.apoio + (m.aprovacao - p.apoio) * 0.25));
-    p.reputacao = clamp(p.reputacao + (c.escopo === 'estado' ? 3 : 1.5));
-    if (c.executivo) p.desgaste = clamp(p.desgaste + 3);
+    p.apoio = Math.round(clamp(p.apoio + (m.aprovacao * 0.85 - p.apoio) * 0.25));
+    p.reputacao = clamp(p.reputacao + (c.escopo === 'estado' ? 1.5 : 0.5));
+    p.desgaste = clamp(p.desgaste + (c.executivo ? 3 : 2.5));
     // Crises: acontecem (o jogador responde).
     if (!m.crise && r.chance(c.executivo ? 0.32 : 0.14)) m.crise = { t: v.t, tipo: r.pick(c.executivo ? ['chuva', 'greve', 'verba', 'obra', 'aliado'] : ['aliado', 'votacao', 'pedido']) };
     // Brasília durante a semana: a casa sente.
@@ -533,8 +537,8 @@ export function processarPolitica(v: Vida, r: Rng): void {
   } else if (p.fase !== 'eleito' && p.fase !== 'candidato') {
     // Fora do cargo: o nome cresce com a presença (ou esfria sem ela).
     const ativo = v.anoAtual.acoes.includes('pol_comunidade') || v.rotinas.some(x => x.id === 'voluntariado');
-    p.apoio = Math.round(clamp(p.apoio + (ativo ? 2 + socia : -1.5) + (v.fatos['pol_quer'] !== undefined && v.t - v.fatos['pol_quer'] <= 24 ? 2 : 0)));
-    p.reputacao = Math.round(clamp(p.reputacao + (ativo ? 1 + socia / 2 : -0.5)));
+    p.apoio = Math.round(clamp(p.apoio + (ativo ? 1 + socia * 0.5 : -1.5) + (v.fatos['pol_quer'] !== undefined && v.t - v.fatos['pol_quer'] <= 24 ? 1 : 0)));
+    p.reputacao = Math.round(clamp(p.reputacao + (ativo ? 0.5 + socia / 4 : -0.5)));
     p.desgaste = clamp(p.desgaste - 3);
   }
   // A janela de uma eleição: a vida pergunta (conteúdo `pol_eleicao`).
@@ -673,8 +677,8 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
     case 'comunidade': {
       v.anoAtual.acoes.push('pol_comunidade');
       const soc = v.personalidade.tracos.sociabilidade;
-      p!.apoio = clamp(p!.apoio + 4 + Math.max(0, soc) / 25);
-      p!.reputacao = clamp(p!.reputacao + 2);
+      p!.apoio = clamp(p!.apoio + 2 + Math.max(0, soc) / 40);
+      p!.reputacao = clamp(p!.reputacao + 1);
       if (p!.mandato) p!.mandato.aprovacao = clamp(p!.mandato.aprovacao + 2);
       aplicarPersonalidade(v, 'acao:pol_comunidade', { sociabilidade: 1 });
       const par = parceiro(v);
@@ -689,7 +693,7 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
         const m = p!.mandato;
         m.feito += 2;
         const deu = r.chance(0.5 + (m.cargo === 'vereador' || m.cargo.startsWith('deputado') || m.cargo === 'senador' ? 0.05 : 0.15));
-        m.aprovacao = clamp(m.aprovacao + (deu ? 5 : 1));
+        m.aprovacao = clamp(m.aprovacao + (deu ? 3 : 0));
         const alvo = p!.prioridade ? NOME_PRIORIDADE[p!.prioridade] : 'o que prometeu';
         escrever(v, { texto: deu ? `O ano do mandato teve uma marca: ${alvo}. Saiu do papel.` : `Trabalhou o ano inteiro em ${alvo}; o resultado ficou para o ano seguinte.`, relevancia: 'biografia', tema: 'trabalho', escolha: true, tom: deu ? 'bom' : undefined });
         aplicarPersonalidade(v, 'acao:pol_prioridade', { disciplina: 1 });
@@ -731,10 +735,8 @@ export function acoesPoliticas(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   const p = v.caminhos.politica;
   const A = (oque: OquePolitica, valor?: string) => ({ tipo: 'politica', oque, valor } as unknown as Acao);
   const add = (x: AcaoProfissional) => { if (x.acao && !podeTentar(disp(v, x.acao))) return; out.push(x); };
-  if (!p || p.fase === 'encerrada') {
-    add({ id: 'pol_aproximar', rotulo: p ? 'Voltar à vida política' : 'Aproximar-se da vida política', porque: portasDaPolitica(v).length ? 'Já tem gente pedindo que você participe.' : undefined, acao: A('aproximar'), peso: portasDaPolitica(v).length ? 3 : 0 });
-    return out;
-  }
+  // Fora da política, a porta mora no Rumo (é mudança de caminho, não ação de trabalho).
+  if (!p || p.fase === 'encerrada') return out;
   const m = p.mandato;
   const e = eleicaoNaJanela(v);
   if (m?.crise) add({ id: 'pol_crise', rotulo: 'Responder à crise', porque: 'Todo mundo espera uma palavra sua.', acao: A('crise'), peso: 10 });

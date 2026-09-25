@@ -177,7 +177,9 @@ export function sobrecargaDaSemana(v: Vida): { fixos: number; atividades: number
   // Sobra só uma fresta da semana depois dos compromissos (e eles são muitos).
   const apertada = fixos <= 0.01 && s.base - somaFixos <= 0.75 && somaFixos >= 2.5;
   const atividades = Math.max(0, s.ocupado - s.capacidade);
-  const rotulos = [...s.fixos.filter(f => f.peso >= 0.5).map(f => f.rotulo.replace(/ \(.*\)$/, '').toLowerCase()), ...s.rotinas.filter(r => r.peso >= 1).map(r => r.rotulo.replace(/ — .*/, '').toLowerCase())];
+  // Só a primeira letra desce (nomes de gente continuam com maiúscula: "cuidar de Sandra").
+  const minuscula = (x: string) => x.charAt(0).toLowerCase() + x.slice(1);
+  const rotulos = [...s.fixos.filter(f => f.peso >= 0.5).map(f => minuscula(f.rotulo.replace(/ \(.*\)$/, ''))), ...s.rotinas.filter(r => r.peso >= 1).map(r => minuscula(r.rotulo.replace(/ — .*/, '')))];
   return { fixos, atividades, rotulos, apertada };
 }
 

@@ -4,8 +4,8 @@ const SP = process.env.SP; const OUT = process.env.OUT ?? SP;
 const URL = 'http://localhost:4173/';
 const CEN = (process.env.CEN ?? 'empreendedor').split(',');
 const W = (process.env.W ?? '390,1440').split(',').map(Number);
-const ABAS = (process.env.ABAS ?? 'Linha da Vida,Você,Pessoas,Estudo e trabalho,Casa e dinheiro,Tempo livre').split(',');
-const CURTO = { 'Linha da Vida': 'Vida', 'Estudo e trabalho': 'Rumo', 'Casa e dinheiro': 'Casa', 'Tempo livre': 'Tempo' };
+const ABAS = (process.env.ABAS ?? 'Linha da Vida,Você,Pessoas,Trabalho,Rumo,Casa,Tempo livre').split(',');
+const CURTO = { 'Linha da Vida': 'Vida', 'Tempo livre': 'Tempo' };
 const b = await chromium.launch();
 for (const c of CEN) for (const w of W) {
   const ctx = await b.newContext({ viewport: { width: w, height: w < 800 ? 844 : 900 } });

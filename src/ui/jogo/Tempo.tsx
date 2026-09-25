@@ -67,7 +67,7 @@ function FaixaDaSemana({ s }: { s: Semana }) {
   // A semana tem um tamanho (s.base): o que passa dele fica hachurado, com nome.
   const dentro = Math.min(total, s.base);
   const descricao = lista.map(p => `${p.rotulo}: ${p.tipo === 'livre' ? 'livre' : dose(p.peso)}`).join('; ');
-  const fixos = s.fixos.filter(f => f.peso >= 0.25).map(f => f.rotulo.replace(/ \(.*\)$/, '').toLowerCase());
+  const fixos = s.fixos.filter(f => f.peso >= 0.25).map(f => { const x = f.rotulo.replace(/ \(.*\)$/, ''); return x.charAt(0).toLowerCase() + x.slice(1); });
   return (
     <figure className="semana" aria-label={`A semana: ${descricao}.`}>
       {fixos.length > 0 && <p className="semana__fixos">Antes de qualquer escolha, a semana já tem {listaNatural(fixos)}.</p>}
