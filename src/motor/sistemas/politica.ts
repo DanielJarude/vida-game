@@ -47,7 +47,7 @@ import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { habilidade } from './frentes';
 import { anoDe, idadeEm } from '../tempo';
-import { flex, ge } from '../texto';
+import { dinheiro, flex, ge } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { aplicarPersonalidade } from '../personalidade';
 import type { AcaoProfissional } from './profissao';
@@ -62,6 +62,18 @@ export const NOME_PRIORIDADE: Record<Prioridade, string> = {
   seguranca: 'segurança no bairro', ambiente: 'saneamento e meio ambiente', contas: 'as contas em dia', cultura: 'cultura e esporte'
 };
 export const PRIORIDADES = Object.keys(NOME_PRIORIDADE) as Prioridade[];
+
+/** O que um mandato consegue entregar, em coisa concreta (nunca em ideologia). */
+const ENTREGAS: Record<Prioridade, string[]> = {
+  saude: ['o posto de saúde do bairro reabriu com médico', 'a fila de exames encurtou', 'a farmácia do posto voltou a ter remédio', 'uma ambulância nova para a zona rural'],
+  educacao: ['uma creche nova no bairro', 'a reforma da escola que chovia dentro', 'o transporte escolar voltou a passar', 'vagas de creche para a fila de espera'],
+  mobilidade: ['a linha de ônibus que faltava', 'o asfalto da rua de terra', 'a ciclovia até o centro', 'semáforos na avenida das batidas'],
+  emprego: ['um curso de qualificação com vaga garantida', 'a feira do bairro regularizada', 'um galpão para pequenas empresas', 'crédito para quem trabalha por conta'],
+  seguranca: ['iluminação nas ruas escuras', 'a praça reformada e ocupada', 'o posto policial do bairro', 'câmeras no terminal de ônibus'],
+  ambiente: ['a rede de esgoto do bairro', 'a coleta de lixo que não passava', 'a limpeza do córrego', 'árvores na avenida'],
+  contas: ['as contas do órgão aprovadas sem ressalva', 'um corte de gastos que ninguém notou', 'a folha paga em dia o ano todo', 'uma dívida antiga renegociada'],
+  cultura: ['a quadra do bairro coberta', 'o festival de música da cidade', 'a biblioteca reaberta', 'aulas de esporte para crianças no contraturno']
+};
 
 interface ModeloCargo { tipo: 'municipal' | 'geral'; anos: 4 | 8; executivo: boolean; idade: number; escopo: 'municipio' | 'estado' }
 export const CARGOS: Record<CargoEletivo, ModeloCargo> = {
@@ -283,7 +295,7 @@ export function registrarCandidatura(v: Vida, cargo: CargoEletivo, tEleicao: num
   else if (e && e.clientela !== undefined && e.contrato !== 'eletivo') e.clientela = clamp(e.clientela - 8);
   p.fase = p.fase === 'mandato' ? 'mandato' : 'candidato';
   p.campanha = { cargo, tEleicao, gasto: 0, nota: 0, etapa: 1 };
-  escrever(v, { texto: `Registrou candidatura a ${nomeCargo(v, cargo)} pelo ${p.partido}, para a eleição de ${anoDe(tEleicao)}.`, relevancia: 'marco', tema: 'trabalho', escolha: true });
+  escrever(v, { texto: `Registrou candidatura a ${nomeCargo(v, cargo)} pelo ${p.partido}, para a eleição de ${anoDe(tEleicao)}.`, relevancia: p.historico.length ? 'biografia' : 'marco', tema: 'trabalho', escolha: true });
   marcar(v, 'candidatura', `${cap(flex(ge(v), 'candidato', 'candidata', 'candidate'))} a ${nomeCargo(v, cargo)}, aos ${idade(v)}.`, 2);
 }
 
@@ -344,8 +356,10 @@ function apurar(v: Vida, r: Rng): void {
     abalar(v, 'a vitória na eleição', 12, 2);
     if (par) lembrarCom(v, par.p.id, `A noite da apuração: ${nome}.`, 'apoio', 3);
   } else {
-    const texto = `Não se elegeu ${nome} em ${anoDe(c.tEleicao)}.${p.mandato ? ' O mandato acaba no fim do ano.' : ''}`;
-    escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    // Perder a reeleição encerra o mandato; perder disputando outro cargo, não.
+    const acaba = !!p.mandato && (p.mandato.cargo === cargo || p.mandato.tFim <= tDaPosse(Math.floor(c.tEleicao / 12)));
+    const texto = `Não se elegeu ${nome} em ${anoDe(c.tEleicao)}.${acaba ? ' O mandato acaba no fim do ano.' : p.mandato ? ` Segue no mandato de ${nomeCargo(v, p.mandato.cargo)}.` : ''}`;
+    escrever(v, { texto, relevancia: p.historico.filter(h => h.resultado === 'derrotado').length <= 1 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'derrota', texto, 3);
     abalar(v, 'a derrota na eleição', -10, 5);
     if (!p.mandato) { p.fase = 'entre_mandatos'; voltarAoTrabalho(v, 'depois da derrota'); }
@@ -464,8 +478,8 @@ export function voltarAoTrabalho(v: Vida, quando: string): void {
     escrever(v, { texto: `Voltou ao cargo público de ${nome}, ${quando}: o posto estava guardado.`, relevancia: 'biografia', tema: 'trabalho' });
     return;
   }
-  if (a.emprego.clientela !== undefined) {
-    v.trabalho.atual = { ...a.emprego, clientela: Math.round((a.emprego.clientela ?? 20) * 0.6), tInicio: v.t, tPosto: v.t, municipioId: v.moradia.municipioId };
+  if (a.emprego.clientela !== undefined || a.emprego.contrato === 'informal' || a.emprego.contrato === 'autonomo') {
+    v.trabalho.atual = { ...a.emprego, clientela: a.emprego.clientela !== undefined ? Math.round(a.emprego.clientela * 0.6) : undefined, tInicio: v.t, tPosto: v.t, municipioId: v.moradia.municipioId };
     escrever(v, { texto: `Voltou a trabalhar como ${nome}, ${quando}. Parte da freguesia tinha ido embora.`, relevancia: 'biografia', tema: 'trabalho' });
     return;
   }
@@ -526,6 +540,13 @@ export function processarPolitica(v: Vida, r: Rng): void {
     p.apoio = Math.round(clamp(p.apoio + (m.aprovacao * 0.85 - p.apoio) * 0.25));
     p.reputacao = clamp(p.reputacao + (c.escopo === 'estado' ? 1.5 : 0.5));
     p.desgaste = clamp(p.desgaste + (c.executivo ? 3 : 2.5));
+    // O mandato cobra do bolso: contribuição ao partido, a base que se mantém, as viagens, os pedidos de ajuda que chegam à porta.
+    const custo = Math.round(ocupacao(m.cargo).salario * 12 * (0.18 + (c.escopo === 'municipio' ? 0 : 0.1)) / 100) * 100;
+    v.financas.conta -= custo;
+    if (!temFato(v, 'pol_custo_mandato')) {
+      v.fatos['pol_custo_mandato'] = v.t;
+      escrever(v, { texto: `O mandato também tem conta: contribuição ao partido, a base, as viagens, gente pedindo ajuda na porta. Foram ${dinheiro(custo)} no ano.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    }
     // Crises: acontecem (o jogador responde).
     if (!m.crise && r.chance(c.executivo ? 0.32 : 0.14)) m.crise = { t: v.t, tipo: r.pick(c.executivo ? ['chuva', 'greve', 'verba', 'obra', 'aliado'] : ['aliado', 'votacao', 'pedido']) };
     // Brasília durante a semana: a casa sente.
@@ -694,8 +715,10 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
         m.feito += 2;
         const deu = r.chance(0.5 + (m.cargo === 'vereador' || m.cargo.startsWith('deputado') || m.cargo === 'senador' ? 0.05 : 0.15));
         m.aprovacao = clamp(m.aprovacao + (deu ? 3 : 0));
-        const alvo = p!.prioridade ? NOME_PRIORIDADE[p!.prioridade] : 'o que prometeu';
-        escrever(v, { texto: deu ? `O ano do mandato teve uma marca: ${alvo}. Saiu do papel.` : `Trabalhou o ano inteiro em ${alvo}; o resultado ficou para o ano seguinte.`, relevancia: 'biografia', tema: 'trabalho', escolha: true, tom: deu ? 'bom' : undefined });
+        const feito = p!.prioridade ? r.pick(ENTREGAS[p!.prioridade]) : 'uma promessa de campanha';
+        const primeira = !temFato(v, `pol_entrega_${m.tInicio}`);
+        if (deu) v.fatos[`pol_entrega_${m.tInicio}`] = v.t;
+        escrever(v, { texto: deu ? `Saiu do papel: ${feito}. Foi o mandato que empurrou.` : `Um ano inteiro de reunião por ${feito}; o resultado ficou para depois.`, relevancia: deu && primeira ? 'biografia' : 'cotidiano', tema: 'trabalho', escolha: true, tom: deu ? 'bom' : undefined });
         aplicarPersonalidade(v, 'acao:pol_prioridade', { disciplina: 1 });
         return { texto: deu ? 'Algo concreto para mostrar.' : 'O trabalho andou; o resultado, não ainda.', tom: deu ? 'bom' : 'neutro' };
       }

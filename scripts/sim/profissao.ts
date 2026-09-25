@@ -71,7 +71,11 @@ function escolher(v: Vida, m: Momento, e: Nome, r: Rng): string {
     const p = v.caminhos.politica;
     const atual = p?.mandato?.cargo;
     const alvo = atual ? [`cargo_${atual}`, `cargo_${ORDEM_CARGOS[ORDEM_CARGOS.indexOf(atual) + 1] ?? atual}`] : (p?.historico.some(h => h.resultado === 'eleito') ? ['cargo_deputado_estadual', 'cargo_prefeito'] : []);
-    for (const id of [...alvo, 'cargo_vereador']) if (livres.some(o => o.id === id)) return id;
+    // Quem tem mandato não desce de cargo (disputa o mesmo ou um acima); sem mandato, começa por vereador.
+    const minimo = atual ? ORDEM_CARGOS.indexOf(atual) : 0;
+    for (const id of [...alvo, 'cargo_vereador']) if (livres.some(o => o.id === id) && ORDEM_CARGOS.indexOf(id.replace('cargo_', '') as never) >= minimo) return id;
+    if (atual && livres.some(o => o.id === 'voltar')) return 'voltar';
+    if (livres.some(o => o.id === 'nao')) return 'nao';
   }
   if (m.situacaoId === 'esp_doping') return 'recusar';
   for (const id of PREFERE[e]) if (livres.some(o => o.id === id)) return id;

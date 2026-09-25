@@ -79,6 +79,9 @@ export const NEGOCIOS: readonly TipoNegocio[] = [
 ];
 
 export const tipoNegocio = (id: string) => NEGOCIOS.find(n => n.id === id);
+/** Negócios sem porta para a rua (a loja é o site; a consultoria, o cliente). */
+const SEM_PONTO = new Set(['loja_online', 'consultoria_ti']);
+const semPonto = (n: Negocio) => SEM_PONTO.has(n.tipo);
 export const tipoDoNegocio = (n: Negocio) => tipoNegocio(n.tipo);
 
 export const custoLocal = (v: Vida, t: TipoNegocio) => Math.round(t.capital * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
@@ -299,6 +302,12 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
     }
     const par = parceiro(v);
     if (par && falta > n.capital * 0.4) par.vin.tensao = Math.min(100, par.vin.tensao + 6);
+    // Quem já não cobre o prejuízo nem com o próprio bolso não escolhe mais: fornecedor e banco fecham a porta.
+    if (v.financas.conta < -Math.max(8000, n.capital * 0.8)) {
+      fecharNegocio(v, 'as dívidas do negócio passaram do que dava para cobrir: fornecedores e banco fecharam a porta');
+      encerrarEmprego(v, 'fechou o negócio');
+      return false;
+    }
   }
 
   // Reputação: o que se fala dele.
@@ -328,14 +337,20 @@ function tombo(v: Vida, r: Rng, n: Negocio): void {
   const tamanho = (n.porte ?? 1) - 1 + (n.unidades ?? 1) - 1;
   const chance = 0.04 + tamanho * 0.05 + (emCrise(v) ? 0.06 : 0);
   if (!r.chance(chance)) return;
-  const tipo = r.pick([...(tamanho > 0 ? ['desvio'] : []), 'concorrente', 'assalto', 'obra']);
+  const tipo = r.pick([...(tamanho > 0 ? ['desvio'] : []), 'concorrente', 'assalto', ...(semPonto(n) ? [] : ['obra'])]);
   const perda = Math.round(n.capital * (tipo === 'desvio' ? 0.25 : tipo === 'assalto' ? 0.08 : 0.05) / 100) * 100;
   const queda = tipo === 'concorrente' ? 14 + tamanho * 4 : tipo === 'obra' ? 8 : tipo === 'desvio' ? 6 : 3;
   n.clientela = Math.max(0, n.clientela - queda);
   if (v.trabalho.atual) v.trabalho.atual.clientela = n.clientela;
   pagarPeloCaixa(v, n, perda);
   n.reputacao = clamp((n.reputacao ?? 40) - (tipo === 'desvio' ? 4 : 2));
-  const texto = { desvio: `Quem cuidava de um dos pontos de ${n.nome} desviou dinheiro durante meses. Quando você descobriu, faltavam ${fmt(perda)}.`, concorrente: `Uma rede grande abriu a duas quadras de ${n.nome}, com preço que você não consegue cobrir.`, assalto: `${n.nome} foi assaltado num sábado à noite. Levaram o caixa e parte do equipamento.`, obra: `Uma obra fechou a rua de ${n.nome} por meses. A freguesia foi para outro lugar.` }[tipo]!;
+  const online = semPonto(n);
+  const texto = {
+    desvio: `Alguém de confiança em ${n.nome} desviou dinheiro durante meses. Quando você descobriu, faltavam ${fmt(perda)}.`,
+    concorrente: online ? `Uma plataforma grande passou a vender o mesmo que ${n.nome}, mais barato e com entrega no dia seguinte.` : `Uma rede grande abriu a duas quadras de ${n.nome}, com preço que você não consegue cobrir.`,
+    assalto: online ? `${n.nome} caiu num golpe de pagamento: pedidos pagos com cartão clonado, mercadoria enviada, dinheiro estornado.` : `${n.nome} foi assaltado num sábado à noite. Levaram o caixa e parte do equipamento.`,
+    obra: `Uma obra fechou a rua de ${n.nome} por meses. A freguesia foi para outro lugar.`
+  }[tipo]!;
   escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
   abalar(v, tipo === 'desvio' ? 'o dinheiro desviado do negócio' : 'o golpe no negócio', -4, 6);
 }
@@ -463,7 +478,9 @@ export function ampliar(v: Vida): void {
   // O lugar maior começa com cadeira vazia.
   n.clientela = Math.round(n.clientela * 0.6);
   v.trabalho.atual!.clientela = n.clientela;
-  const texto = n.porte === 2 ? `Ampliou ${n.nome}: o ponto ao lado, mais espaço, mais conta. Custou ${fmt(custo)}.` : `${n.nome} virou um negócio grande: outro andar, outro tamanho. Custou ${fmt(custo)}.`;
+  const texto = semPonto(n)
+    ? (n.porte === 2 ? `Ampliou ${n.nome}: mais estoque, uma sala de verdade, mais conta. Custou ${fmt(custo)}.` : `${n.nome} virou uma operação grande: galpão, sistema, turnos. Custou ${fmt(custo)}.`)
+    : (n.porte === 2 ? `Ampliou ${n.nome}: o ponto ao lado, mais espaço, mais conta. Custou ${fmt(custo)}.` : `${n.nome} virou um negócio grande: outro andar, outro tamanho. Custou ${fmt(custo)}.`);
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', escolha: true });
   marcar(v, 'promocao', texto, 3, { ocupacaoId: n.ocupacaoId });
 }
@@ -488,7 +505,7 @@ export function abrirUnidade(v: Vida): void {
   n.unidades = (n.unidades ?? 1) + 1;
   n.clientela = Math.round(n.clientela * 0.75);
   v.trabalho.atual!.clientela = n.clientela;
-  const texto = `${n.nome} abriu a ${n.unidades === 2 ? 'segunda' : 'terceira'} unidade, em outro bairro de ${municipio(v.moradia.municipioId).nome}. Custou ${fmt(custo)}.`;
+  const texto = semPonto(n) ? `${n.nome} abriu uma segunda frente de trabalho, com equipe própria. Custou ${fmt(custo)}.` : `${n.nome} abriu a ${n.unidades === 2 ? 'segunda' : 'terceira'} unidade, em outro bairro de ${municipio(v.moradia.municipioId).nome}. Custou ${fmt(custo)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', escolha: true, tom: 'bom' });
   marcar(v, 'promocao', texto, 3, { ocupacaoId: n.ocupacaoId });
 }

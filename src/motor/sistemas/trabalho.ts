@@ -647,7 +647,7 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
   e.tPosto = v.t;
   const texto = oc.promocao === 'antiguidade'
     ? `${flex(ge(v), 'Promovido', 'Promovida')} a ${nomeOcupacao(v, proximo)}, depois de ${Math.round(anosNoPosto)} anos como ${anterior}.`
-    : `${flex(ge(v), 'Promovido', 'Promovida')} de ${anterior} a ${nomeOcupacao(v, proximo)} em ${e.empregador}.`;
+    : `${flex(ge(v), 'Promovido', 'Promovida')} de ${anterior} a ${nomeOcupacao(v, proximo)}${/^por /.test(e.empregador) ? '' : ` ${em(e.empregador)}`}.`;
   escrever(v, { texto, relevancia: proximo.nivel >= 4 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
   marcar(v, proximo.nivel >= 5 ? 'lideranca' : 'promocao', texto, proximo.nivel >= 4 ? 3 : 2, { trilha: proximo.trilha, ocupacaoId: proximo.id });
   v.fatos['promocoes'] = (v.fatos['promocoes'] ?? 0) + 1;
