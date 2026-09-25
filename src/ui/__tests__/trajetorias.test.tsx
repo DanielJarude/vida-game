@@ -24,9 +24,7 @@ function vidaSalva(idade: number, ajuste: (v: Vida) => void): void {
 function abrirTrabalho(): void {
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
-  fireEvent.click(screen.getAllByRole('button', { name: /Estudo e trabalho|Rumo/ })[0]);
-  const tab = screen.queryByRole('tab', { name: 'Trabalho' });
-  if (tab) fireEvent.click(tab);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Trabalho' })[0]);
 }
 
 beforeEach(() => { localStorage.clear(); window.scrollTo = () => {}; window.confirm = () => true; });
@@ -48,12 +46,23 @@ describe('interface dos caminhos de vida', () => {
     expect(screen.getByRole('button', { name: /INSS como facultativo/ })).toBeTruthy();
   });
 
-  it('mudar o ritmo do trabalho fica recolhido (não polui a tela)', () => {
+  it('reduzir a jornada fica recolhido (não polui a tela) e MEI não aparece para quem tem carteira', () => {
     vidaSalva(34, v => { contratar(v, criarRng(1), ocupacao('aux_adm')); });
     abrirTrabalho();
     expect(screen.queryByRole('button', { name: /Reduzir a jornada/ })).toBeNull();
-    const ritmo = screen.queryByRole('button', { name: /Mudar o ritmo/ });
-    if (ritmo) { fireEvent.click(ritmo); expect(screen.getByRole('button', { name: /Reduzir a jornada/ })).toBeTruthy(); }
+    fireEvent.click(screen.getByRole('button', { name: /Outras possibilidades/ }));
+    expect(screen.getByRole('button', { name: /Reduzir a jornada/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Formalizar como MEI/ })).toBeNull();
+  });
+
+  it('a tela de Trabalho muda com o caminho: agora tem de 1 a 5 ações, sem botões bloqueados', () => {
+    vidaSalva(34, v => { contratar(v, criarRng(1), ocupacao('vendedor')); });
+    abrirTrabalho();
+    const agora = screen.getByRole('list', { name: 'O que dá para fazer agora' });
+    const botoes = agora.querySelectorAll('button');
+    expect(botoes.length).toBeGreaterThanOrEqual(1);
+    expect(botoes.length).toBeLessThanOrEqual(5);
+    for (const b of botoes) expect((b as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByText(/No bolso/)).toBeTruthy();
   });
 });

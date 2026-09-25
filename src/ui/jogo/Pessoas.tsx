@@ -28,7 +28,7 @@ import { interacoesPara, rotuloInteracao } from '../../motor/sistemas/interacoes
 import { ehDescendente, faseDeIdade, papelDe } from '../../motor/sistemas/vinculos';
 import { rotuloDe } from '../apresentar';
 import { circulos, comoEsta, etiqueta, ondeEsta, quemE, sinaisSociais, vidaPropria, type Par } from '../leitura';
-import { BotaoAcao, Escolha, Folha, Secao, Vazio } from '../comum';
+import { BotaoAcao, Escolha, Folha, Folio, Secao, Vazio } from '../comum';
 import { Retrato, type Expressao } from '../avatar/Retrato';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void }
@@ -44,6 +44,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
   const sinais = sinaisSociais(vida).filter(x => x.pessoaId && vida.pessoas[x.pessoaId]);
   return (
     <div className="pessoas">
+      <Folio kicker={<><span className="folio__area">Pessoas</span> · {c.nucleo.length + c.familia.length + c.amigos.length + c.contexto.length} na sua vida</>} titulo={tituloDePessoas(vida, c.nucleo)} />
       {sinais.length > 0 && (
         <section className="atencao" aria-label="Pedem atenção">
           <h2 className="atencao__titulo">Pedem atenção</h2>
@@ -333,4 +334,12 @@ function FichaPet({ vida, agir, p }: { vida: Vida; agir: (a: Acao) => boolean; p
       </div>
     </div>
   );
+}
+
+/** O título de Pessoas: quem divide a vida com você, em palavras. */
+function tituloDePessoas(v: Vida, nucleo: { p: Pessoa }[]): string {
+  const par = parceiro(v);
+  if (par) return nucleo.length > 1 ? `A vida com ${par.p.nome} e mais ${nucleo.length - 1}` : `A vida com ${par.p.nome}`;
+  if (nucleo.length) return `Perto: ${nucleo.slice(0, 2).map(x => x.p.nome).join(' e ')}${nucleo.length > 2 ? ` e mais ${nucleo.length - 2}` : ''}`;
+  return 'Gente da sua vida';
 }

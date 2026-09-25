@@ -43,24 +43,28 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-function abrirCasa() {
+function abrirCasa() { abrir('Casa'); }
+function abrirVoce() { abrir('Você'); }
+function abrir(aba: string) {
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
-  fireEvent.click(screen.getAllByRole('button', { name: 'Casa e dinheiro' })[0]);
+  fireEvent.click(screen.getAllByRole('button', { name: aba })[0]);
 }
 
-describe('Casa e dinheiro', () => {
-  it('de relance: onde mora, de quem é, quanto entra, quanto sai, o que sobra — com os números do motor', () => {
+describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
+  it('de relance: onde mora e de quem é (Casa); quanto entra, quanto sai e o que sobra (Você) — com os números do motor', () => {
     const v = vidaSalva(27, adultaDeAluguel);
     abrirCasa();
     expect(screen.getByText(/Mora de aluguel/)).toBeTruthy();
     expect(screen.getByText(/Alugado ·/)).toBeTruthy();
+    // O desenho da casa tem descrição.
+    expect(screen.getByRole('img', { name: /Desenho:/ })).toBeTruthy();
+    cleanup();
+    abrirVoce();
     const m = leituraDoMes(v);
     expect(screen.getByRole('group', { name: /Quanto entra e quanto sai/ })).toBeTruthy();
     expect(screen.getAllByText(new RegExp(m.sobra >= 0 ? 'Sobra' : 'Falta')).length).toBeGreaterThan(0);
     expect(screen.getByText(dinheiroCheio(Math.abs(m.sobra)))).toBeTruthy();
-    // O desenho da casa tem descrição.
-    expect(screen.getByRole('img', { name: /Desenho:/ })).toBeTruthy();
   });
 
   it('o balanço usa o patrimônio líquido do motor (tem − deve)', () => {
@@ -136,9 +140,9 @@ describe('Casa e dinheiro', () => {
     expect(screen.getByText(/pelo preço do dia/)).toBeTruthy();
   });
 
-  it('criança: o dinheiro dela e o da casa aparecem separados', () => {
+  it('criança: o dinheiro dela e o da casa aparecem separados (em Você)', () => {
     vidaSalva(11, () => {});
-    abrirCasa();
+    abrirVoce();
     expect(screen.getByText('O que é seu')).toBeTruthy();
     expect(screen.queryByText(/A casa \(não é seu\)/)).toBeTruthy();
     expect(screen.queryByRole('group', { name: /Quanto entra e quanto sai/ })).toBeNull();

@@ -21,6 +21,24 @@ const CABELO: Record<string, string> = {
 const OLHOS: Record<string, string> = {
   castanho_escuro: '#2f1d14', castanho: '#553620', mel: '#86662b', verde: '#56764a', azul: '#4b75a0'
 };
+/**
+ * O fundo do retrato: escolhido para contrastar AO MESMO TEMPO com o cabelo
+ * e com a pele (cabelo preto não some no escuro; loiro e grisalho não somem
+ * no claro). Entre os que contrastam bem, a semente escolhe — variedade.
+ */
+const FUNDOS = ['#efe4cf', '#e3ebe2', '#f0dcd6', '#dfe6f0', '#b8c7d4', '#c9b8cf', '#b9ccb8', '#d6bfa5', '#4a5c68', '#5b4b60', '#4a6052', '#6b5642'];
+function luminancia(h: string): number {
+  const c = [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16) / 255).map(x => (x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const contraste = (a: string, b: string) => { const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+export function fundoDoRetrato(cabelo: string, pele: string, semente: number): string {
+  const nota = FUNDOS.map(f => ({ f, n: Math.min(contraste(f, cabelo) * 1.15, contraste(f, pele)) }));
+  const melhor = Math.max(...nota.map(x => x.n));
+  const bons = nota.filter(x => x.n >= melhor * 0.9);
+  return bons[semente % bons.length].f;
+}
+
 const ROUPA = ['#4b5a6b', '#6b4f5a', '#4f6b5a', '#7a6248', '#5a5470', '#3f5f66', '#735a4a', '#556048'];
 
 type Fase = 'bebe' | 'crianca' | 'pre' | 'adol' | 'adulto' | 'meia' | 'idoso';
@@ -120,10 +138,11 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   const estilo = f === 'bebe' ? 'bebe' : v.cabelo;
   const calvo = f === 'idoso' && masc && (h % 3 !== 0) || (f === 'meia' && masc && h % 5 === 0);
 
+  const fundo = fundoDoRetrato(cor, pele, h);
   return (
     <svg
       className={`retrato retrato--${f}${falecido ? ' retrato--falecido' : ''} retrato--${expressao}`}
-      viewBox="10 8 80 80" width={tamanho} height={tamanho}
+      viewBox="10 8 80 80" width={tamanho} height={tamanho} style={{ background: fundo }}
       role="img" aria-label={rotulo ?? 'Retrato'}
     >
       {/* Cabelo de trás */}
@@ -436,7 +455,7 @@ function RetratoPet({ especie, tamanho, rotulo, semente }: { especie: 'cachorro'
   const c = cores[hash(semente) % cores.length];
   const escuro = misturar(c, '#000000', 0.25);
   return (
-    <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} role="img" aria-label={rotulo ?? (especie === 'gato' ? 'Gato' : 'Cachorro')}>
+    <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} style={{ background: '#dfe6f0' }} role="img" aria-label={rotulo ?? (especie === 'gato' ? 'Gato' : 'Cachorro')}>
       {especie === 'gato' ? (
         <g>
           <path d="M 28 40 L 30 18 L 44 32 Z M 72 40 L 70 18 L 56 32 Z" fill={escuro} />

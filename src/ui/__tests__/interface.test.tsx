@@ -107,7 +107,8 @@ describe('interface', () => {
     });
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
-    fireEvent.click(screen.getAllByRole('button', { name: /Rumo|Estudo e trabalho/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Trabalho' })[0]);
+    if (!screen.queryByRole('button', { name: /Pedir aumento/ })) fireEvent.click(screen.getByRole('button', { name: /Outras possibilidades/ }));
     fireEvent.click(screen.getByRole('button', { name: /Pedir aumento/ }));
     const dialogo = screen.getByRole('dialog');
     expect(within(dialogo).getByText('A conversa do aumento')).toBeTruthy();
@@ -181,7 +182,7 @@ describe('interface', () => {
     expect(within(main).getByRole('button', { name: /o que caberia com mais tempo/ })).toBeTruthy();
   });
 
-  it('rumo: as portas abertas aparecem com o motivo, e a carreira é contada em palavras', () => {
+  it('trabalho: as portas de trabalho aparecem com o motivo, e a carreira é contada em palavras', () => {
     adultaSalva(v => {
       v.educacao.escolaridade = 'medio';
       contratar(v, criarRng(2), ocupacao('assistente_adm'));
@@ -191,9 +192,9 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
-    fireEvent.click(screen.getAllByRole('button', { name: /^Estudo e trabalho$|^Rumo$/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Trabalho$/ })[0]);
     const main = screen.getByRole('main');
-    expect(within(main).getByText('Ao seu alcance agora')).toBeTruthy();
+    expect(within(main).getByText('Portas de trabalho')).toBeTruthy();
     expect(within(main).getByText(/pode indicar você/)).toBeTruthy();
     expect(within(main).getByRole('button', { name: 'Aceitar' })).toBeTruthy();
     // Estrada e próximo passo, em frases — nunca "nível 2" ou "sênior" por conta do número interno.
@@ -265,8 +266,7 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
-    fireEvent.click(screen.getAllByRole('button', { name: /^Estudo e trabalho$|^Rumo$/ })[0]);
-    fireEvent.click(screen.getByRole('tab', { name: 'Trabalho' }));
+    fireEvent.click(screen.getAllByRole('button', { name: /^Trabalho$/ })[0]);
     fireEvent.click(within(screen.getByRole('main')).getAllByRole('button', { name: /Candidatar-se/ })[0]);
     let etapas = 0;
     while (screen.queryByText('O que você responde?') && etapas < 5) {

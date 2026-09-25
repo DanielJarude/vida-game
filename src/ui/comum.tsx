@@ -60,7 +60,7 @@ export function Secao({ titulo, children, recolhivel, aberta: abertaInicial = tr
 }
 
 /** Folha modal: prende o foco, fecha com Esc (quando permitido). */
-export function Folha({ titulo, rotulo, children, aoFechar, fechavel = true, largura = 'media' }: { titulo?: ReactNode; rotulo: string; children: ReactNode; aoFechar?: () => void; fechavel?: boolean; largura?: 'media' | 'larga' }) {
+export function Folha({ titulo, rotulo, children, aoFechar, fechavel = true, largura = 'media', papel }: { titulo?: ReactNode; rotulo: string; children: ReactNode; aoFechar?: () => void; fechavel?: boolean; largura?: 'media' | 'larga'; papel?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const anterior = document.activeElement as HTMLElement | null;
@@ -86,7 +86,7 @@ export function Folha({ titulo, rotulo, children, aoFechar, fechavel = true, lar
   }, [aoFechar, fechavel]);
   return (
     <div className="veu" onClick={e => { if (e.target === e.currentTarget && fechavel) aoFechar?.(); }}>
-      <div className={`folha folha--${largura}`} role="dialog" aria-modal="true" aria-label={rotulo} ref={ref}>
+      <div className={`folha folha--${largura}${papel ? ' folha--papel' : ''}`} role="dialog" aria-modal="true" aria-label={rotulo} ref={ref}>
         {(titulo || fechavel) && (
           <div className="folha__topo">
             {titulo && <div className="folha__titulo">{titulo}</div>}
@@ -122,4 +122,64 @@ export function Escolha<T extends string>({ opcoes, valor, aoMudar, rotulo }: { 
       ))}
     </div>
   );
+}
+
+/**
+ * O alto de cada página: uma linha pequena no tom da área (onde se está),
+ * um título grande e contextual (o que é a vida agora) e, às vezes, uma
+ * frase. Composição editorial, não cabeçalho de painel.
+ */
+export function Folio({ kicker, titulo, lede, children }: { kicker: ReactNode; titulo: ReactNode; lede?: ReactNode; children?: ReactNode }) {
+  return (
+    <header className="folio">
+      <p className="folio__kicker">{kicker}</p>
+      <h1 className="folio__titulo">{titulo}</h1>
+      {lede && <p className="folio__lede">{lede}</p>}
+      {children}
+    </header>
+  );
+}
+
+/**
+ * Um medidor que não depende de cor: marcas cheias e vazias, a palavra ao
+ * lado, e (opcionalmente) um limite desenhado — até onde dá para ir hoje.
+ */
+export function Medidor({ valor, rotulo, palavra, limite, marcas = 10 }: { valor: number; rotulo: string; palavra: string; limite?: number; marcas?: number }) {
+  const cheias = Math.round(Math.max(0, Math.min(100, valor)) / 100 * marcas);
+  const teto = limite !== undefined && limite < 100 ? Math.round(limite / 100 * marcas) : undefined;
+  return (
+    <div className="medidor-vivo" role="img" aria-label={`${rotulo}: ${palavra}${teto !== undefined ? ` (há um limite antes do máximo)` : ''}`}>
+      <span className="medidor-vivo__rotulo">{rotulo}</span>
+      <span className="medidor-vivo__marcas" aria-hidden>
+        {Array.from({ length: marcas }, (_, k) => <span key={k} className={`medidor-vivo__marca${k < cheias ? ' medidor-vivo__marca--cheia' : ''}${teto !== undefined && k >= teto ? ' medidor-vivo__marca--alem' : ''}`} />)}
+      </span>
+      <span className="medidor-vivo__palavra">{palavra}</span>
+    </div>
+  );
+}
+
+export interface AcaoViva { id: string; rotulo: string; porque?: string; aviso?: string; acao?: Acao; ir?: string; saida?: boolean }
+
+/** Ações contextuais: poucas, com o porquê, cada uma uma linha — não uma parede de botões. */
+export function AcoesVivas({ acoes, agir, ir, rotulo }: { acoes: AcaoViva[]; agir: (a: Acao) => boolean; ir?: (destino: string) => void; rotulo: string }) {
+  if (!acoes.length) return null;
+  return (
+    <ul className="acoes-vivas" aria-label={rotulo}>
+      {acoes.map(x => (
+        <li key={x.id}>
+          <button type="button" className={`acao-viva${x.saida ? ' acao-viva--saida' : ''}${x.ir ? ' acao-viva--lugar' : ''}`} onClick={() => { if (x.acao) agir(x.acao); else if (x.ir) ir?.(x.ir); }}>
+            <span className="acao-viva__rotulo">{x.rotulo}</span>
+            {x.porque && <span className="acao-viva__porque">{x.porque}</span>}
+            {x.aviso && <span className="acao-viva__aviso">{x.aviso}</span>}
+            <span className="acao-viva__seta" aria-hidden>{x.ir ? '↗' : '→'}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Um dado em palavras, numa faixa editorial (sem caixa). */
+export function Dado({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+  return <div className="dado"><dt>{rotulo}</dt><dd>{children}</dd></div>;
 }

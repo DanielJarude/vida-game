@@ -20,7 +20,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
   const m = vida.momento!;
   const pessoas = Object.values(m.papeis).map(id => vida.pessoas[id]).filter(Boolean);
   return (
-    <Folha rotulo={m.titulo} fechavel={false}>
+    <Folha rotulo={m.titulo} fechavel={false} papel>
       <div className="momento">
         <p className="momento__tema">{TEMA_ROTULO[m.tema] ?? ''}</p>
         <h2 className="momento__titulo">{m.titulo}</h2>
@@ -38,7 +38,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
           </div>
         )}
         <p className="momento__texto">{m.texto}</p>
-        <p className="momento__pergunta">{m.situacaoId === 'trab_entrevista' ? 'O que você responde?' : m.situacaoId === 'esp_peneira' ? 'Como você joga?' : 'O que você faz?'}</p>
+        <p className="momento__pergunta"><span className="momento__vez">Sua vez</span> <span>{m.situacaoId === 'trab_entrevista' ? 'O que você responde?' : m.situacaoId === 'esp_peneira' ? 'Como você joga?' : m.situacaoId === 'pol_eleicao' ? 'Como você faz?' : 'O que você faz?'}</span></p>
         <ul className="momento__opcoes">
           {m.opcoes.map(o => (
             <li key={o.id}>
@@ -57,7 +57,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
 export function Resultado({ titulo, texto, aoFechar, vida, pessoaId }: { titulo: string; texto: string; aoFechar: () => void; vida?: Vida; pessoaId?: string }) {
   const p = pessoaId && vida ? vida.pessoas[pessoaId] : undefined;
   return (
-    <Folha rotulo={`Resultado: ${titulo}`} aoFechar={aoFechar} fechavel>
+    <Folha rotulo={`Resultado: ${titulo}`} aoFechar={aoFechar} fechavel papel>
       <div className="momento momento--resultado">
         {p && vida && (
           <div className="momento__pessoas">

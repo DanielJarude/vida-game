@@ -18,8 +18,9 @@ import { BotaoAcao, Vazio } from '../comum';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
 import { expressaoDe, lerDimensao, momentoAtual, palavraTendencia, type LeituraDimensao } from '../estadoPessoal';
+import { ODinheiro } from './Dinheiro';
 
-export type Destino = 'tempo' | 'rumo' | 'pessoas' | 'casa';
+export type Destino = 'tempo' | 'rumo' | 'pessoas' | 'casa' | 'trabalho';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void }
 
@@ -36,8 +37,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       <section className="voce-rosto" aria-label="Como você está">
         <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={176} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
         <div className="voce-rosto__texto">
-          <p className="voce-rosto__fase">{i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
-          <p className="voce-rosto__momento">{momentoAtual(vida)}</p>
+          <p className="folio__kicker"><span className="folio__area">Você</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
+          <h1 className="voce-rosto__momento">{momentoAtual(vida)}</h1>
           <p className="voce-rosto__linha">{ocupacaoAtual(vida)} · {ondeMora(vida)}</p>
           {afeto && <p className="voce-rosto__linha">{afeto}{luto ? ` · ${luto}` : ''}</p>}
         </div>
@@ -46,6 +47,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       <div className={`estados estados--${leituras.length}`}>
         {leituras.map(l => <Estado key={l.d} l={l} vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />)}
       </div>
+
+      {i >= 8 && <ODinheiro vida={vida} agir={agir} irParaCasa={() => irPara('casa')} />}
 
       {condicoes.length > 0 && (
         <section className="voce-condicoes" aria-label="Condições de saúde">

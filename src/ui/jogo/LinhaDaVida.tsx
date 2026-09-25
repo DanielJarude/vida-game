@@ -55,7 +55,7 @@ export function LinhaDaVida({ vida, marca }: { vida: Vida; marca: number }) {
 
 function ItemBiografia({ e, nova }: { e: Entrada; nova: boolean }) {
   return (
-    <li className={`entrada entrada--${e.relevancia}${nova ? ' entrada--nova' : ''}${e.tom ? ` entrada--${e.tom}` : ''}`}>
+    <li className={`entrada entrada--${e.relevancia} entrada--tema-${e.tema}${nova ? ' entrada--nova' : ''}${e.tom ? ` entrada--${e.tom}` : ''}${e.escolha ? ' entrada--escolha' : ''}`}>
       <span className="entrada__marca" aria-hidden />
       <p className="entrada__texto">
         {e.texto}

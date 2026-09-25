@@ -25,7 +25,7 @@ import { economiaLocal } from '../../motor/dados/lugares';
 import { idade } from '../../motor/nucleo';
 import { listaNatural } from '../../motor/texto';
 import { podeTentar } from '../../motor/plausibilidade';
-import { BotaoAcao, Secao, Vazio } from '../comum';
+import { BotaoAcao, Folio, Secao, Vazio } from '../comum';
 import { dinheiroCurto } from '../apresentar';
 
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
@@ -98,7 +98,7 @@ function FaixaDaSemana({ s }: { s: Semana }) {
 
 export function Tempo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const i = idade(vida);
-  if (i < 3) return <Vazio>Nesta idade, o tempo é de quem cuida de você.</Vazio>;
+  if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
   const s = semana(vida);
   const custo = economiaLocal(vida.moradia.municipioId).custo;
   const ativas = vida.rotinas.map(r => ({ r, m: modeloRotina(r.id) })).filter((x): x is { r: Vida['rotinas'][number]; m: ModeloRotina } => !!x.m);
@@ -107,10 +107,10 @@ export function Tempo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   const peneira = ultimaDevolutiva(vida, 'peneira', 36);
   return (
     <div className="tempo">
+      <Folio kicker={<><span className="folio__area">Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
       <section className="tempo-semana" aria-labelledby="titulo-semana">
-        <h2 id="titulo-semana" className="secao__titulo">Sua semana</h2>
+        <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
         <FaixaDaSemana s={s} />
-        <p className="tempo-semana__resumo">{resumoDaSemana(s)}{pesaNaCabeca ? ' Isso tem pesado na cabeça.' : ''}</p>
         {s.fixos.length === 0 && <p className="nota">{i < 18 ? 'Além da escola, a semana é sua.' : 'Nada fixo ocupa a semana: nem trabalho, nem curso.'}</p>}
       </section>
 

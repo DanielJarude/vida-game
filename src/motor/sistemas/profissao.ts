@@ -563,8 +563,10 @@ function separar(lista: AcaoProfissional[]): { agora: AcaoProfissional[]; mais: 
   const unicas = lista.filter((x, k) => lista.findIndex(y => y.id === x.id) === k);
   const saidas = unicas.filter(x => x.saida);
   const resto = unicas.filter(x => !x.saida).sort((a, b) => b.peso - a.peso);
+  // Agora: o que pesa de verdade (2 a 5). Se pouco pesa, completa com o que tem algum motivo — nunca com o que não tem nenhum.
   const fortes = resto.filter(x => x.peso >= 3);
-  const agora = (fortes.length >= 2 ? fortes : resto).slice(0, 5);
+  const agora = (fortes.length >= 2 ? fortes : [...fortes, ...resto.filter(x => x.peso >= 1 && x.peso < 3)].slice(0, 3)).slice(0, 5);
+  if (!agora.length) agora.push(...resto.slice(0, 2));
   const mais = resto.filter(x => !agora.includes(x));
   return { agora, mais, saidas };
 }

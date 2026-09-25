@@ -20,11 +20,11 @@ import { moraComFamiliaDeOrigem } from '../../motor/sistemas/domicilio';
 import { custoDeMudanca } from '../../motor/sistemas/processos';
 import { produto, PALAVRA_RISCO } from '../../motor/dados/investimentos';
 import { resultado } from '../../motor/sistemas/investimentos';
-import { BotaoAcao, Escolha, Linha, Secao } from '../comum';
+import { BotaoAcao, Secao } from '../comum';
 import { lugarDescrito } from '../apresentar';
 import { CenaDaCasa, Evolucao, Icone } from './material/Desenhos';
 import { Lugar, type QualLugar } from './material/Lugares';
-import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoLar, leituraDoMes, leituraDosBens, type LeituraBem } from '../leituraMaterial';
+import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoLar, leituraDosBens, type LeituraBem } from '../leituraMaterial';
 import '../material.css';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean }
@@ -35,9 +35,8 @@ export function Casa({ vida, agir }: Props) {
   return (
     <div className="casa material">
       <Lar vida={vida} agir={agir} abrir={setLugar} />
-      <OMes vida={vida} agir={agir} />
       {i >= 16 && <OQueTem vida={vida} agir={agir} abrir={setLugar} />}
-      {i >= 16 && <Lugares vida={vida} abrir={setLugar} />}
+      {i >= 16 && <Lugares vida={vida} agir={agir} abrir={setLugar} />}
       {i >= 18 && <Mudar vida={vida} agir={agir} />}
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
     </div>
@@ -54,8 +53,8 @@ function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
     <section className="lar" aria-label="Onde você mora">
       <CenaDaCasa l={l} />
       <div className="lar__texto">
-        <p className="lar__onde">{l.onde}</p>
-        <h2 className="lar__frase">{l.frase}</h2>
+        <p className="folio__kicker"><span className="folio__area">Casa</span> · {l.onde}</p>
+        <h1 className="lar__frase">{l.frase}</h1>
         {l.selos.length > 0 && (
           <ul className="selos" aria-label="Sobre a casa">
             {l.selos.map((s, k) => <li key={k} className={`selo${s.tom ? ` selo--${s.tom}` : ''}`}>{s.tom === 'ruim' && <span aria-hidden>! </span>}{s.texto}</li>)}
@@ -69,92 +68,6 @@ function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
         )}
       </div>
     </section>
-  );
-}
-
-/* ---------------------------------------------------------------- O mês */
-
-const TONS = ['t1', 't2', 't3', 't4', 't5', 't6'];
-
-function OMes({ vida, agir }: Props) {
-  const m = leituraDoMes(vida);
-  const seg = leituraDaSeguranca(vida);
-  const i = idade(vida);
-  const f = vida.financas;
-  const total = Math.max(m.orcamento.renda, m.orcamento.despesa, 1);
-  const principais = m.saidas.slice(0, 5);
-  const outras = m.saidas.slice(5);
-  const outrasValor = outras.reduce((s, x) => s + x.valor, 0);
-  if (m.dependente) {
-    return (
-      <Secao titulo="O dinheiro">
-        <div className="mes mes--dependente">
-          <div className="mes__seu">
-            <span className="rotulo-pequeno">O que é seu</span>
-            <strong className="valor-grande">{dinheiroCheio(Math.max(0, f.conta))}</strong>
-            <p className="nota">{m.frase}</p>
-          </div>
-          {m.casa && (
-            <div className={`mes__casa mes__casa--${m.casa.folga}`}>
-              <span className="rotulo-pequeno">A casa (não é seu)</span>
-              <p>{m.casa.texto}</p>
-            </div>
-          )}
-        </div>
-      </Secao>
-    );
-  }
-  return (
-    <Secao titulo="O mês" extra={<Seguranca s={seg} />}>
-      <p className="mes__frase">{m.frase}</p>
-      {m.casa && <p className="nota">{m.casa.texto}</p>}
-      {(m.orcamento.renda > 0 || m.orcamento.despesa > 0) && (
-        <div className="balanca" role="group" aria-label="Quanto entra e quanto sai por mês">
-          <div className="balanca__linha">
-            <span className="balanca__rotulo">Entra</span>
-            <div className="mes-barra" aria-hidden>
-              {m.entradas.map((e, k) => <span key={e.origem} className={`mes-barra__parte mes-barra__parte--entra-${k}`} style={{ width: `${(e.valor / total) * 100}%` }} />)}
-            </div>
-            <span className="balanca__valor">{dinheiroCurto(m.orcamento.renda)}</span>
-          </div>
-          <div className="balanca__linha">
-            <span className="balanca__rotulo">Sai</span>
-            <div className="mes-barra" aria-hidden>
-              {principais.map((s, k) => <span key={s.grupo} className={`mes-barra__parte mes-barra__parte--${TONS[k]}`} style={{ width: `${(s.valor / total) * 100}%` }} />)}
-              {outrasValor > 0 && <span className="mes-barra__parte mes-barra__parte--t6" style={{ width: `${(outrasValor / total) * 100}%` }} />}
-            </div>
-            <span className="balanca__valor">{dinheiroCurto(m.orcamento.despesa)}</span>
-          </div>
-          <p className={`balanca__resultado balanca__resultado--${m.sobra >= 0 ? 'bom' : 'ruim'}`}>
-            {m.sobra >= 0 ? 'Sobra' : 'Falta'} <strong>{dinheiroCheio(Math.abs(m.sobra))}</strong> por mês
-          </p>
-          <ul className="legenda">
-            {m.entradas.map((e, k) => <li key={e.origem}><span className={`legenda__cor mes-barra__parte--entra-${k}`} aria-hidden />{e.origem}<span className="legenda__valor">+ {dinheiroCurto(e.valor)}</span></li>)}
-            {principais.map((s, k) => <li key={s.grupo}><span className={`legenda__cor mes-barra__parte--${TONS[k]}`} aria-hidden />{s.rotulo}<span className="legenda__valor">− {dinheiroCurto(s.valor)}</span></li>)}
-            {outrasValor > 0 && <li><span className="legenda__cor mes-barra__parte--t6" aria-hidden />{outras.map(o => o.rotulo.toLowerCase()).join(', ').replace(/^./, c => c.toUpperCase())}<span className="legenda__valor">− {dinheiroCurto(outrasValor)}</span></li>}
-          </ul>
-          <details className="detalhes">
-            <summary>Ver cada linha</summary>
-            {m.orcamento.entradas.map(l => <Linha key={`e${l.rotulo}`} rotulo={l.rotulo} valor={`+ ${dinheiroCheio(l.valor)}`} />)}
-            {m.orcamento.saidas.map(l => <Linha key={`s${l.rotulo}`} rotulo={l.rotulo} valor={`− ${dinheiroCheio(-l.valor)}`} />)}
-          </details>
-        </div>
-      )}
-      {i >= 18 && (
-        <div className="campo">
-          <span className="campo__rotulo">Padrão de vida</span>
-          <Escolha rotulo="Padrão de vida" valor={f.estilo} aoMudar={x => agir({ tipo: 'estilo', valor: x })}
-            opcoes={[{ id: 'apertado', rotulo: 'Apertado' }, { id: 'modesto', rotulo: 'Modesto' }, { id: 'confortavel', rotulo: 'Confortável' }, { id: 'folgado', rotulo: 'Folgado' }]} />
-          <p className="nota">{({ apertado: 'O mínimo: quase tudo o que sobra fica guardado.', modesto: 'Um pouco de tudo: metade do que sobra vira vida, metade fica.', confortavel: 'Restaurante, viagem, coisa boa: guarda pouco.', folgado: 'O que entra, sai. Quase nada fica.' } as const)[f.estilo]}</p>
-        </div>
-      )}
-      {i >= 18 && (
-        <div className="grupo-acoes">
-          <BotaoAcao vida={vida} acao={{ tipo: 'plano_saude', ativo: !f.planoDeSaude }} agir={agir} variante="discreto">{f.planoDeSaude ? 'Cancelar o plano de saúde' : 'Contratar plano de saúde'}</BotaoAcao>
-          <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarBloqueado>Tirar carteira de motorista</BotaoAcao>
-        </div>
-      )}
-    </Secao>
   );
 }
 
@@ -183,6 +96,7 @@ function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void 
     { id: 'imoveis', rotulo: 'Imóveis', valor: b.imoveis },
     { id: 'veiculos', rotulo: 'Veículos', valor: b.veiculos },
     { id: 'aplicacoes', rotulo: 'Guardado e aplicado', valor: b.aplicacoes },
+    { id: 'negocio', rotulo: 'Caixa do negócio', valor: b.negocio },
     { id: 'conta', rotulo: 'Na conta', valor: Math.max(0, b.conta) }
   ].filter(x => x.valor > 0);
   const deve = [
@@ -192,7 +106,7 @@ function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void 
   ].filter(x => x.valor > 0);
   const maior = Math.max(b.ativos, b.obrigacoes, 1);
   return (
-    <Secao titulo="O que você tem e o que deve">
+    <Secao titulo="O que você tem e o que deve" extra={<Seguranca s={seg} />}>
       {nada ? <p className="nota">{idade(vida) < 18 ? 'Ainda nada no seu nome.' : 'Nada no seu nome — nem dívida.'}</p> : (
         <>
           <div className="balanco" role="group" aria-label={`Tem ${dinheiroCheio(b.ativos)}; deve ${dinheiroCheio(b.obrigacoes)}; descontado, ${dinheiroCheio(b.liquido)}.`}>
@@ -353,7 +267,7 @@ function CartaoAplicacao({ a }: { a: Aplicacao }) {
 
 /* ------------------------------------------------------------- Lugares */
 
-function Lugares({ vida, abrir }: { vida: Vida; abrir: (l: QualLugar) => void }) {
+function Lugares({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
   const i = idade(vida);
   const temVeiculo = vida.financas.bens.some(b => b.tipo === 'veiculo');
   const lugares: { id: QualLugar; nome: string; oque: string; icone: string; so18?: boolean }[] = [
@@ -368,6 +282,7 @@ function Lugares({ vida, abrir }: { vida: Vida; abrir: (l: QualLugar) => void })
   return (
     <Secao titulo="Pela cidade" recolhivel aberta={i >= 18}>
       <p className="nota">Onde se procura casa, carro, um lugar para guardar dinheiro — e um bicho.</p>
+      {i >= 18 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarBloqueado>Tirar carteira de motorista</BotaoAcao>}
       <ul className="lugares">
         {lugares.filter(l => !l.so18 || i >= 18).map(l => (
           <li key={l.id}>

@@ -1,76 +1,63 @@
 /* ==========================================================================
-   VIDA — Design tokens
-   Fonte central de verdade visual. Nenhum componente deve repetir valores
-   mágicos de cor, espaçamento, raio, sombra ou tipografia.
+   VIDA — Design tokens (rework visual e do Trabalho)
 
-   REWORK VISUAL — de painel para página
-   --------------------------------------
-   O B4 entregou uma base escura competente, mas o playtest de navegador
-   confirmou o diagnóstico: aquilo era um DASHBOARD. Barras de progresso
-   com números, acento verde-esmeralda saturado em tudo, rótulos em caixa
-   alta espalhados, e um sans geométrico que podia ser de qualquer produto.
-   A sensação era "estou administrando um painel", não "estou acompanhando
-   a história de uma pessoa".
+   A base continua escura — é a noite em que a vida acontece —, mas deixou
+   de ser quase monocromática. Três ideias carregam a identidade:
 
-   Três decisões carregam a identidade nova, nesta ordem de importância:
+   1. TINTA E PAPEL. A vida acontece no escuro (tinta quente, não preto);
+      quando é a SUA vez de decidir, a tela vira papel claro, com tinta
+      escura. "A vida acontece; às vezes você decide" virou superfície.
 
-   1. TIPOGRAFIA. Uma serifa editorial assume TODA a voz narrativa — a
-      Linha da Vida, a descrição de um acontecimento, os nomes das pessoas.
-      O sans some para a mobília de interface. É a mudança que mais
-      distancia o VIDA de um painel, e ela não custa um pixel de decoração.
+   2. COR COMO LINGUAGEM. Cada área tem um tom próprio, tirado de coisas
+      brasileiras e cotidianas — e cada tom diz o que a área é:
+        Vida      âmbar de fim de tarde (a marca)
+        Você      pêssego, cor de pele e de rosto
+        Pessoas   goiaba: calor, gente
+        Trabalho  ipê-amarelo: energia, coisa feita
+        Rumo      azulejo: estudo, o que se abre
+        Casa      verde-água de fachada
+        Tempo     ipê-roxo: leveza, escolha
+        Saúde     folha
+      O tom aparece em pouco lugar (a aba, o fio da seção, o número que
+      importa, a ilustração), nunca como fundo de tela inteira.
 
-   2. COR COMO MEMÓRIA. O verde-esmeralda saía de fintech. O acento agora é
-      um âmbar terroso — luz de fim de tarde, papel guardado, fotografia
-      velha. Continua único e escasso; o que mudou foi o que ele significa.
-      O verde sobrevive apenas como sinal semântico de "melhorou", nunca
-      como marca.
+   3. CLIMA. Em tempos difíceis (cabeça no limite, humor no chão, doença
+      séria) a página perde saturação; num bom momento, ganha luz. Os tons
+      são misturados em oklab com um cinza quente — o texto nunca perde
+      contraste.
 
-   3. BASE QUENTE. O fundo deixou de ser petróleo azulado e virou um quase-
-      preto de tinta, levemente quente. Um azul frio empurra para ficção
-      científica; o marrom-tinta empurra para arquivo, caderno, lembrança.
+   Nenhuma informação depende só da cor: tudo tem texto, forma ou padrão.
+   Contraste verificado por `scripts/playtest/contraste.mjs` (texto ≥ 4,5:1).
    ========================================================================== */
 
 :root {
-  /* ---------------------------------------------------------------- Fontes
-     A fonte remota é um reforço, não um requisito. As pilhas locais abaixo
-     mantêm o produto legível e proporcional se o Google Fonts falhar —
-     inclusive a serifa, que cai em Georgia/Charter, presentes em
-     praticamente todo sistema. */
-
-  /** Voz narrativa: Linha da Vida, acontecimentos, nomes, títulos. */
+  /* ---------------------------------------------------------------- Fontes */
   --font-serif:
     'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Palatino,
     Charter, Georgia, 'Times New Roman', serif;
-
-  /** Mobília de interface: rótulos, botões, navegação, números. */
   --font-sans:
     'Inter', ui-sans-serif, system-ui, -apple-system,
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-
-  /* Aliases preservados: componentes que já usavam --font-display
-     continuam funcionando, agora falando com a voz nova. */
   --font-display: var(--font-serif);
   --font-hand: var(--font-serif);
 
   /* ------------------------------------------------------- Escala tipográfica
-     Oito degraus nomeados por papel. Não introduzir tamanhos avulsos.
-     A escala cresceu no topo: a Linha da Vida precisa de presença, e
-     presença em tipografia editorial vem de tamanho e entrelinha, não de
-     borda nem de sombra. */
+     Variação de escala é hierarquia: o título contextual de uma página é
+     grande de verdade; o rótulo de interface é pequeno de verdade. */
+  --type-hero: clamp(2.1rem, 1.4rem + 2.6vw, 3.4rem);
   --type-display: 3rem;
   --type-title: 2rem;
-  --type-heading: 1.5rem;
+  --type-heading: 1.45rem;
   --type-lead: 1.1875rem;
   --type-subheading: 1.0625rem;
   --type-body: 0.9375rem;
   --type-caption: 0.8125rem;
-  --type-meta: 0.6875rem;
+  --type-meta: 0.72rem;
   --type-number: 1.5rem;
 
-  --leading-tight: 1.12;
+  --leading-tight: 1.1;
   --leading-snug: 1.3;
   --leading-normal: 1.55;
-  /** Entrelinha de leitura contínua — só para a voz narrativa. */
   --leading-prose: 1.62;
 
   --weight-regular: 400;
@@ -78,100 +65,110 @@
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  --tracking-meta: 0.14em;
+  --tracking-meta: 0.12em;
   --tracking-tight: -0.018em;
-  /** Serifa grande pede entreletra levemente negativa; pequena, nenhuma. */
   --tracking-display: -0.025em;
-
-  /** Medida de leitura: acima de ~68 caracteres o olho perde a linha. */
   --measure-prosa: 62ch;
 
-  /* ------------------------------------------------------------------ Cores
-     Base de TINTA: quase-preto levemente quente. Não é preto puro nem azul
-     frio — guarda um resto de marrom, que é o que dá a sensação de papel
-     guardado em vez de terminal. */
-  --bg-deep: #0b0a09;
-  --bg-app: #121010;
-  --bg-raised: #1b1817;
-  --bg-elevated: #262220;
-  --bg-inset: rgba(255, 252, 245, 0.025);
+  /* ------------------------------------------------------------ Superfícies
+     Tinta quente em quatro alturas. Mais clara que antes: o escuro é
+     noite, não buraco. */
+  --bg-deep: #100d0b;
+  --bg-app: #17130f;
+  --bg-raised: #221c17;
+  --bg-elevated: #2e2620;
+  --bg-inset: rgba(255, 246, 232, 0.035);
 
-  /* Superfícies usadas apenas por unidades reais (evento, pessoa, modal). */
-  --surface: rgba(255, 249, 240, 0.04);
-  --surface-hover: rgba(255, 249, 240, 0.07);
-  --surface-strong: rgba(31, 27, 25, 0.96);
+  --surface: rgba(255, 246, 232, 0.05);
+  --surface-hover: rgba(255, 246, 232, 0.085);
+  --surface-strong: rgba(34, 28, 23, 0.97);
 
-  /* Divisores discretos substituem bordas de card */
-  --rule: rgba(255, 249, 240, 0.08);
-  --rule-strong: rgba(255, 249, 240, 0.15);
+  --rule: rgba(255, 246, 232, 0.1);
+  --rule-strong: rgba(255, 246, 232, 0.2);
 
-  /* Contraste verificado contra --bg-app por
-     `styles/__tests__/contraste.test.ts`, que falha se algum destes cair
-     abaixo de 4.5:1. Os tons são levemente quentes para combinar com a
-     base de tinta — texto cinza-azulado sobre fundo quente parece sujo. */
-  --text-primary: #f4efe6;   /* 16.6:1 */
-  --text-secondary: #bdb3a6; /* 8.8:1  */
-  --text-muted: #9c9388;     /* 6.0:1  */
-  --text-faint: #8d857b;     /* 4.9:1  */
+  /* Papel: a superfície das decisões e dos resultados. */
+  --papel: #f4ecdd;
+  --papel-2: #e9dec9;
+  --papel-tinta: #2a211a;
+  --papel-tinta-2: #5a4c3f;
+  --papel-linha: rgba(42, 33, 26, 0.16);
 
-  /* Acento único e escasso: âmbar terroso. Carrega significado — ativo,
-     escolhido, avançar — e carrega a identidade: memória, fim de tarde,
-     papel guardado. */
-  --accent: #d9a05b;
-  --accent-soft: #edc48c;
-  --accent-deep: #a9702f;
-  --accent-wash: rgba(217, 160, 91, 0.13);
-  --accent-line: rgba(217, 160, 91, 0.4);
+  /* Texto sobre tinta (≥ 4,5:1 contra --bg-app e --bg-raised). */
+  --text-primary: #f7f0e4;
+  --text-secondary: #d2c6b5;
+  --text-muted: #b0a493;
+  --text-faint: #9c907f;
 
-  /* Semânticos — uso restrito ao significado, nunca decoração.
-     O verde deixou de ser a marca e voltou a ser apenas "melhorou". */
-  --danger: #e0685f;
-  --danger-wash: rgba(224, 104, 95, 0.13);
-  /* Variações de intensidade do vermelho semântico. Existiam cravadas em
-     três componentes; centralizadas aqui para que trocar a paleta deixe
-     de ser uma caça a valores mágicos (o teste `identidadeEditorial`
-     falha se voltarem para os componentes). */
-  --danger-line: rgba(224, 104, 95, 0.4);
-  --danger-line-soft: rgba(224, 104, 95, 0.35);
-  --danger-fill: rgba(224, 104, 95, 0.2);
-  --success: #7fb98a;
-  --success-wash: rgba(127, 185, 138, 0.13);
-  --warning: #cfa03f;
-  --warning-wash: rgba(207, 160, 63, 0.13);
+  /* --------------------------------------------------------------- Matizes
+     Os pigmentos. Nunca usados direto nos componentes: passam pelos tons
+     de área (abaixo), que o clima pode dessaturar. */
+  --pig-ambar: #eab468;
+  --pig-pessego: #f2a684;
+  --pig-goiaba: #f38b83;
+  --pig-ipe: #f2c64f;
+  --pig-azulejo: #86b6f2;
+  --pig-fachada: #62cdb9;
+  --pig-ipe-roxo: #bea1f6;
+  --pig-folha: #93cf72;
+  --cinza-quente: #9a8f82;
 
-  /* Cor por SIGNIFICADO, nunca por evento/categoria (nunca arco-íris).
-     Só dois matizes adicionais, de uso restrito:
-     - família/memória: rosa empoeirado, o calor do que é próximo;
-     - estudo/conhecimento: azul frio, idem.
+  /* -------------------------------------------------------- Tons das áreas */
+  --tom-vida: var(--pig-ambar);
+  --tom-voce: var(--pig-pessego);
+  --tom-pessoas: var(--pig-goiaba);
+  --tom-trabalho: var(--pig-ipe);
+  --tom-rumo: var(--pig-azulejo);
+  --tom-casa: var(--pig-fachada);
+  --tom-tempo: var(--pig-ipe-roxo);
+  --tom-saude: var(--pig-folha);
 
-     O tom de memória era terracota até o rework. Com o acento virando
-     âmbar, os dois passaram a ser o mesmo laranja para o olho — e um
-     significado que não se distingue deixou de ser um significado. O teste
-     `paletaProfundidade` pegou isso por distância de cor antes de virar
-     bug visual. O rosa empoeirado guarda o calor e se separa do âmbar. */
-  --warm-memory: #d98fa8;
-  --warm-memory-wash: rgba(217, 143, 168, 0.13);
-  --cool-study: #85a7c9;
-  --cool-study-wash: rgba(133, 167, 201, 0.13);
+  /* O acento da marca continua o âmbar (avançar, escolhido, marca). */
+  --accent: var(--tom-vida);
+  --accent-soft: #f5cf98;
+  --accent-deep: #b27a37;
+  --accent-wash: color-mix(in oklab, var(--accent) 14%, transparent);
+  --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
 
-  /* Degraus neutros da balança do mês (o que sai): do mais pesado ao mais
-     leve, distinguíveis pela luminosidade — e sempre com legenda escrita. */
-  --neutro-1: #cfc5b7;
-  --neutro-2: #a99f93;
-  --neutro-3: #857c72;
-  --neutro-4: #655e56;
-  --neutro-5: #4c4640;
-  --neutro-6: #2e2a27;
-  --patrimonio-imovel: rgba(217, 160, 91, 0.3);
-  --patrimonio-veiculo: rgba(217, 160, 91, 0.18);
-  --patrimonio-aplicado: rgba(133, 167, 201, 0.25);
-  --patrimonio-conta: rgba(255, 249, 240, 0.08);
-  --patrimonio-obrigacao: rgba(255, 249, 240, 0.08);
-  --patrimonio-obrigacao-fraca: rgba(255, 249, 240, 0.03);
-  --aviso-borda: rgba(207, 160, 63, 0.35);
+  /* O tom da página em que se está (cada página redefine). */
+  --tom: var(--accent);
+  --tom-wash: color-mix(in oklab, var(--tom) 13%, transparent);
+  --tom-linha: color-mix(in oklab, var(--tom) 42%, transparent);
+  --tom-sobre: #1a140e;
 
-  /* ------------------------------------------------------------- Espaçamento
-     Escala de 4px. Usar os degraus, não valores intermediários. */
+  /* Semânticos: bom, ruim, atenção — sempre com texto ou forma junto. */
+  --success: #98d68b;
+  --success-wash: color-mix(in oklab, var(--success) 14%, transparent);
+  --danger: #f2826f;
+  --danger-wash: color-mix(in oklab, var(--danger) 14%, transparent);
+  --danger-line: color-mix(in oklab, var(--danger) 45%, transparent);
+  --danger-line-soft: color-mix(in oklab, var(--danger) 35%, transparent);
+  --danger-fill: color-mix(in oklab, var(--danger) 22%, transparent);
+  --warning: #f5a24e;
+  --warning-wash: color-mix(in oklab, var(--warning) 14%, transparent);
+  --aviso-borda: color-mix(in oklab, var(--warning) 40%, transparent);
+
+  /* Compatibilidade: memória (família) e estudo, agora ligados às áreas. */
+  --warm-memory: var(--tom-pessoas);
+  --warm-memory-wash: color-mix(in oklab, var(--tom-pessoas) 13%, transparent);
+  --cool-study: var(--tom-rumo);
+  --cool-study-wash: color-mix(in oklab, var(--tom-rumo) 13%, transparent);
+
+  /* Degraus neutros da balança do mês (o que sai). */
+  --neutro-1: #d9cebf;
+  --neutro-2: #b5a998;
+  --neutro-3: #928675;
+  --neutro-4: #726757;
+  --neutro-5: #564d42;
+  --neutro-6: #3a332c;
+  --patrimonio-imovel: color-mix(in oklab, var(--tom-casa) 42%, transparent);
+  --patrimonio-veiculo: color-mix(in oklab, var(--tom-casa) 24%, transparent);
+  --patrimonio-aplicado: color-mix(in oklab, var(--tom-rumo) 32%, transparent);
+  --patrimonio-negocio: color-mix(in oklab, var(--tom-trabalho) 34%, transparent);
+  --patrimonio-conta: rgba(255, 246, 232, 0.1);
+  --patrimonio-obrigacao: rgba(255, 246, 232, 0.1);
+  --patrimonio-obrigacao-fraca: rgba(255, 246, 232, 0.035);
+
+  /* ------------------------------------------------------------- Espaço */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -184,44 +181,33 @@
   --space-10: 72px;
   --space-11: 96px;
 
-  /* ------------------------------------------------------------------ Raios
-     Reduzidos. Raio grande em tudo é assinatura de aplicativo; página
-     editorial tem cantos discretos ou nenhum. */
   --radius-xs: 3px;
   --radius-sm: 5px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-pill: 999px;
 
-  /* ---------------------------------------------------------------- Sombras
-     Controladas. Profundidade vem de contraste e escala, não de glow. */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
   --shadow-md: 0 8px 24px -12px rgba(0, 0, 0, 0.8);
   --shadow-lg: 0 28px 70px -28px rgba(0, 0, 0, 0.9);
-  --shadow-accent: 0 10px 28px -14px rgba(217, 160, 91, 0.4);
-  --shadow-accent-alta: 0 16px 38px -14px rgba(217, 160, 91, 0.5);
+  --shadow-papel: 0 30px 80px -30px rgba(0, 0, 0, 0.85), 0 2px 0 rgba(255, 255, 255, 0.4) inset;
+  --shadow-accent: 0 10px 28px -14px color-mix(in oklab, var(--accent) 50%, transparent);
+  --shadow-accent-alta: 0 16px 38px -14px color-mix(in oklab, var(--accent) 60%, transparent);
 
-  /* ------------------------------------------------------------ Atmosfera
-     A luz da página. Uma fonte quente entrando pelo alto à esquerda, como
-     fim de tarde por uma janela, e um resto de memória à direita. */
-  --glow-quente: rgba(217, 160, 91, 0.075);
-  --glow-quente-forte: rgba(217, 160, 91, 0.09);
-  --glow-memoria: rgba(217, 143, 168, 0.035);
-  --veu-modal: rgba(11, 10, 9, 0.7);
-  --veu-cabecalho: rgba(18, 16, 16, 0.86);
+  --glow-quente: color-mix(in oklab, var(--tom-vida) 9%, transparent);
+  --glow-quente-forte: color-mix(in oklab, var(--tom-vida) 14%, transparent);
+  --glow-memoria: color-mix(in oklab, var(--tom-pessoas) 5%, transparent);
+  --veu-modal: rgba(12, 9, 7, 0.72);
+  --veu-cabecalho: rgba(23, 19, 15, 0.88);
 
-  /* --------------------------------------------------------------- Movimento
-     Curto e discreto. Toda transição respeita prefers-reduced-motion. */
   --motion-fast: 120ms;
   --motion-base: 200ms;
   --motion-slow: 380ms;
   --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-  /* -------------------------------------------------------------- Dimensões */
-  --rail-width: 260px;
-  --aside-width: 272px;
-  --content-max: 1560px;
+  --aside-width: 300px;
+  --content-max: 1180px;
   --header-height: 60px;
   --touch-target: 44px;
 
@@ -231,11 +217,25 @@
   --z-toast: 90;
 }
 
-/* Fallback tipográfico: se a serifa remota não carregar, a pilha local
-   assume sem quebrar a proporção do título. */
+/* ---------------------------------------------------------------- Clima
+   Tempo difícil: os tons perdem cor (a tinta continua legível). Tempo bom:
+   a luz do fim de tarde fica mais forte. */
+.jogo[data-clima='dificil'] {
+  --tom-voce: color-mix(in oklab, var(--pig-pessego) 52%, var(--cinza-quente));
+  --tom-pessoas: color-mix(in oklab, var(--pig-goiaba) 52%, var(--cinza-quente));
+  --tom-trabalho: color-mix(in oklab, var(--pig-ipe) 52%, var(--cinza-quente));
+  --tom-rumo: color-mix(in oklab, var(--pig-azulejo) 52%, var(--cinza-quente));
+  --tom-casa: color-mix(in oklab, var(--pig-fachada) 52%, var(--cinza-quente));
+  --tom-tempo: color-mix(in oklab, var(--pig-ipe-roxo) 52%, var(--cinza-quente));
+  --tom-saude: color-mix(in oklab, var(--pig-folha) 52%, var(--cinza-quente));
+  --tom-vida: color-mix(in oklab, var(--pig-ambar) 60%, var(--cinza-quente));
+  --glow-quente: rgba(154, 143, 130, 0.05);
+}
+.jogo[data-clima='bom'] {
+  --glow-quente: color-mix(in oklab, var(--tom-vida) 15%, transparent);
+  --glow-memoria: color-mix(in oklab, var(--tom-pessoas) 9%, transparent);
+}
+
 @supports not (font-variation-settings: normal) {
-  :root {
-    --tracking-tight: -0.014em;
-    --tracking-display: -0.018em;
-  }
+  :root { --tracking-tight: -0.014em; --tracking-display: -0.018em; }
 }
