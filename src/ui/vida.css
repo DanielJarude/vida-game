@@ -163,6 +163,7 @@ details summary { cursor: pointer; }
 .criacao__form { display: flex; flex-direction: column; gap: var(--space-5); }
 .criacao__nascer { justify-content: center; min-height: 52px; font-size: var(--type-subheading); background: var(--accent); }
 .amostras { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.amostras__rotulo { font-size: var(--type-caption); color: var(--text-secondary); margin-top: var(--space-2); }
 /* Amostra: o anel claro deixa o cabelo preto visível no fundo escuro; a escolhida ganha anel no tom e ✓. */
 .amostra { position: relative; width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(255, 246, 232, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
 .amostra--ativa { box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4.5px var(--tom); }
@@ -570,7 +571,8 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .semana__faixa { position: relative; display: flex; height: 64px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg-inset); box-shadow: inset 0 0 0 1px var(--rule-strong); gap: 3px; padding: 3px; }
 /* Cada pedaço tem cor E padrão (e rótulo): não depende de ver cor. */
 .semana__pedaco { position: relative; display: flex; align-items: flex-end; min-width: 6px; padding: 0 var(--space-2) var(--space-2); overflow: hidden; border-radius: 5px; }
-.semana__rotulo { font-size: var(--type-caption); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1a140e; background: rgba(255, 255, 255, 0.62); padding: 0 5px; border-radius: 3px; }
+.semana__rotulo { font-size: var(--type-caption); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1a140e; background: rgba(255, 255, 255, 0.82); padding: 0 5px; border-radius: 3px; position: relative; z-index: 2; }
+/* A faixa do "passa da semana" escurece o fundo, não o nome do que está ali. */
 .semana__pedaco--trabalho { background: var(--tom-trabalho); }
 .semana__pedaco--estudo { background: repeating-linear-gradient(135deg, var(--tom-rumo) 0 7px, color-mix(in oklab, var(--tom-rumo) 72%, #102040) 7px 11px); }
 .semana__pedaco--casa { background: radial-gradient(circle at 3px 3px, color-mix(in oklab, var(--tom-pessoas) 55%, #3a1010) 1.6px, transparent 2px) 0 0 / 8px 8px, var(--tom-pessoas); }

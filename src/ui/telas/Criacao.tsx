@@ -140,12 +140,15 @@ export function Criacao({ c }: { c: ControleVida }) {
             </label>
             {!heranca && (
               <>
+                <p className="amostras__rotulo" aria-hidden="true">Pele</p>
                 <div className="amostras" role="radiogroup" aria-label="Tom de pele">
                   {PELES.map(p => <button key={p} type="button" role="radio" aria-checked={visual.pele === p} aria-label={`Tom ${p.slice(1)}`} className={`amostra${visual.pele === p ? ' amostra--ativa' : ''}`} style={{ background: COR_PELE[p] }} onClick={() => setVisual(v => ({ ...v, pele: p }))} />)}
                 </div>
+                <p className="amostras__rotulo" aria-hidden="true">Cabelo</p>
                 <div className="amostras" role="radiogroup" aria-label="Cor do cabelo">
                   {CORES_CABELO.map(p => <button key={p} type="button" role="radio" aria-checked={visual.corCabelo === p} aria-label={p.replace('_', ' ')} className={`amostra${visual.corCabelo === p ? ' amostra--ativa' : ''}`} style={{ background: COR_CABELO[p] }} onClick={() => setVisual(v => ({ ...v, corCabelo: p }))} />)}
                 </div>
+                <p className="amostras__rotulo" aria-hidden="true">Olhos</p>
                 <div className="amostras" role="radiogroup" aria-label="Cor dos olhos">
                   {CORES_OLHOS.map(p => <button key={p} type="button" role="radio" aria-checked={visual.olhos === p} aria-label={p.replace('_', ' ')} className={`amostra amostra--olho${visual.olhos === p ? ' amostra--ativa' : ''}`} style={{ background: COR_OLHO[p] }} onClick={() => setVisual(v => ({ ...v, olhos: p }))} />)}
                 </div>
