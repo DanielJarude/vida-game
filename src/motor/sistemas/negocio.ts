@@ -80,7 +80,7 @@ export const NEGOCIOS: readonly TipoNegocio[] = [
 
 export const tipoNegocio = (id: string) => NEGOCIOS.find(n => n.id === id);
 /** Negócios sem porta para a rua (a loja é o site; a consultoria, o cliente). */
-const SEM_PONTO = new Set(['loja_online', 'consultoria_ti']);
+const SEM_PONTO = new Set(['loja_online', 'consultoria_ti', 'empreiteira']);
 const semPonto = (n: Negocio) => SEM_PONTO.has(n.tipo);
 export const tipoDoNegocio = (n: Negocio) => tipoNegocio(n.tipo);
 
@@ -347,8 +347,8 @@ function tombo(v: Vida, r: Rng, n: Negocio): void {
   const online = semPonto(n);
   const texto = {
     desvio: `Alguém de confiança em ${n.nome} desviou dinheiro durante meses. Quando você descobriu, faltavam ${fmt(perda)}.`,
-    concorrente: online ? `Uma plataforma grande passou a vender o mesmo que ${n.nome}, mais barato e com entrega no dia seguinte.` : `Uma rede grande abriu a duas quadras de ${n.nome}, com preço que você não consegue cobrir.`,
-    assalto: online ? `${n.nome} caiu num golpe de pagamento: pedidos pagos com cartão clonado, mercadoria enviada, dinheiro estornado.` : `${n.nome} foi assaltado num sábado à noite. Levaram o caixa e parte do equipamento.`,
+    concorrente: n.tipo === 'loja_online' ? `Uma plataforma grande passou a vender o mesmo que ${n.nome}, mais barato e com entrega no dia seguinte.` : online ? `Uma empresa maior, de fora, chegou disputando os mesmos clientes de ${n.nome}, cobrando menos.` : `Uma rede grande abriu a duas quadras de ${n.nome}, com preço que você não consegue cobrir.`,
+    assalto: n.tipo === 'empreiteira' ? `Roubaram as ferramentas e o material de uma obra de ${n.nome} num fim de semana. O cliente não quis saber: a entrega atrasou.` : n.tipo === 'loja_online' ? `${n.nome} caiu num golpe de pagamento: pedidos pagos com cartão clonado, mercadoria enviada, dinheiro estornado.` : online ? `Um cliente grande de ${n.nome} recebeu o serviço e sumiu sem pagar. A cobrança foi parar na Justiça.` : `${n.nome} foi assaltado num sábado à noite. Levaram o caixa e parte do equipamento.`,
     obra: `Uma obra fechou a rua de ${n.nome} por meses. A freguesia foi para outro lugar.`
   }[tipo]!;
   escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });

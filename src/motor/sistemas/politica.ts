@@ -65,8 +65,8 @@ export const PRIORIDADES = Object.keys(NOME_PRIORIDADE) as Prioridade[];
 
 /** O que um mandato consegue entregar, em coisa concreta (nunca em ideologia). */
 const ENTREGAS: Record<Prioridade, string[]> = {
-  saude: ['o posto de saúde do bairro reabriu com médico', 'a fila de exames encurtou', 'a farmácia do posto voltou a ter remédio', 'uma ambulância nova para a zona rural'],
-  educacao: ['uma creche nova no bairro', 'a reforma da escola que chovia dentro', 'o transporte escolar voltou a passar', 'vagas de creche para a fila de espera'],
+  saude: ['o posto de saúde do bairro reaberto, com médico', 'a fila de exames mais curta', 'remédio de volta na farmácia do posto', 'uma ambulância nova para a zona rural'],
+  educacao: ['uma creche nova no bairro', 'a reforma da escola que chovia dentro', 'o transporte escolar passando de novo', 'vagas de creche para a fila de espera'],
   mobilidade: ['a linha de ônibus que faltava', 'o asfalto da rua de terra', 'a ciclovia até o centro', 'semáforos na avenida das batidas'],
   emprego: ['um curso de qualificação com vaga garantida', 'a feira do bairro regularizada', 'um galpão para pequenas empresas', 'crédito para quem trabalha por conta'],
   seguranca: ['iluminação nas ruas escuras', 'a praça reformada e ocupada', 'o posto policial do bairro', 'câmeras no terminal de ônibus'],
@@ -541,7 +541,8 @@ export function processarPolitica(v: Vida, r: Rng): void {
     p.reputacao = clamp(p.reputacao + (c.escopo === 'estado' ? 1.5 : 0.5));
     p.desgaste = clamp(p.desgaste + (c.executivo ? 3 : 2.5));
     // O mandato cobra do bolso: contribuição ao partido, a base que se mantém, as viagens, os pedidos de ajuda que chegam à porta.
-    const custo = Math.round(ocupacao(m.cargo).salario * 12 * (0.18 + (c.escopo === 'municipio' ? 0 : 0.1)) / 100) * 100;
+    const subsidio = v.trabalho.atual?.contrato === 'eletivo' ? v.trabalho.atual.salario : ocupacao(m.cargo).salario;
+    const custo = Math.round(subsidio * 12 * (0.18 + (c.escopo === 'municipio' ? 0 : 0.1)) / 100) * 100;
     v.financas.conta -= custo;
     if (!temFato(v, 'pol_custo_mandato')) {
       v.fatos['pol_custo_mandato'] = v.t;
@@ -718,7 +719,7 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
         const feito = p!.prioridade ? r.pick(ENTREGAS[p!.prioridade]) : 'uma promessa de campanha';
         const primeira = !temFato(v, `pol_entrega_${m.tInicio}`);
         if (deu) v.fatos[`pol_entrega_${m.tInicio}`] = v.t;
-        escrever(v, { texto: deu ? `Saiu do papel: ${feito}. Foi o mandato que empurrou.` : `Um ano inteiro de reunião por ${feito}; o resultado ficou para depois.`, relevancia: deu && primeira ? 'biografia' : 'cotidiano', tema: 'trabalho', escolha: true, tom: deu ? 'bom' : undefined });
+        escrever(v, { texto: deu ? `Saiu do papel: ${feito}. Foi o mandato que empurrou.` : `Um ano inteiro de reunião, ofício e visita a secretaria atrás disto: ${feito}. Ainda não saiu.`, relevancia: deu && primeira ? 'biografia' : 'cotidiano', tema: 'trabalho', escolha: true, tom: deu ? 'bom' : undefined });
         aplicarPersonalidade(v, 'acao:pol_prioridade', { disciplina: 1 });
         return { texto: deu ? 'Algo concreto para mostrar.' : 'O trabalho andou; o resultado, não ainda.', tom: deu ? 'bom' : 'neutro' };
       }

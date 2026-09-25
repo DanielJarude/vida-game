@@ -187,6 +187,22 @@ describe('4. mandato', () => {
   });
 });
 
+describe('4b. o mandato cobra do bolso', () => {
+  it('contribuição ao partido, base e viagens saem da conta todo ano (o subsídio não é lucro limpo)', () => {
+    const v = vereadorEmMandato();
+    const conta = v.financas.conta;
+    const depois = transacao(v, (x, r) => { processarPolitica(x, r); }).vida;
+    const custo = conta - depois.financas.conta;
+    expect(custo).toBeGreaterThan(v.trabalho.atual!.salario * 12 * 0.15);
+    expect(depois.biografia.some(e => /O mandato também tem conta/.test(e.texto))).toBe(true);
+  });
+  it('quem tem mandato não recebe chefe novo nem festa da firma', () => {
+    const v = vereadorEmMandato();
+    const c = contexto(v, criarRng(1));
+    for (const id of ['adu_chefe_novo', 'adu_festa_firma', 'car_reconhecimento']) expect(conteudoPorId(id)!.quando!(c)).toBe(false);
+  });
+});
+
 describe('5. reeleição', () => {
   it('prefeito: uma reeleição seguida; o terceiro mandato seguido é impossível', () => {
     let v = vereadorEmMandato(7, 'prefeito');

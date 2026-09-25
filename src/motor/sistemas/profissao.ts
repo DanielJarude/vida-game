@@ -144,7 +144,7 @@ export function mudarRitmo(v: Vida, alvo: Ritmo): string {
   if (alvo !== 'puxado') e.anosPuxado = 0;
   const r = rotulosDoRitmo(v);
   const texto = alvo === 'puxado' ? `${r.puxado}: mais trabalho, mais dinheiro, menos tempo.` : alvo === 'leve' ? `${r.leve}: menos dinheiro, mais vida fora do trabalho.` : 'De volta ao ritmo de sempre.';
-  escrever(v, { texto: alvo === 'puxado' ? `Decidiu puxar o ritmo do trabalho (${r.puxado.toLowerCase()}).` : alvo === 'leve' ? `Decidiu aliviar o ritmo do trabalho (${r.leve.toLowerCase()}).` : 'Voltou ao ritmo de trabalho de sempre.', relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+  escrever(v, { texto: alvo === 'puxado' ? `Decidiu puxar o ritmo do trabalho: ${r.puxado.toLowerCase()}.` : alvo === 'leve' ? `Decidiu aliviar o ritmo do trabalho: ${r.leve.toLowerCase()}.` : 'Voltou ao ritmo de trabalho de sempre.', relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
   return texto;
 }
 

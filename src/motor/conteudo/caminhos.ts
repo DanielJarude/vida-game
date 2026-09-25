@@ -311,7 +311,7 @@ export const CAMINHOS: Conteudo[] = [
   /* ============================================== O TRABALHO ACONTECE (mundo) */
   {
     id: 'car_reconhecimento', tipo: 'acontecimento', idade: [20, 64], tema: 'trabalho', repetir: 6, peso: 3,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && ocupacao(e.ocupacaoId).trilha !== 'atleta' && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && ocupacao(e.ocupacaoId).trilha !== 'atleta' && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
     narrar: c => {
       const e = c.v.trabalho.atual!;
       const texto = c.r.pick([
@@ -324,7 +324,7 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_novato', tipo: 'acontecimento', idade: [30, 64], tema: 'trabalho', repetir: 10, peso: 2,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela === undefined && ocupacao(e.ocupacaoId).trilha !== 'atleta' && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && ocupacao(e.ocupacaoId).trilha !== 'atleta' && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
     narrar: c => ({ texto: c.r.pick(['Puseram um novato para aprender o serviço com você. Na primeira semana, você se viu repetindo frases que ouviu vinte anos atrás.', 'Uma estagiária nova passou a andar atrás de você com um caderninho.', 'Chamaram você para treinar a turma que acabava de entrar.']), relevancia: 'biografia', efeito: () => { const f = c.v.caminhos.frentes.lideranca; if (f) f.interesse = clamp(f.interesse + 5); } })
   },
   {
@@ -348,7 +348,7 @@ export const CAMINHOS: Conteudo[] = [
   {
     id: 'aut_mes_fraco', tipo: 'acontecimento', idade: [20, 75], tema: 'trabalho', repetir: 5,
     quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela !== undefined && (e.clientela < 35 || c.r.chance(0.3)); },
-    narrar: c => ({ texto: c.r.pick(['Três meses fracos seguidos. Você aprendeu a guardar dinheiro nos meses bons.', 'Um cliente antigo sumiu sem pagar.', 'Apareceu concorrência na mesma rua, cobrando mais barato.']), relevancia: 'cotidiano', tom: 'ruim', efeito: () => { const e = c.v.trabalho.atual!; e.clientela = clamp((e.clientela ?? 30) - 5); } })
+    narrar: c => ({ texto: c.r.pick(['Três meses fracos seguidos. Você aprendeu a guardar dinheiro nos meses bons.', 'Um cliente antigo sumiu sem pagar.', 'Apareceu gente nova fazendo o mesmo serviço, cobrando mais barato.']), relevancia: 'cotidiano', tom: 'ruim', efeito: () => { const e = c.v.trabalho.atual!; e.clientela = clamp((e.clientela ?? 30) - 5); } })
   },
   {
     id: 'car_vendas_meta', tipo: 'acontecimento', idade: [18, 64], tema: 'trabalho', repetir: 5,

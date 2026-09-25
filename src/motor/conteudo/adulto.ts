@@ -15,6 +15,7 @@ import { ocupacao } from '../dados/ocupacoes';
 import { mudarAgora } from '../sistemas/processos';
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
+import { comChefia } from '../sistemas/ritmo';
 
 // Emprego comum: o atleta (contrato especial, Lei Pelé) tem as próprias situações — clube, contrato, banco.
 const empregado = (c: Ctx) => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal' && ocupacao(c.v.trabalho.atual.ocupacaoId).trilha !== 'atleta';
@@ -24,7 +25,7 @@ export const ADULTO: Conteudo[] = [
   /* ============================================================ TRABALHO */
   {
     id: 'adu_chefe_novo', tipo: 'acontecimento', idade: [19, 64], tema: 'trabalho', repetir: 6,
-    quando: empregado,
+    quando: c => empregado(c) && comChefia(c.v.trabalho.atual),
     narrar: c => {
       const bom = c.r.chance(0.5);
       const e = c.v.trabalho.atual!;
@@ -122,7 +123,7 @@ export const ADULTO: Conteudo[] = [
   {
     id: 'adu_festa_firma', tipo: 'decisao', idade: [20, 64], tema: 'trabalho', repetir: 4,
     papeis: { colega: P.genteDe('trabalho') },
-    quando: empregado,
+    quando: c => empregado(c) && comChefia(c.v.trabalho.atual),
     titulo: 'Confraternização',
     texto: c => `Festa de fim de ano da firma, open bar. ${c.p.colega.nome} já bebeu demais e está falando mal da diretoria em voz alta, perto do diretor.`,
     opcoes: [

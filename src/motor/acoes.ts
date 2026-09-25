@@ -303,6 +303,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const e = v.trabalho.atual;
       if (!e || (e.contrato !== 'informal' && e.contrato !== 'autonomo')) return bloqueio('impossivel', 'Só para quem trabalha por conta.');
       if (e.mei) return bloqueio('impossivel', 'Já é MEI.');
+      if (v.caminhos.negocio && ['comecando', 'firme', 'apertado'].includes(v.caminhos.negocio.estado)) return bloqueio('impossivel', 'O negócio já tem CNPJ próprio.');
       if (e.contrato === 'autonomo' && e.clientela === undefined) return bloqueio('impossivel', 'Não se aplica.');
       if (e.ocupacaoId === 'produtor_rural' || e.ocupacaoId === 'pescador') return bloqueio('impossivel', 'Produtor rural e pescador têm registro próprio, não MEI.');
       if (e.salario > 6750) return bloqueio('requisito', 'O faturamento passa do limite do MEI (cerca de R$ 81 mil por ano).');
@@ -646,7 +647,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'aposentar':
       if (v.trabalho.atual && eDasForcas(ocupacao(v.trabalho.atual.ocupacaoId))) { irParaReserva(v, 'pedido'); return ok('Transferência para a reserva concedida.', 'bom'); }
       aposentar(v); return ok('Aposentadoria concedida.', 'bom');
-    case 'mei': formalizar(v); escrever(v, { texto: 'Formalizou o trabalho como MEI: CNPJ, nota fiscal e a guia do mês.', relevancia: 'biografia', tema: 'trabalho', escolha: true }); return ok('Agora é MEI: uma guia por mês, tempo de INSS contando.', 'bom');
+    case 'mei': { const antes = temFato(v, 'formalizou_mei'); formalizar(v); escrever(v, { texto: antes ? `Abriu um MEI de novo, agora como ${nomeOcupacao(v, ocupacao(v.trabalho.atual!.ocupacaoId))}.` : 'Formalizou o trabalho como MEI: CNPJ, nota fiscal e a guia do mês.', relevancia: 'biografia', tema: 'trabalho', escolha: true }); return ok('Agora é MEI: uma guia por mês, tempo de INSS contando.', 'bom'); }
     case 'facultativo':
       v.trabalho.pausa!.facultativo = a.ativo;
       return ok(a.ativo ? 'O INSS volta a contar, pago como facultativo.' : 'Sem pagar o INSS, o tempo de contribuição para.');

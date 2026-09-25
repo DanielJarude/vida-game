@@ -29,6 +29,7 @@ import { semana } from '../sistemas/semana';
 import { balanco } from '../sistemas/dinheiro';
 import { interpretar, VERSAO_SAVE } from '../save';
 import { conteudoPorId } from '../conteudo/motor';
+import { contexto } from '../conteudo/base';
 import { PROFISSAO } from '../conteudo/profissao';
 import { criarPessoa, vincular } from '../pessoas';
 import { municipio } from '../dados/lugares';
@@ -279,6 +280,33 @@ describe('negócio: gestão, não renda passiva', () => {
     expect(n.emCasa).toBe(true);
     expect(n.semEstrada).toBe(true);
     expect(tetoDoMovimento(n)).toBeLessThan(60);
+  });
+  it('dono de negócio aberto não vira MEI (a empresa já tem CNPJ) e não recebe "chefe novo"', () => {
+    let v = adulto(34);
+    v.trabalho.experiencia['alimentacao'] = 60;
+    v.financas.conta = 60000;
+    v = transacao(v, (x, r) => { abrirNegocio(x, r, 'lanchonete', { modo: 'guardado' }); }).vida;
+    expect(negocioAtivo(v)).toBeTruthy();
+    expect(tenta(v, { tipo: 'mei' })).toBe(false);
+    expect(conteudoPorId('adu_chefe_novo')!.quando!(contexto(v, criarRng(1)))).toBe(false);
+  });
+  it('prejuízo que o bolso não cobre mais fecha o negócio (fornecedor e banco fecham a porta)', () => {
+    let v = adulto(34);
+    v.trabalho.experiencia['alimentacao'] = 60;
+    v.financas.conta = 60000;
+    v = transacao(v, (x, r) => { abrirNegocio(x, r, 'lanchonete', { modo: 'guardado' }); }).vida;
+    v = transacao(v, (x, r) => { x.financas.conta = -30000; const n = x.caminhos.negocio!; n.caixa = 0; n.clientela = 2; x.trabalho.atual!.clientela = 2; processarNegocio(x, r); }).vida;
+    expect(negocioAtivo(v)).toBeFalsy();
+    expect(v.biografia.some(e => /fornecedores e banco fecharam a porta/.test(e.texto))).toBe(true);
+  });
+  it('loja on-line não sofre "obra na rua" nem ganha "o ponto ao lado"', () => {
+    for (let s = 1; s <= 40; s++) {
+      let v = adulto(30, 7);
+      v.trabalho.experiencia['vendas'] = 60;
+      v.financas.conta = 90000;
+      v = transacao(v, x => { abrirNegocio(x, criarRng(s), 'loja_online', { modo: 'guardado' }); for (let k = 0; k < 6; k++) { x.t += 12; processarNegocio(x, criarRng(s * 31 + k)); } }).vida;
+      expect(v.biografia.some(e => /obra fechou a rua|o ponto ao lado|duas quadras/.test(e.texto))).toBe(false);
+    }
   });
   it('registro profissional continua obrigatório (sem CRP, sem consultório)', () => {
     const v = adulto(34);
