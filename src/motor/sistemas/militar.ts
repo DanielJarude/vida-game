@@ -247,7 +247,10 @@ export function processarMilitar(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): voi
   if (v.t - m.tGuarnicao >= 30 && r.chance(0.32) && v.fatos['mil_transferencia'] === undefined) {
     const opcoes = GUARNICOES[m.forca].filter(g => g !== m.guarnicao && g !== v.moradia.municipioId);
     v.fatos['mil_transferencia'] = v.t;
-    v.fatos['mil_destino'] = MUNIC_INDICE(opcoes[Math.floor(r.next() * opcoes.length)]);
+    // Havendo pedido de movimentação, a Força o considera primeiro.
+    const pedida = v.fatos['mil_pedido_destino'];
+    v.fatos['mil_destino'] = pedida !== undefined ? pedida : MUNIC_INDICE(opcoes[Math.floor(r.next() * opcoes.length)]);
+    if (pedida !== undefined) { v.fatos['mil_foi_pedido'] = v.t; delete v.fatos['mil_pedido_destino']; }
   }
   // Rotina que só a farda tem: missão, embarque, exercício longe de casa.
   if (r.chance(m.forca === 'marinha' ? 0.3 : 0.18)) v.fatos['mil_missao'] = v.t;

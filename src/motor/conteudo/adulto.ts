@@ -16,7 +16,8 @@ import { mudarAgora } from '../sistemas/processos';
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 
-const empregado = (c: Ctx) => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal';
+// Emprego comum: o atleta (contrato especial, Lei Pelé) tem as próprias situações — clube, contrato, banco.
+const empregado = (c: Ctx) => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal' && ocupacao(c.v.trabalho.atual.ocupacaoId).trilha !== 'atleta';
 const mora = (c: Ctx) => municipio(c.v.moradia.municipioId);
 
 export const ADULTO: Conteudo[] = [
@@ -103,7 +104,7 @@ export const ADULTO: Conteudo[] = [
   },
   {
     id: 'adu_empresa_fecha', tipo: 'acontecimento', idade: [18, 64], tema: 'trabalho', repetir: 15,
-    quando: c => !!c.v.trabalho.atual && ['clt'].includes(c.v.trabalho.atual.contrato) && c.r.chance(0.3),
+    quando: c => empregado(c) && ['clt'].includes(c.v.trabalho.atual!.contrato) && c.r.chance(0.3),
     narrar: c => ({
       texto: (() => {
         const e = c.v.trabalho.atual!;

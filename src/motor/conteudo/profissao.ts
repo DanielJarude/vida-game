@@ -357,7 +357,7 @@ export const PROFISSAO: Conteudo[] = [
     },
     opcoes: [
       { id: 'renovar', texto: 'Renovar', disponivel: c => (clubeQuer(c) ? true : false),
-        resolver: c => ({ texto: 'Mais uma assinatura, mais uma foto com a camisa.', memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; es.contratoAte = c.v.t + (es.espaco === 'titular' ? 36 : 24); if (es.espaco === 'titular') { const e = emprego(c); e.salario = Math.round(e.salario * 1.1 / 10) * 10; } } }) },
+        resolver: c => ({ texto: 'Mais uma assinatura, mais uma foto com a camisa.', memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; es.contratoAte = c.v.t + (es.espaco === 'titular' ? 36 : 24); const e = c.v.trabalho.atual; if (es.espaco === 'titular' && e) e.salario = Math.round(e.salario * 1.1 / 10) * 10; } }) },
       { id: 'mercado', texto: c => (clubeQuer(c) ? 'Testar o mercado' : 'Procurar outro clube'), comportamento: { coragem: 1 },
         resolver: c => {
           const es = c.v.caminhos.esporte!;
@@ -367,7 +367,7 @@ export const PROFISSAO: Conteudo[] = [
             const nivel = Math.max(1, Math.min(4, h >= 72 + es.nivel * 2 + 3 ? es.nivel + 1 : es.nivel)) as 1 | 2 | 3 | 4;
             return { texto: nivel > es.nivel ? 'Uma proposta de um clube maior chegou antes do fim do mês.' : 'Um clube do mesmo tamanho ofereceu mais tempo de contrato.', memoria: null, tom: 'bom', efeito: () => { trocarDeClube(c, nivel); } };
           }
-          if (clubeQuer(c)) return { texto: 'O mercado não respondeu. O clube renovou — por menos.', memoria: null, tom: 'ruim', efeito: () => { es.contratoAte = c.v.t + 24; const e = emprego(c); e.salario = Math.round(e.salario * 0.9 / 10) * 10; } };
+          if (clubeQuer(c)) return { texto: 'O mercado não respondeu. O clube renovou — por menos.', memoria: null, tom: 'ruim', efeito: () => { es.contratoAte = c.v.t + 24; const e = c.v.trabalho.atual; if (e) e.salario = Math.round(e.salario * 0.9 / 10) * 10; } };
           return { texto: 'Nenhum clube ligou. O telefone do empresário parou de tocar.', memoria: null, tom: 'ruim', efeito: () => encerrarCarreira(c.v, es, 'sem_contrato') };
         } },
       { id: 'encerrar', texto: 'Encerrar a carreira', resolver: c => ({ texto: 'Você disse ao empresário que era hora.', memoria: null, efeito: () => encerrarCarreira(c.v, c.v.caminhos.esporte!, 'escolha') }) }
@@ -548,7 +548,8 @@ const DIVISAO = ['', 'um time do campeonato estadual', 'um clube da Série C', '
 
 function trocarDeClube(c: Ctx, nivel: 1 | 2 | 3 | 4): void {
   const es = c.v.caminhos.esporte!;
-  const e = emprego(c);
+  const e = c.v.trabalho.atual;
+  if (!e) return;
   const tabela = es.modalidade === 'futebol' ? SALARIO_FUTEBOL : SALARIO_OUTROS;
   const subiu = nivel > es.nivel;
   es.nivel = nivel;
@@ -573,7 +574,9 @@ export function destinoDaRemocao(v: Vida): string | undefined {
   const perto = [parceiro(v)?.p, ...filhos(v), ...Object.values(v.pessoas).filter(p => ['mae', 'pai'].includes(v.vinculos[p.id]?.parentesco ?? ''))].filter((p): p is Pessoa => !!p && p.vivo && pode(p.municipioId));
   if (perto.length) return perto[0].municipioId;
   const capital = MUNICIPIOS.find(m => m.uf === uf && m.capital)?.id;
-  return capital && pode(capital) ? capital : undefined;
+  if (capital && pode(capital)) return capital;
+  // Já na capital: a outra cidade grande do estado (ou, no federal, a capital vizinha).
+  return MUNICIPIOS.find(m => pode(m.id) && m.uf === uf)?.id ?? (federal ? MUNICIPIOS.find(m => pode(m.id) && m.regiao === municipio(aqui).regiao && m.capital)?.id : undefined);
 }
 
 function familiaEm(v: Vida, id: string): string | undefined {

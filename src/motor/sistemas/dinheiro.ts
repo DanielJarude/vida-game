@@ -308,6 +308,8 @@ export interface Balanco {
   aplicacoes: number;
   imoveis: number;
   veiculos: number;
+  /** O que está no caixa do próprio negócio (não é conta sua, mas é seu). */
+  negocio: number;
   ativos: number;
   /** Financiamentos: obrigações presas a um bem. */
   financiamentos: number;
@@ -331,9 +333,11 @@ export function balanco(v: Vida): Balanco {
   const emprestimos = f.dividas.filter(d => d.tipo === 'emprestimo' || d.tipo === 'acordo' || d.tipo === 'fies').reduce((s, d) => s + d.saldo, 0);
   const cartao = f.dividas.filter(d => d.tipo === 'cartao').reduce((s, d) => s + d.saldo, 0);
   const atrasado = f.dividas.reduce((s, d) => s + (d.atraso ?? 0) * d.parcela, 0) + (v.moradia.atraso ?? 0) * v.moradia.aluguel;
-  const ativos = Math.max(0, conta) + aplicacoes + imoveis + veiculos;
+  const n = v.caminhos?.negocio;
+  const negocio = n && n.estado !== 'fechado' ? Math.max(0, Math.round(n.caixa ?? 0)) : 0;
+  const ativos = Math.max(0, conta) + aplicacoes + imoveis + veiculos + negocio;
   const obrigacoes = Math.round(financiamentos + emprestimos + cartao + (v.moradia.atraso ?? 0) * v.moradia.aluguel + Math.max(0, -conta));
-  return { conta, aplicacoes, imoveis, veiculos, ativos, financiamentos, emprestimos, cartao, atrasado: Math.round(atrasado), obrigacoes, liquido: Math.round(ativos - obrigacoes) };
+  return { conta, aplicacoes, imoveis, veiculos, negocio, ativos, financiamentos, emprestimos, cartao, atrasado: Math.round(atrasado), obrigacoes, liquido: Math.round(ativos - obrigacoes) };
 }
 
 export const patrimonio = (v: Vida) => balanco(v).liquido;

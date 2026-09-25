@@ -202,8 +202,9 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   const preservar = e.foco === 'preservar';
   // O jeito de treinar: forçar evolui (e machuca); preservar segura o corpo (e a evolução).
   if (f) {
-    if (forcar) f.habilidade = clamp(f.habilidade + 1.5);
-    if (preservar && i >= 28) f.habilidade = clamp(f.habilidade - 0.5);
+    // Forçar rende enquanto o corpo é novo; depois dos 29, gasta. Preservar segura o declínio.
+    if (forcar) f.habilidade = clamp(f.habilidade + (i < 29 ? 1.2 : -0.8));
+    if (preservar && i >= 29) f.habilidade = clamp(f.habilidade + 0.4);
     // O que não aparece no exame (até aparecer): rende em campo, cobra do corpo.
     if (e.doping) { f.habilidade = clamp(f.habilidade + 2); v.corpo.saude = clamp(v.corpo.saude - 2.5); }
   }
@@ -281,6 +282,11 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
   escrever(v, { texto, relevancia: 'marco', tema: eraPro ? 'trabalho' : 'lazer', tom: 'ruim' });
   marcar(v, eraPro ? 'fim_carreira' : 'fracasso', texto, 3, { dominio: e.modalidade });
   marcarFato(v, eraPro ? 'fim_carreira_esportiva' : 'dispensado_base');
+  // Quem se preparou ainda jogando tem para onde ir: a comissão técnica, a escolinha.
+  if (eraPro && temFato(v, 'pos_treinador')) {
+    const oc = i >= 28 ? 'auxiliar_tecnico' : 'treinador_escolinha';
+    novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: 'Do campo para o banco', texto: oc === 'auxiliar_tecnico' ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
+  }
   abalar(v, eraPro ? 'o fim da carreira no esporte' : `a dispensa ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'}`, -(eraPro ? 8 : 10), 6);
 }
 

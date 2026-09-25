@@ -27,7 +27,7 @@ import { curso, CURSOS } from '../dados/cursos';
 import { capitalDoEstado } from '../sistemas/escola';
 import { habilidade } from '../sistemas/frentes';
 import { marcar } from '../sistemas/marcas';
-import { abrirNegocio, fecharNegocio, NEGOCIOS } from '../sistemas/negocio';
+import { abrirNegocio, demitirFuncionario, fecharNegocio, NEGOCIOS, valorDoNegocio, venderNegocio } from '../sistemas/negocio';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
 import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
 import { modeloRotina, podeComecarRotina } from '../sistemas/rotinas';
@@ -299,14 +299,19 @@ export const CAMINHOS: Conteudo[] = [
         disponivel: c => (guardado(c.v) >= 5000 ? true : 'Não há dinheiro guardado para isso.'),
         resolver: c => ({ texto: 'Você pôs mais dinheiro e mais horas. O movimento reagiu um pouco.', memoria: null, efeito: () => { pagarGuardado(c.v, 5000); const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + 16); c.v.caminhos.negocio!.anosNoVermelho = 0; estresse(c, 8); } }) },
       { id: 'mudar', texto: 'Mudar o jeito de vender', comportamento: { coragem: 1 },
-        resolver: c => { const deu = c.r.chance(0.5); return { texto: deu ? 'Entrega por aplicativo, promoção no bairro, cardápio novo: funcionou mais do que você esperava.' : 'Você mudou tudo. O movimento não mudou.', memoria: null, efeito: () => { const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + (deu ? 20 : 3)); c.v.caminhos.negocio!.anosNoVermelho = deu ? 0 : 1; } }; } }
+        resolver: c => { const deu = c.r.chance(0.5); return { texto: deu ? 'Entrega por aplicativo, promoção no bairro, cardápio novo: funcionou mais do que você esperava.' : 'Você mudou tudo. O movimento não mudou.', memoria: null, efeito: () => { const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + (deu ? 20 : 3)); c.v.caminhos.negocio!.anosNoVermelho = deu ? 0 : 1; } }; } },
+      { id: 'enxugar', texto: c => { const f = c.v.caminhos.negocio?.equipe?.[c.v.caminhos.negocio.equipe.length - 1]; return f && c.v.pessoas[f.pessoaId] ? `Enxugar: demitir ${c.v.pessoas[f.pessoaId].nome}, quem entrou por último` : 'Enxugar a equipe'; },
+        disponivel: c => ((c.v.caminhos.negocio?.equipe?.length ?? 0) > 0 ? true : false),
+        resolver: c => ({ texto: 'A folha ficou menor. O salão, mais silencioso.', memoria: null, tom: 'ruim', efeito: () => { const n = c.v.caminhos.negocio!; const f = n.equipe![n.equipe!.length - 1]; demitirFuncionario(c.v, f.pessoaId); n.anosNoVermelho = 1; } }) },
+      { id: 'vender', texto: 'Tentar vender enquanto vale alguma coisa',
+        resolver: c => { const n = c.v.caminhos.negocio!; const valor = Math.round(valorDoNegocio(c.v, n) * 0.7 / 1000) * 1000; return { texto: valor > 0 ? `Apareceu um comprador, pagando pouco: ${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}.` : 'Ninguém quis comprar um negócio no vermelho.', memoria: null, efeito: () => { if (valor > 0) venderNegocio(c.v, valor); } }; } }
     ]
   },
 
   /* ============================================== O TRABALHO ACONTECE (mundo) */
   {
     id: 'car_reconhecimento', tipo: 'acontecimento', idade: [20, 64], tema: 'trabalho', repetir: 6, peso: 3,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && ocupacao(e.ocupacaoId).trilha !== 'atleta' && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
     narrar: c => {
       const e = c.v.trabalho.atual!;
       const texto = c.r.pick([
@@ -319,7 +324,7 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_novato', tipo: 'acontecimento', idade: [30, 64], tema: 'trabalho', repetir: 10, peso: 2,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela === undefined && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela === undefined && ocupacao(e.ocupacaoId).trilha !== 'atleta' && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
     narrar: c => ({ texto: c.r.pick(['Puseram um novato para aprender o serviço com você. Na primeira semana, você se viu repetindo frases que ouviu vinte anos atrás.', 'Uma estagiária nova passou a andar atrás de você com um caderninho.', 'Chamaram você para treinar a turma que acabava de entrar.']), relevancia: 'biografia', efeito: () => { const f = c.v.caminhos.frentes.lideranca; if (f) f.interesse = clamp(f.interesse + 5); } })
   },
   {
@@ -329,7 +334,7 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_curso_empresa', tipo: 'acontecimento', idade: [20, 58], tema: 'trabalho', repetir: 7,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && e.desempenho >= 55 && c.r.chance(0.5); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && e.desempenho >= 55 && c.r.chance(0.5); },
     narrar: c => {
       const oc = ocupacao(c.v.trabalho.atual!.ocupacaoId);
       return { texto: c.r.pick([`A empresa pagou um curso de atualização em ${ROTULO_TRILHA[oc.trilha] ?? 'na área'}. Três semanas de aula à noite.`, 'Veio uma certificação nova obrigatória; a turma inteira estudou junta nas sextas.', 'Um sistema novo chegou ao trabalho. Quem aprendeu primeiro virou referência.']), relevancia: 'cotidiano', efeito: () => { const e = c.v.trabalho.atual!; e.desempenho = clamp(e.desempenho + 4); } };
