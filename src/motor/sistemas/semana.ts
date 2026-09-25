@@ -21,6 +21,7 @@ import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { listaNatural } from '../texto';
 import { modeloRotina, nivelDa, nivelModelo } from './rotinas';
 import { pesoDoRitmoNaSemana, ritmoDe } from './ritmo';
+import { semanaDaPolitica } from './politica';
 
 export interface Compromisso {
   id: string;
@@ -85,6 +86,8 @@ export function semana(v: Vida): Semana {
     fixos.push({ id: 'trabalho', rotulo: e.formacaoAte ? `Curso de formação (${nome})` : `Trabalho (${nome}${oc?.jornada === 'fora' ? ', dias fora de casa' : oc?.jornada === 'longa' ? ', jornada longa' : oc?.jornada === 'plantao' ? ', em plantões' : e.reduzida ? ', jornada reduzida' : e.carga === 'parcial' ? ', meio período' : ''}${ritmo})`, peso, tipo: 'trabalho' });
     if (v.trabalho.horasExtras) fixos.push({ id: 'horas_extras', rotulo: 'Horas extras', peso: 0.5, tipo: 'trabalho' });
   }
+  const pol = semanaDaPolitica(v);
+  if (pol) fixos.push({ id: 'politica', rotulo: pol.rotulo, peso: pol.peso, tipo: 'trabalho' });
   const b = v.educacao.basica;
   if (b?.integrado) fixos.push({ id: 'integrado', rotulo: 'Médio integrado ao técnico (dia inteiro)', peso: 0.75, tipo: 'estudo' });
   const m = v.educacao.matricula;

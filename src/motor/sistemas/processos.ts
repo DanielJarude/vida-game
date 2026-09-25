@@ -51,6 +51,8 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
   v.processos = v.processos.filter(x => x.id !== p.id);
   const origem = v.moradia.municipioId;
   if (origem === p.destinoId) return;
+  // Domicílio eleitoral: desde quando se vive na cidade (conta para candidatura).
+  v.fatos['chegou_cidade'] = v.t;
   // Quem morava com a família de origem vai sozinho: a família fica.
   if (v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') {
     marcarSaidaDeCasa(v);

@@ -49,6 +49,7 @@ import { climaDe, comChefia, fatorJornada, fatorRitmoClientela, fatorRitmoSalari
 
 export { climaDe, comChefia, fatorDeFreguesia, fatorJornada, pesoDoClima, pesoDoRitmo, ritmoDe, type Ritmo } from './ritmo';
 import { editaisAbertos } from './concurso';
+import { acoesPoliticas } from './politica';
 
 /* ================================================================== Modo */
 
@@ -56,13 +57,17 @@ export type ModoTrabalho =
   | 'crianca' | 'estudante' | 'procurando' | 'aposentado' | 'preso' | 'pausa' | 'base'
   | 'formacao' | 'aprendiz' | 'estagio'
   | 'empregado' | 'servidor' | 'docente' | 'saude' | 'seguranca' | 'militar'
-  | 'negocio' | 'autonomo' | 'informal' | 'plataforma' | 'rural' | 'pesca' | 'artista' | 'atleta';
+  | 'negocio' | 'autonomo' | 'informal' | 'plataforma' | 'rural' | 'pesca' | 'artista' | 'atleta'
+  /** Mandato, campanha sem outro trabalho, eleito à espera da posse. */
+  | 'politica';
 
 export function modoDoTrabalho(v: Vida): ModoTrabalho {
   const i = idade(v);
   if (i < 14) return 'crianca';
   if (v.justica?.prisao) return 'preso';
   const e = v.trabalho.atual;
+  const pol = v.caminhos.politica;
+  if (e?.contrato === 'eletivo' || (!e && pol && (pol.fase === 'candidato' || pol.fase === 'eleito'))) return 'politica';
   if (!e) {
     if (v.trabalho.pausa) return 'pausa';
     if (v.trabalho.aposentadoria) return 'aposentado';
@@ -292,7 +297,7 @@ export interface LeituraTrabalho {
   horizonte?: string;
 }
 
-const VINCULO: Record<string, string> = { clt: 'carteira assinada', servidor: 'servidor público', militar: 'carreira militar', informal: 'informal', autonomo: 'por conta própria', estagio: 'estágio', temporario: 'contrato temporário', aprendiz: 'jovem aprendiz' };
+const VINCULO: Record<string, string> = { eletivo: 'mandato eletivo', clt: 'carteira assinada', servidor: 'servidor público', militar: 'carreira militar', informal: 'informal', autonomo: 'por conta própria', estagio: 'estágio', temporario: 'contrato temporário', aprendiz: 'jovem aprendiz' };
 
 export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
   const modo = modoDoTrabalho(v);
@@ -393,7 +398,7 @@ type Disp = (v: Vida, a: Acao) => Veredito;
  * para "agora"; o resto, para "mais". Nenhuma ação impossível entra.
  */
 export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[]; mais: AcaoProfissional[]; saidas: AcaoProfissional[] } {
-  const lista: AcaoProfissional[] = [];
+  const lista: AcaoProfissional[] = idade(v) >= 16 ? acoesPoliticas(v, disp) : [];
   const add = (x: AcaoProfissional) => {
     if (x.acao) {
       const d = disp(v, x.acao);
@@ -550,7 +555,7 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     const cuidaAlguem = pequenos || vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && ['mae', 'pai', 'avo', 'sogro'].includes(x.vin.parentesco ?? '') && idadePessoa(v, x.p) >= 75);
     add({ id: 'reduzir', rotulo: 'Reduzir a jornada para cuidar da família', porque: cuidaAlguem ? 'Quem mora com você precisa de tempo.' : undefined, acao: { tipo: 'cuidar_da_casa', intensidade: 'parcial' }, peso: cuidaAlguem ? 4 : 0 });
   }
-  if (!n && modo !== 'atleta') add({ id: 'sair', rotulo: e.clientela !== undefined ? 'Parar com esse trabalho' : eDasForcas(oc) ? 'Deixar a Força' : e.contrato === 'servidor' ? 'Pedir exoneração' : 'Pedir demissão', acao: { tipo: 'pedir_demissao' }, peso: 0, saida: true });
+  if (!n && modo !== 'atleta' && modo !== 'politica') add({ id: 'sair', rotulo: e.clientela !== undefined ? 'Parar com esse trabalho' : eDasForcas(oc) ? 'Deixar a Força' : e.contrato === 'servidor' ? 'Pedir exoneração' : 'Pedir demissão', acao: { tipo: 'pedir_demissao' }, peso: 0, saida: true });
   return separar(lista);
 }
 

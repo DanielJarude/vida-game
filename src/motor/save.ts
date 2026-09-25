@@ -246,6 +246,8 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (n?.equipe?.some(f => !f || typeof f.pessoaId !== 'string' || !finito(f.salario) || !(d.pessoas as Record<string, unknown>)[f.pessoaId])) return 'Equipe do negócio aponta para pessoa inexistente.';
     const es = (d.caminhos as Vida['caminhos']).esporte;
     if (es && es.contratoAte !== undefined && !finito(es.contratoAte)) return 'Carreira esportiva inválida.';
+    const pol = (d.caminhos as Vida['caminhos']).politica;
+    if (pol && (typeof pol.fase !== 'string' || !finito(pol.reputacao) || !finito(pol.apoio) || !finito(pol.desgaste) || !Array.isArray(pol.historico) || (pol.mandato && (!finito(pol.mandato.tFim) || !finito(pol.mandato.aprovacao))))) return 'Vida política inválida.';
   }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;

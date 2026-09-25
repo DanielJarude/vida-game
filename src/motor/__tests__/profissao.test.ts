@@ -435,6 +435,7 @@ describe('atleta: contrato, banco, foco, doping abstrato, carreira curta', () =>
       let v = atleta(s, 88);
       v.caminhos.esporte!.foco = 'preservar';
       while (!v.morte && idade(v) < 42) { v = avancarAno(v).vida; while (v.momento) v = responder(v, 'renovar'); }
+      if (v.morte) continue; // uma vida que acabou antes não diz nada sobre carreira
       expect(v.trabalho.atual?.ocupacaoId).not.toBe('jogador_futebol');
     }
   });

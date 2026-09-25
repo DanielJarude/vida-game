@@ -323,7 +323,8 @@ export type NivelCurso = 'livre' | 'tecnico' | 'superior' | 'pos' | 'mestrado' |
  * `militar` é a carreira das Forças Armadas e das polícias e bombeiros
  * militares (regime próprio: reserva por tempo de serviço, não INSS).
  */
-export type Contrato = 'aprendiz' | 'estagio' | 'clt' | 'servidor' | 'informal' | 'autonomo' | 'temporario' | 'militar';
+/** `eletivo`: mandato conquistado em eleição (subsídio, prazo, sem chefe — responde ao eleitor). */
+export type Contrato = 'aprendiz' | 'estagio' | 'clt' | 'servidor' | 'informal' | 'autonomo' | 'temporario' | 'militar' | 'eletivo';
 
 export interface Emprego {
   ocupacaoId: string;
@@ -775,7 +776,8 @@ export type TipoMarcaCaminho =
   | 'primeiro_emprego' | 'formacao' | 'ingresso' | 'promocao' | 'demissao' | 'mudanca_carreira'
   | 'aprovacao' | 'reprovacao' | 'profissional' | 'fim_carreira' | 'negocio_aberto' | 'negocio_fechado'
   | 'volta_estudos' | 'aposentadoria' | 'lideranca' | 'estagnacao' | 'mudanca_cidade'
-  | 'transferencia' | 'reserva' | 'pausa' | 'retorno' | 'prisao' | 'saida_prisao' | 'recomeco' | 'desvio';
+  | 'transferencia' | 'reserva' | 'pausa' | 'retorno' | 'prisao' | 'saida_prisao' | 'recomeco' | 'desvio'
+  | 'politica' | 'candidatura' | 'eleicao' | 'derrota' | 'fim_politica';
 
 /** Um marco do caminho profissional/educacional, estruturado (dado para a Linha da Vida). */
 export interface MarcaCaminho {
@@ -904,6 +906,8 @@ export interface Negocio {
   emCasa?: boolean;
   /** Resultado de cada um dos últimos anos (o que se sabe do negócio quando alguém quer comprar). */
   historico?: number[];
+  /** Nas mãos da equipe (ou do sócio): o dono se afastou (um mandato, por exemplo) e só recebe o que sobra. */
+  passivo?: boolean;
 }
 
 /** Alguém que trabalha no seu negócio. */
@@ -977,6 +981,8 @@ export interface Caminhos {
   rural?: VidaRural;
   /** Envolvimento com atividade ilegal (abstrato: risco e consequência, nunca procedimento). */
   envolvimento?: Envolvimento;
+  /** A vida política: da reunião de bairro ao mandato — e à volta para casa. */
+  politica?: VidaPolitica;
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
 }
@@ -1035,6 +1041,52 @@ export interface Envolvimento {
   ganhos: number;
   /** Parou (e desde quando). O passado não some: a exposição ainda pode chegar. */
   parou?: number;
+}
+
+/* ------------------------------------------------------------- Vida política */
+
+/** Cargos eletivos que a vida pode alcançar (presidência fica fora do jogo). */
+export type CargoEletivo = 'vereador' | 'prefeito' | 'deputado_estadual' | 'deputado_federal' | 'senador' | 'governador';
+
+/** Prioridades de mandato ou de bandeira: metas de gestão, nunca ideologia. */
+export type Prioridade = 'saude' | 'educacao' | 'mobilidade' | 'emprego' | 'seguranca' | 'ambiente' | 'contas' | 'cultura';
+
+/**
+ * A vida política como trajetória: não é emprego, não é concurso. As fases
+ * são estados de VIDA diferentes: estar envolvido (reunião, causa, bairro),
+ * filiado, candidato (campanha como processo), com mandato, entre mandatos
+ * (derrotado ou fora do cargo, mas ainda no meio) e fora (encerrada).
+ */
+export interface VidaPolitica {
+  fase: 'envolvido' | 'filiado' | 'candidato' | 'eleito' | 'mandato' | 'entre_mandatos' | 'encerrada';
+  tInicio: number;
+  /** Por onde a pessoa entrou (a biografia, não uma escolha de menu). */
+  origem: 'comunidade' | 'estudantil' | 'sindicato' | 'causa' | 'notoriedade' | 'empresario' | 'servidor' | 'convite' | 'decisao';
+  /** Partido (fictício) e desde quando. */
+  partido?: string;
+  tFiliacao?: number;
+  /** Quanto a pessoa é conhecida, 0..100. */
+  reputacao: number;
+  /** Base de apoio: quem votaria, quem ajudaria, 0..100. */
+  apoio: number;
+  /** Desgaste acumulado (crises, promessas, anos de cargo executivo), 0..100. */
+  desgaste: number;
+  /** A bandeira (fora do cargo) ou a prioridade do mandato. */
+  prioridade?: Prioridade;
+  /** A campanha em curso (registrada; resultado na apuração). */
+  campanha?: { cargo: CargoEletivo; tEleicao: number; financiamento?: 'pequenas' | 'proprio' | 'empresario'; rua?: 'porta' | 'redes' | 'aliancas'; tom?: 'propostas' | 'ataques' | 'cautela'; gasto: number; nota: number; etapa: number };
+  /** Eleito, esperando a posse. */
+  posse?: { cargo: CargoEletivo; t: number };
+  /** O mandato em exercício. */
+  mandato?: { cargo: CargoEletivo; tInicio: number; tFim: number; aprovacao: number; feito: number; crise?: { t: number; tipo: string } };
+  /** Mandatos seguidos no mesmo cargo executivo (para a regra de uma só reeleição). */
+  consecutivos: number;
+  historico: { t: number; cargo: CargoEletivo; resultado: 'eleito' | 'derrotado' | 'renunciou' | 'concluiu' | 'cassado' }[];
+  /** O trabalho que ficou para trás (para voltar depois). */
+  anterior?: { emprego: Emprego; garantido: boolean; negocio?: boolean };
+  /** Inelegível até (Ficha Limpa, abstrato). */
+  inelegivelAte?: number;
+  tFim?: number;
 }
 
 /* ---------------------------------------------------------------------- Vida */

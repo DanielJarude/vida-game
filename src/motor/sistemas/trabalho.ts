@@ -83,7 +83,7 @@ const EMPREGADORES: Record<string, string[]> = {
 
 /* ---------------------------------------------------------- Elegibilidade */
 
-export type ViaDeEntrada = 'curriculo' | 'oportunidade' | 'negocio' | 'promocao';
+export type ViaDeEntrada = 'curriculo' | 'oportunidade' | 'negocio' | 'promocao' | 'eleicao';
 
 const MOTIVO_ENTRADA: Record<string, string> = {
   atleta: 'Ninguém vira atleta profissional mandando currículo: é preciso passar por uma peneira e ser chamado.',
@@ -139,6 +139,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
     return bloqueio('requisito', MOTIVO_ENTRADA[oc.trilha] ?? 'Não se entra por currículo: depende de uma oportunidade concreta.');
   }
   if (oc.entrada === 'negocio' && via !== 'negocio') return bloqueio('requisito', 'É preciso abrir o próprio negócio.');
+  if (oc.entrada === 'eleicao' && via !== 'eleicao') return bloqueio('impossivel', 'Mandato não é vaga: é eleição.');
 
   if (oc.matriculado === 'basica' && !v.educacao.basica && !temEscolaridade(v, 'medio')) {
     return bloqueio('requisito', 'Aprendiz precisa estar na escola (ou ter concluído o médio).');
@@ -423,6 +424,9 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   // Forças Armadas: antiguidade, cursos, teste físico, transferências e reserva (`militar.ts`).
   if (eDasForcas(oc)) { ajustarSalario(v, r, e, oc); processarMilitar(v, r, e, oc); return; }
 
+  // Mandato: subsídio fixo, prazo marcado, sem chefe nem promoção — quem avalia é o eleitor (`politica.ts`).
+  if (e.contrato === 'eletivo') return;
+
   // Contrato com prazo (professor substituto, pós-doutorado): acaba — e aí é procurar o próximo.
   if (oc.duracao && v.t - e.tInicio >= oc.duracao) {
     const nome = nomeOcupacao(v, oc);
@@ -609,7 +613,7 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
  * carreira que já é assim (soldado → cabo, tenente → capitão).
  */
 export function degrausAcima(oc: Ocupacao): Ocupacao[] {
-  return daTrilha(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && !x.formacaoInicial
+  return daTrilha(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && x.entrada !== 'eleicao' && !x.formacaoInicial
     && (x.entrada !== 'oportunidade' || oc.entrada === 'oportunidade' || !!oc.formacaoInicial || eMilitar(oc)));
 }
 
@@ -737,6 +741,7 @@ export function podeAposentar(v: Vida): Veredito {
   const i = idade(v);
   const t = v.trabalho;
   if (t.aposentadoria) return bloqueio('incompativel', 'Já está aposentado.');
+  if (t.atual?.contrato === 'eletivo') return bloqueio('incompativel', 'Primeiro, terminar (ou renunciar a) o mandato.');
   const atual = t.atual ? ocupacao(t.atual.ocupacaoId) : undefined;
   if (atual && eMilitar(atual)) {
     const anos = anosDeServicoMilitar(v);

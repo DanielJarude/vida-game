@@ -40,7 +40,7 @@ export function liquido(bruto: number, contrato: Contrato): number {
 }
 
 /** Contrato gera tempo de contribuição ao INSS? */
-export const contribui = (c: Contrato) => c === 'clt' || c === 'servidor' || c === 'aprendiz' || c === 'autonomo';
+export const contribui = (c: Contrato) => c === 'clt' || c === 'servidor' || c === 'aprendiz' || c === 'autonomo' || c === 'eletivo';
 
 /** Salário bruto de uma ocupação num município (com uma pequena variação individual). */
 export function salarioLocal(oc: Ocupacao, municipioId: string, variacao = 1): number {
@@ -52,4 +52,4 @@ export function salarioLocal(oc: Ocupacao, municipioId: string, variacao = 1): n
 }
 
 /** 13º e férias: CLT e servidor recebem ~13,33 salários por ano. */
-export const mesesPagos = (c: Contrato) => (c === 'clt' || c === 'servidor' ? 13.33 : 12);
+export const mesesPagos = (c: Contrato) => (c === 'clt' || c === 'servidor' || c === 'eletivo' ? 13.33 : 12);

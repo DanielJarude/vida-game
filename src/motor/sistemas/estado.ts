@@ -36,6 +36,7 @@ import { obrigacoesAtrasadas, seguranca } from './dinheiro';
 import { casaApertada } from './imoveis';
 import { pesoDoTrabalhoNaCabeca, sentidoDoTrabalho } from './carreira';
 import { pesoDoClima, pesoDoNegocio, pesoDoRitmo } from './ritmo';
+import { pesoDaPolitica } from './politica';
 
 export { abalar, type Abalo };
 
@@ -212,6 +213,8 @@ export function fatoresHumor(v: Vida): Fator[] {
   if (sentido) out.push({ id: 'sentido', texto: sentido.texto, efeito: sentido.efeito });
   const ritmoH = pesoDoRitmo(v).humor;
   if (ritmoH) out.push({ id: 'ritmo', texto: ritmoH.texto, efeito: ritmoH.efeito });
+  const polH = pesoDaPolitica(v).humor;
+  if (polH) out.push({ id: 'politica', texto: polH.texto, efeito: polH.efeito });
   const climaH = pesoDoClima(v).humor;
   if (climaH) out.push({ id: 'clima', texto: climaH.texto, efeito: climaH.efeito });
   const pa = v.trabalho.pausa;
@@ -259,6 +262,8 @@ export function fatoresCabeca(v: Vida): Fator[] {
     const negocio = pesoDoNegocio(v);
     if (negocio) out.push({ id: 'negocio', texto: negocio.texto, efeito: negocio.efeito });
   }
+  const pol = pesoDaPolitica(v).cabeca;
+  if (pol) out.push({ id: 'politica', texto: pol.texto, efeito: pol.efeito });
   const j = v.justica;
   if (j?.prisao) out.push({ id: 'prisao', texto: idade(v) < 18 ? 'a internação' : 'a vida atrás das grades', efeito: j.prisao.regime === 'fechado' ? 20 : 12 });
   else if (j?.processo) out.push({ id: 'processo', texto: 'o processo que ainda não terminou', efeito: 9 });

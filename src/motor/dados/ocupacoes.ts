@@ -74,7 +74,7 @@ export interface Ocupacao {
    */
   habilidade?: { dominio: Dominio; minimo: number; ouFormacao?: boolean };
   /** Não se entra por currículo: só por uma oportunidade concreta (peneira, convite, contrato). */
-  entrada?: 'oportunidade' | 'negocio';
+  entrada?: 'oportunidade' | 'negocio' | 'eleicao';
   /** Condicionamento mínimo (teste físico). */
   forma?: number;
   /** Como a carreira sobe. Padrão: mérito. */
@@ -107,6 +107,13 @@ type O = Ocupacao;
 const o = (x: O) => x;
 
 export const OCUPACOES: readonly Ocupacao[] = [
+  // ---------------------------------------------------------- Mandatos (só por eleição; nunca vaga de catálogo)
+  o({ id: 'vereador', nome: ['vereador', 'vereadora'], trilha: 'politica', setor: 'publico', nivel: 3, salario: 6000, contrato: 'eletivo', carga: 'integral', idadeMin: 18, entrada: 'eleicao', oferta: 0, estresse: 3, fundamento: 'CF, art. 14, §3º, VI, d (18 anos).' }),
+  o({ id: 'prefeito', nome: ['prefeito', 'prefeita'], trilha: 'politica', setor: 'publico', nivel: 5, salario: 18000, contrato: 'eletivo', carga: 'integral', idadeMin: 21, entrada: 'eleicao', oferta: 0, estresse: 5, jornada: 'longa', fundamento: 'CF, art. 14, §3º, VI, c (21 anos).' }),
+  o({ id: 'deputado_estadual', nome: ['deputado estadual', 'deputada estadual'], trilha: 'politica', setor: 'publico', nivel: 4, salario: 32000, contrato: 'eletivo', carga: 'integral', idadeMin: 21, entrada: 'eleicao', oferta: 0, estresse: 4, fundamento: 'CF, art. 14, §3º, VI, c (21 anos).' }),
+  o({ id: 'deputado_federal', nome: ['deputado federal', 'deputada federal'], trilha: 'politica', setor: 'publico', nivel: 5, salario: 44000, contrato: 'eletivo', carga: 'integral', idadeMin: 21, entrada: 'eleicao', oferta: 0, estresse: 4, jornada: 'fora', fundamento: 'CF, art. 14, §3º, VI, c (21 anos).' }),
+  o({ id: 'senador', nome: ['senador', 'senadora'], trilha: 'politica', setor: 'publico', nivel: 5, salario: 44000, contrato: 'eletivo', carga: 'integral', idadeMin: 35, entrada: 'eleicao', oferta: 0, estresse: 4, jornada: 'fora', fundamento: 'CF, art. 14, §3º, VI, a (35 anos).' }),
+  o({ id: 'governador', nome: ['governador', 'governadora'], trilha: 'politica', setor: 'publico', nivel: 5, salario: 30000, contrato: 'eletivo', carga: 'integral', idadeMin: 30, entrada: 'eleicao', oferta: 0, estresse: 5, jornada: 'longa', fundamento: 'CF, art. 14, §3º, VI, b (30 anos).' }),
   // ---------------------------------------------------------- Informal e rua
   o({ id: 'ambulante', nome: ['vendedor ambulante', 'vendedora ambulante'], trilha: 'informal', setor: 'comercio', nivel: 1, salario: 1300, contrato: 'informal', carga: 'parcial', idadeMin: 16, oferta: 0, estresse: 3 }),
   o({ id: 'diarista', nome: ['diarista', 'diarista'], trilha: 'cuidado', setor: 'cuidado', nivel: 1, salario: 2000, contrato: 'autonomo', carga: 'integral', idadeMin: 18, oferta: 0, estresse: 3, promocao: 'clientela' }),
@@ -416,6 +423,7 @@ export const AFINS: Record<string, string[]> = {
 };
 
 export const ROTULO_TRILHA: Record<string, string> = {
+  politica: 'vida política',
   informal: 'trabalho de rua', cuidado: 'cuidado de pessoas', transporte: 'aplicativos', estrada: 'direção profissional', beleza: 'beleza',
   comercio: 'comércio', vendas: 'vendas', alimentacao: 'cozinha', confeitaria: 'confeitaria', administrativo: 'escritório',
   contabil: 'contabilidade', logistica: 'logística', ti: 'tecnologia', dados: 'dados', enfermagem: 'enfermagem', radiologia: 'radiologia',

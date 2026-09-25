@@ -20,6 +20,7 @@ import { alvoCabeca, alvoHumor, registrarEstado } from './sistemas/estado';
 import { processarCurso, processarEscola, processarOab } from './sistemas/escola';
 import { processarTrabalho } from './sistemas/trabalho';
 import { processarProfissao } from './sistemas/profissao';
+import { processarPolitica } from './sistemas/politica';
 import { processarRotinas } from './sistemas/rotinas';
 import { processarConcursos } from './sistemas/concurso';
 import { processarEsporte, treinoProfissional } from './sistemas/esporte';
@@ -80,6 +81,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarJustica(v, r);
   processarTrabalho(v, r);
   processarProfissao(v, r);
+  processarPolitica(v, r);
   processarTransformacao(v);
   processarRural(v, r);
   processarPausa(v);

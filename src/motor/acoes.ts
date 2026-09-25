@@ -47,6 +47,7 @@ import { irParaReserva, sairDasForcas } from './sistemas/militar';
 import { formalizar } from './conteudo/trajetorias';
 import { disponibilidadeProfissao, executarProfissao, type AcaoProfissaoCmd } from './sistemas/profissao';
 import { NEGOCIOS } from './sistemas/negocio';
+import { disponibilidadePolitica, executarPolitica, type AcaoPoliticaCmd } from './sistemas/politica';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -117,7 +118,9 @@ export type Acao =
   /** Largar o que se faz por fora. */
   | { tipo: 'parar_por_fora' }
   /** A vida profissional: ritmo, conversa de promoção, o negócio, o clube, a farda, a terra, a obra. */
-  | AcaoProfissaoCmd;
+  | AcaoProfissaoCmd
+  /** A vida política: aproximar-se, filiar-se, a comunidade, a candidatura, a crise, a saída. */
+  | AcaoPoliticaCmd;
 
 export { LIMITE_INTERACOES };
 
@@ -152,6 +155,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'abrir_negocio': return podeAbrirNegocio(v, a.negocio);
     case 'profissao': return disponibilidadeProfissao(v, a);
+    case 'politica': return disponibilidadePolitica(v, a);
     case 'postura': return v.educacao.basica || v.educacao.matricula ? PERMITIDO : bloqueio('impossivel', 'Você não está estudando.');
     case 'enem': return podeFazerEnem(v);
     case 'matricular': {
@@ -181,7 +185,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (jaFez(v, `candidatura:${oc.id}`)) return bloqueio('incompativel', 'Você já tentou esta vaga neste ano.');
       return elegibilidade(v, oc);
     }
-    case 'pedir_demissao': return v.trabalho.atual ? PERMITIDO : bloqueio('incompativel', 'Você não tem emprego.');
+    case 'pedir_demissao': return !v.trabalho.atual ? bloqueio('incompativel', 'Você não tem emprego.') : v.trabalho.atual.contrato === 'eletivo' ? bloqueio('impossivel', 'Mandato não se larga com carta de demissão: é renúncia, na vida política.') : PERMITIDO;
     case 'horas_extras':
       if (a.parar) return v.trabalho.horasExtras ? PERMITIDO : bloqueio('incompativel', 'Não há horas extras combinadas.');
       if (!v.trabalho.atual || !['clt', 'servidor'].includes(v.trabalho.atual.contrato)) return bloqueio('incompativel', 'Só para quem tem emprego formal.');
@@ -538,8 +542,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const n = abrirNegocio(v, r, a.negocio);
       return ok(`${n.nome} abriu as portas.`, 'bom');
     }
-    case 'profissao': {
-      const res = executarProfissao(v, r, a);
+    case 'politica': case 'profissao': {
+      const res = a.tipo === 'politica' ? executarPolitica(v, r, a) : executarProfissao(v, r, a);
       if (res.decisao) {
         const d = conteudoPorId(res.decisao);
         if (d && d.tipo === 'decisao') {

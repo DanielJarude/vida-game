@@ -39,7 +39,8 @@ export type ModeloProgressao =
   | 'plataforma'   // sem chefe e sem piso: horas, veículo e o algoritmo
   | 'informal'     // bons e maus meses → ponto, freguesia → formalizar
   | 'rural'        // terra → safra → cooperativa → patrimônio
-  | 'cuidado';     // confiança de famílias → indicação → estabilidade modesta
+  | 'cuidado'      // confiança de famílias → indicação → estabilidade modesta
+  | 'politica';    // comunidade → filiação → campanha → mandato (ou derrota) → e depois
 
 export interface FamiliaCarreira {
   id: string;
@@ -70,6 +71,8 @@ export interface FamiliaCarreira {
 const F = (x: FamiliaCarreira) => x;
 
 export const FAMILIAS: readonly FamiliaCarreira[] = [
+  F({ id: 'politica', nome: 'vida política', trilhas: ['politica'], progressao: 'politica', entrada: 'comunidade, causa, notoriedade ou convite — depois filiação, campanha e voto',
+    degraus: ['envolvimento', 'filiação', 'candidatura', 'mandato', 'reeleição ou outro cargo'], renda: 'estavel', desgaste: { cabeca: 0.55, noite: 0.4, longe: 0.2 }, sentido: ['comunidade', 'lideranca'], saidas: ['publico', 'administrativo', 'educacao', 'direito'] }),
   F({ id: 'varejo', nome: 'comércio e vendas', trilhas: ['comercio', 'vendas', 'posto'], progressao: 'empresa', entrada: 'entrevista, indicação ou temporário de fim de ano',
     degraus: ['balcão', 'vendas', 'supervisão', 'gerência'], renda: 'estavel', desgaste: { cabeca: 0.35, noite: 0.2 }, sentido: ['vendas'],
     automacao: { desde: 2035, ate: 2070, intensidade: 0.35 }, saidas: ['administrativo', 'logistica', 'informal', 'vendas'] }),
