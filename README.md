@@ -33,7 +33,7 @@ src/
     ano.ts               um ano de vida: sistemas → morte → conteúdo
     acoes.ts             comandos do jogador, com disponibilidade graduada
     criacao.ts           nascer (família de origem coerente com classe e lugar)
-    save.ts              save v11, validação, backup, migração dos saves antigos (v5→…→v11)
+    save.ts              save v12, validação, backup, migração dos saves antigos (v5→…→v12)
     dados/               lugares, cursos, ocupações, bens, nomes por geração
     sistemas/            corpo, escola, trabalho, dinheiro, casa, pessoas,
                          romance, família e gestação, rotinas, processos;
@@ -55,9 +55,20 @@ src/
                          militar (três Forças, formação, especialidade,
                          transferências, reserva), justica e ilicito (proposta,
                          risco, processo, prisão, saída), pausa (cuidado não
-                         remunerado), rural (terra, safra, cooperativa, pesca)
+                         remunerado), rural (terra, safra, cooperativa, pesca);
+                         vida profissional: profissao (modo de cada caminho,
+                         ações contextuais, ritmo, clima com a chefia), ritmo
+                         (pesos puros), negocio (caixa, porte, equipe,
+                         estratégia, tombos, venda, fechamento), esporte
+                         (contrato, espaço, foco, suspensão); politica (portas,
+                         filiação fictícia, campanha em etapas, mandato,
+                         reeleição, regras institucionais)
     conteudo/            acontecimentos (o mundo narra) e decisões (você escolhe)
   ui/                    React fino: um estado (a vida), tudo passa pelo motor
+    tokens.css, vida.css sistema visual: tinta e papel, tons por área, padrões além da cor
+    jogo/                as sete áreas: Linha da Vida, Você (com o dinheiro), Pessoas,
+                         Trabalho (a vida profissional agora), Rumo (o que está se
+                         abrindo), Casa, Tempo livre
 scripts/
   sim/                   simulador de vidas com estratégias de jogador
   playtest/              playtest no navegador (Playwright), retratos
@@ -68,6 +79,7 @@ docs/
   FIX-PLAYTEST-2-REPORT.md    FIX pós-playtest 2: Você, relações, processos, UX
   ATT3-VIDA-MATERIAL-REPORT.md  ATT 3: dinheiro, casa, bens, investimentos, pets
   AUDITORIA-CAMINHOS-DE-VIDA-REPORT.md  auditoria e expansão dos caminhos de vida
+  REWORK-VISUAL-TRABALHO-REPORT.md      rework visual, aba Trabalho, negócio, atleta, vida política
 ```
 
 ### Regras que o código garante
@@ -147,6 +159,25 @@ pouco engajado) e a inspeção de diversidade funcional:
 npx esbuild scripts/sim/trajetorias.ts --bundle --platform=node --outfile=/tmp/traj.cjs
 VIDAS=20 SAIDA=/tmp/traj node /tmp/traj.cjs
 npx esbuild scripts/sim/diversidade.ts --bundle --platform=node --outfile=/tmp/div.cjs && node /tmp/div.cjs
+```
+
+Vida profissional e política (11 estratégias: convencional, puxado, preserva,
+negociador, empreendedor, empreendedor cedo, autônomo, atleta forçando, atleta
+preservando, político de carreira, político tardio):
+
+```bash
+npx esbuild scripts/sim/profissao.ts --bundle --platform=node --outfile=/tmp/prof.cjs
+VIDAS=30 SAIDA=/tmp/prof node /tmp/prof.cjs
+```
+
+Playtest visual do rework (Chromium, 320/390/820/1440, 15 cenários, cinza e
+daltonismo simulado) e contraste dos tokens:
+
+```bash
+npx esbuild scripts/playtest/gerarRework.ts --bundle --platform=node --outfile=/tmp/gr.cjs && SP=/tmp/vida-rework node /tmp/gr.cjs
+npm run build && npx vite preview --port 4173 &
+SP=/tmp/vida-rework node scripts/playtest/rework.mjs
+node scripts/playtest/contraste.mjs
 ```
 
 Playtest visual dos caminhos (Chromium, 320/390/820/1440, 14 cenários):
