@@ -17,6 +17,7 @@ import { registrarDevolutiva } from '../sistemas/devolutivas';
 import { novaOportunidade } from '../sistemas/oportunidades';
 import { marcar } from '../sistemas/marcas';
 import { abalar } from '../sistemas/abalo';
+import { climaDe, fatorJornada } from '../sistemas/ritmo';
 import { podeTentar } from '../plausibilidade';
 import { escrever } from '../nucleo';
 import { clamp } from '../rng';
@@ -153,24 +154,31 @@ function resolverNegociacao(c: Ctx, bonus: number, arriscado: boolean): { texto:
   const e = c.v.trabalho.atual;
   if (!e) return { texto: 'Não havia mais o que negociar.', memoria: null, tom: 'ruim' };
   // O que o cargo paga tem limite: quanto mais perto do teto, menor a chance e o tamanho do aumento.
+  // A faixa do cargo vale para a jornada cheia (turmas a mais ou jornada reduzida multiplicam depois).
+  const jornada = fatorJornada(e);
+  const base = e.salario / jornada;
   const teto = tetoSalarial(e);
-  const folga = clamp((teto - e.salario) / (teto * 0.35), 0, 1);
+  const folga = clamp((teto - base) / (teto * 0.35), 0, 1);
   if (folga <= 0) {
     return { texto: 'A resposta foi direta: você já ganha no topo do que esse cargo paga. Para ganhar mais, só mudando de cargo.', memoria: null, tom: 'ruim' };
   }
-  const chance = clamp(((e.desempenho - 40) / 60 + bonus) * (0.4 + 0.6 * folga), 0.05, 0.9);
+  // O clima com a chefia pesa: quem é bem visto ouve "sim" mais vezes.
+  const chance = clamp(((e.desempenho - 40) / 60 + bonus + (climaDe(e) - 50) / 200) * (0.4 + 0.6 * folga), 0.05, 0.9);
   if (c.r.chance(chance)) {
-    const pct = Math.min(arriscado ? 0.15 : 0.08, (teto - e.salario) / e.salario);
-    e.salario = Math.round(e.salario * (1 + pct) / 10) * 10;
+    const pct = Math.min(arriscado ? 0.15 : 0.08, (teto - base) / base);
+    e.salario = Math.round(base * (1 + pct) * jornada / 10) * 10;
     const n = (c.v.fatos['aumentos'] ?? 0) + 1;
     c.v.fatos['aumentos'] = n;
+    c.v.fatos['ultimo_aumento'] = c.v.t;
     return { texto: `A chefia pensou dois dias e aprovou: o salário foi para R$ ${e.salario.toLocaleString('pt-BR')}.`, memoria: n === 1 ? `Negociou um aumento e conseguiu: R$ ${e.salario.toLocaleString('pt-BR')}.` : null, tom: 'bom' };
   }
   if (arriscado && c.r.chance(0.35)) {
     e.desempenho = clamp(e.desempenho - 10);
+    e.clima = clamp(climaDe(e) - 12);
     return { texto: 'A resposta veio seca: "se tem proposta melhor, fique à vontade". O clima azedou.', memoria: null, tom: 'ruim' };
   }
   e.desempenho = clamp(e.desempenho - 2);
+  e.clima = clamp(climaDe(e) - 1);
   return { texto: 'Disseram que não havia orçamento este ano. Talvez no próximo.', memoria: null, tom: 'ruim' };
 }
 

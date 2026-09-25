@@ -353,6 +353,24 @@ export interface Emprego {
   mei?: boolean;
   /** Última atualização profissional (curso que acompanhou uma mudança do ofício). */
   tAtualizacao?: number;
+  /**
+   * O clima no trabalho, 0..100 (50 = nada a dizer): a relação com a chefia,
+   * a equipe ou os clientes. Sobe com reconhecimento e boa conversa; cai com
+   * conflito, recusa, blefe. Nunca aparece como número.
+   */
+  clima?: number;
+  /**
+   * O ritmo escolhido (quem controla a própria carga: turmas, plantões,
+   * agenda, balcão). `puxado` rende mais e cobra da cabeça, do corpo e de
+   * casa; `leve` rende menos e devolve tempo. Ausente = o ritmo de sempre.
+   */
+  ritmo?: 'leve' | 'puxado';
+  /** Anos seguidos no ritmo puxado (o corpo cobra com o tempo). */
+  anosPuxado?: number;
+  /** Quem trabalha por conta: o que já investiu no próprio trabalho (0 nada · 1 equipamento · 2 um ponto/estrutura). */
+  estrutura?: number;
+  /** Quem trabalha por conta: quanto cobra, em relação ao que se cobra por aí. */
+  preco?: 'baixo' | 'alto';
 }
 
 export interface Candidatura {
@@ -809,7 +827,17 @@ export interface CarreiraEsportiva {
   /** Onde o clube fica (a base pode ser longe de casa). */
   municipioId: string;
   tFim?: number;
-  motivoFim?: 'dispensa' | 'lesao' | 'idade' | 'escolha' | 'sem_contrato';
+  motivoFim?: 'dispensa' | 'lesao' | 'idade' | 'escolha' | 'sem_contrato' | 'suspensao';
+  /** No profissional: joga como titular ou espera no banco. */
+  espaco?: 'titular' | 'reserva';
+  /** Até quando vai o contrato atual (a renovação é uma decisão). */
+  contratoAte?: number;
+  /** O jeito de treinar: forçar (evolui mais, machuca mais) ou preservar o corpo. */
+  foco?: 'forcar' | 'preservar';
+  /** Suspenso pelo controle antidoping até (sem jogar, sem contrato). */
+  suspensoAte?: number;
+  /** Aceitou uma substância proibida (o risco de o exame pegar fica). Nunca descreve o quê. */
+  doping?: number;
 }
 
 /** Um projeto artístico coletivo (banda, grupo de teatro, companhia). */
@@ -853,6 +881,38 @@ export interface Negocio {
   resultadoAno?: number;
   /** Soma dos resultados desde a abertura (sem contar a retirada mensal). */
   acumulado?: number;
+  /**
+   * O caixa do negócio: o que sobra fica aqui, o que falta sai daqui (e,
+   * quando acaba, do seu bolso). Não é o seu dinheiro — retirar é decisão.
+   */
+  caixa?: number;
+  /** Tamanho: 1 pequeno · 2 médio (ampliado) · 3 grande. Mais porte, mais freguesia possível — e mais custo. */
+  porte?: 1 | 2 | 3;
+  /** Quantos pontos (unidades) o negócio tem. */
+  unidades?: number;
+  /** Quem trabalha para você: gente de verdade, com nome (vira gente da sua vida). */
+  equipe?: Funcionario[];
+  /** Reputação, 0..100: o que se fala do negócio. Cresce com o tempo bem feito; cai com crise e demissão. */
+  reputacao?: number;
+  /** O jeito de vender (mudar é decisão; cada um cobra e rende de um jeito). */
+  estrategia?: 'bairro' | 'qualidade' | 'preco' | 'online';
+  /** Abriu sem conhecer o ramo (o começo é mais duro, e o fracasso ensina). */
+  semEstrada?: boolean;
+  /** Empréstimo que financiou a abertura (fica, mesmo se o negócio fechar). */
+  dividaId?: string;
+  /** Começou pequeno, em casa (pouco custo, pouca freguesia possível). */
+  emCasa?: boolean;
+  /** Resultado de cada um dos últimos anos (o que se sabe do negócio quando alguém quer comprar). */
+  historico?: number[];
+}
+
+/** Alguém que trabalha no seu negócio. */
+export interface Funcionario {
+  pessoaId: string;
+  tInicio: number;
+  /** O que faz ("atendente", "ajudante de cozinha"). */
+  funcao: string;
+  salario: number;
 }
 
 /** Uma etapa de um processo seletivo em andamento (uma pergunta, um momento do teste). */
@@ -1002,7 +1062,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 11;
+  versao: 12;
   id: string;
   rng: number;
   seq: number;

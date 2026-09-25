@@ -35,7 +35,7 @@ import { aptidao, MATERIAS } from './sistemas/frentes';
 import { modeloRotina } from './sistemas/rotinas';
 import { CURSOS_NPC } from './sistemas/filhos';
 
-export const VERSAO_SAVE = 11;
+export const VERSAO_SAVE = 12;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -97,12 +97,24 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
+  if (d.versao === 11) {
+    // v11 → v12: vida profissional (ritmo, clima, empresa com caixa, porte e equipe, atleta com contrato).
+    const erro11 = validar(d, 11);
+    if (erro11) return { tipo: 'invalido', motivo: erro11 };
+    try {
+      const v = migrarV11(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
   if (d.versao === 10) {
     // v10 → v11: caminhos de vida (carreira militar, campo, justiça, cuidado, MEI, ondas do trabalho).
     const erro10 = validar(d, 10);
     if (erro10) return { tipo: 'invalido', motivo: erro10 };
     try {
-      const v = migrarV10(d as unknown as Vida);
+      const v = migrarV11(migrarV10(d as unknown as Vida));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -114,7 +126,7 @@ export function interpretar(bruto: string): Leitura {
     const erro9 = validar(d, 9);
     if (erro9) return { tipo: 'invalido', motivo: erro9 };
     try {
-      const v = migrarV10(migrarV9(d as unknown as Vida));
+      const v = migrarV11(migrarV10(migrarV9(d as unknown as Vida)));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -126,7 +138,7 @@ export function interpretar(bruto: string): Leitura {
     const erro8 = validar(d, 8);
     if (erro8) return { tipo: 'invalido', motivo: erro8 };
     try {
-      const v = migrarV10(migrarV9(migrarV8(d as unknown as Vida)));
+      const v = migrarV11(migrarV10(migrarV9(migrarV8(d as unknown as Vida))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -138,7 +150,7 @@ export function interpretar(bruto: string): Leitura {
     const erro7 = validar(d, 7);
     if (erro7) return { tipo: 'invalido', motivo: erro7 };
     try {
-      const v = migrarV10(migrarV9(migrarV8(migrarV7(d as unknown as Vida))));
+      const v = migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(d as unknown as Vida)))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -150,7 +162,7 @@ export function interpretar(bruto: string): Leitura {
     const erro6 = validarBase(d);
     if (erro6) return { tipo: 'invalido', motivo: erro6 };
     try {
-      const v = migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida)))));
+      const v = migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -161,7 +173,7 @@ export function interpretar(bruto: string): Leitura {
     try {
       const v5 = migrarV5(d);
       if (!v5) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
-      const v = migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(v5)))));
+      const v = migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(v5))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -226,6 +238,15 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     const t = d.trabalho as Vida['trabalho'];
     if (t.pausa && (!finito(t.pausa.tInicio) || typeof t.pausa.motivo !== 'string')) return 'Pausa inválida.';
   }
+  if (versao >= 12) {
+    const e = (d.trabalho as Vida['trabalho']).atual;
+    if (e && ((e.clima !== undefined && !finito(e.clima)) || (e.estrutura !== undefined && !finito(e.estrutura)) || (e.ritmo !== undefined && e.ritmo !== 'leve' && e.ritmo !== 'puxado'))) return 'Emprego inválido.';
+    const n = (d.caminhos as Vida['caminhos']).negocio;
+    if (n && (!finito(n.caixa) || !finito(n.porte) || !finito(n.unidades) || !finito(n.reputacao) || !Array.isArray(n.equipe))) return 'Negócio inválido.';
+    if (n?.equipe?.some(f => !f || typeof f.pessoaId !== 'string' || !finito(f.salario) || !(d.pessoas as Record<string, unknown>)[f.pessoaId])) return 'Equipe do negócio aponta para pessoa inexistente.';
+    const es = (d.caminhos as Vida['caminhos']).esporte;
+    if (es && es.contratoAte !== undefined && !finito(es.contratoAte)) return 'Carreira esportiva inválida.';
+  }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -237,6 +258,39 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (p.genitores && p.genitores.some(g => g !== 'eu' && !pessoas[g])) return 'Árvore da família aponta para pessoa inexistente.';
   }
   return null;
+}
+
+/* ================================================================== v11 → v12 */
+
+/**
+ * Migra um save v11 (caminhos de vida) para v12 (vida profissional), sem
+ * inventar passado:
+ *  - negócio aberto ganha caixa vazio (o que sobrou até aqui já foi para a
+ *    sua conta, como era a regra), porte pequeno, uma unidade, nenhuma
+ *    equipe registrada (o motor antigo não tinha funcionários) e reputação
+ *    igual ao movimento de hoje (é o que se sabia dele);
+ *  - quem é atleta profissional ganha o espaço no time pelo que joga hoje e
+ *    um contrato que vence no próximo biênio contado desde a estreia;
+ *  - ritmo, clima, estrutura e preço começam ausentes (= o de sempre).
+ */
+export function migrarV11(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 12;
+  const n = x.caminhos.negocio;
+  if (n) {
+    n.caixa ??= 0;
+    n.porte ??= 1;
+    n.unidades ??= n.estado === 'fechado' ? 0 : 1;
+    n.equipe ??= [];
+    n.reputacao ??= Math.round(Math.max(10, Math.min(80, n.clientela)));
+  }
+  const es = x.caminhos.esporte;
+  if (es?.fase === 'profissional') {
+    const h = x.caminhos.frentes[es.modalidade]?.habilidade ?? 60;
+    es.espaco ??= h >= 76 ? 'titular' : 'reserva';
+    if (es.contratoAte === undefined) { let fim = es.tFase + 24; while (fim <= x.t) fim += 24; es.contratoAte = fim; }
+  }
+  return x;
 }
 
 /* ================================================================== v10 → v11 */
@@ -590,7 +644,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 11,
+    versao: 7 as unknown as 12,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,

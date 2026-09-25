@@ -816,14 +816,14 @@ describe('renda com teto: o bug do milionário por aumento', () => {
 
 describe('save v10', () => {
   it('saves v9 reais migram para v10: reserva e ações viram aplicações, valores preservados, a vida continua 5 anos e volta a ler', () => {
-    expect(VERSAO_SAVE).toBe(11);
+    expect(VERSAO_SAVE).toBe(12);
     for (const nome of ['save-v9-adolescente-pet.json', 'save-v9-jovem-carro.json', 'save-v9-familia-financiada.json', 'save-v9-endividado.json', 'save-v9-aposentada-acoes.json']) {
       const antes = JSON.parse(fixture(nome));
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');
       if (r.tipo !== 'ok') continue;
       const v = r.vida;
-      expect(v.versao).toBe(11);
+      expect(v.versao).toBe(12);
       expect(r.migrado).toBe(true);
       expect(v.financas.conta).toBe(antes.financas.conta);
       const aplicado = v.financas.investimentos.reduce((s, a) => s + a.valor, 0);
@@ -845,7 +845,7 @@ describe('save v10', () => {
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');
       if (r.tipo === 'ok') {
-        expect(r.vida.versao).toBe(11);
+        expect(r.vida.versao).toBe(12);
         expect(Array.isArray(r.vida.financas.investimentos)).toBe(true);
         let w = r.vida; if (w.momento) w = responder(w);
         w = avancarAno(w).vida;

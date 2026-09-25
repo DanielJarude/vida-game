@@ -45,6 +45,8 @@ import { encerrarPausa, iniciarPausa, podeReduzir } from './sistemas/pausa';
 import { parar as pararIlicito } from './sistemas/ilicito';
 import { irParaReserva, sairDasForcas } from './sistemas/militar';
 import { formalizar } from './conteudo/trajetorias';
+import { disponibilidadeProfissao, executarProfissao, type AcaoProfissaoCmd } from './sistemas/profissao';
+import { NEGOCIOS } from './sistemas/negocio';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -113,7 +115,9 @@ export type Acao =
   /** Encerrar a pausa de cuidado: voltar à jornada inteira ou ao mercado. */
   | { tipo: 'voltar_mercado' }
   /** Largar o que se faz por fora. */
-  | { tipo: 'parar_por_fora' };
+  | { tipo: 'parar_por_fora' }
+  /** A vida profissional: ritmo, conversa de promoção, o negócio, o clube, a farda, a terra, a obra. */
+  | AcaoProfissaoCmd;
 
 export { LIMITE_INTERACOES };
 
@@ -147,6 +151,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return PERMITIDO;
     }
     case 'abrir_negocio': return podeAbrirNegocio(v, a.negocio);
+    case 'profissao': return disponibilidadeProfissao(v, a);
     case 'postura': return v.educacao.basica || v.educacao.matricula ? PERMITIDO : bloqueio('impossivel', 'Você não está estudando.');
     case 'enem': return podeFazerEnem(v);
     case 'matricular': {
@@ -522,8 +527,29 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok(res.texto, res.tom ?? 'neutro');
     }
     case 'abrir_negocio': {
+      // Abrir é um processo: com o guardado, pequeno, emprestado, com sócio (`conteudo/profissao`).
+      v.fatos['abrir_tipo'] = Math.max(0, NEGOCIOS.findIndex(n => n.id === a.negocio));
+      const d = conteudoPorId('neg_abrir');
+      if (d && d.tipo === 'decisao') {
+        const socio = vinculosVivos(v).filter(x => !x.p.especie && x.p.renda >= 2500 && idadePessoa(v, x.p) >= 21 && !x.vin.romance && (x.vin.estagio === 'amigo_proximo' || x.vin.estagio === 'amigo' || x.vin.parentesco === 'irmao')).sort((p, q) => q.vin.confianca - p.vin.confianca)[0];
+        abrirDecisao(v, d, contexto(v, r, socio ? { amigo: socio.p } : {}));
+        return {};
+      }
       const n = abrirNegocio(v, r, a.negocio);
       return ok(`${n.nome} abriu as portas.`, 'bom');
+    }
+    case 'profissao': {
+      const res = executarProfissao(v, r, a);
+      if (res.decisao) {
+        const d = conteudoPorId(res.decisao);
+        if (d && d.tipo === 'decisao') {
+          const p: Record<string, Pessoa> = {};
+          for (const [papel, id] of Object.entries(res.papeis ?? {})) if (v.pessoas[id]?.vivo) p[papel] = v.pessoas[id];
+          abrirDecisao(v, d, contexto(v, r, p));
+          return {};
+        }
+      }
+      return ok(res.texto ?? 'Feito.', res.tom ?? 'neutro');
     }
     case 'postura':
       v.educacao.postura = a.valor;
@@ -578,7 +604,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'pedir_demissao': {
       if (eDasForcas(ocupacao(v.trabalho.atual!.ocupacaoId))) { const ind = sairDasForcas(v); if (ind) pagarComGuardado(v, Math.min(ind, disponivel(v))); return ok(ind ? 'Você saiu da Força — e indenizou a formação.' : 'Você saiu da Força.'); }
-      const nome = nomeOcupacao(v, ocupacao(v.trabalho.atual!.ocupacaoId));
+      const atual = v.trabalho.atual!;
+      const nome = nomeOcupacao(v, ocupacao(atual.ocupacaoId));
+      // Largar a estabilidade (concurso, anos de casa) é comportamento; trocar de emprego comum, não.
+      if (atual.contrato === 'servidor' || (atual.contrato === 'clt' && v.t - atual.tInicio >= 120)) aplicarPersonalidade(v, 'acao:largar_estabilidade', { independencia: 1, coragem: 1 });
       encerrarEmprego(v, 'pediu demissão');
       escrever(v, { texto: `Pediu demissão do trabalho de ${nome}.`, relevancia: 'marco', tema: 'trabalho', escolha: true });
       return ok('Você está sem emprego agora.');

@@ -172,6 +172,9 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
   const emp = contratar(v, r, oc, 'oportunidade');
   emp.empregador = e.nivel >= 2 ? DIVISAO[e.nivel] : `o ${e.clube}`;
   emp.salario = (e.modalidade === 'futebol' ? SALARIO_FUTEBOL : SALARIO_OUTROS)[e.nivel];
+  // O primeiro contrato é curto; o espaço no time depende do que se joga.
+  e.contratoAte = v.t + 24;
+  e.espaco = habilidade(v, e.modalidade) >= 72 + e.nivel * 2 ? 'titular' : 'reserva';
   const texto = e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, aos ${idade(v)}.` : `Virou atleta profissional de ${NOME_MOD[e.modalidade]}, aos ${idade(v)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'profissional', texto, 3, { dominio: e.modalidade, ocupacaoId: oc.id });
@@ -181,24 +184,49 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
 function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   const i = idade(v);
   const emp = v.trabalho.atual;
+  const f = v.caminhos.frentes[e.modalidade];
+  // Suspenso pelo antidoping: parado, sem contrato, até a pena acabar.
+  if (e.suspensoAte !== undefined) {
+    if (v.t < e.suspensoAte) return;
+    e.suspensoAte = undefined;
+    const h = habilidade(v, e.modalidade);
+    if (i <= 31 && h >= 66) {
+      novaOportunidade(v, { tipo: 'convite', ocupacaoId: e.modalidade === 'futebol' ? 'jogador_futebol' : 'atleta', dominio: e.modalidade, meses: 12, chave: 'volta_suspensao', titulo: 'Voltar a jogar', texto: 'Acabou a suspensão. Um clube pequeno topa dar uma chance — salário baixo, olhar desconfiado.', bonus: 1 });
+      escrever(v, { texto: 'A suspensão acabou. O nome ficou marcado, mas um clube pequeno ligou.', relevancia: 'biografia', tema: 'trabalho' });
+    } else encerrarCarreira(v, e, 'suspensao');
+    return;
+  }
   if (!emp || !['jogador_futebol', 'atleta'].includes(emp.ocupacaoId)) { e.fase = 'encerrada'; e.tFim = v.t; e.motivoFim = e.motivoFim ?? 'escolha'; return; }
-  const h = habilidade(v, e.modalidade);
   const tabela = e.modalidade === 'futebol' ? SALARIO_FUTEBOL : SALARIO_OUTROS;
-  // Lesões ficam mais prováveis com a idade.
-  if (r.chance(0.07 + Math.max(0, i - 26) * 0.012)) {
+  const forcar = e.foco === 'forcar';
+  const preservar = e.foco === 'preservar';
+  // O jeito de treinar: forçar evolui (e machuca); preservar segura o corpo (e a evolução).
+  if (f) {
+    if (forcar) f.habilidade = clamp(f.habilidade + 1.5);
+    if (preservar && i >= 28) f.habilidade = clamp(f.habilidade - 0.5);
+    // O que não aparece no exame (até aparecer): rende em campo, cobra do corpo.
+    if (e.doping) { f.habilidade = clamp(f.habilidade + 2); v.corpo.saude = clamp(v.corpo.saude - 2.5); }
+  }
+  if (e.doping && r.chance(0.24)) { flagrado(v, e); return; }
+  // Lesões ficam mais prováveis com a idade — e com o treino forçado.
+  const lesao = (0.07 + Math.max(0, i - 26) * 0.012) * (forcar ? 1.6 : preservar ? 0.6 : 1) * (e.doping ? 1.3 : 1);
+  if (r.chance(lesao)) {
     e.lesoes += 1;
-    const grave = r.chance(0.2);
-    const f = v.caminhos.frentes[e.modalidade];
+    const grave = r.chance(forcar ? 0.28 : 0.2);
     if (f) f.habilidade = clamp(f.habilidade - (grave ? 10 : 4));
     escrever(v, { texto: grave ? 'Rompeu o ligamento do joelho: cirurgia e quase um ano fora.' : 'Uma lesão muscular tirou algumas semanas de jogo.', relevancia: grave ? 'biografia' : 'cotidiano', tema: 'saude', tom: 'ruim' });
+    if (grave) { e.espaco = 'reserva'; v.corpo.saude = clamp(v.corpo.saude - 6); }
     if (grave && e.lesoes >= 3 && i >= 27 && r.chance(0.5)) { encerrarCarreira(v, e, 'lesao'); return; }
   }
+  const h = habilidade(v, e.modalidade);
   // Clube sobe e desce com o jogo.
   const alvo = nivelPelaHabilidade(h);
   if (alvo > e.nivel && r.chance(0.35)) {
     e.nivel = (e.nivel + 1) as 1 | 2 | 3 | 4;
     emp.empregador = DIVISAO[e.nivel];
     emp.salario = tabela[e.nivel];
+    e.contratoAte = v.t + 36;
+    e.espaco = 'reserva';
     const texto = `Foi negociado com ${DIVISAO[e.nivel]}.`;
     escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'promocao', texto, e.nivel >= 3 ? 3 : 2, { dominio: e.modalidade });
@@ -206,15 +234,35 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     e.nivel = (e.nivel - 1) as 1 | 2 | 3 | 4;
     emp.empregador = DIVISAO[e.nivel];
     emp.salario = tabela[e.nivel];
+    e.contratoAte = v.t + 24;
     escrever(v, { texto: `Sem espaço no time, foi para ${DIVISAO[e.nivel]}.`, relevancia: 'cotidiano', tema: 'trabalho' });
-  } else if (h < 70 && r.chance(0.3)) {
-    escrever(v, { texto: 'Passou a temporada mais no banco do que em campo.', relevancia: 'cotidiano', tema: 'trabalho' });
   }
-  // Fim de contrato sem renovação.
-  if (r.chance(0.12) && (h < 70 || i >= 30) && r.chance(0.5)) { encerrarCarreira(v, e, 'sem_contrato'); return; }
-  // O corpo encerra a carreira cedo.
-  const limite = e.modalidade === 'futebol' ? 33 : 31;
+  // Titular ou banco: o que se joga, a conversa com o treinador, o nível do clube.
+  const conversa = v.fatos['esp_treinador_ok'] !== undefined && v.t - v.fatos['esp_treinador_ok'] <= 12 ? 3 : 0;
+  const antes = e.espaco;
+  e.espaco = h + conversa >= 72 + e.nivel * 2 ? 'titular' : 'reserva';
+  if (antes === 'titular' && e.espaco === 'reserva') { escrever(v, { texto: 'Perdeu a posição: a temporada foi mais de banco do que de campo.', relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' }); abalar(v, 'perder a posição no time', -4, 3); }
+  else if (antes === 'reserva' && e.espaco === 'titular') escrever(v, { texto: 'Ganhou a posição: titular a temporada inteira.', relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+  // O contrato vence: renovar é conversa (`esp_renovacao`).
+  e.contratoAte ??= v.t + 24;
+  if (v.t >= e.contratoAte) v.fatos['esp_renovacao'] = v.t;
+  // O corpo encerra a carreira cedo (quem se preservou, dura um pouco mais).
+  const limite = (e.modalidade === 'futebol' ? 33 : 31) + (preservar ? 2 : 0) - (forcar ? 1 : 0) - (e.lesoes >= 4 ? 1 : 0);
   if (i >= limite && r.chance(0.2 + (i - limite) * 0.15)) { encerrarCarreira(v, e, 'idade'); return; }
+}
+
+/** O exame pegou: suspensão, contrato rescindido, o nome nos jornais. */
+function flagrado(v: Vida, e: CarreiraEsportiva): void {
+  e.doping = undefined;
+  e.suspensoAte = v.t + 24;
+  e.espaco = undefined;
+  if (v.trabalho.atual && ['jogador_futebol', 'atleta'].includes(v.trabalho.atual.ocupacaoId)) encerrarEmprego(v, 'suspensão por doping');
+  const texto = `O controle antidoping deu positivo. Dois anos de suspensão, contrato rescindido, o nome no noticiário esportivo.`;
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+  marcar(v, 'fracasso', 'Suspenso por doping.', 3, { dominio: e.modalidade });
+  marcarFato(v, 'suspenso_doping');
+  abalar(v, 'a suspensão por doping', -14, 14);
+  for (const p of pais(v)) { const vin = v.vinculos[p.id]; if (vin) vin.confianca = clamp(vin.confianca - 8); }
 }
 
 export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNullable<CarreiraEsportiva['motivoFim']>): void {

@@ -20,6 +20,7 @@ import { curso } from '../dados/cursos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { listaNatural } from '../texto';
 import { modeloRotina, nivelDa, nivelModelo } from './rotinas';
+import { pesoDoRitmoNaSemana, ritmoDe } from './ritmo';
 
 export interface Compromisso {
   id: string;
@@ -78,8 +79,10 @@ export function semana(v: Vida): Semana {
     if (oc?.jornada === 'fora') peso += 0.75;
     // Plantão: menos dias, mas noites e fins de semana (um pouco mais que o expediente).
     if (oc?.jornada === 'plantao') peso += 0.25;
+    peso = Math.max(0.5, peso + pesoDoRitmoNaSemana(e));
     if (e.formacaoAte) peso = 2;
-    fixos.push({ id: 'trabalho', rotulo: e.formacaoAte ? `Curso de formação (${nome})` : `Trabalho (${nome}${oc?.jornada === 'fora' ? ', dias fora de casa' : oc?.jornada === 'longa' ? ', jornada longa' : oc?.jornada === 'plantao' ? ', em plantões' : e.reduzida ? ', jornada reduzida' : e.carga === 'parcial' ? ', meio período' : ''})`, peso, tipo: 'trabalho' });
+    const ritmo = ritmoDe(e) === 'puxado' ? ', ritmo puxado' : ritmoDe(e) === 'leve' ? ', ritmo leve' : '';
+    fixos.push({ id: 'trabalho', rotulo: e.formacaoAte ? `Curso de formação (${nome})` : `Trabalho (${nome}${oc?.jornada === 'fora' ? ', dias fora de casa' : oc?.jornada === 'longa' ? ', jornada longa' : oc?.jornada === 'plantao' ? ', em plantões' : e.reduzida ? ', jornada reduzida' : e.carga === 'parcial' ? ', meio período' : ''}${ritmo})`, peso, tipo: 'trabalho' });
     if (v.trabalho.horasExtras) fixos.push({ id: 'horas_extras', rotulo: 'Horas extras', peso: 0.5, tipo: 'trabalho' });
   }
   const b = v.educacao.basica;

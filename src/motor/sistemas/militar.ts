@@ -141,6 +141,14 @@ export function aoEntrarNasForcas(v: Vida, r: Rng, oc: Ocupacao): void {
 }
 
 const MUNIC_INDICE = (id: string) => [...GUARNICOES.exercito, ...GUARNICOES.marinha, ...GUARNICOES.aeronautica, 'juiz-de-fora-mg', 'volta-redonda-rj', 'sao-jose-dos-campos-sp', 'rio-de-janeiro-rj', 'sao-paulo-sp'].indexOf(id);
+/** A guarnição da Força mais perto de uma cidade (a própria, uma do mesmo estado ou nenhuma). */
+export function guarnicaoPerto(forca: Forca, municipioId: string): string | undefined {
+  const g = GUARNICOES[forca];
+  if (g.includes(municipioId)) return municipioId;
+  const uf = municipio(municipioId).uf;
+  return g.find(x => municipio(x).uf === uf);
+}
+export const indiceDaGuarnicao = (id: string) => MUNIC_INDICE(id);
 export const MUNIC_POR_INDICE = (n: number) => [...GUARNICOES.exercito, ...GUARNICOES.marinha, ...GUARNICOES.aeronautica, 'juiz-de-fora-mg', 'volta-redonda-rj', 'sao-jose-dos-campos-sp', 'rio-de-janeiro-rj', 'sao-paulo-sp'][n];
 
 /** Fim da formação: a especialidade (decisão) e a primeira guarnição. */
@@ -228,6 +236,14 @@ export function processarMilitar(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): voi
 
   // Movimentação: de tempos em tempos, outra cidade. (Um aviso que não virou decisão expira.)
   for (const k of ['mil_transferencia', 'mil_curso_oferta']) if (v.fatos[k] !== undefined && v.t - v.fatos[k] >= 12) delete v.fatos[k];
+  // Um pedido de movimentação (para perto da família) às vezes é atendido — e a vida pergunta de novo.
+  const pedido = v.fatos['mil_pedido_destino'];
+  if (pedido !== undefined && v.fatos['mil_transferencia'] === undefined && MUNIC_POR_INDICE(pedido) !== m.guarnicao && r.chance(0.45)) {
+    v.fatos['mil_transferencia'] = v.t;
+    v.fatos['mil_destino'] = pedido;
+    v.fatos['mil_foi_pedido'] = v.t;
+    delete v.fatos['mil_pedido_destino'];
+  }
   if (v.t - m.tGuarnicao >= 30 && r.chance(0.32) && v.fatos['mil_transferencia'] === undefined) {
     const opcoes = GUARNICOES[m.forca].filter(g => g !== m.guarnicao && g !== v.moradia.municipioId);
     v.fatos['mil_transferencia'] = v.t;

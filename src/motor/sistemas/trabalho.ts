@@ -42,6 +42,7 @@ import { antecedenteAdulto, penaDeAntecedentes } from './justica';
 import { fatorDaEpoca, riscoDaEpoca } from './carreira';
 import { familiaDaTrilha } from '../dados/carreiras';
 import { aoEntrarNasForcas, aoFormarNasForcas, horizonteMilitar, processarMilitar } from './militar';
+import { climaDe, deltaDeFreguesia, fatorDeFreguesia, fatorJornada, ritmoDe } from './ritmo';
 
 export const nomeOcupacao = (v: Vida, oc: Ocupacao) => nomeDoPosto(oc.id, v.caminhos?.militar?.forca, ge(v) === 'feminino') ?? (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
 export const nomeOcupacaoId = (v: Vida, id: string) => nomeOcupacao(v, ocupacao(id));
@@ -344,10 +345,13 @@ function clientelaInicial(v: Vida, oc: Ocupacao): number {
   return Math.round(clamp(12 + exp / 8 + (hab - 50) / 3, 8, 55));
 }
 
-/** Renda de quem trabalha por conta: da freguesia, não do cargo. */
-export function rendaDeClientela(v: Vida, oc: Ocupacao, clientela: number): number {
+/**
+ * Renda de quem trabalha por conta: da freguesia, não do cargo. Com o
+ * emprego em mãos, entram o ritmo, o preço e o que foi investido no trabalho.
+ */
+export function rendaDeClientela(v: Vida, oc: Ocupacao, clientela: number, e?: Emprego): number {
   const ref = salarioLocal(oc, v.moradia.municipioId);
-  return Math.round(ref * (0.4 + clientela / 100 * 1.05) / 10) * 10;
+  return Math.round(ref * (0.4 + clientela / 100 * 1.05) * fatorDeFreguesia(e) / 10) * 10;
 }
 
 /* ---------------------------------------------------------- Trabalho → ofício */
@@ -392,8 +396,10 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   // Desempenho: disciplina, estresse, saúde, esforço, os anos no ofício — e o ofício, quando o trabalho é um.
   const oficio = oc.habilidade ? (habilidade(v, oc.habilidade.dominio) - oc.habilidade.minimo) * 0.25 : 0;
   const estrada = Math.min(8, (v.trabalho.experiencia[oc.trilha] ?? 0) / 18);
+  // O ritmo e o clima também contam: quem puxa entrega mais; quem briga com a chefia, menos.
   const alvo = 54 + estrada + (v.mente.cognicao - 50) * 0.2 + v.personalidade.tracos.disciplina * 0.25 + oficio
-    + (t.horasExtras ? 10 : 0) - Math.max(0, v.mente.estresse - 65) * 0.4 - Math.max(0, 50 - v.corpo.saude) * 0.3;
+    + (t.horasExtras ? 10 : 0) - Math.max(0, v.mente.estresse - 65) * 0.4 - Math.max(0, 50 - v.corpo.saude) * 0.3
+    + (ritmoDe(e) === 'puxado' ? 6 : ritmoDe(e) === 'leve' ? -3 : 0) + (climaDe(e) - 50) * 0.08;
   e.desempenho = clamp(Math.round(e.desempenho * 0.5 + alvo * 0.5 + r.normal() * 8));
 
   // Estresse do cargo
@@ -481,6 +487,18 @@ export function tetoSalarial(e: Emprego): number {
 
 function ajustarSalario(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
   if (e.clientela !== undefined) return;
+  // A faixa do cargo vale para a jornada cheia: turmas a mais ou jornada reduzida multiplicam depois.
+  const jornada = fatorJornada(e);
+  if (jornada !== 1) {
+    e.salario = Math.round(e.salario / jornada);
+    ajustarSalarioCheio(v, r, e, oc);
+    e.salario = Math.round(e.salario * jornada / 10) * 10;
+    return;
+  }
+  ajustarSalarioCheio(v, r, e, oc);
+}
+
+function ajustarSalarioCheio(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
   const ref = salarioLocal(oc, e.municipioId);
   const teto = tetoSalarial(e);
   const piso = ref * 0.85;
@@ -508,9 +526,9 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   const setor = forcaDoSetor(e.municipioId, oc.setor, anoDe(v.t));
   const porte = nivelDeOferta(e.municipioId);
   const delta = (hab - 50) / 12 + Math.min(4, exp / 3) + v.personalidade.tracos.sociabilidade / 40 + (setor - 1) * 8 + (porte - 1.5) * 1.5
-    + ajusteClientela(v) - Math.max(0, (e.clientela ?? 0) - 70) / 6 + r.normal() * 6 + 1;
+    + ajusteClientela(v) - Math.max(0, (e.clientela ?? 0) - 70) / 6 + r.normal() * 6 + 1 + deltaDeFreguesia(e, hab);
   e.clientela = Math.round(clamp((e.clientela ?? 20) + delta, 0, 100));
-  e.salario = rendaDeClientela(v, oc, e.clientela);
+  e.salario = rendaDeClientela(v, oc, e.clientela, e);
   if (e.clientela <= 6 && v.t - e.tInicio >= 24) {
     escrever(v, { texto: `O trabalho como ${nomeOcupacao(v, oc)} foi minguando até não pagar mais as contas.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', `Parou de trabalhar como ${nomeOcupacao(v, oc)}: faltou freguesia.`, 2, { trilha: oc.trilha, ocupacaoId: oc.id });
@@ -534,7 +552,7 @@ function passoDeClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
   e.ocupacaoId = x.id;
   e.tPosto = v.t;
   e.clientela = Math.round((e.clientela ?? 50) * 0.8);
-  e.salario = rendaDeClientela(v, x, e.clientela);
+  e.salario = rendaDeClientela(v, x, e.clientela, e);
   const texto = `Com a clientela que construiu como ${antes}, passou a ${nomeOcupacao(v, x)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
   marcar(v, 'promocao', texto, 3, { trilha: x.trilha, ocupacaoId: x.id });
@@ -561,7 +579,8 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   const i = idade(v);
   const epoca = 1 - sobraNaEpoca(oc.declinio, anoDe(v.t));
   const base = e.contrato === 'servidor' ? 0.002 : e.contrato === 'militar' ? 0.003 : e.desempenho < 35 ? 0.3 : e.contrato === 'clt' ? 0.045 : 0.03;
-  const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 + riscoDaEpoca(oc, anoDe(v.t)) : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
+  const clima = climaDe(e) < 30 ? 1.7 : climaDe(e) > 70 ? 0.8 : 1;
+  const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 + riscoDaEpoca(oc, anoDe(v.t)) : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) * clima : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
   if (!r.chance(risco)) return false;
   const anos = Math.max(1, Math.floor((v.t - e.tInicio) / 12));
   const noPosto = Math.max(1, Math.floor((v.t - (e.tPosto ?? e.tInicio)) / 12));
@@ -608,7 +627,9 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
     chance = 0.75;
   } else {
     if (anosNoPosto < (oc.anosNoPosto ?? 2) || e.desempenho < 62) return;
-    chance = (0.22 + (e.desempenho - 62) / 100) * (0.6 + forcaDoSetor(e.municipioId, proximo.setor, anoDe(v.t)) * 0.4);
+    chance = (0.22 + (e.desempenho - 62) / 100) * (0.6 + forcaDoSetor(e.municipioId, proximo.setor, anoDe(v.t)) * 0.4) * (0.7 + climaDe(e) / 100 * 0.6);
+    // Quem conversou sobre a promoção (e ouviu que dava) entra na frente na próxima vaga.
+    if (v.fatos['promocao_pedida'] !== undefined && v.t - v.fatos['promocao_pedida'] <= 24) chance *= 1.5;
     if (proximo.nivel >= 4 && nivelDeOferta(e.municipioId) === 0) chance *= 0.6;
     if (emRecessao(v)) chance *= 0.4;
   }

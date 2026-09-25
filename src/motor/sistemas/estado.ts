@@ -35,6 +35,7 @@ import { pesoDoLuto } from './luto';
 import { obrigacoesAtrasadas, seguranca } from './dinheiro';
 import { casaApertada } from './imoveis';
 import { pesoDoTrabalhoNaCabeca, sentidoDoTrabalho } from './carreira';
+import { pesoDoClima, pesoDoNegocio, pesoDoRitmo } from './ritmo';
 
 export { abalar, type Abalo };
 
@@ -209,6 +210,10 @@ export function fatoresHumor(v: Vida): Fator[] {
   if (i >= 18 && !v.trabalho.atual && !v.trabalho.aposentadoria && !v.educacao.matricula && !v.trabalho.pausa && !v.justica?.prisao) out.push({ id: 'sem_trabalho', texto: 'estar sem trabalho', efeito: -6 });
   const sentido = sentidoDoTrabalho(v);
   if (sentido) out.push({ id: 'sentido', texto: sentido.texto, efeito: sentido.efeito });
+  const ritmoH = pesoDoRitmo(v).humor;
+  if (ritmoH) out.push({ id: 'ritmo', texto: ritmoH.texto, efeito: ritmoH.efeito });
+  const climaH = pesoDoClima(v).humor;
+  if (climaH) out.push({ id: 'clima', texto: climaH.texto, efeito: climaH.efeito });
   const pa = v.trabalho.pausa;
   if (pa) {
     const p = pa.pessoaId ? v.pessoas[pa.pessoaId] : undefined;
@@ -247,6 +252,12 @@ export function fatoresCabeca(v: Vida): Fator[] {
     const t = pesoDoTrabalhoNaCabeca(v);
     if (t) out.push({ id: 'trabalho', texto: t.texto, efeito: t.efeito });
     if (v.trabalho.horasExtras) out.push({ id: 'horas_extras', texto: 'as horas extras', efeito: 16 });
+    const ritmo = pesoDoRitmo(v).cabeca;
+    if (ritmo) out.push({ id: 'ritmo', texto: ritmo.texto, efeito: ritmo.efeito });
+    const clima = pesoDoClima(v).cabeca;
+    if (clima) out.push({ id: 'clima', texto: clima.texto, efeito: clima.efeito });
+    const negocio = pesoDoNegocio(v);
+    if (negocio) out.push({ id: 'negocio', texto: negocio.texto, efeito: negocio.efeito });
   }
   const j = v.justica;
   if (j?.prisao) out.push({ id: 'prisao', texto: idade(v) < 18 ? 'a internação' : 'a vida atrás das grades', efeito: j.prisao.regime === 'fechado' ? 20 : 12 });
