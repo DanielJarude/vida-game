@@ -98,13 +98,16 @@ interface Cota { bio: number }
 function comunicar(v: Vida, p: Pessoa, cota: Cota, o: {
   texto: string; tipo: TipoTrajetoria; relevancia?: Relevancia; tom?: 'bom' | 'ruim' | 'neutro';
   evento?: TipoEvento; peso?: number; marco?: string; pesoMarco?: number; t?: number;
+  /** Notícia grande (casamento, separação, gravidez): com quem é próximo, não entra na cota das pequenas. */
+  importante?: boolean;
 }): void {
   const vida = garantirVidaEm(v, p);
   vida.trajetoria.push({ t: o.t ?? v.t, texto: o.texto, tipo: o.tipo });
   if (vida.trajetoria.length > 24) vida.trajetoria.splice(0, vida.trajetoria.length - 24);
-  let rel = o.relevancia ?? 'biografia';
-  if (rel === 'biografia') { if (cota.bio >= 3) rel = 'cotidiano'; else cota.bio++; }
   const vin = v.vinculos[p.id];
+  let rel = o.relevancia ?? 'biografia';
+  if (o.importante && vin && vin.proximidade >= 45 && rel !== 'marco') rel = 'biografia';
+  else if (rel === 'biografia') { if (cota.bio >= 3) rel = 'cotidiano'; else cota.bio++; }
   const tema = vin?.parentesco === 'filho' || vin?.parentesco === 'enteado' ? 'filhos' : 'familia';
   escrever(v, { texto: o.texto, relevancia: rel, tema, tom: o.tom, pessoas: [p.id], t: o.t, evento: o.evento ? { tipo: o.evento, pessoaId: p.id, peso: o.peso } : undefined });
   if (o.marco && vin) lembrarCom(v, p.id, o.marco, o.tipo === 'filho' ? 'filho' : o.tipo === 'estudo' || o.tipo === 'escola' ? 'escola' : o.tipo === 'trabalho' || o.tipo === 'promocao' ? 'trabalho' : o.tipo === 'casa' ? 'casa' : o.tipo === 'amor' ? 'romance' : 'antigo', o.pesoMarco ?? 1, o.t ?? v.t);
@@ -199,7 +202,8 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
   const vida = garantirVidaEm(v, f);
   const k = f.id;
   const doJogador = grau === 'filho';
-  const rel: Relevancia = doJogador ? 'biografia' : 'cotidiano';
+  // Os marcos de um neto próximo também são biografia de quem é avô (a cota do ano segura a enxurrada).
+  const rel: Relevancia = doJogador || vin.proximidade >= 50 ? 'biografia' : 'cotidiano';
 
   // Marcos de infância que o sistema registra na história (sem narrar a Linha da Vida: o catálogo já conta o primeiro dia).
   if (i === 6 && !vida.trajetoria.some(t => t.tipo === 'escola')) {
@@ -235,7 +239,12 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
     const risco = (e.paga === 'familia' ? 0.018 : 0.035) + (vida.aptidao < -0.2 ? 0.04 : 0) + (e.paga === 'propria' ? 0.04 : 0) + (e.paga === 'familia' && v.financas.negativado ? 0.06 : 0);
     if (r.chance(risco)) {
       const ano = Math.max(1, Math.round((v.t - (e.tFim - (e.nivel === 'tecnico' ? 24 : 48))) / 12));
-      if (e.paga === 'familia') delete v.fatos[`paga_faculdade_${k}`];
+      if (e.paga === 'familia') {
+        // O curso que o jogador pagava: a notícia vira conversa (conteúdo/biografia).
+        v.fatos[`largou_paga_${k}`] = v.t;
+        v.fatos[`largou_mensalidade_${k}`] = v.fatos[`paga_faculdade_${k}`] ?? 0;
+        delete v.fatos[`paga_faculdade_${k}`];
+      }
       f.estudo = undefined;
       vida.parouDeEstudar = true;
       f.ocupacao = f.renda > 0 ? f.ocupacao : undefined;
@@ -315,7 +324,7 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
   if (i < 18) return;
   trabalho(v, r, f, vin, i, cota, rel, doJogador);
   if (i >= 19) amor(v, r, f, vin, i, cota, doJogador);
-  if (i >= 20 && i <= 50) lugar(v, r, f, vin, cota, doJogador);
+  if (i >= 20 && i <= 65) lugar(v, r, f, vin, cota, doJogador);
 }
 
 const e2 = (f: Pessoa) => (f.estudo?.nivel === 'tecnico' ? 'estudante de curso técnico' : 'estudante universitário');
@@ -463,8 +472,8 @@ function amor(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: Cota, d
   const par = f.parceiroId ? v.pessoas[f.parceiroId] : undefined;
   if (!par || !par.vivo) {
     if (f.parceiroId && !par) f.parceiroId = undefined;
-    if (i > 55) return;
-    const chance = i < 23 ? 0.1 : i < 33 ? 0.16 : i < 45 ? 0.08 : 0.04;
+    if (i > 70) return;
+    const chance = i < 23 ? 0.1 : i < 33 ? 0.16 : i < 45 ? 0.08 : i < 56 ? 0.04 : 0.025;
     if (!r.chance(chance)) return;
     const g = f.genero === 'masculino' ? (r.chance(0.9) ? 'feminino' : 'masculino') : f.genero === 'feminino' ? (r.chance(0.9) ? 'masculino' : 'feminino') : (r.chance(0.5) ? 'masculino' : 'feminino');
     const p = criarPessoa(v, r, { genero: g, idade: Math.max(18, i + r.int(-4, 4)), municipioId: f.municipioId });
@@ -484,7 +493,7 @@ function amor(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: Cota, d
     const vinPar = v.vinculos[par.id];
     if (vinPar) { vinPar.parentesco = undefined; vinPar.estagio = 'afastado'; v.fatos[`ex_genro_${par.id}`] = v.t; }
     if (casou) f.aperto = { tipo: 'separacao', t: v.t };
-    comunicar(v, f, cota, { texto: casou ? `${f.nome} e ${par.nome} se separaram.` : `${f.nome} e ${par.nome} terminaram.`, tipo: 'amor', relevancia: casou && doJogador ? 'biografia' : 'cotidiano', tom: 'ruim', marco: casou && doJogador ? `Separou-se de ${par.nome}.` : undefined });
+    comunicar(v, f, cota, { texto: casou ? `${f.nome} e ${par.nome} se separaram.` : `${f.nome} e ${par.nome} terminaram.`, tipo: 'amor', relevancia: casou && doJogador ? 'biografia' : 'cotidiano', tom: 'ruim', marco: casou && doJogador ? `Separou-se de ${par.nome}.` : undefined, importante: casou && doJogador });
     delete v.fatos[`casou_${k}`];
     return;
   }
@@ -494,10 +503,12 @@ function amor(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: Cota, d
     const vinPar = v.vinculos[par.id] ?? vincular(v, par, { parentesco: 'genro', origem: 'familia', proximidade: 35 });
     vinPar.parentesco = 'genro';
     const noCartorio = r.chance(0.5);
+    // Como foi a união (no cartório ou juntando as coisas): o conteúdo do casamento lê isto.
+    v.fatos[`uniao_cartorio_${k}`] = noCartorio ? 1 : 0;
     comunicar(v, f, cota, {
-      texto: noCartorio ? `${f.nome} casou com ${par.nome}${doJogador ? '. Você foi testemunha no cartório' : ''}.` : `${f.nome} e ${par.nome} foram morar juntos.`,
+      texto: noCartorio ? `${f.nome} casou com ${par.nome} no cartório.` : `${f.nome} e ${par.nome} foram morar juntos.`,
       tipo: 'amor', relevancia: doJogador ? 'biografia' : 'cotidiano', tom: 'bom', evento: 'filho_marco', peso: 35,
-      marco: doJogador ? (noCartorio ? `Casou com ${par.nome}.` : `Foi morar com ${par.nome}.`) : undefined, pesoMarco: 2
+      marco: doJogador ? (noCartorio ? `Casou com ${par.nome}.` : `Foi morar com ${par.nome}.`) : undefined, pesoMarco: 2, importante: doJogador
     });
     if (moraJunto(vin)) sairDeCasa(v, f, vin, cota, `para morar com ${par.nome}`, doJogador);
     par.municipioId = f.municipioId;
@@ -518,7 +529,7 @@ function amor(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: Cota, d
     const texto = gestante === f
       ? `${f.nome} contou que está grávida${nFilhos ? ' de novo' : ''}. O bebê deve nascer em ${quando}.`
       : `${f.nome} contou que vai ser ${flex(f.genero, 'pai', 'mãe', 'mãe')}${nFilhos ? ' de novo' : ''}: ${par.nome} está grávida, o bebê deve nascer em ${quando}.`;
-    comunicar(v, f, cota, { texto, tipo: 'filho', relevancia: doJogador ? 'biografia' : 'cotidiano', tom: 'bom', evento: 'gravidez', peso: 30 });
+    comunicar(v, f, cota, { texto, tipo: 'filho', relevancia: doJogador ? 'biografia' : 'cotidiano', tom: 'bom', evento: 'gravidez', peso: 30, importante: doJogador });
   }
 }
 

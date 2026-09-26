@@ -102,7 +102,8 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     if (p.ocupacao && !p.ocupacao.startsWith('aposentad') && ip >= (p.genero === 'feminino' ? 62 : 65) && r.chance(0.6)) {
       p.ocupacao = flex(p.genero, 'aposentado', 'aposentada');
       p.renda = Math.max(1620, Math.round(p.renda * 0.7));
-      if (i < 40) escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} se aposentou.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [p.id] });
+      // Em qualquer idade do jogador: a aposentadoria dos pais é um marco da vida deles (e o começo da velhice que vem).
+      escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} se aposentou.`, relevancia: v.vinculos[p.id].proximidade >= 55 && i >= 30 ? 'biografia' : 'cotidiano', tema: 'familia', pessoas: [p.id] });
       continue;
     }
     if (p.ocupacao?.startsWith('aposentad') || ip < 18) continue;

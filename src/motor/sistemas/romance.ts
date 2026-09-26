@@ -259,6 +259,22 @@ function crise(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, pequenos: number): void
   if (p.renda > 0) causas.push({ texto: `O trabalho de ${p.nome} apertou: chegava tarde, dormia mal, respondia seco. A casa sentiu.`, curto: 'o trabalho apertou' });
   if (pequenos > 0) causas.push({ texto: `O cansaço dos primeiros anos das crianças: você e ${p.nome} viraram dois turnos de uma mesma casa.`, curto: 'o cansaço das crianças pequenas' });
   if (v.financas.negativado || v.financas.conta < 0) causas.push({ texto: `O dinheiro curto virou assunto de toda noite entre você e ${p.nome}.`, curto: 'o dinheiro curto' });
+  // As causas da meia-idade: o que a casa atravessa depois dos filhos pequenos (FIX #7).
+  const casa = vinculosVivos(v).filter(x => x.vin.convivio.includes('casa'));
+  const adolescente = casa.find(x => (x.vin.parentesco === 'filho' || x.vin.parentesco === 'enteado') && idadePessoa(v, x.p) >= 13 && idadePessoa(v, x.p) <= 17);
+  if (adolescente) causas.push({ texto: `A adolescência de ${adolescente.p.nome} dentro de casa: porta batida, castigo discutido, e você e ${p.nome} de lados diferentes em quase toda briga.`, curto: `a adolescência de ${adolescente.p.nome}` });
+  const filhos = vinculosVivos(v).filter(x => x.vin.parentesco === 'filho');
+  const saidas = filhos.map(x => v.fatos[`saiu_de_casa_${x.p.id}`]).filter((t): t is number => t !== undefined);
+  if (filhos.length && filhos.every(x => !x.vin.convivio.includes('casa')) && saidas.length && v.t - Math.max(...saidas) <= 36) {
+    causas.push({ texto: `Com a casa vazia, você e ${p.nome} perceberam que quase só falavam dos filhos. O silêncio do jantar ficou grande.`, curto: 'a casa vazia' });
+  }
+  const cuidado = casa.find(x => (x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai' || x.vin.parentesco === 'sogro') && idadePessoa(v, x.p) >= 70)
+    ?? vinculosVivos(v).find(x => (x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai') && x.p.aperto?.tipo === 'doenca' && v.t - x.p.aperto.t < 24);
+  if (cuidado && idade(v) >= 35) causas.push({ texto: `O cuidado com ${cuidado.p.nome} tomou as noites e os fins de semana; sobrou pouco para vocês dois.`, curto: `o cuidado com ${cuidado.p.nome}` });
+  const e = v.trabalho.atual;
+  if (e && idade(v) >= 40 && idade(v) < 62 && v.t - (e.tPosto ?? e.tInicio) >= 120) causas.push({ texto: `Os anos parados no mesmo posto viraram assunto em casa — e, entre você e ${p.nome}, cobrança.`, curto: 'o trabalho parado no mesmo lugar' });
+  const apo = v.trabalho.aposentadoria;
+  if (apo && v.t - apo.t <= 24) causas.push({ texto: `A aposentadoria pôs vocês dois em casa o dia inteiro, e a rotina de ${p.nome} não tinha lugar para isso.`, curto: 'a aposentadoria' });
   causas.push({ texto: `${p.nome} atravessou uma fase difícil: ${ele} ficou calad${flex(p.genero, 'o', 'a', 'e')}, distante, com a cabeça longe.`, curto: 'uma fase difícil', fase: true });
   causas.push({ texto: `A família de ${p.nome} entrou em crise, e ${ele} passou meses indo e voltando da casa dos pais.`, curto: 'a família dele em crise'.replace('dele', flex(p.genero, 'dele', 'dela', 'delu')), fase: true });
   const x = r.pick(causas);

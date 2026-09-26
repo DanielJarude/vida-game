@@ -293,7 +293,7 @@ export const SISTEMICOS: Conteudo[] = [
   {
     // A evasão é o grande filtro do ensino superior brasileiro. O mundo aperta;
     // quem decide se fica, tranca ou larga é o jogador.
-    id: 'esc_faculdade_aperto', tipo: 'decisao', idade: [17, 45], tema: 'estudo', repetir: 2, prioritario: true,
+    id: 'esc_faculdade_aperto', tipo: 'decisao', idade: [17, 85], tema: 'estudo', repetir: 2, prioritario: true,
     quando: c => !!motivoDeAperto(c),
     titulo: 'O curso pesa',
     texto: c => ({
