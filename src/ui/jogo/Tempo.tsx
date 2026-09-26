@@ -172,7 +172,7 @@ function ComoVoceVai({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => bo
         </ul>
       )}
       {d.escolhido && <BotaoAcao vida={vida} acao={{ tipo: 'deslocamento', modo: 'auto' }} agir={agir} variante="discreto">Voltar a ir do jeito mais rápido</BotaoAcao>}
-      {!d.veiculoId && d.modo !== 'a_pe' && irPara && <p className="nota">Um veículo muda isso: <button type="button" className="link" onClick={() => irPara('cidade')}>ver as lojas na Cidade →</button></p>}
+      {!d.veiculoId && d.modo !== 'a_pe' && irPara && <div className="trajeto__loja"><p className="nota">Um carro, uma moto ou uma bicicleta mudam isso.</p><button type="button" className="botao botao--discreto" onClick={() => irPara('cidade')}>Ver as lojas na Cidade</button></div>}
     </section>
   );
 }
