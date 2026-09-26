@@ -708,7 +708,7 @@ describe('achados da leitura das biografias do FIX #4', () => {
 
   it('"a conhecida Laura", não "o conhecido Laura"', () => {
     const v = adulto(70, { semente: 19 });
-    const conhecidas = [0, 1].map(k => { const p = pessoaNova(v, 75, 'feminino'); vincular(v, p, { origem: 'rotina', proximidade: 40, estagio: 'conhecido' }); return p; });
+    const conhecidas = [0, 1].map(() => { const p = pessoaNova(v, 75, 'feminino'); vincular(v, p, { origem: 'rotina', proximidade: 40, estagio: 'conhecido' }); return p; });
     const vida = transacao(v, (x, r) => registrarMortes(x, r, conhecidas.map(p => ({ p: x.pessoas[p.id], vin: x.vinculos[p.id], causa: 'AVC' })), () => {})).vida;
     expect(vida.biografia.some(e => /o conhecido [A-Z]/.test(e.texto) && conhecidas.some(c => e.texto.includes(`o conhecido ${c.nome}`)))).toBe(false);
   });
