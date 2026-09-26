@@ -364,7 +364,13 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
     v.financas.conta -= falta;
     if (!v.fatos[`negocio_bolso_${n.tInicio}`] || v.t - v.fatos[`negocio_bolso_${n.tInicio}`] >= 36) {
       v.fatos[`negocio_bolso_${n.tInicio}`] = v.t;
-      escrever(v, { texto: `${n.nome} não pagou as contas do ano: o caixa acabou e saíram ${fmt(falta)} do seu bolso.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
+      // A retirada (o seu salário de dono) já tinha saído do caixa mês a mês: dizer "do seu bolso" sem dizer isso engana.
+      const texto = conta.retirada > 0 && falta <= conta.retirada
+        ? `${n.nome} não rendeu o que você tirou para viver: ${fmt(falta)} dos ${fmt(conta.retirada)} de retirada do ano voltaram para cobrir as contas.`
+        : conta.retirada > 0
+          ? `${n.nome} não rendeu nem a sua retirada: além de devolver os ${fmt(conta.retirada)} do ano, saíram ${fmt(falta - conta.retirada)} do seu bolso.`
+          : `${n.nome} não pagou as contas do ano: o caixa acabou e saíram ${fmt(falta)} do seu bolso.`;
+      escrever(v, { texto, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
     }
     const par = parceiro(v);
     if (par && falta > n.capital * 0.4) par.vin.tensao = Math.min(100, par.vin.tensao + 6);
@@ -443,7 +449,7 @@ function anoDaEquipe(v: Vida, r: Rng, n: Negocio): void {
   }
 }
 
-export const em = (nome: string) => `n${/^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/.test(nome) ? 'a' : 'o'} ${nome}`;
+export const em = (nome: string) => `n${/^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/.test(nome) || / (Tecnologia|Contabilidade|Construções)$/.test(nome) ? 'a' : 'o'} ${nome}`;
 
 /* ------------------------------------------------------ Gente e porte */
 

@@ -245,9 +245,9 @@ export const CAMINHOS: Conteudo[] = [
         resolver: c => ({ texto: 'Mais um ano de farda, de formatura às seis e de soldo no fim do mês.', memoria: 'Engajou por mais um ano no quartel.', relevancia: 'cotidiano', efeito: () => perderEmpregoGuardado(c.v) }) },
       { id: 'carreira', texto: 'Engajar e estudar para a escola de sargentos', comportamento: { disciplina: 2 }, disponivel: c => (['medio', 'tecnico', 'superior_incompleto', 'superior'].includes(c.v.educacao.escolaridade) && idade(c.v) <= 24 ? true : 'Pede ensino médio e menos de 25 anos.'),
         consequencia: c => `O estudo entra na semana, à noite.${c.v.caminhos.militar?.empregoGuardado ? ' O emprego guardado deixa de esperar.' : ''}`,
-        resolver: c => ({ texto: 'Apostila no armário do alojamento, estudo depois do toque de silêncio.', memoria: 'No quartel, começou a estudar para seguir carreira.', efeito: () => { perderEmpregoGuardado(c.v); fato(c, 'plano_carreira_militar'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 1 }); } }) },
+        resolver: c => ({ texto: 'Apostila no armário do alojamento, estudo depois do toque de silêncio.', memoria: temFato(c.v, 'plano_carreira_militar') ? null : 'No quartel, começou a estudar para seguir carreira.', efeito: () => { perderEmpregoGuardado(c.v); fato(c, 'plano_carreira_militar'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 1 }); } }) },
       { id: 'baixa', texto: 'Dar baixa', consequencia: c => (c.v.caminhos.militar?.empregoGuardado ? 'Sai com o certificado de reservista e volta ao emprego que ficou guardado.' : 'Sai com o certificado de reservista.'),
-        resolver: c => ({ texto: 'Você devolveu a farda e saiu pelo portão de sempre, agora sem voltar.', memoria: 'Deu baixa depois do serviço militar.', efeito: () => { encerrarEmprego(c.v, 'baixa do serviço militar'); marcar(c.v, 'fim_carreira', 'Deu baixa do serviço militar.', 2); c.v.fatos['mil_baixa'] = c.v.t; restaurarEmpregoGuardado(c.v); } }) }
+        resolver: c => ({ texto: 'Você devolveu a farda e saiu pelo portão de sempre, agora sem voltar.', memoria: null, efeito: () => { encerrarEmprego(c.v, 'baixa do serviço militar'); marcar(c.v, 'fim_carreira', 'Deu baixa do serviço militar.', 2); c.v.fatos['mil_baixa'] = c.v.t; escrever(c.v, { texto: 'Deu baixa depois do serviço militar.', relevancia: 'biografia', tema: 'trabalho', escolha: true }); restaurarEmpregoGuardado(c.v); } }) }
     ]
   },
 
@@ -448,16 +448,17 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   // Um dia de teste também é treino.
   const f = c.v.caminhos.frentes[d];
   if (f) f.meses += 2;
-  registrarDevolutiva(c.v, { tipo: 'peneira', titulo: `A ${nome} ${pr.lugar ? doClube(pr.lugar) : 'do clube'}`, texto: fala, passou: res.passou, perto: res.perto, falta: res.passou ? undefined : res.falta, dominio: d });
+  const doLugar = pr.lugar ? doClube(pr.lugar) : 'do clube';
+  registrarDevolutiva(c.v, { tipo: 'peneira', titulo: `A ${nome} ${doLugar}`, texto: fala, passou: res.passou, perto: res.perto, falta: res.passou ? undefined : res.falta, dominio: d });
   if (res.passou) {
     c.v.fatos['convite_base'] = c.v.t;
     c.v.fatos['peneira_lugar'] = municipioIndice(lugar);
-    const texto = `Passou na ${nome}.`;
+    const texto = `Passou na ${nome} ${doLugar}.`;
     marcar(c.v, 'oportunidade', texto, 3, { dominio: d });
     return { texto: `No fim do dia, chamaram seu nome. Poucos nomes foram chamados. ${fala}`, memoria: `${texto} Chamaram poucos nomes; o seu foi um deles.`, relevancia: 'marco', tom: 'bom' };
   }
   const tentativas = c.v.fatos[`peneiras_${d}`] ?? 1;
-  marcar(c.v, 'fracasso', `Não passou na ${nome} (${NOME_MOD[d] ?? d}). ${fala}`, 2, { dominio: d });
+  marcar(c.v, 'fracasso', `Não passou na ${nome} ${doLugar} (${NOME_MOD[d] ?? d}). ${fala}`, 2, { dominio: d });
   abalar(c.v, `a ${nome} que não deu`, -5, 3);
   // Quem ficou perto pode ser chamado de novo mais cedo.
   if (res.perto) c.v.caminhos.ultimas[`peneira_${d}`] = c.v.t - 12;
@@ -466,7 +467,7 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
     : res.falta === 'idade' ? '' : ' Ainda dá para treinar e tentar outra.';
   return {
     texto: `Chamaram outros nomes. ${fala}${depois}`,
-    memoria: `Não passou na ${nome} do clube. ${fala}`,
+    memoria: `Não passou na ${nome} ${doLugar}. ${fala}`,
     relevancia: 'biografia', tom: 'ruim'
   };
 }

@@ -13,7 +13,7 @@
 import type { Rng } from '../rng';
 import { clamp, criarRng } from '../rng';
 import type { Especie, InfoPet, Pessoa, Vida } from '../tipos';
-import { animal, palavraDoBicho, umBicho, type GrupoAnimal } from '../dados/animais';
+import { animal, bichoFeminino, palavraDoBicho, umBicho, type GrupoAnimal } from '../dados/animais';
 import { escrever, idade, idadePessoa, lembrarCom, moraCom, parentes, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
 import { economiaLocal, municipio } from '../dados/lugares';
@@ -87,9 +87,10 @@ export function adotarPet(v: Vida, r: Rng, a: Omit<AnimalDoAbrigo, 'id'>, origem
   const idadeTxt = a.idade === 0 ? 'filhote' : `de ${a.idade} ${a.idade === 1 ? 'ano' : 'anos'}`;
   const comprado = origem === 'loja' || origem === 'criador' || origem === 'ilegal';
   const como = origem === 'abrigo' ? `no abrigo${a.historia ? ` (${a.historia})` : ''}` : origem === 'doacao' ? `de ${deQuem ?? 'um conhecido'}, que não podia ficar` : origem === 'ninhada' ? `de uma ninhada${deQuem ? ` de ${deQuem}` : ''}` : origem === 'rua' ? 'da rua: apareceu na porta e foi ficando' : origem === 'ilegal' ? 'na feira, sem nota nem anilha' : origem === 'criador' ? (animal(a.especie).silvestre ? 'de um criadouro autorizado, com nota fiscal e marcação' : 'de um criador') : 'numa loja de animais';
-  const verbo = origem === 'rua' ? 'que veio' : comprado ? (a.genero === 'feminino' || animal(a.especie).generoFixo === 'f' ? 'comprada' : 'comprado') : `adotad${a.genero === 'feminino' ? 'a' : 'o'}`;
+  const fem = bichoFeminino(a.especie, a.genero);
+  const verbo = origem === 'rua' ? 'que veio' : `${comprado ? 'comprad' : 'adotad'}${fem ? 'a' : 'o'}`;
   escrever(v, { texto: `${a.nome} chegou: ${bicho} ${idadeTxt}, ${verbo} ${como}. ${cap(a.jeito)}.`, relevancia: 'biografia', tema: 'casa', tom: origem === 'ilegal' ? undefined : 'bom', escolha: origem !== 'rua', pessoas: [pet.id] });
-  lembrarCom(v, pet.id, `Chegou em casa ${como.startsWith('da rua') ? 'vind' + (a.genero === 'feminino' ? 'a' : 'o') + ' da rua' : `${verbo} ${como.split(' (')[0].split(',')[0]}`}.`, 'inicio', 2);
+  lembrarCom(v, pet.id, `Chegou em casa ${como.startsWith('da rua') ? 'vind' + (fem ? 'a' : 'o') + ' da rua' : `${verbo} ${como.split(' (')[0].split(',')[0]}`}.`, 'inicio', 2);
   for (const p of moraCom(v)) if (idadePessoa(v, p) < 14 && v.vinculos[p.id]?.parentesco === 'filho') lembrarCom(v, p.id, `A chegada de ${a.nome} em casa.`, 'ritual', 1);
   abalar(v, `a chegada de ${a.nome}`, 5, 0);
   return pet;
@@ -234,7 +235,7 @@ function apreender(v: Vida, p: Pessoa): void {
   v.financas.conta -= multa;
   sairDaVida(v, p);
   v.fatos[`apreendido_${p.id}`] = v.t;
-  escrever(v, { texto: `A fiscalização ambiental apareceu: ${p.nome}, ${umBicho(p.especie, p.genero)} sem origem legal, foi levado para um centro de triagem de animais silvestres. Multa de ${fmt(multa)}.`.replace('levado', animal(p.especie).generoFixo === 'f' || p.genero === 'feminino' ? 'levada' : 'levado'), relevancia: 'biografia', tema: 'casa', tom: 'ruim', pessoas: [p.id] });
+  escrever(v, { texto: `A fiscalização ambiental apareceu: ${p.nome}, ${umBicho(p.especie, p.genero)} sem origem legal, foi levado para um centro de triagem de animais silvestres. Multa de ${fmt(multa)}.`.replace('levado', bichoFeminino(p.especie, p.genero) ? 'levada' : 'levado'), relevancia: 'biografia', tema: 'casa', tom: 'ruim', pessoas: [p.id] });
   abalar(v, `a apreensão de ${p.nome}`, -5, 5);
 }
 

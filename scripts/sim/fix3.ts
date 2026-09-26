@@ -137,7 +137,7 @@ for (let s = 0; s < VIDAS; s++) {
     conta('trancou', v.biografia.filter(e => /^Trancou /.test(e.texto)).length);
     conta('recusou', v.biografia.filter(e => /^Recusou /.test(e.texto)).length);
     conta('pet_velhice_cedo', v.biografia.filter(e => /morreu.*velhice/.test(e.texto) && /aos [1-7] anos/.test(e.texto) && /gat|cachorr|papagai|jabuti/.test(e.texto)).length);
-    if (s < 3) writeFileSync(`${SAIDA}/bio-${t}-${semente}.txt`, v.biografia.map(e => `${String(e.idade).padStart(2)}  ${e.texto}`).join('\n'));
+    if (s < 3) writeFileSync(`${SAIDA}/bio-${t}-${semente}.txt`, v.biografia.filter(e => e.relevancia !== 'tecnico').map(e => `${String(e.idade).padStart(2)} ${e.relevancia === 'marco' ? '*' : ' '} ${e.texto}`).join('\n'));
   }
 }
 const resumo = { vidas, segundos: Math.round((Date.now() - t0) / 1000), contagem, incoerencias };

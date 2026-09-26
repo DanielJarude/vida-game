@@ -28,6 +28,9 @@ import { flex } from '../texto';
 import { anoDe } from '../tempo';
 import { abalar } from './abalo';
 
+/** "Eletricista instalador (NR-10)" → "eletricista instalador (NR-10)": só a inicial, e só quando não é sigla. */
+const minusculaInicial = (s: string) => (/^[A-ZÀ-Ú][a-zà-ú]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
+
 const ORDEM_ESCOLARIDADE: Escolaridade[] = [
   'nenhuma', 'fundamental_incompleto', 'fundamental', 'medio_incompleto', 'medio',
   'tecnico', 'superior_incompleto', 'superior', 'pos', 'mestrado', 'doutorado'
@@ -540,7 +543,7 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   const esc = nivelEsc[c.nivel];
   if (esc) subir(v, esc);
   const g = v.eu.genero;
-  const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'livre' ? `Terminou o curso de qualificação: ${c.nome.replace(/^Curso de /, '').toLowerCase()}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? 'Terminou a residência médica' : `Concluiu ${c.nivel === 'pos' ? 'a pós' : `o ${c.nome.toLowerCase()}`} (${c.nome})`;
+  const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'livre' ? `Terminou o curso de qualificação: ${minusculaInicial(c.nome.replace(/^Curso de /, ''))}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? 'Terminou a residência médica' : (c.nivel === 'pos' ? `Concluiu a pós (${c.nome})` : `Concluiu o ${minusculaInicial(c.nome)}`);
   const voltou = idade(v) >= 30 && c.nivel !== 'pos' && c.nivel !== 'mestrado' && c.nivel !== 'doutorado' && c.nivel !== 'residencia';
   escrever(v, { texto: `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, relevancia: c.nivel === 'livre' ? 'biografia' : 'marco', tema: 'estudo', tom: 'bom' });
   marcar(v, 'formacao', `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, c.nivel === 'livre' ? 1 : c.nivel === 'superior' || c.nivel === 'tecnico' ? 3 : 2);

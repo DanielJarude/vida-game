@@ -52,7 +52,9 @@ export function processarArte(v: Vida, r: Rng): void {
     // Primeira vez em público.
     if (praticando && h >= 32 && i >= 8 && !temFato(v, `estreia_${d}`) && r.chance(0.55)) {
       marcarFato(v, `estreia_${d}`);
-      const texto = r.pick(PRIMEIRA_VEZ[d]!);
+      // Sarau da escola, peça de fim de ano: só para quem ainda está na escola.
+      const lista = PRIMEIRA_VEZ[d]!.filter(t => v.educacao.basica || !/escola|fim de ano/.test(t));
+      const texto = r.pick(lista.length ? lista : PRIMEIRA_VEZ[d]!);
       escrever(v, { texto, relevancia: 'biografia', tema: 'lazer', tom: 'bom' });
       marcar(v, 'estreia', texto, 2, { dominio: d });
     }

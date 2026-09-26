@@ -302,7 +302,7 @@ describe('negócio: paralelo, principal, por tipo', () => {
     v = em(v, x => { x.t += 12; x.financas.conta = 10000; processarNegocio(x, r); });
     const n = v.caminhos.negocio!;
     expect((n.resultadoAno ?? 0) < 0 || n.estado === 'apertado').toBe(true);
-    if ((n.resultadoAno ?? 0) < 0) expect(textosBio(v)).toMatch(/do seu bolso|não pagou as contas/);
+    if ((n.resultadoAno ?? 0) < 0) expect(textosBio(v)).toMatch(/do seu bolso|não pagou as contas|não rendeu/);
   });
 });
 
@@ -558,4 +558,34 @@ describe('coerência: vidas longas sem estado impossível', () => {
     const novas = d.biografia.slice(v.biografia.length).map(l => l.texto);
     for (const t of novas.filter(t => /^(Trancou|Deixou)/.test(t))) expect(t).toMatch(/ para /);
   });
+});
+
+describe('achados da leitura de biografias', () => {
+  it('31. hamster fêmea: "um hamster filhote, comprado" (a concordância segue a palavra)', () => {
+    const v = em(adulto(30), x => { x.moradia.tipo = 'propria'; adotarPet(x, r, { especie: 'hamster', nome: 'Bolota', genero: 'feminino', idade: 0, porte: 'pequeno', jeito: 'curiosa', historia: '' }, 'loja'); });
+    expect(v.biografia.slice(-1)[0].texto).toMatch(/um hamster filhote, comprado numa loja/);
+  });
+
+  it('32. morando na casa de um irmão, ele não "sai de casa" todo ano (laço da Linha da Vida)', () => {
+    let v = em(adulto(40), x => {
+      const irmao = criarPessoa(x, r, { idade: 45, municipioId: x.moradia.municipioId, nome: 'Melissa', sobrenome: 'Fix', genero: 'feminino' });
+      vincular(x, irmao, { parentesco: 'irmao', origem: 'familia', proximidade: 70, convivio: ['casa'] });
+      x.moradia = { tipo: 'parente', municipioId: x.moradia.municipioId, aluguel: 0, padrao: 1, tInicio: x.t, aceitaPet: true };
+    });
+    const antes = v.biografia.length;
+    for (let k = 0; k < 6; k++) { v = avancarAno(v).vida; v = responderTudo(v); }
+    const novas = v.biografia.slice(antes).map(e => e.texto);
+    expect(novas.filter(t => /Melissa saiu de casa/.test(t)).length).toBe(0);
+  });
+
+  it('33. a mesma coisa não entra duas vezes seguidas na Linha da Vida em vidas longas', () => {
+    for (const s of [401, 402, 403]) {
+      let v = nova({ semente: s, municipioId: 'recife-pe' });
+      v = viverAte(v, 75);
+      const textos = v.biografia.filter(e => e.relevancia !== 'tecnico').map(e => e.texto);
+      let repetidas = 0;
+      for (let k = 2; k < textos.length; k++) if (textos[k] === textos[k - 2] && textos[k - 1] === textos[k - 3]) repetidas++;
+      expect(repetidas, `semente ${s}`).toBe(0);
+    }
+  }, 120000);
 });

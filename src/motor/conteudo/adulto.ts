@@ -19,6 +19,8 @@ import { anoDe } from '../tempo';
 import { comChefia } from '../sistemas/ritmo';
 
 // Emprego comum: o atleta (contrato especial, Lei Pelé) tem as próprias situações — clube, contrato, banco.
+/** "Uma fábrica foi vendida", "um escritório foi vendido": pelo artigo do empregador. */
+const vendid = (empregador: string) => (/^(uma|a) /i.test(empregador) ? 'vendida' : 'vendido');
 const porConta = (c: Ctx) => c.v.trabalho.atual?.contrato === 'autonomo';
 const empregado = (c: Ctx) => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal' && ocupacao(c.v.trabalho.atual.ocupacaoId).trilha !== 'atleta';
 const mora = (c: Ctx) => municipio(c.v.moradia.municipioId);
@@ -122,10 +124,10 @@ export const ADULTO: Conteudo[] = [
         const e = c.v.trabalho.atual!;
         const lugar = `${e.empregador.charAt(0).toUpperCase()}${e.empregador.slice(1)}`;
         const fam = familiaDaTrilha(ocupacao(e.ocupacaoId).trilha).id;
-        if (fam === 'rural') return `${lugar} foi vendida, e o dono novo trouxe a própria gente.`;
+        if (fam === 'rural') return `${lugar} foi ${vendid(e.empregador)}, e o dono novo trouxe a própria gente.`;
         if (fam === 'industria') return `${lugar} fechou a unidade da cidade e levou a produção para outro estado.`;
         if (fam === 'cuidado') return 'A família para quem você trabalhava se mudou de cidade. O acerto veio com um abraço.';
-        return c.r.pick([`${lugar} fechou as portas. A notícia veio por e-mail numa sexta-feira.`, `${lugar} fechou. A notícia veio numa reunião de cinco minutos.`, `${lugar} foi vendida, e a nova dona fechou o seu setor.`]);
+        return c.r.pick([`${lugar} fechou as portas. A notícia veio por e-mail numa sexta-feira.`, `${lugar} fechou. A notícia veio numa reunião de cinco minutos.`, `${lugar} foi ${vendid(e.empregador)}, e o dono novo fechou o seu setor.`]);
       })(),
       relevancia: 'marco', tom: 'ruim',
       efeito: () => { const s = c.v.trabalho.atual!.salario; encerrarEmprego(c.v, 'empresa fechou'); dinheiro(c, s * 3); estresse(c, 12); }

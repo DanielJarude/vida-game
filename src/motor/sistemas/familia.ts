@@ -14,7 +14,7 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Pessoa, Processo, Vida } from '../tipos';
 import {
-  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, vinculosVivos
+  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, temFato, vinculosVivos
 } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { processarCorpoDePessoa } from './corpo';
@@ -109,7 +109,7 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     // Emprego dos pais oscila: é daqui que vêm os anos apertados da infância.
     // Servidor quase nunca perde o cargo; informal e autônomo, com mais frequência.
     const ocAtual = p.ocupacaoId ? ocupacao(p.ocupacaoId) : undefined;
-    const riscoPerda = (!ocAtual ? 0.05 : ocAtual.contrato === 'servidor' ? 0.003 : ocAtual.contrato === 'clt' ? 0.045 : 0.06) * (emRecessao(v) ? 2 : 1);
+    const riscoPerda = (!ocAtual ? 0.05 : ocAtual.contrato === 'servidor' || (ocAtual.contrato === 'militar' && !ocAtual.duracao && ocAtual.nivel > 0) ? 0.003 : ocAtual.contrato === 'clt' ? 0.045 : 0.06) * (emRecessao(v) ? 2 : 1);
     if (p.renda > 0 && r.chance(riscoPerda)) {
       p.renda = 0;
       const antes = p.ocupacao;
@@ -121,8 +121,8 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       }
     } else if (p.renda === 0 && p.ocupacao?.startsWith('desempregad') && r.chance(0.55)) {
       // Recoloca-se na mesma área, quase sempre; às vezes num degrau abaixo.
-      const mesmaArea = ocAtual ? OCUPACOES.filter(o => o.trilha === ocAtual.trilha && Math.abs(o.nivel - ocAtual.nivel) <= 1 && !o.concurso && o.contrato !== 'estagio' && o.contrato !== 'aprendiz') : [];
-      const oc = mesmaArea.length && r.chance(0.8) ? (r.chance(0.6) ? ocAtual! : r.pick(mesmaArea)) : ocupacao(r.pick(OCUPACOES_POR_CLASSE[v.origem.classe]));
+      const mesmaArea = ocAtual ? OCUPACOES.filter(o => o.trilha === ocAtual.trilha && Math.abs(o.nivel - ocAtual.nivel) <= 1 && !o.concurso && o.contrato !== 'estagio' && o.contrato !== 'aprendiz' && o.contrato !== 'militar') : [];
+      const oc = mesmaArea.length && r.chance(0.8) ? (r.chance(0.6) && !ocAtual!.concurso && ocAtual!.contrato !== 'militar' && ocAtual!.contrato !== 'servidor' ? ocAtual! : r.pick(mesmaArea)) : ocupacao(r.pick(OCUPACOES_POR_CLASSE[v.origem.classe]));
       if (oc.idadeMin <= ip) {
         p.ocupacaoId = oc.id;
         p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
@@ -182,7 +182,8 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     }
     const vin = v.vinculos[irmao.id];
     vidaDoIrmao(v, r, irmao, ii);
-    if (vin.convivio.includes('casa') && ii >= 19 && r.chance(0.12 + (ii - 19) * 0.03)) {
+    // Morando de favor na casa de um irmão, a casa é dele: não é ele quem "sai de casa" (achado da leitura de biografias: um laço anual).
+    if (vin.convivio.includes('casa') && ii >= 19 && v.moradia.tipo !== 'parente' && r.chance(0.12 + (ii - 19) * 0.03)) {
       marcarFato(v, `saiu_de_casa_${irmao.id}`);
       vin.convivio = vin.convivio.filter(c => c !== 'casa');
       if (moraComFamiliaDeOrigem(v)) {
@@ -280,7 +281,8 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
   if (!g.descoberta && g.tConcepcao + 2 <= v.t) {
     g.descoberta = true;
     const quemGesta = g.gestanteId === 'eu' ? 'Você está grávid' + flex(ge(v), 'o', 'a', 'e') : `${outro?.nome ?? 'Sua parceira'} está grávida`;
-    const jaTem = filhos(v).length > 0;
+    // "De novo" é de gravidez: filho que chegou por adoção não conta.
+    const jaTem = filhos(v).some(f => !temFato(v, `adotado_${f.id}`));
     escrever(v, {
       t: g.tConcepcao + 2,
       texto: g.planejada

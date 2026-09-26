@@ -200,6 +200,9 @@ export const ANIMAIS: readonly Animal[] = [
 
 export const animal = (id: Especie | undefined): Animal => ANIMAIS.find(a => a.id === id) ?? ANIMAIS[0];
 
+/** A palavra do bicho é feminina? ("a calopsita", mas "o hamster" mesmo sendo fêmea): é por ela que o texto concorda. */
+export const bichoFeminino = (esp: Especie | undefined, genero: string) => { const a = animal(esp); return a.generoFixo ? a.generoFixo === 'f' : genero === 'feminino'; };
+
 /** A palavra do bicho, concordada ("a calopsita", "o cachorro", "a gata"). */
 export function palavraDoBicho(esp: Especie | undefined, genero: string, artigo = true): string {
   const a = animal(esp);

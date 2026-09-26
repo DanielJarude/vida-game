@@ -59,8 +59,22 @@ const ROTULO_ESPECIALIZAR: Record<string, string> = {
 const DIVULGAR: Record<string, [rotulo: string, texto: string]> = {
   rua: ['Divulgar no bairro', 'Faixa na fachada, panfleto no semáforo, um perfil caprichado nas redes do bairro.'],
   online: ['Pagar anúncios e chamar um influenciador', 'Anúncio pago nas redes e um influenciador pequeno mostrando o produto.'],
-  atendimento: ['Fazer parcerias com quem indica', 'Conversa com quem encaminha gente: médicos, escolas, empresas, pet shops.'],
+  atendimento: ['Fazer parcerias com quem indica', 'Conversa com quem costuma indicar gente.'],
   obra: ['Divulgar nas obras e lojas de material', 'Placa em toda obra, cartão no balcão das lojas de material de construção.']
+};
+
+/** Quem indica, por ofício (a parceria de um consultório não é a de uma consultoria de software). */
+const QUEM_INDICA: Record<string, string> = {
+  consultorio_psicologia: 'médicos, escolas e o RH de empresas', clinica_fisio: 'ortopedistas, academias e clubes', clinica_vet: 'pet shops, criadores e abrigos',
+  consultoria_ti: 'contadores, associações comerciais e agências', escritorio_contabil: 'bancos, sindicatos patronais e quem abre empresa', estudio: 'cerimonialistas, buffets e salões de festa'
+};
+
+/** O que a especialização vira, dito como fato ("a referência em noivas da cidade"). */
+const ESPECIALIDADE: Record<string, string> = {
+  salao: 'coloração e noivas', lanchonete: 'o prato da casa, que atrai gente de outros bairros', comercio: 'os produtos que o bairro não achava em outro lugar',
+  oficina: 'injeção eletrônica e carros híbridos', loja_online: 'um nicho, com cliente que volta a comprar', marcenaria: 'móveis planejados, sob medida',
+  estudio: 'casamentos e eventos', consultoria_ti: 'sistemas para um setor só (saúde, agro, varejo)', escritorio_contabil: 'empresas do campo e do comércio',
+  consultorio_psicologia: 'uma especialização clínica', clinica_fisio: 'fisioterapia esportiva e pilates', clinica_vet: 'animais exóticos legalizados', empreiteira: 'reforma com acabamento fino'
 };
 
 /** As ações de gestão que fazem sentido agora (a UI separa em agora/mais/saídas). */
@@ -177,7 +191,8 @@ export function executarGestao(v: Vida, r: Rng, oque: OqueGestao, valor?: string
       const deu = r.chance(0.7);
       movimento(deu ? 6 : 2);
       if (deu) n.reputacao = clamp((n.reputacao ?? 40) + 2);
-      escrever(v, { texto: `${DIVULGAR[p][1]} ${deu ? `Veio gente nova para ${n.nome}.` : 'O retorno foi menor do que o esperado.'}`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+      const como = p === 'atendimento' && QUEM_INDICA[t.id] ? `Conversa com quem costuma indicar gente: ${QUEM_INDICA[t.id]}.` : DIVULGAR[p][1];
+      escrever(v, { texto: `${como} ${deu ? `Veio gente nova para ${n.nome}.` : 'O retorno foi menor do que o esperado.'}`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
       return { texto: `${fmt(custo)} em divulgação. ${deu ? 'Chegou gente nova — e o efeito dura um tempo.' : 'Pouca gente nova apareceu.'}`, tom: deu ? 'bom' : 'neutro' };
     }
     case 'estrutura_negocio': {
@@ -196,18 +211,17 @@ export function executarGestao(v: Vida, r: Rng, oque: OqueGestao, valor?: string
     case 'especializar': {
       const custo = custoFrac(v, n, 0.15);
       pagarPeloCaixa(v, n, custo);
-      const rotulo = ROTULO_ESPECIALIZAR[t.id] ?? 'Especializar-se';
       const pegou = r.chance(0.65 + Math.min(0.15, (n.reputacao ?? 40) / 400));
       if (pegou) {
         melhorar('especialidade');
         n.reputacao = clamp((n.reputacao ?? 40) + 8);
-        const texto = `${n.nome} ganhou uma marca própria: ${rotulo.charAt(0).toLowerCase() + rotulo.slice(1)}.`;
+        const texto = `${n.nome} ganhou um nome na praça: ${ESPECIALIDADE[t.id] ?? 'uma especialidade que é só dela'}.`;
         escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', escolha: true, tom: 'bom' });
         marcar(v, 'conquista', texto, 2, { ocupacaoId: n.ocupacaoId });
         return { texto: `Pegou. Agora é disso que falam quando falam de ${n.nome}.`, tom: 'bom' };
       }
       v.fatos[`neg_espec_falhou_${n.tInicio}`] = v.t;
-      escrever(v, { texto: `Tentou dar a ${n.nome} uma especialidade (${rotulo.charAt(0).toLowerCase() + rotulo.slice(1)}). Não pegou: ${fmt(custo)} a menos no caixa.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true, tom: 'ruim' });
+      escrever(v, { texto: `Tentou fazer de ${n.nome} referência em ${ESPECIALIDADE[t.id]?.replace(/^(a|o|as|os) /, '') ?? 'alguma coisa só sua'}. Não pegou: ${fmt(custo)} a menos no caixa.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true, tom: 'ruim' });
       return { texto: 'Não pegou. Quem vinha continuou vindo pelo de sempre.', tom: 'ruim' };
     }
     case 'delivery': {

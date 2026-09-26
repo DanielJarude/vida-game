@@ -28,6 +28,9 @@ import { filhosEmComum, importancia, papelDe } from './vinculos';
 import { redeDeApoio } from './estado';
 import { abalar } from './abalo';
 
+/** "aos 3 anos", mas "com 1 ano" e "com poucos meses". */
+const aosAnos = (n: number) => (n < 1 ? 'com poucos meses' : n === 1 ? 'com 1 ano' : `aos ${n} anos`);
+
 export type NivelPerda = 'interrompe' | 'destaque' | 'discreto' | 'registro';
 
 export function nivelDaPerda(peso: number): NivelPerda {
@@ -140,14 +143,14 @@ function textoDaMorte(v: Vida, p: Pessoa, vin: Vinculo, causa: string, nivel: Ni
     const anos = Math.max(1, Math.round((v.t - (rom.tInicio ?? vin.tInicio)) / 12));
     const casados = anosDeCasamento(v, vin);
     const filhosJuntos = filhosEmComum(v, p.id).length;
-    const partes = [`Foram ${anos} ${anos === 1 ? 'ano' : 'anos'} juntos`];
+    const partes = [`${anos === 1 ? 'Foi um ano' : `Foram ${anos} anos`} juntos`];
     if (casados && casados < anos) partes.push(`${casados} de casamento`);
     const junto = partes.join(', ') + (filhosJuntos ? `, ${filhosJuntos === 1 ? 'um filho' : `${filhosJuntos} filhos`}` : '');
     const casa = vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && !x.p.especie) ? 'A casa ficou com um lugar vazio na mesa.' : 'A casa ficou em silêncio.';
-    return `Em ${mes}, ${p.nome} morreu, aos ${ip} anos (${causa}). ${junto}. ${casa} ${flex(g, 'Viúvo', 'Viúva', 'Viúve')} aos ${idade(v)}.`;
+    return `Em ${mes}, ${p.nome} morreu, ${aosAnos(ip)} (${causa}). ${junto}. ${casa} ${flex(g, 'Viúvo', 'Viúva', 'Viúve')} aos ${idade(v)}.`;
   }
   if (papel === 'filho') {
-    return `${capital(quem(v, p, vin))} ${p.nome} morreu em ${mes}, aos ${ip} anos (${causa}). Não existe palavra para quem perde ${flex(p.genero, 'um filho', 'uma filha', 'um filho')}.`;
+    return `${capital(quem(v, p, vin))} ${p.nome} morreu em ${mes}, ${aosAnos(ip)} (${causa}). Não existe palavra para quem perde ${flex(p.genero, 'um filho', 'uma filha', 'um filho')}.`;
   }
   if (p.especie) {
     const anos = Math.max(1, Math.round((v.t - (p.pet?.tChegada ?? vin.tInicio)) / 12));
@@ -156,16 +159,16 @@ function textoDaMorte(v: Vida, p: Pessoa, vin: Vinculo, causa: string, nivel: Ni
     const grupo = animal(p.especie).grupo;
     const vazio = grupo === 'gato' ? 'A almofada da janela ficou vazia.' : grupo === 'cao' ? 'A casa ficou estranha sem o barulho das patas no corredor.' : grupo === 'ave' ? 'A casa ficou silenciosa de manhã.' : grupo === 'peixe' ? 'O aquário ficou parado na sala.' : grupo === 'reptil' ? 'O cantinho de sol ficou vazio.' : 'A gaiola ficou vazia no canto da sala.';
     const velhice = causa === 'velhice';
-    return `${capital(bicho)} ${p.nome} morreu em ${mes}, aos ${ip} anos${velhice ? ', de velhice' : ` (${causa})`}${paliativo ? ', sem sofrer, perto de quem cuidava' : ''}. Foram ${anos} ${anos === 1 ? 'ano' : 'anos'} juntos. ${vazio}`;
+    return `${capital(bicho)} ${p.nome} morreu em ${mes}, ${aosAnos(ip)}${velhice ? ', de velhice' : ` (${causa})`}${paliativo ? ', sem sofrer, perto de quem cuidava' : ''}. ${anos === 1 ? 'Foi um ano' : `Foram ${anos} anos`} juntos. ${vazio}`;
   }
   const rotulo = quem(v, p, vin);
   if (vin.parentesco === 'mae' || vin.parentesco === 'pai') {
     const perto = vin.proximidade >= 55 ? ` ${idade(v)} anos com ${flex(p.genero, 'ele', 'ela', 'elu')} na sua vida.` : '';
-    return `${capital(rotulo)}, ${p.nome}, morreu em ${mes}, aos ${ip} anos (${causa}).${nivel === 'interrompe' ? perto : ''}`;
+    return `${capital(rotulo)}, ${p.nome}, morreu em ${mes}, ${aosAnos(ip)} (${causa}).${nivel === 'interrompe' ? perto : ''}`;
   }
-  if (rotulo && vin.parentesco) return `${capital(rotulo)} ${p.nome} morreu, aos ${ip} anos (${causa}).`;
-  if (rotulo) return `${capital(rotulo)} ${p.nome} morreu aos ${ip} anos (${causa}). Eram amigos desde ${anoDe(vin.tInicio)}, quando se conheceram ${descricaoOrigem(v, vin)}.`;
-  return `${p.nome}, que você conheceu ${descricaoOrigem(v, vin)}, morreu aos ${ip} anos (${causa}).`;
+  if (rotulo && vin.parentesco) return `${capital(rotulo)} ${p.nome} morreu, ${aosAnos(ip)} (${causa}).`;
+  if (rotulo) return `${capital(rotulo)} ${p.nome} morreu ${aosAnos(ip)} (${causa}). Eram amigos desde ${anoDe(vin.tInicio)}, quando se conheceram ${descricaoOrigem(v, vin)}.`;
+  return `${p.nome}, que você conheceu ${descricaoOrigem(v, vin)}, morreu ${aosAnos(ip)} (${causa}).`;
 }
 
 /**

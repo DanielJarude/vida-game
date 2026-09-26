@@ -81,6 +81,14 @@ const EMPREGADORES: Record<string, string[]> = {
   guarda: ['a prefeitura'], policia_civil: ['a Polícia Civil'], financas: ['um banco', 'uma corretora'], publico: ['a prefeitura'], judiciario: ['o Tribunal Regional'], fiscal: ['a Receita']
 };
 
+/** Quem entra sem concurso não trabalha para a rede pública direta (e não seria "cortado" dela): só os empregadores que contratam assim. */
+const SO_POR_CONCURSO = new Set(['a rede municipal de ensino', 'a prefeitura', 'a Unidade Básica de Saúde']);
+function empregadoresPrivados(trilha: string): string[] {
+  const todos = EMPREGADORES[trilha] ?? ['uma empresa'];
+  const livres = todos.filter(x => !SO_POR_CONCURSO.has(x));
+  return livres.length ? livres : todos;
+}
+
 /* ---------------------------------------------------------- Elegibilidade */
 
 export type ViaDeEntrada = 'curriculo' | 'oportunidade' | 'negocio' | 'promocao' | 'eleicao';
@@ -274,7 +282,7 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   if (eDasForcas(oc)) aoEntrarNasForcas(v, r, oc);
   const e: Emprego = {
     ocupacaoId: oc.id,
-    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(EMPREGADORES[oc.trilha] ?? ['uma empresa']),
+    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(empregadoresPrivados(oc.trilha)),
     contrato: oc.contrato,
     salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2),
     tInicio: v.t,
