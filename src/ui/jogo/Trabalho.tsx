@@ -414,8 +414,14 @@ function PainelPolitico({ vida, principal }: { vida: Vida; principal: boolean })
         <Dado rotulo="Base de apoio">{l.apoio}</Dado>
         <Dado rotulo="O nome">{l.reputacao}</Dado>
         <Dado rotulo={m ? 'Prioridade do mandato' : 'Bandeira'}>{nomeDaBandeira(p?.prioridade)}</Dado>
+        {l.estrutura && <Dado rotulo="O partido aqui">{l.estrutura}</Dado>}
+        {l.desgaste && <Dado rotulo="Desgaste">{l.desgaste}</Dado>}
       </dl>
       {l.horizonte && <p className="painel__frase">{l.horizonte}</p>}
+      {l.perspectiva && <p className="nota"><strong>Se fosse hoje.</strong> {l.perspectiva}</p>}
+      {l.ultimaEleicao && <p className="nota"><strong>A última eleição.</strong> {l.ultimaEleicao}</p>}
+      {l.escandalo && <p className="nota nota--atencao">{l.escandalo}</p>}
+      {l.partidos && <p className="nota">{l.partidos}</p>}
       {l.historico.length > 0 && <ul className="historico-politico">{l.historico.map((h, k) => <li key={k}>{h}</li>)}</ul>}
       <p className="nota">Partidos reais, só pelo nome; eleições, crises e mandatos são simulação do jogo.</p>
     </section>

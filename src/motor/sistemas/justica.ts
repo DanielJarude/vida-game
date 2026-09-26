@@ -31,6 +31,8 @@ import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
 import { terminar } from './romance';
 import { novaOportunidade } from './oportunidades';
+import { registrarAssuntoDaJustica } from './exposicao';
+import { perderMandatoPorPrisao } from './politica';
 
 export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedentes: [] });
 
@@ -87,9 +89,11 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaIlicita): voi
     escrever(v, { texto: `A fraude veio à tona. Saiu ${e.empregador.replace(/^(uma|a) /, 'da ').replace(/^(um|o) /, 'do ')} por justa causa, sem acerto — e com um processo pela frente.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', 'Demitido por justa causa: a fraude foi descoberta.'.replace('Demitido', flex(ge(v), 'Demitido', 'Demitida', 'Demitide')), 3);
   } else {
-    escrever(v, { texto: `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder a um processo por ${NOME_CATEGORIA[categoria]}.${particular ? ' A família juntou dinheiro para um advogado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder a um processo por ${NOME_CATEGORIA[categoria]}.${particular ? ' Um advogado particular assumiu a defesa, pago com o que havia guardado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
   }
   marcarFato(v, 'respondeu_processo');
+  // Processo é registro público: para quem tem nome, vira notícia.
+  registrarAssuntoDaJustica(v, 'processo');
   abalar(v, 'o processo na Justiça', -10, 14);
   for (const p of pais(v)) { const vin = v.vinculos[p.id]; if (vin) { vin.tensao = clamp(vin.tensao + 20); lembrarCom(v, p.id, 'O dia em que souberam do processo.', 'conflito', 2); } }
   const par = parceiro(v);
@@ -163,6 +167,8 @@ function prender(v: Vida, tFim: number, regime: 'fechado' | 'semiaberto', motivo
   const ja = !!j.prisao;
   j.prisao = { tInicio: j.prisao?.tInicio ?? v.t, tFim, regime };
   if (ja) return;
+  // Preso não exerce mandato: o cargo acaba (antes, o mandato seguia "vivo" dentro da cela).
+  if (motivo !== 'internacao') { perderMandatoPorPrisao(v, motivo); registrarAssuntoDaJustica(v, 'prisao'); }
   if (v.trabalho.atual) encerrarEmprego(v, 'prisão');
   v.trabalho.desempregadoDesde = undefined;
   v.trabalho.horasExtras = false;

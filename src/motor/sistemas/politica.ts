@@ -39,7 +39,7 @@ import type { Acao } from '../acoes';
 import type { CargoEletivo, Emprego, Pessoa, Prioridade, Vida, VidaPolitica } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { municipio, MUNICIPIOS } from '../dados/lugares';
-import { aoPartido, nomeCompletoPartido, PARTIDOS_REAIS, peloPartido } from '../dados/partidos';
+import { aoPartido, nomeCompletoPartido, oPartido, partidoDe, PARTIDOS_REAIS, peloPartido } from '../dados/partidos';
 import { ocupacao } from '../dados/ocupacoes';
 import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidade';
 import { encerrarEmprego, nomeOcupacao } from './trabalho';
@@ -50,7 +50,7 @@ import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { habilidade } from './frentes';
 import { anoDe, idadeEm } from '../tempo';
-import { dinheiro, flex, ge } from '../texto';
+import { dinheiro, flex, ge, listaNatural } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { aplicarPersonalidade } from '../personalidade';
 import type { AcaoProfissional } from './profissao';
@@ -163,9 +163,40 @@ export interface LeituraPolitica {
   partido?: string;
   horizonte?: string;
   historico: string[];
+  /** O desgaste, em palavras (pesa na eleição). */
+  desgaste?: string;
+  /** A estrutura do partido nesta cidade (o diretório local). */
+  estrutura?: string;
+  /** Por que ganhou ou perdeu a última eleição (os fatores da apuração). */
+  ultimaEleicao?: string;
+  /** Como a próxima eleição estaria hoje, para o cargo mais provável. */
+  perspectiva?: string;
+  /** Os partidos por onde passou. */
+  partidos?: string;
+  /** O escândalo que veio a público (quando há). */
+  escandalo?: string;
 }
 
 export function leituraPolitica(v: Vida): LeituraPolitica | undefined {
+  const base = leituraPoliticaBase(v);
+  const p = v.caminhos.politica;
+  if (!base || !p) return base;
+  const ultima = [...p.historico].reverse().find(h => h.resultado === 'eleito' || h.resultado === 'derrotado');
+  const e = eleicaoNaJanela(v) ?? proximaEleicao(v.t);
+  const cargo = p.mandato && p.mandato.tFim <= tDaPosse(e.ano) && CARGOS[p.mandato.cargo].tipo === e.tipo ? p.mandato.cargo : ORDEM_CARGOS.find(c => CARGOS[c].tipo === e.tipo && podeTentar(podeConcorrer(v, c, e.t)));
+  const passados = (p.partidos ?? []).filter(x => x.tFim !== undefined);
+  return {
+    ...base,
+    desgaste: p.desgaste < 15 ? 'pouco' : p.desgaste < 35 ? 'algum' : p.desgaste < 60 ? 'bastante' : 'muito',
+    estrutura: p.partido ? ['diretório grande na cidade', 'diretório médio na cidade', 'diretório pequeno na cidade'][v.fatos['pol_partido_porte'] ?? 1] : undefined,
+    ultimaEleicao: ultima?.fatores ? `${anoDe(ultima.t)}, ${nomeCargo(v, ultima.cargo)}: ${explicarEleicao(v, ultima)}` : undefined,
+    perspectiva: cargo && p.partido && !p.campanha && !p.posse && base.fase !== 'encerrada' ? `${cap(nomeCargo(v, cargo))} em ${e.ano}: ${perspectiva(v, cargo, e.t)}` : undefined,
+    partidos: passados.length ? `Antes: ${passados.map(x => `${partidoDe(x.sigla)?.chamado ?? x.sigla} (${anoDe(x.tInicio)}–${anoDe(x.tFim!)})`).join(', ')}.` : undefined,
+    escandalo: p.escandalo && v.t - p.escandalo.t <= 72 ? `${p.escandalo.tipo === 'caso' ? 'O caso' : p.escandalo.tipo === 'prisao' ? 'A prisão' : 'O processo'} que veio a público em ${anoDe(p.escandalo.t)} ainda pesa${p.escandalo.resposta === 'desculpas' ? ', menos depois do pedido de desculpas' : p.escandalo.resposta === 'negou' ? ', e a negativa não ajudou' : ''}.` : undefined
+  };
+}
+
+function leituraPoliticaBase(v: Vida): LeituraPolitica | undefined {
   const p = v.caminhos.politica;
   if (!p) return undefined;
   const g = ge(v);
@@ -296,6 +327,104 @@ export function entrarNaPolitica(v: Vida, origem: VidaPolitica['origem'], forca 
   return p;
 }
 
+/**
+ * Preso não exerce mandato. A condenação criminal suspende os direitos
+ * políticos (CF, art. 15, III) e leva à perda do mandato; a prisão
+ * preventiva afasta do cargo. No jogo, simplificado: o mandato acaba, e o
+ * nome fica marcado.
+ */
+export function perderMandatoPorPrisao(v: Vida, motivo: 'preventiva' | 'pena'): void {
+  const p = v.caminhos.politica;
+  if (!p) return;
+  p.campanha = undefined;
+  p.posse = undefined;
+  p.desgaste = clamp(p.desgaste + 30);
+  p.apoio = clamp(p.apoio - 20);
+  const m = p.mandato;
+  if (!m) return;
+  p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'cassado', partido: p.partido });
+  p.mandato = undefined;
+  p.consecutivos = 0;
+  p.fase = 'entre_mandatos';
+  if (v.trabalho.atual?.contrato === 'eletivo') encerrarEmprego(v, 'perda do mandato');
+  const texto = motivo === 'pena' ? `Com a condenação, perdeu o mandato de ${nomeCargo(v, m.cargo)}.` : `${flex(ge(v), 'Preso', 'Presa', 'Prese')} preventivamente, ${flex(ge(v), 'foi afastado', 'foi afastada', 'foi afastade')} do mandato de ${nomeCargo(v, m.cargo)} — e não voltou.`;
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+  marcar(v, 'fim_politica', texto, 3);
+}
+
+/* ======================================================= Troca de partido */
+
+/**
+ * O que a lei diz sobre sair do partido AGORA (Lei 9.096/95, art. 22-A;
+ * CF, art. 17, §6º; Súmula TSE 67 / STF, ADI 5.081):
+ *  - sem mandato: livre (a filiação nova precisa de seis meses antes da
+ *    eleição para valer a candidatura — Lei 9.504/97, art. 9º);
+ *  - mandato majoritário (prefeito, governador, senador): o mandato é de
+ *    quem foi eleito, não se perde por trocar;
+ *  - mandato proporcional (vereador, deputados): o mandato é do partido.
+ *    Trocar só é seguro na janela partidária — os 30 dias que terminam seis
+ *    meses antes da eleição, no fim do mandato. Fora dela, o partido pode
+ *    pedir o mandato na Justiça Eleitoral. (No jogo, a janela é o último
+ *    ano antes da eleição que encerra o mandato.)
+ */
+export function regraDaTroca(v: Vida): { como: 'janela' | 'fora_da_janela' | 'majoritario' | 'sem_mandato'; texto: string } {
+  const p = v.caminhos.politica;
+  const m = p?.fase === 'mandato' ? p.mandato : undefined;
+  if (!m) return { como: 'sem_mandato', texto: 'Sem mandato, a troca é livre.' };
+  if (m.cargo === 'prefeito' || m.cargo === 'governador' || m.cargo === 'senador') return { como: 'majoritario', texto: `Mandato de ${nomeCargo(v, m.cargo)} é de quem foi eleito: trocar de partido não tira o cargo.` };
+  const e = eleicaoNaJanela(v);
+  if (e && m.tFim <= tDaPosse(e.ano)) return { como: 'janela', texto: 'É a janela partidária do fim do mandato: dá para trocar sem perder o cargo.' };
+  return { como: 'fora_da_janela', texto: `Fora da janela partidária, o mandato de ${nomeCargo(v, m.cargo)} pertence ao partido: ele pode pedir o cargo na Justiça Eleitoral.` };
+}
+
+/** Chance de o partido de antes levar o mandato na Justiça (fora da janela, sem justa causa). */
+export const RISCO_FORA_DA_JANELA = 0.6;
+
+/**
+ * Trocar de partido (ou só sair, com `nova` ausente). Tem consequência: quem
+ * votava pela legenda estranha, a relação com o partido de antes esfria, e a
+ * filiação nova conta do zero para os seis meses da candidatura.
+ */
+export function trocarDePartido(v: Vida, r: Rng, nova: string | undefined, porte: number): string {
+  const p = v.caminhos.politica!;
+  const antes = p.partido;
+  const regra = regraDaTroca(v);
+  p.partidos ??= antes ? [{ sigla: antes, tInicio: p.tFiliacao ?? p.tInicio }] : [];
+  const aberto = p.partidos.find(x => x.sigla === antes && x.tFim === undefined);
+  if (aberto) { aberto.tFim = v.t; aberto.como = regra.como; }
+  p.partido = nova;
+  p.tFiliacao = nova ? v.t : undefined;
+  if (nova) { p.partidos.push({ sigla: nova, tInicio: v.t }); v.fatos['pol_partido_porte'] = porte; }
+  else delete v.fatos['pol_partido_porte'];
+  p.apoio = Math.round(clamp(p.apoio - (3 + p.apoio * 0.1)));
+  p.desgaste = clamp(p.desgaste + 4);
+  v.anoAtual.acoes.push('pol_troca');
+  const al = aliado(v);
+  if (al && v.vinculos[al.id]) { v.vinculos[al.id].proximidade = clamp(v.vinculos[al.id].proximidade - 12); lembrarCom(v, al.id, `Você saiu ${doPartido(antes)}.`, 'distancia', 2); }
+  if (p.fase === 'filiado' && !nova) p.fase = 'envolvido';
+  const texto = `Desfiliou-se ${doPartido(antes)}.`;
+  escrever(v, { texto: nova ? `Deixou ${oPartido(antes)} e filiou-se ${aoPartido(nova)}.` : texto, relevancia: p.mandato ? 'marco' : 'biografia', tema: 'trabalho', escolha: true });
+  marcar(v, 'politica', nova ? `Trocou de partido: ${partidoDe(antes)?.chamado ?? antes} → ${partidoDe(nova)?.chamado ?? nova}.` : `Saiu ${doPartido(antes)}.`, 2);
+  // Fora da janela, o partido de antes pode ir à Justiça pelo mandato proporcional.
+  if (regra.como === 'fora_da_janela' && p.mandato && r.chance(RISCO_FORA_DA_JANELA)) {
+    const m = p.mandato;
+    p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'cassado', partido: antes });
+    p.mandato = undefined;
+    p.consecutivos = 0;
+    if (v.trabalho.atual?.contrato === 'eletivo') encerrarEmprego(v, 'perda do mandato por infidelidade partidária');
+    p.fase = 'entre_mandatos';
+    const t2 = `${cap(oPartido(antes))} pediu o mandato na Justiça Eleitoral, e levou: fora da janela partidária, a cadeira de ${nomeCargo(v, m.cargo)} era do partido.`;
+    escrever(v, { texto: t2, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    marcar(v, 'derrota', t2, 3);
+    abalar(v, 'a perda do mandato', -10, 10);
+    voltarAoTrabalho(v, 'depois de perder o mandato');
+    return t2;
+  }
+  const e = eleicaoNaJanela(v);
+  const seis = e && nova && e.t - v.t < 6 ? ` A filiação nova tem menos de seis meses até a eleição de ${e.ano}: esta, não dá para disputar ${peloPartido(nova)}.` : '';
+  return nova ? `Agora ${peloPartido(nova).replace(/^pel[oa] /, x => (x === 'pela ' ? 'na ' : 'no '))}. Quem votava pela legenda estranhou; parte da base ficou para trás.${seis}` : 'Sem partido, por enquanto: sem partido, não há candidatura.';
+}
+
 /* ============================================================== Campanha */
 
 /** Quanto custa uma campanha que se paga do bolso, por cargo (reais de hoje). */
@@ -326,19 +455,56 @@ export function registrarCandidatura(v: Vida, cargo: CargoEletivo, tEleicao: num
   marcar(v, 'candidatura', `${cap(flex(ge(v), 'candidato', 'candidata', 'candidate'))} a ${nomeCargo(v, cargo)}, aos ${idade(v)}.`, 2);
 }
 
-/** A força de uma candidatura (o que a vida construiu + o que a campanha fez). */
-export function forcaDaCandidatura(v: Vida, cargo: CargoEletivo): number {
+/**
+ * O que decide uma eleição, fator por fator — a MESMA lista que a conta usa
+ * e que a explicação lê. Nada é narrado depois do resultado que não esteja
+ * aqui: se o texto diz "a disputa numa metrópole pesou", é porque este
+ * número pesou.
+ */
+export interface FatorEleitoral { id: IdFator; valor: number }
+export type IdFator = 'base' | 'nome' | 'campanha' | 'desgaste' | 'mandato' | 'segundo_mandato' | 'experiencia' | 'partido' | 'crise' | 'mare' | 'disputa' | 'escandalo' | 'troca';
+
+export function fatoresDaEleicao(v: Vida, cargo: CargoEletivo, tEleicao: number, notaSuposta?: number): { fatores: FatorEleitoral[]; x: number; chance: number } {
   const p = v.caminhos.politica!;
   const c = p.campanha;
+  const f: FatorEleitoral[] = [];
+  const add = (id: IdFator, valor: number) => { if (Math.abs(valor) >= 0.05) f.push({ id, valor: Math.round(valor * 10) / 10 }); };
   // A trajetória pesa mais que a campanha: base, nome (no alcance do cargo) e o que o mandato mostrou.
   const nome = CARGOS[cargo].escopo === 'municipio' ? Math.min(p.reputacao, 60) : p.reputacao;
-  let f = p.apoio * 0.45 + nome * 0.22 + (c?.nota ?? 0) * 0.5 - p.desgaste * 0.2;
-  if (p.mandato?.cargo === cargo) f += (p.mandato.aprovacao - 50) * 0.4 - Math.max(0, p.consecutivos - 1) * 3;
-  if (p.historico.some(h => h.resultado === 'derrotado')) f += 3;
-  // O tamanho do partido: o grande tem estrutura; o pequeno, pouca.
-  f += [3, 1, -2][v.fatos['pol_partido_porte'] ?? 1] ?? 0;
-  if (CARGOS[cargo].executivo && p.mandato?.cargo === cargo && v.economia?.fase === 'crise') f -= 8;
-  return f;
+  add('base', p.apoio * 0.45);
+  add('nome', nome * 0.22);
+  add('campanha', (c?.nota ?? notaSuposta ?? 0) * 0.5);
+  add('desgaste', -p.desgaste * 0.2);
+  if (p.mandato?.cargo === cargo) {
+    add('mandato', (p.mandato.aprovacao - 50) * 0.4);
+    add('segundo_mandato', -Math.max(0, p.consecutivos - 1) * 3);
+  }
+  if (p.historico.some(h => h.resultado === 'derrotado')) add('experiencia', 3);
+  // A estrutura do partido NESTA cidade (o diretório local): o grande tem gente e tempo de TV; o pequeno, pouco.
+  add('partido', [3, 1, -2][v.fatos['pol_partido_porte'] ?? 1] ?? 0);
+  if (CARGOS[cargo].executivo && p.mandato?.cargo === cargo && v.economia?.fase === 'crise') add('crise', -8);
+  // Um escândalo que veio a público: pesa menos com o tempo — e menos para quem pediu desculpas.
+  const esc = p.escandalo;
+  if (esc && tEleicao - esc.t <= 72) {
+    const base = esc.tipo === 'prisao' ? 16 : esc.tipo === 'processo' || esc.tipo === 'ilicito' ? 12 : 8;
+    const resposta = esc.resposta === 'desculpas' ? 0.55 : esc.resposta === 'negou' ? 1.15 : 1;
+    add('escandalo', -base * resposta * (1 - (tEleicao - esc.t) / 96));
+  }
+  // Partido novo: parte do eleitor votava na legenda, e desconfia de quem troca.
+  const ultimaTroca = (p.partidos ?? []).filter(x => x.tFim !== undefined).sort((a, b) => b.tFim! - a.tFim!)[0];
+  if (ultimaTroca && tEleicao - ultimaTroca.tFim! <= 30) add('troca', -3);
+  // O mundo, não o jogador: a maré do partido naquela eleição, naquela cidade.
+  add('mare', sorteDoPartido(v, Math.floor(tEleicao / 12)));
+  add('disputa', -dificuldade(v, cargo));
+  const x = f.reduce((s, k) => s + k.valor, 0);
+  // A escala da incerteza: nem base enorme garante, nem base pequena condena de antemão.
+  return { fatores: f, x, chance: 1 / (1 + Math.exp(-x / 7)) };
+}
+
+/** A força de uma candidatura (o que a vida construiu + o que a campanha fez), sem a disputa e a maré. */
+export function forcaDaCandidatura(v: Vida, cargo: CargoEletivo): number {
+  const t = v.caminhos.politica?.campanha?.tEleicao ?? proximaEleicao(v.t).t;
+  return fatoresDaEleicao(v, cargo, t).fatores.filter(k => k.id !== 'disputa' && k.id !== 'mare').reduce((s, k) => s + k.valor, 0);
 }
 
 /** O quanto um cargo é disputado, na cidade e no estado de quem concorre. */
@@ -346,19 +512,83 @@ export function dificuldade(v: Vida, cargo: CargoEletivo): number {
   const porte = municipio(v.moradia.municipioId).perfil;
   const tam = porte === 'metropole' ? 2 : porte === 'capital' ? 1.4 : porte === 'metropolitana' ? 1 : 0;
   // Muito mais candidatos do que vagas: a maioria perde (vereador em cidade pequena é o degrau mais alcançável).
-  return { vereador: 40 + tam * 8, prefeito: 54 + tam * 10, deputado_estadual: 50, deputado_federal: 58, senador: 74, governador: 72 }[cargo];
+  return { vereador: 38 + tam * 6, prefeito: 50 + tam * 8, deputado_estadual: 50, deputado_federal: 58, senador: 74, governador: 72 }[cargo];
 }
 
 /** Um número do ano e do partido (a força do partido naquela eleição): o mundo, não o jogador. */
 function sorteDoPartido(v: Vida, ano: number): number {
   let h = ano * 131;
   for (const ch of (v.caminhos.politica?.partido ?? '') + v.moradia.municipioId) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
-  return (h % 1000) / 1000 * 12 - 6;
+  return (h % 1000) / 1000 * 8 - 4;
 }
 
 export function chanceDeVitoria(v: Vida, cargo: CargoEletivo, tEleicao: number): number {
-  const x = forcaDaCandidatura(v, cargo) + sorteDoPartido(v, Math.floor(tEleicao / 12)) - dificuldade(v, cargo);
-  return 1 / (1 + Math.exp(-x / 5));
+  return fatoresDaEleicao(v, cargo, tEleicao).chance;
+}
+
+/**
+ * Antes de registrar: como a candidatura estaria hoje, com uma campanha
+ * média (a campanha ainda vai acontecer). Os mesmos fatores da apuração.
+ */
+export function perspectiva(v: Vida, cargo: CargoEletivo, tEleicao: number): string {
+  const conta = fatoresDaEleicao(v, cargo, tEleicao, 12);
+  const txt = explicarEleicao(v, { cargo, resultado: 'perspectiva', fatores: conta.fatores.filter(k => k.id !== 'mare'), chance: conta.chance }).replace(/ Chegou .*$| Uma disputa .*$/, '');
+  return `Hoje, ${palavraDaChance(conta.chance)} (com uma campanha média). ${txt}`.trim();
+}
+
+/** A chance em palavras (antes de registrar, e na explicação). */
+export const palavraDaChance = (x: number) => (x >= 0.75 ? 'favorito' : x >= 0.5 ? 'com boa chance' : x >= 0.3 ? 'disputado' : x >= 0.12 ? 'azarão' : 'quase sem chance');
+
+/** Cada fator em palavras, pelo lado em que pesou. */
+function palavraDoFator(v: Vida, id: IdFator, valor: number, cargo: CargoEletivo): string {
+  const porte = municipio(v.moradia.municipioId).perfil;
+  const lugar = CARGOS[cargo].escopo === 'estado' ? 'no estado' : porte === 'metropole' ? 'numa metrópole' : porte === 'capital' ? 'numa capital' : porte === 'pequena' ? 'numa cidade pequena' : 'na cidade';
+  const p = v.caminhos.politica!;
+  switch (id) {
+    case 'base': return valor < 0 ? `uma base pequena para ${cargo === 'vereador' ? 'a disputa' : `disputar ${nomeCargo(v, cargo)}`} ${lugar}` : valor >= 36 ? 'uma base grande' : 'a base que você construiu';
+    case 'nome': return valor < 0 ? `ainda ser pouco conhecido ${lugar}` : valor >= 12 ? 'o nome conhecido' : 'o nome que começa a circular';
+    case 'campanha': return valor >= 7 ? 'a campanha forte' : valor >= 3 ? 'a campanha' : 'uma campanha fraca';
+    case 'desgaste': return p.escandalo ? 'o desgaste acumulado' : 'o desgaste de anos na política';
+    case 'mandato': return valor >= 0 ? 'um mandato aprovado nas ruas' : 'a avaliação ruim do mandato';
+    case 'segundo_mandato': return 'o cansaço de quem já está no segundo mandato';
+    case 'experiencia': return 'a experiência de quem já disputou';
+    case 'partido': return valor > 0 ? `a estrutura ${doPartido(p.partido)} na cidade` : `o diretório pequeno ${doPartido(p.partido)} na cidade`;
+    case 'crise': return 'a crise econômica, que cai no colo de quem governa';
+    case 'escandalo': return p.escandalo?.tipo === 'caso' ? 'o caso que veio a público' : p.escandalo?.tipo === 'prisao' ? 'a prisão, que todo mundo soube' : 'o processo que veio a público';
+    case 'troca': return 'a troca recente de partido';
+    case 'mare': return valor >= 0 ? `uma eleição boa para ${oPartidoDe(p.partido)}` : `uma eleição ruim para ${oPartidoDe(p.partido)}`;
+    case 'disputa': return cargo === 'vereador' ? `muitos candidatos por vaga ${lugar}` : `a disputa por ${nomeCargo(v, cargo)} ${lugar}`;
+  }
+}
+
+const doPartido = (sigla?: string) => { const x = partidoDe(sigla); return x ? `${x.artigo === 'a' ? 'da' : 'do'} ${x.chamado}` : 'do partido'; };
+const oPartidoDe = (sigla?: string) => oPartido(sigla);
+
+/**
+ * A explicação de um resultado, a partir dos fatores guardados na apuração:
+ * o que mais ajudou, o que mais pesou contra, e se foi resultado esperado ou
+ * surpresa (a eleição tem incerteza — sem fórmula na tela).
+ */
+export function explicarEleicao(v: Vida, h: { cargo: CargoEletivo; resultado: string; fatores?: { id: string; valor: number }[]; chance?: number }): string {
+  if (!h.fatores?.length) return '';
+  const fs = h.fatores.map(k => ({ id: k.id as IdFator, valor: k.valor, fraco: false }));
+  // Base e nome sempre somam; mas somar pouco diante do tamanho da disputa é o que faz perder — então isso vai para "contra".
+  const disputa = -(fs.find(k => k.id === 'disputa')?.valor ?? 45);
+  for (const k of fs) {
+    if (k.id === 'base' && k.valor < disputa * 0.55 * 0.7) k.fraco = true;
+    if (k.id === 'nome' && k.valor < disputa * 0.22 * 0.6) k.fraco = true;
+  }
+  const favor = fs.filter(k => k.valor > 1 && !k.fraco && k.id !== 'disputa').sort((a, b) => b.valor - a.valor).slice(0, 2);
+  const contra = fs.filter(k => k.valor < -1 || k.fraco).sort((a, b) => (a.fraco ? -disputa * 0.3 : a.valor) - (b.fraco ? -disputa * 0.3 : b.valor)).slice(0, 2);
+  const nomes = (l: typeof fs) => listaNatural(l.map(k => palavraDoFator(v, k.id, k.fraco ? -1 : k.valor, h.cargo)));
+  const partes: string[] = [];
+  if (favor.length) partes.push(`A favor: ${nomes(favor)}.`);
+  if (contra.length) partes.push(`Contra: ${nomes(contra)}.`);
+  const ch = h.chance ?? 0.5;
+  const ganhou = h.resultado === 'eleito';
+  partes.push(ganhou ? (ch < 0.35 ? `Chegou como ${palavraDaChance(ch)} — e virou na apuração.` : ch >= 0.7 ? 'Chegou como favorito, e confirmou.' : 'Uma disputa apertada, que terminou do seu lado.')
+    : (ch >= 0.6 ? `Chegou ${palavraDaChance(ch) === 'favorito' ? 'como favorito' : 'com boa chance'} — e a apuração não confirmou: eleição tem incerteza.` : ch < 0.3 ? `Chegou como ${palavraDaChance(ch)}: era uma disputa difícil.` : 'Uma disputa apertada, que terminou do outro lado.'));
+  return partes.join(' ');
 }
 
 /** A apuração. */
@@ -366,10 +596,13 @@ function apurar(v: Vida, r: Rng): void {
   const p = v.caminhos.politica!;
   const c = p.campanha!;
   const cargo = c.cargo;
-  const ganhou = r.chance(chanceDeVitoria(v, cargo, c.tEleicao));
+  const conta = fatoresDaEleicao(v, cargo, c.tEleicao);
+  const ganhou = r.chance(conta.chance);
   const nome = nomeCargo(v, cargo);
   const par = parceiro(v);
-  p.historico.push({ t: c.tEleicao, cargo, resultado: ganhou ? 'eleito' : 'derrotado' });
+  const h = { t: c.tEleicao, cargo, resultado: (ganhou ? 'eleito' : 'derrotado') as 'eleito' | 'derrotado', fatores: conta.fatores, chance: Math.round(conta.chance * 100) / 100, partido: p.partido };
+  p.historico.push(h);
+  const porque = explicarEleicao(v, h);
   p.campanha = undefined;
   // A campanha deixa gente conhecida — e conhecida de você.
   p.reputacao = clamp(p.reputacao + (ganhou ? 3 : 1));
@@ -378,7 +611,7 @@ function apurar(v: Vida, r: Rng): void {
     p.posse = { cargo, t: tDaPosse(Math.floor(c.tEleicao / 12)) };
     if (!mesmo) p.fase = 'eleito';
     const texto = mesmo ? `${cap(flex(ge(v), 'Reeleito', 'Reeleita', 'Reeleite'))} ${nome}, em ${anoDe(c.tEleicao)}.` : `${cap(flex(ge(v), 'Eleito', 'Eleita', 'Eleite'))} ${nome} em ${anoDe(c.tEleicao)}, ${peloPartido(p.partido)}.`;
-    escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: `${texto} ${porque}`.trim(), relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'eleicao', texto, 3);
     abalar(v, 'a vitória na eleição', 12, 2);
     if (par) lembrarCom(v, par.p.id, `A noite da apuração: ${nome}.`, 'apoio', 3);
@@ -386,7 +619,7 @@ function apurar(v: Vida, r: Rng): void {
     // Perder a reeleição encerra o mandato; perder disputando outro cargo, não.
     const acaba = !!p.mandato && (p.mandato.cargo === cargo || p.mandato.tFim <= tDaPosse(Math.floor(c.tEleicao / 12)));
     const texto = `Não se elegeu ${nome} em ${anoDe(c.tEleicao)}.${acaba ? ' O mandato acaba no fim do ano.' : p.mandato ? ` Segue no mandato de ${nomeCargo(v, p.mandato.cargo)}.` : ''}`;
-    escrever(v, { texto, relevancia: p.historico.filter(h => h.resultado === 'derrotado').length <= 1 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `${texto} ${porque}`.trim(), relevancia: p.historico.filter(x => x.resultado === 'derrotado').length <= 1 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'derrota', texto, 3);
     abalar(v, 'a derrota na eleição', -10, 5);
     if (!p.mandato) { p.fase = 'entre_mandatos'; voltarAoTrabalho(v, 'depois da derrota'); }
@@ -564,9 +797,11 @@ export function processarPolitica(v: Vida, r: Rng): void {
     const delta = (m.feito > 0 ? 1.5 : -2) + (c.executivo && v.economia?.fase === 'crise' ? -6 : 0) + (c.executivo ? -2 : -0.5) - p.desgaste / 30 + r.normal() * 5 + (50 - m.aprovacao) * 0.2;
     m.aprovacao = Math.round(clamp(m.aprovacao + delta));
     m.feito = Math.max(0, m.feito - 1);
-    p.apoio = Math.round(clamp(p.apoio + (m.aprovacao * 0.85 - p.apoio) * 0.25));
+    // A base acompanha a avaliação do mandato — mas quem já tinha base não a perde inteira em um ano (a de antes pesa metade).
+    p.apoio = Math.round(clamp(p.apoio + ((p.apoio + m.aprovacao) / 2 - p.apoio) * 0.25));
     p.reputacao = clamp(p.reputacao + (c.escopo === 'estado' ? 1.5 : 0.5));
-    p.desgaste = clamp(p.desgaste + (c.executivo ? 3 : 2.5));
+    // O cargo desgasta; entregar algo concreto desgasta menos.
+    p.desgaste = clamp(p.desgaste + (c.executivo ? 3 : 2.5) - (m.feito > 0 ? 1.5 : 0));
     // O mandato cobra do bolso: contribuição ao partido, a base que se mantém, as viagens, os pedidos de ajuda que chegam à porta.
     const subsidio = v.trabalho.atual?.contrato === 'eletivo' ? v.trabalho.atual.salario : ocupacao(m.cargo).salario;
     const custo = Math.round(subsidio * 12 * (0.18 + (c.escopo === 'municipio' ? 0 : 0.1)) / 100) * 100;
@@ -678,7 +913,7 @@ export function semanaDaPolitica(v: Vida): { rotulo: string; peso: number } | un
  * vista; nunca um valor vazio. `prioridade`: trabalhar a prioridade do
  * mandato no ano (só quando ela existe).
  */
-export type OquePolitica = 'aproximar' | 'filiar' | 'comunidade' | 'bandeira' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar';
+export type OquePolitica = 'aproximar' | 'filiar' | 'comunidade' | 'bandeira' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar' | 'trocar_partido';
 export type AcaoPoliticaCmd = { tipo: 'politica'; oque: OquePolitica; valor?: string };
 
 export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
@@ -698,6 +933,12 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
       if (p.partido) return bloqueio('impossivel', `Já é filiado ${aoPartido(p.partido)}.`);
       if (v.trabalho.atual?.contrato === 'militar') return bloqueio('ilegal', 'Militar da ativa não se filia a partido (CF, art. 142, §3º, V).');
       return PERMITIDO;
+    case 'trocar_partido':
+      if (!p?.partido || !naPolitica(v)) return bloqueio('impossivel', 'Sem partido, não há de onde sair.');
+      if (p.campanha) return bloqueio('incompativel', 'Com a candidatura registrada, a legenda já está na urna.');
+      if (v.anoAtual.acoes.includes('pol_troca')) return bloqueio('incompativel', 'Já mudou de partido neste ano.');
+      if (p.tFiliacao !== undefined && v.t - p.tFiliacao < 12) return bloqueio('incompativel', 'A filiação é recente: trocar agora apagaria o pouco que se construiu.');
+      return regraDaTroca(v).como === 'fora_da_janela' ? { grau: 'irregular', motivo: regraDaTroca(v).texto } : PERMITIDO;
     case 'comunidade':
       if (!naPolitica(v) || fase === 'eleito') return bloqueio('impossivel', 'Não se aplica.');
       return v.anoAtual.acoes.includes('pol_comunidade') ? bloqueio('incompativel', 'Já rodou os bairros neste ano.') : PERMITIDO;
@@ -773,6 +1014,7 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
     }
     case 'crise': return { decisao: 'pol_crise' };
     case 'deixar': return { decisao: 'pol_deixar' };
+    case 'trocar_partido': return { decisao: 'pol_troca_partido' };
   }
   return {};
 }
@@ -811,6 +1053,13 @@ export function acoesPoliticas(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   if (p.prioridade) add({ id: 'pol_trocar_bandeira', rotulo: m ? 'Mudar a prioridade do mandato' : 'Trocar de bandeira', acao: A('bandeira'), peso: 0 });
   if (p.partido) add({ id: 'pol_negociar', rotulo: 'Negociar apoio', porque: e ? 'A eleição está perto.' : undefined, acao: A('negociar'), peso: e ? 6 : 2 });
   if (p.partido && !p.campanha && !p.posse) add({ id: 'pol_candidatura', rotulo: e ? (m ? 'Decidir sobre a eleição' : 'Registrar candidatura') : 'Lançar a pré-candidatura', porque: e ? `Eleição em outubro de ${e.ano}.` : undefined, acao: A('candidatura'), peso: e ? 9 : 2 });
+  // Trocar de partido: possibilidade real, com o que a lei diz dito antes. Mais visível quando o partido anda atrapalhando.
+  if (p.partido) {
+    const ultima = p.historico[p.historico.length - 1];
+    const partidoPesou = ultima?.fatores?.some(k => (k.id === 'partido' || k.id === 'mare') && k.valor <= -2);
+    const regra = regraDaTroca(v);
+    add({ id: 'pol_trocar_partido', rotulo: 'Trocar de partido', porque: regra.como === 'janela' ? 'É a janela partidária.' : partidoPesou ? 'Na última eleição, o partido pesou contra.' : undefined, acao: A('trocar_partido'), peso: regra.como === 'janela' || partidoPesou ? 4 : 1 });
+  }
   add({ id: 'pol_deixar', rotulo: m ? 'Renunciar ou encerrar a vida pública' : 'Deixar a vida política', acao: A('deixar'), peso: 0, saida: true });
   return out;
 }

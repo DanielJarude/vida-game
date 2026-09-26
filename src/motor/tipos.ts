@@ -1170,7 +1170,18 @@ export interface VidaPolitica {
   mandato?: { cargo: CargoEletivo; tInicio: number; tFim: number; aprovacao: number; feito: number; crise?: { t: number; tipo: string } };
   /** Mandatos seguidos no mesmo cargo executivo (para a regra de uma só reeleição). */
   consecutivos: number;
-  historico: { t: number; cargo: CargoEletivo; resultado: 'eleito' | 'derrotado' | 'renunciou' | 'concluiu' | 'cassado' }[];
+  historico: {
+    t: number; cargo: CargoEletivo; resultado: 'eleito' | 'derrotado' | 'renunciou' | 'concluiu' | 'cassado';
+    /** Na apuração: os fatores que o motor usou (com o peso de cada um) e a chance que havia — é daqui que sai a explicação. */
+    fatores?: { id: string; valor: number }[];
+    chance?: number;
+    /** Por qual partido disputou. */
+    partido?: string;
+  }[];
+  /** Os partidos por onde passou (a troca fica na história). */
+  partidos?: { sigla: string; tInicio: number; tFim?: number; como?: 'janela' | 'fora_da_janela' | 'majoritario' | 'sem_mandato' }[];
+  /** Um escândalo que veio a público (o caso, o processo): pesa na próxima eleição, conforme a resposta. */
+  escandalo?: { t: number; tipo: 'caso' | 'processo' | 'prisao' | 'ilicito'; resposta?: 'desculpas' | 'negou' | 'silencio' };
   /** O trabalho que ficou para trás (para voltar depois). */
   anterior?: { emprego: Emprego; garantido: boolean; negocio?: boolean };
   /** Inelegível até (Ficha Limpa, abstrato). */
@@ -1236,6 +1247,12 @@ export interface Vida {
   caminhos: Caminhos;
   /** Antecedentes, processo em andamento, pena. Ausente = nunca teve problema com a Justiça. */
   justica?: Justica;
+  /**
+   * O que é privado e quem sabe: um caso, um processo, o que se fez por fora.
+   * Só vira assunto público quando alguém fala (e a vida pública da pessoa
+   * torna isso notícia) — `sistemas/exposicao`.
+   */
+  segredos?: Segredo[];
   /** Como prefere ir ao trabalho e ao estudo. Ausente = o jeito mais rápido que tem (`sistemas/transporte`). */
   deslocamento?: { modo: 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro'; t: number };
   morte?: { t: number; causa: string; heranca?: Heranca };
@@ -1255,6 +1272,19 @@ export interface Justica {
   alternativa?: { tFim: number };
   /** Saiu da prisão em (a volta tem suas próprias portas e barreiras). */
   tSaida?: number;
+}
+
+/** Um acontecimento privado e quem sabe dele. */
+export interface Segredo {
+  id: string;
+  tipo: 'caso' | 'processo' | 'prisao' | 'ilicito';
+  t: number;
+  /** Quem sabe (ids de pessoas). */
+  quemSabe: string[];
+  /** Quando virou público (ausente: ainda não). */
+  publico?: number;
+  /** A outra pessoa do caso, quando há. */
+  pessoaId?: string;
 }
 
 /** O que ficou para quem ficou (simplificado; não é inventário jurídico). */

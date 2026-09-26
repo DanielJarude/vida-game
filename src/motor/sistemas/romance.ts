@@ -34,6 +34,7 @@ import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidad
 import { aplicarPersonalidade } from '../personalidade';
 import { filhosEmComum } from './vinculos';
 import { abalar } from './abalo';
+import { ficouSabendo, registrarSegredo } from './exposicao';
 
 const ESTAGIOS_ATIVOS: EstagioRomance[] = ['saindo', 'namoro', 'morando_junto', 'casamento'];
 
@@ -332,6 +333,8 @@ export function iniciarCaso(v: Vida, p: Pessoa, vin: Vinculo): void {
   const env = vin.romance?.envolvimento ?? interesseInicial(v, p);
   vin.romance = { estagio: 'saindo', tEstagio: v.t, tInicio: v.t, envolvimento: Math.max(50, env), secreto: true };
   if (par?.vin.romance) par.vin.romance.segredo = { pessoaId: p.id, t: v.t };
+  // Um segredo: por ora, só os dois sabem (`sistemas/exposicao`).
+  registrarSegredo(v, 'caso', [p.id], p.id);
   lembrarCom(v, p.id, 'Começaram a se ver escondido.', 'romance', 2);
   escrever(v, {
     texto: par ? `Começou um caso com ${p.nome}, escondido de ${par.p.nome}.` : `Começou a se ver com ${p.nome}, escondido.`,
@@ -384,6 +387,8 @@ export function reacaoATraicao(v: Vida, r: Rng, par: Pessoa, vinPar: Vinculo, co
   const rom = vinPar.romance!;
   vinPar.tensao = clamp(vinPar.tensao + 60);
   vinPar.confianca = confessou ? 15 : 5;
+  // Agora a parceria também sabe — o que ela fizer com isso é dela.
+  ficouSabendo(v, 'caso', par.id, rom.segredo?.pessoaId);
   rom.segredo = undefined;
   const filhosPequenos = filhosEmComum(v, par.id).filter(f => f.vivo && idadePessoa(v, f) < 14).length;
   const chanceFicar = clamp(

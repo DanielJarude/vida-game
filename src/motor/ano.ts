@@ -29,6 +29,7 @@ import { processarNegocio } from './sistemas/negocio';
 import { processarOportunidades } from './sistemas/oportunidades';
 import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, recalcularConvivio } from './sistemas/social';
 import { processarRomance, surgirInteresse } from './sistemas/romance';
+import { processarExposicao } from './sistemas/exposicao';
 import { processarProcessos } from './sistemas/processos';
 import { fotografar, processarDinheiro } from './sistemas/dinheiro';
 import { avancarEconomia } from './sistemas/economia';
@@ -106,6 +107,7 @@ function viverAno(v: Vida, r: Rng): void {
   envelhecerConhecidos(v, r);
   processarSocial(v, r);
   processarRomance(v, r);
+  processarExposicao(v, r);
   surgirInteresse(v, r);
   processarConcepcao(v, r);
   processarGestacoes(v, r);

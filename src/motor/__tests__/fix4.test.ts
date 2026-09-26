@@ -35,6 +35,11 @@ import { capacidade, vereditoDePagar } from '../sistemas/dinheiro';
 import { podeTentar } from '../plausibilidade';
 import { abrirDecisao } from '../conteudo/motor';
 import { contexto } from '../conteudo/base';
+import type { CargoEletivo } from '../tipos';
+import { chanceDeVitoria, entrarNaPolitica, fatoresDaEleicao, leituraPolitica, perderMandatoPorPrisao, perspectiva, podeConcorrer, processarPolitica, proximaEleicao, regraDaTroca, registrarCandidatura, tDaPosse, trocarDePartido } from '../sistemas/politica';
+import { iniciarCaso, reacaoATraicao } from '../sistemas/romance';
+import { processarExposicao, tornarPublico } from '../sistemas/exposicao';
+import { abrirProcesso } from '../sistemas/justica';
 
 /* ============================================================ 1. A rede */
 
@@ -407,5 +412,142 @@ describe('patrimônio aplicado existe quando se precisa dele', () => {
     v = transacao(v, (x, r) => { abrirNegocio(x, r, 'lanchonete', { modo: 'guardado' }); aplicar(x, 'pos_fixado', Math.max(0, x.financas.conta - 1000)); }).vida;
     v = transacao(v, (x, r) => { x.financas.conta = -30000; x.caminhos.negocio!.clientela = 2; if (x.trabalho.atual) x.trabalho.atual.clientela = 2; x.t += 12; processarNegocio(x, r); }).vida;
     expect(v.caminhos.negocio!.estado).not.toBe('fechado');
+  });
+});
+
+/* ======================================================= 4–5. Política */
+
+const ultimo = <T,>(l: T[]): T => l[l.length - 1];
+
+describe('política: eleição explicável, troca de partido, vida privada × pública', () => {
+  function politico(municipioId = 'recife-pe', apoio = 70) {
+    const v = adulto(40, { semente: 5, municipioId });
+    return transacao(v, x => {
+      const p = entrarNaPolitica(x, 'comunidade');
+      p.partido = 'PSD'; p.tFiliacao = x.t - 36; p.apoio = apoio; p.reputacao = 45; p.desgaste = 10; p.fase = 'filiado';
+      x.fatos['pol_partido_porte'] = 2;
+    }).vida;
+  }
+  function comMandato(v: ReturnType<typeof politico>, cargo: CargoEletivo, anosAteOFim: number) {
+    return transacao(v, x => {
+      const p = x.caminhos.politica!;
+      p.fase = 'mandato';
+      p.mandato = { cargo, tInicio: x.t - 12, tFim: x.t + anosAteOFim * 12, aprovacao: 55, feito: 0 };
+      p.consecutivos = 1;
+      x.trabalho.atual = { ocupacaoId: cargo, empregador: 'a Câmara', contrato: 'eletivo', salario: 12000, tInicio: x.t - 12, desempenho: 60, municipioId: x.moradia.municipioId, carga: 'integral' };
+    }).vida;
+  }
+
+  it('a chance é a soma dos fatores guardados — e a explicação cita os que mais pesaram', () => {
+    let v = politico('sao-paulo-sp', 45);
+    const e = proximaEleicao(v.t, 'municipal');
+    v = transacao(v, x => { registrarCandidatura(x, 'vereador', e.t); x.caminhos.politica!.campanha!.nota = 6; }).vida;
+    const conta = fatoresDaEleicao(v, 'vereador', e.t);
+    const x = conta.fatores.reduce((s, k) => s + k.valor, 0);
+    expect(conta.chance).toBeCloseTo(1 / (1 + Math.exp(-x / 7)), 6);
+    expect(chanceDeVitoria(v, 'vereador', e.t)).toBeCloseTo(conta.chance, 6);
+    v = transacao(v, (y, r) => { y.t = e.t; processarPolitica(y, r); }).vida;
+    const h = ultimo(v.caminhos.politica!.historico)!;
+    expect(h.fatores?.length).toBeGreaterThan(3);
+    expect(h.chance).toBeDefined();
+    const linha = ultimo(v.biografia.filter(b => /se elegeu|Eleit/.test(b.texto)));
+    // O maior peso contra numa metrópole é a disputa: a explicação diz isso.
+    const pior = [...h.fatores!].sort((a, b) => a.valor - b.valor)[0];
+    expect(pior.id).toBe('disputa');
+    expect(linha.texto).toMatch(/Contra: .*(candidatos por vaga|disputa)/);
+    expect(linha.texto).toMatch(/A favor: /);
+    // O partido pequeno aqui pesou contra, e isso é dito.
+    expect(h.fatores!.find(k => k.id === 'partido')!.valor).toBeLessThan(0);
+  });
+
+  it('antes de concorrer, a opção diz como estaria hoje (com os mesmos fatores)', () => {
+    const v = politico('campina-grande-pb', 70);
+    const e = proximaEleicao(v.t, 'municipal');
+    const txt = perspectiva(v, 'vereador', e.t);
+    expect(txt).toMatch(/^Hoje, (favorito|com boa chance|disputado|azarão|quase sem chance)/);
+    expect(txt).toMatch(/A favor: /);
+  });
+
+  it('trocar de partido sem mandato: livre, com custo na base e histórico', () => {
+    let v = politico();
+    const apoio = v.caminhos.politica!.apoio;
+    expect(disponibilidade(v, { tipo: 'politica', oque: 'trocar_partido' } as Acao).grau).toBe('permitido');
+    v = transacao(v, (x, r) => { trocarDePartido(x, r, 'MDB', 0); }).vida;
+    const p = v.caminhos.politica!;
+    expect(p.partido).toBe('MDB');
+    expect(p.tFiliacao).toBe(v.t);
+    expect(p.apoio).toBeLessThan(apoio);
+    expect(p.partidos?.find(x => x.sigla === 'PSD')?.tFim).toBe(v.t);
+    expect(ultimo(v.biografia)!.texto).toMatch(/Deixou o PSD e filiou-se ao MDB/);
+    expect(leituraPolitica(v)!.partidos).toMatch(/PSD/);
+    // A filiação nova conta do zero para os seis meses.
+    const e = proximaEleicao(v.t);
+    if (e.t - v.t < 6) expect(podeTentar(podeConcorrer(v, e.tipo === 'municipal' ? 'vereador' : 'deputado_estadual', e.t))).toBe(false);
+  });
+
+  it('prefeito troca e fica com o mandato (majoritário); vereador fora da janela arrisca a cadeira; na janela, não', () => {
+    const prefeito = comMandato(politico(), 'prefeito', 3);
+    expect(regraDaTroca(prefeito).como).toBe('majoritario');
+    for (let s = 1; s <= 8; s++) {
+      const depois = transacao(prefeito, x => { trocarDePartido(x, criarRng(s), 'MDB', 1); }).vida;
+      expect(depois.caminhos.politica!.mandato).toBeDefined();
+    }
+    const vereador = comMandato(politico(), 'vereador', 3);
+    expect(regraDaTroca(vereador).como).toBe('fora_da_janela');
+    expect(disponibilidade(vereador, { tipo: 'politica', oque: 'trocar_partido' } as Acao).grau).toBe('irregular');
+    let perdeu = 0;
+    for (let s = 1; s <= 20; s++) { const d = transacao(vereador, x => { trocarDePartido(x, criarRng(s), 'MDB', 1); }).vida; if (!d.caminhos.politica!.mandato) { perdeu++; expect(d.biografia.some(b => /janela partidária/.test(b.texto))).toBe(true); } }
+    expect(perdeu).toBeGreaterThan(5);
+    // Na janela (último ano do mandato, com eleição chegando), a troca é segura.
+    const e = proximaEleicao(vereador.t, 'municipal');
+    const naJanela = transacao(vereador, x => { x.t = e.t - 7; x.caminhos.politica!.mandato!.tFim = tDaPosse(e.ano); }).vida;
+    expect(regraDaTroca(naJanela).como).toBe('janela');
+    for (let s = 1; s <= 8; s++) expect(transacao(naJanela, x => { trocarDePartido(x, criarRng(s), 'MDB', 1); }).vida.caminhos.politica!.mandato).toBeDefined();
+  });
+
+  it('uma traição secreta não mexe em voto; só depois de pública vira fator da eleição', () => {
+    let v = comMandato(politico('recife-pe', 70), 'vereador', 1);
+    const par = comParceiro(v, { estagio: 'casamento', anos: 12, genero: 'feminino' }).p;
+    const amante = pessoaNova(v, 35, 'feminino');
+    vincular(v, amante, { origem: 'trabalho', proximidade: 50, estagio: 'amigo' });
+    v = transacao(v, x => { iniciarCaso(x, x.pessoas[amante.id], x.vinculos[amante.id]); }).vida;
+    const e = proximaEleicao(v.t, 'municipal');
+    const antes = fatoresDaEleicao(v, 'vereador', e.t).fatores;
+    expect(antes.some(k => k.id === 'escandalo')).toBe(false);
+    expect(v.segredos?.some(s => s.tipo === 'caso' && !s.publico)).toBe(true);
+    // A parceria descobre: é assunto da casa, ainda não da cidade.
+    v = transacao(v, (x, r) => { reacaoATraicao(x, r, x.pessoas[par.id], x.vinculos[par.id], false); }).vida;
+    expect(v.segredos!.find(s => s.tipo === 'caso')!.quemSabe).toContain(par.id);
+    expect(fatoresDaEleicao(v, 'vereador', e.t).fatores.some(k => k.id === 'escandalo')).toBe(false);
+    // Vazou: agora pesa, e a vida pública pergunta o que fazer.
+    v = transacao(v, x => { tornarPublico(x, x.segredos!.find(s => s.tipo === 'caso')!); }).vida;
+    const depois = fatoresDaEleicao(v, 'vereador', e.t).fatores;
+    expect(depois.find(k => k.id === 'escandalo')!.valor).toBeLessThan(0);
+    expect(conteudoPorId('pol_escandalo')).toBeDefined();
+    expect(preparar(conteudoPorId('pol_escandalo')!, v, criarRng(1))).not.toBeNull();
+    // Pedir desculpas pesa menos que negar.
+    const desc = transacao(v, x => { x.caminhos.politica!.escandalo!.resposta = 'desculpas'; }).vida;
+    const neg = transacao(v, x => { x.caminhos.politica!.escandalo!.resposta = 'negou'; }).vida;
+    const peso = (y: typeof v) => fatoresDaEleicao(y, 'vereador', e.t).fatores.find(k => k.id === 'escandalo')!.valor;
+    expect(peso(desc)).toBeGreaterThan(peso(neg));
+  });
+
+  it('um caso que ninguém fora da casa sabe, numa vida sem nome público, não vira notícia', () => {
+    let v = adulto(40, { semente: 8 });
+    const amante = pessoaNova(v, 35, 'masculino');
+    vincular(v, amante, { origem: 'trabalho', proximidade: 50, estagio: 'amigo' });
+    comParceiro(v, { estagio: 'casamento', anos: 10 });
+    v = transacao(v, x => { iniciarCaso(x, x.pessoas[amante.id], x.vinculos[amante.id]); }).vida;
+    for (let s = 1; s <= 30; s++) v = transacao(v, x => { processarExposicao(x, criarRng(s)); }).vida;
+    expect(v.segredos?.find(s => s.tipo === 'caso')?.publico ?? 0).toBeLessThanOrEqual(0);
+  });
+
+  it('preso não segue com o mandato (antes, o cargo continuava "vivo" na cela)', () => {
+    let v = comMandato(politico(), 'vereador', 2);
+    v = transacao(v, (x, r) => { abrirProcesso(x, r, 'fraude'); if (!x.justica?.prisao) perderMandatoPorPrisao(x, 'pena'); }).vida;
+    if (v.justica?.prisao) expect(v.caminhos.politica!.mandato).toBeUndefined();
+    const preso = transacao(comMandato(politico(), 'vereador', 2), x => { perderMandatoPorPrisao(x, 'pena'); }).vida;
+    expect(preso.caminhos.politica!.mandato).toBeUndefined();
+    expect(ultimo(preso.caminhos.politica!.historico)!.resultado).toBe('cassado');
   });
 });

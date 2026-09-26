@@ -7,6 +7,7 @@
  * franqueza, atalho) — nunca sobre o que defender ideologicamente.
  */
 
+import { podeTentar } from '../plausibilidade';
 import type { Conteudo, Ctx, Resultado } from './base';
 import type { CargoEletivo, Vida, VidaPolitica } from '../tipos';
 import { clamp } from '../rng';
@@ -19,13 +20,12 @@ import { marcar } from '../sistemas/marcas';
 import { valorDoNegocio } from '../sistemas/negocio';
 import {
   CARGOS, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, PARTIDOS,
-  podeConcorrer, PRIORIDADES, registrarCandidatura, renunciar, voltarAoTrabalho
-} from '../sistemas/politica';
+  podeConcorrer, PRIORIDADES, registrarCandidatura, renunciar, voltarAoTrabalho, perspectiva, regraDaTroca, trocarDePartido } from '../sistemas/politica';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt } from '../texto';
 import { aoPartido, nomeCompletoPartido, oPartido, partidoDe } from '../dados/partidos';
 
-const doPartido = (s: string) => { const p = partidoDe(s); return p ? `${p.artigo === 'a' ? 'da' : 'do'} ${p.chamado}` : 'do partido'; };
+const doPartido = (s: string | undefined) => { const p = partidoDe(s); return p ? `${p.artigo === 'a' ? 'da' : 'do'} ${p.chamado}` : 'do partido'; };
 
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] !== undefined && c.v.fatos[chave] === c.v.t;
 const pol = (c: Ctx) => c.v.caminhos.politica!;
@@ -58,6 +58,36 @@ function partidosOferecidos(c: Ctx): string[] {
   return out;
 }
 
+/** Os partidos que conversariam sobre uma troca (sem o atual), com o tamanho do diretório daqui. */
+function oferecidosParaTroca(c: Ctx): { sigla: string; porte: number }[] {
+  const atual = pol(c).partido;
+  let h = anoDe(c.v.t) * 17 + 5;
+  for (const ch of c.v.moradia.municipioId + (atual ?? '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const out: { sigla: string; porte: number }[] = [];
+  for (let k = 0; out.length < 3 && k < 60; k++) { const x = PARTIDOS[(h + k * 11) % PARTIDOS.length]; if (x !== atual && !out.some(o => o.sigla === x)) out.push({ sigla: x, porte: out.length }); }
+  return out;
+}
+
+const PORTE_CURTO = ['diretório grande aqui', 'diretório médio aqui', 'diretório pequeno aqui'];
+const noPartido = (s?: string) => { const x = partidoDe(s); return x ? `${x.artigo === 'a' ? 'na' : 'no'} ${x.chamado}` : 'no partido'; };
+const anosNoPartido = (c: Ctx) => { const n = Math.max(0, Math.floor((c.v.t - (pol(c).tFiliacao ?? c.v.t)) / 12)); return n <= 1 ? 'pouco mais de um ano' : `${n} anos`; };
+
+/** O que a troca muda, dito antes: o mandato (pela regra), a base, a próxima eleição. */
+function consequenciaDaTroca(c: Ctx, o: { sigla: string; porte: number } | undefined): string {
+  const regra = regraDaTroca(c.v);
+  const partes: string[] = [];
+  if (regra.como === 'fora_da_janela') partes.push(`Risco alto de perder o mandato: ${oPartido(pol(c).partido)} pode pedir a cadeira na Justiça Eleitoral (fidelidade partidária).`);
+  else if (regra.como === 'majoritario') partes.push('O mandato fica com você.');
+  else if (regra.como === 'janela') partes.push('Na janela partidária: o mandato fica com você.');
+  partes.push('Parte da base, que votava pela legenda, fica para trás.');
+  if (o) {
+    const e = eleicaoNaJanela(c.v);
+    partes.push(e && e.t - c.v.t < 6 ? `A filiação nova não chega a seis meses antes da eleição de ${e.ano}: essa, não dá para disputar.` : 'A filiação nova precisa de seis meses antes da próxima eleição.');
+    partes.push(o.porte === 0 ? 'Um diretório grande dá estrutura na campanha.' : o.porte === 2 ? 'Um diretório pequeno dá espaço rápido, e pouca estrutura.' : 'Um diretório médio: estrutura razoável.');
+  } else partes.push('Sem partido, não há candidatura até se filiar de novo.');
+  return partes.join(' ');
+}
+
 const PORTE = ['o diretório daqui é grande, com estrutura e fila de gente esperando a vez', 'o diretório daqui é médio, organizado em alguns bairros', 'o diretório daqui é pequeno: precisa de nomes novos e dá espaço rápido'];
 
 function filiar(c: Ctx, k: number): Resultado {
@@ -82,6 +112,7 @@ function cargoOpcao(cargo: CargoEletivo) {
       return d.grau === 'permitido' || d.grau === 'improvavel' || d.grau === 'irregular' ? true : (d.motivo ?? 'Não é possível.');
     },
     comportamento: undefined,
+    consequencia: (c: Ctx) => { const e = eleicaoNaJanela(c.v); return e && CARGOS[cargo].tipo === e.tipo && podeTentar(podeConcorrer(c.v, cargo, e.t)) ? perspectiva(c.v, cargo, e.t) : undefined; },
     resolver: (c: Ctx): Resultado => {
       const e = eleicaoNaJanela(c.v)!;
       const d = podeConcorrer(c.v, cargo, e.t);
@@ -135,6 +166,56 @@ export const POLITICA: Conteudo[] = [
     opcoes: [
       ...[0, 1, 2].map(k => ({ id: `p${k}`, texto: (c: Ctx) => `Filiar-se ${aoPartido(partidosOferecidos(c)[k])}`, consequencia: (c: Ctx) => nomeCompletoPartido(partidosOferecidos(c)[k]), resolver: (c: Ctx) => filiar(c, k) })),
       { id: 'nenhum', texto: 'Ainda não se filiar', resolver: () => ({ texto: 'Você disse que ia pensar.', memoria: null }) }
+    ]
+  },
+  {
+    id: 'pol_escandalo', tipo: 'decisao', idade: [16, 99], tema: 'escolha', prioritario: true, prioridade: 8, repetir: 0,
+    quando: c => deHoje(c, 'pol_escandalo') && !!c.v.caminhos.politica?.escandalo && !c.v.caminhos.politica.escandalo.resposta,
+    titulo: 'Virou notícia',
+    texto: c => {
+      const p = pol(c);
+      const e = p.escandalo!;
+      const oque = e.tipo === 'caso' ? 'o caso' : e.tipo === 'prisao' ? 'a prisão' : 'o processo';
+      const par = parceiro(c.v);
+      return `O telefone não para: todo mundo quer saber d${oque.startsWith('a ') ? 'a' : 'o'} ${oque.slice(2)}. ${cap(oPartido(p.partido))} pediu uma posição até amanhã.${e.tipo === 'caso' && par ? ` Em casa, ${par.p.nome} lê as mesmas manchetes.` : ''}`;
+    },
+    opcoes: [
+      { id: 'desculpas', texto: 'Vir a público e pedir desculpas', comportamento: { coragem: 1 },
+        consequencia: () => 'Assumir diminui o peso na próxima eleição — e expõe ainda mais a vida de quem está perto.',
+        resolver: c => ({ texto: 'Você leu uma nota curta, sem se esconder atrás de advogado. A repercussão foi grande — e depois foi diminuindo.', memoria: 'Pediu desculpas em público.', relevancia: 'biografia',
+          efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; p.desgaste = clamp(p.desgaste - 6); const par = parceiro(c.v); if (p.escandalo!.tipo === 'caso' && par) par.vin.tensao = clamp(par.vin.tensao + 6); } }) },
+      { id: 'negar', texto: 'Negar tudo', comportamento: { empatia: -1 },
+        consequencia: () => 'Se colar, passa; se não colar, pesa mais na próxima eleição do que o próprio fato.',
+        resolver: c => ({ texto: 'Você negou. Parte da base acreditou; a imprensa, não.', memoria: 'Negou em público.', relevancia: 'biografia',
+          efeito: () => { const p = pol(c); p.escandalo!.resposta = 'negou'; p.apoio = clamp(p.apoio + 2); } }) },
+      { id: 'silencio', texto: 'Não falar do assunto',
+        consequencia: () => 'O assunto esfria no tempo dele; na próxima eleição, pesa o que pesa.',
+        resolver: c => ({ texto: 'Você não deu entrevista nenhuma. Em duas semanas, o assunto era outro — até a campanha.', memoria: null, efeito: () => { pol(c).escandalo!.resposta = 'silencio'; } }) },
+      { id: 'renunciar', texto: c => `Renunciar ao mandato de ${pol(c).mandato ? nomeCargo(c.v, pol(c).mandato!.cargo) : ''}`, disponivel: c => (pol(c).mandato ? true : false),
+        consequencia: () => 'O cargo acaba agora; o desgaste diminui, e a volta, se vier, é mais adiante.',
+        resolver: c => ({ texto: 'Você entregou a carta de renúncia numa sexta-feira à tarde.', memoria: null, efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; renunciar(c.v, 'depois do escândalo'); p.desgaste = clamp(p.desgaste - 8); } }) }
+    ]
+  },
+  {
+    id: 'pol_troca_partido', tipo: 'decisao', idade: [16, 95], tema: 'escolha', manual: true, repetir: 0, biografica: true,
+    titulo: 'Trocar de partido?',
+    texto: c => {
+      const p = pol(c);
+      const regra = regraDaTroca(c.v);
+      const ultima = p.historico[p.historico.length - 1];
+      const pesou = ultima?.fatores?.find(k => k.id === 'partido' && k.valor < 0) ? ` Na última eleição, o diretório pequeno ${doPartido(p.partido)} pesou contra.` : '';
+      const outros = oferecidosParaTroca(c);
+      return `Há ${anosNoPartido(c)} você está ${noPartido(p.partido)}.${pesou} ${regra.texto} Outros partidos conversaram: ${outros.map(o => `${oPartido(o.sigla)} (${PORTE_CURTO[o.porte]})`).join(', ')}.`;
+    },
+    opcoes: [
+      ...[0, 1, 2].map(k => ({
+        id: `t${k}`, texto: (c: Ctx) => `Filiar-se ${aoPartido(oferecidosParaTroca(c)[k]?.sigla)}`,
+        disponivel: (c: Ctx) => (oferecidosParaTroca(c)[k] ? true : false),
+        consequencia: (c: Ctx) => consequenciaDaTroca(c, oferecidosParaTroca(c)[k]),
+        resolver: (c: Ctx): Resultado => { const o = oferecidosParaTroca(c)[k]; return { texto: trocarDePartido(c.v, c.r, o.sigla, o.porte), memoria: null }; }
+      })),
+      { id: 'sair', texto: c => `Só sair ${doPartido(pol(c).partido)}, sem entrar em outro`, consequencia: c => consequenciaDaTroca(c, undefined), resolver: c => ({ texto: trocarDePartido(c.v, c.r, undefined, 1), memoria: null }) },
+      { id: 'ficar', texto: c => `Ficar ${noPartido(pol(c).partido)}`, consequencia: () => 'Nada muda.', resolver: () => ({ texto: 'Você ficou. A troca ficou para outra hora.', memoria: null }) }
     ]
   },
   {
