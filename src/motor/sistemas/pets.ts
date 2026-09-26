@@ -199,7 +199,8 @@ export function riscoDoPet(v: Vida, p: Pessoa): number {
   const info = infoPet(v, p);
   const ip = idadePessoa(v, p);
   const f = ip / Math.max(1, info.vidaMax);
-  let risco = f >= 1 ? 0.6 : f >= 0.85 ? 0.2 : f >= 0.7 ? 0.06 : 0.008;
+  // Passado o tempo da espécie, cada ano a mais pesa mais (um cachorro de 20 anos é raríssimo; de 24, não existe).
+  let risco = f >= 1 ? 0.75 + (ip - info.vidaMax) * 0.1 : f >= 0.85 ? 0.2 : f >= 0.7 ? 0.06 : 0.008;
   const d = info.doenca;
   if (d?.gravidade === 3) risco += d.tratando ? (d.tratavel ? 0.08 : 0.25) : 0.45;
   else if (d?.gravidade === 2 && !d.tratando) risco += 0.03;

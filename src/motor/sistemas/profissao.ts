@@ -38,7 +38,7 @@ import { bloqueio, podeTentar, PERMITIDO, type Veredito } from '../plausibilidad
 import { degrausAcima, eDasForcas, elegibilidade, horizonte, nomeOcupacao, podeAposentar, rendaDeClientela, tetoSalarial } from './trabalho';
 import { liquido } from './renda';
 import { disponivel, limiteDeCredito, pagar, parcelaPrice, seguranca } from './dinheiro';
-import { abrirUnidade, ampliar, donoIntegral, negocioAberto, podeAbrirUnidade, podeAmpliar, reservaDoCaixa, retirarDoCaixa, tamanhoDaEquipe } from './negocio';
+import { abrirUnidade, ampliar, donoIntegral, negocioAberto, podeAbrirUnidade, presencaDe, podeAmpliar, reservaDoCaixa, retirarDoCaixa, tamanhoDaEquipe } from './negocio';
 import { acoesDoNegocio, disponibilidadeGestao, executarGestao, type OqueGestao } from './gestao';
 import { propor } from './compromissos';
 import { guarnicaoPerto, indiceDaGuarnicao } from './militar';
@@ -114,7 +114,14 @@ export function rotulosDoRitmo(v: Vida): { puxado: string; leve: string; normal:
   const m = modoDoTrabalho(v);
   if (m === 'docente') return { puxado: 'Pegar mais turmas', leve: 'Ficar com menos turmas', normal: 'Voltar à carga de sempre', sobre: 'Mais aulas, mais salário — e mais prova para corrigir no domingo.' };
   if (m === 'saude') return { puxado: 'Pegar plantões extras', leve: 'Fazer menos plantões', normal: 'Voltar à escala de sempre', sobre: 'Plantão a mais paga bem e cobra noite de sono.' };
-  if (m === 'negocio') return { puxado: 'Estar no balcão todo dia, de manhã à noite', leve: 'Deixar mais com a equipe', normal: 'Voltar ao horário de sempre', sobre: 'Dono presente puxa o movimento; dono exausto erra.' };
+  if (m === 'negocio') {
+    // Cada negócio tem o seu "estar lá": o balcão, a caixa de pedidos, a agenda, o canteiro.
+    const n = negocioAberto(v);
+    const p = n ? presencaDe(n) : 'rua';
+    const puxado = { rua: 'Estar no balcão todo dia, de manhã à noite', online: 'Responder pedido e cliente do acordar ao dormir', atendimento: 'Encher a agenda, sem horário vago', obra: 'Estar em toda obra, do primeiro ao último tijolo' }[p];
+    const leve = (n?.equipe?.length ?? 0) > 0 ? 'Deixar mais com a equipe' : 'Trabalhar menos horas';
+    return { puxado, leve, normal: 'Voltar ao horário de sempre', sobre: 'Dono presente puxa o movimento; dono exausto erra.' };
+  }
   if (m === 'artista') return { puxado: 'Aceitar todo trabalho que aparecer', leve: 'Guardar tempo para a própria obra', normal: 'Voltar ao ritmo de sempre', sobre: 'Todo convite paga conta; nem todo convite faz obra.' };
   if (m === 'rural') return { puxado: 'Plantar mais, de sol a sol', leve: 'Diminuir a área', normal: 'Voltar ao tamanho de sempre', sobre: 'Mais área, mais colheita — e mais corpo cansado.' };
   if (m === 'pesca') return { puxado: 'Sair mais para pescar', leve: 'Pescar menos', normal: 'Voltar às saídas de sempre', sobre: 'Mais saída, mais peixe — e mais madrugada.' };
@@ -300,6 +307,13 @@ export interface LeituraTrabalho {
   horizonte?: string;
 }
 
+/** O vínculo, dito com o que ele é: conscrito não tem "carreira militar". */
+function vinculoDe(v: Vida, e: Emprego): string {
+  const m = v.caminhos.militar;
+  if (e.contrato === 'militar' && m) return m.quadro === 'temporario' ? (v.t - m.tIngresso < 12 ? 'serviço militar inicial (obrigatório)' : 'temporário, engajado ano a ano') : m.quadro === 'praca' ? 'praça de carreira' : 'oficial de carreira';
+  return VINCULO[e.contrato];
+}
+
 const VINCULO: Record<string, string> = { eletivo: 'mandato eletivo', clt: 'carteira assinada', servidor: 'servidor público', militar: 'carreira militar', informal: 'informal', autonomo: 'por conta própria', estagio: 'estágio', temporario: 'contrato temporário', aprendiz: 'jovem aprendiz' };
 
 export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
@@ -337,7 +351,7 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
   const ritmo = ritmoDe(e) === 'puxado' ? ` · ${rotulosDoRitmo(v).puxado.toLowerCase()}` : ritmoDe(e) === 'leve' ? ` · ${rotulosDoRitmo(v).leve.toLowerCase()}` : '';
   const desde = anos < 1 ? `começou em ${anoDe(e.tInicio)}` : noPosto < anos && noPosto >= 1 ? `${anos} ${anos === 1 ? 'ano' : 'anos'} ali, ${noPosto} no cargo` : `desde ${anoDe(e.tInicio)} · ${anos} ${anos === 1 ? 'ano' : 'anos'}`;
   const onde = e.empregador === 'a própria terra' || /^o sítio|^uma terra|^o próprio sítio/.test(e.empregador) ? cap(e.empregador) : `${cap(e.empregador)}${e.municipioId !== v.moradia.municipioId ? `, em ${municipio(e.municipioId).nome}` : ''}`;
-  return { modo, titulo: cap(nome), onde, desde, renda, vinculo: VINCULO[e.contrato], jornada: jornada + ritmo, frases: comoVai(v, e, oc), horizonte: horizonte(v) };
+  return { modo, titulo: cap(nome), onde, desde, renda, vinculo: vinculoDe(v, e), jornada: jornada + ritmo, frases: comoVai(v, e, oc), horizonte: horizonte(v) };
 }
 
 /** Como vai o trabalho, em até duas frases: o que dá prazer, o que pesa. */

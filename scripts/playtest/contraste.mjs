@@ -25,5 +25,9 @@ for (const p of pig.slice(0, 8)) { const d = mix(hex(p), hex('cinza-quente'), 0.
 checa('papel-tinta sobre papel', hex('papel-tinta'), hex('papel'), 7);
 checa('papel-tinta-2 sobre papel', hex('papel-tinta-2'), hex('papel'), 4.5);
 checa('papel-tinta-2 sobre papel-2', hex('papel-tinta-2'), hex('papel-2'), 4.5);
+// A carta de decisão (escura, FIX #3): texto e tons sobre a carta e sobre a opção.
+for (const f of ['carta', 'carta-2']) for (const t of ['text-primary', 'text-secondary', 'text-muted']) checa(`${t} sobre ${f}`, hex(t), hex(f), 4.5);
+for (const f of ['carta', 'carta-2']) for (const p of ['pig-ambar', 'pig-goiaba', 'pig-cal']) checa(`${p} sobre ${f}`, hex(p), hex(f), 4.5);
+checa('pig-cal (Cidade) sobre bg-app', hex('pig-cal'), hex('bg-app'), 4.5);
 console.log(falhas ? `\n${falhas} par(es) abaixo do mínimo` : '\nTodos os pares acima do mínimo.');
 process.exitCode = falhas ? 1 : 0;

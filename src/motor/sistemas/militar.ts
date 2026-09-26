@@ -391,7 +391,7 @@ export function perspectivasMilitares(v: Vida): { oque: string; depende: string 
   const out: { oque: string; depende: string }[] = [];
   if (m.quadro === 'temporario') {
     if (meses < 12) out.push({ oque: 'Cumprir o serviço inicial até o fim', depende: 'É obrigatório: sair antes só por desincorporação (doença, arrimo de família) — largar é deserção.' });
-    out.push({ oque: 'Engajar por mais um ano', depende: `Depende de vaga e do conceito com o comando. O temporário vai no máximo até oito anos (você tem ${anos}).${m.empregoGuardado ? ' Engajar faz perder o emprego guardado.' : ''}` });
+    out.push({ oque: 'Engajar por mais um ano', depende: `Depende de vaga e do conceito com o comando. O temporário vai no máximo até oito anos (${anos < 1 ? 'você está no primeiro' : `você tem ${anos}`}).${m.empregoGuardado ? ' Engajar faz perder o emprego guardado.' : ''}` });
     if (e.ocupacaoId === 'soldado_ep') out.push({ oque: 'Chegar a cabo', depende: 'Pelo curso de formação de cabos, com classificação e vaga — não é automático.' });
     out.push({ oque: 'Seguir carreira: a escola de sargentos (EsSA)', depende: medio && i <= 24 ? 'Concurso: ensino médio e até 24 anos. Estudar no alojamento conta.' : !medio ? 'Pede o ensino médio completo.' : 'O limite de idade (24 anos) já passou.' });
     out.push({ oque: 'Dar baixa no fim do ano', depende: `Sai com o certificado de reservista${m.empregoGuardado ? ' e volta ao emprego guardado' : ''}.` });
@@ -428,7 +428,7 @@ export function horizonteMilitar(v: Vida): string {
   const oc = ocupacao(e.ocupacaoId);
   const anosServ = anosDeForcas(v);
   const onde = `Serve em ${municipio(m.guarnicao).nome}${m.transferencias ? ` (${m.transferencias} ${m.transferencias === 1 ? 'transferência' : 'transferências'} na carreira)` : ''}.`;
-  if (m.quadro === 'temporario') return v.t - m.tIngresso < 12 ? `Serviço militar inicial: doze meses obrigatórios. No fim do ano, engajar ou dar baixa. ${onde}` : `Temporário: sem estabilidade, dá para prorrogar ano a ano até oito anos de serviço (você tem ${anosServ}). ${onde}`;
+  if (m.quadro === 'temporario') return v.t - m.tIngresso < 12 ? `Serviço militar inicial: doze meses obrigatórios. No fim do ano, engajar ou dar baixa. ${onde}` : `Temporário: sem estabilidade, dá para prorrogar ano a ano até oito anos de serviço (${anosServ < 1 ? 'você está no primeiro' : `você tem ${anosServ}`}). ${onde}`;
   const x = ESCADA[oc.id];
   const anosNoPosto = (v.t - (e.tPosto ?? e.tInicio)) / 12;
   const reserva = `A reserva a pedido vem com 35 anos de serviço (você tem ${anosServ}).`;

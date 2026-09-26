@@ -84,7 +84,8 @@ export function momentoAtual(v: Vida): string {
   if (v.mente.felicidade < 48) return `Anda para baixo${causa(hum.pesando[0])}.`;
   if (tendencia(v, 'cabeca') === 'piorando' && cab.pesando[0]) return `A cabeça vem enchendo${causa(cab.pesando[0])}.`;
   if (tendencia(v, 'humor') === 'piorando' && hum.pesando[0]) return `O humor vem caindo${causa(hum.pesando[0])}.`;
-  if (tendencia(v, 'saude') === 'piorando' && sau.pesando[0]) return `A saúde vem cobrando${causa(sau.pesando[0])}.`;
+  // Saúde ainda boa que desce não é "cobrança": é o começo de pedir cuidado.
+  if (tendencia(v, 'saude') === 'piorando' && sau.pesando[0]) return v.corpo.saude >= 75 ? `A saúde segue boa, mas começa a pedir cuidado${causa(sau.pesando[0])}.` : `A saúde vem pesando${causa(sau.pesando[0])}.`;
   if (v.mente.felicidade >= 70 && v.mente.estresse < 40) return `Um bom momento${causa(hum.ajudando[0])}.`;
   if (tendencia(v, 'humor') === 'melhorando' && hum.ajudando[0]) return `As coisas vêm melhorando${causa(hum.ajudando[0])}.`;
   const bom = hum.ajudando[0];

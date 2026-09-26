@@ -97,6 +97,7 @@
   --carta-opcao-hover: rgba(255, 246, 232, 0.09);
   /* Papel (legado: algumas telas antigas ainda podem pedir). */
   --papel: #f4ecdd;
+  --papel-2: #e9dec9;
   --papel-tinta: #2a211a;
   --papel-tinta-2: #5a4c3f;
   --papel-linha: rgba(42, 33, 26, 0.16);

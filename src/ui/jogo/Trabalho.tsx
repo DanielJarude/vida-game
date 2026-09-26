@@ -290,7 +290,6 @@ function PainelFarda({ vida }: { vida: Vida }) {
       )}
       {m && (
         <dl className="dados">
-          <Dado rotulo="Vínculo">{m.quadro === 'temporario' ? (inicial ? 'serviço militar inicial (obrigatório)' : 'temporário, engajado ano a ano') : m.quadro === 'praca' ? 'praça de carreira' : 'oficial de carreira'}</Dado>
           <Dado rotulo="Guarnição">{vida.moradia.municipioId === m.guarnicao ? 'na cidade onde mora' : 'longe de casa'}{m.transferencias ? ` · ${m.transferencias} ${m.transferencias === 1 ? 'transferência' : 'transferências'}` : ''}</Dado>
           {m.especialidade && <Dado rotulo="Especialidade">{ESPECIALIDADES[m.especialidade]?.nome ?? m.especialidade}</Dado>}
           <Dado rotulo="Tempo de serviço">{inicial ? 'o primeiro ano, dos doze meses obrigatórios' : `${Math.floor((vida.t - m.tIngresso) / 12)} anos`}</Dado>

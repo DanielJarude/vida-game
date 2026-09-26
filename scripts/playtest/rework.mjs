@@ -13,9 +13,9 @@ import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 const SP = process.env.SP ?? '/tmp/vida-rework';
 const OUT = process.env.OUT ?? SP;
 const URL = process.env.URL ?? 'http://localhost:4173/';
-const CENARIOS = (process.env.CEN ?? 'empregada,professora,negocio,autonomo,informal,rural,atleta,militar,candidata,vereadora,procurando,crianca,adolescente,preso,aposentada').split(',');
+const CENARIOS = (process.env.CEN ?? 'empregada,professora,negocio,autonomo,informal,rural,atleta,militar,candidata,vereadora,procurando,crianca,adolescente,preso,aposentada,conflito,paralelo,soldado,bichos,online').split(',');
 const LARGURAS = (process.env.LARGURAS ?? '320,390,820,1440').split(',').map(Number);
-const ABAS = ['Linha da Vida', 'Você', 'Pessoas', 'Trabalho', 'Rumo', 'Casa', 'Tempo livre'];
+const ABAS = ['Linha da Vida', 'Você', 'Pessoas', 'Trabalho', 'Estudos', 'Casa', 'Tempo livre', 'Cidade'];
 const CURTO = { 'Linha da Vida': 'Vida', 'Tempo livre': 'Tempo' };
 const b = await chromium.launch();
 const problemas = [];
@@ -76,9 +76,17 @@ async function verificar(p, rotulo) {
 for (const c of CENARIOS) {
   const arq = `${SP}/save-${c}.json`;
   if (!existsSync(arq)) { problemas.push(`sem save: ${c}`); continue; }
-  const save = readFileSync(arq, 'utf8');
+  let save = readFileSync(arq, 'utf8');
   for (const w of LARGURAS) {
-    const { p, ctx } = await abrir(save, w);
+    let { p, ctx } = await abrir(save, w);
+    // Uma decisão aberta (a pergunta do conflito): mede e fotografa a carta; depois segue sem ela.
+    if (await p.locator('.veu .folha').count()) {
+      await verificar(p, `${c} ${w} decisão aberta`);
+      await p.screenshot({ path: `${OUT}/${c}-${w}-decisao.png`, fullPage: false });
+      await ctx.close();
+      const semMomento = JSON.parse(save); semMomento.momento = null; semMomento.caminhos.pendente = undefined;
+      ({ p, ctx } = await abrir(JSON.stringify(semMomento), w));
+    }
     for (const a of ABAS) {
       if (!(await irPara(p, a))) continue;
       await verificar(p, `${c} ${w} ${a}`);

@@ -25,6 +25,10 @@ import { garantirFrente } from '../../src/motor/sistemas/frentes';
 import { iniciarRural } from '../../src/motor/sistemas/rural';
 import { entrarNaPolitica, eleicaoNaJanela } from '../../src/motor/sistemas/politica';
 import { novaOportunidade } from '../../src/motor/sistemas/oportunidades';
+import { propor } from '../../src/motor/sistemas/compromissos';
+import { abrirConflitoPendente } from '../../src/motor/conteudo/compromissos';
+import { adotarPet } from '../../src/motor/sistemas/pets';
+import { criarPessoa, vincular } from '../../src/motor/pessoas';
 
 const SP = process.env.SP ?? '/tmp/vida-rework';
 mkdirSync(SP, { recursive: true });
@@ -55,13 +59,13 @@ gravar('professora', transacao(ate(222, 38, 'feminino', 'curitiba-pr'), x => { l
 gravar('autonomo', transacao(ate(444, 33, 'masculino', 'belo-horizonte-mg'), x => { limpar(x); x.trabalho.experiencia['eletrica'] = 80; const e = contratar(x, r, ocupacao('eletricista')); e.clientela = 66; e.mei = true; }).vida);
 gravar('informal', transacao(ate(555, 41, 'feminino', 'fortaleza-ce'), x => { limpar(x); const e = contratar(x, r, ocupacao('feirante')); e.clientela = 24; }).vida);
 gravar('rural', transacao(ate(666, 45, 'masculino', 'chapeco-sc'), x => { limpar(x); garantirFrente(x, 'campo'); x.caminhos.frentes.campo!.habilidade = 70; const e = contratar(x, r, ocupacao('produtor_rural'), 'oportunidade'); iniciarRural(x, 'arrendada'); e.clientela = 44; x.caminhos.rural!.ultimaSafra = 'ruim'; x.caminhos.rural!.anosRuins = 1; }).vida);
-gravar('atleta', transacao(ate(777, 22, 'masculino', 'porto-alegre-rs'), x => { limpar(x); garantirFrente(x, 'futebol'); const f = x.caminhos.frentes.futebol!; f.habilidade = 78; f.interesse = 90; f.meses = 140; entrarNaBase(x, 'futebol', x.moradia.municipioId, 'União Porto Alegre'); profissionalizar(x, r, 2); x.caminhos.esporte!.espaco = 'reserva'; x.caminhos.esporte!.lesoes = 1; }).vida);
+gravar('atleta', transacao(ate(777, 22, 'masculino', 'porto-alegre-rs'), x => { limpar(x); garantirFrente(x, 'futebol'); const f = x.caminhos.frentes.futebol!; f.habilidade = 78; f.interesse = 90; f.meses = 140; entrarNaBase(x, 'futebol', x.moradia.municipioId, 'Grêmio'); profissionalizar(x, r, 2); x.caminhos.esporte!.espaco = 'reserva'; x.caminhos.esporte!.lesoes = 1; }).vida);
 {
   let v = transacao(ate(888, 20, 'feminino', 'natal-rn'), x => { limpar(x); x.educacao.escolaridade = 'medio'; x.corpo.forma = 75; contratar(x, r, ocupacao('aluno_sargento'), 'concurso'); x.caminhos.militar!.forca = 'aeronautica'; x.trabalho.atual!.empregador = 'a Aeronáutica'; }).vida;
   gravar('militar', viver(v, 28));
 }
 {
-  let v = transacao(ate(999, 42, 'feminino', 'goiania-go'), x => { limpar(x); formar(x, 'enfermagem'); const e = contratar(x, r, ocupacao('agente_saude'), 'concurso'); e.tInicio = x.t - 72; x.rotinas.push({ id: 'voluntariado', tInicio: x.t - 60, nivel: 2 }); const p = entrarNaPolitica(x, 'comunidade', 1.2); p.partido = 'Frente Jequitibá'; p.tFiliacao = x.t - 30; p.fase = 'filiado'; p.apoio = 70; p.reputacao = 55; p.prioridade = 'saude'; }).vida;
+  let v = transacao(ate(999, 42, 'feminino', 'goiania-go'), x => { limpar(x); formar(x, 'enfermagem'); const e = contratar(x, r, ocupacao('agente_saude'), 'concurso'); e.tInicio = x.t - 72; x.rotinas.push({ id: 'voluntariado', tInicio: x.t - 60, nivel: 2 }); const p = entrarNaPolitica(x, 'comunidade', 1.2); p.partido = 'PSB'; p.tFiliacao = x.t - 30; p.fase = 'filiado'; p.apoio = 70; p.reputacao = 55; p.prioridade = 'saude'; }).vida;
   for (let k = 0; k < 8 && eleicaoNaJanela(v)?.tipo !== 'municipal'; k++) v = viver(v, idade(v) + 1);
   v = executar(v, { tipo: 'politica', oque: 'candidatura' }).vida;
   for (const o of ['cargo_vereador', 'fin_pequenas', 'rua_porta', 'tom_propostas']) v = executar(v, { tipo: 'decidir', opcaoId: o }).vida;
@@ -76,3 +80,33 @@ gravar('crianca', viver(nasce(1212, 'feminino', 'sao-paulo-sp'), 9));
 gravar('adolescente', viver(nasce(1313, 'masculino', 'belem-pa'), 16));
 gravar('preso', transacao(ate(1414, 31, 'masculino', 'rio-de-janeiro-rj'), x => { limpar(x); x.justica = { antecedentes: [{ t: x.t, categoria: 'mercado', desfecho: 'prisao', anos: 4 }], prisao: { tInicio: x.t, tFim: x.t + 36, regime: 'fechado' } }; }).vida);
 gravar('aposentada', transacao(ate(1515, 68, 'feminino', 'porto-alegre-rs'), x => { limpar(x); x.trabalho.aposentadoria = { t: x.t - 36, beneficio: 3200 }; }).vida);
+
+/* ---------------------------------------------------- FIX #3 */
+// Estudante de Direito que passou na peneira: a pergunta do conflito aberta.
+{
+  let v = transacao(ate(1616, 19, 'masculino', 'salvador-ba'), x => { limpar(x); x.educacao.basica = undefined; x.educacao.escolaridade = 'superior_incompleto'; x.educacao.matricula = { cursoId: 'direito', instituicao: 'a universidade federal em Salvador', rede: 'publica', modalidade: 'presencial', tInicio: x.t - 12, mesesRestantes: 48, mensalidade: 0, desempenho: 62, trancado: false, municipioId: x.moradia.municipioId }; propor(x, r, { tipo: 'base', dominio: 'futebol', municipioId: x.moradia.municipioId, clube: 'Bahia' }); abrirConflitoPendente(x, r); }).vida;
+  const w = { ...v };
+  writeFileSync(`${SP}/save-conflito.json`, JSON.stringify(w)); console.log('conflito'.padEnd(14), idade(v), v.momento?.situacaoId);
+}
+// Vendedora com loja on-line nas horas vagas, com sócio.
+gravar('paralelo', transacao(ate(1717, 33, 'feminino', 'campinas-sp'), x => {
+  limpar(x); x.trabalho.experiencia['comercio'] = 70; x.financas.conta = Math.max(x.financas.conta, 30000); contratar(x, r, ocupacao('vendedor'));
+  const s = criarPessoa(x, r, { idade: 35, municipioId: x.moradia.municipioId, nome: 'Bruna', sobrenome: 'Lima', genero: 'feminino' }); vincular(x, s, { origem: 'amizade' as never, proximidade: 65, estagio: 'amigo_proximo' });
+  const n = abrirNegocio(x, r, 'loja_online', { modo: 'socio', socioId: s.id, dedicacao: 'paralela' }); n.clientela = 38; n.caixa = 4200; n.reputacao = 52;
+}).vida);
+// Soldado no serviço inicial, com o emprego guardado.
+gravar('soldado', transacao(ate(1818, 18, 'masculino', 'natal-rn'), x => { limpar(x); x.educacao.basica = undefined; x.educacao.escolaridade = 'medio'; contratar(x, r, ocupacao('atendente')); propor(x, r, { tipo: 'servico_militar' }); }).vida);
+// Casa com bichos de várias espécies (gato de quatro anos, calopsita, jabuti).
+gravar('bichos', transacao(ate(1919, 36, 'feminino', 'belo-horizonte-mg'), x => {
+  limpar(x); const e = contratar(x, r, ocupacao('assistente_adm')); e.tInicio = x.t - 40; x.moradia = { ...x.moradia, tipo: 'propria' };
+  adotarPet(x, r, { especie: 'gato', nome: 'Café', genero: 'masculino', idade: 4, porte: 'pequeno', jeito: 'dorme na janela', historia: 'resgatado de uma obra' }, 'abrigo');
+  adotarPet(x, r, { especie: 'calopsita', nome: 'Kiko', genero: 'masculino', idade: 1, porte: 'pequeno', jeito: 'assobia o hino do time', historia: '' }, 'loja');
+  adotarPet(x, r, { especie: 'jabuti', nome: 'Tartufo', genero: 'masculino', idade: 12, porte: 'pequeno', jeito: 'aparece quando tem fruta', historia: '' }, 'criador');
+}).vida);
+// Dono de loja on-line em tempo integral, com equipe.
+gravar('online', transacao(ate(2020, 30, 'masculino', 'recife-pe'), x => {
+  limpar(x); x.trabalho.experiencia['comercio'] = 60; x.financas.conta = Math.max(x.financas.conta, 30000);
+  const n = abrirNegocio(x, r, 'loja_online', { modo: 'guardado' }); n.clientela = 55; x.trabalho.atual!.clientela = 55; n.caixa = 9000; n.reputacao = 60; n.resultadoAno = 7000;
+  contratarFuncionario(x, r, 'jovem');
+}).vida);
+
