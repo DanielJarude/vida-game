@@ -11,6 +11,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { exportarVida, importarVida, interpretar, VERSAO_SAVE } from '../save';
 import { nomeDoVeiculo } from '../sistemas/veiculos';
+import { retrospectiva } from '../sistemas/retrospectiva';
+import { amigo as amigoPapel } from '../conteudo/papeis';
 import { avancarAno } from '../ano';
 import { idadePessoa, transacao } from '../nucleo';
 import { registrarMortes } from '../sistemas/luto';
@@ -679,4 +681,35 @@ describe('quem passou da idade da série vai para a EJA (não "repete o 4º ano"
     const adultoRepetindo = v.biografia.filter(e => e.idade >= 18 && /reprovação: o .* de novo, com colegas cada vez mais novos/.test(e.texto));
     expect(adultoRepetindo).toHaveLength(0);
   }, 30000);
+});
+
+/* ======================= Achados da leitura de biografias (retrospectiva, amizade) */
+
+describe('achados da leitura das biografias do FIX #4', () => {
+  it('a retrospectiva não conta "43 anos com" alguém que foi só uma saída, nem um caso escondido', () => {
+    const v = adulto(66, { semente: 3 });
+    const p = pessoaNova(v, 64, 'masculino');
+    const vin = vincular(v, p, { origem: 'escola', proximidade: 60, estagio: 'amigo' });
+    vin.tInicio = v.t - 43 * 12;
+    vin.romance = { estagio: 'ex', tEstagio: v.t, tInicio: v.t - 43 * 12, envolvimento: 30, fim: 'termino' };
+    const txt = retrospectiva(v).join(' ');
+    expect(txt).not.toMatch(new RegExp(`anos com ${p.nome}`));
+  });
+
+  it('o ex-marido não vira "amizade de décadas" nem amigo das cenas de amizade', () => {
+    const v = adulto(60, { semente: 4 });
+    const ex = pessoaNova(v, 60, 'masculino');
+    const vin = vincular(v, ex, { origem: 'escola', proximidade: 70, estagio: 'amigo' });
+    vin.tInicio = v.t - 40 * 12;
+    vin.romance = { estagio: 'ex', tEstagio: v.t - 60, tInicio: v.t - 35 * 12, envolvimento: 30, fim: 'divorcio' };
+    vin.historia.push({ t: v.t - 30 * 12, texto: 'Casaram-se.', tipo: 'casamento', peso: 3 });
+    expect(amigoPapel(v).some(x => x.id === ex.id)).toBe(false);
+  });
+
+  it('"a conhecida Laura", não "o conhecido Laura"', () => {
+    const v = adulto(70, { semente: 19 });
+    const conhecidas = [0, 1].map(k => { const p = pessoaNova(v, 75, 'feminino'); vincular(v, p, { origem: 'rotina', proximidade: 40, estagio: 'conhecido' }); return p; });
+    const vida = transacao(v, (x, r) => registrarMortes(x, r, conhecidas.map(p => ({ p: x.pessoas[p.id], vin: x.vinculos[p.id], causa: 'AVC' })), () => {})).vida;
+    expect(vida.biografia.some(e => /o conhecido [A-Z]/.test(e.texto) && conhecidas.some(c => e.texto.includes(`o conhecido ${c.nome}`)))).toBe(false);
+  });
 });

@@ -25,8 +25,11 @@ export const irmaoEmCasa: Papel = v =>
 export const avoPerto: Papel = v =>
   vinculosVivos(v).filter(x => x.vin.parentesco === 'avo' && x.vin.convivio.length > 0).map(x => x.p);
 
+/** Um ex com quem se casou ou morou junto não entra nas cenas de amizade (a história com ele é outra). */
+const exDeVidaEmComum = (vin: { romance?: { estagio: string; fim?: string }; historia: { tipo?: string }[] }) => vin.romance?.estagio === 'ex' && (vin.romance.fim === 'divorcio' || vin.historia.some(h => h.tipo === 'casamento' || h.tipo === 'casa'));
+
 export const amigo: Papel = v =>
-  vinculosVivos(v).filter(x => !x.vin.parentesco && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo') && (!x.vin.romance || x.vin.romance.estagio === 'ex' || x.vin.romance.estagio === 'interesse')).map(x => x.p);
+  vinculosVivos(v).filter(x => !x.vin.parentesco && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo') && (!x.vin.romance || x.vin.romance.estagio === 'ex' || x.vin.romance.estagio === 'interesse') && !exDeVidaEmComum(x.vin)).map(x => x.p);
 
 export const amigoProximo: Papel = v =>
   vinculosVivos(v).filter(x => !x.vin.parentesco && x.vin.estagio === 'amigo_proximo' && !x.vin.romance).map(x => x.p);

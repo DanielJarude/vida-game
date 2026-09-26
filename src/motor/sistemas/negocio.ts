@@ -383,6 +383,8 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
   if (tem(n, 'agenda')) extra += 1.5;
   if (integral && e?.ritmo === 'puxado') extra += 2.5;
   if (integral && e?.ritmo === 'leve') extra -= equipe >= 2 ? 0.5 : 2;
+  // Dono de jornada reduzida (cuidando de alguém): menos horas atrás do balcão, menos movimento.
+  if (integral && e?.reduzida) extra -= equipe >= 1 ? 1 : 3;
   const divulgou = v.fatos[`neg_divulgou_${n.tInicio}`];
   if (divulgou !== undefined && v.t - divulgou <= 12) extra += 3;
   let base = integral ? (e!.clientela ?? n.clientela) : n.clientela;

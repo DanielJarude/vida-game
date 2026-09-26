@@ -96,7 +96,7 @@ function filiar(c: Ctx, k: number): Resultado {
     texto: `Assinou a ficha de filiação ${doPartido(sigla)}. Uma foto, um aperto de mão, um grupo de mensagens novo.`,
     memoria: `Filiou-se ${aoPartido(sigla)}.`,
     relevancia: 'biografia',
-    efeito: () => { const p = pol(c); p.partido = sigla; p.tFiliacao = c.v.t; p.fase = p.fase === 'envolvido' ? 'filiado' : p.fase; c.v.fatos['pol_partido_porte'] = k; marcar(c.v, 'politica', `Filiou-se ${aoPartido(sigla)}.`, 2); }
+    efeito: () => { const p = pol(c); p.partido = sigla; p.tFiliacao = c.v.t; (p.partidos ??= []).push({ sigla, tInicio: c.v.t }); p.fase = p.fase === 'envolvido' ? 'filiado' : p.fase; c.v.fatos['pol_partido_porte'] = k; marcar(c.v, 'politica', `Filiou-se ${aoPartido(sigla)}.`, 2); }
   };
 }
 

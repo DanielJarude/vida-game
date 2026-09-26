@@ -29,11 +29,19 @@ export function retrospectiva(v: Vida): string[] {
   // O amor mais longo (e como terminou).
   const romances = Object.values(v.vinculos)
     .filter(x => x.romance && x.romance.estagio !== 'interesse' && x.romance.estagio !== 'saindo' && !x.romance.secreto && v.pessoas[x.pessoaId])
+    // Um caso escondido não é "uma história de anos"; só conta o que chegou a namoro (ou mais).
+    .filter(x => !x.historia.some(h => h.texto === 'Começaram a se ver escondido.'))
     .map(x => {
       const p = v.pessoas[x.pessoaId];
-      const ini = x.romance!.tInicio ?? x.tInicio;
       const fimR = x.romance!.estagio === 'ex' ? x.romance!.tEstagio : x.romance!.fim === 'morte' ? p.tMorte ?? fim : fim;
-      return { x, p, dur: Math.max(0, Math.round((fimR - ini) / 12)), ini, fimR };
+      // A MESMA pessoa pode voltar décadas depois: conta a última vez, do começo ao fim (não desde que se conheceram).
+      const deles = v.biografia.filter(e => e.pessoas?.includes(p.id));
+      const antes = deles.filter(e => (e.evento?.tipo === 'termino' || e.evento?.tipo === 'divorcio') && e.t < fimR - 6).map(e => e.t);
+      const corte = antes.length ? Math.max(...antes) : -Infinity;
+      const inicios = deles.filter(e => e.t > corte && (e.evento?.tipo === 'namoro' || e.evento?.tipo === 'uniao' || e.evento?.tipo === 'casamento' || /^Começou a namorar|^Começaram a namorar/.test(e.texto))).map(e => e.t);
+      const chegouANamorar = inicios.length > 0 || x.historia.some(h => h.tipo === 'casamento' || h.tipo === 'casa');
+      const ini = inicios.length ? Math.min(...inicios) : x.romance!.tInicio ?? x.tInicio;
+      return { x, p, dur: chegouANamorar ? Math.max(0, Math.round((fimR - ini) / 12)) : 0, ini, fimR };
     })
     .filter(r => r.dur >= 3)
     .sort((a, b) => b.dur - a.dur);
@@ -75,7 +83,8 @@ export function retrospectiva(v: Vida): string[] {
       const cargos = [...new Set(eleito.map(h => nomeCargo(v, h.cargo)))];
       out.push({ peso: 85 + eleito.length * 5, texto: `${flex(g, 'Eleito', 'Eleita', 'Eleite')} ${eleito.length === 1 ? 'uma vez' : `${eleito.length} vezes`} (${listaNatural(cargos)}${eleito.length ? `, a primeira em ${anoDe(eleito[0].t)}` : ''})${derrotas ? `; perdeu ${derrotas === 1 ? 'uma eleição' : `${derrotas} eleições`}` : ''}${cassado ? '; um mandato terminou antes da hora' : ''}.` });
     } else if (derrotas) out.push({ peso: 55, texto: `Disputou ${derrotas === 1 ? 'uma eleição' : `${derrotas} eleições`} e não se elegeu.` });
-    if ((pol.partidos ?? []).filter(x => x.tFim !== undefined).length) out.push({ peso: 20, texto: `Passou por ${(pol.partidos ?? []).length} partidos.` });
+    const siglas = new Set((pol.partidos ?? []).map(x => x.sigla));
+    if (siglas.size >= 2) out.push({ peso: 20, texto: `Passou por ${siglas.size} partidos.` });
   }
 
   // O trabalho de uma vida (quando não foi o negócio).

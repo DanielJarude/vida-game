@@ -580,7 +580,8 @@ export function explicarEleicao(v: Vida, h: { cargo: CargoEletivo; resultado: st
     if (k.id === 'nome' && k.valor < disputa * 0.22 * 0.6) k.fraco = true;
   }
   const favor = fs.filter(k => k.valor > 1 && !k.fraco && k.id !== 'disputa').sort((a, b) => b.valor - a.valor).slice(0, 2);
-  const contra = fs.filter(k => k.valor < -1 || k.fraco).sort((a, b) => (a.fraco ? -disputa * 0.3 : a.valor) - (b.fraco ? -disputa * 0.3 : b.valor)).slice(0, 2);
+  // O que pesou de verdade contra (um desgaste de 2 pontos não é razão de ninguém perder).
+  const contra = fs.filter(k => k.valor <= -2.5 || k.fraco).sort((a, b) => (a.fraco ? -disputa * 0.3 : a.valor) - (b.fraco ? -disputa * 0.3 : b.valor)).slice(0, 2);
   const nomes = (l: typeof fs) => listaNatural(l.map(k => palavraDoFator(v, k.id, k.fraco ? -1 : k.valor, h.cargo)));
   const partes: string[] = [];
   if (favor.length) partes.push(`A favor: ${nomes(favor)}.`);

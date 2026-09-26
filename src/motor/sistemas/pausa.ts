@@ -51,7 +51,7 @@ export function iniciarPausa(v: Vida, motivo: PausaDeCuidado['motivo'], intensid
     e.reduzida = true;
     e.salario = Math.round(e.salario * 0.6 / 10) * 10;
     if (e.clientela !== undefined) e.clientela = Math.round(e.clientela * 0.75);
-    escrever(v, { texto: `Reduziu a jornada de ${nomeOcupacao(v, ocupacao(e.ocupacaoId))} para cuidar ${quem}. O salário encolheu junto.`, relevancia: 'marco', tema: 'familia', escolha: true, pessoas: p ? [p.id] : undefined });
+    escrever(v, { texto: `Reduziu a jornada de ${nomeOcupacao(v, ocupacao(e.ocupacaoId))} para cuidar ${quem}. ${v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado' && v.caminhos.negocio.ocupacaoId === e.ocupacaoId ? 'Menos horas no negócio: o movimento e a retirada encolhem junto.' : 'O salário encolheu junto.'}`, relevancia: 'marco', tema: 'familia', escolha: true, pessoas: p ? [p.id] : undefined });
   } else {
     if (e) encerrarEmprego(v, 'parou para cuidar');
     escrever(v, { texto: e ? `Parou de trabalhar para cuidar ${quem}.` : `Passou a cuidar ${quem} em tempo integral.`, relevancia: 'marco', tema: 'familia', escolha: true, pessoas: p ? [p.id] : undefined });

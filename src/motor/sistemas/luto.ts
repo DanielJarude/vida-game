@@ -148,7 +148,7 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
     const { p, vin, causa, peso, ficaram } = discretos[0];
     escrever(v, { t: p.tMorte, texto: juntar(textoDaMorte(v, p, vin, causa, 'discreto'), quemFicouNaMorte(v, p, vin, ficaram ?? [])), relevancia: peso >= 28 ? 'biografia' : 'cotidiano', tema: 'perda', tom: 'ruim', pessoas: [p.id], evento: { tipo: 'morte', pessoaId: p.id, peso } });
   } else if (discretos.length > 1) {
-    const nomes = discretos.map(({ p, vin }) => `${quem(v, p, vin) || 'o conhecido'} ${p.nome}`.trim());
+    const nomes = discretos.map(({ p, vin }) => `${quem(v, p, vin) || flex(p.genero, 'o conhecido', 'a conhecida', 'e conhecide')} ${p.nome}`.trim());
     const havia = lista.some(x => nivelDaPerda(x.peso) === 'interrompe' || nivelDaPerda(x.peso) === 'destaque');
     escrever(v, { texto: `${havia ? 'Também se foram, naquele ano' : 'Se foram, naquele ano'}: ${listaNatural(nomes)}.`, relevancia: havia || Math.max(...discretos.map(d => d.peso)) < 28 ? 'cotidiano' : 'biografia', tema: 'perda', tom: 'ruim', pessoas: discretos.map(d => d.p.id), evento: { tipo: 'morte', peso: Math.max(...discretos.map(d => d.peso)) } });
   }

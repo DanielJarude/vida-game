@@ -232,7 +232,8 @@ function ultimoGenitorMorto(v: Vida): Pessoa | undefined {
 /* ------------------------------------------------------- Amizade de décadas */
 
 const marcoDaAmizade = (v: Vida, vin: Vinculo): 25 | 40 | undefined => { const a = anosDesde(v, vin.tInicio); return a >= 25 && a < 27 ? 25 : a >= 40 && a < 42 ? 40 : undefined; };
-const amigosDeVerdade = (v: Vida) => vinculosVivos(v).filter(x => !x.vin.parentesco && !x.p.especie && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo') && (!x.vin.romance || x.vin.romance.estagio === 'ex'));
+// Um ex com quem se viveu junto (ou se casou) não vira "amizade de décadas": essa história é outra.
+const amigosDeVerdade = (v: Vida) => vinculosVivos(v).filter(x => !x.vin.parentesco && !x.p.especie && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo') && (!x.vin.romance || (x.vin.romance.estagio === 'ex' && x.vin.romance.fim !== 'divorcio' && !x.vin.historia.some(h => h.tipo === 'casamento' || h.tipo === 'casa'))));
 
 /** O marco mais pesado da história com alguém (sem os de aniversário e os de começo). */
 function marcoMaisForte(vin: Vinculo) {
