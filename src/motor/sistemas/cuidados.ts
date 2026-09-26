@@ -156,7 +156,7 @@ export interface Sugestao {
   /** Ou: abrir a ficha de alguém. */
   pessoaId?: string;
   /** Ou: ir para outra área. */
-  aba?: 'tempo' | 'rumo' | 'pessoas' | 'casa';
+  aba?: 'tempo' | 'estudos' | 'pessoas' | 'casa' | 'trabalho';
 }
 
 const pode = (v: Vida, a: Acao, disp: (v: Vida, a: Acao) => Veredito) => podeTentar(disp(v, a));
@@ -215,7 +215,7 @@ export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vi
     }
     const antiga = hobbyAntigo(v);
     if (antiga) out.push({ id: 'retomar', texto: `Voltar a ${antiga.verbo}`, motivo: 'Uma coisa que você gostava de fazer.', acao: { tipo: 'rotina', id: antiga.id, ativa: true, nivel: 1 } });
-    if (f.some(x => x.id === 'sem_trabalho')) out.push({ id: 'trabalho', texto: 'Procurar trabalho', motivo: 'Estar parado pesa no dia a dia.', aba: 'rumo' });
+    if (f.some(x => x.id === 'sem_trabalho')) out.push({ id: 'trabalho', texto: 'Procurar trabalho', motivo: 'Estar parado pesa no dia a dia.', aba: 'trabalho' });
     if (f.some(x => x.id === 'solidao')) {
       const social = ['voluntariado', 'igreja', 'futebol', 'danca'].find(id => podeComecarRotina(v, id).grau === 'permitido');
       if (social) out.push({ id: 'gente', texto: `Começar: ${modeloRotina(social)!.nome.toLowerCase()}`, motivo: 'Lugar com gente toda semana.', acao: { tipo: 'rotina', id: social, ativa: true, nivel: 1 } });

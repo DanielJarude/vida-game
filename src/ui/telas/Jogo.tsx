@@ -1,19 +1,20 @@
 /**
  * O jogo em andamento.
  *
- * Sete áreas, cada uma respondendo a uma pergunta:
+ * Oito áreas, cada uma respondendo a uma pergunta:
  *   Vida      o que aconteceu (a biografia — o centro)
  *   Você      como eu estou (corpo, cabeça, humor, dinheiro)
  *   Pessoas   quem está na minha vida
- *   Trabalho  a minha vida profissional agora (a partir dos 14)
- *   Rumo      o que está se abrindo (estudo, portas, mudanças de caminho)
- *   Casa      onde moro e o que tenho
- *   Tempo     o que faço com a semana
+ *   Trabalho  a minha vida profissional: agora, em paralelo, outras possibilidades (a partir dos 14)
+ *   Estudos   a minha formação: onde estudo, o que já fiz, o que posso estudar
+ *   Casa      onde moro, o que é meu, a vida dentro de casa
+ *   Tempo     para onde vai a minha semana
+ *   Cidade    onde vivo e o que a cidade oferece (a partir dos 16)
  * Cada área tem um tom próprio (tokens) e uma composição própria. O painel
  * "Agora" (desktop) diz o que pede atenção, sem repetir as áreas.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ControleVida } from '../useVida';
 import type { Vida } from '../../motor/tipos';
 import { idade, idadePessoa } from '../../motor/nucleo';
@@ -25,7 +26,8 @@ import { Retrato } from '../avatar/Retrato';
 import { LinhaDaVida } from '../jogo/LinhaDaVida';
 import { Momento, Resultado } from '../jogo/Momento';
 import { Pessoas } from '../jogo/Pessoas';
-import { Rumo, ehPortaDeTrabalho } from '../jogo/Rumo';
+import { Estudos, areaDaPorta } from '../jogo/Estudos';
+import { Cidade } from '../jogo/Cidade';
 import { Casa } from '../jogo/Casa';
 import { Tempo } from '../jogo/Tempo';
 import { Voce } from '../jogo/Voce';
@@ -36,16 +38,17 @@ import { faseDaVida } from '../apresentar';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
 
-export type Aba = 'vida' | 'voce' | 'pessoas' | 'trabalho' | 'rumo' | 'casa' | 'tempo';
+export type Aba = 'vida' | 'voce' | 'pessoas' | 'trabalho' | 'estudos' | 'casa' | 'tempo' | 'cidade';
 
 const ABAS: { id: Aba; rotulo: string; curto: string; icone: string }[] = [
   { id: 'vida', rotulo: 'Linha da Vida', curto: 'Vida', icone: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4V4zm0 12a4 4 0 0 0 4 4' },
   { id: 'voce', rotulo: 'Você', curto: 'Você', icone: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm-7.5 9a7.5 7.5 0 0 1 15 0' },
   { id: 'pessoas', rotulo: 'Pessoas', curto: 'Pessoas', icone: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M17 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3' },
   { id: 'trabalho', rotulo: 'Trabalho', curto: 'Trabalho', icone: 'M3.5 8h17v11.5h-17zM9 8V5.5h6V8M3.5 13.5h17' },
-  { id: 'rumo', rotulo: 'Rumo', curto: 'Rumo', icone: 'M12 3l10 5-10 5L2 8l10-5zm-6 7.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5' },
+  { id: 'estudos', rotulo: 'Estudos', curto: 'Estudos', icone: 'M12 3l10 5-10 5L2 8l10-5zm-6 7.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5' },
   { id: 'casa', rotulo: 'Casa', curto: 'Casa', icone: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z' },
-  { id: 'tempo', rotulo: 'Tempo livre', curto: 'Tempo', icone: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-13v5l3 2' }
+  { id: 'tempo', rotulo: 'Tempo livre', curto: 'Tempo', icone: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-13v5l3 2' },
+  { id: 'cidade', rotulo: 'Cidade', curto: 'Cidade', icone: 'M3 21V10l5-3v14M8 21V4l8 3v14M16 21v-9l5 2v7M2 21h20M11 9h2M11 12h2M11 15h2' }
 ];
 
 function Icone({ d }: { d: string }) {
@@ -61,6 +64,7 @@ export function climaDe(v: Vida): 'dificil' | 'bom' | 'normal' {
 }
 
 const temTrabalho = (v: Vida) => idade(v) >= 14 || v.trabalho.historico.length > 0;
+const temCidade = (v: Vida) => idade(v) >= 16;
 
 export function Jogo({ c }: { c: ControleVida }) {
   const vida = c.vida!;
@@ -68,8 +72,8 @@ export function Jogo({ c }: { c: ControleVida }) {
   const [menu, setMenu] = useState(false);
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
   const conteudo = useRef<HTMLElement>(null);
-  const abas = ABAS.filter(a => a.id !== 'trabalho' || temTrabalho(vida));
-  const setAba = (a: Aba) => setAbaBruta(a === 'trabalho' && !temTrabalho(vida) ? 'rumo' : a);
+  const abas = ABAS.filter(a => (a.id !== 'trabalho' || temTrabalho(vida)) && (a.id !== 'cidade' || temCidade(vida)));
+  const setAba = (a: Aba) => setAbaBruta(a === 'trabalho' && !temTrabalho(vida) ? 'estudos' : a === 'cidade' && !temCidade(vida) ? 'casa' : a);
   const abrirPessoa = (id: string | null) => { setPessoaAberta(id); if (id) setAba('pessoas'); };
 
   useEffect(() => { conteudo.current?.scrollTo?.({ top: 0 }); window.scrollTo?.({ top: 0 }); }, [aba]);
@@ -105,9 +109,10 @@ export function Jogo({ c }: { c: ControleVida }) {
           {aba === 'voce' && <Voce vida={vida} agir={c.agir} irPara={setAba} abrirPessoa={abrirPessoa} />}
           {aba === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={setPessoaAberta} />}
           {aba === 'trabalho' && <Trabalho vida={vida} agir={c.agir} irPara={setAba} />}
-          {aba === 'rumo' && <Rumo vida={vida} agir={c.agir} irPara={setAba} />}
+          {aba === 'estudos' && <Estudos vida={vida} agir={c.agir} irPara={setAba} />}
           {aba === 'casa' && <Casa vida={vida} agir={c.agir} />}
-          {aba === 'tempo' && <Tempo vida={vida} agir={c.agir} />}
+          {aba === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={setAba} />}
+          {aba === 'cidade' && <Cidade vida={vida} agir={c.agir} />}
         </main>
 
         <aside className="agora" aria-label="Agora">
@@ -131,7 +136,7 @@ export function Jogo({ c }: { c: ControleVida }) {
       </nav>
 
       {vida.momento && <Momento vida={vida} agir={c.agir} />}
-      {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} />}
+      {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} mudancas={c.resultado.mudancas} />}
       {menu && <Menu c={c} aoFechar={() => setMenu(false)} />}
     </div>
   );
@@ -213,7 +218,7 @@ function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPar
         <>
           <h2 className="painel-agora__titulo painel-agora__titulo--rumo">Portas abertas</h2>
           <ul className="agora-sinais">
-            {portas.map(o => <li key={o.id}><button type="button" className="agora-sinal agora-sinal--porta" onClick={() => irPara(ehPortaDeTrabalho(o) && temTrabalho(vida) ? 'trabalho' : 'rumo')}>{o.titulo}<span className="agora-sinal__prazo"> · até {anoDe(o.tFim)}</span></button></li>)}
+            {portas.map(o => { const area = areaDaPorta(o); return <li key={o.id}><button type="button" className="agora-sinal agora-sinal--porta" onClick={() => irPara(area === 'trabalho' && temTrabalho(vida) ? 'trabalho' : area === 'tempo' ? 'tempo' : 'estudos')}>{o.titulo}<span className="agora-sinal__prazo"> · até {anoDe(o.tFim)}</span></button></li>; })}
           </ul>
         </>
       )}
@@ -241,12 +246,50 @@ function Menu({ c, aoFechar }: { c: ControleVida; aoFechar: () => void }) {
       <div className="folha folha--media" role="dialog" aria-modal="true" aria-label="Menu">
         <div className="folha__topo"><div className="folha__titulo">VIDA</div><button type="button" className="folha__fechar" onClick={aoFechar} aria-label="Fechar">×</button></div>
         <div className="folha__corpo menu">
-          <p className="nota">Sua vida é salva a cada passo.</p>
+          <p className="nota">Sua vida é salva a cada passo, neste navegador. Para continuar em outro aparelho, exporte a vida num arquivo e importe lá.</p>
+          <button type="button" className="botao botao--secundario" onClick={() => c.exportar()}>Exportar esta vida (arquivo)</button>
+          <ImportarVida c={c} aoTerminar={aoFechar} />
           <button type="button" className="botao botao--secundario" onClick={() => { c.setSom(!c.som); }}>{c.som ? 'Desligar o som' : 'Ligar o som'}</button>
           <button type="button" className="botao botao--secundario" onClick={() => { aoFechar(); c.setTela('inicio'); }}>Voltar ao início</button>
           <button type="button" className="botao botao--perigo" onClick={() => { if (window.confirm('Apagar esta vida e começar outra? Não dá para desfazer.')) { aoFechar(); c.recomecar(); } }}>Abandonar esta vida</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Importar uma vida de um arquivo: lê, valida, mostra de quem é — e só
+ * substitui a vida atual depois de confirmar.
+ */
+export function ImportarVida({ c, aoTerminar }: { c: ControleVida; aoTerminar?: () => void }) {
+  const [erro, setErro] = useState<string | null>(null);
+  const [previa, setPrevia] = useState<{ texto: string; resumo: string } | null>(null);
+  const idArquivo = useId();
+  const ler = (arquivo: File | undefined) => {
+    setErro(null); setPrevia(null);
+    if (!arquivo) return;
+    if (arquivo.size > 12 * 1024 * 1024) { setErro('O arquivo é grande demais para ser uma vida do VIDA.'); return; }
+    arquivo.text().then(texto => {
+      const r = c.previaImportacao(texto);
+      if (r.tipo === 'erro') setErro(r.motivo); else setPrevia({ texto, resumo: r.resumo });
+    }).catch(() => setErro('Não foi possível ler esse arquivo.'));
+  };
+  return (
+    <div className="importar">
+      <label className="botao botao--secundario importar__botao" htmlFor={idArquivo}>Importar uma vida (arquivo)</label>
+      <input id={idArquivo} className="sr-only" type="file" accept=".json,application/json" onChange={e => ler(e.target.files?.[0])} />
+      {erro && <p className="nota nota--ruim" role="alert"><span aria-hidden>! </span>{erro}</p>}
+      {previa && (
+        <div className="importar__previa" role="group" aria-label="Confirmar importação">
+          <p>{previa.resumo}</p>
+          {c.salva && <p className="nota nota--atencao"><span aria-hidden>! </span>Isso substitui a vida salva agora ({c.salva.nome}, {c.salva.idade} anos). Exporte antes, se quiser guardá-la.</p>}
+          <div className="grupo-acoes grupo-acoes--linha">
+            <button type="button" className="botao botao--principal" onClick={() => { if (c.importar(previa.texto)) { setPrevia(null); aoTerminar?.(); } }}>Importar e continuar essa vida</button>
+            <button type="button" className="botao botao--discreto" onClick={() => setPrevia(null)}>Cancelar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

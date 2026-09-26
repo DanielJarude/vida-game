@@ -380,7 +380,7 @@ export type OqueProfissao =
 export type AcaoProfissaoCmd = { tipo: 'profissao'; oque: OqueProfissao; valor?: string; pessoaId?: string };
 
 /** Para onde a tela leva quando a ação não é um comando, mas um lugar. */
-export type DestinoTrabalho = 'explorar' | 'rumo' | 'tempo' | 'casa' | 'pessoas';
+export type DestinoTrabalho = 'explorar' | 'estudos' | 'tempo' | 'casa' | 'pessoas';
 
 export interface AcaoProfissional {
   id: string;
@@ -444,7 +444,7 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     add({ id: 'vagas', rotulo: 'Ver as vagas que cabem em você', porque: anos >= 1 ? 'Cada ano parado pesa mais.' : undefined, ir: 'explorar', peso: 9 });
     if (editaisAbertos(v).some(oc => podeTentar(elegibilidade(v, oc)))) add({ id: 'concursos', rotulo: 'Ver os concursos com edital aberto', ir: 'explorar', peso: 5 });
     if (i >= 18 && !v.rotinas.some(r => r.id === 'bico')) add({ id: 'bico', rotulo: 'Fazer bicos enquanto procura', porque: aperto ? 'As contas não esperam.' : undefined, ir: 'tempo', peso: aperto ? 7 : 3 });
-    if (i >= 17 && !v.educacao.matricula) add({ id: 'estudar', rotulo: 'Voltar a estudar para abrir outras portas', ir: 'rumo', peso: anos >= 2 ? 5 : 2 });
+    if (i >= 17 && !v.educacao.matricula) add({ id: 'estudar', rotulo: 'Voltar a estudar para abrir outras portas', ir: 'estudos', peso: anos >= 2 ? 5 : 2 });
     if (i >= 18) add({ id: 'negocio', rotulo: 'Pensar num negócio próprio', ir: 'explorar', peso: 1 });
     return separar(lista);
   }
@@ -471,13 +471,13 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     add({ id: 'aumento', rotulo: 'Pedir aumento', porque: semAumento >= 2 ? `${Math.floor(semAumento)} anos sem aumento.` : undefined, acao: { tipo: 'pedir_aumento' }, peso: semAumento >= 2 && e.salario / fatorJornada(e) < tetoSalarial(e) * 0.9 ? 6 : 2 });
     if (v.trabalho.horasExtras) add({ id: 'sem_horas', rotulo: 'Desistir das horas extras deste ano', porque: cabecaCheia ? 'A cabeça anda cheia.' : undefined, acao: { tipo: 'horas_extras', parar: true }, peso: cabecaCheia ? 8 : 3 });
     else add({ id: 'horas', rotulo: 'Fazer horas extras este ano', porque: aperto ? 'O mês não fecha.' : 'Mais dinheiro, mais cansaço.', acao: { tipo: 'horas_extras' }, peso: aperto ? 6 : 1 });
-    if (pedeFormacao) add({ id: 'qualificar', rotulo: 'Estudar para o próximo passo', porque: hz, ir: 'rumo', peso: 6 });
+    if (pedeFormacao) add({ id: 'qualificar', rotulo: 'Estudar para o próximo passo', porque: hz, ir: 'estudos', peso: 6 });
     const estagnado = (v.t - (e.tPosto ?? e.tInicio)) / 12 >= 5;
     add({ id: 'outra_vaga', rotulo: 'Procurar outra vaga', porque: climaDe(e) < 40 ? 'O clima por aqui não anda bom.' : estagnado ? 'Anos no mesmo lugar.' : undefined, ir: 'explorar', peso: climaDe(e) < 40 ? 6 : estagnado ? 4 : 1 });
   }
   if (modo === 'servidor' || (modo === 'docente' && e.contrato === 'servidor')) {
     const temPos = v.educacao.concluidos.some(c => ['pos', 'mestrado', 'doutorado'].includes(c.nivel));
-    add({ id: 'titulacao', rotulo: temPos ? 'Mais uma titulação (mestrado, doutorado)' : 'Fazer uma pós: o adicional de titulação', porque: 'Na carreira pública, estudar é o que sobe o salário.', ir: 'rumo', peso: temPos ? 2 : 5 });
+    add({ id: 'titulacao', rotulo: temPos ? 'Mais uma titulação (mestrado, doutorado)' : 'Fazer uma pós: o adicional de titulação', porque: 'Na carreira pública, estudar é o que sobe o salário.', ir: 'estudos', peso: temPos ? 2 : 5 });
     add({ id: 'remocao', rotulo: 'Pedir remoção para outra cidade', porque: familiaLonge(v) ? `${familiaLonge(v)} mora longe.` : undefined, acao: P('remocao'), peso: familiaLonge(v) ? 5 : 1 });
     add({ id: 'concurso', rotulo: 'Prestar outro concurso', porque: 'Mudar de cargo, no serviço público, é outro edital.', ir: 'explorar', peso: 2 });
   }

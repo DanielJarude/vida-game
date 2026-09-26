@@ -10,7 +10,7 @@ import type { Vida } from '../motor/tipos';
 import { criarVida, type OpcoesCriacao } from '../motor/criacao';
 import { avancarAno } from '../motor/ano';
 import { executar, type Acao } from '../motor/acoes';
-import { apagarSave, ler, registrarVidaPassada, salvar } from '../motor/save';
+import { apagarSave, exportarVida, importarVida, ler, registrarVidaPassada, salvar } from '../motor/save';
 import { idade } from '../motor/nucleo';
 import { patrimonio } from '../motor/sistemas/dinheiro';
 import { nomeLugar } from '../motor/dados/lugares';
@@ -27,7 +27,7 @@ export function useVida() {
   const [vida, setVida] = useState<Vida | null>(null);
   const [salva, setSalva] = useState<{ nome: string; idade: number } | null>(null);
   const [aviso, setAviso] = useState<Aviso | null>(null);
-  const [resultado, setResultado] = useState<{ titulo: string; texto: string; pessoaId?: string } | null>(null);
+  const [resultado, setResultado] = useState<{ titulo: string; texto: string; pessoaId?: string; mudancas?: string[] } | null>(null);
   /** Primeira entrada da biografia gerada pelo último ano vivido (para destacar). */
   const [marcaAno, setMarcaAno] = useState<number>(0);
   const [avisoSave, setAvisoSave] = useState<string | null>(null);
@@ -108,16 +108,60 @@ export function useVida() {
       return false;
     }
     aplicar(r.vida);
+    // O que a ação mudou na vida (as consequências, como ficaram na Linha da Vida).
+    const mudancas = (r.mudancas ?? []).filter(m => m !== r.resultado);
     if (r.resultado) {
       // Resultado de decisão aparece dentro do próprio momento (o modal decide);
-      // resultado de ação que não abriu decisão vira aviso.
-      if (a.tipo === 'decidir') setResultado({ titulo, texto: r.resultado });
-      else if (r.titulo) setResultado({ titulo: r.titulo, texto: r.resultado, pessoaId: r.pessoaId });
+      // resultado de ação que não abriu decisão vira aviso — a não ser que tenha mudado coisas na vida.
+      if (a.tipo === 'decidir') setResultado({ titulo, texto: r.resultado, mudancas });
+      else if (r.titulo || mudancas.length >= 2) setResultado({ titulo: r.titulo ?? 'O que aconteceu', texto: r.resultado, pessoaId: r.pessoaId, mudancas });
       else avisar(r.resultado, 'neutro');
-    } else if (r.aviso) avisar(r.aviso.texto, r.aviso.tom);
+    } else if (r.aviso) {
+      if (mudancas.length >= 2 && !r.vida.momento) setResultado({ titulo: 'O que mudou', texto: r.aviso.texto, mudancas });
+      else avisar(r.aviso.texto, r.aviso.tom);
+    }
     sound.playClick();
     return true;
   }, [vida, aplicar, avisar]);
+
+  /** Baixa a vida atual num arquivo JSON (para continuar em outro navegador ou aparelho). */
+  const exportar = useCallback(() => {
+    if (!vida) return;
+    try {
+      const blob = new Blob([exportarVida(vida)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vida-${vida.eu.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${anoDe(vida.t)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      avisar('Vida exportada: o arquivo foi baixado.', 'bom');
+    } catch {
+      avisar('Não foi possível exportar agora.', 'ruim');
+    }
+  }, [vida, avisar]);
+
+  /** Lê um arquivo e diz de quem é a vida (sem trocar nada ainda). */
+  const previaImportacao = useCallback((texto: string): { tipo: 'ok'; resumo: string } | { tipo: 'erro'; motivo: string } => {
+    const r = importarVida(texto);
+    if (r.tipo !== 'ok') return { tipo: 'erro', motivo: r.tipo === 'invalido' ? r.motivo : 'O arquivo está vazio.' };
+    const v = r.vida;
+    return { tipo: 'ok', resumo: `A vida de ${v.eu.nome} ${v.eu.sobrenome}, ${idade(v)} anos, em ${nomeLugar(v.moradia.municipioId)}, no ano de ${anoDe(v.t)}.${r.migrado ? ' Veio de uma versão anterior do jogo e será convertida.' : ''}` };
+  }, []);
+
+  /** Importa (depois de confirmado): a vida do arquivo passa a ser a vida salva. */
+  const importar = useCallback((texto: string): boolean => {
+    const r = importarVida(texto);
+    if (r.tipo !== 'ok') { avisar(r.tipo === 'invalido' ? r.motivo : 'O arquivo está vazio.', 'ruim'); return false; }
+    setResultado(null);
+    setMarcaAno(r.vida.biografia.length);
+    aplicar(r.vida);
+    setTela('jogo');
+    avisar(`A vida de ${r.vida.eu.nome} continua aqui.`, 'bom');
+    return true;
+  }, [aplicar, avisar]);
 
   const recomecar = useCallback(() => {
     apagarSave();
@@ -129,7 +173,7 @@ export function useVida() {
 
   return {
     tela, setTela, vida, salva, aviso, avisoSave, setAvisoSave, resultado, fecharResultado: () => setResultado(null),
-    marcaAno, som, setSom, nascer, continuar, avancar, agir, recomecar, avisar
+    marcaAno, som, setSom, nascer, continuar, avancar, agir, recomecar, avisar, exportar, previaImportacao, importar
   };
 }
 

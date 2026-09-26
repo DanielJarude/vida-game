@@ -27,6 +27,9 @@ import { listaNatural } from '../../motor/texto';
 import { podeTentar } from '../../motor/plausibilidade';
 import { BotaoAcao, Folio, Secao, Vazio } from '../comum';
 import { dinheiroCurto } from '../apresentar';
+import { areaDaPorta, PortasAbertas } from './Estudos';
+import { doClube } from '../../motor/dados/clubes';
+import type { Aba } from '../telas/Jogo';
 
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'esporte', rotulo: 'Esporte' }, { id: 'arte', rotulo: 'Arte' }, { id: 'estudo', rotulo: 'Estudo' },
@@ -96,7 +99,51 @@ function FaixaDaSemana({ s }: { s: Semana }) {
   );
 }
 
-export function Tempo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+/** Para onde leva cada pedaço fixo da semana (a causa mora em outra área). */
+const ORIGEM: Record<string, { area: Aba; rotulo: string }> = {
+  trabalho: { area: 'trabalho', rotulo: 'Trabalho' }, horas_extras: { area: 'trabalho', rotulo: 'Trabalho' }, politica: { area: 'trabalho', rotulo: 'Trabalho' },
+  curso: { area: 'estudos', rotulo: 'Estudos' }, integrado: { area: 'estudos', rotulo: 'Estudos' },
+  filhos_pequenos: { area: 'pessoas', rotulo: 'Pessoas' }, filhos_escola: { area: 'pessoas', rotulo: 'Pessoas' }, cuidar: { area: 'pessoas', rotulo: 'Pessoas' }, cuidado_pausa: { area: 'trabalho', rotulo: 'Trabalho' }, pets: { area: 'pessoas', rotulo: 'Pessoas' },
+  onibus: { area: 'cidade', rotulo: 'Cidade' }, conducao: { area: 'casa', rotulo: 'Casa' }
+};
+
+/**
+ * Para onde vai o seu tempo: cada coisa que ocupa a semana, do maior para o
+ * menor, com o tamanho em palavras e o caminho até a causa. Quando passa do
+ * que cabe, diz o que está apertando — e o que dá para aliviar.
+ */
+function ParaOndeVai({ vida, s, irPara }: { vida: Vida; s: Semana; irPara?: (a: Aba) => void }) {
+  const itens = [
+    ...s.fixos.map(f => ({ id: f.id, rotulo: f.rotulo, peso: f.peso, fixo: true })),
+    ...s.rotinas.map(r => ({ id: r.id, rotulo: r.rotulo, peso: r.peso, fixo: false }))
+  ].filter(x => x.peso >= 0.05).sort((a, b) => b.peso - a.peso);
+  if (!itens.length) return null;
+  const passa = s.ocupado > s.capacidade + 0.01 || s.fixos.reduce((t, f) => t + f.peso, 0) > s.base + 0.01;
+  const base = vida.caminhos.esporte?.fase === 'base' ? vida.caminhos.esporte : undefined;
+  return (
+    <section className="para-onde" aria-labelledby="titulo-para-onde">
+      <h2 id="titulo-para-onde" className="secao-fio">Para onde vai o seu tempo</h2>
+      {passa && <p className="nota nota--atencao"><span aria-hidden>! </span>A semana passa do que cabe. O que mais pesa: {listaNatural(itens.slice(0, 2).map(x => x.rotulo.replace(/ \(.*\)$/, '').replace(/ — .*/, '').toLowerCase()))}. Aliviar algo aqui é o que devolve fôlego.</p>}
+      <ul className="para-onde__lista">
+        {itens.map(x => {
+          const origem = ORIGEM[x.id];
+          const treinoBase = base && x.id === base.modalidade;
+          return (
+            <li key={x.id} className={`para-onde__item${x.fixo ? ' para-onde__item--fixo' : ''}`}>
+              <span className="para-onde__barra" aria-hidden><span style={{ width: `${Math.min(100, (x.peso / Math.max(1, s.base)) * 100 * 1.6)}%` }} /></span>
+              <span className="para-onde__nome">{treinoBase ? `Treino de base ${doClube(base!.clube)}` : x.rotulo}</span>
+              <span className="para-onde__dose">{dose(x.peso)}{x.fixo ? ' · fixo' : ' · escolha sua'}</span>
+              {treinoBase && <span className="para-onde__porque">A base toma quase todos os dias: é por isso que outras coisas não cabem.</span>}
+              {origem && irPara && <button type="button" className="link para-onde__ir" onClick={() => irPara(origem.area)}>ver em {origem.rotulo} →</button>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const i = idade(vida);
   if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
   const s = semana(vida);
@@ -108,11 +155,13 @@ export function Tempo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   return (
     <div className="tempo">
       <Folio kicker={<><span className="folio__area">Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
+      <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
       <section className="tempo-semana" aria-labelledby="titulo-semana">
         <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
         <FaixaDaSemana s={s} />
         {s.fixos.length === 0 && <p className="nota">{i < 18 ? 'Além da escola, a semana é sua.' : 'Nada fixo ocupa a semana: nem trabalho, nem curso.'}</p>}
       </section>
+      <ParaOndeVai vida={vida} s={s} irPara={irPara} />
 
       <Secao titulo="O que você faz">
         {ativas.length === 0 && <Vazio>Nada fixo na semana por enquanto.</Vazio>}

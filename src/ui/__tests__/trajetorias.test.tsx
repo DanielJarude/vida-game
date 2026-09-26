@@ -50,7 +50,7 @@ describe('interface dos caminhos de vida', () => {
     vidaSalva(34, v => { contratar(v, criarRng(1), ocupacao('aux_adm')); });
     abrirTrabalho();
     expect(screen.queryByRole('button', { name: /Reduzir a jornada/ })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /Outras possibilidades/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Mais ações/ }));
     expect(screen.getByRole('button', { name: /Reduzir a jornada/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Formalizar como MEI/ })).toBeNull();
   });

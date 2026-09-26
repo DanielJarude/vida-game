@@ -4,9 +4,10 @@
    A base continua escura — é a noite em que a vida acontece —, mas deixou
    de ser quase monocromática. Três ideias carregam a identidade:
 
-   1. TINTA E PAPEL. A vida acontece no escuro (tinta quente, não preto);
-      quando é a SUA vez de decidir, a tela vira papel claro, com tinta
-      escura. "A vida acontece; às vezes você decide" virou superfície.
+   1. TINTA E CARTA. A vida acontece no escuro (tinta quente, não preto);
+      quando é a SUA vez de decidir, sobe uma carta — uma superfície mais
+      alta e mais quente, com a luz do âmbar na borda. Destaca sem virar uma
+      página branca aberta em cima do jogo (FIX #3: o papel claro ofuscava).
 
    2. COR COMO LINGUAGEM. Cada área tem um tom próprio, tirado de coisas
       brasileiras e cotidianas — e cada tom diz o que a área é:
@@ -14,9 +15,10 @@
         Você      pêssego, cor de pele e de rosto
         Pessoas   goiaba: calor, gente
         Trabalho  ipê-amarelo: energia, coisa feita
-        Rumo      azulejo: estudo, o que se abre
+        Estudos   azulejo: estudo, o que se abre
         Casa      verde-água de fachada
         Tempo     ipê-roxo: leveza, escolha
+        Cidade    cal de muro: rua, serviço, lugar
         Saúde     folha
       O tom aparece em pouco lugar (a aba, o fio da seção, o número que
       importa, a ilustração), nunca como fundo de tela inteira.
@@ -86,9 +88,15 @@
   --rule: rgba(255, 246, 232, 0.1);
   --rule-strong: rgba(255, 246, 232, 0.2);
 
-  /* Papel: a superfície das decisões e dos resultados. */
+  /* Carta: a superfície das decisões e dos resultados (escura, quente, mais alta que a página). */
+  --carta: #2b231c;
+  --carta-2: #342a21;
+  --carta-borda: color-mix(in oklab, var(--pig-ambar) 38%, transparent);
+  --carta-luz: color-mix(in oklab, var(--pig-ambar) 12%, transparent);
+  --carta-opcao: rgba(255, 246, 232, 0.045);
+  --carta-opcao-hover: rgba(255, 246, 232, 0.09);
+  /* Papel (legado: algumas telas antigas ainda podem pedir). */
   --papel: #f4ecdd;
-  --papel-2: #e9dec9;
   --papel-tinta: #2a211a;
   --papel-tinta-2: #5a4c3f;
   --papel-linha: rgba(42, 33, 26, 0.16);
@@ -110,6 +118,7 @@
   --pig-fachada: #62cdb9;
   --pig-ipe-roxo: #bea1f6;
   --pig-folha: #93cf72;
+  --pig-cal: #d7c6b0;
   --cinza-quente: #9a8f82;
 
   /* -------------------------------------------------------- Tons das áreas */
@@ -118,8 +127,10 @@
   --tom-pessoas: var(--pig-goiaba);
   --tom-trabalho: var(--pig-ipe);
   --tom-rumo: var(--pig-azulejo);
+  --tom-estudos: var(--tom-rumo);
   --tom-casa: var(--pig-fachada);
   --tom-tempo: var(--pig-ipe-roxo);
+  --tom-cidade: var(--pig-cal);
   --tom-saude: var(--pig-folha);
 
   /* O acento da marca continua o âmbar (avançar, escolhido, marca). */

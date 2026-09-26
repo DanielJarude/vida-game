@@ -108,7 +108,7 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Trabalho' })[0]);
-    if (!screen.queryByRole('button', { name: /Pedir aumento/ })) fireEvent.click(screen.getByRole('button', { name: /Outras possibilidades/ }));
+    if (!screen.queryByRole('button', { name: /Pedir aumento/ })) fireEvent.click(screen.getByRole('button', { name: /Mais ações/ }));
     fireEvent.click(screen.getByRole('button', { name: /Pedir aumento/ }));
     const dialogo = screen.getByRole('dialog');
     expect(within(dialogo).getByText('A conversa do aumento')).toBeTruthy();
@@ -124,7 +124,7 @@ describe('interface', () => {
     });
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
-    fireEvent.click(screen.getAllByRole('button', { name: /Rumo|Estudo e trabalho/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Estudos/ })[0]);
     expect(screen.getByText(/\(trancado\)/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Voltar ao curso/ }));
     expect(screen.queryByText(/\(trancado\)/)).toBeNull();

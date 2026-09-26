@@ -132,8 +132,33 @@ const ICONES: Record<string, string> = {
   oficina: 'M14 6a4 4 0 0 0 5 5l-9 9-3-3 9-9M7 17l-3 3',
   imobiliaria: 'M4 20V9l6-4 6 4v11M16 12h4v8M8 13h4M8 16h4M2 20h20',
   usados: 'M3 16h18M5 16v-4l3-4h8l4 4v4M12 4v3M10 5h4',
-  concessionaria: 'M3 16h18M5 16v-4l3-4h8l4 4v4M4 4h16'
+  concessionaria: 'M3 16h18M5 16v-4l3-4h8l4 4v4M4 4h16',
+  loja_pets: 'M4 10h16v10H4zM3 10l2-5h14l2 5M9 14c0-1 1-2 3-2s3 1 3 2-1 2-3 2-3-1-3-2M8 12.5h.01M16 12.5h.01',
+  republica: 'M3 11l9-7 9 7M5 10v11h14V10M8 13h2M14 13h2M8 17h2M14 17h2',
+  casa_simples: 'M4 12l8-6 8 6M6 11v9h12v-9M11 20v-4h2v4',
+  casa_2q: 'M3 11l9-7 9 7M5 10v11h14V10M8 14h3M13 14h3M10 21v-3h4v3',
+  casa_3q: 'M2 11l7-6 7 6M4 10v11h10V10M14 13l4-3 4 3M16 13v8h5v-8M7 14h4',
+  casa_grande: 'M1 11l6-6 6 6 5-4 5 4M3 10v11h18V10M6 14h3M11 14h2M15 14h3M10 21v-4h4v4',
+  sitio: 'M3 13l6-5 6 5M5 12v8h8v-8M15 20c0-4 3-7 6-7M17 20c0-3 2-5 4-5M2 20h20',
+  apto_1q: 'M7 21V5h10v16M10 9h1M13 9h1M10 13h1M13 13h1M11 21v-3h2v3M4 21h16',
+  apto_2q: 'M6 21V4h12v17M9 8h2M13 8h2M9 12h2M13 12h2M9 16h2M13 16h2M3 21h18',
+  apto_3q: 'M4 21V3h16v18M7 7h2M11 7h2M15 7h2M7 11h2M11 11h2M15 11h2M7 15h2M15 15h2M11 21v-4h2v4M2 21h20',
+  alto_padrao: 'M5 21V2h14v19M8 5h2M14 5h2M8 9h2M14 9h2M8 13h2M14 13h2M3 21h18M9 21v-4h6v4'
 };
+
+/** Cada tipo de moradia tem a sua silhueta (e o tamanho aparece no desenho, não só no texto). */
+const ICONE_MORADIA: Record<string, string> = { republica: 'republica', kitnet: 'kitnet', casa_simples: 'casa_simples', apto_1q: 'apto_1q', apto_2q: 'apto_2q', casa_2q: 'casa_2q', apto_3q: 'apto_3q', casa_3q: 'casa_3q', casa_grande: 'casa_grande', sitio: 'sitio', alto_padrao: 'alto_padrao' };
+
+export function IconeMoradia({ modeloId, estado }: { modeloId: string; estado?: string }) {
+  const nome = ICONE_MORADIA[modeloId] ?? 'casa';
+  return (
+    <span className={`icone-moradia icone-moradia--${nome}${estado === 'reforma' ? ' icone-moradia--reforma' : ''}`} aria-hidden>
+      <Icone nome={nome} tamanho={34} />
+      {estado === 'reforma' && <span className="icone-moradia__selo">obra</span>}
+      {estado === 'novo' && <span className="icone-moradia__selo">novo</span>}
+    </span>
+  );
+}
 
 export function Icone({ nome, tamanho = 28 }: { nome: string; tamanho?: number }) {
   return (

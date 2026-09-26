@@ -22,7 +22,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
   return (
     <Folha rotulo={m.titulo} fechavel={false} papel>
       <div className="momento">
-        <p className="momento__tema">{/^pol_/.test(m.situacaoId) ? 'Vida pública' : /^neg_/.test(m.situacaoId) ? 'O negócio' : /^esp_/.test(m.situacaoId) ? 'Esporte' : /^mil_/.test(m.situacaoId) ? 'A farda' : TEMA_ROTULO[m.tema] ?? ''}</p>
+        <p className="momento__tema">{/^comp_/.test(m.situacaoId) ? 'Duas coisas que não cabem juntas' : /^pol_/.test(m.situacaoId) ? 'Vida pública' : /^neg/.test(m.situacaoId) ? 'O negócio' : /^esp_/.test(m.situacaoId) ? 'Esporte' : /^mil_/.test(m.situacaoId) ? 'A farda' : /^pet_/.test(m.situacaoId) ? 'Os bichos' : TEMA_ROTULO[m.tema] ?? ''}</p>
         <h2 className="momento__titulo">{m.titulo}</h2>
         {pessoas.length > 0 && (
           <div className="momento__pessoas">
@@ -44,6 +44,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
             <li key={o.id}>
               <button type="button" className="opcao" disabled={!!o.bloqueio} onClick={() => agir({ tipo: 'decidir', opcaoId: o.id })}>
                 <span className="opcao__texto">{o.texto}</span>
+                {o.detalhe && !o.bloqueio && <span className="opcao__detalhe"><span className="opcao__seta" aria-hidden>→ </span>{o.detalhe}</span>}
                 {o.bloqueio && <span className="opcao__bloqueio">{o.bloqueio}</span>}
               </button>
             </li>
@@ -54,7 +55,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
   );
 }
 
-export function Resultado({ titulo, texto, aoFechar, vida, pessoaId }: { titulo: string; texto: string; aoFechar: () => void; vida?: Vida; pessoaId?: string }) {
+export function Resultado({ titulo, texto, aoFechar, vida, pessoaId, mudancas }: { titulo: string; texto: string; aoFechar: () => void; vida?: Vida; pessoaId?: string; mudancas?: string[] }) {
   const p = pessoaId && vida ? vida.pessoas[pessoaId] : undefined;
   return (
     <Folha rotulo={`Resultado: ${titulo}`} aoFechar={aoFechar} fechavel papel>
@@ -68,7 +69,13 @@ export function Resultado({ titulo, texto, aoFechar, vida, pessoaId }: { titulo:
           </div>
         )}
         <p className="momento__tema">{titulo}</p>
-        <p className="momento__resultado">{texto}</p>
+        {texto && <p className="momento__resultado">{texto}</p>}
+        {mudancas && mudancas.length > 0 && (
+          <div className="mudancas">
+            <p className="mudancas__titulo">O que mudou na sua vida</p>
+            <ul>{mudancas.map((x, k) => <li key={k}>{x}</li>)}</ul>
+          </div>
+        )}
         <button type="button" className="botao botao--principal" onClick={aoFechar}>Continuar</button>
       </div>
     </Folha>

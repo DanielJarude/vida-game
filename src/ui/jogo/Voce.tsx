@@ -20,7 +20,7 @@ import { lutoVisivel, situacaoAfetiva } from '../leitura';
 import { expressaoDe, lerDimensao, momentoAtual, palavraTendencia, type LeituraDimensao } from '../estadoPessoal';
 import { ODinheiro } from './Dinheiro';
 
-export type Destino = 'tempo' | 'rumo' | 'pessoas' | 'casa' | 'trabalho';
+export type Destino = 'tempo' | 'estudos' | 'pessoas' | 'casa' | 'trabalho';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void }
 

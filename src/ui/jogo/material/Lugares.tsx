@@ -12,6 +12,7 @@ import { condicoesImovel, condicoesVeiculo, condicoesEmprestimo, disponibilidade
 import { idade, idadePessoa, vinculosVivos } from '../../../motor/nucleo';
 import { podeTentar } from '../../../motor/plausibilidade';
 import { modeloMoradia, modeloVeiculo } from '../../../motor/dados/bens';
+import { economiaLocal } from '../../../motor/dados/lugares';
 import { PRODUTOS, PALAVRA_RISCO, produto } from '../../../motor/dados/investimentos';
 import { animaisParaVoce, imoveisParaVoce, investimentosParaVoce, veiculosParaVoce } from '../../../motor/sistemas/relevancia';
 import { aplicacao } from '../../../motor/sistemas/investimentos';
@@ -22,15 +23,19 @@ import { estadoDoVeiculo, custoRevisao } from '../../../motor/sistemas/veiculos'
 import type { AnimalDoAbrigo, OfertaImovel, OfertaVeiculo } from '../../../motor/sistemas/mercado';
 import { BotaoAcao, Escolha, Folha } from '../../comum';
 import { Retrato } from '../../avatar/Retrato';
-import { Icone } from './Desenhos';
+import { Icone, IconeMoradia } from './Desenhos';
+import { animal, palavraDoBicho } from '../../../motor/dados/animais';
+import { ofertasDePets, type OfertaDePet } from '../../../motor/sistemas/mercado';
+
+const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 import { dinheiroCheio, dinheiroCurto } from '../../leituraMaterial';
 
-export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'oficina' | 'banco' | 'abrigo';
+export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'oficina' | 'banco' | 'abrigo' | 'pets';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFechar: () => void; trocar: (l: QualLugar) => void }
 
 const TITULO: Record<QualLugar, string> = {
-  alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais'
+  alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais'
 };
 
 export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
@@ -49,6 +54,7 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
         {qual === 'oficina' && <Oficina vida={vida} agir={agir} />}
         {qual === 'banco' && <Banco vida={vida} agir={agir} />}
         {qual === 'abrigo' && <Abrigo vida={vida} agir={agirEFechar} />}
+        {qual === 'pets' && <LojaDeAnimais vida={vida} agir={agirEFechar} />}
       </div>
     </Folha>
   );
@@ -93,7 +99,7 @@ function CartaoImovel({ o, motivo, abrir, vida }: { o: OfertaImovel; motivo?: st
   const valor = o.modo === 'aluguel' ? o.aluguel : o.preco;
   return (
     <button type="button" className="oferta" onClick={abrir}>
-      <Icone nome={o.modeloId === 'kitnet' ? 'kitnet' : m.casa ? 'casa' : 'predio'} />
+      <IconeMoradia modeloId={o.modeloId} estado={o.estado} />
       <span className="oferta__texto">
         <strong>{m.nome.charAt(0).toUpperCase() + m.nome.slice(1)} {o.bairro}</strong>
         <span>{o.detalhe} · {m.quartos} {m.quartos === 1 ? 'quarto' : 'quartos'}{o.aceitaPet ? ' · aceita animais' : ''}</span>
@@ -368,7 +374,7 @@ function Abrigo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
               <Retrato visual={undefined} genero={a.genero} idade={a.idade} semente={a.id} tamanho={64} especie={a.especie} rotulo={a.nome} />
               <div className="animal__texto">
                 <strong>{a.nome}</strong>
-                <span>{a.especie === 'gato' ? (a.genero === 'feminino' ? 'Gata' : 'Gato') : (a.genero === 'feminino' ? 'Cachorra' : 'Cachorro')}{a.especie === 'cachorro' ? ` de porte ${a.porte === 'medio' ? 'médio' : a.porte}` : ''} · {a.idade === 0 ? 'filhote' : `${a.idade} ${a.idade === 1 ? 'ano' : 'anos'}`}</span>
+                <span>{capitalizar(palavraDoBicho(a.especie, a.genero, false))}{a.especie === 'cachorro' ? ` de porte ${a.porte === 'medio' ? 'médio' : a.porte}` : ''} · {a.idade === 0 ? 'filhote' : `${a.idade} ${a.idade === 1 ? 'ano' : 'anos'}`}</span>
                 <span className="animal__jeito">{a.jeito.charAt(0).toUpperCase() + a.jeito.slice(1)}. {a.historia.charAt(0).toUpperCase() + a.historia.slice(1)}.</span>
                 {motivo(a) && podeTentar(d) && <span className="oferta__motivo">{motivo(a)}</span>}
               </div>
@@ -378,6 +384,41 @@ function Abrigo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         })}
       </ul>
       {!verTodos && resto.length > 0 && <button type="button" className="botao botao--discreto" onClick={() => setVerTodos(true)}>Ver os outros {resto.length}</button>}
+    </>
+  );
+}
+
+/* ---------------------------------------------------------- Loja de animais */
+
+/**
+ * A loja de animais e os criadouros autorizados: só o que se pode ter. Cada
+ * bicho diz quanto vive, quanto custa por mês, quanto tempo pede e o que a
+ * lei exige (silvestre nativo só com nota fiscal e marcação).
+ */
+function LojaDeAnimais({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const lista = ofertasDePets(vida);
+  const custo = economiaLocal(vida.moradia.municipioId).custo;
+  return (
+    <>
+      <p className="nota">Aqui só se vende o que a lei permite: aves domésticas, roedores, coelhos, peixes — e silvestres nativos de criadouro autorizado pelo IBAMA, com nota fiscal e marcação. Macaco, cobra e bicho tirado do mato não se compram: é crime (Lei 9.605/1998).</p>
+      <ul className="animais">
+        {lista.map((o: OfertaDePet) => {
+          const a = animal(o.especie);
+          return (
+            <li key={o.id} className="animal">
+              <Retrato visual={undefined} genero={o.genero} idade={o.idade} semente={o.id} tamanho={64} especie={o.especie} rotulo={o.nome} />
+              <div className="animal__texto">
+                <strong>{capitalizar(palavraDoBicho(o.especie, o.genero, false))}</strong>
+                <span>{a.descricao}</span>
+                <span className="animal__jeito">Vive uns {a.vida[0]} a {a.vida[1]} anos · uns {dinheiroCurto(a.custo * custo)}/mês{a.semana >= 0.15 ? ' · pede tempo todo dia' : a.semana > 0 ? ' · pede um pouco de tempo' : ''}{a.espaco === 'quintal' ? ' · precisa de quintal' : a.espaco === 'espaco' ? ' · precisa de espaço' : ''}</span>
+                {o.documentos && <span className="oferta__motivo">{o.documentos}</span>}
+              </div>
+              <BotaoAcao vida={vida} acao={{ tipo: 'comprar_pet', ofertaId: o.id }} agir={agir}>{`Comprar (${dinheiroCurto(o.preco)})`}</BotaoAcao>
+            </li>
+          );
+        })}
+      </ul>
+      {lista.length === 0 && <p className="nota">Nada à venda por aqui este ano.</p>}
     </>
   );
 }
