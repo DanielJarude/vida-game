@@ -163,15 +163,21 @@ export function processarEscola(v: Vida, r: Rng): void {
     if (fraca && habilidade(v, fraca) < 30 && r.chance(0.25)) escrever(v, { texto: `Ficou de recuperação em ${NOME_MATERIA[fraca]}, e passou raspando.`, relevancia: 'cotidiano', tema: 'escola', tom: 'ruim' });
   }
 
-  // Reprovação: nunca no 1º ano (progressão continuada), mais comum no fundamental II e médio.
-  const reprova = b.serie > 1 && b.desempenho < 38 && r.chance(b.desempenho < 28 ? 0.7 : 0.35);
+  // Muito acima da idade da série: a escola regular encaminha para a EJA (15+ no fundamental, 18+ no médio), à noite,
+  // onde se avança por etapas. Antes, uma adulta seguia "repetindo o 4º ano" ano após ano, com "colegas cada vez mais novos".
+  if (!b.eja && b.reprovacoes >= 2 && ((b.etapa !== 'medio' && i >= 15) || (b.etapa === 'medio' && i >= 18))) {
+    b.eja = true;
+    escrever(v, { texto: `Com ${i} anos ${b.etapa === 'medio' ? 'na' : 'no'} ${rotuloSerie(b)}, foi para a EJA, à noite: turma de gente de todas as idades, avançando por etapas.`, relevancia: 'biografia', tema: 'escola' });
+  }
+  // Reprovação: nunca no 1º ano (progressão continuada), mais comum no fundamental II e médio. Na EJA, rara (as etapas são mais curtas).
+  const reprova = b.serie > 1 && (b.eja ? b.desempenho < 26 && r.chance(0.3) : b.desempenho < 38 && r.chance(b.desempenho < 28 ? 0.7 : 0.35));
   if (reprova) {
     b.reprovacoes += 1;
     escrever(v, {
-      texto: b.reprovacoes === 1 ? `Repetiu ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)}.`
+      texto: b.eja ? `Ficou mais um semestre na mesma etapa da EJA${b.reprovacoes >= 4 ? ' — o cansaço do dia pesava na aula da noite' : ''}.` : b.reprovacoes === 1 ? `Repetiu ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)}.`
         : b.reprovacoes === 2 ? `Repetiu de ano pela segunda vez, agora ${b.etapa === 'medio' ? 'na' : 'no'} ${rotuloSerie(b)}.`
           : `${b.reprovacoes}ª reprovação: ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)} de novo, com colegas cada vez mais novos.`,
-      relevancia: 'biografia', tema: 'escola', tom: 'ruim'
+      relevancia: b.eja ? 'cotidiano' : 'biografia', tema: 'escola', tom: 'ruim'
     });
     abalar(v, 'a repetência', -6, 3);
     return;
@@ -186,8 +192,9 @@ export function processarEscola(v: Vida, r: Rng): void {
       subir(v, 'medio_incompleto');
       escrever(v, { texto: `Terminou o fundamental e começou o ensino médio ${em(escola(v, b.rede, 'medio'))}.`, relevancia: 'biografia', tema: 'escola' });
     } else {
-      b.serie += 1;
-      if (b.serie === 6) b.etapa = 'fundamental2';
+      // Na EJA, cada ano vale por dois (as etapas juntam séries).
+      b.serie = Math.min(9, b.serie + (b.eja ? 2 : 1));
+      if (b.serie >= 6) b.etapa = 'fundamental2';
     }
     return;
   }
@@ -211,7 +218,7 @@ export function processarEscola(v: Vida, r: Rng): void {
         relevancia: 'marco', tema: 'escola', tom: 'bom'
       });
     } else {
-      b.serie += 1;
+      b.serie = Math.min(3, b.serie + (b.eja ? 2 : 1));
     }
   }
 }

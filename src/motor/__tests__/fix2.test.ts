@@ -203,6 +203,7 @@ describe('iniciativa romântica', () => {
       const { p, vin } = amigo(v);
       vin.romance = { estagio: 'interesse', tEstagio: v.t, envolvimento: 55, pediuTempo: v.t };
       const d = avancarAno(v).vida;
+      if (!d.pessoas[p.id].vivo) continue; // a pessoa morreu no ano (acontece): não há resposta a esperar
       const rom = d.vinculos[p.id].romance;
       expect(rom?.estagio === 'saindo' || rom === undefined).toBe(true);
       if (!rom) expect(d.fatos[`recusa_romance_${p.id}`]).toBeDefined();

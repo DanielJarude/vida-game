@@ -587,8 +587,9 @@ export function explicarEleicao(v: Vida, h: { cargo: CargoEletivo; resultado: st
   if (contra.length) partes.push(`Contra: ${nomes(contra)}.`);
   const ch = h.chance ?? 0.5;
   const ganhou = h.resultado === 'eleito';
-  partes.push(ganhou ? (ch < 0.35 ? `Chegou como ${palavraDaChance(ch)} — e virou na apuração.` : ch >= 0.7 ? 'Chegou como favorito, e confirmou.' : 'Uma disputa apertada, que terminou do seu lado.')
-    : (ch >= 0.6 ? `Chegou ${palavraDaChance(ch) === 'favorito' ? 'como favorito' : 'com boa chance'} — e a apuração não confirmou: eleição tem incerteza.` : ch < 0.3 ? `Chegou como ${palavraDaChance(ch)}: era uma disputa difícil.` : 'Uma disputa apertada, que terminou do outro lado.'));
+  const chegou = ch >= 0.75 ? 'como favorito' : ch >= 0.5 ? 'com boa chance' : ch >= 0.3 ? 'numa disputa aberta' : ch >= 0.12 ? 'como azarão' : 'quase sem chance';
+  partes.push(ganhou ? (ch < 0.35 ? `Chegou ${chegou} — e virou na apuração.` : ch >= 0.7 ? 'Chegou como favorito, e confirmou.' : 'Uma disputa apertada, que terminou do seu lado.')
+    : (ch >= 0.6 ? `Chegou ${chegou} — e a apuração não confirmou: eleição tem incerteza.` : ch < 0.3 ? `Chegou ${chegou}: era uma disputa difícil.` : 'Uma disputa apertada, que terminou do outro lado.'));
   return partes.join(' ');
 }
 

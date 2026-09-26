@@ -19,7 +19,7 @@ import { conteudoPorId, preparar } from '../conteudo/motor';
 import { criarRng } from '../rng';
 import { comoEsta, sinaisSociais } from '../../ui/leitura';
 import { interacoesPara, rotuloInteracao } from '../sistemas/interacoes';
-import { responderTudo } from './ajuda';
+import { nova, responderTudo, viverAte } from './ajuda';
 import { adulto, comFilho, comNeto, comParceiro, comParente, pessoaNova } from './cenarios';
 import { vincular } from '../pessoas';
 import { NEGOCIOS } from '../dados/negocios';
@@ -665,4 +665,18 @@ describe('save v13 → v14 com saves reais da base do Playtest #4', () => {
     const d = vereditoDePagar(v, 20000, 'Custa');
     expect(d.resgate).toBeDefined();
   });
+});
+
+/* ================================= Achado da leitura de biografias: EJA */
+
+describe('quem passou da idade da série vai para a EJA (não "repete o 4º ano" aos 30)', () => {
+  it('um aluno que repete sem parar chega à EJA aos 15 e não segue no fundamental regular adulto', () => {
+    let v = nova({ semente: 77 });
+    v = viverAte(v, 9);
+    v = transacao(v, x => { x.educacao.basica = { etapa: 'fundamental1', serie: 3, rede: 'publica', desempenho: 10, reprovacoes: 3 }; x.mente.cognicao = 5; }).vida;
+    for (let k = 0; k < 16 && !v.morte; k++) { v = transacao(v, x => { if (x.educacao.basica) x.educacao.basica.desempenho = 12; }).vida; v = avancarAno(v).vida; v = responderTudo(v); }
+    expect(v.biografia.some(e => /foi para a EJA/.test(e.texto))).toBe(true);
+    const adultoRepetindo = v.biografia.filter(e => e.idade >= 18 && /reprovação: o .* de novo, com colegas cada vez mais novos/.test(e.texto));
+    expect(adultoRepetindo).toHaveLength(0);
+  }, 30000);
 });

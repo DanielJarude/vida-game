@@ -131,7 +131,8 @@ describe('2 e 3. candidatura: derrota (não é fim de jogo) e vitória', () => {
     expect(p.historico[p.historico.length - 1]?.resultado).toBe('derrotado');
     expect(p.fase).toBe('entre_mandatos');
     expect(v.morte).toBeUndefined();
-    expect(v.trabalho.atual?.ocupacaoId).toBe('vendedor');
+    // A derrota não tira o trabalho (o mundo pode tirar — um corte de pessoal —, mas não a eleição).
+    expect(v.trabalho.atual?.ocupacaoId === 'vendedor' || v.trabalho.historico.some(h => h.ocupacaoId === 'vendedor' && !/mandato|elei|pol[ií]tica|candidat/.test(h.motivo))).toBe(true);
     expect(v.caminhos.marcas.some(m => m.tipo === 'derrota')).toBe(true);
     expect(leituraPolitica(v)!.titulo).toMatch(/derrota/);
     // A derrota deixa nome (a apuração foi forçada a partir de zero): da próxima vez, conta um pouco a favor.

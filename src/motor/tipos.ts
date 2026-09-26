@@ -298,6 +298,8 @@ export interface EscolaBasica {
   integrado?: string;
   desempenho: number;  // 0..100
   reprovacoes: number;
+  /** Na EJA (Educação de Jovens e Adultos): quem passou da idade da série estuda por etapas, à noite. */
+  eja?: boolean;
 }
 
 export interface Matricula {
