@@ -110,6 +110,8 @@ export interface Aperto {
   t: number;
   /** Quem foi perdido, no luto. */
   pessoaId?: string;
+  /** O peso do laço com quem se foi (um filho pesa mais que um sogro): um luto mais leve não apaga um mais pesado. */
+  peso?: number;
 }
 
 /**
@@ -130,7 +132,7 @@ export interface VidaNpc {
   trajetoria: { t: number; texto: string; tipo: TipoTrajetoria }[];
 }
 
-export type TipoTrajetoria = 'escola' | 'estudo' | 'trabalho' | 'promocao' | 'desemprego' | 'casa' | 'amor' | 'filho' | 'lugar' | 'saude';
+export type TipoTrajetoria = 'escola' | 'estudo' | 'trabalho' | 'promocao' | 'desemprego' | 'casa' | 'amor' | 'filho' | 'lugar' | 'saude' | 'perda';
 
 export type Atracao = 'homens' | 'mulheres' | 'ambos';
 

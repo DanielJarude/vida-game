@@ -15,6 +15,7 @@ import { descricaoOrigem } from '../motor/sistemas/social';
 import { gestacaoEmCurso } from '../motor/sistemas/familia';
 import { circuloDe, ehDescendente, estadoCivil, filhosEmComum, importancia, papelDe, parceriaAtual, type Papel } from '../motor/sistemas/vinculos';
 import { pesoDoLuto } from '../motor/sistemas/luto';
+import { lutoDe } from '../motor/sistemas/rede';
 
 export type Par = { p: Pessoa; vin: Vinculo };
 
@@ -178,7 +179,7 @@ export function comoEsta(v: Vida, p: Pessoa, vin: Vinculo): string {
       desemprego: `${capital(ele(p))} perdeu o emprego e ainda não se recolocou.`,
       separacao: `${capital(ele(p))} está atravessando uma separação.`,
       doenca: `A saúde ${dele(p)} anda frágil.`,
-      luto: `${capital(ele(p))} está de luto.`,
+      luto: `${capital(ele(p))} está ${lutoDe(v, p) ?? 'de luto'}.`,
       dinheiro: `${capital(ele(p))} está com o dinheiro apertado.`,
       fase: `${capital(ele(p))} está numa fase difícil.`
     })[p.aperto.tipo]);
@@ -191,7 +192,10 @@ export function comoEsta(v: Vida, p: Pessoa, vin: Vinculo): string {
 
   if (papel === 'parceiro') {
     const env = vin.romance!.envolvimento;
-    if (env >= 75 && vin.tensao < 35) frases.push('Estão bem: ainda riem das mesmas coisas.');
+    // Um luto que é dos dois muda o que se pode dizer do casal (ninguém "ri das mesmas coisas" no ano em que perdeu um filho).
+    const lutoJunto = p.aperto?.tipo === 'luto' && v.t - p.aperto.t <= 24 && v.luto.some(l => l.pessoaId === p.aperto!.pessoaId);
+    if (lutoJunto) frases.push(env >= 60 && vin.tensao < 35 ? 'Têm atravessado a perda juntos.' : vin.tensao >= 35 ? 'A perda pesa entre os dois.' : 'Cada um atravessa a perda no seu canto.');
+    else if (env >= 75 && vin.tensao < 35) frases.push('Estão bem: ainda riem das mesmas coisas.');
     else if (env < 40) frases.push(`${capital(ele(p))} anda distante de você.`);
     else if (env < 55 && vin.tensao < 35) frases.push('A rotina tomou conta; faz tempo que não fazem nada só os dois.');
     const filhos = filhosEmComum(v, p.id).filter(f => f.vivo).length;
@@ -300,7 +304,7 @@ export function sinaisSociais(v: Vida): Sinal[] {
     if (imp < 25) continue;
     const papel = papelDe(p, vin);
     if (p.gestacao && v.t < p.gestacao.tParto) out.push({ pessoaId: p.id, texto: `${p.nome} vai ter um bebê em ${MESES[mesDe(p.gestacao.tParto)]}.`, peso: 70 + imp / 10 });
-    if (p.aperto && v.t - p.aperto.t <= 12) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: 'está de luto', dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5 });
+    if (p.aperto && v.t - p.aperto.t <= 12) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5 });
     if (vin.tensao >= 55 && (papel === 'parceiro' || ehDescendente(papel) || papel === 'genitor')) out.push({ pessoaId: p.id, texto: `${p.nome} — vocês têm brigado.`, peso: 55 + imp / 5 });
     if (papel === 'parceiro' && (vin.romance?.envolvimento ?? 50) < 42 && vin.tensao < 55) out.push({ pessoaId: p.id, texto: `${p.nome} anda distante.`, peso: 50 + imp / 5 });
     const semContato = Math.floor((v.t - vin.tUltimoContato) / 12);

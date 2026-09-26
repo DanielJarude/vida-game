@@ -28,6 +28,7 @@ import { aplicarPersonalidade } from '../personalidade';
 import { abalar } from './abalo';
 import { flex, ge } from '../texto';
 import { ehDescendente, faseDeIdade, mesmaCidade, moraJunto, papelDe, type Fase, type Papel } from './vinculos';
+import { lacoCom, oLaco } from './rede';
 
 export const LIMITE_INTERACOES = 5;
 
@@ -810,13 +811,18 @@ function frasesTempo(c: CtxI): string[] {
   return [`Um dia inteiro com ${n}, sem pressa.`, `Saíram para comer e perderam a hora conversando.`, `Um fim de semana com ${n} que ficou na memória.`, `${n} apareceu sem avisar, com cerveja e fofoca.`];
 }
 
+/** Por quem a pessoa está de luto (quando se sabe). */
+const quemSeFoi = (c: CtxI) => (c.p.aperto?.tipo === 'luto' && c.p.aperto.pessoaId ? c.v.pessoas[c.p.aperto.pessoaId] : undefined);
+/** O jogador também perdeu essa pessoa (é um luto dos dois, não só dela). */
+const perdaDividida = (c: CtxI) => { const x = quemSeFoi(c); return !!x && c.v.luto.some(l => l.pessoaId === x.id); };
+
 function rotuloApoio(c: CtxI): string {
   const n = c.p.nome;
   switch (c.p.aperto!.tipo) {
     case 'desemprego': return `Estar com ${n} depois da demissão`;
     case 'separacao': return c.papel === 'filho' && c.ip < 18 ? `Explicar a separação para ${n}` : `Ficar do lado de ${n} na separação`;
     case 'doenca': return `Ficar com ${n} no hospital`;
-    case 'luto': return `Estar com ${n} no luto`;
+    case 'luto': { const x = quemSeFoi(c); return x ? (perdaDividida(c) ? `Atravessar com ${n} o luto por ${x.nome}` : `Estar com ${n} no luto por ${x.nome}`) : `Estar com ${n} no luto`; }
     case 'dinheiro': return `Ajudar ${n} a colocar as contas em ordem`;
     default: return `Estar perto de ${n} nessa fase`;
   }
@@ -827,7 +833,7 @@ function textoApoio(c: CtxI): string {
     case 'desemprego': return 'Você esteve lá quando perdeu o emprego.';
     case 'separacao': return 'Você esteve lá na separação.';
     case 'doenca': return 'Você esteve no hospital.';
-    case 'luto': return 'Você esteve lá no luto.';
+    case 'luto': { const x = quemSeFoi(c); if (!x) return 'Você esteve lá no luto.'; if (perdaDividida(c)) return `Atravessaram juntos o luto por ${x.nome}.`; const l = lacoCom(c.v, c.p.id, x.id); return l ? `Você esteve lá quando ${ele(c.p)} perdeu ${oLaco(l, x.genero)}, ${x.nome}.` : `Você esteve lá no luto por ${x.nome}.`; }
     case 'dinheiro': return 'Você ajudou quando o dinheiro apertou.';
     default: return 'Você esteve perto numa fase difícil.';
   }
@@ -839,7 +845,7 @@ function resultadoApoio(c: CtxI): string {
     case 'desemprego': return `Você revisou o currículo de ${n} e mandou para três conhecidos. ${capital(ele(c.p))} disse que era a primeira vez em semanas que alguém perguntava.`;
     case 'separacao': return c.papel === 'filho' && c.ip < 18 ? `Você explicou do jeito que deu. ${n} perguntou se a culpa era ${flex(c.p.genero, 'dele', 'dela', 'delu')}. Não era, e você disse isso muitas vezes.` : `Você ouviu ${n} falar da separação a noite inteira. Não precisou dizer nada.`;
     case 'doenca': return `Você passou a tarde no hospital com ${n}, revezando o controle da televisão.`;
-    case 'luto': return `Você ficou com ${n}. Às vezes em silêncio, às vezes falando de quem se foi.`;
+    case 'luto': { const x = quemSeFoi(c); return x ? (perdaDividida(c) ? `Você e ${n} ficaram juntos com a falta de ${x.nome}. Às vezes em silêncio, às vezes falando ${flex(x.genero, 'dele', 'dela', 'delu')}.` : `Você ficou com ${n}. Às vezes em silêncio, às vezes deixando ${ele(c.p)} falar de ${x.nome}.`) : `Você ficou com ${n}. Às vezes em silêncio, às vezes falando de quem se foi.`; }
     case 'dinheiro': return `Sentaram com as contas na mesa. Não fechou, mas ficou mais claro.`;
     default: return `Você chamou ${n} para caminhar. Falaram de tudo e de nada.`;
   }

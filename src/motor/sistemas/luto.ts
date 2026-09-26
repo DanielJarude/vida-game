@@ -27,6 +27,38 @@ import { descricaoOrigem } from './social';
 import { filhosEmComum, importancia, papelDe } from './vinculos';
 import { redeDeApoio } from './estado';
 import { abalar } from './abalo';
+import { lacoCom, nomeDoLaco, quemFicouTexto, repercutirMorte, type Atingido } from './rede';
+
+const juntar = (...partes: string[]) => partes.filter(Boolean).join(' ');
+
+/**
+ * Quem mais perdeu, dito na linha da morte: a parceria que perdeu o filho
+ * junto com você, o marido e os filhos que ela deixou, o pai que ficou
+ * viúvo. Só o que a árvore sustenta; nunca como alguém "reagiu".
+ */
+function quemFicouNaMorte(v: Vida, p: Pessoa, vin: Vinculo, ficaram: Atingido[]): string {
+  if (p.especie) return '';
+  const papel = papelDe(p, vin);
+  const partes: string[] = [];
+  // O outro genitor de um filho seu (a parceria de hoje ou de antes).
+  if (papel === 'filho') {
+    const outro = ficaram.find(a => a.laco === 'filho');
+    if (outro) {
+      const vo = v.vinculos[outro.p.id];
+      const atual = vo?.romance && ['namoro', 'morando_junto', 'casamento'].includes(vo.romance.estagio) && !vo.romance.secreto;
+      partes.push(atual ? `Você e ${outro.p.nome} perderam ${flex(p.genero, 'o filho', 'a filha', 'e filhe')}.` : `${outro.p.nome}, ${flex(outro.p.genero, 'o pai', 'a mãe', 'a mãe')} ${flex(p.genero, 'dele', 'dela', 'delu')}, também ficou de luto.`);
+    }
+  }
+  // Seus pais: quem ficou viúvo.
+  if (papel === 'genitor') {
+    const viuvo = ficaram.find(a => a.laco === 'conjuge');
+    if (viuvo) partes.push(`${viuvo.p.nome} ficou ${flex(viuvo.p.genero, 'viúvo', 'viúva', 'viúve')}.`);
+  }
+  // Quem a pessoa deixou (um filho seu que deixa marido e filhos; um irmão que deixa família).
+  if (papel !== 'parceiro' && papel !== 'genitor') partes.push(quemFicouTexto(v, p, ficaram.filter(a => a.laco === 'conjuge' || (a.laco === 'genitor' && lacoCom(v, a.p.id, p.id) === 'genitor'))));
+  return juntar(...partes);
+}
+export { nomeDoLaco };
 
 /** "aos 3 anos", mas "com 1 ano" e "com poucos meses". */
 const aosAnos = (n: number) => (n < 1 ? 'com poucos meses' : n === 1 ? 'com 1 ano' : `aos ${n} anos`);
@@ -57,7 +89,7 @@ function anosDeCasamento(v: Vida, vin: Vinculo): number | null {
   return m ? Math.max(1, Math.round((v.t - m.t) / 12)) : null;
 }
 
-interface Morte { p: Pessoa; vin: Vinculo; causa: string; peso: number }
+interface Morte { p: Pessoa; vin: Vinculo; causa: string; peso: number; ficaram?: Atingido[] }
 
 /**
  * Registra as mortes do ano: estado, casa, herança, luto e narrativa com
@@ -86,23 +118,12 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
     if (eraParceria) {
       marcarFato(v, 'viuvez');
       v.fatos['viuvez'] = v.t;
-      for (const f of filhosEmComum(v, p.id)) if (f.vivo) f.aperto = { tipo: 'luto', t: v.t, pessoaId: p.id };
     }
+    // A morte chega a quem mais perdeu alguém: o luto de cada um vem do laço real com quem morreu (`sistemas/rede`).
+    const ficaram = repercutirMorte(v, p);
     // Quem era casado com a pessoa fica viúvo (os pais do jogador entre si, um filho e o cônjuge).
-    if (p.parceiroId && v.pessoas[p.parceiroId]) {
-      const viuvo = v.pessoas[p.parceiroId];
-      viuvo.parceiroId = undefined;
-      if (viuvo.vivo && v.vinculos[viuvo.id]) {
-        viuvo.aperto = { tipo: 'luto', t: v.t, pessoaId: p.id };
-        if (['mae', 'pai'].includes(v.vinculos[viuvo.id].parentesco ?? '')) lembrarCom(v, viuvo.id, `Ficou ${flex(viuvo.genero, 'viúvo', 'viúva', 'viúve')} de ${p.nome}.`, 'perda', 2);
-      }
-    }
-    if (papel === 'filho') for (const x of Object.values(v.pessoas)) if (x.genitores?.includes(p.id) && x.vivo) x.aperto = { tipo: 'luto', t: v.t, pessoaId: p.id };
-    if (vin.parentesco === 'mae' || vin.parentesco === 'pai') {
-      heranca(p);
-      // Irmãos perdem juntos.
-      for (const x of vinculosVivos(v)) if (x.vin.parentesco === 'irmao' || (x.vin.parentesco === 'meio_irmao' && x.p.genitores?.includes(p.id))) lembrarCom(v, x.p.id, `Perderam ${vin.parentesco === 'mae' ? 'a mãe' : 'o pai'} juntos.`, 'perda', 2);
-    }
+    if (p.parceiroId && v.pessoas[p.parceiroId]) v.pessoas[p.parceiroId].parceiroId = undefined;
+    if (vin.parentesco === 'mae' || vin.parentesco === 'pai') heranca(p);
 
     // O humor sente, na medida do vínculo. Não é uma reação decidida pelo jogo.
     if (peso >= 16) {
@@ -113,19 +134,19 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
     if (nivel === 'interrompe') v.fatos[`despedida:${p.id}`] = v.t;
     if (nivel === 'interrompe' || nivel === 'destaque') {
       escrever(v, {
-        t: p.tMorte, texto: textoDaMorte(v, p, vin, causa, nivel), relevancia: 'marco', tema: 'perda', tom: 'ruim', pessoas: [p.id],
+        t: p.tMorte, texto: juntar(textoDaMorte(v, p, vin, causa, nivel), quemFicouNaMorte(v, p, vin, ficaram)), relevancia: 'marco', tema: 'perda', tom: 'ruim', pessoas: [p.id],
         evento: { tipo: eraParceria ? 'viuvez' : 'morte', pessoaId: p.id, peso }
       });
     } else if (nivel === 'discreto') {
-      discretos.push(m);
+      discretos.push({ ...m, ficaram });
     } else {
       escrever(v, { texto: `Morreu ${p.nome}${quem(v, p, vin) ? `, ${quem(v, p, vin)}` : ''}.`, relevancia: 'tecnico', tema: 'perda', pessoas: [p.id], evento: { tipo: 'morte', pessoaId: p.id, peso } });
     }
   }
   // Várias perdas menores no mesmo ano viram uma linha só (a velhice não é uma lista de óbitos).
   if (discretos.length === 1) {
-    const { p, vin, causa, peso } = discretos[0];
-    escrever(v, { t: p.tMorte, texto: textoDaMorte(v, p, vin, causa, 'discreto'), relevancia: peso >= 28 ? 'biografia' : 'cotidiano', tema: 'perda', tom: 'ruim', pessoas: [p.id], evento: { tipo: 'morte', pessoaId: p.id, peso } });
+    const { p, vin, causa, peso, ficaram } = discretos[0];
+    escrever(v, { t: p.tMorte, texto: juntar(textoDaMorte(v, p, vin, causa, 'discreto'), quemFicouNaMorte(v, p, vin, ficaram ?? [])), relevancia: peso >= 28 ? 'biografia' : 'cotidiano', tema: 'perda', tom: 'ruim', pessoas: [p.id], evento: { tipo: 'morte', pessoaId: p.id, peso } });
   } else if (discretos.length > 1) {
     const nomes = discretos.map(({ p, vin }) => `${quem(v, p, vin) || 'o conhecido'} ${p.nome}`.trim());
     const havia = lista.some(x => nivelDaPerda(x.peso) === 'interrompe' || nivelDaPerda(x.peso) === 'destaque');
@@ -195,11 +216,12 @@ export const pesoDoLuto = (v: Vida) => (v.luto ?? []).reduce((s, l) => s + l.pes
 
 /** Parentes vivos de quem morreu que sofrem mais (para "cuidar de quem ficou"). */
 export function quemFicou(v: Vida, falecidoId: string): Pessoa[] {
-  const out: Pessoa[] = [];
+  const out: { p: Pessoa; peso: number }[] = [];
   for (const { p, vin } of vinculosVivos(v)) {
     if (p.especie || idadePessoa(v, p) < 5) continue;
-    if (p.aperto?.tipo === 'luto' && p.aperto.pessoaId === falecidoId) out.push(p);
-    else if (p.genitores?.includes(falecidoId) && vin.proximidade >= 30) out.push(p);
+    if (p.aperto?.tipo === 'luto' && p.aperto.pessoaId === falecidoId) out.push({ p, peso: p.aperto.peso ?? 50 });
+    else if (p.genitores?.includes(falecidoId) && vin.proximidade >= 30) out.push({ p, peso: 60 });
   }
-  return out;
+  // Quem perdeu mais vem primeiro (a mãe que perdeu a filha antes do primo).
+  return out.sort((a, b) => b.peso - a.peso).map(x => x.p);
 }

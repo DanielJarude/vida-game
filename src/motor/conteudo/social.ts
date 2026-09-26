@@ -16,6 +16,7 @@ import { encerrarCaso, mudarEstagio, reacaoATraicao, terminar } from '../sistema
 import { gestacaoEmCurso } from '../sistemas/familia';
 import { quemFicou } from '../sistemas/luto';
 import { filhosEmComum, papelDe } from '../sistemas/vinculos';
+import { lacoCom } from '../sistemas/rede';
 import { aplicarPersonalidade } from '../personalidade';
 import { anoDe } from '../tempo';
 import { flex } from '../texto';
@@ -29,6 +30,17 @@ const falecido = pendente('despedida:');
 const casoDescoberto = pendente('caso_descoberto:');
 const casoUltimato = (v: Vida) => Object.keys(v.fatos).filter(k => k.startsWith('caso_ultimato_') && v.t - v.fatos[k] <= 12)
   .map(k => v.pessoas[k.slice('caso_ultimato_'.length)]).filter(p => p?.vivo && v.vinculos[p.id]?.romance?.secreto);
+
+/** O outro pai ou mãe de um filho que morreu: a parceria ao seu lado, ou quem foi parceria um dia. */
+function outroGenitorNaDespedida(c: Ctx): string {
+  const x = c.p.falecido;
+  const co = vinculosVivos(c.v).find(k => !k.p.especie && lacoCom(c.v, k.p.id, x.id) === 'filho');
+  if (!co) return '';
+  const rom = co.vin.romance;
+  const atual = rom && ['namoro', 'morando_junto', 'casamento'].includes(rom.estagio) && !rom.secreto;
+  if (atual) return ` ${co.p.nome} está ao seu lado; ${flex(co.p.genero, 'ele', 'ela', 'elu')} perdeu ${flex(x.genero, 'o filho', 'a filha', 'e filhe')} também.`;
+  return ` ${co.p.nome}, ${flex(co.p.genero, 'o pai', 'a mãe', 'a mãe')} ${flex(x.genero, 'dele', 'dela', 'delu')}, ${co.p.municipioId !== c.v.moradia.municipioId ? 'está na estrada' : 'já está lá'}.`;
+}
 
 const pessoasDaDespedida = (c: Ctx) => quemFicou(c.v, c.p.falecido.id).filter(p => p.id !== c.p.falecido.id);
 
@@ -65,11 +77,11 @@ export const SOCIAL: Conteudo[] = [
       const p = c.p.falecido;
       const papel = papelDe(p, c.v.vinculos[p.id]);
       const quem = pessoasDaDespedida(c);
-      const chegando = quem.filter(x => x.municipioId !== c.v.moradia.municipioId).slice(0, 2).map(x => x.nome);
+      const chegando = quem.filter(x => x.municipioId !== c.v.moradia.municipioId && !(papel === 'filho' && lacoCom(c.v, x.id, p.id) === 'filho')).slice(0, 2).map(x => x.nome);
       const base = papel === 'parceiro'
         ? `${anosJuntos(c)} anos, e agora a casa está cheia de gente falando baixo. ${p.nome} não está.`
         : papel === 'genitor' ? `O telefone tocou de madrugada. Quando você chegou, já não havia o que fazer por ${p.nome}.`
-          : papel === 'filho' ? `Nada prepara para isso. O velório de ${p.nome} é amanhã cedo.`
+          : papel === 'filho' ? `Nada prepara para isso. O velório de ${p.nome} é amanhã cedo.${outroGenitorNaDespedida(c)}`
             : `A notícia da morte de ${p.nome} chegou por mensagem, numa terça-feira comum.`;
       return `${base}${chegando.length ? ` ${chegando.join(' e ')} ${chegando.length > 1 ? 'estão' : 'está'} na estrada.` : ''} A despedida é amanhã.`;
     },
