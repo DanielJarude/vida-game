@@ -23,7 +23,7 @@ import { abalar } from './abalo';
 import { aplicarPersonalidade } from '../personalidade';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { podeComecarRotina } from './rotinas';
-import { textoVeiculo, veiculoUtil } from './veiculos';
+import { textoVeiculo, usoMensalDoVeiculo, veiculoUtil } from './veiculos';
 
 export type UsoVeiculo = 'passear' | 'viajar' | 'app' | 'personalizar' | 'emprestar';
 export type UsoCasa = 'festa' | 'familia' | 'decorar' | 'reformar';
@@ -78,7 +78,7 @@ export function disponibilidadeUsoVeiculo(v: Vida, b: Veiculo | undefined, oque:
 
 function custoUso(v: Vida, b: Veiculo, oque: UsoVeiculo): number {
   const m = modeloVeiculo(b.modeloId);
-  if (oque === 'passear') return m.categoria === 'bicicleta' ? 0 : Math.round(m.usoMensal * 0.3 * c(v) / 10) * 10;
+  if (oque === 'passear') return m.categoria === 'bicicleta' ? 0 : Math.round(usoMensalDoVeiculo(b) * 0.3 * c(v) / 10) * 10;
   if (oque === 'viajar') return Math.round((m.categoria === 'moto' ? 900 : 1600) * c(v) / 100) * 100;
   if (oque === 'personalizar') return Math.round(Math.max(800, b.valor * 0.04) / 100) * 100;
   return 0;

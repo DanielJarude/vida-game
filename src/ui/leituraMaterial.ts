@@ -13,7 +13,7 @@ import { municipio, rotuloPerfil } from '../motor/dados/lugares';
 import { mesesRestantes, orcamento, seguranca, type NivelSeguranca, type Orcamento } from '../motor/sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../motor/sistemas/domicilio';
 import { petsDaCasa, estadoDoPet } from '../motor/sistemas/pets';
-import { estadoDoVeiculo, anosDoVeiculo } from '../motor/sistemas/veiculos';
+import { estadoDoVeiculo, anosDoVeiculo, nomeDoVeiculo, versaoDoVeiculo } from '../motor/sistemas/veiculos';
 import { casaApertada } from '../motor/sistemas/imoveis';
 import { anoDe } from '../motor/tempo';
 
@@ -281,8 +281,8 @@ export function leituraDoBem(v: Vida, b: Bem): LeituraBem {
   const anos = anosDoVeiculo(v, b);
   return {
     id: b.id, tipo: 'veiculo', icone: m.categoria, modeloId: m.id,
-    titulo: `${cap(m.nome)}${b.anoFabricacao ? ` ${b.anoFabricacao}` : ''}`,
-    meta: `${b.usado ? 'Comprado usado' : 'Comprado zero'} em ${anoDe(b.tCompra)} · ${anos <= 1 ? 'quase novo' : `${anos} anos de estrada`} · ${dono}`,
+    titulo: `${cap(nomeDoVeiculo(b))}${b.anoFabricacao ? ` ${b.anoFabricacao}` : ''}`,
+    meta: cap(`${versaoDoVeiculo(b) ? `${versaoDoVeiculo(b)!.dica} · ` : ''}${b.usado ? 'comprado usado' : 'comprado zero'} em ${anoDe(b.tCompra)} · ${anos <= 1 ? 'quase novo' : `${anos} anos de estrada`} · ${dono}`),
     estado: cap(estadoDoVeiculo(b)) + '.',
     valor: b.valor, financiamento,
     problema: b.problema ? { texto: b.problema.texto, custo: b.problema.custo, grave: b.problema.gravidade >= 3, adiado: b.problema.adiado } : undefined,

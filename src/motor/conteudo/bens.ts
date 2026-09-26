@@ -12,7 +12,7 @@ import { animal, OFERTAS_ILEGAIS } from '../dados/animais';
 import { adotarPet, podeTerPet } from '../sistemas/pets';
 import { nomeDePet } from '../sistemas/mercado';
 import { dinheiro as fmt } from '../texto';
-import { textoVeiculo } from '../sistemas/veiculos';
+import { categoriaDoVeiculo, textoVeiculo } from '../sistemas/veiculos';
 
 const seusBichos = (v: Vida): Pessoa[] => vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu').map(x => x.p);
 const ofertaDoAno = (c: Ctx) => OFERTAS_ILEGAIS[Math.floor(c.v.t / 12 + c.v.id.length) % OFERTAS_ILEGAIS.length];
@@ -21,7 +21,7 @@ function semBem(v: Vida, id: string): void {
   v.financas.bens = v.financas.bens.filter(x => x.id !== id);
   v.financas.dividas = v.financas.dividas.map(d => (d.bemId === id ? { ...d, bemId: undefined, descricao: `${d.descricao} (roubada)` } : d));
 }
-const motos = (v: Vida) => v.financas.bens.filter(b => b.tipo === 'veiculo' && b.modeloId.startsWith('moto') && !b.parado);
+const motos = (v: Vida) => v.financas.bens.filter(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) === 'moto' && !b.parado);
 
 export const BENS: Conteudo[] = [
   {

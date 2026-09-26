@@ -27,7 +27,7 @@ import { animaisDoAbrigo, ofertasDeImoveis, ofertasDeVeiculos, type AnimalDoAbri
 import { disponivel, rendaPropriaMensal, seguranca } from './dinheiro';
 import { quartosNecessarios } from './imoveis';
 import { podeTerPet, seusPets } from './pets';
-import { modeloMoradia, modeloVeiculo } from '../dados/bens';
+import { modeloMoradia, modeloVeiculo, versaoVeiculo } from '../dados/bens';
 import { produto, type ProdutoInvestimento } from '../dados/investimentos';
 import { condicoesImovel, condicoesVeiculo } from '../acoes';
 import { semana } from './semana';
@@ -256,6 +256,7 @@ export function veiculosParaVoce(v: Vida, lugar: OfertaVeiculo['lugar']): { para
   const cnh = v.trabalho.licencas.includes('cnh');
   const lista: Relevante<OfertaVeiculo>[] = ofertas.map(o => {
     const m = modeloVeiculo(o.modeloId);
+    const lugares = versaoVeiculo(o.versaoId)?.lugares ?? m.lugares;
     let pontos = 0;
     let motivo = '';
     const dar = (p: number, t: string) => { pontos += p; if (!motivo && p > 0) motivo = t; };
@@ -266,16 +267,18 @@ export function veiculosParaVoce(v: Vida, lugar: OfertaVeiculo['lugar']): { para
     if (aVista) dar(1.2, 'Dá para pagar à vista.');
     else if (financiado) dar(0.6, 'Cabe financiado.');
     if (primeiro && o.usado && m.categoria === 'carro' && o.preco <= Math.max(30000, renda * 10)) dar(1.6, 'Um bom primeiro carro.');
-    if (familia >= 2 && m.lugares >= 5 && m.conforto >= 3) dar(1.2, 'Cabe a família com folga.');
-    if (familia >= 3 && m.lugares >= 7) dar(1.4, 'Sete lugares.');
+    if (familia >= 2 && lugares >= 5 && m.conforto >= 3) dar(1.2, 'Cabe a família com folga.');
+    if (familia >= 3 && lugares >= 7) dar(1.4, 'Sete lugares.');
     if (o.usado && o.estado >= 80) dar(0.8, 'Usado bem conservado.');
     if (o.usado && o.estado < 50) pontos -= 0.8;
     if (m.categoria !== 'carro' && renda > 0 && renda < 3500) dar(1.2, 'Barata de manter.');
-    if (m.id === 'carro_luxo' && renda < 25000) pontos -= 2;
+    if (m.conforto >= 5 && renda < 25000) pontos -= 2;
     if (!motivo) motivo = o.usado ? 'Usado à venda.' : 'Zero quilômetro.';
     return { item: o, motivo, pontos };
   });
-  return primarias(lista, MAX_PRIMARIAS_MATERIAL.veiculos);
+  // O resto, do mais barato ao mais caro: é assim que se olha uma vitrine.
+  const { para, resto } = primarias(lista, MAX_PRIMARIAS_MATERIAL.veiculos);
+  return { para, resto: [...resto].sort((a, b) => a.preco - b.preco || a.id.localeCompare(b.id)) };
 }
 
 /**

@@ -28,8 +28,7 @@ import type { Veiculo, Vida } from '../tipos';
 import { idade } from '../nucleo';
 import { municipio, economiaLocal, type PerfilUrbano } from '../dados/lugares';
 import { tipoNegocio } from '../dados/negocios';
-import { modeloVeiculo } from '../dados/bens';
-import { veiculoUtil } from './veiculos';
+import { categoriaDoVeiculo, nomeDoVeiculo, veiculoUtil } from './veiculos';
 
 export type Modo = 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro';
 
@@ -107,8 +106,8 @@ function veiculosQueLevam(v: Vida): { b: Veiculo; modo: Modo }[] {
   const out: { b: Veiculo; modo: Modo }[] = [];
   for (const b of v.financas.bens) {
     if (b.tipo !== 'veiculo' || !veiculoUtil(b)) continue;
-    const m = modeloVeiculo(b.modeloId);
-    const modo: Modo = m.categoria === 'carro' ? 'carro' : m.categoria === 'moto' ? 'moto' : 'bicicleta';
+    const cat = categoriaDoVeiculo(b);
+    const modo: Modo = cat === 'carro' ? 'carro' : cat === 'moto' ? 'moto' : 'bicicleta';
     if ((modo === 'carro' || modo === 'moto') && !temCnh(v)) continue;
     out.push({ b, modo });
   }
@@ -127,7 +126,7 @@ export function opcoesDeDeslocamento(v: Vida): OpcaoDeslocamento[] {
     const min = tabela[modo];
     if (min === null || vistos.has(modo)) continue;
     vistos.add(modo);
-    out.push({ modo, minutos: min, peso: pesoDe(min), passagem: 0, veiculoId: b.id, nomeVeiculo: b.nome });
+    out.push({ modo, minutos: min, peso: pesoDe(min), passagem: 0, veiculoId: b.id, nomeVeiculo: nomeDoVeiculo(b) });
   }
   out.push({ modo: 'publico', minutos: tabela.publico!, peso: pesoDe(tabela.publico!), passagem: Math.round(PASSAGEM[perfil] * c / 10) * 10 });
   if (tabela.a_pe !== null) out.push({ modo: 'a_pe', minutos: tabela.a_pe, peso: pesoDe(tabela.a_pe), passagem: 0 });
@@ -160,7 +159,7 @@ export function deslocamento(v: Vida): Deslocamento | undefined {
 
 /** Por que o veículo que se tem não está levando (a tela precisa dizer, não esconder). */
 function veiculoParadoOuSemCarteira(v: Vida): string | undefined {
-  const motor = v.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo' && modeloVeiculo(b.modeloId).categoria !== 'bicicleta');
+  const motor = v.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo' && categoriaDoVeiculo(b) !== 'bicicleta');
   if (!motor.length) return undefined;
   if (!temCnh(v) && motor.some(veiculoUtil)) return 'Você tem veículo, mas não tem carteira de motorista: vai de transporte público.';
   if (motor.every(b => !veiculoUtil(b))) return motor.some(b => b.parado) ? 'O veículo está parado: vai de transporte público.' : 'O veículo está quebrado: vai de transporte público até consertar.';

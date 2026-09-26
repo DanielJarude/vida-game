@@ -14,6 +14,10 @@ import { aplicar } from '../../motor/sistemas/investimentos';
 import type { Vida } from '../../motor/tipos';
 import { dinheiroCheio, leituraDoMes } from '../leituraMaterial';
 import { MAX_PRIMARIAS_MATERIAL } from '../../motor/sistemas/relevancia';
+import { Lugar } from '../jogo/material/Lugares';
+import { catalogoDeVeiculos } from '../../motor/sistemas/mercado';
+import { modeloVeiculo, nomeDaVersao, versaoVeiculo } from '../../motor/dados/bens';
+import { executar, type Acao } from '../../motor/acoes';
 
 function vidaSalva(idade: number, ajuste: (v: Vida) => void): Vida {
   let v = criarVida({ nome: 'Rita', sobrenome: 'Lopes', genero: 'feminino', municipioId: 'recife-pe', semente: 5 });
@@ -164,5 +168,44 @@ describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
     expect(within(ficha).getByText(/doente: uma infecção urinária/i)).toBeTruthy();
     expect(within(ficha).getByRole('button', { name: /^Tratar/ })).toBeTruthy();
     void petId;
+  });
+});
+
+describe('Loja de veículos: marca e modelo, catálogo completo', () => {
+  const titulos = (folha: HTMLElement) => within(folha).getAllByRole('button').filter(b => b.classList.contains('oferta')).map(b => b.querySelector('strong')!.textContent);
+
+  it('o catálogo completo vem do mais barato ao mais caro, filtra por tipo e condição, e a compra guarda a versão', () => {
+    const v = vidaSalva(30, x => { adultaDeAluguel(x); x.trabalho.licencas.push('cnh'); x.financas.conta = 900000; });
+    const acoes: Acao[] = [];
+    render(<Lugar vida={v} agir={a => { acoes.push(a); return true; }} qual="concessionaria" aoFechar={() => {}} trocar={() => {}} />);
+    const folha = screen.getByRole('dialog', { name: 'Concessionária' });
+    // A loja: "para você" primeiro; o catálogo completo a um toque.
+    expect(within(folha).getByRole('radio', { name: /Para você, agora/ }).getAttribute('aria-checked')).toBe('true');
+    const cat = catalogoDeVeiculos(v);
+    fireEvent.click(within(folha).getByRole('radio', { name: `Catálogo completo (${cat.length})` }));
+    const nome = (o: typeof cat[number]) => `${nomeDaVersao(versaoVeiculo(o.versaoId)!)} ${o.anoFabricacao}`;
+    expect(titulos(folha)).toEqual(cat.slice(0, 20).map(nome));
+    // Só motos, só usadas.
+    fireEvent.click(within(folha).getByRole('radio', { name: 'Motos' }));
+    fireEvent.click(within(folha).getByRole('radio', { name: 'Usados' }));
+    const motosUsadas = cat.filter(o => o.usado && modeloVeiculo(o.modeloId).categoria === 'moto');
+    expect(titulos(folha)).toEqual(motosUsadas.map(nome));
+    // Mais caro primeiro.
+    fireEvent.click(within(folha).getByRole('radio', { name: 'Todos' }));
+    fireEvent.click(within(folha).getByRole('radio', { name: 'Novos e usados' }));
+    fireEvent.click(within(folha).getByRole('button', { name: /Mais barato primeiro/ }));
+    expect(titulos(folha)[0]).toBe(nome(cat[cat.length - 1]));
+    // Busca por marca e modelo.
+    fireEvent.change(within(folha).getByPlaceholderText('Marca ou modelo'), { target: { value: 'hilux' } });
+    expect(titulos(folha).length).toBeGreaterThan(0);
+    expect(titulos(folha).every(t => t!.startsWith('Toyota Hilux'))).toBe(true);
+    // Comprar: a ação leva a oferta, e o veículo sai com a versão.
+    fireEvent.click(within(folha).getAllByRole('button').find(b => b.classList.contains('oferta'))!);
+    fireEvent.click(within(folha).getByRole('button', { name: 'Comprar' }));
+    const a = acoes.find(x => x.tipo === 'comprar_veiculo')!;
+    const depois = executar(v, a).vida;
+    const b = depois.financas.bens.find(x => x.tipo === 'veiculo');
+    expect(b?.tipo === 'veiculo' && b.versaoId).toBe('toyota_hilux');
+    expect(b?.nome).toBe('Toyota Hilux');
   });
 });

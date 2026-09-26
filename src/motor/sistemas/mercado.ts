@@ -16,7 +16,7 @@ import { ANIMAIS, animal } from '../dados/animais';
 import type { Especie, Vida } from '../tipos';
 import { anoDe } from '../tempo';
 import { economiaLocal, municipio } from '../dados/lugares';
-import { MORADIAS, VEICULOS, depreciacao, modeloMoradia, modeloVeiculo, precoImovel, type ModeloMoradia, type ModeloVeiculo } from '../dados/bens';
+import { MORADIAS, VEICULOS, VERSOES_VEICULO, depreciacao, modeloMoradia, modeloVeiculo, precoImovel, versaoVeiculo, versoesDaClasse, type ModeloMoradia, type ModeloVeiculo, type VersaoVeiculo } from '../dados/bens';
 import { indiceImoveis } from './economia';
 
 function rngDe(v: Vida, chave: string): Rng {
@@ -108,7 +108,10 @@ export function nomeImovel(o: { modeloId: string }): string {
 export interface OfertaVeiculo {
   id: string;
   lugar: 'concessionaria' | 'usados' | 'motos';
+  /** A classe (`VEICULOS`). */
   modeloId: string;
+  /** A versão concreta: marca e modelo (`VERSOES_VEICULO`). */
+  versaoId: string;
   usado: boolean;
   anoFabricacao: number;
   preco: number;
@@ -128,6 +131,12 @@ const HISTORICOS: [string, number, number][] = [
   ['vendido por uma senhora que parou de dirigir', 8, 1.02]
 ];
 
+/**
+ * O que está à venda neste ano, nesta cidade. Zero quilômetro: todas as
+ * versões das categorias da loja (as lojas da cidade, juntas). Usados: um
+ * punhado de anúncios, sorteados pelo que é comum na rua (peso da classe e
+ * da versão), cada um com ano, estado e uma história.
+ */
 export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): OfertaVeiculo[] {
   const ano = anoDe(v.t);
   const r = rngDe(v, `vei:${lugar}:${ano}:${v.moradia.municipioId}`);
@@ -135,24 +144,33 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   const regional = 0.96 + 0.08 * Math.min(1.3, custo);
   const out: OfertaVeiculo[] = [];
   let k = 0;
-  const novo = (m: ModeloVeiculo) => out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: m.id, usado: false, anoFabricacao: ano, preco: Math.round(m.preco * regional / 100) * 100, estado: 100 });
+  const novo = (x: VersaoVeiculo) => out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: x.classe, versaoId: x.id, usado: false, anoFabricacao: ano, preco: Math.round(x.preco * regional / 100) * 100, estado: 100 });
   const usado = (m: ModeloVeiculo) => {
+    const x = r.weighted(versoesDaClasse(m.id), y => y.pesoUsado)!;
     const anos = m.categoria === 'bicicleta' ? r.int(1, 5) : r.int(2, 14);
     const [historico, de, dp] = r.pick(HISTORICOS);
     const estado = Math.round(Math.max(25, Math.min(95, 92 - anos * 4 + de + r.normal() * 5)));
-    const preco = Math.round(m.preco * regional * depreciacao(m, anos) * dp * (0.85 + estado / 600) / 100) * 100;
-    out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: m.id, usado: true, anoFabricacao: ano - anos, preco, estado, historico });
+    const preco = Math.round(x.preco * regional * depreciacao(m, anos) * dp * (0.85 + estado / 600) / 100) * 100;
+    out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: m.id, versaoId: x.id, usado: true, anoFabricacao: ano - anos, preco, estado, historico });
   };
-  if (lugar === 'concessionaria') for (const m of VEICULOS.filter(x => x.categoria === 'carro')) novo(m);
+  const daCategoria = (f: (m: ModeloVeiculo) => boolean) => VERSOES_VEICULO.filter(x => f(modeloVeiculo(x.classe)));
+  if (lugar === 'concessionaria') for (const x of daCategoria(m => m.categoria === 'carro')) novo(x);
   else if (lugar === 'motos') {
-    for (const m of VEICULOS.filter(x => x.categoria !== 'carro')) novo(m);
-    for (const m of VEICULOS.filter(x => x.categoria === 'moto')) usado(m);
-    usado(modeloVeiculo('bike'));
+    for (const x of daCategoria(m => m.categoria !== 'carro')) novo(x);
+    usado(modeloVeiculo('moto_pequena'));
+    usado(modeloVeiculo('moto_pequena'));
+    usado(modeloVeiculo('moto_media'));
+    usado(r.weighted(VEICULOS.filter(m => m.categoria === 'bicicleta'), m => m.pesoUsado)!);
   } else {
-    const carros = VEICULOS.filter(x => x.categoria === 'carro');
-    for (let q = 0; q < 9; q++) usado(r.weighted(carros, m => (m.id === 'carro_compacto' ? 4 : m.id === 'carro_sedan' ? 2.5 : m.id === 'carro_suv' ? 2 : m.id === 'carro_suv_grande' ? 1 : 0.5))!);
+    const carros = VEICULOS.filter(m => m.categoria === 'carro' && m.usado);
+    for (let q = 0; q < 9; q++) usado(r.weighted(carros, m => m.pesoUsado)!);
   }
   return out;
+}
+
+/** Tudo o que está à venda na cidade neste ano (concessionária, usados, motos e bicicletas), do mais barato ao mais caro. */
+export function catalogoDeVeiculos(v: Vida): OfertaVeiculo[] {
+  return (['concessionaria', 'usados', 'motos'] as const).flatMap(l => ofertasDeVeiculos(v, l)).sort((a, b) => a.preco - b.preco || a.id.localeCompare(b.id));
 }
 
 export function ofertaDeVeiculo(v: Vida, id: string): OfertaVeiculo | undefined {
@@ -160,11 +178,15 @@ export function ofertaDeVeiculo(v: Vida, id: string): OfertaVeiculo | undefined 
   return ofertasDeVeiculos(v, lugar).find(o => o.id === id);
 }
 
-/** Oferta para comandos antigos que só dizem o modelo. */
+/**
+ * Oferta para comandos que só dizem o modelo: a mais barata da classe (ou,
+ * se o id for de uma versão, daquela versão).
+ */
 export function ofertaVeiculoPorModelo(v: Vida, modeloId: string, usado?: boolean): OfertaVeiculo | undefined {
-  const m = modeloVeiculo(modeloId);
+  const versao = versaoVeiculo(modeloId);
+  const m = modeloVeiculo(versao?.classe ?? modeloId);
   const lugar = m.categoria === 'carro' ? (usado ? 'usados' : 'concessionaria') : 'motos';
-  const lista = ofertasDeVeiculos(v, lugar).filter(o => o.modeloId === m.id && (usado === undefined || o.usado === usado));
+  const lista = ofertasDeVeiculos(v, lugar).filter(o => o.modeloId === m.id && (!versao || o.versaoId === versao.id) && (usado === undefined || o.usado === usado));
   return lista.sort((a, b) => a.preco - b.preco)[0];
 }
 

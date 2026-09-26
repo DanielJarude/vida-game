@@ -14,6 +14,8 @@ import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 import { curso } from '../dados/cursos';
 import { em } from '../sistemas/escola';
+import { categoriaDoVeiculo, textoVeiculo } from '../sistemas/veiculos';
+import type { Veiculo } from '../tipos';
 
 
 /** A recessão contada a partir de onde a pessoa está: empregada, estudando, aposentada. */
@@ -205,13 +207,13 @@ export const MUNDO: Conteudo[] = [
   },
   {
     id: 'adu_carro_roubado', tipo: 'acontecimento', idade: [18, 90], tema: 'lugar', repetir: 15,
-    quando: c => c.v.financas.bens.some(b => b.tipo === 'veiculo' && !b.modeloId.startsWith('bike')) && ['metropole', 'metropolitana'].includes(municipio(c.v.moradia.municipioId).perfil),
+    quando: c => c.v.financas.bens.some(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) !== 'bicicleta') && ['metropole', 'metropolitana'].includes(municipio(c.v.moradia.municipioId).perfil),
     peso: 0.5,
     narrar: c => {
-      const vei = c.v.financas.bens.find(b => b.tipo === 'veiculo' && !b.modeloId.startsWith('bike'))!;
-      const seguro = vei.modeloId.startsWith('carro');
+      const vei = c.v.financas.bens.find(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) !== 'bicicleta')!;
+      const seguro = categoriaDoVeiculo(vei) === 'carro';
       return {
-        texto: seguro ? `Roubaram o ${vei.nome} na porta de casa, de madrugada. O seguro pagou, depois de três meses de papelada.` : `Levaram a ${vei.nome} estacionada na rua. Moto sem seguro: prejuízo inteiro.`,
+        texto: seguro ? `Roubaram ${textoVeiculo(vei as Veiculo)} na porta de casa, de madrugada. O seguro pagou, depois de três meses de papelada.` : `Levaram ${textoVeiculo(vei as Veiculo)} estacionada na rua. Moto sem seguro: prejuízo inteiro.`,
         relevancia: 'biografia', tom: 'ruim',
         efeito: () => { c.v.financas.bens = c.v.financas.bens.filter(b => b.id !== vei.id); if (seguro) dinheiro(c, Math.round(vei.valor * 0.9)); estresse(c, 8); c.v.financas.dividas = c.v.financas.dividas.filter(d => d.bemId !== vei.id || !seguro); }
       };
