@@ -419,10 +419,12 @@ describe('personalidade', () => {
     const par = comParceiro(v, { estagio: 'casamento' }).p;
     comFilho(v, 2, { outroId: par.id });
     comFilho(v, 20, { casa: false, outroId: par.id });
+    // Uma atividade mantida na semana (começada por escolha do jogador, numa decisão) é comportamento: não é "automático".
+    const automaticas = (x: typeof v) => x.personalidade.evidencias.filter(e => !e.origem.startsWith('rotina:')).length;
     for (let k = 0; k < 40 && !v.morte; k++) {
-      const antes = v.personalidade.evidencias.length;
+      const antes = automaticas(v);
       v = avancarAno(v).vida;
-      expect(v.personalidade.evidencias.length).toBe(antes);
+      expect(automaticas(v)).toBe(antes);
       if (v.momento) v = responder(v);
     }
   }, 60000);

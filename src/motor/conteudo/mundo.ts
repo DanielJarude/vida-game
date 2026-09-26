@@ -163,7 +163,7 @@ export const MUNDO: Conteudo[] = [
     })
   },
   {
-    id: 'jov_greve_federal', tipo: 'acontecimento', idade: [17, 40], tema: 'estudo', repetir: 4,
+    id: 'jov_greve_federal', tipo: 'acontecimento', idade: [17, 85], tema: 'estudo', repetir: 4,
     quando: c => !!c.v.educacao.matricula && c.v.educacao.matricula.rede === 'publica' && c.v.educacao.matricula.modalidade === 'presencial',
     narrar: c => ({
       texto: 'Os professores da universidade entraram em greve por quatro meses. O semestre se arrastou até o ano seguinte.',
@@ -171,7 +171,7 @@ export const MUNDO: Conteudo[] = [
     })
   },
   {
-    id: 'jov_tcc', tipo: 'decisao', idade: [20, 40], tema: 'estudo',
+    id: 'jov_tcc', tipo: 'decisao', idade: [18, 85], tema: 'estudo',
     quando: c => !!c.v.educacao.matricula && c.v.educacao.matricula.mesesRestantes <= 12 && curso(c.v.educacao.matricula.cursoId).nivel === 'superior',
     titulo: 'O TCC',
     texto: () => 'Faltam dois meses para entregar o TCC e você escreveu três páginas. Um conhecido diz que "resolve" o trabalho inteiro por R$ 1.500.',

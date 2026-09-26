@@ -60,7 +60,7 @@ export function processarArte(v: Vida, r: Rng): void {
     }
     // Um grupo: alguém chama (ou a turma se junta).
     const p = v.caminhos.arte;
-    if (praticando && (!p || !p.ativo) && i >= 13 && i <= 45 && h >= (d === 'musica' ? 40 : d === 'teatro' ? 38 : 45)
+    if (praticando && (!p || !p.ativo) && i >= 13 && i <= 75 && h >= (d === 'musica' ? 40 : d === 'teatro' ? 38 : 45)
       && (v.caminhos.ultimas[`projeto_${d}`] === undefined || v.t - v.caminhos.ultimas[`projeto_${d}`] >= 36) && r.chance(0.22)) {
       const colega = amigos(v).find(x => !x.especie && Math.abs(i - Math.floor((v.t - x.tNasc) / 12)) <= 8 && x.municipioId === v.moradia.municipioId);
       const tipo = d === 'musica' ? 'banda' : 'grupo';

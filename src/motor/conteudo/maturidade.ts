@@ -13,7 +13,7 @@ import { mudarAgora } from '../sistemas/processos';
 
 export const MATURIDADE: Conteudo[] = [
   {
-    id: 'mat_aniversario_redondo', tipo: 'acontecimento', idade: [60, 100], tema: 'familia', repetir: 10,
+    id: 'mat_aniversario_redondo', tipo: 'acontecimento', idade: [60, 100], tema: 'familia', repetir: 10, prioritario: true,
     quando: c => c.idade % 10 === 0,
     narrar: c => {
       const filhos = P.filho(0)(c.v);
@@ -25,7 +25,8 @@ export const MATURIDADE: Conteudo[] = [
   {
     id: 'mat_bodas', tipo: 'acontecimento', idade: [45, 100], tema: 'amor', repetir: 25,
     papeis: { pessoa: P.conjuge },
-    quando: c => { const anos = anosJuntos(c); return anos === 25 || anos === 50; },
+    // As bodas com decisão (conteúdo/biografia) têm precedência: aqui só a linha, quando a decisão não coube.
+    quando: c => { const anos = anosJuntos(c); return (anos === 25 || anos === 50) && !temFato(c.v, `bodas_${c.p.pessoa.id}_${anos}`) && !c.v.ocorrencias.some(o => o.id === 'bio_bodas' && c.v.t - o.t < 36); },
     narrar: c => {
       const anos = anosJuntos(c);
       return { texto: anos === 50 ? `Bodas de ouro com ${c.p.pessoa.nome}: cinquenta anos juntos.` : `Vinte e cinco anos ao lado de ${c.p.pessoa.nome}. Bodas de prata.`, relevancia: 'biografia', tom: 'bom', efeito: () => lembrarCom(c.v, c.p.pessoa.id, anos === 50 ? 'Bodas de ouro.' : 'Bodas de prata.', 'casamento', 3) };

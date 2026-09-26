@@ -198,7 +198,7 @@ export const VINCULOS: Conteudo[] = [
   {
     // Só existe se o filho de fato perdeu o emprego (a vida própria dele diz isso).
     id: 'fil_volta_casa', tipo: 'decisao', idade: [40, 85], tema: 'filhos', repetir: 6, prioritario: true,
-    papeis: { filho: P.filho(20, 50) },
+    papeis: { filho: P.filho(20, 65) },
     quando: c => !c.v.vinculos[c.p.filho.id].convivio.includes('casa') && c.v.moradia.tipo !== 'pais' && c.v.moradia.tipo !== 'republica'
       && c.p.filho.aperto?.tipo === 'desemprego' && c.v.t - c.p.filho.aperto.t <= 12 && c.p.filho.renda === 0 && !c.p.filho.parceiroId,
     titulo: c => `${c.p.filho.nome} quer voltar`,

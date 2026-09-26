@@ -174,7 +174,7 @@ export const CAMINHOS: Conteudo[] = [
 
   /* ================================================================ ARTE */
   {
-    id: 'arte_projeto', tipo: 'decisao', idade: [13, 50], tema: 'lazer', manual: true, repetir: 0,
+    id: 'arte_projeto', tipo: 'decisao', idade: [13, 85], tema: 'lazer', manual: true, repetir: 0,
     titulo: c => (MODS_ARTE[c.v.fatos['projeto_convite'] ?? 0] === 'musica' ? 'A banda' : 'O grupo'),
     texto: c => `${c.p.amigo ? `${c.p.amigo.nome} já tem nome para ${MODS_ARTE[c.v.fatos['projeto_convite'] ?? 0] === 'musica' ? 'a banda' : 'o grupo'} e um lugar para ensaiar.` : 'Tem gente, tem lugar para ensaiar e falta você.'} Ensaio todo sábado — ${semanaCheia(c) ? 'e a sua semana já está apertada' : 'e alguma coisa da semana vai ter de ceder'}.`,
     opcoes: [
