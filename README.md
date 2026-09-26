@@ -33,7 +33,8 @@ src/
     ano.ts               um ano de vida: sistemas → morte → conteúdo
     acoes.ts             comandos do jogador, com disponibilidade graduada
     criacao.ts           nascer (família de origem coerente com classe e lugar)
-    save.ts              save v12, validação, backup, migração dos saves antigos (v5→…→v12)
+    save.ts              save v13, validação, backup, migração dos saves antigos (v5→…→v13),
+                         exportar/importar vida (arquivo JSON, sem execução de código)
     dados/               lugares, cursos, ocupações, bens, nomes por geração
     sistemas/            corpo, escola, trabalho, dinheiro, casa, pessoas,
                          romance, família e gestação, rotinas, processos;
@@ -47,9 +48,9 @@ src/
                          vida material: economia (fases, inflação, juro,
                          imóveis, bolsa), dinheiro (orçamento pessoal × casa
                          × casal, balanço, segurança), investimentos, mercado
-                         (ofertas de imóveis, veículos, abrigo), veiculos,
+                         (ofertas de imóveis, veículos, abrigo, loja de animais), veiculos,
                          imoveis, obrigacoes (atraso gradual), partilha
-                         (casal, separação, herança), pets;
+                         (casal, separação, herança), pets (por espécie, pela lei);
                          caminhos de vida: carreira (família de carreira: peso
                          contextual, sentido, custos, ondas de transformação),
                          militar (três Forças, formação, especialidade,
@@ -60,15 +61,22 @@ src/
                          ações contextuais, ritmo, clima com a chefia), ritmo
                          (pesos puros), negocio (caixa, porte, equipe,
                          estratégia, tombos, venda, fechamento), esporte
-                         (contrato, espaço, foco, suspensão); politica (portas,
-                         filiação fictícia, campanha em etapas, mandato,
-                         reeleição, regras institucionais)
+                         (contrato, espaço, foco, suspensão, clubes reais);
+                         politica (portas, partidos registrados no TSE,
+                         bandeira, campanha em etapas, mandato, reeleição);
+                         compromissos (quando duas trajetórias não cabem
+                         juntas, o jogo pergunta: planos com consequência),
+                         gestao (ações de cada tipo de negócio), usos (o que
+                         se faz com o carro e a casa), coerencia (varredura
+                         de estados impossíveis, usada por testes e simulador)
     conteudo/            acontecimentos (o mundo narra) e decisões (você escolhe)
   ui/                    React fino: um estado (a vida), tudo passa pelo motor
     tokens.css, vida.css sistema visual: tinta e papel, tons por área, padrões além da cor
-    jogo/                as sete áreas: Linha da Vida, Você (com o dinheiro), Pessoas,
-                         Trabalho (a vida profissional agora), Rumo (o que está se
-                         abrindo), Casa, Tempo livre
+    jogo/                as oito áreas: Linha da Vida, Você (com o dinheiro), Pessoas,
+                         Trabalho (em camadas: a situação agora, o que corre em
+                         paralelo, outras possibilidades em catálogo), Estudos,
+                         Casa (moradia e bens), Tempo livre, Cidade (imobiliária,
+                         concessionária, banco, abrigo, loja de animais, mudança)
 scripts/
   sim/                   simulador de vidas com estratégias de jogador
   playtest/              playtest no navegador (Playwright), retratos
@@ -80,6 +88,7 @@ docs/
   ATT3-VIDA-MATERIAL-REPORT.md  ATT 3: dinheiro, casa, bens, investimentos, pets
   AUDITORIA-CAMINHOS-DE-VIDA-REPORT.md  auditoria e expansão dos caminhos de vida
   REWORK-VISUAL-TRABALHO-REPORT.md      rework visual, aba Trabalho, negócio, atleta, vida política
+  FIX-PLAYTEST-3-REPORT.md              FIX pós-playtest 3: conflitos de trajetória, negócio por tipo, pets, save v13
 ```
 
 ### Regras que o código garante
@@ -170,7 +179,18 @@ npx esbuild scripts/sim/profissao.ts --bundle --platform=node --outfile=/tmp/pro
 VIDAS=30 SAIDA=/tmp/prof node /tmp/prof.cjs
 ```
 
-Playtest visual do rework (Chromium, 320/390/820/1440, 15 cenários, cinza e
+Simulador do FIX #3 (oito trajetórias: negócio paralelo, dono, atleta que
+estuda, militar, bichos, política, bens, livre), com a varredura de coerência
+a cada ano e as biografias em texto para leitura:
+
+```bash
+npx esbuild scripts/sim/fix3.ts --bundle --platform=node --outfile=/tmp/fix3.cjs
+VIDAS=25 SAIDA=/tmp/fix3 node /tmp/fix3.cjs
+```
+
+Playtest visual do rework (Chromium, 320/390/820/1440, 20 cenários — inclusive a
+pergunta de conflito aberta, negócio paralelo com sócio, soldado, bichos e loja
+on-line —, cinza e
 daltonismo simulado) e contraste dos tokens:
 
 ```bash
