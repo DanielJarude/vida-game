@@ -12,7 +12,7 @@ import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro,
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import { abrirDecisao, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
-import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso } from './sistemas/escola';
+import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula } from './sistemas/escola';
 import { eDasForcas, aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria } from './sistemas/trabalho';
 import { inscrever, leituraDoPreparo } from './sistemas/concurso';
 import { aceitarOportunidade, recusarOportunidade } from './sistemas/oportunidades';
@@ -667,9 +667,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'matricular': {
       const o: OpcaoCurso = opcoesDeCurso(v)[a.indice];
       const res = tentarIngresso(v, r, o);
-      if (res.entrou && o.municipioId !== v.moradia.municipioId) mudarAgora(v, o.municipioId, `para estudar ${o.curso.nome}`);
-      if (!res.entrou) v.fatos[`tentou_${o.curso.id}_${Math.floor(v.t / 12)}`] = v.t;
-      return { resultado: res.texto };
+      if (!res.entrou) { v.fatos[`tentou_${o.curso.id}_${Math.floor(v.t / 12)}`] = v.t; return { resultado: res.texto }; }
+      // Aprovado: a matrícula entra pelo mesmo caminho de tudo que chega — se não cabe com o trabalho, a vida pergunta antes.
+      const situacao = propor(v, r, novaMatricula(v, o));
+      return { resultado: situacao === 'pendente' ? `${res.texto} Mas ${o.curso.carga === 'integral' && o.modalidade === 'presencial' ? 'o curso é em período integral' : 'o curso é em outra cidade'}, e isso não cabe junto com o que você já tem.` : res.texto };
     }
     case 'trancar':
       v.educacao.matricula!.trancado = true;
@@ -678,10 +679,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok('Matrícula trancada. Dá para voltar depois.');
     case 'destrancar': {
       const m = v.educacao.matricula!;
-      m.trancado = false;
-      m.tTrancou = undefined;
-      escrever(v, { texto: `Destrancou a matrícula e voltou para ${conteudoCurso(m.cursoId)}.`, relevancia: 'biografia', tema: 'estudo', escolha: true });
-      return ok('De volta ao curso.', 'bom');
+      const situacao = propor(v, r, { tipo: 'curso', cursoId: m.cursoId, via: m.financiamento ?? (m.rede === 'publica' ? 'selecao_publica' : 'privada'), modalidade: m.modalidade, rede: m.rede, mensalidade: m.mensalidade, municipioId: m.municipioId, instituicao: m.instituicao, destrancar: true });
+      return situacao === 'pendente' ? ok('O curso não cabe com o que você tem hoje: a vida pergunta o que fazer.') : ok('De volta ao curso.', 'bom');
     }
     case 'abandonar_curso': {
       const m = v.educacao.matricula!;

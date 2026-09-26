@@ -12,7 +12,7 @@
 
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { EscolaBasica, Escolaridade, Matricula, NivelCurso, Vida } from '../tipos';
+import type { EscolaBasica, Escolaridade, Matricula, NivelCurso, Vida, NovoCompromisso } from '../tipos';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
 import { CURSOS, curso, cursoOuNulo, type Curso, type Materia, ROTULO_AREA } from '../dados/cursos';
 import { estudarMaterias, habilidade, materiasExtremas, mediaEscolar, praticar } from './frentes';
@@ -484,27 +484,43 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
     marcarFato(v, `tentou_${o.curso.id}_${anoDe(v.t)}`);
     return { entrou: false, texto };
   }
+  const texto = `${flex(v.eu.tratamento ?? v.eu.genero, 'Aprovado', 'Aprovada')} em ${nome}, ${em(INSTITUICOES[o.via](o.curso, v, o.municipioId))}.`;
+  return { entrou: true, texto };
+}
+
+/** A matrícula que a aprovação deu, como dado (entra na vida pelo sistema de compromissos). */
+export function novaMatricula(v: Vida, o: OpcaoCurso): Extract<NovoCompromisso, { tipo: 'curso' }> {
+  return { tipo: 'curso', cursoId: o.curso.id, via: o.via, modalidade: o.modalidade, rede: o.rede, mensalidade: o.mensalidade, municipioId: o.municipioId, instituicao: INSTITUICOES[o.via](o.curso, v, o.municipioId) };
+}
+
+/** A matrícula entra de fato (depois de a vida caber, ou do plano escolhido). */
+export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: 'curso' }>): void {
+  const c = curso(n.cursoId);
+  if (n.destrancar) {
+    const atual = v.educacao.matricula;
+    if (atual && atual.cursoId === n.cursoId) { atual.trancado = false; atual.tTrancou = undefined; }
+    escrever(v, { texto: `Destrancou a matrícula e voltou para ${c.nome}.`, relevancia: 'biografia', tema: 'estudo', escolha: true });
+    return;
+  }
   const m: Matricula = {
-    cursoId: o.curso.id,
-    instituicao: INSTITUICOES[o.via](o.curso, v, o.municipioId),
-    rede: o.rede,
-    modalidade: o.modalidade,
+    cursoId: n.cursoId,
+    instituicao: n.instituicao,
+    rede: n.rede,
+    modalidade: n.modalidade,
     tInicio: v.t,
-    mesesRestantes: o.curso.meses,
-    mensalidade: o.mensalidade,
-    financiamento: o.via === 'fies' ? 'fies' : o.via === 'prouni' ? 'prouni' : undefined,
+    mesesRestantes: c.meses,
+    mensalidade: n.mensalidade,
+    financiamento: n.via === 'fies' ? 'fies' : n.via === 'prouni' ? 'prouni' : undefined,
     desempenho: 60,
     trancado: false,
-    municipioId: o.municipioId
+    municipioId: n.municipioId
   };
-  if (o.via === 'fies') m.mensalidade = Math.round(o.curso.mensalidade * economiaLocal(o.municipioId).custo);
+  if (n.via === 'fies') m.mensalidade = Math.round(c.mensalidade * economiaLocal(n.municipioId).custo);
   v.educacao.matricula = m;
   v.educacao.cursinho = false;
-  if (o.curso.nivel === 'superior') subir(v, 'superior_incompleto');
+  if (c.nivel === 'superior') subir(v, 'superior_incompleto');
   const g = v.eu.tratamento ?? v.eu.genero;
-  const texto = `${flex(g, 'Aprovado', 'Aprovada')} em ${nome}, ${em(m.instituicao)}.`;
-  escrever(v, { texto, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
-  return { entrou: true, texto };
+  escrever(v, { texto: `${flex(g, 'Aprovado', 'Aprovada')} em ${c.nome}, ${em(m.instituicao)}.`, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
 }
 
 /* --------------------------------------------------- Andamento do curso */

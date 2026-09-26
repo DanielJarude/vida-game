@@ -26,6 +26,8 @@ import { cursosAgrupados, cursosParaVoce } from '../../motor/sistemas/relevancia
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
 import type { Aba } from '../telas/Jogo';
+import { analisarEntrada } from '../../motor/sistemas/compromissos';
+import { novaMatricula } from '../../motor/sistemas/escola';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }
 
@@ -244,6 +246,8 @@ function Cursos({ vida, agir }: Props) {
                 {o.observacao && <span className="via__obs">{o.observacao}</span>}
                 {/* Estudar em outra cidade é mudar: o que fica para trás é dito antes de tentar. */}
                 {o.modalidade !== 'ead' && o.municipioId !== vida.moradia.municipioId && (() => { const efeitos = consequenciasDaMudanca(vida, o.municipioId); return efeitos.length ? <ul className="via__consequencias">{efeitos.map((x, k) => <li key={k}>{x}</li>)}</ul> : null; })()}
+                {/* O que a matrícula conflitaria (o trabalho do dia inteiro, a base): dito antes; se passar, a vida pergunta. */}
+                {(() => { const c = analisarEntrada(vida, novaMatricula(vida, o)); return c.length ? <span className="via__obs">{c.map(x => `${x.motivo}: ${x.impede ? 'não dá agora' : 'se passar, a vida pergunta o que fazer'}.`).join(' ')}</span> : null; })()}
               </div>
               <BotaoAcao vida={vida} acao={{ tipo: 'matricular', indice }} agir={agir} mostrarChance>Tentar</BotaoAcao>
             </div>

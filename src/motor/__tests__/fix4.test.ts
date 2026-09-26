@@ -40,6 +40,8 @@ import { chanceDeVitoria, entrarNaPolitica, fatoresDaEleicao, leituraPolitica, p
 import { iniciarCaso, reacaoATraicao } from '../sistemas/romance';
 import { processarExposicao, tornarPublico } from '../sistemas/exposicao';
 import { abrirProcesso } from '../sistemas/justica';
+import { analisarEntrada, propor, resolverPendente } from '../sistemas/compromissos';
+import { opcoesDeCurso } from '../sistemas/escola';
 
 /* ============================================================ 1. A rede */
 
@@ -549,5 +551,72 @@ describe('política: eleição explicável, troca de partido, vida privada × p�
     const preso = transacao(comMandato(politico(), 'vereador', 2), x => { perderMandatoPorPrisao(x, 'pena'); }).vida;
     expect(preso.caminhos.politica!.mandato).toBeUndefined();
     expect(ultimo(preso.caminhos.politica!.historico)!.resultado).toBe('cassado');
+  });
+});
+
+/* =================================================== 10. Curso integral */
+
+describe('curso integral × trabalho integral passa por propor()', () => {
+  function trabalhando(carga: 'integral' | 'parcial' = 'integral') {
+    const v = adulto(24, { semente: 12, municipioId: 'recife-pe' });
+    v.educacao.escolaridade = 'medio';
+    v.educacao.matricula = undefined;
+    v.trabalho.atual = { ocupacaoId: 'vendedor', empregador: 'uma loja', contrato: 'clt', salario: 2600, tInicio: v.t - 24, desempenho: 60, municipioId: v.moradia.municipioId, carga };
+    return v;
+  }
+  const integral = (v: ReturnType<typeof trabalhando>, cursoId = 'eng_civil') => ({ tipo: 'curso' as const, cursoId, via: 'privada', modalidade: 'presencial' as const, rede: 'privada' as const, mensalidade: 1500, municipioId: v.moradia.municipioId, instituicao: 'uma faculdade particular em Recife' });
+
+  it('pergunta ANTES: matricular-se e deixar o trabalho, ou não fazer a matrícula — cada plano diz a consequência', () => {
+    const v = trabalhando();
+    const { vida } = transacao(v, (x, r) => { expect(propor(x, r, integral(x))).toBe('pendente'); });
+    const p = vida.caminhos.pendente!;
+    expect(vida.educacao.matricula).toBeUndefined();
+    expect(p.planos.map(x => x.texto)).toEqual(expect.arrayContaining([expect.stringMatching(/^Matricular-se e deixar o trabalho de/), 'Não fazer a matrícula']));
+    for (const pl of p.planos) expect(pl.consequencias.length).toBeGreaterThan(0);
+    expect(p.planos.some(pl => pl.conciliar)).toBe(false);
+  });
+
+  it('escolher estudar deixa o emprego com o motivo; recusar mantém o emprego e registra', () => {
+    const v = trabalhando();
+    const aberto = transacao(v, (x, r) => { propor(x, r, integral(x)); }).vida;
+    const aceita = transacao(aberto, (x, r) => { resolverPendente(x, r, 0); }).vida;
+    expect(aceita.educacao.matricula?.cursoId).toBe('eng_civil');
+    expect(aceita.trabalho.atual).toBeUndefined();
+    expect(aceita.biografia.some(e => /Deixou o trabalho de .* para cursar/.test(e.texto))).toBe(true);
+    const recusa = transacao(aberto, (x, r) => { resolverPendente(x, r, x.caminhos.pendente!.planos.findIndex(q => q.recusa)); }).vida;
+    expect(recusa.educacao.matricula).toBeUndefined();
+    expect(recusa.trabalho.atual).toBeDefined();
+    expect(recusa.biografia.some(e => /não fez a matrícula/.test(e.texto))).toBe(true);
+  });
+
+  it('curso noturno, EAD ou trabalho de meio período: sem conflito (ou com o plano de conciliar, só onde é plausível)', () => {
+    const v = trabalhando();
+    expect(analisarEntrada(v, { ...integral(v, 'administracao') }).length).toBe(0);
+    expect(analisarEntrada(v, { ...integral(v), modalidade: 'ead' }).length).toBe(0);
+    const meio = trabalhando('parcial');
+    const c = analisarEntrada(meio, integral(meio));
+    expect(c.length).toBe(1);
+    expect(c[0].alternativas.some(a => a.conciliar)).toBe(true);
+  });
+
+  it('pela ação de matrícula: aprovado, a pergunta abre na hora (não é a semana que acusa depois)', () => {
+    let v = trabalhando();
+    v.educacao.enem = [{ t: v.t, nota: 820 }];
+    v.financas.conta = 50000;
+    const ops = opcoesDeCurso(v);
+    const k = ops.findIndex(o => o.curso.carga === 'integral' && o.modalidade === 'presencial' && o.municipioId === v.moradia.municipioId && podeTentar(o.veredito) && (o.veredito.chance ?? 1) > 0.5);
+    expect(k).toBeGreaterThanOrEqual(0);
+    for (let s = 0; s < 6 && !v.caminhos.pendente && !v.educacao.matricula; s++) v = executar(transacao(v, x => { x.rng = 1000 + s; delete x.fatos[`tentou_${ops[k].curso.id}_${Math.floor(x.t / 12)}`]; }).vida, { tipo: 'matricular', indice: k }).vida;
+    expect(v.educacao.matricula).toBeUndefined();
+    expect(v.momento?.situacaoId).toBe('comp_conflito');
+    expect(v.trabalho.atual).toBeDefined();
+  });
+
+  it('voltar a um curso integral trancado, com emprego integral, também pergunta', () => {
+    let v = trabalhando();
+    v.educacao.matricula = { cursoId: 'eng_civil', instituicao: 'uma faculdade', rede: 'privada', modalidade: 'presencial', tInicio: v.t - 24, mesesRestantes: 30, mensalidade: 1500, desempenho: 60, trancado: true, tTrancou: v.t - 12, municipioId: v.moradia.municipioId };
+    v = executar(v, { tipo: 'destrancar' }).vida;
+    expect(v.educacao.matricula!.trancado).toBe(true);
+    expect(v.momento?.situacaoId).toBe('comp_conflito');
   });
 });

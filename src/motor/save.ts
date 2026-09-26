@@ -312,6 +312,7 @@ function pendenteValido(p: unknown): boolean {
     case 'emprego': return typeof n.ocupacaoId === 'string' && !!ocupacaoOuNula(n.ocupacaoId) && typeof n.via === 'string';
     case 'negocio': return typeof n.negocioId === 'string' && !!tipoNegocio(n.negocioId);
     case 'dedicar_negocio': case 'servico_militar': return true;
+    case 'curso': return typeof n.cursoId === 'string' && !!cursoOuNulo(n.cursoId) && typeof n.municipioId === 'string' && MUNICIPIOS.some(m => m.id === n.municipioId) && (n.modalidade === 'presencial' || n.modalidade === 'ead') && typeof n.instituicao === 'string';
     default: return false;
   }
 }

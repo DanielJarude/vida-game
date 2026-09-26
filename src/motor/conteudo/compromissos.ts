@@ -13,6 +13,7 @@ import { contexto } from './base';
 import { abrirDecisao, conteudoPorId } from './motor';
 import { resolverPendente } from '../sistemas/compromissos';
 import { listaNatural } from '../texto';
+import { curso } from '../dados/cursos';
 
 const pend = (c: Ctx) => c.v.caminhos.pendente;
 
@@ -24,7 +25,7 @@ export const COMPROMISSOS: Conteudo[] = [
     titulo: c => {
       const p = pend(c);
       if (!p) return 'Uma escolha';
-      const novo = p.novo.tipo === 'base' ? 'A base' : p.novo.tipo === 'contrato_esporte' ? 'O contrato' : p.novo.tipo === 'negocio' ? 'O negócio' : p.novo.tipo === 'dedicar_negocio' ? 'O negócio' : p.novo.tipo === 'servico_militar' ? 'O quartel' : p.novo.via === 'concurso' ? 'A posse' : 'O trabalho novo';
+      const novo = p.novo.tipo === 'base' ? 'A base' : p.novo.tipo === 'contrato_esporte' ? 'O contrato' : p.novo.tipo === 'negocio' ? 'O negócio' : p.novo.tipo === 'dedicar_negocio' ? 'O negócio' : p.novo.tipo === 'servico_militar' ? 'O quartel' : p.novo.tipo === 'curso' ? (curso(p.novo.cursoId).nivel === 'superior' ? 'A faculdade' : 'O curso') : p.novo.via === 'concurso' ? 'A posse' : 'O trabalho novo';
       return `${novo} e o resto da vida`;
     },
     texto: c => {

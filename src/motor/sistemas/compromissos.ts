@@ -33,6 +33,8 @@ import { fem, negocioFeminino, presencaDe, socioVivo, abrirNegocio, dedicarAoNeg
 import { marcar } from './marcas';
 import { incorporarAoServico } from './militar';
 import { tDe } from '../tempo';
+import { efetivarMatricula } from './escola';
+import { mudarAgora } from './processos';
 
 /* ============================================================== O que existe */
 
@@ -147,7 +149,9 @@ function conflitoComNegocioParalelo(v: Vida, novo: NovoCompromisso): Conflito | 
 export function analisarEntrada(v: Vida, novo: NovoCompromisso): Conflito[] {
   const out: Conflito[] = [];
   const push = (c?: Conflito) => { if (c) out.push(c); };
-  if (noServicoInicial(v) && novo.tipo !== 'servico_militar') return [{ com: 'servico', rotulo: 'o serviço militar', motivo: 'Durante o serviço militar inicial, o quartel não libera: são doze meses obrigatórios', alternativas: [], impede: true }];
+  // Durante o serviço inicial, nada novo entra — a não ser estudar à noite na cidade do quartel.
+  const cursoLeve = novo.tipo === 'curso' && (novo.modalidade === 'ead' || (curso(novo.cursoId).carga !== 'integral' && novo.municipioId === v.moradia.municipioId));
+  if (noServicoInicial(v) && novo.tipo !== 'servico_militar' && !cursoLeve) return [{ com: 'servico', rotulo: 'o serviço militar', motivo: 'Durante o serviço militar inicial, o quartel não libera: são doze meses obrigatórios', alternativas: [], impede: true }];
   switch (novo.tipo) {
     case 'base':
       push(conflitoComCurso(v, novo, true, novo.municipioId));
@@ -180,6 +184,31 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): Conflito[] {
       }
       push(conflitoComCurso(v, novo, true));
       push(conflitoComBase(v));
+      break;
+    }
+    case 'curso': {
+      // O curso integral presencial toma o dia; em outra cidade, a mudança leva junto o emprego de lugar fixo.
+      const c = curso(novo.cursoId);
+      const presencial = novo.modalidade === 'presencial';
+      const integral = presencial && c.carga === 'integral';
+      const outraCidade = presencial && novo.municipioId !== v.moradia.municipioId;
+      const e = v.trabalho.atual;
+      if (e && e.contrato !== 'eletivo' && !noServicoInicial(v)) {
+        const oc = ocupacaoOuNula(e.ocupacaoId);
+        const pesado = e.carga === 'integral' || !!e.formacaoAte || oc?.jornada === 'fora';
+        const deLugar = !['autonomo', 'informal'].includes(e.contrato) || ehDono(v);
+        // Integral presencial: com trabalho de dia inteiro, não cabe; com meio período, cabe apertado (há o plano de conciliar).
+        if ((integral && (pesado || e.carga === 'parcial')) || (outraCidade && deLugar)) {
+          const conf = conflitoComEmprego(v, { tipo: 'emprego', ocupacaoId: e.ocupacaoId, via: 'concurso' });
+          if (conf) {
+            conf.motivo = outraCidade ? `${conf.motivo}, em ${municipio(v.moradia.municipioId).nome} — e o curso é em ${municipio(novo.municipioId).nome}` : `${conf.motivo}; ${c.nivel === 'superior' ? 'a faculdade' : 'o curso'} de ${c.nome} é em período integral`;
+            // Meio período ao lado de um curso integral é apertado, mas possível: aí há o plano de tentar os dois.
+            if (!outraCidade && e.carga === 'parcial') conf.alternativas.push({ conciliar: true, texto: 'tentar dar conta dos dois', consequencia: 'O trabalho segue em meio período. A semana passa do que cabe: a cabeça e as notas sentem.' });
+            out.push(conf);
+          }
+        }
+      }
+      if (presencial) push(conflitoComBase(v));
       break;
     }
     case 'servico_militar': {
@@ -236,6 +265,16 @@ export function descreverOferta(v: Vida, novo: NovoCompromisso): { oferta: strin
       return { oferta: `Dedicar-se de vez ${ao}.`, curto: n?.nome ?? 'o negócio', motivo: `para se dedicar ${ao}` };
     }
     case 'servico_militar': return { oferta: 'A convocação para o serviço militar chegou: doze meses de quartel.', curto: 'o serviço militar', motivo: 'para servir' };
+    case 'curso': {
+      const c = curso(novo.cursoId);
+      const g = v.eu.tratamento ?? v.eu.genero;
+      const nomeC = c.nivel === 'superior' ? `a faculdade de ${c.nome}` : `o curso de ${c.nome}`;
+      const integral = novo.modalidade === 'presencial' && c.carga === 'integral';
+      return {
+        oferta: novo.destrancar ? `Dá para voltar ${c.nivel === 'superior' ? 'à faculdade' : 'ao curso'} de ${c.nome}${integral ? ', em período integral' : ''}.` : `${g === 'feminino' ? 'Aprovada' : 'Aprovado'} em ${c.nome}, ${novo.instituicao}${integral ? ': período integral' : ''}.`,
+        curto: nomeC, motivo: `para cursar ${c.nome}`
+      };
+    }
   }
 }
 
@@ -247,7 +286,7 @@ export function planosDeConflito(v: Vida, novo: NovoCompromisso, conflitos: Conf
   const aceitar = (escolhas: Alternativa[]): PlanoDeConflito => {
     const larga = escolhas.filter(a => a.larga).map(a => a.larga!);
     const conciliar = escolhas.some(a => a.conciliar);
-    const verbo = novo.tipo === 'servico_militar' ? 'Servir' : novo.tipo === 'negocio' ? 'Abrir' : novo.tipo === 'dedicar_negocio' ? 'Dedicar-se' : novo.tipo === 'emprego' && novo.via === 'concurso' ? 'Tomar posse' : 'Aceitar';
+    const verbo = novo.tipo === 'servico_militar' ? 'Servir' : novo.tipo === 'curso' ? (novo.destrancar ? 'Destrancar' : 'Matricular-se') : novo.tipo === 'negocio' ? 'Abrir' : novo.tipo === 'dedicar_negocio' ? 'Dedicar-se' : novo.tipo === 'emprego' && novo.via === 'concurso' ? 'Tomar posse' : 'Aceitar';
     const partes = escolhas.map(a => a.texto);
     const texto = partes.length ? `${verbo} e ${listaNatural(partes)}` : verbo;
     return { texto, consequencias: escolhas.map(a => a.consequencia), larga, conciliar: conciliar || undefined };
@@ -262,7 +301,7 @@ export function planosDeConflito(v: Vida, novo: NovoCompromisso, conflitos: Conf
   }
   if (recusavel(novo)) {
     const fica = listaNatural(conflitos.map(c => c.rotulo));
-    planos.push({ texto: novo.tipo === 'negocio' ? 'Não abrir agora' : novo.tipo === 'dedicar_negocio' ? 'Seguir como está' : novo.tipo === 'emprego' && novo.via === 'concurso' ? 'Não tomar posse' : `Recusar ${curto}`, consequencias: [impede ? `${impede.motivo}.` : `Fica tudo como está: ${fica}.`], larga: [], recusa: true });
+    planos.push({ texto: novo.tipo === 'curso' ? (novo.destrancar ? 'Deixar o curso trancado' : 'Não fazer a matrícula') : novo.tipo === 'negocio' ? 'Não abrir agora' : novo.tipo === 'dedicar_negocio' ? 'Seguir como está' : novo.tipo === 'emprego' && novo.via === 'concurso' ? 'Não tomar posse' : `Recusar ${curto}`, consequencias: [impede ? `${impede.motivo}.` : `Fica tudo como está: ${fica}.`], larga: [], recusa: true });
   }
   // Planos iguais (mesmo texto) não aparecem duas vezes.
   return planos.filter((p, k) => planos.findIndex(q => q.texto === p.texto) === k).slice(0, 4);
@@ -308,7 +347,7 @@ export function resolverPendente(v: Vida, r: Rng, k: number): string {
   if (!plano) return 'Essa escolha já passou.';
   const { motivo, curto } = descreverOferta(v, p.novo);
   if (plano.recusa) {
-    escrever(v, { texto: textoDaRecusa(v, p.novo, curto), relevancia: p.novo.tipo === 'base' || p.novo.tipo === 'contrato_esporte' || (p.novo.tipo === 'emprego' && p.novo.via === 'concurso') ? 'marco' : 'biografia', tema: p.novo.tipo === 'base' ? 'lazer' : 'trabalho', escolha: true });
+    escrever(v, { texto: textoDaRecusa(v, p.novo, curto), relevancia: p.novo.tipo === 'curso' || p.novo.tipo === 'base' || p.novo.tipo === 'contrato_esporte' || (p.novo.tipo === 'emprego' && p.novo.via === 'concurso') ? 'marco' : 'biografia', tema: p.novo.tipo === 'base' ? 'lazer' : 'trabalho', escolha: true });
     return plano.consequencias[0] ?? 'Ficou tudo como estava.';
   }
   // A pergunta pode ter ficado velha: se agora algo impede a entrada (o quartel, por exemplo), nada é largado.
@@ -329,6 +368,7 @@ function textoDaRecusa(v: Vida, novo: NovoCompromisso, curto: string): string {
   if (novo.tipo === 'contrato_esporte') return `Recusou o contrato profissional ${fica}.`;
   if (novo.tipo === 'emprego' && novo.via === 'concurso') return `Aprovado no concurso, não tomou posse: ${curto.replace(/^a posse como /, '')} ficou para outra pessoa.`.replace('Aprovado', v.eu.genero === 'feminino' ? 'Aprovada' : 'Aprovado');
   if (novo.tipo === 'negocio') return `Desistiu de abrir ${curto}, por ora.`;
+  if (novo.tipo === 'curso') return novo.destrancar ? `Deixou ${curto} trancad${curso(novo.cursoId).nivel === 'superior' ? 'a' : 'o'} ${fica}.` : `${v.eu.genero === 'feminino' ? 'Aprovada' : 'Aprovado'} em ${curso(novo.cursoId).nome}, não fez a matrícula ${fica}.`;
   return `Recusou ${curto} ${fica}.`;
 }
 
@@ -414,6 +454,11 @@ function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: bool
     case 'servico_militar': {
       if (v.fatos['mil_adiado'] === v.t) return;
       incorporarAoServico(v, r);
+      return;
+    }
+    case 'curso': {
+      efetivarMatricula(v, novo);
+      if (novo.modalidade === 'presencial' && novo.municipioId !== v.moradia.municipioId) mudarAgora(v, novo.municipioId, `para estudar ${curso(novo.cursoId).nome}`);
       return;
     }
   }

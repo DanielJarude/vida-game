@@ -1047,7 +1047,9 @@ export type NovoCompromisso =
   | { tipo: 'emprego'; ocupacaoId: string; via: string; texto?: string; bonus?: number; extra?: 'rural_familia' | 'rural_arrendada' | 'arte'; pessoaId?: string }
   | { tipo: 'negocio'; negocioId: string; modo: 'guardado' | 'pequeno' | 'emprestimo' | 'socio'; socioId?: string }
   | { tipo: 'dedicar_negocio' }
-  | { tipo: 'servico_militar' };
+  | { tipo: 'servico_militar' }
+  /** Aprovado num curso (ou voltando a um trancado): a matrícula só entra depois de caber no resto da vida. */
+  | { tipo: 'curso'; cursoId: string; via: string; modalidade: 'presencial' | 'ead'; rede: 'publica' | 'privada'; mensalidade: number; municipioId: string; instituicao: string; destrancar?: boolean };
 
 /** Um plano possível diante do conflito: o que se larga, o que se tenta conciliar. */
 export interface PlanoDeConflito {
