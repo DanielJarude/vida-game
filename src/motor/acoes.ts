@@ -142,6 +142,20 @@ const jaFez = (v: Vida, chave: string) => v.anoAtual.acoes.includes(chave);
 
 /* ============================================================ Disponibilidade */
 
+/**
+ * O que prende a pessoa à cidade: o serviço militar inicial (sair seria
+ * deserção), a farda de carreira (muda-se por transferência) e o mandato
+ * (é preciso renunciar antes). A mudança não encerra nada disso em silêncio.
+ */
+function presoALugar(v: Vida): Veredito | undefined {
+  const e = v.trabalho.atual;
+  if (!e) return undefined;
+  if (noServicoInicial(v)) return bloqueio('ilegal', 'No serviço militar inicial, não se muda por conta própria: sair do quartel seria deserção.');
+  if (eDasForcas(ocupacao(e.ocupacaoId))) return bloqueio('incompativel', 'Militar da ativa muda de cidade por transferência. Para ir por conta própria, é preciso deixar a Força antes.');
+  if (e.contrato === 'eletivo') return bloqueio('incompativel', 'Com mandato, a mudança pede renúncia antes.');
+  return undefined;
+}
+
 export function disponibilidade(v: Vida, a: Acao): Veredito {
   if (v.morte) return bloqueio('impossivel', 'Esta vida terminou.');
   if (v.momento && a.tipo !== 'decidir') return bloqueio('incompativel', 'Há uma decisão esperando por você.');
@@ -161,6 +175,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
         const d = elegibilidade(v, ocupacao(o.ocupacaoId), 'oportunidade');
         if (!podeTentar(d)) return d;
       }
+      if (o.tipo === 'temporario' && v.trabalho.atual) return bloqueio('incompativel', 'Com um trabalho, o temporário de fim de ano não cabe.');
       if ((o.tipo === 'peneira' || o.tipo === 'seletiva') && i >= 14 && v.trabalho.atual?.carga === 'integral') return bloqueio('incompativel', 'Com trabalho integral, não dá para treinar numa base.');
       return PERMITIDO;
     }
@@ -173,6 +188,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const o = opcoesDeCurso(v)[a.indice];
       if (!o) return bloqueio('impossivel', 'Opção inválida.');
       if (v.fatos[`tentou_${o.curso.id}_${Math.floor(v.t / 12)}`] !== undefined) return bloqueio('incompativel', 'Você já tentou este curso neste ano.');
+      if (o.municipioId !== v.moradia.municipioId) { const preso = presoALugar(v); if (preso) return preso; }
       return o.veredito;
     }
     case 'trancar': return v.educacao.matricula && !v.educacao.matricula.trancado ? PERMITIDO : bloqueio('incompativel', 'Não há curso para trancar.');
@@ -244,6 +260,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'mudar_cidade': {
       if (i < 18) return bloqueio('ilegal', 'Menor de idade não muda de cidade sozinho.');
       if (a.municipioId === v.moradia.municipioId) return bloqueio('incompativel', 'Você já mora aqui.');
+      { const preso = presoALugar(v); if (preso) return preso; }
       const custo = custoDeMudanca(v.moradia.municipioId, a.municipioId);
       if (disponivel(v) < custo) return bloqueio('requisito', `A mudança custa cerca de R$ ${custo.toLocaleString('pt-BR')}.`);
       return PERMITIDO;

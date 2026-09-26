@@ -19,7 +19,7 @@ import { ocupacao } from '../dados/ocupacoes';
 import { contratar } from '../sistemas/trabalho';
 import { analisarEntrada, noServicoInicial, propor } from '../sistemas/compromissos';
 import { abrirConflitoPendente } from '../conteudo/compromissos';
-import { abrirNegocio, contaDoAno, dedicacaoDe, negocioAberto, processarNegocio } from '../sistemas/negocio';
+import { abrirNegocio, contaDoAno, dedicacaoDe, negocioAberto, podeTocarNasHorasVagas, processarNegocio } from '../sistemas/negocio';
 import { acoesDoNegocio } from '../sistemas/gestao';
 import { rotuloEstrategia, NEGOCIOS } from '../dados/negocios';
 import { abrirDecisao, conteudoPorId } from '../conteudo/motor';
@@ -589,3 +589,69 @@ describe('achados da leitura de biografias', () => {
     }
   }, 120000);
 });
+
+describe('achados da segunda auditoria independente', () => {
+  const conscrito = () => em(adulto(18), x => { contratar(x, r, ocupacao('vendedor'), 'teste'); propor(x, r, { tipo: 'servico_militar' }); });
+
+  it('A1. conscrito não sai do quartel mudando de cidade', () => {
+    const v = conscrito();
+    expect(noServicoInicial(v)).toBe(true);
+    const d = disponibilidade(v, { tipo: 'mudar_cidade', municipioId: 'recife-pe' });
+    expect(d.grau).toBe('ilegal');
+    expect(d.motivo).toMatch(/deserção/);
+  });
+
+  it('A2. conscrito não troca o quartel pelo próprio negócio (dedicar-se)', () => {
+    let v = conscrito();
+    v = em(v, x => { abrirNegocio(x, r, 'loja_online', { modo: 'guardado', dedicacao: 'paralela' }); });
+    const c = analisarEntrada(v, { tipo: 'dedicar_negocio' });
+    expect(c.some(x => x.impede)).toBe(true);
+    const { v: w } = proporEAbrir(v, { tipo: 'dedicar_negocio' });
+    expect(w.trabalho.atual?.ocupacaoId).toBe('soldado_ep');
+    expect((w.momento?.opcoes ?? []).some(o => /deixar o trabalho de soldado/.test(o.texto))).toBe(false);
+  });
+
+  it('A3. o temporário não substitui um trabalho em silêncio', () => {
+    const v = em(adulto(20), x => { contratar(x, r, ocupacao('vendedor'), 'teste'); x.caminhos.oportunidades.push({ id: 'o_tmp', tipo: 'temporario', ocupacaoId: 'atendente', tInicio: x.t, tFim: x.t + 6, titulo: 'Temporário', texto: 'Natal' }); });
+    expect(disponibilidade(v, { tipo: 'oportunidade', id: 'o_tmp', aceitar: true }).grau).toBe('incompativel');
+  });
+
+  it('A5. importar uma escolha pendente malformada é recusado, sem travar o jogo', () => {
+    const v = em(adulto(20), x => { matricular(x, 'direito'); propor(x, r, { tipo: 'base', dominio: 'futebol', municipioId: x.moradia.municipioId, clube: 'Bahia' }); });
+    const semConsequencias = JSON.parse(JSON.stringify(v)); delete semConsequencias.caminhos.pendente.planos[0].consequencias;
+    const tipoDesconhecido = JSON.parse(JSON.stringify(v)); tipoDesconhecido.caminhos.pendente.novo = { tipo: 'nave_espacial' };
+    const ocupacaoDesconhecida = JSON.parse(JSON.stringify(v)); ocupacaoDesconhecida.caminhos.pendente.novo = { tipo: 'emprego', ocupacaoId: 'astronauta_lunar', via: 'concurso' };
+    for (const x of [semConsequencias, tipoDesconhecido, ocupacaoDesconhecida]) expect(importarVida(JSON.stringify(x)).tipo).toBe('invalido');
+    expect(importarVida(JSON.stringify(v)).tipo).toBe('ok');
+  });
+
+  it('A6. sócio que morreu não toca o negócio nas horas vagas', () => {
+    const v = em(adulto(30), x => {
+      const s = criarPessoa(x, r, { idade: 70, municipioId: x.moradia.municipioId, nome: 'Caio', sobrenome: 'Prado', genero: 'masculino' });
+      vincular(x, s, { origem: 'amizade' as never, proximidade: 60, estagio: 'amigo_proximo' });
+      abrirNegocio(x, r, 'lanchonete', { modo: 'socio', socioId: s.id });
+      s.vivo = false;
+    });
+    expect(podeTocarNasHorasVagas(v, negocioAberto(v)!)).toBe(false);
+  });
+
+  it('A7. loja on-line "sai do ar", não "fecha as portas"', () => {
+    const v = em(adulto(30), x => { contratar(x, r, ocupacao('vendedor'), 'teste'); abrirNegocio(x, r, 'loja_online', { modo: 'guardado', dedicacao: 'paralela' }); });
+    const { v: w } = proporEAbrir(v, { tipo: 'base', dominio: 'futebol', municipioId: v.moradia.municipioId, clube: 'Sport' });
+    const tudo = JSON.stringify(w.caminhos.pendente ?? {}) + JSON.stringify(w.momento ?? {});
+    expect(tudo).not.toMatch(/fecha as portas/);
+  });
+
+  it('A10. a convocação militar nunca "passa do prazo" por outra escolha em aberto', () => {
+    let res = '';
+    const v = em(adulto(18), x => {
+      contratar(x, r, ocupacao('vendedor'), 'teste');
+      res = propor(x, r, { tipo: 'emprego', ocupacaoId: 'caixa', via: 'concurso' });
+      res += ':' + propor(x, r, { tipo: 'servico_militar' });
+    });
+    expect(res).toBe('pendente:feito');
+    expect(v.trabalho.atual?.ocupacaoId).toBe('soldado_ep');
+    expect(textosBio(v)).toMatch(/o quartel não espera/);
+  });
+});
+

@@ -174,7 +174,7 @@ export function consequenciasDaMudanca(v: Vida, destinoId: string): string[] {
   if (vai.length) out.push(`Vão junto: ${listaNatural([...vai.map(p => p.nome), ...bichos])}.`);
   else if (bichos.length) out.push(`Vão junto: ${listaNatural(bichos)}.`);
   const longe = vinculosVivos(v).filter(x => !x.p.especie && (x.vin.estagio === 'amigo_proximo' || ['mae', 'pai'].includes(x.vin.parentesco ?? '')) && x.p.municipioId === v.moradia.municipioId && !vai.includes(x.p)).map(x => x.p.nome);
-  if (longe.length) out.push(`Ficam longe: ${listaNatural(longe.slice(0, 3))}${longe.length > 3 ? ' e outros' : ''}.`);
+  if (longe.length) out.push(`Ficam longe: ${longe.length > 3 ? `${longe.slice(0, 3).join(', ')} e outros` : listaNatural(longe)}.`);
   return out;
 }
 

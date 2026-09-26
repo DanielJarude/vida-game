@@ -89,7 +89,7 @@ export function acoesDoNegocio(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
     out.push(x);
   };
   const p = presencaDe(n);
-  const teto = tetoDoMovimento(n);
+  const teto = tetoDoMovimento(n, v);
   const eq = tamanhoDaEquipe(n);
   const cheio = n.clientela >= teto - 3 && teto < 100;
   const apertado = n.estado === 'apertado';
@@ -182,7 +182,7 @@ export function executarGestao(v: Vida, r: Rng, oque: OqueGestao, valor?: string
   const t = tipoDoNegocio(n)!;
   const p = presencaDe(n);
   const melhorar = (m: string) => { (n.melhorias ??= []).push(m); };
-  const movimento = (x: number) => { n.clientela = Math.round(clamp(n.clientela + x, 0, tetoDoMovimento(n))); if (donoIntegral(v)) v.trabalho.atual!.clientela = n.clientela; };
+  const movimento = (x: number) => { n.clientela = Math.round(clamp(n.clientela + x, 0, tetoDoMovimento(n, v))); if (donoIntegral(v)) v.trabalho.atual!.clientela = n.clientela; };
   switch (oque) {
     case 'divulgar': {
       const custo = custoFrac(v, n, 0.08);

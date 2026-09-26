@@ -267,7 +267,7 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (n && n.dedicacao !== undefined && n.dedicacao !== 'integral' && n.dedicacao !== 'paralela') return 'Dedicação do negócio inválida.';
     if (n?.melhorias !== undefined && !Array.isArray(n.melhorias)) return 'Negócio inválido.';
     const pend = (d.caminhos as Vida['caminhos']).pendente;
-    if (pend && (typeof pend !== 'object' || !pend.novo || typeof pend.novo.tipo !== 'string' || !Array.isArray(pend.planos) || pend.planos.some(x => !x || typeof x.texto !== 'string' || !Array.isArray(x.larga)))) return 'Escolha pendente inválida.';
+    if (pend && !pendenteValido(pend)) return 'Escolha pendente inválida.';
     const pol = (d.caminhos as Vida['caminhos']).politica;
     if (pol?.prioridade !== undefined && !PRIORIDADES_VALIDAS.includes(pol.prioridade)) return 'Bandeira política inválida.';
   }
@@ -297,6 +297,25 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
  *    um contrato que vence no próximo biênio contado desde a estreia;
  *  - ritmo, clima, estrutura e preço começam ausentes (= o de sempre).
  */
+const textos = (x: unknown) => Array.isArray(x) && x.every(t => typeof t === 'string');
+
+/** Uma escolha de trajetória em aberto, inteira: o que chega (com ids que existem), por que conflita, e cada plano com o que acontece. */
+function pendenteValido(p: unknown): boolean {
+  if (!p || typeof p !== 'object') return false;
+  const x = p as Vida['caminhos']['pendente'] & Record<string, unknown>;
+  const n = x!.novo as Record<string, unknown> | undefined;
+  if (!n || typeof n !== 'object' || typeof x!.oferta !== 'string' || !textos(x!.conflitos) || !Array.isArray(x!.planos) || !x!.planos.length) return false;
+  if (x!.planos.some(q => !q || typeof q.texto !== 'string' || !textos(q.larga) || !textos(q.consequencias))) return false;
+  switch (n.tipo) {
+    case 'base': return typeof n.dominio === 'string' && typeof n.clube === 'string' && typeof n.municipioId === 'string' && MUNICIPIOS.some(m => m.id === n.municipioId);
+    case 'contrato_esporte': return finito(n.nivel);
+    case 'emprego': return typeof n.ocupacaoId === 'string' && !!ocupacaoOuNula(n.ocupacaoId) && typeof n.via === 'string';
+    case 'negocio': return typeof n.negocioId === 'string' && !!tipoNegocio(n.negocioId);
+    case 'dedicar_negocio': case 'servico_militar': return true;
+    default: return false;
+  }
+}
+
 const PRIORIDADES_VALIDAS = ['saude', 'educacao', 'mobilidade', 'emprego', 'seguranca', 'ambiente', 'contas', 'cultura'];
 
 /**

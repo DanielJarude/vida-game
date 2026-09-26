@@ -15,6 +15,7 @@ import { idade } from '../../motor/nucleo';
 import { curso, cursoOuNulo, type AreaFormacao } from '../../motor/dados/cursos';
 import { OCUPACOES } from '../../motor/dados/ocupacoes';
 import { nomeLugar } from '../../motor/dados/lugares';
+import { consequenciasDaMudanca } from '../../motor/sistemas/processos';
 import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { melhorNotaRecente, rotuloSerie, ROTULO_ESCOLARIDADE, temCota, NOME_MATERIA } from '../../motor/sistemas/escola';
 import { materiasExtremas } from '../../motor/sistemas/frentes';
@@ -241,6 +242,8 @@ function Cursos({ vida, agir }: Props) {
                 <strong>{VIA[o.via]}</strong>
                 <span>{o.modalidade === 'ead' ? 'de casa' : nomeLugar(o.municipioId)}{o.mensalidade > 0 ? ` · ${dinheiroCurto(o.mensalidade)}/mês` : o.via === 'fies' ? ' · paga depois de formado' : ' · sem mensalidade'}{o.modalidade !== 'ead' && o.municipioId !== vida.moradia.municipioId ? ' · pede mudança de cidade' : ''}</span>
                 {o.observacao && <span className="via__obs">{o.observacao}</span>}
+                {/* Estudar em outra cidade é mudar: o que fica para trás é dito antes de tentar. */}
+                {o.modalidade !== 'ead' && o.municipioId !== vida.moradia.municipioId && (() => { const efeitos = consequenciasDaMudanca(vida, o.municipioId); return efeitos.length ? <ul className="via__consequencias">{efeitos.map((x, k) => <li key={k}>{x}</li>)}</ul> : null; })()}
               </div>
               <BotaoAcao vida={vida} acao={{ tipo: 'matricular', indice }} agir={agir} mostrarChance>Tentar</BotaoAcao>
             </div>

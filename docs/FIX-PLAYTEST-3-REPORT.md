@@ -16,7 +16,7 @@
 ## Baseline
 
 Na base (`9518411`): typecheck limpo, build ok, **339/339 testes**.
-Ao fim: typecheck limpo, build ok, **386 testes** (47 novos em
+Ao fim: typecheck limpo, build ok, **393 testes** (54 novos em
 `src/motor/__tests__/fix3.test.ts`), todos passando.
 
 ## Causas-raiz encontradas
@@ -224,7 +224,7 @@ de uma vida importada é o mesmo (testado).
 
 ## Testes
 
-`fix3.test.ts` (47 testes), cobrindo os 30 pedidos e mais: faculdade × base
+`fix3.test.ts` (54 testes), cobrindo os 30 pedidos e mais: faculdade × base
 (pergunta, planos com consequência, trancar com motivo, recusa); trabalho ×
 empresa (paralela/principal); trabalho × estudo (integral conflita, EAD não);
 concurso com emprego; candidatura por conta própria; duas ofertas no mesmo
@@ -239,7 +239,8 @@ partidos; candidatura e apuração; mudança avisa trancamento; exportar;
 importar com futuro igual; importação recusa entradas ruins; migração de
 saves v12 reais (três, com asserções por caso); vidas inteiras sem
 `undefined`/`NaN` e sem pendência órfã; nada largado sem motivo; concordância
-do bicho; laço do irmão; nenhuma repetição em sequência.
+do bicho; laço do irmão; nenhuma repetição em sequência; e os sete testes dos
+achados da auditoria independente (A1–A10, abaixo).
 
 ## Simulações
 
@@ -256,6 +257,8 @@ do bicho; laço do irmão; nenhuma repetição em sequência.
   (esgotamento do dono chamava "pedir demissão" do próprio negócio) →
   `encerrarEmprego` passa o negócio para as horas vagas, com registro, e a
   decisão de esgotamento ganhou texto de dono.
+- Depois das correções da auditoria independente: **200 vidas, 0 incoerências,
+  226 perguntas de conflito**.
 
 ## Biografias lidas
 
@@ -343,4 +346,30 @@ Motor: `sistemas/compromissos.ts`*, `conteudo/compromissos.ts`*,
 
 ## Auditoria independente — resultado
 
-(preenchido abaixo)
+Um agente separado leu o diff contra `9518411` sem ter implementado nada, com a
+missão de rejeitar o trabalho, e reproduziu cada achado com um teste
+temporário (já apagado). Achou **dez** problemas; todos foram corrigidos e
+ganharam teste de regressão:
+
+| # | Achado | Correção |
+| --- | --- | --- |
+| A1 | Conscrito saía do quartel **mudando de cidade** (ou se matriculando em outra cidade); o emprego guardado ficava órfão; militar de carreira e mandato também acabavam na mudança | `presoALugar`: mudança e matrícula fora da cidade bloqueadas para o serviço inicial (seria deserção), para a farda de carreira (muda-se por transferência) e para o mandato (renúncia antes); farda que acaba fora da baixa libera o emprego guardado, com registro |
+| A2 | Conscrito largava o quartel por "Dedicar-se só ao negócio" (o caso montava o próprio conflito e pulava o bloqueio) | `analisarEntrada` impede **qualquer** trajetória nova durante o serviço inicial |
+| A3 | Efetivação do temporário chamava `contratar` direto: trocava o emprego (até o de dono) em silêncio e escrevia como escolha | Efetivação passa por `propor`; aceitar temporário com trabalho é bloqueado |
+| A4 | Matrícula em outra cidade não dizia o que ficava para trás | A via do curso lista `consequenciasDaMudanca` antes de "Tentar" |
+| A5 | Save importado com escolha pendente malformada derrubava o jogo | `pendenteValido`: tipo na lista, ids que existem, planos com consequências; senão, a importação é recusada com motivo |
+| A6 | Sócio morto continuava "tocando" o negócio (horas vagas, textos, painel) | `socioVivo`; a parte segue com a família, e o painel diz isso |
+| A7 | "Fecha as portas" e "anos de portas abertas" na loja on-line | `fechaAs`: "sai do ar"; "anos no ar" |
+| A8 | Concordância ("Lanchonete… seguiu aberto", "tocado", "vendido"), crase ("Dedicar-se de vez a Loja"), "Recusar Loja X", "A e B e C e outros", "A base" para equipe de vôlei, "nas mãos da equipe" sem equipe | `negocioFeminino`/`fem`, "à/ao", "Seguir como está", lista corrigida, rótulos por modalidade e por quem toca |
+| A9 | "Parar (ou reduzir)" cuidar dos pais encerrava farda ou mandato com texto de "trabalho menor" | Opção diz reduzir *ou* parar conforme o caso, mostra a consequência e não existe para farda e mandato |
+| A10 | A convocação militar podia virar "o prazo passou" diante de outra escolha em aberto no mesmo mês — e, no teste, a posse pendente sobrevivia para depois trocar a farda pelo cargo | A convocação tem precedência (a outra oferta passa, dito na Linha da Vida); `resolverPendente` reanalisa na hora e não larga nada se algo agora impede |
+
+A auditoria não encontrou decisão de conflito com todas as opções bloqueadas
+(toda oferta irrecusável tem ao menos um plano) nem `undefined` na bandeira.
+Depois das correções: 393 testes, 200 vidas simuladas sem incoerência, 654
+telas no playtest visual sem problema estrutural.
+
+Limitação que fica, dita: matrícula em curso **integral na mesma cidade** ao
+lado de um trabalho integral ainda não pergunta (a semana acusa o excesso, mas
+não há plano de conflito); a próxima etapa natural é fazer a matrícula entrar
+por `propor`.

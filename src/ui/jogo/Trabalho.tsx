@@ -145,7 +145,7 @@ function PainelNegocio({ vida }: { vida: Vida }) {
   const n = negocioAberto(vida)!;
   const t = tipoDoNegocio(n);
   const l = leituraDoNegocio(vida, n);
-  const teto = tetoDoMovimento(n);
+  const teto = tetoDoMovimento(n, vida);
   const p = presencaDe(n);
   const porte = n.emCasa ? 'pequeno, em casa' : n.porte === 3 ? 'grande' : n.porte === 2 ? 'ampliado' : p === 'online' ? 'uma operação pequena' : p === 'atendimento' ? 'uma sala' : p === 'obra' ? 'uma equipe pequena' : 'um ponto pequeno';
   const jeito = rotuloEstrategia(p, estrategiaDe(n), n.tipo)?.hoje ?? 'o de sempre';
@@ -161,7 +161,7 @@ function PainelNegocio({ vida }: { vida: Vida }) {
         <Dado rotulo="O nome">{l.reputacao}</Dado>
         <Dado rotulo="Tamanho">{porte}{(n.unidades ?? 1) > 1 ? ` · ${n.unidades} frentes` : ''}</Dado>
         <Dado rotulo="O jeito de vender">{jeito}</Dado>
-        {n.socioId && vida.pessoas[n.socioId] && <Dado rotulo="Sócio">{vida.pessoas[n.socioId].nome}, {Math.round(parteDoSocio(n) * 100)}% do negócio</Dado>}
+        {n.socioId && vida.pessoas[n.socioId] && <Dado rotulo="Sócio">{vida.pessoas[n.socioId].vivo ? vida.pessoas[n.socioId].nome : `a família de ${vida.pessoas[n.socioId].nome}, que morreu`}, {Math.round(parteDoSocio(n) * 100)}% do negócio</Dado>}
         {melhorias.length > 0 && <Dado rotulo="O que já foi feito">{melhorias.map(m => NOMES_MELHORIA[m] ?? m).join(', ')}</Dado>}
       </dl>
       <div className="equipe">
@@ -414,13 +414,13 @@ function EmParalelo({ vida, agir, irPara, modo }: { vida: Vida; agir: (a: Acao) 
       <h2 id="camada-paralelo" className="camada__titulo">Em paralelo</h2>
       {negocioParalelo && (
         <div className="paralelo">
-          <h3 className="paralelo__titulo">{negocioParalelo.nome}<span> · {negocioParalelo.passivo ? 'nas mãos da equipe' : 'nas horas vagas'}</span></h3>
+          <h3 className="paralelo__titulo">{negocioParalelo.nome}<span> · {negocioParalelo.passivo ? ((negocioParalelo.equipe?.length ?? 0) > 0 ? 'nas mãos da equipe' : 'nas mãos do sócio') : 'nas horas vagas'}</span></h3>
           <PainelNegocio vida={vida} />
           {acoesNeg && acoesNeg.agora.length > 0 && <AcoesVivas acoes={acoesNeg.agora} agir={agir} rotulo={`O que fazer por ${negocioParalelo.nome}`} />}
           {acoesNeg && (acoesNeg.mais.length > 0 || acoesNeg.saidas.length > 0) && <Mais mais={acoesNeg.mais} saidas={acoesNeg.saidas} agir={agir} ir={d => irPara(d as Aba)} />}
         </div>
       )}
-      {base && <div className="paralelo"><h3 className="paralelo__titulo">A base {doClube(vida.caminhos.esporte!.clube)}</h3><PainelBase vida={vida} /></div>}
+      {base && <div className="paralelo"><h3 className="paralelo__titulo">{vida.caminhos.esporte!.modalidade === 'futebol' ? 'A base' : 'A equipe'} {doClube(vida.caminhos.esporte!.clube)}</h3><PainelBase vida={vida} /></div>}
       {pol && <div className="paralelo"><PainelPolitico vida={vida} principal={false} /></div>}
       {arte && <div className="paralelo"><h3 className="paralelo__titulo">{vida.caminhos.arte!.nome}<span> · {vida.caminhos.arte!.tipo === 'banda' ? 'a banda' : 'o grupo'}</span></h3><p className="nota">{vida.caminhos.arte!.publico < 15 ? 'Quase ninguém conhece ainda.' : vida.caminhos.arte!.publico < 40 ? 'Já tem quem vá ver.' : vida.caminhos.arte!.publico < 65 ? 'Público fiel na cidade.' : 'Gente de fora já conhece.'}</p></div>}
       {renda.length > 0 && <div className="paralelo"><h3 className="paralelo__titulo">Por fora</h3><p className="nota">{renda.map(m => m!.nome).join(' · ')} — na sua semana, em <button type="button" className="link" onClick={() => irPara('tempo')}>Tempo livre</button>.</p></div>}

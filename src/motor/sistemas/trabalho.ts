@@ -332,10 +332,17 @@ export function encerrarEmprego(v: Vida, motivo: string): void {
   // O dia de dono acabou (esgotamento, um mandato, a aposentadoria) sem o negócio fechar: ele segue, nas horas vagas — e fica dito.
   if (n && n.estado !== 'fechado' && (n.dedicacao ?? 'integral') === 'integral' && !n.passivo && t.atual.ocupacaoId === n.ocupacaoId && motivo !== 'falta de clientela') {
     n.dedicacao = 'paralela';
-    escrever(v, { texto: `${n.nome} seguiu aberto, agora nas horas vagas.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    escrever(v, { texto: `${n.nome} seguiu ${/^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/.test(n.nome) || / (Tecnologia|Contabilidade|Construções)$/.test(n.nome) ? 'aberta' : 'aberto'}, agora nas horas vagas.`, relevancia: 'cotidiano', tema: 'trabalho' });
   }
+  const guardado = v.caminhos.militar?.empregoGuardado;
+  const fardaAcabou = guardado && eDasForcas(ocupacao(t.atual.ocupacaoId)) && motivo !== 'baixa do serviço militar';
   t.historico.push({ ...t.atual, tFim: v.t, motivo });
   t.atual = undefined;
+  // A farda acabou fora da baixa (prisão, desincorporação): o emprego que esperava deixa de esperar — e a vida diz.
+  if (fardaAcabou) {
+    delete v.caminhos.militar!.empregoGuardado;
+    escrever(v, { texto: 'O emprego que estava guardado durante o serviço deixou de esperar.', relevancia: 'cotidiano', tema: 'trabalho' });
+  }
   t.horasExtras = false;
   // Sem emprego, a jornada reduzida para cuidar vira cuidado em tempo integral.
   if (t.pausa?.intensidade === 'parcial') { t.pausa.intensidade = 'total'; t.desempregadoDesde = undefined; return; }

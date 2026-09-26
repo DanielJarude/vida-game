@@ -343,7 +343,8 @@ export const PROFISSAO: Conteudo[] = [
       const anos = Math.max(1, Math.round((c.v.t - n.tInicio) / 12));
       const eq = tamanhoDaEquipe(n);
       const divida = n.dividaId && c.v.financas.dividas.find(d => d.id === n.dividaId && d.saldo > 0);
-      return `${anos} ${anos === 1 ? 'ano' : 'anos'} de portas abertas. ${eq ? `${eq === 1 ? 'Uma pessoa trabalha' : `${eq} pessoas trabalham`} lá.` : ''} ${divida ? `O empréstimo da abertura continua: faltam ${fmt(divida.saldo)}.` : ''}`;
+      const online = presencaDe(n) === 'online';
+      return `${anos} ${anos === 1 ? 'ano' : 'anos'} ${online ? 'no ar' : 'de portas abertas'}. ${eq ? `${eq === 1 ? 'Uma pessoa trabalha' : `${eq} pessoas trabalham`} ${online ? 'com você' : 'lá'}.` : ''} ${divida ? `O empréstimo da abertura continua: faltam ${fmt(divida.saldo)}.` : ''}`;
     },
     opcoes: [
       { id: 'fechar', texto: c => (presencaDe(negocioAtivo(c.v)!) === 'online' ? 'Tirar a loja do ar' : 'Fechar as portas'), resolver: c => ({ texto: presencaDe(negocioAtivo(c.v)!) === 'online' ? 'Um clique tirou a loja do ar. O último pedido ficou na tela.' : 'A última volta da chave foi a mais pesada.', memoria: null, efeito: () => { const dono = !!donoIntegral(c.v); fecharNegocio(c.v, 'você decidiu fechar'); if (dono) encerrarEmprego(c.v, 'fechou o negócio'); } }) },

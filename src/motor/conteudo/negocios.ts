@@ -39,7 +39,7 @@ const anos = (c: Ctx) => (c.v.t - neg(c).tInicio) / 12;
 
 function mov(c: Ctx, x: number): void {
   const n = neg(c);
-  n.clientela = Math.round(clamp(n.clientela + x, 0, tetoDoMovimento(n)));
+  n.clientela = Math.round(clamp(n.clientela + x, 0, tetoDoMovimento(n, c.v)));
   if (donoIntegral(c.v)) c.v.trabalho.atual!.clientela = n.clientela;
 }
 const rep = (c: Ctx, x: number) => { const n = neg(c); n.reputacao = clamp((n.reputacao ?? 40) + x); };

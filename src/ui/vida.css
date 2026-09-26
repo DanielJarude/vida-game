@@ -513,6 +513,8 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .via__texto strong, .vaga__texto strong, .bem__texto strong, .rotina__texto strong { font-family: var(--font-serif); font-weight: 500; font-size: var(--type-subheading); color: var(--text-primary); }
 .via__texto span, .vaga__texto span, .bem__texto span, .rotina__texto span { font-size: var(--type-caption); color: var(--text-muted); }
 .via__obs { color: var(--warning) !important; }
+.via__consequencias { margin: var(--space-1) 0 0; padding-left: 1.1em; color: var(--text-secondary); font-size: var(--type-caption); line-height: var(--leading-snug); }
+.via__consequencias li::marker { content: "→ "; color: var(--warning); }
 .vaga--bloqueada strong { color: var(--text-secondary); }
 .vaga__motivo, .rotina__motivo { font-family: var(--font-serif); font-style: italic; color: var(--text-secondary) !important; font-size: var(--type-body) !important; }
 .via > .acao, .vaga > .acao, .bem > .acao, .rotina > .acao { flex: none; align-items: flex-end; max-width: 50%; }

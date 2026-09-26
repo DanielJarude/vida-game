@@ -29,7 +29,7 @@ import { municipio } from '../dados/lugares';
 import { listaNatural } from '../texto';
 import { contratar, eDasForcas, encerrarEmprego, nomeOcupacao, textoDeContratacao } from './trabalho';
 import { entrarNaBase, profissionalizar, NOME_MOD } from './esporte';
-import { abrirNegocio, dedicarAoNegocio, fecharNegocio, negocioAberto, passarParaHorasVagas, podeTocarNasHorasVagas, tipoDoNegocio, tipoNegocio, valorDoNegocio, venderNegocio } from './negocio';
+import { fem, negocioFeminino, presencaDe, socioVivo, abrirNegocio, dedicarAoNegocio, fecharNegocio, negocioAberto, passarParaHorasVagas, podeTocarNasHorasVagas, tipoDoNegocio, tipoNegocio, valorDoNegocio, venderNegocio } from './negocio';
 import { marcar } from './marcas';
 import { incorporarAoServico } from './militar';
 import { tDe } from '../tempo';
@@ -103,8 +103,8 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): Conflito | undefine
   if (ehDono(v)) {
     const n = negocioAberto(v)!;
     const alternativas: Alternativa[] = [];
-    if (podeTocarNasHorasVagas(v, n)) alternativas.push({ larga: 'negocio_paralelo', texto: `deixar ${n.nome} para as horas vagas`, consequencia: `${n.nome} continua seu, tocado nas horas vagas${(n.equipe?.length ?? 0) > 0 ? ' e pela equipe' : ''}: cresce mais devagar e não paga retirada fixa.` });
-    alternativas.push({ larga: 'negocio_fechar', texto: valorDoNegocio(v, n) > 0 ? `vender ${n.nome}` : `fechar ${n.nome}`, consequencia: valorDoNegocio(v, n) > 0 ? `${n.nome} é vendido: o dinheiro entra, a história com ele acaba.` : `${n.nome} fecha as portas.` });
+    if (podeTocarNasHorasVagas(v, n)) alternativas.push({ larga: 'negocio_paralelo', texto: `deixar ${n.nome} para as horas vagas`, consequencia: `${n.nome} continua seu, ${fem(n.nome, 'tocado')} nas horas vagas${(n.equipe?.length ?? 0) > 0 ? ' e pela equipe' : ''}: cresce mais devagar e não paga retirada fixa.` });
+    alternativas.push({ larga: 'negocio_fechar', texto: valorDoNegocio(v, n) > 0 ? `vender ${n.nome}` : `fechar ${n.nome}`, consequencia: valorDoNegocio(v, n) > 0 ? `${n.nome} é ${fem(n.nome, 'vendido')}: o dinheiro entra, a história acaba.` : `${n.nome} ${fechaAs(n)}.` });
     return { com: 'negocio', rotulo: n.nome, motivo: `${n.nome} é o seu trabalho de todo dia`, alternativas };
   }
   const nome = nomeEmprego(v);
@@ -136,17 +136,18 @@ function conflitoComNegocioParalelo(v: Vida, novo: NovoCompromisso): Conflito | 
   const n = negocioAberto(v);
   if (!n || (n.dedicacao ?? 'integral') !== 'paralela' || novo.tipo === 'negocio' || novo.tipo === 'dedicar_negocio') return undefined;
   if (novo.tipo !== 'base' && novo.tipo !== 'servico_militar') return undefined;
-  const sozinho = (n.equipe?.length ?? 0) === 0 && !n.socioId;
+  const sozinho = (n.equipe?.length ?? 0) === 0 && !socioVivo(v, n);
   if (!sozinho) return undefined;
   const t = tipoDoNegocio(n);
   if (t?.presenca === 'online' || n.emCasa) return undefined;
-  return { com: 'negocio', rotulo: n.nome, motivo: `${n.nome} depende de você nas horas vagas — e elas acabariam`, alternativas: [{ larga: 'negocio_fechar', texto: valorDoNegocio(v, n) > 0 ? `vender ${n.nome}` : `fechar ${n.nome}`, consequencia: `${n.nome} ${valorDoNegocio(v, n) > 0 ? 'é vendido' : 'fecha'}.` }, { conciliar: true, texto: `manter ${n.nome} de qualquer jeito`, consequencia: 'O negócio fica quase parado: o movimento cai ano a ano.' }] };
+  return { com: 'negocio', rotulo: n.nome, motivo: `${n.nome} depende de você nas horas vagas — e elas acabariam`, alternativas: [{ larga: 'negocio_fechar', texto: valorDoNegocio(v, n) > 0 ? `vender ${n.nome}` : `fechar ${n.nome}`, consequencia: `${n.nome} ${valorDoNegocio(v, n) > 0 ? `é ${fem(n.nome, 'vendido')}` : fechaAs(n)}.` }, { conciliar: true, texto: `manter ${n.nome} de qualquer jeito`, consequencia: 'O negócio fica quase parado: o movimento cai ano a ano.' }] };
 }
 
 /** O que conflita com a entrada de algo novo. */
 export function analisarEntrada(v: Vida, novo: NovoCompromisso): Conflito[] {
   const out: Conflito[] = [];
   const push = (c?: Conflito) => { if (c) out.push(c); };
+  if (noServicoInicial(v) && novo.tipo !== 'servico_militar') return [{ com: 'servico', rotulo: 'o serviço militar', motivo: 'Durante o serviço militar inicial, o quartel não libera: são doze meses obrigatórios', alternativas: [], impede: true }];
   switch (novo.tipo) {
     case 'base':
       push(conflitoComCurso(v, novo, true, novo.municipioId));
@@ -197,8 +198,8 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): Conflito[] {
       if (ehDono(v)) {
         const n = negocioAberto(v)!;
         out.push({ com: 'negocio', rotulo: n.nome, motivo: `${n.nome} é o seu trabalho de todo dia — e o quartel toma o dia`, alternativas: [
-          ...(podeTocarNasHorasVagas(v, n) ? [{ larga: 'negocio_paralelo', texto: `deixar ${n.nome} com ${(n.equipe?.length ?? 0) > 0 ? 'a equipe' : n.socioId ? 'o sócio' : 'a família'} durante o serviço`, consequencia: `${n.nome} segue sem você no dia a dia: o movimento cai.` }] : []),
-          { larga: 'negocio_fechar', texto: `fechar ${n.nome}`, consequencia: `${n.nome} fecha as portas.` }
+          ...(podeTocarNasHorasVagas(v, n) ? [{ larga: 'negocio_paralelo', texto: `deixar ${n.nome} com ${(n.equipe?.length ?? 0) > 0 ? 'a equipe' : socioVivo(v, n) ? 'o sócio' : 'a família'} durante o serviço`, consequencia: `${n.nome} segue sem você no dia a dia: o movimento cai.` }] : []),
+          { larga: 'negocio_fechar', texto: presencaDe(n) === 'online' ? `tirar ${n.nome} do ar` : `fechar ${n.nome}`, consequencia: `${n.nome} ${fechaAs(n)}.` }
         ] });
       }
       break;
@@ -231,7 +232,8 @@ export function descreverOferta(v: Vida, novo: NovoCompromisso): { oferta: strin
     }
     case 'dedicar_negocio': {
       const n = negocioAberto(v);
-      return { oferta: `Dedicar-se de vez a ${n?.nome ?? 'o negócio'}.`, curto: n?.nome ?? 'o negócio', motivo: `para se dedicar a ${n?.nome ?? 'o negócio'}` };
+      const ao = n ? `${negocioFeminino(n.nome) ? 'à' : 'ao'} ${n.nome}` : 'ao negócio';
+      return { oferta: `Dedicar-se de vez ${ao}.`, curto: n?.nome ?? 'o negócio', motivo: `para se dedicar ${ao}` };
     }
     case 'servico_militar': return { oferta: 'A convocação para o serviço militar chegou: doze meses de quartel.', curto: 'o serviço militar', motivo: 'para servir' };
   }
@@ -260,7 +262,7 @@ export function planosDeConflito(v: Vida, novo: NovoCompromisso, conflitos: Conf
   }
   if (recusavel(novo)) {
     const fica = listaNatural(conflitos.map(c => c.rotulo));
-    planos.push({ texto: novo.tipo === 'negocio' ? 'Não abrir agora' : novo.tipo === 'emprego' && novo.via === 'concurso' ? 'Não tomar posse' : `Recusar ${curto}`, consequencias: [impede ? `${impede.motivo}.` : `Fica tudo como está: ${fica}.`], larga: [], recusa: true });
+    planos.push({ texto: novo.tipo === 'negocio' ? 'Não abrir agora' : novo.tipo === 'dedicar_negocio' ? 'Seguir como está' : novo.tipo === 'emprego' && novo.via === 'concurso' ? 'Não tomar posse' : `Recusar ${curto}`, consequencias: [impede ? `${impede.motivo}.` : `Fica tudo como está: ${fica}.`], larga: [], recusa: true });
   }
   // Planos iguais (mesmo texto) não aparecem duas vezes.
   return planos.filter((p, k) => planos.findIndex(q => q.texto === p.texto) === k).slice(0, 4);
@@ -273,6 +275,13 @@ export function planosDeConflito(v: Vida, novo: NovoCompromisso, conflitos: Conf
  * fica pendente — e a pergunta abre (`conteudo/compromissos`).
  */
 export function propor(v: Vida, r: Rng, novo: NovoCompromisso): 'feito' | 'pendente' | 'perdido' {
+  // A convocação não espera e não se recusa: uma escolha que estava em aberto passa (e fica dito).
+  if (v.caminhos.pendente && novo.tipo === 'servico_militar') {
+    const antes = descreverOferta(v, v.caminhos.pendente.novo);
+    escrever(v, { texto: `${cap(antes.curto)} chegou junto com a convocação para o serviço militar — e o quartel não espera: a outra oferta passou.`, relevancia: 'biografia', tema: 'trabalho' });
+    v.caminhos.pendente = undefined;
+    if (v.momento?.situacaoId === 'comp_conflito') v.momento = null;
+  }
   const conflitos = analisarEntrada(v, novo);
   if (!conflitos.length) { aplicarNovo(v, r, novo, false); return 'feito'; }
   const d = descreverOferta(v, novo);
@@ -301,6 +310,12 @@ export function resolverPendente(v: Vida, r: Rng, k: number): string {
   if (plano.recusa) {
     escrever(v, { texto: textoDaRecusa(v, p.novo, curto), relevancia: p.novo.tipo === 'base' || p.novo.tipo === 'contrato_esporte' || (p.novo.tipo === 'emprego' && p.novo.via === 'concurso') ? 'marco' : 'biografia', tema: p.novo.tipo === 'base' ? 'lazer' : 'trabalho', escolha: true });
     return plano.consequencias[0] ?? 'Ficou tudo como estava.';
+  }
+  // A pergunta pode ter ficado velha: se agora algo impede a entrada (o quartel, por exemplo), nada é largado.
+  const impede = analisarEntrada(v, p.novo).find(c => c.impede);
+  if (impede) {
+    escrever(v, { texto: `${cap(curto)} já não cabia: ${impede.motivo.charAt(0).toLowerCase() + impede.motivo.slice(1)}.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    return `${impede.motivo}.`;
   }
   for (const id of plano.larga) largar(v, id, motivo, p.novo);
   aplicarNovo(v, r, p.novo, plano.larga.includes('negocio_nas_horas_vagas'));
@@ -406,6 +421,8 @@ function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: bool
 
 /* ============================================================== Utilidades */
 
+/** "fecha as portas" / "sai do ar": loja on-line não tem porta. */
+const fechaAs = (n: Negocio) => (presencaDe(n) === 'online' ? 'sai do ar' : 'fecha as portas');
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** O conflito pendente já está velho demais (a oferta expirou)? */

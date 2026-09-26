@@ -23,7 +23,7 @@ import { municipio, nivelDeOferta } from '../dados/lugares';
 import { forcaDoSetor } from '../dados/mercado';
 import { habilidade } from './frentes';
 import { marcar } from './marcas';
-import { contratar, elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPropria } from './trabalho';
+import { elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPropria } from './trabalho';
 import { mediaEscolar } from './frentes';
 import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
@@ -236,9 +236,10 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       if (!temFato(v, 'primeiro_emprego')) { marcarFato(v, 'primeiro_emprego'); marcar(v, 'primeiro_emprego', `Primeiro trabalho: temporário ${agro ? 'na colheita' : 'no comércio'}, aos ${idade(v)}.`, 2, { trilha }); }
       const efetivado = !agro && r.chance(0.3 + v.personalidade.tracos.disciplina / 300);
       if (efetivado) {
-        const e = contratar(v, r, ocupacao('atendente'), 'temporario');
-        escrever(v, { texto: `O temporário de fim de ano virou efetivação: atendente em ${e.empregador}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
-        return { texto: 'Três meses de correria — e em janeiro chamaram para ficar.', tom: 'bom' };
+        // A efetivação é uma vaga como qualquer outra: se não cabe com o que já existe, o jogo pergunta.
+        escrever(v, { texto: 'O temporário de fim de ano acabou em convite para ficar.', relevancia: 'cotidiano', tema: 'trabalho', tom: 'bom' });
+        const res = propor(v, r, { tipo: 'emprego', ocupacaoId: 'atendente', via: 'temporario', texto: 'Em janeiro, a loja chamou para ficar: atendente, de carteira assinada.' });
+        return { texto: res === 'feito' ? 'Três meses de correria — e em janeiro chamaram para ficar.' : 'Três meses de correria — e um convite para ficar.', tom: 'bom' };
       }
       escrever(v, { texto: agro ? 'Trabalhou três meses na colheita. Dinheiro no bolso e as costas doendo.' : 'Trabalhou como temporário no fim de ano. Em janeiro, o contrato acabou.', relevancia: 'biografia', tema: 'trabalho', escolha: true });
       return { texto: 'Três meses de trabalho, dinheiro no bolso. Depois, acabou.' };

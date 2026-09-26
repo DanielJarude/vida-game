@@ -61,6 +61,8 @@ export const estrategiaDe = (n: Negocio): EstrategiaNegocio => {
 };
 export const tem = (n: Negocio, melhoria: string) => (n.melhorias ?? []).includes(melhoria);
 export const nivelDe = (n: Negocio, prefixo: string) => (n.melhorias ?? []).filter(m => m.startsWith(prefixo)).length;
+/** O sócio ainda está na vida (vivo): quem toca, divide o dia a dia, aparece. A parte de quem morreu segue com os herdeiros. */
+export const socioVivo = (v: Vida, n: Negocio) => !!n.socioId && !!v.pessoas[n.socioId]?.vivo;
 export const parteDoSocio = (n: Negocio) => (n.socioId ? n.parteSocio ?? 0.5 : 0);
 export const dedicacaoDe = (n: Negocio) => n.dedicacao ?? 'integral';
 
@@ -193,9 +195,9 @@ function nomeDoNegocio(v: Vida, t: TipoNegocio): string {
 /* ------------------------------------------------------- Dedicação */
 
 /** Dá para tocar nas horas vagas sem que o negócio pare? (alguém no balcão, ou um negócio que não depende de balcão) */
-export function podeTocarNasHorasVagas(_v: Vida, n: Negocio): boolean {
+export function podeTocarNasHorasVagas(v: Vida, n: Negocio): boolean {
   const p = presencaDe(n);
-  return p === 'online' || p === 'atendimento' || !!n.emCasa || (n.equipe?.length ?? 0) > 0 || !!n.socioId;
+  return p === 'online' || p === 'atendimento' || !!n.emCasa || (n.equipe?.length ?? 0) > 0 || socioVivo(v, n);
 }
 
 /** Passa a tocar o negócio nas horas vagas (o emprego de dono acaba; o negócio continua seu). */
@@ -203,8 +205,8 @@ export function passarParaHorasVagas(v: Vida, n: Negocio, motivo = ''): void {
   if (dedicacaoDe(n) === 'paralela') return;
   n.dedicacao = 'paralela';
   if (v.trabalho.atual?.ocupacaoId === n.ocupacaoId) encerrarEmprego(v, 'passou o negócio para as horas vagas');
-  const quem = (n.equipe?.length ?? 0) > 0 ? ', com a equipe no dia a dia' : n.socioId && v.pessoas[n.socioId] ? `, com ${v.pessoas[n.socioId].nome} no dia a dia` : '';
-  escrever(v, { texto: `${n.nome} passou a ser tocado nas horas vagas${quem}${motivo ? ` ${motivo}` : ''}.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
+  const quem = (n.equipe?.length ?? 0) > 0 ? ', com a equipe no dia a dia' : socioVivo(v, n) ? `, com ${v.pessoas[n.socioId!].nome} no dia a dia` : '';
+  escrever(v, { texto: `${n.nome} passou a ser ${fem(n.nome, 'tocado')} nas horas vagas${quem}${motivo ? ` ${motivo}` : ''}.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
 }
 
 /** Passa a se dedicar só ao negócio (quem chama já resolveu o emprego de antes). */
@@ -230,7 +232,8 @@ export const EQUIPE_MAXIMA = [0, 2, 4, 7];
 export const tamanhoDaEquipe = (n: Negocio) => n.equipe?.length ?? 0;
 
 /** Até onde o movimento chega com a gente que há: sozinho, ninguém atende uma casa cheia. */
-export function tetoDoMovimento(n: Negocio): number {
+export function tetoDoMovimento(n: Negocio, v?: Vida): number {
+  const socio = v ? socioVivo(v, n) : !!n.socioId;
   const eq = tamanhoDaEquipe(n);
   const porte = n.porte ?? 1;
   const estrutura = nivelDe(n, 'estrutura') * 6;
@@ -240,8 +243,8 @@ export function tetoDoMovimento(n: Negocio): number {
   else if (porte === 2) teto = 38 + eq * 18 + estrutura;
   else teto = 26 + eq * 12 + estrutura;
   // Nas horas vagas, sem ninguém no dia a dia, um negócio de porta aberta abre pouco.
-  if (dedicacaoDe(n) === 'paralela' && eq === 0 && !n.socioId && presencaDe(n) === 'rua' && !n.emCasa) teto = Math.min(teto, 40);
-  if (dedicacaoDe(n) === 'paralela' && eq === 0 && !n.socioId && presencaDe(n) !== 'rua') teto = Math.min(teto, 55);
+  if (dedicacaoDe(n) === 'paralela' && eq === 0 && !socio && presencaDe(n) === 'rua' && !n.emCasa) teto = Math.min(teto, 40);
+  if (dedicacaoDe(n) === 'paralela' && eq === 0 && !socio && presencaDe(n) !== 'rua') teto = Math.min(teto, 55);
   return Math.round(clamp(teto, 0, 100));
 }
 
@@ -317,7 +320,7 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
     else {
       // O dia de dono acabou por outro caminho (aposentadoria parcial, mandato, um trabalho novo que veio de fora): o negócio segue, nas horas vagas.
       n.dedicacao = 'paralela';
-      escrever(v, { texto: `${n.nome} seguiu aberto, agora nas horas vagas.`, relevancia: 'cotidiano', tema: 'trabalho' });
+      escrever(v, { texto: `${n.nome} seguiu ${fem(n.nome, 'aberto')}, agora nas horas vagas.`, relevancia: 'cotidiano', tema: 'trabalho' });
     }
   }
   const integral = dedicacaoDe(n) === 'integral' && !n.passivo && e?.ocupacaoId === n.ocupacaoId;
@@ -341,10 +344,10 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
     const t = tipoDoNegocio(n);
     const hab = t?.dominio ? habilidade(v, t.dominio) : 55;
     const exp = Math.max(...(t?.trilhas ?? ['comercio']).map(tr => experienciaNaTrilha(v, tr))) / 12;
-    const horas = n.passivo || equipe >= 2 || n.socioId ? -0.5 : presencaDe(n) === 'online' || n.emCasa ? -1 : -2.5;
+    const horas = n.passivo || equipe >= 2 || socioVivo(v, n) ? -0.5 : presencaDe(n) === 'online' || n.emCasa ? -1 : -2.5;
     base += (hab - 50) / 14 + Math.min(3, exp / 4) + v.personalidade.tracos.sociabilidade / 60 - Math.max(0, n.clientela - 70) / 6 + 0.5 + horas;
   }
-  const nova = Math.round(clamp(base + extra + (r ? r.normal() * 2 : 0), 0, tetoDoMovimento(n)));
+  const nova = Math.round(clamp(base + extra + (r ? r.normal() * 2 : 0), 0, tetoDoMovimento(n, v)));
   n.clientela = nova;
   if (integral) {
     e!.clientela = nova;
@@ -449,7 +452,11 @@ function anoDaEquipe(v: Vida, r: Rng, n: Negocio): void {
   }
 }
 
-export const em = (nome: string) => `n${/^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/.test(nome) || / (Tecnologia|Contabilidade|Construções)$/.test(nome) ? 'a' : 'o'} ${nome}`;
+/** O nome do negócio é feminino? ("a Lanchonete da Esquina", "a Souza Construções"; "o Salão Ana", "o Estúdio Rui"). */
+export const negocioFeminino = (nome: string) => /^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/.test(nome) || / (Tecnologia|Contabilidade|Construções)$/.test(nome);
+/** Concorda um particípio com o nome do negócio: fem('Lanchonete X', 'aberto') → 'aberta'. */
+export const fem = (nome: string, masc: string) => (negocioFeminino(nome) ? masc.replace(/o$/, 'a') : masc);
+export const em = (nome: string) => `n${negocioFeminino(nome) ? 'a' : 'o'} ${nome}`;
 
 /* ------------------------------------------------------ Gente e porte */
 
@@ -695,14 +702,14 @@ export function negociosPossiveis(v: Vida): { t: TipoNegocio; veredito: Veredito
 export function leituraDoNegocio(v: Vida, n: Negocio): { movimento: string; caixa: string; gente: string; reputacao: string; medidor: string; palavra: string; dedicacao: string } {
   const pal = PALAVRAS[presencaDe(n)];
   const c = n.clientela;
-  const teto = tetoDoMovimento(n);
+  const teto = tetoDoMovimento(n, v);
   const k = faixa(c);
   const limite = c >= teto - 2 && teto < 100 ? ` ${pal.limite[tamanhoDaEquipe(n) === 0 ? 0 : 1]}` : '';
   const r = n.resultadoAno;
   const paralela = dedicacaoDe(n) === 'paralela';
   const caixa = r === undefined ? 'Ainda sem um ano fechado.' : r < 0 ? `O último ano fechou no vermelho (${fmt(-r)}).` : r < 3000 ? 'O último ano empatou, mais ou menos.' : paralela ? `O último ano sobrou ${fmt(r)} no caixa.` : `O último ano sobrou ${fmt(r)} depois da sua retirada.`;
   const eq = tamanhoDaEquipe(n);
-  const gente = eq === 0 ? (paralela ? (n.socioId && v.pessoas[n.socioId] ? `${v.pessoas[n.socioId].nome} toca o dia a dia; você, as horas vagas.` : 'Só você, nas horas vagas.') : 'Só você toca tudo.') : eq === 1 ? `Você e ${v.pessoas[n.equipe![0].pessoaId]?.nome ?? 'mais uma pessoa'}.` : `Você e mais ${eq} pessoas.`;
+  const gente = eq === 0 ? (paralela ? (socioVivo(v, n) ? `${v.pessoas[n.socioId!].nome} toca o dia a dia; você, as horas vagas.` : 'Só você, nas horas vagas.') : 'Só você toca tudo.') : eq === 1 ? `Você e ${v.pessoas[n.equipe![0].pessoaId]?.nome ?? 'mais uma pessoa'}.` : `Você e mais ${eq} pessoas.`;
   const rep = n.reputacao ?? 40;
   const reputacao = pal.reputacao[rep < 30 ? 0 : rep < 55 ? 1 : rep < 75 ? 2 : 3];
   const dedicacao = n.passivo ? 'nas mãos da equipe (você está afastado)' : paralela ? 'nas horas vagas' : 'o trabalho de todo dia';
