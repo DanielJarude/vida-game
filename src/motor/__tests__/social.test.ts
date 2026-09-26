@@ -237,7 +237,7 @@ describe('filhos têm vida própria (sem rodar o motor do jogador)', () => {
 
   it('carreira não fica congelada sem razão', () => {
     let observados = 0;
-    for (let s = 1; s <= 10; s++) {
+    for (let s = 1; s <= 14 && observados < 8; s++) { // vidas que terminam cedo não contam: mais sementes, mesmo critério
       let v = adulto(55, { semente: s * 5 });
       const f = comFilho(v, 26, { casa: false }).p;
       f.formacao = 'Ciência da Computação';
