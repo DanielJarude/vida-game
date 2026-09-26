@@ -8,7 +8,7 @@
  */
 
 import type { Rng } from './rng';
-import type { Convivio, Genero, Parentesco, Pessoa, Vida, Vinculo, Visual } from './tipos';
+import type { Convivio, Especie, Genero, Parentesco, Pessoa, Vida, Vinculo, Visual } from './tipos';
 import { novoId, temperamentoAleatorio } from './nucleo';
 import { sortearNome, sortearSobrenome } from './dados/nomes';
 import { anoDe } from './tempo';
@@ -61,7 +61,7 @@ export interface NovaPessoa {
   municipioId: string;
   ocupacao?: string;
   renda?: number;
-  especie?: 'cachorro' | 'gato';
+  especie?: Especie;
   nome?: string;
   visual?: Visual;
 }

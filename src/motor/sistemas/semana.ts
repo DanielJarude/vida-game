@@ -19,6 +19,7 @@ import { economiaLocal } from '../dados/lugares';
 import { curso } from '../dados/cursos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { listaNatural } from '../texto';
+import { animal } from '../dados/animais';
 import { modeloRotina, nivelDa, nivelModelo } from './rotinas';
 import { pesoDoRitmoNaSemana, ritmoDe } from './ritmo';
 import { semanaDaPolitica } from './politica';
@@ -108,10 +109,15 @@ export function semana(v: Vida): Semana {
     });
     if (cuidar.length && !(pa && cuidar.some(p => p.id === pa.pessoaId))) fixos.push({ id: 'cuidar', rotulo: `Cuidar de ${listaNatural(cuidar.map(p => p.nome))}`, peso: 0.5 * cuidar.length, tipo: 'cuidado' });
   }
-  // Um cachorro pede passeio todo dia (quem cuida é a casa inteira, mas o tempo sai de alguém).
+  // Bicho pede tempo: o passeio do cachorro todo dia, a conversa com o papagaio, a gaiola, o aquário (quem cuida é a casa inteira, mas o tempo sai de alguém).
   if (i >= 18) {
-    const caes = vinculosVivos(v).filter(x => x.p.especie === 'cachorro' && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu').map(x => x.p);
-    if (caes.length) fixos.push({ id: 'pets', rotulo: caes.length === 1 ? `Passear com ${caes[0].nome}` : `Passear com ${listaNatural(caes.map(p => p.nome))}`, peso: Math.min(0.5, 0.25 * caes.length) * (moraCom(v).some(p => idadePessoa(v, p) >= 12) ? 0.5 : 1), tipo: 'cuidado' });
+    const bichos = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu' && animal(x.p.especie).semana > 0).map(x => x.p);
+    if (bichos.length) {
+      const peso = Math.min(0.75, bichos.reduce((s, p) => s + animal(p.especie).semana, 0)) * (moraCom(v).some(p => idadePessoa(v, p) >= 12) ? 0.5 : 1);
+      const caes = bichos.filter(p => p.especie === 'cachorro');
+      const rotulo = caes.length === bichos.length ? (caes.length === 1 ? `Passear com ${caes[0].nome}` : `Passear com ${listaNatural(caes.map(p => p.nome))}`) : `Cuidar de ${listaNatural(bichos.map(p => p.nome))}`;
+      if (peso >= 0.05) fixos.push({ id: 'pets', rotulo, peso: Math.round(peso * 100) / 100, tipo: 'cuidado' });
+    }
   }
   const temConducao = v.financas.bens.some(x => x.tipo === 'veiculo' && !x.modeloId.startsWith('bike') && veiculoUtil(x));
   const transporte = economiaLocal(v.moradia.municipioId).transporte;

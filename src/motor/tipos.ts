@@ -58,8 +58,8 @@ export interface Pessoa {
   estudo?: { curso: string; paga: 'publica' | 'familia' | 'fies' | 'bolsa' | 'propria'; tFim: number; nivel?: 'tecnico' | 'superior' };
   /** Formou-se em (nome do curso). */
   formacao?: string;
-  /** Pet: animal, não gente. Nunca conversa, nunca namora. */
-  especie?: 'cachorro' | 'gato';
+  /** Pet: animal, não gente. Nunca conversa, nunca namora. As espécies e o que as distingue moram em `dados/animais`. */
+  especie?: Especie;
   /** O que só um animal tem: de onde veio, de quem é, como está. */
   pet?: InfoPet;
   /** Pai e mãe (ids; `'eu'` é o jogador). Mantém a árvore da família coerente entre gerações. */
@@ -72,11 +72,26 @@ export interface Pessoa {
   gestacao?: { tParto: number; outroId?: string; anunciada: boolean };
 }
 
+/**
+ * Espécies que podem morar com alguém no Brasil sem crime: as domésticas
+ * (Portaria IBAMA 93/1998) e as silvestres só de criadouro autorizado, com
+ * nota e marcação. A lista, a vida típica e o cuidado de cada uma moram em
+ * `dados/animais`.
+ */
+export type Especie =
+  | 'cachorro' | 'gato'
+  | 'calopsita' | 'periquito' | 'canario' | 'papagaio'
+  | 'hamster' | 'porquinho' | 'coelho' | 'chinchila'
+  | 'peixe' | 'betta'
+  | 'jabuti' | 'iguana';
+
 /** Um animal da casa. Não é patrimônio: é alguém que mora junto e depende de cuidado. */
 export interface InfoPet {
   porte: 'pequeno' | 'medio' | 'grande';
-  /** Como chegou: abrigo, alguém que doou, ninhada, rua, criador, já era da família. */
-  origem: 'abrigo' | 'doacao' | 'ninhada' | 'rua' | 'criador' | 'familia';
+  /** Como chegou: abrigo, alguém que doou, ninhada, rua, criador (ou loja autorizada), já era da família. */
+  origem: 'abrigo' | 'doacao' | 'ninhada' | 'rua' | 'criador' | 'familia' | 'loja' | 'ilegal';
+  /** Silvestre de criadouro autorizado: veio com nota fiscal e marcação (anilha ou microchip). */
+  documentado?: boolean;
   tChegada: number;
   /** Quem cuida: o jogador ou a família de origem (o cachorro da casa dos pais). */
   tutor: 'eu' | 'familia';
@@ -720,7 +735,8 @@ export interface Momento {
   tema: Tema;
   /** Pessoas envolvidas, por papel. */
   papeis: Record<string, string>;
-  opcoes: { id: string; texto: string; bloqueio?: string }[];
+  /** `detalhe`: o que a escolha muda, dito ANTES de escolher ("a faculdade fica trancada"). */
+  opcoes: { id: string; texto: string; bloqueio?: string; detalhe?: string }[];
 }
 
 /* ------------------------------------------------------------------- Rotina */
@@ -896,8 +912,23 @@ export interface Negocio {
   equipe?: Funcionario[];
   /** Reputação, 0..100: o que se fala do negócio. Cresce com o tempo bem feito; cai com crise e demissão. */
   reputacao?: number;
-  /** O jeito de vender (mudar é decisão; cada um cobra e rende de um jeito). */
-  estrategia?: 'bairro' | 'qualidade' | 'preco' | 'online';
+  /**
+   * O jeito de vender (mudar é decisão; cada um cobra e rende de um jeito).
+   * Nem todo jeito existe para todo negócio: loja on-line não tem freguesia
+   * de bairro; consultório não vende em plataforma (`dados/negocios`).
+   */
+  estrategia?: EstrategiaNegocio;
+  /**
+   * Quanto da vida o negócio ocupa. `integral`: é o trabalho (o emprego de
+   * dono). `paralela`: tocado nas horas vagas, ao lado de outro trabalho ou
+   * do estudo — cresce mais devagar, não paga retirada fixa, pede parte da
+   * semana. Ausente = integral (saves antigos).
+   */
+  dedicacao?: 'integral' | 'paralela';
+  /** O que já foi feito no negócio e continua valendo (equipamento, especialidade, canal novo). */
+  melhorias?: string[];
+  /** Quanto do negócio é do sócio (0..1). Ausente com sócio = metade. */
+  parteSocio?: number;
   /** Abriu sem conhecer o ramo (o começo é mais duro, e o fracasso ensina). */
   semEstrada?: boolean;
   /** Empréstimo que financiou a abertura (fica, mesmo se o negócio fechar). */
@@ -909,6 +940,8 @@ export interface Negocio {
   /** Nas mãos da equipe (ou do sócio): o dono se afastou (um mandato, por exemplo) e só recebe o que sobra. */
   passivo?: boolean;
 }
+
+export type EstrategiaNegocio = 'bairro' | 'qualidade' | 'preco' | 'online' | 'escala' | 'marca';
 
 /** Alguém que trabalha no seu negócio. */
 export interface Funcionario {
@@ -985,6 +1018,44 @@ export interface Caminhos {
   politica?: VidaPolitica;
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
+  /**
+   * Uma trajetória nova que não cabe junto com o que já existe (a base e a
+   * faculdade, o negócio e o emprego): esperando o jogador decidir. O jogo
+   * nunca resolve isso sozinho (`sistemas/compromissos`).
+   */
+  pendente?: CompromissoPendente;
+}
+
+/** Algo que entraria na vida — e com o que conflita. */
+export type NovoCompromisso =
+  | { tipo: 'base'; dominio: Dominio; municipioId: string; clube: string }
+  | { tipo: 'contrato_esporte'; nivel: number }
+  | { tipo: 'emprego'; ocupacaoId: string; via: string; texto?: string; bonus?: number; extra?: 'rural_familia' | 'rural_arrendada' | 'arte'; pessoaId?: string }
+  | { tipo: 'negocio'; negocioId: string; modo: 'guardado' | 'pequeno' | 'emprestimo' | 'socio'; socioId?: string }
+  | { tipo: 'dedicar_negocio' }
+  | { tipo: 'servico_militar' };
+
+/** Um plano possível diante do conflito: o que se larga, o que se tenta conciliar. */
+export interface PlanoDeConflito {
+  texto: string;
+  /** O que acontece se escolher (dito antes). */
+  consequencias: string[];
+  /** Ids do que é deixado (`curso`, `emprego`, `base`, `negocio_fechar`, `negocio_paralelo`, `emprego_guardado`...). */
+  larga: string[];
+  /** Aceita tudo e segura a semana acima do que cabe. */
+  conciliar?: boolean;
+  /** Plano que não aceita o novo (quando recusar é possível, ele vem por último). */
+  recusa?: boolean;
+}
+
+export interface CompromissoPendente {
+  novo: NovoCompromisso;
+  t: number;
+  /** O que a vida está oferecendo, em palavras ("a base do Bahia"). */
+  oferta: string;
+  /** Com o que conflita, em palavras. */
+  conflitos: string[];
+  planos: PlanoDeConflito[];
 }
 
 export type Forca = 'exercito' | 'marinha' | 'aeronautica';
@@ -1008,6 +1079,8 @@ export interface CarreiraMilitar {
   transferencias: number;
   /** Último teste físico em que não passou (atrasa promoção). */
   tafFalhou?: number;
+  /** Emprego civil que ficou guardado durante o serviço inicial (Lei 4.375/1964, art. 60). */
+  empregoGuardado?: Emprego;
 }
 
 export type Especialidade = 'combatente' | 'saude' | 'manutencao' | 'comunicacoes' | 'administracao' | 'musica';
@@ -1114,7 +1187,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 12;
+  versao: 13;
   id: string;
   rng: number;
   seq: number;
@@ -1188,4 +1261,10 @@ export interface Retorno {
   titulo?: string;
   /** Quem aparece na folha do resultado. */
   pessoaId?: string;
+  /**
+   * O que a ação mudou na vida, como ficou escrito na Linha da Vida (as
+   * consequências, não só a escolha): "Trancou a faculdade", "Deixou o
+   * emprego de vendedor". Nada biográfico muda escondido no estado.
+   */
+  mudancas?: string[];
 }

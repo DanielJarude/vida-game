@@ -34,6 +34,7 @@ import { expressaoDe, momentoAtual, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
 import { faseDaVida } from '../apresentar';
 import { emCasa, sinaisSociais } from '../leitura';
+import { doClube } from '../../motor/dados/clubes';
 
 export type Aba = 'vida' | 'voce' | 'pessoas' | 'trabalho' | 'rumo' | 'casa' | 'tempo';
 
@@ -172,7 +173,7 @@ function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPar
   const andamento: string[] = processos.map(p => (p.tipo === 'cnh' ? 'Autoescola' : p.tipo === 'adocao' ? 'Processo de adoção' : p.tipo === 'tratamento' ? 'Na fila de tratamento do SUS' : 'Mudança marcada'));
   if (vida.trabalho.candidaturas.length) andamento.push('Esperando o resultado do concurso');
   if (vida.trabalho.atual?.formacaoAte) andamento.push(`Curso de formação até ${anoDe(vida.trabalho.atual.formacaoAte)}`);
-  if (vida.caminhos.esporte?.fase === 'base') andamento.push(`Na base do ${vida.caminhos.esporte.clube}`);
+  if (vida.caminhos.esporte?.fase === 'base') andamento.push(`Na base ${doClube(vida.caminhos.esporte.clube)}`);
   if (vida.caminhos.politica?.campanha) andamento.push(`Em campanha até outubro de ${anoDe(vida.caminhos.politica.campanha.tEleicao)}`);
   const portas = vida.caminhos.oportunidades.filter(o => o.tFim > vida.t);
   return (

@@ -12,7 +12,8 @@
  */
 
 import { criarRng, type Rng } from '../rng';
-import type { Vida } from '../tipos';
+import { ANIMAIS, animal } from '../dados/animais';
+import type { Especie, Vida } from '../tipos';
 import { anoDe } from '../tempo';
 import { economiaLocal, municipio } from '../dados/lugares';
 import { MORADIAS, VEICULOS, depreciacao, modeloMoradia, modeloVeiculo, precoImovel, type ModeloMoradia, type ModeloVeiculo } from '../dados/bens';
@@ -171,7 +172,7 @@ export function ofertaVeiculoPorModelo(v: Vida, modeloId: string, usado?: boolea
 
 export interface AnimalDoAbrigo {
   id: string;
-  especie: 'cachorro' | 'gato';
+  especie: Especie;
   nome: string;
   genero: 'masculino' | 'feminino';
   idade: number;
@@ -211,7 +212,7 @@ const NOMES: Record<'cachorro' | 'gato', [string[], string[]]> = {
 };
 
 /** Um nome de bicho que combina com o gênero dele. */
-export const nomeDePet = (r: Rng, especie: 'cachorro' | 'gato', genero: 'masculino' | 'feminino' | 'nao_binario') => r.pick(NOMES[especie][genero === 'feminino' ? 1 : 0]);
+export const nomeDePet = (r: Rng, especie: Especie, genero: 'masculino' | 'feminino' | 'nao_binario') => r.pick(especie === 'cachorro' || especie === 'gato' ? NOMES[especie][genero === 'feminino' ? 1 : 0] : animal(especie).nomes[genero === 'feminino' ? 1 : 0]);
 
 export function animaisDoAbrigo(v: Vida): AnimalDoAbrigo[] {
   const ano = anoDe(v.t);
@@ -220,6 +221,14 @@ export function animaisDoAbrigo(v: Vida): AnimalDoAbrigo[] {
   const out: AnimalDoAbrigo[] = [];
   const usados = new Set<string>();
   for (let k = 0; k < n; k++) {
+    // Abrigo recebe sobretudo cães e gatos; às vezes, um coelho ou um porquinho-da-índia abandonado.
+    if (r.chance(0.08)) {
+      const esp: Especie = r.chance(0.5) ? 'coelho' : 'porquinho';
+      const a = animal(esp);
+      const genero = r.chance(0.5) ? 'masculino' : 'feminino';
+      out.push({ id: `ab-${ano}-${k}`, especie: esp, nome: r.pick(a.nomes[genero === 'feminino' ? 1 : 0]), genero, idade: r.int(1, 3), porte: 'pequeno', jeito: r.pick(a.jeitos)[genero === 'feminino' ? 1 : 0], historia: genero === 'feminino' ? 'deixada numa caixa na porta do abrigo' : 'deixado numa caixa na porta do abrigo' });
+      continue;
+    }
     const especie = r.chance(0.58) ? 'cachorro' : 'gato';
     const genero = r.chance(0.5) ? 'masculino' : 'feminino';
     const g = genero === 'feminino' ? 1 : 0;
@@ -235,3 +244,37 @@ export function animaisDoAbrigo(v: Vida): AnimalDoAbrigo[] {
 }
 
 export const animalDoAbrigo = (v: Vida, id: string) => animaisDoAbrigo(v).find(a => a.id === id);
+
+/**
+ * A loja de animais e os criadouros autorizados da cidade, neste ano: só
+ * espécies que se podem ter legalmente. Silvestre nativo (papagaio, jabuti,
+ * iguana) só de criadouro autorizado — com nota fiscal e marcação.
+ */
+export interface OfertaDePet extends AnimalDoAbrigo { preco: number; origem: 'loja' | 'criador'; documentos?: string }
+
+export function ofertasDePets(v: Vida): OfertaDePet[] {
+  const ano = anoDe(v.t);
+  const r = rngDe(v, `pets:${ano}:${v.moradia.municipioId}`);
+  const c = Math.sqrt(economiaLocal(v.moradia.municipioId).custo);
+  const out: OfertaDePet[] = [];
+  const especies = ANIMAIS.filter(a => a.origens.includes('loja') || a.origens.includes('criadouro'));
+  const escolhidas = [...especies];
+  for (let k = escolhidas.length - 1; k > 0; k--) { const j = r.int(0, k); [escolhidas[k], escolhidas[j]] = [escolhidas[j], escolhidas[k]]; }
+  escolhidas.length = Math.min(6, escolhidas.length);
+  // Silvestres de criadouro só aparecem em cidade com esse comércio (ou por encomenda, nas capitais).
+  const grande = ['metropole', 'capital', 'metropolitana'].includes(municipio(v.moradia.municipioId).perfil);
+  for (const [k, a] of escolhidas.entries()) {
+    if (a.silvestre && !grande) continue;
+    const genero = r.chance(0.5) ? 'masculino' : 'feminino';
+    const g = genero === 'feminino' ? 1 : 0;
+    out.push({
+      id: `pt-${ano}-${k}`, especie: a.id, nome: r.pick(a.nomes[g]), genero, idade: a.grupo === 'reptil' ? r.int(0, 2) : 0, porte: 'pequeno',
+      jeito: r.pick(a.jeitos)[g], historia: a.silvestre ? 'de um criadouro autorizado' : 'nascido em criador', preco: Math.round(r.int(a.preco[0], a.preco[1]) * c / 10) * 10,
+      origem: a.origens.includes('criadouro') && (a.silvestre || !a.origens.includes('loja')) ? 'criador' : 'loja',
+      documentos: a.silvestre ? 'Nota fiscal, marcação (anilha ou microchip) e o registro do criadouro no IBAMA.' : undefined
+    });
+  }
+  return out;
+}
+
+export const ofertaDePet = (v: Vida, id: string) => ofertasDePets(v).find(o => o.id === id);

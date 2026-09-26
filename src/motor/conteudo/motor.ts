@@ -102,7 +102,8 @@ export function abrirDecisao(v: Vida, d: Decisao, ctx: Ctx): Momento {
     .map(o => {
       const disp = o.disponivel ? o.disponivel(ctx) : true;
       if (disp === false) return null;
-      return { id: o.id, texto: txt(o.texto, ctx), bloqueio: disp === true ? undefined : disp };
+      const detalhe = o.consequencia?.(ctx);
+      return { id: o.id, texto: txt(o.texto, ctx), bloqueio: disp === true ? undefined : disp, ...(detalhe ? { detalhe } : {}) };
     })
     .filter((o): o is NonNullable<typeof o> => o !== null);
   const m: Momento = {
@@ -156,5 +157,13 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
   v.momento = null;
   // Processo em etapas: a mesma decisão volta, com a próxima pergunta.
   if (res.reabrir) abrirDecisao(v, d, contexto(v, r, p));
+  else if (res.abrir || (v.caminhos.pendente && !v.momento)) {
+    const alvo = res.abrir ? conteudoPorId(res.abrir.id) : conteudoPorId('comp_conflito');
+    if (alvo && alvo.tipo === 'decisao') {
+      const q: Record<string, Pessoa> = {};
+      for (const [papel, id] of Object.entries(res.abrir?.papeis ?? {})) if (v.pessoas[id]?.vivo) q[papel] = v.pessoas[id];
+      abrirDecisao(v, alvo, contexto(v, r, q));
+    }
+  }
   return { texto: res.texto };
 }

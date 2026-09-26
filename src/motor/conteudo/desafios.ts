@@ -11,6 +11,7 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import type { Rng } from '../rng';
 import type { Vida } from '../tipos';
 import { OCUPACOES, ocupacao, ocupacaoOuNula, type Ocupacao, type Setor } from '../dados/ocupacoes';
+import { propor } from '../sistemas/compromissos';
 import { contratar, elegibilidade, nomeOcupacao, tetoSalarial, textoDeContratacao } from '../sistemas/trabalho';
 import { avaliar, ctxEntrevista, escolherPerguntas, notaDaResposta, perguntaPorId, reacao, type Pergunta } from '../sistemas/entrevista';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
@@ -122,10 +123,13 @@ function concluirEntrevista(c: Ctx): Resultado {
   if (!podeTentar(d)) return { texto: 'Antes de o resultado sair, a vaga foi preenchida por dentro.', memoria: null, tom: 'ruim' };
   const a = avaliar(c.v, oc, d.chance ?? 0.4, pr.bonus, pr.etapas);
   if (c.r.chance(a.chance)) {
-    const e = contratar(c.v, c.r, oc, pr.via);
     const elogio = a.melhor ? ` Na ligação, disseram que ${a.melhor.bom}.` : '';
     registrarDevolutiva(c.v, { tipo: 'entrevista', titulo: `Entrevista para ${nome}`, texto: a.melhor ? `Passou. Disseram que ${a.melhor.bom}.` : 'Passou.', passou: true, ocupacaoId: oc.id });
-    return { texto: `Ligaram dois dias depois: a vaga é sua. ${nome.charAt(0).toUpperCase() + nome.slice(1)} em ${e.empregador}, R$ ${e.salario.toLocaleString('pt-BR')} por mês.${elogio}`, memoria: textoDeContratacao(c.v, oc, e), tom: 'bom', relevancia: 'marco' };
+    // A vaga é sua — se ela não couber com o que você já faz (a base, a faculdade do dia inteiro, o negócio), vem a pergunta.
+    const saiu = propor(c.v, c.r, { tipo: 'emprego', ocupacaoId: oc.id, via: pr.via, texto: `A vaga de ${nome} é sua.` });
+    const e = c.v.trabalho.atual;
+    if (saiu === 'feito' && e?.ocupacaoId === oc.id) return { texto: `Ligaram dois dias depois: a vaga é sua. ${nome.charAt(0).toUpperCase() + nome.slice(1)} em ${e.empregador}, R$ ${e.salario.toLocaleString('pt-BR')} por mês.${elogio}`, memoria: null, tom: 'bom' };
+    return { texto: `Ligaram dois dias depois: a vaga é sua.${elogio}`, memoria: null, tom: 'bom' };
   }
   const perto = a.chance >= 0.4;
   const motivo = a.falta === 'experiencia' ? 'seguiram com alguém de mais experiência'

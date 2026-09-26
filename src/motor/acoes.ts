@@ -13,7 +13,7 @@ import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade
 import { abrirDecisao, conteudoPorId, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso } from './sistemas/escola';
-import { eDasForcas, aposentar, contratar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria, textoDeContratacao } from './sistemas/trabalho';
+import { eDasForcas, aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria } from './sistemas/trabalho';
 import { inscrever, leituraDoPreparo } from './sistemas/concurso';
 import { aceitarOportunidade, recusarOportunidade } from './sistemas/oportunidades';
 import { abrirNegocio, podeAbrirNegocio } from './sistemas/negocio';
@@ -29,13 +29,14 @@ import { modeloMoradia, modeloVeiculo, VEICULO_ANTIGO } from './dados/bens';
 import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
 import { curso } from './dados/cursos';
 import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, rendaPropriaMensal, saldoMensal } from './sistemas/dinheiro';
-import { animalDoAbrigo, nomeImovel, ofertaDeImovel, ofertaDeVeiculo, ofertaPorModelo, ofertaVeiculoPorModelo } from './sistemas/mercado';
+import { animalDoAbrigo, nomeImovel, ofertaDeImovel, ofertaDePet, ofertaDeVeiculo, ofertaPorModelo, ofertaVeiculoPorModelo } from './sistemas/mercado';
 import { disponibilidadeVeiculo, executarVeiculo, textoVeiculo, valorDeVenda, type AcaoVeiculo } from './sistemas/veiculos';
 import { disponibilidadeImovel, executarImovel, valorDeVendaImovel, type AcaoImovel } from './sistemas/imoveis';
+import { disponibilidadeUsoCasa, disponibilidadeUsoVeiculo, executarUsoCasa, executarUsoVeiculo, rotuloUsoCasa, rotuloUsoVeiculo, type UsoCasa, type UsoVeiculo } from './sistemas/usos';
 import { aplicacao, aplicar, resgatar } from './sistemas/investimentos';
 import { PRODUTOS, produto } from './dados/investimentos';
 import { podeRenegociarFinanciamento, renegociarFinanciamento } from './sistemas/obrigacoes';
-import { adotarPet, disponibilidadeVeterinario, executarVeterinario, infoPet, podeTerPet, type OpcaoVeterinario } from './sistemas/pets';
+import { adotarPet, disponibilidadeVeterinario, entregarPet, executarVeterinario, infoPet, podeTerPet, type OpcaoVeterinario } from './sistemas/pets';
 import { juroDeFinanciamento } from './sistemas/economia';
 import { dinheiro as fmt } from './texto';
 import { moraComFamiliaDeOrigem } from './sistemas/domicilio';
@@ -48,6 +49,8 @@ import { formalizar } from './conteudo/trajetorias';
 import { disponibilidadeProfissao, executarProfissao, type AcaoProfissaoCmd } from './sistemas/profissao';
 import { NEGOCIOS } from './sistemas/negocio';
 import { disponibilidadePolitica, executarPolitica, type AcaoPoliticaCmd } from './sistemas/politica';
+import { abrirConflitoPendente } from './conteudo/compromissos';
+import { noServicoInicial, propor } from './sistemas/compromissos';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -88,6 +91,10 @@ export type Acao =
   | { tipo: 'vender_bem'; bemId: string }
   /** Oficina e cuidados de um veículo. */
   | { tipo: 'veiculo'; bemId: string; oque: AcaoVeiculo }
+  /** Viver com o veículo: passear, pegar a estrada, trabalhar com ele, emprestar. */
+  | { tipo: 'usar_veiculo'; bemId: string; oque: UsoVeiculo }
+  /** Viver a casa: festa, a família no domingo, deixar com a sua cara, reformar. */
+  | { tipo: 'usar_casa'; oque: UsoCasa }
   /** Reparo, aluguel para terceiros, morar num imóvel próprio. */
   | { tipo: 'imovel'; bemId: string; oque: AcaoImovel }
   | { tipo: 'investir'; destino: Produto; valor: number }
@@ -102,6 +109,10 @@ export type Acao =
   | { tipo: 'cnh' }
   /** Adotar um animal do abrigo da cidade. */
   | { tipo: 'adotar_pet'; animalId: string }
+  /** Comprar um animal numa loja ou criadouro autorizado (só espécies permitidas; silvestre com nota e marcação). */
+  | { tipo: 'comprar_pet'; ofertaId: string }
+  /** Entregar ao órgão ambiental um silvestre sem documento (sem multa, se espontâneo). */
+  | { tipo: 'entregar_pet'; petId: string }
   | { tipo: 'veterinario'; petId: string; opcao: OpcaoVeterinario }
   /** Levar o bicho que ficou na casa dos pais para a sua casa. */
   | { tipo: 'levar_pet'; petId: string }
@@ -185,7 +196,15 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (jaFez(v, `candidatura:${oc.id}`)) return bloqueio('incompativel', 'Você já tentou esta vaga neste ano.');
       return elegibilidade(v, oc);
     }
-    case 'pedir_demissao': return !v.trabalho.atual ? bloqueio('incompativel', 'Você não tem emprego.') : v.trabalho.atual.contrato === 'eletivo' ? bloqueio('impossivel', 'Mandato não se larga com carta de demissão: é renúncia, na vida política.') : PERMITIDO;
+    case 'pedir_demissao': {
+      const e = v.trabalho.atual;
+      if (!e) return bloqueio('incompativel', 'Você não tem emprego.');
+      if (e.contrato === 'eletivo') return bloqueio('impossivel', 'Mandato não se larga com carta de demissão: é renúncia, na vida política.');
+      // Serviço militar inicial: obrigatório (Lei 4.375/1964, art. 31) — largar é deserção. O temporário sai no fim de cada ano, na decisão de engajar ou dar baixa.
+      if (noServicoInicial(v)) return bloqueio('ilegal', 'O serviço militar inicial é obrigatório: são doze meses. Sair antes é deserção, crime militar. No fim do ano, dá para dar baixa ou engajar.');
+      if (e.contrato === 'militar' && v.caminhos.militar?.quadro === 'temporario') return bloqueio('incompativel', 'Temporário sai no fim de cada ano de serviço: a hora de dar baixa é a decisão de engajar ou não.');
+      return PERMITIDO;
+    }
     case 'horas_extras':
       if (a.parar) return v.trabalho.horasExtras ? PERMITIDO : bloqueio('incompativel', 'Não há horas extras combinadas.');
       if (!v.trabalho.atual || !['clt', 'servidor'].includes(v.trabalho.atual.contrato)) return bloqueio('incompativel', 'Só para quem tem emprego formal.');
@@ -263,6 +282,12 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const d = disponibilidadeImovel(v, b?.tipo === 'imovel' ? b : undefined, a.oque);
       return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
     }
+    case 'usar_veiculo': {
+      const b = v.financas.bens.find(x => x.id === a.bemId);
+      const d = disponibilidadeUsoVeiculo(v, b?.tipo === 'veiculo' ? b : undefined, a.oque);
+      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+    }
+    case 'usar_casa': { const d = disponibilidadeUsoCasa(v, a.oque); return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!); }
     case 'investir': {
       if (i < 18) return bloqueio('ilegal', 'Investir exige maioridade (ou um responsável).');
       const pr = PRODUTOS.find(x => x.id === (a.destino as string));
@@ -333,6 +358,19 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (jaFez(v, 'adotou_pet')) return bloqueio('incompativel', 'Um bicho novo por ano já é bastante.');
       const d = podeTerPet(v, an.especie, an.porte);
       return d.grau === 'permitido' ? PERMITIDO : d.grau === 'improvavel' ? { grau: 'improvavel', motivo: d.motivo, chance: 0.5 } : bloqueio(d.grau, d.motivo!);
+    }
+    case 'comprar_pet': {
+      const o = ofertaDePet(v, a.ofertaId);
+      if (!o) return bloqueio('impossivel', 'Esse animal já foi vendido.');
+      if (i < 18) return bloqueio('ilegal', 'Comprar um animal é coisa de adulto.');
+      if (jaFez(v, 'adotou_pet')) return bloqueio('incompativel', 'Um bicho novo por ano já é bastante.');
+      if (disponivel(v) < o.preco) return bloqueio('requisito', `Custa ${fmt(o.preco)}; você tem ${fmt(Math.max(0, disponivel(v)))}.`);
+      const d = podeTerPet(v, o.especie, o.porte);
+      return d.grau === 'permitido' ? PERMITIDO : d.grau === 'improvavel' ? { grau: 'improvavel', motivo: d.motivo, chance: 0.5 } : bloqueio(d.grau, d.motivo!);
+    }
+    case 'entregar_pet': {
+      const p = v.pessoas[a.petId];
+      return p?.especie && p.vivo && p.pet?.origem === 'ilegal' && v.vinculos[p.id] ? PERMITIDO : bloqueio('impossivel', 'Não se aplica.');
     }
     case 'veterinario': {
       const d = disponibilidadeVeterinario(v, v.pessoas[a.petId], a.opcao);
@@ -463,14 +501,18 @@ export function executar(vida: Vida, a: Acao): Retorno {
   let aviso: Retorno['aviso'];
   let titulo: string | undefined;
   let pessoaId: string | undefined;
+  const antes = vida.biografia.length;
   const { vida: nova } = transacao(vida, (v, r) => {
     const out = executarNaTransacao(v, r, a);
     resultado = out.resultado;
     aviso = out.aviso;
     titulo = out.titulo;
     pessoaId = out.pessoaId;
+    // Um conflito de trajetórias criado pela ação vira pergunta na hora (nunca fica resolvido em silêncio).
+    if (v.caminhos.pendente && !v.momento) abrirConflitoPendente(v, r);
   });
-  return { vida: nova, resultado, aviso, titulo, pessoaId: pessoaId ?? (a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined) };
+  const mudancas = nova.biografia.slice(antes).filter(e => e.relevancia !== 'tecnico').map(e => e.texto);
+  return { vida: nova, resultado, aviso, titulo, pessoaId: pessoaId ?? (a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined), ...(mudancas.length ? { mudancas } : {}) };
 }
 
 interface Saida { resultado?: string; aviso?: Retorno['aviso']; titulo?: string; pessoaId?: string }
@@ -529,6 +571,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         }
         return {};
       }
+      if (v.caminhos.pendente) return {};
       return ok(res.texto, res.tom ?? 'neutro');
     }
     case 'abrir_negocio': {
@@ -545,6 +588,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'politica': case 'profissao': {
       const res = a.tipo === 'politica' ? executarPolitica(v, r, a) : executarProfissao(v, r, a);
+      if (v.caminhos.pendente && !res.decisao) return {};
       if (res.decisao) {
         const d = conteudoPorId(res.decisao);
         if (d && d.tipo === 'decisao') {
@@ -601,8 +645,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         return { resultado: `Inscrição feita. A prova é daqui a alguns meses — o resultado sai no próximo ano. ${leituraDoPreparo(v, oc)}` };
       }
       if (porContaPropria(oc)) {
-        const e = contratar(v, r, oc, 'por_conta');
-        escrever(v, { texto: textoDeContratacao(v, oc, e), relevancia: 'marco', tema: 'trabalho', escolha: true });
+        if (propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'por_conta' }) !== 'feito') return {};
         return { resultado: `Você começou a pegar trabalho como ${nomeOcupacao(v, oc)}. No começo, a freguesia é pouca.` };
       }
       return abrirEntrevista(v, r, oc.id, 0, 'curriculo');
@@ -729,6 +772,15 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const b = v.financas.bens.find(x => x.id === a.bemId) as Veiculo;
       return { resultado: executarVeiculo(v, b, a.oque), titulo: a.oque === 'consertar' || a.oque === 'revisao' ? 'Na oficina' : undefined };
     }
+    case 'usar_veiculo': {
+      const b = v.financas.bens.find(x => x.id === a.bemId) as Veiculo;
+      const titulo = rotuloUsoVeiculo(v, b, a.oque);
+      return { resultado: executarUsoVeiculo(v, r, b, a.oque), titulo };
+    }
+    case 'usar_casa': {
+      const titulo = rotuloUsoCasa(v, a.oque);
+      return { resultado: executarUsoCasa(v, r, a.oque), titulo };
+    }
     case 'imovel': {
       const b = v.financas.bens.find(x => x.id === a.bemId) as Imovel;
       if (a.oque === 'morar') { morarNoImovel(v, b.id); escrever(v, { texto: `Foi morar ${b.herdado ? 'na casa da família' : `n${b.nome.startsWith('casa') ? 'a' : 'o'} ${b.nome} que era seu`}.`, relevancia: 'biografia', tema: 'casa', escolha: true }); return ok('Mudança feita.'); }
@@ -801,6 +853,17 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       v.anoAtual.acoes.push('adotou_pet');
       const pet = adotarPet(v, r, an, 'abrigo');
       return { resultado: `${pet.nome} chegou em casa. ${an.jeito.charAt(0).toUpperCase() + an.jeito.slice(1)}.`, titulo: 'Um bicho em casa', pessoaId: pet.id };
+    }
+    case 'comprar_pet': {
+      const o = ofertaDePet(v, a.ofertaId)!;
+      v.anoAtual.acoes.push('adotou_pet');
+      pagarTudo(v, o.preco);
+      const pet = adotarPet(v, r, o, o.origem);
+      return { resultado: `${pet.nome} chegou em casa. ${o.jeito.charAt(0).toUpperCase() + o.jeito.slice(1)}.${o.documentos ? ` Veio com os documentos: ${o.documentos.toLowerCase()}` : ''}`, titulo: 'Um bicho em casa', pessoaId: pet.id };
+    }
+    case 'entregar_pet': {
+      const p = v.pessoas[a.petId];
+      return { resultado: entregarPet(v, p), titulo: 'A entrega' };
     }
     case 'veterinario': {
       const p = v.pessoas[a.petId];

@@ -1,7 +1,8 @@
 /**
  * A vida política em processos. O mundo convida, a crise acontece, o
  * apoiador pede; a reação é sempre do jogador. Nada aqui tem lado: os
- * partidos são fictícios, as prioridades são metas de gestão, e as
+ * partidos são os reais, só pelo nome (`dados/partidos`), sem ideologia nem
+ * bônus; as prioridades são metas de gestão, e as
  * decisões são sobre COMO fazer política (rua, redes, alianças, barganha,
  * franqueza, atalho) — nunca sobre o que defender ideologicamente.
  */
@@ -17,11 +18,14 @@ import { abalar } from '../sistemas/abalo';
 import { marcar } from '../sistemas/marcas';
 import { valorDoNegocio } from '../sistemas/negocio';
 import {
-  CARGOS, criarAliado, custoDeCampanha, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, nomeCargo, ORDEM_CARGOS, ORIGENS, PARTIDOS,
-  podeConcorrer, registrarCandidatura, renunciar, voltarAoTrabalho
+  CARGOS, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, PARTIDOS,
+  podeConcorrer, PRIORIDADES, registrarCandidatura, renunciar, voltarAoTrabalho
 } from '../sistemas/politica';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt } from '../texto';
+import { aoPartido, nomeCompletoPartido, oPartido, partidoDe } from '../dados/partidos';
+
+const doPartido = (s: string) => { const p = partidoDe(s); return p ? `${p.artigo === 'a' ? 'da' : 'do'} ${p.chamado}` : 'do partido'; };
 
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] !== undefined && c.v.fatos[chave] === c.v.t;
 const pol = (c: Ctx) => c.v.caminhos.politica!;
@@ -41,7 +45,11 @@ const TEXTO_CONVITE: Record<VidaPolitica['origem'], (c: Ctx) => string> = {
   decisao: () => 'Você resolveu procurar a vida política.'
 };
 
-/** Os três partidos que a vida oferece nesta cidade, neste ano (determinístico). */
+/**
+ * Os três partidos que conversaram com você nesta cidade, neste ano
+ * (determinístico). A ordem é o tamanho do DIRETÓRIO LOCAL — grande, médio,
+ * pequeno — sorteado pela cidade: não diz nada sobre o partido no país.
+ */
 function partidosOferecidos(c: Ctx): string[] {
   let h = anoDe(c.v.t);
   for (const ch of c.v.moradia.municipioId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -50,15 +58,15 @@ function partidosOferecidos(c: Ctx): string[] {
   return out;
 }
 
-const PORTE = ['grande, com estrutura e fila de gente esperando a vez', 'médio, forte em algumas cidades do estado', 'pequeno, que precisa de nomes novos e dá espaço rápido'];
+const PORTE = ['o diretório daqui é grande, com estrutura e fila de gente esperando a vez', 'o diretório daqui é médio, organizado em alguns bairros', 'o diretório daqui é pequeno: precisa de nomes novos e dá espaço rápido'];
 
 function filiar(c: Ctx, k: number): Resultado {
-  const nome = partidosOferecidos(c)[k];
+  const sigla = partidosOferecidos(c)[k];
   return {
-    texto: `Assinou a ficha de filiação do ${nome}. Uma foto, um aperto de mão, um grupo de mensagens novo.`,
-    memoria: `Filiou-se ao ${nome}.`,
+    texto: `Assinou a ficha de filiação ${doPartido(sigla)}. Uma foto, um aperto de mão, um grupo de mensagens novo.`,
+    memoria: `Filiou-se ${aoPartido(sigla)}.`,
     relevancia: 'biografia',
-    efeito: () => { const p = pol(c); p.partido = nome; p.tFiliacao = c.v.t; p.fase = p.fase === 'envolvido' ? 'filiado' : p.fase; c.v.fatos['pol_partido_porte'] = k; marcar(c.v, 'politica', `Filiou-se ao ${nome}.`, 2); }
+    efeito: () => { const p = pol(c); p.partido = sigla; p.tFiliacao = c.v.t; p.fase = p.fase === 'envolvido' ? 'filiado' : p.fase; c.v.fatos['pol_partido_porte'] = k; marcar(c.v, 'politica', `Filiou-se ${aoPartido(sigla)}.`, 2); }
   };
 }
 
@@ -123,9 +131,9 @@ export const POLITICA: Conteudo[] = [
   {
     id: 'pol_filiacao', tipo: 'decisao', idade: [16, 95], tema: 'escolha', manual: true, repetir: 0, biografica: true,
     titulo: 'A filiação',
-    texto: c => `Três partidos da cidade conversaram com você. Nenhum pede que você mude o que pensa; todos querem saber quantos votos você traz. ${partidosOferecidos(c).map((p, k) => `${p}: ${PORTE[k]}.`).join(' ')}`,
+    texto: c => `Três partidos conversaram com você. Nenhum pede que você mude o que pensa; todos querem saber quantos votos você traz. ${partidosOferecidos(c).map((p, k) => `${cap(oPartido(p))}: ${PORTE[k]}.`).join(' ')}`,
     opcoes: [
-      ...[0, 1, 2].map(k => ({ id: `p${k}`, texto: (c: Ctx) => `Filiar-se ao ${partidosOferecidos(c)[k]}`, resolver: (c: Ctx) => filiar(c, k) })),
+      ...[0, 1, 2].map(k => ({ id: `p${k}`, texto: (c: Ctx) => `Filiar-se ${aoPartido(partidosOferecidos(c)[k])}`, consequencia: (c: Ctx) => nomeCompletoPartido(partidosOferecidos(c)[k]), resolver: (c: Ctx) => filiar(c, k) })),
       { id: 'nenhum', texto: 'Ainda não se filiar', resolver: () => ({ texto: 'Você disse que ia pensar.', memoria: null }) }
     ]
   },
@@ -136,7 +144,7 @@ export const POLITICA: Conteudo[] = [
     texto: c => {
       const e = etapa(c);
       const p = pol(c);
-      if (e === 0) return p.mandato ? `O mandato de ${nomeCargo(c.v, p.mandato.cargo)} entra no último ano. O partido quer saber o que você vai fazer — e a casa também.` : `Em outubro tem eleição ${eleicaoNaJanela(c.v)?.tipo === 'municipal' ? 'municipal' : 'geral'}. O ${p.partido} quer saber se você vem.${comFamilia(c.v) ? ' Em casa, a pergunta é outra: vale o preço?' : ''}`;
+      if (e === 0) return p.mandato ? `O mandato de ${nomeCargo(c.v, p.mandato.cargo)} entra no último ano. O partido quer saber o que você vai fazer — e a casa também.` : `Em outubro tem eleição ${eleicaoNaJanela(c.v)?.tipo === 'municipal' ? 'municipal' : 'geral'}. ${cap(oPartido(p.partido))} quer saber se você vem.${comFamilia(c.v) ? ' Em casa, a pergunta é outra: vale o preço?' : ''}`;
       if (e === 1) return `De onde vem o dinheiro da campanha? Material, carro de som, gente na rua: uma campanha como se deve custa uns ${fmt(custoDeCampanha(c.v, p.campanha!.cargo))}.`;
       if (e === 2) return 'Como chegar em quem vota?';
       return 'Faltam três semanas. O debate é quinta-feira.';
@@ -171,6 +179,26 @@ export const POLITICA: Conteudo[] = [
         resolver: c => { const deu = c.r.chance(0.5); return { texto: deu ? 'O ataque colou: o adversário passou o resto da campanha se explicando.' : 'O ataque voltou contra você: o assunto da semana virou o seu tom.', memoria: null, tom: deu ? 'bom' : 'ruim', efeito: () => { pol(c).desgaste = clamp(pol(c).desgaste + 6); passo(c, x => { x.tom = 'ataques'; }, deu ? 7 : -6); } }; } },
       { id: 'tom_cautela', texto: 'Evitar polêmica e não errar', disponivel: c => etapa(c) === 3,
         resolver: c => ({ texto: 'Você não errou. Também não marcou.', memoria: null, efeito: () => passo(c, x => { x.tom = 'cautela'; }, 1) }) }
+    ]
+  },
+  {
+    id: 'pol_bandeira', tipo: 'decisao', idade: [16, 99], tema: 'escolha', manual: true, repetir: 0, biografica: true,
+    titulo: c => (pol(c).mandato ? 'A prioridade do mandato' : pol(c).prioridade ? 'Trocar de bandeira?' : 'Uma bandeira'),
+    texto: c => {
+      const p = pol(c);
+      if (p.mandato) return `${p.prioridade ? `Hoje, a prioridade é ${NOME_PRIORIDADE[p.prioridade]}. ` : 'O gabinete pergunta por onde começar. '}O que o mandato vai empurrar — e mostrar na próxima eleição?`;
+      return `${p.prioridade ? `Até agora, a sua causa é ${NOME_PRIORIDADE[p.prioridade]}. ` : ''}Quem entra na política defendendo tudo acaba lembrado por nada. Por qual causa você quer ser conhecido?`.replace('conhecido', c.g('conhecido', 'conhecida', 'conhecide'));
+    },
+    opcoes: [
+      ...PRIORIDADES.map(prio => ({
+        id: `b_${prio}`,
+        texto: () => cap(NOME_PRIORIDADE[prio]),
+        disponivel: (c: Ctx) => (pol(c).prioridade === prio ? false : true),
+        consequencia: (c: Ctx) => (pol(c).prioridade ? (pol(c).mandato ? 'Mudar a prioridade no meio do mandato atrasa o que estava andando.' : 'Trocar de causa confunde quem acompanhava: um pouco de base se perde.') : undefined),
+        // A bandeira grava a própria linha na Linha da Vida (escolher e trocar dizem coisas diferentes).
+        resolver: (c: Ctx): Resultado => ({ texto: definirBandeira(c.v, prio), memoria: null })
+      })),
+      { id: 'nao', texto: 'Ainda não', resolver: () => ({ texto: 'Você disse que ia pensar melhor.', memoria: null }) }
     ]
   },
   {
@@ -268,6 +296,8 @@ export const POLITICA: Conteudo[] = [
     ]
   }
 ];
+
+const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 
 function crise(c: Ctx): string { return c.v.caminhos.politica?.mandato?.crise?.tipo ?? ''; }
 

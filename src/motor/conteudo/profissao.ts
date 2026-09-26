@@ -22,14 +22,18 @@ import { estresse } from './efeitos';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
 import { degrausAcima, elegibilidade, encerrarEmprego, horizonte, nomeOcupacao, podeAposentar, aposentar, tetoSalarial } from '../sistemas/trabalho';
-import { abrirNegocio, contratarFuncionario, demitirFuncionario, fecharNegocio, modosDeAbrir, mudarEstrategia, negocioAtivo, NEGOCIOS, salarioDaFuncao, tipoDoNegocio, valorDoNegocio, venderNegocio, custoLocal, tamanhoDaEquipe } from '../sistemas/negocio';
+import { ambienteDoNegocio, comprarParteDoSocio, contratarFuncionario, demitirFuncionario, donoIntegral, estrategiaDe, fecharNegocio, modosDeAbrir, mudarEstrategia, negocioAtivo, NEGOCIOS, parteDoSocio, precoDaParteDoSocio, presencaDe, salarioDaFuncao, tipoDoNegocio, valorDoNegocio, venderNegocio, custoLocal, tamanhoDaEquipe } from '../sistemas/negocio';
+import { rotuloEstrategia } from '../dados/negocios';
+import { analisarEntrada, propor } from '../sistemas/compromissos';
+import type { EstrategiaNegocio } from '../tipos';
 import { chefiaAtual, climaDe, mexerNoClima, rotulosDoRitmo } from '../sistemas/profissao';
 import { fatorRitmoClientela, fatorRitmoSalario, ritmoDe } from '../sistemas/ritmo';
 import { novaOportunidade } from '../sistemas/oportunidades';
 import { mudarAgora } from '../sistemas/processos';
 import { marcar } from '../sistemas/marcas';
 import { abalar } from '../sistemas/abalo';
-import { encerrarCarreira } from '../sistemas/esporte';
+import { encerrarCarreira, mudarDeClube } from '../sistemas/esporte';
+import { CLUBES, clubeDoNivel, noClube, oClube } from '../dados/clubes';
 import { habilidade } from '../sistemas/frentes';
 import { arrendamentoMensal } from '../sistemas/rural';
 import { MUNIC_POR_INDICE } from '../sistemas/militar';
@@ -206,7 +210,7 @@ export const PROFISSAO: Conteudo[] = [
     opcoes: [
       { id: 'normal', texto: c => rotulosDoRitmo(c.v).normal,
         resolver: c => ({ texto: 'Você voltou ao ritmo de antes. Os primeiros meses pareceram férias.', memoria: 'Diminuiu o ritmo do trabalho depois de um alerta do corpo.', relevancia: 'biografia', efeito: () => { const e = emprego(c); aliviarRitmo(c.v, 'normal'); estresse(c, -6); e.anosPuxado = 0; } }) },
-      { id: 'leve', texto: c => rotulosDoRitmo(c.v).leve, disponivel: c => (!negocioAtivo(c.v) || tamanhoDaEquipe(negocioAtivo(c.v)!) > 0 ? true : 'Sem ninguém para dividir o trabalho.'),
+      { id: 'leve', texto: c => rotulosDoRitmo(c.v).leve, disponivel: c => (!donoIntegral(c.v) || tamanhoDaEquipe(donoIntegral(c.v)!) > 0 ? true : 'Sem ninguém para dividir o trabalho.'),
         resolver: c => ({ texto: 'Menos dinheiro, mais sono. O exame seguinte veio melhor.', memoria: 'Aliviou de vez o ritmo do trabalho depois de um alerta do corpo.', relevancia: 'biografia', efeito: () => { aliviarRitmo(c.v, 'leve'); estresse(c, -10); } }) },
       { id: 'seguir', texto: 'Seguir no ritmo', comportamento: { impulsividade: 1 },
         resolver: c => ({ texto: 'Você tomou o remédio, guardou o exame na gaveta e voltou para o trabalho.', memoria: 'Ignorou um alerta do corpo e seguiu no mesmo ritmo de trabalho.', relevancia: 'biografia', tom: 'ruim', efeito: () => { c.v.corpo.saude = clamp(c.v.corpo.saude - 6); estresse(c, 3); } }) }
@@ -223,7 +227,9 @@ export const PROFISSAO: Conteudo[] = [
       const estrada = Math.max(...t.trilhas.map(tr => experienciaNaTrilha(c.v, tr)));
       const conhece = estrada >= t.meses || (t.dominio ? habilidade(c.v, t.dominio) >= (t.habilidade ?? 101) : false);
       const par = parceiro(c.v);
-      return `A ideia já não cabe só na cabeça. ${conhece ? 'Os anos no ramo contam: você sabe onde o dinheiro entra e por onde ele foge.' : 'Você nunca trabalhou no ramo — quem trabalhou diria que o primeiro ano é o que derruba.'} Para começar direito: uns ${fmt(custo)}${t.emCasa ? `; pequeno, em casa, uns ${fmt(Math.round(custo * 0.4 / 100) * 100)}` : ''}. ${par ? `${par.p.nome} quer saber de onde vem o dinheiro.` : ''}`;
+      const e = c.v.trabalho.atual;
+      const lado = e ? ` Abrir não é pedir demissão: dá para tocar nas horas vagas${t.presenca === 'rua' ? ' (com alguém no balcão)' : ''} ou largar o trabalho de ${nomeOcupacao(c.v, ocupacao(e.ocupacaoId))} e se dedicar — isso vem depois.` : '';
+      return `A ideia já não cabe só na cabeça. ${conhece ? 'Os anos no ramo contam: você sabe onde o dinheiro entra e por onde ele foge.' : 'Você nunca trabalhou no ramo — quem trabalhou diria que o primeiro ano é o que derruba.'} Para começar direito: uns ${fmt(custo)}${t.emCasa ? `; pequeno, em casa, uns ${fmt(Math.round(custo * 0.4 / 100) * 100)}` : ''}.${lado} ${par ? `${par.p.nome} quer saber de onde vem o dinheiro.` : ''}`;
     },
     opcoes: [
       { id: 'guardado', texto: 'Com o dinheiro guardado',
@@ -240,7 +246,7 @@ export const PROFISSAO: Conteudo[] = [
         resolver: c => {
           const topa = c.r.chance(0.55 + (c.v.vinculos[c.p.amigo.id]?.confianca ?? 40) / 250);
           if (!topa) return { texto: `${c.p.amigo.nome} ouviu tudo, pediu uma semana e disse que não: não é momento.`, memoria: null };
-          return { texto: `${c.p.amigo.nome} topou. Um aperto de mão, um contador, um contrato social.`, memoria: null, efeito: () => { const t = NEGOCIOS[c.v.fatos['abrir_tipo'] ?? 0]; c.v.financas.conta += Math.round(custoLocal(c.v, t) * 0.5); abrirNegocio(c.v, c.r, t.id, { modo: 'socio', socioId: c.p.amigo.id }); lembrarCom(c.v, c.p.amigo.id, `Abriram ${t.nome} juntos.`, 'trabalho', 3); } };
+          return { texto: `${c.p.amigo.nome} topou. Um aperto de mão, um contador, um contrato social.`, memoria: null, efeito: () => { const t = NEGOCIOS[c.v.fatos['abrir_tipo'] ?? 0]; c.v.financas.conta += Math.round(custoLocal(c.v, t) * 0.5); lembrarCom(c.v, c.p.amigo.id, `Combinaram abrir ${t.nome} juntos.`, 'trabalho', 3); propor(c.v, c.r, { tipo: 'negocio', negocioId: t.id, modo: 'socio', socioId: c.p.amigo.id }); } };
         } },
       { id: 'desistir', texto: 'Deixar a ideia para depois', resolver: () => ({ texto: 'A planilha ficou salva numa pasta do computador.', memoria: null }) }
     ]
@@ -279,17 +285,14 @@ export const PROFISSAO: Conteudo[] = [
   {
     id: 'neg_estrategia', tipo: 'decisao', idade: [18, 85], tema: 'trabalho', manual: true, repetir: 0,
     titulo: 'O jeito de vender',
-    texto: c => { const n = negocioAtivo(c.v)!; return `Hoje, ${n.nome} ${({ bairro: 'vive da freguesia do bairro, com preço justo', qualidade: 'aposta na qualidade', preco: 'enche a casa com preço baixo', online: 'vende também pela internet' } as const)[n.estrategia ?? 'bairro']}. Mudar leva tempo para aparecer — e custa diferente.`; },
-    opcoes: [
-      { id: 'bairro', texto: 'O de sempre: freguesia do bairro, preço justo', disponivel: c => ((negocioAtivo(c.v)?.estrategia ?? 'bairro') !== 'bairro' ? true : false),
-        resolver: c => ({ texto: 'Você voltou ao que o bairro conhece.', memoria: null, efeito: () => mudarEstrategia(c.v, 'bairro') }) },
-      { id: 'qualidade', texto: 'Apostar na qualidade (custa mais, cobra mais, demora a pegar)', disponivel: c => (negocioAtivo(c.v)?.estrategia !== 'qualidade' ? true : false),
-        resolver: c => ({ texto: 'Material melhor, atendimento mais caprichado, preço acima. A fama vem devagar.', memoria: null, efeito: () => mudarEstrategia(c.v, 'qualidade') }) },
-      { id: 'preco', texto: 'Preço baixo para encher a casa (menos margem)', disponivel: c => (negocioAtivo(c.v)?.estrategia !== 'preco' ? true : false),
-        resolver: c => ({ texto: 'A placa de promoção foi para a porta. Entra mais gente; cada venda deixa menos.', memoria: null, efeito: () => mudarEstrategia(c.v, 'preco') }) },
-      { id: 'online', texto: 'Vender pela internet também', disponivel: c => (negocioAtivo(c.v)?.estrategia !== 'online' ? true : false),
-        resolver: c => ({ texto: 'Fotos, aplicativo de entrega, mensagem respondida de madrugada.', memoria: null, efeito: () => mudarEstrategia(c.v, 'online') }) }
-    ]
+    texto: c => { const n = negocioAtivo(c.v)!; const hoje = rotuloEstrategia(presencaDe(n), estrategiaDe(n), n.tipo)?.hoje ?? 'segue do jeito de sempre'; return `Hoje, ${n.nome} ${hoje}. Mudar leva tempo para aparecer — e custa diferente.`; },
+    // Só os jeitos que existem para ESTE negócio: loja on-line não tem freguesia de bairro; consultório não vende em plataforma.
+    opcoes: (['bairro', 'qualidade', 'preco', 'online', 'escala', 'marca'] as EstrategiaNegocio[]).map(id => ({
+      id,
+      texto: (c: Ctx) => { const n = negocioAtivo(c.v)!; return rotuloEstrategia(presencaDe(n), id, n.tipo)?.opcao ?? id; },
+      disponivel: (c: Ctx) => { const n = negocioAtivo(c.v); const t = n && tipoDoNegocio(n); return !!n && !!t && t.estrategias.includes(id) && estrategiaDe(n) !== id && !!rotuloEstrategia(t.presenca, id, t.id); },
+      resolver: (c: Ctx) => ({ texto: textoDaEstrategia(c, id), memoria: null, efeito: () => mudarEstrategia(c.v, id) })
+    }))
   },
   {
     id: 'neg_socio', tipo: 'decisao', idade: [18, 85], tema: 'trabalho', manual: true, repetir: 0,
@@ -300,8 +303,10 @@ export const PROFISSAO: Conteudo[] = [
         resolver: c => ({ texto: 'Dinheiro novo no caixa, outra cabeça nas decisões. Metade do lucro, metade do risco.', memoria: null, efeito: () => {
           const n = negocioAtivo(c.v)!;
           let socio = c.p.socio;
-          if (!socio) { socio = criarPessoa(c.v, c.r, { idade: c.r.int(38, 62), municipioId: c.v.moradia.municipioId, ocupacao: 'comerciante', renda: 8000 }); vincular(c.v, socio, { origem: 'trabalho', proximidade: 15, estagio: 'conhecido', convivio: ['trabalho'] }).ambiente = `trabalho:${c.v.trabalho.atual!.empregador}:${c.v.trabalho.atual!.tInicio}`; }
+          if (!socio) { socio = criarPessoa(c.v, c.r, { idade: c.r.int(38, 62), municipioId: c.v.moradia.municipioId, ocupacao: 'comerciante', renda: 8000 }); vincular(c.v, socio, { origem: 'trabalho', proximidade: 15, estagio: 'conhecido', convivio: ['trabalho'] }).ambiente = ambienteDoNegocio(n); }
+          else if (c.v.vinculos[socio.id]) c.v.vinculos[socio.id].ambiente = ambienteDoNegocio(n);
           n.socioId = socio.id;
+          n.parteSocio = 0.5;
           n.caixa = (n.caixa ?? 0) + aporteDoSocio(c);
           lembrarCom(c.v, socio.id, `Virou sócio de ${n.nome}.`, 'trabalho', 2);
           escrever(c.v, { texto: `${socio.nome} entrou de sócio em ${n.nome}, com ${fmt(aporteDoSocio(c))}.`, relevancia: 'biografia', tema: 'trabalho', escolha: true, pessoas: [socio.id] });
@@ -314,7 +319,7 @@ export const PROFISSAO: Conteudo[] = [
     titulo: c => `Vender ${negocioAtivo(c.v)?.nome ?? 'o negócio'}`,
     texto: c => textoDaVenda(c),
     opcoes: [
-      { id: 'vender', texto: 'Vender', resolver: c => ({ texto: 'Você entregou as chaves e ficou um tempo parado na calçada.', memoria: null, efeito: () => venderNegocio(c.v, valorDoNegocio(c.v, negocioAtivo(c.v)!)) }) },
+      { id: 'vender', texto: 'Vender', resolver: c => ({ texto: presencaDe(negocioAtivo(c.v)!) === 'online' ? 'Você passou as senhas, o estoque e a lista de clientes para o novo dono.' : 'Você entregou as chaves e ficou um tempo parado na calçada.', memoria: null, efeito: () => venderNegocio(c.v, valorDoNegocio(c.v, negocioAtivo(c.v)!)) }) },
       { id: 'pechinchar', texto: 'Pedir mais', comportamento: { coragem: 1 },
         resolver: c => { const deu = c.r.chance(0.45); return { texto: deu ? 'O comprador reclamou, fez conta no celular e subiu a oferta.' : 'O comprador agradeceu e foi olhar outro ponto.', memoria: null, tom: deu ? 'bom' : 'ruim', efeito: () => { if (deu) venderNegocio(c.v, Math.round(valorDoNegocio(c.v, negocioAtivo(c.v)!) * 1.15 / 1000) * 1000); else c.v.fatos['neg_venda_recusada'] = c.v.t; } }; } },
       { id: 'nao', texto: 'Não vender', resolver: c => ({ texto: 'Não está à venda — por enquanto.', memoria: null, efeito: () => { c.v.fatos['neg_venda_recusada'] = c.v.t; } }) }
@@ -324,7 +329,7 @@ export const PROFISSAO: Conteudo[] = [
     id: 'neg_comprador', tipo: 'decisao', idade: [25, 90], tema: 'trabalho', repetir: 5, peso: 1,
     quando: c => { const n = negocioAtivo(c.v); return !!n && n.estado === 'firme' && (c.v.t - n.tInicio) / 12 >= 4 && (c.v.fatos['neg_venda_recusada'] === undefined || c.v.t - c.v.fatos['neg_venda_recusada'] >= 36); },
     titulo: 'Alguém quer comprar',
-    texto: c => `Um homem de terno entrou, pediu um café e perguntou se ${negocioAtivo(c.v)!.nome} estava à venda. ${textoDaVenda(c)}`,
+    texto: c => { const n = negocioAtivo(c.v)!; const p = presencaDe(n); const quem = p === 'online' ? `Chegou um e-mail de uma empresa maior perguntando se ${n.nome} está à venda.` : p === 'obra' ? `Uma construtora da região quer comprar ${n.nome}, com equipe e carteira de clientes.` : p === 'atendimento' ? `Um grupo de ${n.tipo === 'escritorio_contabil' || n.tipo === 'consultoria_ti' ? 'escritórios' : 'clínicas'} quer comprar ${n.nome}, com a carteira de ${tipoDoNegocio(n)?.cliente === 'paciente' ? 'pacientes' : 'clientes'}.` : `Um homem de terno entrou, pediu um café e perguntou se ${n.nome} estava à venda.`; return `${quem} ${textoDaVenda(c)}`; },
     opcoes: [
       { id: 'vender', texto: 'Vender', resolver: c => ({ texto: 'Um aperto de mão, uma assinatura, um negócio que já não é seu.', memoria: null, efeito: () => venderNegocio(c.v, valorDoNegocio(c.v, negocioAtivo(c.v)!)) }) },
       { id: 'nao', texto: 'Não está à venda', resolver: c => ({ texto: 'Ele deixou um cartão. Você guardou numa gaveta.', memoria: null, efeito: () => { c.v.fatos['neg_venda_recusada'] = c.v.t; } }) }
@@ -341,7 +346,7 @@ export const PROFISSAO: Conteudo[] = [
       return `${anos} ${anos === 1 ? 'ano' : 'anos'} de portas abertas. ${eq ? `${eq === 1 ? 'Uma pessoa trabalha' : `${eq} pessoas trabalham`} lá.` : ''} ${divida ? `O empréstimo da abertura continua: faltam ${fmt(divida.saldo)}.` : ''}`;
     },
     opcoes: [
-      { id: 'fechar', texto: 'Fechar as portas', resolver: c => ({ texto: 'A última volta da chave foi a mais pesada.', memoria: null, efeito: () => { fecharNegocio(c.v, 'você decidiu fechar'); encerrarEmprego(c.v, 'fechou o negócio'); } }) },
+      { id: 'fechar', texto: c => (presencaDe(negocioAtivo(c.v)!) === 'online' ? 'Tirar a loja do ar' : 'Fechar as portas'), resolver: c => ({ texto: presencaDe(negocioAtivo(c.v)!) === 'online' ? 'Um clique tirou a loja do ar. O último pedido ficou na tela.' : 'A última volta da chave foi a mais pesada.', memoria: null, efeito: () => { const dono = !!donoIntegral(c.v); fecharNegocio(c.v, 'você decidiu fechar'); if (dono) encerrarEmprego(c.v, 'fechou o negócio'); } }) },
       { id: 'nao', texto: 'Ainda não', resolver: () => ({ texto: 'Amanhã a porta abre de novo.', memoria: null }) }
     ]
   },
@@ -436,12 +441,12 @@ export const PROFISSAO: Conteudo[] = [
   },
   {
     id: 'esp_proposta', tipo: 'decisao', idade: [18, 34], tema: 'trabalho', repetir: 3, peso: 2,
-    quando: c => { const es = c.v.caminhos.esporte; if (!es || es.fase !== 'profissional' || es.espaco !== 'titular' || es.nivel >= 4) return false; return habilidade(c.v, es.modalidade) >= 72 + es.nivel * 2 + 3 && ['jogador_futebol', 'atleta'].includes(c.v.trabalho.atual?.ocupacaoId ?? '') && !!destinoDoAno(c.v, 'clube', id => municipio(id).perfil === 'metropole' || !!municipio(id).capital); },
+    quando: c => { const es = c.v.caminhos.esporte; if (!es || es.fase !== 'profissional' || es.espaco !== 'titular' || es.nivel >= 4) return false; return habilidade(c.v, es.modalidade) >= 72 + es.nivel * 2 + 3 && ['jogador_futebol', 'atleta'].includes(c.v.trabalho.atual?.ocupacaoId ?? ''); },
     titulo: 'Uma proposta',
-    texto: c => { const d = municipio(destinoDoAno(c.v, 'clube', id => municipio(id).perfil === 'metropole' || !!municipio(id).capital)!); return `Um clube de ${d.nome} quer você: divisão acima, contrato de três anos, salário maior. ${comFamilia(c.v) ? 'A família iria junto — ou não.' : ''}`; },
+    texto: c => { const es = c.v.caminhos.esporte!; const alvo = clubeProposto(c); const d = municipio(alvo.cidade); return `${es.modalidade === 'futebol' ? `${oClube(alvo.nome).charAt(0).toUpperCase() + oClube(alvo.nome).slice(1)}, de ${d.nome},` : 'Uma equipe maior'} quer você: divisão acima, contrato de três anos, salário maior.${d.id !== c.v.moradia.municipioId ? ` A mudança seria para ${d.nome}.` : ''} ${comFamilia(c.v) ? 'A família iria junto — ou não.' : ''}`; },
     opcoes: [
-      { id: 'aceitar', texto: c => (comFamilia(c.v) ? 'Aceitar e ir com a família' : 'Aceitar'),
-        resolver: c => ({ texto: 'Apresentação no estádio novo, camisa nova, cidade nova.', memoria: null, tom: 'bom', efeito: () => { const es = c.v.caminhos.esporte!; const d = destinoDoAno(c.v, 'clube', id => municipio(id).perfil === 'metropole' || !!municipio(id).capital)!; trocarDeClube(c, (es.nivel + 1) as 1 | 2 | 3 | 4); mudarComOTrabalho(c, d, true, 'para jogar num clube maior'); } }) },
+      { id: 'aceitar', texto: c => (comFamilia(c.v) ? 'Aceitar e ir com a família' : 'Aceitar'), consequencia: c => (clubeProposto(c).cidade !== c.v.moradia.municipioId ? `Mudança para ${municipio(clubeProposto(c).cidade).nome}: quem mora com você vai junto.` : undefined),
+        resolver: c => ({ texto: 'Apresentação no estádio novo, camisa nova, cidade nova.', memoria: null, tom: 'bom', efeito: () => { const es = c.v.caminhos.esporte!; trocarDeClube(c, (es.nivel + 1) as 1 | 2 | 3 | 4); } }) },
       { id: 'ficar', texto: 'Ficar onde está', comportamento: { familia: 1 }, disponivel: c => (comFamilia(c.v) ? true : false),
         resolver: () => ({ texto: 'Você ficou. A família também.', memoria: 'Recusou uma proposta de um clube maior para não tirar a família do lugar.', relevancia: 'biografia' }) },
       { id: 'recusar', texto: 'Recusar', disponivel: c => (comFamilia(c.v) ? false : true), resolver: () => ({ texto: 'Você ficou no clube que conhece o seu jogo.', memoria: null }) }
@@ -515,11 +520,14 @@ function motivoModo(c: Ctx, modo: 'guardado' | 'pequeno' | 'emprestimo'): true |
 
 function abrirCom(c: Ctx, modo: 'guardado' | 'pequeno' | 'emprestimo'): { texto: string; memoria: null; efeito: () => void } {
   const t = NEGOCIOS[c.v.fatos['abrir_tipo'] ?? 0];
-  return {
-    texto: modo === 'pequeno' ? 'Um canto da casa virou ponto. A placa foi feita à mão.' : modo === 'emprestimo' ? 'O gerente do banco carimbou tudo. A dívida começou antes do primeiro cliente.' : 'Você assinou o aluguel do ponto numa sexta-feira.',
-    memoria: null,
-    efeito: () => { abrirNegocio(c.v, c.r, t.id, { modo }); }
-  };
+  const novo = { tipo: 'negocio' as const, negocioId: t.id, modo };
+  // Quando o negócio não cabe no resto da vida (um emprego, a faculdade do dia inteiro), a próxima pergunta é essa.
+  const conflito = analisarEntrada(c.v, novo).length > 0;
+  const texto = conflito ? 'O dinheiro está resolvido. Falta resolver o resto da vida.'
+    : modo === 'pequeno' ? (t.presenca === 'online' ? 'Um canto da casa virou estoque; o celular, a vitrine.' : 'Um canto da casa virou ponto. A placa foi feita à mão.')
+      : modo === 'emprestimo' ? 'O gerente do banco carimbou tudo. A dívida começou antes do primeiro cliente.'
+        : t.presenca === 'online' ? 'Você comprou o primeiro estoque e publicou a loja numa sexta-feira.' : t.presenca === 'obra' ? 'Ferramenta nova, cartão impresso, CNPJ na mão.' : t.presenca === 'atendimento' ? 'Sala alugada, placa na porta, agenda aberta.' : 'Você assinou o aluguel do ponto numa sexta-feira.';
+  return { texto, memoria: null, efeito: () => { propor(c.v, c.r, novo); } };
 }
 
 function aporteDoSocio(c: Ctx): number {
@@ -530,7 +538,8 @@ function aporteDoSocio(c: Ctx): number {
 function textoDaVenda(c: Ctx): string {
   const n = negocioAtivo(c.v)!;
   const valor = valorDoNegocio(c.v, n);
-  return `A oferta por ${n.nome}: ${fmt(valor)}${(n.caixa ?? 0) > 0 ? `, e o que há no caixa fica com você` : ''}. ${tamanhoDaEquipe(n) ? 'A equipe fica com o novo dono.' : ''} ${n.socioId && c.v.pessoas[n.socioId] ? `Metade é de ${c.v.pessoas[n.socioId].nome}.` : ''}`;
+  const socio = n.socioId && c.v.pessoas[n.socioId] ? ` A outra parte (${Math.round(parteDoSocio(n) * 100)}%) é de ${c.v.pessoas[n.socioId].nome}, que vende junto.` : '';
+  return `A oferta pela sua parte de ${n.nome}: ${fmt(valor)}${(n.caixa ?? 0) > 0 ? `, e o que há no caixa fica com você` : ''}. ${tamanhoDaEquipe(n) ? 'A equipe fica com o novo dono.' : ''}${socio}`;
 }
 
 /** O clube quer renovar? Depende do que se joga, da idade e do espaço no time. */
@@ -544,22 +553,23 @@ function clubeQuer(c: Ctx): boolean {
 
 const SALARIO_FUTEBOL = [0, 1800, 4800, 16000, 55000];
 const SALARIO_OUTROS = [0, 1500, 3500, 8500, 22000];
-const DIVISAO = ['', 'um time do campeonato estadual', 'um clube da Série C', 'um clube da Série B', 'um clube da Série A'];
 
-function trocarDeClube(c: Ctx, nivel: 1 | 2 | 3 | 4): void {
+/** Troca de clube (real, na simulação); se o clube novo é de outra cidade, a vida vai junto. */
+function trocarDeClube(c: Ctx, nivel: 1 | 2 | 3 | 4, juntos = true): void {
   const es = c.v.caminhos.esporte!;
   const e = c.v.trabalho.atual;
   if (!e) return;
   const tabela = es.modalidade === 'futebol' ? SALARIO_FUTEBOL : SALARIO_OUTROS;
   const subiu = nivel > es.nivel;
-  es.nivel = nivel;
-  e.empregador = DIVISAO[nivel];
+  const novo = mudarDeClube(c.v, es, nivel);
   e.salario = tabela[nivel];
   es.contratoAte = c.v.t + (subiu ? 36 : 24);
   es.espaco = subiu ? 'reserva' : es.espaco;
-  const texto = subiu ? `Transferiu-se para ${DIVISAO[nivel]}.` : `Mudou de clube: ${DIVISAO[nivel]}.`;
+  const cidade = CLUBES.find(x => x.nome === novo)?.cidade;
+  const texto = subiu ? `Transferiu-se para ${oClube(novo)}.` : `Mudou de clube: ${oClube(novo)}.`;
   escrever(c.v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: subiu ? 'bom' : undefined, escolha: true });
   marcar(c.v, subiu ? 'promocao' : 'mudanca_carreira', texto, subiu && nivel >= 3 ? 3 : 2, { dominio: es.modalidade });
+  if (cidade && cidade !== c.v.moradia.municipioId) mudarComOTrabalho(c, cidade, juntos, `para jogar ${noClube(novo)}`);
 }
 
 /** Para onde um servidor pode pedir remoção: perto da família, e só se o órgão tem onde pôr. */
@@ -577,6 +587,12 @@ export function destinoDaRemocao(v: Vida): string | undefined {
   if (capital && pode(capital)) return capital;
   // Já na capital: a outra cidade grande do estado (ou, no federal, a capital vizinha).
   return MUNICIPIOS.find(m => pode(m.id) && m.uf === uf)?.id ?? (federal ? MUNICIPIOS.find(m => pode(m.id) && m.regiao === municipio(aqui).regiao && m.capital)?.id : undefined);
+}
+
+/** O clube que faz a proposta (estável entre abrir e resolver a decisão). */
+function clubeProposto(c: Ctx) {
+  const es = c.v.caminhos.esporte!;
+  return clubeDoNivel(Math.min(4, es.nivel + 1), ((anoDe(c.v.t) * 37 + c.v.id.length * 11) % 997) / 997, es.clube);
 }
 
 function familiaEm(v: Vida, id: string): string | undefined {
@@ -616,9 +632,36 @@ function aliviarRitmo(v: Vida, alvo: 'normal' | 'leve'): void {
   if (!e) return;
   const antes = ritmoDe(e);
   if (e.clientela === undefined) e.salario = Math.round(e.salario / fatorRitmoSalario(antes) * fatorRitmoSalario(alvo) / 10) * 10;
-  else if (!negocioAtivo(v)) e.salario = Math.round(e.salario / fatorRitmoClientela(antes) * fatorRitmoClientela(alvo) / 10) * 10;
+  else if (!donoIntegral(v)) e.salario = Math.round(e.salario / fatorRitmoClientela(antes) * fatorRitmoClientela(alvo) / 10) * 10;
   e.ritmo = alvo === 'normal' ? undefined : alvo;
   e.anosPuxado = 0;
 }
 
-void ocupacaoOuNula;
+/** O que muda ao trocar o jeito de vender, dito na hora, no idioma do negócio. */
+function textoDaEstrategia(c: Ctx, id: EstrategiaNegocio): string {
+  const n = negocioAtivo(c.v)!;
+  const p = presencaDe(n);
+  const t: Record<string, string> = {
+    'rua:bairro': 'Você voltou ao que o bairro conhece.',
+    'rua:qualidade': 'Material melhor, atendimento mais caprichado, preço acima. A fama vem devagar.',
+    'rua:preco': 'A placa de promoção foi para a porta. Entra mais gente; cada venda deixa menos.',
+    'rua:online': n.tipo === 'lanchonete' ? 'Fotos, aplicativo de entrega, mensagem respondida de madrugada.' : 'Fotos, catálogo nas redes, entrega combinada por mensagem.',
+    'rua:escala': 'Contrato com empresas: volume certo, preço apertado, prazo cobrado.',
+    'online:escala': 'Loja aberta nas grandes plataformas: pedido não falta; a taxa come a margem.',
+    'online:marca': 'Site próprio, redes cuidadas, cliente que chega pelo nome. Devagar — e a margem é sua.',
+    'online:qualidade': 'Catálogo enxuto, produto escolhido a dedo, foto bem feita. Menos venda, mais cliente fiel.',
+    'online:preco': 'O menor preço da categoria: sai muito, sobra pouco em cada pedido.',
+    'atendimento:bairro': 'De volta à indicação: quem foi bem atendido traz o próximo.',
+    'atendimento:qualidade': 'Menos gente na agenda, mais tempo com cada um — e um valor que acompanha.',
+    'atendimento:preco': 'Preço popular: a agenda enche, cada horário rende menos.',
+    'atendimento:escala': p === 'atendimento' && ['consultorio_psicologia', 'clinica_fisio', 'clinica_vet'].includes(n.tipo) ? 'Credenciado nos convênios: agenda cheia, valor menor, pagamento que atrasa.' : 'Uma carteira de empresas: contrato, volume, margem apertada.',
+    'atendimento:online': 'Atendimento também on-line: gente de outras cidades na agenda.',
+    'obra:bairro': 'De volta à indicação: obra bem feita traz a próxima.',
+    'obra:qualidade': 'Acabamento de primeira: obra mais cara, mais demorada, cliente que indica.',
+    'obra:preco': 'O orçamento mais baixo da praça: mais obra, menos folga.',
+    'obra:escala': 'Empreitadas para construtoras: volume garantido, preço apertado, prazo de ferro.'
+  };
+  return t[`${p}:${id}`] ?? 'Você mudou o jeito de vender. O resultado leva tempo.';
+}
+
+void ocupacaoOuNula; void analisarEntrada; void precoDaParteDoSocio; void comprarParteDoSocio;

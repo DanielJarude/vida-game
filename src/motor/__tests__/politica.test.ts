@@ -167,15 +167,21 @@ describe('4. mandato', () => {
     expect(v.trabalho.atual!.salario).toBeGreaterThan(3000);
     expect(fatoresCabeca(v).some(f => f.id === 'politica')).toBe(true);
     const ids = [...acoesDoTrabalho(v, disponibilidade).agora, ...acoesDoTrabalho(v, disponibilidade).mais].map(x => x.id);
-    expect(ids).toContain('pol_prioridade');
+    // Sem prioridade, a ação é escolhê-la (uma decisão com as opções à vista) — nunca "trabalhar" um valor vazio.
+    expect(ids).toContain('pol_bandeira');
+    expect(ids).not.toContain('pol_prioridade');
     expect(ids).toContain('pol_comunidade');
     expect(ids).not.toContain('aumento');
     expect(tenta(v, { tipo: 'pedir_demissao' })).toBe(false);
     expect(tenta(v, { tipo: 'aposentar' })).toBe(false);
-    const antes = v.caminhos.politica!.mandato!.aprovacao;
-    v = executar(v, A('prioridade', 'saude')).vida;
-    expect(v.caminhos.politica!.mandato!.aprovacao).toBeGreaterThanOrEqual(antes);
+    expect(tenta(v, A('prioridade'))).toBe(false);
+    v = executar(v, A('bandeira')).vida;
+    expect(v.momento?.situacaoId).toBe('pol_bandeira');
+    v = executar(v, { tipo: 'decidir', opcaoId: 'b_saude' }).vida;
     expect(v.caminhos.politica!.prioridade).toBe('saude');
+    const antes = v.caminhos.politica!.mandato!.aprovacao;
+    v = executar(v, A('prioridade')).vida;
+    expect(v.caminhos.politica!.mandato!.aprovacao).toBeGreaterThanOrEqual(antes);
     // Crises: acontecem; o jogador responde.
     let houve = false;
     for (let k = 0; k < 3 && !houve; k++) {

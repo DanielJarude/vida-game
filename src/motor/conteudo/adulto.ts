@@ -9,7 +9,8 @@ import { idadePessoa, temFato, marcarFato, lembrarCom } from '../nucleo';
 import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
 import { nomeOcupacaoId, contratar, encerrarEmprego, elegibilidade, degrausAcima } from '../sistemas/trabalho';
 import { editaisAbertos } from '../sistemas/concurso';
-import { abrirNegocio, NEGOCIOS } from '../sistemas/negocio';
+import { propor } from '../sistemas/compromissos';
+import { NEGOCIOS } from '../sistemas/negocio';
 import { marcar } from '../sistemas/marcas';
 import { ocupacao } from '../dados/ocupacoes';
 import { mudarAgora } from '../sistemas/processos';
@@ -399,9 +400,11 @@ export const ADULTO: Conteudo[] = [
     titulo: 'O negócio',
     texto: c => { const t = tipoDoSocio(c); return `${c.p.socio.nome} quer abrir ${t.nome} e chama você para sócio${c.g('', 'a', 'e')}: entrar com uns R$ ${Math.round(t.capital * 0.5 / 1000)} mil e trabalhar junto. ${c.p.socio.nome} entende do ramo; você entraria com o dinheiro e o braço.`; },
     opcoes: [
-      { id: 'entrar', texto: 'Entrar de sócio e tocar junto', comportamento: { coragem: 2 },
+      { id: 'entrar', texto: 'Entrar de sócio', comportamento: { coragem: 2 },
         disponivel: c => (guardado(c.v) >= tipoDoSocio(c).capital * 0.5 ? true : 'Não há dinheiro guardado para a sua parte.'),
-        resolver: c => ({ texto: 'Vocês assinaram o contrato social numa lanchonete, com um guardanapo de testemunha.', memoria: null, efeito: () => { const t = tipoDoSocio(c); const extra = t.capital * 0.5; c.v.financas.conta += extra; abrirNegocio(c.v, c.r, t.id, c.p.socio.id); lembrarCom(c.v, c.p.socio.id, `Abriram ${t.nome} juntos.`, 'trabalho', 3); } }) },
+        consequencia: c => (c.v.trabalho.atual ? 'Se não couber com o trabalho de hoje, a próxima pergunta é essa: horas vagas ou dedicação.' : undefined),
+        // Entrar de sócio não é pedir demissão: se houver trabalho, a vida pergunta como fica (`compromissos`).
+        resolver: c => ({ texto: 'Vocês assinaram o contrato social numa lanchonete, com um guardanapo de testemunha.', memoria: null, efeito: () => { const t = tipoDoSocio(c); const extra = t.capital * 0.5; c.v.financas.conta += extra; lembrarCom(c.v, c.p.socio.id, `Combinaram abrir ${t.nome} juntos.`, 'trabalho', 3); propor(c.v, c.r, { tipo: 'negocio', negocioId: t.id, modo: 'socio', socioId: c.p.socio.id }); } }) },
       { id: 'recusar', texto: 'Recusar', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você desejou boa sorte e não entrou.', memoria: null }) }
     ]
   }

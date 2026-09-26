@@ -34,8 +34,9 @@ import { capitalDoEstado, nivelEsc } from './sistemas/escola';
 import { aptidao, MATERIAS } from './sistemas/frentes';
 import { modeloRotina } from './sistemas/rotinas';
 import { CURSOS_NPC } from './sistemas/filhos';
+import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 
-export const VERSAO_SAVE = 12;
+export const VERSAO_SAVE = 13;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -97,12 +98,24 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
+  if (d.versao === 12) {
+    // v12 → v13: negócio paralelo ou integral, jeitos de vender por tipo, sócio com parte, compromissos pendentes, espécies de bicho.
+    const erro12 = validar(d, 12);
+    if (erro12) return { tipo: 'invalido', motivo: erro12 };
+    try {
+      const v = migrarV12(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
   if (d.versao === 11) {
     // v11 → v12: vida profissional (ritmo, clima, empresa com caixa, porte e equipe, atleta com contrato).
     const erro11 = validar(d, 11);
     if (erro11) return { tipo: 'invalido', motivo: erro11 };
     try {
-      const v = migrarV11(d as unknown as Vida);
+      const v = migrarV12(migrarV11(d as unknown as Vida));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -114,7 +127,7 @@ export function interpretar(bruto: string): Leitura {
     const erro10 = validar(d, 10);
     if (erro10) return { tipo: 'invalido', motivo: erro10 };
     try {
-      const v = migrarV11(migrarV10(d as unknown as Vida));
+      const v = migrarV12(migrarV11(migrarV10(d as unknown as Vida)));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -126,7 +139,7 @@ export function interpretar(bruto: string): Leitura {
     const erro9 = validar(d, 9);
     if (erro9) return { tipo: 'invalido', motivo: erro9 };
     try {
-      const v = migrarV11(migrarV10(migrarV9(d as unknown as Vida)));
+      const v = migrarV12(migrarV11(migrarV10(migrarV9(d as unknown as Vida))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -138,7 +151,7 @@ export function interpretar(bruto: string): Leitura {
     const erro8 = validar(d, 8);
     if (erro8) return { tipo: 'invalido', motivo: erro8 };
     try {
-      const v = migrarV11(migrarV10(migrarV9(migrarV8(d as unknown as Vida))));
+      const v = migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(d as unknown as Vida)))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -150,7 +163,7 @@ export function interpretar(bruto: string): Leitura {
     const erro7 = validar(d, 7);
     if (erro7) return { tipo: 'invalido', motivo: erro7 };
     try {
-      const v = migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(d as unknown as Vida)))));
+      const v = migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(d as unknown as Vida))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -162,7 +175,7 @@ export function interpretar(bruto: string): Leitura {
     const erro6 = validarBase(d);
     if (erro6) return { tipo: 'invalido', motivo: erro6 };
     try {
-      const v = migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida))))));
+      const v = migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida)))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -173,7 +186,7 @@ export function interpretar(bruto: string): Leitura {
     try {
       const v5 = migrarV5(d);
       if (!v5) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
-      const v = migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(v5))))));
+      const v = migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(v5)))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -249,6 +262,15 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     const pol = (d.caminhos as Vida['caminhos']).politica;
     if (pol && (typeof pol.fase !== 'string' || !finito(pol.reputacao) || !finito(pol.apoio) || !finito(pol.desgaste) || !Array.isArray(pol.historico) || (pol.mandato && (!finito(pol.mandato.tFim) || !finito(pol.mandato.aprovacao))))) return 'Vida política inválida.';
   }
+  if (versao >= 13) {
+    const n = (d.caminhos as Vida['caminhos']).negocio;
+    if (n && n.dedicacao !== undefined && n.dedicacao !== 'integral' && n.dedicacao !== 'paralela') return 'Dedicação do negócio inválida.';
+    if (n?.melhorias !== undefined && !Array.isArray(n.melhorias)) return 'Negócio inválido.';
+    const pend = (d.caminhos as Vida['caminhos']).pendente;
+    if (pend && (typeof pend !== 'object' || !pend.novo || typeof pend.novo.tipo !== 'string' || !Array.isArray(pend.planos) || pend.planos.some(x => !x || typeof x.texto !== 'string' || !Array.isArray(x.larga)))) return 'Escolha pendente inválida.';
+    const pol = (d.caminhos as Vida['caminhos']).politica;
+    if (pol?.prioridade !== undefined && !PRIORIDADES_VALIDAS.includes(pol.prioridade)) return 'Bandeira política inválida.';
+  }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -275,6 +297,75 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
  *    um contrato que vence no próximo biênio contado desde a estreia;
  *  - ritmo, clima, estrutura e preço começam ausentes (= o de sempre).
  */
+const PRIORIDADES_VALIDAS = ['saude', 'educacao', 'mobilidade', 'emprego', 'seguranca', 'ambiente', 'contas', 'cultura'];
+
+/**
+ * v12 → v13. O negócio ganha dedicação (é o trabalho de todo dia quando o
+ * emprego é o de dono; senão, fica nas horas vagas — antes, fecharia sozinho
+ * no ano seguinte), melhorias, jeito de vender válido para o tipo e a parte do
+ * sócio (metade, como era). Quem trabalha no negócio passa a conviver no lugar
+ * do negócio. Bandeira política sem valor válido volta a "nenhuma". Nada
+ * da Linha da Vida muda.
+ */
+export function migrarV12(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 13;
+  const n = x.caminhos.negocio;
+  if (n) {
+    n.melhorias ??= [];
+    if (n.estado !== 'fechado') {
+      const dono = x.trabalho.atual?.ocupacaoId === n.ocupacaoId;
+      n.dedicacao ??= dono && !n.passivo ? 'integral' : 'paralela';
+      const t = tipoNegocio(n.tipo);
+      if (t && (!n.estrategia || !t.estrategias.includes(n.estrategia))) n.estrategia = n.estrategia === 'online' && t.presenca === 'online' ? 'marca' : estrategiaPadrao(t);
+      const chave = `negocio:${n.nome}:${n.tInicio}`;
+      for (const f of n.equipe ?? []) { const vin = x.vinculos[f.pessoaId]; if (vin) vin.ambiente = chave; }
+      if (n.socioId && x.vinculos[n.socioId]?.convivio.includes('trabalho')) x.vinculos[n.socioId].ambiente = chave;
+    }
+    if (n.socioId) n.parteSocio ??= 0.5;
+  }
+  const pol = x.caminhos.politica;
+  if (pol && pol.prioridade !== undefined && !PRIORIDADES_VALIDAS.includes(pol.prioridade)) delete pol.prioridade;
+  // Um momento aberto de um catálogo que mudou (opção que não existe mais) fica resolvível: sem ele, o ano segue.
+  if (x.momento?.situacaoId === 'neg_estrategia' && n && tipoNegocio(n.tipo)?.presenca === 'online') x.momento = null;
+  return x;
+}
+
+/* ------------------------------------------------------------------ Exportar */
+
+/** O formato do arquivo exportado: um envelope com a vida dentro (JSON puro — nada executável). */
+export interface ArquivoDeVida { formato: 'vida-save'; versao: number; exportadoEm: string; nome: string; vida: Vida }
+
+export function exportarVida(v: Vida, agora = new Date()): string {
+  const arq: ArquivoDeVida = { formato: 'vida-save', versao: v.versao, exportadoEm: agora.toISOString(), nome: `${v.eu.nome} ${v.eu.sobrenome}`, vida: v };
+  return JSON.stringify(arq);
+}
+
+/** Tamanho máximo aceito na importação (uma vida longa passa de 1 MB; 12 MB é folga, não convite). */
+export const LIMITE_IMPORTACAO = 12 * 1024 * 1024;
+
+/**
+ * Lê um arquivo exportado (ou um save cru): valida, migra se for de versão
+ * anterior e devolve a vida — ou um motivo compreensível. Nunca executa nada:
+ * é JSON.parse e checagem de forma.
+ */
+export function importarVida(texto: string): Leitura {
+  if (typeof texto !== 'string' || !texto.trim()) return { tipo: 'invalido', motivo: 'O arquivo está vazio.' };
+  if (texto.length > LIMITE_IMPORTACAO) return { tipo: 'invalido', motivo: 'O arquivo é grande demais para ser uma vida do VIDA.' };
+  let dados: unknown;
+  try { dados = JSON.parse(texto); } catch { return { tipo: 'invalido', motivo: 'Esse arquivo não é uma vida exportada do VIDA (não é um JSON válido).' }; }
+  if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return { tipo: 'invalido', motivo: 'Esse arquivo não parece uma vida exportada do VIDA.' };
+  const d = dados as Record<string, unknown>;
+  const miolo = d.formato === 'vida-save' ? d.vida : d;
+  if (!miolo || typeof miolo !== 'object') return { tipo: 'invalido', motivo: 'O arquivo não traz uma vida dentro.' };
+  const m = miolo as Record<string, unknown>;
+  if (typeof m.versao === 'number' && m.versao > VERSAO_SAVE) return { tipo: 'invalido', motivo: `Essa vida foi salva numa versão mais nova do jogo (${m.versao}); esta aceita até a ${VERSAO_SAVE}.` };
+  if ((m as { morte?: unknown }).morte) return { tipo: 'invalido', motivo: 'Essa vida já terminou: não há o que continuar.' };
+  const r = interpretar(JSON.stringify(miolo));
+  if (r.tipo === 'ok' && typeof r.vida.rng !== 'number') return { tipo: 'invalido', motivo: 'Falta o estado do acaso da vida (o arquivo está incompleto).' };
+  return r;
+}
+
 export function migrarV11(v: Vida): Vida {
   const x = v as Vida & { versao: number };
   (x as { versao: number }).versao = 12;
@@ -646,7 +737,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 12,
+    versao: 7 as unknown as 13,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,

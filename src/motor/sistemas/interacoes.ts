@@ -12,6 +12,7 @@
  */
 
 import type { Rng } from '../rng';
+import { animal } from '../dados/animais';
 import { clamp } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro } from '../nucleo';
@@ -755,11 +756,14 @@ export const INTERACOES: Interacao[] = [
     id: 'passear', variante: 'principal',
     quando: c => !!c.p.especie && c.casa,
     disponivel: c => (c.eu < 3 ? bloqueio('impossivel', 'Ainda muito pequeno.') : PERMITIDO),
-    rotulo: c => (c.p.especie === 'gato' ? `Brincar com ${c.p.nome}` : `Passear com ${c.p.nome}`),
+    // Cada bicho tem o próprio jeito de conviver: passear, brincar, soltar na sala, cuidar do aquário, dar banho de sol.
+    rotulo: c => `${animal(c.p.especie).interacao.rotulo} ${c.p.nome}`,
     executar: c => {
       const n = habito(c, 'passear');
-      afeto(c, 8);
-      return { resultado: variar(n, c.p.especie === 'gato' ? [`${c.p.nome} caçou o barbante por meia hora e dormiu no seu colo.`] : [`Longo passeio com ${c.p.nome}. Voltaram os dois cansados.`, `${c.p.nome} achou um graveto maior do que ${dele(c.p)} e não largou.`]) };
+      const a = animal(c.p.especie);
+      afeto(c, a.grupo === 'peixe' ? 3 : a.grupo === 'reptil' ? 4 : 8);
+      const extra = c.p.especie === 'cachorro' ? [`Longo passeio com ${c.p.nome}. Voltaram os dois cansados.`, `${c.p.nome} achou um graveto maior do que ${dele(c.p)} e não largou.`] : [];
+      return { resultado: variar(n, [...a.interacao.textos.map(t => t.replace(/\{nome\}/g, c.p.nome)), ...extra]) };
     }
   }
 ];

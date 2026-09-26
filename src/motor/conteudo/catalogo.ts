@@ -15,5 +15,8 @@ import { MATERIAL } from './material';
 import { TRAJETORIAS } from './trajetorias';
 import { PROFISSAO } from './profissao';
 import { POLITICA } from './politica';
+import { COMPROMISSOS } from './compromissos';
+import { NEGOCIOS_CONTEUDO } from './negocios';
+import { BENS } from './bens';
 
-export const CATALOGO: readonly Conteudo[] = [...SISTEMICOS, ...SOCIAL, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO];
+export const CATALOGO: readonly Conteudo[] = [...COMPROMISSOS, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO];

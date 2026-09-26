@@ -320,12 +320,14 @@ function FichaPet({ vida, agir, p }: { vida: Vida; agir: (a: Acao) => boolean; p
   const d = info.doenca;
   const emCasa = vida.vinculos[p.id]?.convivio.includes('casa');
   const chegou = anoDe(info.tChegada);
-  const origem = { abrigo: 'Veio do abrigo', doacao: 'Veio de alguém que não podia ficar', ninhada: 'Veio de uma ninhada', rua: 'Apareceu na porta', criador: 'Veio de um criador', familia: 'Já era da família' }[info.origem];
+  const origem = { abrigo: 'Veio do abrigo', doacao: 'Veio de alguém que não podia ficar', ninhada: 'Veio de uma ninhada', rua: 'Apareceu na porta', criador: info.documentado ? 'Veio de um criadouro autorizado, com nota e marcação' : 'Veio de um criador', familia: 'Já era da família', loja: 'Veio de uma loja de animais', ilegal: 'Veio de uma feira, sem nota nem anilha' }[info.origem];
   return (
     <div className="ficha-pet">
       <p className="ficha-pet__estado">{estadoDoPet(vida, p).charAt(0).toUpperCase() + estadoDoPet(vida, p).slice(1)}.</p>
       <p className="nota">{origem}{info.origem === 'familia' ? '' : `, em ${chegou}`}. {info.jeito.charAt(0).toUpperCase() + info.jeito.slice(1)}.{info.tutor === 'familia' ? ' Quem cuida é a família.' : ''}</p>
+      {info.origem === 'ilegal' && <p className="nota nota--ruim"><span aria-hidden>! </span>Sem documento, é crime manter um silvestre (Lei 9.605/1998): a fiscalização pode levar e multar. Entregar por conta própria não tem multa.</p>}
       <div className="grupo-acoes grupo-acoes--linha">
+        {info.origem === 'ilegal' && <BotaoAcao vida={vida} acao={{ tipo: 'entregar_pet', petId: p.id }} agir={agir} variante="secundario">Entregar ao órgão ambiental</BotaoAcao>}
         {d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'tratar' }} agir={agir}>{`Tratar (${dinheiroCurto(custoDoTratamento(vida, p, true))})`}</BotaoAcao>}
         {d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'basico' }} agir={agir} variante="discreto" ocultarBloqueado>{`O tratamento possível (${dinheiroCurto(custoDoTratamento(vida, p, false))})`}</BotaoAcao>}
         {d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'paliativo' }} agir={agir} variante="discreto" ocultarBloqueado>Cuidar para que não sofra</BotaoAcao>}

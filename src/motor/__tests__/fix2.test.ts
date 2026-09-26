@@ -696,13 +696,13 @@ describe('divulgação progressiva', () => {
 
 describe('save v9', () => {
   it('saves v8 reais (ATT 2) migram, validam, guardam o estado e continuam sendo vividos', () => {
-    expect(VERSAO_SAVE).toBe(12);
+    expect(VERSAO_SAVE).toBe(13);
     for (const nome of ['save-v8-adolescente.json', 'save-v8-adulta.json', 'save-v8-meia-idade.json']) {
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');
       if (r.tipo !== 'ok') continue;
       expect(r.migrado).toBe(true);
-      expect(r.vida.versao).toBe(12);
+      expect(r.vida.versao).toBe(VERSAO_SAVE);
       expect(Array.isArray(r.vida.mente.abalos)).toBe(true);
       expect(r.vida.mente.historico.length).toBe(1);
       expect(r.vida.caminhos.entrevistas).toEqual({ recentes: [], feitas: 0 });
@@ -721,7 +721,7 @@ describe('save v9', () => {
     for (const nome of ['save-v7-adolescente.json', 'save-v6-familia.json', 'save-v5-adulta.json']) {
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');
-      if (r.tipo === 'ok') expect(r.vida.versao).toBe(12);
+      if (r.tipo === 'ok') expect(r.vida.versao).toBe(VERSAO_SAVE);
     }
   });
 

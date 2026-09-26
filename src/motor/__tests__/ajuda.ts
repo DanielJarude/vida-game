@@ -15,11 +15,17 @@ export function viver(v: Vida, anos: number, acoesPorAno?: (v: Vida) => Acao[]):
   for (let k = 0; k < anos && !v.morte; k++) {
     for (const a of acoesPorAno?.(v) ?? []) {
       v = executar(v, a).vida;
-      if (v.momento) v = responder(v);
+      v = responderTudo(v);
     }
     v = avancarAno(v).vida;
-    if (v.momento) v = responder(v);
+    v = responderTudo(v);
   }
+  return v;
+}
+
+/** Responde a decisão aberta e as que vierem encadeadas (etapas, conflitos de trajetória). */
+export function responderTudo(v: Vida, preferir?: string): Vida {
+  for (let k = 0; k < 12 && v.momento && !v.morte; k++) v = responder(v, preferir);
   return v;
 }
 

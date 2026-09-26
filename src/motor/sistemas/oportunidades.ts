@@ -23,13 +23,12 @@ import { municipio, nivelDeOferta } from '../dados/lugares';
 import { forcaDoSetor } from '../dados/mercado';
 import { habilidade } from './frentes';
 import { marcar } from './marcas';
-import { contratar, elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPropria, textoDeContratacao } from './trabalho';
+import { contratar, elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPropria } from './trabalho';
 import { mediaEscolar } from './frentes';
 import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
 import { voltarAEstudar } from './escola';
 import { anoDe } from '../tempo';
-import { iniciarRural } from './rural';
 import { flex, ge } from '../texto';
 
 export const LIMITE_OPORTUNIDADES = 4;
@@ -203,6 +202,8 @@ const OCUPACOES_POR_TRILHA = (trilha: string): Ocupacao[] => OCUPACOES.filter(x 
 
 /* ------------------------------------------------------------- Aceitar */
 
+import { propor } from './compromissos';
+
 export interface Aceite {
   texto: string;
   tom?: 'bom' | 'ruim' | 'neutro';
@@ -222,9 +223,8 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       if (!oc) return { texto: 'A vaga sumiu.' };
       if (o.pessoaId) lembrarCom(v, o.pessoaId, `Indicou você para um trabalho: ${nomeOcupacao(v, oc)}.`, 'apoio', 2);
       if (porContaPropria(oc)) {
-        const e = contratar(v, r, oc, o.tipo === 'indicacao' ? 'indicacao' : o.tipo);
-        escrever(v, { texto: textoDeContratacao(v, oc, e), relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
-        return { texto: `Começou a trabalhar como ${nomeOcupacao(v, oc)}.`, tom: 'bom' };
+        const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: o.tipo === 'indicacao' ? 'indicacao' : o.tipo }) === 'feito';
+        return { texto: feito ? `Começou a trabalhar como ${nomeOcupacao(v, oc)}.` : '', tom: 'bom' };
       }
       return { texto: '', entrevista: { ocupacaoId: oc.id, bonus: o.bonus ?? 0.15, via: o.tipo === 'indicacao' ? 'indicacao' : o.tipo } };
     }
@@ -248,7 +248,7 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       const lugar = o.municipioId ?? v.moradia.municipioId;
       v.fatos['peneira_mod'] = MODS.indexOf(d);
       v.fatos['peneira_lugar'] = municipioIndex(lugar);
-      const clube = o.titulo.replace(/^(Peneira no |Seletiva: )/, '');
+      const clube = o.titulo.replace(/^(Peneira|Seletiva) (no|na) /, '').replace(/^Seletiva: /, '');
       v.caminhos.processo = { tipo: 'peneira', dominio: d, municipioId: lugar, bonus: 0, via: o.pessoaId ? 'indicacao' : 'oportunidade', etapas: [], atual: 0, lugar: clube };
       return { texto: '', decisao: 'esp_peneira' };
     }
@@ -256,16 +256,9 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       if (!oc && v.educacao.evadiu && !v.educacao.basica && o.titulo === 'Terminar a escola') { voltarAEstudar(v); return { texto: 'Caderno novo, turma cansada e adulta, aula das sete às dez.', tom: 'bom' }; }
       if (!oc) return { texto: 'O convite não se confirmou.' };
       if (oc.id === 'jogador_futebol' || oc.id === 'atleta') { v.fatos['contrato_nivel'] = o.bonus ?? 1; return { texto: '', decisao: 'esp_contrato' }; }
-      const e = contratar(v, r, oc, 'oportunidade');
-      if (oc.id === 'produtor_rural') iniciarRural(v, o.pessoaId ? 'familia' : 'arrendada');
-      if (o.pessoaId) lembrarCom(v, o.pessoaId, `Passou para você: ${nomeOcupacao(v, oc)}.`, 'trabalho', 2);
-      if (oc.id === 'musico_profissional' || oc.id === 'ator' || oc.id === 'ator_reconhecido' || oc.id === 'bailarino' || oc.id === 'criador_conteudo' || oc.id === 'escritor') {
-        marcar(v, 'profissional', `Passou a viver da arte: ${nomeOcupacao(v, oc)}, aos ${idade(v)}.`, 3, { ocupacaoId: oc.id, dominio: oc.habilidade?.dominio });
-        marcarFato(v, 'artista_profissional');
-      }
-      if (v.caminhos.arte?.ativo && e.clientela !== undefined) e.clientela = Math.max(e.clientela, Math.round(v.caminhos.arte.publico * 0.8));
-      escrever(v, { texto: textoDeContratacao(v, oc, e), relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
-      return { texto: `Agora é ${nomeOcupacao(v, oc)}.`, tom: 'bom' };
+      const arte = ['musico_profissional', 'ator', 'ator_reconhecido', 'bailarino', 'criador_conteudo', 'escritor'].includes(oc.id);
+      const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'oportunidade', pessoaId: o.pessoaId, extra: oc.id === 'produtor_rural' ? (o.pessoaId ? 'rural_familia' : 'rural_arrendada') : arte ? 'arte' : undefined }) === 'feito';
+      return { texto: feito ? `Agora é ${nomeOcupacao(v, oc)}.` : '', tom: 'bom' };
     }
     case 'clientela': {
       const rot = ROTINA_POR_NUMERO[v.fatos[`clientela_rotina_${o.dominio}`] ?? 0];
@@ -293,9 +286,8 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
     }
     case 'bolsa': {
       if (oc) {
-        const e = contratar(v, r, oc, 'oportunidade');
-        escrever(v, { texto: textoDeContratacao(v, oc, e), relevancia: 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
-        return { texto: 'Dois anos de pesquisa pela frente.', tom: 'bom' };
+        const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'oportunidade' }) === 'feito';
+        return { texto: feito ? 'Dois anos de pesquisa pela frente.' : '', tom: 'bom' };
       }
       const b = v.educacao.basica;
       if (!b) return { texto: 'A bolsa já não se aplica.' };

@@ -19,6 +19,7 @@
 
 import type { Rng } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
+import { animal, palavraDoBicho } from '../dados/animais';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, vinculosVivos } from '../nucleo';
 import { flex, ge, listaNatural, rotuloParentesco } from '../texto';
 import { MESES, anoDe, mesDe } from '../tempo';
@@ -150,9 +151,10 @@ function textoDaMorte(v: Vida, p: Pessoa, vin: Vinculo, causa: string, nivel: Ni
   }
   if (p.especie) {
     const anos = Math.max(1, Math.round((v.t - (p.pet?.tChegada ?? vin.tInicio)) / 12));
-    const bicho = p.especie === 'gato' ? flex(p.genero, 'o gato', 'a gata') : flex(p.genero, 'o cachorro', 'a cachorra');
+    const bicho = palavraDoBicho(p.especie, p.genero);
     const paliativo = v.fatos[`paliativo_${p.id}`] !== undefined;
-    const vazio = p.especie === 'gato' ? 'A almofada da janela ficou vazia.' : 'A casa ficou estranha sem o barulho das patas no corredor.';
+    const grupo = animal(p.especie).grupo;
+    const vazio = grupo === 'gato' ? 'A almofada da janela ficou vazia.' : grupo === 'cao' ? 'A casa ficou estranha sem o barulho das patas no corredor.' : grupo === 'ave' ? 'A casa ficou silenciosa de manhã.' : grupo === 'peixe' ? 'O aquário ficou parado na sala.' : grupo === 'reptil' ? 'O cantinho de sol ficou vazio.' : 'A gaiola ficou vazia no canto da sala.';
     const velhice = causa === 'velhice';
     return `${capital(bicho)} ${p.nome} morreu em ${mes}, aos ${ip} anos${velhice ? ', de velhice' : ` (${causa})`}${paliativo ? ', sem sofrer, perto de quem cuidava' : ''}. Foram ${anos} ${anos === 1 ? 'ano' : 'anos'} juntos. ${vazio}`;
   }

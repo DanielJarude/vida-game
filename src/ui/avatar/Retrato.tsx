@@ -9,6 +9,8 @@
  */
 
 import { memo } from 'react';
+import type { Especie } from '../../motor/tipos';
+import { animal, palavraDoBicho } from '../../motor/dados/animais';
 import type { Genero, Visual } from '../../motor/tipos';
 
 const PELE: Record<string, [string, string]> = {
@@ -73,7 +75,7 @@ interface Props {
   semente?: string;
   tamanho?: number;
   rotulo?: string;
-  especie?: 'cachorro' | 'gato';
+  especie?: Especie;
   falecido?: boolean;
   /**
    * Como a pessoa está (do estado real, não sorteado): muda boca,
@@ -450,13 +452,15 @@ function Barba({ tipo, cor, cx, olhoY, w, queixo, jaw }: { tipo: string; cor: st
 
 /* ------------------------------------------------------------------ Pets */
 
-function RetratoPet({ especie, tamanho, rotulo, semente }: { especie: 'cachorro' | 'gato'; tamanho: number; rotulo?: string; semente: string }) {
+function RetratoPet({ especie, tamanho, rotulo, semente }: { especie: Especie; tamanho: number; rotulo?: string; semente: string }) {
   const cores = ['#8a6a4a', '#2b2622', '#d9c3a0', '#a8752f', '#6b6560', '#efe6d8'];
   const c = cores[hash(semente) % cores.length];
   const escuro = misturar(c, '#000000', 0.25);
+  const a = animal(especie);
+  const fundo = a.grupo === 'peixe' ? '#cfe3ea' : a.grupo === 'reptil' ? '#dfe8d4' : a.grupo === 'ave' ? '#e8e4d2' : '#dfe6f0';
   return (
-    <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} style={{ background: '#dfe6f0' }} role="img" aria-label={rotulo ?? (especie === 'gato' ? 'Gato' : 'Cachorro')}>
-      {especie === 'gato' ? (
+    <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} style={{ background: fundo }} role="img" aria-label={rotulo ?? palavraDoBicho(especie, 'masculino', false)}>
+      {a.grupo === 'gato' && (
         <g>
           <path d="M 28 40 L 30 18 L 44 32 Z M 72 40 L 70 18 L 56 32 Z" fill={escuro} />
           <ellipse cx="50" cy="52" rx="25" ry="22" fill={c} />
@@ -466,7 +470,8 @@ function RetratoPet({ especie, tamanho, rotulo, semente }: { especie: 'cachorro'
           <path d="M 36 61 L 24 59 M 36 63 L 25 65 M 64 61 L 76 59 M 64 63 L 75 65" stroke={escuro} strokeWidth="0.8" />
           <ellipse cx="50" cy="96" rx="22" ry="20" fill={c} />
         </g>
-      ) : (
+      )}
+      {a.grupo === 'cao' && (
         <g>
           <ellipse cx="28" cy="46" rx="8" ry="16" fill={escuro} transform="rotate(18 28 46)" />
           <ellipse cx="72" cy="46" rx="8" ry="16" fill={escuro} transform="rotate(-18 72 46)" />
@@ -478,6 +483,63 @@ function RetratoPet({ especie, tamanho, rotulo, semente }: { especie: 'cachorro'
           <ellipse cx="50" cy="97" rx="22" ry="20" fill={c} />
         </g>
       )}
+      {a.grupo === 'ave' && <Ave especie={especie} semente={semente} />}
+      {(a.grupo === 'roedor' || a.grupo === 'coelho') && (
+        <g>
+          {a.grupo === 'coelho'
+            ? <><ellipse cx="40" cy="26" rx="6" ry="18" fill={c} /><ellipse cx="60" cy="26" rx="6" ry="18" fill={c} /><ellipse cx="40" cy="27" rx="2.6" ry="13" fill="#e8b4b4" /><ellipse cx="60" cy="27" rx="2.6" ry="13" fill="#e8b4b4" /></>
+            : <><circle cx="33" cy="38" r="7" fill={escuro} /><circle cx="67" cy="38" r="7" fill={escuro} /></>}
+          <ellipse cx="50" cy="58" rx={especie === 'hamster' ? 26 : 24} ry={especie === 'hamster' ? 22 : 21} fill={especie === 'chinchila' ? '#a8a4a0' : c} />
+          <circle cx="41" cy="54" r="2.8" fill="#141110" /><circle cx="59" cy="54" r="2.8" fill="#141110" />
+          <ellipse cx="50" cy="62" rx="3" ry="2.2" fill="#c9807a" />
+          <path d="M 44 66 Q 50 69 56 66" stroke="#141110" strokeWidth="1" fill="none" />
+          <path d="M 42 62 L 30 60 M 42 64 L 31 66 M 58 62 L 70 60 M 58 64 L 69 66" stroke={escuro} strokeWidth="0.7" />
+          <ellipse cx="50" cy="98" rx="24" ry="18" fill={especie === 'chinchila' ? '#a8a4a0' : c} />
+        </g>
+      )}
+      {a.grupo === 'peixe' && (
+        <g>
+          <path d="M 14 70 Q 30 62 40 76 Q 30 88 14 84 Z" fill="#fff" opacity="0.25" />
+          <path d="M 70 50 L 90 34 L 88 66 Z" fill={especie === 'betta' ? '#3b56b8' : '#e08a2a'} opacity="0.9" />
+          <ellipse cx="50" cy="50" rx="24" ry="15" fill={especie === 'betta' ? '#2f4aa8' : '#e8952e'} />
+          <path d="M 44 36 Q 52 26 60 37" fill={especie === 'betta' ? '#3b56b8' : '#e08a2a'} />
+          <circle cx="36" cy="47" r="3" fill="#141110" /><circle cx="35" cy="46" r="1" fill="#fff" />
+          <circle cx="24" cy="30" r="2.2" fill="none" stroke="#fff" strokeWidth="0.8" /><circle cx="18" cy="20" r="1.6" fill="none" stroke="#fff" strokeWidth="0.8" />
+        </g>
+      )}
+      {a.grupo === 'reptil' && (especie === 'jabuti' ? (
+        <g>
+          <ellipse cx="50" cy="60" rx="30" ry="20" fill="#5b4a2c" />
+          <path d="M 34 52 L 42 46 L 50 50 L 58 46 L 66 52 L 60 62 L 40 62 Z" fill="#c9922a" opacity="0.8" />
+          <ellipse cx="84" cy="64" rx="9" ry="7" fill="#7b6a4a" /><circle cx="87" cy="62" r="1.4" fill="#141110" />
+          <rect x="28" y="74" width="8" height="8" rx="3" fill="#7b6a4a" /><rect x="62" y="74" width="8" height="8" rx="3" fill="#7b6a4a" />
+        </g>
+      ) : (
+        <g>
+          <path d="M 12 70 Q 40 60 62 66 Q 80 70 88 60 L 90 66 Q 82 78 60 76 Q 36 74 12 76 Z" fill="#5f8f3a" />
+          <ellipse cx="74" cy="58" rx="13" ry="9" fill="#6fa044" />
+          <path d="M 64 50 L 68 44 L 72 50 L 76 44 L 80 50" stroke="#3f6a26" strokeWidth="2" fill="none" />
+          <circle cx="80" cy="56" r="1.8" fill="#141110" />
+          <circle cx="68" cy="64" r="4" fill="#9fc26a" />
+        </g>
+      ))}
     </svg>
+  );
+}
+
+function Ave({ especie, semente }: { especie: Especie; semente: string }) {
+  const corpo = especie === 'calopsita' ? '#c9c4b8' : especie === 'periquito' ? (hash(semente) % 2 ? '#6fb55a' : '#5f8fd0') : especie === 'canario' ? '#e8c43a' : '#3f9b4a';
+  const cabeca = especie === 'calopsita' ? '#e8d25a' : especie === 'papagaio' ? '#e8c43a' : corpo;
+  return (
+    <g>
+      <ellipse cx="50" cy="66" rx="20" ry="26" fill={corpo} />
+      <circle cx="50" cy="38" r="16" fill={cabeca} />
+      {especie === 'calopsita' && <><path d="M 48 23 Q 44 8 52 4 Q 50 14 56 20 Z" fill="#e8d25a" /><circle cx="42" cy="43" r="4" fill="#e0764a" /></>}
+      {especie === 'papagaio' && <ellipse cx="50" cy="30" rx="10" ry="6" fill="#4a78c8" />}
+      <circle cx="44" cy="36" r="2.6" fill="#141110" />
+      <path d="M 56 38 Q 66 40 58 48 Q 56 44 54 42 Z" fill={especie === 'papagaio' ? '#2b2622' : '#e0a24a'} />
+      <path d="M 34 70 Q 28 84 40 90" stroke={misturar(corpo, '#000000', 0.3)} strokeWidth="3" fill="none" />
+      <path d="M 44 92 L 44 98 M 56 92 L 56 98" stroke="#8a6a4a" strokeWidth="2" />
+    </g>
   );
 }

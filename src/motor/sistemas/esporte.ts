@@ -30,6 +30,9 @@ import { contratar, encerrarEmprego } from './trabalho';
 import { capitalDoEstado } from './escola';
 import { flex, ge } from '../texto';
 import { novaOportunidade } from './oportunidades';
+import { aoClube, clubeDoNivel, CLUBES, clubesDaCidade, DIVISAO_DO_NIVEL, doClube, equipeDaCidade, noClube, oClube, peloClube } from '../dados/clubes';
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import { abalar } from './abalo';
 
 export const MODALIDADES: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas'];
@@ -43,18 +46,38 @@ function hash(s: string): number {
   return (h >>> 0) / 4294967295;
 }
 
-/** Um clube plausível e fictício para uma cidade (sem marcas reais). */
+/**
+ * O clube de uma cidade: no futebol, um clube real com categorias de base
+ * na cidade (ou, se não houver, na capital do estado); nos outros esportes,
+ * o clube poliesportivo de referência ou a equipe da prefeitura. O que
+ * acontece no clube é simulação (`dados/clubes`).
+ */
 export function nomeDeClube(municipioId: string, semente: string, d: Dominio = 'futebol'): string {
-  const cidade = municipio(municipioId).nome;
   const h = hash(`${municipioId}:${semente}`);
-  if (d !== 'futebol') return ['Clube', 'Associação Atlética', 'Sociedade Esportiva'][Math.floor(h * 3)] + ` ${cidade}`;
-  return [`Esporte Clube ${cidade}`, `Atlético ${cidade}`, `${cidade} Futebol Clube`, `União ${cidade}`, `Sport ${cidade}`][Math.floor(h * 5)];
+  if (d !== 'futebol') return equipeDaCidade(municipioId, municipio(municipioId).nome, h, d);
+  const aqui = clubesDaCidade(municipioId);
+  const lista = aqui.length ? aqui : clubesDaCidade(capitalDoEstado(municipioId));
+  if (lista.length) return lista[Math.floor(h * lista.length) % lista.length].nome;
+  return clubeDoNivel(2, h).nome;
 }
 
-/** Onde fica a peneira: na própria cidade, se há estrutura; senão, na capital. */
-function ondeTreina(v: Vida): string {
+/** Onde fica a peneira: no futebol, onde há clube com base; nos outros esportes, onde há estrutura — senão, na capital. */
+function ondeTreina(v: Vida, d: Dominio = 'futebol'): string {
   const aqui = v.moradia.municipioId;
+  if (d === 'futebol') return clubesDaCidade(aqui).length ? aqui : capitalDoEstado(aqui);
   return estruturaEsportiva(aqui) >= 1 ? aqui : capitalDoEstado(aqui);
+}
+
+/** O teto de divisão de um clube na simulação (os grandes chegam à elite; os regionais, às divisões de acesso). */
+const tetoDoClube = (nome: string) => { const c = CLUBES.find(x => x.nome === nome); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
+/** Troca o clube do atleta (e o empregador), no nível da simulação. */
+export function mudarDeClube(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 4): string {
+  const novo = e.modalidade === 'futebol' ? clubeDoNivel(nivel, hash(`${v.id}:${v.t}:clube`), e.clube).nome : e.clube;
+  e.clube = novo;
+  e.nivel = nivel;
+  const emp = v.trabalho.atual;
+  if (emp && ['jogador_futebol', 'atleta'].includes(emp.ocupacaoId)) emp.empregador = oClube(novo);
+  return novo;
 }
 
 /** A modalidade que a pessoa pratica com mais seriedade agora. */
@@ -64,7 +87,6 @@ export function modalidadePrincipal(v: Vida): { d: Dominio; nivel: number } | un
 }
 
 const nivelPelaHabilidade = (h: number): 1 | 2 | 3 | 4 => (h < 74 ? 1 : h < 81 ? 2 : h < 88 ? 3 : 4);
-const DIVISAO = ['', 'um time do campeonato estadual', 'um clube da Série C', 'um clube da Série B', 'um clube da Série A'];
 const SALARIO_FUTEBOL = [0, 1800, 4800, 16000, 55000];
 const SALARIO_OUTROS = [0, 1500, 3500, 8500, 22000];
 
@@ -92,13 +114,13 @@ export function processarEsporte(v: Vida, r: Rng): void {
       const serio = mod.nivel >= 2 ? 1 : 0.35;
       const chance = clamp((h - 36) / 32, 0, 0.6) * serio * (0.6 + estruturaEsportiva(v.moradia.municipioId) * 0.15);
       if (r.chance(chance)) {
-        const lugar = ondeTreina(v);
+        const lugar = ondeTreina(v, mod.d);
         const clube = nomeDeClube(lugar, `${v.id}:${i}`, mod.d);
         const longe = lugar !== v.moradia.municipioId;
         novaOportunidade(v, {
           tipo: mod.d === 'futebol' ? 'peneira' : 'seletiva', dominio: mod.d, municipioId: lugar, meses: 12, chave: `peneira_${mod.d}`,
-          titulo: mod.d === 'futebol' ? `Peneira no ${clube}` : `Seletiva: ${clube}`,
-          texto: `${mod.nivel >= 2 ? 'O treinador' : 'Um conhecido que entende de esporte'} viu você ${mod.d === 'futebol' ? 'jogar' : 'competir'} e indicou para ${mod.d === 'futebol' ? 'a peneira' : 'a seletiva'} do ${clube}${longe ? `, em ${municipio(lugar).nome}` : ''}. Centenas de garotos, poucas vagas.`
+          titulo: mod.d === 'futebol' ? `Peneira ${noClube(clube)}` : `Seletiva ${noClube(clube)}`,
+          texto: `${mod.nivel >= 2 ? 'O treinador' : 'Um conhecido que entende de esporte'} viu você ${mod.d === 'futebol' ? 'jogar' : 'competir'} e indicou para ${mod.d === 'futebol' ? 'a peneira' : 'a seletiva'} ${doClube(clube)}${longe ? `, em ${municipio(lugar).nome}` : ''}. ${mod.d === 'futebol' ? 'Centenas de garotos' : 'Dezenas de atletas'}, poucas vagas.`
         });
       }
     }
@@ -124,10 +146,10 @@ export function entrarNaBase(v: Vida, d: Dominio, municipioId: string, clube: st
   const rot = v.rotinas.find(x => x.id === d);
   if (rot) rot.nivel = 3; else v.rotinas.push({ id: d, tInicio: v.t, nivel: 3 });
   const longe = municipioId !== v.moradia.municipioId;
-  const texto = `Entrou para ${EQUIPE[d]} do ${clube}${longe ? `, em ${municipio(municipioId).nome}: alojamento do clube durante a semana, casa nos domingos` : ''}.`;
+  const texto = `Entrou para ${EQUIPE[d]} ${doClube(clube)}${longe ? `, em ${municipio(municipioId).nome}: alojamento durante a semana, casa nos domingos` : ''}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'lazer', tom: 'bom', escolha: true });
   marcar(v, 'ingresso', texto, 3, { dominio: d });
-  for (const p of pais(v)) lembrarCom(v, p.id, `${d === 'futebol' ? 'A base' : 'A equipe'} do ${clube}.`, 'escola', 2);
+  for (const p of pais(v)) lembrarCom(v, p.id, `${d === 'futebol' ? 'A base' : 'A equipe'} ${doClube(clube)}.`, 'escola', 2);
 }
 
 function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
@@ -152,7 +174,7 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     novaOportunidade(v, {
       tipo: 'convite', ocupacaoId: e.modalidade === 'futebol' ? 'jogador_futebol' : 'atleta', dominio: e.modalidade, meses: 12, chave: 'contrato_esporte',
       titulo: 'Contrato profissional',
-      texto: e.modalidade === 'futebol' ? `O ${e.clube} ofereceu o primeiro contrato profissional${nivel >= 3 ? ' — e há sondagem de um clube maior' : ''}. Salário de verdade, prazo de dois anos.` : `A equipe ofereceu contrato de atleta profissional, com salário e calendário de competições.`,
+      texto: e.modalidade === 'futebol' ? `${cap(oClube(e.clube))} ofereceu o primeiro contrato profissional${nivel > tetoDoClube(e.clube) ? ' — e há sondagem de um clube maior' : ''}. Salário de verdade, prazo de dois anos.` : `A equipe ofereceu contrato de atleta profissional, com salário e calendário de competições.`,
       bonus: nivel
     });
     return;
@@ -168,14 +190,15 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
   const oc = ocupacao(e.modalidade === 'futebol' ? 'jogador_futebol' : 'atleta');
   e.fase = 'profissional';
   e.tFase = v.t;
-  e.nivel = Math.max(1, Math.min(4, nivel)) as 1 | 2 | 3 | 4;
+  // O primeiro contrato é com o clube da base, na divisão que ele alcança na simulação.
+  e.nivel = Math.max(1, Math.min(4, nivel, e.modalidade === 'futebol' ? tetoDoClube(e.clube) : 4)) as 1 | 2 | 3 | 4;
   const emp = contratar(v, r, oc, 'oportunidade');
-  emp.empregador = e.nivel >= 2 ? DIVISAO[e.nivel] : `o ${e.clube}`;
+  emp.empregador = oClube(e.clube);
   emp.salario = (e.modalidade === 'futebol' ? SALARIO_FUTEBOL : SALARIO_OUTROS)[e.nivel];
   // O primeiro contrato é curto; o espaço no time depende do que se joga.
   e.contratoAte = v.t + 24;
   e.espaco = habilidade(v, e.modalidade) >= 72 + e.nivel * 2 ? 'titular' : 'reserva';
-  const texto = e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, aos ${idade(v)}.` : `Virou atleta profissional de ${NOME_MOD[e.modalidade]}, aos ${idade(v)}.`;
+  const texto = e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, ${peloClube(e.clube)}, aos ${idade(v)}.` : `Virou atleta profissional de ${NOME_MOD[e.modalidade]}, ${peloClube(e.clube)}, aos ${idade(v)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'profissional', texto, 3, { dominio: e.modalidade, ocupacaoId: oc.id });
   marcarFato(v, 'atleta_profissional');
@@ -223,20 +246,18 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   // Clube sobe e desce com o jogo.
   const alvo = nivelPelaHabilidade(h);
   if (alvo > e.nivel && r.chance(0.35)) {
-    e.nivel = (e.nivel + 1) as 1 | 2 | 3 | 4;
-    emp.empregador = DIVISAO[e.nivel];
+    const novo = mudarDeClube(v, e, (e.nivel + 1) as 1 | 2 | 3 | 4);
     emp.salario = tabela[e.nivel];
     e.contratoAte = v.t + 36;
     e.espaco = 'reserva';
-    const texto = `Foi negociado com ${DIVISAO[e.nivel]}.`;
+    const texto = e.modalidade === 'futebol' ? `Foi negociado com ${oClube(novo)}, ${DIVISAO_DO_NIVEL[e.nivel] === 'Série A' ? 'na elite' : `na ${DIVISAO_DO_NIVEL[e.nivel]}`}.` : `Subiu de patamar: competições nacionais, salário maior.`;
     escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'promocao', texto, e.nivel >= 3 ? 3 : 2, { dominio: e.modalidade });
   } else if (alvo < e.nivel && r.chance(0.4)) {
-    e.nivel = (e.nivel - 1) as 1 | 2 | 3 | 4;
-    emp.empregador = DIVISAO[e.nivel];
+    const novo = mudarDeClube(v, e, (e.nivel - 1) as 1 | 2 | 3 | 4);
     emp.salario = tabela[e.nivel];
     e.contratoAte = v.t + 24;
-    escrever(v, { texto: `Sem espaço no time, foi para ${DIVISAO[e.nivel]}.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    escrever(v, { texto: e.modalidade === 'futebol' ? `Sem espaço no time, foi emprestado ${aoClube(novo)}.` : 'Sem espaço na equipe principal, voltou a competir num nível abaixo.', relevancia: 'cotidiano', tema: 'trabalho' });
   }
   // Titular ou banco: o que se joga, a conversa com o treinador, o nível do clube.
   const conversa = v.fatos['esp_treinador_ok'] !== undefined && v.t - v.fatos['esp_treinador_ok'] <= 12 ? 3 : 0;
@@ -277,7 +298,7 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
   if (eraPro && v.trabalho.atual && ['jogador_futebol', 'atleta'].includes(v.trabalho.atual.ocupacaoId)) encerrarEmprego(v, 'fim da carreira esportiva');
   const g = ge(v);
   const texto = !eraPro
-    ? motivo === 'dispensa' ? `${flex(g, 'Dispensado', 'Dispensada')} ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'} do ${e.clube}, aos ${i}. O sonho de viver do ${NOME_MOD[e.modalidade]} ficou para trás.` : `Deixou ${EQUIPE[e.modalidade]} do ${e.clube}, aos ${i}.`
+    ? motivo === 'dispensa' ? `${flex(g, 'Dispensado', 'Dispensada')} ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'} ${doClube(e.clube)}, aos ${i}. O sonho de viver do ${NOME_MOD[e.modalidade]} ficou para trás.` : `Deixou ${EQUIPE[e.modalidade]} ${doClube(e.clube)}, aos ${i}.`
     : motivo === 'lesao' ? `Encerrou a carreira aos ${i}, depois de lesões demais.` : motivo === 'sem_contrato' ? `Aos ${i}, nenhum clube renovou: a carreira de ${flex(g, 'atleta', 'atleta')} acabou sem despedida.` : `Pendurou as chuteiras aos ${i}.`.replace('as chuteiras', e.modalidade === 'futebol' ? 'as chuteiras' : 'a carreira');
   escrever(v, { texto, relevancia: 'marco', tema: eraPro ? 'trabalho' : 'lazer', tom: 'ruim' });
   marcar(v, eraPro ? 'fim_carreira' : 'fracasso', texto, 3, { dominio: e.modalidade });

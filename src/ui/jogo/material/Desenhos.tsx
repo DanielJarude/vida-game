@@ -115,7 +115,7 @@ export function CenaDaCasa({ l }: { l: LeituraLar }) {
       {l.veiculo === 'carro' && <Carro x={34} />}
       {l.veiculo === 'moto' && <Moto x={44} />}
       {l.veiculo === 'bicicleta' && <Bicicleta x={48} />}
-      {l.bichos.slice(0, 2).map((b, k) => (b.especie === 'gato' ? <Gato key={b.id} x={232 + k * 26} /> : <Cachorro key={b.id} x={232 + k * 26} />))}
+      {l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro').slice(0, 2).map((b, k) => (b.especie === 'gato' ? <Gato key={b.id} x={232 + k * 26} /> : <Cachorro key={b.id} x={232 + k * 26} />))}
     </svg>
   );
 }

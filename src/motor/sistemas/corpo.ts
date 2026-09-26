@@ -8,7 +8,7 @@
  * causas externas que pesam sobre jovens no Brasil.
  */
 
-import { riscoDoPet } from './pets';
+import { causaDaMortePet, riscoDoPet } from './pets';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Condicao, Pessoa, Vida } from '../tipos';
@@ -173,8 +173,7 @@ export function processarCorpoDePessoa(v: Vida, r: Rng, p: Pessoa): string | nul
   const i = idadeEm(p.tNasc, v.t);
   if (p.especie) {
     if (!r.chance(riscoDoPet(v, p))) return null;
-    const d = p.pet?.doenca;
-    return d?.gravidade === 3 ? d.nome.replace(/^um |^uma /, '') : 'velhice';
+    return causaDaMortePet(v, p, r);
   }
   const deriva = i < 40 ? 0 : i < 60 ? -0.8 : i < 75 ? -1.5 : -2.5;
   p.saude = clamp(Math.round(p.saude + deriva + r.normal() * 2));

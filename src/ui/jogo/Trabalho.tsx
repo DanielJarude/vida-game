@@ -21,7 +21,8 @@ import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
 import { degrausAcima, elegibilidade, horizonte, nomeOcupacao, porContaPropria, estradaNaArea } from '../../motor/sistemas/trabalho';
 import { acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
-import { leituraDoNegocio, negocioAtivo, negociosPossiveis, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
+import { estrategiaDe, leituraDoNegocio, negocioAtivo, negociosPossiveis, presencaDe, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
+import { rotuloEstrategia } from '../../motor/dados/negocios';
 import { leituraPolitica, naPolitica } from '../../motor/sistemas/politica';
 import { escadaMilitar } from '../../motor/sistemas/militar';
 import { editaisAbertos, leituraDoPreparo } from '../../motor/sistemas/concurso';
@@ -134,7 +135,7 @@ function PainelNegocio({ vida }: { vida: Vida }) {
   const l = leituraDoNegocio(vida, n);
   const teto = tetoDoMovimento(n);
   const porte = n.emCasa ? 'pequeno, em casa' : n.porte === 3 ? 'grande' : n.porte === 2 ? 'ampliado' : 'um ponto pequeno';
-  const jeito = ({ bairro: 'freguesia do bairro', qualidade: 'aposta na qualidade', preco: 'preço baixo', online: 'também pela internet' } as const)[n.estrategia ?? 'bairro'];
+  const jeito = rotuloEstrategia(presencaDe(n), estrategiaDe(n), n.tipo)?.hoje ?? 'o de sempre';
   return (
     <section className="painel painel--negocio" aria-label="O negócio">
       <p className="painel__frase">{l.movimento}</p>

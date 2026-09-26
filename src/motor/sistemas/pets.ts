@@ -12,10 +12,11 @@
 
 import type { Rng } from '../rng';
 import { clamp, criarRng } from '../rng';
-import type { InfoPet, Pessoa, Vida } from '../tipos';
+import type { Especie, InfoPet, Pessoa, Vida } from '../tipos';
+import { animal, palavraDoBicho, umBicho, type GrupoAnimal } from '../dados/animais';
 import { escrever, idade, idadePessoa, lembrarCom, moraCom, parentes, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
-import { economiaLocal } from '../dados/lugares';
+import { economiaLocal, municipio } from '../dados/lugares';
 import { dinheiro as fmt, flex } from '../texto';
 import { abalar } from './abalo';
 import { moraComFamiliaDeOrigem } from './domicilio';
@@ -28,7 +29,10 @@ export const petsDaCasa = (v: Vida) => vinculosVivos(v).filter(x => x.p.especie 
 export const seusPets = (v: Vida) => parentes(v, 'pet').filter(p => (p.pet?.tutor ?? (moraComFamiliaDeOrigem(v) ? 'familia' : 'eu')) === 'eu');
 
 export function infoPet(v: Vida, p: Pessoa): InfoPet {
-  if (!p.pet) p.pet = { porte: p.especie === 'gato' ? 'pequeno' : 'medio', origem: 'familia', tChegada: v.vinculos[p.id]?.tInicio ?? v.t, tutor: moraComFamiliaDeOrigem(v) ? 'familia' : 'eu', jeito: p.especie === 'gato' ? 'dono da casa' : 'fiel', vidaMax: p.especie === 'gato' ? 15 : 13 };
+  if (!p.pet) {
+    const a = animal(p.especie);
+    p.pet = { porte: p.especie === 'cachorro' ? 'medio' : 'pequeno', origem: 'familia', tChegada: v.vinculos[p.id]?.tInicio ?? v.t, tutor: moraComFamiliaDeOrigem(v) ? 'familia' : 'eu', jeito: p.especie === 'gato' ? 'dono da casa' : p.especie === 'cachorro' ? 'fiel' : a.jeitos[0][0], vidaMax: Math.round((a.vida[0] + a.vida[1]) / 2) };
+  }
   return p.pet;
 }
 
@@ -38,8 +42,9 @@ export function custoDosPets(v: Vida, c: number, soTutor?: 'eu'): number {
   let total = 0;
   for (const p of lista) {
     const porte = p.pet?.porte ?? 'medio';
-    const base = p.especie === 'gato' ? 120 : porte === 'pequeno' ? 140 : porte === 'medio' ? 190 : 260;
-    const velho = idadePessoa(v, p) >= (p.especie === 'gato' ? 11 : 9) ? 1.4 : 1;
+    const a = animal(p.especie);
+    const base = p.especie === 'cachorro' ? (porte === 'pequeno' ? 140 : porte === 'medio' ? 190 : 260) : a.custo;
+    const velho = idadePessoa(v, p) >= (p.pet?.vidaMax ?? a.vida[1]) * 0.75 ? 1.4 : 1;
     total += base * velho * c;
   }
   return total;
@@ -47,33 +52,44 @@ export function custoDosPets(v: Vida, c: number, soTutor?: 'eu'): number {
 
 /* --------------------------------------------------------------- Adoção */
 
-export function podeTerPet(v: Vida, especie: 'cachorro' | 'gato', porte: InfoPet['porte']): { grau: 'permitido' | 'improvavel' | 'requisito' | 'ilegal' | 'incompativel'; motivo?: string } {
+export function podeTerPet(v: Vida, especie: Especie, porte: InfoPet['porte']): { grau: 'permitido' | 'improvavel' | 'requisito' | 'ilegal' | 'incompativel'; motivo?: string } {
   const i = idade(v);
+  const a = animal(especie);
   if (i < 18 && moraComFamiliaDeOrigem(v)) return { grau: 'ilegal', motivo: 'Quem decide ter um bicho em casa são os adultos da família.' };
   if (seusPets(v).length >= 4) return { grau: 'incompativel', motivo: 'Já são muitos bichos para uma casa só.' };
   const m = v.moradia;
-  if ((m.tipo === 'aluguel' || m.tipo === 'republica') && m.aceitaPet === false) return { grau: 'requisito', motivo: 'O contrato do aluguel não aceita animais.' };
-  if (m.tipo === 'cedida') return { grau: 'requisito', motivo: 'Morando de favor, não dá para levar um bicho.' };
+  if ((m.tipo === 'aluguel' || m.tipo === 'republica') && m.aceitaPet === false && (a.grupo === 'cao' || a.grupo === 'gato' || a.grupo === 'coelho')) return { grau: 'requisito', motivo: 'O contrato do aluguel não aceita animais.' };
+  if (m.tipo === 'cedida' && a.grupo !== 'peixe') return { grau: 'requisito', motivo: 'Morando de favor, não dá para levar um bicho.' };
   if (moraComFamiliaDeOrigem(v) && petsDaCasa(v).length >= 2) return { grau: 'improvavel', motivo: 'A casa da família já tem bicho que chegue.' };
   const modelo = m.modeloId ? modeloMoradia(m.modeloId) : undefined;
-  if (especie === 'cachorro' && porte === 'grande' && modelo && !modelo.casa && modelo.quartos <= 1) return { grau: 'improvavel', motivo: 'Um cachorro grande num lugar tão pequeno sofre — e o condomínio reclama.' };
+  const pequeno = modelo && !modelo.casa && modelo.quartos <= 1;
+  if (especie === 'cachorro' && porte === 'grande' && pequeno) return { grau: 'improvavel', motivo: 'Um cachorro grande num lugar tão pequeno sofre — e o condomínio reclama.' };
+  if (a.espaco === 'quintal' && modelo && !modelo.casa) return { grau: 'improvavel', motivo: `${cap(palavraDoBicho(especie, 'masculino'))} vive bem com quintal e sol; num apartamento, sofre.` };
+  if (a.espaco === 'espaco' && pequeno) return { grau: 'improvavel', motivo: `${cap(palavraDoBicho(especie, 'masculino'))} precisa de espaço — num lugar deste tamanho, não vive bem.` };
+  if (a.calorFaz && ['Norte', 'Nordeste', 'Centro-Oeste'].includes(regiaoDe(v))) return { grau: 'improvavel', motivo: 'Chinchila sofre com o calor forte: aqui, só com ar-condicionado o ano inteiro.' };
+  if (a.barulho && modelo && !modelo.casa && especie === 'papagaio') return { grau: 'improvavel', motivo: 'Papagaio grita — e num prédio o vizinho escuta.' };
   return { grau: 'permitido' };
 }
 
-function vidaMaxima(r: Rng, especie: 'cachorro' | 'gato', porte: InfoPet['porte']): number {
-  if (especie === 'gato') return r.int(13, 18);
-  return porte === 'pequeno' ? r.int(13, 16) : porte === 'medio' ? r.int(11, 14) : r.int(9, 12);
+const regiaoDe = (v: Vida) => municipio(v.moradia.municipioId).regiao;
+
+function vidaMaxima(r: Rng, especie: Especie, porte: InfoPet['porte']): number {
+  if (especie === 'cachorro') return porte === 'pequeno' ? r.int(13, 16) : porte === 'medio' ? r.int(11, 14) : r.int(9, 12);
+  const a = animal(especie);
+  return r.int(a.vida[0], a.vida[1]);
 }
 
 export function adotarPet(v: Vida, r: Rng, a: Omit<AnimalDoAbrigo, 'id'>, origem: InfoPet['origem'], deQuem?: string): Pessoa {
   const pet = criarPessoa(v, r, { especie: a.especie, idade: a.idade, municipioId: v.moradia.municipioId, nome: a.nome, sobrenome: '', genero: a.genero });
-  pet.pet = { porte: a.porte, origem, tChegada: v.t, tutor: 'eu', jeito: a.jeito, vidaMax: Math.max(a.idade + 2, vidaMaxima(r, a.especie, a.porte)) };
+  pet.pet = { porte: a.porte, origem, tChegada: v.t, tutor: 'eu', jeito: a.jeito, vidaMax: Math.max(a.idade + 1, vidaMaxima(r, a.especie, a.porte)), ...(animal(a.especie).silvestre ? { documentado: origem !== 'ilegal' } : {}) };
   vincular(v, pet, { parentesco: 'pet', origem: 'familia', proximidade: 45, convivio: ['casa'] });
-  const bicho = a.especie === 'gato' ? flex(a.genero, 'um gato', 'uma gata') : flex(a.genero, 'um cachorro', 'uma cachorra');
+  const bicho = umBicho(a.especie, a.genero);
   const idadeTxt = a.idade === 0 ? 'filhote' : `de ${a.idade} ${a.idade === 1 ? 'ano' : 'anos'}`;
-  const como = origem === 'abrigo' ? `no abrigo${a.historia ? ` (${a.historia})` : ''}` : origem === 'doacao' ? `de ${deQuem ?? 'um conhecido'}, que não podia ficar` : origem === 'ninhada' ? `de uma ninhada${deQuem ? ` de ${deQuem}` : ''}` : origem === 'rua' ? 'da rua: apareceu na porta e foi ficando' : 'de um criador';
-  escrever(v, { texto: `${a.nome} chegou: ${bicho} ${idadeTxt}, ${origem === 'rua' ? 'que veio' : `adotad${a.genero === 'feminino' ? 'a' : 'o'}`} ${como}. ${cap(a.jeito)}.`, relevancia: 'biografia', tema: 'casa', tom: 'bom', escolha: origem !== 'rua', pessoas: [pet.id] });
-  lembrarCom(v, pet.id, `Chegou em casa ${como.startsWith('da rua') ? 'vind' + (a.genero === 'feminino' ? 'a' : 'o') + ' da rua' : `adotad${a.genero === 'feminino' ? 'a' : 'o'} ${como.split(' (')[0]}`}.`, 'inicio', 2);
+  const comprado = origem === 'loja' || origem === 'criador' || origem === 'ilegal';
+  const como = origem === 'abrigo' ? `no abrigo${a.historia ? ` (${a.historia})` : ''}` : origem === 'doacao' ? `de ${deQuem ?? 'um conhecido'}, que não podia ficar` : origem === 'ninhada' ? `de uma ninhada${deQuem ? ` de ${deQuem}` : ''}` : origem === 'rua' ? 'da rua: apareceu na porta e foi ficando' : origem === 'ilegal' ? 'na feira, sem nota nem anilha' : origem === 'criador' ? (animal(a.especie).silvestre ? 'de um criadouro autorizado, com nota fiscal e marcação' : 'de um criador') : 'numa loja de animais';
+  const verbo = origem === 'rua' ? 'que veio' : comprado ? (a.genero === 'feminino' || animal(a.especie).generoFixo === 'f' ? 'comprada' : 'comprado') : `adotad${a.genero === 'feminino' ? 'a' : 'o'}`;
+  escrever(v, { texto: `${a.nome} chegou: ${bicho} ${idadeTxt}, ${verbo} ${como}. ${cap(a.jeito)}.`, relevancia: 'biografia', tema: 'casa', tom: origem === 'ilegal' ? undefined : 'bom', escolha: origem !== 'rua', pessoas: [pet.id] });
+  lembrarCom(v, pet.id, `Chegou em casa ${como.startsWith('da rua') ? 'vind' + (a.genero === 'feminino' ? 'a' : 'o') + ' da rua' : `${verbo} ${como.split(' (')[0].split(',')[0]}`}.`, 'inicio', 2);
   for (const p of moraCom(v)) if (idadePessoa(v, p) < 14 && v.vinculos[p.id]?.parentesco === 'filho') lembrarCom(v, p.id, `A chegada de ${a.nome} em casa.`, 'ritual', 1);
   abalar(v, `a chegada de ${a.nome}`, 5, 0);
   return pet;
@@ -83,7 +99,36 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ------------------------------------------------------------- Saúde */
 
-const DOENCAS: { nome: string; gravidade: 1 | 2 | 3; tratavel: boolean; custo: [number, number] }[] = [
+type Doenca = { nome: string; gravidade: 1 | 2 | 3; tratavel: boolean; custo: [number, number] };
+const DOENCAS_GRUPO: Partial<Record<GrupoAnimal, Doenca[]>> = {
+  ave: [
+    { nome: 'uma infecção respiratória', gravidade: 2, tratavel: true, custo: [300, 900] },
+    { nome: 'penas caindo, de estresse', gravidade: 1, tratavel: true, custo: [150, 400] },
+    { nome: 'um problema no bico', gravidade: 1, tratavel: true, custo: [150, 400] },
+    { nome: 'um tumor', gravidade: 3, tratavel: false, custo: [800, 2500] }
+  ],
+  roedor: [
+    { nome: 'um problema nos dentes', gravidade: 2, tratavel: true, custo: [200, 600] },
+    { nome: 'uma infecção respiratória', gravidade: 2, tratavel: true, custo: [200, 600] },
+    { nome: 'um tumor', gravidade: 3, tratavel: false, custo: [500, 1500] }
+  ],
+  coelho: [
+    { nome: 'um problema nos dentes', gravidade: 2, tratavel: true, custo: [300, 900] },
+    { nome: 'um problema intestinal', gravidade: 2, tratavel: true, custo: [400, 1200] },
+    { nome: 'um tumor', gravidade: 3, tratavel: false, custo: [900, 2500] }
+  ],
+  peixe: [
+    { nome: 'pontos brancos na pele', gravidade: 1, tratavel: true, custo: [40, 120] },
+    { nome: 'um fungo nas nadadeiras', gravidade: 1, tratavel: true, custo: [40, 120] },
+    { nome: 'um problema na bexiga natatória', gravidade: 2, tratavel: false, custo: [60, 200] }
+  ],
+  reptil: [
+    { nome: 'uma infecção respiratória', gravidade: 2, tratavel: true, custo: [400, 1200] },
+    { nome: 'uma doença dos ossos, de falta de luz', gravidade: 2, tratavel: true, custo: [500, 1500] },
+    { nome: 'um problema no casco ou na pele', gravidade: 1, tratavel: true, custo: [200, 600] }
+  ]
+};
+const DOENCAS: Doenca[] = [
   { nome: 'uma otite', gravidade: 1, tratavel: true, custo: [250, 600] },
   { nome: 'uma alergia de pele', gravidade: 1, tratavel: true, custo: [300, 800] },
   { nome: 'um problema nos dentes', gravidade: 2, tratavel: true, custo: [800, 2200] },
@@ -118,7 +163,9 @@ export function processarPets(v: Vida, _r: Rng): void {
     const r = criarRng(h >>> 0);
     const info = infoPet(v, p);
     const ip = idadePessoa(v, p);
-    if (vin.convivio.includes('casa')) vin.proximidade = clamp(vin.proximidade + 3, 0, 95);
+    if (vin.convivio.includes('casa')) vin.proximidade = clamp(vin.proximidade + animal(p.especie).vinculo, 0, 95);
+    // Silvestre sem documento: a fiscalização pode chegar (e entregar por conta própria afasta a multa).
+    if (info.origem === 'ilegal' && info.tutor === 'eu' && r.chance(0.2)) { apreender(v, p); continue; }
     const d = info.doenca;
     if (d) {
       if (info.tutor === 'familia' || !vin.convivio.includes('casa')) {
@@ -132,10 +179,10 @@ export function processarPets(v: Vida, _r: Rng): void {
       }
       continue;
     }
-    const velho = Math.max(0, ip - (info.vidaMax - 6));
+    const velho = Math.max(0, ip - (info.vidaMax - Math.max(2, Math.round(info.vidaMax * 0.4))));
     const chance = 0.05 + velho * 0.07 - (info.tVeterinario !== undefined && v.t - info.tVeterinario <= 12 ? 0.03 : 0);
     if (r.chance(Math.min(0.6, chance))) {
-      const lista = DOENCAS.filter(x => (velho >= 3 ? true : x.gravidade < 3));
+      const lista = (DOENCAS_GRUPO[animal(p.especie).grupo] ?? DOENCAS).filter(x => (velho >= 3 ? true : x.gravidade < 3));
       const x = r.weighted(lista, y => (y.gravidade === 3 ? velho * 0.5 : y.gravidade === 2 ? 1 : 1.5))!;
       info.doenca = { nome: x.nome, desde: v.t, gravidade: x.gravidade, tratando: false, tratavel: x.tratavel };
       if (info.tutor === 'eu' && vin.convivio.includes('casa')) {
@@ -146,16 +193,57 @@ export function processarPets(v: Vida, _r: Rng): void {
   }
 }
 
-/** Risco de morte de um pet neste ano (usado por `corpo`). */
+/** Risco de morte de um pet neste ano (usado por `corpo`), relativo ao tempo de vida da espécie. */
 export function riscoDoPet(v: Vida, p: Pessoa): number {
   const info = infoPet(v, p);
   const ip = idadePessoa(v, p);
-  let risco = ip >= info.vidaMax ? 0.6 : ip >= info.vidaMax - 2 ? 0.2 : ip >= info.vidaMax - 4 ? 0.06 : 0.01;
+  const f = ip / Math.max(1, info.vidaMax);
+  let risco = f >= 1 ? 0.6 : f >= 0.85 ? 0.2 : f >= 0.7 ? 0.06 : 0.008;
   const d = info.doenca;
   if (d?.gravidade === 3) risco += d.tratando ? (d.tratavel ? 0.08 : 0.25) : 0.45;
   else if (d?.gravidade === 2 && !d.tratando) risco += 0.03;
   if (v.fatos[`paliativo_${p.id}`] !== undefined) risco = Math.max(risco, 0.85);
   return Math.min(0.95, risco);
+}
+
+/**
+ * Do que um bicho morreu. "Velhice" só quando a idade é de velhice para a
+ * espécie; antes disso, a morte tem causa (a doença que havia, um acidente,
+ * algo que apareceu de repente).
+ */
+export function causaDaMortePet(v: Vida, p: Pessoa, r: Rng): string {
+  const info = infoPet(v, p);
+  const a = animal(p.especie);
+  const ip = idadePessoa(v, p);
+  const d = info.doenca;
+  if (d && d.gravidade >= 2) return d.nome.replace(/^um |^uma /, '');
+  const velhice = ip >= Math.max(a.vida[0] * 0.8, info.vidaMax - Math.max(1, Math.round(info.vidaMax * 0.15)));
+  if (velhice) return 'velhice';
+  return r.pick(a.morteCedo);
+}
+
+/** O bicho deixa a vida do jogador sem morrer (vai para um centro de triagem): o vínculo acaba; a Linha da Vida guarda. */
+function sairDaVida(v: Vida, p: Pessoa): void {
+  delete v.vinculos[p.id];
+  if (p.pet) p.pet.tutor = 'familia';
+}
+
+/** A fiscalização ambiental levou o bicho sem origem legal (Decreto 6.514/2008, art. 24). */
+function apreender(v: Vida, p: Pessoa): void {
+  const multa = 5000;
+  v.financas.conta -= multa;
+  sairDaVida(v, p);
+  v.fatos[`apreendido_${p.id}`] = v.t;
+  escrever(v, { texto: `A fiscalização ambiental apareceu: ${p.nome}, ${umBicho(p.especie, p.genero)} sem origem legal, foi levado para um centro de triagem de animais silvestres. Multa de ${fmt(multa)}.`.replace('levado', animal(p.especie).generoFixo === 'f' || p.genero === 'feminino' ? 'levada' : 'levado'), relevancia: 'biografia', tema: 'casa', tom: 'ruim', pessoas: [p.id] });
+  abalar(v, `a apreensão de ${p.nome}`, -5, 5);
+}
+
+/** Entregar por conta própria um silvestre sem documento: sem multa (Decreto 6.514/2008, art. 24, §5º). */
+export function entregarPet(v: Vida, p: Pessoa): string {
+  sairDaVida(v, p);
+  v.fatos[`entregue_${p.id}`] = v.t;
+  escrever(v, { texto: `Entregou ${p.nome} ao órgão ambiental: sem documento, ${palavraDoBicho(p.especie, p.genero)} não podia ficar. Quem entrega por conta própria não é multado.`, relevancia: 'biografia', tema: 'casa', escolha: true, pessoas: [p.id] });
+  return `${p.nome} foi para um centro de triagem, onde vai ser cuidado e, se der, devolvido à natureza.`;
 }
 
 /* ------------------------------------------------------------ Veterinário */
@@ -224,7 +312,7 @@ export function estadoDoPet(v: Vida, p: Pessoa): string {
   const info = infoPet(v, p);
   const ip = idadePessoa(v, p);
   if (info.doenca) return `${info.doenca.tratando ? 'em tratamento' : 'doente'}: ${info.doenca.nome}`;
-  if (ip >= info.vidaMax - 3) return 'velhinho, mais lento, dorme mais';
-  if (ip <= 1) return 'filhote, cheio de energia';
+  if (ip >= info.vidaMax * 0.8) return animal(p.especie).grupo === 'peixe' ? 'mais lento, perto do fundo' : 'velhinho, mais lento, dorme mais';
+  if (ip <= 1 && ['cao', 'gato', 'coelho'].includes(animal(p.especie).grupo)) return 'filhote, cheio de energia';
   return 'saudável';
 }

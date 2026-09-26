@@ -414,6 +414,17 @@ export const ROTINAS: readonly ModeloRotina[] = [
     efeito: v => { v.corpo.forma = clamp(v.corpo.forma + 1); }
   },
   {
+    // O veículo que é seu vira ferramenta: entrega ou corrida por aplicativo, nas horas vagas (e o veículo gasta mais).
+    id: 'corridas_app', nome: 'Fazer entregas e corridas por aplicativo', descricao: 'Com a moto ou o carro, nas horas vagas: pedido, corrida, avaliação de cinco estrelas.', categoria: 'renda', idadeMin: 18,
+    niveis: [{ rotulo: 'Nas horas vagas', tempo: 1, custo: 0 }],
+    requer: v => {
+      if (!v.trabalho.licencas.includes('cnh')) return 'Precisa de carteira de motorista.';
+      return v.financas.bens.some(b => b.tipo === 'veiculo' && (b.modeloId.startsWith('moto') || b.modeloId.startsWith('carro')) && !b.parado && (b.problema?.gravidade ?? 0) < 3) ? true : 'Precisa de uma moto ou um carro rodando.';
+    },
+    renda: v => (v.financas.bens.some(b => b.tipo === 'veiculo' && b.modeloId.startsWith('carro') && !b.parado) ? 1300 : 950),
+    efeito: v => { for (const b of v.financas.bens) if (b.tipo === 'veiculo' && !b.parado && !b.modeloId.startsWith('bike')) b.estado = Math.max(0, b.estado - 4); }
+  },
+  {
     id: 'tocar_na_noite', nome: 'Tocar em bares e festas', descricao: 'Voz e violão, banda de baile, casamento. Paga por noite.', categoria: 'renda', idadeMin: 16,
     requer: v => (habilidade(v, 'musica') >= 50 ? true : 'Ainda não toca o bastante para alguém pagar.'),
     niveis: [{ rotulo: 'Alguns fins de semana', tempo: 0.5, custo: 0 }, { rotulo: 'Quase todo fim de semana', tempo: 1, custo: 0 }],

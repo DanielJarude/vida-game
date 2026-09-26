@@ -12,7 +12,12 @@ import { municipio, nomeLugar } from '../dados/lugares';
 import { encerrarEmprego } from './trabalho';
 import { modeloMoradia } from '../dados/bens';
 import { aluguelDe, marcarSaidaDeCasa } from './moradia';
-import { flex, ge } from '../texto';
+import { flex, ge, listaNatural } from '../texto';
+import { curso } from '../dados/cursos';
+import { nomeOcupacaoId } from './trabalho';
+import { fecharNegocio, negocioAberto, presencaDe, valorDoNegocio, venderNegocio } from './negocio';
+import type { Negocio } from '../tipos';
+import { doClube } from '../dados/clubes';
 import { abalar } from './abalo';
 
 export function processarProcessos(v: Vida, r: Rng): void {
@@ -79,15 +84,33 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
   for (const x of juntos) x.municipioId = p.destinoId;
   for (const { p: pet, vin } of vinculosVivos(v)) if (pet.especie && vin.convivio.includes('casa')) pet.municipioId = p.destinoId;
 
-  if (v.trabalho.atual && v.trabalho.atual.municipioId !== p.destinoId && v.trabalho.atual.contrato !== 'autonomo') {
+  // O negócio: o que é da cidade fica na cidade (com quem o toque, ou fecha); o que é da internet vai junto.
+  const n = negocioAberto(v);
+  if (n && !negocioViaja(n)) negocioFicaParaTras(v, n, origem);
+  const e = v.trabalho.atual;
+  if (e && e.municipioId !== p.destinoId && e.contrato !== 'autonomo' && e.contrato !== 'informal') {
+    const nome = nomeOcupacaoId(v, e.ocupacaoId);
     encerrarEmprego(v, 'mudança de cidade');
-  } else if (v.trabalho.atual) {
-    v.trabalho.atual.municipioId = p.destinoId;
+    escrever(v, { texto: `A mudança encerrou o trabalho de ${nome} em ${municipio(origem).nome}.`, relevancia: 'cotidiano', tema: 'trabalho' });
+  } else if (e) {
+    // Quem trabalha por conta leva o ofício; a freguesia, não.
+    if (e.clientela !== undefined && !(n && e.ocupacaoId === n.ocupacaoId)) {
+      e.clientela = Math.round(e.clientela * 0.4);
+      escrever(v, { texto: `A freguesia ficou em ${municipio(origem).nome}: em ${municipio(p.destinoId).nome}, recomeçar de quase nada.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    }
+    e.municipioId = p.destinoId;
   }
   const m = v.educacao.matricula;
-  if (m && m.modalidade === 'presencial' && m.municipioId !== p.destinoId) {
-    escrever(v, { texto: 'A mudança interrompeu a faculdade: o curso presencial ficou para trás.', relevancia: 'biografia', tema: 'estudo', tom: 'ruim' });
-    v.educacao.matricula = undefined;
+  if (m && m.modalidade === 'presencial' && m.municipioId !== p.destinoId && !m.trancado) {
+    // Trancada, não perdida: a vaga espera quatro anos (e voltar para a cidade devolve o curso).
+    m.trancado = true;
+    m.tTrancou = v.t;
+    escrever(v, { texto: `Com a mudança, trancou ${curso(m.cursoId).nome}: o curso é presencial em ${municipio(m.municipioId).nome}.`, relevancia: 'biografia', tema: 'estudo', tom: 'ruim' });
+  }
+  const es = v.caminhos.esporte;
+  if (es?.fase === 'base' && es.municipioId === origem) {
+    es.fase = 'encerrada'; es.tFim = v.t; es.motivoFim = 'escolha';
+    escrever(v, { texto: `A mudança deixou para trás ${es.modalidade === 'futebol' ? 'a base' : 'a equipe'} ${doClube(es.clube)}.`, relevancia: 'biografia', tema: 'lazer', tom: 'ruim' });
   }
   for (const b of v.financas.bens) if (b.tipo === 'veiculo') (b.historia ??= []).push({ t: v.t, texto: `Foi junto na mudança para ${municipio(p.destinoId).nome}.` });
   v.moradia.municipioId = p.destinoId;
@@ -99,6 +122,60 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
     relevancia: 'marco', tema: 'lugar'
   });
   abalar(v, `a mudança para ${destino.nome}`, 0, 8);
+}
+
+/** A internet (e o que se faz de qualquer lugar) muda junto; o balcão, a sala e a obra ficam. */
+const negocioViaja = (n: Negocio) => presencaDe(n) === 'online' || n.tipo === 'consultoria_ti' || n.tipo === 'escritorio_contabil';
+
+function negocioFicaParaTras(v: Vida, n: Negocio, origem: string): void {
+  const dono = v.trabalho.atual?.ocupacaoId === n.ocupacaoId;
+  const quem = (n.equipe?.length ?? 0) > 0 ? 'da equipe' : n.socioId && v.pessoas[n.socioId]?.vivo ? `de ${v.pessoas[n.socioId].nome}` : undefined;
+  if (quem) {
+    n.dedicacao = 'paralela';
+    n.passivo = true;
+    if (dono) encerrarEmprego(v, 'mudança de cidade');
+    escrever(v, { texto: `${n.nome} ficou em ${municipio(origem).nome}, nas mãos ${quem}: de longe, só o que sobra no caixa.`, relevancia: 'biografia', tema: 'trabalho' });
+    return;
+  }
+  const valor = valorDoNegocio(v, n);
+  if (valor > 0) { venderNegocio(v, valor); return; }
+  fecharNegocio(v, 'a mudança de cidade levou você para longe, e não havia quem tocasse');
+  if (dono) encerrarEmprego(v, 'fechou o negócio');
+}
+
+/**
+ * O que uma mudança de cidade faria com esta vida — dito ANTES de mudar
+ * (a tela de mudança mostra; a mudança faz exatamente isto).
+ */
+export function consequenciasDaMudanca(v: Vida, destinoId: string): string[] {
+  const out: string[] = [];
+  const aqui = municipio(v.moradia.municipioId).nome;
+  const n = negocioAberto(v);
+  if (n && !negocioViaja(n)) {
+    const quem = (n.equipe?.length ?? 0) > 0 ? 'a equipe' : n.socioId && v.pessoas[n.socioId]?.vivo ? v.pessoas[n.socioId].nome : undefined;
+    out.push(quem ? `${n.nome} fica em ${aqui}, tocado por ${quem}; você só recebe o que sobrar.` : valorDoNegocio(v, n) > 0 ? `${n.nome} é vendido: não há quem toque o ${presencaDe(n) === 'atendimento' ? 'consultório' : 'ponto'} sem você.` : `${n.nome} fecha: não há quem toque sem você.`);
+  } else if (n) out.push(`${n.nome} vai junto: ${presencaDe(n) === 'online' ? 'a loja é na internet' : 'os clientes são atendidos à distância'}.`);
+  const e = v.trabalho.atual;
+  if (e && !(n && e.ocupacaoId === n.ocupacaoId)) {
+    const nome = nomeOcupacaoId(v, e.ocupacaoId);
+    if (e.contrato === 'autonomo' || e.contrato === 'informal') out.push(`O trabalho de ${nome} vai junto, mas a freguesia fica: recomeçar lá.`);
+    else if (e.municipioId !== destinoId) out.push(`O trabalho de ${nome} acaba (é em ${municipio(e.municipioId).nome}).`);
+  }
+  const m = v.educacao.matricula;
+  if (m && !m.trancado && m.modalidade === 'presencial' && m.municipioId !== destinoId) out.push(`${curso(m.cursoId).nome} fica trancado: é presencial em ${municipio(m.municipioId).nome}.`);
+  const es = v.caminhos.esporte;
+  if (es?.fase === 'base' && es.municipioId === v.moradia.municipioId) out.push(`${es.modalidade === 'futebol' ? 'A base' : 'A equipe'} ${doClube(es.clube)} fica para trás.`);
+  if (v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') out.push('Você sai da casa da família: aluguel, mercado e contas passam a ser seus.');
+  if (v.moradia.tipo === 'propria') out.push(`A casa própria fica em ${aqui} (dá para alugar ou vender); lá, começa-se de aluguel.`);
+  // Da casa da família, só você sai; da sua casa, vai quem mora nela.
+  const naFamilia = v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente';
+  const vai = naFamilia ? [] : moraCom(v).filter(p => !p.especie);
+  const bichos = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu').map(x => x.p.nome);
+  if (vai.length) out.push(`Vão junto: ${listaNatural([...vai.map(p => p.nome), ...bichos])}.`);
+  else if (bichos.length) out.push(`Vão junto: ${listaNatural(bichos)}.`);
+  const longe = vinculosVivos(v).filter(x => !x.p.especie && (x.vin.estagio === 'amigo_proximo' || ['mae', 'pai'].includes(x.vin.parentesco ?? '')) && x.p.municipioId === v.moradia.municipioId && !vai.includes(x.p)).map(x => x.p.nome);
+  if (longe.length) out.push(`Ficam longe: ${listaNatural(longe.slice(0, 3))}${longe.length > 3 ? ' e outros' : ''}.`);
+  return out;
 }
 
 export const custoDeMudanca = (origemId: string, destinoId: string) =>

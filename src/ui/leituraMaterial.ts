@@ -4,6 +4,7 @@
  * número da interface é calculado fora do motor.
  */
 
+import type { Especie } from '../motor/tipos';
 import type { Bem, Imovel, LinhaRazao, Veiculo, Vida } from '../motor/tipos';
 import { idade, idadePessoa, moraCom } from '../motor/nucleo';
 import { listaNatural, flex } from '../motor/texto';
@@ -39,7 +40,7 @@ export interface LeituraLar {
   /** Selos curtos: de quem é, quanto custa, o que falta. */
   selos: { texto: string; tom?: 'ruim' | 'atencao' }[];
   moradores: { id: string; nome: string }[];
-  bichos: { id: string; nome: string; especie: 'cachorro' | 'gato' }[];
+  bichos: { id: string; nome: string; especie: Especie }[];
   veiculo?: 'carro' | 'moto' | 'bicicleta';
   janelasAcesas: number;
 }

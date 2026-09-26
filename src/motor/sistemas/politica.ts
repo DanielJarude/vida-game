@@ -26,9 +26,11 @@
  *   depois de cumprida a pena. Eleições municipais em 2028, 2032…; gerais em
  *   2030, 2034… (a de 2026 já passou quando o jogo começa).
  *
- *   NEUTRALIDADE — partidos fictícios (nomes de árvores), sem programa nem
- *   lado; prioridades são metas de gestão (saúde, escola, transporte...),
- *   nunca ideologia. Nenhuma pessoa, campanha ou slogan real.
+ *   NEUTRALIDADE — partidos reais registrados no TSE (`dados/partidos`),
+ *   só pelo nome: sem programa, sem lado, sem bônus (o tamanho do diretório
+ *   que convida é local e sorteado por cidade). Prioridades são metas de
+ *   gestão (saúde, escola, transporte...), nunca ideologia. Nenhuma pessoa,
+ *   campanha ou slogan real; eleições, crises e escândalos são simulação.
  */
 
 import type { Rng } from '../rng';
@@ -37,6 +39,7 @@ import type { Acao } from '../acoes';
 import type { CargoEletivo, Emprego, Pessoa, Prioridade, Vida, VidaPolitica } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { municipio, MUNICIPIOS } from '../dados/lugares';
+import { aoPartido, nomeCompletoPartido, PARTIDOS_REAIS, peloPartido } from '../dados/partidos';
 import { ocupacao } from '../dados/ocupacoes';
 import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidade';
 import { encerrarEmprego, nomeOcupacao } from './trabalho';
@@ -54,14 +57,38 @@ import type { AcaoProfissional } from './profissao';
 
 /* ================================================================ Catálogo */
 
-/** Partidos fictícios: nomes de árvores, sem programa nem lado. */
-export const PARTIDOS = ['Partido Ipê', 'Movimento Aroeira', 'Frente Jequitibá', 'União Carnaúba', 'Partido Buriti', 'Aliança Pau-Brasil'];
+/** Os partidos (siglas) que podem convidar alguém: os registrados no TSE. */
+export const PARTIDOS = PARTIDOS_REAIS.map(p => p.sigla);
 
 export const NOME_PRIORIDADE: Record<Prioridade, string> = {
   saude: 'saúde: posto, fila, remédio', educacao: 'escola e creche', mobilidade: 'transporte e ruas', emprego: 'trabalho e renda',
   seguranca: 'segurança no bairro', ambiente: 'saneamento e meio ambiente', contas: 'as contas em dia', cultura: 'cultura e esporte'
 };
 export const PRIORIDADES = Object.keys(NOME_PRIORIDADE) as Prioridade[];
+
+/** A causa em palavras (nunca `undefined`: sem causa, diz que não há). */
+export const nomeDaBandeira = (p: Prioridade | undefined) => (p && NOME_PRIORIDADE[p]) ?? 'nenhuma, por enquanto';
+
+/**
+ * Escolher (ou trocar) a bandeira — ou, no mandato, a prioridade. Trocar tem
+ * preço: quem acompanhava estranha; no mandato, o que estava andando para.
+ */
+export function definirBandeira(v: Vida, prio: Prioridade): string {
+  const p = v.caminhos.politica!;
+  const antes = p.prioridade;
+  if (antes === prio) return `A ${p.mandato ? 'prioridade' : 'bandeira'} continua: ${NOME_PRIORIDADE[prio]}.`;
+  p.prioridade = prio;
+  v.anoAtual.acoes.push('pol_bandeira');
+  const nome = NOME_PRIORIDADE[prio];
+  if (antes) {
+    p.apoio = clamp(p.apoio - 3);
+    if (p.mandato) p.mandato.feito = Math.max(0, p.mandato.feito - 1);
+    escrever(v, { texto: p.mandato ? `Mudou a prioridade do mandato: saiu ${NOME_PRIORIDADE[antes]}, entrou ${nome}.` : `Trocou de bandeira: deixou ${NOME_PRIORIDADE[antes]} e passou a defender ${nome}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+    return `Agora, ${nome}. Quem acompanhava a causa antiga estranhou — um pouco de base se foi.`;
+  }
+  escrever(v, { texto: p.mandato ? `Escolheu a prioridade do mandato: ${nome}.` : `Passou a defender uma bandeira: ${nome}.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
+  return p.mandato ? `A prioridade do mandato: ${nome}. Agora é fazer sair do papel.` : `A sua bandeira: ${nome}. Na campanha, quem fala de proposta concreta ganha força.`;
+}
 
 /** O que um mandato consegue entregar, em coisa concreta (nunca em ideologia). */
 const ENTREGAS: Record<Prioridade, string[]> = {
@@ -152,15 +179,15 @@ export function leituraPolitica(v: Vida): LeituraPolitica | undefined {
     const m = p.mandato;
     const total = Math.round((m.tFim - m.tInicio) / 12);
     const ano = Math.min(total, Math.floor((v.t - m.tInicio) / 12) + 1);
-    return { fase: p.fase, titulo: `${cap(nomeCargo(v, m.cargo))}${p.consecutivos >= 2 && CARGOS[m.cargo].executivo ? ', segundo mandato' : ''}`, etapa: `Ano ${ano} de ${total} do mandato · termina em ${anoDe(m.tFim)}`, reputacao: rep, apoio, aprovacao: palavraAprovacao(m.aprovacao), prioridade: prio, partido: p.partido, horizonte: horizonteDoMandato(v), historico: hist };
+    return { fase: p.fase, titulo: `${cap(nomeCargo(v, m.cargo))}${p.consecutivos >= 2 && CARGOS[m.cargo].executivo ? ', segundo mandato' : ''}`, etapa: `Ano ${ano} de ${total} do mandato · termina em ${anoDe(m.tFim)}`, reputacao: rep, apoio, aprovacao: palavraAprovacao(m.aprovacao), prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: horizonteDoMandato(v), historico: hist };
   }
-  if (p.fase === 'eleito' && p.posse) return { fase: p.fase, titulo: `${cap(flex(g, 'Eleito', 'Eleita', 'Eleite'))} ${nomeCargo(v, p.posse.cargo)}`, etapa: `Posse em ${anoDe(p.posse.t)}`, reputacao: rep, apoio, prioridade: prio, partido: p.partido, historico: hist };
-  if (p.fase === 'candidato' && p.campanha) return { fase: p.fase, titulo: `${flex(g, 'Candidato', 'Candidata', 'Candidate')} a ${nomeCargo(v, p.campanha.cargo)}`, etapa: `Eleição em outubro de ${anoDe(p.campanha.tEleicao)}`, reputacao: rep, apoio, prioridade: prio, partido: p.partido, horizonte: 'A campanha está na rua. Agora, é a apuração.', historico: hist };
+  if (p.fase === 'eleito' && p.posse) return { fase: p.fase, titulo: `${cap(flex(g, 'Eleito', 'Eleita', 'Eleite'))} ${nomeCargo(v, p.posse.cargo)}`, etapa: `Posse em ${anoDe(p.posse.t)}`, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), historico: hist };
+  if (p.fase === 'candidato' && p.campanha) return { fase: p.fase, titulo: `${flex(g, 'Candidato', 'Candidata', 'Candidate')} a ${nomeCargo(v, p.campanha.cargo)}`, etapa: `Eleição em outubro de ${anoDe(p.campanha.tEleicao)}`, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: 'A campanha está na rua. Agora, é a apuração.', historico: hist };
   if (p.fase === 'encerrada') return { fase: p.fase, titulo: 'Fora da vida pública', etapa: p.tFim ? `Desde ${anoDe(p.tFim)}` : undefined, reputacao: rep, apoio, historico: hist };
   const derrotado = p.historico[p.historico.length - 1]?.resultado === 'derrotado';
-  const titulo = p.fase === 'entre_mandatos' ? (derrotado ? 'Depois da derrota' : 'Entre mandatos') : p.fase === 'filiado' ? `${flex(g, 'Filiado', 'Filiada', 'Filiade')} ao ${p.partido}` : 'Envolvido na vida da cidade'.replace('Envolvido', flex(g, 'Envolvido', 'Envolvida', 'Envolvide'));
+  const titulo = p.fase === 'entre_mandatos' ? (derrotado ? 'Depois da derrota' : 'Entre mandatos') : p.fase === 'filiado' ? `${flex(g, 'Filiado', 'Filiada', 'Filiade')} ${aoPartido(p.partido)}` : 'Envolvido na vida da cidade'.replace('Envolvido', flex(g, 'Envolvido', 'Envolvida', 'Envolvide'));
   const horizonte = !p.partido ? 'Sem partido, não há candidatura: a filiação precisa de seis meses antes da eleição.' : e ? `Eleição ${e.tipo === 'municipal' ? 'municipal' : 'geral'} em outubro de ${e.ano}: é agora ou na próxima.` : `A próxima eleição ${prox.tipo === 'municipal' ? 'municipal' : 'geral'} é em ${prox.ano}.`;
-  return { fase: p.fase, titulo, reputacao: rep, apoio, prioridade: prio, partido: p.partido, horizonte, historico: hist };
+  return { fase: p.fase, titulo, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte, historico: hist };
 }
 
 function horizonteDoMandato(v: Vida): string {
@@ -295,7 +322,7 @@ export function registrarCandidatura(v: Vida, cargo: CargoEletivo, tEleicao: num
   else if (e && e.clientela !== undefined && e.contrato !== 'eletivo') e.clientela = clamp(e.clientela - 8);
   p.fase = p.fase === 'mandato' ? 'mandato' : 'candidato';
   p.campanha = { cargo, tEleicao, gasto: 0, nota: 0, etapa: 1 };
-  escrever(v, { texto: `Registrou candidatura a ${nomeCargo(v, cargo)} pelo ${p.partido}, para a eleição de ${anoDe(tEleicao)}.`, relevancia: p.historico.length ? 'biografia' : 'marco', tema: 'trabalho', escolha: true });
+  escrever(v, { texto: `Registrou candidatura a ${nomeCargo(v, cargo)} ${peloPartido(p.partido)}, para a eleição de ${anoDe(tEleicao)}.`, relevancia: p.historico.length ? 'biografia' : 'marco', tema: 'trabalho', escolha: true });
   marcar(v, 'candidatura', `${cap(flex(ge(v), 'candidato', 'candidata', 'candidate'))} a ${nomeCargo(v, cargo)}, aos ${idade(v)}.`, 2);
 }
 
@@ -350,7 +377,7 @@ function apurar(v: Vida, r: Rng): void {
     const mesmo = p.mandato?.cargo === cargo;
     p.posse = { cargo, t: tDaPosse(Math.floor(c.tEleicao / 12)) };
     if (!mesmo) p.fase = 'eleito';
-    const texto = mesmo ? `${cap(flex(ge(v), 'Reeleito', 'Reeleita', 'Reeleite'))} ${nome}, em ${anoDe(c.tEleicao)}.` : `${cap(flex(ge(v), 'Eleito', 'Eleita', 'Eleite'))} ${nome} em ${anoDe(c.tEleicao)}, pelo ${p.partido}.`;
+    const texto = mesmo ? `${cap(flex(ge(v), 'Reeleito', 'Reeleita', 'Reeleite'))} ${nome}, em ${anoDe(c.tEleicao)}.` : `${cap(flex(ge(v), 'Eleito', 'Eleita', 'Eleite'))} ${nome} em ${anoDe(c.tEleicao)}, ${peloPartido(p.partido)}.`;
     escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'eleicao', texto, 3);
     abalar(v, 'a vitória na eleição', 12, 2);
@@ -645,7 +672,13 @@ export function semanaDaPolitica(v: Vida): { rotulo: string; peso: number } | un
 
 /* ================================================================== Ações */
 
-export type OquePolitica = 'aproximar' | 'filiar' | 'comunidade' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar';
+/**
+ * `bandeira`: escolher (ou trocar) a causa que se defende — fora do cargo, é
+ * a bandeira; no mandato, a prioridade. Sempre uma decisão com as opções à
+ * vista; nunca um valor vazio. `prioridade`: trabalhar a prioridade do
+ * mandato no ano (só quando ela existe).
+ */
+export type OquePolitica = 'aproximar' | 'filiar' | 'comunidade' | 'bandeira' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar';
 export type AcaoPoliticaCmd = { tipo: 'politica'; oque: OquePolitica; valor?: string };
 
 export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
@@ -662,16 +695,21 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
     case 'filiar':
       if (!p || !naPolitica(v)) return bloqueio('impossivel', 'Primeiro, é preciso estar no meio.');
       if (i < 16) return bloqueio('ilegal', 'Filiação partidária, só a partir dos 16 anos (com título de eleitor).');
-      if (p.partido) return bloqueio('impossivel', `Já é filiado ao ${p.partido}.`);
+      if (p.partido) return bloqueio('impossivel', `Já é filiado ${aoPartido(p.partido)}.`);
       if (v.trabalho.atual?.contrato === 'militar') return bloqueio('ilegal', 'Militar da ativa não se filia a partido (CF, art. 142, §3º, V).');
       return PERMITIDO;
     case 'comunidade':
       if (!naPolitica(v) || fase === 'eleito') return bloqueio('impossivel', 'Não se aplica.');
       return v.anoAtual.acoes.includes('pol_comunidade') ? bloqueio('incompativel', 'Já rodou os bairros neste ano.') : PERMITIDO;
-    case 'prioridade':
+    case 'bandeira':
       if (!naPolitica(v)) return bloqueio('impossivel', 'Não se aplica.');
-      if (a.valor && !PRIORIDADES.includes(a.valor as Prioridade)) return bloqueio('impossivel', 'Prioridade desconhecida.');
-      if (emMandato(v) && v.anoAtual.acoes.includes('pol_prioridade')) return bloqueio('incompativel', 'O trabalho do ano já tem prioridade.');
+      if (a.valor && !PRIORIDADES.includes(a.valor as Prioridade)) return bloqueio('impossivel', 'Essa causa não existe no jogo.');
+      if (v.anoAtual.acoes.includes('pol_bandeira')) return bloqueio('incompativel', 'A bandeira já mudou neste ano: mudar de novo agora confunde quem acompanha.');
+      return PERMITIDO;
+    case 'prioridade':
+      if (!emMandato(v)) return bloqueio('impossivel', 'Trabalhar uma prioridade é coisa de quem tem mandato.');
+      if (!p?.prioridade) return bloqueio('requisito', 'Primeiro, escolher qual é a prioridade do mandato.');
+      if (v.anoAtual.acoes.includes('pol_prioridade')) return bloqueio('incompativel', 'O trabalho do ano já tem prioridade.');
       return PERMITIDO;
     case 'negociar':
       if (!p?.partido || !naPolitica(v)) return bloqueio('requisito', 'Negociar apoio pede partido e alguma base.');
@@ -708,22 +746,23 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
       escrever(v, { texto: r.pick(['Passou os sábados do ano rodando bairros: reclamação de buraco, pedido de vaga em creche, café em toda casa.', 'Ouviu gente numa escola de bairro até as dez da noite.', 'Uma feira, uma igreja, um campo de várzea por fim de semana.']), relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
       return { texto: 'Mais gente sabe quem você é — e o que pedem.', tom: 'bom' };
     }
+    case 'bandeira': {
+      if (!a.valor) return { decisao: 'pol_bandeira' };
+      return { texto: definirBandeira(v, a.valor as Prioridade) };
+    }
     case 'prioridade': {
-      if (a.valor) { p!.prioridade = a.valor as Prioridade; }
-      if (p!.mandato) {
-        v.anoAtual.acoes.push('pol_prioridade');
-        const m = p!.mandato;
-        m.feito += 2;
-        const deu = r.chance(0.5 + (m.cargo === 'vereador' || m.cargo.startsWith('deputado') || m.cargo === 'senador' ? 0.05 : 0.15));
-        m.aprovacao = clamp(m.aprovacao + (deu ? 3 : 0));
-        const feito = p!.prioridade ? r.pick(ENTREGAS[p!.prioridade]) : 'uma promessa de campanha';
-        const primeira = !temFato(v, `pol_entrega_${m.tInicio}`);
-        if (deu) v.fatos[`pol_entrega_${m.tInicio}`] = v.t;
-        escrever(v, { texto: deu ? `Saiu do papel: ${feito}. Foi o mandato que empurrou.` : `Um ano inteiro de reunião, ofício e visita a secretaria atrás disto: ${feito}. Ainda não saiu.`, relevancia: deu && primeira ? 'biografia' : 'cotidiano', tema: 'trabalho', escolha: true, tom: deu ? 'bom' : undefined });
-        aplicarPersonalidade(v, 'acao:pol_prioridade', { disciplina: 1 });
-        return { texto: deu ? 'Algo concreto para mostrar.' : 'O trabalho andou; o resultado, não ainda.', tom: deu ? 'bom' : 'neutro' };
-      }
-      return { texto: `A sua bandeira: ${NOME_PRIORIDADE[p!.prioridade!]}.` };
+      const m = p!.mandato!;
+      const prio = p!.prioridade!;
+      v.anoAtual.acoes.push('pol_prioridade');
+      m.feito += 2;
+      const deu = r.chance(0.5 + (m.cargo === 'vereador' || m.cargo.startsWith('deputado') || m.cargo === 'senador' ? 0.05 : 0.15));
+      m.aprovacao = clamp(m.aprovacao + (deu ? 3 : 0));
+      const feito = r.pick(ENTREGAS[prio]);
+      const primeira = !temFato(v, `pol_entrega_${m.tInicio}`);
+      if (deu) v.fatos[`pol_entrega_${m.tInicio}`] = v.t;
+      escrever(v, { texto: deu ? `Saiu do papel: ${feito}. Foi o mandato que empurrou.` : `Um ano inteiro de reunião, ofício e visita a secretaria atrás disto: ${feito}. Ainda não saiu.`, relevancia: deu && primeira ? 'biografia' : 'cotidiano', tema: 'trabalho', escolha: true, tom: deu ? 'bom' : undefined });
+      aplicarPersonalidade(v, 'acao:pol_prioridade', { disciplina: 1 });
+      return { texto: deu ? `Algo concreto para mostrar: ${feito}.` : 'O trabalho andou; o resultado, não ainda.', tom: deu ? 'bom' : 'neutro' };
     }
     case 'negociar': v.anoAtual.acoes.push('pol_negociar'); return { decisao: 'pol_negociar', papeis: aliado(v) ? { aliado: aliado(v)!.id } : {} };
     case 'candidatura': {
@@ -764,10 +803,12 @@ export function acoesPoliticas(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   const m = p.mandato;
   const e = eleicaoNaJanela(v);
   if (m?.crise) add({ id: 'pol_crise', rotulo: 'Responder à crise', porque: 'Todo mundo espera uma palavra sua.', acao: A('crise'), peso: 10 });
-  if (m) add({ id: 'pol_prioridade', rotulo: p.prioridade ? `Trabalhar a prioridade: ${NOME_PRIORIDADE[p.prioridade]}` : 'Escolher uma prioridade para o mandato', porque: m.feito === 0 ? 'Sem nada para mostrar, a aprovação cai.' : undefined, acao: A('prioridade'), peso: m.feito === 0 ? 8 : 5 });
+  if (m && p.prioridade) add({ id: 'pol_prioridade', rotulo: `Trabalhar a prioridade: ${NOME_PRIORIDADE[p.prioridade]}`, porque: m.feito === 0 ? 'Sem nada para mostrar, a aprovação cai.' : undefined, acao: A('prioridade'), peso: m.feito === 0 ? 8 : 5 });
+  if (m && !p.prioridade) add({ id: 'pol_bandeira', rotulo: 'Escolher a prioridade do mandato', porque: 'Sem prioridade, o mandato não tem o que mostrar.', acao: A('bandeira'), peso: 9 });
   add({ id: 'pol_comunidade', rotulo: 'Conversar com a comunidade', porque: m && m.aprovacao < 45 ? 'A rua anda reclamando.' : p.apoio < 30 ? 'A base ainda é pequena.' : undefined, acao: A('comunidade'), peso: m ? (m.aprovacao < 45 ? 7 : 4) : 6 });
   if (!p.partido) add({ id: 'pol_filiar', rotulo: 'Filiar-se a um partido', porque: 'Sem partido, não há candidatura.', acao: A('filiar'), peso: p.apoio >= 20 ? 7 : 4 });
-  if (!m && !p.prioridade) add({ id: 'pol_bandeira', rotulo: 'Escolher uma bandeira', porque: 'Gente conhece melhor quem defende uma coisa só.', acao: A('prioridade'), peso: 3 });
+  if (!m && !p.prioridade) add({ id: 'pol_bandeira', rotulo: 'Escolher uma bandeira', porque: 'Gente conhece melhor quem defende uma coisa só.', acao: A('bandeira'), peso: 3 });
+  if (p.prioridade) add({ id: 'pol_trocar_bandeira', rotulo: m ? 'Mudar a prioridade do mandato' : 'Trocar de bandeira', acao: A('bandeira'), peso: 0 });
   if (p.partido) add({ id: 'pol_negociar', rotulo: 'Negociar apoio', porque: e ? 'A eleição está perto.' : undefined, acao: A('negociar'), peso: e ? 6 : 2 });
   if (p.partido && !p.campanha && !p.posse) add({ id: 'pol_candidatura', rotulo: e ? (m ? 'Decidir sobre a eleição' : 'Registrar candidatura') : 'Lançar a pré-candidatura', porque: e ? `Eleição em outubro de ${e.ano}.` : undefined, acao: A('candidatura'), peso: e ? 9 : 2 });
   add({ id: 'pol_deixar', rotulo: m ? 'Renunciar ou encerrar a vida pública' : 'Deixar a vida política', acao: A('deixar'), peso: 0, saida: true });

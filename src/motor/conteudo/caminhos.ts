@@ -15,7 +15,7 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
 import { estresse, fato, feliz } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
-import { encerrarCarreira, entrarNaBase, fazerPeneira, NOME_MOD, nomeDeClube, profissionalizar } from '../sistemas/esporte';
+import { encerrarCarreira, fazerPeneira, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
 import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador } from '../sistemas/peneira';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
 import { abalar } from '../sistemas/abalo';
@@ -25,9 +25,15 @@ import { contratar, degrausAcima, elegibilidade, encerrarEmprego, experienciaNaT
 import { OCUPACOES, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { curso, CURSOS } from '../dados/cursos';
 import { capitalDoEstado } from '../sistemas/escola';
+import { analisarEntrada, propor } from '../sistemas/compromissos';
+import { listaNatural } from '../texto';
+import { doClube, oClube } from '../dados/clubes';
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+import { perderEmpregoGuardado, restaurarEmpregoGuardado } from '../sistemas/militar';
 import { habilidade } from '../sistemas/frentes';
 import { marcar } from '../sistemas/marcas';
-import { abrirNegocio, demitirFuncionario, fecharNegocio, NEGOCIOS, valorDoNegocio, venderNegocio } from '../sistemas/negocio';
+import { abrirNegocio, demitirFuncionario, donoIntegral, fecharNegocio, NEGOCIOS, presencaDe, valorDoNegocio, venderNegocio } from '../sistemas/negocio';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
 import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
 import { modeloRotina, podeComecarRotina } from '../sistemas/rotinas';
@@ -36,6 +42,8 @@ import { clamp } from '../rng';
 import { editaisAbertos } from '../sistemas/concurso';
 
 const mod = (c: Ctx) => MODS[c.v.fatos['peneira_mod'] ?? 0] ?? 'futebol';
+const clubeDaBase = (c: Ctx) => nomeDeClube(lugarPeneira(c), `${c.v.id}:${c.v.fatos['convite_base']}`, mod(c));
+const novoDaBase = (c: Ctx) => ({ tipo: 'base' as const, dominio: mod(c), municipioId: lugarPeneira(c), clube: clubeDaBase(c) });
 const lugarPeneira = (c: Ctx) => municipioPorIndice(c.v.fatos['peneira_lugar'] ?? -1) ?? c.v.moradia.municipioId;
 
 function melhorEntrada(c: Ctx) {
@@ -100,18 +108,20 @@ export const CAMINHOS: Conteudo[] = [
     titulo: 'O convite',
     texto: c => {
       const longe = lugarPeneira(c) !== c.v.moradia.municipioId;
-      return `O ${nomeDeClube(lugarPeneira(c), `${c.v.id}:${c.v.fatos['convite_base']}`, mod(c))} quer você ${mod(c) === 'futebol' ? 'na base' : 'na equipe'}. Treino todo dia${longe ? `, alojamento em ${municipio(lugarPeneira(c)).nome}` : ''}, escola à noite. ${P.genitor(c.v)[0] ? `${P.genitor(c.v)[0].nome} diz que a decisão é sua.` : ''}`;
+      const conflitos = analisarEntrada(c.v, novoDaBase(c));
+      const aviso = conflitos.length ? ` A rotina não cabe junto com ${listaNatural(conflitos.map(x => x.motivo.charAt(0).toLowerCase() + x.motivo.slice(1)).map(t => t.replace(/ treina quase todo dia$/, '')))}: ir significa escolher o que fazer com isso.` : '';
+      return `${cap(oClube(clubeDaBase(c)))} quer você ${mod(c) === 'futebol' ? 'na base' : 'na equipe'}. Treino quase todo dia${longe ? `, alojamento em ${municipio(lugarPeneira(c)).nome}` : ''}${c.v.educacao.basica ? ', escola à noite' : ''}.${aviso} ${P.genitor(c.v)[0] && idade(c.v) < 18 ? `${P.genitor(c.v)[0].nome} diz que a decisão é sua.` : ''}`;
     },
     opcoes: [
-      { id: 'ir', texto: c => (lugarPeneira(c) !== c.v.moradia.municipioId ? `Ir — mesmo longe de casa` : 'Ir para a base'),
+      { id: 'ir', texto: c => (lugarPeneira(c) !== c.v.moradia.municipioId ? `Ir — mesmo longe de casa` : `Ir para ${mod(c) === 'futebol' ? 'a base' : 'a equipe'}`),
+        consequencia: c => (analisarEntrada(c.v, novoDaBase(c)).length ? 'Não cabe com o que você já faz: a próxima pergunta é o que fazer com isso.' : 'Treino quase todo dia: o resto da semana encolhe.'),
         resolver: c => {
-          const lugar = lugarPeneira(c);
-          const clube = nomeDeClube(lugar, `${c.v.id}:${c.v.fatos['convite_base']}`, mod(c));
+          const novo = novoDaBase(c);
           delete c.v.fatos['convite_base'];
-          return { texto: 'A mochila ficou pesada de chuteira e caderno. O sonho, agora, tem horário.', memoria: null, efeito: () => entrarNaBase(c.v, mod(c), lugar, clube) };
+          return { texto: analisarEntrada(c.v, novo).length ? 'Você disse que sim. Agora falta o resto da vida caber.' : 'A mochila ficou pesada de chuteira e caderno. O sonho, agora, tem horário.', memoria: null, efeito: () => { propor(c.v, c.r, novo); } };
         } },
-      { id: 'ficar', texto: 'Ficar: a escola e a vida daqui vêm primeiro',
-        resolver: c => { delete c.v.fatos['convite_base']; return { texto: `Você agradeceu. ${mod(c) === 'futebol' ? 'A bola' : 'O esporte'} continuou nos fins de semana.`, memoria: `Recusou o convite ${mod(c) === 'futebol' ? 'da base de um clube' : 'de uma equipe'} para ficar perto de casa e da escola.`, relevancia: 'marco' }; } }
+      { id: 'ficar', texto: c => (c.v.educacao.matricula && !c.v.educacao.matricula.trancado ? 'Ficar: a faculdade e a vida daqui vêm primeiro' : c.v.trabalho.atual ? 'Ficar: o trabalho e a vida daqui vêm primeiro' : 'Ficar: a escola e a vida daqui vêm primeiro'),
+        resolver: c => { delete c.v.fatos['convite_base']; const o = c.v.educacao.matricula && !c.v.educacao.matricula.trancado ? 'da faculdade' : c.v.trabalho.atual ? 'do trabalho' : 'da escola'; return { texto: `Você agradeceu. ${mod(c) === 'futebol' ? 'A bola' : 'O esporte'} continuou nos fins de semana.`, memoria: `Recusou o convite ${mod(c) === 'futebol' ? 'da base' : 'da equipe'} ${doClube(clubeDaBase(c))} para ficar perto de casa e ${o}.`, relevancia: 'marco' }; } }
     ]
   },
   {
@@ -119,7 +129,8 @@ export const CAMINHOS: Conteudo[] = [
     titulo: 'O contrato',
     texto: c => `Um papel de três páginas: salário, prazo, multa. ${c.v.educacao.basica ? 'A escola ainda não acabou.' : c.v.educacao.matricula ? 'A faculdade teria de esperar.' : ''} Quase ninguém que começou com você chegou até aqui.`,
     opcoes: [
-      { id: 'assinar', texto: 'Assinar', resolver: c => ({ texto: 'A caneta falhou na primeira tentativa. Na segunda, foi.', memoria: null, efeito: () => profissionalizar(c.v, c.r, c.v.fatos['contrato_nivel'] ?? 1) }) },
+      { id: 'assinar', texto: 'Assinar', consequencia: c => (analisarEntrada(c.v, { tipo: 'contrato_esporte', nivel: c.v.fatos['contrato_nivel'] ?? 1 }).length ? 'O contrato é de tempo integral: não cabe com o que você já faz, e a próxima pergunta é essa.' : 'Treino e jogo em tempo integral, salário de atleta.'),
+        resolver: c => ({ texto: 'A caneta falhou na primeira tentativa. Na segunda, foi.', memoria: null, efeito: () => { propor(c.v, c.r, { tipo: 'contrato_esporte', nivel: c.v.fatos['contrato_nivel'] ?? 1 }); } }) },
       { id: 'estudar', texto: 'Recusar e seguir outro caminho',
         resolver: c => ({ texto: 'Você disse não ao que quase todo mundo diria sim.', memoria: 'Recusou um contrato profissional para seguir outro caminho.', relevancia: 'marco', efeito: () => { const e = c.v.caminhos.esporte; if (e) encerrarCarreira(c.v, e, 'escolha'); } }) }
     ]
@@ -128,7 +139,7 @@ export const CAMINHOS: Conteudo[] = [
     id: 'esp_dispensa', tipo: 'decisao', idade: [13, 23], tema: 'lazer', prioritario: true, prioridade: 3, repetir: 3,
     quando: c => c.v.caminhos.esporte?.fase === 'encerrada' && c.v.caminhos.esporte.motivoFim === 'dispensa' && c.v.caminhos.esporte.tFim === c.v.t,
     titulo: 'Depois da dispensa',
-    texto: c => `O ${c.v.caminhos.esporte!.clube} mandou embora ${c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade] && c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade]! > 1 ? 'de novo' : ''} metade da categoria. Você estava na metade. Os colegas de escola não entendem direito o que acabou.`,
+    texto: c => `${cap(oClube(c.v.caminhos.esporte!.clube))} mandou embora ${c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade] && c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade]! > 1 ? 'de novo' : ''} metade da categoria. Você estava na metade. Os colegas de escola não entendem direito o que acabou.`,
     opcoes: [
       { id: 'tentar', texto: 'Treinar mais e tentar outro clube', comportamento: { disciplina: 1 },
         disponivel: c => ((c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade] ?? 0) < 3 && idade(c.v) <= 18 ? true : 'Já não há idade nem peneira para isso.'),
@@ -230,10 +241,13 @@ export const CAMINHOS: Conteudo[] = [
       return `${anos <= 1 ? 'O ano de serviço acabou.' : `${anos} anos de temporário, de um máximo de oito.`} O sargento perguntou quem quer engajar e ficar mais um ano. ${['medio', 'tecnico', 'superior_incompleto', 'superior'].includes(c.v.educacao.escolaridade) ? 'Alguns colegas estudam à noite para a escola de sargentos — lá, a carreira tem estabilidade.' : 'Sem o ensino médio, a escola de sargentos fica fora de alcance.'}`;
     },
     opcoes: [
-      { id: 'engajar', texto: 'Engajar por mais um ano', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Mais um ano de farda, de formatura às seis e de soldo no fim do mês.', memoria: null }) },
+      { id: 'engajar', texto: 'Engajar por mais um ano', comportamento: { disciplina: 1 }, consequencia: c => (c.v.caminhos.militar?.empregoGuardado ? 'O emprego que estava guardado deixa de esperar: engajar é escolha.' : 'Mais um ano de soldo, sem estabilidade.'),
+        resolver: c => ({ texto: 'Mais um ano de farda, de formatura às seis e de soldo no fim do mês.', memoria: 'Engajou por mais um ano no quartel.', relevancia: 'cotidiano', efeito: () => perderEmpregoGuardado(c.v) }) },
       { id: 'carreira', texto: 'Engajar e estudar para a escola de sargentos', comportamento: { disciplina: 2 }, disponivel: c => (['medio', 'tecnico', 'superior_incompleto', 'superior'].includes(c.v.educacao.escolaridade) && idade(c.v) <= 24 ? true : 'Pede ensino médio e menos de 25 anos.'),
-        resolver: c => ({ texto: 'Apostila no armário do alojamento, estudo depois do toque de silêncio.', memoria: 'No quartel, começou a estudar para seguir carreira.', efeito: () => { fato(c, 'plano_carreira_militar'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 1 }); } }) },
-      { id: 'baixa', texto: 'Dar baixa', resolver: c => ({ texto: 'Você devolveu a farda e saiu pelo portão de sempre, agora sem voltar.', memoria: 'Deu baixa depois do serviço militar.', efeito: () => { encerrarEmprego(c.v, 'baixa do serviço militar'); marcar(c.v, 'fim_carreira', 'Deu baixa do serviço militar.', 2); c.v.fatos['mil_baixa'] = c.v.t; } }) }
+        consequencia: c => `O estudo entra na semana, à noite.${c.v.caminhos.militar?.empregoGuardado ? ' O emprego guardado deixa de esperar.' : ''}`,
+        resolver: c => ({ texto: 'Apostila no armário do alojamento, estudo depois do toque de silêncio.', memoria: 'No quartel, começou a estudar para seguir carreira.', efeito: () => { perderEmpregoGuardado(c.v); fato(c, 'plano_carreira_militar'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 1 }); } }) },
+      { id: 'baixa', texto: 'Dar baixa', consequencia: c => (c.v.caminhos.militar?.empregoGuardado ? 'Sai com o certificado de reservista e volta ao emprego que ficou guardado.' : 'Sai com o certificado de reservista.'),
+        resolver: c => ({ texto: 'Você devolveu a farda e saiu pelo portão de sempre, agora sem voltar.', memoria: 'Deu baixa depois do serviço militar.', efeito: () => { encerrarEmprego(c.v, 'baixa do serviço militar'); marcar(c.v, 'fim_carreira', 'Deu baixa do serviço militar.', 2); c.v.fatos['mil_baixa'] = c.v.t; restaurarEmpregoGuardado(c.v); } }) }
     ]
   },
 
@@ -292,17 +306,28 @@ export const CAMINHOS: Conteudo[] = [
     id: 'neg_aperto', tipo: 'decisao', idade: [18, 80], tema: 'trabalho', prioritario: true, prioridade: 2, repetir: 2,
     quando: c => (c.v.caminhos.negocio?.anosNoVermelho ?? 0) >= 2 && c.v.caminhos.negocio?.estado !== 'fechado',
     titulo: c => `${c.v.caminhos.negocio!.nome} no vermelho`,
-    texto: c => `Dois anos de movimento fraco. O aluguel do ponto não espera, o fornecedor já liga duas vezes. ${parceiro(c.v) ? `${parceiro(c.v)!.p.nome} não diz nada, mas faz as contas na mesa da cozinha.` : ''}`,
+    texto: c => {
+      const n = c.v.caminhos.negocio!;
+      const p = presencaDe(n);
+      const conta = p === 'online' ? 'A taxa da plataforma e o estoque parado não esperam' : p === 'obra' ? 'A equipe e o material não esperam' : p === 'atendimento' ? 'O aluguel da sala e os horários vazios não esperam' : n.emCasa ? 'O fornecedor não espera' : 'O aluguel do ponto não espera';
+      return `Dois anos de ${p === 'online' ? 'pedido fraco' : p === 'atendimento' ? 'agenda vazia' : p === 'obra' ? 'pouca obra' : 'movimento fraco'}. ${conta}; o fornecedor já liga duas vezes. ${parceiro(c.v) ? `${parceiro(c.v)!.p.nome} não diz nada, mas faz as contas na mesa da cozinha.` : ''}`;
+    },
     opcoes: [
-      { id: 'fechar', texto: 'Fechar', resolver: c => ({ texto: 'Você baixou a porta de ferro pela última vez numa terça-feira.', memoria: null, efeito: () => { fecharNegocio(c.v, 'o movimento não pagou as contas'); encerrarEmprego(c.v, 'fechou o negócio'); estresse(c, 6); } }) },
+      { id: 'fechar', texto: c => (presencaDe(c.v.caminhos.negocio!) === 'online' ? 'Tirar a loja do ar' : 'Fechar'),
+        resolver: c => ({ texto: presencaDe(c.v.caminhos.negocio!) === 'online' ? 'Você tirou a loja do ar numa terça-feira à noite.' : presencaDe(c.v.caminhos.negocio!) === 'rua' ? 'Você baixou a porta de ferro pela última vez numa terça-feira.' : 'Você avisou os últimos clientes e encerrou as atividades.', memoria: null, efeito: () => { const dono = !!donoIntegral(c.v); fecharNegocio(c.v, 'o movimento não pagou as contas'); if (dono) encerrarEmprego(c.v, 'fechou o negócio'); estresse(c, 6); } }) },
       { id: 'insistir', texto: 'Insistir, com o dinheiro guardado', comportamento: { disciplina: 1 },
         disponivel: c => (guardado(c.v) >= 5000 ? true : 'Não há dinheiro guardado para isso.'),
-        resolver: c => ({ texto: 'Você pôs mais dinheiro e mais horas. O movimento reagiu um pouco.', memoria: null, efeito: () => { pagarGuardado(c.v, 5000); const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + 16); c.v.caminhos.negocio!.anosNoVermelho = 0; estresse(c, 8); } }) },
+        resolver: c => ({ texto: 'Você pôs mais dinheiro e mais horas. O movimento reagiu um pouco.', memoria: null, efeito: () => { pagarGuardado(c.v, 5000); const n = c.v.caminhos.negocio!; n.clientela = clamp(n.clientela + 16); if (donoIntegral(c.v)) c.v.trabalho.atual!.clientela = n.clientela; n.anosNoVermelho = 0; estresse(c, 8); } }) },
       { id: 'mudar', texto: 'Mudar o jeito de vender', comportamento: { coragem: 1 },
-        resolver: c => { const deu = c.r.chance(0.5); return { texto: deu ? 'Entrega por aplicativo, promoção no bairro, cardápio novo: funcionou mais do que você esperava.' : 'Você mudou tudo. O movimento não mudou.', memoria: null, efeito: () => { const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + (deu ? 20 : 3)); c.v.caminhos.negocio!.anosNoVermelho = deu ? 0 : 1; } }; } },
+        resolver: c => {
+          const n = c.v.caminhos.negocio!;
+          const deu = c.r.chance(0.5);
+          const como = ({ online: 'Anúncio novo, catálogo refeito, frete mais barato', atendimento: 'Horário estendido, parceria com quem indica, preço de pacote', obra: 'Orçamento mais enxuto, visita no mesmo dia, garantia por escrito', rua: n.tipo === 'lanchonete' ? 'Entrega por aplicativo, promoção no bairro, cardápio novo' : n.tipo === 'salao' ? 'Pacotes, horário estendido, promoção para quem traz amiga' : n.tipo === 'oficina' ? 'Revisão com preço fechado, leva-e-traz, orçamento por mensagem' : 'Promoção no bairro, vitrine nova, vendas por mensagem' } as const)[presencaDe(n)];
+          return { texto: deu ? `${como}: funcionou mais do que você esperava.` : `${como}. O movimento não mudou.`, memoria: null, efeito: () => { n.clientela = clamp(n.clientela + (deu ? 20 : 3)); if (donoIntegral(c.v)) c.v.trabalho.atual!.clientela = n.clientela; n.anosNoVermelho = deu ? 0 : 1; } };
+        } },
       { id: 'enxugar', texto: c => { const f = c.v.caminhos.negocio?.equipe?.[c.v.caminhos.negocio.equipe.length - 1]; return f && c.v.pessoas[f.pessoaId] ? `Enxugar: demitir ${c.v.pessoas[f.pessoaId].nome}, quem entrou por último` : 'Enxugar a equipe'; },
         disponivel: c => ((c.v.caminhos.negocio?.equipe?.length ?? 0) > 0 ? true : false),
-        resolver: c => ({ texto: 'A folha ficou menor. O salão, mais silencioso.', memoria: null, tom: 'ruim', efeito: () => { const n = c.v.caminhos.negocio!; const f = n.equipe![n.equipe!.length - 1]; demitirFuncionario(c.v, f.pessoaId); n.anosNoVermelho = 1; } }) },
+        resolver: c => ({ texto: presencaDe(c.v.caminhos.negocio!) === 'rua' ? 'A folha ficou menor. O salão, mais silencioso.' : 'A folha ficou menor. O trabalho, mais pesado para quem ficou.', memoria: null, tom: 'ruim', efeito: () => { const n = c.v.caminhos.negocio!; const f = n.equipe![n.equipe!.length - 1]; demitirFuncionario(c.v, f.pessoaId); n.anosNoVermelho = 1; } }) },
       { id: 'vender', texto: 'Tentar vender enquanto vale alguma coisa',
         resolver: c => { const n = c.v.caminhos.negocio!; const valor = Math.round(valorDoNegocio(c.v, n) * 0.7 / 1000) * 1000; return { texto: valor > 0 ? `Apareceu um comprador, pagando pouco: ${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}.` : 'Ninguém quis comprar um negócio no vermelho.', memoria: null, efeito: () => { if (valor > 0) venderNegocio(c.v, valor); } }; } }
     ]
@@ -423,7 +448,7 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   // Um dia de teste também é treino.
   const f = c.v.caminhos.frentes[d];
   if (f) f.meses += 2;
-  registrarDevolutiva(c.v, { tipo: 'peneira', titulo: `A ${nome} do ${pr.lugar ?? 'clube'}`, texto: fala, passou: res.passou, perto: res.perto, falta: res.passou ? undefined : res.falta, dominio: d });
+  registrarDevolutiva(c.v, { tipo: 'peneira', titulo: `A ${nome} ${pr.lugar ? doClube(pr.lugar) : 'do clube'}`, texto: fala, passou: res.passou, perto: res.perto, falta: res.passou ? undefined : res.falta, dominio: d });
   if (res.passou) {
     c.v.fatos['convite_base'] = c.v.t;
     c.v.fatos['peneira_lugar'] = municipioIndice(lugar);
@@ -474,13 +499,8 @@ function alistar(c: Ctx, chance: number) {
       texto: 'Na lista de convocados, o seu nome. Um ano de quartel pela frente.',
       memoria: c.v.eu.genero === 'masculino' ? 'Foi convocado para o serviço militar: um ano no quartel da região.' : 'Foi incorporada ao serviço militar voluntário: um ano de quartel.'.replace('incorporada', c.g('incorporado', 'incorporada', 'incorporade')),
       relevancia: 'marco' as const,
-      efeito: () => {
-        const m = c.v.educacao.matricula;
-        if (m && !m.trancado) { m.trancado = true; m.tTrancou = c.v.t; escrever(c.v, { texto: 'Trancou o curso para servir.', relevancia: 'cotidiano', tema: 'estudo' }); }
-        const oc = ocupacao('soldado_ep');
-        contratar(c.v, c.r, oc, 'oportunidade');
-        marcar(c.v, 'ingresso', `Serviço militar: ${nomeOcupacao(c.v, oc)}.`, 2, { trilha: oc.trilha });
-      }
+      // O serviço é obrigatório; o que fazer com a faculdade, o negócio ou a base, o jogador escolhe (`compromissos`).
+      efeito: () => { propor(c.v, c.r, { tipo: 'servico_militar' }); }
     };
   }
   if (c.v.eu.genero !== 'masculino') return { texto: 'A seleção foi concorrida. O seu nome não saiu na lista de incorporação.', memoria: 'Alistou-se voluntariamente, mas não foi selecionad' + c.g('o', 'a', 'e') + ' para o serviço militar.', relevancia: 'biografia' as const };

@@ -38,7 +38,9 @@ import { bloqueio, podeTentar, PERMITIDO, type Veredito } from '../plausibilidad
 import { degrausAcima, eDasForcas, elegibilidade, horizonte, nomeOcupacao, podeAposentar, rendaDeClientela, tetoSalarial } from './trabalho';
 import { liquido } from './renda';
 import { disponivel, limiteDeCredito, pagar, parcelaPrice, seguranca } from './dinheiro';
-import { abrirUnidade, ampliar, negocioAtivo, podeAbrirUnidade, podeAmpliar, reservaDoCaixa, retirarDoCaixa, tamanhoDaEquipe, tetoDoMovimento } from './negocio';
+import { abrirUnidade, ampliar, donoIntegral, negocioAberto, podeAbrirUnidade, podeAmpliar, reservaDoCaixa, retirarDoCaixa, tamanhoDaEquipe } from './negocio';
+import { acoesDoNegocio, disponibilidadeGestao, executarGestao, type OqueGestao } from './gestao';
+import { propor } from './compromissos';
 import { guarnicaoPerto, indiceDaGuarnicao } from './militar';
 import { aplicarPersonalidade } from '../personalidade';
 import { marcar } from './marcas';
@@ -49,6 +51,7 @@ import { climaDe, comChefia, fatorJornada, fatorRitmoClientela, fatorRitmoSalari
 
 export { climaDe, comChefia, fatorDeFreguesia, fatorJornada, pesoDoClima, pesoDoRitmo, ritmoDe, type Ritmo } from './ritmo';
 import { editaisAbertos } from './concurso';
+import { doClube } from '../dados/clubes';
 import { acoesPoliticas } from './politica';
 
 /* ================================================================== Modo */
@@ -80,7 +83,7 @@ export function modoDoTrabalho(v: Vida): ModoTrabalho {
   if (e.formacaoAte) return 'formacao';
   if (e.contrato === 'aprendiz') return 'aprendiz';
   if (e.contrato === 'estagio') return 'estagio';
-  if (negocioAtivo(v)) return 'negocio';
+  if (donoIntegral(v)) return 'negocio';
   if (oc.trilha === 'atleta') return 'atleta';
   if (eDasForcas(oc)) return 'militar';
   if (f.progressao === 'seguranca') return 'seguranca';
@@ -124,8 +127,8 @@ export function podeMudarRitmo(v: Vida, alvo: Ritmo): Veredito {
   if (ritmoDe(e) === alvo) return bloqueio('impossivel', 'Já é assim.');
   if (e.reduzida && alvo === 'puxado') return bloqueio('incompativel', 'A jornada está reduzida para cuidar de alguém.');
   if (v.anoAtual.acoes.includes('ritmo')) return bloqueio('incompativel', 'Você já mexeu no ritmo neste ano.');
-  const n = negocioAtivo(v);
-  if (n && alvo === 'leve' && tamanhoDaEquipe(n) === 0) return bloqueio('requisito', 'Sem ninguém para dividir o balcão, não há como aliviar.');
+  const n = donoIntegral(v);
+  if (n && alvo === 'leve' && tamanhoDaEquipe(n) === 0) return bloqueio('requisito', 'Sem ninguém para dividir o trabalho, não há como aliviar.');
   if (alvo === 'puxado' && v.corpo.saude < 35) return bloqueio('requisito', 'O corpo não aguenta mais carga agora.');
   return PERMITIDO;
 }
@@ -137,7 +140,7 @@ export function mudarRitmo(v: Vida, alvo: Ritmo): string {
   if (e.clientela === undefined) {
     // Quem ganha por turma ou plantão: o salário muda na hora (e volta quando o ritmo volta).
     e.salario = Math.round(e.salario / fatorRitmoSalario(antes) * fatorRitmoSalario(alvo) / 10) * 10;
-  } else if (!negocioAtivo(v)) {
+  } else if (!donoIntegral(v)) {
     e.salario = Math.round(e.salario / fatorRitmoClientela(antes) * fatorRitmoClientela(alvo) / 10) * 10;
   }
   e.ritmo = alvo === 'normal' ? undefined : alvo;
@@ -311,7 +314,7 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
     else if (modo === 'preso') { titulo = 'Cumprindo pena'; frases.push('O trabalho possível é o da unidade.'); }
     else if (modo === 'pausa') { titulo = flex(g, 'Cuidando', 'Cuidando'); frases.push('Fora do trabalho pago, por um tempo, para cuidar.'); }
     else if (modo === 'aposentado' && t.aposentadoria) { titulo = flex(g, 'Aposentado', 'Aposentada', 'Aposentade'); frases.push(`${fmt(t.aposentadoria.beneficio)} por mês, desde ${anoDe(t.aposentadoria.t)}.`); }
-    else if (modo === 'base' && v.caminhos.esporte) { titulo = `Na base do ${v.caminhos.esporte.clube}`; frases.push('Treino todo dia, escola à noite. Quase ninguém da base vira profissional — e quem vira, vira cedo.'); }
+    else if (modo === 'base' && v.caminhos.esporte) { titulo = `Na base ${doClube(v.caminhos.esporte.clube)}`; frases.push('Treino quase todo dia. Quase ninguém da base vira profissional — e quem vira, vira cedo.'); }
     else if (modo === 'estudante') { titulo = 'Estudando'; frases.push(idade(v) < 16 ? 'Aos 14 e 15, só como jovem aprendiz.' : 'Dá para começar como aprendiz ou estagiário, sem largar a escola.'); }
     else {
       const desde = t.desempregadoDesde;
@@ -366,6 +369,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /* ================================================================= Ações */
 
 export type OqueProfissao =
+  | OqueGestao
   | 'ritmo' | 'promocao' | 'estrutura' | 'preco'
   | 'contratar' | 'demitir' | 'ampliar' | 'unidade' | 'retirar' | 'estrategia' | 'socio' | 'vender' | 'fechar'
   | 'foco' | 'treinador' | 'mercado' | 'pendurar' | 'pos_carreira'
@@ -481,26 +485,9 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     add({ id: 'outra_vaga', rotulo: 'Procurar outra escola ou rede', ir: 'explorar', peso: 2 });
   }
 
-  /* ---------------------------------------------- Negócio */
-  const n = negocioAtivo(v);
-  if (n) {
-    const teto = tetoDoMovimento(n);
-    const eq = tamanhoDaEquipe(n);
-    const cheio = n.clientela >= teto - 3 && teto < 100;
-    add({ id: 'contratar', rotulo: eq === 0 ? 'Contratar a primeira pessoa' : 'Contratar mais alguém', porque: cheio ? (eq === 0 ? 'Sozinho, não dá para atender mais.' : 'A equipe já não dá conta do movimento.') : n.estado === 'apertado' ? 'Com o movimento fraco, é mais uma conta.' : undefined, acao: P('contratar'), peso: cheio ? 8 : n.estado === 'apertado' ? 0 : 2 });
-    if (podeTentar(podeAmpliar(v))) add({ id: 'ampliar', rotulo: n.emCasa ? 'Sair de casa: abrir um ponto' : 'Ampliar o negócio', porque: 'A casa enche: dá para crescer — e a conta cresce junto.', acao: P('ampliar'), peso: 6 });
-    if (podeTentar(podeAbrirUnidade(v))) add({ id: 'unidade', rotulo: 'Abrir outra unidade', porque: 'O primeiro ponto está firme.', acao: P('unidade'), peso: 5 });
-    const sobra = (n.caixa ?? 0) - reservaDoCaixa(v, n);
-    if (sobra >= 3000) add({ id: 'retirar', rotulo: `Tirar ${fmt(Math.round(sobra / 100) * 100)} do caixa`, porque: 'O que sobra no caixa não é seu até você tirar.', acao: P('retirar'), peso: aperto ? 8 : 5 });
-    if (n.estado === 'apertado' || (v.fatos['negocio_estrategia'] === undefined && (v.t - n.tInicio) / 12 >= 3)) add({ id: 'estrategia', rotulo: 'Mudar o jeito de vender', porque: n.estado === 'apertado' ? 'O movimento não reage.' : undefined, acao: P('estrategia'), peso: n.estado === 'apertado' ? 6 : 2 });
-    if (!n.socioId) add({ id: 'socio', rotulo: 'Trazer um sócio', porque: n.estado === 'apertado' ? 'Dinheiro novo, metade do lucro.' : undefined, acao: P('socio'), peso: n.estado === 'apertado' ? 3 : 1 });
-    for (const f of n.equipe ?? []) {
-      const p = v.pessoas[f.pessoaId];
-      if (p) add({ id: `demitir_${p.id}`, rotulo: `Demitir ${p.nome}`, porque: n.estado === 'apertado' ? 'A folha pesa mais do que o movimento paga.' : undefined, acao: P('demitir', { pessoaId: p.id }), peso: n.estado === 'apertado' ? 4 : 0 });
-    }
-    add({ id: 'vender', rotulo: 'Vender o negócio', porque: i >= 60 ? 'Passar adiante enquanto vale.' : undefined, acao: P('vender'), peso: i >= 60 ? 5 : 0 });
-    add({ id: 'fechar', rotulo: 'Fechar o negócio', acao: P('fechar'), peso: 0, saida: true });
-  }
+  /* ---------------------------------------------- Negócio (quando é o trabalho de todo dia) */
+  const n = donoIntegral(v);
+  if (n) for (const x of acoesDoNegocio(v, disp)) lista.push(x);
 
   /* ---------------------------------------------- Por conta própria */
   if (POR_CONTA.has(modo) || modo === 'artista') {
@@ -622,9 +609,12 @@ const custoLancar = (v: Vida) => Math.round(3500 * economiaLocal(v.moradia.munic
 export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito {
   const e = v.trabalho.atual;
   const modo = modoDoTrabalho(v);
-  const n = negocioAtivo(v);
+  const n = negocioAberto(v);
   const semTrabalho = bloqueio('impossivel', 'Não se aplica ao seu trabalho.');
   switch (a.oque) {
+    case 'divulgar': case 'estrutura_negocio': case 'especializar': case 'delivery': case 'agenda_online': case 'logistica': case 'fornecedor':
+    case 'treinar': case 'credito_negocio': case 'gestao': case 'dedicacao': case 'comprar_parte': case 'conversar_socio':
+      return disponibilidadeGestao(v, a.oque, a.valor);
     case 'ritmo': return podeMudarRitmo(v, (a.valor as Ritmo) ?? 'normal');
     case 'promocao': {
       if (!e || !['empregado', 'saude', 'docente'].includes(modo) || e.contrato !== 'clt') return semTrabalho;
@@ -723,6 +713,16 @@ export interface SaidaProfissao { texto?: string; tom?: 'bom' | 'ruim' | 'neutro
 export function executarProfissao(v: Vida, r: Rng, a: AcaoProfissaoCmd): SaidaProfissao {
   const e = v.trabalho.atual;
   switch (a.oque) {
+    case 'divulgar': case 'estrutura_negocio': case 'especializar': case 'delivery': case 'agenda_online': case 'logistica': case 'fornecedor':
+    case 'treinar': case 'credito_negocio': case 'gestao': case 'dedicacao': case 'comprar_parte': case 'conversar_socio': {
+      const g = executarGestao(v, r, a.oque, a.valor);
+      if (g.conflito) {
+        // Dedicar-se ao negócio é largar o que ocupa o dia: se houver o que largar, o jogo pergunta.
+        const feito = propor(v, r, { tipo: 'dedicar_negocio' }) === 'feito';
+        return feito ? { texto: 'Agora o negócio é o trabalho de todo dia.', tom: 'bom' } : {};
+      }
+      return g;
+    }
     case 'ritmo': {
       const alvo = (a.valor as Ritmo) ?? 'normal';
       const familia = pequenosEmCasa(v) || (!!parceiro(v)?.vin.convivio.includes('casa'));

@@ -324,6 +324,9 @@ describe('negócio: gestão, não renda passiva', () => {
     const emp = v.momento!.opcoes.find(o => o.id === 'emprestimo')!;
     if (emp.bloqueio) return; // a renda desta vida não sustenta empréstimo — o motivo aparece
     v = executar(v, { tipo: 'decidir', opcaoId: 'emprestimo' }).vida;
+    // Com emprego, abrir não é pedir demissão: a vida pergunta como fica (horas vagas ou dedicação).
+    expect(v.momento?.situacaoId).toBe('comp_conflito');
+    v = executar(v, { tipo: 'decidir', opcaoId: 'plano_0' }).vida;
     const n = v.caminhos.negocio!;
     expect(n.dividaId).toBeTruthy();
     v = transacao(v, x => { fecharNegocio(x, 'teste'); }).vida;
@@ -615,7 +618,7 @@ describe('personalidade só por escolha; acontecimento não decide por você', (
 
 describe('save v12', () => {
   it('saves v11 reais (motor do PLAYTEST #3) migram, validam, seguem vivendo anos, salvam e reabrem', () => {
-    expect(VERSAO_SAVE).toBe(12);
+    expect(VERSAO_SAVE).toBe(13);
     for (const nome of ['save-v11-negocio.json', 'save-v11-atleta.json', 'save-v11-professora.json']) {
       const bruto = fixture(nome);
       expect(JSON.parse(bruto).versao).toBe(11);
@@ -624,7 +627,7 @@ describe('save v12', () => {
       if (r.tipo !== 'ok') continue;
       expect(r.migrado).toBe(true);
       let v = r.vida;
-      expect(v.versao).toBe(12);
+      expect(v.versao).toBe(VERSAO_SAVE);
       if (nome === 'save-v11-negocio.json') {
         const n = v.caminhos.negocio!;
         expect(n.caixa).toBe(0);
@@ -650,7 +653,7 @@ describe('save v12', () => {
   it('v10 → v11 → v12: a cadeia antiga continua de pé', () => {
     const r = interpretar(fixture('save-v10-familia.json'));
     expect(r.tipo).toBe('ok');
-    if (r.tipo === 'ok') expect(r.vida.versao).toBe(12);
+    if (r.tipo === 'ok') expect(r.vida.versao).toBe(VERSAO_SAVE);
   });
   it('um save v12 com equipe apontando para ninguém é recusado (vai para backup), não corrompe', () => {
     const v = lanchonete();

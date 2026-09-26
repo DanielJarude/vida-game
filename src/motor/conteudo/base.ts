@@ -84,6 +84,8 @@ export interface Resultado {
   evento?: EventoSocial;
   /** Reabre a mesma decisão (próxima etapa de um processo seletivo em andamento). */
   reabrir?: boolean;
+  /** Abre OUTRA decisão em seguida (o resultado criou uma escolha nova: a vaga veio, mas não cabe com a faculdade). */
+  abrir?: { id: string; papeis?: Record<string, string> };
 }
 
 export interface Opcao {
@@ -92,6 +94,8 @@ export interface Opcao {
   /** `true` ou o motivo do bloqueio (mostrado desabilitado). `false` esconde. */
   disponivel?: (c: Ctx) => true | string | false;
   comportamento?: Partial<Record<Traco, number>>;
+  /** O que a escolha muda, dito antes de escolher (aparece sob a opção). */
+  consequencia?: (c: Ctx) => string | undefined;
   resolver: (c: Ctx) => Resultado;
 }
 

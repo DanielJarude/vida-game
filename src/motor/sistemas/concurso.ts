@@ -24,7 +24,7 @@ import { escrever, idade, marcarFato } from '../nucleo';
 import { municipio } from '../dados/lugares';
 import { habilidade } from './frentes';
 import { marcar } from './marcas';
-import { contratar, nomeOcupacao, textoDeContratacao } from './trabalho';
+import { nomeOcupacao } from './trabalho';
 import { anoDe } from '../tempo';
 import { flex, ge } from '../texto';
 import { registrarDevolutiva } from './devolutivas';
@@ -71,6 +71,8 @@ const PERFIS: Record<string, PerfilConcurso> = {
 };
 
 const PADRAO: PerfilConcurso = { preparo: 10, teto: 0.35, frequencia: 0.3, materias: ['linguagens'], esfera: 'estadual' };
+import { propor } from './compromissos';
+
 export const perfilConcurso = (id: string) => PERFIS[id] ?? PADRAO;
 
 function hash(s: string): number {
@@ -158,8 +160,9 @@ export function processarConcursos(v: Vida, r: Rng): void {
     const sorte = r.next();
     if (sorte < chance) {
       c.aprovacoes += 1;
-      const novo = contratar(v, r, oc, 'concurso');
-      escrever(v, { texto: textoDeContratacao(v, oc, novo) + (tentativas > 1 ? ` Na ${tentativas}ª tentativa.` : ''), relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+      if (tentativas > 1) escrever(v, { texto: `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso para ${nomeOcupacao(v, oc)}, na ${tentativas}ª tentativa.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+      // Aprovado não é empossado: se houver o que largar (um emprego, a base, o negócio), a posse é escolha.
+      propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'concurso' });
       continue;
     }
     v.fatos[`concurso_${oc.id}`] = tentativas;
@@ -198,8 +201,8 @@ export function processarConcursos(v: Vida, r: Rng): void {
     } else if (r.chance(0.35) && v.trabalho.atual?.ocupacaoId !== oc.id && !v.trabalho.aposentadoria && idade(v) < 70) {
       c.reserva = undefined;
       c.aprovacoes += 1;
-      const novo = contratar(v, r, oc, 'concurso');
-      escrever(v, { texto: `Chamaram o cadastro reserva: ${nomeOcupacao(v, oc)} em ${novo.empregador.replace(/^(a|o) /, '')}, com estabilidade.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+      escrever(v, { texto: `Chamaram o cadastro reserva do concurso para ${nomeOcupacao(v, oc)}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+      propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'reserva' });
     }
   }
 }

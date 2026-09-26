@@ -8,6 +8,7 @@
  */
 
 import type { Genero, Pessoa } from './tipos';
+import { palavraDoBicho } from './dados/animais';
 
 /** Gênero gramatical usado para falar do personagem (escolha do jogador). */
 export const ge = (v: { eu: { genero: Genero; tratamento?: Genero } }): Genero => v.eu.tratamento ?? v.eu.genero;
@@ -53,7 +54,7 @@ export function rotuloParentesco(p: Pessoa, parentesco: string): string {
     bisneto: ['bisneto', 'bisneta', 'bisnete'],
     genro: ['genro', 'nora', 'genre'],
     sogro: ['sogro', 'sogra', 'sogre'],
-    pet: [p.especie === 'gato' ? 'gato' : 'cachorro', p.especie === 'gato' ? 'gata' : 'cachorra', 'bichinho']
+    pet: [palavraDoBicho(p.especie, 'masculino', false), palavraDoBicho(p.especie, 'feminino', false), palavraDoBicho(p.especie, 'masculino', false)]
   };
   const f = mapa[parentesco];
   if (!f) return parentesco;

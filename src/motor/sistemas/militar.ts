@@ -37,7 +37,7 @@ import { ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { ESCOLA, ESPECIALIDADES, GUARNICOES, NOME_FORCA, SIGLA_DA } from '../dados/forcas';
 import { municipio, pertoDaAgua } from '../dados/lugares';
 import { marcar } from './marcas';
-import { encerrarEmprego, nomeOcupacao, salarioLiquidoAtual } from './trabalho';
+import { contratar, encerrarEmprego, nomeOcupacao, salarioLiquidoAtual } from './trabalho';
 import { salarioLocal } from './renda';
 import { praticar } from './frentes';
 import { anoDe } from '../tempo';
@@ -334,6 +334,76 @@ export function irParaReserva(v: Vida, como: 'pedido' | 'compulsoria'): void {
   if (v.moradia.funcional) v.fatos['sair_funcional'] = v.t;
 }
 
+/* ------------------------------------------------------ Serviço inicial */
+
+/**
+ * Incorporação ao serviço militar inicial (doze meses; Lei 4.375/1964, art.
+ * 6º). O emprego civil não acaba: fica guardado, e a lei garante a volta em
+ * até trinta dias depois da baixa (art. 60) — a não ser que a pessoa engaje.
+ */
+export function incorporarAoServico(v: Vida, r: Rng): void {
+  const e = v.trabalho.atual;
+  const guardado = e && e.contrato !== 'eletivo' && e.contrato !== 'militar' ? { ...e } : undefined;
+  const nomeGuardado = guardado ? nomeOcupacao(v, ocupacao(guardado.ocupacaoId)) : undefined;
+  if (guardado) v.trabalho.atual = undefined;
+  const oc = ocupacao('soldado_ep');
+  contratar(v, r, oc, 'convocacao');
+  const m = v.caminhos.militar;
+  if (m && guardado) m.empregoGuardado = guardado;
+  marcar(v, 'ingresso', `Serviço militar: ${nomeOcupacao(v, oc)}.`, 2, { trilha: oc.trilha });
+  if (guardado) escrever(v, { texto: `O trabalho de ${nomeGuardado} ficou guardado durante o serviço: a lei garante a volta depois da baixa.`, relevancia: 'cotidiano', tema: 'trabalho' });
+}
+
+/** A baixa do serviço inicial devolve o emprego guardado (se ainda houver). */
+export function restaurarEmpregoGuardado(v: Vida): void {
+  const m = v.caminhos.militar;
+  const g = m?.empregoGuardado;
+  if (!m || !g) return;
+  m.empregoGuardado = undefined;
+  if (v.trabalho.atual) return;
+  v.trabalho.atual = { ...g, municipioId: v.moradia.municipioId };
+  v.trabalho.desempregadoDesde = undefined;
+  escrever(v, { texto: `Depois da baixa, voltou ao trabalho de ${nomeOcupacao(v, ocupacao(g.ocupacaoId))}: a vaga estava guardada.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+}
+
+/** Engajar é escolha: o emprego guardado deixa de esperar (Lei 4.375/1964, art. 60, §2º). */
+export function perderEmpregoGuardado(v: Vida): void {
+  const m = v.caminhos.militar;
+  const g = m?.empregoGuardado;
+  if (!m || !g) return;
+  m.empregoGuardado = undefined;
+  v.trabalho.historico.push({ ...g, tFim: v.t, motivo: 'engajou no serviço militar' });
+  escrever(v, { texto: `Ao engajar, deixou para trás o trabalho de ${nomeOcupacao(v, ocupacao(g.ocupacaoId))}, que estava guardado.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+}
+
+/**
+ * O que pode acontecer daqui, na farda — e do que depende. Nada é promessa:
+ * promoção depende de vaga, curso e conceito; engajar depende da Força.
+ */
+export function perspectivasMilitares(v: Vida): { oque: string; depende: string }[] {
+  const m = v.caminhos.militar;
+  const e = v.trabalho.atual;
+  if (!m || !e) return [];
+  const meses = v.t - m.tIngresso;
+  const anos = Math.floor(meses / 12);
+  const medio = ['medio', 'tecnico', 'superior_incompleto', 'superior', 'pos', 'mestrado', 'doutorado'].includes(v.educacao.escolaridade);
+  const i = idade(v);
+  const out: { oque: string; depende: string }[] = [];
+  if (m.quadro === 'temporario') {
+    if (meses < 12) out.push({ oque: 'Cumprir o serviço inicial até o fim', depende: 'É obrigatório: sair antes só por desincorporação (doença, arrimo de família) — largar é deserção.' });
+    out.push({ oque: 'Engajar por mais um ano', depende: `Depende de vaga e do conceito com o comando. O temporário vai no máximo até oito anos (você tem ${anos}).${m.empregoGuardado ? ' Engajar faz perder o emprego guardado.' : ''}` });
+    if (e.ocupacaoId === 'soldado_ep') out.push({ oque: 'Chegar a cabo', depende: 'Pelo curso de formação de cabos, com classificação e vaga — não é automático.' });
+    out.push({ oque: 'Seguir carreira: a escola de sargentos (EsSA)', depende: medio && i <= 24 ? 'Concurso: ensino médio e até 24 anos. Estudar no alojamento conta.' : !medio ? 'Pede o ensino médio completo.' : 'O limite de idade (24 anos) já passou.' });
+    out.push({ oque: 'Dar baixa no fim do ano', depende: `Sai com o certificado de reservista${m.empregoGuardado ? ' e volta ao emprego guardado' : ''}.` });
+    return out;
+  }
+  const x = ESCADA[e.ocupacaoId];
+  if (x?.proximo) out.push({ oque: `Promoção a ${nomeOcupacao(v, ocupacao(x.proximo))}`, depende: `Tempo no posto (${x.anos} anos), teste físico em dia${x.curso ? `, curso de ${x.curso === 'altos_estudos' ? 'altos estudos' : 'aperfeiçoamento'}` : ''} e vaga${x.disputa < 0.5 ? ' — e as vagas são poucas' : ''}.` });
+  out.push({ oque: 'Transferência para outra guarnição', depende: 'Vem de tempos em tempos; dá para pedir movimentação para perto da família.' });
+  out.push({ oque: 'A reserva', depende: `Com 35 anos de serviço, a pedido (você tem ${anos}); antes disso, pela idade-limite do posto.` });
+  return out;
+}
+
 /** Sair antes: temporário dá baixa; de carreira, pede demissão (quem se formou há pouco indeniza a formação). */
 export function sairDasForcas(v: Vida): number {
   const m = v.caminhos.militar;
@@ -358,7 +428,7 @@ export function horizonteMilitar(v: Vida): string {
   const oc = ocupacao(e.ocupacaoId);
   const anosServ = anosDeForcas(v);
   const onde = `Serve em ${municipio(m.guarnicao).nome}${m.transferencias ? ` (${m.transferencias} ${m.transferencias === 1 ? 'transferência' : 'transferências'} na carreira)` : ''}.`;
-  if (m.quadro === 'temporario') return `Temporário: sem estabilidade, dá para prorrogar ano a ano até oito anos de serviço (você tem ${anosServ}). ${onde}`;
+  if (m.quadro === 'temporario') return v.t - m.tIngresso < 12 ? `Serviço militar inicial: doze meses obrigatórios. No fim do ano, engajar ou dar baixa. ${onde}` : `Temporário: sem estabilidade, dá para prorrogar ano a ano até oito anos de serviço (você tem ${anosServ}). ${onde}`;
   const x = ESCADA[oc.id];
   const anosNoPosto = (v.t - (e.tPosto ?? e.tInicio)) / 12;
   const reserva = `A reserva a pedido vem com 35 anos de serviço (você tem ${anosServ}).`;

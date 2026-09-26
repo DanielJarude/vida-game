@@ -580,6 +580,8 @@ function marcoDeEstrada(v: Vida, oc: Ocupacao): void {
 }
 
 function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
+  // Atleta não sai em "corte de pessoal": o contrato tem prazo e acaba na renovação (`esporte`).
+  if (oc.trilha === 'atleta') return false;
   const i = idade(v);
   const epoca = 1 - sobraNaEpoca(oc.declinio, anoDe(v.t));
   const base = e.contrato === 'servidor' ? 0.002 : e.contrato === 'militar' ? 0.003 : e.desempenho < 35 ? 0.3 : e.contrato === 'clt' ? 0.045 : 0.03;
