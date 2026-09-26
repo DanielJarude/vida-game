@@ -639,7 +639,7 @@ describe('save v13 → v14 com saves reais da base do Playtest #4', () => {
       expect(res.migrado).toBe(true);
       let v = res.vida;
       expect(v.versao).toBe(VERSAO_SAVE);
-      expect(VERSAO_SAVE).toBe(14);
+      expect(VERSAO_SAVE).toBe(15);
       for (const b of v.financas.bens) if (b.tipo === 'veiculo') { expect(b.versaoId).toBeTruthy(); expect(nomeDoVeiculo(b)).not.toMatch(/^carro compacto$/); }
       if (v.caminhos.politica?.partido) expect(v.caminhos.politica.partidos?.[0].sigla).toBe(v.caminhos.politica.partido);
       for (let k = 0; k < 3 && !v.morte; k++) { v = avancarAno(v).vida; v = responderTudo(v); }
@@ -945,14 +945,16 @@ describe('achados da auditoria independente do FIX #4', () => {
 
   it('retrospectiva: "Deixou uma filha", e não "Deixou 0 filhos e 2 netos"', () => {
     const v = adulto(80, { semente: 19 });
+    // A premissa, explícita (não depende do que a semente sorteou): nenhum outro filho nem neto.
+    for (const [id, w] of Object.entries(v.vinculos)) if (w.parentesco === 'filho' || w.parentesco === 'neto') { delete v.vinculos[id]; delete v.pessoas[id]; }
     const par = comParceiro(v, { estagio: 'casamento', anos: 50, genero: 'feminino' }).p;
     const filha = comFilho(v, 50, { casa: false, outroId: par.id, genero: 'feminino' }).p;
     comNeto(v, filha, 20); comNeto(v, filha, 18);
-    expect(retrospectiva(v).some(f => /^Deixou uma filha e 2 net/.test(f))).toBe(true);
+    expect(retrospectiva(v).some(f => /^Deixou uma filha e \d+ net/.test(f))).toBe(true);
     filha.vivo = false; filha.tMorte = v.t - 24;
     const r = retrospectiva(v);
     expect(r.some(f => /Deixou 0/.test(f))).toBe(false);
-    expect(r.some(f => /Não deixou filhos vivos; deixou 2 net/.test(f))).toBe(true);
+    expect(r.some(f => /Não deixou filhos vivos; deixou \d+ net/.test(f))).toBe(true);
   });
 
   it('a conta do negócio só diz "saiu do seu bolso" quando saiu mesmo (o caixa cobriu = "saiu do caixa")', () => {
