@@ -345,6 +345,9 @@ describe('os pais envelhecem', () => {
 describe('os irmãos depois dos pais', () => {
   function cena() {
     const v = base(58);
+    // Os pais da vida sorteada também já se foram (o cenário é "depois dos pais").
+    for (const w of Object.values(v.vinculos)) if (w.parentesco === 'mae' || w.parentesco === 'pai') { const q = v.pessoas[w.pessoaId]; if (q) { q.vivo = false; q.tMorte = Math.min(q.tMorte ?? v.t, v.t - 36); } }
+    v.ocorrencias = v.ocorrencias.filter(o => o.id !== 'bio_irmaos_depois');
     const pai = comParente(v, 'pai', 85, 'masculino').p;
     pai.vivo = false; pai.tMorte = v.t - 24;
     const irma = comParente(v, 'irmao', 55, 'feminino', 40).p;

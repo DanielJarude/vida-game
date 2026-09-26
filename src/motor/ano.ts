@@ -168,19 +168,18 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   const i = idade(v);
   let acontecimentos = 0;
 
-  // 1. Marcos garantidos (desenvolvimento, passagens).
-  const garantidos = candidatos(v, r, c => !!c.garantido);
-  for (const { c, ctx } of garantidos) {
-    if (c.tipo === 'decisao') {
-      if (!v.momento) abrirDecisao(v, c, ctx);
-    } else if (aplicarAcontecimento(v, c, ctx)) acontecimentos++;
+  // O mundo age primeiro (marcos, situações disparadas pelo estado, o sorteio); só DEPOIS a vida
+  // pergunta — com o estado já mudado. Antes, um acontecimento do mesmo ano podia desfazer a
+  // premissa de uma decisão já aberta (a decisão sobre a carreira, e a demissão logo depois).
+
+  // 1. Marcos garantidos que são acontecimentos (desenvolvimento, passagens).
+  for (const { c, ctx } of candidatos(v, r, c => !!c.garantido && c.tipo === 'acontecimento')) {
+    if (c.tipo === 'acontecimento' && aplicarAcontecimento(v, c, ctx)) acontecimentos++;
   }
 
-  // 2. Situações disparadas pelo estado.
-  const prioritarios = candidatos(v, r, c => !!c.prioritario && !c.garantido)
+  // 2. Acontecimentos disparados pelo estado.
+  const prioritarios = candidatos(v, r, c => !!c.prioritario && !c.garantido && c.tipo === 'acontecimento')
     .sort((a, b) => (b.c.prioridade ?? 1) - (a.c.prioridade ?? 1));
-  const decisaoPrioritaria = prioritarios.find(x => x.c.tipo === 'decisao');
-  if (decisaoPrioritaria && !v.momento && decisaoPrioritaria.c.tipo === 'decisao') abrirDecisao(v, decisaoPrioritaria.c, decisaoPrioritaria.ctx);
   for (const x of prioritarios) {
     if (x.c.tipo === 'acontecimento' && acontecimentos < 2 && preparar(x.c, v, r)) {
       if (aplicarAcontecimento(v, x.c, x.ctx)) acontecimentos++;
@@ -195,7 +194,14 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
     if (x && x.c.tipo === 'acontecimento') aplicarAcontecimento(v, x.c, x.ctx);
   }
 
-  // 4. Uma decisão sorteada, no máximo — e só se o ano ainda não pediu nada.
+  // 4. As decisões, com o estado de agora: a garantida, a disparada pelo estado, ou uma sorteada.
+  const garantida = candidatos(v, r, c => !!c.garantido && c.tipo === 'decisao')[0];
+  if (garantida && !v.momento && garantida.c.tipo === 'decisao') abrirDecisao(v, garantida.c, garantida.ctx);
+  if (!v.momento) {
+    const decisaoPrioritaria = candidatos(v, r, c => !!c.prioritario && !c.garantido && c.tipo === 'decisao')
+      .sort((a, b) => (b.c.prioridade ?? 1) - (a.c.prioridade ?? 1))[0];
+    if (decisaoPrioritaria && decisaoPrioritaria.c.tipo === 'decisao') abrirDecisao(v, decisaoPrioritaria.c, decisaoPrioritaria.ctx);
+  }
   if (!v.momento) {
     let chance = chanceDeDecisao(i);
     if (decidiuRecentemente(v)) chance *= 0.55;

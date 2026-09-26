@@ -21,7 +21,7 @@
 import type { Conteudo, Ctx } from './base';
 import type { Dominio, Imovel, Pessoa, Vida, Vinculo } from '../tipos';
 import * as P from './papeis';
-import { dinheiro, envolvimento, estresse, feliz, prox, tensao } from './efeitos';
+import { custa, dinheiro, envolvimento, estresse, feliz, prox, tensao } from './efeitos';
 import { clamp } from '../rng';
 import { idadePessoa, lembrarCom, temFato, vinculosVivos } from '../nucleo';
 import { flex, listaNatural } from '../texto';
@@ -1132,31 +1132,33 @@ export const BIOGRAFIA: Conteudo[] = [
         id: 'formar', texto: 'Pedir para formar quem está chegando', comportamento: { generosidade: 1 },
         consequencia: () => 'O clima no trabalho melhora e você passa a ser referência; a liderança vira parte do que você faz.',
         resolver: c => {
-          const m = marcoDeCarreira(c.v)!;
+          const m = marcoDeCarreira(c.v);
+          if (!m) return { texto: 'A vida mudou antes da conversa; o assunto ficou para depois.', memoria: null };
           return {
             texto: 'Puseram dois novatos com você. Na primeira semana, você se pegou repetindo frases que ouviu no seu começo.',
             memoria: `Com ${m.anos} anos de estrada, passou a formar quem chegava.`,
-            efeito: () => { c.v.fatos[`bio_carreira_${m.trilha}_${m.anos}`] = c.v.t; const f = garantirFrente(c.v, 'lideranca'); f.interesse = clamp(f.interesse + 10); f.tUltimo = c.v.t; const e = c.v.trabalho.atual!; e.clima = clamp((e.clima ?? 50) + 8); feliz(c, 2); }
+            efeito: () => { c.v.fatos[`bio_carreira_${m.trilha}_${m.anos}`] = c.v.t; const f = garantirFrente(c.v, 'lideranca'); f.interesse = clamp(f.interesse + 10); f.tUltimo = c.v.t; const e = c.v.trabalho.atual; if (e) e.clima = clamp((e.clima ?? 50) + 8); feliz(c, 2); }
           };
         }
       },
       {
         id: 'atualizar', texto: 'Fazer uma atualização, para não ficar para trás', comportamento: { disciplina: 1 },
-        disponivel: c => (guardado(c.v) >= 1800 ? true : 'Não há dinheiro guardado para o curso.'),
+        disponivel: c => custa(c, 1800, 'Não há dinheiro guardado para o curso.'),
         consequencia: () => `Um curso de ${fmt(1800)}; o desempenho no trabalho sobe.`,
         resolver: c => {
-          const m = marcoDeCarreira(c.v)!;
+          const m = marcoDeCarreira(c.v);
+          if (!m) return { texto: 'A vida mudou antes da conversa; o assunto ficou para depois.', memoria: null };
           return {
             texto: 'Aula aos sábados, com gente vinte anos mais nova. Você era quem mais perguntava.',
             memoria: null,
-            efeito: () => { c.v.fatos[`bio_carreira_${m.trilha}_${m.anos}`] = c.v.t; pagar(c.v, 1800); const e = c.v.trabalho.atual!; e.tAtualizacao = c.v.t; e.desempenho = clamp(e.desempenho + 6); }
+            efeito: () => { c.v.fatos[`bio_carreira_${m.trilha}_${m.anos}`] = c.v.t; pagar(c.v, 1800); const e = c.v.trabalho.atual; if (e) { e.tAtualizacao = c.v.t; e.desempenho = clamp(e.desempenho + 6); } }
           };
         }
       },
       {
         id: 'seguir', texto: 'Seguir como está',
         consequencia: () => 'Nada muda.',
-        resolver: c => { const m = marcoDeCarreira(c.v)!; return { texto: 'Segunda-feira foi segunda-feira.', memoria: null, efeito: () => { c.v.fatos[`bio_carreira_${m.trilha}_${m.anos}`] = c.v.t; } }; }
+        resolver: c => { const m = marcoDeCarreira(c.v); return { texto: 'Segunda-feira foi segunda-feira.', memoria: null, efeito: () => { if (m) c.v.fatos[`bio_carreira_${m.trilha}_${m.anos}`] = c.v.t; } }; }
       }
     ]
   },
@@ -1197,7 +1199,7 @@ export const BIOGRAFIA: Conteudo[] = [
         resolver: c => ({
           texto: 'Você passou a escrever num caderno tudo o que só você sabia fazer.',
           memoria: 'Nos últimos anos antes de aposentar, preparou quem ia ficar no seu lugar.',
-          efeito: () => { const e = c.v.trabalho.atual!; e.clima = clamp((e.clima ?? 50) + 8); const f = garantirFrente(c.v, 'lideranca'); f.interesse = clamp(f.interesse + 6); f.tUltimo = c.v.t; }
+          efeito: () => { const e = c.v.trabalho.atual; if (e) e.clima = clamp((e.clima ?? 50) + 8); const f = garantirFrente(c.v, 'lideranca'); f.interesse = clamp(f.interesse + 6); f.tUltimo = c.v.t; }
         })
       },
       {
