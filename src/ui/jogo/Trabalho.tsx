@@ -24,15 +24,20 @@ import { anoDe } from '../../motor/tempo';
 import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, type Ocupacao } from '../../motor/dados/ocupacoes';
 import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
-import { degrausAcima, elegibilidade, horizonte, nomeOcupacao, porContaPropria, estradaNaArea } from '../../motor/sistemas/trabalho';
+import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, proximoPasso, ROTULO_MODELO } from '../../motor/sistemas/trabalho';
 import { acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
 import { acoesDoNegocio } from '../../motor/sistemas/gestao';
 import { contaDoAno, dedicacaoDe, donoIntegral, estrategiaDe, leituraDoNegocio, negocioAberto, negociosPossiveis, parteDoSocio, presencaDe, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
 import { rotuloEstrategia } from '../../motor/dados/negocios';
-import { leituraPolitica, naPolitica, nomeDaBandeira, portasDaPolitica } from '../../motor/sistemas/politica';
+import { leituraPolitica, naPolitica, nomeDaBandeira } from '../../motor/sistemas/politica';
 import { escadaMilitar, perspectivasMilitares } from '../../motor/sistemas/militar';
-import { editaisAbertos, leituraDoPreparo } from '../../motor/sistemas/concurso';
-import { vagasParaVoce } from '../../motor/sistemas/relevancia';
+import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from '../../motor/sistemas/concurso';
+import { caminhosPossiveis, emConstrucao } from '../../motor/sistemas/caminhosDeVida';
+import { perfilParaVaga } from '../../motor/sistemas/empregabilidade';
+import { BlocoDeVagas, CaminhosPossiveis, EmConstrucao, PerfilDaVaga, ProximoPassoPainel } from './Caminhos';
+import type { FocoConcurso } from '../../motor/tipos';
+import { vagasEmCamadas, type Vaga } from '../../motor/sistemas/relevancia';
+import type { Relevante } from '../../motor/sistemas/relevancia';
 import { O_QUE_TRABALHAR } from '../../motor/sistemas/devolutivas';
 import { situacaoNaJustica } from '../../motor/sistemas/justica';
 import { leituraDaPausa } from '../../motor/sistemas/pausa';
@@ -63,10 +68,14 @@ export function Trabalho({ vida, agir, irPara }: Props) {
   const modo = modoDoTrabalho(vida);
   const l = leituraDoTrabalho(vida);
   const [explorar, setExplorar] = useState(modo === 'procurando');
+  const [aba, setAba] = useState('vagas');
   const explorarRef = useRef<HTMLDivElement>(null);
   const acoes = useMemo(() => acoesDoTrabalho(vida, disponibilidade), [vida]);
+  const construindo = useMemo(() => emConstrucao(vida, disponibilidade), [vida]);
   const ir = (d: string) => {
-    if (d === 'explorar') { setExplorar(true); setTimeout(() => explorarRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 30); return; }
+    // Os passos de um caminho apontam para a procura (e uma aba dela) ou para outra área.
+    const abaDe: Record<string, string> = { explorar: 'vagas', concursos: 'concursos', negocio: 'negocio', caminhos: 'caminhos' };
+    if (abaDe[d]) { setAba(abaDe[d]); setExplorar(true); setTimeout(() => explorarRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 30); return; }
     irPara(d as Aba);
   };
   const e = vida.trabalho.atual;
@@ -106,13 +115,15 @@ export function Trabalho({ vida, agir, irPara }: Props) {
         {modo === 'crianca' && <p className="vazio">Trabalho é proibido antes dos 14. O trabalho agora é crescer.</p>}
       </section>
 
+      {!preso && modo !== 'crianca' && <EmConstrucao vida={vida} lista={construindo} agir={agir} ir={ir} />}
+
       <EmParalelo vida={vida} agir={agir} irPara={irPara} modo={modo} />
 
       {!preso && <PortasAbertas vida={vida} agir={agir} filtro={ehPortaDeTrabalho} titulo="Portas de trabalho" />}
 
       {!preso && modo !== 'crianca' && (
         <div ref={explorarRef} id="explorar">
-          <OutrasPossibilidades vida={vida} agir={agir} aberto={explorar} alternar={() => setExplorar(x => !x)} irPara={irPara} />
+          <OutrasPossibilidades vida={vida} agir={agir} aberto={explorar} alternar={() => setExplorar(x => !x)} irPara={irPara} aba={aba} setAba={setAba} ir={ir} />
         </div>
       )}
       <Devolutivas vida={vida} />
@@ -337,9 +348,17 @@ function PainelFarda({ vida }: { vida: Vida }) {
           <ul>{persp.map((x, k) => <li key={k}><strong>{x.oque}</strong><span>{x.depende}</span></li>)}</ul>
         </div>
       )}
-      <p className="painel__frase">{horizonte(vida)}</p>
+      <Horizonte vida={vida} />
     </section>
   );
+}
+
+/** O próximo passo da carreira, requisito por requisito — ou, onde não há degrau, a frase do horizonte. */
+function Horizonte({ vida }: { vida: Vida }) {
+  const pp = proximoPasso(vida);
+  if (pp) return <ProximoPassoPainel passo={pp} />;
+  const h = horizonte(vida);
+  return h ? <p className="painel__frase">{h}</p> : null;
 }
 
 function PainelCarreiraPublica({ vida }: { vida: Vida }) {
@@ -351,7 +370,7 @@ function PainelCarreiraPublica({ vida }: { vida: Vida }) {
   const proxima = servidor ? anoDe(e.tInicio) + Math.ceil((anos + 0.01) / 3) * 3 : undefined;
   return (
     <section className={`painel painel--${docente ? 'docente' : 'publico'}`} aria-label={docente ? 'A sala de aula' : 'A carreira pública'}>
-      <p className="painel__frase">{horizonte(vida)}</p>
+      <Horizonte vida={vida} />
       <dl className="dados">
         {servidor && <Dado rotulo="Estabilidade">{anos < 3 ? `estágio probatório até ${anoDe(e.tInicio) + 3}` : 'estável'}</Dado>}
         {proxima && <Dado rotulo="Próxima progressão">{proxima}</Dado>}
@@ -384,7 +403,7 @@ function PainelEstrada({ vida }: { vida: Vida }) {
           })}
         </ol>
       )}
-      <p className="painel__frase">{horizonte(vida)}</p>
+      <Horizonte vida={vida} />
       <p className="nota">{estradaNaArea(vida)}</p>
       <Clima vida={vida} />
     </section>
@@ -487,27 +506,27 @@ function separarNegocio(lista: AcaoProfissional[]): { agora: AcaoProfissional[];
 
 /* ================================================== Outras possibilidades */
 
-function OutrasPossibilidades({ vida, agir, aberto, alternar, irPara }: { vida: Vida; agir: (a: Acao) => boolean; aberto: boolean; alternar: () => void; irPara: (a: Aba) => void }) {
+function OutrasPossibilidades({ vida, agir, aberto, alternar, irPara, aba, setAba, ir }: { vida: Vida; agir: (a: Acao) => boolean; aberto: boolean; alternar: () => void; irPara: (a: Aba) => void; aba: string; setAba: (a: string) => void; ir: (d: string) => void }) {
   const i = idade(vida);
   const abas = [
-    { id: 'vagas', rotulo: 'Vagas' },
+    { id: 'vagas', rotulo: 'Vagas e trabalho' },
     ...(i >= 17 && !vida.justica?.prisao ? [{ id: 'concursos', rotulo: 'Concursos' }] : []),
     ...(i >= 18 ? [{ id: 'negocio', rotulo: 'Negócio próprio' }] : []),
-    ...(i >= 16 ? [{ id: 'caminhos', rotulo: 'Outros caminhos' }] : [])
+    ...(i >= 14 ? [{ id: 'caminhos', rotulo: 'Outros caminhos' }] : [])
   ];
-  const [aba, setAba] = useState('vagas');
+  const atual = abas.some(x => x.id === aba) ? aba : 'vagas';
   return (
     <section className="explorar-trabalho camada camada--explorar" aria-labelledby="titulo-explorar">
       <button type="button" id="titulo-explorar" className="explorar-trabalho__titulo" aria-expanded={aberto} onClick={alternar}>
-        <span>Outras possibilidades</span><span className="explorar-trabalho__sub">vagas, concursos, o próprio negócio, outros caminhos</span>
+        <span>Procurar outro caminho</span><span className="explorar-trabalho__sub">vagas, concursos, o próprio negócio, esporte, arte, universidade, farda…</span>
       </button>
       {aberto && (
         <div className="explorar-trabalho__corpo">
-          {abas.length > 1 && <Escolha rotulo="O que procurar" valor={aba} aoMudar={setAba} opcoes={abas} />}
-          {aba === 'vagas' && <Vagas vida={vida} agir={agir} />}
-          {aba === 'concursos' && <Concursos vida={vida} agir={agir} />}
-          {aba === 'negocio' && <Negocios vida={vida} agir={agir} />}
-          {aba === 'caminhos' && <OutrosCaminhos vida={vida} agir={agir} irPara={irPara} />}
+          {abas.length > 1 && <Escolha rotulo="O que procurar" valor={atual} aoMudar={setAba} opcoes={abas} />}
+          {atual === 'vagas' && <Vagas vida={vida} agir={agir} />}
+          {atual === 'concursos' && <Concursos vida={vida} agir={agir} irPara={irPara} />}
+          {atual === 'negocio' && <Negocios vida={vida} agir={agir} />}
+          {atual === 'caminhos' && <OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} />}
         </div>
       )}
     </section>
@@ -523,66 +542,148 @@ function avisoDeConflito(vida: Vida, oc: Ocupacao): string | undefined {
   return partes.length ? partes.join(' ') : undefined;
 }
 
+const TEXTO_BOTAO: Record<string, string> = { por_conta: 'Começar por conta própria', emprego: 'Candidatar-se' };
+
+/** Uma vaga numa camada: o nome, o MODELO de trabalho (dito antes), o porquê, o currículo, o botão. */
+function VagaNaCamada({ vida, x, agir }: { vida: Vida; x: Relevante<Vaga>; agir: (a: Acao) => boolean }) {
+  const oc = x.item.oc;
+  const modelo = modeloDeTrabalho(oc);
+  const aviso = avisoDeConflito(vida, oc);
+  return (
+    <li className="vaga-camada">
+      <div>
+        <strong className="vaga-camada__nome">{nomeOcupacao(vida, oc)}</strong>
+        <span className="vaga-camada__modelo">{ROTULO_MODELO[modelo].curto}</span>
+        <span className="vaga-camada__meta">{ROTULO_SETOR[oc.setor]} · {modelo === 'por_conta' ? `rende conforme a freguesia (referência ${dinheiroCurto(oc.salario)})` : `a partir de ${dinheiroCurto(oc.salario)}`}{oc.carga === 'parcial' ? ' · meio período' : ''}{oc.jornada === 'plantao' ? ' · plantões' : oc.jornada === 'longa' ? ' · jornada longa' : oc.jornada === 'fora' ? ' · dias fora de casa' : ''}</span>
+        <span className="vaga-camada__porque">{x.motivo}</span>
+        {x.item.perfil && <PerfilDaVaga perfil={x.item.perfil} curto />}
+        {aviso && <span className="vaga-camada__aviso"><span aria-hidden>! </span>{aviso}</span>}
+      </div>
+      <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={modelo !== 'por_conta'}>{TEXTO_BOTAO[modelo] ?? 'Candidatar-se'}</BotaoAcao>
+    </li>
+  );
+}
+
 function Vagas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
-  const atual = vida.trabalho.atual?.ocupacaoId;
-  const { para } = vagasParaVoce(vida);
-  const sugestao = new Map(para.map(x => [x.item.oc.id, x.motivo]));
+  const [todas, setTodas] = useState(false);
+  const [maisOutras, setMaisOutras] = useState(false);
+  const camadas = useMemo(() => vagasEmCamadas(vida), [vida]);
   const usadas = vida.anoAtual.acoes.filter(a => a.startsWith('candidatura:')).length;
   if (idade(vida) < 14) return null;
+  const atual = vida.trabalho.atual?.ocupacaoId;
+  const outras = camadas.outras.slice(0, maisOutras ? 12 : 4);
+  const vazio = !camadas.trajetoria.length && !camadas.relacionadas.length;
+  return (
+    <div className="explorar-bloco">
+      <p className="dica">Vaga de emprego leva a uma entrevista (até três processos por ano: {Math.max(0, 3 - usadas)} {3 - usadas === 1 ? 'restante' : 'restantes'}). Por conta própria não há entrevista: você começa a atender, e a freguesia é que decide. Abrir um negócio fica em "Negócio próprio".</p>
+      {camadas.trajetoria.length > 0 && (
+        <BlocoDeVagas titulo="Combina com a sua trajetória" dica="A estrada, a formação e o próximo degrau.">
+          <ul>{camadas.trajetoria.slice(0, 5).map(x => <VagaNaCamada key={x.item.oc.id} vida={vida} x={x} agir={agir} />)}</ul>
+        </BlocoDeVagas>
+      )}
+      {camadas.relacionadas.length > 0 && (
+        <BlocoDeVagas titulo={vazio ? 'Para começar' : 'Também ao seu alcance'} dica="Perto do que você já fez: parte da estrada se transfere.">
+          <ul>{camadas.relacionadas.slice(0, 5).map(x => <VagaNaCamada key={x.item.oc.id} vida={vida} x={x} agir={agir} />)}</ul>
+        </BlocoDeVagas>
+      )}
+      {camadas.outras.length > 0 && (
+        <BlocoDeVagas titulo={vazio ? 'Para começar' : 'Outros caminhos'} dica={vazio ? 'Nada na sua estrada aponta ainda para um lado: estas são portas de entrada.' : 'Fora da sua trajetória — possíveis, se a vida pedir outra coisa.'}>
+          <ul>{outras.map(x => <VagaNaCamada key={x.item.oc.id} vida={vida} x={x} agir={agir} />)}</ul>
+          {camadas.outras.length > outras.length && <button type="button" className="dobra__botao" onClick={() => setMaisOutras(true)}>Ver mais {Math.min(8, camadas.outras.length - outras.length)}</button>}
+        </BlocoDeVagas>
+      )}
+      <div className="explorar-todas">
+        <button type="button" className="dobra__botao" aria-expanded={todas} onClick={() => setTodas(x => !x)}>{todas ? 'Recolher o catálogo' : 'Explorar todas as ocupações (com busca e filtros)'}</button>
+        {todas && <CatalogoDeVagas vida={vida} agir={agir} atual={atual} />}
+      </div>
+    </div>
+  );
+}
+
+/** O catálogo inteiro (terceira camada): todas as ocupações, por família, com o que falta em cada uma. */
+function CatalogoDeVagas({ vida, agir, atual }: { vida: Vida; agir: (a: Acao) => boolean; atual?: string }) {
   const itens: ItemCatalogo[] = OCUPACOES.filter(oc => !oc.concurso && oc.id !== atual && oc.entrada !== 'eleicao' && oc.entrada !== 'negocio').map(oc => {
     const d = elegibilidade(vida, oc);
     const pode = podeTentar(d) && oc.entrada !== 'oportunidade';
     const f = familiaDaTrilha(oc.trilha);
     const acima = degrausAcima(oc).slice(0, 2).map(x => nomeOcupacao(vida, x));
     const aviso = pode ? avisoDeConflito(vida, oc) : undefined;
-    const tipo = porContaPropria(oc) ? 'conta' : oc.experiencia ? 'estrada' : oc.nivel <= 1 ? 'entrada' : 'emprego';
+    const modelo = modeloDeTrabalho(oc);
+    const tipo = modelo === 'por_conta' ? 'conta' : oc.entrada === 'oportunidade' ? 'oportunidade' : oc.experiencia ? 'estrada' : oc.nivel <= 1 ? 'entrada' : 'emprego';
+    const perfil = pode ? perfilParaVaga(vida, oc) : undefined;
     return {
       id: oc.id,
       titulo: nomeOcupacao(vida, oc),
       grupo: f.nome,
       tipo,
-      meta: `${ROTULO_SETOR[oc.setor]} · a partir de ${dinheiroCurto(oc.salario)}${oc.carga === 'parcial' ? ' · meio período' : ''}${oc.jornada === 'fora' ? ' · dias fora de casa' : oc.jornada === 'longa' ? ' · jornada longa' : oc.jornada === 'plantao' ? ' · plantões' : ''}`,
-      motivo: sugestao.get(oc.id),
-      destaque: sugestao.has(oc.id),
+      meta: `${ROTULO_MODELO[modelo].curto} · ${ROTULO_SETOR[oc.setor]} · a partir de ${dinheiroCurto(oc.salario)}${oc.carga === 'parcial' ? ' · meio período' : ''}${oc.jornada === 'fora' ? ' · dias fora de casa' : oc.jornada === 'longa' ? ' · jornada longa' : oc.jornada === 'plantao' ? ' · plantões' : ''}`,
+      motivo: perfil?.camada === 'trajetoria' ? perfil.porque : undefined,
+      destaque: perfil?.camada === 'trajetoria',
       possivel: pode,
-      bloqueio: oc.entrada === 'oportunidade' ? 'Não se entra por currículo: chega por uma oportunidade concreta (convite, peneira, contrato).' : d.motivo,
-      busca: `${ROTULO_TRILHA[oc.trilha] ?? ''} ${ROTULO_SETOR[oc.setor]}`,
+      bloqueio: oc.entrada === 'oportunidade' ? 'Não se entra por currículo: chega por uma oportunidade concreta (convite, peneira, contrato). Em "Outros caminhos", como cada uma começa.' : d.motivo,
+      busca: `${ROTULO_TRILHA[oc.trilha] ?? ''} ${ROTULO_SETOR[oc.setor]} ${ROTULO_MODELO[modelo].curto}`,
       detalhe: (
         <div className="vaga-detalhe">
+          <p className="modelo-trabalho"><strong>{ROTULO_MODELO[modelo].curto[0].toUpperCase() + ROTULO_MODELO[modelo].curto.slice(1)}.</strong> {ROTULO_MODELO[modelo].explica}</p>
           <p><strong>Como se entra:</strong> {f.entrada}.</p>
           {acima.length > 0 && <p><strong>Para onde leva:</strong> {acima.join(', ')}.</p>}
           {f.degraus.length > 0 && <p><strong>Como se cresce:</strong> {f.degraus.join(' → ')}.</p>}
-          {pode && d.chance !== undefined && !porContaPropria(oc) && <p><strong>Chance de passar na seleção:</strong> {d.chance >= 0.6 ? 'boa' : d.chance >= 0.35 ? 'razoável' : 'baixa'}.</p>}
+          {perfil && <PerfilDaVaga perfil={perfil} />}
           {aviso && <p className="nota nota--atencao"><span aria-hidden>! </span>{aviso}</p>}
         </div>
       ),
-      acao: <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={!porContaPropria(oc)}>{porContaPropria(oc) ? 'Começar por conta' : 'Candidatar-se'}</BotaoAcao>
+      acao: <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={modelo !== 'por_conta'}>{TEXTO_BOTAO[modelo] ?? 'Candidatar-se'}</BotaoAcao>
     };
   });
-  return (
-    <div className="explorar-bloco">
-      <p className="dica">Candidatar-se leva a uma entrevista de duas ou três perguntas. Até três processos por ano ({Math.max(0, 3 - usadas)} restantes). Por conta própria não há entrevista: a freguesia é que decide.</p>
-      <Catalogo itens={itens} rotulo="Vagas" dicaBusca="enfermagem, cozinha, motorista, TI…" tipos={[{ id: 'entrada', rotulo: 'Para começar' }, { id: 'emprego', rotulo: 'Com carteira' }, { id: 'estrada', rotulo: 'Pede estrada' }, { id: 'conta', rotulo: 'Por conta própria' }]} vazio="Nenhuma vaga com esse filtro." />
-    </div>
-  );
+  return <Catalogo itens={itens} rotulo="Ocupações" dicaBusca="enfermagem, cozinha, motorista, por conta própria…" tipos={[{ id: 'entrada', rotulo: 'Para começar' }, { id: 'emprego', rotulo: 'Vaga de emprego' }, { id: 'estrada', rotulo: 'Pede estrada' }, { id: 'conta', rotulo: 'Por conta própria' }, { id: 'oportunidade', rotulo: 'Por oportunidade' }]} vazio="Nenhuma ocupação com esse filtro." />;
 }
 
-function Concursos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+const FOCOS_UI: { id: FocoConcurso | 'geral'; rotulo: string }[] = [
+  { id: 'geral', rotulo: 'Estudo geral' }, { id: 'policial', rotulo: 'Polícia e farda' }, { id: 'administrativo', rotulo: 'Prefeitura e tribunais' },
+  { id: 'fiscal', rotulo: 'Fiscal' }, { id: 'bancario', rotulo: 'Bancos públicos' }, { id: 'educacao', rotulo: 'Magistério' }, { id: 'saude', rotulo: 'Saúde' }, { id: 'academico', rotulo: 'Universidade' }
+];
+
+function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }) {
   const editais = editaisAbertos(vida).map(oc => ({ oc, d: elegibilidade(vida, oc) })).filter(x => podeTentar(x.d));
+  const c = vida.caminhos.concurso;
   const estudando = vida.rotinas.some(r => r.id === 'estudar_concurso');
+  const anos = Math.round(c.meses / 12);
   return (
     <div className="explorar-bloco">
-      <p className="dica">{estudando ? `Você estuda para concurso${vida.caminhos.concurso.meses >= 12 ? ` — o equivalente a ${Math.round(vida.caminhos.concurso.meses / 12)} ${Math.round(vida.caminhos.concurso.meses / 12) === 1 ? 'ano' : 'anos'} de estudo firme` : ''}.` : 'Concurso pede preparo: sem estudo, é quase loteria. O estudo entra em Tempo livre.'} Aprovado não é empossado: se a posse significar largar alguma coisa, a vida pergunta.</p>
-      {editais.length === 0 && <p className="vazio">Nenhum edital aberto que caiba no seu perfil este ano.</p>}
+      <p className="dica">{estudando ? `Você estuda para concurso${c.meses >= 12 ? ` — o equivalente a ${anos} ${anos === 1 ? 'ano' : 'anos'} de estudo firme` : ''}${c.foco ? `, dirigido para ${NOME_FOCO[c.foco]}` : ', sem uma área'}.` : c.meses >= 6 ? 'Você não estuda agora: o preparo esfria a cada ano parado.' : 'Concurso pede preparo: sem estudo, é quase loteria.'} Aprovado não é empossado: se a posse significar largar alguma coisa, a vida pergunta.</p>
+      {!estudando && <button type="button" className="botao botao--secundario" onClick={() => irPara('tempo')}>Começar a estudar (Tempo livre) <span aria-hidden>→</span></button>}
+      {(estudando || c.meses >= 6) && (
+        <div className="foco-estudo" role="group" aria-labelledby="foco-rotulo">
+          <span id="foco-rotulo" className="foco-estudo__rotulo">Para que área você estuda</span>
+          <div className="foco-estudo__opcoes">
+            {FOCOS_UI.map(f => {
+              const ativo = (c.foco ?? 'geral') === f.id;
+              return <button key={f.id} type="button" className="botao botao--discreto" aria-pressed={ativo} disabled={ativo} onClick={() => agir({ tipo: 'perseguir', oque: 'foco_concurso', valor: f.id } as unknown as Acao)}>{f.rotulo}</button>;
+            })}
+          </div>
+          <p className="nota">Estudo dirigido rende mais nos editais daquela área; mudar de área não apaga o que se estudou, mas o que vem depois é que conta mais. A sua estrada (a farda para a polícia, o Direito para tribunal, Contábeis para o fiscal) também pesa.</p>
+        </div>
+      )}
+      {editais.length === 0 && <p className="vazio">Nenhum edital aberto que caiba no seu perfil este ano. Os concursos abrem em anos diferentes.</p>}
       <ul className="lista-vagas">
-        {editais.map(({ oc }) => (
-          <li key={oc.id} className="vaga">
-            <div className="vaga__texto"><strong>{nomeOcupacao(vida, oc)}</strong><span>{leituraDoPreparo(vida, oc)}</span></div>
-            <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance>Inscrever-se</BotaoAcao>
-          </li>
-        ))}
+        {editais.map(({ oc }) => {
+          const l = lerPreparo(vida, oc);
+          const foco = FOCO_DO_CARGO[oc.id];
+          return (
+            <li key={oc.id} className="vaga">
+              <div className="vaga__texto preparo">
+                <strong>{nomeOcupacao(vida, oc)}</strong>
+                <span className="preparo__palavra">Preparo: {l.palavra}.{foco ? ` Área: ${NOME_FOCO[foco]}.` : ''}</span>
+                <span>{l.frase}</span>
+                {l.desde && <span className="preparo__fator">{l.desde}</span>}
+                {l.fatores.slice(0, 3).map((f, k) => <span key={k} className="preparo__fator">{f}</span>)}
+              </div>
+              <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance>Inscrever-se</BotaoAcao>
+            </li>
+          );
+        })}
       </ul>
-      {vida.trabalho.candidaturas.length > 0 && <p className="nota">Concurso em andamento: {vida.trabalho.candidaturas.map(c => nomeOcupacao(vida, ocupacao(c.ocupacaoId))).join(', ')} — resultado no próximo ano.</p>}
+      {vida.trabalho.candidaturas.length > 0 && <p className="nota">Concurso em andamento: {vida.trabalho.candidaturas.map(x => nomeOcupacao(vida, ocupacao(x.ocupacaoId))).join(', ')} — resultado no próximo ano.</p>}
     </div>
   );
 }
@@ -612,25 +713,18 @@ function Negocios({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   );
 }
 
-/** Mudanças de caminho que não são um cargo: a vida política. */
-function OutrosCaminhos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }) {
-  const lp = leituraPolitica(vida);
-  const dentro = naPolitica(vida);
-  const portas = portasDaPolitica(vida);
+/** Por onde se começa cada vida diferente (esporte, arte, universidade, farda, serviço público, negócio, por conta, política). */
+function OutrosCaminhos({ vida, agir, irPara, ir }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; ir: (d: string) => void }) {
+  const lista = useMemo(() => caminhosPossiveis(vida, disponibilidade), [vida]);
   return (
-    <div className="explorar-bloco">
-      <div className="caminho-politico">
-        <h3 className="paralelo__titulo">A vida política</h3>
-        <p className="caminho-politico__texto">{dentro && lp ? `${lp.titulo}. ${lp.horizonte ?? ''}` : portas.length ? 'A vida que você leva já puxa gente para perto: associação, causa, nome conhecido. A política é uma porta possível.' : 'A vida política começa perto: a associação do bairro, uma causa, um partido da cidade.'}</p>
-        {dentro ? <p className="nota">Ela aparece acima, na sua situação ou em paralelo.</p>
-          : <BotaoAcao vida={vida} acao={{ tipo: 'politica', oque: 'aproximar' }} agir={agir} variante="secundario" ocultarBloqueado>{lp ? 'Voltar à vida política' : 'Aproximar-se da vida política'}</BotaoAcao>}
-      </div>
+    <>
+      <CaminhosPossiveis vida={vida} lista={lista} agir={agir} ir={ir} />
       <div className="caminho-politico">
         <h3 className="paralelo__titulo">Estudar para mudar de caminho</h3>
-        <p className="caminho-politico__texto">Cursos, faculdade, qualificação — tudo o que abre outras portas mora em Estudos.</p>
+        <p className="caminho-politico__texto">Cursos, faculdade, pós, qualificação — tudo o que abre outras portas mora em Estudos.</p>
         <button type="button" className="botao botao--discreto" onClick={() => irPara('estudos')}>Ir para Estudos →</button>
       </div>
-    </div>
+    </>
   );
 }
 

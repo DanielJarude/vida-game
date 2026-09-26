@@ -196,7 +196,8 @@ describe('interface', () => {
     const main = screen.getByRole('main');
     expect(within(main).getByText('Portas de trabalho')).toBeTruthy();
     expect(within(main).getByText(/pode indicar você/)).toBeTruthy();
-    expect(within(main).getByRole('button', { name: 'Aceitar' })).toBeTruthy();
+    // O botão diz o que aceitar significa: uma vaga de emprego leva à entrevista.
+    expect(within(main).getByRole('button', { name: 'Ir à entrevista' })).toBeTruthy();
     // Estrada e próximo passo, em frases — nunca "nível 2" ou "sênior" por conta do número interno.
     expect(within(main).getAllByText(/anos em escritório|Começando em escritório|Um ano em escritório/).length).toBeGreaterThan(0);
     expect(within(main).queryByText(/nível \d/i)).toBeNull();

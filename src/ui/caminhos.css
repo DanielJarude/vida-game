@@ -1,0 +1,127 @@
+/* ==========================================================================
+   VIDA — Caminhos (REWORK Caminhos, Agência e UX)
+
+   Editorial + interativo. Cada tipo de coisa tem um peso próprio:
+     estado      prosa em serifa, sem moldura
+     requisito   linha com glifo e rótulo pequeno (✓ ◷ ○ …), nunca só cor
+     progresso   linha que começa com a direção (↗ → ↘)
+     ação        botão de verdade, com o porquê embaixo
+   Poucos fios, nenhum cartão com sombra, nenhuma pílula decorativa.
+   ========================================================================== */
+
+/* ------------------------------------------------------------ Próximo passo */
+.proximo-passo { margin: var(--space-4) 0 var(--space-2); padding-left: var(--space-4); border-left: 2px solid var(--tom-linha); max-width: 70ch; }
+.proximo-passo__rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+.proximo-passo__destino { font-family: var(--font-serif); font-size: var(--type-heading); color: var(--text-primary); line-height: var(--leading-snug); margin-top: 2px; }
+.proximo-passo__ano { font-size: var(--type-subheading); color: var(--tom); }
+.proximo-passo__resumo { font-family: var(--font-serif); color: var(--text-secondary); margin: var(--space-2) 0 var(--space-3); line-height: var(--leading-normal); }
+
+.requisitos { display: flex; flex-direction: column; gap: 2px; }
+.requisito { display: grid; grid-template-columns: 1.4em minmax(0, 9.5em) minmax(0, 1fr); column-gap: var(--space-3); align-items: baseline; padding: 6px 0; border-top: 1px solid var(--rule); font-size: var(--type-body); }
+.requisito__glifo { font-weight: 700; text-align: center; }
+.requisito__tipo { font-size: var(--type-caption); color: var(--text-muted); text-transform: none; }
+.requisito__texto { color: var(--text-primary); line-height: var(--leading-snug); }
+.requisito--ok .requisito__glifo { color: var(--success); }
+.requisito--ok .requisito__texto { color: var(--text-secondary); }
+.requisito--tempo .requisito__glifo { color: var(--tom); }
+.requisito--falta .requisito__glifo { color: var(--warning); }
+.requisito--depois .requisito__glifo, .requisito--depois .requisito__texto { color: var(--text-muted); }
+@media (max-width: 480px) {
+  .requisito { grid-template-columns: 1.4em minmax(0, 1fr); }
+  .requisito__tipo { grid-column: 2; }
+  .requisito__texto { grid-column: 2; }
+}
+
+/* ---------------------------------------------------- O que está construindo */
+.camada--construindo { border-top: 1px solid var(--rule); }
+.construindo { display: flex; flex-direction: column; }
+.construindo__item { padding: var(--space-5) 0 var(--space-5); border-bottom: 1px solid var(--rule); }
+.construindo__item:last-child { border-bottom: 0; }
+.construindo__titulo { font-family: var(--font-serif); font-size: var(--type-heading); font-weight: 600; color: var(--text-primary); line-height: var(--leading-snug); }
+.construindo__onde { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-secondary); margin: var(--space-2) 0; line-height: var(--leading-snug); max-width: var(--measure-prosa); }
+.construindo__rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-top: var(--space-3); }
+.construindo__falta ul { margin-top: var(--space-1); display: flex; flex-direction: column; gap: 2px; }
+.construindo__falta li { color: var(--text-secondary); padding-left: 1.1em; position: relative; max-width: var(--measure-prosa); }
+.construindo__falta li::before { content: '○'; position: absolute; left: 0; color: var(--warning); font-size: 0.8em; top: 0.25em; }
+.construindo__passo { margin-top: var(--space-4); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.construindo__passo .acao { align-items: flex-start; }
+.construindo__porque { font-size: var(--type-caption); color: var(--text-muted); max-width: 60ch; }
+
+.progresso { display: flex; gap: var(--space-2); align-items: baseline; color: var(--text-primary); margin: var(--space-2) 0; max-width: var(--measure-prosa); }
+.progresso__glifo { font-weight: 700; flex: none; }
+.progresso--sobe .progresso__glifo { color: var(--success); }
+.progresso--cai .progresso__glifo { color: var(--danger); }
+.progresso--igual .progresso__glifo { color: var(--text-muted); }
+
+/* ------------------------------------------------------- Outros caminhos */
+.caminhos { display: flex; flex-direction: column; }
+.caminho { padding: var(--space-4) 0; border-top: 1px solid var(--rule); }
+.caminho__cabeca { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.caminho__titulo { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: 600; color: var(--text-primary); }
+.caminho__estado { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: 600; color: var(--text-muted); }
+.caminho--pronto .caminho__estado { color: var(--tom); }
+.caminho--pronto .caminho__estado::before { content: '● '; }
+.caminho--preparar .caminho__estado::before { content: '○ '; }
+.caminho--aqui .caminho__estado::before { content: '✓ '; }
+.caminho--fora .caminho__estado::before { content: '— '; }
+.caminho--fora .caminho__titulo, .caminho--fora .caminho__como { color: var(--text-muted); }
+.caminho__como { color: var(--text-secondary); font-size: var(--type-caption); margin-top: var(--space-1); max-width: 70ch; line-height: var(--leading-normal); }
+.caminho__agora { font-family: var(--font-serif); color: var(--text-primary); margin-top: var(--space-2); max-width: var(--measure-prosa); }
+.caminho__passo { margin-top: var(--space-3); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+
+/* ------------------------------------------------------- A procura em camadas */
+.bloco-vagas { display: flex; flex-direction: column; }
+.bloco-vagas + .bloco-vagas { margin-top: var(--space-6); }
+.bloco-vagas__titulo { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: 600; color: var(--text-primary); padding-bottom: var(--space-2); border-bottom: 1px solid var(--rule-strong); }
+.bloco-vagas__dica { font-size: var(--type-caption); color: var(--text-muted); margin: var(--space-2) 0 0; }
+.vaga-camada { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: start; padding: var(--space-4) 0; border-bottom: 1px solid var(--rule); }
+.vaga-camada__nome { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: 500; color: var(--text-primary); }
+.vaga-camada__modelo { display: block; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom); font-weight: 600; margin-top: 2px; }
+.vaga-camada__meta { display: block; font-size: var(--type-caption); color: var(--text-muted); margin-top: 2px; }
+.vaga-camada__porque { display: block; font-family: var(--font-serif); font-style: italic; color: var(--text-secondary); margin-top: var(--space-1); }
+.vaga-camada__aviso { display: block; font-size: var(--type-caption); color: var(--warning); margin-top: var(--space-1); }
+.vaga-camada > .acao { align-items: flex-end; }
+@media (max-width: 560px) {
+  .vaga-camada { grid-template-columns: minmax(0, 1fr); }
+  .vaga-camada > .acao { align-items: flex-start; }
+}
+
+.perfil-vaga { margin-top: var(--space-2); }
+.perfil-vaga__palavra { font-size: var(--type-caption); color: var(--text-primary); }
+.perfil-vaga__rotulo { color: var(--text-muted); }
+.perfil-vaga__lista { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+.perfil-vaga__lista li { font-size: var(--type-caption); color: var(--text-secondary); }
+.perfil-vaga__forte > span[aria-hidden] { color: var(--success); font-weight: 700; }
+.perfil-vaga__fraco > span[aria-hidden] { color: var(--warning); font-weight: 700; }
+
+.explorar-todas { margin-top: var(--space-6); }
+
+/* O modelo de trabalho, dito antes (vaga de emprego × por conta × negócio). */
+.modelo-trabalho { font-size: var(--type-caption); color: var(--text-secondary); border-left: 2px solid var(--tom-linha); padding: var(--space-1) 0 var(--space-1) var(--space-3); margin: var(--space-2) 0; max-width: 64ch; }
+.modelo-trabalho strong { color: var(--text-primary); font-weight: 600; }
+
+/* Preparo para concurso: a leitura por edital. */
+.preparo { display: flex; flex-direction: column; gap: 2px; }
+.preparo__palavra { font-family: var(--font-serif); color: var(--text-primary); }
+.preparo__fator { font-size: var(--type-caption); color: var(--text-secondary); }
+.foco-estudo { margin: var(--space-3) 0 var(--space-4); }
+.foco-estudo__rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: var(--space-2); }
+.foco-estudo__opcoes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.foco-estudo__opcoes .botao { min-height: var(--touch-target); }
+.foco-estudo__opcoes .botao[aria-pressed='true'] { background: var(--tom-wash); box-shadow: inset 0 0 0 1.5px var(--tom); }
+.foco-estudo__opcoes .botao[aria-pressed='true']::before { content: '✓ '; }
+
+/* Estudos: formação × preparação × próximos caminhos. */
+.formacao-lista { display: flex; flex-direction: column; }
+.formacao-lista li { display: grid; grid-template-columns: 4.5em minmax(0, 1fr); gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.formacao-lista__ano { font-size: var(--type-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.formacao-lista__nome { font-family: var(--font-serif); color: var(--text-primary); }
+.formacao-lista__nivel { display: block; font-size: var(--type-caption); color: var(--text-muted); font-family: var(--font-sans); }
+.nota-alvo { display: flex; flex-direction: column; }
+.nota-alvo li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
+.nota-alvo__curso { font-family: var(--font-serif); color: var(--text-primary); }
+.nota-alvo__palavra { font-size: var(--type-caption); color: var(--text-secondary); text-align: right; }
+.nota-alvo__palavra::before { margin-right: 0.35em; font-weight: 700; }
+.nota-alvo__palavra--acima::before { content: '✓'; color: var(--success); }
+.nota-alvo__palavra--perto::before { content: '◷'; color: var(--tom); }
+.nota-alvo__palavra--longe::before { content: '○'; color: var(--warning); }
