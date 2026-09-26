@@ -838,7 +838,7 @@ export function proximoPasso(v: Vida): ProximoPasso | undefined {
   const como: ProximoPasso['como'] = e.clientela !== undefined ? 'clientela' : antiguidade ? 'antiguidade' : 'merito';
   const farda = eFarda(oc);
   // Idade mínima do posto (nunca chamada de formação).
-  if (x.idadeMin > 18) reqs.push({ tipo: 'idade', ok: i >= x.idadeMin, ano: i >= x.idadeMin ? undefined : ano + (x.idadeMin - i), texto: i >= x.idadeMin ? `Idade mínima (${x.idadeMin} anos): cumprida.` : `Idade mínima de ${x.idadeMin} anos — você chega lá em ${ano + (x.idadeMin - i)}.` });
+  if (x.idadeMin > 18) reqs.push({ tipo: 'idade', ok: i >= x.idadeMin, ano: i >= x.idadeMin ? undefined : ano + (x.idadeMin - i), texto: i >= x.idadeMin ? `Mínima de ${x.idadeMin} anos: cumprida.` : `Mínima de ${x.idadeMin} anos — você chega lá em ${ano + (x.idadeMin - i)}.` });
   // Tempo de serviço / estrada na área.
   if (x.experiencia) {
     const exp = (x.nivel >= 4 ? (v.trabalho.experiencia[x.trilha] ?? 0) : experienciaNaTrilha(v, x.trilha)) + (x.nivel <= 4 ? titulacaoNaTrilha(v, x).meses : 0);

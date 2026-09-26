@@ -32,5 +32,6 @@ export const O_QUE_TRABALHAR: Record<NonNullable<Devolutiva['falta']>, string> =
   leitura: 'Faltou experiência de jogo: competir mais, num time, faz diferença.',
   nervos: 'O nervosismo atrapalhou. Com mais testes, isso diminui.',
   idade: 'A idade pesa nas bases: a janela está fechando.',
-  preparo: 'Faltou preparo: estudo firme, por mais tempo, é o que aproxima da nota de corte.'
+  preparo: 'Faltou preparo: estudo firme, por mais tempo, é o que aproxima da nota de corte.',
+  publico: 'Faltou público: ensaio firme, shows, um edital de cultura — é o público que faz o convite chegar.'
 };

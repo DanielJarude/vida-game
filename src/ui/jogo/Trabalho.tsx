@@ -465,9 +465,8 @@ function EmParalelo({ vida, agir, irPara, modo }: { vida: Vida; agir: (a: Acao) 
   const pol = !!leituraPolitica(vida) && naPolitica(vida) && modo !== 'politica';
   const arte = !!vida.caminhos.arte?.ativo && modo !== 'artista';
   const renda = vida.rotinas.map(r => modeloRotina(r.id)).filter(m => m?.categoria === 'renda');
-  const concurso = vida.rotinas.some(r => r.id === 'estudar_concurso');
   const porFora = leituraDoEnvolvimento(vida);
-  if (!negocioParalelo && !base && !pol && !arte && !renda.length && !concurso && !porFora) return null;
+  if (!negocioParalelo && !base && !pol && !arte && !renda.length && !porFora) return null;
   const acoesNeg = negocioParalelo ? separarNegocio(acoesDoNegocio(vida, disponibilidade)) : undefined;
   return (
     <section className="camada camada--paralelo" aria-labelledby="camada-paralelo">
@@ -484,7 +483,6 @@ function EmParalelo({ vida, agir, irPara, modo }: { vida: Vida; agir: (a: Acao) 
       {pol && <div className="paralelo"><PainelPolitico vida={vida} principal={false} /></div>}
       {arte && <div className="paralelo"><h3 className="paralelo__titulo">{vida.caminhos.arte!.nome}<span> · {vida.caminhos.arte!.tipo === 'banda' ? 'a banda' : 'o grupo'}</span></h3><p className="nota">{vida.caminhos.arte!.publico < 15 ? 'Quase ninguém conhece ainda.' : vida.caminhos.arte!.publico < 40 ? 'Já tem quem vá ver.' : vida.caminhos.arte!.publico < 65 ? 'Público fiel na cidade.' : 'Gente de fora já conhece.'}</p></div>}
       {renda.length > 0 && <div className="paralelo"><h3 className="paralelo__titulo">Por fora</h3><p className="nota">{renda.map(m => m!.nome).join(' · ')} — na sua semana, em <button type="button" className="link" onClick={() => irPara('tempo')}>Tempo livre</button>.</p></div>}
-      {concurso && <div className="paralelo"><h3 className="paralelo__titulo">Estudando para concurso</h3><p className="nota">{vida.caminhos.concurso.meses >= 12 ? `O equivalente a ${Math.round(vida.caminhos.concurso.meses / 12)} ${Math.round(vida.caminhos.concurso.meses / 12) === 1 ? 'ano' : 'anos'} de estudo firme.` : 'Começando.'} Os editais abertos estão em "Outras possibilidades".</p></div>}
       {porFora && (
         <section className="por-fora" aria-label="Por fora">
           <p className="por-fora__titulo">Por fora</p>

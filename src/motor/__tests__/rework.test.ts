@@ -168,7 +168,7 @@ describe('o próximo passo da carreira, requisito por requisito', () => {
     expect(tipos).toContain('idade');
     expect(tipos).toContain('servico');
     expect(tipos).toContain('posto');
-    expect(pp.requisitos.find(r => r.tipo === 'idade')!.texto).toMatch(/Idade mínima de 31 anos/);
+    expect(pp.requisitos.find(r => r.tipo === 'idade')!.texto).toMatch(/Mínima de 31 anos/);
     expect(pp.requisitos.every(r => r.tipo !== 'formacao')).toBe(true);
     expect(pp.resumo).toMatch(/Pela antiguidade, a promoção a sargento da PM deve vir por volta de \d{4}/);
     expect(horizonte(v)).not.toMatch(/pede formação/);
@@ -500,5 +500,31 @@ describe('save v14 → v15 com saves reais da base do rework (955d5d4)', () => {
     expect(l.palavra.length).toBeGreaterThan(3);
     const c = emConstrucao(v, disponibilidade).find(x => x.id === 'esporte');
     expect(c).toBeDefined();
+  });
+});
+
+describe('ajustes da segunda passagem (simulação de intenções)', () => {
+  it('quem está "começando" não gasta um teste: o requisito é treinar antes', () => {
+    const v = atleta(12, 'futebol', 44, 2);
+    expect(disponibilidade(v, P('pedir_teste', 'futebol')).motivo).toMatch(/começando/);
+  });
+
+  it('arte: com público, dá para mandar o trabalho a produtores; o parecer diz o que faltou e se melhorou', () => {
+    let v = atleta(22, 'musica' as Dominio, 66, 3);
+    v = executar(v, P('montar_grupo', 'musica')).vida;
+    expect(disponibilidade(v, P('mostrar_trabalho')).motivo).toMatch(/ainda não tem público/);
+    v = transacao(v, x => { x.caminhos.arte!.publico = 30; }).vida;
+    expect(podeTentar(disponibilidade(v, P('mostrar_trabalho')))).toBe(true);
+    const r = executar(v, P('mostrar_trabalho')).vida;
+    const convite = r.caminhos.oportunidades.some(o => o.tipo === 'convite' && o.ocupacaoId === 'musico_profissional');
+    const parecer = r.caminhos.devolutivas.find(d => d.tipo === 'arte');
+    expect(convite || (!!parecer && !!parecer.falta && parecer.nivel !== undefined)).toBe(true);
+    expect(disponibilidade(r, P('mostrar_trabalho')).motivo).toMatch(/temporada|convite/);
+  });
+
+  it('a política continua vindo da vida, mas não a cada seis anos: o intervalo mínimo é de oito', () => {
+    const src = readFileSync(join(__dirname, '../sistemas/politica.ts'), 'utf8');
+    expect(src).toMatch(/v\.t - ultima >= 96/);
+    expect(src).toMatch(/Math\.min\(0\.12,/);
   });
 });

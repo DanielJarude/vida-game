@@ -64,8 +64,10 @@ interface Intencao {
 
 /* ------------------------------------------------------------ utilidades */
 
-function escolher(m: Momento, r: Rng, pref: string[]): string {
+function escolher(m: Momento, r: Rng, pref: string[], quemE = ''): string {
   const livres = m.opcoes.filter(o => !o.bloqueio);
+  // Quem não quer política diz não ao convite (o convite continua sendo medido).
+  if (m.situacaoId === 'pol_convite' && quemE !== 'politica') { const nao = livres.find(o => o.id === 'nao'); if (nao) return nao.id; }
   for (const p of pref) {
     const o = livres.find(x => x.id === p || x.id.startsWith(p));
     if (o) return o.id;
@@ -214,7 +216,12 @@ const INTENCOES: Intencao[] = [
       const i = idade(v);
       const out: Acao[] = [...rotinas(v, [[v.fatos['int_mod'] === 1 ? 'volei' : 'futebol', 6, 3], ['corrida', 12, 1]])];
       out.push(...aceitar(v, ['peneira', 'seletiva', 'convite']));
-      for (const x of [P('pedir_teste')]) if (!v.caminhos.esporte && tenta(v, x)) out.push(x);
+      // Um jogador que quer isso segue a orientação da tela: pede o teste quando a técnica já está perto
+      // (ou quando a janela da base vai fechar), não aos 11 anos só porque pode.
+      const d = v.fatos['int_mod'] === 1 ? 'volei' : 'futebol';
+      const h = v.caminhos.frentes[d as 'volei']?.habilidade ?? 0;
+      const fimJanela = d === 'futebol' ? 17 : 19;
+      if (!v.caminhos.esporte && (h >= 66 || i >= fimJanela - 1)) for (const x of [P('pedir_teste', d)]) if (tenta(v, x)) out.push(x);
       if (i >= 20 && !v.trabalho.atual && v.caminhos.esporte?.fase !== 'profissional' && v.caminhos.esporte?.fase !== 'base') out.push(...candidatar(v, r, ['treino', 'comercio']));
       void r;
       return out;
@@ -228,14 +235,14 @@ const INTENCOES: Intencao[] = [
     agir: (v, r) => {
       const out: Acao[] = [...rotinas(v, [['musica', 8, 3], ['teatro', 12, 2]])];
       out.push(...aceitar(v, ['banda', 'grupo', 'convite', 'clientela']));
-      for (const x of [P('montar_grupo', 'musica')]) if (tenta(v, x)) out.push(x);
+      for (const x of [P('montar_grupo', 'musica'), P('mostrar_trabalho')]) if (tenta(v, x)) out.push(x);
       for (const oc of OCUPACOES.filter(o => ARTE_OC.includes(o.id))) if (!jaFoi(v, ARTE_OC) && tenta(v, { tipo: 'candidatar', ocupacaoId: oc.id })) { out.push({ tipo: 'candidatar', ocupacaoId: oc.id }); break; }
       if (idade(v) >= 19 && !v.trabalho.atual) out.push(...candidatar(v, r, ['comercio', 'alimentacao']));
       return out;
     },
     descobriu: v => v.caminhos.oportunidades.some(o => o.tipo === 'banda' || o.tipo === 'grupo') || !!v.caminhos.arte || tenta(v, P('montar_grupo', 'musica')),
     chegou: v => jaFoi(v, ARTE_OC),
-    tentativas: v => (v.caminhos.arte ? 1 : 0) + v.caminhos.marcas.filter(m => /edital de cultura/.test(m.texto)).length
+    tentativas: v => (v.caminhos.arte ? 1 : 0) + v.caminhos.marcas.filter(m => /edital de cultura/.test(m.texto)).length + devs(v, 'arte').length
   },
   {
     nome: 'empreendedor', prefere: ['guardado', 'pequeno', 'casa', 'dedicar', 'integral', 'aceitar', 'crescer'],
@@ -289,7 +296,7 @@ const INTENCOES: Intencao[] = [
 
 interface Registro {
   intencao: string; semente: number;
-  descobriu?: number; comecou?: number; tentou?: number; chegou?: number;
+  descobriu?: number; comecou?: number; tentou?: number; chegou?: number; meio?: number;
   tentativas: number; devolutivas: number; devolutivasComPasso: number; progressoDito: number;
   bloqueiosSemMotivo: number; politica: boolean; politicaConvite: boolean;
   ocupacoes: Record<number, string>;
@@ -306,6 +313,19 @@ const COMECO: Record<string, (v: Vida) => boolean> = {
   empreendedor: v => !!v.caminhos.negocio,
   autonomo: v => v.educacao.concluidos.some(c => c.nivel === 'livre') || !!v.educacao.matricula,
   politica: v => !!v.caminhos.politica
+};
+
+/** Marcos intermediários (o caminho não é só o topo): entrou na base, entrou num grupo, começou a pós. */
+const MEIO: Record<string, (v: Vida) => boolean> = {
+  esporte: v => !!v.caminhos.esporte,
+  arte: v => !!v.caminhos.arte || jaFoi(v, ['musico_noite', 'professor_musica']),
+  academico: v => v.educacao.concluidos.some(c => c.nivel === 'mestrado'),
+  militar: v => !!v.caminhos.militar || MILITAR.some(id => jaFoi(v, [id])),
+  concurso: v => v.caminhos.concurso.tentativas > 0,
+  privado: v => [v.trabalho.atual, ...v.trabalho.historico].some(e => e && ocupacao(e.ocupacaoId).nivel >= 3),
+  empreendedor: v => !!v.caminhos.negocio,
+  autonomo: v => jaFoi(v, ['confeiteiro', 'cabeleireiro', 'manicure']),
+  politica: v => (v.caminhos.politica?.historico.length ?? 0) > 0
 };
 
 function viver(semente: number, it: Intencao): Registro {
@@ -327,13 +347,13 @@ function viver(semente: number, it: Intencao): Registro {
       if (!podeTentar(d)) { if (!d.motivo && d.grau !== 'impossivel') reg.bloqueiosSemMotivo++; continue; }
       try { v = executar(v, a).vida; } catch { continue; }
       let k = 0;
-      while (v.momento && k++ < 8) v = executar(v, { tipo: 'decidir', opcaoId: escolher(v.momento, r, it.prefere) }).vida;
+      while (v.momento && k++ < 8) v = executar(v, { tipo: 'decidir', opcaoId: escolher(v.momento, r, it.prefere, it.nome) }).vida;
     }
     v = avancarAno(v).vida;
     let k = 0;
     while (v.momento && k++ < 8) {
-      if (/convite/i.test(v.momento.titulo ?? '') && /política|partido|candidat/i.test(v.momento.texto ?? '')) reg.politicaConvite = true;
-      v = executar(v, { tipo: 'decidir', opcaoId: escolher(v.momento, r, it.prefere) }).vida;
+      if (v.momento.situacaoId === 'pol_convite') reg.politicaConvite = true;
+      v = executar(v, { tipo: 'decidir', opcaoId: escolher(v.momento, r, it.prefere, it.nome) }).vida;
     }
     const ia = idade(v);
     if (reg.comecou === undefined && COMECO[it.nome](v)) reg.comecou = ia;
@@ -341,6 +361,7 @@ function viver(semente: number, it: Intencao): Registro {
     if (t > 0 && reg.tentou === undefined) reg.tentou = ia;
     reg.tentativas = Math.max(reg.tentativas, t);
     if (reg.chegou === undefined && it.chegou(v)) reg.chegou = ia;
+    if (reg.meio === undefined && MEIO[it.nome](v)) reg.meio = ia;
     const lista = v.caminhos.devolutivas;
     for (const dv of lista.slice(Math.max(0, lista.length - (lista.length - Math.min(devsVistas, lista.length))))) void dv;
     if ([25, 30, 35, 40, 45, 50, 55].includes(ia)) reg.ocupacoes[ia] = v.trabalho.atual?.ocupacaoId ?? (v.educacao.matricula ? `estudando:${v.educacao.matricula.cursoId}` : 'sem_trabalho');
@@ -351,7 +372,7 @@ function viver(semente: number, it: Intencao): Registro {
   const todas = v.caminhos.devolutivas.filter(d => !d.passou);
   reg.devolutivas = todas.length;
   reg.devolutivasComPasso = todas.filter(d => !!d.falta).length;
-  reg.progressoDito = todas.filter(d => /desde a última|da outra vez|melhorou|subiu|evoluiu|mais perto|ainda longe|quase lá/i.test(d.texto)).length;
+  reg.progressoDito = todas.filter(d => /desde a última|da outra vez|melhorou|subiu|evoluiu|cresceu|mais forte|mais perto|ainda longe|quase lá/i.test(d.texto)).length;
   reg.biografia = v.biografia.filter(b => b.tema === 'trabalho' || b.tema === 'estudo' || b.tema === 'lazer').filter(b => b.relevancia === 'marco' || b.relevancia === 'biografia').map(b => `${idade({ ...v, t: b.t } as Vida)}: ${b.texto}`).slice(0, 60);
   return reg;
 }
@@ -366,8 +387,8 @@ const med = (xs: number[]) => { const a = xs.filter(x => Number.isFinite(x)).sor
 const linhas: string[] = [];
 const log = (s: string) => { linhas.push(s); console.log(s); };
 log(`# Intenções — ${VIDAS} vidas por estratégia, até ${IDADE_FIM} anos\n`);
-log('| intenção | descobriu | idade (mediana) | começou a se preparar | tentou | 1ª tentativa (idade) | tentativas (mediana) | devolutivas c/ próximo passo | progresso dito | chegou | idade ao chegar | bloqueio sem motivo | entrou na política |');
-log('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+log('| intenção | descobriu | idade (mediana) | começou a se preparar | tentou | 1ª tentativa (idade) | tentativas (mediana) | devolutivas c/ próximo passo | progresso dito | meio do caminho | chegou | idade ao chegar | bloqueio sem motivo | entrou na política |');
+log('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
 const resumo: Record<string, unknown> = {};
 for (const it of INTENCOES) {
   const g = regs.filter(x => x.intencao === it.nome);
@@ -382,7 +403,8 @@ for (const it of INTENCOES) {
   const bl = g.reduce((s, x) => s + x.bloqueiosSemMotivo, 0);
   const pol = g.filter(x => x.politica).length;
   resumo[it.nome] = { n, descobriu: d, comecou: c, tentou: t, chegou: ch, devolutivas: dv, comPasso: dp, progresso: pr, bloqueiosSemMotivo: bl, politica: pol };
-  log(`| ${it.nome} | ${pct(d, n)} | ${med(g.map(x => x.descobriu ?? NaN))} | ${pct(c, n)} | ${pct(t, n)} | ${med(g.map(x => x.tentou ?? NaN))} | ${med(g.filter(x => x.tentou !== undefined).map(x => x.tentativas))} | ${dv ? pct(dp, dv) : '—'} (${dv}) | ${dv ? pct(pr, dv) : '—'} | ${pct(ch, n)} | ${med(g.map(x => x.chegou ?? NaN))} | ${bl} | ${it.nome === 'politica' ? '—' : pct(pol, n)} |`);
+  const meio = g.filter(x => x.meio !== undefined).length;
+  log(`| ${it.nome} | ${pct(d, n)} | ${med(g.map(x => x.descobriu ?? NaN))} | ${pct(c, n)} | ${pct(t, n)} | ${med(g.map(x => x.tentou ?? NaN))} | ${med(g.filter(x => x.tentou !== undefined).map(x => x.tentativas))} | ${dv ? pct(dp, dv) : '—'} (${dv}) | ${dv ? pct(pr, dv) : '—'} | ${pct(meio, n)} | ${pct(ch, n)} | ${med(g.map(x => x.chegou ?? NaN))} | ${bl} | ${it.nome === 'politica' ? '—' : pct(pol, n)} |`);
 }
 
 // Convergência: a ocupação aos 40 de cada intenção.

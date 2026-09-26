@@ -786,9 +786,11 @@ export function processarPolitica(v: Vida, r: Rng): void {
     // A porta: rara, e vinda da vida.
     const portas = portasDaPolitica(v);
     const ultima = v.caminhos.ultimas['politica'];
-    if (portas.length && i >= 16 && i <= 75 && !v.justica?.prisao && (ultima === undefined || v.t - ultima >= 72) && !v.momento) {
+    // (REWORK Caminhos: a porta vinha a cada seis anos, até 22% ao ano — a política encontrava quase toda vida longa
+    // no serviço público. Agora, oito anos entre convites e no máximo 12% ao ano: continua vindo da vida, sem empurrar.)
+    if (portas.length && i >= 16 && i <= 75 && !v.justica?.prisao && (ultima === undefined || v.t - ultima >= 96) && !v.momento) {
       const soma = portas.reduce((s, x) => s + x.peso, 0);
-      if (r.chance(Math.min(0.22, 0.02 + soma * 0.035))) {
+      if (r.chance(Math.min(0.12, 0.01 + soma * 0.025))) {
         const o = r.weighted(portas, x => x.peso)!;
         v.caminhos.ultimas['politica'] = v.t;
         v.fatos['pol_porta'] = v.t;

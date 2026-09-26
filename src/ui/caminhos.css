@@ -125,3 +125,6 @@
 .nota-alvo__palavra--acima::before { content: '✓'; color: var(--success); }
 .nota-alvo__palavra--perto::before { content: '◷'; color: var(--tom); }
 .nota-alvo__palavra--longe::before { content: '○'; color: var(--warning); }
+
+/* Links de passagem entre áreas: alvo de toque de verdade. */
+.secao .nota .link { display: inline-block; min-height: 40px; padding: 9px 0; }

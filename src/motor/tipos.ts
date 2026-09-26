@@ -1015,14 +1015,14 @@ export interface ProcessoSeletivo {
 /** O que ficou de uma tentativa: o retorno que a pessoa recebeu. */
 export interface Devolutiva {
   t: number;
-  tipo: 'entrevista' | 'peneira' | 'concurso';
+  tipo: 'entrevista' | 'peneira' | 'concurso' | 'arte';
   titulo: string;
   texto: string;
   passou: boolean;
   /** Ficou perto: vale tentar de novo. */
   perto?: boolean;
   /** O que mais pesou contra (para o jogador saber o que trabalhar). */
-  falta?: 'experiencia' | 'formacao' | 'entrevista' | 'tecnica' | 'fisico' | 'leitura' | 'nervos' | 'idade' | 'concorrencia' | 'preparo';
+  falta?: 'experiencia' | 'formacao' | 'entrevista' | 'tecnica' | 'fisico' | 'leitura' | 'nervos' | 'idade' | 'concorrencia' | 'preparo' | 'publico';
   ocupacaoId?: string;
   dominio?: Dominio;
   /**

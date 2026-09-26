@@ -116,7 +116,9 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
       id: 'arte', titulo: `Viver de ${NOME_ARTE[a]}`,
       onde: `Na ${NOME_ARTE[a]}, você está "${ARTE_PALAVRA(habilidade(v, a))}".${p ? ` ${p.nome}: ${publico}.` : ' Ainda sem grupo.'}`,
       falta: [p ? (p.publico < 40 ? 'Público: é ele que traz convite para viver disso — ensaio firme, shows, edital de cultura.' : 'O convite para viver disso costuma vir com o público grande.') : 'Um grupo: é no palco com outras pessoas que o público começa.', habilidade(v, a) < 55 ? 'Técnica de palco: prática firme.' : ''].filter(Boolean),
-      proximo: !p && pode(montar) ? { rotulo: a === 'musica' ? 'Montar uma banda' : 'Montar um grupo', acao: montar } : { rotulo: 'Seguir ensaiando', ir: 'tempo', porque: p ? 'Os editais de cultura e os convites aparecem para quem está em cena.' : disp(v, montar).motivo }
+      proximo: !p && pode(montar) ? { rotulo: a === 'musica' ? 'Montar uma banda' : 'Montar um grupo', acao: montar }
+        : p && pode(P('mostrar_trabalho')) ? { rotulo: a === 'musica' ? 'Mandar o material para produtores e festivais' : 'Fazer uma audição numa companhia', acao: P('mostrar_trabalho'), porque: 'É pedir para ser visto: o parecer diz o que faltou.' }
+          : { rotulo: 'Seguir ensaiando', ir: 'tempo', porque: p ? disp(v, P('mostrar_trabalho')).motivo ?? 'Os editais de cultura e os convites aparecem para quem está em cena.' : disp(v, montar).motivo }
     });
   }
 
