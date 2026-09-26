@@ -34,7 +34,9 @@ import { custosDoTrabalho } from './carreira';
 import { moraComFamiliaDeOrigem, rendaDosOutros } from './domicilio';
 import { dinheiro as fmt, flex } from '../texto';
 import { abalar } from './abalo';
-import { cobrirComAplicacoes, liquidezImediata, processarInvestimentos, rendaDasAplicacoes, totalAplicado } from './investimentos';
+import { cobrirComAplicacoes, liquidezImediata, processarInvestimentos, rendaDasAplicacoes, resgatar, totalAplicado } from './investimentos';
+import { produto } from '../dados/investimentos';
+import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { custoDosPets } from './pets';
 import { custosDeVeiculo } from './veiculos';
 import { deslocamento } from './transporte';
@@ -687,6 +689,85 @@ export function fotografar(v: Vida): void {
 }
 
 /* ============================================================ Pagar e ter */
+
+/* ============================================== Liquidez: conta × patrimônio */
+
+/**
+ * Posso pagar isto agora? Separa três situações que o jogo não pode
+ * confundir:
+ *   'tem'            — o dinheiro está na conta;
+ *   'resgatando'     — a conta não cobre, mas as aplicações cobrem (é
+ *                      patrimônio que existe: tirar é escolha do jogador);
+ *   'sem_patrimonio' — nem somando conta e aplicações.
+ * Imóveis e veículos não entram: vender a casa para pagar o conserto do
+ * carro é outra decisão, não um detalhe de pagamento.
+ */
+export interface Capacidade {
+  situacao: 'tem' | 'resgatando' | 'sem_patrimonio';
+  conta: number;
+  /** Quanto falta na conta. */
+  falta: number;
+  /** Quanto as aplicações cobrem agora (pelo valor do dia). */
+  aplicado: number;
+  /** Aplicações que seriam vendidas abaixo do que se pôs (a perda se realiza). */
+  naBaixa: string[];
+}
+
+export function capacidade(v: Vida, valor: number): Capacidade {
+  const conta = Math.max(0, v.financas.conta);
+  const aplicado = totalAplicado(v);
+  const falta = Math.max(0, Math.round(valor - conta));
+  if (falta <= 0) return { situacao: 'tem', conta, falta: 0, aplicado, naBaixa: [] };
+  if (falta > aplicado) return { situacao: 'sem_patrimonio', conta, falta, aplicado, naBaixa: [] };
+  return { situacao: 'resgatando', conta, falta, aplicado, naBaixa: planoDeResgate(v, falta).naBaixa };
+}
+
+/** O que sairia de cada aplicação para cobrir `valor` (a mesma ordem da vida real: reserva primeiro, bolsa por último). */
+export function planoDeResgate(v: Vida, valor: number): { itens: { id: string; nome: string; valor: number }[]; naBaixa: string[] } {
+  const itens: { id: string; nome: string; valor: number }[] = [];
+  const naBaixa: string[] = [];
+  let falta = valor;
+  for (const a of [...v.financas.investimentos].sort((x, y) => produto(x.produto).ordemResgate - produto(y.produto).ordemResgate)) {
+    if (falta <= 0) break;
+    const tirar = Math.min(falta, a.valor);
+    if (tirar <= 0) continue;
+    const nome = produto(a.produto).nome.toLowerCase();
+    itens.push({ id: a.id, nome, valor: Math.round(tirar) });
+    if (a.valor < a.aportado * 0.9 && produto(a.produto).risco >= 3) naBaixa.push(nome);
+    falta -= tirar;
+  }
+  return { itens, naBaixa };
+}
+
+/**
+ * O veredito de um pagamento, com a frase certa para cada situação:
+ * "Custa R$ X; na conta há R$ Y" (e as aplicações cobrem: dá para tirar) ou
+ * "Custa R$ X; somando conta e aplicações, você tem R$ Y".
+ */
+export function vereditoDePagar(v: Vida, valor: number, oque = 'Custa'): Veredito {
+  const k = capacidade(v, valor);
+  if (k.situacao === 'tem') return PERMITIDO;
+  const custa = `${oque} ${fmt(valor)}`;
+  if (k.situacao === 'resgatando') {
+    return { grau: 'requisito', motivo: `${custa}; na conta há ${fmt(k.conta)}. Faltam ${fmt(k.falta)} — dá para tirar das suas aplicações${k.naBaixa.length ? ` (${k.naBaixa.join(' e ')} está abaixo do que você pôs: vender agora realiza a perda)` : ''}.`, resgate: { valor: k.falta, naBaixa: k.naBaixa } };
+  }
+  return bloqueio('requisito', k.aplicado > 0 ? `${custa}; somando conta e aplicações, você tem ${fmt(k.conta + k.aplicado)}.` : `${custa}; na conta há ${fmt(k.conta)}.`);
+}
+
+/**
+ * Tira `valor` das aplicações para a conta — só por escolha do jogador (ou
+ * pelo fim do ano, quando a conta fica negativa: aí fica dito). Devolve o
+ * que saiu de cada uma, para a mensagem.
+ */
+export function tirarDasAplicacoes(v: Vida, valor: number, motivo: string): string {
+  const plano = planoDeResgate(v, valor);
+  let tirado = 0;
+  for (const it of plano.itens) tirado += resgatar(v, it.id, it.valor);
+  const partes = plano.itens.map(it => `${fmt(it.valor)} ${it.nome.startsWith('a ') || it.nome.startsWith('o ') ? 'd' + it.nome : `de ${it.nome}`}`);
+  const texto = `Tirou ${fmt(tirado)} das aplicações ${motivo}: ${partes.join(', ')}.${plano.naBaixa.length ? ` Vendeu ${plano.naBaixa.join(' e ')} abaixo do que tinha posto.` : ''}`;
+  escrever(v, { texto, relevancia: tirado >= 50000 ? 'cotidiano' : 'tecnico', tema: 'dinheiro', escolha: true });
+  return texto;
+}
 
 /** O que dá para usar agora: conta + aplicações (vendendo pelo preço do dia). */
 export const disponivel = (v: Vida) => Math.max(0, v.financas.conta) + totalAplicado(v);

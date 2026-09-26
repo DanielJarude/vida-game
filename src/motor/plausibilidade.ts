@@ -20,6 +20,12 @@ export interface Veredito {
   motivo?: string;
   /** Chance de sucesso quando o resultado depende de terceiros (0..1). */
   chance?: number;
+  /**
+   * Falta dinheiro NA CONTA, mas há aplicações que cobrem: quanto seria
+   * preciso tirar delas. A interface oferece "tirar das aplicações e pagar"
+   * — nunca vende sozinha (`sistemas/dinheiro.vereditoDePagar`).
+   */
+  resgate?: { valor: number; naBaixa: string[] };
 }
 
 export const PERMITIDO: Veredito = { grau: 'permitido' };
