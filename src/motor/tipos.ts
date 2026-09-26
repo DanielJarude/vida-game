@@ -1216,7 +1216,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 13;
+  versao: 14;
   id: string;
   rng: number;
   seq: number;

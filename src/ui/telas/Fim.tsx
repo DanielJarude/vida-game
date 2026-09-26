@@ -14,6 +14,7 @@ import { Retrato } from '../avatar/Retrato';
 import { anosDaBiografia, dinheiroCurto, rotuloDe } from '../apresentar';
 import { importancia } from '../../motor/sistemas/vinculos';
 import { situacaoAfetiva } from '../leitura';
+import { retrospectiva } from '../../motor/sistemas/retrospectiva';
 
 export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
   const i = idade(vida);
@@ -36,7 +37,12 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
         <p className="fim__datas">{anoDe(vida.eu.tNasc)} — {anoDe(vida.t)}</p>
         <p className="fim__causa">{flex(g, 'Nascido', 'Nascida', 'Nascide')} em {nomeLugar(vida.eu.municipioNatal)}. Morreu aos {i} anos, {vida.morte?.causa}, em {nomeLugar(vida.moradia.municipioId)}.</p>
       </header>
+      <section className="fim__marcas" aria-labelledby="fim-marcas">
+        <h2 id="fim-marcas">O que marcou esta vida</h2>
+        <ul>{retrospectiva(vida).map((t, k) => <li key={k}>{t}</li>)}</ul>
+      </section>
       <section className="fim__resumo">
+        <h2>Em números</h2>
         <ul>
           <li>{vida.educacao.concluidos.length ? `Estudou ${vida.educacao.concluidos.map(c => c.nome).join(', ')}.` : `Escolaridade: ${ROTULO_ESCOLARIDADE[vida.educacao.escolaridade]}.`}</li>
           <li>{principal ? `Trabalhou sobretudo como ${principal}.` : empregos.length === 0 ? 'Nunca teve emprego fixo.' : ''}</li>

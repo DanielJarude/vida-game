@@ -7,6 +7,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { exportarVida, importarVida, interpretar, VERSAO_SAVE } from '../save';
+import { nomeDoVeiculo } from '../sistemas/veiculos';
 import { avancarAno } from '../ano';
 import { idadePessoa, transacao } from '../nucleo';
 import { registrarMortes } from '../sistemas/luto';
@@ -618,5 +622,47 @@ describe('curso integral × trabalho integral passa por propor()', () => {
     v = executar(v, { tipo: 'destrancar' }).vida;
     expect(v.educacao.matricula!.trancado).toBe(true);
     expect(v.momento?.situacaoId).toBe('comp_conflito');
+  });
+});
+
+/* ======================================================= 17. Save v14 */
+
+describe('save v13 → v14 com saves reais da base do Playtest #4', () => {
+  const ler = (nome: string) => readFileSync(join(__dirname, 'fixtures', nome), 'utf8');
+  for (const nome of ['save-v13-salao-carro.json', 'save-v13-politica.json', 'save-v13-investidor.json', 'save-v12-loja-online.json', 'save-v12-politica.json', 'save-v12-soldado.json']) {
+    it(`${nome}: migra, valida, segue vivendo, exporta e importa`, () => {
+      const res = interpretar(ler(nome));
+      expect(res.tipo).toBe('ok');
+      if (res.tipo !== 'ok') return;
+      expect(res.migrado).toBe(true);
+      let v = res.vida;
+      expect(v.versao).toBe(VERSAO_SAVE);
+      expect(VERSAO_SAVE).toBe(14);
+      for (const b of v.financas.bens) if (b.tipo === 'veiculo') { expect(b.versaoId).toBeTruthy(); expect(nomeDoVeiculo(b)).not.toMatch(/^carro compacto$/); }
+      if (v.caminhos.politica?.partido) expect(v.caminhos.politica.partidos?.[0].sigla).toBe(v.caminhos.politica.partido);
+      for (let k = 0; k < 3 && !v.morte; k++) { v = avancarAno(v).vida; v = responderTudo(v); }
+      expect(JSON.stringify(v)).not.toMatch(/undefined|NaN/);
+      const volta = importarVida(exportarVida(v));
+      expect(volta.tipo).toBe('ok');
+    }, 30000);
+  }
+
+  it('o salão do playtest, migrado, paga o dono e o carro faz o trajeto', () => {
+    const res = interpretar(ler('save-v13-salao-carro.json'));
+    if (res.tipo !== 'ok') throw new Error('não migrou');
+    let v = res.vida;
+    expect(modoDoTrabalho(v)).toBe('negocio');
+    expect(deslocamento(v)!.modo).toBe('carro');
+    v = avancarAno(v).vida; v = responderTudo(v);
+    if (v.caminhos.negocio?.estado !== 'fechado' && v.trabalho.atual) expect(v.caminhos.negocio!.retiradaAno).toBeGreaterThan(0);
+  }, 30000);
+
+  it('o investidor migrado não recebe "sem dinheiro": recebe a opção de tirar das aplicações', () => {
+    const res = interpretar(ler('save-v13-investidor.json'));
+    if (res.tipo !== 'ok') throw new Error('não migrou');
+    const v = res.vida;
+    v.financas.conta = 500;
+    const d = vereditoDePagar(v, 20000, 'Custa');
+    expect(d.resgate).toBeDefined();
   });
 });

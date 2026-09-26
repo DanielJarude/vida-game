@@ -16,6 +16,7 @@ import { escrever, idade, novoId } from '../nucleo';
 import { municipio } from '../dados/lugares';
 import { idadeEm } from '../tempo';
 import { derivaDaSaude } from './estado';
+import { registrarQuemApareceu } from './rede';
 
 export interface ModeloCondicao {
   id: string;
@@ -124,6 +125,8 @@ export function processarCorpo(v: Vida, r: Rng): void {
         tema: 'saude',
         tom: 'ruim'
       });
+      // Doença grave: quem esteve perto no tratamento (e quem não esteve) fica na história com cada um.
+      if (m.gravidade >= 3 && !repetida) { const junto = registrarQuemApareceu(v, 'doenca', m.nome); if (junto) escrever(v, { texto: junto, relevancia: 'biografia', tema: 'saude' }); }
       break;
     }
   }

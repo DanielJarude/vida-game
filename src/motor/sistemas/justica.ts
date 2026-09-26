@@ -33,6 +33,7 @@ import { terminar } from './romance';
 import { novaOportunidade } from './oportunidades';
 import { registrarAssuntoDaJustica } from './exposicao';
 import { perderMandatoPorPrisao } from './politica';
+import { registrarQuemApareceu } from './rede';
 
 export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedentes: [] });
 
@@ -188,6 +189,9 @@ function prender(v: Vida, tFim: number, regime: 'fechado' | 'semiaberto', motivo
     marcar(v, 'prisao', 'Prisão preventiva.', 3);
   }
   abalar(v, motivo === 'internacao' ? 'a internação' : 'a prisão', -16, 20);
+  // Quem aparece nas visitas (e quem some) sai do vínculo.
+  const visitas = registrarQuemApareceu(v, 'prisao');
+  if (visitas) escrever(v, { texto: visitas, relevancia: 'biografia', tema: 'familia' });
 }
 
 function soltar(v: Vida, motivo: string): void {

@@ -54,7 +54,7 @@ export const MATURIDADE: Conteudo[] = [
     titulo: c => `Perto de ${c.p.filho.nome}`,
     texto: c => `${c.p.filho.nome} sugere que você se mude para ${c.v.pessoas[c.p.filho.id].municipioId.split('-').slice(0, -1).map(x => x.charAt(0).toUpperCase() + x.slice(1)).join(' ')}, para ficar perto. Seria deixar a cidade onde você viveu tanto tempo.`,
     opcoes: [
-      { id: 'mudar', texto: 'Mudar para perto', comportamento: { familia: 1 }, resolver: c => ({ texto: 'A mudança foi triste e aliviada ao mesmo tempo.', memoria: null, efeito: () => { mudarAgora(c.v, c.p.filho.municipioId, `para ficar perto de ${c.p.filho.nome}`); prox(c, 'filho', 10); } }) },
+      { id: 'mudar', texto: 'Mudar para perto', comportamento: { familia: 1 }, resolver: c => ({ texto: 'Arrumar as caixas levou um mês: cada gaveta tinha uma história.', memoria: null, efeito: () => { mudarAgora(c.v, c.p.filho.municipioId, `para ficar perto de ${c.p.filho.nome}`); prox(c, 'filho', 10); } }) },
       { id: 'ficar', texto: 'Ficar onde está', comportamento: { independencia: 1 }, resolver: () => ({ texto: 'Você agradeceu e ficou. As visitas continuaram sendo nos feriados.', memoria: null }) }
     ]
   },

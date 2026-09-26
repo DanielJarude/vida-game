@@ -213,3 +213,43 @@ export function lutoDe(v: Vida, p: Pessoa): string | undefined {
   const oX = oLaco(laco, x.genero, casadosCom(v, p.id, x.id));
   return `de luto ${oX.startsWith('a ') ? 'pela' : 'pelo'} ${oX.slice(2)}, ${x.nome}`;
 }
+
+/* ================================================ O que acontece com VOCÊ */
+
+/**
+ * Quando a coisa grande acontece com o jogador (a prisão, uma doença grave,
+ * a posse), quem está perto aparece — ou não. Quem aparece sai do vínculo
+ * (afeto, confiança, atrito, distância), não de um sorteio de texto: quem
+ * gosta e confia vem; quem está brigado ou longe, não. O jogo diz quem
+ * esteve lá; não diz o que o jogador sentiu.
+ */
+export function quemApareceu(v: Vida, tipo: 'prisao' | 'doenca' | 'posse'): { vieram: Pessoa[]; sumiram: Pessoa[] } {
+  const vieram: Pessoa[] = [];
+  const sumiram: Pessoa[] = [];
+  for (const { p, vin } of vinculosVivos(v)) {
+    if (p.especie || idadePessoa(v, p) < 12) continue;
+    const papel = papelDe(p, vin);
+    const perto = ['parceiro', 'filho', 'genitor', 'irmao', 'amigo_proximo', 'neto'].includes(papel);
+    if (!perto) continue;
+    const longe = p.municipioId !== v.moradia.municipioId;
+    const quer = vin.proximidade + vin.confianca * 0.4 - vin.tensao * 0.8 - (longe ? 15 : 0) - (tipo === 'prisao' ? 20 : 0);
+    if (quer >= 55) vieram.push(p);
+    else if (vin.proximidade >= 40 && (tipo === 'prisao' || tipo === 'doenca')) sumiram.push(p);
+  }
+  const ordem = (x: Pessoa) => importancia(v, x, v.vinculos[x.id]);
+  vieram.sort((a, b) => ordem(b) - ordem(a));
+  sumiram.sort((a, b) => ordem(b) - ordem(a));
+  return { vieram, sumiram };
+}
+
+/** Escreve (e guarda nas relações) quem esteve lá. Devolve a frase, ou vazio. */
+export function registrarQuemApareceu(v: Vida, tipo: 'prisao' | 'doenca' | 'posse', sobre = ''): string {
+  const { vieram, sumiram } = quemApareceu(v, tipo);
+  const nomes = (l: Pessoa[]) => listaNatural(l.slice(0, 3).map(p => p.nome));
+  const marco = { prisao: 'Visitava você na prisão.', doenca: `Esteve perto no tratamento${sobre ? ` (${sobre})` : ''}.`, posse: 'Estava lá na posse.' }[tipo];
+  for (const p of vieram.slice(0, 4)) { lembrarCom(v, p.id, marco, 'apoio', tipo === 'posse' ? 1 : 2); const vin = v.vinculos[p.id]; vin.tUltimoContato = v.t; if (tipo !== 'posse') vin.confianca = clamp(vin.confianca + 4); }
+  for (const p of sumiram.slice(0, 2)) { lembrarCom(v, p.id, tipo === 'prisao' ? 'Não apareceu nas visitas.' : 'Não apareceu no tratamento.', 'distancia', 2); v.vinculos[p.id].proximidade = clamp(v.vinculos[p.id].proximidade - 6); }
+  if (tipo === 'prisao') return vieram.length ? `Nas visitas de domingo, vinham ${nomes(vieram)}.${sumiram.length ? ` ${nomes(sumiram)} não ${sumiram.length > 1 ? 'apareceram' : 'apareceu'}.` : ''}` : 'Nas visitas de domingo, quase ninguém veio.';
+  if (tipo === 'doenca') return vieram.length ? `No tratamento, ${nomes(vieram)} ${vieram.length > 1 ? 'se revezaram' : 'esteve'} ao seu lado nas consultas.` : 'O tratamento foi atravessado quase sem companhia.';
+  return vieram.length ? `Na posse, na primeira fila: ${nomes(vieram)}.` : '';
+}

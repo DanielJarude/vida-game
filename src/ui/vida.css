@@ -889,3 +889,9 @@ button.agora-sinal:hover { color: var(--text-primary); }
 /* Tirar das aplicações e pagar (FIX #4): a saída quando o dinheiro existe, mas não está na conta. */
 .acao__resgate, .opcao__resgate { margin-top: var(--space-2); min-height: 40px; }
 .momento__opcoes .opcao__resgate { width: 100%; }
+
+/* O que marcou esta vida (FIX #4): as frases que só esta vida teve, antes dos números. */
+.fim__marcas { display: block; }
+.fim__marcas h2 { font-size: var(--type-heading); margin: 0 0 var(--space-3); }
+.fim__marcas ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-primary); }
+.fim__marcas li { padding-left: var(--space-3); border-left: 2px solid var(--tom-linha, currentColor); }

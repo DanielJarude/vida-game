@@ -538,7 +538,7 @@ describe('gênero, cidade e idade', () => {
 
 describe('save v11', () => {
   it('saves v10 reais (ATT 3) migram, validam e seguem vivendo; quem está no quartel ganha a carreira militar', () => {
-    expect(VERSAO_SAVE).toBe(13);
+    expect(VERSAO_SAVE).toBe(14);
     for (const nome of ['save-v10-soldado.json', 'save-v10-familia.json', 'save-v10-aposentado.json']) {
       const r = interpretar(fixture(nome));
       expect([nome, r.tipo]).toEqual([nome, 'ok']);

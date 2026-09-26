@@ -618,7 +618,7 @@ describe('personalidade só por escolha; acontecimento não decide por você', (
 
 describe('save v12', () => {
   it('saves v11 reais (motor do PLAYTEST #3) migram, validam, seguem vivendo anos, salvam e reabrem', () => {
-    expect(VERSAO_SAVE).toBe(13);
+    expect(VERSAO_SAVE).toBe(14);
     for (const nome of ['save-v11-negocio.json', 'save-v11-atleta.json', 'save-v11-professora.json']) {
       const bruto = fixture(nome);
       expect(JSON.parse(bruto).versao).toBe(11);

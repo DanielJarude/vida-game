@@ -54,6 +54,7 @@ import { dinheiro, flex, ge, listaNatural } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { aplicarPersonalidade } from '../personalidade';
 import type { AcaoProfissional } from './profissao';
+import { registrarQuemApareceu } from './rede';
 
 /* ================================================================ Catálogo */
 
@@ -683,7 +684,8 @@ function tomarPosse(v: Vida, r: Rng): void {
     assessor.renda = Math.round(emprego.salario * 0.45);
     const vin = vincular(v, assessor, { origem: 'trabalho', proximidade: 25, convivio: ['trabalho'], estagio: 'colega' });
     vin.ambiente = `trabalho:${emprego.empregador}:${emprego.tInicio}`;
-    escrever(v, { texto: `Tomou posse como ${nomeCargo(v, cargo)}. ${assessor.nome} assumiu a chefia de gabinete.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom', pessoas: [assessor.id] });
+    const plateia = registrarQuemApareceu(v, 'posse');
+    escrever(v, { texto: `Tomou posse como ${nomeCargo(v, cargo)}. ${assessor.nome} assumiu a chefia de gabinete.${plateia ? ` ${plateia}` : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'bom', pessoas: [assessor.id] });
     marcar(v, 'politica', `Posse: ${nomeCargo(v, cargo)}.`, 3, { ocupacaoId: cargo });
   } else escrever(v, { texto: `Começou o segundo mandato como ${nomeCargo(v, cargo)}.`, relevancia: 'biografia', tema: 'trabalho' });
 }
