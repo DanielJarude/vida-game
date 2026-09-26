@@ -19,7 +19,7 @@ import { moraComFamiliaDeOrigem } from '../../motor/sistemas/domicilio';
 import { produto, PALAVRA_RISCO } from '../../motor/dados/investimentos';
 import { resultado } from '../../motor/sistemas/investimentos';
 import { BotaoAcao, Secao } from '../comum';
-import { CenaDaCasa, Evolucao, Icone } from './material/Desenhos';
+import { CenaDaCasa, Evolucao, Icone, IconeMoradia } from './material/Desenhos';
 import { Lugar, type QualLugar } from './material/Lugares';
 import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoLar, leituraDosBens, type LeituraBem } from '../leituraMaterial';
 import '../material.css';
@@ -163,7 +163,7 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
   return (
     <article className={`objeto objeto--${b.tipo}`}>
       <div className="objeto__cabeca">
-        <Icone nome={b.icone} />
+        {b.tipo === 'imovel' ? <IconeMoradia modeloId={b.modeloId} /> : <Icone nome={b.icone} />}
         <div className="objeto__nome">
           <h3>{b.titulo}</h3>
           <p>{b.meta}</p>

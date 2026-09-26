@@ -20,6 +20,21 @@
 .cena__janela--acesa { fill: var(--accent-soft); stroke: var(--accent); opacity: 0.85; }
 .cena__chao { color: var(--rule-strong); }
 .cena__bicho { color: var(--warm-memory); }
+/* Cada moradia com a sua silhueta; o que é verde, água ou vidro ganha um toque de tom, mas a forma já diz. */
+.cena__folha { color: color-mix(in oklab, var(--tom-saude) 70%, var(--text-muted)); fill: color-mix(in oklab, var(--tom-saude) 12%, transparent); }
+.cena__arvore > path:first-child { color: var(--text-faint); }
+.cena__vidro { fill: color-mix(in oklab, var(--tom-rumo) 10%, var(--bg-raised)); }
+.cena__piscina { fill: color-mix(in oklab, var(--tom-rumo) 22%, transparent); color: color-mix(in oklab, var(--tom-rumo) 70%, var(--text-muted)); }
+.cena__roupa { color: var(--warm-memory); fill: color-mix(in oklab, var(--warm-memory) 16%, transparent); }
+.cena__bandeira { fill: color-mix(in oklab, var(--tom-saude) 30%, transparent); }
+.cena__porta { fill: var(--bg-deep); }
+.cena__tijolo { color: var(--rule-strong); }
+.cena__roca { color: color-mix(in oklab, var(--tom-saude) 60%, var(--text-faint)); }
+/* Estado da casa: mancha tracejada, rachadura, andaime de obra, lata e rolo da pintura nova. */
+.cena__mancha { fill: color-mix(in oklab, var(--text-faint) 18%, transparent); color: var(--text-faint); }
+.cena__rachadura { color: var(--danger); stroke-width: 1.8; }
+.cena__andaime { color: var(--warning); }
+.cena__tinta { color: var(--accent); }
 .lar__texto { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .lar__onde { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--accent); }
 .lar__frase { font-family: var(--font-serif); font-weight: 500; font-size: clamp(1.6rem, 1.2rem + 1.5vw, 2.3rem); line-height: var(--leading-snug); color: var(--text-primary); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }

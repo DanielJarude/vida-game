@@ -29,10 +29,38 @@ export const dinheiroCurto = (v: number) => {
 
 /* --------------------------------------------------------------- Moradia */
 
-export type FormaDaCasa = 'predio' | 'kitnet' | 'casa' | 'casa_grande' | 'republica' | 'familia' | 'favor';
+/**
+ * A silhueta do lar no desenho: um tipo para cada modelo de moradia
+ * (`dados/bens`), mais os arranjos sem modelo — a casa da família, a casa de
+ * parentes, o quarto de favor e a moradia funcional (vila, alojamento).
+ */
+export type FormaDaCasa =
+  | 'republica' | 'kitnet' | 'apto_1q' | 'apto_2q' | 'apto_3q' | 'alto_padrao'
+  | 'casa_simples' | 'casa_2q' | 'casa_3q' | 'casa_grande' | 'sitio'
+  | 'familia' | 'parente' | 'favor' | 'funcional';
+
+/** Como a casa está — só se sabe de verdade do imóvel próprio. */
+export interface CondicaoDoLar {
+  /** boa · gasta (mancha de umidade) · ruim (rachadura) · problema (reparo pendente: andaime). */
+  nivel: 'boa' | 'gasta' | 'ruim' | 'problema';
+  /** Conservação 0..100 do imóvel próprio (ausente em casa alugada ou de outros). */
+  estado?: number;
+  /** O reparo pendente, em palavras. */
+  problema?: string;
+  /** Reforma ou reparo grande nos últimos 12 meses (pintura nova). */
+  reformaRecente: boolean;
+}
 
 export interface LeituraLar {
   forma: FormaDaCasa;
+  /** Modelo de moradia (`dados/bens`), quando há. */
+  modeloId?: string;
+  /** 1 (precária) .. 5 (muito boa). */
+  padrao: number;
+  rural: boolean;
+  /** Moradia funcional (vila militar, alojamento). */
+  funcional: boolean;
+  condicao: CondicaoDoLar;
   /** "Recife, capital do Nordeste". */
   onde: string;
   /** A frase principal: onde, como, com quem. */
@@ -43,6 +71,19 @@ export interface LeituraLar {
   bichos: { id: string; nome: string; especie: Especie }[];
   veiculo?: 'carro' | 'moto' | 'bicicleta';
   janelasAcesas: number;
+}
+
+const FORMAS_DE_MODELO: readonly FormaDaCasa[] = ['republica', 'kitnet', 'apto_1q', 'apto_2q', 'apto_3q', 'alto_padrao', 'casa_simples', 'casa_2q', 'casa_3q', 'casa_grande', 'sitio'];
+const formaDoModelo = (id: string): FormaDaCasa => (FORMAS_DE_MODELO as readonly string[]).includes(id) ? id as FormaDaCasa : 'apto_2q';
+
+/** Só lê: o estado do imóvel próprio onde se mora (o motor é quem o muda). */
+function condicaoDoLar(v: Vida): CondicaoDoLar {
+  const m = v.moradia;
+  const im = m.tipo === 'propria' ? v.financas.bens.find((x): x is Imovel => x.tipo === 'imovel' && x.id === m.imovelId) : undefined;
+  if (!im) return { nivel: 'boa', reformaRecente: false };
+  const reformaRecente = im.tManutencao !== undefined && v.t - im.tManutencao <= 12;
+  const nivel: CondicaoDoLar['nivel'] = im.problema ? 'problema' : im.estado < 40 ? 'ruim' : im.estado < 65 && !reformaRecente ? 'gasta' : 'boa';
+  return { nivel, estado: im.estado, problema: im.problema?.texto, reformaRecente };
 }
 
 const artigo = (nome: string) => (nome.startsWith('casa') || nome.startsWith('kitnet') ? 'uma' : 'um');
@@ -64,22 +105,22 @@ export function leituraDoLar(v: Vida): LeituraLar {
   const comQuem = nomes.length ? ` com ${listaNatural(nomes.slice(0, 4))}${nomes.length > 4 ? ' e mais gente' : ''}` : '';
   const bichoTxt = bichos.length ? `${nomes.length ? ' — e' : ', com'} ${listaNatural(bichos.map(b => b.nome))}` : '';
   const eu = v.eu.tratamento ?? v.eu.genero;
-  let forma: FormaDaCasa = 'predio';
+  let forma: FormaDaCasa = 'apto_2q';
   let frase: string;
   const selos: LeituraLar['selos'] = [];
   if (m.tipo === 'pais' || m.tipo === 'parente') {
-    forma = 'familia';
+    forma = m.tipo === 'pais' ? 'familia' : 'parente';
     const i = idade(v);
     frase = `Mora na casa da família${comQuem}${bichoTxt}.`;
     selos.push({ texto: i < 18 ? 'A casa é dos adultos' : 'Casa da família' });
     if (i >= 18) selos.push({ texto: v.trabalho.atual ? 'Ajuda nas contas' : 'Sem pagar aluguel' });
   } else if (m.tipo === 'cedida') {
-    forma = 'favor';
+    forma = m.funcional ? 'funcional' : 'favor';
     frase = `Mora de favor${comQuem ? `, na casa de conhecidos` : ''}${bichoTxt}.`;
     selos.push({ texto: 'De favor', tom: 'atencao' });
   } else {
     const nome = modelo?.nome ?? 'casa';
-    forma = modelo?.id === 'republica' ? 'republica' : modelo?.id === 'kitnet' ? 'kitnet' : modelo?.casa ? ((modelo.quartos >= 4 || modelo.padrao >= 5) ? 'casa_grande' : 'casa') : 'predio';
+    forma = modelo ? formaDoModelo(modelo.id) : m.tipo === 'republica' ? 'republica' : 'apto_2q';
     const bairro = m.bairro ? ` ${m.bairro}` : '';
     if (m.tipo === 'republica') frase = `Mora numa república${bairro}, dividindo a casa com outros estudantes e trabalhadores${bichoTxt}.`;
     else if (m.tipo === 'propria') frase = `Mora n${artigo(nome) === 'uma' ? 'uma' : 'um'} ${nome}${bairro}${comQuem ? `,${comQuem}` : `, sozinh${flex(eu, 'o', 'a', 'e')}`}${bichoTxt}.`;
@@ -103,6 +144,11 @@ export function leituraDoLar(v: Vida): LeituraLar {
   const cat = vei ? modeloVeiculo(vei.modeloId).categoria : undefined;
   return {
     forma,
+    modeloId: modelo?.id,
+    padrao: m.padrao,
+    rural: !!modelo?.rural,
+    funcional: !!m.funcional,
+    condicao: condicaoDoLar(v),
     onde: `${mun.nome}, ${mun.uf} · ${rotuloPerfil(mun.perfil)}`,
     frase,
     selos,
@@ -190,7 +236,9 @@ export function leituraDaSeguranca(v: Vida) {
 export interface LeituraBem {
   id: string;
   tipo: 'imovel' | 'veiculo';
-  icone: 'predio' | 'casa' | 'kitnet' | 'carro' | 'moto' | 'bicicleta';
+  /** Veículo: a categoria; imóvel: o modelo de moradia (cada um com a sua silhueta, `IconeMoradia`). */
+  icone: string;
+  modeloId: string;
   titulo: string;
   meta: string;
   estado: string;
@@ -220,7 +268,7 @@ export function leituraDoBem(v: Vida, b: Bem): LeituraBem {
     const m = modeloMoradia(b.modeloId);
     const aqui = v.moradia.imovelId === b.id;
     return {
-      id: b.id, tipo: 'imovel', icone: m.id === 'kitnet' ? 'kitnet' : m.casa ? 'casa' : 'predio',
+      id: b.id, tipo: 'imovel', icone: m.id, modeloId: m.id,
       titulo: `${cap(b.herdado && b.nome === 'casa da família' ? 'casa da família' : m.nome)}${b.bairro ? ` ${b.bairro}` : ''}`,
       meta: `${b.herdado ? 'Herdado' : 'Comprado'} em ${anoDe(b.tCompra)} · ${dono}${b.municipioId !== v.moradia.municipioId ? ` · em ${municipio(b.municipioId).nome}` : ''}`,
       estado: aqui ? 'Você mora aqui.' : b.alugadoPor ? `Alugado por ${dinheiroCurto(b.alugadoPor)} por mês.` : 'Vazio.',
@@ -232,7 +280,7 @@ export function leituraDoBem(v: Vida, b: Bem): LeituraBem {
   const m = modeloVeiculo(b.modeloId);
   const anos = anosDoVeiculo(v, b);
   return {
-    id: b.id, tipo: 'veiculo', icone: m.categoria,
+    id: b.id, tipo: 'veiculo', icone: m.categoria, modeloId: m.id,
     titulo: `${cap(m.nome)}${b.anoFabricacao ? ` ${b.anoFabricacao}` : ''}`,
     meta: `${b.usado ? 'Comprado usado' : 'Comprado zero'} em ${anoDe(b.tCompra)} · ${anos <= 1 ? 'quase novo' : `${anos} anos de estrada`} · ${dono}`,
     estado: cap(estadoDoVeiculo(b)) + '.',
