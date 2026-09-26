@@ -17,6 +17,7 @@ import { mudarAgora } from '../sistemas/processos';
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 import { comChefia } from '../sistemas/ritmo';
+import { categoriaDoVeiculo, textoVeiculo } from '../sistemas/veiculos';
 
 // Emprego comum: o atleta (contrato especial, Lei Pelé) tem as próprias situações — clube, contrato, banco.
 /** "Uma fábrica foi vendida", "um escritório foi vendido": pelo artigo do empregador. */
@@ -191,24 +192,26 @@ export const ADULTO: Conteudo[] = [
     id: 'adu_carro_quebra', tipo: 'acontecimento', idade: [18, 85], tema: 'dinheiro', repetir: 4,
     quando: () => false,
     narrar: c => {
-      const carro = c.v.financas.bens.find(b => b.tipo === 'veiculo' && b.modeloId.startsWith('carro'))!;
+      const carro = c.v.financas.bens.find(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) === 'carro')!;
+      const oCarro = textoVeiculo(carro as never);
+      const OCarro = oCarro.charAt(0).toUpperCase() + oCarro.slice(1);
       const grave = carro.estado < 40;
       const custo = grave ? c.r.int(2500, 6000) : c.r.int(800, 2200);
       const peca = c.r.pick(['a embreagem', 'a suspensão', 'o radiador', 'a bomba de combustível', 'os freios']);
       const texto = c.vezes === 0
-        ? grave ? `O ${carro.nome} deixou você na mão no meio da avenida. O mecânico falou em motor: R$ ${custo.toLocaleString('pt-BR')}.` : `O ${carro.nome} foi para a oficina trocar ${peca}: R$ ${custo.toLocaleString('pt-BR')}.`
+        ? grave ? `${OCarro} deixou você na mão no meio da avenida. O mecânico falou em motor: R$ ${custo.toLocaleString('pt-BR')}.` : `${OCarro} foi para a oficina trocar ${peca}: R$ ${custo.toLocaleString('pt-BR')}.`
         : grave
-          ? c.r.pick([`De novo na oficina, e desta vez era o motor. O ${carro.nome} já não era o mesmo.`, `O ${carro.nome} ferveu na estrada e voltou de guincho.`, `O mecânico já chamava você pelo nome. Mais R$ ${custo.toLocaleString('pt-BR')} no ${carro.nome}.`])
+          ? c.r.pick([`De novo na oficina, e desta vez era o motor. ${OCarro} já não era o mesmo.`, `${OCarro} ferveu na estrada e voltou de guincho.`, `O mecânico já chamava você pelo nome. Mais R$ ${custo.toLocaleString('pt-BR')} em ${oCarro}.`])
           : `Mais uma ida à oficina: ${peca}, R$ ${custo.toLocaleString('pt-BR')}.`;
       return { texto, relevancia: 'cotidiano', tom: 'ruim', efeito: () => { dinheiro(c, -custo); carro.estado = Math.min(100, carro.estado + 30); } };
     }
   },
   {
     id: 'adu_acidente_transito', tipo: 'acontecimento', idade: [18, 85], tema: 'saude', repetir: 12,
-    quando: c => c.v.financas.bens.some(b => b.tipo === 'veiculo' && !b.modeloId.startsWith('bike')),
-    peso: c => (c.v.financas.bens.some(b => b.tipo === 'veiculo' && b.modeloId.startsWith('moto')) ? 3 : 1),
+    quando: c => c.v.financas.bens.some(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) !== 'bicicleta'),
+    peso: c => (c.v.financas.bens.some(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) === 'moto') ? 3 : 1),
     narrar: c => {
-      const moto = c.v.financas.bens.some(b => b.tipo === 'veiculo' && b.modeloId.startsWith('moto'));
+      const moto = c.v.financas.bens.some(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) === 'moto');
       return {
         texto: moto
           ? c.vezes === 0 ? 'Um carro fechou a moto num cruzamento. Foram dois meses de gesso na perna e fisioterapia pelo SUS.' : 'Outro tombo de moto, outra vez no asfalto. Desta vez foi o braço.'

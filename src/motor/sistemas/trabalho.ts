@@ -22,7 +22,7 @@ import { clamp } from '../rng';
 import type { Dominio, Emprego, Vida } from '../tipos';
 import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
 import { ajusteClientela, ajusteContratacao, fatorDemissao, reajusteReal } from './economia';
-import { veiculoUtil } from './veiculos';
+import { categoriaDoVeiculo, veiculoUtil } from './veiculos';
 import { OCUPACOES, AFINS, daTrilha, ocupacao, ocupacaoOuNula, ROTULO_TRILHA, type Ocupacao } from '../dados/ocupacoes';
 import { economiaLocal, municipio, nivelDeOferta, nomeLugar } from '../dados/lugares';
 import { ORDEM_NIVEL, ROTULO_AREA, cursoOuNulo } from '../dados/cursos';
@@ -179,9 +179,9 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   if (oc.licenca === 'cnh' && !t.licencas.includes('cnh')) return bloqueio('requisito', 'Exige carteira de motorista.');
   if (oc.veiculo) {
     const bens = v.financas.bens.filter(b => b.tipo === 'veiculo' && veiculoUtil(b));
-    const temCarro = bens.some(b => b.modeloId.startsWith('carro'));
-    const temMoto = bens.some(b => b.modeloId.startsWith('moto'));
-    const temBike = bens.some(b => b.modeloId.startsWith('bike'));
+    const temCarro = bens.some(b => categoriaDoVeiculo(b) === 'carro');
+    const temMoto = bens.some(b => categoriaDoVeiculo(b) === 'moto');
+    const temBike = bens.some(b => categoriaDoVeiculo(b) === 'bicicleta');
     const ok = oc.veiculo === 'carro' ? temCarro : oc.veiculo === 'moto_ou_bike' ? temMoto || temBike : temCarro || temMoto;
     if (!ok) return bloqueio('requisito', oc.veiculo === 'carro' ? 'Exige carro próprio.' : 'Exige moto ou bicicleta.');
   }

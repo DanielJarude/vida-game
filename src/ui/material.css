@@ -145,6 +145,8 @@
 .lugar-botao__oque { font-size: var(--type-caption); color: var(--text-muted); }
 
 .lugar-folha { display: flex; flex-direction: column; gap: var(--space-3); }
+.catalogo-veiculos { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.catalogo-veiculos__barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .ofertas { display: flex; flex-direction: column; gap: var(--space-2); }
 .oferta { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; text-align: left; padding: var(--space-3); min-height: var(--touch-target); border-radius: var(--radius-md); background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule); color: var(--text-primary); cursor: pointer; }
 .oferta:hover { background: var(--surface-hover); }

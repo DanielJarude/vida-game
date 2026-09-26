@@ -25,7 +25,7 @@ import { ge } from './texto';
 import { OCUPACOES, ocupacao } from './dados/ocupacoes';
 import { aluguelDe, alugar, amigoParaDividir, marcarSaidaDeCasa, opcoesDeAluguel, vereditoAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
 import { custoDeMudanca, iniciarAdocao, iniciarCnh, mudarAgora } from './sistemas/processos';
-import { modeloMoradia, modeloVeiculo, VEICULO_ANTIGO } from './dados/bens';
+import { modeloMoradia, modeloVeiculo, nomeDaVersao, versaoVeiculo, VEICULO_ANTIGO } from './dados/bens';
 import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
 import { curso } from './dados/cursos';
 import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, rendaPropriaMensal, saldoMensal } from './sistemas/dinheiro';
@@ -732,21 +732,27 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'comprar_veiculo': {
       const o = a.ofertaId ? ofertaDeVeiculo(v, a.ofertaId)! : ofertaVeiculoPorModelo(v, a.modeloId!, VEICULO_ANTIGO[a.modeloId!]?.usado)!;
       const m = modeloVeiculo(o.modeloId);
+      const versao = versaoVeiculo(o.versaoId);
+      const nome = versao ? nomeDaVersao(versao) : m.nome;
       const cond = condicoesVeiculo(v, o.preco, a.financiar, a.entrada);
       const id = `v${v.seq++}`;
       const financiou = a.financiar && cond.financiado > 0;
       pagarTudo(v, financiou ? cond.entrada : o.preco);
-      if (financiou) v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'financiamento_veiculo', saldo: cond.financiado, jurosMes: cond.jurosMes, parcela: cond.parcela, bemId: id, descricao: `Financiamento: ${m.nome}`, tInicio: v.t, prazo: cond.meses });
+      if (financiou) v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'financiamento_veiculo', saldo: cond.financiado, jurosMes: cond.jurosMes, parcela: cond.parcela, bemId: id, descricao: `Financiamento: ${nome}`, tInicio: v.t, prazo: cond.meses });
       const casal = arranjoDaCasa(v) === 'casados';
       const anterior = v.financas.bens.filter(b => b.tipo === 'veiculo');
-      v.financas.bens.push({ id, tipo: 'veiculo', modeloId: m.id, nome: m.nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: casal ? 'casal' : 'eu', historia: [{ t: v.t, texto: o.usado ? `Comprado usado, ano ${o.anoFabricacao}${o.historico ? ` (${o.historico})` : ''}, por ${fmt(o.preco)}.` : `Comprado zero, por ${fmt(o.preco)}.` }] });
+      v.financas.bens.push({ id, tipo: 'veiculo', modeloId: m.id, versaoId: versao?.id, nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: casal ? 'casal' : 'eu', historia: [{ t: v.t, texto: o.usado ? `Comprado usado, ano ${o.anoFabricacao}${o.historico ? ` (${o.historico})` : ''}, por ${fmt(o.preco)}.` : `Comprado zero, por ${fmt(o.preco)}.` }] });
       const nVeiculos = (v.fatos['veiculos_comprados'] ?? 0) + 1;
       v.fatos['veiculos_comprados'] = nVeiculos;
+      // O tipo em palavras ("carro", "moto", "bicicleta elétrica") e o gênero dele; o nome é o da versão.
+      const tipo = m.categoria === 'bicicleta' ? m.nome : m.categoria;
       const fem = m.categoria !== 'carro';
-      const primeiro = nVeiculos === 1 || !v.biografia.some(e => e.texto.includes(m.categoria === 'carro' ? 'carro' : m.nome));
-      const verbo = anterior.length ? `Comprou também ${fem ? 'uma' : 'um'}` : nVeiculos === 1 || primeiro && m.categoria === 'carro' ? `Comprou ${fem ? 'a primeira' : 'o primeiro'}` : `Comprou ${fem ? 'uma' : 'um'}`;
-      escrever(v, { texto: `${verbo} ${m.nome}${o.usado ? `, usad${fem ? 'a' : 'o'}, de ${o.anoFabricacao}` : ' zero'}${financiou ? `, financiad${fem ? 'a' : 'o'} em ${cond.meses} vezes` : ''}.`, relevancia: m.categoria === 'carro' && (primeiro || o.preco > 60000) ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
-      return ok(`${m.nome.charAt(0).toUpperCase() + m.nome.slice(1)} ${o.usado ? `de ${o.anoFabricacao}` : 'zero'} na garagem.`, 'bom');
+      const artigoNome = versao ? versao.artigo : fem ? 'a' : 'o';
+      const primeiro = nVeiculos === 1 || !v.biografia.some(e => e.texto.includes(tipo));
+      const verbo = anterior.length ? `Comprou também ${fem ? 'uma' : 'um'} ${tipo}` : nVeiculos === 1 || primeiro && m.categoria === 'carro' ? `Comprou ${fem ? 'a primeira' : 'o primeiro'} ${tipo}` : `Comprou ${fem ? 'uma' : 'um'} ${tipo}`;
+      const qual = versao ? `: ${artigoNome === 'a' ? 'uma' : 'um'} ${nome}` : '';
+      escrever(v, { texto: `${verbo}${qual}${o.usado ? `, usad${artigoNome} de ${o.anoFabricacao}` : ', zero quilômetro'}${financiou ? `, financiad${artigoNome} em ${cond.meses} vezes` : ''}.`, relevancia: m.categoria === 'carro' && (primeiro || o.preco > 60000) ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
+      return ok(`${nome.charAt(0).toUpperCase() + nome.slice(1)} ${o.usado ? `de ${o.anoFabricacao}` : 'zero'} na garagem.`, 'bom');
     }
     case 'comprar_imovel': {
       const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId)! : ofertaPorModelo(v, 'venda', a.modeloId!)!;

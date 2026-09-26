@@ -482,7 +482,10 @@ export interface ProblemaBem {
 export interface Veiculo {
   id: string;
   tipo: 'veiculo';
+  /** A classe (compacto, SUV, moto pequena...: `VEICULOS`). */
   modeloId: string;
+  /** A versão concreta (marca e modelo: `VERSOES_VEICULO`); saves antigos não têm. */
+  versaoId?: string;
   nome: string;
   valor: number;
   tCompra: number;

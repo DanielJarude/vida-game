@@ -28,6 +28,7 @@ import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { esquecerFrentes, habilidade, praticar } from './frentes';
 import { cabeNaSemana } from './semana';
 import type { Categoria } from '../dados/frentes';
+import { categoriaDoVeiculo } from './veiculos';
 
 export type CategoriaAtividade = Categoria | 'corpo' | 'lazer' | 'renda' | 'cuidado';
 
@@ -419,10 +420,10 @@ export const ROTINAS: readonly ModeloRotina[] = [
     niveis: [{ rotulo: 'Nas horas vagas', tempo: 1, custo: 0 }],
     requer: v => {
       if (!v.trabalho.licencas.includes('cnh')) return 'Precisa de carteira de motorista.';
-      return v.financas.bens.some(b => b.tipo === 'veiculo' && (b.modeloId.startsWith('moto') || b.modeloId.startsWith('carro')) && !b.parado && (b.problema?.gravidade ?? 0) < 3) ? true : 'Precisa de uma moto ou um carro rodando.';
+      return v.financas.bens.some(b => b.tipo === 'veiculo' && (categoriaDoVeiculo(b) === 'moto' || categoriaDoVeiculo(b) === 'carro') && !b.parado && (b.problema?.gravidade ?? 0) < 3) ? true : 'Precisa de uma moto ou um carro rodando.';
     },
-    renda: v => (v.financas.bens.some(b => b.tipo === 'veiculo' && b.modeloId.startsWith('carro') && !b.parado) ? 1300 : 950),
-    efeito: v => { for (const b of v.financas.bens) if (b.tipo === 'veiculo' && !b.parado && !b.modeloId.startsWith('bike')) b.estado = Math.max(0, b.estado - 4); }
+    renda: v => (v.financas.bens.some(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) === 'carro' && !b.parado) ? 1300 : 950),
+    efeito: v => { for (const b of v.financas.bens) if (b.tipo === 'veiculo' && !b.parado && categoriaDoVeiculo(b) !== 'bicicleta') b.estado = Math.max(0, b.estado - 4); }
   },
   {
     id: 'tocar_na_noite', nome: 'Tocar em bares e festas', descricao: 'Voz e violão, banda de baile, casamento. Paga por noite.', categoria: 'renda', idadeMin: 16,

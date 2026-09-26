@@ -15,7 +15,7 @@ import type { ProblemaBem, Veiculo, Vida } from '../tipos';
 import { escrever } from '../nucleo';
 import { anoDe } from '../tempo';
 import { economiaLocal } from '../dados/lugares';
-import { depreciacao, modeloVeiculo, type ModeloVeiculo } from '../dados/bens';
+import { depreciacao, modeloVeiculo, nomeDaVersao, versaoVeiculo, type CategoriaVeiculo, type ModeloVeiculo } from '../dados/bens';
 import { dinheiro as fmt } from '../texto';
 import { abalar } from './abalo';
 
@@ -24,8 +24,23 @@ export const veiculoUtil = (b: { tipo: string; parado?: boolean; problema?: Prob
 
 export const veiculos = (v: Vida) => v.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo');
 
+/** Carro, moto ou bicicleta — pela classe (vale para ids antigos, como `moto_usada`). */
+export const categoriaDoVeiculo = (b: { modeloId: string } | string): CategoriaVeiculo => modeloVeiculo(typeof b === 'string' ? b : b.modeloId).categoria;
+
+/** A versão concreta (marca e modelo), quando o veículo tem uma. */
+export const versaoDoVeiculo = (b: { versaoId?: string }) => versaoVeiculo(b.versaoId);
+
+/** O nome para mostrar: marca e modelo da versão ("Fiat Mobi"); sem versão, o nome guardado. */
+export const nomeDoVeiculo = (b: { versaoId?: string; nome: string }) => { const x = versaoVeiculo(b.versaoId); return x ? nomeDaVersao(x) : b.nome; };
+
+/** Quanto custa um igual zero quilômetro (a versão, senão a classe). */
+export const precoNovoDoVeiculo = (b: { modeloId: string; versaoId?: string }) => versaoVeiculo(b.versaoId)?.preco ?? modeloVeiculo(b.modeloId).preco;
+
+/** Combustível e manutenção básica por mês (a versão ajusta a classe). */
+export const usoMensalDoVeiculo = (b: { modeloId: string; versaoId?: string }) => versaoVeiculo(b.versaoId)?.usoMensal ?? modeloVeiculo(b.modeloId).usoMensal;
+
 /** Tem condução própria que funciona (carro ou moto). */
-export const temConducao = (v: Vida) => veiculos(v).some(b => veiculoUtil(b) && !b.modeloId.startsWith('bike'));
+export const temConducao = (v: Vida) => veiculos(v).some(b => veiculoUtil(b) && categoriaDoVeiculo(b) !== 'bicicleta');
 
 export const anosDoVeiculo = (v: Vida, b: Veiculo) => Math.max(0, anoDe(v.t) - (b.anoFabricacao ?? anoDe(b.tCompra)));
 
@@ -35,10 +50,10 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export function custosDeVeiculo(v: Vida, b: Veiculo, c: number): { rotulo: string; valor: number }[] {
   const m = modeloVeiculo(b.modeloId);
   const out: { rotulo: string; valor: number }[] = [];
-  const nome = cap(m.nome);
+  const nome = cap(nomeDoVeiculo(b));
   if (!b.parado && veiculoUtil(b)) {
     const idadeFator = 1 + Math.min(0.35, anosDoVeiculo(v, b) * 0.015);
-    out.push({ rotulo: `${nome}: combustível e manutenção`, valor: m.usoMensal * c * idadeFator * (b.estado < 40 ? 1.3 : 1) });
+    out.push({ rotulo: `${nome}: combustível e manutenção`, valor: usoMensalDoVeiculo(b) * c * idadeFator * (b.estado < 40 ? 1.3 : 1) });
   }
   if (m.taxaAnual) out.push({ rotulo: `${nome}: IPVA${b.parado ? '' : ' e seguro'}`, valor: b.valor * (b.parado ? 0.035 : m.taxaAnual) / 12 });
   return out;
@@ -71,12 +86,11 @@ const PROBLEMAS: Record<ModeloVeiculo['categoria'], { texto: string; gravidade: 
 function sortearProblema(v: Vida, r: Rng, b: Veiculo): ProblemaBem {
   const m = modeloVeiculo(b.modeloId);
   let lista = PROBLEMAS[m.categoria];
-  if (m.id === 'bike') lista = lista.filter(p => !p.texto.includes('bateria'));
+  if (m.categoria === 'bicicleta' && !m.eletrica) lista = lista.filter(p => !p.texto.includes('bateria'));
   // Estado ruim puxa para os problemas graves.
   const grave = b.estado < 40 || anosDoVeiculo(v, b) > 12;
   const p = r.weighted(lista, x => (x.gravidade === 3 ? (grave ? 1.2 : 0.35) : x.gravidade === 2 ? 1 : 1.4))!;
-  const fator = m.id === 'carro_luxo' ? 2.4 : m.id === 'carro_suv_grande' ? 1.4 : m.id === 'carro_suv' || m.id === 'carro_sedan' ? 1.2 : 1;
-  const custo = Math.round(Math.min(r.int(p.custo[0], p.custo[1]) * fator * Math.sqrt(economiaLocal(v.moradia.municipioId).custo), m.preco * 0.45) / 10) * 10;
+  const custo = Math.round(Math.min(r.int(p.custo[0], p.custo[1]) * m.fatorConserto * Math.sqrt(economiaLocal(v.moradia.municipioId).custo), precoNovoDoVeiculo(b) * 0.45) / 10) * 10;
   return { id: `pb${v.seq++}`, texto: p.texto, custo, desde: v.t, gravidade: p.gravidade, adiado: 0 };
 }
 
@@ -85,7 +99,7 @@ export function processarVeiculos(v: Vida, r: Rng): void {
   for (const b of veiculos(v)) {
     const m = modeloVeiculo(b.modeloId);
     const anos = anosDoVeiculo(v, b);
-    const novo = m.preco;
+    const novo = precoNovoDoVeiculo(b);
     // Vale o que um igual, da mesma idade e estado, vale no mercado.
     b.valor = Math.round(novo * depreciacao(m, anos) * (0.8 + b.estado / 500) / 100) * 100;
     const revisado = b.tRevisao !== undefined && v.t - b.tRevisao <= 12;
@@ -99,11 +113,11 @@ export function processarVeiculos(v: Vida, r: Rng): void {
         p.custo = Math.round(p.custo * 1.25 / 10) * 10;
         // Bicicleta não "quebra de vez": o problema fica, mas não vira motor fundido.
         const teto = m.categoria === 'bicicleta' ? 2 : 3;
-        p.custo = Math.min(p.custo, Math.round(m.preco * 0.45 / 10) * 10);
+        p.custo = Math.min(p.custo, Math.round(novo * 0.45 / 10) * 10);
         if (p.gravidade < teto && !b.parado && r.chance(p.gravidade === 1 ? 0.35 : 0.4)) {
           p.gravidade = (p.gravidade + 1) as 1 | 2 | 3;
           if (p.gravidade === 3) {
-            p.custo = Math.round(Math.min(Math.max(p.custo * 1.6, m.preco * 0.05), m.preco * 0.45) / 10) * 10;
+            p.custo = Math.round(Math.min(Math.max(p.custo * 1.6, novo * 0.05), novo * 0.45) / 10) * 10;
             escrever(v, { texto: `${cap(textoVeiculo(b))} parou de vez: o que era ${p.texto} virou coisa grande. Na oficina, ${fmt(p.custo)}.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'ruim' });
             abalar(v, `${textoVeiculo(b)} parado`, -2, 5);
           }
@@ -126,7 +140,10 @@ export function processarVeiculos(v: Vida, r: Rng): void {
   }
 }
 
+/** "o Fiat Mobi", "a Honda CG 160 Fan"; sem versão, "o carro compacto", "a moto pequena". */
 export function textoVeiculo(b: Veiculo): string {
+  const x = versaoVeiculo(b.versaoId);
+  if (x) return `${x.artigo} ${nomeDaVersao(x)}`;
   const m = modeloVeiculo(b.modeloId);
   return m.categoria === 'carro' ? `o ${m.nome}` : `a ${m.nome}`;
 }
@@ -162,7 +179,7 @@ export function disponibilidadeVeiculo(v: Vida, b: Veiculo | undefined, oque: Ac
   }
 }
 
-export const custoRevisao = (v: Vida, b: Veiculo) => Math.round(modeloVeiculo(b.modeloId).usoMensal * 1.4 * Math.sqrt(economiaLocal(v.moradia.municipioId).custo) / 10) * 10;
+export const custoRevisao = (v: Vida, b: Veiculo) => Math.round(usoMensalDoVeiculo(b) * 1.4 * Math.sqrt(economiaLocal(v.moradia.municipioId).custo) / 10) * 10;
 
 export function executarVeiculo(v: Vida, b: Veiculo, oque: AcaoVeiculo): string {
   switch (oque) {

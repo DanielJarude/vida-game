@@ -19,7 +19,7 @@ import { dinheiro as fmt } from '../texto';
 import { abalar } from './abalo';
 import { voltarParaCasaDosPais } from './moradia';
 import { mesesRestantes, parcelaPrice, rendaPropriaMensal } from './dinheiro';
-import { valorDeVenda } from './veiculos';
+import { textoVeiculo, valorDeVenda } from './veiculos';
 import { valorDeVendaImovel } from './imoveis';
 import { modeloMoradia } from '../dados/bens';
 import { aluguelDe, ofertasDeImoveis } from './mercado';
@@ -131,7 +131,7 @@ function buscaEApreensao(v: Vida, d: Divida): void {
   const resto = Math.max(0, d.saldo - leilao);
   f.dividas = f.dividas.filter(x => x.id !== d.id);
   if (resto > 0) f.dividas.push({ id: `d${v.seq++}`, tipo: 'emprestimo', saldo: resto, jurosMes: 0.015, parcela: Math.max(200, Math.round(resto / 36)), descricao: 'O que sobrou do financiamento do veículo', tInicio: v.t, prazo: 36 });
-  escrever(v, { texto: `Com as parcelas atrasadas, o banco foi buscar ${b?.nome ? `o ${b.nome}` : 'o veículo'}.${resto > 0 ? ` O leilão não cobriu tudo: ficaram ${fmt(resto)} de dívida.` : ''}`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
+  escrever(v, { texto: `Com as parcelas atrasadas, o banco foi buscar ${b && b.tipo === 'veiculo' ? textoVeiculo(b) : 'o veículo'}.${resto > 0 ? ` O leilão não cobriu tudo: ficaram ${fmt(resto)} de dívida.` : ''}`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
   abalar(v, 'a perda do carro', -6, 10);
 }
 
