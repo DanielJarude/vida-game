@@ -721,7 +721,8 @@ export interface Capacidade {
 }
 
 export function capacidade(v: Vida, valor: number): Capacidade {
-  const conta = Math.max(0, v.financas.conta);
+  // A conta de verdade: se está no negativo, o que falta inclui tirar do vermelho.
+  const conta = Math.round(v.financas.conta);
   const aplicado = totalAplicado(v);
   const falta = Math.max(0, Math.round(valor - conta));
   if (falta <= 0) return { situacao: 'tem', conta, falta: 0, aplicado, naBaixa: [] };

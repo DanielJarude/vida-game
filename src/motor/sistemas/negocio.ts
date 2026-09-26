@@ -183,7 +183,7 @@ export function abrirNegocio(v: Vida, r: Rng, id: string, opcoes: OpcoesAbertura
     e.salario = retiradaMensal(v, n);
   }
   const como = pequeno ? ', começando pequeno, em casa' : op.modo === 'emprestimo' ? ', com um empréstimo do banco' : '';
-  const lado = paralela ? (nomeAnterior ? ` Sem largar o trabalho de ${nomeAnterior}: o negócio fica para as horas vagas.` : ' Nas horas vagas, ao lado dos estudos.') : '';
+  const lado = paralela ? (nomeAnterior ? ` Sem largar o trabalho de ${nomeAnterior}: o negócio fica para as horas vagas.` : (v.educacao.matricula ? ' Nas horas vagas, ao lado dos estudos.' : ' Por enquanto, nas horas vagas.')) : '';
   const texto = `Abriu ${t.nome}${op.socioId && v.pessoas[op.socioId] ? ` com ${v.pessoas[op.socioId].nome}` : ''}${como}: ${n.nome}, em ${municipio(v.moradia.municipioId).nome}. ${op.modo === 'emprestimo' ? `A dívida: ${fmt(v.financas.dividas.find(d => d.id === dividaId)!.saldo)}.` : `Pôs ${fmt(custo)} do próprio bolso.`}${lado}`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true, pessoas: op.socioId ? [op.socioId] : undefined });
   marcar(v, 'negocio_aberto', texto, 3, { ocupacaoId: oc.id, pessoaId: op.socioId });
@@ -216,14 +216,18 @@ export function passarParaHorasVagas(v: Vida, n: Negocio, motivo = ''): void {
 
 /** Passa a se dedicar só ao negócio (quem chama já resolveu o emprego de antes). */
 export function dedicarAoNegocio(v: Vida, r: Rng, n: Negocio): void {
-  if (dedicacaoDe(n) === 'integral' && v.trabalho.atual?.ocupacaoId === n.ocupacaoId) return;
+  if (dedicacaoDe(n) === 'integral' && !n.passivo && v.trabalho.atual?.ocupacaoId === n.ocupacaoId) return;
+  const voltou = !!n.passivo;
+  n.passivo = undefined;
+  n.ficouEm = undefined;
+  if (v.caminhos.politica?.anterior?.negocio) v.caminhos.politica.anterior = undefined;
   const oc = ocupacao(n.ocupacaoId);
   const e = contratar(v, r, oc, 'negocio');
   e.clientela = n.clientela;
   e.empregador = n.nome;
   n.dedicacao = 'integral';
   e.salario = retiradaMensal(v, n);
-  escrever(v, { texto: `Passou a viver só de ${n.nome}: o negócio virou o trabalho de todo dia.`, relevancia: 'marco', tema: 'trabalho', escolha: true });
+  escrever(v, { texto: voltou ? `Voltou a tocar ${n.nome} todo dia: o negócio saiu das mãos da equipe.` : `Passou a viver só de ${n.nome}: o negócio virou o trabalho de todo dia.`, relevancia: 'marco', tema: 'trabalho', escolha: true });
   marcar(v, 'mudanca_carreira', `Dedicou-se de vez a ${n.nome}.`, 2, { ocupacaoId: oc.id });
 }
 

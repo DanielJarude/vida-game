@@ -29,12 +29,13 @@ import { clamp } from '../rng';
 import type { EstagioRomance, Genero, Pessoa, Romance, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, parceiro, vinculosVivos } from '../nucleo';
 import { compatibilidade } from './social';
-import { flex } from '../texto';
+import { flex, listaNatural } from '../texto';
 import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidade';
 import { aplicarPersonalidade } from '../personalidade';
 import { filhosEmComum } from './vinculos';
 import { abalar } from './abalo';
 import { ficouSabendo, registrarSegredo } from './exposicao';
+import { semOcupacao } from './trabalho';
 
 const ESTAGIOS_ATIVOS: EstagioRomance[] = ['saindo', 'namoro', 'morando_junto', 'casamento'];
 
@@ -176,7 +177,7 @@ export function processarRomance(v: Vida, r: Rng): void {
     alvo += (vin.confianca - 60) / 8;
     if (v.financas.negativado) alvo -= 8;
     // Desemprego longo pesa na relação; uma pausa combinada para cuidar da casa, não.
-    const semTrabalho = !v.trabalho.atual && !v.trabalho.aposentadoria && !v.trabalho.pausa && !v.educacao.matricula && v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde >= 24;
+    const semTrabalho = semOcupacao(v) && !v.trabalho.aposentadoria && !v.trabalho.pausa && !v.educacao.matricula && v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde >= 24;
     if (semTrabalho) alvo -= 5;
     // O que se esconde da parceria (um dinheiro por fora) também.
     if (v.caminhos.envolvimento && v.caminhos.envolvimento.parou === undefined) alvo -= 4;
@@ -321,6 +322,12 @@ export function terminar(v: Vida, p: Pessoa, vin: Vinculo, quem: 'jogador' | 'el
     lembrarCom(v, f.id, i < 18 ? `Você e ${p.nome} se separaram quando ${flex(f.genero, 'ele', 'ela', 'elu')} tinha ${i} anos.` : `Viu os pais se separarem, já adult${flex(f.genero, 'o', 'a', 'e')}.`, 'conflito', 2);
     if (i >= 6 && i < 25) f.aperto = { tipo: 'separacao', t: v.t };
     if (motivo === 'traicao' && i >= 10) { vf.tensao = clamp(vf.tensao + 20); vf.confianca = clamp(vf.confianca - 15); }
+  }
+  // A família de origem também atravessa: quem é próximo fica por perto (e a linha diz quem).
+  if (moravam) {
+    const perto = vinculosVivos(v).filter(x => ['mae', 'pai', 'irmao', 'meio_irmao'].includes(x.vin.parentesco ?? '') && !x.p.especie && x.vin.proximidade >= 50 && x.vin.tensao < 50 && idadePessoa(v, x.p) >= 14);
+    for (const x of perto) { x.vin.proximidade = clamp(x.vin.proximidade + 3); lembrarCom(v, x.p.id, `Esteve por perto quando você se separou de ${p.nome}.`, 'apoio', 2); }
+    if (perto.length) escrever(v, { texto: `Na separação, ${listaNatural(perto.slice(0, 3).map(x => x.p.nome))} ${perto.length === 1 ? 'ficou' : 'ficaram'} por perto.`, relevancia: 'biografia', tema: 'familia', pessoas: perto.slice(0, 3).map(x => x.p.id) });
   }
   if (moravam) dividirVida(v, p, era);
 }

@@ -36,6 +36,7 @@ import {
 } from './negocio';
 import type { AcaoProfissional } from './profissao';
 import { seguranca } from './dinheiro';
+import { municipio } from '../dados/lugares';
 
 /* ================================================================== Ações */
 
@@ -125,7 +126,8 @@ export function acoesDoNegocio(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   }
   for (const f of n.equipe ?? []) { const q = v.pessoas[f.pessoaId]; if (q) add({ id: `demitir_${q.id}`, rotulo: `Demitir ${q.nome}`, porque: apertado ? 'A folha pesa mais do que o movimento paga.' : undefined, acao: P('demitir', { pessoaId: q.id }), peso: apertado ? 4 : 0 }); }
   // A vida em volta do negócio.
-  if (paralela) add({ id: 'dedicacao', rotulo: `Dedicar-se só a ${n.nome}`, porque: n.clientela >= 50 ? 'Nas horas vagas, o negócio já não cabe.' : undefined, acao: P('dedicacao', { valor: 'integral' }), peso: n.clientela >= 50 ? 5 : 1 });
+  if (n.passivo && !v.caminhos.politica?.mandato && (!n.ficouEm || n.ficouEm === v.moradia.municipioId)) add({ id: 'dedicacao', rotulo: `Voltar a tocar ${n.nome} todo dia`, porque: 'Hoje ele está nas mãos da equipe; de volta ao balcão, a retirada é sua.', acao: P('dedicacao', { valor: 'integral' }), peso: 5 });
+  else if (paralela || (!n.passivo && !donoIntegral(v))) add({ id: 'dedicacao', rotulo: `Dedicar-se só a ${n.nome}`, porque: n.clientela >= 50 ? 'Nas horas vagas, o negócio já não cabe.' : undefined, acao: P('dedicacao', { valor: 'integral' }), peso: n.clientela >= 50 ? 5 : 1 });
   else if (donoIntegral(v) && podeTocarNasHorasVagas(v, n)) add({ id: 'dedicacao', rotulo: `Passar ${n.nome} para as horas vagas`, porque: 'Para ter outro trabalho, ou mais vida fora dele.', acao: P('dedicacao', { valor: 'paralela' }), peso: 0 });
   add({ id: 'vender', rotulo: parteDoSocio(n) ? 'Vender a sua parte' : 'Vender o negócio', porque: idade(v) >= 60 ? 'Passar adiante enquanto vale.' : undefined, acao: P('vender'), peso: idade(v) >= 60 ? 5 : 0 });
   add({ id: 'fechar', rotulo: p === 'online' ? 'Tirar a loja do ar' : 'Fechar o negócio', acao: P('fechar'), peso: 0, saida: true });
@@ -161,8 +163,12 @@ export function disponibilidadeGestao(v: Vida, oque: OqueGestao, valor?: string)
       return PERMITIDO;
     }
     case 'dedicacao':
-      if (valor === 'integral') return dedicacaoDe(n) === 'paralela' ? PERMITIDO : bloqueio('impossivel', 'Já é o seu trabalho de todo dia.');
-      if (valor === 'paralela') return donoIntegral(v) ? (podeTocarNasHorasVagas(v, n) ? PERMITIDO : bloqueio('requisito', 'Sem ninguém para abrir a porta todo dia, o negócio não anda nas horas vagas: primeiro, alguém na equipe.')) : bloqueio('impossivel', 'Já está nas horas vagas.');
+      if (valor === 'integral') {
+        if (n.ficouEm && n.ficouEm !== v.moradia.municipioId) return bloqueio('requisito', `${n.nome} ficou em ${municipio(n.ficouEm).nome}: de longe, não dá para tocar todo dia.`);
+        if (n.passivo && v.caminhos.politica?.mandato) return bloqueio('incompativel', 'Durante o mandato, o negócio fica nas mãos da equipe.');
+        return donoIntegral(v) === n && !n.passivo ? bloqueio('impossivel', 'Já é o seu trabalho de todo dia.') : PERMITIDO;
+      }
+      if (valor === 'paralela') return n.passivo ? bloqueio('impossivel', 'Está nas mãos da equipe.') : donoIntegral(v) ? (podeTocarNasHorasVagas(v, n) ? PERMITIDO : bloqueio('requisito', 'Sem ninguém para abrir a porta todo dia, o negócio não anda nas horas vagas: primeiro, alguém na equipe.')) : bloqueio('impossivel', 'Já está nas horas vagas.');
       return bloqueio('impossivel', 'Não se aplica.');
     case 'comprar_parte': {
       if (!n.socioId) return bloqueio('impossivel', 'Não há sócio.');

@@ -24,7 +24,7 @@ import { abalar } from './abalo';
 import { aplicarPersonalidade } from '../personalidade';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { podeComecarRotina } from './rotinas';
-import { textoVeiculo, usoMensalDoVeiculo, veiculoUtil } from './veiculos';
+import { gv, textoVeiculo, usoMensalDoVeiculo, veiculoUtil } from './veiculos';
 
 export type UsoVeiculo = 'passear' | 'viajar' | 'app' | 'personalizar' | 'emprestar';
 export type UsoCasa = 'festa' | 'familia' | 'decorar' | 'reformar';
@@ -148,7 +148,7 @@ export function executarUsoVeiculo(v: Vida, r: Rng, b: Veiculo, oque: UsoVeiculo
       const sorte = r.next();
       if (sorte < 0.72) {
         if (vin) { vin.proximidade = clamp(vin.proximidade + 4); vin.confianca = clamp(vin.confianca + 4); }
-        lembrarCom(v, a.id, `Pegou ${textoVeiculo(b)} emprestado e devolveu de tanque cheio.`, 'apoio', 1);
+        lembrarCom(v, a.id, `Pegou ${textoVeiculo(b)} ${gv(b, 'emprestado', 'emprestada')} e devolveu de tanque cheio.`, 'apoio', 1);
         return `${a.nome} devolveu no dia combinado, de tanque cheio e com uma caixa de bombom no banco.`;
       }
       if (sorte < 0.92) {
@@ -160,9 +160,9 @@ export function executarUsoVeiculo(v: Vida, r: Rng, b: Veiculo, oque: UsoVeiculo
       b.estado = clamp(b.estado - 15);
       b.problema = { id: `pb${v.seq++}`, texto: 'a lataria amassada e o farol quebrado', custo: Math.round(Math.max(1200, b.valor * 0.06) / 10) * 10, desde: v.t, gravidade: 1, adiado: 0 };
       if (vin) { vin.confianca = clamp(vin.confianca - 15); vin.tensao = clamp(vin.tensao + 15); }
-      hist(`Voltou batido de um empréstimo para ${a.nome}.`);
+      hist(`Voltou ${gv(b, 'batido', 'batida')} de um empréstimo para ${a.nome}.`);
       lembrarCom(v, a.id, `Bateu ${textoVeiculo(b)} que você emprestou — e sumiu.`, 'conflito', 2);
-      abalar(v, `${textoVeiculo(b)} batido`, -3, 4);
+      abalar(v, `${textoVeiculo(b)} ${gv(b, 'batido', 'batida')}`, -3, 4);
       return `${a.nome} bateu ${textoVeiculo(b)} e demorou uma semana para contar. O conserto ficou com você.`;
     }
   }

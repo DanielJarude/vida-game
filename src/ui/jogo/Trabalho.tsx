@@ -193,6 +193,8 @@ function ContaDoNegocioAno({ vida }: { vida: Vida }) {
   const socio = n.socioId ? Math.round(lucro * parteDoSocio(n) / 100) * 100 : 0;
   const ficou = fechado ? n.resultadoAno ?? 0 : k.resultado;
   const custos = Math.max(0, faturamento - lucro);
+  // Só o que a conta pessoal cobriu saiu do bolso; o resto o caixa absorveu. (Antes do fechamento, a estimativa: o que o caixa não cobre.)
+  const bolso = fechado ? n.devolvidoAno ?? 0 : Math.max(0, -ficou - Math.max(0, n.caixa ?? 0));
   const s = n.socioId ? vida.pessoas[n.socioId] : undefined;
   const paralela = dedicacaoDe(n) === 'paralela' || n.passivo;
   return (
@@ -203,7 +205,7 @@ function ContaDoNegocioAno({ vida }: { vida: Vida }) {
         <Dado rotulo="Custos">{dinheiroCurto(custos)}<small> (mercadoria, ponto, contas{(n.equipe?.length ?? 0) > 0 ? ', equipe' : ''})</small></Dado>
         <Dado rotulo={lucro >= 0 ? 'Lucro' : 'Prejuízo'}>{dinheiroCurto(Math.abs(lucro))}{s && socio !== 0 ? <small> · {Math.round(parteDoSocio(n) * 100)}% são de {s.vivo ? s.nome : `herdeiros de ${s.nome}`} ({dinheiroCurto(Math.abs(socio))})</small> : null}</Dado>
         <Dado rotulo="Sua retirada">{paralela ? 'sem retirada fixa — o que é seu fica no caixa' : retirada > 0 ? <>{dinheiroCurto(retirada)} no ano<small> (≈ {dinheiroCurto(Math.round(retirada / 12 / 10) * 10)}/mês, para viver)</small></> : 'nada: o negócio não rendeu para isso'}</Dado>
-        <Dado rotulo={ficou >= 0 ? 'Ficou no caixa' : 'Faltou'}>{dinheiroCurto(Math.abs(ficou))}{ficou < 0 ? <small> (saiu do seu bolso)</small> : <small> (reserva e reinvestimento)</small>}</Dado>
+        <Dado rotulo={ficou >= 0 ? 'Ficou no caixa' : 'Faltou'}>{dinheiroCurto(Math.abs(ficou))}{ficou < 0 ? <small>{bolso > 0 ? ` (${bolso >= -ficou - 50 ? 'saiu do seu bolso' : `${dinheiroCurto(bolso)} saíram do seu bolso; o resto, do caixa`})` : ' (saiu do caixa)'}</small> : <small> (reserva e reinvestimento)</small>}</Dado>
       </dl>
     </section>
   );

@@ -11,7 +11,7 @@ import { dinheiro as fmt, flex } from '../texto';
 import { estresse, custa } from './efeitos';
 import { podeRenegociarFinanciamento, renegociarFinanciamento } from '../sistemas/obrigacoes';
 import { pagar } from '../sistemas/dinheiro';
-import { valorDeVenda, textoVeiculo } from '../sistemas/veiculos';
+import { gv, valorDeVenda, textoVeiculo } from '../sistemas/veiculos';
 import { valorDeVendaImovel } from '../sistemas/imoveis';
 import { aluguelDe } from '../sistemas/mercado';
 import { modeloMoradia } from '../dados/bens';
@@ -83,7 +83,7 @@ export const MATERIAL: Conteudo[] = [
         c.v.financas.bens = c.v.financas.bens.filter(x => x.id !== b.id);
         c.v.financas.dividas = c.v.financas.dividas.filter(x => x.bemId !== b.id);
         c.v.financas.conta += liquido;
-        return { texto: `Vendeu para um mecânico por ${fmt(Math.max(0, valorDeVenda(b)))}.`, memoria: `Vendeu ${textoVeiculo(b)} quebrado, depois de ${Math.max(1, Math.round((c.v.t - b.tCompra) / 12))} anos.`, relevancia: 'cotidiano' };
+        return { texto: `Vendeu para um mecânico por ${fmt(Math.max(0, valorDeVenda(b)))}.`, memoria: `Vendeu ${textoVeiculo(b)} ${gv(b, 'quebrado', 'quebrada')}, depois de ${Math.max(1, Math.round((c.v.t - b.tCompra) / 12))} anos.`, relevancia: 'cotidiano' };
       }) },
       { id: 'parar', texto: 'Deixar parado por enquanto', resolver: com(carroParado, (_c, b) => { b.parado = true; return { texto: 'Ficou na garagem. Sem conserto, sem condução — e sem gastar com ele, por ora.', memoria: null }; }) }
     ]

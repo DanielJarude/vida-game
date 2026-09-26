@@ -728,3 +728,265 @@ describe('achado da varredura de repetições: morar com o irmão não é uma mu
     expect(vezes).toBeLessThanOrEqual(1);
   }, 30000);
 });
+
+/* ================================================ Auditoria independente */
+
+describe('achados da auditoria independente do FIX #4', () => {
+  function salao(municipioId = 'salvador-ba', equipe = true) {
+    const v = adulto(40, { semente: 31, municipioId });
+    v.financas.conta = 300000;
+    return transacao(v, (x, r) => {
+      const t = NEGOCIOS.find(k => k.id === 'salao')!;
+      for (const tr of t.trilhas) x.trabalho.experiencia[tr] = 200;
+      const n = abrirNegocio(x, r, 'salao', { modo: 'guardado', dedicacao: 'integral' });
+      n.clientela = 60;
+      if (x.trabalho.atual) x.trabalho.atual.clientela = 60;
+      if (equipe) { const f = pessoaNova(x, 25, 'feminino'); vincular(x, f, { origem: 'trabalho', proximidade: 30 }); n.equipe = [{ pessoaId: f.id, tInicio: x.t, funcao: 'cabeleireira', salario: 1800 }]; }
+    }).vida;
+  }
+
+  it('meia-idade: uma opção paga que a conta não cobre pede o resgate — nada é vendido em silêncio', () => {
+    let v = adulto(50, { semente: 44 });
+    const mae = comParente(v, 'mae', 79, 'feminino', 70).p;
+    mae.saude = 30;
+    v.vinculos[mae.id].convivio = [];
+    v.financas.conta = 60500;
+    v = transacao(v, x => { aplicar(x, 'acoes', 60000); }).vida;
+    expect(v.financas.conta).toBe(500);
+    const d = conteudoPorId('bio_pais_envelhecem')!;
+    if (d.tipo !== 'decisao') throw new Error('decisão');
+    v = transacao(v, (x, r) => { abrirDecisao(x, d, contexto(x, r, { genitor: x.pessoas[mae.id] })); }).vida;
+    const op = v.momento!.opcoes.find(o => o.id === 'cuidadora')!;
+    expect(op.bloqueio).toBeTruthy();
+    expect(op.resgate).toBeGreaterThan(0);
+    const antes = totalAplicado(v);
+    // Sem o clique de resgate, escolher não vende nada.
+    const tentou = executar(v, { tipo: 'decidir', opcaoId: 'cuidadora' });
+    expect(totalAplicado(tentou.vida)).toBe(antes);
+    // Com o clique, vende — e diz.
+    const pagou = executar(v, { tipo: 'decidir', opcaoId: 'cuidadora', resgatar: true }).vida;
+    expect(totalAplicado(pagou)).toBeLessThan(antes);
+    expect(pagou.biografia.some(b => /das aplicações|Tirou/.test(b.texto)) || pagou.financas.razao.some(l => /aplica/i.test(l.rotulo))).toBe(true);
+  });
+
+  it('negócio que ficou em outra cidade não vira "integral" de longe; voltando para lá, dá para retomar', async () => {
+    const { mudarAgora } = await import('../sistemas/processos');
+    const { disponibilidadeGestao } = await import('../sistemas/gestao');
+    let v = salao();
+    v = transacao(v, x => { mudarAgora(x, 'recife-pe', 'para recomeçar'); }).vida;
+    const n = v.caminhos.negocio!;
+    expect(n.passivo).toBe(true);
+    expect(n.ficouEm).toBe('salvador-ba');
+    const d = disponibilidadeGestao(v, 'dedicacao', 'integral');
+    expect(podeTentar(d)).toBe(false);
+    expect(d.motivo).toMatch(/de longe/);
+    v = transacao(v, x => { mudarAgora(x, 'salvador-ba', 'de volta'); }).vida;
+    expect(podeTentar(disponibilidadeGestao(v, 'dedicacao', 'integral'))).toBe(true);
+  });
+
+  it('a prisão que encerra o mandato não deixa o negócio "passivo" para sempre: ao sair, o dono volta ao balcão', async () => {
+    const { processarJustica } = await import('../sistemas/justica');
+    let v = salao('recife-pe');
+    v = transacao(v, x => {
+      const p = entrarNaPolitica(x, 'empresario');
+      p.partido = 'PSD'; p.tFiliacao = x.t - 36; p.fase = 'mandato';
+      p.mandato = { cargo: 'vereador', tInicio: x.t - 12, tFim: x.t + 36, aprovacao: 50, feito: 0 };
+      p.anterior = { emprego: { ...x.trabalho.atual! }, garantido: false, negocio: true };
+      x.caminhos.negocio!.passivo = true;
+      x.trabalho.atual = { ocupacaoId: 'vereador', empregador: 'a Câmara', contrato: 'eletivo', salario: 12000, tInicio: x.t - 12, desempenho: 60, municipioId: x.moradia.municipioId, carga: 'integral' };
+      perderMandatoPorPrisao(x, 'pena');
+      x.trabalho.atual = undefined;
+      x.justica = { antecedentes: [{ t: x.t, categoria: 'fraude', desfecho: 'prisao', anos: 2 }], prisao: { tInicio: x.t - 24, tFim: x.t, regime: 'fechado' } } as NonNullable<typeof x.justica>;
+    }).vida;
+    v = transacao(v, (x, r) => { processarJustica(x, r); }).vida;
+    expect(v.justica?.prisao).toBeUndefined();
+    expect(v.caminhos.negocio!.passivo).toBeFalsy();
+    expect(v.trabalho.atual?.ocupacaoId).toBe(v.caminhos.negocio!.ocupacaoId);
+    expect(v.trabalho.desempregadoDesde).toBeUndefined();
+    expect(modoDoTrabalho(v)).toBe('negocio');
+  });
+
+  it('o dono que saiu da prisão sem outro trabalho não é tratado como desempregado', async () => {
+    const { processarJustica } = await import('../sistemas/justica');
+    let v = salao('recife-pe');
+    v = transacao(v, x => {
+      x.trabalho.atual = undefined;
+      x.justica = { antecedentes: [{ t: x.t, categoria: 'fraude', desfecho: 'prisao', anos: 2 }], prisao: { tInicio: x.t - 24, tFim: x.t, regime: 'fechado' } } as NonNullable<typeof x.justica>;
+    }).vida;
+    v = transacao(v, (x, r) => { processarJustica(x, r); }).vida;
+    expect(v.trabalho.desempregadoDesde).toBeUndefined();
+    v.trabalho.desempregadoDesde = v.t - 40; // mesmo com a marca de um save antigo
+    const d = conteudoPorId('des_longo')!;
+    expect(d.quando!(contexto(v, criarRng(1), {}))).toBe(false);
+  });
+
+  it('renunciar depois do escândalo devolve o dono ao negócio', () => {
+    let v = salao('recife-pe');
+    v = transacao(v, x => {
+      const p = entrarNaPolitica(x, 'empresario');
+      p.partido = 'PSD'; p.fase = 'mandato';
+      p.mandato = { cargo: 'vereador', tInicio: x.t - 12, tFim: x.t + 36, aprovacao: 50, feito: 0 };
+      p.anterior = { emprego: { ...x.trabalho.atual! }, garantido: false, negocio: true };
+      p.escandalo = { t: x.t, tipo: 'caso' };
+      x.fatos['pol_escandalo'] = x.t;
+      x.caminhos.negocio!.passivo = true;
+      x.trabalho.atual = { ocupacaoId: 'vereador', empregador: 'a Câmara', contrato: 'eletivo', salario: 12000, tInicio: x.t - 12, desempenho: 60, municipioId: x.moradia.municipioId, carga: 'integral' };
+    }).vida;
+    const d = conteudoPorId('pol_escandalo')!;
+    if (d.tipo !== 'decisao') throw new Error('decisão');
+    v = transacao(v, (x, r) => { abrirDecisao(x, d, contexto(x, r, {})); }).vida;
+    v = executar(v, { tipo: 'decidir', opcaoId: 'renunciar' }).vida;
+    expect(v.caminhos.politica!.mandato).toBeUndefined();
+    expect(v.caminhos.negocio!.passivo).toBeFalsy();
+    expect(v.trabalho.atual?.ocupacaoId).toBe(v.caminhos.negocio!.ocupacaoId);
+  });
+
+  it('uma prisão não se nega: "Negar tudo" não aparece no escândalo da prisão', () => {
+    let v = adulto(45, { semente: 3 });
+    v = transacao(v, x => { const p = entrarNaPolitica(x, 'comunidade'); p.partido = 'PSD'; p.escandalo = { t: x.t, tipo: 'prisao' }; x.fatos['pol_escandalo'] = x.t; }).vida;
+    const d = conteudoPorId('pol_escandalo')!;
+    if (d.tipo !== 'decisao') throw new Error('decisão');
+    v = transacao(v, (x, r) => { abrirDecisao(x, d, contexto(x, r, {})); }).vida;
+    expect(v.momento!.opcoes.some(o => o.id === 'negar')).toBe(false);
+  });
+
+  it('filho adotado é filho da parceria também: a rede o vê (e o luto chega a ela)', () => {
+    let v = adulto(38, { semente: 12 });
+    const par = comParceiro(v, { estagio: 'casamento', anos: 8, genero: 'feminino' }).p;
+    v = transacao(v, x => { x.processos.push({ tipo: 'adocao', id: 'ado1', tInicio: x.t - 36, tFim: x.t, parceiroId: par.id }); }).vida;
+    v = avancarAno(v).vida;
+    const adotado = Object.keys(v.fatos).filter(k => k.startsWith('adotado_')).map(k => v.pessoas[k.slice(8)])[0];
+    expect(adotado).toBeDefined();
+    expect(adotado.genitores).toEqual(['eu', par.id]);
+    expect(lacoCom(v, par.id, adotado.id)).toBe('filho');
+    expect(quemPerde(v, adotado).some(a => a.p.id === par.id && a.laco === 'filho')).toBe(true);
+  });
+
+  it('save v14 antigo: o filho adotado ganha os pais registrados na migração', () => {
+    let v = adulto(38, { semente: 12 });
+    const par = comParceiro(v, { estagio: 'casamento', anos: 8, genero: 'feminino' }).p;
+    const f = comFilho(v, 5, { casa: true }).p;
+    f.genitores = undefined;
+    v.fatos[`adotado_${f.id}`] = v.t - 12;
+    const raw = JSON.parse(JSON.stringify(v));
+    raw.versao = 13;
+    const r = interpretar(JSON.stringify(raw));
+    if (r.tipo !== 'ok') throw new Error(r.tipo === 'invalido' ? r.motivo : r.tipo);
+    expect(r.vida.pessoas[f.id].genitores).toEqual(['eu', par.id]);
+  });
+
+  it('conta no negativo: o resgate de uma decisão cobre o vermelho e o custo — e não vende duas vezes', () => {
+    let v = adulto(45, { semente: 57 });
+    v.financas.conta = 50000;
+    v = transacao(v, x => { aplicar(x, 'pos_fixado', 50000); }).vida;
+    v.financas.conta = -1500;
+    const par = comParceiro(v, { estagio: 'casamento', anos: 10 }).p;
+    par.aperto = undefined;
+    v.vinculos[par.id].tensao = 50;
+    const d = conteudoPorId('rom_crise')!;
+    if (d.tipo !== 'decisao') throw new Error('decisão');
+    v = transacao(v, (x, r) => { abrirDecisao(x, d, contexto(x, r, { pessoa: x.pessoas[par.id] })); }).vida;
+    const op = v.momento!.opcoes.find(o => o.id === 'terapia')!;
+    expect(op.resgate).toBeGreaterThan(2000); // o custo mais o vermelho
+    expect(podeTentar(disponibilidade(v, { tipo: 'decidir', opcaoId: 'terapia', resgatar: true }))).toBe(true);
+    const antes = totalAplicado(v);
+    const depois = executar(v, { tipo: 'decidir', opcaoId: 'terapia', resgatar: true }).vida;
+    expect(depois.momento?.situacaoId).not.toBe('rom_crise');
+    expect(antes - totalAplicado(depois)).toBeCloseTo(op.resgate!, -2);
+  });
+
+  it('voltar à política não apaga o registro: partidos, escândalo e inelegibilidade continuam', async () => {
+    const { encerrarVidaPolitica } = await import('../sistemas/politica');
+    let v = adulto(50, { semente: 8 });
+    v = transacao(v, x => {
+      const p = entrarNaPolitica(x, 'comunidade');
+      p.partido = 'PSD'; p.partidos = [{ sigla: 'PT', tInicio: x.t - 100, tFim: x.t - 50 }, { sigla: 'PSD', tInicio: x.t - 50 }];
+      p.escandalo = { t: x.t - 12, tipo: 'caso', resposta: 'negou' };
+      p.inelegivelAte = x.t + 96;
+      encerrarVidaPolitica(x, 'por cansaço');
+      entrarNaPolitica(x, 'convite');
+    }).vida;
+    const p = v.caminhos.politica!;
+    expect(p.partidos?.length).toBe(2);
+    expect(p.escandalo?.resposta).toBe('negou');
+    expect(p.inelegivelAte).toBeGreaterThan(v.t);
+  });
+
+  it('eleito e ainda sem posse: a troca de partido não é "livre" — e perder a cadeira leva a posse junto', () => {
+    const v = adulto(40, { semente: 5, municipioId: 'recife-pe' });
+    const x = transacao(v, y => {
+      const p = entrarNaPolitica(y, 'comunidade');
+      p.partido = 'PSD'; p.fase = 'eleito';
+      p.posse = { cargo: 'vereador', t: y.t + 3 };
+    }).vida;
+    expect(regraDaTroca(x).como).toBe('fora_da_janela');
+    expect(regraDaTroca(x).texto).toMatch(/pertence ao partido/);
+    // Várias sementes: quando o partido leva, a posse vai junto.
+    let levou = 0;
+    for (let s = 1; s <= 12; s++) {
+      const y = transacao(x, (z) => { trocarDePartido(z, criarRng(s), 'PL', 2); }).vida;
+      if (ultimo(y.caminhos.politica!.historico)?.resultado === 'cassado') { levou++; expect(y.caminhos.politica!.posse).toBeUndefined(); }
+    }
+    expect(levou).toBeGreaterThan(0);
+    // Prefeito eleito, sem posse: majoritário, o cargo é de quem se elegeu.
+    const pref = transacao(v, y => { const p = entrarNaPolitica(y, 'comunidade'); p.partido = 'PSD'; p.fase = 'eleito'; p.posse = { cargo: 'prefeito', t: y.t + 3 }; }).vida;
+    expect(regraDaTroca(pref).como).toBe('majoritario');
+  });
+
+  it('a explicação da eleição concorda com quem se candidata', () => {
+    const v = adulto(40, { semente: 5, genero: 'feminino', municipioId: 'recife-pe' });
+    const x = transacao(v, y => { const p = entrarNaPolitica(y, 'comunidade'); p.partido = 'PSD'; p.tFiliacao = y.t - 36; p.apoio = 95; p.reputacao = 80; p.fase = 'filiado'; y.fatos['pol_partido_porte'] = 3; }).vida;
+    const e = proximaEleicao(x.t, 'municipal');
+    const txt = perspectiva(x, 'vereador', e.t);
+    expect(txt).toMatch(/favorita/); expect(txt).not.toMatch(/favorito\b/);
+    const pouco = transacao(v, y => { const p = entrarNaPolitica(y, 'comunidade'); p.partido = 'PSD'; p.tFiliacao = y.t - 36; p.apoio = 10; p.reputacao = 2; p.fase = 'filiado'; }).vida;
+    expect(perspectiva(pouco, 'deputado_federal', proximaEleicao(pouco.t, 'geral').t)).not.toMatch(/pouco conhecido\b/);
+  });
+
+  it('retrospectiva: "Deixou uma filha", e não "Deixou 0 filhos e 2 netos"', () => {
+    const v = adulto(80, { semente: 19 });
+    const par = comParceiro(v, { estagio: 'casamento', anos: 50, genero: 'feminino' }).p;
+    const filha = comFilho(v, 50, { casa: false, outroId: par.id, genero: 'feminino' }).p;
+    comNeto(v, filha, 20); comNeto(v, filha, 18);
+    expect(retrospectiva(v).some(f => /^Deixou uma filha e 2 net/.test(f))).toBe(true);
+    filha.vivo = false; filha.tMorte = v.t - 24;
+    const r = retrospectiva(v);
+    expect(r.some(f => /Deixou 0/.test(f))).toBe(false);
+    expect(r.some(f => /Não deixou filhos vivos; deixou 2 net/.test(f))).toBe(true);
+  });
+
+  it('a conta do negócio só diz "saiu do seu bolso" quando saiu mesmo (o caixa cobriu = "saiu do caixa")', () => {
+    const src = readFileSync(join(__dirname, '../../ui/jogo/Trabalho.tsx'), 'utf8');
+    expect(src).toMatch(/devolvidoAno/);
+    expect(src).toMatch(/saiu do caixa/);
+  });
+
+  it('veículo feminino concorda: "a Honda Biz ficou parada"', async () => {
+    const { textoVeiculo, gv } = await import('../sistemas/veiculos');
+    const { VERSOES_VEICULO } = await import('../dados/bens');
+    const biz = VERSOES_VEICULO.find(x => x.artigo === 'a')!;
+    const b = { id: 'b1', tipo: 'veiculo', versaoId: biz.id, modeloId: biz.classe } as unknown as Veiculo;
+    expect(textoVeiculo(b).startsWith('a ')).toBe(true);
+    expect(gv(b, 'parado', 'parada')).toBe('parada');
+  });
+
+  it('viúvo que se casou de novo: a parceria de agora é "a mãe" do filho de vocês (não a que morreu)', async () => {
+    const { conjugeDe } = await import('../sistemas/rede');
+    const v = adulto(60, { semente: 21 });
+    const primeira = comParceiro(v, { estagio: 'casamento', anos: 20, genero: 'feminino' }).p;
+    primeira.vivo = false; primeira.tMorte = v.t - 120;
+    v.vinculos[primeira.id].romance!.fim = 'morte';
+    const segunda = comParceiro(v, { estagio: 'casamento', anos: 8, genero: 'feminino' }).p;
+    expect(conjugeDe(v, 'eu')).toBe(segunda.id);
+  });
+
+  it('a separação de quem morava junto chega à família próxima', async () => {
+    const { terminar } = await import('../sistemas/romance');
+    const v = adulto(45, { semente: 14 });
+    const par = comParceiro(v, { estagio: 'casamento', anos: 15, genero: 'feminino' }).p;
+    const mae = comParente(v, 'mae', 70, 'feminino', 75).p;
+    const x = transacao(v, y => { terminar(y, y.pessoas[par.id], y.vinculos[par.id], 'jogador'); }).vida;
+    expect(x.vinculos[mae.id].historia.some(h => /separou/.test(h.texto))).toBe(true);
+    expect(x.biografia.some(b => /Na separação, .*por perto/.test(b.texto))).toBe(true);
+  });
+});

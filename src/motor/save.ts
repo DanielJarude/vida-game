@@ -383,6 +383,15 @@ export function migrarV13(v: Vida): Vida {
     const irmao = Object.values(x.vinculos).find(w => (w.parentesco === 'irmao' || w.parentesco === 'meio_irmao') && w.convivio.includes('casa') && x.pessoas[w.pessoaId]?.vivo);
     if (irmao) x.moradia.anfitriaoId = irmao.pessoaId;
   }
+  // Filhos adotados chegavam sem pais registrados: a rede não os via (quem os perde, de quem são netos).
+  for (const k of Object.keys(x.fatos)) {
+    if (!k.startsWith('adotado_')) continue;
+    const f = x.pessoas[k.slice('adotado_'.length)];
+    if (!f || f.genitores?.length) continue;
+    const quando = x.fatos[k];
+    const par = Object.values(x.vinculos).find(w => w.romance && (w.romance.estagio === 'casamento' || w.romance.estagio === 'morando_junto' || (w.romance.estagio === 'ex' && w.romance.tEstagio >= quando && w.historia.some(h => h.tipo === 'casa' || h.tipo === 'casamento'))) && (w.romance.tInicio ?? w.tInicio) <= quando);
+    f.genitores = ['eu', ...(par && x.pessoas[par.pessoaId] ? [par.pessoaId] : [])];
+  }
   return x;
 }
 

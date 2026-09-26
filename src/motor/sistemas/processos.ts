@@ -6,7 +6,7 @@
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Processo, Vida } from '../tipos';
-import { escrever, idade, marcarFato, moraCom, novoId, vinculosVivos } from '../nucleo';
+import { escrever, idade, marcarFato, moraCom, novoId, parceiro, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
 import { municipio, nomeLugar } from '../dados/lugares';
 import { encerrarEmprego } from './trabalho';
@@ -86,7 +86,10 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
 
   // O negócio: o que é da cidade fica na cidade (com quem o toque, ou fecha); o que é da internet vai junto.
   const n = negocioAberto(v);
-  if (n && !negocioViaja(n)) negocioFicaParaTras(v, n, origem);
+  // Já tinha ficado para trás noutra cidade: continua lá (e quem volta para lá pode retomá-lo).
+  if (n && n.ficouEm) {
+    if (n.ficouEm === p.destinoId) escrever(v, { texto: `De volta a ${municipio(p.destinoId).nome}, onde está ${n.nome}: dá para voltar a tocar o negócio de perto.`, relevancia: 'biografia', tema: 'trabalho' });
+  } else if (n && !negocioViaja(n)) negocioFicaParaTras(v, n, origem);
   const e = v.trabalho.atual;
   if (e && e.municipioId !== p.destinoId && e.contrato !== 'autonomo' && e.contrato !== 'informal') {
     const nome = nomeOcupacaoId(v, e.ocupacaoId);
@@ -133,6 +136,7 @@ function negocioFicaParaTras(v: Vida, n: Negocio, origem: string): void {
   if (quem) {
     n.dedicacao = 'paralela';
     n.passivo = true;
+    n.ficouEm = origem;
     if (dono) encerrarEmprego(v, 'mudança de cidade');
     escrever(v, { texto: `${n.nome} ficou em ${municipio(origem).nome}, nas mãos ${quem}: de longe, só o que sobra no caixa.`, relevancia: 'biografia', tema: 'trabalho' });
     return;
@@ -151,7 +155,8 @@ export function consequenciasDaMudanca(v: Vida, destinoId: string): string[] {
   const out: string[] = [];
   const aqui = municipio(v.moradia.municipioId).nome;
   const n = negocioAberto(v);
-  if (n && !negocioViaja(n)) {
+  if (n?.ficouEm) out.push(n.ficouEm === destinoId ? `Em ${municipio(destinoId).nome} está ${n.nome}: de lá, dá para voltar a tocar o negócio.` : `${n.nome} continua em ${municipio(n.ficouEm).nome}, nas mãos da equipe.`);
+  else if (n && !negocioViaja(n)) {
     const quem = (n.equipe?.length ?? 0) > 0 ? 'a equipe' : n.socioId && v.pessoas[n.socioId]?.vivo ? v.pessoas[n.socioId].nome : undefined;
     out.push(quem ? `${n.nome} fica em ${aqui}, tocado por ${quem}; você só recebe o que sobrar.` : valorDoNegocio(v, n) > 0 ? `${n.nome} é vendido: não há quem toque o ${presencaDe(n) === 'atendimento' ? 'consultório' : 'ponto'} sem você.` : `${n.nome} fecha: não há quem toque sem você.`);
   } else if (n) out.push(`${n.nome} vai junto: ${presencaDe(n) === 'online' ? 'a loja é na internet' : 'os clientes são atendidos à distância'}.`);
@@ -217,6 +222,9 @@ function concluirAdocao(v: Vida, r: Rng, p: Extract<Processo, { tipo: 'adocao' }
   const idadeCrianca = r.int(1, 8);
   const crianca = criarPessoa(v, r, { genero, idade: idadeCrianca, municipioId: v.moradia.municipioId, sobrenome: v.eu.sobrenome });
   crianca.ocupacao = idadeCrianca >= 4 ? 'estudante' : undefined;
+  // Filho de quem adotou: do jogador e da parceria de agora (a rede — luto, avós, irmãos — passa por aqui).
+  const parId = p.parceiroId && v.pessoas[p.parceiroId]?.vivo ? p.parceiroId : parceiro(v)?.p.id;
+  crianca.genitores = ['eu', ...(parId ? [parId] : [])];
   vincular(v, crianca, { parentesco: 'filho', origem: 'familia', proximidade: 55, convivio: ['casa'] });
   marcarFato(v, `adotado_${crianca.id}`);
   escrever(v, { texto: `Depois de ${Math.round((v.t - p.tInicio) / 12)} anos de espera, ${crianca.nome}, de ${idadeCrianca} ${idadeCrianca === 1 ? 'ano' : 'anos'}, chegou em casa. ${flex(ge(v), 'Pai', 'Mãe', 'Mãe')} por adoção aos ${idade(v)}.`, relevancia: 'marco', tema: 'filhos', tom: 'bom', pessoas: [crianca.id] });

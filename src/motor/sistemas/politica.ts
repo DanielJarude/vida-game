@@ -36,7 +36,7 @@
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Acao } from '../acoes';
-import type { CargoEletivo, Emprego, Pessoa, Prioridade, Vida, VidaPolitica } from '../tipos';
+import type { CargoEletivo, Emprego, Genero, Pessoa, Prioridade, Vida, VidaPolitica } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { municipio, MUNICIPIOS } from '../dados/lugares';
 import { aoPartido, nomeCompletoPartido, oPartido, partidoDe, PARTIDOS_REAIS, peloPartido } from '../dados/partidos';
@@ -150,7 +150,7 @@ export const naPolitica = (v: Vida) => { const f = fasePolitica(v); return f !==
 export const emMandato = (v: Vida) => fasePolitica(v) === 'mandato' && !!v.caminhos.politica?.mandato;
 
 const palavraApoio = (x: number) => (x < 15 ? 'quase ninguém' : x < 35 ? 'um grupo pequeno' : x < 55 ? 'uma base de bairro' : x < 75 ? 'uma base sólida' : 'muita gente');
-const palavraReputacao = (x: number) => (x < 15 ? 'pouco conhecido' : x < 35 ? 'conhecido no bairro' : x < 60 ? 'conhecido na cidade' : x < 80 ? 'nome conhecido no estado' : 'figura pública');
+const palavraReputacao = (x: number, g: Genero) => (x < 15 ? `pouco ${flex(g, 'conhecido', 'conhecida', 'conhecide')}` : x < 35 ? `${flex(g, 'conhecido', 'conhecida', 'conhecide')} no bairro` : x < 60 ? `${flex(g, 'conhecido', 'conhecida', 'conhecide')} na cidade` : x < 80 ? 'nome conhecido no estado' : 'figura pública');
 const palavraAprovacao = (x: number) => (x < 25 ? 'reprovado nas ruas' : x < 42 ? 'desgastado' : x < 58 ? 'dividido' : x < 72 ? 'bem avaliado' : 'muito bem avaliado');
 
 export interface LeituraPolitica {
@@ -202,7 +202,7 @@ function leituraPoliticaBase(v: Vida): LeituraPolitica | undefined {
   if (!p) return undefined;
   const g = ge(v);
   const hist = p.historico.slice(-4).reverse().map(h => `${anoDe(h.t)}: ${nomeCargo(v, h.cargo)} — ${h.resultado === 'eleito' ? flex(g, 'eleito', 'eleita', 'eleite') : h.resultado === 'derrotado' ? 'não se elegeu' : h.resultado === 'renunciou' ? 'renunciou' : h.resultado === 'cassado' ? 'mandato cassado' : 'mandato cumprido'}`);
-  const rep = palavraReputacao(p.reputacao);
+  const rep = palavraReputacao(p.reputacao, g);
   const apoio = palavraApoio(p.apoio);
   const prio = p.prioridade ? NOME_PRIORIDADE[p.prioridade] : undefined;
   const e = eleicaoNaJanela(v);
@@ -321,7 +321,9 @@ export function entrarNaPolitica(v: Vida, origem: VidaPolitica['origem'], forca 
     fase: antiga?.partido ? 'filiado' : 'envolvido', tInicio: v.t, origem,
     partido: antiga?.partido, tFiliacao: antiga?.tFiliacao,
     reputacao: Math.round(Math.max(antiga?.reputacao ?? 0, c.reputacao * forca)), apoio: Math.round(Math.max((antiga?.apoio ?? 0) * 0.6, c.apoio * forca)),
-    desgaste: Math.round((antiga?.desgaste ?? 0) * 0.5), consecutivos: 0, historico: antiga?.historico ?? []
+    desgaste: Math.round((antiga?.desgaste ?? 0) * 0.5), consecutivos: 0, historico: antiga?.historico ?? [],
+    // O que é registro não se apaga com a volta: os partidos por onde passou, o escândalo, a inelegibilidade.
+    partidos: antiga?.partidos, escandalo: antiga?.escandalo, inelegivelAte: antiga?.inelegivelAte
   };
   v.caminhos.politica = p;
   marcar(v, 'politica', antiga ? `Voltou à vida política, aos ${idade(v)}.` : `Entrou na vida política, aos ${idade(v)}.`, 2);
@@ -371,8 +373,13 @@ export function perderMandatoPorPrisao(v: Vida, motivo: 'preventiva' | 'pena'): 
 export function regraDaTroca(v: Vida): { como: 'janela' | 'fora_da_janela' | 'majoritario' | 'sem_mandato'; texto: string } {
   const p = v.caminhos.politica;
   const m = p?.fase === 'mandato' ? p.mandato : undefined;
-  if (!m) return { como: 'sem_mandato', texto: 'Sem mandato, a troca é livre.' };
-  if (m.cargo === 'prefeito' || m.cargo === 'governador' || m.cargo === 'senador') return { como: 'majoritario', texto: `Mandato de ${nomeCargo(v, m.cargo)} é de quem foi eleito: trocar de partido não tira o cargo.` };
+  // Eleito e ainda sem posse: o mandato que vai começar já é do partido pelo qual se elegeu.
+  const posse = p?.posse;
+  if (!m && !posse) return { como: 'sem_mandato', texto: 'Sem mandato, a troca é livre.' };
+  const majoritario = (c: CargoEletivo) => c === 'prefeito' || c === 'governador' || c === 'senador';
+  if (posse && !majoritario(posse.cargo)) return { como: 'fora_da_janela', texto: `Eleito para ${nomeCargo(v, posse.cargo)}, o mandato que vai começar pertence ao partido pelo qual se elegeu: trocando agora, ele pode pedir o cargo na Justiça Eleitoral.` };
+  if (!m) return { como: 'majoritario', texto: `Mandato de ${nomeCargo(v, posse!.cargo)} é de quem foi eleito: trocar de partido não tira o cargo.` };
+  if (majoritario(m.cargo)) return { como: 'majoritario', texto: `Mandato de ${nomeCargo(v, m.cargo)} é de quem foi eleito: trocar de partido não tira o cargo.` };
   const e = eleicaoNaJanela(v);
   if (e && m.tFim <= tDaPosse(e.ano)) return { como: 'janela', texto: 'É a janela partidária do fim do mandato: dá para trocar sem perder o cargo.' };
   return { como: 'fora_da_janela', texto: `Fora da janela partidária, o mandato de ${nomeCargo(v, m.cargo)} pertence ao partido: ele pode pedir o cargo na Justiça Eleitoral.` };
@@ -407,10 +414,12 @@ export function trocarDePartido(v: Vida, r: Rng, nova: string | undefined, porte
   escrever(v, { texto: nova ? `Deixou ${oPartido(antes)} e filiou-se ${aoPartido(nova)}.` : texto, relevancia: p.mandato ? 'marco' : 'biografia', tema: 'trabalho', escolha: true });
   marcar(v, 'politica', nova ? `Trocou de partido: ${partidoDe(antes)?.chamado ?? antes} → ${partidoDe(nova)?.chamado ?? nova}.` : `Saiu ${doPartido(antes)}.`, 2);
   // Fora da janela, o partido de antes pode ir à Justiça pelo mandato proporcional.
-  if (regra.como === 'fora_da_janela' && p.mandato && r.chance(RISCO_FORA_DA_JANELA)) {
-    const m = p.mandato;
+  if (regra.como === 'fora_da_janela' && (p.mandato || p.posse) && r.chance(RISCO_FORA_DA_JANELA)) {
+    // Perde a cadeira que exerce e a que ia assumir (a do partido de antes).
+    const m = p.mandato ?? p.posse!;
     p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'cassado', partido: antes });
     p.mandato = undefined;
+    p.posse = undefined;
     p.consecutivos = 0;
     if (v.trabalho.atual?.contrato === 'eletivo') encerrarEmprego(v, 'perda do mandato por infidelidade partidária');
     p.fase = 'entre_mandatos';
@@ -534,11 +543,11 @@ export function chanceDeVitoria(v: Vida, cargo: CargoEletivo, tEleicao: number):
 export function perspectiva(v: Vida, cargo: CargoEletivo, tEleicao: number): string {
   const conta = fatoresDaEleicao(v, cargo, tEleicao, 12);
   const txt = explicarEleicao(v, { cargo, resultado: 'perspectiva', fatores: conta.fatores.filter(k => k.id !== 'mare'), chance: conta.chance }).replace(/ Chegou .*$| Uma disputa .*$/, '');
-  return `Hoje, ${palavraDaChance(conta.chance)} (com uma campanha média). ${txt}`.trim();
+  return `Hoje, ${palavraDaChance(conta.chance, ge(v))} (com uma campanha média). ${txt}`.trim();
 }
 
 /** A chance em palavras (antes de registrar, e na explicação). */
-export const palavraDaChance = (x: number) => (x >= 0.75 ? 'favorito' : x >= 0.5 ? 'com boa chance' : x >= 0.3 ? 'disputado' : x >= 0.12 ? 'azarão' : 'quase sem chance');
+export const palavraDaChance = (x: number, g: Genero = 'masculino') => (x >= 0.75 ? flex(g, 'favorito', 'favorita', 'favorite') : x >= 0.5 ? 'com boa chance' : x >= 0.3 ? 'numa disputa aberta' : x >= 0.12 ? 'azarão' : 'quase sem chance');
 
 /** Cada fator em palavras, pelo lado em que pesou. */
 function palavraDoFator(v: Vida, id: IdFator, valor: number, cargo: CargoEletivo): string {
@@ -547,7 +556,7 @@ function palavraDoFator(v: Vida, id: IdFator, valor: number, cargo: CargoEletivo
   const p = v.caminhos.politica!;
   switch (id) {
     case 'base': return valor < 0 ? `uma base pequena para ${cargo === 'vereador' ? 'a disputa' : `disputar ${nomeCargo(v, cargo)}`} ${lugar}` : valor >= 36 ? 'uma base grande' : 'a base que você construiu';
-    case 'nome': return valor < 0 ? `ainda ser pouco conhecido ${lugar}` : valor >= 12 ? 'o nome conhecido' : 'o nome que começa a circular';
+    case 'nome': return valor < 0 ? `ainda ser pouco ${flex(ge(v), 'conhecido', 'conhecida', 'conhecide')} ${lugar}` : valor >= 12 ? 'o nome conhecido' : 'o nome que começa a circular';
     case 'campanha': return valor >= 7 ? 'a campanha forte' : valor >= 3 ? 'a campanha' : 'uma campanha fraca';
     case 'desgaste': return p.escandalo ? 'o desgaste acumulado' : 'o desgaste de anos na política';
     case 'mandato': return valor >= 0 ? 'um mandato aprovado nas ruas' : 'a avaliação ruim do mandato';
@@ -588,8 +597,8 @@ export function explicarEleicao(v: Vida, h: { cargo: CargoEletivo; resultado: st
   if (contra.length) partes.push(`Contra: ${nomes(contra)}.`);
   const ch = h.chance ?? 0.5;
   const ganhou = h.resultado === 'eleito';
-  const chegou = ch >= 0.75 ? 'como favorito' : ch >= 0.5 ? 'com boa chance' : ch >= 0.3 ? 'numa disputa aberta' : ch >= 0.12 ? 'como azarão' : 'quase sem chance';
-  partes.push(ganhou ? (ch < 0.35 ? `Chegou ${chegou} — e virou na apuração.` : ch >= 0.7 ? 'Chegou como favorito, e confirmou.' : 'Uma disputa apertada, que terminou do seu lado.')
+  const chegou = ch >= 0.75 ? `como ${flex(ge(v), 'favorito', 'favorita', 'favorite')}` : ch >= 0.5 ? 'com boa chance' : ch >= 0.3 ? 'numa disputa aberta' : ch >= 0.12 ? 'como azarão' : 'quase sem chance';
+  partes.push(ganhou ? (ch < 0.35 ? `Chegou ${chegou} — e virou na apuração.` : ch >= 0.7 ? `Chegou como ${flex(ge(v), 'favorito', 'favorita', 'favorite')}, e confirmou.` : 'Uma disputa apertada, que terminou do seu lado.')
     : (ch >= 0.6 ? `Chegou ${chegou} — e a apuração não confirmou: eleição tem incerteza.` : ch < 0.3 ? `Chegou ${chegou}: era uma disputa difícil.` : 'Uma disputa apertada, que terminou do outro lado.'));
   return partes.join(' ');
 }

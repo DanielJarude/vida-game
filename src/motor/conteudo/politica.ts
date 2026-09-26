@@ -184,7 +184,8 @@ export const POLITICA: Conteudo[] = [
         consequencia: () => 'Assumir diminui o peso na próxima eleição — e expõe ainda mais a vida de quem está perto.',
         resolver: c => ({ texto: 'Você leu uma nota curta, sem se esconder atrás de advogado. A repercussão foi grande — e depois foi diminuindo.', memoria: 'Pediu desculpas em público.', relevancia: 'biografia',
           efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; p.desgaste = clamp(p.desgaste - 6); const par = parceiro(c.v); if (p.escandalo!.tipo === 'caso' && par) par.vin.tensao = clamp(par.vin.tensao + 6); } }) },
-      { id: 'negar', texto: 'Negar tudo', comportamento: { empatia: -1 },
+      // Uma prisão não se nega: é registro público.
+      { id: 'negar', texto: 'Negar tudo', comportamento: { empatia: -1 }, disponivel: c => pol(c).escandalo!.tipo !== 'prisao',
         consequencia: () => 'Se colar, passa; se não colar, pesa mais na próxima eleição do que o próprio fato.',
         resolver: c => ({ texto: 'Você negou. Parte da base acreditou; a imprensa, não.', memoria: 'Negou em público.', relevancia: 'biografia',
           efeito: () => { const p = pol(c); p.escandalo!.resposta = 'negou'; p.apoio = clamp(p.apoio + 2); } }) },
@@ -193,7 +194,7 @@ export const POLITICA: Conteudo[] = [
         resolver: c => ({ texto: 'Você não deu entrevista nenhuma. Em duas semanas, o assunto era outro — até a campanha.', memoria: null, efeito: () => { pol(c).escandalo!.resposta = 'silencio'; } }) },
       { id: 'renunciar', texto: c => `Renunciar ao mandato de ${pol(c).mandato ? nomeCargo(c.v, pol(c).mandato!.cargo) : ''}`, disponivel: c => (pol(c).mandato ? true : false),
         consequencia: () => 'O cargo acaba agora; o desgaste diminui, e a volta, se vier, é mais adiante.',
-        resolver: c => ({ texto: 'Você entregou a carta de renúncia numa sexta-feira à tarde.', memoria: null, efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; renunciar(c.v, 'depois do escândalo'); p.desgaste = clamp(p.desgaste - 8); } }) }
+        resolver: c => ({ texto: 'Você entregou a carta de renúncia numa sexta-feira à tarde.', memoria: null, efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; renunciar(c.v, 'depois do escândalo'); voltarAoTrabalho(c.v, 'depois da renúncia'); p.desgaste = clamp(p.desgaste - 8); } }) }
     ]
   },
   {

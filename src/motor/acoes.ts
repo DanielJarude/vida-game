@@ -172,7 +172,10 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (!a.resgatar) return PERMITIDO;
       const op = v.momento.opcoes.find(o => o.id === a.opcaoId);
       if (!op?.resgate) return bloqueio('incompativel', 'Essa escolha não precisa tirar dinheiro das aplicações.');
-      return capacidade(v, v.financas.conta + op.resgate).situacao !== 'sem_patrimonio' ? PERMITIDO : bloqueio('requisito', 'As aplicações já não cobrem.');
+      if (capacidade(v, v.financas.conta + op.resgate).situacao === 'sem_patrimonio') return bloqueio('requisito', 'As aplicações já não cobrem.');
+      // Depois de tirar, a escolha precisa ficar livre de verdade (nada de vender e continuar bloqueado).
+      const { valor: livre } = transacao(v, (x, r) => { tirarDasAplicacoes(x, op.resgate!, 'para pagar'); liberarOpcaoPaga(x, r, a.opcaoId); return !x.momento?.opcoes.find(o => o.id === a.opcaoId)?.bloqueio; });
+      return livre ? PERMITIDO : bloqueio('requisito', 'Mesmo tirando das aplicações, essa escolha não fica ao alcance.');
     }
     case 'resgatar_e': {
       const d = disponibilidade(v, a.acao);

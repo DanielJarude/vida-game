@@ -342,7 +342,7 @@ export const BIOGRAFIA: Conteudo[] = [
     opcoes: [
       {
         id: 'ajudar', texto: c => (noCartorio(c.v, c.p.filho) ? 'Ajudar a pagar a festa' : 'Ajudar a montar a casa nova'), comportamento: { generosidade: 1, familia: 1 },
-        disponivel: c => (guardado(c.v) >= custoDaFesta(c.v) ? true : 'Não há dinheiro guardado para isso.'),
+        disponivel: c => custa(c, custoDaFesta(c.v), 'Não há dinheiro guardado para isso.'),
         consequencia: c => `Saem ${fmt(custoDaFesta(c.v))} do que você tem. ${c.p.filho.nome} e ${parceriaDoFilho(c.v, c.p.filho)!.nome} ficam mais perto de você.`,
         resolver: c => {
           const g = parceriaDoFilho(c.v, c.p.filho)!;
@@ -502,7 +502,7 @@ export const BIOGRAFIA: Conteudo[] = [
     opcoes: [
       {
         id: 'viagem', texto: 'Uma viagem só de vocês dois', comportamento: { familia: 1 },
-        disponivel: c => (guardado(c.v) >= custoViagem(c.v) ? true : 'Não há dinheiro guardado para viajar.'),
+        disponivel: c => custa(c, custoViagem(c.v), 'Não há dinheiro guardado para viajar.'),
         consequencia: c => `Custa ${fmt(custoViagem(c.v))}. ${c.v.vinculos[c.p.par.id].tensao >= 40 ? 'Pode aproximar — ou deixar o silêncio mais evidente, longe de casa.' : `Aproxima você e ${c.p.par.nome}.`}`,
         resolver: c => {
           const tenso = c.v.vinculos[c.p.par.id].tensao >= 40;
@@ -525,7 +525,7 @@ export const BIOGRAFIA: Conteudo[] = [
       },
       {
         id: 'terapia', texto: 'Admitir a distância e procurar terapia de casal', comportamento: { empatia: 1 },
-        disponivel: c => { const vin = c.v.vinculos[c.p.par.id]; return vin.tensao >= 30 || (vin.romance?.envolvimento ?? 50) < 55 || crisesDoCasal(vin) >= 2 ? (guardado(c.v) >= 2400 ? true : 'Não há dinheiro para as sessões.') : false; },
+        disponivel: c => { const vin = c.v.vinculos[c.p.par.id]; return vin.tensao >= 30 || (vin.romance?.envolvimento ?? 50) < 55 || crisesDoCasal(vin) >= 2 ? custa(c, 2400, 'Não há dinheiro para as sessões.') : false; },
         consequencia: c => `Doze sessões, ${fmt(2400)}. ${c.v.vinculos[c.p.par.id].confianca >= 50 ? 'Com a confiança que existe, tende a aproximar.' : 'A confiança está baixa: ajuda, mas devagar.'}`,
         resolver: c => {
           const conf = c.v.vinculos[c.p.par.id].confianca >= 50;
@@ -643,7 +643,7 @@ export const BIOGRAFIA: Conteudo[] = [
       },
       {
         id: 'dinheiro', texto: 'Ajudar com dinheiro: fraldas, creche, o que faltar', comportamento: { generosidade: 1 },
-        disponivel: c => (guardado(c.v) >= ajudaNeto(c.v) ? true : 'Não há dinheiro guardado para isso.'),
+        disponivel: c => custa(c, ajudaNeto(c.v), 'Não há dinheiro guardado para isso.'),
         consequencia: c => `Saem ${fmt(ajudaNeto(c.v))} do que você tem; ${paiDoNeto(c.v, c.p.neto)!.nome} respira no primeiro ano.`,
         resolver: c => {
           const pai = paiDoNeto(c.v, c.p.neto)!;
@@ -677,7 +677,7 @@ export const BIOGRAFIA: Conteudo[] = [
     opcoes: [
       {
         id: 'viagem', texto: c => `Chamar ${c.p.neto.nome} para uma viagem só vocês dois`, comportamento: { familia: 1 },
-        disponivel: c => (guardado(c.v) >= custoViagem(c.v) ? true : 'Não há dinheiro guardado para viajar.'),
+        disponivel: c => custa(c, custoViagem(c.v), 'Não há dinheiro guardado para viajar.'),
         consequencia: c => `Custa ${fmt(custoViagem(c.v))}. Vira uma lembrança de ${c.p.neto.nome} com você.`,
         resolver: c => ({
           texto: `Uma semana de estrada. ${c.p.neto.nome} escolheu as músicas do carro e tirou mais fotos do que você.`,
@@ -720,7 +720,7 @@ export const BIOGRAFIA: Conteudo[] = [
     opcoes: [
       {
         id: 'festa', texto: c => (filhosEmComum(c.v, c.p.par.id).some(f => f.vivo) ? 'Uma festa com os filhos e quem fez parte' : 'Uma festa com quem fez parte'), comportamento: { sociabilidade: 1, familia: 1 },
-        disponivel: c => (guardado(c.v) >= custoDaFesta(c.v) ? true : 'Não há dinheiro guardado para uma festa.'),
+        disponivel: c => custa(c, custoDaFesta(c.v), 'Não há dinheiro guardado para uma festa.'),
         consequencia: c => `Custa ${fmt(custoDaFesta(c.v))}. ${c.p.par.nome} e a família guardam a data.`,
         resolver: c => {
           const m = marcoDasBodas(c.v, c.p.par)!;
@@ -794,7 +794,7 @@ export const BIOGRAFIA: Conteudo[] = [
       },
       {
         id: 'cuidadora', texto: 'Pagar uma cuidadora algumas horas por dia', comportamento: { generosidade: 1 },
-        disponivel: c => (guardado(c.v) >= 14000 ? true : 'Não há dinheiro guardado para um ano de cuidadora.'),
+        disponivel: c => custa(c, 14000, 'Não há dinheiro guardado para um ano de cuidadora.'),
         consequencia: c => `Cerca de ${fmt(14000)} por ano. ${c.p.genitor.nome} fica menos só e mais segur${o(c.p.genitor)}; sua rotina não muda.`,
         resolver: c => ({
           texto: `A cuidadora chega às oito e sai às duas. ${c.p.genitor.nome} reclamou na primeira semana e na segunda já contava a vida para ela.`,
@@ -958,7 +958,7 @@ export const BIOGRAFIA: Conteudo[] = [
       },
       {
         id: 'viagem', texto: c => `Uma viagem com ${c.p.amigo.nome}`, comportamento: { sociabilidade: 1 },
-        disponivel: c => (guardado(c.v) >= custoViagem(c.v) ? true : 'Não há dinheiro guardado para viajar.'),
+        disponivel: c => custa(c, custoViagem(c.v), 'Não há dinheiro guardado para viajar.'),
         consequencia: c => `Custa ${fmt(custoViagem(c.v))}. Uns dias só de vocês dois, como antes.`,
         resolver: c => ({
           texto: `Três dias numa pousada. Vocês riram das mesmas coisas de ${anosDesde(c.v, c.v.vinculos[c.p.amigo.id].tInicio)} anos atrás.`,
@@ -992,7 +992,7 @@ export const BIOGRAFIA: Conteudo[] = [
     opcoes: [
       {
         id: 'visitar', texto: c => `Ir visitar ${c.p.amigo.nome}`, comportamento: { sociabilidade: 1 },
-        disponivel: c => (guardado(c.v) >= 2000 ? true : 'Não há dinheiro guardado para a viagem.'),
+        disponivel: c => custa(c, 2000, 'Não há dinheiro guardado para a viagem.'),
         consequencia: () => `Passagem e uns dias fora (cerca de ${fmt(2000)}). A amizade volta a ter presença.`,
         resolver: c => ({
           texto: `${c.p.amigo.nome} foi buscar você na rodoviária e mostrou a cidade como se fosse ${dele(c.p.amigo)}. É.`,
@@ -1366,7 +1366,7 @@ export const BIOGRAFIA: Conteudo[] = [
       },
       {
         id: 'manter', texto: 'Manter como está e cuidar dela',
-        disponivel: c => (guardado(c.v) >= 4000 ? true : 'Não há dinheiro guardado para a manutenção.'),
+        disponivel: c => custa(c, 4000, 'Não há dinheiro guardado para a manutenção.'),
         consequencia: () => `Uma manutenção de ${fmt(4000)} agora; a casa fica de pé, fechada, esperando.`,
         resolver: c => {
           const b = casaHerdadaParada(c.v)!;

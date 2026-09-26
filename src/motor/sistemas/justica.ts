@@ -26,13 +26,13 @@ import { escrever, filhos, idade, lembrarCom, marcarFato, pais, parceiro, vincul
 import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { disponivel, pagar } from './dinheiro';
-import { encerrarEmprego } from './trabalho';
+import { encerrarEmprego, temNegocioAberto } from './trabalho';
 import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
 import { terminar } from './romance';
 import { novaOportunidade } from './oportunidades';
 import { registrarAssuntoDaJustica } from './exposicao';
-import { perderMandatoPorPrisao } from './politica';
+import { perderMandatoPorPrisao, voltarAoTrabalho } from './politica';
 import { registrarQuemApareceu } from './rede';
 
 export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedentes: [] });
@@ -214,7 +214,10 @@ function soltar(v: Vida, motivo: string): void {
     }
   }
   if (par?.vin.convivio.includes('casa')) for (const f of filhos(v)) if (f.municipioId === v.moradia.municipioId && idade(v) - 0 >= 0 && (v.t - f.tNasc) / 12 < 18 && !v.vinculos[f.id]?.convivio.includes('casa')) v.vinculos[f.id]?.convivio.push('casa');
-  v.trabalho.desempregadoDesde = v.t;
+  // Quem tinha deixado o negócio nas mãos da equipe por um mandato que a prisão encerrou volta a ele; o resto do "antes" ficou para trás.
+  const pol = v.caminhos.politica;
+  if (pol?.anterior && !pol.mandato) { if (pol.anterior.negocio) voltarAoTrabalho(v, 'ao sair da prisão'); else pol.anterior = undefined; }
+  if (!v.trabalho.atual && !temNegocioAberto(v)) v.trabalho.desempregadoDesde = v.t;
   const texto = internacao ? 'Saiu da unidade socioeducativa. A rua era a mesma; ele, nem tanto.'.replace('ele', flex(ge(v), 'ele', 'ela', 'elu'))
     : motivo === 'absolvição' ? 'Saiu da prisão com a absolvição na mão.'
       : `Saiu da prisão depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}, com o resto da pena em liberdade.`;

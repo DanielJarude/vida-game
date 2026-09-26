@@ -957,6 +957,8 @@ export interface Negocio {
   historico?: number[];
   /** Nas mãos da equipe (ou do sócio): o dono se afastou (um mandato, por exemplo) e só recebe o que sobra. */
   passivo?: boolean;
+  /** Ficou numa cidade de onde o dono se mudou: de longe, só dá para receber o que sobra (tocar de novo, só voltando para lá). */
+  ficouEm?: string;
 }
 
 export type EstrategiaNegocio = 'bairro' | 'qualidade' | 'preco' | 'online' | 'escala' | 'marca';

@@ -39,8 +39,9 @@ export function paisDe(v: Vida, id: string): string[] {
 /** A parceria de alguém (viva ou não), do ponto de vista da árvore. */
 export function conjugeDe(v: Vida, id: string): string | undefined {
   if (id === 'eu') {
-    const par = Object.values(v.vinculos).find(x => x.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.romance.estagio) && !x.romance.secreto && (v.pessoas[x.pessoaId]?.vivo || x.romance.fim === 'morte'));
-    return par?.pessoaId;
+    // A parceria viva de agora vem antes da que morreu (quem fica viúvo e se casa de novo).
+    const pares = Object.values(v.vinculos).filter(x => x.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.romance.estagio) && !x.romance.secreto && (v.pessoas[x.pessoaId]?.vivo || x.romance.fim === 'morte'));
+    return (pares.find(x => v.pessoas[x.pessoaId]?.vivo) ?? pares.sort((a, b) => b.romance!.tEstagio - a.romance!.tEstagio)[0])?.pessoaId;
   }
   const p = v.pessoas[id];
   if (!p) return undefined;
@@ -211,7 +212,7 @@ export function lutoDe(v: Vida, p: Pessoa): string | undefined {
   // A parceria do jogador de luto pelo filho dos dois.
   if (par && laco === 'filho' && paisDe(v, x.id).includes('eu')) return `de luto por ${x.nome}, ${flex(x.genero, 'o filho', 'a filha', 'e filhe')} de vocês`;
   const oX = oLaco(laco, x.genero, casadosCom(v, p.id, x.id));
-  return `de luto ${oX.startsWith('a ') ? 'pela' : 'pelo'} ${oX.slice(2)}, ${x.nome}`;
+  return `de luto ${oX.startsWith('a ') ? 'pela' : oX.startsWith('e ') ? 'pele' : 'pelo'} ${oX.slice(2)}, ${x.nome}`;
 }
 
 /* ================================================ O que acontece com VOCÊ */

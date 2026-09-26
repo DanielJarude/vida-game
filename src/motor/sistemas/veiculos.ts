@@ -121,7 +121,7 @@ export function processarVeiculos(v: Vida, r: Rng): void {
           if (p.gravidade === 3) {
             p.custo = Math.round(Math.min(Math.max(p.custo * 1.6, novo * 0.05), novo * 0.45) / 10) * 10;
             escrever(v, { texto: `${cap(textoVeiculo(b))} parou de vez: o que era ${p.texto} virou coisa grande. Na oficina, ${fmt(p.custo)}.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'ruim' });
-            abalar(v, `${textoVeiculo(b)} parado`, -2, 5);
+            abalar(v, `${textoVeiculo(b)} ${gv(b, 'parado', 'parada')}`, -2, 5);
           }
         }
       }
@@ -149,6 +149,9 @@ export function textoVeiculo(b: Veiculo): string {
   const m = modeloVeiculo(b.modeloId);
   return m.categoria === 'carro' ? `o ${m.nome}` : `a ${m.nome}`;
 }
+
+/** Concorda com o veículo: "o Onix ficou parado", "a Biz ficou parada". */
+export const gv = (b: Veiculo, masc: string, fem: string) => (textoVeiculo(b).startsWith('a ') ? fem : masc);
 
 /* ------------------------------------------------------------- Ações */
 
@@ -190,7 +193,7 @@ export function executarVeiculo(v: Vida, b: Veiculo, oque: AcaoVeiculo): string 
       b.estado = clamp(b.estado + (p.gravidade === 3 ? 30 : 18), 0, b.usado ? 92 : 100);
       b.problema = undefined;
       (b.historia ??= []).push({ t: v.t, texto: `Consertou ${p.texto} (${fmt(p.custo)}).` });
-      if (p.gravidade === 3 && p.custo > b.valor * 0.4) escrever(v, { texto: `Pagou ${fmt(p.custo)} para ${textoVeiculo(b)} voltar a andar — quase metade do que ele valia.`, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true });
+      if (p.gravidade === 3 && p.custo > b.valor * 0.4) escrever(v, { texto: `Pagou ${fmt(p.custo)} para ${textoVeiculo(b)} voltar a andar — quase metade do que ${gv(b, 'ele', 'ela')} valia.`, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true });
       return `Consertado: ${p.texto}. ${cap(textoVeiculo(b))} voltou a rodar direito.`;
     }
     case 'adiar':
@@ -207,7 +210,7 @@ export function executarVeiculo(v: Vida, b: Veiculo, oque: AcaoVeiculo): string 
     case 'parar':
       b.parado = true;
       (b.historia ??= []).push({ t: v.t, texto: 'Ficou parado na garagem.' });
-      return `${cap(textoVeiculo(b))} ficou parado: sem combustível nem seguro, mas também sem condução.`;
+      return `${cap(textoVeiculo(b))} ficou ${gv(b, 'parado', 'parada')}: sem combustível nem seguro, mas também sem condução.`;
     case 'usar':
       b.parado = false;
       return `${cap(textoVeiculo(b))} voltou a rodar.`;

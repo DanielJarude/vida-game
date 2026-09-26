@@ -61,7 +61,12 @@ export function retrospectiva(v: Vida): string[] {
   const vivos = vinculosVivos(v);
   const filhos = vivos.filter(x => x.vin.parentesco === 'filho' && !x.p.especie);
   const netos = vivos.filter(x => x.vin.parentesco === 'neto' || x.vin.parentesco === 'bisneto');
-  if (filhos.length >= 3 || netos.length >= 2) out.push({ peso: 70, texto: `Deixou ${filhos.length === 1 ? 'um filho' : `${filhos.length} filhos`}${netos.length ? ` e ${netos.length === 1 ? 'um neto' : `${netos.length} netos`}` : ''}${filhos.some(f => v.fatos[`guarda_neto_${f.p.id}`] !== undefined) ? ' — e criou netos como filhos' : ''}.` });
+  if (filhos.length >= 3 || netos.length >= 2) {
+    const umFilho = filhos.length === 1 ? flex(filhos[0].p.genero, 'um filho', 'uma filha', 'um filho') : `${filhos.length} ${filhos.every(f => f.p.genero === 'feminino') ? 'filhas' : 'filhos'}`;
+    const osNetos = netos.length === 1 ? flex(netos[0].p.genero, 'um neto', 'uma neta', 'um neto') : `${netos.length} ${netos.every(x => x.p.genero === 'feminino') ? 'netas' : 'netos'}`;
+    // A frase dos netos criados em casa vem à parte (abaixo); aqui, só quem ficou.
+    out.push({ peso: 70, texto: filhos.length ? `Deixou ${umFilho}${netos.length ? ` e ${osNetos}` : ''}.` : `Não deixou filhos vivos; deixou ${osNetos}.` });
+  }
   const criouNetos = Object.keys(v.fatos).filter(k => k.startsWith('guarda_neto_')).length;
   if (criouNetos) out.push({ peso: 95, texto: `Criou ${criouNetos === 1 ? 'um neto' : `${criouNetos} netos`} em casa, depois de uma perda.` });
 

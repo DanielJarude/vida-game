@@ -21,7 +21,7 @@ import { registrarDevolutiva } from '../sistemas/devolutivas';
 import { abalar } from '../sistemas/abalo';
 import { MODS, MODS_ARTE, municipioIndice, municipioPorIndice, novaOportunidade } from '../sistemas/oportunidades';
 import { criarProjeto } from '../sistemas/arte';
-import { contratar, degrausAcima, elegibilidade, encerrarEmprego, experienciaNaTrilha, horizonte, nomeOcupacao, porContaPropria, textoDeContratacao } from '../sistemas/trabalho';
+import { contratar, degrausAcima, elegibilidade, encerrarEmprego, experienciaNaTrilha, horizonte, nomeOcupacao, porContaPropria, semOcupacao, textoDeContratacao } from '../sistemas/trabalho';
 import { OCUPACOES, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { curso, CURSOS } from '../dados/cursos';
 import { capitalDoEstado } from '../sistemas/escola';
@@ -286,7 +286,7 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'des_longo', tipo: 'decisao', idade: [20, 62], tema: 'trabalho', repetir: 3, prioritario: true, prioridade: 1,
-    quando: c => !c.v.trabalho.atual && !c.v.trabalho.aposentadoria && !c.v.educacao.matricula && c.v.trabalho.desempregadoDesde !== undefined && c.v.t - c.v.trabalho.desempregadoDesde >= 24,
+    quando: c => semOcupacao(c.v) && !c.v.trabalho.aposentadoria && !c.v.educacao.matricula && c.v.trabalho.desempregadoDesde !== undefined && c.v.t - c.v.trabalho.desempregadoDesde >= 24,
     titulo: c => `${Math.floor((c.v.t - c.v.trabalho.desempregadoDesde!) / 12)} anos sem trabalho fixo`,
     texto: c => `Currículo enviado para tudo quanto é lugar. ${c.v.rotinas.some(r => r.id === 'bico') ? 'Os bicos seguram parte das contas.' : 'As contas chegam do mesmo jeito.'} ${parceiro(c.v) ? `${parceiro(c.v)!.p.nome} pergunta, com cuidado, o que você pensa fazer.` : ''}`,
     opcoes: [
