@@ -525,10 +525,11 @@ describe('veículos', () => {
 
   it('o carro entra no orçamento e tira o ônibus; bicicleta não "quebra de vez" nem custa mais que ela', () => {
     const v = sozinha(30, 83);
-    const antes = orcamento(v).saidas.some(l => /Ônibus/.test(l.rotulo));
+    const antes = orcamento(v).saidas.some(l => /ônibus/i.test(l.rotulo));
     comCarro(v, 3, 80);
+    v.trabalho.licencas.push('cnh'); // FIX #4: sem carteira, o carro não leva ninguém ao trabalho
     expect(antes).toBe(true);
-    expect(orcamento(v).saidas.some(l => /Ônibus/.test(l.rotulo))).toBe(false);
+    expect(orcamento(v).saidas.some(l => /ônibus/i.test(l.rotulo))).toBe(false);
     expect(orcamento(v).saidas.some(l => /combustível/.test(l.rotulo))).toBe(true);
     const bici = sozinha(30, 84);
     bici.financas.bens.push({ id: 'b', tipo: 'veiculo', modeloId: 'bike', nome: 'bicicleta', valor: 500, tCompra: bici.t, estado: 30, anoFabricacao: Math.floor(bici.t / 12) - 8, usado: true, problema: { id: 'x', texto: 'corrente e pneus', custo: 300, desde: bici.t - 24, gravidade: 2, adiado: 3 } });

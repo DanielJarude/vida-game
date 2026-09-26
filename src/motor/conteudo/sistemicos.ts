@@ -12,6 +12,7 @@ import * as P from './papeis';
 import { iniciarPausa, podeReduzir } from '../sistemas/pausa';
 import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao } from './efeitos';
 import { idade, idadePessoa, lembrarCom, marcarFato, temFato } from '../nucleo';
+import { deslocamento } from '../sistemas/transporte';
 import { iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
 import { morarJuntos } from '../sistemas/moradia';
 import { registrarNascimento } from '../sistemas/familia';
@@ -297,7 +298,7 @@ export const SISTEMICOS: Conteudo[] = [
     titulo: 'O curso pesa',
     texto: c => ({
       dinheiro: `A mensalidade de ${nomeCurso(c)} vence todo dia 10, e o dinheiro do mês já acabou no dia 3.`,
-      trabalho: 'O expediente termina às seis; a aula começa às sete. Você dorme no ônibus e acorda na prova.',
+      trabalho: `O expediente termina às seis; a aula começa às sete. ${deslocamento(c.v)?.modo === 'publico' ? 'Você dorme no ônibus e acorda na prova.' : 'Você janta no caminho e chega à prova com a cabeça no trabalho.'}`,
       bebe: 'O bebê acorda de duas em duas horas. O trabalho de grupo é para sexta.',
       notas: `As notas em ${nomeCurso(c)} desceram, e a coordenação mandou um e-mail sobre risco de reprovação.`
     })[motivoDeAperto(c)!],

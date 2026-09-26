@@ -76,6 +76,8 @@ export function modoDoTrabalho(v: Vida): ModoTrabalho {
     if (v.trabalho.aposentadoria) return 'aposentado';
     if (v.caminhos.esporte?.fase === 'base') return 'base';
     if (i < 18 && (v.educacao.basica || v.educacao.matricula)) return 'estudante';
+    // Sem emprego, mas com um negócio aberto: é dono (nas horas vagas ou afastado), não alguém procurando trabalho.
+    if (negocioAberto(v) && i >= 18) return 'negocio';
     return 'procurando';
   }
   const oc = ocupacao(e.ocupacaoId);
@@ -330,6 +332,14 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
     else if (modo === 'aposentado' && t.aposentadoria) { titulo = flex(g, 'Aposentado', 'Aposentada', 'Aposentade'); frases.push(`${fmt(t.aposentadoria.beneficio)} por mês, desde ${anoDe(t.aposentadoria.t)}.`); }
     else if (modo === 'base' && v.caminhos.esporte) { titulo = `Na base ${doClube(v.caminhos.esporte.clube)}`; frases.push('Treino quase todo dia. Quase ninguém da base vira profissional — e quem vira, vira cedo.'); }
     else if (modo === 'estudante') { titulo = 'Estudando'; frases.push(idade(v) < 16 ? 'Aos 14 e 15, só como jovem aprendiz.' : 'Dá para começar como aprendiz ou estagiário, sem largar a escola.'); }
+    else if (modo === 'negocio') {
+      const n = negocioAberto(v)!;
+      titulo = n.nome;
+      frases.push(n.passivo
+        ? 'O negócio segue nas mãos de quem toca o dia a dia; o que é seu fica no caixa até você tirar.'
+        : `Sem outro trabalho: ${n.nome} é o que você faz hoje, ainda no ritmo de horas vagas — sem retirada fixa; o que sobra fica no caixa até você tirar.`);
+      return { modo, titulo, frases, onde: 'O próprio negócio', renda: `sem retirada fixa · ${fmt(n.caixa ?? 0)} no caixa`, vinculo: 'dono' };
+    }
     else {
       const desde = t.desempregadoDesde;
       const anos = desde !== undefined ? Math.floor((v.t - desde) / 12) : 0;
@@ -447,6 +457,13 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     }
     if (modo === 'aposentado') {
       add({ id: 'voltar', rotulo: 'Procurar algum trabalho', porque: aperto ? 'O benefício não tem fechado o mês.' : 'Pelo gosto, pela conta ou pela companhia.', ir: 'explorar', peso: aperto ? 6 : 2 });
+      return separar(lista);
+    }
+    if (modo === 'negocio') {
+      // O negócio é o que há: as decisões dele vêm primeiro; procurar emprego vira uma possibilidade entre outras.
+      const n = negocioAberto(v)!;
+      for (const x of acoesDoNegocio(v, disp)) lista.push(x.id === 'dedicacao' && !n.passivo ? { ...x, peso: Math.max(x.peso, 6), porque: x.porque ?? 'Sem outro trabalho, o negócio pode ser o trabalho de todo dia — com retirada.' } : x);
+      add({ id: 'outras', rotulo: 'Ver outras oportunidades de trabalho', porque: 'Um emprego ao lado do negócio também é possível.', ir: 'explorar', peso: 1 });
       return separar(lista);
     }
     if (modo === 'estudante' || modo === 'base') {

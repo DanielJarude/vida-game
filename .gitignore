@@ -13,3 +13,6 @@ vida-itch.zip
 # Simulação local da hospedagem do itch.io (subdiretório + iframe), usada
 # para conferir a build no navegador antes do upload.
 .itch-sim/
+
+# Cópias de trabalho paralelas (worktrees de agentes).
+.claude/worktrees/

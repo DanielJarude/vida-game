@@ -36,7 +36,8 @@ import { dinheiro as fmt, flex } from '../texto';
 import { abalar } from './abalo';
 import { cobrirComAplicacoes, liquidezImediata, processarInvestimentos, rendaDasAplicacoes, totalAplicado } from './investimentos';
 import { custoDosPets } from './pets';
-import { custosDeVeiculo, veiculoUtil } from './veiculos';
+import { custosDeVeiculo } from './veiculos';
+import { deslocamento } from './transporte';
 import type { AnoEconomico } from './economia';
 
 const ESTILO: Record<EstiloDeVida, { basico: number; lazerBase: number; parte: number }> = {
@@ -235,15 +236,15 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
 function comuns(v: Vida, sai: (r: string, x: number, g: LinhaRazao['grupo']) => void, c: number, naFamilia: boolean): void {
   const f = v.financas;
   const i = idade(v);
-  const local = economiaLocal(v.moradia.municipioId);
+  // O veículo do trajeto roda todo dia; o outro (ou o de quem não tem trajeto) roda menos — gasta menos combustível.
+  const d = deslocamento(v);
   for (const vei of f.bens) {
     if (vei.tipo !== 'veiculo') continue;
-    for (const l of custosDeVeiculo(v, vei, c)) sai(l.rotulo, l.valor, 'transporte');
+    const uso = d?.veiculoId === vei.id ? 1 : d ? 0.45 : 0.7;
+    for (const l of custosDeVeiculo(v, vei, c, uso)) sai(l.rotulo, l.valor, 'transporte');
   }
-  const precisaDeslocar = v.trabalho.atual || v.educacao.matricula?.modalidade === 'presencial';
-  if (precisaDeslocar && !f.bens.some(b => b.tipo === 'veiculo' && veiculoUtil(b) && !b.modeloId.startsWith('bike')) && i >= 16) {
-    sai('Ônibus e condução', local.transporte === 'bom' ? 260 : local.transporte === 'medio' ? 210 : 150, 'transporte');
-  }
+  // A passagem só existe para quem vai de transporte público (o veículo próprio já custa acima; a pé e de bicicleta, nada).
+  if (d && d.modo === 'publico' && d.passagem > 0 && i >= 16) sai('Passagem de ônibus (o trajeto de todo dia)', d.passagem, 'transporte');
   if (f.planoDeSaude && (!naFamilia || i >= 24)) {
     sai('Plano de saúde', planoDeSaudeMensal(i) * c, 'saude');
     const pequenos = filhos(v).filter(fl => idadePessoa(v, fl) < 18 && v.vinculos[fl.id].convivio.includes('casa')).length;
@@ -437,6 +438,9 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
     }
   }
   f.razao = linhas.map(l => ({ ...l, valor: l.valor * 12 }));
+  // O prejuízo do negócio que saiu da conta (já descontado em `processarNegocio`): aparece na conta do ano.
+  const neg = v.caminhos.negocio;
+  if (neg?.devolvidoAno && neg.estado !== 'fechado') f.razao.push({ rotulo: `Prejuízo de ${neg.nome} coberto do seu bolso`, valor: -neg.devolvidoAno, grupo: 'outros' });
   if (o.sobra < 0) { if (v.fatos['sem_sobra_desde'] === undefined) v.fatos['sem_sobra_desde'] = v.t; } else delete v.fatos['sem_sobra_desde'];
 
   // Dívidas parceladas: o ano de parcelas pagas amortiza (a parcela já está na despesa).

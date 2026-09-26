@@ -870,3 +870,18 @@ button.agora-sinal:hover { color: var(--text-primary); }
   .cat-item__linha { flex-wrap: wrap; }
   .catalogo__ferramentas { top: 0; }
 }
+
+/* A conta do negócio (FIX #4): faturamento → custos → lucro → retirada → caixa, em linhas. */
+.conta-negocio { margin: var(--space-4) 0; padding: var(--space-3) 0 var(--space-3) var(--space-3); border-left: 2px solid var(--tom-linha); }
+.conta-negocio__titulo { margin: 0 0 var(--space-2); font-size: var(--type-body); font-weight: 600; }
+.dados--conta { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); margin: 0; }
+.dados--conta .dado { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); border-left: 0; padding-left: 0; }
+.dados--conta .dado dd { font-family: var(--font-sans); font-size: var(--type-body); }
+.dados--conta .dado dd { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* O trajeto de todo dia (FIX #4). */
+.trajeto { margin: var(--space-5) 0; }
+.trajeto__agora { margin: 0 0 var(--space-2); }
+.trajeto__opcoes { list-style: none; margin: var(--space-3) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.trajeto__opcoes li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.trajeto__dif { color: var(--text-muted); font-size: var(--type-meta); }

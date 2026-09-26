@@ -14,6 +14,7 @@ import { idade } from '../../motor/nucleo';
 import { economiaLocal, municipio, MUNICIPIOS, NOMES_UF, nomeLugar } from '../../motor/dados/lugares';
 import { consequenciasDaMudanca, custoDeMudanca } from '../../motor/sistemas/processos';
 import { BotaoAcao, Folio, Secao } from '../comum';
+import { deslocamento, NOME_MODO, tempoEmPalavras } from '../../motor/sistemas/transporte';
 import { lugarDescrito, dinheiroCurto } from '../apresentar';
 import { Icone } from './material/Desenhos';
 import { Lugar, type QualLugar } from './material/Lugares';
@@ -40,6 +41,7 @@ export function Cidade({ vida, agir }: Props) {
     { id: 'abrigo', nome: 'Abrigo de animais', oque: 'Adotar um cão, um gato — às vezes, outro bicho', icone: 'abrigo', so18: true },
     { id: 'pets', nome: 'Loja e criadouro de animais', oque: 'Aves, roedores, peixes; silvestres só com documento', icone: 'loja_pets', so18: true }
   ];
+  const desl = deslocamento(vida);
   return (
     <div className="cidade material">
       <Folio kicker={<><span className="folio__area">Cidade</span> · {m.uf}</>} titulo={m.nome} lede={`${PERFIL[m.perfil] ?? 'uma cidade'}${m.capital ? ' — a capital' : ''}. ${anos >= 1 ? `Você vive aqui há ${anos} ${anos === 1 ? 'ano' : 'anos'}.` : 'Você chegou há pouco.'}`} />
@@ -47,7 +49,8 @@ export function Cidade({ vida, agir }: Props) {
         <div className="dado"><dt>Custo de vida</dt><dd>{ec.custo > 1.15 ? 'alto' : ec.custo < 0.9 ? 'baixo' : 'médio'}</dd></div>
         <div className="dado"><dt>Salários</dt><dd>{ec.salario > 1.1 ? 'acima da média' : ec.salario < 0.9 ? 'abaixo da média' : 'na média'}</dd></div>
         <div className="dado"><dt>Aluguel de referência</dt><dd>{dinheiroCurto(ec.aluguel)}/mês</dd></div>
-        <div className="dado"><dt>Transporte</dt><dd>{ec.transporte === 'bom' ? 'bom: dá para viver sem carro' : ec.transporte === 'ruim' ? 'ruim: ônibus demora' : 'razoável'}</dd></div>
+        <div className="dado"><dt>Transporte público</dt><dd>{ec.transporte === 'bom' ? 'bom: dá para viver sem carro' : ec.transporte === 'ruim' ? 'fraco: o ônibus demora' : 'razoável'}</dd></div>
+        {desl && <div className="dado"><dt>O seu trajeto</dt><dd>{NOME_MODO[desl.modo]}{desl.nomeVeiculo ? ` (${desl.nomeVeiculo})` : ''} · {tempoEmPalavras(desl.minutos)}</dd></div>}
       </dl>
 
       {i >= 16 ? (

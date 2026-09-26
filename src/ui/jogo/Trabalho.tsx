@@ -27,7 +27,7 @@ import { ESPECIALIDADES } from '../../motor/dados/forcas';
 import { degrausAcima, elegibilidade, horizonte, nomeOcupacao, porContaPropria, estradaNaArea } from '../../motor/sistemas/trabalho';
 import { acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
 import { acoesDoNegocio } from '../../motor/sistemas/gestao';
-import { dedicacaoDe, donoIntegral, estrategiaDe, leituraDoNegocio, negocioAberto, negociosPossiveis, parteDoSocio, presencaDe, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
+import { contaDoAno, dedicacaoDe, donoIntegral, estrategiaDe, leituraDoNegocio, negocioAberto, negociosPossiveis, parteDoSocio, presencaDe, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
 import { rotuloEstrategia } from '../../motor/dados/negocios';
 import { leituraPolitica, naPolitica, nomeDaBandeira, portasDaPolitica } from '../../motor/sistemas/politica';
 import { escadaMilitar, perspectivasMilitares } from '../../motor/sistemas/militar';
@@ -79,7 +79,7 @@ export function Trabalho({ vida, agir, irPara }: Props) {
 
       <section className="camada camada--agora" aria-labelledby="camada-agora">
         <h2 id="camada-agora" className="camada__titulo">A sua situação agora</h2>
-        {e && modo !== 'politica' && (
+        {(e || modo === 'negocio') && modo !== 'politica' && (
           <dl className="ficha-trabalho">
             {l.onde && !/^Por conta própria$|^A internet$|^Por encomenda$/i.test(l.onde) && <Dado rotulo="Onde">{l.onde}</Dado>}
             {l.renda && <Dado rotulo="No bolso">{l.renda.replace(' por mês no bolso', '/mês')}</Dado>}
@@ -154,6 +154,7 @@ function PainelNegocio({ vida }: { vida: Vida }) {
     <section className="painel painel--negocio" aria-label="O negócio">
       <p className="painel__frase">{l.movimento}</p>
       <Medidor valor={n.clientela} limite={teto} rotulo={l.medidor} palavra={l.palavra} />
+      <ContaDoNegocioAno vida={vida} />
       <dl className="dados">
         <Dado rotulo="Como é tocado">{l.dedicacao}</Dado>
         <Dado rotulo="O último ano">{l.caixa}</Dado>
@@ -173,6 +174,37 @@ function PainelNegocio({ vida }: { vida: Vida }) {
         )}
       </div>
       {t && n.semEstrada && (vida.t - n.tInicio) / 12 < 3 && <p className="nota">Você abriu sem conhecer o ramo: os primeiros anos pesam mais.</p>}
+    </section>
+  );
+}
+
+/**
+ * A conta do ano, na ordem em que o dono entende: o que entrou, o que custou,
+ * o que sobrou, o que você tirou para viver e o que ficou no caixa. Com o ano
+ * fechado, os números do ano; antes disso, a conta como o negócio está hoje.
+ */
+function ContaDoNegocioAno({ vida }: { vida: Vida }) {
+  const n = negocioAberto(vida)!;
+  const fechado = n.faturamentoAno !== undefined;
+  const k = contaDoAno(vida, n);
+  const faturamento = fechado ? n.faturamentoAno! : k.faturamento;
+  const lucro = fechado ? n.lucroAno ?? k.lucro : k.lucro;
+  const retirada = fechado ? n.retiradaAno ?? k.retirada : k.retirada;
+  const socio = n.socioId ? Math.round(lucro * parteDoSocio(n) / 100) * 100 : 0;
+  const ficou = fechado ? n.resultadoAno ?? 0 : k.resultado;
+  const custos = Math.max(0, faturamento - lucro);
+  const s = n.socioId ? vida.pessoas[n.socioId] : undefined;
+  const paralela = dedicacaoDe(n) === 'paralela' || n.passivo;
+  return (
+    <section className="conta-negocio" aria-label="A conta do negócio">
+      <h4 className="conta-negocio__titulo">{fechado ? 'A conta do último ano' : 'A conta, como o negócio está hoje'}</h4>
+      <dl className="dados dados--conta">
+        <Dado rotulo="Faturamento">{dinheiroCurto(faturamento)} no ano</Dado>
+        <Dado rotulo="Custos">{dinheiroCurto(custos)}<small> (mercadoria, ponto, contas{(n.equipe?.length ?? 0) > 0 ? ', equipe' : ''})</small></Dado>
+        <Dado rotulo={lucro >= 0 ? 'Lucro' : 'Prejuízo'}>{dinheiroCurto(Math.abs(lucro))}{s && socio !== 0 ? <small> · {Math.round(parteDoSocio(n) * 100)}% são de {s.vivo ? s.nome : `herdeiros de ${s.nome}`} ({dinheiroCurto(Math.abs(socio))})</small> : null}</Dado>
+        <Dado rotulo="Sua retirada">{paralela ? 'sem retirada fixa — o que é seu fica no caixa' : retirada > 0 ? <>{dinheiroCurto(retirada)} no ano<small> (≈ {dinheiroCurto(Math.round(retirada / 12 / 10) * 10)}/mês, para viver)</small></> : 'nada: o negócio não rendeu para isso'}</Dado>
+        <Dado rotulo={ficou >= 0 ? 'Ficou no caixa' : 'Faltou'}>{dinheiroCurto(Math.abs(ficou))}{ficou < 0 ? <small> (saiu do seu bolso)</small> : <small> (reserva e reinvestimento)</small>}</Dado>
+      </dl>
     </section>
   );
 }
@@ -400,7 +432,8 @@ function SituacaoDaPena({ vida }: { vida: Vida }) {
 /** O que corre ao lado do trabalho principal: nada disso se perde num campo escondido. */
 function EmParalelo({ vida, agir, irPara, modo }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; modo: ModoTrabalho }) {
   const n = negocioAberto(vida);
-  const negocioParalelo = n && !donoIntegral(vida) ? n : undefined;
+  // Sem outro trabalho, o negócio já é a situação de agora (não aparece duas vezes).
+  const negocioParalelo = n && !donoIntegral(vida) && modo !== 'negocio' ? n : undefined;
   const base = vida.caminhos.esporte?.fase === 'base' && modo !== 'base';
   const pol = !!leituraPolitica(vida) && naPolitica(vida) && modo !== 'politica';
   const arte = !!vida.caminhos.arte?.ativo && modo !== 'artista';

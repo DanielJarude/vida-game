@@ -37,6 +37,7 @@ import { casaApertada } from './imoveis';
 import { pesoDoTrabalhoNaCabeca, sentidoDoTrabalho } from './carreira';
 import { pesoDoClima, pesoDoNegocio, pesoDoRitmo } from './ritmo';
 import { pesoDaPolitica } from './politica';
+import { semOcupacao } from './trabalho';
 
 export { abalar, type Abalo };
 
@@ -210,7 +211,7 @@ export function fatoresHumor(v: Vida): Fator[] {
   // A companhia de um bicho: pesa mais para quem mora sozinho.
   const bicho = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa')).sort((a, b) => b.vin.proximidade - a.vin.proximidade)[0];
   if (bicho && i >= 6) out.push({ id: 'pet', texto: `a companhia de ${bicho.p.nome}`, efeito: moraCom(v).length === 0 ? 4 : 2, pessoaId: bicho.p.id });
-  if (i >= 18 && !v.trabalho.atual && !v.trabalho.aposentadoria && !v.educacao.matricula && !v.trabalho.pausa && !v.justica?.prisao) out.push({ id: 'sem_trabalho', texto: 'estar sem trabalho', efeito: -6 });
+  if (i >= 18 && semOcupacao(v) && !v.trabalho.aposentadoria && !v.educacao.matricula && !v.trabalho.pausa && !v.justica?.prisao) out.push({ id: 'sem_trabalho', texto: 'estar sem trabalho', efeito: -6 });
   const sentido = sentidoDoTrabalho(v);
   if (sentido) out.push({ id: 'sentido', texto: sentido.texto, efeito: sentido.efeito });
   const ritmoH = pesoDoRitmo(v).humor;

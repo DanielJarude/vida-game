@@ -28,6 +28,7 @@ import { custoDeMudanca, iniciarAdocao, iniciarCnh, mudarAgora } from './sistema
 import { modeloMoradia, modeloVeiculo, VEICULO_ANTIGO } from './dados/bens';
 import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
 import { curso } from './dados/cursos';
+import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras, type Modo } from './sistemas/transporte';
 import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, rendaPropriaMensal, saldoMensal } from './sistemas/dinheiro';
 import { animalDoAbrigo, nomeImovel, ofertaDeImovel, ofertaDePet, ofertaDeVeiculo, ofertaPorModelo, ofertaVeiculoPorModelo } from './sistemas/mercado';
 import { disponibilidadeVeiculo, executarVeiculo, textoVeiculo, valorDeVenda, type AcaoVeiculo } from './sistemas/veiculos';
@@ -122,6 +123,8 @@ export type Acao =
   | { tipo: 'mei' }
   /** Pagar (ou parar de pagar) o INSS como facultativo durante uma pausa de cuidado. */
   | { tipo: 'facultativo'; ativo: boolean }
+  /** Como ir ao trabalho e ao estudo (`auto`: o jeito mais rápido que se tem). */
+  | { tipo: 'deslocamento'; modo: Modo | 'auto' }
   /** Reduzir a jornada (ou parar) para cuidar da casa e da família. */
   | { tipo: 'cuidar_da_casa'; intensidade: 'parcial' | 'total' }
   /** Encerrar a pausa de cuidado: voltar à jornada inteira ou ao mercado. */
@@ -349,6 +352,14 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (e.contrato === 'autonomo' && e.clientela === undefined) return bloqueio('impossivel', 'Não se aplica.');
       if (e.ocupacaoId === 'produtor_rural' || e.ocupacaoId === 'pescador') return bloqueio('impossivel', 'Produtor rural e pescador têm registro próprio, não MEI.');
       if (e.salario > 6750) return bloqueio('requisito', 'O faturamento passa do limite do MEI (cerca de R$ 81 mil por ano).');
+      return PERMITIDO;
+    }
+    case 'deslocamento': {
+      const d = deslocamento(v);
+      if (!d) return bloqueio('impossivel', semTrajeto(v));
+      if (a.modo === 'auto') return v.deslocamento ? PERMITIDO : bloqueio('incompativel', 'Já vai do jeito mais rápido que tem.');
+      if (!d.opcoes.some(o => o.modo === a.modo)) return bloqueio('impossivel', a.modo === 'carro' || a.modo === 'moto' ? 'Precisa de um veículo que funcione e de carteira de motorista.' : a.modo === 'bicicleta' ? 'Precisa de uma bicicleta — e de um trajeto que caiba de bicicleta.' : 'Não dá para fazer esse trajeto assim aqui.');
+      if (d.modo === a.modo) return bloqueio('incompativel', 'Já vai assim.');
       return PERMITIDO;
     }
     case 'facultativo': {
@@ -708,6 +719,14 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (v.trabalho.atual && eDasForcas(ocupacao(v.trabalho.atual.ocupacaoId))) { irParaReserva(v, 'pedido'); return ok('Transferência para a reserva concedida.', 'bom'); }
       aposentar(v); return ok('Aposentadoria concedida.', 'bom');
     case 'mei': { const antes = temFato(v, 'formalizou_mei'); formalizar(v); escrever(v, { texto: antes ? `Abriu um MEI de novo, agora como ${nomeOcupacao(v, ocupacao(v.trabalho.atual!.ocupacaoId))}.` : 'Formalizou o trabalho como MEI: CNPJ, nota fiscal e a guia do mês.', relevancia: 'biografia', tema: 'trabalho', escolha: true }); return ok('Agora é MEI: uma guia por mês, tempo de INSS contando.', 'bom'); }
+    case 'deslocamento': {
+      const antes = deslocamento(v)!;
+      v.deslocamento = a.modo === 'auto' ? undefined : { modo: a.modo, t: v.t };
+      const d = deslocamento(v)!;
+      const dif = d.minutos - antes.minutos;
+      const dinheiro = d.passagem - antes.passagem;
+      return ok(`Agora ${d.destino === 'o estudo' ? 'para o estudo' : 'para o trabalho'} você vai ${NOME_MODO[d.modo]}: ${tempoEmPalavras(d.minutos)}${dif ? ` (${dif > 0 ? `${dif} minutos a mais` : `${-dif} minutos a menos`} que antes)` : ''}${dinheiro ? `, ${dinheiro > 0 ? `mais ${fmt(dinheiro)} de passagem por mês` : `sem ${fmt(-dinheiro)} de passagem por mês`}` : ''}.`);
+    }
     case 'facultativo':
       v.trabalho.pausa!.facultativo = a.ativo;
       return ok(a.ativo ? 'O INSS volta a contar, pago como facultativo.' : 'Sem pagar o INSS, o tempo de contribuição para.');

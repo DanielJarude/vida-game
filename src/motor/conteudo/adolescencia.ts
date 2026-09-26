@@ -4,6 +4,7 @@ import type { Conteudo } from './base';
 import * as P from './papeis';
 import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa, temFato } from '../nucleo';
+import { deslocamento } from '../sistemas/transporte';
 import { municipio } from '../dados/lugares';
 
 export const ADOLESCENCIA: Conteudo[] = [
@@ -90,7 +91,7 @@ export const ADOLESCENCIA: Conteudo[] = [
     quando: c => ['metropole', 'metropolitana', 'capital'].includes(municipio(c.v.moradia.municipioId).perfil),
     narrar: c => ({
       texto: c.vezes > 0
-        ? c.r.pick(['Mais um celular levado na rua. Você passou a andar com um aparelho velho só para isso.', 'Outro assalto, dessa vez dentro do ônibus.', 'Levaram sua carteira num arrastão perto do terminal.'])
+        ? c.r.pick(['Mais um celular levado na rua. Você passou a andar com um aparelho velho só para isso.', deslocamento(c.v)?.modo === 'carro' ? 'Outro assalto, dessa vez no sinal fechado, com o vidro aberto.' : deslocamento(c.v)?.modo === 'moto' ? 'Outro assalto, dessa vez parado no sinal, em cima da moto.' : 'Outro assalto, dessa vez dentro do ônibus.', 'Levaram sua carteira num arrastão perto do terminal.'])
         : c.idade < 18 ? 'Foi assaltad' + c.g('o', 'a', 'e') + ' no ponto de ônibus voltando da escola. Levaram o celular.' : 'Levaram seu celular num assalto rápido, à luz do dia, numa esquina movimentada.',
       relevancia: 'biografia', tom: 'ruim',
       efeito: () => { estresse(c, 8); if (c.idade >= 18) dinheiro(c, -1500); }

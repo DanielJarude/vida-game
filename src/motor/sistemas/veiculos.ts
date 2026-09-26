@@ -32,13 +32,13 @@ export const anosDoVeiculo = (v: Vida, b: Veiculo) => Math.max(0, anoDe(v.t) - (
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Custos mensais de um veículo (uso, IPVA, seguro). */
-export function custosDeVeiculo(v: Vida, b: Veiculo, c: number): { rotulo: string; valor: number }[] {
+export function custosDeVeiculo(v: Vida, b: Veiculo, c: number, uso = 1): { rotulo: string; valor: number }[] {
   const m = modeloVeiculo(b.modeloId);
   const out: { rotulo: string; valor: number }[] = [];
   const nome = cap(m.nome);
   if (!b.parado && veiculoUtil(b)) {
     const idadeFator = 1 + Math.min(0.35, anosDoVeiculo(v, b) * 0.015);
-    out.push({ rotulo: `${nome}: combustível e manutenção`, valor: m.usoMensal * c * idadeFator * (b.estado < 40 ? 1.3 : 1) });
+    out.push({ rotulo: `${nome}: combustível e manutenção`, valor: m.usoMensal * c * idadeFator * (b.estado < 40 ? 1.3 : 1) * uso });
   }
   if (m.taxaAnual) out.push({ rotulo: `${nome}: IPVA${b.parado ? '' : ' e seguro'}`, valor: b.valor * (b.parado ? 0.035 : m.taxaAnual) / 12 });
   return out;

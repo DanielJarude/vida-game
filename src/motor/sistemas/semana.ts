@@ -9,13 +9,13 @@
  * 2, quase todo dia. Uma criança tem uns 2 pedaços além da escola; um
  * adolescente, 3; um adulto, 3,5. Trabalho, faculdade, filhos pequenos e
  * quem precisa de cuidado em casa ocupam parte disso antes de qualquer
- * escolha. Condução própria devolve tempo onde o ônibus é ruim.
+ * escolha. O trajeto de todo dia também — e o que se tem (carro, moto,
+ * bicicleta) muda quanto (`sistemas/transporte`).
  */
 
 import type { Vida } from '../tipos';
 import { filhos, idade, idadePessoa, moraCom, vinculosVivos } from '../nucleo';
-import { veiculoUtil } from './veiculos';
-import { economiaLocal } from '../dados/lugares';
+import { deslocamento } from './transporte';
 import { curso } from '../dados/cursos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { listaNatural } from '../texto';
@@ -125,12 +125,9 @@ export function semana(v: Vida): Semana {
       if (peso >= 0.05) fixos.push({ id: 'pets', rotulo, peso: Math.round(peso * 100) / 100, tipo: 'cuidado' });
     }
   }
-  const temConducao = v.financas.bens.some(x => x.tipo === 'veiculo' && !x.modeloId.startsWith('bike') && veiculoUtil(x));
-  const transporte = economiaLocal(v.moradia.municipioId).transporte;
-  if ((e || m) && i >= 18) {
-    if (temConducao && transporte !== 'bom') ganhos.push({ id: 'conducao', rotulo: 'Condução própria (menos tempo no ônibus)', peso: 0.5, tipo: 'deslocamento' });
-    else if (!temConducao && transporte === 'ruim') fixos.push({ id: 'onibus', rotulo: 'Horas no ônibus', peso: 0.25, tipo: 'deslocamento' });
-  }
+  // O trajeto de todo dia, do jeito que a pessoa vai (carro, moto, bicicleta, ônibus, a pé): a mesma conta da tela e do orçamento.
+  const d = deslocamento(v);
+  if (d && d.peso >= 0.02) fixos.push({ id: 'deslocamento', rotulo: d.rotulo, peso: d.peso, tipo: 'deslocamento' });
 
   const capacidade = Math.max(0.5, base - fixos.reduce((s, x) => s + x.peso, 0) + ganhos.reduce((s, x) => s + x.peso, 0));
   const rotinas: Compromisso[] = v.rotinas.map(r => {

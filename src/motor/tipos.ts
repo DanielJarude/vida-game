@@ -897,8 +897,16 @@ export interface Negocio {
   anosNoVermelho: number;
   socioId?: string;
   tFim?: number;
-  /** Resultado do último ano além da sua retirada: lucro (+) ou o que saiu do seu bolso (−). */
+  /** Resultado do último ano além da sua retirada: o que ficou no caixa (+) ou o que faltou (−). */
   resultadoAno?: number;
+  /** O que entrou no último ano (vendas, serviços). */
+  faturamentoAno?: number;
+  /** O lucro do último ano, antes do dono (o negócio inteiro). */
+  lucroAno?: number;
+  /** O que o dono tirou para viver no último ano (pró-labore). */
+  retiradaAno?: number;
+  /** O que saiu da sua conta no último ano para cobrir o prejuízo do negócio. */
+  devolvidoAno?: number;
   /** Soma dos resultados desde a abertura (sem contar a retirada mensal). */
   acumulado?: number;
   /**
@@ -1224,6 +1232,8 @@ export interface Vida {
   caminhos: Caminhos;
   /** Antecedentes, processo em andamento, pena. Ausente = nunca teve problema com a Justiça. */
   justica?: Justica;
+  /** Como prefere ir ao trabalho e ao estudo. Ausente = o jeito mais rápido que tem (`sistemas/transporte`). */
+  deslocamento?: { modo: 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro'; t: number };
   morte?: { t: number; causa: string; heranca?: Heranca };
 }
 

@@ -23,7 +23,7 @@ import { municipio, nivelDeOferta } from '../dados/lugares';
 import { forcaDoSetor } from '../dados/mercado';
 import { habilidade } from './frentes';
 import { marcar } from './marcas';
-import { elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPropria } from './trabalho';
+import { elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPropria, semOcupacao } from './trabalho';
 import { mediaEscolar } from './frentes';
 import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
@@ -44,7 +44,7 @@ export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: s
 }
 
 const podeGerar = (v: Vida, chave: string, anos: number) => v.caminhos.ultimas[chave] === undefined || v.t - v.caminhos.ultimas[chave] >= anos * 12;
-const semTrabalho = (v: Vida) => !v.trabalho.atual;
+const semTrabalho = (v: Vida) => semOcupacao(v);
 const trabalhoFraco = (v: Vida) => !!v.trabalho.atual && (['informal', 'temporario'].includes(v.trabalho.atual.contrato) || (ocupacaoOuNula(v.trabalho.atual.ocupacaoId)?.nivel ?? 0) <= 1);
 
 /* -------------------------------------------------------------- Geradores */

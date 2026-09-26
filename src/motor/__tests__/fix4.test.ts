@@ -18,6 +18,17 @@ import { interacoesPara, rotuloInteracao } from '../sistemas/interacoes';
 import { responderTudo } from './ajuda';
 import { adulto, comFilho, comNeto, comParceiro, comParente, pessoaNova } from './cenarios';
 import { vincular } from '../pessoas';
+import { NEGOCIOS } from '../dados/negocios';
+import { abrirNegocio, contaDoAno, passarParaHorasVagas, processarNegocio } from '../sistemas/negocio';
+import { orcamento, processarDinheiro } from '../sistemas/dinheiro';
+import { liquido } from '../sistemas/renda';
+import { acoesDoTrabalho, leituraDoTrabalho, modoDoTrabalho } from '../sistemas/profissao';
+import { disponibilidade } from '../acoes';
+import { fatoresHumor } from '../sistemas/estado';
+import { deslocamento } from '../sistemas/transporte';
+import { semana } from '../sistemas/semana';
+import { executar } from '../acoes';
+import type { Veiculo } from '../tipos';
 
 /* ============================================================ 1. A rede */
 
@@ -138,4 +149,165 @@ describe('rede: uma morte chega a quem amava', () => {
     for (let k = 0; k < 35 && !v.morte; k++) { v = avancarAno(v).vida; v = responderTudo(v); }
     for (const p of Object.values(v.pessoas)) if (p.aperto?.tipo === 'luto' && p.aperto.pessoaId) expect(v.pessoas[p.aperto.pessoaId]?.vivo).toBe(false);
   }, 60000);
+});
+
+/* ======================================================= 2. O negócio */
+
+describe('negócio próprio é trabalho de verdade', () => {
+  function dono(tipo = 'salao', clientela = 60, dedicacao: 'integral' | 'paralela' = 'integral') {
+    const v = adulto(35, { semente: 9, municipioId: 'salvador-ba' });
+    v.financas.conta = 400000;
+    return transacao(v, (x, r) => {
+      const t = NEGOCIOS.find(k => k.id === tipo)!;
+      for (const tr of t.trilhas) x.trabalho.experiencia[tr] = 200;
+      const n = abrirNegocio(x, r, tipo, { modo: 'guardado', dedicacao });
+      n.clientela = clientela;
+      if (x.trabalho.atual) x.trabalho.atual.clientela = clientela;
+    }).vida;
+  }
+
+  it('a conta fecha: faturamento − custos = lucro; lucro − sócio − retirada = o que ficou no caixa', () => {
+    for (const t of NEGOCIOS) {
+      const v = dono(t.id, 55);
+      const k = contaDoAno(v, v.caminhos.negocio!);
+      expect(k.faturamento).toBeGreaterThan(k.lucro);
+      expect(Math.abs(k.lucro - k.socio - k.retirada - k.resultado)).toBeLessThanOrEqual(200);
+    }
+  });
+
+  it('um negócio que vai bem paga o dono; um vazio dá prejuízo (todos os tipos)', () => {
+    for (const t of NEGOCIOS) {
+      const bem = dono(t.id, 65);
+      const vazio = dono(t.id, 3);
+      expect(contaDoAno(bem, bem.caminhos.negocio!).retirada).toBeGreaterThan(20000);
+      expect(contaDoAno(vazio, vazio.caminhos.negocio!).lucro).toBeLessThan(0);
+      expect(contaDoAno(vazio, vazio.caminhos.negocio!).retirada).toBe(0);
+    }
+  });
+
+  it('a retirada do ano vira renda pessoal: é ela que entra na conta como "Retirada do negócio"', () => {
+    let v = dono('salao', 60);
+    v = transacao(v, (x, r) => { x.t += 12; processarNegocio(x, r); }).vida;
+    const n = v.caminhos.negocio!;
+    expect(n.retiradaAno).toBeGreaterThan(0);
+    expect(v.trabalho.atual!.salario * 12).toBe(n.retiradaAno);
+    const linha = orcamento(v).entradas.find(l => l.rotulo === 'Retirada do negócio')!;
+    expect(linha.valor).toBeGreaterThan(0);
+    expect(linha.valor).toBe(Math.round(liquido(v.trabalho.atual!.salario, 'autonomo')));
+  });
+
+  it('prejuízo que sai do bolso aparece na conta do ano (toda vez, não só a cada três anos)', () => {
+    let v = dono('lanchonete', 2);
+    for (let k = 0; k < 2; k++) {
+      v = transacao(v, (x, r) => { x.t += 12; x.financas.conta = 400000; x.caminhos.negocio!.clientela = 2; if (x.trabalho.atual) x.trabalho.atual.clientela = 2; processarNegocio(x, r); processarDinheiro(x, r); }).vida;
+      expect(v.caminhos.negocio!.devolvidoAno).toBeGreaterThan(0);
+      expect(v.financas.razao.some(l => /Prejuízo de .* coberto do seu bolso/.test(l.rotulo))).toBe(true);
+    }
+  });
+
+  it('dono dedicado não é tratado como desempregado: nada de "ver vagas" em destaque', () => {
+    const v = dono('salao', 60);
+    expect(modoDoTrabalho(v)).toBe('negocio');
+    const a = acoesDoTrabalho(v, disponibilidade);
+    expect([...a.agora, ...a.mais].some(x => x.id === 'vagas')).toBe(false);
+  });
+
+  it('quem passou o negócio para as horas vagas e ficou sem outro trabalho é dono, não desempregado', () => {
+    let v = dono('salao', 60);
+    v = transacao(v, x => { passarParaHorasVagas(x, x.caminhos.negocio!); }).vida;
+    expect(v.trabalho.atual).toBeUndefined();
+    expect(v.trabalho.desempregadoDesde).toBeUndefined();
+    expect(modoDoTrabalho(v)).toBe('negocio');
+    const l = leituraDoTrabalho(v);
+    expect(l.titulo).toBe(v.caminhos.negocio!.nome);
+    const a = acoesDoTrabalho(v, disponibilidade);
+    expect(a.agora.some(x => x.id === 'dedicacao')).toBe(true);
+    expect(a.agora.some(x => x.id === 'vagas')).toBe(false);
+    expect([...a.agora, ...a.mais].find(x => x.id === 'outras')?.peso).toBeLessThanOrEqual(1);
+    expect(fatoresHumor(v).some(f => f.id === 'sem_trabalho')).toBe(false);
+  });
+
+  it('o negócio paralelo segue sem retirada fixa (a distinção do FIX #3)', () => {
+    const v = dono('loja_online', 50, 'paralela');
+    expect(contaDoAno(v, v.caminhos.negocio!).retirada).toBe(0);
+  });
+});
+
+/* ===================================================== 3. Deslocamento */
+
+describe('o que se possui muda o trajeto de todo dia', () => {
+  function trabalhadora(municipioId = 'campina-grande-pb') {
+    const v = adulto(30, { semente: 41, municipioId });
+    v.trabalho.atual = { ocupacaoId: 'vendedor', empregador: 'uma loja', contrato: 'clt', salario: 2600, tInicio: v.t - 24, desempenho: 60, municipioId: v.moradia.municipioId, carga: 'integral' };
+    v.financas.bens = [];
+    v.deslocamento = undefined;
+    return v;
+  }
+  const carro = (v: ReturnType<typeof trabalhadora>, extra: Partial<Veiculo> = {}) => v.financas.bens.push({ id: `v${v.seq++}`, tipo: 'veiculo', modeloId: 'carro_compacto', nome: 'Chevrolet Onix', valor: 70000, tCompra: v.t, estado: 80, anoFabricacao: Math.floor(v.t / 12) - 2, ...extra } as Veiculo);
+
+  it('sem veículo: transporte público, com passagem no orçamento e o trajeto na semana', () => {
+    const v = trabalhadora();
+    const d = deslocamento(v)!;
+    expect(d.modo).toBe('publico');
+    expect(semana(v).fixos.find(f => f.id === 'deslocamento')?.rotulo).toMatch(/ônibus/);
+    expect(orcamento(v).saidas.some(l => /Passagem/.test(l.rotulo))).toBe(true);
+  });
+
+  it('com carro e carteira: vai de carro, menos tempo na semana, sem passagem (e o combustível entra)', () => {
+    const v = trabalhadora();
+    const antes = deslocamento(v)!;
+    carro(v);
+    v.trabalho.licencas.push('cnh');
+    const d = deslocamento(v)!;
+    expect(d.modo).toBe('carro');
+    expect(d.minutos).toBeLessThan(antes.minutos);
+    expect(semana(v).fixos.find(f => f.id === 'deslocamento')!.rotulo).toMatch(/de carro \(Chevrolet Onix\)/);
+    expect(semana(v).capacidade).toBeGreaterThan(semana(trabalhadora()).capacidade);
+    expect(orcamento(v).saidas.some(l => /Passagem/.test(l.rotulo))).toBe(false);
+    expect(orcamento(v).saidas.some(l => /combustível/.test(l.rotulo))).toBe(true);
+  });
+
+  it('carro sem carteira, parado ou quebrado não leva ninguém — e a tela diz por quê', () => {
+    const semCnh = trabalhadora(); carro(semCnh);
+    expect(deslocamento(semCnh)!.modo).toBe('publico');
+    expect(deslocamento(semCnh)!.motivo).toMatch(/carteira/);
+    const parado = trabalhadora(); carro(parado, { parado: true }); parado.trabalho.licencas.push('cnh');
+    expect(deslocamento(parado)!.modo).toBe('publico');
+    expect(deslocamento(parado)!.motivo).toMatch(/parado/);
+  });
+
+  it('bicicleta e moto mudam a vida; na metrópole, a bicicleta não faz o trajeto', () => {
+    const v = trabalhadora();
+    v.financas.bens.push({ id: 'b1', tipo: 'veiculo', modeloId: 'bike', nome: 'Caloi 10', valor: 1200, tCompra: v.t, estado: 90 } as Veiculo);
+    expect(deslocamento(v)!.modo).toBe('bicicleta');
+    expect(orcamento(v).saidas.some(l => /Passagem/.test(l.rotulo))).toBe(false);
+    const sp = trabalhadora('sao-paulo-sp');
+    sp.financas.bens.push({ id: 'b1', tipo: 'veiculo', modeloId: 'bike', nome: 'Caloi 10', valor: 1200, tCompra: sp.t, estado: 90 } as Veiculo);
+    expect(deslocamento(sp)!.modo).toBe('publico');
+    const m = trabalhadora(); m.trabalho.licencas.push('cnh');
+    m.financas.bens.push({ id: 'm1', tipo: 'veiculo', modeloId: 'moto_pequena', nome: 'Honda CG 160', valor: 17000, tCompra: m.t, estado: 90 } as Veiculo);
+    expect(deslocamento(m)!.modo).toBe('moto');
+  });
+
+  it('o jogador pode preferir outro jeito (o ônibus, para poupar o carro); a escolha diz a diferença', () => {
+    let v = trabalhadora(); carro(v); v.trabalho.licencas.push('cnh');
+    const r = executar(v, { tipo: 'deslocamento', modo: 'publico' });
+    v = r.vida;
+    expect(deslocamento(v)!.modo).toBe('publico');
+    expect(r.aviso?.texto).toMatch(/minutos a mais/);
+    // O carro que ficou para o fim de semana gasta menos combustível.
+    const comb = (x: typeof v) => -(orcamento(x).saidas.find(l => /combustível/.test(l.rotulo))?.valor ?? 0);
+    const noCarro = transacao(v, x => { x.deslocamento = undefined; }).vida;
+    expect(comb(v)).toBeLessThan(comb(noCarro));
+    v = executar(v, { tipo: 'deslocamento', modo: 'auto' }).vida;
+    expect(deslocamento(v)!.modo).toBe('carro');
+  });
+
+  it('quem trabalha em casa não tem trajeto; sem trabalho nem estudo presencial, também não', () => {
+    const v = trabalhadora();
+    v.trabalho.atual = undefined;
+    expect(deslocamento(v)).toBeUndefined();
+    expect(semana(v).fixos.some(f => f.id === 'deslocamento')).toBe(false);
+    expect(orcamento(v).saidas.some(l => /Passagem/.test(l.rotulo))).toBe(false);
+  });
 });

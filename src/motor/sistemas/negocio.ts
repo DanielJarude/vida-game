@@ -40,9 +40,10 @@ import { ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { economiaLocal, municipio } from '../dados/lugares';
 import { habilidade } from './frentes';
 import { marcar } from './marcas';
-import { contratar, encerrarEmprego, experienciaNaTrilha, nomeOcupacao, rendaDeClientela } from './trabalho';
+import { contratar, encerrarEmprego, experienciaNaTrilha, nomeOcupacao } from './trabalho';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { comprometimento, disponivel, limiteDeCredito, pagar, parcelaPrice } from './dinheiro';
+import { totalAplicado } from './investimentos';
 import { juroDeFinanciamento } from './economia';
 import { criarPessoa, vincular } from '../pessoas';
 import { salarioLocal, SALARIO_MINIMO } from './renda';
@@ -175,7 +176,8 @@ export function abrirNegocio(v: Vida, r: Rng, id: string, opcoes: OpcoesAbertura
     const e = contratar(v, r, oc, 'negocio');
     e.clientela = inicial;
     e.empregador = n.nome;
-    e.salario = rendaDeClientela(v, oc, inicial);
+    // O primeiro ano: a retirada que o negócio, do tamanho que começa, consegue pagar.
+    e.salario = retiradaMensal(v, n);
   }
   const como = pequeno ? ', começando pequeno, em casa' : op.modo === 'emprestimo' ? ', com um empréstimo do banco' : '';
   const lado = paralela ? (nomeAnterior ? ` Sem largar o trabalho de ${nomeAnterior}: o negócio fica para as horas vagas.` : ' Nas horas vagas, ao lado dos estudos.') : '';
@@ -216,8 +218,8 @@ export function dedicarAoNegocio(v: Vida, r: Rng, n: Negocio): void {
   const e = contratar(v, r, oc, 'negocio');
   e.clientela = n.clientela;
   e.empregador = n.nome;
-  e.salario = rendaDeClientela(v, oc, n.clientela);
   n.dedicacao = 'integral';
+  e.salario = retiradaMensal(v, n);
   escrever(v, { texto: `Passou a viver só de ${n.nome}: o negócio virou o trabalho de todo dia.`, relevancia: 'marco', tema: 'trabalho', escolha: true });
   marcar(v, 'mudanca_carreira', `Dedicou-se de vez a ${n.nome}.`, 2, { ocupacaoId: oc.id });
 }
@@ -269,23 +271,65 @@ function fatorMelhorias(n: Negocio): { margem: number; custo: number } {
 
 export const salarioDaFuncao = (v: Vida, t: TipoNegocio) => Math.round(SALARIO_MINIMO * t.folha * economiaLocal(v.moradia.municipioId).salario / 10) * 10;
 
-/** A conta do ano (em reais por ano): o que o movimento deixa, o que o ponto custa, a folha, a sua retirada. */
-export function contaDoAno(v: Vida, n: Negocio): { margem: number; fixo: number; folha: number; retirada: number; resultado: number } {
-  const e = donoIntegral(v) ? v.trabalho.atual : undefined;
+/**
+ * A conta do ano, em reais por ano, na ordem em que o dono entende:
+ *
+ *   faturamento  — o que entrou (vendas, serviços, obras);
+ *   insumos      — o que foi para mercadoria, material, produto;
+ *   fixo         — ponto, contas, equipamento;
+ *   folha        — quem trabalha para você;
+ *   lucro        — o que sobrou, antes do dono (o negócio inteiro);
+ *   socio        — a parte do sócio nesse lucro;
+ *   retirada     — o que você tirou para viver (o pró-labore). Quem se
+ *                  dedica ao negócio tira a maior parte do que é seu; quem
+ *                  toca nas horas vagas não tem retirada fixa;
+ *   resultado    — o que ficou no caixa depois de tudo (ou o que faltou).
+ *
+ * A retirada vem do que o negócio rende: um salão que vai bem paga bem ao
+ * dono; um que vai mal, pouco — e um que dá prejuízo não paga nada (o
+ * prejuízo sai do caixa e, depois, do bolso). `margem` é o faturamento
+ * menos os insumos (o que o movimento deixa).
+ */
+export interface ContaDoNegocio {
+  faturamento: number; insumos: number; margem: number; fixo: number; folha: number;
+  lucro: number; socio: number; suaParte: number; retirada: number; resultado: number;
+}
+
+/** Quanto do que é seu o dono dedicado tira para viver; o resto fica no caixa (reserva e reinvestimento). */
+export const PARTE_RETIRADA = 0.8;
+/** Quanto de cada real vendido fica depois de mercadoria e insumos, por presença. */
+const MARGEM_BRUTA: Record<string, number> = { rua: 0.5, online: 0.4, atendimento: 0.78, obra: 0.45 };
+
+export function contaDoAno(v: Vida, n: Negocio, dono = donoIntegral(v) === n && !n.passivo): ContaDoNegocio {
   const oc = ocupacao(n.ocupacaoId);
   const ref = salarioLocal(oc, v.moradia.municipioId);
   const est = FATOR_ESTRATEGIA[estrategiaDe(n)];
   const mel = fatorMelhorias(n);
   const casa = n.emCasa ? { margem: 0.62, custo: 0.3 } : { margem: 1, custo: 1 };
   const c = n.clientela;
-  const margem = ref * (3.7 + 0.176 * c) * escala(n, ESCALA_MARGEM) * est.margem * casa.margem * mel.margem;
-  const fixo = n.capital / (n.emCasa ? 0.4 : 1) * 0.2 * escala(n, ESCALA_CUSTO) * est.custo * casa.custo * mel.custo;
+  // O movimento é o que paga: casa vazia não cobre o ponto; casa cheia paga o ponto, a folha e o dono.
+  const margem = ref * (0.5 + 0.28 * c) * escala(n, ESCALA_MARGEM) * est.margem * casa.margem * mel.margem;
+  // O fixo: o desgaste do que foi investido e o ponto (aluguel, contas, contador) — em casa, sem ponto.
+  const ponto = n.emCasa ? 0 : ref * 2.6;
+  const fixo = (n.capital / (n.emCasa ? 0.4 : 1) * 0.2 + ponto) * escala(n, ESCALA_CUSTO) * est.custo * casa.custo * mel.custo;
   const folha = (n.equipe ?? []).reduce((s, f) => s + f.salario * 13.33 * 1.3, 0);
-  // Nas horas vagas não há retirada fixa: o que sobra fica no caixa, e tirar é decisão.
-  const retirada = e ? e.salario * 12 : 0;
-  const bruto = margem - fixo - folha - retirada;
-  const resultado = Math.round(bruto * (1 - parteDoSocio(n)) / 100) * 100;
-  return { margem: Math.round(margem), fixo: Math.round(fixo), folha: Math.round(folha), retirada: Math.round(retirada), resultado };
+  const bruta = MARGEM_BRUTA[presencaDe(n)] ?? 0.5;
+  const faturamento = margem / bruta;
+  const lucro = margem - fixo - folha;
+  const socio = lucro * parteDoSocio(n);
+  const suaParte = lucro - socio;
+  // Nas horas vagas (ou afastado, nas mãos da equipe) não há retirada fixa: o que é seu fica no caixa, e tirar é decisão.
+  const retirada = dono ? Math.max(0, suaParte * PARTE_RETIRADA) : 0;
+  const r100 = (x: number) => Math.round(x / 100) * 100;
+  return {
+    faturamento: r100(faturamento), insumos: r100(faturamento - margem), margem: Math.round(margem), fixo: Math.round(fixo), folha: Math.round(folha),
+    lucro: r100(lucro), socio: r100(socio), suaParte: r100(suaParte), retirada: r100(retirada), resultado: r100(suaParte - retirada)
+  };
+}
+
+/** A retirada mensal do dono dedicado, pela conta do negócio como ele está (bruta, antes do INSS de autônomo). */
+export function retiradaMensal(v: Vida, n: Negocio): number {
+  return Math.round(contaDoAno(v, n, true).retirada / 12 / 10) * 10;
 }
 
 /** Quanto alguém pagaria pela SUA parte do negócio hoje. */
@@ -349,36 +393,34 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
   }
   const nova = Math.round(clamp(base + extra + (r ? r.normal() * 2 : 0), 0, tetoDoMovimento(n, v)));
   n.clientela = nova;
+  const conta = contaDoAno(v, n, integral);
   if (integral) {
     e!.clientela = nova;
-    e!.salario = rendaDeClientela(v, ocupacao(n.ocupacaoId), nova);
+    // A retirada do ano é o que o negócio rendeu para você (não uma tabela de mercado): paga o mês a mês do dono.
+    e!.salario = Math.round(conta.retirada / 12 / 10) * 10;
     if (v.fatos['corte_proprio'] !== undefined && v.t - v.fatos['corte_proprio'] <= 12) e!.salario = Math.round(e!.salario * 0.7 / 10) * 10;
   }
-
-  const conta = contaDoAno(v, n);
-  const resultado = conta.resultado;
+  const resultado = conta.resultado + (integral ? conta.retirada - e!.salario * 12 : 0);
   n.resultadoAno = resultado;
+  n.faturamentoAno = conta.faturamento;
+  n.lucroAno = conta.lucro;
+  n.retiradaAno = integral ? e!.salario * 12 : 0;
+  n.devolvidoAno = undefined;
   n.acumulado = (n.acumulado ?? 0) + resultado;
   n.historico = [...n.historico, resultado].slice(-6);
   n.caixa += resultado;
   if (n.caixa < 0) {
     const falta = -n.caixa;
     n.caixa = 0;
+    // O que faltou sai da sua conta — e fica dito, todo ano em que acontece (na Linha da Vida e na conta do ano).
     v.financas.conta -= falta;
-    if (!v.fatos[`negocio_bolso_${n.tInicio}`] || v.t - v.fatos[`negocio_bolso_${n.tInicio}`] >= 36) {
-      v.fatos[`negocio_bolso_${n.tInicio}`] = v.t;
-      // A retirada (o seu salário de dono) já tinha saído do caixa mês a mês: dizer "do seu bolso" sem dizer isso engana.
-      const texto = conta.retirada > 0 && falta <= conta.retirada
-        ? `${n.nome} não rendeu o que você tirou para viver: ${fmt(falta)} dos ${fmt(conta.retirada)} de retirada do ano voltaram para cobrir as contas.`
-        : conta.retirada > 0
-          ? `${n.nome} não rendeu nem a sua retirada: além de devolver os ${fmt(conta.retirada)} do ano, saíram ${fmt(falta - conta.retirada)} do seu bolso.`
-          : `${n.nome} não pagou as contas do ano: o caixa acabou e saíram ${fmt(falta)} do seu bolso.`;
-      escrever(v, { texto, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
-    }
+    n.devolvidoAno = falta;
+    escrever(v, { texto: `${n.nome} fechou o ano no prejuízo: o caixa acabou e saíram ${fmt(falta)} do seu bolso para pagar ${presencaDe(n) === 'obra' ? 'material e equipe' : 'as contas do negócio'}.`, relevancia: v.fatos[`negocio_bolso_${n.tInicio}`] !== undefined && v.t - v.fatos[`negocio_bolso_${n.tInicio}`] < 36 ? 'tecnico' : 'cotidiano', tema: 'trabalho', tom: 'ruim' });
+    v.fatos[`negocio_bolso_${n.tInicio}`] = v.t;
     const par = parceiro(v);
     if (par && falta > n.capital * 0.4) par.vin.tensao = Math.min(100, par.vin.tensao + 6);
-    // Quem já não cobre o prejuízo nem com o próprio bolso não escolhe mais: fornecedor e banco fecham a porta.
-    if (v.financas.conta < -Math.max(8000, n.capital * 0.8)) {
+    // Quem já não cobre o prejuízo nem com o que tem (conta e aplicações) não escolhe mais: fornecedor e banco fecham a porta.
+    if (v.financas.conta + totalAplicado(v) < -Math.max(8000, n.capital * 0.8)) {
       fecharNegocio(v, 'as dívidas do negócio passaram do que dava para cobrir: fornecedores e banco fecharam a porta');
       if (v.trabalho.atual?.ocupacaoId === n.ocupacaoId) encerrarEmprego(v, 'fechou o negócio');
       return false;

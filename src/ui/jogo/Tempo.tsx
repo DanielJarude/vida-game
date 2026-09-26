@@ -22,6 +22,7 @@ import { atividadesParaVoce } from '../../motor/sistemas/relevancia';
 import { fatoresCabeca } from '../../motor/sistemas/estado';
 import { ultimaDevolutiva } from '../../motor/sistemas/devolutivas';
 import { economiaLocal } from '../../motor/dados/lugares';
+import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras } from '../../motor/sistemas/transporte';
 import { idade } from '../../motor/nucleo';
 import { listaNatural } from '../../motor/texto';
 import { podeTentar } from '../../motor/plausibilidade';
@@ -47,7 +48,7 @@ function resumoDaSemana(s: Semana): string {
 
 type Pedaco = { id: string; rotulo: string; curto: string; peso: number; tipo: 'trabalho' | 'estudo' | 'casa' | 'atividade' | 'livre' | 'excesso' };
 
-const CURTO: Record<string, string> = { negocio: 'Negócio', trabalho: 'Trabalho', horas_extras: 'Horas extras', curso: 'Estudo', integrado: 'Escola técnica', filhos_pequenos: 'Filhos', filhos_escola: 'Filhos', cuidar: 'Cuidar', onibus: 'Ônibus' };
+const CURTO: Record<string, string> = { negocio: 'Negócio', trabalho: 'Trabalho', horas_extras: 'Horas extras', curso: 'Estudo', integrado: 'Escola técnica', filhos_pequenos: 'Filhos', filhos_escola: 'Filhos', cuidar: 'Cuidar', deslocamento: 'Trajeto' };
 
 /** A semana em pedaços, na ordem: o que já vem ocupado, o que você escolheu, o que sobra, o que passa. */
 function pedacos(s: Semana): Pedaco[] {
@@ -104,7 +105,7 @@ const ORIGEM: Record<string, { area: Aba; rotulo: string }> = {
   trabalho: { area: 'trabalho', rotulo: 'Trabalho' }, horas_extras: { area: 'trabalho', rotulo: 'Trabalho' }, politica: { area: 'trabalho', rotulo: 'Trabalho' }, negocio: { area: 'trabalho', rotulo: 'Trabalho' },
   curso: { area: 'estudos', rotulo: 'Estudos' }, integrado: { area: 'estudos', rotulo: 'Estudos' },
   filhos_pequenos: { area: 'pessoas', rotulo: 'Pessoas' }, filhos_escola: { area: 'pessoas', rotulo: 'Pessoas' }, cuidar: { area: 'pessoas', rotulo: 'Pessoas' }, cuidado_pausa: { area: 'trabalho', rotulo: 'Trabalho' }, pets: { area: 'pessoas', rotulo: 'Pessoas' },
-  onibus: { area: 'cidade', rotulo: 'Cidade' }, conducao: { area: 'casa', rotulo: 'Casa' }
+  deslocamento: { area: 'cidade', rotulo: 'Cidade' }
 };
 
 /**
@@ -143,6 +144,39 @@ function ParaOndeVai({ vida, s, irPara }: { vida: Vida; s: Semana; irPara?: (a: 
   );
 }
 
+/**
+ * O trajeto de todo dia: como você vai, quanto tempo leva, quanto custa — e
+ * os outros jeitos que você tem, com a diferença dita antes de trocar.
+ */
+function ComoVoceVai({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
+  if (idade(vida) < 14) return null;
+  const d = deslocamento(vida);
+  if (!d) return (vida.trabalho.atual || vida.educacao.matricula) ? <section className="trajeto" aria-labelledby="titulo-trajeto"><h2 id="titulo-trajeto" className="secao-fio">O trajeto de todo dia</h2><p className="nota">{semTrajeto(vida)}</p></section> : null;
+  const outras = d.opcoes.filter(o => o.modo !== d.modo);
+  return (
+    <section className="trajeto" aria-labelledby="titulo-trajeto">
+      <h2 id="titulo-trajeto" className="secao-fio">O trajeto de todo dia</h2>
+      <p className="trajeto__agora"><strong>Para {d.destino}, você vai {NOME_MODO[d.modo]}{d.nomeVeiculo ? ` (${d.nomeVeiculo})` : ''}</strong>: {tempoEmPalavras(d.minutos)}, ida e volta{d.passagem ? `, com ${dinheiroCurto(d.passagem)} de passagem por mês` : d.veiculoId ? '; o combustível e a manutenção estão nas contas da casa' : ', sem gastar nada'}.</p>
+      <p className="nota">{d.motivo}</p>
+      {outras.length > 0 && (
+        <ul className="trajeto__opcoes">
+          {outras.map(o => {
+            const dif = o.minutos - d.minutos;
+            return (
+              <li key={o.modo}>
+                <BotaoAcao vida={vida} acao={{ tipo: 'deslocamento', modo: o.modo }} agir={agir} variante="discreto" ocultarBloqueado>{`Ir ${NOME_MODO[o.modo]}${o.nomeVeiculo ? ` (${o.nomeVeiculo})` : ''}`}</BotaoAcao>
+                <span className="trajeto__dif">{tempoEmPalavras(o.minutos)} — {dif > 0 ? `${dif} min a mais por dia` : `${-dif} min a menos por dia`}{o.passagem ? `, ${dinheiroCurto(o.passagem)}/mês de passagem` : d.passagem ? ', sem passagem' : ''}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {d.escolhido && <BotaoAcao vida={vida} acao={{ tipo: 'deslocamento', modo: 'auto' }} agir={agir} variante="discreto">Voltar a ir do jeito mais rápido</BotaoAcao>}
+      {!d.veiculoId && d.modo !== 'a_pe' && irPara && <p className="nota">Um veículo muda isso: <button type="button" className="link" onClick={() => irPara('cidade')}>ver as lojas na Cidade →</button></p>}
+    </section>
+  );
+}
+
 export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const i = idade(vida);
   if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
@@ -162,6 +196,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
         {s.fixos.length === 0 && <p className="nota">{i < 18 ? 'Além da escola, a semana é sua.' : 'Nada fixo ocupa a semana: nem trabalho, nem curso.'}</p>}
       </section>
       <ParaOndeVai vida={vida} s={s} irPara={irPara} />
+      <ComoVoceVai vida={vida} agir={agir} irPara={irPara} />
 
       <Secao titulo="O que você faz">
         {ativas.length === 0 && <Vazio>Nada fixo na semana por enquanto.</Vazio>}

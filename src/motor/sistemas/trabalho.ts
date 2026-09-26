@@ -346,8 +346,15 @@ export function encerrarEmprego(v: Vida, motivo: string): void {
   t.horasExtras = false;
   // Sem emprego, a jornada reduzida para cuidar vira cuidado em tempo integral.
   if (t.pausa?.intensidade === 'parcial') { t.pausa.intensidade = 'total'; t.desempregadoDesde = undefined; return; }
-  t.desempregadoDesde = t.pausa ? undefined : v.t;
+  // Dono de um negócio que segue aberto não está desempregado: tem o que fazer (e o que render).
+  t.desempregadoDesde = t.pausa || temNegocioAberto(v) ? undefined : v.t;
 }
+
+/** Há um negócio aberto (qualquer dedicação)? — sem importar `negocio`, que depende deste módulo. */
+export const temNegocioAberto = (v: Vida) => !!v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado';
+
+/** Sem trabalho e sem negócio: é quem está, de fato, procurando. */
+export const semOcupacao = (v: Vida) => !v.trabalho.atual && !temNegocioAberto(v);
 
 export function textoDeContratacao(v: Vida, oc: Ocupacao, e: Emprego): string {
   const nome = nomeOcupacao(v, oc);
