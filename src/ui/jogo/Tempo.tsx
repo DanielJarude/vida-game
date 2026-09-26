@@ -47,7 +47,7 @@ function resumoDaSemana(s: Semana): string {
 
 type Pedaco = { id: string; rotulo: string; curto: string; peso: number; tipo: 'trabalho' | 'estudo' | 'casa' | 'atividade' | 'livre' | 'excesso' };
 
-const CURTO: Record<string, string> = { trabalho: 'Trabalho', horas_extras: 'Horas extras', curso: 'Estudo', integrado: 'Escola técnica', filhos_pequenos: 'Filhos', filhos_escola: 'Filhos', cuidar: 'Cuidar', onibus: 'Ônibus' };
+const CURTO: Record<string, string> = { negocio: 'Negócio', trabalho: 'Trabalho', horas_extras: 'Horas extras', curso: 'Estudo', integrado: 'Escola técnica', filhos_pequenos: 'Filhos', filhos_escola: 'Filhos', cuidar: 'Cuidar', onibus: 'Ônibus' };
 
 /** A semana em pedaços, na ordem: o que já vem ocupado, o que você escolheu, o que sobra, o que passa. */
 function pedacos(s: Semana): Pedaco[] {
@@ -101,7 +101,7 @@ function FaixaDaSemana({ s }: { s: Semana }) {
 
 /** Para onde leva cada pedaço fixo da semana (a causa mora em outra área). */
 const ORIGEM: Record<string, { area: Aba; rotulo: string }> = {
-  trabalho: { area: 'trabalho', rotulo: 'Trabalho' }, horas_extras: { area: 'trabalho', rotulo: 'Trabalho' }, politica: { area: 'trabalho', rotulo: 'Trabalho' },
+  trabalho: { area: 'trabalho', rotulo: 'Trabalho' }, horas_extras: { area: 'trabalho', rotulo: 'Trabalho' }, politica: { area: 'trabalho', rotulo: 'Trabalho' }, negocio: { area: 'trabalho', rotulo: 'Trabalho' },
   curso: { area: 'estudos', rotulo: 'Estudos' }, integrado: { area: 'estudos', rotulo: 'Estudos' },
   filhos_pequenos: { area: 'pessoas', rotulo: 'Pessoas' }, filhos_escola: { area: 'pessoas', rotulo: 'Pessoas' }, cuidar: { area: 'pessoas', rotulo: 'Pessoas' }, cuidado_pausa: { area: 'trabalho', rotulo: 'Trabalho' }, pets: { area: 'pessoas', rotulo: 'Pessoas' },
   onibus: { area: 'cidade', rotulo: 'Cidade' }, conducao: { area: 'casa', rotulo: 'Casa' }

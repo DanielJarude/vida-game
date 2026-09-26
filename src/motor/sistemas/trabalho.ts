@@ -320,6 +320,12 @@ function orgaoDoConcurso(oc: Ocupacao): string {
 export function encerrarEmprego(v: Vida, motivo: string): void {
   const t = v.trabalho;
   if (!t.atual) return;
+  const n = v.caminhos.negocio;
+  // O dia de dono acabou (esgotamento, um mandato, a aposentadoria) sem o negócio fechar: ele segue, nas horas vagas — e fica dito.
+  if (n && n.estado !== 'fechado' && (n.dedicacao ?? 'integral') === 'integral' && !n.passivo && t.atual.ocupacaoId === n.ocupacaoId && motivo !== 'falta de clientela') {
+    n.dedicacao = 'paralela';
+    escrever(v, { texto: `${n.nome} seguiu aberto, agora nas horas vagas.`, relevancia: 'cotidiano', tema: 'trabalho' });
+  }
   t.historico.push({ ...t.atual, tFim: v.t, motivo });
   t.atual = undefined;
   t.horasExtras = false;

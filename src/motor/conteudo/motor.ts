@@ -117,6 +117,7 @@ export function abrirDecisao(v: Vida, d: Decisao, ctx: Ctx): Momento {
     opcoes
   };
   v.momento = m;
+  if (d.id === 'comp_conflito' && v.caminhos.pendente) v.caminhos.pendente.perguntado = true;
   return m;
 }
 

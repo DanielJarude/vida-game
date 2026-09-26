@@ -9,8 +9,8 @@ import { idadePessoa, temFato, marcarFato, lembrarCom } from '../nucleo';
 import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
 import { nomeOcupacaoId, contratar, encerrarEmprego, elegibilidade, degrausAcima } from '../sistemas/trabalho';
 import { editaisAbertos } from '../sistemas/concurso';
-import { propor } from '../sistemas/compromissos';
-import { NEGOCIOS } from '../sistemas/negocio';
+import { noServicoInicial, propor } from '../sistemas/compromissos';
+import { NEGOCIOS, donoIntegral } from '../sistemas/negocio';
 import { marcar } from '../sistemas/marcas';
 import { ocupacao } from '../dados/ocupacoes';
 import { mudarAgora } from '../sistemas/processos';
@@ -19,6 +19,7 @@ import { anoDe } from '../tempo';
 import { comChefia } from '../sistemas/ritmo';
 
 // Emprego comum: o atleta (contrato especial, Lei Pelé) tem as próprias situações — clube, contrato, banco.
+const porConta = (c: Ctx) => c.v.trabalho.atual?.contrato === 'autonomo';
 const empregado = (c: Ctx) => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal' && ocupacao(c.v.trabalho.atual.ocupacaoId).trilha !== 'atleta';
 const mora = (c: Ctx) => municipio(c.v.moradia.municipioId);
 
@@ -100,8 +101,17 @@ export const ADULTO: Conteudo[] = [
         resolver: c => ({ texto: 'O médico deu quinze dias de atestado e encaminhou para terapia.', memoria: 'Foi afastad' + c.g('o', 'a', 'e') + ' do trabalho por esgotamento.', efeito: () => { estresse(c, -30); if (c.v.trabalho.atual) c.v.trabalho.atual.desempenho -= 5; } }) },
       { id: 'aguentar', texto: 'Aguentar firme', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Você aguentou. O corpo começou a cobrar.', memoria: null, efeito: () => { saude(c, -6); estresse(c, 5); } }) },
-      { id: 'pedir_conta', texto: 'Pedir demissão', comportamento: { impulsividade: 1, independencia: 1 },
-        resolver: c => ({ texto: 'Você entregou a carta na segunda de manhã. O alívio veio antes do medo.', memoria: 'Pediu demissão, no limite do esgotamento.', relevancia: 'marco', efeito: () => { encerrarEmprego(c.v, 'pediu demissão'); estresse(c, -35); } }) }
+      // Dono não pede demissão de si mesmo; quem trabalha por conta também não entrega carta a ninguém.
+      { id: 'pedir_conta', texto: c => (donoIntegral(c.v) ? `Largar o dia a dia de ${donoIntegral(c.v)!.nome}` : porConta(c) ? 'Parar de trabalhar por um tempo' : 'Pedir demissão'), comportamento: { impulsividade: 1, independencia: 1 },
+        // No serviço militar inicial não há demissão: sair seria deserção (Lei 4.375/1964; CPM, art. 187).
+        disponivel: c => (noServicoInicial(c.v) ? 'No serviço militar inicial, não existe pedir para sair.' : true),
+        consequencia: c => (donoIntegral(c.v) ? `${donoIntegral(c.v)!.nome} continua seu, nas horas vagas; a retirada fixa acaba.` : 'O salário acaba. O descanso, não se sabe quanto dura.'),
+        resolver: c => {
+          const n = donoIntegral(c.v);
+          if (n) return { texto: 'Você passou a chave do dia a dia. O alívio veio antes do medo.', memoria: `No limite do esgotamento, largou o dia a dia de ${n.nome}.`, relevancia: 'marco', efeito: () => { encerrarEmprego(c.v, 'esgotamento'); estresse(c, -35); } };
+          if (porConta(c)) return { texto: 'Você desmarcou tudo e desligou o celular. O alívio veio antes do medo.', memoria: 'Parou de trabalhar, no limite do esgotamento.', relevancia: 'marco', efeito: () => { encerrarEmprego(c.v, 'parou por esgotamento'); estresse(c, -35); } };
+          return { texto: 'Você entregou a carta na segunda de manhã. O alívio veio antes do medo.', memoria: 'Pediu demissão, no limite do esgotamento.', relevancia: 'marco', efeito: () => { encerrarEmprego(c.v, 'pediu demissão'); estresse(c, -35); } };
+        } }
     ]
   },
   {

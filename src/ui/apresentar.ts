@@ -65,6 +65,10 @@ export function rotuloDe(v: Vida, p: Pessoa, vin: Vinculo): string {
     return vin.romance.estagio === 'saindo' ? 'vocês estão saindo' : `${flex(p.genero, 'seu', 'sua', 'sue')} ${e}`;
   }
   if (vin.romance?.estagio === 'ex') return `${flex(p.genero, 'seu', 'sua', 'sue')} ex`;
+  // Quem divide um negócio com você é sócio antes de ser colega.
+  const n = v.caminhos.negocio;
+  if (n && n.estado !== 'fechado' && n.socioId === p.id) return `${flex(p.genero, 'sócio', 'sócia', 'sócie')} ${n.nome.match(/^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/) ? 'na' : 'no'} ${n.nome}`;
+  if (n && n.estado !== 'fechado' && n.equipe?.some(f => f.pessoaId === p.id)) return `trabalha ${n.nome.match(/^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/) ? 'na' : 'no'} ${n.nome}`;
   const onde = descricaoOrigem(v, vin);
   switch (vin.estagio) {
     case 'amigo_proximo': return `${flex(p.genero, 'amigo', 'amiga', 'amigue')} de longa data`;

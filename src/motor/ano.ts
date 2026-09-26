@@ -43,7 +43,8 @@ import { processarPausa } from './sistemas/pausa';
 import { processarRural } from './sistemas/rural';
 import { processarTransformacao } from './sistemas/carreira';
 import { efetivarMudancaMilitar } from './sistemas/militar';
-import { abrirDecisao, aplicarAcontecimento, candidatos, preparar, sortear } from './conteudo/motor';
+import { abrirDecisao, aplicarAcontecimento, candidatos, conteudoPorId, preparar, sortear } from './conteudo/motor';
+import { contexto } from './conteudo/base';
 import { CATALOGO } from './conteudo/catalogo';
 import type { Conteudo } from './conteudo/base';
 
@@ -55,9 +56,16 @@ export interface ResumoDoAno {
 export function avancarAno(vida: Vida): Retorno {
   if (vida.morte) return { vida, aviso: { texto: 'Esta vida terminou.', tom: 'neutro' } };
   if (vida.momento) return { vida, aviso: { texto: 'Há uma decisão esperando por você.', tom: 'neutro' } };
+  // Uma escolha de trajetória pendente (duas coisas que não cabem juntas) não fica esquecida: vira pergunta antes do ano andar.
+  if (vida.caminhos.pendente && !vida.caminhos.pendente.perguntado) {
+    const { vida: comPergunta } = transacao(vida, (v, r) => { const d = conteudoPorId('comp_conflito'); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); });
+    if (comPergunta.momento) return { vida: comPergunta, aviso: { texto: 'Há uma escolha esperando por você.', tom: 'neutro' } };
+  }
   const { vida: nova } = transacao(vida, (v, r) => {
     // Um processo seletivo só existe com a etapa aberta; sem ela, acabou.
     if (v.caminhos.processo) v.caminhos.processo = undefined;
+    // Uma escolha que foi perguntada e ficou sem resposta (a pergunta sumiu) é uma oferta que passou.
+    if (v.caminhos.pendente?.perguntado) v.caminhos.pendente = undefined;
     viverAno(v, r);
   });
   return { vida: nova };

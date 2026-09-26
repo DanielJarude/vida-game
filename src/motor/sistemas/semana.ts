@@ -87,6 +87,12 @@ export function semana(v: Vida): Semana {
     fixos.push({ id: 'trabalho', rotulo: e.formacaoAte ? `Curso de formação (${nome})` : `Trabalho (${nome}${oc?.jornada === 'fora' ? ', dias fora de casa' : oc?.jornada === 'longa' ? ', jornada longa' : oc?.jornada === 'plantao' ? ', em plantões' : e.reduzida ? ', jornada reduzida' : e.carga === 'parcial' ? ', meio período' : ''}${ritmo})`, peso, tipo: 'trabalho' });
     if (v.trabalho.horasExtras) fixos.push({ id: 'horas_extras', rotulo: 'Horas extras', peso: 0.5, tipo: 'trabalho' });
   }
+  // O negócio tocado nas horas vagas também é semana (menos, se há equipe ou sócio no dia a dia).
+  const n = v.caminhos.negocio;
+  if (n && n.estado !== 'fechado' && (n.dedicacao ?? 'integral') === 'paralela') {
+    const ajuda = (n.equipe?.length ?? 0) > 0 || !!n.socioId;
+    fixos.push({ id: 'negocio', rotulo: n.passivo ? `${n.nome} (de longe)` : `${n.nome} (nas horas vagas)`, peso: n.passivo ? 0.25 : ajuda ? 0.5 : 0.75, tipo: 'trabalho' });
+  }
   const pol = semanaDaPolitica(v);
   if (pol) fixos.push({ id: 'politica', rotulo: pol.rotulo, peso: pol.peso, tipo: 'trabalho' });
   const b = v.educacao.basica;

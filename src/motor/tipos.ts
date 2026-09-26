@@ -1056,6 +1056,8 @@ export interface CompromissoPendente {
   /** Com o que conflita, em palavras. */
   conflitos: string[];
   planos: PlanoDeConflito[];
+  /** A pergunta já foi aberta (um momento não se descarta: sem ele, a oferta passou). */
+  perguntado?: boolean;
 }
 
 export type Forca = 'exercito' | 'marinha' | 'aeronautica';
