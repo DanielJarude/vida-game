@@ -33,7 +33,7 @@ src/
     ano.ts               um ano de vida: sistemas → morte → conteúdo
     acoes.ts             comandos do jogador, com disponibilidade graduada
     criacao.ts           nascer (família de origem coerente com classe e lugar)
-    save.ts              save v13, validação, backup, migração dos saves antigos (v5→…→v13),
+    save.ts              save v14, validação, backup, migração dos saves antigos (v5→…→v14),
                          exportar/importar vida (arquivo JSON, sem execução de código)
     dados/               lugares, cursos, ocupações, bens, nomes por geração
     sistemas/            corpo, escola, trabalho, dinheiro, casa, pessoas,
@@ -89,6 +89,7 @@ docs/
   AUDITORIA-CAMINHOS-DE-VIDA-REPORT.md  auditoria e expansão dos caminhos de vida
   REWORK-VISUAL-TRABALHO-REPORT.md      rework visual, aba Trabalho, negócio, atleta, vida política
   FIX-PLAYTEST-3-REPORT.md              FIX pós-playtest 3: conflitos de trajetória, negócio por tipo, pets, save v13
+  FIX-PLAYTEST-4-REPORT.md              FIX pós-playtest 4: rede de relações, negócio como trabalho, deslocamento, eleição explicada, liquidez, meia-idade, save v14
 ```
 
 ### Regras que o código garante
@@ -186,6 +187,23 @@ a cada ano e as biografias em texto para leitura:
 ```bash
 npx esbuild scripts/sim/fix3.ts --bundle --platform=node --outfile=/tmp/fix3.cjs
 VIDAS=25 SAIDA=/tmp/fix3 node /tmp/fix3.cjs
+```
+
+Simulador do FIX #4 (as trajetórias do FIX #3 mais família, investidor), com
+métricas por faixa de idade e a busca das classes de problema do Playtest #4;
+e as métricas por idade com o mesmo código na base e na branch:
+
+```bash
+npx esbuild scripts/sim/fix4.ts --bundle --platform=node --outfile=/tmp/fix4.cjs
+VIDAS=25 SAIDA=/tmp/fix4 node /tmp/fix4.cjs
+npx esbuild scripts/sim/metricasIdade.ts --bundle --platform=node --outfile=/tmp/m.cjs && VIDAS=120 node /tmp/m.cjs
+```
+
+Playtest visual do FIX #4 (18 cenários, lojas e catálogo, tela de morte):
+
+```bash
+npx esbuild scripts/playtest/gerarFix4.ts --bundle --platform=node --outfile=/tmp/g4.cjs && SP=/tmp/vida-fix4 node /tmp/g4.cjs
+SP=/tmp/vida-fix4 node scripts/playtest/fix4.mjs
 ```
 
 Playtest visual do rework (Chromium, 320/390/820/1440, 20 cenários — inclusive a
