@@ -11,8 +11,8 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import type { CargoEletivo, Vida, VidaPolitica } from '../tipos';
 import { clamp } from '../rng';
 import { escrever, filhos, idadePessoa, lembrarCom, parceiro } from '../nucleo';
-import { estresse } from './efeitos';
-import { disponivel, pagar } from '../sistemas/dinheiro';
+import { estresse, custa } from './efeitos';
+import { pagar } from '../sistemas/dinheiro';
 import { municipio } from '../dados/lugares';
 import { abalar } from '../sistemas/abalo';
 import { marcar } from '../sistemas/marcas';
@@ -161,7 +161,7 @@ export const POLITICA: Conteudo[] = [
       { id: 'fin_pequenas', texto: 'Só com doações pequenas e o fundo do partido', disponivel: c => etapa(c) === 1,
         resolver: c => ({ texto: 'Vaquinha, rifa, a cota do partido. Pouco dinheiro, nenhum dono.', memoria: null, reabrir: true, efeito: () => passo(c, x => { x.financiamento = 'pequenas'; }, pol(c).apoio >= 40 ? 3 : 0) }) },
       { id: 'fin_proprio', texto: c => `Pôr dinheiro do próprio bolso (${fmt(custoDeCampanha(c.v, pol(c).campanha?.cargo ?? 'vereador'))})`, comportamento: { coragem: 1 },
-        disponivel: c => (etapa(c) !== 1 ? false : disponivel(c.v) >= custoDeCampanha(c.v, pol(c).campanha!.cargo) ? true : 'Não há esse dinheiro guardado.'),
+        disponivel: c => (etapa(c) !== 1 ? false : custa(c, custoDeCampanha(c.v, pol(c).campanha!.cargo), 'Não há esse dinheiro guardado.')),
         resolver: c => ({ texto: 'O dinheiro da reserva virou santinho, carro de som e gasolina.', memoria: null, reabrir: true, efeito: () => { const custo = custoDeCampanha(c.v, pol(c).campanha!.cargo); pagar(c.v, custo); passo(c, x => { x.financiamento = 'proprio'; x.gasto += custo; }, 8); } }) },
       { id: 'fin_empresario', texto: 'Aceitar o apoio de um empresário da cidade', comportamento: { impulsividade: 1 }, disponivel: c => etapa(c) === 1,
         resolver: c => ({ texto: 'Um empresário conhecido bancou boa parte da campanha. "Depois a gente conversa", ele disse.', memoria: null, reabrir: true, efeito: () => { c.v.fatos['pol_empresario'] = c.v.t; passo(c, x => { x.financiamento = 'empresario'; }, 10); } }) },

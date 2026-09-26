@@ -29,6 +29,12 @@ import { deslocamento } from '../sistemas/transporte';
 import { semana } from '../sistemas/semana';
 import { executar } from '../acoes';
 import type { Veiculo } from '../tipos';
+import type { Acao } from '../acoes';
+import { aplicar, totalAplicado } from '../sistemas/investimentos';
+import { capacidade, vereditoDePagar } from '../sistemas/dinheiro';
+import { podeTentar } from '../plausibilidade';
+import { abrirDecisao } from '../conteudo/motor';
+import { contexto } from '../conteudo/base';
 
 /* ============================================================ 1. A rede */
 
@@ -309,5 +315,97 @@ describe('o que se possui muda o trajeto de todo dia', () => {
     expect(deslocamento(v)).toBeUndefined();
     expect(semana(v).fixos.some(f => f.id === 'deslocamento')).toBe(false);
     expect(orcamento(v).saidas.some(l => /Passagem/.test(l.rotulo))).toBe(false);
+  });
+});
+
+/* ================================================= 6. Liquidez */
+
+describe('patrimônio aplicado existe quando se precisa dele', () => {
+  function rico() {
+    const v = adulto(45, { semente: 57 });
+    v.financas.conta = 2000;
+    v.financas.investimentos = [];
+    transacao(v, () => {}); // nada
+    v.financas.conta = 1_002_000;
+    const x = transacao(v, xv => { aplicar(xv, 'pos_fixado', 1_000_000); }).vida;
+    return x;
+  }
+
+  it('R$ 1 milhão aplicado e R$ 2 mil na conta: não é "sem dinheiro" — é dinheiro que não está na conta', () => {
+    const v = rico();
+    expect(v.financas.conta).toBe(2000);
+    const k = capacidade(v, 30000);
+    expect(k.situacao).toBe('resgatando');
+    const d = vereditoDePagar(v, 30000, 'A mudança custa');
+    expect(d.grau).toBe('requisito');
+    expect(d.resgate?.valor).toBe(28000);
+    expect(d.motivo).toMatch(/na conta há/);
+    expect(d.motivo).toMatch(/aplicações/);
+    expect(d.motivo).not.toMatch(/não tem|sem dinheiro/i);
+  });
+
+  it('sem patrimônio suficiente, a frase é outra: soma conta e aplicações', () => {
+    const v = rico();
+    const d = vereditoDePagar(v, 5_000_000);
+    expect(d.resgate).toBeUndefined();
+    expect(d.motivo).toMatch(/somando conta e aplicações/);
+  });
+
+  it('nada é vendido sem consentimento: a ação bloqueia, e "tirar das aplicações e pagar" faz as duas coisas', () => {
+    let v = rico();
+    const cnh: Acao = { tipo: 'cnh' };
+    v.trabalho.licencas = [];
+    v.financas.conta = 100;
+    expect(podeTentar(disponibilidade(v, cnh))).toBe(false);
+    expect(disponibilidade(v, cnh).resgate).toBeDefined();
+    const antes = totalAplicado(v);
+    const falhou = executar(v, cnh);
+    expect(totalAplicado(falhou.vida)).toBe(antes);
+    const r = executar(v, { tipo: 'resgatar_e', acao: cnh });
+    v = r.vida;
+    expect(v.processos.some(p => p.tipo === 'cnh')).toBe(true);
+    expect(totalAplicado(v)).toBeLessThan(antes);
+    expect(v.biografia.some(e => /Tirou .* das aplicações/.test(e.texto))).toBe(true);
+  });
+
+  it('numa decisão, a opção que custa mostra o resgate; escolher com resgate tira e segue', () => {
+    let v = rico();
+    v.financas.conta = 100;
+    const par = comParceiro(v, { estagio: 'casamento', anos: 10 }).p;
+    par.aperto = undefined;
+    v.vinculos[par.id].tensao = 50;
+    const d = conteudoPorId('rom_crise')!;
+    if (d.tipo !== 'decisao') throw new Error('rom_crise deveria ser decisão');
+    v = transacao(v, (x, r) => { abrirDecisao(x, d, contexto(x, r, { pessoa: x.pessoas[par.id] })); }).vida;
+    const op = v.momento!.opcoes.find(o => o.id === 'terapia');
+    expect(op?.bloqueio).toBeTruthy();
+    expect(op?.resgate).toBeGreaterThan(0);
+    const antes = totalAplicado(v);
+    v = executar(v, { tipo: 'decidir', opcaoId: 'terapia', resgatar: true }).vida;
+    expect(v.momento?.situacaoId).not.toBe('rom_crise');
+    expect(totalAplicado(v)).toBeLessThan(antes);
+  });
+
+  it('o rendimento existe e é dito: um milhão aplicado rende e aparece na conta do ano', () => {
+    let v = rico();
+    v = avancarAno(v).vida;
+    const linha = v.financas.razao.find(l => l.rotulo === 'Valorização das aplicações');
+    expect(linha).toBeDefined();
+    expect(Math.abs(linha!.valor)).toBeGreaterThan(1000);
+  });
+
+  it('o ano que fecha no vermelho e é coberto pelas aplicações fica escrito (não é venda silenciosa)', () => {
+    let v = rico();
+    v = transacao(v, (x, r) => { x.financas.conta = -20000; x.t += 12; processarDinheiro(x, r); }).vida;
+    expect(v.financas.razao.some(l => l.rotulo === 'Tirado das aplicações para cobrir o ano')).toBe(true);
+    expect(v.biografia.some(e => /saíram .* das aplicações para cobrir/.test(e.texto))).toBe(true);
+  });
+
+  it('negócio não fecha "por dívida" com um milhão aplicado', () => {
+    let v = adulto(40, { semente: 9, municipioId: 'salvador-ba' });
+    v.financas.conta = 1_300_000;
+    v = transacao(v, (x, r) => { abrirNegocio(x, r, 'lanchonete', { modo: 'guardado' }); aplicar(x, 'pos_fixado', Math.max(0, x.financas.conta - 1000)); }).vida;
+    v = transacao(v, (x, r) => { x.financas.conta = -30000; x.caminhos.negocio!.clientela = 2; if (x.trabalho.atual) x.trabalho.atual.clientela = 2; x.t += 12; processarNegocio(x, r); }).vida;
+    expect(v.caminhos.negocio!.estado).not.toBe('fechado');
   });
 });

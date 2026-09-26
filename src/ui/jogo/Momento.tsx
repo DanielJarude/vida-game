@@ -9,6 +9,7 @@ import { Folha } from '../comum';
 import { Retrato } from '../avatar/Retrato';
 import { idadePessoa } from '../../motor/nucleo';
 import { rotuloDe } from '../apresentar';
+import { dinheiroCurto } from '../apresentar';
 
 const TEMA_ROTULO: Record<string, string> = {
   infancia: 'Infância', familia: 'Família', amizade: 'Amizade', amor: 'Amor', escola: 'Escola', estudo: 'Estudos',
@@ -47,6 +48,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
                 {o.detalhe && !o.bloqueio && <span className="opcao__detalhe"><span className="opcao__seta" aria-hidden>→ </span>{o.detalhe}</span>}
                 {o.bloqueio && <span className="opcao__bloqueio">{o.bloqueio}</span>}
               </button>
+              {o.bloqueio && o.resgate && <button type="button" className="botao botao--discreto opcao__resgate" onClick={() => agir({ tipo: 'decidir', opcaoId: o.id, resgatar: true })}>Tirar {dinheiroCurto(o.resgate)} das aplicações e escolher isto</button>}
             </li>
           ))}
         </ul>

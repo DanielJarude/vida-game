@@ -1,10 +1,10 @@
 /** Vida adulta (18–59). */
 
 import { familiaDaTrilha } from '../dados/carreiras';
-import { disponivel as guardado, pagar as pagarGuardado } from '../sistemas/dinheiro';
+import { pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
-import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
+import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao, custa } from './efeitos';
 import { idadePessoa, temFato, marcarFato, lembrarCom } from '../nucleo';
 import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
 import { nomeOcupacaoId, contratar, encerrarEmprego, elegibilidade, degrausAcima } from '../sistemas/trabalho';
@@ -379,7 +379,7 @@ export const ADULTO: Conteudo[] = [
     texto: c => `Com os pais já falecidos, sobrou a casa da família. ${c.p.irmao.nome} quer vender logo; você cresceu naquela casa.`,
     opcoes: [
       { id: 'vender', texto: 'Aceitar vender e dividir', resolver: c => ({ texto: 'A casa foi vendida para uma família com crianças pequenas.', memoria: 'A casa da família foi vendida e o dinheiro, dividido entre os irmãos.', efeito: () => { fato(c, 'partilha_feita'); dinheiro(c, Math.round(({ media_baixa: 60000, media: 180000, alta: 600000 } as Record<string, number>)[c.v.origem.classe] / (1 + P.irmao(c.v).length))); } }) },
-      { id: 'comprar', texto: c => `Comprar a parte de ${c.p.irmao.nome}`, disponivel: c => (guardado(c.v) > 80000 ? true : 'Não há dinheiro para comprar a parte.'), comportamento: { familia: 1 },
+      { id: 'comprar', texto: c => `Comprar a parte de ${c.p.irmao.nome}`, disponivel: c => custa(c, 80000, 'Não há dinheiro para comprar a parte.'), comportamento: { familia: 1 },
         resolver: c => ({ texto: 'A casa continuou na família — agora sua.', memoria: 'Comprou dos irmãos a casa onde cresceu.', efeito: () => { fato(c, 'partilha_feita'); pagarGuardado(c.v, 80000); c.v.financas.bens.push({ id: `imovel${c.v.seq++}`, tipo: 'imovel', modeloId: 'casa_3q', nome: 'casa da família', valor: 200000, precoPago: 80000, tCompra: c.v.t, municipioId: c.v.eu.municipioNatal, estado: 55, herdado: true, dono: 'eu', historia: [{ t: c.v.t, texto: 'Comprou dos irmãos a parte deles.' }] }); } }) },
       { id: 'brigar', texto: 'Não aceitar vender', comportamento: { familia: -1, impulsividade: 1 },
         resolver: c => ({ texto: 'Virou inventário na Justiça. Vocês passaram a se falar por advogado.', memoria: `Brigou na Justiça com ${c.p.irmao.nome} pela casa dos pais.`, efeito: () => { fato(c, 'partilha_feita'); tensao(c, 'irmao', 60); prox(c, 'irmao', -30); } }) }
@@ -416,7 +416,7 @@ export const ADULTO: Conteudo[] = [
     texto: c => { const t = tipoDoSocio(c); return `${c.p.socio.nome} quer abrir ${t.nome} e chama você para sócio${c.g('', 'a', 'e')}: entrar com uns R$ ${Math.round(t.capital * 0.5 / 1000)} mil e trabalhar junto. ${c.p.socio.nome} entende do ramo; você entraria com o dinheiro e o braço.`; },
     opcoes: [
       { id: 'entrar', texto: 'Entrar de sócio', comportamento: { coragem: 2 },
-        disponivel: c => (guardado(c.v) >= tipoDoSocio(c).capital * 0.5 ? true : 'Não há dinheiro guardado para a sua parte.'),
+        disponivel: c => custa(c, tipoDoSocio(c).capital * 0.5, 'Não há dinheiro guardado para a sua parte.'),
         consequencia: c => (c.v.trabalho.atual ? 'Se não couber com o trabalho de hoje, a próxima pergunta é essa: horas vagas ou dedicação.' : undefined),
         // Entrar de sócio não é pedir demissão: se houver trabalho, a vida pergunta como fica (`compromissos`).
         resolver: c => ({ texto: 'Vocês assinaram o contrato social numa lanchonete, com um guardanapo de testemunha.', memoria: null, efeito: () => { const t = tipoDoSocio(c); const extra = t.capital * 0.5; c.v.financas.conta += extra; lembrarCom(c.v, c.p.socio.id, `Combinaram abrir ${t.nome} juntos.`, 'trabalho', 3); propor(c.v, c.r, { tipo: 'negocio', negocioId: t.id, modo: 'socio', socioId: c.p.socio.id }); } }) },

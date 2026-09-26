@@ -2,6 +2,8 @@
 
 import { clamp } from '../rng';
 import type { Ctx } from './base';
+import { capacidade } from '../sistemas/dinheiro';
+import { dinheiro as fmt } from '../texto';
 
 export const feliz = (c: Ctx, n: number) => { c.v.mente.felicidade = clamp(c.v.mente.felicidade + n); };
 export const estresse = (c: Ctx, n: number) => { c.v.mente.estresse = clamp(c.v.mente.estresse + n); };
@@ -44,3 +46,15 @@ export const gp = (c: Ctx, papel: string, masc: string, fem: string, neutro?: st
   const g = c.p[papel]?.genero;
   return g === 'feminino' ? fem : g === 'masculino' ? masc : neutro ?? masc;
 };
+
+/**
+ * Uma opção que custa `valor`: `true` se a conta cobre; se só as aplicações
+ * cobrem, o bloqueio com o resgate possível (o jogador escolhe tirar); se
+ * nem assim, o motivo — dizendo o que há, sem confundir patrimônio com conta.
+ */
+export function custa(c: Ctx, valor: number, semDinheiro = 'Não há esse dinheiro.'): true | string | { motivo: string; resgate: number } {
+  const k = capacidade(c.v, valor);
+  if (k.situacao === 'tem') return true;
+  if (k.situacao === 'resgatando') return { motivo: `Custa ${fmt(valor)}; na conta há ${fmt(k.conta)}. O resto está nas aplicações${k.naBaixa.length ? ` (${k.naBaixa.join(' e ')} abaixo do que você pôs)` : ''}.`, resgate: k.falta };
+  return k.aplicado > 0 ? `${semDinheiro} Somando conta e aplicações, você tem ${fmt(k.conta + k.aplicado)}.` : semDinheiro;
+}

@@ -9,10 +9,14 @@ import type { Conteudo, Ctx } from './base';
 import { mudarAgora } from '../sistemas/processos';
 import { MUNICIPIOS, economiaLocal, municipio } from '../dados/lugares';
 import * as P from './papeis';
-import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
+import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao, custa } from './efeitos';
 import { idadePessoa, lembrarCom, temFato } from '../nucleo';
 import { anoDe } from '../tempo';
 import { criarPessoa, vincular } from '../pessoas';
+import { disponivel } from '../sistemas/dinheiro';
+
+/** Festa no salão: quem escolheu viver confortável e tem como pagar. */
+const festaGrande = (c: Ctx) => (c.v.financas.estilo === 'confortavel' || c.v.financas.estilo === 'folgado') && disponivel(c.v) > 3000;
 
 const cursoDoFilho = (c: Ctx) => curso(CURSOS_NPC[c.v.fatos[`fil_curso_${c.p.filho.id}`] ?? 0] ?? 'administracao').nome;
 const mensalidadeFilho = (c: Ctx) => {
@@ -60,7 +64,7 @@ export const VINCULOS: Conteudo[] = [
     opcoes: [
       { id: 'dividir', texto: 'Fazer uma divisão de tarefas e cumprir', comportamento: { empatia: 1, disciplina: 1 },
         resolver: c => ({ texto: 'Uma lista na geladeira. Nas primeiras semanas, cumprida à risca.', memoria: null, efeito: () => { envolvimento(c, 'pessoa', 10); tensao(c, 'pessoa', -15); } }) },
-      { id: 'faxineira', texto: 'Propor pagar uma diarista', disponivel: c => (c.v.financas.conta > 3000 ? true : 'Não cabe no orçamento.'),
+      { id: 'faxineira', texto: 'Propor pagar uma diarista', disponivel: c => custa(c, 3000, 'Não cabe no orçamento.'),
         resolver: c => ({ texto: 'A diarista passou a vir às sextas. A briga mudou de assunto.', memoria: null, efeito: () => { dinheiro(c, -2400); envolvimento(c, 'pessoa', 4); } }) },
       { id: 'discordar', texto: 'Dizer que não é bem assim', comportamento: { empatia: -1 },
         resolver: c => ({ texto: `${c.p.pessoa.nome} não respondeu. Lavou a louça batendo os pratos.`, memoria: null, efeito: () => { tensao(c, 'pessoa', 20); envolvimento(c, 'pessoa', -8); } }) }
@@ -150,10 +154,11 @@ export const VINCULOS: Conteudo[] = [
     id: 'fil_aniversario', tipo: 'acontecimento', idade: [18, 80], tema: 'filhos', repetir: 3,
     papeis: { filho: P.filhoEmCasa(3, 11) },
     narrar: c => ({
-      texto: c.v.financas.conta > 3000
+      // O tamanho da festa segue o padrão de vida que o jogador escolheu (não o saldo do dia).
+      texto: festaGrande(c)
         ? `Festa de ${idadePessoa(c.v, c.p.filho)} anos de ${c.p.filho.nome} num salão de festas, com pula-pula e docinho de brigadeiro.`
         : `O aniversário de ${idadePessoa(c.v, c.p.filho)} anos de ${c.p.filho.nome} foi no quintal, com bolo feito em casa e os primos.`,
-      relevancia: 'cotidiano', tom: 'bom', efeito: () => { dinheiro(c, c.v.financas.conta > 3000 ? -1800 : -250); prox(c, 'filho', 4); }
+      relevancia: 'cotidiano', tom: 'bom', efeito: () => { dinheiro(c, festaGrande(c) ? -1800 : -250); prox(c, 'filho', 4); }
     })
   },
   {
@@ -164,7 +169,7 @@ export const VINCULOS: Conteudo[] = [
     opcoes: [
       { id: 'sentar', texto: 'Sentar para estudar junto todas as noites', comportamento: { familia: 1, disciplina: 1 },
         resolver: c => ({ texto: 'Um mês de tabuada e redação na mesa da cozinha. As notas subiram.', memoria: null, lembrar: ['filho', 'Um boletim vermelho, um mês estudando juntos, notas que subiram.'], efeito: () => { prox(c, 'filho', 8); estresse(c, 4); if (c.p.filho.vida) c.p.filho.vida.aptidao = Math.min(1, c.p.filho.vida.aptidao + 0.05); } }) },
-      { id: 'reforco', texto: 'Pagar aula de reforço', disponivel: c => (c.v.financas.conta > 1500 ? true : 'Não sobra dinheiro para isso.'),
+      { id: 'reforco', texto: 'Pagar aula de reforço', disponivel: c => custa(c, 1500, 'Não sobra dinheiro para isso.'),
         resolver: c => ({ texto: 'Duas vezes por semana, uma professora aposentada do bairro.', memoria: null, efeito: () => dinheiro(c, -1500) }) },
       { id: 'conversar', texto: 'Perguntar o que está acontecendo', comportamento: { empatia: 1 },
         resolver: c => ({ texto: `${c.p.filho.nome} demorou, mas contou que não estava enxergando o quadro. Precisava de óculos.`, memoria: null, lembrar: ['filho', 'Descobriram juntos que o problema na escola era de óculos.'], efeito: () => prox(c, 'filho', 6) }) },
@@ -201,7 +206,7 @@ export const VINCULOS: Conteudo[] = [
     opcoes: [
       { id: 'sim', texto: 'Abrir a porta', comportamento: { familia: 2 },
         resolver: c => ({ texto: 'O quarto antigo virou quarto de novo. Os meses viraram um ano e meio.', memoria: `${c.p.filho.nome} voltou a morar com você por um tempo.`, lembrar: ['filho', 'Voltou para casa depois de perder o emprego.', 'casa'], efeito: () => { const vin = c.v.vinculos[c.p.filho.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.filho.municipioId = c.v.moradia.municipioId; delete c.v.fatos[`saiu_de_casa_${c.p.filho.id}`]; prox(c, 'filho', 10); vin.confianca = Math.min(100, vin.confianca + 8); } }) },
-      { id: 'dinheiro', texto: 'Ajudar com o aluguel por uns meses', disponivel: c => (c.v.financas.conta > 5000 ? true : 'Não há dinheiro para isso.'), comportamento: { generosidade: 1 },
+      { id: 'dinheiro', texto: 'Ajudar com o aluguel por uns meses', disponivel: c => custa(c, 5000, 'Não há dinheiro para isso.'), comportamento: { generosidade: 1 },
         resolver: c => ({ texto: 'Três meses de aluguel pagos. Foi o tempo de arrumar outro emprego.', memoria: null, lembrar: ['filho', 'Você pagou o aluguel num aperto.', 'apoio'], efeito: () => { dinheiro(c, -5000); prox(c, 'filho', 6); } }) },
       { id: 'nao', texto: 'Dizer que é hora de se virar', comportamento: { independencia: 1 },
         resolver: c => ({ texto: `${c.p.filho.nome} foi dividir apartamento com um amigo. Demorou a ligar de novo.`, memoria: null, lembrar: ['filho', 'Pediu para voltar para casa; você disse não.', 'conflito'], efeito: () => { prox(c, 'filho', -12); tensao(c, 'filho', 15); } }) }
@@ -236,7 +241,7 @@ export const VINCULOS: Conteudo[] = [
   {
     id: 'ami_viagem', tipo: 'decisao', idade: [18, 70], tema: 'amizade', repetir: 5,
     papeis: { amigo: P.amigo },
-    quando: c => c.v.financas.conta > 1500,
+    quando: c => disponivel(c.v) > 1500,
     titulo: 'A viagem da turma',
     texto: c => `${c.p.amigo.nome} está organizando uma viagem da turma antiga: feriado prolongado, casa alugada na praia, cada um paga uns R$ 900.`,
     opcoes: [

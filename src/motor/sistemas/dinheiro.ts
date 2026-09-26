@@ -481,8 +481,9 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
   const limiar = Math.max(300000, despesa * 12 * 8);
   if (financeiro > limiar && i >= 30) {
     const taxa = { apertado: 0.015, modesto: 0.02, confortavel: 0.03, folgado: 0.05 }[f.estilo];
-    const gasto = Math.round((financeiro - limiar) * taxa);
-    f.razao.push({ rotulo: 'Viagens, reformas e presentes que o patrimônio permitiu', valor: -gasto, grupo: 'lazer' });
+    // O que o patrimônio permite gastar sai do que está livre na conta — não obriga a vender aplicação.
+    const gasto = Math.min(Math.round((financeiro - limiar) * taxa), Math.max(0, Math.round(f.conta + (renda - despesa) * 12)));
+    if (gasto > 0) f.razao.push({ rotulo: 'Viagens, reformas e presentes que o patrimônio permitiu', valor: -gasto, grupo: 'lazer' });
     f.conta -= gasto;
   }
 
@@ -589,8 +590,14 @@ function cobrirRombo(v: Vida, r: Rng): void {
   let falta = -f.conta;
   f.conta = 0;
   const aplic = cobrirComAplicacoes(v, falta);
+  const resgatado = falta - aplic.resta;
   falta = aplic.resta;
   f.conta = 0;
+  // O ano fechou no vermelho e as aplicações cobriram: não é silêncio — fica na conta do ano e na Linha da Vida.
+  if (resgatado >= 100) {
+    f.razao.push({ rotulo: 'Tirado das aplicações para cobrir o ano', valor: Math.round(resgatado), grupo: 'outros' });
+    escrever(v, { texto: `As contas do ano passaram do que entrou: saíram ${fmt(resgatado)} das aplicações para cobrir.`, relevancia: resgatado >= 20000 ? 'cotidiano' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
+  }
   if (aplic.vendeuNaBaixa.length && !temFato(v, 'vendeu_na_baixa')) {
     marcarFato(v, 'vendeu_na_baixa');
     escrever(v, { texto: `Para fechar as contas, precisou vender ${aplic.vendeuNaBaixa[0]} num momento ruim — por menos do que tinha posto.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
@@ -767,6 +774,12 @@ export function tirarDasAplicacoes(v: Vida, valor: number, motivo: string): stri
   const texto = `Tirou ${fmt(tirado)} das aplicações ${motivo}: ${partes.join(', ')}.${plano.naBaixa.length ? ` Vendeu ${plano.naBaixa.join(' e ')} abaixo do que tinha posto.` : ''}`;
   escrever(v, { texto, relevancia: tirado >= 50000 ? 'cotidiano' : 'tecnico', tema: 'dinheiro', escolha: true });
   return texto;
+}
+
+/** O mesmo veredito, no formato `{ ok, motivo }` que alguns sistemas usam (com o resgate possível junto). */
+export function okDePagar(v: Vida, valor: number, oque = 'Custa'): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
+  const d = vereditoDePagar(v, valor, oque);
+  return d.grau === 'permitido' ? { ok: true } : { ok: false, motivo: d.motivo, resgate: d.resgate };
 }
 
 /** O que dá para usar agora: conta + aplicações (vendendo pelo preço do dia). */

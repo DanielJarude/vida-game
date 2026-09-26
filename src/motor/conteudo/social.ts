@@ -10,7 +10,7 @@
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import * as P from './papeis';
-import { dinheiro, envolvimento, estresse, feliz, gp, prox, tensao } from './efeitos';
+import { dinheiro, envolvimento, estresse, feliz, gp, prox, tensao, custa } from './efeitos';
 import { idade, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
 import { encerrarCaso, mudarEstagio, reacaoATraicao, terminar } from '../sistemas/romance';
 import { gestacaoEmCurso } from '../sistemas/familia';
@@ -305,7 +305,7 @@ export const SOCIAL: Conteudo[] = [
     titulo: c => c.p.pessoa.nome,
     texto: c => `${c.p.pessoa.nome} disse, sem briga, só cansaço: "A gente virou dois colegas de apartamento." Faz tempo que vocês não fazem nada só os dois.`,
     opcoes: [
-      { id: 'viagem', texto: 'Propor uma viagem só de vocês', disponivel: c => (c.v.financas.conta >= 2500 ? true : 'Não há dinheiro para viajar agora.'), comportamento: { familia: 1 },
+      { id: 'viagem', texto: 'Propor uma viagem só de vocês', disponivel: c => custa(c, 2500, 'Não há dinheiro para viajar agora.'), comportamento: { familia: 1 },
         resolver: c => ({ texto: 'Três dias numa pousada. Na segunda noite, riram como não riam havia anos.', memoria: `Viajou só com ${c.p.pessoa.nome} para recomeçar.`, lembrar: ['pessoa', 'Uma viagem só de vocês, para recomeçar.', 'reconciliacao'], efeito: () => { dinheiro(c, -2500); envolvimento(c, 'pessoa', 14); feliz(c, 5); } }) },
       { id: 'rotina', texto: 'Combinar uma noite por semana só de vocês', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Quinta-feira virou a noite de vocês. Na terceira semana, você quase esqueceu. Não esqueceu.', memoria: null, lembrar: ['pessoa', 'Combinaram uma noite por semana só de vocês.'], efeito: () => { envolvimento(c, 'pessoa', 9); const vin = c.v.vinculos[c.p.pessoa.id]; (vin.habitos ??= {}).sair = (vin.habitos.sair ?? 0) + 1; } }) },

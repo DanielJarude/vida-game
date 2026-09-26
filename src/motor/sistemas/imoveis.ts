@@ -13,6 +13,8 @@ import { modeloMoradia } from '../dados/bens';
 import { dinheiro as fmt } from '../texto';
 import { aluguelDe } from './mercado';
 import type { AnoEconomico } from './economia';
+import { okDePagar } from './dinheiro';
+import type { Veredito } from '../plausibilidade';
 
 export const imoveis = (v: Vida) => v.financas.bens.filter((b): b is Imovel => b.tipo === 'imovel');
 export const casaPropria = (v: Vida) => imoveis(v).find(b => b.id === v.moradia.imovelId);
@@ -56,13 +58,13 @@ export function processarImoveis(v: Vida, r: Rng, ec?: AnoEconomico): void {
 
 export type AcaoImovel = 'reparar' | 'adiar' | 'alugar' | 'retomar' | 'morar';
 
-export function disponibilidadeImovel(v: Vida, b: Imovel | undefined, oque: AcaoImovel): { ok: boolean; motivo?: string } {
+export function disponibilidadeImovel(v: Vida, b: Imovel | undefined, oque: AcaoImovel): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
   if (!b) return { ok: false, motivo: 'Imóvel não encontrado.' };
   const aqui = v.moradia.imovelId === b.id;
   switch (oque) {
     case 'reparar':
       if (!b.problema) return { ok: false, motivo: 'Não há reparo pendente.' };
-      return v.financas.conta >= b.problema.custo ? { ok: true } : { ok: false, motivo: `O reparo custa ${fmt(b.problema.custo)}.` };
+      return okDePagar(v, b.problema.custo, 'O reparo custa');
     case 'adiar':
       if (!b.problema) return { ok: false, motivo: 'Não há reparo pendente.' };
       return v.anoAtual.acoes.includes(`adiou:${b.id}`) ? { ok: false, motivo: 'Já decidiu esperar este ano.' } : { ok: true };

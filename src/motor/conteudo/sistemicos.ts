@@ -10,7 +10,7 @@ import { disponivel as guardado, pagar as pagarGuardado, parcelaPrice, rendaProp
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { iniciarPausa, podeReduzir } from '../sistemas/pausa';
-import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao } from './efeitos';
+import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao, custa } from './efeitos';
 import { idade, idadePessoa, lembrarCom, marcarFato, temFato } from '../nucleo';
 import { deslocamento } from '../sistemas/transporte';
 import { iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
@@ -26,6 +26,7 @@ import { ROTINAS } from '../sistemas/rotinas';
 import { economiaLocal } from '../dados/lugares';
 import { curso } from '../dados/cursos';
 import { saldoMensal } from '../sistemas/dinheiro';
+import { totalAplicado } from '../sistemas/investimentos';
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -170,7 +171,7 @@ export const SISTEMICOS: Conteudo[] = [
     papeis: { pessoa: P.parceiro },
     quando: c => temFato(c.v, `noivado_${c.p.pessoa.id}`) && c.v.vinculos[c.p.pessoa.id].romance?.estagio !== 'casamento' && c.v.t - (c.v.fatos[`noivado_${c.p.pessoa.id}`] ?? c.v.t) >= 12,
     titulo: 'Como vai ser o casamento',
-    texto: c => `A data está marcada. Falta decidir o tamanho da festa — e de onde vem o dinheiro. Você tem ${c.v.financas.conta > 0 ? `R$ ${Math.round(c.v.financas.conta).toLocaleString('pt-BR')} na conta` : 'pouco dinheiro guardado'}.`,
+    texto: c => `A data está marcada. Falta decidir o tamanho da festa — e de onde vem o dinheiro. Você tem ${c.v.financas.conta > 0 ? `R$ ${Math.round(c.v.financas.conta).toLocaleString('pt-BR')} na conta` : 'pouco dinheiro na conta'}${totalAplicado(c.v) > 1000 ? ` e R$ ${Math.round(totalAplicado(c.v)).toLocaleString('pt-BR')} aplicados` : ''}.`,
     opcoes: [
       { id: 'cartorio', texto: 'Só o cartório e um almoço com os mais próximos', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Assinaram no cartório de manhã. O almoço foi na casa de um parente, com churrasco.', memoria: `Casou-se com ${c.p.pessoa.nome} no cartório, com almoço para os mais próximos.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, 2500) }) },
@@ -186,7 +187,7 @@ export const SISTEMICOS: Conteudo[] = [
     titulo: 'A conversa',
     texto: c => `As brigas com ${c.p.pessoa.nome} viraram rotina${c.v.financas.negativado ? ', quase sempre sobre dinheiro' : ''}. Hoje ${c.p.pessoa.genero === 'feminino' ? 'ela' : 'ele'} disse que não aguenta mais do jeito que está.`,
     opcoes: [
-      { id: 'terapia', texto: 'Propor terapia de casal', disponivel: c => (c.v.financas.conta > 2000 ? true : 'Sem dinheiro para terapia de casal agora.'), comportamento: { empatia: 1, familia: 1 },
+      { id: 'terapia', texto: 'Propor terapia de casal', disponivel: c => custa(c, 2000, 'Sem dinheiro para terapia de casal agora.'), comportamento: { empatia: 1, familia: 1 },
         resolver: c => ({ texto: 'Foram meses de sessões difíceis. Algumas coisas melhoraram.', memoria: `Fez terapia de casal com ${c.p.pessoa.nome}.`, efeito: () => { dinheiro(c, -2400); tensao(c, 'pessoa', -35); envolvimento(c, 'pessoa', 12); } }) },
       { id: 'ouvir', texto: 'Ouvir, sem se defender', comportamento: { empatia: 2 },
         resolver: c => ({ texto: `Você ouviu tudo. ${c.p.pessoa.nome} chorou, e depois vocês conversaram até de madrugada.`, memoria: null, efeito: () => { tensao(c, 'pessoa', -20); envolvimento(c, 'pessoa', 8); } }) },
@@ -362,7 +363,7 @@ export const SISTEMICOS: Conteudo[] = [
         const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando)!;
         return { texto: 'Você saiu do posto com um papel de encaminhamento e uma estimativa vaga.', memoria: `Entrou na fila do SUS para tratar ${cond.nome}.`, relevancia: 'cotidiano', efeito: () => c.v.processos.push({ tipo: 'tratamento', id: `trat${c.v.seq++}`, condicaoId: cond.id, tFim: c.v.t + (cond.id === 'cancer' ? 4 : 10), rede: 'sus' }) };
       } },
-      { id: 'particular', texto: 'Pagar particular', disponivel: c => (guardado(c.v) >= 6000 ? true : 'Não há dinheiro para pagar particular.'),
+      { id: 'particular', texto: 'Pagar particular', disponivel: c => custa(c, 6000, 'Não há dinheiro para pagar particular.'),
         resolver: c => {
           const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando)!;
           const custo = cond.id === 'cancer' ? 45000 : 6000;

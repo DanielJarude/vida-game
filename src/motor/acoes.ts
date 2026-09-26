@@ -10,7 +10,7 @@ import type { Rng } from './rng';
 import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, Veiculo, Vida } from './tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
-import { abrirDecisao, conteudoPorId, preparar, resolverDecisao } from './conteudo/motor';
+import { abrirDecisao, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso } from './sistemas/escola';
 import { eDasForcas, aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria } from './sistemas/trabalho';
@@ -29,7 +29,7 @@ import { modeloMoradia, modeloVeiculo, nomeDaVersao, versaoVeiculo, VEICULO_ANTI
 import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
 import { curso } from './dados/cursos';
 import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras, type Modo } from './sistemas/transporte';
-import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, rendaPropriaMensal, saldoMensal } from './sistemas/dinheiro';
+import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, rendaPropriaMensal, saldoMensal, capacidade, tirarDasAplicacoes, vereditoDePagar } from './sistemas/dinheiro';
 import { animalDoAbrigo, nomeImovel, ofertaDeImovel, ofertaDePet, ofertaDeVeiculo, ofertaPorModelo, ofertaVeiculoPorModelo } from './sistemas/mercado';
 import { disponibilidadeVeiculo, executarVeiculo, textoVeiculo, valorDeVenda, type AcaoVeiculo } from './sistemas/veiculos';
 import { disponibilidadeImovel, executarImovel, valorDeVendaImovel, type AcaoImovel } from './sistemas/imoveis';
@@ -57,7 +57,10 @@ import { noServicoInicial, propor } from './sistemas/compromissos';
 export type InteracaoPessoa = string;
 
 export type Acao =
-  | { tipo: 'decidir'; opcaoId: string }
+  /** `resgatar`: a opção custa mais do que há na conta, e o jogador aceitou tirar das aplicações. */
+  | { tipo: 'decidir'; opcaoId: string; resgatar?: boolean }
+  /** Tirar das aplicações o que falta na conta e fazer (o jogador consentiu: nada é vendido sozinho). */
+  | { tipo: 'resgatar_e'; acao: Acao }
   /** Começar, mudar a intensidade (nivel) ou parar uma atividade. */
   | { tipo: 'rotina'; id: string; ativa: boolean; nivel?: 1 | 2 | 3 }
   /** Aceitar ou deixar passar uma porta que a vida abriu. */
@@ -164,7 +167,21 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
   if (v.momento && a.tipo !== 'decidir') return bloqueio('incompativel', 'Há uma decisão esperando por você.');
   const i = idade(v);
   switch (a.tipo) {
-    case 'decidir': return v.momento ? PERMITIDO : bloqueio('incompativel', 'Não há decisão aberta.');
+    case 'decidir': {
+      if (!v.momento) return bloqueio('incompativel', 'Não há decisão aberta.');
+      if (!a.resgatar) return PERMITIDO;
+      const op = v.momento.opcoes.find(o => o.id === a.opcaoId);
+      if (!op?.resgate) return bloqueio('incompativel', 'Essa escolha não precisa tirar dinheiro das aplicações.');
+      return capacidade(v, v.financas.conta + op.resgate).situacao !== 'sem_patrimonio' ? PERMITIDO : bloqueio('requisito', 'As aplicações já não cobrem.');
+    }
+    case 'resgatar_e': {
+      const d = disponibilidade(v, a.acao);
+      if (podeTentar(d)) return bloqueio('incompativel', 'Não precisa: o dinheiro está na conta.');
+      if (!d.resgate) return d;
+      // Depois de tirar, a ação precisa caber de verdade (nada de vender para esbarrar em outra regra).
+      const { valor: depois } = transacao(v, x => { tirarDasAplicacoes(x, d.resgate!.valor, 'para pagar'); return disponibilidade(x, a.acao); });
+      return podeTentar(depois) ? { grau: 'permitido', motivo: `Tira ${fmt(d.resgate.valor)} das aplicações.` } : depois;
+    }
     case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
     case 'oportunidade': {
       const o = v.caminhos.oportunidades.find(x => x.id === a.id);
@@ -265,8 +282,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (a.municipioId === v.moradia.municipioId) return bloqueio('incompativel', 'Você já mora aqui.');
       { const preso = presoALugar(v); if (preso) return preso; }
       const custo = custoDeMudanca(v.moradia.municipioId, a.municipioId);
-      if (disponivel(v) < custo) return bloqueio('requisito', `A mudança custa cerca de R$ ${custo.toLocaleString('pt-BR')}.`);
-      return PERMITIDO;
+      return vereditoDePagar(v, custo, 'A mudança custa cerca de');
     }
     case 'comprar_veiculo': {
       const o = a.ofertaId ? ofertaDeVeiculo(v, a.ofertaId) : a.modeloId ? ofertaVeiculoPorModelo(v, a.modeloId, VEICULO_ANTIGO[a.modeloId]?.usado) : undefined;
@@ -274,7 +290,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const m = modeloVeiculo(o.modeloId);
       if (i < m.idadeMin) return bloqueio(m.cnh ? 'ilegal' : 'impossivel', `A partir dos ${m.idadeMin}.`);
       if (m.cnh && !v.trabalho.licencas.includes('cnh')) return bloqueio('requisito', 'Precisa de carteira de motorista.');
-      if (i < 18 && moraComFamiliaDeOrigem(v) && o.preco > v.financas.conta) return bloqueio('requisito', `Custa ${fmt(o.preco)}; você tem ${fmt(Math.max(0, v.financas.conta))}.`);
+      if (i < 18 && moraComFamiliaDeOrigem(v) && o.preco > v.financas.conta) return vereditoDePagar(v, o.preco);
       return condicoesVeiculo(v, o.preco, a.financiar, a.entrada).veredito;
     }
     case 'comprar_imovel': {
@@ -295,19 +311,19 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'veiculo': {
       const b = v.financas.bens.find(x => x.id === a.bemId);
       const d = disponibilidadeVeiculo(v, b?.tipo === 'veiculo' ? b : undefined, a.oque);
-      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+      return deOk(d);
     }
     case 'imovel': {
       const b = v.financas.bens.find(x => x.id === a.bemId);
       const d = disponibilidadeImovel(v, b?.tipo === 'imovel' ? b : undefined, a.oque);
-      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+      return deOk(d);
     }
     case 'usar_veiculo': {
       const b = v.financas.bens.find(x => x.id === a.bemId);
       const d = disponibilidadeUsoVeiculo(v, b?.tipo === 'veiculo' ? b : undefined, a.oque);
-      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+      return deOk(d);
     }
-    case 'usar_casa': { const d = disponibilidadeUsoCasa(v, a.oque); return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!); }
+    case 'usar_casa': { const d = disponibilidadeUsoCasa(v, a.oque); return deOk(d); }
     case 'investir': {
       if (i < 18) return bloqueio('ilegal', 'Investir exige maioridade (ou um responsável).');
       const pr = PRODUTOS.find(x => x.id === (a.destino as string));
@@ -323,12 +339,13 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const d = v.financas.dividas.find(x => x.id === a.dividaId);
       if (!d) return bloqueio('impossivel', 'Dívida não encontrada.');
       if (d.tipo === 'cartao') return bloqueio('incompativel', 'O cartão se paga sozinho com o que sobra no ano.');
-      return a.valor > 0 && a.valor <= v.financas.conta ? PERMITIDO : bloqueio('requisito', 'Não há esse dinheiro na conta.');
+      if (!(a.valor > 0)) return bloqueio('requisito', 'Escolha um valor.');
+      return vereditoDePagar(v, a.valor, 'Amortizar');
     }
     case 'emprestimo': return condicoesEmprestimo(v, a.valor, a.meses).veredito;
     case 'renegociar_financiamento': {
       const d = podeRenegociarFinanciamento(v, v.financas.dividas.find(x => x.id === a.dividaId));
-      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+      return deOk(d);
     }
     case 'estilo': return moraComFamiliaDeOrigem(v) && i < 18 ? bloqueio('impossivel', 'Quem decide os gastos da casa são os adultos.') : PERMITIDO;
     case 'plano_saude': return i < 18 ? bloqueio('impossivel', 'O plano das crianças é decisão dos pais.') : PERMITIDO;
@@ -392,9 +409,11 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (!o) return bloqueio('impossivel', 'Esse animal já foi vendido.');
       if (i < 18) return bloqueio('ilegal', 'Comprar um animal é coisa de adulto.');
       if (jaFez(v, 'adotou_pet')) return bloqueio('incompativel', 'Um bicho novo por ano já é bastante.');
-      if (disponivel(v) < o.preco) return bloqueio('requisito', `Custa ${fmt(o.preco)}; você tem ${fmt(Math.max(0, disponivel(v)))}.`);
       const d = podeTerPet(v, o.especie, o.porte);
-      return d.grau === 'permitido' ? PERMITIDO : d.grau === 'improvavel' ? { grau: 'improvavel', motivo: d.motivo, chance: 0.5 } : bloqueio(d.grau, d.motivo!);
+      if (d.grau !== 'permitido' && d.grau !== 'improvavel') return bloqueio(d.grau, d.motivo!);
+      const pag = vereditoDePagar(v, o.preco);
+      if (pag.grau !== 'permitido') return pag;
+      return d.grau === 'permitido' ? PERMITIDO : { grau: 'improvavel', motivo: d.motivo, chance: 0.5 };
     }
     case 'entregar_pet': {
       const p = v.pessoas[a.petId];
@@ -402,7 +421,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'veterinario': {
       const d = disponibilidadeVeterinario(v, v.pessoas[a.petId], a.opcao);
-      return d.ok ? PERMITIDO : bloqueio('requisito', d.motivo!);
+      return deOk(d);
     }
     case 'levar_pet': {
       const p = v.pessoas[a.petId];
@@ -418,11 +437,14 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (i < 18) return bloqueio('ilegal', 'A CNH é a partir dos 18.');
       if (v.trabalho.licencas.includes('cnh')) return bloqueio('incompativel', 'Você já tem carteira.');
       if (v.processos.some(p => p.tipo === 'cnh')) return bloqueio('incompativel', 'Já está na autoescola.');
-      return v.financas.conta >= custoCnh(v) ? PERMITIDO : bloqueio('requisito', `A autoescola custa cerca de R$ ${custoCnh(v).toLocaleString('pt-BR')}.`);
+      return vereditoDePagar(v, custoCnh(v), 'A autoescola custa cerca de');
   }
 }
 
 const custoCnh = (v: Vida) => Math.round(3200 * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
+
+/** `{ ok, motivo, resgate }` dos sistemas vira veredito (com o resgate possível, quando é só a conta que não cobre). */
+const deOk = (d: { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] }): Veredito => (d.ok ? PERMITIDO : { grau: 'requisito', motivo: d.motivo, ...(d.resgate ? { resgate: d.resgate } : {}) });
 
 /* ------------------------------------------------------------ Condições de compra */
 
@@ -456,14 +478,13 @@ function rendaParaCredito(v: Vida): number {
 export function condicoesImovel(v: Vida, preco: number, financiar: boolean, entrada?: number, prazoAnos?: number): Condicoes {
   const i = idade(v);
   const custos = Math.round(preco * 0.04 / 100) * 100;
-  const tem = disponivel(v);
   const renda = rendaParaCredito(v);
   const social = renda <= 8600 && !v.financas.bens.some(b => b.tipo === 'imovel') && preco <= 350000 * Math.pow(economiaLocal(v.moradia.municipioId).custo, 1.2);
   const prazoMaximo = Math.max(0, Math.min(35, 80 - i));
   const entradaMinima = Math.round(preco * (social ? 0.1 : 0.2));
   const base: Omit<Condicoes, 'veredito'> = { preco, entrada: preco, entradaMinima, financiado: 0, parcela: 0, meses: 0, jurosMes: 0, custos, peso: 0, total: preco + custos, social, prazoMaximo };
   if (!financiar) {
-    return { ...base, veredito: tem >= preco + custos ? PERMITIDO : bloqueio('requisito', `À vista: ${fmt(preco)} mais ${fmt(custos)} de escritura e impostos. Você tem ${fmt(tem)}.`) };
+    return { ...base, veredito: vereditoDePagar(v, preco + custos, `À vista, com ${fmt(custos)} de escritura e impostos:`) };
   }
   const meses = Math.round(Math.min(prazoAnos ?? 30, prazoMaximo) * 12);
   const ent = Math.round(Math.max(entradaMinima, Math.min(preco, entrada ?? entradaMinima)));
@@ -475,17 +496,16 @@ export function condicoesImovel(v: Vida, preco: number, financiar: boolean, entr
   if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco financia.') };
   if (prazoMaximo < 5) return { ...out, veredito: bloqueio('requisito', 'Nenhum banco financia com esse prazo na sua idade.') };
   if (renda <= 0) return { ...out, veredito: bloqueio('requisito', 'Sem renda comprovada, não há financiamento.') };
-  if (tem < ent + custos) return { ...out, veredito: bloqueio('requisito', `A entrada é de ${fmt(ent)}, mais ${fmt(custos)} de escritura. Você tem ${fmt(tem)}.`) };
   if (peso > 0.3) return { ...out, veredito: bloqueio('requisito', `A parcela (${fmt(parcela)}) passaria de 30% da renda${renda !== rendaPropriaMensal(v) ? ' de vocês' : ''}.`) };
   if (comprometimento(v, parcela) > 0.45) return { ...out, veredito: bloqueio('requisito', 'Somada às parcelas que você já tem, não cabe na renda.') };
-  return { ...out, veredito: PERMITIDO };
+  // O dinheiro por último: a entrada existe (conta, ou aplicações que o jogador pode tirar)?
+  return { ...out, veredito: vereditoDePagar(v, ent + custos, `A entrada, com ${fmt(custos)} de escritura, é`) };
 }
 
 /** Condições para comprar um veículo. */
 export function condicoesVeiculo(v: Vida, preco: number, financiar: boolean, entrada?: number): Condicoes {
-  const tem = disponivel(v);
   const base: Omit<Condicoes, 'veredito'> = { preco, entrada: preco, entradaMinima: Math.round(preco * 0.2), financiado: 0, parcela: 0, meses: 0, jurosMes: 0, custos: 0, peso: 0, total: preco, social: false, prazoMaximo: 5 };
-  if (!financiar || preco < 8000) return { ...base, veredito: tem >= preco ? PERMITIDO : bloqueio('requisito', `Custa ${fmt(preco)}; você tem ${fmt(tem)}.`) };
+  if (!financiar || preco < 8000) return { ...base, veredito: vereditoDePagar(v, preco) };
   const meses = 48;
   const ent = Math.round(Math.max(base.entradaMinima, Math.min(preco, entrada ?? base.entradaMinima)));
   const jurosMes = juroDeFinanciamento(v, 'veiculo');
@@ -495,10 +515,9 @@ export function condicoesVeiculo(v: Vida, preco: number, financiar: boolean, ent
   const out = { ...base, entrada: ent, financiado, parcela, meses, jurosMes, peso: parcela / Math.max(1, renda), total: ent + parcela * meses };
   if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco financia.') };
   if (renda <= 0) return { ...out, veredito: bloqueio('requisito', 'Sem renda, não há financiamento.') };
-  if (tem < ent) return { ...out, veredito: bloqueio('requisito', `A entrada é de ${fmt(ent)}.`) };
   if (out.peso > 0.3) return { ...out, veredito: bloqueio('requisito', `A parcela (${fmt(parcela)}) passaria de 30% da sua renda.`) };
   if (comprometimento(v, parcela) > 0.45) return { ...out, veredito: bloqueio('requisito', 'Somada às parcelas que você já tem, não cabe na renda.') };
-  return { ...out, veredito: PERMITIDO };
+  return { ...out, veredito: vereditoDePagar(v, ent, 'A entrada é de') };
 }
 
 /** Empréstimo pessoal (ou consignado, para quem tem salário garantido ou aposentadoria). */
@@ -549,7 +568,17 @@ const ok = (texto: string, tom: 'bom' | 'ruim' | 'neutro' = 'neutro'): Saida => 
 function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
   const i = idade(v);
   switch (a.tipo) {
+    case 'resgatar_e': {
+      const d = disponibilidade(v, a.acao);
+      tirarDasAplicacoes(v, d.resgate!.valor, 'para pagar');
+      return executarNaTransacao(v, r, a.acao);
+    }
     case 'decidir': {
+      if (a.resgatar) {
+        const op = v.momento!.opcoes.find(o => o.id === a.opcaoId)!;
+        tirarDasAplicacoes(v, op.resgate!, 'para pagar');
+        liberarOpcaoPaga(v, r, a.opcaoId);
+      }
       const res = resolverDecisao(v, r, a.opcaoId);
       return 'erro' in res ? ok(res.erro, 'ruim') : { resultado: res.texto };
     }

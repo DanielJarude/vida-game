@@ -11,7 +11,7 @@
 import type { Conteudo, Ctx, Resultado } from './base';
 import type { CategoriaIlicita, Especialidade, Pessoa, Vida } from '../tipos';
 import * as P from './papeis';
-import { estresse, fato, feliz, prox, tensao } from './efeitos';
+import { estresse, fato, feliz, prox, tensao, custa } from './efeitos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { CATEGORIAS, entrar, escalar, parar } from '../sistemas/ilicito';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
@@ -95,7 +95,7 @@ export const TRAJETORIAS: Conteudo[] = [
       { id: 'parar_esquema', texto: 'Parar de vez', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: c.v.caminhos.envolvimento!.nivel >= 3 ? 'Você avisou que estava fora. Ninguém disse nada — e isso era o que dava medo.' : 'Você parou. O dinheiro fácil fez falta no primeiro mês; o sono voltou no segundo.', memoria: null, efeito: () => parar(c.v, 'decidiu sair') }) },
       { id: 'mudar_de_vez', texto: 'Parar e mudar de cidade, para longe de todo mundo', comportamento: { coragem: 1 },
-        disponivel: c => (idade(c.v) >= 18 && disponivel(c.v) >= custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)) ? true : 'Não há dinheiro nem idade para recomeçar longe.'),
+        disponivel: c => (idade(c.v) < 18 ? 'Sem idade para recomeçar longe sozinho.' : custa(c, custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)), 'Não há dinheiro para recomeçar longe.')),
         resolver: c => ({ texto: 'Uma mala, um número de telefone novo, uma cidade onde ninguém sabe o seu nome.', memoria: null, efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : 'sao-paulo-sp'; parar(c.v, 'mudou de cidade para cortar os contatos'); pagar(c.v, custoDeMudanca(aqui, d)); mudarAgora(c.v, d, 'para recomeçar longe dos contatos de antes'); delete c.v.fatos['pressao_grupo']; } }) },
       { id: 'seguir_esquema', texto: 'Seguir do mesmo jeito', resolver: () => ({ texto: 'Você seguiu. Cada ano parece o último sem problema.', memoria: null }) },
       { id: 'fundo', texto: 'Ir mais fundo', comportamento: { impulsividade: 1, coragem: 1 }, disponivel: c => ((c.v.caminhos.envolvimento?.nivel ?? 3) < 3 ? true : false),
@@ -139,7 +139,7 @@ export const TRAJETORIAS: Conteudo[] = [
       { id: 'estudar', texto: 'Estudar: um curso técnico ou de qualificação', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Você foi ver os cursos gratuitos da cidade. Uma sala cheia de gente recomeçando alguma coisa.', memoria: 'Saiu da prisão decidid' + c.g('o', 'a', 'e') + ' a estudar.', efeito: () => { fato(c, 'plano_tecnico'); delete c.v.fatos['remicao_decidida']; } }) },
       { id: 'longe', texto: 'Recomeçar em outra cidade, longe dos contatos de antes', comportamento: { coragem: 1 },
-        disponivel: c => (disponivel(c.v) >= 2500 ? true : 'Sem dinheiro nem para a passagem e o primeiro mês.'),
+        disponivel: c => custa(c, 2500, 'Sem dinheiro nem para a passagem e o primeiro mês.'),
         resolver: c => ({ texto: 'Outra rodoviária, outra cidade. Ninguém ali sabe de onde você veio.', memoria: 'Recomeçou a vida em outra cidade depois da prisão.', efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : 'campinas-sp'; pagar(c.v, 2500); mudarAgora(c.v, d, 'para recomeçar'); const e = c.v.caminhos.envolvimento; if (e) e.contatoId = undefined; delete c.v.fatos['remicao_decidida']; } }) },
       { id: 'antigos', texto: 'Procurar o pessoal de antes', comportamento: { impulsividade: 1 },
         resolver: c => ({ texto: 'Foram os únicos que abriram a porta sem perguntar nada.', memoria: 'Voltou para os contatos de antes da prisão.', relevancia: 'marco', tom: 'ruim', efeito: () => { delete c.v.fatos['remicao_decidida']; const e = c.v.caminhos.envolvimento; entrar(c.v, e?.categoria === 'fraude' ? 'patrimonial' : e?.categoria ?? 'patrimonial', e?.contatoId, c.r); } }) }
@@ -179,7 +179,7 @@ export const TRAJETORIAS: Conteudo[] = [
         resolver: c => ({ texto: 'As manhãs no trabalho, as tardes em casa.', memoria: null, efeito: () => { iniciarPausa(c.v, c.p.quem.parceiroId === undefined && parceiro(c.v)?.p.id === c.p.quem.id ? 'parceiro' : 'pais', 'parcial', c.p.quem.id); prox(c, 'quem', 6); } }) },
       { id: 'parar', texto: 'Parar de trabalhar para cuidar', comportamento: { familia: 2, empatia: 1 }, disponivel: c => (c.v.trabalho.atual?.contrato === 'militar' ? 'A farda não permite parar assim.' : true),
         resolver: c => ({ texto: 'Você virou enfermeira, motorista e companhia — sem folga e sem salário.'.replace('enfermeira', c.g('enfermeiro', 'enfermeira', 'enfermeire')), memoria: null, efeito: () => { iniciarPausa(c.v, parceiro(c.v)?.p.id === c.p.quem.id ? 'parceiro' : 'pais', 'total', c.p.quem.id); prox(c, 'quem', 8); } }) },
-      { id: 'cuidadora', texto: 'Pagar uma cuidadora durante o dia', disponivel: c => (disponivel(c.v) >= 6000 || (c.v.trabalho.atual?.salario ?? 0) >= 4500 ? true : 'O salário não cobre uma cuidadora.'),
+      { id: 'cuidadora', texto: 'Pagar uma cuidadora durante o dia', disponivel: c => ((c.v.trabalho.atual?.salario ?? 0) >= 4500 ? true : custa(c, 6000, 'O salário não cobre uma cuidadora.')),
         resolver: c => ({ texto: 'Uma cuidadora passou a vir de manhã. O custo entrou no orçamento.', memoria: `Contratou uma cuidadora para ${c.p.quem.nome}.`, efeito: () => fato(c, `paga_cuidadora_${c.p.quem.id}`) }) },
       { id: 'dar_conta', texto: 'Dar conta dos dois, como der', resolver: c => ({ texto: 'Você passou a dormir pouco.', memoria: null, efeito: () => estresse(c, 8) }) }
     ]
@@ -278,7 +278,7 @@ export const TRAJETORIAS: Conteudo[] = [
     titulo: 'O trabalho mudou',
     texto: c => { const o = ondaAgora(c.v)!; const ts = TEXTO_ONDA[o.familia.id] ?? ['O jeito de trabalhar mudou.']; return `${ts[o.ano % ts.length]} ${idade(c.v) >= 45 ? 'Gente da sua idade anda dizendo que já não compensa aprender tudo de novo.' : ''}`; },
     opcoes: [
-      { id: 'atualizar', texto: 'Fazer um curso de atualização (alguns meses, à noite)', comportamento: { disciplina: 1 }, disponivel: c => (disponivel(c.v) >= 1500 ? true : 'O curso custa uns R$ 1.500 que não sobram agora.'),
+      { id: 'atualizar', texto: 'Fazer um curso de atualização (alguns meses, à noite)', comportamento: { disciplina: 1 }, disponivel: c => custa(c, 1500, 'O curso custa uns R$ 1.500 que não sobram agora.'),
         resolver: c => ({ texto: 'Três meses de aula à noite. No fim, o que parecia outra língua virou ferramenta.', memoria: 'Fez um curso de atualização quando o trabalho mudou.', efeito: () => { pagar(c.v, 1500); const e = c.v.trabalho.atual; if (!e) return; e.tAtualizacao = c.v.t; e.desempenho = clamp(e.desempenho + 8); if (e.clientela !== undefined) e.clientela = clamp(e.clientela + 8); estresse(c, 4); } }) },
       { id: 'no_trabalho', texto: 'Aprender no próprio trabalho, errando', comportamento: { coragem: 1 },
         resolver: c => { const deu = c.r.chance(0.5 + c.v.mente.cognicao / 250); return { texto: deu ? 'Você foi aprendendo no susto. Deu certo, com alguns tropeços.' : 'Você tentou aprender sozinho. Ficou pela metade.', memoria: null, efeito: () => { if (deu && c.v.trabalho.atual) c.v.trabalho.atual.tAtualizacao = c.v.t; } }; } },
@@ -320,9 +320,9 @@ export const TRAJETORIAS: Conteudo[] = [
     titulo: 'A terra à venda',
     texto: c => `O dono da terra arrendada quer vender. Pede uns ${fmt(precoDoSitio(c.v))}. Há crédito rural, com juro menor que o do banco, para quem produz.`,
     opcoes: [
-      { id: 'vista', texto: 'Comprar à vista', disponivel: c => (disponivel(c.v) >= precoDoSitio(c.v) ? true : 'Não há esse dinheiro guardado.'),
+      { id: 'vista', texto: 'Comprar à vista', disponivel: c => custa(c, precoDoSitio(c.v), 'Não há esse dinheiro guardado.'),
         resolver: c => ({ texto: 'A escritura saiu no seu nome. Você andou a divisa inteira no primeiro dia.', memoria: 'Comprou a terra onde produzia.', relevancia: 'marco', tom: 'bom', efeito: () => comprarSitio(c.v, false) }) },
-      { id: 'credito', texto: 'Comprar com crédito rural (20% de entrada)', disponivel: c => (disponivel(c.v) >= precoDoSitio(c.v) * 0.2 && !c.v.financas.negativado ? true : 'Não há a entrada, ou o nome está sujo.'),
+      { id: 'credito', texto: 'Comprar com crédito rural (20% de entrada)', disponivel: c => (c.v.financas.negativado ? 'Com o nome sujo, não há crédito rural.' : custa(c, precoDoSitio(c.v) * 0.2, 'Não há a entrada.')),
         resolver: c => ({ texto: 'Doze anos de parcela. Mas é sua.', memoria: 'Comprou a terra com crédito rural.', relevancia: 'marco', tom: 'bom', efeito: () => comprarSitio(c.v, true) }) },
       { id: 'nao', texto: 'Seguir arrendando', resolver: () => ({ texto: 'Outro comprou. O novo dono renovou o arrendamento — por enquanto.', memoria: null }) }
     ]

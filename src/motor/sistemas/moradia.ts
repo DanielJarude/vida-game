@@ -14,10 +14,9 @@ import { economiaLocal } from '../dados/lugares';
 import { modeloMoradia, type ModeloMoradia } from '../dados/bens';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { moraComFamiliaDeOrigem } from './domicilio';
-import { disponivel, rendaPropriaMensal } from './dinheiro';
+import { disponivel, rendaPropriaMensal, vereditoDePagar } from './dinheiro';
 import { aluguelDe, ofertaPorModelo, ofertasDeImoveis, type OfertaImovel } from './mercado';
 import { seusPets } from './pets';
-import { dinheiro as fmt } from '../texto';
 
 export { aluguelDe };
 
@@ -42,8 +41,9 @@ export function vereditoAluguel(v: Vida, o: OfertaImovel, dividir = 0, comParcer
   const parte = o.modeloId === 'republica' ? o.aluguel : o.aluguel / (1 + dividir);
   const renda = rendaParaAluguel(v, comParceria);
   const entrada = custoDeEntrada(v, parte);
-  if (disponivel(v) < entrada) return bloqueio('requisito', `Para entrar: caução e mudança, uns ${fmt(entrada)}.`);
   if (renda === 0 && disponivel(v) < parte * 6 + entrada) return bloqueio('requisito', 'Sem renda, só com seis meses de aluguel guardados.');
+  const pag = vereditoDePagar(v, entrada, 'Para entrar (caução e mudança):');
+  if (pag.grau !== 'permitido') return pag;
   if (renda > 0 && parte > renda * 0.5) return { grau: 'improvavel', motivo: 'O aluguel passaria de metade da renda. A imobiliária vai pedir fiador.', chance: 0.4 };
   return { grau: 'permitido' };
 }

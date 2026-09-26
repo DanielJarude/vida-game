@@ -10,10 +10,10 @@
  * fracasso, arriscar, voltar atrás — isso é comportamento.
  */
 
-import { disponivel as guardado, pagar as pagarGuardado } from '../sistemas/dinheiro';
+import { pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
-import { estresse, fato, feliz } from './efeitos';
+import { estresse, fato, feliz, custa } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
 import { encerrarCarreira, fazerPeneira, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
 import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador } from '../sistemas/peneira';
@@ -295,7 +295,7 @@ export const CAMINHOS: Conteudo[] = [
       { id: 'estudar', texto: 'Voltar a estudar', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Um curso técnico, uma qualificação, uma faculdade à noite: você foi ver o que cabia.', memoria: 'Desempregado, decidiu voltar a estudar.'.replace('Desempregado', c.g('Desempregado', 'Desempregada', 'Desempregade')), efeito: () => fato(c, 'plano_estudar') }) },
       { id: 'cidade', texto: 'Tentar a vida numa cidade maior', comportamento: { coragem: 1 },
-        disponivel: c => (nivelDeOferta(c.v.moradia.municipioId) >= 2 ? false : guardado(c.v) >= custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)) ? true : 'Não há dinheiro nem para a mudança.'),
+        disponivel: c => (nivelDeOferta(c.v.moradia.municipioId) >= 2 ? false : custa(c, custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)), 'Não há dinheiro nem para a mudança.')),
         resolver: c => ({ texto: 'Uma mala, um endereço de conhecido, a rodoviária de madrugada.', memoria: null, efeito: () => { const d = capitalDoEstado(c.v.moradia.municipioId); c.v.financas.conta -= custoDeMudanca(c.v.moradia.municipioId, d); mudarAgora(c.v, d, 'atrás de trabalho'); marcar(c.v, 'mudanca_cidade', `Mudou-se para ${municipio(d).nome} atrás de trabalho.`, 2); marcarFato(c.v, 'mudou_por_trabalho'); } }) },
       { id: 'conta', texto: 'Trabalhar por conta', disponivel: c => (autonomoPossivel(c) ? true : false),
         resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: `Você imprimiu uns cartões e avisou todo mundo: ${nomeOcupacao(c.v, oc)}, atende em casa.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'por_conta'); escrever(c.v, { texto: textoDeContratacao(c.v, oc, e), relevancia: 'marco', tema: 'trabalho' }); } }; } },
@@ -316,7 +316,7 @@ export const CAMINHOS: Conteudo[] = [
       { id: 'fechar', texto: c => (presencaDe(c.v.caminhos.negocio!) === 'online' ? 'Tirar a loja do ar' : 'Fechar'),
         resolver: c => ({ texto: presencaDe(c.v.caminhos.negocio!) === 'online' ? 'Você tirou a loja do ar numa terça-feira à noite.' : presencaDe(c.v.caminhos.negocio!) === 'rua' ? 'Você baixou a porta de ferro pela última vez numa terça-feira.' : 'Você avisou os últimos clientes e encerrou as atividades.', memoria: null, efeito: () => { const dono = !!donoIntegral(c.v); fecharNegocio(c.v, 'o movimento não pagou as contas'); if (dono) encerrarEmprego(c.v, 'fechou o negócio'); estresse(c, 6); } }) },
       { id: 'insistir', texto: 'Insistir, com o dinheiro guardado', comportamento: { disciplina: 1 },
-        disponivel: c => (guardado(c.v) >= 5000 ? true : 'Não há dinheiro guardado para isso.'),
+        disponivel: c => custa(c, 5000, 'Não há dinheiro guardado para isso.'),
         resolver: c => ({ texto: 'Você pôs mais dinheiro e mais horas. O movimento reagiu um pouco.', memoria: null, efeito: () => { pagarGuardado(c.v, 5000); const n = c.v.caminhos.negocio!; n.clientela = clamp(n.clientela + 16); if (donoIntegral(c.v)) c.v.trabalho.atual!.clientela = n.clientela; n.anosNoVermelho = 0; estresse(c, 8); } }) },
       { id: 'mudar', texto: 'Mudar o jeito de vender', comportamento: { coragem: 1 },
         resolver: c => {

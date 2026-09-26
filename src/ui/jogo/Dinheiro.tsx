@@ -10,7 +10,9 @@
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
-import { balanco, disponivel, rendaPropriaMensal } from '../../motor/sistemas/dinheiro';
+import { balanco, rendaPropriaMensal } from '../../motor/sistemas/dinheiro';
+import { totalAplicado } from '../../motor/sistemas/investimentos';
+import { negocioAberto } from '../../motor/sistemas/negocio';
 import { BotaoAcao, Dado, Escolha, Linha } from '../comum';
 import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoMes } from '../leituraMaterial';
 
@@ -52,6 +54,8 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
     );
   }
   const b = balanco(vida);
+  const aplicado = totalAplicado(vida);
+  const negocio = negocioAberto(vida);
   const proprio = rendaPropriaMensal(vida);
   const emCasa = -m.orcamento.saidas.filter(l => l.grupo === 'moradia' || l.grupo === 'casa' || l.grupo === 'filhos').reduce((s, l) => s + l.valor, 0);
   const parcelas = f.dividas.filter(d => d.parcela > 0 && d.saldo > 0);
@@ -69,12 +73,15 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
       </div>
       <p className="mes__frase">{m.frase}</p>
       <dl className="dados dados--dinheiro">
-        <Dado rotulo="À mão">{dinheiroCurto(disponivel(vida))}</Dado>
+        <Dado rotulo="Na conta">{dinheiroCurto(Math.max(0, f.conta))}</Dado>
+        {aplicado > 0 && <Dado rotulo="Aplicado">{dinheiroCurto(aplicado)}<small> (dá para tirar)</small></Dado>}
         <Dado rotulo="Seu, por mês">{proprio > 0 ? dinheiroCurto(proprio) : 'nada ainda'}</Dado>
         {emCasa > 0 && <Dado rotulo="Casa e família">{dinheiroCurto(emCasa)}/mês</Dado>}
         <Dado rotulo="Deve">{b.obrigacoes > 0 ? dinheiroCurto(b.obrigacoes) : 'nada'}{atrasadas ? <small> · {atrasadas} em atraso</small> : null}</Dado>
         <Dado rotulo="Patrimônio">{dinheiroCurto(b.liquido)}{t && <small> {t.seta} {t.palavra}</small>}</Dado>
       </dl>
+      {aplicado > 0 && <p className="nota">{rendeuTexto(vida)}</p>}
+      {negocio && (negocio.caixa ?? 0) >= 1000 && <p className="nota">No caixa de {negocio.nome}: {dinheiroCurto(negocio.caixa ?? 0)} — do negócio; vira seu quando você tira (em Trabalho).</p>}
       {parcelas.length > 0 && <p className="nota">Compromissos de todo mês: {parcelas.length === 1 ? parcelas[0].descricao.toLowerCase() : `${parcelas.length} parcelas`}, {dinheiroCurto(parcelas.reduce((s, d) => s + d.parcela, 0))} por mês.</p>}
       {(m.orcamento.renda > 0 || m.orcamento.despesa > 0) && (
         <div className="balanca" role="group" aria-label="Quanto entra e quanto sai por mês">
@@ -123,6 +130,24 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
       </div>
     </section>
   );
+}
+
+/**
+ * O que as aplicações fizeram no último ano, em reais: o que rendeu (e ficou
+ * aplicado) e o que pagaram na conta. Sem isso, um milhão aplicado parece
+ * dinheiro que não existe.
+ */
+function rendeuTexto(v: Vida): string {
+  const r = v.financas.razao;
+  const val = r.find(l => l.rotulo === 'Valorização das aplicações')?.valor ?? 0;
+  const pago = r.find(l => l.rotulo === 'Dividendos e aluguéis de fundos')?.valor ?? 0;
+  const tirado = r.find(l => l.rotulo === 'Tirado das aplicações para cobrir o ano')?.valor ?? 0;
+  const partes: string[] = [];
+  if (val > 0) partes.push(`renderam ${dinheiroCurto(val)} (ficou aplicado)`);
+  else if (val < 0) partes.push(`perderam ${dinheiroCurto(-val)} de valor`);
+  if (pago > 0) partes.push(`pagaram ${dinheiroCurto(pago)} na conta`);
+  const ano = partes.length ? `No último ano, as aplicações ${partes.join(' e ')}.` : 'As aplicações ainda não fecharam um ano.';
+  return `${ano}${tirado > 0 ? ` Para cobrir o ano, saíram ${dinheiroCurto(tirado)} delas.` : ''} Quando falta na conta, dá para tirar delas — o jogo pergunta antes.`;
 }
 
 function Seguranca({ s }: { s: ReturnType<typeof leituraDaSeguranca> }) {

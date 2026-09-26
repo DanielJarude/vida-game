@@ -6,7 +6,7 @@
 import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
-import { dinheiro, estresse, fato, feliz, gp, prox, tensao } from './efeitos';
+import { dinheiro, estresse, fato, feliz, gp, prox, tensao, custa } from './efeitos';
 import { emRecessao, idadePessoa, temFato } from '../nucleo';
 import { entrouEmCrise, saiuDaCrise } from '../sistemas/economia';
 import { municipio } from '../dados/lugares';
@@ -144,7 +144,7 @@ export const MUNDO: Conteudo[] = [
     titulo: 'O show',
     texto: c => `A banda preferida de ${c.p.amigo.nome} vai tocar na cidade. O ingresso custa R$ 180 e você tem R$ ${Math.max(0, Math.round(c.v.financas.conta))}.`,
     opcoes: [
-      { id: 'juntar', texto: 'Juntar o dinheiro e ir', disponivel: c => (c.v.financas.conta >= 180 ? true : 'Você não tem esse dinheiro.'),
+      { id: 'juntar', texto: 'Juntar o dinheiro e ir', disponivel: c => custa(c, 180, 'Você não tem esse dinheiro.'),
         resolver: c => ({ texto: 'Grade da frente, garganta rouca, celular sem bateria.', memoria: `Foi ao show com ${c.p.amigo.nome}.`, efeito: () => { dinheiro(c, -180); prox(c, 'amigo', 8); feliz(c, 6); } }) },
       { id: 'pedir', texto: c => `Pedir o dinheiro para ${c.p.adulto.nome}`, resolver: c => c.v.origem.classe === 'vulneravel' || c.r.chance(0.4)
         ? { texto: `${c.p.adulto.nome} disse que não dava. Você viu o show pelos stories.`, memoria: null }
@@ -255,7 +255,7 @@ export const MUNDO: Conteudo[] = [
     opcoes: [
       { id: 'sim', texto: 'Arrumar o sofá e ouvir', comportamento: { empatia: 1, generosidade: 1 },
         resolver: c => ({ texto: `"Só hoje" virou três semanas. ${c.p.amigo.nome} nunca esqueceu.`, memoria: `Abrigou ${c.p.amigo.nome} no sofá durante a separação.`, efeito: () => { prox(c, 'amigo', 15); c.p.amigo.parceiroId = undefined; for (const par of P.conjuge(c.v)) { const vin = c.v.vinculos[par.id]; vin.tensao = Math.min(100, vin.tensao + 8); } }, lembrar: ['amigo', 'Você abriu a porta quando precisou.'] }) },
-      { id: 'hotel', texto: 'Ajudar a pagar uma pousada', disponivel: c => (c.v.financas.conta > 800 ? true : 'Não sobra dinheiro.'),
+      { id: 'hotel', texto: 'Ajudar a pagar uma pousada', disponivel: c => custa(c, 800, 'Não sobra dinheiro.'),
         resolver: c => ({ texto: 'Você pagou três diárias numa pousada perto.', memoria: null, efeito: () => { dinheiro(c, -600); prox(c, 'amigo', 6); c.p.amigo.parceiroId = undefined; } }) },
       { id: 'nao', texto: 'Dizer que hoje não dá', resolver: c => ({ texto: `${c.p.amigo.nome} disse que entendia e foi para a casa de um primo.`, memoria: null, efeito: () => { prox(c, 'amigo', -8); c.p.amigo.parceiroId = undefined; } }) }
     ]

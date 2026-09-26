@@ -19,9 +19,9 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import type { Negocio } from '../tipos';
 import { clamp } from '../rng';
 import { escrever, idadePessoa, lembrarCom } from '../nucleo';
-import { estresse } from './efeitos';
+import { estresse, custa } from './efeitos';
 import { dinheiro as fmt } from '../texto';
-import { disponivel, pagar } from '../sistemas/dinheiro';
+import { pagar } from '../sistemas/dinheiro';
 import {
   abrirUnidade, ampliar, comprarParteDoSocio, dedicacaoDe, donoIntegral, estrategiaDe, fecharNegocio, mudarEstrategia, negocioAberto, pagarPeloCaixa,
   parteDoSocio, podeAbrirUnidade, podeAmpliar, precoDaParteDoSocio, presencaDe, reservaDoCaixa, tetoDoMovimento, tipoDoNegocio, valorDoNegocio, valorInteiro
@@ -85,7 +85,7 @@ export const NEGOCIOS_CONTEUDO: Conteudo[] = [
     texto: c => { const n = neg(c); return `${c.p.socio?.nome ?? 'O sócio'} tem ${Math.round(parteDoSocio(n) * 100)}% de ${n.nome}. Pelo que o negócio vale hoje (${fmt(valorInteiro(c.v, n))}), a parte sai por uns ${fmt(precoDaParteDoSocio(c.v, n))}.`; },
     opcoes: [
       { id: 'comprar', texto: 'Propor a compra', consequencia: c => `Sai ${fmt(precoDaParteDoSocio(c.v, neg(c)))} do seu dinheiro; o negócio fica todo seu — o lucro e o risco.`,
-        disponivel: c => (disponivel(c.v) >= precoDaParteDoSocio(c.v, neg(c)) ? true : 'Não há esse dinheiro.'),
+        disponivel: c => custa(c, precoDaParteDoSocio(c.v, neg(c)), 'Não há esse dinheiro.'),
         resolver: c => {
           const vin = c.p.socio && c.v.vinculos[c.p.socio.id];
           const topa = c.r.chance(0.5 + ((vin?.tensao ?? 0) > 40 ? 0.3 : 0) + (idadePessoa(c.v, c.p.socio) >= 60 ? 0.2 : 0) - ((vin?.proximidade ?? 50) > 70 ? 0.1 : 0));
@@ -154,7 +154,7 @@ export const NEGOCIOS_CONTEUDO: Conteudo[] = [
     titulo: c => `${c.p.socio.nome} quer sair`,
     texto: c => { const n = neg(c); const vin = c.v.vinculos[c.p.socio.id]; return `${(vin?.tensao ?? 0) > 55 ? 'Depois de tanta discussão' : 'Com a idade pesando'}, ${c.p.socio.nome} quer vender a parte em ${n.nome}. Pela conta de hoje, uns ${fmt(precoDaParteDoSocio(c.v, n))}.`; },
     opcoes: [
-      { id: 'comprar', texto: 'Comprar a parte', consequencia: c => `Sai ${fmt(precoDaParteDoSocio(c.v, neg(c)))}; o negócio fica todo seu.`, disponivel: c => (disponivel(c.v) >= precoDaParteDoSocio(c.v, neg(c)) ? true : 'Não há esse dinheiro.'),
+      { id: 'comprar', texto: 'Comprar a parte', consequencia: c => `Sai ${fmt(precoDaParteDoSocio(c.v, neg(c)))}; o negócio fica todo seu.`, disponivel: c => custa(c, precoDaParteDoSocio(c.v, neg(c)), 'Não há esse dinheiro.'),
         resolver: c => ({ texto: 'Assinaram numa tarde de chuva. Depois, um abraço meio sem jeito.', memoria: null, tom: 'bom', efeito: () => { comprarParteDoSocio(c.v); } }) },
       { id: 'terceiro', texto: 'Deixar que venda para alguém de fora', consequencia: () => 'Entra um sócio novo, que você mal conhece.',
         resolver: c => ({ texto: 'O comprador apareceu em um mês: educado, de terno, cheio de ideias para o seu negócio.', memoria: null, efeito: () => socioDeFora(c) }) },
@@ -173,7 +173,7 @@ export const NEGOCIOS_CONTEUDO: Conteudo[] = [
     opcoes: [
       { id: 'aceitar', texto: c => `Aceitar o dinheiro de ${c.p.socio.nome}`, consequencia: c => `Entra ${fmt(valor(c, 0.3))} no caixa; a parte de ${c.p.socio.nome} sobe para ${Math.round(Math.min(0.7, parteDoSocio(neg(c)) + 0.1) * 100)}%.`,
         resolver: c => ({ texto: 'O dinheiro entrou. A sua parte do negócio ficou menor.', memoria: null, efeito: () => { const n = neg(c); n.caixa = (n.caixa ?? 0) + valor(c, 0.3); n.parteSocio = Math.min(0.7, parteDoSocio(n) + 0.1); comSocio(c, -3, 3); } }) },
-      { id: 'bolso', texto: 'Pôr do seu bolso, e aumentar a sua parte', consequencia: c => `Sai ${fmt(valor(c, 0.3))} da sua conta; a sua parte sobe.`, disponivel: c => (disponivel(c.v) >= valor(c, 0.3) ? true : 'Não há esse dinheiro.'),
+      { id: 'bolso', texto: 'Pôr do seu bolso, e aumentar a sua parte', consequencia: c => `Sai ${fmt(valor(c, 0.3))} da sua conta; a sua parte sobe.`, disponivel: c => custa(c, valor(c, 0.3), 'Não há esse dinheiro.'),
         resolver: c => ({ texto: 'Você pôs o dinheiro. O negócio ficou mais seu.', memoria: null, efeito: () => { const n = neg(c); pagar(c.v, valor(c, 0.3)); n.caixa = (n.caixa ?? 0) + valor(c, 0.3); n.parteSocio = Math.max(0.3, parteDoSocio(n) - 0.1); comSocio(c, 2, 0); } }) },
       { id: 'nada', texto: 'Ninguém põe nada: cortar até caber', resolver: c => ({ texto: 'Cortaram luz, gente, estoque. O negócio encolheu.', memoria: null, efeito: () => { mov(c, -4); comSocio(c, 4); } }) }
     ]

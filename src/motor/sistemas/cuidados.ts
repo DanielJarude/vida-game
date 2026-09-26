@@ -23,6 +23,7 @@ import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
 import { interacoesPara } from './interacoes';
 import { listaNatural } from '../texto';
+import { vereditoDePagar } from './dinheiro';
 
 export type TipoCuidado = 'descansar' | 'consulta' | 'parar_fumar' | 'beber_menos';
 
@@ -39,7 +40,7 @@ export function disponibilidadeCuidado(v: Vida, c: TipoCuidado): Veredito {
       const e = v.trabalho.atual;
       if (e && (e.contrato === 'autonomo' || e.contrato === 'informal')) {
         const custo = custoDescanso(v);
-        if (v.financas.conta < custo) return bloqueio('requisito', `Parar uns dias por conta própria custa o que se deixa de ganhar (uns R$ ${custo.toLocaleString('pt-BR')}).`);
+        if (v.financas.conta < custo) return vereditoDePagar(v, custo, 'Parar uns dias por conta própria custa o que se deixa de ganhar: uns');
       }
       return PERMITIDO;
     }

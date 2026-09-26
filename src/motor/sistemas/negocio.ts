@@ -42,7 +42,7 @@ import { habilidade } from './frentes';
 import { marcar } from './marcas';
 import { contratar, encerrarEmprego, experienciaNaTrilha, nomeOcupacao } from './trabalho';
 import { bloqueio, type Veredito } from '../plausibilidade';
-import { comprometimento, disponivel, limiteDeCredito, pagar, parcelaPrice } from './dinheiro';
+import { comprometimento, disponivel, limiteDeCredito, pagar, parcelaPrice, vereditoDePagar } from './dinheiro';
 import { totalAplicado } from './investimentos';
 import { juroDeFinanciamento } from './economia';
 import { criarPessoa, vincular } from '../pessoas';
@@ -121,14 +121,16 @@ export function podeAbrirNegocio(v: Vida, id: string): Veredito {
 }
 
 /** Como dá para abrir, agora: com o que se tem, pequeno, emprestado. */
-export function modosDeAbrir(v: Vida, id: string): { modo: ModoAbertura; custo: number; motivo?: string }[] {
+export function modosDeAbrir(v: Vida, id: string): { modo: ModoAbertura; custo: number; motivo?: string; resgate?: number }[] {
   const t = tipoNegocio(id);
   if (!t) return [];
   const custo = custoLocal(v, t);
   const tem = disponivel(v);
-  const out: { modo: ModoAbertura; custo: number; motivo?: string }[] = [];
-  out.push({ modo: 'guardado', custo, motivo: tem >= custo ? undefined : `Faltam ${fmt(custo - tem)}.` });
-  if (t.emCasa) { const c = Math.round(custo * 0.4 / 100) * 100; out.push({ modo: 'pequeno', custo: c, motivo: tem >= c ? undefined : `Faltam ${fmt(c - tem)}.` }); }
+  const out: { modo: ModoAbertura; custo: number; motivo?: string; resgate?: number }[] = [];
+  // Com o que se tem: na conta, ou tirando das aplicações (o jogador escolhe; nada é vendido sozinho).
+  const comOQueTem = (c: number) => { const d = vereditoDePagar(v, c, 'Custa'); return d.grau === 'permitido' ? {} : d.resgate ? { motivo: d.motivo, resgate: d.resgate.valor } : { motivo: `Faltam ${fmt(c - tem)}.` }; };
+  out.push({ modo: 'guardado', custo, ...comOQueTem(custo) });
+  if (t.emCasa) { const c = Math.round(custo * 0.4 / 100) * 100; out.push({ modo: 'pequeno', custo: c, ...comOQueTem(c) }); }
   const falta = custo - Math.min(tem, custo * 0.3);
   out.push({ modo: 'emprestimo', custo, motivo: v.financas.negativado ? 'Com o nome sujo, o banco não empresta.' : emprestimoPossivel(v, falta) ? undefined : 'O banco não empresta tanto para a sua renda.' });
   return out;
@@ -146,14 +148,15 @@ export function abrirNegocio(v: Vida, r: Rng, id: string, opcoes: OpcoesAbertura
   let dividaId: string | undefined;
   if (op.modo === 'emprestimo') {
     // Põe um pouco do que tem; o resto é empréstimo, que fica — mesmo que o negócio não fique.
-    const proprio = Math.min(disponivel(v), Math.round(custo * 0.3));
+    // A parte própria sai da conta (o que está aplicado só sai se o jogador tirar antes).
+    const proprio = Math.min(Math.max(0, v.financas.conta), Math.round(custo * 0.3));
     const valor = custo - proprio;
     pagar(v, proprio);
     const j = juroDeFinanciamento(v, 'emprestimo');
     dividaId = `d${v.seq++}`;
     v.financas.dividas.push({ id: dividaId, tipo: 'emprestimo', saldo: valor, jurosMes: j, parcela: Math.round(parcelaPrice(valor, j, 48)), descricao: `Empréstimo para abrir ${t.nome}`, tInicio: v.t, prazo: 48 });
   } else {
-    pagar(v, Math.min(custo, disponivel(v)));
+    pagar(v, custo);
   }
   const oc = ocupacao(t.ocupacaoId);
   const estrada = Math.max(...t.trilhas.map(tr => experienciaNaTrilha(v, tr)));

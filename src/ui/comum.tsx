@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { Vida } from '../motor/tipos';
 import { disponibilidade, type Acao } from '../motor/acoes';
 import { podeTentar } from '../motor/plausibilidade';
-import { palavraChance } from './apresentar';
+import { dinheiroCurto, palavraChance } from './apresentar';
 
 interface BotaoAcaoProps {
   vida: Vida;
@@ -29,6 +29,9 @@ export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario',
   if (ocultarBloqueado && !pode) return null;
   const aviso = d.grau === 'irregular' || d.grau === 'improvavel' ? d.motivo : undefined;
   const chance = mostrarChance && pode && d.chance !== undefined ? palavraChance(d.chance) : undefined;
+  // Falta só na conta, e as aplicações cobrem: a saída aparece — com o que sai, dito antes. Nada é vendido sem este clique.
+  const comResgate: Acao | undefined = !pode && d.resgate ? { tipo: 'resgatar_e', acao } : undefined;
+  const podeResgatar = comResgate ? podeTentar(disponibilidade(vida, comResgate)) : false;
   return (
     <div className={`acao acao--${variante}${pode ? '' : ' acao--bloqueada'}`}>
       <button type="button" className={`botao botao--${variante}`} disabled={!pode} onClick={() => { if (agir(acao)) aoAgir?.(); }}>
@@ -36,6 +39,7 @@ export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario',
         {chance && <span className="botao__chance">{chance}</span>}
       </button>
       {!pode && d.motivo && <p className="acao__motivo">{d.motivo}</p>}
+      {comResgate && podeResgatar && <button type="button" className="botao botao--discreto acao__resgate" onClick={() => { if (agir(comResgate)) aoAgir?.(); }}>Tirar {dinheiroCurto(d.resgate!.valor)} das aplicações e pagar</button>}
       {pode && aviso && <p className="acao__aviso">{aviso}</p>}
     </div>
   );

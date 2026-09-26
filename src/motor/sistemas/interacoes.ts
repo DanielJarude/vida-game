@@ -29,6 +29,7 @@ import { abalar } from './abalo';
 import { flex, ge } from '../texto';
 import { ehDescendente, faseDeIdade, mesmaCidade, moraJunto, papelDe, type Fase, type Papel } from './vinculos';
 import { lacoCom, oLaco } from './rede';
+import { vereditoDePagar, disponivel } from './dinheiro';
 
 export const LIMITE_INTERACOES = 5;
 
@@ -278,7 +279,7 @@ export const INTERACOES: Interacao[] = [
   {
     id: 'visitar',
     quando: c => humano(c) && c.longe && !c.casa && c.eu >= 18 && !emRomance(c) && (c.papel !== 'colega' && c.papel !== 'conhecido'),
-    disponivel: c => (c.v.financas.conta >= custoViagem(c) ? PERMITIDO : bloqueio('requisito', `A viagem custa cerca de R$ ${custoViagem(c).toLocaleString('pt-BR')}.`)),
+    disponivel: c => vereditoDePagar(c.v, custoViagem(c), 'A viagem custa cerca de'),
     rotulo: c => `Viajar para ver ${c.p.nome}`,
     executar: c => {
       const n = habito(c, 'visitar');
@@ -339,10 +340,11 @@ export const INTERACOES: Interacao[] = [
   {
     id: 'dinheiro',
     quando: c => humano(c) && c.eu >= 18 && c.ip >= 18 && !c.casa && !emRomance(c) && precisaDeDinheiro(c),
-    disponivel: c => (c.v.financas.conta >= 500 ? { grau: 'permitido' } : bloqueio('requisito', 'Não sobra dinheiro para ajudar agora.')),
+    disponivel: c => vereditoDePagar(c.v, 500, 'Ajudar pede uns'),
     rotulo: c => (c.p.aperto?.tipo === 'desemprego' ? `Ajudar ${c.p.nome} até arrumar trabalho` : `Ajudar ${c.p.nome} com dinheiro`),
     executar: c => {
-      const valor = Math.min(Math.round(c.v.financas.conta * 0.3 / 100) * 100, 3000) || 500;
+      // Quem tem mais (na conta e aplicado) pode ajudar mais; o que sai é da conta.
+      const valor = Math.max(500, Math.min(Math.round(c.v.financas.conta * 0.3 / 100) * 100, disponivel(c.v) >= 100000 ? 8000 : 3000));
       c.v.financas.conta -= valor;
       afeto(c, 6); confiar(c, 4);
       aplicarPersonalidade(c.v, 'acao:ajudar', { generosidade: 1 });
@@ -552,7 +554,7 @@ export const INTERACOES: Interacao[] = [
   {
     id: 'visitar_par', variante: 'principal',
     quando: c => (parceriaAtiva(c) || c.papel === 'saindo') && c.longe && !c.casa && c.eu >= 16,
-    disponivel: c => (c.v.financas.conta >= custoViagem(c) ? PERMITIDO : bloqueio('requisito', `A viagem custa cerca de R$ ${custoViagem(c).toLocaleString('pt-BR')}.`)),
+    disponivel: c => vereditoDePagar(c.v, custoViagem(c), 'A viagem custa cerca de'),
     rotulo: c => `Viajar para ver ${c.p.nome}`,
     executar: c => {
       const n = habito(c, 'visitar_par');

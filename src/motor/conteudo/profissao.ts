@@ -18,7 +18,7 @@ import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import { clamp } from '../rng';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro } from '../nucleo';
-import { estresse } from './efeitos';
+import { estresse, custa } from './efeitos';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
 import { degrausAcima, elegibilidade, encerrarEmprego, horizonte, nomeOcupacao, podeAposentar, aposentar, tetoSalarial } from '../sistemas/trabalho';
@@ -39,7 +39,6 @@ import { arrendamentoMensal } from '../sistemas/rural';
 import { MUNIC_POR_INDICE } from '../sistemas/militar';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt, listaNatural } from '../texto';
-import { disponivel } from '../sistemas/dinheiro';
 import { criarPessoa, vincular } from '../pessoas';
 import { experienciaNaTrilha } from '../sistemas/trabalho';
 
@@ -242,7 +241,7 @@ export const PROFISSAO: Conteudo[] = [
         disponivel: c => motivoModo(c, 'emprestimo'),
         resolver: c => abrirCom(c, 'emprestimo') },
       { id: 'socio', texto: c => (c.p.amigo ? `Chamar ${c.p.amigo.nome} para sócio` : 'Chamar alguém para sócio'), comportamento: { sociabilidade: 1 },
-        disponivel: c => { if (!c.p.amigo) return false; const t = NEGOCIOS[c.v.fatos['abrir_tipo'] ?? 0]; if (t.licenca) return false; return disponivel(c.v) >= custoLocal(c.v, t) * 0.5 ? true : 'Nem a sua metade você tem.'; },
+        disponivel: c => { if (!c.p.amigo) return false; const t = NEGOCIOS[c.v.fatos['abrir_tipo'] ?? 0]; if (t.licenca) return false; return custa(c, custoLocal(c.v, t) * 0.5, 'Nem a sua metade você tem.'); },
         resolver: c => {
           const topa = c.r.chance(0.55 + (c.v.vinculos[c.p.amigo.id]?.confianca ?? 40) / 250);
           if (!topa) return { texto: `${c.p.amigo.nome} ouviu tudo, pediu uma semana e disse que não: não é momento.`, memoria: null };
@@ -512,10 +511,11 @@ export const PROFISSAO: Conteudo[] = [
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-function motivoModo(c: Ctx, modo: 'guardado' | 'pequeno' | 'emprestimo'): true | string {
+function motivoModo(c: Ctx, modo: 'guardado' | 'pequeno' | 'emprestimo'): true | string | { motivo: string; resgate: number } {
   const t = NEGOCIOS[c.v.fatos['abrir_tipo'] ?? 0];
   const m = modosDeAbrir(c.v, t.id).find(x => x.modo === modo);
   if (!m) return 'Não se aplica.';
+  if (m.resgate && m.motivo) return { motivo: m.motivo, resgate: m.resgate };
   return m.motivo ?? true;
 }
 

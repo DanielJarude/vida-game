@@ -91,8 +91,12 @@ export interface Resultado {
 export interface Opcao {
   id: string;
   texto: string | ((c: Ctx) => string);
-  /** `true` ou o motivo do bloqueio (mostrado desabilitado). `false` esconde. */
-  disponivel?: (c: Ctx) => true | string | false;
+  /**
+   * `true` ou o motivo do bloqueio (mostrado desabilitado). `false` esconde.
+   * `{ motivo, resgate }`: falta dinheiro na conta, mas as aplicações cobrem
+   * — a opção aparece com "tirar das aplicações e escolher" (ver `custa`).
+   */
+  disponivel?: (c: Ctx) => true | string | false | { motivo: string; resgate: number };
   comportamento?: Partial<Record<Traco, number>>;
   /** O que a escolha muda, dito antes de escolher (aparece sob a opção). */
   consequencia?: (c: Ctx) => string | undefined;

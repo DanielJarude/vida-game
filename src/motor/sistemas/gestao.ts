@@ -26,7 +26,7 @@ import type { Negocio, Vida } from '../tipos';
 import { escrever, idade, lembrarCom } from '../nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from '../plausibilidade';
 import { dinheiro as fmt } from '../texto';
-import { disponivel, parcelaPrice } from './dinheiro';
+import { parcelaPrice, vereditoDePagar } from './dinheiro';
 import { juroDeFinanciamento } from './economia';
 import { marcar } from './marcas';
 import { aplicarPersonalidade } from '../personalidade';
@@ -167,7 +167,7 @@ export function disponibilidadeGestao(v: Vida, oque: OqueGestao, valor?: string)
     case 'comprar_parte': {
       if (!n.socioId) return bloqueio('impossivel', 'Não há sócio.');
       const preco = precoDaParteDoSocio(v, n);
-      return disponivel(v) >= preco ? PERMITIDO : bloqueio('requisito', `A parte vale uns ${fmt(preco)}; você não tem esse dinheiro.`);
+      return vereditoDePagar(v, preco, 'A parte vale uns');
     }
     case 'conversar_socio': return n.socioId && v.pessoas[n.socioId]?.vivo ? (ja('neg_socio_conversa') ? bloqueio('incompativel', 'Vocês já sentaram para conversar neste ano.') : PERMITIDO) : bloqueio('impossivel', 'Não há sócio.');
   }

@@ -37,7 +37,7 @@ import { economiaLocal, municipio } from '../dados/lugares';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from '../plausibilidade';
 import { degrausAcima, eDasForcas, elegibilidade, horizonte, nomeOcupacao, podeAposentar, rendaDeClientela, tetoSalarial } from './trabalho';
 import { liquido } from './renda';
-import { disponivel, limiteDeCredito, pagar, parcelaPrice, seguranca } from './dinheiro';
+import { limiteDeCredito, pagar, parcelaPrice, seguranca, vereditoDePagar } from './dinheiro';
 import { abrirUnidade, ampliar, donoIntegral, negocioAberto, podeAbrirUnidade, presencaDe, podeAmpliar, reservaDoCaixa, retirarDoCaixa, tamanhoDaEquipe } from './negocio';
 import { acoesDoNegocio, disponibilidadeGestao, executarGestao, type OqueGestao } from './gestao';
 import { propor } from './compromissos';
@@ -253,7 +253,7 @@ export function podeInvestirEstrutura(v: Vida): Veredito {
   if ((e.estrutura ?? 0) >= 2) return bloqueio('impossivel', 'Já investiu o que dá para investir nesse trabalho.');
   if (v.anoAtual.acoes.includes('estrutura')) return bloqueio('incompativel', 'Você já investiu neste ano.');
   const custo = custoDaEstrutura(v);
-  if (disponivel(v) < custo) return bloqueio('requisito', `Custa uns ${fmt(custo)}.`);
+  { const pag = vereditoDePagar(v, custo, 'Custa uns'); if (pag.grau !== 'permitido') return pag; }
   return PERMITIDO;
 }
 
@@ -695,7 +695,7 @@ export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito
       const ru = v.caminhos.rural;
       if (modo !== 'rural' || !ru) return semTrabalho;
       if (ru.cooperativa) return bloqueio('impossivel', 'Já é cooperado.');
-      return disponivel(v) >= custoCooperativa(v) ? PERMITIDO : bloqueio('requisito', `A cota de entrada é de uns ${fmt(custoCooperativa(v))}.`);
+      return vereditoDePagar(v, custoCooperativa(v), 'A cota de entrada é de uns');
     }
     case 'investir_terra': {
       const ru = v.caminhos.rural;
@@ -715,7 +715,7 @@ export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito
     case 'lancar': {
       if (!(modo === 'artista' || v.caminhos.arte?.ativo)) return semTrabalho;
       if (v.fatos['arte_lancou'] !== undefined && v.t - v.fatos['arte_lancou'] < 24) return bloqueio('incompativel', 'O último trabalho saiu há pouco; o próximo leva tempo.');
-      return disponivel(v) >= custoLancar(v) ? PERMITIDO : bloqueio('requisito', `Gravar, imprimir, montar: uns ${fmt(custoLancar(v))}.`);
+      return vereditoDePagar(v, custoLancar(v), 'Gravar, imprimir, montar: uns');
     }
     case 'estrada': {
       if (!(modo === 'artista' || v.caminhos.arte?.ativo)) return semTrabalho;

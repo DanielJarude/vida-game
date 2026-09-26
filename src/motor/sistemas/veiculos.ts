@@ -18,6 +18,8 @@ import { economiaLocal } from '../dados/lugares';
 import { depreciacao, modeloVeiculo, nomeDaVersao, versaoVeiculo, type CategoriaVeiculo, type ModeloVeiculo } from '../dados/bens';
 import { dinheiro as fmt } from '../texto';
 import { abalar } from './abalo';
+import { okDePagar } from './dinheiro';
+import type { Veredito } from '../plausibilidade';
 
 /** Dá para usar (não está parado nem quebrado de vez). */
 export const veiculoUtil = (b: { tipo: string; parado?: boolean; problema?: ProblemaBem }) => b.tipo === 'veiculo' && !b.parado && (b.problema?.gravidade ?? 0) < 3;
@@ -152,13 +154,12 @@ export function textoVeiculo(b: Veiculo): string {
 
 export type AcaoVeiculo = 'consertar' | 'adiar' | 'revisao' | 'parar' | 'usar';
 
-export function disponibilidadeVeiculo(v: Vida, b: Veiculo | undefined, oque: AcaoVeiculo): { ok: boolean; motivo?: string } {
+export function disponibilidadeVeiculo(v: Vida, b: Veiculo | undefined, oque: AcaoVeiculo): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
   if (!b) return { ok: false, motivo: 'Veículo não encontrado.' };
-  const disponivel = v.financas.conta;
   switch (oque) {
     case 'consertar':
       if (!b.problema) return { ok: false, motivo: 'Não há nada para consertar.' };
-      return disponivel >= b.problema.custo ? { ok: true } : { ok: false, motivo: `O conserto custa ${fmt(b.problema.custo)}; na conta há ${fmt(Math.max(0, disponivel))}.` };
+      return okDePagar(v, b.problema.custo, 'O conserto custa');
     case 'adiar':
       if (!b.problema) return { ok: false, motivo: 'Não há conserto pendente.' };
       if (b.problema.gravidade >= 3) return { ok: false, motivo: 'Assim não anda. Ou conserta, ou vende, ou deixa parado.' };
@@ -169,7 +170,7 @@ export function disponibilidadeVeiculo(v: Vida, b: Veiculo | undefined, oque: Ac
       if (b.problema) return { ok: false, motivo: 'Primeiro, o conserto.' };
       if (b.tRevisao !== undefined && v.t - b.tRevisao < 12) return { ok: false, motivo: 'Já fez a revisão este ano.' };
       const custo = custoRevisao(v, b);
-      return disponivel >= custo ? { ok: true } : { ok: false, motivo: `A revisão custa ${fmt(custo)}.` };
+      return okDePagar(v, custo, 'A revisão custa');
     }
     case 'parar': return b.parado ? { ok: false, motivo: 'Já está parado.' } : { ok: true };
     case 'usar':

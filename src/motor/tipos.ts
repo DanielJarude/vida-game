@@ -741,7 +741,8 @@ export interface Momento {
   /** Pessoas envolvidas, por papel. */
   papeis: Record<string, string>;
   /** `detalhe`: o que a escolha muda, dito ANTES de escolher ("a faculdade fica trancada"). */
-  opcoes: { id: string; texto: string; bloqueio?: string; detalhe?: string }[];
+  /** `resgate`: a opção custa mais do que há na conta, e as aplicações cobrem esse valor (tirar é escolha do jogador). */
+  opcoes: { id: string; texto: string; bloqueio?: string; detalhe?: string; resgate?: number }[];
 }
 
 /* ------------------------------------------------------------------- Rotina */

@@ -8,9 +8,9 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import type { Veiculo } from '../tipos';
 import { vinculosVivos, idadePessoa, lembrarCom } from '../nucleo';
 import { dinheiro as fmt, flex } from '../texto';
-import { estresse } from './efeitos';
+import { estresse, custa } from './efeitos';
 import { podeRenegociarFinanciamento, renegociarFinanciamento } from '../sistemas/obrigacoes';
-import { disponivel, pagar } from '../sistemas/dinheiro';
+import { pagar } from '../sistemas/dinheiro';
 import { valorDeVenda, textoVeiculo } from '../sistemas/veiculos';
 import { valorDeVendaImovel } from '../sistemas/imoveis';
 import { aluguelDe } from '../sistemas/mercado';
@@ -75,7 +75,7 @@ export const MATERIAL: Conteudo[] = [
     },
     opcoes: [
       { id: 'consertar', texto: c => `Consertar (${fmt(carroParado(c)!.problema!.custo)})`,
-        disponivel: c => (!carroParado(c) ? false : disponivel(c.v) >= carroParado(c)!.problema!.custo ? true : 'Não há esse dinheiro.'),
+        disponivel: c => (!carroParado(c) ? false : custa(c, carroParado(c)!.problema!.custo)),
         resolver: com(carroParado, (c, b) => { const p = b.problema!; pagar(c.v, p.custo); b.problema = undefined; b.estado = Math.min(b.usado ? 92 : 100, b.estado + 30); (b.historia ??= []).push({ t: c.v.t, texto: `Consertou ${p.texto} (${fmt(p.custo)}).` }); return { texto: 'Duas semanas depois, voltou a rodar.', memoria: null }; }) },
       { id: 'vender', texto: 'Vender como está', resolver: com(carroParado, (c, b) => {
         const d = c.v.financas.dividas.find(x => x.bemId === b.id);
@@ -100,7 +100,7 @@ export const MATERIAL: Conteudo[] = [
     },
     opcoes: [
       { id: 'tratar', texto: c => `Tratar (${fmt(custoDoTratamento(c.v, petMuitoDoente(c)!, true))})`,
-        disponivel: c => (!petMuitoDoente(c) ? false : disponivel(c.v) >= custoDoTratamento(c.v, petMuitoDoente(c)!, true) ? true : 'Não há esse dinheiro.'),
+        disponivel: c => (!petMuitoDoente(c) ? false : custa(c, custoDoTratamento(c.v, petMuitoDoente(c)!, true))),
         resolver: com(petMuitoDoente, (c, p) => {
           const info = infoPet(c.v, p);
           const d = info.doenca!;

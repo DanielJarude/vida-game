@@ -18,7 +18,8 @@ import { escrever, filhos, idade, idadePessoa, lembrarCom, moraCom, parceiro, vi
 import { modeloMoradia, modeloVeiculo } from '../dados/bens';
 import { economiaLocal, municipio, MUNICIPIOS, pertoDaAgua } from '../dados/lugares';
 import { dinheiro as fmt, listaNatural } from '../texto';
-import { disponivel, pagar } from './dinheiro';
+import { disponivel, okDePagar, pagar } from './dinheiro';
+import type { Veredito } from '../plausibilidade';
 import { abalar } from './abalo';
 import { aplicarPersonalidade } from '../personalidade';
 import { moraComFamiliaDeOrigem } from './domicilio';
@@ -55,13 +56,15 @@ function destino(v: Vida): string {
 
 /* ================================================================ Veículo */
 
-export function disponibilidadeUsoVeiculo(v: Vida, b: Veiculo | undefined, oque: UsoVeiculo): { ok: boolean; motivo?: string } {
+export function disponibilidadeUsoVeiculo(v: Vida, b: Veiculo | undefined, oque: UsoVeiculo): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
   if (!b) return { ok: false, motivo: 'Veículo não encontrado.' };
   const m = modeloVeiculo(b.modeloId);
   if (!veiculoUtil(b)) return { ok: false, motivo: b.parado ? 'Está parado na garagem.' : 'Precisa de conserto antes.' };
   if (m.cnh && !v.trabalho.licencas.includes('cnh')) return { ok: false, motivo: 'Sem carteira de motorista, não dá para dirigir.' };
   const custo = custoUso(v, b, oque);
   if (custo > 0 && disponivel(v) < custo) return { ok: false, motivo: `Custa uns ${fmt(custo)}.` };
+  // O dinheiro existe, mas parte está aplicada: tirar é escolha (a interface oferece).
+  if (custo > 0 && v.financas.conta < custo) return okDePagar(v, custo, 'Custa uns');
   switch (oque) {
     case 'passear': return ja(v, `uso:passear:${b.id}`) ? { ok: false, motivo: 'Já passearam bastante este ano.' } : { ok: true };
     case 'viajar': if (m.categoria === 'bicicleta') return { ok: false, motivo: 'De bicicleta, a estrada é outra história.' }; return ja(v, `uso:viajar:${b.id}`) ? { ok: false, motivo: 'Uma viagem de estrada por ano já é bastante.' } : { ok: true };
@@ -170,10 +173,12 @@ export function executarUsoVeiculo(v: Vida, r: Rng, b: Veiculo, oque: UsoVeiculo
 const minhaCasa = (v: Vida) => !moraComFamiliaDeOrigem(v) && v.moradia.tipo !== 'cedida';
 const imovelDaCasa = (v: Vida) => v.financas.bens.find((b): b is Imovel => b.tipo === 'imovel' && b.id === v.moradia.imovelId);
 
-export function disponibilidadeUsoCasa(v: Vida, oque: UsoCasa): { ok: boolean; motivo?: string } {
+export function disponibilidadeUsoCasa(v: Vida, oque: UsoCasa): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
   if (idade(v) < 18) return { ok: false, motivo: 'A casa é dos adultos da família.' };
   const custo = custoCasa(v, oque);
   if (custo > 0 && disponivel(v) < custo) return { ok: false, motivo: `Custa uns ${fmt(custo)}.` };
+  // O dinheiro existe, mas parte está aplicada: tirar é escolha (a interface oferece).
+  if (custo > 0 && v.financas.conta < custo) return okDePagar(v, custo, 'Custa uns');
   switch (oque) {
     case 'festa': {
       if (moraComFamiliaDeOrigem(v)) return { ok: false, motivo: 'Na casa da família, a festa é dos adultos da casa.' };

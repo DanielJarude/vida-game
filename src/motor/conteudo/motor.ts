@@ -103,7 +103,9 @@ export function abrirDecisao(v: Vida, d: Decisao, ctx: Ctx): Momento {
       const disp = o.disponivel ? o.disponivel(ctx) : true;
       if (disp === false) return null;
       const detalhe = o.consequencia?.(ctx);
-      return { id: o.id, texto: txt(o.texto, ctx), bloqueio: disp === true ? undefined : disp, ...(detalhe ? { detalhe } : {}) };
+      const bloqueio = disp === true ? undefined : typeof disp === 'string' ? disp : disp.motivo;
+      const resgate = typeof disp === 'object' ? disp.resgate : undefined;
+      return { id: o.id, texto: txt(o.texto, ctx), bloqueio, ...(resgate ? { resgate } : {}), ...(detalhe ? { detalhe } : {}) };
     })
     .filter((o): o is NonNullable<typeof o> => o !== null);
   const m: Momento = {
@@ -119,6 +121,21 @@ export function abrirDecisao(v: Vida, d: Decisao, ctx: Ctx): Momento {
   v.momento = m;
   if (d.id === 'comp_conflito' && v.caminhos.pendente) v.caminhos.pendente.perguntado = true;
   return m;
+}
+
+/**
+ * Depois de tirar das aplicações o que faltava, a opção paga é reavaliada:
+ * se agora cabe, deixa de estar bloqueada (a escolha segue normalmente).
+ */
+export function liberarOpcaoPaga(v: Vida, r: Rng, opcaoId: string): void {
+  const m = v.momento;
+  const d = m ? conteudoPorId(m.situacaoId) : undefined;
+  const o = d && d.tipo === 'decisao' ? d.opcoes.find(x => x.id === opcaoId) : undefined;
+  const aberta = m?.opcoes.find(x => x.id === opcaoId);
+  if (!m || !o || !aberta) return;
+  const p: Record<string, Pessoa> = {};
+  for (const [papel, id] of Object.entries(m.papeis)) if (v.pessoas[id]) p[papel] = v.pessoas[id];
+  if ((o.disponivel ? o.disponivel(contexto(v, r, p)) : true) === true) { aberta.bloqueio = undefined; aberta.resgate = undefined; }
 }
 
 /** Resolve o momento aberto com a opção escolhida. */

@@ -22,6 +22,8 @@ import { abalar } from './abalo';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import type { AnimalDoAbrigo } from './mercado';
 import { modeloMoradia } from '../dados/bens';
+import { okDePagar } from './dinheiro';
+import type { Veredito } from '../plausibilidade';
 
 export const petsDaCasa = (v: Vida) => vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa')).map(x => x.p);
 
@@ -252,24 +254,23 @@ export function entregarPet(v: Vida, p: Pessoa): string {
 
 export type OpcaoVeterinario = 'consulta' | 'tratar' | 'basico' | 'paliativo';
 
-export function disponibilidadeVeterinario(v: Vida, p: Pessoa | undefined, opcao: OpcaoVeterinario): { ok: boolean; motivo?: string } {
+export function disponibilidadeVeterinario(v: Vida, p: Pessoa | undefined, opcao: OpcaoVeterinario): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
   if (!p || !p.especie || !p.vivo) return { ok: false, motivo: 'Não há esse animal.' };
   const info = infoPet(v, p);
   if (!v.vinculos[p.id]?.convivio.includes('casa') && info.tutor !== 'eu') return { ok: false, motivo: `${p.nome} mora com a família; lá cuidam dele.` };
   if (info.tutor === 'familia' && moraComFamiliaDeOrigem(v) && idade(v) < 18) return { ok: false, motivo: 'Quem leva ao veterinário são os adultos da casa.' };
   const d = info.doenca;
-  const conta = v.financas.conta;
   switch (opcao) {
     case 'consulta': {
       if (d) return { ok: false, motivo: 'Já está doente: é caso de tratar.' };
       if (info.tVeterinario !== undefined && v.t - info.tVeterinario < 12) return { ok: false, motivo: 'Já passou no veterinário este ano.' };
-      return conta >= custoDaConsulta(v) ? { ok: true } : { ok: false, motivo: `A consulta custa ${fmt(custoDaConsulta(v))}.` };
+      return okDePagar(v, custoDaConsulta(v), 'A consulta custa');
     }
     case 'tratar': case 'basico': {
       if (!d) return { ok: false, motivo: 'Não está doente.' };
       if (d.tratando) return { ok: false, motivo: 'Já está em tratamento.' };
       const custo = custoDoTratamento(v, p, opcao === 'tratar');
-      return conta >= custo ? { ok: true } : { ok: false, motivo: `Custa ${fmt(custo)}; na conta há ${fmt(Math.max(0, conta))}.` };
+      return okDePagar(v, custo);
     }
     case 'paliativo':
       if (!d || d.gravidade < 3) return { ok: false, motivo: 'Não é o caso.' };
