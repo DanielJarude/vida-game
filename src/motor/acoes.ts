@@ -14,6 +14,7 @@ import { abrirDecisao, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisa
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula } from './sistemas/escola';
 import { eDasForcas, aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria } from './sistemas/trabalho';
+import { disponibilidadePerseguir, executarPerseguir, type AcaoPerseguirCmd } from './sistemas/perseguir';
 import { inscrever, leituraDoPreparo } from './sistemas/concurso';
 import { aceitarOportunidade, recusarOportunidade } from './sistemas/oportunidades';
 import { abrirNegocio, podeAbrirNegocio } from './sistemas/negocio';
@@ -137,7 +138,9 @@ export type Acao =
   /** A vida profissional: ritmo, conversa de promoção, o negócio, o clube, a farda, a terra, a obra. */
   | AcaoProfissaoCmd
   /** A vida política: aproximar-se, filiar-se, a comunidade, a candidatura, a crise, a saída. */
-  | AcaoPoliticaCmd;
+  | AcaoPoliticaCmd
+  /** Perseguir um caminho: pedir um teste, montar um grupo, dirigir o estudo, pedir uma bolsa. */
+  | AcaoPerseguirCmd;
 
 export { LIMITE_INTERACOES };
 
@@ -205,6 +208,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'abrir_negocio': return podeAbrirNegocio(v, a.negocio);
     case 'profissao': return disponibilidadeProfissao(v, a);
     case 'politica': return disponibilidadePolitica(v, a);
+    case 'perseguir': return disponibilidadePerseguir(v, a);
     case 'postura': return v.educacao.basica || v.educacao.matricula ? PERMITIDO : bloqueio('impossivel', 'Você não está estudando.');
     case 'enem': return podeFazerEnem(v);
     case 'matricular': {
@@ -646,8 +650,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const n = abrirNegocio(v, r, a.negocio);
       return ok(`${n.nome} abriu as portas.`, 'bom');
     }
-    case 'politica': case 'profissao': {
-      const res = a.tipo === 'politica' ? executarPolitica(v, r, a) : executarProfissao(v, r, a);
+    case 'politica': case 'profissao': case 'perseguir': {
+      const res: { texto?: string; tom?: 'bom' | 'ruim' | 'neutro'; decisao?: string; papeis?: Record<string, string> } = a.tipo === 'politica' ? executarPolitica(v, r, a) : a.tipo === 'perseguir' ? executarPerseguir(v, r, a) : executarProfissao(v, r, a);
       if (v.caminhos.pendente && !res.decisao) return {};
       if (res.decisao) {
         const d = conteudoPorId(res.decisao);

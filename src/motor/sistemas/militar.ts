@@ -37,7 +37,7 @@ import { ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { ESCOLA, ESPECIALIDADES, GUARNICOES, NOME_FORCA, SIGLA_DA } from '../dados/forcas';
 import { municipio, pertoDaAgua } from '../dados/lugares';
 import { marcar } from './marcas';
-import { contratar, encerrarEmprego, nomeOcupacao, salarioLiquidoAtual } from './trabalho';
+import { contratar, encerrarEmprego, nomeOcupacao, salarioLiquidoAtual, type ProximoPasso, type Requisito } from './trabalho';
 import { salarioLocal } from './renda';
 import { praticar } from './frentes';
 import { anoDe } from '../tempo';
@@ -263,7 +263,7 @@ function promoverMilitar(v: Vida, e: Emprego, oc: Ocupacao, proximo: Ocupacao, c
   e.salario = Math.max(Math.round(e.salario * 1.1 / 10) * 10, salarioLocal(proximo, e.municipioId));
   if (proximo.id === 'subtenente') delete v.fatos['grau_sargento'];
   const texto = `Promovid${flex(ge(v), 'o', 'a', 'e')} de ${antes} a ${nomeOcupacao(v, proximo)}, ${como}.`;
-  escrever(v, { texto, relevancia: proximo.nivel >= 4 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
   marcar(v, proximo.nivel >= 5 ? 'lideranca' : 'promocao', texto, proximo.nivel >= 4 ? 3 : 2, { trilha: proximo.trilha, ocupacaoId: proximo.id });
   v.fatos['promocoes'] = (v.fatos['promocoes'] ?? 0) + 1;
   abalar(v, 'a promoção', 5, 0);
@@ -441,6 +441,39 @@ export function horizonteMilitar(v: Vida): string {
 }
 
 export { NOME_FORCA, salarioLiquidoAtual };
+
+/** O próximo posto nas Forças, requisito por requisito: tempo no posto, curso, teste físico, conceito, vaga. */
+export function proximoPassoMilitar(v: Vida): ProximoPasso | undefined {
+  const m = v.caminhos.militar;
+  const e = v.trabalho.atual;
+  if (!m || !e || m.quadro === 'temporario') return undefined;
+  const oc = ocupacao(e.ocupacaoId);
+  const x = ESCADA[oc.id];
+  if (!x?.proximo) return undefined;
+  const ano = anoDe(v.t);
+  const destino = nomeOcupacao(v, ocupacao(x.proximo));
+  const noPosto = (v.t - (e.tPosto ?? e.tInicio)) / 12;
+  const falta = Math.max(0, Math.ceil(x.anos - noPosto));
+  const agora = nomeOcupacao(v, oc);
+  const reqs: Requisito[] = [
+    { tipo: 'posto', ok: falta === 0, ano: falta ? ano + falta : undefined, texto: falta === 0 ? `${x.anos} anos como ${agora}: cumprido.` : `${x.anos} anos como ${agora} — você tem ${Math.floor(noPosto)}; completa em ${ano + falta}.` }
+  ];
+  if (x.curso) {
+    const nomeCurso = x.curso === 'altos_estudos' ? 'altos estudos' : 'aperfeiçoamento';
+    const feito = m.cursos.includes(x.curso);
+    reqs.push({ tipo: 'curso', ok: feito, texto: feito ? `Curso de ${nomeCurso}: feito.` : `Curso de ${nomeCurso} — é oferecido perto do tempo de promoção; aceitar a vaga do curso é decisão sua.` });
+  }
+  const taf = m.tafFalhou === undefined || v.t - m.tafFalhou >= 12;
+  reqs.push({ tipo: 'fisico', ok: taf, texto: taf ? 'Teste físico anual: em dia.' : 'O teste físico deste ano não passou: treino (corrida, academia) antes do próximo.' });
+  reqs.push({ tipo: 'desempenho', ok: e.desempenho >= 45, texto: e.desempenho >= 45 ? 'Conceito com o comando: bom o bastante.' : 'Conceito baixo com o comando: pesa na promoção.' });
+  reqs.push({ tipo: 'vaga', ok: false, texto: x.disputa < 0.5 ? 'Depois, a vaga — e são poucas: há quem seja preterido.' : 'Depois, a vaga do quadro.' });
+  const pend = reqs.filter(r => !r.ok && r.tipo !== 'vaga');
+  const previsao = pend.every(r => r.ano !== undefined) ? Math.max(ano, ...pend.map(r => r.ano!)) : undefined;
+  const resumo = pend.length === 0 ? `A promoção a ${destino} depende de vaga${x.disputa < 0.5 ? ' — e são poucas' : ''}.`
+    : previsao ? `Pela antiguidade, a promoção a ${destino} pode vir por volta de ${previsao}.`
+      : `Para a promoção a ${destino}, falta ${pend.filter(r => r.ano === undefined).map(r => r.tipo === 'curso' ? 'o curso' : r.tipo === 'fisico' ? 'passar no teste físico' : 'melhorar o conceito').join(' e ')}.`;
+  return { destino, ocupacaoId: x.proximo, como: 'antiguidade', requisitos: reqs, previsao, resumo };
+}
 
 /** A escada do quadro em que a pessoa está (para a tela): postos, onde está, o próximo. */
 export function escadaMilitar(v: Vida): { nome: string; estado: 'foi' | 'agora' | 'acima' }[] {

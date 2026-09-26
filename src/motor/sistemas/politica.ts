@@ -217,8 +217,10 @@ function leituraPoliticaBase(v: Vida): LeituraPolitica | undefined {
   if (p.fase === 'candidato' && p.campanha) return { fase: p.fase, titulo: `${flex(g, 'Candidato', 'Candidata', 'Candidate')} a ${nomeCargo(v, p.campanha.cargo)}`, etapa: `Eleição em outubro de ${anoDe(p.campanha.tEleicao)}`, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: 'A campanha está na rua. Agora, é a apuração.', historico: hist };
   if (p.fase === 'encerrada') return { fase: p.fase, titulo: 'Fora da vida pública', etapa: p.tFim ? `Desde ${anoDe(p.tFim)}` : undefined, reputacao: rep, apoio, historico: hist };
   const derrotado = p.historico[p.historico.length - 1]?.resultado === 'derrotado';
-  const titulo = p.fase === 'entre_mandatos' ? (derrotado ? 'Depois da derrota' : 'Entre mandatos') : p.fase === 'filiado' ? `${flex(g, 'Filiado', 'Filiada', 'Filiade')} ${aoPartido(p.partido)}` : 'Envolvido na vida da cidade'.replace('Envolvido', flex(g, 'Envolvido', 'Envolvida', 'Envolvide'));
-  const horizonte = !p.partido ? 'Sem partido, não há candidatura: a filiação precisa de seis meses antes da eleição.' : e ? `Eleição ${e.tipo === 'municipal' ? 'municipal' : 'geral'} em outubro de ${e.ano}: é agora ou na próxima.` : `A próxima eleição ${prox.tipo === 'municipal' ? 'municipal' : 'geral'} é em ${prox.ano}.`;
+  const titulo = p.indicacaoMilitar && p.partido && p.fase === 'filiado' ? `Com a indicação ${doPartido(p.partido)}` : p.fase === 'entre_mandatos' ? (derrotado ? 'Depois da derrota' : 'Entre mandatos') : p.fase === 'filiado' ? `${flex(g, 'Filiado', 'Filiada', 'Filiade')} ${aoPartido(p.partido)}` : 'Envolvido na vida da cidade'.replace('Envolvido', flex(g, 'Envolvido', 'Envolvida', 'Envolvide'));
+  const horizonte = !p.partido && militarDaAtiva(v) ? 'Militar da ativa não se filia a partido (CF, art. 142, §3º, V), mas pode ser candidato: um partido precisa escolher você em convenção. Com menos de dez anos de serviço, candidatar-se é deixar a ativa; com mais, você fica agregado e, se eleito, passa à inatividade (CF, art. 14, §8º).'
+    : !p.partido ? 'Sem partido, não há candidatura: a filiação precisa de seis meses antes da eleição. Filiar-se está entre as ações acima.'
+      : p.indicacaoMilitar && !militarDaAtiva(v) ? 'Fora da ativa, a indicação de militar não vale mais: para a próxima eleição, é preciso filiar-se.' : e ? `Eleição ${e.tipo === 'municipal' ? 'municipal' : 'geral'} em outubro de ${e.ano}: é agora ou na próxima.` : `A próxima eleição ${prox.tipo === 'municipal' ? 'municipal' : 'geral'} é em ${prox.ano}.`;
   return { fase: p.fase, titulo, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte, historico: hist };
 }
 
@@ -263,8 +265,11 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   if (inel && inel > tEleicao) return bloqueio('ilegal', `Inelegível até ${anoDe(inel)} (Lei da Ficha Limpa).`);
   const m = v.caminhos.militar;
   if (m && v.trabalho.atual?.contrato === 'militar' && m.quadro === 'temporario' && v.t - m.tIngresso < 12) return bloqueio('ilegal', 'Durante o serviço militar obrigatório, conscrito não se candidata.');
-  if (!p?.partido || p.tFiliacao === undefined) return bloqueio('requisito', 'Sem filiação a um partido, não há candidatura no Brasil.');
-  if (tEleicao - p.tFiliacao < 6) return bloqueio('requisito', 'A filiação precisa ter pelo menos seis meses antes da eleição.');
+  // Militar da ativa: elegível sem filiação — a escolha em convenção supre (TSE, Res. 21.608/2004, art. 14, §1º).
+  const naAtiva = militarDaAtiva(v);
+  if (p?.partido && p.indicacaoMilitar && !naAtiva) return bloqueio('requisito', 'Fora da ativa, a indicação de militar não vale mais: para disputar, é preciso filiar-se, seis meses antes da eleição.');
+  if (!p?.partido || (p.tFiliacao === undefined && !p.indicacaoMilitar)) return bloqueio('requisito', naAtiva ? 'Militar da ativa não se filia, mas pode ser candidato: é preciso que um partido escolha você em convenção.' : 'Sem filiação a um partido, não há candidatura no Brasil.');
+  if (!p.indicacaoMilitar && tEleicao - (p.tFiliacao ?? tEleicao) < 6) return bloqueio('requisito', 'A filiação precisa ter pelo menos seis meses antes da eleição.');
   const chegou = v.fatos['chegou_cidade'];
   if (chegou !== undefined && tEleicao - chegou < 6 && (c.escopo === 'municipio' || v.fatos['chegou_uf'] === chegou)) return bloqueio('requisito', 'O domicílio eleitoral precisa ter pelo menos seis meses na circunscrição.');
   const mand = p.mandato;
@@ -319,7 +324,7 @@ export function entrarNaPolitica(v: Vida, origem: VidaPolitica['origem'], forca 
   // Quem já passou pela política volta com o nome que tinha.
   const p: VidaPolitica = {
     fase: antiga?.partido ? 'filiado' : 'envolvido', tInicio: v.t, origem,
-    partido: antiga?.partido, tFiliacao: antiga?.tFiliacao,
+    partido: antiga?.partido, tFiliacao: antiga?.tFiliacao, indicacaoMilitar: antiga?.indicacaoMilitar,
     reputacao: Math.round(Math.max(antiga?.reputacao ?? 0, c.reputacao * forca)), apoio: Math.round(Math.max((antiga?.apoio ?? 0) * 0.6, c.apoio * forca)),
     desgaste: Math.round((antiga?.desgaste ?? 0) * 0.5), consecutivos: 0, historico: antiga?.historico ?? [],
     // O que é registro não se apaga com a volta: os partidos por onde passou, o escândalo, a inelegibilidade.
@@ -926,7 +931,7 @@ export function semanaDaPolitica(v: Vida): { rotulo: string; peso: number } | un
  * vista; nunca um valor vazio. `prioridade`: trabalhar a prioridade do
  * mandato no ano (só quando ela existe).
  */
-export type OquePolitica = 'aproximar' | 'filiar' | 'comunidade' | 'bandeira' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar' | 'trocar_partido';
+export type OquePolitica = 'aproximar' | 'filiar' | 'indicacao' | 'comunidade' | 'bandeira' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar' | 'trocar_partido';
 export type AcaoPoliticaCmd = { tipo: 'politica'; oque: OquePolitica; valor?: string };
 
 export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
@@ -943,11 +948,18 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
     case 'filiar':
       if (!p || !naPolitica(v)) return bloqueio('impossivel', 'Primeiro, é preciso estar no meio.');
       if (i < 16) return bloqueio('ilegal', 'Filiação partidária, só a partir dos 16 anos (com título de eleitor).');
-      if (p.partido) return bloqueio('impossivel', `Já é filiado ${aoPartido(p.partido)}.`);
-      if (v.trabalho.atual?.contrato === 'militar') return bloqueio('ilegal', 'Militar da ativa não se filia a partido (CF, art. 142, §3º, V).');
+      if (militarDaAtiva(v)) return bloqueio('ilegal', 'Militar da ativa não se filia a partido (CF, art. 142, §3º, V) — mas pode ser escolhido em convenção e disputar.');
+      if (p.partido && !p.indicacaoMilitar) return bloqueio('impossivel', `Já é filiado ${aoPartido(p.partido)}.`);
+      return PERMITIDO;
+    case 'indicacao':
+      if (!p || !naPolitica(v)) return bloqueio('impossivel', 'Primeiro, é preciso estar no meio.');
+      if (!militarDaAtiva(v)) return bloqueio('impossivel', 'A indicação sem filiação é só para militar da ativa; os outros se filiam.');
+      if (p.partido) return bloqueio('impossivel', `Já tem a indicação ${doPartido(p.partido)}.`);
+      if (v.anoAtual.acoes.includes('pol_indicacao')) return bloqueio('incompativel', 'As conversas com os partidos já aconteceram neste ano.');
       return PERMITIDO;
     case 'trocar_partido':
       if (!p?.partido || !naPolitica(v)) return bloqueio('impossivel', 'Sem partido, não há de onde sair.');
+      if (p.indicacaoMilitar) return bloqueio('impossivel', 'Com indicação de militar não há filiação para trocar: outra indicação só na próxima convenção.');
       if (p.campanha) return bloqueio('incompativel', 'Com a candidatura registrada, a legenda já está na urna.');
       if (v.anoAtual.acoes.includes('pol_troca')) return bloqueio('incompativel', 'Já mudou de partido neste ano.');
       if (p.tFiliacao !== undefined && v.t - p.tFiliacao < 12) return bloqueio('incompativel', 'A filiação é recente: trocar agora apagaria o pouco que se construiu.');
@@ -988,6 +1000,7 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
   switch (a.oque) {
     case 'aproximar': v.anoAtual.acoes.push('pol_aproximar'); return { decisao: 'pol_aproximar' };
     case 'filiar': return { decisao: 'pol_filiacao' };
+    case 'indicacao': v.anoAtual.acoes.push('pol_indicacao'); return { decisao: 'pol_indicacao' };
     case 'comunidade': {
       v.anoAtual.acoes.push('pol_comunidade');
       const soc = v.personalidade.tracos.sociabilidade;
@@ -1032,6 +1045,11 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
   return {};
 }
 
+/** Militar em serviço ativo (Forças, PM, bombeiros): não se filia, e se candidata por indicação. */
+export function militarDaAtiva(v: Vida): boolean {
+  return v.trabalho.atual?.contrato === 'militar';
+}
+
 /** Uma liderança do meio político (gente que já existe na vida, ou alguém novo). */
 export function aliado(v: Vida): Pessoa | undefined {
   return vinculosVivos(v).find(x => !x.p.especie && x.p.ocupacao === 'liderança política')?.p;
@@ -1061,7 +1079,9 @@ export function acoesPoliticas(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   if (m && p.prioridade) add({ id: 'pol_prioridade', rotulo: `Trabalhar a prioridade: ${NOME_PRIORIDADE[p.prioridade]}`, porque: m.feito === 0 ? 'Sem nada para mostrar, a aprovação cai.' : undefined, acao: A('prioridade'), peso: m.feito === 0 ? 8 : 5 });
   if (m && !p.prioridade) add({ id: 'pol_bandeira', rotulo: 'Escolher a prioridade do mandato', porque: 'Sem prioridade, o mandato não tem o que mostrar.', acao: A('bandeira'), peso: 9 });
   add({ id: 'pol_comunidade', rotulo: 'Conversar com a comunidade', porque: m && m.aprovacao < 45 ? 'A rua anda reclamando.' : p.apoio < 30 ? 'A base ainda é pequena.' : undefined, acao: A('comunidade'), peso: m ? (m.aprovacao < 45 ? 7 : 4) : 6 });
-  if (!p.partido) add({ id: 'pol_filiar', rotulo: 'Filiar-se a um partido', porque: 'Sem partido, não há candidatura.', acao: A('filiar'), peso: p.apoio >= 20 ? 7 : 4 });
+  if (!p.partido || p.indicacaoMilitar) add({ id: 'pol_filiar', rotulo: 'Filiar-se a um partido', porque: 'Sem partido, não há candidatura.', acao: A('filiar'), peso: p.apoio >= 20 ? 7 : 4 });
+  // Farda: não se filia, mas um partido pode escolher em convenção (TSE) — o requisito vem com a ação que o cumpre.
+  if (!p.partido) add({ id: 'pol_indicacao', rotulo: 'Conversar com partidos sobre uma indicação', porque: 'Militar da ativa não se filia; um partido pode escolher você em convenção.', acao: A('indicacao'), peso: p.apoio >= 20 ? 7 : 4 });
   if (!m && !p.prioridade) add({ id: 'pol_bandeira', rotulo: 'Escolher uma bandeira', porque: 'Gente conhece melhor quem defende uma coisa só.', acao: A('bandeira'), peso: 3 });
   if (p.prioridade) add({ id: 'pol_trocar_bandeira', rotulo: m ? 'Mudar a prioridade do mandato' : 'Trocar de bandeira', acao: A('bandeira'), peso: 0 });
   if (p.partido) add({ id: 'pol_negociar', rotulo: 'Negociar apoio', porque: e ? 'A eleição está perto.' : undefined, acao: A('negociar'), peso: e ? 6 : 2 });

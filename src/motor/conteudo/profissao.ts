@@ -41,6 +41,7 @@ import { anoDe } from '../tempo';
 import { dinheiro as fmt, listaNatural } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { experienciaNaTrilha } from '../sistemas/trabalho';
+import { noTrabalho } from '../sistemas/ambiente';
 
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] !== undefined && c.v.fatos[chave] === c.v.t;
 const emprego = (c: Ctx) => c.v.trabalho.atual!;
@@ -136,7 +137,7 @@ export const PROFISSAO: Conteudo[] = [
   {
     id: 'trab_conflito', tipo: 'decisao', idade: [18, 70], tema: 'trabalho', repetir: 4,
     peso: c => (climaDe(c.v.trabalho.atual) < 45 ? 4 : 1),
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor'].includes(e.contrato) && e.clientela === undefined && ocupacao(e.ocupacaoId).trilha !== 'atleta'; },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor'].includes(e.contrato) && e.clientela === undefined && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'chefia', 'colegas', 'organizacao'); },
     titulo: 'A discussão',
     texto: c => c.r.pick([
       `${quemChefia(c)} cobrou na frente de todo mundo um erro que não foi seu.`,
@@ -161,7 +162,7 @@ export const PROFISSAO: Conteudo[] = [
   },
   {
     id: 'trab_responsabilidade', tipo: 'decisao', idade: [20, 62], tema: 'trabalho', repetir: 5, peso: 2,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor'].includes(e.contrato) && e.clientela === undefined && e.desempenho >= 65 && ocupacao(e.ocupacaoId).nivel <= 3 && !e.formacaoAte && ocupacao(e.ocupacaoId).trilha !== 'atleta'; },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor'].includes(e.contrato) && e.clientela === undefined && e.desempenho >= 65 && noTrabalho(c.v, 'chefia', 'colegas', 'organizacao') && ocupacao(e.ocupacaoId).nivel <= 3 && !e.formacaoAte && ocupacao(e.ocupacaoId).trilha !== 'atleta'; },
     titulo: 'Uma responsabilidade a mais',
     texto: c => `${quemChefia(c)} precisa de alguém para ${c.r.pick(['cobrir as férias da coordenação', 'tocar um projeto que atrasou', 'treinar a turma que acabou de entrar', 'abrir uma frente nova por uns meses'])}. Pensou em você. Não muda o cargo — ainda.${pequenosEmCasa(c.v).length ? ' Em casa, as crianças estão pequenas.' : ''}`,
     opcoes: [

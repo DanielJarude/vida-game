@@ -14,7 +14,7 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { EscolaBasica, Escolaridade, Matricula, NivelCurso, Vida, NovoCompromisso } from '../tipos';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
-import { CURSOS, curso, cursoOuNulo, type Curso, type Materia, ROTULO_AREA } from '../dados/cursos';
+import { CURSOS, curso, cursoOuNulo, type AreaFormacao, type Curso, type Materia, ROTULO_AREA } from '../dados/cursos';
 import { estudarMaterias, habilidade, materiasExtremas, mediaEscolar, praticar } from './frentes';
 
 export const NOME_MATERIA: Record<string, string> = { exatas: 'matemática', linguagens: 'português', ciencias: 'ciências', humanas: 'história' };
@@ -339,7 +339,7 @@ export function temCota(v: Vida): boolean {
 function requisitoDoCurso(v: Vida, c: Curso): Veredito | null {
   const i = idade(v);
   const e = v.educacao;
-  if (e.matricula) return bloqueio('incompativel', `Já está cursando ${curso(e.matricula.cursoId).nome}.`);
+  if (e.matricula) return bloqueio('incompativel', `Já está cursando ${nomeDaMatricula(v, e.matricula)}.`);
   if (e.concluidos.some(x => x.cursoId === c.id)) return bloqueio('incompativel', 'Já concluiu este curso.');
   if (c.idadeMin && i < c.idadeMin) return bloqueio('requisito', `A partir dos ${c.idadeMin} anos.`);
   if (c.teste && habilidade(v, c.teste.dominio) < c.teste.minimo) return bloqueio('requisito', `O curso tem prova de habilidade específica, e ainda falta preparo em ${c.teste.dominio === 'musica' ? 'música' : 'interpretação'}.`);
@@ -520,7 +520,8 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
     financiamento: n.via === 'fies' ? 'fies' : n.via === 'prouni' ? 'prouni' : undefined,
     desempenho: 60,
     trancado: false,
-    municipioId: n.municipioId
+    municipioId: n.municipioId,
+    area: areaDaPos(v, c)
   };
   if (n.via === 'fies') m.mensalidade = Math.round(c.mensalidade * economiaLocal(n.municipioId).custo);
   v.educacao.matricula = m;
@@ -558,15 +559,44 @@ export function processarCurso(v: Vida, r: Rng): void {
   if (m.mesesRestantes <= 0) concluirCurso(v, r, m, c);
 }
 
+/**
+ * A área de uma pós-graduação que o catálogo oferece a qualquer formado
+ * (especialização, mestrado, doutorado): a da formação em que ela se apoia —
+ * o doutorado, a do mestrado; o mestrado e a especialização, a da graduação
+ * mais recente. O MBA é de gestão para qualquer um (não herda). Cursos com
+ * área própria ficam com ela.
+ */
+export function areaDaPos(v: Vida, c: Curso): string | undefined {
+  if (c.area !== 'qualquer') return c.area;
+  if (c.id === 'mba' || !['pos', 'mestrado', 'doutorado'].includes(c.nivel)) return undefined;
+  const base = (niveis: NivelCurso[]) => [...v.educacao.concluidos].filter(x => niveis.includes(x.nivel) && x.area !== 'qualquer').sort((a, b) => b.tFim - a.tFim)[0]?.area;
+  return (c.nivel === 'doutorado' ? base(['mestrado']) : undefined) ?? base(['superior']) ?? undefined;
+}
+
+/** O nome de uma formação com a área que ela carrega: "Doutorado em Nutrição". */
+export function nomeDaFormacao(c: Curso, area?: string): string {
+  if (!area || area === 'qualquer' || c.area !== 'qualquer' || c.id === 'mba') return c.nome;
+  const rotulo = ROTULO_AREA[area as AreaFormacao] ?? area;
+  return `${c.nome} em ${rotulo}`;
+}
+
+/** O nome do curso em andamento, com a área (para a tela e a biografia). */
+export function nomeDaMatricula(v: Vida, m: Matricula = v.educacao.matricula!): string {
+  const c = curso(m.cursoId);
+  return nomeDaFormacao(c, m.area ?? areaDaPos(v, c));
+}
+
 function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   const e = v.educacao;
   e.matricula = undefined;
-  e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined });
+  const area = m.area ?? areaDaPos(v, c) ?? c.area;
+  e.concluidos.push({ cursoId: c.id, nome: nomeDaFormacao(c, area), nivel: c.nivel, area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined });
   const nivelEsc: Partial<Record<NivelCurso, Escolaridade>> = { tecnico: 'tecnico', superior: 'superior', pos: 'pos', residencia: 'pos', mestrado: 'mestrado', doutorado: 'doutorado' };
   const esc = nivelEsc[c.nivel];
   if (esc) subir(v, esc);
   const g = v.eu.genero;
-  const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'livre' ? `Terminou o curso de qualificação: ${minusculaInicial(c.nome.replace(/^Curso de /, ''))}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? 'Terminou a residência médica' : (c.nivel === 'pos' ? `Concluiu a pós (${c.nome})` : `Concluiu o ${minusculaInicial(c.nome)}`);
+  const nomeF = nomeDaFormacao(c, area);
+  const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'livre' ? `Terminou o curso de qualificação: ${minusculaInicial(c.nome.replace(/^Curso de /, ''))}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? 'Terminou a residência médica' : (c.nivel === 'pos' ? `Concluiu a pós (${nomeF})` : `Concluiu o ${minusculaInicial(nomeF)}`);
   const voltou = idade(v) >= 30 && c.nivel !== 'pos' && c.nivel !== 'mestrado' && c.nivel !== 'doutorado' && c.nivel !== 'residencia';
   escrever(v, { texto: `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, relevancia: c.nivel === 'livre' ? 'biografia' : 'marco', tema: 'estudo', tom: 'bom' });
   marcar(v, 'formacao', `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, c.nivel === 'livre' ? 1 : c.nivel === 'superior' || c.nivel === 'tecnico' ? 3 : 2);

@@ -16,7 +16,7 @@ import * as P from './papeis';
 import { estresse, fato, feliz, custa } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
 import { encerrarCarreira, fazerPeneira, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
-import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador } from '../sistemas/peneira';
+import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador, lerTecnica } from '../sistemas/peneira';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
 import { abalar } from '../sistemas/abalo';
 import { MODS, MODS_ARTE, municipioIndice, municipioPorIndice, novaOportunidade } from '../sistemas/oportunidades';
@@ -40,6 +40,7 @@ import { modeloRotina, podeComecarRotina } from '../sistemas/rotinas';
 import { anoDe } from '../tempo';
 import { clamp } from '../rng';
 import { editaisAbertos } from '../sistemas/concurso';
+import { noTrabalho } from '../sistemas/ambiente';
 
 const mod = (c: Ctx) => MODS[c.v.fatos['peneira_mod'] ?? 0] ?? 'futebol';
 const clubeDaBase = (c: Ctx) => nomeDeClube(lugarPeneira(c), `${c.v.id}:${c.v.fatos['convite_base']}`, mod(c));
@@ -336,7 +337,7 @@ export const CAMINHOS: Conteudo[] = [
   /* ============================================== O TRABALHO ACONTECE (mundo) */
   {
     id: 'car_reconhecimento', tipo: 'acontecimento', idade: [20, 64], tema: 'trabalho', repetir: 6, peso: 3,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && ocupacao(e.ocupacaoId).trilha !== 'atleta' && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'chefia', 'organizacao') && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
     narrar: c => {
       const e = c.v.trabalho.atual!;
       const texto = c.r.pick([
@@ -349,7 +350,7 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_novato', tipo: 'acontecimento', idade: [30, 64], tema: 'trabalho', repetir: 10, peso: 2,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && ocupacao(e.ocupacaoId).trilha !== 'atleta' && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'colegas') && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
     narrar: c => ({ texto: c.r.pick(['Puseram um novato para aprender o serviço com você. Na primeira semana, você se viu repetindo frases que ouviu vinte anos atrás.', 'Uma estagiária nova passou a andar atrás de você com um caderninho.', 'Chamaram você para treinar a turma que acabava de entrar.']), relevancia: 'biografia', efeito: () => { const f = c.v.caminhos.frentes.lideranca; if (f) f.interesse = clamp(f.interesse + 5); } })
   },
   {
@@ -359,7 +360,7 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_curso_empresa', tipo: 'acontecimento', idade: [20, 58], tema: 'trabalho', repetir: 7,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && e.desempenho >= 55 && c.r.chance(0.5); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5); },
     narrar: c => {
       const oc = ocupacao(c.v.trabalho.atual!.ocupacaoId);
       return { texto: c.r.pick([`A empresa pagou um curso de atualização em ${ROTULO_TRILHA[oc.trilha] ?? 'na área'}. Três semanas de aula à noite.`, 'Veio uma certificação nova obrigatória; a turma inteira estudou junta nas sextas.', 'Um sistema novo chegou ao trabalho. Quem aprendeu primeiro virou referência.']), relevancia: 'cotidiano', efeito: () => { const e = c.v.trabalho.atual!; e.desempenho = clamp(e.desempenho + 4); } };
@@ -449,7 +450,11 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   const f = c.v.caminhos.frentes[d];
   if (f) f.meses += 2;
   const doLugar = pr.lugar ? doClube(pr.lugar) : 'do clube';
-  registrarDevolutiva(c.v, { tipo: 'peneira', titulo: `A ${nome} ${doLugar}`, texto: fala, passou: res.passou, perto: res.perto, falta: res.passou ? undefined : res.falta, dominio: d });
+  // A régua da técnica fica guardada: a próxima devolutiva diz se o treino apareceu.
+  const tec = lerTecnica(c.v, d);
+  const comparacao = tec.desde && !res.passou ? ` ${tec.desde}` : '';
+  const caminho = !res.passou && (res.falta === 'tecnica' || res.fraco === 'tecnica') ? ` A técnica está "${tec.palavra}".` : '';
+  registrarDevolutiva(c.v, { tipo: 'peneira', titulo: `A ${nome} ${doLugar}`, texto: `${fala}${caminho}${comparacao}`, passou: res.passou, perto: res.perto, falta: res.passou ? undefined : res.falta, dominio: d, nivel: tec.nivel });
   if (res.passou) {
     c.v.fatos['convite_base'] = c.v.t;
     c.v.fatos['peneira_lugar'] = municipioIndice(lugar);
@@ -466,7 +471,7 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
     ? tentativas < 3 ? ' Pediram para você voltar no ano que vem.' : ''
     : res.falta === 'idade' ? '' : ' Ainda dá para treinar e tentar outra.';
   return {
-    texto: `Chamaram outros nomes. ${fala}${depois}`,
+    texto: `Chamaram outros nomes. ${fala}${caminho}${comparacao}${depois}`,
     memoria: `Não passou na ${nome} ${doLugar}. ${fala}`,
     relevancia: 'biografia', tom: 'ruim'
   };

@@ -30,14 +30,14 @@ import { economiaInicial } from './sistemas/economia';
 import { temperamentoAleatorio } from './nucleo';
 import { criarRng } from './rng';
 import { visualAleatorio } from './pessoas';
-import { capitalDoEstado, nivelEsc } from './sistemas/escola';
+import { areaDaPos, capitalDoEstado, nivelEsc, nomeDaFormacao } from './sistemas/escola';
 import { aptidao, MATERIAS } from './sistemas/frentes';
 import { modeloRotina } from './sistemas/rotinas';
 import { CURSOS_NPC } from './sistemas/filhos';
 import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 import { atribuirVersoesAosVeiculos } from './sistemas/versoesVeiculo';
 
-export const VERSAO_SAVE = 14;
+export const VERSAO_SAVE = 15;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -99,12 +99,24 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
+  if (d.versao === 14) {
+    // v14 → v15: pós, mestrado e doutorado com a área que carregam ("Doutorado em Nutrição").
+    const erro14 = validar(d, 14);
+    if (erro14) return { tipo: 'invalido', motivo: erro14 };
+    try {
+      const v = migrarV14(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
   if (d.versao === 13) {
     // v13 → v14: veículos com marca e modelo reais, a história dos partidos por onde passou.
     const erro13 = validar(d, 13);
     if (erro13) return { tipo: 'invalido', motivo: erro13 };
     try {
-      const v = migrarV13(d as unknown as Vida);
+      const v = migrarV14(migrarV13(d as unknown as Vida));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -116,7 +128,7 @@ export function interpretar(bruto: string): Leitura {
     const erro12 = validar(d, 12);
     if (erro12) return { tipo: 'invalido', motivo: erro12 };
     try {
-      const v = migrarV13(migrarV12(d as unknown as Vida));
+      const v = migrarV14(migrarV13(migrarV12(d as unknown as Vida)));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -128,7 +140,7 @@ export function interpretar(bruto: string): Leitura {
     const erro11 = validar(d, 11);
     if (erro11) return { tipo: 'invalido', motivo: erro11 };
     try {
-      const v = migrarV13(migrarV12(migrarV11(d as unknown as Vida)));
+      const v = migrarV14(migrarV13(migrarV12(migrarV11(d as unknown as Vida))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -140,7 +152,7 @@ export function interpretar(bruto: string): Leitura {
     const erro10 = validar(d, 10);
     if (erro10) return { tipo: 'invalido', motivo: erro10 };
     try {
-      const v = migrarV13(migrarV12(migrarV11(migrarV10(d as unknown as Vida))));
+      const v = migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(d as unknown as Vida)))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -152,7 +164,7 @@ export function interpretar(bruto: string): Leitura {
     const erro9 = validar(d, 9);
     if (erro9) return { tipo: 'invalido', motivo: erro9 };
     try {
-      const v = migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(d as unknown as Vida)))));
+      const v = migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(d as unknown as Vida))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -164,7 +176,7 @@ export function interpretar(bruto: string): Leitura {
     const erro8 = validar(d, 8);
     if (erro8) return { tipo: 'invalido', motivo: erro8 };
     try {
-      const v = migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(d as unknown as Vida))))));
+      const v = migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(d as unknown as Vida)))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -176,7 +188,7 @@ export function interpretar(bruto: string): Leitura {
     const erro7 = validar(d, 7);
     if (erro7) return { tipo: 'invalido', motivo: erro7 };
     try {
-      const v = migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(d as unknown as Vida)))))));
+      const v = migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(d as unknown as Vida))))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -188,7 +200,7 @@ export function interpretar(bruto: string): Leitura {
     const erro6 = validarBase(d);
     if (erro6) return { tipo: 'invalido', motivo: erro6 };
     try {
-      const v = migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida))))))));
+      const v = migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida)))))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -199,7 +211,7 @@ export function interpretar(bruto: string): Leitura {
     try {
       const v5 = migrarV5(d);
       if (!v5) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
-      const v = migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(v5))))))));
+      const v = migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(v5)))))))));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -391,6 +403,38 @@ export function migrarV13(v: Vida): Vida {
     const quando = x.fatos[k];
     const par = Object.values(x.vinculos).find(w => w.romance && (w.romance.estagio === 'casamento' || w.romance.estagio === 'morando_junto' || (w.romance.estagio === 'ex' && w.romance.tEstagio >= quando && w.historia.some(h => h.tipo === 'casa' || h.tipo === 'casamento'))) && (w.romance.tInicio ?? w.tInicio) <= quando);
     f.genitores = ['eu', ...(par && x.pessoas[par.pessoaId] ? [par.pessoaId] : [])];
+  }
+  return x;
+}
+
+/**
+ * v14 → v15 (REWORK Caminhos, Agência e UX): a pós-graduação que o catálogo
+ * oferece a qualquer formado (especialização, mestrado, doutorado) passa a
+ * carregar a área em que se apoia — "Doutorado em Nutrição". Nos saves
+ * antigos, a área é deduzida da formação anterior, em ordem cronológica (o
+ * doutorado herda o mestrado; o mestrado, a graduação), e o nome ganha a
+ * área. O curso em andamento também. Idempotente; a Linha da Vida não muda.
+ * O resto do rework (foco de estudo, devolutivas com nível, indicação de
+ * militar) é opcional: saves antigos seguem válidos sem nada a preencher.
+ */
+export function migrarV14(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 15;
+  const e = x.educacao;
+  const ordem = [...e.concluidos].sort((a, b) => a.tFim - b.tFim);
+  for (const c of ordem) {
+    const cc = cursoOuNulo(c.cursoId);
+    if (!cc || cc.area !== 'qualquer' || c.area !== 'qualquer' || c.cursoId === 'mba') continue;
+    const antes = ordem.filter(o => o.tFim <= c.tFim && o !== c);
+    const base = (niveis: string[]) => [...antes].reverse().find(o => niveis.includes(o.nivel) && o.area !== 'qualquer')?.area;
+    const area = (c.nivel === 'doutorado' ? base(['mestrado']) : undefined) ?? base(['superior']);
+    if (!area) continue;
+    c.area = area;
+    c.nome = nomeDaFormacao(cc, area);
+  }
+  if (e.matricula && !e.matricula.area) {
+    const cc = cursoOuNulo(e.matricula.cursoId);
+    if (cc) { const a = areaDaPos(x, cc); if (a && a !== cc.area) e.matricula.area = a; }
   }
   return x;
 }
@@ -801,7 +845,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 14,
+    versao: 7 as unknown as 15,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,

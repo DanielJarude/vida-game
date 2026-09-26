@@ -109,7 +109,7 @@ export const FAMILIAS: readonly FamiliaCarreira[] = [
   F({ id: 'docencia', nome: 'ensino', trilhas: ['educacao', 'idiomas', 'ensino_tecnico', 'ensino_musica', 'ensino_danca'], progressao: 'docente',
     entrada: 'licenciatura, concurso ou processo seletivo; no ensino livre, saber e ter alunos', degraus: ['primeiras turmas', 'sala de aula por anos', 'titulação (pós, mestrado)', 'coordenação ou direção, se quiser'],
     renda: 'estavel', desgaste: { cabeca: 0.45 }, sentido: ['lideranca', 'comunidade', 'linguagens'], expansao: { desde: 2030, intensidade: 0.05 }, saidas: ['publico', 'academia', 'comunicacao'] }),
-  F({ id: 'academia', nome: 'ciência e universidade', trilhas: ['academia', 'pesquisa'], progressao: 'academica', entrada: 'iniciação, mestrado e doutorado com bolsa, concurso docente',
+  F({ id: 'academia', nome: 'ciência e universidade', trilhas: ['academia', 'pesquisa', 'docencia_superior'], progressao: 'academica', entrada: 'iniciação, mestrado e doutorado com bolsa, concurso docente',
     degraus: ['iniciação científica', 'pós-graduação com bolsa', 'pós-doutorado (contrato com prazo)', 'concurso: docência ou instituto'], renda: 'projeto', desgaste: { cabeca: 0.4 }, sentido: ['ciencias', 'exatas', 'humanas', 'linguagens'],
     saidas: ['educacao', 'dados', 'publico'] }),
   F({ id: 'direito', nome: 'direito', trilhas: ['direito'], progressao: 'liberal', entrada: 'faculdade, estágio e o Exame da OAB',

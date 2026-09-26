@@ -15,6 +15,8 @@ import { propor } from '../sistemas/compromissos';
 import { contratar, elegibilidade, nomeOcupacao, tetoSalarial, textoDeContratacao } from '../sistemas/trabalho';
 import { avaliar, ctxEntrevista, escolherPerguntas, notaDaResposta, perguntaPorId, reacao, type Pergunta } from '../sistemas/entrevista';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
+import { motivoDaRejeicao, PALAVRA_COMPATIBILIDADE, perfilParaVaga } from '../sistemas/empregabilidade';
+import { anoDe as anoDeT } from '../tempo';
 import { novaOportunidade } from '../sistemas/oportunidades';
 import { marcar } from '../sistemas/marcas';
 import { abalar } from '../sistemas/abalo';
@@ -124,7 +126,7 @@ function concluirEntrevista(c: Ctx): Resultado {
   const a = avaliar(c.v, oc, d.chance ?? 0.4, pr.bonus, pr.etapas);
   if (c.r.chance(a.chance)) {
     const elogio = a.melhor ? ` Na ligação, disseram que ${a.melhor.bom}.` : '';
-    registrarDevolutiva(c.v, { tipo: 'entrevista', titulo: `Entrevista para ${nome}`, texto: a.melhor ? `Passou. Disseram que ${a.melhor.bom}.` : 'Passou.', passou: true, ocupacaoId: oc.id });
+    registrarDevolutiva(c.v, { tipo: 'entrevista', titulo: `Entrevista para ${nome}`, texto: a.melhor ? `Passou. Disseram que ${a.melhor.bom}.` : 'Passou.', passou: true, ocupacaoId: oc.id, nivel: perfilParaVaga(c.v, oc).compatibilidade });
     // A vaga é sua — se ela não couber com o que você já faz (a base, a faculdade do dia inteiro, o negócio), vem a pergunta.
     const saiu = propor(c.v, c.r, { tipo: 'emprego', ocupacaoId: oc.id, via: pr.via, texto: `A vaga de ${nome} é sua.` });
     const e = c.v.trabalho.atual;
@@ -132,21 +134,23 @@ function concluirEntrevista(c: Ctx): Resultado {
     return { texto: `Ligaram dois dias depois: a vaga é sua.${elogio}`, memoria: null, tom: 'bom' };
   }
   const perto = a.chance >= 0.4;
-  const motivo = a.falta === 'experiencia' ? 'seguiram com alguém de mais experiência'
-    : a.falta === 'formacao' ? 'buscavam alguém formado na área'
-      : a.falta === 'entrevista' ? (a.pior ? a.pior.ruim : 'a entrevista não ajudou')
-        : 'a vaga era disputada e escolheram outra pessoa';
+  // O motivo vem do que pesou (a falta) lido no currículo desta vida: formação, estrada, histórico.
+  const motivo = a.falta === 'entrevista' ? (a.pior ? a.pior.ruim : 'a entrevista não ajudou') : motivoDaRejeicao(c.v, oc, a.falta, a.media);
+  const perfil = perfilParaVaga(c.v, oc);
+  const antes = [...c.v.caminhos.devolutivas].reverse().find(x => x.tipo === 'entrevista' && x.nivel !== undefined && x.ocupacaoId && ocupacaoOuNula(x.ocupacaoId)?.trilha === oc.trilha);
+  const desde = antes && antes.nivel! < perfil.compatibilidade ? ` Desde a última candidatura na área (${anoDeT(antes.t)}), o currículo ficou mais forte: de "${PALAVRA_COMPATIBILIDADE[antes.nivel!]}" para "${perfil.palavra}".` : '';
   let texto = a.falta === 'entrevista'
     ? `Não passou. Pelo retorno, ${motivo}.`
     : a.falta === 'concorrencia' && a.media >= 0.3
-      ? `Você foi bem${a.melhor ? ` — ${a.melhor.bom}` : ''}. Mesmo assim, escolheram outra pessoa: a vaga era disputada.`
+      ? `Você foi bem${a.melhor ? ` — ${a.melhor.bom}` : ''}. Mesmo assim, ${motivo.replace(/^seu histórico combina bastante com a vaga; foi a disputa: /, '')}.`
       : `O e-mail veio educado: ${motivo}.`;
+  texto += desde;
   if (a.pior && a.falta !== 'entrevista') texto += ` Um detalhe pesou: ${a.pior.ruim}.`;
   if (perto && c.r.chance(0.35)) {
     novaOportunidade(c.v, { tipo: 'vaga', ocupacaoId: oc.id, meses: 12, chave: `retorno_${oc.id}`, bonus: 0.15, titulo: `Chamaram de novo: ${nome}`, texto: `A empresa da entrevista para ${nome} abriu outra vaga e lembrou de você.` });
     texto += ' Semanas depois, ligaram: abriu outra vaga, e seu nome estava na lista.';
   } else if (perto) texto += ' Disseram que o seu currículo fica guardado.';
-  registrarDevolutiva(c.v, { tipo: 'entrevista', titulo: `Entrevista para ${nome}`, texto: `Não passou: ${motivo}.`, passou: false, perto, falta: a.falta, ocupacaoId: oc.id });
+  registrarDevolutiva(c.v, { tipo: 'entrevista', titulo: `Entrevista para ${nome}`, texto: `Não passou: ${motivo}.${desde}`, passou: false, perto, falta: a.falta, ocupacaoId: oc.id, nivel: perfil.compatibilidade });
   marcar(c.v, 'reprovacao', `Entrevista para ${nome}: não passou (${motivo}).`, 1, { ocupacaoId: oc.id, trilha: oc.trilha });
   abalar(c.v, `a entrevista para ${nome}`, -3, 2);
   // A primeira reprovação entra na Linha da Vida; as seguintes ficam nas devolutivas (não viram ruído).

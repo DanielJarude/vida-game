@@ -17,7 +17,7 @@
 
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { Vida } from '../tipos';
+import type { FocoConcurso, Vida } from '../tipos';
 import type { Ocupacao } from '../dados/ocupacoes';
 import { OCUPACOES, ocupacao } from '../dados/ocupacoes';
 import { escrever, idade, marcarFato } from '../nucleo';
@@ -95,12 +95,71 @@ export function editaisAbertos(v: Vida): Ocupacao[] {
   return OCUPACOES.filter(oc => oc.concurso && editalAberto(v, oc));
 }
 
-/** O preparo efetivo para um cargo: meses de estudo, temperados pelas matérias que ele cobra. */
+/* ------------------------------------------------------------- Foco */
+
+/** A área de cada edital (o que o estudo dirigido cobre). */
+export const FOCO_DO_CARGO: Record<string, FocoConcurso> = {
+  aluno_pm: 'policial', aluno_bombeiro: 'policial', aluno_sargento: 'policial', cadete: 'policial', policial_civil: 'policial', delegado: 'policial',
+  policial_penal: 'policial', perito_criminal: 'policial', policial_rodoviario: 'policial', aluno_oficial_pm: 'policial', aluno_oficial_tecnico: 'policial', guarda_municipal: 'policial',
+  tecnico_publico: 'administrativo', analista_judiciario: 'administrativo', auditor_fiscal: 'fiscal', escriturario_banco: 'bancario',
+  professor_concursado: 'educacao', professor_substituto: 'educacao', agente_saude: 'saude', professor_univ: 'academico', pesquisador_instituto: 'academico'
+};
+
+export const NOME_FOCO: Record<FocoConcurso, string> = {
+  policial: 'carreiras policiais e militares', administrativo: 'prefeitura e tribunais', fiscal: 'área fiscal (Receita)', bancario: 'bancos públicos',
+  educacao: 'magistério público', saude: 'saúde pública', academico: 'universidade e pesquisa'
+};
+
+/**
+ * O que a vida já traz para cada área: anos de farda contam no edital de
+ * polícia (a rotina, a legislação, o teste físico); o Direito conta no de
+ * tribunal e de delegado; Contábeis e Economia, no fiscal; a estrada no
+ * banco, no bancário. Não é atalho: é a mesma coisa que um examinador vê.
+ */
+const TRAJETORIA_DO_FOCO: Record<FocoConcurso, { trilhas: string[]; areas: string[]; rotulo: string }> = {
+  policial: { trilhas: ['pm', 'pm_oficial', 'bombeiro', 'guarda', 'penal', 'vigilancia', 'exercito_praca', 'exercito_sargento', 'exercito_oficial', 'policia_civil', 'pericia', 'federal'], areas: ['direito'], rotulo: 'farda' },
+  administrativo: { trilhas: ['publico', 'judiciario', 'administrativo'], areas: ['direito', 'administracao'], rotulo: 'serviço público' },
+  fiscal: { trilhas: ['contabil', 'financas', 'fiscal'], areas: ['contabilidade', 'economia', 'direito'], rotulo: 'contas' },
+  bancario: { trilhas: ['financas', 'administrativo', 'atendimento'], areas: ['economia', 'administracao', 'contabilidade'], rotulo: 'banco' },
+  educacao: { trilhas: ['educacao', 'ensino_tecnico', 'idiomas'], areas: ['educacao', 'letras'], rotulo: 'sala de aula' },
+  saude: { trilhas: ['saude_publica', 'enfermagem', 'cuidado'], areas: ['enfermagem'], rotulo: 'saúde' },
+  academico: { trilhas: ['academia', 'pesquisa', 'docencia_superior'], areas: [], rotulo: 'pesquisa' }
+};
+
+/** O que a biografia soma a este edital, em meses equivalentes de estudo — e dito em palavras. */
+export function trajetoriaParaConcurso(v: Vida, oc: Ocupacao): { meses: number; motivos: string[] } {
+  const foco = FOCO_DO_CARGO[oc.id];
+  if (!foco) return { meses: 0, motivos: [] };
+  const t = TRAJETORIA_DO_FOCO[foco];
+  const motivos: string[] = [];
+  let meses = 0;
+  const anos = t.trilhas.reduce((s, x) => s + (v.trabalho.experiencia[x] ?? 0), 0) / 12;
+  if (anos >= 2) {
+    const m = Math.min(18, Math.round(anos * 1.5));
+    meses += m;
+    const atual = v.trabalho.atual && t.trilhas.includes(ocupacao(v.trabalho.atual.ocupacaoId).trilha) ? nomeOcupacao(v, ocupacao(v.trabalho.atual.ocupacaoId)) : undefined;
+    motivos.push(atual ? `Seus ${Math.floor(anos)} anos de ${t.rotulo}, hoje como ${atual}, contam: a rotina e a matéria da prova não são novidade.` : `Os ${Math.floor(anos)} anos de ${t.rotulo} contam: boa parte da matéria você já viveu.`);
+  }
+  const formacao = v.educacao.concluidos.find(c => t.areas.includes(c.area) && ['superior', 'pos', 'mestrado', 'doutorado'].includes(c.nivel));
+  if (formacao) { meses += 8; motivos.push(`A formação em ${formacao.nome.replace(/ \(.*\)$/, '')} pesa a favor: é o conteúdo específico deste edital.`); }
+  if (oc.forma && v.corpo.forma >= oc.forma + 10) motivos.push('O preparo físico está acima do que o teste pede.');
+  else if (oc.forma && v.corpo.forma < oc.forma) motivos.push('O teste físico ainda não passaria: corrida e academia entram no preparo.');
+  return { meses, motivos };
+}
+
+/** O preparo efetivo para um cargo: meses de estudo (dirigido ou não), as matérias, e o que a vida já traz. */
 export function preparoPara(v: Vida, oc: Ocupacao): number {
   const p = perfilConcurso(oc.id);
+  const c = v.caminhos.concurso;
   const materias = p.materias.map(d => habilidade(v, d)).reduce((s, x) => s + x, 0) / p.materias.length;
+  const foco = FOCO_DO_CARGO[oc.id];
+  // Estudo dirigido para esta área rende mais que o geral; o geral rende o de sempre; o dirigido para outra área, pouco mais da metade.
+  const noFoco = c.foco && foco === c.foco ? Math.min(c.meses, c.mesesFoco ?? 0) : 0;
+  const resto = c.meses - noFoco;
+  const fator = !c.foco || c.foco === foco ? 1 : 0.65;
+  const estudo = noFoco * 1.15 + resto * fator;
   // Matéria boa rende o estudo; matéria fraca come o estudo.
-  return v.caminhos.concurso.meses * (0.55 + materias / 110) + Math.max(0, materias - 55) / 4;
+  return estudo * (0.55 + materias / 110) + Math.max(0, materias - 55) / 4 + trajetoriaParaConcurso(v, oc).meses;
 }
 
 /** Chance de aprovação (0..1). Sem preparo, quase nenhuma. Com todo o preparo, ainda há concorrência. */
@@ -109,20 +168,70 @@ export function chanceNoConcurso(v: Vida, oc: Ocupacao): number {
   const prep = preparoPara(v, oc);
   const x = (prep - p.preparo) / Math.max(4, p.preparo * 0.45);
   const curva = 1 / (1 + Math.exp(-x * 1.6));
-  let c = 0.01 + (p.teto - 0.01) * curva;
+  // Quem traz estrada da área passa mais vezes das etapas que não são prova (título, físico, investigação social).
+  const teto = p.teto + (trajetoriaParaConcurso(v, oc).meses >= 12 ? 0.04 : 0);
+  let c = 0.01 + (teto - 0.01) * curva;
   if (oc.id === 'musico_orquestra') c = clamp(0.01 + (habilidade(v, 'musica') - 76) / 40, 0.01, p.teto);
   if (oc.id === 'professor_univ') c += v.educacao.concluidos.filter(x => x.nivel === 'doutorado').length ? 0.05 : 0;
-  return clamp(c, 0.01, p.teto);
+  return clamp(c, 0.01, teto);
 }
 
-/** Palavras para o preparo. */
-export function leituraDoPreparo(v: Vida, oc: Ocupacao): string {
+/** Em que ponto está o preparo para um edital, do jeito que a vida fala (0 sem preparo … 4 muito competitivo). */
+export const PALAVRA_PREPARO = ['sem preparo', 'começando', 'em construção', 'competitivo', 'muito competitivo'] as const;
+
+export function nivelDoPreparo(v: Vida, oc: Ocupacao): number {
   const p = perfilConcurso(oc.id);
-  const prep = preparoPara(v, oc);
-  if (prep < p.preparo * 0.3) return 'Sem preparo, é quase um bilhete de loteria.';
-  if (prep < p.preparo * 0.7) return 'O estudo começou, mas ainda falta bastante.';
-  if (prep < p.preparo) return 'Perto do preparo que esse concurso costuma pedir.';
-  return 'Preparo de quem vem estudando a sério. Ainda assim, há concorrência.';
+  const r = preparoPara(v, oc) / p.preparo;
+  return r < 0.3 ? 0 : r < 0.65 ? 1 : r < 0.95 ? 2 : r < 1.3 ? 3 : 4;
+}
+
+export interface LeituraPreparo {
+  nivel: number;
+  palavra: string;
+  /** A frase principal. */
+  frase: string;
+  /** O que pesa (a favor e contra), em palavras. */
+  fatores: string[];
+  /** Comparação com a última vez que tentou este edital (ou um da mesma área). */
+  desde?: string;
+}
+
+/** A leitura completa: onde está, o que pesa, o que mudou desde a última tentativa. */
+export function lerPreparo(v: Vida, oc: Ocupacao): LeituraPreparo {
+  const p = perfilConcurso(oc.id);
+  const nivel = nivelDoPreparo(v, oc);
+  const c = v.caminhos.concurso;
+  const foco = FOCO_DO_CARGO[oc.id];
+  const fatores: string[] = [];
+  if (foco && c.foco === foco && (c.mesesFoco ?? 0) >= 6) fatores.push(`O estudo está dirigido para ${NOME_FOCO[foco]}: rende mais aqui.`);
+  else if (foco && c.foco && c.foco !== foco) fatores.push(`O estudo está dirigido para ${NOME_FOCO[c.foco]}; este edital cobra outra coisa — o preparo rende bem menos.`);
+  else if (c.meses >= 6 && foco) fatores.push(`Estudo geral: serve, mas dirigir para ${NOME_FOCO[foco]} renderia mais.`);
+  fatores.push(...trajetoriaParaConcurso(v, oc).motivos);
+  const fraca = [...p.materias].sort((a, b) => habilidade(v, a) - habilidade(v, b))[0];
+  if (fraca && habilidade(v, fraca) < 50) fatores.push(`A matéria mais fraca é ${NOME_DA_PROVA[fraca] ?? fraca}: é onde o estudo mais falta.`);
+  const disputa = p.teto <= 0.1 ? ' Mesmo bem preparado, a maioria não passa: é um dos editais mais disputados.' : p.teto <= 0.16 ? ' A concorrência é grande: costuma levar mais de uma tentativa.' : '';
+  const frase = nivel === 0 ? 'Sem preparo, é quase um bilhete de loteria.'
+    : nivel === 1 ? 'O estudo começou, mas ainda falta bastante para a nota de corte.'
+      : nivel === 2 ? 'Preparo em construção: perto do que esse concurso costuma pedir.'
+        : nivel === 3 ? `Preparo competitivo para ${nomeOcupacao(v, oc)}.${disputa}`
+          : `Preparo muito competitivo: está entre os mais preparados.${disputa}`;
+  const antes = [...v.caminhos.devolutivas].reverse().find(d => d.tipo === 'concurso' && d.nivel !== undefined && (d.ocupacaoId === oc.id || (foco && FOCO_DO_CARGO[d.ocupacaoId ?? ''] === foco)));
+  const desde = antes ? (antes.nivel! < nivel ? `Desde a última tentativa (${anoDe(antes.t)}), o preparo subiu de "${PALAVRA_PREPARO[antes.nivel!]}" para "${PALAVRA_PREPARO[nivel]}".` : antes.nivel! > nivel ? `Desde a última tentativa (${anoDe(antes.t)}), o preparo esfriou: era "${PALAVRA_PREPARO[antes.nivel!]}", agora "${PALAVRA_PREPARO[nivel]}".` : `Desde a última tentativa (${anoDe(antes.t)}), o preparo segue "${PALAVRA_PREPARO[nivel]}".`) : undefined;
+  return { nivel, palavra: PALAVRA_PREPARO[nivel], frase, fatores, desde };
+}
+
+/** Palavras para o preparo (a frase curta de antes, agora com o que pesa). */
+export function leituraDoPreparo(v: Vida, oc: Ocupacao): string {
+  const l = lerPreparo(v, oc);
+  return [l.frase, l.fatores[0]].filter(Boolean).join(' ');
+}
+
+/** Mudar a direção do estudo: o que já se estudou não some, mas passa a render menos para a área nova. */
+export function dirigirEstudo(v: Vida, foco: FocoConcurso | undefined): void {
+  const c = v.caminhos.concurso;
+  if (c.foco === foco) return;
+  c.foco = foco;
+  c.mesesFoco = 0;
 }
 
 /* ------------------------------------------------------------- Inscrição */
@@ -140,7 +249,7 @@ export function inscrever(v: Vida, oc: Ocupacao): void {
 export function processarConcursos(v: Vida, r: Rng): void {
   const c = v.caminhos.concurso;
   // O preparo esfria sem estudo.
-  if (!v.rotinas.some(x => x.id === 'estudar_concurso') && c.meses > 0) c.meses = Math.max(0, Math.round(c.meses * 0.85 - 2));
+  if (!v.rotinas.some(x => x.id === 'estudar_concurso') && c.meses > 0) { c.meses = Math.max(0, Math.round(c.meses * 0.85 - 2)); if (c.mesesFoco) c.mesesFoco = Math.min(c.meses, Math.max(0, Math.round(c.mesesFoco * 0.85 - 2))); }
 
   for (const cand of [...v.trabalho.candidaturas]) {
     if (cand.tResultado > v.t) continue;
@@ -154,6 +263,7 @@ export function processarConcursos(v: Vida, r: Rng): void {
     if (oc.forma && v.corpo.forma < oc.forma) {
       v.fatos[`concurso_${oc.id}`] = tentativas;
       escrever(v, { texto: `Passou na prova escrita para ${nomeOcupacao(v, oc)}, mas não no teste físico.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+      registrarDevolutiva(v, { tipo: 'concurso', titulo: `Concurso para ${nomeOcupacao(v, oc)}`, passou: false, perto: true, falta: 'fisico', ocupacaoId: oc.id, nivel: nivelDoPreparo(v, oc), texto: 'A prova escrita passou; o teste físico, não. O estudo estava lá — falta o corpo: corrida e academia, com tempo, resolvem.' });
       marcar(v, 'reprovacao', `${flex(ge(v), 'Reprovado', 'Reprovada', 'Reprovade')} no teste físico: ${nomeOcupacao(v, oc)}.`, 1, { ocupacaoId: oc.id });
       continue;
     }
@@ -185,9 +295,16 @@ export function processarConcursos(v: Vida, r: Rng): void {
     const fraca = [...p.materias].sort((a, b) => habilidade(v, a) - habilidade(v, b))[0];
     const falta = preparoPara(v, oc) < p.preparo ? 'preparo' : 'concorrencia';
     const nomeFraca = fraca ? NOME_DA_PROVA[fraca] ?? fraca : undefined;
+    const leitura = lerPreparo(v, oc);
+    const trajetoria = trajetoriaParaConcurso(v, oc).motivos[0];
     registrarDevolutiva(v, {
-      tipo: 'concurso', titulo: `Concurso para ${nomeOcupacao(v, oc)}`, passou: false, perto, falta, ocupacaoId: oc.id,
-      texto: falta === 'preparo' ? `Faltou preparo${nomeFraca ? `; a nota mais baixa foi em ${nomeFraca}` : ''}.${perto ? ' Ficou perto da nota de corte.' : ''}` : `A nota foi boa, mas a concorrência foi maior${perto ? ' — ficou a poucas questões' : ''}.`
+      tipo: 'concurso', titulo: `Concurso para ${nomeOcupacao(v, oc)}`, passou: false, perto, falta, ocupacaoId: oc.id, nivel: leitura.nivel,
+      texto: [
+        falta === 'preparo' ? `Faltou preparo (${leitura.palavra})${nomeFraca ? `; a nota mais baixa foi em ${nomeFraca}` : ''}.${perto ? ' Ficou perto da nota de corte.' : ''}` : `O preparo era ${leitura.palavra}, mas a concorrência foi maior${perto ? ' — ficou a poucas questões' : ''}.`,
+        leitura.desde,
+        falta === 'preparo' && FOCO_DO_CARGO[oc.id] && v.caminhos.concurso.foco !== FOCO_DO_CARGO[oc.id] ? `Dirigir o estudo para ${NOME_FOCO[FOCO_DO_CARGO[oc.id]]} faria o preparo render mais.` : undefined,
+        trajetoria
+      ].filter(Boolean).join(' ')
     });
     abalar(v, `a reprovação no concurso`, perto ? -3 : -4, 2);
   }

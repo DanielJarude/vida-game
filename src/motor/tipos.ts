@@ -317,6 +317,12 @@ export interface Matricula {
   /** Quando trancou (a instituição cancela depois de quatro anos). */
   tTrancou?: number;
   municipioId: string;
+  /**
+   * A área de uma pós, mestrado ou doutorado (que no catálogo servem a
+   * qualquer área): herdada da formação em que se apoia. É o que faz um
+   * doutorado ser "Doutorado em Nutrição", e não só "Doutorado".
+   */
+  area?: string;
 }
 
 export interface Educacao {
@@ -882,8 +888,15 @@ export interface ProjetoArtistico {
 }
 
 /** Preparação para concurso: meses de estudo acumulados (esfriam se parar). */
+/** Para onde o estudo de concurso está dirigido (o edital de polícia não cobra o mesmo que o de tribunal). */
+export type FocoConcurso = 'policial' | 'administrativo' | 'fiscal' | 'bancario' | 'educacao' | 'saude' | 'academico';
+
 export interface PreparoConcurso {
   meses: number;
+  /** A direção do estudo (sem foco: estudo geral, que serve a tudo um pouco). */
+  foco?: FocoConcurso;
+  /** Meses estudados desde que o foco atual foi escolhido (o que mais conta para os editais dessa área). */
+  mesesFoco?: number;
   tentativas: number;
   aprovacoes: number;
   ultimaTentativa?: number;
@@ -1012,6 +1025,13 @@ export interface Devolutiva {
   falta?: 'experiencia' | 'formacao' | 'entrevista' | 'tecnica' | 'fisico' | 'leitura' | 'nervos' | 'idade' | 'concorrencia' | 'preparo';
   ocupacaoId?: string;
   dominio?: Dominio;
+  /**
+   * Em que ponto a pessoa estava nessa tentativa (0 começo … 4 muito
+   * competitivo), na régua do próprio processo: o preparo do concurso, a
+   * técnica na peneira, o currículo na vaga. É o que deixa a próxima
+   * devolutiva dizer "desde a última vez, melhorou".
+   */
+  nivel?: number;
 }
 
 export interface Caminhos {
@@ -1162,6 +1182,13 @@ export interface VidaPolitica {
   /** Partido (fictício) e desde quando. */
   partido?: string;
   tFiliacao?: number;
+  /**
+   * Militar da ativa não se filia (CF, art. 142, §3º, V; art. 42, §1º), mas
+   * é elegível: basta ser escolhido em convenção e ter o registro pedido pelo
+   * partido (TSE, Res. 21.608/2004, art. 14, §1º). `partido` é então o que o
+   * indicou, sem filiação. Fora da ativa, a filiação volta a ser exigida.
+   */
+  indicacaoMilitar?: boolean;
   /** Quanto a pessoa é conhecida, 0..100. */
   reputacao: number;
   /** Base de apoio: quem votaria, quem ajudaria, 0..100. */
@@ -1222,7 +1249,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 14;
+  versao: 15;
   id: string;
   rng: number;
   seq: number;

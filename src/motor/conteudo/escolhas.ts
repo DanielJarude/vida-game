@@ -12,6 +12,7 @@ import { idadePessoa, temFato } from '../nucleo';
 import { encerrarEmprego } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
 import { criarPessoa, vincular } from '../pessoas';
+import { noTrabalho, varianteDoLugar, type Ambiente } from '../sistemas/ambiente';
 
 export const ESCOLHAS: Conteudo[] = [
   /* ================================================================ HÁBITOS */
@@ -94,9 +95,16 @@ export const ESCOLHAS: Conteudo[] = [
   {
     id: 'trab_erro', tipo: 'decisao', idade: [18, 70], tema: 'trabalho', repetir: 8,
     papeis: { colega: P.genteDe('trabalho') },
-    quando: c => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal',
+    // Pede um lugar com chefia, colegas e um trabalho que deixa rastro (papel, caixa, obra, linha) — nunca a casa de um cliente.
+    quando: c => noTrabalho(c.v, 'chefia', 'colegas', 'organizacao') && ['escritorio', 'balcao', 'obra', 'fabrica', 'estrada'].some(a => noTrabalho(c.v, a as Ambiente)),
     titulo: 'O erro',
-    texto: c => `Um erro seu custou caro para a empresa: um pedido errado, um relatório com números trocados. Ninguém sabe de onde veio — e o nome de ${c.p.colega.nome} aparece no mesmo documento.`,
+    texto: c => varianteDoLugar(c.v, {
+      escritorio: `Um erro seu custou caro: um pedido lançado errado, um relatório com números trocados. Ninguém sabe de onde veio — e o nome de ${c.p.colega.nome} aparece no mesmo documento.`,
+      balcao: `O caixa não fechou por uma diferença grande, e o estoque do dia não bate. Foi você, no corre do fim do turno — e ${c.p.colega.nome} estava no mesmo caixa.`,
+      obra: `Uma medida errada fez refazer uma parede inteira. A anotação era sua — e ${c.p.colega.nome} assinou a mesma folha de serviço.`,
+      fabrica: `Um ajuste errado na máquina estragou um lote inteiro. Foi no seu turno — e ${c.p.colega.nome} estava na mesma linha.`,
+      estrada: `Uma entrega foi para o endereço errado e o cliente cancelou o contrato. A rota era sua — e ${c.p.colega.nome} tinha montado a carga.`
+    }, `Um erro seu custou caro no trabalho. Ninguém sabe de onde veio — e o nome de ${c.p.colega.nome} aparece junto.`),
     opcoes: [
       { id: 'assumir', texto: 'Assumir o erro para a chefia', comportamento: { coragem: 1, empatia: 1 },
         resolver: c => ({ texto: 'A chefia ficou brava e depois agradeceu a franqueza. O assunto morreu ali.', memoria: null, efeito: () => { if (c.v.trabalho.atual) c.v.trabalho.atual.desempenho -= 3; prox(c, 'colega', 5); } }) },
@@ -133,7 +141,7 @@ export const ESCOLHAS: Conteudo[] = [
   {
     id: 'trab_assedio', tipo: 'decisao', idade: [18, 70], tema: 'trabalho', repetir: 8,
     papeis: { colega: P.genteDe('trabalho') },
-    quando: c => !!c.v.trabalho.atual,
+    quando: c => noTrabalho(c.v, 'chefia', 'colegas', 'organizacao'),
     titulo: 'Na reunião',
     texto: c => `Na reunião, a chefia humilhou ${c.p.colega.nome} na frente de todo mundo por um atraso de cinco minutos. ${gp(c, 'colega', 'Ele', 'Ela', 'Elu')} saiu da sala com os olhos vermelhos.`,
     opcoes: [

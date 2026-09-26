@@ -22,7 +22,7 @@ import { habilidade } from './frentes';
 import { OCUPACOES, ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { degrausAcima, elegibilidade, experienciaNaTrilha, porContaPropria } from './trabalho';
 import { cursoOuNulo, type Curso } from '../dados/cursos';
-import { opcoesDeCurso, type OpcaoCurso } from './escola';
+import { areaDaPos, nomeDaFormacao, notaParaCurso, opcoesDeCurso, temCota, type OpcaoCurso } from './escola';
 import { animaisDoAbrigo, ofertasDeImoveis, ofertasDeVeiculos, type AnimalDoAbrigo, type OfertaImovel, type OfertaVeiculo } from './mercado';
 import { disponivel, rendaPropriaMensal, seguranca } from './dinheiro';
 import { quartosNecessarios } from './imoveis';
@@ -31,6 +31,7 @@ import { modeloMoradia, modeloVeiculo, versaoVeiculo } from '../dados/bens';
 import { produto, type ProdutoInvestimento } from '../dados/investimentos';
 import { condicoesImovel, condicoesVeiculo } from '../acoes';
 import { semana } from './semana';
+import { perfilParaVaga, type PerfilVaga } from './empregabilidade';
 
 export interface Relevante<T> { item: T; motivo: string; pontos: number }
 
@@ -106,37 +107,58 @@ export function atividadesParaVoce(v: Vida): { para: Relevante<ModeloRotina>[]; 
 
 /* ------------------------------------------------------------------ Vagas */
 
-const minhaArea = (v: Vida, oc: Ocupacao) => {
-  const areas = new Set(v.educacao.concluidos.map(c => c.area));
-  return (v.trabalho.experiencia[oc.trilha] ?? 0) >= 12 || !!oc.area?.some(a => areas.has(a)) || (!!oc.habilidade && habilidade(v, oc.habilidade.dominio) >= oc.habilidade.minimo);
-};
+export interface Vaga { oc: Ocupacao; d: Veredito; perfil?: PerfilVaga }
 
-export interface Vaga { oc: Ocupacao; d: Veredito }
+export interface VagasEmCamadas {
+  /** A sua trajetória: a estrada, a formação, o próximo degrau. */
+  trajetoria: Relevante<Vaga>[];
+  /** Relacionadas: vizinhas, a estrada que se transfere, o ofício que se sabe. */
+  relacionadas: Relevante<Vaga>[];
+  /** Outros caminhos: tudo o mais que está ao alcance. */
+  outras: Relevante<Vaga>[];
+}
 
 /**
- * Vagas ao alcance, pela sua vida: o próximo degrau da estrada, a sua área
- * (estrada, formação, ofício), o que dá para começar. Um passo atrás no
- * salário não vira sugestão.
+ * As vagas ao alcance, em camadas pela vida acumulada: quem construiu uma
+ * trajetória clara vê primeiro o que continua essa trajetória (um doutorado
+ * em Nutrição → nutricionista especialista, docência superior), depois o que
+ * se relaciona, e só então os outros caminhos — que continuam possíveis.
+ * Um passo atrás (bem abaixo da formação ou do cargo) nunca é a primeira
+ * camada.
+ */
+export function vagasEmCamadas(v: Vida): VagasEmCamadas {
+  const atual = v.trabalho.atual ? ocupacao(v.trabalho.atual.ocupacaoId) : undefined;
+  const alcance = OCUPACOES.filter(oc => !oc.concurso && oc.id !== atual?.id && oc.entrada !== 'eleicao' && oc.entrada !== 'negocio' && oc.entrada !== 'oportunidade')
+    .map(oc => ({ oc, d: elegibilidade(v, oc) })).filter(x => podeTentar(x.d));
+  const out: VagasEmCamadas = { trajetoria: [], relacionadas: [], outras: [] };
+  for (const x of alcance) {
+    const perfil = perfilParaVaga(v, x.oc);
+    let pontos = perfil.compatibilidade * 1.5 + (x.d.chance ?? 0.4) * 1.5 + x.oc.nivel * 0.25;
+    if (atual && x.oc.salario < atual.salario * 0.95 && perfil.camada !== 'trajetoria') pontos -= 2;
+    if (!atual && !v.trabalho.historico.length && x.oc.nivel <= 1) pontos += 1;
+    if (atual && degrausAcima(atual).some(d => d.id === x.oc.id)) pontos += 3;
+    const item: Relevante<Vaga> = { item: { ...x, perfil }, motivo: perfil.porque, pontos };
+    (perfil.camada === 'trajetoria' ? out.trajetoria : perfil.camada === 'relacionada' ? out.relacionadas : out.outras).push(item);
+  }
+  for (const l of [out.trajetoria, out.relacionadas, out.outras]) l.sort((a, b) => b.pontos - a.pontos);
+  return out;
+}
+
+/**
+ * As primárias (poucas, com motivo) e o resto. As primárias vêm da sua
+ * trajetória; sem trajetória ainda, das relacionadas; sem nada, algumas
+ * para começar.
  */
 export function vagasParaVoce(v: Vida): { para: Relevante<Vaga>[]; resto: Vaga[] } {
-  const atual = v.trabalho.atual ? ocupacao(v.trabalho.atual.ocupacaoId) : undefined;
-  const acima = new Set(atual ? degrausAcima(atual).map(x => x.id) : []);
-  const alcance = OCUPACOES.filter(oc => !oc.concurso && oc.id !== atual?.id).map(oc => ({ oc, d: elegibilidade(v, oc) })).filter(x => podeTentar(x.d));
-  const lista = alcance.map(x => {
-    let pontos = 0;
-    let motivo = '';
-    let maior = 0;
-    const add = (p: number, porque: string) => { if (porque && p > maior) { motivo = porque; maior = p; } pontos += p; };
-    if (acima.has(x.oc.id)) add(4, 'O próximo passo da sua estrada.');
-    if (minhaArea(v, x.oc)) add(3, porContaPropria(x.oc) ? 'Você sabe fazer isso.' : 'Na sua área.');
-    if (!atual && x.oc.nivel <= 1) add(1.2, 'Para começar.');
-    add((x.d.chance ?? 0) * 1.5, '');
-    if (atual && x.oc.salario < atual.salario * 0.95 && !acima.has(x.oc.id)) pontos -= 3;
-    if (experienciaNaTrilha(v, x.oc.trilha) >= 24 && x.oc.nivel >= (atual?.nivel ?? 0)) add(1, 'Sua experiência conta aqui.');
-    return { item: x, motivo: motivo || 'Ao seu alcance.', pontos };
-  });
-  return primarias(lista, MAX_PRIMARIAS.vagas);
+  const c = vagasEmCamadas(v);
+  const base = c.trajetoria.length ? c.trajetoria : c.relacionadas.length ? c.relacionadas : c.outras.map(x => ({ ...x, motivo: x.item.oc.nivel <= 1 ? 'Para começar.' : x.motivo }));
+  const para = base.slice(0, MAX_PRIMARIAS.vagas);
+  const usados = new Set(para.map(x => x.item.oc.id));
+  const resto = [...c.trajetoria, ...c.relacionadas, ...c.outras].filter(x => !usados.has(x.item.oc.id)).map(x => x.item);
+  return { para, resto };
 }
+
+void habilidade; void experienciaNaTrilha; void porContaPropria;
 
 /* ----------------------------------------------------------------- Cursos */
 
@@ -168,6 +190,11 @@ export function cursosParaVoce(v: Vida): { para: Relevante<CursoOpcoes>[]; resto
     if (n === 'superior' && ['medio', 'tecnico'].includes(esc)) add(1.5, 'O próximo nível da sua formação.');
     if (n === 'tecnico' && ['medio', 'medio_incompleto'].includes(esc)) add(1.2, 'Formação mais curta, com ofício.');
     if ((n === 'pos' || n === 'mestrado') && esc === 'superior') add(1, 'Depois da graduação.');
+    // A pós que continua a formação que você tem (e carrega a área dela): o caminho da universidade e da especialização.
+    const area = areaDaPos(v, c.curso);
+    if (n === 'mestrado' && area) add(2.2, `O caminho da universidade: um ${nomeDaFormacao(c.curso, area).replace(/^Mestrado/, 'mestrado')} abre a docência em faculdade e o doutorado.`);
+    if (n === 'doutorado' && area) add(3.2, `Depois do mestrado: o ${nomeDaFormacao(c.curso, area).replace(/^Doutorado/, 'doutorado')} abre a pesquisa e a universidade.`);
+    if (c.curso.id === 'especializacao' && area) add(1.6, `Aprofunda o que você faz: a ${nomeDaFormacao(c.curso, area).replace(/^Especialização/, 'especialização')} conta como estrada nas vagas da área.`);
     if (areasDaEstrada.has(c.curso.area)) add(3, 'Abre portas na área em que você já trabalha.');
     for (const [d, w] of Object.entries(c.curso.pratica ?? {}) as [Dominio, number][]) {
       const f = v.caminhos.frentes[d];
@@ -184,6 +211,27 @@ export function cursosParaVoce(v: Vida): { para: Relevante<CursoOpcoes>[]; resto
   const r = primarias(lista, MAX_PRIMARIAS.cursos);
   const usados = new Set(r.para.map(x => x.item.curso.id));
   return { para: r.para, resto: cursosAgrupados(v).filter(c => !usados.has(c.curso.id)) };
+}
+
+/* ------------------------------------------------------------ Vestibular */
+
+export interface AlvoDoEnem { curso: Curso; nota: number; corte: number; situacao: 'acima' | 'perto' | 'longe' | 'sem_nota' }
+
+/**
+ * A nota do ENEM diante dos cursos que fazem sentido para esta vida: acima
+ * do corte, perto (lista de espera), longe — com o corte dito. É o "estou
+ * melhorando?" de quem se prepara para o vestibular.
+ */
+export function alvosDoEnem(v: Vida, max = 4): AlvoDoEnem[] {
+  const cota = temCota(v);
+  const sup = cursosParaVoce(v);
+  const lista = [...sup.para.map(x => x.item), ...sup.resto].filter(c => c.curso.nivel === 'superior' && c.curso.publica !== null && c.curso.corte > 0);
+  return lista.slice(0, max).map(c => {
+    const nota = notaParaCurso(v, c.curso);
+    const corte = c.curso.corte - (cota ? 45 : 0);
+    const situacao: AlvoDoEnem['situacao'] = nota === 0 ? 'sem_nota' : nota >= corte ? 'acima' : nota >= corte - 30 ? 'perto' : 'longe';
+    return { curso: c.curso, nota, corte, situacao };
+  });
 }
 
 /* ------------------------------------------------------------ Vida material */

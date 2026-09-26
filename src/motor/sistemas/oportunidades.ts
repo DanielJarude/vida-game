@@ -93,7 +93,7 @@ export function processarOportunidades(v: Vida, r: Rng): void {
       if (oc) {
         const onde = porContaPropria(oc) ? 'passar serviço para você' : 'indicar você onde trabalha';
         novaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.p.id, meses: 12, chave: 'indicacao', bonus: 0.28, titulo: `Indicação de ${quem.p.nome}`,
-          texto: `${quem.p.nome}, que trabalha como ${quem.p.ocupacao}, disse que pode ${onde}: ${nomeOcupacao(v, oc)}.` });
+          texto: `${quem.p.nome}, que trabalha como ${quem.p.ocupacao}, disse que pode ${onde}: ${nomeOcupacao(v, oc)}${porContaPropria(oc) ? ' — por conta própria (clientes seus, preço seu, sem patrão nem salário fixo)' : ' — vaga de emprego, com entrevista'}.` });
       }
     }
   }
@@ -165,8 +165,12 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   }
 
   // Pesquisa depois do doutorado.
-  if (v.educacao.concluidos.some(c => c.nivel === 'doutorado') && semTrabalho(v) && podeGerar(v, 'posdoc', 3) && r.chance(0.5)) {
-    novaOportunidade(v, { tipo: 'bolsa', ocupacaoId: 'pesquisador', meses: 12, chave: 'posdoc', titulo: 'Bolsa de pesquisa', texto: 'Um programa de pós-graduação abriu bolsa de pós-doutorado na sua área. Dois anos de pesquisa, sem vínculo.' });
+  // Quem trabalha fora da pesquisa também recebe o chamado (menos: quem está longe da universidade ouve menos) — a vida acumulada abre a porta.
+  const doutorado = [...v.educacao.concluidos].filter(c => c.nivel === 'doutorado').sort((a, b) => b.tFim - a.tFim)[0];
+  const naPesquisa = ['pesquisador', 'professor_univ', 'pesquisador_instituto'].includes(v.trabalho.atual?.ocupacaoId ?? '');
+  if (doutorado && !naPesquisa && i <= 55 && podeGerar(v, 'posdoc', 3) && r.chance(semTrabalho(v) ? 0.5 : v.t - doutorado.tFim <= 96 ? 0.25 : 0.1)) {
+    const area = doutorado.nome.replace(/^Doutorado ?/, '').replace(/^em /, '');
+    novaOportunidade(v, { tipo: 'bolsa', ocupacaoId: 'pesquisador', meses: 12, chave: 'posdoc', titulo: 'Bolsa de pesquisa', texto: `Um programa de pós-graduação abriu bolsa de pós-doutorado${area ? ` em ${area}` : ' na sua área'}. Dois anos de pesquisa, sem vínculo.` });
   }
 
   // A terra da família.

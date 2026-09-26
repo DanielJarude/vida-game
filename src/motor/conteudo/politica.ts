@@ -23,7 +23,7 @@ import {
   podeConcorrer, PRIORIDADES, registrarCandidatura, renunciar, voltarAoTrabalho, perspectiva, regraDaTroca, trocarDePartido } from '../sistemas/politica';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt } from '../texto';
-import { aoPartido, nomeCompletoPartido, oPartido, partidoDe } from '../dados/partidos';
+import { aoPartido, nomeCompletoPartido, oPartido, partidoDe, peloPartido } from '../dados/partidos';
 
 const doPartido = (s: string | undefined) => { const p = partidoDe(s); return p ? `${p.artigo === 'a' ? 'da' : 'do'} ${p.chamado}` : 'do partido'; };
 
@@ -96,7 +96,18 @@ function filiar(c: Ctx, k: number): Resultado {
     texto: `Assinou a ficha de filiação ${doPartido(sigla)}. Uma foto, um aperto de mão, um grupo de mensagens novo.`,
     memoria: `Filiou-se ${aoPartido(sigla)}.`,
     relevancia: 'biografia',
-    efeito: () => { const p = pol(c); p.partido = sigla; p.tFiliacao = c.v.t; (p.partidos ??= []).push({ sigla, tInicio: c.v.t }); p.fase = p.fase === 'envolvido' ? 'filiado' : p.fase; c.v.fatos['pol_partido_porte'] = k; marcar(c.v, 'politica', `Filiou-se ${aoPartido(sigla)}.`, 2); }
+    efeito: () => { const p = pol(c); if (p.indicacaoMilitar && p.partido) { const aberto = (p.partidos ?? []).find(x => x.sigla === p.partido && x.tFim === undefined); if (aberto) aberto.tFim = c.v.t; } p.indicacaoMilitar = undefined; p.partido = sigla; p.tFiliacao = c.v.t; (p.partidos ??= []).push({ sigla, tInicio: c.v.t }); p.fase = p.fase === 'envolvido' ? 'filiado' : p.fase; c.v.fatos['pol_partido_porte'] = k; marcar(c.v, 'politica', `Filiou-se ${aoPartido(sigla)}.`, 2); }
+  };
+}
+
+/** Militar da ativa: o partido escolhe o nome em convenção; não há ficha de filiação. */
+function indicar(c: Ctx, k: number): Resultado {
+  const sigla = partidosOferecidos(c)[k];
+  return {
+    texto: `${cap(oPartido(sigla))} vai levar o seu nome à convenção. Sem ficha, sem carteirinha: a farda continua até o registro.`,
+    memoria: `Aceitou a indicação ${doPartido(sigla)} para disputar uma eleição, ainda na ativa.`,
+    relevancia: 'biografia',
+    efeito: () => { const p = pol(c); p.partido = sigla; p.tFiliacao = undefined; p.indicacaoMilitar = true; (p.partidos ??= []).push({ sigla, tInicio: c.v.t }); p.fase = p.fase === 'envolvido' ? 'filiado' : p.fase; c.v.fatos['pol_partido_porte'] = k; marcar(c.v, 'politica', `Indicado ${peloPartido(sigla)}, ainda na farda.`, 2); }
   };
 }
 
@@ -166,6 +177,15 @@ export const POLITICA: Conteudo[] = [
     opcoes: [
       ...[0, 1, 2].map(k => ({ id: `p${k}`, texto: (c: Ctx) => `Filiar-se ${aoPartido(partidosOferecidos(c)[k])}`, consequencia: (c: Ctx) => nomeCompletoPartido(partidosOferecidos(c)[k]), resolver: (c: Ctx) => filiar(c, k) })),
       { id: 'nenhum', texto: 'Ainda não se filiar', resolver: () => ({ texto: 'Você disse que ia pensar.', memoria: null }) }
+    ]
+  },
+  {
+    id: 'pol_indicacao', tipo: 'decisao', idade: [18, 95], tema: 'escolha', manual: true, repetir: 0, biografica: true,
+    titulo: 'A indicação',
+    texto: c => `Farda não se filia — mas pode disputar, se um partido escolher o seu nome na convenção. Três partidos toparam conversar. ${partidosOferecidos(c).map((p, k) => `${cap(oPartido(p))}: ${PORTE[k]}.`).join(' ')}`,
+    opcoes: [
+      ...[0, 1, 2].map(k => ({ id: `p${k}`, texto: (c: Ctx) => `Aceitar a indicação ${doPartido(partidosOferecidos(c)[k])}`, consequencia: (c: Ctx) => `${nomeCompletoPartido(partidosOferecidos(c)[k])} — sem ficha de filiação: você segue na ativa até registrar a candidatura.`, resolver: (c: Ctx) => indicar(c, k) })),
+      { id: 'nenhum', texto: 'Ainda não aceitar nenhuma', resolver: () => ({ texto: 'Você agradeceu e disse que ia pensar.', memoria: null }) }
     ]
   },
   {

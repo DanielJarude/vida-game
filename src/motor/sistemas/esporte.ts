@@ -62,7 +62,7 @@ export function nomeDeClube(municipioId: string, semente: string, d: Dominio = '
 }
 
 /** Onde fica a peneira: no futebol, onde há clube com base; nos outros esportes, onde há estrutura — senão, na capital. */
-function ondeTreina(v: Vida, d: Dominio = 'futebol'): string {
+export function ondeTreina(v: Vida, d: Dominio = 'futebol'): string {
   const aqui = v.moradia.municipioId;
   if (d === 'futebol') return clubesDaCidade(aqui).length ? aqui : capitalDoEstado(aqui);
   return estruturaEsportiva(aqui) >= 1 ? aqui : capitalDoEstado(aqui);
@@ -126,6 +126,13 @@ export function processarEsporte(v: Vida, r: Rng): void {
     }
   }
 
+  // A foto da técnica, uma vez por ano: é o que deixa a tela dizer se o treino do ano apareceu.
+  for (const x of v.rotinas) {
+    if (!MODALIDADES.includes(x.id as Dominio)) continue;
+    const agora = Math.round(habilidade(v, x.id as Dominio) * 10) / 10;
+    if (v.fatos[`tec_${x.id}`] !== undefined) v.fatos[`tec_${x.id}_antes`] = v.fatos[`tec_${x.id}`];
+    v.fatos[`tec_${x.id}`] = agora;
+  }
   if (!e) return;
   if (e.fase === 'base') anoNaBase(v, r, e);
   else if (e.fase === 'profissional') anoProfissional(v, r, e);

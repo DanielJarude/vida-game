@@ -133,10 +133,11 @@ export const CURSOS: readonly Curso[] = [
 
   // ------------------------------------------------------ Pós-graduação
   { id: 'mba', nome: 'MBA em Gestão', nivel: 'pos', area: 'qualquer', meses: 18, publica: null, privada: 1, ead: true, mensalidade: 750, corte: 0, carga: 'parcial', descricao: 'Especialização de fim de semana para quem já trabalha.', pratica: { lideranca: 0.5 } },
+  { id: 'especializacao', nome: 'Especialização', nivel: 'pos', area: 'qualquer', meses: 18, publica: null, privada: 0, ead: true, mensalidade: 480, corte: 0, carga: 'parcial', descricao: 'Pós lato sensu na área em que você se formou: aprofunda o que já faz e pesa no currículo.' },
   { id: 'esp_educacao', nome: 'Especialização em Educação', nivel: 'pos', area: 'educacao', meses: 18, publica: null, privada: 0, ead: true, mensalidade: 280, corte: 0, requerArea: 'educacao', carga: 'parcial', descricao: 'Soma pontos na carreira docente.' },
   { id: 'residencia', nome: 'Residência Médica', nivel: 'residencia', area: 'medicina', meses: 36, publica: 2, privada: null, ead: false, mensalidade: 0, corte: 0, requerArea: 'medicina', bolsa: 4100, carga: 'integral', descricao: 'Três anos de plantão e especialização, com bolsa.' },
-  { id: 'mestrado', nome: 'Mestrado', nivel: 'mestrado', area: 'qualquer', meses: 24, publica: 1, privada: null, ead: false, mensalidade: 0, corte: 0, bolsa: 2100, carga: 'integral', descricao: 'Pesquisa, com bolsa quando há vaga.' },
-  { id: 'doutorado', nome: 'Doutorado', nivel: 'doutorado', area: 'qualquer', meses: 48, publica: 2, privada: null, ead: false, mensalidade: 0, corte: 0, bolsa: 3100, carga: 'integral', descricao: 'Quatro anos de pesquisa. Porta da carreira acadêmica.' }
+  { id: 'mestrado', nome: 'Mestrado', nivel: 'mestrado', area: 'qualquer', meses: 24, publica: 1, privada: null, ead: false, mensalidade: 0, corte: 0, bolsa: 2100, carga: 'integral', descricao: 'Dois anos de pesquisa na área da sua graduação, com bolsa quando há vaga. Abre a docência no ensino superior e o doutorado.' },
+  { id: 'doutorado', nome: 'Doutorado', nivel: 'doutorado', area: 'qualquer', meses: 48, publica: 2, privada: null, ead: false, mensalidade: 0, corte: 0, bolsa: 3100, carga: 'integral', descricao: 'Quatro anos de pesquisa na área do seu mestrado. Porta da carreira acadêmica: universidade, pós-doutorado, institutos de pesquisa.' }
 ];
 
 const POR_ID = new Map(CURSOS.map(c => [c.id, c]));

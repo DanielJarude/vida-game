@@ -318,7 +318,9 @@ export const ROTINAS: readonly ModeloRotina[] = [
     pratica: { linguagens: 0.4, humanas: 0.4, exatas: 0.3 }, comportamento: { disciplina: 1 },
     efeito: (v, _r, n) => {
       marcarFato(v, 'estudando_concurso');
-      v.caminhos.concurso.meses += [6, 12, 20][n - 1];
+      const ganho = [6, 12, 20][n - 1];
+      v.caminhos.concurso.meses += ganho;
+      if (v.caminhos.concurso.foco) v.caminhos.concurso.mesesFoco = (v.caminhos.concurso.mesesFoco ?? 0) + ganho;
     }
   },
 

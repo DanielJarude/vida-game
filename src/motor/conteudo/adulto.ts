@@ -17,6 +17,7 @@ import { mudarAgora } from '../sistemas/processos';
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 import { comChefia } from '../sistemas/ritmo';
+import { noTrabalho } from '../sistemas/ambiente';
 import { categoriaDoVeiculo, textoVeiculo } from '../sistemas/veiculos';
 
 // Emprego comum: o atleta (contrato especial, Lei Pelé) tem as próprias situações — clube, contrato, banco.
@@ -30,7 +31,7 @@ export const ADULTO: Conteudo[] = [
   /* ============================================================ TRABALHO */
   {
     id: 'adu_chefe_novo', tipo: 'acontecimento', idade: [19, 64], tema: 'trabalho', repetir: 6,
-    quando: c => empregado(c) && comChefia(c.v.trabalho.atual),
+    quando: c => empregado(c) && comChefia(c.v.trabalho.atual) && noTrabalho(c.v, 'organizacao', 'colegas'),
     narrar: c => {
       const bom = c.r.chance(0.5);
       const e = c.v.trabalho.atual!;
@@ -52,6 +53,8 @@ export const ADULTO: Conteudo[] = [
   {
     id: 'adu_colega_demitido', tipo: 'decisao', idade: [19, 64], tema: 'trabalho', repetir: 6,
     papeis: { colega: P.genteDe('trabalho') },
+    // "O corte de fim de ano" é de empresa com equipe (não de quem trabalha por conta nem em casa de família).
+    quando: c => c.v.trabalho.atual?.contrato === 'clt' && noTrabalho(c.v, 'organizacao', 'colegas'),
     titulo: 'Corte',
     texto: c => `${c.p.colega.nome} foi demitid${gp(c, 'colega', 'o', 'a')} no corte de fim de ano. ${gp(c, 'colega', 'Ele', 'Ela')} tem dois filhos e mandou mensagem perguntando se você sabe de alguma vaga.`,
     opcoes: [
@@ -119,7 +122,7 @@ export const ADULTO: Conteudo[] = [
   },
   {
     id: 'adu_empresa_fecha', tipo: 'acontecimento', idade: [18, 64], tema: 'trabalho', repetir: 15,
-    quando: c => empregado(c) && ['clt'].includes(c.v.trabalho.atual!.contrato) && c.r.chance(0.3),
+    quando: c => empregado(c) && ['clt'].includes(c.v.trabalho.atual!.contrato) && noTrabalho(c.v, 'organizacao') && c.r.chance(0.3),
     narrar: c => ({
       texto: (() => {
         const e = c.v.trabalho.atual!;
@@ -137,7 +140,7 @@ export const ADULTO: Conteudo[] = [
   {
     id: 'adu_festa_firma', tipo: 'decisao', idade: [20, 64], tema: 'trabalho', repetir: 4,
     papeis: { colega: P.genteDe('trabalho') },
-    quando: c => empregado(c) && comChefia(c.v.trabalho.atual),
+    quando: c => empregado(c) && comChefia(c.v.trabalho.atual) && noTrabalho(c.v, 'organizacao', 'colegas'),
     titulo: 'Confraternização',
     texto: c => `Festa de fim de ano da firma, open bar. ${c.p.colega.nome} já bebeu demais e está falando mal da diretoria em voz alta, perto do diretor.`,
     opcoes: [

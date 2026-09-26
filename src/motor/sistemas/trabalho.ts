@@ -41,7 +41,7 @@ import { pertoDaAgua } from '../dados/lugares';
 import { antecedenteAdulto, penaDeAntecedentes } from './justica';
 import { fatorDaEpoca, riscoDaEpoca } from './carreira';
 import { familiaDaTrilha } from '../dados/carreiras';
-import { aoEntrarNasForcas, aoFormarNasForcas, horizonteMilitar, processarMilitar } from './militar';
+import { aoEntrarNasForcas, aoFormarNasForcas, horizonteMilitar, processarMilitar, proximoPassoMilitar } from './militar';
 import { climaDe, deltaDeFreguesia, fatorDeFreguesia, fatorJornada, ritmoDe } from './ritmo';
 
 export const nomeOcupacao = (v: Vida, oc: Ocupacao) => nomeDoPosto(oc.id, v.caminhos?.militar?.forca, ge(v) === 'feminino') ?? (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
@@ -63,8 +63,8 @@ export const anosDeServicoMilitar = (v: Vida) => Math.floor([...MILITARES].reduc
 
 const EMPREGADORES: Record<string, string[]> = {
   informal: ['por conta própria'], cuidado: ['uma família do bairro', 'uma casa de repouso'], transporte: ['os aplicativos'], estrada: ['uma transportadora', 'uma empresa de ônibus'],
-  beleza: ['um salão do bairro'], comercio: ['um supermercado', 'uma loja de roupas', 'uma loja de departamento', 'uma farmácia de rede', 'uma loja de materiais de construção'],
-  vendas: ['uma distribuidora', 'uma imobiliária'], alimentacao: ['um restaurante', 'uma lanchonete', 'uma padaria', 'um bar do centro'], confeitaria: ['por encomenda'],
+  beleza: ['um salão do bairro', 'uma rede de salões'], comercio: ['um supermercado', 'uma loja de roupas', 'uma loja de departamento', 'uma farmácia de rede', 'uma loja de materiais de construção'],
+  vendas: ['uma distribuidora', 'uma imobiliária'], alimentacao: ['um restaurante', 'uma lanchonete', 'uma padaria', 'um bar do centro'], confeitaria: ['por encomenda', 'uma padaria', 'uma confeitaria do bairro'],
   administrativo: ['um escritório de contabilidade', 'uma distribuidora', 'uma clínica', 'uma empresa de logística', 'uma concessionária'], contabil: ['um escritório de contabilidade'],
   logistica: ['um centro de distribuição', 'uma transportadora', 'um atacadista'], ti: ['uma empresa de software', 'uma startup', 'um banco digital', 'uma consultoria de tecnologia'],
   dados: ['um banco', 'uma varejista grande', 'uma consultoria'], enfermagem: ['o hospital municipal', 'um hospital particular', 'uma UPA'], radiologia: ['uma clínica de imagem', 'o hospital regional'],
@@ -72,10 +72,10 @@ const EMPREGADORES: Record<string, string[]> = {
   nutricao: ['uma clínica', 'uma rede de academias'], fisioterapia: ['uma clínica de reabilitação', 'o hospital regional'], odontologia: ['um consultório'], farmacia: ['uma farmácia', 'um laboratório'],
   veterinaria: ['uma clínica veterinária', 'uma cooperativa agrícola'], educacao_fisica: ['uma academia'], direito: ['um escritório de advocacia'], engenharia: ['uma construtora', 'uma incorporadora'],
   arquitetura: ['por conta própria'], eng_industrial: ['uma fábrica', 'uma montadora'], educacao: ['uma escola particular', 'uma creche', 'a rede municipal de ensino'], idiomas: ['um curso de idiomas'],
-  ensino_tecnico: ['uma escola técnica'], academia: ['a universidade'], construcao: ['uma empreiteira', 'obras do bairro'], manutencao: ['uma empresa de manutenção'], eletrica: ['uma empresa de instalações'],
+  ensino_tecnico: ['uma escola técnica'], academia: ['a universidade'], docencia_superior: ['uma faculdade particular', 'um centro universitário'], domestico: ['uma família', 'uma casa de família'], construcao: ['uma empreiteira', 'obras do bairro'], manutencao: ['uma empresa de manutenção'], eletrica: ['uma empresa de instalações', 'uma empresa de manutenção predial'],
   mecanica: ['uma oficina', 'uma concessionária'], industria: ['uma fábrica', 'uma metalúrgica'], tecnico_industrial: ['uma fábrica', 'uma indústria da região'], seguranca_trabalho: ['uma construtora', 'uma fábrica'],
   agro: ['uma fazenda da região', 'uma cooperativa agrícola'], campo: ['a própria terra'], design: ['uma agência', 'uma editora'], ilustracao: ['por encomenda'], artesanato: ['feiras e encomendas'],
-  imagem: ['por encomenda'], comunicacao: ['um portal de notícias', 'uma agência', 'um jornal da região'], conteudo: ['a internet'], literatura: ['uma editora'], musica: ['bares, festas e casamentos'],
+  imagem: ['por encomenda', 'um estúdio de fotografia'], comunicacao: ['um portal de notícias', 'uma agência', 'um jornal da região'], conteudo: ['a internet'], literatura: ['uma editora'], musica: ['bares, festas e casamentos'],
   orquestra: ['a orquestra sinfônica'], cena: ['uma companhia de teatro'], danca: ['uma companhia de dança'], atleta: ['o clube'], treino: ['uma escolinha do bairro', 'um clube'], arbitragem: ['a federação'],
   vigilancia: ['uma empresa de segurança'], exercito_praca: ['o Exército'], exercito_sargento: ['o Exército'], exercito_oficial: ['o Exército'], pm: ['a Polícia Militar'], bombeiro: ['o Corpo de Bombeiros'],
   guarda: ['a prefeitura'], policia_civil: ['a Polícia Civil'], financas: ['um banco', 'uma corretora'], publico: ['a prefeitura'], judiciario: ['o Tribunal Regional'], fiscal: ['a Receita']
@@ -83,10 +83,13 @@ const EMPREGADORES: Record<string, string[]> = {
 
 /** Quem entra sem concurso não trabalha para a rede pública direta (e não seria "cortado" dela): só os empregadores que contratam assim. */
 const SO_POR_CONCURSO = new Set(['a rede municipal de ensino', 'a prefeitura', 'a Unidade Básica de Saúde']);
-function empregadoresPrivados(trilha: string): string[] {
+/** Quem trabalha por conta não trabalha "numa empresa": o lugar dele é a própria freguesia. */
+const DE_QUEM_E_POR_CONTA = /^(por |a própria|a internet|feiras|bares|os aplicativos)/;
+function empregadoresPrivados(trilha: string, porConta = false): string[] {
   const todos = EMPREGADORES[trilha] ?? ['uma empresa'];
-  const livres = todos.filter(x => !SO_POR_CONCURSO.has(x));
-  return livres.length ? livres : todos;
+  if (porConta) { const proprios = todos.filter(x => DE_QUEM_E_POR_CONTA.test(x)); return proprios.length ? proprios : ['por conta própria']; }
+  const livres = todos.filter(x => !SO_POR_CONCURSO.has(x) && !DE_QUEM_E_POR_CONTA.test(x));
+  return livres.length ? livres : ['uma empresa'];
 }
 
 /* ---------------------------------------------------------- Elegibilidade */
@@ -198,13 +201,16 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
 
   // Experiência: requisito duro abaixo da metade; improvável entre metade e o total.
   // Para liderar, só conta a estrada na própria área: afins ajudam a entrar, não a chefiar.
-  const exp = oc.nivel >= 4 ? (v.trabalho.experiencia[oc.trilha] ?? 0) : experienciaNaTrilha(v, oc.trilha);
+  // A formação avançada NA ÁREA (especialização, mestrado, doutorado) conta como estrada — até o nível de especialista, não o de chefia.
+  const tit = oc.nivel <= 4 ? titulacaoNaTrilha(v, oc) : { meses: 0 };
+  const exp = (oc.nivel >= 4 ? (v.trabalho.experiencia[oc.trilha] ?? 0) : experienciaNaTrilha(v, oc.trilha)) + tit.meses;
+  const contando = tit.meses && tit.nome ? ` (contando ${tit.nome.startsWith('Especialização') ? 'a' : 'o'} ${tit.nome.charAt(0).toLowerCase() + tit.nome.slice(1)} como estrada)` : '';
   let chance = chanceBase(v, oc, bonus);
   if (oc.experiencia && via !== 'promocao') {
-    if (exp < oc.experiencia / 2) return bloqueio('requisito', `Pedem ${anosTxt(oc.experiencia)} de experiência na área; você tem ${anosTxt(exp)}.`);
+    if (exp < oc.experiencia / 2) return bloqueio('requisito', `Pedem ${anosTxt(oc.experiencia)} de experiência na área; você tem ${anosTxt(exp)}${contando}.`);
     if (exp < oc.experiencia) {
       chance *= 0.35;
-      return { grau: 'improvavel', chance, motivo: `Pedem ${anosTxt(oc.experiencia)} de experiência; você tem ${anosTxt(exp)}.` };
+      return { grau: 'improvavel', chance, motivo: `Pedem ${anosTxt(oc.experiencia)} de experiência; você tem ${anosTxt(exp)}${contando}.` };
     }
   }
   if (via === 'promocao' && oc.experiencia && exp < oc.experiencia) return bloqueio('requisito', `Pede ${anosTxt(oc.experiencia)} de estrada na área.`);
@@ -226,6 +232,28 @@ const MOTIVO_HABILIDADE: Partial<Record<Dominio, string>> = {
   campo: 'Precisa conhecer o trabalho da terra.'
 };
 
+const TRILHAS_ACADEMICAS = new Set(['academia', 'pesquisa', 'docencia_superior']);
+
+/**
+ * A formação avançada que conta como estrada nesta vaga: uma especialização
+ * vale um ano; mestrado, dois; doutorado, três — se for NA ÁREA da vaga
+ * (na universidade e na docência superior, qualquer pós stricto sensu conta).
+ * É o que faz a vida acumulada mudar as portas: um doutorado em Nutrição
+ * pesa numa vaga de nutricionista especialista; não pesa numa de caixa.
+ */
+export function titulacaoNaTrilha(v: Vida, oc: Ocupacao): { meses: number; nome?: string } {
+  const areas = (oc.area ?? []).filter(a => a !== 'qualquer') as string[];
+  const acad = TRILHAS_ACADEMICAS.has(oc.trilha);
+  let melhor = { meses: 0 as number, nome: undefined as string | undefined };
+  for (const c of v.educacao.concluidos) {
+    const meses = c.nivel === 'doutorado' ? 36 : c.nivel === 'mestrado' ? 24 : c.nivel === 'residencia' ? 24 : c.nivel === 'pos' ? 12 : 0;
+    if (!meses) continue;
+    const vale = acad ? c.nivel !== 'pos' && c.nivel !== 'residencia' : areas.includes(c.area);
+    if (vale && meses > melhor.meses) melhor = { meses, nome: c.nome };
+  }
+  return melhor;
+}
+
 export function anosTxt(meses: number): string {
   const a = Math.floor(meses / 12);
   if (a === 0) return meses === 0 ? 'nenhuma' : 'menos de um ano';
@@ -240,10 +268,12 @@ function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   c += v.personalidade.tracos.sociabilidade / 600;
   c -= oc.nivel * 0.035;
   // Mais estrada do que pedem e um ofício bem aprendido contam.
-  const exp = experienciaNaTrilha(v, oc.trilha);
+  const exp = experienciaNaTrilha(v, oc.trilha) + titulacaoNaTrilha(v, oc).meses;
   if (exp > (oc.experiencia ?? 0)) c += Math.min(0.12, (exp - (oc.experiencia ?? 0)) / 300);
   if (oc.habilidade) c += Math.max(-0.1, Math.min(0.12, (habilidade(v, oc.habilidade.dominio) - oc.habilidade.minimo) / 150));
   if (!oc.area && v.educacao.concluidos.some(x => x.nivel !== 'livre' && x.tFim > v.t - 60)) c += 0.04;
+  // Muito mais formação do que a vaga pede (e de outra área): quem contrata teme que a pessoa saia logo.
+  if (oc.nivel <= 2 && !oc.area && !oc.habilidade && !porContaPropria(oc) && v.educacao.concluidos.some(x => ['superior', 'pos', 'mestrado', 'doutorado', 'residencia'].includes(x.nivel))) c -= 0.04;
   const setor = forcaDoSetor(v.moradia.municipioId, oc.setor, anoDe(v.t));
   c *= 0.7 + setor * 0.3;
   c *= sobraNaEpoca(oc.declinio, anoDe(v.t)) * fatorDaEpoca(oc, anoDe(v.t));
@@ -282,7 +312,7 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   if (eDasForcas(oc)) aoEntrarNasForcas(v, r, oc);
   const e: Emprego = {
     ocupacaoId: oc.id,
-    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(empregadoresPrivados(oc.trilha)),
+    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(empregadoresPrivados(oc.trilha, porContaPropria(oc))),
     contrato: oc.contrato,
     salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2),
     tInicio: v.t,
@@ -644,8 +674,36 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
  */
 export function degrausAcima(oc: Ocupacao): Ocupacao[] {
   return daTrilha(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && x.entrada !== 'eleicao' && !x.formacaoInicial
-    && (x.entrada !== 'oportunidade' || oc.entrada === 'oportunidade' || !!oc.formacaoInicial || eMilitar(oc)));
+    && (x.entrada !== 'oportunidade' || oc.entrada === 'oportunidade' || !!oc.formacaoInicial || eMilitar(oc))
+    // O modelo de trabalho não muda sozinho: quem é empregado não é "promovido" a trabalhar por conta (nem o contrário) — isso é escolha, com a vaga dizendo o que é.
+    && porContaPropria(x) === porContaPropria(oc));
 }
+
+/**
+ * O modelo de trabalho de uma ocupação, dito ANTES da escolha: vaga de
+ * emprego (alguém contrata e paga salário), por conta própria (você atende
+ * clientes, define preço, a renda é a freguesia), o próprio negócio (caixa,
+ * ponto, equipe), concurso, uma oportunidade (peneira, convite, contrato)
+ * ou mandato.
+ */
+export type ModeloDeTrabalho = 'emprego' | 'por_conta' | 'negocio' | 'concurso' | 'oportunidade' | 'mandato';
+
+export function modeloDeTrabalho(oc: Ocupacao): ModeloDeTrabalho {
+  if (oc.entrada === 'eleicao') return 'mandato';
+  if (oc.entrada === 'negocio') return 'negocio';
+  if (oc.concurso) return 'concurso';
+  if (oc.entrada === 'oportunidade') return 'oportunidade';
+  return porContaPropria(oc) ? 'por_conta' : 'emprego';
+}
+
+export const ROTULO_MODELO: Record<ModeloDeTrabalho, { curto: string; explica: string }> = {
+  emprego: { curto: 'vaga de emprego', explica: 'Alguém contrata: salário todo mês, chefia, e (quase sempre) carteira assinada. Tem entrevista.' },
+  por_conta: { curto: 'por conta própria', explica: 'Você atende os próprios clientes: define o preço, monta a agenda, pode virar MEI. A renda é a freguesia — começa pequena. Sem entrevista.' },
+  negocio: { curto: 'o próprio negócio', explica: 'Você é dono: ponto, caixa, fornecedores, talvez equipe. Abrir custa, e o risco é seu.' },
+  concurso: { curto: 'concurso público', explica: 'Edital, prova, estabilidade depois do estágio probatório.' },
+  oportunidade: { curto: 'por oportunidade', explica: 'Não há vaga aberta: chega por teste, convite ou contrato.' },
+  mandato: { curto: 'mandato', explica: 'Só por eleição.' }
+};
 
 function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): void {
   const anosNoPosto = (v.t - tPosto) / 12;
@@ -678,7 +736,8 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
   const texto = oc.promocao === 'antiguidade'
     ? `${flex(ge(v), 'Promovido', 'Promovida')} a ${nomeOcupacao(v, proximo)}, depois de ${Math.round(anosNoPosto)} anos como ${anterior}.`
     : `${flex(ge(v), 'Promovido', 'Promovida')} de ${anterior} a ${nomeOcupacao(v, proximo)}${/^por /.test(e.empregador) ? '' : ` ${em(e.empregador)}`}.`;
-  escrever(v, { texto, relevancia: proximo.nivel >= 4 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+  // Promoção é conquista: entra como marco da vida, com o degrau nomeado (nunca uma troca silenciosa de título).
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
   marcar(v, proximo.nivel >= 5 ? 'lideranca' : 'promocao', texto, proximo.nivel >= 4 ? 3 : 2, { trilha: proximo.trilha, ocupacaoId: proximo.id });
   v.fatos['promocoes'] = (v.fatos['promocoes'] ?? 0) + 1;
   abalar(v, 'a promoção', 6, 0);
@@ -729,27 +788,106 @@ export function horizonte(v: Vida): string | undefined {
     return c < 20 ? 'A freguesia ainda é pouca: cada cliente conta.' : c < 45 ? 'A freguesia vem crescendo, devagar.' : c < 70 ? 'Já tem clientela fiel.' : 'Não falta trabalho: a agenda está cheia.';
   }
   const acima = degrausAcima(oc);
-  const anosNoPosto = (v.t - (e.tPosto ?? e.tInicio)) / 12;
   if (!acima.length) return oc.nivel >= 4 ? 'É o topo do que essa carreira costuma oferecer.' : 'Não há cargo acima deste nesse tipo de trabalho. Crescer é mudar de área, estudar ou trabalhar por conta.';
-  const x = acima[0];
-  const nome = nomeOcupacao(v, x);
-  const d = elegibilidade(v, x, 'promocao');
-  if (d.grau !== 'permitido' && d.grau !== 'improvavel') {
-    const m = d.motivo ?? '';
-    if (/graduação|curso técnico|formação|Exige /.test(m)) return `O próximo passo (${nome}) pede formação: ${m.replace(/^Exige /, '').replace(/\.$/, '').split('. ')[0].toLowerCase()}.`;
-    if (/estrada|experiência/.test(m)) return `O próximo passo (${nome}) pede mais tempo de estrada.`;
-    if (/cidade maior|Quase não há/.test(m)) return `Cargos de ${nome} quase não existem numa cidade do tamanho de ${municipio(e.municipioId).nome}.`;
-    return `O próximo passo (${nome}) ainda não está ao alcance: ${m.toLowerCase()}`;
-  }
-  if (oc.promocao === 'antiguidade') {
-    const falta = Math.max(0, Math.ceil((oc.anosNoPosto ?? 5) - anosNoPosto));
-    return falta > 0 ? `Pela antiguidade, a promoção a ${nome} vem por volta de ${anoDe(v.t) + falta}.` : `A promoção a ${nome} está perto: é questão de tempo e de vaga.`;
-  }
-  if (anosNoPosto < (oc.anosNoPosto ?? 2)) return `Ainda é cedo: promoção a ${nome} costuma levar uns ${oc.anosNoPosto ?? 2} anos no cargo.`;
-  if (e.desempenho < 62) return `Para chegar a ${nome}, o trabalho precisaria estar indo melhor.`;
-  if (x.nivel >= 4 && nivelDeOferta(e.municipioId) === 0) return `O próximo passo (${nome}) existe, mas em cidade pequena essas vagas são raras.`;
-  return `O próximo passo (${nome}) está ao alcance; depende de uma vaga abrir.`;
+  return proximoPasso(v)?.resumo;
 }
+
+/* ------------------------------------------------------------ Próximo passo */
+
+/**
+ * Um requisito do próximo passo, com o TIPO certo (idade não é formação;
+ * tempo de serviço não é tempo no posto) e, quando é questão de tempo, o
+ * ano em que se cumpre. É o que a tela mostra como lista de "o que falta" —
+ * e o que o `horizonte` resume numa frase.
+ */
+export interface Requisito {
+  tipo: 'idade' | 'servico' | 'posto' | 'experiencia' | 'formacao' | 'registro' | 'curso' | 'fisico' | 'desempenho' | 'cidade' | 'vaga';
+  texto: string;
+  ok: boolean;
+  /** Ano em que se cumpre sozinho (tempo, idade). */
+  ano?: number;
+}
+
+export interface ProximoPasso {
+  destino: string;
+  ocupacaoId: string;
+  /** Como a promoção vem: pelo tempo (antiguidade) ou pela avaliação (mérito). */
+  como: 'antiguidade' | 'merito' | 'clientela';
+  requisitos: Requisito[];
+  /** Ano estimado (antiguidade: quando o último requisito de tempo se cumpre). */
+  previsao?: number;
+  /** A frase de horizonte. */
+  resumo: string;
+}
+
+const eFarda = (oc: Ocupacao) => ['pm', 'pm_oficial', 'bombeiro'].includes(oc.trilha);
+
+/** O próximo passo da carreira de hoje, requisito por requisito (ou nada, se não há degrau acima). */
+export function proximoPasso(v: Vida): ProximoPasso | undefined {
+  const e = v.trabalho.atual;
+  if (!e || e.formacaoAte || e.posAposentadoria || e.contrato === 'eletivo') return undefined;
+  const oc = ocupacao(e.ocupacaoId);
+  if (eDasForcas(oc)) return proximoPassoMilitar(v);
+  const x = e.clientela !== undefined ? degrausAcima(oc).find(d => d.promocao !== 'clientela' || d.contrato === 'autonomo') : degrausAcima(oc).filter(d => e.contrato !== 'servidor' || d.contrato === 'servidor')[0];
+  if (!x) return undefined;
+  const ano = anoDe(v.t);
+  const i = idade(v);
+  const nome = nomeOcupacao(v, x);
+  const reqs: Requisito[] = [];
+  const antiguidade = oc.promocao === 'antiguidade';
+  const como: ProximoPasso['como'] = e.clientela !== undefined ? 'clientela' : antiguidade ? 'antiguidade' : 'merito';
+  const farda = eFarda(oc);
+  // Idade mínima do posto (nunca chamada de formação).
+  if (x.idadeMin > 18) reqs.push({ tipo: 'idade', ok: i >= x.idadeMin, ano: i >= x.idadeMin ? undefined : ano + (x.idadeMin - i), texto: i >= x.idadeMin ? `Idade mínima (${x.idadeMin} anos): cumprida.` : `Idade mínima de ${x.idadeMin} anos — você chega lá em ${ano + (x.idadeMin - i)}.` });
+  // Tempo de serviço / estrada na área.
+  if (x.experiencia) {
+    const exp = (x.nivel >= 4 ? (v.trabalho.experiencia[x.trilha] ?? 0) : experienciaNaTrilha(v, x.trilha)) + (x.nivel <= 4 ? titulacaoNaTrilha(v, x).meses : 0);
+    const falta = Math.max(0, Math.ceil((x.experiencia - exp) / 12));
+    const oque = farda ? `${anosTxt(x.experiencia)} de corporação` : `${anosTxt(x.experiencia)} de estrada na área`;
+    reqs.push({ tipo: farda ? 'servico' : 'experiencia', ok: falta === 0, ano: falta ? ano + falta : undefined, texto: falta === 0 ? `${cap(oque)}: cumprido (você tem ${anosTxt(exp)}).` : `${cap(oque)} — você tem ${anosTxt(exp)}; completa em ${ano + falta}.` });
+  }
+  // Tempo no posto atual.
+  const noPosto = (v.t - (e.tPosto ?? e.tInicio)) / 12;
+  const minimo = oc.anosNoPosto ?? (antiguidade ? 5 : 2);
+  if (como !== 'clientela') {
+    const falta = Math.max(0, Math.ceil(minimo - noPosto));
+    const agora = nomeOcupacao(v, oc);
+    reqs.push({ tipo: 'posto', ok: falta === 0, ano: falta ? ano + falta : undefined, texto: falta === 0 ? `${minimo} anos como ${agora}: cumprido.` : `${minimo} anos como ${agora} — você tem ${Math.floor(noPosto)}; completa em ${ano + falta}.` });
+  }
+  // Formação, escolaridade, registro.
+  if (x.escolaridade && !temEscolaridade(v, x.escolaridade)) reqs.push({ tipo: 'formacao', ok: false, texto: `Pede ${ROTULO_ESCOLARIDADE[x.escolaridade]}.` });
+  if (x.area && !temFormacaoPara(v, x)) {
+    const areas = x.area.map(a => ROTULO_AREA[a]).join(' ou ');
+    reqs.push({ tipo: 'formacao', ok: false, texto: `Pede formação em ${areas}${x.nivelCurso && x.nivelCurso !== 'superior' ? ` (${x.nivelCurso === 'tecnico' ? 'técnico ou mais' : x.nivelCurso === 'livre' ? 'curso de qualificação' : x.nivelCurso})` : ''}.` });
+  }
+  if (x.licenca && x.licenca !== 'cnh' && !v.trabalho.licencas.includes(x.licenca)) reqs.push({ tipo: 'registro', ok: false, texto: `Pede registro profissional (${x.licenca.toUpperCase()}).` });
+  // Desempenho (mérito) e cidade.
+  if (como === 'merito') reqs.push({ tipo: 'desempenho', ok: e.desempenho >= 62, texto: e.desempenho >= 62 ? 'O trabalho vem indo bem: isso conta.' : 'O trabalho precisa estar indo melhor — promoção por mérito olha o desempenho.' });
+  if (como === 'antiguidade' && e.desempenho < 40) reqs.push({ tipo: 'desempenho', ok: false, texto: 'Conceito baixo: com o trabalho indo mal, a antiguidade não basta.' });
+  if (como === 'clientela') reqs.push({ tipo: 'desempenho', ok: (e.clientela ?? 0) >= 75, texto: (e.clientela ?? 0) >= 75 ? 'A freguesia já é grande.' : 'Freguesia grande (agenda cheia por anos).' });
+  if (x.nivel >= 4 && nivelDeOferta(e.municipioId) === 0) reqs.push({ tipo: 'cidade', ok: false, texto: `Cargos de ${nome} são raros numa cidade do tamanho de ${municipio(e.municipioId).nome}.` });
+  reqs.push({ tipo: 'vaga', ok: false, texto: como === 'antiguidade' ? 'Cumprido o tempo, a promoção vem com a vaga do quadro.' : como === 'clientela' ? 'Depois, é um passo seu: a oportunidade aparece.' : 'Depois, depende de abrir uma vaga — e de você ser lembrado.' });
+
+  const pendentes = reqs.filter(r => !r.ok && r.tipo !== 'vaga');
+  const deTempo = pendentes.filter(r => r.ano !== undefined);
+  const previsao = pendentes.length && deTempo.length === pendentes.length ? Math.max(...deTempo.map(r => r.ano!)) : !pendentes.length ? ano : undefined;
+  let resumo: string;
+  const semTempo = pendentes.filter(r => r.ano === undefined);
+  if (semTempo.length) {
+    const r0 = semTempo[0];
+    resumo = r0.tipo === 'formacao' || r0.tipo === 'registro' ? `O próximo passo (${nome}) ${r0.texto.replace(/^Pede /, 'pede ').replace(/\.$/, '')}.`
+      : r0.tipo === 'cidade' ? r0.texto
+        : r0.tipo === 'desempenho' ? (como === 'clientela' ? `Para chegar a ${nome}, a freguesia precisa crescer bem mais.` : `Para chegar a ${nome}, o trabalho precisaria estar indo melhor.`)
+          : `O próximo passo (${nome}) ainda não está ao alcance.`;
+  } else if (previsao && previsao > ano) {
+    resumo = como === 'antiguidade' ? `Pela antiguidade, a promoção a ${nome} deve vir por volta de ${previsao}.` : `O próximo passo (${nome}) fica ao alcance por volta de ${previsao}: ${deTempo.map(r => r.tipo === 'idade' ? 'a idade mínima' : r.tipo === 'posto' ? 'o tempo no cargo' : r.tipo === 'servico' ? 'o tempo de corporação' : 'o tempo de estrada').filter((t, k, l) => l.indexOf(t) === k).join(' e ')}.`;
+  } else {
+    resumo = como === 'antiguidade' ? `A promoção a ${nome} está perto: é questão de vaga.` : como === 'clientela' ? `O próximo passo (${nome}) está ao alcance.` : `O próximo passo (${nome}) está ao alcance; depende de uma vaga abrir.`;
+  }
+  return { destino: nome, ocupacaoId: x.id, como, requisitos: reqs, previsao, resumo };
+}
+
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /** Tempo de estrada na área, em palavras. */
 export function estradaNaArea(v: Vida): string | undefined {

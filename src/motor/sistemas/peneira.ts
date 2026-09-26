@@ -24,6 +24,7 @@ import type { Devolutiva, Dominio, Vida } from '../tipos';
 import { idade } from '../nucleo';
 import { habilidade } from './frentes';
 import { estruturaEsportiva } from '../dados/mercado';
+import { anoDe } from '../tempo';
 
 export type Aspecto = 'tecnica' | 'fisico' | 'leitura' | 'nervos';
 
@@ -123,6 +124,41 @@ const CRITICA: Record<Aspecto, (d: Dominio) => string> = {
   leitura: d => (futebol(d) ? 'faltou experiência de jogo competitivo' : 'faltou experiência de competição'),
   nervos: () => 'o nervosismo apareceu nas primeiras bolas'
 };
+
+/* ---------------------------------------------------- A técnica, em palavras */
+
+/**
+ * A régua da técnica de quem quer uma base — em palavras, nunca número. Os
+ * cortes seguem a conta da peneira: a técnica pesa metade, e quem passa
+ * costuma estar "no nível de uma base" (o dia, o físico e a leitura de jogo
+ * decidem a margem).
+ */
+export const NIVEL_TECNICA = ['começando', 'de escolinha', 'ainda longe do nível de uma base', 'perto do nível de uma base', 'no nível de uma base', 'acima do que uma base pede'] as const;
+export const nivelTecnico = (h: number) => (h < 50 ? 0 : h < 60 ? 1 : h < 66 ? 2 : h < 70 ? 3 : h < 76 ? 4 : 5);
+
+export interface LeituraTecnica {
+  nivel: number;
+  palavra: string;
+  /** O que o treino fez no último ano. */
+  ano?: string;
+  /** Desde a última peneira. */
+  desde?: string;
+  /** Faz sentido tentar agora? */
+  tentar: string;
+}
+
+/** Onde está a técnica, o que o treino fez, o que mudou desde a última peneira — e se vale tentar. */
+export function lerTecnica(v: Vida, d: Dominio): LeituraTecnica {
+  const h = habilidade(v, d);
+  const nivel = nivelTecnico(h);
+  const antes = v.fatos[`tec_${d}_antes`];
+  const agora = v.fatos[`tec_${d}`];
+  const ano = antes !== undefined && agora !== undefined ? (agora - antes >= 2.5 ? 'O treino do último ano apareceu: a técnica subiu bem.' : agora - antes >= 0.8 ? 'O treino do último ano rendeu um pouco.' : agora - antes <= -1 ? 'Sem treino firme, a técnica caiu no último ano.' : 'No último ano, a técnica ficou onde estava: o treino de manutenção não faz subir.') : undefined;
+  const ultima = [...v.caminhos.devolutivas].reverse().find(x => x.tipo === 'peneira' && x.dominio === d && x.nivel !== undefined);
+  const desde = ultima ? (ultima.nivel! < nivel ? `Desde a última peneira (${anoDe(ultima.t)}), a técnica evoluiu: de "${NIVEL_TECNICA[ultima.nivel!]}" para "${NIVEL_TECNICA[nivel]}".` : ultima.nivel! > nivel ? `Desde a última peneira (${anoDe(ultima.t)}), a técnica caiu: era "${NIVEL_TECNICA[ultima.nivel!]}".` : `Desde a última peneira (${anoDe(ultima.t)}), a técnica ainda não mudou de patamar: segue "${NIVEL_TECNICA[nivel]}".`) : undefined;
+  const tentar = nivel >= 4 ? 'No nível de quem é chamado: agora pesam o dia, o físico e a leitura de jogo.' : nivel === 3 ? 'Perto: um teste agora é possível; mais um ano de treino firme aumentaria a chance.' : nivel === 2 ? 'Ainda longe: o teste é possível, mas o mais provável é ouvir que a técnica não está no nível. Treino dobrado encurta a distância.' : 'Muito cedo para um teste: é a fase de treinar.';
+  return { nivel, palavra: NIVEL_TECNICA[nivel], ano, desde, tentar };
+}
 
 /** A fala do treinador, em uma frase — sem fórmula. */
 export function falaDoTreinador(d: Dominio, res: ResultadoPeneira, anterior?: Aspecto): string {
