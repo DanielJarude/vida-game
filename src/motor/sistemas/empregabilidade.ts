@@ -112,7 +112,8 @@ export function perfilParaVaga(v: Vida, oc: Ocupacao): PerfilVaga {
 
   // Camada: a sua trajetória (a estrada, a formação, o próximo degrau), o que se relaciona, o resto.
   const naTrilha = trilhas.includes(oc.trilha);
-  const naFormacao = !!oc.area && (oc.area.includes('qualquer') ? nivelF >= 4 && oc.nivel >= 4 : oc.area.some(a => areas.has(a)));
+  // Vagas de 'qualquer área' só são trajetória quando pedem pós stricto sensu (a docência superior) e a pessoa tem.
+  const naFormacao = !!oc.area && (oc.area.includes('qualquer') ? !!oc.nivelCurso && ORDEM_NIVEL[oc.nivelCurso] >= 4 && nivelF >= ORDEM_NIVEL[oc.nivelCurso] : oc.area.some(a => areas.has(a)));
   const familia = familiaDaTrilha(oc.trilha).id;
   const vizinha = trilhas.some(t => (AFINS[t] ?? []).includes(oc.trilha) || familiaDaTrilha(t).id === familia) || (!!oc.habilidade && habilidade(v, oc.habilidade.dominio) >= oc.habilidade.minimo);
   // Um passo atrás (bem abaixo do que se faz ou da formação que se tem) não é trajetória.
@@ -148,7 +149,7 @@ export function motivoDaRejeicao(v: Vida, oc: Ocupacao, falta: string, mediaEntr
     if (mediaEntrevista >= 0.3) return `você foi bem na entrevista, mas a sua experiência na área ainda é pequena para a vaga (pediam ${anosTxt(pede)}; você tem ${anosTxt(tem)})`;
     return formado ? `seu currículo atende à formação, mas havia candidatos com mais experiência na área` : 'seguiram com alguém de mais experiência';
   }
-  if (falta === 'formacao') return `buscavam alguém formado em ${(oc.area ?? []).filter(a => a !== 'qualquer').map(a => ROTULO_AREA[a]).join(' ou ') || 'na área'}`;
+  if (falta === 'formacao') return `buscavam alguém formado em ${(oc.area ?? []).filter(a => a !== 'qualquer').map(a => ROTULO_AREA[a]).join(' ou ') || 'a área da vaga'}`;
   if (p.acimaDaVaga && falta === 'concorrencia') return 'acharam que o seu currículo é maior que a vaga — e que você não ficaria';
   if (falta === 'concorrencia' && p.compatibilidade >= 2) return 'seu histórico combina bastante com a vaga; foi a disputa: escolheram outra pessoa';
   if (falta === 'concorrencia') return 'a vaga era disputada e escolheram alguém com o perfil mais próximo do que buscavam';

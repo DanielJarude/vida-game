@@ -42,7 +42,7 @@ import { municipio, MUNICIPIOS } from '../dados/lugares';
 import { aoPartido, nomeCompletoPartido, oPartido, partidoDe, PARTIDOS_REAIS, peloPartido } from '../dados/partidos';
 import { ocupacao } from '../dados/ocupacoes';
 import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidade';
-import { encerrarEmprego, nomeOcupacao } from './trabalho';
+import { anosDeServicoMilitar, eDasForcas, encerrarEmprego, nomeOcupacao } from './trabalho';
 import { disponivel, pagar } from './dinheiro';
 import { irParaReserva, sairDasForcas } from './militar';
 import { mudarAgora } from './processos';
@@ -457,9 +457,12 @@ export function registrarCandidatura(v: Vida, cargo: CargoEletivo, tEleicao: num
   // Quem governa e disputa outro cargo renuncia seis meses antes.
   if (p.fase === 'mandato' && p.mandato && CARGOS[p.mandato.cargo].executivo && p.mandato.cargo !== cargo) renunciar(v, 'para disputar outro cargo');
   // Farda: menos de dez anos, deixa a ativa; mais, fica agregado.
-  if (e?.contrato === 'militar' && v.caminhos.militar && (v.t - v.caminhos.militar.tIngresso) / 12 < 10) {
-    const ind = sairDasForcas(v);
-    if (ind) pagar(v, Math.min(ind, disponivel(v)));
+  // Farda (Forças, PM, bombeiros — CF, art. 14, §8º; art. 42, §1º): menos de dez anos de serviço, deixa a ativa; mais, fica agregado.
+  const dasForcas = !!e && !!v.caminhos.militar && eDasForcas(ocupacao(e.ocupacaoId));
+  const anosFarda = dasForcas ? (v.t - v.caminhos.militar!.tIngresso) / 12 : anosDeServicoMilitar(v);
+  if (e?.contrato === 'militar' && anosFarda < 10) {
+    if (dasForcas) { const ind = sairDasForcas(v); if (ind) pagar(v, Math.min(ind, disponivel(v))); }
+    else encerrarEmprego(v, 'afastamento para disputar eleição');
     escrever(v, { texto: 'Para se candidatar, deixou a farda: com menos de dez anos de serviço, a lei manda sair da ativa.', relevancia: 'marco', tema: 'trabalho' });
   } else if (e?.contrato === 'militar') v.fatos['pol_agregado'] = v.t;
   else if (e?.contrato === 'servidor') escrever(v, { texto: 'Afastou-se do cargo público três meses antes da eleição, como a lei pede.', relevancia: 'cotidiano', tema: 'trabalho' });

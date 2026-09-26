@@ -36,6 +36,7 @@ import { registrarDevolutiva } from './devolutivas';
 import { marcar } from './marcas';
 import { anoDe } from '../tempo';
 import { propor } from './compromissos';
+import { flex, ge } from '../texto';
 
 export type OquePerseguir = 'pedir_teste' | 'montar_grupo' | 'mostrar_trabalho' | 'foco_concurso' | 'bolsa_pesquisa';
 export type AcaoPerseguirCmd = { tipo: 'perseguir'; oque: OquePerseguir; valor?: string };
@@ -69,6 +70,9 @@ function podePedirTeste(v: Vida, valor?: string): Veredito {
   if (i < ini) return bloqueio('requisito', `As bases de ${NOME_MOD[d]} testam a partir dos ${ini} anos.`);
   if (i > fim) return bloqueio('requisito', `A janela das bases de ${NOME_MOD[d]} vai até os ${fim} anos: depois disso, quase ninguém é chamado sem já ter carreira.`);
   if ((v.fatos[`peneiras_${d}`] ?? 0) >= LIMITE_TESTES) return bloqueio('incompativel', `Já foram ${LIMITE_TESTES} testes em ${NOME_MOD[d]}: os clubes da região já conhecem o seu jogo.`);
+  // O próprio pedido tem o seu relógio (o atalho do "quase" vale para quem o clube chama, não para pedir de novo no mesmo mês).
+  const pedido = v.fatos[`peneira_pedida_${d}`];
+  if (pedido !== undefined && v.t - pedido < 12) return bloqueio('incompativel', `O último teste que você pediu foi em ${anoDe(pedido)}: os clubes pedem um ano entre uma tentativa e outra.`);
   const ultima = v.caminhos.ultimas[`peneira_${d}`];
   if (ultima !== undefined && v.t - ultima < 12) return bloqueio('incompativel', `O último teste foi em ${anoDe(ultima)}: os clubes pedem um ano entre uma tentativa e outra.`);
   if (v.trabalho.atual?.carga === 'integral') return bloqueio('incompativel', 'Com trabalho integral, não dá para treinar numa base.');
@@ -88,6 +92,7 @@ function pedirTeste(v: Vida, r: Rng, valor?: string): { texto?: string; decisao?
   const grande = onde === 'grande';
   const lugar = lugarDoTeste(v, d, grande);
   const clube = nomeDeClube(lugar, `${v.id}:pedido:${idade(v)}:${grande ? 'g' : 'p'}`, d);
+  v.fatos[`peneira_pedida_${d}`] = v.t;
   const op = novaOportunidade(v, {
     tipo: d === 'futebol' ? 'peneira' : 'seletiva', dominio: d, municipioId: lugar, meses: 12, chave: `peneira_${d}`,
     titulo: d === 'futebol' ? `Peneira ${noClube(clube)}` : `Seletiva ${noClube(clube)}`,
@@ -160,7 +165,7 @@ function mostrarTrabalho(v: Vida, r: Rng): { texto: string; tom: 'bom' | 'ruim' 
   v.fatos['arte_mostras'] = (v.fatos['arte_mostras'] ?? 0) + 1;
   const nivel = nivelDePublico(p.publico);
   const antes = [...v.caminhos.devolutivas].reverse().find(x => x.tipo === 'arte' && x.nivel !== undefined && x.dominio === d);
-  const desde = antes ? (antes.nivel! < nivel ? ` Desde a última vez (${anoDe(antes.t)}), o público cresceu: de "${PALAVRA_PUBLICO[antes.nivel!]}" para "${PALAVRA_PUBLICO[nivel]}".` : ` Desde a última vez (${anoDe(antes.t)}), o público segue "${PALAVRA_PUBLICO[nivel]}".`) : '';
+  const desde = antes ? (antes.nivel! < nivel ? ` Desde a última vez (${anoDe(antes.t)}), o público cresceu: de "${PALAVRA_PUBLICO[antes.nivel!]}" para "${PALAVRA_PUBLICO[nivel]}".` : antes.nivel! > nivel ? ` Desde a última vez (${anoDe(antes.t)}), o público caiu: era "${PALAVRA_PUBLICO[antes.nivel!]}", agora "${PALAVRA_PUBLICO[nivel]}".` : ` Desde a última vez (${anoDe(antes.t)}), o público segue "${PALAVRA_PUBLICO[nivel]}".`) : '';
   if (r.chance(chance)) {
     novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: d, meses: 12, chave: 'convite_arte',
       titulo: d === 'musica' ? 'Um convite para viver de música' : d === 'teatro' ? 'Um papel' : 'Uma audição que deu certo',
@@ -208,7 +213,7 @@ function pedirBolsa(v: Vida, r: Rng): { texto: string } {
   v.fatos['bolsas_tentadas'] = (v.fatos['bolsas_tentadas'] ?? 0) + 1;
   if (r.chance(chance)) {
     const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: 'pesquisador', via: 'oportunidade' }) === 'feito';
-    marcar(v, 'aprovacao', `Aprovado num edital de pós-doutorado (${dout.nome}).`, 3, { ocupacaoId: 'pesquisador' });
+    marcar(v, 'aprovacao', `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} num edital de pós-doutorado (${dout.nome}).`, 3, { ocupacaoId: 'pesquisador' });
     return { texto: feito ? `O projeto foi aprovado: dois anos de pós-doutorado, na área do ${dout.nome.replace(/^Doutorado/, 'doutorado')}.` : 'O projeto foi aprovado. Agora, é caber a bolsa na vida que você tem.' };
   }
   const perto = chance >= 0.3;

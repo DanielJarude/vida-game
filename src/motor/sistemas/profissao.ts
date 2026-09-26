@@ -343,7 +343,13 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
     else {
       const desde = t.desempregadoDesde;
       const anos = desde !== undefined ? Math.floor((v.t - desde) / 12) : 0;
-      if (!t.historico.length) { titulo = 'Procurando o primeiro trabalho'; frases.push('Sem experiência, as portas são poucas — e cada uma conta.'); }
+      if (!t.historico.length) {
+        titulo = 'Procurando o primeiro trabalho';
+        // Quem se formou não é "sem nada": a formação abre as portas da área, mesmo sem estrada.
+        const f = [...v.educacao.concluidos].filter(c => c.nivel !== 'livre').sort((a, b) => b.tFim - a.tFim)[0];
+        const com = !f ? '' : f.nivel === 'superior' ? `a formação em ${f.nome}` : f.nivel === 'residencia' ? 'a residência médica' : f.cursoId === 'mba' ? 'o MBA em Gestão' : f.nivel === 'tecnico' ? `o ${f.nome}` : `${f.nivel === 'pos' ? 'a' : 'o'} ${f.nome.charAt(0).toLowerCase()}${f.nome.slice(1)}`;
+        frases.push(f ? `Sem estrada ainda — mas com ${com}: as vagas da sua área vêm primeiro.` : 'Sem experiência, as portas são poucas — e cada uma conta.');
+      }
       else if (anos >= 2) frases.push(`Sem trabalho fixo desde ${anoDe(desde!)}. Cada ano parado pesa mais na entrevista.`);
       else if (desde !== undefined) frases.push(`Sem trabalho desde ${anoDe(desde)}.`);
     }

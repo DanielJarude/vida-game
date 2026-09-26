@@ -312,7 +312,7 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   if (eDasForcas(oc)) aoEntrarNasForcas(v, r, oc);
   const e: Emprego = {
     ocupacaoId: oc.id,
-    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(empregadoresPrivados(oc.trilha, porContaPropria(oc))),
+    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(empregadoresPrivados(oc.trilha, oc.contrato === 'autonomo' || oc.contrato === 'informal')),
     contrato: oc.contrato,
     salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2),
     tInicio: v.t,
@@ -779,7 +779,7 @@ export function horizonte(v: Vida): string | undefined {
   if (e.posAposentadoria) return 'Trabalho depois da aposentadoria: sem escada, pelo gosto ou pela conta.';
   if (oc.duracao && !eDasForcas(oc)) return `Contrato com prazo: termina por volta de ${anoDe(e.tInicio + oc.duracao)}. Depois, é outro edital, outra seleção.`;
   if (eDasForcas(oc)) return horizonteMilitar(v);
-  if (e.contrato === 'servidor' && oc.promocao === 'antiguidade' && !degrausAcima(oc).length) return 'A carreira anda pela tabela: progressão a cada três anos e adicional quando conclui pós, mestrado ou doutorado. Mudar de cargo é outro concurso.';
+  if (e.contrato === 'servidor' && !degrausAcima(oc).some(d => d.contrato === 'servidor')) return 'A carreira anda pela tabela: progressão a cada três anos e adicional quando conclui pós, mestrado ou doutorado. Mudar de cargo é outro concurso.';
   if (e.clientela !== undefined) {
     const c = e.clientela;
     const fam = familiaDaTrilha(oc.trilha);
@@ -828,7 +828,9 @@ export function proximoPasso(v: Vida): ProximoPasso | undefined {
   if (!e || e.formacaoAte || e.posAposentadoria || e.contrato === 'eletivo') return undefined;
   const oc = ocupacao(e.ocupacaoId);
   if (eDasForcas(oc)) return proximoPassoMilitar(v);
-  const x = e.clientela !== undefined ? degrausAcima(oc).find(d => d.promocao !== 'clientela' || d.contrato === 'autonomo') : degrausAcima(oc).filter(d => e.contrato !== 'servidor' || d.contrato === 'servidor')[0];
+  // O mesmo degrau que `promover` escolheria: o primeiro ao alcance (senão, o primeiro da escada).
+  const candidatos = e.clientela !== undefined ? degrausAcima(oc).filter(d => d.promocao !== 'clientela' || d.contrato === 'autonomo') : degrausAcima(oc).filter(d => e.contrato !== 'servidor' || d.contrato === 'servidor');
+  const x = candidatos.find(d => ['permitido', 'improvavel'].includes(elegibilidade(v, d, 'promocao').grau)) ?? candidatos[0];
   if (!x) return undefined;
   const ano = anoDe(v.t);
   const i = idade(v);
@@ -856,7 +858,8 @@ export function proximoPasso(v: Vida): ProximoPasso | undefined {
   }
   // Formação, escolaridade, registro.
   if (x.escolaridade && !temEscolaridade(v, x.escolaridade)) reqs.push({ tipo: 'formacao', ok: false, texto: `Pede ${ROTULO_ESCOLARIDADE[x.escolaridade]}.` });
-  if (x.area && !temFormacaoPara(v, x)) {
+  const peloOficio = !!x.habilidade?.ouFormacao && habilidade(v, x.habilidade.dominio) >= x.habilidade.minimo;
+  if (x.area && !temFormacaoPara(v, x) && !peloOficio && !(x.matriculado && cursandoNaArea(v, x))) {
     const areas = x.area.map(a => ROTULO_AREA[a]).join(' ou ');
     reqs.push({ tipo: 'formacao', ok: false, texto: `Pede formação em ${areas}${x.nivelCurso && x.nivelCurso !== 'superior' ? ` (${x.nivelCurso === 'tecnico' ? 'técnico ou mais' : x.nivelCurso === 'livre' ? 'curso de qualificação' : x.nivelCurso})` : ''}.` });
   }

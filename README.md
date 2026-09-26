@@ -33,7 +33,7 @@ src/
     ano.ts               um ano de vida: sistemas → morte → conteúdo
     acoes.ts             comandos do jogador, com disponibilidade graduada
     criacao.ts           nascer (família de origem coerente com classe e lugar)
-    save.ts              save v14, validação, backup, migração dos saves antigos (v5→…→v14),
+    save.ts              save v15, validação, backup, migração dos saves antigos (v5→…→v15),
                          exportar/importar vida (arquivo JSON, sem execução de código)
     dados/               lugares, cursos, ocupações, bens, nomes por geração
     sistemas/            corpo, escola, trabalho, dinheiro, casa, pessoas,
@@ -90,6 +90,7 @@ docs/
   REWORK-VISUAL-TRABALHO-REPORT.md      rework visual, aba Trabalho, negócio, atleta, vida política
   FIX-PLAYTEST-3-REPORT.md              FIX pós-playtest 3: conflitos de trajetória, negócio por tipo, pets, save v13
   FIX-PLAYTEST-4-REPORT.md              FIX pós-playtest 4: rede de relações, negócio como trabalho, deslocamento, eleição explicada, liquidez, meia-idade, save v14
+  REWORK-CAMINHOS-AGENCIA-UX-REPORT.md  REWORK 1: caminhos perseguíveis (pedir teste, montar banda, bolsa, estudo dirigido), formação com área, próximo passo por requisito, ambiente de trabalho, Trabalho e Estudos em camadas, save v15
 ```
 
 ### Regras que o código garante
@@ -122,6 +123,12 @@ docs/
   conta. Nenhum cuidado é instantâneo.
 - **Tentar é uma pequena experiência**: entrevista (2–3 perguntas contextuais,
   sem resposta certa universal) e peneira (duas etapas) terminam com devolutiva.
+- **Perseguir uma intenção é possível** (e não garante nada): quem quer uma vida
+  tem por onde começar, pode pedir a tentativa (um teste, uma audição, uma bolsa),
+  sabe o que falta e se está melhorando; a devolutiva guarda o ponto em que estava.
+- **Requisito vem com a ação que o cumpre**, com o tipo certo (idade não é formação).
+- **O acontecimento de trabalho segue o ambiente**, não o cargo; o modelo de
+  trabalho (emprego, por conta, negócio) é dito antes da escolha e nunca muda sozinho.
 - **Autonomia não é opacidade**: filhos e netos seguem a própria vida, e o
   jogador fica sabendo.
 
@@ -240,4 +247,22 @@ Playtest visual dos cenários do FIX (Chromium, 320/390/820/1440):
 npx esbuild scripts/playtest/gerarFix2.ts --bundle --platform=node --outfile=/tmp/g2.cjs && SP=/tmp/vida-fix2 node /tmp/g2.cjs
 npm run build && npx vite preview --port 4173 &
 SP=/tmp/vida-fix2 node scripts/playtest/fix2.mjs
+```
+
+Intenções (REWORK 1: nove jogadores que querem uma vida — emprego, universidade,
+concurso, farda, esporte, arte, negócio, por conta, política —, só com ações do
+jogador; mede descoberta, preparação, tentativa, devolutiva, progresso, chegada):
+
+```bash
+npx esbuild scripts/sim/intencoes.ts --bundle --platform=node --outfile=/tmp/int.cjs
+VIDAS=40 SAIDA=/tmp/int node /tmp/int.cjs
+```
+
+Playtest visual do REWORK 1 (13 cenários, 320/390/820/1440, todas as áreas e as
+abas da procura, teclado, cinza e daltonismo):
+
+```bash
+npx esbuild scripts/playtest/gerarRework2.ts --bundle --platform=node --outfile=/tmp/gr2.cjs && SP=/tmp/vida-rework2 node /tmp/gr2.cjs
+npm run build && npx vite preview --port 4173 &
+SP=/tmp/vida-rework2 node scripts/playtest/rework2.mjs
 ```

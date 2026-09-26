@@ -31,7 +31,7 @@ import { lerTecnica } from './peneira';
 import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from './concurso';
 import { janelaDaBase, modalidadeSeria } from './perseguir';
 import { nomeDaMatricula } from './escola';
-import { eDasForcas, elegibilidade } from './trabalho';
+import { eDasForcas, elegibilidade, nomeOcupacao } from './trabalho';
 import { naPolitica } from './politica';
 import { negocioAberto } from './negocio';
 
@@ -74,7 +74,7 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
   // Esporte: treino sério, ainda sem clube.
   const d = modalidadeSeria(v);
   const es = v.caminhos.esporte;
-  if (d && (!es || es.fase === 'encerrada') && i >= 8 && i <= janelaDaBase(d)[1] + 1) {
+  if (d && (!es || es.fase === 'encerrada') && i >= 8 && i <= janelaDaBase(d)[1]) {
     const t = lerTecnica(v, d);
     const pedir = P('pedir_teste', d);
     const veredito = disp(v, pedir);
@@ -97,7 +97,7 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
     const l = alvo ? lerPreparo(v, alvo) : undefined;
     out.push({
       id: 'concurso', titulo: foco ? `Passar num concurso: ${NOME_FOCO[foco]}` : 'Passar num concurso',
-      onde: `${estudando ? 'Estudando' : 'O estudo parou; o preparo esfria'} — ${foco ? `dirigido para ${NOME_FOCO[foco]}` : 'estudo geral, sem área'}.${l && alvo ? ` Para ${alvo.nome[0]}: ${l.palavra}.` : ''}`,
+      onde: `${estudando ? 'Estudando' : 'O estudo parou; o preparo esfria'} — ${foco ? `dirigido para ${NOME_FOCO[foco]}` : 'estudo geral, sem área'}.${l && alvo ? ` Para ${nomeOcupacao(v, alvo)}: ${l.palavra}.` : ''}`,
       progresso: l?.desde,
       falta: [...(l?.fatores ?? []).filter(x => /fraca|metade|renderia|teste físico/.test(x)), ...(foco ? [] : ['Escolher uma área: o edital de polícia não cobra o mesmo que o de tribunal.'])].slice(0, 3),
       proximo: !foco && pode(P('foco_concurso', 'administrativo')) ? { rotulo: 'Escolher para que área estudar', ir: 'concursos' } : editaisAbertos(v).some(oc => podeTentar(elegibilidade(v, oc))) ? { rotulo: 'Ver os editais abertos', ir: 'concursos' } : { rotulo: 'Seguir estudando', ir: 'tempo', porque: 'Nenhum edital que caiba abriu este ano: os concursos abrem em anos diferentes.' }
@@ -176,9 +176,9 @@ export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
     out.push({
       id: 'esporte', titulo: 'Esporte',
       como: 'Treino a sério desde cedo → um teste num clube (peneira ou seletiva) → a base → o contrato. Quase ninguém chega; quem se prepara ainda jogando tem para onde ir.',
-      agora: dentro ? 'Você está num clube.' : i > fim + 1 ? `A janela das bases já passou (vai até uns ${fim} anos). O esporte segue como treino, arbitragem, preparação física, escolinha.` : d ? `Você treina ${NOME_MOD[d]}: a técnica está "${lerTecnica(v, d).palavra}".` : 'Começa escolhendo uma modalidade e treinando a sério (Tempo livre).',
-      estado: dentro ? 'aqui' : i > fim + 1 ? 'fora' : pode(pedir) ? 'pronto' : 'preparar',
-      passo: dentro ? undefined : pode(pedir) ? { rotulo: 'Pedir um teste num clube', acao: pedir } : i <= fim + 1 ? { rotulo: d ? 'Treinar mais' : 'Começar a treinar', ir: 'tempo', porque: disp(v, pedir).motivo } : undefined
+      agora: dentro ? 'Você está num clube.' : i > fim ? `A janela das bases já passou (vai até uns ${fim} anos). O esporte segue como treino, arbitragem, preparação física, escolinha.` : d ? `Você treina ${NOME_MOD[d]}: a técnica está "${lerTecnica(v, d).palavra}".` : 'Começa escolhendo uma modalidade e treinando a sério (Tempo livre).',
+      estado: dentro ? 'aqui' : i > fim ? 'fora' : pode(pedir) ? 'pronto' : 'preparar',
+      passo: dentro ? undefined : pode(pedir) ? { rotulo: 'Pedir um teste num clube', acao: pedir } : i <= fim ? { rotulo: d ? 'Treinar mais' : 'Começar a treinar', ir: 'tempo', porque: disp(v, pedir).motivo } : undefined
     });
   }
   // Arte.
@@ -215,7 +215,7 @@ export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
     out.push({
       id: 'forcas', titulo: 'Forças Armadas',
       como: 'O serviço militar aos 18 (obrigatório para homens, voluntário para mulheres) — ou o concurso para a escola de sargentos ou a academia, com estudo e teste físico. Formação longe de casa; transferências pela carreira.',
-      agora: dentro ? 'Você está na farda.' : escola ? `Dá para prestar ${escola.nome[0]} (estudo para concurso, área de carreiras policiais e militares).` : i < 17 ? 'Aos 17, os concursos das escolas militares abrem para você.' : 'Os concursos das escolas têm limite de idade (e pedem ensino médio).',
+      agora: dentro ? 'Você está na farda.' : escola ? `Dá para prestar ${nomeOcupacao(v, escola)} (estudo para concurso, área de carreiras policiais e militares).` : i < 17 ? 'Aos 17, os concursos das escolas militares abrem para você.' : 'Os concursos das escolas têm limite de idade (e pedem ensino médio).',
       estado: dentro ? 'aqui' : escola ? 'pronto' : i < 17 ? 'preparar' : 'fora',
       passo: dentro ? undefined : escola ? { rotulo: 'Estudar para o concurso (e ver os editais)', ir: 'concursos' } : undefined
     });
@@ -227,7 +227,7 @@ export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
     out.push({
       id: 'seguranca', titulo: 'Polícia e bombeiros',
       como: 'Concurso estadual (prova, teste físico, investigação social: pede ficha limpa) → curso de formação → a carreira, que sobe por antiguidade.',
-      agora: dentro ? 'Você está na segurança pública.' : alvo ? `Dá para prestar ${alvo.nome[0]}: estudo dirigido para carreiras policiais, e o físico em dia.` : 'Fora do alcance agora (idade, escolaridade ou antecedentes).',
+      agora: dentro ? 'Você está na segurança pública.' : alvo ? `Dá para prestar ${nomeOcupacao(v, alvo)}: estudo dirigido para carreiras policiais, e o físico em dia.` : 'Fora do alcance agora (idade, escolaridade ou antecedentes).',
       estado: dentro ? 'aqui' : alvo ? 'pronto' : 'fora',
       passo: dentro || !alvo ? undefined : { rotulo: 'Estudar para o concurso (e ver os editais)', ir: 'concursos' }
     });

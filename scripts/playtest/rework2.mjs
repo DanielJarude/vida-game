@@ -116,9 +116,10 @@ async function arquitetura(p, c) {
     sargento: [/Próximo passo/, /Curso/, /Teste físico/]
   }[c] ?? [];
   const nao = { 'cabo-pm': [/pede formação: 31/], doutora: [], 'doutora-diarista': [] }[c] ?? [];
-  for (const x of deve) if (!x.test(t)) problemas.push(`${c}: Trabalho não mostra ${x}`);
+  const ok = (x) => new RegExp(x.source, 'i').test(t);
+  for (const x of deve) if (!ok(x)) problemas.push(`${c}: Trabalho não mostra ${x}`);
   for (const x of nao) if (x.test(t)) problemas.push(`${c}: Trabalho ainda mostra ${x}`);
-  if (deve.length) achados.push(`${c}: ${deve.filter(x => x.test(t)).length}/${deve.length} elementos da arquitetura presentes`);
+  if (deve.length) achados.push(`${c}: ${deve.filter(ok).length}/${deve.length} elementos da arquitetura presentes`);
 }
 
 for (const c of CENARIOS) {

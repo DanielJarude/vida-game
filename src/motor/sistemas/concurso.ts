@@ -138,10 +138,13 @@ export function trajetoriaParaConcurso(v: Vida, oc: Ocupacao): { meses: number; 
     const m = Math.min(18, Math.round(anos * 1.5));
     meses += m;
     const atual = v.trabalho.atual && t.trilhas.includes(ocupacao(v.trabalho.atual.ocupacaoId).trilha) ? nomeOcupacao(v, ocupacao(v.trabalho.atual.ocupacaoId)) : undefined;
-    motivos.push(atual ? `Seus ${Math.floor(anos)} anos de ${t.rotulo}, hoje como ${atual}, contam: a rotina e a matéria da prova não são novidade.` : `Os ${Math.floor(anos)} anos de ${t.rotulo} contam: boa parte da matéria você já viveu.`);
+    // Anos de vigilância privada são segurança, não farda: o texto diz de onde a estrada veio.
+    const maior = t.trilhas.reduce((a, x) => ((v.trabalho.experiencia[x] ?? 0) > (v.trabalho.experiencia[a] ?? 0) ? x : a), t.trilhas[0]);
+    const rotulo = foco === 'policial' && maior === 'vigilancia' ? 'segurança privada' : t.rotulo;
+    motivos.push(atual ? `Seus ${Math.floor(anos)} anos de ${rotulo}, hoje como ${atual}, contam: a rotina e a matéria da prova não são novidade.` : `Os ${Math.floor(anos)} anos de ${rotulo} contam: boa parte da matéria você já viveu.`);
   }
   const formacao = v.educacao.concluidos.find(c => t.areas.includes(c.area) && ['superior', 'pos', 'mestrado', 'doutorado'].includes(c.nivel));
-  if (formacao) { meses += 8; motivos.push(`A formação em ${formacao.nome.replace(/ \(.*\)$/, '')} pesa a favor: é o conteúdo específico deste edital.`); }
+  if (formacao) { meses += 8; motivos.push(`${formacao.nivel === 'superior' ? `A formação em ${formacao.nome}` : `${formacao.nivel === 'pos' ? 'A' : 'O'} ${formacao.nome.charAt(0).toLowerCase()}${formacao.nome.slice(1)}`} pesa a favor: é o conteúdo específico deste edital.`); }
   if (oc.forma && v.corpo.forma >= oc.forma + 10) motivos.push('O preparo físico está acima do que o teste pede.');
   else if (oc.forma && v.corpo.forma < oc.forma) motivos.push('O teste físico ainda não passaria: corrida e academia entram no preparo.');
   return { meses, motivos };

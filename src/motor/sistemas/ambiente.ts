@@ -87,7 +87,7 @@ export function ambienteDoTrabalho(v: Vida): Set<Ambiente> {
   if (e.contrato === 'eletivo') { out.add('organizacao'); out.add('colegas'); out.add('escritorio'); return out; }
   if (comChefia(e)) out.add('chefia');
   // Trabalho doméstico de carteira: há patrão, mas não há "a empresa" nem colegas.
-  if (EM_CASAS.has(oc.trilha) && /família|casa de/.test(e.empregador)) { out.add('residencias'); return out; }
+  if (EM_CASAS.has(oc.trilha) && /família|casa de família/.test(e.empregador)) { out.add('residencias'); return out; }
   out.add('organizacao');
   out.add('colegas');
   doOficio(oc, out);

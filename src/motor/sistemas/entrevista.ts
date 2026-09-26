@@ -30,7 +30,7 @@ import { clamp } from '../rng';
 import type { Devolutiva, Vida } from '../tipos';
 import type { Ocupacao, Setor } from '../dados/ocupacoes';
 import { idade } from '../nucleo';
-import { experienciaNaTrilha } from './trabalho';
+import { experienciaNaTrilha, titulacaoNaTrilha } from './trabalho';
 
 export type Familia =
   | 'motivacao' | 'experiencia' | 'primeiro' | 'mudanca' | 'erro' | 'prazo' | 'conflito' | 'atendimento'
@@ -362,7 +362,8 @@ const LIMITE_RECENTES = 16;
 /* -------------------------------------------------------------- Contexto */
 
 export function ctxEntrevista(v: Vida, oc: Ocupacao): CtxEntrevista {
-  const exp = experienciaNaTrilha(v, oc.trilha);
+  // A formação avançada na área conta como estrada, como em `elegibilidade` (até o nível de especialista).
+  const exp = experienciaNaTrilha(v, oc.trilha) + (oc.nivel <= 4 ? titulacaoNaTrilha(v, oc).meses : 0);
   const trabalhou = v.trabalho.historico.length > 0 || !!v.trabalho.atual;
   const outras = Object.entries(v.trabalho.experiencia).filter(([t, m]) => t !== oc.trilha && m >= 24).length > 0;
   const areas = new Set(v.educacao.concluidos.map(x => x.area));

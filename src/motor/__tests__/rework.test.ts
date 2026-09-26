@@ -29,6 +29,8 @@ import { chanceNoConcurso, lerPreparo, preparoPara, trajetoriaParaConcurso } fro
 import { lerTecnica, NIVEL_TECNICA } from '../sistemas/peneira';
 import { caminhosPossiveis, emConstrucao } from '../sistemas/caminhosDeVida';
 import { entrarNaPolitica, podeConcorrer, proximaEleicao, leituraPolitica } from '../sistemas/politica';
+import * as require_politica from '../sistemas/politica';
+import * as require_entrevista from '../sistemas/entrevista';
 import { exportarVida, importarVida, interpretar, migrarV14, VERSAO_SAVE } from '../save';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -126,6 +128,7 @@ describe('formação e estrada transformam as oportunidades', () => {
     const primeira = c.trajetoria.map(x => x.item.oc.id);
     expect(primeira.some(id => ['nutricionista', 'nutricionista_especialista', 'professor_faculdade'].includes(id))).toBe(true);
     for (const id of ['diarista', 'trabalhador_domestico', 'confeiteiro', 'cuidador']) expect(primeira).not.toContain(id);
+    expect(primeira).toContain('professor_faculdade');
     // Outros caminhos seguem possíveis.
     expect(c.outras.length + c.relacionadas.length).toBeGreaterThan(0);
   });
@@ -526,5 +529,80 @@ describe('ajustes da segunda passagem (simulação de intenções)', () => {
     const src = readFileSync(join(__dirname, '../sistemas/politica.ts'), 'utf8');
     expect(src).toMatch(/v\.t - ultima >= 96/);
     expect(src).toMatch(/Math\.min\(0\.12,/);
+  });
+});
+
+describe('achados da auditoria independente do rework', () => {
+  it('H1: carreiras de carteira têm degrau acima de carteira (a promoção não cruza o modelo, mas existe)', () => {
+    for (const id of ['advogado_jr', 'medico', 'psicologo', 'fisioterapeuta', 'veterinario', 'contador', 'agronomo', 'aux_marcenaria', 'operador_confeccao']) {
+      const acima = degrausAcima(ocupacao(id));
+      expect([id, acima.length > 0]).toEqual([id, true]);
+      expect(acima.every(x => !porContaPropria(x))).toBe(true);
+    }
+  });
+
+  it('H2: o próximo passo mira o mesmo degrau que a promoção, e o ofício vale no lugar do diploma', () => {
+    const v = adulto(28);
+    formar(v, 'psicologia', 'superior');
+    empregar(v, 'assistente_adm', 4, 3);
+    const pp = proximoPasso(v)!;
+    expect(pp.ocupacaoId).toBe('analista_rh');
+    expect(pp.requisitos.some(r => r.tipo === 'formacao')).toBe(false);
+    const w = adulto(26, { semente: 17 });
+    empregar(w, 'dev_jr', 3, 3);
+    w.caminhos.frentes.programacao = { interesse: 90, meses: 90, habilidade: 90, tInicio: w.t - 90, tUltimo: w.t, retomadas: 0, auge: 90 };
+    const q = proximoPasso(w);
+    if (q) expect(q.requisitos.some(r => r.tipo === 'formacao')).toBe(false);
+  });
+
+  it('M1: a entrevista conta a pós na área como estrada (a rejeição não diz "pediam 4 anos; você tem 4")', () => {
+    const { ctxEntrevista } = require_entrevista;
+    const v = adulto(34);
+    formar(v, 'nutricao', 'superior', 'mestrado', 'doutorado');
+    v.trabalho.experiencia.nutricao = 12;
+    const c = ctxEntrevista(v, ocupacao('nutricionista_especialista'));
+    expect(c.exp).toBeGreaterThanOrEqual(c.pede);
+  });
+
+  it('M2: depois de um teste pedido, o próximo pedido espera um ano, mesmo se ficou perto', () => {
+    let v = atleta(14, 'futebol', 68, 2);
+    v = responderTudo(executar(v, P('pedir_teste', 'futebol')).vida);
+    v = transacao(v, x => { x.caminhos.esporte = undefined; x.fatos['convite_base'] = undefined as never; delete x.fatos['convite_base']; x.caminhos.ultimas['peneira_futebol'] = x.t - 12; }).vida;
+    expect(disponibilidade(v, P('pedir_teste', 'futebol')).motivo).toMatch(/um ano entre/);
+  });
+
+  it('M3: servidor cujo degrau acima não é de servidor ainda tem horizonte', () => {
+    const v = adulto(35);
+    formar(v, 'licenciatura', 'superior');
+    empregar(v, 'professor_concursado', 6, 6);
+    expect(horizonte(v)).toMatch(/tabela|concurso/);
+  });
+
+  it('M4: por conta que começa por convite continua com o lugar próprio (não "uma empresa")', () => {
+    const v = adulto(25);
+    v.caminhos.frentes.musica = { interesse: 90, meses: 90, habilidade: 85, tInicio: v.t - 90, tUltimo: v.t, retomadas: 0, auge: 85 };
+    const e = contratar(v, criarRng(2), ocupacao('musico_profissional'), 'oportunidade');
+    expect(e.empregador).not.toBe('uma empresa');
+  });
+
+  it('L1: cuidador em casa de repouso tem organização e colegas', () => {
+    const v = adulto(30);
+    const e = empregar(v, 'cuidador', 3);
+    e.empregador = 'uma casa de repouso';
+    expect(noTrabalho(v, 'organizacao', 'colegas')).toBe(true);
+  });
+
+  it('L2: "Outros caminhos" diz o cargo no gênero da pessoa', () => {
+    const v = adulto(19, { genero: 'feminino' });
+    v.educacao.escolaridade = 'medio';
+    const t = caminhosPossiveis(v, disponibilidade).map(c => c.agora).join(' ');
+    expect(t).not.toMatch(/prestar aluno soldado/);
+  });
+
+  it('L4: cabo da PM com menos de dez anos que registra candidatura deixa a ativa (como a tela promete)', () => {
+    const { registrarCandidatura } = require_politica;
+    let v = adulto(28);
+    v = transacao(v, x => { empregar(x, 'soldado_pm', 6, 6); x.trabalho.experiencia = { pm: 72 }; x.caminhos.militar = undefined; const p = entrarNaPolitica(x, 'servidor'); p.partido = 'PSD'; p.indicacaoMilitar = true; p.fase = 'filiado'; registrarCandidatura(x, 'vereador', proximaEleicao(x.t, 'municipal').t); }).vida;
+    expect(v.trabalho.atual?.contrato).not.toBe('militar');
   });
 });
