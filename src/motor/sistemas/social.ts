@@ -122,6 +122,8 @@ function moraJunto(v: Vida, p: Pessoa, vin: Vinculo, naCasaDosPais: boolean): bo
   // Casal mora junto — a não ser que um dos dois esteja em outra cidade (relação à distância).
   if (vin.romance && (vin.romance.estagio === 'morando_junto' || vin.romance.estagio === 'casamento') && !vin.romance.secreto) return p.municipioId === v.moradia.municipioId;
   if (naCasaDosPais) {
+    // Na casa de um irmão, ele é o dono da casa: continua morando junto (antes, perdia a "casa" todo ano e a mudança se repetia).
+    if (v.moradia.tipo === 'parente' && v.moradia.anfitriaoId === p.id) return p.municipioId === v.moradia.municipioId;
     if (vin.convivio.includes('casa')) return p.municipioId === v.moradia.municipioId && !saiuDeCasa(v, p, vin);
     return false;
   }

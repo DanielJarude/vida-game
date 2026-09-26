@@ -655,6 +655,8 @@ export interface Moradia {
   funcional?: boolean;
   /** Com quantas pessoas divide o aluguel (república, dividir apartamento). */
   divide?: number;
+  /** Morando de favor na casa de um parente: de quem é a casa (é ela que não "sai de casa"). */
+  anfitriaoId?: string;
   /** Aluguel atrasado (meses). */
   atraso?: number;
   atrasoDesde?: number;

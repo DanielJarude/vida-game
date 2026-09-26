@@ -105,7 +105,7 @@ function casaSemFamilia(v: Vida): void {
   const irmao = rendaPropriaMensal(v) <= 0 ? vinculosVivos(v).filter(x => (x.vin.parentesco === 'irmao' || x.vin.parentesco === 'meio_irmao') && x.p.municipioId === v.moradia.municipioId && x.vin.proximidade >= 40 && x.p.renda > 0).sort((a, b) => b.vin.proximidade - a.vin.proximidade)[0] : undefined;
   if (irmao) {
     if (!irmao.vin.convivio.includes('casa')) irmao.vin.convivio.push('casa');
-    v.moradia = { tipo: 'parente', municipioId: v.moradia.municipioId, aluguel: 0, padrao: v.moradia.padrao, tInicio: v.t, aceitaPet: true };
+    v.moradia = { tipo: 'parente', municipioId: v.moradia.municipioId, aluguel: 0, padrao: v.moradia.padrao, tInicio: v.t, aceitaPet: true, anfitriaoId: irmao.p.id };
     escrever(v, { texto: `Sem os pais, foi morar com ${irmao.p.nome}.`, relevancia: 'biografia', tema: 'casa', pessoas: [irmao.p.id] });
     lembrarCom(v, irmao.p.id, 'Abriu a casa depois que os pais se foram.', 'apoio', 2);
     return;

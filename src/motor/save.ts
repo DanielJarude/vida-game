@@ -378,6 +378,11 @@ export function migrarV13(v: Vida): Vida {
   atribuirVersoesAosVeiculos(x);
   const pol = x.caminhos.politica;
   if (pol?.partido && !pol.partidos) pol.partidos = [{ sigla: pol.partido, tInicio: pol.tFiliacao ?? pol.tInicio }];
+  // Morando de favor com um irmão: a casa é dele (sem isso, a "mudança" para a casa dele se repetia todo ano).
+  if (x.moradia.tipo === 'parente' && !x.moradia.anfitriaoId) {
+    const irmao = Object.values(x.vinculos).find(w => (w.parentesco === 'irmao' || w.parentesco === 'meio_irmao') && w.convivio.includes('casa') && x.pessoas[w.pessoaId]?.vivo);
+    if (irmao) x.moradia.anfitriaoId = irmao.pessoaId;
+  }
   return x;
 }
 

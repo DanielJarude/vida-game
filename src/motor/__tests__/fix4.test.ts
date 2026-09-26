@@ -713,3 +713,18 @@ describe('achados da leitura das biografias do FIX #4', () => {
     expect(vida.biografia.some(e => /o conhecido [A-Z]/.test(e.texto) && conhecidas.some(c => e.texto.includes(`o conhecido ${c.nome}`)))).toBe(false);
   });
 });
+
+describe('achado da varredura de repetições: morar com o irmão não é uma mudança por ano', () => {
+  it('"Sem os pais, foi morar com X" acontece uma vez, e a casa continua sendo do irmão', () => {
+    let v = adulto(45, { semente: 21 });
+    for (const w of Object.values(v.vinculos)) if (w.parentesco === 'mae' || w.parentesco === 'pai') { const q = v.pessoas[w.pessoaId]; if (q) { q.vivo = false; q.tMorte = v.t - 12; } }
+    const irma = comParente(v, 'irmao', 48, 'feminino', 70).p;
+    irma.renda = 4000;
+    v.fatos[`saiu_de_casa_${irma.id}`] = v.t - 200;
+    v.trabalho.atual = undefined; v.trabalho.aposentadoria = undefined;
+    v.moradia = { tipo: 'pais', municipioId: v.moradia.municipioId, aluguel: 0, padrao: 3, tInicio: v.t - 400 };
+    for (let k = 0; k < 6 && !v.morte; k++) { v = transacao(v, x => { x.trabalho.atual = undefined; }).vida; v = avancarAno(v).vida; v = responderTudo(v); }
+    const vezes = v.biografia.filter(e => e.texto === `Sem os pais, foi morar com ${irma.nome}.`).length;
+    expect(vezes).toBeLessThanOrEqual(1);
+  }, 30000);
+});
