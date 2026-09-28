@@ -222,7 +222,8 @@ export function processarSocial(v: Vida, r: Rng): void {
     const outraCidade = p.municipioId !== cidade;
     let delta: number;
     if (junto) {
-      delta = 3 + c * 11 + v.personalidade.tracos.sociabilidade / 25 + r.normal() * 4;
+      // Bem-estar é disposição para gente: quem anda muito para baixo se recolhe um pouco (sem romper nada).
+      delta = 3 + c * 11 + v.personalidade.tracos.sociabilidade / 25 + clamp((v.mente.felicidade - 50) / 20, -2, 1.5) + r.normal() * 4;
       vin.tUltimoContato = v.t;
       if (c < -0.35 && r.chance(0.25)) vin.tensao = clamp(vin.tensao + 25);
     } else {

@@ -79,6 +79,8 @@ describe('romance e idade', () => {
     const v = viverAte(nova({ semente: 5 }), 17);
     v.momento = null;
     v.eu.atracao = 'homens';
+    // Premissa: sem outra história em andamento (uma de cada vez).
+    for (const x of Object.values(v.vinculos)) if (x.romance && x.romance.estagio !== 'ex') x.romance = undefined;
     const p = pessoaNova(v, 18, 'masculino', { atracao: 'mulheres' });
     const vin = vincular(v, p, { origem: 'escola', proximidade: 50, convivio: ['escola'] });
     expect(podeTerRomance(v, p, vin)).toBe(true);

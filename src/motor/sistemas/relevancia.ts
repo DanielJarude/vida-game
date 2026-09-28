@@ -16,7 +16,7 @@ import type { Dominio, Vida } from '../tipos';
 import type { Veredito } from '../plausibilidade';
 import { podeTentar } from '../plausibilidade';
 import { idade, filhos, parceiro } from '../nucleo';
-import { ROTINAS, atividadeExiste, podeComecarRotina, type ModeloRotina } from './rotinas';
+import { DE_ESTUDOS, ROTINAS, atividadeExiste, podeComecarRotina, type ModeloRotina } from './rotinas';
 import { BEM_ESTAR, fatoresHumor } from './estado';
 import { habilidade } from './frentes';
 import { OCUPACOES, ocupacao, type Ocupacao } from '../dados/ocupacoes';
@@ -60,7 +60,7 @@ const MATERIAS_ESCOLA = new Set<Dominio>(['exatas', 'linguagens', 'ciencias', 'h
  */
 export function atividadesParaVoce(v: Vida): { para: Relevante<ModeloRotina>[]; resto: ModeloRotina[] } {
   const i = idade(v);
-  const possiveis = ROTINAS.filter(m => !v.rotinas.some(r => r.id === m.id) && atividadeExiste(v, m) && podeTentar(podeComecarRotina(v, m.id, 1)));
+  const possiveis = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !v.rotinas.some(r => r.id === m.id) && atividadeExiste(v, m) && podeTentar(podeComecarRotina(v, m.id, 1)));
   const cabeca = v.mente.estresse;
   const humor = v.mente.felicidade;
   const solidao = fatoresHumor(v).some(f => f.id === 'solidao');
@@ -87,7 +87,6 @@ export function atividadesParaVoce(v: Vida): { para: Relevante<ModeloRotina>[]; 
     if (solidao && m.social && m.social.fluxo >= 0.8) add(2.5, 'Um lugar com gente toda semana.');
     if (aperto && m.renda && m.renda(v, 1) > 0) add(2.5, 'Um dinheiro por fora ajudaria agora.');
     if (m.id === 'tempo_familia' && (filhos(v).some(f => v.vinculos[f.id]?.convivio.includes('casa')) || parceiro(v))) add(2, 'Tempo com quem mora com você.');
-    if (m.id === 'cursinho' && i >= 16 && i <= 20 && !v.educacao.matricula && v.educacao.escolaridade !== 'superior') add(2.5, 'O vestibular está chegando.');
     if (m.id === 'estudar_concurso' && !v.trabalho.atual && i >= 20 && i <= 45) add(1.2, 'Uma porta para quem estuda com constância.');
     // A fase da vida: criança brinca e se mexe; adolescente procura turma.
     if (i < 12 && (m.categoria === 'esporte' || m.categoria === 'arte')) add(1, 'Coisa boa de começar criança.');

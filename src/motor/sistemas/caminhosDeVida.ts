@@ -34,6 +34,8 @@ import { nomeDaMatricula } from './escola';
 import { eDasForcas, elegibilidade, nomeOcupacao } from './trabalho';
 import { naPolitica } from './politica';
 import { negocioAberto } from './negocio';
+import { estimativaParaCurso, fazCursinho, objetivoCurso, proximoPassoVestibular } from './vestibular';
+import { anoDe } from '../tempo';
 
 export interface PassoDoCaminho {
   rotulo: string;
@@ -45,7 +47,7 @@ export interface PassoDoCaminho {
 }
 
 export interface CaminhoEmConstrucao {
-  id: 'esporte' | 'concurso' | 'arte' | 'academia';
+  id: 'esporte' | 'concurso' | 'arte' | 'academia' | 'vestibular';
   /** A intenção, em palavras ("Chegar a uma base de vôlei"). */
   titulo: string;
   /** Onde está (estado, em palavras). */
@@ -119,6 +121,26 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
       proximo: !p && pode(montar) ? { rotulo: a === 'musica' ? 'Montar uma banda' : 'Montar um grupo', acao: montar }
         : p && pode(P('mostrar_trabalho')) ? { rotulo: a === 'musica' ? 'Mandar o material para produtores e festivais' : 'Fazer uma audição numa companhia', acao: P('mostrar_trabalho'), porque: 'É pedir para ser visto: o parecer diz o que faltou.' }
           : { rotulo: 'Seguir ensaiando', ir: 'tempo', porque: p ? disp(v, P('mostrar_trabalho')).motivo ?? 'Os editais de cultura e os convites aparecem para quem está em cena.' : disp(v, montar).motivo }
+    });
+  }
+
+  // Vestibular: um curso em vista (Medicina, Direito...), ainda sem a vaga. Mesma conta da prova.
+  const alvoCurso = objetivoCurso(v);
+  if (alvoCurso && v.educacao.matricula?.cursoId !== alvoCurso.id) {
+    const est = estimativaParaCurso(v, alvoCurso);
+    const antes = est.ultima;
+    const progresso = antes ? (est.nota - antes.nota >= 15 ? `Desde o ENEM de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação subiu: hoje aponta uns ${est.nota}.` : est.nota - antes.nota <= -15 ? `Desde o ENEM de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação esfriou: hoje aponta uns ${est.nota}.` : `Desde o ENEM de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação está parecida.`) : undefined;
+    const enem: Acao = { tipo: 'enem' };
+    const cursinho: Acao = { tipo: 'rotina', id: 'cursinho', ativa: true, nivel: 1 };
+    out.push({
+      id: 'vestibular', titulo: `Entrar em ${alvoCurso.nome}`,
+      onde: est.frase,
+      progresso,
+      falta: [proximoPassoVestibular(v, est)],
+      proximo: est.situacao === 'no_corte' && pode(enem) ? { rotulo: 'Fazer o ENEM deste ano', acao: enem, porque: 'A preparação está no nível: o dia decide o resto.' }
+        : !fazCursinho(v) && pode(cursinho) ? { rotulo: 'Começar o cursinho', acao: cursinho, porque: 'É a preparação que mais sobe a nota no primeiro ano.' }
+          : pode(enem) ? { rotulo: 'Fazer o ENEM deste ano', acao: enem, porque: 'Tentar também mostra onde está — a devolutiva diz o que faltou.' }
+            : { rotulo: 'Seguir se preparando', ir: 'estudos' }
     });
   }
 

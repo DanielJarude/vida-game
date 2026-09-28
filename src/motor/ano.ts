@@ -13,6 +13,7 @@ import { clamp } from './rng';
 import type { Retorno, Vida } from './tipos';
 import { escrever, idade, transacao } from './nucleo';
 import { morreEsteAno, processarCorpo } from './sistemas/corpo';
+import { desenvolverPessoa } from './sistemas/pessoa';
 import { processarFamiliaDeOrigem, processarConcepcao, processarGestacoes, processarMortes } from './sistemas/familia';
 import { processarDescendentes, processarPartosDaFamilia } from './sistemas/filhos';
 import { processarLuto } from './sistemas/luto';
@@ -29,6 +30,7 @@ import { processarNegocio } from './sistemas/negocio';
 import { processarOportunidades } from './sistemas/oportunidades';
 import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, recalcularConvivio } from './sistemas/social';
 import { processarRomance, surgirInteresse } from './sistemas/romance';
+import { processarIniciativas } from './sistemas/iniciativas';
 import { processarExposicao } from './sistemas/exposicao';
 import { processarProcessos } from './sistemas/processos';
 import { fotografar, processarDinheiro } from './sistemas/dinheiro';
@@ -78,6 +80,8 @@ function viverAno(v: Vida, r: Rng): void {
   // A economia do país anda antes de tudo (e não depende de nada que a pessoa fez).
   const ec = avancarEconomia(v.economia, v.t);
 
+  // O que a semana do ano faz pela pessoa (treino, leitura) vale no MESMO ano: vem antes do corpo e da escola.
+  desenvolverPessoa(v, r);
   processarCorpo(v, r);
   processarLuto(v);
   limparApertos(v);
@@ -107,6 +111,8 @@ function viverAno(v: Vida, r: Rng): void {
   envelhecerConhecidos(v, r);
   processarSocial(v, r);
   processarRomance(v, r);
+  // As outras pessoas também agem: pedem, convidam, cobram, aparecem — e o silêncio do ano passado responde.
+  processarIniciativas(v, r);
   processarExposicao(v, r);
   surgirInteresse(v, r);
   processarConcepcao(v, r);

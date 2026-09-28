@@ -28,6 +28,7 @@ import { Catalogo, type ItemCatalogo } from './Catalogo';
 import type { Aba } from '../telas/Jogo';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { novaMatricula } from '../../motor/sistemas/escola';
+import { estimativaParaCurso, fazCursinho, mesesDePreparo, objetivoCurso, PALAVRA_SITUACAO, proximoPassoVestibular } from '../../motor/sistemas/vestibular';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }
 
@@ -75,7 +76,7 @@ export function Estudos({ vida, agir, irPara }: Props) {
       <TrajetoriaDeEstudo vida={vida} />
       <Formacao vida={vida} />
       <Estudo vida={vida} agir={agir} />
-      {i >= 15 && <Preparacao vida={vida} irPara={irPara} />}
+      {i >= 14 && <Preparacao vida={vida} agir={agir} irPara={irPara} />}
       {i >= 15 && <Cursos vida={vida} agir={agir} />}
       {i < 14 && !vida.educacao.basica && <p className="vazio">Por enquanto, o estudo é crescer.</p>}
     </div>
@@ -191,19 +192,67 @@ function Formacao({ vida }: { vida: Vida }) {
 
 const SITUACAO_ENEM: Record<string, string> = { acima: 'a nota alcança o corte', perto: 'perto do corte (lista de espera)', longe: 'ainda longe do corte', sem_nota: 'sem nota do ENEM ainda' };
 
-/** A preparação (não é credencial): a nota diante dos cursos que fazem sentido, o cursinho, o estudo para concurso. */
-function Preparacao({ vida, irPara }: { vida: Vida; irPara?: (a: Aba) => void }) {
+/** Cursos que as pessoas costumam "mirar" (além dos que já fazem sentido para esta vida). */
+const MIRAS = ['medicina', 'direito', 'eng_civil', 'psicologia', 'computacao', 'odontologia', 'veterinaria', 'arquitetura'];
+
+/**
+ * A preparação (não é credencial). Com um curso em vista, a situação dele —
+ * pela MESMA conta da prova (`vestibular.estimativaParaCurso`) — o que pesa,
+ * o próximo passo e o que mudou desde a última prova. O cursinho mora aqui
+ * (é uma rotina da semana, mas começa e para em Estudos).
+ */
+function Preparacao({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const e = vida.educacao;
-  const alvos = !e.matricula && !['superior', 'pos', 'mestrado', 'doutorado'].includes(e.escolaridade) && (e.escolaridade === 'medio' || e.escolaridade === 'tecnico' || e.basica?.etapa === 'medio') ? alvosDoEnem(vida) : [];
-  const cursinho = vida.rotinas.some(r => r.id === 'cursinho');
+  const i = idade(vida);
+  const rumoAoVestibular = !e.matricula && !['superior', 'pos', 'mestrado', 'doutorado'].includes(e.escolaridade) && (e.escolaridade === 'medio' || e.escolaridade === 'tecnico' || e.basica?.etapa === 'medio' || (e.basica?.etapa === 'fundamental2' && i >= 14));
+  const alvos = rumoAoVestibular ? alvosDoEnem(vida) : [];
+  const cursinho = fazCursinho(vida);
   const concurso = vida.rotinas.some(r => r.id === 'estudar_concurso');
   const notas = e.enem.slice(-2);
-  if (!alvos.length && !concurso && !cursinho) return null;
+  const objetivo = objetivoCurso(vida);
+  const est = objetivo ? estimativaParaCurso(vida, objetivo) : undefined;
+  const ultimaDev = [...vida.caminhos.devolutivas].reverse().find(d => d.tipo === 'vestibular');
+  const miras = rumoAoVestibular && !objetivo ? [...new Set([...alvos.map(a => a.curso.id), ...MIRAS])].slice(0, 6) : [];
+  const anosCursinho = cursinho ? Math.floor((vida.t - (vida.rotinas.find(r => r.id === 'cursinho')?.tInicio ?? vida.t)) / 12) : 0;
+  const preparo = mesesDePreparo(vida);
+  if (!rumoAoVestibular && !concurso && !cursinho && !objetivo) return null;
   return (
     <Secao titulo="Preparação">
+      {objetivo && est && (
+        <div className="objetivo" aria-label={`Objetivo: ${objetivo.nome}`}>
+          <p className="objetivo__titulo"><span className="objetivo__rotulo">Objetivo</span> {objetivo.nome}</p>
+          <p className={`objetivo__situacao objetivo__situacao--${est.situacao}`}>{PALAVRA_SITUACAO[est.situacao].charAt(0).toUpperCase() + PALAVRA_SITUACAO[est.situacao].slice(1)}</p>
+          <p className="nota">{est.frase}</p>
+          {est.ultima && <p className="nota">{est.nota - est.ultima.nota >= 15 ? `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação subiu.` : est.nota - est.ultima.nota <= -15 ? `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação esfriou.` : `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação está parecida.`}</p>}
+          <p className="objetivo__passo">{proximoPassoVestibular(vida, est)}</p>
+          <div className="grupo-acoes grupo-acoes--linha">
+            <BotaoAcao vida={vida} acao={{ tipo: 'objetivo_estudo' }} agir={agir} variante="discreto">Deixar esse objetivo de lado</BotaoAcao>
+          </div>
+        </div>
+      )}
+      {miras.length > 0 && (
+        <div className="objetivo objetivo--escolher">
+          <p className="nota">Tem um curso em vista? Com um objetivo, a preparação passa a ser dirigida a ele — e Estudos diz a distância até o corte.</p>
+          <div className="grupo-acoes grupo-acoes--linha">
+            {miras.map(id => <BotaoAcao key={id} vida={vida} acao={{ tipo: 'objetivo_estudo', cursoId: id }} agir={agir} variante="discreto" ocultarImpossivel>{`Mirar em ${curso(id).nome}`}</BotaoAcao>)}
+          </div>
+        </div>
+      )}
+      {(rumoAoVestibular || cursinho) && (
+        <div className="preparo-cursinho">
+          <p className="nota">{cursinho
+            ? `Você faz cursinho${anosCursinho >= 1 ? ` há ${anosCursinho} ${anosCursinho === 1 ? 'ano' : 'anos'}` : ' (começou agora: rende ao longo do ano)'}${objetivo ? `, dirigido ao que ${objetivo.nome} pesa` : ''}.`
+            : preparo > 0 ? 'A preparação do cursinho esfria sem ele.' : 'O cursinho é a preparação que mais sobe a nota no primeiro ano; depois, rende menos.'}</p>
+          <div className="grupo-acoes grupo-acoes--linha">
+            {cursinho
+              ? <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: 'cursinho', ativa: false }} agir={agir} variante="discreto">Parar o cursinho</BotaoAcao>
+              : <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: 'cursinho', ativa: true, nivel: 1 }} agir={agir} variante="secundario" ocultarImpossivel>Começar o cursinho</BotaoAcao>}
+          </div>
+        </div>
+      )}
       {alvos.length > 0 && (
         <>
-          <p className="nota">{notas.length ? `ENEM: ${notas.map(n => `${n.nota} em ${anoDe(n.t)}`).join(' · ')}${notas.length === 2 ? (notas[1].nota > notas[0].nota ? ' — a nota subiu.' : notas[1].nota < notas[0].nota ? ' — a nota caiu.' : ' — igual.') : '.'}` : 'Ainda sem nota do ENEM: é ela que abre a faculdade pública.'} {cursinho ? 'Você faz cursinho: ele sobe a nota das matérias que o curso pesa.' : 'Cursinho (Tempo livre) sobe a nota das matérias que cada curso pesa.'}</p>
+          <p className="nota">{notas.length ? `ENEM: ${notas.map(n => `${n.nota} em ${anoDe(n.t)}`).join(' · ')}${notas.length === 2 ? (notas[1].nota > notas[0].nota ? ' — a nota subiu.' : notas[1].nota < notas[0].nota ? ' — a nota caiu.' : ' — igual.') : '.'}` : 'Ainda sem nota do ENEM: é ela que abre a faculdade pública.'}</p>
           <ul className="nota-alvo" aria-label="A sua nota diante dos cursos">
             {alvos.map(a => (
               <li key={a.curso.id}>
@@ -214,6 +263,7 @@ function Preparacao({ vida, irPara }: { vida: Vida; irPara?: (a: Aba) => void })
           </ul>
         </>
       )}
+      {ultimaDev && vida.t - ultimaDev.t <= 36 && <p className="nota"><strong>{ultimaDev.titulo}.</strong> {ultimaDev.texto}</p>}
       {concurso && <p className="nota">Você estuda para concurso{vida.caminhos.concurso.foco ? ', com foco definido' : ''}. O preparo, edital por edital, está em Trabalho → Concursos.{irPara ? ' ' : ''}{irPara && <button type="button" className="link" onClick={() => irPara('trabalho')}>Ver em Trabalho</button>}</p>}
     </Secao>
   );

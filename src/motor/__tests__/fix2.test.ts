@@ -27,7 +27,7 @@ import { PERGUNTAS, avaliar, ctxEntrevista, escolherPerguntas } from '../sistema
 import { aspectos, avaliarPeneira } from '../sistemas/peneira';
 import { novaOportunidade } from '../sistemas/oportunidades';
 import { atividadesParaVoce, cursosParaVoce, MAX_PRIMARIAS, vagasParaVoce } from '../sistemas/relevancia';
-import { ROTINAS, atividadeExiste, podeComecarRotina } from '../sistemas/rotinas';
+import { DE_ESTUDOS, ROTINAS, atividadeExiste, podeComecarRotina } from '../sistemas/rotinas';
 import { interpretar, VERSAO_SAVE } from '../save';
 import type { Genero, Pessoa, Vida, Vinculo } from '../tipos';
 
@@ -621,7 +621,9 @@ describe('peneira em etapas', () => {
   });
 
   it('falhar produz história: devolutiva com o que pesou, prática somada e — se ficou perto — chance de voltar antes', () => {
+    // Premissa: um garoto vivo aos 15 (a semente é só o ponto de partida da busca).
     let v = viverAte(nova({ semente: 170, genero: 'masculino' }), 15);
+    for (let s = 171; v.morte && s < 200; s++) v = viverAte(nova({ semente: s, genero: 'masculino' }), 15);
     v.momento = null; v.caminhos.processo = undefined; v.anoAtual = { acoes: [] };
     v.caminhos.frentes.futebol = { interesse: 80, meses: 50, habilidade: 58, tInicio: v.t - 60, tUltimo: v.t, retomadas: 0, auge: 58 };
     v = transacao(v, x => { novaOportunidade(x, { tipo: 'peneira', dominio: 'futebol', municipioId: x.moradia.municipioId, meses: 12, chave: 'peneira_futebol', titulo: 'Peneira no Clube X', texto: 't' }); }).vida;
@@ -651,7 +653,8 @@ describe('divulgação progressiva', () => {
       const { para, resto } = atividadesParaVoce(v);
       expect(para.length).toBeLessThanOrEqual(MAX_PRIMARIAS.atividades);
       for (const x of para) expect(x.motivo.length).toBeGreaterThan(3);
-      const possiveis = ROTINAS.filter(m => !v.rotinas.some(r => r.id === m.id) && atividadeExiste(v, m) && podeTentar(podeComecarRotina(v, m.id, 1)));
+      // O cursinho mora em Estudos (REWORK 2): não é sugestão de tempo livre.
+      const possiveis = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !v.rotinas.some(r => r.id === m.id) && atividadeExiste(v, m) && podeTentar(podeComecarRotina(v, m.id, 1)));
       expect(new Set([...para.map(x => x.item.id), ...resto.map(m => m.id)])).toEqual(new Set(possiveis.map(m => m.id)));
     }
   });
@@ -697,7 +700,7 @@ describe('divulgação progressiva', () => {
 
 describe('save v9', () => {
   it('saves v8 reais (ATT 2) migram, validam, guardam o estado e continuam sendo vividos', () => {
-    expect(VERSAO_SAVE).toBe(15);
+    expect(VERSAO_SAVE).toBe(16);
     for (const nome of ['save-v8-adolescente.json', 'save-v8-adulta.json', 'save-v8-meia-idade.json']) {
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');

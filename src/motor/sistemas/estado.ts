@@ -38,6 +38,7 @@ import { pesoDoTrabalhoNaCabeca, sentidoDoTrabalho } from './carreira';
 import { pesoDoClima, pesoDoNegocio, pesoDoRitmo } from './ritmo';
 import { pesoDaPolitica } from './politica';
 import { semOcupacao } from './trabalho';
+import { perdaDaCondicao, SINAIS } from './saude';
 
 export { abalar, type Abalo };
 
@@ -82,7 +83,7 @@ function abalosAtivos(v: Vida, d: 'humor' | 'cabeca'): Fator[] {
 /** Guarda como a pessoa estava neste aniversário (para a tendência). */
 export function registrarEstado(v: Vida): void {
   const h = v.mente.historico ?? (v.mente.historico = []);
-  h.push({ t: v.t, humor: v.mente.felicidade, cabeca: v.mente.estresse, saude: v.corpo.saude });
+  h.push({ t: v.t, humor: v.mente.felicidade, cabeca: v.mente.estresse, saude: v.corpo.saude, forma: v.corpo.forma, cognicao: Math.round(v.mente.cognicao * 10) / 10, aparencia: v.corpo.aparencia });
   if (h.length > LIMITE_REGISTROS) h.splice(0, h.length - LIMITE_REGISTROS);
 }
 
@@ -338,8 +339,10 @@ export function fatoresSaude(v: Vida): Fator[] {
   for (const cond of c.condicoes) {
     const m = modeloCondicao(cond.id);
     if (!m) continue;
-    const perda = (cond.tratando ? m.perda[1] : m.perda[0]) * (i < 45 ? 0.5 : 1);
-    out.push({ id: `condicao:${cond.id}`, texto: `${cond.nome}${cond.tratando ? ', em tratamento' : ', sem tratamento'}`, efeito: -perda });
+    const perda = perdaDaCondicao(cond, m.perda) * (i < 45 ? 0.5 : 1);
+    // Sem diagnóstico, o que a pessoa conhece é o sinal, não o nome.
+    const texto = cond.diagnosticada === false ? `${SINAIS[cond.id] ?? 'um incômodo'}, ainda sem diagnóstico` : `${cond.nome}${cond.tratando ? ', em tratamento' : ', sem tratamento'}`;
+    out.push({ id: `condicao:${cond.id}`, texto, efeito: -perda });
   }
   return out;
 }

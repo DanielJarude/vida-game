@@ -19,6 +19,7 @@ import { aplicarPersonalidade } from '../personalidade';
 import { abalar } from './abalo';
 import { apoios, fatoresCabeca, fatoresHumor, fatoresSaude, sobrecargaDaSemana } from './estado';
 import { modeloCondicao } from './corpo';
+import { diagnosticar, registrarDiagnostico, semNome, SINAIS } from './saude';
 import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
 import { interacoesPara } from './interacoes';
@@ -87,6 +88,16 @@ function descansar(v: Vida, r: Rng): SaidaCuidado {
 
 function consulta(v: Vida, r: Rng): SaidaCuidado {
   const i = idade(v);
+  // Primeiro, o que o corpo vem sinalizando: quem procura cuidado dá nome ao sinal (quase sempre; saúde mental, um pouco menos).
+  const sinal = v.corpo.condicoes.find(semNome);
+  if (sinal && r.chance(sinal.id === 'depressao' || sinal.id === 'ansiedade' ? 0.75 : 0.9)) {
+    diagnosticar(v, sinal, 'consulta');
+    const texto = registrarDiagnostico(v, sinal, 'consulta');
+    if (v.financas.planoDeSaude) { sinal.tratando = true; return { resultado: `${texto} O plano cobriu o tratamento, que começou logo.` }; }
+    if (i >= 18 && !v.processos.some(p => p.tipo === 'tratamento')) return { resultado: texto, decisao: 'sau_tratamento' };
+    return { resultado: texto };
+  }
+  if (sinal) return { resultado: `O médico ouviu sobre ${SINAIS[sinal.id] ?? 'o incômodo'} e pediu exames. Nada fechado ainda: voltar no ano que vem, se não passar.` };
   const semTratar = v.corpo.condicoes.find(x => x.cronica && !x.tratando);
   if (semTratar && i >= 18) {
     if (v.processos.some(p => p.tipo === 'tratamento')) return { resultado: `O médico olhou o encaminhamento: a fila do SUS para ${semTratar.nome} continua andando. Mandou não parar de se cuidar enquanto isso.` };
@@ -232,9 +243,10 @@ export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vi
   // Saúde
   const f = fatoresSaude(v);
   const pesa = (id: string) => f.some(x => x.id === id && x.efeito < 0);
-  const semTratar = v.corpo.condicoes.some(x => x.cronica && !x.tratando);
-  if (v.corpo.saude >= 80 && !semTratar && !pesa('fuma') && !pesa('bebe') && !(pesa('forma') && i >= 30)) return out;
-  if (junto({ tipo: 'cuidar', cuidado: 'consulta' })) out.push({ id: 'consulta', texto: semTratar ? 'Ir ao médico tratar' : 'Ir ao médico, fazer um check-up', motivo: semTratar ? 'Tem uma condição sem tratamento.' : undefined, acao: { tipo: 'cuidar', cuidado: 'consulta' } });
+  const sinal = v.corpo.condicoes.find(semNome);
+  const semTratar = v.corpo.condicoes.some(x => x.cronica && !x.tratando && !semNome(x));
+  if (v.corpo.saude >= 80 && !sinal && !semTratar && !pesa('fuma') && !pesa('bebe') && !(pesa('forma') && i >= 30)) return out;
+  if (junto({ tipo: 'cuidar', cuidado: 'consulta' })) out.push({ id: 'consulta', texto: sinal ? 'Ir ao médico ver o que é' : semTratar ? 'Ir ao médico tratar' : 'Ir ao médico, fazer um check-up', motivo: sinal ? `O corpo tem dado sinais: ${SINAIS[sinal.id] ?? 'um incômodo que não passa'}.` : semTratar ? 'Tem uma condição sem tratamento.' : undefined, acao: { tipo: 'cuidar', cuidado: 'consulta' } });
   if (pesa('fuma') && junto({ tipo: 'cuidar', cuidado: 'parar_fumar' })) out.push({ id: 'parar_fumar', texto: 'Tentar parar de fumar', acao: { tipo: 'cuidar', cuidado: 'parar_fumar' } });
   if (pesa('bebe') && junto({ tipo: 'cuidar', cuidado: 'beber_menos' })) out.push({ id: 'beber_menos', texto: 'Tentar beber menos', acao: { tipo: 'cuidar', cuidado: 'beber_menos' } });
   if (pesa('forma') && i >= 14) {

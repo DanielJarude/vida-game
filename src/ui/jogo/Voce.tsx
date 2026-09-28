@@ -17,7 +17,10 @@ import { Retrato } from '../avatar/Retrato';
 import { BotaoAcao, Vazio } from '../comum';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
-import { expressaoDe, lerDimensao, momentoAtual, palavraTendencia, type LeituraDimensao } from '../estadoPessoal';
+import { expressaoDe, lerDimensao, lerPessoal, momentoAtual, palavraTendencia, type LeituraDimensao } from '../estadoPessoal';
+import { sinaisDoCorpo } from '../../motor/sistemas/saude';
+import type { DimensaoPessoal } from '../../motor/sistemas/pessoa';
+import { anoDe } from '../../motor/tempo';
 import { ODinheiro } from './Dinheiro';
 
 export type Destino = 'tempo' | 'estudos' | 'pessoas' | 'casa' | 'trabalho';
@@ -31,7 +34,10 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
   const tracos = tracosMarcantes(vida);
   const afeto = situacaoAfetiva(vida);
   const luto = lutoVisivel(vida);
-  const condicoes = vida.corpo.condicoes;
+  // Só o que tem nome é "condição"; o resto é sinal (e o cuidado é ir ao médico).
+  const condicoes = vida.corpo.condicoes.filter(c => c.diagnosticada !== false);
+  const sinais = sinaisDoCorpo(vida);
+  const pessoais: DimensaoPessoal[] = [...(i >= 6 ? ['condicionamento' as const] : []), ...(i >= 7 ? ['aprendizado' as const] : []), ...(i >= 14 ? ['aparencia' as const] : [])];
   return (
     <div className="voce">
       <section className="voce-rosto" aria-label="Como você está">
@@ -48,6 +54,19 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
         {leituras.map(l => <Estado key={l.d} l={l} vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />)}
       </div>
 
+      {pessoais.length > 0 && <CorpoEAprendizado vida={vida} dims={pessoais} irPara={irPara} />}
+
+      {sinais.length > 0 && (
+        <section className="voce-condicoes voce-sinais" aria-label="Sinais do corpo">
+          <h2 className="voce-subtitulo">O corpo tem dado sinais</h2>
+          <ul>
+            {sinais.map(x => <li key={x.id}><strong>{x.texto.charAt(0).toUpperCase() + x.texto.slice(1)}</strong><span>desde {anoDe(x.desde)}</span></li>)}
+          </ul>
+          <p className="nota">Ainda sem nome. Ir ao médico é o que dá diagnóstico — e tratamento. Ignorar também é escolha: às vezes passa, às vezes o corpo cobra depois.</p>
+          {i >= 14 && <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="secundario" ocultarImpossivel>Ir ao médico ver o que é</BotaoAcao></div>}
+        </section>
+      )}
+
       {i >= 8 && <ODinheiro vida={vida} agir={agir} irParaCasa={() => irPara('casa')} />}
 
       {condicoes.length > 0 && (
@@ -57,7 +76,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
             {condicoes.map(c => (
               <li key={c.id}>
                 <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</strong>
-                <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? 'na fila do SUS' : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}</span>
+                <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? 'na fila do SUS' : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}{c.tarde ? ' · descoberto tarde' : ''}</span>
               </li>
             ))}
           </ul>
@@ -112,5 +131,37 @@ function Estado({ l, vida, agir, irPara, abrirPessoa }: { l: LeituraDimensao; vi
         </div>
       )}
     </article>
+  );
+}
+
+/**
+ * Condicionamento, aprendizado e aparência: o que é, o que tem mexido nisso
+ * (as causas do motor) e para que serve — com o caminho para mexer.
+ */
+function CorpoEAprendizado({ vida, dims, irPara }: { vida: Vida; dims: DimensaoPessoal[]; irPara: (a: Destino) => void }) {
+  const leituras = dims.map(d => lerPessoal(vida, d));
+  return (
+    <section className="voce-pessoal" aria-labelledby="titulo-pessoal">
+      <h2 id="titulo-pessoal" className="voce-subtitulo">Corpo e aprendizado</h2>
+      <ul className="pessoal">
+        {leituras.map(l => (
+          <li key={l.d} className="pessoal__item">
+            <p className="pessoal__cabeca">
+              <strong className="pessoal__nome">{l.nome}</strong>
+              <span className="pessoal__palavra">{l.palavra}</span>
+              {l.tendencia === 'melhorando' || l.tendencia === 'piorando' ? <span className={`estado-bloco__tendencia estado-bloco__tendencia--${l.tendencia}`}>{l.tendencia === 'melhorando' ? '↗ vem melhorando' : '↘ vem piorando'}</span> : null}
+            </p>
+            {(l.ajuda.length > 0 || l.pesa.length > 0) && (
+              <p className="pessoal__causas">
+                {l.ajuda.length > 0 && <span><span className="pessoal__sinal pessoal__sinal--bom" aria-hidden>+ </span>{l.ajuda.join('; ')}</span>}
+                {l.pesa.length > 0 && <span><span className="pessoal__sinal" aria-hidden>− </span>{l.pesa.join('; ')}</span>}
+              </p>
+            )}
+            <p className="pessoal__uso">{l.uso}</p>
+            {l.ir && <button type="button" className="link pessoal__ir" onClick={() => irPara(l.ir!.aba)}>{l.ir.rotulo} →</button>}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

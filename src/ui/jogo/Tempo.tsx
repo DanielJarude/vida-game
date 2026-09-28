@@ -15,7 +15,8 @@ import { useState } from 'react';
 import type { Dominio, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
-import { ROTINAS, atividadeExiste, modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
+import { DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
+import { estimuloCognitivo, estimuloFisico, palavraAprendizado, palavraCondicionamento } from '../../motor/sistemas/pessoa';
 import { cabeNaSemana, dose, semana, type Semana } from '../../motor/sistemas/semana';
 import { frentesDaVida, leituraDaFrente } from '../../motor/sistemas/frentes';
 import { atividadesParaVoce } from '../../motor/sistemas/relevancia';
@@ -205,7 +206,9 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
             const n = nivelDa(r);
             const nm = nivelModelo(m, n);
             const dominio = m.pratica ? (Object.keys(m.pratica)[0] as Dominio) : undefined;
-            const leitura = dominio && vida.caminhos.frentes[dominio] ? leituraDaFrente(vida, dominio) : '';
+            // O que a atividade faz de verdade: a técnica da frente que pratica, ou o atributo que desenvolve (a mesma leitura de Você).
+            const leitura = dominio && vida.caminhos.frentes[dominio] && (m.pratica?.[dominio] ?? 0) >= 1 ? leituraDaFrente(vida, dominio) : efeitoNoCorpo(vida, r.id);
+            const deEstudos = DE_ESTUDOS.has(r.id);
             const anos = Math.floor((vida.t - r.tInicio) / 12);
             const renda = m.renda?.(vida, n);
             const retorno = peneira && peneira.dominio === dominio ? peneira : undefined;
@@ -218,9 +221,10 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
                   {retorno && <span className="rotina__retorno">Na última {dominio === 'futebol' ? 'peneira' : 'seletiva'}: {retorno.texto}</span>}
                 </div>
                 <div className="rotina__acoes">
-                  {n < m.niveis.length && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${nivelModelo(m, n + 1).rotulo.toLowerCase()}`}</BotaoAcao>}
-                  {n > 1 && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n - 1) as 1 | 2 }} agir={agir} variante="discreto">Mais leve</BotaoAcao>}
-                  <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>
+                  {deEstudos && irPara && <button type="button" className="link rotina__ir" onClick={() => irPara('estudos')}>ver em Estudos →</button>}
+                  {!deEstudos && n < m.niveis.length && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${nivelModelo(m, n + 1).rotulo.toLowerCase()}`}</BotaoAcao>}
+                  {!deEstudos && n > 1 && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n - 1) as 1 | 2 }} agir={agir} variante="discreto">Mais leve</BotaoAcao>}
+                  {!deEstudos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>}
                 </div>
               </li>
             );
@@ -266,7 +270,8 @@ function Comecar({ vida, agir, custo }: { vida: Vida; agir: (a: Acao) => boolean
   const [verSemTempo, setVerSemTempo] = useState(false);
   const [verFora, setVerFora] = useState(false);
   const { para, resto } = atividadesParaVoce(vida);
-  const outras = ROTINAS.filter(m => !vida.rotinas.some(x => x.id === m.id) && atividadeExiste(vida, m));
+  // O cursinho mora em Estudos (é preparação, não tempo livre): aqui só aparece na semana.
+  const outras = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !vida.rotinas.some(x => x.id === m.id) && atividadeExiste(vida, m));
   const itens = outras.map(m => ({ m, d: disponibilidade(vida, { tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }) }));
   const semTempo = itens.filter(x => !podeTentar(x.d) && x.d.grau === 'incompativel' && /semana/.test(x.d.motivo ?? ''));
   const fora = itens.filter(x => !podeTentar(x.d) && !semTempo.includes(x));
@@ -309,4 +314,19 @@ function Comecar({ vida, agir, custo }: { vida: Vida; agir: (a: Acao) => boolean
       )}
     </Secao>
   );
+}
+
+/**
+ * O que uma atividade que não é técnica faz pela pessoa: academia e corrida
+ * mexem no condicionamento; leitura e xadrez, no aprendizado. É a leitura de
+ * Você (a mesma fonte), e diz também o que ela NÃO faz.
+ */
+function efeitoNoCorpo(vida: Vida, id: string): string {
+  if (estimuloFisico(vida).fontes.some(f => f.id === id) && ['academia', 'corrida', 'bico'].includes(id)) {
+    return `Condicionamento: ${palavraCondicionamento(vida.corpo.forma)}.${id === 'academia' ? ' Treina o corpo — não ensina um esporte.' : ''}`;
+  }
+  if (estimuloCognitivo(vida).fontes.some(f => f.id === id) && ['leitura', 'xadrez'].includes(id)) {
+    return `Aprendizado: ${palavraAprendizado(vida.mente.cognicao)}. Sobe devagar, com os anos.`;
+  }
+  return '';
 }

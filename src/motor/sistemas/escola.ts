@@ -27,6 +27,7 @@ import { SALARIO_MINIMO } from './renda';
 import { flex } from '../texto';
 import { anoDe } from '../tempo';
 import { abalar } from './abalo';
+import { bonusDoPreparo, devolutivaDoEnem } from './vestibular';
 
 /** "Eletricista instalador (NR-10)" → "eletricista instalador (NR-10)": só a inicial, e só quando não é sigla. */
 const minusculaInicial = (s: string) => (/^[A-ZÀ-Ú][a-zà-ú]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
@@ -92,7 +93,8 @@ export function condicoesDeEstudo(v: Vida): number {
 export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?: Materia[]): number {
   const d = v.personalidade.tracos.disciplina;
   const postura = v.educacao.postura === 'dedicada' ? 10 : v.educacao.postura === 'relaxada' ? -10 : 0;
-  const casa = (v.mente.felicidade - 50) * 0.1 - Math.max(0, v.mente.estresse - 60) * 0.25;
+  // Bem-estar, cabeça e corpo: um ano doente ou para baixo rende menos na escola (sem virar fracasso).
+  const casa = (v.mente.felicidade - 50) * 0.1 - Math.max(0, v.mente.estresse - 60) * 0.25 - Math.max(0, 55 - v.corpo.saude) * 0.2;
   const trabalhoPesa = v.trabalho.atual ? (v.trabalho.atual.carga === 'integral' ? -10 : -4) : 0;
   // A nota compara o que a pessoa sabe com o que se espera na série (ou no curso).
   const media = materias?.length ? materias.reduce((s, m) => s + habilidade(v, m), 0) / materias.length : mediaEscolar(v);
@@ -243,19 +245,28 @@ export function voltarAEstudar(v: Vida): void {
 
 /* ------------------------------------------------------------------ ENEM */
 
-const AREAS_ENEM: Materia[] = ['exatas', 'linguagens', 'ciencias', 'humanas'];
+export const AREAS_ENEM: Materia[] = ['exatas', 'linguagens', 'ciencias', 'humanas'];
 
-/** Nota do ENEM por área: cada matéria vai para um lado. */
-export function notasEnem(v: Vida, r: Rng): Record<Materia, number> {
+/**
+ * A nota que a preparação de hoje daria numa área, sem o acaso do dia. É a
+ * MESMA conta da prova (`notasEnem` só soma o dia) — e a que Estudos mostra
+ * como "onde você está" (`vestibular.estimativaParaCurso`).
+ */
+export function notaEsperadaArea(v: Vida, a: Materia): number {
   const hist = v.educacao.basica?.desempenho ?? 55;
   const privada = v.educacao.basica?.rede === 'privada' ? 35 : 0;
-  const cursinho = v.educacao.cursinho ? 40 : 0;
+  const preparo = bonusDoPreparo(v);
   const idadeFora = v.educacao.basica ? 0 : Math.min(40, Math.max(0, idade(v) - 18) * 4);
   const postura = v.educacao.postura === 'dedicada' ? 20 : v.educacao.postura === 'relaxada' ? -20 : 0;
+  return 250 + habilidade(v, a) * 4.4 + hist * 1.2 + (v.mente.cognicao - 50) * 1.2 + privada + preparo + postura - idadeFora;
+}
+
+/** Nota do ENEM por área: cada matéria vai para um lado, e o dia pesa. */
+export function notasEnem(v: Vida, r: Rng): Record<Materia, number> {
   const dia = r.normal() * 25;
   const out = {} as Record<Materia, number>;
   for (const a of AREAS_ENEM) {
-    const nota = 250 + habilidade(v, a) * 4.4 + hist * 1.2 + (v.mente.cognicao - 50) * 1.2 + privada + cursinho + postura - idadeFora + dia + r.normal() * 30;
+    const nota = notaEsperadaArea(v, a) + dia + r.normal() * 30;
     out[a] = Math.round(clamp(nota, 320, 950));
   }
   return out;
@@ -305,6 +316,7 @@ export function fazerEnem(v: Vida, r: Rng): number {
     ? `Fez o ENEM pela primeira vez e tirou ${nota} — ${faixa}.`
     : nota > anterior ? `Fez o ENEM de novo e subiu para ${nota}.` : `Fez o ENEM de novo: ${nota}, sem melhorar.`;
   escrever(v, { texto, relevancia: anterior === 0 || nota > anterior + 40 ? 'biografia' : 'cotidiano', tema: 'estudo', tom: nota >= 650 ? 'bom' : nota < 500 ? 'ruim' : 'neutro', escolha: true });
+  devolutivaDoEnem(v, areas);
   return nota;
 }
 
@@ -525,10 +537,15 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
   };
   if (n.via === 'fies') m.mensalidade = Math.round(c.mensalidade * economiaLocal(n.municipioId).custo);
   v.educacao.matricula = m;
-  v.educacao.cursinho = false;
+  // O cursinho acaba com a aprovação (a rotina é a fonte única; a preparação fica para trás).
+  v.rotinas = v.rotinas.filter(x => x.id !== 'cursinho');
+  if (v.educacao.cursinho !== undefined) v.educacao.cursinho = false;
   if (c.nivel === 'superior') subir(v, 'superior_incompleto');
   const g = v.eu.tratamento ?? v.eu.genero;
-  escrever(v, { texto: `${flex(g, 'Aprovado', 'Aprovada')} em ${c.nome}, ${em(m.instituicao)}.`, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
+  const objetivo = v.educacao.objetivo?.cursoId === c.id;
+  const tentativas = objetivo ? v.educacao.enem.filter(x => x.t >= v.educacao.objetivo!.t).length : 0;
+  escrever(v, { texto: `${flex(g, 'Aprovado', 'Aprovada')} em ${c.nome}, ${em(m.instituicao)}.${objetivo ? (tentativas > 1 ? ` Era o curso que queria — depois de ${tentativas} ENEMs.` : ' Era o curso que queria.') : ''}`, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
+  if (objetivo) v.educacao.objetivo = undefined;
 }
 
 /* --------------------------------------------------- Andamento do curso */

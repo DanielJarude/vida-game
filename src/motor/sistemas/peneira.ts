@@ -24,7 +24,8 @@ import type { Devolutiva, Dominio, Vida } from '../tipos';
 import { idade } from '../nucleo';
 import { habilidade } from './frentes';
 import { estruturaEsportiva } from '../dados/mercado';
-import { anoDe } from '../tempo';
+import { anoDe, idadeEm } from '../tempo';
+import { predisposicao } from './predisposicao';
 
 export type Aspecto = 'tecnica' | 'fisico' | 'leitura' | 'nervos';
 
@@ -62,18 +63,32 @@ export const ETAPAS_PENEIRA: EtapaPeneira[] = [
   }
 ];
 
-/** Como a pessoa chega à peneira (antes do dia). */
-export function aspectos(v: Vida, d: Dominio): Aspectos {
+/**
+ * Como a pessoa chega à peneira (antes do dia). Cada aspecto tem uma fonte:
+ *   técnica  a habilidade DA MODALIDADE (só a prática dela a constrói);
+ *   físico   o condicionamento (academia, treino), a predisposição física
+ *            (o corpo que responde) e a saúde — é modificador, não técnica;
+ *   leitura  anos de prática competitiva, a regularidade (quem parou e
+ *            voltou perde ritmo de jogo) e a idade em que começou;
+ *   nervos   a cabeça do momento e as peneiras que já fez (quem já passou
+ *            por uma sabe como é).
+ */
+export function aspectos(v: Vida, d: Dominio, anteriores = v.fatos[`peneiras_${d}`] ?? 0): Aspectos {
   const h = habilidade(v, d);
   const f = v.caminhos.frentes[d];
   const anosDePratica = (f?.meses ?? 0) / 12;
+  const inicio = f ? idadeEm(v.eu.tNasc, f.tInicio) : idade(v);
+  const cedo = inicio <= 9 ? 0.08 : inicio >= 15 ? -0.08 : 0;
+  const retomadas = Math.min(3, f?.retomadas ?? 0);
+  const saude = Math.max(0, 60 - v.corpo.saude) / 40 + v.corpo.condicoes.filter(c => c.id === 'coluna' && !c.tratando).length * 0.2;
+  const tentativas = Math.min(2, anteriores);
   return {
     h,
     forma: v.corpo.forma,
     tecnica: (h - 66) / 20,
-    fisico: (v.corpo.forma - 52) / 40,
-    leitura: Math.min(1, anosDePratica / 6) - 0.35 + ((v.rotinas.find(x => x.id === d)?.nivel ?? 1) >= 2 ? 0.1 : 0),
-    nervos: clamp(-(v.mente.estresse - 40) / 60, -0.6, 0.4)
+    fisico: (v.corpo.forma - 45) / 40 + predisposicao(v, 'fisica') * 0.15 - saude,
+    leitura: Math.min(1, anosDePratica / 6) - 0.35 + ((v.rotinas.find(x => x.id === d)?.nivel ?? 1) >= 2 ? 0.1 : 0) + cedo - retomadas * 0.05,
+    nervos: clamp(-(v.mente.estresse - 40) / 60 + tentativas * 0.08, -0.6, 0.45)
   };
 }
 
@@ -92,7 +107,8 @@ export interface ResultadoPeneira {
  * cidade pesam; o dia (acaso) decide o que está na margem.
  */
 export function avaliarPeneira(v: Vida, r: Rng, d: Dominio, municipioId: string, notas: { comeco?: string; final?: string }, bonus: number): ResultadoPeneira {
-  const a = aspectos(v, d);
+  // A tentativa de agora já foi contada: as anteriores são as outras.
+  const a = aspectos(v, d, Math.max(0, (v.fatos[`peneiras_${d}`] ?? 1) - 1));
   // Correr em todas cobra a conta no fim de quem não tem fôlego.
   const fisico = a.fisico - (notas.comeco === 'intensidade' && a.forma < 60 ? 0.25 : 0);
   const ajustes = ETAPAS_PENEIRA.map(e => e.opcoes.find(o => o.id === notas[e.id])?.ajuste(a) ?? 0);
@@ -102,7 +118,9 @@ export function avaliarPeneira(v: Vida, r: Rng, d: Dominio, municipioId: string,
   const concorrencia = estruturaEsportiva(municipioId) >= 2 ? 0.06 : 0;
   const dia = r.normal() * 0.14;
   const pontos = 0.5 * a.tecnica + 0.14 * fisico + 0.14 * a.leitura + 0.06 * a.nervos + 0.18 * abordagem + idadeAjuste + bonus + dia;
-  const limiar = 0.28 + concorrencia;
+  // REWORK 2: o limiar era 0,28 com o físico inflado (quem jogava chegava a forma 100). Com o condicionamento
+  // realista, 0,21 mantém a promessa da tela: quem está "no nível de uma base" costuma ser chamado; o físico só não compensa a técnica.
+  const limiar = 0.21 + concorrencia;
   const valores: Record<Aspecto, number> = { tecnica: a.tecnica, fisico, leitura: a.leitura, nervos: a.nervos * 1.5 };
   const ordem = (Object.entries(valores) as [Aspecto, number][]).sort((x, y) => y[1] - x[1]);
   const forte = ordem[0][0];

@@ -284,6 +284,8 @@ describe('7 e 8. sair e voltar', () => {
 describe('9. família e estado pessoal', () => {
   it('campanha porta a porta: semana cheia, cabeça, tensão com a parceria; Brasília afasta as crianças', () => {
     let v = politico(adulto(34));
+    // Premissa: a parceria é a que o teste cria (sem outra história em andamento).
+    for (const x of Object.values(v.vinculos)) if (x.romance && x.romance.estagio !== 'ex') x.romance = undefined;
     const par = criarPessoa(v, criarRng(2), { idade: 34, municipioId: v.moradia.municipioId });
     const vin = vincular(v, par, { origem: 'romance', proximidade: 70, convivio: ['casa'] });
     vin.romance = { estagio: 'casamento', tEstagio: v.t - 60, envolvimento: 70 };

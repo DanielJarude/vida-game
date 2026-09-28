@@ -30,12 +30,14 @@ import { rotuloDe } from '../apresentar';
 import { circulos, comoEsta, etiqueta, ondeEsta, quemE, sinaisSociais, vidaPropria, type Par } from '../leitura';
 import { BotaoAcao, Escolha, Folha, Folio, Secao, Vazio } from '../comum';
 import { Retrato, type Expressao } from '../avatar/Retrato';
+import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void }
 
 export function Pessoas({ vida, agir, aberta, abrir }: Props) {
   const c = circulos(vida);
-  const usadas = vida.anoAtual.acoes.filter(a => a.startsWith('pessoa:')).length;
+  // Reagir a quem tomou a iniciativa não gasta o tempo do ano (é a mesma regra do motor).
+  const usadas = vida.anoAtual.acoes.filter(a => a.startsWith('pessoa:') && !a.startsWith('pessoa:chamado_')).length;
   const restam = Math.max(0, LIMITE_INTERACOES - usadas);
   const pessoa = aberta ? vida.pessoas[aberta] : null;
   const i = idade(vida);
@@ -89,6 +91,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
         {' '}Quem convive com você continua perto sem esforço; quem está longe, esfria.
       </p>
 
+      <ConhecerAlguem vida={vida} agir={agir} />
       <Voce vida={vida} agir={agir} />
       {pessoa && <FichaPessoa vida={vida} p={pessoa} vin={vida.vinculos[pessoa.id]} agir={agir} aoFechar={() => abrir(null)} />}
     </div>
@@ -179,6 +182,36 @@ function Dobra({ rotulo, children }: { rotulo: string; children: React.ReactNode
   );
 }
 
+/**
+ * Conhecer alguém: a busca ativa (uma vez por ano), pelos contextos que
+ * existem nesta vida. A resposta é da outra pessoa — e não achar ninguém é
+ * resultado também.
+ */
+function ConhecerAlguem({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const i = idade(vida);
+  if (i < 15 || parceiro(vida) || vida.justica?.prisao) return null;
+  const ctxs = contextosDeBusca(vida);
+  const opcoesAtracao: { id: Atracao; rotulo: string }[] = [{ id: 'mulheres', rotulo: 'Mulheres' }, { id: 'homens', rotulo: 'Homens' }, { id: 'ambos', rotulo: 'Qualquer gênero' }];
+  const feita = vida.anoAtual.acoes.some(a => a.startsWith('buscar:'));
+  return (
+    <Secao titulo="Conhecer alguém" recolhivel aberta={i >= 18}>
+      <p className="nota">Procurar alguém é uma escolha sua; o interesse é da outra pessoa. Às vezes aparece alguém, às vezes não — uma vez por ano.</p>
+      {!vida.eu.atracao && (
+        <div className="campo">
+          <span className="campo__rotulo">Antes: por quem você se interessa</span>
+          <Escolha rotulo="Por quem você se interessa" opcoes={opcoesAtracao} valor={undefined as unknown as Atracao} aoMudar={valor => agir({ tipo: 'atracao', valor })} />
+        </div>
+      )}
+      {vida.eu.atracao && !feita && (
+        <div className="grupo-acoes">
+          {ctxs.map(x => <BotaoAcao key={x} vida={vida} acao={{ tipo: 'conhecer_alguem', contexto: x }} agir={agir} variante="discreto">{ROTULO_BUSCA[x]}</BotaoAcao>)}
+        </div>
+      )}
+      {feita && <p className="nota">Você já procurou este ano.</p>}
+    </Secao>
+  );
+}
+
 /** O que é só seu: por quem você se interessa. Adoção sem parceria também é individual. */
 function Voce({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const i = idade(vida);
@@ -261,9 +294,12 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
 
         {p.vivo && p.especie && <FichaPet vida={vida} agir={agir} p={p} />}
 
+        {p.vivo && vin.chamado && (
+          <p className="ficha__chamado"><span className="ficha__ano">{anoDe(vin.chamado.t)}</span> {vin.chamado.texto} <span className="ficha__chamado-nota">{vin.chamado.tipo === 'apoio' ? 'Aconteceu — e dá para responder.' : 'Espera uma resposta; o silêncio também responde.'}</span></p>
+        )}
         {p.vivo && acoes.length > 0 && (
           <div className="ficha__acoes">
-            <h3 className="ficha__subtitulo">O que fazer junto</h3>
+            <h3 className="ficha__subtitulo">{vin.chamado ? 'Como reagir' : 'O que fazer junto'}</h3>
             <div className="grupo-acoes">
               {principais.map(x => (
                 <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={x.variante} mostrarChance={x.chance}

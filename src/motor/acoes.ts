@@ -53,6 +53,8 @@ import { NEGOCIOS } from './sistemas/negocio';
 import { disponibilidadePolitica, executarPolitica, type AcaoPoliticaCmd } from './sistemas/politica';
 import { abrirConflitoPendente } from './conteudo/compromissos';
 import { noServicoInicial, propor } from './sistemas/compromissos';
+import { definirObjetivo, podeDefinirObjetivo } from './sistemas/vestibular';
+import { buscarAlguem, disponibilidadeBusca, type ContextoBusca } from './sistemas/busca';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -140,7 +142,11 @@ export type Acao =
   /** A vida política: aproximar-se, filiar-se, a comunidade, a candidatura, a crise, a saída. */
   | AcaoPoliticaCmd
   /** Perseguir um caminho: pedir um teste, montar um grupo, dirigir o estudo, pedir uma bolsa. */
-  | AcaoPerseguirCmd;
+  | AcaoPerseguirCmd
+  /** O curso que se quer (Medicina, Direito...): a preparação passa a ser dirigida a ele. Sem curso: deixar de lado. */
+  | { tipo: 'objetivo_estudo'; cursoId?: string }
+  /** Procurar alguém (a busca ativa de um relacionamento), num contexto da vida. */
+  | { tipo: 'conhecer_alguem'; contexto: ContextoBusca };
 
 export { LIMITE_INTERACOES };
 
@@ -211,6 +217,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'perseguir': return disponibilidadePerseguir(v, a);
     case 'postura': return v.educacao.basica || v.educacao.matricula ? PERMITIDO : bloqueio('impossivel', 'Você não está estudando.');
     case 'enem': return podeFazerEnem(v);
+    case 'objetivo_estudo': return podeDefinirObjetivo(v, a.cursoId);
+    case 'conhecer_alguem': return disponibilidadeBusca(v, a.contexto);
     case 'matricular': {
       const o = opcoesDeCurso(v)[a.indice];
       if (!o) return bloqueio('impossivel', 'Opção inválida.');
@@ -669,7 +677,14 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok(a.valor === 'dedicada' ? 'Este ano, estudo em primeiro lugar.' : a.valor === 'relaxada' ? 'Este ano, a escola vem depois.' : 'Estudar no ritmo normal.');
     case 'enem': {
       const nota = fazerEnem(v, r);
-      return { resultado: `Você fez o ENEM e tirou ${nota}.` };
+      // Com um curso em vista, a prova deixa devolutiva: onde ficou diante do corte e o que pesou.
+      const dev = v.educacao.objetivo ? [...v.caminhos.devolutivas].reverse().find(d => d.tipo === 'vestibular' && d.t === v.t) : undefined;
+      return { resultado: `Você fez o ENEM e tirou ${nota}.${dev ? ` ${dev.texto}` : ''}`, titulo: dev ? 'O ENEM' : undefined };
+    }
+    case 'objetivo_estudo': return ok(definirObjetivo(v, a.cursoId));
+    case 'conhecer_alguem': {
+      const out = buscarAlguem(v, r, a.contexto);
+      return { resultado: out.resultado, titulo: out.titulo ?? 'Conhecer alguém', pessoaId: out.pessoaId };
     }
     case 'matricular': {
       const o: OpcaoCurso = opcoesDeCurso(v)[a.indice];

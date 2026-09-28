@@ -22,6 +22,7 @@ import { clamp } from '../rng';
 import type { Dominio, Frente, Vida } from '../tipos';
 import { FRENTES, MATERIAS, estagioDe, modeloFrente } from '../dados/frentes';
 import { idade } from '../nucleo';
+import { predisposicao } from './predisposicao';
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -79,24 +80,32 @@ export function praticar(v: Vida, r: Rng, d: Dominio, peso: number, qualidade = 
   const m = modeloFrente(d);
   if (v.t - f.tUltimo > 24 && f.meses > 0) f.retomadas += 1;
   const apt = aptidao(v, d);
+  // A predisposição larga (o corpo para o esporte, a sensibilidade para a arte, a cabeça para o estudo)
+  // soma um pouco à facilidade da frente: influência, nunca substituta da prática.
+  const pred = m.categoria === 'esporte' ? predisposicao(v, 'fisica') : m.categoria === 'arte' ? predisposicao(v, 'artistica') : m.categoria === 'estudo' ? predisposicao(v, 'cognitiva') : 0;
   // A facilidade muda a velocidade (±45%), não o teto.
-  const velocidade = 1 + apt * 0.45;
-  const vontade = 0.75 + f.interesse / 200;
+  const velocidade = (1 + apt * 0.45) * (1 + pred * 0.12);
+  // O aprendizado geral (ler, estudar) deixa as matérias e os estudos renderem um pouco mais — só eles.
+  const aprende = m.categoria === 'estudo' ? 1 + (v.mente.cognicao - 55) / 250 : 1;
+  // Bem-estar é motivação: um tempo muito para baixo rende menos; um bom momento, um pouco mais.
+  const vontade = 0.75 + f.interesse / 200 + clamp((v.mente.felicidade - 50) / 400, -0.1, 0.06);
   let corpo = 1;
-  if (m.categoria === 'esporte') corpo = 0.7 + v.corpo.forma / 170 - Math.max(0, 55 - v.corpo.saude) / 120;
+  // No esporte, o condicionamento é MODIFICADOR do treino técnico (não o substitui).
+  // (Recalibrado no REWORK 2: o condicionamento deixou de inflar com o treino técnico — quem joga na escolinha fica perto de 65–70, não de 90.)
+  if (m.categoria === 'esporte') corpo = 0.85 + v.corpo.forma / 200 - Math.max(0, 55 - v.corpo.saude) / 120;
   // Rende menos perto do topo. O topo de cada um sobe com a facilidade e com
   // os anos de prática intensa: sem facilidade, a raça leva longe (70 e
   // poucos); com facilidade e anos de treino, chega-se ao que é raro.
-  const topo = Math.min(97, 70 + apt * 18 + Math.min(12, f.meses / 24));
+  const topo = Math.min(97, 70 + apt * 18 + pred * 4 + Math.min(12, f.meses / 24));
   const teto = Math.max(0.03, 1 - f.habilidade / (topo + 4));
-  const ganho = 7.2 * peso * velocidade * vontade * fatorIdade(d, i) * qualidade * corpo * teto * (0.8 + r.next() * 0.4);
+  const ganho = 7.2 * peso * velocidade * aprende * vontade * fatorIdade(d, i) * qualidade * corpo * teto * (0.8 + r.next() * 0.4);
   f.habilidade = clamp(Math.round((f.habilidade + ganho) * 10) / 10);
   f.meses += Math.round(12 * peso);
   f.tUltimo = v.t;
   f.auge = Math.max(f.auge, f.habilidade);
   // Interesse: a prática que rende alimenta; a que não rende cansa. Pressão também cansa.
   const rendeu = ganho >= 3 ? 3 : ganho >= 1.5 ? 1 : -2;
-  const cansaco = v.mente.estresse > 70 ? -3 : 0;
+  const cansaco = (v.mente.estresse > 70 ? -3 : 0) + (v.mente.felicidade < 35 ? -2 : 0);
   f.interesse = clamp(Math.round(f.interesse + rendeu + cansaco + apt * 2 + (r.next() - 0.5) * 4));
   // O corpo cobra depois de certa idade, mesmo praticando.
   if (m.declinio && i > m.declinio) f.habilidade = clamp(Math.round((f.habilidade - (i - m.declinio) * 0.5) * 10) / 10);

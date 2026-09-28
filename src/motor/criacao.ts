@@ -7,6 +7,7 @@
  * cachorro no quintal. Tudo isso é coerente com a classe e o lugar.
  */
 
+import { derivarPredisposicoes } from './sistemas/pessoa';
 import { caminhosVazios } from './sistemas/marcas';
 import { criarRng, type Rng } from './rng';
 import type { Classe, Genero, Origem, Pessoa, Vida, Visual } from './tipos';
@@ -107,9 +108,12 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const arranjo = sortearArranjo(r, classe);
   const podeGestar = o.genero === 'feminino' ? true : o.genero === 'masculino' ? false : !!o.podeGestar;
 
+  const id = `vida-${o.semente.toString(36)}`;
+  // Predisposições: da semente, sem gastar o gerador (a vida criada é a mesma de antes, com elas guardadas).
+  const pred = derivarPredisposicoes(id);
   const v: Vida = {
-    versao: 15,
-    id: `vida-${o.semente.toString(36)}`,
+    versao: 16,
+    id,
     rng: 0,
     seq: 0,
     t,
@@ -124,8 +128,9 @@ export function criarVida(o: OpcoesCriacao): Vida {
     },
     corpo: {
       saude: Math.round(88 + r.normal() * 5 - (classe === 'vulneravel' ? 4 : 0)),
-      forma: 50,
+      forma: Math.round(50 + pred.fisica * 6),
       aparencia: Math.round(55 + r.normal() * 12),
+      aparenciaBase: 0,
       condicoes: [],
       habitos: { fuma: false, bebe: 'nao', sedentario: false },
       podeGestar
@@ -133,10 +138,12 @@ export function criarVida(o: OpcoesCriacao): Vida {
     mente: {
       felicidade: 75,
       estresse: 8,
-      cognicao: Math.max(15, Math.min(95, Math.round(55 + r.normal() * 13))),
+      // A facilidade de aprender nasce perto da predisposição cognitiva (e o resto é acaso).
+      cognicao: Math.max(15, Math.min(95, Math.round(55 + pred.cognitiva * 10 + r.normal() * 9))),
       abalos: [],
       historico: []
     },
+    predisposicoes: pred,
     personalidade: {
       tracos: { empatia: 0, generosidade: 0, disciplina: 0, impulsividade: 0, coragem: 0, sociabilidade: 0, independencia: 0, familia: 0 },
       evidencias: []
@@ -170,6 +177,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     caminhos: caminhosVazios()
   };
   v.eu.visual = o.visual ?? v.eu.visual;
+  v.corpo.aparenciaBase = v.corpo.aparencia;
 
   const cidade = o.municipioId;
   const sob = v.eu.sobrenome;

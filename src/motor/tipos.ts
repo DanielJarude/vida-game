@@ -234,6 +234,23 @@ export interface Vinculo {
   habitos?: Record<string, number>;
   /** História compartilhada — só fatos que aconteceram. */
   historia: Marco[];
+  /**
+   * A pessoa tomou uma iniciativa e espera uma reação (pediu ajuda,
+   * convidou, cobrou a distância, demonstrou interesse). Responder é escolha
+   * do jogador; não responder também tem consequência (`sistemas/iniciativas`).
+   */
+  chamado?: Chamado;
+}
+
+export type TipoChamado = 'pedido_ajuda' | 'convite' | 'reclamacao' | 'apoio' | 'interesse' | 'conversa_casal';
+
+export interface Chamado {
+  tipo: TipoChamado;
+  t: number;
+  /** O que a pessoa fez, em palavras (gravado: recarregar mostra o mesmo). */
+  texto: string;
+  /** O assunto (a mudança, as consultas, a viagem) — para a resposta falar dele. */
+  assunto?: string;
 }
 
 /* ------------------------------------------------------------------- Corpo */
@@ -246,12 +263,24 @@ export interface Condicao {
   /** Gravidade 1..3. */
   gravidade: number;
   tratando: boolean;
+  /**
+   * Já tem nome no consultório? Antes do diagnóstico, a condição existe e
+   * age sobre o corpo, mas a pessoa só percebe os SINAIS (`sistemas/saude`).
+   * Ausente = diagnosticada (saves anteriores à v16).
+   */
+  diagnosticada?: boolean;
+  /** Quando ganhou nome. */
+  tDiagnostico?: number;
+  /** Descoberta tarde (depois de anos de sinais): o tratamento rende menos. */
+  tarde?: boolean;
 }
 
 export interface Corpo {
   saude: number;       // 0..100
   forma: number;       // condicionamento físico 0..100
   aparencia: number;   // presença/cuidado 0..100
+  /** A aparência de nascença (traços, jeito): o ponto para onde ela volta sem os fatores do momento. */
+  aparenciaBase: number;
   condicoes: Condicao[];
   habitos: { fuma: boolean; bebe: 'nao' | 'social' | 'muito'; sedentario: boolean };
   /** Pode gestar (definido pelo corpo, não pelo gênero). */
@@ -265,7 +294,23 @@ export interface Mente {
   /** Acontecimentos que mexeram com a pessoa, com nome (o equilíbrio vai absorvendo). */
   abalos: { t: number; texto: string; humor: number; cabeca: number }[];
   /** Como estava a cada aniversário (para a tendência: melhorando, piorando). */
-  historico: { t: number; humor: number; cabeca: number; saude: number }[];
+  historico: { t: number; humor: number; cabeca: number; saude: number; forma?: number; cognicao?: number; aparencia?: number }[];
+}
+
+/**
+ * Predisposições: a facilidade de nascença em três eixos largos (−1..1),
+ * derivadas da semente e guardadas na criação. São influência, não
+ * destino: mudam a VELOCIDADE com que a prática rende e o teto plausível,
+ * nunca substituem a prática. Não aparecem como número.
+ *
+ * Diferente da aptidão por frente (`sistemas/frentes.aptidao`): a física
+ * diz como o CORPO responde ao treino (condicionamento, explosão); a aptidão
+ * no futebol diz o jeito com a bola. Nenhuma das duas é técnica.
+ */
+export interface Predisposicoes {
+  cognitiva: number;
+  fisica: number;
+  artistica: number;
 }
 
 /* -------------------------------------------------------------- Personalidade */
@@ -335,7 +380,19 @@ export interface Educacao {
   enem: { t: number; nota: number; areas?: Partial<Record<'exatas' | 'linguagens' | 'ciencias' | 'humanas', number>> }[];
   /** Postura do ano na escola/curso (escolha comportamental do jogador). */
   postura: 'dedicada' | 'normal' | 'relaxada';
-  cursinho: boolean;
+  /**
+   * Obsoleto (até a v15): espelho da rotina de cursinho. A fonte única é a
+   * rotina (`sistemas/vestibular.fazCursinho`); o campo só existe em saves antigos.
+   */
+  cursinho?: boolean;
+  /** O curso que a pessoa quer (Medicina, Direito...): a preparação passa a ser dirigida a ele. */
+  objetivo?: { cursoId: string; t: number };
+  /**
+   * Preparação para o vestibular: meses de cursinho acumulados (esfriam
+   * quando para). É o que o cursinho acrescenta à nota — dito em Estudos
+   * pela mesma conta que a prova usa.
+   */
+  preparo?: { meses: number; tUltimo?: number };
 }
 
 /** `livre`: qualificação profissional curta (SENAI, SENAC, cursos de ofício) — não muda a escolaridade. */
@@ -1015,7 +1072,7 @@ export interface ProcessoSeletivo {
 /** O que ficou de uma tentativa: o retorno que a pessoa recebeu. */
 export interface Devolutiva {
   t: number;
-  tipo: 'entrevista' | 'peneira' | 'concurso' | 'arte';
+  tipo: 'entrevista' | 'peneira' | 'concurso' | 'arte' | 'vestibular';
   titulo: string;
   texto: string;
   passou: boolean;
@@ -1249,7 +1306,7 @@ export interface Ocorrencia {
 }
 
 export interface Vida {
-  versao: 15;
+  versao: 16;
   id: string;
   rng: number;
   seq: number;
@@ -1257,6 +1314,8 @@ export interface Vida {
   eu: Personagem;
   corpo: Corpo;
   mente: Mente;
+  /** Facilidades de nascença (estáveis, da semente). */
+  predisposicoes: Predisposicoes;
   personalidade: Personalidade;
   pessoas: Record<string, Pessoa>;
   vinculos: Record<string, Vinculo>;

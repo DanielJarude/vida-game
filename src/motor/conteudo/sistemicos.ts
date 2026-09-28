@@ -352,20 +352,21 @@ export const SISTEMICOS: Conteudo[] = [
   /* ============================================================== SAÚDE */
   {
     id: 'sau_tratamento', tipo: 'decisao', idade: [12, 100], tema: 'saude', prioritario: true, repetir: 3,
-    quando: c => c.idade >= 18 && c.v.corpo.condicoes.some(x => x.cronica && !x.tratando) && !c.v.processos.some(p => p.tipo === 'tratamento'),
+    // Só o que já tem nome pede tratamento (o que ainda é sinal pede ir ao médico: `sistemas/saude`).
+    quando: c => c.idade >= 18 && c.v.corpo.condicoes.some(x => x.cronica && !x.tratando && x.diagnosticada !== false) && !c.v.processos.some(p => p.tipo === 'tratamento'),
     titulo: 'O tratamento',
     texto: c => {
-      const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando)!;
+      const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando && x.diagnosticada !== false)!;
       return `O ${cond.nome === 'câncer' ? 'oncologista' : 'médico do posto'} explicou: ${cond.nome} tem tratamento, mas pelo SUS há fila de meses para o especialista. Particular, é para já — e caro.`;
     },
     opcoes: [
       { id: 'sus', texto: 'Entrar na fila do SUS', resolver: c => {
-        const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando)!;
+        const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando && x.diagnosticada !== false)!;
         return { texto: 'Você saiu do posto com um papel de encaminhamento e uma estimativa vaga.', memoria: `Entrou na fila do SUS para tratar ${cond.nome}.`, relevancia: 'cotidiano', efeito: () => c.v.processos.push({ tipo: 'tratamento', id: `trat${c.v.seq++}`, condicaoId: cond.id, tFim: c.v.t + (cond.id === 'cancer' ? 4 : 10), rede: 'sus' }) };
       } },
       { id: 'particular', texto: 'Pagar particular', disponivel: c => custa(c, 6000, 'Não há dinheiro para pagar particular.'),
         resolver: c => {
-          const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando)!;
+          const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando && x.diagnosticada !== false)!;
           const custo = cond.id === 'cancer' ? 45000 : 6000;
           return { texto: 'Consulta na mesma semana, exames no mesmo mês.', memoria: `Pagou do bolso o tratamento de ${cond.nome}.`, efeito: () => { cond.tratando = true; dinheiro(c, -custo); } };
         } },

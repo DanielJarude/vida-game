@@ -15,6 +15,7 @@ import { leituraDoEstado, tendencia, type Dimensao, type Fator, type Tendencia }
 import { sugestoes, type Sugestao } from '../motor/sistemas/cuidados';
 import type { Expressao } from './avatar/Retrato';
 import { palavraEstresse, palavraHumor, palavraSaude } from './apresentar';
+import { CONSUMIDORES, estimuloFisico, fatoresPessoais, NOME_PESSOAL, palavraAparencia, palavraAprendizado, palavraCondicionamento, tendenciaPessoal, valorPessoal, type DimensaoPessoal } from '../motor/sistemas/pessoa';
 
 /** O rosto do dia: do estado real, com prioridade para o que mais pesa. */
 export function expressaoDe(v: Vida): Expressao {
@@ -37,7 +38,8 @@ export function palavra(v: Vida, d: Dimensao): string {
   return d === 'humor' ? palavraHumor(v.mente.felicidade) : d === 'cabeca' ? palavraEstresse(v.mente.estresse) : palavraSaude(v.corpo.saude);
 }
 
-export const NOME_DIMENSAO: Record<Dimensao, string> = { humor: 'Humor', cabeca: 'Cabeça', saude: 'Saúde' };
+/** "Bem-estar" é o humor (`mente.felicidade`): a mesma fonte, o nome que a tela usa. */
+export const NOME_DIMENSAO: Record<Dimensao, string> = { humor: 'Bem-estar', cabeca: 'Cabeça', saude: 'Saúde' };
 
 export function palavraTendencia(t: Tendencia): string | undefined {
   return t === 'melhorando' ? 'vem melhorando' : t === 'piorando' ? 'vem piorando' : t === 'estavel' ? 'estável' : undefined;
@@ -97,7 +99,40 @@ export function sinalPessoal(v: Vida): string | undefined {
   if (idade(v) < 10) return undefined;
   if (v.mente.estresse >= 60) return 'A cabeça anda cheia.';
   if (v.mente.felicidade < 40) return 'Você anda para baixo.';
+  if (v.corpo.condicoes.some(c => c.diagnosticada === false) && idade(v) >= 14) return 'O corpo tem dado sinais.';
   if (v.corpo.condicoes.some(c => c.cronica && !c.tratando) && idade(v) >= 18) return 'Uma condição de saúde sem tratamento.';
   if (v.corpo.saude < 45) return 'A saúde tem pedido atenção.';
   return undefined;
+}
+
+/* ------------------------------------------------ Corpo e aprendizado */
+
+export interface LeituraPessoal {
+  d: DimensaoPessoal;
+  nome: string;
+  palavra: string;
+  tendencia: 'melhorando' | 'piorando' | 'estavel' | 'sem_dado';
+  ajuda: string[];
+  pesa: string[];
+  /** Quem usa isso no motor, em palavras. */
+  uso: string;
+  /** Onde se mexe nisso. */
+  ir?: { aba: 'tempo' | 'estudos'; rotulo: string };
+}
+
+/**
+ * Condicionamento, aparência e aprendizado em palavras — com as MESMAS
+ * causas que o motor usa no desenvolvimento do ano (`sistemas/pessoa`).
+ */
+export function lerPessoal(v: Vida, d: DimensaoPessoal): LeituraPessoal {
+  const fatores = fatoresPessoais(v, d);
+  const i = idade(v);
+  const valor = valorPessoal(v, d);
+  const palavra = d === 'condicionamento' ? palavraCondicionamento(valor) : d === 'aparencia' ? palavraAparencia(valor) : palavraAprendizado(valor);
+  const ajuda = fatores.filter(f => f.efeito > 0).sort((a, b) => b.efeito - a.efeito).map(f => f.texto).slice(0, 2);
+  const pesa = fatores.filter(f => f.efeito < 0).sort((a, b) => a.efeito - b.efeito).map(f => f.texto).slice(0, 2);
+  if (d === 'condicionamento' && i >= 12 && estimuloFisico(v).total < 0.4) pesa.unshift('nenhum exercício na semana');
+  if (d === 'aprendizado' && !fatores.some(f => f.id === 'estimulo') && i >= 10) pesa.push('nada que exercite a cabeça fora da obrigação');
+  const ir = d === 'aprendizado' ? { aba: 'tempo' as const, rotulo: 'Ler, xadrez, estudar — em Tempo livre' } : d === 'condicionamento' ? { aba: 'tempo' as const, rotulo: 'Treino e movimento — em Tempo livre' } : undefined;
+  return { d, nome: NOME_PESSOAL[d], palavra, tendencia: tendenciaPessoal(v, d), ajuda, pesa: pesa.slice(0, 2), uso: CONSUMIDORES[d], ir };
 }

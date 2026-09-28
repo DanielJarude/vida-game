@@ -17,6 +17,7 @@ import { municipio } from '../dados/lugares';
 import { idadeEm } from '../tempo';
 import { derivaDaSaude } from './estado';
 import { registrarQuemApareceu } from './rede';
+import { checkupDoPlano, evoluirCondicoes, SINAIS } from './saude';
 
 export interface ModeloCondicao {
   id: string;
@@ -89,8 +90,8 @@ export function processarCorpo(v: Vida, r: Rng): void {
     if (!m) continue;
     if (cond.id === 'depressao' || cond.id === 'ansiedade') {
       v.mente.felicidade = clamp(v.mente.felicidade - (cond.tratando ? 2 : 6));
-      // Transtornos mentais melhoram com o tempo e com a vida melhorando.
-      if (v.mente.estresse < 40 && v.mente.felicidade > 60 && r.chance(0.25)) {
+      // Transtornos mentais melhoram com o tempo e com a vida melhorando — com tratamento, bem mais.
+      if (v.mente.estresse < 40 && v.mente.felicidade > 60 && r.chance(cond.tratando ? 0.3 : 0.12)) {
         c.condicoes = c.condicoes.filter(x => x !== cond);
         escrever(v, { texto: `A ${cond.nome} foi embora devagar, sem data certa.`, relevancia: 'cotidiano', tema: 'saude', tom: 'bom' });
       }
@@ -101,22 +102,33 @@ export function processarCorpo(v: Vida, r: Rng): void {
 
   c.saude = clamp(Math.round(c.saude + delta + r.normal() * 1.5));
 
-  // Forma física decai sem atividade, mais com a idade
-  // Sem exercício a forma cai até o piso do dia a dia (andar, subir escada).
-  const decaiForma = c.habitos.sedentario ? 3 : 1;
-  const piso = i < 50 ? 30 : i < 70 ? 22 : 15;
-  c.forma = Math.max(Math.min(c.forma, piso), clamp(Math.round(c.forma - decaiForma - (i > 50 ? 1 : 0))));
+  // O que ainda não tem nome pode se revelar (check-up do plano, ou um susto); o que é tratado evolui.
+  checkupDoPlano(v, r);
+  evoluirCondicoes(v, r);
+
+  // O condicionamento do ano (treino, piso do dia a dia, idade) já foi feito em `pessoa.desenvolverCondicionamento`.
 
   // Novas condições (no máximo uma por ano, para não virar lista)
   const candidatas = MODELOS.filter(m => !c.condicoes.some(x => x.id === m.id));
   for (const m of candidatas) {
     if (r.chance(m.risco(v, i))) {
-      const nova: Condicao = { id: m.id, nome: m.nome, tInicio: v.t, cronica: m.cronica, gravidade: m.gravidade, tratando: v.financas.planoDeSaude && m.cronica };
+      // Uma condição crônica nasce sem nome: o corpo dá sinais, e o diagnóstico depende de alguém procurar cuidado
+      // (`sistemas/saude`). Com plano, o check-up pega parte logo; criança e adolescente, quem leva são os adultos.
+      const pegaCedo = m.cronica && (v.financas.planoDeSaude ? r.chance(0.5) : i < 14 && r.chance(0.5));
+      const nova: Condicao = { id: m.id, nome: m.nome, tInicio: v.t, cronica: m.cronica, gravidade: m.gravidade, tratando: m.cronica && pegaCedo && (v.financas.planoDeSaude || i < 18) };
+      if (m.cronica) { nova.diagnosticada = pegaCedo; if (pegaCedo) nova.tDiagnostico = v.t; }
       c.condicoes.push(nova);
       const vezes = v.fatos[`teve_${m.id}`] ?? 0;
       v.fatos[`teve_${m.id}`] = vezes + 1;
       const repetida = !m.cronica && vezes > 0;
       if (repetida && m.id === 'dengue') c.saude = clamp(c.saude - 3); // a segunda dengue costuma ser pior
+      if (m.cronica && !pegaCedo) {
+        // Só o sinal (a tela "Você" o mostra, com o cuidado possível) — a Linha da Vida registra o diagnóstico, quando vier.
+        // O começo de algo sério (diabetes, depressão, câncer) é lembrado mesmo antes de ter nome.
+        escrever(v, { texto: `Começou a sentir ${SINAIS[m.id] ?? 'um incômodo que não passa'}.`, relevancia: m.gravidade >= 2 ? 'biografia' : 'cotidiano', tema: 'saude', tom: 'ruim' });
+        break;
+      }
+      if (m.cronica) v.fatos[`diagnostico_${m.id}`] = v.t;
       escrever(v, {
         texto: repetida
           ? m.id === 'dengue' ? `Dengue outra vez${vezes === 1 ? ' — e a segunda foi pior que a primeira' : ''}.` : `${m.nome[0].toUpperCase() + m.nome.slice(1)} de novo.`
@@ -165,7 +177,7 @@ export function causaDaMorte(r: Rng, i: number, masculino: boolean, condicoes: s
 export function morreEsteAno(v: Vida, r: Rng): string | null {
   const i = idade(v);
   const risco = riscoBase(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes)
-    + v.corpo.condicoes.reduce((s, c) => s + (c.id === 'cancer' ? (c.tratando ? 0.025 : 0.08) : 0), 0);
+    + v.corpo.condicoes.reduce((s, c) => s + (c.id === 'cancer' ? (c.tratando ? (c.tarde ? 0.045 : 0.025) : 0.08) : 0), 0);
   if (!r.chance(Math.min(0.95, risco))) return null;
   return causaDaMorte(r, i, v.eu.genero === 'masculino', v.corpo.condicoes.map(c => c.id));
 }

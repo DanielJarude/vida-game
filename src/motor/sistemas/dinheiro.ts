@@ -22,6 +22,7 @@
  * Valores em reais de hoje (ver `economia`).
  */
 
+import { fazCursinho } from './vestibular';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Divida, EstiloDeVida, LinhaRazao, Pessoa, Rotina, Vida } from '../tipos';
@@ -259,7 +260,7 @@ function comuns(v: Vida, sai: (r: string, x: number, g: LinhaRazao['grupo']) => 
     const pagoPelosPais = naFamilia ? Math.min(m.mensalidade, PAIS_PAGAM_ESTUDO[v.origem.classe]) : 0;
     sai('Mensalidade da faculdade', m.mensalidade - pagoPelosPais, 'educacao');
   }
-  if (v.educacao.cursinho) sai('Cursinho', (naFamilia && ['media', 'alta'].includes(v.origem.classe) ? 0 : 450) * c, 'educacao');
+  if (fazCursinho(v)) sai('Cursinho', (naFamilia && ['media', 'alta'].includes(v.origem.classe) ? 0 : 450) * c, 'educacao');
   for (const rot of v.rotinas) {
     const custo = CUSTO_ROTINA.de(v, rot);
     if (custo && !(naFamilia && i < 18)) sai(CUSTO_ROTINA.rotulo(rot), custo * c, 'lazer');

@@ -300,15 +300,17 @@ export function sinaisSociais(v: Vida): Sinal[] {
   }
   for (const { p, vin } of vinculosVivos(v)) {
     if (p.especie || !p.nome) continue;
+    // Quem tomou uma iniciativa e espera uma reação vem primeiro (o silêncio também responde, no ano que vem).
+    if (vin.chamado) out.push({ pessoaId: p.id, texto: vin.chamado.texto, peso: 96 });
     const imp = importancia(v, p, vin);
     if (imp < 25) continue;
     const papel = papelDe(p, vin);
     if (p.gestacao && v.t < p.gestacao.tParto) out.push({ pessoaId: p.id, texto: `${p.nome} vai ter um bebê em ${MESES[mesDe(p.gestacao.tParto)]}.`, peso: 70 + imp / 10 });
-    if (p.aperto && v.t - p.aperto.t <= 12) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5 });
-    if (vin.tensao >= 55 && (papel === 'parceiro' || ehDescendente(papel) || papel === 'genitor')) out.push({ pessoaId: p.id, texto: `${p.nome} — vocês têm brigado.`, peso: 55 + imp / 5 });
-    if (papel === 'parceiro' && (vin.romance?.envolvimento ?? 50) < 42 && vin.tensao < 55) out.push({ pessoaId: p.id, texto: `${p.nome} anda distante.`, peso: 50 + imp / 5 });
+    if (p.aperto && v.t - p.aperto.t <= 12 && !vin.chamado) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5 });
+    if (!vin.chamado && vin.tensao >= 55 && (papel === 'parceiro' || ehDescendente(papel) || papel === 'genitor')) out.push({ pessoaId: p.id, texto: `${p.nome} — vocês têm brigado.`, peso: 55 + imp / 5 });
+    if (!vin.chamado && papel === 'parceiro' && (vin.romance?.envolvimento ?? 50) < 42 && vin.tensao < 55) out.push({ pessoaId: p.id, texto: `${p.nome} anda distante.`, peso: 50 + imp / 5 });
     const semContato = Math.floor((v.t - vin.tUltimoContato) / 12);
-    if (semContato >= 3 && (papel === 'amigo_proximo' || papel === 'filho' || papel === 'genitor' || papel === 'irmao')) out.push({ pessoaId: p.id, texto: `${p.nome} — ${anos(semContato)} sem se falarem.`, peso: 40 + imp / 5 });
+    if (!vin.chamado && semContato >= 3 && (papel === 'amigo_proximo' || papel === 'filho' || papel === 'genitor' || papel === 'irmao')) out.push({ pessoaId: p.id, texto: `${p.nome} — ${anos(semContato)} sem se falarem.`, peso: 40 + imp / 5 });
   }
   return out.sort((a, b) => b.peso - a.peso).slice(0, 4);
 }

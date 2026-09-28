@@ -172,7 +172,10 @@ export function processarRomance(v: Vida, r: Rng): void {
     // para baixo. O envolvimento anda em direção a esse alvo, com ruído.
     const anosJuntos = (v.t - (rom.tInicio ?? vin.tInicio)) / 12;
     const pequenos = vinculosVivos(v).filter(x => x.vin.parentesco === 'filho' && idadePessoa(v, x.p) < 5).length;
-    let alvo = 52 + c * 30 + (cuidou ? 10 : -8) + (v.rotinas.some(x => x.id === 'tempo_familia') ? 6 : 0) - (longe ? 15 : 0);
+    // Cuidar conta; morar junto também é convivência (não é preciso "clicar" todo ano para o casal existir),
+    // mas a rotina sem nenhum gesto desgasta — e a outra pessoa pode pedir para conversar (`iniciativas`).
+    const juntos = vin.convivio.includes('casa');
+    let alvo = 52 + c * 30 + (cuidou ? 10 : juntos ? -4 : -8) + (v.rotinas.some(x => x.id === 'tempo_familia') ? 6 : 0) - (longe ? 15 : 0);
     alvo -= vin.tensao / 4;
     alvo += (vin.confianca - 60) / 8;
     if (v.financas.negativado) alvo -= 8;

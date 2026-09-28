@@ -18,6 +18,7 @@
  */
 
 import type { Rng } from '../rng';
+import { pesoDaSaudeNoTrabalho } from './saude';
 import { clamp } from '../rng';
 import type { Dominio, Emprego, Vida } from '../tipos';
 import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
@@ -458,7 +459,9 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   // O ritmo e o clima também contam: quem puxa entrega mais; quem briga com a chefia, menos.
   const alvo = 54 + estrada + (v.mente.cognicao - 50) * 0.2 + v.personalidade.tracos.disciplina * 0.25 + oficio
     + (t.horasExtras ? 10 : 0) - Math.max(0, v.mente.estresse - 65) * 0.4 - Math.max(0, 50 - v.corpo.saude) * 0.3
-    + (ritmoDe(e) === 'puxado' ? 6 : ritmoDe(e) === 'leve' ? -3 : 0) + (climaDe(e) - 50) * 0.08;
+    + (ritmoDe(e) === 'puxado' ? 6 : ritmoDe(e) === 'leve' ? -3 : 0) + (climaDe(e) - 50) * 0.08
+    // Bem-estar pesa pouco (ninguém fracassa em tudo por estar para baixo); uma condição séria sem tratamento, um pouco mais.
+    + clamp((v.mente.felicidade - 50) * 0.06, -3, 2) - pesoDaSaudeNoTrabalho(v);
   e.desempenho = clamp(Math.round(e.desempenho * 0.5 + alvo * 0.5 + r.normal() * 8));
 
   // Estresse do cargo

@@ -30,6 +30,7 @@ import { flex, ge } from '../texto';
 import { ehDescendente, faseDeIdade, mesmaCidade, moraJunto, papelDe, type Fase, type Papel } from './vinculos';
 import { lacoCom, oLaco } from './rede';
 import { vereditoDePagar, disponivel } from './dinheiro';
+import { responderChamado, rotulosDoChamado } from './iniciativas';
 
 export const LIMITE_INTERACOES = 5;
 
@@ -768,6 +769,42 @@ export const INTERACOES: Interacao[] = [
       const extra = c.p.especie === 'cachorro' ? [`Longo passeio com ${c.p.nome}. Voltaram os dois cansados.`, `${c.p.nome} achou um graveto maior do que ${dele(c.p)} e não largou.`] : [];
       return { resultado: variar(n, [...a.interacao.textos.map(t => t.replace(/\{nome\}/g, c.p.nome)), ...extra]) };
     }
+  },
+
+  /* ============================================ QUANDO A OUTRA PESSOA AGE */
+  /*
+   * Um chamado (`sistemas/iniciativas`): a pessoa pediu, convidou, cobrou,
+   * apareceu ou demonstrou interesse. As duas reações possíveis aparecem
+   * primeiro na ficha, com o texto do que ela fez. Reagir não gasta o tempo
+   * do ano com as pessoas (quem gasta é quem tomou a iniciativa).
+   */
+  {
+    id: 'chamado_sim', variante: 'principal', destaque: true,
+    quando: c => !!c.vin.chamado && humano(c),
+    prioridade: () => 6,
+    disponivel: c => (c.vin.chamado?.tipo === 'pedido_ajuda' && c.vin.chamado.assunto === 'dinheiro' ? vereditoDePagar(c.v, 300, 'Ajudar pede ao menos uns') : PERMITIDO),
+    rotulo: c => rotulosDoChamado(c.p, c.vin.chamado!).sim,
+    executar: (c, r) => {
+      const ch = c.vin.chamado!;
+      if (ch.tipo === 'interesse') {
+        c.vin.chamado = undefined;
+        if (!c.v.eu.atracao) c.v.eu.atracao = c.p.genero === 'masculino' ? 'homens' : c.p.genero === 'feminino' ? 'mulheres' : 'ambos';
+        return comecarASair(c, 60, `${c.p.nome} tomou a iniciativa, e você correspondeu: começaram a sair.`, `Você disse que também. ${c.p.nome} riu de alívio.`, 2);
+      }
+      if (ch.tipo === 'pedido_ajuda' || ch.tipo === 'apoio') aplicarPersonalidade(c.v, 'acao:apoiar', { empatia: 1 });
+      const out = responderChamado(c.v, r, c.p, c.vin, true);
+      return { resultado: out.resultado, titulo: out.titulo };
+    }
+  },
+  {
+    id: 'chamado_nao', variante: 'discreto',
+    quando: c => !!c.vin.chamado && humano(c),
+    prioridade: () => 5,
+    rotulo: c => rotulosDoChamado(c.p, c.vin.chamado!).nao,
+    executar: (c, r) => {
+      const out = responderChamado(c.v, r, c.p, c.vin, false);
+      return { resultado: out.resultado, titulo: out.titulo };
+    }
   }
 ];
 
@@ -1117,14 +1154,16 @@ export function interacoesPara(v: Vida, id: string): Interacao[] {
   return lista.map((x, k) => ({ x, k, r: rel(x) })).sort((a, b) => b.r - a.r || a.k - b.k).map(y => y.x);
 }
 
-const interacoesNoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('pessoa:')).length;
+const interacoesNoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('pessoa:') && !a.startsWith('pessoa:chamado_')).length;
 
 export function disponibilidadeInteracao(v: Vida, id: string, interacao: string): Veredito {
   const c = ctxPessoa(v, id);
   if (!c || !c.p.vivo) return bloqueio('impossivel', 'Essa pessoa não está mais na sua vida.');
   const def = porId.get(interacao);
   if (!def || !def.quando(c)) return bloqueio('impossivel', 'Isso não faz sentido com essa pessoa agora.');
-  if (interacoesNoAno(v) >= LIMITE_INTERACOES) return bloqueio('incompativel', 'O ano não tem mais tempo para isso. Avance o ano.');
+  // Responder a quem tomou a iniciativa não gasta o tempo do ano (é reação, não iniciativa).
+  const reacao = interacao === 'chamado_sim' || interacao === 'chamado_nao';
+  if (!reacao && interacoesNoAno(v) >= LIMITE_INTERACOES) return bloqueio('incompativel', 'O ano não tem mais tempo para isso. Avance o ano.');
   if (v.anoAtual.acoes.includes(`pessoa:${interacao}:${id}`)) return bloqueio('incompativel', 'Você já fez isso neste ano.');
   return def.disponivel ? def.disponivel(c) : PERMITIDO;
 }

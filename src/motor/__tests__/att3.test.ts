@@ -111,8 +111,9 @@ describe('dinheiro pessoal não é dinheiro da casa', () => {
   });
 
   it('adulto que mora com os pais e trabalha: ajuda nas contas, gasta o dele — e não paga o mercado da casa', () => {
+    // Premissa: alguém de 20 anos que ainda mora com os pais (a semente é só o começo da busca).
     let v = viverAte(nova({ semente: 33, classe: 'trabalhadora' }), 20);
-    if (v.moradia.tipo !== 'pais') v = viverAte(nova({ semente: 34, classe: 'trabalhadora' }), 20);
+    for (let s = 34; (v.moradia.tipo !== 'pais' || v.morte) && s < 80; s++) v = viverAte(nova({ semente: s, classe: 'trabalhadora' }), 20);
     v.trabalho.atual = undefined;
     contratar(v, criarRng(1), ocupacao('assistente_adm'));
     const o = orcamento(v);
@@ -817,7 +818,7 @@ describe('renda com teto: o bug do milionário por aumento', () => {
 
 describe('save v10', () => {
   it('saves v9 reais migram para v10: reserva e ações viram aplicações, valores preservados, a vida continua 5 anos e volta a ler', () => {
-    expect(VERSAO_SAVE).toBe(15);
+    expect(VERSAO_SAVE).toBe(16);
     for (const nome of ['save-v9-adolescente-pet.json', 'save-v9-jovem-carro.json', 'save-v9-familia-financiada.json', 'save-v9-endividado.json', 'save-v9-aposentada-acoes.json']) {
       const antes = JSON.parse(fixture(nome));
       const r = interpretar(fixture(nome));
