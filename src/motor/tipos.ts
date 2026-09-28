@@ -1089,6 +1089,13 @@ export interface Devolutiva {
    * devolutiva dizer "desde a última vez, melhorou".
    */
   nivel?: number;
+  /**
+   * Vestibular: a área que mais tirou pontos na PROVA e a que a PREPARAÇÃO
+   * apontava antes dela (a mesma conta, `vestibular.areaQueMaisPesa`). Quando
+   * diferem, foi o dia — e a devolutiva diz isso.
+   */
+  fraca?: string;
+  fracaPrevista?: string;
 }
 
 export interface Caminhos {

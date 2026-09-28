@@ -114,6 +114,28 @@ export interface Estimativa {
 /** Cota: a MESMA regra do ingresso (`escola.temCota`). */
 const cota = (v: Vida) => temCota(v);
 
+/**
+ * A FONTE ÚNICA de "o que mais pesa contra" para um curso: a área que mais
+ * tira pontos da nota ponderada diante do corte — peso do curso × distância
+ * do corte. A estimativa (a nota esperada, antes da prova) e a devolutiva (a
+ * nota real, depois) passam pela mesma conta; se apontarem áreas diferentes,
+ * a diferença é o dia da prova, e é dita assim.
+ */
+export function areaQueMaisPesa(notas: Record<Materia, number>, c: Curso, corte: number): Materia {
+  const pesos = c.pesos ?? {};
+  const perda = (a: Materia) => (1 + (pesos[a] ?? 0)) * (corte - notas[a]);
+  return AREAS_ENEM.reduce((pior, a) => (perda(a) > perda(pior) ? a : pior), AREAS_ENEM[0]);
+}
+
+const pesaMais = (c: Curso, a: Materia) => ((c.pesos ?? {})[a] ?? 0) > 0 ? `, que ${c.nome} pesa mais` : '';
+
+/** A nota esperada de cada área agora (sem o dia). */
+export function notasEsperadas(v: Vida): Record<Materia, number> {
+  const out = {} as Record<Materia, number>;
+  for (const a of AREAS_ENEM) out[a] = notaEsperadaArea(v, a);
+  return out;
+}
+
 export function situacaoDa(nota: number, corte: number): SituacaoVestibular {
   return nota >= corte - 5 ? 'no_corte' : nota >= corte - 35 ? 'perto' : nota >= corte - 100 ? 'construcao' : 'longe';
 }
@@ -121,25 +143,30 @@ export function situacaoDa(nota: number, corte: number): SituacaoVestibular {
 export function estimativaParaCurso(v: Vida, c: Curso): Estimativa {
   const pesos = c.pesos ?? {};
   let soma = 0, total = 0;
-  const porArea = {} as Record<Materia, number>;
+  const porArea = notasEsperadas(v);
   for (const a of AREAS_ENEM) {
-    const n = notaEsperadaArea(v, a);
-    porArea[a] = n;
     const w = 1 + (pesos[a] ?? 0);
-    soma += n * w; total += w;
+    soma += porArea[a] * w; total += w;
   }
   const nota = Math.round(soma / total);
   const corte = c.corte - (cota(v) ? 45 : 0);
   const situacao = situacaoDa(nota, corte);
-  // A matéria fraca: onde o peso do curso encontra a nota mais baixa.
-  const fraca = (AREAS_ENEM.filter(a => (pesos[a] ?? 0) > 0).sort((a, b) => porArea[a] - porArea[b])[0]) ?? AREAS_ENEM.slice().sort((a, b) => porArea[a] - porArea[b])[0];
+  const fraca = areaQueMaisPesa(porArea, c, corte);
   const ultimaProva = [...v.educacao.enem].reverse().find(x => x.areas);
   const ultima = ultimaProva ? { t: ultimaProva.t, nota: ponderada(ultimaProva.areas!, c) } : undefined;
   const falta = corte - nota;
   const partes: string[] = [];
   partes.push(situacao === 'no_corte' ? `Hoje, a preparação alcança o corte de ${c.nome} (~${corte}).`
     : `Hoje, a preparação daria algo entre ${nota - 30} e ${nota + 30} — ${PALAVRA_SITUACAO[situacao]} de ${c.nome} (~${corte}${falta > 0 ? `; faltam uns ${Math.round(falta / 10) * 10} pontos` : ''}).`);
-  if (fraca && situacao !== 'no_corte') partes.push(`O que mais pesa contra: ${NOME_MATERIA[fraca]}${(pesos[fraca] ?? 0) > 0 ? `, que ${c.nome} pesa mais` : ''}.`);
+  if (fraca && situacao !== 'no_corte') partes.push(`O que mais pesa contra: ${NOME_MATERIA[fraca]}${pesaMais(c, fraca)}.`);
+  // A última prova para este curso apontou outra área? Foi o dia — e se diz.
+  const dev = [...v.caminhos.devolutivas].reverse().find(d => d.tipo === 'vestibular' && d.titulo.endsWith(c.nome) && d.fraca);
+  if (dev && dev.fraca !== fraca && situacao !== 'no_corte') {
+    const nome = (x?: string) => NOME_MATERIA[x as Materia];
+    partes.push(dev.fracaPrevista === fraca
+      ? `(No ENEM de ${anoDe(dev.t)}, quem mais pesou foi ${nome(dev.fraca)} — rendeu abaixo do que a preparação indicava, foi o dia; pela preparação, continua sendo ${nome(fraca)}.)`
+      : `(No ENEM de ${anoDe(dev.t)}, quem mais pesou foi ${nome(dev.fraca)}; desde então a preparação mudou, e hoje é ${nome(fraca)} que mais pesa.)`);
+  }
   return { curso: c, nota, faixa: [nota - 30, nota + 30], corte, situacao, nivel: NIVEL_SITUACAO[situacao], fraca, ultima, frase: partes.join(' ') };
 }
 
@@ -177,12 +204,15 @@ export function devolutivaDoEnem(v: Vida, areas: Record<Materia, number>): Devol
   const nota = ponderada(areas, c);
   const corte = c.corte - (cota(v) ? 45 : 0);
   const situacao = situacaoDa(nota, corte);
-  const pesos = c.pesos ?? {};
-  const fraca = AREAS_ENEM.filter(a => (pesos[a] ?? 0) > 0).sort((a, b) => areas[a] - areas[b])[0] ?? AREAS_ENEM.slice().sort((a, b) => areas[a] - areas[b])[0];
+  // A prova e a preparação passam pela mesma conta (`areaQueMaisPesa`); a preparação é a da véspera (o mesmo estado da prova, sem o dia).
+  const fraca = areaQueMaisPesa(areas, c, corte);
+  const fracaPrevista = areaQueMaisPesa(notasEsperadas(v), c, corte);
   const anterior = [...v.caminhos.devolutivas].reverse().find(d => d.tipo === 'vestibular' && d.titulo.endsWith(c.nome));
   const partes: string[] = [];
   partes.push(nota >= corte ? `Para ${c.nome} (corte ~${corte}), a nota ponderada foi ${nota}: alcança o corte.` : `Para ${c.nome} (corte ~${corte}), a nota ponderada foi ${nota}: ${PALAVRA_SITUACAO[situacao]}.`);
-  if (nota < corte) partes.push(`O que mais pesou contra: ${NOME_MATERIA[fraca]}.`);
+  if (nota < corte) partes.push(fraca === fracaPrevista
+    ? `O que mais pesou contra: ${NOME_MATERIA[fraca]}${pesaMais(c, fraca)} — como a preparação indicava.`
+    : `O que mais pesou contra, nesta prova: ${NOME_MATERIA[fraca]}, que rendeu abaixo do que a preparação indicava (o dia pesa); na preparação, a área que mais pesa continua sendo ${NOME_MATERIA[fracaPrevista]}.`);
   if (anterior && anterior.nivel !== undefined) {
     const antes = Number((anterior.texto.match(/ponderada foi (\d+)/) ?? [])[1] ?? 0);
     const dif = nota - antes;
@@ -190,6 +220,7 @@ export function devolutivaDoEnem(v: Vida, areas: Record<Materia, number>): Devol
   }
   return registrarDevolutiva(v, {
     tipo: 'vestibular', titulo: `ENEM ${anoDe(v.t)} — ${c.nome}`, texto: partes.filter(Boolean).join(' '),
-    passou: nota >= corte, perto: nota < corte && situacao === 'perto', falta: nota >= corte ? undefined : 'preparo', nivel: NIVEL_SITUACAO[situacao]
+    passou: nota >= corte, perto: nota < corte && situacao === 'perto', falta: nota >= corte ? undefined : 'preparo', nivel: NIVEL_SITUACAO[situacao],
+    fraca, fracaPrevista
   });
 }

@@ -10,7 +10,7 @@
 | Base | `claude/rework-caminhos-agencia-ux` @ `f7b84a9` (working tree limpa, confirmada) |
 | Branch | `claude/rework-2-pessoa-corpo-mente-relacoes` |
 | Baseline | typecheck limpo, build ok, **582/582** testes (20 arquivos) |
-| Ao fim | typecheck limpo, build ok (sem aviso de tamanho), **629/629** testes (23 arquivos), smoke do itch.io 18/18 |
+| Ao fim | typecheck limpo, build ok (sem aviso de tamanho), **631/631** testes (23 arquivos), smoke do itch.io 18/18 |
 | Save | **v16** (migra v15; ver §6) |
 | Node | 22 (`~/.nvm/versions/node/v22.23.2`) |
 
@@ -174,7 +174,6 @@ A queda de concurso foi investigada: o preparo para o edital é **idêntico** (c
 ## 10. Limitações
 
 - Sem nova oferta de atividades: teatro e artes marciais já existiam como frentes e foram só integrados (predisposição artística/física), sem conteúdo novo.
-- O "o que mais pesa" do vestibular vem da estimativa; a devolutiva da prova vem das notas reais (com o dia) — podem apontar matérias diferentes no mesmo ano.
 - Condições silenciosas + um piloto automático que nunca vai ao médico aumentam a mortalidade até 60 (9% → 14% no piloto automático). É a consequência pretendida de ignorar a saúde, mas quem joga sem olhar Você sente mais.
 - A aparência de saves antigos usa a aparência de hoje como base (não há como separar a de nascença).
 - A busca ativa exige dizer por quem se interessa (o seletor aparece ali mesmo).
@@ -242,7 +241,12 @@ As seis pendências da primeira entrega foram incorporadas ao escopo e **todas c
 ### Validação desta etapa
 Testes específicos (`rework2fecho`: 11; `ui/rework2`: 6), suíte completa **629/629**, TypeScript limpo, build sem avisos, smoke 18/18; simulador de intenções, sonda de diversidade ocupacional e estratégias sociais re-executados. Achado de tela corrigido junto: "ENEM: 562 em 2044" ao lado de "sem nota do ENEM ainda" → "sem nota recente (o SISU usa as dos últimos anos)".
 
+### 11.7 Estimativa × devolutiva do vestibular apontando matérias fracas diferentes — **corrigida**
+- **Causa**: a mesma regra ("a área ponderada de nota mais baixa") estava **copiada** em dois lugares (`estimativaParaCurso` e `devolutivaDoEnem`), aplicada a entradas diferentes — a nota esperada (antes da prova) e a nota real (com o acaso do dia) — sem que nenhum dos dois dissesse por que divergiam. A regra ainda ignorava o quanto cada área pesa (em Medicina, ciências vale o triplo) e descartava áreas de peso 1 muito baixas. Os outros textos de "matéria fraca" (`escola.materiasExtremas`, "vai melhor em…; … é onde mais sofre") são outro conceito — a escola, sem peso de curso — e continuam separados.
+- **Como**: `vestibular.areaQueMaisPesa(notas, curso, corte)` é a **fonte única**: a área que mais tira pontos da nota ponderada diante do corte (peso × distância). A estimativa usa a nota esperada (`notasEsperadas`, a mesma conta da prova sem o dia); a devolutiva calcula as duas — a da **prova** e a **prevista** (o mesmo estado, na véspera) — e grava ambas (`Devolutiva.fraca` / `fracaPrevista`, opcionais, compatíveis com o save v16). A devolutiva diz "— como a preparação indicava" quando coincidem, ou "nesta prova: X, que rendeu abaixo do que a preparação indicava (o dia pesa); na preparação, a área que mais pesa continua sendo Y" quando não. A estimativa, depois da prova, menciona a divergência e a causa: o dia (se a prova contrariou a previsão daquela época) ou a preparação que mudou desde então. O próximo passo (`proximoPassoVestibular`) e Trabalho ("O que você está construindo") leem a mesma estimativa.
+- **Testes**: `rework2fecho` §7 — objetivo Medicina → cursinho → estimativa → 40 provas (dias diferentes, o mesmo estado): a previsão gravada na devolutiva é sempre a estimativa da véspera; quando a prova coincide, o texto diz "como a preparação indicava"; quando diverge, nomeia as duas áreas e a estimativa seguinte explica ("foi o dia"); os dois casos ocorrem. Unidade: o peso do curso entra (ciências 20 pontos acima de matemática ainda pesa mais em Medicina).
+- **Resultado**: 631/631, TypeScript e build ok; determinismo preservado (sem novo sorteio).
+
 ## 12. PENDÊNCIAS ENCONTRADAS (fora do escopo, não implementadas)
 
-1. Na sonda de diversidade, diarista e cuidador ainda são as ocupações mais comuns de quem não estuda e só segue a tela (10% e 9%). Pode ser realista, mas o peso do trabalho doméstico nas vagas de entrada merece calibração com dados.
-2. O "o que mais pesa" do vestibular (estimativa) e o da devolutiva (prova real) podem apontar matérias diferentes no mesmo ano (ver §10).
+1. **Concentração em diarista/cuidador** (registrada para calibração futura, não alterada agora): na sonda de diversidade, são as ocupações mais comuns de quem não estuda e só segue a tela (10% e 9%). Pode ser realista, mas o peso do trabalho doméstico nas vagas de entrada merece calibração com dados e simulação em massa.

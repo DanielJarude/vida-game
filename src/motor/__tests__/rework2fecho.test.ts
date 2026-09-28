@@ -25,6 +25,9 @@ import { emConstrucao } from '../sistemas/caminhosDeVida';
 import { encaminhado } from '../sistemas/saude';
 import { vinculoReal } from '../sistemas/vinculos';
 import { sinaisSociais } from '../../ui/leitura';
+import { curso } from '../dados/cursos';
+import { areaQueMaisPesa, estimativaParaCurso, notasEsperadas } from '../sistemas/vestibular';
+import { NOME_MATERIA } from '../sistemas/escola';
 
 const tenta = (v: Vida, a: Acao) => podeTentar(disponibilidade(v, a));
 const disp = (v: Vida, a: Acao) => disponibilidade(v, a);
@@ -241,5 +244,52 @@ describe('6. adolescente sem dinheiro em casa: caminho de cuidado em saúde ment
     adulta.corpo.condicoes = []; adulta.mente.felicidade = 25;
     const x = executar(adulta, { tipo: 'cuidar', cuidado: 'consulta' }).vida;
     expect(x.corpo.condicoes.some(c => c.id === 'depressao' || c.id === 'ansiedade')).toBe(false);
+  });
+});
+
+describe('7. vestibular: a estimativa e a devolutiva falam da mesma área pela mesma conta', () => {
+  it('objetivo → preparação → estimativa → prova → devolutiva: previsão e prova usam a mesma conta; quando divergem, a diferença é dita como o dia', () => {
+    let v = pessoa(16, 370);
+    v.educacao.basica = { etapa: 'medio', serie: 2, rede: 'publica', desempenho: 62, reprovacoes: 0 };
+    v = executar(v, { tipo: 'objetivo_estudo', cursoId: 'medicina' }).vida;
+    v = executar(v, { tipo: 'rotina', id: 'cursinho', ativa: true, nivel: 1 }).vida;
+    v = responderTudo(avancarAno(v).vida);
+    v.anoAtual = { acoes: [] };
+    const med = curso('medicina');
+    const est = estimativaParaCurso(v, med);
+    expect(est.fraca).toBe(areaQueMaisPesa(notasEsperadas(v), med, est.corte));
+    let iguais = 0, diferentes = 0;
+    for (let s = 1; s <= 40; s++) {
+      const x = structuredClone(v);
+      x.rng = (s * 2654435761) >>> 0;
+      const depois = executar(x, { tipo: 'enem' }).vida;
+      const dev = depois.caminhos.devolutivas.slice(-1)[0];
+      expect(dev.tipo).toBe('vestibular');
+      // A previsão da devolutiva É a estimativa que a tela mostrava na véspera.
+      expect(dev.fracaPrevista).toBe(est.fraca);
+      if (dev.passou) continue;
+      const nomeReal = NOME_MATERIA[dev.fraca!], nomePrev = NOME_MATERIA[dev.fracaPrevista!];
+      if (dev.fraca === dev.fracaPrevista) {
+        iguais++;
+        expect(dev.texto).toMatch(/como a preparação indicava/);
+      } else {
+        diferentes++;
+        expect(dev.texto).toContain(`nesta prova: ${nomeReal}`);
+        expect(dev.texto).toContain(`continua sendo ${nomePrev}`);
+        // E a tela, depois da prova, não contradiz em silêncio: menciona a área da prova e o motivo.
+        const depoisEst = estimativaParaCurso(depois, med);
+        expect(depoisEst.frase).toContain(nomeReal);
+        expect(depoisEst.frase).toMatch(/foi o dia/);
+      }
+    }
+    expect(iguais).toBeGreaterThan(0);
+    expect(diferentes).toBeGreaterThan(0);
+  });
+
+  it('a área que mais pesa considera o peso do curso: ciências pesa três vezes em Medicina', () => {
+    const med = curso('medicina');
+    // Ciências 20 pontos abaixo de matemática ainda pesa mais, porque vale o triplo.
+    expect(areaQueMaisPesa({ exatas: 600, linguagens: 640, ciencias: 620, humanas: 650 }, med, 745)).toBe('ciencias');
+    expect(areaQueMaisPesa({ exatas: 450, linguagens: 700, ciencias: 700, humanas: 700 }, med, 745)).toBe('exatas');
   });
 });
