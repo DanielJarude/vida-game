@@ -42,7 +42,7 @@ import { adotarPet, disponibilidadeVeterinario, entregarPet, executarVeterinario
 import { juroDeFinanciamento } from './sistemas/economia';
 import { dinheiro as fmt } from './texto';
 import { moraComFamiliaDeOrigem } from './sistemas/domicilio';
-import { disponibilidadeInteracao, executarInteracao, LIMITE_INTERACOES } from './sistemas/interacoes';
+import { disponibilidadeInteracao, executarInteracao } from './sistemas/interacoes';
 import { disponibilidadeCuidado, executarCuidado, type TipoCuidado } from './sistemas/cuidados';
 import { encerrarPausa, iniciarPausa, podeReduzir } from './sistemas/pausa';
 import { parar as pararIlicito } from './sistemas/ilicito';
@@ -148,7 +148,6 @@ export type Acao =
   /** Procurar alguém (a busca ativa de um relacionamento), num contexto da vida. */
   | { tipo: 'conhecer_alguem'; contexto: ContextoBusca };
 
-export { LIMITE_INTERACOES };
 
 const TITULO_CUIDADO: Record<TipoCuidado, string> = { descansar: 'Uns dias de descanso', consulta: 'No médico', parar_fumar: 'Parar de fumar', beber_menos: 'Beber menos' };
 export const LIMITE_CANDIDATURAS = 3;

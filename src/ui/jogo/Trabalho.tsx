@@ -35,7 +35,6 @@ import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from '../../moto
 import { caminhosPossiveis, emConstrucao } from '../../motor/sistemas/caminhosDeVida';
 import { perfilParaVaga } from '../../motor/sistemas/empregabilidade';
 import { BlocoDeVagas, CaminhosPossiveis, EmConstrucao, PerfilDaVaga, ProximoPassoPainel } from './Caminhos';
-import type { FocoConcurso } from '../../motor/tipos';
 import { vagasEmCamadas, type Vaga } from '../../motor/sistemas/relevancia';
 import type { Relevante } from '../../motor/sistemas/relevancia';
 import { O_QUE_TRABALHAR } from '../../motor/sistemas/devolutivas';
@@ -636,10 +635,6 @@ function CatalogoDeVagas({ vida, agir, atual }: { vida: Vida; agir: (a: Acao) =>
   return <Catalogo itens={itens} rotulo="Ocupações" dicaBusca="enfermagem, cozinha, motorista, por conta própria…" tipos={[{ id: 'entrada', rotulo: 'Para começar' }, { id: 'emprego', rotulo: 'Vaga de emprego' }, { id: 'estrada', rotulo: 'Pede estrada' }, { id: 'conta', rotulo: 'Por conta própria' }, { id: 'oportunidade', rotulo: 'Por oportunidade' }]} vazio="Nenhuma ocupação com esse filtro." />;
 }
 
-const FOCOS_UI: { id: FocoConcurso | 'geral'; rotulo: string }[] = [
-  { id: 'geral', rotulo: 'Estudo geral' }, { id: 'policial', rotulo: 'Polícia e farda' }, { id: 'administrativo', rotulo: 'Prefeitura e tribunais' },
-  { id: 'fiscal', rotulo: 'Fiscal' }, { id: 'bancario', rotulo: 'Bancos públicos' }, { id: 'educacao', rotulo: 'Magistério' }, { id: 'saude', rotulo: 'Saúde' }, { id: 'academico', rotulo: 'Universidade' }
-];
 
 function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }) {
   const editais = editaisAbertos(vida).map(oc => ({ oc, d: elegibilidade(vida, oc) })).filter(x => podeTentar(x.d));
@@ -649,19 +644,8 @@ function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => bool
   return (
     <div className="explorar-bloco">
       <p className="dica">{estudando ? `Você estuda para concurso${c.meses >= 12 ? ` — o equivalente a ${anos} ${anos === 1 ? 'ano' : 'anos'} de estudo firme` : ''}${c.foco ? `, dirigido para ${NOME_FOCO[c.foco]}` : ', sem uma área'}.` : c.meses >= 6 ? 'Você não estuda agora: o preparo esfria a cada ano parado.' : 'Concurso pede preparo: sem estudo, é quase loteria.'} Aprovado não é empossado: se a posse significar largar alguma coisa, a vida pergunta.</p>
-      {!estudando && <button type="button" className="botao botao--secundario" onClick={() => irPara('tempo')}>Começar a estudar (Tempo livre) <span aria-hidden>→</span></button>}
-      {(estudando || c.meses >= 6) && (
-        <div className="foco-estudo" role="group" aria-labelledby="foco-rotulo">
-          <span id="foco-rotulo" className="foco-estudo__rotulo">Para que área você estuda</span>
-          <div className="foco-estudo__opcoes">
-            {FOCOS_UI.map(f => {
-              const ativo = (c.foco ?? 'geral') === f.id;
-              return <button key={f.id} type="button" className="botao botao--discreto" aria-pressed={ativo} disabled={ativo} onClick={() => agir({ tipo: 'perseguir', oque: 'foco_concurso', valor: f.id } as unknown as Acao)}>{f.rotulo}</button>;
-            })}
-          </div>
-          <p className="nota">Estudo dirigido rende mais nos editais daquela área; mudar de área não apaga o que se estudou, mas o que vem depois é que conta mais. A sua estrada (a farda para a polícia, o Direito para tribunal, Contábeis para o fiscal) também pesa.</p>
-        </div>
-      )}
+      {/* A preparação (começar, o ritmo, a área, parar) mora em Estudos; aqui, os editais e o preparo de cada um. */}
+      <button type="button" className="botao botao--secundario" onClick={() => irPara('estudos')}>{estudando ? 'A preparação, em Estudos' : 'Começar a estudar (Estudos)'} <span aria-hidden>→</span></button>
       {editais.length === 0 && <p className="vazio">Nenhum edital aberto que caiba no seu perfil este ano. Os concursos abrem em anos diferentes.</p>}
       <ul className="lista-vagas">
         {editais.map(({ oc }) => {

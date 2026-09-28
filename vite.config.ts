@@ -18,9 +18,29 @@ export default defineConfig({
   // `npm run dev`, que continua servindo da raiz.
   base: './',
   plugins: [react()],
-  // O pacote é react-dom + o conteúdo do jogo (~600 kB, ~185 kB gzip). Um
-  // único arquivo é o que o itch.io serve melhor; não vale fatiar.
-  build: { chunkSizeWarningLimit: 800 },
+  // REWORK 2: o pacote único passou de 1,8 MB (o motor é ~70% dele). Agora a
+  // primeira tela carrega só o React e a interface inicial; o motor e as telas
+  // do jogo vêm sob demanda (`ui/motor.ts`, `ui/util/sobDemanda.tsx`), logo em
+  // seguida. O React fica num pacote próprio (muda pouco: o navegador guarda);
+  // o motor, em três por camada — sistemas, conteúdo (os textos, com o que os
+  // orquestra) e dados (os catálogos) —, sem ciclos, que carregam em paralelo. O limite de aviso não foi
+  // aumentado.
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (/node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react';
+          // O conteúdo (os textos) e o que o orquestra (o ano, as ações, a fachada, a relevância das telas) ficam
+          // juntos: são eles que importam o conteúdo, e o conteúdo importa os sistemas — sem ciclo entre pacotes.
+          if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
+          if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
+          if (/[\\/]src[\\/]motor[\\/]/.test(id)) return 'motor';
+          return undefined;
+        }
+      }
+    }
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,

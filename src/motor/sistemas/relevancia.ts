@@ -14,6 +14,7 @@
 
 import type { Dominio, Vida } from '../tipos';
 import type { Veredito } from '../plausibilidade';
+import { familiaDaTrilha } from '../dados/carreiras';
 import { podeTentar } from '../plausibilidade';
 import { idade, filhos, parceiro } from '../nucleo';
 import { DE_ESTUDOS, ROTINAS, atividadeExiste, podeComecarRotina, type ModeloRotina } from './rotinas';
@@ -87,7 +88,6 @@ export function atividadesParaVoce(v: Vida): { para: Relevante<ModeloRotina>[]; 
     if (solidao && m.social && m.social.fluxo >= 0.8) add(2.5, 'Um lugar com gente toda semana.');
     if (aperto && m.renda && m.renda(v, 1) > 0) add(2.5, 'Um dinheiro por fora ajudaria agora.');
     if (m.id === 'tempo_familia' && (filhos(v).some(f => v.vinculos[f.id]?.convivio.includes('casa')) || parceiro(v))) add(2, 'Tempo com quem mora com você.');
-    if (m.id === 'estudar_concurso' && !v.trabalho.atual && i >= 20 && i <= 45) add(1.2, 'Uma porta para quem estuda com constância.');
     // A fase da vida: criança brinca e se mexe; adolescente procura turma.
     if (i < 12 && (m.categoria === 'esporte' || m.categoria === 'arte')) add(1, 'Coisa boa de começar criança.');
     if (i >= 12 && i < 18 && m.social && m.social.fluxo >= 1) add(0.8, 'Onde a turma está.');
@@ -150,11 +150,27 @@ export function vagasEmCamadas(v: Vida): VagasEmCamadas {
  */
 export function vagasParaVoce(v: Vida): { para: Relevante<Vaga>[]; resto: Vaga[] } {
   const c = vagasEmCamadas(v);
+  const semTrajetoria = !c.trajetoria.length && !c.relacionadas.length;
   const base = c.trajetoria.length ? c.trajetoria : c.relacionadas.length ? c.relacionadas : c.outras.map(x => ({ ...x, motivo: x.item.oc.nivel <= 1 ? 'Para começar.' : x.motivo }));
-  const para = base.slice(0, MAX_PRIMARIAS.vagas);
+  // Sem trajetória ainda (o primeiro emprego), as primárias mostram caminhos DIFERENTES — uma por família de
+  // carreira —, e não as cinco de maior pontuação (quase sempre o mesmo tipo de trabalho de entrada). Antes,
+  // o primeiro emprego sugerido era quase sempre de cuidado ou doméstico, e ele virava a "trajetória" da vida.
+  const para = semTrajetoria ? umaPorFamilia(base, MAX_PRIMARIAS.vagas) : base.slice(0, MAX_PRIMARIAS.vagas);
   const usados = new Set(para.map(x => x.item.oc.id));
   const resto = [...c.trajetoria, ...c.relacionadas, ...c.outras].filter(x => !usados.has(x.item.oc.id)).map(x => x.item);
   return { para, resto };
+}
+
+function umaPorFamilia(lista: Relevante<Vaga>[], max: number): Relevante<Vaga>[] {
+  const vistas = new Set<string>();
+  const out: Relevante<Vaga>[] = [];
+  for (const x of lista) {
+    const f = familiaDaTrilha(x.item.oc.trilha).id;
+    if (vistas.has(f)) continue;
+    vistas.add(f); out.push(x);
+    if (out.length >= max) break;
+  }
+  return out.length ? out : lista.slice(0, max);
 }
 
 void habilidade; void experienciaNaTrilha; void porContaPropria;

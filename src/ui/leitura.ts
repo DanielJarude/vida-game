@@ -13,7 +13,7 @@ import { flex, listaNatural } from '../motor/texto';
 import { municipio } from '../motor/dados/lugares';
 import { descricaoOrigem } from '../motor/sistemas/social';
 import { gestacaoEmCurso } from '../motor/sistemas/familia';
-import { circuloDe, ehDescendente, estadoCivil, filhosEmComum, importancia, papelDe, parceriaAtual, type Papel } from '../motor/sistemas/vinculos';
+import { circuloDe, ehDescendente, estadoCivil, filhosEmComum, importancia, papelDe, parceriaAtual, vinculoReal, type Papel } from '../motor/sistemas/vinculos';
 import { pesoDoLuto } from '../motor/sistemas/luto';
 import { lutoDe } from '../motor/sistemas/rede';
 
@@ -303,7 +303,8 @@ export function sinaisSociais(v: Vida): Sinal[] {
     // Quem tomou uma iniciativa e espera uma reação vem primeiro (o silêncio também responde, no ano que vem).
     if (vin.chamado) out.push({ pessoaId: p.id, texto: vin.chamado.texto, peso: 96 });
     const imp = importancia(v, p, vin);
-    if (imp < 25) continue;
+    // Parentesco sem história não pede atenção (o motor diz o que é vínculo real).
+    if (imp < 25 || !vinculoReal(v, p, vin)) continue;
     const papel = papelDe(p, vin);
     if (p.gestacao && v.t < p.gestacao.tParto) out.push({ pessoaId: p.id, texto: `${p.nome} vai ter um bebê em ${MESES[mesDe(p.gestacao.tParto)]}.`, peso: 70 + imp / 10 });
     if (p.aperto && v.t - p.aperto.t <= 12 && !vin.chamado) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5 });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { App } from '../App';
+import { App, precarregar } from '../App';
 import { criarRng } from '../../motor/rng';
 import { criarVida } from '../../motor/criacao';
 import { avancarAno } from '../../motor/ano';
@@ -18,6 +18,9 @@ import { Lugar } from '../jogo/material/Lugares';
 import { catalogoDeVeiculos } from '../../motor/sistemas/mercado';
 import { modeloVeiculo, nomeDaVersao, versaoVeiculo } from '../../motor/dados/bens';
 import { executar, type Acao } from '../../motor/acoes';
+
+// O motor e as telas do jogo chegam sob demanda (pacotes à parte): os testes esperam a carga uma vez.
+beforeAll(async () => { await precarregar(); });
 
 function vidaSalva(idade: number, ajuste: (v: Vida) => void): Vida {
   let v = criarVida({ nome: 'Rita', sobrenome: 'Lopes', genero: 'feminino', municipioId: 'recife-pe', semente: 5 });

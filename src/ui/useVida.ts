@@ -7,16 +7,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Vida } from '../motor/tipos';
-import { criarVida, type OpcoesCriacao } from '../motor/criacao';
-import { avancarAno } from '../motor/ano';
-import { executar, type Acao } from '../motor/acoes';
-import { apagarSave, exportarVida, importarVida, ler, registrarVidaPassada, salvar } from '../motor/save';
-import { idade } from '../motor/nucleo';
-import { patrimonio } from '../motor/sistemas/dinheiro';
-import { nomeLugar } from '../motor/dados/lugares';
-import { descricaoEmprego } from '../motor/sistemas/trabalho';
-import { anoDe } from '../motor/tempo';
+import type { OpcoesCriacao } from '../motor/criacao';
+import type { Acao } from '../motor/acoes';
 import { sound } from './util/som';
+import { carregarMotor, motorCarregado, type Motor } from './motor';
 
 export type Tela = 'inicio' | 'criacao' | 'jogo' | 'vidas';
 
@@ -35,15 +29,20 @@ export function useVida() {
     try { return localStorage.getItem('VIDA_SOM') !== '0'; } catch { return true; }
   });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // O motor chega num pacote à parte: a tela inicial abre antes dele.
+  const [motor, setMotor] = useState<Motor | null>(motorCarregado);
+  useEffect(() => { if (!motor) { let vivo = true; void carregarMotor().then(m => { if (vivo) setMotor(m); }); return () => { vivo = false; }; } return undefined; }, [motor]);
 
   useEffect(() => { sound.enabled = som; try { localStorage.setItem('VIDA_SOM', som ? '1' : '0'); } catch { /* sem armazenamento */ } }, [som]);
 
   useEffect(() => {
+    if (!motor) return;
+    const { ler, idade } = motor;
     const r = ler();
     if (r.tipo === 'ok') setSalva({ nome: r.vida.eu.nome, idade: idade(r.vida) });
     if (r.tipo === 'invalido') setAvisoSave(`Não foi possível abrir a vida salva: ${r.motivo} Uma cópia foi guardada.`);
     if (r.tipo === 'ok' && r.migrado) setAvisoSave('Sua vida salva veio de uma versão anterior do jogo e foi convertida. Alguns detalhes foram aproximados.');
-  }, []);
+  }, [motor]);
 
   const avisar = useCallback((texto: string, tom: Aviso['tom'] = 'neutro') => {
     setAviso({ id: Date.now(), texto, tom });
@@ -55,6 +54,8 @@ export function useVida() {
 
   /** Aplica uma vida nova: salva, trata a morte. */
   const aplicar = useCallback((nova: Vida) => {
+    if (!motor) return;
+    const { apagarSave, registrarVidaPassada, idade, nomeLugar, descricaoEmprego, patrimonio, anoDe, salvar } = motor;
     setVida(nova);
     if (nova.morte) {
       apagarSave();
@@ -68,41 +69,43 @@ export function useVida() {
       salvar(nova);
       setSalva({ nome: nova.eu.nome, idade: idade(nova) });
     }
-  }, []);
+  }, [motor]);
 
   const nascer = useCallback((o: Omit<OpcoesCriacao, 'semente'> & { semente?: number }) => {
-    const v = criarVida({ ...o, semente: o.semente ?? Math.floor(Math.random() * 2 ** 31) });
+    if (!motor) return;
+    const v = motor.criarVida({ ...o, semente: o.semente ?? Math.floor(Math.random() * 2 ** 31) });
     setMarcaAno(0);
     aplicar(v);
     setTela('jogo');
     sound.playSuccess();
-  }, [aplicar]);
+  }, [aplicar, motor]);
 
   const continuar = useCallback(() => {
-    const r = ler();
+    if (!motor) return;
+    const r = motor.ler();
     if (r.tipo !== 'ok') { avisar('Não há vida salva para continuar.', 'ruim'); return; }
     setVida(r.vida);
     setMarcaAno(r.vida.biografia.length);
     setTela('jogo');
-  }, [avisar]);
+  }, [avisar, motor]);
 
   const avancar = useCallback(() => {
-    if (!vida) return;
+    if (!vida || !motor) return;
     const antes = vida.biografia.length;
-    const r = avancarAno(vida);
+    const r = motor.avancarAno(vida);
     if (r.aviso) { avisar(r.aviso.texto, r.aviso.tom); return; }
     setMarcaAno(antes);
     aplicar(r.vida);
     if (r.vida.morte) sound.playDeath();
     else if (r.vida.momento) sound.playEvent();
     else sound.playAgeUp();
-  }, [vida, aplicar, avisar]);
+  }, [vida, aplicar, avisar, motor]);
 
   const agir = useCallback((a: Acao): boolean => {
-    if (!vida) return false;
+    if (!vida || !motor) return false;
     // O título do resultado é o do processo, sem a etapa ("Entrevista: vendedora", não "· 3 de 3").
     const titulo = (vida.momento?.titulo ?? '').replace(/ · .*$/, '');
-    const r = executar(vida, a);
+    const r = motor.executar(vida, a);
     if (r.vida === vida) {
       if (r.aviso) avisar(r.aviso.texto, 'ruim');
       return false;
@@ -122,11 +125,12 @@ export function useVida() {
     }
     sound.playClick();
     return true;
-  }, [vida, aplicar, avisar]);
+  }, [vida, aplicar, avisar, motor]);
 
   /** Baixa a vida atual num arquivo JSON (para continuar em outro navegador ou aparelho). */
   const exportar = useCallback(() => {
-    if (!vida) return;
+    if (!vida || !motor) return;
+    const { exportarVida, anoDe } = motor;
     try {
       const blob = new Blob([exportarVida(vida)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -141,19 +145,22 @@ export function useVida() {
     } catch {
       avisar('Não foi possível exportar agora.', 'ruim');
     }
-  }, [vida, avisar]);
+  }, [vida, avisar, motor]);
 
   /** Lê um arquivo e diz de quem é a vida (sem trocar nada ainda). */
   const previaImportacao = useCallback((texto: string): { tipo: 'ok'; resumo: string } | { tipo: 'erro'; motivo: string } => {
+    if (!motor) return { tipo: 'erro', motivo: 'O jogo ainda está carregando.' };
+    const { importarVida, idade, nomeLugar, anoDe } = motor;
     const r = importarVida(texto);
     if (r.tipo !== 'ok') return { tipo: 'erro', motivo: r.tipo === 'invalido' ? r.motivo : 'O arquivo está vazio.' };
     const v = r.vida;
     return { tipo: 'ok', resumo: `A vida de ${v.eu.nome} ${v.eu.sobrenome}, ${idade(v)} anos, em ${nomeLugar(v.moradia.municipioId)}, no ano de ${anoDe(v.t)}.${r.migrado ? ' Veio de uma versão anterior do jogo e será convertida.' : ''}` };
-  }, []);
+  }, [motor]);
 
   /** Importa (depois de confirmado): a vida do arquivo passa a ser a vida salva. */
   const importar = useCallback((texto: string): boolean => {
-    const r = importarVida(texto);
+    if (!motor) return false;
+    const r = motor.importarVida(texto);
     if (r.tipo !== 'ok') { avisar(r.tipo === 'invalido' ? r.motivo : 'O arquivo está vazio.', 'ruim'); return false; }
     setResultado(null);
     setMarcaAno(r.vida.biografia.length);
@@ -161,17 +168,18 @@ export function useVida() {
     setTela('jogo');
     avisar(`A vida de ${r.vida.eu.nome} continua aqui.`, 'bom');
     return true;
-  }, [aplicar, avisar]);
+  }, [aplicar, avisar, motor]);
 
   const recomecar = useCallback(() => {
-    apagarSave();
+    motor?.apagarSave();
     setVida(null);
     setSalva(null);
     setResultado(null);
     setTela('inicio');
-  }, []);
+  }, [motor]);
 
   return {
+    pronto: !!motor, estatisticas: motor ? motor.lerEstatisticas() : null,
     tela, setTela, vida, salva, aviso, avisoSave, setAvisoSave, resultado, fecharResultado: () => setResultado(null),
     marcaAno, som, setSom, nascer, continuar, avancar, agir, recomecar, avisar, exportar, previaImportacao, importar
   };

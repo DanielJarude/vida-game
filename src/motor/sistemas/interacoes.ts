@@ -32,7 +32,6 @@ import { lacoCom, oLaco } from './rede';
 import { vereditoDePagar, disponivel } from './dinheiro';
 import { responderChamado, rotulosDoChamado } from './iniciativas';
 
-export const LIMITE_INTERACOES = 5;
 
 export interface CtxI {
   v: Vida;
@@ -1154,26 +1153,67 @@ export function interacoesPara(v: Vida, id: string): Interacao[] {
   return lista.map((x, k) => ({ x, k, r: rel(x) })).sort((a, b) => b.r - a.r || a.k - b.k).map(y => y.x);
 }
 
-const interacoesNoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('pessoa:') && !a.startsWith('pessoa:chamado_')).length;
+/*
+ * Sem moeda social. Não há um número de "momentos por ano": o que limita é a
+ * SEMÂNTICA de cada coisa —
+ *   - cada interação com a mesma pessoa, uma vez por ano (a conversa de verdade
+ *     do ano já aconteceu; pedir desculpas só existe se há o que reparar; o
+ *     chamado se responde uma vez);
+ *   - o tempo com a MESMA pessoa no mesmo ano rende cada vez menos (a quinta
+ *     coisa com alguém não aproxima como a primeira);
+ *   - o alívio e o ânimo que se tira das pessoas também têm retorno
+ *     decrescente no ano (o quarto desabafo não alivia como o primeiro);
+ *   - uma iniciativa romântica de cada vez (quem já está vendo no que dá com
+ *     alguém não começa outra no mesmo ano).
+ * Nada disso impede de procurar mais gente: impede de "farmar" um estado.
+ */
+const REACOES = new Set(['chamado_sim', 'chamado_nao']);
+const ROMANTICAS = new Set(['flertar', 'declarar', 'convidar']);
+const socialDoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('pessoa:') && !REACOES.has(a.split(':')[1]));
+/** Quantas coisas já foram feitas com esta pessoa neste ano. */
+export const vezesComEla = (v: Vida, id: string) => socialDoAno(v).filter(a => a.endsWith(`:${id}`)).length;
+/** O quanto o tempo com a mesma pessoa ainda rende, no ano (1, 0,6, 0,35, 0,2, 0,1). */
+export const rendeComEla = (vezes: number) => [1, 0.6, 0.35, 0.2, 0.1][Math.min(4, vezes)];
+/** O quanto o alívio tirado das pessoas ainda rende, no ano (cheio até a terceira; depois, metade a cada vez). */
+export const rendeParaVoce = (noAno: number) => (noAno < 3 ? 1 : Math.max(0.1, Math.pow(0.5, noAno - 2)));
 
 export function disponibilidadeInteracao(v: Vida, id: string, interacao: string): Veredito {
   const c = ctxPessoa(v, id);
   if (!c || !c.p.vivo) return bloqueio('impossivel', 'Essa pessoa não está mais na sua vida.');
   const def = porId.get(interacao);
   if (!def || !def.quando(c)) return bloqueio('impossivel', 'Isso não faz sentido com essa pessoa agora.');
-  // Responder a quem tomou a iniciativa não gasta o tempo do ano (é reação, não iniciativa).
-  const reacao = interacao === 'chamado_sim' || interacao === 'chamado_nao';
-  if (!reacao && interacoesNoAno(v) >= LIMITE_INTERACOES) return bloqueio('incompativel', 'O ano não tem mais tempo para isso. Avance o ano.');
   if (v.anoAtual.acoes.includes(`pessoa:${interacao}:${id}`)) return bloqueio('incompativel', 'Você já fez isso neste ano.');
+  if (ROMANTICAS.has(interacao)) {
+    const outra = socialDoAno(v).map(a => a.split(':')).find(([, i, quem]) => ROMANTICAS.has(i) && quem !== id && ['interesse', 'saindo'].includes(v.vinculos[quem]?.romance?.estagio ?? ''));
+    if (outra && !parceiro(v)) return bloqueio('incompativel', `Você já está vendo no que dá com ${v.pessoas[outra[2]]?.nome ?? 'outra pessoa'}.`);
+  }
   return def.disponivel ? def.disponivel(c) : PERMITIDO;
 }
 
 export function executarInteracao(v: Vida, r: Rng, id: string, interacao: string): Saida {
   const c = ctxPessoa(v, id)!;
   const def = porId.get(interacao)!;
+  const reacao = REACOES.has(interacao);
+  const fPessoa = reacao ? 1 : rendeComEla(vezesComEla(v, id));
+  const fVoce = reacao ? 1 : rendeParaVoce(socialDoAno(v).length);
+  const antes = { prox: c.vin.proximidade, conf: c.vin.confianca, pres: c.vin.presenca, env: c.vin.romance?.envolvimento, hum: v.mente.felicidade, cab: v.mente.estresse, abalos: v.mente.abalos?.length ?? 0 };
   v.anoAtual.acoes.push(`pessoa:${interacao}:${id}`);
   c.vin.tUltimoContato = v.t;
   const out = def.executar(c, r);
+  // Retornos decrescentes: só os GANHOS encolhem (o que custa, custa inteiro).
+  const vin = v.vinculos[id];
+  const encolhe = (depois: number, era: number | undefined, f: number) => (era !== undefined && depois > era ? Math.round(era + (depois - era) * f) : depois);
+  if (vin && fPessoa < 1) {
+    vin.proximidade = encolhe(vin.proximidade, antes.prox, fPessoa);
+    vin.confianca = encolhe(vin.confianca, antes.conf, fPessoa);
+    if (vin.presenca !== undefined) vin.presenca = encolhe(vin.presenca, antes.pres, fPessoa);
+    if (vin.romance && antes.env !== undefined) vin.romance.envolvimento = encolhe(vin.romance.envolvimento, antes.env, fPessoa);
+  }
+  if (fVoce < 1) {
+    if (v.mente.felicidade > antes.hum) v.mente.felicidade = Math.round(antes.hum + (v.mente.felicidade - antes.hum) * fVoce);
+    if (v.mente.estresse < antes.cab) v.mente.estresse = Math.round(antes.cab + (v.mente.estresse - antes.cab) * fVoce);
+    for (const a of (v.mente.abalos ?? []).slice(antes.abalos)) { if (a.humor > 0) a.humor = Math.round(a.humor * fVoce * 10) / 10; if (a.cabeca < 0) a.cabeca = Math.round(a.cabeca * fVoce * 10) / 10; }
+  }
   if (def.destaque && out.resultado && !out.titulo) out.titulo = c.p.nome;
   return out;
 }

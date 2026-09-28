@@ -63,7 +63,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
             {sinais.map(x => <li key={x.id}><strong>{x.texto.charAt(0).toUpperCase() + x.texto.slice(1)}</strong><span>desde {anoDe(x.desde)}</span></li>)}
           </ul>
           <p className="nota">Ainda sem nome. Ir ao médico é o que dá diagnóstico — e tratamento. Ignorar também é escolha: às vezes passa, às vezes o corpo cobra depois.</p>
-          {i >= 14 && <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="secundario" ocultarImpossivel>Ir ao médico ver o que é</BotaoAcao></div>}
+          {i >= 12 && <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="secundario" ocultarImpossivel>{i < 18 ? 'Pedir ajuda: contar em casa ou na escola e ir ao posto de saúde' : 'Ir ao médico ver o que é'}</BotaoAcao></div>}
+          {i < 18 && <p className="nota">No posto de saúde (SUS), o atendimento é de graça — e, quando precisa, encaminha para acompanhamento.</p>}
         </section>
       )}
 

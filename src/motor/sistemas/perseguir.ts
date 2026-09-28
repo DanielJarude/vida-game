@@ -183,7 +183,7 @@ function mostrarTrabalho(v: Vida, r: Rng): { texto: string; tom: 'bom' | 'ruim' 
 /* ------------------------------------------------------------ Concurso */
 
 function podeFocar(v: Vida, valor?: string): Veredito {
-  if (!v.rotinas.some(r => r.id === 'estudar_concurso') && v.caminhos.concurso.meses < 6) return bloqueio('requisito', 'Primeiro, estudar para concurso (Tempo livre); depois, escolher para que área.');
+  if (!v.rotinas.some(r => r.id === 'estudar_concurso') && v.caminhos.concurso.meses < 6) return bloqueio('requisito', 'Primeiro, estudar para concurso (Estudos); depois, escolher para que área.');
   if (valor && !FOCOS.includes(valor as FocoConcurso) && valor !== 'geral') return bloqueio('impossivel', 'Essa área de editais não existe no jogo.');
   if ((valor === 'geral' ? undefined : valor) === v.caminhos.concurso.foco) return bloqueio('impossivel', 'O estudo já está nessa direção.');
   return PERMITIDO;

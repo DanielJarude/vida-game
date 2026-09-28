@@ -18,7 +18,6 @@ import { custoDaConsulta, custoDoTratamento, estadoDoPet, infoPet } from '../../
 import { dinheiroCurto } from '../leituraMaterial';
 import type { Atracao, Marco, Pessoa, Vida, Vinculo } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
-import { LIMITE_INTERACOES } from '../../motor/acoes';
 import { idade, idadePessoa, jeitoDe, parceiro } from '../../motor/nucleo';
 import { nomeLugar } from '../../motor/dados/lugares';
 import { flex } from '../../motor/texto';
@@ -36,9 +35,6 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null;
 
 export function Pessoas({ vida, agir, aberta, abrir }: Props) {
   const c = circulos(vida);
-  // Reagir a quem tomou a iniciativa não gasta o tempo do ano (é a mesma regra do motor).
-  const usadas = vida.anoAtual.acoes.filter(a => a.startsWith('pessoa:') && !a.startsWith('pessoa:chamado_')).length;
-  const restam = Math.max(0, LIMITE_INTERACOES - usadas);
   const pessoa = aberta ? vida.pessoas[aberta] : null;
   const i = idade(vida);
   const moraComPais = vida.moradia.tipo === 'pais' || vida.moradia.tipo === 'parente';
@@ -87,8 +83,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
       {vazio && <Vazio>Ninguém por perto ainda.</Vazio>}
 
       <p className="dica pessoas__tempo">
-        {restam === 0 ? 'O tempo deste ano para as pessoas acabou.' : `Neste ano ainda há tempo para ${restam} ${restam === 1 ? 'momento' : 'momentos'} com as pessoas.`}
-        {' '}Quem convive com você continua perto sem esforço; quem está longe, esfria.
+        Quem convive com você continua perto sem esforço; quem está longe, esfria. Com a mesma pessoa, no mesmo ano, cada coisa a mais aproxima menos.
       </p>
 
       <ConhecerAlguem vida={vida} agir={agir} />

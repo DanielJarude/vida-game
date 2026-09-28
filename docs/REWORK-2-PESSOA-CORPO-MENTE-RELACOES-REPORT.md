@@ -10,7 +10,7 @@
 | Base | `claude/rework-caminhos-agencia-ux` @ `f7b84a9` (working tree limpa, confirmada) |
 | Branch | `claude/rework-2-pessoa-corpo-mente-relacoes` |
 | Baseline | typecheck limpo, build ok, **582/582** testes (20 arquivos) |
-| Ao fim | typecheck limpo, build ok, **617/617** testes (22 arquivos) |
+| Ao fim | typecheck limpo, build ok (sem aviso de tamanho), **629/629** testes (23 arquivos), smoke do itch.io 18/18 |
 | Save | **v16** (migra v15; ver §6) |
 | Node | 22 (`~/.nvm/versions/node/v22.23.2`) |
 
@@ -98,7 +98,7 @@ Entra: prática que virou parte da vida (3 anos, uma vez por frente), entrar em 
 
 ## 4. Arquivos
 
-Novos: `sistemas/pessoa.ts`, `predisposicao.ts`, `saude.ts`, `vestibular.ts`, `iniciativas.ts`, `busca.ts`; testes `__tests__/rework2.test.ts`, `ui/__tests__/rework2.test.tsx`; fixtures `save-v15-*.json` (3); scripts `sim/rework2.ts`, `playtest/gerarSavesV15.ts`, `playtest/gerarRework2Pessoa.ts`.
+Novos: `motor/fachada.ts`, `ui/motor.ts`, `ui/util/sobDemanda.tsx`, `ui/telas/ImportarVida.tsx`, `__tests__/rework2fecho.test.ts`, `sistemas/pessoa.ts`, `predisposicao.ts`, `saude.ts`, `vestibular.ts`, `iniciativas.ts`, `busca.ts`; testes `__tests__/rework2.test.ts`, `ui/__tests__/rework2.test.tsx`; fixtures `save-v15-*.json` (3); scripts `sim/rework2.ts`, `playtest/gerarSavesV15.ts`, `playtest/gerarRework2Pessoa.ts`.
 Alterados: `tipos`, `save`, `criacao`, `ano`, `acoes`, `sistemas/{corpo,estado,rotinas,frentes,peneira,escola,cuidados,interacoes,social,romance,trabalho,dinheiro,relevancia,caminhosDeVida}`, `conteudo/sistemicos`, UI `Voce, Tempo, Estudos, Pessoas, estadoPessoal, leitura`, CSS.
 
 ## 5. Testes
@@ -180,11 +180,69 @@ A queda de concurso foi investigada: o preparo para o edital é **idêntico** (c
 - A busca ativa exige dizer por quem se interessa (o seletor aparece ali mesmo).
 - Iniciativas dos NPCs: uma por ano, tipos fixos; o NPC não tem objetivos de longo prazo próprios além do que o romance e a `VidaNpc` já tinham.
 
-## 11. PENDÊNCIAS ENCONTRADAS (fora do escopo, não implementadas)
+## 11. Pendências encontradas durante o desenvolvimento — resolução
 
-1. Estudar para concurso continua em Tempo livre (a mesma duplicação semântica que o cursinho tinha); o preparo já é dito em Trabalho → Concursos.
-2. `LIMITE_INTERACOES = 5` por ano é, na prática, uma moeda de ação social antiga; foi preservada (reagir a chamados não gasta), mas merece revisão no rework de relações.
-3. "Rafael — 17 anos sem se falarem" aparece em "Pede atenção" para parentes distantes com quem nunca houve contato real (o critério de importância olha o papel, não a história).
-4. Muitas vidas simuladas acabam em `gerente_loja` aos 40 (fallback das estratégias de intenção) — convergência de carreira já apontada no REWORK 1.
-5. A escola não oferece caminho de saúde mental para adolescentes (terapia a partir de 12 depende de dinheiro em casa).
-6. Chunk único do build > 800 kB (aviso do Vite, antigo).
+As seis pendências da primeira entrega foram incorporadas ao escopo e **todas corrigidas**. Nenhuma exigiu rework separado.
+
+### 11.1 "Estudar para concurso" em Tempo livre — **corrigida**
+- **Como**: `rotinas.DE_ESTUDOS` passou a conter `cursinho` e `estudar_concurso`. A rotina continua sendo a implementação técnica e a **fonte única** (ocupa a semana; `caminhos.concurso` guarda o preparo), mas começar, mudar o ritmo, escolher a área e parar agora moram em **Estudos** (`EstudoParaConcurso`). Tempo livre só mostra que ela ocupa a semana ("ver em Estudos →"), sem oferecê-la nem sugeri-la (`relevancia.atividadesParaVoce` a exclui). Trabalho → Concursos mostra os editais e o preparo de cada um e manda para Estudos ("A preparação, em Estudos"); os botões de área saíram de lá (um lugar só). Os próximos passos do motor que diziam "Tempo livre" (`caminhosDeVida`, `perseguir`) passaram a dizer Estudos. Efeitos e determinismo preservados (é a mesma rotina, com a mesma ação).
+- **Outros casos equivalentes**: revisados; nenhum outro é preparação formal (inglês, programação, xadrez, clube de ciências são atividades pessoais com prática — ficam em Tempo livre).
+- **Testes**: `rework2fecho` §1 (fora das sugestões; o preparo cresce pela rotina; o próximo passo não aponta para Tempo livre); `ui/rework2` "o estudo para concurso é de Estudos" (começar, parar e área em Estudos; Tempo livre sem os controles).
+
+### 11.2 Limite de 5 interações por ano — **corrigida**
+- **Como**: `LIMITE_INTERACOES` removido (motor, ações e tela; a frase "ainda há tempo para N momentos" saiu). O abuso é contido pela **semântica** (`interacoes.ts`):
+  - cada interação com a mesma pessoa, uma vez por ano (já existia);
+  - o tempo com a **mesma pessoa** no mesmo ano rende cada vez menos (1 · 0,6 · 0,35 · 0,2 · 0,1 dos ganhos de afeto, confiança, presença e envolvimento);
+  - o alívio e o ânimo tirados das pessoas (desabafar, comemorar…) têm retorno decrescente no ano (cheios até o terceiro, depois metade a cada vez);
+  - **uma iniciativa romântica de cada vez**: quem já está vendo no que dá com alguém não flerta nem convida outra pessoa no mesmo ano;
+  - só os ganhos encolhem — o que custa (dinheiro, atrito, estresse) custa inteiro; reagir a um chamado acontece uma vez e não entra nas contas.
+- **Testes**: `rework2fecho` §2–3 — oito pessoas diferentes no mesmo ano (todas permitidas); tudo o que dá para fazer com a mesma pessoa num ano soma menos que 1,2× a primeira vez; dez desabafos aliviam menos que 4× o primeiro; segunda iniciativa romântica bloqueada com motivo; determinismo e save com dezenas de interações. UI: a tela não mostra contador.
+- **Resultado**: nas simulações, as estratégias sociais seguem com os mesmos resultados (conectado: bem-estar 71 aos 45 e 3 amigos próximos; isolado: 45,5 e 0,6) — nenhum estado disparou.
+
+### 11.3 Parentes distantes em "Pede atenção" — **corrigida**
+- **Como**: `vinculos.vinculoReal` — parentesco não basta: conta convivência, contato de verdade (e recente), história compartilhada, afeto ≥ 55, responsabilidade (filhos, parceria) ou uma iniciativa recente da pessoa. `leitura.sinaisSociais` e `iniciativas` (quem toma iniciativa ou cobra ausência) usam o mesmo critério. Ninguém é apagado do mundo; o pai que nunca apareceu passa a pedir atenção **se** procurar você.
+- **Testes**: `rework2fecho` §4 — pai ausente e primo distante (com aperto) não aparecem; a amiga próxima distante aparece; o pai que manda mensagem passa a aparecer.
+
+### 11.4 Convergência para "gerente de loja" — **corrigida (causa encontrada)**
+- **Investigação**: vidas sem estratégia nem procuram emprego; um "jogador neutro" que segue as sugestões da tela (200 vidas) não convergia para gerente de loja. A concentração vinha de **duas causas**:
+  1. **O simulador de intenções**: o trabalho "enquanto isso" de atletas, artistas, militares e concurseiros era sempre `candidatar(['comercio', …])` no degrau mais alto que desse — vinte anos depois, gerente de loja (25 de 40 atletas, 13 de 40 militares). Agora segue a tela (`candidatarPelaTela` → `vagasParaVoce`).
+  2. **Um funil real no motor**: sem trajetória, as vagas sugeridas eram as cinco de maior pontuação — quase sempre o mesmo tipo de trabalho de entrada (cuidado e doméstico) —, e o primeiro emprego virava a "trajetória" da vida. Agora, sem trajetória, as primárias são **uma por família de carreira** (`relevancia.umaPorFamilia`); com trajetória, nada muda.
+- **Resultado** (jogador neutro, 200 vidas, aos 40; a mesma sonda nas duas árvores):
+
+  | | base (f7b84a9) | antes da correção | depois |
+  | --- | --- | --- | --- |
+  | ocupações distintas | 49 | 49 | **65** |
+  | concentração (HHI, entre quem trabalha) | 0,066 | 0,062 | **0,034** |
+  | maior ocupação | diarista 19% | diarista 18% | diarista 10% |
+
+  Intenções (40 vidas): a ocupação mais comum aos 40 entre atletas passou de gerente de loja 25/40 para diarista 11/40, mais espalhada; entre militares, de gerente de loja 11/40 para no máximo 5/40 por ocupação; artistas: produtor musical 9, professor de música 8. Arte "chegou" 15% → 33% (o fallback já não afasta da arte). Concurso 93%, militar 80%, esporte 25% no meio do caminho.
+- **Regressão**: `rework2fecho` §5 — sem trajetória, as sugestões são de famílias diferentes; 24 vidas seguindo a tela chegam aos 38 com ≥ 7 ocupações e nenhuma com um terço.
+
+### 11.5 Saúde mental de adolescentes sem dinheiro — **corrigida**
+- **Investigação**: a rotina de terapia não cobrava de menores que moram com a família, mas (a) antes dos 14 não havia como procurar ajuda, (b) a primeira versão deste rework dava nome **e** tratamento a toda condição de menor automaticamente (o motor resolvia) e (c) adultos pobres pagavam R$ 280/mês mesmo com diagnóstico.
+- **Como** (reutilizando cuidados e rotinas, sem sistema paralelo): `saude.encaminhado` — quem tem depressão ou ansiedade com nome tem **encaminhamento pelo SUS** (UBS; CAPSi para menores), e a terapia custa 0 (`rotinas.custoDaRotina`; Tempo livre diz "pelo SUS, de graça"). A consulta é gratuita e, a partir dos 12, um adolescente com **sinal** de saúde mental pode pedir ajuda ("contar em casa ou na escola e ir ao posto"). Para menores, a família ou a escola pode perceber (20%/ano) e levar à UBS — dá nome e encaminha; **começar o acompanhamento continua sendo escolha**. Humor baixo sozinho não vira diagnóstico (só a condição que o corpo registrou pelo risco que já existia).
+- **Testes**: `rework2fecho` §6 — adolescente de 15, família vulnerável, conta zerada: pedir ajuda é possível, o posto dá nome e encaminha ("SUS"), a terapia custa 0, começa e trata, a conta não fica negativa; aos 13 também dá (só com sinal); humor baixo sem condição não gera diagnóstico.
+
+### 11.6 Chunk único > 800 kB — **corrigida**
+- **Composição medida** (metafile do esbuild): motor/sistemas 670 kB, motor/conteúdo 437 kB, react-dom 205 kB, telas do jogo 178 kB, motor/dados 168 kB — tudo num arquivo, porque `useVida` e a tela inicial importavam o motor estaticamente (e a tela inicial importava `ImportarVida` de dentro de `Jogo`).
+- **Como** (idiomático, sem refactor grande): `motor/fachada.ts` + `ui/motor.ts` carregam o motor com `import()`; `ui/util/sobDemanda.tsx` (carregamento sob demanda com cache de módulo — síncrono depois da primeira carga, o que manteve os testes de interface) para Jogo, Criação e Vidas; `ImportarVida` foi para arquivo próprio; a tela inicial abre sem o motor ("Carregando…" até ele chegar) e já dispara o pré-carregamento de tudo. `manualChunks` só onde há justificativa: React num pacote próprio (muda pouco; o navegador guarda) e o motor em três camadas **sem ciclo** entre pacotes (a primeira tentativa deu "Circular chunk" conteúdo ↔ motor; o conteúdo foi agrupado com quem o importa — ano, ações, fachada, relevância). O limite de aviso **não** foi aumentado (continua 800).
+- **Tamanhos** (minificado · gzip):
+
+  | | antes | depois |
+  | --- | --- | --- |
+  | carga inicial (JS) | **1.890 kB · 583 kB** (um arquivo) | **237 kB · 75 kB** (index 14 kB + react 223 kB) |
+  | motor (sistemas) | — | 741 kB · 247 kB |
+  | motor (conteúdo e orquestração) | — | 503 kB · 151 kB |
+  | motor (dados) | — | 169 kB · 41 kB |
+  | telas do jogo | — | 212 kB · 63 kB (+ comum 25 kB, criação 8 kB, vidas 1 kB) |
+  | aviso do Vite | sim | **não** |
+
+- **Smoke do itch.io** reescrito para Chromium real (o jsdom não executa módulos): serve o pacote de um subdiretório como o itch.io e verifica que os 10 pacotes chegam de lá sem 404, que o jogo abre (nascer → "Viver mais um ano"), save e recarga — **18/18**. Auditoria visual: 161 telas, nenhum problema estrutural. Guia `docs/ITCH-IO-BUILD.md` atualizado.
+
+### Validação desta etapa
+Testes específicos (`rework2fecho`: 11; `ui/rework2`: 6), suíte completa **629/629**, TypeScript limpo, build sem avisos, smoke 18/18; simulador de intenções, sonda de diversidade ocupacional e estratégias sociais re-executados. Achado de tela corrigido junto: "ENEM: 562 em 2044" ao lado de "sem nota do ENEM ainda" → "sem nota recente (o SISU usa as dos últimos anos)".
+
+## 12. PENDÊNCIAS ENCONTRADAS (fora do escopo, não implementadas)
+
+1. Na sonda de diversidade, diarista e cuidador ainda são as ocupações mais comuns de quem não estuda e só segue a tela (10% e 9%). Pode ser realista, mas o peso do trabalho doméstico nas vagas de entrada merece calibração com dados.
+2. O "o que mais pesa" do vestibular (estimativa) e o da devolutiva (prova real) podem apontar matérias diferentes no mesmo ano (ver §10).

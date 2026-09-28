@@ -26,7 +26,7 @@ import type { Chamado, Pessoa, TipoChamado, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { abalar } from './abalo';
 import { flex } from '../texto';
-import { papelDe, type Papel } from './vinculos';
+import { papelDe, vinculoReal, type Papel } from './vinculos';
 import { atraiGenero, podeTerRomance } from './romance';
 import { compatibilidade } from './social';
 
@@ -39,6 +39,8 @@ const atrito = (vin: Vinculo, n: number) => { vin.tensao = clamp(Math.round(vin.
 /** Quem importa o bastante para tomar a iniciativa (e para a relação cobrar quando você some). */
 function importante(v: Vida, p: Pessoa, vin: Vinculo, papel: Papel): boolean {
   if (p.especie || !p.vivo) return false;
+  // Parentesco sem história não toma iniciativa (nem cobra ausência): o mesmo critério de "Pede atenção".
+  if (!vinculoReal(v, p, vin)) return false;
   const ip = idadePessoa(v, p);
   if (papel === 'amigo_proximo') return true;
   if (papel === 'amigo') return vin.proximidade >= 48;

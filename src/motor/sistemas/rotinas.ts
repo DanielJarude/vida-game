@@ -30,7 +30,7 @@ import { cabeNaSemana } from './semana';
 import type { Categoria } from '../dados/frentes';
 import { categoriaDoVeiculo } from './veiculos';
 import { esfriarPreparo, prepararVestibular } from './vestibular';
-import { diagnosticar } from './saude';
+import { diagnosticar, encaminhado } from './saude';
 import { modeloFrente } from '../dados/frentes';
 
 export type CategoriaAtividade = Categoria | 'corpo' | 'lazer' | 'renda' | 'cuidado';
@@ -487,11 +487,12 @@ export const ROTINAS: readonly ModeloRotina[] = [
 const POR_ID = new Map(ROTINAS.map(r => [r.id, r]));
 
 /**
- * Atividades que ocupam a semana mas pertencem a Estudos (a preparação para o
- * vestibular): a rotina é a fonte única, o lugar de começar e parar é Estudos —
- * o Tempo livre só as mostra na semana.
+ * Atividades que ocupam a semana mas pertencem a Estudos (preparação formal:
+ * o cursinho para o vestibular, o estudo para concurso): a rotina é a fonte
+ * única, o lugar de começar, mudar e parar é Estudos — o Tempo livre só as
+ * mostra na semana (elas ocupam tempo), nunca as oferece como lazer.
  */
-export const DE_ESTUDOS = new Set(['cursinho']);
+export const DE_ESTUDOS = new Set(['cursinho', 'estudar_concurso']);
 export const modeloRotina = (id: string) => POR_ID.get(id);
 
 export const nivelDa = (r: Rotina) => (r.nivel ?? 1) as 1 | 2 | 3;
@@ -504,7 +505,14 @@ export const tempoDaRotina = (r: Rotina) => {
 };
 
 for (const r of ROTINAS) if (r.social) ROTINAS_SOCIAIS[r.id] = r.social;
-CUSTO_ROTINA.de = (_v, rot) => { const m = modeloRotina(rot.id); return m ? nivelModelo(m, nivelDa(rot)).custo : 0; };
+/** O custo de uma atividade para esta vida (a terapia com encaminhamento é pelo SUS: de graça). */
+export function custoDaRotina(v: Vida, id: string, nivel: number): number {
+  const m = modeloRotina(id);
+  if (!m) return 0;
+  if (id === 'terapia' && encaminhado(v)) return 0;
+  return nivelModelo(m, nivel).custo;
+}
+CUSTO_ROTINA.de = (v, rot) => custoDaRotina(v, rot.id, nivelDa(rot));
 CUSTO_ROTINA.rotulo = rot => { const m = modeloRotina(rot.id); if (!m) return rot.id; return m.niveis.length > 1 ? `${m.nome} (${nivelModelo(m, nivelDa(rot)).rotulo.toLowerCase()})` : m.nome; };
 
 function marcarAnos(v: Vida, chave: string): number {

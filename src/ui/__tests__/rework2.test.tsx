@@ -91,6 +91,24 @@ describe('Estudos ↔ Trabalho ↔ Tempo livre: o vestibular é um só', () => {
   });
 });
 
+describe('Estudos ↔ Tempo livre ↔ Trabalho: o estudo para concurso é de Estudos', () => {
+  it('começa, muda de ritmo e de área em Estudos; Tempo livre não o oferece; Trabalho manda para Estudos', () => {
+    let v = viva(22, 35);
+    v.trabalho.atual = undefined; v.educacao.matricula = undefined; v.educacao.basica = undefined;
+    render(<main><Estudos vida={v} agir={() => true} irPara={nada} /></main>);
+    expect(screen.getByRole('button', { name: 'Começar a estudar para concurso' })).toBeTruthy();
+    cleanup();
+    v = executar(v, { tipo: 'rotina', id: 'estudar_concurso', ativa: true, nivel: 1 }).vida;
+    render(<main><Estudos vida={v} agir={() => true} irPara={nada} /></main>);
+    expect(screen.getByRole('button', { name: 'Parar de estudar' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Para que área você estuda' })).toBeTruthy();
+    cleanup();
+    render(<main><Tempo vida={v} agir={() => true} irPara={nada} /></main>);
+    expect(screen.getByRole('button', { name: /ver em Estudos/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Mais a sério: estudo firme/ })).toBeNull();
+  });
+});
+
 describe('Pessoas: quem tomou a iniciativa', () => {
   function comChamado(): { v: Vida; id: string; nome: string } {
     const v = viva(30, 33);
@@ -108,7 +126,8 @@ describe('Pessoas: quem tomou a iniciativa', () => {
     const { rerender } = render(<main><Pessoas vida={v} agir={agir} aberta={null} abrir={nada} /></main>);
     const atencao = screen.getByRole('region', { name: 'Pedem atenção' });
     expect(within(atencao).getByText(`${nome} perdeu o emprego e pediu ajuda.`)).toBeTruthy();
-    expect(screen.getByText(/ainda há tempo para 5 momentos/)).toBeTruthy();
+    // Não há contador de "momentos" no ano (sem moeda social).
+    expect(screen.queryByText(/ainda há tempo para/)).toBeNull();
     rerender(<main><Pessoas vida={v} agir={agir} aberta={id} abrir={nada} /></main>);
     const r = rotulosDoChamado(v.pessoas[id], v.vinculos[id].chamado!);
     expect(screen.getByText('Como reagir')).toBeTruthy();
@@ -116,7 +135,7 @@ describe('Pessoas: quem tomou a iniciativa', () => {
     expect(screen.getByRole('button', { name: r.nao })).toBeTruthy();
     expect(atual.vinculos[id].chamado).toBeUndefined();
     rerender(<main><Pessoas vida={atual} agir={agir} aberta={null} abrir={nada} /></main>);
-    expect(screen.getByText(/ainda há tempo para 5 momentos/)).toBeTruthy();
+    expect(screen.queryByText(`${nome} perdeu o emprego e pediu ajuda.`)).toBeNull();
   });
 
   it('conhecer alguém: os contextos desta vida, uma vez por ano', () => {

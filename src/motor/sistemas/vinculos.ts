@@ -115,6 +115,22 @@ export function importancia(v: Vida, p: Pessoa, vin: Vinculo): number {
   return Math.max(0, Math.min(papel === 'pet' ? 50 : 100, Math.round(base * afeto + casa + tempo + historia)));
 }
 
+/**
+ * O vínculo é real (e não só genealógico)? Parentesco não basta: conta quem
+ * convive ou conviveu, com quem houve contato, história, afeto de verdade,
+ * responsabilidade (filhos, parceria) ou quem acabou de procurar você. O pai
+ * que nunca apareceu e o primo que ninguém conhece continuam no mundo —
+ * só não competem por atenção com quem faz parte da vida.
+ */
+export function vinculoReal(v: Vida, p: Pessoa, vin: Vinculo): boolean {
+  const papel = papelDe(p, vin);
+  if (papel === 'parceiro' || papel === 'filho' || vin.chamado) return true;
+  if (vin.convivio.length > 0) return true;
+  if (vin.historia.some(h => h.tipo !== 'antigo')) return true;
+  if (vin.tUltimoContato - vin.tInicio >= 12 && v.t - vin.tUltimoContato < 120) return true;
+  return vin.proximidade >= 55;
+}
+
 /** Parceria romântica viva (namoro ou mais), sem contar casos escondidos. */
 export function parceriaAtual(v: Vida): { p: Pessoa; vin: Vinculo } | undefined {
   for (const vin of Object.values(v.vinculos)) {

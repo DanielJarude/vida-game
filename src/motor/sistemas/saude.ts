@@ -31,6 +31,16 @@ export const SINAIS: Record<string, string> = {
 };
 
 export const semNome = (c: Condicao) => c.diagnosticada === false;
+
+/** Condições de saúde mental (o cuidado é acompanhamento: psicólogo, UBS, CAPS). */
+export const MENTAIS = new Set(['depressao', 'ansiedade']);
+
+/**
+ * Encaminhamento público para acompanhamento psicológico: quem tem uma
+ * condição de saúde mental com nome é atendido pelo SUS (UBS, e CAPS/CAPSi nos
+ * casos que pedem mais) — o dinheiro da casa não impede o cuidado.
+ */
+export const encaminhado = (v: Vida) => v.corpo.condicoes.some(c => MENTAIS.has(c.id) && diagnosticada(c));
 export const diagnosticada = (c: Condicao) => c.diagnosticada !== false;
 
 /** Os sinais percebidos agora (condições que ainda não têm nome). */
@@ -100,6 +110,15 @@ export function evoluirCondicoes(v: Vida, r: Rng): void {
     if (!cond.cronica) continue;
     const anos = (v.t - cond.tInicio) / 12;
     if (semNome(cond)) {
+      // Saúde mental de criança e adolescente: a família ou a escola pode perceber e levar à UBS — o que
+      // dá nome e encaminha (acompanhamento pelo SUS, de graça), mas o acompanhamento em si ainda é escolha.
+      if (idade(v) < 18 && MENTAIS.has(cond.id)) {
+        if (r.chance(0.2)) {
+          diagnosticar(v, cond, 'consulta');
+          escrever(v, { texto: `${idade(v) < 12 ? 'A família percebeu' : 'Na escola, perceberam'} que algo não ia bem, e a família levou ao posto de saúde: ${cond.nome}. Veio o encaminhamento para acompanhamento pelo SUS.`, relevancia: 'biografia', tema: 'saude', tom: 'ruim' });
+        }
+        continue;
+      }
       // Criança e adolescente: quem percebe e leva ao médico são os adultos da casa — e o tratamento vem com eles.
       if (idade(v) < 18 && r.chance(0.6)) {
         diagnosticar(v, cond, 'consulta');

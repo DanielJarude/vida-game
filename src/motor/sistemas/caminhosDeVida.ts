@@ -102,7 +102,7 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
       onde: `${estudando ? 'Estudando' : 'O estudo parou; o preparo esfria'} — ${foco ? `dirigido para ${NOME_FOCO[foco]}` : 'estudo geral, sem área'}.${l && alvo ? ` Para ${nomeOcupacao(v, alvo)}: ${l.palavra}.` : ''}`,
       progresso: l?.desde,
       falta: [...(l?.fatores ?? []).filter(x => /fraca|metade|renderia|teste físico/.test(x)), ...(foco ? [] : ['Escolher uma área: o edital de polícia não cobra o mesmo que o de tribunal.'])].slice(0, 3),
-      proximo: !foco && pode(P('foco_concurso', 'administrativo')) ? { rotulo: 'Escolher para que área estudar', ir: 'concursos' } : editaisAbertos(v).some(oc => podeTentar(elegibilidade(v, oc))) ? { rotulo: 'Ver os editais abertos', ir: 'concursos' } : { rotulo: 'Seguir estudando', ir: 'tempo', porque: 'Nenhum edital que caiba abriu este ano: os concursos abrem em anos diferentes.' }
+      proximo: !foco && pode(P('foco_concurso', 'administrativo')) ? { rotulo: 'Escolher para que área estudar', ir: 'estudos' } : editaisAbertos(v).some(oc => podeTentar(elegibilidade(v, oc))) ? { rotulo: 'Ver os editais abertos', ir: 'concursos' } : { rotulo: 'Seguir estudando', ir: 'estudos', porque: 'Nenhum edital que caiba abriu este ano: os concursos abrem em anos diferentes.' }
     });
   }
 
@@ -260,7 +260,7 @@ export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
     out.push({
       id: 'publico', titulo: 'Serviço público',
       como: 'Estudo para concurso, dirigido para uma área (prefeitura e tribunais, fiscal, bancos públicos, magistério, saúde) → edital → prova → estabilidade. Costuma levar mais de uma tentativa.',
-      agora: dentro ? 'Você é servidor.' : v.rotinas.some(r => r.id === 'estudar_concurso') ? 'Você estuda para concurso.' : i >= 17 ? 'Começa estudando (Tempo livre) e escolhendo a área.' : 'A partir dos 17.',
+      agora: dentro ? 'Você é servidor.' : v.rotinas.some(r => r.id === 'estudar_concurso') ? 'Você estuda para concurso.' : i >= 17 ? 'Começa estudando (Estudos) e escolhendo a área.' : 'A partir dos 17.',
       estado: dentro ? 'aqui' : i >= 17 ? 'pronto' : 'preparar',
       passo: dentro ? undefined : { rotulo: 'Ver os concursos', ir: 'concursos' }
     });

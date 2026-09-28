@@ -28,6 +28,9 @@ import { Catalogo, type ItemCatalogo } from './Catalogo';
 import type { Aba } from '../telas/Jogo';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { novaMatricula } from '../../motor/sistemas/escola';
+import { modeloRotina, nivelDa, nivelModelo } from '../../motor/sistemas/rotinas';
+import { NOME_FOCO } from '../../motor/sistemas/concurso';
+import type { FocoConcurso } from '../../motor/tipos';
 import { estimativaParaCurso, fazCursinho, mesesDePreparo, objetivoCurso, PALAVRA_SITUACAO, proximoPassoVestibular } from '../../motor/sistemas/vestibular';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }
@@ -215,7 +218,7 @@ function Preparacao({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boo
   const miras = rumoAoVestibular && !objetivo ? [...new Set([...alvos.map(a => a.curso.id), ...MIRAS])].slice(0, 6) : [];
   const anosCursinho = cursinho ? Math.floor((vida.t - (vida.rotinas.find(r => r.id === 'cursinho')?.tInicio ?? vida.t)) / 12) : 0;
   const preparo = mesesDePreparo(vida);
-  if (!rumoAoVestibular && !concurso && !cursinho && !objetivo) return null;
+  if (!rumoAoVestibular && !concurso && !cursinho && !objetivo && i < 17) return null;
   return (
     <Secao titulo="Preparação">
       {objetivo && est && (
@@ -257,15 +260,60 @@ function Preparacao({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boo
             {alvos.map(a => (
               <li key={a.curso.id}>
                 <span className="nota-alvo__curso">{a.curso.nome}</span>
-                <span className={`nota-alvo__palavra nota-alvo__palavra--${a.situacao === 'sem_nota' ? 'longe' : a.situacao}`}>{SITUACAO_ENEM[a.situacao]}{a.situacao !== 'sem_nota' ? ` (corte ~${a.corte})` : ''}</span>
+                <span className={`nota-alvo__palavra nota-alvo__palavra--${a.situacao === 'sem_nota' ? 'longe' : a.situacao}`}>{a.situacao === 'sem_nota' && notas.length ? 'sem nota recente (o SISU usa as dos últimos anos)' : SITUACAO_ENEM[a.situacao]}{a.situacao !== 'sem_nota' ? ` (corte ~${a.corte})` : ''}</span>
               </li>
             ))}
           </ul>
         </>
       )}
       {ultimaDev && vida.t - ultimaDev.t <= 36 && <p className="nota"><strong>{ultimaDev.titulo}.</strong> {ultimaDev.texto}</p>}
-      {concurso && <p className="nota">Você estuda para concurso{vida.caminhos.concurso.foco ? ', com foco definido' : ''}. O preparo, edital por edital, está em Trabalho → Concursos.{irPara ? ' ' : ''}{irPara && <button type="button" className="link" onClick={() => irPara('trabalho')}>Ver em Trabalho</button>}</p>}
+      {i >= 17 && <EstudoParaConcurso vida={vida} agir={agir} irPara={irPara} />}
     </Secao>
+  );
+}
+
+const FOCOS_UI: { id: FocoConcurso | 'geral'; rotulo: string }[] = [
+  { id: 'geral', rotulo: 'Estudo geral' }, { id: 'policial', rotulo: 'Polícia e farda' }, { id: 'administrativo', rotulo: 'Prefeitura e tribunais' },
+  { id: 'fiscal', rotulo: 'Fiscal' }, { id: 'bancario', rotulo: 'Bancos públicos' }, { id: 'educacao', rotulo: 'Magistério' }, { id: 'saude', rotulo: 'Saúde' }, { id: 'academico', rotulo: 'Universidade' }
+];
+
+/**
+ * Estudar para concurso: preparação profissional deliberada, em Estudos
+ * (a rotina da semana é a fonte única; `caminhos.concurso` guarda o preparo).
+ * Começar, o ritmo, a área e parar moram aqui; os editais, em Trabalho.
+ */
+function EstudoParaConcurso({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
+  const c = vida.caminhos.concurso;
+  const rot = vida.rotinas.find(r => r.id === 'estudar_concurso');
+  const m = modeloRotina('estudar_concurso')!;
+  const n = rot ? nivelDa(rot) : 0;
+  const anos = Math.round(c.meses / 12);
+  return (
+    <div className="preparo-cursinho" aria-label="Estudo para concurso">
+      <p className="objetivo__titulo"><span className="objetivo__rotulo">Concurso</span> {rot ? nivelModelo(m, n).rotulo : 'sem estudar agora'}</p>
+      <p className="nota">{rot
+        ? `Você estuda para concurso${c.meses >= 12 ? ` — o equivalente a ${anos} ${anos === 1 ? 'ano' : 'anos'} de estudo firme` : ''}${c.foco ? `, dirigido para ${NOME_FOCO[c.foco]}` : ', sem uma área'}.`
+        : c.meses >= 6 ? 'O estudo parou: o preparo esfria a cada ano parado.' : 'Concurso pede preparo: sem estudo, é quase loteria.'}</p>
+      <div className="grupo-acoes grupo-acoes--linha">
+        {!rot && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: 'estudar_concurso', ativa: true, nivel: 1 }} agir={agir} variante="secundario" ocultarImpossivel>Começar a estudar para concurso</BotaoAcao>}
+        {rot && n < m.niveis.length && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: 'estudar_concurso', ativa: true, nivel: (n + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${nivelModelo(m, n + 1).rotulo.toLowerCase()}`}</BotaoAcao>}
+        {rot && n > 1 && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: 'estudar_concurso', ativa: true, nivel: (n - 1) as 1 | 2 }} agir={agir} variante="discreto">Mais leve</BotaoAcao>}
+        {rot && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: 'estudar_concurso', ativa: false }} agir={agir} variante="discreto">Parar de estudar</BotaoAcao>}
+      </div>
+      {(rot || c.meses >= 6) && (
+        <div className="foco-estudo" role="group" aria-labelledby="foco-rotulo">
+          <span id="foco-rotulo" className="foco-estudo__rotulo">Para que área você estuda</span>
+          <div className="foco-estudo__opcoes">
+            {FOCOS_UI.map(f => {
+              const ativo = (c.foco ?? 'geral') === f.id;
+              return <button key={f.id} type="button" className="botao botao--discreto" aria-pressed={ativo} disabled={ativo} onClick={() => agir({ tipo: 'perseguir', oque: 'foco_concurso', valor: f.id } as unknown as Acao)}>{f.rotulo}</button>;
+            })}
+          </div>
+          <p className="nota">Estudo dirigido rende mais nos editais daquela área; mudar de área não apaga o que se estudou. A sua estrada (a farda para a polícia, o Direito para tribunal, Contábeis para o fiscal) também pesa.</p>
+        </div>
+      )}
+      {irPara && (rot || c.meses >= 6) && <button type="button" className="link rotina__ir" onClick={() => irPara('trabalho')}>Os editais e o preparo de cada um, em Trabalho →</button>}
+    </div>
   );
 }
 

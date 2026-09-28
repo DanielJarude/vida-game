@@ -29,6 +29,7 @@ import { OCUPACOES, ocupacao } from '../../src/motor/dados/ocupacoes';
 import { ORDEM_NIVEL, cursoOuNulo } from '../../src/motor/dados/cursos';
 import { familiaDaTrilha } from '../../src/motor/dados/carreiras';
 import { editaisAbertos } from '../../src/motor/sistemas/concurso';
+import { vagasParaVoce } from '../../src/motor/sistemas/relevancia';
 import { negociosPossiveis } from '../../src/motor/sistemas/negocio';
 import { saldoMensal } from '../../src/motor/sistemas/dinheiro';
 import { porContaPropria } from '../../src/motor/sistemas/trabalho';
@@ -111,6 +112,18 @@ function candidatar(v: Vida, r: Rng, trilhas: string[], so = false): Acao[] {
   return alvo ? [{ tipo: 'candidatar', ocupacaoId: alvo.id }] : [];
 }
 
+/**
+ * "Enquanto isso": o trabalho de quem persegue outra coisa (a base, a banda, o
+ * edital). Segue as sugestões da própria tela de Trabalho (`vagasParaVoce`),
+ * como um jogador faria — e não "comércio, no degrau mais alto que dá", que
+ * fazia 25 de 40 atletas virarem gerente de loja aos 40 (REWORK 2).
+ */
+function candidatarPelaTela(v: Vida, r: Rng): Acao[] {
+  const { para } = vagasParaVoce(v);
+  const ok = para.filter(x => tenta(v, { tipo: 'candidatar', ocupacaoId: x.item.oc.id }));
+  return ok.length ? [{ tipo: 'candidatar', ocupacaoId: r.pick(ok).item.oc.id }] : [];
+}
+
 const trabalhaEm = (v: Vida, trilhas: string[]) => !!v.trabalho.atual && trilhas.includes(ocupacao(v.trabalho.atual.ocupacaoId).trilha);
 const jaFoi = (v: Vida, ids: string[]) => ids.includes(v.trabalho.atual?.ocupacaoId ?? '') || v.trabalho.historico.some(h => ids.includes(h.ocupacaoId));
 const devs = (v: Vida, tipo?: string) => v.caminhos.devolutivas.filter(d => !tipo || d.tipo === tipo);
@@ -183,7 +196,7 @@ const INTENCOES: Intencao[] = [
         for (const oc of editaisAbertos(v).filter(x => CONCURSOS_ADM.includes(x.id))) if (tenta(v, { tipo: 'candidatar', ocupacaoId: oc.id })) { out.push({ tipo: 'candidatar', ocupacaoId: oc.id }); break; }
       }
       if (servidor && v.rotinas.some(x => x.id === 'estudar_concurso')) out.push({ tipo: 'rotina', id: 'estudar_concurso', ativa: false });
-      if (i >= 18 && !v.trabalho.atual) out.push(...candidatar(v, r, ['administrativo', 'comercio']));
+      if (i >= 18 && !v.trabalho.atual) out.push(...candidatarPelaTela(v, r));
       return out;
     },
     descobriu: v => editaisAbertos(v).some(oc => CONCURSOS_ADM.includes(oc.id) && tenta(v, { tipo: 'candidatar', ocupacaoId: oc.id })),
@@ -203,7 +216,7 @@ const INTENCOES: Intencao[] = [
         for (const oc of editaisAbertos(v).filter(x => MILITAR.includes(x.id))) if (tenta(v, { tipo: 'candidatar', ocupacaoId: oc.id })) { out.push({ tipo: 'candidatar', ocupacaoId: oc.id }); break; }
       }
       if (na && v.rotinas.some(x => x.id === 'estudar_concurso')) out.push({ tipo: 'rotina', id: 'estudar_concurso', ativa: false });
-      if (!na && i >= 18 && !v.trabalho.atual) out.push(...candidatar(v, r, ['vigilancia', 'comercio', 'logistica']));
+      if (!na && i >= 18 && !v.trabalho.atual) out.push(...candidatarPelaTela(v, r));
       return out;
     },
     descobriu: v => editaisAbertos(v).some(oc => MILITAR.includes(oc.id) && tenta(v, { tipo: 'candidatar', ocupacaoId: oc.id })) || !!v.caminhos.militar,
@@ -222,7 +235,7 @@ const INTENCOES: Intencao[] = [
       const h = v.caminhos.frentes[d as 'volei']?.habilidade ?? 0;
       const fimJanela = d === 'futebol' ? 17 : 19;
       if (!v.caminhos.esporte && (h >= 66 || i >= fimJanela - 1)) for (const x of [P('pedir_teste', d)]) if (tenta(v, x)) out.push(x);
-      if (i >= 20 && !v.trabalho.atual && v.caminhos.esporte?.fase !== 'profissional' && v.caminhos.esporte?.fase !== 'base') out.push(...candidatar(v, r, ['treino', 'comercio']));
+      if (i >= 20 && !v.trabalho.atual && v.caminhos.esporte?.fase !== 'profissional' && v.caminhos.esporte?.fase !== 'base') out.push(...candidatarPelaTela(v, r));
       void r;
       return out;
     },
@@ -237,7 +250,7 @@ const INTENCOES: Intencao[] = [
       out.push(...aceitar(v, ['banda', 'grupo', 'convite', 'clientela']));
       for (const x of [P('montar_grupo', 'musica'), P('mostrar_trabalho')]) if (tenta(v, x)) out.push(x);
       for (const oc of OCUPACOES.filter(o => ARTE_OC.includes(o.id))) if (!jaFoi(v, ARTE_OC) && tenta(v, { tipo: 'candidatar', ocupacaoId: oc.id })) { out.push({ tipo: 'candidatar', ocupacaoId: oc.id }); break; }
-      if (idade(v) >= 19 && !v.trabalho.atual) out.push(...candidatar(v, r, ['comercio', 'alimentacao']));
+      if (idade(v) >= 19 && !v.trabalho.atual) out.push(...candidatarPelaTela(v, r));
       return out;
     },
     descobriu: v => v.caminhos.oportunidades.some(o => o.tipo === 'banda' || o.tipo === 'grupo') || !!v.caminhos.arte || tenta(v, P('montar_grupo', 'musica')),
@@ -250,7 +263,7 @@ const INTENCOES: Intencao[] = [
       const i = idade(v);
       const out: Acao[] = [];
       if (!v.caminhos.negocio || v.caminhos.negocio.estado === 'fechado') {
-        if (i >= 18 && !v.trabalho.atual) out.push(...candidatar(v, r, ['comercio', 'alimentacao', 'beleza']));
+        if (i >= 18 && !v.trabalho.atual) out.push(...candidatarPelaTela(v, r));
         if (i >= 23) { const n = negociosPossiveis(v).filter(x => podeTentar(x.veredito)).sort((a, b) => a.custo - b.custo)[0]; if (n) out.push({ tipo: 'abrir_negocio', negocio: n.t.id }); }
       }
       return out;

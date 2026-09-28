@@ -15,7 +15,7 @@ import { useState } from 'react';
 import type { Dominio, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
-import { DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
+import { custoDaRotina, DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
 import { estimuloCognitivo, estimuloFisico, palavraAprendizado, palavraCondicionamento } from '../../motor/sistemas/pessoa';
 import { cabeNaSemana, dose, semana, type Semana } from '../../motor/sistemas/semana';
 import { frentesDaVida, leituraDaFrente } from '../../motor/sistemas/frentes';
@@ -216,7 +216,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
               <li key={r.id} className="rotina rotina--ativa">
                 <div className="rotina__texto">
                   <strong>{m.nome}</strong>
-                  <span>{m.niveis.length > 1 ? `${nm.rotulo} · ` : ''}{dose(nm.tempo)}{anos >= 1 ? ` · há ${anos} ${anos === 1 ? 'ano' : 'anos'}` : ''}{nm.custo ? ` · ${dinheiroCurto(nm.custo * custo)}/mês` : ''}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
+                  <span>{m.niveis.length > 1 ? `${nm.rotulo} · ` : ''}{dose(nm.tempo)}{anos >= 1 ? ` · há ${anos} ${anos === 1 ? 'ano' : 'anos'}` : ''}{custoDaRotina(vida, r.id, n) ? ` · ${dinheiroCurto(custoDaRotina(vida, r.id, n) * custo)}/mês` : r.id === 'terapia' && nm.custo ? ' · pelo SUS, de graça' : ''}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
                   {leitura && <span className="rotina__leitura">{leitura}</span>}
                   {retorno && <span className="rotina__retorno">Na última {dominio === 'futebol' ? 'peneira' : 'seletiva'}: {retorno.texto}</span>}
                 </div>
@@ -253,7 +253,7 @@ function linhaAtividade(vida: Vida, m: ModeloRotina, custo: number, agir: (a: Ac
       <div className="rotina__texto">
         <strong>{m.nome}</strong>
         {motivo && <span className="rotina__motivo">{motivo}</span>}
-        <span>{motivo ? '' : `${m.descricao} `}{dose(n1.tempo)}{n1.custo ? ` · ${dinheiroCurto(n1.custo * custo)}/mês` : ' · de graça'}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
+        <span>{motivo ? '' : `${m.descricao} `}{dose(n1.tempo)}{custoDaRotina(vida, m.id, 1) ? ` · ${dinheiroCurto(custoDaRotina(vida, m.id, 1) * custo)}/mês` : m.id === 'terapia' ? ' · pelo SUS (com encaminhamento), de graça' : ' · de graça'}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
       </div>
       {comBotao && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir}>{m.niveis.length > 1 ? `Começar: ${n1.rotulo.toLowerCase()}` : 'Começar'}</BotaoAcao>}
     </li>

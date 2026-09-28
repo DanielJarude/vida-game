@@ -31,17 +31,22 @@ Ao final você verá algo como:
 
 ```
 vida-itch.zip gerado em: /caminho/do/projeto/vida-itch.zip
-3 arquivos · 178.5 kB comprimido
+13 arquivos · ~600 kB comprimido
 
-  assets/index-XXXXXXXX.css  (40.4 kB)
-  assets/index-XXXXXXXX.js   (596.3 kB)
-  index.html                 (2.4 kB)
+  assets/index-XXXXXXXX.js   (~14 kB)   ← a primeira tela
+  assets/react-XXXXXXXX.js   (~220 kB)
+  assets/motor-XXXXXXXX.js   (e os outros pacotes que chegam sob demanda)
+  index.html                 (2.5 kB)
 
 O index.html está na RAIZ do ZIP, como o itch.io exige.
 ```
 
 **O arquivo `vida-itch.zip` fica na raiz do projeto.** É esse o arquivo que
 você envia.
+
+> Desde o REWORK 2 o jogo é dividido em pacotes: a primeira tela abre com o
+> React e a interface inicial, e o motor e as telas do jogo chegam logo em
+> seguida. Todos ficam em `assets/`, com caminhos relativos.
 
 > Os nomes dos arquivos em `assets/` mudam a cada build (têm um hash no nome).
 > Isso é proposital: garante que o navegador do jogador baixe a versão nova em
