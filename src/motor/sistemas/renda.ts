@@ -6,7 +6,7 @@
  * e faz a mobilidade vir de trajetória, não de correção monetária.
  */
 
-import type { Contrato } from '../tipos';
+import type { Contrato, Emprego } from '../tipos';
 import { economiaLocal } from '../dados/lugares';
 import type { Ocupacao } from '../dados/ocupacoes';
 
@@ -53,3 +53,15 @@ export function salarioLocal(oc: Ocupacao, municipioId: string, variacao = 1): n
 
 /** 13º e férias: CLT e servidor recebem ~13,33 salários por ano. */
 export const mesesPagos = (c: Contrato) => (c === 'clt' || c === 'servidor' || c === 'eletivo' ? 13.33 : 12);
+
+/**
+ * A remuneração de um emprego: FONTE ÚNICA dos três números que as telas
+ * mostram — o bruto do contrato, o líquido que cai no mês e a média mensal
+ * do ano (com 13º e férias, para quem tem). Cada tela diz qual está usando.
+ */
+export interface Remuneracao { bruto: number; liquido: number; mediaMensal: number; tem13: boolean }
+export function remuneracaoDe(e: Emprego): Remuneracao {
+  const liq = liquido(e.salario, e.contrato);
+  const meses = mesesPagos(e.contrato);
+  return { bruto: e.salario, liquido: liq, mediaMensal: Math.round(liq * meses / 12), tem13: meses > 12 };
+}

@@ -36,14 +36,13 @@ import { familiaDaTrilha } from '../dados/carreiras';
 import { economiaLocal, municipio } from '../dados/lugares';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from '../plausibilidade';
 import { degrausAcima, eDasForcas, elegibilidade, horizonte, nomeOcupacao, podeAposentar, rendaDeClientela, tetoSalarial } from './trabalho';
-import { liquido } from './renda';
+import { liquido, remuneracaoDe } from './renda';
 import { limiteDeCredito, pagar, parcelaPrice, seguranca, vereditoDePagar } from './dinheiro';
 import { abrirUnidade, ampliar, donoIntegral, negocioAberto, podeAbrirUnidade, presencaDe, podeAmpliar, reservaDoCaixa, retirarDoCaixa, tamanhoDaEquipe } from './negocio';
 import { acoesDoNegocio, disponibilidadeGestao, executarGestao, type OqueGestao } from './gestao';
 import { propor } from './compromissos';
 import { guarnicaoPerto, indiceDaGuarnicao } from './militar';
 import { aplicarPersonalidade } from '../personalidade';
-import { marcar } from './marcas';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt, flex, ge } from '../texto';
 import { abalar } from './abalo';
@@ -53,6 +52,9 @@ export { climaDe, comChefia, fatorDeFreguesia, fatorJornada, pesoDoClima, pesoDo
 import { editaisAbertos } from './concurso';
 import { doClube } from '../dados/clubes';
 import { acoesPoliticas } from './politica';
+import { lancarObra } from './arte';
+import { OFICIOS } from '../conteudo/oficios';
+import { NEGOCIOS } from '../dados/negocios';
 
 /* ================================================================== Modo */
 
@@ -359,10 +361,13 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
   const nome = nomeOcupacao(v, oc);
   const anos = Math.floor((v.t - e.tInicio) / 12);
   const noPosto = Math.floor((v.t - (e.tPosto ?? e.tInicio)) / 12);
-  const liq = liquido(e.salario, e.contrato);
+  const rem = remuneracaoDe(e);
+  const liq = rem.liquido;
   const f = familiaDaTrilha(oc.trilha);
   const variavel = e.clientela !== undefined;
-  const renda = `${fmt(liq)} por mês no bolso${variavel ? (f.renda === 'sazonal' ? ', conforme a safra' : f.renda === 'projeto' ? ', conforme os trabalhos' : ', conforme a freguesia') : ''}`;
+  // Um número por conceito, com o nome dele: o líquido do mês, o bruto do contrato, a média com 13º (a que a tela Dinheiro soma).
+  const detalhe = !variavel && rem.bruto - liq >= 50 ? ` (bruto ${fmt(rem.bruto)}${rem.tem13 ? `; com 13º e férias, média de ${fmt(rem.mediaMensal)}` : ''})` : '';
+  const renda = `${fmt(liq)} por mês no bolso${variavel ? (f.renda === 'sazonal' ? ', conforme a safra' : f.renda === 'projeto' ? ', conforme os trabalhos' : ', conforme a freguesia') : detalhe}`;
   const jornada = e.formacaoAte ? 'curso de formação, em tempo integral' : e.reduzida ? 'jornada reduzida (para cuidar de alguém)' : e.carga === 'parcial' ? 'meio período' : oc.jornada === 'plantao' ? 'plantões, com noites e fins de semana' : oc.jornada === 'fora' ? 'dias fora de casa' : oc.jornada === 'longa' ? 'jornada longa' : 'jornada inteira';
   const ritmo = ritmoDe(e) === 'puxado' ? ` · ${rotulosDoRitmo(v).puxado.toLowerCase()}` : ritmoDe(e) === 'leve' ? ` · ${rotulosDoRitmo(v).leve.toLowerCase()}` : '';
   const desde = anos < 1 ? `começou em ${anoDe(e.tInicio)}` : noPosto < anos && noPosto >= 1 ? `${anos} ${anos === 1 ? 'ano' : 'anos'} ali, ${noPosto} no cargo` : `desde ${anoDe(e.tInicio)} · ${anos} ${anos === 1 ? 'ano' : 'anos'}`;
@@ -534,7 +539,13 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     if (e.preco) add({ id: 'preco_normal', rotulo: 'Voltar ao preço de mercado', acao: P('preco', { valor: 'normal' }), peso: e.preco === 'alto' && c < 40 ? 6 : 1 });
     if (c >= 30) add({ id: 'estrutura', rotulo: rotuloDaEstrutura(v), porque: `Uns ${fmt(custoDaEstrutura(v))}: mais freguesia possível.`, acao: P('estrutura'), peso: 3 });
     add({ id: 'mei', rotulo: 'Formalizar como MEI', porque: 'Nota fiscal, INSS contando, cliente que exige CNPJ.', acao: { tipo: 'mei' }, peso: e.contrato === 'informal' ? 5 : 3 });
-    if (c >= 70 && modo === 'autonomo') add({ id: 'negocio', rotulo: 'Abrir o próprio negócio', porque: 'A freguesia é maior do que uma pessoa dá conta.', ir: 'explorar', peso: 4 });
+    // Autônomo ≠ dono: quem atende por conta pode montar a EMPRESA (equipe, ponto, folha) — outra trajetória, dita pelo nome.
+    if (c >= 70 && modo === 'autonomo') {
+      const tipo = OFICIOS[oc.trilha]?.negocio ? NEGOCIOS.find(x => x.id === OFICIOS[oc.trilha]!.negocio) : undefined;
+      add(tipo
+        ? { id: 'negocio', rotulo: `Montar ${tipo.nome}, com equipe (virar ${ge(v) === 'feminino' ? 'dona' : 'dono'})`, porque: 'Hoje você atende por conta; a agenda já é maior do que uma pessoa.', acao: { tipo: 'abrir_negocio', negocio: tipo.id } as Acao, peso: 4 }
+        : { id: 'negocio', rotulo: 'Transformar o trabalho por conta num negócio com equipe', porque: 'A freguesia é maior do que uma pessoa dá conta.', ir: 'explorar', peso: 4 });
+    }
     if (modo === 'informal' || modo === 'plataforma') add({ id: 'carteira', rotulo: 'Procurar trabalho com carteira', ir: 'explorar', peso: c < 30 ? 4 : 1 });
   }
 
@@ -563,7 +574,7 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
       if (es.foco) add({ id: 'foco_normal', rotulo: 'Voltar ao treino de sempre', acao: P('foco', { valor: 'normal' }), peso: 1 });
       if (es.espaco === 'reserva') add({ id: 'treinador', rotulo: 'Conversar com o treinador', porque: 'Mais um jogo no banco.', acao: P('treinador'), peso: 7 });
       add({ id: 'mercado', rotulo: 'Pedir para ser negociado', porque: es.espaco === 'reserva' ? 'Em outro clube, dá para jogar.' : undefined, acao: P('mercado'), peso: es.espaco === 'reserva' ? 5 : 1 });
-      if (i >= 27 && !temFato(v, 'pos_carreira')) add({ id: 'pos', rotulo: 'Preparar a vida depois do esporte', porque: 'Quase ninguém joga depois dos 35.', acao: P('pos_carreira'), peso: i >= 30 ? 7 : 4 });
+      if (i >= 27 && !temFato(v, 'pos_carreira')) add({ id: 'pos', rotulo: 'Preparar a vida depois do esporte', porque: 'O corpo tem prazo — e ele muda com a posição.', acao: P('pos_carreira'), peso: i >= 30 ? 7 : 4 });
       add({ id: 'pendurar', rotulo: 'Encerrar a carreira', acao: P('pendurar'), peso: 0, saida: true });
     }
   }
@@ -823,16 +834,8 @@ export function executarProfissao(v: Vida, r: Rng, a: AcaoProfissaoCmd): SaidaPr
       const custo = custoLancar(v);
       pagar(v, custo);
       v.fatos['arte_lancou'] = v.t;
-      const p = v.caminhos.arte;
-      const deu = r.chance(0.5 + publicoDoArtista(v) / 200);
-      if (p?.ativo) p.publico = clamp(p.publico + (deu ? 12 : 4));
-      if (e?.clientela !== undefined && modoDoTrabalho(v) === 'artista') e.clientela = clamp(e.clientela + (deu ? 8 : 2));
-      const nome = p?.ativo ? p.nome : 'o trabalho novo';
-      const texto = deu ? `Lançou ${p?.linguagem === 'musica' || !p ? 'um trabalho novo' : 'um espetáculo novo'}${p?.ativo ? ` com ${p.nome}` : ''}: saiu na rádio da cidade, gente de fora comentou.` : `Lançou ${p?.linguagem === 'musica' || !p ? 'um trabalho novo' : 'um espetáculo novo'}${p?.ativo ? ` com ${p.nome}` : ''}. Quem conhecia gostou; o resto nem ficou sabendo.`;
-      escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: deu ? 'bom' : undefined, escolha: true });
-      if (deu) marcar(v, 'conquista', texto, 2);
-      void nome;
-      return { texto: deu ? 'O trabalho pegou.' : 'Saiu. Pouca gente viu — por enquanto.', tom: deu ? 'bom' : 'neutro' };
+      const o = lancarObra(v, r);
+      return { texto: o.recepcao >= 2 ? 'O trabalho pegou.' : o.recepcao === 1 ? 'Saiu — e achou o seu público.' : 'Saiu. Pouca gente viu — por enquanto.', tom: o.recepcao >= 2 ? 'bom' : 'neutro' };
     }
     case 'estrada': v.fatos['arte_estrada'] = v.t; return { decisao: 'arte_estrada' };
   }

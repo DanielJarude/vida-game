@@ -27,6 +27,8 @@ export function publicidade(v: Vida): number {
   const n = v.caminhos.negocio;
   if (n && n.estado !== 'fechado') x = Math.max(x, (n.reputacao ?? 30) * 0.3);
   if (v.caminhos.arte?.ativo) x = Math.max(x, v.caminhos.arte.publico * 0.5);
+  // Quem é famoso vive mais exposto: o que é privado vira notícia com mais facilidade (`notoriedade`).
+  x = Math.max(x, (v.notoriedade?.valor ?? 0) * 0.9);
   return clamp(Math.round(x));
 }
 

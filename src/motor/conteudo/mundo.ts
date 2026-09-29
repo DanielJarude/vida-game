@@ -24,6 +24,14 @@ function textoDeRecessao(c: Ctx): string {
   const e = v.trabalho.atual;
   const abertura = c.vezes === 0 ? 'O país entrou em recessão' : c.r.pick(['Mais uma crise econômica', 'O país voltou a entrar em recessão', 'Veio outra recessão']);
   if (v.trabalho.aposentadoria) return `${abertura}. A aposentadoria não mudou, mas o supermercado sim: a lista do mês encolheu.`;
+  // A crise chega a cada trabalho do jeito DELE (FIX pós-REWORK 2: o "corte nas reuniões" de escritório vazava para o jogador de futebol).
+  const esp = v.caminhos.esporte;
+  if (e && esp?.fase === 'profissional' && ['jogador_futebol', 'atleta'].includes(e.ocupacaoId)) return `${abertura}. No clube, o patrocínio master não renovou e a diretoria avisou: ninguém contrata na próxima janela, e os salários podem atrasar.`;
+  if (e?.contrato === 'eletivo') return `${abertura}. No mandato, a arrecadação caiu e a cobrança subiu: cada obra prometida virou pergunta sem resposta.`;
+  const n = v.caminhos.negocio;
+  if (n && n.estado !== 'fechado' && (!e || e.ocupacaoId === n.ocupacaoId)) return `${abertura}. Em ${n.nome}, o movimento caiu primeiro e os fornecedores reajustaram depois.`;
+  if (e && v.caminhos.arte?.ativo && ['musica', 'teatro', 'danca', 'arte', 'imagem', 'conteudo'].includes(e.ocupacaoId.split('_')[0])) return `${abertura}. Os editais foram adiados, as casas de show cortaram datas.`;
+  if (e?.contrato === 'militar') return `${abertura}. Na caserna, o soldo continuou; o orçamento das operações, não.`;
   if (e && e.contrato === 'servidor') return `${abertura}. No serviço público o emprego ficou, mas o reajuste foi congelado e os colegas de fora começaram a ser demitidos.`;
   if (e && (e.contrato === 'autonomo' || e.contrato === 'informal')) return `${abertura}. Os clientes sumiram primeiro: quem pagava à vista passou a pedir fiado.`;
   if (e) return `${abertura}. ${em(e.empregador).charAt(0).toUpperCase()}${em(e.empregador).slice(1)}, a palavra "corte" começou a aparecer nas reuniões.`;

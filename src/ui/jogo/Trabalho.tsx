@@ -45,6 +45,9 @@ import { leituraRural } from '../../motor/sistemas/rural';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { DIVISAO_DO_NIVEL, doClube } from '../../motor/dados/clubes';
+import { augeDe, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
+import { lesaoAtiva } from '../../motor/sistemas/lesoes';
+import { palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
 import { podeTentar } from '../../motor/plausibilidade';
 import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Secao } from '../comum';
 import { Retrato } from '../avatar/Retrato';
@@ -268,22 +271,35 @@ const CLUBES_REAIS = 'Clubes reais; peneiras, contratos, divisões e resultados 
 function PainelAtleta({ vida }: { vida: Vida }) {
   const es = vida.caminhos.esporte!;
   const i = idade(vida);
-  const limite = es.modalidade === 'futebol' ? 33 : 31;
+  const auge = augeDe(vida, es);
+  const t = es.temporadas?.[es.temporadas.length - 1];
+  const noto = vida.notoriedade && vida.notoriedade.valor >= 10 ? palavraDaNotoriedade(vida) : undefined;
+  const oferta = nivelQueOMercadoOferece(vida, es);
+  const lesao = lesaoAtiva(vida);
   return (
     <section className="painel painel--atleta" aria-label="A carreira no esporte">
       <div className="placar">
-        <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{es.espaco === 'titular' ? 'Titular' : 'Reserva'}</span>
-        <span className="placar__clube">{es.clube}</span>
+        <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{es.espaco === 'titular' ? 'Titular' : es.espaco === 'reserva' ? 'Reserva' : 'Sem clube'}</span>
+        <span className="placar__clube">{es.clube}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}</span>
       </div>
+      {t && (
+        <div className="temporada" aria-label="A última temporada">
+          <p className="temporada__titulo">Temporada {t.ano} — {t.clube}</p>
+          <p className="temporada__linha">{linhaDaTemporada(vida, t)}</p>
+          <p className="nota">{palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)}. {es.espaco === 'titular' ? 'O próximo ano começa como titular.' : 'O próximo ano começa no banco.'}</p>
+        </div>
+      )}
       <dl className="dados">
         <Dado rotulo="Divisão (no jogo)">{DIVISAO_DO_NIVEL[es.nivel]}</Dado>
         <Dado rotulo="Contrato">{es.contratoAte ? `até ${anoDe(es.contratoAte)}` : '—'}</Dado>
-        <Dado rotulo="No bolso">{dinheiroCurto(vida.trabalho.atual?.salario ?? 0)}/mês</Dado>
+        <Dado rotulo="Salário do contrato">{vida.trabalho.atual ? `${dinheiroCurto(vida.trabalho.atual.salario)}/mês, bruto` : '—'}</Dado>
+        <Dado rotulo="No mercado">{palavraDaReputacao(es.reputacao ?? 30)}{oferta > es.nivel ? ' · clubes maiores olham' : oferta < es.nivel ? (oferta === 0 ? ' · sem interesse de outros clubes' : ' · o interesse vem de divisões menores') : ''}</Dado>
+        {noto && <Dado rotulo="O público">{noto}</Dado>}
         <Dado rotulo="Treino">{es.foco === 'forcar' ? 'dobrado (evolui e machuca mais)' : es.foco === 'preservar' ? 'poupando o corpo' : 'o normal do clube'}</Dado>
-        <Dado rotulo="O corpo">{es.lesoes === 0 ? 'sem lesões sérias' : `${es.lesoes} ${es.lesoes === 1 ? 'lesão' : 'lesões'} na carreira`}</Dado>
-        <Dado rotulo="O prazo">{i < limite - 6 ? 'o auge está pela frente' : i < limite - 2 ? 'o auge é agora' : 'o fim se aproxima'}</Dado>
+        <Dado rotulo="O corpo">{lesao ? `${lesao.lesao.parte}${lesao.lesao.cuidado === 'sacrificio' ? ', jogando no sacrifício' : lesao.lesao.cuidado ? `, volta por volta de ${anoDe(lesao.lesao.tFim)}` : ''}` : es.lesoes === 0 ? 'sem lesões sérias' : `${es.lesoes} ${es.lesoes === 1 ? 'lesão' : 'lesões'} na carreira`}</Dado>
+        <Dado rotulo="O prazo">{i < auge - 5 ? 'o auge está pela frente' : i <= auge ? 'o auge é agora' : i <= auge + 3 ? 'depois do auge: o rendimento começa a cair' : 'a idade pesa em cada temporada'}</Dado>
       </dl>
-      <p className="nota">Quase ninguém joga profissionalmente depois dos 35. Quem se prepara ainda jogando tem para onde ir. {es.modalidade === 'futebol' ? CLUBES_REAIS : ''}</p>
+      <p className="nota">Não há idade para parar: o corpo declina conforme a posição, a temporada mostra, e o mercado decide se ainda há lugar. Parar é escolha. {es.modalidade === 'futebol' ? CLUBES_REAIS : ''}</p>
     </section>
   );
 }

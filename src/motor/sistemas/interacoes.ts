@@ -27,7 +27,7 @@ import { gestacaoEmCurso } from './familia';
 import { aplicarPersonalidade } from '../personalidade';
 import { abalar } from './abalo';
 import { flex, ge } from '../texto';
-import { ehDescendente, faseDeIdade, mesmaCidade, moraJunto, papelDe, type Fase, type Papel } from './vinculos';
+import { ehDescendente, faseDeIdade, filhosEmComum, mesmaCidade, moraJunto, papelDe, type Fase, type Papel } from './vinculos';
 import { lacoCom, oLaco } from './rede';
 import { vereditoDePagar, disponivel } from './dinheiro';
 import { responderChamado, rotulosDoChamado } from './iniciativas';
@@ -47,7 +47,7 @@ export interface CtxI {
   longe: boolean;
 }
 
-export interface Saida { resultado?: string; aviso?: { texto: string; tom: 'bom' | 'ruim' | 'neutro' }; titulo?: string }
+export interface Saida { resultado?: string; aviso?: { texto: string; tom: 'bom' | 'ruim' | 'neutro' }; titulo?: string; /** A interação abre uma decisão (com estes papéis). */ decisao?: string; papeis?: Record<string, string> }
 
 export interface Interacao {
   id: string;
@@ -121,6 +121,14 @@ const pertoOuEmCasa = (c: CtxI) => c.casa || !c.longe;
 /** Criança da família (filho, neto, irmão mais novo, primo) — não um amigo da escola do jogador adulto. */
 const criancaDaFamilia = (c: CtxI) => ehDescendente(c.papel) || ((c.papel === 'irmao' || c.papel === 'parente') && c.eu >= 12);
 const apertoRecente = (c: CtxI) => !!c.p.aperto && c.v.t - c.p.aperto.t <= 24;
+/** Um ex que VIROU amigo (os dois quiseram): aí, sim, as ações de amizade fazem sentido. */
+const exAmigo = (c: CtxI) => c.papel === 'ex' && (c.vin.estagio === 'amigo' || c.vin.estagio === 'amigo_proximo');
+/** Ex que ainda é só ex: nada de "passar a tarde junto" como se fosse amigo. */
+const soEx = (c: CtxI) => c.papel === 'ex' && !exAmigo(c);
+const distante = (c: CtxI) => c.vin.distancia !== undefined && c.v.t - c.vin.distancia < 60;
+/** Colega, conhecido: gente do convívio que ainda não é amiga. */
+const doConvivio = (c: CtxI) => c.papel === 'colega' || c.papel === 'conhecido';
+const filhosMenoresEmComum = (c: CtxI) => filhosEmComum(c.v, c.p.id).filter(f => f.vivo && idadePessoa(c.v, f) < 18);
 const semContatoHa = (c: CtxI) => (c.v.t - c.vin.tUltimoContato) / 12;
 
 /* ------------------------------------------------------------- Catálogo */
@@ -246,7 +254,7 @@ export const INTERACOES: Interacao[] = [
   /* ============================================================ CONVERSA */
   {
     id: 'conversar',
-    quando: c => humano(c) && c.ip >= 6 && c.eu >= 6 && !parceriaAtiva(c) && c.papel !== 'caso' && (!c.longe || c.casa),
+    quando: c => humano(c) && c.ip >= 6 && c.eu >= 6 && !parceriaAtiva(c) && c.papel !== 'caso' && !soEx(c) && !distante(c) && (!c.longe || c.casa),
     rotulo: c => c.vin.tensao >= 40 ? 'Conversar e tentar acertar as coisas' : c.papel === 'filho' && c.fase === 'adolescente' ? 'Conversar de verdade, sem sermão' : c.papel === 'filho' && c.ip < 13 ? `Perguntar como foi o dia ${c.ip < 9 ? 'na escola' : ''}`.trim() : 'Ter uma conversa de verdade',
     executar: c => {
       const comp = compatibilidade(c.v, c.p);
@@ -262,12 +270,15 @@ export const INTERACOES: Interacao[] = [
   /* ============================================================ TEMPO JUNTO */
   {
     id: 'tempo', variante: 'principal',
-    quando: c => humano(c) && !emRomance(c) && c.ip >= 12 && c.eu >= 3 && pertoOuEmCasa(c) && !(criancaDaFamilia(c) && c.ip <= 11),
+    // Colega e conhecido não "passam tempo" como amigos: para eles, o passo é se aproximar (e a pessoa responde).
+    quando: c => humano(c) && !emRomance(c) && c.ip >= 12 && c.eu >= 3 && pertoOuEmCasa(c) && !(criancaDaFamilia(c) && c.ip <= 11) && !(doConvivio(c) && c.eu >= 12) && !soEx(c) && c.papel !== 'afastado' && !distante(c),
     rotulo: c => rotuloTempo(c),
     executar: c => {
       const n = habito(c, 'tempo');
       const comp = compatibilidade(c.v, c.p);
       afeto(c, 6 + comp * 6); confiar(c, 2);
+      // Tempo junto com amigo é gesto: mantém viva a chance de a amizade aprofundar.
+      if (!c.vin.parentesco) c.vin.aproximacao = c.v.t;
       if (ehDescendente(c.papel)) presente(c, 8);
       if (c.papel === 'colega' || c.papel === 'conhecido') afeto(c, 2);
       if (c.papel === 'filho' && c.ip >= 18) costume(c, n, 4, c.casa ? 'Vocês mantinham um programa só de vocês, mesmo morando juntos.' : 'O almoço com você nunca saiu da agenda.');
@@ -278,7 +289,7 @@ export const INTERACOES: Interacao[] = [
   },
   {
     id: 'visitar',
-    quando: c => humano(c) && c.longe && !c.casa && c.eu >= 18 && !emRomance(c) && (c.papel !== 'colega' && c.papel !== 'conhecido'),
+    quando: c => humano(c) && c.longe && !c.casa && c.eu >= 18 && !emRomance(c) && !doConvivio(c) && !soEx(c) && c.papel !== 'afastado' && !distante(c),
     disponivel: c => vereditoDePagar(c.v, custoViagem(c), 'A viagem custa cerca de'),
     rotulo: c => `Viajar para ver ${c.p.nome}`,
     executar: c => {
@@ -292,7 +303,7 @@ export const INTERACOES: Interacao[] = [
   },
   {
     id: 'ligar',
-    quando: c => humano(c) && c.eu >= 9 && c.ip >= 8 && !parceriaAtiva(c) && (c.longe || semContatoHa(c) >= 2) && !c.casa,
+    quando: c => humano(c) && c.eu >= 9 && c.ip >= 8 && !parceriaAtiva(c) && !soEx(c) && !distante(c) && (c.longe || semContatoHa(c) >= 2) && !c.casa,
     rotulo: c => (c.eu >= 60 || c.ip >= 60 ? `Ligar para ${c.p.nome}` : `Mandar mensagem para ${c.p.nome}`),
     executar: c => {
       const n = habito(c, 'ligar');
@@ -319,7 +330,7 @@ export const INTERACOES: Interacao[] = [
   },
   {
     id: 'desabafar', destaque: true,
-    quando: c => humano(c) && c.eu >= 12 && c.ip >= 14 && precisaDesabafar(c.v) && ouve(c),
+    quando: c => humano(c) && c.eu >= 12 && c.ip >= 14 && precisaDesabafar(c.v) && ouve(c) && !soEx(c) && !distante(c),
     prioridade: () => 2.2,
     rotulo: c => (c.longe && !c.casa ? `Ligar para ${c.p.nome} e desabafar` : c.eu < 18 && c.papel === 'genitor' ? `Contar para ${c.p.nome} o que anda pesando` : `Desabafar com ${c.p.nome}`),
     executar: c => {
@@ -380,15 +391,122 @@ export const INTERACOES: Interacao[] = [
   },
   {
     id: 'reaproximar',
-    quando: c => humano(c) && !emRomance(c) && c.papel !== 'ex' && c.eu >= 10 && (c.vin.estagio === 'afastado' || (semContatoHa(c) >= 3 && c.vin.proximidade < 45)),
-    rotulo: c => `Procurar ${c.p.nome} depois de tanto tempo`,
+    quando: c => humano(c) && !emRomance(c) && !soEx(c) && c.eu >= 10 && (distante(c) || (c.vin.estagio === 'afastado' && (c.vin.historia.length > 0 || c.vin.proximidade >= 30)) || (semContatoHa(c) >= 3 && c.vin.proximidade < 45 && !doConvivio(c))),
+    rotulo: c => (distante(c) ? `Voltar a procurar ${c.p.nome}` : `Procurar ${c.p.nome} depois de tanto tempo`),
     executar: c => {
+      c.vin.distancia = undefined;
       afeto(c, 14); confiar(c, 3);
-      if (c.vin.proximidade >= 40 && !c.vin.parentesco) c.vin.estagio = 'amigo';
+      // Reaproximar é gesto; a amizade volta se a pessoa também estava disposta (o afeto que sobrou diz).
+      if (c.vin.proximidade >= 40 && !c.vin.parentesco) { c.vin.estagio = 'amigo'; c.vin.aproximacao = c.v.t; }
       escrever(c.v, { texto: `Procurou ${c.p.nome} depois de muito tempo sem se falar.`, relevancia: 'cotidiano', tema: c.vin.parentesco ? 'familia' : 'amizade', escolha: true, pessoas: [c.p.id], evento: { tipo: 'reencontro', pessoaId: c.p.id, peso: 20 } });
       lembrarCom(c.v, c.p.id, 'Voltaram a se falar depois de anos.', 'reconciliacao', 2);
       return { resultado: c.vin.proximidade >= 40 ? `${c.p.nome} respondeu na hora. Parecia estar esperando isso.` : `${c.p.nome} respondeu com educação. Vai levar tempo.` };
     }
+  },
+
+  /* ===================================================== CONHECER NÃO É SER AMIGO */
+  /*
+   * Conviver cria a CHANCE de uma amizade. O passo é de alguém — e a outra
+   * pessoa responde (corresponde, fica morna, recusa). Um "sim" é o gesto
+   * que deixa a amizade acontecer (`social.processarSocial`).
+   */
+  {
+    id: 'aproximar', variante: 'principal',
+    quando: c => humano(c) && !c.vin.parentesco && !c.vin.romance && c.eu >= 12 && c.ip >= 12 && !distante(c)
+      && (doConvivio(c) || (c.papel === 'afastado' && c.vin.convivio.length > 0)) && (c.vin.convivio.length > 0 || !c.longe),
+    prioridade: c => (c.vin.proximidade >= 35 ? 2 : 1),
+    rotulo: c => rotuloAproximar(c),
+    executar: (c, r) => aproximar(c, r)
+  },
+  {
+    id: 'aprofundar', destaque: true,
+    quando: c => humano(c) && !c.vin.parentesco && (c.papel === 'amigo' || (exAmigo(c) && c.vin.estagio === 'amigo')) && c.eu >= 14 && c.ip >= 14 && !distante(c),
+    rotulo: c => (c.longe ? `Ligar para ${c.p.nome} e contar algo que importa` : `Contar a ${c.p.nome} algo que importa`),
+    executar: c => {
+      const comp = compatibilidade(c.v, c.p);
+      const confia = c.vin.confianca >= 42 || comp > 0.25;
+      if (!confia) { confiar(c, 2); return { resultado: `${c.p.nome} ouviu, mas a conversa não passou da superfície. Talvez ainda não seja a hora.` }; }
+      afeto(c, 5); confiar(c, 8); c.vin.aproximacao = c.v.t;
+      lembrarCom(c.v, c.p.id, `Você contou a ${c.p.nome} algo que quase ninguém sabia — e ${ele(c.p)} contou de volta.`, 'descoberta', 2);
+      return { resultado: `Você falou de uma coisa que não costuma falar. ${c.p.nome} ouviu inteiro e contou uma sua. Saíram mais amigos do que entraram.` };
+    }
+  },
+  {
+    id: 'afastar', variante: 'discreto',
+    quando: c => humano(c) && c.eu >= 16 && c.ip >= 14 && !distante(c) && !parceriaAtiva(c) && c.papel !== 'saindo' && c.papel !== 'caso'
+      && !(ehDescendente(c.papel) && c.ip < 18) && !c.casa
+      && (c.papel !== 'genitor' && c.papel !== 'irmao' && c.papel !== 'avo' && c.papel !== 'parente' && c.papel !== 'sogro' && c.papel !== 'genro' || c.vin.tensao >= 35 || c.vin.confianca < 35 || c.vin.proximidade < 30),
+    rotulo: c => (c.papel === 'ex' ? `Cortar o contato com ${c.p.nome}` : c.vin.parentesco ? `Pôr limites com ${c.p.nome}` : `Tomar distância de ${c.p.nome}`),
+    executar: c => {
+      c.vin.distancia = c.v.t;
+      c.vin.aproximacao = undefined;
+      c.vin.chamado = undefined;
+      afeto(c, -6);
+      // Limite posto costuma diminuir o atrito (menos ocasião de briga), mesmo que doa.
+      acalmar(c, c.vin.parentesco || c.papel === 'ex' ? 12 : 4);
+      if (c.vin.estagio === 'amigo' || c.vin.estagio === 'amigo_proximo') c.vin.estagio = 'afastado';
+      aplicarPersonalidade(c.v, 'acao:afastar', { independencia: 1 });
+      lembrarCom(c.v, c.p.id, c.vin.parentesco ? 'Você pôs limites.' : c.papel === 'ex' ? 'Você cortou o contato.' : 'Você tomou distância.', 'distancia', 1);
+      escrever(c.v, { texto: c.vin.parentesco ? `Pôs limites na relação com ${c.p.nome}.` : c.papel === 'ex' ? `Cortou o contato com ${c.p.nome}.` : `Tomou distância de ${c.p.nome}.`, relevancia: c.vin.parentesco || importanciaPara(c) >= 40 ? 'biografia' : 'cotidiano', tema: c.vin.parentesco ? 'familia' : c.papel === 'ex' ? 'amor' : 'amizade', escolha: true, pessoas: [c.p.id] });
+      return { resultado: c.vin.parentesco ? `Você disse a ${c.p.nome} o que aceita e o que não aceita mais. ${capital(ele(c.p))} não gostou — mas ouviu.` : `Você deixou de procurar ${c.p.nome}. Não houve briga; houve silêncio.` };
+    }
+  },
+
+  /* ============================================================ EX */
+  /* Ex não é amigo. O que existe entre os dois depende de como acabou, do tempo, dos filhos — e do que cada um quer. */
+  {
+    id: 'ex_conversar',
+    quando: c => soEx(c) && humano(c) && c.vin.romance?.fim !== 'morte' && !distante(c) && (c.vin.tensao >= 20 || c.v.t - (c.vin.romance?.tEstagio ?? 0) < 36),
+    rotulo: c => (c.longe ? `Ligar para ${c.p.nome} e falar do que ficou` : `Conversar com ${c.p.nome} sobre o que ficou entre vocês`),
+    executar: c => {
+      const comp = compatibilidade(c.v, c.p);
+      acalmar(c, 15); confiar(c, 4); afeto(c, 2);
+      if (c.v.t - (c.vin.romance?.tEstagio ?? 0) >= 12 && comp > -0.1) lembrarCom(c.v, c.p.id, 'Conversaram sobre o fim, sem briga.', 'reconciliacao', 1);
+      return { resultado: c.vin.tensao >= 40 ? `Foi uma conversa dura. Mas foi uma conversa — e não uma briga.` : `Falaram do que deu errado sem procurar culpado. Ficou mais leve.` };
+    }
+  },
+  {
+    id: 'ex_filhos', variante: 'principal',
+    quando: c => c.papel === 'ex' && humano(c) && c.vin.romance?.fim !== 'morte' && filhosMenoresEmComum(c).length > 0,
+    rotulo: c => `Combinar com ${c.p.nome} as coisas de ${listaFilhos(c)}`,
+    executar: c => {
+      const n = habito(c, 'ex_filhos');
+      acalmar(c, 10); confiar(c, 5);
+      for (const f of filhosMenoresEmComum(c)) { const vf = c.v.vinculos[f.id]; if (vf) { vf.presenca = clamp((vf.presenca ?? 30) + 4); vf.tensao = clamp(vf.tensao - 3); } }
+      costume(c, n, 3, `Mesmo separados, vocês combinavam juntos as coisas de ${listaFilhos(c)}.`);
+      return { resultado: variar(n, [`Escola, médico, fim de semana de quem: vocês acertaram a agenda sem levantar a voz.`, `Uma conversa prática, quase de trabalho. ${capital(listaFilhos(c))} nem percebeu que houve — e é esse o ponto.`, `Vocês discordaram de uma coisa e combinaram o resto.`]) };
+    }
+  },
+  {
+    id: 'ex_amizade',
+    quando: c => soEx(c) && humano(c) && c.vin.romance?.fim !== 'morte' && !distante(c) && c.v.t - (c.vin.romance?.tEstagio ?? 0) >= 12 && c.vin.tensao < 35 && c.vin.proximidade >= 30,
+    disponivel: c => (c.v.fatos[`ex_amizade_nao_${c.p.id}`] !== undefined && c.v.t - c.v.fatos[`ex_amizade_nao_${c.p.id}`] < 24 ? bloqueio('incompativel', `${c.p.nome} pediu um tempo da última vez.`) : PERMITIDO),
+    rotulo: c => `Propor a ${c.p.nome} ficarem amigos`,
+    executar: (c, r) => {
+      const comp = compatibilidade(c.v, c.p);
+      const rom = c.vin.romance!;
+      const chance = clamp(0.3 + comp * 0.4 + (c.vin.proximidade - 30) / 80 - (c.p.parceiroId ? 0.18 : 0) - (rom.fim === 'divorcio' ? 0.1 : 0) - (c.vin.confianca < 35 ? 0.2 : 0), 0.05, 0.85);
+      if (!r.chance(chance)) {
+        c.v.fatos[`ex_amizade_nao_${c.p.id}`] = c.v.t;
+        c.vin.tensao = clamp(c.vin.tensao + 3);
+        return { resultado: `${c.p.nome} disse que ainda precisa de distância. Talvez um dia.` };
+      }
+      c.vin.estagio = 'amigo';
+      c.vin.aproximacao = c.v.t;
+      afeto(c, 6); confiar(c, 5);
+      lembrarCom(c.v, c.p.id, 'De ex a amigos: os dois quiseram.', 'amizade', 2);
+      escrever(c.v, { texto: `Depois do fim, ${c.p.nome} e você viraram amigos.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', escolha: true, pessoas: [c.p.id] });
+      return { resultado: `${c.p.nome} riu e disse que achava que você nunca ia propor. Amigos, então.` };
+    }
+  },
+
+  /* ================================================== CASAL EM CIDADES DIFERENTES */
+  {
+    id: 'distancia', variante: 'principal',
+    quando: c => (parceriaAtiva(c) || c.papel === 'saindo') && c.longe && !c.casa && c.eu >= 18 && c.ip >= 18,
+    prioridade: () => 2.4,
+    rotulo: c => `Conversar com ${c.p.nome} sobre a distância`,
+    executar: c => ({ decisao: 'rom_distancia', papeis: { par: c.p.id } })
   },
 
   /* ========================================================== ROMANCE: COMEÇO */
@@ -703,6 +821,7 @@ export const INTERACOES: Interacao[] = [
     disponivel: c => {
       if (c.eu < 18 || c.ip < 18) return bloqueio('ilegal', 'Os dois precisam ser maiores de idade.');
       if (c.v.t - c.vin.romance!.tEstagio < 12) return bloqueio('requisito', 'Namoram há pouco tempo.');
+      if (c.longe) return bloqueio('requisito', `Vocês moram em cidades diferentes: antes, decidir onde (conversar com ${c.p.nome} sobre a distância).`);
       return PERMITIDO;
     },
     rotulo: () => 'Propor morar junto',
@@ -792,6 +911,8 @@ export const INTERACOES: Interacao[] = [
       }
       if (ch.tipo === 'pedido_ajuda' || ch.tipo === 'apoio') aplicarPersonalidade(c.v, 'acao:apoiar', { empatia: 1 });
       const out = responderChamado(c.v, r, c.p, c.vin, true);
+      // A distância do casal vira uma conversa com opções de verdade (mudar, chamar, seguir, terminar).
+      if (ch.tipo === 'distancia_casal') return { decisao: 'rom_distancia', papeis: { par: c.p.id } };
       return { resultado: out.resultado, titulo: out.titulo };
     }
   },
@@ -806,6 +927,40 @@ export const INTERACOES: Interacao[] = [
     }
   }
 ];
+
+/* ------------------------------------------------------- Aproximação */
+
+function rotuloAproximar(c: CtxI): string {
+  const { p, vin } = c;
+  if (c.papel === 'afastado') return `Voltar a chamar ${p.nome} para alguma coisa`;
+  if (vin.convivio.includes('trabalho')) return `Chamar ${p.nome} para um café depois do expediente`;
+  if (vin.convivio.includes('faculdade')) return `Chamar ${p.nome} para estudar junto`;
+  if (vin.convivio.includes('escola')) return `Chamar ${p.nome} para fazer o trabalho junto`;
+  if (vin.convivio.includes('rotina')) return `Puxar conversa com ${p.nome} depois da atividade`;
+  return `Tentar se aproximar de ${p.nome}`;
+}
+
+/** Você dá o passo; a pessoa responde — corresponde, fica morna, ou recusa com educação. */
+function aproximar(c: CtxI, r: Rng): Saida {
+  const comp = compatibilidade(c.v, c.p);
+  const chance = clamp(0.4 + comp * 0.55 + c.p.temperamento.extroversao * 0.15 + (c.vin.proximidade - 30) / 100 - c.vin.tensao / 80 + (c.v.mente.felicidade - 50) / 300, 0.08, 0.9);
+  const x = r.next();
+  if (x < chance) {
+    c.vin.aproximacao = c.v.t;
+    afeto(c, 8); confiar(c, 3);
+    lembrarCom(c.v, c.p.id, 'Começaram a conversar de verdade.', 'amizade', 1);
+    return { resultado: variar(1 + (habito(c, 'aproximar') - 1), [`${c.p.nome} topou na hora. A conversa foi longe do assunto de sempre.`, `${c.p.nome} veio — e ficou mais do que o combinado.`, `Deu certo: ${c.p.nome} parecia estar esperando alguém chamar.`]) };
+  }
+  if (x < chance + (1 - chance) * 0.55) {
+    afeto(c, 2);
+    return { resultado: `${c.p.nome} foi simpátic${o(c.p)}, mas estava com a cabeça em outro lugar. Ficou no "a gente marca".` };
+  }
+  afeto(c, -1);
+  return { resultado: `${c.p.nome} agradeceu e disse que não ia dar. Pelo jeito, prefere manter as coisas como estão.` };
+}
+
+const listaFilhos = (c: CtxI) => { const fs = filhosMenoresEmComum(c).map(f => f.nome); return fs.length <= 1 ? (fs[0] ?? 'das crianças') : fs.length === 2 ? `${fs[0]} e ${fs[1]}` : 'das crianças'; };
+const importanciaPara = (c: CtxI) => (c.vin.estagio === 'amigo_proximo' ? 50 : c.vin.estagio === 'amigo' ? 30 : c.vin.parentesco ? 45 : 10);
 
 /* ------------------------------------------------------- Rótulos e frases */
 

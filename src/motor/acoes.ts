@@ -782,7 +782,19 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'cuidar_da_casa': iniciarPausa(v, 'casa', a.intensidade); return ok(a.intensidade === 'parcial' ? 'Jornada reduzida.' : 'Você parou de trabalhar para cuidar da casa e da família.');
     case 'voltar_mercado': encerrarPausa(v, 'procurar'); return ok('Hora de voltar.');
     case 'parar_por_fora': pararIlicito(v, ''); return ok('Você saiu. O que ficou para trás ainda pode aparecer.');
-    case 'pessoa': return executarInteracao(v, r, a.pessoaId, a.interacao);
+    case 'pessoa': {
+      const out = executarInteracao(v, r, a.pessoaId, a.interacao);
+      if (out.decisao) {
+        const d = conteudoPorId(out.decisao);
+        if (d && d.tipo === 'decisao') {
+          const p: Record<string, Pessoa> = {};
+          for (const [papel, id] of Object.entries(out.papeis ?? {})) if (v.pessoas[id]?.vivo) p[papel] = v.pessoas[id];
+          abrirDecisao(v, d, contexto(v, r, p));
+          return {};
+        }
+      }
+      return out;
+    }
     case 'adotar': iniciarAdocao(v, parceiro(v)?.p.id); return ok('Processo de adoção iniciado.');
     case 'sair_de_casa': case 'trocar_moradia': {
       const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId)! : ofertaPorModelo(v, 'aluguel', a.modeloId!)!;

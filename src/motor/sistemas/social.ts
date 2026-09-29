@@ -220,6 +220,12 @@ export function processarSocial(v: Vida, r: Rng): void {
     const c = compatibilidade(v, p);
     const junto = vin.convivio.length > 0;
     const outraCidade = p.municipioId !== cidade;
+    // Conviver cria a CHANCE de uma amizade; o gesto correspondido (seu ou da pessoa) é que a faz acontecer.
+    // Criança faz amigo brincando; adolescente, quase; adulto, só quando alguém dá o passo e o outro vem.
+    const gesto = vin.aproximacao !== undefined && v.t - vin.aproximacao <= 24;
+    const distante = vin.distancia !== undefined && v.t - vin.distancia < 60;
+    const antesEst = vin.estagio ?? 'conhecido';
+    const aindaNaoAmigo = antesEst === 'conhecido' || antesEst === 'colega' || antesEst === 'afastado';
     let delta: number;
     if (junto) {
       // Bem-estar é disposição para gente: quem anda muito para baixo se recolhe um pouco (sem romper nada).
@@ -231,6 +237,10 @@ export function processarSocial(v: Vida, r: Rng): void {
       delta = semContato < 12 ? -2 : outraCidade ? -11 : -6;
       if (vin.estagio === 'amigo_proximo') delta *= 0.6; // amizade antiga resiste mais
     }
+    // Sem gesto, a convivência vira familiaridade, não amizade: o afeto de quem só divide o lugar cresce devagar.
+    if (junto && aindaNaoAmigo && !gesto && i >= 12) delta = Math.min(delta, i < 18 ? 5 : 3);
+    // Quem tomou distância (ou pôs limites) não se aproxima por conviver — e o que havia esfria.
+    if (distante) delta = Math.min(delta, ORDEM[antesEst] >= 2 ? -5 : 0);
     delta -= vin.tensao / 12;
     vin.proximidade = clamp(Math.round(vin.proximidade + clamp(delta, -15, 10)));
     // Colega é colega: o afeto de quem ainda não virou amigo tem teto.
@@ -241,15 +251,21 @@ export function processarSocial(v: Vida, r: Rng): void {
     const antes = vin.estagio ?? 'conhecido';
     let depois = antes;
     const amigosAtuais = vinculosVivos(v).filter(x => !x.vin.parentesco && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo')).length;
+    // O passo de colega para amigo: na infância, basta conviver; na adolescência, às vezes basta;
+    // depois, precisa de um gesto correspondido nos últimos dois anos.
+    const podeVirarAmigo = !distante && (i < 12 || gesto || (i < 18 && r.chance(0.4)));
+    // Amigo próximo: tempo, afeto e uma história que não é só de convivência (apoio, confidência, costume).
+    const historiaFunda = vin.historia.some(h => h.tipo === 'apoio' || h.tipo === 'ritual' || h.tipo === 'descoberta' || h.tipo === 'reconciliacao' || (h.tipo === 'amizade' && !h.texto.startsWith('Viraram amigos')));
+    const podeAprofundar = !distante && (i < 18 ? conhecidosHa >= 5 : gesto && historiaFunda);
     if (antes === 'afastado') {
-      if (junto && vin.proximidade >= 45) depois = 'amigo';
+      if (junto && vin.proximidade >= 45 && podeVirarAmigo) depois = 'amigo';
     } else if (vin.proximidade < 28 && ORDEM[antes] >= 2) {
       depois = 'afastado';
     } else if (antes === 'conhecido' && junto && vin.proximidade >= 20) {
       depois = 'colega';
-    } else if (antes === 'colega' && vin.proximidade >= 45 && conhecidosHa >= 1 && amigosAtuais < limiteDeAmigos(v)) {
+    } else if (antes === 'colega' && vin.proximidade >= 45 && conhecidosHa >= 1 && amigosAtuais < limiteDeAmigos(v) && podeVirarAmigo) {
       depois = 'amigo';
-    } else if (antes === 'amigo' && vin.proximidade >= 75 && conhecidosHa >= 4 && proximosAtuais(v) < 3) {
+    } else if (antes === 'amigo' && vin.proximidade >= 75 && conhecidosHa >= 4 && proximosAtuais(v) < 3 && podeAprofundar) {
       depois = 'amigo_proximo';
     } else if (antes === 'colega' && !junto && vin.proximidade < 20) {
       depois = 'conhecido';

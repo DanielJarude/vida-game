@@ -263,7 +263,10 @@ export function processarConcepcao(v: Vida, r: Rng): void {
   const impulsivo = v.personalidade.tracos.impulsividade > 25 ? 2 : 1;
   const chance = plano === 'tentando' ? fert : plano === 'sem_planejar' ? fert * 0.45 : (saindo ? 0.01 : 0.025) * impulsivo * (idadeG < 20 ? 1.6 : 1);
   if (!r.chance(chance)) return;
-  const tConcepcao = v.t - r.int(1, 11);
+  // A concepção cai entre dois e cinco meses antes do aniversário: a gravidez é DESCOBERTA neste ano e o bebê
+  // nasce no próximo. (FIX pós-REWORK 2: com qualquer mês do ano, um terço das gestações era descoberta e dada à
+  // luz no mesmo passo — o bebê surgia "do nada", sem a gravidez ter existido na vida.)
+  const tConcepcao = v.t - r.int(2, 5);
   v.processos.push({
     tipo: 'gestacao', id: novoId(v, 'g'), tConcepcao, tParto: tConcepcao + 9,
     gestanteId: quem === 'eu' ? 'eu' : par.p.id, outroId: quem === 'eu' ? par.p.id : 'eu',

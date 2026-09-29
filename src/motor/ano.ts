@@ -25,6 +25,9 @@ import { processarPolitica } from './sistemas/politica';
 import { processarRotinas } from './sistemas/rotinas';
 import { processarConcursos } from './sistemas/concurso';
 import { processarEsporte, treinoProfissional } from './sistemas/esporte';
+import { processarLesoes } from './sistemas/lesoes';
+import { processarSobrecarga } from './sistemas/sobrecarga';
+import { processarNotoriedade } from './sistemas/notoriedade';
 import { processarArte } from './sistemas/arte';
 import { processarNegocio } from './sistemas/negocio';
 import { processarOportunidades } from './sistemas/oportunidades';
@@ -104,6 +107,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarConcursos(v, r);
   efetivarMudancaMilitar(v);
   processarEsporte(v, r);
+  // A lesão volta (ou piora) depois da temporada que ela atravessou.
+  processarLesoes(v, r);
   processarArte(v, r);
   processarProcessos(v, r);
   recalcularConvivio(v);
@@ -126,6 +131,10 @@ function viverAno(v: Vida, r: Rng): void {
   processarImoveis(v, r, ec);
   processarDinheiro(v, r, ec);
   processarObrigacoes(v);
+  // O que o público sabe de você (esporte, obra, mandato, negócio) — depois do ano de cada um.
+  processarNotoriedade(v, r);
+  // A semana do ano inteiro, contada: se passou do que cabe, cobra (e a vida pergunta).
+  processarSobrecarga(v);
   equilibrarMente(v);
   registrarEstado(v);
   fotografar(v);

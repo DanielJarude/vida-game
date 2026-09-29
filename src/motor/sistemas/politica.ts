@@ -299,16 +299,20 @@ export function portasDaPolitica(v: Vida): { origem: VidaPolitica['origem']; pes
   const i = idade(v);
   const out: { origem: VidaPolitica['origem']; peso: number }[] = [];
   const rot = (id: string) => v.rotinas.some(r => r.id === id);
-  if (i >= 18 && (rot('voluntariado') || rot('igreja') || habilidade(v, 'comunidade') >= 35)) out.push({ origem: 'comunidade', peso: 3 });
-  if (i >= 16 && i <= 26 && (rot('gremio') || temFato(v, 'gremio_eleito')) && habilidade(v, 'lideranca') >= 35) out.push({ origem: 'estudantil', peso: 2 });
+  // (FIX pós-REWORK 2: ir à igreja não é trabalho comunitário. A porta do bairro pede envolvimento de verdade —
+  // voluntariado, liderança, gente que já resolve coisas — e pesa mais quando há as duas coisas.)
+  const comunidade = habilidade(v, 'comunidade');
+  const lideranca = habilidade(v, 'lideranca');
+  if (i >= 18 && (rot('voluntariado') || comunidade >= 45 || (lideranca >= 45 && rot('igreja')))) out.push({ origem: 'comunidade', peso: (rot('voluntariado') ? 2 : 0.6) + (comunidade >= 45 ? 1 : 0) + (lideranca >= 45 ? 0.5 : 0) });
+  if (i >= 16 && i <= 26 && (rot('gremio') || temFato(v, 'gremio_eleito')) && lideranca >= 35) out.push({ origem: 'estudantil', peso: 2 });
   const e = v.trabalho.atual;
-  if (e && (e.contrato === 'clt' || e.contrato === 'servidor') && (v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 96 && v.personalidade.tracos.sociabilidade > 10) out.push({ origem: 'sindicato', peso: 1.5 });
-  if (i >= 20 && v.luto.some(l => l.peso >= 60 && v.t - l.t <= 36)) out.push({ origem: 'causa', peso: 1.5 });
-  const fama = (v.caminhos.arte?.ativo && v.caminhos.arte.publico >= 55) || temFato(v, 'atleta_profissional') || (e && (v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 180 && ['saude', 'educacao', 'seguranca', 'comunicacao'].includes(ocupacao(e.ocupacaoId).setor));
-  if (i >= 25 && fama) out.push({ origem: 'notoriedade', peso: 2 });
+  if (e && (e.contrato === 'clt' || e.contrato === 'servidor') && (v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 96 && v.personalidade.tracos.sociabilidade > 15 && lideranca >= 25) out.push({ origem: 'sindicato', peso: 1 });
+  if (i >= 20 && v.luto.some(l => l.peso >= 60 && v.t - l.t <= 36) && v.personalidade.tracos.coragem > 10) out.push({ origem: 'causa', peso: 1 });
+  // Nome conhecido de verdade (a notoriedade do motor), não "anos de profissão".
+  if (i >= 25 && (v.notoriedade?.valor ?? 0) >= 30) out.push({ origem: 'notoriedade', peso: 1 + (v.notoriedade!.valor - 30) / 25 });
   const n = v.caminhos.negocio;
-  if (n && n.estado === 'firme' && (n.reputacao ?? 0) >= 60) out.push({ origem: 'empresario', peso: 2 });
-  if (e && (e.contrato === 'servidor' || e.contrato === 'militar') && (v.t - e.tInicio) / 12 >= 10) out.push({ origem: 'servidor', peso: 1 });
+  if (n && n.estado === 'firme' && (n.reputacao ?? 0) >= 65 && (n.porte ?? 1) >= 2) out.push({ origem: 'empresario', peso: 1.2 });
+  if (e && (e.contrato === 'servidor' || e.contrato === 'militar') && (v.t - e.tInicio) / 12 >= 10 && (lideranca >= 30 || v.personalidade.tracos.sociabilidade > 20)) out.push({ origem: 'servidor', peso: 0.5 });
   return out;
 }
 
@@ -789,12 +793,16 @@ export function processarPolitica(v: Vida, r: Rng): void {
     // A porta: rara, e vinda da vida.
     const portas = portasDaPolitica(v);
     const ultima = v.caminhos.ultimas['politica'];
-    // (REWORK Caminhos: a porta vinha a cada seis anos, até 22% ao ano — a política encontrava quase toda vida longa
-    // no serviço público. Agora, oito anos entre convites e no máximo 12% ao ano: continua vindo da vida, sem empurrar.)
-    if (portas.length && i >= 16 && i <= 75 && !v.justica?.prisao && (ultima === undefined || v.t - ultima >= 96) && !v.momento) {
+    // (FIX pós-REWORK 2: o mesmo convite do bairro chegava a uma vida em cada três. Agora a porta pede contexto
+    // construído (`portasDaPolitica`), vem no máximo a cada dez anos, e quem já recusou duas vezes não é mais
+    // procurado. Sem contexto nenhum, um convite inesperado ainda pode vir — raro.)
+    const recusas = v.fatos['pol_recusas'] ?? 0;
+    const livre = i >= 18 && i <= 75 && !v.justica?.prisao && (ultima === undefined || v.t - ultima >= 120) && !v.momento && recusas < 2;
+    if (livre) {
       const soma = portas.reduce((s, x) => s + x.peso, 0);
-      if (r.chance(Math.min(0.12, 0.01 + soma * 0.025))) {
-        const o = r.weighted(portas, x => x.peso)!;
+      const chance = portas.length ? Math.min(0.08, soma * 0.022) : 0.0015;
+      if (r.chance(chance)) {
+        const o = portas.length ? r.weighted(portas, x => x.peso)! : { origem: 'convite' as const };
         v.caminhos.ultimas['politica'] = v.t;
         v.fatos['pol_porta'] = v.t;
         v.fatos['pol_origem'] = ORIGENS.indexOf(o.origem);
@@ -834,7 +842,7 @@ export function processarPolitica(v: Vida, r: Rng): void {
       escrever(v, { texto: `O mandato também tem conta: contribuição ao partido, a base, as viagens, gente pedindo ajuda na porta. Foram ${dinheiro(custo)} no ano.`, relevancia: 'cotidiano', tema: 'trabalho' });
     }
     // Crises: acontecem (o jogador responde).
-    if (!m.crise && r.chance(c.executivo ? 0.32 : 0.14)) m.crise = { t: v.t, tipo: r.pick(c.executivo ? ['chuva', 'greve', 'verba', 'obra', 'aliado'] : ['aliado', 'votacao', 'pedido']) };
+    if (!m.crise && r.chance(c.executivo ? 0.32 : 0.2)) m.crise = { t: v.t, tipo: r.pick(c.executivo ? ['chuva', 'greve', 'verba', 'obra', 'aliado'] : ['aliado', 'votacao', 'pedido']) };
     // Brasília durante a semana: a casa sente.
     if (ocupacao(m.cargo).jornada === 'fora') {
       const par = parceiro(v);

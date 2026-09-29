@@ -23,6 +23,8 @@ import type { Dominio, Frente, Vida } from '../tipos';
 import { FRENTES, MATERIAS, estagioDe, modeloFrente } from '../dados/frentes';
 import { idade } from '../nucleo';
 import { predisposicao } from './predisposicao';
+import { fatorDeTreino } from './lesoes';
+import { NIVEL_TECNICA, nivelTecnico } from './peneira';
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -93,6 +95,8 @@ export function praticar(v: Vida, r: Rng, d: Dominio, peso: number, qualidade = 
   // No esporte, o condicionamento é MODIFICADOR do treino técnico (não o substitui).
   // (Recalibrado no REWORK 2: o condicionamento deixou de inflar com o treino técnico — quem joga na escolinha fica perto de 65–70, não de 90.)
   if (m.categoria === 'esporte') corpo = 0.85 + v.corpo.forma / 200 - Math.max(0, 55 - v.corpo.saude) / 120;
+  // Machucado, treina pouco (ou treina no sacrifício, rendendo menos): a lesão é a mesma que a tela Você mostra.
+  if (m.categoria === 'esporte') corpo *= fatorDeTreino(v);
   // Rende menos perto do topo. O topo de cada um sobe com a facilidade e com
   // os anos de prática intensa: sem facilidade, a raça leva longe (70 e
   // poucos); com facilidade e anos de treino, chega-se ao que é raro.
@@ -179,6 +183,11 @@ export function leituraDaFrente(v: Vida, d: Dominio): string {
   if (apt >= 0.35 && f.habilidade < 40 && f.meses < 24) return `${cap(m.facilidade)}, mas pratica pouco.`;
   if (apt <= -0.3 && f.habilidade >= 45) return `${cap(base)} — foi na raça, não no dom.`;
   const tempo = anos >= 2 ? ` Há ${anos} anos.` : '';
+  // Destaque entre amadores ≠ nível de base: no esporte, a frase diz as duas réguas (a mesma que a peneira usa).
+  if (m.categoria === 'esporte' && e >= 3 && !v.caminhos.esporte) {
+    const n = nivelTecnico(f.habilidade);
+    if (n <= 3) return `${cap(base)} — entre quem joga no seu nível. Para uma base, a técnica ainda está ${NIVEL_TECNICA[n].replace(/^ainda /, '')}.${tempo}`;
+  }
   return `${cap(base)}.${tempo}`;
 }
 

@@ -13,7 +13,7 @@
 
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { Dominio, ProjetoArtistico, Vida } from '../tipos';
+import type { Dominio, Obra, ProjetoArtistico, Vida } from '../tipos';
 import { amigos, escrever, idade, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { forcaDoSetor } from '../dados/mercado';
 import { habilidade } from './frentes';
@@ -158,4 +158,60 @@ function anoDoProjeto(v: Vida, r: Rng, p: ProjetoArtistico): void {
     if (ensaiando && ensaiando.nivel === 3) ensaiando.nivel = 2;
   }
   void vinculosVivos; void flex; void ge;
+}
+
+/* ------------------------------------------------------------ A obra */
+
+const TITULOS: Partial<Record<Dominio, string[]>> = {
+  musica: ['Ruas de Dentro', 'Canções para Depois', 'Maré', 'O Que Sobrou do Verão', 'Quintal', 'Barulho Bom', 'Linha de Ônibus'],
+  teatro: ['A Casa Vazia', 'Três Cadeiras', 'O Último Ensaio', 'Janela para a Rua'],
+  danca: ['Chão', 'Corpo Aberto', 'Passo em Falso', 'Travessia'],
+  desenho: ['Cadernos', 'Retratos da Rua', 'Linhas'], escrita: ['O Ano da Chuva', 'Contos de Esquina', 'A Filha do Porteiro'],
+  fotografia: ['Periferia em Preto e Branco', 'Gente da Feira', 'Luz de Fim de Tarde']
+};
+const ARTES: Dominio[] = ['musica', 'teatro', 'danca', 'desenho', 'escrita', 'fotografia'];
+
+/** A linguagem da carreira: a do projeto, a do trabalho, ou a arte mais praticada. */
+export function linguagemDaCarreira(v: Vida): Dominio {
+  if (v.caminhos.arte?.ativo) return v.caminhos.arte.linguagem;
+  const trilha = v.trabalho.atual?.ocupacaoId ?? '';
+  const pelo = ARTES.find(d => trilha.includes(d === 'musica' ? 'music' : d === 'fotografia' ? 'fotog' : d));
+  return pelo ?? [...ARTES].sort((a, b) => habilidade(v, b) - habilidade(v, a))[0];
+}
+
+/**
+ * Lançar um trabalho: a obra sai para o mundo e é RECEBIDA (ou não). A
+ * recepção nasce da habilidade construída, do público que já existe, da
+ * sensibilidade de nascença (pouco) e do acaso; e tem consumidores: público,
+ * renda, clientela, notoriedade, convites, a Linha da Vida quando marca.
+ */
+export function lancarObra(v: Vida, r: Rng): Obra {
+  const d = linguagemDaCarreira(v);
+  const p = v.caminhos.arte;
+  const publico = p?.ativo ? p.publico : v.trabalho.atual?.clientela ?? 15;
+  const q = habilidade(v, d) / 100 * 0.62 + publico / 100 * 0.25 + (v.predisposicoes?.artistica ?? 0) * 0.08 + r.normal() * 0.13;
+  const recepcao: Obra['recepcao'] = q >= 0.66 ? 3 : q >= 0.52 ? 2 : q >= 0.38 ? 1 : 0;
+  const lista = TITULOS[d] ?? TITULOS.musica!;
+  const titulo = lista[((v.caminhos.obras?.length ?? 0) + Math.floor(v.t / 12)) % lista.length];
+  const renda = Math.round([0, 1500, 6000, 22000][recepcao] * Math.max(0.4, publico / 50) / 100) * 100;
+  const o: Obra = { t: v.t, titulo, linguagem: d, recepcao, renda };
+  (v.caminhos.obras ??= []).push(o);
+  if (v.caminhos.obras.length > 20) v.caminhos.obras.splice(0, v.caminhos.obras.length - 20);
+  v.financas.conta += renda;
+  if (p?.ativo) p.publico = clamp(p.publico + [2, 6, 12, 20][recepcao]);
+  const e = v.trabalho.atual;
+  if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + [1, 4, 8, 14][recepcao]);
+  const quem = p?.ativo ? ` com ${p.nome}` : '';
+  const oque = d === 'musica' ? `o disco "${titulo}"` : d === 'teatro' ? `a peça "${titulo}"` : d === 'danca' ? `o espetáculo "${titulo}"` : d === 'escrita' ? `o livro "${titulo}"` : `"${titulo}"`;
+  const texto = recepcao === 3 ? `Lançou ${oque}${quem} — e ele marcou: crítica, público, gente cantando junto em cidade onde você nunca tinha ido.`
+    : recepcao === 2 ? `Lançou ${oque}${quem}. Repercutiu: saiu na imprensa da região, apareceu convite de fora.`
+      : recepcao === 1 ? `Lançou ${oque}${quem}. Achou o seu público, pequeno e fiel.`
+        : `Lançou ${oque}${quem}. Quem conhecia gostou; o resto nem ficou sabendo.`;
+  escrever(v, { texto, relevancia: recepcao >= 3 ? 'marco' : recepcao >= 1 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: recepcao >= 2 ? 'bom' : undefined, escolha: true });
+  if (recepcao >= 2) marcar(v, 'conquista', texto, recepcao >= 3 ? 3 : 2, { dominio: d });
+  // Quem repercute é chamado: um festival, um edital, uma casa maior (a porta abre; entrar é escolha).
+  if (recepcao >= 2 && (v.caminhos.ultimas['arte_convite'] === undefined || v.t - v.caminhos.ultimas['arte_convite'] >= 24)) {
+    novaOportunidade(v, { tipo: 'edital_cultura', dominio: d, meses: 12, chave: 'arte_convite', titulo: 'Um convite', texto: `Depois de ${oque}, um festival da capital chamou para uma apresentação — cachê e público novo.` });
+  }
+  return o;
 }

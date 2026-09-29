@@ -22,6 +22,8 @@
  * Valores em reais de hoje (ver `economia`).
  */
 
+import { rendaDeImagem } from './notoriedade';
+import { remuneracaoDe } from './renda';
 import { fazCursinho } from './vestibular';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -30,7 +32,7 @@ import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, moraCom, 
 import { economiaLocal } from '../dados/lugares';
 import { modeloMoradia } from '../dados/bens';
 import { curso } from '../dados/cursos';
-import { liquido, mesesPagos, SALARIO_MINIMO } from './renda';
+import { SALARIO_MINIMO } from './renda';
 import { custosDoTrabalho } from './carreira';
 import { moraComFamiliaDeOrigem, rendaDosOutros } from './domicilio';
 import { dinheiro as fmt, flex } from '../texto';
@@ -92,11 +94,15 @@ function entradasProprias(v: Vida): LinhaRazao[] {
   const out: LinhaRazao[] = [];
   const e = v.trabalho.atual;
   if (e) {
-    const liq = liquido(e.salario, e.contrato);
-    const meses = mesesPagos(e.contrato);
-    out.push({ rotulo: e.contrato === 'clt' || e.contrato === 'servidor' ? 'Salário (com 13º e férias)' : e.contrato === 'estagio' ? 'Bolsa de estágio' : v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado' && e.ocupacaoId === v.caminhos.negocio.ocupacaoId ? `Retirada do negócio` : 'Renda do trabalho', valor: Math.round(liq * meses / 12), grupo: 'renda', de: 'eu' });
+    // A mesma conta que a tela Trabalho mostra (`renda.remuneracaoDe`): aqui entra a média do mês no ano.
+    const rem = remuneracaoDe(e);
+    const liq = rem.liquido;
+    out.push({ rotulo: rem.tem13 ? 'Salário líquido (média do mês, com 13º e férias)' : e.contrato === 'estagio' ? 'Bolsa de estágio' : v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado' && e.ocupacaoId === v.caminhos.negocio.ocupacaoId ? `Retirada do negócio` : 'Renda do trabalho (líquida)', valor: rem.mediaMensal, grupo: 'renda', de: 'eu' });
     if (v.anoAtual.acoes.includes('horas_extras')) out.push({ rotulo: 'Horas extras', valor: Math.round(liq * 0.15), grupo: 'renda', de: 'eu' });
   }
+  // O nome também paga: patrocínio e publicidade de quem é conhecido pelo esporte ou pela obra (`notoriedade`).
+  const imagem = rendaDeImagem(v);
+  if (imagem > 0) out.push({ rotulo: 'Patrocínio e publicidade', valor: imagem, grupo: 'renda', de: 'eu' });
   if (v.trabalho.aposentadoria) out.push({ rotulo: temFato(v, 'bpc') ? 'Benefício assistencial (BPC)' : 'Aposentadoria', valor: Math.round(v.trabalho.aposentadoria.beneficio * 13 / 12), grupo: 'renda', de: 'governo' });
   const m = v.educacao.matricula;
   if (m && !m.trancado) {

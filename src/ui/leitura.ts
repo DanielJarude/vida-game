@@ -281,39 +281,55 @@ export function lutoVisivel(v: Vida): string | null {
 
 /* --------------------------------------------------- O que pede atenção */
 
-export interface Sinal { pessoaId?: string; texto: string; peso: number }
+/**
+ * `global`: urgente ou importante o bastante para aparecer em qualquer área
+ * (a gravidez, a perda recente, o pedido de ajuda, a briga em casa).
+ * `pessoas`: a vida social normal — mora em Pessoas, não persegue o jogador.
+ */
+export interface Sinal { pessoaId?: string; texto: string; peso: number; escopo: 'global' | 'pessoas' }
+
+const CHAMADO_URGENTE = new Set(['pedido_ajuda', 'conversa_casal', 'distancia_casal']);
 
 /**
  * O que, na vida social, pede atenção agora — não uma lista das mesmas
- * pessoas da tela Pessoas, mas o que mudou ou está pendurado.
+ * pessoas da tela Pessoas, mas o que mudou ou está pendurado. Cada sinal diz
+ * se é assunto de todas as telas (`global`) ou só de Pessoas; o que é antigo
+ * sai (um luto de anos atrás não pede atenção toda vez que se abre o jogo).
  */
 export function sinaisSociais(v: Vida): Sinal[] {
   const out: Sinal[] = [];
   const gest = gestacaoEmCurso(v);
   if (gest?.descoberta) {
     const quem = gest.gestanteId === 'eu' ? 'Você está esperando um bebê' : `${v.pessoas[gest.gestanteId]?.nome ?? ''} está esperando um bebê`;
-    out.push({ texto: `${quem} — para ${MESES[mesDe(gest.tParto)]} de ${anoDe(gest.tParto)}.`, peso: 100, pessoaId: gest.gestanteId === 'eu' ? gest.outroId : gest.gestanteId });
+    out.push({ texto: `${quem} — para ${MESES[mesDe(gest.tParto)]} de ${anoDe(gest.tParto)}.`, peso: 100, pessoaId: gest.gestanteId === 'eu' ? gest.outroId : gest.gestanteId, escopo: 'global' });
   }
   for (const l of v.luto) {
     const p = v.pessoas[l.pessoaId];
-    if (p && l.peso >= 25) out.push({ pessoaId: p.id, texto: `${p.nome} se foi em ${anoDe(p.tMorte ?? l.t)}.`, peso: 90 + l.peso / 10 });
+    const ha = v.t - (p?.tMorte ?? l.t);
+    if (p && l.peso >= 25 && ha <= 36) out.push({ pessoaId: p.id, texto: `${p.nome} se foi em ${anoDe(p.tMorte ?? l.t)}.`, peso: 90 + l.peso / 10, escopo: ha <= 12 ? 'global' : 'pessoas' });
   }
   for (const { p, vin } of vinculosVivos(v)) {
     if (p.especie || !p.nome) continue;
     // Quem tomou uma iniciativa e espera uma reação vem primeiro (o silêncio também responde, no ano que vem).
-    if (vin.chamado) out.push({ pessoaId: p.id, texto: vin.chamado.texto, peso: 96 });
+    if (vin.chamado) out.push({ pessoaId: p.id, texto: vin.chamado.texto, peso: CHAMADO_URGENTE.has(vin.chamado.tipo) ? 96 : 80, escopo: CHAMADO_URGENTE.has(vin.chamado.tipo) ? 'global' : 'pessoas' });
     const imp = importancia(v, p, vin);
-    // Parentesco sem história não pede atenção (o motor diz o que é vínculo real).
+    // Parentesco sem história não pede atenção (o motor diz o que é vínculo real). Quem você afastou, também não.
     if (imp < 25 || !vinculoReal(v, p, vin)) continue;
+    if (vin.distancia !== undefined && v.t - vin.distancia < 60) continue;
     const papel = papelDe(p, vin);
-    if (p.gestacao && v.t < p.gestacao.tParto) out.push({ pessoaId: p.id, texto: `${p.nome} vai ter um bebê em ${MESES[mesDe(p.gestacao.tParto)]}.`, peso: 70 + imp / 10 });
-    if (p.aperto && v.t - p.aperto.t <= 12 && !vin.chamado) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5 });
-    if (!vin.chamado && vin.tensao >= 55 && (papel === 'parceiro' || ehDescendente(papel) || papel === 'genitor')) out.push({ pessoaId: p.id, texto: `${p.nome} — vocês têm brigado.`, peso: 55 + imp / 5 });
-    if (!vin.chamado && papel === 'parceiro' && (vin.romance?.envolvimento ?? 50) < 42 && vin.tensao < 55) out.push({ pessoaId: p.id, texto: `${p.nome} anda distante.`, peso: 50 + imp / 5 });
+    const nucleo = papel === 'parceiro' || ehDescendente(papel) || papel === 'genitor';
+    if (p.gestacao && v.t < p.gestacao.tParto) out.push({ pessoaId: p.id, texto: `${p.nome} vai ter um bebê em ${MESES[mesDe(p.gestacao.tParto)]}.`, peso: 70 + imp / 10, escopo: nucleo ? 'global' : 'pessoas' });
+    if (p.aperto && v.t - p.aperto.t <= 12 && !vin.chamado) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5, escopo: nucleo || papel === 'amigo_proximo' ? 'global' : 'pessoas' });
+    if (!vin.chamado && vin.tensao >= 55 && nucleo) out.push({ pessoaId: p.id, texto: `${p.nome} — vocês têm brigado.`, peso: 55 + imp / 5, escopo: vin.convivio.includes('casa') ? 'global' : 'pessoas' });
+    if (!vin.chamado && papel === 'parceiro' && (vin.romance?.envolvimento ?? 50) < 42 && vin.tensao < 55) out.push({ pessoaId: p.id, texto: `${p.nome} anda distante.`, peso: 50 + imp / 5, escopo: 'pessoas' });
     const semContato = Math.floor((v.t - vin.tUltimoContato) / 12);
-    if (!vin.chamado && semContato >= 3 && (papel === 'amigo_proximo' || papel === 'filho' || papel === 'genitor' || papel === 'irmao')) out.push({ pessoaId: p.id, texto: `${p.nome} — ${anos(semContato)} sem se falarem.`, peso: 40 + imp / 5 });
+    if (!vin.chamado && semContato >= 3 && semContato <= 15 && (papel === 'amigo_proximo' || papel === 'filho' || papel === 'genitor' || papel === 'irmao')) {
+      // Contexto importa: o pai que nunca esteve por perto não é o amigo próximo esquecido.
+      const nuncaProximos = (papel === 'genitor' || papel === 'irmao') && (vin.presenca ?? 50) < 30 && vin.proximidade < 45;
+      if (!nuncaProximos) out.push({ pessoaId: p.id, texto: `${p.nome} — ${anos(semContato)} sem se falarem.`, peso: 40 + imp / 5, escopo: 'pessoas' });
+    }
   }
-  return out.sort((a, b) => b.peso - a.peso).slice(0, 4);
+  return out.sort((a, b) => b.peso - a.peso).slice(0, 5);
 }
 
 /** Quem mora com você, em palavras curtas. */

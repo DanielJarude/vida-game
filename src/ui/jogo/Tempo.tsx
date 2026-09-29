@@ -31,6 +31,7 @@ import { BotaoAcao, Folio, Secao, Vazio } from '../comum';
 import { dinheiroCurto } from '../apresentar';
 import { areaDaPorta, PortasAbertas } from './Estudos';
 import { doClube } from '../../motor/dados/clubes';
+import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
 import type { Aba } from '../telas/Jogo';
 
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
@@ -194,6 +195,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
       <section className="tempo-semana" aria-labelledby="titulo-semana">
         <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
         <FaixaDaSemana s={s} />
+        {i >= 10 && (() => { const l = leituraDaSobrecarga(vida); return <p className={`semana-carga semana-carga--${l.nivel}`}><span className="semana-carga__palavra">{l.palavra.charAt(0).toUpperCase() + l.palavra.slice(1)}.</span> {l.nivel === 0 ? l.texto.replace(/^A semana cabe na vida: /, '') : l.texto.replace(/^[^:.]*[:.] ?/, '')}{l.nivel >= 2 ? ' Descanso, férias, menos compromissos ou um ritmo mais leve no trabalho aliviam.' : ''}</p>; })()}
         {s.fixos.length === 0 && <p className="nota">{i < 18 ? 'Além da escola, a semana é sua.' : 'Nada fixo ocupa a semana: nem trabalho, nem curso.'}</p>}
       </section>
       <ParaOndeVai vida={vida} s={s} irPara={irPara} />

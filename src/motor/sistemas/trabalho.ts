@@ -19,6 +19,7 @@
 
 import type { Rng } from '../rng';
 import { pesoDaSaudeNoTrabalho } from './saude';
+import { pesoNoDesempenho } from './sobrecarga';
 import { clamp } from '../rng';
 import type { Dominio, Emprego, Vida } from '../tipos';
 import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
@@ -327,6 +328,9 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
     posAposentadoria: t.aposentadoria ? true : undefined
   };
   t.atual = e;
+  // A área escolhida vai junto para o próximo trabalho da mesma profissão (é do profissional, não do emprego).
+  const antes = [...t.historico].reverse().find(h => h.especialidade && ocupacaoOuNula(h.ocupacaoId)?.trilha === oc.trilha);
+  if (antes) e.especialidade = antes.especialidade;
   t.desempregadoDesde = undefined;
   if (primeiro) {
     marcarFato(v, 'primeiro_emprego');
@@ -461,7 +465,11 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     + (t.horasExtras ? 10 : 0) - Math.max(0, v.mente.estresse - 65) * 0.4 - Math.max(0, 50 - v.corpo.saude) * 0.3
     + (ritmoDe(e) === 'puxado' ? 6 : ritmoDe(e) === 'leve' ? -3 : 0) + (climaDe(e) - 50) * 0.08
     // Bem-estar pesa pouco (ninguém fracassa em tudo por estar para baixo); uma condição séria sem tratamento, um pouco mais.
-    + clamp((v.mente.felicidade - 50) * 0.06, -3, 2) - pesoDaSaudeNoTrabalho(v);
+    + clamp((v.mente.felicidade - 50) * 0.06, -3, 2) - pesoDaSaudeNoTrabalho(v)
+    // A semana maior do que a vida: cansaço erra (`sistemas/sobrecarga`).
+    + pesoNoDesempenho(v)
+    // O que a carreira construiu aqui (casos, turmas, projetos que deram certo) e a área que se domina.
+    + Math.min(6, (e.feitos ?? 0) * 1.5) + (e.especialidade ? 2 : 0);
   e.desempenho = clamp(Math.round(e.desempenho * 0.5 + alvo * 0.5 + r.normal() * 8));
 
   // Estresse do cargo

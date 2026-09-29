@@ -19,6 +19,8 @@
  */
 
 import { derivarPredisposicoes } from './sistemas/pessoa';
+import { posicaoSugerida } from './sistemas/esporte';
+import { alvoDaNotoriedade } from './sistemas/notoriedade';
 import type {
   Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, Tema, Vida, Vinculo
 } from './tipos';
@@ -38,7 +40,7 @@ import { CURSOS_NPC } from './sistemas/filhos';
 import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 import { atribuirVersoesAosVeiculos } from './sistemas/versoesVeiculo';
 
-export const VERSAO_SAVE = 16;
+export const VERSAO_SAVE = 17;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -98,6 +100,23 @@ export function interpretar(bruto: string): Leitura {
   const d = dados as Record<string, unknown>;
   if (d.versao === VERSAO_SAVE) {
     const erro = validar(d);
+    return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
+  }
+  // Toda versão anterior passa pela cadeia até a v16 e, dali, pela migração do FIX pós-REWORK 2.
+  const ate16 = interpretarAte16(d);
+  if (ate16.tipo !== 'ok') return ate16;
+  try {
+    const v = migrarV16(ate16.vida);
+    const erro = validar(v as unknown as Record<string, unknown>);
+    return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+  } catch (e) {
+    return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+  }
+}
+
+function interpretarAte16(d: Record<string, unknown>): Leitura {
+  if (d.versao === 16) {
+    const erro = validar(d, 16);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
   if (d.versao === 15) {
@@ -318,6 +337,15 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (e.objetivo !== undefined && (typeof e.objetivo.cursoId !== 'string' || !finito(e.objetivo.t))) return 'Objetivo de estudo inválido.';
     for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) if (vin.chamado && (typeof vin.chamado.tipo !== 'string' || !finito(vin.chamado.t) || typeof vin.chamado.texto !== 'string')) return 'Chamado inválido.';
   }
+  if (versao >= 17) {
+    const n = d.notoriedade as Vida['notoriedade'];
+    if (n !== undefined && (!finito(n.valor) || !finito(n.pico))) return 'Notoriedade inválida.';
+    const m = (d.mente as Vida['mente']).sobrecarga;
+    if (m !== undefined && !finito(m.anos)) return 'Sobrecarga inválida.';
+    const es = (d.caminhos as Vida['caminhos'] | undefined)?.esporte;
+    if (es?.temporadas !== undefined && (!Array.isArray(es.temporadas) || es.temporadas.some(t => !finito(t.nota) || !finito(t.partidas)))) return 'Temporadas inválidas.';
+    for (const c of (d.corpo as Vida['corpo']).condicoes) if (c.lesao && (!finito(c.lesao.tFim) || ![1, 2, 3].includes(c.lesao.gravidade))) return 'Lesão inválida.';
+  }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -476,6 +504,36 @@ export function migrarV15(v: Vida): Vida {
   if (!finito(x.corpo.aparenciaBase)) x.corpo.aparenciaBase = x.corpo.aparencia;
   if (!x.educacao.preparo) {
     if (x.educacao.cursinho) x.educacao.preparo = { meses: 12, tUltimo: x.t };
+  }
+  return x;
+}
+
+/**
+ * v16 → v17 (FIX pós-REWORK 2: integração, relações, carreiras vivas).
+ *   - atleta profissional: o treino de base sai do tempo livre (é do clube);
+ *     posição derivada da semente (a mesma que o jogo sugeriria); reputação
+ *     derivada do que já se sabe (técnica, divisão, espaço); o salário do
+ *     contrato fica como está (é o que foi assinado);
+ *   - notoriedade: derivada do estado (sem sorteio, sem inventar passado);
+ *   - sobrecarga, aproximação, distância, temporadas, obras: começam vazias
+ *     (nenhuma história retroativa é inventada).
+ * Determinística e idempotente.
+ */
+export function migrarV16(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 17;
+  const e = x.caminhos?.esporte;
+  if (e?.fase === 'profissional') {
+    x.rotinas = x.rotinas.filter(r => r.id !== e.modalidade);
+    if (e.modalidade === 'futebol' && !e.posicao) e.posicao = posicaoSugerida(x);
+    if (!finito(e.reputacao)) {
+      const h = x.caminhos.frentes[e.modalidade]?.habilidade ?? 60;
+      e.reputacao = Math.round(Math.max(5, Math.min(80, 14 + (h - 70) * 1.4 + (e.nivel - 1) * 7 + (e.espaco === 'titular' ? 8 : 0))));
+    }
+  }
+  if (!x.notoriedade) {
+    const n = alvoDaNotoriedade(x);
+    if (n.valor >= 1) x.notoriedade = { valor: Math.round(n.valor * 10) / 10, pico: Math.round(n.valor * 10) / 10, fonte: n.fonte, t: x.t };
   }
   return x;
 }
@@ -886,7 +944,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 16,
+    versao: 7 as unknown as 17,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,

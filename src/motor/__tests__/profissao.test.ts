@@ -188,7 +188,8 @@ describe('ritmo: trabalho excessivo tem custo; preservar a saúde tem valor', ()
     expect(semana(v).fixos.find(f => f.id === 'trabalho')!.peso).toBeGreaterThan(semanaAntes);
     expect(fatoresCabeca(v).some(f => f.id === 'ritmo' && f.efeito > 0)).toBe(true);
     expect(tenta(v, P('ritmo', { valor: 'normal' }))).toBe(false); // uma mudança por ano
-    v = avancarAno(v).vida; if (v.momento) v = responder(v);
+    // (A vida pode trazer uma decisão no meio do ano; aqui, a que não mexe na jornada.)
+    v = avancarAno(v).vida; if (v.momento) v = responder(v, 'dar_conta');
     v = executar(v, P('ritmo', { valor: 'normal' })).vida;
     expect(Math.abs(v.trabalho.atual!.salario / antes - 1)).toBeLessThan(0.12);
   });
@@ -618,7 +619,7 @@ describe('personalidade só por escolha; acontecimento não decide por você', (
 
 describe('save v12', () => {
   it('saves v11 reais (motor do PLAYTEST #3) migram, validam, seguem vivendo anos, salvam e reabrem', () => {
-    expect(VERSAO_SAVE).toBe(16);
+    expect(VERSAO_SAVE).toBe(17);
     for (const nome of ['save-v11-negocio.json', 'save-v11-atleta.json', 'save-v11-professora.json']) {
       const bruto = fixture(nome);
       expect(JSON.parse(bruto).versao).toBe(11);

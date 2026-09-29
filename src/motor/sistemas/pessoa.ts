@@ -36,6 +36,7 @@ import type { Fator } from './estado';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
 import { nivelDa } from './rotinas';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
+import { fatorDeTreino, pesoNoCondicionamento } from './lesoes';
 
 /* ---------------------------------------------------------- Predisposições */
 
@@ -66,13 +67,17 @@ export interface Estimulo { total: number; fontes: { id: string; texto: string; 
 
 export function estimuloFisico(v: Vida): Estimulo {
   const fontes: Estimulo['fontes'] = [];
+  const e = v.caminhos.esporte;
+  const pro = e?.fase === 'profissional' ? e.modalidade : undefined;
   for (const r of v.rotinas) {
     const c = CARGA[r.id];
     if (!c) continue;
+    // O treino do atleta profissional é do clube (abaixo): a mesma modalidade não conta duas vezes.
+    if (r.id === pro) continue;
     fontes.push({ id: r.id, texto: NOME_CARGA[r.id] ?? r.id, carga: c[Math.min(c.length, nivelDa(r)) - 1] });
   }
-  const e = v.caminhos.esporte;
-  if (e?.fase === 'profissional' && !v.rotinas.some(x => x.id === e.modalidade)) fontes.push({ id: 'profissional', texto: NOME_CARGA.profissional, carga: 1.3 });
+  // O treino do clube, quase todo dia: é trabalho, e o corpo conta — menos quando a lesão tira dos treinos.
+  if (pro && !e!.suspensoAte) fontes.push({ id: 'profissional', texto: NOME_CARGA.profissional, carga: (e!.foco === 'forcar' ? 1.5 : e!.foco === 'preservar' ? 1.15 : 1.35) * fatorDeTreino(v) });
   const oc = v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.ocupacaoId) : undefined;
   if (oc && FARDA.has(oc.trilha)) fontes.push({ id: 'farda', texto: NOME_CARGA.farda, carga: 0.5 });
   else if (oc && TRABALHO_PESADO.has(oc.trilha)) fontes.push({ id: 'obra', texto: NOME_CARGA.obra, carga: 0.35 });
@@ -117,6 +122,7 @@ export function fatoresCondicionamento(v: Vida): Fator[] {
   }
   if (c.saude < 55) out.push({ id: 'saude', texto: 'a saúde fraca', efeito: -(55 - c.saude) * 0.5 });
   for (const cond of c.condicoes) {
+    if (cond.lesao) { out.push({ id: 'condicao:lesao', texto: cond.lesao.cuidado === 'sacrificio' ? `${cond.lesao.parte}, jogando em cima` : cond.lesao.parte, efeito: pesoNoCondicionamento(cond.lesao) }); continue; }
     const pesa = cond.id === 'coluna' ? (cond.tratando ? -2 : -6)
       : cond.id === 'cancer' ? (cond.tratando ? -6 : -10)
         : cond.id === 'diabetes' && !cond.tratando ? -3

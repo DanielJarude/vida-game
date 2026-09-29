@@ -153,7 +153,7 @@ export const POLITICA: Conteudo[] = [
         resolver: c => ({ texto: 'A primeira reunião foi numa sala abafada, com café de garrafa térmica. Você falou mais do que esperava.', memoria: 'Entrou na vida política.', relevancia: 'marco', efeito: () => { entrarNaPolitica(c.v, origemDoConvite(c), 1.2); const a = criarAliado(c.v, c.r); lembrarCom(c.v, a.id, 'Chamou você para a vida política.', 'inicio', 2); } }) },
       { id: 'pouco', texto: 'Ajudar, sem se expor',
         resolver: c => ({ texto: 'Você topou ajudar nos bastidores: planilha, telefone, carona.', memoria: null, efeito: () => { entrarNaPolitica(c.v, origemDoConvite(c), 0.7); } }) },
-      { id: 'nao', texto: 'Agradecer e recusar', resolver: () => ({ texto: 'Você disse que política não era para você. Por enquanto.', memoria: null }) }
+      { id: 'nao', texto: 'Agradecer e recusar', resolver: c => ({ texto: 'Você disse que política não era para você. Por enquanto.', memoria: null, efeito: () => { c.v.fatos['pol_recusas'] = (c.v.fatos['pol_recusas'] ?? 0) + 1; } }) }
     ]
   },
   {

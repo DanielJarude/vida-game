@@ -20,5 +20,7 @@ import { NEGOCIOS_CONTEUDO } from './negocios';
 import { BENS } from './bens';
 import { REDE } from './rede';
 import { BIOGRAFIA } from './biografia';
+import { INTEGRACAO } from './integracao';
+import { OFICIOS_CONTEUDO } from './oficios';
 
-export const CATALOGO: readonly Conteudo[] = [...COMPROMISSOS, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA];
+export const CATALOGO: readonly Conteudo[] = [...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA];

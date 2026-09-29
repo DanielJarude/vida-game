@@ -525,10 +525,10 @@ describe('ajustes da segunda passagem (simulação de intenções)', () => {
     expect(disponibilidade(r, P('mostrar_trabalho')).motivo).toMatch(/temporada|convite/);
   });
 
-  it('a política continua vindo da vida, mas não a cada seis anos: o intervalo mínimo é de oito', () => {
+  it('a política continua vindo da vida, mas não a cada seis anos: o intervalo mínimo é de dez (FIX pós-REWORK 2)', () => {
     const src = readFileSync(join(__dirname, '../sistemas/politica.ts'), 'utf8');
-    expect(src).toMatch(/v\.t - ultima >= 96/);
-    expect(src).toMatch(/Math\.min\(0\.12,/);
+    expect(src).toMatch(/v\.t - ultima >= 120/);
+    expect(src).toMatch(/Math\.min\(0\.08,/);
   });
 });
 

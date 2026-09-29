@@ -35,6 +35,7 @@ import { Trabalho } from '../jogo/Trabalho';
 import { expressaoDe, momentoAtual, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
 import { faseDaVida } from '../apresentar';
+import { fechamentoDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
 
@@ -105,7 +106,7 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       <div className={`palco palco--${aba}`}>
         <main className={`conteudo pagina pagina--${aba}`} ref={conteudo}>
-          {aba === 'vida' && <><Hoje vida={vida} irPara={setAba} /><LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
+          {aba === 'vida' && <><Hoje vida={vida} irPara={setAba} />{c.marcaAno > 0 && <FechamentoDoAno vida={vida} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
           {aba === 'voce' && <Voce vida={vida} agir={c.agir} irPara={setAba} abrirPessoa={abrirPessoa} />}
           {aba === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={setPessoaAberta} />}
           {aba === 'trabalho' && <Trabalho vida={vida} agir={c.agir} irPara={setAba} />}
@@ -146,6 +147,22 @@ export function Jogo({ c }: { c: ControleVida }) {
  * O alto da Linha da Vida: o rosto, o nome, a idade, uma frase sobre agora —
  * e nada mais. O resto é biografia.
  */
+/** O fechamento do ano das carreiras especiais (temporada, obra, mandato, negócio): só quando há o que contar. */
+export function FechamentoDoAno({ vida }: { vida: Vida }) {
+  const f = fechamentoDoAno(vida);
+  if (!f.length) return null;
+  return (
+    <section className="fechamento" aria-label="O ano que passou">
+      {f.map(x => (
+        <div key={x.titulo} className="temporada">
+          <p className="temporada__titulo">{x.titulo}</p>
+          {x.linhas.map((l, k) => <p key={k} className={k === 0 ? 'temporada__linha' : 'nota'}>{l}</p>)}
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function Hoje({ vida, irPara }: { vida: Vida; irPara: (a: Aba) => void }) {
   const i = idade(vida);
   return (
@@ -170,7 +187,8 @@ function Hoje({ vida, irPara }: { vida: Vida; irPara: (a: Aba) => void }) {
 function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }) {
   const casa = emCasa(vida);
   const pessoal = sinalPessoal(vida);
-  const sinais = aba === 'pessoas' ? [] : sinaisSociais(vida);
+  // Só o urgente atravessa as áreas; a vida social normal mora em Pessoas (FIX pós-REWORK 2).
+  const sinais = aba === 'pessoas' ? [] : sinaisSociais(vida).filter(x => x.escopo === 'global').slice(0, 2);
   const i = idade(vida);
   const seg = seguranca(vida);
   const aperta = i >= 18 && (seg.nivel === 'no_vermelho' || seg.nivel === 'apertado');

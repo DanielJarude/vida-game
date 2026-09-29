@@ -16,7 +16,7 @@ import { disponibilidade, executar, type Acao } from '../acoes';
 import { criarRng } from '../rng';
 import { idade, transacao, vinculosVivos } from '../nucleo';
 import { podeTentar } from '../plausibilidade';
-import { interpretar, migrarV15, VERSAO_SAVE } from '../save';
+import { interpretar, migrarV15, migrarV16, VERSAO_SAVE } from '../save';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { criarPessoa, vincular } from '../pessoas';
 import { ocupacao } from '../dados/ocupacoes';
@@ -181,6 +181,8 @@ describe('4 e 5. saúde ignorada × saúde tratada', () => {
     v.financas.planoDeSaude = false; v.financas.conta = 30000;
     v.corpo.condicoes.push({ id: 'diabetes', nome: 'diabetes', tInicio: v.t - 24, cronica: true, gravidade: 2, tratando: false, diagnosticada: false });
     contratar(v, criarRng(1), ocupacao('assistente_adm'));
+    // Premissa: nenhum tratamento já na fila (a vida de algumas sementes chega aqui com um).
+    v.processos = v.processos.filter(p => p.tipo !== 'tratamento');
     return v;
   }
 
@@ -277,7 +279,8 @@ describe('7. Medicina como objetivo → preparação → ENEM → devolutiva coe
     // A prova: esperada + o dia. Em média, a prova É a estimativa.
     let soma = 0;
     for (let s = 1; s <= 300; s++) { const n = notasEnem(v, criarRng(s)); soma += (n.exatas + n.linguagens + n.ciencias * 3 + n.humanas) / 6; }
-    expect(Math.abs(soma / 300 - e2.nota)).toBeLessThan(8);
+    // (Tolerância 10: perto do piso de 320 da prova, o corte do mínimo puxa a média um pouco para cima.)
+    expect(Math.abs(soma / 300 - e2.nota)).toBeLessThan(10);
     v = executar(v, { tipo: 'enem' }).vida;
     const dev = v.caminhos.devolutivas.slice(-1)[0];
     expect(dev.tipo).toBe('vestibular');
@@ -478,7 +481,8 @@ describe('13. save/reload e migração v15 → v16', () => {
     expect(a.vida.predisposicoes).toEqual(derivarPredisposicoes(v.id));
     expect(a.vida.corpo.aparenciaBase).toBe(v.corpo.aparencia);
     expect(a.vida.educacao.preparo?.meses).toBe(12);
-    expect(migrarV15(structuredClone(a.vida))).toEqual(a.vida);
+    // Idempotente: aplicar de novo as migrações (v15→v16→v17) não muda nada.
+    expect(migrarV16(migrarV15(structuredClone(a.vida)))).toEqual(a.vida);
     // E a vida continua.
     let x = a.vida;
     for (let k = 0; k < 3 && !x.morte; k++) x = ano(x);

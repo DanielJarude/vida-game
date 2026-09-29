@@ -3,6 +3,7 @@
  * Relações, saúde e humor aparecem como palavras, nunca como números.
  */
 
+import { capituloDaVida } from '../motor/sistemas/vinculos';
 import type { Entrada, Pessoa, Vida, Vinculo } from '../motor/tipos';
 import { idade, idadePessoa, moraCom, parceiro } from '../motor/nucleo';
 import { anoDe } from '../motor/tempo';
@@ -41,15 +42,8 @@ export function anosDaBiografia(v: Vida, incluirCotidiano = true): AnoDeVida[] {
 
 const peso = (e: Entrada) => (e.relevancia === 'marco' ? 2 : e.relevancia === 'biografia' ? 1 : 0);
 
-export function faseDaVida(i: number): string {
-  if (i <= 2) return 'Primeiros anos';
-  if (i <= 5) return 'Primeira infância';
-  if (i <= 11) return 'Infância';
-  if (i <= 17) return 'Adolescência';
-  if (i <= 29) return 'Juventude';
-  if (i <= 59) return 'Vida adulta';
-  return 'Maturidade';
-}
+/** O capítulo da vida: a mesma tabela do motor (`vinculos.FASES_DA_VIDA`). */
+export const faseDaVida = (i: number): string => capituloDaVida(i);
 
 /* -------------------------------------------------------------- Pessoas */
 

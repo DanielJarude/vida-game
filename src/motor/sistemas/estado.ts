@@ -39,6 +39,9 @@ import { pesoDoClima, pesoDoNegocio, pesoDoRitmo } from './ritmo';
 import { pesoDaPolitica } from './politica';
 import { semOcupacao } from './trabalho';
 import { perdaDaCondicao, SINAIS } from './saude';
+import { pesoNaSaude } from './lesoes';
+import { pesoDaExposicao } from './notoriedade';
+import { pesoDaSobrecargaNaSaude } from './sobrecarga';
 
 export { abalar, type Abalo };
 
@@ -280,6 +283,8 @@ export function fatoresCabeca(v: Vida): Fator[] {
     const p = pa.pessoaId ? v.pessoas[pa.pessoaId] : undefined;
     out.push({ id: 'cuidando', texto: pa.motivo === 'casa' ? 'o trabalho de casa, que não acaba' : `cuidar de ${p?.nome ?? 'quem depende de você'} todo dia`, efeito: pa.intensidade === 'total' ? 6 : 4, pessoaId: p?.id });
   }
+  const expo = pesoDaExposicao(v);
+  if (expo) out.push({ id: 'exposicao', texto: expo.texto, efeito: expo.efeito });
   const s = sobrecargaDaSemana(v);
   if (s.fixos > 0.01) out.push({ id: 'semana_fixa', texto: `compromissos que não cabem na semana: ${listaNatural(s.rotulos.slice(0, 3))}`, efeito: Math.round(s.fixos * 36) });
   else if (s.apertada) out.push({ id: 'semana_apertada', texto: 'quase nada da semana sobra para você', efeito: 6 });
@@ -336,7 +341,16 @@ export function fatoresSaude(v: Vida): Fator[] {
   if (c.habitos.bebe === 'muito') out.push({ id: 'bebe', texto: 'a bebida', efeito: -1.4 });
   if (v.mente.estresse > 75) out.push({ id: 'estresse', texto: 'a cabeça no limite', efeito: -0.8 });
   if (v.mente.felicidade < 25) out.push({ id: 'tristeza', texto: 'um tempo muito para baixo', efeito: -0.5 });
+  // Anos seguidos de semana maior do que a vida: o corpo cobra (devagar, e só quando persiste).
+  const sob = pesoDaSobrecargaNaSaude(v);
+  if (sob) out.push({ id: 'sobrecarga', texto: sob.texto, efeito: sob.efeito });
   for (const cond of c.condicoes) {
+    // A lesão tem o seu peso — e ele depende do cuidado escolhido (`sistemas/lesoes`).
+    if (cond.lesao) {
+      const l = cond.lesao;
+      out.push({ id: 'condicao:lesao', texto: `${l.parte}${l.cuidado === 'sacrificio' ? ', jogando em cima' : l.cuidado ? ', em recuperação' : ', sem decidir o que fazer'}`, efeito: -pesoNaSaude(l) });
+      continue;
+    }
     const m = modeloCondicao(cond.id);
     if (!m) continue;
     const perda = perdaDaCondicao(cond, m.perda) * (i < 45 ? 0.5 : 1);

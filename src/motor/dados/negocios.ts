@@ -73,6 +73,12 @@ export const NEGOCIOS: readonly TipoNegocio[] = [
     presenca: 'atendimento', estrategias: ['bairro', 'qualidade', 'escala', 'online'], acoes: ['estrutura', 'especializar'], cliente: 'cliente' },
   { id: 'consultorio_psicologia', nome: 'um consultório de psicologia', ocupacaoId: 'psicologo_clinico', capital: 14000, trilhas: ['psicologia'], meses: 36, licenca: 'crp', funcoes: [['secretário', 'secretária']], folha: 1.3,
     presenca: 'atendimento', estrategias: ['bairro', 'qualidade', 'escala', 'online'], acoes: ['estrutura', 'especializar', 'agenda_online'], cliente: 'paciente' },
+  // O dentista que trabalha por conta (autônomo, cadeira alugada, a própria agenda) ≠ o dono de um consultório com equipe.
+  { id: 'consultorio_odonto', nome: 'um consultório odontológico', ocupacaoId: 'dono_consultorio_odonto', capital: 55000, trilhas: ['odontologia'], meses: 48, licenca: 'cro', funcoes: [['auxiliar de saúde bucal', 'auxiliar de saúde bucal'], ['recepcionista', 'recepcionista'], ['dentista', 'dentista']], folha: 1.8,
+    presenca: 'atendimento', estrategias: ['bairro', 'qualidade', 'preco', 'escala'], acoes: ['estrutura', 'especializar', 'agenda_online'], cliente: 'paciente' },
+  // O advogado que atende por conta ≠ o dono de um escritório (sala, equipe, carteira de clientes do escritório).
+  { id: 'escritorio_advocacia', nome: 'um escritório de advocacia', ocupacaoId: 'socio_advocacia', capital: 25000, trilhas: ['direito'], meses: 60, licenca: 'oab', funcoes: [['advogado associado', 'advogada associada'], ['estagiário de direito', 'estagiária de direito'], ['secretário', 'secretária']], folha: 2.4,
+    presenca: 'atendimento', estrategias: ['bairro', 'qualidade', 'escala', 'online'], acoes: ['estrutura', 'especializar'], cliente: 'cliente' },
   { id: 'clinica_fisio', nome: 'uma clínica de fisioterapia', ocupacaoId: 'fisio_clinica', capital: 45000, trilhas: ['fisioterapia'], meses: 48, licenca: 'crefito', funcoes: [['fisioterapeuta', 'fisioterapeuta'], ['recepcionista', 'recepcionista']], folha: 2.2,
     presenca: 'atendimento', estrategias: ['bairro', 'qualidade', 'escala'], acoes: ['estrutura', 'especializar', 'agenda_online'], cliente: 'paciente' },
   { id: 'clinica_vet', nome: 'uma clínica veterinária', ocupacaoId: 'veterinario_clinica', capital: 60000, trilhas: ['veterinaria'], meses: 48, licenca: 'crmv', funcoes: [['auxiliar veterinário', 'auxiliar veterinária'], ['recepcionista', 'recepcionista'], ['veterinário', 'veterinária']], folha: 1.9,

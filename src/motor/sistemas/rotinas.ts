@@ -547,6 +547,9 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   if (i < m.idadeMin) return bloqueio('impossivel', `A partir dos ${m.idadeMin} anos.`);
   if (m.idadeMax && i > m.idadeMax) return bloqueio('impossivel', 'Não é para a sua idade.');
   if (!atividadeExiste(v, m)) return bloqueio('impossivel', 'Não há isso por aqui agora.');
+  // O atleta profissional treina no clube: a mesma modalidade não vira "atividade de tempo livre" (contaria duas vezes).
+  const es = v.caminhos.esporte;
+  if (es?.fase === 'profissional' && es.modalidade === id) return bloqueio('incompativel', 'Seu treino agora é o do clube (em Trabalho).');
   const atual = v.rotinas.find(r => r.id === id);
   if (atual && nivelDa(atual) === nivel) return bloqueio('incompativel', 'Já faz parte da sua semana.');
   if (nivel > m.niveis.length) return bloqueio('impossivel', 'Não há esse ritmo.');

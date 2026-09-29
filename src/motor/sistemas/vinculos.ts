@@ -20,14 +20,29 @@ export type Papel =
 
 export type Fase = 'bebe' | 'crianca' | 'pre' | 'adolescente' | 'jovem' | 'adulto' | 'idoso';
 
+/**
+ * As fases da vida: FONTE ÚNICA dos limites (a tela, os capítulos da Linha
+ * da Vida e as interações usam esta tabela). Juventude vai até os 25; aos
+ * 28 ninguém é "jovem" numa tela e "adulto" na outra.
+ */
+export const FASES_DA_VIDA: { fase: Fase; ate: number; capitulo: string }[] = [
+  { fase: 'bebe', ate: 2, capitulo: 'Primeiros anos' },
+  { fase: 'crianca', ate: 5, capitulo: 'Primeira infância' },
+  { fase: 'crianca', ate: 8, capitulo: 'Infância' },
+  { fase: 'pre', ate: 11, capitulo: 'Infância' },
+  { fase: 'adolescente', ate: 17, capitulo: 'Adolescência' },
+  { fase: 'jovem', ate: 25, capitulo: 'Juventude' },
+  { fase: 'adulto', ate: 59, capitulo: 'Vida adulta' },
+  { fase: 'idoso', ate: 200, capitulo: 'Maturidade' }
+];
+
 export function faseDeIdade(i: number): Fase {
-  if (i <= 2) return 'bebe';
-  if (i <= 8) return 'crianca';
-  if (i <= 12) return 'pre';
-  if (i <= 17) return 'adolescente';
-  if (i <= 25) return 'jovem';
-  if (i <= 59) return 'adulto';
-  return 'idoso';
+  return (FASES_DA_VIDA.find(f => i <= f.ate) ?? FASES_DA_VIDA[FASES_DA_VIDA.length - 1]).fase;
+}
+
+/** O capítulo da vida (o nome que a tela mostra), da mesma tabela. */
+export function capituloDaVida(i: number): string {
+  return (FASES_DA_VIDA.find(f => i <= f.ate) ?? FASES_DA_VIDA[FASES_DA_VIDA.length - 1]).capitulo;
 }
 
 export const fasePessoa = (v: Vida, p: Pessoa) => faseDeIdade(idadePessoa(v, p));

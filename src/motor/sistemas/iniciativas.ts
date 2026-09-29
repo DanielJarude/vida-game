@@ -71,6 +71,8 @@ export function rotulosDoChamado(p: Pessoa, ch: Chamado): { sim: string; nao: st
     case 'apoio': return { sim: `Contar a ${p.nome} como você está de verdade`, nao: 'Agradecer e dizer que está tudo bem' };
     case 'interesse': return { sim: `Corresponder ao interesse de ${p.nome}`, nao: 'Deixar claro, com cuidado, que não' };
     case 'conversa_casal': return { sim: 'Sentar e conversar de verdade', nao: 'Deixar para depois' };
+    case 'aproximacao': return { sim: 'Topar', nao: 'Agradecer e deixar para outro dia' };
+    case 'distancia_casal': return { sim: 'Conversar sobre o que fazer com a distância', nao: 'Dizer que está bom assim, por enquanto' };
   }
 }
 
@@ -125,6 +127,20 @@ export function responderChamado(v: Vida, _r: Rng, p: Pessoa, vin: Vinculo, sim:
       atrito(vin, 5); afeto(vin, -4);
       return { resultado: `${p.nome} disse que tudo bem, e que preferia ter sabido logo. Nos dias seguintes, um pouco sem jeito; depois, passou.`, titulo: tituloP };
     }
+    case 'aproximacao': {
+      if (!sim) { afeto(vin, -2); return { resultado: `${p.nome} disse "outro dia, então". Talvez não chame de novo tão cedo.`, titulo: tituloP }; }
+      afeto(vin, 9); confiar(vin, 4);
+      vin.aproximacao = v.t;
+      lembrarCom(v, p.id, `${cap(ch.assunto ?? 'um café')}, a convite ${flex(p.genero, 'dele', 'dela', 'delu')}: a conversa foi além do de sempre.`, 'amizade', 1);
+      return { resultado: `Foi. A conversa saiu do assunto de sempre — e ${p.nome} parecia contente de você ter vindo.`, titulo: tituloP };
+    }
+    case 'distancia_casal': {
+      const rom = vin.romance;
+      if (!sim) { if (rom) rom.envolvimento = clamp(rom.envolvimento - 5); return { resultado: `${p.nome} disse "tá". A distância continuou do mesmo tamanho.`, titulo: tituloP }; }
+      if (rom) rom.envolvimento = clamp(rom.envolvimento + 4);
+      atrito(vin, -6);
+      return { resultado: 'Vocês sentaram (cada um numa tela) para falar do que fazer.', titulo: tituloP };
+    }
     case 'conversa_casal': {
       const rom = vin.romance;
       if (!sim) {
@@ -175,6 +191,9 @@ function expirarChamados(v: Vida): void {
       case 'conversa_casal': if (vin.romance) vin.romance.envolvimento = clamp(vin.romance.envolvimento - 10); atrito(vin, 10); lembrarCom(v, p.id, 'Pediu para conversar sobre vocês; a conversa não aconteceu.', 'conflito', 1, ch.t); break;
       case 'interesse': if (vin.romance?.estagio === 'interesse' && vin.romance.tEstagio <= ch.t) vin.romance = undefined; break;
       case 'apoio': break;
+      // O convite de um colega que ficou sem resposta: nada quebra — a chance só passa.
+      case 'aproximacao': afeto(vin, -1); break;
+      case 'distancia_casal': if (vin.romance) vin.romance.envolvimento = clamp(vin.romance.envolvimento - 7); atrito(vin, 6); lembrarCom(v, p.id, 'Pediu para falar da distância; a conversa não aconteceu.', 'distancia', 1, ch.t); break;
     }
   }
 }
@@ -262,6 +281,13 @@ function novaIniciativa(v: Vida, r: Rng): void {
     const semContato = (v.t - vin.tUltimoContato) / 12;
     const ultimo = v.fatos[`chamado_${p.id}`];
     if (ultimo !== undefined && v.t - ultimo < 24) continue;
+    // Quem tomou distância não é procurado (a escolha foi respeitada, por enquanto).
+    if (vin.distancia !== undefined && v.t - vin.distancia < 60 && papel !== 'parceiro') continue;
+    // O casal em cidades diferentes: alguém pergunta o que fazer com isso.
+    if (papel === 'parceiro' && vin.romance && !moraJunto(vin) && p.municipioId !== v.moradia.municipioId && v.t - vin.romance.tEstagio >= 12) {
+      lista.push({ p, vin, tipo: 'distancia_casal', peso: 2.2, texto: `${p.nome} perguntou até quando vai ser assim, cada um numa cidade.` });
+      continue;
+    }
     // O casal: quem está insatisfeito pede para conversar (antes de desistir).
     if (papel === 'parceiro' && vin.romance && (vin.romance.envolvimento < 46 || vin.tensao >= 45)) {
       lista.push({ p, vin, tipo: 'conversa_casal', peso: 3, texto: `${p.nome} disse que precisa conversar sobre vocês.` });
@@ -274,6 +300,18 @@ function novaIniciativa(v: Vida, r: Rng): void {
         && v.fatos[`recusa_romance_${p.id}`] === undefined) {
         const comp = compatibilidade(v, p);
         if (comp > 0.1) lista.push({ p, vin, tipo: 'interesse', peso: 0.35 + comp * 0.6 + (v.corpo.aparencia - 55) / 100, texto: `${p.nome} anda procurando você mais do que o normal — e deixou claro que está interessad${o(p)}.` });
+      }
+      // Um colega que gosta de você dá o primeiro passo (um café, ficar depois do treino). Não é amizade ainda: é a chance.
+      const gestoRecente = vin.aproximacao !== undefined && v.t - vin.aproximacao <= 24;
+      if (eu >= 15 && ip >= 15 && (papel === 'colega' || papel === 'conhecido') && vin.convivio.length > 0 && !vin.romance && !gestoRecente && vin.proximidade >= 30) {
+        const comp = compatibilidade(v, p);
+        if (comp > 0.15) {
+          const onde = vin.convivio.includes('trabalho') ? r.pick(['almoçar junto', 'um café depois do expediente', 'uma cerveja na sexta, depois do trabalho'])
+            : vin.convivio.includes('faculdade') ? r.pick(['estudar junto para a prova', 'um bar depois da aula'])
+              : vin.convivio.includes('escola') ? r.pick(['fazer o trabalho junto', 'ir para a casa dele depois da aula'.replace('dele', flex(p.genero, 'dele', 'dela', 'delu'))])
+                : r.pick(['ficar para conversar depois da atividade', 'um lanche depois do encontro']);
+          lista.push({ p, vin, tipo: 'aproximacao', peso: 0.3 + comp * 0.7 + Math.max(0, p.temperamento.extroversao) * 0.3, texto: `${p.nome} chamou você para ${onde}.`, assunto: onde });
+        }
       }
       continue;
     }

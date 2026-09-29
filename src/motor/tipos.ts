@@ -235,6 +235,14 @@ export interface Vinculo {
   /** História compartilhada — só fatos que aconteceram. */
   historia: Marco[];
   /**
+   * A última vez em que houve um gesto de aproximação CORRESPONDIDO (você
+   * chamou e a pessoa veio; ela chamou e você foi). Conviver cria a chance de
+   * uma amizade; é o gesto que a faz acontecer (`sistemas/social`).
+   */
+  aproximacao?: number;
+  /** Você decidiu tomar distância (ou pôr limites) desde então: a convivência deixa de aproximar. */
+  distancia?: number;
+  /**
    * A pessoa tomou uma iniciativa e espera uma reação (pediu ajuda,
    * convidou, cobrou a distância, demonstrou interesse). Responder é escolha
    * do jogador; não responder também tem consequência (`sistemas/iniciativas`).
@@ -242,7 +250,7 @@ export interface Vinculo {
   chamado?: Chamado;
 }
 
-export type TipoChamado = 'pedido_ajuda' | 'convite' | 'reclamacao' | 'apoio' | 'interesse' | 'conversa_casal';
+export type TipoChamado = 'pedido_ajuda' | 'convite' | 'reclamacao' | 'apoio' | 'interesse' | 'conversa_casal' | 'aproximacao' | 'distancia_casal';
 
 export interface Chamado {
   tipo: TipoChamado;
@@ -273,6 +281,30 @@ export interface Condicao {
   tDiagnostico?: number;
   /** Descoberta tarde (depois de anos de sinais): o tratamento rende menos. */
   tarde?: boolean;
+  /**
+   * Uma lesão (do esporte, do trabalho, de um tombo): aguda, com prazo de
+   * recuperação que depende do CUIDADO escolhido. Enquanto dura, pesa na
+   * saúde, no condicionamento, no treino e na disponibilidade (`sistemas/lesoes`).
+   */
+  lesao?: Lesao;
+}
+
+/** O cuidado escolhido para uma lesão: parar, reabilitar, operar — ou seguir no sacrifício. */
+export type CuidadoLesao = 'repouso' | 'fisio' | 'cirurgia' | 'sacrificio';
+
+export interface Lesao {
+  /** Onde (o joelho, a coxa, o tornozelo). */
+  parte: string;
+  /** 1 leve (semanas) · 2 séria (meses) · 3 grave (cirurgia, quase um ano). */
+  gravidade: 1 | 2 | 3;
+  /** Previsão de volta (muda com o cuidado). */
+  tFim: number;
+  /** O que a pessoa decidiu fazer (ausente: ainda não decidiu). */
+  cuidado?: CuidadoLesao;
+  /** Onde aconteceu: em jogo/treino de atleta, na prática amadora, no trabalho. */
+  origem: 'profissional' | 'pratica' | 'trabalho';
+  /** Quantas vezes piorou por jogar/treinar em cima. */
+  recaidas?: number;
 }
 
 export interface Corpo {
@@ -295,6 +327,12 @@ export interface Mente {
   abalos: { t: number; texto: string; humor: number; cabeca: number }[];
   /** Como estava a cada aniversário (para a tendência: melhorando, piorando). */
   historico: { t: number; humor: number; cabeca: number; saude: number; forma?: number; cognicao?: number; aparencia?: number }[];
+  /**
+   * Sobrecarga acumulada: anos seguidos com a vida maior do que a semana
+   * (`sistemas/sobrecarga`). Não é energia para gastar: é o que a semana
+   * concreta vem cobrando — e o que o descanso devolve. Ausente = 0.
+   */
+  sobrecarga?: { anos: number; t: number };
 }
 
 /**
@@ -454,6 +492,10 @@ export interface Emprego {
   estrutura?: number;
   /** Quem trabalha por conta: quanto cobra, em relação ao que se cobra por aí. */
   preco?: 'baixo' | 'alto';
+  /** A área dentro da profissão (direito de família, ortodontia, alfabetização): escolhida, leva junto para o próximo emprego. */
+  especialidade?: string;
+  /** Casos, turmas, projetos marcantes neste trabalho (o que a carreira foi construindo). */
+  feitos?: number;
 }
 
 export interface Candidatura {
@@ -929,6 +971,40 @@ export interface CarreiraEsportiva {
   suspensoAte?: number;
   /** Aceitou uma substância proibida (o risco de o exame pegar fica). Nunca descreve o quê. */
   doping?: number;
+  /** Onde joga (futebol). Não é enfeite: decide o que a temporada mede e como o corpo envelhece em campo. */
+  posicao?: Posicao;
+  /**
+   * O nome no mercado, 0..100: o que as temporadas construíram. É o que os
+   * clubes olham para oferecer, renovar, pagar — e o que faz o público
+   * conhecer (`notoriedade`).
+   */
+  reputacao?: number;
+  /** As últimas temporadas, em poucos números (as mais antigas saem). */
+  temporadas?: Temporada[];
+  /** O salário do contrato atual (fonte única: `esporte.salarioDoContrato`). */
+  salarioContrato?: number;
+}
+
+export type Posicao = 'goleiro' | 'lateral' | 'zagueiro' | 'volante' | 'meia' | 'ponta' | 'atacante';
+
+/** Uma temporada fechada: poucos números, com consequência. */
+export interface Temporada {
+  ano: number;
+  clube: string;
+  nivel: 1 | 2 | 3 | 4;
+  posicao?: Posicao;
+  partidas: number;
+  titular: number;
+  gols: number;
+  assistencias: number;
+  /** Goleiro: jogos sem sofrer gol. Defensor: desarmes/cortes decisivos (abstrato). */
+  defesa?: number;
+  /** A nota da temporada, 0..10 (o que o clube e o mercado leram). */
+  nota: number;
+  /** Onde o time terminou (1 = campeão). */
+  colocacao: number;
+  /** Meses fora por lesão. */
+  mesesFora: number;
 }
 
 /** Um projeto artístico coletivo (banda, grupo de teatro, companhia). */
@@ -942,6 +1018,17 @@ export interface ProjetoArtistico {
   membros: string[];
   ativo: boolean;
   tFim?: number;
+}
+
+/** Um trabalho artístico que saiu para o mundo (disco, peça, exposição, livro, série de fotos). */
+export interface Obra {
+  t: number;
+  titulo: string;
+  linguagem: Dominio;
+  /** Como foi recebido: 0 passou em branco · 1 teve público · 2 repercutiu · 3 marcou. */
+  recepcao: 0 | 1 | 2 | 3;
+  /** O que rendeu (reais, no ano). */
+  renda: number;
 }
 
 /** Preparação para concurso: meses de estudo acumulados (esfriam se parar). */
@@ -1120,6 +1207,8 @@ export interface Caminhos {
   envolvimento?: Envolvimento;
   /** A vida política: da reunião de bairro ao mandato — e à volta para casa. */
   politica?: VidaPolitica;
+  /** A obra: projetos lançados e como foram recebidos (carreira artística viva). */
+  obras?: Obra[];
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
   /**
@@ -1312,8 +1401,22 @@ export interface Ocorrencia {
   idade: number;
 }
 
+/**
+ * Notoriedade: quanto o público conhece a pessoa, 0..100, vinda de um
+ * motivo (o esporte, a obra, a política, o negócio). Sobe e cai; tem
+ * consumidores (convites, patrocínio, exposição, pressão). Quase todo mundo
+ * vive a vida inteira em 0 (`sistemas/notoriedade`).
+ */
+export interface Notoriedade {
+  valor: number;
+  pico: number;
+  /** De onde vem, agora. */
+  fonte?: 'esporte' | 'arte' | 'politica' | 'negocio';
+  t: number;
+}
+
 export interface Vida {
-  versao: 16;
+  versao: 17;
   id: string;
   rng: number;
   seq: number;
@@ -1354,6 +1457,8 @@ export interface Vida {
    * torna isso notícia) — `sistemas/exposicao`.
    */
   segredos?: Segredo[];
+  /** Quanto o público conhece você (ausente = anônimo). */
+  notoriedade?: Notoriedade;
   /** Como prefere ir ao trabalho e ao estudo. Ausente = o jeito mais rápido que tem (`sistemas/transporte`). */
   deslocamento?: { modo: 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro'; t: number };
   morte?: { t: number; causa: string; heranca?: Heranca };

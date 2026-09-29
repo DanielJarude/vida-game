@@ -299,6 +299,9 @@ export function terminar(v: Vida, p: Pessoa, vin: Vinculo, quem: 'jogador' | 'el
   const moravam = era === 'morando_junto' || era === 'casamento';
   const emComum = filhosEmComum(v, p.id).filter(f => f.vivo);
   mudarEstagio(v, vin, 'ex', era === 'casamento' ? 'divorcio' : 'termino');
+  // Ex não é amigo: o que eram antes (amigos, colegas) não volta sozinho. Se voltar, é porque os dois quiseram.
+  vin.estagio = 'afastado';
+  vin.aproximacao = undefined;
   let texto: string;
   if (era === 'casamento') {
     texto = quem === 'jogador'

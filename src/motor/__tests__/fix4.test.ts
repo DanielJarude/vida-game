@@ -639,7 +639,7 @@ describe('save v13 → v14 com saves reais da base do Playtest #4', () => {
       expect(res.migrado).toBe(true);
       let v = res.vida;
       expect(v.versao).toBe(VERSAO_SAVE);
-      expect(VERSAO_SAVE).toBe(16);
+      expect(VERSAO_SAVE).toBe(17);
       for (const b of v.financas.bens) if (b.tipo === 'veiculo') { expect(b.versaoId).toBeTruthy(); expect(nomeDoVeiculo(b)).not.toMatch(/^carro compacto$/); }
       if (v.caminhos.politica?.partido) expect(v.caminhos.politica.partidos?.[0].sigla).toBe(v.caminhos.politica.partido);
       for (let k = 0; k < 3 && !v.morte; k++) { v = avancarAno(v).vida; v = responderTudo(v); }
