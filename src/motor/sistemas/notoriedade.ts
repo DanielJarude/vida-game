@@ -21,6 +21,7 @@ import { clamp } from '../rng';
 import type { Notoriedade, Vida } from '../tipos';
 import { escrever } from '../nucleo';
 import { flex, ge } from '../texto';
+import { sinalDoEstilo } from '../dados/estilo';
 
 const FAIXAS = [10, 30, 55, 78];
 const PALAVRAS = ['anônimo', 'conhecido localmente', 'reconhecido', 'famoso', 'muito famoso'];
@@ -104,7 +105,38 @@ export function rendaDeImagem(v: Vida): number {
   if (fonte !== 'esporte' && fonte !== 'arte') return 0;
   if (v.caminhos.esporte?.suspensoAte && v.t < v.caminhos.esporte.suspensoAte) return 0;
   // O esporte de alto nível paga imagem mais do que o palco paga publicidade (o palco tem cachê próprio: `palco`).
-  return Math.round(((x - 30) ** 2) * (fonte === 'esporte' ? 22 : 11) / 100) * 100;
+  // A imagem (como o público vê quem já é conhecido) mexe um pouco no que as marcas pagam.
+  const im = imagemPublica(v);
+  return Math.round(((x - 30) ** 2) * (fonte === 'esporte' ? 22 : 11) * (im?.fator ?? 1) / 100) * 100;
+}
+
+/* ------------------------------------------------------------ Imagem pública */
+
+export type PalavraImagem = 'discreta' | 'querida' | 'marcante' | 'desgastada' | 'polêmica';
+
+/**
+ * Como o público vê quem JÁ é conhecido. Não existe para anônimos (e não é
+ * uma segunda "fama"): deriva da notoriedade que existe, do que se tornou
+ * público (um escândalo), do que a carreira entregou (a temporada, a obra,
+ * a aprovação do mandato) — e, só aqui, do estilo (uma identidade visual
+ * marcante; o luxo exibido). Consumidores: o patrocínio (`rendaDeImagem`),
+ * a frase em Você.
+ */
+export function imagemPublica(v: Vida): { palavra: PalavraImagem; texto: string; fator: number } | undefined {
+  const n = v.notoriedade;
+  if (!n || n.valor < 20) return undefined;
+  const escandalo = (v.segredos ?? []).some(s => s.publico && s.publico > 0 && v.t - s.publico <= 60);
+  const pol = v.caminhos.politica;
+  const desgaste = pol && pol.fase !== 'encerrada' && (pol.desgaste >= 60 || (pol.mandato?.aprovacao ?? 50) < 30);
+  const t = v.caminhos.esporte?.temporadas?.slice(-1)[0];
+  const obraBoa = (v.caminhos.obras ?? []).some(o => v.t - o.t <= 36 && o.recepcao >= 2);
+  const querida = (t && t.nota >= 7.2) || obraBoa || (pol?.mandato && pol.mandato.aprovacao >= 65);
+  const est = sinalDoEstilo(v);
+  if (escandalo) return { palavra: 'polêmica', texto: 'O nome anda ligado a um escândalo: marcas se afastam, a rua comenta.', fator: 0.7 };
+  if (desgaste) return { palavra: 'desgastada', texto: 'A imagem anda desgastada: o público cobra.', fator: 0.85 };
+  if (est.marcante && n.valor >= 30) return { palavra: 'marcante', texto: `Um visual que o público reconhece de longe${est.luxo ? ' — e o luxo aparece nas fotos' : ''}.`, fator: querida ? 1.2 : 1.1 };
+  if (querida) return { palavra: 'querida', texto: 'O público gosta do que vê: a fase é boa.', fator: 1.15 };
+  return { palavra: 'discreta', texto: 'Conhecido pelo que faz, sem muito barulho em volta.', fator: 1 };
 }
 
 /** A pressão de ser visto: pesa na cabeça de quem é famoso. */

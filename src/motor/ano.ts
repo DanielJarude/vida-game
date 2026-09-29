@@ -14,6 +14,10 @@ import type { Retorno, Vida } from './tipos';
 import { escrever, idade, transacao } from './nucleo';
 import { morreEsteAno, processarCorpo } from './sistemas/corpo';
 import { desenvolverPessoa } from './sistemas/pessoa';
+import { processarOrigem } from './sistemas/origem';
+import { processarFormacao } from './sistemas/formacao';
+import { processarIndependencia } from './sistemas/independencia';
+import { processarEstilo } from './sistemas/estilo';
 import { processarFamiliaDeOrigem, processarConcepcao, processarGestacoes, processarMortes } from './sistemas/familia';
 import { processarDescendentes, processarPartosDaFamilia } from './sistemas/filhos';
 import { processarLuto } from './sistemas/luto';
@@ -86,11 +90,15 @@ function viverAno(v: Vida, r: Rng): void {
   // O que a semana do ano faz pela pessoa (treino, leitura) vale no MESMO ano: vem antes do corpo e da escola.
   desenvolverPessoa(v, r);
   processarCorpo(v, r);
+  // A vista que pede óculos (a família compra, na infância).
+  processarEstilo(v);
   processarLuto(v);
   limparApertos(v);
   processarPets(v, r);
   processarMortes(v, r);
   processarFamiliaDeOrigem(v, r);
+  // A casa de onde a pessoa veio: a folga real, a reserva que cresce ou se gasta, a família que pode precisar.
+  processarOrigem(v);
   processarEscola(v, r);
   processarCurso(v, r);
   processarOab(v, r);
@@ -104,6 +112,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarNegocio(v, r);
   treinoProfissional(v, r);
   processarRotinas(v, r);
+  // A formação como lugar: o que ficou para trás com a escola, o professor que repara.
+  processarFormacao(v);
   processarConcursos(v, r);
   efetivarMudancaMilitar(v);
   processarEsporte(v, r);
@@ -131,6 +141,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarImoveis(v, r, ec);
   processarDinheiro(v, r, ec);
   processarObrigacoes(v);
+  // A primeira vez que as contas foram todas suas (a transição, não uma data): `independencia`.
+  processarIndependencia(v);
   // O que o público sabe de você (esporte, obra, mandato, negócio) — depois do ano de cada um.
   processarNotoriedade(v, r);
   // A semana do ano inteiro, contada: se passou do que cabe, cobra (e a vida pergunta).

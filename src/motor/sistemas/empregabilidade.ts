@@ -17,6 +17,7 @@
  * formação muito acima da vaga): aqui só se diz, em palavras, o que pesou.
  */
 
+import { vivenciaQuePesa } from './formacao';
 import type { Vida } from '../tipos';
 import { AFINS, OCUPACOES, ROTULO_TRILHA, ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { ORDEM_NIVEL, ROTULO_AREA } from '../dados/cursos';
@@ -96,6 +97,9 @@ export function perfilParaVaga(v: Vida, oc: Ocupacao): PerfilVaga {
   if (propria >= 12) fortes.push(`${anosTxt(propria)} de estrada em ${ROTULO_TRILHA[oc.trilha] ?? 'na área'}: ${PALAVRA_ESTRADA[estradaPalavra(propria)]}.`);
   else if (estrada > propria && estrada >= 12) fortes.push(`Experiência que se transfere: ${anosTxt(estrada - propria)} em áreas vizinhas contam aqui pela metade.`);
   if (pede > 0 && total < pede) fracos.push(`Pedem ${anosTxt(pede)} de experiência na área; você tem ${anosTxt(total)}.`);
+  // O que a formação deixou (a mesma conta da seleção: `formacao.vivenciaQuePesa`).
+  const viv = vivenciaQuePesa(v, oc);
+  if (viv.texto) fortes.push(viv.texto);
   // Ofício.
   if (oc.habilidade && habilidade(v, oc.habilidade.dominio) >= oc.habilidade.minimo + 10) fortes.push('Você sabe fazer isso bem, com trabalho para mostrar.');
   // Histórico.

@@ -8,7 +8,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
-import { palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
+import { imagemPublica, palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
@@ -22,9 +22,11 @@ import { expressaoDe, lerDimensao, lerPessoal, momentoAtual, palavraTendencia, t
 import { sinaisDoCorpo } from '../../motor/sistemas/saude';
 import type { DimensaoPessoal } from '../../motor/sistemas/pessoa';
 import { anoDe } from '../../motor/tempo';
-import { ODinheiro } from './Dinheiro';
+import { AparenciaEEstilo } from './Aparencia';
+import { leituraDaSeguranca } from '../leituraMaterial';
+import type { Aba } from '../navegacao';
 
-export type Destino = 'tempo' | 'estudos' | 'pessoas' | 'casa' | 'trabalho';
+export type Destino = Aba;
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void }
 
@@ -49,6 +51,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
           <p className="voce-rosto__linha">{ocupacaoAtual(vida)} · {ondeMora(vida)}</p>
           {afeto && <p className="voce-rosto__linha">{afeto}{luto ? ` · ${luto}` : ''}</p>}
           {vida.notoriedade && vida.notoriedade.valor >= 10 && <p className="voce-rosto__linha">Para o público: {palavraDaNotoriedade(vida)} ({({ esporte: 'pelo esporte', arte: 'pela obra', politica: 'pela vida pública', negocio: 'pelo negócio' } as const)[vida.notoriedade.fonte ?? 'esporte']})</p>}
+          {(() => { const im = imagemPublica(vida); return im ? <p className="voce-rosto__linha">Imagem pública: {im.palavra} — {im.texto.charAt(0).toLowerCase() + im.texto.slice(1)}</p> : null; })()}
         </div>
       </section>
 
@@ -70,7 +73,17 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
         </section>
       )}
 
-      {i >= 8 && <ODinheiro vida={vida} agir={agir} irParaCasa={() => irPara('casa')} />}
+      {i >= 8 && (
+        <section className="voce-dinheiro" aria-label="O dinheiro">
+          <button type="button" className="voce-dinheiro__ir" onClick={() => irPara('dinheiro')}>
+            <span className="rotulo-pequeno">O dinheiro</span>
+            <strong>{leituraDaSeguranca(vida).palavra}</strong>
+            <span className="nota">o mês, o que é seu e o que deve — em Vida · Dinheiro →</span>
+          </button>
+        </section>
+      )}
+
+      <AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} />
 
       {condicoes.length > 0 && (
         <section className="voce-condicoes" aria-label="Condições de saúde">

@@ -41,7 +41,7 @@ export function Casa({ vida, agir }: Props) {
 
 /* ------------------------------------------------------------------ Lar */
 
-function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
+export function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
   const l = leituraDoLar(vida);
   const naFamilia = moraComFamiliaDeOrigem(vida);
   const i = idade(vida);
@@ -49,7 +49,7 @@ function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
     <section className="lar" aria-label="Onde você mora">
       <CenaDaCasa l={l} />
       <div className="lar__texto">
-        <p className="folio__kicker"><span className="folio__area">Casa</span> · {l.onde}</p>
+        <p className="folio__kicker"><span className="folio__area">Vida · Casa</span> · {l.onde}</p>
         <h1 className="lar__frase">{l.frase}</h1>
         {l.selos.length > 0 && (
           <ul className="selos" aria-label="Sobre a casa">
@@ -80,7 +80,7 @@ function Seguranca({ s }: { s: ReturnType<typeof leituraDaSeguranca> }) {
 
 /* ------------------------------------------------ O que tem, o que deve */
 
-function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
+export function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
   const b = balanco(vida);
   const bens = leituraDosBens(vida);
   const seg = leituraDaSeguranca(vida);
@@ -278,7 +278,7 @@ function CartaoAplicacao({ a }: { a: Aplicacao }) {
 /* ------------------------------------------------------------ Viver a casa */
 
 /** A casa como lugar de vida: receber gente, juntar a família, deixar com a sua cara, reformar. */
-function ViverACasa({ vida, agir }: Props) {
+export function ViverACasa({ vida, agir }: Props) {
   const usos = USOS_CASA.filter(u => disponibilidadeUsoCasa(vida, u).ok || (u === 'reformar' && !!vida.moradia.imovelId));
   if (!usos.length) return null;
   return (

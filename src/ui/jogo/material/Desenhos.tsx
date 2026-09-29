@@ -584,6 +584,7 @@ const ICONES: Record<string, string> = {
   usados: 'M3 16h18M5 16v-4l3-4h8l4 4v4M12 4v3M10 5h4',
   concessionaria: 'M3 16h18M5 16v-4l3-4h8l4 4v4M4 4h16',
   loja_pets: 'M4 10h16v10H4zM3 10l2-5h14l2 5M9 14c0-1 1-2 3-2s3 1 3 2-1 2-3 2-3-1-3-2M8 12.5h.01M16 12.5h.01',
+  loja: 'M3 9h18l-1.5 11h-15zM8 9V7a4 4 0 0 1 8 0v2M5 13a2.5 2.5 0 0 0 5 0M14 13a2.5 2.5 0 0 0 5 0',
   republica: 'M3 11l9-7 9 7M5 10v11h14V10M8 13h2M14 13h2M8 17h2M14 17h2',
   casa_simples: 'M4 12l8-6 8 6M6 11v9h12v-9M11 20v-4h2v4',
   casa_2q: 'M3 11l9-7 9 7M5 10v11h14V10M8 14h3M13 14h3M10 21v-3h4v3',

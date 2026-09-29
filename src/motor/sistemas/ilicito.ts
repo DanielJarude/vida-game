@@ -27,9 +27,9 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { CategoriaIlicita, Envolvimento, Pessoa, Vida } from '../tipos';
-import { escrever, idade, idadePessoa, marcarFato, parceiro, vinculosVivos } from '../nucleo';
+import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, vinculosVivos } from '../nucleo';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { nivelDeOferta } from '../dados/lugares';
 import { seguranca } from './dinheiro';
@@ -107,6 +107,52 @@ export function categoriaPara(v: Vida, r: Rng): CategoriaIlicita {
   return r.chance(nivelDeOferta(v.moradia.municipioId) >= 2 || v.moradia.padrao <= 2 ? 0.45 : 0.25) ? 'mercado' : 'patrimonial';
 }
 
+/* ------------------------------------------------ Descobrir e procurar */
+
+/**
+ * Você sabe que essa pessoa anda envolvida com o que não devia (porque
+ * percebeu, porque ela contou, porque já esteve junto). É o que torna o
+ * caminho PERSEGUÍVEL: a conversa existe com gente da sua vida — nunca como
+ * um menu universal.
+ */
+export function sabeQueAndaNisso(v: Vida, pessoaId: string): boolean {
+  return v.fatos[`sabe_por_fora_${pessoaId}`] !== undefined || v.caminhos.envolvimento?.contatoId === pessoaId;
+}
+
+/** Quem da sua vida pode andar nisso (o jeito, a idade, a cidade) — o contexto, não uma sentença. */
+function suspeitos(v: Vida): Pessoa[] {
+  const i = idade(v);
+  return vinculosVivos(v)
+    .filter(x => !x.p.especie && !x.vin.romance && x.vin.parentesco !== 'mae' && x.vin.parentesco !== 'pai' && x.vin.parentesco !== 'filho' && x.p.municipioId === v.moradia.municipioId && idadePessoa(v, x.p) >= 15 && Math.abs(idadePessoa(v, x.p) - i) <= 15)
+    .filter(x => x.p.temperamento.responsabilidade < -0.3 && x.vin.proximidade >= 25 && x.vin.convivio.length > 0)
+    .map(x => x.p);
+}
+
+/** O ano em que você percebe (gerador derivado: não mexe no rumo das outras coisas). */
+function perceber(v: Vida): void {
+  const i = idade(v);
+  if (i < 14) return;
+  const ctx = (v.moradia.padrao <= 2 ? 0.08 : 0.03) + (nivelDeOferta(v.moradia.municipioId) >= 2 ? 0.03 : 0) + (v.justica?.tSaida !== undefined ? 0.2 : 0);
+  const r = rngDe(v.id, 'perceber', v.t);
+  for (const p of suspeitos(v)) {
+    if (sabeQueAndaNisso(v, p.id) || !r.chance(ctx)) continue;
+    v.fatos[`sabe_por_fora_${p.id}`] = v.t;
+    lembrarCom(v, p.id, `Você percebeu que ${p.nome} anda com um dinheiro que não bate com o que faz.`, 'descoberta', 1);
+    break;
+  }
+}
+
+/** Você foi atrás: a conversa vira uma proposta (a decisão `ilic_proposta` — recusar continua possível). */
+export function proporPorFora(v: Vida, r: Rng, p: Pessoa): void {
+  const cat = categoriaPara(v, r);
+  v.fatos['proposta_ilicita'] = v.t;
+  v.fatos['proposta_categoria'] = CATEGORIAS.indexOf(cat === 'fraude' ? (temAcesso(v) ? 'fraude' : 'patrimonial') : cat);
+  for (const k of Object.keys(v.fatos)) if (k.startsWith('proposta_de_')) delete v.fatos[k];
+  v.fatos[`proposta_de_${p.id}`] = v.t;
+  v.fatos['foi_atras_por_fora'] = v.t;
+  v.caminhos.ultimas['proposta_ilicita'] = v.t;
+}
+
 /* ---------------------------------------------------------------- O ano */
 
 /**
@@ -115,6 +161,7 @@ export function categoriaPara(v: Vida, r: Rng): CategoriaIlicita {
  * decisão prioritária, com a pessoa que trouxe a proposta).
  */
 export function processarIlicito(v: Vida, r: Rng): void {
+  perceber(v);
   const env = v.caminhos.envolvimento;
   if (env) anoEnvolvido(v, r, env);
   if (!ativo(v) && !v.momento && r.chance(chanceDeProposta(v))) {

@@ -16,7 +16,7 @@ import { disponibilidade, executar, type Acao } from '../acoes';
 import { criarRng } from '../rng';
 import { idade, transacao, vinculosVivos } from '../nucleo';
 import { podeTentar } from '../plausibilidade';
-import { interpretar, migrarV15, migrarV16, VERSAO_SAVE } from '../save';
+import { interpretar, migrarV15, migrarV16, migrarV17, VERSAO_SAVE } from '../save';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { criarPessoa, vincular } from '../pessoas';
 import { ocupacao } from '../dados/ocupacoes';
@@ -280,6 +280,8 @@ describe('7. Medicina como objetivo → preparação → ENEM → devolutiva coe
     v = ano(v, [{ tipo: 'rotina', id: 'cursinho', ativa: true, nivel: 1 }]);
     expect(fazCursinho(v)).toBe(true);
     expect(bonusDoPreparo(v)).toBeGreaterThan(20);
+    // (REWORK 3: com a mesma nota da escola — o ano letivo desta semente variou —, o cursinho encurta a distância.)
+    v.educacao.basica!.desempenho = 60;
     const e2 = estimativaParaCurso(v, med);
     expect(e2.nota).toBeGreaterThan(e1.nota);
     // A prova: esperada + o dia. Em média, a prova É a estimativa.
@@ -487,8 +489,8 @@ describe('13. save/reload e migração v15 → v16', () => {
     expect(a.vida.predisposicoes).toEqual(derivarPredisposicoes(v.id));
     expect(a.vida.corpo.aparenciaBase).toBe(v.corpo.aparencia);
     expect(a.vida.educacao.preparo?.meses).toBe(12);
-    // Idempotente: aplicar de novo as migrações (v15→v16→v17) não muda nada.
-    expect(migrarV16(migrarV15(structuredClone(a.vida)))).toEqual(a.vida);
+    // Idempotente: aplicar de novo as migrações (v15→v16→v17→v18) não muda nada.
+    expect(migrarV17(migrarV16(migrarV15(structuredClone(a.vida))))).toEqual(a.vida);
     // E a vida continua.
     let x = a.vida;
     for (let k = 0; k < 3 && !x.morte; k++) x = ano(x);

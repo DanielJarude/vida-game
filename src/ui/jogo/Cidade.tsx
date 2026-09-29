@@ -1,10 +1,7 @@
 /**
- * Cidade: onde se vive — e o que a cidade oferece.
- *
- * Casa é moradia, patrimônio e vida doméstica. A imobiliária, a
- * concessionária, o banco, o abrigo, a loja de animais e a autoescola são da
- * CIDADE: lugares aonde se vai. E é daqui que se muda de cidade — sabendo,
- * antes, o que fica para trás.
+ * Vida · Cidade: onde se vive — o custo, os salários, o transporte, o seu
+ * trajeto — e de onde se muda de cidade, sabendo antes o que fica para trás.
+ * As lojas (imobiliária, concessionária, banco, óticas) moram em Compras.
  */
 
 import { useMemo, useState } from 'react';
@@ -16,35 +13,21 @@ import { consequenciasDaMudanca, custoDeMudanca } from '../../motor/sistemas/pro
 import { BotaoAcao, Folio, Secao } from '../comum';
 import { deslocamento, NOME_MODO, tempoEmPalavras } from '../../motor/sistemas/transporte';
 import { lugarDescrito, dinheiroCurto } from '../apresentar';
-import { Icone } from './material/Desenhos';
-import { Lugar, type QualLugar } from './material/Lugares';
 import '../material.css';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean }
 
 const PERFIL: Record<string, string> = { metropole: 'uma metrópole', metropolitana: 'uma cidade colada numa metrópole', capital: 'uma capital de estado', polo: 'uma cidade média, polo da região', pequena: 'uma cidade pequena do interior' };
 
-export function Cidade({ vida, agir }: Props) {
+export function Cidade({ vida, agir, irCompras }: Props & { irCompras?: () => void }) {
   const i = idade(vida);
-  const [lugar, setLugar] = useState<QualLugar | null>(null);
   const m = municipio(vida.moradia.municipioId);
   const ec = economiaLocal(m.id);
   const anos = Math.max(0, Math.floor((vida.t - (vida.fatos['chegou_cidade'] ?? vida.eu.tNasc)) / 12));
-  const temVeiculo = vida.financas.bens.some(b => b.tipo === 'veiculo');
-  const lugares: { id: QualLugar; nome: string; oque: string; icone: string; so18?: boolean }[] = [
-    { id: 'alugar', nome: 'Imobiliária', oque: 'Alugar ou comprar onde morar', icone: 'imobiliaria', so18: true },
-    { id: 'concessionaria', nome: 'Concessionária', oque: 'Carros zero', icone: 'concessionaria', so18: true },
-    { id: 'usados', nome: 'Usados', oque: 'Anúncios de carros', icone: 'usados', so18: true },
-    { id: 'motos', nome: 'Motos e bicicletas', oque: 'Novas e usadas', icone: 'bicicleta' },
-    ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto', icone: 'oficina' }] : []),
-    { id: 'banco', nome: 'Banco', oque: 'Guardar, investir, empréstimo', icone: 'banco', so18: true },
-    { id: 'abrigo', nome: 'Abrigo de animais', oque: 'Adotar um cão, um gato — às vezes, outro bicho', icone: 'abrigo', so18: true },
-    { id: 'pets', nome: 'Loja e criadouro de animais', oque: 'Aves, roedores, peixes; silvestres só com documento', icone: 'loja_pets', so18: true }
-  ];
   const desl = deslocamento(vida);
   return (
     <div className="cidade material">
-      <Folio kicker={<><span className="folio__area">Cidade</span> · {m.uf}</>} titulo={m.nome} lede={`${PERFIL[m.perfil] ?? 'uma cidade'}${m.capital ? ' — a capital' : ''}. ${anos >= 1 ? `Você vive aqui há ${anos} ${anos === 1 ? 'ano' : 'anos'}.` : 'Você chegou há pouco.'}`} />
+      <Folio kicker={<><span className="folio__area">Vida · Cidade</span> · {m.uf}</>} titulo={m.nome} lede={`${PERFIL[m.perfil] ?? 'uma cidade'}${m.capital ? ' — a capital' : ''}. ${anos >= 1 ? `Você vive aqui há ${anos} ${anos === 1 ? 'ano' : 'anos'}.` : 'Você chegou há pouco.'}`} />
       <dl className="dados cidade__dados">
         <div className="dado"><dt>Custo de vida</dt><dd>{ec.custo > 1.15 ? 'alto' : ec.custo < 0.9 ? 'baixo' : 'médio'}</dd></div>
         <div className="dado"><dt>Salários</dt><dd>{ec.salario > 1.1 ? 'acima da média' : ec.salario < 0.9 ? 'abaixo da média' : 'na média'}</dd></div>
@@ -53,26 +36,8 @@ export function Cidade({ vida, agir }: Props) {
         {desl && <div className="dado"><dt>O seu trajeto</dt><dd>{NOME_MODO[desl.modo]}{desl.nomeVeiculo ? ` (${desl.nomeVeiculo})` : ''} · {tempoEmPalavras(desl.minutos)}</dd></div>}
       </dl>
 
-      {i >= 16 ? (
-        <Secao titulo="Pela cidade">
-          <p className="nota">Onde se procura casa, carro, um lugar para guardar dinheiro — e um bicho.</p>
-          {i >= 18 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarBloqueado>Tirar carteira de motorista (autoescola)</BotaoAcao>}
-          <ul className="lugares">
-            {lugares.filter(l => !l.so18 || i >= 18).map(l => (
-              <li key={l.id}>
-                <button type="button" className="lugar-botao" onClick={() => setLugar(l.id)}>
-                  <Icone nome={l.icone} tamanho={26} />
-                  <span className="lugar-botao__nome">{l.nome}</span>
-                  <span className="lugar-botao__oque">{l.oque}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Secao>
-      ) : <p className="nota">Por enquanto, a cidade é o caminho da escola e a rua de casa.</p>}
-
+      <p className="nota">{i >= 12 ? 'A imobiliária, a concessionária, o banco, as lojas e o abrigo de animais ficam em ' : 'Por enquanto, a cidade é o caminho da escola e a rua de casa. As lojas ficam em '}{irCompras ? <button type="button" className="link" onClick={irCompras}>Vida · Compras →</button> : 'Vida · Compras'}.</p>
       {i >= 18 && <Mudar vida={vida} agir={agir} />}
-      {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
     </div>
   );
 }

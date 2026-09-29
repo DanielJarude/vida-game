@@ -22,5 +22,6 @@ import { REDE } from './rede';
 import { BIOGRAFIA } from './biografia';
 import { INTEGRACAO } from './integracao';
 import { OFICIOS_CONTEUDO } from './oficios';
+import { REWORK3 } from './rework3';
 
-export const CATALOGO: readonly Conteudo[] = [...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA];
+export const CATALOGO: readonly Conteudo[] = [...REWORK3, ...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA];

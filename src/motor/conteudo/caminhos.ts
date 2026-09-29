@@ -10,6 +10,7 @@
  * fracasso, arriscar, voltar atrás — isso é comportamento.
  */
 
+import { pesoNaSelecaoDoIf, registrarVivencia } from '../sistemas/formacao';
 import { pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
@@ -198,11 +199,12 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'esc_olimpiada', tipo: 'acontecimento', idade: [10, 17], tema: 'escola', repetir: 3,
-    quando: c => !!c.v.educacao.basica && habilidade(c.v, 'exatas') >= 60 && c.r.chance(0.35),
+    // A OBMEP chega a toda escola pública: a medalha pode vir sem preparação. Quem se prepara (a atividade) tem o próprio caminho (`formacao`).
+    quando: c => !!c.v.educacao.basica && !c.v.rotinas.some(r => r.id === 'olimpiada') && habilidade(c.v, 'exatas') >= 60 && c.r.chance(0.35),
     narrar: c => {
       const ouro = habilidade(c.v, 'exatas') >= 78;
       const texto = c.vezes === 0 ? `Ganhou uma medalha ${ouro ? 'de prata' : 'de bronze'} na olimpíada de matemática das escolas públicas. O nome saiu num cartaz na entrada da escola.` : `Mais uma medalha na olimpíada de matemática${ouro ? ' — dessa vez, entre as melhores do estado' : ''}.`;
-      return { texto, relevancia: c.vezes === 0 ? 'biografia' : 'cotidiano', tom: 'bom', efeito: () => { fato(c, 'medalha_obmep'); feliz(c, 4); const f = c.v.caminhos.frentes.exatas; if (f) f.interesse = clamp(f.interesse + 10); if (c.vezes === 0) marcar(c.v, 'conquista', texto, 2, { dominio: 'exatas' }); } };
+      return { texto, relevancia: c.vezes === 0 ? 'biografia' : 'cotidiano', tom: 'bom', efeito: () => { fato(c, 'medalha_obmep'); registrarVivencia(c.v, 'olimpiada', { area: 'exatas', feito: `medalha ${ouro ? 'de prata' : 'de bronze'}` }); feliz(c, 4); const f = c.v.caminhos.frentes.exatas; if (f) f.interesse = clamp(f.interesse + 10); if (c.vezes === 0) marcar(c.v, 'conquista', texto, 2, { dominio: 'exatas' }); } };
     }
   },
   {
@@ -211,13 +213,13 @@ export const CAMINHOS: Conteudo[] = [
     narrar: c => {
       const ganhou = habilidade(c.v, 'ciencias') >= 58;
       const texto = ganhou ? `O projeto do clube de ciências ${c.r.pick(['— um filtro de água de garrafa PET —', '— um sensor de chuva feito de sucata —', '— uma horta que se rega sozinha —'])} ganhou a feira regional.` : 'O projeto do clube de ciências foi para a feira da cidade. Não ganhou, mas um professor da universidade parou para perguntar.';
-      return { texto, relevancia: 'biografia', tom: 'bom', efeito: () => { const f = c.v.caminhos.frentes.ciencias; if (f) f.interesse = clamp(f.interesse + 8); if (ganhou) marcar(c.v, 'conquista', texto, 2, { dominio: 'ciencias' }); } };
+      return { texto, relevancia: 'biografia', tom: 'bom', efeito: () => { const f = c.v.caminhos.frentes.ciencias; if (f) f.interesse = clamp(f.interesse + 8); if (ganhou) { marcar(c.v, 'conquista', texto, 2, { dominio: 'ciencias' }); registrarVivencia(c.v, 'ciencias', { area: 'ciencias', feito: 'prêmio na feira regional' }); } } };
     }
   },
   {
     id: 'esc_gremio_eleicao', tipo: 'acontecimento', idade: [13, 17], tema: 'escola',
     quando: c => c.v.rotinas.some(r => r.id === 'gremio') && habilidade(c.v, 'lideranca') >= 38,
-    narrar: c => { const texto = `Foi ${c.g('eleito presidente', 'eleita presidenta', 'eleite presidente')} do grêmio, com uma chapa montada na hora do recreio.`; return { texto, relevancia: 'biografia', tom: 'bom', efeito: () => marcar(c.v, 'conquista', texto, 2, { dominio: 'lideranca' }) }; }
+    narrar: c => { const texto = `Foi ${c.g('eleito presidente', 'eleita presidenta', 'eleite presidente')} do grêmio, com uma chapa montada na hora do recreio.`; return { texto, relevancia: 'biografia', tom: 'bom', efeito: () => { marcar(c.v, 'conquista', texto, 2, { dominio: 'lideranca' }); fato(c, 'gremio_eleito'); registrarVivencia(c.v, 'gremio', { feito: 'presidência do grêmio' }); } }; }
   },
 
   /* ============================================================= MILITAR */
@@ -499,7 +501,8 @@ function cursosDoIf(c: Ctx) {
 function selecaoIf(c: Ctx, k: number) {
   const cc = cursosDoIf(c)[k];
   // A prova compara com quem está na mesma série: vai bem quem vai bem na escola.
-  const chance = clamp(0.3 + ((c.v.educacao.basica?.desempenho ?? 50) - 55) / 40 + (c.v.educacao.postura === 'dedicada' ? 0.08 : 0), 0.05, 0.8);
+  // A preparação que um professor ofereceu e a medalha da olimpíada também contam (`formacao`).
+  const chance = clamp(0.3 + ((c.v.educacao.basica?.desempenho ?? 50) - 55) / 40 + (c.v.educacao.postura === 'dedicada' ? 0.08 : 0) + pesoNaSelecaoDoIf(c.v), 0.05, 0.85);
   if (c.r.chance(chance) && c.v.educacao.basica) {
     return {
       texto: `Passou. Em fevereiro, começa o médio integrado em ${cc.nome.replace(/^Técnico em /, '')}.`,

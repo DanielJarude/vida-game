@@ -17,6 +17,7 @@ import type { Veredito } from '../plausibilidade';
 import { familiaDaTrilha } from '../dados/carreiras';
 import { podeTentar } from '../plausibilidade';
 import { idade, filhos, parceiro } from '../nucleo';
+import { DE_FORMACAO } from './formacao';
 import { DE_ESTUDOS, ROTINAS, atividadeExiste, podeComecarRotina, type ModeloRotina } from './rotinas';
 import { BEM_ESTAR, fatoresHumor } from './estado';
 import { habilidade } from './frentes';
@@ -61,7 +62,7 @@ const MATERIAS_ESCOLA = new Set<Dominio>(['exatas', 'linguagens', 'ciencias', 'h
  */
 export function atividadesParaVoce(v: Vida): { para: Relevante<ModeloRotina>[]; resto: ModeloRotina[] } {
   const i = idade(v);
-  const possiveis = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !v.rotinas.some(r => r.id === m.id) && atividadeExiste(v, m) && podeTentar(podeComecarRotina(v, m.id, 1)));
+  const possiveis = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !DE_FORMACAO.has(m.id) && !v.rotinas.some(r => r.id === m.id) && atividadeExiste(v, m) && podeTentar(podeComecarRotina(v, m.id, 1)));
   const cabeca = v.mente.estresse;
   const humor = v.mente.felicidade;
   const solidao = fatoresHumor(v).some(f => f.id === 'solidao');
@@ -327,8 +328,10 @@ export function veiculosParaVoce(v: Vida, lugar: OfertaVeiculo['lugar']): { para
     const financiado = podeTentar(condicoesVeiculo(v, o.preco, true).veredito);
     if (!aVista && !financiado) pontos -= 6;
     if (m.cnh && !cnh) pontos -= 6;
-    if (aVista) dar(1.2, 'Dá para pagar à vista.');
-    else if (financiado) dar(0.6, 'Cabe financiado.');
+    // O que cabe (e se pode dirigir) é o ponto de partida de uma vitrine útil: antes, um zero quilômetro que cabia no bolso nunca aparecia "para você".
+    const dirige = !m.cnh || cnh;
+    if (aVista && dirige) dar(1.6, 'Dá para pagar à vista.');
+    else if (financiado && dirige) dar(1.2, 'Cabe financiado.');
     if (primeiro && o.usado && m.categoria === 'carro' && o.preco <= Math.max(30000, renda * 10)) dar(1.6, 'Um bom primeiro carro.');
     if (familia >= 2 && lugares >= 5 && m.conforto >= 3) dar(1.2, 'Cabe a família com folga.');
     if (familia >= 3 && lugares >= 7) dar(1.4, 'Sete lugares.');

@@ -565,9 +565,11 @@ describe('campo e arte: a terra adiante, a obra na rua', () => {
     filho.renda = 1500;
     v = executar(v, P('sucessao')).vida;
     expect(v.momento?.situacaoId).toBe('rural_sucessao');
+    // (REWORK 3: a vida montada pode ter outro filho adulto; a sucessão vai para quem a decisão nomeou.)
+    const herdeiro = v.momento!.papeis.filho ?? filho.id;
     v = executar(v, { tipo: 'decidir', opcaoId: 'filho' }).vida;
     expect(v.trabalho.atual?.ocupacaoId).not.toBe('produtor_rural');
-    expect(v.pessoas[filho.id].ocupacao).toMatch(/produtor/);
+    expect(v.pessoas[herdeiro].ocupacao).toMatch(/produtor/);
   });
   it('turnê pede público; lançar custa dinheiro e mexe no público', () => {
     let v = adulto(28);
@@ -620,7 +622,7 @@ describe('personalidade só por escolha; acontecimento não decide por você', (
 
 describe('save v12', () => {
   it('saves v11 reais (motor do PLAYTEST #3) migram, validam, seguem vivendo anos, salvam e reabrem', () => {
-    expect(VERSAO_SAVE).toBe(17);
+    expect(VERSAO_SAVE).toBe(18); // REWORK 3: v18 (origem, vivências, estilo).
     for (const nome of ['save-v11-negocio.json', 'save-v11-atleta.json', 'save-v11-professora.json']) {
       const bruto = fixture(nome);
       expect(JSON.parse(bruto).versao).toBe(11);

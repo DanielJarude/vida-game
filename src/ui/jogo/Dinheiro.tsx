@@ -1,10 +1,11 @@
 /**
- * O dinheiro, dentro de "Você": porque a situação material faz parte de
+ * O dinheiro, em Vida · Dinheiro (REWORK 3; antes, dentro de "Você" — Você
+ * guarda um atalho): porque a situação material faz parte de
  * como a pessoa está. Responde "como eu estou de dinheiro?" — o que tenho
  * à mão, quanto entra que é meu, quanto ponho em casa, quanto sai, o que
  * devo, para onde a coisa anda — e as duas escolhas de todo mês (padrão de
  * vida, plano de saúde). Não é extrato de banco: a casa, os bens, as
- * aplicações e os lugares da cidade continuam em "Casa".
+ * aplicações ficam logo abaixo; as lojas, em Compras.
  */
 
 import type { Vida } from '../../motor/tipos';
@@ -126,7 +127,7 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
       )}
       <div className="grupo-acoes grupo-acoes--linha">
         {i >= 18 && <BotaoAcao vida={vida} acao={{ tipo: 'plano_saude', ativo: !f.planoDeSaude }} agir={agir} variante="discreto">{f.planoDeSaude ? 'Cancelar o plano de saúde' : 'Contratar plano de saúde'}</BotaoAcao>}
-        {i >= 16 && irParaCasa && <button type="button" className="botao botao--discreto" onClick={irParaCasa}>Casa, bens e aplicações ↗</button>}
+        {i >= 16 && irParaCasa && <button type="button" className="botao botao--discreto" onClick={irParaCasa}>Onde você mora (Casa) ↗</button>}
       </div>
     </section>
   );

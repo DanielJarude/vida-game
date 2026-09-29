@@ -542,6 +542,8 @@ describe('política: eleição explicável, troca de partido, vida privada × p�
 
   it('um caso que ninguém fora da casa sabe, numa vida sem nome público, não vira notícia', () => {
     let v = adulto(40, { semente: 8 });
+    // A premissa: uma vida sem nome público (REWORK 3: a vida desta semente passou a ter um lado público — tirado aqui).
+    v.caminhos.politica = undefined; v.caminhos.negocio = undefined; v.caminhos.arte = undefined; v.notoriedade = undefined;
     const amante = pessoaNova(v, 35, 'masculino');
     vincular(v, amante, { origem: 'trabalho', proximidade: 50, estagio: 'amigo' });
     comParceiro(v, { estagio: 'casamento', anos: 10 });
@@ -639,7 +641,7 @@ describe('save v13 → v14 com saves reais da base do Playtest #4', () => {
       expect(res.migrado).toBe(true);
       let v = res.vida;
       expect(v.versao).toBe(VERSAO_SAVE);
-      expect(VERSAO_SAVE).toBe(17);
+      expect(VERSAO_SAVE).toBe(18); // REWORK 3: v18 (origem, vivências, estilo).
       for (const b of v.financas.bens) if (b.tipo === 'veiculo') { expect(b.versaoId).toBeTruthy(); expect(nomeDoVeiculo(b)).not.toMatch(/^carro compacto$/); }
       if (v.caminhos.politica?.partido) expect(v.caminhos.politica.partidos?.[0].sigla).toBe(v.caminhos.politica.partido);
       for (let k = 0; k < 3 && !v.morte; k++) { v = avancarAno(v).vida; v = responderTudo(v); }

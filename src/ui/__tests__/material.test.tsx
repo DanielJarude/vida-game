@@ -50,16 +50,18 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-function abrirCasa() { abrir('Casa'); }
-function abrirVoce() { abrir('Você'); }
-function abrir(aba: string) {
+// REWORK 3: Casa, Dinheiro e Compras são seções de Vida (a navegação estável de seis áreas).
+function abrirCasa() { abrir('Vida', 'Casa'); }
+function abrirDinheiro() { abrir('Vida', 'Dinheiro'); }
+function abrir(area: string, secao?: string) {
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
-  fireEvent.click(screen.getAllByRole('button', { name: aba })[0]);
+  fireEvent.click(screen.getAllByRole('button', { name: area })[0]);
+  if (secao) fireEvent.click(screen.getByRole('tab', { name: secao }));
 }
 
-describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
-  it('de relance: onde mora e de quem é (Casa); quanto entra, quanto sai e o que sobra (Você) — com os números do motor', () => {
+describe('Casa e dinheiro (Vida · Casa: moradia; Vida · Dinheiro: o mês, os bens, as aplicações)', () => {
+  it('de relance: onde mora e de quem é (Casa); quanto entra, quanto sai e o que sobra (Dinheiro) — com os números do motor', () => {
     const v = vidaSalva(27, adultaDeAluguel);
     abrirCasa();
     expect(screen.getByText(/Mora de aluguel/)).toBeTruthy();
@@ -67,7 +69,7 @@ describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
     // O desenho da casa tem descrição.
     expect(screen.getByRole('img', { name: /Desenho:/ })).toBeTruthy();
     cleanup();
-    abrirVoce();
+    abrirDinheiro();
     const m = leituraDoMes(v);
     expect(screen.getByRole('group', { name: /Quanto entra e quanto sai/ })).toBeTruthy();
     expect(screen.getAllByText(new RegExp(m.sobra >= 0 ? 'Sobra' : 'Falta')).length).toBeGreaterThan(0);
@@ -82,7 +84,7 @@ describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
       v.financas.dividas.push({ id: 'd', tipo: 'financiamento_veiculo', saldo: 15000, jurosMes: 0.015, parcela: 500, bemId: 'car', descricao: 'Financiamento: carro compacto', tInicio: v.t, prazo: 36 });
       esperado = balanco(v).liquido;
     });
-    abrirCasa();
+    abrirDinheiro();
     const linha = screen.getByText(/Descontado o que deve/);
     expect(linha.textContent).toContain(dinheiroCheio(esperado));
     // Financiamento aparece como obrigação presa ao bem, não como "dívida" vermelha genérica.
@@ -95,7 +97,7 @@ describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
       adultaDeAluguel(v);
       v.financas.bens.push({ id: 'car', tipo: 'veiculo', modeloId: 'carro_suv', nome: 'SUV compacto', valor: 60000, tCompra: v.t, estado: 30, anoFabricacao: 2040, usado: true, historia: [], problema: { id: 'p', texto: 'a suspensão batendo', custo: 3200, desde: v.t, gravidade: 2, adiado: 0 } });
     });
-    abrirCasa();
+    abrirDinheiro();
     expect(screen.getAllByText(/Precisa de conserto/).length).toBeGreaterThan(0);
     const consertar = screen.getAllByRole('button', { name: 'Consertar' })[0] as HTMLButtonElement;
     expect(consertar.disabled).toBe(false);
@@ -107,12 +109,14 @@ describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
     abrirCasa();
     fireEvent.click(screen.getByRole('button', { name: /Procurar outro lugar/ }));
     const folha = screen.getByRole('dialog', { name: 'Imobiliária' });
-    const primarias = within(folha).getAllByRole('button').filter(b => b.classList.contains('oferta'));
+    // As primeiras vêm com o motivo; o resto aparece logo abaixo, do mais barato ao mais caro (REWORK 3: nada escondido atrás de um botão).
+    const primarias = within(folha).getAllByRole('button').filter(b => b.classList.contains('oferta') && b.querySelector('.oferta__motivo'));
     expect(primarias.length).toBeLessThanOrEqual(MAX_PRIMARIAS_MATERIAL.imoveis);
     expect(primarias.length).toBeGreaterThan(0);
-    const ver = within(folha).getByRole('button', { name: /Ver as outras/ });
-    fireEvent.click(ver);
-    expect(within(folha).getAllByRole('button').filter(b => b.classList.contains('oferta')).length).toBeGreaterThan(primarias.length);
+    const antes = within(folha).getAllByRole('button').filter(b => b.classList.contains('oferta')).length;
+    expect(antes).toBeGreaterThan(primarias.length);
+    const ver = within(folha).queryByRole('button', { name: /Ver todas/ });
+    if (ver) { fireEvent.click(ver); expect(within(folha).getAllByRole('button').filter(b => b.classList.contains('oferta')).length).toBeGreaterThan(antes); }
     // Abrir uma oferta mostra a condição e pede confirmação.
     fireEvent.click(primarias[0]);
     expect(within(folha).getByText(/Para entrar/)).toBeTruthy();
@@ -139,7 +143,7 @@ describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
       const a = aplicar(v, 'acoes', 40000);
       a.valor = 31000; a.historico = [40000, 36000, 31000]; a.retornoAno = -0.14;
     });
-    abrirCasa();
+    abrirDinheiro();
     expect(screen.getByText('Ações de muitas empresas')).toBeTruthy();
     expect(screen.getByText('Perdeu')).toBeTruthy();
     expect(screen.getByText(/caiu 14/)).toBeTruthy();
@@ -147,9 +151,9 @@ describe('Casa e dinheiro (Casa: moradia e bens; Você: o mês)', () => {
     expect(screen.getByText(/pelo preço do dia/)).toBeTruthy();
   });
 
-  it('criança: o dinheiro dela e o da casa aparecem separados (em Você)', () => {
+  it('criança: o dinheiro dela e o da casa aparecem separados (em Vida · Dinheiro)', () => {
     vidaSalva(11, () => {});
-    abrirVoce();
+    abrirDinheiro();
     expect(screen.getByText('O que é seu')).toBeTruthy();
     expect(screen.queryByText(/A casa \(não é seu\)/)).toBeTruthy();
     expect(screen.queryByRole('group', { name: /Quanto entra e quanto sai/ })).toBeNull();

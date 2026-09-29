@@ -20,6 +20,7 @@
  * por ano, e a convivência continua mantendo quem está perto.
  */
 
+import { registrarAjudaDada, responsaveis } from './origem';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Chamado, Pessoa, TipoChamado, Vida, Vinculo } from '../tipos';
@@ -96,7 +97,13 @@ export function responderChamado(v: Vida, _r: Rng, p: Pessoa, vin: Vinculo, sim:
         return { resultado: `${p.nome} disse que entendia. Talvez entenda mesmo.`, titulo: tituloP };
       }
       afeto(vin, 8); confiar(vin, 9); atrito(vin, -8);
-      if (ch.assunto === 'dinheiro') v.financas.conta -= Math.min(Math.max(0, v.financas.conta), 800);
+      if (ch.assunto === 'dinheiro') {
+        // Quando é a casa de onde você veio, a ajuda segura a casa de lá (a reserva da família): `origem`.
+        const valor = Math.min(Math.max(0, v.financas.conta), responsaveis(v).some(x => x.p.id === p.id) ? 1500 : 800);
+        v.financas.conta -= valor;
+        registrarAjudaDada(v, p, valor);
+        if (p.aperto?.tipo === 'dinheiro') p.aperto.resolvido = v.t;
+      }
       if (ch.assunto === 'consultas') { p.saude = clamp(p.saude + 3); v.mente.estresse = clamp(v.mente.estresse + 3); }
       if (p.aperto && (p.aperto.tipo === 'desemprego' || p.aperto.tipo === 'separacao' || p.aperto.tipo === 'fase')) p.aperto.t -= 6;
       lembrarCom(v, p.id, `Pediu ajuda ${textoAssunto(ch)}, e você foi.`, 'apoio', 2);
@@ -299,7 +306,8 @@ function novaIniciativa(v: Vida, r: Rng): void {
     }
     if (!importante(v, p, vin, papel)) {
       // Interesse romântico: alguém do convívio pode tomar a frente.
-      if (solteiro && eu >= 15 && ip >= 15 && (papel === 'amigo' || papel === 'colega' || papel === 'conhecido') && vin.convivio.length > 0 && !vin.romance
+      const daFormacao = !!vin.formacao && vin.formacao.papel !== 'colega';
+      if (solteiro && eu >= 15 && ip >= 15 && (papel === 'amigo' || papel === 'colega' || papel === 'conhecido') && vin.convivio.length > 0 && !vin.romance && !daFormacao
         && v.eu.atracao && atraiGenero(v.eu.atracao, p.genero) && atraiGenero(p.atracao, v.eu.genero) && !p.parceiroId && podeTerRomance(v, p, vin)
         && v.fatos[`recusa_romance_${p.id}`] === undefined) {
         const comp = compatibilidade(v, p);
@@ -307,7 +315,7 @@ function novaIniciativa(v: Vida, r: Rng): void {
       }
       // Um colega que gosta de você dá o primeiro passo (um café, ficar depois do treino). Não é amizade ainda: é a chance.
       const gestoRecente = vin.aproximacao !== undefined && v.t - vin.aproximacao <= 24;
-      if (eu >= 15 && ip >= 15 && (papel === 'colega' || papel === 'conhecido') && vin.convivio.length > 0 && !vin.romance && !gestoRecente && vin.proximidade >= 30) {
+      if (eu >= 15 && ip >= 15 && (papel === 'colega' || papel === 'conhecido') && vin.convivio.length > 0 && !vin.romance && !gestoRecente && !daFormacao && vin.proximidade >= 30) {
         const comp = compatibilidade(v, p);
         if (comp > 0.15) {
           const onde = vin.convivio.includes('trabalho') ? r.pick(['almoçar junto', 'um café depois do expediente', 'uma cerveja na sexta, depois do trabalho'])

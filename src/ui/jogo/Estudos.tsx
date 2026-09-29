@@ -1,5 +1,6 @@
 /**
- * Estudos: a formação, inteira, num lugar só.
+ * Formação: a formação, inteira, num lugar só — e o lugar onde ela acontece
+ * (a escola, o instituto federal, a universidade), com gente e atividades.
  *
  * Antes se chamava "Rumo" — e ninguém sabia o que era. Aqui se responde de
  * imediato: onde eu estudo agora (escola, faculdade, curso), o que já ficou
@@ -25,15 +26,17 @@ import { BotaoAcao, Escolha, Folio, Linha, Secao } from '../comum';
 import { alvosDoEnem, cursosAgrupados, cursosParaVoce } from '../../motor/sistemas/relevancia';
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
-import type { Aba } from '../telas/Jogo';
+import type { Aba } from '../navegacao';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { novaMatricula } from '../../motor/sistemas/escola';
 import { modeloRotina, nivelDa, nivelModelo } from '../../motor/sistemas/rotinas';
 import { NOME_FOCO } from '../../motor/sistemas/concurso';
 import type { FocoConcurso } from '../../motor/tipos';
+import { instituicaoAtual, leituraDasVivencias, pessoasDaFormacao, ROTINA_DA_OFERTA } from '../../motor/sistemas/formacao';
+import { flex } from '../../motor/texto';
 import { estimativaParaCurso, fazCursinho, mesesDePreparo, objetivoCurso, PALAVRA_SITUACAO, proximoPassoVestibular } from '../../motor/sistemas/vestibular';
 
-interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }
+interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }
 
 const VIA: Record<string, string> = {
   sisu: 'SISU — universidade pública', selecao_publica: 'Seleção pública', privada: 'Particular',
@@ -67,15 +70,18 @@ export function areaDaPorta(o: Oportunidade): 'trabalho' | 'estudos' | 'tempo' {
 /** A porta é de trabalho? (compatibilidade com quem já chamava assim) */
 export const ehPortaDeTrabalho = (o: Oportunidade) => areaDaPorta(o) === 'trabalho';
 
-export function Estudos({ vida, agir, irPara }: Props) {
+export function Estudos({ vida, agir, irPara, abrirPessoa }: Props) {
   const i = idade(vida);
   const e = vida.educacao;
+  const inst = instituicaoAtual(vida);
   const titulo = e.basica ? rotuloSerie(e.basica) : e.matricula ? nomeDaMatricula(vida, e.matricula) : i < 4 ? 'Ainda não é hora da escola' : i >= 18 ? 'Estudar de novo, ou pela primeira vez' : 'Sem estudar agora';
   const lede = e.basica ? `Escola ${e.basica.rede === 'publica' ? 'pública' : 'particular'} · notas ${palavraDesempenho(e.basica.desempenho)}` : e.matricula ? `${e.matricula.instituicao}${e.matricula.trancado ? ' · trancado' : ` · ${e.matricula.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(e.matricula.mesesRestantes / 12)} anos`}`}` : ROTULO_ESCOLARIDADE[e.escolaridade];
   return (
     <div className="estudos rumo">
-      <Folio kicker={<><span className="folio__area">Estudos</span> · a sua formação</>} titulo={titulo} lede={lede} />
+      <Folio kicker={<><span className="folio__area">Formação</span> · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</>} titulo={titulo} lede={lede} />
       <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'estudos'} titulo="Ao seu alcance agora" />
+      {inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
+      <OQueFicou vida={vida} />
       <TrajetoriaDeEstudo vida={vida} />
       <Formacao vida={vida} />
       <Estudo vida={vida} agir={agir} />
@@ -83,6 +89,67 @@ export function Estudos({ vida, agir, irPara }: Props) {
       {i >= 15 && <Cursos vida={vida} agir={agir} />}
       {i < 14 && !vida.educacao.basica && <p className="vazio">Por enquanto, o estudo é crescer.</p>}
     </div>
+  );
+}
+
+/* ------------------------------------------------------ O lugar (REWORK 3) */
+
+/**
+ * A instituição como ambiente: como ela é, quem está lá (a professora que
+ * reparou, os colegas), e o que dá para fazer ali — atividades de verdade,
+ * que ocupam a semana (a mesma rotina que Vida · Tempo livre conta) e deixam
+ * vivências que pesam depois (`formacao`).
+ */
+function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Acao) => boolean; abrirPessoa?: (id: string) => void; irPara?: (a: Aba) => void }) {
+  const inst = instituicaoAtual(vida)!;
+  const gente = pessoasDaFormacao(vida);
+  const profs = gente.filter(x => x.papel === 'professor' || x.papel === 'orientador');
+  const amigos = gente.filter(x => x.papel === 'amigo').length;
+  const colegas = gente.filter(x => x.papel === 'colega').length;
+  const atividades = inst.ofertas.map(o => ROTINA_DA_OFERTA[o]).filter((id): id is string => !!id).map(id => modeloRotina(id)).filter((m): m is NonNullable<ReturnType<typeof modeloRotina>> => !!m);
+  const i = idade(vida);
+  return (
+    <section className="o-lugar" aria-labelledby="o-lugar-titulo">
+      <h2 id="o-lugar-titulo" className="secao-fio">{inst.nome}</h2>
+      <p className="o-lugar__descricao">{inst.descricao}</p>
+      {(profs.length > 0 || colegas + amigos > 0) && (
+        <ul className="o-lugar__gente">
+          {profs.map(x => <li key={x.p.id}><button type="button" className="link" onClick={() => abrirPessoa?.(x.p.id)}>{x.p.nome}</button> — {x.papel === 'orientador' ? flex(x.p.genero, 'orienta você', 'orienta você') : x.p.ocupacao ?? 'professor'}</li>)}
+          {colegas + amigos > 0 && <li>{colegas > 0 ? `${colegas} ${colegas === 1 ? 'colega' : 'colegas'} de convívio` : ''}{colegas > 0 && amigos > 0 ? ' e ' : ''}{amigos > 0 ? `${amigos} ${amigos === 1 ? 'amizade' : 'amizades'} daqui` : ''} <span className="nota">— conviver não é ser amigo: a amizade pede gesto, em Pessoas.</span></li>}
+        </ul>
+      )}
+      {i >= 7 && atividades.length > 0 && (
+        <>
+          <h3 className="subtitulo">O que dá para fazer aqui</h3>
+          <ul className="o-lugar__atividades">
+            {atividades.map(m => {
+              const faz = vida.rotinas.some(r => r.id === m.id);
+              return (
+                <li key={m.id} className={`atividade-formacao${faz ? ' atividade-formacao--ativa' : ''}`}>
+                  <div className="atividade-formacao__texto"><strong>{m.nome}</strong><span>{m.descricao}</span></div>
+                  {faz
+                    ? <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>
+                    : <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir} variante="secundario">Entrar</BotaoAcao>}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="nota">Cada atividade ocupa parte da semana (veja em <button type="button" className="link" onClick={() => irPara?.('tempo')}>Vida · Tempo livre</button>).</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** O que a formação deixou (e continua valendo): vivências, com o que deu certo. */
+function OQueFicou({ vida }: { vida: Vida }) {
+  const xs = leituraDasVivencias(vida);
+  if (!xs.length) return null;
+  return (
+    <Secao titulo="O que ficou da formação">
+      <ul className="formacao-lista">{xs.map((x, k) => <li key={k}><span className="formacao-lista__nome">{x}</span></li>)}</ul>
+      <p className="nota">Isso pesa em portas futuras: uma seleção, um estágio, uma vaga, um mestrado.</p>
+    </Secao>
   );
 }
 
@@ -235,7 +302,7 @@ function Preparacao({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boo
       )}
       {miras.length > 0 && (
         <div className="objetivo objetivo--escolher">
-          <p className="nota">Tem um curso em vista? Com um objetivo, a preparação passa a ser dirigida a ele — e Estudos diz a distância até o corte.</p>
+          <p className="nota">Tem um curso em vista? Com um objetivo, a preparação passa a ser dirigida a ele — e Formação diz a distância até o corte.</p>
           <div className="grupo-acoes grupo-acoes--linha">
             {miras.map(id => <BotaoAcao key={id} vida={vida} acao={{ tipo: 'objetivo_estudo', cursoId: id }} agir={agir} variante="discreto" ocultarImpossivel>{`Mirar em ${curso(id).nome}`}</BotaoAcao>)}
           </div>

@@ -98,7 +98,9 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Nascer de novo' }));
     fireEvent.click(screen.getByRole('button', { name: 'Nascer' }));
     avancar(8);
-    fireEvent.click(screen.getAllByRole('button', { name: /Tempo/ })[0]);
+    // REWORK 3: o tempo livre é uma seção de Vida.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Vida' })[0]);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tempo livre' }));
     expect(screen.getByText('Sua semana')).toBeTruthy();
   });
 
@@ -127,7 +129,7 @@ describe('interface', () => {
     });
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
-    fireEvent.click(screen.getAllByRole('button', { name: /Estudos/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Formação/ })[0]);
     expect(screen.getByText(/\(trancado\)/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Voltar ao curso/ }));
     expect(screen.queryByText(/\(trancado\)/)).toBeNull();
@@ -175,7 +177,8 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
-    fireEvent.click(screen.getAllByRole('button', { name: /^Tempo livre$|^Tempo$/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Vida' })[0]);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tempo livre' }));
     const main = screen.getByRole('main');
     expect(within(main).getByText(/Antes de qualquer escolha, a semana já tem/)).toBeTruthy();
     expect(within(main).getAllByText(/Trabalho \(/).length).toBeGreaterThan(0);
@@ -235,7 +238,8 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
-    fireEvent.click(screen.getAllByRole('button', { name: /^Tempo livre$|^Tempo$/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Vida' })[0]);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tempo livre' }));
     const main = screen.getByRole('main');
     const antes = within(main).queryAllByRole('button', { name: /^Começar/ }).length;
     expect(antes).toBeLessThanOrEqual(4);

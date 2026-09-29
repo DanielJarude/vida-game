@@ -69,3 +69,17 @@ export function sementeAleatoria(): number {
 }
 
 export const clamp = (v: number, min = 0, max = 100) => Math.max(min, Math.min(max, v));
+
+/**
+ * Um gerador DERIVADO: semente tirada de partes estáveis (o id da vida, o
+ * sistema, o instante). Os sistemas do REWORK 3 sorteiam por aqui para não
+ * mexer na sequência do gerador principal — a mesma semente com os mesmos
+ * comandos continua dando a mesma vida, e as vidas que já existiam não mudam
+ * de rumo só porque um sistema novo passou a olhar para elas.
+ */
+export function rngDe(...partes: (string | number)[]): Rng {
+  let h = 2166136261;
+  const s = partes.join('|');
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return criarRng(h >>> 0);
+}

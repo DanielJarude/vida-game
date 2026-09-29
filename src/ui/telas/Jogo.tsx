@@ -1,16 +1,16 @@
 /**
  * O jogo em andamento.
  *
- * Oito áreas, cada uma respondendo a uma pergunta:
- *   Vida      o que aconteceu (a biografia — o centro)
- *   Você      como eu estou (corpo, cabeça, humor, dinheiro)
- *   Pessoas   quem está na minha vida
- *   Trabalho  a minha vida profissional: agora, em paralelo, outras possibilidades (a partir dos 14)
- *   Estudos   a minha formação: onde estudo, o que já fiz, o que posso estudar
- *   Casa      onde moro, o que é meu, a vida dentro de casa
- *   Tempo     para onde vai a minha semana
- *   Cidade    onde vivo e o que a cidade oferece (a partir dos 16)
- * Cada área tem um tom próprio (tokens) e uma composição própria. O painel
+ * Seis áreas ESTÁVEIS (REWORK 3 — `ui/navegacao`), cada uma respondendo a
+ * uma pergunta; o que muda com a idade é o conteúdo e o destaque, não o
+ * lugar das coisas:
+ *   Linha da Vida  o que aconteceu (a biografia — o centro)
+ *   Você           como eu estou (corpo, cabeça, humor, aparência e estilo)
+ *   Pessoas        quem está na minha vida
+ *   Formação       onde estudo, com quem, o que faço lá, o que posso estudar
+ *   Trabalho       o que faço para viver (antes dos 14: quem sustenta a casa)
+ *   Vida           a vida concreta: Casa · Dinheiro · Compras · Tempo livre · Cidade
+ * Dentro de Vida, seções internas — em vez de mais abas no topo. O painel
  * "Agora" (desktop) diz o que pede atenção, sem repetir as áreas.
  */
 
@@ -27,30 +27,18 @@ import { LinhaDaVida } from '../jogo/LinhaDaVida';
 import { Momento, Resultado } from '../jogo/Momento';
 import { Pessoas } from '../jogo/Pessoas';
 import { Estudos, areaDaPorta } from '../jogo/Estudos';
-import { Cidade } from '../jogo/Cidade';
-import { Casa } from '../jogo/Casa';
-import { Tempo } from '../jogo/Tempo';
 import { Voce } from '../jogo/Voce';
-import { Trabalho } from '../jogo/Trabalho';
+import { Trabalho, TrabalhoAindaNao } from '../jogo/Trabalho';
+import { VidaConcreta } from '../jogo/VidaConcreta';
 import { expressaoDe, momentoAtual, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
 import { faseDaVida } from '../apresentar';
 import { fechamentoDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
+import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type Lugar, type SecaoVida } from '../navegacao';
 
-export type Aba = 'vida' | 'voce' | 'pessoas' | 'trabalho' | 'estudos' | 'casa' | 'tempo' | 'cidade';
-
-const ABAS: { id: Aba; rotulo: string; curto: string; icone: string }[] = [
-  { id: 'vida', rotulo: 'Linha da Vida', curto: 'Vida', icone: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4V4zm0 12a4 4 0 0 0 4 4' },
-  { id: 'voce', rotulo: 'Você', curto: 'Você', icone: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm-7.5 9a7.5 7.5 0 0 1 15 0' },
-  { id: 'pessoas', rotulo: 'Pessoas', curto: 'Pessoas', icone: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M17 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3' },
-  { id: 'trabalho', rotulo: 'Trabalho', curto: 'Trabalho', icone: 'M3.5 8h17v11.5h-17zM9 8V5.5h6V8M3.5 13.5h17' },
-  { id: 'estudos', rotulo: 'Estudos', curto: 'Estudos', icone: 'M12 3l10 5-10 5L2 8l10-5zm-6 7.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5' },
-  { id: 'casa', rotulo: 'Casa', curto: 'Casa', icone: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z' },
-  { id: 'tempo', rotulo: 'Tempo livre', curto: 'Tempo', icone: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-13v5l3 2' },
-  { id: 'cidade', rotulo: 'Cidade', curto: 'Cidade', icone: 'M3 21V10l5-3v14M8 21V4l8 3v14M16 21v-9l5 2v7M2 21h20M11 9h2M11 12h2M11 15h2' }
-];
+export type { Aba };
 
 function Icone({ d }: { d: string }) {
   return <svg className="icone" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
@@ -65,20 +53,21 @@ export function climaDe(v: Vida): 'dificil' | 'bom' | 'normal' {
 }
 
 const temTrabalho = (v: Vida) => idade(v) >= 14 || v.trabalho.historico.length > 0;
-const temCidade = (v: Vida) => idade(v) >= 16;
 
 export function Jogo({ c }: { c: ControleVida }) {
   const vida = c.vida!;
-  const [aba, setAbaBruta] = useState<Aba>('vida');
+  const [lugar, setLugar] = useState<Lugar>({ area: 'linha' });
+  const [secao, setSecao] = useState<SecaoVida>('casa');
   const [menu, setMenu] = useState(false);
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
   const conteudo = useRef<HTMLElement>(null);
-  const abas = ABAS.filter(a => (a.id !== 'trabalho' || temTrabalho(vida)) && (a.id !== 'cidade' || temCidade(vida)));
-  const setAba = (a: Aba) => setAbaBruta(a === 'trabalho' && !temTrabalho(vida) ? 'estudos' : a === 'cidade' && !temCidade(vida) ? 'casa' : a);
-  const abrirPessoa = (id: string | null) => { setPessoaAberta(id); if (id) setAba('pessoas'); };
+  const area = lugar.area;
+  const ir = (d: Aba) => { const l = resolverDestino(d); if (l.secao) setSecao(l.secao); setLugar(l); };
+  const irLugar = (l: Lugar) => { if (l.secao) setSecao(l.secao); setLugar(l); };
+  const abrirPessoa = (id: string | null) => { setPessoaAberta(id); if (id) ir('pessoas'); };
 
-  useEffect(() => { conteudo.current?.scrollTo?.({ top: 0 }); window.scrollTo?.({ top: 0 }); }, [aba]);
-  useEffect(() => { if (c.marcaAno > 0) { setAbaBruta('vida'); window.scrollTo?.({ top: 0 }); } }, [c.marcaAno]);
+  useEffect(() => { conteudo.current?.scrollTo?.({ top: 0 }); window.scrollTo?.({ top: 0 }); }, [area, secao]);
+  useEffect(() => { if (c.marcaAno > 0) { setLugar({ area: 'linha' }); window.scrollTo?.({ top: 0 }); } }, [c.marcaAno]);
 
   if (vida.morte) return <Fim vida={vida} c={c} />;
   const i = idade(vida);
@@ -88,14 +77,14 @@ export function Jogo({ c }: { c: ControleVida }) {
     <div className="jogo" data-clima={climaDe(vida)}>
       <header className="cabecalho">
         <button type="button" className="marca" onClick={() => setMenu(true)} aria-label="Menu">VIDA</button>
-        <nav className="abas" aria-label="Seções">
-          {abas.map(a => (
-            <button key={a.id} type="button" className={`aba aba--${a.id}${aba === a.id ? ' aba--ativa' : ''}`} aria-label={a.rotulo} aria-current={aba === a.id ? 'page' : undefined} onClick={() => setAba(a.id)}>
+        <nav className="abas" aria-label="Áreas">
+          {AREAS.map(a => (
+            <button key={a.id} type="button" className={`aba aba--${a.id}${area === a.id ? ' aba--ativa' : ''}`} aria-label={a.rotulo} aria-current={area === a.id ? 'page' : undefined} onClick={() => ir(a.id)}>
               <Icone d={a.icone} /><span>{a.rotulo}</span>
             </button>
           ))}
         </nav>
-        <button type="button" className="cabecalho__eu" onClick={() => setAba('voce')} aria-label={`${vida.eu.nome}, ${i} anos: ver como você está`}>
+        <button type="button" className="cabecalho__eu" onClick={() => ir('voce')} aria-label={`${vida.eu.nome}, ${i} anos: ver como você está`}>
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={36} rotulo={vida.eu.nome} expressao={expressaoDe(vida)} />
           <span className="cabecalho__eu-texto">
             <strong>{vida.eu.nome}, {i} {i === 1 ? 'ano' : 'anos'}</strong>
@@ -104,20 +93,18 @@ export function Jogo({ c }: { c: ControleVida }) {
         </button>
       </header>
 
-      <div className={`palco palco--${aba}`}>
-        <main className={`conteudo pagina pagina--${aba}`} ref={conteudo}>
-          {aba === 'vida' && <><Hoje vida={vida} irPara={setAba} />{c.marcaAno > 0 && <FechamentoDoAno vida={vida} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
-          {aba === 'voce' && <Voce vida={vida} agir={c.agir} irPara={setAba} abrirPessoa={abrirPessoa} />}
-          {aba === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={setPessoaAberta} />}
-          {aba === 'trabalho' && <Trabalho vida={vida} agir={c.agir} irPara={setAba} />}
-          {aba === 'estudos' && <Estudos vida={vida} agir={c.agir} irPara={setAba} />}
-          {aba === 'casa' && <Casa vida={vida} agir={c.agir} />}
-          {aba === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={setAba} />}
-          {aba === 'cidade' && <Cidade vida={vida} agir={c.agir} />}
+      <div className={`palco palco--${area}`}>
+        <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
+          {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <FechamentoDoAno vida={vida} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
+          {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
+          {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={setPessoaAberta} />}
+          {area === 'formacao' && <Estudos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
+          {area === 'trabalho' && (temTrabalho(vida) ? <Trabalho vida={vida} agir={c.agir} irPara={ir} /> : <TrabalhoAindaNao vida={vida} irPara={ir} />)}
+          {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
         </main>
 
         <aside className="agora" aria-label="Agora">
-          <Agora vida={vida} aba={aba} irPara={setAba} abrirPessoa={abrirPessoa} />
+          <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} />
         </aside>
       </div>
 
@@ -128,9 +115,9 @@ export function Jogo({ c }: { c: ControleVida }) {
         </button>
       </div>
 
-      <nav className={`barra barra--${abas.length}`} aria-label="Seções">
-        {abas.map(a => (
-          <button key={a.id} type="button" className={`barra__item barra__item--${a.id}${aba === a.id ? ' barra__item--ativo' : ''}`} aria-current={aba === a.id ? 'page' : undefined} onClick={() => setAba(a.id)}>
+      <nav className={`barra barra--${AREAS.length}`} aria-label="Áreas">
+        {AREAS.map(a => (
+          <button key={a.id} type="button" className={`barra__item barra__item--${a.id}${area === a.id ? ' barra__item--ativo' : ''}`} aria-current={area === a.id ? 'page' : undefined} onClick={() => ir(a.id)}>
             <Icone d={a.icone} /><span>{a.curto}</span>
           </button>
         ))}
@@ -138,7 +125,7 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       {vida.momento && <Momento vida={vida} agir={c.agir} />}
       {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} mudancas={c.resultado.mudancas} />}
-      {menu && <Menu c={c} aoFechar={() => setMenu(false)} />}
+      {menu && <Menu c={c} aoFechar={() => setMenu(false)} ir={l => { irLugar(l); setMenu(false); }} />}
     </div>
   );
 }
@@ -184,11 +171,11 @@ function Hoje({ vida, irPara }: { vida: Vida; irPara: (a: Aba) => void }) {
  * com você, quem precisa de você, as portas abertas (levando para a área
  * certa), o que está em andamento; o dinheiro só quando aperta.
  */
-function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }) {
+function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }) {
   const casa = emCasa(vida);
   const pessoal = sinalPessoal(vida);
   // Só o urgente atravessa as áreas; a vida social normal mora em Pessoas (FIX pós-REWORK 2).
-  const sinais = aba === 'pessoas' ? [] : sinaisSociais(vida).filter(x => x.escopo === 'global').slice(0, 2);
+  const sinais = area === 'pessoas' ? [] : sinaisSociais(vida).filter(x => x.escopo === 'global').slice(0, 2);
   const i = idade(vida);
   const seg = seguranca(vida);
   const aperta = i >= 18 && (seg.nivel === 'no_vermelho' || seg.nivel === 'apertado');
@@ -201,7 +188,7 @@ function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPar
   const portas = vida.caminhos.oportunidades.filter(o => o.tFim > vida.t);
   return (
     <div className="painel-agora">
-      {pessoal && aba !== 'voce' && (
+      {pessoal && area !== 'voce' && (
         <button type="button" className="agora-voce" onClick={() => irPara('voce')}>
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={34} rotulo="Você" expressao={expressaoDe(vida)} />
           <span>{pessoal}</span>
@@ -236,12 +223,12 @@ function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPar
         <>
           <h2 className="painel-agora__titulo painel-agora__titulo--rumo">Portas abertas</h2>
           <ul className="agora-sinais">
-            {portas.map(o => { const area = areaDaPorta(o); return <li key={o.id}><button type="button" className="agora-sinal agora-sinal--porta" onClick={() => irPara(area === 'trabalho' && temTrabalho(vida) ? 'trabalho' : area === 'tempo' ? 'tempo' : 'estudos')}>{o.titulo}<span className="agora-sinal__prazo"> · até {anoDe(o.tFim)}</span></button></li>; })}
+            {portas.map(o => { const area = areaDaPorta(o); return <li key={o.id}><button type="button" className="agora-sinal agora-sinal--porta" onClick={() => irPara(area === 'trabalho' && temTrabalho(vida) ? 'trabalho' : area === 'tempo' ? 'tempo' : 'formacao')}>{o.titulo}<span className="agora-sinal__prazo"> · até {anoDe(o.tFim)}</span></button></li>; })}
           </ul>
         </>
       )}
       {aperta && (
-        <button type="button" className="agora-dinheiro" onClick={() => irPara('voce')}>
+        <button type="button" className="agora-dinheiro" onClick={() => irPara('dinheiro')}>
           <span className="agora-dinheiro__rotulo">O dinheiro</span>
           <strong>{leituraDaSeguranca(vida).palavra}</strong>
         </button>
@@ -258,7 +245,7 @@ function Agora({ vida, aba, irPara, abrirPessoa }: { vida: Vida; aba: Aba; irPar
   );
 }
 
-function Menu({ c, aoFechar }: { c: ControleVida; aoFechar: () => void }) {
+function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: (l: Lugar) => void }) {
   return (
     <div className="veu" onClick={e => { if (e.target === e.currentTarget) aoFechar(); }}>
       <div className="folha folha--media" role="dialog" aria-modal="true" aria-label="Menu">
@@ -270,9 +257,29 @@ function Menu({ c, aoFechar }: { c: ControleVida; aoFechar: () => void }) {
           <button type="button" className="botao botao--secundario" onClick={() => { c.setSom(!c.som); }}>{c.som ? 'Desligar o som' : 'Ligar o som'}</button>
           <button type="button" className="botao botao--secundario" onClick={() => { aoFechar(); c.setTela('inicio'); }}>Voltar ao início</button>
           <button type="button" className="botao botao--perigo" onClick={() => { if (window.confirm('Apagar esta vida e começar outra? Não dá para desfazer.')) { aoFechar(); c.recomecar(); } }}>Abandonar esta vida</button>
+          <OndeFica ir={ir} />
         </div>
       </div>
     </div>
+  );
+}
+
+/** "Eu quero fazer X. Onde eu começo?" — o mapa de intenções (`navegacao`), com o caminho de cada uma. */
+function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
+  return (
+    <section className="onde-fica" aria-labelledby="onde-fica-titulo">
+      <h2 id="onde-fica-titulo" className="subtitulo">Onde fica cada coisa</h2>
+      <ul className="onde-fica__lista">
+        {MAPA_DE_INTENCOES.map(x => (
+          <li key={x.id}>
+            <button type="button" className="onde-fica__item" onClick={() => ir(x.lugar)}>
+              <span className="onde-fica__quero">{x.quero}</span>
+              <span className="onde-fica__onde">{rotuloDoLugar(x.lugar)} <span aria-hidden>→</span></span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -8,6 +8,7 @@
  */
 
 import { derivarPredisposicoes } from './sistemas/pessoa';
+import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 import { caminhosVazios } from './sistemas/marcas';
 import { criarRng, type Rng } from './rng';
 import type { Classe, Genero, Origem, Pessoa, Vida, Visual } from './tipos';
@@ -112,7 +113,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   // Predisposições: da semente, sem gastar o gerador (a vida criada é a mesma de antes, com elas guardadas).
   const pred = derivarPredisposicoes(id);
   const v: Vida = {
-    versao: 17,
+    versao: 18,
     id,
     rng: 0,
     seq: 0,
@@ -150,7 +151,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     },
     pessoas: {},
     vinculos: {},
-    origem: { classe, arranjo },
+    origem: { classe, arranjo, reserva: reservaInicial(id, classe), bairro: bairroDeOrigem(id, classe, o.municipioId) },
     moradia: {
       tipo: 'pais',
       municipioId: o.municipioId,

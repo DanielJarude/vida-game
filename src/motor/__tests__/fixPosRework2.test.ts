@@ -17,7 +17,7 @@ import type { Vida } from '../tipos';
 import { idade, transacao, vinculosVivos } from '../nucleo';
 import { vincular } from '../pessoas';
 import { podeTentar } from '../plausibilidade';
-import { interpretar, migrarV16, VERSAO_SAVE } from '../save';
+import { interpretar, migrarV16, migrarV17, VERSAO_SAVE } from '../save';
 import { contratar } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
 import { garantirFrente, habilidade, leituraDaFrente } from '../sistemas/frentes';
@@ -598,9 +598,9 @@ describe('fonte única das fases da vida, migração v16 → v17, determinismo',
       expect(a.tipo).toBe('ok');
       if (a.tipo !== 'ok' || b.tipo !== 'ok') continue;
       expect(a.vida.versao).toBe(VERSAO_SAVE);
-      expect(VERSAO_SAVE).toBe(17);
+      expect(VERSAO_SAVE).toBe(18); // REWORK 3: v18 (origem, vivências, estilo).
       expect(a.vida).toEqual(b.vida);
-      expect(migrarV16(clone(a.vida))).toEqual(a.vida);
+      expect(migrarV17(migrarV16(clone(a.vida)))).toEqual(a.vida); // REWORK 3: a cadeia vai até a v18.
       const e = a.vida.caminhos.esporte;
       if (e?.fase === 'profissional') {
         expect(a.vida.rotinas.some(r => r.id === 'futebol')).toBe(false);

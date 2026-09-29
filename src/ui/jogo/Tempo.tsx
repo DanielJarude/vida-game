@@ -15,6 +15,7 @@ import { useState } from 'react';
 import type { Dominio, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
+import { DE_FORMACAO } from '../../motor/sistemas/formacao';
 import { custoDaRotina, DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
 import { estimuloCognitivo, estimuloFisico, palavraAprendizado, palavraCondicionamento } from '../../motor/sistemas/pessoa';
 import { cabeNaSemana, dose, semana, type Semana } from '../../motor/sistemas/semana';
@@ -32,7 +33,7 @@ import { dinheiroCurto } from '../apresentar';
 import { areaDaPorta, PortasAbertas } from './Estudos';
 import { doClube } from '../../motor/dados/clubes';
 import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
-import type { Aba } from '../telas/Jogo';
+import type { Aba } from '../navegacao';
 
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'esporte', rotulo: 'Esporte' }, { id: 'arte', rotulo: 'Arte' }, { id: 'estudo', rotulo: 'Estudo' },
@@ -107,7 +108,7 @@ function FaixaDaSemana({ s }: { s: Semana }) {
 /** Para onde leva cada pedaço fixo da semana (a causa mora em outra área). */
 const ORIGEM: Record<string, { area: Aba; rotulo: string }> = {
   trabalho: { area: 'trabalho', rotulo: 'Trabalho' }, horas_extras: { area: 'trabalho', rotulo: 'Trabalho' }, politica: { area: 'trabalho', rotulo: 'Trabalho' }, negocio: { area: 'trabalho', rotulo: 'Trabalho' },
-  curso: { area: 'estudos', rotulo: 'Estudos' }, integrado: { area: 'estudos', rotulo: 'Estudos' },
+  curso: { area: 'formacao', rotulo: 'Formação' }, integrado: { area: 'formacao', rotulo: 'Formação' },
   filhos_pequenos: { area: 'pessoas', rotulo: 'Pessoas' }, filhos_escola: { area: 'pessoas', rotulo: 'Pessoas' }, cuidar: { area: 'pessoas', rotulo: 'Pessoas' }, cuidado_pausa: { area: 'trabalho', rotulo: 'Trabalho' }, pets: { area: 'pessoas', rotulo: 'Pessoas' },
   deslocamento: { area: 'cidade', rotulo: 'Cidade' }
 };
@@ -176,14 +177,14 @@ function ComoVoceVai({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => bo
         </ul>
       )}
       {d.escolhido && <BotaoAcao vida={vida} acao={{ tipo: 'deslocamento', modo: 'auto' }} agir={agir} variante="discreto">Voltar a ir do jeito mais rápido</BotaoAcao>}
-      {!d.veiculoId && d.modo !== 'a_pe' && irPara && <div className="trajeto__loja"><p className="nota">Um carro, uma moto ou uma bicicleta mudam isso.</p><button type="button" className="botao botao--discreto" onClick={() => irPara('cidade')}>Ver as lojas na Cidade</button></div>}
+      {!d.veiculoId && d.modo !== 'a_pe' && irPara && <div className="trajeto__loja"><p className="nota">Um carro, uma moto ou uma bicicleta mudam isso.</p><button type="button" className="botao botao--discreto" onClick={() => irPara('compras')}>Ver as lojas, em Vida · Compras</button></div>}
     </section>
   );
 }
 
 export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const i = idade(vida);
-  if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
+  if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Vida · Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
   const s = semana(vida);
   const custo = economiaLocal(vida.moradia.municipioId).custo;
   const ativas = vida.rotinas.map(r => ({ r, m: modeloRotina(r.id) })).filter((x): x is { r: Vida['rotinas'][number]; m: ModeloRotina } => !!x.m);
@@ -192,7 +193,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
   const peneira = ultimaDevolutiva(vida, 'peneira', 36);
   return (
     <div className="tempo">
-      <Folio kicker={<><span className="folio__area">Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s, sobrecargaDaSemana(vida).fixos > 0.01)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
+      <Folio kicker={<><span className="folio__area">Vida · Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s, sobrecargaDaSemana(vida).fixos > 0.01)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
       <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
       <section className="tempo-semana" aria-labelledby="titulo-semana">
         <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
@@ -212,7 +213,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
             const dominio = m.pratica ? (Object.keys(m.pratica)[0] as Dominio) : undefined;
             // O que a atividade faz de verdade: a técnica da frente que pratica, ou o atributo que desenvolve (a mesma leitura de Você).
             const leitura = dominio && vida.caminhos.frentes[dominio] && (m.pratica?.[dominio] ?? 0) >= 1 ? leituraDaFrente(vida, dominio) : efeitoNoCorpo(vida, r.id);
-            const deEstudos = DE_ESTUDOS.has(r.id);
+            const deEstudos = DE_ESTUDOS.has(r.id) || DE_FORMACAO.has(r.id);
             const anos = Math.floor((vida.t - r.tInicio) / 12);
             const renda = m.renda?.(vida, n);
             const retorno = peneira && peneira.dominio === dominio ? peneira : undefined;
@@ -225,7 +226,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
                   {retorno && <span className="rotina__retorno">Na última {dominio === 'futebol' ? 'peneira' : 'seletiva'}: {retorno.texto}</span>}
                 </div>
                 <div className="rotina__acoes">
-                  {deEstudos && irPara && <button type="button" className="link rotina__ir" onClick={() => irPara('estudos')}>ver em Estudos →</button>}
+                  {deEstudos && irPara && <button type="button" className="link rotina__ir" onClick={() => irPara('formacao')}>ver em Formação →</button>}
                   {!deEstudos && n < m.niveis.length && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${nivelModelo(m, n + 1).rotulo.toLowerCase()}`}</BotaoAcao>}
                   {!deEstudos && n > 1 && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n - 1) as 1 | 2 }} agir={agir} variante="discreto">Mais leve</BotaoAcao>}
                   {!deEstudos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>}
@@ -275,7 +276,7 @@ function Comecar({ vida, agir, custo }: { vida: Vida; agir: (a: Acao) => boolean
   const [verFora, setVerFora] = useState(false);
   const { para, resto } = atividadesParaVoce(vida);
   // O cursinho mora em Estudos (é preparação, não tempo livre): aqui só aparece na semana.
-  const outras = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !vida.rotinas.some(x => x.id === m.id) && atividadeExiste(vida, m));
+  const outras = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !DE_FORMACAO.has(m.id) && !vida.rotinas.some(x => x.id === m.id) && atividadeExiste(vida, m));
   const itens = outras.map(m => ({ m, d: disponibilidade(vida, { tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }) }));
   const semTempo = itens.filter(x => !podeTentar(x.d) && x.d.grau === 'incompativel' && /semana/.test(x.d.motivo ?? ''));
   const fora = itens.filter(x => !podeTentar(x.d) && !semTempo.includes(x));

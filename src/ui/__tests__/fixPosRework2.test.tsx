@@ -34,8 +34,10 @@ afterEach(() => cleanup());
 const nada = () => {};
 
 function viva(i: number, semente = 41): Vida {
+  // (REWORK 3: uma vida viva na idade pedida — a semente seguinte, se esta não chegou lá.)
   let v = criarVida({ nome: 'Rui', sobrenome: 'Lopes', genero: 'masculino', municipioId: 'belo-horizonte-mg', semente });
   for (let k = 0; k < i; k++) { v = avancarAno(v).vida; v.momento = null; v.caminhos.pendente = undefined; }
+  if (v.morte) return viva(i, semente + 1);
   v.rotinas = []; v.corpo.condicoes = []; v.anoAtual = { acoes: [] }; v.trabalho.atual = undefined; v.educacao.matricula = undefined; v.educacao.basica = undefined;
   for (const vin of Object.values(v.vinculos)) { vin.chamado = undefined; if (vin.romance && vin.romance.estagio !== 'ex') vin.romance = undefined; }
   return v;

@@ -133,6 +133,6 @@ export function lerPessoal(v: Vida, d: DimensaoPessoal): LeituraPessoal {
   const pesa = fatores.filter(f => f.efeito < 0).sort((a, b) => a.efeito - b.efeito).map(f => f.texto).slice(0, 2);
   if (d === 'condicionamento' && i >= 12 && estimuloFisico(v).total < 0.4) pesa.unshift('nenhum exercício na semana');
   if (d === 'aprendizado' && !fatores.some(f => f.id === 'estimulo') && i >= 10) pesa.push('nada que exercite a cabeça fora da obrigação');
-  const ir = d === 'aprendizado' ? { aba: 'tempo' as const, rotulo: 'Ler, xadrez, estudar — em Tempo livre' } : d === 'condicionamento' ? (v.caminhos.esporte?.fase === 'profissional' ? { aba: 'trabalho' as const, rotulo: 'O treino do clube — em Trabalho' } : { aba: 'tempo' as const, rotulo: 'Treino e movimento — em Tempo livre' }) : undefined;
+  const ir = d === 'aprendizado' ? { aba: 'tempo' as const, rotulo: 'Ler, xadrez, estudar — em Vida · Tempo livre' } : d === 'condicionamento' ? (v.caminhos.esporte?.fase === 'profissional' ? { aba: 'trabalho' as const, rotulo: 'O treino do clube — em Trabalho' } : { aba: 'tempo' as const, rotulo: 'Treino e movimento — em Tempo livre' }) : undefined;
   return { d, nome: NOME_PESSOAL[d], palavra, tendencia: tendenciaPessoal(v, d), ajuda, pesa: pesa.slice(0, 2), uso: CONSUMIDORES[d], ir };
 }

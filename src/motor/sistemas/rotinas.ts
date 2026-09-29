@@ -32,6 +32,8 @@ import { categoriaDoVeiculo } from './veiculos';
 import { esfriarPreparo, prepararVestibular } from './vestibular';
 import { diagnosticar, encaminhado } from './saude';
 import { modeloFrente } from '../dados/frentes';
+import { anoDaAtividade, ofereceAqui } from './formacao';
+import { cursoOuNulo } from '../dados/cursos';
 
 export type CategoriaAtividade = Categoria | 'corpo' | 'lazer' | 'renda' | 'cuidado';
 
@@ -213,7 +215,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
   },
   {
     id: 'teatro', nome: 'Teatro', descricao: 'Grupo da escola, da igreja ou um curso livre.', categoria: 'arte', idadeMin: 9,
-    oferta: v => cidade(v) >= 1 || janela(v, 'teatro', 0.5) || !!v.caminhos.frentes.teatro,
+    oferta: v => cidade(v) >= 1 || janela(v, 'teatro', 0.5) || !!v.caminhos.frentes.teatro || ofereceAqui(v, 'teatro'),
     niveis: [
       { rotulo: 'Grupo da escola ou do bairro', tempo: 0.5, custo: 0, qualidade: 0.9 },
       { rotulo: 'Curso livre de teatro', tempo: 1, custo: 160, qualidade: 1.2, requer: pago(160, 'teatro', v => (cidade(v) >= 1 ? true : 'Não há curso de teatro na cidade.')) },
@@ -292,9 +294,11 @@ export const ROTINAS: readonly ModeloRotina[] = [
   {
     id: 'clube_ciencias', nome: 'Clube de ciências e robótica', descricao: 'Feira de ciências, olimpíada, robô de sucata.', categoria: 'estudo', idadeMin: 10, idadeMax: 17,
     requer: v => (naEscola(v) ? true : 'É uma atividade da escola.'),
-    oferta: v => janela(v, 'clube_ciencias', escolaPrivada(v) ? 0.75 : 0.4),
+    // Existe onde a escola tem laboratório e clube (o perfil da instituição: `formacao`).
+    oferta: v => ofereceAqui(v, 'ciencias'),
     niveis: [{ rotulo: 'Depois da aula', tempo: 0.5, custo: 0 }],
-    pratica: { ciencias: 0.8, exatas: 0.4, programacao: 0.3 }, social: { onde: 'no clube de ciências', fluxo: 0.6, amplitude: 2 }
+    pratica: { ciencias: 0.8, exatas: 0.4, programacao: 0.3 }, social: { onde: 'no clube de ciências', fluxo: 0.6, amplitude: 2 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'clube_ciencias', n)
   },
   {
     id: 'cursinho', nome: 'Cursinho pré-vestibular', descricao: 'Aulas para o ENEM. Ajuda muito na nota.', categoria: 'estudo', idadeMin: 16,
@@ -324,8 +328,118 @@ export const ROTINAS: readonly ModeloRotina[] = [
   {
     id: 'gremio', nome: 'Grêmio estudantil', descricao: 'Reunião, eleição, festa junina, briga com a diretoria.', categoria: 'social', idadeMin: 12, idadeMax: 18,
     requer: v => (v.educacao.basica && ['fundamental2', 'medio'].includes(v.educacao.basica.etapa) ? true : 'É coisa da escola.'),
+    oferta: v => ofereceAqui(v, 'gremio'),
     niveis: [{ rotulo: 'Participar', tempo: 0.5, custo: 0 }],
-    pratica: { lideranca: 1.2, linguagens: 0.2 }, social: { onde: 'no grêmio', fluxo: 1, amplitude: 3 }, comportamento: { sociabilidade: 1 }
+    pratica: { lideranca: 1.2, linguagens: 0.2 }, social: { onde: 'no grêmio', fluxo: 1, amplitude: 3 }, comportamento: { sociabilidade: 1 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'gremio', n)
+  },
+  // ------------------------------------------------ formação (REWORK 3)
+  // Atividades que só existem numa instituição (o perfil dela: `formacao`). Moram em Formação.
+  {
+    id: 'time_escola', nome: 'Time da escola', descricao: 'Treino depois da aula e os jogos escolares da cidade.', categoria: 'esporte', idadeMin: 8, idadeMax: 18,
+    requer: v => (naEscola(v) ? true : 'É uma atividade da escola.'),
+    oferta: v => ofereceAqui(v, 'time'),
+    niveis: [{ rotulo: 'Treinar com o time', tempo: 1, custo: 0, qualidade: 1.1 }],
+    pratica: { futebol: 1 }, social: { onde: 'no time da escola', fluxo: 1, amplitude: 2 }, comportamento: { disciplina: 1 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'time_escola', n)
+  },
+  {
+    id: 'olimpiada', nome: 'Preparação para as olimpíadas', descricao: 'Matemática, ciências, astronomia: lista de problemas, simulado, a prova.', categoria: 'estudo', idadeMin: 10, idadeMax: 18,
+    requer: v => (naEscola(v) ? true : 'É uma atividade da escola.'),
+    oferta: v => ofereceAqui(v, 'olimpiada'),
+    niveis: [{ rotulo: 'A turma da olimpíada', tempo: 0.5, custo: 0 }, { rotulo: 'Estudar a sério para a prova', tempo: 1, custo: 0, qualidade: 1.2 }],
+    pratica: { exatas: 0.9, ciencias: 0.45 }, social: { onde: 'na turma da olimpíada', fluxo: 0.5, amplitude: 2 }, comportamento: { disciplina: 1 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'olimpiada', n)
+  },
+  {
+    id: 'reforco', nome: 'Aula de reforço', descricao: 'Pedir ajuda: no contraturno, a professora explica de novo.', categoria: 'estudo', idadeMin: 7, idadeMax: 18,
+    requer: v => (naEscola(v) ? true : 'É uma atividade da escola.'),
+    oferta: v => ofereceAqui(v, 'reforco'),
+    niveis: [{ rotulo: 'No contraturno', tempo: 0.5, custo: 0 }],
+    pratica: { exatas: 0.35, linguagens: 0.35 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'reforco', n)
+  },
+  {
+    id: 'projeto_escola', nome: 'Projeto da escola', descricao: 'Horta, rádio, jornal, oficina: um projeto de alunos e professores.', categoria: 'estudo', idadeMin: 9, idadeMax: 18,
+    requer: v => (naEscola(v) ? true : 'É uma atividade da escola.'),
+    oferta: v => ofereceAqui(v, 'projeto'),
+    niveis: [{ rotulo: 'Participar', tempo: 0.5, custo: 0 }],
+    pratica: { ciencias: 0.4, linguagens: 0.4, comunidade: 0.5 }, social: { onde: 'no projeto da escola', fluxo: 0.7, amplitude: 3 }, comportamento: { empatia: 1 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'projeto_escola', n)
+  },
+  {
+    id: 'fanfarra', nome: 'Fanfarra da escola', descricao: 'Tambor, corneta e o desfile de Sete de Setembro.', categoria: 'arte', idadeMin: 9, idadeMax: 18,
+    requer: v => (naEscola(v) ? true : 'É uma atividade da escola.'),
+    oferta: v => ofereceAqui(v, 'fanfarra'),
+    niveis: [{ rotulo: 'Ensaios depois da aula', tempo: 0.5, custo: 0 }],
+    pratica: { musica: 0.8 }, social: { onde: 'na fanfarra', fluxo: 0.8, amplitude: 3 }
+  },
+  {
+    id: 'projeto_tecnico', nome: 'Projeto no laboratório', descricao: 'Um projeto técnico de verdade, com um professor orientando.', categoria: 'estudo', idadeMin: 14,
+    requer: v => (v.educacao.basica?.integrado || cursoOuNulo(v.educacao.matricula?.cursoId ?? '')?.nivel === 'tecnico' ? true : 'É do curso técnico.'),
+    oferta: v => ofereceAqui(v, 'projeto_tecnico'),
+    niveis: [{ rotulo: 'Algumas tardes', tempo: 0.5, custo: 0 }, { rotulo: 'Dedicação de verdade', tempo: 1, custo: 0, qualidade: 1.2 }],
+    social: { onde: 'no laboratório', fluxo: 0.6, amplitude: 3 }, comportamento: { disciplina: 1 },
+    // Pratica o que o curso ensina (quem faz Eletrotécnica mexe com elétrica).
+    efeito: (v, r, n) => { const c = cursoOuNulo(v.educacao.basica?.integrado ?? v.educacao.matricula?.cursoId ?? ''); for (const [d, w] of Object.entries(c?.pratica ?? {}) as [Dominio, number][]) praticar(v, r, d, w * (n === 2 ? 0.9 : 0.5), 1.15); anoDaAtividade(v, 'projeto_tecnico', n); }
+  },
+  {
+    id: 'iniciacao', nome: 'Iniciação científica', descricao: 'Pesquisa com um professor: leitura, laboratório, relatório — e uma bolsa pequena.', categoria: 'estudo', idadeMin: 17,
+    requer: v => { const m = v.educacao.matricula; const c = cursoOuNulo(m?.cursoId ?? ''); return m && !m.trancado && c?.nivel === 'superior' ? (m.desempenho >= 55 ? true : 'O grupo de pesquisa pede notas firmes.') : 'É da graduação.'; },
+    oferta: v => ofereceAqui(v, 'iniciacao'),
+    niveis: [{ rotulo: 'Vinte horas por semana', tempo: 1, custo: 0, qualidade: 1.2 }],
+    comportamento: { disciplina: 1 },
+    renda: v => (v.educacao.matricula?.rede === 'publica' ? 700 : 400),
+    efeito: (v, r, n) => { const c = cursoOuNulo(v.educacao.matricula?.cursoId ?? ''); for (const [d, w] of Object.entries(c?.pesos ?? {}) as [Dominio, number][]) praticar(v, r, d, Math.min(1, w * 0.5), 1.1); anoDaAtividade(v, 'iniciacao', n); }
+  },
+  {
+    id: 'monitoria', nome: 'Monitoria', descricao: 'Ajudar o professor: tirar dúvidas da turma, corrigir lista.', categoria: 'estudo', idadeMin: 17,
+    requer: v => { const m = v.educacao.matricula; return m && !m.trancado && ['superior', 'mestrado', 'doutorado'].includes(cursoOuNulo(m.cursoId)?.nivel ?? '') ? (m.desempenho >= 62 ? true : 'A monitoria é para quem vai bem na disciplina.') : 'É da faculdade.'; },
+    oferta: v => ofereceAqui(v, 'monitoria'),
+    niveis: [{ rotulo: 'Algumas horas por semana', tempo: 0.5, custo: 0 }],
+    pratica: { linguagens: 0.25 },
+    renda: v => (v.educacao.matricula?.rede === 'publica' ? 400 : 0),
+    efeito: (v, _r, n) => anoDaAtividade(v, 'monitoria', n)
+  },
+  {
+    id: 'extensao', nome: 'Projeto de extensão', descricao: 'A universidade fora dos muros: atendimento, cursinho popular, assessoria.', categoria: 'social', idadeMin: 17,
+    requer: v => (v.educacao.matricula && !v.educacao.matricula.trancado ? true : 'É da faculdade.'),
+    oferta: v => ofereceAqui(v, 'extensao'),
+    niveis: [{ rotulo: 'Algumas vezes por mês', tempo: 0.5, custo: 0 }, { rotulo: 'Toda semana', tempo: 1, custo: 0 }],
+    pratica: { comunidade: 1 }, social: { onde: 'na extensão', fluxo: 0.8, amplitude: 8 }, comportamento: { empatia: 1, generosidade: 1 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'extensao', n)
+  },
+  {
+    id: 'centro_academico', nome: 'Centro acadêmico', descricao: 'Representar a turma: reunião, assembleia, briga com a coordenação.', categoria: 'social', idadeMin: 17,
+    requer: v => (v.educacao.matricula && !v.educacao.matricula.trancado ? true : 'É da faculdade.'),
+    oferta: v => ofereceAqui(v, 'centro_academico'),
+    niveis: [{ rotulo: 'Participar', tempo: 0.5, custo: 0 }],
+    pratica: { lideranca: 1.1 }, social: { onde: 'no centro acadêmico', fluxo: 1, amplitude: 4 }, comportamento: { sociabilidade: 1 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'centro_academico', n)
+  },
+  {
+    id: 'atletica', nome: 'Atlética', descricao: 'O time do curso, os jogos universitários — e a festa depois.', categoria: 'esporte', idadeMin: 17,
+    requer: v => (v.educacao.matricula && !v.educacao.matricula.trancado && v.educacao.matricula.modalidade === 'presencial' ? true : 'É da faculdade presencial.'),
+    oferta: v => ofereceAqui(v, 'atletica'),
+    niveis: [{ rotulo: 'Treinos e jogos', tempo: 1, custo: 30 }],
+    pratica: { futebol: 0.6, volei: 0.4 }, social: { onde: 'na atlética', fluxo: 1.4, amplitude: 5 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'atletica', n)
+  },
+  {
+    id: 'grupo_estudos', nome: 'Grupo de estudos', descricao: 'Estudar junto antes da prova: quem entendeu explica.', categoria: 'estudo', idadeMin: 15,
+    requer: v => (v.educacao.matricula && !v.educacao.matricula.trancado ? true : 'É de quem está num curso.'),
+    oferta: v => ofereceAqui(v, 'grupo_estudos'),
+    niveis: [{ rotulo: 'Antes das provas', tempo: 0.5, custo: 0 }],
+    social: { onde: 'no grupo de estudos', fluxo: 0.8, amplitude: 4 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'grupo_estudos', n)
+  },
+  {
+    id: 'empresa_junior', nome: 'Empresa júnior', descricao: 'Projetos para clientes de verdade, tocados por estudantes.', categoria: 'estudo', idadeMin: 17,
+    requer: v => (v.educacao.matricula && !v.educacao.matricula.trancado ? true : 'É da faculdade.'),
+    oferta: v => ofereceAqui(v, 'empresa_junior'),
+    niveis: [{ rotulo: 'Meio período', tempo: 1, custo: 0 }],
+    pratica: { lideranca: 0.5, vendas: 0.3 }, social: { onde: 'na empresa júnior', fluxo: 0.8, amplitude: 4 }, comportamento: { disciplina: 1 },
+    efeito: (v, _r, n) => anoDaAtividade(v, 'empresa_junior', n)
   },
   {
     id: 'igreja', nome: 'Frequentar a igreja', descricao: 'Cultos ou missas, grupo de jovens, festas da comunidade.', categoria: 'social', idadeMin: 0,

@@ -17,6 +17,7 @@
  * mudar de cargo. Não existe escada infinita.
  */
 
+import { vivenciaQuePesa } from './formacao';
 import type { Rng } from '../rng';
 import { pesoDaSaudeNoTrabalho } from './saude';
 import { pesoNoDesempenho } from './sobrecarga';
@@ -285,6 +286,8 @@ function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   if (i > 50 && oc.nivel < 4) c -= (i - 50) / 60; // etarismo real no mercado
   // Antecedentes pesam em quem contrata com carteira (o autônomo não passa por isso).
   if (oc.contrato === 'clt' || oc.contrato === 'estagio' || oc.contrato === 'aprendiz') c -= penaDeAntecedentes(v);
+  // O que se viveu na formação (o projeto técnico, a iniciação, a empresa júnior) pesa — a mesma conta que a tela diz (`formacao`).
+  c += vivenciaQuePesa(v, oc).bonus;
   c += bonus;
   return clamp(c, 0.05, 0.92);
 }

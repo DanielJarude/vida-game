@@ -133,6 +133,12 @@ export function quemE(v: Vida, p: Pessoa, vin: Vinculo): string {
     return `${conheceram}Juntos há ${juntos < 1 ? 'menos de um ano' : anos(juntos)}.`;
   }
   if (papel === 'pet') return `Na família desde ${anoDe(vin.tInicio)}.`;
+  // Gente da formação: o papel que teve ali (não amizade automática).
+  if (vin.formacao && vin.formacao.papel !== 'colega') {
+    const pap = vin.formacao.papel === 'orientador' ? flex(p.genero, 'Seu orientador', 'Sua orientadora', 'Sue orientadore') : flex(p.genero, 'Seu professor', 'Sua professora', 'Sue professore');
+    return `${pap}${p.ocupacao ? ` (${p.ocupacao})` : ''}, desde ${anoDe(vin.tInicio)}.${vin.formacao.tFim !== undefined ? ` A formação acabou em ${anoDe(vin.formacao.tFim)}; a memória ficou.` : ''}`;
+  }
+  if (vin.formacao?.papel === 'colega' && vin.formacao.tFim !== undefined) return `Estudaram juntos até ${anoDe(vin.formacao.tFim)}${p.ocupacao && p.ocupacao !== 'estudante' ? `; hoje, ${p.ocupacao}` : ''}.`;
   const onde = descricaoOrigem(v, vin);
   return `Vocês se conheceram ${onde}, em ${anoDe(vin.tInicio)}${tempo >= 2 ? ` — há ${anos(tempo)}` : ''}.`;
 }

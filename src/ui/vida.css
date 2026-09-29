@@ -50,6 +50,12 @@ details summary { cursor: pointer; }
 
 /* Tom de cada página. */
 .pagina--vida { --tom: var(--tom-vida); }
+/* REWORK 3: seis áreas estáveis (Linha da Vida · Você · Pessoas · Formação · Trabalho · Vida). */
+.pagina--linha { --tom: var(--tom-vida); }
+.pagina--formacao { --tom: var(--tom-estudos); }
+.pagina--vida.pagina--vida-casa, .pagina--vida.pagina--vida-dinheiro, .pagina--vida.pagina--vida-compras { --tom: var(--tom-casa); }
+.pagina--vida.pagina--vida-tempo { --tom: var(--tom-tempo); }
+.pagina--vida.pagina--vida-cidade { --tom: var(--tom-cidade); }
 .pagina--voce { --tom: var(--tom-voce); }
 .pagina--pessoas { --tom: var(--tom-pessoas); }
 .pagina--trabalho { --tom: var(--tom-trabalho); }
@@ -186,7 +192,9 @@ details summary { cursor: pointer; }
 .aba:hover { color: var(--text-primary); background: var(--surface); }
 .aba--ativa { color: var(--text-primary); box-shadow: inset 0 -3px 0 var(--tom-aba); border-radius: 0; }
 .aba--ativa .icone { color: var(--tom-aba); }
-.aba--vida, .barra__item--vida { --tom-aba: var(--tom-vida); }
+.aba--vida, .barra__item--vida { --tom-aba: var(--tom-casa); }
+.aba--linha, .barra__item--linha { --tom-aba: var(--tom-vida); }
+.aba--formacao, .barra__item--formacao { --tom-aba: var(--tom-estudos); }
 .aba--voce, .barra__item--voce { --tom-aba: var(--tom-voce); }
 .aba--pessoas, .barra__item--pessoas { --tom-aba: var(--tom-pessoas); }
 .aba--trabalho, .barra__item--trabalho { --tom-aba: var(--tom-trabalho); }
@@ -921,3 +929,71 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .acao-viva--bloqueada { opacity: 0.62; cursor: default; }
 .acao-viva--bloqueada .acao-viva__seta { visibility: hidden; }
 .acao-viva__motivo { font-style: italic; }
+
+
+/* ================================================================ REWORK 3 */
+
+/* Navegação interna de Vida: seções estáveis, que rolam de lado no celular (sem rolagem da página). */
+.subnav { margin: 0 0 var(--space-5); border-bottom: 1px solid var(--rule); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.subnav::-webkit-scrollbar { display: none; }
+.subnav__lista { display: flex; gap: var(--space-1); list-style: none; margin: 0; padding: 0; min-width: max-content; }
+.subnav__item { min-height: var(--touch-target); padding: 0 var(--space-4); color: var(--text-muted); font-size: var(--type-body); white-space: nowrap; border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.subnav__item:hover { color: var(--text-primary); background: var(--surface); }
+.subnav__item--ativo { color: var(--text-primary); font-weight: var(--weight-semibold); box-shadow: inset 0 -3px 0 var(--tom); }
+.subnav__item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* "Onde fica cada coisa" (no menu): intenção → lugar. */
+.onde-fica { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--rule); }
+.onde-fica__lista { list-style: none; margin: var(--space-2) 0 0; padding: 0; }
+.onde-fica__item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); width: 100%; text-align: left; padding: var(--space-2) 0; min-height: var(--touch-target); border-bottom: 1px solid var(--rule); color: var(--text-primary); }
+.onde-fica__item:hover .onde-fica__onde { color: var(--text-primary); }
+.onde-fica__onde { color: var(--text-muted); font-size: var(--type-caption); }
+
+/* Formação: o lugar (a instituição como ambiente). */
+.o-lugar { margin: var(--space-5) 0; }
+.o-lugar__descricao { color: var(--text-secondary, var(--text-muted)); max-width: 62ch; }
+.o-lugar__gente { list-style: none; margin: var(--space-3) 0; padding: 0; display: grid; gap: var(--space-1); }
+.o-lugar__atividades { list-style: none; margin: var(--space-2) 0; padding: 0; }
+.atividade-formacao { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: center; padding: var(--space-3) 0 var(--space-3) var(--space-3); border-left: 3px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.atividade-formacao--ativa { border-left-color: var(--tom); background: color-mix(in oklab, var(--tom) 6%, transparent); }
+.atividade-formacao__texto { display: grid; gap: 2px; min-width: 0; }
+.atividade-formacao__texto span { color: var(--text-muted); font-size: var(--type-caption); }
+@media (max-width: 560px) { .atividade-formacao { grid-template-columns: minmax(0, 1fr); } }
+
+/* Você: o dinheiro vira um atalho (a conta mora em Vida · Dinheiro). */
+.voce-dinheiro { margin: var(--space-5) 0; }
+.voce-dinheiro__ir { display: grid; gap: 2px; width: 100%; text-align: left; padding: var(--space-3) var(--space-4); border-left: 3px solid var(--tom-casa); background: var(--surface); border-radius: 0 var(--radius-md) var(--radius-md) 0; min-height: var(--touch-target); color: var(--text-primary); }
+.voce-dinheiro__ir:hover { background: var(--surface-hover); }
+
+/* Você: aparência e estilo. */
+.aparencia { margin: var(--space-6) 0; }
+.aparencia__corpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+.aparencia__previa { display: grid; justify-items: center; gap: var(--space-1); }
+.aparencia__previa .retrato { border-radius: var(--radius-md); }
+.aparencia__escolhas { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-3); align-items: end; }
+.aparencia__escolhas .grupo-acoes, .aparencia__escolhas .nota, .aparencia__escolhas .marcar { grid-column: 1 / -1; }
+.aparencia__itens { margin-top: var(--space-4); }
+.itens-estilo { list-style: none; margin: 0; padding: 0; }
+.item-estilo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.item-estilo--usando strong { color: var(--text-primary); }
+@media (max-width: 560px) { .aparencia__corpo { grid-template-columns: minmax(0, 1fr); } .aparencia__previa { justify-items: start; } }
+
+/* Compras: um lugar que ainda não é para a sua idade aparece, com o porquê. */
+.lugar-botao--bloqueado, .lugar-botao:disabled { cursor: not-allowed; opacity: 0.62; background: transparent; }
+.lugar-botao--bloqueado .lugar-botao__oque { color: var(--text-muted); font-style: italic; }
+.oferta--estilo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: center; padding: var(--space-3); border-bottom: 1px solid var(--rule); }
+.oferta--estilo .acao, .oferta--estilo > .nota { grid-column: 1 / -1; }
+.selo--luxo { font-size: var(--type-caption); color: var(--text-muted); margin-left: var(--space-1); }
+
+/* Casa e Dinheiro: quem paga, e a família. */
+.independencia { max-width: 62ch; }
+.apoios { list-style: none; margin: var(--space-2) 0; padding: 0; }
+.apoios li { padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); }
+.apoios__ano { color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: var(--space-2); }
+.origem-linha { margin-bottom: var(--space-3); }
+/* No celular, as cinco seções de Vida cabem em duas linhas (nenhuma escondida atrás da rolagem). */
+@media (max-width: 520px) {
+  .subnav { overflow: visible; }
+  .subnav__lista { flex-wrap: wrap; min-width: 0; row-gap: 0; }
+  .subnav__item { padding: 0 var(--space-3); }
+}

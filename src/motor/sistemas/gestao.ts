@@ -101,8 +101,10 @@ export function acoesDoNegocio(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
 
   // Crescer.
   add({ id: 'contratar', rotulo: eq === 0 ? 'Contratar a primeira pessoa' : 'Contratar mais alguém', porque: cheio ? (eq === 0 ? (paralela ? 'Sem ninguém no dia a dia, o negócio abre pouco.' : 'Sozinho, não dá para atender mais.') : 'A equipe já não dá conta.') : apertado ? 'Com o movimento fraco, é mais uma conta.' : undefined, acao: P('contratar'), peso: cheio ? 8 : apertado ? 0 : paralela && eq === 0 && p === 'rua' ? 6 : 2 });
-  if (podeTentar(podeAmpliar(v))) add({ id: 'ampliar', rotulo: n.emCasa ? (p === 'online' ? 'Sair de casa: um galpão pequeno' : p === 'atendimento' ? 'Sair de casa: uma sala de atendimento' : 'Sair de casa: abrir um ponto') : 'Ampliar o negócio', porque: 'Dá para crescer — e a conta cresce junto.', acao: P('ampliar'), peso: 6 });
-  if (podeTentar(podeAbrirUnidade(v))) add({ id: 'unidade', rotulo: `Abrir ${nomeDaUnidade(n)}`, porque: 'A primeira frente está firme.', acao: P('unidade'), peso: 5 });
+  const dAmp = podeAmpliar(v);
+  if (podeTentar(dAmp) || dAmp.dinheiro) add({ id: 'ampliar', rotulo: n.emCasa ? (p === 'online' ? 'Sair de casa: um galpão pequeno' : p === 'atendimento' ? 'Sair de casa: uma sala de atendimento' : 'Sair de casa: abrir um ponto') : 'Ampliar o negócio', porque: 'Dá para crescer — e a conta cresce junto.', acao: P('ampliar'), peso: 6 });
+  const dUni = podeAbrirUnidade(v);
+  if (podeTentar(dUni) || dUni.dinheiro) add({ id: 'unidade', rotulo: `Abrir ${nomeDaUnidade(n)}`, porque: 'A primeira frente está firme.', acao: P('unidade'), peso: 5 });
   // O ofício.
   add({ id: 'divulgar', rotulo: DIVULGAR[p][0], porque: n.clientela < 35 ? 'Pouca gente sabe que você existe.' : undefined, acao: P('divulgar'), peso: n.clientela < 35 ? 6 : 1 });
   if (t.acoes.includes('estrutura') && nivelDe(n, 'estrutura') < 2) add({ id: 'estrutura_negocio', rotulo: ROTULO_ESTRUTURA[t.id] ?? 'Investir na estrutura', porque: cheio ? 'Mais estrutura, mais gente atendida.' : `Uns ${fmt(custoFrac(v, n, 0.25))}.`, acao: P('estrutura_negocio'), peso: cheio ? 5 : 2 });
@@ -141,7 +143,8 @@ export function disponibilidadeGestao(v: Vida, oque: OqueGestao, valor?: string)
   if (!n) return bloqueio('impossivel', 'Não há negócio.');
   const t = tipoDoNegocio(n)!;
   const ja = (k: string) => v.anoAtual.acoes.includes(k);
-  const custa = (f: number, oq: string): Veredito => cabeNoCaixaEBolso(v, n, custoFrac(v, n, f)) ? PERMITIDO : bloqueio('requisito', `${oq} custa uns ${fmt(custoFrac(v, n, f))} — entre o caixa e o seu bolso, não há.`);
+  // Falta de dinheiro é falta de dinheiro: a ação aparece bloqueada, com o motivo (REWORK 3: antes, sumia).
+  const custa = (f: number, oq: string): Veredito => cabeNoCaixaEBolso(v, n, custoFrac(v, n, f)) ? PERMITIDO : { ...bloqueio('requisito', `${oq} custa uns ${fmt(custoFrac(v, n, f))} — entre o caixa e o seu bolso, não há.`), dinheiro: true };
   switch (oque) {
     case 'divulgar': {
       const ult = v.fatos[`neg_divulgou_${n.tInicio}`];

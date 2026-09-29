@@ -18,7 +18,9 @@ const PELE: Record<string, [string, string]> = {
   p4: ['#b27b52', '#98643f'], p5: ['#8b5b3a', '#74482c'], p6: ['#5f3c27', '#4b2e1d']
 };
 const CABELO: Record<string, string> = {
-  preto: '#1c1917', castanho_escuro: '#35251c', castanho: '#563a28', castanho_claro: '#86603f', loiro: '#caa25e', ruivo: '#a24a27'
+  preto: '#1c1917', castanho_escuro: '#35251c', castanho: '#563a28', castanho_claro: '#86603f', loiro: '#caa25e', ruivo: '#a24a27',
+  // Tinta (a partir da adolescência) e o grisalho assumido.
+  platinado: '#e6e0cf', vermelho: '#a8232f', azul: '#2f5f9e', rosa: '#d9829e', grisalho: '#a9a39b'
 };
 const OLHOS: Record<string, string> = {
   castanho_escuro: '#2f1d14', castanho: '#553620', mel: '#86662b', verde: '#56764a', azul: '#4b75a0'
@@ -42,6 +44,10 @@ export function fundoDoRetrato(cabelo: string, pele: string, semente: number): s
 }
 
 const ROUPA = ['#4b5a6b', '#6b4f5a', '#4f6b5a', '#7a6248', '#5a5470', '#3f5f66', '#735a4a', '#556048'];
+/** O jeito de vestir escolhido muda a paleta e o recorte da roupa (sem virar figurino). */
+const ROUPA_ESTILO: Record<string, string[]> = {
+  social: ['#2c3440', '#3b3b46', '#29384a'], esportiva: ['#2f6f8f', '#b0493c', '#3f7a52'], alternativa: ['#8a5a2b', '#6b3f73', '#2f6b66'], elegante: ['#1d1f24', '#3a2430', '#1f2d3a']
+};
 
 type Fase = 'bebe' | 'crianca' | 'pre' | 'adol' | 'adulto' | 'meia' | 'idoso';
 
@@ -99,10 +105,11 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   const sombra = expressao === 'doente' ? misturar(sombraBase, '#9d978e', 0.2) : sombraBase;
   const x = expressao;
 
-  // Cabelo envelhece
+  // Cabelo envelhece (a tinta, não: quem pinta, pinta a raiz também)
   let cor = CABELO[v.corCabelo] ?? CABELO.castanho;
-  if (f === 'meia') cor = misturar(cor, '#b8b2aa', idade >= 55 ? 0.45 : 0.22);
-  if (f === 'idoso') cor = misturar(cor, '#ddd8d0', idade >= 78 ? 0.9 : 0.7);
+  const tinta = ['platinado', 'vermelho', 'azul', 'rosa', 'grisalho'].includes(v.corCabelo);
+  if (f === 'meia' && !tinta) cor = misturar(cor, '#b8b2aa', idade >= 55 ? 0.45 : 0.22);
+  if (f === 'idoso' && !tinta) cor = misturar(cor, '#ddd8d0', idade >= 78 ? 0.9 : 0.7);
   if (f === 'bebe' || f === 'crianca') cor = misturar(cor, '#caa25e', v.corCabelo === 'preto' || v.corCabelo === 'castanho_escuro' ? 0.05 : 0.2);
 
   // Geometria por fase
@@ -129,7 +136,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
     C ${cx + w / 2} ${cy + hh * 0.3} ${cx + jaw} ${queixo} ${cx} ${queixo}
     C ${cx - jaw} ${queixo} ${cx - w / 2} ${cy + hh * 0.3} ${cx - w / 2} ${cy} Z`;
 
-  const roupa = f === 'bebe' ? ['#c9d6e3', '#e3cdd6', '#d7e0c8', '#e6dcc4'][h % 4] : ROUPA[h % ROUPA.length];
+  const roupa = f === 'bebe' ? ['#c9d6e3', '#e3cdd6', '#d7e0c8', '#e6dcc4'][h % 4] : v.roupa && ROUPA_ESTILO[v.roupa] ? ROUPA_ESTILO[v.roupa][h % ROUPA_ESTILO[v.roupa].length] : ROUPA[h % ROUPA.length];
   const ombro = 30 * G.corpo * (adultoOuAdol && masc ? 1.12 : 1);
   const pescocoW = f === 'bebe' ? 0 : w * (masc && adultoOuAdol ? 0.36 : 0.3);
   const corpoTopo = queixo + (f === 'bebe' ? -2 : 4);
@@ -159,6 +166,13 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {f !== 'bebe' && (
         <path d={fem ? `M ${cx - pescocoW * 0.9} ${corpoTopo + 4} Q ${cx} ${corpoTopo + 14} ${cx + pescocoW * 0.9} ${corpoTopo + 4}` : `M ${cx - pescocoW * 0.75} ${corpoTopo + 3.5} L ${cx} ${corpoTopo + 10} L ${cx + pescocoW * 0.75} ${corpoTopo + 3.5}`}
           fill="none" stroke={misturar(roupa, '#000000', 0.25)} strokeWidth={1.4} strokeLinejoin="round" />
+      )}
+      {/* Gola de camisa (social, elegante) e a faixa do agasalho (esportiva). */}
+      {f !== 'bebe' && (v.roupa === 'social' || v.roupa === 'elegante') && (
+        <path d={`M ${cx - pescocoW * 0.95} ${corpoTopo + 3} L ${cx - 1.5} ${corpoTopo + 11} L ${cx - pescocoW * 0.2} ${corpoTopo + 3} Z M ${cx + pescocoW * 0.95} ${corpoTopo + 3} L ${cx + 1.5} ${corpoTopo + 11} L ${cx + pescocoW * 0.2} ${corpoTopo + 3} Z`} fill="#eeeae2" opacity={0.92} />
+      )}
+      {f !== 'bebe' && v.roupa === 'esportiva' && (
+        <path d={`M ${cx - ombro * 0.62} ${corpoTopo + 12} L ${cx - ombro * 0.62} 101 M ${cx + ombro * 0.62} ${corpoTopo + 12} L ${cx + ombro * 0.62} 101`} stroke="#f2efe8" strokeWidth={1.6} opacity={0.8} />
       )}
 
       {/* Orelhas */}
@@ -234,22 +248,19 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
               fill={fem && adultoOuAdol && curva > 1 ? '#b9606b' : 'none'} stroke={fem && adultoOuAdol ? '#a85460' : misturar(sombra, '#6a2e2e', 0.45)} strokeWidth={fem && adultoOuAdol ? (curva > 1 ? 0.8 : 1.2) : 1.3} strokeLinecap="round" />;
           })()}
 
-      {/* Barba e bigode (só homens adultos) */}
-      {masc && (f === 'adulto' || f === 'meia' || f === 'idoso') && v.barba && (
-        <Barba tipo={v.barba} cor={f === 'idoso' ? misturar(cor, '#e6e2dc', 0.3) : misturar(cor, '#000000', 0.05)} cx={cx} olhoY={olhoY} w={w} queixo={queixo} jaw={jaw} />
+      {/* Barba e bigode: de quem tem (a escolha é da pessoa; a barba aparece do fim da adolescência em diante) */}
+      {!fem && (f === 'adol' && idade >= 16 || f === 'adulto' || f === 'meia' || f === 'idoso') && v.barba && (
+        <Barba tipo={v.barba} bigode={v.bigode !== false} cor={f === 'idoso' ? misturar(cor, '#e6e2dc', 0.3) : misturar(cor, '#000000', 0.05)} cx={cx} olhoY={olhoY} w={w} queixo={queixo} jaw={jaw} />
       )}
 
-      {/* Óculos em parte dos idosos */}
-      {f === 'idoso' && h % 2 === 0 && (
-        <g fill="none" stroke="#2a2522" strokeWidth={0.9} opacity={0.9}>
-          <rect x={cx - esp - 4.3} y={olhoY - 3.4} width={8.6} height={6.6} rx={2} />
-          <rect x={cx + esp - 4.3} y={olhoY - 3.4} width={8.6} height={6.6} rx={2} />
-          <path d={`M ${cx - esp + 4.3} ${olhoY - 0.6} Q ${cx} ${olhoY - 2} ${cx + esp - 4.3} ${olhoY - 0.6}`} />
-        </g>
-      )}
+      {/* Óculos: os escolhidos; sem escolha, parte dos idosos usa os de leitura */}
+      {v.oculos ? <Oculos tipo={v.oculos} cx={cx} olhoY={olhoY} esp={esp} /> : f === 'idoso' && h % 2 === 0 && <Oculos tipo="grau" cx={cx} olhoY={olhoY} esp={esp} />}
 
       {/* Cabelo da frente */}
       <CabeloFrente estilo={estilo} cor={cor} cx={cx} cy={cy} w={w} hh={hh} fase={f} calvo={calvo} semente={h} fem={fem} />
+
+      {/* O que vai na cabeça */}
+      {v.chapeu && f !== 'bebe' && <Chapeu tipo={v.chapeu} cx={cx} cy={cy} w={w} hh={hh} semente={h} />}
     </svg>
   );
 });
@@ -426,9 +437,62 @@ function CabeloFrente({ estilo, cor, cx, cy, w, hh, fase, calvo, semente, fem }:
   }
 }
 
-function Barba({ tipo, cor, cx, olhoY, w, queixo, jaw }: { tipo: string; cor: string; cx: number; olhoY: number; w: number; queixo: number; jaw: number }) {
+function Oculos({ tipo, cx, olhoY, esp }: { tipo: 'grau' | 'redondo' | 'sol'; cx: number; olhoY: number; esp: number }) {
+  const lente = tipo === 'sol' ? '#1e2227' : 'none';
+  return (
+    <g fill={lente} fillOpacity={tipo === 'sol' ? 0.82 : 0} stroke="#2a2522" strokeWidth={tipo === 'redondo' ? 1.1 : 0.9} opacity={0.95}>
+      {tipo === 'redondo'
+        ? <><circle cx={cx - esp} cy={olhoY} r={4.4} /><circle cx={cx + esp} cy={olhoY} r={4.4} /></>
+        : <><rect x={cx - esp - 4.5} y={olhoY - 3.5} width={9} height={tipo === 'sol' ? 7.2 : 6.6} rx={tipo === 'sol' ? 2.6 : 2} /><rect x={cx + esp - 4.5} y={olhoY - 3.5} width={9} height={tipo === 'sol' ? 7.2 : 6.6} rx={tipo === 'sol' ? 2.6 : 2} /></>}
+      <path d={`M ${cx - esp + 4.4} ${olhoY - 0.6} Q ${cx} ${olhoY - 2} ${cx + esp - 4.4} ${olhoY - 0.6}`} fill="none" />
+    </g>
+  );
+}
+
+function Chapeu({ tipo, cx, cy, w, hh, semente }: { tipo: 'bone' | 'chapeu' | 'gorro' | 'lenco'; cx: number; cy: number; w: number; hh: number; semente: number }) {
+  const topo = cy - hh / 2;
+  const cores = { bone: ['#2f4f7a', '#8a2f2f', '#2f6a4a', '#1f1f24'], chapeu: ['#b89a64', '#5a4636', '#2e2a28'], gorro: ['#7a3b3b', '#3b4f7a', '#5d6b3a'], lenco: ['#b0543c', '#3c6e8f', '#8f3c6e'] }[tipo];
+  const c = cores[semente % cores.length];
+  const escuro = misturar(c, '#000000', 0.25);
+  if (tipo === 'bone') return (
+    <g>
+      <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.2} C ${cx - w / 2} ${topo - 5} ${cx + w / 2} ${topo - 5} ${cx + w / 2 + 1} ${topo + hh * 0.2} Z`} fill={c} />
+      <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.2} Q ${cx - w * 0.2} ${topo + hh * 0.26} ${cx - w / 2 - 12} ${topo + hh * 0.28} Q ${cx - w / 2 - 6} ${topo + hh * 0.16} ${cx - w / 2 - 1} ${topo + hh * 0.2} Z`} fill={escuro} />
+      <circle cx={cx} cy={topo - 2.6} r={1.2} fill={escuro} />
+    </g>
+  );
+  if (tipo === 'chapeu') return (
+    <g>
+      <ellipse cx={cx} cy={topo + hh * 0.14} rx={w / 2 + 11} ry={3.4} fill={escuro} />
+      <path d={`M ${cx - w / 2 + 3} ${topo + hh * 0.14} C ${cx - w / 2 + 3} ${topo - 9} ${cx + w / 2 - 3} ${topo - 9} ${cx + w / 2 - 3} ${topo + hh * 0.14} Z`} fill={c} />
+      <path d={`M ${cx - w / 2 + 3.5} ${topo + hh * 0.06} L ${cx + w / 2 - 3.5} ${topo + hh * 0.06}`} stroke={escuro} strokeWidth={2} />
+    </g>
+  );
+  if (tipo === 'gorro') return (
+    <g>
+      <path d={`M ${cx - w / 2 - 1.5} ${topo + hh * 0.22} C ${cx - w / 2 - 1} ${topo - 9} ${cx + w / 2 + 1} ${topo - 9} ${cx + w / 2 + 1.5} ${topo + hh * 0.22} Z`} fill={c} />
+      <rect x={cx - w / 2 - 2} y={topo + hh * 0.14} width={w + 4} height={4.6} rx={2} fill={escuro} />
+    </g>
+  );
+  return (
+    <g>
+      <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.24} C ${cx - w / 2} ${topo - 6} ${cx + w / 2} ${topo - 6} ${cx + w / 2 + 1} ${topo + hh * 0.24} Q ${cx} ${topo + hh * 0.12} ${cx - w / 2 - 1} ${topo + hh * 0.24} Z`} fill={c} />
+      <path d={`M ${cx + w / 2} ${topo + hh * 0.2} q 5 2 4 8 q -3 -3 -5 -4 Z`} fill={escuro} />
+    </g>
+  );
+}
+
+function Barba({ tipo, cor, cx, olhoY, w, queixo, jaw, bigode: comBigode = true }: { tipo: string; cor: string; cx: number; olhoY: number; w: number; queixo: number; jaw: number; bigode?: boolean }) {
   const bigode = <path d={`M ${cx - 5} ${olhoY + 11} Q ${cx} ${olhoY + 8.6} ${cx + 5} ${olhoY + 11} Q ${cx} ${olhoY + 10.4} ${cx - 5} ${olhoY + 11} Z`} fill={cor} stroke={cor} strokeWidth={1.4} strokeLinejoin="round" />;
   if (tipo === 'bigode') return bigode;
+  if (tipo === 'por_fazer') {
+    return (
+      <g>
+        <path d={`M ${cx - w / 2 + 1.5} ${olhoY + 4} C ${cx - w / 2 + 2} ${olhoY + 14} ${cx - jaw - 1} ${queixo + 0.5} ${cx} ${queixo + 0.8} C ${cx + jaw + 1} ${queixo + 0.5} ${cx + w / 2 - 2} ${olhoY + 14} ${cx + w / 2 - 1.5} ${olhoY + 4} L ${cx + w / 2 - 4} ${olhoY + 5} C ${cx + w / 2 - 4.5} ${olhoY + 12} ${cx + 5} ${olhoY + 16} ${cx} ${olhoY + 16} C ${cx - 5} ${olhoY + 16} ${cx - w / 2 + 4.5} ${olhoY + 12} ${cx - w / 2 + 4} ${olhoY + 5} Z`} fill={cor} opacity={0.22} />
+        {comBigode && <g opacity={0.35}>{bigode}</g>}
+      </g>
+    );
+  }
   if (tipo === 'cavanhaque') {
     return (
       <g fill={cor}>
@@ -445,7 +509,7 @@ function Barba({ tipo, cor, cx, olhoY, w, queixo, jaw }: { tipo: string; cor: st
                L ${cx + w / 2 - 3.5} ${olhoY + 3} C ${cx + w / 2 - 4} ${olhoY + 12} ${cx + 5} ${olhoY + 16} ${cx} ${olhoY + 16}
                C ${cx - 5} ${olhoY + 16} ${cx - w / 2 + 4} ${olhoY + 12} ${cx - w / 2 + 3.5} ${olhoY + 3} Z`}
         fill={cor} opacity={cheia ? 0.95 : 0.45} />
-      {bigode}
+      {comBigode && bigode}
     </g>
   );
 }

@@ -23,6 +23,7 @@
  */
 
 import { rendaDeImagem } from './notoriedade';
+import { ajudaMensalDaFamilia, apoioPossivel, contribuicaoEmCasa, familiaPagaCursinho, familiaPagaEstudo, mesadaDaFamilia, responsaveis } from './origem';
 import { rendaDoPalcoParalelo } from './palco';
 import { remuneracaoDe } from './renda';
 import { fazCursinho } from './vestibular';
@@ -55,10 +56,8 @@ const ESTILO: Record<EstiloDeVida, { basico: number; lazerBase: number; parte: n
 const MERCADO_POR_ADULTO = 780;
 const CONTAS_DA_CASA = 340;
 
-const CONTRIBUICAO_EM_CASA: Record<string, number> = { vulneravel: 0.4, trabalhadora: 0.3, media_baixa: 0.2, media: 0.1, alta: 0 };
-const MESADA: Record<string, number> = { vulneravel: 0, trabalhadora: 30, media_baixa: 70, media: 180, alta: 450 };
-/** Quanto da mensalidade da faculdade os pais conseguem bancar enquanto o filho mora com eles. */
-const PAIS_PAGAM_ESTUDO: Record<string, number> = { vulneravel: 0, trabalhadora: 0, media_baixa: 400, media: 1600, alta: 12000 };
+// Mesada, contribuição em casa e o que a família paga do estudo vêm da casa de origem REAL
+// (renda de quem a sustenta hoje, reserva, relação) — `sistemas/origem`. Antes, eram tabelas por classe de nascimento.
 
 export function planoDeSaudeMensal(i: number): number {
   return i < 19 ? 230 : i < 34 ? 420 : i < 49 ? 640 : i < 59 ? 1050 : 1600;
@@ -163,7 +162,7 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
 
   /* ---------------------------------------------- Na casa da família de origem */
   if (naFamilia) {
-    const mesada = i >= 8 && i < 18 ? Math.round(MESADA[v.origem.classe] * Math.min(1, (i - 6) / 10)) : 0;
+    const mesada = mesadaDaFamilia(v);
     if (mesada > 0) entradas.push({ rotulo: 'Mesada', valor: mesada, grupo: 'renda', de: 'familia' });
     const quem = moraCom(v).filter(p => idadePessoa(v, p) >= 16 && p.renda > 0);
     const rendaCasa = rendaDosOutros(v);
@@ -175,7 +174,8 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
       return fechar(v, arranjo, entradas, saidas, daCasa);
     }
     // Adulto na casa dos pais: ajuda nas contas quando tem renda; o resto é dele.
-    if (propria > 0) sai('Ajuda nas contas de casa', propria * CONTRIBUICAO_EM_CASA[v.origem.classe], 'moradia');
+    const parteEmCasa = contribuicaoEmCasa(v);
+    if (propria > 0 && parteEmCasa > 0) sai('Ajuda nas contas de casa', propria * parteEmCasa, 'moradia');
     comuns(v, sai, c, true);
     const livre = propria - somaSaidas(saidas);
     if (propria > 0) sai('Gastos pessoais e lazer', estilo.lazerBase * c * 0.6 + Math.max(0, livre - estilo.lazerBase * c * 0.6) * estilo.parte, 'lazer');
@@ -223,6 +223,8 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
     entradas.push({ rotulo: `Renda de ${par.p.nome}`, valor: Math.round(par.p.renda), grupo: 'renda', de: 'parceria' });
   }
   entradas.push(...pensaoRecebida(v));
+  const daFamilia = ajudaMensalDaFamilia(v);
+  if (daFamilia > 0) entradas.push({ rotulo: 'Ajuda da família (enquanto estuda)', valor: daFamilia, grupo: 'renda', de: 'familia' });
 
   // Pensão dos filhos que não moram junto.
   let pensao = 0;
@@ -267,10 +269,10 @@ function comuns(v: Vida, sai: (r: string, x: number, g: LinhaRazao['grupo']) => 
   if (tratamentos) sai('Remédios e consultas', 180 * tratamentos, 'saude');
   const m = v.educacao.matricula;
   if (m && !m.trancado && m.mensalidade > 0 && m.financiamento !== 'fies') {
-    const pagoPelosPais = naFamilia ? Math.min(m.mensalidade, PAIS_PAGAM_ESTUDO[v.origem.classe]) : 0;
-    sai('Mensalidade da faculdade', m.mensalidade - pagoPelosPais, 'educacao');
+    const pagoPelosPais = Math.min(m.mensalidade, familiaPagaEstudo(v));
+    sai(pagoPelosPais > 0 ? 'Mensalidade (a parte que não é da família)' : 'Mensalidade da faculdade', m.mensalidade - pagoPelosPais, 'educacao');
   }
-  if (fazCursinho(v)) sai('Cursinho', (naFamilia && ['media', 'alta'].includes(v.origem.classe) ? 0 : 450) * c, 'educacao');
+  if (fazCursinho(v)) sai('Cursinho', (familiaPagaCursinho(v) ? 0 : 450) * c, 'educacao');
   for (const rot of v.rotinas) {
     const custo = CUSTO_ROTINA.de(v, rot);
     if (custo && !(naFamilia && i < 18)) sai(CUSTO_ROTINA.rotulo(rot), custo * c, 'lazer');
@@ -673,15 +675,20 @@ function cobrirRombo(v: Vida, r: Rng): void {
  * Quando falta, a família às vezes cobre — se pode e se quer. Pais com renda,
  * filhos adultos que estão bem, um irmão próximo. Não é garantido: depende da
  * relação e de quanto a pessoa tem. Devolve o que ainda faltou.
+ *
+ * A casa de origem ajuda com o que ELA tem (a reserva e a folga de hoje, não
+ * a classe em que você nasceu) — e a ajuda sai da reserva dela (`origem`).
  */
 function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
+  const daOrigem = new Set(responsaveis(v).map(x => x.p.id));
+  const capOrigem = apoioPossivel(v, 'emergencia').ate;
   const candidatos = vinculosVivos(v)
     .filter(x => !x.p.especie && idadePessoa(v, x.p) >= 25 && x.p.renda > 0 && ['mae', 'pai', 'filho', 'irmao', 'avo'].includes(x.vin.parentesco ?? ''))
     .filter(x => v.t - (v.fatos[`ajudou_${x.p.id}`] ?? -999) >= 36)
     .map(x => {
       const pais = x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai' || x.vin.parentesco === 'avo';
-      const classe = pais ? ({ vulneravel: 0.5, trabalhadora: 1, media_baixa: 2, media: 5, alta: 15 } as Record<string, number>)[v.origem.classe] : 1.5;
-      return { ...x, capacidade: x.p.renda * 2 * classe, vontade: (x.vin.proximidade - 35) / 50 + x.vin.confianca / 200 - x.vin.tensao / 100 + (pais ? 0.15 : 0) };
+      const capacidade = daOrigem.has(x.p.id) ? capOrigem : x.p.renda * (pais ? 1.5 : 3);
+      return { ...x, capacidade, vontade: (x.vin.proximidade - 35) / 50 + x.vin.confianca / 200 - x.vin.tensao / 100 + (pais ? 0.15 : 0) };
     })
     .filter(x => x.vontade > 0 && x.capacidade >= 500)
     .sort((a, b) => b.vontade * b.capacidade - a.vontade * a.capacidade);
@@ -693,6 +700,11 @@ function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
     v.financas.conta += valor;
     falta -= valor;
     v.fatos[`ajudou_${x.p.id}`] = v.t;
+    if (daOrigem.has(x.p.id)) {
+      v.origem.reserva = Math.max(0, Math.round((v.origem.reserva ?? 0) - valor));
+      (v.origem.apoios ??= []).push({ t: v.t, valor, motivo: 'emergencia', sentido: 'recebeu', pessoaId: x.p.id });
+      daOrigem.clear();
+    }
     const papel = x.vin.parentesco === 'filho' ? flex(x.p.genero, 'O filho', 'A filha', 'Filhe') : x.vin.parentesco === 'mae' ? 'A mãe' : x.vin.parentesco === 'pai' ? 'O pai' : x.vin.parentesco === 'avo' ? flex(x.p.genero, 'O avô', 'A avó') : flex(x.p.genero, 'O irmão', 'A irmã', 'Irmane');
     const vezes = (v.fatos['ajudas_recebidas'] ?? 0) + 1;
     v.fatos['ajudas_recebidas'] = vezes;

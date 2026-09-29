@@ -304,9 +304,13 @@ export function portasDaPolitica(v: Vida): { origem: VidaPolitica['origem']; pes
   const comunidade = habilidade(v, 'comunidade');
   const lideranca = habilidade(v, 'lideranca');
   const voluntario = v.rotinas.find(r => r.id === 'voluntariado');
-  const anosVoluntario = voluntario ? (v.t - voluntario.tInicio) / 12 : 0;
+  // A extensão universitária é trabalho comunitário de verdade (anos de vivência contam como voluntariado).
+  const extensao = (v.educacao.vivencias ?? []).filter(x => x.tipo === 'extensao').reduce((s, x) => s + x.anos, 0);
+  const anosVoluntario = (voluntario ? (v.t - voluntario.tInicio) / 12 : 0) + extensao;
   if (i >= 18 && (anosVoluntario >= 2 || comunidade >= 45 || (lideranca >= 45 && rot('igreja')))) out.push({ origem: 'comunidade', peso: (anosVoluntario >= 2 ? 2 : 0.5) + (comunidade >= 45 ? 1 : 0) + (lideranca >= 45 ? 0.5 : 0) });
-  if (i >= 16 && i <= 26 && (rot('gremio') || temFato(v, 'gremio_eleito')) && lideranca >= 35) out.push({ origem: 'estudantil', peso: 2 });
+  // Representação estudantil (grêmio, centro acadêmico): uma semente — não um destino (REWORK 3: a vivência fica, e conta até os 30).
+  const representou = rot('gremio') || rot('centro_academico') || temFato(v, 'gremio_eleito') || (v.educacao.vivencias ?? []).some(x => (x.tipo === 'gremio' || x.tipo === 'centro_academico') && x.anos >= 2);
+  if (i >= 16 && i <= 30 && representou && lideranca >= 35) out.push({ origem: 'estudantil', peso: i <= 26 ? 2 : 1 });
   const e = v.trabalho.atual;
   if (e && (e.contrato === 'clt' || e.contrato === 'servidor') && (v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 96 && v.personalidade.tracos.sociabilidade > 15 && lideranca >= 25) out.push({ origem: 'sindicato', peso: 1 });
   if (i >= 20 && v.luto.some(l => l.peso >= 60 && v.t - l.t <= 36) && v.personalidade.tracos.coragem > 10) out.push({ origem: 'causa', peso: 1 });

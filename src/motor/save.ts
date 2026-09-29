@@ -39,8 +39,9 @@ import { modeloRotina } from './sistemas/rotinas';
 import { CURSOS_NPC } from './sistemas/filhos';
 import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 import { atribuirVersoesAosVeiculos } from './sistemas/versoesVeiculo';
+import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 
-export const VERSAO_SAVE = 17;
+export const VERSAO_SAVE = 18;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -102,11 +103,23 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
-  // Toda versão anterior passa pela cadeia até a v16 e, dali, pela migração do FIX pós-REWORK 2.
+  // v17 → v18 (REWORK 3): a casa de origem com reserva e bairro, as vivências da formação, o estilo.
+  if (d.versao === 17) {
+    const erro17 = validar(d, 17);
+    if (erro17) return { tipo: 'invalido', motivo: erro17 };
+    try {
+      const v = migrarV17(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
+  // Toda versão anterior passa pela cadeia até a v16 e, dali, pelas migrações do FIX pós-REWORK 2 e do REWORK 3.
   const ate16 = interpretarAte16(d);
   if (ate16.tipo !== 'ok') return ate16;
   try {
-    const v = migrarV16(ate16.vida);
+    const v = migrarV17(migrarV16(ate16.vida));
     const erro = validar(v as unknown as Record<string, unknown>);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
   } catch (e) {
@@ -346,6 +359,14 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (es?.temporadas !== undefined && (!Array.isArray(es.temporadas) || es.temporadas.some(t => !finito(t.nota) || !finito(t.partidas)))) return 'Temporadas inválidas.';
     for (const c of (d.corpo as Vida['corpo']).condicoes) if (c.lesao && (!finito(c.lesao.tFim) || ![1, 2, 3].includes(c.lesao.gravidade))) return 'Lesão inválida.';
   }
+  if (versao >= 18) {
+    const o = d.origem as Vida['origem'];
+    if (!o || typeof o !== 'object' || (o.reserva !== undefined && !finito(o.reserva)) || (o.apoios !== undefined && (!Array.isArray(o.apoios) || o.apoios.some(a => !a || !finito(a.valor) || !finito(a.t))))) return 'Origem inválida.';
+    const viv = (d.educacao as Vida['educacao']).vivencias;
+    if (viv !== undefined && (!Array.isArray(viv) || viv.some(x => !x || typeof x.tipo !== 'string' || !finito(x.t) || !finito(x.anos)))) return 'Vivências da formação inválidas.';
+    const est = (d.eu as Vida['eu']).estilo;
+    if (est !== undefined && (typeof est !== 'object' || !Array.isArray(est.itens) || est.itens.some(x => !x || typeof x.itemId !== 'string' || !finito(x.preco)))) return 'Estilo inválido.';
+  }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -534,6 +555,35 @@ export function migrarV16(v: Vida): Vida {
   if (!x.notoriedade) {
     const n = alvoDaNotoriedade(x);
     if (n.valor >= 1) x.notoriedade = { valor: Math.round(n.valor * 10) / 10, pico: Math.round(n.valor * 10) / 10, fonte: n.fonte, t: x.t };
+  }
+  return x;
+}
+
+/**
+ * v17 → v18 (REWORK 3). Determinística e idempotente:
+ *   - a casa de origem ganha a reserva (do ponto de partida, pela semente) e
+ *     o bairro (texto estável); o jeito de contribuir em casa é o combinado;
+ *   - as vivências da formação que o estado já registrava viram vivências
+ *     (a medalha da olimpíada, o grêmio, o clube de ciências) — nada é
+ *     inventado além do que os fatos dizem;
+ *   - aparência e estilo: o visual continua o mesmo; o estilo começa vazio.
+ */
+export function migrarV17(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 18;
+  const o = x.origem;
+  if (!finito(o.reserva)) o.reserva = reservaInicial(x.id, o.classe);
+  o.bairro ??= bairroDeOrigem(x.id, o.classe, x.eu.municipioNatal);
+  const e = x.educacao;
+  if (!e.vivencias) {
+    const viv: NonNullable<Vida['educacao']['vivencias']> = [];
+    const chave = 'escola:migrada';
+    if (x.fatos['medalha_obmep'] !== undefined) viv.push({ tipo: 'olimpiada', t: x.fatos['medalha_obmep'], anos: 1, instituicao: chave, area: 'exatas', feito: 'medalha na olimpíada de matemática', tFim: x.fatos['medalha_obmep'] });
+    const gremio = x.rotinas.find(r => r.id === 'gremio');
+    if (gremio || x.fatos['gremio_eleito'] !== undefined) viv.push({ tipo: 'gremio', t: gremio?.tInicio ?? x.fatos['gremio_eleito'], anos: gremio ? Math.max(1, Math.floor((x.t - gremio.tInicio) / 12)) : 1, instituicao: chave, ...(x.fatos['gremio_eleito'] !== undefined ? { feito: 'presidência do grêmio' } : {}), ...(gremio ? {} : { tFim: x.fatos['gremio_eleito'] }) });
+    const clube = x.rotinas.find(r => r.id === 'clube_ciencias');
+    if (clube) viv.push({ tipo: 'ciencias', t: clube.tInicio, anos: Math.max(1, Math.floor((x.t - clube.tInicio) / 12)), instituicao: chave, area: 'ciencias' });
+    e.vivencias = viv;
   }
   return x;
 }
@@ -944,7 +994,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 17,
+    versao: 7 as unknown as 18,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,

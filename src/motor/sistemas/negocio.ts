@@ -583,7 +583,8 @@ export function podeAmpliar(v: Vida): Veredito {
   if ((n.porte ?? 1) >= 3) return bloqueio('impossivel', 'Já é do maior tamanho que um negócio assim costuma ter.');
   if (n.clientela < 60) return bloqueio('requisito', 'Com o movimento ainda pela metade, crescer só aumenta a conta.');
   const custo = custoDeAmpliar(v, n);
-  if (!cabeNoCaixaEBolso(v, n, custo)) return bloqueio('requisito', `Ampliar custa uns ${fmt(custo)} (entre o caixa e o seu bolso, não há).`);
+  // Só o dinheiro falta: a intenção fica à vista, bloqueada, com o motivo (nunca some).
+  if (!cabeNoCaixaEBolso(v, n, custo)) return { ...bloqueio('requisito', `Ampliar custa uns ${fmt(custo)} (entre o caixa e o seu bolso, não há).`), dinheiro: true };
   return { grau: 'permitido' };
 }
 
@@ -629,7 +630,7 @@ export function podeAbrirUnidade(v: Vida): Veredito {
   if (n.estado !== 'firme' || n.clientela < 65 || (n.reputacao ?? 0) < 55) return bloqueio('requisito', 'Outra frente pede a primeira firme, cheia e com nome na cidade.');
   if (tamanhoDaEquipe(n) < 1) return bloqueio('requisito', 'Sem ninguém de confiança para tocar uma das frentes, não dá para estar nas duas.');
   const custo = custoDeUnidade(v, n);
-  if (!cabeNoCaixaEBolso(v, n, custo)) return bloqueio('requisito', `Outra frente custa uns ${fmt(custo)}.`);
+  if (!cabeNoCaixaEBolso(v, n, custo)) return { ...bloqueio('requisito', `Outra frente custa uns ${fmt(custo)} — entre o caixa e o seu bolso, não há.`), dinheiro: true };
   return { grau: 'improvavel', chance: 0.5, motivo: 'Duas frentes dobram o que pode dar certo — e o que pode dar errado.' };
 }
 

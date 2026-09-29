@@ -150,7 +150,43 @@ export interface Visual {
   cabelo: string;
   corCabelo: string;
   olhos: string;
+  /** Barba: 'curta', 'cheia', 'por_fazer', 'cavanhaque' — ou só 'bigode'. */
   barba?: string;
+  /**
+   * Com a barba (curta, cheia, por fazer), o bigode vai junto — a não ser
+   * que a pessoa escolha tirar (`false`). Ausente = junto (saves antigos).
+   */
+  bigode?: boolean;
+  /** Óculos: de grau (o corpo pediu) ou escolhidos (armação redonda, de sol). */
+  oculos?: 'grau' | 'redondo' | 'sol';
+  /** O que vai na cabeça, quando vai. */
+  chapeu?: 'bone' | 'chapeu' | 'gorro' | 'lenco';
+  /** O jeito de vestir (a cor e o corte da roupa no retrato). */
+  roupa?: EstiloRoupa;
+}
+
+export type EstiloRoupa = 'basica' | 'social' | 'esportiva' | 'alternativa' | 'elegante';
+
+/**
+ * Estilo: como a pessoa ESCOLHE se apresentar (≠ aparência, que é atributo;
+ * ≠ notoriedade, que é quanto a conhecem). Guarda o que foi comprado e está
+ * em uso — um chapéu não dá fama a ninguém (`sistemas/estilo`).
+ */
+export interface EstiloPessoal {
+  itens: ItemDeEstilo[];
+  /** A última mudança de visual que a pessoa decidiu (corte, barba, óculos). */
+  tMudanca?: number;
+  /** A cor natural do cabelo (guardada na primeira tinta: é para ela que se volta). */
+  corNatural?: string;
+}
+
+export interface ItemDeEstilo {
+  id: string;
+  /** O item do catálogo (`dados/estilo`). */
+  itemId: string;
+  t: number;
+  preco: number;
+  usando: boolean;
 }
 
 export type Parentesco =
@@ -253,6 +289,12 @@ export interface Vinculo {
    * do jogador; não responder também tem consequência (`sistemas/iniciativas`).
    */
   chamado?: Chamado;
+  /**
+   * Alguém da formação: o professor que reparou, a orientadora, o colega de
+   * turma. Não é amizade automática: é o papel que a pessoa teve ali — e que
+   * pode voltar anos depois (uma indicação, uma carta) (`sistemas/formacao`).
+   */
+  formacao?: { papel: 'professor' | 'orientador' | 'colega'; instituicao: string; area?: string; tFim?: number };
 }
 
 export type TipoChamado = 'pedido_ajuda' | 'convite' | 'reclamacao' | 'apoio' | 'interesse' | 'conversa_casal' | 'aproximacao' | 'distancia_casal';
@@ -436,6 +478,35 @@ export interface Educacao {
    * pela mesma conta que a prova usa.
    */
   preparo?: { meses: number; tUltimo?: number };
+  /**
+   * O que a pessoa VIVEU na formação além das aulas: a olimpíada, o grêmio,
+   * o time da escola, o projeto do laboratório, a iniciação científica, a
+   * monitoria. Fica depois que a formação acaba — e pesa em portas futuras
+   * (`sistemas/formacao`).
+   */
+  vivencias?: Vivencia[];
+}
+
+export type TipoVivencia =
+  | 'olimpiada' | 'projeto' | 'gremio' | 'time' | 'reforco' | 'ciencias'
+  | 'projeto_tecnico' | 'iniciacao' | 'monitoria' | 'extensao' | 'centro_academico' | 'atletica' | 'empresa_junior' | 'grupo_estudos';
+
+export interface Vivencia {
+  tipo: TipoVivencia;
+  /** Quando começou. */
+  t: number;
+  /** Anos de dedicação (cresce enquanto dura). */
+  anos: number;
+  /** A instituição (chave do ambiente) onde aconteceu. */
+  instituicao: string;
+  /** A área (do curso ou da matéria), quando há. */
+  area?: string;
+  /** O que deu certo: a medalha, o artigo, o título, a eleição. */
+  feito?: string;
+  /** Quem orientou (professor), quando houve. */
+  pessoaId?: string;
+  /** Terminou (a formação acabou ou a pessoa largou). */
+  tFim?: number;
 }
 
 /** `livre`: qualificação profissional curta (SENAI, SENAC, cursos de ofício) — não muda a escolaridade. */
@@ -772,11 +843,41 @@ export interface Moradia {
   atrasoDesde?: number;
 }
 
-/** A casa de origem enquanto o jogador mora com a família. */
+/**
+ * A casa de origem. A `classe` é o ponto de partida (o que a família tinha
+ * quando a pessoa nasceu), não o destino: o que a família PODE hoje vem da
+ * renda real de quem a sustenta e da reserva que ela guardou — e isso muda
+ * com os anos (`sistemas/origem`).
+ */
 export interface Origem {
   classe: Classe;
   /** Estrutura do lar em que nasceu. */
   arranjo: 'pais_juntos' | 'mae_solo' | 'pai_solo' | 'avos';
+  /**
+   * O que a casa de origem tem guardado (reais de hoje): a margem para uma
+   * emergência, um curso, uma mudança. Cresce nos anos folgados, encolhe nos
+   * apertados — e cada ajuda sai daqui. Não é infinita.
+   */
+  reserva?: number;
+  /** As ajudas que passaram entre a pessoa e a família (as últimas). */
+  apoios?: ApoioFamiliar[];
+  /**
+   * Adulto morando com a família: quanto põe nas contas de casa (escolha).
+   * `combinado` = o que a casa precisa de quem tem renda; `nada`; `mais`.
+   */
+  contribuicao?: 'nada' | 'combinado' | 'mais';
+  /** O bairro onde cresceu, em palavras (dado da origem, estável). */
+  bairro?: string;
+}
+
+export interface ApoioFamiliar {
+  t: number;
+  valor: number;
+  /** Para quê: estudo, mudança, emergência, dívida, casa. */
+  motivo: 'estudo' | 'mudanca' | 'emergencia' | 'divida' | 'casa' | 'recomeco';
+  /** Quem deu (família → você) ou para quem foi (você → família). */
+  sentido: 'recebeu' | 'deu' | 'negado';
+  pessoaId?: string;
 }
 
 /* ---------------------------------------------------------------- Processos */
@@ -913,7 +1014,8 @@ export type TipoMarcaCaminho =
   | 'aprovacao' | 'reprovacao' | 'profissional' | 'fim_carreira' | 'negocio_aberto' | 'negocio_fechado'
   | 'volta_estudos' | 'aposentadoria' | 'lideranca' | 'estagnacao' | 'mudanca_cidade'
   | 'transferencia' | 'reserva' | 'pausa' | 'retorno' | 'prisao' | 'saida_prisao' | 'recomeco' | 'desvio'
-  | 'politica' | 'candidatura' | 'eleicao' | 'derrota' | 'fim_politica';
+  | 'politica' | 'candidatura' | 'eleicao' | 'derrota' | 'fim_politica'
+  | 'vivencia' | 'independencia';
 
 /** Um marco do caminho profissional/educacional, estruturado (dado para a Linha da Vida). */
 export interface MarcaCaminho {
@@ -931,7 +1033,9 @@ export interface MarcaCaminho {
 export type TipoOportunidade =
   | 'vaga' | 'indicacao' | 'aprendiz' | 'estagio' | 'temporario' | 'peneira' | 'seletiva' | 'banda' | 'grupo'
   | 'clientela' | 'convite' | 'retomar' | 'bolsa' | 'selecao_tecnico' | 'proposta'
-  | 'edital_cultura' | 'reinsercao' | 'atualizacao' | 'funcao';
+  | 'edital_cultura' | 'reinsercao' | 'atualizacao' | 'funcao'
+  /** Um professor chamou para a iniciação científica, a monitoria, um projeto (REWORK 3). */
+  | 'iniciacao';
 
 /**
  * Uma porta que a vida abriu AGORA, por um motivo (a escola divulgou, um
@@ -950,6 +1054,8 @@ export interface Oportunidade {
   municipioId?: string;
   /** Bônus de chance que a porta dá (indicação pesa). */
   bonus?: number;
+  /** O convite é para uma atividade (a rotina que começa ao aceitar): a olimpíada, a iniciação científica. */
+  atividade?: string;
 }
 
 /** Carreira esportiva: base, profissional, encerrada. */
@@ -1409,6 +1515,8 @@ export interface Personagem {
   municipioNatal: string;
   atracao?: Atracao;
   visual: Visual;
+  /** O estilo escolhido e o que foi comprado para ele (ausente: nada além do básico). */
+  estilo?: EstiloPessoal;
   /**
    * Como o texto se refere ao personagem (concordância). Escolha do jogador:
    * uma pessoa não binária pode preferir formas masculinas, femininas ou
@@ -1438,7 +1546,7 @@ export interface Notoriedade {
 }
 
 export interface Vida {
-  versao: 17;
+  versao: 18;
   id: string;
   rng: number;
   seq: number;

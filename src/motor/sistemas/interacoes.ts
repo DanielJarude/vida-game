@@ -31,6 +31,7 @@ import { ehDescendente, faseDeIdade, filhosEmComum, mesmaCidade, moraJunto, pape
 import { lacoCom, oLaco } from './rede';
 import { vereditoDePagar, disponivel } from './dinheiro';
 import { responderChamado, rotulosDoChamado } from './iniciativas';
+import { ativo as envolvimentoAtivo, proporPorFora, sabeQueAndaNisso } from './ilicito';
 
 
 export interface CtxI {
@@ -429,6 +430,22 @@ export const INTERACOES: Interacao[] = [
       afeto(c, 5); confiar(c, 8); c.vin.aproximacao = c.v.t;
       lembrarCom(c.v, c.p.id, `Você contou a ${c.p.nome} algo que quase ninguém sabia — e ${ele(c.p)} contou de volta.`, 'descoberta', 2);
       return { resultado: `Você falou de uma coisa que não costuma falar. ${c.p.nome} ouviu inteiro e contou uma sua. Saíram mais amigos do que entraram.` };
+    }
+  },
+  {
+    // O caminho por fora não é um botão universal: só existe com alguém da SUA vida que você sabe que anda nisso (`ilicito`).
+    // A conversa é abstrata: abre a proposta; aceitar ou recusar é a próxima escolha.
+    id: 'por_fora', variante: 'discreto',
+    quando: c => humano(c) && c.eu >= 15 && sabeQueAndaNisso(c.v, c.p.id) && !envolvimentoAtivo(c.v) && !c.v.justica?.prisao && !c.v.justica?.processo && !distante(c),
+    disponivel: c => {
+      const ult = c.v.caminhos.ultimas['proposta_ilicita'];
+      if (ult !== undefined && c.v.t - ult < 24) return bloqueio('incompativel', 'Essa conversa aconteceu há pouco.');
+      return c.vin.proximidade >= 20 ? PERMITIDO : bloqueio('incompativel', `Vocês não têm intimidade para esse assunto.`);
+    },
+    rotulo: c => `Perguntar a ${c.p.nome} sobre o dinheiro que ${ele(c.p)} faz por fora`,
+    executar: (c, r) => {
+      proporPorFora(c.v, r, c.p);
+      return { decisao: 'ilic_proposta', papeis: {} };
     }
   },
   {
@@ -1096,6 +1113,8 @@ export function chanceConvite(c: CtxI): number {
  */
 function iniciativaPossivel(c: CtxI): boolean {
   if (!humano(c) || c.vin.parentesco || !c.p.vivo) return false;
+  // Professor e orientador, enquanto a formação dura, não são gente para flertar (REWORK 3).
+  if (c.vin.formacao && c.vin.formacao.papel !== 'colega' && (c.vin.formacao.tFim === undefined || c.eu < 18)) return false;
   if (!podeTentarIdade(c)) return false;
   if (parceiro(c.v)) return false;
   if (c.papel === 'parceiro' || c.papel === 'saindo' || c.papel === 'caso') return false;

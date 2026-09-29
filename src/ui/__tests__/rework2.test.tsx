@@ -104,7 +104,7 @@ describe('Estudos ↔ Tempo livre ↔ Trabalho: o estudo para concurso é de Est
     expect(screen.getByRole('group', { name: 'Para que área você estuda' })).toBeTruthy();
     cleanup();
     render(<main><Tempo vida={v} agir={() => true} irPara={nada} /></main>);
-    expect(screen.getByRole('button', { name: /ver em Estudos/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /ver em Formação/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Mais a sério: estudo firme/ })).toBeNull();
   });
 });

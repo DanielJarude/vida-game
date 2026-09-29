@@ -55,6 +55,10 @@ import { abrirConflitoPendente } from './conteudo/compromissos';
 import { noServicoInicial, propor } from './sistemas/compromissos';
 import { definirObjetivo, podeDefinirObjetivo } from './sistemas/vestibular';
 import { buscarAlguem, disponibilidadeBusca, type ContextoBusca } from './sistemas/busca';
+import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, type MotivoDeAjuda } from './sistemas/origem';
+import { autonomia } from './sistemas/autonomia';
+import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, usarItem, type MudancaVisual } from './sistemas/estilo';
+import { clamp } from './rng';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -146,7 +150,17 @@ export type Acao =
   /** O curso que se quer (Medicina, Direito...): a preparação passa a ser dirigida a ele. Sem curso: deixar de lado. */
   | { tipo: 'objetivo_estudo'; cursoId?: string }
   /** Procurar alguém (a busca ativa de um relacionamento), num contexto da vida. */
-  | { tipo: 'conhecer_alguem'; contexto: ContextoBusca };
+  | { tipo: 'conhecer_alguem'; contexto: ContextoBusca }
+  /** Pedir ajuda à família (a casa de origem), por uma necessidade concreta (`origem`). */
+  | { tipo: 'pedir_ajuda_familia'; motivo: MotivoDeAjuda }
+  /** Morando com a família e com renda: quanto põe nas contas de casa. */
+  | { tipo: 'contribuicao'; valor: 'nada' | 'combinado' | 'mais' }
+  /** Mudar o visual: corte, cor, barba, óculos, chapéu, roupa (`estilo`). */
+  | { tipo: 'aparencia'; mudanca: MudancaVisual }
+  /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
+  | { tipo: 'comprar_item'; itemId: string }
+  /** Usar ou guardar um item que é seu. */
+  | { tipo: 'usar_item'; itemId: string; usar: boolean };
 
 
 const TITULO_CUIDADO: Record<TipoCuidado, string> = { descansar: 'Uns dias de descanso', consulta: 'No médico', parar_fumar: 'Parar de fumar', beber_menos: 'Beber menos' };
@@ -447,6 +461,18 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (v.moradia.tipo === 'cedida') return bloqueio('requisito', 'Morando de favor, não dá para levar um bicho.');
       return v.vinculos[p.id].proximidade >= 30 ? PERMITIDO : bloqueio('incompativel', 'Vocês não são tão próximos.');
     }
+    case 'pedir_ajuda_familia': return disponibilidadePedirAjuda(v, a.motivo);
+    case 'contribuicao': {
+      if (!moraComFamiliaDeOrigem(v)) return bloqueio('impossivel', 'Só para quem mora com a família.');
+      const aut = autonomia(v, 'contribuir');
+      if (aut.grau !== 'permitido') return aut;
+      if (rendaPropriaMensal(v) <= 0) return bloqueio('impossivel', 'Sem renda, não há o que pôr em casa.');
+      if ((v.origem.contribuicao ?? 'combinado') === a.valor) return bloqueio('incompativel', 'Já é assim.');
+      return PERMITIDO;
+    }
+    case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
+    case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId);
+    case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
     case 'cnh':
       if (i < 18) return bloqueio('ilegal', 'A CNH é a partir dos 18.');
       if (v.trabalho.licencas.includes('cnh')) return bloqueio('incompativel', 'Você já tem carteira.');
@@ -985,6 +1011,22 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       pagarTudo(v, custoCnh(v));
       iniciarCnh(v);
       return ok('Matrícula na autoescola feita. A prova é em alguns meses.');
+    case 'pedir_ajuda_familia': {
+      const res = pedirAjuda(v, r, a.motivo);
+      return { resultado: res.texto, titulo: res.valor > 0 ? 'A família ajudou' : 'O pedido', pessoaId: res.pessoaId };
+    }
+    case 'contribuicao': {
+      v.origem.contribuicao = a.valor;
+      const pr = principalDaOrigem(v);
+      if (pr) {
+        if (a.valor === 'nada') pr.vin.tensao = clamp(pr.vin.tensao + 8);
+        if (a.valor === 'mais') { pr.vin.proximidade = clamp(pr.vin.proximidade + 4); lembrarCom(v, pr.p.id, 'Passou a pôr mais dinheiro em casa.', 'apoio', 1); }
+      }
+      return ok(a.valor === 'nada' ? 'O salário fica todo com você. Em casa, o assunto não morre.' : a.valor === 'mais' ? 'Você passou a pôr mais em casa. A casa respira.' : 'Combinado: uma parte do salário vai para a casa todo mês.', a.valor === 'nada' ? 'ruim' : 'bom');
+    }
+    case 'aparencia': return ok(mudarAparencia(v, a.mudanca), 'neutro');
+    case 'comprar_item': return ok(comprarItem(v, a.itemId), 'bom');
+    case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
   }
 }
 

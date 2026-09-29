@@ -30,6 +30,7 @@ import { circulos, comoEsta, etiqueta, ondeEsta, quemE, sinaisSociais, vidaPropr
 import { BotaoAcao, Escolha, Folha, Folio, Secao, Vazio } from '../comum';
 import { Retrato, type Expressao } from '../avatar/Retrato';
 import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
+import { leituraDaOrigem } from '../../motor/sistemas/origem';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void }
 
@@ -72,6 +73,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
 
       {(c.familia.length > 0 || c.familiaExtensa.length > 0) && (
         <Secao titulo="Família" recolhivel aberta>
+          <p className="nota origem-linha">{leituraDaOrigem(vida)}{vida.origem.bairro ? ` Você cresceu ${vida.origem.bairro}.` : ''}</p>
           <Lista vida={vida} itens={c.familia} abrir={abrir} />
           {c.familiaExtensa.length > 0 && <Dobra rotulo={`Outros parentes (${c.familiaExtensa.length})`}><Lista vida={vida} itens={c.familiaExtensa} abrir={abrir} /></Dobra>}
         </Secao>

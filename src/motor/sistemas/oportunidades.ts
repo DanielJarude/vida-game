@@ -29,15 +29,18 @@ import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
 import { voltarAEstudar } from './escola';
 import { anoDe } from '../tempo';
+import { rngDe } from '../rng';
+import { podeTentar } from '../plausibilidade';
+import { conviteDoProfessor, exColegasDaArea, ofereceAqui } from './formacao';
 import { flex, ge } from '../texto';
 
 export const LIMITE_OPORTUNIDADES = 4;
 
-export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number }): Oportunidade | undefined {
+export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number; atividade?: string }): Oportunidade | undefined {
   const lista = v.caminhos.oportunidades;
   if (lista.some(x => x.tipo === o.tipo && x.ocupacaoId === o.ocupacaoId && x.dominio === o.dominio)) return undefined;
   if (lista.length >= LIMITE_OPORTUNIDADES) lista.shift();
-  const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus };
+  const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus, ...(o.atividade ? { atividade: o.atividade } : {}) };
   lista.push(op);
   v.caminhos.ultimas[o.chave] = v.t;
   return op;
@@ -58,17 +61,22 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   const m = v.educacao.matricula;
 
   // Jovem aprendiz: a escola divulga.
-  if (i >= 14 && i <= 17 && b && semTrabalho(v) && podeGerar(v, 'aprendiz', 2) && r.chance(0.3)) {
+  // A escola com parceria (empresas da cidade) divulga mais (o perfil da instituição: `formacao`).
+  if (i >= 14 && i <= 17 && b && semTrabalho(v) && podeGerar(v, 'aprendiz', 2) && r.chance(ofereceAqui(v, 'parceria') ? 0.45 : 0.3)) {
     const oc = ocupacao('jovem_aprendiz');
     if (elegibilidade(v, oc).grau !== 'ilegal') novaOportunidade(v, { tipo: 'aprendiz', ocupacaoId: oc.id, meses: 12, chave: 'aprendiz', bonus: 0.25, titulo: 'Jovem aprendiz', texto: `A escola divulgou vagas de jovem aprendiz ${r.pick(['numa rede de supermercados', 'num escritório do centro', 'numa distribuidora', 'numa agência bancária'])}. Meio período, carteira assinada, escola garantida.` });
   }
 
   // Estágio pelo curso (técnico, integrado ou faculdade).
   const cursoAtual = m && !m.trancado ? cursoOuNulo(m.cursoId) : b?.integrado ? cursoOuNulo(b.integrado) : undefined;
-  if (cursoAtual && i >= 16 && (semTrabalho(v) || v.trabalho.atual?.contrato === 'aprendiz') && podeGerar(v, 'estagio', 1) && r.chance(0.4)) {
+  // Quem tem projeto técnico, empresa júnior ou iniciação na área recebe mais chamados de estágio — às vezes pela mão de quem orienta.
+  const vivenciaDeCurso = (v.educacao.vivencias ?? []).find(x => x.tFim === undefined && ['projeto_tecnico', 'empresa_junior', 'iniciacao'].includes(x.tipo));
+  if (cursoAtual && i >= 16 && (semTrabalho(v) || v.trabalho.atual?.contrato === 'aprendiz') && podeGerar(v, 'estagio', 1) && r.chance(vivenciaDeCurso ? 0.6 : 0.4)) {
     const estagios = ['estagio_ti', 'estagio_direito', 'estagio_eng', 'estagio_adm'].map(ocupacao).filter(oc => elegibilidade(v, oc).grau === 'permitido' || elegibilidade(v, oc).grau === 'improvavel');
     const naArea = estagios.find(oc => oc.area?.includes(cursoAtual.area as never)) ?? (cursoAtual.nivel !== 'livre' ? estagios.find(oc => oc.id === 'estagio_adm') : undefined);
-    if (naArea) novaOportunidade(v, { tipo: 'estagio', ocupacaoId: naArea.id, meses: 12, chave: 'estagio', bonus: 0.3, titulo: `Estágio: ${nomeOcupacao(v, naArea)}`, texto: `${cursoAtual.nivel === 'superior' ? 'A coordenação do curso' : 'A escola técnica'} divulgou uma vaga de estágio que pede exatamente o que você estuda.` });
+    const quemIndica = vivenciaDeCurso?.pessoaId && v.pessoas[vivenciaDeCurso.pessoaId]?.vivo ? v.pessoas[vivenciaDeCurso.pessoaId] : undefined;
+    if (naArea) novaOportunidade(v, { tipo: 'estagio', ocupacaoId: naArea.id, meses: 12, chave: 'estagio', bonus: vivenciaDeCurso ? 0.38 : 0.3, pessoaId: quemIndica?.id, titulo: `Estágio: ${nomeOcupacao(v, naArea)}`,
+      texto: quemIndica ? `${quemIndica.nome}, que orienta o seu ${vivenciaDeCurso!.tipo === 'iniciacao' ? 'projeto de pesquisa' : 'projeto'}, indicou você para um estágio na área.` : vivenciaDeCurso ? `Uma empresa que viu o ${vivenciaDeCurso.tipo === 'empresa_junior' ? 'trabalho da empresa júnior' : 'projeto do laboratório'} abriu uma vaga de estágio e perguntou por você.` : `${cursoAtual.nivel === 'superior' ? 'A coordenação do curso' : 'A escola técnica'} divulgou uma vaga de estágio que pede exatamente o que você estuda.` });
   }
 
   // Temporário: fim de ano no comércio, safra no interior.
@@ -147,8 +155,8 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   // Seleção do instituto federal (médio integrado ao técnico).
   if (i >= 14 && i <= 15 && b && (b.etapa === 'fundamental2' && b.serie >= 9 || b.etapa === 'medio' && b.serie === 1) && !b.integrado && podeGerar(v, 'selecao_tecnico', 3)
     // Quem vai bem na escola ouve falar da prova (a professora avisa, os colegas comentam); quem vai mal, nem sempre.
-    && r.chance(clamp((nivelDeOferta(v.moradia.municipioId) >= 1 ? 0.35 : 0.2) + ((b.desempenho ?? 50) - 50) / 60 + (v.educacao.postura === 'dedicada' ? 0.15 : 0), 0.1, 0.9))) {
-    novaOportunidade(v, { tipo: 'selecao_tecnico', meses: 12, chave: 'selecao_tecnico', titulo: 'Seleção do instituto federal', texto: `O instituto federal ${nivelDeOferta(v.moradia.municipioId) >= 1 ? 'da cidade' : 'da região'} abriu a prova para o ensino médio integrado ao técnico: três anos, dia inteiro, e um diploma de técnico junto com o do médio.` });
+    && r.chance(clamp((nivelDeOferta(v.moradia.municipioId) >= 1 ? 0.35 : 0.2) + ((b.desempenho ?? 50) - 50) / 60 + (v.educacao.postura === 'dedicada' ? 0.15 : 0) + (temFato(v, 'incentivo_if') ? 0.4 : 0), 0.1, 0.95))) {
+    novaOportunidade(v, { tipo: 'selecao_tecnico', meses: 12, chave: 'selecao_tecnico', titulo: 'Seleção do instituto federal', texto: `O instituto federal ${nivelDeOferta(v.moradia.municipioId) >= 1 ? 'da cidade' : 'da região'} abriu a prova para o ensino médio integrado ao técnico: três anos, dia inteiro, e um diploma de técnico junto com o do médio.${temFato(v, 'incentivo_if') ? ' A professora que tinha sugerido a prova lembrou você da inscrição.' : ''}` });
   }
 
   // Ensinar o ofício: quem tem técnico e muitos anos de estrada vira instrutor.
@@ -174,12 +182,53 @@ export function processarOportunidades(v: Vida, r: Rng): void {
     novaOportunidade(v, { tipo: 'bolsa', ocupacaoId: 'pesquisador', meses: 12, chave: 'posdoc', titulo: 'Bolsa de pesquisa', texto: `Um programa de pós-graduação abriu bolsa de pós-doutorado${area ? ` em ${area}` : ' na sua área'}. Dois anos de pesquisa, sem vínculo.` });
   }
 
+  // A formação como lugar (REWORK 3): o professor que reparou faz UM convite; a turma de faculdade, anos depois, indica.
+  portasDaFormacao(v);
+
   // A terra da família.
   if (i >= 18 && i <= 55 && habilidade(v, 'campo') >= 35 && podeGerar(v, 'terra', 8) && v.trabalho.atual?.ocupacaoId !== 'produtor_rural') {
     const rural = parentes(v, 'mae', 'pai', 'avo', 'tio').find(p => p.ocupacaoId && ['campo', 'agro'].includes(ocupacaoOuNula(p.ocupacaoId)?.trilha ?? ''));
     if ((rural || forcaDoSetor(v.moradia.municipioId, 'agro', anoDe(v.t)) > 1.2) && r.chance(0.18)) {
       novaOportunidade(v, { tipo: 'convite', ocupacaoId: 'produtor_rural', pessoaId: rural?.id, meses: 12, chave: 'terra', titulo: rural ? `O sítio de ${rural.nome}` : 'Uma terra para arrendar',
         texto: rural ? `${rural.nome} não dá mais conta do sítio sozinh${flex(rural.genero, 'o', 'a', 'e')} e quer que você assuma a produção.` : 'Um conhecido arrenda um pedaço de terra por um preço que dá para pagar com a primeira safra.' });
+    }
+  }
+}
+
+/**
+ * As portas que a formação abre (geradores derivados: não mexem no gerador
+ * principal). O convite do professor aparece uma vez; a indicação de um
+ * ex-colega, quando a vida pede (sem trabalho, ou num trabalho aquém) e há
+ * alguém da turma trabalhando na área.
+ */
+function portasDaFormacao(v: Vida): void {
+  const i = idade(v);
+  const convite = conviteDoProfessor(v);
+  if (convite) {
+    v.fatos[`convite_prof_${convite.pessoaId}`] = v.t;
+    if (convite.incentivoIf) {
+      marcarFato(v, 'incentivo_if');
+      lembrarCom(v, convite.pessoaId, 'Sugeriu a prova do instituto federal e ofereceu aulas de preparação.', 'apoio', 2);
+      escrever(v, { texto: `${convite.texto}`, relevancia: 'biografia', tema: 'escola', pessoas: [convite.pessoaId] });
+    } else if (convite.atividade) {
+      novaOportunidade(v, { tipo: 'iniciacao', meses: 12, chave: `convite_${convite.atividade}`, pessoaId: convite.pessoaId, titulo: convite.titulo, texto: convite.texto, atividade: convite.atividade });
+    }
+  }
+  const r = rngDe(v.id, 'rede_formacao', v.t);
+  if (i >= 21 && i <= 50 && (semTrabalho(v) || trabalhoFraco(v)) && !v.trabalho.aposentadoria && podeGerar(v, 'indicacao_formacao', 4)) {
+    const areas = [...new Set(v.educacao.concluidos.filter(c => c.nivel !== 'livre').map(c => c.area))];
+    for (const area of areas) {
+      const quem = exColegasDaArea(v, area).find(p => p.municipioId === v.moradia.municipioId);
+      if (!quem || !r.chance(0.3)) continue;
+      const oc = OCUPACOES.filter(o => o.area?.includes(area as never) && !o.concurso && !o.entrada && o.contrato !== 'estagio' && o.contrato !== 'aprendiz' && v.trabalho.atual?.ocupacaoId !== o.id)
+        .filter(o => { const d = elegibilidade(v, o); return d.grau === 'permitido' || d.grau === 'improvavel'; })
+        .sort((a, b) => a.nivel - b.nivel)[0];
+      if (!oc) continue;
+      const vin = v.vinculos[quem.id];
+      const anos = vin?.formacao?.tFim !== undefined ? Math.max(1, Math.floor((v.t - vin.formacao.tFim) / 12)) : 0;
+      novaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.id, meses: 12, chave: 'indicacao_formacao', bonus: 0.3, titulo: `Indicação de ${quem.nome}, da sua turma`,
+        texto: `${quem.nome} estudou com você${anos ? ` — faz ${anos} ${anos === 1 ? 'ano' : 'anos'} que não se viam` : ''}. Hoje trabalha como ${quem.ocupacao} e lembrou de você para uma vaga: ${nomeOcupacao(v, oc)}.` });
+      break;
     }
   }
 }
@@ -306,6 +355,24 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
     }
     case 'selecao_tecnico':
       return { texto: '', decisao: 'esc_selecao_if' };
+    case 'iniciacao': {
+      // O convite de um professor: a atividade começa (se cabe na semana), com quem convidou por perto.
+      const id = o.atividade;
+      const mod = id ? modeloRotina(id) : undefined;
+      if (!id || !mod) return { texto: 'O convite não se confirmou.' };
+      const disp = podeComecarRotina(v, id, 1);
+      if (!podeTentar(disp)) return { texto: disp.motivo ?? 'Não coube agora.', tom: 'ruim' };
+      v.rotinas.push({ id, tInicio: v.t, nivel: 1 });
+      const p = o.pessoaId ? v.pessoas[o.pessoaId] : undefined;
+      if (p && v.vinculos[p.id]) {
+        v.vinculos[p.id].proximidade = clamp(v.vinculos[p.id].proximidade + 8);
+        v.vinculos[p.id].aproximacao = v.t;
+        if (id === 'iniciacao' && v.vinculos[p.id].formacao) v.vinculos[p.id].formacao!.papel = 'orientador';
+        lembrarCom(v, p.id, `Aceitou o convite: ${mod.nome.toLowerCase()}.`, 'apoio', 2);
+      }
+      escrever(v, { texto: `Aceitou o convite${p ? ` de ${p.nome}` : ''}: ${mod.nome.toLowerCase()}.`, relevancia: 'biografia', tema: id === 'iniciacao' || id === 'monitoria' ? 'estudo' : 'escola', escolha: true, pessoas: p ? [p.id] : undefined });
+      return { texto: p ? `${p.nome} sorriu como quem já esperava o sim.` : 'Começou na semana seguinte.', tom: 'bom' };
+    }
     case 'banda': case 'grupo':
       v.fatos['projeto_convite'] = MODS_ARTE.indexOf(o.dominio ?? 'musica');
       if (o.pessoaId) v.fatos['projeto_pessoa_marca'] = v.t;

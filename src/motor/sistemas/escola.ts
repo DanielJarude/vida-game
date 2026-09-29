@@ -28,6 +28,7 @@ import { flex } from '../texto';
 import { anoDe } from '../tempo';
 import { abalar } from './abalo';
 import { bonusDoPreparo, devolutivaDoEnem } from './vestibular';
+import { aoConcluir, bonusDeEstudo, instituicaoAtual, pesoNaPesquisa } from './formacao';
 
 /** "Eletricista instalador (NR-10)" → "eletricista instalador (NR-10)": só a inicial, e só quando não é sigla. */
 const minusculaInicial = (s: string) => (/^[A-ZÀ-Ú][a-zà-ú]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
@@ -99,7 +100,9 @@ export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?
   // A nota compara o que a pessoa sabe com o que se espera na série (ou no curso).
   const media = materias?.length ? materias.reduce((s, m) => s + habilidade(v, m), 0) / materias.length : mediaEscolar(v);
   const esperado = materias?.length ? 52 : Math.min(60, Math.max(6, 5 * (idade(v) - 5)));
-  const base = 52 + (media - esperado) * 0.9 + (v.mente.cognicao - 50) * 0.18 + d * 0.1 + postura + bonusRede + casa + trabalhoPesa + condicoesDeEstudo(v);
+  // O reforço e o grupo de estudos (atividades da formação) contam aqui — a mesma rotina que ocupa a semana.
+  const apoio = bonusDeEstudo(v, materias === undefined);
+  const base = 52 + (media - esperado) * 0.9 + (v.mente.cognicao - 50) * 0.18 + d * 0.1 + postura + bonusRede + casa + trabalhoPesa + condicoesDeEstudo(v) + apoio;
   return clamp(Math.round(base + r.normal() * 6), 5, 100);
 }
 
@@ -203,6 +206,9 @@ export function processarEscola(v: Vida, r: Rng): void {
 
   if (b.etapa === 'medio') {
     if (b.serie >= 3) {
+      // A turma se espalha: colegas levam a formação (o técnico do integrado) para a vida (`formacao`).
+      const inst = instituicaoAtual(v);
+      if (inst) aoConcluir(v, inst.ambiente, inst.chave, b.integrado ? cursoOuNulo(b.integrado)?.area : undefined);
       subir(v, 'medio');
       e.basica = undefined;
       marcarFato(v, 'concluiu_medio');
@@ -211,6 +217,7 @@ export function processarEscola(v: Vida, r: Rng): void {
         if (c) {
           e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: 'o instituto federal', rede: 'publica', modalidade: 'presencial' });
           subir(v, 'tecnico');
+          v.fatos['concluiu_integrado'] = v.t;
           escrever(v, { texto: `Terminou o médio integrado: saiu com o diploma de ${c.nome.replace(/^Técnico em /, 'técnico em ')}.`, relevancia: 'marco', tema: 'escola', tom: 'bom' });
           marcar(v, 'formacao', `Técnico em ${c.nome.replace(/^Técnico em /, '')}, pelo médio integrado.`, 3);
         }
@@ -414,7 +421,9 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
         // qualificação e técnico públicos, residência, mestrado, doutorado: processo seletivo próprio
         const base = c.nivel === 'livre' ? 0.6 : c.nivel === 'tecnico' ? 0.5 : c.nivel === 'residencia' ? 0.35 : 0.45;
         const desempenho = v.educacao.basica?.desempenho ?? ultimoDesempenho(v);
-        const chance = clamp(base + (desempenho - 60) / 100, 0.08, 0.9);
+        // Mestrado e doutorado: a iniciação científica e a carta de quem orientou pesam (`formacao`).
+        const pesquisa = c.nivel === 'mestrado' || c.nivel === 'doutorado' ? pesoNaPesquisa(v) : 0;
+        const chance = clamp(base + (desempenho - 60) / 100 + pesquisa, 0.08, 0.9);
         add({ via: 'selecao_publica', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito: { grau: chance < 0.3 ? 'improvavel' : 'permitido', chance }, municipioId: lugar, observacao });
       }
     }
@@ -605,6 +614,7 @@ export function nomeDaMatricula(v: Vida, m: Matricula = v.educacao.matricula!): 
 
 function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   const e = v.educacao;
+  { const inst = instituicaoAtual(v); if (inst) aoConcluir(v, inst.ambiente, inst.chave, m.area ?? c.area); }
   e.matricula = undefined;
   const area = m.area ?? areaDaPos(v, c) ?? c.area;
   e.concluidos.push({ cursoId: c.id, nome: nomeDaFormacao(c, area), nivel: c.nivel, area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined });

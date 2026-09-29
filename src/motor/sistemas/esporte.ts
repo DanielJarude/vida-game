@@ -86,7 +86,8 @@ export function mudarDeClube(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 4
 
 /** A modalidade que a pessoa pratica com mais seriedade agora. */
 export function modalidadePrincipal(v: Vida): { d: Dominio; nivel: number } | undefined {
-  const lista = v.rotinas.filter(r => MODALIDADES.includes(r.id as Dominio)).map(r => ({ d: r.id as Dominio, nivel: r.nivel ?? 1 }));
+  // O time da escola é futebol de competição (os jogos escolares): conta como treino regular (REWORK 3).
+  const lista = v.rotinas.filter(r => MODALIDADES.includes(r.id as Dominio) || r.id === 'time_escola').map(r => ({ d: (r.id === 'time_escola' ? 'futebol' : r.id) as Dominio, nivel: r.id === 'time_escola' ? 2 : r.nivel ?? 1 }));
   return lista.sort((a, b) => b.nivel - a.nivel || habilidade(v, b.d) - habilidade(v, a.d))[0];
 }
 
@@ -323,7 +324,7 @@ export function processarEsporte(v: Vida, r: Rng): void {
         novaOportunidade(v, {
           tipo: mod.d === 'futebol' ? 'peneira' : 'seletiva', dominio: mod.d, municipioId: lugar, meses: 12, chave: `peneira_${mod.d}`,
           titulo: mod.d === 'futebol' ? `Peneira ${noClube(clube)}` : `Seletiva ${noClube(clube)}`,
-          texto: `${mod.nivel >= 2 ? 'O treinador' : 'Um conhecido que entende de esporte'} viu você ${mod.d === 'futebol' ? 'jogar' : 'competir'} e indicou para ${mod.d === 'futebol' ? 'a peneira' : 'a seletiva'} ${doClube(clube)}${longe ? `, em ${municipio(lugar).nome}` : ''}. ${mod.d === 'futebol' ? 'Centenas de garotos' : 'Dezenas de atletas'}, poucas vagas.`
+          texto: `${v.rotinas.some(x => x.id === 'time_escola') && !v.rotinas.some(x => x.id === 'futebol' && (x.nivel ?? 1) >= 2) ? 'O professor de educação física, nos jogos escolares,' : mod.nivel >= 2 ? 'O treinador' : 'Um conhecido que entende de esporte'} viu você ${mod.d === 'futebol' ? 'jogar' : 'competir'} e indicou para ${mod.d === 'futebol' ? 'a peneira' : 'a seletiva'} ${doClube(clube)}${longe ? `, em ${municipio(lugar).nome}` : ''}. ${mod.d === 'futebol' ? 'Centenas de garotos' : 'Dezenas de atletas'}, poucas vagas.`
         });
       }
     }
