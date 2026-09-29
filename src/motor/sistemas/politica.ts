@@ -303,7 +303,9 @@ export function portasDaPolitica(v: Vida): { origem: VidaPolitica['origem']; pes
   // voluntariado, liderança, gente que já resolve coisas — e pesa mais quando há as duas coisas.)
   const comunidade = habilidade(v, 'comunidade');
   const lideranca = habilidade(v, 'lideranca');
-  if (i >= 18 && (rot('voluntariado') || comunidade >= 45 || (lideranca >= 45 && rot('igreja')))) out.push({ origem: 'comunidade', peso: (rot('voluntariado') ? 2 : 0.6) + (comunidade >= 45 ? 1 : 0) + (lideranca >= 45 ? 0.5 : 0) });
+  const voluntario = v.rotinas.find(r => r.id === 'voluntariado');
+  const anosVoluntario = voluntario ? (v.t - voluntario.tInicio) / 12 : 0;
+  if (i >= 18 && (anosVoluntario >= 2 || comunidade >= 45 || (lideranca >= 45 && rot('igreja')))) out.push({ origem: 'comunidade', peso: (anosVoluntario >= 2 ? 2 : 0.5) + (comunidade >= 45 ? 1 : 0) + (lideranca >= 45 ? 0.5 : 0) });
   if (i >= 16 && i <= 26 && (rot('gremio') || temFato(v, 'gremio_eleito')) && lideranca >= 35) out.push({ origem: 'estudantil', peso: 2 });
   const e = v.trabalho.atual;
   if (e && (e.contrato === 'clt' || e.contrato === 'servidor') && (v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 96 && v.personalidade.tracos.sociabilidade > 15 && lideranca >= 25) out.push({ origem: 'sindicato', peso: 1 });

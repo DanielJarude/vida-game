@@ -120,7 +120,7 @@ const emRomance = (c: CtxI) => c.papel === 'parceiro' || c.papel === 'saindo' ||
 const pertoOuEmCasa = (c: CtxI) => c.casa || !c.longe;
 /** Criança da família (filho, neto, irmão mais novo, primo) — não um amigo da escola do jogador adulto. */
 const criancaDaFamilia = (c: CtxI) => ehDescendente(c.papel) || ((c.papel === 'irmao' || c.papel === 'parente') && c.eu >= 12);
-const apertoRecente = (c: CtxI) => !!c.p.aperto && c.v.t - c.p.aperto.t <= 24;
+const apertoRecente = (c: CtxI) => !!c.p.aperto && !c.p.aperto.resolvido && c.v.t - c.p.aperto.t <= 24;
 /** Um ex que VIROU amigo (os dois quiseram): aí, sim, as ações de amizade fazem sentido. */
 const exAmigo = (c: CtxI) => c.papel === 'ex' && (c.vin.estagio === 'amigo' || c.vin.estagio === 'amigo_proximo');
 /** Ex que ainda é só ex: nada de "passar a tarde junto" como se fosse amigo. */
@@ -1045,7 +1045,7 @@ function resultadoApoio(c: CtxI): string {
 }
 
 function precisaDeDinheiro(c: CtxI): boolean {
-  if (c.p.aperto && (c.p.aperto.tipo === 'desemprego' || c.p.aperto.tipo === 'dinheiro') && c.v.t - c.p.aperto.t <= 24) return true;
+  if (c.p.aperto && !c.p.aperto.resolvido && (c.p.aperto.tipo === 'desemprego' || c.p.aperto.tipo === 'dinheiro') && c.v.t - c.p.aperto.t <= 24) return true;
   if ((ehDescendente(c.papel) || c.papel === 'genitor' || c.papel === 'irmao') && c.p.renda < 2200) return true;
   return false;
 }

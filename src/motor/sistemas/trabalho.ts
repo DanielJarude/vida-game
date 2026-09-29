@@ -473,7 +473,8 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   e.desempenho = clamp(Math.round(e.desempenho * 0.5 + alvo * 0.5 + r.normal() * 8));
 
   // Estresse do cargo
-  t.horasExtras = false;
+  // (As horas extras do ano só saem da semana no FIM do ano, em `ano.viverAno`: antes, zeravam aqui e nunca
+  // chegavam à cabeça nem à sobrecarga — a semana mostrava um peso que o motor não contava.)
 
   // Curso de formação (escola de sargentos, academia de polícia): termina e vira o posto.
   if (e.formacaoAte !== undefined) {

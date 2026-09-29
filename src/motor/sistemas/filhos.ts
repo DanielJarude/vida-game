@@ -355,7 +355,8 @@ function empregar(v: Vida, f: Pessoa, oc: Ocupacao): void {
   f.ocupacao = nomeOc(f, oc);
   f.renda = liquido(salarioLocal(oc, f.municipioId), oc.contrato);
   vida.tCargo = v.t;
-  if (f.aperto?.tipo === 'desemprego') f.aperto = undefined;
+  // Resolvido não é esquecido: a relação ainda lembra, um ano depois, quem esteve por perto.
+  if (f.aperto?.tipo === 'desemprego') { if (v.t - f.aperto!.t < 24) f.aperto!.resolvido ??= v.t; else f.aperto = undefined; }
 }
 
 /** Ocupações a que a pessoa tem acesso pela formação, experiência e idade. */
@@ -391,7 +392,7 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
   }
   // Sem trabalho: procura (e acha, com mais ou menos demora).
   if (f.renda === 0 && !f.estudo?.nivel) {
-    const chance = f.aperto?.tipo === 'desemprego' ? 0.55 : 0.8;
+    const chance = f.aperto?.tipo === 'desemprego' && !f.aperto.resolvido ? 0.55 : 0.8;
     if (!r.chance(chance * (emRecessao(v) ? 0.7 : 1))) return;
     const naArea = entradaDaFormacao(f.formacao);
     let escolhida = naArea && acessivel(f, naArea, i) ? naArea : undefined;
@@ -406,7 +407,7 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
       const lista = base.filter(o => acessivel(f, o, i) && o.nivel <= 2);
       escolhida = lista.length ? r.pick(lista) : ocupacao('atendente');
     }
-    const antes = f.aperto?.tipo === 'desemprego';
+    const antes = f.aperto?.tipo === 'desemprego' && !f.aperto.resolvido;
     const primeiro = !vida.tCargo && !vida.trajetoria.some(t => t.tipo === 'trabalho' || t.tipo === 'promocao' || t.tipo === 'desemprego');
     empregar(v, f, escolhida);
     comunicar(v, f, cota, {

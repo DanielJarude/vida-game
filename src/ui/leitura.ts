@@ -319,7 +319,7 @@ export function sinaisSociais(v: Vida): Sinal[] {
     const papel = papelDe(p, vin);
     const nucleo = papel === 'parceiro' || ehDescendente(papel) || papel === 'genitor';
     if (p.gestacao && v.t < p.gestacao.tParto) out.push({ pessoaId: p.id, texto: `${p.nome} vai ter um bebê em ${MESES[mesDe(p.gestacao.tParto)]}.`, peso: 70 + imp / 10, escopo: nucleo ? 'global' : 'pessoas' });
-    if (p.aperto && v.t - p.aperto.t <= 12 && !vin.chamado) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5, escopo: nucleo || papel === 'amigo_proximo' ? 'global' : 'pessoas' });
+    if (p.aperto && !p.aperto.resolvido && v.t - p.aperto.t <= 12 && !vin.chamado) out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: 60 + imp / 5, escopo: nucleo || papel === 'amigo_proximo' ? 'global' : 'pessoas' });
     if (!vin.chamado && vin.tensao >= 55 && nucleo) out.push({ pessoaId: p.id, texto: `${p.nome} — vocês têm brigado.`, peso: 55 + imp / 5, escopo: vin.convivio.includes('casa') ? 'global' : 'pessoas' });
     if (!vin.chamado && papel === 'parceiro' && (vin.romance?.envolvimento ?? 50) < 42 && vin.tensao < 55) out.push({ pessoaId: p.id, texto: `${p.nome} anda distante.`, peso: 50 + imp / 5, escopo: 'pessoas' });
     const semContato = Math.floor((v.t - vin.tUltimoContato) / 12);

@@ -86,6 +86,8 @@ export function responderChamado(v: Vida, _r: Rng, p: Pessoa, vin: Vinculo, sim:
   const ch = vin.chamado!;
   vin.chamado = undefined;
   vin.tUltimoContato = v.t;
+  // Responder que sim a quem procurou é gesto correspondido: é o que deixa uma amizade aprofundar (`social`).
+  if (sim && !vin.parentesco && ch.tipo !== 'interesse' && ch.tipo !== 'conversa_casal' && ch.tipo !== 'distancia_casal') vin.aproximacao = v.t;
   const tituloP = p.nome;
   switch (ch.tipo) {
     case 'pedido_ajuda': {
@@ -207,6 +209,8 @@ function lembrarApertos(v: Vida): void {
   for (const { p, vin } of vinculosVivos(v)) {
     const ap = p.aperto;
     if (!ap || v.t - ap.t < 12) continue;
+    // Lembrado, o aperto que já se resolveu pode sair da vida da pessoa.
+    if (ap.resolvido !== undefined) p.aperto = undefined;
     const chave = `aperto_visto_${p.id}_${ap.t}`;
     if (v.fatos[chave] !== undefined) continue;
     const papel = papelDe(p, vin);
@@ -317,7 +321,7 @@ function novaIniciativa(v: Vida, r: Rng): void {
     }
     // Pedido de ajuda: quem está num aperto recente e confia em você.
     const ap = p.aperto;
-    if (ap && v.t - ap.t <= 12 && eu >= 16 && ap.tipo !== 'luto' && !moraJunto(vin) && vin.confianca >= 40) {
+    if (ap && !ap.resolvido && v.t - ap.t <= 12 && eu >= 16 && ap.tipo !== 'luto' && !moraJunto(vin) && vin.confianca >= 40) {
       const assunto = ap.tipo === 'dinheiro' ? 'dinheiro' : ap.tipo === 'desemprego' ? 'emprego' : ap.tipo === 'separacao' ? 'lugar' : ap.tipo === 'doenca' ? 'consultas' : 'fase';
       const texto = assunto === 'dinheiro' ? `${p.nome} pediu ajuda com dinheiro, com vergonha de pedir.`
         : assunto === 'emprego' ? `${p.nome} perdeu o emprego e pediu ajuda: uma indicação, um currículo revisado, qualquer coisa.`

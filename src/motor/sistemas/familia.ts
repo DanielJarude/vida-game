@@ -128,7 +128,8 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
         p.ocupacaoId = oc.id;
         p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
         p.renda = liquido(salarioLocal(oc, p.municipioId, 0.85 + r.next() * 0.3), oc.contrato);
-        if (p.aperto?.tipo === 'desemprego') p.aperto = undefined;
+        // Resolvido não é esquecido: a relação ainda lembra, um ano depois, quem esteve por perto.
+        if (p.aperto?.tipo === 'desemprego') { if (v.t - p.aperto!.t < 24) p.aperto!.resolvido ??= v.t; else p.aperto = undefined; }
         if (i < 25 && moraComFamiliaDeOrigem(v)) escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} arrumou trabalho de novo, como ${p.ocupacao}.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [p.id] });
       }
     }

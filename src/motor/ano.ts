@@ -137,6 +137,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarSobrecarga(v);
   equilibrarMente(v);
   registrarEstado(v);
+  // As horas extras valiam para ESTE ano (semana, cabeça, sobrecarga, desempenho); no próximo, é outra escolha.
+  v.trabalho.horasExtras = false;
   fotografar(v);
 
   const causa = morreEsteAno(v, r);

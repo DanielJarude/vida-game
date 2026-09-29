@@ -238,7 +238,8 @@ export function processarSocial(v: Vida, r: Rng): void {
       if (vin.estagio === 'amigo_proximo') delta *= 0.6; // amizade antiga resiste mais
     }
     // Sem gesto, a convivência vira familiaridade, não amizade: o afeto de quem só divide o lugar cresce devagar.
-    if (junto && aindaNaoAmigo && !gesto && i >= 12) delta = Math.min(delta, i < 18 ? 5 : 3);
+    // (Com muita afinidade, a familiaridade cresce um pouco mais depressa — é o que às vezes vira amizade sem que ninguém "decida".)
+    if (junto && aindaNaoAmigo && !gesto && i >= 12) delta = Math.min(delta, i < 18 ? 5 : c > 0.45 ? 5 : 3);
     // Quem tomou distância (ou pôs limites) não se aproxima por conviver — e o que havia esfria.
     if (distante) delta = Math.min(delta, ORDEM[antesEst] >= 2 ? -5 : 0);
     delta -= vin.tensao / 12;
@@ -253,7 +254,8 @@ export function processarSocial(v: Vida, r: Rng): void {
     const amigosAtuais = vinculosVivos(v).filter(x => !x.vin.parentesco && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo')).length;
     // O passo de colega para amigo: na infância, basta conviver; na adolescência, às vezes basta;
     // depois, precisa de um gesto correspondido nos últimos dois anos.
-    const podeVirarAmigo = !distante && (i < 12 || gesto || (i < 18 && r.chance(0.4)));
+    // Raro, entre adultos: anos lado a lado com muita afinidade às vezes viram amizade sem gesto marcado.
+    const podeVirarAmigo = !distante && (i < 12 || gesto || (i < 18 && r.chance(0.4)) || (junto && c > 0.45 && conhecidosHa >= 3 && r.chance(0.2)));
     // Amigo próximo: tempo, afeto e uma história que não é só de convivência (apoio, confidência, costume).
     const historiaFunda = vin.historia.some(h => h.tipo === 'apoio' || h.tipo === 'ritual' || h.tipo === 'descoberta' || h.tipo === 'reconciliacao' || (h.tipo === 'amizade' && !h.texto.startsWith('Viraram amigos')));
     const podeAprofundar = !distante && (i < 18 ? conhecidosHa >= 5 : gesto && historiaFunda);
@@ -331,7 +333,8 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
       p.renda = Math.max(1620, Math.round(p.renda * 0.7));
       p.ocupacao = p.genero === 'feminino' ? 'aposentada' : 'aposentado';
     }
-    if (p.aperto?.tipo === 'desemprego' && p.renda > 0) p.aperto = undefined;
+    // Resolvido não é esquecido: a relação ainda lembra, um ano depois, quem esteve por perto.
+    if (p.aperto?.tipo === 'desemprego' && p.renda > 0) { if (v.t - p.aperto!.t < 24) p.aperto!.resolvido ??= v.t; else p.aperto = undefined; }
     // A vida de um amigo próximo também acontece — e fica na história de vocês.
     if (vin.estagio === 'amigo_proximo' && !vin.romance) {
       if (!p.parceiroId && i >= 22 && i <= 50 && r.chance(0.07)) {

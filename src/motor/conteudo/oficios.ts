@@ -148,8 +148,9 @@ export const OFICIOS_CONTEUDO: Conteudo[] = [
     })), { id: 'geral', texto: () => 'Seguir generalista, por enquanto', disponivel: () => true, consequencia: () => 'Nada muda — e dá para escolher depois.', resolver: (c: Ctx) => ({ texto: 'Você preferiu não se prender a uma área só.', memoria: null, efeito: () => { c.v.fatos['ofi_generalista'] = c.v.t; } }) }]
   },
   {
-    id: 'ofi_desafio', tipo: 'decisao', idade: [22, 75], tema: 'trabalho', repetir: 3, peso: 1.6,
-    quando: c => vivo(c) && anosNaTrilha(c) >= 1,
+    // O trabalho também acontece: de dois em dois anos, mais ou menos, aparece o caso, a turma, a obra, a pauta.
+    id: 'ofi_desafio', tipo: 'decisao', idade: [22, 75], tema: 'trabalho', prioritario: true, prioridade: 1, repetir: 2,
+    quando: c => vivo(c) && anosNaTrilha(c) >= 1 && c.r.chance(0.45),
     titulo: 'No trabalho',
     texto: c => { const o = oficioDe(emprego(c))!; return o.desafios[indiceDesafio(c)].texto(emprego(c).especialidade); },
     opcoes: [
@@ -186,8 +187,8 @@ export const OFICIOS_CONTEUDO: Conteudo[] = [
   },
   {
     // Com estrada e nome, dá para sair e atender por conta: sem chefe, sem salário fixo — a agenda é sua.
-    id: 'ofi_conta_propria', tipo: 'decisao', idade: [25, 65], tema: 'trabalho', repetir: 6, peso: 1.2,
-    quando: c => { const e = c.v.trabalho.atual; const o = oficioDe(e); if (!e || !o?.contaPropria || e.contrato !== 'clt' || !vivo(c)) return false; const alvo = ocupacaoOuNula(o.contaPropria); return !!alvo && anosNaTrilha(c) >= 4 && ((e.feitos ?? 0) >= 1 || anosNaTrilha(c) >= 7) && podeTentar(elegibilidade(c.v, alvo)); },
+    id: 'ofi_conta_propria', tipo: 'decisao', idade: [25, 65], tema: 'trabalho', prioritario: true, prioridade: 1, repetir: 6,
+    quando: c => c.r.chance(0.25) && (() => { const e = c.v.trabalho.atual; const o = oficioDe(e); if (!e || !o?.contaPropria || e.contrato !== 'clt' || !vivo(c)) return false; const alvo = ocupacaoOuNula(o.contaPropria); return !!alvo && anosNaTrilha(c) >= 4 && ((e.feitos ?? 0) >= 1 || anosNaTrilha(c) >= 7) && podeTentar(elegibilidade(c.v, alvo)); })(),
     titulo: 'Por conta própria',
     texto: c => `Dois clientes antigos disseram que iriam com você se você atendesse por conta. ${(emprego(c).feitos ?? 0) >= 2 ? 'O seu nome já circula.' : ''} Sair é trocar o salário pela agenda: o que entra depende de quem vem.`,
     opcoes: [
@@ -199,8 +200,8 @@ export const OFICIOS_CONTEUDO: Conteudo[] = [
   },
   {
     // O autônomo cheio de clientes pode virar DONO: a empresa, a equipe, as contas — outra vida, não uma promoção.
-    id: 'ofi_virar_dono', tipo: 'decisao', idade: [27, 68], tema: 'trabalho', repetir: 5, peso: 1.4,
-    quando: c => { const e = c.v.trabalho.atual; const o = oficioDe(e); return !!e && !!o?.negocio && e.clientela !== undefined && e.clientela >= 62 && !negocioAberto(c.v) && idade(c.v) >= 27 && NEGOCIOS.some(n => n.id === o.negocio); },
+    id: 'ofi_virar_dono', tipo: 'decisao', idade: [27, 68], tema: 'trabalho', prioritario: true, prioridade: 1, repetir: 5,
+    quando: c => c.r.chance(0.3) && (() => { const e = c.v.trabalho.atual; const o = oficioDe(e); return !!e && !!o?.negocio && e.clientela !== undefined && e.clientela >= 62 && !negocioAberto(c.v) && idade(c.v) >= 27 && NEGOCIOS.some(n => n.id === o.negocio); })(),
     titulo: 'A agenda não cabe',
     texto: c => { const t = NEGOCIOS.find(n => n.id === oficioDe(emprego(c))!.negocio)!; return `A agenda lota três semanas adiante. Um colega sugere: por que não ${t.nome.replace(/^um /, 'montar um ').replace(/^uma /, 'montar uma ')}, com gente trabalhando junto? Hoje você atende por conta; lá, seria ${c.g('o dono', 'a dona', 'e done')} — com equipe, aluguel e folha.`; },
     opcoes: [

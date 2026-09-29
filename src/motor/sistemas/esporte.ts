@@ -167,7 +167,8 @@ export function valorDeMercado(v: Vida, e: CarreiraEsportiva): number {
   const t = e.temporadas?.[e.temporadas.length - 1];
   const nota = t ? t.nota : 6;
   const pos = posicaoDe(v, e);
-  const passou = Math.max(0, idade(v) - augeDe(v, e) - (e.foco === 'preservar' ? 2 : 1));
+  // Treinar dobrado depois do auge envelhece o corpo mais cedo; preservar dá uns anos a mais.
+  const passou = Math.max(0, idade(v) - augeDe(v, e) - (e.foco === 'preservar' ? 2 : e.foco === 'forcar' ? 0 : 1));
   void pos;
   return (e.reputacao ?? 30) + (nota - 6) * 6 - passou * passou * 0.9;
 }

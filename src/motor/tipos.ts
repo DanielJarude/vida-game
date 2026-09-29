@@ -112,6 +112,11 @@ export interface Aperto {
   pessoaId?: string;
   /** O peso do laço com quem se foi (um filho pesa mais que um sogro): um luto mais leve não apaga um mais pesado. */
   peso?: number;
+  /**
+   * Quando o aperto se resolveu (arrumou emprego). Ele não some na hora: a
+   * relação ainda lembra, um ano depois, se você esteve por perto (`iniciativas.lembrarApertos`).
+   */
+  resolvido?: number;
 }
 
 /**
