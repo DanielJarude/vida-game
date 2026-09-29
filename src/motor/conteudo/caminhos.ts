@@ -188,7 +188,7 @@ export const CAMINHOS: Conteudo[] = [
   {
     id: 'esc_selecao_if', tipo: 'decisao', idade: [13, 16], tema: 'escola', manual: true, repetir: 0,
     titulo: 'A prova do instituto federal',
-    texto: () => 'Três anos de dia inteiro, uniforme cinza, laboratório — e um diploma de técnico junto com o do médio. A prova é concorrida. Qual curso?',
+    texto: c => `Três anos de dia inteiro, uniforme, laboratório — e um diploma de técnico junto com o do médio. O campus ${municipio(c.v.moradia.municipioId).perfil === 'pequena' ? 'da região' : 'daqui'} oferece ${cursosDoIf(c).map(x => x.nome.replace(/^Técnico em /, '')).join(', ').replace(/, ([^,]*)$/, ' e $1')}. A prova é concorrida.`,
     opcoes: [0, 1, 2].map(k => ({
       id: `curso${k}`,
       texto: (c: Ctx) => { const x = cursosDoIf(c)[k]; return x ? `Tentar ${x.nome.replace(/^Técnico em /, '')}` : '—'; },
@@ -477,10 +477,23 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   };
 }
 
+/**
+ * Os cursos do campus: cada instituto oferece os seus (o da capital não é o do
+ * interior agrícola). Determinístico pela cidade — é o mesmo campus para
+ * quem nasce ali. (FIX pós-REWORK 2: antes, toda vida via Informática,
+ * Eletrotécnica e mais um; a reestruturação da escola fica para o REWORK 3.)
+ */
 function cursosDoIf(c: Ctx) {
-  const agro = economiaLocal(c.v.moradia.municipioId).custo < 0.95 || municipio(c.v.moradia.municipioId).perfil === 'pequena';
-  const base = ['tec_informatica', agro ? 'tec_agropecuaria' : 'tec_eletrotecnica', ['tec_mecanica', 'tec_edificacoes', 'tec_administracao'][Math.floor((anoDe(c.v.eu.tNasc) % 3))]];
-  return base.map(id => CURSOS.find(x => x.id === id)!).filter(Boolean);
+  const m = municipio(c.v.moradia.municipioId);
+  const agro = economiaLocal(m.id).custo < 0.95 || m.perfil === 'pequena';
+  const pool = agro ? ['tec_agropecuaria', 'tec_informatica', 'tec_administracao', 'tec_mecanica', 'tec_edificacoes', 'tec_eletrotecnica']
+    : ['tec_informatica', 'tec_eletrotecnica', 'tec_edificacoes', 'tec_administracao', 'tec_mecanica'];
+  let h = 0;
+  for (const ch of m.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const escolhidos: string[] = [];
+  for (let k = 0; escolhidos.length < 3 && k < 20; k++) { const x = pool[(h + k * 7) % pool.length]; if (!escolhidos.includes(x)) escolhidos.push(x); }
+  void anoDe;
+  return escolhidos.map(id => CURSOS.find(x => x.id === id)!).filter(Boolean);
 }
 
 function selecaoIf(c: Ctx, k: number) {

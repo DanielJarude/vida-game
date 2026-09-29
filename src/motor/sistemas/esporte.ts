@@ -460,6 +460,21 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   else if (antes === 'reserva' && e.espaco === 'titular') escrever(v, { texto: 'Ganhou a posição: a próxima temporada começa como titular.', relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
   // O contrato vence: renovar é conversa (`esp_renovacao`) — e o mercado é quem diz se ainda há lugar.
   e.contratoAte ??= v.t + 24;
+  // Venceu há um ano e a conversa não aconteceu (outra decisão ocupou o ano): o contrato não vale para sempre.
+  // Quem decide é o clube — prorroga por um ano, se ainda quer; se não, a pessoa fica sem clube e o mercado responde.
+  if (v.t >= e.contratoAte + 12) {
+    if (clubeQuerRenovar(v, e)) {
+      assinarContrato(v, e, 12);
+      escrever(v, { texto: `O contrato venceu sem conversa, e ${oClube(e.clube)} prorrogou por mais um ano.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    } else {
+      v.fatos['esp_sem_clube'] = v.t;
+      e.espaco = undefined;
+      e.contratoAte = undefined;
+      encerrarEmprego(v, 'fim do contrato');
+      escrever(v, { texto: `O contrato com ${oClube(e.clube)} acabou e não foi renovado. Sem clube, esperando proposta.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+      return;
+    }
+  }
   if (v.t >= e.contratoAte) v.fatos['esp_renovacao'] = v.t;
   // (FIX pós-REWORK 2: não há mais aposentadoria por idade fixa. O corpo declina pela posição, a temporada
   // mostra, o mercado lê: banco, divisão menor, salário menor — e, um dia, nenhum clube. Parar é escolha.)

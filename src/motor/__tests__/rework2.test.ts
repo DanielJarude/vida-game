@@ -193,10 +193,16 @@ describe('4 e 5. saúde ignorada × saúde tratada', () => {
     expect(pesoDaSaudeNoTrabalho(v)).toBeGreaterThan(2);
     // A decisão de tratamento não aparece para o que ainda não tem nome.
     expect(v.momento).toBeNull();
+    // Ignorado, o corpo obriga — cedo ou tarde (uns 14% ao ano depois de três anos de sinal): em cinco vidas,
+    // a maioria chega ao susto em vinte anos (uma ou outra passa sem, como na vida).
     let x = v;
-    let susto = false;
-    for (let k = 0; k < 12 && !x.morte; k++) { x = ano(x); if (x.fatos['susto_diabetes'] !== undefined) { susto = true; break; } }
-    expect(susto).toBe(true);
+    let sustos = 0;
+    for (const s of [70, 71, 72, 73, 74]) {
+      let y = s === 70 ? v : comSinal(s);
+      for (let k = 0; k < 20 && !y.morte; k++) { y = ano(y); if (y.fatos['susto_diabetes'] !== undefined) break; }
+      if (y.fatos['susto_diabetes'] !== undefined) { sustos++; if (x === v) x = y; }
+    }
+    expect(sustos).toBeGreaterThanOrEqual(3);
     const c = x.corpo.condicoes.find(c => c.id === 'diabetes')!;
     expect(c.diagnosticada).toBe(true);
     expect(c.tarde).toBe(true);

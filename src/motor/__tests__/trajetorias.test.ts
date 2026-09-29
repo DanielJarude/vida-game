@@ -137,6 +137,8 @@ describe('Forças Armadas', () => {
 
   it('transferência: a família vai junto (a parceria recomeça) ou fica (vira distância)', () => {
     const base = adulto(32, 14, 'masculino', 'curitiba-pr');
+    // Premissa: nenhuma outra parceria na vida (a de teste é a única).
+    for (const x of Object.values(base.vinculos)) if (x.romance) x.romance = undefined;
     const par = criarPessoa(base, criarRng(9), { idade: 31, genero: 'feminino', municipioId: base.moradia.municipioId });
     vincular(base, par, { origem: 'romance', proximidade: 80, convivio: ['casa'] });
     base.vinculos[par.id].romance = { estagio: 'casamento', tEstagio: base.t - 60, tInicio: base.t - 100, envolvimento: 80 };

@@ -20,7 +20,7 @@ import { estimuloCognitivo, estimuloFisico, palavraAprendizado, palavraCondicion
 import { cabeNaSemana, dose, semana, type Semana } from '../../motor/sistemas/semana';
 import { frentesDaVida, leituraDaFrente } from '../../motor/sistemas/frentes';
 import { atividadesParaVoce } from '../../motor/sistemas/relevancia';
-import { fatoresCabeca } from '../../motor/sistemas/estado';
+import { fatoresCabeca, sobrecargaDaSemana } from '../../motor/sistemas/estado';
 import { ultimaDevolutiva } from '../../motor/sistemas/devolutivas';
 import { economiaLocal } from '../../motor/dados/lugares';
 import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras } from '../../motor/sistemas/transporte';
@@ -40,7 +40,9 @@ const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'renda', rotulo: 'Dinheiro por fora' }, { id: 'cuidado', rotulo: 'Cuidado' }, { id: 'lazer', rotulo: 'Lazer' }
 ];
 
-function resumoDaSemana(s: Semana): string {
+function resumoDaSemana(s: Semana, fixosPassam = false): string {
+  // Os compromissos fixos já passam do que cabe: a folga mínima que a conta garante não é "tempo sobrando".
+  if (fixosPassam) return 'Os compromissos fixos já passam do que cabe na semana.';
   if (s.ocupado > s.capacidade + 0.01) return 'Você está fazendo mais do que cabe na semana — o cansaço aparece.';
   if (s.livre >= 1.5) return 'Sobra bastante tempo para escolher o que fazer.';
   if (s.livre >= 1) return 'Sobra tempo para mais uma ou duas coisas.';
@@ -190,7 +192,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
   const peneira = ultimaDevolutiva(vida, 'peneira', 36);
   return (
     <div className="tempo">
-      <Folio kicker={<><span className="folio__area">Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
+      <Folio kicker={<><span className="folio__area">Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s, sobrecargaDaSemana(vida).fixos > 0.01)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
       <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
       <section className="tempo-semana" aria-labelledby="titulo-semana">
         <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>

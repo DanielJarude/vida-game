@@ -255,7 +255,7 @@ function carreiras() {
     { nome: 'arte (música, lança trabalhos)', filtro: /^arte_|^noto_/, acoes: () => [P('lancar'), P('estrada')], montar: (v, s) => transacao(v, x => { garantirFrente(x, 'musica'); const f = x.caminhos.frentes.musica!; f.habilidade = 70 + (s % 15); f.meses = 120; x.rotinas.push({ id: 'musica', tInicio: x.t, nivel: 3 }); contratar(x, criarRng(s), ocupacao('musico_noite')); }).vida },
     { nome: 'esporte (profissional)', filtro: /^esp_|^sau_lesao|^noto_/, montar: (v, s) => transacao(v, x => { garantirFrente(x, 'futebol'); const f = x.caminhos.frentes.futebol!; f.habilidade = 78 + (s % 8); f.meses = 120; f.interesse = 90; entrarNaBase(x, 'futebol', x.moradia.municipioId, 'Esporte Clube Teste'); profissionalizar(x, criarRng(s), 2); }).vida },
     { nome: 'política (perseguindo)', filtro: /^pol_/, acoes: () => ['aproximar', 'filiar', 'comunidade', 'bandeira', 'candidatura', 'prioridade'].map(o => ({ tipo: 'politica', oque: o } as unknown as Acao)), montar: v => v },
-    { nome: 'negócio (lanchonete)', filtro: /^neg_|^adu_negocio/, montar: (v, s) => { v.financas.conta = 60000; return executar(transacao(v, x => { x.trabalho.experiencia['alimentacao'] = 48; void s; }).vida, { tipo: 'abrir_negocio', negocio: 'lanchonete' }).vida; } }
+    { nome: 'negócio (lanchonete)', filtro: /^neg|^adu_negocio/, montar: (v, s) => { v.financas.conta = 60000; return executar(transacao(v, x => { x.trabalho.experiencia['alimentacao'] = 48; void s; }).vida, { tipo: 'abrir_negocio', negocio: 'lanchonete' }).vida; } }
   ];
   console.log('\n## Carreiras — 10 anos a partir dos 24 (média por vida)');
   console.log('| carreira | decisões da carreira | tipos distintos | decisões/ano | ações de carreira à mão | estado próprio ao fim |');

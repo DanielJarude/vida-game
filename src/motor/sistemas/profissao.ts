@@ -53,7 +53,7 @@ import { editaisAbertos } from './concurso';
 import { doClube } from '../dados/clubes';
 import { acoesPoliticas } from './politica';
 import { lancarObra } from './arte';
-import { OFICIOS } from '../conteudo/oficios';
+import { OFICIOS } from './oficios';
 import { NEGOCIOS } from '../dados/negocios';
 
 /* ================================================================== Modo */
@@ -315,10 +315,12 @@ export interface LeituraTrabalho {
 function vinculoDe(v: Vida, e: Emprego): string {
   const m = v.caminhos.militar;
   if (e.contrato === 'militar' && m) return m.quadro === 'temporario' ? (v.t - m.tIngresso < 12 ? 'serviço militar inicial (obrigatório)' : 'temporário, engajado ano a ano') : m.quadro === 'praca' ? 'praça de carreira' : 'oficial de carreira';
+  // Dono ≠ autônomo: quem toca o próprio negócio (empresa, equipe, caixa) não "trabalha por conta" — é dono.
+  if (donoIntegral(v)) return 'dono do próprio negócio';
   return VINCULO[e.contrato];
 }
 
-const VINCULO: Record<string, string> = { eletivo: 'mandato eletivo', clt: 'carteira assinada', servidor: 'servidor público', militar: 'carreira militar', informal: 'informal', autonomo: 'por conta própria', estagio: 'estágio', temporario: 'contrato temporário', aprendiz: 'jovem aprendiz' };
+const VINCULO: Record<string, string> = { eletivo: 'mandato eletivo', clt: 'carteira assinada', servidor: 'servidor público', militar: 'carreira militar', informal: 'informal', autonomo: 'por conta própria (sem empresa)', estagio: 'estágio', temporario: 'contrato temporário', aprendiz: 'jovem aprendiz' };
 
 export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
   const modo = modoDoTrabalho(v);
@@ -366,7 +368,7 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
   const f = familiaDaTrilha(oc.trilha);
   const variavel = e.clientela !== undefined;
   // Um número por conceito, com o nome dele: o líquido do mês, o bruto do contrato, a média com 13º (a que a tela Dinheiro soma).
-  const detalhe = !variavel && rem.bruto - liq >= 50 ? ` (bruto ${fmt(rem.bruto)}${rem.tem13 ? `; com 13º e férias, média de ${fmt(rem.mediaMensal)}` : ''})` : '';
+  const detalhe = !variavel && rem.bruto - liq >= 50 ? ` (bruto ${fmt(rem.bruto)})` : '';
   const renda = `${fmt(liq)} por mês no bolso${variavel ? (f.renda === 'sazonal' ? ', conforme a safra' : f.renda === 'projeto' ? ', conforme os trabalhos' : ', conforme a freguesia') : detalhe}`;
   const jornada = e.formacaoAte ? 'curso de formação, em tempo integral' : e.reduzida ? 'jornada reduzida (para cuidar de alguém)' : e.carga === 'parcial' ? 'meio período' : oc.jornada === 'plantao' ? 'plantões, com noites e fins de semana' : oc.jornada === 'fora' ? 'dias fora de casa' : oc.jornada === 'longa' ? 'jornada longa' : 'jornada inteira';
   const ritmo = ritmoDe(e) === 'puxado' ? ` · ${rotulosDoRitmo(v).puxado.toLowerCase()}` : ritmoDe(e) === 'leve' ? ` · ${rotulosDoRitmo(v).leve.toLowerCase()}` : '';

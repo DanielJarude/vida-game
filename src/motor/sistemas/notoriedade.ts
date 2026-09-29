@@ -35,7 +35,7 @@ export function palavraDaNotoriedade(v: Vida, x = v.notoriedade?.valor ?? 0): st
 }
 
 const ESCOPO_CARGO: Record<string, number> = { vereador: 0.45, prefeito: 0.7, deputado_estadual: 0.6, deputado_federal: 0.8, senador: 0.9, governador: 0.95 };
-const PESO_DIVISAO = [0, 0.14, 0.32, 0.62, 1];
+const PESO_DIVISAO = [0, 0.12, 0.28, 0.55, 0.85];
 
 /** O que o público conheceria de você HOJE, pela vida que você tem (antes da inércia). */
 export function alvoDaNotoriedade(v: Vida): { valor: number; fonte?: Notoriedade['fonte'] } {
@@ -43,7 +43,7 @@ export function alvoDaNotoriedade(v: Vida): { valor: number; fonte?: Notoriedade
   const e = v.caminhos.esporte;
   if (e?.fase === 'profissional' && !e.suspensoAte) {
     const rep = e.reputacao ?? 30;
-    cands.push({ valor: rep * PESO_DIVISAO[e.nivel] * (e.espaco === 'titular' ? 1 : 0.7), fonte: 'esporte' });
+    cands.push({ valor: rep * PESO_DIVISAO[e.nivel] * (e.espaco === 'titular' ? 1 : 0.6), fonte: 'esporte' });
   }
   const a = v.caminhos.arte;
   const obras = (v.caminhos.obras ?? []).filter(o => v.t - o.t <= 60);

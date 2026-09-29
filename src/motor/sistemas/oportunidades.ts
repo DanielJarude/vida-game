@@ -146,7 +146,8 @@ export function processarOportunidades(v: Vida, r: Rng): void {
 
   // Seleção do instituto federal (médio integrado ao técnico).
   if (i >= 14 && i <= 15 && b && (b.etapa === 'fundamental2' && b.serie >= 9 || b.etapa === 'medio' && b.serie === 1) && !b.integrado && podeGerar(v, 'selecao_tecnico', 3)
-    && (nivelDeOferta(v.moradia.municipioId) >= 1 || r.chance(0.4))) {
+    // Quem vai bem na escola ouve falar da prova (a professora avisa, os colegas comentam); quem vai mal, nem sempre.
+    && r.chance(clamp((nivelDeOferta(v.moradia.municipioId) >= 1 ? 0.35 : 0.2) + ((b.desempenho ?? 50) - 50) / 60 + (v.educacao.postura === 'dedicada' ? 0.15 : 0), 0.1, 0.9))) {
     novaOportunidade(v, { tipo: 'selecao_tecnico', meses: 12, chave: 'selecao_tecnico', titulo: 'Seleção do instituto federal', texto: `O instituto federal ${nivelDeOferta(v.moradia.municipioId) >= 1 ? 'da cidade' : 'da região'} abriu a prova para o ensino médio integrado ao técnico: três anos, dia inteiro, e um diploma de técnico junto com o do médio.` });
   }
 

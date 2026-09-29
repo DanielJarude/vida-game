@@ -195,6 +195,8 @@ describe('esporte', () => {
     let tentaram = 0, profissionais = 0, dispensadosComRota = 0, dispensados = 0;
     for (let s = 1; s <= 40; s++) {
       const x = vidaDeAtleta(s * 7);
+      // Uma vida que acabou na adolescência (a violência urbana também existe no jogo) não diz nada sobre a rota depois do sonho.
+      if (x.morte && idade(x) < 18) continue;
       if (Object.keys(x.fatos).some(k => k.startsWith('peneiras_'))) tentaram++;
       if (x.fatos['atleta_profissional']) profissionais++;
       if (x.fatos['dispensado_base'] || x.caminhos.marcas.some(m => m.tipo === 'fracasso')) {

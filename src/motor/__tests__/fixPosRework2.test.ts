@@ -445,6 +445,19 @@ describe('futebol profissional: uma carreira jogável', () => {
     expect(notasVelho.length).toBeGreaterThan(0);
     expect(m(notasJovem)).toBeGreaterThan(m(notasVelho));
   });
+  it('contrato vencido não vale para sempre: se a conversa não acontece (outra decisão ocupou os anos), o clube decide', () => {
+    let v = atleta(26, 60, 1);
+    const e = v.caminhos.esporte!;
+    e.contratoAte = v.t - 24; e.reputacao = 1;
+    v = transacao(v, x => { x.eu.tNasc -= 12 * 18; }).vida;
+    v = transacao(v, (x, r) => { x.t += 12; processarEsporte(x, r); }).vida;
+    expect(v.trabalho.atual?.ocupacaoId).not.toBe('jogador_futebol');
+    expect(v.fatos['esp_sem_clube']).toBe(v.t);
+    // Um ano sem proposta: a carreira acaba pelo mercado, não por um aniversário.
+    v = transacao(v, (x, r) => { x.t += 12; processarEsporte(x, r); }).vida;
+    expect(v.caminhos.esporte!.fase).toBe('encerrada');
+    expect(v.caminhos.esporte!.motivoFim).toBe('sem_contrato');
+  });
   it('um evento genérico de emprego não vaza para o jogador: a recessão fala do clube', () => {
     const v = atleta(24);
     const d = conteudoPorId('mun_recessao')!;
@@ -499,8 +512,11 @@ describe('autônomo ≠ dono de negócio', () => {
     const a = [...acoesDoTrabalho(v, disponibilidade).agora, ...acoesDoTrabalho(v, disponibilidade).mais].find(x => x.id === 'negocio')!;
     expect(a.rotulo).toMatch(/consultório/);
     expect(a.rotulo).not.toBe('Abrir o próprio negócio');
+    expect(leituraDoTrabalho(v).vinculo).toMatch(/por conta própria/);
     v = transacao(v, (x, r) => { abrirNegocio(x, r, 'consultorio_odonto'); }).vida;
     const n = negocioAberto(v)!;
+    // Dona agora: o vínculo diz isso (e não "por conta própria"), a tela é a do negócio.
+    if (modoDoTrabalho(v) === 'negocio' && v.trabalho.atual) expect(leituraDoTrabalho(v).vinculo).toBe('dono do próprio negócio');
     expect(n.tipo).toBe('consultorio_odonto');
     v = avancarAno(v).vida; while (v.momento) v = responder(v);
     expect(negocioAberto(v)?.faturamentoAno).toBeDefined();

@@ -8,6 +8,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
+import { palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
@@ -47,6 +48,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
           <h1 className="voce-rosto__momento">{momentoAtual(vida)}</h1>
           <p className="voce-rosto__linha">{ocupacaoAtual(vida)} · {ondeMora(vida)}</p>
           {afeto && <p className="voce-rosto__linha">{afeto}{luto ? ` · ${luto}` : ''}</p>}
+          {vida.notoriedade && vida.notoriedade.valor >= 10 && <p className="voce-rosto__linha">Para o público: {palavraDaNotoriedade(vida)} ({({ esporte: 'pelo esporte', arte: 'pela obra', politica: 'pela vida pública', negocio: 'pelo negócio' } as const)[vida.notoriedade.fonte ?? 'esporte']})</p>}
         </div>
       </section>
 
