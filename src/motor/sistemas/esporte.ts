@@ -133,28 +133,67 @@ export const augeDe = (v: Vida, e: CarreiraEsportiva) => (e.modalidade === 'fute
 /* ------------------------------------------------------------ Salário */
 
 /**
- * O salário de um contrato de atleta (bruto, mensal): FONTE ÚNICA. A divisão
- * e o tamanho do clube, o espaço no time, o nome no mercado (reputação) e a
- * fase da carreira. Um titular consolidado da elite ganha muitas vezes o que
- * ganha um reserva da divisão de acesso — como na vida.
+ * O salário de um contrato de atleta (bruto, mensal): FONTE ÚNICA.
+ *
+ * Não é "divisão X = salário Y". É uma distribuição que nasce do estado:
+ *   divisão × tamanho do clube × espaço no time × nome no mercado (curva
+ *   convexa: pouco nome paga pouco, muito nome paga desproporcionalmente) ×
+ *   a última temporada × a fase da carreira — e, fora da elite, o valor de
+ *   um nome conhecido (o veterano famoso num clube menor ganha muito mais
+ *   que o elenco); na elite, raramente, o prêmio de estrela (reputação
+ *   altíssima + notoriedade + clube grande).
+ * Patrocínio e direito de imagem NÃO entram aqui: são outra renda
+ * (`notoriedade.rendaDeImagem`, linha própria em Dinheiro).
+ * Valores em reais de hoje (o jogo não infla preços: `sistemas/renda`).
  */
-const BASE_FUTEBOL = [0, 2200, 7500, 26000, 95000];
+const BASE_FUTEBOL = [0, 2000, 6500, 22000, 70000];
 const BASE_OUTROS = [0, 1800, 4000, 9500, 26000];
+const PORTE_CLUBE: Record<string, number> = { grande: 1.5, tradicional: 1, regional: 0.7 };
 export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number = e.nivel, espaco: CarreiraEsportiva['espaco'] = e.espaco): number {
   const i = idade(v);
-  const base = (e.modalidade === 'futebol' ? BASE_FUTEBOL : BASE_OUTROS)[nivel] ?? 0;
+  const futebol = e.modalidade === 'futebol';
+  const base = (futebol ? BASE_FUTEBOL : BASE_OUTROS)[nivel] ?? 0;
   const rep = e.reputacao ?? 30;
   const papel = espaco === 'titular' ? 1 : 0.55;
-  const nome = 0.55 + (rep / 100) * 0.95;
-  const fase = i < 20 ? 0.6 : i < 23 ? 0.85 : 1;
-  return Math.max(SALARIO_MINIMO, Math.round(base * papel * nome * fase / 100) * 100);
+  const nome = 0.45 + (rep / 100) ** 2 * 2.2;
+  const tamanho = futebol ? CLUBES.find(c => c.nome === e.clube)?.porte ?? 'regional' : 'tradicional';
+  const porte = futebol ? PORTE_CLUBE[tamanho] ?? 0.8 : 1;
+  const t = e.temporadas?.[e.temporadas.length - 1];
+  const temporada = t ? 1 + clamp((t.nota - 6) * 0.06, -0.2, 0.2) : 1;
+  const auge = augeDe(v, e);
+  const fase = i < 20 ? 0.55 : i < 23 ? 0.8 : i > auge + 3 ? 0.85 : 1;
+  const noto = v.notoriedade?.fonte === 'esporte' ? v.notoriedade.valor : 0;
+  // A estrela: só na elite, só com nome altíssimo, notoriedade e clube grande — raro por construção.
+  const alcance = tamanho === 'grande' ? 1 : tamanho === 'tradicional' ? 0.4 : 0.15;
+  const estrela = nivel >= 4 && rep >= 78 && noto >= 60 ? 1 + ((rep - 78) * 0.12 + (noto - 60) * 0.05) * alcance : 1;
+  let bruto = base * papel * nome * porte * temporada * fase * estrela;
+  // Fora da elite, um nome conhecido vale por si (o veterano que o clube menor contrata pelo nome).
+  if (nivel <= 3 && noto >= 45) bruto += (noto - 40) ** 2 * 60 * fase;
+  return Math.max(SALARIO_MINIMO, Math.round(bruto / 100) * 100);
 }
 
-/** Assina (ou renova) um contrato: o salário sai daqui e só daqui. */
-export function assinarContrato(v: Vida, e: CarreiraEsportiva, meses: number, fator = 1): void {
-  e.contratoAte = v.t + meses;
+/** Fora da elite, contrato é curto (um ano, uma temporada); na elite, dá para assinar mais longo. */
+export const prazoDeContrato = (e: CarreiraEsportiva, meses: number) => (e.nivel <= 2 ? Math.min(meses, 12) : meses);
+
+/**
+ * Assina (ou renova) um contrato: o salário sai daqui e só daqui. Na renovação
+ * com o mesmo clube, o contrato anterior serve de âncora para quem ainda rende
+ * (`salarioDaRenovacao`).
+ */
+export function assinarContrato(v: Vida, e: CarreiraEsportiva, meses: number, fator = 1, renovacao = false): void {
+  e.contratoAte = v.t + prazoDeContrato(e, meses);
   const emp = v.trabalho.atual;
-  if (emp && ['jogador_futebol', 'atleta'].includes(emp.ocupacaoId)) emp.salario = Math.round(salarioDoContrato(v, e) * fator / 100) * 100;
+  if (!emp || !['jogador_futebol', 'atleta'].includes(emp.ocupacaoId)) return;
+  emp.salario = renovacao ? salarioDaRenovacao(v, e, fator) : Math.round(salarioDoContrato(v, e) * fator / 100) * 100;
+}
+
+/** O salário que a renovação oferece (o mesmo número que a decisão mostra antes de escolher). */
+export function salarioDaRenovacao(v: Vida, e: CarreiraEsportiva, fator = 1): number {
+  const novo = Math.round(salarioDoContrato(v, e) * fator / 100) * 100;
+  const atual = v.trabalho.atual && ['jogador_futebol', 'atleta'].includes(v.trabalho.atual.ocupacaoId) ? v.trabalho.atual.salario : 0;
+  // A âncora do contrato anterior só vale para quem ainda rende: o veterano em queda renova pelo que joga hoje.
+  const nota = e.temporadas?.[e.temporadas.length - 1]?.nota ?? 6;
+  return nota >= 6.5 ? Math.max(novo, Math.round(atual * 0.75 / 100) * 100) : novo;
 }
 
 /* ------------------------------------------------------------ Mercado */
@@ -464,7 +503,7 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   // Quem decide é o clube — prorroga por um ano, se ainda quer; se não, a pessoa fica sem clube e o mercado responde.
   if (v.t >= e.contratoAte + 12) {
     if (clubeQuerRenovar(v, e)) {
-      assinarContrato(v, e, 12);
+      assinarContrato(v, e, 12, 1, true);
       escrever(v, { texto: `O contrato venceu sem conversa, e ${oClube(e.clube)} prorrogou por mais um ano.`, relevancia: 'cotidiano', tema: 'trabalho' });
     } else {
       v.fatos['esp_sem_clube'] = v.t;

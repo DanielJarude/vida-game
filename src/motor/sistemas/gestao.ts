@@ -86,7 +86,7 @@ export function acoesDoNegocio(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   const out: AcaoProfissional[] = [];
   const P = (oque: string, extra: Record<string, unknown> = {}): Acao => ({ tipo: 'profissao', oque, ...extra } as unknown as Acao);
   const add = (x: AcaoProfissional) => {
-    if (x.acao) { const d = disp(v, x.acao); if (!podeTentar(d)) return; if (d.grau === 'improvavel' || d.grau === 'irregular') x.aviso = x.aviso ?? d.motivo; }
+    if (x.acao) { const d = disp(v, x.acao); if (!podeTentar(d)) { if (!d.dinheiro) return; x.bloqueado = d.motivo; x.peso = Math.min(x.peso, 3); } else if (d.grau === 'improvavel' || d.grau === 'irregular') x.aviso = x.aviso ?? d.motivo; }
     out.push(x);
   };
   const p = presencaDe(n);

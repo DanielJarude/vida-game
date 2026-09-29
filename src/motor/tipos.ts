@@ -1025,6 +1025,21 @@ export interface ProjetoArtistico {
   tFim?: number;
 }
 
+/** O último ano no palco (música, teatro, dança): valor contratado, custos e o que ficou (`sistemas/palco`). */
+export interface Palco {
+  ano: number;
+  linguagem: Dominio;
+  apresentacoes: number;
+  /** Valor contratado médio de uma apresentação (bruto). */
+  cacheMedio: number;
+  /** Tudo o que os contratantes pagaram no ano. */
+  bruto: number;
+  /** Equipe, produção, transporte, agência, impostos. */
+  custos: number;
+  /** O que ficou para o artista no ano (antes do imposto pessoal). */
+  artista: number;
+}
+
 /** Um trabalho artístico que saiu para o mundo (disco, peça, exposição, livro, série de fotos). */
 export interface Obra {
   t: number;
@@ -1214,6 +1229,8 @@ export interface Caminhos {
   politica?: VidaPolitica;
   /** A obra: projetos lançados e como foram recebidos (carreira artística viva). */
   obras?: Obra[];
+  /** O último ano de apresentações (quem vive do palco, ou a banda que toca por fora). */
+  palco?: Palco;
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
   /**

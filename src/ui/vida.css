@@ -917,3 +917,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .ficha__chamado { font-family: var(--font-serif); color: var(--text-primary); padding: var(--space-3) 0 var(--space-3) var(--space-3); border-left: 3px solid var(--tom-pessoas, var(--tom-voce)); margin: var(--space-2) 0; }
 .ficha__chamado-nota { display: block; font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); margin-top: var(--space-1); }
 .rotina__ir { min-height: 40px; padding: 9px 0; }
+
+.acao-viva--bloqueada { opacity: 0.62; cursor: default; }
+.acao-viva--bloqueada .acao-viva__seta { visibility: hidden; }
+.acao-viva__motivo { font-style: italic; }

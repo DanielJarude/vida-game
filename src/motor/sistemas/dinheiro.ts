@@ -23,6 +23,7 @@
  */
 
 import { rendaDeImagem } from './notoriedade';
+import { rendaDoPalcoParalelo } from './palco';
 import { remuneracaoDe } from './renda';
 import { fazCursinho } from './vestibular';
 import type { Rng } from '../rng';
@@ -101,6 +102,9 @@ function entradasProprias(v: Vida): LinhaRazao[] {
     if (v.anoAtual.acoes.includes('horas_extras')) out.push({ rotulo: 'Horas extras', valor: Math.round(liq * 0.15), grupo: 'renda', de: 'eu' });
   }
   // O nome também paga: patrocínio e publicidade de quem é conhecido pelo esporte ou pela obra (`notoriedade`).
+  // A banda que toca por fora: o que o palco deixou no último ano (quem vive do palco já tem isso como renda do trabalho).
+  const palco = rendaDoPalcoParalelo(v);
+  if (palco > 0) out.push({ rotulo: 'Shows e apresentações (média do último ano)', valor: palco, grupo: 'renda', de: 'eu' });
   const imagem = rendaDeImagem(v);
   if (imagem > 0) out.push({ rotulo: 'Patrocínio e publicidade', valor: imagem, grupo: 'renda', de: 'eu' });
   if (v.trabalho.aposentadoria) out.push({ rotulo: temFato(v, 'bpc') ? 'Benefício assistencial (BPC)' : 'Aposentadoria', valor: Math.round(v.trabalho.aposentadoria.beneficio * 13 / 12), grupo: 'renda', de: 'governo' });
@@ -384,9 +388,21 @@ export function seguranca(v: Vida): Seguranca {
   }
   if (financeiro >= despesa * 12 * 15) return { nivel: 'folgado', meses, texto: 'O que você juntou paga muitos anos de vida. Dinheiro deixou de ser a preocupação.' };
   if (meses >= 12 || financeiro >= despesa * 12 * 4) return { nivel: 'seguro', meses, texto: `Se a renda parasse hoje, o guardado seguraria ${meses >= 24 ? `uns ${Math.floor(meses / 12)} anos` : `${Math.floor(meses)} meses`}.` };
-  if (o.sobra < 0 && meses < 3) return { nivel: 'apertado', meses, texto: 'O mês não fecha: falta todo mês, e quase nada guardado para cobrir.' };
-  if (meses < 1) return { nivel: 'no_limite', meses, texto: o.sobra > 0 ? 'Fecha o mês, mas qualquer imprevisto vira dívida.' : 'O mês está no limite e não há reserva.' };
-  if (meses < 3) return { nivel: 'no_limite', meses, texto: `A reserva seguraria ${Math.round(meses * 4) >= 8 ? `uns ${Math.round(meses)} meses` : 'pouco mais de um mês'} sem renda.` };
+  // A leitura olha as DUAS coisas que decidem o aperto: a margem do mês (o que sobra da renda depois do que sai)
+  // e a reserva (quantos meses o guardado segura). Antes, só a reserva contava: quem sobrava um terço da renda
+  // todo mês, mas ainda não tinha juntado três meses, aparecia "no limite".
+  // (Correção pós-FIX: uma fonte só — a tela lê esta função.)
+  const margem = o.sobra / renda;
+  const parcelas = v.financas.dividas.reduce((t, d) => t + (d.saldo > 0 && d.parcela > 0 ? d.parcela : 0), 0);
+  const peso = parcelas / renda;
+  if (o.sobra < 0) {
+    if (meses < 3) return { nivel: 'apertado', meses, texto: 'O mês não fecha: falta todo mês, e quase nada guardado para cobrir.' };
+    return { nivel: 'no_limite', meses, texto: `Sai mais do que entra; o guardado cobre a diferença por um tempo (uns ${Math.floor(meses)} meses de despesa).` };
+  }
+  if (peso >= 0.45) return { nivel: 'no_limite', meses, texto: `As parcelas levam ${Math.round(peso * 100)}% da renda: o mês fecha, mas sem folga para imprevisto.` };
+  if (margem >= 0.15) return { nivel: 'equilibrado', meses, texto: meses < 3 ? `Sobra uns ${Math.round(margem * 100)}% da renda todo mês; a reserva ainda é pequena, mas cresce.` : `Uma reserva de uns ${Math.floor(meses)} meses, e sobra dinheiro todo mês.` };
+  if (meses < 1) return { nivel: 'no_limite', meses, texto: 'Fecha o mês, mas qualquer imprevisto vira dívida.' };
+  if (meses < 3) return { nivel: 'no_limite', meses, texto: `Sobra pouco no mês, e a reserva seguraria ${Math.round(meses * 4) >= 8 ? `uns ${Math.round(meses)} meses` : 'pouco mais de um mês'} sem renda.` };
   return { nivel: 'equilibrado', meses, texto: `Uma reserva de uns ${Math.floor(meses)} meses. Dá para atravessar um imprevisto.` };
 }
 
@@ -764,9 +780,9 @@ export function vereditoDePagar(v: Vida, valor: number, oque = 'Custa'): Veredit
   if (k.situacao === 'tem') return PERMITIDO;
   const custa = `${oque} ${fmt(valor)}`;
   if (k.situacao === 'resgatando') {
-    return { grau: 'requisito', motivo: `${custa}; na conta há ${fmt(k.conta)}. Faltam ${fmt(k.falta)} — dá para tirar das suas aplicações${k.naBaixa.length ? ` (${k.naBaixa.join(' e ')} está abaixo do que você pôs: vender agora realiza a perda)` : ''}.`, resgate: { valor: k.falta, naBaixa: k.naBaixa } };
+    return { grau: 'requisito', dinheiro: true, motivo: `${custa}; na conta há ${fmt(k.conta)}. Faltam ${fmt(k.falta)} — dá para tirar das suas aplicações${k.naBaixa.length ? ` (${k.naBaixa.join(' e ')} está abaixo do que você pôs: vender agora realiza a perda)` : ''}.`, resgate: { valor: k.falta, naBaixa: k.naBaixa } };
   }
-  return bloqueio('requisito', k.aplicado > 0 ? `${custa}; somando conta e aplicações, você tem ${fmt(k.conta + k.aplicado)}.` : `${custa}; na conta há ${fmt(k.conta)}.`);
+  return { ...bloqueio('requisito', k.aplicado > 0 ? `${custa}; somando conta e aplicações, você tem ${fmt(k.conta + k.aplicado)}.` : `${custa}; na conta há ${fmt(k.conta)}.`), dinheiro: true };
 }
 
 /**

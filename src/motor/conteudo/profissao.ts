@@ -20,7 +20,7 @@ import { clamp } from '../rng';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro } from '../nucleo';
 import { estresse, custa } from './efeitos';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
-import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
+import { municipio, MUNICIPIOS } from '../dados/lugares';
 import { degrausAcima, elegibilidade, encerrarEmprego, horizonte, nomeOcupacao, podeAposentar, aposentar, tetoSalarial } from '../sistemas/trabalho';
 import { ambienteDoNegocio, comprarParteDoSocio, contratarFuncionario, demitirFuncionario, donoIntegral, estrategiaDe, fecharNegocio, modosDeAbrir, mudarEstrategia, negocioAtivo, NEGOCIOS, parteDoSocio, precoDaParteDoSocio, presencaDe, salarioDaFuncao, tipoDoNegocio, valorDoNegocio, venderNegocio, custoLocal, tamanhoDaEquipe } from '../sistemas/negocio';
 import { rotuloEstrategia } from '../dados/negocios';
@@ -32,8 +32,9 @@ import { novaOportunidade } from '../sistemas/oportunidades';
 import { mudarAgora } from '../sistemas/processos';
 import { marcar } from '../sistemas/marcas';
 import { abalar } from '../sistemas/abalo';
-import { assinarContrato, augeDe, clubeQuerRenovar, encerrarCarreira, mudarDeClube, nivelQueOMercadoOferece, palavraDaNota, salarioDoContrato, valorDeMercado } from '../sistemas/esporte';
+import { assinarContrato, augeDe, prazoDeContrato, salarioDaRenovacao, clubeQuerRenovar, encerrarCarreira, mudarDeClube, nivelQueOMercadoOferece, palavraDaNota, salarioDoContrato, valorDeMercado } from '../sistemas/esporte';
 import { CLUBES, clubeDoNivel, DIVISAO_DO_NIVEL, noClube, oClube } from '../dados/clubes';
+import { alcanceNoPalco, cacheDeApresentacao, linguagemDePalco, parteDosCustos } from '../sistemas/palco';
 import { habilidade } from '../sistemas/frentes';
 import { arrendamentoMensal } from '../sistemas/rural';
 import { MUNIC_POR_INDICE } from '../sistemas/militar';
@@ -369,8 +370,8 @@ export const PROFISSAO: Conteudo[] = [
     },
     opcoes: [
       { id: 'renovar', texto: 'Renovar', disponivel: c => (clubeQuerRenovar(c.v, c.v.caminhos.esporte!) ? true : false),
-        consequencia: c => { const es = c.v.caminhos.esporte!; return `Salário do novo contrato: ${fmt(salarioDoContrato(c.v, es))} por mês (bruto), ${es.espaco === 'titular' ? 'três' : 'dois'} anos.`; },
-        resolver: c => ({ texto: 'Mais uma assinatura, mais uma foto com a camisa.', memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; assinarContrato(c.v, es, es.espaco === 'titular' ? 36 : 24); } }) },
+        consequencia: c => { const es = c.v.caminhos.esporte!; return `Salário do novo contrato: ${fmt(salarioDaRenovacao(c.v, es))} por mês (bruto), ${prazoDeContrato(es, es.espaco === 'titular' ? 36 : 24) / 12 === 1 ? 'um ano' : es.espaco === 'titular' ? 'três anos' : 'dois anos'}.`; },
+        resolver: c => ({ texto: 'Mais uma assinatura, mais uma foto com a camisa.', memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; assinarContrato(c.v, es, es.espaco === 'titular' ? 36 : 24, 1, true); } }) },
       { id: 'descer', texto: c => `Aceitar a proposta de um clube ${nivelQueOMercadoOferece(c.v, c.v.caminhos.esporte!) === 1 ? 'do estadual' : 'de divisão menor'}`,
         disponivel: c => { const es = c.v.caminhos.esporte!; const o = nivelQueOMercadoOferece(c.v, es); return o >= 1 && o < es.nivel ? true : false; },
         consequencia: c => { const es = c.v.caminhos.esporte!; const o = nivelQueOMercadoOferece(c.v, es); return `${cap(DIVISAO_DO_NIVEL[o])}: uns ${fmt(salarioDoContrato(c.v, es, o, 'titular'))} por mês, e chance real de jogar.`; },
@@ -385,7 +386,7 @@ export const PROFISSAO: Conteudo[] = [
             const nivel = Math.min(4, Math.max(1, oferta)) as 1 | 2 | 3 | 4;
             return { texto: nivel > es.nivel ? 'Uma proposta de um clube maior chegou antes do fim do mês.' : nivel < es.nivel ? 'A proposta que veio é de um clube menor. Melhor do que nenhuma.' : 'Um clube do mesmo tamanho ofereceu mais tempo de contrato.', memoria: null, tom: nivel >= es.nivel ? 'bom' : 'neutro', efeito: () => { trocarDeClube(c, nivel); assinarContrato(c.v, es, nivel > es.nivel ? 36 : 24); } };
           }
-          if (clubeQuerRenovar(c.v, es)) return { texto: 'O mercado não respondeu. O clube renovou — por menos.', memoria: null, tom: 'ruim', efeito: () => assinarContrato(c.v, es, 24, 0.85) };
+          if (clubeQuerRenovar(c.v, es)) return { texto: 'O mercado não respondeu. O clube renovou — por menos.', memoria: null, tom: 'ruim', efeito: () => assinarContrato(c.v, es, 24, 0.85, true) };
           if (oferta >= 1) return { texto: 'Só apareceu clube pequeno, sem garantia. Você ficou sem contrato, treinando por conta, esperando o telefone.', memoria: 'Ficou sem clube, esperando proposta.', relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
           return { texto: 'Nenhum clube ligou. Você ficou treinando por conta, esperando.', memoria: 'Ficou sem clube, esperando proposta.', relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
         } },
@@ -456,7 +457,7 @@ export const PROFISSAO: Conteudo[] = [
   },
   {
     // A temporada foi boa e o mercado reagiu (`esporte.anoProfissional`): um clube maior pergunta — a resposta é sua.
-    id: 'esp_proposta', tipo: 'decisao', idade: [17, 40], tema: 'trabalho', prioritario: true, prioridade: 3, repetir: 0,
+    id: 'esp_proposta', tipo: 'decisao', idade: [17, 40], tema: 'trabalho', prioritario: true, prioridade: 5, repetir: 0,
     quando: c => { const es = c.v.caminhos.esporte; if (!es || es.fase !== 'profissional' || es.nivel >= 4) return false; return deHoje(c, 'esp_proposta_hoje') && ['jogador_futebol', 'atleta'].includes(c.v.trabalho.atual?.ocupacaoId ?? ''); },
     titulo: 'Uma proposta',
     texto: c => { const es = c.v.caminhos.esporte!; const alvo = clubeProposto(c); const d = municipio(alvo.cidade); return `${es.modalidade === 'futebol' ? `${oClube(alvo.nome).charAt(0).toUpperCase() + oClube(alvo.nome).slice(1)}, de ${d.nome},` : 'Uma equipe maior'} quer você: divisão acima, contrato de três anos, salário maior.${d.id !== c.v.moradia.municipioId ? ` A mudança seria para ${d.nome}.` : ''} ${comFamilia(c.v) ? 'A família iria junto — ou não.' : ''}`; },
@@ -623,8 +624,12 @@ const publicoDe = (v: Vida) => v.caminhos.arte?.ativo ? v.caminhos.arte.publico 
 
 function estrada(c: Ctx, deu: boolean, peso: number): void {
   const v = c.v;
-  const custo = economiaLocal(v.moradia.municipioId).custo;
-  const valor = Math.round((deu ? 6000 + publicoDe(v) * 120 : -2500) * peso * custo / 100) * 100;
+  // A turnê pela mesma conta do palco: datas × valor contratado × bilheteria, menos o que a estrada custa (`palco`).
+  const d = linguagemDePalco(v) ?? v.caminhos.arte?.linguagem ?? 'musica';
+  const x = alcanceNoPalco(v, d);
+  const datas = 20 * peso;
+  const bruto = datas * cacheDeApresentacao(v, d) * (deu ? 0.75 : 0.35);
+  const valor = Math.round((bruto * (1 - parteDosCustos(x)) - (deu ? 0 : 2500 * peso)) / 100) * 100;
   v.financas.conta += valor;
   if (v.caminhos.arte?.ativo) v.caminhos.arte.publico = clamp(v.caminhos.arte.publico + (deu ? 12 : 5) * peso);
   const e = v.trabalho.atual;
@@ -633,7 +638,7 @@ function estrada(c: Ctx, deu: boolean, peso: number): void {
   const par = parceiro(v);
   if (par && par.vin.convivio.includes('casa')) par.vin.tensao = clamp(par.vin.tensao + 6 * peso);
   for (const f of pequenosEmCasa(v)) { const vin = v.vinculos[f.id]; vin.presenca = clamp((vin.presenca ?? 50) - 4 * peso); }
-  const texto = deu ? `Caiu na estrada numa turnê${peso < 1 ? ' de fins de semana' : ''}: casas cheias, ${fmt(valor)} no bolso.` : `Caiu na estrada numa turnê${peso < 1 ? ' de fins de semana' : ''} que não pagou as contas.`;
+  const texto = deu ? `Caiu na estrada numa turnê${peso < 1 ? ' de fins de semana' : ''}: casas cheias; tirados equipe, van e hotel, ${fmt(valor)} no bolso.` : `Caiu na estrada numa turnê${peso < 1 ? ' de fins de semana' : ''} que não pagou as contas.`;
   escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: deu ? 'bom' : 'ruim', escolha: true });
   if (deu) marcar(v, 'conquista', texto, 2);
   abalar(v, deu ? 'a turnê que deu certo' : 'a turnê que não pagou', deu ? 4 : -3, 3);

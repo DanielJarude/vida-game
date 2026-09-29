@@ -27,6 +27,8 @@ import { Tempo } from '../jogo/Tempo';
 import { Voce } from '../jogo/Voce';
 import { Pessoas } from '../jogo/Pessoas';
 import { FechamentoDoAno } from '../telas/Jogo';
+import { temporadaDePalco } from '../../motor/sistemas/palco';
+import { remuneracaoDe } from '../../motor/sistemas/renda';
 
 afterEach(() => cleanup());
 const nada = () => {};
@@ -109,5 +111,34 @@ describe('Pessoas: um ex é um ex', () => {
     render(<main><Pessoas vida={v} agir={() => true} aberta={p.id} abrir={nada} /></main>);
     expect(screen.queryByText(/Passar um tempo com Clara|Viajar para ver Clara|Mandar mensagem para Clara/)).toBeNull();
     expect(screen.getAllByText(/Conversar com Clara sobre o que ficou entre vocês|Ligar para Clara e falar do que ficou/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('correção pós-FIX: ação bloqueada e palco nas telas', () => {
+  it('a ação conhecida sem dinheiro aparece desabilitada, com o motivo', () => {
+    const v = viva(34, 45);
+    v.educacao.concluidos.push({ cursoId: 'odontologia', nome: 'Odontologia', nivel: 'superior', area: 'odontologia', tFim: v.t - 60, instituicao: 'x' });
+    v.educacao.escolaridade = 'superior'; v.trabalho.licencas.push('cro'); v.trabalho.experiencia['odontologia'] = 72;
+    contratar(v, criarRng(1), ocupacao('dentista'));
+    v.trabalho.atual!.clientela = 85; v.financas.conta = 0; v.financas.investimentos = [];
+    render(<main><Trabalho vida={v} agir={() => true} irPara={nada} /></main>);
+    const botao = screen.getByText(/Montar um consultório odontológico/).closest('button')!;
+    expect(botao.hasAttribute('disabled')).toBe(true);
+    expect(within(botao).getByText(/capital/)).toBeTruthy();
+  });
+  it('o palco diz o valor contratado, os custos e o que ficou — e "No bolso" é o que ficou', () => {
+    let v = transacao(viva(28, 46), x => {
+      garantirFrente(x, 'musica'); x.caminhos.frentes.musica!.habilidade = 82;
+      x.rotinas = [{ id: 'musica', tInicio: x.t, nivel: 3 }];
+      x.caminhos.arte = { linguagem: 'musica', nome: 'Maré', tipo: 'banda', tInicio: x.t - 60, publico: 60, membros: [], ativo: true };
+      contratar(x, criarRng(1), ocupacao('musico_profissional')); x.trabalho.atual!.clientela = 60;
+    }).vida;
+    for (let s = 1; s < 20 && !(v.caminhos.palco?.apresentacoes); s++) v = transacao(v, x => { temporadaDePalco(x, criarRng(s)); }).vida;
+    render(<main><Trabalho vida={v} agir={() => true} irPara={nada} /></main>);
+    const bloco = screen.getByLabelText('O palco no último ano');
+    expect(within(bloco).getByText(/valor contratado/)).toBeTruthy();
+    expect(within(bloco).getByText(/Custos \(equipe/)).toBeTruthy();
+    expect(within(bloco).getByText(new RegExp(`Ficou para você: ${dinheiroCurto(v.caminhos.palco!.artista).replace(/[.$]/g, m => '\\' + m)}`))).toBeTruthy();
+    expect(screen.getAllByText(new RegExp(remuneracaoDe(v.trabalho.atual!).liquido.toLocaleString('pt-BR').replace('.', '\\.'))).length).toBeGreaterThan(0);
   });
 });

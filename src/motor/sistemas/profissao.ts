@@ -53,6 +53,7 @@ import { editaisAbertos } from './concurso';
 import { doClube } from '../dados/clubes';
 import { acoesPoliticas } from './politica';
 import { lancarObra } from './arte';
+import { trabalhoDePalco } from './palco';
 import { OFICIOS } from './oficios';
 import { NEGOCIOS } from '../dados/negocios';
 
@@ -267,7 +268,7 @@ export function investirEstrutura(v: Vida): string {
   v.anoAtual.acoes.push('estrutura');
   e.estrutura = (e.estrutura ?? 0) + 1;
   e.clientela = clamp((e.clientela ?? 20) + 4);
-  e.salario = rendaDeClientela(v, ocupacao(e.ocupacaoId), e.clientela ?? 20, e);
+  if (!trabalhoDePalco(v)) e.salario = rendaDeClientela(v, ocupacao(e.ocupacaoId), e.clientela ?? 20, e);
   escrever(v, { texto: `Investiu no próprio trabalho: ${rotulo.toLowerCase()}, por ${fmt(custo)}.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
   return `${rotulo}: ${fmt(custo)}. Mais freguesia possível — o retorno vem com o tempo.`;
 }
@@ -285,7 +286,7 @@ export function mudarPreco(v: Vida, alvo: 'baixo' | 'normal' | 'alto'): string {
   const e = v.trabalho.atual!;
   v.anoAtual.acoes.push('preco');
   e.preco = alvo === 'normal' ? undefined : alvo;
-  e.salario = rendaDeClientela(v, ocupacao(e.ocupacaoId), e.clientela ?? 20, e);
+  if (!trabalhoDePalco(v)) e.salario = rendaDeClientela(v, ocupacao(e.ocupacaoId), e.clientela ?? 20, e);
   escrever(v, { texto: alvo === 'alto' ? 'Passou a cobrar mais pelo trabalho.' : alvo === 'baixo' ? 'Baixou o preço para atrair freguesia.' : 'Voltou a cobrar o preço de mercado.', relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
   return alvo === 'alto' ? 'Cobrar mais: cada serviço rende mais; quem não pode pagar vai embora.' : alvo === 'baixo' ? 'Cobrar menos: mais gente procura; cada serviço rende menos.' : 'De volta ao preço de mercado.';
 }
@@ -432,6 +433,8 @@ export interface AcaoProfissional {
   saida?: boolean;
   /** Aviso (quando a ação é possível mas arriscada). */
   aviso?: string;
+  /** A ação é conhecida, mas agora falta dinheiro: aparece bloqueada, com o motivo (nunca some). */
+  bloqueado?: string;
 }
 
 type Disp = (v: Vida, a: Acao) => Veredito;
@@ -445,7 +448,9 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
   const add = (x: AcaoProfissional) => {
     if (x.acao) {
       const d = disp(v, x.acao);
-      if (!podeTentar(d)) return;
+      // Conhecida mas sem dinheiro agora: a intenção fica à vista, bloqueada, com o porquê (e mais abaixo na lista).
+      // Qualquer outro impedimento (não elegível, não se aplica) continua escondendo — nada é revelado antes da hora.
+      if (!podeTentar(d)) { if (!d.dinheiro) return; x.bloqueado = d.motivo; x.peso = Math.min(x.peso, 3); }
       if (d.grau === 'improvavel' || d.grau === 'irregular') x.aviso = x.aviso ?? d.motivo;
     }
     lista.push(x);

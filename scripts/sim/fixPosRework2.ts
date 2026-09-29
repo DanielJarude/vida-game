@@ -18,7 +18,7 @@
 import { criarVida } from '../../src/motor/criacao';
 import { avancarAno } from '../../src/motor/ano';
 import { disponibilidade, executar, type Acao } from '../../src/motor/acoes';
-import { criarRng, type Rng } from '../../src/motor/rng';
+import { clamp, criarRng, type Rng } from '../../src/motor/rng';
 import type { Vida } from '../../src/motor/tipos';
 import { idade, transacao, vinculosVivos } from '../../src/motor/nucleo';
 import { podeTentar } from '../../src/motor/plausibilidade';
@@ -30,6 +30,9 @@ import { ocupacao } from '../../src/motor/dados/ocupacoes';
 import { lerTecnica } from '../../src/motor/sistemas/peneira';
 import { interacoesPara } from '../../src/motor/sistemas/interacoes';
 import { acoesDoTrabalho } from '../../src/motor/sistemas/profissao';
+import { rendaDeImagem, processarNotoriedade } from '../../src/motor/sistemas/notoriedade';
+import { temporadaDePalco } from '../../src/motor/sistemas/palco';
+import { remuneracaoDe } from '../../src/motor/sistemas/renda';
 
 const N = Number(process.env.VIDAS ?? 40);
 const CIDADES = ['recife-pe', 'sao-paulo-sp', 'belo-horizonte-mg', 'salvador-ba', 'porto-alegre-rs', 'manaus-am'];
@@ -53,8 +56,9 @@ function responder(v: Vida, r: Rng, j: Jogador): Vida {
     const m = v.momento;
     if (j.conta) j.conta[m.situacaoId] = (j.conta[m.situacaoId] ?? 0) + 1;
     const livres = m.opcoes.filter(o => !o.bloqueio);
-    const pref = j.prefere?.(m.situacaoId);
-    const o = (pref && livres.find(x => x.id === pref || x.id.startsWith(pref))) || r.pick(livres.length ? livres : m.opcoes);
+    // A preferência pode ser uma lista em ordem ("renovar|descer|mercado"): a primeira livre vale.
+    const prefs = (j.prefere?.(m.situacaoId) ?? '').split('|').filter(Boolean);
+    const o = prefs.map(pf => livres.find(x => x.id === pf || x.id.startsWith(pf))).find(Boolean) || r.pick(livres.length ? livres : m.opcoes);
     v = executar(v, { tipo: 'decidir', opcaoId: o.id }).vida;
   }
   return v;
@@ -77,17 +81,19 @@ function viverAno(v: Vida, r: Rng, j: Jogador): Vida {
 /* ================================================================ Política */
 
 function politica() {
-  const grupos: Record<string, { convite: boolean[]; entrou: boolean[]; filiou: boolean[]; candidato: boolean[]; eleito: boolean[]; convites: number[] }> = {};
+  const grupos: Record<string, { convite: boolean[]; entrou: boolean[]; filiou: boolean[]; candidato: boolean[]; eleito: boolean[]; convites: number[]; disputas: number[]; vitorias: number[] }> = {};
   const origens: Record<string, string[]> = {};
+  const primeiras: Record<string, [number, number]> = {};
   const P = (oque: string): Acao => ({ tipo: 'politica', oque } as unknown as Acao);
   const jogadores: Record<string, (conta: Record<string, number>) => Jogador> = {
     'A sem intenção nem contexto (atividades ao acaso, sem voluntariado/grêmio)': conta => ({ conta, chamados: 'aleatorio', acoes: (v, r) => (r.chance(0.3) ? [R(r.pick(ROTINAS.filter(x => !['voluntariado', 'gremio'].includes(x.id))).id)] : []), prefere: s => (s === 'pol_convite' ? 'nao' : undefined) }),
     'A2 sem intenção, com contexto comunitário (voluntariado desde os 18)': conta => ({ conta, chamados: 'aleatorio', acoes: (v, r) => [...(idade(v) >= 18 ? [R('voluntariado')] : []), ...(r.chance(0.3) ? [R(r.pick(ROTINAS).id)] : [])], prefere: s => (s === 'pol_convite' ? 'nao' : undefined) }),
+    'A3 contexto comunitário que aceita o convite (sem campanha deliberada)': conta => ({ conta, chamados: 'aleatorio', acoes: (v, r) => [...(idade(v) >= 18 ? [R('voluntariado')] : []), ...(r.chance(0.3) ? [R(r.pick(ROTINAS).id)] : [])], prefere: s => (s === 'pol_convite' ? 'entrar' : undefined) }),
     'B perseguindo política desde os 20': conta => ({ conta, chamados: 'aleatorio', acoes: v => (idade(v) >= 20 ? [P('aproximar'), P('filiar'), P('comunidade'), P('bandeira'), P('candidatura'), P('prioridade')] : []),
       prefere: s => (s === 'pol_convite' ? 'entrar' : s === 'pol_aproximar' ? 'bairro' : s === 'pol_filiacao' ? 'p0' : s === 'pol_eleicao' ? 'cargo_vereador' : undefined) })
   };
   for (const [nome, fab] of Object.entries(jogadores)) {
-    const g = grupos[nome] = { convite: [], entrou: [], filiou: [], candidato: [], eleito: [], convites: [] };
+    const g = grupos[nome] = { convite: [], entrou: [], filiou: [], candidato: [], eleito: [], convites: [], disputas: [], vitorias: [] };
     for (let s = 1; s <= N; s++) {
       const conta: Record<string, number> = {};
       const j = fab(conta);
@@ -102,12 +108,16 @@ function politica() {
       g.filiou.push(!!p?.partido || !!p?.partidos?.length);
       g.candidato.push(!!p?.historico.length || !!p?.campanha);
       g.eleito.push(!!p?.historico.some(h => h.resultado === 'eleito'));
+      const disp = (p?.historico ?? []).filter(h => h.resultado === 'eleito' || h.resultado === 'derrotado');
+      g.disputas.push(disp.length); g.vitorias.push(disp.filter(h => h.resultado === 'eleito').length);
+      if (disp.length) { primeiras[nome] = primeiras[nome] ?? [0, 0]; primeiras[nome][0]++; if (disp[0].resultado === 'eleito') primeiras[nome][1]++; }
     }
   }
   console.log('\n## Política (até 60 anos)');
-  console.log('| grupo | recebeu convite | convites/vida | entrou | filiou | candidatou | elegeu |');
-  console.log('| --- | --- | --- | --- | --- | --- | --- |');
-  for (const [k, g] of Object.entries(grupos)) console.log(`| ${k} | ${pct(g.convite)} | ${media(g.convites)} | ${pct(g.entrou)} | ${pct(g.filiou)} | ${pct(g.candidato)} | ${pct(g.eleito)} |`);
+  console.log('| grupo | recebeu convite | convites/vida | entrou | filiou | candidatou | elegeu | disputas/vida | vitória por disputa |');
+  console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+  for (const [k, g] of Object.entries(grupos)) { const d = g.disputas.reduce((a, b) => a + b, 0); const w = g.vitorias.reduce((a, b) => a + b, 0); console.log(`| ${k} | ${pct(g.convite)} | ${media(g.convites)} | ${pct(g.entrou)} | ${pct(g.filiou)} | ${pct(g.candidato)} | ${pct(g.eleito)} | ${media(g.disputas)} | ${d ? Math.round(w / d * 100) + '%' : '—'} |`); }
+  for (const [k, [n, w]] of Object.entries(primeiras)) console.log(`- primeira disputa (${k.split(' ')[0]}): ${w}/${n} eleitos`);
   const ORIG = ['comunidade', 'estudantil', 'sindicato', 'causa', 'notoriedade', 'empresario', 'servidor', 'convite', 'decisao'];
   for (const [k, o] of Object.entries(origens)) { const f = new Map<string, number>(); for (const x of o) f.set(ORIG[Number(x)] ?? x, (f.get(ORIG[Number(x)] ?? x) ?? 0) + 1); console.log(`- origem do convite (${k.split(' ')[0]}): ${[...f].map(([a, b]) => `${a} ${b}`).join(', ')}`); }
 }
@@ -182,7 +192,7 @@ function esporte() {
     v = transacao(v, x => { garantirFrente(x, 'futebol'); const f = x.caminhos.frentes.futebol!; f.habilidade = h; f.interesse = 90; f.meses = 120; f.auge = h; entrarNaBase(x, 'futebol', x.moradia.municipioId, 'Esporte Clube Teste'); profissionalizar(x, criarRng(s), h >= 84 ? 3 : 2); }).vida;
     const inicio = idade(v);
     let aposAuge = false;
-    const j: Jogador = { conta, prefere: sit => (sit === 'esp_renovacao' ? (s % 3 === 0 ? 'mercado' : 'renovar') : sit === 'esp_proposta' ? 'aceitar' : sit === 'sau_lesao' ? (s % 4 === 0 ? 'sacrificio' : s % 4 === 1 ? 'repouso' : 'fisio') : sit === 'esp_posicao' ? undefined : sit === 'noto_convite' ? 'aceitar' : undefined), acoes: vv => (vv.caminhos.esporte?.espaco === 'reserva' ? [{ tipo: 'profissao', oque: 'treinador' } as unknown as Acao] : []) };
+    const j: Jogador = { conta, prefere: sit => (sit === 'esp_renovacao' ? (s % 3 === 0 ? 'mercado' : 'renovar|descer|mercado') : sit === 'esp_proposta' ? 'aceitar' : sit === 'sau_lesao' ? (s % 4 === 0 ? 'sacrificio' : s % 4 === 1 ? 'repouso' : 'fisio') : sit === 'esp_posicao' ? undefined : sit === 'noto_convite' ? 'aceitar' : undefined), acoes: vv => (vv.caminhos.esporte?.espaco === 'reserva' ? [{ tipo: 'profissao', oque: 'treinador' } as unknown as Acao] : []) };
     let topo = 1;
     while (!v.morte && v.caminhos.esporte?.fase === 'profissional' && idade(v) < 48) {
       v = viverAno(v, r, j);
@@ -284,9 +294,80 @@ function carreiras() {
   }
 }
 
+/* ================================================================ Economia */
+
+const q = (xs: number[], p: number) => { const o = [...xs].sort((a, b) => a - b); return o.length ? o[Math.min(o.length - 1, Math.floor(p * o.length))] : 0; };
+const fx = (xs: number[]) => (xs.length ? `mediana ${q(xs, 0.5).toLocaleString('pt-BR')} · p10 ${q(xs, 0.1).toLocaleString('pt-BR')} · p90 ${q(xs, 0.9).toLocaleString('pt-BR')} · máx ${Math.max(...xs).toLocaleString('pt-BR')} (n=${xs.length})` : '—');
+
+function economia() {
+  // Futebol: carreiras vividas até o fim; cada ano contratado vira uma observação na sua categoria.
+  const cat: Record<string, number[]> = { 'baixa (estadual/acesso) · reserva': [], 'baixa (estadual/acesso) · titular': [], 'elite · reserva': [], 'elite · titular': [], 'elite · estrela (rep ≥ 78, fama ≥ 60)': [] };
+  const img: number[] = []; const anual: number[] = []; const semClubeAnos: number[] = [];
+  const casosTopo: string[] = [];
+  for (let s = 1; s <= N * 2; s++) {
+    const r = criarRng(s * 5003);
+    let v = nascer(s);
+    while (!v.morte && idade(v) < 19) v = avancarAno(v).vida, v.momento = null;
+    v.caminhos.pendente = undefined; v.trabalho.atual = undefined; v.educacao.basica = undefined; v.educacao.matricula = undefined;
+    const h = 72 + (s % 19);
+    v = transacao(v, x => { garantirFrente(x, 'futebol'); const f = x.caminhos.frentes.futebol!; f.habilidade = h; f.interesse = 90; f.meses = 120; f.auge = h; entrarNaBase(x, 'futebol', x.moradia.municipioId, 'Esporte Clube Teste'); profissionalizar(x, criarRng(s), h >= 86 ? 4 : h >= 80 ? 3 : 2); }).vida;
+    const j: Jogador = { chamados: 'aleatorio', prefere: sit => (sit === 'esp_renovacao' ? 'renovar|descer|mercado' : sit === 'esp_proposta' ? 'aceitar' : sit === 'sau_lesao' ? 'fisio' : sit === 'noto_convite' ? 'aceitar' : undefined) };
+    let semClube = 0;
+    while (!v.morte && v.caminhos.esporte?.fase === 'profissional' && idade(v) < 44) {
+      v = viverAno(v, r, j);
+      const e = v.caminhos.esporte;
+      const emp = v.trabalho.atual;
+      if (!e || e.fase !== 'profissional') break;
+      if (!emp || emp.ocupacaoId !== 'jogador_futebol') { semClube++; continue; }
+      const noto = v.notoriedade?.valor ?? 0;
+      const k = e.nivel >= 4 ? ((e.reputacao ?? 0) >= 78 && noto >= 60 ? 'elite · estrela (rep ≥ 78, fama ≥ 60)' : e.espaco === 'titular' ? 'elite · titular' : 'elite · reserva') : e.nivel <= 2 ? `baixa (estadual/acesso) · ${e.espaco === 'titular' ? 'titular' : 'reserva'}` : '';
+      if (k) cat[k].push(emp.salario);
+      if (emp.salario >= 400000) casosTopo.push(`${emp.salario.toLocaleString('pt-BR')}: ${idade(v)} anos, rep ${e.reputacao}, fama ${Math.round(noto)}, ${e.clube}, nota ${e.temporadas?.slice(-1)[0]?.nota}`);
+      const im = rendaDeImagem(v); if (im) img.push(im);
+      anual.push(remuneracaoDe(emp).bruto * 12);
+    }
+    semClubeAnos.push(semClube);
+  }
+  console.log('\n## Economia do futebol (salário bruto mensal do contrato, por ano contratado)');
+  for (const [k, xs] of Object.entries(cat)) console.log(`- ${k}: ${fx(xs)}`);
+  console.log(`- patrocínio/imagem (à parte do salário), quando há: ${fx(img)}`);
+  console.log(`- anos "sem clube" por carreira: média ${media(semClubeAnos)}; carreiras com algum: ${semClubeAnos.filter(x => x > 0).length}/${semClubeAnos.length}`);
+  console.log(`- casos ≥ R$ 400 mil/mês: ${casosTopo.length ? casosTopo.slice(0, 6).join(' | ') : 'nenhum'}`);
+
+  // Palco (música): tiers por alcance construído; cada tier vive 6 anos; mede-se valor contratado, custos, cachê do artista, imagem.
+  const tiers: [string, number, number, number][] = [['iniciante', 30, 8, 0], ['regional/em ascensão', 60, 35, 0], ['reconhecido', 75, 55, 35], ['famoso', 86, 75, 70], ['excepcional', 95, 95, 96]];
+  console.log('\n## Economia do palco (música)');
+  console.log('| perfil | cachê contratado por show | shows/ano | custos/ano | cachê do artista/ano | anos sem show | patrocínio/mês |');
+  console.log('| --- | --- | --- | --- | --- | --- | --- |');
+  for (const [nome, hab, publico, noto] of tiers) {
+    const cache: number[] = []; const shows: number[] = []; const custos: number[] = []; const artista: number[] = []; const imagem: number[] = []; let vazios = 0; let anos = 0;
+    for (let s = 1; s <= N; s++) {
+      let v = transacao(nascer(s), x => { x.t += 12 * 28; }).vida;
+      v = transacao(v, x => {
+        garantirFrente(x, 'musica'); x.caminhos.frentes.musica!.habilidade = hab;
+        x.rotinas = [{ id: 'musica', tInicio: x.t, nivel: 3 }];
+        x.caminhos.arte = { linguagem: 'musica', nome: 'Maré', tipo: 'banda', tInicio: x.t - 60, publico, membros: [], ativo: true };
+        contratar(x, criarRng(s), ocupacao(publico >= 55 ? 'musico_profissional' : 'musico_noite')); x.trabalho.atual!.clientela = publico;
+        if (noto) x.notoriedade = { valor: noto, pico: noto, fonte: 'arte', t: x.t };
+      }).vida;
+      for (let k = 0; k < 6; k++) {
+        v = transacao(v, (x, r) => { x.t += 12; x.caminhos.arte!.publico = clamp(publico + r.normal() * 8, 0, 100); temporadaDePalco(x, criarRng(s * 31 + k)); }).vida;
+        const p = v.caminhos.palco!; anos++;
+        if (!p.apresentacoes) vazios++;
+        if (p.apresentacoes) { cache.push(p.cacheMedio); shows.push(p.apresentacoes); custos.push(p.custos); artista.push(p.artista); }
+        const im = rendaDeImagem(v); if (im) imagem.push(im);
+        void r0;
+      }
+    }
+    console.log(`| ${nome} | ${fx(cache).split(' · ')[0].replace('mediana ', '')} (p90 ${q(cache, 0.9).toLocaleString('pt-BR')}) | ${q(shows, 0.5)} (${q(shows, 0.1)}–${q(shows, 0.9)}) | ${q(custos, 0.5).toLocaleString('pt-BR')} | ${q(artista, 0.5).toLocaleString('pt-BR')} (${q(artista, 0.1).toLocaleString('pt-BR')}–${q(artista, 0.9).toLocaleString('pt-BR')}) | ${Math.round(vazios / anos * 100)}% | ${imagem.length ? q(imagem, 0.5).toLocaleString('pt-BR') : '—'} |`);
+  }
+}
+const r0 = 0;
+
 const quais = (process.env.PARTES ?? 'politica,amizades,esporte,sobrecarga,carreiras').split(',');
 if (quais.includes('politica')) politica();
 if (quais.includes('amizades')) amizades();
 if (quais.includes('esporte')) esporte();
 if (quais.includes('sobrecarga')) sobrecarga();
 if (quais.includes('carreiras')) carreiras();
+if (quais.includes('economia')) economia();

@@ -162,7 +162,7 @@ export function Medidor({ valor, rotulo, palavra, limite, marcas = 10 }: { valor
   );
 }
 
-export interface AcaoViva { id: string; rotulo: string; porque?: string; aviso?: string; acao?: Acao; ir?: string; saida?: boolean }
+export interface AcaoViva { id: string; rotulo: string; porque?: string; aviso?: string; acao?: Acao; ir?: string; saida?: boolean; bloqueado?: string }
 
 /** Ações contextuais: poucas, com o porquê, cada uma uma linha — não uma parede de botões. */
 export function AcoesVivas({ acoes, agir, ir, rotulo }: { acoes: AcaoViva[]; agir: (a: Acao) => boolean; ir?: (destino: string) => void; rotulo: string }) {
@@ -171,9 +171,9 @@ export function AcoesVivas({ acoes, agir, ir, rotulo }: { acoes: AcaoViva[]; agi
     <ul className="acoes-vivas" aria-label={rotulo}>
       {acoes.map(x => (
         <li key={x.id}>
-          <button type="button" className={`acao-viva${x.saida ? ' acao-viva--saida' : ''}${x.ir ? ' acao-viva--lugar' : ''}`} onClick={() => { if (x.acao) agir(x.acao); else if (x.ir) ir?.(x.ir); }}>
+          <button type="button" className={`acao-viva${x.saida ? ' acao-viva--saida' : ''}${x.ir ? ' acao-viva--lugar' : ''}${x.bloqueado ? ' acao-viva--bloqueada' : ''}`} disabled={!!x.bloqueado} onClick={() => { if (x.acao) agir(x.acao); else if (x.ir) ir?.(x.ir); }}>
             <span className="acao-viva__rotulo">{x.rotulo}</span>
-            {x.porque && <span className="acao-viva__porque">{x.porque}</span>}
+            {x.bloqueado ? <span className="acao-viva__porque acao-viva__motivo">{x.bloqueado}</span> : x.porque && <span className="acao-viva__porque">{x.porque}</span>}
             {x.aviso && <span className="acao-viva__aviso">{x.aviso}</span>}
             <span className="acao-viva__seta" aria-hidden>{x.ir ? '↗' : '→'}</span>
           </button>

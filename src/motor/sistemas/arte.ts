@@ -22,6 +22,7 @@ import { novaOportunidade } from './oportunidades';
 import { anoDe } from '../tempo';
 import { flex, ge } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
+import { temporadaDePalco } from './palco';
 
 const LINGUAGENS: Dominio[] = ['musica', 'teatro', 'danca'];
 
@@ -73,6 +74,8 @@ export function processarArte(v: Vida, r: Rng): void {
   }
   const p = v.caminhos.arte;
   if (p?.ativo) anoDoProjeto(v, r, p);
+  // O ano no palco: datas, valor contratado, custos, o que ficou (e, para quem vive disso, a renda do trabalho).
+  temporadaDePalco(v, r);
 
   // Vídeos que viram público.
   const aud = v.fatos['audiencia'] ?? 0;

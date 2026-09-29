@@ -425,7 +425,8 @@ describe('atleta: contrato, banco, foco, doping abstrato, carreira curta', () =>
   it('o contrato tem prazo e o espaço no time depende do que se joga', () => {
     const v = atleta();
     const es = v.caminhos.esporte!;
-    expect(es.contratoAte).toBe(v.t + 24);
+    // Fora da elite, o contrato é curto (um ano); na elite, o primeiro contrato é de dois.
+    expect(es.contratoAte).toBe(v.t + (es.nivel <= 2 ? 12 : 24));
     expect(['titular', 'reserva']).toContain(es.espaco);
     expect(modoDoTrabalho(v)).toBe('atleta');
     expect(ids(v)).toContain('forcar');

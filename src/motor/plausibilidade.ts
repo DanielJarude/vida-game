@@ -26,6 +26,11 @@ export interface Veredito {
    * — nunca vende sozinha (`sistemas/dinheiro.vereditoDePagar`).
    */
   resgate?: { valor: number; naBaixa: string[] };
+  /**
+   * O que falta é DINHEIRO (a ação é conhecida e faria sentido): a tela mostra
+   * a intenção bloqueada, com o motivo, em vez de escondê-la.
+   */
+  dinheiro?: boolean;
 }
 
 export const PERMITIDO: Veredito = { grau: 'permitido' };

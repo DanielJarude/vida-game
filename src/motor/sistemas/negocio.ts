@@ -110,7 +110,7 @@ export function podeAbrirNegocio(v: Vida, id: string): Veredito {
   const custo = custoLocal(v, t);
   const tem = disponivel(v);
   const cabe = tem >= custo || (t.emCasa && tem >= custo * 0.4) || emprestimoPossivel(v, custo - Math.min(tem, custo * 0.3));
-  if (!cabe) return bloqueio('requisito', `Para começar, uns ${fmt(custo)} (${t.presenca === 'online' ? 'estoque, fotos, plataforma' : t.presenca === 'obra' ? 'ferramentas, material, primeiro mês de equipe' : t.presenca === 'atendimento' ? 'sala, equipamento, registro' : 'ponto, equipamento, primeiro estoque'})${t.emCasa ? ` — ou uns ${fmt(Math.round(custo * 0.4 / 100) * 100)} começando pequeno, em casa` : ''}.`);
+  if (!cabe) return { dinheiro: true, ...bloqueio('requisito', `Você ainda não tem capital para isso: para começar, uns ${fmt(custo)} (${t.presenca === 'online' ? 'estoque, fotos, plataforma' : t.presenca === 'obra' ? 'ferramentas, material, primeiro mês de equipe' : t.presenca === 'atendimento' ? 'sala, equipamento, registro' : 'ponto, equipamento, primeiro estoque'})${t.emCasa ? ` — ou uns ${fmt(Math.round(custo * 0.4 / 100) * 100)} começando pequeno, em casa` : ''}.`) };
   const estrada = Math.max(...t.trilhas.map(tr => experienciaNaTrilha(v, tr)));
   const oficio = t.dominio ? habilidade(v, t.dominio) : 0;
   const conhece = estrada >= t.meses || oficio >= (t.habilidade ?? 101);

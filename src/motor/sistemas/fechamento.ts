@@ -33,8 +33,10 @@ export function fechamentoDoAno(v: Vida): Fechamento[] {
   }
   const obras = (v.caminhos.obras ?? []).filter(o => o.t > v.t - 12 && o.t <= v.t);
   const a = v.caminhos.arte;
-  if (obras.length || (a?.ativo && (v.trabalho.atual?.clientela !== undefined || a.publico >= 30))) {
+  if (obras.length || v.caminhos.palco || (a?.ativo && (v.trabalho.atual?.clientela !== undefined || a.publico >= 30))) {
     const linhas = obras.map(o => `"${o.titulo}" ${RECEPCAO[o.recepcao]}${o.renda ? ` (rendeu ${fmt(o.renda)})` : ''}.`);
+    const pl = v.caminhos.palco;
+    if (pl && pl.ano === ano) linhas.push(pl.apresentacoes ? `${pl.apresentacoes} ${pl.linguagem === 'musica' ? 'shows' : 'apresentações'}, ${fmt(pl.bruto)} contratados; depois de equipe, produção e agência, ${fmt(pl.artista)} para você.` : 'Nenhuma apresentação paga no ano.');
     if (a?.ativo) linhas.push(`${a.nome}: público ${a.publico >= 70 ? 'grande' : a.publico >= 45 ? 'crescendo' : a.publico >= 20 ? 'pequeno e fiel' : 'ainda de amigos'}.`);
     if (!obras.length) linhas.push('Nenhum trabalho novo lançado neste ano.');
     out.push({ titulo: `A obra em ${ano}`, linhas });

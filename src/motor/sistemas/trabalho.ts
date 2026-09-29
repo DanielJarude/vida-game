@@ -20,6 +20,7 @@
 import type { Rng } from '../rng';
 import { pesoDaSaudeNoTrabalho } from './saude';
 import { pesoNoDesempenho } from './sobrecarga';
+import { trabalhoDePalco } from './palco';
 import { clamp } from '../rng';
 import type { Dominio, Emprego, Vida } from '../tipos';
 import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
@@ -602,7 +603,8 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   const delta = (hab - 50) / 12 + Math.min(4, exp / 3) + v.personalidade.tracos.sociabilidade / 40 + (setor - 1) * 8 + (porte - 1.5) * 1.5
     + ajusteClientela(v) - Math.max(0, (e.clientela ?? 0) - 70) / 6 + r.normal() * 6 + 1 + deltaDeFreguesia(e, hab);
   e.clientela = Math.round(clamp((e.clientela ?? 20) + delta, 0, 100));
-  e.salario = rendaDeClientela(v, oc, e.clientela, e);
+  // Quem vive do palco não ganha pela tabela de freguesia: a renda sai da agenda do ano (`palco`).
+  if (!trabalhoDePalco(v)) e.salario = rendaDeClientela(v, oc, e.clientela, e);
   if (e.clientela <= 6 && v.t - e.tInicio >= 24) {
     escrever(v, { texto: `O trabalho como ${nomeOcupacao(v, oc)} foi minguando até não pagar mais as contas.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', `Parou de trabalhar como ${nomeOcupacao(v, oc)}: faltou freguesia.`, 2, { trilha: oc.trilha, ocupacaoId: oc.id });

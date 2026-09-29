@@ -103,7 +103,8 @@ export function rendaDeImagem(v: Vida): number {
   const fonte = v.notoriedade?.fonte;
   if (fonte !== 'esporte' && fonte !== 'arte') return 0;
   if (v.caminhos.esporte?.suspensoAte && v.t < v.caminhos.esporte.suspensoAte) return 0;
-  return Math.round(((x - 30) ** 2) * 11 / 100) * 100;
+  // O esporte de alto nível paga imagem mais do que o palco paga publicidade (o palco tem cachê próprio: `palco`).
+  return Math.round(((x - 30) ** 2) * (fonte === 'esporte' ? 22 : 11) / 100) * 100;
 }
 
 /** A pressão de ser visto: pesa na cabeça de quem é famoso. */

@@ -242,8 +242,23 @@ function PainelFreguesia({ vida }: { vida: Vida }) {
         <Dado rotulo="Formalização">{e.mei ? 'MEI: nota fiscal e INSS' : e.contrato === 'informal' ? 'informal: sem CNPJ, sem INSS' : 'por conta própria'}</Dado>
         {p?.ativo && <Dado rotulo={p.tipo === 'banda' ? 'A banda' : 'O grupo'}>{p.nome}: {p.publico < 15 ? 'quase ninguém conhece ainda' : p.publico < 40 ? 'já tem quem vá ver' : p.publico < 65 ? 'público fiel na cidade' : 'gente de fora já conhece'}</Dado>}
       </dl>
+      {vida.caminhos.palco && <PalcoDoAno vida={vida} />}
       <p className="nota">{estradaNaArea(vida)}</p>
     </section>
+  );
+}
+
+/** O último ano no palco, com cada número pelo nome: o que o contratante paga não é o que fica. */
+export function PalcoDoAno({ vida }: { vida: Vida }) {
+  const p = vida.caminhos.palco!;
+  const rotulo = p.linguagem === 'musica' ? 'shows' : 'apresentações';
+  if (p.apresentacoes === 0) return <p className="nota">Em {p.ano}, nenhum {p.linguagem === 'musica' ? 'show' : 'trabalho de palco'} pago: o ano foi de ensaio e espera.</p>;
+  return (
+    <div className="temporada" aria-label="O palco no último ano">
+      <p className="temporada__titulo">O palco em {p.ano}</p>
+      <p className="temporada__linha">{p.apresentacoes} {rotulo} · cachê médio do {p.linguagem === 'musica' ? 'show' : 'trabalho'}: {dinheiroCurto(p.cacheMedio)} (valor contratado)</p>
+      <p className="nota">Contratado no ano: {dinheiroCurto(p.bruto)}. Custos (equipe, produção, transporte, agência, impostos): {dinheiroCurto(p.custos)}. Ficou para você: {dinheiroCurto(p.artista)} — uns {dinheiroCurto(Math.round(p.artista / 12 / 10) * 10)} por mês, se o ano que vem for igual (e raramente é).</p>
+    </div>
   );
 }
 
