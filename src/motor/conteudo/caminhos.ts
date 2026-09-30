@@ -16,7 +16,7 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
 import { estresse, fato, feliz, custa } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
-import { encerrarCarreira, fazerPeneira, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
+import { conviteDaBase, encerrarCarreira, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
 import { dinheiro as fmt } from '../texto';
 import { conflitoDoContrato, contaDoContrato, descricaoDoContrato, podePausar as podePausarAV, resolverConflitoAV } from '../sistemas/audiovisual';
 import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador, lerTecnica } from '../sistemas/peneira';
@@ -46,7 +46,7 @@ import { editaisAbertos } from '../sistemas/concurso';
 import { noTrabalho } from '../sistemas/ambiente';
 
 const mod = (c: Ctx) => MODS[c.v.fatos['peneira_mod'] ?? 0] ?? 'futebol';
-const clubeDaBase = (c: Ctx) => nomeDeClube(lugarPeneira(c), `${c.v.id}:${c.v.fatos['convite_base']}`, mod(c));
+const clubeDaBase = (c: Ctx) => conviteDaBase(c.v)?.clube ?? nomeDeClube(lugarPeneira(c), `${c.v.id}:${c.v.fatos['convite_base']}`, mod(c));
 const novoDaBase = (c: Ctx) => ({ tipo: 'base' as const, dominio: mod(c), municipioId: lugarPeneira(c), clube: clubeDaBase(c) });
 const lugarPeneira = (c: Ctx) => municipioPorIndice(c.v.fatos['peneira_lugar'] ?? -1) ?? c.v.moradia.municipioId;
 
@@ -107,8 +107,10 @@ export const CAMINHOS: Conteudo[] = [
     ]
   },
   {
-    id: 'esp_base', tipo: 'decisao', idade: [11, 20], tema: 'lazer', prioritario: true, prioridade: 4,
-    quando: c => temFato(c.v, 'convite_base') && !c.v.caminhos.esporte,
+    // Abre logo depois da peneira aprovada (o resultado encadeia); a virada do ano pega o convite que ficou sem resposta.
+    // `repetir: 0`: quem é dispensado e passa de novo recebe outro convite (a etapa do caminho é que guarda).
+    id: 'esp_base', tipo: 'decisao', idade: IDADE_CONVITE, tema: 'lazer', prioritario: true, prioridade: 4, repetir: 0,
+    quando: c => etapaNaBase(c.v) === 'convidado',
     titulo: 'O convite',
     texto: c => {
       const longe = lugarPeneira(c) !== c.v.moradia.municipioId;
@@ -462,7 +464,7 @@ function peneira(c: Ctx, ajuste: number) {
     c.v.fatos['convite_base'] = c.v.t;
     const texto = `Passou na ${d === 'futebol' ? 'peneira' : 'seletiva'}.`;
     marcar(c.v, 'oportunidade', texto, 3, { dominio: d });
-    return { texto: 'No fim do dia, chamaram seu nome. Poucos nomes foram chamados.', memoria: `${texto} Chamaram poucos nomes; o seu foi um deles.`, relevancia: 'marco' as const, tom: 'bom' as const };
+    return { texto: 'No fim do dia, chamaram seu nome. Poucos nomes foram chamados.', memoria: `${texto} Chamaram poucos nomes; o seu foi um deles.`, relevancia: 'marco' as const, tom: 'bom' as const, abrir: { id: 'esp_base' } };
   }
   return { texto: 'Chamaram outros nomes. Na volta, o ônibus pareceu mais comprido.', memoria: `Não passou na ${d === 'futebol' ? 'peneira' : 'seletiva'} do clube.`, relevancia: 'biografia' as const, tom: 'ruim' as const };
 }
@@ -500,7 +502,8 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
     c.v.fatos['peneira_lugar'] = municipioIndice(lugar);
     const texto = `Passou na ${nome} ${doLugar}.`;
     marcar(c.v, 'oportunidade', texto, 3, { dominio: d });
-    return { texto: `No fim do dia, chamaram seu nome. Poucos nomes foram chamados. ${fala}`, memoria: `${texto} Chamaram poucos nomes; o seu foi um deles.`, relevancia: 'marco', tom: 'bom' };
+    // O convite vem na hora: passar é ser chamado — a resposta (ir ou ficar) é do jogador, e a tela não volta a mostrar "chegar a uma base".
+    return { texto: `No fim do dia, chamaram seu nome. Poucos nomes foram chamados. ${fala}`, memoria: `${texto} Chamaram poucos nomes; o seu foi um deles.`, relevancia: 'marco', tom: 'bom', abrir: { id: 'esp_base' } };
   }
   const tentativas = c.v.fatos[`peneiras_${d}`] ?? 1;
   marcar(c.v, 'fracasso', `Não passou na ${nome} ${doLugar} (${NOME_MOD[d] ?? d}). ${fala}`, 2, { dominio: d });

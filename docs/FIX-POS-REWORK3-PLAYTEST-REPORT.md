@@ -625,3 +625,43 @@ Sem taxa-alvo.
 5. **Audiovisual:** a produção integral não ocupa horas da semana (`semana`); ela pesa no estresse e bloqueia outra integral. Exclusividade de emissora e renegociação de contrato longo também não entraram.
 6. **Ajuda da família:** "recebeu ao menos uma vez" segue alto (~82%), com a mediana baixa. Confirmar na simulação de 1.000 vidas se o primeiro socorro aos ~20 (morando com a família) deveria contar como ajuda ou como despesa da casa.
 7. **Casa própria:** as personas que não poupam ("social", "gastadora") quase não compram, por construção da estratégia. Rever as personas na simulação oficial.
+
+---
+
+# HOTFIX de playtest — progressão após ingresso na base
+
+**Sintoma (Netlify, FIX 3.1):** o jogador passou na peneira, mas em Trabalho → "O que você está construindo" seguiam "Chegar a uma base de futebol", o botão "Pedir um teste num clube" e a orientação "Desde a última peneira (2041), a técnica ainda não mudou de patamar…".
+
+**Causa.** Entre "passou" e "está na base" havia um intervalo que nenhum consumidor reconhecia:
+
+1. A peneira aprovada só gravava o fato `convite_base`. A decisão do convite (`esp_base`) era *prioritária*, mas só abria na **virada do ano**. Até lá, `caminhos.esporte` seguia vazio, e `emConstrucao`, `caminhosPossiveis` e `podePedirTeste` liam só `caminhos.esporte`: para eles, a pessoa ainda estava tentando chegar. Por isso voltavam o objetivo, o pedido de teste (numa peneira que veio por indicação não há o intervalo de um ano do pedido) e a devolutiva da peneira como se fosse instrução.
+2. `esp_base` não tinha `repetir`. Quem já tinha recebido um convite nunca recebia outro, nem depois de uma dispensa e de uma nova aprovação. E o `quando` (`!caminhos.esporte`) também deixava de fora quem tinha uma carreira `encerrada`.
+3. Na base, "O que você está construindo" ficava vazio: não havia etapa seguinte.
+
+**Fonte de verdade.** `esporte.etapaNaBase(v)` → `fora | convidado | decidindo | base | profissional`, derivada **só do estado persistido**: `caminhos.esporte.fase`, `caminhos.pendente` (novo do tipo `base`) e o fato `convite_base` (dentro da idade do convite). `conviteDaBase(v)` dá a modalidade, o lugar e o clube do convite, os mesmos que a decisão usa. Consumidores alinhados:
+- `emConstrucao`: `fora` → "Chegar a uma base" (como antes). `convidado`/`decidindo` → "Entrar para a base do X", com o passo "Responder ao convite do clube". `base` → **"Se firmar na base do X"**: categoria (sub-15/17/20), desde quando, a técnica comparada à que o contrato pede, o que falta (técnica, idade do contrato, físico, posição) e o passo "Treinar firme e disputar os jogos da base". O progresso vem do treino do ano, não da peneira antiga.
+- `caminhosPossiveis`: a mesma etapa ("Você passou na peneira: o clube chamou" / "Você está num clube"). O pedido de teste some.
+- `podePedirTeste`: bloqueado em `convidado`/`decidindo` ("falta responder ao convite") e em `base`/`profissional`.
+- As peneiras oferecidas pelo mundo (`esporte.processarAno`) não aparecem com um convite em aberto.
+- A conta do contrato (`contratoDaBase`) e a categoria (`categoriaDaBase`) passaram a ser fonte única, usada pelo ano na base, pela tela e pelo `PainelBase`.
+
+**Correção do fluxo.** A peneira aprovada **abre o convite na hora** (`abrir: { id: 'esp_base' }`). A escolha (ir ou ficar) continua sendo do jogador. "Ir" leva ao `propor` e, havendo conflito, à pergunta do que largar; depois vem `entrarNaBase`. `esp_base` agora tem `repetir: 0`, `quando: etapaNaBase === 'convidado'` e idade 10–20 (a peneira começa aos 10 no tênis). Não foi criada troca de clube.
+
+**Linha da Vida.** O marco "Entrou para a base do X." continua sendo escrito uma única vez, em `entrarNaBase` (a opção "ir" não grava memória própria).
+
+**Save existente (sem subir a versão, segue v18).** Não há flag nova: a etapa é derivada do que o save já tem. O save do playtest (peneira aprovada, `convite_base` gravado, sem decisão aberta e sem clube) é lido como `convidado` já no primeiro render. A tela deixa de mostrar "Chegar a uma base" e o pedido de teste, e oferece **"Responder ao convite do clube"** (ação nova `perseguir: responder_convite`, que abre a mesma decisão `esp_base`). Se o jogador não responder, a virada do ano traz o convite. Nenhuma peneira nova é exigida. Um save que já está na base mostra "Se firmar na base".
+
+**Testes** (`src/motor/__tests__/hotfixBase.test.ts`, 6; `src/ui/__tests__/hotfixBase.test.tsx`, 2):
+1. fora → "Chegar a uma base de futebol" e o pedido de teste permitido;
+2. peneira pedida, duas etapas → aprovado → o convite abre junto;
+3. depois do "ir": base persistida, com o clube do convite, e "Chegar a uma base" fora dos objetivos;
+4. "Pedir um teste" some (objetivo, caminhos, motor);
+5. a devolutiva fica no histórico, e "Desde a última peneira" não aparece;
+6. "Se firmar na base do …", com categoria, contrato e o passo de treino;
+7. save/reload (convidado e base);
+8. save pré-hotfix com convite sem resposta → `convidado` → "Responder ao convite" → base, sem nova peneira; convite na virada do ano (também com carreira `encerrada`); save já na base;
+9. Linha da Vida: "Entrou para a base" uma vez, e ainda uma vez depois de um ano;
+- recusar o convite volta para `fora`;
+- UI: na base, sem "Chegar a uma base", sem "Desde a última peneira" e sem o botão de teste; com o convite em aberto, o botão "Responder ao convite do clube" dispara `responder_convite`.
+
+**Validação:** testes direcionados 8/8. Suíte completa com 34 arquivos e **791/791**: numa rodada, `interface.test.tsx` não subiu por timeout de inicialização do worker (carga no WSL); isolado, passou 14/14. Typecheck limpo, build limpo, smoke itch.io **18/18**. O save continua na v18.

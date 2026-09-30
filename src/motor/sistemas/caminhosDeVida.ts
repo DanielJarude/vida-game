@@ -26,7 +26,8 @@ import { podeTentar } from '../plausibilidade';
 import { idade } from '../nucleo';
 import { ocupacao, OCUPACOES } from '../dados/ocupacoes';
 import { habilidade } from './frentes';
-import { MODALIDADES, NOME_MOD } from './esporte';
+import { aEquipe, categoriaDaBase, contratoDaBase, conviteDaBase, etapaNaBase, MODALIDADES, NOME_MOD } from './esporte';
+import { oClube } from '../dados/clubes';
 import { lerTecnica } from './peneira';
 import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from './concurso';
 import { janelaDaBase, modalidadeSeria, nivelDePublico, PALAVRA_PUBLICO } from './perseguir';
@@ -76,10 +77,39 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
   const e = v.trabalho.atual;
   const pode = (a: Acao) => podeTentar(disp(v, a));
 
-  // Esporte: treino sério, ainda sem clube.
+  // Esporte: a etapa do caminho da base (fonte única) decide o que se está construindo.
   const d = modalidadeSeria(v);
   const es = v.caminhos.esporte;
-  if (d && (!es || es.fase === 'encerrada') && i >= 8 && i <= janelaDaBase(d)[1]) {
+  const etapa = etapaNaBase(v);
+  const convite = conviteDaBase(v);
+  if ((etapa === 'convidado' || etapa === 'decidindo') && (convite || v.caminhos.pendente?.novo.tipo === 'base')) {
+    // Passou na peneira: "chegar a uma base" já foi. Falta a resposta ao convite (ou o que fazer com o que não cabe).
+    const nb = v.caminhos.pendente?.novo;
+    const alvo = nb?.tipo === 'base' ? { dominio: nb.dominio, clube: nb.clube } : convite!;
+    out.push({
+      id: 'esporte', titulo: `Entrar para ${aEquipe(alvo.dominio, alvo.clube)}`,
+      onde: `Você passou na ${alvo.dominio === 'futebol' ? 'peneira' : 'seletiva'}: ${oClube(alvo.clube)} chamou você. ${etapa === 'decidindo' ? 'Você disse que ia — falta decidir o que fazer com o que não cabe junto.' : 'Falta dizer se vai.'}`,
+      falta: [],
+      proximo: etapa === 'convidado' ? { rotulo: 'Responder ao convite do clube', acao: P('responder_convite'), porque: 'Ir ou ficar: a decisão é sua.' } : undefined
+    });
+  } else if (etapa === 'base' && es) {
+    // Na base: a próxima etapa é se firmar — seguir evoluindo até o contrato (ou a dispensa, o destino da maioria).
+    const t = lerTecnica(v, es.modalidade);
+    const h = habilidade(v, es.modalidade);
+    const ct = contratoDaBase(es.modalidade);
+    const palavra = h >= ct.tecnica ? 'no nível de um contrato profissional' : h >= ct.tecnica - 3 ? 'perto do que o contrato pede' : h >= ct.tecnica - 8 ? 'a caminho do que o contrato pede' : 'ainda longe do que o contrato pede';
+    const equipe = aEquipe(es.modalidade, es.clube);
+    out.push({
+      id: 'esporte', titulo: `Se firmar ${equipe.replace(/^a /, 'na ').replace(/^o /, 'no ')}`,
+      onde: `${categoriaDaBase(v, es).replace(/^./, m => m.toUpperCase())}, desde ${anoDe(es.tInicio)}. Para o contrato, a técnica está "${palavra}".`,
+      progresso: t.ano,
+      falta: [h < ct.tecnica ? 'Técnica para o contrato: seguir evoluindo a cada ano — quem para de evoluir é dispensado.' : '',
+        i < ct.idade[0] ? `Idade: o contrato profissional chega entre os ${ct.idade[0]} e os ${ct.idade[1]} anos.` : '',
+        v.corpo.forma < 55 ? 'Físico: o ritmo da base cobra fôlego nos jogos.' : '',
+        es.modalidade === 'futebol' && !es.posicao ? 'Posição: a comissão ainda vai perguntar onde você joga.' : ''].filter(Boolean),
+      proximo: { rotulo: 'Treinar firme e disputar os jogos da base', ir: 'tempo', porque: 'O contrato vem para quem segue evoluindo; a dispensa, para quem para.' }
+    });
+  } else if (etapa === 'fora' && d && (!es || es.fase === 'encerrada') && i >= 8 && i <= janelaDaBase(d)[1]) {
     const t = lerTecnica(v, d);
     const pedir = P('pedir_teste', d);
     const veredito = disp(v, pedir);
@@ -206,16 +236,16 @@ export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
   // Esporte.
   {
     const d = modalidadeSeria(v) ?? (v.rotinas.find(r => MODALIDADES.includes(r.id as Dominio))?.id as Dominio | undefined);
-    const es = v.caminhos.esporte;
     const pedir = P('pedir_teste', d);
     const [, fim] = janelaDaBase(d ?? 'volei');
-    const dentro = es && (es.fase === 'base' || es.fase === 'profissional');
+    const etapa = etapaNaBase(v);
+    const dentro = etapa !== 'fora';
     out.push({
       id: 'esporte', titulo: 'Esporte',
       como: 'Treino a sério desde cedo → um teste num clube (peneira ou seletiva) → a base → o contrato. Quase ninguém chega; quem se prepara ainda jogando tem para onde ir.',
-      agora: dentro ? 'Você está num clube.' : i > fim ? `A janela das bases já passou (vai até uns ${fim} anos). O esporte segue como treino, arbitragem, preparação física, escolinha.` : d ? `Você treina ${NOME_MOD[d]}: a técnica está "${lerTecnica(v, d).palavra}".` : 'Começa escolhendo uma modalidade e treinando a sério (Tempo livre).',
+      agora: etapa === 'convidado' || etapa === 'decidindo' ? 'Você passou na peneira: o clube chamou.' : dentro ? 'Você está num clube.' : i > fim ? `A janela das bases já passou (vai até uns ${fim} anos). O esporte segue como treino, arbitragem, preparação física, escolinha.` : d ? `Você treina ${NOME_MOD[d]}: a técnica está "${lerTecnica(v, d).palavra}".` : 'Começa escolhendo uma modalidade e treinando a sério (Tempo livre).',
       estado: dentro ? 'aqui' : i > fim ? 'fora' : pode(pedir) ? 'pronto' : 'preparar',
-      passo: dentro ? undefined : pode(pedir) ? { rotulo: 'Pedir um teste num clube', acao: pedir } : i <= fim ? { rotulo: d ? 'Treinar mais' : 'Começar a treinar', ir: 'tempo', porque: disp(v, pedir).motivo } : undefined
+      passo: etapa === 'convidado' ? { rotulo: 'Responder ao convite do clube', acao: P('responder_convite') } : dentro ? undefined : pode(pedir) ? { rotulo: 'Pedir um teste num clube', acao: pedir } : i <= fim ? { rotulo: d ? 'Treinar mais' : 'Começar a treinar', ir: 'tempo', porque: disp(v, pedir).motivo } : undefined
     });
   }
   // Arte.

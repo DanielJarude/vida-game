@@ -50,6 +50,50 @@ export function aEquipe(d: Dominio, clube: string): string {
   return `${EQUIPE[d] ?? 'a equipe'} ${doClube(clube)}`;
 }
 
+/**
+ * Onde a pessoa está no caminho de uma base — FONTE ÚNICA para a tela ("o
+ * que você está construindo"), para o pedido de teste e para as peneiras que
+ * o mundo oferece:
+ *
+ *   fora          ainda tentando chegar (treina, pede teste, faz peneira)
+ *   convidado     passou na peneira: o clube chamou, falta responder ao convite
+ *   decidindo     disse que ia; falta decidir o que fazer com o que não cabe
+ *   base          está na base (ou na equipe de formação)
+ *   profissional  tem contrato
+ *
+ * Derivada só do estado persistido (o convite é o fato `convite_base`, a
+ * base é `caminhos.esporte`): vale também para saves de antes desta regra.
+ */
+export type EtapaDaBase = 'fora' | 'convidado' | 'decidindo' | 'base' | 'profissional';
+export function etapaNaBase(v: Vida): EtapaDaBase {
+  const es = v.caminhos.esporte;
+  if (es?.fase === 'base') return 'base';
+  if (es?.fase === 'profissional') return 'profissional';
+  if (v.caminhos.pendente?.novo.tipo === 'base') return 'decidindo';
+  // O convite vale enquanto a idade da base (a decisão do convite) cabe.
+  if (temFato(v, 'convite_base') && idade(v) <= IDADE_CONVITE[1]) return 'convidado';
+  return 'fora';
+}
+/** A idade em que o convite de uma base ainda é respondido (a mesma da decisão `esp_base`). */
+export const IDADE_CONVITE: [number, number] = [10, 20];
+
+/** O convite em aberto de quem passou na peneira: a modalidade, o lugar e o clube (os mesmos que a decisão do convite usa). */
+export function conviteDaBase(v: Vida): { dominio: Dominio; municipioId: string; clube: string } | undefined {
+  if (!temFato(v, 'convite_base')) return undefined;
+  const dominio = MODALIDADES[v.fatos['peneira_mod'] ?? 0] ?? 'futebol';
+  const municipioId = MUNICIPIOS[v.fatos['peneira_lugar'] ?? -1]?.id ?? v.moradia.municipioId;
+  return { dominio, municipioId, clube: nomeDeClube(municipioId, `${v.id}:${v.fatos['convite_base']}`, dominio) };
+}
+
+/** A categoria de quem está na base (sub-15, sub-17...): a mesma na tela e no texto. */
+export function categoriaDaBase(v: Vida, e: CarreiraEsportiva): string {
+  const i = idade(v);
+  return e.modalidade === 'tenis' ? 'circuito juvenil' : e.modalidade !== 'futebol' ? 'equipe de base' : i <= 15 ? 'sub-15' : i <= 17 ? 'sub-17' : 'sub-20';
+}
+
+/** O contrato profissional: a idade em que chega e a técnica que o clube pede (a mesma conta do ano na base). */
+export const contratoDaBase = (d: Dominio) => ({ idade: (d === 'futebol' ? [17, 20] : [17, 22]) as [number, number], tecnica: d === 'futebol' ? 79 : 82 });
+
 /** O nome da divisão (ou do circuito) em cada modalidade: fonte única para tela e texto. */
 export function divisaoDe(d: Dominio, nivel: number): string {
   if (d === 'futebol') return DIVISAO_DO_NIVEL[nivel] ?? '';
@@ -371,7 +415,7 @@ export function processarEsporte(v: Vida, r: Rng): void {
   const mod = modalidadePrincipal(v);
 
   // Campeonatos da infância e da adolescência: destaque é marca.
-  if (mod && i >= 8 && i <= 18 && !e) {
+  if (mod && i >= 8 && i <= 18 && !e && etapaNaBase(v) === 'fora') {
     const h = habilidade(v, mod.d);
     if (mod.nivel >= 2 && h >= 50 && !temFato(v, `destaque_${mod.d}`) && r.chance(0.5)) {
       marcarFato(v, `destaque_${mod.d}`);
@@ -462,8 +506,7 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     lesionar(v, r, r.chance(0.2) ? 2 : 1, 'pratica');
   }
   // Contrato profissional: só para quem segue evoluindo.
-  const idadeContrato = e.modalidade === 'futebol' ? [17, 20] : [17, 22];
-  const limiar = e.modalidade === 'futebol' ? 79 : 82;
+  const { idade: idadeContrato, tecnica: limiar } = contratoDaBase(e.modalidade);
   if (i >= idadeContrato[0] && i <= idadeContrato[1] && h >= limiar && r.chance(clamp((h - limiar + 2) / 16, 0.08, 0.6))) {
     const nivel = nivelPelaHabilidade(h);
     novaOportunidade(v, {

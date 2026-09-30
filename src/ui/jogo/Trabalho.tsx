@@ -46,7 +46,7 @@ import { leituraDaOrigem, responsaveis } from '../../motor/sistemas/origem';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { doClube } from '../../motor/dados/clubes';
-import { augeDe, divisaoDe, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
+import { augeDe, categoriaDaBase, divisaoDe, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
 import { estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
 import { lesaoAtiva } from '../../motor/sistemas/lesoes';
 import { palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
@@ -342,8 +342,7 @@ function PainelAtleta({ vida }: { vida: Vida }) {
 function PainelBase({ vida }: { vida: Vida }) {
   const es = vida.caminhos.esporte;
   if (!es || es.fase !== 'base') return null;
-  const i = idade(vida);
-  const categoria = es.modalidade === 'tenis' ? 'circuito juvenil' : es.modalidade !== 'futebol' ? 'equipe de base' : i <= 15 ? 'sub-15' : i <= 17 ? 'sub-17' : 'sub-20';
+  const categoria = categoriaDaBase(vida, es);
   const anos = Math.max(0, Math.floor((vida.t - es.tInicio) / 12));
   const contratoIdade = es.modalidade === 'futebol' ? '17 e 20' : '17 e 22';
   const longe = es.municipioId !== vida.moradia.municipioId;

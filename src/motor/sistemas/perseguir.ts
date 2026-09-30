@@ -30,7 +30,7 @@ import { recursosDaFamilia } from './origem';
 import { estudarMateria, podeEstudarMateria } from './vestibular';
 import { preparoDaPos } from './escola';
 import type { Materia } from '../dados/cursos';
-import { MODALIDADES, NOME_MOD, nomeDeClube, ondeTreina } from './esporte';
+import { etapaNaBase, MODALIDADES, NOME_MOD, nomeDeClube, ondeTreina } from './esporte';
 import { capitalDoEstado } from './escola';
 import { municipio } from '../dados/lugares';
 import { doClube, noClube } from '../dados/clubes';
@@ -47,7 +47,7 @@ import { disponibilidadeCena, executarCena, type OqueCena } from './cena';
 import { disponibilidadePrepararResidencia, prepararResidencia } from './medicina';
 import { disponibilidadeAV, executarAV, type OqueAV } from './audiovisual';
 
-export type OquePerseguir = 'pedir_teste' | 'montar_grupo' | 'mostrar_trabalho' | 'foco_concurso' | 'bolsa_pesquisa' | 'estudo_dirigido' | 'preparar_pos' | 'preparar_residencia' | 'treino_fundamentos' | OqueCena | OqueAV;
+export type OquePerseguir = 'pedir_teste' | 'responder_convite' | 'montar_grupo' | 'mostrar_trabalho' | 'foco_concurso' | 'bolsa_pesquisa' | 'estudo_dirigido' | 'preparar_pos' | 'preparar_residencia' | 'treino_fundamentos' | OqueCena | OqueAV;
 export type AcaoPerseguirCmd = { tipo: 'perseguir'; oque: OquePerseguir; valor?: string };
 
 const FOCOS: FocoConcurso[] = ['policial', 'administrativo', 'fiscal', 'bancario', 'educacao', 'saude', 'academico'];
@@ -74,8 +74,10 @@ function podePedirTeste(v: Vida, valor?: string): Veredito {
   if (!d) return bloqueio('requisito', 'Um teste num clube pede treino a sério: a modalidade na semana, em ritmo de treino (Tempo livre).');
   const rot = v.rotinas.find(r => r.id === d);
   if (!rot || (rot.nivel ?? 1) < 2) return bloqueio('requisito', `Treinar ${NOME_MOD[d]} a sério (ritmo de treino) vem antes de pedir um teste.`);
-  const es = v.caminhos.esporte;
-  if (es && (es.fase === 'base' || es.fase === 'profissional')) return bloqueio('impossivel', 'Você já está num clube.');
+  // A etapa do caminho (fonte única): quem já foi chamado, ou já está num clube, não pede teste para entrar.
+  const etapa = etapaNaBase(v);
+  if (etapa === 'base' || etapa === 'profissional') return bloqueio('impossivel', 'Você já está num clube.');
+  if (etapa === 'convidado' || etapa === 'decidindo') return bloqueio('impossivel', 'Você já passou na peneira: o clube chamou, falta responder ao convite.');
   const [ini, fim] = janelaDaBase(d);
   if (i < ini) return bloqueio('requisito', `As bases de ${NOME_MOD[d]} testam a partir dos ${ini} anos.`);
   if (i > fim) return bloqueio('requisito', `A janela das bases de ${NOME_MOD[d]} vai até os ${fim} anos: depois disso, quase ninguém é chamado sem já ter carreira.`);
@@ -327,6 +329,7 @@ export function disponibilidadePerseguir(v: Vida, a: AcaoPerseguirCmd): Veredito
   if (v.justica?.prisao) return bloqueio('impossivel', 'Não enquanto cumpre pena.');
   switch (a.oque) {
     case 'pedir_teste': return podePedirTeste(v, a.valor?.split(':')[0] || undefined);
+    case 'responder_convite': return etapaNaBase(v) === 'convidado' ? PERMITIDO : bloqueio('impossivel', 'Não há convite de clube em aberto.');
     case 'montar_grupo': return podeMontarGrupo(v, a.valor);
     case 'mostrar_trabalho': return podeMostrar(v);
     case 'foco_concurso': return podeFocar(v, a.valor);
@@ -344,6 +347,8 @@ export function disponibilidadePerseguir(v: Vida, a: AcaoPerseguirCmd): Veredito
 export function executarPerseguir(v: Vida, r: Rng, a: AcaoPerseguirCmd): { texto?: string; decisao?: string; tom?: 'bom' | 'ruim' | 'neutro' } {
   switch (a.oque) {
     case 'pedir_teste': return pedirTeste(v, r, a.valor);
+    // O convite que ficou sem resposta (saves de antes de ele abrir junto com o resultado da peneira): a mesma decisão.
+    case 'responder_convite': return etapaNaBase(v) === 'convidado' ? { decisao: 'esp_base' } : { texto: 'Não há convite em aberto.' };
     case 'montar_grupo': return { ...montarGrupo(v, r, a.valor), tom: 'bom' };
     case 'mostrar_trabalho': return mostrarTrabalho(v, r);
     case 'foco_concurso': {
