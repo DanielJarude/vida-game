@@ -84,10 +84,11 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
             {itens.map(x => {
               const it = itemEstilo(x.itemId);
               if (!it) return null;
-              const usavel = !!it.visual;
+              // Tudo que é seu se usa ou se guarda (o relógio também: não aparece no retrato, mas está no pulso).
+              const usavel = !!it.visual || !!it.lugar;
               return (
                 <li key={x.id} className={`item-estilo${x.usando ? ' item-estilo--usando' : ''}`}>
-                  <span><strong>{it.nome}</strong>{usavel ? <span className="nota"> · {x.usando ? 'em uso' : 'guardado'}</span> : null}</span>
+                  <span><strong>{it.nome}</strong>{usavel ? <span className="nota"> · {x.usando ? (it.lugar === 'pulso' ? 'no pulso' : 'em uso') : 'guardado'}</span> : null}</span>
                   {usavel && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, usar: !x.usando }} agir={agir} variante="discreto">{x.usando ? 'Tirar' : 'Usar'}</BotaoAcao>}
                 </li>
               );

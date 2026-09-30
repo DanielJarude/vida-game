@@ -101,6 +101,9 @@ describe('romance e idade', () => {
   it('namoro adolescente não vira casa, casamento nem gravidez com adulto', () => {
     const v = viverAte(nova({ semente: 5 }), 17);
     v.momento = null;
+    // O cenário é ESTE namoro (17 × 18): um namoro que a vida sorteada já tivesse sai da conta.
+    for (const x of Object.values(v.vinculos)) if (x.romance) x.romance = undefined;
+    v.processos = v.processos.filter(pr => pr.tipo !== 'gestacao');
     const p = pessoaNova(v, 18, 'masculino', { atracao: 'mulheres' });
     const vin = vincular(v, p, { origem: 'escola', proximidade: 70, convivio: ['escola'] });
     vin.romance = { estagio: 'namoro', tEstagio: v.t - 14, tInicio: v.t - 20, envolvimento: 90, planoFilhos: 'tentando' };

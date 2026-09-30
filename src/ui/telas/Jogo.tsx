@@ -100,6 +100,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={setPessoaAberta} />}
           {area === 'formacao' && <Estudos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'trabalho' && (temTrabalho(vida) ? <Trabalho vida={vida} agir={c.agir} irPara={ir} /> : <TrabalhoAindaNao vida={vida} irPara={ir} />)}
+          {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} />}
           {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
         </main>
 
@@ -288,4 +289,5 @@ function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
  * substitui a vida atual depois de confirmar.
  */
 import { ImportarVida } from './ImportarVida';
+import { Tempo } from '../jogo/Tempo';
 export { ImportarVida };

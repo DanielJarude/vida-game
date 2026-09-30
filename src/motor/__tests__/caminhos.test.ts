@@ -407,7 +407,8 @@ describe('concurso', () => {
 describe('autonomia e aposentadoria', () => {
   it('22. trabalho por conta funciona: sem entrevista, com freguesia que decide a renda', () => {
     let v = adulto(19);
-    garantirFrente(v, 'beleza').habilidade = 60;
+    // Uma cabeleireira que já sabe o ofício (no limite do mínimo, a freguesia pode minguar no primeiro ano — e o teste não diria nada).
+    garantirFrente(v, 'beleza').habilidade = 68;
     expect(tenta(v, { tipo: 'candidatar', ocupacaoId: 'cabeleireiro' })).toBe(true);
     v = executar(v, { tipo: 'candidatar', ocupacaoId: 'cabeleireiro' }).vida;
     expect(v.momento).toBeFalsy();

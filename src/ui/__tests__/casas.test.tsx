@@ -130,7 +130,7 @@ describe('Casas com identidade visual', () => {
       expect(container.querySelectorAll('.cena__janela--acesa').length).toBeGreaterThanOrEqual(1);
       expect(container.querySelector('.cena__veiculo')).toBeTruthy();
       expect(container.querySelectorAll('.cena__bicho').length).toBe(2);
-      expect(container.querySelector('svg')!.getAttribute('aria-label')).toMatch(/Pipoca e Mingau na frente, um carro na porta/);
+      expect(container.querySelector('svg')!.getAttribute('aria-label')).toMatch(/Pipoca e Mingau na frente, um carro \(hatch\) na porta/);
       cleanup();
     }
   });

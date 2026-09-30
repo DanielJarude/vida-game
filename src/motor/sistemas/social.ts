@@ -20,6 +20,11 @@ import { criarPessoa, vincular } from '../pessoas';
 import { MUNICIPIOS, municipio } from '../dados/lugares';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { flex } from '../texto';
+import { rngDe } from '../rng';
+import { carreiraDeAdulto } from './filhos';
+
+/** Quem tem carreira acompanhada de perto: a parceria (até a de namoro), o amigo próximo, quem é muito próximo. */
+export const importaParaCarreira = (vin: Vinculo) => (!!vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(vin.romance.estagio)) || vin.estagio === 'amigo_proximo' || vin.proximidade >= 60;
 
 /* ------------------------------------------------------------ Ambientes */
 
@@ -315,10 +320,17 @@ export function processarSocial(v: Vida, r: Rng): void {
  * trabalho, trabalho às vezes acaba. Vale para amigos e parceiros.
  */
 export function envelhecerConhecidos(v: Vida, r: Rng): void {
+  const cota = { bio: 0 };
   for (const { p, vin } of vinculosVivos(v)) {
     if (p.especie || vin.parentesco) continue;
     const i = idadePessoa(v, p);
-    if (i >= 18 && (p.ocupacao === 'estudante' || (!p.ocupacao && p.renda === 0))) {
+    // Quem importa (a parceria, o amigo próximo) tem carreira de verdade — a mesma dos filhos adultos (`filhos.carreiraDeAdulto`):
+    // cargo, renda e texto mudam juntos (nunca "advogada júnior" desempregada com salário congelado).
+    if (i >= 18 && i < 75 && importaParaCarreira(vin)) {
+      const romance = !!vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(vin.romance.estagio);
+      const res = carreiraDeAdulto(v, rngDe(v.id, 'carreira', p.id, v.t), p, vin, cota, romance);
+      if (res === 'perdeu' && romance) v.mente.estresse = clamp(v.mente.estresse + 6);
+    } else if (i >= 18 && (p.ocupacao === 'estudante' || (!p.ocupacao && p.renda === 0))) {
       if (r.chance(i >= 23 ? 0.6 : 0.3)) {
         const nivel = hash(p.id) ; // cada pessoa tem sua sorte, estável
         p.renda = Math.round((1500 + nivel * 6500 + (i >= 30 ? 1500 : 0)) / 10) * 10;
@@ -327,8 +339,11 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
     } else if (p.renda > 0 && i < 65 && r.chance(0.05)) {
       p.renda = 0;
       p.aperto = { tipo: 'desemprego', t: v.t };
+      // O cargo acompanha a renda: quem perdeu o trabalho não segue "empregado" no cabeçalho.
+      if (p.ocupacaoId || (p.ocupacao && p.ocupacao !== 'estudante')) { p.ocupacao = flex(p.genero, 'desempregado', 'desempregada', 'desempregade'); p.ocupacaoId = undefined; }
     } else if (p.renda === 0 && i >= 18 && i < 65 && r.chance(0.5)) {
       p.renda = Math.round((1500 + hash(p.id) * 6500) / 10) * 10;
+      if (p.ocupacao?.startsWith('desempregad')) p.ocupacao = undefined;
     } else if (i >= 65 && p.renda > 0 && r.chance(0.3)) {
       p.renda = Math.max(1620, Math.round(p.renda * 0.7));
       p.ocupacao = p.genero === 'feminino' ? 'aposentada' : 'aposentado';
@@ -372,12 +387,30 @@ export function descricaoOrigem(_v: Vida, vin: Vinculo): string {
   return 'por aí';
 }
 
+const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+
 function textoNovaAmizade(v: Vida, p: Pessoa, onde: string): string {
   const i = idade(v);
   const amigo = flex(p.genero, 'amigo', 'amiga', 'amigue');
-  if (i <= 10) return `${p.nome} virou ${flex(p.genero, 'o', 'a', 'e')} ${amigo} de todo dia ${onde}.`;
-  if (i <= 17) return `${onde.charAt(0).toUpperCase() + onde.slice(1)}, ${p.nome} deixou de ser só ${flex(p.genero, 'colega', 'colega')} e virou ${amigo}.`;
-  return `${p.nome}, que você conheceu ${onde}, virou ${amigo} de verdade.`;
+  const o = flex(p.genero, 'o', 'a', 'e');
+  if (i <= 10) return variante(v, 'amizade_crianca', [
+    `${p.nome} virou ${o} ${amigo} de todo dia ${onde}.`,
+    `${cap(onde)}, ${p.nome} passou a guardar lugar para você — e você, para ${flex(p.genero, 'ele', 'ela', 'elu')}.`,
+    `Com ${p.nome}, ${onde}, as brincadeiras ganharam regra própria e nome secreto.`,
+    ...(onde === 'na escola' || onde === 'na escolinha' ? [`${p.nome} e você viraram a dupla que a professora separa na sala.`, `${cap(onde)}, ${p.nome} dividiu o lanche uma vez — e depois todo dia.`] : [`${cap(onde)}, ${p.nome} passou a ser a primeira pessoa que você procurava ao chegar.`])
+  ]);
+  if (i <= 17) return variante(v, 'amizade_adolescente', [
+    `${cap(onde)}, ${p.nome} deixou de ser só ${flex(p.genero, 'colega', 'colega')} e virou ${amigo}.`,
+    `${p.nome} virou a pessoa das mensagens até de madrugada — ${onde}, e depois fora dali também.`,
+    `Foi ${onde} que ${p.nome} virou ${amigo}: um fone dividido, uma piada que só vocês entendem.`,
+    `${p.nome} e você passaram a ir e voltar juntos ${onde === 'na escola' ? 'da escola' : 'de lá'}; a amizade veio no caminho.`
+  ]);
+  return variante(v, 'amizade_adulta', [
+    `${p.nome}, que você conheceu ${onde}, virou ${amigo} de verdade.`,
+    `Com ${p.nome}, ${onde}, a conversa passou do assunto de sempre — e ficou.`,
+    `${p.nome} virou ${amigo}: daquelas amizades que começam tarde e parecem antigas.`,
+    `Um café depois do outro, ${p.nome} deixou de ser alguém ${onde} e virou ${amigo}.`
+  ]);
 }
 
 function textoAfastamento(v: Vida, p: Pessoa, outraCidade: boolean): string {
@@ -398,7 +431,10 @@ function variante(v: Vida, chave: string, frases: string[]): string {
   const k = `frase_${chave}`;
   const n = (v.fatos[k] ?? 0) as number;
   v.fatos[k] = n + 1;
-  return frases[n % frases.length];
+  // Cada vida começa num ponto diferente da lista (antes, a primeira amizade de TODA vida tinha a mesma frase);
+  // dentro da vida, as frases seguem girando, sem repetir em seguida.
+  const inicio = Math.floor(rngDe(v.id, 'variante', chave).next() * frases.length);
+  return frases[(inicio + n) % frases.length];
 }
 
 /** Pessoa conhecida "por aí" — usada por conteúdo que apresenta alguém. */

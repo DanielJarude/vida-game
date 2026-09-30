@@ -192,7 +192,9 @@ export function lancarObra(v: Vida, r: Rng): Obra {
   const d = linguagemDaCarreira(v);
   const p = v.caminhos.arte;
   const publico = p?.ativo ? p.publico : v.trabalho.atual?.clientela ?? 15;
-  const q = habilidade(v, d) / 100 * 0.62 + publico / 100 * 0.25 + (v.predisposicoes?.artistica ?? 0) * 0.08 + r.normal() * 0.13;
+  // Quem guarda tempo para a própria obra (ritmo leve de quem vive da arte) entrega uma obra mais cuidada.
+  const cuidada = v.trabalho.atual?.ritmo === 'leve' && v.trabalho.atual.clientela !== undefined ? 0.05 : 0;
+  const q = habilidade(v, d) / 100 * 0.62 + publico / 100 * 0.25 + (v.predisposicoes?.artistica ?? 0) * 0.08 + cuidada + r.normal() * 0.13;
   const recepcao: Obra['recepcao'] = q >= 0.66 ? 3 : q >= 0.52 ? 2 : q >= 0.38 ? 1 : 0;
   const lista = TITULOS[d] ?? TITULOS.musica!;
   const titulo = lista[((v.caminhos.obras?.length ?? 0) + Math.floor(v.t / 12)) % lista.length];

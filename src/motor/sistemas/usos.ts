@@ -25,6 +25,7 @@ import { aplicarPersonalidade } from '../personalidade';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { podeComecarRotina } from './rotinas';
 import { gv, textoVeiculo, usoMensalDoVeiculo, veiculoUtil } from './veiculos';
+import { faltaHabilitacao } from './habilitacoes';
 
 export type UsoVeiculo = 'passear' | 'viajar' | 'app' | 'personalizar' | 'emprestar';
 export type UsoCasa = 'festa' | 'familia' | 'decorar' | 'reformar';
@@ -65,6 +66,8 @@ export function disponibilidadeUsoVeiculo(v: Vida, b: Veiculo | undefined, oque:
   if (custo > 0 && disponivel(v) < custo) return { ok: false, motivo: `Custa uns ${fmt(custo)}.` };
   // O dinheiro existe, mas parte está aplicada: tirar é escolha (a interface oferece).
   if (custo > 0 && v.financas.conta < custo) return okDePagar(v, custo, 'Custa uns');
+  // Barco e avião: passeio e viagem, sim; aplicativo e empréstimo, não.
+  if (m.raro && (oque === 'app' || oque === 'emprestar')) return { ok: false, motivo: 'Não se aplica.' };
   switch (oque) {
     case 'passear': return ja(v, `uso:passear:${b.id}`) ? { ok: false, motivo: 'Já passearam bastante este ano.' } : { ok: true };
     case 'viajar': if (m.categoria === 'bicicleta') return { ok: false, motivo: 'De bicicleta, a estrada é outra história.' }; return ja(v, `uso:viajar:${b.id}`) ? { ok: false, motivo: 'Uma viagem de estrada por ano já é bastante.' } : { ok: true };
@@ -81,6 +84,12 @@ export function disponibilidadeUsoVeiculo(v: Vida, b: Veiculo | undefined, oque:
 
 function custoUso(v: Vida, b: Veiculo, oque: UsoVeiculo): number {
   const m = modeloVeiculo(b.modeloId);
+  if (m.raro) {
+    // Sem habilitação, vai quem conduza (marinheiro, piloto contratado): posse não é saber operar.
+    const contratado = faltaHabilitacao(v, b.modeloId) ? (m.categoria === 'aeronave' ? (oque === 'viajar' ? 6000 : 2500) : (oque === 'viajar' ? 2500 : 900)) : 0;
+    if (oque === 'passear') return Math.round((usoMensalDoVeiculo(b) * 0.3 + contratado) * c(v) / 10) * 10;
+    if (oque === 'viajar') return Math.round(((m.categoria === 'aeronave' ? 8000 : 3000) + contratado) * c(v) / 100) * 100;
+  }
   if (oque === 'passear') return m.categoria === 'bicicleta' ? 0 : Math.round(usoMensalDoVeiculo(b) * 0.3 * c(v) / 10) * 10;
   if (oque === 'viajar') return Math.round((m.categoria === 'moto' ? 900 : 1600) * c(v) / 100) * 100;
   if (oque === 'personalizar') return Math.round(Math.max(800, b.valor * 0.04) / 100) * 100;
@@ -90,6 +99,9 @@ function custoUso(v: Vida, b: Veiculo, oque: UsoVeiculo): number {
 export function rotuloUsoVeiculo(v: Vida, b: Veiculo, oque: UsoVeiculo): string {
   const m = modeloVeiculo(b.modeloId);
   const com = companhia(v);
+  const quem = faltaHabilitacao(v, b.modeloId) ? (m.categoria === 'aeronave' ? ' (com um piloto contratado)' : ' (com um marinheiro contratado)') : '';
+  if (m.categoria === 'embarcacao') { if (oque === 'passear') return `Um dia no mar${com.length ? ' com a família' : ''}${quem}`; if (oque === 'viajar') return `Uma travessia até uma ilha, com pernoite${quem}`; }
+  if (m.categoria === 'aeronave') { if (oque === 'passear') return `Um voo de fim de semana${quem}`; if (oque === 'viajar') return `Voar até ${destino(v)}${quem}`; }
   switch (oque) {
     case 'passear': return m.categoria === 'bicicleta' ? 'Pedalar no domingo' : com.length ? 'Um domingo de passeio com a família' : m.categoria === 'moto' ? 'Uma volta de moto no fim da tarde' : 'Um domingo de estrada';
     case 'viajar': return `Pegar a estrada até ${destino(v)}`;
@@ -113,6 +125,8 @@ export function executarUsoVeiculo(v: Vida, r: Rng, b: Veiculo, oque: UsoVeiculo
       v.mente.estresse = clamp(v.mente.estresse - 3);
       for (const p of com) { const vin = v.vinculos[p.id]; if (vin) { vin.proximidade = clamp(vin.proximidade + 3); vin.presenca = clamp((vin.presenca ?? 50) + 2); } }
       if (com.length) lembrarCom(v, com[0].id, `Um domingo de passeio de ${m.categoria === 'bicicleta' ? 'bicicleta' : m.categoria}.`, 'ritual', 1);
+      if (m.categoria === 'embarcacao') return com.length ? `Um dia inteiro na água, com ${nomes}: sol, mergulho, a volta com o céu alaranjado.` : 'Um dia na água, sozinho com o barulho do motor e das ondas.';
+      if (m.categoria === 'aeronave') return 'Lá de cima, a cidade parecia outra. O pouso foi o melhor momento do mês.';
       return m.categoria === 'bicicleta' ? 'Pedal no parque, água de coco na volta.' : com.length ? `Um domingo inteiro fora, com ${nomes}. Ninguém pegou no celular.` : 'Janela aberta, música alta, lugar nenhum para ir. Foi bom.';
     }
     case 'viajar': {
@@ -124,6 +138,8 @@ export function executarUsoVeiculo(v: Vida, r: Rng, b: Veiculo, oque: UsoVeiculo
       for (const p of com) { const vin = v.vinculos[p.id]; if (vin) { vin.proximidade = clamp(vin.proximidade + 5); vin.presenca = clamp((vin.presenca ?? 50) + 3); lembrarCom(v, p.id, `A viagem de estrada até ${lugar}.`, 'ritual', 2); } }
       hist(`Levou ${com.length ? 'a família' : 'você'} até ${lugar}.`);
       const pneu = r.chance(0.15);
+      const como = m.categoria === 'embarcacao' ? `Foi de ${m.nome} até uma ilha` : m.categoria === 'aeronave' ? `Voou até ${lugar}` : `Pegou a estrada ${m.categoria === 'moto' ? 'de moto' : 'de carro'} até ${lugar}`;
+      if (m.raro) { escrever(v, { texto: `${como}${com.length ? `, com ${nomes}` : ''}.`, relevancia: 'biografia', tema: 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id) }); return `${fmt(custo)} entre combustível, taxas e estadia${faltaHabilitacao(v, b.modeloId) ? ' (e quem conduziu)' : ''}. Uma viagem para contar.`; }
       escrever(v, { texto: `Pegou a estrada ${m.categoria === 'moto' ? 'de moto' : 'de carro'} até ${lugar}${com.length ? `, com ${nomes}` : ''}.${pneu ? ' Um pneu furou no meio do caminho — virou a história da viagem.' : ''}`, relevancia: com.length ? 'biografia' : 'cotidiano', tema: 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id) });
       return `${fmt(custo)} entre combustível, pedágio e pousada. ${com.length ? 'Voltaram cansados e perto.' : 'Voltou com a cabeça mais leve.'}`;
     }

@@ -23,7 +23,13 @@ import { clamp } from '../rng';
 import type { Dominio, FocoConcurso, Vida } from '../tipos';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { escrever, idade } from '../nucleo';
-import { habilidade } from './frentes';
+import { garantirFrente, habilidade, praticar } from './frentes';
+import { economiaLocal } from '../dados/lugares';
+import { pagar, vereditoDePagar } from './dinheiro';
+import { recursosDaFamilia } from './origem';
+import { estudarMateria, podeEstudarMateria } from './vestibular';
+import { preparoDaPos } from './escola';
+import type { Materia } from '../dados/cursos';
 import { MODALIDADES, NOME_MOD, nomeDeClube, ondeTreina } from './esporte';
 import { capitalDoEstado } from './escola';
 import { municipio } from '../dados/lugares';
@@ -37,8 +43,9 @@ import { marcar } from './marcas';
 import { anoDe } from '../tempo';
 import { propor } from './compromissos';
 import { flex, ge } from '../texto';
+import { disponibilidadeCena, executarCena, type OqueCena } from './cena';
 
-export type OquePerseguir = 'pedir_teste' | 'montar_grupo' | 'mostrar_trabalho' | 'foco_concurso' | 'bolsa_pesquisa';
+export type OquePerseguir = 'pedir_teste' | 'montar_grupo' | 'mostrar_trabalho' | 'foco_concurso' | 'bolsa_pesquisa' | 'estudo_dirigido' | 'preparar_pos' | 'treino_fundamentos' | OqueCena;
 export type AcaoPerseguirCmd = { tipo: 'perseguir'; oque: OquePerseguir; valor?: string };
 
 const FOCOS: FocoConcurso[] = ['policial', 'administrativo', 'fiscal', 'bancario', 'educacao', 'saude', 'academico'];
@@ -147,7 +154,7 @@ function podeMostrar(v: Vida): Veredito {
   if (!oc) return bloqueio('impossivel', 'Não se aplica.');
   if (v.trabalho.atual?.ocupacaoId === oc) return bloqueio('impossivel', 'Você já vive disso.');
   if (p.linguagem === 'danca' && idade(v) > 27) return bloqueio('requisito', 'As companhias profissionais de dança fazem audição até uns 27 anos.');
-  if (p.publico < 15) return bloqueio('requisito', `${p.nome} ainda não tem público: quem contrata quer ver gente na plateia. Ensaio firme e os primeiros shows vêm antes.`);
+  if (p.publico < 15) return bloqueio('requisito', `${p.nome} ainda não tem público: quem contrata quer ver gente na plateia. Apresentar-se (uma temporada curta, um show) e um edital de cultura constroem esse público.`);
   const ultima = v.fatos['arte_mostrou'];
   if (ultima !== undefined && v.t - ultima < 12) return bloqueio('incompativel', `O material foi mandado em ${anoDe(ultima)}: festival e produtor respondem uma vez por temporada.`);
   if (v.caminhos.oportunidades.some(o => o.tipo === 'convite' && o.ocupacaoId === oc)) return bloqueio('incompativel', 'Já há um convite esperando resposta.');
@@ -212,7 +219,7 @@ function pedirBolsa(v: Vida, r: Rng): { texto: string } {
   const chance = clamp(0.32 + (v.mente.cognicao - 50) / 200 - Math.max(0, anos - 5) * 0.03 + Math.min(0.1, pesquisa * 0.03) + (v.fatos['bolsas_tentadas'] ?? 0) * 0.03, 0.06, 0.6);
   v.fatos['bolsas_tentadas'] = (v.fatos['bolsas_tentadas'] ?? 0) + 1;
   if (r.chance(chance)) {
-    const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: 'pesquisador', via: 'oportunidade' }) === 'feito';
+    const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: 'pesquisador', via: 'bolsa' }) === 'feito';
     marcar(v, 'aprovacao', `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} num edital de pós-doutorado (${dout.nome}).`, 3, { ocupacaoId: 'pesquisador' });
     return { texto: feito ? `O projeto foi aprovado: dois anos de pós-doutorado, na área do ${dout.nome.replace(/^Doutorado/, 'doutorado')}.` : 'O projeto foi aprovado. Agora, é caber a bolsa na vida que você tem.' };
   }
@@ -221,6 +228,94 @@ function pedirBolsa(v: Vida, r: Rng): { texto: string } {
   registrarDevolutiva(v, { tipo: 'concurso', titulo: 'Edital de pós-doutorado', passou: false, perto, falta: pesquisa < 1 ? 'experiencia' : 'concorrencia', texto: `Não passou: ${motivo}. Editais abrem todo ano; dar aula numa faculdade ou pesquisar em algum projeto conta para o próximo.` });
   escrever(v, { texto: 'Mandou um projeto para um edital de pós-doutorado. Não passou desta vez.', relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
   return { texto: `Não passou: ${motivo}.` };
+}
+
+/* ------------------------------------------------------ Preparar a pós */
+
+/** Qual pós está no horizonte: o doutorado para quem tem mestrado, o mestrado para quem tem graduação. */
+function posDoHorizonte(v: Vida): 'mestrado' | 'doutorado' | undefined {
+  const tem = (n: string) => v.educacao.concluidos.some(c => c.nivel === n);
+  if (tem('doutorado')) return undefined;
+  if (tem('mestrado')) return 'doutorado';
+  return tem('superior') ? 'mestrado' : undefined;
+}
+
+function podePrepararPos(v: Vida): Veredito {
+  const alvo = posDoHorizonte(v);
+  if (!alvo) return bloqueio('requisito', v.educacao.concluidos.some(c => c.nivel === 'doutorado') ? 'O doutorado já está concluído.' : 'Mestrado pede a graduação concluída.');
+  const m = v.educacao.matricula;
+  if (m && !m.trancado && (m.cursoId === 'mestrado' || m.cursoId === 'doutorado')) return bloqueio('incompativel', 'Você já está na pós.');
+  if (preparoDaPos(v) >= 3) return bloqueio('incompativel', 'O projeto está pronto: agora, é a seleção.');
+  const t = v.fatos['pos_preparo_t'];
+  if (t !== undefined && v.t - t < 12) return bloqueio('incompativel', 'O projeto deste ano já está em andamento.');
+  return PERMITIDO;
+}
+
+/**
+ * Um ano preparando o projeto (e estudando para a prova da seleção): o fator
+ * controlável que a própria avaliação da pós aponta (`escola.avaliacaoDaPos`).
+ * Pede semana e cabeça; um professor da graduação por perto ajuda a lapidar.
+ */
+function prepararPos(v: Vida, r: Rng): { texto: string; tom: 'neutro' } {
+  const alvo = posDoHorizonte(v)!;
+  v.fatos['pos_preparo'] = preparoDaPos(v) + 1;
+  v.fatos['pos_preparo_t'] = v.t;
+  v.mente.estresse = clamp(v.mente.estresse + 3);
+  v.mente.cognicao = clamp(v.mente.cognicao + (r.chance(0.5) ? 1 : 0));
+  const n = v.fatos['pos_preparo'];
+  const texto = n === 1 ? `Começou a escrever o projeto para o ${alvo}: a pergunta da pesquisa, as leituras, o método. Ainda cru — mas existe.`
+    : n === 2 ? `Mais um ano no projeto do ${alvo}: a bibliografia cresceu, o método ficou claro, alguém da área leu e comentou.`
+      : `O projeto do ${alvo} está redondo: dá para defender numa banca.`;
+  escrever(v, { texto, relevancia: 'cotidiano', tema: 'estudo', escolha: true });
+  return { texto, tom: 'neutro' };
+}
+
+/* ------------------------------------------------ Treino de fundamentos */
+
+/**
+ * O treino que a peneira pede: fundamentos, com treinador, focado na técnica
+ * (a MESMA variável que a peneira lê: a habilidade na modalidade). É a
+ * resposta acionável a "a técnica ainda é de escolinha": uma escolinha ou
+ * projeto com treinador por um ano — custa (menos no projeto social) e rende
+ * mais do que a pelada. Uma vez por ano.
+ */
+function podeTreinarFundamentos(v: Vida, valor?: string): Veredito {
+  const d = (valor as Dominio | undefined) ?? 'futebol';
+  if (!MODS.includes(d)) return bloqueio('impossivel', 'Não se aplica.');
+  const i = idade(v);
+  if (i < 7) return bloqueio('requisito', 'A partir dos 7.');
+  if (i > 30) return bloqueio('improvavel', 'Treino de base é para quem ainda pode chegar a competir.');
+  if (v.justica?.prisao) return bloqueio('impossivel', 'Não enquanto cumpre pena.');
+  if (v.caminhos.esporte?.fase === 'profissional') return bloqueio('impossivel', 'No clube, o treino é do clube.');
+  const t = v.fatos[`fundamentos_${d}_t`];
+  if (t !== undefined && v.t - t < 12) return bloqueio('incompativel', 'O treino de fundamentos deste ano já está em andamento.');
+  // Menor de idade não paga do próprio bolso: a família paga a escolinha quando pode; quando não pode, há o projeto social do bairro.
+  if (i < 18) return PERMITIDO;
+  return vereditoDePagar(v, custoFundamentos(v), 'A escolinha com treinador custa uns');
+}
+
+/** Quem paga o treino do menor: a família (com folga, a escolinha) — ou é o projeto social, de graça. */
+const escolinhaPaga = (v: Vida) => idade(v) < 18 && recursosDaFamilia(v).folga >= 2;
+
+const custoFundamentos = (v: Vida) => Math.round(1800 * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
+
+function treinarFundamentos(v: Vida, r: Rng, d: Dominio): { texto: string; tom: 'neutro' } {
+  v.fatos[`fundamentos_${d}_t`] = v.t;
+  const menor = idade(v) < 18;
+  const projeto = menor && !escolinhaPaga(v);
+  if (!menor) pagar(v, custoFundamentos(v));
+  garantirFrente(v, d);
+  const antes = habilidade(v, d);
+  // Treino com treinador, focado: qualidade alta (a pelada é quantidade; isto é método). O projeto social tem menos estrutura.
+  praticar(v, r, d, projeto ? 0.95 : 1.1, projeto ? 1.3 : 1.5);
+  const f = v.caminhos.frentes[d]!;
+  f.meses += 6;
+  const depois = habilidade(v, d);
+  const nome = NOME_MOD[d] ?? d;
+  const onde = projeto ? 'no projeto social do bairro, com um treinador voluntário' : menor ? 'numa escolinha paga pela família' : 'com treinador';
+  const texto = `Um ano de treino de fundamentos em ${nome}, ${onde}: ${d === 'futebol' ? 'passe, domínio, finalização' : 'fundamentos'}, repetição até cansar.${depois - antes >= 2 ? ' A técnica deu um passo à frente.' : ' A técnica anda devagar — mas anda.'}`;
+  escrever(v, { texto, relevancia: 'cotidiano', tema: 'lazer', escolha: true });
+  return { texto, tom: 'neutro' };
 }
 
 /* ------------------------------------------------------------ Entrada única */
@@ -233,6 +328,10 @@ export function disponibilidadePerseguir(v: Vida, a: AcaoPerseguirCmd): Veredito
     case 'mostrar_trabalho': return podeMostrar(v);
     case 'foco_concurso': return podeFocar(v, a.valor);
     case 'bolsa_pesquisa': return podeBolsa(v);
+    case 'estudo_dirigido': return podeEstudarMateria(v, a.valor);
+    case 'preparar_pos': return podePrepararPos(v);
+    case 'treino_fundamentos': return podeTreinarFundamentos(v, a.valor);
+    case 'apresentar': case 'edital': case 'audicao': case 'trabalho_pequeno': return disponibilidadeCena(v, a.oque);
   }
   return bloqueio('impossivel', 'Não se aplica.');
 }
@@ -248,6 +347,10 @@ export function executarPerseguir(v: Vida, r: Rng, a: AcaoPerseguirCmd): { texto
       return { texto: foco ? `Estudo dirigido para ${NOME_FOCO[foco]}: o que você já estudou continua valendo, mas daqui para a frente o edital dessa área é que manda na apostila.` : 'Estudo geral: um pouco de tudo, sem apostar numa área.' };
     }
     case 'bolsa_pesquisa': return pedirBolsa(v, r);
+    case 'estudo_dirigido': return estudarMateria(v, r, a.valor as Materia);
+    case 'preparar_pos': return prepararPos(v, r);
+    case 'treino_fundamentos': return treinarFundamentos(v, r, (a.valor as Dominio | undefined) ?? 'futebol');
+    case 'apresentar': case 'edital': case 'audicao': case 'trabalho_pequeno': return executarCena(v, r, a.oque);
   }
   return {};
 }

@@ -8,7 +8,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
-import { imagemPublica, palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
+import { imagemPublica, notoriedadeDoPassado, palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
@@ -18,7 +18,7 @@ import { Retrato } from '../avatar/Retrato';
 import { BotaoAcao, Vazio } from '../comum';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
-import { expressaoDe, lerDimensao, lerPessoal, momentoAtual, palavraTendencia, type LeituraDimensao } from '../estadoPessoal';
+import { expressaoDe, lerDimensao, noQueEBom, lerPessoal, momentoAtual, palavraTendencia, type LeituraDimensao } from '../estadoPessoal';
 import { sinaisDoCorpo } from '../../motor/sistemas/saude';
 import type { DimensaoPessoal } from '../../motor/sistemas/pessoa';
 import { anoDe } from '../../motor/tempo';
@@ -50,7 +50,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
           <h1 className="voce-rosto__momento">{momentoAtual(vida)}</h1>
           <p className="voce-rosto__linha">{ocupacaoAtual(vida)} · {ondeMora(vida)}</p>
           {afeto && <p className="voce-rosto__linha">{afeto}{luto ? ` · ${luto}` : ''}</p>}
-          {vida.notoriedade && vida.notoriedade.valor >= 10 && <p className="voce-rosto__linha">Para o público: {palavraDaNotoriedade(vida)} ({({ esporte: 'pelo esporte', arte: 'pela obra', politica: 'pela vida pública', negocio: 'pelo negócio' } as const)[vida.notoriedade.fonte ?? 'esporte']})</p>}
+          {vida.notoriedade && vida.notoriedade.valor >= 10 && <p className="voce-rosto__linha">Para o público: {palavraDaNotoriedade(vida)} ({({ esporte: 'pelo esporte', arte: 'pela obra e pelos trabalhos', politica: 'pela vida pública', negocio: 'pelo negócio' } as const)[vida.notoriedade.fonte ?? 'esporte']}{notoriedadeDoPassado(vida) ? ' — o público ainda lembra; sem exposição, o nome esfria devagar' : ''})</p>}
           {(() => { const im = imagemPublica(vida); return im ? <p className="voce-rosto__linha">Imagem pública: {im.palavra} — {im.texto.charAt(0).toLowerCase() + im.texto.slice(1)}</p> : null; })()}
         </div>
       </section>
@@ -60,6 +60,13 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       </div>
 
       {pessoais.length > 0 && <CorpoEAprendizado vida={vida} dims={pessoais} irPara={irPara} />}
+
+      {(() => { const bom = noQueEBom(vida); return bom.length ? (
+        <section className="voce-bom" aria-labelledby="titulo-bom">
+          <h2 id="titulo-bom" className="voce-subtitulo">No que você é bom</h2>
+          <dl className="dados">{bom.map(x => <div key={x.rotulo} className="dado"><dt>{x.rotulo}</dt><dd>{x.texto}</dd></div>)}</dl>
+        </section>
+      ) : null; })()}
 
       {sinais.length > 0 && (
         <section className="voce-condicoes voce-sinais" aria-label="Sinais do corpo">

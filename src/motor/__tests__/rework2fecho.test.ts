@@ -102,6 +102,9 @@ describe('2 e 3. sem limite global de interações — e sem farm', () => {
   it('o alívio de desabafar tem retorno decrescente no ano: dez desabafos não valem dez', () => {
     let v = pessoa(35, 312);
     v.mente.estresse = 70; v.mente.felicidade = 40;
+    // Estado limpo: o que a vida sorteada já carregava de abalos do ano não entra na conta do retorno decrescente.
+    v.mente.abalos = v.mente.abalos.filter(a => v.t - a.t > 12);
+    v.luto = []; // um luto recente da vida sorteada manteria a necessidade de desabafar aberta (e o teste mediria o luto, não o retorno decrescente)
     const ids = Array.from({ length: 10 }, (_, k) => { const x = amiga(v, `Amiga${k}`, 600 + k, 70); x.vin.estagio = 'amigo_proximo'; x.vin.confianca = 75; return x.p.id; });
     const inicio = v.mente.estresse;
     let primeiro = 0;
@@ -122,6 +125,8 @@ describe('2 e 3. sem limite global de interações — e sem farm', () => {
     for (let s = 700; s < 740 && !achou; s++) {
       let v = pessoa(24, 313, 'masculino');
       v.eu.atracao = 'mulheres';
+      // Cada tentativa, um dia diferente (o sorteio de "como a conversa caiu" varia; antes, era o mesmo nas 40).
+      v.rng = s * 7919;
       const a = criarPessoa(v, criarRng(s), { idade: 24, genero: 'feminino', municipioId: v.moradia.municipioId }); a.atracao = 'homens'; a.parceiroId = undefined;
       const b = criarPessoa(v, criarRng(s + 1000), { idade: 24, genero: 'feminino', municipioId: v.moradia.municipioId }); b.atracao = 'homens'; b.parceiroId = undefined;
       vincular(v, a, { origem: 'trabalho', proximidade: 30, convivio: ['trabalho'] });

@@ -87,6 +87,13 @@ export function semana(v: Vida): Semana {
     fixos.push({ id: 'trabalho', rotulo: e.formacaoAte ? `Curso de formação (${nome})` : `Trabalho (${nome}${oc?.jornada === 'fora' ? ', dias fora de casa' : oc?.jornada === 'longa' ? ', jornada longa' : oc?.jornada === 'plantao' ? ', em plantões' : e.reduzida ? ', jornada reduzida' : e.carga === 'parcial' ? ', meio período' : ''}${ritmo})`, peso, tipo: 'trabalho' });
     if (v.trabalho.horasExtras) fixos.push({ id: 'horas_extras', rotulo: 'Horas extras', peso: 0.5, tipo: 'trabalho' });
   }
+  // A trajetória em paralelo também é semana (menos que a principal: são alguns trabalhos, não o expediente).
+  const par = v.trabalho.paralela;
+  if (par) {
+    const oc = ocupacaoOuNula(par.ocupacaoId);
+    const nome = oc ? (v.eu.genero === 'feminino' ? oc.nome[1] : oc.nome[0]) : 'trabalho';
+    fixos.push({ id: 'paralela', rotulo: `${nome.charAt(0).toUpperCase() + nome.slice(1)} (em paralelo)`, peso: 0.6, tipo: 'trabalho' });
+  }
   // O negócio tocado nas horas vagas também é semana (menos, se há equipe ou sócio no dia a dia).
   const n = v.caminhos.negocio;
   if (n && n.estado !== 'fechado' && (n.dedicacao ?? 'integral') === 'paralela') {

@@ -53,7 +53,13 @@ export interface ItemEstilo {
   /** Preço de referência (reais de hoje; a cidade ajusta). */
   preco: number;
   /** O que o item muda no retrato quando está em uso. */
-  visual?: Partial<Pick<Visual, 'oculos' | 'chapeu' | 'roupa'>>;
+  visual?: Partial<Pick<Visual, 'oculos' | 'chapeu' | 'roupa' | 'joia'>>;
+  /**
+   * Onde se usa (um de cada vez por lugar): o relógio no pulso, a joia no
+   * pescoço ou nas orelhas. Sem `visual` (o relógio), usar e guardar é posse
+   * de verdade — aparece em Você, não no retrato.
+   */
+  lugar?: 'pulso' | 'joia';
   /** Peça de luxo: status social em certos contextos — nunca fama. */
   luxo?: boolean;
   descricao: string;
@@ -74,9 +80,28 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   { id: 'roupa_social', nome: 'Roupas sociais', categoria: 'roupa', preco: 950, visual: { roupa: 'social' }, descricao: 'Camisa, calça de alfaiataria, um sapato que não machuca. A entrevista agradece.' },
   { id: 'roupa_alternativa', nome: 'Roupas de brechó e autorais', categoria: 'roupa', preco: 380, visual: { roupa: 'alternativa' }, descricao: 'Peças garimpadas, cor, estampa, um jeito próprio.' },
   { id: 'roupa_elegante', nome: 'Guarda-roupa de grife', categoria: 'roupa', preco: 6500, visual: { roupa: 'elegante' }, luxo: true, descricao: 'Peças de marca, corte perfeito. Ninguém pergunta o preço; quem sabe, sabe.' },
-  { id: 'relogio', nome: 'Relógio', categoria: 'acessorio', preco: 320, descricao: 'Um relógio de pulso que dura.' },
-  { id: 'relogio_luxo', nome: 'Relógio de luxo', categoria: 'acessorio', preco: 24000, luxo: true, descricao: 'Suíço, automático. Um anônimo com ele continua anônimo.' },
-  { id: 'joia', nome: 'Uma joia', categoria: 'acessorio', preco: 2800, luxo: true, descricao: 'Ouro, uma pedra, um presente para si.' }
+  { id: 'relogio', nome: 'Relógio', categoria: 'acessorio', lugar: 'pulso', preco: 320, descricao: 'Um relógio de pulso que dura.' },
+  { id: 'relogio_luxo', nome: 'Relógio de luxo', categoria: 'acessorio', lugar: 'pulso', preco: 24000, luxo: true, descricao: 'Suíço, automático. Um anônimo com ele continua anônimo.' },
+  { id: 'joia', nome: 'Uma joia', categoria: 'acessorio', lugar: 'joia', preco: 2800, luxo: true, visual: { joia: 'corrente_ouro' }, descricao: 'Ouro, uma pedra, um presente para si.' },
+  // Mais variedade (sem virar simulador de moda): o que se escolhe de verdade no dia a dia.
+  { id: 'oculos_aviador', nome: 'Óculos aviador', categoria: 'oculos', preco: 320, visual: { oculos: 'sol' }, descricao: 'Lente espelhada, armação fina de metal.' },
+  { id: 'oculos_grau_acetato', nome: 'Óculos de grau de acetato', categoria: 'oculos', preco: 780, visual: { oculos: 'grau' }, receita: true, descricao: 'A receita de sempre numa armação que é escolha, não só necessidade.' },
+  { id: 'bone_aba_reta', nome: 'Boné de aba reta', categoria: 'chapeu', preco: 120, visual: { chapeu: 'bone' }, descricao: 'Aba reta, bordado na frente.' },
+  { id: 'chapeu_palha', nome: 'Chapéu de palha', categoria: 'chapeu', preco: 90, visual: { chapeu: 'chapeu' }, descricao: 'Para a praia, a roça, o sol de meio-dia.' },
+  { id: 'roupa_basica_boa', nome: 'Básicos de qualidade', categoria: 'roupa', preco: 600, visual: { roupa: 'basica' }, descricao: 'Camisetas boas, um jeans que veste bem. O de sempre, melhor.' },
+  { id: 'terno', nome: 'Terno sob medida', categoria: 'roupa', preco: 3200, visual: { roupa: 'social' }, descricao: 'Feito no alfaiate, com prova e ajuste. Casamento, formatura, a reunião que importa.' },
+  { id: 'relogio_digital', nome: 'Relógio digital esportivo', categoria: 'acessorio', lugar: 'pulso', preco: 450, descricao: 'Cronômetro, alarme, à prova d’água. Aguenta treino.' },
+  { id: 'smartwatch', nome: 'Relógio inteligente', categoria: 'acessorio', lugar: 'pulso', preco: 1800, descricao: 'Mensagem no pulso, passos contados, o coração medido.' },
+  { id: 'corrente_prata', nome: 'Corrente de prata', categoria: 'acessorio', lugar: 'joia', preco: 380, visual: { joia: 'corrente' }, descricao: 'Fina, discreta, no pescoço.' },
+  { id: 'brincos', nome: 'Brincos', categoria: 'acessorio', lugar: 'joia', preco: 240, visual: { joia: 'brincos' }, descricao: 'Argola pequena ou ponto de luz.' },
+  { id: 'brincos_ouro', nome: 'Brincos de ouro', categoria: 'acessorio', lugar: 'joia', preco: 3400, luxo: true, visual: { joia: 'brincos' }, descricao: 'Ouro dezoito, pedra pequena. Um presente que fica.' }
+];
+
+/** As lojas (balcões) dentro de Compras: ótica, roupas e chapéus, relojoaria e joalheria. */
+export const BALCOES: { id: 'otica' | 'roupas' | 'joias'; nome: string; categorias: CategoriaItem[] }[] = [
+  { id: 'otica', nome: 'Ótica', categorias: ['oculos'] },
+  { id: 'roupas', nome: 'Roupas e chapéus', categorias: ['roupa', 'chapeu'] },
+  { id: 'joias', nome: 'Relojoaria e joalheria', categorias: ['acessorio'] }
 ];
 
 const POR_ID = new Map(ITENS_ESTILO.map(x => [x.id, x]));

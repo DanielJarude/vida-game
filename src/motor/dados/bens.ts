@@ -12,7 +12,28 @@
  * Cidade de custo 1,0.
  */
 
-export type CategoriaVeiculo = 'bicicleta' | 'moto' | 'carro';
+export type CategoriaVeiculo = 'bicicleta' | 'moto' | 'carro' | 'embarcacao' | 'aeronave';
+
+/** Em palavras (a loja, o filtro, a frase). */
+export const NOME_CATEGORIA: Record<CategoriaVeiculo, { um: string; varios: string }> = {
+  bicicleta: { um: 'bicicleta', varios: 'Bicicletas' }, moto: { um: 'moto', varios: 'Motos' }, carro: { um: 'carro', varios: 'Carros' },
+  embarcacao: { um: 'embarcação', varios: 'Embarcações' }, aeronave: { um: 'aeronave', varios: 'Aeronaves' }
+};
+
+/**
+ * A forma de cada veículo (o desenho, a leitura): um hatch não é uma picape,
+ * uma scooter não é uma moto de trilha. Derivada da versão (ou dita nela).
+ */
+export type FormaVeiculo =
+  | 'hatch' | 'seda' | 'suv' | 'picape' | 'esportivo'
+  | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail'
+  | 'urbana' | 'estrada' | 'mtb' | 'eletrica'
+  | 'jetski' | 'lancha' | 'veleiro'
+  | 'ultraleve' | 'monomotor';
+
+/** Habilitação para operar (separada da posse: ter um barco não é saber pilotar um). */
+export type Habilitacao = 'cnh' | 'nautica' | 'piloto';
+export const NOME_HABILITACAO: Record<Habilitacao, string> = { cnh: 'carteira de motorista', nautica: 'habilitação náutica', piloto: 'licença de piloto' };
 
 export interface ModeloVeiculo {
   id: string;
@@ -41,6 +62,10 @@ export interface ModeloVeiculo {
   pesoUsado: number;
   /** Tem bateria de tração (bicicleta elétrica): pode dar problema de bateria. */
   eletrica?: boolean;
+  /** Operar pede outra habilitação (barco, avião): quem não tem, contrata quem tenha. */
+  habilitacao?: Exclude<Habilitacao, 'cnh'>;
+  /** Raro e contextual: onde se vende (perto da água, cidade com aeroclube). */
+  raro?: boolean;
 }
 
 /** Classes de veículo (os ids ficam: estão nos saves e em toda a simulação). */
@@ -53,7 +78,13 @@ export const VEICULOS: readonly ModeloVeiculo[] = [
   { id: 'carro_sedan', nome: 'sedã médio', categoria: 'carro', preco: 140000, usoMensal: 650, taxaAnual: 0.075, idadeMin: 18, cnh: true, lugares: 5, conforto: 3, fragilidade: 0.9, descricao: 'Porta-malas grande, estrada confortável.', usado: true, fatorConserto: 1.2, pesoUsado: 2.5 },
   { id: 'carro_suv', nome: 'SUV compacto', categoria: 'carro', preco: 160000, usoMensal: 720, taxaAnual: 0.08, idadeMin: 18, cnh: true, lugares: 5, conforto: 4, fragilidade: 1, descricao: 'Alto, espaçoso, bom para a família.', usado: true, fatorConserto: 1.2, pesoUsado: 2 },
   { id: 'carro_suv_grande', nome: 'SUV grande', categoria: 'carro', preco: 270000, usoMensal: 950, taxaAnual: 0.08, idadeMin: 18, cnh: true, lugares: 7, conforto: 4, fragilidade: 1.1, descricao: 'Sete lugares, estrada de terra, conta de posto alta.', usado: true, fatorConserto: 1.4, pesoUsado: 1 },
-  { id: 'carro_luxo', nome: 'carro de luxo', categoria: 'carro', preco: 420000, usoMensal: 1400, taxaAnual: 0.08, idadeMin: 18, cnh: true, lugares: 5, conforto: 5, fragilidade: 1.2, descricao: 'Chama atenção — boa e má. Peça cara, oficina especializada.', usado: true, fatorConserto: 2.4, pesoUsado: 0.5 }
+  { id: 'carro_luxo', nome: 'carro de luxo', categoria: 'carro', preco: 420000, usoMensal: 1400, taxaAnual: 0.08, idadeMin: 18, cnh: true, lugares: 5, conforto: 5, fragilidade: 1.2, descricao: 'Chama atenção — boa e má. Peça cara, oficina especializada.', usado: true, fatorConserto: 2.4, pesoUsado: 0.5 },
+  // Raros: na água e no ar. Caros para comprar e MAIS para manter (marina, hangar, seguro, revisão obrigatória).
+  { id: 'jetski', nome: 'moto aquática', categoria: 'embarcacao', preco: 78000, usoMensal: 900, taxaAnual: 0.04, idadeMin: 18, cnh: false, habilitacao: 'nautica', raro: true, lugares: 2, conforto: 3, fragilidade: 1.1, descricao: 'Barulho, sal e sol. Guarda-se numa marina (e paga-se por isso).', usado: true, fatorConserto: 1.6, pesoUsado: 1 },
+  { id: 'lancha', nome: 'lancha', categoria: 'embarcacao', preco: 420000, usoMensal: 4200, taxaAnual: 0.045, idadeMin: 18, cnh: false, habilitacao: 'nautica', raro: true, lugares: 8, conforto: 5, fragilidade: 1.2, descricao: 'Um dia no mar com gente querida. Marina, combustível, marinheiro de vez em quando: a conta não para.', usado: true, fatorConserto: 2.6, pesoUsado: 0.8 },
+  { id: 'veleiro', nome: 'veleiro', categoria: 'embarcacao', preco: 360000, usoMensal: 2600, taxaAnual: 0.04, idadeMin: 18, cnh: false, habilitacao: 'nautica', raro: true, lugares: 6, conforto: 4, fragilidade: 1, descricao: 'Anda com o vento: pouco combustível, muito aprendizado.', usado: true, fatorConserto: 2.2, pesoUsado: 0.5 },
+  { id: 'ultraleve', nome: 'ultraleve', categoria: 'aeronave', preco: 390000, usoMensal: 3200, taxaAnual: 0.05, idadeMin: 18, cnh: false, habilitacao: 'piloto', raro: true, lugares: 2, conforto: 3, fragilidade: 1.2, descricao: 'Voar baixo, de manhã cedo. Hangar, combustível e revisões pesam.', usado: true, fatorConserto: 2.8, pesoUsado: 0.6 },
+  { id: 'monomotor', nome: 'avião monomotor', categoria: 'aeronave', preco: 2400000, usoMensal: 12000, taxaAnual: 0.05, idadeMin: 18, cnh: false, habilitacao: 'piloto', raro: true, lugares: 4, conforto: 5, fragilidade: 1.1, descricao: 'Quatro lugares e o país inteiro ao alcance — com hangar, inspeção e uma conta de manutenção de empresa.', usado: true, fatorConserto: 3.2, pesoUsado: 0.4 }
 ];
 
 /** Faixa de preço dentro da categoria (carros, motos, bicicletas). */
@@ -90,6 +121,8 @@ export interface VersaoVeiculo {
   lugares?: number;
   /** Ajuste da descrição da classe. */
   descricao?: string;
+  /** A forma (o desenho); sem ela, derivada da dica (`formaDaVersao`). */
+  forma?: FormaVeiculo;
 }
 
 export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
@@ -143,8 +176,48 @@ export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
   { id: 'bmw_320i', classe: 'carro_luxo', marca: 'BMW', modelo: '320i', acabamento: 'M Sport', dica: 'sedã de luxo', faixa: 'alta', preco: 359900, artigo: 'o', pesoUsado: 1, usoMensal: 1250 },
   { id: 'mercedes_c300', classe: 'carro_luxo', marca: 'Mercedes-Benz', modelo: 'C 300', acabamento: 'AMG Line', dica: 'sedã de luxo', faixa: 'alta', preco: 419900, artigo: 'o', pesoUsado: 0.8 },
   { id: 'volvo_xc60', classe: 'carro_luxo', marca: 'Volvo', modelo: 'XC60', acabamento: 'T8 híbrido plug-in', dica: 'SUV de luxo híbrido', faixa: 'alta', preco: 449900, artigo: 'o', pesoUsado: 0.5, usoMensal: 1100 },
-  { id: 'porsche_macan', classe: 'carro_luxo', marca: 'Porsche', modelo: 'Macan', dica: 'SUV esportivo', faixa: 'alta', preco: 629900, artigo: 'o', pesoUsado: 0.3, usoMensal: 1800 }
+  { id: 'porsche_macan', classe: 'carro_luxo', marca: 'Porsche', modelo: 'Macan', dica: 'SUV esportivo', faixa: 'alta', preco: 629900, artigo: 'o', pesoUsado: 0.3, usoMensal: 1800, forma: 'suv' },
+  { id: 'ford_mustang', classe: 'carro_luxo', marca: 'Ford', modelo: 'Mustang', acabamento: 'GT 5.0 V8', dica: 'esportivo', faixa: 'alta', preco: 549900, artigo: 'o', pesoUsado: 0.3, usoMensal: 1900, forma: 'esportivo', lugares: 4 },
+  { id: 'porsche_911', classe: 'carro_luxo', marca: 'Porsche', modelo: '911', acabamento: 'Carrera', dica: 'esportivo', faixa: 'alta', preco: 1090000, artigo: 'o', pesoUsado: 0.15, usoMensal: 2400, forma: 'esportivo', lugares: 4 },
+  // Mais motos e bicicletas (a scooter do dia a dia, a esportiva, a speed)
+  { id: 'honda_pcx', classe: 'moto_pequena', marca: 'Honda', modelo: 'PCX 160', dica: 'scooter 160 cc', faixa: 'intermediaria', preco: 21900, artigo: 'a', pesoUsado: 1, forma: 'scooter' },
+  { id: 'kawasaki_ninja400', classe: 'moto_media', marca: 'Kawasaki', modelo: 'Ninja 400', dica: 'moto esportiva 400 cc', faixa: 'alta', preco: 38900, artigo: 'a', pesoUsado: 0.5, usoMensal: 320, forma: 'esportiva' },
+  { id: 'caloi_strada', classe: 'bike', marca: 'Caloi', modelo: 'Strada', acabamento: 'alumínio, 16 marchas', dica: 'bicicleta de estrada (speed)', faixa: 'intermediaria', preco: 3900, artigo: 'a', pesoUsado: 0.6, forma: 'estrada' },
+  // Na água
+  { id: 'seadoo_spark', classe: 'jetski', marca: 'Sea-Doo', modelo: 'Spark', dica: 'moto aquática', faixa: 'economica', preco: 69900, artigo: 'a', pesoUsado: 1, forma: 'jetski' },
+  { id: 'yamaha_vx', classe: 'jetski', marca: 'Yamaha', modelo: 'VX Cruiser', dica: 'moto aquática para três', faixa: 'intermediaria', preco: 98900, artigo: 'a', pesoUsado: 0.8, forma: 'jetski' },
+  { id: 'focker_242', classe: 'lancha', marca: 'Fibrafort', modelo: 'Focker 242', dica: 'lancha de 24 pés', faixa: 'intermediaria', preco: 389000, artigo: 'a', pesoUsado: 1, forma: 'lancha' },
+  { id: 'schaefer_303', classe: 'lancha', marca: 'Schaefer', modelo: '303', dica: 'lancha de 30 pés, com cabine', faixa: 'alta', preco: 1250000, artigo: 'a', pesoUsado: 0.4, usoMensal: 7800, lugares: 10, forma: 'lancha' },
+  { id: 'delta_26', classe: 'veleiro', marca: 'Delta', modelo: '26', dica: 'veleiro de 26 pés', faixa: 'intermediaria', preco: 340000, artigo: 'o', pesoUsado: 0.6, forma: 'veleiro' },
+  { id: 'fast_310', classe: 'veleiro', marca: 'Fast', modelo: '310', dica: 'veleiro de 31 pés, com cabine', faixa: 'alta', preco: 690000, artigo: 'o', pesoUsado: 0.3, usoMensal: 3800, forma: 'veleiro' },
+  // No ar
+  { id: 'inpaer_excel', classe: 'ultraleve', marca: 'Inpaer', modelo: 'Excel', dica: 'ultraleve de dois lugares', faixa: 'intermediaria', preco: 420000, artigo: 'o', pesoUsado: 0.6, forma: 'ultraleve' },
+  { id: 'paradise_p1', classe: 'ultraleve', marca: 'Paradise', modelo: 'P1', dica: 'ultraleve de asa alta', faixa: 'economica', preco: 330000, artigo: 'o', pesoUsado: 0.8, forma: 'ultraleve' },
+  { id: 'cessna_172', classe: 'monomotor', marca: 'Cessna', modelo: '172 Skyhawk', dica: 'monomotor de quatro lugares', faixa: 'alta', preco: 2600000, artigo: 'o', pesoUsado: 0.5, forma: 'monomotor' },
+  { id: 'piper_archer', classe: 'monomotor', marca: 'Piper', modelo: 'Archer', dica: 'monomotor de asa baixa, quatro lugares', faixa: 'alta', preco: 2300000, artigo: 'o', pesoUsado: 0.5, forma: 'monomotor' }
 ];
+
+/** A forma de uma versão (o desenho que a representa). */
+export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): FormaVeiculo {
+  if (x?.forma) return x.forma;
+  const c = x?.classe ?? classe ?? 'carro_compacto';
+  const d = (x?.dica ?? '').toLowerCase();
+  const m = VEICULOS.find(y => y.id === c);
+  switch (m?.categoria) {
+    case 'bicicleta': return m.eletrica ? 'eletrica' : /trilha|mountain/.test(d) ? 'mtb' : /estrada|speed/.test(d) ? 'estrada' : 'urbana';
+    case 'moto': return /scooter/.test(d) || x?.id === 'honda_pop' || x?.id === 'honda_biz' ? 'scooter' : /trail|terra/.test(d) ? 'trail' : /clássica|custom/.test(d) ? 'cruiser' : /esportiva/.test(d) ? 'esportiva' : 'street';
+    case 'embarcacao': return c === 'jetski' ? 'jetski' : c === 'veleiro' ? 'veleiro' : 'lancha';
+    case 'aeronave': return c === 'ultraleve' ? 'ultraleve' : 'monomotor';
+    default: return /picape/.test(d) ? 'picape' : /suv/.test(d) ? 'suv' : /esportivo/.test(d) ? 'esportivo' : /sedã/.test(d) ? 'seda' : c === 'carro_sedan' ? 'seda' : c.startsWith('carro_suv') ? 'suv' : 'hatch';
+  }
+}
+
+export const NOME_FORMA: Record<FormaVeiculo, string> = {
+  hatch: 'hatch', seda: 'sedã', suv: 'SUV', picape: 'picape', esportivo: 'esportivo',
+  scooter: 'scooter', street: 'moto de rua', esportiva: 'moto esportiva', cruiser: 'moto clássica', trail: 'moto de trilha',
+  urbana: 'bicicleta urbana', estrada: 'bicicleta de estrada', mtb: 'mountain bike', eletrica: 'bicicleta elétrica',
+  jetski: 'moto aquática', lancha: 'lancha', veleiro: 'veleiro', ultraleve: 'ultraleve', monomotor: 'monomotor'
+};
 
 export const versaoVeiculo = (id: string | undefined) => (id ? VERSOES_VEICULO.find(x => x.id === id) : undefined);
 export const versoesDaClasse = (classe: string) => VERSOES_VEICULO.filter(x => x.classe === classe);

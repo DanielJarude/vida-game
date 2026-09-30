@@ -1,0 +1,6 @@
+# Mantém LF no repositório e no working tree, inclusive quando editado pelo lado Windows.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.zip binary

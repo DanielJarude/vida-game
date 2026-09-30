@@ -143,24 +143,31 @@ export function comprarItem(v: Vida, itemId: string, pagoPelaFamilia = false): s
   v.eu.estilo ??= { itens: [] };
   const item: ItemDeEstilo = { id: novoId(v, 'est'), itemId, t: v.t, preco, usando: true };
   v.eu.estilo.itens.push(item);
-  // Passa a usar (o que era da mesma categoria sai).
-  if (it.visual) {
-    for (const x of v.eu.estilo.itens) if (x !== item && itemEstilo(x.itemId)?.categoria === it.categoria) x.usando = false;
-    Object.assign(v.eu.visual, it.visual);
-  }
+  // Passa a usar (o que ocupa o mesmo lugar sai: a mesma categoria que aparece no retrato, o mesmo pulso, o mesmo pescoço).
+  for (const x of v.eu.estilo.itens) if (x !== item && mesmoLugar(it, itemEstilo(x.itemId))) x.usando = false;
+  if (it.visual) Object.assign(v.eu.visual, it.visual);
   v.eu.estilo.tMudanca = v.t;
   return it.luxo ? `Comprou ${it.nome.toLowerCase()} por ${fmt(preco)}. É bonito. Ninguém na rua sabe quem você é por causa disso.` : `Comprou ${it.nome.toLowerCase()}${pagoPelaFamilia ? '' : ` por ${fmt(preco)}`}.`;
+}
+
+/** Dois itens disputam o mesmo lugar (só um de cada vez)? */
+function mesmoLugar(a: ReturnType<typeof itemEstilo>, b: ReturnType<typeof itemEstilo>): boolean {
+  if (!a || !b) return false;
+  if (a.lugar || b.lugar) return a.lugar === b.lugar;
+  return !!a.visual && !!b.visual && a.categoria === b.categoria;
 }
 
 export function usarItem(v: Vida, itemId: string, usar: boolean): string {
   const it = itemEstilo(itemId)!;
   const x = itensDaPessoa(v).find(y => y.itemId === itemId)!;
+  if (usar) for (const y of itensDaPessoa(v)) if (y !== x && mesmoLugar(it, itemEstilo(y.itemId))) y.usando = false;
   if (it.visual) {
     const m: MudancaVisual = {};
     if (it.visual.oculos) m.oculos = usar ? it.visual.oculos : undefined;
     if (it.visual.chapeu) m.chapeu = usar ? it.visual.chapeu : undefined;
     if (it.visual.roupa) m.roupa = usar ? it.visual.roupa : 'basica';
     mudarAparencia(v, m);
+    if (it.visual.joia) v.eu.visual.joia = usar ? it.visual.joia : undefined;
   }
   x.usando = usar;
   return usar ? `Passou a usar: ${it.nome.toLowerCase()}.` : `Guardou: ${it.nome.toLowerCase()}.`;

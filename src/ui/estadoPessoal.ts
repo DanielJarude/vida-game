@@ -6,7 +6,8 @@
  * "tem pesado". Nenhum número de humor, cabeça ou saúde chega à tela.
  */
 
-import type { Vida } from '../motor/tipos';
+import type { Dominio, Vida } from '../motor/tipos';
+import { modeloFrente } from '../motor/dados/frentes';
 import type { Acao } from '../motor/acoes';
 import { disponibilidade } from '../motor/acoes';
 import { idade } from '../motor/nucleo';
@@ -133,6 +134,44 @@ export function lerPessoal(v: Vida, d: DimensaoPessoal): LeituraPessoal {
   const pesa = fatores.filter(f => f.efeito < 0).sort((a, b) => a.efeito - b.efeito).map(f => f.texto).slice(0, 2);
   if (d === 'condicionamento' && i >= 12 && estimuloFisico(v).total < 0.4) pesa.unshift('nenhum exercício na semana');
   if (d === 'aprendizado' && !fatores.some(f => f.id === 'estimulo') && i >= 10) pesa.push('nada que exercite a cabeça fora da obrigação');
-  const ir = d === 'aprendizado' ? { aba: 'tempo' as const, rotulo: 'Ler, xadrez, estudar — em Vida · Tempo livre' } : d === 'condicionamento' ? (v.caminhos.esporte?.fase === 'profissional' ? { aba: 'trabalho' as const, rotulo: 'O treino do clube — em Trabalho' } : { aba: 'tempo' as const, rotulo: 'Treino e movimento — em Tempo livre' }) : undefined;
+  const ir = d === 'aprendizado' ? { aba: 'tempo' as const, rotulo: 'Ler, xadrez, estudar — em Tempo livre' } : d === 'condicionamento' ? (v.caminhos.esporte?.fase === 'profissional' ? { aba: 'trabalho' as const, rotulo: 'O treino do clube — em Trabalho' } : { aba: 'tempo' as const, rotulo: 'Treino e movimento — em Tempo livre' }) : undefined;
   return { d, nome: NOME_PESSOAL[d], palavra, tendencia: tendenciaPessoal(v, d), ajuda, pesa: pesa.slice(0, 2), uso: CONSUMIDORES[d], ir };
+}
+
+/* ------------------------------------------------ No que a pessoa é boa */
+
+/**
+ * "Em que essa pessoa é naturalmente, e hoje, boa?" — derivado do que o
+ * motor já tem, sem fonte nova e sem barra: o que ela faz bem (as frentes
+ * praticadas, pela habilidade de hoje), o jeito natural para alguma coisa
+ * (as predisposições, só quando marcantes, em palavras), a cabeça para
+ * aprender (cognição) separada do diploma (escolaridade), o corpo separado
+ * do condicionamento e da técnica. Cada linha diz de onde vem.
+ */
+export function noQueEBom(v: Vida): { rotulo: string; texto: string }[] {
+  const out: { rotulo: string; texto: string }[] = [];
+  const i = idade(v);
+  if (i < 5) return out;
+  const fortes = Object.entries(v.caminhos.frentes)
+    .filter(([, f]) => f && f.habilidade >= 45 && v.t - f.tUltimo < 36)
+    .sort((a, b) => b[1]!.habilidade - a[1]!.habilidade)
+    .slice(0, 3);
+  for (const [d, f] of fortes) {
+    const nome = modeloFrente(d as Dominio).nome;
+    out.push({ rotulo: nome.charAt(0).toUpperCase() + nome.slice(1), texto: `${f!.habilidade >= 75 ? 'muito bom' : f!.habilidade >= 60 ? 'bom de verdade' : 'se vira bem'} — técnica de hoje, feita de prática.` });
+  }
+  const p = v.predisposicoes;
+  if (p) {
+    if (p.cognitiva >= 0.3) out.push({ rotulo: 'Jeito para aprender', texto: 'aprende rápido o que é novo (é de nascença — o diploma é outra coisa).' });
+    if (p.fisica >= 0.3) out.push({ rotulo: 'Jeito para o esporte', texto: 'o corpo responde ao treino mais do que o da maioria (aptidão; técnica e fôlego vêm do treino).' });
+    if (p.artistica >= 0.3) out.push({ rotulo: 'Jeito para a arte', texto: 'ouvido, olho, mão — uma facilidade que a prática transforma em ofício.' });
+  }
+  if (i >= 12) {
+    const c = v.mente.cognicao;
+    const esc = v.educacao.escolaridade;
+    const diploma = ['superior', 'pos', 'mestrado', 'doutorado'].includes(esc);
+    if (c >= 68 && !diploma) out.push({ rotulo: 'Cabeça boa', texto: 'raciocina rápido — sem diploma superior, o que não diz nada sobre a capacidade.' });
+    else if (c < 40 && diploma) out.push({ rotulo: 'Formação', texto: 'o diploma está lá; o aprendizado, hoje, anda mais lento (cansaço, cabeça cheia, a idade).' });
+  }
+  return out.slice(0, 5);
 }

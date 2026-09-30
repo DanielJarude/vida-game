@@ -57,7 +57,8 @@ export function custosDeVeiculo(v: Vida, b: Veiculo, c: number, uso = 1): { rotu
     const idadeFator = 1 + Math.min(0.35, anosDoVeiculo(v, b) * 0.015);
     out.push({ rotulo: `${nome}: combustível e manutenção`, valor: usoMensalDoVeiculo(b) * c * idadeFator * (b.estado < 40 ? 1.3 : 1) * uso });
   }
-  if (m.taxaAnual) out.push({ rotulo: `${nome}: IPVA${b.parado ? '' : ' e seguro'}`, valor: b.valor * (b.parado ? 0.035 : m.taxaAnual) / 12 });
+  const taxas = m.categoria === 'embarcacao' ? 'seguro e marina' : m.categoria === 'aeronave' ? 'seguro, hangar e inspeção' : `IPVA${b.parado ? '' : ' e seguro'}`;
+  if (m.taxaAnual) out.push({ rotulo: `${nome}: ${taxas}`, valor: b.valor * (b.parado ? 0.035 : m.taxaAnual) / 12 });
   return out;
 }
 
@@ -82,6 +83,16 @@ const PROBLEMAS: Record<ModeloVeiculo['categoria'], { texto: string; gravidade: 
   bicicleta: [
     { texto: 'corrente e pneus', gravidade: 1, custo: [120, 300] },
     { texto: 'a bateria da bicicleta', gravidade: 2, custo: [1800, 3200] }
+  ],
+  embarcacao: [
+    { texto: 'a parte elétrica, com a maresia', gravidade: 1, custo: [1500, 4500] },
+    { texto: 'o casco, que pediu reparo', gravidade: 2, custo: [6000, 18000] },
+    { texto: 'o motor', gravidade: 3, custo: [15000, 60000] }
+  ],
+  aeronave: [
+    { texto: 'a inspeção anual, que pediu troca de peças', gravidade: 1, custo: [8000, 20000] },
+    { texto: 'os instrumentos', gravidade: 2, custo: [15000, 45000] },
+    { texto: 'o motor, na revisão geral', gravidade: 3, custo: [60000, 180000] }
   ]
 };
 
@@ -147,7 +158,7 @@ export function textoVeiculo(b: Veiculo): string {
   const x = versaoVeiculo(b.versaoId);
   if (x) return `${x.artigo} ${nomeDaVersao(x)}`;
   const m = modeloVeiculo(b.modeloId);
-  return m.categoria === 'carro' ? `o ${m.nome}` : `a ${m.nome}`;
+  return m.categoria === 'carro' || m.id === 'veleiro' || m.id === 'ultraleve' || m.id === 'monomotor' ? `o ${m.nome}` : `a ${m.nome}`;
 }
 
 /** Concorda com o veículo: "o Onix ficou parado", "a Biz ficou parada". */

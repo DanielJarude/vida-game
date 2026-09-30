@@ -33,6 +33,7 @@ import { rngDe } from '../rng';
 import { podeTentar } from '../plausibilidade';
 import { conviteDoProfessor, exColegasDaArea, ofereceAqui } from './formacao';
 import { flex, ge } from '../texto';
+import { apresentarNoFestival } from './cena';
 
 export const LIMITE_OPORTUNIDADES = 4;
 
@@ -277,8 +278,8 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       if (!oc) return { texto: 'A vaga sumiu.' };
       if (o.pessoaId) lembrarCom(v, o.pessoaId, `Indicou você para um trabalho: ${nomeOcupacao(v, oc)}.`, 'apoio', 2);
       if (porContaPropria(oc)) {
-        const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: o.tipo === 'indicacao' ? 'indicacao' : o.tipo }) === 'feito';
-        return { texto: feito ? `Começou a trabalhar como ${nomeOcupacao(v, oc)}.` : '', tom: 'bom' };
+        const res = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: o.tipo === 'indicacao' ? 'indicacao' : o.tipo });
+        return { texto: res === 'feito' ? `Começou a trabalhar como ${nomeOcupacao(v, oc)}.` : res === 'perdido' ? PASSOU : '', tom: res === 'perdido' ? 'neutro' : 'bom' };
       }
       return { texto: '', entrevista: { ocupacaoId: oc.id, bonus: o.bonus ?? 0.15, via: o.tipo === 'indicacao' ? 'indicacao' : o.tipo } };
     }
@@ -312,8 +313,8 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       if (!oc) return { texto: 'O convite não se confirmou.' };
       if (oc.id === 'jogador_futebol' || oc.id === 'atleta') { v.fatos['contrato_nivel'] = o.bonus ?? 1; return { texto: '', decisao: 'esp_contrato' }; }
       const arte = ['musico_profissional', 'ator', 'ator_reconhecido', 'bailarino', 'criador_conteudo', 'escritor'].includes(oc.id);
-      const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'oportunidade', pessoaId: o.pessoaId, extra: oc.id === 'produtor_rural' ? (o.pessoaId ? 'rural_familia' : 'rural_arrendada') : arte ? 'arte' : undefined }) === 'feito';
-      return { texto: feito ? `Agora é ${nomeOcupacao(v, oc)}.` : '', tom: 'bom' };
+      const res = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'convite', pessoaId: o.pessoaId, extra: oc.id === 'produtor_rural' ? (o.pessoaId ? 'rural_familia' : 'rural_arrendada') : arte ? 'arte' : undefined });
+      return { texto: res === 'feito' ? `Agora é ${nomeOcupacao(v, oc)}.` : res === 'perdido' ? PASSOU : '', tom: res === 'perdido' ? 'neutro' : 'bom' };
     }
     case 'clientela': {
       const rot = ROTINA_POR_NUMERO[v.fatos[`clientela_rotina_${o.dominio}`] ?? 0];
@@ -341,8 +342,8 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
     }
     case 'bolsa': {
       if (oc) {
-        const feito = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'oportunidade' }) === 'feito';
-        return { texto: feito ? 'Dois anos de pesquisa pela frente.' : '', tom: 'bom' };
+        const res = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'bolsa' });
+        return { texto: res === 'feito' ? 'Dois anos de pesquisa pela frente.' : res === 'perdido' ? PASSOU : '', tom: res === 'perdido' ? 'neutro' : 'bom' };
       }
       const b = v.educacao.basica;
       if (!b) return { texto: 'A bolsa já não se aplica.' };
@@ -377,9 +378,17 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       v.fatos['projeto_convite'] = MODS_ARTE.indexOf(o.dominio ?? 'musica');
       if (o.pessoaId) v.fatos['projeto_pessoa_marca'] = v.t;
       return { texto: '', decisao: 'arte_projeto' };
+    case 'edital_cultura':
+      // O festival que chamou: aceitar é ir lá e se apresentar — com o resultado que vier (`cena`).
+      return apresentarNoFestival(v, r, o);
   }
-  return { texto: 'Nada aconteceu.' };
+  // Toda escolha consumida tem uma resolução observável (nunca "nada aconteceu"): uma porta sem regra própria vira registro do sim.
+  escrever(v, { texto: `Aceitou: ${o.titulo.toLowerCase()}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+  return { texto: `Você disse que sim (${o.titulo.toLowerCase()}). Por ora, ficou combinado — e registrado.` };
 }
+
+/** O que dizer quando a oferta não entrou agora porque outra escolha grande está em aberto (`propor` → 'perdido'). */
+const PASSOU = 'Chegou quando outra escolha grande estava em aberto — e o prazo passou. Ficou registrado na Linha da Vida.';
 
 const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrita: 'escrever', natacao: 'nadar', lutas: 'treinar luta', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinha: 'cozinhar' };
 export const MODS: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas'];

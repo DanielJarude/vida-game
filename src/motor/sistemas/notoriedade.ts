@@ -22,6 +22,10 @@ import type { Notoriedade, Vida } from '../tipos';
 import { escrever } from '../nucleo';
 import { flex, ge } from '../texto';
 import { sinalDoEstilo } from '../dados/estilo';
+import { ocupacaoOuNula } from '../dados/ocupacoes';
+
+/** Trilhas em que o trabalho, por si, põe o nome na frente do público. */
+const TRILHAS_DE_NOME = new Set(['cena', 'musica', 'danca', 'conteudo', 'literatura']);
 
 const FAIXAS = [10, 30, 55, 78];
 const PALAVRAS = ['anônimo', 'conhecido localmente', 'reconhecido', 'famoso', 'muito famoso'];
@@ -49,7 +53,15 @@ export function alvoDaNotoriedade(v: Vida): { valor: number; fonte?: Notoriedade
   const a = v.caminhos.arte;
   const obras = (v.caminhos.obras ?? []).filter(o => v.t - o.t <= 60);
   const marcou = obras.reduce((s, o) => s + (o.recepcao >= 3 ? 12 : o.recepcao === 2 ? 5 : 0), 0);
-  const artista = (a?.ativo ? a.publico * 0.62 : 0) + Math.min(24, marcou);
+  // O trabalho artístico (principal ou em paralelo) e o currículo recente também dão nome — não só o grupo.
+  const freguesia = [v.trabalho.atual, v.trabalho.paralela].reduce((m, x) => {
+    const oc = x ? ocupacaoOuNula(x.ocupacaoId) : undefined;
+    if (!oc || !TRILHAS_DE_NOME.has(oc.trilha)) return m;
+    const base = x!.clientela ?? (oc.nivel >= 5 ? 70 : 40);
+    return Math.max(m, base * (x === v.trabalho.paralela ? 0.3 : 0.45));
+  }, 0);
+  const trabalhos = (v.caminhos.curriculo ?? []).filter(x => v.t - x.t <= 60).reduce((s2, x) => s2 + (x.repercussao >= 3 ? 10 : x.repercussao === 2 ? 4 : 0) + (['novela', 'filme', 'serie'].includes(x.tipo) ? 3 : 0), 0);
+  const artista = Math.max(a?.ativo ? a.publico * 0.62 : 0, freguesia) + Math.min(24, marcou) + Math.min(18, trabalhos);
   if (artista > 0) cands.push({ valor: artista, fonte: 'arte' });
   const p = v.caminhos.politica;
   if (p && p.fase !== 'encerrada') {
@@ -65,12 +77,23 @@ export function alvoDaNotoriedade(v: Vida): { valor: number; fonte?: Notoriedade
   return top && top.valor >= 1 ? { valor: clamp(top.valor), fonte: top.fonte } : { valor: 0 };
 }
 
+/** A notoriedade vem de uma vida que não está mais em curso (a carreira pausou, acabou): "de quem já foi conhecido". */
+export function notoriedadeDoPassado(v: Vida): boolean {
+  const n = v.notoriedade;
+  if (!n || n.valor < 10) return false;
+  const alvo = alvoDaNotoriedade(v);
+  return alvo.valor < n.valor * 0.5;
+}
+
 /** O ano do nome: sobe depressa, cai devagar; a Linha da Vida registra quando muda de patamar. */
 export function processarNotoriedade(v: Vida, _r?: Rng): void {
   const alvo = alvoDaNotoriedade(v);
   const antes = v.notoriedade?.valor ?? 0;
   if (antes === 0 && alvo.valor < 3) return;
-  const vel = alvo.valor > antes ? 0.55 : 0.22;
+  // O nome sobe depressa e cai devagar — mais devagar ainda quando veio do palco ou do campo (o público lembra).
+  // Trocar de trabalho não zera ninguém: quem foi conhecido segue "de quem já se ouviu falar" por anos.
+  const fonteAntes = v.notoriedade?.fonte;
+  const vel = alvo.valor > antes ? 0.55 : fonteAntes === 'arte' || fonteAntes === 'esporte' ? 0.14 : 0.22;
   const valor = Math.round(clamp(antes + (alvo.valor - antes) * vel) * 10) / 10;
   if (valor < 1 && alvo.valor < 1) { v.notoriedade = undefined; return; }
   const pico = Math.max(v.notoriedade?.pico ?? 0, valor);

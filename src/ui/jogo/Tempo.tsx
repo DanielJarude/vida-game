@@ -34,6 +34,8 @@ import { areaDaPorta, PortasAbertas } from './Estudos';
 import { doClube } from '../../motor/dados/clubes';
 import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
 import type { Aba } from '../navegacao';
+import { MODS as MODS_ESPORTE } from '../../motor/sistemas/oportunidades';
+import { custoDaExperiencia, descricaoDaExperiencia, experienciasPossiveis, nomeDaExperiencia } from '../../motor/sistemas/experiencias';
 
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'esporte', rotulo: 'Esporte' }, { id: 'arte', rotulo: 'Arte' }, { id: 'estudo', rotulo: 'Estudo' },
@@ -182,9 +184,28 @@ function ComoVoceVai({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => bo
   );
 }
 
+/** O que o dinheiro compra além de objetos: aparece conforme o que a vida tem (não o catálogo inteiro). */
+function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const lista = experienciasPossiveis(vida);
+  if (!lista.length) return null;
+  return (
+    <section className="experiencias" aria-labelledby="titulo-experiencias">
+      <h2 id="titulo-experiencias" className="secao-fio">Viagens e experiências</h2>
+      <ul className="experiencias__lista">
+        {lista.map(id => (
+          <li key={id} className="experiencia">
+            <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)}</strong><span>{descricaoDaExperiencia(id)} Uns {dinheiroCurto(custoDaExperiencia(vida, id))}.</span></span>
+            <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id }} agir={agir} variante="discreto" ocultarImpossivel>{id === 'sabatico' ? 'Tirar' : id === 'bancar_projeto' ? 'Bancar' : id === 'presente_familia' ? 'Presentear' : id === 'curso_caro' ? 'Fazer' : 'Ir'}</BotaoAcao>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const i = idade(vida);
-  if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Vida · Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
+  if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
   const s = semana(vida);
   const custo = economiaLocal(vida.moradia.municipioId).custo;
   const ativas = vida.rotinas.map(r => ({ r, m: modeloRotina(r.id) })).filter((x): x is { r: Vida['rotinas'][number]; m: ModeloRotina } => !!x.m);
@@ -193,7 +214,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
   const peneira = ultimaDevolutiva(vida, 'peneira', 36);
   return (
     <div className="tempo">
-      <Folio kicker={<><span className="folio__area">Vida · Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s, sobrecargaDaSemana(vida).fixos > 0.01)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
+      <Folio kicker={<><span className="folio__area">Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s, sobrecargaDaSemana(vida).fixos > 0.01)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
       <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
       <section className="tempo-semana" aria-labelledby="titulo-semana">
         <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
@@ -201,6 +222,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
         {i >= 10 && (() => { const l = leituraDaSobrecarga(vida); return <p className={`semana-carga semana-carga--${l.nivel}`}><span className="semana-carga__palavra">{l.palavra.charAt(0).toUpperCase() + l.palavra.slice(1)}.</span> {l.nivel === 0 ? l.texto.replace(/^A semana cabe na vida: /, '') : l.texto.replace(/^[^:.]*[:.] ?/, '')}{l.nivel >= 2 ? ' Descanso, férias, menos compromissos ou um ritmo mais leve no trabalho aliviam.' : ''}</p>; })()}
         {s.fixos.length === 0 && <p className="nota">{i < 18 ? 'Além da escola, a semana é sua.' : 'Nada fixo ocupa a semana: nem trabalho, nem curso.'}</p>}
       </section>
+      <Experiencias vida={vida} agir={agir} />
       <ParaOndeVai vida={vida} s={s} irPara={irPara} />
       <ComoVoceVai vida={vida} agir={agir} irPara={irPara} />
 
@@ -227,6 +249,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
                 </div>
                 <div className="rotina__acoes">
                   {deEstudos && irPara && <button type="button" className="link rotina__ir" onClick={() => irPara('formacao')}>ver em Formação →</button>}
+                  {dominio && MODS_ESPORTE.includes(dominio) && (retorno?.falta === 'tecnica' || (i >= 8 && i <= 18 && (m.pratica?.[dominio] ?? 0) >= 1)) && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'treino_fundamentos', valor: dominio } as unknown as Acao} agir={agir} variante={retorno?.falta === 'tecnica' ? 'secundario' : 'discreto'} ocultarImpossivel>Um ano de fundamentos, com treinador</BotaoAcao>}
                   {!deEstudos && n < m.niveis.length && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${nivelModelo(m, n + 1).rotulo.toLowerCase()}`}</BotaoAcao>}
                   {!deEstudos && n > 1 && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n - 1) as 1 | 2 }} agir={agir} variante="discreto">Mais leve</BotaoAcao>}
                   {!deEstudos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>}

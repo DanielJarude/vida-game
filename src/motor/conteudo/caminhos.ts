@@ -471,7 +471,7 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   if (res.perto) c.v.caminhos.ultimas[`peneira_${d}`] = c.v.t - 12;
   const depois = res.perto
     ? tentativas < 3 ? ' Pediram para você voltar no ano que vem.' : ''
-    : res.falta === 'idade' ? '' : ' Ainda dá para treinar e tentar outra.';
+    : res.falta === 'idade' ? '' : res.falta === 'tecnica' ? ' Um ano de treino de fundamentos, com treinador, trabalha exatamente a técnica — e a próxima peneira vê.' : ' Ainda dá para treinar e tentar outra.';
   return {
     texto: `Chamaram outros nomes. ${fala}${caminho}${comparacao}${depois}`,
     memoria: `Não passou na ${nome} ${doLugar}. ${fala}`,

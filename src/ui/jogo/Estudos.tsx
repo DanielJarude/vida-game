@@ -23,7 +23,7 @@ import { materiasExtremas } from '../../motor/sistemas/frentes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { anoDe } from '../../motor/tempo';
 import { BotaoAcao, Escolha, Folio, Linha, Secao } from '../comum';
-import { alvosDoEnem, cursosAgrupados, cursosParaVoce } from '../../motor/sistemas/relevancia';
+import { alvosDoEnem, cursosAgrupados, cursosParaVoce, pontuarCursos } from '../../motor/sistemas/relevancia';
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
 import type { Aba } from '../navegacao';
@@ -35,6 +35,8 @@ import type { FocoConcurso } from '../../motor/tipos';
 import { instituicaoAtual, leituraDasVivencias, pessoasDaFormacao, ROTINA_DA_OFERTA } from '../../motor/sistemas/formacao';
 import { flex } from '../../motor/texto';
 import { estimativaParaCurso, fazCursinho, mesesDePreparo, objetivoCurso, PALAVRA_SITUACAO, proximoPassoVestibular } from '../../motor/sistemas/vestibular';
+import { objetivosAtivos } from '../../motor/sistemas/objetivos';
+import type { Objetivo } from '../../motor/tipos';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }
 
@@ -86,6 +88,7 @@ export function Estudos({ vida, agir, irPara, abrirPessoa }: Props) {
       <Formacao vida={vida} />
       <Estudo vida={vida} agir={agir} />
       {i >= 14 && <Preparacao vida={vida} agir={agir} irPara={irPara} />}
+      <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => /^(selecao|vestibular):/.test(o.id)} />
       {i >= 15 && <Cursos vida={vida} agir={agir} />}
       {i < 14 && !vida.educacao.basica && <p className="vazio">Por enquanto, o estudo é crescer.</p>}
     </div>
@@ -97,7 +100,7 @@ export function Estudos({ vida, agir, irPara, abrirPessoa }: Props) {
 /**
  * A instituição como ambiente: como ela é, quem está lá (a professora que
  * reparou, os colegas), e o que dá para fazer ali — atividades de verdade,
- * que ocupam a semana (a mesma rotina que Vida · Tempo livre conta) e deixam
+ * que ocupam a semana (a mesma rotina que Tempo livre conta) e deixam
  * vivências que pesam depois (`formacao`).
  */
 function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Acao) => boolean; abrirPessoa?: (id: string) => void; irPara?: (a: Aba) => void }) {
@@ -134,7 +137,7 @@ function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Aca
               );
             })}
           </ul>
-          <p className="nota">Cada atividade ocupa parte da semana (veja em <button type="button" className="link" onClick={() => irPara?.('tempo')}>Vida · Tempo livre</button>).</p>
+          <p className="nota">Cada atividade ocupa parte da semana (veja em <button type="button" className="link" onClick={() => irPara?.('tempo')}>Tempo livre</button>).</p>
         </>
       )}
     </section>
@@ -262,6 +265,40 @@ function Formacao({ vida }: { vida: Vida }) {
 
 const SITUACAO_ENEM: Record<string, string> = { acima: 'a nota alcança o corte', perto: 'perto do corte (lista de espera)', longe: 'ainda longe do corte', sem_nota: 'sem nota do ENEM ainda' };
 
+/**
+ * O que você vem tentando: os objetivos que as próprias tentativas formaram
+ * (o mestrado, a peneira, o concurso) — quantas vezes, o que pesou por último
+ * (a causa real, da conta do motor) e, quando é controlável, a ação que mexe
+ * nisso. Não é lista de tarefas: some quando se alcança ou se deixa de tentar.
+ */
+export function ObjetivosEmCurso({ vida, agir, filtro }: { vida: Vida; agir: (a: Acao) => boolean; filtro?: (o: Objetivo) => boolean }) {
+  const lista = objetivosAtivos(vida).filter(o => o.tentativas >= 1 && o.resultado === 'nao_passou' && (!filtro || filtro(o)));
+  if (!lista.length) return null;
+  const acaoDe = (o: Objetivo): { acao: Acao; rotulo: string } | undefined => {
+    if (o.id.startsWith('selecao:')) return { acao: { tipo: 'perseguir', oque: 'preparar_pos' } as unknown as Acao, rotulo: 'Um ano preparando o projeto de pesquisa' };
+    if (o.id.startsWith('peneira:')) return { acao: { tipo: 'perseguir', oque: 'treino_fundamentos', valor: o.id.split(':')[1] } as unknown as Acao, rotulo: 'Um ano de fundamentos, com treinador' };
+    if (o.id === 'arte:teste' || o.id === 'arte:edital') return { acao: { tipo: 'perseguir', oque: 'apresentar' } as unknown as Acao, rotulo: 'Apresentar-se (currículo e público)' };
+    return undefined;
+  };
+  return (
+    <Secao titulo="O que você vem tentando">
+      <ul className="objetivos">
+        {lista.map(o => {
+          const a = o.caminho ? acaoDe(o) : undefined;
+          return (
+            <li key={o.id} className="objetivo-em-curso">
+              <strong>{o.titulo}</strong>
+              <span className="nota">{o.tentativas === 1 ? `Uma tentativa, em ${anoDe(o.tUltima)}` : `${o.tentativas} tentativas desde ${anoDe(o.tPrimeira)}`}.{o.obstaculo ? ` Da última vez: ${o.obstaculo.replace(/^Não passou: /, '').replace(/^./, x => x.toLowerCase())}` : ''}</span>
+              {o.caminho && <span className="devolutiva__dica">{o.caminho}</span>}
+              {a && <BotaoAcao vida={vida} acao={a.acao} agir={agir} variante="discreto" ocultarImpossivel>{a.rotulo}</BotaoAcao>}
+            </li>
+          );
+        })}
+      </ul>
+    </Secao>
+  );
+}
+
 /** Cursos que as pessoas costumam "mirar" (além dos que já fazem sentido para esta vida). */
 const MIRAS = ['medicina', 'direito', 'eng_civil', 'psicologia', 'computacao', 'odontologia', 'veterinaria', 'arquitetura'];
 
@@ -296,6 +333,7 @@ function Preparacao({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boo
           {est.ultima && <p className="nota">{est.nota - est.ultima.nota >= 15 ? `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação subiu.` : est.nota - est.ultima.nota <= -15 ? `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação esfriou.` : `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação está parecida.`}</p>}
           <p className="objetivo__passo">{proximoPassoVestibular(vida, est)}</p>
           <div className="grupo-acoes grupo-acoes--linha">
+            {est.fraca && est.situacao !== 'no_corte' && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'estudo_dirigido', valor: est.fraca } as unknown as Acao} agir={agir} variante="secundario" ocultarImpossivel>{`Estudar ${NOME_MATERIA[est.fraca]} de forma dirigida (este ano)`}</BotaoAcao>}
             <BotaoAcao vida={vida} acao={{ tipo: 'objetivo_estudo' }} agir={agir} variante="discreto">Deixar esse objetivo de lado</BotaoAcao>
           </div>
         </div>
@@ -441,10 +479,22 @@ function portasDoCurso(v: Vida, cursoId: string): string {
   return `Abre portas como: ${ocs.map(oc => nomeOcupacao(v, oc)).join(', ')}.`;
 }
 
+/** Onde um curso mora no catálogo, conforme o ponto da formação em que a pessoa está. */
+function grupoDoCurso(cc: { nivel: string; area: string }, formado: boolean, areas: Set<string>): { grupo: string; ordemGrupo: number } {
+  if (cc.nivel === 'mestrado' || cc.nivel === 'doutorado') return { grupo: 'pesquisa: mestrado e doutorado', ordemGrupo: formado ? 2 : 7 };
+  if (cc.nivel === 'pos' || cc.nivel === 'residencia') return { grupo: 'pós e especialização', ordemGrupo: formado ? 1 : 6 };
+  if (cc.nivel === 'superior') return formado ? (areas.has(cc.area) ? { grupo: 'outra graduação na sua área', ordemGrupo: 5 } : { grupo: 'mudar de área: outra graduação', ordemGrupo: 4 }) : { grupo: 'graduação', ordemGrupo: 0 };
+  if (cc.nivel === 'tecnico') return { grupo: 'técnico e profissionalizante', ordemGrupo: formado ? 3 : 1 };
+  return { grupo: 'cursos livres e preparação', ordemGrupo: 8 };
+}
+
 function Cursos({ vida, agir }: Props) {
   const { para } = useMemo(() => cursosParaVoce(vida), [vida]);
   const todos = useMemo(() => cursosAgrupados(vida), [vida]);
   const sugestao = new Map(para.map(x => [x.item.curso.id, x.motivo]));
+  const pontos = useMemo(() => new Map(pontuarCursos(vida, todos).map(x => [x.item.curso.id, x.pontos])), [vida, todos]);
+  const formado = vida.educacao.concluidos.some(c => c.nivel === 'superior');
+  const areasFormadas = new Set(vida.educacao.concluidos.filter(c => c.nivel === 'superior').map(c => c.area));
   if (vida.educacao.matricula && !vida.educacao.matricula.trancado) return <Secao titulo="Outra formação"><p className="nota">Um curso de cada vez: quando este terminar (ou for trancado), o catálogo volta a abrir aqui.</p></Secao>;
   const itens: ItemCatalogo[] = todos.map(c => {
     const cc = c.curso;
@@ -454,17 +504,20 @@ function Cursos({ vida, agir }: Props) {
     return {
       id: cc.id,
       titulo: nomeDaFormacao(cc, areaDaPos(vida, cc)),
-      grupo: GRANDE_AREA[cc.area as AreaFormacao] ?? 'outras áreas',
+      // Grupos pelo momento da formação (não pela área): graduação, técnico, pós, pesquisa, mudar de área, cursos livres.
+      ...grupoDoCurso(cc, formado, areasFormadas),
+      ordem: pontos.get(cc.id) ?? 0,
       tipo: TIPO_NIVEL[cc.nivel],
       meta: `${NIVEL[cc.nivel]} · ${duracao}${cc.carga === 'integral' ? ' · período integral' : ''}${melhor ? ` · ${melhor.mensalidade > 0 ? `${dinheiroCurto(melhor.mensalidade)}/mês` : melhor.via === 'fies' ? 'paga depois de formado' : 'sem mensalidade'}` : ''}`,
       motivo: sugestao.get(cc.id),
       destaque: sugestao.has(cc.id),
       possivel: c.possivel,
       bloqueio: vias.find(x => !podeTentar(x.o.veredito))?.o.veredito.motivo,
-      busca: `${cc.area} ${cc.descricao}`,
+      busca: `${cc.area} ${GRANDE_AREA[cc.area as AreaFormacao] ?? ""} ${cc.descricao}`,
       detalhe: (
         <div className="curso-detalhe">
           <p className="nota">{cc.descricao} {portasDoCurso(vida, cc.id)}</p>
+          {(cc.nivel === 'mestrado' || cc.nivel === 'doutorado') && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'preparar_pos' } as unknown as Acao} agir={agir} variante="discreto" ocultarImpossivel>Um ano preparando o projeto de pesquisa (antes de tentar)</BotaoAcao>}
           {vias.map(({ o, indice }) => (
             <div key={indice} className="via">
               <div className="via__texto">
@@ -499,7 +552,7 @@ function Cursos({ vida, agir }: Props) {
       )}
       <Secao titulo="Explorar formações" recolhivel={para.length > 0} aberta={para.length === 0}>
         {para.length === 0 && melhorNotaRecente(vida) === 0 && idade(vida) >= 16 && <p className="nota">Uma nota do ENEM abre as portas da faculdade pública.</p>}
-        <Catalogo itens={itens} rotulo="Cursos" dicaBusca="enfermagem, direito, solda, técnico, mestrado…" tipos={[{ id: 'oficio', rotulo: 'Ofício' }, { id: 'tecnico', rotulo: 'Técnico' }, { id: 'superior', rotulo: 'Faculdade' }, { id: 'pos', rotulo: 'Pós' }]} vazio="Nenhum curso com esse filtro." porGrupo={5} />
+        <Catalogo itens={itens} rotulo="Cursos" dicaBusca="enfermagem, direito, solda, técnico, mestrado…" tipos={[{ id: 'oficio', rotulo: 'Ofício' }, { id: 'tecnico', rotulo: 'Técnico' }, { id: 'superior', rotulo: 'Faculdade' }, { id: 'pos', rotulo: 'Pós' }]} vazio="Nenhum curso com esse filtro." porGrupo={6} />
       </Secao>
     </>
   );

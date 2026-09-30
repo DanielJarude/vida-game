@@ -25,7 +25,7 @@ import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, type Ocupacao } from 
 import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
 import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, proximoPasso, ROTULO_MODELO } from '../../motor/sistemas/trabalho';
-import { acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
+import { acoesDasTrajetorias, acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
 import { acoesDoNegocio } from '../../motor/sistemas/gestao';
 import { contaDoAno, dedicacaoDe, donoIntegral, estrategiaDe, leituraDoNegocio, negocioAberto, negociosPossiveis, parteDoSocio, presencaDe, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
 import { rotuloEstrategia } from '../../motor/dados/negocios';
@@ -50,12 +50,15 @@ import { augeDe, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavra
 import { lesaoAtiva } from '../../motor/sistemas/lesoes';
 import { palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
 import { podeTentar } from '../../motor/plausibilidade';
-import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Secao } from '../comum';
+import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Renomear, Secao } from '../comum';
 import { Retrato } from '../avatar/Retrato';
 import { idadePessoa } from '../../motor/nucleo';
 import { dinheiroCurto } from '../apresentar';
-import { ehPortaDeTrabalho, PortasAbertas } from './Estudos';
+import { ehPortaDeTrabalho, ObjetivosEmCurso, PortasAbertas } from './Estudos';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
+import { leituraDasTrajetorias } from '../../motor/sistemas/paralelas';
+import { leituraDoCurriculo } from '../../motor/sistemas/cena';
+import { empregoAcademico, leituraAcademica } from '../../motor/sistemas/academia';
 import type { Aba } from '../navegacao';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }
@@ -97,6 +100,7 @@ export function Trabalho({ vida, agir, irPara }: Props) {
             {l.renda && <Dado rotulo="No bolso">{l.renda.replace(' por mês no bolso', '/mês')}</Dado>}
             {l.jornada && <Dado rotulo="Jornada">{l.jornada}</Dado>}
             {l.vinculo && <Dado rotulo="Vínculo">{l.vinculo}</Dado>}
+            {e?.especialidade && modo !== 'militar' && <Dado rotulo="Área">{e.especialidade} <small>(pesa nos casos grandes e no desempenho)</small></Dado>}
           </dl>
         )}
         {l.frases.length > 1 && modo !== 'politica' && <div className="como-vai">{l.frases.slice(1).map((f, k) => <p key={k}>{f}</p>)}</div>}
@@ -104,6 +108,8 @@ export function Trabalho({ vida, agir, irPara }: Props) {
         {preso && <SituacaoDaPena vida={vida} />}
         {modo === 'pausa' && <p className="nota-grande">{leituraDaPausa(vida)}</p>}
         {modo === 'negocio' && <PainelNegocio vida={vida} />}
+        {modo === 'negocio' && negocioAberto(vida) && <Renomear vida={vida} agir={agir} alvo="negocio" atual={negocioAberto(vida)!.nome} rotulo={`Dar outro nome a ${negocioAberto(vida)!.nome}`} />}
+        {modo === 'artista' && vida.caminhos.arte?.ativo && <Renomear vida={vida} agir={agir} alvo="grupo" atual={vida.caminhos.arte.nome} rotulo={`Dar outro nome a ${vida.caminhos.arte.nome}`} />}
         {(modo === 'autonomo' || modo === 'informal' || modo === 'plataforma' || modo === 'artista') && <PainelFreguesia vida={vida} />}
         {(modo === 'rural' || modo === 'pesca') && <PainelCampo vida={vida} />}
         {modo === 'atleta' && <PainelAtleta vida={vida} />}
@@ -112,6 +118,7 @@ export function Trabalho({ vida, agir, irPara }: Props) {
         {(modo === 'servidor' || modo === 'docente') && <PainelCarreiraPublica vida={vida} />}
         {(modo === 'empregado' || modo === 'saude' || modo === 'seguranca' || modo === 'aprendiz' || modo === 'estagio' || modo === 'formacao') && <PainelEstrada vida={vida} />}
         {pol && modo === 'politica' && <PainelPolitico vida={vida} principal />}
+        {e && empregoAcademico(vida) === e && <PainelAcademia vida={vida} />}
 
         {acoes.agora.length > 0 && <AcoesVivas acoes={acoes.agora as AcaoProfissional[]} agir={agir} ir={ir} rotulo="O que dá para fazer agora" />}
         {(acoes.mais.length > 0 || acoes.saidas.length > 0) && <Mais mais={acoes.mais} saidas={acoes.saidas} agir={agir} ir={ir} />}
@@ -130,6 +137,9 @@ export function Trabalho({ vida, agir, irPara }: Props) {
         </div>
       )}
       <Devolutivas vida={vida} />
+      <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => !/^(selecao|vestibular):/.test(o.id)} />
+      <Trajetorias vida={vida} />
+      <CurriculoArtistico vida={vida} agir={agir} />
       {(vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <PorOndePassou vida={vida} />}
     </div>
   );
@@ -183,7 +193,7 @@ function PainelNegocio({ vida }: { vida: Vida }) {
         <p className="equipe__titulo">{l.gente}</p>
         {(n.equipe ?? []).length > 0 && (
           <ul className="equipe__rostos">
-            {n.equipe!.map(f => { const q = vida.pessoas[f.pessoaId]; return q ? <li key={q.id}><Retrato visual={q.visual} genero={q.genero} idade={idadePessoa(vida, q)} semente={q.id} tamanho={40} rotulo={q.nome} /><span>{q.nome}<small>{f.funcao}</small></span></li> : null; })}
+            {n.equipe!.map(f => { const q = vida.pessoas[f.pessoaId]; return q ? <li key={q.id}><Retrato visual={q.visual} genero={q.genero} idade={idadePessoa(vida, q)} semente={q.id} tamanho={40} especie={q.especie} rotulo={q.nome} /><span>{q.nome}<small>{f.funcao}</small></span></li> : null; })}
           </ul>
         )}
       </div>
@@ -309,7 +319,7 @@ function PainelAtleta({ vida }: { vida: Vida }) {
         <Dado rotulo="Divisão (no jogo)">{DIVISAO_DO_NIVEL[es.nivel]}</Dado>
         <Dado rotulo="Contrato">{es.contratoAte ? `até ${anoDe(es.contratoAte)}` : '—'}</Dado>
         <Dado rotulo="Salário do contrato">{vida.trabalho.atual ? `${dinheiroCurto(vida.trabalho.atual.salario)}/mês, bruto` : '—'}</Dado>
-        <Dado rotulo="No mercado">{palavraDaReputacao(es.reputacao ?? 30)}{oferta > es.nivel ? ' · clubes maiores olham' : oferta < es.nivel ? (oferta === 0 ? ' · sem interesse de outros clubes' : ' · o interesse vem de divisões menores') : ''}</Dado>
+        <Dado rotulo="No mercado">{palavraDaReputacao(es.reputacao ?? 30, es.modalidade)}{oferta > es.nivel ? ' · clubes maiores olham' : oferta < es.nivel ? (oferta === 0 ? ' · sem interesse de outros clubes' : ' · o interesse vem de divisões menores') : ''}</Dado>
         {noto && <Dado rotulo="O público">{noto}</Dado>}
         <Dado rotulo="Treino">{es.foco === 'forcar' ? 'dobrado (evolui e machuca mais)' : es.foco === 'preservar' ? 'poupando o corpo' : 'o normal do clube'}</Dado>
         <Dado rotulo="O corpo">{lesao ? `${lesao.lesao.parte}${lesao.lesao.cuidado === 'sacrificio' ? ', jogando no sacrifício' : lesao.lesao.cuidado ? `, volta por volta de ${anoDe(lesao.lesao.tFim)}` : ''}` : es.lesoes === 0 ? 'sem lesões sérias' : `${es.lesoes} ${es.lesoes === 1 ? 'lesão' : 'lesões'} na carreira`}</Dado>
@@ -447,7 +457,7 @@ function Clima({ vida }: { vida: Vida }) {
   const chefe = chefiaAtual(vida);
   return (
     <p className={`clima clima--${c.tom}`}>
-      {chefe && <Retrato visual={chefe.visual} genero={chefe.genero} idade={idadePessoa(vida, chefe)} semente={chefe.id} tamanho={28} rotulo={chefe.nome} />}
+      {chefe && <Retrato visual={chefe.visual} genero={chefe.genero} idade={idadePessoa(vida, chefe)} semente={chefe.id} tamanho={28} especie={chefe.especie} rotulo={chefe.nome} />}
       <span><span className="clima__rotulo">Clima: {c.palavra}.</span> {c.texto}</span>
     </p>
   );
@@ -497,7 +507,10 @@ function EmParalelo({ vida, agir, irPara, modo }: { vida: Vida; agir: (a: Acao) 
   const arte = !!vida.caminhos.arte?.ativo && modo !== 'artista';
   const renda = vida.rotinas.map(r => modeloRotina(r.id)).filter(m => m?.categoria === 'renda');
   const porFora = leituraDoEnvolvimento(vida);
-  if (!negocioParalelo && !base && !pol && !arte && !renda.length && !porFora) return null;
+  // As outras trajetórias (a paralela, o grupo de fora, as pausadas), cada uma com as próprias ações — nunca misturadas às do trabalho principal.
+  const grupos = acoesDasTrajetorias(vida, disponibilidade);
+  const grupoArte = grupos.find(g => g.id === 'grupo');
+  if (!negocioParalelo && !base && !pol && !arte && !renda.length && !porFora && !grupos.length) return null;
   const acoesNeg = negocioParalelo ? separarNegocio(acoesDoNegocio(vida, disponibilidade)) : undefined;
   return (
     <section className="camada camada--paralelo" aria-labelledby="camada-paralelo">
@@ -506,14 +519,23 @@ function EmParalelo({ vida, agir, irPara, modo }: { vida: Vida; agir: (a: Acao) 
         <div className="paralelo">
           <h3 className="paralelo__titulo">{negocioParalelo.nome}<span> · {negocioParalelo.passivo ? ((negocioParalelo.equipe?.length ?? 0) > 0 ? 'nas mãos da equipe' : 'nas mãos do sócio') : 'nas horas vagas'}</span></h3>
           <PainelNegocio vida={vida} />
+          <Renomear vida={vida} agir={agir} alvo="negocio" atual={negocioParalelo.nome} rotulo={`Dar outro nome a ${negocioParalelo.nome}`} />
           {acoesNeg && acoesNeg.agora.length > 0 && <AcoesVivas acoes={acoesNeg.agora} agir={agir} rotulo={`O que fazer por ${negocioParalelo.nome}`} />}
           {acoesNeg && (acoesNeg.mais.length > 0 || acoesNeg.saidas.length > 0) && <Mais mais={acoesNeg.mais} saidas={acoesNeg.saidas} agir={agir} ir={d => irPara(d as Aba)} />}
         </div>
       )}
       {base && <div className="paralelo"><h3 className="paralelo__titulo">{vida.caminhos.esporte!.modalidade === 'futebol' ? 'A base' : 'A equipe'} {doClube(vida.caminhos.esporte!.clube)}</h3><PainelBase vida={vida} /></div>}
       {pol && <div className="paralelo"><PainelPolitico vida={vida} principal={false} /></div>}
-      {arte && <div className="paralelo"><h3 className="paralelo__titulo">{vida.caminhos.arte!.nome}<span> · {vida.caminhos.arte!.tipo === 'banda' ? 'a banda' : 'o grupo'}</span></h3><p className="nota">{vida.caminhos.arte!.publico < 15 ? 'Quase ninguém conhece ainda.' : vida.caminhos.arte!.publico < 40 ? 'Já tem quem vá ver.' : vida.caminhos.arte!.publico < 65 ? 'Público fiel na cidade.' : 'Gente de fora já conhece.'}</p></div>}
-      {renda.length > 0 && <div className="paralelo"><h3 className="paralelo__titulo">Por fora</h3><p className="nota">{renda.map(m => m!.nome).join(' · ')} — na sua semana, em <button type="button" className="link" onClick={() => irPara('tempo')}>Vida · Tempo livre</button>.</p></div>}
+      {arte && <div className="paralelo"><h3 className="paralelo__titulo">{vida.caminhos.arte!.nome}<span> · {vida.caminhos.arte!.tipo === 'banda' ? 'a banda' : 'o grupo'}, por fora</span></h3><p className="nota">{vida.caminhos.arte!.publico < 15 ? 'Quase ninguém conhece ainda.' : vida.caminhos.arte!.publico < 40 ? 'Já tem quem vá ver.' : vida.caminhos.arte!.publico < 65 ? 'Público fiel na cidade.' : 'Gente de fora já conhece.'}</p>{grupoArte && <AcoesVivas acoes={grupoArte.acoes} agir={agir} ir={d => irPara(d as Aba)} rotulo={`O que fazer com ${vida.caminhos.arte!.nome}`} />}<Renomear vida={vida} agir={agir} alvo="grupo" atual={vida.caminhos.arte!.nome} rotulo={`Dar outro nome a ${vida.caminhos.arte!.nome}`} /></div>}
+      {grupos.filter(g => g.id !== 'grupo').map(g => (
+        <div key={g.id} className="paralelo" data-trajetoria={g.id}>
+          <h3 className="paralelo__titulo">{g.titulo}</h3>
+          {g.subtitulo && <p className="nota">{g.subtitulo}</p>}
+          {g.id === 'paralela' && vida.trabalho.paralela && empregoAcademico(vida) === vida.trabalho.paralela && <PainelAcademia vida={vida} />}
+          <AcoesVivas acoes={g.acoes} agir={agir} ir={d => irPara(d as Aba)} rotulo={`O que fazer: ${g.titulo}`} />
+        </div>
+      ))}
+      {renda.length > 0 && <div className="paralelo"><h3 className="paralelo__titulo">Por fora</h3><p className="nota">{renda.map(m => m!.nome).join(' · ')} — na sua semana, em <button type="button" className="link" onClick={() => irPara('tempo')}>Tempo livre</button>.</p></div>}
       {porFora && (
         <section className="por-fora" aria-label="Por fora">
           <p className="por-fora__titulo">Por fora</p>
@@ -606,23 +628,23 @@ function Vagas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
     <div className="explorar-bloco">
       <p className="dica">Vaga de emprego leva a uma entrevista (até três processos por ano: {Math.max(0, 3 - usadas)} {3 - usadas === 1 ? 'restante' : 'restantes'}). Por conta própria não há entrevista: você começa a atender, e a freguesia é que decide. Abrir um negócio fica em "Negócio próprio".</p>
       {camadas.trajetoria.length > 0 && (
-        <BlocoDeVagas titulo="Combina com a sua trajetória" dica="A estrada, a formação e o próximo degrau.">
+        <BlocoDeVagas titulo="Para você agora" dica="A formação, a estrada recente e o próximo degrau.">
           <ul>{camadas.trajetoria.slice(0, 5).map(x => <VagaNaCamada key={x.item.oc.id} vida={vida} x={x} agir={agir} />)}</ul>
         </BlocoDeVagas>
       )}
       {camadas.relacionadas.length > 0 && (
-        <BlocoDeVagas titulo={vazio ? 'Para começar' : 'Também ao seu alcance'} dica="Perto do que você já fez: parte da estrada se transfere.">
+        <BlocoDeVagas titulo={vazio ? 'Para começar' : 'Outros caminhos ao seu alcance'} dica="Perto do que você já fez: parte da estrada se transfere.">
           <ul>{camadas.relacionadas.slice(0, 5).map(x => <VagaNaCamada key={x.item.oc.id} vida={vida} x={x} agir={agir} />)}</ul>
         </BlocoDeVagas>
       )}
       {camadas.outras.length > 0 && (
-        <BlocoDeVagas titulo={vazio ? 'Para começar' : 'Outros caminhos'} dica={vazio ? 'Nada na sua estrada aponta ainda para um lado: estas são portas de entrada.' : 'Fora da sua trajetória — possíveis, se a vida pedir outra coisa.'}>
+        <BlocoDeVagas titulo={vazio ? 'Para começar' : 'Mudar de rumo'} dica={vazio ? 'Nada na sua estrada aponta ainda para um lado: estas são portas de entrada.' : 'Fora da sua trajetória — possíveis, se a vida pedir outra coisa.'}>
           <ul>{outras.map(x => <VagaNaCamada key={x.item.oc.id} vida={vida} x={x} agir={agir} />)}</ul>
           {camadas.outras.length > outras.length && <button type="button" className="dobra__botao" onClick={() => setMaisOutras(true)}>Ver mais {Math.min(8, camadas.outras.length - outras.length)}</button>}
         </BlocoDeVagas>
       )}
       <div className="explorar-todas">
-        <button type="button" className="dobra__botao" aria-expanded={todas} onClick={() => setTodas(x => !x)}>{todas ? 'Recolher o catálogo' : 'Explorar todas as ocupações (com busca e filtros)'}</button>
+        <button type="button" className="dobra__botao" aria-expanded={todas} onClick={() => setTodas(x => !x)}>{todas ? 'Recolher o catálogo' : 'Explorar tudo (todas as ocupações, com busca e filtros)'}</button>
         {todas && <CatalogoDeVagas vida={vida} agir={agir} atual={atual} />}
       </div>
     </div>
@@ -761,6 +783,49 @@ function Devolutivas({ vida }: { vida: Vida }) {
           </li>
         ))}
       </ul>
+    </Secao>
+  );
+}
+
+/** A vida acadêmica: a linha, o projeto, a produção (a docência não é só o cargo). */
+function PainelAcademia({ vida }: { vida: Vida }) {
+  const l = leituraAcademica(vida);
+  if (!l) return null;
+  return (
+    <section className="painel painel--academia" aria-label="A vida acadêmica">
+      <dl className="ficha-trabalho">{l.dados.map(([r, t]) => <Dado key={r} rotulo={r}>{t}</Dado>)}</dl>
+    </section>
+  );
+}
+
+/** A trajetória profissional inteira: principal, paralela, pausadas, o que passou (não é um slot só). */
+function Trajetorias({ vida }: { vida: Vida }) {
+  const linhas = leituraDasTrajetorias(vida);
+  if (linhas.length < 2) return null;
+  return (
+    <Secao titulo="A sua trajetória profissional">
+      <ul className="trajetorias">
+        {linhas.map((x, k) => <li key={k} className={`trajetoria trajetoria--${x.estado}`}><span className="trajetoria__nome">{x.rotulo}</span><span className="trajetoria__estado">{x.texto}</span></li>)}
+      </ul>
+    </Secao>
+  );
+}
+
+/** O currículo artístico: os trabalhos feitos (fictícios, do universo desta vida) — fica depois que a carreira pausa. */
+function CurriculoArtistico({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const c = leituraDoCurriculo(vida);
+  const obras = vida.caminhos.obras ?? [];
+  if (!c.linhas.length && !obras.length) return null;
+  return (
+    <Secao titulo={`Currículo artístico · ${c.palavra}`} recolhivel aberta={false}>
+      <ul className="marcos-caminho">{c.linhas.map((x, k) => <li key={k}><span>{x}</span></li>)}</ul>
+      {obras.length > 0 && (
+        <>
+          <h3 className="subtitulo">Obras próprias</h3>
+          <ul className="marcos-caminho">{obras.slice(-6).map((o, j) => { const k = obras.length - Math.min(6, obras.length) + j; return <li key={k}><span className="marcos-caminho__ano">{anoDe(o.t)}</span><span>"{o.titulo}" {['· passou em branco', '· teve público', '· repercutiu', '· marcou'][o.recepcao]} <Renomear vida={vida} agir={agir} alvo="obra" k={k} atual={o.titulo} rotulo="renomear" /></span></li>; })}</ul>
+        </>
+      )}
+      <p className="nota">Produções e títulos são do universo desta vida.</p>
     </Secao>
   );
 }

@@ -53,7 +53,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
               return (
                 <li key={k}>
                   <button type="button" className="atencao__item" onClick={() => abrir(p.id)}>
-                    <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={40} rotulo={p.nome} expressao={expressaoNpc(vida, p)} falecido={!p.vivo} />
+                    <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={40} especie={p.especie} rotulo={p.nome} expressao={expressaoNpc(vida, p)} falecido={!p.vivo} />
                     <span>{x.texto}</span>
                   </button>
                 </li>
@@ -139,7 +139,7 @@ function Rostos({ vida, itens, abrir }: { vida: Vida; itens: Par[]; abrir: (id: 
         {mostrados.map(({ p, vin }) => (
           <li key={p.id}>
             <button type="button" className={`rosto${vin.tensao >= 55 ? ' rosto--tenso' : ''}`} onClick={() => abrir(p.id)}>
-              <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={64} rotulo={p.nome} expressao={expressaoNpc(vida, p)} />
+              <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={64} especie={p.especie} rotulo={p.nome} expressao={expressaoNpc(vida, p)} />
               <span className="rosto__nome">{p.nome}</span>
               <span className="rosto__rotulo">{rotuloDe(vida, p, vin)}</span>
               <span className="rosto__prox">{etiqueta(vida, p, vin)}</span>

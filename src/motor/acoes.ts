@@ -59,6 +59,12 @@ import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, 
 import { autonomia } from './sistemas/autonomia';
 import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, usarItem, type MudancaVisual } from './sistemas/estilo';
 import { clamp } from './rng';
+import { disponibilidadeParalela, encerrarParalela, encerrarPausada, trocarPrincipal } from './sistemas/paralelas';
+import { cnhEmProva, disponibilidadePrepararCnh, prepararCnh } from './sistemas/autoescola';
+import { disponibilidadeHabilitacao, iniciarHabilitacao } from './sistemas/habilitacoes';
+import { disponibilidadeExperiencia, nomeDaExperiencia, viverExperiencia, type TipoExperiencia } from './sistemas/experiencias';
+import { disponibilidadeRenomear, renomear, type AlvoDeNome } from './sistemas/autoria';
+import { DE_FORMACAO, instituicaoAtual } from './sistemas/formacao';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -118,6 +124,15 @@ export type Acao =
   | { tipo: 'plano_saude'; ativo: boolean }
   | { tipo: 'renegociar' }
   | { tipo: 'cnh' }
+  /** Preparar-se para a prova da autoescola (apostila, aulas extras) — ou fazer a prova teórica marcada. */
+  | { tipo: 'cnh_preparar'; como: 'teoria' | 'pratica' }
+  | { tipo: 'cnh_prova' }
+  /** Habilitação para operar barco ou avião (a posse não depende dela). */
+  | { tipo: 'habilitacao'; qual: 'nautica' | 'piloto' }
+  /** O que o dinheiro compra além de objetos: uma viagem, um curso caro, um tempo sabático, uma doação, um presente grande. */
+  | { tipo: 'experiencia'; id: TipoExperiencia }
+  /** Dar nome ao que é seu: a banda ou o grupo, o negócio, uma obra (o jogo sugere; a pessoa decide). */
+  | { tipo: 'renomear'; alvo: AlvoDeNome; nome: string; k?: number }
   /** Adotar um animal do abrigo da cidade. */
   | { tipo: 'adotar_pet'; animalId: string }
   /** Comprar um animal numa loja ou criadouro autorizado (só espécies permitidas; silvestre com nota e marcação). */
@@ -160,7 +175,9 @@ export type Acao =
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string }
   /** Usar ou guardar um item que é seu. */
-  | { tipo: 'usar_item'; itemId: string; usar: boolean };
+  | { tipo: 'usar_item'; itemId: string; usar: boolean }
+  /** As outras trajetórias: deixar a paralela, trocar a principal, voltar a (ou encerrar) uma carreira pausada. */
+  | { tipo: 'trajetoria'; oque: 'deixar' | 'principal' | 'retomar' | 'encerrar_pausada'; k?: number };
 
 
 const TITULO_CUIDADO: Record<TipoCuidado, string> = { descansar: 'Uns dias de descanso', consulta: 'No médico', parar_fumar: 'Parar de fumar', beber_menos: 'Beber menos' };
@@ -473,6 +490,12 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
+    case 'trajetoria': return disponibilidadeParalela(v, a.oque, a.k);
+    case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
+    case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
+    case 'experiencia': return disponibilidadeExperiencia(v, a.id);
+    case 'renomear': return disponibilidadeRenomear(v, a.alvo, a.nome, a.k);
+    case 'cnh_prova': return cnhEmProva(v) ? PERMITIDO : bloqueio('incompativel', 'A prova ainda não foi marcada.');
     case 'cnh':
       if (i < 18) return bloqueio('ilegal', 'A CNH é a partir dos 18.');
       if (v.trabalho.licencas.includes('cnh')) return bloqueio('incompativel', 'Você já tem carteira.');
@@ -634,7 +657,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         }
         const f = v.caminhos.frentes[a.id as keyof typeof v.caminhos.frentes];
         const retomada = f && f.meses >= 12 && v.t - f.tUltimo >= 24;
-        v.rotinas.push({ id: a.id, tInicio: v.t, nivel });
+        // Atividade institucional nasce presa à instituição de agora (o time da escola A não vira o da escola B).
+        const inst = DE_FORMACAO.has(a.id) ? instituicaoAtual(v)?.chave : undefined;
+        v.rotinas.push({ id: a.id, tInicio: v.t, nivel, ...(inst ? { instituicao: inst } : {}) });
         if (retomada) {
           const anos = Math.floor((v.t - f!.tUltimo) / 12);
           escrever(v, { texto: `Voltou a ${m.nome.toLowerCase()} depois de ${anos} anos parad${ge(v) === 'feminino' ? 'a' : ge(v) === 'masculino' ? 'o' : 'e'}.`, relevancia: 'cotidiano', tema: 'lazer', escolha: true });
@@ -851,8 +876,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const nVeiculos = (v.fatos['veiculos_comprados'] ?? 0) + 1;
       v.fatos['veiculos_comprados'] = nVeiculos;
       // O tipo em palavras ("carro", "moto", "bicicleta elétrica") e o gênero dele; o nome é o da versão.
-      const tipo = m.categoria === 'bicicleta' ? m.nome : m.categoria;
-      const fem = m.categoria !== 'carro';
+      const tipo = m.categoria === 'bicicleta' || m.raro ? m.nome : m.categoria;
+      const fem = m.categoria !== 'carro' && !['veleiro', 'ultraleve', 'monomotor'].includes(m.id);
       const artigoNome = versao ? versao.artigo : fem ? 'a' : 'o';
       const primeiro = nVeiculos === 1 || !v.biografia.some(e => e.texto.includes(tipo));
       const verbo = anterior.length ? `Comprou também ${fem ? 'uma' : 'um'} ${tipo}` : nVeiculos === 1 || primeiro && m.categoria === 'carro' ? `Comprou ${fem ? 'a primeira' : 'o primeiro'} ${tipo}` : `Comprou ${fem ? 'uma' : 'um'} ${tipo}`;
@@ -1010,7 +1035,16 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'cnh':
       pagarTudo(v, custoCnh(v));
       iniciarCnh(v);
-      return ok('Matrícula na autoescola feita. A prova é em alguns meses.');
+      return ok('Matrícula na autoescola feita. A prova teórica é em alguns meses (as perguntas, você responde); estudar a apostila e fazer aulas extras ajudam.');
+    case 'cnh_preparar': return ok(prepararCnh(v, a.como));
+    case 'habilitacao': return ok(iniciarHabilitacao(v, a.qual));
+    case 'experiencia': return { resultado: viverExperiencia(v, r, a.id), titulo: nomeDaExperiencia(a.id) };
+    case 'renomear': return ok(renomear(v, a.alvo, a.nome, a.k));
+    case 'cnh_prova': {
+      const d = conteudoPorId('cnh_prova');
+      if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r));
+      return {};
+    }
     case 'pedir_ajuda_familia': {
       const res = pedirAjuda(v, r, a.motivo);
       return { resultado: res.texto, titulo: res.valor > 0 ? 'A família ajudou' : 'O pedido', pessoaId: res.pessoaId };
@@ -1027,6 +1061,15 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'aparencia': return ok(mudarAparencia(v, a.mudanca), 'neutro');
     case 'comprar_item': return ok(comprarItem(v, a.itemId), 'bom');
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
+    case 'trajetoria': {
+      if (a.oque === 'deixar') { const nome = nomeOcupacao(v, ocupacao(v.trabalho.paralela!.ocupacaoId)); encerrarParalela(v, 'deixou a trajetória paralela'); return ok(`Você deixou ${nome}. O que fez fica no currículo.`); }
+      if (a.oque === 'principal') { trocarPrincipal(v); return ok('A principal e a paralela trocaram de lugar.'); }
+      const p = v.trabalho.pausadas![a.k!];
+      if (a.oque === 'encerrar_pausada') { encerrarPausada(v, a.k!); return ok(`A carreira de ${nomeOcupacao(v, ocupacao(p.emprego.ocupacaoId))} fica no passado — e no currículo.`); }
+      // Voltar: se não couber com o trabalho de agora, a vida pergunta (deixar, pausar, conciliar, desistir).
+      if (propor(v, r, { tipo: 'emprego', ocupacaoId: p.emprego.ocupacaoId, via: 'retorno', retoma: a.k }) !== 'feito') return {};
+      return ok(`De volta: ${nomeOcupacao(v, ocupacao(p.emprego.ocupacaoId))}.`, 'bom');
+    }
   }
 }
 

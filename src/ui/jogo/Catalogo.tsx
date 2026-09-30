@@ -36,6 +36,10 @@ export interface ItemCatalogo {
   detalhe?: ReactNode;
   /** A ação (um botão), quando dá para tentar. */
   acao?: ReactNode;
+  /** Relevância para esta vida (maior primeiro): ordena os destaques e cada grupo. */
+  ordem?: number;
+  /** A ordem do grupo (menor primeiro); sem ela, ordem alfabética. */
+  ordemGrupo?: number;
 }
 
 const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -58,12 +62,16 @@ export function Catalogo({ itens, rotulo, tipos, vazio, porGrupo = 4, dicaBusca 
   const termo = normal(busca.trim());
 
   const filtrados = useMemo(() => itens.filter(x => (todos || x.possivel) && (!tipo || x.tipo === tipo) && (!termo || normal(`${x.titulo} ${x.grupo} ${x.busca ?? ''} ${x.meta}`).includes(termo))), [itens, todos, tipo, termo]);
-  const destaques = filtrados.filter(x => x.destaque).slice(0, 5);
+  // "Para você, agora": só o que dá para tentar, pela relevância para esta vida (não pela ordem do catálogo).
+  const porOrdem = (a: ItemCatalogo, b: ItemCatalogo) => (b.ordem ?? 0) - (a.ordem ?? 0);
+  const destaques = filtrados.filter(x => x.destaque && x.possivel).sort(porOrdem).slice(0, 5);
   const resto = filtrados.filter(x => !destaques.includes(x));
   const porNome = useMemo(() => {
     const m = new Map<string, ItemCatalogo[]>();
     for (const x of resto) { const l = m.get(x.grupo) ?? []; l.push(x); m.set(x.grupo, l); }
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+    for (const l of m.values()) l.sort(porOrdem);
+    const og = (g: string) => Math.min(...(m.get(g) ?? []).map(x => x.ordemGrupo ?? 99));
+    return [...m.entries()].sort((a, b) => og(a[0]) - og(b[0]) || a[0].localeCompare(b[0], 'pt-BR'));
   }, [resto]);
   const alcance = itens.filter(x => x.possivel).length;
   const alternar = (set: Set<string>, id: string, f: (s: Set<string>) => void) => { const n = new Set(set); if (n.has(id)) n.delete(id); else n.add(id); f(n); };

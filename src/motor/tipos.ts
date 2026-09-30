@@ -163,6 +163,8 @@ export interface Visual {
   chapeu?: 'bone' | 'chapeu' | 'gorro' | 'lenco';
   /** O jeito de vestir (a cor e o corte da roupa no retrato). */
   roupa?: EstiloRoupa;
+  /** A joia em uso, quando aparece no retrato (a corrente no pescoço, os brincos). O relógio não aparece: fica no pulso, fora do quadro. */
+  joia?: 'corrente' | 'corrente_ouro' | 'brincos';
 }
 
 export type EstiloRoupa = 'basica' | 'social' | 'esportiva' | 'alternativa' | 'elegante';
@@ -461,7 +463,7 @@ export interface Educacao {
   /** Largou a escola básica sem concluir. */
   evadiu: boolean;
   matricula?: Matricula;
-  concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean }[];
+  concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean; /** O desempenho ao se formar (0..100): o histórico que a seleção da pós lê. */ desempenho?: number }[];
   enem: { t: number; nota: number; areas?: Partial<Record<'exatas' | 'linguagens' | 'ciencias' | 'humanas', number>> }[];
   /** Postura do ano na escola/curso (escolha comportamental do jogador). */
   postura: 'dedicada' | 'normal' | 'relaxada';
@@ -472,6 +474,8 @@ export interface Educacao {
   cursinho?: boolean;
   /** O curso que a pessoa quer (Medicina, Direito...): a preparação passa a ser dirigida a ele. */
   objetivo?: { cursoId: string; t: number };
+  /** A matéria em que o estudo está dirigido (a que a estimativa aponta como fraca): o cursinho e o estudo por conta puxam para ela. */
+  focoMateria?: 'exatas' | 'linguagens' | 'ciencias' | 'humanas';
   /**
    * Preparação para o vestibular: meses de cursinho acumulados (esfriam
    * quando para). É o que o cursinho acrescenta à nota — dito em Estudos
@@ -604,6 +608,29 @@ export interface Trabalho {
    * Não é profissão: é uma trajetória de vida, com custo e sentido.
    */
   pausa?: PausaDeCuidado;
+  /**
+   * Uma segunda trajetória ATIVA, ao lado do trabalho principal (a professora
+   * que atua; o ator que segue fazendo alguns trabalhos durante a bolsa).
+   * Rende menos, pede parte da semana, conta experiência — e tem ações
+   * próprias (`sistemas/paralelas`). Nunca entra sem o jogador escolher.
+   */
+  paralela?: Emprego;
+  /**
+   * Trajetórias PAUSADAS: a carreira que ficou em espera (não encerrada) por
+   * outra. O currículo, a freguesia, os contatos e o nome continuam; voltar é
+   * retorno, não começo do zero (`sistemas/paralelas`).
+   */
+  pausadas?: TrajetoriaPausada[];
+}
+
+export interface TrajetoriaPausada {
+  emprego: Emprego;
+  /** Desde quando está pausada. */
+  t: number;
+  /** Por quê (dito na Linha da Vida): "para aceitar a bolsa de pesquisa". */
+  motivo: string;
+  /** Servidor: licença sem remuneração (o cargo espera até `tAte`). */
+  licenca?: { tAte: number };
 }
 
 export interface PausaDeCuidado {
@@ -887,7 +914,19 @@ export type Processo =
   | { tipo: 'adocao'; id: string; tInicio: number; tFim: number; parceiroId?: string }
   | { tipo: 'mudanca'; id: string; tEfetiva: number; destinoId: string; motivo: string }
   | { tipo: 'tratamento'; id: string; condicaoId: string; tFim: number; rede: 'sus' | 'particular' }
-  | { tipo: 'cnh'; id: string; tInicio: number; tFim: number; tentativas: number };
+  | {
+    tipo: 'cnh'; id: string; tInicio: number; tFim: number; tentativas: number;
+    /** Aulas (esperando a data da prova) ou a prova teórica marcada (`sistemas/autoescola`). */
+    fase?: 'aulas' | 'prova';
+    /** Apostila estudada (0..3) e aulas extras (0..3): o que o personagem traz para a prova. */
+    preparo?: number;
+    pratica?: number;
+    /** A teórica já passou (falta a prática). */
+    teoricaOk?: boolean;
+    tentativasPratica?: number;
+    /** A prova teórica em andamento: as perguntas sorteadas, a da vez, os acertos. */
+    prova?: { perguntas: string[]; atual: number; acertos: number };
+  };
 
 /* --------------------------------------------------------------- Biografia */
 
@@ -968,6 +1007,8 @@ export interface Rotina {
   tInicio: number;
   /** Intensidade: 1 leve (por diversão) · 2 regular (aulas, treino) · 3 a sério (base, banda, preparação pesada). */
   nivel?: 1 | 2 | 3;
+  /** Atividade de uma instituição (o time DA escola, o grêmio DA faculdade): a chave dela. Trocar de instituição encerra a atividade. */
+  instituicao?: string;
 }
 
 /* ---------------------------------------------------------------- Caminhos */
@@ -1157,6 +1198,64 @@ export interface Obra {
   renda: number;
 }
 
+/** Um trabalho no currículo artístico (projetos são fictícios, do universo desta vida). */
+export interface ItemCurriculo {
+  t: number;
+  /** Onde/como: teatro, festival, publicidade, curta, série, novela, filme, show, espetáculo. */
+  tipo: 'teatro' | 'festival' | 'publicidade' | 'curta' | 'serie' | 'novela' | 'filme' | 'show' | 'espetaculo' | 'edital';
+  titulo: string;
+  /** O papel ou a função ("protagonista", "elenco", "figuração", "direção"). */
+  papel: string;
+  /** A casa, a produtora, o grupo (fictícios ou genéricos). */
+  onde?: string;
+  /** 0 passou em branco · 1 teve público · 2 repercutiu · 3 marcou. */
+  repercussao: 0 | 1 | 2 | 3;
+  /** Cachê (reais). */
+  cache?: number;
+  /** Alguém que se conheceu ali (diretora, colega de elenco). */
+  pessoaId?: string;
+}
+
+/** A carreira acadêmica como vida: não é só o cargo — é o que se pesquisa, quem se orienta, o que se publica. */
+export interface VidaAcademica {
+  /** A linha de pesquisa (a área, em palavras). */
+  linha?: string;
+  /** Projetos iniciados e concluídos. */
+  projetos: number;
+  /** Projeto em andamento (termina em `tFim`). */
+  projeto?: { titulo: string; tInicio: number; tFim: number; financiado?: boolean };
+  /** Orientações feitas (alunos que concluíram com você). */
+  orientacoes: number;
+  /** Alunos que você orienta agora (ids de pessoas). */
+  orientandos: string[];
+  /** Artigos e trabalhos publicados. */
+  publicacoes: number;
+  /** Colaborações com outros grupos. */
+  colaboracoes: number;
+  /** Financiamentos conquistados (editais de pesquisa). */
+  financiamentos: number;
+  /** Quando fez cada coisa pela última vez (o ritmo de cada ação). */
+  ultimas: Record<string, number>;
+}
+
+/** Uma intenção persistente: o que se tenta, quantas vezes, o que pesou por último. */
+export interface Objetivo {
+  /** Chave estável: "curso:mestrado", "peneira:futebol", "concurso:professor_univ". */
+  id: string;
+  titulo: string;
+  tentativas: number;
+  tPrimeira: number;
+  tUltima: number;
+  /** O último resultado. */
+  resultado?: 'passou' | 'nao_passou';
+  /** O que mais pesou contra, em palavras (da mesma conta do motor). */
+  obstaculo?: string;
+  /** O que dá para fazer (quando é controlável). */
+  caminho?: string;
+  /** Alcançado em. */
+  tAlcancado?: number;
+}
+
 /** Preparação para concurso: meses de estudo acumulados (esfriam se parar). */
 /** Para onde o estudo de concurso está dirigido (o edital de polícia não cobra o mesmo que o de tribunal). */
 export type FocoConcurso = 'policial' | 'administrativo' | 'fiscal' | 'bancario' | 'educacao' | 'saude' | 'academico';
@@ -1285,15 +1384,17 @@ export interface ProcessoSeletivo {
 /** O que ficou de uma tentativa: o retorno que a pessoa recebeu. */
 export interface Devolutiva {
   t: number;
-  tipo: 'entrevista' | 'peneira' | 'concurso' | 'arte' | 'vestibular';
+  tipo: 'entrevista' | 'peneira' | 'concurso' | 'arte' | 'vestibular' | 'selecao';
   titulo: string;
   texto: string;
   passou: boolean;
   /** Ficou perto: vale tentar de novo. */
   perto?: boolean;
   /** O que mais pesou contra (para o jogador saber o que trabalhar). */
-  falta?: 'experiencia' | 'formacao' | 'entrevista' | 'tecnica' | 'fisico' | 'leitura' | 'nervos' | 'idade' | 'concorrencia' | 'preparo' | 'publico';
+  falta?: 'experiencia' | 'formacao' | 'entrevista' | 'tecnica' | 'fisico' | 'leitura' | 'nervos' | 'idade' | 'concorrencia' | 'preparo' | 'publico' | 'pesquisa' | 'projeto' | 'historico' | 'area' | 'materia';
   ocupacaoId?: string;
+  /** Seleção de curso (mestrado, doutorado): qual. */
+  cursoId?: string;
   dominio?: Dominio;
   /**
    * Em que ponto a pessoa estava nessa tentativa (0 começo … 4 muito
@@ -1337,6 +1438,20 @@ export interface Caminhos {
   obras?: Obra[];
   /** O último ano de apresentações (quem vive do palco, ou a banda que toca por fora). */
   palco?: Palco;
+  /**
+   * O currículo artístico: os TRABALHOS feitos (a peça em que atuou, o
+   * festival, a publicidade, a série) — diferente das obras próprias. Fica
+   * depois que a carreira pausa ou acaba (`sistemas/cena`).
+   */
+  curriculo?: ItemCurriculo[];
+  /**
+   * Objetivos perseguidos: o que a pessoa tenta e retenta (o mestrado, a
+   * peneira, o concurso). Memória de intenção, não lista de tarefas
+   * (`sistemas/objetivos`): nasce das devolutivas, com a mesma causa.
+   */
+  objetivos?: Objetivo[];
+  /** A vida acadêmica (docência e pesquisa): linha, projetos, orientações, produção (`sistemas/academia`). */
+  academia?: VidaAcademica;
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
   /**
@@ -1351,7 +1466,7 @@ export interface Caminhos {
 export type NovoCompromisso =
   | { tipo: 'base'; dominio: Dominio; municipioId: string; clube: string }
   | { tipo: 'contrato_esporte'; nivel: number }
-  | { tipo: 'emprego'; ocupacaoId: string; via: string; texto?: string; bonus?: number; extra?: 'rural_familia' | 'rural_arrendada' | 'arte'; pessoaId?: string }
+  | { tipo: 'emprego'; ocupacaoId: string; via: string; texto?: string; bonus?: number; extra?: 'rural_familia' | 'rural_arrendada' | 'arte'; pessoaId?: string; /** Retomar uma trajetória pausada (índice em `trabalho.pausadas`). */ retoma?: number }
   | { tipo: 'negocio'; negocioId: string; modo: 'guardado' | 'pequeno' | 'emprestimo' | 'socio'; socioId?: string }
   | { tipo: 'dedicar_negocio' }
   | { tipo: 'servico_militar' }
@@ -1439,6 +1554,14 @@ export interface Envolvimento {
   ganhos: number;
   /** Parou (e desde quando). O passado não some: a exposição ainda pode chegar. */
   parou?: number;
+  /** Na moita: menos dinheiro, menos exposição (escolha do jogador na pergunta do rumo). */
+  cautela?: boolean;
+  /**
+   * Desde quando há uma investigação (alguém começou a fazer perguntas). Não
+   * é processo ainda: pode virar processo — ou ser arquivada, se o que existe
+   * contra a pessoa esfria (parar, a moita).
+   */
+  investigado?: number;
 }
 
 /* ------------------------------------------------------------- Vida política */

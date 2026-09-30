@@ -46,11 +46,43 @@ export function prepararVestibular(v: Vida, r: Rng): void {
   p.meses += 12;
   p.tUltimo = v.t;
   const alvo = objetivoCurso(v);
+  const foco = v.educacao.focoMateria;
   for (const a of AREAS_ENEM) {
     const peso = alvo?.pesos?.[a] ?? 0;
     const w = alvo ? 0.35 + 0.25 * peso : 0.5;
-    praticar(v, r, a, 0.5 * w, 1);
+    // O foco numa matéria (a que a própria estimativa aponta como fraca) puxa o cursinho para ela.
+    praticar(v, r, a, 0.5 * w * (foco ? (a === foco ? 1.8 : 0.85) : 1), 1);
   }
+}
+
+/* ------------------------------------------------------ Estudo dirigido */
+
+/**
+ * Estudar uma matéria específica: a que a estimativa diz que mais pesa. É a
+ * resposta acionável a "o que ajuda agora: mais português" — pratica a MESMA
+ * variável que a nota da prova lê (`habilidade` da área) e, com cursinho,
+ * puxa a preparação para ela. Uma vez por ano (é um ano de estudo, não um clique).
+ */
+export function podeEstudarMateria(v: Vida, area?: string): Veredito {
+  if (!area || !AREAS_ENEM.includes(area as Materia)) return bloqueio('impossivel', 'Essa matéria não existe na prova.');
+  if (idade(v) < 13) return bloqueio('requisito', 'A partir dos 13.');
+  if (v.justica?.prisao) return bloqueio('impossivel', 'Não enquanto cumpre pena.');
+  const t = v.fatos['estudo_dirigido_t'];
+  if (t !== undefined && v.t - t < 12) return bloqueio('incompativel', `O estudo dirigido deste ano já foi para ${NOME_MATERIA[v.educacao.focoMateria ?? 'linguagens']}.`);
+  return PERMITIDO;
+}
+
+export function estudarMateria(v: Vida, r: Rng, area: Materia): { texto: string } {
+  v.fatos['estudo_dirigido_t'] = v.t;
+  v.educacao.focoMateria = area;
+  const antes = Math.round(notaEsperadaArea(v, area));
+  praticar(v, r, area, 0.9, 1);
+  v.mente.estresse = Math.min(100, v.mente.estresse + 2);
+  const depois = Math.round(notaEsperadaArea(v, area));
+  const COMO: Record<string, string> = { linguagens: 'redação toda semana, gramática, leitura dirigida', exatas: 'lista de exercícios todo dia, as contas refeitas até sair', ciencias: 'resumos, experimentos em vídeo, as fórmulas no caderno', humanas: 'linha do tempo na parede, textos e mapas' };
+  const texto = `Um ano de estudo dirigido em ${NOME_MATERIA[area]}: ${COMO[area]}.${fazCursinho(v) ? ' O cursinho passa a puxar para ela também.' : ''}${depois > antes ? ' Já se nota na preparação.' : ''}`;
+  escrever(v, { texto, relevancia: 'cotidiano', tema: 'estudo', escolha: true });
+  return { texto };
 }
 
 /** Sem cursinho, a preparação esfria (o que se decorou para a prova vai embora). */
@@ -186,7 +218,7 @@ export function proximoPassoVestibular(v: Vida, e: Estimativa): string {
   const passos: string[] = [];
   if (!cursinho) passos.push('um cursinho (é a preparação que mais sobe a nota no primeiro ano)');
   else if (meses >= 24) passos.push('o cursinho já rendeu o grosso; agora pesa mais a matéria fraca');
-  if (e.fraca) passos.push(`mais ${NOME_MATERIA[e.fraca]}`);
+  if (e.fraca) passos.push(`estudar ${NOME_MATERIA[e.fraca]} de forma dirigida${v.educacao.focoMateria === e.fraca ? ' (é o foco agora; mais um ano ajuda)' : ''}`);
   if (v.educacao.basica && d !== 'dedicada') passos.push('estudar com dedicação na escola');
   if (!v.rotinas.some(r => r.id === 'leitura') && e.fraca === 'linguagens') passos.push('ler com regularidade (a redação agradece)');
   return passos.length ? `O que ajuda agora: ${passos.slice(0, 3).join('; ')}.` : 'Mais um ano de preparação encurta a distância.';

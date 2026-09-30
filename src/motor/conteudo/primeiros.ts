@@ -42,7 +42,12 @@ export const PRIMEIROS: Conteudo[] = [
   {
     id: 'pri_hospital_braco', tipo: 'acontecimento', idade: [3, 9], tema: 'saude',
     narrar: c => ({
-      texto: `Uma queda do trepa-trepa terminou com o braço engessado por um mês. O gesso voltou para casa cheio de assinaturas.`,
+      texto: c.r.pick([
+        `Uma queda do trepa-trepa terminou com o braço engessado por um mês. O gesso voltou para casa cheio de assinaturas.`,
+        `Caiu da bicicleta na descida da rua e quebrou o pulso. Seis semanas de gesso, e a história ficou maior a cada vez que era contada.`,
+        `Um tombo no pega-pega do recreio terminou no pronto-socorro: o braço engessado virou mural da turma.`,
+        `Subiu no muro para buscar a bola e voltou com o braço quebrado — e a bola.`
+      ]),
       relevancia: 'biografia', efeito: () => saude(c, -2)
     })
   },

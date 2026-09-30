@@ -447,7 +447,8 @@ describe('atleta: contrato, banco, foco, doping abstrato, carreira curta', () =>
   });
   it('treinar dobrado machuca mais; preservar dura mais (média de várias vidas)', () => {
     let lesF = 0; let lesP = 0; let durF = 0; let durP = 0;
-    for (let s = 1; s <= 24; s++) {
+    // (FIX pós-REWORK 3: 60 vidas. Com 24, a diferença de duração — uns 2% — ficava dentro do ruído da semente.)
+    for (let s = 1; s <= 60; s++) {
       for (const foco of ['forcar', 'preservar'] as const) {
         let v = atleta(s);
         v.caminhos.esporte!.foco = foco;
@@ -462,7 +463,7 @@ describe('atleta: contrato, banco, foco, doping abstrato, carreira curta', () =>
     }
     expect(lesF).toBeGreaterThan(lesP);
     expect(durP).toBeGreaterThanOrEqual(durF);
-  });
+  }, 90000);
   it('carreiras de atleta não são eternas: ninguém joga profissional aos 42', () => {
     for (let s = 1; s <= 12; s++) {
       let v = atleta(s, 88);

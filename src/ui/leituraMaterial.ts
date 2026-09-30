@@ -8,7 +8,7 @@ import type { Especie } from '../motor/tipos';
 import type { Bem, Imovel, LinhaRazao, Veiculo, Vida } from '../motor/tipos';
 import { idade, idadePessoa, moraCom } from '../motor/nucleo';
 import { listaNatural, flex } from '../motor/texto';
-import { modeloMoradia, modeloVeiculo } from '../motor/dados/bens';
+import { formaDaVersao, modeloMoradia, modeloVeiculo, versaoVeiculo, type FormaVeiculo } from '../motor/dados/bens';
 import { municipio, rotuloPerfil } from '../motor/dados/lugares';
 import { mesesRestantes, orcamento, seguranca, type NivelSeguranca, type Orcamento } from '../motor/sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../motor/sistemas/domicilio';
@@ -70,6 +70,8 @@ export interface LeituraLar {
   moradores: { id: string; nome: string }[];
   bichos: { id: string; nome: string; especie: Especie }[];
   veiculo?: 'carro' | 'moto' | 'bicicleta';
+  /** A forma do veículo na porta (o desenho): hatch, picape, scooter, mountain bike. */
+  formaVeiculo?: FormaVeiculo;
   janelasAcesas: number;
 }
 
@@ -140,8 +142,9 @@ export function leituraDoLar(v: Vida): LeituraLar {
   }
   const apertada = casaApertada(v);
   if (apertada) selos.push({ texto: apertada.charAt(0).toUpperCase() + apertada.slice(1), tom: 'atencao' });
-  const vei = v.financas.bens.filter((x): x is Veiculo => x.tipo === 'veiculo').sort((a, c) => c.valor - a.valor)[0];
-  const cat = vei ? modeloVeiculo(vei.modeloId).categoria : undefined;
+  // O veículo na porta: o de terra mais valioso (o barco fica na marina; o avião, no hangar).
+  const vei = v.financas.bens.filter((x): x is Veiculo => x.tipo === 'veiculo' && ['carro', 'moto', 'bicicleta'].includes(modeloVeiculo(x.modeloId).categoria)).sort((a, c) => c.valor - a.valor)[0];
+  const cat = vei ? (modeloVeiculo(vei.modeloId).categoria as 'carro' | 'moto' | 'bicicleta') : undefined;
   return {
     forma,
     modeloId: modelo?.id,
@@ -155,6 +158,7 @@ export function leituraDoLar(v: Vida): LeituraLar {
     moradores: junto.map(p => ({ id: p.id, nome: p.nome })),
     bichos,
     veiculo: cat,
+    formaVeiculo: vei ? formaDaVersao(versaoVeiculo(vei.versaoId), vei.modeloId) : undefined,
     janelasAcesas: 1 + junto.length
   };
 }
@@ -238,6 +242,8 @@ export interface LeituraBem {
   tipo: 'imovel' | 'veiculo';
   /** Veículo: a categoria; imóvel: o modelo de moradia (cada um com a sua silhueta, `IconeMoradia`). */
   icone: string;
+  /** Veículo: a forma (o desenho próprio — hatch, picape, scooter, lancha). */
+  forma?: FormaVeiculo;
   modeloId: string;
   titulo: string;
   meta: string;
@@ -280,9 +286,9 @@ export function leituraDoBem(v: Vida, b: Bem): LeituraBem {
   const m = modeloVeiculo(b.modeloId);
   const anos = anosDoVeiculo(v, b);
   return {
-    id: b.id, tipo: 'veiculo', icone: m.categoria, modeloId: m.id,
+    id: b.id, tipo: 'veiculo', icone: m.categoria, forma: formaDaVersao(versaoVeiculo(b.versaoId), m.id), modeloId: m.id,
     titulo: `${cap(nomeDoVeiculo(b))}${b.anoFabricacao ? ` ${b.anoFabricacao}` : ''}`,
-    meta: cap(`${versaoDoVeiculo(b) ? `${versaoDoVeiculo(b)!.dica} · ` : ''}${b.usado ? 'comprado usado' : 'comprado zero'} em ${anoDe(b.tCompra)} · ${anos <= 1 ? 'quase novo' : `${anos} anos de estrada`} · ${dono}`),
+    meta: cap(`${versaoDoVeiculo(b) ? `${versaoDoVeiculo(b)!.dica} · ` : ''}${b.usado ? 'comprado usado' : 'comprado zero'} em ${anoDe(b.tCompra)} · ${anos <= 1 ? 'quase novo' : `${anos} anos${m.raro ? '' : ' de estrada'}`} · ${dono}`),
     estado: cap(estadoDoVeiculo(b)) + '.',
     valor: b.valor, financiamento,
     problema: b.problema ? { texto: b.problema.texto, custo: b.problema.custo, grave: b.problema.gravidade >= 3, adiado: b.problema.adiado } : undefined,

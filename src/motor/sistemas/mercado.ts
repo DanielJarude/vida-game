@@ -15,8 +15,8 @@ import { criarRng, type Rng } from '../rng';
 import { ANIMAIS, animal } from '../dados/animais';
 import type { Especie, Vida } from '../tipos';
 import { anoDe } from '../tempo';
-import { economiaLocal, municipio } from '../dados/lugares';
-import { MORADIAS, VEICULOS, VERSOES_VEICULO, depreciacao, modeloMoradia, modeloVeiculo, precoImovel, versaoVeiculo, versoesDaClasse, type ModeloMoradia, type ModeloVeiculo, type VersaoVeiculo } from '../dados/bens';
+import { economiaLocal, municipio, pertoDaAgua } from '../dados/lugares';
+import { MORADIAS, VEICULOS, VERSOES_VEICULO, depreciacao, type CategoriaVeiculo, modeloMoradia, modeloVeiculo, precoImovel, versaoVeiculo, versoesDaClasse, type ModeloMoradia, type ModeloVeiculo, type VersaoVeiculo } from '../dados/bens';
 import { indiceImoveis } from './economia';
 
 function rngDe(v: Vida, chave: string): Rng {
@@ -105,9 +105,28 @@ export function nomeImovel(o: { modeloId: string }): string {
 
 /* ---------------------------------------------------------------- Veículos */
 
+/** As lojas de veículos da cidade. */
+export type LojaDeVeiculo = 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube';
+
+/**
+ * A fonte única do que cada loja vende: a vitrine, o "catálogo completo" da
+ * loja e o filtro por tipo partem daqui (a loja de motos e bicicletas nunca
+ * mostra carro, nem o filtro "Carros").
+ */
+export const CATEGORIAS_DA_LOJA: Record<LojaDeVeiculo, CategoriaVeiculo[]> = {
+  concessionaria: ['carro'], usados: ['carro'], motos: ['moto', 'bicicleta'], nautica: ['embarcacao'], aeroclube: ['aeronave']
+};
+
+/** A loja existe nesta cidade? Náutica, perto da água; aeroclube, em cidade grande. */
+export function lojaNaCidade(municipioId: string, loja: LojaDeVeiculo): boolean {
+  if (loja === 'nautica') return pertoDaAgua(municipioId);
+  if (loja === 'aeroclube') { const m = municipio(municipioId); return m.perfil === 'metropole' || m.perfil === 'capital'; }
+  return true;
+}
+
 export interface OfertaVeiculo {
   id: string;
-  lugar: 'concessionaria' | 'usados' | 'motos';
+  lugar: LojaDeVeiculo;
   /** A classe (`VEICULOS`). */
   modeloId: string;
   /** A versão concreta: marca e modelo (`VERSOES_VEICULO`). */
@@ -138,6 +157,7 @@ const HISTORICOS: [string, number, number][] = [
  * da versão), cada um com ano, estado e uma história.
  */
 export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): OfertaVeiculo[] {
+  if (!lojaNaCidade(v.moradia.municipioId, lugar)) return [];
   const ano = anoDe(v.t);
   const r = rngDe(v, `vei:${lugar}:${ano}:${v.moradia.municipioId}`);
   const custo = economiaLocal(v.moradia.municipioId).custo;
@@ -147,7 +167,7 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   const novo = (x: VersaoVeiculo) => out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: x.classe, versaoId: x.id, usado: false, anoFabricacao: ano, preco: Math.round(x.preco * regional / 100) * 100, estado: 100 });
   const usado = (m: ModeloVeiculo) => {
     const x = r.weighted(versoesDaClasse(m.id), y => y.pesoUsado)!;
-    const anos = m.categoria === 'bicicleta' ? r.int(1, 5) : r.int(2, 14);
+    const anos = m.categoria === 'bicicleta' ? r.int(1, 5) : m.raro ? r.int(3, 20) : r.int(2, 14);
     const [historico, de, dp] = r.pick(HISTORICOS);
     const estado = Math.round(Math.max(25, Math.min(95, 92 - anos * 4 + de + r.normal() * 5)));
     const preco = Math.round(x.preco * regional * depreciacao(m, anos) * dp * (0.85 + estado / 600) / 100) * 100;
@@ -155,8 +175,14 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   };
   const daCategoria = (f: (m: ModeloVeiculo) => boolean) => VERSOES_VEICULO.filter(x => f(modeloVeiculo(x.classe)));
   if (lugar === 'concessionaria') for (const x of daCategoria(m => m.categoria === 'carro')) novo(x);
-  else if (lugar === 'motos') {
-    for (const x of daCategoria(m => m.categoria !== 'carro')) novo(x);
+  else if (lugar === 'nautica' || lugar === 'aeroclube') {
+    // Raros: todas as versões novas da loja e um ou dois usados (anúncio de marina, de hangar).
+    const cats = CATEGORIAS_DA_LOJA[lugar];
+    for (const x of daCategoria(m => cats.includes(m.categoria))) novo(x);
+    const classes = VEICULOS.filter(m => cats.includes(m.categoria));
+    for (let q = 0; q < (lugar === 'nautica' ? 2 : 1); q++) usado(r.weighted(classes, m => m.pesoUsado)!);
+  } else if (lugar === 'motos') {
+    for (const x of daCategoria(m => CATEGORIAS_DA_LOJA.motos.includes(m.categoria))) novo(x);
     usado(modeloVeiculo('moto_pequena'));
     usado(modeloVeiculo('moto_pequena'));
     usado(modeloVeiculo('moto_media'));
@@ -168,9 +194,15 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   return out;
 }
 
-/** Tudo o que está à venda na cidade neste ano (concessionária, usados, motos e bicicletas), do mais barato ao mais caro. */
-export function catalogoDeVeiculos(v: Vida): OfertaVeiculo[] {
-  return (['concessionaria', 'usados', 'motos'] as const).flatMap(l => ofertasDeVeiculos(v, l)).sort((a, b) => a.preco - b.preco || a.id.localeCompare(b.id));
+/**
+ * Tudo o que está à venda na cidade neste ano, do mais barato ao mais caro.
+ * Com uma loja: o catálogo DAQUELA loja (as categorias dela, novos e usados
+ * da cidade) — é o "Catálogo completo" de dentro da loja.
+ */
+export function catalogoDeVeiculos(v: Vida, loja?: LojaDeVeiculo): OfertaVeiculo[] {
+  const cats = loja ? CATEGORIAS_DA_LOJA[loja] : undefined;
+  const lojas = (['concessionaria', 'usados', 'motos', 'nautica', 'aeroclube'] as const).filter(l => !cats || CATEGORIAS_DA_LOJA[l].some(c => cats.includes(c)));
+  return lojas.flatMap(l => ofertasDeVeiculos(v, l)).filter(o => !cats || cats.includes(modeloVeiculo(o.modeloId).categoria)).sort((a, b) => a.preco - b.preco || a.id.localeCompare(b.id));
 }
 
 export function ofertaDeVeiculo(v: Vida, id: string): OfertaVeiculo | undefined {
@@ -185,7 +217,7 @@ export function ofertaDeVeiculo(v: Vida, id: string): OfertaVeiculo | undefined 
 export function ofertaVeiculoPorModelo(v: Vida, modeloId: string, usado?: boolean): OfertaVeiculo | undefined {
   const versao = versaoVeiculo(modeloId);
   const m = modeloVeiculo(versao?.classe ?? modeloId);
-  const lugar = m.categoria === 'carro' ? (usado ? 'usados' : 'concessionaria') : 'motos';
+  const lugar: LojaDeVeiculo = m.categoria === 'carro' ? (usado ? 'usados' : 'concessionaria') : m.categoria === 'embarcacao' ? 'nautica' : m.categoria === 'aeronave' ? 'aeroclube' : 'motos';
   const lista = ofertasDeVeiculos(v, lugar).filter(o => o.modeloId === m.id && (!versao || o.versaoId === versao.id) && (usado === undefined || o.usado === usado));
   return lista.sort((a, b) => a.preco - b.preco)[0];
 }

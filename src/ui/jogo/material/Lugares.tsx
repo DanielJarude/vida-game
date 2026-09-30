@@ -11,7 +11,8 @@ import type { Produto, Vida } from '../../../motor/tipos';
 import { condicoesImovel, condicoesVeiculo, condicoesEmprestimo, disponibilidade, type Acao } from '../../../motor/acoes';
 import { idade, idadePessoa, vinculosVivos } from '../../../motor/nucleo';
 import { podeTentar } from '../../../motor/plausibilidade';
-import { modeloMoradia, modeloVeiculo, nomeDaVersao, versaoVeiculo, PALAVRA_FAIXA, type CategoriaVeiculo } from '../../../motor/dados/bens';
+import { formaDaVersao, modeloMoradia, modeloVeiculo, nomeDaVersao, versaoVeiculo, NOME_CATEGORIA, NOME_FORMA, PALAVRA_FAIXA, type CategoriaVeiculo } from '../../../motor/dados/bens';
+import { leituraDaHabilitacao } from '../../../motor/sistemas/habilitacoes';
 import { economiaLocal } from '../../../motor/dados/lugares';
 import { PRODUTOS, PALAVRA_RISCO, produto } from '../../../motor/dados/investimentos';
 import { animaisParaVoce, imoveisParaVoce, investimentosParaVoce, veiculosParaVoce } from '../../../motor/sistemas/relevancia';
@@ -23,21 +24,21 @@ import { estadoDoVeiculo, custoRevisao, nomeDoVeiculo } from '../../../motor/sis
 import type { AnimalDoAbrigo, OfertaImovel, OfertaVeiculo } from '../../../motor/sistemas/mercado';
 import { BotaoAcao, Escolha, Folha } from '../../comum';
 import { Retrato } from '../../avatar/Retrato';
-import { Icone, IconeMoradia } from './Desenhos';
+import { DesenhoVeiculo, Icone, IconeMoradia } from './Desenhos';
 import { animal, palavraDoBicho } from '../../../motor/dados/animais';
-import { catalogoDeVeiculos, ofertasDePets, type OfertaDePet } from '../../../motor/sistemas/mercado';
-import { ITENS_ESTILO, type CategoriaItem } from '../../../motor/dados/estilo';
+import { CATEGORIAS_DA_LOJA, catalogoDeVeiculos, ofertasDePets, type OfertaDePet } from '../../../motor/sistemas/mercado';
+import { BALCOES, ITENS_ESTILO, type CategoriaItem } from '../../../motor/dados/estilo';
 import { precoDoItem, temItem } from '../../../motor/sistemas/estilo';
 
 const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 import { dinheiroCheio, dinheiroCurto } from '../../leituraMaterial';
 
-export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo';
+export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFechar: () => void; trocar: (l: QualLugar) => void }
 
 const TITULO: Record<QualLugar, string> = {
-  alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios'
+  alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', nautica: 'Loja náutica', aeroclube: 'Aeroclube e hangar', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios'
 };
 
 export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
@@ -52,7 +53,7 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
             <Imobiliaria vida={vida} agir={agirEFechar} modo={qual === 'alugar' ? 'aluguel' : 'venda'} />
           </>
         )}
-        {(qual === 'concessionaria' || qual === 'usados' || qual === 'motos') && <Veiculos vida={vida} agir={agirEFechar} lugar={qual} />}
+        {(qual === 'concessionaria' || qual === 'usados' || qual === 'motos' || qual === 'nautica' || qual === 'aeroclube') && <Veiculos vida={vida} agir={agirEFechar} lugar={qual} />}
         {qual === 'oficina' && <Oficina vida={vida} agir={agir} />}
         {qual === 'banco' && <Banco vida={vida} agir={agir} />}
         {qual === 'abrigo' && <Abrigo vida={vida} agir={agirEFechar} />}
@@ -71,10 +72,14 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
  * dá fama: um relógio caro num anônimo é só um relógio caro.
  */
 function LojaDeEstilo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
-  const grupos: { cat: CategoriaItem; titulo: string }[] = [{ cat: 'oculos', titulo: 'Óculos' }, { cat: 'chapeu', titulo: 'Na cabeça' }, { cat: 'roupa', titulo: 'Roupas' }, { cat: 'acessorio', titulo: 'Acessórios' }];
+  // Três balcões (não uma prateleira só): a ótica, as roupas e chapéus, a relojoaria e a joalheria.
+  const [balcao, setBalcao] = useState<(typeof BALCOES)[number]['id']>('otica');
+  const TITULO_CAT: Record<CategoriaItem, string> = { oculos: 'Óculos', chapeu: 'Na cabeça', roupa: 'Roupas', acessorio: 'Relógios e joias' };
+  const grupos: { cat: CategoriaItem; titulo: string }[] = BALCOES.find(b => b.id === balcao)!.categorias.map(cat => ({ cat, titulo: TITULO_CAT[cat] }));
   return (
     <div className="loja-estilo">
-      <p className="nota">Mudar o corte, a cor ou a barba não custa nada: fica em Você · Aparência e estilo. Aqui é o que se compra — e fica com você.</p>
+      <p className="nota">Mudar o corte, a cor ou a barba não custa nada: fica em Você · Aparência e estilo. Aqui é o que se compra — e fica com você: dá para usar, guardar e trocar depois.</p>
+      <Escolha rotulo="Balcão" valor={balcao} aoMudar={setBalcao} opcoes={BALCOES.map(b => ({ id: b.id, rotulo: b.nome }))} />
       {grupos.map(g => (
         <section key={g.cat} className="loja-estilo__grupo" aria-label={g.titulo}>
           <h3 className="subtitulo">{g.titulo}</h3>
@@ -88,7 +93,7 @@ function LojaDeEstilo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                     <span>{x.descricao}</span>
                   </span>
                   <span className="oferta__preco">{dinheiroCurto(precoDoItem(vida, x.id))}</span>
-                  {tem ? <span className="nota">Já é seu.</span> : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_item', itemId: x.id }} agir={agir} variante="secundario">Comprar</BotaoAcao>}
+                  {tem ? (() => { const meu = vida.eu.estilo?.itens.find(y => y.itemId === x.id); return <span className="loja-estilo__seu"><span className="nota">É seu{meu?.usando ? ' · em uso' : ' · guardado'}.</span><BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.id, usar: !meu?.usando }} agir={agir} variante="discreto">{meu?.usando ? 'Guardar' : 'Usar'}</BotaoAcao></span>; })() : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_item', itemId: x.id }} agir={agir} variante="secundario">Comprar</BotaoAcao>}
                 </li>
               );
             })}
@@ -233,7 +238,9 @@ const POR_PAGINA = 20;
 
 function Veiculos({ vida, agir, lugar }: { vida: Vida; agir: (a: Acao) => boolean; lugar: OfertaVeiculo['lugar'] }) {
   const { para, resto } = veiculosParaVoce(vida, lugar);
-  const catalogo = catalogoDeVeiculos(vida);
+  // O catálogo DESTA loja (as categorias dela): a loja de motos e bicicletas não mostra carro.
+  const catalogo = catalogoDeVeiculos(vida, lugar);
+  const categorias = CATEGORIAS_DA_LOJA[lugar];
   const [vista, setVista] = useState<'loja' | 'catalogo'>('loja');
   const [aberta, setAberta] = useState<string | null>(null);
   const [verTudo, setVerTudo] = useState(false);
@@ -242,9 +249,10 @@ function Veiculos({ vida, agir, lugar }: { vida: Vida; agir: (a: Acao) => boolea
   return (
     <>
       <Escolha rotulo="O que ver" valor={vista} aoMudar={setVista} opcoes={[{ id: 'loja', rotulo: 'Para você, agora' }, { id: 'catalogo', rotulo: `Catálogo completo (${catalogo.length})` }]} />
-      {vista === 'catalogo' ? <CatalogoVeiculos ofertas={catalogo} abrir={setAberta} /> : (
+      {vista === 'catalogo' ? <CatalogoVeiculos ofertas={catalogo} abrir={setAberta} categorias={categorias} /> : (
         <>
-          <p className="nota">{lugar === 'usados' ? 'Usado custa menos e dá mais oficina. Cada anúncio tem uma história.' : lugar === 'concessionaria' ? 'Zero quilômetro: garantia, cheiro de novo — e o valor cai assim que sai da loja.' : 'Moto e bicicleta: baratas de manter, expostas no trânsito.'}{!vida.trabalho.licencas.includes('cnh') && lugar !== 'motos' ? ' Sem carteira de motorista, não dá para dirigir.' : ''}</p>
+          <p className="nota">{lugar === 'usados' ? 'Usado custa menos e dá mais oficina. Cada anúncio tem uma história.' : lugar === 'concessionaria' ? 'Zero quilômetro: garantia, cheiro de novo — e o valor cai assim que sai da loja.' : lugar === 'nautica' ? 'Barco é caro de comprar e mais caro de manter: marina, seguro, combustível, o casco que pede cuidado.' : lugar === 'aeroclube' ? 'Avião é raro e caro: hangar, inspeção obrigatória, seguro — uma conta de empresa.' : 'Moto e bicicleta: baratas de manter, expostas no trânsito.'}{!vida.trabalho.licencas.includes('cnh') && (lugar === 'concessionaria' || lugar === 'usados') ? ' Sem carteira de motorista, não dá para dirigir.' : !vida.trabalho.licencas.includes('cnh') && lugar === 'motos' ? ' Moto pede carteira de motorista; bicicleta, não.' : ''}</p>
+          {(lugar === 'nautica' || lugar === 'aeroclube') && (() => { const h = lugar === 'nautica' ? 'nautica' : 'piloto'; return <div className="habilitacao"><p className="nota">Ter não é saber operar. {leituraDaHabilitacao(vida, h)}</p><BotaoAcao vida={vida} acao={{ tipo: 'habilitacao', qual: h }} agir={agir} variante="discreto" ocultarBloqueado ocultarImpossivel>{h === 'nautica' ? 'Fazer o curso de habilitação náutica' : 'Começar a formação de piloto'}</BotaoAcao></div>; })()}
           {para.length > 0 ? <><h3 className="subtitulo">Para você, agora</h3><ul className="ofertas">{para.map(x => <li key={x.item.id}><CartaoVeiculo o={x.item} motivo={x.motivo} abrir={() => setAberta(x.item.id)} /></li>)}</ul></>
             : <p className="nota">{motivoDeNadaCaber(vida, resto)}</p>}
           {resto.length > 0 && <h3 className="subtitulo">{para.length ? 'Os outros' : 'À venda'}, do mais barato ao mais caro</h3>}
@@ -268,7 +276,9 @@ function motivoDeNadaCaber(vida: Vida, resto: OfertaVeiculo[]): string {
 }
 
 /** A loja inteira da cidade: tudo o que está à venda, do mais barato ao mais caro, com filtros. */
-export function CatalogoVeiculos({ ofertas, abrir }: { ofertas: OfertaVeiculo[]; abrir: (id: string) => void }) {
+export function CatalogoVeiculos({ ofertas, abrir, categorias }: { ofertas: OfertaVeiculo[]; abrir: (id: string) => void; categorias?: CategoriaVeiculo[] }) {
+  // Os filtros de tipo saem das categorias que a loja vende (fonte única: `mercado.CATEGORIAS_DA_LOJA`).
+  const cats = categorias ?? ([...new Set(ofertas.map(o => modeloVeiculo(o.modeloId).categoria))] as CategoriaVeiculo[]);
   const [categoria, setCategoria] = useState<FiltroCategoria>('todas');
   const [condicao, setCondicao] = useState<FiltroCondicao>('todos');
   const [ordem, setOrdem] = useState<Ordem>('barato');
@@ -289,7 +299,7 @@ export function CatalogoVeiculos({ ofertas, abrir }: { ofertas: OfertaVeiculo[];
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
         <input id={idBusca} type="search" value={busca} onChange={e => mudar(setBusca)(e.target.value)} placeholder="Marca ou modelo" autoComplete="off" />
       </label>
-      <Escolha rotulo="Tipo de veículo" valor={categoria} aoMudar={mudar(setCategoria)} opcoes={[{ id: 'todas', rotulo: 'Todos' }, { id: 'carro', rotulo: 'Carros' }, { id: 'moto', rotulo: 'Motos' }, { id: 'bicicleta', rotulo: 'Bicicletas' }]} />
+      {cats.length > 1 && <Escolha rotulo="Tipo de veículo" valor={categoria} aoMudar={mudar(setCategoria)} opcoes={[{ id: 'todas', rotulo: 'Todos' }, ...cats.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c].varios }))]} />}
       <Escolha rotulo="Novo ou usado" valor={condicao} aoMudar={mudar(setCondicao)} opcoes={[{ id: 'todos', rotulo: 'Novos e usados' }, { id: 'novos', rotulo: 'Novos' }, { id: 'usados', rotulo: 'Usados' }]} />
       <div className="catalogo-veiculos__barra">
         <p className="catalogo__conta" aria-live="polite">{lista.length} à venda{termo ? ` para "${busca.trim()}"` : ''}</p>
@@ -312,11 +322,10 @@ function vitrine(o: OfertaVeiculo): { nome: string; linha: string; descricao: st
 }
 
 function CartaoVeiculo({ o, motivo, abrir }: { o: OfertaVeiculo; motivo?: string; abrir: () => void }) {
-  const m = modeloVeiculo(o.modeloId);
   const vt = vitrine(o);
   return (
     <button type="button" className="oferta" onClick={abrir}>
-      <Icone nome={m.categoria} />
+      <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId)} />
       <span className="oferta__texto">
         <strong>{vt.nome} {o.anoFabricacao}</strong>
         <span>{o.usado ? 'Usado' : 'Novo, zero km'} · {vt.linha}</span>
@@ -350,9 +359,11 @@ function DetalheVeiculo({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao)
         <div><dt>Preço</dt><dd>{dinheiroCheio(o.preco)}</dd></div>
         {financiar && <div><dt>Parcela</dt><dd>{dinheiroCheio(c.parcela)} × {c.meses}</dd></div>}
         {financiar && <div><dt>Total pago</dt><dd>{dinheiroCurto(c.total)}</dd></div>}
-        <div><dt>Para rodar</dt><dd>uns {dinheiroCurto(uso)}/mês{m.taxaAnual ? ' + IPVA e seguro' : ''}</dd></div>
+        <div><dt>{m.raro ? 'Para manter' : 'Para rodar'}</dt><dd>uns {dinheiroCurto(uso)}/mês{m.taxaAnual ? (m.categoria === 'embarcacao' ? ' + seguro e marina' : m.categoria === 'aeronave' ? ' + seguro, hangar e inspeção' : ' + IPVA e seguro') : ''}</dd></div>
+        <div><dt>Tipo</dt><dd>{NOME_FORMA[formaDaVersao(x, o.modeloId)]}</dd></div>
         {m.categoria === 'carro' && <div><dt>Lugares</dt><dd>{lugares}</dd></div>}
       </dl>
+      {m.habilitacao && <p className="nota">{leituraDaHabilitacao(vida, m.habilitacao)}</p>}
       <BotaoAcao vida={vida} acao={{ tipo: 'comprar_veiculo', ofertaId: o.id, financiar, entrada }} agir={agir} variante="principal">{financiar ? 'Financiar' : 'Comprar'}</BotaoAcao>
     </div>
   );

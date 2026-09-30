@@ -728,6 +728,8 @@ describe('casal, separação, herança, apoio entre gerações', () => {
 
   it('herança: as dívidas não passam; o cônjuge fica com a metade do que construíram e divide o resto com os filhos', () => {
     const v = sozinha(60, 111);
+    // O cenário é "cônjuge + um filho": a vida sorteada pode ter tido outros filhos (tiram-se da conta).
+    for (const vin of Object.values(v.vinculos)) if (vin.parentesco === 'filho' || vin.parentesco === 'enteado' || vin.parentesco === 'neto') { const q = v.pessoas[vin.pessoaId]; if (q) q.vivo = false; }
     const p = comParceria(v, 'casamento');
     const f = comFilho(v, 30);
     comecarVidaEmComum(v, p);
@@ -754,6 +756,10 @@ describe('casal, separação, herança, apoio entre gerações', () => {
         if (!mae) return -1;
         for (const x of vinculosVivos(v)) if (x.p.id !== mae.p.id) x.vin.proximidade = 5;
         mae.p.renda = 6000; mae.vin.proximidade = prox; mae.vin.tensao = tensao; mae.vin.confianca = prox;
+        // "Poder": a casa de origem com alguma reserva (a vida sorteada pode ter chegado aos 25 com ela zerada).
+        if (v.origem) v.origem.reserva = Math.max(v.origem.reserva ?? 0, 40000);
+        // E sem ajuda recente (quem acabou de ajudar espera um tempo): a vida sorteada pode ter recebido uma aos 23.
+        for (const k of Object.keys(v.fatos)) if (k.startsWith('ajudou_')) delete v.fatos[k];
         mae.p.tNasc = v.t - 55 * 12;
         v.trabalho.atual = undefined;
         v.financas.conta = 0;

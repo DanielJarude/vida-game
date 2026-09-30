@@ -16,6 +16,8 @@ import { TRAJETORIAS } from './trajetorias';
 import { PROFISSAO } from './profissao';
 import { POLITICA } from './politica';
 import { COMPROMISSOS } from './compromissos';
+import { CARREIRAS } from './carreiras';
+import { AUTOESCOLA } from './autoescola';
 import { NEGOCIOS_CONTEUDO } from './negocios';
 import { BENS } from './bens';
 import { REDE } from './rede';
@@ -24,4 +26,4 @@ import { INTEGRACAO } from './integracao';
 import { OFICIOS_CONTEUDO } from './oficios';
 import { REWORK3 } from './rework3';
 
-export const CATALOGO: readonly Conteudo[] = [...REWORK3, ...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA];
+export const CATALOGO: readonly Conteudo[] = [...REWORK3, ...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...CARREIRAS, ...AUTOESCOLA, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA];

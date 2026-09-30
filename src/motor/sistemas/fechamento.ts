@@ -26,7 +26,7 @@ export function fechamentoDoAno(v: Vida): Fechamento[] {
   const e = v.caminhos.esporte;
   const t = e?.temporadas?.[e.temporadas.length - 1];
   if (e && t && t.ano === ano && e.fase !== 'base') {
-    const linhas = [linhaDaTemporada(v, t), `${palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)} — no mercado: ${palavraDaReputacao(e.reputacao ?? 30)}.`];
+    const linhas = [linhaDaTemporada(v, t), `${palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)} — no mercado: ${palavraDaReputacao(e.reputacao ?? 30, e.modalidade)}.`];
     if (e.fase === 'profissional') linhas.push(e.espaco === 'titular' ? 'A próxima temporada começa como titular.' : e.espaco === 'reserva' ? 'A próxima temporada começa no banco.' : 'Sem clube, esperando proposta.');
     if (v.notoriedade && v.notoriedade.valor >= 30 && v.notoriedade.fonte === 'esporte') linhas.push(`Para o público: ${palavraDaNotoriedade(v)}.`);
     out.push({ titulo: `Temporada ${t.ano} — ${t.clube}${t.posicao ? ` · ${nomePosicao(v, t.posicao)}` : ''}`, linhas });

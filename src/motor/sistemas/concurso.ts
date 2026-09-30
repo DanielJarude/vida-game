@@ -72,6 +72,7 @@ const PERFIS: Record<string, PerfilConcurso> = {
 
 const PADRAO: PerfilConcurso = { preparo: 10, teto: 0.35, frequencia: 0.3, materias: ['linguagens'], esfera: 'estadual' };
 import { propor } from './compromissos';
+import { pesoDaProducao } from './academia';
 
 export const perfilConcurso = (id: string) => PERFIS[id] ?? PADRAO;
 
@@ -143,6 +144,14 @@ export function trajetoriaParaConcurso(v: Vida, oc: Ocupacao): { meses: number; 
     const rotulo = foco === 'policial' && maior === 'vigilancia' ? 'segurança privada' : t.rotulo;
     motivos.push(atual ? `Seus ${Math.floor(anos)} anos de ${rotulo}, hoje como ${atual}, contam: a rotina e a matéria da prova não são novidade.` : `Os ${Math.floor(anos)} anos de ${rotulo} contam: boa parte da matéria você já viveu.`);
   }
+  // Concurso acadêmico (universidade, instituto): a prova de títulos pesa — o doutorado, o mestrado, a produção.
+  if (foco === 'academico') {
+    const tem = (n: string) => v.educacao.concluidos.some(c => c.nivel === n);
+    if (tem('doutorado')) { meses += 12; motivos.push('O doutorado é o título que esse concurso mais pesa: conta como boa parte do preparo.'); }
+    else if (tem('mestrado')) { meses += 5; motivos.push('O mestrado conta na prova de títulos; o doutorado contaria bem mais.'); }
+    const prod = pesoDaProducao(v);
+    if (prod >= 0.1) { meses += Math.round(prod * 10); motivos.push('A produção (artigos, orientações, projetos) soma na prova de títulos.'); }
+  }
   const formacao = v.educacao.concluidos.find(c => t.areas.includes(c.area) && ['superior', 'pos', 'mestrado', 'doutorado'].includes(c.nivel));
   if (formacao) { meses += 8; motivos.push(`${formacao.nivel === 'superior' ? `A formação em ${formacao.nome}` : `${formacao.nivel === 'pos' ? 'A' : 'O'} ${formacao.nome.charAt(0).toLowerCase()}${formacao.nome.slice(1)}`} pesa a favor: é o conteúdo específico deste edital.`); }
   if (oc.forma && v.corpo.forma >= oc.forma + 10) motivos.push('O preparo físico está acima do que o teste pede.');
@@ -172,11 +181,22 @@ export function chanceNoConcurso(v: Vida, oc: Ocupacao): number {
   const x = (prep - p.preparo) / Math.max(4, p.preparo * 0.45);
   const curva = 1 / (1 + Math.exp(-x * 1.6));
   // Quem traz estrada da área passa mais vezes das etapas que não são prova (título, físico, investigação social).
-  const teto = p.teto + (trajetoriaParaConcurso(v, oc).meses >= 12 ? 0.04 : 0);
+  const teto = tetoDoConcurso(v, oc);
   let c = 0.01 + (teto - 0.01) * curva;
   if (oc.id === 'musico_orquestra') c = clamp(0.01 + (habilidade(v, 'musica') - 76) / 40, 0.01, p.teto);
-  if (oc.id === 'professor_univ') c += v.educacao.concluidos.filter(x => x.nivel === 'doutorado').length ? 0.05 : 0;
   return clamp(c, 0.01, teto);
+}
+
+/**
+ * O teto (a concorrência): nem o mais preparado passa sempre. Quem traz
+ * estrada da área passa mais das etapas que não são prova; no concurso
+ * acadêmico, o doutor disputa numa faixa acima (o título está no preparo E
+ * aqui — é dito na leitura, não escondido depois da conta).
+ */
+export function tetoDoConcurso(v: Vida, oc: Ocupacao): number {
+  const p = perfilConcurso(oc.id);
+  const doutor = FOCO_DO_CARGO[oc.id] === 'academico' && v.educacao.concluidos.some(x => x.nivel === 'doutorado');
+  return p.teto + (trajetoriaParaConcurso(v, oc).meses >= 12 ? 0.04 : 0) + (doutor ? 0.06 : 0);
 }
 
 /** Em que ponto está o preparo para um edital, do jeito que a vida fala (0 sem preparo … 4 muito competitivo). */
@@ -212,7 +232,8 @@ export function lerPreparo(v: Vida, oc: Ocupacao): LeituraPreparo {
   fatores.push(...trajetoriaParaConcurso(v, oc).motivos);
   const fraca = [...p.materias].sort((a, b) => habilidade(v, a) - habilidade(v, b))[0];
   if (fraca && habilidade(v, fraca) < 50) fatores.push(`A matéria mais fraca é ${NOME_DA_PROVA[fraca] ?? fraca}: é onde o estudo mais falta.`);
-  const disputa = p.teto <= 0.1 ? ' Mesmo bem preparado, a maioria não passa: é um dos editais mais disputados.' : p.teto <= 0.16 ? ' A concorrência é grande: costuma levar mais de uma tentativa.' : '';
+  const teto = tetoDoConcurso(v, oc);
+  const disputa = teto <= 0.1 ? ' Mesmo bem preparado, a maioria não passa: é um dos editais mais disputados.' : teto <= 0.16 ? ' A concorrência é grande: costuma levar mais de uma tentativa.' : foco === 'academico' ? ' São poucas vagas por área: mesmo bem preparado, pode levar mais de uma tentativa.' : '';
   const frase = nivel === 0 ? 'Sem preparo, é quase um bilhete de loteria.'
     : nivel === 1 ? 'O estudo começou, mas ainda falta bastante para a nota de corte.'
       : nivel === 2 ? 'Preparo em construção: perto do que esse concurso costuma pedir.'

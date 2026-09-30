@@ -8,16 +8,18 @@
  *   Pessoas        quem está na minha vida (família, amigos, amor)
  *   Formação       onde estudo, com quem, o que faço lá, o que posso estudar
  *   Trabalho       o que faço para viver (e o que posso vir a fazer)
- *   Vida           a vida concreta: onde moro, o dinheiro, as compras, o
- *                  tempo livre, a cidade
+ *   Tempo livre    a semana: atividades, esporte, arte, lazer (a área mais
+ *                  visitada no dia a dia — FIX pós-REWORK 3: saiu de dentro
+ *                  de Vida para não pedir dois toques toda vez)
+ *   Vida           a vida concreta: onde moro, o dinheiro, as compras, a cidade
  *
  * Dentro de Vida há seções (navegação contextual interna), em vez de mais
  * abas no topo. O MAPA DE INTENÇÕES é a fonte única de "onde começo?": o
  * menu o mostra e os testes de navegação o percorrem.
  */
 
-export type Area = 'linha' | 'voce' | 'pessoas' | 'formacao' | 'trabalho' | 'vida';
-export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'tempo' | 'cidade';
+export type Area = 'linha' | 'voce' | 'pessoas' | 'formacao' | 'trabalho' | 'tempo' | 'vida';
+export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'cidade';
 
 /** Um destino: uma área, uma seção de Vida — ou um nome antigo que continua aceito. */
 export type Aba = Area | SecaoVida | 'estudos';
@@ -26,7 +28,7 @@ export interface Lugar { area: Area; secao?: SecaoVida }
 
 export function resolverDestino(d: Aba): Lugar {
   if (d === 'estudos') return { area: 'formacao' };
-  if (d === 'casa' || d === 'dinheiro' || d === 'compras' || d === 'tempo' || d === 'cidade') return { area: 'vida', secao: d };
+  if (d === 'casa' || d === 'dinheiro' || d === 'compras' || d === 'cidade') return { area: 'vida', secao: d };
   return { area: d };
 }
 
@@ -36,6 +38,7 @@ export const AREAS: { id: Area; rotulo: string; curto: string; icone: string }[]
   { id: 'pessoas', rotulo: 'Pessoas', curto: 'Pessoas', icone: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M17 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3' },
   { id: 'formacao', rotulo: 'Formação', curto: 'Formação', icone: 'M12 3l10 5-10 5L2 8l10-5zm-6 7.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5' },
   { id: 'trabalho', rotulo: 'Trabalho', curto: 'Trabalho', icone: 'M3.5 8h17v11.5h-17zM9 8V5.5h6V8M3.5 13.5h17' },
+  { id: 'tempo', rotulo: 'Tempo livre', curto: 'Tempo', icone: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2' },
   { id: 'vida', rotulo: 'Vida', curto: 'Vida', icone: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z' }
 ];
 
@@ -43,7 +46,6 @@ export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'casa', rotulo: 'Casa', oque: 'Onde e com quem você mora; sair de casa, voltar' },
   { id: 'dinheiro', rotulo: 'Dinheiro', oque: 'O mês, o que é seu e o que deve; a ajuda da família' },
   { id: 'compras', rotulo: 'Compras', oque: 'Imóveis, carros, motos, bicicletas, óculos e roupas, banco' },
-  { id: 'tempo', rotulo: 'Tempo livre', oque: 'A semana: atividades, esporte, arte, lazer' },
   { id: 'cidade', rotulo: 'Cidade', oque: 'Onde você vive, o trajeto, mudar de cidade' }
 ];
 
@@ -68,7 +70,7 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'namoro', quero: 'Procurar alguém para namorar', lugar: { area: 'pessoas' }, la: '"Conhecer alguém"' },
   { id: 'emprego', quero: 'Procurar emprego, ver a profissão', lugar: { area: 'trabalho' }, la: 'o trabalho de agora e as vagas' },
   { id: 'negocio', quero: 'Abrir um negócio', lugar: { area: 'trabalho' }, la: '"Outras possibilidades"' },
-  { id: 'futebol', quero: 'Jogar futebol, treinar', lugar: { area: 'vida', secao: 'tempo' }, la: 'as atividades da semana (o time da escola fica em Formação)' },
+  { id: 'futebol', quero: 'Jogar futebol, treinar', lugar: { area: 'tempo' }, la: 'as atividades da semana (o time da escola fica em Formação)' },
   { id: 'carro', quero: 'Comprar carro, moto ou bicicleta', lugar: { area: 'vida', secao: 'compras' }, la: 'concessionária, usados, motos e bicicletas' },
   { id: 'casa', quero: 'Procurar casa, sair da casa dos pais', lugar: { area: 'vida', secao: 'casa' }, la: '"Procurar um lugar para morar"' },
   { id: 'onde_moro', quero: 'Saber onde moro e com quem', lugar: { area: 'vida', secao: 'casa' }, la: 'a casa, no alto' },

@@ -13,7 +13,7 @@ import type { CategoriaIlicita, Especialidade, Pessoa, Vida } from '../tipos';
 import * as P from './papeis';
 import { estresse, fato, feliz, prox, tensao, custa } from './efeitos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, vinculosVivos } from '../nucleo';
-import { CATEGORIAS, entrar, escalar, parar } from '../sistemas/ilicito';
+import { CATEGORIAS, entrar, escalar, moita, parar } from '../sistemas/ilicito';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
 import { disponivel, pagar } from '../sistemas/dinheiro';
 import { encerrarPausa, iniciarPausa, podeReduzir } from '../sistemas/pausa';
@@ -89,7 +89,7 @@ export const TRAJETORIAS: Conteudo[] = [
       const e = c.v.caminhos.envolvimento!;
       const anos = Math.max(1, Math.round((c.v.t - e.tInicio) / 12));
       const par = parceiro(c.v);
-      return `${anos === 1 ? 'Um ano' : `${anos} anos`} disso. Entraram ${fmt(e.ganhos)} por fora${e.exposicao >= 45 ? ', e gente demais já sabe' : ''}. ${par ? `${par.p.nome} desconfia de onde vem o dinheiro.` : ''} ${e.nivel < 3 ? 'Quem está acima oferece mais — mais dinheiro, mais compromisso.' : 'O grupo conta com você.'}`;
+      return `${anos === 1 ? 'Um ano' : `${anos} anos`} disso. Entraram ${fmt(e.ganhos)} por fora${e.investigado !== undefined ? ', e agora há uma investigação' : e.exposicao >= 45 ? ', e gente demais já sabe' : ''}. ${par ? `${par.p.nome} desconfia de onde vem o dinheiro.` : ''} ${e.nivel < 3 ? 'Quem está acima oferece mais — mais dinheiro, mais compromisso.' : 'O grupo conta com você.'}`;
     },
     opcoes: [
       { id: 'parar_esquema', texto: 'Parar de vez', comportamento: { disciplina: 1 },
@@ -97,7 +97,9 @@ export const TRAJETORIAS: Conteudo[] = [
       { id: 'mudar_de_vez', texto: 'Parar e mudar de cidade, para longe de todo mundo', comportamento: { coragem: 1 },
         disponivel: c => (idade(c.v) < 18 ? 'Sem idade para recomeçar longe sozinho.' : custa(c, custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)), 'Não há dinheiro para recomeçar longe.')),
         resolver: c => ({ texto: 'Uma mala, um número de telefone novo, uma cidade onde ninguém sabe o seu nome.', memoria: null, efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : 'sao-paulo-sp'; parar(c.v, 'mudou de cidade para cortar os contatos'); pagar(c.v, custoDeMudanca(aqui, d)); mudarAgora(c.v, d, 'para recomeçar longe dos contatos de antes'); delete c.v.fatos['pressao_grupo']; } }) },
-      { id: 'seguir_esquema', texto: 'Seguir do mesmo jeito', resolver: () => ({ texto: 'Você seguiu. Cada ano parece o último sem problema.', memoria: null }) },
+      { id: 'moita', texto: 'Ficar na moita: menos dinheiro, menos exposição', comportamento: { disciplina: 1 }, disponivel: c => (c.v.caminhos.envolvimento?.cautela ? false : true),
+        resolver: c => ({ texto: 'Menos encomenda, menos gente sabendo, o telefone desligado mais cedo. O dinheiro cai pela metade; o medo, um pouco.', memoria: null, efeito: () => moita(c.v, true) }) },
+      { id: 'seguir_esquema', texto: c => (c.v.caminhos.envolvimento?.cautela ? 'Voltar ao ritmo de antes' : 'Seguir do mesmo jeito'), resolver: c => ({ texto: c.v.caminhos.envolvimento?.cautela ? 'Você voltou ao ritmo de antes. Mais dinheiro, mais gente em volta.' : 'Você seguiu. Cada ano parece o último sem problema.', memoria: null, efeito: () => moita(c.v, false) }) },
       { id: 'fundo', texto: 'Ir mais fundo', comportamento: { impulsividade: 1, coragem: 1 }, disponivel: c => ((c.v.caminhos.envolvimento?.nivel ?? 3) < 3 ? true : false),
         resolver: c => ({ texto: 'Mais dinheiro, mais gente em volta, mais coisa para esconder.', memoria: 'Foi mais fundo no esquema.', relevancia: 'marco', tom: 'ruim', efeito: () => escalar(c.v) }) }
     ]

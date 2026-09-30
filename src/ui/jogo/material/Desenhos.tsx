@@ -12,6 +12,7 @@
 
 import type { ReactNode } from 'react';
 import type { FormaDaCasa, LeituraLar } from '../../leituraMaterial';
+import { NOME_FORMA, type FormaVeiculo } from '../../../motor/dados/bens';
 
 const TRACO = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 const FINO = { ...TRACO, strokeWidth: 1 };
@@ -537,7 +538,7 @@ export function CenaDaCasa({ l }: { l: LeituraLar }) {
   const c = l.condicao;
   const tijolo = pl.tijolo && l.padrao <= 1 && !(c.reformaRecente && c.nivel !== 'problema');
   const Forma = FORMAS[l.forma];
-  const rotulo = `Desenho: ${descricaoDaCasa(l)}; ${acesas} ${acesas === 1 ? 'janela acesa' : 'janelas acesas'}${l.bichos.length ? `, ${l.bichos.map(b => b.nome).join(' e ')} na frente` : ''}${l.veiculo ? `, ${l.veiculo === 'carro' ? 'um carro' : l.veiculo === 'moto' ? 'uma moto' : 'uma bicicleta'} na porta` : ''}.`;
+  const rotulo = `Desenho: ${descricaoDaCasa(l)}; ${acesas} ${acesas === 1 ? 'janela acesa' : 'janelas acesas'}${l.bichos.length ? `, ${l.bichos.map(b => b.nome).join(' e ')} na frente` : ''}${l.veiculo ? `, ${l.veiculo === 'carro' ? 'um carro' : l.veiculo === 'moto' ? 'uma moto' : 'uma bicicleta'} (${NOME_FORMA[formaNaPorta(l)!]}) na porta` : ''}.`;
   return (
     <svg className={`cena cena--${l.forma} cena--${c.nivel}`} viewBox="0 0 312 140" role="img" aria-label={rotulo} data-forma={l.forma}>
       <path d={`M8 ${CHAO}h296`} {...TRACO} className="cena__chao" />
@@ -546,23 +547,52 @@ export function CenaDaCasa({ l }: { l: LeituraLar }) {
       {(c.nivel === 'ruim' || c.nivel === 'problema') && <Rachadura x={w.x + w.l * 0.74} y={w.y} a={w.a} />}
       {c.nivel === 'problema' && <Andaime x={w.x + 4} topo={Math.max(w.y - 2, 20)} />}
       {c.reformaRecente && c.nivel !== 'problema' && <TintaNova x={w.x + w.l - 36} />}
-      {l.veiculo === 'carro' && <Carro x={pl.vaga} />}
-      {l.veiculo === 'moto' && <Moto x={pl.vaga + 10} />}
-      {l.veiculo === 'bicicleta' && <Bicicleta x={pl.vaga + 14} />}
+      {l.veiculo && <g transform={`translate(${pl.vaga + (l.veiculo === 'carro' ? 0 : 8)} 107)`} className="cena__veiculo" data-forma={formaNaPorta(l)}>{FORMAS_VEICULO[formaNaPorta(l)!]()}</g>}
       {l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro').slice(0, 2).map((b, k) => (b.especie === 'gato' ? <Gato key={b.id} x={pl.bichos + k * 24} /> : <Cachorro key={b.id} x={pl.bichos + k * 24} />))}
     </svg>
   );
 }
 
-function Carro({ x }: { x: number }) {
-  return <g transform={`translate(${x} 110)`} className="cena__veiculo"><path d="M2 14h40M6 14V9l6-6h18l7 6h3v5" {...TRACO} /><circle cx={11} cy={15} r={3.5} {...TRACO} /><circle cx={33} cy={15} r={3.5} {...TRACO} /></g>;
+/**
+ * O desenho de cada FORMA de veículo (não um carro genérico para tudo): o
+ * hatch, a picape, a scooter, a moto de trilha, a mountain bike, a lancha,
+ * o monomotor. Traço editorial, sem marca nem logotipo — o modelo real, se
+ * houver, é só texto.
+ */
+const ROD = (cx: number, r = 3.5, cy = 17) => <circle cx={cx} cy={cy} r={r} {...TRACO} />;
+const FORMAS_VEICULO: Record<FormaVeiculo, () => ReactNode> = {
+  hatch: () => <><path d="M3 17h40M5 17v-5l7-6h15l8 6h5v5" {...TRACO} />{ROD(12)}{ROD(34)}</>,
+  seda: () => <><path d="M2 17h43M4 17v-5h4l6-6h13l6 6h8l2 2v3" {...TRACO} />{ROD(12)}{ROD(36)}</>,
+  suv: () => <><path d="M3 17h40M5 17V8l4-4h21l6 5h5v8M9 8h10" {...TRACO} />{ROD(12, 4)}{ROD(34, 4)}</>,
+  picape: () => <><path d="M2 17h43M4 17v-6l5-6h11v6h24v6M20 11h24" {...TRACO} />{ROD(11, 4)}{ROD(36, 4)}</>,
+  esportivo: () => <><path d="M2 17h43M4 17v-3l11-4h13l10 4h5v3M16 10l3-3h7l4 3" {...TRACO} />{ROD(11, 3.2)}{ROD(37, 3.2)}</>,
+  scooter: () => <><path d="M9 17h8l3-8h5M25 9l4 8M14 13h9" {...TRACO} />{ROD(9, 3)}{ROD(31, 3)}</>,
+  street: () => <><path d="M9 17l8-8h7l7 8M17 9l-2-3h3" {...TRACO} />{ROD(9, 4.5)}{ROD(31, 4.5)}</>,
+  esportiva: () => <><path d="M9 17l6-9h11l6 9M15 8l6 4h6M26 8l2-2" {...TRACO} />{ROD(9, 4.5)}{ROD(32, 4.5)}</>,
+  cruiser: () => <><path d="M7 17h28M11 17l4-6h8l3 6M30 17l-3-8h4M15 11l-2-3h4" {...TRACO} />{ROD(8, 4.5)}{ROD(34, 4.5)}</>,
+  trail: () => <><path d="M9 16l8-10h6l8 10M17 6l-1-3M23 6l3-1" {...TRACO} />{ROD(9, 5, 16)}{ROD(31, 5, 16)}</>,
+  urbana: () => <><path d="M10 17l5-8h9M15 9l-1-3M24 9l4 8M24 9v-3h3M28 7h4v3h-4" {...TRACO} />{ROD(10, 4.5)}{ROD(30, 4.5)}</>,
+  estrada: () => <><path d="M10 17l6-8h9l5 8M16 9l4 8M25 9c2 0 3 1 2 3" {...TRACO} />{ROD(10, 5)}{ROD(30, 5)}</>,
+  mtb: () => <><path d="M10 17l6-9h8l5 9M16 8l5 9M24 8l1-3" {...TRACO} strokeWidth={2.2} />{ROD(10, 5)}{ROD(30, 5)}</>,
+  eletrica: () => <><path d="M10 17l5-8h9l5 8M15 9l4 8M16 12h6v3h-6z" {...TRACO} />{ROD(10, 4.5)}{ROD(30, 4.5)}</>,
+  jetski: () => <><path d="M3 16c9 4 27 4 38-2M9 15l6-6h9l4 5M24 9l3-3" {...TRACO} /><path d="M1 20c4-1 8 1 12 0s8-1 12 0" {...TRACO} strokeWidth={1} /></>,
+  lancha: () => <><path d="M2 13h42l-6 6H8zM15 13l4-5h10l3 5M34 13v-3" {...TRACO} /><path d="M1 21c5-1 10 1 15 0s10-1 15 0 9 1 14 0" {...TRACO} strokeWidth={1} /></>,
+  veleiro: () => <><path d="M5 16h34l-5 4H10zM21 16V2M21 3l13 12H21M21 5l-9 10h9" {...TRACO} /></>,
+  ultraleve: () => <><path d="M3 7h42M24 7v6M14 13h18l4 2M18 13l-3 5M30 13l3 5M36 15l6-4" {...TRACO} /></>,
+  monomotor: () => <><path d="M4 13h33l7-3M21 13l-7 7M21 13l-7-7M40 10v6M4 11v4M9 13c0-2 3-3 6-3" {...TRACO} /></>
+};
+
+/** A forma do veículo na porta (sem a versão, a forma típica da categoria). */
+const formaNaPorta = (l: LeituraLar): FormaVeiculo | undefined => l.formaVeiculo ?? (l.veiculo === 'carro' ? 'hatch' : l.veiculo === 'moto' ? 'street' : l.veiculo === 'bicicleta' ? 'urbana' : undefined);
+
+export function DesenhoVeiculo({ forma, rotulo, largura = 48 }: { forma: FormaVeiculo; rotulo?: string; largura?: number }) {
+  return (
+    <svg className={`desenho-veiculo desenho-veiculo--${forma}`} viewBox="0 0 48 24" width={largura} height={largura / 2} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-forma={forma}>
+      {FORMAS_VEICULO[forma]()}
+    </svg>
+  );
 }
-function Moto({ x }: { x: number }) {
-  return <g transform={`translate(${x} 112)`} className="cena__veiculo"><circle cx={5} cy={12} r={4.5} {...TRACO} /><circle cx={27} cy={12} r={4.5} {...TRACO} /><path d="M5 12l8-8h7l7 8M13 4l-2-3" {...TRACO} /></g>;
-}
-function Bicicleta({ x }: { x: number }) {
-  return <g transform={`translate(${x} 113)`} className="cena__veiculo"><circle cx={5} cy={10} r={4.5} {...TRACO} /><circle cx={23} cy={10} r={4.5} {...TRACO} /><path d="M5 10l6-7h8l4 7M11 3l4 7" {...TRACO} /></g>;
-}
+
 function Cachorro({ x }: { x: number }) {
   return <g transform={`translate(${x} 116)`} className="cena__bicho"><path d="M2 12V6l3-3h9l2-3 3 1-1 4v7M5 12V8M15 12V8M1 6l-1-3" {...TRACO} /></g>;
 }
@@ -577,6 +607,8 @@ const ICONES: Record<string, string> = {
   carro: 'M3 16h18M5 16v-4l3-4h8l4 4v4M7.5 18.5a1.5 1.5 0 1 0 0-.01M16.5 18.5a1.5 1.5 0 1 0 0-.01',
   moto: 'M5 17a3 3 0 1 0 0-.01M19 17a3 3 0 1 0 0-.01M5 17l5-6h5l4 6M10 11l-1-3h3',
   bicicleta: 'M5 17a3 3 0 1 0 0-.01M19 17a3 3 0 1 0 0-.01M5 17l4-7h6l4 7M9 10l3 7',
+  nautica: 'M3 15h18l-3 4H6zM12 15V4M12 5l6 8h-6M2 21c3-1 5 1 8 0s5-1 8 0 3 1 4 0',
+  aeroclube: 'M2 13h16l4-2M11 13l-4 6M11 13l-4-6M20 11v4M2 11v4',
   banco: 'M3 9l9-5 9 5M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18',
   abrigo: 'M4 12c0-4 3-6 5-6M20 12c0-4-3-6-5-6M7 14c1 4 9 4 10 0M9 9h.01M15 9h.01M12 12v1',
   oficina: 'M14 6a4 4 0 0 0 5 5l-9 9-3-3 9-9M7 17l-3 3',

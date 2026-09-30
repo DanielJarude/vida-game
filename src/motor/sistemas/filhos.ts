@@ -89,7 +89,7 @@ function garantirVidaEm(v: Vida, p: Pessoa): NonNullable<Pessoa['vida']> {
 
 /* ------------------------------------------------------------ Comunicação */
 
-interface Cota { bio: number }
+interface Cota { bio: number; /** A vida da pessoa anda (cargo, renda, trajetória dela), sem virar linha na biografia do jogador. */ silencioso?: boolean }
 
 /**
  * O jogador fica sabendo. Uma linha na Linha da Vida (biografia ou cotidiano,
@@ -104,6 +104,7 @@ function comunicar(v: Vida, p: Pessoa, cota: Cota, o: {
   const vida = garantirVidaEm(v, p);
   vida.trajetoria.push({ t: o.t ?? v.t, texto: o.texto, tipo: o.tipo });
   if (vida.trajetoria.length > 24) vida.trajetoria.splice(0, vida.trajetoria.length - 24);
+  if (cota.silencioso) return;
   const vin = v.vinculos[p.id];
   let rel = o.relevancia ?? 'biografia';
   if (o.importante && vin && vin.proximidade >= 45 && rel !== 'marco') rel = 'biografia';
@@ -464,6 +465,41 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
     const falta = !acima.length ? 'já chegou onde a carreira costuma chegar' : pedeDiploma ? 'sem diploma, o próximo degrau não abre' : 'a empresa não promove ninguém há anos';
     comunicar(v, f, cota, { texto: `${f.nome} segue como ${f.ocupacao}: ${falta}.`, tipo: 'trabalho', relevancia: 'cotidiano' });
   }
+}
+
+/* ----------------------------------------------- Adultos importantes que não são descendentes */
+
+/**
+ * A carreira de quem importa e não é filho nem neto — a parceria, o amigo
+ * próximo: a MESMA simulação dos descendentes (entrada, experiência,
+ * promoção ou estagnação, demissão, recolocação), com a MESMA fonte de
+ * verdade (`ocupacaoId` + `ocupacao` + `renda` mudam juntos). Quem tinha
+ * renda sem cargo definido ganha um cargo compatível com o que ganha (a
+ * casa, a tela e o orçamento passam a concordar). Promoção não vem por
+ * idade: vem de tempo no cargo, experiência e aptidão.
+ */
+export function carreiraDeAdulto(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, cota: Cota, doJogador: boolean): 'perdeu' | 'arrumou' | undefined {
+  const i = idadePessoa(v, p);
+  if (i < 18 || p.especie) return undefined;
+  const vida = garantirVidaEm(v, p);
+  // Quem ainda estuda (sem curso acompanhado) começa a trabalhar aos poucos, não no dia dos 18.
+  if (p.ocupacao === 'estudante' && i < 22 && !r.chance(0.35)) return undefined;
+  if (p.renda > 0 && !p.ocupacaoId && !p.ocupacao?.startsWith('aposentad')) {
+    const base = OCUPACOES_POR_CLASSE[vida.escolaridade === 'superior' ? 'media' : vida.escolaridade === 'fundamental' ? 'vulneravel' : 'trabalhadora'] ?? OCUPACOES_POR_CLASSE.trabalhadora;
+    const lista = base.map(id => ocupacao(id)).filter(o => acessivel(p, o, i));
+    if (lista.length) {
+      const oc = lista.reduce((m, o) => (Math.abs(liquido(salarioLocal(o, p.municipioId), o.contrato) - p.renda) < Math.abs(liquido(salarioLocal(m, p.municipioId), m.contrato) - p.renda) ? o : m));
+      p.ocupacaoId = oc.id;
+      p.ocupacao = nomeOc(p, oc);
+      vida.tCargo ??= v.t - 24;
+    }
+  }
+  const antes = p.renda;
+  // Só a parceria narra na Linha da Vida; a carreira do amigo anda em silêncio (a ficha dele mostra; o aperto vira pedido de ajuda).
+  trabalho(v, r, p, vin, i, doJogador ? cota : { bio: 3, silencioso: true }, doJogador ? 'biografia' : 'cotidiano', doJogador);
+  if (antes > 0 && p.renda === 0) return 'perdeu';
+  if (antes === 0 && p.renda > 0) return 'arrumou';
+  return undefined;
 }
 
 /* ----------------------------------------------------------------- Amor */

@@ -59,7 +59,7 @@ describe('Trabalho', () => {
   it('doutora em Nutrição procurando: a trajetória dela vem primeiro, e o modelo de trabalho é dito antes', () => {
     const v = adulta(36, x => { formar(x, 'nutricao', 'superior', 'mestrado', 'doutorado'); x.trabalho.desempregadoDesde = x.t - 6; });
     tela(v);
-    const bloco = screen.getByText('Combina com a sua trajetória').closest('section')!;
+    const bloco = screen.getByText('Para você agora').closest('section')!;
     expect(within(bloco).queryAllByText(/nutricionista|professora de faculdade/i).length).toBeGreaterThan(0);
     expect(within(bloco).queryByText(/^diarista$/i)).toBeNull();
     expect(within(bloco).getAllByText(/vaga de emprego|por conta própria/).length).toBeGreaterThan(0);

@@ -386,12 +386,26 @@ function criarProfessor(v: Vida, inst: Instituicao, papel: 'professor' | 'orient
  * alguém da vida, com uma porta); o convite dele é oferecido uma vez.
  */
 export function processarFormacao(v: Vida): void {
+  const inst = ajustarAoLugarDeFormacao(v);
+  if (!inst || inst.tipo === 'infantil' || inst.tipo === 'livre') return;
+  formacaoDoAno(v, inst);
+}
+
+/**
+ * O que era da instituição e ficou para trás — NA HORA da troca (mudança de
+ * cidade, de rede, de etapa), não no fim do ano: a atividade institucional
+ * da escola antiga (o time, o grêmio, a fanfarra) acaba; a vivência se fecha;
+ * quem era de lá vira passado de formação. O que é independente da escola (a
+ * aula de música particular, o futebol da rua) continua; o histórico fica.
+ */
+export function ajustarAoLugarDeFormacao(v: Vida): ReturnType<typeof instituicaoAtual> {
   const inst = instituicaoAtual(v);
-  // 1. O que era da instituição e ficou para trás.
   for (const rot of [...v.rotinas]) {
     if (!DE_FORMACAO.has(rot.id)) continue;
     const oferta = (Object.entries(ROTINA_DA_OFERTA).find(([, id]) => id === rot.id)?.[0]) as OfertaFormacao | undefined;
-    if (oferta && inst?.ofertas.includes(oferta)) continue;
+    // A atividade era DE uma instituição: trocou de instituição, ela acaba (mesmo que a nova tenha uma igual — lá, é outra entrada).
+    const daMesma = rot.instituicao === undefined ? true : rot.instituicao === inst?.chave;
+    if (daMesma && oferta && inst?.ofertas.includes(oferta)) continue;
     v.rotinas = v.rotinas.filter(x => x !== rot);
     const t = VIVENCIA_DA_ROTINA[rot.id];
     if (t) for (const x of v.educacao.vivencias ?? []) if (x.tipo === t && x.tFim === undefined) x.tFim = v.t;
@@ -402,7 +416,10 @@ export function processarFormacao(v: Vida): void {
   }
   // Quem era da formação e a formação acabou: o papel fica, a convivência não.
   for (const { vin } of vinculosVivos(v)) if (vin.formacao && vin.formacao.tFim === undefined && vin.formacao.instituicao !== inst?.chave) vin.formacao.tFim = v.t;
-  if (!inst || inst.tipo === 'infantil' || inst.tipo === 'livre') return;
+  return inst;
+}
+
+function formacaoDoAno(v: Vida, inst: NonNullable<ReturnType<typeof instituicaoAtual>>): void {
 
   // 2. Um professor repara — por um motivo concreto.
   const i = idade(v);

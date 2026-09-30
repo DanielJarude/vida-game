@@ -4,7 +4,6 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
 import type { Processo, Vida } from '../tipos';
 import { escrever, idade, marcarFato, moraCom, novoId, parceiro, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
@@ -19,6 +18,9 @@ import { fecharNegocio, negocioAberto, presencaDe, valorDoNegocio, venderNegocio
 import type { Negocio } from '../tipos';
 import { doClube } from '../dados/clubes';
 import { abalar } from './abalo';
+import { ajustarAoLugarDeFormacao } from './formacao';
+import { encerrarParalela } from './paralelas';
+import { diaDaProvaCnh } from './autoescola';
 
 export function processarProcessos(v: Vida, r: Rng): void {
   for (const p of [...v.processos]) {
@@ -116,8 +118,13 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
     escrever(v, { texto: `A mudança deixou para trás ${es.modalidade === 'futebol' ? 'a base' : 'a equipe'} ${doClube(es.clube)}.`, relevancia: 'biografia', tema: 'lazer', tom: 'ruim' });
   }
   for (const b of v.financas.bens) if (b.tipo === 'veiculo') (b.historia ??= []).push({ t: v.t, texto: `Foi junto na mudança para ${municipio(p.destinoId).nome}.` });
+  // A trajetória em paralelo (por conta, por projeto) vai junto; a de lugar fixo, não.
+  const par = v.trabalho.paralela;
+  if (par && par.municipioId !== p.destinoId) { if (['autonomo', 'informal'].includes(par.contrato) || par.clientela !== undefined) par.municipioId = p.destinoId; else encerrarParalela(v, 'mudança de cidade', false); }
   v.moradia.municipioId = p.destinoId;
   v.moradia.tInicio = v.t;
+  // A escola da cidade antiga fica para trás agora (o time, o grêmio) — não no fim do ano.
+  ajustarAoLugarDeFormacao(v);
   marcarFato(v, 'mudou_de_cidade');
   const destino = municipio(p.destinoId);
   escrever(v, {
@@ -192,22 +199,12 @@ export function iniciarCnh(v: Vida): void {
   v.processos.push({ tipo: 'cnh', id: novoId(v, 'cnh'), tInicio: v.t, tFim: v.t + 4, tentativas: 0 });
 }
 
+/** O dia da prova: a teórica é interativa (abre a pergunta — `conteudo/autoescola`); a prática, com a teórica aprovada, resolve no dia. */
 function concluirCnh(v: Vida, r: Rng, p: Extract<Processo, { tipo: 'cnh' }>): void {
-  const chance = clamp(0.62 + (v.mente.cognicao - 50) / 200 - p.tentativas * 0.05 + (v.mente.estresse > 60 ? -0.1 : 0), 0.3, 0.9);
-  if (r.chance(chance)) {
-    v.processos = v.processos.filter(x => x.id !== p.id);
-    v.trabalho.licencas.push('cnh');
-    escrever(v, { texto: p.tentativas === 0 ? 'Passou na prova do Detran de primeira e tirou a carteira de motorista.' : 'Tirou a carteira de motorista, depois de reprovar na baliza.', relevancia: 'biografia', tema: 'lugar', tom: 'bom' });
-  } else {
-    p.tentativas += 1;
-    p.tFim = v.t + 3;
-    v.financas.conta -= 450; // taxas e aulas extras
-    if (p.tentativas >= 3) {
-      v.processos = v.processos.filter(x => x.id !== p.id);
-      escrever(v, { texto: 'Depois de três reprovações no Detran, desistiu da carteira por um tempo.', relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
-    }
-  }
+  if (p.fase === 'prova') return; // esperando o jogador responder
+  diaDaProvaCnh(v, r, p);
 }
+
 
 /* ---------------------------------------------------------------- Adoção */
 

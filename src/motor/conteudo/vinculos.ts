@@ -26,36 +26,7 @@ const mensalidadeFilho = (c: Ctx) => {
 
 export const VINCULOS: Conteudo[] = [
   /* ================================================================ CÔNJUGE */
-  {
-    id: 'par_emprego_perdido', tipo: 'acontecimento', idade: [20, 70], tema: 'amor', repetir: 8,
-    papeis: { pessoa: P.conjuge },
-    quando: c => c.p.pessoa.renda > 0 && idadePessoa(c.v, c.p.pessoa) < 64,
-    narrar: c => ({
-      texto: `${c.p.pessoa.nome} foi ${gp(c, 'pessoa', 'demitido', 'demitida', 'demitide')}. A casa passou a viver de um salário só por um tempo.`,
-      tom: 'ruim',
-      efeito: () => { const r = c.p.pessoa.renda; c.p.pessoa.renda = 0; c.v.fatos[`renda_antiga_${c.p.pessoa.id}`] = r; estresse(c, 8); }
-    })
-  },
-  {
-    id: 'par_emprego_novo', tipo: 'acontecimento', idade: [20, 70], tema: 'amor', repetir: 2, prioritario: true,
-    papeis: { pessoa: P.conjuge },
-    quando: c => c.p.pessoa.renda === 0 && c.v.fatos[`renda_antiga_${c.p.pessoa.id}`] !== undefined && c.r.chance(0.6),
-    narrar: c => ({
-      texto: `${c.p.pessoa.nome} arrumou trabalho de novo. A primeira coisa foi pagar as contas atrasadas.`,
-      tom: 'bom',
-      efeito: () => { c.p.pessoa.renda = Math.round((c.v.fatos[`renda_antiga_${c.p.pessoa.id}`] ?? 2500) * (0.85 + c.r.next() * 0.3)); delete c.v.fatos[`renda_antiga_${c.p.pessoa.id}`]; }
-    })
-  },
-  {
-    id: 'par_promocao', tipo: 'acontecimento', idade: [22, 64], tema: 'amor', repetir: 8,
-    papeis: { pessoa: P.conjuge },
-    quando: c => c.p.pessoa.renda > 0 && idadePessoa(c.v, c.p.pessoa) < 60,
-    narrar: c => ({
-      texto: `${c.p.pessoa.nome} foi ${gp(c, 'pessoa', 'promovido', 'promovida', 'promovide')}. Comemoraram com pizza e refrigerante no chão da sala.`,
-      tom: 'bom', relevancia: 'cotidiano',
-      efeito: () => { c.p.pessoa.renda = Math.round(c.p.pessoa.renda * 1.18); feliz(c, 3); }
-    })
-  },
+  // O trabalho da parceria (demissão, recolocação, promoção) é simulado em `filhos.carreiraDeAdulto` — cargo, renda e texto juntos.
   {
     id: 'par_tarefas', tipo: 'decisao', idade: [20, 80], tema: 'amor', repetir: 6,
     papeis: { pessoa: P.conjuge },

@@ -23,6 +23,9 @@ import { processarDescendentes, processarPartosDaFamilia } from './sistemas/filh
 import { processarLuto } from './sistemas/luto';
 import { alvoCabeca, alvoHumor, registrarEstado } from './sistemas/estado';
 import { processarCurso, processarEscola, processarOab } from './sistemas/escola';
+import { processarParalelas, tempoParaAObra } from './sistemas/paralelas';
+import { processarAcademia } from './sistemas/academia';
+import { processarHabilitacoes } from './sistemas/habilitacoes';
 import { processarTrabalho } from './sistemas/trabalho';
 import { processarProfissao } from './sistemas/profissao';
 import { processarPolitica } from './sistemas/politica';
@@ -104,6 +107,14 @@ function viverAno(v: Vida, r: Rng): void {
   processarOab(v, r);
   processarJustica(v, r);
   processarTrabalho(v, r);
+  // A segunda trajetória (a paralela) e as pausadas: experiência, freguesia, prazo (`paralelas`).
+  processarParalelas(v);
+  // A vida acadêmica: projetos que terminam em artigo, orientandos que defendem (`academia`).
+  processarAcademia(v);
+  // Os cursos de habilitação rara (barco, avião) que terminam no ano (`habilitacoes`).
+  processarHabilitacoes(v);
+  // Quem vive da arte e guardou tempo para a própria obra pratica mais (o efeito do ritmo leve).
+  tempoParaAObra(v);
   processarProfissao(v, r);
   processarPolitica(v, r);
   processarTransformacao(v);

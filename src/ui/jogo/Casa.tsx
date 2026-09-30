@@ -19,7 +19,8 @@ import { moraComFamiliaDeOrigem } from '../../motor/sistemas/domicilio';
 import { produto, PALAVRA_RISCO } from '../../motor/dados/investimentos';
 import { resultado } from '../../motor/sistemas/investimentos';
 import { BotaoAcao, Secao } from '../comum';
-import { CenaDaCasa, Evolucao, Icone, IconeMoradia } from './material/Desenhos';
+import { CenaDaCasa, DesenhoVeiculo, Evolucao, Icone, IconeMoradia } from './material/Desenhos';
+import { NOME_FORMA } from '../../motor/dados/bens';
 import { Lugar, type QualLugar } from './material/Lugares';
 import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoLar, leituraDosBens, type LeituraBem } from '../leituraMaterial';
 import '../material.css';
@@ -128,10 +129,19 @@ export function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) =
         </>
       )}
 
-      {bens.length > 0 && (
+      {bens.some(x => x.tipo === 'imovel') && (
         <div className="objetos">
-          {bens.map(x => <Objeto key={x.id} vida={vida} agir={agir} b={x} />)}
+          {bens.filter(x => x.tipo === 'imovel').map(x => <Objeto key={x.id} vida={vida} agir={agir} b={x} />)}
         </div>
+      )}
+      {bens.some(x => x.tipo === 'veiculo') && (
+        <section className="seus-veiculos" aria-labelledby="seus-veiculos">
+          <h3 id="seus-veiculos" className="subtitulo">Seus veículos</h3>
+          <p className="nota">Manter é o padrão: cada um segue custando (uso, taxas, oficina) e perdendo valor devagar. Vender, usar de outro jeito ou trocar é escolha.</p>
+          <div className="objetos">
+            {bens.filter(x => x.tipo === 'veiculo').map(x => <Objeto key={x.id} vida={vida} agir={agir} b={x} />)}
+          </div>
+        </section>
       )}
 
       <Aplicacoes vida={vida} abrir={abrir} />
@@ -163,7 +173,7 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
   return (
     <article className={`objeto objeto--${b.tipo}`}>
       <div className="objeto__cabeca">
-        {b.tipo === 'imovel' ? <IconeMoradia modeloId={b.modeloId} /> : <Icone nome={b.icone} />}
+        {b.tipo === 'imovel' ? <IconeMoradia modeloId={b.modeloId} /> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={NOME_FORMA[b.forma]} largura={56} /> : <Icone nome={b.icone} />}
         <div className="objeto__nome">
           <h3>{b.titulo}</h3>
           <p>{b.meta}</p>

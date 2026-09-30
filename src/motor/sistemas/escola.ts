@@ -11,7 +11,7 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { EscolaBasica, Escolaridade, Matricula, NivelCurso, Vida, NovoCompromisso } from '../tipos';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
 import { CURSOS, curso, cursoOuNulo, type AreaFormacao, type Curso, type Materia, ROTULO_AREA } from '../dados/cursos';
@@ -29,6 +29,9 @@ import { anoDe } from '../tempo';
 import { abalar } from './abalo';
 import { bonusDoPreparo, devolutivaDoEnem } from './vestibular';
 import { aoConcluir, bonusDeEstudo, instituicaoAtual, pesoNaPesquisa } from './formacao';
+import { ajustarAoLugarDeFormacao } from './formacao';
+import { registrarDevolutiva } from './devolutivas';
+import { objetivoPorId, registrarTentativa } from './objetivos';
 
 /** "Eletricista instalador (NR-10)" → "eletricista instalador (NR-10)": só a inicial, e só quando não é sigla. */
 const minusculaInicial = (s: string) => (/^[A-ZÀ-Ú][a-zà-ú]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);
@@ -126,7 +129,8 @@ export function processarEscola(v: Vida, r: Rng): void {
   if (i === 4 && (!e.basica || e.basica.etapa === 'creche')) {
     const rede = redeParaCasa(v);
     e.basica = { etapa: 'pre', serie: 0, rede, desempenho: 60, reprovacoes: 0 };
-    escrever(v, { texto: `Entrou na pré-escola, ${em(escola(v, rede, 'pre'))}.`, relevancia: 'cotidiano', tema: 'escola' });
+    const onde = em(escola(v, rede, 'pre'));
+    escrever(v, { texto: rngDe(v.id, 'pre_escola').pick([`Entrou na pré-escola, ${onde}.`, `Começou a pré-escola ${onde}: mochila de rodinha, nome bordado na camiseta.`, `Primeiro ano de pré-escola, ${onde}. Chorou três dias; no quarto, não quis voltar para casa.`, `A pré-escola começou ${onde}, com massinha, fila do lanche e uma música para cada coisa.`]), relevancia: 'cotidiano', tema: 'escola' });
     return;
   }
 
@@ -155,6 +159,8 @@ export function processarEscola(v: Vida, r: Rng): void {
         : `Com a casa mais folgada, a família passou a pagar ${escola(v, 'privada', b.etapa)}.`,
       relevancia: 'biografia', tema: 'escola', tom: antes === 'privada' ? 'ruim' : 'neutro'
     });
+    // Escola nova: o que era institucional da antiga (o time, o grêmio) acaba agora.
+    ajustarAoLugarDeFormacao(v);
   }
 
   // As matérias do ano: a escola exercita todas; a particular, com mais estrutura.
@@ -419,12 +425,16 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
         add({ via: 'sisu', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito, municipioId: lugar, observacao: [observacao, cota ? 'Concorre por cota.' : ''].filter(Boolean).join(' ') || undefined });
       } else {
         // qualificação e técnico públicos, residência, mestrado, doutorado: processo seletivo próprio
-        const base = c.nivel === 'livre' ? 0.6 : c.nivel === 'tecnico' ? 0.5 : c.nivel === 'residencia' ? 0.35 : 0.45;
-        const desempenho = v.educacao.basica?.desempenho ?? ultimoDesempenho(v);
-        // Mestrado e doutorado: a iniciação científica e a carta de quem orientou pesam (`formacao`).
-        const pesquisa = c.nivel === 'mestrado' || c.nivel === 'doutorado' ? pesoNaPesquisa(v) : 0;
-        const chance = clamp(base + (desempenho - 60) / 100 + pesquisa, 0.08, 0.9);
-        add({ via: 'selecao_publica', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito: { grau: chance < 0.3 ? 'improvavel' : 'permitido', chance }, municipioId: lugar, observacao });
+        if (c.nivel === 'mestrado' || c.nivel === 'doutorado') {
+          // A seleção da pós tem fatores próprios (histórico, pesquisa, projeto, tentativas): a MESMA conta dá a chance e o que a tela diz.
+          const a = avaliacaoDaPos(v, c);
+          add({ via: 'selecao_publica', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito: { grau: a.chance < 0.3 ? 'improvavel' : 'permitido', chance: a.chance }, municipioId: lugar, observacao: [observacao, a.leitura].filter(Boolean).join(' ') });
+        } else {
+          const base = c.nivel === 'livre' ? 0.6 : c.nivel === 'tecnico' ? 0.5 : c.nivel === 'residencia' ? 0.35 : 0.45;
+          const desempenho = v.educacao.basica?.desempenho ?? ultimoDesempenho(v);
+          const chance = clamp(base + (desempenho - 60) / 100, 0.08, 0.9);
+          add({ via: 'selecao_publica', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito: { grau: chance < 0.3 ? 'improvavel' : 'permitido', chance }, municipioId: lugar, observacao });
+        }
       }
     }
 
@@ -482,8 +492,55 @@ const CAPITAIS: Record<string, string> = {
   PR: 'curitiba-pr', RS: 'porto-alegre-rs', SC: 'florianopolis-sc'
 };
 
-function ultimoDesempenho(v: Vida): number {
-  return v.fatos['desempenho_ultimo_curso'] !== undefined ? 60 : 55;
+/** O desempenho no último curso concluído (a graduação guarda o seu; saves antigos sem ele ficam no meio). */
+function ultimoDesempenho(v: Vida, niveis?: string[]): number {
+  const c = [...v.educacao.concluidos].filter(x => !niveis || niveis.includes(x.nivel)).sort((a, b) => b.tFim - a.tFim)[0];
+  return c?.desempenho ?? 58;
+}
+
+/* ------------------------------------------------------- A seleção da pós */
+
+export type FatorPos = 'historico' | 'pesquisa' | 'projeto';
+
+/** Anos de preparação do projeto (e da prova) para a pós — esfria se parar por três anos. */
+export function preparoDaPos(v: Vida): number {
+  const t = v.fatos['pos_preparo_t'];
+  if (t === undefined || v.t - t > 36) return 0;
+  return Math.min(3, v.fatos['pos_preparo'] ?? 0);
+}
+
+/**
+ * A seleção de mestrado ou doutorado, com os fatores separados: o histórico
+ * (a nota da graduação — ou do mestrado, para o doutorado), a experiência de
+ * pesquisa (iniciação, um orientador que escreva a carta), o projeto (a
+ * preparação que o jogador escolhe fazer) e as tentativas anteriores (quem
+ * já passou pelo processo conhece a banca). A chance, a leitura da tela e a
+ * causa de uma rejeição saem desta MESMA conta.
+ */
+export function avaliacaoDaPos(v: Vida, c: Curso): { chance: number; fatores: Record<FatorPos, number>; obstaculo: FatorPos | 'concorrencia'; leitura: string } {
+  const hist = ultimoDesempenho(v, c.nivel === 'doutorado' ? ['mestrado'] : ['superior']);
+  const pesquisa = pesoNaPesquisa(v);
+  const projeto = preparoDaPos(v);
+  const tentativas = objetivoPorId(v, `selecao:${c.id}`)?.tentativas ?? 0;
+  const fatores: Record<FatorPos, number> = { historico: (hist - 60) / 90, pesquisa, projeto: projeto * 0.08 };
+  const chance = clamp(0.28 + fatores.historico + fatores.pesquisa + fatores.projeto + Math.min(0.09, tentativas * 0.03), 0.06, 0.88);
+  // O que mais falta, entre o que se pode trabalhar (o histórico não muda mais): quanto cada fator ainda poderia render.
+  const faltas: [FatorPos, number][] = [['projeto', 0.24 - fatores.projeto], ['pesquisa', 0.2 - fatores.pesquisa], ['historico', hist < 58 ? 0.12 : 0]];
+  faltas.sort((a, b) => b[1] - a[1]);
+  const obstaculo: FatorPos | 'concorrencia' = faltas[0][1] > 0.06 ? faltas[0][0] : 'concorrencia';
+  const leitura = obstaculo === 'projeto' ? `O que mais pode ajudar agora: preparar o projeto de pesquisa${projeto ? ' (já começou)' : ''}.`
+    : obstaculo === 'pesquisa' ? 'O que mais pesa contra: pouca experiência de pesquisa (iniciação, orientador).'
+      : obstaculo === 'historico' ? 'O histórico da graduação pesa contra; o projeto compensa parte.'
+        : 'Bem preparado: a seleção agora é concorrência.';
+  return { chance, fatores, obstaculo, leitura };
+}
+
+/** O motivo de uma rejeição na pós, em palavras (da mesma avaliação). */
+function motivoDaPos(o: ReturnType<typeof avaliacaoDaPos>['obstaculo']): string {
+  return o === 'projeto' ? 'a banca achou o projeto de pesquisa pouco amadurecido'
+    : o === 'pesquisa' ? 'faltou experiência de pesquisa no currículo (iniciação científica, uma carta de orientador)'
+      : o === 'historico' ? 'o histórico da graduação pesou na nota final'
+        : 'o projeto foi bem avaliado, mas havia mais candidatos bons do que vagas';
 }
 
 const INSTITUICOES: Record<Via, (c: Curso, v: Vida, lugar: string) => string> = {
@@ -508,10 +565,20 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
       : o.via === 'prouni' ? `Não conseguiu a bolsa do ProUni para ${nome}.`
         : o.via === 'selecao_publica' ? `Não passou na seleção para ${nome}.`
           : `A matrícula em ${nome} não deu certo neste semestre.`;
-    escrever(v, { texto, relevancia: 'biografia', tema: 'estudo', tom: 'ruim', escolha: true });
     marcarFato(v, `tentou_${o.curso.id}_${anoDe(v.t)}`);
+    if (o.via === 'selecao_publica' && (o.curso.nivel === 'mestrado' || o.curso.nivel === 'doutorado')) {
+      // A rejeição diz a causa real (a mesma avaliação que deu a chance) e fica no objetivo.
+      const a = avaliacaoDaPos(v, o.curso);
+      const motivo = motivoDaPos(a.obstaculo);
+      registrarDevolutiva(v, { tipo: 'selecao', titulo: `Seleção para ${nomeDaFormacao(o.curso, areaDaPos(v, o.curso))}`, texto: `Não passou: ${motivo}.`, passou: false, perto: chance >= 0.4, falta: a.obstaculo, nivel: preparoDaPos(v), cursoId: o.curso.id });
+      const comMotivo = `${texto.replace(/\.$/, '')}: ${motivo}.`;
+      escrever(v, { texto: comMotivo, relevancia: 'biografia', tema: 'estudo', tom: 'ruim', escolha: true });
+      return { entrou: false, texto: comMotivo };
+    }
+    escrever(v, { texto, relevancia: 'biografia', tema: 'estudo', tom: 'ruim', escolha: true });
     return { entrou: false, texto };
   }
+  if (o.via === 'selecao_publica' && (o.curso.nivel === 'mestrado' || o.curso.nivel === 'doutorado')) registrarTentativa(v, { id: `selecao:${o.curso.id}`, titulo: `Entrar no ${nomeDaFormacao(o.curso, areaDaPos(v, o.curso)).replace(/^./, x => x.toLowerCase())}`, passou: true });
   const texto = `${flex(v.eu.tratamento ?? v.eu.genero, 'Aprovado', 'Aprovada')} em ${nome}, ${em(INSTITUICOES[o.via](o.curso, v, o.municipioId))}.`;
   return { entrou: true, texto };
 }
@@ -549,6 +616,7 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
   // O cursinho acaba com a aprovação (a rotina é a fonte única; a preparação fica para trás).
   v.rotinas = v.rotinas.filter(x => x.id !== 'cursinho');
   if (v.educacao.cursinho !== undefined) v.educacao.cursinho = false;
+  ajustarAoLugarDeFormacao(v);
   if (c.nivel === 'superior') subir(v, 'superior_incompleto');
   const g = v.eu.tratamento ?? v.eu.genero;
   const objetivo = v.educacao.objetivo?.cursoId === c.id;
@@ -617,7 +685,7 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   { const inst = instituicaoAtual(v); if (inst) aoConcluir(v, inst.ambiente, inst.chave, m.area ?? c.area); }
   e.matricula = undefined;
   const area = m.area ?? areaDaPos(v, c) ?? c.area;
-  e.concluidos.push({ cursoId: c.id, nome: nomeDaFormacao(c, area), nivel: c.nivel, area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined });
+  e.concluidos.push({ cursoId: c.id, nome: nomeDaFormacao(c, area), nivel: c.nivel, area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined, desempenho: Math.round(m.desempenho) });
   const nivelEsc: Partial<Record<NivelCurso, Escolaridade>> = { tecnico: 'tecnico', superior: 'superior', pos: 'pos', residencia: 'pos', mestrado: 'mestrado', doutorado: 'doutorado' };
   const esc = nivelEsc[c.nivel];
   if (esc) subir(v, esc);

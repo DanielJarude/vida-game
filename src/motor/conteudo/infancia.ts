@@ -12,26 +12,44 @@ import * as P from './papeis';
 import { art, dinheiro, estresse, fato, feliz, forma, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa } from '../nucleo';
 import { municipio } from '../dados/lugares';
+import { rngDe } from '../rng';
 
 export const INFANCIA: Conteudo[] = [
   /* ============================================================ MARCOS */
   {
+    // Nem toda vida guarda a história dos primeiros passos — e quem guarda, guarda do seu jeito (quem estava, o irmão, o bicho).
     id: 'bb_primeiros_passos', tipo: 'acontecimento', idade: [1, 1], tema: 'infancia', garantido: true,
     papeis: { quem: P.genitorEmCasa },
-    narrar: c => ({
-      texto: c.r.pick([
+    quando: c => rngDe(c.v.id, 'marco', 'passos').next() < 0.6,
+    narrar: c => {
+      const irmao = P.irmaoEmCasa(c.v)[0];
+      const bicho = P.pet(c.v)[0];
+      const opcoes = [
         `Deu os primeiros passos na sala, em direção a ${c.p.quem.nome}. ${gp(c, 'quem', 'Ele', 'Ela')} conta essa história até hoje.`,
         `Os primeiros passos vieram tarde, depois de muito tempo engatinhando — e vieram de uma vez: atravessou a cozinha sem cair.`,
-        `Aprendeu a andar ${c.g('agarrado', 'agarrada', 'agarrade')} nos móveis. ${c.p.quem.nome} filmou o primeiro passo sem apoio e mandou para a família inteira.`
-      ]),
-      relevancia: 'marco', tom: 'bom'
-    })
+        `Aprendeu a andar ${c.g('agarrado', 'agarrada', 'agarrade')} nos móveis. ${c.p.quem.nome} filmou o primeiro passo sem apoio e mandou para a família inteira.`,
+        `Os primeiros passos foram no quintal, descalç${c.g('o', 'a', 'e')}, atrás de uma bola que rolava devagar.`,
+        `Andou pela primeira vez numa festa de família, no meio de gente demais — e ninguém filmou, porque todo mundo gritou ao mesmo tempo.`,
+        ...(irmao ? [`Os primeiros passos foram atrás de ${irmao.nome}, que corria pela casa e não esperava ninguém.`] : []),
+        ...(bicho ? [`Deu os primeiros passos tentando alcançar ${bicho.nome}, que fugia sem pressa pelo corredor.`] : [])
+      ];
+      return { texto: c.r.pick(opcoes), relevancia: 'marco', tom: 'bom' };
+    }
   },
   {
+    // A primeira palavra é marco de parte das vidas (não de todas) — e a cena depende de quem está em casa.
     id: 'bb_primeira_palavra', tipo: 'decisao', idade: [2, 2], tema: 'infancia', garantido: true, biografica: true,
     papeis: { quem: P.genitorEmCasa },
+    quando: c => rngDe(c.v.id, 'marco', 'palavra').next() < 0.5,
     titulo: 'A primeira palavra',
-    texto: c => `Faz semanas que ${c.p.quem.nome} repete palavras devagar, apontando para as coisas. Hoje saiu uma, clara. Qual foi?`,
+    texto: c => {
+      const irmao = P.irmaoEmCasa(c.v)[0];
+      return rngDe(c.v.id, 'marco', 'palavra', 'cena').pick([
+        `Faz semanas que ${c.p.quem.nome} repete palavras devagar, apontando para as coisas. Hoje saiu uma, clara. Qual foi?`,
+        `No meio do almoço, sem aviso, saiu uma palavra inteira — e a mesa ficou em silêncio. Qual foi?`,
+        irmao ? `${irmao.nome} jura que ensinou. ${c.p.quem.nome} jura que não. Mas a primeira palavra saiu hoje. Qual foi?` : `No banho, entre água e espuma, a primeira palavra saiu clara. Qual foi?`
+      ]);
+    },
     opcoes: [
       { id: 'nome', texto: c => `"${c.p.quem.genero === 'feminino' ? (c.v.vinculos[c.p.quem.id].parentesco === 'avo' ? 'Vó' : 'Mamãe') : (c.v.vinculos[c.p.quem.id].parentesco === 'avo' ? 'Vô' : 'Papai')}"`, resolver: c => ({ texto: `A primeira palavra foi para ${c.p.quem.nome}, que chorou na hora.`, memoria: `A primeira palavra foi "${c.p.quem.genero === 'feminino' ? 'mamãe' : 'papai'}". ${c.p.quem.nome} chorou.`, relevancia: 'marco', tom: 'bom', efeito: () => prox(c, 'quem', 5) }) },
       { id: 'agua', texto: '"Água"', resolver: () => ({ texto: 'Foi "água" — pedida com a mão estendida para o copo.', memoria: 'A primeira palavra foi "água", com a mão estendida para o copo.', relevancia: 'marco' }) },
@@ -44,9 +62,17 @@ export const INFANCIA: Conteudo[] = [
     quando: c => !!c.v.educacao.basica && c.v.educacao.basica.etapa === 'fundamental1' && c.v.educacao.basica.serie === 1,
     papeis: { quem: P.genitorEmCasa },
     narrar: c => ({
-      texto: c.v.educacao.basica!.rede === 'privada'
-        ? `Primeiro dia no 1º ano, de uniforme novo e mochila maior que as costas. ${c.p.quem.nome} ficou no portão até a porta da sala fechar.`
-        : `Primeiro dia no 1º ano da escola ${municipio(c.v.moradia.municipioId).perfil === 'pequena' ? 'da cidade' : 'do bairro'}. ${c.p.quem.nome} levou até o portão; a professora se chamava ${c.r.pick(['Dona Célia', 'Tia Rose', 'Professora Márcia', 'Tia Kátia', 'Professora Sônia'])}.`,
+      texto: (() => {
+        const irmao = P.irmaoEmCasa(c.v).find(x => idadePessoa(c.v, x) > 7);
+        const prof = c.r.pick(['Dona Célia', 'Tia Rose', 'Professora Márcia', 'Tia Kátia', 'Professora Sônia', 'Professor Anderson', 'Tia Jô', 'Professora Luíza']);
+        const lugar = municipio(c.v.moradia.municipioId).perfil === 'pequena' ? 'da cidade' : 'do bairro';
+        return c.r.pick([
+          c.v.educacao.basica!.rede === 'privada' ? `Primeiro dia no 1º ano, de uniforme novo e mochila maior que as costas. ${c.p.quem.nome} ficou no portão até a porta da sala fechar.` : `Primeiro dia no 1º ano da escola ${lugar}. ${c.p.quem.nome} levou até o portão; a professora se chamava ${prof}.`,
+          `No primeiro dia do 1º ano, chorou na porta e, meia hora depois, já tinha um amigo. A professora, ${prof}, disse que é sempre assim.`,
+          `Primeiro dia de aula: não chorou, não falou com ninguém, voltou para casa com a lancheira intacta e uma história inventada sobre um dinossauro.`,
+          ...(irmao ? [`Primeiro dia no 1º ano, na mesma escola de ${irmao.nome} — que fingiu não conhecer ninguém no recreio.`] : [])
+        ]);
+      })(),
       relevancia: 'marco'
     })
   },
@@ -56,9 +82,9 @@ export const INFANCIA: Conteudo[] = [
     narrar: c => {
       const d = c.v.educacao.basica!.desempenho;
       return {
-        texto: d >= 70 ? 'Aprendeu a ler antes da maior parte da turma e passou a ler placa de ônibus em voz alta.'
-          : d >= 45 ? 'Aprendeu a ler no ritmo da turma, juntando sílaba por sílaba no caderno de caligrafia.'
-            : 'A leitura demorou a engrenar. A professora mandou bilhete pedindo reforço em casa.',
+        texto: c.r.pick(d >= 70 ? ['Aprendeu a ler antes da maior parte da turma e passou a ler placa de ônibus em voz alta.', 'Leu o primeiro livro inteiro sozinh' + c.g('o', 'a', 'e') + ' e quis ler de novo, no mesmo dia.', 'Aprendeu a ler com gibi, escondido debaixo da coberta.']
+          : d >= 45 ? ['Aprendeu a ler no ritmo da turma, juntando sílaba por sílaba no caderno de caligrafia.', 'A leitura veio devagar e ficou: primeiro as placas, depois os rótulos, depois as legendas.', 'Aprendeu a ler lendo o nome das ruas no caminho da escola.']
+            : ['A leitura demorou a engrenar. A professora mandou bilhete pedindo reforço em casa.', 'As letras custaram a fazer sentido; um dia, fizeram. Ninguém lembra direito quando.']),
         relevancia: 'biografia', tom: d < 45 ? 'ruim' : 'neutro'
       };
     }

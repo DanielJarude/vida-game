@@ -29,7 +29,8 @@ import { habilidade } from './frentes';
 import { MODALIDADES, NOME_MOD } from './esporte';
 import { lerTecnica } from './peneira';
 import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from './concurso';
-import { janelaDaBase, modalidadeSeria } from './perseguir';
+import { janelaDaBase, modalidadeSeria, nivelDePublico, PALAVRA_PUBLICO } from './perseguir';
+import { leituraDoCurriculo } from './cena';
 import { nomeDaMatricula } from './escola';
 import { eDasForcas, elegibilidade, nomeOcupacao } from './trabalho';
 import { naPolitica } from './politica';
@@ -84,8 +85,14 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
       id: 'esporte', titulo: `Chegar a uma ${d === 'futebol' ? 'base' : 'equipe'} de ${NOME_MOD[d]}`,
       onde: `A técnica está "${t.palavra}". ${t.tentar}`,
       progresso: t.desde ?? t.ano,
-      falta: [t.nivel < 4 ? 'Técnica no nível de uma base: treino regular, e a sério (ritmo de treino dobrado encurta).' : '', v.corpo.forma < 55 ? 'Fôlego: o fim do teste cobra quem não tem.' : ''].filter(Boolean),
-      proximo: podeTentar(veredito) ? { rotulo: 'Pedir um teste num clube', acao: pedir, porque: t.nivel >= 3 ? 'O nível já permite tentar.' : 'Dá para tentar — sabendo que ainda falta técnica.' } : { rotulo: 'Treinar mais antes do próximo teste', ir: 'tempo', porque: veredito.motivo }
+      falta: [t.nivel < 4 ? 'Técnica no nível de uma base: treino regular e a sério; um ano de fundamentos com treinador (escolinha, projeto) é o que mais encurta.' : '', v.corpo.forma < 55 ? 'Fôlego: o fim do teste cobra quem não tem.' : ''].filter(Boolean),
+      // A última peneira disse "falta técnica" (ou nem dá para tentar ainda): o passo é o treino que mexe na técnica — a MESMA variável que a peneira lê.
+      proximo: (() => {
+        const fund = P('treino_fundamentos', d);
+        const pediuTecnica = [...v.caminhos.devolutivas].reverse().find(x => x.tipo === 'peneira' && x.dominio === d && v.t - x.t <= 24)?.falta === 'tecnica';
+        if (t.nivel < 4 && pode(fund) && (pediuTecnica || !podeTentar(veredito))) return { rotulo: 'Um ano de treino de fundamentos, com treinador', acao: fund, porque: 'A técnica é o que a peneira mais pesa — e é o que este treino trabalha.' };
+        return podeTentar(veredito) ? { rotulo: 'Pedir um teste num clube', acao: pedir, porque: t.nivel >= 3 ? 'O nível já permite tentar.' : 'Dá para tentar — sabendo que ainda falta técnica.' } : { rotulo: 'Treinar mais antes do próximo teste', ir: 'tempo', porque: veredito.motivo };
+      })()
     });
   }
 
@@ -117,10 +124,13 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
     out.push({
       id: 'arte', titulo: `Viver de ${NOME_ARTE[a]}`,
       onde: `Na ${NOME_ARTE[a]}, você está "${ARTE_PALAVRA(habilidade(v, a))}".${p ? ` ${p.nome}: ${publico}.` : ' Ainda sem grupo.'}`,
-      falta: [p ? (p.publico < 40 ? 'Público: é ele que traz convite para viver disso — ensaio firme, shows, edital de cultura.' : 'O convite para viver disso costuma vir com o público grande.') : 'Um grupo: é no palco com outras pessoas que o público começa.', habilidade(v, a) < 55 ? 'Técnica de palco: prática firme.' : ''].filter(Boolean),
+      falta: [p ? (p.publico < 40 ? `Público (${PALAVRA_PUBLICO[nivelDePublico(p.publico)]}): apresentar-se, um edital de cultura, testes de elenco e trabalhos pequenos constroem o currículo e o público.` : 'O convite para viver disso costuma vir com o público grande.') : 'Um grupo: é no palco com outras pessoas que o público começa (e dá para se apresentar sozinho, também).', habilidade(v, a) < 55 ? 'Técnica de palco: prática firme.' : '', `Currículo: ${leituraDoCurriculo(v).palavra}.`].filter(Boolean),
       proximo: !p && pode(montar) ? { rotulo: a === 'musica' ? 'Montar uma banda' : 'Montar um grupo', acao: montar }
         : p && pode(P('mostrar_trabalho')) ? { rotulo: a === 'musica' ? 'Mandar o material para produtores e festivais' : 'Fazer uma audição numa companhia', acao: P('mostrar_trabalho'), porque: 'É pedir para ser visto: o parecer diz o que faltou.' }
-          : { rotulo: 'Seguir ensaiando', ir: 'tempo', porque: p ? disp(v, P('mostrar_trabalho')).motivo ?? 'Os editais de cultura e os convites aparecem para quem está em cena.' : disp(v, montar).motivo }
+          : pode(P('apresentar')) ? { rotulo: a === 'musica' ? 'Fazer um show (uma casa pequena)' : 'Apresentar-se: uma temporada curta', acao: P('apresentar'), porque: 'É assim que o público começa: a sala pequena, o boca a boca. Pode dar prejuízo.' }
+            : pode(P('edital')) ? { rotulo: 'Inscrever o projeto num edital de cultura', acao: P('edital'), porque: 'Verba para montar — disputada; o parecer diz o que pesou.' }
+              : pode(P('audicao')) ? { rotulo: 'Fazer um teste de elenco', acao: P('audicao'), porque: 'Trabalhos no currículo abrem testes maiores.' }
+                : { rotulo: 'Seguir ensaiando', ir: 'tempo', porque: p ? disp(v, P('mostrar_trabalho')).motivo ?? 'Os editais de cultura e os convites aparecem para quem está em cena.' : disp(v, montar).motivo }
     });
   }
 

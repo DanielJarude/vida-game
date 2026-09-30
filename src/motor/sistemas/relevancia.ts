@@ -131,9 +131,16 @@ export function vagasEmCamadas(v: Vida): VagasEmCamadas {
   const alcance = OCUPACOES.filter(oc => !oc.concurso && oc.id !== atual?.id && oc.entrada !== 'eleicao' && oc.entrada !== 'negocio' && oc.entrada !== 'oportunidade')
     .map(oc => ({ oc, d: elegibilidade(v, oc) })).filter(x => podeTentar(x.d));
   const out: VagasEmCamadas = { trajetoria: [], relacionadas: [], outras: [] };
+  // A formação superior (e a pós) aponta o rumo — mais ainda se é recente; a estrada antiga, noutra área, pesa menos com os anos.
+  const superiores = v.educacao.concluidos.filter(c => ['superior', 'pos', 'mestrado', 'doutorado', 'residencia'].includes(c.nivel));
+  const ultimaNaTrilha = (tr: string) => Math.max(-Infinity, ...v.trabalho.historico.filter(h => ocupacao(h.ocupacaoId).trilha === tr).map(h => h.tFim));
   for (const x of alcance) {
     const perfil = perfilParaVaga(v, x.oc);
     let pontos = perfil.compatibilidade * 1.5 + (x.d.chance ?? 0.4) * 1.5 + x.oc.nivel * 0.25;
+    const daFormacao = !!x.oc.area && !x.oc.area.includes('qualquer') && superiores.filter(c => x.oc.area!.includes(c.area as never));
+    if (daFormacao && daFormacao.length) pontos += 1.5 + (daFormacao.some(c => v.t - c.tFim <= 60) ? 1 : 0);
+    // Experiência antiga numa área em que não se trabalha há anos (o varejo de quando estudava): continua possível, não domina.
+    { const ult = ultimaNaTrilha(x.oc.trilha); if (superiores.length && atual?.trilha !== x.oc.trilha && ult > -Infinity && v.t - ult > 48 && !(daFormacao && daFormacao.length)) pontos -= 1.2; }
     if (atual && x.oc.salario < atual.salario * 0.95 && perfil.camada !== 'trajetoria') pontos -= 2;
     if (!atual && !v.trabalho.historico.length && x.oc.nivel <= 1) pontos += 1;
     if (atual && degrausAcima(atual).some(d => d.id === x.oc.id)) pontos += 3;
@@ -194,10 +201,19 @@ export function cursosAgrupados(v: Vida): CursoOpcoes[] {
  * bem ou gosta.
  */
 export function cursosParaVoce(v: Vida): { para: Relevante<CursoOpcoes>[]; resto: CursoOpcoes[] } {
+  const lista = pontuarCursos(v, cursosAgrupados(v).filter(c => c.possivel));
+  const r = primarias(lista, MAX_PRIMARIAS.cursos);
+  const usados = new Set(r.para.map(x => x.item.curso.id));
+  return { para: r.para, resto: cursosAgrupados(v).filter(c => !usados.has(c.curso.id)) };
+}
+
+/** A relevância de cada curso para esta vida (a mesma conta das sugestões): a Formação ordena o catálogo por ela. */
+export function pontuarCursos(v: Vida, cursos: CursoOpcoes[]): Relevante<CursoOpcoes>[] {
   const esc = v.educacao.escolaridade;
   const trilhas = Object.entries(v.trabalho.experiencia).filter(([, m]) => m >= 12).map(([t]) => t);
   const areasDaEstrada = new Set(OCUPACOES.filter(oc => trilhas.includes(oc.trilha)).flatMap(oc => oc.area ?? []));
-  const lista = cursosAgrupados(v).filter(c => c.possivel).map(c => {
+  const areasFormadas = new Set(v.educacao.concluidos.filter(c => c.nivel === 'superior').map(c => c.area));
+  return cursos.map(c => {
     let pontos = 0;
     let motivo = '';
     let maior = 0;
@@ -220,13 +236,12 @@ export function cursosParaVoce(v: Vida): { para: Relevante<CursoOpcoes>[]; resto
       const f = v.caminhos.frentes[m];
       if (f && f.habilidade >= 60 && w >= 2) add(1.5, 'Pesa as matérias em que você vai bem.');
     }
+    // A pós/especialização de área definida na área em que se formou: contexto, não curso aleatório.
+    if (['pos', 'residencia'].includes(n) && c.curso.area !== 'qualquer' && areasFormadas.has(c.curso.area)) add(1.8, 'Na área em que você se formou.');
     const melhorChance = Math.max(0, ...c.opcoes.filter(x => podeTentar(x.o.veredito)).map(x => x.o.veredito.chance ?? 0.5));
     pontos += melhorChance;
     return { item: c, motivo: motivo || c.curso.descricao, pontos };
   });
-  const r = primarias(lista, MAX_PRIMARIAS.cursos);
-  const usados = new Set(r.para.map(x => x.item.curso.id));
-  return { para: r.para, resto: cursosAgrupados(v).filter(c => !usados.has(c.curso.id)) };
 }
 
 /* ------------------------------------------------------------ Vestibular */

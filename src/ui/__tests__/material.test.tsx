@@ -188,17 +188,18 @@ describe('Loja de veículos: marca e modelo, catálogo completo', () => {
     const folha = screen.getByRole('dialog', { name: 'Concessionária' });
     // A loja: "para você" primeiro; o catálogo completo a um toque.
     expect(within(folha).getByRole('radio', { name: /Para você, agora/ }).getAttribute('aria-checked')).toBe('true');
-    const cat = catalogoDeVeiculos(v);
+    // O catálogo completo DESTA loja (FIX pós-REWORK 3): carros, novos e usados — sem motos nem o filtro "Motos".
+    const cat = catalogoDeVeiculos(v, 'concessionaria');
+    expect(cat.every(o => modeloVeiculo(o.modeloId).categoria === 'carro')).toBe(true);
     fireEvent.click(within(folha).getByRole('radio', { name: `Catálogo completo (${cat.length})` }));
     const nome = (o: typeof cat[number]) => `${nomeDaVersao(versaoVeiculo(o.versaoId)!)} ${o.anoFabricacao}`;
     expect(titulos(folha)).toEqual(cat.slice(0, 20).map(nome));
-    // Só motos, só usadas.
-    fireEvent.click(within(folha).getByRole('radio', { name: 'Motos' }));
+    expect(within(folha).queryByRole('radio', { name: 'Motos' })).toBeNull();
+    // Só usados.
     fireEvent.click(within(folha).getByRole('radio', { name: 'Usados' }));
-    const motosUsadas = cat.filter(o => o.usado && modeloVeiculo(o.modeloId).categoria === 'moto');
-    expect(titulos(folha)).toEqual(motosUsadas.map(nome));
+    const usados = cat.filter(o => o.usado);
+    expect(titulos(folha)).toEqual(usados.slice(0, 20).map(nome));
     // Mais caro primeiro.
-    fireEvent.click(within(folha).getByRole('radio', { name: 'Todos' }));
     fireEvent.click(within(folha).getByRole('radio', { name: 'Novos e usados' }));
     fireEvent.click(within(folha).getByRole('button', { name: /Mais barato primeiro/ }));
     expect(titulos(folha)[0]).toBe(nome(cat[cat.length - 1]));

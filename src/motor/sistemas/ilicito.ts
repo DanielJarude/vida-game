@@ -186,8 +186,10 @@ export const CATEGORIAS: CategoriaIlicita[] = ['pequenos', 'patrimonial', 'fraud
 function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   if (preso(v)) return;
   if (env.parou !== undefined) {
+    // Uma investigação aberta antes de parar segue o próprio curso.
+    if (env.investigado !== undefined && andamentoDaInvestigacao(v, r, env)) return;
     // O passado esfria devagar — mas pode chegar.
-    if (env.exposicao > 4 && r.chance(env.exposicao / 100 * 0.18)) {
+    if (env.investigado === undefined && env.exposicao > 4 && r.chance(env.exposicao / 100 * 0.18)) {
       escrever(v, { texto: 'Uma investigação antiga chegou até você, anos depois de ter parado.', relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
       abrirProcesso(v, r, env.categoria);
       return;
@@ -196,10 +198,14 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
     return;
   }
   const renda = RENDA[env.categoria][env.nivel - 1];
-  const ganho = Math.round(renda * 12 * (0.6 + r.next() * 0.8) / 100) * 100;
+  const ganho = Math.round(renda * 12 * (0.6 + r.next() * 0.8) * (env.cautela ? 0.5 : 1) / 100) * 100;
   v.financas.conta += ganho;
   env.ganhos += ganho;
-  env.exposicao = clamp(env.exposicao + EXPOSICAO[env.categoria] + (env.nivel - 1) * 6 + (reincidente(v) ? 6 : 0));
+  // A exposição cresce com o que se faz — menos para quem já aprendeu a não aparecer (os anos no caminho),
+  // e bem menos na moita (que também deixa esfriar o que já se sabia).
+  const anos = (v.t - env.tInicio) / 12;
+  const cresce = Math.max(3, EXPOSICAO[env.categoria] + (env.nivel - 1) * 6 + (reincidente(v) ? 6 : 0) - Math.min(6, anos * 1.2));
+  env.exposicao = clamp(env.cautela ? env.exposicao * 0.85 + cresce * 0.35 : env.exposicao + cresce);
   // A cabeça de quem vive com medo de ser descoberto; a casa que desconfia.
   abalar(v, 'o que se faz por fora', 0, 4 + env.nivel * 2);
   const par = parceiro(v);
@@ -211,10 +217,52 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
     escrever(v, { texto: grave ? 'Uma confusão com gente do esquema terminou no pronto-socorro. Meses para se recuperar.' : 'Um susto com gente do esquema. Ninguém se machucou de verdade, dessa vez.', relevancia: grave ? 'marco' : 'biografia', tema: 'saude', tom: 'ruim' });
     abalar(v, 'o susto', -6, 10);
   }
-  // Descoberta: a exposição acumulada é o que pesa.
-  if (r.chance(env.exposicao / 100 * DESCOBERTA[env.nivel])) { abrirProcesso(v, r, env.categoria); return; }
+  // Investigação em andamento: vira processo (o que existe contra a pessoa é bastante) — ou é arquivada, se esfriou.
+  if (env.investigado !== undefined) {
+    if (andamentoDaInvestigacao(v, r, env)) return;
+  } else if (r.chance(env.exposicao / 100 * DESCOBERTA[env.nivel])) {
+    // Descoberta não é prisão programada: primeiro, alguém começa a fazer perguntas (e a pessoa fica sabendo).
+    env.investigado = v.t;
+    v.fatos['investigacoes'] = (v.fatos['investigacoes'] ?? 0) + 1;
+    escrever(v, { texto: 'Alguém começou a fazer perguntas: há uma investigação sobre o que você faz por fora. Ainda não é processo.', relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+    abalar(v, 'a investigação', -4, 10);
+    v.fatos['ilic_rumo'] = v.t; // a pergunta do rumo abre agora: parar, ficar na moita, seguir
+    return;
+  }
   // A cada dois anos, a vida pergunta de novo.
   if ((v.t - env.tInicio) % 24 === 12 || (v.t - env.tInicio) === 12) v.fatos['ilic_rumo'] = v.t;
+}
+
+/**
+ * O ano de uma investigação: com o que existe (a exposição) e o que a pessoa
+ * fez desde que soube (parou, ficou na moita, seguiu), ela vira processo, é
+ * arquivada ou segue aberta. Devolve `true` se virou processo.
+ */
+function andamentoDaInvestigacao(v: Vida, r: Rng, env: Envolvimento): boolean {
+  const anos = (v.t - env.investigado!) / 12;
+  const esfriou = env.parou !== undefined || env.cautela;
+  const chanceProcesso = clamp(env.exposicao / 100 * (esfriou ? 0.45 : 0.85) + (env.nivel - 1) * 0.08, 0.08, 0.8);
+  if (r.chance(chanceProcesso)) {
+    env.investigado = undefined;
+    escrever(v, { texto: 'A investigação virou processo.', relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    abrirProcesso(v, r, env.categoria);
+    return true;
+  }
+  if (anos >= 2 && (esfriou || env.exposicao < 35) && r.chance(esfriou ? 0.55 : 0.25)) {
+    env.investigado = undefined;
+    env.exposicao = Math.round(env.exposicao * 0.6);
+    v.fatos['investigacoes_arquivadas'] = (v.fatos['investigacoes_arquivadas'] ?? 0) + 1;
+    escrever(v, { texto: 'A investigação foi arquivada: não juntaram o bastante. O alívio vem junto com o aviso.', relevancia: 'biografia', tema: 'trabalho' });
+    return false;
+  }
+  return false;
+}
+
+/** Na moita (ou voltar ao de antes): menos dinheiro, menos exposição. */
+export function moita(v: Vida, sim: boolean): void {
+  const e = v.caminhos.envolvimento;
+  if (!e || e.parou !== undefined) return;
+  e.cautela = sim || undefined;
 }
 
 /* ------------------------------------------------------------ Escolhas */
@@ -254,8 +302,8 @@ export function parar(v: Vida, motivo: string): void {
 export function leituraDoEnvolvimento(v: Vida): string | undefined {
   const e = v.caminhos.envolvimento;
   if (!e || e.parou !== undefined) return undefined;
-  const risco = e.exposicao < 25 ? 'por enquanto, pouca gente sabe' : e.exposicao < 55 ? 'gente demais já sabe' : 'é questão de tempo até alguém chegar';
-  return `Há um dinheiro entrando por fora, ${e.nivel === 1 ? 'de vez em quando' : e.nivel === 2 ? 'com frequência' : 'e um grupo que conta com você'}: ${risco}.`;
+  const risco = e.investigado !== undefined ? 'e há uma investigação em andamento' : e.exposicao < 25 ? 'por enquanto, pouca gente sabe' : e.exposicao < 55 ? 'gente demais já sabe' : 'é questão de tempo até alguém chegar';
+  return `Há um dinheiro entrando por fora, ${e.nivel === 1 ? 'de vez em quando' : e.nivel === 2 ? 'com frequência' : 'e um grupo que conta com você'}${e.cautela ? ' (na moita: menos, e com mais cuidado)' : ''}: ${risco}.`;
 }
 
 export { flex, ge };

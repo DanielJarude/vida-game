@@ -14,7 +14,8 @@
 import type { Rng } from '../rng';
 import { animal } from '../dados/animais';
 import { clamp } from '../rng';
-import type { Pessoa, Vida, Vinculo } from '../tipos';
+import type { Dominio, Pessoa, Vida, Vinculo } from '../tipos';
+import { praticar } from './frentes';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { compatibilidade } from './social';
@@ -131,6 +132,18 @@ const distante = (c: CtxI) => c.vin.distancia !== undefined && c.v.t - c.vin.dis
 const doConvivio = (c: CtxI) => c.papel === 'colega' || c.papel === 'conhecido';
 const filhosMenoresEmComum = (c: CtxI) => filhosEmComum(c.v, c.p.id).filter(f => f.vivo && idadePessoa(c.v, f) < 18);
 const semContatoHa = (c: CtxI) => (c.v.t - c.vin.tUltimoContato) / 12;
+/** Professor ou orientador de uma formação em curso: a relação é de ensino, não de amizade (as ações são outras). */
+const professorAtivo = (c: CtxI) => !!c.vin.formacao && c.vin.formacao.papel !== 'colega' && c.vin.formacao.tFim === undefined;
+/** Foi professor (a formação acabou): dá para voltar a procurar, agradecer. */
+const exProfessor = (c: CtxI) => !!c.vin.formacao && c.vin.formacao.papel !== 'colega' && c.vin.formacao.tFim !== undefined;
+/** A modalidade que vocês praticam juntos (o futebol da rua, o time da escola, o vôlei do clube), se a pessoa veio de lá. */
+function esporteEmComum(c: CtxI): Dominio | undefined {
+  const a = c.vin.ambiente;
+  if (!a?.startsWith('rotina:')) return undefined;
+  const id = a.split(':')[1];
+  const d = (id === 'time_escola' ? 'futebol' : id) as Dominio;
+  return ['futebol', 'volei', 'natacao', 'atletismo', 'lutas'].includes(d) && c.v.rotinas.some(r => r.id === id) ? d : undefined;
+}
 
 /* ------------------------------------------------------------- Catálogo */
 
@@ -272,7 +285,7 @@ export const INTERACOES: Interacao[] = [
   {
     id: 'tempo', variante: 'principal',
     // Colega e conhecido não "passam tempo" como amigos: para eles, o passo é se aproximar (e a pessoa responde).
-    quando: c => humano(c) && !emRomance(c) && c.ip >= 12 && c.eu >= 3 && pertoOuEmCasa(c) && !(criancaDaFamilia(c) && c.ip <= 11) && !(doConvivio(c) && c.eu >= 12) && !soEx(c) && c.papel !== 'afastado' && !distante(c),
+    quando: c => humano(c) && !emRomance(c) && c.ip >= 12 && c.eu >= 3 && pertoOuEmCasa(c) && !(criancaDaFamilia(c) && c.ip <= 11) && !(doConvivio(c) && c.eu >= 12) && !soEx(c) && c.papel !== 'afastado' && !distante(c) && !professorAtivo(c),
     rotulo: c => rotuloTempo(c),
     executar: c => {
       const n = habito(c, 'tempo');
@@ -413,7 +426,7 @@ export const INTERACOES: Interacao[] = [
    */
   {
     id: 'aproximar', variante: 'principal',
-    quando: c => humano(c) && !c.vin.parentesco && !c.vin.romance && c.eu >= 12 && c.ip >= 12 && !distante(c)
+    quando: c => humano(c) && !c.vin.parentesco && !c.vin.romance && c.eu >= 12 && c.ip >= 12 && !distante(c) && !professorAtivo(c)
       && (doConvivio(c) || (c.papel === 'afastado' && c.vin.convivio.length > 0)) && (c.vin.convivio.length > 0 || !c.longe),
     prioridade: c => (c.vin.proximidade >= 35 ? 2 : 1),
     rotulo: c => rotuloAproximar(c),
@@ -527,6 +540,62 @@ export const INTERACOES: Interacao[] = [
   },
 
   /* ========================================================== ROMANCE: COMEÇO */
+  /* ============================================ CONTEXTUAIS (de onde vem a relação) */
+  // Professora não é amiga de escola, e a amiga do futebol não é a colega de sala: as ações vêm de onde a relação nasceu.
+  {
+    id: 'duvidas', variante: 'principal',
+    quando: c => humano(c) && professorAtivo(c) && c.eu >= 8 && c.eu < 30 && !!(c.v.educacao.basica || c.v.educacao.matricula),
+    prioridade: c => ((c.v.educacao.basica?.desempenho ?? c.v.educacao.matricula?.desempenho ?? 60) < 55 ? 2 : 1),
+    rotulo: c => (c.vin.formacao?.papel === 'orientador' ? `Levar o trabalho para ${c.p.nome} ler` : `Ficar depois da aula para tirar dúvidas com ${c.p.nome}`),
+    executar: c => {
+      afeto(c, 4); confiar(c, 3);
+      const b = c.v.educacao.basica; const m = c.v.educacao.matricula;
+      if (b) b.desempenho = clamp(b.desempenho + 1.5); else if (m) m.desempenho = clamp(m.desempenho + 1.5);
+      const orient = c.vin.formacao?.papel === 'orientador';
+      return { resultado: orient ? `${c.p.nome} leu, riscou metade, elogiou a outra metade. Voltou melhor.` : `${c.p.nome} explicou de novo, com outro exemplo — e daquela vez fez sentido. As notas sentem.` };
+    }
+  },
+  {
+    id: 'conselho_futuro',
+    quando: c => humano(c) && (professorAtivo(c) || exProfessor(c)) && c.eu >= 14 && !distante(c),
+    prioridade: c => (c.eu >= 16 && c.eu <= 24 ? 1.5 : 0.5),
+    rotulo: c => `Pedir conselho a ${c.p.nome} sobre o que fazer depois`,
+    executar: c => {
+      afeto(c, 3);
+      // O conselho diz o que a própria conta do motor diz (a pós, o curso que se mira), com a voz de quem ensinou.
+      const temSup = c.v.educacao.concluidos.some(x => x.nivel === 'superior');
+      const alvo = c.v.educacao.objetivo?.cursoId;
+      const fala = temSup ? `"Se for fazer mestrado, comece pelo projeto — é o que a banca lê primeiro. E chegue com alguém que conheça o seu trabalho."`
+        : alvo ? `"Foque no que mais pesa para o curso que você quer — e não largue a leitura."` : `"Escolha pelo que você gosta de estudar, não pelo que os outros esperam. Dá para mudar depois — custa, mas dá."`;
+      lembrarCom(c.v, c.p.id, 'Deu um conselho sobre o futuro que você guardou.', 'escola', 1);
+      return { resultado: `${c.p.nome} pensou um pouco antes de responder: ${fala}` };
+    }
+  },
+  {
+    id: 'agradecer_professor',
+    quando: c => humano(c) && exProfessor(c) && c.eu >= 16 && c.v.fatos[`agradeceu_${c.p.id}`] === undefined,
+    rotulo: c => `Mandar uma mensagem agradecendo a ${c.p.nome}`,
+    executar: c => {
+      c.v.fatos[`agradeceu_${c.p.id}`] = c.v.t;
+      afeto(c, 6);
+      lembrarCom(c.v, c.p.id, 'Você escreveu, anos depois, para agradecer.', 'escola', 2);
+      return { resultado: `${c.p.nome} respondeu no mesmo dia: disse que lembrava de você — e que mensagens assim são o que faz a profissão valer.` };
+    }
+  },
+  {
+    id: 'treinar_junto', variante: 'principal',
+    quando: c => humano(c) && !!esporteEmComum(c) && !c.vin.parentesco && c.eu >= 7 && c.ip >= 7 && !c.longe && !emRomance(c),
+    prioridade: () => 1.5,
+    rotulo: c => { const d = esporteEmComum(c)!; return d === 'futebol' ? `Chamar ${c.p.nome} para bater uma bola depois do treino` : `Treinar junto com ${c.p.nome} (um treino a mais)`; },
+    executar: (c, r) => {
+      const d = esporteEmComum(c)!;
+      afeto(c, 5);
+      praticar(c.v, r, d, 0.25, 1);
+      const n = habito(c, 'treinar_junto');
+      costume(c, n, 3, 'O treino a mais virou costume de vocês.');
+      return { resultado: variar(n, [`Ficaram até escurecer. ${c.p.nome} mostrou um jeito de fazer que você não conhecia.`, 'Mais uma tarde de treino a dois: menos conversa, mais repetição.', `${c.p.nome} cobrou, você cobrou de volta — e os dois saíram melhores.`]) };
+    }
+  },
   /*
    * Iniciativa: UMA de cada vez, conforme o quanto vocês se conhecem.
    *  - mal se conhecem → demonstrar interesse (um sinal, sem risco grande);
@@ -538,9 +607,9 @@ export const INTERACOES: Interacao[] = [
    */
   {
     id: 'flertar', destaque: true,
-    quando: c => iniciativaPossivel(c) && !c.vin.romance && c.vin.proximidade < 35 && !c.longe && c.vin.convivio.length > 0,
-    prioridade: c => (c.vin.proximidade >= 25 ? 1.5 : 0.6),
-    rotulo: c => (c.eu < 18 ? `Puxar conversa com ${c.p.nome}, com segundas intenções` : `Demonstrar interesse por ${c.p.nome}`),
+    quando: c => iniciativaPossivel(c) && !c.vin.romance && c.vin.proximidade < 35 && !c.longe && (c.vin.convivio.length > 0 || c.vin.proximidade >= 20),
+    prioridade: c => (c.vin.proximidade >= 25 ? 1.5 : 0.6) + (c.eu < 18 && Math.abs(c.eu - c.ip) <= 2 ? 0.8 : 0),
+    rotulo: c => (c.eu < 18 ? `Demonstrar interesse por ${c.p.nome} (puxar conversa, um bilhete)` : `Demonstrar interesse por ${c.p.nome}`),
     executar: (c, r) => flertar(c, r)
   },
   {

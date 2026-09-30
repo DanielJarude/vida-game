@@ -13,6 +13,8 @@ import { interacoesPara } from '../../src/motor/sistemas/interacoes';
 import { OCUPACOES } from '../../src/motor/dados/ocupacoes';
 import { saldoMensal } from '../../src/motor/sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../../src/motor/sistemas/domicilio';
+import { imoveisParaVoce } from '../../src/motor/sistemas/relevancia';
+import { modeloMoradia } from '../../src/motor/dados/bens';
 
 export interface Estrategia {
   nome: string;
@@ -176,10 +178,17 @@ export function estrategia(nome: string): Estrategia {
       if (p.poupa && i >= 18 && v.financas.conta > Math.max(3000, mensal.despesa * 3)) {
         out.push({ tipo: 'investir', destino: p.nome === 'ambicioso' ? 'acoes' : 'reserva', valor: Math.round(v.financas.conta - mensal.despesa * 2) });
       }
-      if (p.poupa && i >= 28 && !v.financas.bens.some(b => b.tipo === 'imovel')) {
-        out.push({ tipo: 'comprar_imovel', modeloId: filhos(v).length ? 'apto_2q' : 'kitnet', financiar: true, morar: true });
+      // A casa própria: entre as ofertas reais da cidade, a que serve à família (quartos) e CABE no financiamento
+      // (FIX pós-REWORK 3: antes tentava sempre o mesmo modelo — kitnet ou apto de dois quartos —, caro demais em
+      // metade das cidades, e a vida "nunca comprava" por estratégia, não por dinheiro).
+      if ((p.poupa && i >= 28 || p.nome === 'gastador' && i >= 30) && !v.financas.bens.some(b => b.tipo === 'imovel')) {
+        const quartos = 1 + Math.min(2, filhos(v).length);
+        const { para, resto } = imoveisParaVoce(v, 'venda');
+        const cands = [...para.map(x => x.item), ...resto].filter(o => !modeloMoradia(o.modeloId).rural)
+          .sort((a, b) => Number(modeloMoradia(b.modeloId).quartos >= quartos) - Number(modeloMoradia(a.modeloId).quartos >= quartos) || (p.nome === 'gastador' ? b.preco - a.preco : a.preco - b.preco));
+        const cabe = cands.find(o => podeTentar(disponibilidade(v, { tipo: 'comprar_imovel', ofertaId: o.id, financiar: true, morar: true })));
+        if (cabe) out.push({ tipo: 'comprar_imovel', ofertaId: cabe.id, financiar: true, morar: true });
       }
-      if (p.nome === 'gastador' && i >= 30 && !v.financas.bens.some(b => b.tipo === 'imovel')) out.push({ tipo: 'comprar_imovel', modeloId: 'casa_3q', financiar: true, morar: true });
       if (i >= 30 && tenta(v, { tipo: 'plano_saude', ativo: true }) && !v.financas.planoDeSaude && (p.nome === 'ambicioso' || p.nome === 'familiar') && mensal.renda > 6000) out.push({ tipo: 'plano_saude', ativo: true });
       void idadePessoa;
       return out;

@@ -366,6 +366,14 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (viv !== undefined && (!Array.isArray(viv) || viv.some(x => !x || typeof x.tipo !== 'string' || !finito(x.t) || !finito(x.anos)))) return 'Vivências da formação inválidas.';
     const est = (d.eu as Vida['eu']).estilo;
     if (est !== undefined && (typeof est !== 'object' || !Array.isArray(est.itens) || est.itens.some(x => !x || typeof x.itemId !== 'string' || !finito(x.preco)))) return 'Estilo inválido.';
+    // FIX pós-REWORK 3 (campos opcionais na mesma v18: saves antigos não os têm, e continuam válidos).
+    const t = d.trabalho as Vida['trabalho'];
+    if (t.paralela !== undefined && (typeof t.paralela !== 'object' || typeof t.paralela.ocupacaoId !== 'string' || !finito(t.paralela.salario))) return 'Trajetória paralela inválida.';
+    if (t.pausadas !== undefined && (!Array.isArray(t.pausadas) || t.pausadas.some(x => !x || !x.emprego || typeof x.emprego.ocupacaoId !== 'string' || !finito(x.t)))) return 'Trajetória pausada inválida.';
+    const cam = d.caminhos as Vida['caminhos'];
+    if (cam.objetivos !== undefined && (!Array.isArray(cam.objetivos) || cam.objetivos.some(x => !x || typeof x.id !== 'string' || !finito(x.tentativas)))) return 'Objetivos inválidos.';
+    if (cam.curriculo !== undefined && (!Array.isArray(cam.curriculo) || cam.curriculo.some(x => !x || typeof x.titulo !== 'string' || !finito(x.t)))) return 'Currículo inválido.';
+    if (cam.academia !== undefined && (typeof cam.academia !== 'object' || !Array.isArray(cam.academia.orientandos) || !finito(cam.academia.publicacoes))) return 'Vida acadêmica inválida.';
   }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;

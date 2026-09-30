@@ -56,6 +56,10 @@ import { lancarObra } from './arte';
 import { trabalhoDePalco } from './palco';
 import { OFICIOS } from './oficios';
 import { NEGOCIOS } from '../dados/negocios';
+import { disponibilidadeAcademia, executarAcademia, linhaDePesquisa, OCUPACOES_ACADEMICAS, type OqueAcademia } from './academia';
+import { linguagemEmCena, trabalhaComArte } from './cena';
+import { TRILHAS_ARTISTICAS } from './paralelas';
+
 
 /* ================================================================== Modo */
 
@@ -115,7 +119,7 @@ const RITMO_CLIENTELA = new Set<ModoTrabalho>(['autonomo', 'informal', 'platafor
 export const temRitmo = (v: Vida) => { const m = modoDoTrabalho(v); return RITMO_SALARIO.has(m) || RITMO_CLIENTELA.has(m); };
 
 /** As palavras do ritmo, no idioma de cada trabalho. */
-export function rotulosDoRitmo(v: Vida): { puxado: string; leve: string; normal: string; sobre: string } {
+export function rotulosDoRitmo(v: Vida): { puxado: string; leve: string; normal: string; sobre: string; sobreLeve?: string } {
   const m = modoDoTrabalho(v);
   if (m === 'docente') return { puxado: 'Pegar mais turmas', leve: 'Ficar com menos turmas', normal: 'Voltar à carga de sempre', sobre: 'Mais aulas, mais salário — e mais prova para corrigir no domingo.' };
   if (m === 'saude') return { puxado: 'Pegar plantões extras', leve: 'Fazer menos plantões', normal: 'Voltar à escala de sempre', sobre: 'Plantão a mais paga bem e cobra noite de sono.' };
@@ -127,7 +131,7 @@ export function rotulosDoRitmo(v: Vida): { puxado: string; leve: string; normal:
     const leve = (n?.equipe?.length ?? 0) > 0 ? 'Deixar mais com a equipe' : 'Trabalhar menos horas';
     return { puxado, leve, normal: 'Voltar ao horário de sempre', sobre: 'Dono presente puxa o movimento; dono exausto erra.' };
   }
-  if (m === 'artista') return { puxado: 'Aceitar todo trabalho que aparecer', leve: 'Guardar tempo para a própria obra', normal: 'Voltar ao ritmo de sempre', sobre: 'Todo convite paga conta; nem todo convite faz obra.' };
+  if (m === 'artista') return { puxado: 'Aceitar todo trabalho que aparecer', leve: 'Guardar tempo para a própria obra (menos trabalhos pagos)', normal: 'Voltar ao ritmo de sempre', sobre: 'Todo convite paga conta; nem todo convite faz obra.', sobreLeve: 'Recusa parte dos trabalhos pagos: a renda cai (uns 18%) e a freguesia cresce mais devagar; a semana fica mais leve, a prática rende mais e a próxima obra sai mais cuidada.' };
   if (m === 'rural') return { puxado: 'Plantar mais, de sol a sol', leve: 'Diminuir a área', normal: 'Voltar ao tamanho de sempre', sobre: 'Mais área, mais colheita — e mais corpo cansado.' };
   if (m === 'pesca') return { puxado: 'Sair mais para pescar', leve: 'Pescar menos', normal: 'Voltar às saídas de sempre', sobre: 'Mais saída, mais peixe — e mais madrugada.' };
   return { puxado: 'Aceitar todo serviço (agenda cheia)', leve: 'Deixar a agenda mais leve', normal: 'Voltar à agenda de sempre', sobre: 'Agenda cheia rende e cansa; agenda leve sobra tempo e falta dinheiro.' };
@@ -413,7 +417,9 @@ export type OqueProfissao =
   | 'foco' | 'treinador' | 'mercado' | 'pendurar' | 'pos_carreira'
   | 'movimentacao' | 'remocao'
   | 'cooperativa' | 'investir_terra' | 'diversificar' | 'sucessao'
-  | 'lancar' | 'estrada';
+  | 'lancar' | 'estrada'
+  /** A vida acadêmica: projeto, orientação, colaboração, financiamento (`academia`). */
+  | 'academia';
 
 export type AcaoProfissaoCmd = { tipo: 'profissao'; oque: OqueProfissao; valor?: string; pessoaId?: string };
 
@@ -506,7 +512,7 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
   if (temRitmo(v)) {
     if (ritmo !== 'puxado') add({ id: 'ritmo_puxado', rotulo: rot.puxado, porque: aperto ? 'O mês não fecha: mais trabalho, mais dinheiro.' : rot.sobre, acao: P('ritmo', { valor: 'puxado' }), peso: aperto ? 6 : 2 });
     if (ritmo === 'puxado') add({ id: 'ritmo_normal', rotulo: rot.normal, porque: (e.anosPuxado ?? 0) >= 2 ? 'O corpo e a casa vêm cobrando.' : undefined, acao: P('ritmo', { valor: 'normal' }), peso: cabecaCheia || (e.anosPuxado ?? 0) >= 2 ? 8 : 3 });
-    if (ritmo !== 'leve') add({ id: 'ritmo_leve', rotulo: rot.leve, porque: cabecaCheia ? 'A cabeça anda cheia.' : pequenos ? 'Filho pequeno em casa.' : undefined, acao: P('ritmo', { valor: 'leve' }), peso: cabecaCheia ? 6 : pequenos ? 4 : 1 });
+    if (ritmo !== 'leve') add({ id: 'ritmo_leve', rotulo: rot.leve, porque: [cabecaCheia ? 'A cabeça anda cheia.' : pequenos ? 'Filho pequeno em casa.' : '', rot.sobreLeve ?? ''].filter(Boolean).join(' ') || undefined, acao: P('ritmo', { valor: 'leve' }), peso: cabecaCheia ? 6 : pequenos ? 4 : 1 });
     if (ritmo === 'leve') add({ id: 'ritmo_normal', rotulo: rot.normal, porque: aperto ? 'O dinheiro anda curto.' : undefined, acao: P('ritmo', { valor: 'normal' }), peso: aperto ? 6 : 2 });
   }
 
@@ -525,8 +531,10 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     add({ id: 'outra_vaga', rotulo: 'Procurar outra vaga', porque: climaDe(e) < 40 ? 'O clima por aqui não anda bom.' : estagnado ? 'Anos no mesmo lugar.' : undefined, ir: 'explorar', peso: climaDe(e) < 40 ? 6 : estagnado ? 4 : 1 });
   }
   if (modo === 'servidor' || (modo === 'docente' && e.contrato === 'servidor')) {
-    const temPos = v.educacao.concluidos.some(c => ['pos', 'mestrado', 'doutorado'].includes(c.nivel));
-    add({ id: 'titulacao', rotulo: temPos ? 'Mais uma titulação (mestrado, doutorado)' : 'Fazer uma pós: o adicional de titulação', porque: 'Na carreira pública, estudar é o que sobe o salário.', ir: 'estudos', peso: temPos ? 2 : 5 });
+    // A titulação que FALTA (a que já existe nunca volta como próximo passo): pós → mestrado → doutorado.
+    const tem = (n: string) => v.educacao.concluidos.some(c => c.nivel === n) || v.educacao.matricula?.cursoId === n;
+    const proxima = tem('doutorado') ? undefined : tem('mestrado') ? 'o doutorado' : tem('pos') ? 'um mestrado' : 'uma pós';
+    if (proxima && !v.educacao.matricula) add({ id: 'titulacao', rotulo: proxima === 'uma pós' ? 'Fazer uma pós: o adicional de titulação' : `Fazer ${proxima}: o próximo adicional de titulação`, porque: 'Na carreira pública, a titulação sobe o salário na tabela.', ir: 'estudos', peso: proxima === 'uma pós' ? 5 : 2 });
     add({ id: 'remocao', rotulo: 'Pedir remoção para outra cidade', porque: familiaLonge(v) ? `${familiaLonge(v)} mora longe.` : undefined, acao: P('remocao'), peso: familiaLonge(v) ? 5 : 1 });
     add({ id: 'concurso', rotulo: 'Prestar outro concurso', porque: 'Mudar de cargo, no serviço público, é outro edital.', ir: 'explorar', peso: 2 });
   }
@@ -566,11 +574,12 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     if (i >= 58) add({ id: 'sucessao', rotulo: 'Passar a terra adiante', porque: 'Pensar em quem continua.', acao: P('sucessao'), peso: i >= 65 ? 6 : 3 });
   }
 
-  /* ---------------------------------------------- Arte */
-  if (modo === 'artista' || (v.caminhos.arte?.ativo && i >= 16)) {
-    add({ id: 'lancar', rotulo: v.caminhos.arte?.linguagem === 'musica' || oc.trilha === 'musica' ? 'Gravar e lançar um trabalho' : 'Estrear um trabalho novo', porque: 'Obra na rua é o que faz o público crescer.', acao: P('lancar'), peso: 4 });
-    add({ id: 'estrada', rotulo: 'Cair na estrada (uma turnê)', porque: 'Público novo, dinheiro incerto, casa longe.', acao: P('estrada'), peso: 2 });
-  }
+  /* ---------------------------------------------- Arte (quando a arte é o trabalho principal) */
+  // O grupo por fora e a arte em paralelo têm as ações no próprio lugar (`acoesDasTrajetorias`): nunca misturadas às do trabalho.
+  if (modo === 'artista') for (const x of acoesArtisticas(v, i)) add(x);
+
+  /* ---------------------------------------------- Academia (docência e pesquisa) */
+  if (OCUPACOES_ACADEMICAS.has(e.ocupacaoId)) for (const x of acoesAcademicas(v)) add(x);
 
   /* ---------------------------------------------- Atleta */
   if (modo === 'atleta') {
@@ -601,6 +610,84 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
   }
   if (!n && modo !== 'atleta' && modo !== 'politica') add({ id: 'sair', rotulo: e.clientela !== undefined ? 'Parar com esse trabalho' : eDasForcas(oc) ? 'Deixar a Força' : e.contrato === 'servidor' ? 'Pedir exoneração' : 'Pedir demissão', acao: { tipo: 'pedir_demissao' }, peso: 0, saida: true });
   return separar(lista);
+}
+
+/** As ações da carreira artística (a obra, a estrada, o palco, os testes, o edital). */
+function acoesArtisticas(v: Vida, i: number): AcaoProfissional[] {
+  const P = (oque: OqueProfissao): Acao => ({ tipo: 'profissao', oque } as unknown as Acao);
+  const Q = (oque: string): Acao => ({ tipo: 'perseguir', oque } as unknown as Acao);
+  const oc = v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.ocupacaoId) : undefined;
+  const musica = v.caminhos.arte?.linguagem === 'musica' || oc?.trilha === 'musica' || v.trabalho.paralela?.ocupacaoId === 'musico_profissional';
+  const teatro = linguagemEmCena(v) === 'teatro' || linguagemEmCena(v) === 'danca';
+  const out: AcaoProfissional[] = [
+    { id: 'lancar', rotulo: musica ? 'Gravar e lançar um trabalho' : 'Estrear um trabalho novo (obra própria)', porque: `Custa uns ${fmt(custoLancar(v))}; obra na rua é o que faz o público crescer — e pode passar em branco.`, acao: P('lancar'), peso: 4 },
+    { id: 'estrada', rotulo: 'Cair na estrada (uma turnê)', porque: 'Público novo, dinheiro incerto, casa longe.', acao: P('estrada'), peso: 2 },
+    { id: 'apresentar', rotulo: musica ? 'Fazer um show numa casa pequena' : 'Apresentar-se: uma temporada curta', porque: 'Público e currículo, devagar. A bilheteria pode não pagar a sala.', acao: Q('apresentar'), peso: 3 },
+    { id: 'edital', rotulo: 'Inscrever um projeto num edital de cultura', porque: 'Verba para montar; o parecer diz o que pesou.', acao: Q('edital'), peso: 3 }
+  ];
+  if (teatro) out.push({ id: 'audicao', rotulo: 'Fazer um teste de elenco', porque: 'Teatro, curta, série: o tamanho do teste acompanha o currículo.', acao: Q('audicao'), peso: 4 });
+  if (i >= 14) out.push({ id: 'pequeno', rotulo: musica ? 'Tocar em festas e casamentos (cachê)' : 'Pegar um trabalho pequeno (publicidade, figuração)', porque: 'Paga pouco, mas paga — e entra no currículo.', acao: Q('trabalho_pequeno'), peso: 2 });
+  return out;
+}
+
+/** As ações da vida acadêmica (sem repetir a titulação já concluída). */
+function acoesAcademicas(v: Vida): AcaoProfissional[] {
+  const A = (valor: OqueAcademia): Acao => ({ tipo: 'profissao', oque: 'academia', valor } as unknown as Acao);
+  const a = v.caminhos.academia;
+  return [
+    { id: 'ac_projeto', rotulo: 'Começar um projeto de pesquisa', porque: `Dois anos; o resultado vira artigo (ou não). Linha: ${linhaDePesquisa(v)}.`, acao: A('projeto'), peso: a?.projeto ? 0 : 5 },
+    { id: 'ac_orientar', rotulo: 'Orientar um aluno de mestrado', porque: 'Pede semana e paciência; orientação concluída conta muito na carreira.', acao: A('orientar'), peso: 3 },
+    { id: 'ac_colaborar', rotulo: 'Entrar numa colaboração com outro grupo', porque: 'Contatos e, às vezes, um artigo em conjunto.', acao: A('colaborar'), peso: 2 },
+    { id: 'ac_financiamento', rotulo: 'Pedir financiamento para o projeto', porque: 'Edital de pesquisa: pesa a produção recente.', acao: A('financiamento'), peso: a?.projeto && !a.projeto.financiado ? 4 : 1 }
+  ];
+}
+
+/** Um grupo de ações de OUTRA trajetória (a paralela, o grupo de fora, uma carreira pausada). */
+export interface GrupoDeTrajetoria { id: string; titulo: string; subtitulo?: string; acoes: AcaoProfissional[] }
+
+/**
+ * As outras trajetórias, cada uma no seu lugar: a professora que atua vê a
+ * carreira artística separada da universidade (a turnê não é ação "da
+ * universidade"); a carreira pausada mostra a volta.
+ */
+export function acoesDasTrajetorias(v: Vida, disp: Disp): GrupoDeTrajetoria[] {
+  const grupos: GrupoDeTrajetoria[] = [];
+  const i = idade(v);
+  const filtrar = (lista: AcaoProfissional[]) => lista.filter(x => {
+    if (!x.acao) return true;
+    const d = disp(v, x.acao);
+    if (!podeTentar(d)) { if (!d.dinheiro) return false; x.bloqueado = d.motivo; }
+    return true;
+  }).sort((a, b) => b.peso - a.peso);
+  const modo = modoDoTrabalho(v);
+  const par = v.trabalho.paralela;
+  if (par) {
+    const oc = ocupacao(par.ocupacaoId);
+    const nome = nomeOcupacao(v, oc);
+    const proprias = TRILHAS_ARTISTICAS.has(oc.trilha) ? acoesArtisticas(v, i) : OCUPACOES_ACADEMICAS.has(oc.id) ? acoesAcademicas(v) : [];
+    grupos.push({ id: 'paralela', titulo: `${cap(nome)} — em paralelo`, subtitulo: `Desde ${anoDe(par.tInicio)} · rende uns ${fmt(remuneracaoDe(par).mediaMensal)}/mês`, acoes: filtrar([
+      ...proprias,
+      { id: 'par_principal', rotulo: `Fazer de ${nome} o trabalho principal`, porque: 'O trabalho de agora passa a ser o paralelo.', acao: { tipo: 'trajetoria', oque: 'principal' } as Acao, peso: 1 },
+      { id: 'par_deixar', rotulo: `Deixar ${nome}`, porque: 'O que fez fica no currículo.', acao: { tipo: 'trajetoria', oque: 'deixar' } as Acao, peso: 0, saida: true }
+    ]) });
+  }
+  // O grupo de fora (a banda, o grupo de teatro) quando a arte não é o trabalho principal.
+  const p = v.caminhos.arte;
+  if (p?.ativo && modo !== 'artista' && !(par && TRILHAS_ARTISTICAS.has(ocupacao(par.ocupacaoId).trilha)) && i >= 13) {
+    grupos.push({ id: 'grupo', titulo: `${p.nome} — ${p.tipo === 'banda' ? 'a banda' : 'o grupo'}, por fora`, subtitulo: 'A arte que corre ao lado do trabalho', acoes: filtrar([
+      ...acoesArtisticas(v, i),
+      { id: 'mostrar', rotulo: p.linguagem === 'musica' ? 'Mandar o material para produtores e festivais' : 'Fazer uma audição numa companhia', porque: 'Pedir para ser visto: o parecer diz o que faltou.', acao: { tipo: 'perseguir', oque: 'mostrar_trabalho' } as Acao, peso: 3 }
+    ]) });
+  }
+  (v.trabalho.pausadas ?? []).forEach((pa, k) => {
+    const oc = ocupacao(pa.emprego.ocupacaoId);
+    const nome = nomeOcupacao(v, oc);
+    grupos.push({ id: `pausada_${k}`, titulo: `${cap(nome)} — ${pa.licenca ? 'de licença' : 'em pausa'}`, subtitulo: pa.licenca ? `O cargo espera até ${anoDe(pa.licenca.tAte)}` : `Desde ${anoDe(pa.t)}: trabalhos, contatos e nome continuam`, acoes: filtrar([
+      { id: `retomar_${k}`, rotulo: pa.licenca ? `Voltar ao cargo de ${nome}` : `Voltar a trabalhar como ${nome}`, porque: v.trabalho.atual ? 'Se não couber com o trabalho de agora, a vida pergunta o que fazer.' : 'É retorno, não recomeço.', acao: { tipo: 'trajetoria', oque: 'retomar', k } as Acao, peso: 3 },
+      { id: `encerrar_${k}`, rotulo: pa.licenca ? `Pedir exoneração do cargo de ${nome}` : `Encerrar de vez a carreira de ${nome}`, porque: 'O currículo continua; a porta fecha.', acao: { tipo: 'trajetoria', oque: 'encerrar_pausada', k } as Acao, peso: 0, saida: true }
+    ]) });
+  });
+  return grupos;
 }
 
 function separar(lista: AcaoProfissional[]): { agora: AcaoProfissional[]; mais: AcaoProfissional[]; saidas: AcaoProfissional[] } {
@@ -736,13 +823,14 @@ export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito
       return ru.cultura === 'misto' ? bloqueio('impossivel', 'A produção já é diversificada.') : PERMITIDO;
     }
     case 'sucessao': return modo === 'rural' && idade(v) >= 50 ? PERMITIDO : semTrabalho;
+    case 'academia': return disponibilidadeAcademia(v, (a.valor as OqueAcademia) ?? 'projeto');
     case 'lancar': {
-      if (!(modo === 'artista' || v.caminhos.arte?.ativo)) return semTrabalho;
+      if (!(modo === 'artista' || v.caminhos.arte?.ativo || trabalhaComArte(v))) return semTrabalho;
       if (v.fatos['arte_lancou'] !== undefined && v.t - v.fatos['arte_lancou'] < 24) return bloqueio('incompativel', 'O último trabalho saiu há pouco; o próximo leva tempo.');
       return vereditoDePagar(v, custoLancar(v), 'Gravar, imprimir, montar: uns');
     }
     case 'estrada': {
-      if (!(modo === 'artista' || v.caminhos.arte?.ativo)) return semTrabalho;
+      if (!(modo === 'artista' || v.caminhos.arte?.ativo || trabalhaComArte(v))) return semTrabalho;
       if (publicoDoArtista(v) < 25) return bloqueio('requisito', 'Ainda falta público para uma turnê pagar.');
       if (v.fatos['arte_estrada'] !== undefined && v.t - v.fatos['arte_estrada'] < 24) return bloqueio('incompativel', 'A última turnê foi há pouco.');
       return PERMITIDO;
@@ -751,7 +839,7 @@ export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito
   return semTrabalho;
 }
 
-const publicoDoArtista = (v: Vida) => (v.caminhos.arte?.ativo ? v.caminhos.arte.publico : v.trabalho.atual?.clientela ?? 0);
+const publicoDoArtista = (v: Vida) => (v.caminhos.arte?.ativo ? v.caminhos.arte.publico : Math.max(v.trabalho.atual?.clientela ?? 0, v.trabalho.paralela?.clientela ?? 0));
 
 /** Para onde pedir movimentação: a guarnição da Força perto de quem importa. */
 export function alvoDaMovimentacao(v: Vida): string | undefined {
@@ -845,6 +933,7 @@ export function executarProfissao(v: Vida, r: Rng, a: AcaoProfissaoCmd): SaidaPr
       return { texto: o.recepcao >= 2 ? 'O trabalho pegou.' : o.recepcao === 1 ? 'Saiu — e achou o seu público.' : 'Saiu. Pouca gente viu — por enquanto.', tom: o.recepcao >= 2 ? 'bom' : 'neutro' };
     }
     case 'estrada': v.fatos['arte_estrada'] = v.t; return { decisao: 'arte_estrada' };
+    case 'academia': return executarAcademia(v, r, (a.valor as OqueAcademia) ?? 'projeto');
   }
     return {};
 }

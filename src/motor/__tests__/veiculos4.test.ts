@@ -91,7 +91,7 @@ describe('ofertas e vitrine', () => {
     }
     // A concessionária tem todos os carros zero; a loja de motos, todas as motos e bicicletas zero.
     expect(ofertasDeVeiculos(v, 'concessionaria').filter(o => !o.usado).length).toBe(VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === 'carro').length);
-    expect(ofertasDeVeiculos(v, 'motos').filter(o => !o.usado).length).toBe(VERSOES_VEICULO.filter(x => categoriaDe(x.classe) !== 'carro').length);
+    expect(ofertasDeVeiculos(v, 'motos').filter(o => !o.usado).length).toBe(VERSOES_VEICULO.filter(x => ['moto', 'bicicleta'].includes(categoriaDe(x.classe))).length);
     expect(ofertasDeVeiculos(v, 'usados').every(o => o.usado)).toBe(true);
   });
 
@@ -99,9 +99,11 @@ describe('ofertas e vitrine', () => {
     const v = adulta();
     const c = catalogoDeVeiculos(v);
     for (let k = 1; k < c.length; k++) expect(c[k].preco).toBeGreaterThanOrEqual(c[k - 1].preco);
-    expect(new Set(c.map(o => categoriaDe(o.modeloId)))).toEqual(new Set(['carro', 'moto', 'bicicleta']));
+    // As três de terra sempre; na água e no ar, onde a cidade tem loja (FIX pós-REWORK 3).
+    const cats = new Set(c.map(o => categoriaDe(o.modeloId)));
+    for (const x of ['carro', 'moto', 'bicicleta']) expect(cats.has(x as never)).toBe(true);
     expect(c.some(o => o.usado) && c.some(o => !o.usado)).toBe(true);
-    expect(c.length).toBe((['concessionaria', 'usados', 'motos'] as const).reduce((s, l) => s + ofertasDeVeiculos(v, l).length, 0));
+    expect(c.length).toBe((['concessionaria', 'usados', 'motos', 'nautica', 'aeroclube'] as const).reduce((s, l) => s + ofertasDeVeiculos(v, l).length, 0));
   });
 
   it('"ver os outros" de cada loja vem em ordem de preço', () => {

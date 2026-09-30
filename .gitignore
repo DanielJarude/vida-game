@@ -16,3 +16,6 @@ vida-itch.zip
 
 # Cópias de trabalho paralelas (worktrees de agentes).
 .claude/worktrees/
+
+# Cache do tsc incremental (gerado a cada typecheck/build).
+*.tsbuildinfo

@@ -57,6 +57,8 @@ export default defineConfig({
     css: false,
     // Os testes que vivem muitas vidas (média de várias sementes) passam de 5 s em máquina carregada.
     testTimeout: 20000,
+    // O `precarregar()` dos testes de interface importa todas as telas: passa de 10 s em disco lento (WSL em /mnt/c).
+    hookTimeout: 60000,
     // Cópias de trabalho paralelas (worktrees de agentes) não são a suíte deste checkout.
     exclude: [...configDefaults.exclude, '.claude/**'],
   },

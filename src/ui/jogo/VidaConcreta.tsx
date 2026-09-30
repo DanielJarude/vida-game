@@ -19,17 +19,22 @@ import { AUTONOMIA } from '../../motor/sistemas/autonomia';
 import { BotaoAcao, Secao } from '../comum';
 import { Lar, OQueTem, ViverACasa } from './Casa';
 import { ODinheiro } from './Dinheiro';
-import { Tempo } from './Tempo';
 import { Cidade } from './Cidade';
 import { Icone } from './material/Desenhos';
 import { Lugar, type QualLugar } from './material/Lugares';
 import { dinheiroCurto } from '../leituraMaterial';
 import { SECOES_VIDA, type Aba, type SecaoVida } from '../navegacao';
 import '../material.css';
+import { leituraDaAutoescola } from '../../motor/sistemas/autoescola';
+import { lojaNaCidade } from '../../motor/sistemas/mercado';
+import { disponivel } from '../../motor/sistemas/dinheiro';
+import { modeloVeiculo } from '../../motor/dados/bens';
+
+const temRaro = (v: Vida, cat: 'embarcacao' | 'aeronave') => v.financas.bens.some(b => b.tipo === 'veiculo' && modeloVeiculo(b.modeloId).categoria === cat);
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; secao: SecaoVida; irSecao: (s: SecaoVida) => void; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }
 
-export function VidaConcreta({ vida, agir, secao, irSecao, irPara, abrirPessoa }: Props) {
+export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props) {
   const [lugar, setLugar] = useState<QualLugar | null>(null);
   const i = idade(vida);
   return (
@@ -61,7 +66,6 @@ export function VidaConcreta({ vida, agir, secao, irSecao, irPara, abrirPessoa }
           </div>
         )}
         {secao === 'compras' && <Compras vida={vida} agir={agir} abrir={setLugar} />}
-        {secao === 'tempo' && <Tempo vida={vida} agir={agir} irPara={irPara} />}
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} />}
       </div>
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
@@ -141,6 +145,9 @@ function Compras({ vida, agir, abrir }: { vida: Vida; agir: (a: Acao) => boolean
       { id: 'concessionaria', nome: 'Concessionária', oque: 'Carros zero', icone: 'concessionaria', idadeMin: 18, porque: 'Carro é a partir dos 18, com carteira.' },
       { id: 'usados', nome: 'Carros usados', oque: 'Anúncios, cada um com uma história', icone: 'usados', idadeMin: 18, porque: 'Carro é a partir dos 18, com carteira.' },
       { id: 'motos', nome: 'Motos e bicicletas', oque: 'Novas e usadas; bicicleta é de qualquer idade', icone: 'bicicleta', idadeMin: 10, porque: 'Com essa idade, a bicicleta vem da família.' },
+      // Raros e contextuais: a loja náutica perto da água, o aeroclube na cidade grande — para quem tem com que (ou já tem um).
+      ...(lojaNaCidade(vida.moradia.municipioId, 'nautica') && (disponivel(vida) >= 60000 || temRaro(vida, 'embarcacao')) ? [{ id: 'nautica' as QualLugar, nome: 'Loja náutica', oque: 'Moto aquática, lancha, veleiro', icone: 'nautica', idadeMin: 18, porque: 'A partir dos 18.' }] : []),
+      ...(lojaNaCidade(vida.moradia.municipioId, 'aeroclube') && (disponivel(vida) >= 350000 || temRaro(vida, 'aeronave')) ? [{ id: 'aeroclube' as QualLugar, nome: 'Aeroclube e hangar', oque: 'Ultraleve, monomotor, a formação de piloto', icone: 'aeroclube', idadeMin: 18, porque: 'A partir dos 18.' }] : []),
       ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto', icone: 'oficina', idadeMin: 0 }] : [])
     ] },
     { titulo: 'Você', lugares: [{ id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio', icone: 'loja', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes }] },
@@ -174,6 +181,16 @@ function Compras({ vida, agir, abrir }: { vida: Vida; agir: (a: Acao) => boolean
             })}
           </ul>
           {g.titulo === 'Transporte' && i >= 17 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarImpossivel>Tirar carteira de motorista (autoescola)</BotaoAcao>}
+          {g.titulo === 'Transporte' && leituraDaAutoescola(vida) && (
+            <div className="autoescola">
+              <p className="nota">{leituraDaAutoescola(vida)}</p>
+              <div className="grupo-acoes grupo-acoes--linha">
+                <BotaoAcao vida={vida} acao={{ tipo: 'cnh_prova' }} agir={agir} variante="secundario" ocultarBloqueado ocultarImpossivel>Fazer a prova teórica</BotaoAcao>
+                <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'teoria' }} agir={agir} variante="discreto" ocultarImpossivel>Estudar a apostila e fazer simulados</BotaoAcao>
+                <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'pratica' }} agir={agir} variante="discreto" ocultarImpossivel>Fazer aulas extras de direção</BotaoAcao>
+              </div>
+            </div>
+          )}
         </Secao>
       ))}
     </div>

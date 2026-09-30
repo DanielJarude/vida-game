@@ -175,12 +175,24 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
         <path d={`M ${cx - ombro * 0.62} ${corpoTopo + 12} L ${cx - ombro * 0.62} 101 M ${cx + ombro * 0.62} ${corpoTopo + 12} L ${cx + ombro * 0.62} 101`} stroke="#f2efe8" strokeWidth={1.6} opacity={0.8} />
       )}
 
+      {/* A joia no pescoço (a corrente), quando é o que está em uso. */}
+      {f !== 'bebe' && f !== 'crianca' && (v.joia === 'corrente' || v.joia === 'corrente_ouro') && (
+        <path className="retrato__joia" d={`M ${cx - pescocoW * 0.72} ${corpoTopo + 3.6} Q ${cx} ${corpoTopo + 11.5} ${cx + pescocoW * 0.72} ${corpoTopo + 3.6}`} fill="none" stroke={v.joia === 'corrente_ouro' ? '#c9a14a' : '#c9ccd1'} strokeWidth={0.9} strokeLinecap="round" />
+      )}
+
       {/* Orelhas */}
       <ellipse cx={cx - w / 2 + 0.6} cy={olhoY + 3} rx={2.6} ry={4} fill={sombra} />
       <ellipse cx={cx + w / 2 - 0.6} cy={olhoY + 3} rx={2.6} ry={4} fill={sombra} />
 
       {/* Rosto */}
       <path d={rosto} fill={pele} />
+      {/* Brincos: um ponto de luz na ponta da orelha. */}
+      {f !== 'bebe' && v.joia === 'brincos' && (
+        <g className="retrato__joia" fill="#d8b45a">
+          <circle cx={cx - w / 2 + 0.2} cy={olhoY + 7.4} r={1} />
+          <circle cx={cx + w / 2 - 0.2} cy={olhoY + 7.4} r={1} />
+        </g>
+      )}
       {(f === 'bebe' || f === 'crianca') && (
         <>
           <ellipse cx={cx - esp - 2} cy={olhoY + 7} rx={4} ry={2.6} fill="#e8889a" opacity={0.22} />

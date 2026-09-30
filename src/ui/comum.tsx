@@ -187,3 +187,20 @@ export function AcoesVivas({ acoes, agir, ir, rotulo }: { acoes: AcaoViva[]; agi
 export function Dado({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return <div className="dado"><dt>{rotulo}</dt><dd>{children}</dd></div>;
 }
+
+/**
+ * Dar nome ao que é seu (a banda, o negócio, a obra): o nome sugerido fica,
+ * a não ser que a pessoa troque. Um campo curto, no lugar — sem abrir tela.
+ */
+export function Renomear({ vida, agir, alvo, atual, k, rotulo = 'Renomear' }: { vida: Vida; agir: (a: Acao) => boolean; alvo: 'grupo' | 'negocio' | 'obra'; atual: string; k?: number; rotulo?: string }) {
+  const [aberto, setAberto] = useState(false);
+  const [nome, setNome] = useState(atual);
+  if (!aberto) return <button type="button" className="link renomear__abrir" onClick={() => { setNome(atual); setAberto(true); }}>{rotulo}</button>;
+  return (
+    <form className="renomear" onSubmit={e => { e.preventDefault(); if (agir({ tipo: 'renomear', alvo, nome, k } as Acao)) setAberto(false); }}>
+      <label className="campo"><span className="campo__rotulo">Novo nome</span><input type="text" value={nome} maxLength={40} onChange={e => setNome(e.target.value)} autoFocus /></label>
+      <button type="submit" className="botao botao--secundario" disabled={!podeTentar(disponibilidade(vida, { tipo: 'renomear', alvo, nome, k } as Acao))}>Salvar o nome</button>
+      <button type="button" className="botao botao--discreto" onClick={() => setAberto(false)}>Manter "{atual}"</button>
+    </form>
+  );
+}

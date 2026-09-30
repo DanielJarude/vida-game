@@ -40,6 +40,7 @@ import { encerrarEmprego, podeAposentar, valorAposentadoria } from '../sistemas/
 import { negocioAberto, retiradaMensal, valorDoNegocio, venderNegocio } from '../sistemas/negocio';
 import { marcar } from '../sistemas/marcas';
 import { ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
+import { DE_FORMACAO, instituicaoAtual } from '../sistemas/formacao';
 
 /* ------------------------------------------------------------- Auxiliares */
 
@@ -95,7 +96,8 @@ function rotinaCabe(v: Vida, id: string, nivel: 1 | 2 | 3 = 1): true | string {
 function comecarRotina(v: Vida, id: string, nivel: 1 | 2 | 3 = 1): void {
   const r = v.rotinas.find(x => x.id === id);
   if (r) { if ((r.nivel ?? 1) < nivel) r.nivel = nivel; return; }
-  v.rotinas.push({ id, tInicio: v.t, nivel });
+  const inst = DE_FORMACAO.has(id) ? instituicaoAtual(v)?.chave : undefined;
+  v.rotinas.push({ id, tInicio: v.t, nivel, ...(inst ? { instituicao: inst } : {}) });
 }
 
 /* ------------------------------------------------------ O casamento do filho */

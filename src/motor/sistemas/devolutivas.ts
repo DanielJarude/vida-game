@@ -5,6 +5,7 @@
  */
 
 import type { Devolutiva, Vida } from '../tipos';
+import { tentativaDaDevolutiva } from './objetivos';
 
 const LIMITE = 8;
 
@@ -13,6 +14,9 @@ export function registrarDevolutiva(v: Vida, d: Omit<Devolutiva, 't'>): Devoluti
   const lista = v.caminhos.devolutivas;
   lista.push(nova);
   if (lista.length > LIMITE) lista.splice(0, lista.length - LIMITE);
+  // Toda tentativa alimenta o objetivo que ela persegue (a memória de intenção), com a MESMA causa.
+  const controlavel = d.falta && d.falta !== 'concorrencia' && d.falta !== 'idade' && d.falta !== 'historico';
+  tentativaDaDevolutiva(v, nova, controlavel ? O_QUE_TRABALHAR[d.falta!] : undefined);
   return nova;
 }
 
@@ -33,5 +37,10 @@ export const O_QUE_TRABALHAR: Record<NonNullable<Devolutiva['falta']>, string> =
   nervos: 'O nervosismo atrapalhou. Com mais testes, isso diminui.',
   idade: 'A idade pesa nas bases: a janela está fechando.',
   preparo: 'Faltou preparo: estudo firme, por mais tempo, é o que aproxima da nota de corte.',
-  publico: 'Faltou público: ensaio firme, shows, um edital de cultura — é o público que faz o convite chegar.'
+  publico: 'Faltou público: apresentar-se (uma temporada curta, um show), testes e trabalhos pequenos, um edital de cultura — é o público que faz o convite chegar.',
+  pesquisa: 'Faltou experiência de pesquisa: uma iniciação científica, ou um professor que acompanhe o seu trabalho e escreva a carta.',
+  projeto: 'O projeto de pesquisa estava cru: preparar o projeto (e estudar para a prova da seleção) antes da próxima.',
+  historico: 'O histórico da graduação pesou — isso não muda mais; o projeto e a pesquisa compensam parte.',
+  area: 'Vindo de outra área, a banca quis mais base: um curso ou uma especialização na área ajuda.',
+  materia: 'Uma matéria específica pesou: estudar dirigido a ela (foco no cursinho ou por conta) é o que move a nota.'
 };

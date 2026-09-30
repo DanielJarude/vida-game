@@ -35,10 +35,21 @@ import { incorporarAoServico } from './militar';
 import { tDe } from '../tempo';
 import { efetivarMatricula } from './escola';
 import { mudarAgora } from './processos';
+import { entrarComoParalela, moverParaParalela, novaViraPrincipal, pausadaDe, pausarAtual, podeConciliar, podePausar, retomarPausada } from './paralelas';
+
+/**
+ * Vias em que a pessoa JÁ escolheu trocar, sabendo antes o que perdia: a
+ * candidatura feita na tela de vagas (que diz "entrar aqui é deixar o trabalho
+ * de X") e começar por conta. Toda outra porta (convite, bolsa, indicação,
+ * concurso, retorno) pergunta o que fazer com o trabalho de agora.
+ */
+const VIAS_DE_TROCA_ESCOLHIDA = new Set(['curriculo', 'por_conta']);
+/** Via interna: o conflito do emprego de agora com um curso (só "deixar o trabalho" — o plano de conciliar é do próprio curso). */
+const VIA_CURSO = '__curso__';
 
 /* ============================================================== O que existe */
 
-type IdAtual = 'curso' | 'emprego' | 'base' | 'negocio' | 'servico' | 'mandato';
+type IdAtual = 'curso' | 'emprego' | 'base' | 'negocio' | 'servico' | 'mandato' | 'cidade';
 
 interface Alternativa {
   /** O que se larga (id aplicável) — ou `conciliar`. */
@@ -110,8 +121,10 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): Conflito | undefine
     return { com: 'negocio', rotulo: n.nome, motivo: `${n.nome} é o seu trabalho de todo dia`, alternativas };
   }
   const nome = nomeEmprego(v);
-  // Emprego novo no lugar do atual: quem se candidatou já escolheu trocar — só o que vem de fora (concurso, convocação) pergunta.
-  if (novo.tipo === 'emprego' && !['concurso', 'reserva'].includes(novo.via)) return undefined;
+  // Emprego novo no lugar do atual: quem se candidatou pela tela de vagas já escolheu trocar (e foi avisado antes).
+  // Convite, bolsa, indicação, concurso, retorno: ninguém escolheu ainda o que fazer com o trabalho de agora — pergunta.
+  if (novo.tipo === 'emprego' && VIAS_DE_TROCA_ESCOLHIDA.has(novo.via)) return undefined;
+  if (novo.tipo === 'emprego' && novo.ocupacaoId === e.ocupacaoId && novo.via !== VIA_CURSO) return undefined;
   if (novo.tipo === 'servico_militar') return undefined; // o emprego fica guardado (lei), não é conflito
   if (novo.tipo === 'negocio') {
     return {
@@ -124,7 +137,27 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): Conflito | undefine
   }
   const oc = ocupacao(e.ocupacaoId);
   const estavel = e.contrato === 'servidor' ? ' — e a estabilidade do cargo' : '';
-  return { com: 'emprego', rotulo: `o trabalho de ${nome}`, motivo: `Você trabalha como ${nome}${e.carga === 'integral' ? ', o dia inteiro' : ''}`, alternativas: [{ larga: 'emprego', texto: `deixar o trabalho de ${nome}`, consequencia: `O trabalho de ${nome}${oc.concurso ? ' (concursado)' : ''} acaba${estavel}.` }] };
+  const alternativas: Alternativa[] = [{ larga: 'emprego', texto: `deixar o trabalho de ${nome}`, consequencia: `O trabalho de ${nome}${oc.concurso ? ' (concursado)' : ''} acaba${estavel}. O que você fez ali fica no currículo.` }];
+  if (novo.tipo === 'emprego' && novo.via !== VIA_CURSO) {
+    const noc = ocupacao(novo.ocupacaoId);
+    // Pausar não é apagar: quem trabalha por projeto pausa a agenda; o servidor pede licença sem salário.
+    if (podePausar(v)) alternativas.push(e.contrato === 'servidor'
+      ? { larga: 'emprego_licenca', texto: `pedir licença sem salário do cargo de ${nome}`, consequencia: `O cargo de ${nome} espera por um tempo (sem salário). Dá para voltar; se não voltar, ele acaba.` }
+      : { larga: 'emprego_pausa', texto: `pôr a carreira de ${nome} em pausa`, consequencia: `A agenda de ${nome} para. Trabalhos, contatos e nome continuam: voltar depois é retorno, não recomeço.` });
+    // Conciliar só quando é plausível (uma das duas é por conta, por projeto ou de meio período).
+    if (podeConciliar(v, noc)) {
+      const principal = novaViraPrincipal(v, noc);
+      alternativas.push({ conciliar: true, larga: principal ? 'emprego_paralela' : 'novo_paralela', texto: principal ? `manter ${nome} em paralelo` : `seguir como ${nome} e fazer isso em paralelo`, consequencia: principal ? `${cap(nome)} continua, com menos trabalhos. A semana fica mais cheia.` : `${cap(nome)} continua sendo o trabalho principal; o novo entra em parte da semana, rendendo menos.` });
+    }
+  }
+  return { com: 'emprego', rotulo: `o trabalho de ${nome}`, motivo: `Você trabalha como ${nome}${e.carga === 'integral' ? ', o dia inteiro' : ''}`, alternativas };
+}
+
+/** Um curso presencial em outra cidade: ninguém muda de cidade sem dizer que sim. */
+function conflitoComCidade(v: Vida, municipioId: string, oque: string): Conflito | undefined {
+  if (municipioId === v.moradia.municipioId) return undefined;
+  const destino = municipio(municipioId).nome;
+  return { com: 'cidade', rotulo: `a vida em ${municipio(v.moradia.municipioId).nome}`, motivo: `${cap(oque)} é presencial em ${destino} — e você mora em ${municipio(v.moradia.municipioId).nome}`, alternativas: [{ larga: 'mudar', texto: `se mudar para ${destino}`, consequencia: `Você se muda para ${destino}: casa nova, custo de mudança, e o que é de lugar fixo aqui fica para trás.` }] };
 }
 
 function conflitoComBase(v: Vida): Conflito | undefined {
@@ -199,7 +232,7 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): Conflito[] {
         const deLugar = !['autonomo', 'informal'].includes(e.contrato) || ehDono(v);
         // Integral presencial: com trabalho de dia inteiro, não cabe; com meio período, cabe apertado (há o plano de conciliar).
         if ((integral && (pesado || e.carga === 'parcial')) || (outraCidade && deLugar)) {
-          const conf = conflitoComEmprego(v, { tipo: 'emprego', ocupacaoId: e.ocupacaoId, via: 'concurso' });
+          const conf = conflitoComEmprego(v, { tipo: 'emprego', ocupacaoId: e.ocupacaoId, via: VIA_CURSO });
           if (conf) {
             conf.motivo = outraCidade ? `${conf.motivo}, em ${municipio(v.moradia.municipioId).nome} — e o curso é em ${municipio(novo.municipioId).nome}` : `${conf.motivo}; ${c.nivel === 'superior' ? 'a faculdade' : 'o curso'} de ${c.nome} é em período integral`;
             // Meio período ao lado de um curso integral é apertado, mas possível: aí há o plano de tentar os dois.
@@ -209,6 +242,7 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): Conflito[] {
         }
       }
       if (presencial) push(conflitoComBase(v));
+      if (outraCidade) push(conflitoComCidade(v, novo.municipioId, c.nivel === 'superior' ? `a faculdade de ${c.nome}` : c.nome));
       break;
     }
     case 'servico_militar': {
@@ -322,7 +356,7 @@ export function propor(v: Vida, r: Rng, novo: NovoCompromisso): 'feito' | 'pende
     if (v.momento?.situacaoId === 'comp_conflito') v.momento = null;
   }
   const conflitos = analisarEntrada(v, novo);
-  if (!conflitos.length) { aplicarNovo(v, r, novo, false); return 'feito'; }
+  if (!conflitos.length) { aplicarNovo(v, r, novo, false, []); return 'feito'; }
   const d = descreverOferta(v, novo);
   if (v.caminhos.pendente && v.caminhos.pendente.t === v.t) {
     // Duas ofertas que não cabem no mesmo ano: a segunda passa, e fica dito por quê.
@@ -357,7 +391,7 @@ export function resolverPendente(v: Vida, r: Rng, k: number): string {
     return `${impede.motivo}.`;
   }
   for (const id of plano.larga) largar(v, id, motivo, p.novo);
-  aplicarNovo(v, r, p.novo, plano.larga.includes('negocio_nas_horas_vagas'));
+  aplicarNovo(v, r, p.novo, plano.larga.includes('negocio_nas_horas_vagas'), plano.larga);
   if (plano.conciliar) v.fatos['conciliando'] = v.t;
   return plano.consequencias.join(' ');
 }
@@ -416,6 +450,9 @@ function largar(v: Vida, id: string, motivo: string, novo: NovoCompromisso): voi
       return;
     }
     case 'negocio_nas_horas_vagas': return; // o negócio nasce paralelo (ver `aplicarNovo`)
+    case 'emprego_pausa': case 'emprego_licenca': pausarAtual(v, motivo); return;
+    case 'emprego_paralela': moverParaParalela(v, motivo); return;
+    case 'novo_paralela': case 'mudar': return; // o novo entra em paralelo / a mudança vai junto com o novo (ver `aplicarNovo`)
     case 'adiar_servico': {
       v.fatos['mil_adiado'] = v.t;
       escrever(v, { texto: 'Pediu o adiamento da incorporação pelo curso: o serviço militar fica para depois da formatura.', relevancia: 'biografia', tema: 'lugar', escolha: true });
@@ -425,16 +462,36 @@ function largar(v: Vida, id: string, motivo: string, novo: NovoCompromisso): voi
 }
 
 /** O novo entra na vida. */
-function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: boolean): void {
+function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: boolean, larga: string[]): void {
   switch (novo.tipo) {
     case 'base': entrarNaBase(v, novo.dominio, novo.municipioId, novo.clube); return;
     case 'contrato_esporte': profissionalizar(v, r, novo.nivel); return;
     case 'emprego': {
       const oc = ocupacao(novo.ocupacaoId);
-      const e = contratar(v, r, oc, novo.via);
+      // A volta a uma trajetória pausada não é contratação: o emprego guardado retorna.
+      const k = novo.retoma !== undefined ? novo.retoma : novo.via === 'retorno' ? pausadaDe(v, oc.id) : -1;
+      if (k >= 0 && (v.trabalho.pausadas ?? [])[k]) {
+        if (larga.includes('novo_paralela')) {
+          const guardado = v.trabalho.atual;
+          v.trabalho.atual = undefined;
+          const e = retomarPausada(v, k);
+          v.trabalho.atual = guardado;
+          if (e) entrarComoParalela(v, e);
+        } else retomarPausada(v, k);
+        return;
+      }
+      let e;
+      if (larga.includes('novo_paralela') && v.trabalho.atual) {
+        // Conciliar com o novo em paralelo: o trabalho de agora continua sendo o principal.
+        const guardado = v.trabalho.atual;
+        v.trabalho.atual = undefined;
+        e = entrarComoParalela(v, contratar(v, r, oc, novo.via));
+        v.trabalho.atual = guardado;
+        v.trabalho.desempregadoDesde = undefined;
+      } else e = contratar(v, r, oc, novo.via);
       if (novo.extra === 'rural_familia' || novo.extra === 'rural_arrendada') iniciarRural(v, novo.extra === 'rural_familia' ? 'familia' : 'arrendada');
       if (novo.extra === 'arte') {
-        marcar(v, 'profissional', `Passou a viver da arte: ${nomeOcupacao(v, oc)}, aos ${idade(v)}.`, 3, { ocupacaoId: oc.id, dominio: oc.habilidade?.dominio });
+        marcar(v, 'profissional', larga.includes('novo_paralela') ? `Começou a trabalhar como ${nomeOcupacao(v, oc)} em paralelo, aos ${idade(v)}.` : `Passou a viver da arte: ${nomeOcupacao(v, oc)}, aos ${idade(v)}.`, 3, { ocupacaoId: oc.id, dominio: oc.habilidade?.dominio });
         v.fatos['artista_profissional'] ??= v.t;
         if (v.caminhos.arte?.ativo && e.clientela !== undefined) e.clientela = Math.max(e.clientela, Math.round(v.caminhos.arte.publico * 0.8));
       }

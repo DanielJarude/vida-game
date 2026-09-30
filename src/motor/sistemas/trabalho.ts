@@ -159,7 +159,12 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   if (oc.matriculado === 'basica' && !v.educacao.basica && !temEscolaridade(v, 'medio')) {
     return bloqueio('requisito', 'Aprendiz precisa estar na escola (ou ter concluído o médio).');
   }
-  if (oc.matriculado === 'superior' && !v.educacao.matricula) return bloqueio('requisito', 'Estágio exige estar matriculado numa faculdade.');
+  // Estágio de graduação é para quem está NA graduação (não trancada): formado, ou só na pós, não é estagiário.
+  if (oc.matriculado === 'superior') {
+    const m = v.educacao.matricula;
+    const naGraduacao = !!m && !m.trancado && cursoOuNulo(m.cursoId)?.nivel === 'superior';
+    if (!naGraduacao) return bloqueio('requisito', temEscolaridade(v, 'superior') && !m ? 'Estágio é para quem está na graduação — formado, a porta é a de quem já exerce.' : 'Estágio exige estar matriculado numa faculdade (e com o curso em andamento).');
+  }
   if (oc.matriculado === 'qualquer' && !v.educacao.matricula && !(v.educacao.basica && i >= 16)) {
     return bloqueio('requisito', 'Estágio exige estar estudando.');
   }

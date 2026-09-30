@@ -107,6 +107,8 @@ function veiculosQueLevam(v: Vida): { b: Veiculo; modo: Modo }[] {
   for (const b of v.financas.bens) {
     if (b.tipo !== 'veiculo' || !veiculoUtil(b)) continue;
     const cat = categoriaDoVeiculo(b);
+    // Barco e avião não levam ninguém ao trabalho (e não viram "bicicleta" por falta de caso).
+    if (cat === 'embarcacao' || cat === 'aeronave') continue;
     const modo: Modo = cat === 'carro' ? 'carro' : cat === 'moto' ? 'moto' : 'bicicleta';
     if ((modo === 'carro' || modo === 'moto') && !temCnh(v)) continue;
     out.push({ b, modo });
@@ -159,7 +161,7 @@ export function deslocamento(v: Vida): Deslocamento | undefined {
 
 /** Por que o veículo que se tem não está levando (a tela precisa dizer, não esconder). */
 function veiculoParadoOuSemCarteira(v: Vida): string | undefined {
-  const motor = v.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo' && categoriaDoVeiculo(b) !== 'bicicleta');
+  const motor = v.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo' && ['carro', 'moto'].includes(categoriaDoVeiculo(b)));
   if (!motor.length) return undefined;
   if (!temCnh(v) && motor.some(veiculoUtil)) return 'Você tem veículo, mas não tem carteira de motorista: vai de transporte público.';
   if (motor.every(b => !veiculoUtil(b))) return motor.some(b => b.parado) ? 'O veículo está parado: vai de transporte público.' : 'O veículo está quebrado: vai de transporte público até consertar.';

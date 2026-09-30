@@ -210,7 +210,9 @@ export function valorDeMercado(v: Vida, e: CarreiraEsportiva): number {
   // Treinar dobrado depois do auge envelhece o corpo mais cedo; preservar dá uns anos a mais.
   const passou = Math.max(0, idade(v) - augeDe(v, e) - (e.foco === 'preservar' ? 2 : e.foco === 'forcar' ? 0 : 1));
   void pos;
-  return (e.reputacao ?? 30) + (nota - 6) * 6 - passou * passou * 0.9;
+  // O nome ajuda a renovar — mas, anos depois do auge, o mercado paga o que o corpo ainda joga, não o que ele já jogou.
+  const nome = (e.reputacao ?? 30) * Math.max(0.4, 1 - passou * 0.06);
+  return nome + (nota - 6) * 6 - passou * passou * 0.9;
 }
 
 /** A melhor divisão que ainda quer você (0 = nenhum clube). */
@@ -292,7 +294,13 @@ export function linhaDaTemporada(_v: Vida, t: Temporada): string {
 export const palavraDaNota = (n: number) => (n >= 8.2 ? 'temporada de destaque' : n >= 7 ? 'boa temporada' : n >= 5.8 ? 'temporada regular' : n >= 4.6 ? 'temporada fraca' : 'temporada ruim');
 
 /** O nome no mercado, em palavras. */
-export const palavraDaReputacao = (x: number) => (x >= 75 ? 'um dos nomes do campeonato' : x >= 58 ? 'nome respeitado no mercado' : x >= 40 ? 'jogador de confiança do elenco' : x >= 24 ? 'mais um no elenco' : 'pouco lembrado pelo mercado');
+/** A reputação no mercado, no idioma da modalidade (o vôlei tem equipe; o atletismo e a luta, circuito — não "elenco"). */
+export const palavraDaReputacao = (x: number, modalidade: Dominio = 'futebol') => {
+  const coletivo = modalidade === 'futebol' || modalidade === 'volei';
+  const quem = modalidade === 'futebol' ? 'jogador de confiança do elenco' : coletivo ? 'atleta de confiança da equipe' : 'atleta respeitado no circuito';
+  const mais = modalidade === 'futebol' ? 'mais um no elenco' : coletivo ? 'mais uma peça da equipe' : 'mais um nas competições';
+  return x >= 75 ? (coletivo ? 'um dos nomes do campeonato' : 'um dos nomes da modalidade no país') : x >= 58 ? 'nome respeitado no mercado' : x >= 40 ? quem : x >= 24 ? mais : 'pouco lembrado pelo mercado';
+};
 
 /* ------------------------------------------------------------ O ano */
 
