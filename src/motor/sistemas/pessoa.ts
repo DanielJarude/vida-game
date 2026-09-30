@@ -54,11 +54,11 @@ export const aparenciaBase = (v: Vida) => v.corpo.aparenciaBase ?? v.corpo.apare
  */
 const CARGA: Record<string, number[]> = {
   academia: [1], corrida: [0.6], futebol: [0.45, 0.85, 1.3], volei: [0.4, 0.8, 1.2], natacao: [0.8, 1.05, 1.35],
-  atletismo: [0.5, 0.9, 1.3], lutas: [0.8, 1.1], danca: [0.55, 0.85], bico: [0.15]
+  atletismo: [0.5, 0.9, 1.3], lutas: [0.8, 1.1], basquete: [0.45, 0.85, 1.25], tenis: [0.5, 0.9, 1.25], danca: [0.55, 0.85], bico: [0.15]
 };
 const NOME_CARGA: Record<string, string> = {
   academia: 'a academia', corrida: 'correr', futebol: 'o futebol', volei: 'o vôlei', natacao: 'a natação', atletismo: 'o atletismo',
-  lutas: 'a luta', danca: 'a dança', bico: 'os bicos', farda: 'o treino da farda', obra: 'o trabalho pesado', profissional: 'o treino de atleta'
+  lutas: 'a luta', basquete: 'o basquete', tenis: 'o tênis', danca: 'a dança', bico: 'os bicos', farda: 'o treino da farda', obra: 'o trabalho pesado', profissional: 'o treino de atleta'
 };
 const TRABALHO_PESADO = new Set(['construcao', 'agro', 'campo', 'pesca', 'limpeza', 'logistica', 'reciclagem', 'marcenaria']);
 const FARDA = new Set(['pm', 'pm_oficial', 'bombeiro', 'exercito_oficial', 'exercito_sargento', 'exercito', 'marinha', 'aeronautica', 'militar', 'policia_civil']);

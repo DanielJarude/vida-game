@@ -142,7 +142,7 @@ function esporteEmComum(c: CtxI): Dominio | undefined {
   if (!a?.startsWith('rotina:')) return undefined;
   const id = a.split(':')[1];
   const d = (id === 'time_escola' ? 'futebol' : id) as Dominio;
-  return ['futebol', 'volei', 'natacao', 'atletismo', 'lutas'].includes(d) && c.v.rotinas.some(r => r.id === id) ? d : undefined;
+  return ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'].includes(d) && c.v.rotinas.some(r => r.id === id) ? d : undefined;
 }
 
 /* ------------------------------------------------------------- Catálogo */

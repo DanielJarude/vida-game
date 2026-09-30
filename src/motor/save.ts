@@ -18,6 +18,7 @@
  *     para não se repetirem.
  */
 
+import { ehEspecialidadeMedica } from './dados/especialidades';
 import { derivarPredisposicoes } from './sistemas/pessoa';
 import { posicaoSugerida } from './sistemas/esporte';
 import { alvoDaNotoriedade } from './sistemas/notoriedade';
@@ -373,6 +374,11 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     const cam = d.caminhos as Vida['caminhos'];
     if (cam.objetivos !== undefined && (!Array.isArray(cam.objetivos) || cam.objetivos.some(x => !x || typeof x.id !== 'string' || !finito(x.tentativas)))) return 'Objetivos inválidos.';
     if (cam.curriculo !== undefined && (!Array.isArray(cam.curriculo) || cam.curriculo.some(x => !x || typeof x.titulo !== 'string' || !finito(x.t)))) return 'Currículo inválido.';
+    // FIX 3.1: a especialidade médica (na residência concluída e na matrícula) e a faixa salarial do emprego.
+    if ((d.educacao as Vida['educacao']).concluidos.some(x => x.especialidade !== undefined && !ehEspecialidadeMedica(x.especialidade))) return 'Especialidade médica inválida.';
+    { const mat = (d.educacao as Vida['educacao']).matricula; if (mat?.especialidade !== undefined && !ehEspecialidadeMedica(mat.especialidade)) return 'Especialidade da residência inválida.'; }
+    if ([t.atual, t.paralela].some(e => e?.faixa !== undefined && (!finito(e.faixa) || e.faixa <= 0))) return 'Faixa salarial inválida.';
+    { const av = cam.audiovisual; if (av !== undefined && (typeof av !== 'object' || !Array.isArray(av.contratos) || av.contratos.some(x => !x || typeof x.id !== 'string' || typeof x.status !== 'string' || !finito(x.bruto) || !finito(x.comissao) || !finito(x.despesas)) || (av.agente !== undefined && (typeof av.agente.nome !== 'string' || !finito(av.agente.comissao))))) return 'Audiovisual inválido.'; }
     if (cam.academia !== undefined && (typeof cam.academia !== 'object' || !Array.isArray(cam.academia.orientandos) || !finito(cam.academia.publicacoes))) return 'Vida acadêmica inválida.';
   }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';

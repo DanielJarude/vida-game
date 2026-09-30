@@ -14,6 +14,7 @@
  * do universo desta vida; as casas são genéricas (uma produtora, um canal).
  */
 
+import { agenteDe, cacheAudiovisual, contaDoContrato, intervaloDeTestes, novaProposta, porteMaximoDoTeste } from './audiovisual';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { Dominio, ItemCurriculo, Oportunidade, Vida } from '../tipos';
@@ -85,13 +86,13 @@ export const nivelDoCurriculo = (x: number) => (x < 0.08 ? 0 : x < 0.25 ? 1 : x 
 const TITULOS_PECA = ['O Quarto de Cima', 'Vento Norte', 'A Última Festa', 'Rua das Palmeiras', 'Os Dias Contados', 'Casa de Farinha', 'Travessia Noturna', 'O Peso das Coisas', 'Mar de Dentro', 'Retrato de Família'];
 const TITULOS_TELA = ['Horizonte Partido', 'Os Herdeiros da Serra', 'Pelas Margens', 'Rota 116', 'A Cidade Acorda', 'Fronteira Sul', 'Laços de Maré', 'O Contador de Histórias', 'Sol de Inverno', 'Terra Vermelha'];
 const PRODUTOS = ['uma rede de farmácias', 'um banco digital', 'uma marca de refrigerante', 'um supermercado da região', 'uma loja de eletrodomésticos', 'uma operadora de celular'];
-const CASAS: Record<ItemCurriculo['tipo'], string[]> = {
+export const CASAS: Record<ItemCurriculo['tipo'], string[]> = {
   teatro: ['um teatro do centro', 'uma sala independente', 'o teatro municipal'], festival: ['um festival da capital'], publicidade: ['uma agência de publicidade'],
   curta: ['uma produtora independente'], serie: ['uma plataforma de streaming', 'um canal por assinatura'], novela: ['uma emissora de TV aberta'], filme: ['uma produtora de cinema'],
   show: ['uma casa de shows'], espetaculo: ['uma companhia de dança'], edital: ['um edital de cultura']
 };
 
-function tituloFicticio(v: Vida, tipo: ItemCurriculo['tipo'], salt: string): string {
+export function tituloFicticio(v: Vida, tipo: ItemCurriculo['tipo'], salt: string): string {
   const r = rngDe(v.id, 'titulo', tipo, v.t, salt, v.caminhos.curriculo?.length ?? 0);
   if (tipo === 'publicidade') return `Comercial de ${r.pick(PRODUTOS)}`;
   if (tipo === 'serie' || tipo === 'novela' || tipo === 'filme' || tipo === 'curta') return r.pick(TITULOS_TELA);
@@ -127,7 +128,8 @@ export function disponibilidadeCena(v: Vida, oque: OqueCena): Veredito {
       if (d !== 'teatro' && d !== 'danca') return bloqueio('impossivel', 'Testes de elenco são para quem atua ou dança.');
       if (i < 14) return bloqueio('requisito', 'A partir dos 14 (com autorização dos responsáveis, até os 18).');
       if (h < 45) return bloqueio('requisito', 'Um teste de elenco pede o básico de cena: prática firme primeiro.');
-      if (jaFezNoAno(v, 'cena_audicao')) return bloqueio('incompativel', `O último teste foi em ${anoDe(v.fatos['cena_audicao'])}: o próximo ciclo de testes vem no ano que vem.`);
+      // O agente marca mais testes (um a cada seis meses); sem agente, um ciclo por ano.
+      if (v.fatos['cena_audicao'] !== undefined && v.t - v.fatos['cena_audicao'] < intervaloDeTestes(v)) return bloqueio('incompativel', agenteDe(v) ? 'O agente já marcou o próximo teste: daqui a alguns meses.' : `O último teste foi em ${anoDe(v.fatos['cena_audicao'])}: o próximo ciclo de testes vem no ano que vem (com agente, vêm mais).`);
       return PERMITIDO;
     }
     case 'trabalho_pequeno': {
@@ -141,14 +143,14 @@ export function disponibilidadeCena(v: Vida, oque: OqueCena): Veredito {
 }
 
 /** O público de agora (0..100): o do grupo, o da freguesia do trabalho, o do nome. */
-function publicoAgora(v: Vida): number {
+export function publicoAgora(v: Vida): number {
   const p = v.caminhos.arte?.ativo ? v.caminhos.arte.publico : 0;
   const c = [v.trabalho.atual, v.trabalho.paralela].reduce((m, e) => Math.max(m, e?.clientela ?? 0), 0);
   const n = v.notoriedade?.fonte === 'arte' ? v.notoriedade.valor : 0;
   return Math.max(p, c * 0.7, n);
 }
 
-function crescerPublico(v: Vida, quanto: number): void {
+export function crescerPublico(v: Vida, quanto: number): void {
   const p = v.caminhos.arte;
   if (p?.ativo) p.publico = Math.round(clamp(p.publico + quanto, 0, 100));
   for (const e of [v.trabalho.atual, v.trabalho.paralela]) if (e?.clientela !== undefined && trabalhaComArte(v)) e.clientela = Math.round(clamp(e.clientela + quanto * 0.6, 0, 100));
@@ -217,7 +219,9 @@ export function executarCena(v: Vida, r: Rng, oque: OqueCena): { texto: string; 
       v.fatos['cena_audicao'] = v.t;
       const noto = v.notoriedade?.fonte === 'arte' ? v.notoriedade.valor : 0;
       // O tamanho da produção que chama para teste depende do que já se fez (o currículo, o nome).
-      const porte = cv + noto / 100 >= 0.7 ? 3 : cv + noto / 100 >= 0.4 ? 2 : cv >= 0.12 ? 1 : 0;
+      // Sem agente, novela e filme de estúdio não chamam (o porte para em 2); o trabalho que repercutiu abre um degrau.
+      const repercutiu = v.fatos['av_repercutiu'] !== undefined && v.t - v.fatos['av_repercutiu'] <= 24 ? 0.15 : 0;
+      const porte = Math.min(porteMaximoDoTeste(v), cv + noto / 100 + repercutiu >= 0.7 ? 3 : cv + noto / 100 + repercutiu >= 0.4 ? 2 : cv >= 0.12 ? 1 : 0) as 0 | 1 | 2 | 3;
       const tipos: ItemCurriculo['tipo'][][] = [['teatro', 'curta'], ['teatro', 'curta', 'serie'], ['serie', 'filme', 'teatro'], ['novela', 'filme', 'serie']];
       const tipo = r.pick(tipos[porte]);
       const exige = [52, 60, 68, 74][porte];
@@ -227,20 +231,17 @@ export function executarCena(v: Vida, r: Rng, oque: OqueCena): { texto: string; 
       const nomeTipo = { teatro: 'a montagem', curta: 'o curta', serie: 'a série', novela: 'a novela', filme: 'o filme', festival: 'o festival', publicidade: 'o comercial', show: 'o show', espetaculo: 'o espetáculo', edital: 'o projeto' }[tipo];
       if (r.chance(chance)) {
         const papel = h >= exige + 12 && r.chance(0.3) ? (porte >= 2 ? 'papel de destaque' : 'protagonista') : h >= exige ? 'coadjuvante' : 'elenco de apoio';
-        const cache = Math.round([1800, 4500, 14000, 38000][porte] * (papel === 'protagonista' || papel === 'papel de destaque' ? 2.2 : papel === 'coadjuvante' ? 1.3 : 1) / 100) * 100;
-        v.financas.conta += cache;
-        const repercussao: ItemCurriculo['repercussao'] = r.chance(0.15 + porte * 0.1) ? 2 : 1;
         // Alguém da produção fica na vida (a diretora, um colega de elenco): contato que pode chamar de novo.
         const contato = criarPessoa(v, r, { genero: r.chance(0.5) ? 'masculino' : 'feminino', idade: Math.max(20, idade(v) + r.int(-6, 15)), municipioId: v.moradia.municipioId });
         contato.ocupacao = r.chance(0.5) ? (contato.genero === 'feminino' ? 'diretora' : 'diretor') : (contato.genero === 'feminino' ? 'atriz' : 'ator');
         contato.ocupacaoId = contato.ocupacao.startsWith('diret') ? undefined : 'ator';
         vincular(v, contato, { origem: 'trabalho', estagio: 'colega', proximidade: 30, convivio: [] });
-        lembrarCom(v, contato.id, `Trabalharam juntos em "${titulo}".`, 'trabalho', 2);
-        registrarNoCurriculo(v, { tipo, titulo, papel, onde, repercussao, cache, pessoaId: contato.id });
-        crescerPublico(v, [2, 4, 8, 14][porte] * repercussao);
-        const texto = `Passou no teste: ${papel} em ${nomeTipo} "${titulo}", de ${onde} (${fmt(cache)} de cachê).`;
+        lembrarCom(v, contato.id, `O teste de "${titulo}".`, 'trabalho', 1);
+        // Passar não é receber: a produção manda a PROPOSTA (papel, duração, cachê) — aceitar é escolha (`audiovisual`).
+        const prop = novaProposta(v, { tipo, porte, papel, casa: onde, titulo, pessoaId: contato.id });
+        const texto = `Passou no teste: ${papel} ${nomeTipo.replace(/^o /, 'no ').replace(/^a /, 'na ')} "${titulo}", de ${onde}. A proposta chegou — ${prop.meses ? `${prop.meses} ${prop.meses === 1 ? 'mês' : 'meses'} de produção${prop.integral ? ', dedicação integral' : ''}, ` : ''}${contaDoContrato(prop)}.`;
         escrever(v, { texto, relevancia: porte >= 2 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', escolha: true, pessoas: [contato.id] });
-        marcar(v, 'conquista', texto, porte >= 2 ? 3 : 2, { dominio: d });
+        marcar(v, 'conquista', `Passou num teste de elenco: ${papel} ${nomeTipo.replace(/^o /, 'no ').replace(/^a /, 'na ')} "${titulo}".`, porte >= 2 ? 3 : 2, { dominio: d });
         // Quem ainda não vive disso e vai acumulando trabalhos recebe a porta para viver disso (aceitar é escolha).
         if (!trabalhaComArte(v, d) && pesoDoCurriculo(v) >= 0.25 && d === 'teatro') {
           novaOportunidade(v, { tipo: 'convite', ocupacaoId: porte >= 3 && h >= 75 ? 'ator_reconhecido' : 'ator', dominio: d, meses: 24, chave: 'convite_arte', titulo: 'Um convite para viver de atuar', texto: `Depois de "${titulo}", uma agência de atores ofereceu representar você: testes com frequência, trabalhos pagos — sem salário fixo.`, pessoaId: contato.id });
@@ -257,11 +258,14 @@ export function executarCena(v: Vida, r: Rng, oque: OqueCena): { texto: string; 
       v.fatos['cena_pequeno'] = v.t;
       const tipo: ItemCurriculo['tipo'] = d === 'musica' ? 'show' : r.chance(0.6) ? 'publicidade' : 'curta';
       const titulo = d === 'musica' ? 'Casamento e festas' : tituloFicticio(v, tipo, 'pequeno');
-      const cache = Math.round((d === 'musica' ? 900 : tipo === 'publicidade' ? 2500 : 700) * (0.7 + r.next() * 0.8) / 50) * 50;
+      // Música de festa tem preço de mercado; o trabalho de tela, o cachê do audiovisual (a casa, o papel, o nome, o agente).
+      const av = d === 'musica' ? undefined : cacheAudiovisual(v, { tipo, porte: 0, papel: tipo === 'publicidade' ? 'elenco' : 'figuração', casa: CASAS[tipo][0], titulo });
+      const cache = av ? av.liquido : Math.round(900 * (0.8 + pub / 250 + h / 400) / 50) * 50;
       v.financas.conta += cache;
-      registrarNoCurriculo(v, { tipo, titulo, papel: d === 'musica' ? 'músico contratado' : tipo === 'publicidade' ? 'elenco' : 'figuração', onde: CASAS[tipo][0], repercussao: 0, cache });
+      registrarNoCurriculo(v, { tipo, titulo, papel: d === 'musica' ? 'músico contratado' : tipo === 'publicidade' ? 'elenco' : 'figuração', onde: CASAS[tipo][0], repercussao: 0, cache: av?.bruto ?? cache });
       crescerPublico(v, 1);
-      const texto = d === 'musica' ? `Tocou em festas e casamentos por um cachê (${fmt(cache)}). Não é o palco dos sonhos; pagou as cordas novas.` : tipo === 'publicidade' ? `Fez ${titulo.toLowerCase()} (${fmt(cache)}). Três segundos de tela — mas é um trabalho no currículo.` : `Fez figuração no curta "${titulo}" (${fmt(cache)}). Poucas falas, muita espera, e alguns contatos.`;
+      const conta = av && av.comissao ? ` (${fmt(av.bruto)} bruto, ${fmt(av.comissao)} do agente)` : '';
+      const texto = d === 'musica' ? `Tocou em festas e casamentos por um cachê (${fmt(cache)}). Não é o palco dos sonhos; pagou as cordas novas.` : tipo === 'publicidade' ? `Fez ${titulo.toLowerCase()} (${fmt(cache)}${conta}). Três segundos de tela — mas é um trabalho no currículo.` : `Fez figuração no curta "${titulo}" (${fmt(cache)}${conta}). Poucas falas, muita espera, e alguns contatos.`;
       escrever(v, { texto, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
       return { texto, tom: 'neutro' };
     }

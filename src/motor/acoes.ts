@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { OCUPACOES_DE_ATLETA } from './sistemas/esporte';
 import type { Rng } from './rng';
 import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, Veiculo, Vida } from './tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
@@ -233,7 +234,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
         const d = elegibilidade(v, ocupacao(o.ocupacaoId), 'curriculo', o.bonus ?? 0);
         if (!podeTentar(d)) return d;
       }
-      if (o.tipo === 'convite' && o.ocupacaoId && !['jogador_futebol', 'atleta'].includes(o.ocupacaoId)) {
+      if (o.tipo === 'convite' && o.ocupacaoId && !OCUPACOES_DE_ATLETA.includes(o.ocupacaoId)) {
         const d = elegibilidade(v, ocupacao(o.ocupacaoId), 'oportunidade');
         if (!podeTentar(d)) return d;
       }

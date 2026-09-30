@@ -154,6 +154,27 @@ export const ROTINAS: readonly ModeloRotina[] = [
     pratica: { volei: 1 }, social: { onde: 'no vôlei', fluxo: 1, amplitude: 4 }
   },
   {
+    id: 'basquete', nome: 'Basquete', descricao: 'Tabela na quadra da escola, clube, equipe de base.', categoria: 'esporte', idadeMin: 8,
+    oferta: v => cidade(v) >= 1 || escolaPrivada(v) || janela(v, 'basquete', 0.45),
+    niveis: [
+      { rotulo: 'Arremessando na quadra', tempo: 0.5, custo: 0, qualidade: 0.8 },
+      { rotulo: 'Escolinha ou equipe do clube', tempo: 1, custo: 90, qualidade: 1.15, requer: pago(90, 'basquete') },
+      { rotulo: 'Equipe de base, todo dia', tempo: 1.9, custo: 0, qualidade: 1.4, requer: naBase('basquete') }
+    ],
+    pratica: { basquete: 1 }, social: { onde: 'no basquete', fluxo: 1, amplitude: 4 }
+  },
+  {
+    // Tênis é caro desde cedo: aula, raquete, quadra — e a competição pede treinador e viagem (sem projeto social que cubra).
+    id: 'tenis', nome: 'Tênis', descricao: 'Aulas no clube, treino com treinador, torneios.', categoria: 'esporte', idadeMin: 6,
+    oferta: v => cidade(v) >= 2 || escolaPrivada(v) || janela(v, 'tenis', 0.3),
+    niveis: [
+      { rotulo: 'Aulas de tênis', tempo: 0.8, custo: 280, qualidade: 1, requer: pago(280, 'tenis') },
+      { rotulo: 'Treino de competição, com treinador', tempo: 1.6, custo: 900, qualidade: 1.3, requer: v => (!casaPaga(v, 900) ? semDinheiro : habilidade(v, 'tenis') >= 40 ? true : 'O treinador só pega quem já troca bola com segurança.') },
+      { rotulo: 'Academia de tênis, alto rendimento', tempo: 2.2, custo: 0, qualidade: 1.45, requer: naBase('tenis') }
+    ],
+    pratica: { tenis: 1 }, social: { onde: 'no tênis', fluxo: 0.6, amplitude: 3 }
+  },
+  {
     id: 'natacao', nome: 'Natação', descricao: 'Piscina do clube, do SESC ou da prefeitura.', categoria: 'esporte', idadeMin: 4,
     oferta: v => cidade(v) >= 1 || janela(v, 'natacao', 0.35),
     niveis: [
@@ -733,7 +754,7 @@ export function processarRotinas(v: Vida, r: Rng): void {
 /* ------------------------------------------------ Prática que virou vida */
 
 const VERBO_DA_PRATICA: Partial<Record<Dominio, string>> = {
-  futebol: 'Jogar bola', volei: 'O vôlei', natacao: 'Nadar', atletismo: 'Correr', lutas: 'O tatame', musica: 'Tocar', teatro: 'O teatro',
+  futebol: 'Jogar bola', volei: 'O vôlei', basquete: 'O basquete', tenis: 'O tênis', natacao: 'Nadar', atletismo: 'Correr', lutas: 'O tatame', musica: 'Tocar', teatro: 'O teatro',
   danca: 'Dançar', desenho: 'Desenhar', escrita: 'Escrever', fotografia: 'Fotografar', xadrez: 'O xadrez', programacao: 'Programar'
 };
 

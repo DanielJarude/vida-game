@@ -50,7 +50,7 @@ const indiceDesafio = (c: Ctx) => { const o = oficioDe(emprego(c))!; return Math
 export const OFICIOS_CONTEUDO: Conteudo[] = [
   {
     id: 'ofi_area', tipo: 'decisao', idade: [23, 70], tema: 'trabalho', prioritario: true, prioridade: 2, repetir: 0,
-    quando: c => vivo(c) && !emprego(c).especialidade && anosNaTrilha(c) >= 2 && (c.v.fatos['ofi_generalista'] === undefined || c.v.t - c.v.fatos['ofi_generalista'] >= 60) && c.r.chance(0.5),
+    quando: c => vivo(c) && !emprego(c).especialidade && oficioDe(emprego(c))!.areas.length > 0 && anosNaTrilha(c) >= 2 && (c.v.fatos['ofi_generalista'] === undefined || c.v.t - c.v.fatos['ofi_generalista'] >= 60) && c.r.chance(0.5),
     titulo: 'A área',
     texto: c => oficioDe(emprego(c))!.area,
     opcoes: [...[0, 1, 2, 3].map((k): Opcao => ({

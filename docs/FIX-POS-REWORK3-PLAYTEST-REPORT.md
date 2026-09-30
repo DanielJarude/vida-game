@@ -382,3 +382,246 @@ Conferência visual:
 - **Trajetória paralela:** rende 45% do trabalho. Em combinações raras (duas carreiras por projeto), a semana pode ficar mais cheia do que a leitura sugere.
 - **Crime:** "aprofunda sem cautela" ainda termina preso em ~79% das vidas até os 45. Isso é consequência da exposição acumulada e foi mantido de propósito, mas deve ser olhado na simulação de 1.000 vidas.
 - **`tsconfig.tsbuildinfo`:** é artefato gerado. Agora está no `.gitignore` e não é versionado.
+
+---
+
+# FIX 3.1 — Pendências resolvidas antes do deploy
+
+- Base: `2e13cbc`
+- Branch: `claude/fix-pos-rework3-playtest`, sem merge e sem deploy
+- Save: continua na **v18**, porque todos os campos novos são opcionais e validados
+
+Resolve as pendências 1, 2, 5 e 6 do fechamento anterior e a calibração pedida para casa própria e ajuda da família (3 e 4).
+
+## Medicina: especialização real
+
+**ANTES**
+- A residência era um curso genérico ("Residência Médica", 36 meses).
+- A "área" do médico era um rótulo sorteado pela pergunta de ofício, sem efeito em vaga, renda ou convite.
+
+**DEPOIS**
+- **Cinco especialidades** em `dados/especialidades.ts` (fonte única): clínica médica, pediatria, cirurgia geral, psiquiatria e medicina de família. Cada uma define:
+  - duração da residência: 24 ou 36 meses;
+  - concorrência na seleção;
+  - fator da faixa de renda: cirurgia 1,35, psiquiatria 1,1, clínica 1, MFC 0,95, pediatria 0,9;
+  - ambiente;
+  - convite característico;
+  - o caso grande do dia a dia.
+- **Fluxo:**
+  - formação e CRM;
+  - catálogo de Formação com **uma residência por especialidade** (item próprio, duração e seleção dela);
+  - matrícula, que passa pela pergunta de conflito quando há emprego integral;
+  - residência;
+  - título.
+- **Especialidade persistente:** fica em `educacao.concluidos[].especialidade` (e na matrícula). É da pessoa e vai para todo emprego médico. Saves de antes, com residência sem especialidade, contam como clínica médica, sem mutação.
+- **Efeitos reais:**
+  - *vagas de título:* `cirurgiao` pede cirurgia e `medico_familia` pede MFC, via `Ocupacao.especialidades` → `elegibilidade`, com o motivo dito;
+  - *renda:* `Emprego.faixa`, fixada na contratação a partir da especialidade; teto e reajuste a respeitam;
+  - *convites da área:* equipe cirúrgica, hospital infantil, saúde da família, os pacientes que esperam psiquiatra. Passam pela pergunta de conflito;
+  - *casos do ofício:* com a cara da especialidade;
+  - *tela:* ficha do Trabalho ("Especialidade: o título da residência…");
+  - *biografia:* "Terminou a residência médica em pediatria".
+- **Progressão acionável:**
+  - a prova de residência reprovada diz a causa real (preparo, histórico ou concorrência), vinda da mesma conta da chance (`avaliacaoDaResidencia`), e alimenta o objetivo "Entrar na residência médica";
+  - "Estudar para a prova de residência" (Formação, objetivos e Trabalho) mexe no fator controlável.
+- **Relevância:** para quem se formou em Medicina, a residência passou a ser o primeiro item de "Próximos caminhos" (antes apareciam técnico em enfermagem e radiologia). Técnicos abaixo da graduação saem das sugestões; ficam no catálogo.
+
+**TESTE:** 7 casos em `src/motor/__tests__/fix31.test.ts`, mais o de UI (Formação).
+
+## Basquete e tênis
+
+A estrutura da carreira esportiva é compartilhada (`esporte`: prática → seletiva → base → profissional → fim, com lesões, auge e mercado). O que muda está em `sistemas/modalidades.ts`, derivado do estado e sem campo novo persistido.
+
+### Basquete (coletivo, de clube)
+
+- A **estatura** é da pessoa: deriva da semente e da predisposição física, e cresce até os 17.
+  - Entra no físico da seletiva: a mesma técnica rende diferente em quem tem 1,70 m e em quem tem 2,01 m.
+  - Decide a função (armador, ala, pivô), que aparece na tela.
+  - Em Tempo livre e em Formação é dita com franqueza, junto com o que ela implica.
+- A temporada mede **pontos, rebotes e assistências por jogo**, com o perfil da função.
+- Liga própria (estadual → Liga Ouro → NBB → times de ponta do NBB), com tabela salarial própria.
+- O prêmio de "estrela" do futebol não vaza para outras modalidades.
+- Ocupação `jogador_basquete`, com contrato por temporada.
+
+### Tênis (individual, caro, de prêmio)
+
+- **Custo desde cedo:**
+  - aulas a R$ 280;
+  - treino de competição a R$ 900, sem projeto social que cubra;
+  - circuito juvenil pago pela família com folga, ou tirado da conta. Sem dinheiro, joga-se menos e a técnica anda menos (dito na tela).
+- Entrada por academia (janela dos 10 aos 16).
+- **Profissional sem clube e sem salário** (`tenista`, por conta própria): prêmio **bruto** do ano → **custos** do circuito (treinador, viagens, inscrições) → **líquido**, que pode ser negativo por anos. O prêmio vira a renda do ano seguinte; os custos saem da conta.
+- O **ranking** decide o circuito (nacional → entrada internacional → challengers → principal), com limiares mais duros que os das divisões de clube.
+- **Dois anos no vermelho sem reserva** abrem uma pergunta (`esp_tenis_conta`): seguir, jogar só no Brasil, ou parar e dar aulas, com convite para `professor_tenis`.
+- Tela própria: "No circuito", ranking, "Bruto − custos = líquido", e nenhum "contrato".
+
+**Correção de texto (três pontos):** "Deixou a equipe da equipe da prefeitura" → helper `aEquipe`.
+
+**TESTE:** 6 casos (estatura e física, estatística e salário, custo como barreira, bruto/custos/líquido, pergunta do aperto, técnica treinada = técnica lida), mais save e UI.
+
+## Atuação e audiovisual: contratos e agente
+
+A base existente (agenda, grupo, público, obras, currículo) foi preservada.
+
+**ANTES:** passar num teste de elenco pagava o cachê na hora e escrevia o currículo, sem contrato, produção, escolha ou custo.
+
+**DEPOIS** (`sistemas/audiovisual.ts`):
+
+- **Fluxo:** teste → **proposta**, com produção fictícia, casa genérica, papel, duração, dedicação integral ou não, e bruto, comissão, despesas e líquido.
+  - A proposta pode ser **aceita**, **negociada** (a produção pode chamar a segunda opção) ou **recusada**.
+  - Aceita, vai para **produção** (os meses do contrato). Ao fim do trabalho, o líquido entra, a obra vai para o **currículo**, a repercussão mexe no público e abre um degrau nos próximos testes.
+  - Proposta sem resposta **vence** em 12 meses, dito na Linha da Vida.
+  - **Romper** custa multa de 20% e o trabalho não entra no currículo.
+- **Conflito com outras trajetórias:** uma produção integral (novela; série ou filme grandes) com um trabalho de dia inteiro fora da arte abre a decisão `av_conflito`, usando o sistema de carreiras paralelas: licença ou pausa, deixar o trabalho, ou recusar a produção. Nada sobrescreve em silêncio.
+- **Agente** (`caminhos.audiovisual.agente`), uma pessoa na vida:
+  - **Acesso:** sem agente, os testes param no porte 2 (novela e filme de estúdio não chamam); com rede média ou grande, chegam.
+  - **Frequência:** testes a cada 6 meses, contra 12 sem agente.
+  - **Negociação:** até +18% no bruto.
+  - **Custo:** comissão de 10%, 15% ou 20% sobre todo cachê.
+  - Procurar (a agência avalia o currículo), dispensar e trocar.
+- Na tela de Trabalho, junto das ações artísticas:
+  - "Aceitar: coadjuvante em a novela … — 8 meses, dedicação integral · R$ X bruto − R$ Y do agente − R$ Z de despesas = R$ W líquido";
+  - "Pedir mais pelo papel";
+  - "Recusar";
+  - "Romper";
+  - "Procurar um agente" / "Dispensar …".
+
+**TESTE:** casos 5 a 8 (proposta nasce de teste válido; integral não apaga carreira; agente tem efeito e custo; obra concluída entra no currículo; romper e vencer) e o de save.
+
+## Cachês: sem valor fixo repetido
+
+**ANTES:** `[1800, 4500, 14000, 38000][porte] × papel` produzia os mesmos poucos números. R$ 49.400 era 38.000 × 1,3: todo coadjuvante de produção grande ganhava igual.
+
+**DEPOIS:** `cacheAudiovisual` é a fonte única, e a proposta, a negociação e o trabalho pequeno usam essa mesma conta. O cachê resulta de:
+
+- tipo da produção;
+- porte;
+- papel;
+- nome (currículo e notoriedade, convexo só no alto);
+- casa (TV aberta > streaming > canal > produtora independente);
+- **orçamento desta produção** (estável por produção);
+- negociação do agente;
+- mercado;
+- estrela (só para protagonista de produção grande com notoriedade ≥ 60).
+
+A conta é **bruto → comissão → despesas (deslocamento em produção longe) → líquido**, e o trabalho pequeno paga o líquido.
+
+**TESTE:**
+- mesma pessoa em escalas diferentes → cachês ordenados;
+- seis estágios × cinco produções → ≥ 25 valores distintos;
+- comissão e despesas reduzem o líquido.
+
+## Casa própria: diagnóstico causal
+
+Diagnóstico com 173 vidas comuns de 6 estratégias, medindo em cada ano entre os 28 e os 40 se alguma oferta real da cidade cabia:
+
+- **Mercado e financiamento funcionam.** Entre quem nunca foi capaz, os bloqueios são reais: entrada que não existe, parcela acima de 30% da renda, nome sujo, sem renda comprovada.
+- **Bug estrutural na estratégia do simulador.** Quem poupa guarda nas aplicações. Na compra, o motor responde "dá para tirar das suas aplicações" (a tela oferece "Tirar R$ X das aplicações e pagar"), mas a estratégia só olhava a conta corrente. Quem podia comprar nunca comprava: entre os capazes, 0–13% compravam nas bases que poupam.
+- **Correção:** a estratégia usa o mesmo caminho do jogador (`resgatar_e`). O diagnóstico conta como capaz quem paga resgatando.
+- **Resultado** (173 vidas):
+  - casa comprada aos 40: **6% → 35%**; capazes em algum ano: 55%;
+  - entre os capazes das bases que poupam, 73–90% compram;
+  - por renda aos 35: até 2 SM 10%; 2–5 SM 39%; 5–10 SM 59%; 10+ SM 80%;
+  - as bases "social" e "gastadora" não poupam, por persona, e quase não compram.
+- Nenhuma probabilidade foi mexida e não há taxa-alvo.
+
+**TESTE 11:** renda e entrada nas aplicações → a oferta mais barata não passa direto (sem conta), mas passa com o resgate, e a compra acontece.
+
+## Ajuda da família: diagnóstico causal
+
+Primeiro diagnóstico, 115 vidas:
+
+- 83% receberam ajuda até os 40;
+- **mediana de 8 socorros, máximo de 29**;
+- 41% dos ajudantes ganhavam menos de 1,5 salário mínimo.
+
+A ajuda parecia renda automática. Três causas estruturais:
+
+1. **Parentes fora da casa de origem** (irmão, avó) "podiam" dar `renda × 1,5 ou 3`, sem descontar o próprio custo de vida.
+2. **A casa de origem se revezava:** o intervalo de 36 meses era por pessoa, então mãe e pai alternavam e a mesma casa cobria quase todo ano. Instrumentado: 110 de 120 socorros vinham da casa de origem.
+3. **Nenhum desgaste pela repetição.**
+
+**DEPOIS:**
+- Quem ajuda de fora da casa de origem é quem tem **folga**: renda − (1,2 SM + 35% da renda).
+- A **casa de origem é uma casa só**: um intervalo para os dois.
+- Cada socorro nos últimos 5 anos multiplica por 0,6 a chance do próximo, e a partir do terceiro a relação sente (tensão).
+- A necessidade continua sendo o buraco real do ano. A capacidade da casa de origem continua sendo a reserva e a folga dela.
+
+**Resultado** (175 vidas):
+- recebeu ajuda pelo menos uma vez até os 40: 82% (a família cobre o ano ruim, sobretudo no começo da vida adulta);
+- **mediana de 4 socorros, máximo de 12**;
+- ajudantes com menos de 1,5 SM: 28% (casa de origem com reserva);
+- por estratégia: gastador e impulsivo ≈ 100% (93–79% com 3 ou mais vezes); econômico e estudioso ≈ 60% (23–34% com 3 ou mais).
+
+Sem taxa-alvo.
+
+**TESTE 12:**
+- irmão com 1,4 SM nunca cobre, irmão com R$ 9 mil cobre;
+- dois socorros recentes reduzem a chance em mais de 30%.
+
+## Testes
+
+- **Motor:** `src/motor/__tests__/fix31.test.ts`, com 25 casos cobrindo os 13 pedidos (Medicina 7; basquete e tênis 6; audiovisual e cachês 8; casa 1; ajuda 2; save em Medicina, esporte e audiovisual).
+- **UI:** `src/ui/__tests__/fix31.test.tsx`, com 3 casos:
+  - residências na Formação, com a residência em "Próximos caminhos" e sem técnico;
+  - proposta, conta e agente no Trabalho;
+  - painel da tenista.
+- **Estabilização.** As mudanças deslocam as vidas sorteadas, e três testes tinham limites na margem da própria medida:
+  - `fixPosRework2`, "colega não vira amigo sozinho": a taxa medida é 31 de 150 (21%), e o limite antigo (6 de 30) estava na média. Agora são 90 colegas com limite de 30%.
+  - `meiaidade`, "mais anos com biografia": com 60 vidas, deu 0,843 no `2e13cbc` e 0,832 agora, com as mesmas 1,13 linhas de família por ano. Agora são 60 vidas com limite de 0,82, acima do 0,809 de antes do FIX #7.
+  - `rework2fecho`, "uma iniciativa romântica de cada vez": a pré-condição (um flerte dar certo por sorteio) falhou nas 40 tentativas da vida sorteada. Se nenhum der certo, o estado "vendo no que dá" é montado direto; a regra testada é a mesma.
+
+## Validação
+
+- **Suíte completa:** 32 arquivos, **783/783**. Numa rodada, `interface.test.tsx` não subiu por timeout de inicialização do worker (carga no WSL); isolado, passou 14/14.
+- **Typecheck:** limpo.
+- **Build:** limpo. O pacote `motor` passou de 800 kB; interações, experiências e autoria, que só a camada de cima usa, foram para `motor-conteudo`, sem ciclo, e o `motor` ficou em 754 kB.
+- **Smoke itch.io:** **18/18**.
+- **Responsividade:** 15 capturas (cirurgiã, médica recém-formada em Formação, tenista, jogador de basquete e atriz com agente e propostas, a 1440, 820 e 390 px), sem rolagem horizontal nem erro de página.
+- **Correções vindas das capturas:**
+  - "protagonista em o curta" / "em a novela" → "no curta" / "na novela" (helper `emTipo`, também no texto do teste de elenco);
+  - o tenista não vê "Pedir para ser negociado" nem "Conversar com o treinador" (ações de clube);
+  - "Treino: o normal do clube" e o aviso sobre "a posição" ganharam texto próprio do tênis.
+
+## Simulações dirigidas (`scripts/sim/fix31.ts`)
+
+**A. Medicina** (40 vidas por grupo, até os 42):
+
+| grupo | formou | residência | especialidades | na medicina aos 42 | renda mediana | vaga de título |
+| --- | --- | --- | --- | --- | --- | --- |
+| generalista | 65% | 0% | — | 58% | R$ 19.220 | 0% |
+| tenta residência | 65% | 85% | MFC 8, cirurgia 5, pediatria 4, clínica 3, psiquiatria 2 | 69% | R$ 25.310 | 46% |
+
+**B. Esportes** (80 vidas por modalidade, perseguição deliberada dos 7 aos 32):
+
+| modalidade | chegou à base/academia | profissional | ainda aos 32 | nível máximo (mediana) | renda do auge (mediana) |
+| --- | --- | --- | --- | --- | --- |
+| futebol | 13% | 5% | 5% | 4 | R$ 1,55 mi/mês |
+| basquete | 10% | 8% | 6% | 4 | R$ 96,9 mil/mês |
+| tênis | 19% | 12% | 9% | 4 | R$ 230 mil/mês (prêmio) |
+
+- Os caminhos são alcançáveis, mas não garantidos.
+- **Achado:** a primeira rodada deu 0% profissional porque o jogador simulado aceitava emprego de jovem aprendiz aos 17 e, na pergunta de conflito, largava a base. O motor perguntou certo; a estratégia não era deliberada. Na perseguição, o simulador agora não procura emprego enquanto está na base.
+- **Futebol:** a renda do auge vem da economia do futebol já existente, com os poucos que viram profissional chegando à Série A. Ver pendências.
+
+**C. Atuação** (40 vidas por grupo, dos 10 aos 40):
+
+| grupo | teve agente | trabalhos (mediana) | cachê bruto p25 · mediana · p90 | comissão (mediana) | líquido/bruto | maior |
+| --- | --- | --- | --- | --- | --- | --- |
+| sem agente | 0% | 10 | R$ 13,4 mil · 35,8 mil · 88,8 mil | — | 95% | R$ 183 mil |
+| procura agente | 84% | 11 | R$ 17,1 mil · 39,4 mil · 114,9 mil | R$ 4,1 mil | 85% | R$ 1,25 mi |
+
+- 696 cachês e 472 valores distintos (antes: poucos valores fixos).
+- Calibração: a primeira rodada deu mediana de R$ 87 mil e máximo de R$ 3,9 mi, porque os fatores de nome e estrela multiplicavam demais. Recalibrado: o extraordinário continua existindo e continua raro.
+
+**D. Patrimônio** e **E. Ajuda:** ver as seções acima.
+
+## Pendências restantes
+
+1. **Economia do futebol no topo:** entre os poucos profissionais simulados que chegam à Série A, a mediana do auge é de R$ 1,55 mi por mês. O sistema de salário do futebol vem de antes (prêmio de estrela e nome) e não foi recalibrado aqui. Vale revisar na simulação de 1.000 vidas.
+2. **Medicina:** subespecialidades (cardiologia, ortopedia…), consultório próprio como negócio médico e plantão como segunda trajetória não entraram. A arquitetura (`especialidades` + `faixa` + `paralelas`) comporta.
+3. **Basquete:** a bolsa universitária nos EUA (caminho real de muitos jogadores brasileiros) não entrou.
+4. **Tênis:** patrocínio de material e ranking juvenil próprio não entraram.
+5. **Audiovisual:** a produção integral não ocupa horas da semana (`semana`); ela pesa no estresse e bloqueia outra integral. Exclusividade de emissora e renegociação de contrato longo também não entraram.
+6. **Ajuda da família:** "recebeu ao menos uma vez" segue alto (~82%), com a mediana baixa. Confirmar na simulação de 1.000 vidas se o primeiro socorro aos ~20 (morando com a família) deveria contar como ajuda ou como despesa da casa.
+7. **Casa própria:** as personas que não poupam ("social", "gastadora") quase não compram, por construção da estratégia. Rever as personas na simulação oficial.

@@ -138,7 +138,7 @@ export const FAMILIAS: readonly FamiliaCarreira[] = [
     desgaste: { noite: 0.5, cabeca: 0.3 }, sentido: ['musica', 'teatro', 'danca'], saidas: ['ensino_musica', 'ensino_danca', 'educacao', 'comercio'] }),
   F({ id: 'esporte', nome: 'esporte', trilhas: ['atleta', 'treino', 'arbitragem', 'educacao_fisica'], progressao: 'esporte',
     entrada: 'peneira ou seletiva, na idade certa', degraus: ['base', 'primeiro contrato', 'auge curto', 'transição: treinar, preparar, ensinar'], renda: 'projeto', desgaste: { corpo: 0.6, longe: 0.3 },
-    sentido: ['futebol', 'volei', 'natacao', 'atletismo', 'lutas'], saidas: ['treino', 'educacao_fisica', 'comercio', 'vigilancia'] }),
+    sentido: ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'], saidas: ['treino', 'educacao_fisica', 'comercio', 'vigilancia'] }),
   F({ id: 'informal', nome: 'rua, feira e bicos', trilhas: ['informal', 'reciclagem'], progressao: 'informal', entrada: 'começar amanhã: mercadoria, ponto, gente conhecida',
     degraus: ['ponto incerto', 'freguesia', 'banca fixa', 'formalizar (MEI) ou abrir um comércio'], renda: 'variavel', desgaste: { corpo: 0.45, cabeca: 0.35 }, sentido: ['vendas'],
     custoAutonomo: { valor: 90, rotulo: 'Mercadoria que encalha e transporte' }, saidas: ['comercio', 'limpeza', 'alimentacao'] })

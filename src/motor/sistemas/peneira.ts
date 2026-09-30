@@ -26,6 +26,7 @@ import { habilidade } from './frentes';
 import { estruturaEsportiva } from '../dados/mercado';
 import { anoDe, idadeEm } from '../tempo';
 import { predisposicao } from './predisposicao';
+import { vantagemDeEstatura } from './modalidades';
 
 export type Aspecto = 'tecnica' | 'fisico' | 'leitura' | 'nervos';
 
@@ -86,7 +87,8 @@ export function aspectos(v: Vida, d: Dominio, anteriores = v.fatos[`peneiras_${d
     h,
     forma: v.corpo.forma,
     tecnica: (h - 66) / 20,
-    fisico: (v.corpo.forma - 45) / 40 + predisposicao(v, 'fisica') * 0.15 - saude,
+    // No basquete, a estatura entra no físico (a seletiva mede na entrada): ajuda muito o alto, cobra do baixo.
+    fisico: (v.corpo.forma - 45) / 40 + predisposicao(v, 'fisica') * 0.15 - saude + (d === 'basquete' ? vantagemDeEstatura(v) : 0),
     leitura: Math.min(1, anosDePratica / 6) - 0.35 + ((v.rotinas.find(x => x.id === d)?.nivel ?? 1) >= 2 ? 0.1 : 0) + cedo - retomadas * 0.05,
     nervos: clamp(-(v.mente.estresse - 40) / 60 + tentativas * 0.08, -0.6, 0.45)
   };

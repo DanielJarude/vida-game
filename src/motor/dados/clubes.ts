@@ -95,7 +95,7 @@ export function artigoDoClube(nome: string): 'o' | 'a' {
   const c = CLUBES.find(x => x.nome === nome);
   if (c) return c.artigo;
   for (const lista of Object.values(POLIESPORTIVOS)) { const p = lista.find(x => x[0] === nome); if (p) return p[1]; }
-  return /^(equipe|Associação|Sociedade|Seleção)/i.test(nome) ? 'a' : 'o';
+  return /^(equipe|Associação|Sociedade|Seleção|academia)/i.test(nome) ? 'a' : 'o';
 }
 export const oClube = (nome: string) => `${artigoDoClube(nome)} ${nome}`;
 export const doClube = (nome: string) => `${artigoDoClube(nome) === 'a' ? 'da' : 'do'} ${nome}`;

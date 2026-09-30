@@ -33,6 +33,7 @@
 
 import type { Contrato, Dominio, Escolaridade, NivelCurso } from '../tipos';
 import type { AreaFormacao } from './cursos';
+import type { EspecialidadeMedica } from './especialidades';
 
 export type Setor =
   | 'comercio' | 'alimentacao' | 'beleza' | 'cuidado' | 'transporte' | 'logistica' | 'industria'
@@ -101,6 +102,8 @@ export interface Ocupacao {
   surge?: number;
   /** Fundamento legal do requisito, quando houver. */
   fundamento?: string;
+  /** Vaga que pede um título de especialista específico (residência naquela área). */
+  especialidades?: EspecialidadeMedica[];
 }
 
 type O = Ocupacao;
@@ -258,6 +261,8 @@ export const OCUPACOES: readonly Ocupacao[] = [
   o({ id: 'medico', nome: ['médico', 'médica'], trilha: 'medicina', setor: 'saude', nivel: 3, salario: 14500, contrato: 'clt', carga: 'integral', idadeMin: 23, area: ['medicina'], nivelCurso: 'superior', licenca: 'crm', oferta: 0, estresse: 5, jornada: 'plantao', fundamento: 'Lei 12.842/2013: exige graduação em Medicina e registro no CRM.' }),
   o({ id: 'medico_especialista', nome: ['médico especialista', 'médica especialista'], trilha: 'medicina', setor: 'saude', nivel: 4, salario: 26000, contrato: 'autonomo', carga: 'integral', idadeMin: 26, area: ['medicina'], nivelCurso: 'residencia', licenca: 'crm', oferta: 1, estresse: 5, jornada: 'longa', fundamento: 'Título de especialista exige residência médica.' }),
   o({ id: 'medico_hospital', nome: ['médico especialista do hospital', 'médica especialista do hospital'], trilha: 'medicina', setor: 'saude', nivel: 4, salario: 21000, contrato: 'clt', carga: 'integral', idadeMin: 26, area: ['medicina'], nivelCurso: 'residencia', licenca: 'crm', oferta: 1, estresse: 5, jornada: 'plantao', fundamento: 'Título de especialista exige residência médica; o hospital contrata o especialista.' }),
+  o({ id: 'cirurgiao', nome: ['cirurgião do hospital', 'cirurgiã do hospital'], trilha: 'medicina', setor: 'saude', nivel: 5, salario: 31000, contrato: 'clt', carga: 'integral', idadeMin: 27, area: ['medicina'], nivelCurso: 'residencia', licenca: 'crm', especialidades: ['cirurgia'], experiencia: 12, oferta: 2, estresse: 5, jornada: 'plantao', fundamento: 'Operar exige título de especialista em cirurgia (residência).' }),
+  o({ id: 'medico_familia', nome: ['médico de família', 'médica de família'], trilha: 'medicina', setor: 'saude', nivel: 4, salario: 17000, contrato: 'clt', carga: 'integral', idadeMin: 25, area: ['medicina'], nivelCurso: 'residencia', licenca: 'crm', especialidades: ['familia'], oferta: 0, estresse: 3, fundamento: 'A equipe de saúde da família prefere (e paga mais a) quem tem residência em Medicina de Família.' }),
   o({ id: 'psicologo', nome: ['psicólogo', 'psicóloga'], trilha: 'psicologia', setor: 'saude', nivel: 3, salario: 4300, contrato: 'clt', carga: 'integral', idadeMin: 22, area: ['psicologia'], nivelCurso: 'superior', licenca: 'crp', oferta: 0, estresse: 3, fundamento: 'Lei 4.119/1962: exige graduação em Psicologia e CRP.' }),
   o({ id: 'psicologo_clinico', nome: ['psicólogo clínico', 'psicóloga clínica'], trilha: 'psicologia', setor: 'saude', nivel: 4, salario: 7200, contrato: 'autonomo', carga: 'integral', idadeMin: 26, area: ['psicologia'], nivelCurso: 'superior', licenca: 'crp', experiencia: 48, oferta: 1, estresse: 3, promocao: 'clientela' }),
   o({ id: 'psicologo_hospitalar', nome: ['psicólogo hospitalar', 'psicóloga hospitalar'], trilha: 'psicologia', setor: 'saude', nivel: 4, salario: 6400, contrato: 'clt', carga: 'integral', idadeMin: 26, area: ['psicologia'], nivelCurso: 'superior', licenca: 'crp', experiencia: 48, oferta: 1, estresse: 4 }),
@@ -366,7 +371,10 @@ export const OCUPACOES: readonly Ocupacao[] = [
   // ------------------------------------------------------------- Esporte
   o({ id: 'jogador_futebol', nome: ['jogador de futebol', 'jogadora de futebol'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 3200, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Lei Pelé (9.615/1998): contrato especial de trabalho desportivo, com prazo.' }),
   o({ id: 'atleta', nome: ['atleta profissional', 'atleta profissional'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 2800, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora' }),
+  o({ id: 'jogador_basquete', nome: ['jogador de basquete', 'jogadora de basquete'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 3000, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Lei Pelé (9.615/1998): contrato especial de trabalho desportivo, com prazo (uma temporada, em geral).' }),
+  o({ id: 'tenista', nome: ['tenista profissional', 'tenista profissional'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 0, contrato: 'autonomo', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Sem clube nem salário: vive de premiação e patrocínio, e paga do bolso treinador e viagens.' }),
   o({ id: 'treinador_escolinha', nome: ['treinador de escolinha', 'treinadora de escolinha'], trilha: 'treino', setor: 'esporte', nivel: 2, salario: 2200, contrato: 'autonomo', carga: 'parcial', idadeMin: 22, habilidade: { dominio: 'futebol', minimo: 62 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
+  o({ id: 'professor_tenis', nome: ['professor de tênis', 'professora de tênis'], trilha: 'treino', setor: 'esporte', nivel: 2, salario: 3800, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, habilidade: { dominio: 'tenis', minimo: 62 }, oferta: 1, estresse: 2, promocao: 'clientela' }),
   o({ id: 'auxiliar_tecnico', nome: ['auxiliar técnico', 'auxiliar técnica'], trilha: 'treino', setor: 'esporte', nivel: 4, salario: 6500, contrato: 'clt', carga: 'integral', idadeMin: 28, entrada: 'oportunidade', oferta: 1, estresse: 4, jornada: 'fora' }),
   o({ id: 'tecnico_futebol', nome: ['técnico de futebol', 'técnica de futebol'], trilha: 'treino', setor: 'esporte', nivel: 5, salario: 14000, contrato: 'clt', carga: 'integral', idadeMin: 32, experiencia: 36, entrada: 'oportunidade', oferta: 1, estresse: 5, jornada: 'fora', fundamento: 'O comando do time: acima do auxiliar técnico, e mais instável (cai com os resultados).' }),
   o({ id: 'arbitro', nome: ['árbitro de futebol', 'árbitra de futebol'], trilha: 'arbitragem', setor: 'esporte', nivel: 2, salario: 1800, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, area: ['arbitragem'], nivelCurso: 'livre', escolaridade: 'medio', forma: 55, oferta: 1, estresse: 4 }),

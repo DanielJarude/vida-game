@@ -1,3 +1,4 @@
+import type { EspecialidadeMedica } from './dados/especialidades';
 /**
  * O modelo de uma vida.
  *
@@ -455,6 +456,8 @@ export interface Matricula {
    * doutorado ser "Doutorado em Nutrição", e não só "Doutorado".
    */
   area?: string;
+  /** A especialidade escolhida na residência médica (define duração, título e o que vem depois). */
+  especialidade?: EspecialidadeMedica;
 }
 
 export interface Educacao {
@@ -463,7 +466,7 @@ export interface Educacao {
   /** Largou a escola básica sem concluir. */
   evadiu: boolean;
   matricula?: Matricula;
-  concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean; /** O desempenho ao se formar (0..100): o histórico que a seleção da pós lê. */ desempenho?: number }[];
+  concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean; /** O desempenho ao se formar (0..100): o histórico que a seleção da pós lê. */ desempenho?: number; /** A especialidade da residência médica (da pessoa: vai para todo emprego). */ especialidade?: EspecialidadeMedica }[];
   enem: { t: number; nota: number; areas?: Partial<Record<'exatas' | 'linguagens' | 'ciencias' | 'humanas', number>> }[];
   /** Postura do ano na escola/curso (escolha comportamental do jogador). */
   postura: 'dedicada' | 'normal' | 'relaxada';
@@ -574,6 +577,8 @@ export interface Emprego {
   preco?: 'baixo' | 'alto';
   /** A área dentro da profissão (direito de família, ortodontia, alfabetização): escolhida, leva junto para o próximo emprego. */
   especialidade?: string;
+  /** Fator da faixa salarial deste emprego (a especialidade médica), fixado na entrada: teto e reajuste o respeitam. */
+  faixa?: number;
   /** Casos, turmas, projetos marcantes neste trabalho (o que a carreira foi construindo). */
   feitos?: number;
 }
@@ -1023,7 +1028,7 @@ export interface Rotina {
  */
 export type Dominio =
   // esporte
-  | 'futebol' | 'volei' | 'natacao' | 'atletismo' | 'lutas'
+  | 'futebol' | 'volei' | 'natacao' | 'atletismo' | 'lutas' | 'basquete' | 'tenis'
   // arte
   | 'musica' | 'teatro' | 'danca' | 'desenho' | 'escrita' | 'fotografia'
   // escola e estudo
@@ -1157,6 +1162,16 @@ export interface Temporada {
   colocacao: number;
   /** Meses fora por lesão. */
   mesesFora: number;
+  /** Basquete: pontos, rebotes e assistências POR JOGO (a função em quadra decide o perfil). */
+  pontos?: number;
+  rebotes?: number;
+  /** Tênis: vitórias e derrotas no ano, títulos, o ranking ao fim, e o dinheiro (bruto e custos do circuito). */
+  vitorias?: number;
+  derrotas?: number;
+  titulos?: number;
+  ranking?: number;
+  premio?: number;
+  custos?: number;
 }
 
 /** Um projeto artístico coletivo (banda, grupo de teatro, companhia). */
@@ -1199,6 +1214,40 @@ export interface Obra {
 }
 
 /** Um trabalho no currículo artístico (projetos são fictícios, do universo desta vida). */
+/**
+ * Quem representa a pessoa no audiovisual (FIX 3.1): não é bônus mágico. A
+ * rede (1 pequena · 2 média · 3 grande) decide a que testes se chega e quanto
+ * se negocia; a comissão sai de todo cachê.
+ */
+export interface AgenteArtistico { nome: string; pessoaId?: string; rede: 1 | 2 | 3; comissao: number; tInicio: number }
+
+/** Um trabalho no audiovisual (ou no teatro contratado): da proposta ao que foi feito. */
+export interface ContratoAV {
+  id: string;
+  tipo: ItemCurriculo['tipo'];
+  /** Título FICTÍCIO da produção (do universo desta vida). */
+  titulo: string;
+  /** A casa (genérica: "uma emissora de TV aberta"). */
+  casa: string;
+  papel: string;
+  /** O tamanho da produção (0 pequena … 3 grande). */
+  porte: 0 | 1 | 2 | 3;
+  /** Quanto dura a produção (meses). */
+  meses: number;
+  /** Pede dedicação integral no período (não cabe com outro trabalho de dia inteiro). */
+  integral: boolean;
+  /** Bruto → comissão do agente → despesas → líquido. */
+  bruto: number;
+  comissao: number;
+  despesas: number;
+  status: 'proposta' | 'em_producao' | 'concluido' | 'rompido' | 'recusado' | 'expirou';
+  tProposta: number;
+  tInicio?: number;
+  tFim?: number;
+  pessoaId?: string;
+  negociado?: boolean;
+}
+
 export interface ItemCurriculo {
   t: number;
   /** Onde/como: teatro, festival, publicidade, curta, série, novela, filme, show, espetáculo. */
@@ -1444,6 +1493,8 @@ export interface Caminhos {
    * depois que a carreira pausa ou acaba (`sistemas/cena`).
    */
   curriculo?: ItemCurriculo[];
+  /** Audiovisual (FIX 3.1): o agente e os contratos (propostas, produções, o que foi feito). */
+  audiovisual?: { agente?: AgenteArtistico; contratos: ContratoAV[] };
   /**
    * Objetivos perseguidos: o que a pessoa tenta e retenta (o mestrado, a
    * peneira, o concurso). Memória de intenção, não lista de tarefas
@@ -1471,7 +1522,7 @@ export type NovoCompromisso =
   | { tipo: 'dedicar_negocio' }
   | { tipo: 'servico_militar' }
   /** Aprovado num curso (ou voltando a um trancado): a matrícula só entra depois de caber no resto da vida. */
-  | { tipo: 'curso'; cursoId: string; via: string; modalidade: 'presencial' | 'ead'; rede: 'publica' | 'privada'; mensalidade: number; municipioId: string; instituicao: string; destrancar?: boolean };
+  | { tipo: 'curso'; cursoId: string; via: string; modalidade: 'presencial' | 'ead'; rede: 'publica' | 'privada'; mensalidade: number; municipioId: string; instituicao: string; destrancar?: boolean; /** A especialidade de uma residência médica. */ especialidade?: EspecialidadeMedica };
 
 /** Um plano possível diante do conflito: o que se larga, o que se tenta conciliar. */
 export interface PlanoDeConflito {

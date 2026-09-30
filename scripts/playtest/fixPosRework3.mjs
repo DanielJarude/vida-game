@@ -7,7 +7,8 @@ const SP = process.env.SP ?? '/tmp/vida-f3';
 const URL = process.env.URL ?? 'http://localhost:4173/';
 const b = await chromium.launch();
 const problemas = [];
-const cenas = [['professora', 'Trabalho'], ['professora', 'Você'], ['rica', 'Tempo livre'], ['rica', 'Vida'], ['adolescente', 'Tempo livre'], ['adolescente', 'Trabalho']];
+// CENAS=cenario:Aba,cenario:Aba (FIX 3.1 reaproveita o script com os próprios cenários).
+const cenas = process.env.CENAS ? process.env.CENAS.split(',').map(x => x.split(':')) : [['professora', 'Trabalho'], ['professora', 'Você'], ['rica', 'Tempo livre'], ['rica', 'Vida'], ['adolescente', 'Tempo livre'], ['adolescente', 'Trabalho']];
 for (const [cen, aba] of cenas) {
   for (const w of [1440, 820, 390]) {
     const ctx = await b.newContext({ viewport: { width: w, height: w < 800 ? 844 : 900 } });

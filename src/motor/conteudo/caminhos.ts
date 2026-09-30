@@ -17,6 +17,8 @@ import * as P from './papeis';
 import { estresse, fato, feliz, custa } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
 import { encerrarCarreira, fazerPeneira, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
+import { dinheiro as fmt } from '../texto';
+import { conflitoDoContrato, contaDoContrato, descricaoDoContrato, podePausar as podePausarAV, resolverConflitoAV } from '../sistemas/audiovisual';
 import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador, lerTecnica } from '../sistemas/peneira';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
 import { abalar } from '../sistemas/abalo';
@@ -128,13 +130,49 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'esp_contrato', tipo: 'decisao', idade: [16, 24], tema: 'trabalho', manual: true, repetir: 0,
-    titulo: 'O contrato',
-    texto: c => `Um papel de três páginas: salário, prazo, multa. ${c.v.educacao.basica ? 'A escola ainda não acabou.' : c.v.educacao.matricula ? 'A faculdade teria de esperar.' : ''} Quase ninguém que começou com você chegou até aqui.`,
+    titulo: c => (c.v.caminhos.esporte?.modalidade === 'tenis' ? 'Virar profissional' : 'O contrato'),
+    texto: c => c.v.caminhos.esporte?.modalidade === 'tenis' ? `Não há papel para assinar: é decidir jogar o circuito como profissional. Sem salário — o que entra é prêmio, e o treinador, as viagens e o hotel passam a ser seus. ${c.v.educacao.basica ? 'A escola ainda não acabou.' : c.v.educacao.matricula ? 'A faculdade teria de esperar.' : ''}` : `Um papel de três páginas: salário, prazo, multa. ${c.v.educacao.basica ? 'A escola ainda não acabou.' : c.v.educacao.matricula ? 'A faculdade teria de esperar.' : ''} Quase ninguém que começou com você chegou até aqui.`,
     opcoes: [
       { id: 'assinar', texto: 'Assinar', consequencia: c => (analisarEntrada(c.v, { tipo: 'contrato_esporte', nivel: c.v.fatos['contrato_nivel'] ?? 1 }).length ? 'O contrato é de tempo integral: não cabe com o que você já faz, e a próxima pergunta é essa.' : 'Treino e jogo em tempo integral, salário de atleta.'),
         resolver: c => ({ texto: 'A caneta falhou na primeira tentativa. Na segunda, foi.', memoria: null, efeito: () => { propor(c.v, c.r, { tipo: 'contrato_esporte', nivel: c.v.fatos['contrato_nivel'] ?? 1 }); } }) },
       { id: 'estudar', texto: 'Recusar e seguir outro caminho',
         resolver: c => ({ texto: 'Você disse não ao que quase todo mundo diria sim.', memoria: 'Recusou um contrato profissional para seguir outro caminho.', relevancia: 'marco', efeito: () => { const e = c.v.caminhos.esporte; if (e) encerrarCarreira(c.v, e, 'escolha'); } }) }
+    ]
+  },
+  {
+    // O contrato de dedicação integral e o trabalho de dia inteiro: nada muda sem escolha (FIX 3.1).
+    id: 'av_conflito', tipo: 'decisao', idade: [14, 90], tema: 'trabalho', manual: true, repetir: 0,
+    titulo: 'O contrato e o trabalho',
+    texto: c => { const x = c.v.caminhos.audiovisual?.contratos[c.v.fatos['av_conflito'] ?? -1]; const nome = x ? conflitoDoContrato(c.v, x) : undefined; return x ? `${cap(descricaoDoContrato(x))}: ${x.meses} meses de dedicação integral, ${contaDoContrato(x)}. O trabalho de ${nome ?? 'agora'} é de dia inteiro — as duas coisas não cabem juntas.` : 'A proposta já não está na mesa.'; },
+    opcoes: [
+      { id: 'pausar', texto: c => (c.v.trabalho.atual?.contrato === 'servidor' ? 'Pedir licença sem salário e fazer a produção' : 'Pôr o trabalho em pausa e fazer a produção'),
+        disponivel: c => (podePausarAV(c.v) ? true : 'Esse trabalho não tem como esperar (não dá para pausar).'),
+        consequencia: c => (c.v.trabalho.atual?.contrato === 'servidor' ? 'O cargo espera por um tempo, sem salário. Dá para voltar depois.' : 'A carreira de agora fica em pausa: currículo, contatos e nome continuam, e voltar é retorno.'),
+        resolver: c => ({ texto: resolverConflitoAV(c.v, 'pausar'), memoria: null }) },
+      { id: 'deixar', texto: 'Deixar o trabalho e fazer a produção', comportamento: { coragem: 1 },
+        consequencia: () => 'O trabalho de agora acaba (fica no currículo). Depois da produção, é procurar o próximo.',
+        resolver: c => ({ texto: resolverConflitoAV(c.v, 'deixar'), memoria: null, relevancia: 'marco' }) },
+      { id: 'recusar', texto: 'Recusar a produção e ficar no trabalho',
+        consequencia: () => 'O papel vai para outra pessoa. O trabalho continua como está.',
+        resolver: c => ({ texto: resolverConflitoAV(c.v, 'recusar'), memoria: null }) }
+    ]
+  },
+  {
+    // O tênis não demite ninguém: é a conta que aperta. Dois anos no vermelho e sem reserva — a vida pergunta.
+    id: 'esp_tenis_conta', tipo: 'decisao', idade: [17, 45], tema: 'dinheiro', prioritario: true, prioridade: 3, repetir: 2,
+    quando: c => c.v.fatos['tenis_aperto'] === c.v.t && c.v.caminhos.esporte?.fase === 'profissional' && c.v.caminhos.esporte.modalidade === 'tenis',
+    titulo: 'A conta do circuito',
+    texto: c => { const es = c.v.caminhos.esporte!; const t = es.temporadas?.[es.temporadas.length - 1]; return `Dois anos seguidos gastando mais do que os prêmios pagam${t ? ` (no último: ${fmt(t.premio ?? 0)} de prêmios, ${fmt(t.custos ?? 0)} de custos)` : ''}. A reserva não cobre o próximo ano de viagens.`; },
+    opcoes: [
+      { id: 'seguir', texto: 'Seguir no circuito e apertar tudo o resto', comportamento: { coragem: 1 },
+        consequencia: () => 'A conta pode ficar no vermelho. Se o ranking subir, o prêmio sobe junto; se não, a pergunta volta.',
+        resolver: () => ({ texto: 'Você cortou o que dava e renovou a inscrição dos torneios.', memoria: null }) },
+      { id: 'nacional', texto: 'Jogar só os torneios do Brasil por um tempo', disponivel: c => ((c.v.caminhos.esporte?.nivel ?? 1) > 1 ? true : 'Já é só o circuito nacional.'),
+        consequencia: () => 'Prêmios menores, viagens muito mais baratas. O ranking internacional cai.',
+        resolver: c => ({ texto: 'De volta aos torneios nacionais: ônibus em vez de avião.', memoria: 'Voltou a jogar só no Brasil para a conta fechar.', efeito: () => { const es = c.v.caminhos.esporte!; es.nivel = 1; es.reputacao = Math.round((es.reputacao ?? 20) * 0.8); } }) },
+      { id: 'parar', texto: 'Parar e dar aulas', comportamento: { disciplina: 1 },
+        consequencia: () => 'A carreira de competição acaba. O que você sabe de tênis vira trabalho: aula em clube e academia.',
+        resolver: c => ({ texto: 'Você guardou a raquete de competição e foi dar aula.', memoria: 'Parou o circuito porque a conta não fechava.', relevancia: 'marco', efeito: () => { const es = c.v.caminhos.esporte; if (es) encerrarCarreira(c.v, es, 'escolha'); c.v.fatos['pos_treinador'] = c.v.t; } }) }
     ]
   },
   {
@@ -402,7 +440,7 @@ export const CAMINHOS: Conteudo[] = [
   }
 ];
 
-const VERBOS: Record<string, string> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrever: 'escrever', natacao: 'nadar', lutas: 'treinar', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinhar: 'cozinhar', leitura: 'ler' };
+const VERBOS: Record<string, string> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', basquete: 'jogar basquete', tenis: 'jogar tênis', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrever: 'escrever', natacao: 'nadar', lutas: 'treinar', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinhar: 'cozinhar', leitura: 'ler' };
 
 function frenteAntiga(c: Ctx): string | undefined {
   const cand = Object.entries(c.v.caminhos.frentes)

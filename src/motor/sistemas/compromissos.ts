@@ -18,6 +18,7 @@
  *   base do Bahia").
  */
 
+import { aEquipe } from './esporte';
 import type { Rng } from '../rng';
 import type { CompromissoPendente, Dominio, Negocio, NovoCompromisso, PlanoDeConflito, Vida } from '../tipos';
 import { escrever, idade, lembrarCom } from '../nucleo';
@@ -433,7 +434,7 @@ function largar(v: Vida, id: string, motivo: string, novo: NovoCompromisso): voi
       es.motivoFim = 'escolha';
       const rot = v.rotinas.find(x => x.id === es.modalidade);
       if (rot) rot.nivel = 1;
-      const texto = `Deixou ${es.modalidade === 'futebol' ? 'a base' : 'a equipe'} ${doClube(es.clube)} ${motivo}.`;
+      const texto = `Deixou ${aEquipe(es.modalidade, es.clube)} ${motivo}.`;
       escrever(v, { texto, relevancia: 'marco', tema: 'lazer', escolha: true });
       marcar(v, 'abandono', texto, 3, { dominio: es.modalidade as Dominio });
       return;

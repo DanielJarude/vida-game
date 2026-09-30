@@ -21,7 +21,7 @@ import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
-import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, type Ocupacao } from '../../motor/dados/ocupacoes';
+import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, ocupacaoOuNula, type Ocupacao } from '../../motor/dados/ocupacoes';
 import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
 import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, proximoPasso, ROTULO_MODELO } from '../../motor/sistemas/trabalho';
@@ -45,8 +45,9 @@ import { leituraRural } from '../../motor/sistemas/rural';
 import { leituraDaOrigem, responsaveis } from '../../motor/sistemas/origem';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
-import { DIVISAO_DO_NIVEL, doClube } from '../../motor/dados/clubes';
-import { augeDe, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
+import { doClube } from '../../motor/dados/clubes';
+import { augeDe, divisaoDe, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
+import { estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
 import { lesaoAtiva } from '../../motor/sistemas/lesoes';
 import { palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
 import { podeTentar } from '../../motor/plausibilidade';
@@ -100,7 +101,9 @@ export function Trabalho({ vida, agir, irPara }: Props) {
             {l.renda && <Dado rotulo="No bolso">{l.renda.replace(' por mês no bolso', '/mês')}</Dado>}
             {l.jornada && <Dado rotulo="Jornada">{l.jornada}</Dado>}
             {l.vinculo && <Dado rotulo="Vínculo">{l.vinculo}</Dado>}
-            {e?.especialidade && modo !== 'militar' && <Dado rotulo="Área">{e.especialidade} <small>(pesa nos casos grandes e no desempenho)</small></Dado>}
+            {e?.especialidade && modo !== 'militar' && (ocupacaoOuNula(e.ocupacaoId)?.trilha === 'medicina'
+              ? <Dado rotulo="Especialidade">{e.especialidade} <small>(o título da residência: decide as vagas, a faixa de renda e os casos)</small></Dado>
+              : <Dado rotulo="Área">{e.especialidade} <small>(pesa nos casos grandes e no desempenho)</small></Dado>)}
           </dl>
         )}
         {l.frases.length > 1 && modo !== 'politica' && <div className="como-vai">{l.frases.slice(1).map((f, k) => <p key={k}>{f}</p>)}</div>}
@@ -302,30 +305,35 @@ function PainelAtleta({ vida }: { vida: Vida }) {
   const noto = vida.notoriedade && vida.notoriedade.valor >= 10 ? palavraDaNotoriedade(vida) : undefined;
   const oferta = nivelQueOMercadoOferece(vida, es);
   const lesao = lesaoAtiva(vida);
+  const tenis = es.modalidade === 'tenis';
   return (
     <section className="painel painel--atleta" aria-label="A carreira no esporte">
       <div className="placar">
-        <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{es.espaco === 'titular' ? 'Titular' : es.espaco === 'reserva' ? 'Reserva' : 'Sem clube'}</span>
-        <span className="placar__clube">{es.clube}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}</span>
+        <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{tenis ? 'No circuito' : es.espaco === 'titular' ? 'Titular' : es.espaco === 'reserva' ? 'Reserva' : 'Sem clube'}</span>
+        <span className="placar__clube">{tenis ? `ranking ${t?.ranking ?? '—'}º` : es.clube}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}{es.modalidade === 'basquete' ? ` · ${NOME_FUNCAO[funcaoBasquete(vida)]}, ${estaturaEmPalavras(estatura(vida))}` : ''}</span>
       </div>
       {t && (
         <div className="temporada" aria-label="A última temporada">
           <p className="temporada__titulo">Temporada {t.ano} — {t.clube}</p>
           <p className="temporada__linha">{linhaDaTemporada(vida, t)}</p>
-          <p className="nota">{palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)}. {es.espaco === 'titular' ? 'O próximo ano começa como titular.' : 'O próximo ano começa no banco.'}</p>
+          <p className="nota">{palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)}. {tenis ? (t.premio !== undefined ? `Bruto ${dinheiroCurto(t.premio)} − custos do circuito ${dinheiroCurto(t.custos ?? 0)} = ${(t.premio - (t.custos ?? 0)) >= 0 ? '' : '−'}${dinheiroCurto(Math.abs(t.premio - (t.custos ?? 0)))} no ano.` : '') : es.espaco === 'titular' ? 'O próximo ano começa como titular.' : 'O próximo ano começa no banco.'}</p>
         </div>
       )}
       <dl className="dados">
-        <Dado rotulo="Divisão (no jogo)">{DIVISAO_DO_NIVEL[es.nivel]}</Dado>
-        <Dado rotulo="Contrato">{es.contratoAte ? `até ${anoDe(es.contratoAte)}` : '—'}</Dado>
-        <Dado rotulo="Salário do contrato">{vida.trabalho.atual ? `${dinheiroCurto(vida.trabalho.atual.salario)}/mês, bruto` : '—'}</Dado>
-        <Dado rotulo="No mercado">{palavraDaReputacao(es.reputacao ?? 30, es.modalidade)}{oferta > es.nivel ? ' · clubes maiores olham' : oferta < es.nivel ? (oferta === 0 ? ' · sem interesse de outros clubes' : ' · o interesse vem de divisões menores') : ''}</Dado>
+        <Dado rotulo={tenis ? 'Circuito' : 'Divisão (no jogo)'}>{divisaoDe(es.modalidade, es.nivel)}</Dado>
+        {tenis
+          ? <Dado rotulo="Renda">premiação: uns {vida.trabalho.atual ? dinheiroCurto(vida.trabalho.atual.salario) : '—'}/mês (a média do último ano), sem salário; treinador e viagens por sua conta</Dado>
+          : <>
+            <Dado rotulo="Contrato">{es.contratoAte ? `até ${anoDe(es.contratoAte)}` : '—'}</Dado>
+            <Dado rotulo="Salário do contrato">{vida.trabalho.atual ? `${dinheiroCurto(vida.trabalho.atual.salario)}/mês, bruto` : '—'}</Dado>
+          </>}
+        <Dado rotulo="No mercado">{palavraDaReputacao(es.reputacao ?? 30, es.modalidade)}{tenis ? (oferta > es.nivel ? ' · o ranking já dá o circuito acima' : oferta < es.nivel ? ' · o ranking não sustenta este circuito' : '') : oferta > es.nivel ? ' · clubes maiores olham' : oferta < es.nivel ? (oferta === 0 ? ' · sem interesse de outros clubes' : ' · o interesse vem de divisões menores') : ''}</Dado>
         {noto && <Dado rotulo="O público">{noto}</Dado>}
-        <Dado rotulo="Treino">{es.foco === 'forcar' ? 'dobrado (evolui e machuca mais)' : es.foco === 'preservar' ? 'poupando o corpo' : 'o normal do clube'}</Dado>
+        <Dado rotulo="Treino">{es.foco === 'forcar' ? 'dobrado (evolui e machuca mais)' : es.foco === 'preservar' ? 'poupando o corpo' : tenis ? 'o de sempre, com o seu treinador' : 'o normal do clube'}</Dado>
         <Dado rotulo="O corpo">{lesao ? `${lesao.lesao.parte}${lesao.lesao.cuidado === 'sacrificio' ? ', jogando no sacrifício' : lesao.lesao.cuidado ? `, volta por volta de ${anoDe(lesao.lesao.tFim)}` : ''}` : es.lesoes === 0 ? 'sem lesões sérias' : `${es.lesoes} ${es.lesoes === 1 ? 'lesão' : 'lesões'} na carreira`}</Dado>
         <Dado rotulo="O prazo">{i < auge - 5 ? 'o auge está pela frente' : i <= auge ? 'o auge é agora' : i <= auge + 3 ? 'depois do auge: o rendimento começa a cair' : 'a idade pesa em cada temporada'}</Dado>
       </dl>
-      <p className="nota">Não há idade para parar: o corpo declina conforme a posição, a temporada mostra, e o mercado decide se ainda há lugar. Parar é escolha. {es.modalidade === 'futebol' ? CLUBES_REAIS : ''}</p>
+      <p className="nota">{tenis ? 'Não há idade para parar: o corpo declina, o ranking mostra, e a conta do circuito diz se ainda fecha. Parar é escolha.' : 'Não há idade para parar: o corpo declina conforme a posição, a temporada mostra, e o mercado decide se ainda há lugar. Parar é escolha.'} {es.modalidade === 'futebol' ? CLUBES_REAIS : ''}</p>
     </section>
   );
 }
@@ -335,7 +343,7 @@ function PainelBase({ vida }: { vida: Vida }) {
   const es = vida.caminhos.esporte;
   if (!es || es.fase !== 'base') return null;
   const i = idade(vida);
-  const categoria = es.modalidade !== 'futebol' ? 'equipe de base' : i <= 15 ? 'sub-15' : i <= 17 ? 'sub-17' : 'sub-20';
+  const categoria = es.modalidade === 'tenis' ? 'circuito juvenil' : es.modalidade !== 'futebol' ? 'equipe de base' : i <= 15 ? 'sub-15' : i <= 17 ? 'sub-17' : 'sub-20';
   const anos = Math.max(0, Math.floor((vida.t - es.tInicio) / 12));
   const contratoIdade = es.modalidade === 'futebol' ? '17 e 20' : '17 e 22';
   const longe = es.municipioId !== vida.moradia.municipioId;
@@ -351,7 +359,9 @@ function PainelBase({ vida }: { vida: Vida }) {
         <Dado rotulo="Há quanto tempo">{anos < 1 ? 'começou este ano' : `${anos} ${anos === 1 ? 'ano' : 'anos'}`}</Dado>
         <Dado rotulo="O corpo">{es.lesoes === 0 ? 'sem lesões sérias' : `${es.lesoes} ${es.lesoes === 1 ? 'lesão' : 'lesões'}`}</Dado>
       </dl>
-      <p className="painel__frase">O que pode vir: um contrato profissional, entre os {contratoIdade} anos, para quem segue evoluindo — ou a dispensa, que é o destino da maioria. A escola e o resto da semana dividem espaço com o treino.</p>
+      <p className="painel__frase">{es.modalidade === 'tenis'
+        ? `O que pode vir: virar profissional, entre os ${contratoIdade} anos, se os resultados do circuito juvenil sustentarem — sem salário, vivendo de prêmio. Ou a bolsa acaba. O circuito juvenil custa viagem todo ano.`
+        : `O que pode vir: um contrato profissional, entre os ${contratoIdade} anos, para quem segue evoluindo — ou a dispensa, que é o destino da maioria. A escola e o resto da semana dividem espaço com o treino.`}</p>
       {es.modalidade === 'futebol' && <p className="nota">{CLUBES_REAIS}</p>}
     </section>
   );

@@ -275,8 +275,8 @@ const filhoParaEstudar = (v: Vida) => filhosVivos(v).filter(f => { const i = ida
 
 /* -------------------------------------------------- O sonho que ficou para trás */
 
-const DOMINIOS_DE_SONHO: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'musica', 'teatro', 'danca', 'desenho', 'escrita', 'fotografia'];
-const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrita: 'escrever', natacao: 'nadar', atletismo: 'correr', lutas: 'treinar luta', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinha: 'cozinhar', idiomas: 'estudar idiomas', programacao: 'programar' };
+const DOMINIOS_DE_SONHO: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis', 'musica', 'teatro', 'danca', 'desenho', 'escrita', 'fotografia'];
+const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', basquete: 'jogar basquete', tenis: 'jogar tênis', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrita: 'escrever', natacao: 'nadar', atletismo: 'correr', lutas: 'treinar luta', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinha: 'cozinhar', idiomas: 'estudar idiomas', programacao: 'programar' };
 const ROTINA_DO_DOMINIO: Partial<Record<Dominio, string>> = { escrita: 'escrever', cozinha: 'cozinhar', idiomas: 'ingles' };
 const rotinaDe = (d: Dominio) => { const id = ROTINA_DO_DOMINIO[d] ?? d; return modeloRotina(id) ? id : undefined; };
 

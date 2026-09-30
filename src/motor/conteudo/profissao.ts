@@ -14,6 +14,7 @@
  * escapar do controle.
  */
 
+import { divisaoDe, OCUPACOES_DE_ATLETA } from '../sistemas/esporte';
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import { clamp } from '../rng';
@@ -33,7 +34,7 @@ import { mudarAgora } from '../sistemas/processos';
 import { marcar } from '../sistemas/marcas';
 import { abalar } from '../sistemas/abalo';
 import { assinarContrato, augeDe, prazoDeContrato, salarioDaRenovacao, clubeQuerRenovar, encerrarCarreira, mudarDeClube, nivelQueOMercadoOferece, palavraDaNota, salarioDoContrato, valorDeMercado } from '../sistemas/esporte';
-import { CLUBES, clubeDoNivel, DIVISAO_DO_NIVEL, noClube, oClube } from '../dados/clubes';
+import { CLUBES, clubeDoNivel, noClube, oClube } from '../dados/clubes';
 import { alcanceNoPalco, cacheDeApresentacao, linguagemDePalco, parteDosCustos } from '../sistemas/palco';
 import { habilidade } from '../sistemas/frentes';
 import { arrendamentoMensal } from '../sistemas/rural';
@@ -357,7 +358,7 @@ export const PROFISSAO: Conteudo[] = [
   {
     // O contrato vence: o clube diz se quer; o mercado diz para onde dá para ir. Ninguém se aposenta por fazer aniversário.
     id: 'esp_renovacao', tipo: 'decisao', idade: [17, 50], tema: 'trabalho', prioritario: true, prioridade: 4, repetir: 1,
-    quando: c => deHoje(c, 'esp_renovacao') && c.v.caminhos.esporte?.fase === 'profissional' && ['jogador_futebol', 'atleta'].includes(c.v.trabalho.atual?.ocupacaoId ?? ''),
+    quando: c => deHoje(c, 'esp_renovacao') && c.v.caminhos.esporte?.fase === 'profissional' && OCUPACOES_DE_ATLETA.includes(c.v.trabalho.atual?.ocupacaoId ?? ''),
     titulo: 'O contrato vence',
     texto: c => {
       const es = c.v.caminhos.esporte!;
@@ -374,7 +375,7 @@ export const PROFISSAO: Conteudo[] = [
         resolver: c => ({ texto: 'Mais uma assinatura, mais uma foto com a camisa.', memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; assinarContrato(c.v, es, es.espaco === 'titular' ? 36 : 24, 1, true); } }) },
       { id: 'descer', texto: c => `Aceitar a proposta de um clube ${nivelQueOMercadoOferece(c.v, c.v.caminhos.esporte!) === 1 ? 'do estadual' : 'de divisão menor'}`,
         disponivel: c => { const es = c.v.caminhos.esporte!; const o = nivelQueOMercadoOferece(c.v, es); return o >= 1 && o < es.nivel ? true : false; },
-        consequencia: c => { const es = c.v.caminhos.esporte!; const o = nivelQueOMercadoOferece(c.v, es); return `${cap(DIVISAO_DO_NIVEL[o])}: uns ${fmt(salarioDoContrato(c.v, es, o, 'titular'))} por mês, e chance real de jogar.`; },
+        consequencia: c => { const es = c.v.caminhos.esporte!; const o = nivelQueOMercadoOferece(c.v, es); return `${cap(divisaoDe(es.modalidade, o))}: uns ${fmt(salarioDoContrato(c.v, es, o, 'titular'))} por mês, e chance real de jogar.`; },
         resolver: c => ({ texto: 'Estádio menor, gramado pior — e o seu nome na escalação.', memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; trocarDeClube(c, nivelQueOMercadoOferece(c.v, es) as 1 | 2 | 3 | 4); es.espaco = 'titular'; assinarContrato(c.v, es, 24); } }) },
       { id: 'mercado', texto: c => (clubeQuerRenovar(c.v, c.v.caminhos.esporte!) ? 'Testar o mercado' : 'Procurar outro clube'), comportamento: { coragem: 1 },
         consequencia: c => (nivelQueOMercadoOferece(c.v, c.v.caminhos.esporte!) === 0 ? 'Sem propostas agora: seria esperar sem clube, treinando por conta.' : undefined),
@@ -445,7 +446,7 @@ export const PROFISSAO: Conteudo[] = [
   {
     id: 'esp_doping', tipo: 'decisao', idade: [20, 36], tema: 'trabalho', repetir: 6,
     peso: c => (c.v.caminhos.esporte?.espaco === 'reserva' || (c.v.caminhos.esporte?.lesoes ?? 0) >= 2 ? 1.2 : 0.5),
-    quando: c => c.v.caminhos.esporte?.fase === 'profissional' && !c.v.caminhos.esporte.doping && !c.v.caminhos.esporte.suspensoAte && ['jogador_futebol', 'atleta'].includes(c.v.trabalho.atual?.ocupacaoId ?? ''),
+    quando: c => c.v.caminhos.esporte?.fase === 'profissional' && !c.v.caminhos.esporte.doping && !c.v.caminhos.esporte.suspensoAte && OCUPACOES_DE_ATLETA.includes(c.v.trabalho.atual?.ocupacaoId ?? ''),
     titulo: 'Uma ajuda',
     texto: () => 'Um preparador de fora do clube chama você num canto: uma "ajuda" para voltar ao ritmo, que — garante — não aparece no exame. Outros já usam, diz. O controle antidoping, diz também, é questão de sorte.',
     opcoes: [
@@ -458,7 +459,7 @@ export const PROFISSAO: Conteudo[] = [
   {
     // A temporada foi boa e o mercado reagiu (`esporte.anoProfissional`): um clube maior pergunta — a resposta é sua.
     id: 'esp_proposta', tipo: 'decisao', idade: [17, 40], tema: 'trabalho', prioritario: true, prioridade: 5, repetir: 0,
-    quando: c => { const es = c.v.caminhos.esporte; if (!es || es.fase !== 'profissional' || es.nivel >= 4) return false; return deHoje(c, 'esp_proposta_hoje') && ['jogador_futebol', 'atleta'].includes(c.v.trabalho.atual?.ocupacaoId ?? ''); },
+    quando: c => { const es = c.v.caminhos.esporte; if (!es || es.fase !== 'profissional' || es.nivel >= 4) return false; return deHoje(c, 'esp_proposta_hoje') && OCUPACOES_DE_ATLETA.includes(c.v.trabalho.atual?.ocupacaoId ?? ''); },
     titulo: 'Uma proposta',
     texto: c => { const es = c.v.caminhos.esporte!; const alvo = clubeProposto(c); const d = municipio(alvo.cidade); return `${es.modalidade === 'futebol' ? `${oClube(alvo.nome).charAt(0).toUpperCase() + oClube(alvo.nome).slice(1)}, de ${d.nome},` : 'Uma equipe maior'} quer você: divisão acima, contrato de três anos, salário maior.${d.id !== c.v.moradia.municipioId ? ` A mudança seria para ${d.nome}.` : ''} ${comFamilia(c.v) ? 'A família iria junto — ou não.' : ''}`; },
     opcoes: [

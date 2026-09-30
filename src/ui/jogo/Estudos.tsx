@@ -275,6 +275,7 @@ export function ObjetivosEmCurso({ vida, agir, filtro }: { vida: Vida; agir: (a:
   const lista = objetivosAtivos(vida).filter(o => o.tentativas >= 1 && o.resultado === 'nao_passou' && (!filtro || filtro(o)));
   if (!lista.length) return null;
   const acaoDe = (o: Objetivo): { acao: Acao; rotulo: string } | undefined => {
+    if (o.id === 'selecao:residencia') return { acao: { tipo: 'perseguir', oque: 'preparar_residencia' } as unknown as Acao, rotulo: 'Um ano de estudo para a prova de residência' };
     if (o.id.startsWith('selecao:')) return { acao: { tipo: 'perseguir', oque: 'preparar_pos' } as unknown as Acao, rotulo: 'Um ano preparando o projeto de pesquisa' };
     if (o.id.startsWith('peneira:')) return { acao: { tipo: 'perseguir', oque: 'treino_fundamentos', valor: o.id.split(':')[1] } as unknown as Acao, rotulo: 'Um ano de fundamentos, com treinador' };
     if (o.id === 'arte:teste' || o.id === 'arte:edital') return { acao: { tipo: 'perseguir', oque: 'apresentar' } as unknown as Acao, rotulo: 'Apresentar-se (currículo e público)' };
@@ -517,6 +518,7 @@ function Cursos({ vida, agir }: Props) {
       detalhe: (
         <div className="curso-detalhe">
           <p className="nota">{cc.descricao} {portasDoCurso(vida, cc.id)}</p>
+          {cc.nivel === 'residencia' && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'preparar_residencia' } as unknown as Acao} agir={agir} variante="discreto" ocultarImpossivel>Um ano de estudo para a prova de residência (antes de tentar)</BotaoAcao>}
           {(cc.nivel === 'mestrado' || cc.nivel === 'doutorado') && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'preparar_pos' } as unknown as Acao} agir={agir} variante="discreto" ocultarImpossivel>Um ano preparando o projeto de pesquisa (antes de tentar)</BotaoAcao>}
           {vias.map(({ o, indice }) => (
             <div key={indice} className="via">

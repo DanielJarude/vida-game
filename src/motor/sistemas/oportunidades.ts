@@ -13,6 +13,8 @@
  * todo ano.
  */
 
+import { OCUPACOES_DE_ATLETA } from './esporte';
+import { conviteDaEspecialidade } from './medicina';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Oportunidade, TipoOportunidade, Vida } from '../tipos';
@@ -105,6 +107,13 @@ export function processarOportunidades(v: Vida, r: Rng): void {
           texto: `${quem.p.nome}, que trabalha como ${quem.p.ocupacao}, disse que pode ${onde}: ${nomeOcupacao(v, oc)}${porContaPropria(oc) ? ' — por conta própria (clientes seus, preço seu, sem patrão nem salário fixo)' : ' — vaga de emprego, com entrevista'}.` });
       }
     }
+  }
+
+  // A especialidade médica atrai o convite da área (a equipe cirúrgica, o hospital infantil, a saúde da família):
+  // aceitar passa pela pergunta do que fazer com o trabalho de agora.
+  if (i >= 26 && podeGerar(v, 'convite_medico', 4) && r.chance(0.3)) {
+    const c = conviteDaEspecialidade(v);
+    if (c && podeTentar(elegibilidade(v, c.oc, 'oportunidade'))) novaOportunidade(v, { tipo: 'convite', ocupacaoId: c.oc.id, meses: 12, chave: 'convite_medico', titulo: c.titulo, texto: c.texto });
   }
 
   // Freguesia: quem sabe fazer algo começa a receber pedidos.
@@ -241,6 +250,8 @@ const TEXTO_RETOMAR: Partial<Record<Dominio, string>> = {
   musica: 'O instrumento que ficou anos no armário. Um amigo antigo chamou para tocar num sarau.',
   futebol: 'Montaram um time de veteranos no bairro e estão chamando quem já jogou.',
   volei: 'Tem vôlei de veteranos na praça, aos sábados.',
+  basquete: 'Tem um racha de basquete na quadra do parque, de terça e quinta à noite.',
+  tenis: 'O clube do bairro abriu horário de tênis para adultos, com torneio interno.',
   teatro: 'Um grupo de teatro amador está procurando gente para a próxima peça.',
   danca: 'Abriu uma turma de dança para adultos perto de casa.',
   desenho: 'Você encontrou um caderno de desenhos antigo. Ainda dá vontade.',
@@ -311,7 +322,7 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
     case 'convite': {
       if (!oc && v.educacao.evadiu && !v.educacao.basica && o.titulo === 'Terminar a escola') { voltarAEstudar(v); return { texto: 'Caderno novo, turma cansada e adulta, aula das sete às dez.', tom: 'bom' }; }
       if (!oc) return { texto: 'O convite não se confirmou.' };
-      if (oc.id === 'jogador_futebol' || oc.id === 'atleta') { v.fatos['contrato_nivel'] = o.bonus ?? 1; return { texto: '', decisao: 'esp_contrato' }; }
+      if (OCUPACOES_DE_ATLETA.includes(oc.id)) { v.fatos['contrato_nivel'] = o.bonus ?? 1; return { texto: '', decisao: 'esp_contrato' }; }
       const arte = ['musico_profissional', 'ator', 'ator_reconhecido', 'bailarino', 'criador_conteudo', 'escritor'].includes(oc.id);
       const res = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'convite', pessoaId: o.pessoaId, extra: oc.id === 'produtor_rural' ? (o.pessoaId ? 'rural_familia' : 'rural_arrendada') : arte ? 'arte' : undefined });
       return { texto: res === 'feito' ? `Agora é ${nomeOcupacao(v, oc)}.` : res === 'perdido' ? PASSOU : '', tom: res === 'perdido' ? 'neutro' : 'bom' };
@@ -390,8 +401,9 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
 /** O que dizer quando a oferta não entrou agora porque outra escolha grande está em aberto (`propor` → 'perdido'). */
 const PASSOU = 'Chegou quando outra escolha grande estava em aberto — e o prazo passou. Ficou registrado na Linha da Vida.';
 
-const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrita: 'escrever', natacao: 'nadar', lutas: 'treinar luta', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinha: 'cozinhar' };
-export const MODS: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas'];
+const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', basquete: 'jogar basquete', tenis: 'jogar tênis', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrita: 'escrever', natacao: 'nadar', lutas: 'treinar luta', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinha: 'cozinhar' };
+// (Novas modalidades entram no FIM: o índice é guardado nos fatos da peneira.)
+export const MODS: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'];
 export const MODS_ARTE: Dominio[] = ['musica', 'teatro', 'danca'];
 
 import { MUNICIPIOS } from '../dados/lugares';

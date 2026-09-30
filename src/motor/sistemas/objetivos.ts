@@ -25,7 +25,7 @@ export function chaveDaTentativa(d: Pick<Devolutiva, 'tipo' | 'titulo' | 'ocupac
 }
 
 const TITULO: Partial<Record<Devolutiva['tipo'], (d: Pick<Devolutiva, 'titulo'>) => string>> = {
-  selecao: d => d.titulo.replace(/^Seleção para /, 'Entrar no ').replace(/^Entrar no Doutorado/, 'Entrar no doutorado').replace(/^Entrar no Mestrado/, 'Entrar no mestrado'),
+  selecao: d => /^Seleção para a residência/.test(d.titulo) ? 'Entrar na residência médica' : d.titulo.replace(/^Seleção para /, 'Entrar no ').replace(/^Entrar no Doutorado/, 'Entrar no doutorado').replace(/^Entrar no Mestrado/, 'Entrar no mestrado'),
   arte: d => (/^edital/i.test(d.titulo) ? 'Aprovar um projeto num edital de cultura' : 'Passar num teste de elenco'),
   peneira: () => 'Passar numa peneira'
 };

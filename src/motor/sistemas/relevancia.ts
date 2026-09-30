@@ -191,7 +191,8 @@ export interface CursoOpcoes { curso: Curso; opcoes: { o: OpcaoCurso; indice: nu
 export function cursosAgrupados(v: Vida): CursoOpcoes[] {
   const por = new Map<string, { o: OpcaoCurso; indice: number }[]>();
   opcoesDeCurso(v).forEach((o, indice) => { const l = por.get(o.curso.id) ?? []; l.push({ o, indice }); por.set(o.curso.id, l); });
-  return [...por.entries()].map(([id, opcoes]) => ({ curso: cursoOuNulo(id)!, opcoes, possivel: opcoes.some(x => podeTentar(x.o.veredito)) }))
+  // (A residência médica tem um item por especialidade: o curso vem da própria opção.)
+  return [...por.entries()].map(([id, opcoes]) => ({ curso: cursoOuNulo(id) ?? opcoes[0].o.curso, opcoes, possivel: opcoes.some(x => podeTentar(x.o.veredito)) }))
     .filter(c => c.curso && !c.opcoes.every(x => x.o.veredito.grau === 'incompativel' && /concluiu/.test(x.o.veredito.motivo ?? '')));
 }
 
@@ -202,6 +203,9 @@ export function cursosAgrupados(v: Vida): CursoOpcoes[] {
  */
 export function cursosParaVoce(v: Vida): { para: Relevante<CursoOpcoes>[]; resto: CursoOpcoes[] } {
   const lista = pontuarCursos(v, cursosAgrupados(v).filter(c => c.possivel));
+  // As residências são uma escolha só (a especialidade): entre as sugestões, as duas mais alcançáveis — as outras seguem no catálogo.
+  const residencias = lista.filter(x => x.item.curso.nivel === 'residencia').sort((a, b) => b.pontos - a.pontos);
+  for (const x of residencias.slice(2)) x.pontos -= 4;
   const r = primarias(lista, MAX_PRIMARIAS.cursos);
   const usados = new Set(r.para.map(x => x.item.curso.id));
   return { para: r.para, resto: cursosAgrupados(v).filter(c => !usados.has(c.curso.id)) };
@@ -238,6 +242,10 @@ export function pontuarCursos(v: Vida, cursos: CursoOpcoes[]): Relevante<CursoOp
     }
     // A pós/especialização de área definida na área em que se formou: contexto, não curso aleatório.
     if (['pos', 'residencia'].includes(n) && c.curso.area !== 'qualquer' && areasFormadas.has(c.curso.area)) add(1.8, 'Na área em que você se formou.');
+    // (FIX 3.1) Formado em Medicina: a residência é o degrau seguinte — é ela que decide que médico você vai ser.
+    if (n === 'residencia' && areasFormadas.has('medicina')) add(3.4, 'O próximo passo de quem se formou em Medicina: a especialidade decide as vagas, a renda e o dia a dia.');
+    // Um curso técnico abaixo da graduação que você já tem não é o "próximo passo" (continua no catálogo, para quem quiser).
+    if (n === 'tecnico' && ['superior', 'pos', 'mestrado', 'doutorado'].includes(esc)) pontos -= 2;
     const melhorChance = Math.max(0, ...c.opcoes.filter(x => podeTentar(x.o.veredito)).map(x => x.o.veredito.chance ?? 0.5));
     pontos += melhorChance;
     return { item: c, motivo: motivo || c.curso.descricao, pontos };

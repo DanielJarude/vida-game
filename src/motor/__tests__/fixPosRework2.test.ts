@@ -184,16 +184,17 @@ describe('relações: conhecer não é virar amigo', () => {
     return { v, p };
   }
   it('colega adulto, convivendo todo dia, não vira amigo sozinho (sem gesto de ninguém)', () => {
-    // Amostra de 30 colegas (10 era pouco: uma vida a mais ou a menos mudava o veredito). Sem gesto, poucos viram amigos.
+    // Sem gesto, poucos viram amigos. (FIX 3.1: 90 colegas e "poucos" = até 30%. Medido: 31 de 150, 21%; em
+    // lotes de 30 o número oscila de 2 a 8 — o limite antigo, 6 de 30, estava na média, não na margem.)
     let viraram = 0;
-    for (let s = 1; s <= 30; s++) {
+    for (let s = 1; s <= 90; s++) {
       let { v, p } = comColega(s, 'media');
       p.temperamento = { extroversao: 0, afabilidade: 0.2, responsabilidade: 0, abertura: 0, estabilidade: 0 };
       for (let k = 0; k < 5; k++) v = anoDe(v, criarRng(s * 7 + k), (x, r) => processarSocial(x, r));
       if (v.vinculos[p.id].estagio === 'amigo') viraram++;
     }
-    expect(viraram).toBeLessThanOrEqual(6);
-  });
+    expect(viraram).toBeLessThanOrEqual(27);
+  }, 90000);
   it('o gesto correspondido abre a amizade — e a outra pessoa pode não corresponder', () => {
     const { v, p } = comColega(4);
     expect(ids(v, p.id)).toContain('aproximar');

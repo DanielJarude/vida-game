@@ -37,6 +37,8 @@ import { naPolitica } from './politica';
 import { negocioAberto } from './negocio';
 import { estimativaParaCurso, fazCursinho, objetivoCurso, proximoPassoVestibular } from './vestibular';
 import { anoDe } from '../tempo';
+import { estatura, estaturaEmPalavras, vantagemDeEstatura } from './modalidades';
+import { recursosDaFamilia } from './origem';
 
 export interface PassoDoCaminho {
   rotulo: string;
@@ -82,10 +84,13 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
     const pedir = P('pedir_teste', d);
     const veredito = disp(v, pedir);
     out.push({
-      id: 'esporte', titulo: `Chegar a uma ${d === 'futebol' ? 'base' : 'equipe'} de ${NOME_MOD[d]}`,
+      id: 'esporte', titulo: d === 'tenis' ? 'Entrar numa academia de tênis' : `Chegar a uma ${d === 'futebol' ? 'base' : 'equipe'} de ${NOME_MOD[d]}`,
       onde: `A técnica está "${t.palavra}". ${t.tentar}`,
       progresso: t.desde ?? t.ano,
-      falta: [t.nivel < 4 ? 'Técnica no nível de uma base: treino regular e a sério; um ano de fundamentos com treinador (escolinha, projeto) é o que mais encurta.' : '', v.corpo.forma < 55 ? 'Fôlego: o fim do teste cobra quem não tem.' : ''].filter(Boolean),
+      falta: [t.nivel < 4 ? 'Técnica no nível de uma base: treino regular e a sério; um ano de fundamentos com treinador (escolinha, projeto) é o que mais encurta.' : '', v.corpo.forma < 55 ? 'Fôlego: o fim do teste cobra quem não tem.' : '',
+        // O que não se treina, dito com franqueza: a estatura no basquete; o custo do circuito no tênis.
+        d === 'basquete' ? `Estatura: ${estaturaEmPalavras(estatura(v))}${vantagemDeEstatura(v) >= 0.1 ? ' — ajuda (a seletiva mede na entrada).' : vantagemDeEstatura(v) <= -0.1 ? ' — pesa contra: de quem é baixo, a seletiva cobra mais técnica (o caminho é o de armador).' : ' — na média; decide a técnica.'}` : '',
+        d === 'tenis' && recursosDaFamilia(v).folga < 3 ? 'O circuito juvenil custa viagem e inscrição: sem a casa pagar, joga-se menos torneio — e a técnica anda menos.' : ''].filter(Boolean),
       // A última peneira disse "falta técnica" (ou nem dá para tentar ainda): o passo é o treino que mexe na técnica — a MESMA variável que a peneira lê.
       proximo: (() => {
         const fund = P('treino_fundamentos', d);

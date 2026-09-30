@@ -10,6 +10,8 @@
  * disponível em Tarauacá.
  */
 
+import { LISTA_ESPECIALIDADES, modeloEspecialidade, type EspecialidadeMedica } from '../dados/especialidades';
+import { avaliacaoDaResidencia, MOTIVO_RESIDENCIA, preparoDaResidencia } from './medicina';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { EscolaBasica, Escolaridade, Matricula, NivelCurso, Vida, NovoCompromisso } from '../tipos';
@@ -350,6 +352,8 @@ export interface OpcaoCurso {
   /** Onde o curso é (outra cidade exige mudança). */
   municipioId: string;
   observacao?: string;
+  /** Residência médica: a especialidade desta vaga (cada especialidade é uma seleção própria). */
+  especialidade?: EspecialidadeMedica;
 }
 
 function temFormacaoNaArea(v: Vida, area: string, nivel?: NivelCurso): boolean {
@@ -429,8 +433,19 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
           // A seleção da pós tem fatores próprios (histórico, pesquisa, projeto, tentativas): a MESMA conta dá a chance e o que a tela diz.
           const a = avaliacaoDaPos(v, c);
           add({ via: 'selecao_publica', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito: { grau: a.chance < 0.3 ? 'improvavel' : 'permitido', chance: a.chance }, municipioId: lugar, observacao: [observacao, a.leitura].filter(Boolean).join(' ') });
+        } else if (c.nivel === 'residencia') {
+          // Cada especialidade é uma seleção própria: duração e concorrência dela (a mesma conta dá a chance e o que a tela diz).
+          const desempenho = ultimoDesempenho(v);
+          const feitas = new Set(v.educacao.concluidos.filter(x => x.nivel === 'residencia').map(x => especialidadeDaResidencia(x)));
+          for (const esp of LISTA_ESPECIALIDADES) {
+            if (feitas.has(esp.id)) continue;
+            const { chance, leitura: disputa } = avaliacaoDaResidencia(v, esp, desempenho);
+            // Cada especialidade é um item próprio do catálogo (`residencia:<especialidade>`); a matrícula volta ao curso `residencia`.
+            opcoes.push({ curso: { ...c, id: `residencia:${esp.id}`, nome: esp.residencia, meses: esp.meses, descricao: esp.descricao }, especialidade: esp.id, via: 'selecao_publica', modalidade: 'presencial', rede: 'publica', mensalidade: 0,
+              veredito: req ?? { grau: chance < 0.3 ? 'improvavel' : 'permitido', chance }, municipioId: lugar, observacao: [observacao, disputa].filter(Boolean).join(' ') });
+          }
         } else {
-          const base = c.nivel === 'livre' ? 0.6 : c.nivel === 'tecnico' ? 0.5 : c.nivel === 'residencia' ? 0.35 : 0.45;
+          const base = c.nivel === 'livre' ? 0.6 : c.nivel === 'tecnico' ? 0.5 : 0.45;
           const desempenho = v.educacao.basica?.desempenho ?? ultimoDesempenho(v);
           const chance = clamp(base + (desempenho - 60) / 100, 0.08, 0.9);
           add({ via: 'selecao_publica', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito: { grau: chance < 0.3 ? 'improvavel' : 'permitido', chance }, municipioId: lugar, observacao });
@@ -566,6 +581,16 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
         : o.via === 'selecao_publica' ? `Não passou na seleção para ${nome}.`
           : `A matrícula em ${nome} não deu certo neste semestre.`;
     marcarFato(v, `tentou_${o.curso.id}_${anoDe(v.t)}`);
+    if (o.especialidade) {
+      // A residência também diz a causa real (a mesma avaliação que deu a chance) e fica no objetivo.
+      const esp = modeloEspecialidade(o.especialidade);
+      const a = avaliacaoDaResidencia(v, esp, ultimoDesempenho(v));
+      const motivo = MOTIVO_RESIDENCIA[a.obstaculo];
+      registrarDevolutiva(v, { tipo: 'selecao', titulo: `Seleção para a residência em ${esp.area}`, texto: `Não passou: ${motivo}.`, passou: false, perto: chance >= 0.4, falta: a.obstaculo, nivel: preparoDaResidencia(v), cursoId: 'residencia' });
+      const comMotivo = `Não passou na prova da ${esp.residencia.replace(/^R/, 'r')}: ${motivo}.`;
+      escrever(v, { texto: comMotivo, relevancia: 'biografia', tema: 'estudo', tom: 'ruim', escolha: true });
+      return { entrou: false, texto: comMotivo };
+    }
     if (o.via === 'selecao_publica' && (o.curso.nivel === 'mestrado' || o.curso.nivel === 'doutorado')) {
       // A rejeição diz a causa real (a mesma avaliação que deu a chance) e fica no objetivo.
       const a = avaliacaoDaPos(v, o.curso);
@@ -578,6 +603,7 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
     escrever(v, { texto, relevancia: 'biografia', tema: 'estudo', tom: 'ruim', escolha: true });
     return { entrou: false, texto };
   }
+  if (o.especialidade) registrarTentativa(v, { id: 'selecao:residencia', titulo: 'Entrar na residência médica', passou: true });
   if (o.via === 'selecao_publica' && (o.curso.nivel === 'mestrado' || o.curso.nivel === 'doutorado')) registrarTentativa(v, { id: `selecao:${o.curso.id}`, titulo: `Entrar no ${nomeDaFormacao(o.curso, areaDaPos(v, o.curso)).replace(/^./, x => x.toLowerCase())}`, passou: true });
   const texto = `${flex(v.eu.tratamento ?? v.eu.genero, 'Aprovado', 'Aprovada')} em ${nome}, ${em(INSTITUICOES[o.via](o.curso, v, o.municipioId))}.`;
   return { entrou: true, texto };
@@ -585,7 +611,7 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
 
 /** A matrícula que a aprovação deu, como dado (entra na vida pelo sistema de compromissos). */
 export function novaMatricula(v: Vida, o: OpcaoCurso): Extract<NovoCompromisso, { tipo: 'curso' }> {
-  return { tipo: 'curso', cursoId: o.curso.id, via: o.via, modalidade: o.modalidade, rede: o.rede, mensalidade: o.mensalidade, municipioId: o.municipioId, instituicao: INSTITUICOES[o.via](o.curso, v, o.municipioId) };
+  return { tipo: 'curso', cursoId: o.especialidade ? 'residencia' : o.curso.id, via: o.via, modalidade: o.modalidade, rede: o.rede, mensalidade: o.mensalidade, municipioId: o.municipioId, instituicao: INSTITUICOES[o.via](o.curso, v, o.municipioId), ...(o.especialidade ? { especialidade: o.especialidade } : {}) };
 }
 
 /** A matrícula entra de fato (depois de a vida caber, ou do plano escolhido). */
@@ -603,13 +629,14 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
     rede: n.rede,
     modalidade: n.modalidade,
     tInicio: v.t,
-    mesesRestantes: c.meses,
+    mesesRestantes: n.especialidade ? modeloEspecialidade(n.especialidade).meses : c.meses,
     mensalidade: n.mensalidade,
     financiamento: n.via === 'fies' ? 'fies' : n.via === 'prouni' ? 'prouni' : undefined,
     desempenho: 60,
     trancado: false,
     municipioId: n.municipioId,
-    area: areaDaPos(v, c)
+    area: areaDaPos(v, c),
+    ...(n.especialidade ? { especialidade: n.especialidade } : {})
   };
   if (n.via === 'fies') m.mensalidade = Math.round(c.mensalidade * economiaLocal(n.municipioId).custo);
   v.educacao.matricula = m;
@@ -677,7 +704,13 @@ export function nomeDaFormacao(c: Curso, area?: string): string {
 /** O nome do curso em andamento, com a área (para a tela e a biografia). */
 export function nomeDaMatricula(v: Vida, m: Matricula = v.educacao.matricula!): string {
   const c = curso(m.cursoId);
+  if (m.especialidade) return modeloEspecialidade(m.especialidade).residencia;
   return nomeDaFormacao(c, m.area ?? areaDaPos(v, c));
+}
+
+/** A especialidade de uma residência concluída (saves anteriores à escolha: clínica médica, a residência de base). */
+export function especialidadeDaResidencia(x: Vida['educacao']['concluidos'][number]): EspecialidadeMedica {
+  return x.especialidade ?? 'clinica';
 }
 
 function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
@@ -685,13 +718,14 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   { const inst = instituicaoAtual(v); if (inst) aoConcluir(v, inst.ambiente, inst.chave, m.area ?? c.area); }
   e.matricula = undefined;
   const area = m.area ?? areaDaPos(v, c) ?? c.area;
-  e.concluidos.push({ cursoId: c.id, nome: nomeDaFormacao(c, area), nivel: c.nivel, area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined, desempenho: Math.round(m.desempenho) });
+  const esp = m.especialidade ? modeloEspecialidade(m.especialidade) : undefined;
+  e.concluidos.push({ cursoId: c.id, nome: esp?.residencia ?? nomeDaFormacao(c, area), nivel: c.nivel, area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined, desempenho: Math.round(m.desempenho), ...(esp ? { especialidade: esp.id } : {}) });
   const nivelEsc: Partial<Record<NivelCurso, Escolaridade>> = { tecnico: 'tecnico', superior: 'superior', pos: 'pos', residencia: 'pos', mestrado: 'mestrado', doutorado: 'doutorado' };
   const esc = nivelEsc[c.nivel];
   if (esc) subir(v, esc);
   const g = v.eu.genero;
   const nomeF = nomeDaFormacao(c, area);
-  const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'livre' ? `Terminou o curso de qualificação: ${minusculaInicial(c.nome.replace(/^Curso de /, ''))}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? 'Terminou a residência médica' : (c.nivel === 'pos' ? `Concluiu a pós (${nomeF})` : `Concluiu o ${minusculaInicial(nomeF)}`);
+  const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'livre' ? `Terminou o curso de qualificação: ${minusculaInicial(c.nome.replace(/^Curso de /, ''))}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? `Terminou a residência médica${esp ? ` em ${esp.area}` : ''}` : (c.nivel === 'pos' ? `Concluiu a pós (${nomeF})` : `Concluiu o ${minusculaInicial(nomeF)}`);
   const voltou = idade(v) >= 30 && c.nivel !== 'pos' && c.nivel !== 'mestrado' && c.nivel !== 'doutorado' && c.nivel !== 'residencia';
   escrever(v, { texto: `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, relevancia: c.nivel === 'livre' ? 'biografia' : 'marco', tema: 'estudo', tom: 'bom' });
   marcar(v, 'formacao', `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, c.nivel === 'livre' ? 1 : c.nivel === 'superior' || c.nivel === 'tecnico' ? 3 : 2);

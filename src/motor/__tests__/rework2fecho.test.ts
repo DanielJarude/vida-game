@@ -132,7 +132,12 @@ describe('2 e 3. sem limite global de interações — e sem farm', () => {
       vincular(v, a, { origem: 'trabalho', proximidade: 30, convivio: ['trabalho'] });
       vincular(v, b, { origem: 'trabalho', proximidade: 30, convivio: ['trabalho'] });
       v = executar(v, { tipo: 'pessoa', pessoaId: a.id, interacao: 'flertar' }).vida;
-      if (!['interesse', 'saindo'].includes(v.vinculos[a.id].romance?.estagio ?? '')) continue;
+      // (FIX 3.1: o flerte que dá certo é só a pré-condição — e depende de sorteio e da vida sorteada. Se nenhum der
+      // certo, o estado "vendo no que dá" é montado direto: a regra testada é a de não começar outra.)
+      if (!['interesse', 'saindo'].includes(v.vinculos[a.id].romance?.estagio ?? '')) {
+        if (s < 739) continue;
+        v.vinculos[a.id].romance = { estagio: 'interesse', tEstagio: v.t, envolvimento: 60 }; // o flerte deste ano já está no registro do ano
+      }
       achou = true;
       expect(disponibilidade(v, { tipo: 'pessoa', pessoaId: b.id, interacao: 'flertar' }).motivo).toMatch(/vendo no que dá/);
     }

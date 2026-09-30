@@ -17,6 +17,7 @@
  * mudar de cargo. Não existe escada infinita.
  */
 
+import { areaMedica, faltaTituloPara, fatorRendaMedica } from './medicina';
 import { vivenciaQuePesa } from './formacao';
 import type { Rng } from '../rng';
 import { pesoDaSaudeNoTrabalho } from './saude';
@@ -185,6 +186,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   if (oc.habilidade && !oc.habilidade.ouFormacao && habilidade(v, oc.habilidade.dominio) < oc.habilidade.minimo) {
     return bloqueio('requisito', MOTIVO_HABILIDADE[oc.habilidade.dominio] ?? 'Ainda não sabe fazer isso bem o bastante.');
   }
+  { const titulo = faltaTituloPara(v, oc); if (titulo) return bloqueio('requisito', titulo); }
   if (oc.licenca && oc.licenca !== 'cnh' && !t.licencas.includes(oc.licenca)) {
     return bloqueio('requisito', `Exige registro profissional (${oc.licenca.toUpperCase()}).`);
   }
@@ -325,7 +327,7 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
     ocupacaoId: oc.id,
     empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(empregadoresPrivados(oc.trilha, oc.contrato === 'autonomo' || oc.contrato === 'informal')),
     contrato: oc.contrato,
-    salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2),
+    salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : Math.round(salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2) * fatorRendaMedica(v, oc) / 10) * 10,
     tInicio: v.t,
     tPosto: v.t,
     desempenho: 60,
@@ -340,6 +342,10 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   // A área escolhida vai junto para o próximo trabalho da mesma profissão (é do profissional, não do emprego).
   const antes = [...t.historico].reverse().find(h => h.especialidade && ocupacaoOuNula(h.ocupacaoId)?.trilha === oc.trilha);
   if (antes) e.especialidade = antes.especialidade;
+  // Médico: a área é a do título (a residência), não uma escolha do emprego; a faixa de renda vem junto.
+  const areaMed = areaMedica(v, oc);
+  if (areaMed) e.especialidade = areaMed;
+  if (fatorRendaMedica(v, oc) !== 1) e.faixa = fatorRendaMedica(v, oc);
   t.desempregadoDesde = undefined;
   if (primeiro) {
     marcarFato(v, 'primeiro_emprego');
@@ -565,7 +571,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
 /** O quanto um cargo costuma pagar no máximo, nesta cidade (negociar acima disso não cola). */
 export function tetoSalarial(e: Emprego): number {
   const oc = ocupacao(e.ocupacaoId);
-  return salarioLocal(oc, e.municipioId) * (oc.promocao === 'antiguidade' ? 1.5 : 1.45);
+  return salarioLocal(oc, e.municipioId) * (e.faixa ?? 1) * (oc.promocao === 'antiguidade' ? 1.5 : 1.45);
 }
 
 function ajustarSalario(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
@@ -582,7 +588,7 @@ function ajustarSalario(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
 }
 
 function ajustarSalarioCheio(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
-  const ref = salarioLocal(oc, e.municipioId);
+  const ref = salarioLocal(oc, e.municipioId) * (e.faixa ?? 1);
   const teto = tetoSalarial(e);
   const piso = ref * 0.85;
   if (e.contrato === 'informal') {
@@ -753,7 +759,9 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
   e.ocupacaoId = proximo.id;
   e.contrato = proximo.contrato === 'autonomo' && e.contrato !== 'autonomo' ? e.contrato : proximo.contrato;
   e.carga = proximo.carga;
-  e.salario = Math.max(Math.round(salarioAntigo * 1.1 / 10) * 10, salarioLocal(proximo, e.municipioId));
+  const faixa = fatorRendaMedica(v, proximo);
+  e.faixa = faixa !== 1 ? faixa : undefined;
+  e.salario = Math.max(Math.round(salarioAntigo * 1.1 / 10) * 10, Math.round(salarioLocal(proximo, e.municipioId) * faixa / 10) * 10);
   e.tPosto = v.t;
   const texto = oc.promocao === 'antiguidade'
     ? `${flex(ge(v), 'Promovido', 'Promovida')} a ${nomeOcupacao(v, proximo)}, depois de ${Math.round(anosNoPosto)} anos como ${anterior}.`

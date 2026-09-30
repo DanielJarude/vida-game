@@ -44,8 +44,10 @@ import { anoDe } from '../tempo';
 import { propor } from './compromissos';
 import { flex, ge } from '../texto';
 import { disponibilidadeCena, executarCena, type OqueCena } from './cena';
+import { disponibilidadePrepararResidencia, prepararResidencia } from './medicina';
+import { disponibilidadeAV, executarAV, type OqueAV } from './audiovisual';
 
-export type OquePerseguir = 'pedir_teste' | 'montar_grupo' | 'mostrar_trabalho' | 'foco_concurso' | 'bolsa_pesquisa' | 'estudo_dirigido' | 'preparar_pos' | 'treino_fundamentos' | OqueCena;
+export type OquePerseguir = 'pedir_teste' | 'montar_grupo' | 'mostrar_trabalho' | 'foco_concurso' | 'bolsa_pesquisa' | 'estudo_dirigido' | 'preparar_pos' | 'preparar_residencia' | 'treino_fundamentos' | OqueCena | OqueAV;
 export type AcaoPerseguirCmd = { tipo: 'perseguir'; oque: OquePerseguir; valor?: string };
 
 const FOCOS: FocoConcurso[] = ['policial', 'administrativo', 'fiscal', 'bancario', 'educacao', 'saude', 'academico'];
@@ -56,7 +58,8 @@ const MINIMO_GRUPO: Partial<Record<Dominio, number>> = { musica: 40, teatro: 38,
 /* ------------------------------------------------------------ Esporte */
 
 /** A janela de idade de uma base (a mesma em que a peneira chega sozinha, um ano mais larga para quem pede). */
-export const janelaDaBase = (d: Dominio): [number, number] => (d === 'futebol' ? [11, 17] : [12, 19]);
+// O tênis escolhe cedo (as academias formam desde os 10); o basquete aceita quem cresceu tarde.
+export const janelaDaBase = (d: Dominio): [number, number] => (d === 'futebol' ? [11, 17] : d === 'tenis' ? [10, 16] : [12, 19]);
 /** Quantos testes numa modalidade (a vida inteira): quem pede também não vive de peneira. */
 export const LIMITE_TESTES = 4;
 
@@ -330,8 +333,10 @@ export function disponibilidadePerseguir(v: Vida, a: AcaoPerseguirCmd): Veredito
     case 'bolsa_pesquisa': return podeBolsa(v);
     case 'estudo_dirigido': return podeEstudarMateria(v, a.valor);
     case 'preparar_pos': return podePrepararPos(v);
+    case 'preparar_residencia': return disponibilidadePrepararResidencia(v);
     case 'treino_fundamentos': return podeTreinarFundamentos(v, a.valor);
     case 'apresentar': case 'edital': case 'audicao': case 'trabalho_pequeno': return disponibilidadeCena(v, a.oque);
+    case 'aceitar_contrato': case 'negociar_contrato': case 'recusar_contrato': case 'romper_contrato': case 'buscar_agente': case 'deixar_agente': return disponibilidadeAV(v, a.oque, a.valor);
   }
   return bloqueio('impossivel', 'Não se aplica.');
 }
@@ -349,8 +354,10 @@ export function executarPerseguir(v: Vida, r: Rng, a: AcaoPerseguirCmd): { texto
     case 'bolsa_pesquisa': return pedirBolsa(v, r);
     case 'estudo_dirigido': return estudarMateria(v, r, a.valor as Materia);
     case 'preparar_pos': return prepararPos(v, r);
+    case 'preparar_residencia': return prepararResidencia(v, r);
     case 'treino_fundamentos': return treinarFundamentos(v, r, (a.valor as Dominio | undefined) ?? 'futebol');
     case 'apresentar': case 'edital': case 'audicao': case 'trabalho_pequeno': return executarCena(v, r, a.oque);
+    case 'aceitar_contrato': case 'negociar_contrato': case 'recusar_contrato': case 'romper_contrato': case 'buscar_agente': case 'deixar_agente': return executarAV(v, r, a.oque, a.valor);
   }
   return {};
 }

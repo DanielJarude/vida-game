@@ -26,6 +26,9 @@
  *   sentido.
  */
 
+import { especialidadeMedica } from './medicina';
+import { agenteDe, conflitoDoContrato, contaDoContrato, descricaoDoContrato, emProducao, propostasAbertas, redeAlcancavel } from './audiovisual';
+import { OCUPACOES_DE_ATLETA } from './esporte';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Acao } from '../acoes';
@@ -527,6 +530,8 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     if (v.trabalho.horasExtras) add({ id: 'sem_horas', rotulo: 'Desistir das horas extras deste ano', porque: cabecaCheia ? 'A cabeça anda cheia.' : undefined, acao: { tipo: 'horas_extras', parar: true }, peso: cabecaCheia ? 8 : 3 });
     else add({ id: 'horas', rotulo: 'Fazer horas extras este ano', porque: aperto ? 'O mês não fecha.' : 'Mais dinheiro, mais cansaço.', acao: { tipo: 'horas_extras' }, peso: aperto ? 6 : 1 });
     if (pedeFormacao) add({ id: 'qualificar', rotulo: 'Estudar para o próximo passo', porque: hz, ir: 'estudos', peso: 6 });
+    // O médico sem residência: o título (a especialidade) é o que abre as vagas de especialista e a faixa de renda.
+    if (oc.trilha === 'medicina' && !especialidadeMedica(v)) add({ id: 'residencia', rotulo: 'Estudar para a prova de residência', porque: 'A especialidade decide as vagas, a faixa de renda e o dia a dia; a residência se escolhe em Formação.', acao: { tipo: 'perseguir', oque: 'preparar_residencia' } as unknown as Acao, peso: 5 });
     const estagnado = (v.t - (e.tPosto ?? e.tInicio)) / 12 >= 5;
     add({ id: 'outra_vaga', rotulo: 'Procurar outra vaga', porque: climaDe(e) < 40 ? 'O clima por aqui não anda bom.' : estagnado ? 'Anos no mesmo lugar.' : undefined, ir: 'explorar', peso: climaDe(e) < 40 ? 6 : estagnado ? 4 : 1 });
   }
@@ -588,8 +593,9 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
       if (es.foco !== 'forcar') add({ id: 'forcar', rotulo: 'Treinar dobrado', porque: es.espaco === 'reserva' ? 'Para disputar a posição.' : 'Evolui mais — e machuca mais.', acao: P('foco', { valor: 'forcar' }), peso: es.espaco === 'reserva' ? 6 : 2 });
       if (es.foco !== 'preservar') add({ id: 'preservar', rotulo: 'Preservar o corpo', porque: es.lesoes >= 2 || i >= 30 ? 'O corpo tem prazo.' : undefined, acao: P('foco', { valor: 'preservar' }), peso: es.lesoes >= 2 || i >= 30 ? 6 : 1 });
       if (es.foco) add({ id: 'foco_normal', rotulo: 'Voltar ao treino de sempre', acao: P('foco', { valor: 'normal' }), peso: 1 });
-      if (es.espaco === 'reserva') add({ id: 'treinador', rotulo: 'Conversar com o treinador', porque: 'Mais um jogo no banco.', acao: P('treinador'), peso: 7 });
-      add({ id: 'mercado', rotulo: 'Pedir para ser negociado', porque: es.espaco === 'reserva' ? 'Em outro clube, dá para jogar.' : undefined, acao: P('mercado'), peso: es.espaco === 'reserva' ? 5 : 1 });
+      if (es.espaco === 'reserva' && es.modalidade !== 'tenis') add({ id: 'treinador', rotulo: 'Conversar com o treinador', porque: 'Mais um jogo no banco.', acao: P('treinador'), peso: 7 });
+      // O tenista não tem clube para negociá-lo: o circuito é o ranking (FIX 3.1).
+      if (es.modalidade !== 'tenis') add({ id: 'mercado', rotulo: 'Pedir para ser negociado', porque: es.espaco === 'reserva' ? 'Em outro clube, dá para jogar.' : undefined, acao: P('mercado'), peso: es.espaco === 'reserva' ? 5 : 1 });
       if (i >= 27 && !temFato(v, 'pos_carreira')) add({ id: 'pos', rotulo: 'Preparar a vida depois do esporte', porque: 'O corpo tem prazo — e ele muda com a posição.', acao: P('pos_carreira'), peso: i >= 30 ? 7 : 4 });
       add({ id: 'pendurar', rotulo: 'Encerrar a carreira', acao: P('pendurar'), peso: 0, saida: true });
     }
@@ -626,6 +632,20 @@ function acoesArtisticas(v: Vida, i: number): AcaoProfissional[] {
     { id: 'edital', rotulo: 'Inscrever um projeto num edital de cultura', porque: 'Verba para montar; o parecer diz o que pesou.', acao: Q('edital'), peso: 3 }
   ];
   if (teatro) out.push({ id: 'audicao', rotulo: 'Fazer um teste de elenco', porque: 'Teatro, curta, série: o tamanho do teste acompanha o currículo.', acao: Q('audicao'), peso: 4 });
+  // O audiovisual (FIX 3.1): as propostas que os testes trouxeram, a produção em andamento, o agente.
+  if (teatro) {
+    const AV = (oque: string, valor?: string): Acao => ({ tipo: 'perseguir', oque, valor } as unknown as Acao);
+    for (const c of propostasAbertas(v)) {
+      const conflito = conflitoDoContrato(v, c);
+      out.push({ id: `av_aceitar_${c.id}`, rotulo: `Aceitar: ${descricaoDoContrato(c)}`, porque: `${c.meses ? `${c.meses} ${c.meses === 1 ? 'mês' : 'meses'}${c.integral ? ', dedicação integral' : ''} · ` : ''}${contaDoContrato(c)}.${conflito ? ` Não cabe com o trabalho de ${conflito}: aceitar abre a pergunta do que fazer com ele.` : ''}`, acao: AV('aceitar_contrato', c.id), peso: 9 });
+      out.push({ id: `av_negociar_${c.id}`, rotulo: `Pedir mais pelo papel em "${c.titulo}"`, porque: agenteDe(v) ? 'O agente negocia; se a produção não subir, pode chamar outra pessoa.' : 'Sem agente, é você quem pede — e a produção pode chamar a segunda opção.', acao: AV('negociar_contrato', c.id), peso: 5 });
+      out.push({ id: `av_recusar_${c.id}`, rotulo: `Recusar o papel em "${c.titulo}"`, acao: AV('recusar_contrato', c.id), peso: 1 });
+    }
+    for (const c of emProducao(v)) out.push({ id: `av_romper_${c.id}`, rotulo: `Romper o contrato de "${c.titulo}"`, porque: `Em produção até ${anoDe(c.tFim ?? v.t)}. Romper custa multa (uns ${fmt(Math.round(c.bruto * 0.2 / 100) * 100)}) e o trabalho não entra no currículo.`, acao: AV('romper_contrato', c.id), peso: 0, saida: true });
+    const ag = agenteDe(v);
+    if (ag) out.push({ id: 'av_deixar_agente', rotulo: `Dispensar ${ag.nome} (agente)`, porque: `${['', 'agência pequena', 'agência média', 'agência grande'][ag.rede]}, ${Math.round(ag.comissao * 100)}% de comissão sobre os cachês. Sem agente, sem comissão — e sem os testes maiores.`, acao: AV('deixar_agente'), peso: 0, saida: true });
+    else out.push({ id: 'av_agente', rotulo: 'Procurar um agente', porque: `Uma agência abre testes maiores (TV, cinema), marca mais testes e negocia; cobra de 10% a 20% de cada cachê. Hoje o currículo alcança ${['', 'uma agência pequena', 'uma agência média', 'uma agência grande'][redeAlcancavel(v)]}.`, acao: AV('buscar_agente'), peso: 3 });
+  }
   if (i >= 14) out.push({ id: 'pequeno', rotulo: musica ? 'Tocar em festas e casamentos (cachê)' : 'Pegar um trabalho pequeno (publicidade, figuração)', porque: 'Paga pouco, mas paga — e entra no currículo.', acao: Q('trabalho_pequeno'), peso: 2 });
   return out;
 }
@@ -731,7 +751,7 @@ export { ocupacaoOuNula, ROTULO_TRILHA };
 /* ======================================================= Comando e execução */
 
 
-const ESPORTISTA = (v: Vida) => v.caminhos.esporte?.fase === 'profissional' && ['jogador_futebol', 'atleta'].includes(v.trabalho.atual?.ocupacaoId ?? '');
+const ESPORTISTA = (v: Vida) => v.caminhos.esporte?.fase === 'profissional' && OCUPACOES_DE_ATLETA.includes(v.trabalho.atual?.ocupacaoId ?? '');
 
 /** Quem poderia ser sócio: gente próxima, adulta, com renda. */
 export function candidatoASocio(v: Vida): Pessoa | undefined {

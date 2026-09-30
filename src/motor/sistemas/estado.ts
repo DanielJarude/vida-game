@@ -137,7 +137,7 @@ export const redeDeApoio = (v: Vida) => apoios(v).reduce((s, a) => s + a.peso, 0
  * relaxantes não apagam uma semana impossível.
  */
 export const BEM_ESTAR: Record<string, { humor?: number; cabeca?: number | ((nivel: number) => number) }> = {
-  futebol: { humor: 4, cabeca: -6 }, volei: { humor: 4, cabeca: -3 }, natacao: { cabeca: -6 }, atletismo: { cabeca: -3 }, lutas: { cabeca: -6 },
+  futebol: { humor: 4, cabeca: -6 }, volei: { humor: 4, cabeca: -3 }, natacao: { cabeca: -6 }, atletismo: { cabeca: -3 }, lutas: { cabeca: -6 }, basquete: { humor: 4, cabeca: -4 }, tenis: { cabeca: -5 },
   academia: { cabeca: -8 }, corrida: { cabeca: -7 }, musica: { humor: 4 }, danca: { humor: 4, cabeca: -2 }, teatro: { humor: 4 },
   desenho: { cabeca: -4 }, escrever: { cabeca: -3 }, fotografia: { humor: 2 }, leitura: { cabeca: -4 }, igreja: { humor: 4, cabeca: -6 },
   voluntariado: { humor: 5 }, sair_noite: { humor: 6 }, videogame: { humor: 4 }, terapia: { humor: 5, cabeca: -15 }, tempo_familia: { humor: 4, cabeca: -2 },

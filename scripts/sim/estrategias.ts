@@ -186,8 +186,13 @@ export function estrategia(nome: string): Estrategia {
         const { para, resto } = imoveisParaVoce(v, 'venda');
         const cands = [...para.map(x => x.item), ...resto].filter(o => !modeloMoradia(o.modeloId).rural)
           .sort((a, b) => Number(modeloMoradia(b.modeloId).quartos >= quartos) - Number(modeloMoradia(a.modeloId).quartos >= quartos) || (p.nome === 'gastador' ? b.preco - a.preco : a.preco - b.preco));
-        const cabe = cands.find(o => podeTentar(disponibilidade(v, { tipo: 'comprar_imovel', ofertaId: o.id, financiar: true, morar: true })));
-        if (cabe) out.push({ tipo: 'comprar_imovel', ofertaId: cabe.id, financiar: true, morar: true });
+        // (FIX 3.1: quem poupa guarda nas aplicações — a entrada sai de lá, como o jogador faz na tela com "tirar das
+        // aplicações e pagar". Antes, a estratégia só olhava a conta corrente e quem PODIA comprar nunca comprava.)
+        const compra = (o: { id: string }): Acao => ({ tipo: 'comprar_imovel', ofertaId: o.id, financiar: true, morar: true });
+        const direto = cands.find(o => podeTentar(disponibilidade(v, compra(o))));
+        const resgatando = direto ? undefined : cands.find(o => podeTentar(disponibilidade(v, { tipo: 'resgatar_e', acao: compra(o) } as Acao)));
+        if (direto) out.push(compra(direto));
+        else if (resgatando) out.push({ tipo: 'resgatar_e', acao: compra(resgatando) } as Acao);
       }
       if (i >= 30 && tenta(v, { tipo: 'plano_saude', ativo: true }) && !v.financas.planoDeSaude && (p.nome === 'ambicioso' || p.nome === 'familiar') && mensal.renda > 6000) out.push({ tipo: 'plano_saude', ativo: true });
       void idadePessoa;

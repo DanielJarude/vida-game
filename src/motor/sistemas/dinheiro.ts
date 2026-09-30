@@ -687,22 +687,32 @@ function cobrirRombo(v: Vida, r: Rng): void {
  * A casa de origem ajuda com o que ELA tem (a reserva e a folga de hoje, não
  * a classe em que você nasceu) — e a ajuda sai da reserva dela (`origem`).
  */
-function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
+export function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
   const daOrigem = new Set(responsaveis(v).map(x => x.p.id));
   const capOrigem = apoioPossivel(v, 'emergencia').ate;
+  // (FIX 3.1: a ajuda virava renda recorrente — mediana de 8 socorros até os 40, e 41% vindos de parentes que ganham
+  // menos de 1,5 salário mínimo. Agora: quem ajuda é quem tem FOLGA (a renda menos o próprio custo de vida), e cada
+  // socorro recente pesa na vontade do próximo — a família cobre o buraco de um ano ruim, não o de todo ano.)
+  const recentes = vinculosVivos(v).filter(x => v.t - (v.fatos[`ajudou_${x.p.id}`] ?? -999) < 60).length
+    + (v.origem.apoios ?? []).filter(a => a.sentido === 'recebeu' && v.t - a.t < 60).length;
   const candidatos = vinculosVivos(v)
     .filter(x => !x.p.especie && idadePessoa(v, x.p) >= 25 && x.p.renda > 0 && ['mae', 'pai', 'filho', 'irmao', 'avo'].includes(x.vin.parentesco ?? ''))
     .filter(x => v.t - (v.fatos[`ajudou_${x.p.id}`] ?? -999) >= 36)
+    // A casa de origem é UMA casa: se a mãe cobriu, o pai não cobre no ano seguinte (antes, os dois se revezavam).
+    .filter(x => !daOrigem.has(x.p.id) || [...daOrigem].every(id => v.t - (v.fatos[`ajudou_${id}`] ?? -999) >= 36))
     .map(x => {
       const pais = x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai' || x.vin.parentesco === 'avo';
-      const capacidade = daOrigem.has(x.p.id) ? capOrigem : x.p.renda * (pais ? 1.5 : 3);
+      // A folga de quem ajuda: o que sobra da renda depois do próprio custo de vida (o mínimo para viver e o grosso do resto).
+      const folga = Math.max(0, x.p.renda - (SALARIO_MINIMO * 1.2 + x.p.renda * 0.35));
+      const capacidade = daOrigem.has(x.p.id) ? capOrigem : folga * (pais ? 2 : 3);
       return { ...x, capacidade, vontade: (x.vin.proximidade - 35) / 50 + x.vin.confianca / 200 - x.vin.tensao / 100 + (pais ? 0.15 : 0) };
     })
     .filter(x => x.vontade > 0 && x.capacidade >= 500)
     .sort((a, b) => b.vontade * b.capacidade - a.vontade * a.capacidade);
   for (const x of candidatos) {
     if (falta <= 0) break;
-    if (!r.chance(Math.min(0.85, x.vontade))) continue;
+    // Cada socorro recente (cinco anos) diminui a chance do próximo: quem ajuda também se cansa.
+    if (!r.chance(Math.min(0.85, x.vontade) * Math.pow(0.6, recentes))) continue;
     const valor = Math.round(Math.min(falta, x.capacidade) / 100) * 100;
     if (valor <= 0) continue;
     v.financas.conta += valor;
@@ -725,6 +735,8 @@ function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
     escrever(v, { texto: textos[(vezes - 1) % textos.length], relevancia: vezes <= 2 ? 'cotidiano' : 'tecnico', tema: 'familia', pessoas: [x.p.id], tom: 'bom' });
     lembrarCom(v, x.p.id, x.vin.parentesco === 'filho' ? 'Ajudou você com dinheiro quando apertou.' : 'Ajudou com dinheiro num ano apertado.', 'apoio', 2);
     x.vin.proximidade = Math.min(100, x.vin.proximidade + 2);
+    // Ajudar de novo e de novo cansa: a partir da terceira vez em poucos anos, a relação sente.
+    if (recentes >= 2) x.vin.tensao = Math.min(100, x.vin.tensao + 3);
   }
   return Math.max(0, falta);
 }

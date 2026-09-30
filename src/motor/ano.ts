@@ -36,6 +36,7 @@ import { processarLesoes } from './sistemas/lesoes';
 import { processarSobrecarga } from './sistemas/sobrecarga';
 import { processarNotoriedade } from './sistemas/notoriedade';
 import { processarArte } from './sistemas/arte';
+import { processarAudiovisual } from './sistemas/audiovisual';
 import { processarNegocio } from './sistemas/negocio';
 import { processarOportunidades } from './sistemas/oportunidades';
 import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, recalcularConvivio } from './sistemas/social';
@@ -131,6 +132,7 @@ function viverAno(v: Vida, r: Rng): void {
   // A lesão volta (ou piora) depois da temporada que ela atravessou.
   processarLesoes(v, r);
   processarArte(v, r);
+  processarAudiovisual(v, r);
   processarProcessos(v, r);
   recalcularConvivio(v);
   conhecerGente(v, r);
