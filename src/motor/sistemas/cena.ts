@@ -36,7 +36,7 @@ import { nomePor } from './notoriedade';
 
 export const LINGUAGENS_DE_CENA: Dominio[] = ['teatro', 'musica', 'danca'];
 const TRILHA_DA: Partial<Record<Dominio, string[]>> = { teatro: ['cena'], musica: ['musica', 'orquestra'], danca: ['danca'] };
-export const LIMITE_CURRICULO = 40;
+export const LIMITE_CURRICULO = 80;
 
 /* ----------------------------------------------------------------- Quem */
 

@@ -13,7 +13,7 @@
 
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
-import type { Vida, VidaAcademica } from '../tipos';
+import type { ItemAcademico, Vida, VidaAcademica } from '../tipos';
 import { escrever, idade, lembrarCom } from '../nucleo';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { ROTULO_AREA, type AreaFormacao } from '../dados/cursos';
@@ -53,6 +53,47 @@ export function pesoDaProducao(v: Vida): number {
 
 const recente = (v: Vida, a: VidaAcademica, k: string, meses: number) => a.ultimas[k] !== undefined && v.t - a.ultimas[k] < meses;
 
+/* ------------------------------------------------------------ A obra, item por item */
+
+/**
+ * O que a carreira acadêmica produziu, item por item (generalização de
+ * carreiras): os contadores continuam sendo a conta (`publicacoes`,
+ * `orientacoes`...), e aqui fica o que foi feito — o título, onde, o impacto.
+ * Títulos e revistas são do universo desta vida.
+ */
+export function registrarProducao(v: Vida, item: Omit<ItemAcademico, 't'>): ItemAcademico {
+  const a = vidaAcademica(v);
+  const x: ItemAcademico = { t: v.t, ...item };
+  (a.producao ??= []).push(x);
+  if (a.producao.length > 60) {
+    // O que sai primeiro é o que menos marcou (o congresso antigo), nunca o prêmio ou o artigo de referência.
+    const k = a.producao.findIndex(y => y.tipo === 'congresso' || (y.impacto ?? 0) === 0);
+    a.producao.splice(k >= 0 ? k : 0, 1);
+  }
+  return x;
+}
+
+const REVISTA = ['numa revista pequena da área', 'numa revista nacional', 'numa revista internacional', 'numa revista de referência da área'];
+const ABERTURAS = (linha: string) => [`Um olhar novo sobre ${linha}`, `${linha.charAt(0).toUpperCase()}${linha.slice(1)} em perspectiva`, `O que os dados dizem sobre ${linha}`, `Revisitando ${linha}`, `Limites e caminhos em ${linha}`, `Evidências recentes em ${linha}`];
+const RECORTES = ['', ': um estudo de caso', ' no Brasil', ': uma revisão', ' ao longo de dez anos', ' em comunidades do interior', ': o que mudou', ' e as suas controvérsias'];
+/** Um título que esta obra ainda não tem (a combinação de abertura e recorte, sem repetir). */
+function tituloDeArtigo(v: Vida, r: Rng): string {
+  const usados = new Set((vidaAcademica(v).producao ?? []).map(x => x.titulo));
+  const linha = linhaDePesquisa(v);
+  const todos = ABERTURAS(linha).flatMap(a => RECORTES.map(c => `${a}${c}`));
+  const livres = todos.filter(t => !usados.has(t));
+  return r.pick(livres.length ? livres : todos);
+}
+
+/** Um artigo publicado: o impacto nasce da cabeça, do financiamento e do acaso (a maioria passa sem barulho). */
+export function publicarArtigo(v: Vida, origem: string, financiado = false): ItemAcademico {
+  const r = rngDe(v.id, 'artigo', v.t, vidaAcademica(v).producao?.length ?? 0);
+  // A maioria dos artigos é lida na área e pouco citada; a referência é rara mesmo para quem produz muito.
+  const q = (v.mente.cognicao - 50) / 60 + (financiado ? 0.3 : 0) + pesoDaProducao(v) * 0.4 + r.normal() * 0.45;
+  const impacto = (q >= 1.35 ? 3 : q >= 0.7 ? 2 : q >= 0 ? 1 : 0) as 0 | 1 | 2 | 3;
+  return registrarProducao(v, { tipo: 'artigo', titulo: tituloDeArtigo(v, r), detalhe: `${REVISTA[impacto]}${origem ? ` · ${origem}` : ''}`, impacto });
+}
+
 export function disponibilidadeAcademia(v: Vida, oque: OqueAcademia): Veredito {
   const e = empregoAcademico(v);
   if (!e) return bloqueio('impossivel', 'Isso é da vida acadêmica (docência e pesquisa).');
@@ -89,6 +130,7 @@ export function executarAcademia(v: Vida, r: Rng, oque: OqueAcademia): { texto: 
     case 'projeto': {
       const titulo = rngDe(v.id, 'projeto', v.t).pick([`Um estudo sobre ${linha}`, `Novos caminhos em ${linha}`, `${linha.charAt(0).toUpperCase() + linha.slice(1)}: o que os dados mostram`, `Práticas e desafios em ${linha}`]);
       a.projeto = { titulo, tInicio: v.t, tFim: v.t + 24 };
+      registrarProducao(v, { tipo: 'projeto', titulo, detalhe: 'projeto de pesquisa (dois anos)' });
       v.mente.estresse = clamp(v.mente.estresse + 3);
       const texto = `Começou um projeto de pesquisa: "${titulo}". Dois anos de trabalho — o resultado vem em artigos, se vier.`;
       escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', escolha: true });
@@ -108,8 +150,10 @@ export function executarAcademia(v: Vida, r: Rng, oque: OqueAcademia): { texto: 
     case 'colaborar': {
       const deu = r.chance(clamp(0.45 + (v.mente.cognicao - 50) / 150 + pesoDaProducao(v) * 0.2, 0.2, 0.8));
       a.colaboracoes += 1;
+      registrarProducao(v, { tipo: 'colaboracao', titulo: `Colaboração com um grupo de outra universidade`, detalhe: linha });
       if (deu) {
         a.publicacoes += 1;
+        publicarArtigo(v, 'em colaboração');
         e.feitos = (e.feitos ?? 0) + 1;
         const texto = `Entrou numa colaboração com um grupo de outra universidade: saiu um artigo em conjunto, em ${linha}.`;
         escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
@@ -124,6 +168,7 @@ export function executarAcademia(v: Vida, r: Rng, oque: OqueAcademia): { texto: 
       if (r.chance(chance)) {
         a.financiamentos += 1;
         a.projeto!.financiado = true;
+        registrarProducao(v, { tipo: 'financiamento', titulo: a.projeto!.titulo, detalhe: 'edital de pesquisa: equipamento, bolsas, congressos' });
         e.feitos = (e.feitos ?? 0) + 1;
         const texto = `O projeto "${a.projeto!.titulo}" foi aprovado num edital de pesquisa: verba para equipamento, bolsa para alunos, viagens a congressos.`;
         escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
@@ -148,6 +193,7 @@ export function processarAcademia(v: Vida): void {
     const n = Math.max(0, Math.round((v.mente.cognicao - 40) / 25 + (a.projeto.financiado ? 1.2 : 0) + r.normal() * 0.8));
     a.projetos += 1;
     a.publicacoes += n;
+    for (let k = 0; k < n; k++) publicarArtigo(v, `do projeto "${a.projeto.titulo}"`, a.projeto.financiado);
     if (e) e.feitos = (e.feitos ?? 0) + (n > 0 ? 1 : 0);
     escrever(v, { texto: n > 0 ? `O projeto "${a.projeto.titulo}" terminou em ${n} ${n === 1 ? 'artigo publicado' : 'artigos publicados'}.` : `O projeto "${a.projeto.titulo}" terminou sem artigo publicado: os resultados não fecharam.`, relevancia: n > 0 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: n > 0 ? 'bom' : 'ruim' });
     a.projeto = undefined;
@@ -162,7 +208,8 @@ export function processarAcademia(v: Vida): void {
       a.orientandos = a.orientandos.filter(x => x !== id);
       if (r.chance(0.85)) {
         a.orientacoes += 1;
-        a.publicacoes += r.chance(0.5) ? 1 : 0;
+        registrarProducao(v, { tipo: 'orientacao', titulo: `O mestrado de ${p.nome}`, detalhe: linhaDePesquisa(v) });
+        if (r.chance(0.5)) { a.publicacoes += 1; publicarArtigo(v, `com ${p.nome}`); }
         p.ocupacao = p.genero === 'feminino' ? 'mestra, pesquisadora' : 'mestre, pesquisador';
         p.formacao = `Mestrado em ${linhaDePesquisa(v)}`;
         if (e) e.feitos = (e.feitos ?? 0) + 1;
@@ -174,7 +221,31 @@ export function processarAcademia(v: Vida): void {
       }
     }
   }
+  // O congresso: quem tem pesquisa em andamento apresenta (nem todo ano).
+  if (e && a.projeto && r.chance(0.35)) registrarProducao(v, { tipo: 'congresso', titulo: `"${a.projeto.titulo}"`, detalhe: r.pick(['um congresso nacional da área', 'um congresso internacional', 'um encontro regional de pesquisa']) });
+  // O livro: para quem acumulou obra (e tem o que dizer em fôlego longo).
+  if (e && a.publicacoes >= 10 && !(a.producao ?? []).some(x => x.tipo === 'livro') && r.chance(0.08)) {
+    const titulo = `${linhaDePesquisa(v).charAt(0).toUpperCase()}${linhaDePesquisa(v).slice(1)}: uma introdução crítica`;
+    registrarProducao(v, { tipo: 'livro', titulo, detalhe: 'editora universitária', impacto: 2 });
+    escrever(v, { texto: `Publicou um livro: "${titulo}", por uma editora universitária.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+    marcar(v, 'conquista', `Publicou o livro "${titulo}".`, 2, { ocupacaoId: e.ocupacaoId });
+  }
+  // O reconhecimento: raro, e só para quem tem obra de referência — nunca pelo cargo.
+  const referencia = (a.producao ?? []).filter(x => x.tipo === 'artigo' && x.impacto === 3).length;
+  if (e && referencia >= 1 && pesoDaProducao(v) >= 0.55 && !(a.producao ?? []).some(x => x.tipo === 'premio') && r.chance(0.12 + referencia * 0.04)) {
+    registrarProducao(v, { tipo: 'premio', titulo: 'Prêmio de pesquisa da sociedade científica da área', detalhe: linhaDePesquisa(v), impacto: 3 });
+    const texto = `Recebeu o prêmio de pesquisa da sociedade científica da área, pelo trabalho em ${linhaDePesquisa(v)}.`;
+    escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+    marcar(v, 'conquista', texto, 3, { ocupacaoId: e.ocupacaoId });
+  }
   void idade; void ocupacaoOuNula;
+}
+
+/** A obra acadêmica em leitura (o histórico e o legado): o que se fez, do mais marcante ao corriqueiro. */
+export function obraAcademica(v: Vida): { artigos: ItemAcademico[]; livros: ItemAcademico[]; orientacoes: ItemAcademico[]; financiamentos: ItemAcademico[]; congressos: ItemAcademico[]; premios: ItemAcademico[]; projetos: ItemAcademico[] } {
+  const p = v.caminhos.academia?.producao ?? [];
+  const de = (t: ItemAcademico['tipo']) => p.filter(x => x.tipo === t);
+  return { artigos: de('artigo').sort((a, b) => (b.impacto ?? 0) - (a.impacto ?? 0) || b.t - a.t), livros: de('livro'), orientacoes: de('orientacao'), financiamentos: de('financiamento'), congressos: de('congresso'), premios: de('premio'), projetos: de('projeto') };
 }
 
 /** Em palavras (para a tela). */

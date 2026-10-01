@@ -1065,3 +1065,18 @@ button.agora-sinal:hover { color: var(--text-primary); }
   .trajetoria { flex-direction: column; gap: 2px; }
   .trajetoria__estado { text-align: left; }
 }
+
+/* Generalização de carreiras e legado: "O que você construiu" — as trajetórias da vida, com o histórico revelado aos poucos. */
+.trajetorias-vida { margin: var(--space-5) 0; }
+.trajetorias-vida__lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.trajetoria-vida { border-left: 2px solid var(--rule); padding: 0 0 0 var(--space-3); min-width: 0; }
+.trajetoria-vida--ativa { border-left-color: var(--text-secondary); }
+.trajetoria-vida__cabeca { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: baseline; }
+.trajetoria-vida__titulo { font-family: var(--font-serif); font-size: 1.12rem; font-weight: 500; }
+.trajetoria-vida__periodo { font-size: var(--type-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.trajetoria-vida__resumo { margin: var(--space-1) 0; font-family: var(--font-serif); color: var(--text-secondary); overflow-wrap: anywhere; }
+.trajetoria-vida__marcos { margin: var(--space-1) 0 var(--space-2); padding-left: 1.1em; color: var(--text-secondary); overflow-wrap: anywhere; }
+.trajetoria-vida__marcos li { margin: 2px 0; }
+.trajetoria-vida__abrir { font-size: var(--type-caption); }
+.trajetoria-vida__detalhe { margin-top: var(--space-2); min-width: 0; }
+.trajetoria-vida__detalhe .marcos-caminho li span { overflow-wrap: anywhere; }

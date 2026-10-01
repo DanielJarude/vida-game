@@ -37,7 +37,7 @@ import { ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { ESCOLA, ESPECIALIDADES, GUARNICOES, NOME_FORCA, SIGLA_DA } from '../dados/forcas';
 import { municipio, pertoDaAgua } from '../dados/lugares';
 import { marcar } from './marcas';
-import { contratar, encerrarEmprego, nomeOcupacao, salarioLiquidoAtual, type ProximoPasso, type Requisito } from './trabalho';
+import { contratar, encerrarEmprego, nomeOcupacao, registrarPosto, salarioLiquidoAtual, type ProximoPasso, type Requisito } from './trabalho';
 import { salarioLocal } from './renda';
 import { praticar } from './frentes';
 import { anoDe } from '../tempo';
@@ -135,6 +135,8 @@ export function aoEntrarNasForcas(v: Vida, r: Rng, oc: Ocupacao): void {
   };
   // Tempo de serviço de temporário conta para a carreira (a data de ingresso é a primeira).
   if (atual && quadro !== 'temporario') v.caminhos.militar.tIngresso = atual.tIngresso;
+  v.caminhos.militar.guarnicoes = [...(atual?.guarnicoes ?? [])];
+  registrarGuarnicao(v.caminhos.militar, guarnicao, v.t);
   marcarFato(v, `serviu_${forca}`);
   // A formação é longe: internato na escola.
   if (oc.formacaoInicial && guarnicao !== v.moradia.municipioId && idade(v) < 30) v.fatos['mil_mudar_para'] = MUNIC_INDICE(guarnicao);
@@ -151,6 +153,14 @@ export function guarnicaoPerto(forca: Forca, municipioId: string): string | unde
 export const indiceDaGuarnicao = (id: string) => MUNIC_INDICE(id);
 export const MUNIC_POR_INDICE = (n: number) => [...GUARNICOES.exercito, ...GUARNICOES.marinha, ...GUARNICOES.aeronautica, 'juiz-de-fora-mg', 'volta-redonda-rj', 'sao-jose-dos-campos-sp', 'rio-de-janeiro-rj', 'sao-paulo-sp'][n];
 
+/** A guarnição entra na história da carreira (a mesma cidade seguida não se repete). */
+export function registrarGuarnicao(m: CarreiraMilitar, municipioId: string, t: number): void {
+  const lista = (m.guarnicoes ??= []);
+  if (lista[lista.length - 1]?.municipioId === municipioId) return;
+  lista.push({ municipioId, t });
+  if (lista.length > 16) lista.splice(0, lista.length - 16);
+}
+
 /** Fim da formação: a especialidade (decisão) e a primeira guarnição. */
 export function aoFormarNasForcas(v: Vida, r: Rng, destino: Ocupacao): void {
   const m = v.caminhos.militar;
@@ -162,6 +172,7 @@ export function aoFormarNasForcas(v: Vida, r: Rng, destino: Ocupacao): void {
   const primeira = lista[Math.floor(r.next() * lista.length)];
   m.guarnicao = primeira;
   m.tGuarnicao = v.t;
+  registrarGuarnicao(m, primeira, v.t);
   if (primeira !== v.moradia.municipioId) v.fatos['mil_mudar_para'] = MUNIC_INDICE(primeira);
 }
 
@@ -258,6 +269,7 @@ export function processarMilitar(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): voi
 
 function promoverMilitar(v: Vida, e: Emprego, oc: Ocupacao, proximo: Ocupacao, como: string): void {
   const antes = nomeOcupacao(v, oc);
+  registrarPosto(v, e);
   e.ocupacaoId = proximo.id;
   e.tPosto = v.t;
   e.salario = Math.max(Math.round(e.salario * 1.1 / 10) * 10, salarioLocal(proximo, e.municipioId));
@@ -296,6 +308,7 @@ export function transferir(v: Vida, destino: string, comFamilia: boolean, funcio
   m.guarnicao = destino;
   m.tGuarnicao = v.t;
   m.transferencias += 1;
+  registrarGuarnicao(m, destino, v.t);
   if (comFamilia && par && par.p.renda > 0) {
     // A carreira de quem acompanha recomeça do zero na cidade nova.
     par.p.renda = Math.round(par.p.renda * 0.5);

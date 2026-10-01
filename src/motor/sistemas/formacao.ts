@@ -237,7 +237,22 @@ export function anoDaAtividade(v: Vida, id: string, nivel: number): void {
   const i = idade(v);
   const viv = registrarVivencia(v, tipo);
   const g = v.eu.tratamento ?? v.eu.genero;
-  // As atividades com história interna (o time, a olimpíada, o projeto, a robótica, o reforço, o xadrez): `arcos`.
+  // A iniciação tem orientador: é quem aceitou você no projeto (antes do arco, que conta a história da pesquisa).
+  if (id === 'iniciacao') {
+    const c = cursoOuNulo(cursoAtualId(v) ?? '');
+    if (c?.area) viv.area = v.educacao.matricula?.area ?? c.area;
+    if (!viv.pessoaId) {
+      const orient = professorDe(v, inst) ?? criarProfessor(v, inst, 'orientador');
+      if (orient) {
+        viv.pessoaId = orient.id;
+        const vin = v.vinculos[orient.id];
+        if (vin?.formacao) vin.formacao.papel = 'orientador';
+        lembrarCom(v, orient.id, 'Começou a orientar você na iniciação científica.', 'inicio', 2);
+        escrever(v, { texto: `Começou uma iniciação científica, com orientação ${flex(orient.genero, 'do professor', 'da professora', 'de professore')} ${orient.nome}.`, relevancia: 'biografia', tema: 'estudo', tom: 'bom', pessoas: [orient.id] });
+      }
+    }
+  }
+  // As atividades com história interna (o time, a olimpíada, o projeto, a robótica, o reforço, o xadrez — e as da universidade): `arcos`.
   if (anoDoArco(v, id, viv, nivel, r)) return;
   switch (id) {
     case 'projeto_tecnico': {

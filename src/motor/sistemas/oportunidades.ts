@@ -319,8 +319,9 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       const lugar = o.municipioId ?? v.moradia.municipioId;
       v.fatos['peneira_mod'] = MODS.indexOf(d);
       v.fatos['peneira_lugar'] = municipioIndex(lugar);
-      const clube = o.titulo.replace(/^(Peneira|Seletiva) (no|na) /, '').replace(/^Seletiva: /, '');
-      v.caminhos.processo = { tipo: 'peneira', dominio: d, municipioId: lugar, bonus: 0, via: o.pessoaId ? 'indicacao' : 'oportunidade', etapas: [], atual: 0, lugar: clube };
+      const clube = o.titulo.replace(/^(Peneira|Seletiva|Teste) (no|na) /, '').replace(/^Seletiva: /, '');
+      // O teste do time de cima (a rota amadora) é avaliado contra o elenco adulto de um clube pequeno, não contra a base.
+      v.caminhos.processo = { tipo: 'peneira', dominio: d, municipioId: lugar, bonus: 0, via: o.atividade === 'amador' ? 'amador' : o.pessoaId ? 'indicacao' : 'oportunidade', etapas: [], atual: 0, lugar: clube };
       return { texto: '', decisao: 'esp_peneira' };
     }
     case 'convite': {

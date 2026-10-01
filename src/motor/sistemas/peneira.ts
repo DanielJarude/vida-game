@@ -108,16 +108,19 @@ export interface ResultadoPeneira {
  * abordagens ajustam; a idade fora do melhor momento e a concorrência da
  * cidade pesam; o dia (acaso) decide o que está na margem.
  */
-export function avaliarPeneira(v: Vida, r: Rng, d: Dominio, municipioId: string, notas: { comeco?: string; final?: string }, bonus: number): ResultadoPeneira {
+export function avaliarPeneira(v: Vida, r: Rng, d: Dominio, municipioId: string, notas: { comeco?: string; final?: string }, bonus: number, amador = false): ResultadoPeneira {
   // A tentativa de agora já foi contada: as anteriores são as outras.
   const a = aspectos(v, d, Math.max(0, (v.fatos[`peneiras_${d}`] ?? 1) - 1));
+  // O teste do time de cima (rota amadora): a régua é a técnica de quem joga o estadual (a barra da divisão),
+  // e a idade não é desconto — o clube pequeno quer quem joga hoje. Não há bônus por ter começado tarde.
+  if (amador) a.tecnica = (a.h - 74) / 14;
   // Correr em todas cobra a conta no fim de quem não tem fôlego.
   const fisico = a.fisico - (notas.comeco === 'intensidade' && a.forma < 60 ? 0.25 : 0);
   const ajustes = ETAPAS_PENEIRA.map(e => e.opcoes.find(o => o.id === notas[e.id])?.ajuste(a) ?? 0);
   const abordagem = ajustes.reduce((s, x) => s + x, 0) / ajustes.length;
   const i = idade(v);
-  const idadeAjuste = futebol(d) ? (i <= 12 ? -0.05 : i >= 17 ? -0.15 : 0) : i >= 18 ? -0.1 : 0;
-  const concorrencia = estruturaEsportiva(municipioId) >= 2 ? 0.06 : 0;
+  const idadeAjuste = amador ? (i >= 24 ? -0.1 : 0) : futebol(d) ? (i <= 12 ? -0.05 : i >= 17 ? -0.15 : 0) : i >= 18 ? -0.1 : 0;
+  const concorrencia = !amador && estruturaEsportiva(municipioId) >= 2 ? 0.06 : 0;
   const dia = r.normal() * 0.14;
   const pontos = 0.5 * a.tecnica + 0.14 * fisico + 0.14 * a.leitura + 0.06 * a.nervos + 0.18 * abordagem + idadeAjuste + bonus + dia;
   // REWORK 2: o limiar era 0,28 com o físico inflado (quem jogava chegava a forma 100). Com o condicionamento

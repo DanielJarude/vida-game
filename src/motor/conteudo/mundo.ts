@@ -4,6 +4,7 @@
  */
 
 import { OCUPACOES_DE_ATLETA } from '../sistemas/esporte';
+import { perfilDe } from '../sistemas/perfisEsportivos';
 import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
@@ -27,7 +28,12 @@ function textoDeRecessao(c: Ctx): string {
   if (v.trabalho.aposentadoria) return `${abertura}. A aposentadoria não mudou, mas o supermercado sim: a lista do mês encolheu.`;
   // A crise chega a cada trabalho do jeito DELE (FIX pós-REWORK 2: o "corte nas reuniões" de escritório vazava para o jogador de futebol).
   const esp = v.caminhos.esporte;
-  if (e && esp?.fase === 'profissional' && OCUPACOES_DE_ATLETA.includes(e.ocupacaoId)) return `${abertura}. No clube, o patrocínio master não renovou e a diretoria avisou: ninguém contrata na próxima janela, e os salários podem atrasar.`;
+  if (e && esp?.fase === 'profissional' && OCUPACOES_DE_ATLETA.includes(e.ocupacaoId)) {
+    const estrutura = perfilDe(esp.modalidade).estrutura;
+    if (estrutura === 'circuito') return `${abertura}. No circuito, os patrocinadores encolheram: os torneios menores cortaram premiação, e cada viagem passou a pesar mais na conta.`;
+    if (estrutura === 'equipe') return `${abertura}. Na equipe, o patrocínio não renovou e a coordenação avisou: a ajuda de custo pode atrasar, e a próxima viagem de competição está em dúvida.`;
+    return `${abertura}. No clube, o patrocínio master não renovou e a diretoria avisou: ninguém contrata na próxima janela, e os salários podem atrasar.`;
+  }
   if (e?.contrato === 'eletivo') return `${abertura}. No mandato, a arrecadação caiu e a cobrança subiu: cada obra prometida virou pergunta sem resposta.`;
   const n = v.caminhos.negocio;
   if (n && n.estado !== 'fechado' && (!e || e.ocupacaoId === n.ocupacaoId)) return `${abertura}. Em ${n.nome}, o movimento caiu primeiro e os fornecedores reajustaram depois.`;

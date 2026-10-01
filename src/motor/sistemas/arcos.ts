@@ -215,7 +215,156 @@ const XADREZ: ModeloDeArco = {
   }
 };
 
-const ARCOS: Partial<Record<string, ModeloDeArco>> = { time_escola: TIME, olimpiada: OLIMPIADA, projeto_escola: PROJETO, clube_ciencias: CIENCIAS, reforco: REFORCO, xadrez: XADREZ };
+/* ============================================================ Universidade (generalização de carreiras) */
+
+/**
+ * A universidade como experiência vivida: nem todo aluno participa de tudo, e
+ * cada atividade tem a sua história. Os "feitos" que já tinham consequência
+ * depois continuam com o mesmo nome (a iniciação que pesa no mestrado e nas
+ * vagas de pesquisa; a coordenação do centro acadêmico que abre a porta da
+ * política estudantil; a empresa júnior e a monitoria no currículo).
+ */
+function marcoUni(v: Vida, x: Vivencia, texto: string, bio = false, peso: 1 | 2 | 3 = 2, dominio?: Dominio): void {
+  (x.marcos ??= []).push({ t: v.t, texto });
+  if (x.marcos.length > 10) x.marcos.splice(0, x.marcos.length - 10);
+  escrever(v, { texto, relevancia: bio ? 'biografia' : 'cotidiano', tema: 'estudo', tom: 'bom' });
+  if (bio) marcar(v, 'vivencia', texto, peso, dominio ? { dominio } : {});
+}
+const cognicao = (v: Vida) => v.mente.cognicao;
+
+const INICIACAO: ModeloDeArco = {
+  etapas: { leitura: 'lendo e aprendendo o método', coleta: 'na coleta de dados', resultados: 'com os primeiros resultados', sem_resultado: 'o experimento não deu o que se esperava', congresso: 'apresentou num congresso', artigo: 'com um artigo publicado' },
+  ano: (v, x, nivel, r) => {
+    if (!x.etapa) { etapa(x, 'leitura'); x.papel = 'bolsista'; return; }
+    const forca = (cognicao(v) - 45) / 60 + (nivel - 1) * 0.12 + Math.min(0.2, x.anos * 0.05) + r.normal() * 0.25;
+    if (x.etapa === 'leitura') { etapa(x, 'coleta'); marcoUni(v, x, 'Na iniciação, saiu das leituras para a bancada: a coleta de dados começou.'); return; }
+    if (x.etapa === 'coleta' || x.etapa === 'sem_resultado') {
+      if (forca >= 0.25) { etapa(x, 'resultados'); marcoUni(v, x, 'A iniciação deu os primeiros resultados: um gráfico que a orientação mostrou na reunião do grupo.'); }
+      else if (x.etapa === 'coleta' && forca < -0.1) { etapa(x, 'sem_resultado'); marcoUni(v, x, 'O experimento da iniciação não deu o que se esperava. A orientação disse que isso também é pesquisa.'); }
+      return;
+    }
+    if (x.etapa === 'resultados' && forca >= 0.2) {
+      etapa(x, 'congresso');
+      x.feito ??= 'um trabalho apresentado num congresso';
+      marcoUni(v, x, 'Apresentou o trabalho da iniciação num congresso, com a voz tremendo nos primeiros minutos.', true, 2);
+      marcar(v, 'conquista', `Iniciação científica: ${x.feito}.`, 2);
+      return;
+    }
+    if (x.etapa === 'congresso' && forca >= 0.45) {
+      etapa(x, 'artigo');
+      x.feito = 'um artigo publicado com a orientadora';
+      marcoUni(v, x, 'Saiu o primeiro artigo com o seu nome — o último da lista de autores, mas o seu.', true, 2);
+      marcar(v, 'conquista', `Iniciação científica: ${x.feito}.`, 2);
+    }
+  }
+};
+
+/** A modalidade que a pessoa joga (para a atlética): a mais treinada entre as que se jogam em equipe universitária. */
+const MODALIDADES_UNI: Dominio[] = ['futebol', 'volei', 'basquete', 'natacao', 'atletismo', 'lutas', 'tenis'];
+const ATLETICA: ModeloDeArco = {
+  etapas: { treinos: 'treinando com a atlética', equipe: 'na equipe da atlética', jogos: 'nos jogos universitários', titulo: 'campeão dos jogos universitários', diretoria: 'na diretoria da atlética' },
+  ano: (v, x, nivel, r) => {
+    const d = [...MODALIDADES_UNI].sort((a, b) => habilidade(v, b) - habilidade(v, a))[0];
+    const h = habilidade(v, d);
+    // Treinar pela atlética também é treino (pouco, mas conta): o esporte universitário mantém o corpo e a técnica.
+    praticar(v, r, d, 0.4 + (nivel - 1) * 0.2, 1);
+    v.corpo.forma = clamp(v.corpo.forma + 1);
+    if (!x.etapa) { etapa(x, 'treinos'); x.papel = 'nos treinos'; x.area = x.area ?? d; return; }
+    if (x.etapa === 'treinos' && h + r.normal() * 8 >= 38) { etapa(x, 'equipe'); x.papel = 'da equipe'; marcoUni(v, x, `Entrou para a equipe de ${NOME_MOD_UNI[d] ?? d} da atlética.`); return; }
+    if (x.etapa === 'equipe' || x.etapa === 'jogos' || x.etapa === 'titulo') {
+      etapa(x, x.etapa === 'titulo' ? 'titulo' : 'jogos');
+      const forca = r.next() + (h - 50) / 200;
+      if (forca > 0.9) { const primeira = !x.feito; x.feito = flex(g(v), 'campeão', 'campeã', 'campeão') + ' dos jogos universitários'; etapa(x, 'titulo'); marcoUni(v, x, `A equipe da atlética ganhou os jogos universitários${primeira ? ' — e a festa durou três dias' : ' de novo'}.`, primeira, 2, d); }
+      else if (forca > 0.7) marcoUni(v, x, 'A atlética chegou à final dos jogos universitários e perdeu nos detalhes.');
+    }
+    const lider = Math.max(habilidade(v, 'lideranca'), 20 + v.personalidade.tracos.sociabilidade / 3);
+    if (x.anos >= 2 && x.etapa !== 'diretoria' && lider >= 40 && r.chance(0.25)) {
+      etapa(x, 'diretoria'); x.papel = 'da diretoria';
+      x.feito ??= 'a diretoria da atlética';
+      praticar(v, r, 'lideranca', 0.6, 1.1);
+      marcoUni(v, x, 'Entrou para a diretoria da atlética: calendário de treinos, festa, patrocínio de padaria.', true, 1, 'lideranca');
+    }
+  }
+};
+const NOME_MOD_UNI: Partial<Record<Dominio, string>> = { futebol: 'futebol', volei: 'vôlei', basquete: 'basquete', natacao: 'natação', atletismo: 'atletismo', lutas: 'luta', tenis: 'tênis' };
+
+const CENTRO_ACADEMICO: ModeloDeArco = {
+  etapas: { membro: 'nas reuniões', chapa: 'numa chapa', coordenacao: 'na coordenação', mobilizacao: 'liderou uma mobilização' },
+  ano: (v, x, nivel, r) => {
+    const lider = habilidade(v, 'lideranca');
+    const social = v.personalidade.tracos.sociabilidade;
+    praticar(v, r, 'lideranca', 0.35 + (nivel - 1) * 0.15, 1);
+    if (!x.etapa) { etapa(x, 'membro'); x.papel = 'participante'; return; }
+    if (x.etapa === 'membro' && (lider >= 35 || social >= 30) && r.chance(0.45)) { etapa(x, 'chapa'); x.papel = 'da chapa'; marcoUni(v, x, 'Entrou numa chapa para a eleição do centro acadêmico.'); return; }
+    if (x.etapa === 'chapa') {
+      if (lider + social / 4 + r.normal() * 12 >= 45) {
+        etapa(x, 'coordenacao'); x.papel = 'da coordenação';
+        x.feito = 'a coordenação do centro acadêmico';
+        marcarFato(v, 'gremio_eleito');
+        marcoUni(v, x, `${flex(g(v), 'Eleito', 'Eleita', 'Eleite')} para a coordenação do centro acadêmico.`, true, 2, 'lideranca');
+        marcar(v, 'conquista', 'Coordenação do centro acadêmico.', 2, { dominio: 'lideranca' });
+      } else { etapa(x, 'membro'); marcoUni(v, x, 'A chapa perdeu a eleição do centro acadêmico por poucos votos.'); }
+      return;
+    }
+    if (x.etapa === 'coordenacao' && r.chance(0.35)) {
+      etapa(x, 'mobilizacao');
+      const pauta = r.pick(['a reabertura do restaurante universitário', 'a reforma da biblioteca', 'o ônibus noturno até o campus', 'a volta das bolsas cortadas']);
+      x.feito = `a mobilização por ${pauta}`;
+      marcoUni(v, x, `Liderou a mobilização dos estudantes por ${pauta} — e a reitoria cedeu.`, true, 2, 'lideranca');
+    }
+  }
+};
+
+const EXTENSAO: ModeloDeArco = {
+  etapas: { participante: 'participando', frente: 'cuidando de uma frente', comunidade: 'o projeto chegou à comunidade', coordenacao: 'coordenando o projeto' },
+  ano: (v, x, nivel, r) => {
+    praticar(v, r, 'comunidade', 0.4 + (nivel - 1) * 0.15, 1);
+    if (!x.etapa) { etapa(x, 'participante'); x.papel = 'participante'; return; }
+    if (x.etapa === 'participante' && r.chance(0.5 + (nivel - 1) * 0.1)) { etapa(x, 'frente'); x.papel = 'responsável por uma frente'; marcoUni(v, x, 'No projeto de extensão, ficou responsável por uma frente de trabalho.'); return; }
+    if (x.etapa === 'frente' && r.chance(0.4)) {
+      etapa(x, 'comunidade');
+      x.feito = 'um projeto de extensão que chegou à comunidade';
+      marcoUni(v, x, `O projeto de extensão ${r.pick(['levou atendimento a um bairro sem posto', 'abriu um cursinho popular no bairro', 'assessorou uma cooperativa da periferia', 'montou oficinas numa escola pública'])}. Gente de fora da universidade passou a contar com vocês.`, true, 2, 'comunidade');
+      return;
+    }
+    if (x.etapa === 'comunidade' && x.anos >= 3 && r.chance(0.3)) { etapa(x, 'coordenacao'); x.papel = 'coordenação'; marcoUni(v, x, 'Passou a coordenar o projeto de extensão: os calouros chegam e perguntam para você.'); }
+  }
+};
+
+const EMPRESA_JUNIOR: ModeloDeArco = {
+  etapas: { trainee: 'trainee', consultor: 'consultor', projeto: 'entregou projeto a cliente', diretoria: 'na diretoria' },
+  ano: (v, x, nivel, r) => {
+    if (!x.etapa) { etapa(x, 'trainee'); x.papel = 'trainee'; return; }
+    if (x.etapa === 'trainee') { etapa(x, 'consultor'); x.papel = 'consultor'; marcoUni(v, x, 'Passou do processo de trainee: agora é consultor da empresa júnior.'.replace('consultor da', `${flex(g(v), 'consultor', 'consultora', 'consultore')} da`)); return; }
+    if (x.etapa === 'consultor' && r.chance(0.35 + (nivel - 1) * 0.1)) {
+      etapa(x, 'projeto');
+      x.feito = 'o primeiro projeto para um cliente de verdade';
+      marcoUni(v, x, 'Na empresa júnior, entregou o primeiro projeto para um cliente de verdade — com prazo, reunião e reclamação.');
+      return;
+    }
+    if (x.etapa === 'projeto' && x.anos >= 2 && habilidade(v, 'lideranca') + r.normal() * 10 >= 38) {
+      etapa(x, 'diretoria'); x.papel = 'diretoria';
+      x.feito = 'a diretoria da empresa júnior';
+      praticar(v, r, 'lideranca', 0.6, 1.1);
+      marcoUni(v, x, 'Assumiu uma diretoria da empresa júnior: meta, equipe, cliente que atrasa pagamento.', true, 2, 'lideranca');
+    }
+  }
+};
+
+const MONITORIA: ModeloDeArco = {
+  etapas: { monitor: 'monitor da disciplina', turmas: 'atendendo turmas', referencia: 'a referência da disciplina' },
+  ano: (v, x, nivel, r) => {
+    if (!x.etapa) { etapa(x, 'monitor'); x.papel = 'monitoria'; return; }
+    if (x.etapa === 'monitor') { etapa(x, 'turmas'); marcoUni(v, x, 'A monitoria virou rotina: plantão de dúvidas antes da prova, a sala cheia na véspera.'); return; }
+    if (x.etapa === 'turmas' && cognicao(v) + (nivel - 1) * 5 + r.normal() * 10 >= 60) {
+      etapa(x, 'referencia');
+      x.feito = 'a monitoria que virou referência na disciplina';
+      marcoUni(v, x, 'O professor disse, na frente da turma, que a monitoria tinha mudado a média da disciplina.', true, 1);
+    }
+  }
+};
+
+const ARCOS: Partial<Record<string, ModeloDeArco>> = { time_escola: TIME, olimpiada: OLIMPIADA, projeto_escola: PROJETO, clube_ciencias: CIENCIAS, reforco: REFORCO, xadrez: XADREZ, iniciacao: INICIACAO, atletica: ATLETICA, centro_academico: CENTRO_ACADEMICO, extensao: EXTENSAO, empresa_junior: EMPRESA_JUNIOR, monitoria: MONITORIA };
 
 /** O ano de uma atividade com história: avança o arco (se a atividade tem um). Devolve se tinha. */
 export function anoDoArco(v: Vida, rotinaId: string, x: Vivencia, nivel: number, r: Rng): boolean {

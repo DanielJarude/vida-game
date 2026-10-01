@@ -78,6 +78,9 @@ export function processarRural(v: Vida, r: Rng): void {
   const delta = s === 'boa' ? 12 * (ru.cooperativa ? 0.8 : 1) : s === 'ruim' ? -18 * coop : 2;
   if (e.clientela !== undefined) e.clientela = clamp(Math.round(e.clientela + delta + (ru.terra === 'propria' ? 2 : 0)));
   ru.anosRuins = s === 'ruim' ? ru.anosRuins + 1 : 0;
+  // A história da terra: a safra de cada ano (o histórico da vida rural lê daqui).
+  (ru.safras ??= []).push({ ano: anoDe(v.t), resultado: s, ...(ru.cooperativa ? { coop: true } : {}) });
+  if (ru.safras.length > 50) ru.safras.splice(0, ru.safras.length - 50);
   const anos = Math.floor((v.t - ru.tInicio) / 12);
   if (s === 'ruim') escrever(v, { texto: r.pick(['A chuva não veio na hora certa. A safra deu metade.', 'O preço caiu na época de vender. Trabalhou o ano todo para empatar.', 'Uma seca comprida: o pasto secou antes do tempo.']) + (ru.cooperativa ? ' A cooperativa segurou parte do prejuízo.' : ''), relevancia: anos <= 2 || ru.anosRuins >= 2 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: 'ruim' });
   else if (s === 'boa' && r.chance(0.5)) escrever(v, { texto: r.pick(['Safra cheia e preço bom: o ano pagou os dois anteriores.', 'Choveu na hora certa. Deu para trocar o equipamento velho.', 'O leite rendeu e o laticínio pagou em dia.']), relevancia: 'cotidiano', tema: 'trabalho', tom: 'bom' });

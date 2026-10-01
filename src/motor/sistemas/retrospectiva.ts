@@ -16,6 +16,7 @@ import { nomeLugar } from '../dados/lugares';
 import { nomeCargo } from './politica';
 import { papelDe } from './vinculos';
 import { nomeOcupacaoId } from './trabalho';
+import { legadoEmFrases } from './legado';
 
 interface Frase { peso: number; texto: string }
 
@@ -92,8 +93,13 @@ export function retrospectiva(v: Vida): string[] {
     if (siglas.size >= 2) out.push({ peso: 20, texto: `Passou por ${siglas.size} partidos.` });
   }
 
-  // O trabalho de uma vida (quando não foi o negócio).
-  const hist = [...v.trabalho.historico, ...(v.trabalho.atual ? [{ ...v.trabalho.atual, tFim: fim, motivo: '' }] : [])];
+  // O que construiu, trajetória por trajetória (o esporte, a obra, a pesquisa, a farda, o campo, a carreira): o legado.
+  // O negócio e a vida pública já têm a sua frase acima.
+  const legado = legadoEmFrases(v).filter(x => x.area !== 'negocio' && x.area !== 'politica');
+  for (const x of legado) out.push({ peso: x.peso, texto: x.texto });
+
+  // O trabalho de uma vida (quando não foi o negócio nem uma trajetória que o legado já contou).
+  const hist = legado.length ? [] : [...v.trabalho.historico, ...(v.trabalho.atual ? [{ ...v.trabalho.atual, tFim: fim, motivo: '' }] : [])];
   const porOcup = new Map<string, number>();
   for (const h of hist) porOcup.set(h.ocupacaoId, (porOcup.get(h.ocupacaoId) ?? 0) + (h.tFim - h.tInicio));
   const [oc, meses] = [...porOcup.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];

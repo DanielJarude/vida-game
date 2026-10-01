@@ -89,9 +89,10 @@ export function cacheAudiovisual(v: Vida, o: { tipo: ItemCurriculo['tipo']; port
   const estrela = o.porte >= 3 && PAPEL(o.papel) >= 2 && noto >= 60 ? 1 + (noto - 60) / 80 : 1;
   const mercado = nivelDeOferta(v.moradia.municipioId) >= 3 ? 1.05 : 0.95;
   const bruto = Math.round((BASE_TIPO[o.tipo] ?? 3000) * PORTE[o.porte] * PAPEL(o.papel) * nome * casa * orcamento * negociacao * estrela * mercado / 100) * 100;
-  const comissao = ag ? Math.round(bruto * ag.comissao / 100) * 100 : 0;
+  // Arredondado a dez reais (a cem, o agente de um trabalho pequeno não levava nada).
+  const comissao = ag ? Math.round(bruto * ag.comissao / 10) * 10 : 0;
   const longe = integralDe(o.tipo, o.porte) && nivelDeOferta(v.moradia.municipioId) < 3;
-  const despesas = Math.round((bruto * 0.05 + (longe ? 900 * (DURACAO[o.tipo] ?? 1) : 0)) / 100) * 100;
+  const despesas = Math.round((bruto * 0.05 + (longe ? 900 * (DURACAO[o.tipo] ?? 1) : 0)) / 10) * 10;
   return { bruto, comissao, despesas, liquido: bruto - comissao - despesas, fatores: { nome, casa, orcamento, negociacao } };
 }
 
@@ -208,19 +209,50 @@ export function iniciarProducao(v: Vida, c: ContratoAV): string {
 
 /** O trabalho feito: o líquido entra, a obra vai para o currículo, a repercussão mexe no que vem depois. */
 export function concluirProducao(v: Vida, c: ContratoAV, r: Rng | undefined): void {
+  // Um trabalho termina uma vez só (o cachê e o currículo não se repetem).
+  if (c.status === 'concluido') return;
   c.status = 'concluido';
   v.financas.conta += liquidoDe(c);
   const h = habilidade(v, linguagemEmCena(v) ?? 'teatro');
   const sorte = r ? r.normal() * 0.12 : 0;
   const q = h / 100 * 0.5 + c.porte * 0.08 + (/protagonista|destaque/.test(c.papel) ? 0.08 : 0) + sorte;
   const repercussao: ItemCurriculo['repercussao'] = q >= 0.72 ? 3 : q >= 0.58 ? 2 : q >= 0.42 ? 1 : 0;
-  registrarNoCurriculo(v, { tipo: c.tipo, titulo: c.titulo, papel: c.papel, onde: c.casa, repercussao, cache: c.bruto, pessoaId: c.pessoaId });
+  const protagonista = /protagonista/.test(c.papel);
+  const primeiroProtagonista = protagonista && !(v.caminhos.curriculo ?? []).some(x => /protagonista/.test(x.papel) && ['serie', 'novela', 'filme', 'curta', 'teatro'].includes(x.tipo));
+  // A indicação (fictícia, do universo desta vida): só para o trabalho que repercutiu, e mais para quem carregou a produção.
+  const premio = indicacaoDoTrabalho(v, c, repercussao, r);
+  const item = registrarNoCurriculo(v, { tipo: c.tipo, titulo: c.titulo, papel: c.papel, onde: c.casa, repercussao, cache: c.bruto, pessoaId: c.pessoaId, ...(premio ? { premio } : {}) });
+  void item;
+  if (primeiroProtagonista && repercussao >= 1) {
+    const texto = `O primeiro papel de protagonista: "${c.titulo}" (${NOME_TIPO_AV[c.tipo] ?? c.tipo}).`;
+    escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+    marcar(v, 'conquista', texto, 3, { dominio: 'teatro' });
+  }
+  if (premio) {
+    const texto = premio.venceu ? `Ganhou ${premio.nome} por "${c.titulo}".` : `Indicação ${premio.nome.replace(/^o /, 'ao ')} por "${c.titulo}".`;
+    escrever(v, { texto, relevancia: premio.venceu ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+    marcar(v, 'conquista', texto, premio.venceu ? 3 : 2, { dominio: 'teatro' });
+    if (premio.venceu && v.notoriedade) { v.notoriedade.valor = clamp(v.notoriedade.valor + 4); v.notoriedade.pico = Math.max(v.notoriedade.pico, v.notoriedade.valor); }
+  }
   crescerPublico(v, [1, 3, 7, 12][repercussao] * (1 + c.porte * 0.5));
   if (c.pessoaId && v.pessoas[c.pessoaId]?.vivo) lembrarCom(v, c.pessoaId, `"${c.titulo}", juntos.`, 'trabalho', 1);
   const efeito = repercussao >= 3 ? 'foi assunto por semanas; o seu nome apareceu nas críticas' : repercussao === 2 ? 'repercutiu; outras produções perguntaram por você' : repercussao === 1 ? 'teve público; mais uma linha forte no currículo' : 'passou sem muito barulho — mas está no currículo';
   const texto = `Terminou ${descricaoDoContrato(c)}: ${efeito}. ${contaDoContrato(c)}.`;
   escrever(v, { texto, relevancia: repercussao >= 2 || c.porte >= 2 ? 'marco' : 'biografia', tema: 'trabalho', tom: repercussao >= 1 ? 'bom' : undefined });
   if (repercussao >= 2) { marcar(v, 'conquista', texto, repercussao >= 3 ? 3 : 2, { dominio: 'teatro' }); v.fatos['av_repercutiu'] = v.t; }
+}
+
+const NOME_TIPO_AV: Partial<Record<ItemCurriculo['tipo'], string>> = { serie: 'série', novela: 'novela', filme: 'filme', curta: 'curta', teatro: 'teatro', publicidade: 'publicidade' };
+const PREMIO_AV: Partial<Record<ItemCurriculo['tipo'], string>> = { filme: 'o prêmio de interpretação de um festival de cinema', curta: 'o prêmio de interpretação de um festival de curtas', serie: 'o prêmio da crítica de televisão', novela: 'o prêmio da crítica de televisão', teatro: 'o prêmio de teatro da cidade' };
+
+/** A indicação (e, mais raro, o prêmio) que um trabalho pode render: nasce da repercussão, do papel e do porte — e do ano. */
+function indicacaoDoTrabalho(v: Vida, c: ContratoAV, repercussao: number, r: Rng | undefined): { nome: string; venceu: boolean } | undefined {
+  const nome = PREMIO_AV[c.tipo];
+  if (!nome || repercussao < 2 || !r) return undefined;
+  const papel = /protagonista/.test(c.papel) ? 1 : /destaque|coadjuv/.test(c.papel) ? 0.6 : 0.25;
+  if (!r.chance(clamp((repercussao - 1) * 0.22 * papel + c.porte * 0.03, 0, 0.6))) return undefined;
+  const venceu = r.chance(clamp(0.18 + (habilidade(v, linguagemEmCena(v) ?? 'teatro') - 70) / 100 + (repercussao === 3 ? 0.12 : 0), 0.05, 0.5));
+  return { nome, venceu };
 }
 
 /** O ano do audiovisual: produções que acabam, propostas que vencem. */

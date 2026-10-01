@@ -199,7 +199,10 @@ export function lancarObra(v: Vida, r: Rng): Obra {
   const lista = TITULOS[d] ?? TITULOS.musica!;
   const titulo = lista[((v.caminhos.obras?.length ?? 0) + Math.floor(v.t / 12)) % lista.length];
   const renda = Math.round([0, 1500, 6000, 22000][recepcao] * Math.max(0.4, publico / 50) / 100) * 100;
-  const o: Obra = { t: v.t, titulo, linguagem: d, recepcao, renda };
+  // A obra que marcou pode ser indicada (fictício, do universo desta vida): um prêmio da música independente, um prêmio literário.
+  const nomePremio = d === 'musica' ? 'o prêmio da música independente' : d === 'escrita' ? 'um prêmio literário nacional' : d === 'teatro' ? 'o prêmio de teatro da cidade' : d === 'danca' ? 'o prêmio de dança da cidade' : 'o salão de artes da região';
+  const premio = recepcao >= 3 && r.chance(0.45) ? { nome: nomePremio, venceu: r.chance(0.35) } : undefined;
+  const o: Obra = { t: v.t, titulo, linguagem: d, recepcao, renda, ...(premio ? { premio } : {}) };
   (v.caminhos.obras ??= []).push(o);
   if (v.caminhos.obras.length > 20) v.caminhos.obras.splice(0, v.caminhos.obras.length - 20);
   v.financas.conta += renda;
@@ -214,6 +217,11 @@ export function lancarObra(v: Vida, r: Rng): Obra {
         : `Lançou ${oque}${quem}. Quem conhecia gostou; o resto nem ficou sabendo.`;
   escrever(v, { texto, relevancia: recepcao >= 3 ? 'marco' : recepcao >= 1 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: recepcao >= 2 ? 'bom' : undefined, escolha: true });
   if (recepcao >= 2) marcar(v, 'conquista', texto, recepcao >= 3 ? 3 : 2, { dominio: d });
+  if (premio) {
+    const tp = premio.venceu ? `Ganhou ${premio.nome} com ${oque}.` : `${oque.charAt(0).toUpperCase()}${oque.slice(1)} foi ${d === 'escrita' ? 'finalista de' : 'indicado a'} ${premio.nome.replace(/^o /, '')}.`;
+    escrever(v, { texto: tp, relevancia: premio.venceu ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+    marcar(v, 'conquista', tp, premio.venceu ? 3 : 2, { dominio: d });
+  }
   // Quem repercute é chamado: um festival, um edital, uma casa maior (a porta abre; entrar é escolha).
   if (recepcao >= 2 && (v.caminhos.ultimas['arte_convite'] === undefined || v.t - v.caminhos.ultimas['arte_convite'] >= 24)) {
     novaOportunidade(v, { tipo: 'edital_cultura', dominio: d, meses: 12, chave: 'arte_convite', titulo: 'Um convite', texto: `Depois de ${oque}, um festival da capital chamou para uma apresentação — cachê e público novo.` });

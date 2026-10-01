@@ -500,6 +500,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   if (e.formacaoAte !== undefined) {
     if (v.t >= e.formacaoAte && oc.formacaoInicial) {
       const destino = ocupacao(oc.formacaoInicial.destino);
+      registrarPosto(v, e);
       e.ocupacaoId = destino.id;
       e.formacaoAte = undefined;
       e.tPosto = v.t;
@@ -638,12 +639,26 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   return false;
 }
 
+/**
+ * Guarda o posto de agora antes de uma promoção no MESMO vínculo (a troca de
+ * `ocupacaoId` no lugar apagava o cargo anterior): a carreira de 35 anos numa
+ * empresa tem os degraus que subiu. Chamar ANTES de mudar o cargo.
+ */
+export function registrarPosto(v: Vida, e: Emprego): void {
+  const lista = (e.postos ??= []);
+  const t = e.tPosto ?? e.tInicio;
+  if (!lista.some(x => x.ocupacaoId === e.ocupacaoId && x.t === t)) lista.push({ ocupacaoId: e.ocupacaoId, t });
+  if (lista.length > 12) lista.splice(0, lista.length - 12);
+  void v;
+}
+
 /** Autônomo com clientela madura sobe um degrau que exista na trilha (advogado → sócio). */
 function passoDeClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
   if ((e.clientela ?? 0) < 75 || v.t - (e.tPosto ?? e.tInicio) < 60) return;
   const x = degrausAcima(oc).find(d => d.promocao !== 'clientela' || d.contrato === 'autonomo');
   if (!x || elegibilidade(v, x, 'promocao').grau !== 'permitido' || !r.chance(0.2)) return;
   const antes = nomeOcupacao(v, oc);
+  registrarPosto(v, e);
   e.ocupacaoId = x.id;
   e.tPosto = v.t;
   e.clientela = Math.round((e.clientela ?? 50) * 0.8);
@@ -761,6 +776,7 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
   if (!r.chance(chance)) return;
   const anterior = nomeOcupacao(v, oc);
   const salarioAntigo = e.salario;
+  registrarPosto(v, e);
   e.ocupacaoId = proximo.id;
   e.contrato = proximo.contrato === 'autonomo' && e.contrato !== 'autonomo' ? e.contrato : proximo.contrato;
   e.carga = proximo.carga;

@@ -12,6 +12,7 @@ import type { Conteudo, Ctx } from './base';
 import { clamp } from '../rng';
 import { dinheiro as fmt } from '../texto';
 import { origemDoNome, porOrigem } from '../sistemas/notoriedade';
+import { perfilDe } from '../sistemas/perfisEsportivos';
 import { apoiarCausa, causasPossiveis } from '../sistemas/visibilidade';
 import { disponivel, pagar } from '../sistemas/dinheiro';
 import * as P from './papeis';
@@ -27,7 +28,8 @@ export const FAMA: Conteudo[] = [
     narrar: c => {
       const o = origemDoNome(c.v);
       const muito = nome(c.v) >= 60;
-      const cena = o === 'esporte' ? 'Na fila da padaria, um menino de camisa do clube pediu uma foto — e o pai, outra.'
+      const mod = c.v.caminhos.esporte?.modalidade ?? c.v.caminhos.carreirasEsportivas?.[c.v.caminhos.carreirasEsportivas.length - 1]?.modalidade;
+      const cena = o === 'esporte' ? `Na fila da padaria, um menino ${!mod || perfilDe(mod).estrutura === 'clube' ? 'de camisa do clube' : 'que tinha visto você competir'} pediu uma foto — e o pai, outra.`
         : o === 'arte' ? 'No mercado, uma senhora pediu para você repetir uma fala de um trabalho seu. Você repetiu.'
           : o === 'politica' ? 'Na feira, alguém parou você para reclamar do buraco da rua — e depois pediu uma foto.'
             : 'Num restaurante, o dono veio à mesa: tinha lido sobre o seu negócio.';

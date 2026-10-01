@@ -16,7 +16,7 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
 import { estresse, fato, feliz, custa } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
-import { conviteDaBase, encerrarCarreira, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
+import { conviteDaBase, encerrarCarreira, entrarPeloAmador, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
 import { dinheiro as fmt } from '../texto';
 import { conflitoDoContrato, contaDoContrato, descricaoDoContrato, podePausar as podePausarAV, resolverConflitoAV } from '../sistemas/audiovisual';
 import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador, lerTecnica } from '../sistemas/peneira';
@@ -74,10 +74,10 @@ function autonomoPossivel(c: Ctx) {
 export const CAMINHOS: Conteudo[] = [
   /* ============================================================= ESPORTE */
   {
-    id: 'esp_peneira', tipo: 'decisao', idade: [10, 19], tema: 'lazer', manual: true, repetir: 0,
+    id: 'esp_peneira', tipo: 'decisao', idade: [10, 24], tema: 'lazer', manual: true, repetir: 0,
     titulo: c => {
       const pr = c.v.caminhos.processo;
-      const nome = mod(c) === 'futebol' ? 'A peneira' : 'A seletiva';
+      const nome = pr?.via === 'amador' ? 'O teste no time de cima' : mod(c) === 'futebol' ? 'A peneira' : 'A seletiva';
       return pr?.tipo === 'peneira' ? `${nome} · ${pr.atual === 0 ? 'o começo' : 'o fim do dia'}` : nome;
     },
     texto: c => {
@@ -86,6 +86,8 @@ export const CAMINHOS: Conteudo[] = [
       if (!etapa) return `${municipio(lugarPeneira(c)).nome}, oito da manhã. ${mod(c) === 'futebol' ? 'Duzentos garotos de colete, três treinadores de prancheta' : 'Dezenas de atletas, cronômetro na mão dos técnicos'}. Você tem uma chance de mostrar o que sabe.`;
       const lugar = pr?.lugar ?? municipio(lugarPeneira(c)).nome;
       const junto = pr?.via === 'familia' && pr.atual > 0 && P.genitor(c.v)[0] ? ` ${P.genitor(c.v)[0].nome} continua na arquibancada.` : '';
+      // O teste de adulto não é a peneira de garotos: é uma semana com o elenco, e quem observa é a comissão do time de cima.
+      if (pr?.via === 'amador') return pr.atual === 0 ? `${cap(lugar)}, primeiro treino com o elenco adulto. Os jogadores do clube olham de lado: mais um que veio do amador. Rondo, passe, finalização.` : 'Jogo-treino contra os reservas, no último dia. A comissão técnica anota de pé, na beira do campo.';
       return etapa.texto(mod(c), lugar) + junto;
     },
     opcoes: [
@@ -483,7 +485,8 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   const notas = { comeco: pr.etapas[0]?.resposta, final: pr.etapas[1]?.resposta };
   c.v.caminhos.processo = undefined;
   c.v.fatos[`peneiras_${d}`] = (c.v.fatos[`peneiras_${d}`] ?? 0) + 1;
-  const res = avaliarPeneira(c.v, c.r, d, lugar, notas, pr.bonus);
+  const amador = pr.via === 'amador';
+  const res = avaliarPeneira(c.v, c.r, d, lugar, notas, pr.bonus, amador);
   const antes = [...c.v.caminhos.devolutivas].reverse().find(x => x.tipo === 'peneira' && x.dominio === d && !x.passou);
   const fala = falaDoTreinador(d, res, antes?.falta && ['tecnica', 'fisico', 'leitura', 'nervos'].includes(antes.falta) ? antes.falta as 'tecnica' : undefined);
   const nome = d === 'futebol' ? 'peneira' : 'seletiva';
@@ -497,6 +500,11 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   const comparacao = tec.desde && !res.passou ? ` ${tec.desde}` : '';
   const caminho = !res.passou && (res.falta === 'tecnica' || res.fraco === 'tecnica') ? ` A técnica está "${tec.palavra}".` : '';
   registrarDevolutiva(c.v, { tipo: 'peneira', titulo: `A ${nome} ${doLugar}`, texto: `${fala}${caminho}${comparacao}`, passou: res.passou, perto: res.perto, falta: res.passou ? undefined : res.falta, dominio: d, nivel: tec.nivel });
+  if (res.passou && amador) {
+    // A rota amadora: não há base para ir — o clube pequeno oferece o contrato do time de cima.
+    entrarPeloAmador(c.v, d, lugar, pr.lugar ?? nomeDeClube(lugar, `${c.v.id}:amador`, d));
+    return { texto: `No fim da semana, o treinador chamou você na sala. ${fala} O clube quer você no elenco adulto.`, memoria: null, tom: 'bom', abrir: { id: 'esp_contrato' } };
+  }
   if (res.passou) {
     c.v.fatos['convite_base'] = c.v.t;
     c.v.fatos['peneira_lugar'] = municipioIndice(lugar);

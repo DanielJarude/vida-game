@@ -29,7 +29,8 @@ import { flex, ge } from '../texto';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { CLUBES, DIVISAO_DO_NIVEL, doClube, noClube, oClube } from '../dados/clubes';
-import { ASSIST, DEFESA, divisaoDe, GOL, jogosDaTemporada, linhaDaTemporada, nomePosicao } from './esporte';
+import { ASSIST, carreirasEsportivas, DEFESA, divisaoDe, GOL, jogosDaTemporada, linhaDaTemporada, NOME_MOD, nomePosicao } from './esporte';
+import { aCompeticao, avaliarPelaModalidade, daCompeticao, individualComEquipe, lideresDaTemporada, perfilDe } from './perfisEsportivos';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -56,6 +57,8 @@ export function registrarConquista(v: Vida, c: Omit<ConquistaEsportiva, 't'>): C
  */
 export function avaliarTemporada(e: CarreiraEsportiva, t: Temporada): { indice: number; participacao: number; producao: number } {
   const max = jogosDaTemporada(e.modalidade, t.nivel) || 1;
+  // Fora do futebol, a modalidade sabe o que medir (a função no basquete, as fases no tênis, os pódios nas individuais).
+  if (e.modalidade !== 'futebol') return avaliarPelaModalidade(e, t, max);
   const participacao = clamp(t.titular / max, 0, 1);
   // Jogos equivalentes: entrar no fim vale menos que começar jogando (a mesma conta que a temporada usa).
   const je = t.titular + (t.partidas - t.titular) * 0.35;
@@ -78,8 +81,8 @@ export function avaliarTemporada(e: CarreiraEsportiva, t: Temporada): { indice: 
 }
 
 /** O nome da competição de uma temporada (no universo do jogo). */
-export const competicaoDe = (d: Dominio, nivel: number) => (d === 'futebol' ? DIVISAO_DO_NIVEL[nivel] : divisaoDe(d, nivel).replace(/ —.*$/, ''));
-const daCompeticao = (c: string) => (c === 'campeonato estadual' ? 'do estadual' : c === 'divisões de acesso' ? 'das divisões de acesso' : `da ${c}`);
+export const competicaoDe = (d: Dominio, nivel: number) => (d === 'futebol' ? DIVISAO_DO_NIVEL[nivel] : divisaoDe(d, nivel).replace(/ —.*$/, '').replace(/ \(acesso\)$/, ''));
+export { daCompeticao };
 
 /** O teto de divisão de um clube na simulação (o mesmo de `esporte`). */
 const tetoDoClube = (nome: string) => { const c = CLUBES.find(x => x.nome === nome); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
@@ -94,6 +97,8 @@ export const pisoDoClube = (nome: string) => { const c = CLUBES.find(x => x.nome
  * reputação e (o que é biografia) na Linha da Vida.
  */
 export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada): void {
+  // O tênis não tem temporada de clube: o palmarés dele é o do circuito, torneio a torneio (`esporte.registrarCircuito`).
+  if (e.modalidade === 'tenis') return;
   const g = ge(v);
   const futebol = e.modalidade === 'futebol';
   const comp = competicaoDe(e.modalidade, t.nivel);
@@ -116,7 +121,14 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   }
 
   // O título: o do clube — e o seu papel nele.
-  if (t.colocacao === 1 && t.partidas > 0) {
+  if (t.colocacao === 1 && t.partidas > 0 && individualComEquipe(e.modalidade)) {
+    // Natação, atletismo, luta: o título é do atleta, na prova que importa (a equipe é o vínculo, não o campeão).
+    const texto = `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${daCompeticao(comp)} de ${NOME_MOD[e.modalidade] ?? e.modalidade}`;
+    registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, papel: 'protagonista', texto });
+    escrever(v, { texto: `${texto} (${t.ano}): ${t.gols} ${t.gols === 1 ? 'pódio' : 'pódios'} na temporada.`, relevancia: t.nivel >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+    marcar(v, 'conquista', texto, t.nivel >= 3 ? 3 : 2, { dominio: e.modalidade });
+    e.reputacao = clamp((e.reputacao ?? 30) + 1 + Math.floor(t.nivel / 2));
+  } else if (t.colocacao === 1 && t.partidas > 0) {
     const protagonista = ava.participacao >= 0.5;
     registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, papel: protagonista ? 'protagonista' : 'elenco', texto: `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${daCompeticao(comp)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
     const campeao = flex(g, 'Campeão', 'Campeã', 'Campeão');
@@ -131,21 +143,21 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   }
 
   // Acesso e rebaixamento: o clube sobe ou cai — e você junto (o contrato continua; a próxima conversa já é em outra divisão).
-  if (futebol || e.modalidade === 'basquete') {
+  if (perfilDe(e.modalidade).estrutura === 'clube') {
     const sobe = t.nivel < 4 && t.colocacao <= (t.nivel === 1 ? 2 : 4) && (!futebol || tetoDoClube(e.clube) > t.nivel);
     const cai = t.nivel >= 2 && t.colocacao >= 17 && (!futebol || t.nivel - 1 >= pisoDoClube(e.clube));
     if (sobe && e.nivel === t.nivel) {
       e.nivel = (t.nivel + 1) as 1 | 2 | 3 | 4;
       const para = competicaoDe(e.modalidade, e.nivel);
-      const texto = `Acesso: ${futebol ? oClube(e.clube) : 'a equipe'} subiu para ${para === 'divisões de acesso' ? 'as divisões de acesso' : `a ${para}`}${ava.participacao >= 0.5 ? ', com você entre os titulares' : ''}.`;
-      registrarConquista(v, { tipo: 'acesso', modalidade: e.modalidade, ano: t.ano, competicao: para, clube: t.clube, papel: ava.participacao >= 0.5 ? 'protagonista' : 'elenco', texto: `Acesso para ${para === 'divisões de acesso' ? 'as divisões de acesso' : `a ${para}`}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
+      const texto = `Acesso: ${futebol ? oClube(e.clube) : 'a equipe'} subiu para ${aCompeticao(para)}${ava.participacao >= 0.5 ? ', com você entre os titulares' : ''}.`;
+      registrarConquista(v, { tipo: 'acesso', modalidade: e.modalidade, ano: t.ano, competicao: para, clube: t.clube, papel: ava.participacao >= 0.5 ? 'protagonista' : 'elenco', texto: `Acesso para ${aCompeticao(para)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
       escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
       e.reputacao = clamp((e.reputacao ?? 30) + 1);
     } else if (cai && e.nivel === t.nivel) {
       e.nivel = (t.nivel - 1) as 1 | 2 | 3 | 4;
       const para = competicaoDe(e.modalidade, e.nivel);
       registrarConquista(v, { tipo: 'rebaixamento', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: `Rebaixamento ${daCompeticao(comp)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
-      escrever(v, { texto: `${futebol ? cap(oClube(e.clube)) : 'A equipe'} caiu: a próxima temporada é ${para === 'divisões de acesso' ? 'nas divisões de acesso' : para === 'campeonato estadual' ? 'só no estadual' : `na ${para}`}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+      escrever(v, { texto: `${futebol ? cap(oClube(e.clube)) : 'A equipe'} caiu: a próxima temporada é ${para === 'campeonato estadual' ? 'só no estadual' : daCompeticao(para).replace(/^do /, 'no ').replace(/^da /, 'na ').replace(/^das /, 'nas ')}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       abalar(v, 'o rebaixamento do clube', -5, 3);
     }
   }
@@ -162,6 +174,7 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
 export function premiosDaTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, ava = avaliarTemporada(e, t)): string[] {
   if (t.nivel < 2 || e.modalidade === 'tenis' || t.partidas === 0) return [];
   const g = ge(v);
+  const coletivo = perfilDe(e.modalidade).coletivo;
   const comp = competicaoDe(e.modalidade, t.nivel);
   const ganhos: { texto: string; peso: 1 | 2 | 3; rep: number }[] = [];
   // As vagas são poucas e a concorrência é a liga inteira: estar entre os elegíveis não é ganhar.
@@ -170,9 +183,12 @@ export function premiosDaTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   const futebol = e.modalidade === 'futebol';
   const pos = futebol && t.posicao ? nomePosicao(v, t.posicao) : undefined;
   // A seleção do campeonato: os melhores de cada posição (participação de titular é condição).
-  if (ava.participacao >= 0.6 && ava.indice + ruido >= 84 && vaga(0.4)) ganhos.push({ texto: `Seleção ${daCompeticao(comp)}${pos ? `, como ${pos}` : ''}`, peso: t.nivel >= 3 ? 3 : 2, rep: 2 });
-  // O melhor do campeonato: raríssimo, e só para quem jogou o ano inteiro num time de cima.
-  if (ava.participacao >= 0.7 && t.colocacao <= 4 && ava.indice + ruido >= 90 && t.nota >= 8.4 && vaga(0.25)) ganhos.push({ texto: `${flex(g, 'Melhor jogador', 'Melhor jogadora', 'Melhor jogador')} ${daCompeticao(comp)}`, peso: 3, rep: 3 });
+  const funcao = e.modalidade === 'basquete' && t.funcao ? ({ armador: 'armador', ala: 'ala', pivo: 'pivô' } as Record<string, string>)[t.funcao] : undefined;
+  if (coletivo && ava.participacao >= 0.6 && ava.indice + ruido >= 84 && vaga(0.4)) ganhos.push({ texto: `Seleção ${daCompeticao(comp)}${pos ? `, como ${pos}` : funcao ? `, como ${funcao}` : ''}`, peso: t.nivel >= 3 ? 3 : 2, rep: 2 });
+  // O melhor do campeonato: raríssimo, e só para quem jogou o ano inteiro num time de cima (nas individuais, o atleta do ano).
+  if (ava.participacao >= 0.7 && t.colocacao <= 4 && ava.indice + ruido >= 90 && t.nota >= 8.4 && vaga(0.25)) ganhos.push({ texto: coletivo ? `${flex(g, 'Melhor jogador', 'Melhor jogadora', 'Melhor jogador')} ${daCompeticao(comp)}` : `${flex(g, 'Atleta', 'Atleta', 'Atleta')} do ano ${daCompeticao(comp)} (${NOME_MOD[e.modalidade] ?? e.modalidade})`, peso: 3, rep: 3 });
+  // Os fatos do placar de cada modalidade (o cestinha, o líder em rebotes ou em assistências).
+  ganhos.push(...lideresDaTemporada(v, e, t, comp, ruido, r));
   // A artilharia é um fato do placar: só quem fez muitos gols (o número que a divisão costuma pedir).
   if (futebol && t.gols >= [0, 0, 16, 18, 21][t.nivel] + Math.round(ruido / 2)) ganhos.push({ texto: `${flex(g, 'Artilheiro', 'Artilheira', 'Artilheiro')} ${daCompeticao(comp)}, com ${t.gols} gols`, peso: t.nivel >= 3 ? 3 : 2, rep: 2 });
   // A revelação: a temporada boa de quem ainda é muito novo.
@@ -200,14 +216,27 @@ export function historicoPorClube(e: CarreiraEsportiva): { clube: string; de: nu
 }
 
 /** O palmarés em leitura (a tela de carreira): títulos, prêmios, marcos, por grupo e em ordem. */
-export function leituraDoPalmares(v: Vida): { titulos: string[]; premios: string[]; marcos: string[]; selecao?: string } {
+/** A representação nacional de uma carreira, em uma linha, no idioma da modalidade. */
+export function leituraDaSelecao(v: Vida, e: CarreiraEsportiva, comModalidade = false): string {
+  const s = e.selecao!;
+  const individual = !perfilDe(e.modalidade).coletivo;
+  const conv = individual ? `${s.convocacoes} ${s.convocacoes === 1 ? 'convocação' : 'convocações'} pelo país` : `${s.convocacoes} ${s.convocacoes === 1 ? 'convocação' : 'convocações'}`;
+  const jogos = e.modalidade === 'tenis' ? `${s.jogos} ${s.jogos === 1 ? 'partida' : 'partidas'}` : individual ? `${s.jogos} ${s.jogos === 1 ? 'prova' : 'provas'}` : `${s.jogos} ${s.jogos === 1 ? 'jogo' : 'jogos'}`;
+  const medalhas = s.medalhas ? `, ${s.medalhas} ${s.medalhas === 1 ? 'medalha' : 'medalhas'}` : '';
+  const gols = e.modalidade === 'futebol' && s.gols ? `, ${s.gols} ${s.gols === 1 ? 'gol' : 'gols'}` : '';
+  return `${comModalidade && NOME_MOD[e.modalidade] ? `${(NOME_MOD[e.modalidade] ?? '').charAt(0).toUpperCase()}${(NOME_MOD[e.modalidade] ?? '').slice(1)}: ` : ''}${conv}, ${jogos}${gols}${medalhas}${s.capitao ? ` · já foi ${flex(ge(v), 'capitão', 'capitã', 'capitão')}` : ''}`;
+}
+
+export function leituraDoPalmares(v: Vida): { titulos: string[]; premios: string[]; marcos: string[]; selecao?: string; finais: string[] } {
   const p = palmaresDe(v);
   const titulos = p.filter(x => x.tipo === 'titulo' || x.tipo === 'acesso' || (x.tipo === 'selecao' && /^Campe(ão|ã)/.test(x.texto))).map(x => `${x.ano} · ${x.texto}${x.tipo === 'titulo' ? (x.papel === 'elenco' ? ' (no elenco)' : ' (titular)') : ''}`);
   const premios = p.filter(x => x.tipo === 'premio').map(x => `${x.ano} · ${x.texto}`);
   const marcos = p.filter(x => x.tipo === 'marco' || x.tipo === 'rebaixamento' || (x.tipo === 'selecao' && !/^Campe(ão|ã)/.test(x.texto))).map(x => `${x.ano} · ${x.texto}`);
-  const s = v.caminhos.esporte?.selecao;
-  const selecao = s && s.convocacoes > 0 ? `${s.convocacoes} ${s.convocacoes === 1 ? 'convocação' : 'convocações'}, ${s.jogos} ${s.jogos === 1 ? 'jogo' : 'jogos'}${s.gols ? `, ${s.gols} ${s.gols === 1 ? 'gol' : 'gols'}` : ''}${s.capitao ? ' · já foi capitão' : ''}` : undefined;
-  return { titulos, premios, marcos, selecao };
+  // A representação nacional de TODAS as carreiras da pessoa (uma carreira nova não apaga a seleção da anterior).
+  const sels = carreirasEsportivas(v).filter(x => x.selecao && x.selecao.convocacoes > 0);
+  const selecao = sels.length ? sels.map(x => leituraDaSelecao(v, x, sels.length > 1)).join(' · ') : undefined;
+  const finais = p.filter(x => x.tipo === 'final').map(x => `${x.ano} · ${x.texto}`);
+  return { titulos, premios, marcos, selecao, finais };
 }
 
 /** Os títulos recentes de peso (para o nome: notoriedade e seleção). */

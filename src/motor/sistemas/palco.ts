@@ -88,6 +88,8 @@ export function temporadaDePalco(v: Vida, r: Rng): Palco | undefined {
   const custos = Math.round(bruto * parteDosCustos(x) / 100) * 100;
   const palco: Palco = { ano: anoDe(v.t - 6), linguagem: d, apresentacoes, cacheMedio, bruto, custos, artista: bruto - custos };
   v.caminhos.palco = palco;
+  // O ano no palco entra na história (o `palco` guarda só o último; o histórico de shows e temporadas fica aqui).
+  if (apresentacoes > 0) { (v.caminhos.palcos ??= []).push({ ano: palco.ano, linguagem: d, apresentacoes, bruto }); if (v.caminhos.palcos.length > 60) v.caminhos.palcos.splice(0, v.caminhos.palcos.length - 60); }
   // Quem vive do palco: a renda do trabalho É o que o palco deixou (média do ano, variável).
   const e = v.trabalho.atual;
   if (e && trabalhoDePalco(v)) e.salario = Math.max(0, Math.round(palco.artista / 12 / 10) * 10);

@@ -33,14 +33,15 @@ import { novaOportunidade } from '../sistemas/oportunidades';
 import { mudarAgora } from '../sistemas/processos';
 import { marcar } from '../sistemas/marcas';
 import { abalar } from '../sistemas/abalo';
-import { assinarContrato, augeDe, barraDeTitular, criarProposta, prazoDeContrato, propostaNaMesa, salarioDaRenovacao, clubeQuerRenovar, encerrarCarreira, nivelQueOMercadoOferece, palavraDaNota, transferirPara, valorDeMercado } from '../sistemas/esporte';
-import { doClube, noClube, oClube } from '../dados/clubes';
+import { assinarContrato, augeDe, barraDeTitular, criarProposta, prazoDeContrato, propostaNaMesa, salarioDaRenovacao, clubeQuerRenovar, encerrarCarreira, nivelQueOMercadoOferece, palavraDaNota, transferirPara, valorDeMercado, voltarDoEmprestimo } from '../sistemas/esporte';
+import { aoClube, doClube, noClube, oClube } from '../dados/clubes';
 import { alcanceNoPalco, cacheDeApresentacao, linguagemDePalco, parteDosCustos } from '../sistemas/palco';
 import { habilidade } from '../sistemas/frentes';
 import { arrendamentoMensal } from '../sistemas/rural';
 import { MUNIC_POR_INDICE } from '../sistemas/militar';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt, listaNatural } from '../texto';
+import { semVinculo } from '../sistemas/perfisEsportivos';
 import { criarPessoa, vincular } from '../pessoas';
 import { experienciaNaTrilha } from '../sistemas/trabalho';
 import { noTrabalho } from '../sistemas/ambiente';
@@ -391,8 +392,8 @@ export const PROFISSAO: Conteudo[] = [
             return { texto: nivel > es.nivel ? 'Uma proposta de um clube maior chegou antes do fim do mês.' : nivel < es.nivel ? 'A proposta que veio é de um clube menor. Melhor do que nenhuma.' : 'Um clube do mesmo tamanho ofereceu mais tempo de contrato.', memoria: null, tom: nivel >= es.nivel ? 'bom' : 'neutro', abrir: { id: 'esp_proposta' } };
           }
           if (clubeQuerRenovar(c.v, es)) return { texto: 'O mercado não respondeu. O clube renovou — por menos.', memoria: null, tom: 'ruim', efeito: () => assinarContrato(c.v, es, 24, 0.85, true) };
-          if (oferta >= 1) return { texto: 'Só apareceu clube pequeno, sem garantia. Você ficou sem contrato, treinando por conta, esperando o telefone.', memoria: 'Ficou sem clube, esperando proposta.', relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
-          return { texto: 'Nenhum clube ligou. Você ficou treinando por conta, esperando.', memoria: 'Ficou sem clube, esperando proposta.', relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
+          if (oferta >= 1) return { texto: 'Só apareceu clube pequeno, sem garantia. Você ficou sem contrato, treinando por conta, esperando o telefone.', memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
+          return { texto: 'Nenhum clube ligou. Você ficou treinando por conta, esperando.', memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
         } },
       { id: 'encerrar', texto: 'Encerrar a carreira', resolver: c => ({ texto: 'Você disse ao empresário que era hora.', memoria: null, efeito: () => encerrarCarreira(c.v, c.v.caminhos.esporte!, 'escolha') }) }
     ]
@@ -471,24 +472,28 @@ export const PROFISSAO: Conteudo[] = [
     // trouxe, a do clube que quer liberar você. O que aparece aqui é o que se assina (`aceitarProposta` → `transferirPara`).
     id: 'esp_proposta', tipo: 'decisao', idade: [17, 45], tema: 'trabalho', prioritario: true, prioridade: 5, repetir: 0,
     quando: c => { const es = c.v.caminhos.esporte; if (!es || es.fase !== 'profissional' || !propostaNaMesa(c.v)) return false; return deHoje(c, 'esp_proposta_hoje') && OCUPACOES_DE_ATLETA.includes(c.v.trabalho.atual?.ocupacaoId ?? ''); },
-    titulo: c => (propostaNaMesa(c.v)?.origem === 'liberacao' ? 'O clube quer liberar você' : 'Uma proposta'),
+    titulo: c => { const o = propostaNaMesa(c.v)?.origem; return o === 'liberacao' ? 'O clube quer liberar você' : o === 'emprestimo' ? 'Um empréstimo' : o === 'compra' ? 'Ficar de vez?' : 'Uma proposta'; },
     texto: c => {
       const es = c.v.caminhos.esporte!;
       const p = propostaNaMesa(c.v)!;
       const d = municipio(p.municipioId);
       const quem = es.modalidade === 'futebol' ? `${cap(oClube(p.clube))}, de ${d.nome},` : p.nivel > es.nivel ? 'Uma equipe maior' : 'Uma equipe de nível menor';
       const anos = p.meses >= 24 ? `${Math.round(p.meses / 12)} anos` : 'um ano';
-      const comeco = p.origem === 'liberacao'
+      const comeco = p.origem === 'emprestimo'
+        ? `Sem minutos no time, ${oClube(es.clube)} quer emprestar você por ${p.meses >= 12 ? 'um ano' : `${p.meses} meses`}: ${quem.replace(/,$/, '')} quer você para jogar (${divisaoDe(es.modalidade, p.nivel)}). O contrato continua ${doClube(es.clube)}; no fim, a volta.`
+        : p.origem === 'compra'
+          ? `O empréstimo acaba. ${cap(oClube(es.clube))} quer ficar com você de vez: contrato de ${anos}${es.emprestimo ? ` — e ${oClube(es.emprestimo.clube)} topa negociar` : ''}. Se não, é a volta ${es.emprestimo ? aoClube(es.emprestimo.clube) : 'ao clube de origem'}.`
+          : p.origem === 'liberacao'
         ? `Sem espaço no time, ${oClube(es.clube)} quer liberar você. ${quem} topa: ${divisaoDe(es.modalidade, p.nivel)}, contrato de ${anos}, lugar no time.`
         : `${quem} quer você: ${divisaoDe(es.modalidade, p.nivel)}${p.nivel > es.nivel ? ', divisão acima' : p.nivel < es.nivel ? ', divisão abaixo' : ''}, contrato de ${anos}${p.espaco === 'reserva' ? ', para brigar por posição' : ', para jogar'}.`;
       return `${comeco}${d.id !== c.v.moradia.municipioId ? ` A mudança seria para ${d.nome}.` : ''} ${comFamilia(c.v) && d.id !== c.v.moradia.municipioId ? 'A família iria junto — ou não.' : ''}`.trim();
     },
     opcoes: [
-      { id: 'aceitar', texto: c => (comFamilia(c.v) && propostaNaMesa(c.v)?.municipioId !== c.v.moradia.municipioId ? 'Aceitar e ir com a família' : 'Aceitar'), consequencia: c => consequenciaDaProposta(c, propostaNaMesa(c.v)!),
+      { id: 'aceitar', texto: c => { const p = propostaNaMesa(c.v); return p?.origem === 'emprestimo' ? 'Aceitar o empréstimo' : p?.origem === 'compra' ? 'Ficar de vez' : comFamilia(c.v) && p?.municipioId !== c.v.moradia.municipioId ? 'Aceitar e ir com a família' : 'Aceitar'; }, consequencia: c => consequenciaDaProposta(c, propostaNaMesa(c.v)!),
         resolver: c => ({ texto: propostaNaMesa(c.v)?.municipioId !== c.v.moradia.municipioId ? 'Apresentação no estádio novo, camisa nova, cidade nova.' : 'Apresentação no estádio novo, camisa nova.', memoria: null, tom: 'bom', efeito: () => aceitarProposta(c, propostaNaMesa(c.v)!) }) },
-      { id: 'ficar', texto: c => (propostaNaMesa(c.v)?.origem === 'liberacao' ? 'Ficar e brigar pela vaga' : 'Ficar onde está'), comportamento: { familia: 1 }, disponivel: c => (comFamilia(c.v) || propostaNaMesa(c.v)?.origem === 'liberacao' ? true : false),
-        resolver: c => recusarProposta(c, comFamilia(c.v) ? 'Recusou uma proposta de outro clube para não tirar a família do lugar.' : null) },
-      { id: 'recusar', texto: 'Recusar', disponivel: c => (comFamilia(c.v) || propostaNaMesa(c.v)?.origem === 'liberacao' ? false : true), resolver: c => recusarProposta(c, null) }
+      { id: 'ficar', texto: c => { const o = propostaNaMesa(c.v)?.origem; return o === 'liberacao' || o === 'emprestimo' ? 'Ficar e brigar pela vaga' : o === 'compra' ? `Voltar ${c.v.caminhos.esporte?.emprestimo ? aoClube(c.v.caminhos.esporte.emprestimo.clube) : 'ao clube de origem'}` : 'Ficar onde está'; }, comportamento: { familia: 1 }, disponivel: c => { const o = propostaNaMesa(c.v)?.origem; return comFamilia(c.v) || o === 'liberacao' || o === 'emprestimo' || o === 'compra' ? true : false; },
+        resolver: c => recusarProposta(c, comFamilia(c.v) && propostaNaMesa(c.v)?.origem !== 'compra' && propostaNaMesa(c.v)?.origem !== 'emprestimo' ? 'Recusou uma proposta de outro clube para não tirar a família do lugar.' : null) },
+      { id: 'recusar', texto: 'Recusar', disponivel: c => { const o = propostaNaMesa(c.v)?.origem; return comFamilia(c.v) || o === 'liberacao' || o === 'emprestimo' || o === 'compra' ? false : true; }, resolver: c => recusarProposta(c, null) }
     ]
   },
 
@@ -600,9 +605,14 @@ function aceitarProposta(c: Ctx, p: PropostaDeClube, juntos = true): void {
   const es = c.v.caminhos.esporte!;
   if (!c.v.trabalho.atual || !p) return;
   const subiu = p.nivel > es.nivel;
+  const dono = es.clube;
+  const daOrigem = es.emprestimo?.clube;
   transferirPara(c.v, es, p);
-  const texto = p.origem === 'liberacao' ? `Sem espaço no time, foi jogar ${noClube(p.clube)}.` : subiu ? `Transferiu-se para ${oClube(p.clube)}.` : `Mudou de clube: ${oClube(p.clube)}.`;
-  escrever(c.v, { texto: es.modalidade === 'futebol' ? texto : subiu ? 'Subiu de nível: uma equipe maior, um calendário mais duro.' : 'Mudou de equipe, um nível abaixo.', relevancia: 'biografia', tema: 'trabalho', tom: subiu ? 'bom' : undefined, escolha: true });
+  const texto = p.origem === 'emprestimo' ? `Emprestado ${aoClube(p.clube)} por ${p.meses >= 12 ? 'um ano' : `${p.meses} meses`}; o contrato continua ${doClube(dono)}.`
+    : p.origem === 'compra' ? `Ficou de vez ${noClube(p.clube)}${daOrigem ? `, que comprou o contrato ${doClube(daOrigem)}` : ''}.`
+      : p.origem === 'liberacao' ? `Sem espaço no time, foi jogar ${noClube(p.clube)}.` : subiu ? `Transferiu-se para ${oClube(p.clube)}.` : `Mudou de clube: ${oClube(p.clube)}.`;
+  // A biografia diz o nome da equipe nova em toda modalidade de clube (antes, só no futebol).
+  escrever(c.v, { texto: es.modalidade === 'futebol' || p.origem === 'emprestimo' || p.origem === 'compra' ? texto : subiu ? `Subiu de nível: foi para ${oClube(p.clube)} — um calendário mais duro.` : `Mudou de equipe: ${oClube(p.clube)}, um nível abaixo.`, relevancia: 'biografia', tema: 'trabalho', tom: subiu ? 'bom' : undefined, escolha: true });
   marcar(c.v, subiu ? 'promocao' : 'mudanca_carreira', texto, subiu && p.nivel >= 3 ? 3 : 2, { dominio: es.modalidade });
   if (p.municipioId !== c.v.moradia.municipioId) mudarComOTrabalho(c, p.municipioId, juntos, `para jogar ${noClube(p.clube)}`);
 }
@@ -610,16 +620,23 @@ function aceitarProposta(c: Ctx, p: PropostaDeClube, juntos = true): void {
 /** Recusar tira a proposta da mesa. Se o contrato já venceu, recusar não é ficar: o clube decide se ainda quer (como no "testar o mercado"). */
 function recusarProposta(c: Ctx, memoria: string | null) {
   const es = c.v.caminhos.esporte!;
+  // Recusar ficar de vez no fim do empréstimo é voltar ao clube detentor (o contrato era dele).
+  if (propostaNaMesa(c.v)?.origem === 'compra') { const texto = voltarDoEmprestimo(c.v, es); return { texto: texto || 'Você voltou ao clube de origem.', memoria: null }; }
   es.proposta = undefined;
   const vencido = es.contratoAte !== undefined && c.v.t >= es.contratoAte;
   if (vencido && clubeQuerRenovar(c.v, es)) return { texto: 'Você ficou. O clube renovou — por menos.', memoria, relevancia: 'biografia' as const, efeito: () => assinarContrato(c.v, es, 24, 0.85, true) };
-  if (vencido) return { texto: 'Você recusou — e o contrato antigo não foi renovado. Ficou sem clube, treinando por conta.', memoria: 'Ficou sem clube, esperando proposta.', relevancia: 'biografia' as const, tom: 'ruim' as const, efeito: () => semClube(c) };
+  if (vencido) return { texto: 'Você recusou — e o contrato antigo não foi renovado. Ficou sem clube, treinando por conta.', memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia' as const, tom: 'ruim' as const, efeito: () => semClube(c) };
   return { texto: memoria ? 'Você ficou. A família também.' : 'Você ficou no clube que conhece o seu jogo.', memoria, relevancia: 'biografia' as const };
 }
 
 /** O que a proposta diz antes do sim: os números DELA (os mesmos que o contrato vai ter). */
 function consequenciaDaProposta(c: Ctx, p: PropostaDeClube): string {
   const anos = p.meses >= 24 ? `${Math.round(p.meses / 12)} anos` : 'um ano';
+  if (p.origem === 'emprestimo') {
+    const es = c.v.caminhos.esporte;
+    const volta = anoDe(Math.min(c.v.t + p.meses, es?.contratoAte ?? c.v.t + p.meses));
+    return `O salário continua o do contrato (${fmt(p.salario)} por mês); quem recebe divide a conta. Lugar no time para jogar, volta prevista para ${volta}.${p.municipioId !== c.v.moradia.municipioId ? ` Mudança para ${municipio(p.municipioId).nome} durante o empréstimo.` : ''}`;
+  }
   const sal = p.espaco === 'reserva' && p.salarioTitular > p.salario
     ? `Salário de ${fmt(p.salario)} por mês para começar (${fmt(p.salarioTitular)} se ganhar a posição), contrato de ${anos}. Clube maior, briga por posição.`
     : `Salário de ${fmt(p.espaco === 'titular' ? p.salarioTitular : p.salario)} por mês, contrato de ${anos}${p.espaco === 'titular' ? ', e chance real de jogar' : ''}.`;

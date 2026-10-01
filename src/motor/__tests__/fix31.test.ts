@@ -329,7 +329,8 @@ describe('5–8. Audiovisual: teste → proposta → contrato → produção →
     const a = cacheAudiovisual(sem, o); const b = cacheAudiovisual(com, o);
     expect(b.bruto).toBeGreaterThan(a.bruto);
     expect(a.comissao).toBe(0);
-    expect(b.comissao).toBe(Math.round(b.bruto * 0.2 / 100) * 100);
+    // (Generalização de carreiras: a comissão é arredondada a dez reais — a cem, o trabalho pequeno saía sem comissão.)
+    expect(b.comissao).toBe(Math.round(b.bruto * 0.2 / 10) * 10);
     expect(b.liquido).toBe(b.bruto - b.comissao - b.despesas);
     // Dispensar tira a comissão.
     const sozinha = executar(com, { tipo: 'perseguir', oque: 'deixar_agente' } as unknown as Acao).vida;

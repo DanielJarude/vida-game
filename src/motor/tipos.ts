@@ -607,6 +607,12 @@ export interface Emprego {
   faixa?: number;
   /** Casos, turmas, projetos marcantes neste trabalho (o que a carreira foi construindo). */
   feitos?: number;
+  /**
+   * Os postos ANTERIORES dentro deste mesmo vínculo (generalização de carreiras):
+   * a promoção troca `ocupacaoId` no lugar, e é aqui que o cargo de antes fica
+   * (`trabalho.registrarPosto`). Saves antigos não têm: o histórico começa daqui.
+   */
+  postos?: { ocupacaoId: string; t: number }[];
 }
 
 export interface Candidatura {
@@ -1175,8 +1181,16 @@ export interface CarreiraEsportiva {
   proposta?: PropostaDeClube;
   /** A cláusula do contrato assinado: o salário que passa a valer se ganhar a posição (dito na proposta, cumprido aqui). */
   clausulaTitular?: number;
-  /** A seleção nacional (futebol): o radar, as convocações, os jogos — o mundo observa a carreira (`selecao`). */
+  /** A representação nacional (a seleção, a equipe do país, o índice): o radar, as convocações, os jogos — o mundo observa a carreira (`selecao`). */
   selecao?: TrajetoriaNaSelecao;
+  /** Por onde se chegou ao profissional: a base (o caminho comum) ou o campeonato amador (a rota tardia). */
+  origem?: 'base' | 'amador';
+  /**
+   * Empréstimo em curso: o clube DETENTOR (dono do contrato) cedeu o atleta
+   * por um período a outro clube (`clube`, o atual). Termina em `ate`: volta
+   * ao detentor — ou o clube atual compra, se houver proposta aceita.
+   */
+  emprestimo?: { clube: string; municipioId: string; nivel: 1 | 2 | 3 | 4; desde: number; ate: number };
 }
 
 /** Uma proposta concreta de clube (ou de empréstimo): o que se viu é o que se assina. */
@@ -1197,7 +1211,7 @@ export interface PropostaDeClube {
   /** Até quando vale a resposta. */
   validaAte: number;
   /** De onde veio: o mercado reagiu à temporada, o empresário buscou (maior, menor), o clube quis liberar, a volta de quem estava sem clube. */
-  origem: 'mercado' | 'maior' | 'menor' | 'liberacao' | 'sem_clube';
+  origem: 'mercado' | 'maior' | 'menor' | 'liberacao' | 'sem_clube' | 'emprestimo' | 'compra';
 }
 
 /** A trajetória na seleção nacional: só existe depois que o radar ligou. */
@@ -1216,6 +1230,8 @@ export interface TrajetoriaNaSelecao {
   capitao?: boolean;
   /** Os torneios de seleções disputados (ano, nome, campanha). */
   torneios: { ano: number; nome: string; campanha: string; jogos: number }[];
+  /** Nas modalidades individuais: medalhas em competições internacionais pelo país. */
+  medalhas?: number;
 }
 
 /** Uma situação de carreira aberta (`situacoes`): o modelo e o contexto sorteado (o minuto, o placar, o caso). */
@@ -1239,7 +1255,8 @@ export interface RegistroDeSituacao {
  * só os marcos biográficos.
  */
 export interface ConquistaEsportiva {
-  tipo: 'titulo' | 'acesso' | 'rebaixamento' | 'premio' | 'marco' | 'selecao';
+  /** `final`: a final perdida (no tênis, a final de torneio é parte da história). */
+  tipo: 'titulo' | 'acesso' | 'rebaixamento' | 'premio' | 'marco' | 'selecao' | 'final';
   modalidade: Dominio;
   ano: number;
   t: number;
@@ -1282,6 +1299,14 @@ export interface Temporada {
   ranking?: number;
   premio?: number;
   custos?: number;
+  /** Tênis: finais disputadas (vencidas e perdidas), a melhor fase do ano e os torneios que marcaram (nomes do universo do jogo). */
+  finais?: number;
+  melhorFase?: string;
+  torneios?: { nome: string; fase: string }[];
+  /** A temporada foi de empréstimo: o clube detentor do contrato. */
+  emprestado?: string;
+  /** Basquete: a função em quadra naquela temporada. */
+  funcao?: string;
 }
 
 /** Um projeto artístico coletivo (banda, grupo de teatro, companhia). */
@@ -1321,6 +1346,8 @@ export interface Obra {
   recepcao: 0 | 1 | 2 | 3;
   /** O que rendeu (reais, no ano). */
   renda: number;
+  /** Indicação ou prêmio (fictício, do universo desta vida) que a obra recebeu. */
+  premio?: { nome: string; venceu: boolean };
 }
 
 /** Um trabalho no currículo artístico (projetos são fictícios, do universo desta vida). */
@@ -1373,6 +1400,8 @@ export interface ItemCurriculo {
   cache?: number;
   /** Alguém que se conheceu ali (diretora, colega de elenco). */
   pessoaId?: string;
+  /** Indicação ou prêmio (fictício, do universo desta vida) pelo trabalho. */
+  premio?: { nome: string; venceu: boolean };
 }
 
 /** A carreira acadêmica como vida: não é só o cargo — é o que se pesquisa, quem se orienta, o que se publica. */
@@ -1395,6 +1424,23 @@ export interface VidaAcademica {
   financiamentos: number;
   /** Quando fez cada coisa pela última vez (o ritmo de cada ação). */
   ultimas: Record<string, number>;
+  /**
+   * A obra acadêmica, item por item (generalização de carreiras): o artigo, o
+   * livro, o congresso, a orientação, o financiamento, o prêmio. Os contadores
+   * acima continuam sendo a conta; aqui fica o que foi feito.
+   */
+  producao?: ItemAcademico[];
+}
+
+/** Um item da trajetória acadêmica (títulos fictícios, do universo desta vida). */
+export interface ItemAcademico {
+  t: number;
+  tipo: 'artigo' | 'livro' | 'congresso' | 'orientacao' | 'financiamento' | 'projeto' | 'premio' | 'colaboracao';
+  titulo: string;
+  /** Onde, com quem, a revista (genérica). */
+  detalhe?: string;
+  /** 0 passou · 1 lido na área · 2 citado · 3 referência. */
+  impacto?: 0 | 1 | 2 | 3;
 }
 
 /** Uma intenção persistente: o que se tenta, quantas vezes, o que pesou por último. */
@@ -1615,6 +1661,13 @@ export interface Caminhos {
   academia?: VidaAcademica;
   /** O palmarés esportivo: títulos, acessos, prêmios, marcos — permanente (pacote pós-REWORK 3). */
   palmares?: ConquistaEsportiva[];
+  /**
+   * Carreiras esportivas ANTERIORES (encerradas) que uma carreira nova
+   * substituiu em `esporte`: a trajetória passada continua sendo da pessoa.
+   */
+  carreirasEsportivas?: CarreiraEsportiva[];
+  /** Os anos de palco (o histórico de `palco`, que guarda só o último). */
+  palcos?: { ano: number; linguagem: Dominio; apresentacoes: number; bruto: number }[];
   /** A situação de carreira deste ano, esperando a escolha (o contexto fica guardado: o texto não muda no reload). */
   situacao?: SituacaoAberta;
   /** As situações de carreira vividas: a intenção escolhida e o que aconteceu (memória da vida profissional). */
@@ -1686,6 +1739,8 @@ export interface CarreiraMilitar {
   transferencias: number;
   /** Último teste físico em que não passou (atrasa promoção). */
   tafFalhou?: number;
+  /** As guarnições por onde passou (a primeira e cada transferência), em ordem. */
+  guarnicoes?: { municipioId: string; t: number }[];
   /** Emprego civil que ficou guardado durante o serviço inicial (Lei 4.375/1964, art. 60). */
   empregoGuardado?: Emprego;
 }
@@ -1700,6 +1755,8 @@ export interface VidaRural {
   ultimaSafra?: 'boa' | 'normal' | 'ruim';
   /** Anos seguidos de safra ruim (o que leva a vender, arrendar ou largar). */
   anosRuins: number;
+  /** As safras, ano a ano (a história da terra): o resultado da região e o que a pessoa fez dele. */
+  safras?: { ano: number; resultado: 'boa' | 'normal' | 'ruim'; coop?: boolean }[];
 }
 
 /**
@@ -1773,7 +1830,7 @@ export interface VidaPolitica {
   /** Eleito, esperando a posse. */
   posse?: { cargo: CargoEletivo; t: number };
   /** O mandato em exercício. */
-  mandato?: { cargo: CargoEletivo; tInicio: number; tFim: number; aprovacao: number; feito: number; crise?: { t: number; tipo: string } };
+  mandato?: { cargo: CargoEletivo; tInicio: number; tFim: number; aprovacao: number; feito: number; crise?: { t: number; tipo: string }; /** O que aconteceu durante o exercício (as crises, os momentos, o que foi entregue). */ marcos?: string[] };
   /** Mandatos seguidos no mesmo cargo executivo (para a regra de uma só reeleição). */
   consecutivos: number;
   historico: {
@@ -1783,6 +1840,11 @@ export interface VidaPolitica {
     chance?: number;
     /** Por qual partido disputou. */
     partido?: string;
+    /** No fim de um mandato: a aprovação, o que foi entregue, a prioridade e os marcos do exercício. */
+    aprovacao?: number;
+    feitos?: number;
+    prioridade?: Prioridade;
+    marcos?: string[];
   }[];
   /** Os partidos por onde passou (a troca fica na história). */
   partidos?: { sigla: string; tInicio: number; tFim?: number; como?: 'janela' | 'fora_da_janela' | 'majoritario' | 'sem_mandato' }[];

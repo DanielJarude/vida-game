@@ -31,23 +31,31 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { Posicao, RegistroDeSituacao, Vida } from '../tipos';
 import { escrever, idade } from '../nucleo';
 import { flex, ge } from '../texto';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { doClube, oClube, peloClube } from '../dados/clubes';
+import { cursoOuNulo } from '../dados/cursos';
+import { OCUPACOES } from '../dados/ocupacoes';
+import { estatura, funcaoBasquete, vantagemDeEstatura } from './modalidades';
+import { NOME_MOD } from './esporte';
+import { registrarNoMandato, NOME_PRIORIDADE } from './politica';
+import { novaOportunidade } from './oportunidades';
+import { lesionar } from './lesoes';
+import { especialidadeMedica } from './medicina';
 import { habilidade } from './frentes';
 import { barraDaDivisao, nomePosicao, OCUPACOES_DE_ATLETA } from './esporte';
 import { climaDe, mexerNoClima } from './profissao';
 import { negocioAtivo } from './negocio';
-import { empregoAcademico, vidaAcademica } from './academia';
+import { empregoAcademico, publicarArtigo, registrarProducao, vidaAcademica } from './academia';
 import { mercadoDoTrabalho } from './mercados';
 import { marcar } from './marcas';
 import { registrarConquista } from './palmares';
 import { anoDe } from '../tempo';
 
-export type Trajetoria = 'futebol' | 'medicina' | 'academia' | 'cena' | 'negocio' | 'autonomo' | 'emprego';
+export type Trajetoria = 'futebol' | 'basquete' | 'tenis' | 'atleta' | 'medicina' | 'academia' | 'cena' | 'negocio' | 'autonomo' | 'emprego' | 'militar' | 'politica' | 'rural' | 'universidade';
 export type Desfecho = RegistroDeSituacao['desfecho'];
 type Dados = Record<string, string | number>;
 export interface Fator { id: string; valor: number }
@@ -71,6 +79,9 @@ export interface Efeitos {
   defesa?: number;
   /** Dinheiro: no caixa do negócio, ou na conta. */
   dinheiro?: number;
+  /** Política (no mandato): a base de apoio e o desgaste (a aprovação do mandato é o `nome`). */
+  apoio?: number;
+  desgaste?: number;
   /** Algo próprio do momento (a posição nova, a braçadeira, o orientando). */
   extra?: (v: Vida, d: Dados) => void;
 }
@@ -134,8 +145,15 @@ export function situacaoAberta(v: Vida): { m: ModeloSituacao; d: Dados } | undef
 export function trajetoriaDeSituacao(v: Vida): Trajetoria | undefined {
   const e = v.trabalho.atual;
   const es = v.caminhos.esporte;
-  if (es?.fase === 'profissional' && es.modalidade === 'futebol' && e && OCUPACOES_DE_ATLETA.includes(e.ocupacaoId)) return 'futebol';
+  // Toda carreira esportiva produz momentos — cada modalidade os seus (o futebol não é exceção de arquitetura).
+  if (es?.fase === 'profissional' && e && OCUPACOES_DE_ATLETA.includes(e.ocupacaoId)) return es.modalidade === 'futebol' ? 'futebol' : es.modalidade === 'basquete' ? 'basquete' : es.modalidade === 'tenis' ? 'tenis' : 'atleta';
+  // A universidade como experiência: quem estuda (e, no máximo, estagia) vive situações do curso.
+  const mat = v.educacao.matricula;
+  if (mat && !mat.trancado && ['superior', 'tecnico'].includes(cursoOuNulo(mat.cursoId)?.nivel ?? '') && idade(v) <= 32 && (!e || e.contrato === 'estagio' || e.carga === 'parcial') && !negocioAtivo(v)) return 'universidade';
   if (!e) return negocioAtivo(v) ? 'negocio' : undefined;
+  if (e.contrato === 'eletivo' && v.caminhos.politica?.mandato) return 'politica';
+  if (e.contrato === 'militar' && v.caminhos.militar && !e.formacaoAte) return 'militar';
+  if (e.ocupacaoId === 'produtor_rural' && v.caminhos.rural) return 'rural';
   const oc = ocupacaoOuNula(e.ocupacaoId);
   if (!oc) return undefined;
   if (oc.trilha === 'medicina') return 'medicina';
@@ -149,13 +167,13 @@ export function trajetoriaDeSituacao(v: Vida): Trajetoria | undefined {
 }
 
 /** Quantas situações por ano, em média, cada trajetória produz (algumas temporadas são silenciosas). */
-const FREQUENCIA: Record<Trajetoria, number> = { futebol: 0.45, medicina: 0.32, academia: 0.3, cena: 0.32, negocio: 0.3, autonomo: 0.25, emprego: 0.22 };
+const FREQUENCIA: Record<Trajetoria, number> = { futebol: 0.45, basquete: 0.4, tenis: 0.4, atleta: 0.35, medicina: 0.32, academia: 0.3, cena: 0.32, negocio: 0.3, autonomo: 0.25, emprego: 0.22, militar: 0.25, politica: 0.38, rural: 0.28, universidade: 0.25 };
 
 /** O ano: às vezes, uma situação (nunca a mesma de pouco tempo atrás). Fica aberta para a decisão `car_situacao`. */
 export function processarSituacoes(v: Vida, r: Rng): void {
   v.caminhos.situacao = undefined;
   const tr = trajetoriaDeSituacao(v);
-  if (!tr || idade(v) < 16 || v.justica?.prisao || !r.chance(FREQUENCIA[tr])) return;
+  if (!tr || idade(v) < 17 || v.justica?.prisao || !r.chance(FREQUENCIA[tr])) return;
   const recentes = new Set((v.caminhos.situacoes ?? []).filter(x => v.t - x.t <= 36).map(x => x.id));
   const cands = MODELOS.filter(m => m.trajetoria === tr && !recentes.has(m.id) && m.cabe(v));
   const m = r.weighted(cands, x => x.peso?.(v) ?? 1);
@@ -183,7 +201,10 @@ export function resolverSituacao(v: Vida, r: Rng, intencaoId: string): { texto: 
 function aplicar(v: Vida, tr: Trajetoria, ef: Efeitos, d: Dados): void {
   const e = v.trabalho.atual;
   if (ef.nome) {
-    if (tr === 'futebol') { const es = v.caminhos.esporte; if (es) es.reputacao = clamp((es.reputacao ?? 30) + ef.nome); }
+    if (tr === 'futebol' || tr === 'basquete' || tr === 'tenis' || tr === 'atleta') { const es = v.caminhos.esporte; if (es) es.reputacao = clamp((es.reputacao ?? 30) + ef.nome); }
+    else if (tr === 'politica') { const m = v.caminhos.politica?.mandato; if (m) m.aprovacao = clamp(m.aprovacao + ef.nome * 1.5); }
+    else if (tr === 'universidade') { const m = v.educacao.matricula; if (m) m.desempenho = clamp(m.desempenho + ef.nome * 2); }
+    else if (tr === 'rural' && e?.clientela !== undefined) e.clientela = clamp(e.clientela + ef.nome * 1.5);
     else if (tr === 'negocio') { const n = negocioAtivo(v); if (n) n.reputacao = clamp((n.reputacao ?? 30) + ef.nome * 1.5); }
     else if ((tr === 'cena' || tr === 'autonomo') && e?.clientela !== undefined) e.clientela = clamp(e.clientela + ef.nome * 1.5);
     else if (tr === 'cena' && v.caminhos.arte?.ativo) v.caminhos.arte.publico = clamp(v.caminhos.arte.publico + ef.nome);
@@ -196,6 +217,8 @@ function aplicar(v: Vida, tr: Trajetoria, ef: Efeitos, d: Dados): void {
   if (ef.imagem) v.fatos[ef.imagem === 'boa' ? 'vis_boa' : 'vis_polemica'] = v.t;
   if (ef.confianca) v.fatos['esp_treinador_ok'] = ef.confianca > 0 ? v.t : v.t - 24;
   const t = v.caminhos.esporte?.temporadas?.slice(-1)[0];
+  if (ef.apoio && v.caminhos.politica) v.caminhos.politica.apoio = clamp(v.caminhos.politica.apoio + ef.apoio);
+  if (ef.desgaste && v.caminhos.politica) v.caminhos.politica.desgaste = clamp(v.caminhos.politica.desgaste + ef.desgaste);
   if (t && tr === 'futebol') { if (ef.gols) t.gols += ef.gols; if (ef.assistencias) t.assistencias += ef.assistencias; if (ef.defesa && t.defesa !== undefined) t.defesa += ef.defesa; }
   if (ef.dinheiro) { const n = tr === 'negocio' ? negocioAtivo(v) : undefined; if (n) n.caixa = (n.caixa ?? 0) + ef.dinheiro; else v.financas.conta += ef.dinheiro; }
   ef.extra?.(v, d);
@@ -514,9 +537,9 @@ const MODELOS_PROFISSOES: ModeloSituacao[] = [
   { id: 'aca_revisao', trajetoria: 'academia', cabe: () => true,
     titulo: 'Os revisores', texto: () => 'O artigo voltou da revista com três pareceres. Um gostou. Dois pedem um experimento que levaria um ano.',
     intencoes: [
-      { id: 'refazer', texto: 'Refazer o que pedem', dica: 'Um ano a mais — e o artigo mais forte.', risco: 0.2, fatores: v => [disciplina(v), competencia(v)], desfechos: D('O artigo saiu, melhor, numa revista de peso.', 'Saiu, um ano depois.', 'O experimento novo não confirmou tudo.', 'Um ano depois, outro grupo publicou primeiro.', { otimo: { extra: v => { vidaAcademica(v).publicacoes += 1; } }, bom: { extra: v => { vidaAcademica(v).publicacoes += 1; } } }, { otimo: 'Publicou numa revista de peso depois de refazer o que os revisores pediram.' }) },
-      { id: 'contestar', texto: 'Contestar os pareceres', dica: 'Às vezes o editor concorda.', risco: 0.55, fatores: v => [leitura(v), coragem(v), competencia(v)], desfechos: D('O editor concordou com você. Aceito.', 'Uma rodada a mais, e aceito.', 'Recusado.', 'Recusado — e o editor ficou com o seu nome.', { otimo: { extra: v => { vidaAcademica(v).publicacoes += 1; } }, bom: { extra: v => { vidaAcademica(v).publicacoes += 1; } } }) },
-      { id: 'outra', texto: 'Mandar para outra revista', dica: 'Mais rápido; com menos alcance.', risco: 0.3, fatores: v => [competencia(v)], desfechos: D('Aceito de primeira na outra revista.', 'Aceito, numa revista menor.', 'Recusado de novo.', 'Recusado duas vezes. O artigo foi para a gaveta.', { otimo: { extra: v => { vidaAcademica(v).publicacoes += 1; } }, bom: { extra: v => { vidaAcademica(v).publicacoes += 1; } } }) }
+      { id: 'refazer', texto: 'Refazer o que pedem', dica: 'Um ano a mais — e o artigo mais forte.', risco: 0.2, fatores: v => [disciplina(v), competencia(v)], desfechos: D('O artigo saiu, melhor, numa revista de peso.', 'Saiu, um ano depois.', 'O experimento novo não confirmou tudo.', 'Um ano depois, outro grupo publicou primeiro.', { otimo: { extra: v => { vidaAcademica(v).publicacoes += 1; publicarArtigo(v, 'depois da revisão'); } }, bom: { extra: v => { vidaAcademica(v).publicacoes += 1; publicarArtigo(v, 'depois da revisão'); } } }, { otimo: 'Publicou numa revista de peso depois de refazer o que os revisores pediram.' }) },
+      { id: 'contestar', texto: 'Contestar os pareceres', dica: 'Às vezes o editor concorda.', risco: 0.55, fatores: v => [leitura(v), coragem(v), competencia(v)], desfechos: D('O editor concordou com você. Aceito.', 'Uma rodada a mais, e aceito.', 'Recusado.', 'Recusado — e o editor ficou com o seu nome.', { otimo: { extra: v => { vidaAcademica(v).publicacoes += 1; publicarArtigo(v, 'depois da revisão'); } }, bom: { extra: v => { vidaAcademica(v).publicacoes += 1; publicarArtigo(v, 'depois da revisão'); } } }) },
+      { id: 'outra', texto: 'Mandar para outra revista', dica: 'Mais rápido; com menos alcance.', risco: 0.3, fatores: v => [competencia(v)], desfechos: D('Aceito de primeira na outra revista.', 'Aceito, numa revista menor.', 'Recusado de novo.', 'Recusado duas vezes. O artigo foi para a gaveta.', { otimo: { extra: v => { vidaAcademica(v).publicacoes += 1; publicarArtigo(v, 'depois da revisão'); } }, bom: { extra: v => { vidaAcademica(v).publicacoes += 1; publicarArtigo(v, 'depois da revisão'); } } }) }
     ] },
   { id: 'aca_orientando', trajetoria: 'academia', cabe: v => vidaAcademica(v).orientandos.length > 0 || vidaAcademica(v).orientacoes > 0,
     titulo: 'Um orientando em crise', texto: () => 'Um orientando aparece na sua sala dizendo que vai desistir: a bolsa atrasou, o experimento não sai, a cabeça não aguenta.',
@@ -527,8 +550,8 @@ const MODELOS_PROFISSOES: ModeloSituacao[] = [
   { id: 'aca_edital', trajetoria: 'academia', cabe: () => true,
     titulo: 'O edital', texto: () => 'Abriu um edital de pesquisa: dá para mandar um projeto ambicioso, que mudaria o laboratório, ou um seguro, que mantém o grupo andando.',
     intencoes: [
-      { id: 'ambicioso', texto: 'Mandar o ambicioso', dica: 'Muito dinheiro — e muita concorrência.', risco: 0.65, fatores: v => [competencia(v), F('produção', (vidaAcademica(v).publicacoes - 6) / 20)], desfechos: D('Aprovado. O laboratório ganhou equipamento e bolsas.', 'Aprovado com corte no orçamento.', 'Não aprovado — "mérito, mas sem recurso".', 'Não aprovado, e o seguro também não foi mandado. Um ano no aperto.', { otimo: { extra: v => { vidaAcademica(v).financiamentos += 1; } }, bom: { extra: v => { vidaAcademica(v).financiamentos += 1; } } }, { otimo: 'Ganhou um edital grande de pesquisa e montou o laboratório que queria.' }) },
-      { id: 'seguro', texto: 'Mandar o seguro', dica: 'Mais chance, menos mudança.', risco: 0.15, fatores: v => [competencia(v)], desfechos: D('Aprovado e elogiado.', 'Aprovado.', 'Ficou na lista de espera.', 'Não aprovado.', { otimo: { extra: v => { vidaAcademica(v).financiamentos += 1; } }, bom: { extra: v => { vidaAcademica(v).financiamentos += 1; } } }) }
+      { id: 'ambicioso', texto: 'Mandar o ambicioso', dica: 'Muito dinheiro — e muita concorrência.', risco: 0.65, fatores: v => [competencia(v), F('produção', (vidaAcademica(v).publicacoes - 6) / 20)], desfechos: D('Aprovado. O laboratório ganhou equipamento e bolsas.', 'Aprovado com corte no orçamento.', 'Não aprovado — "mérito, mas sem recurso".', 'Não aprovado, e o seguro também não foi mandado. Um ano no aperto.', { otimo: { extra: v => { vidaAcademica(v).financiamentos += 1; registrarProducao(v, { tipo: 'financiamento', titulo: 'Um edital de pesquisa', detalhe: 'verba para o laboratório' }); } }, bom: { extra: v => { vidaAcademica(v).financiamentos += 1; registrarProducao(v, { tipo: 'financiamento', titulo: 'Um edital de pesquisa', detalhe: 'verba para o laboratório' }); } } }, { otimo: 'Ganhou um edital grande de pesquisa e montou o laboratório que queria.' }) },
+      { id: 'seguro', texto: 'Mandar o seguro', dica: 'Mais chance, menos mudança.', risco: 0.15, fatores: v => [competencia(v)], desfechos: D('Aprovado e elogiado.', 'Aprovado.', 'Ficou na lista de espera.', 'Não aprovado.', { otimo: { extra: v => { vidaAcademica(v).financiamentos += 1; registrarProducao(v, { tipo: 'financiamento', titulo: 'Um edital de pesquisa', detalhe: 'verba para o laboratório' }); } }, bom: { extra: v => { vidaAcademica(v).financiamentos += 1; registrarProducao(v, { tipo: 'financiamento', titulo: 'Um edital de pesquisa', detalhe: 'verba para o laboratório' }); } } }) }
     ] },
   { id: 'cena_dificil', trajetoria: 'cena', cabe: () => true,
     titulo: 'A cena difícil', texto: () => 'A cena mais difícil do trabalho: a décima tomada não saiu, e a equipe olha o relógio.',
@@ -590,7 +613,311 @@ const MODELOS_PROFISSOES: ModeloSituacao[] = [
     ] }
 ];
 
-export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_PROFISSOES];
+/* ============================================================ Outras trajetórias (generalização de carreiras) */
+
+/*
+ * Não é o mesmo popup com substantivos trocados: cada modelo consulta o que
+ * é daquela trajetória (a função e a estatura no basquete; o saque, o fôlego e
+ * o ranking no tênis; o conceito e o comando na farda; o capital político, a
+ * base e o desgaste no mandato; a safra, a cooperativa e o caixa no campo; o
+ * desempenho no curso na universidade). A escolha é a intenção; o motor
+ * decide o resultado.
+ */
+
+const tecnicaEsp = (v: Vida) => { const es = v.caminhos.esporte!; return F('técnica', (habilidade(v, es.modalidade) - barraDaDivisao(es.modalidade, es.nivel)) / 12); };
+const estaturaF = (v: Vida) => F('estatura', vantagemDeEstatura(v) * 2);
+const nomeEsp = (v: Vida) => F('nome no esporte', ((v.caminhos.esporte?.reputacao ?? 30) - 50) / 120);
+const esporteDe = (v: Vida, tr: Trajetoria) => trajetoriaDeSituacao(v) === tr;
+const individualEsp = (v: Vida) => ['natacao', 'atletismo', 'lutas'].includes(v.caminhos.esporte?.modalidade ?? '');
+
+const MODELOS_ESPORTES: ModeloSituacao[] = [
+  {
+    id: 'bas_ultimo_ataque', trajetoria: 'basquete', peso: () => 2,
+    cabe: v => esporteDe(v, 'basquete'),
+    contexto: (v, r) => { const t = v.caminhos.esporte?.temporadas?.slice(-1)[0]; return { segundos: r.int(5, 14), placar: r.pick(['perde por um', 'perde por dois', 'empate']), jogo: t && t.colocacao <= 2 ? 'final' : r.chance(0.4) ? 'playoff' : 'jogo de temporada', funcao: funcaoBasquete(v) }; },
+    titulo: 'O último ataque',
+    texto: (_v, d) => `${d.segundos} segundos no relógio, ${d.jogo === 'final' ? 'a final' : d.jogo === 'playoff' ? 'um jogo de playoff' : 'um jogo da temporada'}, o time ${d.placar}. O técnico pediu tempo e desenhou a jogada — ${d.funcao === 'pivo' ? 'a bola vai para você no garrafão' : d.funcao === 'armador' ? 'a bola está na sua mão' : 'você é a opção de arremesso'}.`,
+    intencoes: (_v, d) => {
+      const decisivo = (v: Vida) => d.jogo === 'final' ? `Fez a cesta da vitória nos últimos segundos de uma final, ${peloClube(v.caminhos.esporte!.clube)}.` : 'Decidiu um jogo no último ataque.';
+      const ok = { nome: 3, confianca: 1, humor: 5, noto: 1 };
+      if (d.funcao === 'pivo') return [
+        { id: 'poste', texto: 'Jogar de costas, no poste', dica: 'O corpo decide — se o marcador deixar.', risco: 0.45, fatores: v => [tecnicaEsp(v), estaturaF(v), cabeca(v)],
+          desfechos: { otimo: { texto: 'Girou em cima do marcador e cravou. Cesta e falta.', efeitos: ok, memoria: decisivo }, bom: { texto: 'Pontuou de gancho; o jogo seguiu para a prorrogação.', efeitos: { nome: 1 } }, ruim: { texto: 'A dobra chegou e a bola espirrou.', efeitos: {} }, pessimo: { texto: 'Andou com a bola. Posse deles, jogo perdido.', efeitos: { nome: -2, estresse: 5, confianca: -1 } } } },
+        { id: 'devolver', texto: 'Atrair a marcação e devolver para fora', dica: 'O arremesso livre pode ser de outro.', risco: 0.25, fatores: v => [leitura(v), tecnicaEsp(v)],
+          desfechos: { otimo: { texto: 'Duas marcações em você — e o ala livre fez de três.', efeitos: { nome: 2, confianca: 1 } }, bom: { texto: 'Passe certo, arremesso bom, aro.', efeitos: {} }, ruim: { texto: 'O passe saiu lento; a defesa fechou.', efeitos: {} }, pessimo: { texto: 'Interceptado no meio do caminho.', efeitos: { nome: -1, estresse: 3 } } } },
+        { id: 'rebote', texto: 'Posicionar-se para o rebote ofensivo', dica: 'Se o arremesso errar, a segunda chance é sua.', risco: 0.5, fatores: v => [estaturaF(v), coragem(v), F('fôlego', (v.corpo.forma - 70) / 60)],
+          desfechos: { otimo: { texto: 'O arremesso bateu no aro, e a sua mão chegou antes de todas. Tapinha, cesta, fim.', efeitos: ok, memoria: decisivo }, bom: { texto: 'Pegou o rebote e sofreu a falta: dois lances livres.', efeitos: { nome: 1 } }, ruim: { texto: 'O rebote foi deles.', efeitos: {} }, pessimo: { texto: 'Falta no garrafão disputando o rebote — a sexta. Fora do jogo.', efeitos: { nome: -2, confianca: -1, estresse: 4 } } } }
+      ];
+      if (d.funcao === 'armador') return [
+        { id: 'infiltrar', texto: 'Chamar a jogada e infiltrar', dica: 'Pede perna e coragem no garrafão.', risco: 0.55, fatores: v => [tecnicaEsp(v), coragem(v), F('fôlego', (v.corpo.forma - 70) / 60)],
+          desfechos: { otimo: { texto: 'Passou pelo marcador, bandeja de canhota no último segundo.', efeitos: ok, memoria: decisivo }, bom: { texto: 'Infiltrou e sofreu a falta: dois lances livres convertidos.', efeitos: { nome: 1 } }, ruim: { texto: 'O toco veio de trás.', efeitos: {} }, pessimo: { texto: 'Perdeu a bola no drible; o contra-ataque matou o jogo.', efeitos: { nome: -2, estresse: 5, confianca: -1 } } } },
+        { id: 'pivo', texto: 'Achar o pivô no garrafão', dica: 'O passe certo exige ler a defesa antes dela.', risco: 0.3, fatores: v => [leitura(v), tecnicaEsp(v)],
+          desfechos: { otimo: { texto: 'Passe por cima da defesa, e o pivô só empurrou. Assistência da vitória.', efeitos: { nome: 2, confianca: 1, humor: 3 } }, bom: { texto: 'O passe chegou; o pivô errou o gancho.', efeitos: {} }, ruim: { texto: 'A linha de passe fechou; você forçou um arremesso ruim.', efeitos: {} }, pessimo: { texto: 'O passe foi direto na mão do adversário.', efeitos: { nome: -2, estresse: 3 } } } },
+        { id: 'tempo', texto: 'Segurar a bola e esperar a jogada desenhar', dica: 'Quase nunca dá errado. O relógio, às vezes, dá.', risco: 0.12, fatores: v => [leitura(v), cabeca(v)],
+          desfechos: { otimo: { texto: 'Esperou o bloqueio, e a jogada saiu como o técnico desenhou.', efeitos: { nome: 1, confianca: 1 } }, bom: { texto: 'A jogada saiu, o arremesso não caiu.', efeitos: {} }, ruim: { texto: 'O relógio de posse quase estourou.', efeitos: {} }, pessimo: { texto: 'Estourou o tempo de posse.', efeitos: { nome: -1, estresse: 3 } } } }
+      ];
+      return [
+        { id: 'tres', texto: 'Arremessar de três', dica: 'Se cair, decide. Se não cair, acabou.', risco: 0.7, fatores: v => [tecnicaEsp(v), cabeca(v)],
+          desfechos: { otimo: { texto: 'Do canto, com a mão do marcador na cara. Caiu.', efeitos: ok, memoria: decisivo }, bom: { texto: 'Caiu de dois, com o pé na linha: prorrogação.', efeitos: { nome: 1 } }, ruim: { texto: 'Aro e fora.', efeitos: {} }, pessimo: { texto: 'Airball. O ginásio inteiro cantou.', efeitos: { nome: -2, estresse: 6, imagem: 'polemica' } } } },
+        { id: 'atacar', texto: 'Atacar a cesta', dica: 'Pede perna depois de quarenta minutos.', risco: 0.45, fatores: v => [tecnicaEsp(v), F('fôlego', (v.corpo.forma - 70) / 60)],
+          desfechos: { otimo: { texto: 'Bandeja com a falta. Cesta e um.', efeitos: ok, memoria: decisivo }, bom: { texto: 'Sofreu a falta; acertou um dos dois.', efeitos: { nome: 1 } }, ruim: { texto: 'A ajuda chegou; arremesso forçado.', efeitos: {} }, pessimo: { texto: 'Falta de ataque. Bola deles.', efeitos: { nome: -2, confianca: -1 } } } },
+        { id: 'passar', texto: 'Passar para o companheiro livre', dica: 'O arremesso pode ser de outro; o jogo é do time.', risco: 0.25, fatores: v => [leitura(v), social(v)],
+          desfechos: { otimo: { texto: 'O companheiro livre no canto — e caiu. O abraço foi seu.', efeitos: { nome: 2, confianca: 1 } }, bom: { texto: 'O passe chegou; o arremesso não.', efeitos: {} }, ruim: { texto: 'O passe saiu atrasado.', efeitos: {} }, pessimo: { texto: 'Passe interceptado.', efeitos: { nome: -1, estresse: 3 } } } }
+      ];
+    }
+  },
+  {
+    id: 'bas_minutos', trajetoria: 'basquete', peso: () => 1,
+    cabe: v => esporteDe(v, 'basquete') && v.caminhos.esporte?.espaco === 'reserva',
+    titulo: 'Poucos minutos',
+    texto: v => `Oito minutos por jogo, quase sempre no fim. ${estatura(v) >= 195 ? 'O técnico diz que falta força no garrafão.' : 'O técnico diz que falta defesa.'}`,
+    intencoes: [
+      { id: 'cobrar', texto: 'Cobrar o técnico por mais minutos', dica: 'Pode render minutos — ou banco.', risco: 0.6, fatores: v => [nomeEsp(v), social(v)], desfechos: D('Ele ouviu e deu dez jogos de chance. Você aproveitou.', 'Ganhou uns minutos a mais.', 'A conversa esfriou o clima.', '"Então treina melhor." E mais banco.', { otimo: { confianca: 1 }, pessimo: { confianca: -1 } }) },
+      { id: 'treinar', texto: 'Ficar depois do treino arremessando', dica: 'Devagar, sem garantia.', risco: 0.2, fatores: v => [disciplina(v), tecnicaEsp(v)], desfechos: D('Trezentos arremessos por dia. Na rotação dos playoffs, você entrou.', 'O arremesso melhorou um pouco.', 'Nada mudou na rotação.', 'O ombro reclamou do excesso.', { otimo: { confianca: 1, extra: (v, _d) => { const f = v.caminhos.frentes.basquete; if (f) f.habilidade = clamp(f.habilidade + 1); } } }) },
+      { id: 'papel', texto: 'Aceitar o papel de especialista em defesa', dica: 'Menos ponto, mais lugar na rotação.', risco: 0.25, fatores: v => [leitura(v), disciplina(v)], desfechos: D('Virou o defensor que o técnico chama nos fins de jogo.', 'Entrou na rotação como defensor.', 'O papel não pegou.', 'Fez faltas demais em pouco tempo.', { otimo: { confianca: 1 }, bom: { confianca: 1 } }, { otimo: 'Virou o especialista em defesa que o técnico chamava nos fins de jogo.' }) }
+    ]
+  },
+  {
+    id: 'bas_vestiario', trajetoria: 'basquete', peso: () => 0.7,
+    cabe: v => esporteDe(v, 'basquete') && idade(v) >= 26 && v.caminhos.esporte?.espaco === 'titular',
+    titulo: 'Briga no vestiário',
+    texto: () => 'Dois jovens do elenco saíram no braço depois da derrota. O técnico olhou para você antes de dizer qualquer coisa.',
+    intencoes: [
+      { id: 'separar', texto: 'Separar e conversar com os dois', dica: 'Quem lidera, aparece.', risco: 0.3, fatores: v => [lideranca(v), social(v)], desfechos: D('No treino seguinte, os dois jogaram juntos como nunca. O técnico agradeceu em particular.', 'Os ânimos baixaram.', 'Um deles achou que você tomou partido.', 'A briga vazou para a imprensa com o seu nome no meio.', { otimo: { confianca: 1 }, pessimo: { imagem: 'polemica' } }, { otimo: 'Segurou um vestiário rachado no meio da temporada.' }) },
+      { id: 'comissao', texto: 'Deixar a comissão técnica resolver', dica: 'Não é com você — até ser.', risco: 0.1, fatores: v => [clima(v)], desfechos: D('A comissão resolveu rápido.', 'Resolvido.', 'O clima ruim durou semanas.', 'O time desandou na reta final.', { otimo: { nome: 0 }, bom: { nome: 0 } }) }
+    ]
+  },
+  {
+    id: 'ten_tiebreak', trajetoria: 'tenis', peso: () => 2,
+    cabe: v => esporteDe(v, 'tenis'),
+    contexto: (_v, r) => ({ fase: r.pick(['quartas de final', 'semifinal', 'semifinal']), placar: r.pick(['5 a 5', '6 a 6']), quadra: r.pick(['saibro', 'quadra dura']) }),
+    titulo: 'O tie-break',
+    texto: (_v, d) => `${String(d.fase).charAt(0).toUpperCase()}${String(d.fase).slice(1)}, terceiro set, ${d.placar} no tie-break, ${d.quadra}. O saque é seu. O braço pesa.`,
+    intencoes: [
+      { id: 'forte', texto: 'Sacar forte e subir à rede', dica: 'Se entrar, acaba. Se não, a dupla falta mora ao lado.', risco: 0.6, fatores: (v, d) => [tecnicaEsp(v), coragem(v), cabeca(v, d)],
+        desfechos: { otimo: { texto: 'Ace no T, voleio no ponto seguinte. A vitória veio com o punho fechado.', efeitos: { nome: 3, humor: 5 }, memoria: (_v, d) => `Fechou um tie-break de terceiro set nas ${d.fase} com dois saques que ninguém devolveu.` }, bom: { texto: 'Primeiro saque dentro, voleio difícil, ponto seu. Passou.', efeitos: { nome: 1 } }, ruim: { texto: 'O voleio ficou na rede.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Dupla falta no match point. O silêncio da quadra.', efeitos: { nome: -2, estresse: 6, humor: -3 } } } },
+      { id: 'fundo', texto: 'Jogar do fundo e esperar o erro', dica: 'Pede fôlego e paciência.', risco: 0.25, fatores: v => [F('fôlego', (v.corpo.forma - 70) / 60), disciplina(v), cabeca(v)],
+        desfechos: { otimo: { texto: 'Trinta e duas trocas de bola. Ele errou primeiro.', efeitos: { nome: 2, humor: 3 } }, bom: { texto: 'Ganhou nos erros dele.', efeitos: { nome: 1 } }, ruim: { texto: 'A paciência dele foi maior.', efeitos: {} }, pessimo: { texto: 'As pernas acabaram antes do ponto.', efeitos: { nome: -1, estresse: 4 } } } },
+      { id: 'variar', texto: 'Variar: slice e deixada', dica: 'Desmonta quem joga no ritmo — se a mão estiver boa.', risco: 0.45, fatores: v => [leitura(v), tecnicaEsp(v)],
+        desfechos: { otimo: { texto: 'A deixada morreu na rede dele. A torcida veio abaixo.', efeitos: { nome: 3, humor: 4, noto: 1 } }, bom: { texto: 'O slice desmontou o ritmo dele.', efeitos: { nome: 1 } }, ruim: { texto: 'A deixada ficou curta demais — na rede.', efeitos: {} }, pessimo: { texto: 'Ele leu a deixada e matou na paralela.', efeitos: { nome: -1, estresse: 4 } } } }
+    ]
+  },
+  {
+    id: 'ten_preparador', trajetoria: 'tenis', peso: () => 0.8,
+    cabe: v => esporteDe(v, 'tenis') && (v.caminhos.esporte?.nivel ?? 1) >= 2,
+    titulo: 'A equipe',
+    texto: () => 'O treinador diz que, para o próximo nível, falta um preparador físico de verdade — e isso custa uns R$ 18 mil por ano, do seu bolso.',
+    intencoes: [
+      { id: 'pagar', texto: 'Contratar o preparador', dica: 'Dinheiro agora; corpo melhor depois — talvez.', risco: 0.35, fatores: v => [disciplina(v), F('caixa', v.financas.conta >= 18000 ? 0.1 : -0.3)], desfechos: D('O corpo respondeu: a temporada seguinte foi a melhor fisicamente.', 'Mais fôlego no terceiro set.', 'Pouca diferença por enquanto.', 'O preparador e o treinador não se entenderam.', { otimo: { dinheiro: -18000, extra: v => { v.corpo.forma = clamp(v.corpo.forma + 6); } }, bom: { dinheiro: -18000, extra: v => { v.corpo.forma = clamp(v.corpo.forma + 3); } }, ruim: { dinheiro: -18000 }, pessimo: { dinheiro: -18000 } }) },
+      { id: 'seguir', texto: 'Seguir como está', dica: 'A conta fecha; o salto, talvez não.', risco: 0.1, fatores: () => [], desfechos: D('Seguiu bem assim mesmo.', 'Nada mudou.', 'O cansaço apareceu nos torneios longos.', 'Perdeu jogos no terceiro set por falta de perna.', { otimo: { nome: 0 }, bom: { nome: 0 } }) },
+      { id: 'trocar', texto: 'Trocar de treinador', dica: 'Um olhar novo — ou um ano perdido.', risco: 0.55, fatores: v => [leitura(v), social(v)], desfechos: D('O treinador novo mudou o seu saque. O ranking agradeceu.', 'A troca deu um gás.', 'A adaptação levou a temporada inteira.', 'Brigou com o novo em três meses.', { otimo: { extra: v => { const f = v.caminhos.frentes.tenis; if (f) f.habilidade = clamp(f.habilidade + 1.5); } } }, { otimo: 'Trocou de treinador no meio da carreira — e o jogo mudou de patamar.' }) }
+    ]
+  },
+  {
+    id: 'ten_dor', trajetoria: 'tenis', peso: () => 0.8,
+    cabe: v => esporteDe(v, 'tenis') && idade(v) >= 22,
+    titulo: 'A dor no ombro',
+    texto: () => 'Na véspera de uma semifinal, o ombro do saque dói ao levantar o braço. O fisioterapeuta faz uma cara que você conhece.',
+    intencoes: [
+      { id: 'jogar', texto: 'Jogar assim mesmo', dica: 'Os pontos do ranking estão ali. O ombro também.', risco: 0.6, fatores: v => [F('corpo', (v.corpo.saude - 60) / 70), coragem(v)], desfechos: { otimo: { texto: 'Jogou no sacrifício e ganhou. O ombro aguentou.', efeitos: { nome: 2, estresse: 4 } }, bom: { texto: 'Perdeu, mas competiu. O ombro aguentou.', efeitos: { estresse: 3 } }, ruim: { texto: 'Abandonou no segundo set.', efeitos: { nome: -1, estresse: 4 } }, pessimo: { texto: 'O ombro não aguentou: lesão de verdade, meses fora.', efeitos: { nome: -2, estresse: 8, extra: v => { lesionar(v, rngParaLesao(v), 2, 'profissional'); } }, memoria: 'Jogou machucado uma semifinal e saiu com uma lesão que custou meses.' } } },
+      { id: 'abandonar', texto: 'Não jogar e tratar', dica: 'Perde os pontos; ganha o ombro.', risco: 0.1, fatores: () => [], desfechos: D('O tratamento resolveu em duas semanas.', 'Voltou no torneio seguinte.', 'O ranking caiu um pouco.', 'Caiu no ranking e perdeu a vaga num torneio maior.', { otimo: { nome: 0, estresse: -2 }, bom: { nome: 0 }, ruim: { nome: -1 }, pessimo: { nome: -2 } }) },
+      { id: 'adaptar', texto: 'Jogar mudando o saque', dica: 'Menos força, mais colocação.', risco: 0.4, fatores: v => [leitura(v), tecnicaEsp(v)], desfechos: D('O saque colocado funcionou: ganhou sem forçar o ombro.', 'Perdeu em três sets apertados, sem piorar o ombro.', 'O saque fraco virou alvo.', 'Forçou mesmo assim no fim e piorou a dor.') }
+    ]
+  },
+  {
+    id: 'atl_final', trajetoria: 'atleta', peso: () => 2,
+    cabe: v => esporteDe(v, 'atleta') && individualEsp(v),
+    titulo: v => (v.caminhos.esporte?.modalidade === 'lutas' ? 'A final' : 'A final'),
+    texto: v => { const d = v.caminhos.esporte!.modalidade; return d === 'natacao' ? 'Final do campeonato nacional, raia quatro. O adversário da raia cinco é o favorito.' : d === 'lutas' ? 'Final do campeonato nacional. A adversária conhece o seu jogo; você conhece o dela.'.replace('A adversária conhece o seu jogo; você conhece o dela', 'Do outro lado, alguém que já venceu você uma vez') : 'Final do campeonato nacional. Oito atletas, uma pista, o estádio quase vazio — e a comissão da seleção na arquibancada.'; },
+    intencoes: v => {
+      const d = v.caminhos.esporte!.modalidade;
+      const forte = d === 'lutas' ? 'Partir para cima desde o primeiro segundo' : 'Sair forte desde o começo';
+      const guardar = d === 'lutas' ? 'Esperar o erro e contra-atacar' : 'Guardar para o fim';
+      return [
+        { id: 'forte', texto: forte, dica: 'Se o corpo aguentar, ninguém alcança.', risco: 0.6, fatores: v2 => [tecnicaEsp(v2), F('fôlego', (v2.corpo.forma - 70) / 50), coragem(v2)], desfechos: { otimo: { texto: 'Ninguém acompanhou. O ouro veio com folga.', efeitos: { nome: 3, humor: 5, noto: 1 }, memoria: `Venceu uma final nacional de ${NOME_MOD[d] ?? d} saindo na frente desde o começo.` }, bom: { texto: 'Liderou quase tudo; terminou no pódio.', efeitos: { nome: 1 } }, ruim: { texto: 'O corpo cobrou no fim: fora do pódio.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Quebrou no meio. Último lugar.', efeitos: { nome: -2, estresse: 6 } } } },
+        { id: 'guardar', texto: guardar, dica: 'Pede leitura da prova — e sangue frio.', risco: 0.4, fatores: v2 => [leitura(v2), cabeca(v2), tecnicaEsp(v2)], desfechos: { otimo: { texto: 'A arrancada do fim foi a mais bonita da prova. Ouro.', efeitos: { nome: 3, humor: 5 } }, bom: { texto: 'Recuperou posições no fim: pódio.', efeitos: { nome: 1 } }, ruim: { texto: 'Esperou demais.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Quando foi, já não dava: o pior resultado do ano.', efeitos: { nome: -1, estresse: 5 } } } },
+        { id: 'plano', texto: 'Seguir o plano do técnico à risca', dica: 'O plano é bom — se a prova for a que ele imaginou.', risco: 0.15, fatores: v2 => [disciplina(v2), tecnicaEsp(v2)], desfechos: D('O plano encaixou: medalha de prata, a melhor marca da vida.', 'Fez o que treinou: pódio.', 'A prova não foi a que o plano imaginava.', 'Errou a tática no meio e não se recuperou.') }
+      ];
+    }
+  },
+  {
+    id: 'atl_indice', trajetoria: 'atleta', peso: () => 1,
+    cabe: v => esporteDe(v, 'atleta') && individualEsp(v) && (v.caminhos.esporte?.nivel ?? 1) >= 3,
+    titulo: 'O índice',
+    texto: () => 'Uma competição extra no fim da temporada pode dar o índice para o campeonato mundial. O corpo pede descanso; o técnico diz que a decisão é sua.',
+    intencoes: [
+      { id: 'ir', texto: 'Ir atrás do índice', dica: 'O índice é o ano. O corpo também.', risco: 0.55, fatores: v => [tecnicaEsp(v), F('corpo', (v.corpo.saude - 60) / 70), cabeca(v)], desfechos: { otimo: { texto: 'Fez o índice na última tentativa. O nome entrou na lista.', efeitos: { nome: 4, humor: 5 }, memoria: 'Conseguiu o índice para o mundial na última competição do ano.' }, bom: { texto: 'Ficou a centésimos do índice — e com a melhor marca da carreira.', efeitos: { nome: 2 } }, ruim: { texto: 'Longe do índice; o cansaço pesou.', efeitos: { estresse: 4 } }, pessimo: { texto: 'Machucou na prova extra.', efeitos: { nome: -1, estresse: 6, extra: v => { lesionar(v, rngParaLesao(v), 1, 'profissional'); } } } } },
+      { id: 'descansar', texto: 'Descansar e preparar o ano que vem', dica: 'Sem índice agora; com corpo depois.', risco: 0.1, fatores: () => [], desfechos: D('Voltou na temporada seguinte inteiro e mais rápido.', 'Descansou.', 'Viu o índice ficar com outro.', 'O ano que vem não começou melhor.', { otimo: { nome: 1, extra: v => { v.corpo.forma = clamp(v.corpo.forma + 3); } }, bom: { nome: 0 } }) }
+    ]
+  },
+  {
+    id: 'vol_saque', trajetoria: 'atleta', peso: () => 2,
+    cabe: v => esporteDe(v, 'atleta') && v.caminhos.esporte?.modalidade === 'volei',
+    contexto: (_v, r) => ({ placar: r.pick(['13 a 14', '14 a 14', '12 a 14']) }),
+    titulo: 'O saque do tie-break',
+    texto: (_v, d) => `Quinto set, ${d.placar}. O técnico olha para o banco e para você. A bola é sua no saque.`,
+    intencoes: [
+      { id: 'viagem', texto: 'Saque viagem, forçado', dica: 'Ace — ou bola na rede.', risco: 0.65, fatores: (v, d) => [tecnicaEsp(v), cabeca(v, d), coragem(v)], desfechos: { otimo: { texto: 'Ace. E outro. O ginásio desabou.', efeitos: { nome: 3, humor: 5, confianca: 1 }, memoria: 'Virou um quinto set com dois aces seguidos.' }, bom: { texto: 'O passe deles saiu ruim; o bloqueio fez o ponto.', efeitos: { nome: 1 } }, ruim: { texto: 'Bola na rede.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Na rede, no match point. Fim de jogo.', efeitos: { nome: -2, estresse: 6, confianca: -1 } } } },
+      { id: 'tatico', texto: 'Saque flutuante no líbero deles', dica: 'Menos força, mais pontaria.', risco: 0.3, fatores: v => [leitura(v), tecnicaEsp(v)], desfechos: D('O líbero errou o passe; o contra-ataque foi seu.', 'O passe deles saiu fora da rede.', 'Passe perfeito deles.', 'Saque fácil, ponto deles.') },
+      { id: 'seguro', texto: 'Só colocar a bola em jogo', dica: 'Não erra. Não pressiona.', risco: 0.1, fatores: v => [disciplina(v)], desfechos: D('Rali longo, e o seu bloqueio fechou o jogo.', 'O rali seguiu.', 'Eles atacaram de primeira.', 'Ponto deles no contra-ataque.', { otimo: { nome: 1 }, bom: { nome: 0 } }) }
+    ]
+  }
+];
+
+/** Um sorteio estável para a lesão que um desfecho causa (o desfecho já foi sorteado; a gravidade é dele). */
+const rngParaLesao = (v: Vida): Rng => rngDe(v.id, 'lesao_situacao', v.t);
+
+/* ------------------------------------------------------------ Farda */
+
+const conceito = (v: Vida) => F('conceito', ((v.trabalho.atual?.desempenho ?? 50) - 55) / 80);
+const naFarda = (v: Vida) => trajetoriaDeSituacao(v) === 'militar';
+
+const MODELOS_MILITAR: ModeloSituacao[] = [
+  { id: 'mil_apoio', trajetoria: 'militar', peso: () => 1.2, cabe: v => naFarda(v),
+    contexto: (_v, r) => ({ ocorrencia: r.pick(['uma enchente', 'um deslizamento de encosta', 'uma seca que deixou cidades sem água']) }),
+    titulo: 'A operação de apoio', texto: (_v, d) => `Uma operação de apoio a uma região atingida por ${d.ocorrencia}: você responde por uma equipe pequena, numa área que ninguém mapeou direito.`,
+    intencoes: [
+      { id: 'plano', texto: 'Seguir à risca o plano da operação', dica: 'Seguro e previsível — se o plano couber no terreno.', risco: 0.15, fatores: v => [disciplina(v), competencia(v), conceito(v)], desfechos: D('O plano coube no terreno. A equipe trabalhou sem um acidente.', 'Cumpriu a missão no prazo.', 'O plano não previa a ponte caída: um dia perdido.', 'A equipe ficou parada esperando ordem enquanto a água subia.', { otimo: { clima: 4 }, pessimo: { clima: -4 } }) },
+      { id: 'adaptar', texto: 'Adaptar o plano ao que está vendo', dica: 'Pode salvar o dia — e você responde pela decisão.', risco: 0.5, fatores: v => [leitura(v), coragem(v), lideranca(v)], desfechos: D('A rota que você escolheu chegou antes a uma comunidade isolada. Saiu um elogio em boletim.', 'A adaptação funcionou.', 'Deu mais trabalho que o plano.', 'A decisão foi contestada pelo comando: o relatório ficou com o seu nome.', { otimo: { clima: 6, extra: v => { v.fatos['mil_elogios'] = (v.fatos['mil_elogios'] ?? 0) + 1; marcar(v, 'conquista', 'Elogio em boletim por uma operação de apoio a uma região atingida.', 2, { trilha: 'militar' }); } }, pessimo: { clima: -8 } }, { otimo: 'Recebeu um elogio em boletim pela atuação numa operação de apoio a uma região atingida.' }) },
+      { id: 'reforco', texto: 'Pedir reforço e esperar', dica: 'Ninguém se arrisca. O tempo, sim.', risco: 0.2, fatores: v => [clima(v), disciplina(v)], desfechos: D('O reforço chegou rápido e a operação andou.', 'O reforço veio.', 'O reforço demorou.', 'Esperar custou caro para quem esperava ajuda.', { otimo: { nome: 0 }, bom: { nome: 0 } }) }
+    ] },
+  { id: 'mil_subordinado', trajetoria: 'militar', peso: () => 1, cabe: v => naFarda(v) && v.caminhos.militar?.quadro !== 'temporario' && idade(v) >= 24,
+    titulo: 'Um soldado da equipe', texto: () => 'Um soldado da sua equipe chegou atrasado pela terceira vez no mês. Em particular, conta que a mãe está doente e sozinha.',
+    intencoes: [
+      { id: 'regulamento', texto: 'Aplicar o regulamento', dica: 'Correto. Frio.', risco: 0.2, fatores: v => [disciplina(v), conceito(v)], desfechos: D('Ele cumpriu a punição e passou a chegar na hora. Depois agradeceu a clareza.', 'O caso seguiu o regulamento.', 'Ele cumpriu, ressentido.', 'Ele pediu baixa; o resto da equipe ficou mais calado.') },
+      { id: 'encaminhar', texto: 'Conversar e encaminhar à assistência social da unidade', dica: 'Leva tempo. Pode resolver de verdade.', risco: 0.3, fatores: v => [social(v), lideranca(v)], desfechos: D('A assistência ajustou a escala dele e ajudou com a mãe. Ele virou o mais leal da equipe.', 'A escala dele mudou.', 'A papelada demorou.', 'O comando achou que você estava passando a mão.', { otimo: { clima: 4 }, pessimo: { clima: -5 } }, { otimo: 'Ajudou um soldado em crise familiar sem largar o regulamento — e ganhou a equipe.' }) },
+      { id: 'acobertar', texto: 'Acobertar a falta', dica: 'Resolve hoje. Pode aparecer na inspeção.', risco: 0.6, fatores: v => [coragem(v), F('sorte', 0)], desfechos: D('Ninguém soube; ele resolveu a vida em casa.', 'Passou.', 'O sargento desconfiou.', 'A falta apareceu na inspeção — e o seu nome junto.', { pessimo: { clima: -10 } }) }
+    ] },
+  { id: 'mil_curso', trajetoria: 'militar', peso: () => 0.8, cabe: v => naFarda(v) && idade(v) <= 46,
+    titulo: 'Um curso longe', texto: v => `Abriu uma vaga num curso de especialização ${v.caminhos.militar?.forca === 'marinha' ? 'numa base no litoral' : 'noutra cidade'}: seis meses fora de casa. Conta para a carreira.`,
+    intencoes: [
+      { id: 'ir', texto: 'Ir', dica: 'Seis meses longe; o currículo agradece.', risco: 0.35, fatores: v => [disciplina(v), F('cabeça', -(v.mente.estresse - 45) / 110)], desfechos: D('Terminou entre os primeiros da turma. O conceito subiu.', 'Concluiu o curso.', 'Concluiu, cansado e com saudade.', 'Não acompanhou a turma e saiu no meio.', { otimo: { clima: 4, extra: v => { const p = v.vinculos[Object.keys(v.vinculos).find(k => v.vinculos[k].romance && ['namoro', 'morando_junto', 'casamento'].includes(v.vinculos[k].romance!.estagio)) ?? '']; if (p) p.tensao = clamp(p.tensao + 5); } } }, { otimo: 'Terminou um curso de especialização militar entre os primeiros da turma.' }) },
+      { id: 'recusar', texto: 'Recusar por causa da família', dica: 'A família fica perto; a vaga vai para outro.', risco: 0.1, fatores: () => [], desfechos: D('Ficou, e ninguém cobrou nada.', 'Outro foi.', 'O comando anotou.', 'Na promoção seguinte, quem foi ao curso passou na frente.', { otimo: { nome: 0, humor: 3 }, bom: { nome: 0, humor: 2 } }) }
+    ] }
+];
+
+/* ------------------------------------------------------------ Mandato */
+
+const pol = (v: Vida) => v.caminhos.politica!;
+const experienciaPolitica = (v: Vida) => { const anos = (pol(v).historico.filter(h => h.resultado === 'concluiu').length * 4) + ((v.t - (pol(v).mandato?.tInicio ?? v.t)) / 12); return F('experiência política', Math.min(12, anos) / 12 - 0.35); };
+const capital = (v: Vida) => F('capital político', (pol(v).reputacao - 40) / 120);
+const base = (v: Vida) => F('base de apoio', (pol(v).apoio - 40) / 120);
+const desgasteF = (v: Vida) => F('desgaste', -pol(v).desgaste / 150);
+const noMandato = (v: Vida) => trajetoriaDeSituacao(v) === 'politica';
+
+const MODELOS_POLITICA: ModeloSituacao[] = [
+  { id: 'pol_audiencia', trajetoria: 'politica', peso: () => 1.2, cabe: v => noMandato(v),
+    titulo: 'A audiência pública', texto: v => `Audiência pública sobre ${pol(v).prioridade ? NOME_PRIORIDADE[pol(v).prioridade!].toLowerCase() : 'o orçamento do ano'}: auditório cheio, e um grupo organizado chegou para vaiar.`,
+    intencoes: [
+      { id: 'ouvir', texto: 'Ouvir tudo e responder ponto a ponto', dica: 'Longo. Quem fica até o fim lembra.', risco: 0.3, fatores: v => [social(v), cabeca(v), experienciaPolitica(v)], desfechos: D('Ficou até a última pergunta. Na saída, até quem vaiou apertou a sua mão.', 'A audiência terminou sem incidente.', 'A vaia abafou as respostas.', 'Uma frase sua, fora de contexto, virou vídeo.', { otimo: { apoio: 4 }, pessimo: { imagem: 'polemica', desgaste: 4 } }, { otimo: 'Numa audiência pública tensa, ouviu até a última pergunta — e saiu maior do que entrou.' }) },
+      { id: 'numeros', texto: 'Apresentar os números da gestão', dica: 'Convence quem quer ser convencido.', risco: 0.2, fatores: v => [disciplina(v), leitura(v), capital(v)], desfechos: D('Os números falaram: a imprensa reproduziu os gráficos.', 'Apresentação correta, plateia fria.', 'Ninguém quis saber de gráfico.', 'Um número errado na apresentação virou manchete.', { pessimo: { desgaste: 5 } }) },
+      { id: 'ceder', texto: 'Ceder a uma reivindicação no microfone', dica: 'Aplauso hoje; conta depois.', risco: 0.6, fatores: v => [base(v), leitura(v), desgasteF(v)], desfechos: D('A promessa era possível — e foi cumprida no mesmo ano.', 'Aplausos; a conta ficou para depois.', 'A promessa não cabia no orçamento.', 'A promessa não cumprida voltou na campanha seguinte.', { otimo: { apoio: 6, extra: v => { const m = pol(v).mandato; if (m) m.feito += 1; } }, ruim: { desgaste: 4 }, pessimo: { desgaste: 8 } }) }
+    ] },
+  { id: 'pol_projeto', trajetoria: 'politica', peso: () => 1, cabe: v => noMandato(v) && !!pol(v).prioridade,
+    titulo: 'O projeto travado', texto: v => `O seu projeto de ${NOME_PRIORIDADE[pol(v).prioridade!].toLowerCase()} está parado na comissão há meses. Dá para negociar, levar a voto como está ou recolher e esperar.`,
+    intencoes: [
+      { id: 'negociar', texto: 'Negociar uma emenda com a oposição', dica: 'O projeto muda; a chance de passar sobe.', risco: 0.35, fatores: v => [social(v), base(v), experienciaPolitica(v)], desfechos: D('Aprovado com votos da oposição. O projeto saiu menor — e saiu.', 'Andou na comissão.', 'A oposição pediu demais.', 'O seu próprio grupo achou que você cedeu demais.', { otimo: { apoio: 2, extra: v => { const m = pol(v).mandato; if (m) m.feito += 2; registrarNoMandato(v, `${anoDe(v.t)} · aprovou o projeto de ${NOME_PRIORIDADE[pol(v).prioridade!].toLowerCase()} negociando com a oposição`); } }, pessimo: { apoio: -5 } }, { otimo: 'Aprovou o seu projeto prioritário negociando com a oposição.' }) },
+      { id: 'votar', texto: 'Levar a voto como está', dica: 'Ou passa inteiro, ou cai.', risco: 0.65, fatores: v => [base(v), capital(v), desgasteF(v)], desfechos: D('Passou inteiro, por dois votos.', 'Passou com mudanças de última hora.', 'Derrotado no plenário.', 'Derrotado — e a oposição comemorou na tribuna.', { otimo: { extra: v => { const m = pol(v).mandato; if (m) m.feito += 3; registrarNoMandato(v, `${anoDe(v.t)} · aprovou o projeto de ${NOME_PRIORIDADE[pol(v).prioridade!].toLowerCase()} como queria`); } }, pessimo: { desgaste: 6 } }) },
+      { id: 'recolher', texto: 'Recolher e reapresentar depois', dica: 'Nada se perde. Nada se ganha.', risco: 0.1, fatores: () => [], desfechos: D('O tempo jogou a favor: no ano seguinte, havia votos.', 'O projeto voltou para a gaveta.', 'A imprensa chamou de recuo.', 'O tema saiu da pauta de vez.', { otimo: { nome: 1 }, bom: { nome: 0 } }) }
+    ] },
+  { id: 'pol_entrevista', trajetoria: 'politica', peso: () => 1, cabe: v => noMandato(v),
+    titulo: 'Ao vivo', texto: () => 'Numa entrevista ao vivo, a jornalista pergunta um número que você não sabe de cabeça.',
+    intencoes: v => {
+      // A fama não é vitória: amplia. Quem é muito conhecido tem mais gente assistindo — para o bem e para o mal.
+      const amplia = clamp((v.notoriedade?.valor ?? 0) / 250, 0, 0.3);
+      return [
+        { id: 'admitir', texto: 'Admitir que não sabe e prometer o dado', dica: 'Honesto. Pode parecer despreparo.', risco: 0.15 + amplia / 2, fatores: v2 => [social(v2), capital(v2)], desfechos: D('A resposta honesta virou elogio nos comentários.', 'Passou.', 'Chamaram de despreparo.', 'O corte do "não sei" rodou o dia inteiro.', { pessimo: { desgaste: 4 } }) },
+        { id: 'arriscar', texto: 'Arriscar um número', dica: 'Se acertar, ninguém lembra. Se errar...', risco: 0.55 + amplia, fatores: v2 => [leitura(v2), F('cabeça', (v2.mente.cognicao - 55) / 90)], desfechos: D('O número estava certo — e você ainda explicou o contexto.', 'Chegou perto.', 'O número estava errado; a correção saiu no dia seguinte.', 'O número errado virou checagem de fatos e meme.', { pessimo: { imagem: 'polemica', desgaste: 6 } }) },
+        { id: 'mudar', texto: 'Mudar de assunto', dica: 'Funciona com quem não presta atenção.', risco: 0.4 + amplia / 2, fatores: v2 => [social(v2), experienciaPolitica(v2)], desfechos: D('A transição foi natural; a entrevista seguiu nas suas propostas.', 'Ninguém reparou.', 'A jornalista repetiu a pergunta.', '"O político que fugiu da pergunta."', { pessimo: { desgaste: 4 } }) }
+      ];
+    } }
+];
+
+/* ------------------------------------------------------------ Campo */
+
+const ru = (v: Vida) => v.caminhos.rural!;
+const noCampo = (v: Vida) => trajetoriaDeSituacao(v) === 'rural';
+const anosNoCampo = (v: Vida) => F('anos de lida', Math.min(15, (v.t - ru(v).tInicio) / 12) / 20 - 0.2);
+const caixa = (v: Vida, quanto: number) => F('caixa', v.financas.conta >= quanto ? 0.15 : -0.3);
+
+const MODELOS_RURAL: ModeloSituacao[] = [
+  { id: 'rur_venda', trajetoria: 'rural', peso: () => 1.2, cabe: v => noCampo(v),
+    titulo: 'A hora de vender', texto: v => `A ${ru(v).cultura === 'leite' ? 'produção do mês' : 'safra'} está pronta. O atravessador oferece pagamento à vista, abaixo do preço. Esperar pode render mais — ou o preço cair.`,
+    intencoes: v => [
+      { id: 'vista', texto: 'Vender agora ao atravessador', dica: 'Dinheiro certo, menor.', risco: 0.1, fatores: () => [], desfechos: D('O preço caiu na semana seguinte: vender cedo foi o certo.', 'Vendeu, sem surpresa.', 'O preço subiu depois.', 'O preço subiu muito depois; o atravessador ganhou a sua margem.', { otimo: { dinheiro: 3000 }, bom: { dinheiro: 1500, nome: 0 } }) },
+      { id: 'esperar', texto: 'Guardar e esperar o preço', dica: 'Pede caixa para aguentar e um pouco de sorte.', risco: 0.6, fatores: v2 => [leitura(v2), caixa(v2, 8000), anosNoCampo(v2)], desfechos: D('O preço subiu bem: o ano fechou no azul.', 'Vendeu um pouco melhor.', 'O preço não se mexeu, e o produto perdeu qualidade.', 'O preço desabou: vendeu abaixo do que o atravessador ofereceu.', { otimo: { dinheiro: 9000 }, bom: { dinheiro: 3000 }, ruim: { dinheiro: -1500 }, pessimo: { dinheiro: -6000 } }, { otimo: 'Segurou a safra esperando o preço — e o ano pagou os anteriores.' }) },
+      ...(ru(v).cooperativa ? [{ id: 'coop', texto: 'Vender pela cooperativa', dica: 'Preço médio, sem susto.', risco: 0.2, fatores: (v2: Vida) => [anosNoCampo(v2)], desfechos: D('A cooperativa fechou contrato com um laticínio grande: preço bom.', 'Preço justo, pago em dia.', 'O pagamento atrasou um mês.', 'A cooperativa passou por uma crise e pagou parcelado.', { otimo: { dinheiro: 5000 }, bom: { dinheiro: 2500 } }) }] : [])
+    ] },
+  { id: 'rur_maquina', trajetoria: 'rural', peso: () => 0.8, cabe: v => noCampo(v) && v.t - ru(v).tInicio >= 24,
+    titulo: 'A máquina', texto: () => 'Um vendedor oferece financiar uma máquina nova: dobra o que se planta e tira um peso das costas — parcela por cinco anos.',
+    intencoes: [
+      { id: 'financiar', texto: 'Financiar a máquina nova', dica: 'Produz mais. A parcela não espera a chuva.', risco: 0.55, fatores: v => [anosNoCampo(v), F('safras', ru(v).anosRuins ? -0.2 : 0.1), leitura(v)], desfechos: D('A máquina pagou a si mesma em três safras.', 'Rendeu; a parcela pesa, mas fecha.', 'Um ano ruim, e a parcela apertou tudo.', 'Duas safras ruins e a parcela atrasada: o banco ligou.', { otimo: { nome: 4, dinheiro: -8000 }, bom: { nome: 2, dinheiro: -8000 }, ruim: { dinheiro: -12000 }, pessimo: { dinheiro: -20000, estresse: 8 } }, { otimo: 'Comprou a primeira máquina nova do sítio — e ela se pagou.' }) },
+      { id: 'usado', texto: 'Comprar uma usada, à vista', dica: 'Menos dívida, mais oficina.', risco: 0.3, fatores: v => [caixa(v, 12000), leitura(v)], desfechos: D('A usada era boa: anos de serviço.', 'Funciona, com remendo.', 'Quebrou na colheita.', 'Comprou um problema.', { otimo: { nome: 2, dinheiro: -12000 }, bom: { nome: 1, dinheiro: -12000 }, ruim: { dinheiro: -15000 }, pessimo: { dinheiro: -16000 } }) },
+      { id: 'seguir', texto: 'Seguir com o que tem', dica: 'Sem dívida, sem salto.', risco: 0.1, fatores: () => [], desfechos: D('O vizinho que financiou quebrou; você não.', 'Seguiu.', 'O vizinho com máquina nova colheu o dobro.', 'A máquina velha parou de vez.', { otimo: { nome: 0 }, bom: { nome: 0 } }) }
+    ] },
+  { id: 'rur_estiagem', trajetoria: 'rural', peso: () => 1.5, cabe: v => noCampo(v) && ru(v).ultimaSafra === 'ruim',
+    titulo: 'A estiagem', texto: v => (ru(v).cultura === 'leite' ? 'A estiagem continua. O pasto secou, o gado emagrece, o poço baixou.' : 'A estiagem continua. A lavoura murcha, e a previsão não traz chuva para as próximas semanas.'),
+    intencoes: [
+      { id: 'vender', texto: 'Vender parte agora, antes de perder', dica: 'Perde menos. Recomeça menor.', risco: 0.2, fatores: v => [leitura(v), anosNoCampo(v)], desfechos: D('Vendeu na hora certa: o preço desabou na semana seguinte.', 'Perdeu menos do que os vizinhos.', 'Vendeu barato.', 'Vendeu barato — e a chuva veio no mês seguinte.', { otimo: { dinheiro: 3000 }, ruim: { dinheiro: -2000 }, pessimo: { dinheiro: -5000 } }) },
+      { id: 'poco', texto: 'Furar um poço mais fundo', dica: 'Caro. Se achar água, salva este ano e os próximos.', risco: 0.5, fatores: v => [caixa(v, 15000), F('sorte', 0)], desfechos: D('Água boa a sessenta metros. O sítio nunca mais secou igual.', 'Achou água, pouca.', 'O poço deu pouca água pelo preço.', 'Poço seco. O dinheiro foi junto.', { otimo: { dinheiro: -15000, nome: 4 }, bom: { dinheiro: -15000, nome: 2 }, ruim: { dinheiro: -15000 }, pessimo: { dinheiro: -15000, estresse: 8 } }, { otimo: 'Furou o poço que acabou com as estiagens no sítio.' }) },
+      { id: 'esperar', texto: 'Esperar a chuva', dica: 'Às vezes ela vem.', risco: 0.6, fatores: () => [F('sorte', 0)], desfechos: D('Choveu na semana seguinte. Salvou a maior parte.', 'Choveu tarde, mas choveu.', 'A chuva não veio a tempo.', 'Perdeu quase tudo.', { otimo: { nome: 1 }, ruim: { dinheiro: -4000 }, pessimo: { dinheiro: -9000, estresse: 8 } }) }
+    ] }
+];
+
+/* ------------------------------------------------------------ Universidade */
+
+const naUni = (v: Vida) => trajetoriaDeSituacao(v) === 'universidade';
+const desempenhoCurso = (v: Vida) => F('desempenho no curso', ((v.educacao.matricula?.desempenho ?? 55) - 55) / 70);
+const colegaDaFaculdade = (v: Vida) => Object.values(v.vinculos).find(x => x.convivio.includes('faculdade') && v.pessoas[x.pessoaId]?.vivo && !x.romance);
+
+const MODELOS_UNIVERSIDADE: ModeloSituacao[] = [
+  { id: 'uni_grupo', trajetoria: 'universidade', peso: () => 1, cabe: v => naUni(v),
+    titulo: 'O trabalho em grupo', texto: () => 'O trabalho em grupo vale metade da nota do semestre, e dois colegas não fizeram nada até a véspera.',
+    intencoes: [
+      { id: 'sozinho', texto: 'Fazer a parte deles', dica: 'A nota sai. A noite, não.', risco: 0.2, fatores: v => [disciplina(v), desempenhoCurso(v)], desfechos: D('Nota máxima — e o professor percebeu de quem era o trabalho.', 'Entregue, nota boa.', 'Entregue, nota mediana e uma madrugada perdida.', 'Entregou mal feito e ficou com a nota que todos tiveram.', { ruim: { estresse: 5 }, pessimo: { estresse: 7 } }) },
+      { id: 'conversar', texto: 'Chamar o grupo para conversar', dica: 'Pode reorganizar tudo — ou virar briga.', risco: 0.35, fatores: v => [social(v), lideranca(v)], desfechos: D('A conversa reorganizou o grupo; um deles virou amigo.', 'Cada um fez um pedaço.', 'Ninguém mudou nada.', 'Virou briga no grupo da turma.', { otimo: { extra: v => { const c = colegaDaFaculdade(v); if (c) c.proximidade = clamp(c.proximidade + 8); } }, pessimo: { extra: v => { const c = colegaDaFaculdade(v); if (c) c.proximidade = clamp(c.proximidade - 8); } } }) },
+      { id: 'professor', texto: 'Falar com o professor', dica: 'Justo. Nem todo mundo vê assim.', risco: 0.45, fatores: v => [coragem(v), desempenhoCurso(v)], desfechos: D('O professor dividiu as notas pelo que cada um fez.', 'O professor deu mais um prazo.', 'O professor disse que grupo é grupo.', 'A turma soube, e o clima azedou.') }
+    ] },
+  { id: 'uni_semana', trajetoria: 'universidade', peso: () => 1, cabe: v => naUni(v) && idade(v) >= 19,
+    titulo: 'A mesma semana', texto: () => 'Na mesma semana: a prova mais difícil do curso e o processo seletivo de um estágio disputado.',
+    intencoes: [
+      { id: 'prova', texto: 'Priorizar a prova', dica: 'O curso primeiro.', risco: 0.2, fatores: v => [disciplina(v), desempenhoCurso(v)], desfechos: D('A melhor nota da turma.', 'Passou bem.', 'Passou, raspando — e o estágio foi para outro.', 'Mesmo estudando, não passou.') },
+      { id: 'estagio', texto: 'Priorizar o estágio', dica: 'Uma porta real — se abrir.', risco: 0.5, fatores: v => [social(v), F('cabeça', -(v.mente.estresse - 45) / 110), desempenhoCurso(v)], desfechos: D('A empresa chamou: a vaga é sua, se quiser.', 'Foi bem na entrevista; ficou na lista.', 'Não passou no estágio, e a prova foi mal.', 'Ficou sem os dois.', { otimo: { extra: v => abrirEstagio(v) }, ruim: { nome: -1 }, pessimo: { nome: -2 } }, { otimo: 'Escolheu o processo seletivo em vez da prova — e ganhou a vaga de estágio.' }) },
+      { id: 'ambos', texto: 'Tentar dar conta dos dois', dica: 'Pede cabeça fria e noites curtas.', risco: 0.6, fatores: v => [F('cabeça', -(v.mente.estresse - 45) / 110), disciplina(v), F('fôlego', (v.corpo.forma - 60) / 80)], desfechos: D('Deu conta dos dois. Ninguém entendeu como.', 'Foi razoável nos dois.', 'Foi mal nos dois.', 'Adoeceu na quarta-feira.', { otimo: { extra: v => abrirEstagio(v) }, ruim: { estresse: 6 }, pessimo: { estresse: 9 } }) }
+    ] },
+  { id: 'uni_professora', trajetoria: 'universidade', peso: () => 0.8, cabe: v => naUni(v) && (v.educacao.matricula?.desempenho ?? 0) >= 58 && !v.rotinas.some(r => r.id === 'iniciacao'),
+    titulo: 'O convite da professora', texto: () => 'Depois da aula, uma professora pergunta se você toparia ajudar num projeto dela — sem bolsa por enquanto, no semestre mais cheio.',
+    intencoes: [
+      { id: 'aceitar', texto: 'Aceitar', dica: 'Mais horas. Uma porta para a pesquisa.', risco: 0.3, fatores: v => [desempenhoCurso(v), F('cabeça', (v.mente.cognicao - 55) / 90)], desfechos: D('O projeto rendeu: ela ofereceu uma vaga de iniciação científica, com bolsa.', 'Aprendeu muito; o semestre apertou.', 'O projeto não andou.', 'O semestre desandou junto.', { otimo: { extra: v => abrirIniciacao(v) }, ruim: { estresse: 4 }, pessimo: { nome: -2, estresse: 6 } }) },
+      { id: 'recusar', texto: 'Agradecer e recusar por agora', dica: 'O semestre fica inteiro.', risco: 0.1, fatores: () => [], desfechos: D('Ela entendeu e disse para procurar depois.', 'Seguiu o semestre.', 'Outro aluno ficou com a vaga.', 'O projeto virou o artigo de outro aluno.', { otimo: { nome: 0 }, bom: { nome: 0 } }) }
+    ] }
+];
+
+/** O estágio que o desfecho abriu: uma porta real, na área do curso (aceitar continua sendo escolha). */
+function abrirEstagio(v: Vida): void {
+  const area = v.educacao.matricula?.area;
+  const oc = OCUPACOES.find(o => o.contrato === 'estagio' && area && (o.area as readonly string[] | undefined ?? []).includes(area)) ?? OCUPACOES.find(o => o.id === 'estagio_adm');
+  if (!oc) return;
+  novaOportunidade(v, { tipo: 'estagio', ocupacaoId: oc.id, meses: 6, chave: 'uni_estagio', titulo: 'O estágio da semana difícil', texto: `A empresa do processo seletivo chamou: a vaga de ${oc.nome[0]} é sua, se quiser.`, bonus: 0.4, municipioId: v.moradia.municipioId });
+}
+/** A iniciação científica que o projeto da professora abriu. */
+function abrirIniciacao(v: Vida): void {
+  novaOportunidade(v, { tipo: 'iniciacao', atividade: 'iniciacao', meses: 12, chave: 'uni_iniciacao', titulo: 'Uma iniciação científica', texto: 'A professora do projeto conseguiu uma bolsa de iniciação científica e pensou em você.' });
+}
+
+/* ------------------------------------------------------------ Medicina (preceptoria) */
+
+const MODELOS_MEDICINA_MAIS: ModeloSituacao[] = [
+  { id: 'med_preceptoria', trajetoria: 'medicina', cabe: v => !!especialidadeMedica(v) && idade(v) >= 34,
+    titulo: 'O residente', texto: () => 'Um residente sob a sua supervisão errou uma conduta simples no plantão. Ninguém mais viu; o paciente está bem.',
+    intencoes: [
+      { id: 'ensinar', texto: 'Corrigir em particular e ensinar', dica: 'Forma alguém. Toma tempo.', risco: 0.2, fatores: v => [social(v), competencia(v)], desfechos: D('Anos depois, ele contou numa homenagem que aprendeu ali a ser médico.', 'Ele entendeu e não repetiu.', 'Ele ficou na defensiva.', 'Ele repetiu o erro no mês seguinte.', { otimo: { humor: 4 } }, { otimo: 'Formou residentes — um deles lembrou disso numa homenagem anos depois.' }) },
+      { id: 'registrar', texto: 'Registrar formalmente', dica: 'Correto. Ele vai lembrar.', risco: 0.3, fatores: v => [disciplina(v), clima(v)], desfechos: D('O registro virou caso de ensino no programa, sem expor ninguém.', 'Registrado.', 'Ele passou a evitar você.', 'O programa abriu sindicância; o clima azedou.', { pessimo: { clima: -5 } }) },
+      { id: 'deixar', texto: 'Deixar passar', dica: 'Paz agora.', risco: 0.5, fatores: () => [F('sorte', 0)], desfechos: D('Ele mesmo percebeu e veio contar.', 'Ninguém soube.', 'O erro se repetiu.', 'O erro se repetiu, e alguém perguntou quem supervisionava.', { otimo: { nome: 0 }, bom: { nome: 0 }, pessimo: { clima: -6 } }) }
+    ] }
+];
+
+export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS];
 
 /** As situações vividas, para a tela (as mais recentes primeiro). */
 export function momentosDaCarreira(v: Vida, n = 8): { ano: number; texto: string; desfecho: Desfecho; intencao: string }[] {

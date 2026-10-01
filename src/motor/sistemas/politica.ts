@@ -727,7 +727,7 @@ function tomarPosse(v: Vida, r: Rng): void {
     else encerrarEmprego(v, 'posse no mandato');
   } else if (e?.contrato === 'eletivo') {
     // Eleito para outro cargo: o mandato de antes fica para trás.
-    if (p.mandato && p.mandato.cargo !== cargo) { p.historico.push({ t: v.t, cargo: p.mandato.cargo, resultado: 'concluiu' }); escrever(v, { texto: `Deixou o mandato de ${nomeCargo(v, p.mandato.cargo)} para assumir o novo cargo.`, relevancia: 'biografia', tema: 'trabalho' }); }
+    if (p.mandato && p.mandato.cargo !== cargo) { p.historico.push({ t: v.t, cargo: p.mandato.cargo, resultado: 'concluiu', ...resumoDoMandato(p) }); escrever(v, { texto: `Deixou o mandato de ${nomeCargo(v, p.mandato.cargo)} para assumir o novo cargo.`, relevancia: 'biografia', tema: 'trabalho' }); }
     encerrarEmprego(v, 'fim do mandato');
   }
   const c = CARGOS[cargo];
@@ -738,6 +738,8 @@ function tomarPosse(v: Vida, r: Rng): void {
   v.trabalho.atual = emprego;
   v.trabalho.desempregadoDesde = undefined;
   const fim = tPosse + c.anos * 12;
+  // A reeleição fecha o registro do mandato que acabou (o que ele entregou fica na história).
+  if (reeleicao && p.mandato) p.historico.push({ t: tPosse, cargo, resultado: 'concluiu', ...resumoDoMandato(p) });
   p.consecutivos = reeleicao ? p.consecutivos + 1 : 1;
   p.mandato = { cargo, tInicio: inicio, tFim: fim, aprovacao: reeleicao ? Math.round((p.mandato!.aprovacao + 50) / 2) : 55, feito: 0 };
   p.fase = 'mandato';
@@ -758,7 +760,7 @@ function tomarPosse(v: Vida, r: Rng): void {
 function concluirMandato(v: Vida): void {
   const p = v.caminhos.politica!;
   const m = p.mandato!;
-  p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'concluiu' });
+  p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'concluiu', ...resumoDoMandato(p) });
   p.mandato = undefined;
   p.consecutivos = CARGOS[m.cargo].executivo ? 0 : p.consecutivos;
   if (v.trabalho.atual?.contrato === 'eletivo') encerrarEmprego(v, 'fim do mandato');
@@ -773,7 +775,7 @@ export function renunciar(v: Vida, motivo: string): void {
   const p = v.caminhos.politica!;
   const m = p.mandato;
   if (!m) return;
-  p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'renunciou' });
+  p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'renunciou', ...resumoDoMandato(p) });
   p.mandato = undefined;
   p.consecutivos = 0;
   p.desgaste = clamp(p.desgaste + 10);
@@ -782,6 +784,47 @@ export function renunciar(v: Vida, motivo: string): void {
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', escolha: true });
   marcar(v, 'politica', texto, 3);
   p.fase = 'entre_mandatos';
+}
+
+/**
+ * O que aconteceu durante o exercício (generalização de carreiras): a crise e
+ * como saiu, o que foi entregue, os momentos do mandato. Fica no mandato
+ * enquanto ele dura e vai para o histórico quando ele acaba.
+ */
+export function registrarNoMandato(v: Vida, texto: string): void {
+  const m = v.caminhos.politica?.mandato;
+  if (!m) return;
+  (m.marcos ??= []).push(texto);
+  if (m.marcos.length > 12) m.marcos.splice(0, m.marcos.length - 12);
+}
+
+/** O mandato que acaba, em poucos dados: a aprovação no fim, o que foi entregue, a prioridade, os marcos. */
+export function resumoDoMandato(p: VidaPolitica): { aprovacao?: number; feitos?: number; prioridade?: Prioridade; marcos?: string[] } {
+  const m = p.mandato;
+  if (!m) return {};
+  const entregas = (m.marcos ?? []).filter(x => /saiu do papel/.test(x)).length;
+  return { aprovacao: Math.round(m.aprovacao), feitos: entregas, ...(p.prioridade ? { prioridade: p.prioridade } : {}), ...(m.marcos?.length ? { marcos: [...m.marcos] } : {}) };
+}
+
+/** Os mandatos da vida (o histórico político em leitura): cargo, período, como acabou, o que ficou. */
+export function mandatosDaVida(v: Vida): { cargo: string; de: number; ate?: number; como: string; aprovacao?: number; marcos: string[] }[] {
+  const p = v.caminhos.politica;
+  if (!p) return [];
+  const out: ReturnType<typeof mandatosDaVida> = [];
+  const eleicoes = p.historico.filter(h => h.resultado === 'eleito');
+  const fins = p.historico.filter(h => h.resultado !== 'eleito' && h.resultado !== 'derrotado');
+  for (const el of eleicoes) {
+    // O fim é o primeiro registro de fim do mesmo cargo depois da posse.
+    const fim = fins.find(f => f.cargo === el.cargo && f.t > el.t && !out.some(o => o.ate === anoDe(f.t) && o.cargo === nomeCargo(v, f.cargo)));
+    const ativo = !fim && p.mandato?.cargo === el.cargo && p.mandato.tInicio >= el.t;
+    out.push({
+      cargo: nomeCargo(v, el.cargo), de: anoDe(el.t) + 1, ate: fim ? anoDe(fim.t) : undefined,
+      como: ativo ? 'em exercício' : !fim ? '' : fim.resultado === 'concluiu' ? 'concluído' : fim.resultado === 'renunciou' ? 'renunciou' : 'cassado',
+      aprovacao: fim?.aprovacao ?? (ativo ? Math.round(p.mandato!.aprovacao) : undefined),
+      marcos: fim?.marcos ?? (ativo ? p.mandato!.marcos ?? [] : [])
+    });
+  }
+  return out;
 }
 
 /** Voltar ao trabalho de antes: o servidor retoma o cargo; o dono, o negócio; os outros, o que der. */
@@ -1080,7 +1123,7 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
       m.aprovacao = clamp(m.aprovacao + (deu ? 3 : 0));
       const feito = r.pick(ENTREGAS[prio]);
       const primeira = !temFato(v, `pol_entrega_${m.tInicio}`);
-      if (deu) v.fatos[`pol_entrega_${m.tInicio}`] = v.t;
+      if (deu) { v.fatos[`pol_entrega_${m.tInicio}`] = v.t; registrarNoMandato(v, `${anoDe(v.t)} · saiu do papel: ${feito}`); }
       escrever(v, { texto: deu ? `Saiu do papel: ${feito}. Foi o mandato que empurrou.` : `Um ano inteiro de reunião, ofício e visita a secretaria atrás disto: ${feito}. Ainda não saiu.`, relevancia: deu && primeira ? 'biografia' : 'cotidiano', tema: 'trabalho', escolha: true, tom: deu ? 'bom' : undefined });
       aplicarPersonalidade(v, 'acao:pol_prioridade', { disciplina: 1 });
       return { texto: deu ? `Algo concreto para mostrar: ${feito}.` : 'O trabalho andou; o resultado, não ainda.', tom: deu ? 'bom' : 'neutro' };

@@ -438,11 +438,14 @@ describe('I · situação de carreira: intenção ≠ resultado', () => {
     expect(desfechos(ruim).size).toBeGreaterThanOrEqual(3);
     // A consequência fica: o registro, e o estado (a decisão completa, pela ação do jogador, e o reload).
     let v = transacao(bom, y => { y.caminhos.situacao = { id: m.id, t: y.t, dados: d }; }).vida;
+    // (A vida até aqui pode já ter tido momentos — na faculdade, por exemplo: o que se mede é o desta decisão.)
+    const antes = v.caminhos.situacoes?.length ?? 0;
     v = abrir(v, 'car_situacao');
     expect(v.momento?.texto).toContain('78 minutos');
     v = recarregar(v);
     v = decidir(v, 'i0');
-    expect(v.caminhos.situacoes?.length).toBe(1);
+    expect(v.caminhos.situacoes?.length).toBe(antes + 1);
+    expect(v.caminhos.situacoes!.slice(-1)[0].id).toBe('fut_lance_construcao');
     expect(v.caminhos.situacao).toBeUndefined();
     expect(recarregar(v).caminhos.situacoes).toEqual(v.caminhos.situacoes);
   });

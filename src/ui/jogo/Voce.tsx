@@ -25,6 +25,7 @@ import { sinaisDoCorpo } from '../../motor/sistemas/saude';
 import type { DimensaoPessoal } from '../../motor/sistemas/pessoa';
 import { anoDe } from '../../motor/tempo';
 import { AparenciaEEstilo } from './Aparencia';
+import { OQueConstruiu } from './Trajetorias';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import type { Aba } from '../navegacao';
 
@@ -94,6 +95,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
 
       <AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} />
       <OSeuNome vida={vida} agir={agir} />
+      {i >= 14 && <OQueConstruiu vida={vida} />}
 
       {condicoes.length > 0 && (
         <section className="voce-condicoes" aria-label="Condições de saúde">

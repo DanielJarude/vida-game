@@ -177,28 +177,30 @@ function vidaDeAtleta(semente: number): Vida {
 }
 
 describe('esporte', () => {
-  it('8. futebol profissional exige trajetória: não se entra por currículo, e todo profissional passou pela base', () => {
+  it('8. futebol profissional exige trajetória: não se entra por currículo — passa-se pela base ou pelo teste do time de cima (a rota amadora)', () => {
     const v = adulto(3);
     garantirFrente(v, 'futebol').habilidade = 95;
     expect(elegibilidade(v, ocupacao('jogador_futebol')).grau).toBe('requisito');
     for (let s = 1; s <= 40; s++) {
       const x = vidaDeAtleta(s * 11);
       if (!x.fatos['atleta_profissional']) continue;
-      const base = x.caminhos.marcas.find(m => m.tipo === 'ingresso' && m.dominio === 'futebol');
+      // (Generalização de carreiras: a rota tardia existe — o campeonato amador, o teste no clube pequeno. Também é trajetória, não currículo.)
+      const base = x.caminhos.marcas.find(m => (m.tipo === 'ingresso' && m.dominio === 'futebol') || (m.tipo === 'oportunidade' && m.dominio === 'futebol' && /do campeonato amador para o elenco adulto/.test(m.texto)));
       const pro = x.caminhos.marcas.find(m => m.tipo === 'profissional');
       expect(base).toBeDefined();
-      expect(base!.t).toBeLessThan(pro!.t);
+      // Na rota amadora, o teste e o contrato são o mesmo momento (a semana com o elenco termina na assinatura).
+      expect(base!.t).toBeLessThanOrEqual(pro!.t);
     }
   }, 240000);
 
   it('9 e 10. virar profissional é raro, tentar é comum — e quem fracassa segue com as outras rotas', () => {
-    let tentaram = 0, profissionais = 0, dispensadosComRota = 0, dispensados = 0;
+    let tentaram = 0, profissionais = 0, pelaBase = 0, dispensadosComRota = 0, dispensados = 0;
     for (let s = 1; s <= 40; s++) {
       const x = vidaDeAtleta(s * 7);
       // Uma vida que acabou na adolescência (a violência urbana também existe no jogo) não diz nada sobre a rota depois do sonho.
       if (x.morte && idade(x) < 18) continue;
       if (Object.keys(x.fatos).some(k => k.startsWith('peneiras_'))) tentaram++;
-      if (x.fatos['atleta_profissional']) profissionais++;
+      if (x.fatos['atleta_profissional']) { profissionais++; if (![...(x.caminhos.carreirasEsportivas ?? []), x.caminhos.esporte].some(c => c?.origem === 'amador')) pelaBase++; }
       if (x.fatos['dispensado_base'] || x.caminhos.marcas.some(m => m.tipo === 'fracasso')) {
         dispensados++;
         // Depois do sonho, a vida continua: escola concluída ou trabalho, e vagas comuns abertas.
@@ -207,7 +209,10 @@ describe('esporte', () => {
       }
     }
     expect(tentaram).toBeGreaterThanOrEqual(10);
-    expect(profissionais).toBeLessThanOrEqual(Math.max(2, tentaram * 0.25));
+    // (Generalização de carreiras: a base deixou de ser a única porta. A régua de raridade vale para ela; a rota amadora é exceção.)
+    expect(pelaBase).toBeLessThanOrEqual(Math.max(2, tentaram * 0.25));
+    // A rota amadora existe (é a porta tardia), mas é exceção: a base continua sendo o caminho de quase todos.
+    expect(profissionais - pelaBase).toBeLessThan(Math.max(2, pelaBase));
     expect(tentaram).toBeGreaterThan(profissionais * 3);
     expect(dispensadosComRota).toBe(dispensados);
   }, 300000);

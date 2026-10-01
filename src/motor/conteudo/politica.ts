@@ -20,7 +20,7 @@ import { marcar } from '../sistemas/marcas';
 import { valorDoNegocio } from '../sistemas/negocio';
 import {
   CARGOS, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, PARTIDOS,
-  podeConcorrer, PRIORIDADES, registrarCandidatura, renunciar, voltarAoTrabalho, perspectiva, regraDaTroca, trocarDePartido } from '../sistemas/politica';
+  podeConcorrer, PRIORIDADES, registrarCandidatura, registrarNoMandato, renunciar, voltarAoTrabalho, perspectiva, regraDaTroca, trocarDePartido } from '../sistemas/politica';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt } from '../texto';
 import { aoPartido, nomeCompletoPartido, oPartido, partidoDe, peloPartido } from '../dados/partidos';
@@ -409,6 +409,9 @@ function fecharCrise(c: Ctx, aprovacao: number, desgaste: number, cabeca: number
   const m = p.mandato;
   if (!m) return;
   m.aprovacao = clamp(m.aprovacao + aprovacao);
+  // O que a crise deixou no mandato (a história política, não só a aprovação de agora).
+  const nome = ({ chuva: 'a chuva que alagou os bairros', greve: 'a greve dos professores', verba: 'o dinheiro que não fechava', obra: 'a obra parada', aliado: 'o aliado no noticiário', votacao: 'a votação contra a promessa', pedido: 'o pedido de um apoiador' } as Record<string, string>)[m.crise?.tipo ?? ''] ?? 'uma crise';
+  registrarNoMandato(c.v, `${anoDe(c.v.t)} · ${nome}: ${aprovacao >= 4 ? 'saiu maior do que entrou' : aprovacao <= -4 ? 'saiu mal' : 'atravessou sem ganhar nem perder muito'}`);
   m.crise = undefined;
   p.desgaste = clamp(p.desgaste + desgaste);
   estresse(c, cabeca);

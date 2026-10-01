@@ -20,7 +20,7 @@ import { encerrarPausa, iniciarPausa, podeReduzir } from '../sistemas/pausa';
 import { escolherEspecialidade, fazerCurso, irParaReserva, MUNIC_POR_INDICE, sairDasForcas, transferir } from '../sistemas/militar';
 import { ESPECIALIDADES, SIGLA_DA } from '../dados/forcas';
 import { municipio, nivelDeOferta } from '../dados/lugares';
-import { contratar, elegibilidade, nomeOcupacao, textoDeContratacao } from '../sistemas/trabalho';
+import { contratar, elegibilidade, nomeOcupacao, registrarPosto, textoDeContratacao } from '../sistemas/trabalho';
 import { OCUPACOES, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { familiaAtual, ondaAgora, TEXTO_ONDA } from '../sistemas/carreira';
 import { novaOportunidade } from '../sistemas/oportunidades';
@@ -351,7 +351,7 @@ export const TRAJETORIAS: Conteudo[] = [
     texto: c => { const oc = ocupacao(c.v.trabalho.atual!.ocupacaoId); return oc.trilha === 'educacao' ? 'A escola vai eleger uma nova direção, e colegas querem o seu nome na chapa. Mais salário, muito mais problema — e a sala de aula ficaria para depois.' : 'Ofereceram uma função de chefia no setor: gratificação no salário, a responsabilidade pelos outros e as reuniões que ninguém quer.'; },
     opcoes: [
       { id: 'aceitar', texto: 'Aceitar', comportamento: { coragem: 1 },
-        resolver: c => ({ texto: 'Mesa nova, telefone que não para, gratificação no contracheque.', memoria: null, efeito: () => { const e = c.v.trabalho.atual; if (!e) return; const oc = ocupacao(e.ocupacaoId); marcarFato(c.v, `funcao_${oc.id}`); if (oc.trilha === 'educacao' && oc.id !== 'diretor_escola') { e.ocupacaoId = 'diretor_escola'; e.tPosto = c.v.t; } e.salario = Math.round(e.salario * 1.22 / 10) * 10; const texto = oc.trilha === 'educacao' ? 'Eleito para a direção da escola.'.replace('Eleito', c.g('Eleito', 'Eleita', 'Eleite')) : 'Assumiu uma função de chefia no serviço público.'; escrever(c.v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); marcar(c.v, 'lideranca', texto, 2); estresse(c, 6); } }) },
+        resolver: c => ({ texto: 'Mesa nova, telefone que não para, gratificação no contracheque.', memoria: null, efeito: () => { const e = c.v.trabalho.atual; if (!e) return; const oc = ocupacao(e.ocupacaoId); marcarFato(c.v, `funcao_${oc.id}`); if (oc.trilha === 'educacao' && oc.id !== 'diretor_escola') { registrarPosto(c.v, e); e.ocupacaoId = 'diretor_escola'; e.tPosto = c.v.t; } e.salario = Math.round(e.salario * 1.22 / 10) * 10; const texto = oc.trilha === 'educacao' ? 'Eleito para a direção da escola.'.replace('Eleito', c.g('Eleito', 'Eleita', 'Eleite')) : 'Assumiu uma função de chefia no serviço público.'; escrever(c.v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); marcar(c.v, 'lideranca', texto, 2); estresse(c, 6); } }) },
       { id: 'recusar', texto: 'Recusar: o trabalho de agora é o que gosto', resolver: c => ({ texto: 'Você agradeceu e ficou onde estava.', memoria: null, efeito: () => { if (c.v.trabalho.atual) marcarFato(c.v, `funcao_${c.v.trabalho.atual.ocupacaoId}`); } }) }
     ]
   },

@@ -46,11 +46,12 @@ import { leituraDaOrigem, responsaveis } from '../../motor/sistemas/origem';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { doClube } from '../../motor/dados/clubes';
-import { augeDe, categoriaDaBase, divisaoDe, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
+import { augeDe, carreirasEsportivas, categoriaDaBase, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
 import { estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
 import { lesaoAtiva } from '../../motor/sistemas/lesoes';
 import { leituraDoNome } from '../../motor/sistemas/notoriedade';
-import { historicoPorClube, leituraDoPalmares } from '../../motor/sistemas/palmares';
+import { leituraDoPalmares } from '../../motor/sistemas/palmares';
+import { historicoDaCarreira, resumoDaCarreira } from '../../motor/sistemas/perfisEsportivos';
 import { momentosDaCarreira } from '../../motor/sistemas/situacoes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Renomear, Secao } from '../comum';
@@ -851,30 +852,35 @@ function CurriculoArtistico({ vida, agir }: { vida: Vida; agir: (a: Acao) => boo
  * depois que a carreira acaba. A Linha da Vida tem os marcos; aqui, o detalhe.
  */
 function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolean }) {
-  const es = vida.caminhos.esporte;
+  // Todas as carreiras esportivas da pessoa (a de agora e as que acabaram antes de uma nova começar).
+  const carreiras = carreirasEsportivas(vida).filter(c => c.fase !== 'base' && (c.temporadas?.length ?? 0) > 0);
   const p = leituraDoPalmares(vida);
-  const clubes = es && es.fase !== 'base' ? historicoPorClube(es) : [];
-  if (!clubes.length && !p.titulos.length && !p.premios.length) return null;
-  const futebol = es?.modalidade === 'futebol';
-  const total = clubes.reduce((a, c) => ({ jogos: a.jogos + c.jogos, gols: a.gols + c.gols }), { jogos: 0, gols: 0 });
+  if (!carreiras.length && !p.titulos.length && !p.premios.length) return null;
+  const es = vida.caminhos.esporte;
+  const futebol = carreiras.some(c => c.modalidade === 'futebol');
   return (
     <Secao titulo={es?.fase === 'encerrada' ? 'A carreira no esporte (encerrada)' : 'A carreira no esporte'} recolhivel aberta={aberta}>
-      {clubes.length > 0 && <p className="painel__frase">{clubes.length} {clubes.length === 1 ? 'clube' : 'clubes'}, {total.jogos} jogos{futebol ? `, ${total.gols} ${total.gols === 1 ? 'gol' : 'gols'}` : ''}{p.titulos.length ? ` · ${p.titulos.length} ${p.titulos.length === 1 ? 'conquista' : 'conquistas'}` : ''}.</p>}
+      {carreiras.map((c, k) => <p key={k} className="painel__frase">{carreiras.length > 1 ? `${(NOME_MOD[c.modalidade] ?? c.modalidade).replace(/^./, x => x.toUpperCase())}: ` : ''}{resumoDaCarreira(c)}{p.titulos.length && carreiras.length === 1 ? ` · ${p.titulos.length} ${p.titulos.length === 1 ? 'conquista' : 'conquistas'}` : ''}.</p>)}
       {p.titulos.length > 0 && <div className="palmares__grupo"><h4>Títulos e acessos</h4><ul className="marcos-caminho">{p.titulos.slice().reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
+      {p.finais.length > 0 && <div className="palmares__grupo"><h4>Finais</h4><ul className="marcos-caminho">{p.finais.slice().reverse().slice(0, 10).map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
       {p.premios.length > 0 && <div className="palmares__grupo"><h4>Prêmios individuais</h4><ul className="marcos-caminho">{p.premios.slice().reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
-      {p.selecao && <div className="palmares__grupo"><h4>Seleção</h4><p>{p.selecao}</p></div>}
+      {p.selecao && <div className="palmares__grupo"><h4>Pelo país</h4><p>{p.selecao}</p></div>}
       {p.marcos.length > 0 && <div className="palmares__grupo"><h4>Marcos</h4><ul className="marcos-caminho">{p.marcos.slice(-8).reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
-      {clubes.length > 0 && (
-        <div className="palmares__grupo">
-          <h4>Por clube</h4>
-          <div className="palmares__historico-rolagem">
-            <table className="palmares__historico">
-              <thead><tr><th>Clube</th><th>Anos</th><th>Jogos</th><th>Titular</th>{futebol && <><th>Gols</th><th>Assist.</th>{es?.posicao && ['goleiro', 'zagueiro', 'volante', 'lateral'].includes(es.posicao) && <th>{es.posicao === 'goleiro' ? 'Sem sofrer gol' : 'Desarmes'}</th>}</>}</tr></thead>
-              <tbody>{clubes.slice().reverse().map((c, k) => <tr key={k}><td>{c.clube}</td><td>{c.de === c.ate ? c.de : `${c.de}–${c.ate}`}</td><td>{c.jogos}</td><td>{c.titular}</td>{futebol && <><td>{c.gols}</td><td>{c.assistencias}</td>{es?.posicao && ['goleiro', 'zagueiro', 'volante', 'lateral'].includes(es.posicao) && <td>{c.defesa}</td>}</>}</tr>)}</tbody>
-            </table>
+      {carreiras.map((c, k) => {
+        const h = historicoDaCarreira(c);
+        if (!h.linhas.length) return null;
+        return (
+          <div key={k} className="palmares__grupo">
+            <h4>{h.agrupado === 'clube' ? (c.modalidade === 'futebol' ? 'Por clube' : 'Por equipe') : 'Ano a ano'}{carreiras.length > 1 ? ` · ${NOME_MOD[c.modalidade] ?? c.modalidade}` : ''}</h4>
+            <div className="palmares__historico-rolagem">
+              <table className="palmares__historico">
+                <thead><tr>{h.colunas.map(col => <th key={col}>{col}</th>)}</tr></thead>
+                <tbody>{h.linhas.slice().reverse().map((l, j) => <tr key={j}>{l.map((x, i) => <td key={i}>{x}</td>)}</tr>)}</tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })}
       {futebol && <p className="nota">{CLUBES_REAIS}</p>}
     </Secao>
   );

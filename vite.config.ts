@@ -40,7 +40,10 @@ export default defineConfig({
           if (/[\\/]src[\\/]motor[\\/](save\.ts|criacao\.ts|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria)\.ts)/.test(id)) return 'motor-conteudo';
           // Pacote pós-playtest: as situações de carreira e o uso da visibilidade num pacote próprio — o conteúdo (e o ano)
           // os chamam; eles só chamam os sistemas. Sem ciclo, e os dois pacotes de cima seguem abaixo do limite.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|visibilidade)\.ts/.test(id)) return 'motor-carreira';
+          // Generalização de carreiras: o legado (as trajetórias da vida) e a retrospectiva, que só a tela e o fim da vida
+          // leem; e a família, as iniciativas, o ilícito e a pessoa, que só o ano, as ações e as interações chamam — o pacote
+          // dos sistemas volta a caber no limite. Nenhum deles importa a camada de cima: sem ciclo.
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa)\.ts/.test(id)) return 'motor-carreira';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           if (/[\\/]src[\\/]motor[\\/]/.test(id)) return 'motor';
           return undefined;
