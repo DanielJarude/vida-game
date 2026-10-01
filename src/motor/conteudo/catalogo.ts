@@ -25,5 +25,7 @@ import { BIOGRAFIA } from './biografia';
 import { INTEGRACAO } from './integracao';
 import { OFICIOS_CONTEUDO } from './oficios';
 import { REWORK3 } from './rework3';
+import { FAMA } from './fama';
+import { SITUACOES } from './situacoes';
 
-export const CATALOGO: readonly Conteudo[] = [...REWORK3, ...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...CARREIRAS, ...AUTOESCOLA, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA];
+export const CATALOGO: readonly Conteudo[] = [...SITUACOES, ...FAMA, ...REWORK3, ...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...CARREIRAS, ...AUTOESCOLA, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA];

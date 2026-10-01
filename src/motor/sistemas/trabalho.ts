@@ -99,7 +99,8 @@ function empregadoresPrivados(trilha: string, porConta = false): string[] {
 
 /* ---------------------------------------------------------- Elegibilidade */
 
-export type ViaDeEntrada = 'curriculo' | 'oportunidade' | 'negocio' | 'promocao' | 'eleicao';
+/** `proposta`: um concorrente chamou para a mesma função (ou a de cima) — troca de emprego, não candidatura ao próprio cargo. */
+export type ViaDeEntrada = 'curriculo' | 'oportunidade' | 'negocio' | 'promocao' | 'eleicao' | 'proposta';
 
 const MOTIVO_ENTRADA: Record<string, string> = {
   atleta: 'Ninguém vira atleta profissional mandando currículo: é preciso passar por uma peneira e ser chamado.',
@@ -143,7 +144,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   if (i < oc.idadeMin) return bloqueio(oc.idadeMin <= 18 ? 'ilegal' : 'requisito', `Exige ${oc.idadeMin} anos.`);
   if (oc.idadeMax && i > oc.idadeMax) return bloqueio('requisito', `É para quem tem até ${oc.idadeMax} anos.`);
   if (via !== 'promocao' && oc.idadeMaxIngresso && i > oc.idadeMaxIngresso) return bloqueio('requisito', `A seleção tem limite de idade (até ${oc.idadeMaxIngresso} anos).`);
-  if (t.atual?.ocupacaoId === oc.id) return bloqueio('incompativel', 'Você já trabalha nisso.');
+  if (t.atual?.ocupacaoId === oc.id && via !== 'proposta') return bloqueio('incompativel', 'Você já trabalha nisso.');
   if (t.candidaturas.some(c => c.ocupacaoId === oc.id)) return bloqueio('incompativel', 'Já está no processo seletivo desta vaga.');
   if (t.aposentadoria && oc.concurso && i >= 60) return bloqueio('incompativel', 'Depois de aposentado e dos 60, os editais que valem a pena já não cabem na vida.');
   if (t.aposentadoria && eMilitar(oc)) return bloqueio('incompativel', 'Carreira militar não recebe quem já se aposentou.');
@@ -309,8 +310,12 @@ export const porContaPropria = (oc: Ocupacao) => (oc.contrato === 'autonomo' || 
 
 /* ------------------------------------------------------------ Contratar */
 
+/** Trocar de emprego é ir para OUTRO lugar (a proposta do concorrente nunca é o próprio empregador). */
+const outroLugar = (lista: string[], anterior?: string) => { const x = lista.filter(e => e !== anterior); return x.length ? x : lista; };
+
 export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emprego {
   const t = v.trabalho;
+  const anterior = t.atual?.empregador;
   const primeiro = !temFato(v, 'primeiro_emprego');
   if (t.atual) encerrarEmprego(v, 'trocou de emprego');
   // Quem estava fora do mercado cuidando de alguém, voltou: a pausa acaba com o primeiro emprego.
@@ -325,7 +330,7 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   if (eDasForcas(oc)) aoEntrarNasForcas(v, r, oc);
   const e: Emprego = {
     ocupacaoId: oc.id,
-    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(empregadoresPrivados(oc.trilha, oc.contrato === 'autonomo' || oc.contrato === 'informal')),
+    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(outroLugar(empregadoresPrivados(oc.trilha, oc.contrato === 'autonomo' || oc.contrato === 'informal'), anterior)),
     contrato: oc.contrato,
     salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : Math.round(salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2) * fatorRendaMedica(v, oc) / 10) * 10,
     tInicio: v.t,

@@ -18,6 +18,8 @@ import { eDasForcas, aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, po
 import { disponibilidadePerseguir, executarPerseguir, type AcaoPerseguirCmd } from './sistemas/perseguir';
 import { inscrever, leituraDoPreparo } from './sistemas/concurso';
 import { aceitarOportunidade, recusarOportunidade } from './sistemas/oportunidades';
+import { oportunidadeCoerente } from './sistemas/mercados';
+import { disponibilidadeVisibilidade, usarVisibilidade, type UsoDaVisibilidade } from './sistemas/visibilidade';
 import { abrirNegocio, podeAbrirNegocio } from './sistemas/negocio';
 import { marcar } from './sistemas/marcas';
 import { aplicarPersonalidade } from './personalidade';
@@ -131,7 +133,8 @@ export type Acao =
   /** Habilitação para operar barco ou avião (a posse não depende dela). */
   | { tipo: 'habilitacao'; qual: 'nautica' | 'piloto' }
   /** O que o dinheiro compra além de objetos: uma viagem, um curso caro, um tempo sabático, uma doação, um presente grande. */
-  | { tipo: 'experiencia'; id: TipoExperiencia }
+  /** A porta (a categoria) e a escolha de dentro dela (o destino, o curso, a pessoa e o presente): `experiencias`. */
+  | { tipo: 'experiencia'; id: TipoExperiencia; escolha?: string }
   /** Dar nome ao que é seu: a banda ou o grupo, o negócio, uma obra (o jogo sugere; a pessoa decide). */
   | { tipo: 'renomear'; alvo: AlvoDeNome; nome: string; k?: number }
   /** Adotar um animal do abrigo da cidade. */
@@ -178,7 +181,9 @@ export type Acao =
   /** Usar ou guardar um item que é seu. */
   | { tipo: 'usar_item'; itemId: string; usar: boolean }
   /** As outras trajetórias: deixar a paralela, trocar a principal, voltar a (ou encerrar) uma carreira pausada. */
-  | { tipo: 'trajetoria'; oque: 'deixar' | 'principal' | 'retomar' | 'encerrar_pausada'; k?: number };
+  | { tipo: 'trajetoria'; oque: 'deixar' | 'principal' | 'retomar' | 'encerrar_pausada'; k?: number }
+  /** Usar a própria visibilidade (entrevista, causa, evento, publicidade, privacidade, projeto, política): `visibilidade`. */
+  | { tipo: 'visibilidade'; oque: UsoDaVisibilidade };
 
 
 const TITULO_CUIDADO: Record<TipoCuidado, string> = { descansar: 'Uns dias de descanso', consulta: 'No médico', parar_fumar: 'Parar de fumar', beber_menos: 'Beber menos' };
@@ -230,8 +235,11 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const o = v.caminhos.oportunidades.find(x => x.id === a.id);
       if (!o) return bloqueio('incompativel', 'Essa porta já fechou.');
       if (!a.aceitar) return PERMITIDO;
+      const coerente = oportunidadeCoerente(v, o);
+      if (coerente !== true) return bloqueio('incompativel', coerente);
       if (o.ocupacaoId && ['aprendiz', 'estagio', 'indicacao', 'vaga', 'proposta', 'reinsercao'].includes(o.tipo)) {
-        const d = elegibilidade(v, ocupacao(o.ocupacaoId), 'curriculo', o.bonus ?? 0);
+        // A proposta de um concorrente é para a mesma função (ou a de cima) em OUTRO lugar: não é "você já trabalha nisso".
+        const d = elegibilidade(v, ocupacao(o.ocupacaoId), o.tipo === 'proposta' ? 'proposta' : 'curriculo', o.bonus ?? 0);
         if (!podeTentar(d)) return d;
       }
       if (o.tipo === 'convite' && o.ocupacaoId && !OCUPACOES_DE_ATLETA.includes(o.ocupacaoId)) {
@@ -489,12 +497,13 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return PERMITIDO;
     }
     case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
+    case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
     case 'trajetoria': return disponibilidadeParalela(v, a.oque, a.k);
     case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
     case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
-    case 'experiencia': return disponibilidadeExperiencia(v, a.id);
+    case 'experiencia': return disponibilidadeExperiencia(v, a.id, a.escolha);
     case 'renomear': return disponibilidadeRenomear(v, a.alvo, a.nome, a.k);
     case 'cnh_prova': return cnhEmProva(v) ? PERMITIDO : bloqueio('incompativel', 'A prova ainda não foi marcada.');
     case 'cnh':
@@ -1039,7 +1048,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok('Matrícula na autoescola feita. A prova teórica é em alguns meses (as perguntas, você responde); estudar a apostila e fazer aulas extras ajudam.');
     case 'cnh_preparar': return ok(prepararCnh(v, a.como));
     case 'habilitacao': return ok(iniciarHabilitacao(v, a.qual));
-    case 'experiencia': return { resultado: viverExperiencia(v, r, a.id), titulo: nomeDaExperiencia(a.id) };
+    case 'experiencia': return { resultado: viverExperiencia(v, r, a.id, a.escolha), titulo: nomeDaExperiencia(a.id) };
     case 'renomear': return ok(renomear(v, a.alvo, a.nome, a.k));
     case 'cnh_prova': {
       const d = conteudoPorId('cnh_prova');
@@ -1060,6 +1069,11 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok(a.valor === 'nada' ? 'O salário fica todo com você. Em casa, o assunto não morre.' : a.valor === 'mais' ? 'Você passou a pôr mais em casa. A casa respira.' : 'Combinado: uma parte do salário vai para a casa todo mês.', a.valor === 'nada' ? 'ruim' : 'bom');
     }
     case 'aparencia': return ok(mudarAparencia(v, a.mudanca), 'neutro');
+    case 'visibilidade': {
+      const res = usarVisibilidade(v, r, a.oque);
+      if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }
+      return ok(res.texto, res.tom);
+    }
     case 'comprar_item': return ok(comprarItem(v, a.itemId), 'bom');
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
     case 'trajetoria': {

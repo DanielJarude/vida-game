@@ -35,7 +35,12 @@ import { doClube } from '../../motor/dados/clubes';
 import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
 import type { Aba } from '../navegacao';
 import { MODS as MODS_ESPORTE } from '../../motor/sistemas/oportunidades';
-import { custoDaExperiencia, descricaoDaExperiencia, experienciasPossiveis, nomeDaExperiencia } from '../../motor/sistemas/experiencias';
+import { custoDaExperiencia, descricaoDaExperiencia, escolhasDaExperiencia, experienciasPossiveis, nomeDaExperiencia, type TipoExperiencia } from '../../motor/sistemas/experiencias';
+import { estadoDoArco } from '../../motor/sistemas/arcos';
+import { VIVENCIA_DA_ROTINA } from '../../motor/sistemas/formacao';
+
+/** A história da atividade (a etapa e o papel), quando ela tem uma (`arcos`). */
+const estadoDaAtividade = (vida: Vida, id: string) => { const viv = (vida.educacao.vivencias ?? []).find(x => x.tipo === VIVENCIA_DA_ROTINA[id] && x.tFim === undefined); const e = estadoDoArco(id, viv); return e ? `Agora: ${e}.` : undefined; };
 
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'esporte', rotulo: 'Esporte' }, { id: 'arte', rotulo: 'Arte' }, { id: 'estudo', rotulo: 'Estudo' },
@@ -184,20 +189,50 @@ function ComoVoceVai({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => bo
   );
 }
 
-/** O que o dinheiro compra além de objetos: aparece conforme o que a vida tem (não o catálogo inteiro). */
+/**
+ * O que o dinheiro compra além de objetos: aparece conforme o que a vida tem
+ * (não o catálogo inteiro). Cada categoria é uma PORTA: abrir mostra as
+ * escolhas concretas desta vida (o destino e a duração, o curso, o projeto,
+ * a pessoa e o presente), cada uma com o seu preço.
+ */
 function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const [aberta, setAberta] = useState<TipoExperiencia | null>(null);
   const lista = experienciasPossiveis(vida);
   if (!lista.length) return null;
   return (
     <section className="experiencias" aria-labelledby="titulo-experiencias">
       <h2 id="titulo-experiencias" className="secao-fio">Viagens e experiências</h2>
       <ul className="experiencias__lista">
-        {lista.map(id => (
-          <li key={id} className="experiencia">
-            <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)}</strong><span>{descricaoDaExperiencia(id)} Uns {dinheiroCurto(custoDaExperiencia(vida, id))}.</span></span>
-            <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id }} agir={agir} variante="discreto" ocultarImpossivel>{id === 'sabatico' ? 'Tirar' : id === 'bancar_projeto' ? 'Bancar' : id === 'presente_familia' ? 'Presentear' : id === 'curso_caro' ? 'Fazer' : 'Ir'}</BotaoAcao>
-          </li>
-        ))}
+        {lista.map(id => {
+          const escolhas = escolhasDaExperiencia(vida, id);
+          const porta = escolhas.length > 0;
+          const grupos = [...new Set(escolhas.map(e => e.grupo ?? ''))];
+          return (
+            <li key={id} className="experiencia">
+              <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)}</strong><span>{descricaoDaExperiencia(id)} {porta ? `A partir de ${dinheiroCurto(custoDaExperiencia(vida, id))}.` : `Uns ${dinheiroCurto(custoDaExperiencia(vida, id))}.`}</span></span>
+              {porta
+                ? <button type="button" className="botao botao--discreto" aria-expanded={aberta === id} onClick={() => setAberta(a => (a === id ? null : id))}>{aberta === id ? 'Fechar' : id === 'bancar_projeto' ? 'Ver projetos' : id === 'presente_familia' ? 'Escolher' : id === 'curso_caro' ? 'Ver cursos' : 'Ver destinos'}</button>
+                : <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id }} agir={agir} variante="discreto" ocultarImpossivel>Tirar</BotaoAcao>}
+              {porta && aberta === id && (
+                <div className="experiencia__escolhas">
+                  {grupos.map(g => (
+                    <div key={g} className="experiencia__grupo">
+                      {g && grupos.length > 1 && <p className="experiencia__grupo-nome">{g.charAt(0).toUpperCase() + g.slice(1)}</p>}
+                      <div className="grupo-acoes">
+                        {escolhas.filter(e => (e.grupo ?? '') === g).map(e => (
+                          <BotaoAcao key={e.id} vida={vida} acao={{ tipo: 'experiencia', id, escolha: e.id }} agir={agir} variante="discreto" ocultarImpossivel>
+                            {`${g && grupos.length > 1 ? e.rotulo.replace(/^.*?(—|:) /, '') : e.rotulo} · ${dinheiroCurto(e.custo)}`}
+                          </BotaoAcao>
+                        ))}
+                      </div>
+                      {escolhas.filter(e => (e.grupo ?? '') === g && e.descricao).slice(0, 1).map(e => <p key={e.id} className="nota">{e.descricao}</p>)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -245,6 +280,7 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
                   <strong>{m.nome}</strong>
                   <span>{m.niveis.length > 1 ? `${nm.rotulo} · ` : ''}{dose(nm.tempo)}{anos >= 1 ? ` · há ${anos} ${anos === 1 ? 'ano' : 'anos'}` : ''}{custoDaRotina(vida, r.id, n) ? ` · ${dinheiroCurto(custoDaRotina(vida, r.id, n) * custo)}/mês` : r.id === 'terapia' && nm.custo ? ' · pelo SUS, de graça' : ''}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
                   {leitura && <span className="rotina__leitura">{leitura}</span>}
+                  {estadoDaAtividade(vida, r.id) && <span className="rotina__leitura">{estadoDaAtividade(vida, r.id)}</span>}
                   {retorno && <span className="rotina__retorno">Na última {dominio === 'futebol' ? 'peneira' : 'seletiva'}: {retorno.texto}</span>}
                 </div>
                 <div className="rotina__acoes">

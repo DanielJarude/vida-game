@@ -25,8 +25,8 @@ export const NOME_CATEGORIA: Record<CategoriaVeiculo, { um: string; varios: stri
  * uma scooter não é uma moto de trilha. Derivada da versão (ou dita nela).
  */
 export type FormaVeiculo =
-  | 'hatch' | 'seda' | 'suv' | 'picape' | 'esportivo'
-  | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail'
+  | 'hatch' | 'seda' | 'suv' | 'suv_medio' | 'suv_grande' | 'picape' | 'esportivo'
+  | 'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail'
   | 'urbana' | 'estrada' | 'mtb' | 'eletrica'
   | 'jetski' | 'lancha' | 'veleiro'
   | 'ultraleve' | 'monomotor';
@@ -135,9 +135,9 @@ export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
   { id: 'caloi_evibe', classe: 'bike_eletrica', marca: 'Caloi', modelo: 'E-Vibe Easy Rider', dica: 'bicicleta elétrica', faixa: 'alta', preco: 8200, artigo: 'a', pesoUsado: 1 },
   { id: 'sense_impulse', classe: 'bike_eletrica', marca: 'Sense', modelo: 'Impulse E-Trail', dica: 'bicicleta elétrica de trilha', faixa: 'alta', preco: 14500, artigo: 'a', pesoUsado: 0.5, usoMensal: 40 },
   // Motos
-  { id: 'honda_pop', classe: 'moto_pequena', marca: 'Honda', modelo: 'Pop 110i', dica: 'moto 110 cc', faixa: 'economica', preco: 11900, artigo: 'a', pesoUsado: 1.5, usoMensal: 170 },
+  { id: 'honda_pop', classe: 'moto_pequena', marca: 'Honda', modelo: 'Pop 110i', dica: 'moto 110 cc', faixa: 'economica', preco: 11900, artigo: 'a', pesoUsado: 1.5, usoMensal: 170, forma: 'cub' },
   { id: 'haojue_dk150', classe: 'moto_pequena', marca: 'Haojue', modelo: 'DK 150', dica: 'moto 150 cc', faixa: 'economica', preco: 14900, artigo: 'a', pesoUsado: 0.6 },
-  { id: 'honda_biz',classe: 'moto_pequena', marca: 'Honda', modelo: 'Biz 125', dica: 'moto 125 cc', faixa: 'economica', preco: 15900, artigo: 'a', pesoUsado: 1.5, usoMensal: 180 },
+  { id: 'honda_biz',classe: 'moto_pequena', marca: 'Honda', modelo: 'Biz 125', dica: 'moto 125 cc', faixa: 'economica', preco: 15900, artigo: 'a', pesoUsado: 1.5, usoMensal: 180, forma: 'cub' },
   { id: 'yamaha_factor', classe: 'moto_pequena', marca: 'Yamaha', modelo: 'Factor 150', dica: 'moto 150 cc', faixa: 'intermediaria', preco: 17600, artigo: 'a', pesoUsado: 1.5 },
   { id: 'honda_cg160', classe: 'moto_pequena', marca: 'Honda', modelo: 'CG 160 Fan', dica: 'moto 160 cc', faixa: 'intermediaria', preco: 18900, artigo: 'a', pesoUsado: 3 },
   { id: 'honda_bros', classe: 'moto_pequena', marca: 'Honda', modelo: 'NXR 160 Bros', dica: 'moto 160 cc de terra e asfalto', faixa: 'intermediaria', preco: 22500, artigo: 'a', pesoUsado: 1 },
@@ -165,17 +165,17 @@ export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
   { id: 'hyundai_creta', classe: 'carro_suv', marca: 'Hyundai', modelo: 'Creta', acabamento: 'Comfort 1.0 turbo', dica: 'SUV compacto', faixa: 'intermediaria', preco: 144900, artigo: 'o', pesoUsado: 2 },
   { id: 'jeep_renegade', classe: 'carro_suv', marca: 'Jeep', modelo: 'Renegade', acabamento: 'Longitude 1.3 turbo', dica: 'SUV compacto', faixa: 'intermediaria', preco: 152900, artigo: 'o', pesoUsado: 2 },
   { id: 'chevrolet_tracker', classe: 'carro_suv', marca: 'Chevrolet', modelo: 'Tracker', acabamento: 'Premier 1.2 turbo', dica: 'SUV compacto', faixa: 'alta', preco: 168900, artigo: 'o', pesoUsado: 1.5 },
-  { id: 'toyota_corolla_cross', classe: 'carro_suv', marca: 'Toyota', modelo: 'Corolla Cross', acabamento: 'XRE 2.0', dica: 'SUV médio', faixa: 'alta', preco: 189900, artigo: 'o', pesoUsado: 1 },
-  { id: 'jeep_compass', classe: 'carro_suv', marca: 'Jeep', modelo: 'Compass', acabamento: 'Longitude 1.3 turbo', dica: 'SUV médio', faixa: 'alta', preco: 214900, artigo: 'o', pesoUsado: 1.2, usoMensal: 780 },
+  { id: 'toyota_corolla_cross', classe: 'carro_suv', marca: 'Toyota', modelo: 'Corolla Cross', acabamento: 'XRE 2.0', dica: 'SUV médio', faixa: 'alta', preco: 189900, artigo: 'o', pesoUsado: 1, forma: 'suv_medio' },
+  { id: 'jeep_compass', classe: 'carro_suv', marca: 'Jeep', modelo: 'Compass', acabamento: 'Longitude 1.3 turbo', dica: 'SUV médio', faixa: 'alta', preco: 214900, artigo: 'o', pesoUsado: 1.2, usoMensal: 780, forma: 'suv_medio' },
   // Grandes: sete lugares e picapes
-  { id: 'jeep_commander', classe: 'carro_suv_grande', marca: 'Jeep', modelo: 'Commander', acabamento: 'Longitude 1.3 turbo', dica: 'SUV de sete lugares', faixa: 'alta', preco: 249900, artigo: 'o', pesoUsado: 1, usoMensal: 880 },
+  { id: 'jeep_commander', classe: 'carro_suv_grande', marca: 'Jeep', modelo: 'Commander', acabamento: 'Longitude 1.3 turbo', dica: 'SUV de sete lugares', faixa: 'alta', preco: 249900, artigo: 'o', pesoUsado: 1, usoMensal: 880, forma: 'suv_grande' },
   { id: 'chevrolet_s10', classe: 'carro_suv_grande', marca: 'Chevrolet', modelo: 'S10', acabamento: 'LTZ 2.8 diesel', dica: 'picape média', faixa: 'alta', preco: 262900, artigo: 'a', pesoUsado: 1, lugares: 5, descricao: 'Caçamba, diesel, estrada de terra. Cinco lugares.' },
   { id: 'toyota_hilux', classe: 'carro_suv_grande', marca: 'Toyota', modelo: 'Hilux', acabamento: 'SRV 2.8 diesel', dica: 'picape média', faixa: 'alta', preco: 279900, artigo: 'a', pesoUsado: 1.3, lugares: 5, descricao: 'Caçamba, diesel, estrada de terra. Cinco lugares.' },
-  { id: 'toyota_sw4', classe: 'carro_suv_grande', marca: 'Toyota', modelo: 'SW4', acabamento: 'SRX 2.8 diesel', dica: 'SUV de sete lugares', faixa: 'alta', preco: 389900, artigo: 'o', pesoUsado: 0.6, usoMensal: 1050 },
+  { id: 'toyota_sw4', classe: 'carro_suv_grande', marca: 'Toyota', modelo: 'SW4', acabamento: 'SRX 2.8 diesel', dica: 'SUV de sete lugares', faixa: 'alta', preco: 389900, artigo: 'o', pesoUsado: 0.6, usoMensal: 1050, forma: 'suv_grande' },
   // Luxo
   { id: 'bmw_320i', classe: 'carro_luxo', marca: 'BMW', modelo: '320i', acabamento: 'M Sport', dica: 'sedã de luxo', faixa: 'alta', preco: 359900, artigo: 'o', pesoUsado: 1, usoMensal: 1250 },
   { id: 'mercedes_c300', classe: 'carro_luxo', marca: 'Mercedes-Benz', modelo: 'C 300', acabamento: 'AMG Line', dica: 'sedã de luxo', faixa: 'alta', preco: 419900, artigo: 'o', pesoUsado: 0.8 },
-  { id: 'volvo_xc60', classe: 'carro_luxo', marca: 'Volvo', modelo: 'XC60', acabamento: 'T8 híbrido plug-in', dica: 'SUV de luxo híbrido', faixa: 'alta', preco: 449900, artigo: 'o', pesoUsado: 0.5, usoMensal: 1100 },
+  { id: 'volvo_xc60', classe: 'carro_luxo', marca: 'Volvo', modelo: 'XC60', acabamento: 'T8 híbrido plug-in', dica: 'SUV de luxo híbrido', faixa: 'alta', preco: 449900, artigo: 'o', pesoUsado: 0.5, usoMensal: 1100, forma: 'suv_medio' },
   { id: 'porsche_macan', classe: 'carro_luxo', marca: 'Porsche', modelo: 'Macan', dica: 'SUV esportivo', faixa: 'alta', preco: 629900, artigo: 'o', pesoUsado: 0.3, usoMensal: 1800, forma: 'suv' },
   { id: 'ford_mustang', classe: 'carro_luxo', marca: 'Ford', modelo: 'Mustang', acabamento: 'GT 5.0 V8', dica: 'esportivo', faixa: 'alta', preco: 549900, artigo: 'o', pesoUsado: 0.3, usoMensal: 1900, forma: 'esportivo', lugares: 4 },
   { id: 'porsche_911', classe: 'carro_luxo', marca: 'Porsche', modelo: '911', acabamento: 'Carrera', dica: 'esportivo', faixa: 'alta', preco: 1090000, artigo: 'o', pesoUsado: 0.15, usoMensal: 2400, forma: 'esportivo', lugares: 4 },
@@ -213,8 +213,8 @@ export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): Fo
 }
 
 export const NOME_FORMA: Record<FormaVeiculo, string> = {
-  hatch: 'hatch', seda: 'sedã', suv: 'SUV', picape: 'picape', esportivo: 'esportivo',
-  scooter: 'scooter', street: 'moto de rua', esportiva: 'moto esportiva', cruiser: 'moto clássica', trail: 'moto de trilha',
+  hatch: 'hatch', seda: 'sedã', suv: 'SUV', suv_medio: 'SUV médio', suv_grande: 'SUV de sete lugares', picape: 'picape', esportivo: 'esportivo',
+  cub: 'motoneta', scooter: 'scooter', street: 'moto de rua', esportiva: 'moto esportiva', cruiser: 'moto clássica', trail: 'moto de trilha',
   urbana: 'bicicleta urbana', estrada: 'bicicleta de estrada', mtb: 'mountain bike', eletrica: 'bicicleta elétrica',
   jetski: 'moto aquática', lancha: 'lancha', veleiro: 'veleiro', ultraleve: 'ultraleve', monomotor: 'monomotor'
 };

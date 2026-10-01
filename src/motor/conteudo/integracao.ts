@@ -25,6 +25,7 @@ import { municipio } from '../dados/lugares';
 import { encerrarCarreira, nomePosicao, POSICOES, posicaoSugerida, SOBRE_POSICAO } from '../sistemas/esporte';
 import { dinheiro as fmt, flex } from '../texto';
 import { abalar } from '../sistemas/abalo';
+import { origemDoNome } from '../sistemas/notoriedade';
 
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] !== undefined && c.v.fatos[chave] === c.v.t;
 const mesesTexto = (n: number) => `${n} ${n === 1 ? 'mês' : 'meses'}`;
@@ -161,18 +162,19 @@ export const INTEGRACAO: Conteudo[] = [
   {
     // O nome tem consumidores: convites, entrevistas, publicidade — e o preço de ser visto.
     id: 'noto_convite', tipo: 'decisao', idade: [16, 95], tema: 'trabalho', repetir: 2, peso: c => ((c.v.notoriedade?.valor ?? 0) >= 55 ? 2.2 : 1.2),
-    quando: c => (c.v.notoriedade?.valor ?? 0) >= 35 && !!c.v.notoriedade?.fonte,
+    // O convite é pelo que o público conhece de você (a ORIGEM do nome: o ex-jogador ainda é chamado pela marca esportiva).
+    quando: c => (c.v.notoriedade?.valor ?? 0) >= 35 && !!origemDoNome(c.v),
     titulo: 'Querem você',
     texto: c => ({
       esporte: 'Uma marca de material esportivo quer você na campanha da temporada: foto, vídeo, uma frase sua no outdoor.',
       arte: 'Um programa de TV de domingo quer você ao vivo, contando a sua história e mostrando o trabalho novo.',
       politica: 'Um podcast de entrevistas longas, desses que meio país ouve, chamou para três horas de conversa.',
       negocio: 'Uma revista de negócios quer contar a história de como você começou.'
-    }[c.v.notoriedade!.fonte!]),
+    }[origemDoNome(c.v)!]),
     opcoes: [
       { id: 'aceitar', texto: 'Aceitar', comportamento: { sociabilidade: 1 },
-        consequencia: c => (c.v.notoriedade!.fonte === 'esporte' || c.v.notoriedade!.fonte === 'arte' ? `Um cachê de uns ${fmt(cacheDoConvite(c))}. Mais gente vai saber quem você é — para o bem e para o mal.` : 'Mais gente vai saber quem você é — para o bem e para o mal.'),
-        resolver: c => ({ texto: 'Luz, maquiagem, uma pergunta que você não esperava. Saiu melhor do que o medo dizia.', memoria: null, efeito: () => { const n = c.v.notoriedade!; n.valor = clamp(n.valor + 3); n.pico = Math.max(n.pico, n.valor); if (n.fonte === 'esporte' || n.fonte === 'arte') c.v.financas.conta += cacheDoConvite(c); if (n.fonte === 'politica' && c.v.caminhos.politica) c.v.caminhos.politica.reputacao = clamp(c.v.caminhos.politica.reputacao + 3); estresse(c, 3); } }) },
+        consequencia: c => (origemDoNome(c.v) === 'esporte' || origemDoNome(c.v) === 'arte' ? `Um cachê de uns ${fmt(cacheDoConvite(c))}. Mais gente vai saber quem você é — para o bem e para o mal.` : 'Mais gente vai saber quem você é — para o bem e para o mal.'),
+        resolver: c => ({ texto: 'Luz, maquiagem, uma pergunta que você não esperava. Saiu melhor do que o medo dizia.', memoria: null, efeito: () => { const n = c.v.notoriedade!; n.valor = clamp(n.valor + 3); n.pico = Math.max(n.pico, n.valor); if (origemDoNome(c.v) === 'esporte' || origemDoNome(c.v) === 'arte') c.v.financas.conta += cacheDoConvite(c); if (n.fonte === 'politica' && c.v.caminhos.politica) c.v.caminhos.politica.reputacao = clamp(c.v.caminhos.politica.reputacao + 3); estresse(c, 3); } }) },
       { id: 'recusar', texto: 'Recusar e guardar a vida privada', comportamento: { independencia: 1 },
         resolver: c => ({ texto: 'Você agradeceu e disse que prefere falar pelo trabalho.', memoria: null, efeito: () => estresse(c, -2) }) }
     ]

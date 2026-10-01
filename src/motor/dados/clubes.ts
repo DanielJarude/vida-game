@@ -111,9 +111,13 @@ export function equipeDaCidade(municipioId: string, nomeCidade: string, h: numbe
 }
 
 /** Um clube para a simulação da carreira: pelo nível que se alcançou (4 elite · 3 série B · 2 acesso · 1 estadual). */
-export function clubeDoNivel(nivel: number, h: number, excluir?: string): Clube {
+/** Os clubes que a simulação põe numa divisão (pelo porte). */
+export function clubesDoNivel(nivel: number, excluir?: string): Clube[] {
   const porte: Clube['porte'][] = nivel >= 4 ? ['grande', 'tradicional'] : nivel === 3 ? ['tradicional'] : nivel === 2 ? ['tradicional', 'regional'] : ['regional'];
-  const lista = CLUBES.filter(c => porte.includes(c.porte) && c.nome !== excluir);
+  return CLUBES.filter(c => porte.includes(c.porte) && c.nome !== excluir);
+}
+export function clubeDoNivel(nivel: number, h: number, excluir?: string): Clube {
+  const lista = clubesDoNivel(nivel, excluir);
   return lista[Math.floor(h * lista.length) % lista.length];
 }
 

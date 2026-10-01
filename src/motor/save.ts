@@ -380,6 +380,21 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if ([t.atual, t.paralela].some(e => e?.faixa !== undefined && (!finito(e.faixa) || e.faixa <= 0))) return 'Faixa salarial inválida.';
     { const av = cam.audiovisual; if (av !== undefined && (typeof av !== 'object' || !Array.isArray(av.contratos) || av.contratos.some(x => !x || typeof x.id !== 'string' || typeof x.status !== 'string' || !finito(x.bruto) || !finito(x.comissao) || !finito(x.despesas)) || (av.agente !== undefined && (typeof av.agente.nome !== 'string' || !finito(av.agente.comissao))))) return 'Audiovisual inválido.'; }
     if (cam.academia !== undefined && (typeof cam.academia !== 'object' || !Array.isArray(cam.academia.orientandos) || !finito(cam.academia.publicacoes))) return 'Vida acadêmica inválida.';
+    // Pacote pós-playtest (campos opcionais na mesma v18): proposta de clube, seleção, palmarés, situações de carreira,
+    // origem do nome, contexto e fases das relações, a história interna das atividades.
+    const esp = cam.esporte;
+    if (esp?.proposta !== undefined && (typeof esp.proposta !== 'object' || typeof esp.proposta.clube !== 'string' || typeof esp.proposta.municipioId !== 'string' || ![1, 2, 3, 4].includes(esp.proposta.nivel) || !finito(esp.proposta.salario) || !finito(esp.proposta.salarioTitular) || !finito(esp.proposta.meses) || !finito(esp.proposta.validaAte))) return 'Proposta de clube inválida.';
+    if (esp?.clausulaTitular !== undefined && !finito(esp.clausulaTitular)) return 'Contrato inválido.';
+    if (esp?.selecao !== undefined && (typeof esp.selecao !== 'object' || !finito(esp.selecao.convocacoes) || !finito(esp.selecao.jogos) || !finito(esp.selecao.gols) || !Array.isArray(esp.selecao.torneios))) return 'Seleção inválida.';
+    if (cam.palmares !== undefined && (!Array.isArray(cam.palmares) || cam.palmares.some(x => !x || typeof x.tipo !== 'string' || !finito(x.ano) || !finito(x.t) || typeof x.texto !== 'string'))) return 'Palmarés inválido.';
+    if (cam.situacao !== undefined && (typeof cam.situacao !== 'object' || typeof cam.situacao.id !== 'string' || !finito(cam.situacao.t) || !cam.situacao.dados || typeof cam.situacao.dados !== 'object')) return 'Situação de carreira inválida.';
+    if (cam.situacoes !== undefined && (!Array.isArray(cam.situacoes) || cam.situacoes.some(x => !x || typeof x.id !== 'string' || !finito(x.t) || !['otimo', 'bom', 'ruim', 'pessimo'].includes(x.desfecho) || typeof x.texto !== 'string'))) return 'Momentos da carreira inválidos.';
+    { const n = d.notoriedade as Vida['notoriedade']; if (n?.origens !== undefined && (typeof n.origens !== 'object' || Object.values(n.origens).some(x => !finito(x)))) return 'Origem do nome inválida.'; }
+    for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
+      if (vin.contexto !== undefined && (typeof vin.contexto !== 'object' || typeof vin.contexto.via !== 'string' || !finito(vin.contexto.abertura) || (vin.contexto.quimica !== undefined && !finito(vin.contexto.quimica)))) return 'Contexto de relação inválido.';
+      if (vin.fases !== undefined && (!Array.isArray(vin.fases) || vin.fases.some(f => !f || typeof f.fase !== 'string' || !finito(f.t)))) return 'Trajetória de relação inválida.';
+    }
+    if ((viv ?? []).some(x => (x.etapa !== undefined && typeof x.etapa !== 'string') || (x.marcos !== undefined && (!Array.isArray(x.marcos) || x.marcos.some(m => !m || !finito(m.t) || typeof m.texto !== 'string'))))) return 'História de atividade inválida.';
   }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;

@@ -32,6 +32,7 @@ import { anoDe } from '../tempo';
 import { dinheiro as fmt } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { capitalDoEstado } from './escola';
+import { nomePor } from './notoriedade';
 
 export const LINGUAGENS_DE_CENA: Dominio[] = ['teatro', 'musica', 'danca'];
 const TRILHA_DA: Partial<Record<Dominio, string[]>> = { teatro: ['cena'], musica: ['musica', 'orquestra'], danca: ['danca'] };
@@ -146,7 +147,7 @@ export function disponibilidadeCena(v: Vida, oque: OqueCena): Veredito {
 export function publicoAgora(v: Vida): number {
   const p = v.caminhos.arte?.ativo ? v.caminhos.arte.publico : 0;
   const c = [v.trabalho.atual, v.trabalho.paralela].reduce((m, e) => Math.max(m, e?.clientela ?? 0), 0);
-  const n = v.notoriedade?.fonte === 'arte' ? v.notoriedade.valor : 0;
+  const n = nomePor(v, 'arte');
   return Math.max(p, c * 0.7, n);
 }
 
@@ -217,7 +218,7 @@ export function executarCena(v: Vida, r: Rng, oque: OqueCena): { texto: string; 
     }
     case 'audicao': {
       v.fatos['cena_audicao'] = v.t;
-      const noto = v.notoriedade?.fonte === 'arte' ? v.notoriedade.valor : 0;
+      const noto = nomePor(v, 'arte');
       // O tamanho da produção que chama para teste depende do que já se fez (o currículo, o nome).
       // Sem agente, novela e filme de estúdio não chamam (o porte para em 2); o trabalho que repercutiu abre um degrau.
       const repercutiu = v.fatos['av_repercutiu'] !== undefined && v.t - v.fatos['av_repercutiu'] <= 24 ? 0.15 : 0;

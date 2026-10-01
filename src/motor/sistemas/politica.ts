@@ -55,6 +55,7 @@ import { criarPessoa, vincular } from '../pessoas';
 import { aplicarPersonalidade } from '../personalidade';
 import type { AcaoProfissional } from './profissao';
 import { registrarQuemApareceu } from './rede';
+import { leituraDoNome, porOrigem } from './notoriedade';
 
 /* ================================================================ Catálogo */
 
@@ -142,6 +143,9 @@ export function eleicaoNaJanela(v: Vida): { ano: number; tipo: 'municipal' | 'ge
   return e.t <= v.t + 12 ? e : undefined;
 }
 
+/** O nome público visto pelo eleitor (a notoriedade, pela metade): reconhecer o nome não é apoiar. */
+export const nomePublico = (v: Vida) => (v.notoriedade?.valor ?? 0) * 0.5;
+
 /* ========================================================= Fase e leitura */
 
 export type FasePolitica = VidaPolitica['fase'] | 'fora';
@@ -150,7 +154,28 @@ export const naPolitica = (v: Vida) => { const f = fasePolitica(v); return f !==
 export const emMandato = (v: Vida) => fasePolitica(v) === 'mandato' && !!v.caminhos.politica?.mandato;
 
 const palavraApoio = (x: number) => (x < 15 ? 'quase ninguém' : x < 35 ? 'um grupo pequeno' : x < 55 ? 'uma base de bairro' : x < 75 ? 'uma base sólida' : 'muita gente');
-const palavraReputacao = (x: number, g: Genero) => (x < 15 ? `pouco ${flex(g, 'conhecido', 'conhecida', 'conhecide')}` : x < 35 ? `${flex(g, 'conhecido', 'conhecida', 'conhecide')} no bairro` : x < 60 ? `${flex(g, 'conhecido', 'conhecida', 'conhecide')} na cidade` : x < 80 ? 'nome conhecido no estado' : 'figura pública');
+/**
+ * A PRESENÇA POLÍTICA (`p.reputacao`, o capital político): quanto a pessoa é
+ * conhecida COMO ATOR POLÍTICO — não quanto o público a conhece (isso é a
+ * notoriedade, `notoriedade.leituraDoNome`). Um ex-jogador famoso pode ser
+ * estreante aqui; as duas coisas aparecem juntas, sem se contradizer.
+ */
+const palavraReputacao = (x: number, g: Genero) => (x < 15 ? `${flex(g, 'estreante', 'estreante', 'estreante')} na política` : x < 35 ? 'presença no bairro' : x < 60 ? 'presença na cidade' : x < 80 ? 'nome político no estado' : 'figura pública da política');
+/**
+ * A base partidária: o lugar DENTRO do partido (anos de filiação, campanhas,
+ * mandatos, trocas de legenda). Não é a base de eleitores (`apoio`) nem o
+ * nome. Pesa quando o partido escolhe a cabeça de chapa (`podeConcorrer`).
+ */
+export function basePartidaria(v: Vida): number {
+  const p = v.caminhos.politica;
+  if (!p?.partido || p.tFiliacao === undefined) return 0;
+  const anos = Math.max(0, (v.t - p.tFiliacao) / 12);
+  const campanhas = p.historico.filter(h => h.partido === p.partido || !h.partido).length;
+  const mandatos = p.historico.filter(h => h.resultado === 'eleito' || h.resultado === 'concluiu').length + (p.mandato ? 1 : 0);
+  const trocas = (p.partidos ?? []).filter(x => x.tFim !== undefined).length;
+  return Math.round(clamp(anos * 5 + campanhas * 8 + mandatos * 14 - trocas * 6));
+}
+const palavraPartidaria = (x: number) => (x < 12 ? 'recém-chegado, sem lugar na direção' : x < 30 ? 'militância conhecida no diretório' : x < 55 ? 'voz na direção local' : 'peso na direção do partido');
 const palavraAprovacao = (x: number) => (x < 25 ? 'reprovado nas ruas' : x < 42 ? 'desgastado' : x < 58 ? 'dividido' : x < 72 ? 'bem avaliado' : 'muito bem avaliado');
 
 export interface LeituraPolitica {
@@ -174,6 +199,10 @@ export interface LeituraPolitica {
   perspectiva?: string;
   /** Os partidos por onde passou. */
   partidos?: string;
+  /** O nome para o PÚBLICO (a notoriedade, a mesma leitura da tela Você) — separado da presença política. */
+  publico?: string;
+  /** O lugar dentro do partido (`basePartidaria`). */
+  noPartido?: string;
   /** O escândalo que veio a público (quando há). */
   escandalo?: string;
 }
@@ -190,6 +219,8 @@ export function leituraPolitica(v: Vida): LeituraPolitica | undefined {
     ...base,
     desgaste: p.desgaste < 15 ? 'pouco' : p.desgaste < 35 ? 'algum' : p.desgaste < 60 ? 'bastante' : 'muito',
     estrutura: p.partido ? ['diretório grande na cidade', 'diretório médio na cidade', 'diretório pequeno na cidade'][v.fatos['pol_partido_porte'] ?? 1] : undefined,
+    publico: leituraDoNome(v)?.frase ?? `${flex(ge(v), 'anônimo', 'anônima', 'anônime')} fora da política`,
+    noPartido: p.partido && !p.indicacaoMilitar ? palavraPartidaria(basePartidaria(v)) : undefined,
     ultimaEleicao: ultima?.fatores ? `${anoDe(ultima.t)}, ${nomeCargo(v, ultima.cargo)}: ${explicarEleicao(v, ultima)}` : undefined,
     perspectiva: cargo && p.partido && !p.campanha && !p.posse && base.fase !== 'encerrada' ? `${cap(nomeCargo(v, cargo))} em ${e.ano}: ${perspectiva(v, cargo, e.t)}` : undefined,
     partidos: passados.length ? `Antes: ${passados.map(x => `${partidoDe(x.sigla)?.chamado ?? x.sigla} (${anoDe(x.tInicio)}–${anoDe(x.tFim!)})`).join(', ')}.` : undefined,
@@ -279,7 +310,9 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
     if (CARGOS[mand.cargo].executivo && mand.cargo !== cargo) return { grau: 'irregular', motivo: `Para disputar outro cargo, é preciso renunciar ao mandato de ${nomeCargo(v, mand.cargo)} seis meses antes.` };
   }
   if (cargo === 'prefeito' && p.apoio < (v.fatos['pol_partido_porte'] === 2 ? 10 : 18)) return { grau: 'improvavel', chance: 0.1, motivo: 'Para prefeito, sem base nenhuma, o partido nem lança o nome.' };
-  if ((cargo === 'governador' || cargo === 'senador') && p.reputacao < 40) return { grau: 'improvavel', chance: 0.05, motivo: 'Para um cargo do estado inteiro, é preciso ser conhecido no estado inteiro.' };
+  if ((cargo === 'governador' || cargo === 'senador') && Math.max(p.reputacao, nomePublico(v)) < 40) return { grau: 'improvavel', chance: 0.05, motivo: 'Para um cargo do estado inteiro, é preciso ser conhecido no estado inteiro.' };
+  // A cabeça de chapa é escolha do partido: quem chegou ontem raramente é escolhido — por mais famoso que seja.
+  if ((cargo === 'governador' || cargo === 'senador' || cargo === 'prefeito') && !p.indicacaoMilitar && basePartidaria(v) < (cargo === 'prefeito' ? 8 : 20)) return { grau: 'improvavel', chance: 0.08, motivo: 'O partido não entrega a cabeça de chapa a quem acabou de chegar: falta lugar dentro dele (anos de filiação, campanhas, mandato).' };
   return PERMITIDO;
 }
 
@@ -325,7 +358,7 @@ export function portasDaPolitica(v: Vida): { origem: VidaPolitica['origem']; pes
 /** Reputação e apoio com que cada porta começa. */
 const COMECO: Record<VidaPolitica['origem'], { reputacao: number; apoio: number }> = {
   comunidade: { reputacao: 12, apoio: 16 }, estudantil: { reputacao: 8, apoio: 10 }, sindicato: { reputacao: 14, apoio: 18 }, causa: { reputacao: 14, apoio: 10 },
-  notoriedade: { reputacao: 38, apoio: 8 }, empresario: { reputacao: 24, apoio: 10 }, servidor: { reputacao: 14, apoio: 12 }, convite: { reputacao: 10, apoio: 8 }, decisao: { reputacao: 5, apoio: 4 }
+  notoriedade: { reputacao: 14, apoio: 8 }, empresario: { reputacao: 24, apoio: 10 }, servidor: { reputacao: 14, apoio: 12 }, convite: { reputacao: 10, apoio: 8 }, decisao: { reputacao: 5, apoio: 4 }
 };
 
 export function entrarNaPolitica(v: Vida, origem: VidaPolitica['origem'], forca = 1): VidaPolitica {
@@ -498,7 +531,9 @@ export function fatoresDaEleicao(v: Vida, cargo: CargoEletivo, tEleicao: number,
   const f: FatorEleitoral[] = [];
   const add = (id: IdFator, valor: number) => { if (Math.abs(valor) >= 0.05) f.push({ id, valor: Math.round(valor * 10) / 10 }); };
   // A trajetória pesa mais que a campanha: base, nome (no alcance do cargo) e o que o mandato mostrou.
-  const nome = CARGOS[cargo].escopo === 'municipio' ? Math.min(p.reputacao, 60) : p.reputacao;
+  // O nome que o eleitor reconhece: a presença política OU o nome público (a notoriedade, pela metade — reconhecer
+  // não é apoiar: a base é outra conta). O ex-jogador famoso tem nome; base, não necessariamente.
+  const nome = Math.max(CARGOS[cargo].escopo === 'municipio' ? Math.min(p.reputacao, 60) : p.reputacao, nomePublico(v));
   add('base', p.apoio * 0.45);
   add('nome', nome * 0.22);
   add('campanha', (c?.nota ?? notaSuposta ?? 0) * 0.5);
@@ -574,7 +609,7 @@ function palavraDoFator(v: Vida, id: IdFator, valor: number, cargo: CargoEletivo
   const p = v.caminhos.politica!;
   switch (id) {
     case 'base': return valor < 0 ? `uma base pequena para ${cargo === 'vereador' ? 'a disputa' : `disputar ${nomeCargo(v, cargo)}`} ${lugar}` : valor >= 36 ? 'uma base grande' : 'a base que você construiu';
-    case 'nome': return valor < 0 ? `ainda ser pouco ${flex(ge(v), 'conhecido', 'conhecida', 'conhecide')} ${lugar}` : valor >= 12 ? 'o nome conhecido' : 'o nome que começa a circular';
+    case 'nome': return valor < 0 ? `ainda ser pouco ${flex(ge(v), 'conhecido', 'conhecida', 'conhecide')} ${lugar}` : nomePublico(v) > p.reputacao && nomePublico(v) * 0.22 >= 4 ? `o nome que o público já conhece ${porOrigem(v)}` : valor >= 12 ? 'o nome conhecido' : 'o nome que começa a circular';
     case 'campanha': return valor >= 7 ? 'a campanha forte' : valor >= 3 ? 'a campanha' : 'uma campanha fraca';
     case 'desgaste': return p.escandalo ? 'o desgaste acumulado' : 'o desgaste de anos na política';
     case 'mandato': return valor >= 0 ? 'um mandato aprovado nas ruas' : 'a avaliação ruim do mandato';

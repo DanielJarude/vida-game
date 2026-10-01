@@ -22,6 +22,7 @@ import { moraComFamiliaDeOrigem } from './domicilio';
 import { flex } from '../texto';
 import { rngDe } from '../rng';
 import { carreiraDeAdulto } from './filhos';
+import { registrarFase } from './relacoes';
 
 /** Quem tem carreira acompanhada de perto: a parceria (até a de namoro), o amigo próximo, quem é muito próximo. */
 export const importaParaCarreira = (vin: Vinculo) => (!!vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(vin.romance.estagio)) || vin.estagio === 'amigo_proximo' || vin.proximidade >= 60;
@@ -279,6 +280,7 @@ export function processarSocial(v: Vida, r: Rng): void {
     }
     if (depois !== antes) {
       vin.estagio = depois;
+      registrarFase(v, vin, depois === 'amigo' && antes === 'afastado' ? 'reconciliacao' : depois);
       const onde = descricaoOrigem(v, vin);
       if (depois === 'amigo' && antes !== 'afastado') {
         linhas.push({ prioridade: 2, fazer: () => {

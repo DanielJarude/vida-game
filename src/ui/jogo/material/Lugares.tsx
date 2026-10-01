@@ -325,7 +325,7 @@ function CartaoVeiculo({ o, motivo, abrir }: { o: OfertaVeiculo; motivo?: string
   const vt = vitrine(o);
   return (
     <button type="button" className="oferta" onClick={abrir}>
-      <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId)} />
+      <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId)} semente={o.modeloId} />
       <span className="oferta__texto">
         <strong>{vt.nome} {o.anoFabricacao}</strong>
         <span>{o.usado ? 'Usado' : 'Novo, zero km'} · {vt.linha}</span>

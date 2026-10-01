@@ -8,7 +8,7 @@
  * sobrancelha, cílios, lábios e o repertório de cabelo, sem caricatura.
  */
 
-import { memo } from 'react';
+import { memo, type ReactElement } from 'react';
 import type { Especie } from '../../motor/tipos';
 import { animal, palavraDoBicho } from '../../motor/dados/animais';
 import type { Genero, Visual } from '../../motor/tipos';
@@ -528,94 +528,309 @@ function Barba({ tipo, cor, cx, olhoY, w, queixo, jaw, bigode: comBigode = true 
 
 /* ------------------------------------------------------------------ Pets */
 
+/**
+ * Os bichos têm a sua própria linguagem, por família, e NUNCA um rosto de
+ * gente: nada de dois olhos e uma boca num círculo chapado. O cão e os
+ * pequenos mamíferos vêm de perfil (focinho, olho do lado, orelha no lugar
+ * certo); o gato, de frente, mas com orelhas, almofadas de bigode e a boca
+ * em "w"; o hamster é uma bola sem pescoço, de bochechas cheias e patinhas;
+ * o porquinho-da-índia, um pão comprido sem pescoço nem rabo; as aves, de
+ * perfil num poleiro, cada uma com o seu bico, cauda e marca; os répteis e
+ * os peixes, pela silhueta. A semente varia a pelagem (e a orelha do cão),
+ * nunca a espécie. Sem gradiente, cor contida, olho de conta com um brilho.
+ */
+const ESCURO = '#141110';
+const ROSA = '#d99a94';
+/** Olho de conta com brilho; na pelagem escura, um aro claro para não sumir. */
+function Olho({ x, y, r = 2.8, aro }: { x: number; y: number; r?: number; aro?: string }) {
+  return <g>{aro && <circle cx={x} cy={y} r={r + 0.9} fill={aro} />}<circle cx={x} cy={y} r={r} fill={ESCURO} /><circle cx={x - r * 0.35} cy={y - r * 0.35} r={r * 0.32} fill="#ffffff" /></g>;
+}
+const Sombra = ({ y = 88, rx = 32 }: { y?: number; rx?: number }) => <ellipse cx="50" cy={y} rx={rx} ry="4" fill="#000000" opacity="0.08" />;
+const Bigodes = ({ x, y, lado = 1, comp = 14 }: { x: number; y: number; lado?: 1 | -1; comp?: number }) => (
+  <path d={`M ${x} ${y} l ${lado * comp} -3 M ${x} ${y + 1.5} l ${lado * comp} 1 M ${x} ${y + 3} l ${lado * (comp - 2)} 4`} stroke={ESCURO} strokeWidth="0.6" opacity="0.55" fill="none" />
+);
+const aroSe = (pelo: string) => (luminancia(pelo) < 0.06 ? misturar(pelo, '#ffffff', 0.45) : undefined);
+const escolha = <T,>(xs: readonly T[], semente: string, sal = 0): T => xs[(hash(semente) >>> sal) % xs.length];
+
+const FUNDO_PET: Record<string, string> = { cao: '#dfe6f0', gato: '#e6e0ea', roedor: '#e9e2d4', coelho: '#e3ebe2', ave: '#e8e4d2', peixe: '#cfe3ea', reptil: '#dfe8d4' };
+
 function RetratoPet({ especie, tamanho, rotulo, semente }: { especie: Especie; tamanho: number; rotulo?: string; semente: string }) {
-  const cores = ['#8a6a4a', '#2b2622', '#d9c3a0', '#a8752f', '#6b6560', '#efe6d8'];
-  const c = cores[hash(semente) % cores.length];
-  const escuro = misturar(c, '#000000', 0.25);
   const a = animal(especie);
-  const fundo = a.grupo === 'peixe' ? '#cfe3ea' : a.grupo === 'reptil' ? '#dfe8d4' : a.grupo === 'ave' ? '#e8e4d2' : '#dfe6f0';
+  const Desenho = DESENHO_PET[especie] ?? DESENHO_PET[a.grupo === 'gato' ? 'gato' : 'cachorro'];
   return (
-    <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} style={{ background: fundo }} role="img" aria-label={rotulo ?? palavraDoBicho(especie, 'masculino', false)}>
-      {a.grupo === 'gato' && (
-        <g>
-          <path d="M 28 40 L 30 18 L 44 32 Z M 72 40 L 70 18 L 56 32 Z" fill={escuro} />
-          <ellipse cx="50" cy="52" rx="25" ry="22" fill={c} />
-          <ellipse cx="41" cy="50" rx="3.4" ry="4.2" fill="#c9b23a" /><ellipse cx="59" cy="50" rx="3.4" ry="4.2" fill="#c9b23a" />
-          <ellipse cx="41" cy="50" rx="1.2" ry="3.4" fill="#141110" /><ellipse cx="59" cy="50" rx="1.2" ry="3.4" fill="#141110" />
-          <path d="M 47 59 L 53 59 L 50 62 Z" fill="#d88a8a" />
-          <path d="M 36 61 L 24 59 M 36 63 L 25 65 M 64 61 L 76 59 M 64 63 L 75 65" stroke={escuro} strokeWidth="0.8" />
-          <ellipse cx="50" cy="96" rx="22" ry="20" fill={c} />
-        </g>
-      )}
-      {a.grupo === 'cao' && (
-        <g>
-          <ellipse cx="28" cy="46" rx="8" ry="16" fill={escuro} transform="rotate(18 28 46)" />
-          <ellipse cx="72" cy="46" rx="8" ry="16" fill={escuro} transform="rotate(-18 72 46)" />
-          <ellipse cx="50" cy="50" rx="23" ry="24" fill={c} />
-          <ellipse cx="50" cy="62" rx="12" ry="9" fill={misturar(c, '#ffffff', 0.25)} />
-          <circle cx="41" cy="48" r="3.2" fill="#141110" /><circle cx="59" cy="48" r="3.2" fill="#141110" />
-          <ellipse cx="50" cy="58" rx="4.4" ry="3.2" fill="#141110" />
-          <path d="M 46 65 Q 50 68 54 65" stroke="#141110" strokeWidth="1.2" fill="none" />
-          <ellipse cx="50" cy="97" rx="22" ry="20" fill={c} />
-        </g>
-      )}
-      {a.grupo === 'ave' && <Ave especie={especie} semente={semente} />}
-      {(a.grupo === 'roedor' || a.grupo === 'coelho') && (
-        <g>
-          {a.grupo === 'coelho'
-            ? <><ellipse cx="40" cy="26" rx="6" ry="18" fill={c} /><ellipse cx="60" cy="26" rx="6" ry="18" fill={c} /><ellipse cx="40" cy="27" rx="2.6" ry="13" fill="#e8b4b4" /><ellipse cx="60" cy="27" rx="2.6" ry="13" fill="#e8b4b4" /></>
-            : <><circle cx="33" cy="38" r="7" fill={escuro} /><circle cx="67" cy="38" r="7" fill={escuro} /></>}
-          <ellipse cx="50" cy="58" rx={especie === 'hamster' ? 26 : 24} ry={especie === 'hamster' ? 22 : 21} fill={especie === 'chinchila' ? '#a8a4a0' : c} />
-          <circle cx="41" cy="54" r="2.8" fill="#141110" /><circle cx="59" cy="54" r="2.8" fill="#141110" />
-          <ellipse cx="50" cy="62" rx="3" ry="2.2" fill="#c9807a" />
-          <path d="M 44 66 Q 50 69 56 66" stroke="#141110" strokeWidth="1" fill="none" />
-          <path d="M 42 62 L 30 60 M 42 64 L 31 66 M 58 62 L 70 60 M 58 64 L 69 66" stroke={escuro} strokeWidth="0.7" />
-          <ellipse cx="50" cy="98" rx="24" ry="18" fill={especie === 'chinchila' ? '#a8a4a0' : c} />
-        </g>
-      )}
-      {a.grupo === 'peixe' && (
-        <g>
-          <path d="M 14 70 Q 30 62 40 76 Q 30 88 14 84 Z" fill="#fff" opacity="0.25" />
-          <path d="M 70 50 L 90 34 L 88 66 Z" fill={especie === 'betta' ? '#3b56b8' : '#e08a2a'} opacity="0.9" />
-          <ellipse cx="50" cy="50" rx="24" ry="15" fill={especie === 'betta' ? '#2f4aa8' : '#e8952e'} />
-          <path d="M 44 36 Q 52 26 60 37" fill={especie === 'betta' ? '#3b56b8' : '#e08a2a'} />
-          <circle cx="36" cy="47" r="3" fill="#141110" /><circle cx="35" cy="46" r="1" fill="#fff" />
-          <circle cx="24" cy="30" r="2.2" fill="none" stroke="#fff" strokeWidth="0.8" /><circle cx="18" cy="20" r="1.6" fill="none" stroke="#fff" strokeWidth="0.8" />
-        </g>
-      )}
-      {a.grupo === 'reptil' && (especie === 'jabuti' ? (
-        <g>
-          <ellipse cx="50" cy="60" rx="30" ry="20" fill="#5b4a2c" />
-          <path d="M 34 52 L 42 46 L 50 50 L 58 46 L 66 52 L 60 62 L 40 62 Z" fill="#c9922a" opacity="0.8" />
-          <ellipse cx="84" cy="64" rx="9" ry="7" fill="#7b6a4a" /><circle cx="87" cy="62" r="1.4" fill="#141110" />
-          <rect x="28" y="74" width="8" height="8" rx="3" fill="#7b6a4a" /><rect x="62" y="74" width="8" height="8" rx="3" fill="#7b6a4a" />
-        </g>
-      ) : (
-        <g>
-          <path d="M 12 70 Q 40 60 62 66 Q 80 70 88 60 L 90 66 Q 82 78 60 76 Q 36 74 12 76 Z" fill="#5f8f3a" />
-          <ellipse cx="74" cy="58" rx="13" ry="9" fill="#6fa044" />
-          <path d="M 64 50 L 68 44 L 72 50 L 76 44 L 80 50" stroke="#3f6a26" strokeWidth="2" fill="none" />
-          <circle cx="80" cy="56" r="1.8" fill="#141110" />
-          <circle cx="68" cy="64" r="4" fill="#9fc26a" />
-        </g>
-      ))}
+    <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} style={{ background: FUNDO_PET[a.grupo] ?? '#dfe6f0' }} role="img" aria-label={rotulo ?? palavraDoBicho(especie, 'masculino', false)} data-especie={especie}>
+      <Desenho semente={semente} />
     </svg>
   );
 }
 
-function Ave({ especie, semente }: { especie: Especie; semente: string }) {
-  const corpo = especie === 'calopsita' ? '#c9c4b8' : especie === 'periquito' ? (hash(semente) % 2 ? '#6fb55a' : '#5f8fd0') : especie === 'canario' ? '#e8c43a' : '#3f9b4a';
-  const cabeca = especie === 'calopsita' ? '#e8d25a' : especie === 'papagaio' ? '#e8c43a' : corpo;
+type DesenhoBicho = (p: { semente: string }) => ReactElement;
+
+/** Cão: de perfil, focinho comprido com a trufa na ponta, orelha caída ou em pé, coleira. */
+const Cao: DesenhoBicho = ({ semente }) => {
+  const c = escolha(['#8a5a32', '#2b2622', '#d9c3a0', '#a8752f', '#6b6560', '#efe6d8'], semente);
+  const escuro = misturar(c, '#000000', 0.3), claro = misturar(c, '#ffffff', 0.35);
+  const emPe = hash(semente) % 3 === 0;
   return (
     <g>
-      <ellipse cx="50" cy="66" rx="20" ry="26" fill={corpo} />
-      <circle cx="50" cy="38" r="16" fill={cabeca} />
-      {especie === 'calopsita' && <><path d="M 48 23 Q 44 8 52 4 Q 50 14 56 20 Z" fill="#e8d25a" /><circle cx="42" cy="43" r="4" fill="#e0764a" /></>}
-      {especie === 'papagaio' && <ellipse cx="50" cy="30" rx="10" ry="6" fill="#4a78c8" />}
-      <circle cx="44" cy="36" r="2.6" fill="#141110" />
-      <path d="M 56 38 Q 66 40 58 48 Q 56 44 54 42 Z" fill={especie === 'papagaio' ? '#2b2622' : '#e0a24a'} />
-      <path d="M 34 70 Q 28 84 40 90" stroke={misturar(corpo, '#000000', 0.3)} strokeWidth="3" fill="none" />
-      <path d="M 44 92 L 44 98 M 56 92 L 56 98" stroke="#8a6a4a" strokeWidth="2" />
+      <path d="M 30 54 C 22 68 18 84 17 100 H 70 C 66 88 62 74 62 60 Z" fill={c} />
+      {hash(semente) % 2 === 0 && <path d="M 36 74 C 32 84 32 94 34 100 H 52 C 52 90 48 80 36 74 Z" fill={claro} />}
+      <ellipse cx="46" cy="42" rx="18" ry="16" fill={c} />
+      <path d="M 51 32 C 64 31 78 37 82 45 C 85 52 80 58 72 59 L 55 61 C 50 54 48 42 51 32 Z" fill={claro} />
+      <ellipse cx="81" cy="45" rx="3.8" ry="3.1" fill={ESCURO} />
+      <path d="M 80 53 Q 72 57 63 56" stroke={ESCURO} strokeWidth="1.3" fill="none" />
+      <Olho x={58} y={37} r={2.8} aro={aroSe(c)} />
+      {emPe
+        ? <><path d="M 33 34 L 36 10 L 51 28 Z" fill={escuro} /><path d="M 37 30 L 38 17 L 46 27 Z" fill={ROSA} opacity="0.6" /></>
+        : <path d="M 38 28 C 28 28 24 42 27 56 C 29 62 35 61 38 55 C 41 46 44 34 38 28 Z" fill={escuro} />}
+      <path d="M 31 63 Q 46 71 62 66" stroke="#b8442e" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <circle cx="47" cy="72" r="2.6" fill="#c9a23a" />
     </g>
   );
-}
+};
+
+/** Gato: de frente, cabeça larga, orelhas em triângulo, olho amendoado de pupila fenda, boca em "w". */
+const Gato: DesenhoBicho = ({ semente }) => {
+  const c = escolha(['#2b2622', '#7d7670', '#c98a43', '#efe6d8', '#8a7a66'], semente);
+  const escuro = misturar(c, '#000000', 0.35), claro = c === '#efe6d8' ? '#ffffff' : misturar(c, '#ffffff', 0.55);
+  const listrado = c === '#c98a43' || c === '#8a7a66' || c === '#7d7670';
+  const iris = escolha(['#c9b23a', '#7fa04a', '#d08a2a'], semente, 3);
+  return (
+    <g>
+      <ellipse cx="50" cy="98" rx="27" ry="22" fill={c} />
+      <path d="M 26 48 L 28 15 L 48 32 Z M 74 48 L 72 15 L 52 32 Z" fill={c} />
+      <path d="M 30 40 L 31 22 L 42 32 Z M 70 40 L 69 22 L 58 32 Z" fill={ROSA} opacity="0.75" />
+      <ellipse cx="50" cy="53" rx="27" ry="21" fill={c} />
+      {listrado && <path d="M 44 36 L 46 43 M 50 34 V 42 M 56 36 L 54 43 M 24 54 H 31 M 25 59 H 31 M 76 54 H 69 M 75 59 H 69" stroke={escuro} strokeWidth="2.2" strokeLinecap="round" />}
+      <ellipse cx="45.5" cy="64.5" rx="5.4" ry="4" fill={claro} /><ellipse cx="54.5" cy="64.5" rx="5.4" ry="4" fill={claro} />
+      <ellipse cx="39" cy="51" rx="5" ry="4.2" fill={iris} /><ellipse cx="61" cy="51" rx="5" ry="4.2" fill={iris} />
+      <ellipse cx="39" cy="51" rx="1.3" ry="3.7" fill={ESCURO} /><ellipse cx="61" cy="51" rx="1.3" ry="3.7" fill={ESCURO} />
+      <path d="M 47 59 H 53 L 50 62 Z" fill="#d07a7a" />
+      <path d="M 50 62 V 64 M 50 64 Q 47.5 67 45 65.5 M 50 64 Q 52.5 67 55 65.5" stroke={ESCURO} strokeWidth="0.9" fill="none" strokeLinecap="round" />
+      <Bigodes x={40} y={64} lado={-1} comp={17} /><Bigodes x={60} y={64} lado={1} comp={17} />
+    </g>
+  );
+};
+
+/** Hamster: uma bola sem pescoço, bochechas estufadas, orelhinhas redondas no alto, patinhas no peito. */
+const Hamster: DesenhoBicho = ({ semente }) => {
+  const c = escolha(['#d9a35f', '#c98a43', '#8a7f74', '#efe6d8'], semente);
+  const claro = '#f4ece0', escuro = misturar(c, '#000000', 0.3);
+  return (
+    <g>
+      <Sombra y={90} rx={30} />
+      <ellipse cx="50" cy="62" rx="30" ry="28" fill={c} />
+      <ellipse cx="27" cy="62" rx="12.5" ry="11.5" fill={c} /><ellipse cx="73" cy="62" rx="12.5" ry="11.5" fill={c} />
+      <ellipse cx="29" cy="65" rx="9" ry="8" fill={claro} /><ellipse cx="71" cy="65" rx="9" ry="8" fill={claro} />
+      <ellipse cx="50" cy="78" rx="17" ry="12" fill={claro} />
+      <circle cx="31" cy="37" r="7" fill={escuro} /><circle cx="69" cy="37" r="7" fill={escuro} />
+      <circle cx="31" cy="38" r="3.8" fill={ROSA} /><circle cx="69" cy="38" r="3.8" fill={ROSA} />
+      <ellipse cx="50" cy="58" rx="7.5" ry="6" fill={claro} />
+      <Olho x={37} y={49} r={3.2} /><Olho x={63} y={49} r={3.2} />
+      <ellipse cx="50" cy="54.5" rx="2.4" ry="1.7" fill="#c9707a" />
+      <path d="M 50 56 V 58.5 M 50 58.5 l -1.8 1.4 M 50 58.5 l 1.8 1.4" stroke={ESCURO} strokeWidth="0.8" fill="none" strokeLinecap="round" />
+      <Bigodes x={44} y={56} lado={-1} comp={12} /><Bigodes x={56} y={56} lado={1} comp={12} />
+      <ellipse cx="44.5" cy="72" rx="3.2" ry="2.3" fill={ROSA} /><ellipse cx="55.5" cy="72" rx="3.2" ry="2.3" fill={ROSA} />
+      <ellipse cx="38" cy="89" rx="5" ry="2.4" fill={ROSA} /><ellipse cx="62" cy="89" rx="5" ry="2.4" fill={ROSA} />
+    </g>
+  );
+};
+
+/** Porquinho-da-índia: de perfil, um pão comprido, sem pescoço e sem rabo, focinho rombudo, orelha de pétala, malhado. */
+const Porquinho: DesenhoBicho = ({ semente }) => {
+  const [c, mancha] = escolha([['#efe6d8', '#a8642f'], ['#c98a43', '#efe6d8'], ['#2b2622', '#efe6d8'], ['#d9c3a0', '#8a5a32'], ['#a8642f', '#2b2622']] as const, semente);
+  const corpo = 'M 11 72 C 11 52 30 40 54 40 C 72 40 84 47 88 59 C 91 69 86 79 75 80 H 21 C 14 80 11 77 11 72 Z';
+  return (
+    <g>
+      <Sombra y={82} rx={40} />
+      <path d={corpo} fill={c} />
+      <path d="M 11 72 C 11 52 30 40 46 40 C 40 54 38 68 42 80 H 21 C 14 80 11 77 11 72 Z" fill={mancha} />
+      {hash(semente) % 2 === 0 && <path d="M 72 41 C 78 46 80 52 79 60 C 84 60 88 62 89 64 C 90 56 86 46 72 41 Z" fill={mancha} opacity="0.9" />}
+      <path d="M 62 44 C 60 36 68 32 72 38 C 73 42 68 46 62 44 Z" fill={misturar(c === '#2b2622' ? '#6b5a50' : c, '#c97a6a', 0.45)} />
+      <Olho x={75} y={52} r={3} aro={aroSe(c)} />
+      <ellipse cx="88" cy="63" rx="1.8" ry="1.4" fill="#8a5a5a" />
+      <path d="M 88 65 Q 86 68 82 67.5" stroke={ESCURO} strokeWidth="0.8" fill="none" />
+      <Bigodes x={85} y={63} lado={1} comp={11} />
+      <ellipse cx="28" cy="80.5" rx="4.5" ry="2" fill={ROSA} /><ellipse cx="72" cy="80.5" rx="4" ry="2" fill={ROSA} />
+    </g>
+  );
+};
+
+/** Coelho: de perfil, sentado, orelhas compridas em pé, rabo de algodão. */
+const Coelho: DesenhoBicho = ({ semente }) => {
+  const c = escolha(['#8a7a66', '#efe6d8', '#2b2622', '#c9a37a', '#7d7a78'], semente);
+  const escuro = misturar(c, '#000000', 0.25), claro = c === '#efe6d8' ? '#ffffff' : misturar(c, '#ffffff', 0.45);
+  return (
+    <g>
+      <Sombra y={88} rx={34} />
+      <ellipse cx="47" cy="25" rx="6" ry="19" fill={escuro} transform="rotate(-18 47 25)" />
+      <path d="M 17 86 C 9 72 15 52 33 50 C 46 48 57 54 61 63 C 65 73 62 83 56 87 H 24 Z" fill={c} />
+      <ellipse cx="64" cy="51" rx="15" ry="13" fill={c} />
+      <ellipse cx="57" cy="24" rx="6.5" ry="20" fill={c} transform="rotate(-8 57 24)" />
+      <ellipse cx="57.5" cy="25" rx="2.8" ry="15" fill={ROSA} transform="rotate(-8 57 24)" opacity="0.8" />
+      <ellipse cx="73" cy="56" rx="6" ry="4.5" fill={claro} />
+      <Olho x={67} y={47} r={3} aro={aroSe(c)} />
+      <ellipse cx="78.5" cy="53" rx="1.6" ry="1.3" fill="#c9707a" />
+      <Bigodes x={76} y={55} lado={1} comp={12} />
+      <circle cx="15" cy="72" r="6.5" fill={claro} />
+      <ellipse cx="62" cy="87" rx="6.5" ry="3" fill={c} />
+    </g>
+  );
+};
+
+/** Chinchila: sentada, cinza denso, orelhas grandes e redondas, olho grande, rabo felpudo para cima. */
+const Chinchila: DesenhoBicho = ({ semente }) => {
+  const c = escolha(['#8e8c8a', '#a8a29a', '#c9bfb2'], semente);
+  const escuro = misturar(c, '#000000', 0.25), claro = '#efebe4';
+  return (
+    <g>
+      <Sombra y={90} rx={30} />
+      <path d="M 34 84 C 18 84 8 70 11 54 C 13 42 22 38 27 44 C 30 48 26 52 25 58 C 24 68 30 76 40 78 Z" fill={escuro} />
+      <path d="M 14 50 l -3 -2 M 13 58 l -4 0 M 15 66 l -4 2" stroke={escuro} strokeWidth="2" strokeLinecap="round" />
+      <ellipse cx="46" cy="68" rx="22" ry="22" fill={c} />
+      <ellipse cx="55" cy="74" rx="10" ry="13" fill={claro} />
+      <ellipse cx="49" cy="23" rx="10" ry="12.5" fill={escuro} /><ellipse cx="49" cy="24" rx="6" ry="8.5" fill="#d9b8b0" />
+      <ellipse cx="60" cy="45" rx="17" ry="15" fill={c} />
+      <ellipse cx="67" cy="22" rx="10" ry="12.5" fill={c} /><ellipse cx="67" cy="23" rx="6" ry="8.5" fill="#e3c4bc" />
+      <Olho x={67} y={44} r={3.6} />
+      <ellipse cx="77" cy="50" rx="1.6" ry="1.2" fill="#c9707a" />
+      <Bigodes x={74} y={51} lado={1} comp={18} />
+      <ellipse cx="61" cy="64" rx="3.6" ry="2.6" fill={claro} />
+      <ellipse cx="40" cy="89" rx="6" ry="2.4" fill={escuro} /><ellipse cx="58" cy="89" rx="5" ry="2.4" fill={escuro} />
+    </g>
+  );
+};
+
+/**
+ * Ave: de perfil num poleiro. O mesmo corpo para todas; o que muda é o que se
+ * reconhece — o bico (curvo e grande no papagaio, curvo e pequeno com cera no
+ * periquito, cônico no canário), a crista e a bochecha laranja da calopsita,
+ * a máscara amarela do papagaio, o barrado do periquito, o comprimento da cauda.
+ */
+interface Plumagem { corpo: string; cabeca: string; asa: string; cauda: 'longa' | 'curta' | 'media'; escala: number; bico: 'gancho' | 'gancho_pequeno' | 'conico' }
+const Ave = ({ p, children, enfeite }: { p: Plumagem; children?: ReactElement; enfeite?: ReactElement }) => {
+  const caudaD = p.cauda === 'longa' ? 'M 40 70 L 20 100 L 29 100 L 47 76 Z' : p.cauda === 'curta' ? 'M 40 70 L 31 90 L 37 89 L 40 93 L 48 76 Z' : 'M 40 70 L 26 96 L 35 96 L 48 76 Z';
+  const bico = p.bico === 'gancho' ? <><path d="M 67 28 C 80 27 85 38 79 48 C 78 43 75 40 69 41 Z" fill="#3a3430" /><path d="M 69 41 L 76 44 L 70 47 Z" fill="#2b2622" /></>
+    : p.bico === 'gancho_pequeno' ? <path d="M 68 31 C 75 31 77 37 73 42 C 72 39 70 38 68 38 Z" fill="#cdb98e" />
+    : <path d="M 68 33 L 78 36.5 L 68 40 Z" fill="#e0b080" />;
+  return (
+    <g>
+      <path d="M 6 85 H 94" stroke="#7a5a3a" strokeWidth="4.5" strokeLinecap="round" />
+      <g transform={`translate(50 84) scale(${p.escala}) translate(-50 -84)`}>
+        <path d={caudaD} fill={misturar(p.asa, '#000000', 0.12)} />
+        <ellipse cx="51" cy="59" rx="16" ry="23" fill={p.corpo} transform="rotate(18 51 59)" />
+        <path d="M 46 45 C 34 52 34 72 40 82 C 49 76 54 62 52 49 Z" fill={p.asa} />
+        <circle cx="58" cy="35" r="13" fill={p.cabeca} />
+        {children}
+        {bico}
+        <Olho x={61} y={32} r={2.4} />
+        {enfeite}
+        <path d="M 48 79 V 86 M 55 78 V 86" stroke="#8a6a4a" strokeWidth="2" strokeLinecap="round" />
+      </g>
+    </g>
+  );
+};
+const Papagaio: DesenhoBicho = () => (
+  <Ave p={{ corpo: '#3f9b4a', cabeca: '#3f9b4a', asa: '#2f7a3a', cauda: 'curta', escala: 1.05, bico: 'gancho' }}
+    enfeite={<circle cx="61" cy="32" r="4.2" fill="none" stroke="#f4ece0" strokeWidth="1.6" />}>
+    <g><path d="M 52 23 C 56 20 63 21 67 26 L 58 28 Z" fill="#4a78c8" /><ellipse cx="63" cy="39" rx="7" ry="6" fill="#e8c43a" /><ellipse cx="42" cy="54" rx="4" ry="5" fill="#c8402a" /></g>
+  </Ave>
+);
+const Periquito: DesenhoBicho = ({ semente }) => {
+  const azul = hash(semente) % 2 === 1;
+  const corpo = azul ? '#5f8fd0' : '#6fb55a';
+  return (
+    <Ave p={{ corpo, cabeca: azul ? '#f0eee6' : '#ecd85a', asa: misturar(corpo, '#000000', 0.15), cauda: 'longa', escala: 0.92, bico: 'gancho_pequeno' }}
+      enfeite={<><ellipse cx="68" cy="31" rx="2.2" ry="1.6" fill={azul ? '#8a6a4a' : '#4a6ac8'} /><circle cx="60" cy="45" r="1.1" fill={ESCURO} /><circle cx="65" cy="45" r="1.1" fill={ESCURO} /></>}>
+      <path d="M 47 30 q 3 -2 6 0 M 46 35 q 3 -2 6 0 M 47 40 q 3 -2 6 0 M 41 54 q 4 -2 8 0 M 39 60 q 4 -2 8 0 M 39 66 q 4 -2 8 0 M 40 72 q 3 -2 6 0" stroke={ESCURO} strokeWidth="1.1" fill="none" opacity="0.6" />
+    </Ave>
+  );
+};
+const Calopsita: DesenhoBicho = () => (
+  <Ave p={{ corpo: '#a8a49c', cabeca: '#ecd85a', asa: '#8e8a82', cauda: 'longa', escala: 0.98, bico: 'gancho_pequeno' }}
+    enfeite={<circle cx="63" cy="40" r="4.4" fill="#e0764a" />}>
+    <g><path d="M 52 25 C 47 15 49 6 56 1 C 54 9 57 17 61 23 Z" fill="#ecd85a" /><path d="M 56 24 C 54 15 58 8 63 5 C 60 12 62 18 64 24 Z" fill="#d9c44a" /><ellipse cx="45" cy="57" rx="3.4" ry="7.5" fill="#efebe4" transform="rotate(12 45 57)" /></g>
+  </Ave>
+);
+const Canario: DesenhoBicho = () => <Ave p={{ corpo: '#e8c43a', cabeca: '#ecca3e', asa: '#c9a62e', cauda: 'curta', escala: 0.85, bico: 'conico' }} />;
+
+/** Iguana: de perfil, crista de espinhos no dorso, papada sob o queixo, escama redonda na face, rabo comprido anelado. */
+const Iguana: DesenhoBicho = () => {
+  const c = '#6f9a44', escuro = '#4a6e2c', claro = '#a8c870';
+  const espinhos = Array.from({ length: 10 }, (_, k) => { const t = k / 9, x = 64 - t * 40, y = 43 + t * 16; return `L ${x.toFixed(1)} ${(y - 6 + t * 2).toFixed(1)} L ${(x - 2).toFixed(1)} ${(y + 1).toFixed(1)}`; }).join(' ');
+  return (
+    <g>
+      <Sombra y={92} rx={40} />
+      <path d="M 26 66 C 8 68 4 90 24 92 C 46 95 72 90 94 80 L 94 85 C 72 96 44 100 22 98 C 0 96 2 64 26 62 Z" fill={c} />
+      <path d="M 30 93 l 2 5 M 44 93 l 2 5 M 58 90 l 2 5 M 72 86 l 2 5 M 13 82 l -5 2" stroke={escuro} strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M 22 66 C 30 54 50 50 64 52 L 66 64 C 52 70 36 72 22 70 Z" fill={c} />
+      <path d={`M 66 44 ${espinhos} L 22 62 Z`} fill={escuro} />
+      <path d="M 60 44 C 66 36 80 36 88 44 C 92 48 90 54 84 56 L 64 58 Z" fill={c} />
+      <path d="M 66 56 C 67 70 75 74 82 56 Z" fill={claro} stroke={escuro} strokeWidth="0.8" />
+      <circle cx="70" cy="50" r="3.8" fill={claro} />
+      <path d="M 88 50 L 72 53" stroke={escuro} strokeWidth="1" />
+      <Olho x={78} y={44} r={2.2} />
+      <path d="M 58 62 L 63 74 L 68 76 M 63 74 L 60 78 M 32 70 L 28 80 L 33 83 M 28 80 L 24 82" stroke={c} strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </g>
+  );
+};
+
+/** Jabuti: casco alto em domo com os escudos marcados, cabeça e patas de coluna com as manchas vermelhas. */
+const Jabuti: DesenhoBicho = () => {
+  const pele = '#4a3c2c', mancha = '#c8502a', casco = '#3a2e22', areola = '#c9922a';
+  return (
+    <g>
+      <Sombra y={86} rx={40} />
+      <rect x="21" y="70" width="11" height="14" rx="4" fill={pele} /><rect x="62" y="70" width="11" height="14" rx="4" fill={pele} />
+      <circle cx="25" cy="76" r="1.6" fill={mancha} /><circle cx="28" cy="80" r="1.4" fill={mancha} /><circle cx="66" cy="76" r="1.6" fill={mancha} /><circle cx="69" cy="80" r="1.4" fill={mancha} />
+      <path d="M 74 70 C 79 64 83 61 88 61 C 94 61 96 66 94 70 C 92 73 86 73 82 72 L 76 74 Z" fill={pele} />
+      <circle cx="86" cy="68" r="1.7" fill={mancha} /><circle cx="91" cy="69" r="1.3" fill={mancha} />
+      <Olho x={89} y={64.5} r={1.8} />
+      <path d="M 12 74 C 12 44 30 31 47 31 C 64 31 80 44 80 74 Z" fill={casco} />
+      <path d="M 12 74 H 80" stroke="#5a4632" strokeWidth="3.5" strokeLinecap="round" />
+      {([[46, 41, 7, 5], [32, 50, 6, 5], [60, 50, 6, 5], [46, 57, 7, 5], [22, 64, 5, 4], [36, 66, 5, 4], [56, 66, 5, 4], [70, 64, 5, 4]] as const).map(([x, y, rx, ry], k) => <ellipse key={k} cx={x} cy={y} rx={rx} ry={ry} fill={areola} opacity="0.85" />)}
+      <path d="M 38 36 L 39 46 L 53 46 L 55 36 M 39 46 L 25 56 M 53 46 L 67 56 M 39 46 L 39 61 L 53 61 L 53 46 M 39 61 L 29 72 M 53 61 L 63 72 M 25 56 L 15 62 M 67 56 L 77 62" stroke="#1e1812" strokeWidth="1.2" fill="none" opacity="0.6" />
+    </g>
+  );
+};
+
+/** Peixinho-dourado: corpo redondo laranja, cauda dupla em leque. */
+const Peixe: DesenhoBicho = () => (
+  <g>
+    <Aquario />
+    <path d="M 66 52 C 76 36 90 34 93 41 C 87 47 87 57 93 63 C 90 70 76 68 66 52 Z" fill="#f0a850" />
+    <path d="M 36 40 C 42 27 56 28 60 40 Z" fill="#f0a850" />
+    <ellipse cx="47" cy="52" rx="22" ry="15" fill="#e8892a" />
+    <path d="M 40 42 Q 35 52 40 62" stroke="#c46a1e" strokeWidth="1.4" fill="none" />
+    <path d="M 46 60 C 48 68 54 70 56 64 Z" fill="#f0a850" />
+    <Olho x={34} y={49} r={3.2} />
+    <path d="M 25.5 54 q 2 1.5 4 0" stroke="#8a4a1a" strokeWidth="1" fill="none" />
+  </g>
+);
+/** Betta: corpo fino, nadadeiras enormes caindo como véu. */
+const Betta: DesenhoBicho = ({ semente }) => {
+  const c = escolha(['#2f4aa8', '#b8323a', '#6a3fa0', '#2b8a8a'], semente);
+  const veu = misturar(c, '#ffffff', 0.18);
+  return (
+    <g>
+      <Aquario />
+      <path d="M 58 46 C 72 22 96 30 94 50 C 96 72 74 82 58 56 Z" fill={veu} />
+      <path d="M 70 40 L 88 36 M 72 50 L 92 50 M 70 60 L 86 68" stroke={c} strokeWidth="1" opacity="0.6" />
+      <path d="M 32 43 C 38 26 56 26 60 44 Z" fill={veu} />
+      <path d="M 34 57 C 38 76 56 80 62 56 Z" fill={veu} />
+      <ellipse cx="45" cy="50" rx="18" ry="8.5" fill={c} />
+      <Olho x={32} y={48.5} r={2.6} />
+    </g>
+  );
+};
+const Aquario = () => (
+  <g>
+    <path d="M 22 100 C 18 90 26 84 22 74 M 30 100 C 34 92 28 86 32 78 M 74 100 C 70 92 78 88 74 80" stroke="#5f8f3a" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+    <circle cx="26" cy="30" r="2.2" fill="none" stroke="#ffffff" strokeWidth="0.9" /><circle cx="21" cy="20" r="1.6" fill="none" stroke="#ffffff" strokeWidth="0.9" />
+  </g>
+);
+
+const DESENHO_PET: Record<string, DesenhoBicho> = {
+  cachorro: Cao, gato: Gato, hamster: Hamster, porquinho: Porquinho, coelho: Coelho, chinchila: Chinchila,
+  papagaio: Papagaio, periquito: Periquito, calopsita: Calopsita, canario: Canario, iguana: Iguana, jabuti: Jabuti, peixe: Peixe, betta: Betta
+};

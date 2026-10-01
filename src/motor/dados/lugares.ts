@@ -101,6 +101,9 @@ export const MUNICIPIOS: readonly Municipio[] = LINHAS.map(([nome, uf, perfil, c
 
 const POR_ID = new Map(MUNICIPIOS.map(m => [m.id, m]));
 
+/** A região de uma UF (a mesma tabela dos municípios). */
+export const regiaoDaUf = (uf: string): Regiao => REGIAO_UF[uf];
+
 export function municipio(id: string): Municipio {
   const m = POR_ID.get(id);
   if (!m) throw new Error(`Município desconhecido: ${id}`);

@@ -27,6 +27,7 @@ import type { Dominio, Palco, Vida } from '../tipos';
 import { habilidade } from './frentes';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { anoDe } from '../tempo';
+import { nomePor } from './notoriedade';
 
 export const LINGUAGENS_DE_PALCO: Dominio[] = ['musica', 'teatro', 'danca'];
 /** Trilhas de trabalho em que a renda É a agenda de apresentações (não um salário). */
@@ -54,7 +55,7 @@ export function alcanceNoPalco(v: Vida, d: Dominio): number {
   const p = v.caminhos.arte;
   const publico = p?.ativo && p.linguagem === d ? p.publico : 0;
   const freguesia = trabalhoDePalco(v) ? (v.trabalho.atual?.clientela ?? 0) * 0.6 : 0;
-  const noto = v.notoriedade?.fonte === 'arte' ? v.notoriedade.valor : 0;
+  const noto = nomePor(v, 'arte');
   return clamp(Math.max(publico, freguesia, noto) + (habilidade(v, d) - 60) / 8, 0, 100);
 }
 

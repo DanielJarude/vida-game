@@ -31,6 +31,7 @@ import { BotaoAcao, Escolha, Folha, Folio, Secao, Vazio } from '../comum';
 import { Retrato, type Expressao } from '../avatar/Retrato';
 import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
 import { leituraDaOrigem } from '../../motor/sistemas/origem';
+import { trajetoriaDaRelacao } from '../../motor/sistemas/relacoes';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void }
 
@@ -258,6 +259,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   const onde = ondeEsta(vida, p, vin);
   const como = comoEsta(vida, p, vin);
   const agora = agoraDela(vida, p, vin);
+  const trajetoria = !p.especie ? trajetoriaDaRelacao(vida, vin) : undefined;
   const historia = [...vin.historia].sort((a, b) => a.t - b.t);
   const costumes = historia.filter(RITUAL);
   const sabe = historia.filter(DESCOBERTA);
@@ -286,6 +288,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
         </div>
         {como && <p className="ficha__prox">{como}</p>}
         {(quem || onde) && <p className="ficha__origem">{[quem, onde].filter(Boolean).join(' ')}</p>}
+        {trajetoria && (vin.fases?.length ?? 0) > 1 && <p className="ficha__origem ficha__trajetoria" aria-label="A trajetória de vocês">{trajetoria}</p>}
         {esperando && gest && <p className="ficha__nota">Um bebê a caminho — o parto é previsto para {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</p>}
         {ultima && <p className="ficha__ultima"><span className="ficha__ano">{anoDe(ultima.t)}</span> {ultima.texto}</p>}
 

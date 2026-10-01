@@ -12,7 +12,7 @@ import type { Vida } from '../tipos';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt } from '../texto';
 import { linhaDaTemporada, nomePosicao, palavraDaNota, palavraDaReputacao } from './esporte';
-import { palavraDaNotoriedade } from './notoriedade';
+import { leituraDoNome } from './notoriedade';
 import { leituraPolitica } from './politica';
 import { negocioAberto } from './negocio';
 
@@ -28,7 +28,7 @@ export function fechamentoDoAno(v: Vida): Fechamento[] {
   if (e && t && t.ano === ano && e.fase !== 'base') {
     const linhas = [linhaDaTemporada(v, t), `${palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)} — no mercado: ${palavraDaReputacao(e.reputacao ?? 30, e.modalidade)}.`];
     if (e.fase === 'profissional') linhas.push(e.espaco === 'titular' ? 'A próxima temporada começa como titular.' : e.espaco === 'reserva' ? 'A próxima temporada começa no banco.' : 'Sem clube, esperando proposta.');
-    if (v.notoriedade && v.notoriedade.valor >= 30 && v.notoriedade.fonte === 'esporte') linhas.push(`Para o público: ${palavraDaNotoriedade(v)}.`);
+    { const nome = leituraDoNome(v); if (nome && nome.valor >= 30 && nome.origem === 'esporte') linhas.push(`Para o público: ${nome.frase}.`); }
     out.push({ titulo: `Temporada ${t.ano} — ${t.clube}${t.posicao ? ` · ${nomePosicao(v, t.posicao)}` : ''}`, linhas });
   }
   const obras = (v.caminhos.obras ?? []).filter(o => o.t > v.t - 12 && o.t <= v.t);

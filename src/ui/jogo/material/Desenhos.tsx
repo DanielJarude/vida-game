@@ -547,34 +547,215 @@ export function CenaDaCasa({ l }: { l: LeituraLar }) {
       {(c.nivel === 'ruim' || c.nivel === 'problema') && <Rachadura x={w.x + w.l * 0.74} y={w.y} a={w.a} />}
       {c.nivel === 'problema' && <Andaime x={w.x + 4} topo={Math.max(w.y - 2, 20)} />}
       {c.reformaRecente && c.nivel !== 'problema' && <TintaNova x={w.x + w.l - 36} />}
-      {l.veiculo && <g transform={`translate(${pl.vaga + (l.veiculo === 'carro' ? 0 : 8)} 107)`} className="cena__veiculo" data-forma={formaNaPorta(l)}>{FORMAS_VEICULO[formaNaPorta(l)!]()}</g>}
+      {l.veiculo && <g transform={`translate(${pl.vaga + (l.veiculo === 'carro' ? 0 : 8)} 107)`} className="cena__veiculo" data-forma={formaNaPorta(l)}>{desenhoDaForma(formaNaPorta(l)!)}</g>}
       {l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro').slice(0, 2).map((b, k) => (b.especie === 'gato' ? <Gato key={b.id} x={pl.bichos + k * 24} /> : <Cachorro key={b.id} x={pl.bichos + k * 24} />))}
     </svg>
   );
 }
 
 /**
- * O desenho de cada FORMA de veículo (não um carro genérico para tudo): o
- * hatch, a picape, a scooter, a moto de trilha, a mountain bike, a lancha,
- * o monomotor. Traço editorial, sem marca nem logotipo — o modelo real, se
- * houver, é só texto.
+ * O desenho de cada FORMA de veículo, por FAMÍLIAS paramétricas (não um
+ * carro genérico para tudo, nem um desenho à mão por modelo): o carro sai
+ * da carroceria (hatch, sedã de três volumes, SUV compacto/médio/de sete
+ * lugares, picape de cabine e caçamba, esportivo baixo) e das proporções
+ * (teto, entre-eixos, vão livre, roda, capô); a moto sai da sua leitura
+ * (motoneta, scooter, rua, esportiva carenada, trilha de para-lama alto,
+ * clássica); a bicicleta, do quadro, do guidão e do pneu. Traço editorial,
+ * sem marca nem logotipo — o modelo real, se houver, é só texto; a semente
+ * (o id da versão) só mexe um pouco nas proporções, para dois sedãs não
+ * saírem idênticos. Chão em y = 21 (a cena da casa conta com isso).
  */
-const ROD = (cx: number, r = 3.5, cy = 17) => <circle cx={cx} cy={cy} r={r} {...TRACO} />;
-const FORMAS_VEICULO: Record<FormaVeiculo, () => ReactNode> = {
-  hatch: () => <><path d="M3 17h40M5 17v-5l7-6h15l8 6h5v5" {...TRACO} />{ROD(12)}{ROD(34)}</>,
-  seda: () => <><path d="M2 17h43M4 17v-5h4l6-6h13l6 6h8l2 2v3" {...TRACO} />{ROD(12)}{ROD(36)}</>,
-  suv: () => <><path d="M3 17h40M5 17V8l4-4h21l6 5h5v8M9 8h10" {...TRACO} />{ROD(12, 4)}{ROD(34, 4)}</>,
-  picape: () => <><path d="M2 17h43M4 17v-6l5-6h11v6h24v6M20 11h24" {...TRACO} />{ROD(11, 4)}{ROD(36, 4)}</>,
-  esportivo: () => <><path d="M2 17h43M4 17v-3l11-4h13l10 4h5v3M16 10l3-3h7l4 3" {...TRACO} />{ROD(11, 3.2)}{ROD(37, 3.2)}</>,
-  scooter: () => <><path d="M9 17h8l3-8h5M25 9l4 8M14 13h9" {...TRACO} />{ROD(9, 3)}{ROD(31, 3)}</>,
-  street: () => <><path d="M9 17l8-8h7l7 8M17 9l-2-3h3" {...TRACO} />{ROD(9, 4.5)}{ROD(31, 4.5)}</>,
-  esportiva: () => <><path d="M9 17l6-9h11l6 9M15 8l6 4h6M26 8l2-2" {...TRACO} />{ROD(9, 4.5)}{ROD(32, 4.5)}</>,
-  cruiser: () => <><path d="M7 17h28M11 17l4-6h8l3 6M30 17l-3-8h4M15 11l-2-3h4" {...TRACO} />{ROD(8, 4.5)}{ROD(34, 4.5)}</>,
-  trail: () => <><path d="M9 16l8-10h6l8 10M17 6l-1-3M23 6l3-1" {...TRACO} />{ROD(9, 5, 16)}{ROD(31, 5, 16)}</>,
-  urbana: () => <><path d="M10 17l5-8h9M15 9l-1-3M24 9l4 8M24 9v-3h3M28 7h4v3h-4" {...TRACO} />{ROD(10, 4.5)}{ROD(30, 4.5)}</>,
-  estrada: () => <><path d="M10 17l6-8h9l5 8M16 9l4 8M25 9c2 0 3 1 2 3" {...TRACO} />{ROD(10, 5)}{ROD(30, 5)}</>,
-  mtb: () => <><path d="M10 17l6-9h8l5 9M16 8l5 9M24 8l1-3" {...TRACO} strokeWidth={2.2} />{ROD(10, 5)}{ROD(30, 5)}</>,
-  eletrica: () => <><path d="M10 17l5-8h9l5 8M15 9l4 8M16 12h6v3h-6z" {...TRACO} />{ROD(10, 4.5)}{ROD(30, 4.5)}</>,
+const CHAO_V = 21;
+const MASSA = { fill: 'currentColor', fillOpacity: 0.14 };
+const VIDRO = { fill: 'currentColor', fillOpacity: 0.5, stroke: 'none' };
+type Pt = [number, number];
+const f1 = (n: number) => Math.round(n * 10) / 10;
+/** Polilinha com os cantos arredondados (corta `r` de cada lado do vértice). */
+function arredondada(pts: Pt[], r: number): string {
+  let d = `M${f1(pts[0][0])} ${f1(pts[0][1])}`;
+  for (let k = 1; k < pts.length - 1; k++) {
+    const [a, b, c] = [pts[k - 1], pts[k], pts[k + 1]];
+    const corte = (p: Pt): Pt => { const dx = p[0] - b[0], dy = p[1] - b[1], n = Math.hypot(dx, dy) || 1, t = Math.min(r, n / 2) / n; return [b[0] + dx * t, b[1] + dy * t]; };
+    const [p, q] = [corte(a), corte(c)];
+    d += `L${f1(p[0])} ${f1(p[1])}Q${f1(b[0])} ${f1(b[1])} ${f1(q[0])} ${f1(q[1])}`;
+  }
+  const z = pts[pts.length - 1];
+  return d + `L${f1(z[0])} ${f1(z[1])}`;
+}
+/** Recorta um polígono convexo entre duas verticais (as janelas entre as colunas). */
+function entreX(poly: Pt[], x0: number, x1: number): Pt[] {
+  const corta = (pts: Pt[], x: number, manter: (p: Pt) => boolean): Pt[] => pts.flatMap((p, k) => {
+    const q = pts[(k + 1) % pts.length]; const out: Pt[] = manter(p) ? [p] : [];
+    if (manter(p) !== manter(q)) { const t = (x - p[0]) / (q[0] - p[0]); out.push([x, p[1] + (q[1] - p[1]) * t]); }
+    return out;
+  });
+  return corta(corta(poly, x0, p => p[0] >= x0), x1, p => p[0] <= x1);
+}
+const poligono = (pts: Pt[]) => pts.length ? `M${pts.map(p => `${f1(p[0])} ${f1(p[1])}`).join('L')}Z` : '';
+function hashV(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+/** Quatro números em [-1, 1] estáveis por semente (a pequena variação de cada modelo). */
+const variacao = (s?: string) => { if (!s) return [0, 0, 0, 0]; const h = hashV(s); return [0, 8, 16, 24].map(k => (((h >>> k) & 255) / 127.5) - 1); };
+
+/** A roda: aro, cubo; o pneu de trilha tem cravos (traço interrompido). */
+function Roda({ x, r, grossa = 1.6, cravos }: { x: number; r: number; grossa?: number; cravos?: boolean }) {
+  return <g><circle cx={x} cy={CHAO_V - r} r={r - grossa / 2 + 0.8} {...TRACO} strokeWidth={grossa} strokeDasharray={cravos ? '1.3 0.9' : undefined} /><circle cx={x} cy={CHAO_V - r} r={r > 4 ? 1 : 0.8} fill="currentColor" /></g>;
+}
+
+type Traseira = 'hatch' | 'tres' | 'caixa' | 'cacamba' | 'fastback';
+interface Carroceria {
+  traseira: Traseira;
+  x0: number; x1: number; eixoT: number; eixoD: number; r: number;
+  /** Vão livre: o quanto a soleira fica acima do centro da roda. */
+  folga: number;
+  cintura: number; teto: number; capo: number;
+  /** Fim do teto na frente e base do para-brisa. */
+  tetoD: number; parabrisa: number;
+  /** Sedã: fim do porta-malas; picape: fim da cabine; esportivo: início do teto. */
+  volume?: number;
+  /** As colunas entre as janelas (frações do vão envidraçado). */
+  colunas: number[];
+  rack?: boolean;
+}
+const CARROCERIAS: Record<'hatch' | 'seda' | 'suv' | 'suv_medio' | 'suv_grande' | 'picape' | 'esportivo', Carroceria> = {
+  hatch: { traseira: 'hatch', x0: 6, x1: 41.5, eixoT: 12.5, eixoD: 34.5, r: 3.6, folga: 0.8, cintura: 12.4, teto: 6, capo: 13.4, tetoD: 24, parabrisa: 30.5, colunas: [0.52] },
+  seda: { traseira: 'tres', x0: 2, x1: 46, eixoT: 11.5, eixoD: 37, r: 3.5, folga: 0.6, cintura: 12.6, teto: 6.6, capo: 13.4, tetoD: 26, parabrisa: 33, volume: 11, colunas: [0.5] },
+  suv: { traseira: 'caixa', x0: 4.5, x1: 43.5, eixoT: 12, eixoD: 35.5, r: 4.1, folga: 1.6, cintura: 11.2, teto: 4.6, capo: 11.8, tetoD: 26, parabrisa: 32, colunas: [0.5], rack: true },
+  suv_medio: { traseira: 'caixa', x0: 3, x1: 45, eixoT: 11, eixoD: 37, r: 4.3, folga: 1.8, cintura: 10.9, teto: 3.9, capo: 11.4, tetoD: 28, parabrisa: 34, colunas: [0.42, 0.78], rack: true },
+  suv_grande: { traseira: 'caixa', x0: 1.5, x1: 46.5, eixoT: 10, eixoD: 38.5, r: 4.5, folga: 2, cintura: 10.4, teto: 3, capo: 10.8, tetoD: 30, parabrisa: 35.5, colunas: [0.34, 0.67], rack: true },
+  picape: { traseira: 'cacamba', x0: 1.5, x1: 46.5, eixoT: 9.5, eixoD: 38.5, r: 4.4, folga: 2.4, cintura: 10.6, teto: 3.8, capo: 10.8, tetoD: 31, parabrisa: 36, volume: 20, colunas: [0.5] },
+  esportivo: { traseira: 'fastback', x0: 3, x1: 45.5, eixoT: 11, eixoD: 37, r: 3.8, folga: 0.1, cintura: 14.2, teto: 9, capo: 15.4, tetoD: 24, parabrisa: 30.5, volume: 16, colunas: [0.64] }
+};
+
+function Carro({ c: base, semente }: { c: Carroceria; semente?: string }) {
+  const [a, b, d, e] = variacao(semente);
+  const c = { ...base, teto: base.teto + 0.45 * a, tetoD: base.tetoD + 0.8 * b, parabrisa: base.parabrisa + 0.6 * b, capo: base.capo + 0.35 * d, r: base.r + 0.15 * e, folga: base.folga + 0.2 * e, x1: base.x1 + 0.4 * d, eixoD: base.eixoD + 0.3 * d };
+  const cy = CHAO_V - c.r, sol = cy - c.folga, R = c.r + 1.1;
+  const { x0, x1, cintura: ci, teto, capo } = c;
+  const v = c.volume ?? 0;
+  // O perfil de cima, de trás para a frente; e a "estufa" (o vão envidraçado): base de trás, topo de trás, topo da frente, base da frente.
+  const [perfil, estufa]: [Pt[], Pt[]] =
+    c.traseira === 'hatch' ? [[[x0, sol], [x0, ci + 0.6], [x0 + 2.4, teto], [c.tetoD, teto]], [[x0 + 1.4, ci], [x0 + 3.2, teto + 1.2]]]
+    : c.traseira === 'tres' ? [[[x0, sol], [x0, ci - 0.4], [v, ci - 0.9], [v + 6, teto], [c.tetoD, teto]], [[v + 2.6, ci], [v + 6.6, teto + 1.2]]]
+    : c.traseira === 'caixa' ? [[[x0, sol], [x0, teto + 1.4], [x0 + 1.2, teto], [c.tetoD, teto]], [[x0 + 1.4, ci], [x0 + 1.9, teto + 1.2]]]
+    : c.traseira === 'cacamba' ? [[[x0, sol], [x0, ci], [v, ci], [v, teto + 0.6], [v + 0.8, teto], [c.tetoD, teto]], [[v + 1.2, ci], [v + 1.4, teto + 1.2]]]
+    : [[[x0, sol], [x0, ci + 0.2], [x0 + 3, ci - 1], [v, teto], [c.tetoD, teto]], [[v - 2, ci], [v + 1.4, teto + 1.2]]];
+  const cima: Pt[] = [...perfil, [c.parabrisa, ci], [x1 - 1.2, capo], [x1, capo + 1.4], [x1, sol]];
+  const ar = (x: number) => `L${f1(x + R)} ${f1(sol)}A${f1(R)} ${f1(R)} 0 0 0 ${f1(x - R)} ${f1(sol)}`;
+  const corpo = `${arredondada(cima, 1.3)}${ar(c.eixoD)}${ar(c.eixoT)}L${x0} ${f1(sol)}Z`;
+  // As janelas: a estufa recortada pelas colunas.
+  const vao: Pt[] = [estufa[0], estufa[1], [c.tetoD - 0.8, teto + 1.2], [c.parabrisa - 1.6, ci]];
+  const [xa, xb] = [Math.min(vao[0][0], vao[1][0]), c.parabrisa - 1.6];
+  const cortes = [xa, ...c.colunas.map(f => xa + (xb - xa) * f), xb];
+  const janelas = cortes.slice(0, -1).map((x, k) => entreX(vao, x + (k ? 0.6 : 0), cortes[k + 1] - (k < cortes.length - 2 ? 0.6 : 0)));
+  return (
+    <g>
+      <path d={corpo} {...TRACO} {...MASSA} />
+      {janelas.map((j, k) => <path key={k} d={poligono(j)} {...VIDRO} />)}
+      {c.rack && <path d={`M${f1(x0 + 3)} ${f1(teto - 1.1)}H${f1(c.tetoD - 3)}`} {...FINO} />}
+      {c.traseira === 'cacamba' && <path d={`M${f1(x0 + 1)} ${f1(ci + 1.4)}H${f1(v - 1)}`} {...FINO} />}
+      <path d={`${capo + 2.4 < sol - 0.5 ? `M${f1(x1 - 0.2)} ${f1(capo + 2.4)}h-1.8` : ''}M${f1(x0 + 0.2)} ${f1(Math.max(ci, teto + 2) + 1.2)}v1.6`} {...TRACO} strokeWidth={1.2} />
+      <Roda x={c.eixoT} r={c.r} /><Roda x={c.eixoD} r={c.r} />
+    </g>
+  );
+}
+
+const GROSSO = { ...TRACO, strokeWidth: 2.4 };
+/** Para-lama colado na roda (arco por cima). */
+const paraLama = (x: number, r: number, de = 200, ate = 340, folga = 1.4) => {
+  const R = r + folga, cy = CHAO_V - r, p = (g: number) => `${f1(x + R * Math.cos(g * Math.PI / 180))} ${f1(cy + R * Math.sin(g * Math.PI / 180))}`;
+  return <path d={`M${p(de)}A${f1(R)} ${f1(R)} 0 0 1 ${p(ate)}`} {...TRACO} />;
+};
+
+const MOTOS: Record<'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail', () => ReactNode> = {
+  // Motoneta: rodas grandes e finas, escudo de pernas, quadro baixo de passar a perna, banco comprido.
+  cub: () => <>
+    <Roda x={10} r={4.4} /><Roda x={36.5} r={4.4} />
+    <path d="M36.5 16.6L33.8 6M31.4 5.6H36.2" {...TRACO} /><circle cx={35.6} cy={7.6} r={1.1} {...TRACO} />
+    <path d="M4.6 11.4L5.4 9.8H19.8C20.8 9.8 21.2 10.6 21.2 11.6C21.2 13.8 21.8 16.4 23.4 16.4H28.6C29.2 13 30.8 9.4 33 7.2L34.4 8C33 10.4 32 13.6 31.8 16.8H22.6C20.6 16.8 19.6 13 17.4 12.6H7.6C6 12.6 4.8 12.4 4.6 11.4Z" {...TRACO} {...MASSA} />
+    <path d="M6.4 9.4H19.4" {...GROSSO} />
+    {paraLama(36.5, 4.4, 225, 330, 1.2)}
+  </>,
+  // Scooter: rodas pequenas, assoalho plano, carenagem fechada atrás, escudo na frente.
+  scooter: () => <>
+    <Roda x={9.5} r={3.3} /><Roda x={37.5} r={3.3} />
+    <path d="M3.4 17.4C3 13.4 5.6 10.8 10.4 10.4H20.2L22.6 16.8H30.4C32.2 13.2 32.8 9.6 33 5.8L35.4 5.4C35.8 9.6 37.8 12.4 40.8 13.8C41.2 15 40.4 15.4 39.4 15C37.6 13.6 35.2 13.8 34 16.8L30.4 16.8" {...TRACO} {...MASSA} />
+    <path d="M8 10.4H19.4" {...GROSSO} />
+    <path d="M31.2 5.6L36.2 4.6M35.4 5.4L36 3" {...TRACO} />
+  </>,
+  // Rua (naked): tanque em cima do motor à vista, farol redondo, banco reto, rabeta curta.
+  street: () => <>
+    <Roda x={9.5} r={4.6} /><Roda x={36} r={4.6} />
+    <path d="M9.5 16.4L19.6 14.4M20 14L22 9.8L31.2 7.2" {...TRACO} />
+    <rect x={18.6} y={12.2} width={7.6} height={5.4} rx={1.2} {...TRACO} {...MASSA} />
+    <path d="M21 9.8C22 6.6 27.6 6.2 30.8 7.4L29.6 10.2Z" {...TRACO} {...MASSA} />
+    <path d="M11.2 9.8L21 9.8M6.4 8.4L11.2 9.8" {...GROSSO} />
+    <path d="M36 16.4L32.4 5.2M30.6 4.8L34.4 4.2" {...TRACO} /><circle cx={34.6} cy={7.6} r={1.4} {...TRACO} />
+    {paraLama(36, 4.6, 215, 310, 1.2)}
+  </>,
+  // Esportiva: carenagem em cunha cobrindo o motor, bolha, rabeta alta e pontuda.
+  esportiva: () => <>
+    <Roda x={9.5} r={4.5} /><Roda x={36.5} r={4.5} />
+    <path d="M9.5 16.5L18.6 14.6M36.5 16.5L34 8" {...TRACO} />
+    <path d="M40.4 11.8C39.6 8.6 37.4 6.4 34 5.4L29.6 7.6L23.4 7.4C21.4 8.8 18.6 8.8 16.4 8.4L5.6 6.2L7.4 8.8L15.2 11C17.4 14.2 20 16.2 24 16.4L33 15C35.8 13.8 38.8 13.4 40.4 11.8Z" {...TRACO} {...MASSA} />
+    <path d="M34 5.4L31.8 3.4M17 8.6L23.4 7.4" {...TRACO} /><path d="M31 7.2l-2.6 0.2" {...TRACO} />
+  </>,
+  // Clássica: tanque gota, farol redondo grande, para-lamas abraçando as rodas, banco baixo, guidão alto.
+  cruiser: () => <>
+    <Roda x={8.6} r={4.6} /><Roda x={37} r={4.6} />
+    {paraLama(8.6, 4.6, 180, 320)}{paraLama(37, 4.6, 205, 345)}
+    <path d="M8.6 16.4L18 15M18.4 12.6L21 8.6L32.6 6.6M37 16.4L32.6 5.6C31.2 3.4 29.2 3.4 28.4 4.6" {...TRACO} />
+    <ellipse cx={25.4} cy={8.2} rx={4.6} ry={2.3} transform="rotate(-6 25.4 8.2)" {...TRACO} {...MASSA} />
+    <path d="M11.4 10C14.6 11.6 18 11.4 20.6 9.6" {...GROSSO} />
+    <rect x={18.6} y={11.6} width={7.4} height={5.6} rx={1} {...TRACO} {...MASSA} /><path d="M19.6 13.4h5.4M19.6 15.2h5.4" {...FINO} />
+    <circle cx={34.8} cy={7.4} r={1.9} {...TRACO} {...MASSA} /><path d="M10.4 18.8H22" {...TRACO} />
+  </>,
+  // Trilha: alta, suspensão longa, pneu de cravos, para-lama alto em bico, banco longo e reto.
+  trail: () => <>
+    <Roda x={9.5} r={5} cravos /><Roda x={36} r={5} cravos />
+    <path d="M36 16L32 3.4M29.4 3.2L34.8 2.4M9.5 16L19.8 13.6M14.2 8.6L18.6 13.6M20.6 10L19.8 13.4" {...TRACO} />
+    <path d="M32.6 6.4L40 7.8" {...GROSSO} />
+    <path d="M21 10C22 6.6 27.8 6 31 6.8L29.2 11Z" {...TRACO} {...MASSA} />
+    <rect x={19.4} y={12.2} width={6.4} height={4.4} rx={1} {...TRACO} {...MASSA} />
+    <path d="M11 8.2L24.6 7.6M4.4 6.6L11 8.2" {...GROSSO} />
+  </>
+};
+
+/** A bicicleta: duas rodas finas grandes; o quadro, o guidão e o pneu dizem qual é. */
+const BIKE_RODA = 5.4;
+const BIKES: Record<'urbana' | 'estrada' | 'mtb' | 'eletrica', () => ReactNode> = {
+  // Urbana: quadro aberto (de passar a perna), guidão alto voltado para trás, cestinha, para-lamas.
+  urbana: () => <>
+    <Roda x={10} r={BIKE_RODA} grossa={1.1} /><Roda x={35} r={BIKE_RODA} grossa={1.1} />
+    {paraLama(10, BIKE_RODA, 190, 300, 1)}{paraLama(35, BIKE_RODA, 230, 330, 1)}
+    <path d="M31.2 9C26.4 14.4 23 16.6 20 16.4L10 15.6M20 16.4L16.8 8.4M10 15.6L17.2 10.2M31.2 9L35 15.6M31.2 9L30.6 5.6L27.4 6.4" {...TRACO} strokeWidth={1.3} />
+    <path d="M14.6 7.6H18.8" {...GROSSO} />
+    <path d="M32.6 6.2H38.8L38 10.2H33.4Z" {...TRACO} strokeWidth={1.2} {...MASSA} />
+  </>,
+  // Estrada (speed): quadro em diamante de tubo horizontal, guidão curvo para baixo, pneus finos, selim alto.
+  estrada: () => <>
+    <Roda x={10} r={BIKE_RODA} grossa={0.9} /><Roda x={35} r={BIKE_RODA} grossa={0.9} />
+    <path d="M10 15.6L20 16.4L17.6 7.6H31.2L31.8 10.2L20 16.4M10 15.6L17.6 7.6M31.8 10.2C32.6 12 34 13.6 35 15.6M31.2 7.6L33.6 7.2C36 7.2 36 10.8 33.6 10.6" {...TRACO} strokeWidth={1.2} />
+    <path d="M15.4 6.4H19.8" {...GROSSO} />
+  </>,
+  // Mountain bike: pneus grossos de cravos, garfo de suspensão, tubo superior inclinado, guidão reto largo.
+  mtb: () => <>
+    <Roda x={10} r={BIKE_RODA} grossa={2.4} cravos /><Roda x={35} r={BIKE_RODA} grossa={2.4} cravos />
+    <path d="M10 15.6L20 16.4L18 8.6L30.4 7.4L31 10.2L20 16.4M10 15.6L18 8.6M30.4 7.4L30 5.6M28 5.6H33" {...TRACO} strokeWidth={1.5} />
+    <path d="M31 10.2L32.6 12.6" {...GROSSO} /><path d="M32.6 12.6L35 15.6" {...TRACO} />
+    <path d="M15.8 7.4H20" {...GROSSO} />
+  </>,
+  // Elétrica: quadro urbano com a bateria no tubo de baixo e o motor no cubo traseiro.
+  eletrica: () => <>
+    <Roda x={10} r={BIKE_RODA} grossa={1.3} /><Roda x={35} r={BIKE_RODA} grossa={1.3} />
+    {paraLama(10, BIKE_RODA, 190, 300, 1)}{paraLama(35, BIKE_RODA, 230, 330, 1)}
+    <path d="M10 15.6L20 16.4L17.2 8.4M10 15.6L17.2 10.6L30.6 8.6M31.2 9L35 15.6M30.6 8.6L30 5.6L27.2 6.2" {...TRACO} strokeWidth={1.3} />
+    <path d="M20.6 15.2L30.2 9.6" stroke="currentColor" strokeWidth={3.6} strokeLinecap="round" />
+    <circle cx={10} cy={CHAO_V - BIKE_RODA} r={2} fill="currentColor" />
+    <path d="M15 7.4H19.2" {...GROSSO} />
+  </>
+};
+
+const OUTROS: Record<'jetski' | 'lancha' | 'veleiro' | 'ultraleve' | 'monomotor', () => ReactNode> = {
   jetski: () => <><path d="M3 16c9 4 27 4 38-2M9 15l6-6h9l4 5M24 9l3-3" {...TRACO} /><path d="M1 20c4-1 8 1 12 0s8-1 12 0" {...TRACO} strokeWidth={1} /></>,
   lancha: () => <><path d="M2 13h42l-6 6H8zM15 13l4-5h10l3 5M34 13v-3" {...TRACO} /><path d="M1 21c5-1 10 1 15 0s10-1 15 0 9 1 14 0" {...TRACO} strokeWidth={1} /></>,
   veleiro: () => <><path d="M5 16h34l-5 4H10zM21 16V2M21 3l13 12H21M21 5l-9 10h9" {...TRACO} /></>,
@@ -582,13 +763,21 @@ const FORMAS_VEICULO: Record<FormaVeiculo, () => ReactNode> = {
   monomotor: () => <><path d="M4 13h33l7-3M21 13l-7 7M21 13l-7-7M40 10v6M4 11v4M9 13c0-2 3-3 6-3" {...TRACO} /></>
 };
 
+/** O desenho de uma forma (com a semente, a pequena variação do modelo). */
+function desenhoDaForma(forma: FormaVeiculo, semente?: string): ReactNode {
+  if (forma in CARROCERIAS) return <Carro c={CARROCERIAS[forma as keyof typeof CARROCERIAS]} semente={semente} />;
+  const f = (MOTOS as Record<string, () => ReactNode>)[forma] ?? (BIKES as Record<string, () => ReactNode>)[forma] ?? (OUTROS as Record<string, () => ReactNode>)[forma];
+  return f ? f() : <Carro c={CARROCERIAS.hatch} />;
+}
+
 /** A forma do veículo na porta (sem a versão, a forma típica da categoria). */
 const formaNaPorta = (l: LeituraLar): FormaVeiculo | undefined => l.formaVeiculo ?? (l.veiculo === 'carro' ? 'hatch' : l.veiculo === 'moto' ? 'street' : l.veiculo === 'bicicleta' ? 'urbana' : undefined);
 
-export function DesenhoVeiculo({ forma, rotulo, largura = 48 }: { forma: FormaVeiculo; rotulo?: string; largura?: number }) {
+/** `semente` (o id da versão, opcional): a variação de proporção do modelo — dois sedãs não saem idênticos. */
+export function DesenhoVeiculo({ forma, rotulo, largura = 48, semente }: { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string }) {
   return (
     <svg className={`desenho-veiculo desenho-veiculo--${forma}`} viewBox="0 0 48 24" width={largura} height={largura / 2} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-forma={forma}>
-      {FORMAS_VEICULO[forma]()}
+      {desenhoDaForma(forma, semente)}
     </svg>
   );
 }

@@ -25,7 +25,7 @@
  * sequência do gerador principal.
  */
 
-import { clamp, rngDe } from '../rng';
+import { rngDe } from '../rng';
 import type { Pessoa, TipoVivencia, Vida, Vivencia } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { cursoOuNulo, ROTULO_AREA, type AreaFormacao } from '../dados/cursos';
@@ -35,6 +35,7 @@ import { criarPessoa, vincular } from '../pessoas';
 import { habilidade, materiasExtremas } from './frentes';
 import { marcar } from './marcas';
 import { flex } from '../texto';
+import { anoDoArco } from './arcos';
 
 /* ------------------------------------------------------------ Instituição */
 
@@ -191,13 +192,13 @@ export const DE_FORMACAO = new Set(['time_escola', 'olimpiada', 'reforco', 'proj
 export const VIVENCIA_DA_ROTINA: Record<string, TipoVivencia> = {
   time_escola: 'time', olimpiada: 'olimpiada', reforco: 'reforco', projeto_escola: 'projeto', gremio: 'gremio', clube_ciencias: 'ciencias',
   projeto_tecnico: 'projeto_tecnico', iniciacao: 'iniciacao', monitoria: 'monitoria', extensao: 'extensao', centro_academico: 'centro_academico',
-  atletica: 'atletica', grupo_estudos: 'grupo_estudos', empresa_junior: 'empresa_junior'
+  atletica: 'atletica', grupo_estudos: 'grupo_estudos', empresa_junior: 'empresa_junior', xadrez: 'xadrez'
 };
 
 export const NOME_VIVENCIA: Record<TipoVivencia, string> = {
   olimpiada: 'olimpíadas', projeto: 'projeto da escola', gremio: 'grêmio estudantil', time: 'time da escola', reforco: 'aula de reforço', ciencias: 'clube de ciências',
   projeto_tecnico: 'projeto técnico', iniciacao: 'iniciação científica', monitoria: 'monitoria', extensao: 'extensão', centro_academico: 'centro acadêmico',
-  atletica: 'atlética', empresa_junior: 'empresa júnior', grupo_estudos: 'grupo de estudos'
+  atletica: 'atlética', empresa_junior: 'empresa júnior', grupo_estudos: 'grupo de estudos', xadrez: 'equipe de xadrez'
 };
 
 /** Registra (ou estende) a vivência de uma atividade nesta instituição. */
@@ -236,41 +237,9 @@ export function anoDaAtividade(v: Vida, id: string, nivel: number): void {
   const i = idade(v);
   const viv = registrarVivencia(v, tipo);
   const g = v.eu.tratamento ?? v.eu.genero;
+  // As atividades com história interna (o time, a olimpíada, o projeto, a robótica, o reforço, o xadrez): `arcos`.
+  if (anoDoArco(v, id, viv, nivel, r)) return;
   switch (id) {
-    case 'olimpiada': {
-      const h = Math.max(habilidade(v, 'exatas'), habilidade(v, 'ciencias') * 0.9);
-      if (r.chance(clamp((h - 42) / 55 + (nivel - 1) * 0.06, 0.03, 0.62))) {
-        const ouro = h >= 80 && r.chance(0.35);
-        const medalha = ouro ? 'de ouro' : h >= 68 ? 'de prata' : 'de bronze';
-        const primeira = !viv.feito;
-        viv.feito = `medalha ${medalha}`;
-        marcarFato(v, 'medalha_obmep');
-        const texto = primeira ? `Depois de um ano de preparação, veio a medalha ${medalha} na olimpíada de matemática. O nome saiu no mural da escola.` : `Mais uma medalha na olimpíada (${medalha}).`;
-        escrever(v, { texto, relevancia: primeira ? 'biografia' : 'cotidiano', tema: 'escola', tom: 'bom' });
-        if (primeira) marcar(v, 'conquista', texto, 2, { dominio: 'exatas' });
-        const f = v.caminhos.frentes.exatas; if (f) f.interesse = clamp(f.interesse + 8);
-      }
-      break;
-    }
-    case 'time_escola': {
-      // Os jogos escolares: um campeonato de verdade. É onde um professor de educação física vê quem joga.
-      const h = habilidade(v, 'futebol');
-      if (!viv.feito && h >= 52 && r.chance(0.3)) {
-        viv.feito = 'título nos jogos escolares';
-        const texto = `O time da escola ganhou os jogos escolares da cidade, com você em campo.`;
-        escrever(v, { texto, relevancia: 'biografia', tema: 'escola', tom: 'bom' });
-        marcar(v, 'destaque', texto, 2, { dominio: 'futebol' });
-      }
-      break;
-    }
-    case 'projeto_escola': {
-      const h = Math.max(habilidade(v, 'ciencias'), habilidade(v, 'linguagens'), habilidade(v, 'comunidade'));
-      if (!viv.feito && viv.anos >= 1 && r.chance(clamp((h - 35) / 60, 0.05, 0.45))) {
-        viv.feito = 'o projeto apresentado na mostra da cidade';
-        escrever(v, { texto: `O projeto da escola ${r.pick(['— a horta que abastece a merenda —', '— a rádio do recreio —', '— o jornal da turma —', '— a oficina de reciclagem —'])} foi apresentado na mostra da cidade.`, relevancia: 'biografia', tema: 'escola', tom: 'bom' });
-      }
-      break;
-    }
     case 'projeto_tecnico': {
       const c = cursoOuNulo(cursoAtualId(v) ?? '');
       if (c?.area) viv.area = c.area;
@@ -543,6 +512,9 @@ export function vivenciaQuePesa(v: Vida, oc: { area?: readonly string[]; trilha:
     if (x.tipo === 'iniciacao' && (naArea || ['academia', 'pesquisa', 'docencia_superior'].includes(oc.trilha))) conta(['academia', 'pesquisa'].includes(oc.trilha) ? 0.08 : 0.04, `A iniciação científica aparece no currículo${x.feito ? `: ${x.feito}` : ''}.`);
     if (x.tipo === 'monitoria' && oc.setor === 'educacao') conta(0.04, 'A monitoria conta: você já deu aula, de algum jeito.');
     if (x.tipo === 'extensao' && naArea) conta(0.03, 'A extensão mostra trabalho com gente de verdade.');
+    // A história da escola também conta: a robótica premiada para engenharia e TI; a medalha da olimpíada para quem vai para a área de exatas.
+    if (x.tipo === 'ciencias' && x.feito && ['engenharia', 'eng_industrial', 'ti', 'dados', 'tecnico_industrial', 'eletrica'].includes(oc.trilha)) conta(x.feito.startsWith('prêmio') ? 0.04 : 0.02, `A robótica da escola aparece no currículo: ${x.feito}.`);
+    if (x.tipo === 'olimpiada' && x.feito?.startsWith('medalha') && ['engenharia', 'ti', 'dados', 'financas', 'academia', 'pesquisa'].includes(oc.trilha)) conta(0.03, `A ${x.feito} na olimpíada ainda chama atenção.`);
   }
   return { bonus: Math.min(0.1, bonus), texto };
 }
@@ -552,7 +524,7 @@ export function pesoNaPesquisa(v: Vida): number {
   const ic = temVivencia(v, 'iniciacao');
   const feito = temVivencia(v, 'iniciacao', x => !!x.feito);
   const orientador = vinculosVivos(v).some(x => x.vin.formacao?.papel === 'orientador' && x.vin.proximidade >= 25);
-  return (ic ? 0.12 : 0) + (feito ? 0.06 : 0) + (orientador ? 0.07 : 0);
+  return (ic ? 0.12 : 0) + (feito ? 0.06 : 0) + (orientador ? 0.07 : 0) + (temFato(v, 'medalha_nacional') ? 0.04 : 0);
 }
 
 /** Pesa na prova do instituto federal: a preparação que o professor ofereceu e a olimpíada. */
@@ -564,6 +536,6 @@ export function pesoNaSelecaoDoIf(v: Vida): number {
 export function leituraDasVivencias(v: Vida): string[] {
   return (v.educacao.vivencias ?? [])
     .filter(x => x.anos >= 1 && x.tipo !== 'reforco' && x.tipo !== 'grupo_estudos')
-    .map(x => `${NOME_VIVENCIA[x.tipo].charAt(0).toUpperCase() + NOME_VIVENCIA[x.tipo].slice(1)}${x.anos >= 2 ? `, ${x.anos} anos` : ''}${x.feito ? ` — ${x.feito}` : ''}${x.tFim === undefined ? ' (agora)' : ''}`);
+    .map(x => `${NOME_VIVENCIA[x.tipo].charAt(0).toUpperCase() + NOME_VIVENCIA[x.tipo].slice(1)}${x.anos >= 2 ? `, ${x.anos} anos` : ''}${x.papel && !['participante', 'nos treinos'].includes(x.papel) ? ` — ${x.papel}` : ''}${x.feito ? ` — ${x.feito}` : ''}${x.tFim === undefined ? ' (agora)' : ''}`);
 }
 

@@ -37,6 +37,7 @@ import { criarPessoa, vincular } from '../pessoas';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { encerrarEmprego } from './trabalho';
 import { pausarAtual, podePausar, TRILHAS_ARTISTICAS } from './paralelas';
+import { nomePor } from './notoriedade';
 
 /* ------------------------------------------------------------ Estado */
 
@@ -76,7 +77,7 @@ export interface CacheAV { bruto: number; comissao: number; despesas: number; li
  * figurino próprio, preparação) → líquido.
  */
 export function cacheAudiovisual(v: Vida, o: { tipo: ItemCurriculo['tipo']; porte: number; papel: string; casa: string; titulo: string; negociado?: boolean }): CacheAV {
-  const noto = v.notoriedade?.fonte === 'arte' ? v.notoriedade.valor : 0;
+  const noto = nomePor(v, 'arte');
   // O nome: o currículo pesa pouco (todo ator que trabalha tem um); a notoriedade pesa mais — e só no alto.
   const nome = 1 + pesoDoCurriculo(v) * 0.3 + (noto / 100) ** 2 * 1.4;
   const casa = CASA[o.casa] ?? 1;
@@ -253,7 +254,7 @@ export { podePausar };
 
 /** A rede que a pessoa consegue (o currículo e o nome decidem quem aceita representar). */
 export function redeAlcancavel(v: Vida): 1 | 2 | 3 {
-  const x = pesoDoCurriculo(v) + (v.notoriedade?.fonte === 'arte' ? v.notoriedade.valor : 0) / 100;
+  const x = pesoDoCurriculo(v) + nomePor(v, 'arte') / 100;
   return x >= 0.9 ? 3 : x >= 0.45 ? 2 : 1;
 }
 const COMISSAO = [0, 0.1, 0.15, 0.2];

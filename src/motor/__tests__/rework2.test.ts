@@ -375,8 +375,9 @@ describe('10. busca ativa de relacionamento → encontro → resultado → persi
     }
     expect(achou).toBeGreaterThan(0);
     expect(ninguem + semFaisca).toBeGreaterThan(0);
-    // Com interesse no ar, o próximo passo é chamar para sair (a resposta é da outra pessoa).
-    expect(tenta(exemplo!, { tipo: 'pessoa', pessoaId: id, interacao: 'convidar' })).toBe(true);
+    // Com o match, o próximo passo é o do aplicativo: conversar (depois, o encontro) — a resposta é da outra pessoa.
+    // (Pacote pós-playtest: o app tem fluxo próprio; o "chamar para sair" genérico não atravessa o match.)
+    expect(tenta(exemplo!, { tipo: 'pessoa', pessoaId: id, interacao: 'app_conversar' })).toBe(true);
     const r = interpretar(JSON.stringify(exemplo!));
     if (r.tipo !== 'ok') throw new Error(r.tipo === 'invalido' ? r.motivo : 'vazio');
     expect(r.vida.vinculos[id].romance?.estagio).toBe('interesse');

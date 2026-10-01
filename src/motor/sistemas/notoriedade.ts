@@ -18,7 +18,7 @@
 
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { Notoriedade, Vida } from '../tipos';
+import type { FonteDoNome, Notoriedade, Vida } from '../tipos';
 import { escrever } from '../nucleo';
 import { flex, ge } from '../texto';
 import { sinalDoEstilo } from '../dados/estilo';
@@ -42,13 +42,29 @@ export function palavraDaNotoriedade(v: Vida, x = v.notoriedade?.valor ?? 0): st
 const ESCOPO_CARGO: Record<string, number> = { vereador: 0.45, prefeito: 0.7, deputado_estadual: 0.6, deputado_federal: 0.8, senador: 0.9, governador: 0.95 };
 const PESO_DIVISAO = [0, 0.12, 0.28, 0.55, 0.85];
 
-/** O que o público conheceria de você HOJE, pela vida que você tem (antes da inércia). */
-export function alvoDaNotoriedade(v: Vida): { valor: number; fonte?: Notoriedade['fonte'] } {
-  const cands: { valor: number; fonte: Notoriedade['fonte'] }[] = [];
+/**
+ * O que cada motivo daria de nome HOJE (antes da inércia). A carreira em
+ * curso é o motivo principal; uma carreira que acabou deixa um LEGADO
+ * proporcional ao que ficou registrado (títulos, seleção, obras que
+ * marcaram) — o campeão do mundo não volta a ser anônimo quando para.
+ */
+export function candidatosDaNotoriedade(v: Vida): { valor: number; fonte: FonteDoNome }[] {
+  const cands: { valor: number; fonte: FonteDoNome }[] = [];
   const e = v.caminhos.esporte;
+  // O palmarés e a seleção também põem o nome na frente do público (não só a divisão).
+  const pal = v.caminhos.palmares ?? [];
+  const recentes = pal.filter(x => v.t - x.t <= 36);
+  const sel = e?.selecao;
+  const daSelecao = sel && sel.tUltima !== undefined && v.t - sel.tUltima <= 24 ? 10 + Math.min(10, sel.jogos / 3) : 0;
+  const conquistas = Math.min(10, recentes.filter(x => x.tipo === 'premio' || (x.tipo === 'titulo' && x.papel === 'protagonista' && /Série A|elite/.test(x.competicao))).length * 4);
   if (e?.fase === 'profissional' && !e.suspensoAte) {
     const rep = e.reputacao ?? 30;
-    cands.push({ valor: rep * PESO_DIVISAO[e.nivel] * (e.espaco === 'titular' ? 1 : 0.6), fonte: 'esporte' });
+    cands.push({ valor: rep * PESO_DIVISAO[e.nivel] * (e.espaco === 'titular' ? 1 : 0.6) + daSelecao + conquistas, fonte: 'esporte' });
+  } else if (pal.length) {
+    // O legado: o que ficou registrado, não o que se fazia. Seleção, títulos da elite, prêmios, torneios de seleções.
+    const legado = Math.min(10, (sel?.jogos ?? 0) / 4) + (sel?.capitao ? 6 : 0) + pal.filter(x => x.tipo === 'selecao' && /^Campe/.test(x.texto)).length * 14
+      + Math.min(12, pal.filter(x => x.tipo === 'titulo' && /Série A|elite/.test(x.competicao) && x.papel === 'protagonista').length * 4) + Math.min(8, pal.filter(x => x.tipo === 'premio').length * 2);
+    if (legado > 0) cands.push({ valor: legado, fonte: 'esporte' });
   }
   const a = v.caminhos.arte;
   const obras = (v.caminhos.obras ?? []).filter(o => v.t - o.t <= 60);
@@ -61,7 +77,9 @@ export function alvoDaNotoriedade(v: Vida): { valor: number; fonte?: Notoriedade
     return Math.max(m, base * (x === v.trabalho.paralela ? 0.3 : 0.45));
   }, 0);
   const trabalhos = (v.caminhos.curriculo ?? []).filter(x => v.t - x.t <= 60).reduce((s2, x) => s2 + (x.repercussao >= 3 ? 10 : x.repercussao === 2 ? 4 : 0) + (['novela', 'filme', 'serie'].includes(x.tipo) ? 3 : 0), 0);
-  const artista = Math.max(a?.ativo ? a.publico * 0.62 : 0, freguesia) + Math.min(24, marcou) + Math.min(18, trabalhos);
+  // O legado da obra: o que marcou de verdade continua sendo lembrado (menos que o trabalho em curso).
+  const legadoArte = Math.min(16, (v.caminhos.obras ?? []).filter(o => o.recepcao >= 3).length * 5 + (v.caminhos.curriculo ?? []).filter(x => x.repercussao >= 3).length * 3);
+  const artista = Math.max(a?.ativo ? a.publico * 0.62 : 0, freguesia, legadoArte) + Math.min(24, marcou) + Math.min(18, trabalhos);
   if (artista > 0) cands.push({ valor: artista, fonte: 'arte' });
   const p = v.caminhos.politica;
   if (p && p.fase !== 'encerrada') {
@@ -73,8 +91,59 @@ export function alvoDaNotoriedade(v: Vida): { valor: number; fonte?: Notoriedade
     const grande = (n.porte ?? 1) >= 3 ? 1 : (n.porte ?? 1) === 2 ? 0.5 : 0.2;
     cands.push({ valor: Math.max(0, (n.reputacao ?? 0) - 40) * grande * 0.7 + Math.max(0, (n.unidades ?? 1) - 1) * 4, fonte: 'negocio' });
   }
-  const top = cands.sort((x, y) => y.valor - x.valor)[0];
+  return cands.map(c => ({ valor: clamp(c.valor), fonte: c.fonte }));
+}
+
+/** O que o público conheceria de você HOJE, pela vida que você tem (antes da inércia). */
+export function alvoDaNotoriedade(v: Vida): { valor: number; fonte?: Notoriedade['fonte'] } {
+  const top = candidatosDaNotoriedade(v).sort((x, y) => y.valor - x.valor)[0];
   return top && top.valor >= 1 ? { valor: clamp(top.valor), fonte: top.fonte } : { valor: 0 };
+}
+
+/**
+ * Por que o público conhece você: o motivo que mais deu nome na vida
+ * (`origens`), não o trabalho de agora. Saves de antes: a fonte guardada.
+ */
+export function origemDoNome(v: Vida): FonteDoNome | undefined {
+  const n = v.notoriedade;
+  if (!n) return undefined;
+  const o = Object.entries(n.origens ?? {}) as [FonteDoNome, number][];
+  return o.length ? o.sort((a, b) => b[1] - a[1])[0][0] : n.fonte;
+}
+
+/**
+ * O nome que conta numa área (o cachê da atriz, o salário do atleta): o
+ * público que conhece você POR aquilo — pela origem do nome ou pelo que o
+ * alimenta agora. Trocar de trabalho não apaga o nome do palco.
+ */
+export function nomePor(v: Vida, f: FonteDoNome): number {
+  const n = v.notoriedade;
+  return n && (n.fonte === f || origemDoNome(v) === f) ? n.valor : 0;
+}
+
+/** "pelo futebol", "pela atuação", "pela vida pública", "pelos negócios" — a origem, em palavras. */
+export function porOrigem(v: Vida, f: FonteDoNome | undefined = origemDoNome(v)): string {
+  if (f === 'esporte') { const d = v.caminhos.esporte?.modalidade; return d === 'futebol' ? 'pelo futebol' : d === 'volei' ? 'pelo vôlei' : d === 'basquete' ? 'pelo basquete' : d === 'tenis' ? 'pelo tênis' : 'pelo esporte'; }
+  if (f === 'arte') return 'pela obra e pelos trabalhos';
+  if (f === 'politica') return 'pela vida pública';
+  if (f === 'negocio') return 'pelo negócio';
+  return '';
+}
+
+/**
+ * A leitura do nome para TODAS as telas (Você, Política, Trabalho, a
+ * biografia): a notoriedade pública, a origem, e se o nome é do passado.
+ * Uma tela não pode dizer "famoso" e outra "pouco conhecido" sobre a mesma
+ * coisa: a Política diz o nome DAQUI e a presença política à parte.
+ */
+export function leituraDoNome(v: Vida): { valor: number; palavra: string; origem?: FonteDoNome; por: string; passado: boolean; frase: string } | undefined {
+  const n = v.notoriedade;
+  if (!n || n.valor < 10) return undefined;
+  const origem = origemDoNome(v);
+  const por = porOrigem(v, origem);
+  const passado = notoriedadeDoPassado(v);
+  const palavra = palavraDaNotoriedade(v);
+  return { valor: n.valor, palavra, origem, por, passado, frase: `${palavra} ${por}${passado ? ' — o público ainda lembra; sem exposição, o nome esfria devagar' : ''}` };
 }
 
 /** A notoriedade vem de uma vida que não está mais em curso (a carreira pausou, acabou): "de quem já foi conhecido". */
@@ -87,17 +156,23 @@ export function notoriedadeDoPassado(v: Vida): boolean {
 
 /** O ano do nome: sobe depressa, cai devagar; a Linha da Vida registra quando muda de patamar. */
 export function processarNotoriedade(v: Vida, _r?: Rng): void {
+  const cands = candidatosDaNotoriedade(v);
   const alvo = alvoDaNotoriedade(v);
   const antes = v.notoriedade?.valor ?? 0;
   if (antes === 0 && alvo.valor < 3) return;
-  // O nome sobe depressa e cai devagar — mais devagar ainda quando veio do palco ou do campo (o público lembra).
-  // Trocar de trabalho não zera ninguém: quem foi conhecido segue "de quem já se ouviu falar" por anos.
-  const fonteAntes = v.notoriedade?.fonte;
-  const vel = alvo.valor > antes ? 0.55 : fonteAntes === 'arte' || fonteAntes === 'esporte' ? 0.14 : 0.22;
+  // A origem do nome persiste (o pico que cada motivo já deu); saves de antes começam pela fonte guardada.
+  const origens: Partial<Record<FonteDoNome, number>> = { ...(v.notoriedade?.origens ?? (v.notoriedade?.fonte ? { [v.notoriedade.fonte]: v.notoriedade.pico } : {})) };
+  // O nome sobe depressa e cai devagar — mais devagar quando a ORIGEM é o palco ou o campo (o público lembra), mesmo
+  // que hoje a pessoa faça outra coisa. Trocar de trabalho não zera ninguém.
+  const marca = (Object.entries(origens) as [FonteDoNome, number][]).sort((a, b) => b[1] - a[1])[0]?.[0] ?? v.notoriedade?.fonte;
+  const vel = alvo.valor > antes ? 0.55 : marca === 'arte' || marca === 'esporte' ? 0.14 : 0.22;
   const valor = Math.round(clamp(antes + (alvo.valor - antes) * vel) * 10) / 10;
   if (valor < 1 && alvo.valor < 1) { v.notoriedade = undefined; return; }
   const pico = Math.max(v.notoriedade?.pico ?? 0, valor);
-  v.notoriedade = { valor, pico, fonte: alvo.fonte ?? v.notoriedade?.fonte, t: v.t };
+  for (const c of cands) if (c.valor >= 1) origens[c.fonte] = Math.round(Math.max(origens[c.fonte] ?? 0, Math.min(c.valor, valor + 0.01)) * 10) / 10;
+  // A fonte de agora: o que alimenta o nome este ano (um motivo fraco não rouba a fonte de um nome grande).
+  const fonte = alvo.fonte && alvo.valor >= Math.min(5, valor * 0.25) ? alvo.fonte : v.notoriedade?.fonte ?? alvo.fonte;
+  v.notoriedade = { valor, pico, fonte, t: v.t, origens };
   const fa = faixaDaNotoriedade(antes);
   const fd = faixaDaNotoriedade(valor);
   // Subiu de patamar pela primeira vez: é biografia.
@@ -124,8 +199,10 @@ export function processarNotoriedade(v: Vida, _r?: Rng): void {
 export function rendaDeImagem(v: Vida): number {
   const x = v.notoriedade?.valor ?? 0;
   if (x < 35) return 0;
-  const fonte = v.notoriedade?.fonte;
+  // A imagem que as marcas compram é a da ORIGEM do nome (o ex-jogador ainda vende chuteira; o político, não — o mandato fecha essa porta).
+  const fonte = origemDoNome(v);
   if (fonte !== 'esporte' && fonte !== 'arte') return 0;
+  if (v.caminhos.politica?.mandato) return 0;
   if (v.caminhos.esporte?.suspensoAte && v.t < v.caminhos.esporte.suspensoAte) return 0;
   // O esporte de alto nível paga imagem mais do que o palco paga publicidade (o palco tem cachê próprio: `palco`).
   // A imagem (como o público vê quem já é conhecido) mexe um pouco no que as marcas pagam.
@@ -155,10 +232,14 @@ export function imagemPublica(v: Vida): { palavra: PalavraImagem; texto: string;
   const obraBoa = (v.caminhos.obras ?? []).some(o => v.t - o.t <= 36 && o.recepcao >= 2);
   const querida = (t && t.nota >= 7.2) || obraBoa || (pol?.mandato && pol.mandato.aprovacao >= 65);
   const est = sinalDoEstilo(v);
+  // O que a própria pessoa fez com a visibilidade (`visibilidade`): uma frase que pegou mal; uma causa, uma entrevista boa.
+  const polemica = v.fatos['vis_polemica'] !== undefined && v.t - v.fatos['vis_polemica'] <= 24;
+  const boa = v.fatos['vis_boa'] !== undefined && v.t - v.fatos['vis_boa'] <= 24;
   if (escandalo) return { palavra: 'polêmica', texto: 'O nome anda ligado a um escândalo: marcas se afastam, a rua comenta.', fator: 0.7 };
+  if (polemica && !boa) return { palavra: 'polêmica', texto: 'Uma fala sua virou polêmica: a rua ainda comenta.', fator: 0.8 };
   if (desgaste) return { palavra: 'desgastada', texto: 'A imagem anda desgastada: o público cobra.', fator: 0.85 };
   if (est.marcante && n.valor >= 30) return { palavra: 'marcante', texto: `Um visual que o público reconhece de longe${est.luxo ? ' — e o luxo aparece nas fotos' : ''}.`, fator: querida ? 1.2 : 1.1 };
-  if (querida) return { palavra: 'querida', texto: 'O público gosta do que vê: a fase é boa.', fator: 1.15 };
+  if (querida || boa) return { palavra: 'querida', texto: boa && !querida ? 'O público gosta do que vê: o que você fez com o nome ajudou.' : 'O público gosta do que vê: a fase é boa.', fator: 1.15 };
   return { palavra: 'discreta', texto: 'Conhecido pelo que faz, sem muito barulho em volta.', fator: 1 };
 }
 
@@ -166,5 +247,7 @@ export function imagemPublica(v: Vida): { palavra: PalavraImagem; texto: string;
 export function pesoDaExposicao(v: Vida): { texto: string; efeito: number } | undefined {
   const x = v.notoriedade?.valor ?? 0;
   if (x < 55) return undefined;
-  return { texto: 'viver sendo reconhecido na rua (e comentado)', efeito: Math.round((x - 45) / 7) };
+  // Um ano de privacidade escolhida (`visibilidade`) alivia — sem apagar o que é ser conhecido.
+  const recolhido = v.fatos['vis_privacidade'] !== undefined && v.t - v.fatos['vis_privacidade'] <= 12;
+  return { texto: recolhido ? 'ser reconhecido na rua (menos, num ano de recolhimento)' : 'viver sendo reconhecido na rua (e comentado)', efeito: Math.round((x - 45) / 7 * (recolhido ? 0.5 : 1)) };
 }

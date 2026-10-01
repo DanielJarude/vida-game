@@ -27,6 +27,7 @@ import { compatibilidade, ROTINAS_SOCIAIS } from './social';
 import { nivelDeOferta } from '../dados/lugares';
 import { vereditoDePagar } from './dinheiro';
 import { flex } from '../texto';
+import { buscaDoPerfil, etapaDoApp, novoContexto, pesoDoContexto, registrarFase } from './relacoes';
 
 export type ContextoBusca = 'amigos' | 'atividade' | 'estudo_trabalho' | 'noite' | 'app';
 
@@ -61,6 +62,9 @@ export function disponibilidadeBusca(v: Vida, ctx: ContextoBusca): Veredito {
   const par = parceiro(v);
   if (par) return bloqueio('incompativel', `Você está com ${par.p.nome}.`);
   if (vinculosVivos(v).some(x => x.vin.romance && !x.vin.romance.secreto && (x.vin.romance.estagio === 'saindo' || x.vin.romance.pediuTempo !== undefined))) return bloqueio('incompativel', 'Você já está saindo com alguém (ou esperando uma resposta).');
+  // Uma conversa do aplicativo em andamento é uma iniciativa em curso: o próximo passo é com essa pessoa (`relacoes`).
+  const conversa = vinculosVivos(v).find(x => x.vin.romance?.estagio === 'interesse' && etapaDoApp(v, x.vin) && x.vin.contexto?.etapa !== 'encerrado');
+  if (conversa) return bloqueio('incompativel', `Você está conversando com ${conversa.p.nome} pelo aplicativo: o próximo passo é com ${flex(conversa.p.genero, 'ele', 'ela', 'elu')}.`);
   if (!v.eu.atracao) return bloqueio('requisito', 'Diga antes por quem você se interessa (logo abaixo).');
   if (feitaNoAno(v)) return bloqueio('incompativel', 'Você já procurou este ano. A vida também precisa de tempo.');
   switch (ctx) {
@@ -90,7 +94,7 @@ const MOD: Record<ContextoBusca, { acha: number; interesse: number }> = {
   atividade: { acha: 0.42, interesse: 4 },
   estudo_trabalho: { acha: 0.38, interesse: 2 },
   noite: { acha: 0.55, interesse: -6 },
-  app: { acha: 0.68, interesse: -4 }
+  app: { acha: 0.68, interesse: 0 }
 };
 
 export function buscarAlguem(v: Vida, r: Rng, ctx: ContextoBusca): SaidaBusca {
@@ -122,8 +126,11 @@ export function buscarAlguem(v: Vida, r: Rng, ctx: ContextoBusca): SaidaBusca {
   const origem = ctx === 'app' ? 'online' : ctx === 'amigos' ? 'apresentado' : ctx === 'atividade' ? 'rotina' : ctx === 'noite' ? 'apresentado' : diaADia(v) === 'trabalho' ? 'trabalho' : diaADia(v) === 'faculdade' ? 'faculdade' : 'escola';
   const vin = vincular(v, p, { origem, proximidade: r.int(18, 28), estagio: 'conhecido' });
   if (rot) { vin.ambiente = `rotina:${rot.id}:${v.moradia.municipioId}`; vin.convivio = ['rotina']; }
+  // O contexto da relação nasce aqui (a origem): no app, quem aparece está procurando alguém — e o perfil diz o quê.
+  vin.contexto = novoContexto(ctx === 'app' ? 'app' : ctx === 'amigos' ? 'amigos' : ctx === 'noite' ? 'noite' : ctx === 'atividade' ? 'atividade' : diaADia(v) === 'trabalho' ? 'trabalho' : diaADia(v) === 'faculdade' ? 'faculdade' : 'escola', ctx === 'app' ? { busca: buscaDoPerfil(v, p, r), etapa: 'match' } : {});
+  registrarFase(v, vin, 'conhecido');
   const comp = compatibilidade(v, p);
-  const interesse = clamp(Math.round(interesseInicial(v, p) + MOD[ctx].interesse + comp * 12 + r.normal() * 8));
+  const interesse = clamp(Math.round(interesseInicial(v, p) + MOD[ctx].interesse + pesoDoContexto(v, vin) + comp * 12 + r.normal() * 8));
   const onde = ctx === 'app' ? `Pelo aplicativo, você conheceu ${p.nome}`
     : ctx === 'amigos' ? `${amigo?.p.nome ?? 'Uma amiga'} apresentou ${p.nome} num aniversário`
       : ctx === 'atividade' ? `${cap(ROTINAS_SOCIAIS[rot!.id].onde)}, você e ${p.nome} começaram a conversar`
@@ -132,12 +139,21 @@ export function buscarAlguem(v: Vida, r: Rng, ctx: ContextoBusca): SaidaBusca {
   if (amigo) lembrarCom(v, amigo.p.id, `Apresentou ${p.nome} a você.`, 'amizade', 1);
   const pode = podeTerRomance(v, p, vin);
   if (!pode || interesse < 45) {
-    const texto = `${onde}. A conversa foi educada — e só. ${flex(p.genero, 'Ele', 'Ela', 'Elu')} não pareceu ${ctx === 'app' ? 'querer marcar nada' : 'interessad' + flex(p.genero, 'o', 'a', 'e')}.`;
+    if (vin.contexto) vin.contexto.etapa = 'encerrado';
+    const texto = ctx === 'app' ? `Você curtiu o perfil de ${p.nome}; o match veio, a conversa não. Parou no "oi, tudo bem?".` : `${onde}. A conversa foi educada — e só. ${flex(p.genero, 'Ele', 'Ela', 'Elu')} não pareceu interessad${flex(p.genero, 'o', 'a', 'e')}.`;
     return { resultado: texto, titulo: p.nome, pessoaId: p.id };
   }
   vin.romance = { estagio: 'interesse', tEstagio: v.t, envolvimento: interesse };
+  if (ctx === 'app') {
+    vin.proximidade = clamp(vin.proximidade + 4);
+    registrarFase(v, vin, 'match');
+    lembrarCom(v, p.id, 'Deram match num aplicativo.', 'inicio', 1);
+    escrever(v, { texto: `Deu match com ${p.nome} num aplicativo de encontros.`, relevancia: 'cotidiano', tema: 'amor', escolha: true, pessoas: [p.id] });
+    const procura = vin.contexto!.busca === 'relacionamento' ? 'procura um relacionamento' : vin.contexto!.busca === 'casual' ? 'diz que quer algo sem compromisso' : 'diz que "ainda não sabe o que procura"';
+    return { resultado: `Deu match com ${p.nome}: os dois curtiram. No perfil, ${p.ocupacao ? `${p.ocupacao}, ` : ''}${procura}. O próximo passo é conversar (em Pessoas).`, titulo: p.nome, pessoaId: p.id };
+  }
   vin.proximidade = clamp(vin.proximidade + 8);
-  lembrarCom(v, p.id, ctx === 'app' ? 'Se conheceram por um aplicativo.' : ctx === 'amigos' ? `Foram apresentados por ${amigo?.p.nome ?? 'amigos'}.` : 'A primeira conversa de verdade.', 'inicio', 1);
+  lembrarCom(v, p.id, ctx === 'amigos' ? `Foram apresentados por ${amigo?.p.nome ?? 'amigos'}.` : 'A primeira conversa de verdade.', 'inicio', 1);
   const faisca = interesse >= 62 ? 'Houve faísca dos dois lados: a conversa foi longe.' : 'Pareceu haver interesse — dá para chamar para sair e ver.';
   escrever(v, { texto: `${onde}.`, relevancia: 'cotidiano', tema: 'amor', escolha: true, pessoas: [p.id] });
   return { resultado: `${onde}. ${faisca}`, titulo: p.nome, pessoaId: p.id };

@@ -36,11 +36,14 @@ import { podeTentar } from '../plausibilidade';
 import { conviteDoProfessor, exColegasDaArea, ofereceAqui } from './formacao';
 import { flex, ge } from '../texto';
 import { apresentarNoFestival } from './cena';
+import { mercadoDoTrabalho, oportunidadeCoerente } from './mercados';
 
 export const LIMITE_OPORTUNIDADES = 4;
 
 export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number; atividade?: string }): Oportunidade | undefined {
   const lista = v.caminhos.oportunidades;
+  // Uma carreira de mercado próprio (o clube, o palco, a academia) não recebe as portas do emprego comum (`mercados`).
+  if (oportunidadeCoerente(v, o) !== true) return undefined;
   if (lista.some(x => x.tipo === o.tipo && x.ocupacaoId === o.ocupacaoId && x.dominio === o.dominio)) return undefined;
   if (lista.length >= LIMITE_OPORTUNIDADES) lista.shift();
   const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus, ...(o.atividade ? { atividade: o.atividade } : {}) };
@@ -58,7 +61,8 @@ const trabalhoFraco = (v: Vida) => !!v.trabalho.atual && (['informal', 'temporar
 export function processarOportunidades(v: Vida, r: Rng): void {
   const i = idade(v);
   // Portas que expiraram (ou deixaram de fazer sentido).
-  v.caminhos.oportunidades = v.caminhos.oportunidades.filter(o => o.tFim > v.t && (!o.pessoaId || v.pessoas[o.pessoaId]?.vivo));
+  // (Também as que deixaram de caber na trajetória — inclusive as que um save antigo trouxe: `mercados.oportunidadeCoerente`.)
+  v.caminhos.oportunidades = v.caminhos.oportunidades.filter(o => o.tFim > v.t && (!o.pessoaId || v.pessoas[o.pessoaId]?.vivo) && oportunidadeCoerente(v, o) === true);
   if (v.morte) return;
   const b = v.educacao.basica;
   const m = v.educacao.matricula;
@@ -147,9 +151,9 @@ export function processarOportunidades(v: Vida, r: Rng): void {
     }
   }
 
-  // Proposta de outra empresa: quem é bom e tem estrada.
+  // Proposta de outra empresa: quem é bom e tem estrada — no emprego comum (o atleta recebe proposta de clube: `esporte`).
   const e = v.trabalho.atual;
-  if (e && e.contrato === 'clt' && e.desempenho >= 70 && !e.posAposentadoria && i <= 58 && podeGerar(v, 'proposta', 5)) {
+  if (e && e.contrato === 'clt' && mercadoDoTrabalho(v, e) === 'emprego' && e.desempenho >= 70 && !e.posAposentadoria && i <= 58 && podeGerar(v, 'proposta', 5)) {
     const oc = ocupacao(e.ocupacaoId);
     if (experienciaNaTrilha(v, oc.trilha) >= 36 && r.chance(0.15)) {
       const melhor = OCUPACOES_POR_TRILHA(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && !x.entrada && elegibilidade(v, x).grau === 'permitido')[0] ?? oc;

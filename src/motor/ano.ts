@@ -37,6 +37,7 @@ import { processarSobrecarga } from './sistemas/sobrecarga';
 import { processarNotoriedade } from './sistemas/notoriedade';
 import { processarArte } from './sistemas/arte';
 import { processarAudiovisual } from './sistemas/audiovisual';
+import { processarSituacoes } from './sistemas/situacoes';
 import { processarNegocio } from './sistemas/negocio';
 import { processarOportunidades } from './sistemas/oportunidades';
 import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, recalcularConvivio } from './sistemas/social';
@@ -133,6 +134,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarLesoes(v, r);
   processarArte(v, r);
   processarAudiovisual(v, r);
+  // A carreira, às vezes, produz um momento (o lance, o caso difícil, o crédito roubado): a escolha vem na fase de conteúdo.
+  processarSituacoes(v, r);
   processarProcessos(v, r);
   recalcularConvivio(v);
   conhecerGente(v, r);

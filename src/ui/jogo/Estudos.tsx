@@ -32,10 +32,12 @@ import { novaMatricula } from '../../motor/sistemas/escola';
 import { modeloRotina, nivelDa, nivelModelo } from '../../motor/sistemas/rotinas';
 import { NOME_FOCO } from '../../motor/sistemas/concurso';
 import type { FocoConcurso } from '../../motor/tipos';
-import { instituicaoAtual, leituraDasVivencias, pessoasDaFormacao, ROTINA_DA_OFERTA } from '../../motor/sistemas/formacao';
+import { instituicaoAtual, leituraDasVivencias, pessoasDaFormacao, ROTINA_DA_OFERTA, VIVENCIA_DA_ROTINA } from '../../motor/sistemas/formacao';
+import { estadoDoArco } from '../../motor/sistemas/arcos';
 import { flex } from '../../motor/texto';
 import { estimativaParaCurso, fazCursinho, mesesDePreparo, objetivoCurso, PALAVRA_SITUACAO, proximoPassoVestibular } from '../../motor/sistemas/vestibular';
 import { objetivosAtivos } from '../../motor/sistemas/objetivos';
+import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import type { Objetivo } from '../../motor/tipos';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }
@@ -127,9 +129,13 @@ function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Aca
           <ul className="o-lugar__atividades">
             {atividades.map(m => {
               const faz = vida.rotinas.some(r => r.id === m.id);
+              // A história interna da atividade: a etapa, o papel, o último marco (`arcos`).
+              const viv = faz ? (vida.educacao.vivencias ?? []).find(x => x.tipo === VIVENCIA_DA_ROTINA[m.id] && x.tFim === undefined) : undefined;
+              const estado = estadoDoArco(m.id, viv);
+              const ultimo = viv?.marcos?.[viv.marcos.length - 1];
               return (
                 <li key={m.id} className={`atividade-formacao${faz ? ' atividade-formacao--ativa' : ''}`}>
-                  <div className="atividade-formacao__texto"><strong>{m.nome}</strong><span>{m.descricao}</span></div>
+                  <div className="atividade-formacao__texto"><strong>{m.nome}</strong><span>{estado ? `Agora: ${estado}.` : m.descricao}</span>{ultimo && <span className="nota">{anoDe(ultimo.t)} · {ultimo.texto}</span>}</div>
                   {faz
                     ? <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>
                     : <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir} variante="secundario">Entrar</BotaoAcao>}
@@ -220,7 +226,7 @@ function rotuloDaPorta(o: Oportunidade): string {
 
 /** As portas que a vida abriu (filtradas pela área que as mostra). Elas não esperam para sempre. */
 export function PortasAbertas({ vida, agir, filtro, titulo }: { vida: Vida; agir: (a: Acao) => boolean; filtro: (o: Oportunidade) => boolean; titulo: string }) {
-  const ops = vida.caminhos.oportunidades.filter(o => o.tFim > vida.t && filtro(o));
+  const ops = oportunidadesAbertas(vida).filter(filtro);
   if (!ops.length) return null;
   return (
     <section className="portas-abertas" aria-labelledby={`portas-${titulo}`}>

@@ -298,6 +298,23 @@ export interface Vinculo {
    * pode voltar anos depois (uma indicação, uma carta) (`sistemas/formacao`).
    */
   formacao?: { papel: 'professor' | 'orientador' | 'colega'; instituicao: string; area?: string; tFim?: number };
+  /** O contexto em que a relação nasceu (pacote pós-playtest, `relacoes`): define a abertura inicial, não o resultado. */
+  contexto?: ContextoDaRelacao;
+  /** A TRAJETÓRIA da relação: as fases por que passou, com a data (colega → amigo → afastado → reconciliação; match → encontro → namoro...). */
+  fases?: { fase: string; t: number }[];
+}
+
+/** De onde a relação veio — e o que isso abre (a origem define o contexto e a intenção inicial; não determina o resultado). */
+export interface ContextoDaRelacao {
+  via: 'app' | 'trabalho' | 'escola' | 'faculdade' | 'esporte' | 'atividade' | 'amigos' | 'noite' | 'vizinhanca' | 'infancia' | 'evento' | 'viagem' | 'familia' | 'outro';
+  /** A abertura romântica inicial, 0..1 (no app, alta; no trabalho, baixa; entre amigos de infância, há história). */
+  abertura: number;
+  /** O que a outra pessoa procura — no app, aparece no perfil; nos outros lugares, só se descobre. */
+  busca?: 'relacionamento' | 'casual' | 'incerto';
+  /** No app: match → conversa → encontro (depois, a relação segue o caminho de qualquer outra). */
+  etapa?: 'match' | 'conversa' | 'encontro' | 'encerrado';
+  /** A química do primeiro encontro (oculta: nunca é mostrada como número). */
+  quimica?: number;
 }
 
 export type TipoChamado = 'pedido_ajuda' | 'convite' | 'reclamacao' | 'apoio' | 'interesse' | 'conversa_casal' | 'aproximacao' | 'distancia_casal';
@@ -496,7 +513,8 @@ export interface Educacao {
 
 export type TipoVivencia =
   | 'olimpiada' | 'projeto' | 'gremio' | 'time' | 'reforco' | 'ciencias'
-  | 'projeto_tecnico' | 'iniciacao' | 'monitoria' | 'extensao' | 'centro_academico' | 'atletica' | 'empresa_junior' | 'grupo_estudos';
+  | 'projeto_tecnico' | 'iniciacao' | 'monitoria' | 'extensao' | 'centro_academico' | 'atletica' | 'empresa_junior' | 'grupo_estudos'
+  | 'xadrez';
 
 export interface Vivencia {
   tipo: TipoVivencia;
@@ -514,6 +532,14 @@ export interface Vivencia {
   pessoaId?: string;
   /** Terminou (a formação acabou ou a pessoa largou). */
   tFim?: number;
+  /**
+   * A HISTÓRIA INTERNA da atividade (pacote pós-playtest, `arcos`): a etapa
+   * em que está (treinos → titular → destaque; preparação → fase regional →
+   * estadual...), o papel (reserva, titular, capitão, responsável) e os marcos.
+   */
+  etapa?: string;
+  papel?: string;
+  marcos?: { t: number; texto: string }[];
 }
 
 /** `livre`: qualificação profissional curta (SENAI, SENAC, cursos de ofício) — não muda a escolaridade. */
@@ -1140,6 +1166,90 @@ export interface CarreiraEsportiva {
   temporadas?: Temporada[];
   /** O salário do contrato atual (fonte única: `esporte.salarioDoContrato`). */
   salarioContrato?: number;
+  /**
+   * A proposta de clube na mesa (pacote pós-REWORK 3): criada UMA vez, com
+   * clube, cidade, divisão, prazo e salário fixados; a decisão mostra ESTA
+   * proposta e, se aceita, ESTA proposta é executada (`esporte.transferirPara`).
+   * Nada é sorteado de novo depois do sim.
+   */
+  proposta?: PropostaDeClube;
+  /** A cláusula do contrato assinado: o salário que passa a valer se ganhar a posição (dito na proposta, cumprido aqui). */
+  clausulaTitular?: number;
+  /** A seleção nacional (futebol): o radar, as convocações, os jogos — o mundo observa a carreira (`selecao`). */
+  selecao?: TrajetoriaNaSelecao;
+}
+
+/** Uma proposta concreta de clube (ou de empréstimo): o que se viu é o que se assina. */
+export interface PropostaDeClube {
+  id: string;
+  clube: string;
+  /** A cidade do clube (a mudança, se houver, é para cá). */
+  municipioId: string;
+  nivel: 1 | 2 | 3 | 4;
+  /** Prazo do contrato, em meses. */
+  meses: number;
+  /** Salário mensal bruto para começar (como reserva, se o clube é maior) — e se ganhar a posição. */
+  salario: number;
+  salarioTitular: number;
+  /** Começa como titular (clube menor que quer o seu jogo) ou briga por posição. */
+  espaco: 'titular' | 'reserva';
+  t: number;
+  /** Até quando vale a resposta. */
+  validaAte: number;
+  /** De onde veio: o mercado reagiu à temporada, o empresário buscou (maior, menor), o clube quis liberar, a volta de quem estava sem clube. */
+  origem: 'mercado' | 'maior' | 'menor' | 'liberacao' | 'sem_clube';
+}
+
+/** A trajetória na seleção nacional: só existe depois que o radar ligou. */
+export interface TrajetoriaNaSelecao {
+  /** Quando o nome entrou na lista de observados. */
+  radar: number;
+  convocacoes: number;
+  jogos: number;
+  gols: number;
+  tPrimeira?: number;
+  tEstreia?: number;
+  /** A última convocação (o corte é ficar de fora). */
+  tUltima?: number;
+  /** Titular nas últimas convocações. */
+  titular?: boolean;
+  capitao?: boolean;
+  /** Os torneios de seleções disputados (ano, nome, campanha). */
+  torneios: { ano: number; nome: string; campanha: string; jogos: number }[];
+}
+
+/** Uma situação de carreira aberta (`situacoes`): o modelo e o contexto sorteado (o minuto, o placar, o caso). */
+export interface SituacaoAberta { id: string; t: number; dados: Record<string, string | number> }
+
+/** Uma situação vivida: a intenção, o desfecho (do ótimo ao péssimo) e a frase do que aconteceu. */
+export interface RegistroDeSituacao {
+  id: string;
+  t: number;
+  /** A trajetória em que aconteceu ("futebol", "medicina", "emprego"...). */
+  trajetoria: string;
+  intencao: string;
+  desfecho: 'otimo' | 'bom' | 'ruim' | 'pessimo';
+  texto: string;
+}
+
+/**
+ * Uma conquista esportiva PERMANENTE (o palmarés): título, acesso,
+ * rebaixamento, prêmio individual, marco. Fica depois que a carreira acaba
+ * (`caminhos.palmares`), e a tela de carreira a lê; a Linha da Vida recebe
+ * só os marcos biográficos.
+ */
+export interface ConquistaEsportiva {
+  tipo: 'titulo' | 'acesso' | 'rebaixamento' | 'premio' | 'marco' | 'selecao';
+  modalidade: Dominio;
+  ano: number;
+  t: number;
+  /** "Série A", "campeonato estadual", "torneio mundial de seleções", "seleção do campeonato". */
+  competicao: string;
+  clube?: string;
+  /** No título: foi peça central (titular na maior parte) ou parte do elenco. */
+  papel?: 'protagonista' | 'elenco';
+  /** O texto curto, como a carreira mostra. */
+  texto: string;
 }
 
 export type Posicao = 'goleiro' | 'lateral' | 'zagueiro' | 'volante' | 'meia' | 'ponta' | 'atacante';
@@ -1503,6 +1613,12 @@ export interface Caminhos {
   objetivos?: Objetivo[];
   /** A vida acadêmica (docência e pesquisa): linha, projetos, orientações, produção (`sistemas/academia`). */
   academia?: VidaAcademica;
+  /** O palmarés esportivo: títulos, acessos, prêmios, marcos — permanente (pacote pós-REWORK 3). */
+  palmares?: ConquistaEsportiva[];
+  /** A situação de carreira deste ano, esperando a escolha (o contexto fica guardado: o texto não muda no reload). */
+  situacao?: SituacaoAberta;
+  /** As situações de carreira vividas: a intenção escolhida e o que aconteceu (memória da vida profissional). */
+  situacoes?: RegistroDeSituacao[];
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
   /**
@@ -1712,12 +1828,20 @@ export interface Ocorrencia {
  * vive a vida inteira em 0 (`sistemas/notoriedade`).
  */
 export interface Notoriedade {
+  /** NOTORIEDADE PÚBLICA: quantas pessoas sabem quem você é, 0..100. Não é reputação na área, nem imagem, nem apoio político. */
   valor: number;
   pico: number;
-  /** De onde vem, agora. */
-  fonte?: 'esporte' | 'arte' | 'politica' | 'negocio';
+  /** De onde vem, agora (o que alimenta o nome este ano). */
+  fonte?: FonteDoNome;
   t: number;
+  /**
+   * A ORIGEM do nome (pacote pós-playtest): o pico que cada motivo já deu.
+   * Sobrevive à troca de carreira — o ex-jogador que vira político continua
+   * conhecido "pelo futebol" (`notoriedade.origemDoNome`).
+   */
+  origens?: Partial<Record<FonteDoNome, number>>;
 }
+export type FonteDoNome = 'esporte' | 'arte' | 'politica' | 'negocio';
 
 export interface Vida {
   versao: 18;

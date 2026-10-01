@@ -301,7 +301,9 @@ export const ROTINAS: readonly ModeloRotina[] = [
       { rotulo: 'Jogar por gosto', tempo: 0.5, custo: 0, qualidade: 0.9 },
       { rotulo: 'Clube de xadrez', tempo: 1, custo: 30, qualidade: 1.25, requer: v => (cidade(v) >= 1 || janela(v, 'clube_xadrez', 0.5) ? true : 'Não há clube de xadrez perto.') }
     ],
-    pratica: { xadrez: 1, exatas: 0.25 }, social: { onde: 'no xadrez', fluxo: 0.5, amplitude: 5 }
+    pratica: { xadrez: 1, exatas: 0.25 }, social: { onde: 'no xadrez', fluxo: 0.5, amplitude: 5 },
+    // Na escola, o xadrez tem história: a equipe, os torneios entre escolas (`arcos`).
+    efeito: (v, _r, n) => anoDaAtividade(v, 'xadrez', n)
   },
   {
     id: 'programacao', nome: 'Programar', descricao: 'Tutoriais, joguinhos, sites. Depois, coisa séria.', categoria: 'estudo', idadeMin: 10,

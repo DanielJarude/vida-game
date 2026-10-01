@@ -8,9 +8,11 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
-import { imagemPublica, notoriedadeDoPassado, palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
+import { imagemPublica, leituraDoNome } from '../../motor/sistemas/notoriedade';
+import { USOS } from '../../motor/sistemas/visibilidade';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
+import { disponibilidade } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { tracosMarcantes } from '../../motor/personalidade';
 import type { Dimensao } from '../../motor/sistemas/estado';
@@ -50,7 +52,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
           <h1 className="voce-rosto__momento">{momentoAtual(vida)}</h1>
           <p className="voce-rosto__linha">{ocupacaoAtual(vida)} · {ondeMora(vida)}</p>
           {afeto && <p className="voce-rosto__linha">{afeto}{luto ? ` · ${luto}` : ''}</p>}
-          {vida.notoriedade && vida.notoriedade.valor >= 10 && <p className="voce-rosto__linha">Para o público: {palavraDaNotoriedade(vida)} ({({ esporte: 'pelo esporte', arte: 'pela obra e pelos trabalhos', politica: 'pela vida pública', negocio: 'pelo negócio' } as const)[vida.notoriedade.fonte ?? 'esporte']}{notoriedadeDoPassado(vida) ? ' — o público ainda lembra; sem exposição, o nome esfria devagar' : ''})</p>}
+          {leituraDoNome(vida) && <p className="voce-rosto__linha">Para o público: {leituraDoNome(vida)!.frase}</p>}
           {(() => { const im = imagemPublica(vida); return im ? <p className="voce-rosto__linha">Imagem pública: {im.palavra} — {im.texto.charAt(0).toLowerCase() + im.texto.slice(1)}</p> : null; })()}
         </div>
       </section>
@@ -91,6 +93,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       )}
 
       <AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} />
+      <OSeuNome vida={vida} agir={agir} />
 
       {condicoes.length > 0 && (
         <section className="voce-condicoes" aria-label="Condições de saúde">
@@ -182,6 +185,30 @@ function CorpoEAprendizado({ vida, dims, irPara }: { vida: Vida; dims: DimensaoP
             )}
             <p className="pessoal__uso">{l.uso}</p>
             {l.ir && <button type="button" className="link pessoal__ir" onClick={() => irPara(l.ir!.aba)}>{l.ir.rotulo} →</button>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * O seu nome (Fama 2.0): quem o público conhece pode decidir o que fazer com
+ * isso — e o resultado não é garantido (`visibilidade`). Só aparece para
+ * quem tem nome; o que não cabe agora fica de fora.
+ */
+function OSeuNome({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const nome = leituraDoNome(vida);
+  if (!nome || nome.valor < 15) return null;
+  return (
+    <section className="visibilidade" aria-labelledby="titulo-visibilidade">
+      <h2 id="titulo-visibilidade" className="secao-fio">O seu nome</h2>
+      <p className="nota">Para o público: {nome.frase}. O que você faz com isso muda a imagem, a cabeça — e, às vezes, nada.</p>
+      <ul className="experiencias__lista">
+        {USOS.filter(u => disponibilidade(vida, { tipo: 'visibilidade', oque: u.id }).grau !== 'impossivel').map(u => (
+          <li key={u.id} className="experiencia">
+            <span className="experiencia__texto"><strong>{u.rotulo}</strong><span>{u.descricao}</span></span>
+            <BotaoAcao vida={vida} acao={{ tipo: 'visibilidade', oque: u.id }} agir={agir} variante="discreto">{u.id === 'privacidade' ? 'Recolher-se' : 'Fazer'}</BotaoAcao>
           </li>
         ))}
       </ul>

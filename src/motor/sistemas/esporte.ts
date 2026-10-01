@@ -19,7 +19,7 @@
 
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { CarreiraEsportiva, Dominio, Posicao, Temporada, Vida } from '../tipos';
+import type { CarreiraEsportiva, Dominio, Posicao, PropostaDeClube, Temporada, Vida } from '../tipos';
 import { escrever, idade, lembrarCom, marcarFato, pais, temFato } from '../nucleo';
 import { municipio, MUNICIPIOS } from '../dados/lugares';
 import { estruturaEsportiva } from '../dados/mercado';
@@ -30,7 +30,7 @@ import { contratar, encerrarEmprego } from './trabalho';
 import { capitalDoEstado } from './escola';
 import { flex, ge } from '../texto';
 import { novaOportunidade } from './oportunidades';
-import { aoClube, clubeDoNivel, CLUBES, clubesDaCidade, DIVISAO_DO_NIVEL, doClube, equipeDaCidade, noClube, oClube, peloClube } from '../dados/clubes';
+import { clubeDoNivel, clubesDoNivel, CLUBES, clubesDaCidade, DIVISAO_DO_NIVEL, doClube, equipeDaCidade, noClube, oClube, peloClube } from '../dados/clubes';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import { abalar } from './abalo';
@@ -41,6 +41,10 @@ import { anoDe } from '../tempo';
 import { dinheiro } from '../texto';
 import { CIRCUITO_TENIS, custoDoCircuito, custoJuvenilTenis, DIVISAO_BASQUETE, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO, premiacaoTenis, rankingTenis, vantagemDeEstatura, vivePremiacao } from './modalidades';
 import { recursosDaFamilia } from './origem';
+import { mudarAgora } from './processos';
+import { pisoDoClube, registrarTemporada, registrarConquista } from './palmares';
+import { processarSelecao } from './selecao';
+import { nomePor } from './notoriedade';
 
 export const MODALIDADES: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'];
 
@@ -141,16 +145,6 @@ export function ondeTreina(v: Vida, d: Dominio = 'futebol'): string {
 
 /** O teto de divisão de um clube na simulação (os grandes chegam à elite; os regionais, às divisões de acesso). */
 const tetoDoClube = (nome: string) => { const c = CLUBES.find(x => x.nome === nome); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
-/** Troca o clube do atleta (e o empregador), no nível da simulação. */
-export function mudarDeClube(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 4): string {
-  const novo = e.modalidade === 'futebol' ? clubeDoNivel(nivel, hash(`${v.id}:${v.t}:clube`), e.clube).nome : e.clube;
-  e.clube = novo;
-  e.nivel = nivel;
-  const emp = v.trabalho.atual;
-  if (emp && OCUPACOES_DE_ATLETA.includes(emp.ocupacaoId)) emp.empregador = oClube(novo);
-  return novo;
-}
-
 /** A modalidade que a pessoa pratica com mais seriedade agora. */
 export function modalidadePrincipal(v: Vida): { d: Dominio; nivel: number } | undefined {
   // O time da escola é futebol de competição (os jogos escolares): conta como treino regular (REWORK 3).
@@ -158,7 +152,8 @@ export function modalidadePrincipal(v: Vida): { d: Dominio; nivel: number } | un
   return lista.sort((a, b) => b.nivel - a.nivel || habilidade(v, b.d) - habilidade(v, a.d))[0];
 }
 
-const nivelPelaHabilidade = (h: number): 1 | 2 | 3 | 4 => (h < 74 ? 1 : h < 81 ? 2 : h < 88 ? 3 : 4);
+/** A divisão em que a técnica de hoje joga (pela mesma barra da nota: `barraDaDivisao`). */
+const nivelPelaHabilidade = (h: number): 1 | 2 | 3 | 4 => (h < 77 ? 1 : h < 83 ? 2 : h < 90 ? 3 : 4);
 
 /* ------------------------------------------------------------ Posição */
 
@@ -198,6 +193,7 @@ const posicaoDe = (v: Vida, e: CarreiraEsportiva): Posicao => e.posicao ?? posic
 const AUGE_MODALIDADE: Partial<Record<Dominio, number>> = { volei: 31, natacao: 26, atletismo: 28, lutas: 30, basquete: 30, tenis: 27 };
 /** O risco de lesão da modalidade (o joelho e o tornozelo do basquete; o ombro e o cotovelo do tênis). */
 const RISCO_MODALIDADE: Partial<Record<Dominio, number>> = { basquete: 1.1, tenis: 1, volei: 1.05, lutas: 1.2, natacao: 0.8, atletismo: 1 };
+export { posicaoDe };
 export const augeDe = (v: Vida, e: CarreiraEsportiva) => (e.modalidade === 'futebol' ? AUGE_POSICAO[posicaoDe(v, e)] : AUGE_MODALIDADE[e.modalidade] ?? 29);
 
 /* ------------------------------------------------------------ Salário */
@@ -221,7 +217,7 @@ const BASE_OUTROS = [0, 1800, 4000, 9500, 26000];
 /** Basquete: o NBB paga mais que as outras modalidades de quadra; a Liga Ouro, pouco acima do mínimo. */
 const BASE_BASQUETE = [0, 2200, 4500, 9500, 24000];
 const PORTE_CLUBE: Record<string, number> = { grande: 1.5, tradicional: 1, regional: 0.7 };
-export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number = e.nivel, espaco: CarreiraEsportiva['espaco'] = e.espaco): number {
+export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number = e.nivel, espaco: CarreiraEsportiva['espaco'] = e.espaco, clube: string = e.clube): number {
   const i = idade(v);
   const futebol = e.modalidade === 'futebol';
   // Tênis não tem salário de clube: vive de premiação (`modalidades.premiacaoTenis`).
@@ -230,13 +226,13 @@ export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number =
   const rep = e.reputacao ?? 30;
   const papel = espaco === 'titular' ? 1 : 0.55;
   const nome = 0.45 + (rep / 100) ** 2 * 2.2;
-  const tamanho = futebol ? CLUBES.find(c => c.nome === e.clube)?.porte ?? 'regional' : 'tradicional';
+  const tamanho = futebol ? CLUBES.find(c => c.nome === clube)?.porte ?? 'regional' : 'tradicional';
   const porte = futebol ? PORTE_CLUBE[tamanho] ?? 0.8 : 1;
   const t = e.temporadas?.[e.temporadas.length - 1];
   const temporada = t ? 1 + clamp((t.nota - 6) * 0.06, -0.2, 0.2) : 1;
   const auge = augeDe(v, e);
   const fase = i < 20 ? 0.55 : i < 23 ? 0.8 : i > auge + 3 ? 0.85 : 1;
-  const noto = v.notoriedade?.fonte === 'esporte' ? v.notoriedade.valor : 0;
+  const noto = nomePor(v, 'esporte');
   // A estrela: só na elite, só com nome altíssimo, notoriedade e clube grande — raro por construção.
   const alcance = tamanho === 'grande' ? 1 : tamanho === 'tradicional' ? 0.4 : 0.15;
   // (FIX 3.1: o prêmio de estrela e o valor do nome fora da elite são do futebol — o mercado das outras modalidades é bem menor.)
@@ -260,6 +256,7 @@ export function assinarContrato(v: Vida, e: CarreiraEsportiva, meses: number, fa
   // O tenista não assina com ninguém: joga o circuito e recebe o que a premiação der.
   if (vivePremiacao(e.modalidade)) { e.contratoAte = undefined; return; }
   e.contratoAte = v.t + prazoDeContrato(e, meses);
+  e.clausulaTitular = undefined;
   const emp = v.trabalho.atual;
   if (!emp || !OCUPACOES_DE_ATLETA.includes(emp.ocupacaoId)) return;
   emp.salario = renovacao ? salarioDaRenovacao(v, e, fator) : Math.round(salarioDoContrato(v, e) * fator / 100) * 100;
@@ -274,10 +271,66 @@ export function salarioDaRenovacao(v: Vida, e: CarreiraEsportiva, fator = 1): nu
   return nota >= 6.5 ? Math.max(novo, Math.round(atual * 0.75 / 100) * 100) : novo;
 }
 
+/* ------------------------------------------------------------ Propostas */
+
+/**
+ * A proposta na mesa (P0 de integridade): criada uma vez, com clube, cidade,
+ * divisão, prazo e salário FIXADOS; a decisão a exibe e o "sim" a executa
+ * (`transferirPara`) — nada é sorteado de novo depois do sim. Uma proposta
+ * nova nunca sobrescreve a que ainda espera resposta.
+ */
+export const propostaNaMesa = (v: Vida): PropostaDeClube | undefined => { const p = v.caminhos.esporte?.proposta; return p && v.t <= p.validaAte ? p : undefined; };
+
+export function criarProposta(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 4, origem: PropostaDeClube['origem']): PropostaDeClube | undefined {
+  if (propostaNaMesa(v)) return undefined;
+  const futebol = e.modalidade === 'futebol';
+  // O clube que quer você: no futebol, um clube real do porte da divisão (a liberação, de preferência no mesmo estado);
+  // nos outros esportes, a estrutura é a mesma equipe, num nível acima ou abaixo.
+  let clube = e.clube;
+  if (futebol) {
+    const doNivel = clubesDoNivel(nivel, e.clube);
+    const uf = municipio(v.moradia.municipioId).uf;
+    const pertos = origem === 'liberacao' ? doNivel.filter(c => municipio(c.cidade).uf === uf) : [];
+    const lista = pertos.length ? pertos : doNivel;
+    clube = lista[Math.floor(hash(`${v.id}:${v.t}:${origem}:proposta`) * lista.length) % lista.length].nome;
+  }
+  const municipioId = futebol ? CLUBES.find(c => c.nome === clube)?.cidade ?? v.moradia.municipioId : v.trabalho.atual?.municipioId ?? v.moradia.municipioId;
+  const espaco: 'titular' | 'reserva' = nivel > e.nivel ? 'reserva' : 'titular';
+  const meses = prazoDeContrato({ ...e, nivel }, origem === 'liberacao' ? 12 : nivel > e.nivel ? 36 : 24);
+  const p: PropostaDeClube = {
+    id: `pc${v.t}${Math.floor(hash(`${v.id}:${v.t}:${origem}`) * 1e6)}`, clube, municipioId, nivel, meses, espaco,
+    salario: salarioDoContrato(v, e, nivel, espaco, clube), salarioTitular: salarioDoContrato(v, e, nivel, 'titular', clube),
+    t: v.t, validaAte: v.t + 11, origem
+  };
+  e.proposta = p;
+  return p;
+}
+
+/**
+ * Executa EXATAMENTE a proposta aceita: clube, divisão, prazo, salário,
+ * empregador. A mudança de cidade (se houver) é de quem chama — para a
+ * cidade da proposta (`p.municipioId`).
+ */
+export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube): void {
+  e.clube = p.clube;
+  e.nivel = p.nivel;
+  e.espaco = p.espaco;
+  e.contratoAte = v.t + p.meses;
+  e.proposta = undefined;
+  e.clausulaTitular = p.espaco === 'reserva' && p.salarioTitular > p.salario ? p.salarioTitular : undefined;
+  if (e.modalidade === 'futebol') e.municipioId = p.municipioId;
+  const emp = v.trabalho.atual;
+  if (emp && OCUPACOES_DE_ATLETA.includes(emp.ocupacaoId)) {
+    emp.empregador = vivePremiacao(e.modalidade) ? emp.empregador : oClube(p.clube);
+    emp.salario = p.espaco === 'titular' ? p.salarioTitular : p.salario;
+  }
+}
+
 /* ------------------------------------------------------------ Mercado */
 
 /** O limiar de nome (reputação ajustada pela última temporada) que cada divisão pede. */
-const LIMIAR_NIVEL = [0, 8, 34, 50, 64];
+/** (Pacote pós-playtest: recalibrado junto com a barra da divisão — o jogador médio de cada divisão fica nela; quem se destaca é chamado acima.) */
+const LIMIAR_NIVEL = [0, 8, 32, 46, 56];
 /** No tênis, o ranking é mundial: subir de circuito pede bem mais (o principal é para pouquíssimos). */
 const LIMIAR_TENIS = [0, 8, 42, 62, 78];
 
@@ -311,9 +364,24 @@ export function clubeQuerRenovar(v: Vida, e: CarreiraEsportiva): boolean {
 /* ------------------------------------------------------------ Temporada */
 
 const PARTIDAS = [0, 20, 30, 38, 38];
-const GOL: Record<Posicao, number> = { goleiro: 0, lateral: 0.05, zagueiro: 0.05, volante: 0.06, meia: 0.18, ponta: 0.3, atacante: 0.46 };
-const ASSIST: Record<Posicao, number> = { goleiro: 0.005, lateral: 0.14, zagueiro: 0.03, volante: 0.1, meia: 0.27, ponta: 0.24, atacante: 0.14 };
-const DEFESA: Record<Posicao, number> = { goleiro: 0.3, lateral: 1.2, zagueiro: 2.2, volante: 2, meia: 0.5, ponta: 0.2, atacante: 0.1 };
+/**
+ * A barra de cada divisão: a técnica de quem joga ali (pacote pós-playtest).
+ * A nota mede a temporada CONTRA a concorrência daquela divisão — no
+ * futebol, quem chega à Série A já é muito bom, e ser muito bom ali é o
+ * normal, não destaque. (Antes, a barra era a mesma escada para todas as
+ * divisões, e quase todo jogador de Série A fechava "temporada de destaque":
+ * nota mediana 7,9, 85% titulares, nome e salário de estrela.)
+ */
+const BARRA_FUTEBOL = [0, 73, 77, 82, 89];
+export const barraDaDivisao = (d: Dominio, nivel: number) => (d === 'futebol' ? BARRA_FUTEBOL[nivel] ?? 89 : 70 + nivel * 3);
+/** A técnica que a divisão pede para começar jogando (a mesma barra, um pouco acima; nos outros esportes, a escada de antes). */
+export const barraDeTitular = (d: Dominio, nivel: number) => (d === 'futebol' ? (BARRA_FUTEBOL[nivel] ?? 89) + 1 : 72 + nivel * 2);
+/** Quantos jogos (ou competições) a temporada tem, em cada modalidade e nível: fonte única (temporada, palmarés, seleção). */
+export const jogosDaTemporada = (d: Dominio, nivel: number) => (d === 'futebol' ? PARTIDAS[nivel] : d === 'basquete' ? [0, 18, 26, 32, 34][nivel] : d === 'tenis' ? [0, 14, 20, 22, 22][nivel] : [0, 8, 10, 12, 12][nivel]) ?? 0;
+/** O que cada posição produz por jogo, em média (a temporada sorteia em volta disso; o palmarés mede contra isso). */
+export const GOL: Record<Posicao, number> = { goleiro: 0, lateral: 0.05, zagueiro: 0.05, volante: 0.06, meia: 0.18, ponta: 0.3, atacante: 0.46 };
+export const ASSIST: Record<Posicao, number> = { goleiro: 0.005, lateral: 0.14, zagueiro: 0.03, volante: 0.1, meia: 0.27, ponta: 0.24, atacante: 0.14 };
+export const DEFESA: Record<Posicao, number> = { goleiro: 0.3, lateral: 1.2, zagueiro: 2.2, volante: 2, meia: 0.5, ponta: 0.2, atacante: 0.1 };
 
 /**
  * Uma temporada, em poucos números com consequência. A nota da temporada
@@ -333,10 +401,10 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   const desgaste = e.foco === 'preservar' ? 0.7 : e.foco === 'forcar' ? 1.25 : 1;
   // No basquete, a estatura é parte do jogo (o garrafão): ajuda o pivô, cobra mais técnica do armador baixo.
   const corpo = e.modalidade === 'basquete' ? vantagemDeEstatura(v) * 2.4 : 0;
-  let nota = 6 + (h - (70 + e.nivel * 3)) / 4 + (v.corpo.forma - 70) / 22 + corpo - passou * (futebol && pos === 'goleiro' ? 0.18 : 0.3) * desgaste - (sacrificio ? 0.9 : 0) + r.normal() * 0.6;
+  let nota = 6 + (h - barraDaDivisao(e.modalidade, e.nivel)) / 4 + (v.corpo.forma - 70) / 22 + corpo - passou * (futebol && pos === 'goleiro' ? 0.18 : 0.3) * desgaste - (sacrificio ? 0.9 : 0) + r.normal() * 0.6;
   nota = Math.round(clamp(nota, 2.5, 9.6) * 10) / 10;
   // Nos outros esportes, a temporada é um calendário de competições; o que conta são os pódios.
-  const max = futebol ? PARTIDAS[e.nivel] : e.modalidade === 'basquete' ? [0, 18, 26, 32, 34][e.nivel] : e.modalidade === 'tenis' ? [0, 14, 20, 22, 22][e.nivel] : [0, 8, 10, 12, 12][e.nivel];
+  const max = jogosDaTemporada(e.modalidade, e.nivel);
   const disp = (12 - fora) / 12;
   const partidas = Math.max(0, Math.round(max * disp * (e.espaco === 'titular' ? 0.92 : 0.45) * (0.9 + r.next() * 0.15)));
   const titular = Math.min(partidas, Math.round(partidas * (e.espaco === 'titular' ? 0.88 : 0.3)));
@@ -369,7 +437,8 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
     t.colocacao = t.titulos > 0 ? 1 : 10;
   }
   (e.temporadas ??= []).push(t);
-  if (e.temporadas.length > 20) e.temporadas.splice(0, e.temporadas.length - 20);
+  // A carreira inteira cabe aqui (o histórico por clube e o palmarés leem daqui).
+  if (e.temporadas.length > 30) e.temporadas.splice(0, e.temporadas.length - 30);
   // O nome no mercado: o que a temporada construiu (ou gastou). Divisão maior conta mais.
   const participacao = max ? titular / max : 0;
   const alvoRep = clamp((nota - 4.3) * 14 + (e.nivel - 1) * 6 + participacao * 10);
@@ -429,7 +498,9 @@ export function processarEsporte(v: Vida, r: Rng): void {
     const janela = mod.d === 'futebol' ? i >= 11 && i <= 17 : mod.d === 'tenis' ? i >= 10 && i <= 16 : i >= 12 && i <= 18;
     if (janela && h >= 42 && tentativas < 3 && (ultimaPeneira === undefined || v.t - ultimaPeneira >= 24)) {
       const serio = mod.nivel >= 2 ? 1 : 0.35;
-      const chance = clamp((h - 36) / 32, 0, 0.6) * serio * (0.6 + estruturaEsportiva(v.moradia.municipioId) * 0.15);
+      // Quem foi destaque (ou capitão) do time da escola é visto por quem indica (`arcos`): a história da atividade pesa na descoberta.
+      const visto = mod.d === 'futebol' && (temFato(v, 'destaque_escolar_futebol') || (v.educacao.vivencias ?? []).some(x => x.tipo === 'time' && (x.etapa === 'destaque' || x.etapa === 'capitao'))) ? 1.4 : 1;
+      const chance = clamp((h - 36) / 32, 0, 0.6) * serio * visto * (0.6 + estruturaEsportiva(v.moradia.municipioId) * 0.15);
       if (r.chance(chance)) {
         const lugar = ondeTreina(v, mod.d);
         const clube = nomeDeClube(lugar, `${v.id}:${i}`, mod.d);
@@ -526,24 +597,53 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
   const e = v.caminhos.esporte;
   if (!e) return;
   const oc = ocupacao(ocupacaoDaModalidade(e.modalidade));
+  // A volta de quem já era profissional (sem clube, ou depois da suspensão): é com o clube DA proposta, não o da base — e não é "o primeiro contrato".
+  if (e.fase === 'profissional') {
+    const p = propostaNaMesa(v);
+    const emp = contratar(v, r, oc, 'oportunidade');
+    emp.empregador = e.modalidade === 'tenis' ? 'por conta própria (o circuito)' : oClube(p?.clube ?? e.clube);
+    if (p) {
+      transferirPara(v, e, p);
+      // O clube é de outra cidade: a vida vai junto (quem mora na casa também — a mesma regra de toda mudança).
+      if (p.municipioId !== v.moradia.municipioId) { emp.municipioId = p.municipioId; mudarAgora(v, p.municipioId, `para jogar ${noClube(p.clube)}`); }
+    }
+    else { e.nivel = Math.max(1, Math.min(4, nivel)) as 1 | 2 | 3 | 4; e.espaco = 'reserva'; assinarContrato(v, e, 12); }
+    const texto = e.modalidade === 'futebol' ? `Voltou a jogar: assinou com ${oClube(e.clube)}, aos ${idade(v)}.` : `Voltou a competir, aos ${idade(v)}.`;
+    escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
+    return;
+  }
   e.fase = 'profissional';
   e.tFase = v.t;
   // O primeiro contrato é com o clube da base, na divisão que ele alcança na simulação.
   e.nivel = Math.max(1, Math.min(4, nivel, e.modalidade === 'futebol' ? tetoDoClube(e.clube) : 4)) as 1 | 2 | 3 | 4;
+  // Um clube grande não joga as divisões de acesso: quem ainda não tem nível para o time de cima começa num clube
+  // do tamanho do próprio jogo (o mesmo estado, de preferência) — e a biografia diz isso.
+  const daBase = e.clube;
+  if (e.modalidade === 'futebol' && e.nivel < pisoDoClube(e.clube)) {
+    const lista = clubesDoNivel(e.nivel, e.clube);
+    const uf = municipio(v.moradia.municipioId).uf;
+    const perto = lista.filter(c => municipio(c.cidade).uf === uf);
+    const alvo = (perto.length ? perto : lista)[Math.floor(hash(`${v.id}:primeiro`) * (perto.length || lista.length)) % (perto.length || lista.length)];
+    if (alvo) { e.clube = alvo.nome; e.municipioId = alvo.cidade; }
+  }
   if (e.modalidade === 'futebol') e.posicao ??= posicaoSugerida(v);
   e.reputacao ??= Math.round(clamp(12 + (habilidade(v, e.modalidade) - 70) * 1.5 + e.nivel * 4, 5, 45));
   // O treino de base vira treino de clube: é trabalho agora, não atividade de tempo livre (e não conta duas vezes na semana nem no corpo).
   v.rotinas = v.rotinas.filter(x => x.id !== e.modalidade);
   const emp = contratar(v, r, oc, 'oportunidade');
   emp.empregador = e.modalidade === 'tenis' ? 'por conta própria (o circuito)' : oClube(e.clube);
+  // O clube do primeiro contrato é de outra cidade: a vida vai para lá (a mesma regra de toda mudança).
+  if (e.clube !== daBase && e.municipioId !== v.moradia.municipioId) { emp.municipioId = e.municipioId; mudarAgora(v, e.municipioId, `para jogar ${noClube(e.clube)}`); }
   // O primeiro contrato é curto; o espaço no time depende do que se joga.
-  e.espaco = e.modalidade === 'tenis' ? 'titular' : habilidade(v, e.modalidade) >= 72 + e.nivel * 2 ? 'titular' : 'reserva';
+  e.espaco = e.modalidade === 'tenis' ? 'titular' : habilidade(v, e.modalidade) >= barraDeTitular(e.modalidade, e.nivel) ? 'titular' : 'reserva';
   assinarContrato(v, e, 24);
   // O tenista começa sem prêmio no bolso: a renda do ano é a estimativa do circuito em que entra (a temporada acerta a conta).
   if (e.modalidade === 'tenis') emp.salario = Math.round(premiacaoTenis(e, { nota: 6, partidas: [0, 14, 20, 22, 22][e.nivel] }) / 12 / 10) * 10;
-  const texto = e.modalidade === 'tenis' ? `Virou tenista profissional aos ${idade(v)}, no ${CIRCUITO_TENIS[e.nivel]}: sem clube, sem salário, a raquete e o ranking.` : e.modalidade === 'basquete' ? `Assinou o primeiro contrato de ${NOME_FUNCAO[funcaoBasquete(v)]} ${peloClube(e.clube)}, aos ${idade(v)}.` : e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, ${peloClube(e.clube)}, aos ${idade(v)}.` : `Virou atleta profissional de ${NOME_MOD[e.modalidade]}, ${peloClube(e.clube)}, aos ${idade(v)}.`;
+  const outroClube = e.clube !== daBase ? ` (${oClube(daBase)} não tinha lugar no time de cima)` : '';
+  const texto = e.modalidade === 'tenis' ? `Virou tenista profissional aos ${idade(v)}, no ${CIRCUITO_TENIS[e.nivel]}: sem clube, sem salário, a raquete e o ranking.` : e.modalidade === 'basquete' ? `Assinou o primeiro contrato de ${NOME_FUNCAO[funcaoBasquete(v)]} ${peloClube(e.clube)}, aos ${idade(v)}.` : e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, ${peloClube(e.clube)}, aos ${idade(v)}${outroClube}.` : `Virou atleta profissional de ${NOME_MOD[e.modalidade]}, ${peloClube(e.clube)}, aos ${idade(v)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'profissional', texto, 3, { dominio: e.modalidade, ocupacaoId: oc.id });
+  registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: anoDe(v.t), competicao: divisaoDe(e.modalidade, e.nivel), clube: e.modalidade === 'tenis' ? undefined : e.clube, texto: `Primeiro contrato profissional, aos ${idade(v)}` });
   marcarFato(v, 'atleta_profissional');
 }
 
@@ -556,7 +656,9 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     if (v.t < e.suspensoAte) return;
     e.suspensoAte = undefined;
     if (nivelQueOMercadoOferece(v, e) >= 1 || habilidade(v, e.modalidade) >= 66) {
-      novaOportunidade(v, { tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'volta_suspensao', titulo: 'Voltar a jogar', texto: 'Acabou a suspensão. Um clube pequeno topa dar uma chance — salário baixo, olhar desconfiado.', bonus: 1 });
+      e.proposta = undefined;
+      const p = criarProposta(v, e, 1, 'sem_clube');
+      novaOportunidade(v, { tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'volta_suspensao', titulo: 'Voltar a jogar', texto: `Acabou a suspensão. ${p && e.modalidade === 'futebol' ? `${cap(oClube(p.clube))}, de ${municipio(p.municipioId).nome},` : 'Um clube pequeno'} topa dar uma chance — salário baixo, olhar desconfiado.`, bonus: 1 });
       escrever(v, { texto: 'A suspensão acabou. O nome ficou marcado, mas um clube pequeno ligou.', relevancia: 'biografia', tema: 'trabalho' });
     } else encerrarCarreira(v, e, 'suspensao');
     return;
@@ -568,7 +670,11 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
       const oferta = nivelQueOMercadoOferece(v, e);
       if (oferta >= 1 && v.t - desde <= 24) {
         delete v.fatos['esp_sem_clube'];
-        novaOportunidade(v, { tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'volta_clube', titulo: 'Um clube ligou', texto: `Depois de meses treinando por conta, ${oferta < e.nivel ? 'um clube de divisão menor' : 'um clube'} fez proposta. Salário ${oferta < e.nivel ? 'menor' : 'parecido'}, contrato curto.`, bonus: oferta });
+        e.proposta = undefined;
+        const nivel = Math.min(4, oferta) as 1 | 2 | 3 | 4;
+        const p = criarProposta(v, e, nivel, 'sem_clube');
+        const quem = p && e.modalidade === 'futebol' ? `${oClube(p.clube)}, de ${municipio(p.municipioId).nome},` : oferta < e.nivel ? 'um clube de divisão menor' : 'um clube';
+        novaOportunidade(v, { tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'volta_clube', titulo: 'Um clube ligou', texto: `Depois de meses treinando por conta, ${quem} fez proposta${p ? ` (${divisaoDe(e.modalidade, p.nivel)})` : ''}. Salário ${oferta < e.nivel ? 'menor' : 'parecido'}, contrato curto.`, bonus: nivel });
         return;
       }
       if (v.t - desde >= 12) { delete v.fatos['esp_sem_clube']; encerrarCarreira(v, e, 'sem_contrato'); }
@@ -603,33 +709,28 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   const h = habilidade(v, e.modalidade);
   if (e.modalidade === 'tenis') { anoDeCircuito(v, r, e, t); return; }
   const nomeClube = e.modalidade === 'futebol' ? cap(e.clube) : 'A equipe';
-  // Temporadas que ficam na biografia: a primeira, a de destaque, a que foi campeã.
-  const primeira = (e.temporadas?.length ?? 0) === 1;
-  if (primeira || t.nota >= 8.2 || (t.colocacao === 1 && t.titular >= 10)) {
-    const texto = t.colocacao === 1 && t.titular >= 10
-      ? `Campeão ${e.modalidade === 'basquete' ? `${divisaoDe('basquete', t.nivel) === 'campeonato estadual' ? 'estadual' : `da ${divisaoDe('basquete', t.nivel).replace(/ —.*$/, '')}`} com ${oClube(e.clube)}` : e.modalidade === 'futebol' ? `${DIVISAO_DO_NIVEL[t.nivel] === 'campeonato estadual' ? 'estadual' : `da ${DIVISAO_DO_NIVEL[t.nivel]}`} com ${oClube(e.clube)}` : 'com a equipe'}: ${linhaDaTemporada(v, t).split(' · ').slice(2).join(', ')}.`.replace('Campeão', flex(ge(v), 'Campeão', 'Campeã', 'Campeão'))
-      : primeira ? `A primeira temporada como profissional, ${noClube(e.clube)}: ${t.partidas} jogos${t.gols ? `, ${t.gols} ${t.gols === 1 ? 'gol' : 'gols'}` : ''}.`
-        : `Temporada de destaque ${noClube(e.clube)}: ${linhaDaTemporada(v, t).split(' · ').slice(2).join(', ')}.`;
-    escrever(v, { texto, relevancia: t.colocacao === 1 || t.nota >= 8.2 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: 'bom' });
-    if (t.colocacao === 1 && t.titular >= 10) marcar(v, 'conquista', texto, t.nivel >= 3 ? 3 : 2, { dominio: e.modalidade });
-  }
+  // A temporada no palmarés: título (e o papel nele), acesso ou rebaixamento, prêmios pela posição, marcos — e a seleção, que observa.
+  registrarTemporada(v, r, e, t);
+  processarSelecao(v, r, e, t);
   // O mercado reage à temporada: um clube maior pergunta (a resposta é sua: `esp_proposta`).
   const oferta = nivelQueOMercadoOferece(v, e);
-  if (oferta > e.nivel && e.nivel < 4 && t.nota >= 6.6 && r.chance(0.45)) v.fatos['esp_proposta_hoje'] = v.t;
-  // Reserva de novo, temporada fraca: o clube empresta para um menor (decisão do clube, não sua).
+  // A proposta nasce aqui, concreta (clube, cidade, salário), e fica na mesa até a resposta (`criarProposta`).
+  if (oferta > e.nivel && e.nivel < 4 && t.nota >= 6.6 && r.chance(0.45) && criarProposta(v, e, (e.nivel + 1) as 1 | 2 | 3 | 4, 'mercado')) v.fatos['esp_proposta_hoje'] = v.t;
+  // Reserva de novo, temporada fraca: o clube quer liberar você para um menor (a ideia é do clube; ir ou ficar brigando é você quem diz).
   const ultimas = (e.temporadas ?? []).slice(-2);
-  if (e.espaco === 'reserva' && ultimas.length === 2 && ultimas.every(x => x.nota < 5.6 && x.titular < 8) && e.nivel > 1 && oferta < e.nivel && r.chance(0.5)) {
-    const novo = mudarDeClube(v, e, (e.nivel - 1) as 1 | 2 | 3 | 4);
-    assinarContrato(v, e, 24);
-    escrever(v, { texto: e.modalidade === 'futebol' ? `Sem espaço no time, foi emprestado ${aoClube(novo)}.` : 'Sem espaço na equipe principal, voltou a competir num nível abaixo.', relevancia: 'cotidiano', tema: 'trabalho' });
-  }
+  if (e.espaco === 'reserva' && ultimas.length === 2 && ultimas.every(x => x.nota < 5.6 && x.titular < 8) && e.nivel > 1 && oferta < e.nivel && r.chance(0.5)
+    && criarProposta(v, e, (e.nivel - 1) as 1 | 2 | 3 | 4, 'liberacao')) v.fatos['esp_proposta_hoje'] = v.t;
   // Titular ou banco na próxima: a temporada, a técnica, a conversa com o treinador, a idade para a posição.
   const conversa = v.fatos['esp_treinador_ok'] !== undefined && v.t - v.fatos['esp_treinador_ok'] <= 12 ? 3 : 0;
   const antes = e.espaco;
   const passou = Math.max(0, i - auge);
-  e.espaco = h + (t.nota - 6) * 2.5 + conversa - passou * 1.2 >= 72 + e.nivel * 2 && !(lesaoAtiva(v)?.lesao.gravidade === 3) ? 'titular' : 'reserva';
+  e.espaco = h + (t.nota - 6) * 2.5 + conversa - passou * 1.2 >= barraDeTitular(e.modalidade, e.nivel) && !(lesaoAtiva(v)?.lesao.gravidade === 3) ? 'titular' : 'reserva';
   if (antes === 'titular' && e.espaco === 'reserva') { escrever(v, { texto: `${nomeClube === 'A equipe' ? 'Perdeu a vaga na equipe principal' : 'Perdeu a posição'}: a próxima temporada começa no banco.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' }); abalar(v, 'perder a posição no time', -4, 3); }
-  else if (antes === 'reserva' && e.espaco === 'titular') escrever(v, { texto: 'Ganhou a posição: a próxima temporada começa como titular.', relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+  else if (antes === 'reserva' && e.espaco === 'titular') {
+    escrever(v, { texto: `Ganhou a posição: a próxima temporada começa como titular${e.clausulaTitular ? ' — e o salário sobe, como o contrato dizia' : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+    // A cláusula da proposta aceita: o que foi dito antes de assinar é cumprido aqui.
+    if (e.clausulaTitular && emp && OCUPACOES_DE_ATLETA.includes(emp.ocupacaoId)) { emp.salario = Math.max(emp.salario, e.clausulaTitular); e.clausulaTitular = undefined; }
+  }
   // O contrato vence: renovar é conversa (`esp_renovacao`) — e o mercado é quem diz se ainda há lugar.
   e.contratoAte ??= v.t + 24;
   // Venceu há um ano e a conversa não aconteceu (outra decisão ocupou o ano): o contrato não vale para sempre.
@@ -647,7 +748,12 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
       return;
     }
   }
-  if (v.t >= e.contratoAte) v.fatos['esp_renovacao'] = v.t;
+  if (v.t >= e.contratoAte) {
+    v.fatos['esp_renovacao'] = v.t;
+    // Quem só tem sondagem de divisão menor recebe a proposta concreta junto (o nome do clube, a cidade, o salário).
+    const o = nivelQueOMercadoOferece(v, e);
+    if (o >= 1 && o < e.nivel) { e.proposta = undefined; criarProposta(v, e, o as 1 | 2 | 3 | 4, 'menor'); }
+  }
   // (FIX pós-REWORK 2: não há mais aposentadoria por idade fixa. O corpo declina pela posição, a temporada
   // mostra, o mercado lê: banco, divisão menor, salário menor — e, um dia, nenhum clube. Parar é escolha.)
 }
@@ -671,6 +777,7 @@ function anoDeCircuito(v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada): voi
   const texto = `O ano no ${CIRCUITO_TENIS[e.nivel]}: ${t.vitorias} vitórias${t.titulos ? `, ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}, ranking ${t.ranking}º. Prêmios de ${dinheiro(premio)}; treinador e viagens custaram ${dinheiro(custos)} — ${liquido >= 0 ? `sobraram ${dinheiro(liquido)}` : `faltaram ${dinheiro(-liquido)}`}.`;
   escrever(v, { texto, relevancia: t.titulos ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: liquido >= 0 ? 'bom' : t.titulos ? undefined : 'ruim' });
   if (t.titulos && e.nivel >= 3) marcar(v, 'conquista', `${flex(ge(v), 'Campeão', 'Campeã', 'Campeão')} de torneio no ${CIRCUITO_TENIS[e.nivel]} (ranking ${t.ranking}º).`, 3, { dominio: 'tenis' });
+  if (t.titulos) registrarConquista(v, { tipo: 'titulo', modalidade: 'tenis', ano: t.ano, competicao: CIRCUITO_TENIS[e.nivel], papel: 'protagonista', texto: `${t.titulos} ${t.titulos === 1 ? 'torneio vencido' : 'torneios vencidos'} no ${CIRCUITO_TENIS[e.nivel]} (ranking ${t.ranking}º)` });
   // O ranking decide onde se joga: subir (a porta do circuito maior) ou descer (o nome não sustentou).
   const oferta = nivelQueOMercadoOferece(v, e);
   if (oferta > e.nivel && e.nivel < 4) {

@@ -173,7 +173,7 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
   return (
     <article className={`objeto objeto--${b.tipo}`}>
       <div className="objeto__cabeca">
-        {b.tipo === 'imovel' ? <IconeMoradia modeloId={b.modeloId} /> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={NOME_FORMA[b.forma]} largura={56} /> : <Icone nome={b.icone} />}
+        {b.tipo === 'imovel' ? <IconeMoradia modeloId={b.modeloId} /> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={NOME_FORMA[b.forma]} largura={56} semente={b.modeloId} /> : <Icone nome={b.icone} />}
         <div className="objeto__nome">
           <h3>{b.titulo}</h3>
           <p>{b.meta}</p>

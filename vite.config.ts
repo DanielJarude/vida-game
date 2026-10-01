@@ -38,6 +38,9 @@ export default defineConfig({
           // entrevista, a leitura da independência) vai com ela — o pacote dos sistemas volta a caber no limite, sem ciclo.
           // FIX 3.1: as interações com pessoas, as experiências e a autoria (só as ações e as telas as chamam) também.
           if (/[\\/]src[\\/]motor[\\/](save\.ts|criacao\.ts|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria)\.ts)/.test(id)) return 'motor-conteudo';
+          // Pacote pós-playtest: as situações de carreira e o uso da visibilidade num pacote próprio — o conteúdo (e o ano)
+          // os chamam; eles só chamam os sistemas. Sem ciclo, e os dois pacotes de cima seguem abaixo do limite.
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|visibilidade)\.ts/.test(id)) return 'motor-carreira';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           if (/[\\/]src[\\/]motor[\\/]/.test(id)) return 'motor';
           return undefined;

@@ -49,7 +49,9 @@ import { doClube } from '../../motor/dados/clubes';
 import { augeDe, categoriaDaBase, divisaoDe, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
 import { estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
 import { lesaoAtiva } from '../../motor/sistemas/lesoes';
-import { palavraDaNotoriedade } from '../../motor/sistemas/notoriedade';
+import { leituraDoNome } from '../../motor/sistemas/notoriedade';
+import { historicoPorClube, leituraDoPalmares } from '../../motor/sistemas/palmares';
+import { momentosDaCarreira } from '../../motor/sistemas/situacoes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Renomear, Secao } from '../comum';
 import { Retrato } from '../avatar/Retrato';
@@ -143,6 +145,8 @@ export function Trabalho({ vida, agir, irPara }: Props) {
       <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => !/^(selecao|vestibular):/.test(o.id)} />
       <Trajetorias vida={vida} />
       <CurriculoArtistico vida={vida} agir={agir} />
+      <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta'} />
+      <MomentosDaCarreira vida={vida} />
       {(vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <PorOndePassou vida={vida} />}
     </div>
   );
@@ -302,7 +306,7 @@ function PainelAtleta({ vida }: { vida: Vida }) {
   const i = idade(vida);
   const auge = augeDe(vida, es);
   const t = es.temporadas?.[es.temporadas.length - 1];
-  const noto = vida.notoriedade && vida.notoriedade.valor >= 10 ? palavraDaNotoriedade(vida) : undefined;
+  const noto = leituraDoNome(vida)?.frase;
   const oferta = nivelQueOMercadoOferece(vida, es);
   const lesao = lesaoAtiva(vida);
   const tenis = es.modalidade === 'tenis';
@@ -482,8 +486,10 @@ function PainelPolitico({ vida, principal }: { vida: Vida; principal: boolean })
       {m && <Medidor valor={m.aprovacao} rotulo="Aprovação" palavra={l.aprovacao ?? ''} />}
       <dl className="dados">
         {l.partido && <Dado rotulo="Partido">{l.partido}</Dado>}
+        {l.publico && <Dado rotulo="Para o público">{l.publico}</Dado>}
+        <Dado rotulo="Como político">{l.reputacao}</Dado>
         <Dado rotulo="Base de apoio">{l.apoio}</Dado>
-        <Dado rotulo="O nome">{l.reputacao}</Dado>
+        {l.noPartido && <Dado rotulo="No partido">{l.noPartido}</Dado>}
         <Dado rotulo={m ? 'Prioridade do mandato' : 'Bandeira'}>{nomeDaBandeira(p?.prioridade)}</Dado>
         {l.estrutura && <Dado rotulo="O partido aqui">{l.estrutura}</Dado>}
         {l.desgaste && <Dado rotulo="Desgaste">{l.desgaste}</Dado>}
@@ -835,6 +841,53 @@ function CurriculoArtistico({ vida, agir }: { vida: Vida; agir: (a: Acao) => boo
         </>
       )}
       <p className="nota">Produções e títulos são do universo desta vida.</p>
+    </Secao>
+  );
+}
+
+/**
+ * A memória estruturada da carreira esportiva (o palmarés): títulos (com o
+ * papel), acessos, prêmios, seleção, marcos — e o histórico por clube. Fica
+ * depois que a carreira acaba. A Linha da Vida tem os marcos; aqui, o detalhe.
+ */
+function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolean }) {
+  const es = vida.caminhos.esporte;
+  const p = leituraDoPalmares(vida);
+  const clubes = es && es.fase !== 'base' ? historicoPorClube(es) : [];
+  if (!clubes.length && !p.titulos.length && !p.premios.length) return null;
+  const futebol = es?.modalidade === 'futebol';
+  const total = clubes.reduce((a, c) => ({ jogos: a.jogos + c.jogos, gols: a.gols + c.gols }), { jogos: 0, gols: 0 });
+  return (
+    <Secao titulo={es?.fase === 'encerrada' ? 'A carreira no esporte (encerrada)' : 'A carreira no esporte'} recolhivel aberta={aberta}>
+      {clubes.length > 0 && <p className="painel__frase">{clubes.length} {clubes.length === 1 ? 'clube' : 'clubes'}, {total.jogos} jogos{futebol ? `, ${total.gols} ${total.gols === 1 ? 'gol' : 'gols'}` : ''}{p.titulos.length ? ` · ${p.titulos.length} ${p.titulos.length === 1 ? 'conquista' : 'conquistas'}` : ''}.</p>}
+      {p.titulos.length > 0 && <div className="palmares__grupo"><h4>Títulos e acessos</h4><ul className="marcos-caminho">{p.titulos.slice().reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
+      {p.premios.length > 0 && <div className="palmares__grupo"><h4>Prêmios individuais</h4><ul className="marcos-caminho">{p.premios.slice().reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
+      {p.selecao && <div className="palmares__grupo"><h4>Seleção</h4><p>{p.selecao}</p></div>}
+      {p.marcos.length > 0 && <div className="palmares__grupo"><h4>Marcos</h4><ul className="marcos-caminho">{p.marcos.slice(-8).reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
+      {clubes.length > 0 && (
+        <div className="palmares__grupo">
+          <h4>Por clube</h4>
+          <div className="palmares__historico-rolagem">
+            <table className="palmares__historico">
+              <thead><tr><th>Clube</th><th>Anos</th><th>Jogos</th><th>Titular</th>{futebol && <><th>Gols</th><th>Assist.</th>{es?.posicao && ['goleiro', 'zagueiro', 'volante', 'lateral'].includes(es.posicao) && <th>{es.posicao === 'goleiro' ? 'Sem sofrer gol' : 'Desarmes'}</th>}</>}</tr></thead>
+              <tbody>{clubes.slice().reverse().map((c, k) => <tr key={k}><td>{c.clube}</td><td>{c.de === c.ate ? c.de : `${c.de}–${c.ate}`}</td><td>{c.jogos}</td><td>{c.titular}</td>{futebol && <><td>{c.gols}</td><td>{c.assistencias}</td>{es?.posicao && ['goleiro', 'zagueiro', 'volante', 'lateral'].includes(es.posicao) && <td>{c.defesa}</td>}</>}</tr>)}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {futebol && <p className="nota">{CLUBES_REAIS}</p>}
+    </Secao>
+  );
+}
+
+/** Os momentos da carreira (as situações vividas): a intenção, o que aconteceu. Nem todo ano tem um. */
+function MomentosDaCarreira({ vida }: { vida: Vida }) {
+  const xs = momentosDaCarreira(vida, 8);
+  if (!xs.length) return null;
+  return (
+    <Secao titulo="Momentos da carreira" recolhivel aberta={false}>
+      <ul className="momentos-carreira">{xs.map((x, k) => <li key={k} className={`momento--${x.desfecho}`}><span className="momentos-carreira__ano">{x.ano}</span><span><em>{x.intencao}.</em> {x.texto}</span></li>)}</ul>
+      <p className="nota">A escolha é sua; o que acontece depende do que você construiu — e do dia.</p>
     </Secao>
   );
 }

@@ -147,7 +147,21 @@ export function comprarItem(v: Vida, itemId: string, pagoPelaFamilia = false): s
   for (const x of v.eu.estilo.itens) if (x !== item && mesmoLugar(it, itemEstilo(x.itemId))) x.usando = false;
   if (it.visual) Object.assign(v.eu.visual, it.visual);
   v.eu.estilo.tMudanca = v.t;
-  return it.luxo ? `Comprou ${it.nome.toLowerCase()} por ${fmt(preco)}. É bonito. Ninguém na rua sabe quem você é por causa disso.` : `Comprou ${it.nome.toLowerCase()}${pagoPelaFamilia ? '' : ` por ${fmt(preco)}`}.`;
+  return it.luxo ? `Comprou ${it.nome.toLowerCase()} por ${fmt(preco)}. ${efeitoDoLuxo(v)}` : `Comprou ${it.nome.toLowerCase()}${pagoPelaFamilia ? '' : ` por ${fmt(preco)}`}.`;
+}
+
+/**
+ * O que o luxo faz (e não faz) — pela notoriedade que JÁ existe. Luxo mexe no
+ * estilo e na imagem material; não cria fama. Para quem o público já
+ * reconhece, aparece nas fotos e entra na imagem pública (`imagemPublica`);
+ * para quem é anônimo, é só um objeto bonito.
+ */
+export function efeitoDoLuxo(v: Vida): string {
+  const x = v.notoriedade?.valor ?? 0;
+  if (x >= 55) return 'Nas fotos, todo mundo repara — vira parte de como o público vê você, não do quanto ele conhece você.';
+  if (x >= 30) return 'Quem reconhece você na rua repara. Não é isso que faz alguém saber o seu nome.';
+  if (x >= 10) return 'É bonito. Quem já conhece o seu trabalho pode até reparar; o nome não cresce por causa disso.';
+  return 'É bonito. Ninguém na rua passa a saber quem você é por causa disso.';
 }
 
 /** Dois itens disputam o mesmo lugar (só um de cada vez)? */

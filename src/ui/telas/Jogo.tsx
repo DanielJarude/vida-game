@@ -186,7 +186,7 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
   if (vida.trabalho.atual?.formacaoAte) andamento.push(`Curso de formação até ${anoDe(vida.trabalho.atual.formacaoAte)}`);
   if (vida.caminhos.esporte?.fase === 'base') andamento.push(`Na base ${doClube(vida.caminhos.esporte.clube)}`);
   if (vida.caminhos.politica?.campanha) andamento.push(`Em campanha até outubro de ${anoDe(vida.caminhos.politica.campanha.tEleicao)}`);
-  const portas = vida.caminhos.oportunidades.filter(o => o.tFim > vida.t);
+  const portas = oportunidadesAbertas(vida);
   return (
     <div className="painel-agora">
       {pessoal && area !== 'voce' && (
@@ -290,4 +290,5 @@ function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
  */
 import { ImportarVida } from './ImportarVida';
 import { Tempo } from '../jogo/Tempo';
+import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 export { ImportarVida };

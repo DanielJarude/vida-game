@@ -33,6 +33,7 @@ import { lacoCom, oLaco } from './rede';
 import { vereditoDePagar, disponivel } from './dinheiro';
 import { responderChamado, rotulosDoChamado } from './iniciativas';
 import { ativo as envolvimentoAtivo, proporPorFora, sabeQueAndaNisso } from './ilicito';
+import { contextoDaRelacao, conversarNoApp, encontroDoApp, etapaDoApp, pesoDoContexto, registrarFase } from './relacoes';
 
 
 export interface CtxI {
@@ -411,7 +412,7 @@ export const INTERACOES: Interacao[] = [
       c.vin.distancia = undefined;
       afeto(c, 14); confiar(c, 3);
       // Reaproximar é gesto; a amizade volta se a pessoa também estava disposta (o afeto que sobrou diz).
-      if (c.vin.proximidade >= 40 && !c.vin.parentesco) { c.vin.estagio = 'amigo'; c.vin.aproximacao = c.v.t; }
+      if (c.vin.proximidade >= 40 && !c.vin.parentesco) { c.vin.estagio = 'amigo'; c.vin.aproximacao = c.v.t; registrarFase(c.v, c.vin, 'amigo'); }
       escrever(c.v, { texto: `Procurou ${c.p.nome} depois de muito tempo sem se falar.`, relevancia: 'cotidiano', tema: c.vin.parentesco ? 'familia' : 'amizade', escolha: true, pessoas: [c.p.id], evento: { tipo: 'reencontro', pessoaId: c.p.id, peso: 20 } });
       lembrarCom(c.v, c.p.id, 'Voltaram a se falar depois de anos.', 'reconciliacao', 2);
       return { resultado: c.vin.proximidade >= 40 ? `${c.p.nome} respondeu na hora. Parecia estar esperando isso.` : `${c.p.nome} respondeu com educação. Vai levar tempo.` };
@@ -474,7 +475,7 @@ export const INTERACOES: Interacao[] = [
       afeto(c, -6);
       // Limite posto costuma diminuir o atrito (menos ocasião de briga), mesmo que doa.
       acalmar(c, c.vin.parentesco || c.papel === 'ex' ? 12 : 4);
-      if (c.vin.estagio === 'amigo' || c.vin.estagio === 'amigo_proximo') c.vin.estagio = 'afastado';
+      if (c.vin.estagio === 'amigo' || c.vin.estagio === 'amigo_proximo') { c.vin.estagio = 'afastado'; registrarFase(c.v, c.vin, 'afastado'); }
       aplicarPersonalidade(c.v, 'acao:afastar', { independencia: 1 });
       lembrarCom(c.v, c.p.id, c.vin.parentesco ? 'Você pôs limites.' : c.papel === 'ex' ? 'Você cortou o contato.' : 'Você tomou distância.', 'distancia', 1);
       escrever(c.v, { texto: c.vin.parentesco ? `Pôs limites na relação com ${c.p.nome}.` : c.papel === 'ex' ? `Cortou o contato com ${c.p.nome}.` : `Tomou distância de ${c.p.nome}.`, relevancia: c.vin.parentesco || importanciaPara(c) >= 40 ? 'biografia' : 'cotidiano', tema: c.vin.parentesco ? 'familia' : c.papel === 'ex' ? 'amor' : 'amizade', escolha: true, pessoas: [c.p.id] });
@@ -523,6 +524,7 @@ export const INTERACOES: Interacao[] = [
       }
       c.vin.estagio = 'amigo';
       c.vin.aproximacao = c.v.t;
+      registrarFase(c.v, c.vin, 'reconciliacao');
       afeto(c, 6); confiar(c, 5);
       lembrarCom(c.v, c.p.id, 'De ex a amigos: os dois quiseram.', 'amizade', 2);
       escrever(c.v, { texto: `Depois do fim, ${c.p.nome} e você viraram amigos.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', escolha: true, pessoas: [c.p.id] });
@@ -620,12 +622,39 @@ export const INTERACOES: Interacao[] = [
     executar: (c, r) => declarar(c, r)
   },
   {
+    // O aplicativo: depois do match, a conversa (pode seguir, esfriar, sumir).
+    id: 'app_conversar', destaque: true, variante: 'principal',
+    quando: c => humano(c) && !parceiro(c.v) && etapaDoApp(c.v, c.vin) === 'match',
+    prioridade: () => 4,
+    rotulo: c => `Puxar conversa com ${c.p.nome} no aplicativo`,
+    executar: (c, r) => { const x = conversarNoApp(c.v, r, c.p, c.vin); return { resultado: x.texto, titulo: c.p.nome }; }
+  },
+  {
+    // O primeiro encontro: a química decide o depois — não o contexto.
+    id: 'app_encontro', destaque: true, variante: 'principal',
+    quando: c => humano(c) && !parceiro(c.v) && etapaDoApp(c.v, c.vin) === 'conversa' && !c.longe,
+    prioridade: () => 4,
+    rotulo: c => `Marcar um encontro com ${c.p.nome}`,
+    executar: (c, r) => {
+      const x = encontroDoApp(c.v, r, c.p, c.vin);
+      if (x.resultado === 'saindo') return comecarASair(c, Math.max(55, c.vin.romance?.envolvimento ?? 55), `Começou a sair com ${c.p.nome}, que conheceu pelo aplicativo.`, `O encontro durou até fecharem o bar. ${c.p.nome} mandou mensagem antes de você chegar em casa.`);
+      if (x.resultado === 'talvez') { if (c.vin.contexto) c.vin.contexto.etapa = 'conversa'; lembrarCom(c.v, c.p.id, 'O primeiro encontro: bom, sem certeza.', 'romance', 1); return { resultado: `Foi bom — sem fogos. ${c.p.nome} topou um segundo encontro, "para ver".`, titulo: c.p.nome }; }
+      recusar(c);
+      if (c.vin.contexto) c.vin.contexto.etapa = 'encerrado';
+      if (x.resultado === 'amizade') { registrarFase(c.v, c.vin, 'so_amizade'); afeto(c, 6); lembrarCom(c.v, c.p.id, 'Um encontro que virou conversa de amigos.', 'amizade', 1); return { resultado: `A conversa foi ótima — de amigos. Os dois perceberam ao mesmo tempo, e riram disso.`, titulo: c.p.nome }; }
+      registrarFase(c.v, c.vin, 'sem_quimica');
+      return { resultado: `${c.p.nome} foi gentil, você também.${motivoDoNao(c, 'quimica')} Ninguém marcou o segundo.`, titulo: c.p.nome };
+    }
+  },
+  {
     id: 'convidar', chance: true, destaque: true,
     quando: c => {
       if (!humano(c) || c.vin.parentesco || c.eu < 13 || c.ip < 13) return false;
       const rom = c.vin.romance;
       if (parceiro(c.v)) return !rom || rom.estagio === 'interesse' || (rom.estagio === 'ex' && rom.fim !== 'morte');
       if (!iniciativaPossivel(c) || c.longe) return false;
+      // No aplicativo, o caminho é o dele: conversar, marcar o encontro (`app_conversar`, `app_encontro`).
+      if (etapaDoApp(c.v, c.vin) === 'match' || etapaDoApp(c.v, c.vin) === 'conversa') return false;
       if (rom?.estagio === 'interesse') return !rom.pediuTempo;
       if (rom?.estagio === 'ex') return rom.fim !== 'morte' && c.v.t - rom.tEstagio >= 24 && c.vin.proximidade >= 35;
       if (rom) return false;
@@ -661,13 +690,17 @@ export const INTERACOES: Interacao[] = [
     rotulo: () => 'Pedir em namoro',
     executar: (c, r) => {
       const rom = c.vin.romance!;
-      if (r.chance(clamp((rom.envolvimento - 30) / 45, 0.05, 0.95))) {
+      // O que a pessoa procura pesa na exclusividade: quem queria algo casual pode gostar de você e, ainda assim, dizer não.
+      const busca = contextoDaRelacao(c.v, c.vin).busca;
+      const casual = busca === 'casual' ? 0.45 : busca === 'incerto' ? 0.8 : 1;
+      if (r.chance(clamp((rom.envolvimento - 30) / 45 * casual, 0.05, 0.95))) {
         mudarEstagio(c.v, c.vin, 'namoro');
         escrever(c.v, { texto: `Começou a namorar ${c.p.nome}.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id], evento: { tipo: 'namoro', pessoaId: c.p.id, peso: 40 } });
         lembrarCom(c.v, c.p.id, 'Começaram a namorar.', 'romance', 2);
         return { resultado: `${c.p.nome} disse sim antes de você terminar a frase.` };
       }
       envolver(c, -8);
+      if (busca === 'casual') return { resultado: `${c.p.nome} gosta do que vocês têm — e disse, com franqueza, que não quer namorar agora.${motivoDoNao(c, 'busca')}` };
       return { resultado: `${c.p.nome} disse que ainda não está pront${o(c.p)} para isso.` };
     }
   },
@@ -1204,17 +1237,27 @@ const podeTentarIdade = (c: CtxI) => { const g = regraDeIdade(c.eu, c.ip).grau; 
  * afinidade e aparência (`interesseInicial`), proximidade, confiança,
  * história, atrito e o momento dela. Um pouco de acaso por cima.
  */
-export function interesseDoOutro(c: CtxI, r?: Rng): { valor: number; motivo?: 'orientacao' | 'compromisso' | 'momento' } {
+export type MotivoDoNao = 'orientacao' | 'compromisso' | 'momento' | 'amizade' | 'busca' | 'quimica';
+export function interesseDoOutro(c: CtxI, r?: Rng): { valor: number; motivo?: MotivoDoNao } {
   let x = Math.max(c.vin.romance?.envolvimento ?? 0, interesseInicial(c.v, c.p));
   x += c.vin.proximidade * 0.25 - 10;
   x += (c.vin.confianca - 50) * 0.12;
   x += Math.min(8, c.vin.historia.length * 1.2);
   x -= c.vin.tensao * 0.3;
-  let motivo: 'orientacao' | 'compromisso' | 'momento' | undefined;
+  // A origem da relação (o app abre a porta; o trabalho, pouco; a infância traz história): contexto, não destino (`relacoes`).
+  x += pesoDoContexto(c.v, c.vin);
+  let motivo: MotivoDoNao | undefined;
   if (c.p.aperto && c.v.t - c.p.aperto.t <= 18 && (c.p.aperto.tipo === 'separacao' || c.p.aperto.tipo === 'luto')) { x -= 12; motivo = 'momento'; }
   if (r) x += r.normal() * 6;
   if (!atraiGenero(c.p.atracao, c.v.eu.genero)) { x = Math.min(x, 28); motivo = 'orientacao'; }
   if (c.p.parceiroId) { x = Math.min(x, 24); motivo = 'compromisso'; }
+  // O que é razoavelmente conhecível, quando a resposta é não: entre amigos de verdade, o "gosto de você, mas não assim";
+  // depois de um encontro sem química, a química; no app, o que o perfil dizia procurar.
+  const ctx = contextoDaRelacao(c.v, c.vin);
+  if (!motivo && x < 50) {
+    if ((c.vin.estagio === 'amigo' || c.vin.estagio === 'amigo_proximo') && c.vin.proximidade >= 50) motivo = 'amizade';
+    else if (ctx.quimica !== undefined && ctx.quimica < 50) motivo = 'quimica';
+  }
   return { valor: clamp(Math.round(x)), motivo };
 }
 
@@ -1223,10 +1266,13 @@ function recusar(c: CtxI): void {
   if (c.vin.romance?.estagio === 'interesse' || c.vin.romance?.estagio === 'ex') c.vin.romance = c.vin.romance.estagio === 'ex' ? c.vin.romance : undefined;
 }
 
-function motivoDoNao(c: CtxI, m?: 'orientacao' | 'compromisso' | 'momento'): string {
+function motivoDoNao(c: CtxI, m?: MotivoDoNao): string {
   if (m === 'compromisso') return ` ${capital(ele(c.p))} está com outra pessoa.`;
   if (m === 'orientacao') return ` ${capital(ele(c.p))} gosta de você — mas não desse jeito.`;
   if (m === 'momento') return ` Não é o momento: ${ele(c.p)} está atravessando ${c.p.aperto?.tipo === 'luto' ? 'um luto' : 'uma separação'}.`;
+  if (m === 'amizade') return ` Gosta muito de você — como ${flex(c.v.eu.genero, 'amigo', 'amiga', 'amigue')}. Disse com cuidado, para não perder isso.`;
+  if (m === 'quimica') return ' Foi agradável — mas, para os dois, não houve química.';
+  if (m === 'busca') return ` ${capital(ele(c.p))} disse que não está procurando um relacionamento agora.`;
   return '';
 }
 

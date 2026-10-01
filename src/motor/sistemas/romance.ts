@@ -36,6 +36,7 @@ import { filhosEmComum } from './vinculos';
 import { abalar } from './abalo';
 import { ficouSabendo, registrarSegredo } from './exposicao';
 import { semOcupacao } from './trabalho';
+import { registrarFase } from './relacoes';
 
 const ESTAGIOS_ATIVOS: EstagioRomance[] = ['saindo', 'namoro', 'morando_junto', 'casamento'];
 
@@ -92,6 +93,7 @@ export function mudarEstagio(v: Vida, vin: Vinculo, estagio: EstagioRomance, fim
   const rom = vin.romance;
   if (rom.tInicio === undefined && estagio !== 'interesse' && estagio !== 'ex') rom.tInicio = v.t;
   rom.estagio = estagio;
+  registrarFase(v, vin, estagio);
   rom.tEstagio = v.t;
   if (estagio !== 'ex') rom.fim = undefined;
   if (estagio === 'namoro' && !rom.planoFilhos) rom.planoFilhos = 'evitando';
