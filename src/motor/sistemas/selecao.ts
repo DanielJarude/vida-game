@@ -5,7 +5,8 @@
  *
  *   futebol, basquete, vôlei  a seleção: convocação, jogos, torneios
  *   tênis                     a equipe do país na competição por equipes —
- *                             o critério é o ranking
+ *                             o critério é o ranking entre os tenistas do
+ *                             país (o 4º melhor convoca, o 2º joga as simples)
  *   natação, atletismo, luta  o índice: a classificação para as competições
  *                             internacionais (mundial, jogos multiesportivos);
  *                             a campanha é individual (final, medalha)
@@ -29,7 +30,7 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, criarRng } from '../rng';
 import type { CarreiraEsportiva, Dominio, Posicao, Temporada, TrajetoriaNaSelecao, Vida } from '../tipos';
 import { NOME_MOD } from './esporte';
 import { perfilDe } from './perfisEsportivos';
@@ -84,7 +85,8 @@ const CONCORRENCIA_BASQUETE: Record<FuncaoBasquete, number> = { armador: 1, ala:
  * a fama), o critério de cada uma.
  *   coletivas    nome no mercado + a temporada avaliada + a divisão + idade/lesão
  *                (+ a concorrência da função, no basquete)
- *   tênis        o ranking (escala logarítmica: do 1º ao 500º) e a forma do ano
+ *   tênis        o ranking contra o dos outros tenistas do país naquele ano
+ *                (escala logarítmica) e a forma do ano
  *   individuais  a temporada (pódios, a melhor colocação) + o nível + idade/lesão
  */
 function olharDaModalidade(v: Vida, e: CarreiraEsportiva, t: Temporada): number {
@@ -95,8 +97,15 @@ function olharDaModalidade(v: Vida, e: CarreiraEsportiva, t: Temporada): number 
   const premios = Math.min(8, conquistasRecentes(v, 2).filter(x => x.tipo === 'premio' && x.modalidade === e.modalidade).length * 4);
   const p = perfilDe(e.modalidade);
   if (p.estrutura === 'circuito') {
-    const rk = t.ranking ?? 2000;
-    return clamp(100 - 15 * Math.log10(Math.max(1, rk)) + (t.nota - 6) * 2 + lesao + (i > 34 ? -(i - 34) * 4 : 0));
+    // A equipe do país é dos MELHORES DO PAÍS no ranking, não de quem passa de um número absoluto (FIX final da
+    // generalização: com o corte fixo, todo top 160 era chamado — 95% dos profissionais). A régua é a dos outros
+    // tenistas do país naquele ano: o 4º melhor (a convocação) e o 2º (quem joga as simples).
+    const { quarto, segundo } = concorrenciaNoTenis(t.ano, ge(v) === 'feminino');
+    const rk = Math.max(1, t.ranking ?? 2200);
+    const [, CONV, TIT] = LIMIARES.circuito;
+    const escala = (TIT - CONV) / (Math.log10(quarto) - Math.log10(segundo));
+    // A forma do ano já está no ranking (são os pontos do ano): a nota da temporada, que é relativa ao circuito, não entra.
+    return clamp(CONV + (Math.log10(quarto) - Math.log10(rk)) * escala + lesao + (i > 34 ? -(i - 34) * 4 : 0));
   }
   if (p.estrutura === 'equipe') {
     const nivel = [0, -40, -26, -10, 0][t.nivel] ?? -40;
@@ -105,6 +114,18 @@ function olharDaModalidade(v: Vida, e: CarreiraEsportiva, t: Temporada): number 
   const divisao = [0, -45, -32, -14, 0][t.nivel] ?? -45;
   const funcao = e.modalidade === 'basquete' && t.funcao ? CONCORRENCIA_BASQUETE[t.funcao as FuncaoBasquete] ?? 0 : 0;
   return clamp((e.reputacao ?? 30) * 0.5 + ava.indice * 0.5 + divisao + idadeFator + lesao + premios - funcao);
+}
+
+/**
+ * Os outros tenistas do país num ano (no universo do jogo): o ranking do 4º e
+ * do 2º melhor. Muda de ano para ano (há safras melhores e piores), mas é a
+ * mesma para todas as vidas daquele ano — é o país, não a pessoa.
+ */
+export function concorrenciaNoTenis(ano: number, feminino: boolean): { quarto: number; segundo: number } {
+  const r = criarRng(ano * 9973 + (feminino ? 17 : 0));
+  const quarto = Math.round(10 ** (Math.log10(feminino ? 240 : 150) + r.normal() * 0.16));
+  const segundo = Math.round(Math.min(quarto * 0.7, 10 ** (Math.log10(feminino ? 120 : 70) + r.normal() * 0.18)));
+  return { quarto, segundo: Math.max(1, segundo) };
 }
 
 const RADAR_FUT = 66;

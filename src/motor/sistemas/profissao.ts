@@ -29,6 +29,7 @@
 import { especialidadeMedica } from './medicina';
 import { agenteDe, conflitoDoContrato, contaDoContrato, descricaoDoContrato, emProducao, propostasAbertas, redeAlcancavel } from './audiovisual';
 import { OCUPACOES_DE_ATLETA } from './esporte';
+import { mercadoEsportivo, perfilDe } from './perfisEsportivos';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Acao } from '../acoes';
@@ -593,9 +594,9 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
       if (es.foco !== 'forcar') add({ id: 'forcar', rotulo: 'Treinar dobrado', porque: es.espaco === 'reserva' ? 'Para disputar a posição.' : 'Evolui mais — e machuca mais.', acao: P('foco', { valor: 'forcar' }), peso: es.espaco === 'reserva' ? 6 : 2 });
       if (es.foco !== 'preservar') add({ id: 'preservar', rotulo: 'Preservar o corpo', porque: es.lesoes >= 2 || i >= 30 ? 'O corpo tem prazo.' : undefined, acao: P('foco', { valor: 'preservar' }), peso: es.lesoes >= 2 || i >= 30 ? 6 : 1 });
       if (es.foco) add({ id: 'foco_normal', rotulo: 'Voltar ao treino de sempre', acao: P('foco', { valor: 'normal' }), peso: 1 });
-      if (es.espaco === 'reserva' && es.modalidade !== 'tenis') add({ id: 'treinador', rotulo: 'Conversar com o treinador', porque: 'Mais um jogo no banco.', acao: P('treinador'), peso: 7 });
+      if (es.espaco === 'reserva' && es.modalidade !== 'tenis') add({ id: 'treinador', rotulo: 'Conversar com o treinador', porque: mercadoEsportivo(es.modalidade).banco === 'no banco' ? 'Mais um jogo no banco.' : 'Mais uma competição fora da prova principal.', acao: P('treinador'), peso: 7 });
       // O tenista não tem clube para negociá-lo: o circuito é o ranking (FIX 3.1).
-      if (es.modalidade !== 'tenis') add({ id: 'mercado', rotulo: 'Pedir para ser negociado', porque: es.espaco === 'reserva' ? 'Em outro clube, dá para jogar.' : undefined, acao: P('mercado'), peso: es.espaco === 'reserva' ? 5 : 1 });
+      if (es.modalidade !== 'tenis') add({ id: 'mercado', rotulo: 'Pedir para ser negociado', porque: es.espaco === 'reserva' ? `Em ${mercadoEsportivo(es.modalidade).outro}, dá para ${perfilDe(es.modalidade).estrutura === 'clube' ? 'jogar' : 'competir'}.` : undefined, acao: P('mercado'), peso: es.espaco === 'reserva' ? 5 : 1 });
       if (i >= 27 && !temFato(v, 'pos_carreira')) add({ id: 'pos', rotulo: 'Preparar a vida depois do esporte', porque: 'O corpo tem prazo — e ele muda com a posição.', acao: P('pos_carreira'), peso: i >= 30 ? 7 : 4 });
       add({ id: 'pendurar', rotulo: 'Encerrar a carreira', acao: P('pendurar'), peso: 0, saida: true });
     }
@@ -803,8 +804,9 @@ export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito
     case 'vender': return n ? (v.fatos['neg_venda_recusada'] !== undefined && v.t - v.fatos['neg_venda_recusada'] < 12 ? bloqueio('incompativel', 'Quem queria comprar já foi embora; espere aparecer outro.') : PERMITIDO) : semTrabalho;
     case 'fechar': return n ? PERMITIDO : semTrabalho;
     case 'foco': return ESPORTISTA(v) ? ((v.caminhos.esporte!.foco ?? 'normal') === (a.valor ?? 'normal') ? bloqueio('impossivel', 'Já treina assim.') : PERMITIDO) : semTrabalho;
-    case 'treinador': return ESPORTISTA(v) ? (v.anoAtual.acoes.includes('treinador') ? bloqueio('incompativel', 'Você já conversou com o treinador neste ano.') : PERMITIDO) : semTrabalho;
-    case 'mercado': return ESPORTISTA(v) ? (v.anoAtual.acoes.includes('mercado') ? bloqueio('incompativel', 'O empresário já está procurando.') : PERMITIDO) : semTrabalho;
+    // O tenista não tem banco nem clube que o negocie: o treinador é dele, e o ranking decide o circuito.
+    case 'treinador': return v.caminhos.esporte?.modalidade === 'tenis' ? bloqueio('impossivel', 'No tênis, o treinador é seu: não há banco nem escalação.') : ESPORTISTA(v) ? (v.anoAtual.acoes.includes('treinador') ? bloqueio('incompativel', 'Você já conversou com o treinador neste ano.') : PERMITIDO) : semTrabalho;
+    case 'mercado': return v.caminhos.esporte?.modalidade === 'tenis' ? bloqueio('impossivel', 'No tênis não há clube: o ranking decide onde se joga.') : ESPORTISTA(v) ? (v.anoAtual.acoes.includes('mercado') ? bloqueio('incompativel', 'O empresário já está procurando.') : PERMITIDO) : semTrabalho;
     case 'pendurar': return ESPORTISTA(v) ? PERMITIDO : semTrabalho;
     case 'pos_carreira': return ESPORTISTA(v) && !temFato(v, 'pos_carreira') ? PERMITIDO : semTrabalho;
     case 'movimentacao': {

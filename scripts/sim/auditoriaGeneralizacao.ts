@@ -2,7 +2,9 @@
  * Auditoria transversal da generalização: uma carreira profissional por
  * modalidade (várias sementes), e tudo o que ela escreve para o jogador —
  * resumo, tabela do histórico, palmarés, momentos de carreira, legado,
- * retrospectiva e Linha da Vida — conferido contra vocabulário de outra
+ * retrospectiva, Linha da Vida e (FIX final) as decisões de mercado abertas
+ * no meio da carreira: renovação, proposta, treinador, pedir para sair,
+ * doping, depois do esporte — conferido contra vocabulário de outra
  * modalidade e contra texto quebrado (NaN, undefined, [object …]).
  *
  *   npx esbuild scripts/sim/auditoriaGeneralizacao.ts --bundle --platform=node --outfile=/tmp/aud.cjs
@@ -18,6 +20,9 @@ import { idade, transacao } from '../../src/motor/nucleo';
 import { garantirFrente } from '../../src/motor/sistemas/frentes';
 import { entrarNaBase, profissionalizar } from '../../src/motor/sistemas/esporte';
 import { historicoDaCarreira, resumoDaCarreira, perfilDe } from '../../src/motor/sistemas/perfisEsportivos';
+import { criarProposta } from '../../src/motor/sistemas/esporte';
+import { abrirDecisao, conteudoPorId } from '../../src/motor/conteudo/motor';
+import { contexto } from '../../src/motor/conteudo/base';
 import * as legado from '../../src/motor/sistemas/legado';
 import { retrospectiva } from '../../src/motor/sistemas/retrospectiva';
 
@@ -34,7 +39,45 @@ function proibidos(d: string): RegExp[] {
   if (d !== 'tenis') r.push(/\branking\b/i, /circuito principal/i, /tie-break/i);
   if (p.estrutura !== 'clube') r.push(/\bclubes?\b/i, /\bseleção do campeonato\b/i);
   if (d === 'tenis') r.push(/\bseleção\b/i);
+  // O vocabulário de campo (FIX final): estádio, gramado, chuteira e escalação são do futebol; o banco e o time
+  // reserva, das coletivas; a natação não tem quadra; o nadador e o lutador competem, não "jogam".
+  if (d !== 'futebol') r.push(/estádio/i, /gramado/i, /chuteira/i, /escalação/i, /\bfutebol\b/i);
+  if (p.estrutura !== 'clube') r.push(/\bno banco\b/i, /time reserva/i, /\bescalad/i);
+  if (p.estrutura === 'equipe') r.push(/\bjogar\b/i, /\bjogos?\b(?! (continentais|multiesportivos))/i, /\btitular\b/i);
+  if (d === 'natacao' || d === 'atletismo' || d === 'lutas') r.push(/\bquadra\b/i);
   return r;
+}
+
+/** As decisões de mercado que a carreira abre (e as respostas de cada opção), lidas como o jogador as lê. */
+const DECISOES = ['esp_renovacao', 'esp_mercado', 'esp_treinador', 'esp_doping', 'esp_pos', 'esp_pendurar', 'esp_proposta'];
+function textosDasDecisoes(v: Vida, d: string): string[] {
+  const out: string[] = [];
+  for (const id of DECISOES) {
+    const c = conteudoPorId(id);
+    if (!c || c.tipo !== 'decisao') continue;
+    // Uma proposta na mesa para a decisão de proposta (só nas modalidades de clube, que têm mercado de equipe).
+    if (id === 'esp_proposta' && perfilDe(d as never).estrutura !== 'clube') continue;
+    const base = id === 'esp_proposta' ? transacao(v, x => { const es = x.caminhos.esporte!; criarProposta(x, es, Math.min(4, es.nivel + 1) as 1 | 2 | 3 | 4, 'maior'); }).vida : v;
+    if (id === 'esp_proposta' && !base.caminhos.esporte?.proposta) continue;
+    const r = criarRng(7);
+    let m: { titulo: string; texto: string; opcoes: { id: string; texto: string; bloqueio?: string; detalhe?: string }[] } | undefined;
+    transacao(base, x => { m = abrirDecisao(x, c, contexto(x, r)); });
+    if (!m) continue;
+    out.push(m.titulo, m.texto, ...m.opcoes.flatMap(o => [o.texto, o.bloqueio ?? '', o.detalhe ?? '']));
+    // E o que cada opção responde (num clone: a resposta não muda a vida auditada).
+    for (const o of c.opcoes) {
+      transacao(base, x => {
+        const ctx = contexto(x, criarRng(11));
+        const disp = o.disponivel ? o.disponivel(ctx) : true;
+        if (disp !== true) return;
+        const res = o.resolver(ctx) as { texto?: string; memoria?: string | null };
+        out.push(res.texto ?? '', res.memoria ?? '');
+      });
+    }
+  }
+  // O nome da equipe é nome próprio (pode ter "Clube" no nome): não é vocabulário.
+  const nomes = [v.caminhos.esporte?.clube, v.trabalho.atual?.empregador].filter((x): x is string => !!x);
+  return out.filter(Boolean).map(t => nomes.reduce((a, n) => a.split(n).join('[equipe]'), t));
 }
 
 interface Achado { modalidade: string; semente: number; onde: string; texto: string; regra: string }
@@ -60,7 +103,12 @@ for (const d of MODALIDADES) {
       profissionalizar(x, rr, h0 < 82 ? 1 : h0 < 86 ? 2 : h0 < 90 ? 3 : 4);
     }).vida;
     const t0 = v.biografia.length;
-    while (!v.morte && idade(v) < 34) v = sim(avancarAno(v).vida);
+    let decisoes: string[] = [];
+    while (!v.morte && idade(v) < 34) {
+      v = sim(avancarAno(v).vida);
+      // Aos 25, no meio da carreira: as decisões de mercado, como o jogador as lê.
+      if (idade(v) === 25 && v.caminhos.esporte?.fase === 'profissional') decisoes = textosDasDecisoes(v, d);
+    }
     const e = v.caminhos.esporte?.modalidade === d ? v.caminhos.esporte : (v.caminhos.carreirasEsportivas ?? []).find(c => c.modalidade === d);
     if (!e) continue;
     contagem[d].vidas++;
@@ -74,7 +122,8 @@ for (const d of MODALIDADES) {
       ...(v.caminhos.situacoes ?? []).filter(x => x.trajetoria === d).map(x => ['momento', x.texto] as [string, string]),
       ...legado.trajetoriasDaVida(v).filter(t => t.area === 'esporte').flatMap(t => [t.titulo, t.resumo, ...t.realizacoes, ...t.reconhecimento, ...t.detalhe.flatMap(x => [x.titulo, ...x.linhas])].map(x => ['legado', x] as [string, string])),
       ...retrospectiva(v).map(x => ['retrospectiva', typeof x === 'string' ? x : JSON.stringify(x)] as [string, string]),
-      ...v.biografia.slice(t0).map(b => ['linha da vida', b.texto] as [string, string])
+      ...v.biografia.slice(t0).map(b => ['linha da vida', b.texto] as [string, string]),
+      ...decisoes.map(x => ['decisão', x] as [string, string])
     ];
     contagem[d].textos += textos.length;
     for (const [onde, texto] of textos) {

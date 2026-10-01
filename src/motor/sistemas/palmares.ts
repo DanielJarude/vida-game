@@ -31,6 +31,7 @@ import { abalar } from './abalo';
 import { CLUBES, DIVISAO_DO_NIVEL, doClube, noClube, oClube } from '../dados/clubes';
 import { ASSIST, carreirasEsportivas, DEFESA, divisaoDe, GOL, jogosDaTemporada, linhaDaTemporada, NOME_MOD, nomePosicao } from './esporte';
 import { aCompeticao, avaliarPelaModalidade, daCompeticao, individualComEquipe, lideresDaTemporada, perfilDe } from './perfisEsportivos';
+import { formatarMarca, naProva, podiosDe } from './provas';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -108,12 +109,13 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
 
   // Marcos: a primeira temporada, a primeira como titular de verdade, a estreia na elite.
   if (!anteriores.length) {
-    const texto = futebol ? `A primeira temporada como profissional, ${noClube(e.clube)}: ${t.partidas} jogos${t.gols ? `, ${t.gols} ${t.gols === 1 ? 'gol' : 'gols'}` : ''}.` : `A primeira temporada como profissional: ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'}.`;
+    const texto = futebol ? `A primeira temporada como profissional, ${noClube(e.clube)}: ${t.partidas} jogos${t.gols ? `, ${t.gols} ${t.gols === 1 ? 'gol' : 'gols'}` : ''}.` : t.prova ? `A primeira temporada como profissional: ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'} ${naProva(t.prova.nome)}, a melhor marca em ${formatarMarca(t.prova.unidade, t.prova.marca)}.` : t.luta ? `A primeira temporada como profissional, na categoria ${t.luta.categoria}: ${t.luta.vitorias} ${t.luta.vitorias === 1 ? 'vitória' : 'vitórias'} e ${t.luta.derrotas} ${t.luta.derrotas === 1 ? 'derrota' : 'derrotas'}.` : `A primeira temporada como profissional: ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'}.`;
     escrever(v, { texto, relevancia: 'cotidiano', tema: 'trabalho', tom: 'bom' });
     registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: 'Primeira temporada como profissional' });
   }
   if (ava.participacao >= 0.6 && !anteriores.some(x => x.titular / (jogosDaTemporada(e.modalidade, x.nivel) || 1) >= 0.6)) {
-    registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: `Primeira temporada como ${flex(g, 'titular', 'titular')} (${t.titular} jogos começando jogando)` });
+    // Nas individuais, "titular" é estar nas provas principais da equipe — não há jogo começando jogando.
+    registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: individualComEquipe(e.modalidade) ? `Primeira temporada nas competições principais da equipe (${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'})` : `Primeira temporada como ${flex(g, 'titular', 'titular')} (${t.titular} jogos começando jogando)` });
   }
   if (t.nivel === 4 && !anteriores.some(x => x.nivel === 4)) {
     registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: `Estreia na elite: ${comp}` });
@@ -123,9 +125,12 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   // O título: o do clube — e o seu papel nele.
   if (t.colocacao === 1 && t.partidas > 0 && individualComEquipe(e.modalidade)) {
     // Natação, atletismo, luta: o título é do atleta, na prova que importa (a equipe é o vínculo, não o campeão).
-    const texto = `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${daCompeticao(comp)} de ${NOME_MOD[e.modalidade] ?? e.modalidade}`;
+    // O título diz onde: a prova (com a marca) ou a categoria de peso.
+    const onde = t.prova ? ` ${naProva(t.prova.nome)}` : t.luta ? `, na categoria ${t.luta.categoria}` : '';
+    const texto = `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${daCompeticao(comp)} de ${NOME_MOD[e.modalidade] ?? e.modalidade}${onde}`;
     registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, papel: 'protagonista', texto });
-    escrever(v, { texto: `${texto} (${t.ano}): ${t.gols} ${t.gols === 1 ? 'pódio' : 'pódios'} na temporada.`, relevancia: t.nivel >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+    const doAno = t.prova ? `a melhor marca do ano, ${formatarMarca(t.prova.unidade, t.prova.marca)}${t.prova.recorde ? ' (recorde pessoal)' : ''}` : t.luta ? `${t.luta.vitorias} ${t.luta.vitorias === 1 ? 'vitória' : 'vitórias'} e ${t.luta.derrotas} ${t.luta.derrotas === 1 ? 'derrota' : 'derrotas'} no ano` : `${podiosDe(t)} ${podiosDe(t) === 1 ? 'pódio' : 'pódios'} na temporada`;
+    escrever(v, { texto: `${texto} (${t.ano}): ${doAno}.`, relevancia: t.nivel >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'conquista', texto, t.nivel >= 3 ? 3 : 2, { dominio: e.modalidade });
     e.reputacao = clamp((e.reputacao ?? 30) + 1 + Math.floor(t.nivel / 2));
   } else if (t.colocacao === 1 && t.partidas > 0) {

@@ -29,11 +29,12 @@ import { anoDe } from '../tempo';
 import { flex, ge, listaNatural } from '../texto';
 import { ocupacaoOuNula, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { municipio } from '../dados/lugares';
-import { NOME_FORCA } from '../dados/forcas';
+import { ESPECIALIDADES, NOME_FORCA, SIGLA_DA } from '../dados/forcas';
 import { carreirasEsportivas, NOME_MOD } from './esporte';
-import { historicoDaCarreira, perfilDe, resumoDaCarreira, type Estrutura, type HistoricoEsportivo } from './perfisEsportivos';
+import { historicoDaCarreira, pelaPorta, perfilDe, resumoDaCarreira, type Estrutura, type HistoricoEsportivo } from './perfisEsportivos';
 import { leituraDaSelecao } from './palmares';
-import { mandatosDaVida, nomeCargo } from './politica';
+import { mandatosDaVida, nomeCargo, NOME_PRIORIDADE } from './politica';
+import { aoPartido, oPartido, peloPartido } from '../dados/partidos';
 import { obraAcademica, OCUPACOES_ACADEMICAS } from './academia';
 import { modeloEspecialidade } from '../dados/especialidades';
 import { mercadoDe } from './mercados';
@@ -122,7 +123,7 @@ function trajetoriaEsportiva(v: Vida, e: CarreiraEsportiva, k: number): Trajetor
   const marcantes = realizacoes.reduce((a, r) => a + r.peso, 0);
   return {
     id: `esporte:${k}`, area: 'esporte', titulo: `${cap(mod)} profissional`, periodo: periodo(de, ate, ativa), de, ate, ativa,
-    resumo: `${resumoDaCarreira(e)}${e.origem === 'amador' ? ' — chegou pelo campeonato amador' : ''}${e.motivoFim && !ativa ? `; ${e.motivoFim === 'lesao' ? 'parou pelas lesões' : e.motivoFim === 'sem_contrato' ? SEM_CONTRATO[perfilDe(e.modalidade).estrutura] : e.motivoFim === 'suspensao' ? 'acabou na suspensão' : 'parou por escolha'}` : ''}.`,
+    resumo: `${resumoDaCarreira(e)}${e.origem === 'amador' ? ` — chegou ${pelaPorta(e.modalidade)}` : ''}${e.motivoFim && !ativa ? `; ${e.motivoFim === 'lesao' ? 'parou pelas lesões' : e.motivoFim === 'sem_contrato' ? SEM_CONTRATO[perfilDe(e.modalidade).estrutura] : e.motivoFim === 'suspensao' ? 'acabou na suspensão' : 'parou por escolha'}` : ''}.`,
     realizacoes: top(realizacoes), reconhecimento, detalhe, peso: ts.length * 6 + marcantes
   };
 }
@@ -272,6 +273,8 @@ function trajetoriaMedica(v: Vida): TrajetoriaDaVida | undefined {
 
 /* ============================================================ Política */
 
+const ORIGEM_POLITICA: Record<string, string> = { comunidade: 'pela associação do bairro', estudantil: 'pela política estudantil', sindicato: 'pelo sindicato', causa: 'por uma causa', notoriedade: 'com um nome já conhecido', empresario: 'pelo meio empresarial', servidor: 'pelo serviço público', convite: 'por um convite', decisao: 'por decisão própria' };
+
 function trajetoriaPolitica(v: Vida): TrajetoriaDaVida | undefined {
   const p = v.caminhos.politica;
   if (!p) return undefined;
@@ -282,12 +285,26 @@ function trajetoriaPolitica(v: Vida): TrajetoriaDaVida | undefined {
   const eleicoes = p.historico.filter(h => h.resultado === 'eleito' || h.resultado === 'derrotado');
   const derrotas = eleicoes.filter(h => h.resultado === 'derrotado').length;
   const r: Realizacao[] = [];
-  for (const m of mandatos) {
-    r.push({ texto: `${cap(m.cargo)} (${m.de}${m.ate ? `–${m.ate}` : '–'}${m.como && m.como !== 'concluído' && m.como !== 'em exercício' ? `, ${m.como}` : ''})`, peso: 7 + (/prefeit|governad|senad/i.test(m.cargo) ? 2 : 0) });
+  const g = ge(v);
+  // O que aconteceu, e só isso (FIX final da generalização): os mandatos (e a reeleição), as eleições perdidas, a
+  // filiação e as trocas de partido, os anos de trabalho de base, as crises atravessadas e o que saiu do papel.
+  // A fama não entra (notoriedade não é realização política), e a derrota é registrada como derrota.
+  mandatos.forEach((m, k) => {
+    const reeleicao = k > 0 && mandatos[k - 1].cargo === m.cargo && mandatos[k - 1].ate === m.de;
+    r.push({ texto: `${reeleicao ? `${flex(g, 'Reeleito', 'Reeleita', 'Reeleite')} ${m.cargo}` : cap(m.cargo)} (${m.de}${m.ate ? `–${m.ate}` : '–'}${m.como && m.como !== 'concluído' && m.como !== 'em exercício' ? `, ${m.como}` : ''})`, peso: 7 + (/prefeit|governad|senad/i.test(m.cargo) ? 2 : 0) + (reeleicao ? 1 : 0) });
     for (const x of m.marcos.filter(y => /saiu do papel|aprovou/.test(y)).slice(0, 2)) r.push({ texto: cap(x.replace(/^\d+ · /, '')) + ` (${x.slice(0, 4)})`, peso: 4 });
-  }
+    // A crise atravessada de pé (o registro do mandato diz como saiu): é história do mandato, não glória.
+    for (const x of m.marcos.filter(y => /saiu maior do que entrou/.test(y)).slice(0, 1)) r.push({ texto: `${cap(x.replace(/^\d+ · /, '').replace(/: saiu maior do que entrou$/, ''))}: saiu maior do que entrou (${x.slice(0, 4)})`, peso: 3 });
+  });
+  for (const h of p.historico.filter(x => x.resultado === 'derrotado')) r.push({ texto: `Candidatura a ${nomeCargo(v, h.cargo)} em ${anoDe(h.t)}: não se elegeu`, peso: 2 });
+  const filiacoes = p.partidos?.length ? p.partidos : p.partido && p.tFiliacao !== undefined ? [{ sigla: p.partido, tInicio: p.tFiliacao }] : [];
+  filiacoes.forEach((x, k) => r.push({ texto: k === 0 ? (p.indicacaoMilitar && filiacoes.length === 1 ? `${flex(g, 'Indicado', 'Indicada', 'Indicade')} ${peloPartido(x.sigla)}, ainda na ativa (${anoDe(x.tInicio)})` : `Filiação ${aoPartido(x.sigla)} (${anoDe(x.tInicio)})`) : `Trocou ${oPartido(filiacoes[k - 1].sigla)} por ${oPartido(x.sigla)} (${anoDe(x.tInicio)})`, peso: k === 0 ? 1.5 : 1 }));
+  const base = v.fatos['pol_base_anos'] ?? 0;
+  if (base >= 2) r.push({ texto: `${base} anos de trabalho de base nos bairros`, peso: Math.min(3, 1 + base / 5) });
+  if (p.prioridade) r.push({ texto: `A bandeira: ${NOME_PRIORIDADE[p.prioridade].replace(': ', ' — ')}`, peso: 1 });
+  r.push({ texto: `Entrou na vida política ${ORIGEM_POLITICA[p.origem] ?? ''} (${de})`, peso: 0.5 });
   const origem = p.origem === 'notoriedade' && v.notoriedade?.origens ? Object.entries(v.notoriedade.origens).filter(([k]) => k !== 'politica').sort((a, b) => b[1] - a[1])[0]?.[0] : undefined;
-  const ORIGEM: Record<string, string> = { comunidade: 'pela associação do bairro', estudantil: 'pela política estudantil', sindicato: 'pelo sindicato', causa: 'por uma causa', notoriedade: origem === 'esporte' ? 'com o nome conhecido do esporte' : origem === 'arte' ? 'com o nome conhecido da arte' : 'com um nome já conhecido', empresario: 'pelo meio empresarial', servidor: 'pelo serviço público', convite: 'por um convite', decisao: 'por decisão própria' };
+  const ORIGEM: Record<string, string> = { ...ORIGEM_POLITICA, notoriedade: origem === 'esporte' ? 'com o nome conhecido do esporte' : origem === 'arte' ? 'com o nome conhecido da arte' : 'com um nome já conhecido' };
   return {
     id: 'politica', area: 'politica', titulo: 'Vida pública', periodo: periodo(de, ate, ativa), de, ate, ativa,
     resumo: `Entrou ${ORIGEM[p.origem] ?? ''}. ${mandatos.length ? `${mandatos.length} ${mandatos.length === 1 ? 'mandato' : 'mandatos'} (${listaNatural([...new Set(mandatos.map(m => m.cargo))])})` : 'Nenhum mandato'}${derrotas ? `, ${derrotas} ${derrotas === 1 ? 'derrota' : 'derrotas'}` : ''}${(p.partidos?.length ?? 0) >= 2 ? `; ${p.partidos!.length} partidos` : ''}.`,
@@ -320,16 +337,33 @@ function trajetoriaMilitar(v: Vida): TrajetoriaDaVida | undefined {
   const final = escada[escada.length - 1];
   const guarn = m.guarnicoes ?? [{ municipioId: m.guarnicao, t: m.tGuarnicao }];
   const r: Realizacao[] = [];
-  for (const p of escada.slice(1)) r.push({ texto: `${cap(nomeOcupacao(v, ocupacaoOuNula(p.oc)!))} (${anoDe(p.t)})`, peso: 3 + (ocupacaoOuNula(p.oc)?.nivel ?? 0) });
+  // Os marcos que o motor de fato simula (FIX final da generalização): o ingresso, a formação concluída, cada
+  // posto, os cursos de carreira, a especialidade, as guarnições, o reconhecimento em boletim, o que marcou nas
+  // situações, e o fim (a baixa, a saída, a reserva). Sem medalha inventada: uma carreira curta tem poucos marcos.
+  const primeiro = escada[0];
+  if (primeiro) r.push({ texto: `Ingresso: ${nomeOcupacao(v, ocupacaoOuNula(primeiro.oc)!)} (${anoDe(primeiro.t)})`, peso: 1 });
+  escada.slice(1).forEach((p, k) => {
+    const posto = nomeOcupacao(v, ocupacaoOuNula(p.oc)!);
+    const formacao = (ocupacaoOuNula(escada[k].oc)?.nivel ?? 1) === 0;
+    r.push({ texto: formacao ? `Concluiu a formação: ${posto} (${anoDe(p.t)})` : `${cap(posto)} (${anoDe(p.t)})`, peso: 3 + (ocupacaoOuNula(p.oc)?.nivel ?? 0) });
+  });
   for (const c of m.cursos) r.push({ texto: c === 'altos_estudos' ? 'Curso de altos estudos militares' : 'Curso de aperfeiçoamento militar', peso: 4 });
+  if (m.especialidade) r.push({ texto: `Especialidade: ${ESPECIALIDADES[m.especialidade]?.nome ?? m.especialidade}`, peso: 1.5 });
+  if (guarn.length >= 2) r.push({ texto: `Serviu em ${guarn.length} guarnições: ${listaNatural(guarn.map(x => municipio(x.municipioId).nome))}`, peso: 1 + guarn.length * 0.5 });
   if (v.fatos['mil_elogios']) r.push({ texto: `${v.fatos['mil_elogios']} ${v.fatos['mil_elogios'] === 1 ? 'elogio' : 'elogios'} em boletim`, peso: 5 });
   for (const x of (v.caminhos.situacoes ?? []).filter(y => y.trajetoria === 'militar' && y.desfecho === 'otimo')) r.push({ texto: `${x.texto} (${anoDe(x.t)})`, peso: 3 });
   const reserva = v.fatos['mil_reserva'];
-  if (reserva !== undefined) r.push({ texto: `Foi para a reserva em ${anoDe(reserva)}`, peso: 4 });
   const anosServ = Math.round((fim - m.tIngresso) / 12);
+  if (m.quadro === 'temporario' && anosServ >= 2) r.push({ texto: `Engajou: ${anos(anosServ)} de serviço temporário`, peso: 1.5 });
+  if (reserva !== undefined) r.push({ texto: `Foi para a reserva em ${anoDe(reserva)}`, peso: 4 });
+  else if (!ativa) {
+    // O fim é o que aconteceu: a baixa do temporário (com o certificado de reservista), ou a saída de quem era de carreira.
+    const ultimo = empregos.reduce<typeof empregos[number] | undefined>((a, e) => (!a || e.tFim > a.tFim ? e : a), undefined);
+    if (ultimo) r.push({ texto: m.quadro === 'temporario' || /baixa/.test(ultimo.motivo ?? '') ? `Deu baixa ${SIGLA_DA[m.forca]} em ${anoDe(ultimo.tFim)}, com o certificado de reservista` : `Deixou ${NOME_FORCA[m.forca]} em ${anoDe(ultimo.tFim)}, depois de ${anos(anosServ)}`, peso: 0.8 });
+  }
   return {
     id: 'militar', area: 'militar', titulo: cap(NOME_FORCA[m.forca].replace(/^(o|a) /, '')), periodo: periodo(de, ate, ativa), de, ate, ativa,
-    resumo: `${anos(anosServ)} ${m.quadro === 'temporario' ? 'de serviço temporário' : 'de carreira'}${final ? `, ${ativa ? 'hoje' : 'por último'} ${nomeOcupacao(v, ocupacaoOuNula(final.oc)!)}` : ''}; ${guarn.length} ${guarn.length === 1 ? 'guarnição' : 'guarnições'}${m.especialidade ? `; especialidade: ${m.especialidade}` : ''}.`,
+    resumo: `${anos(anosServ)} ${m.quadro === 'temporario' ? 'de serviço temporário' : 'de carreira'}${final ? `, ${ativa ? 'hoje' : 'por último'} ${nomeOcupacao(v, ocupacaoOuNula(final.oc)!)}` : ''}; ${guarn.length} ${guarn.length === 1 ? 'guarnição' : 'guarnições'}${m.especialidade ? `; especialidade: ${ESPECIALIDADES[m.especialidade]?.nome ?? m.especialidade}` : ''}.`,
     realizacoes: top(r), reconhecimento: v.fatos['mil_elogios'] ? [`${v.fatos['mil_elogios']} ${v.fatos['mil_elogios'] === 1 ? 'elogio' : 'elogios'} em boletim`] : [],
     detalhe: [
       ...(escada.length ? [{ titulo: 'Postos', linhas: escada.map(p => `${anoDe(p.t)} · ${nomeOcupacao(v, ocupacaoOuNula(p.oc)!)}`) }] : []),

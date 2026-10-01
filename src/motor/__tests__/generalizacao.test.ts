@@ -213,7 +213,9 @@ describe('B · basquete: a função importa, a equipe tem cidade, o país observ
 
 describe('C · tênis: um ano é torneio a torneio — não um time com outro nome', () => {
   it('vitórias, derrotas, finais, títulos e o nome dos torneios saem das chaves jogadas', () => {
-    let v = atleta('tenis', { habilidade: 90, nivel: 3 });
+    // (FIX final da generalização: o challenger pede técnica 85; quem ganha torneio ali tem técnica acima disso E
+    // o corpo de profissional — o condicionamento do adulto de teste era o de quem não treina.)
+    let v = transacao(atleta('tenis', { habilidade: 90, nivel: 3 }), x => { x.corpo.forma = 78; }).vida;
     let titulo = false;
     for (let s = 1; s <= 12; s++) {
       v = transacao(v, (x) => {
@@ -233,7 +235,7 @@ describe('C · tênis: um ano é torneio a torneio — não um time com outro no
   });
 
   it('o ano no circuito vira palmarés com nome de torneio; a equipe do país olha o ranking', () => {
-    let v = atleta('tenis', { habilidade: 92, nivel: 3 });
+    let v = transacao(atleta('tenis', { habilidade: 92, nivel: 3 }), x => { x.corpo.forma = 78; }).vida;
     for (let k = 0; k < 6; k++) v = transacao(v, (x, r) => { x.t += 12; processarEsporte(x, r); }).vida;
     const pal = (v.caminhos.palmares ?? []).filter(c => c.modalidade === 'tenis');
     expect(pal.some(c => c.tipo === 'titulo' && /^Campe(ão|ã) d/.test(c.texto)) || pal.some(c => c.tipo === 'final')).toBe(true);

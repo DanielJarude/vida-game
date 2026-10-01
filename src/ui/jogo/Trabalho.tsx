@@ -47,11 +47,13 @@ import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { doClube } from '../../motor/dados/clubes';
 import { augeDe, carreirasEsportivas, categoriaDaBase, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
-import { estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
+import { capitalizar as cap } from '../../motor/texto';
+import { circuitoPeloRanking, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
+import { categoriaDeLuta, funcaoVolei, NOME_FUNCAO_VOLEI, provaDe } from '../../motor/sistemas/provas';
 import { lesaoAtiva } from '../../motor/sistemas/lesoes';
 import { leituraDoNome } from '../../motor/sistemas/notoriedade';
 import { leituraDoPalmares } from '../../motor/sistemas/palmares';
-import { historicoDaCarreira, resumoDaCarreira } from '../../motor/sistemas/perfisEsportivos';
+import { historicoDaCarreira, perfilDe, resumoDaCarreira, semVinculo } from '../../motor/sistemas/perfisEsportivos';
 import { momentosDaCarreira } from '../../motor/sistemas/situacoes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Renomear, Secao } from '../comum';
@@ -308,20 +310,27 @@ function PainelAtleta({ vida }: { vida: Vida }) {
   const auge = augeDe(vida, es);
   const t = es.temporadas?.[es.temporadas.length - 1];
   const noto = leituraDoNome(vida)?.frase;
-  const oferta = nivelQueOMercadoOferece(vida, es);
-  const lesao = lesaoAtiva(vida);
   const tenis = es.modalidade === 'tenis';
+  // O tênis sobe e desce pelo ranking (a mesma regra do motor); os outros, pelo mercado.
+  const oferta = tenis ? circuitoPeloRanking(es.nivel, t?.ranking ?? 2200) : nivelQueOMercadoOferece(vida, es);
+  const lesao = lesaoAtiva(vida);
+  const individual = perfilDe(es.modalidade).estrutura === 'equipe';
+  // O que define a pessoa na modalidade: a posição, a função (e a estatura), a prova, a categoria.
+  const prova = individual ? provaDe(vida, es.modalidade) : undefined;
+  const papel = es.modalidade === 'basquete' ? ` · ${NOME_FUNCAO[funcaoBasquete(vida)]}, ${estaturaEmPalavras(estatura(vida))}`
+    : es.modalidade === 'volei' ? ` · ${NOME_FUNCAO_VOLEI[funcaoVolei(vida)]}, ${estaturaEmPalavras(estatura(vida))}`
+      : es.modalidade === 'lutas' ? ` · categoria ${categoriaDeLuta(vida)}` : prova ? ` · ${prova.nome}` : '';
   return (
     <section className="painel painel--atleta" aria-label="A carreira no esporte">
       <div className="placar">
-        <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{tenis ? 'No circuito' : es.espaco === 'titular' ? 'Titular' : es.espaco === 'reserva' ? 'Reserva' : 'Sem clube'}</span>
-        <span className="placar__clube">{tenis ? `ranking ${t?.ranking ?? '—'}º` : es.clube}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}{es.modalidade === 'basquete' ? ` · ${NOME_FUNCAO[funcaoBasquete(vida)]}, ${estaturaEmPalavras(estatura(vida))}` : ''}</span>
+        <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{tenis ? 'No circuito' : es.espaco === 'titular' ? 'Titular' : es.espaco === 'reserva' ? 'Reserva' : cap(semVinculo(es.modalidade))}</span>
+        <span className="placar__clube">{tenis ? `ranking ${t?.ranking ?? '—'}º` : es.clube}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}{papel}</span>
       </div>
       {t && (
         <div className="temporada" aria-label="A última temporada">
           <p className="temporada__titulo">Temporada {t.ano} — {t.clube}</p>
           <p className="temporada__linha">{linhaDaTemporada(vida, t)}</p>
-          <p className="nota">{palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)}. {tenis ? (t.premio !== undefined ? `Bruto ${dinheiroCurto(t.premio)} − custos do circuito ${dinheiroCurto(t.custos ?? 0)} = ${(t.premio - (t.custos ?? 0)) >= 0 ? '' : '−'}${dinheiroCurto(Math.abs(t.premio - (t.custos ?? 0)))} no ano.` : '') : es.espaco === 'titular' ? 'O próximo ano começa como titular.' : 'O próximo ano começa no banco.'}</p>
+          <p className="nota">{palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)}. {tenis ? (t.premio !== undefined ? `Bruto ${dinheiroCurto(t.premio)} − custos do circuito ${dinheiroCurto(t.custos ?? 0)} = ${(t.premio - (t.custos ?? 0)) >= 0 ? '' : '−'}${dinheiroCurto(Math.abs(t.premio - (t.custos ?? 0)))} no ano.` : '') : individual ? (es.espaco === 'titular' ? 'O próximo ano começa nas provas principais da equipe.' : 'O próximo ano começa fora das provas principais da equipe.') : es.espaco === 'titular' ? 'O próximo ano começa como titular.' : 'O próximo ano começa no banco.'}</p>
         </div>
       )}
       <dl className="dados">

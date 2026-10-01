@@ -281,6 +281,20 @@ function validarBase(d: Record<string, unknown>): string | null {
 }
 
 const finito = (x: unknown) => typeof x === 'number' && Number.isFinite(x);
+/**
+ * Os números próprios de cada modalidade numa temporada (FIX final da generalização): opcionais — temporadas
+ * antigas não os têm —, mas, quando vêm, têm de ser números de verdade (o vôlei, a prova, o cartel, os pontos do
+ * ranking do tênis).
+ */
+function numerosDaModalidadeValidos(x: object): boolean {
+  const t = x as Record<string, unknown>;
+  const ok = (o: unknown, chaves: string[]) => !!o && typeof o === 'object' && chaves.every(k => finito((o as Record<string, unknown>)[k]));
+  if (t.pontosRanking !== undefined && !finito(t.pontosRanking)) return false;
+  if (t.volei !== undefined && !ok(t.volei, ['sets', 'pontos', 'bloqueios', 'aces', 'levantamentos', 'defesas'])) return false;
+  if (t.prova !== undefined && (!ok(t.prova, ['marca', 'finais', 'podios', 'vitorias']) || typeof (t.prova as { nome?: unknown }).nome !== 'string' || !['s', 'm'].includes((t.prova as { unidade?: string }).unidade ?? ''))) return false;
+  if (t.luta !== undefined && (!ok(t.luta, ['lutas', 'vitorias', 'derrotas', 'antesDoTempo', 'titulos', 'podios', 'sequencia']) || typeof (t.luta as { categoria?: unknown }).categoria !== 'string')) return false;
+  return true;
+}
 
 /**
  * Validação do save v7. Relações corrompidas não entram: um save que passa
@@ -357,7 +371,7 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     const m = (d.mente as Vida['mente']).sobrecarga;
     if (m !== undefined && !finito(m.anos)) return 'Sobrecarga inválida.';
     const es = (d.caminhos as Vida['caminhos'] | undefined)?.esporte;
-    if (es?.temporadas !== undefined && (!Array.isArray(es.temporadas) || es.temporadas.some(t => !finito(t.nota) || !finito(t.partidas)))) return 'Temporadas inválidas.';
+    if (es?.temporadas !== undefined && (!Array.isArray(es.temporadas) || es.temporadas.some(t => !finito(t.nota) || !finito(t.partidas) || !numerosDaModalidadeValidos(t)))) return 'Temporadas inválidas.';
     for (const c of (d.corpo as Vida['corpo']).condicoes) if (c.lesao && (!finito(c.lesao.tFim) || ![1, 2, 3].includes(c.lesao.gravidade))) return 'Lesão inválida.';
   }
   if (versao >= 18) {
@@ -391,7 +405,7 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     // anos de palco, postos dentro de um emprego, guarnições, safras, obra acadêmica, marcos de mandato, prêmios de obras.
     if (esp?.emprestimo !== undefined && (typeof esp.emprestimo !== 'object' || typeof esp.emprestimo.clube !== 'string' || typeof esp.emprestimo.municipioId !== 'string' || ![1, 2, 3, 4].includes(esp.emprestimo.nivel) || !finito(esp.emprestimo.ate) || !finito(esp.emprestimo.desde))) return 'Empréstimo inválido.';
     if (esp?.origem !== undefined && esp.origem !== 'base' && esp.origem !== 'amador') return 'Origem da carreira esportiva inválida.';
-    if (cam.carreirasEsportivas !== undefined && (!Array.isArray(cam.carreirasEsportivas) || cam.carreirasEsportivas.some(x => !x || typeof x.modalidade !== 'string' || typeof x.fase !== 'string' || typeof x.clube !== 'string' || (x.temporadas !== undefined && !Array.isArray(x.temporadas))))) return 'Carreira esportiva arquivada inválida.';
+    if (cam.carreirasEsportivas !== undefined && (!Array.isArray(cam.carreirasEsportivas) || cam.carreirasEsportivas.some(x => !x || typeof x.modalidade !== 'string' || typeof x.fase !== 'string' || typeof x.clube !== 'string' || (x.temporadas !== undefined && (!Array.isArray(x.temporadas) || x.temporadas.some(t => !t || !numerosDaModalidadeValidos(t))))))) return 'Carreira esportiva arquivada inválida.';
     if (cam.palcos !== undefined && (!Array.isArray(cam.palcos) || cam.palcos.some(x => !x || !finito(x.ano) || !finito(x.apresentacoes) || !finito(x.bruto)))) return 'Histórico de palco inválido.';
     if ([t.atual, t.paralela, ...t.historico].some(e => e?.postos !== undefined && (!Array.isArray(e.postos) || e.postos.some(x => !x || typeof x.ocupacaoId !== 'string' || !finito(x.t))))) return 'Postos de trabalho inválidos.';
     if (cam.militar?.guarnicoes !== undefined && (!Array.isArray(cam.militar.guarnicoes) || cam.militar.guarnicoes.some(x => !x || typeof x.municipioId !== 'string' || !finito(x.t)))) return 'Guarnições inválidas.';

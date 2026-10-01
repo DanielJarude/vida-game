@@ -726,10 +726,12 @@ function tomarPosse(v: Vida, r: Rng): void {
     if (e.contrato === 'militar' && v.caminhos.militar) { irParaReserva(v, 'pedido'); p.anterior = undefined; }
     else encerrarEmprego(v, 'posse no mandato');
   } else if (e?.contrato === 'eletivo') {
-    // Eleito para outro cargo: o mandato de antes fica para trás.
-    if (p.mandato && p.mandato.cargo !== cargo) { p.historico.push({ t: v.t, cargo: p.mandato.cargo, resultado: 'concluiu', ...resumoDoMandato(p) }); escrever(v, { texto: `Deixou o mandato de ${nomeCargo(v, p.mandato.cargo)} para assumir o novo cargo.`, relevancia: 'biografia', tema: 'trabalho' }); }
     encerrarEmprego(v, 'fim do mandato');
   }
+  // Eleito para outro cargo: o mandato de antes fica para trás — e o histórico o fecha, qualquer que seja o emprego
+  // registrado agora (FIX final da generalização: o fechamento dependia do emprego atual ser o do mandato, e o
+  // histórico guardava um mandato que nunca acabou, sobreposto ao novo).
+  if (p.mandato && p.mandato.cargo !== cargo) { p.historico.push({ t: v.t, cargo: p.mandato.cargo, resultado: 'concluiu', ...resumoDoMandato(p) }); escrever(v, { texto: `Deixou o mandato de ${nomeCargo(v, p.mandato.cargo)} para assumir o novo cargo.`, relevancia: 'biografia', tema: 'trabalho' }); }
   const c = CARGOS[cargo];
   // Governar o estado é morar na capital.
   if (cargo === 'governador') { const cap = MUNICIPIOS.find(m => m.uf === municipio(v.moradia.municipioId).uf && m.capital); if (cap && cap.id !== v.moradia.municipioId) mudarAgora(v, cap.id, 'para governar o estado'); }
@@ -811,15 +813,22 @@ export function mandatosDaVida(v: Vida): { cargo: string; de: number; ate?: numb
   const p = v.caminhos.politica;
   if (!p) return [];
   const out: ReturnType<typeof mandatosDaVida> = [];
-  const eleicoes = p.historico.filter(h => h.resultado === 'eleito');
-  const fins = p.historico.filter(h => h.resultado !== 'eleito' && h.resultado !== 'derrotado');
+  const eleicoes = p.historico.filter(h => h.resultado === 'eleito').sort((a, b) => a.t - b.t);
+  const fins = p.historico.filter(h => h.resultado !== 'eleito' && h.resultado !== 'derrotado').sort((a, b) => a.t - b.t);
+  // Cada registro de fim fecha um mandato só (FIX final da generalização: o pareamento pelo ano deixava um fim
+  // fechar dois mandatos — e o histórico mostrava vereador e deputado ao mesmo tempo).
+  const usados = new Set<number>();
   for (const el of eleicoes) {
-    // O fim é o primeiro registro de fim do mesmo cargo depois da posse.
-    const fim = fins.find(f => f.cargo === el.cargo && f.t > el.t && !out.some(o => o.ate === anoDe(f.t) && o.cargo === nomeCargo(v, f.cargo)));
+    // O fim é o primeiro registro de fim do mesmo cargo depois da eleição que ainda não fechou outro mandato.
+    const k = fins.findIndex((f, j) => !usados.has(j) && f.cargo === el.cargo && f.t > el.t);
+    const fim = k >= 0 ? fins[k] : undefined;
+    if (k >= 0) usados.add(k);
     const ativo = !fim && p.mandato?.cargo === el.cargo && p.mandato.tInicio >= el.t;
+    // Eleito, e a posse ainda não chegou (a eleição de outubro, a posse de janeiro).
+    const aEsperaDaPosse = !fim && !ativo && p.posse?.cargo === el.cargo && el === eleicoes[eleicoes.length - 1];
     out.push({
       cargo: nomeCargo(v, el.cargo), de: anoDe(el.t) + 1, ate: fim ? anoDe(fim.t) : undefined,
-      como: ativo ? 'em exercício' : !fim ? '' : fim.resultado === 'concluiu' ? 'concluído' : fim.resultado === 'renunciou' ? 'renunciou' : 'cassado',
+      como: ativo ? 'em exercício' : aEsperaDaPosse ? 'à espera da posse' : !fim ? '' : fim.resultado === 'concluiu' ? 'concluído' : fim.resultado === 'renunciou' ? 'renunciou' : 'cassado',
       aprovacao: fim?.aprovacao ?? (ativo ? Math.round(p.mandato!.aprovacao) : undefined),
       marcos: fim?.marcos ?? (ativo ? p.mandato!.marcos ?? [] : [])
     });
@@ -1099,6 +1108,8 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
     case 'filiar': return { decisao: 'pol_filiacao' };
     case 'indicacao': v.anoAtual.acoes.push('pol_indicacao'); return { decisao: 'pol_indicacao' };
     case 'comunidade': {
+      // Os anos de trabalho de base ficam (é a história política de quem nunca teve mandato): um por ano.
+      if (!v.anoAtual.acoes.includes('pol_comunidade')) v.fatos['pol_base_anos'] = (v.fatos['pol_base_anos'] ?? 0) + 1;
       v.anoAtual.acoes.push('pol_comunidade');
       const soc = v.personalidade.tracos.sociabilidade;
       p!.apoio = clamp(p!.apoio + 2 + Math.max(0, soc) / 40);

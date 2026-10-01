@@ -16,6 +16,7 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
 import { estresse, fato, feliz, custa } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
+import { portaAmadora } from '../sistemas/perfisEsportivos';
 import { conviteDaBase, encerrarCarreira, entrarPeloAmador, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
 import { dinheiro as fmt } from '../texto';
 import { conflitoDoContrato, contaDoContrato, descricaoDoContrato, podePausar as podePausarAV, resolverConflitoAV } from '../sistemas/audiovisual';
@@ -503,7 +504,7 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   if (res.passou && amador) {
     // A rota amadora: não há base para ir — o clube pequeno oferece o contrato do time de cima.
     entrarPeloAmador(c.v, d, lugar, pr.lugar ?? nomeDeClube(lugar, `${c.v.id}:amador`, d));
-    return { texto: `No fim da semana, o treinador chamou você na sala. ${fala} O clube quer você no elenco adulto.`, memoria: null, tom: 'bom', abrir: { id: 'esp_contrato' } };
+    return { texto: `No fim da semana, o treinador chamou você na sala. ${fala} ${d === 'futebol' ? 'O clube quer você no elenco adulto.' : `A equipe quer você ${portaAmadora(d).elenco === 'a equipe adulta' ? 'na equipe adulta' : 'no elenco adulto'}.`}`, memoria: null, tom: 'bom', abrir: { id: 'esp_contrato' } };
   }
   if (res.passou) {
     c.v.fatos['convite_base'] = c.v.t;

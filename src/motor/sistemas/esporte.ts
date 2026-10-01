@@ -39,13 +39,14 @@ import { fatorDeRiscoFisico } from './sobrecarga';
 import { SALARIO_MINIMO } from './renda';
 import { anoDe } from '../tempo';
 import { dinheiro } from '../texto';
-import { CIRCUITO_TENIS, custoDoCircuito, custoJuvenilTenis, DIVISAO_BASQUETE, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO, premiacaoTenis, rankingTenis, vantagemDeEstatura, vivePremiacao } from './modalidades';
+import { CIRCUITO_TENIS, custoDoCircuito, custoJuvenilTenis, DIVISAO_BASQUETE, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO, circuitoDeEstreia, circuitoPeloRanking, PONTOS_CAMPEAO, PONTOS_PRINCIPAL, pontosDaRodada, premiacaoTenis, rankingPorPontos, vantagemDeEstatura, vivePremiacao } from './modalidades';
 import { recursosDaFamilia } from './origem';
 import { mudarAgora } from './processos';
 import { pisoDoClube, registrarTemporada, registrarConquista } from './palmares';
 import { processarSelecao } from './selecao';
 import { nomePor } from './notoriedade';
-import { individualComEquipe, perfilDe, semVinculo } from './perfisEsportivos';
+import { daPorta, individualComEquipe, perfilDe, portaAmadora, semVinculo } from './perfisEsportivos';
+import { formatarMarca, jogarLutas, jogarProvas, jogarTemporadaVolei, NOME_FUNCAO_VOLEI, numeroDaFuncao, podiosDe, type FuncaoVolei } from './provas';
 
 export const MODALIDADES: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'];
 
@@ -446,9 +447,17 @@ const PARTIDAS = [0, 20, 30, 38, 38];
  * nota mediana 7,9, 85% titulares, nome e salário de estrela.)
  */
 const BARRA_FUTEBOL = [0, 73, 77, 82, 89];
-export const barraDaDivisao = (d: Dominio, nivel: number) => (d === 'futebol' ? BARRA_FUTEBOL[nivel] ?? 89 : 70 + nivel * 3);
+/**
+ * Tênis (FIX final da generalização): a técnica de quem joga cada circuito.
+ * O principal é o dos cem melhores do mundo — ali, técnica 85 é a de quem
+ * mal se segura, não a de quem se destaca. (Antes, valia a escada genérica,
+ * 82 no principal: quase todo profissional jogava o circuito principal como
+ * destaque, e o ranking mediano era 31º.)
+ */
+const BARRA_TENIS = [0, 74, 80, 85, 91];
+export const barraDaDivisao = (d: Dominio, nivel: number) => (d === 'futebol' ? BARRA_FUTEBOL[nivel] ?? 89 : d === 'tenis' ? BARRA_TENIS[nivel] ?? 91 : 70 + nivel * 3);
 /** A técnica que a divisão pede para começar jogando (a mesma barra, um pouco acima; nos outros esportes, a escada de antes). */
-export const barraDeTitular = (d: Dominio, nivel: number) => (d === 'futebol' ? (BARRA_FUTEBOL[nivel] ?? 89) + 1 : 72 + nivel * 2);
+export const barraDeTitular = (d: Dominio, nivel: number) => (d === 'futebol' ? (BARRA_FUTEBOL[nivel] ?? 89) + 1 : d === 'tenis' ? BARRA_TENIS[nivel] ?? 91 : 72 + nivel * 2);
 /** Quantos jogos (ou competições) a temporada tem, em cada modalidade e nível: fonte única (temporada, palmarés, seleção). */
 export const jogosDaTemporada = (d: Dominio, nivel: number) => (d === 'futebol' ? PARTIDAS[nivel] : d === 'basquete' ? [0, 18, 26, 32, 34][nivel] : d === 'tenis' ? [0, 14, 20, 22, 22][nivel] : d === 'volei' ? [0, 14, 20, 24, 26][nivel] : [0, 8, 10, 12, 12][nivel]) ?? 0;
 /** O que cada posição produz por jogo, em média (a temporada sorteia em volta disso; o palmarés mede contra isso). */
@@ -505,6 +514,11 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
     t.gols = 0;
   }
   if (e.modalidade === 'tenis') jogarCircuito(v, r, e, t, nota);
+  // As outras modalidades medem o que é delas (FIX final da generalização): a função no vôlei, a prova e a marca na
+  // natação e no atletismo, o cartel na luta.
+  if (e.modalidade === 'volei') jogarTemporadaVolei(v, r, e, t, nota);
+  if (e.modalidade === 'natacao' || e.modalidade === 'atletismo') jogarProvas(v, r, e, t, nota, h);
+  if (e.modalidade === 'lutas') jogarLutas(v, r, t, nota);
   (e.temporadas ??= []).push(t);
   // A carreira inteira cabe aqui (o histórico por clube e o palmarés leem daqui).
   if (e.temporadas.length > 30) e.temporadas.splice(0, e.temporadas.length - 30);
@@ -512,7 +526,7 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   const participacao = max ? titular / max : 0;
   const alvoRep = clamp((nota - 4.3) * 14 + (e.nivel - 1) * 6 + participacao * 10);
   e.reputacao = Math.round(clamp((e.reputacao ?? 30) * 0.55 + alvoRep * 0.45));
-  if (e.modalidade === 'tenis') t.ranking = rankingTenis(e);
+  if (e.modalidade === 'tenis') t.ranking = rankingPorPontos(t.pontosRanking ?? 0);
   return t;
 }
 
@@ -526,9 +540,12 @@ export function faseDoTenis(vencidas: number, rodadas: number): string {
 const CIDADES_TORNEIO = ['Florianópolis', 'Campinas', 'Porto Alegre', 'Belo Horizonte', 'Recife', 'Curitiba', 'Brasília', 'Salvador', 'Goiânia', 'Fortaleza', 'Ribeirão Preto', 'Santos'];
 const TORNEIOS_PRINCIPAL = ['um torneio 250 do circuito principal', 'um torneio 500 do circuito principal', 'um masters do circuito principal', 'um dos quatro grandes torneios do ano'];
 
+/** O porte de um torneio do circuito principal (250, 500, masters, um dos quatro grandes): quanto vale e como se chama. */
+function porteNoPrincipal(r: Rng): number { const x = r.next(); return x < 0.55 ? 0 : x < 0.85 ? 1 : x < 0.97 ? 2 : 3; }
+
 /** O nome de um torneio, no universo do jogo (nenhum torneio real é afirmado). */
-function nomeDoTorneio(nivel: number, r: Rng): string {
-  if (nivel >= 4) { const x = r.next(); return TORNEIOS_PRINCIPAL[x < 0.55 ? 0 : x < 0.85 ? 1 : x < 0.97 ? 2 : 3]; }
+function nomeDoTorneio(nivel: number, r: Rng, porte = 0): string {
+  if (nivel >= 4) return TORNEIOS_PRINCIPAL[porte];
   const cidade = r.pick(CIDADES_TORNEIO);
   return nivel === 3 ? `o challenger de ${cidade}` : nivel === 2 ? `o torneio internacional de ${cidade}` : `o torneio nacional de ${cidade}`;
 }
@@ -537,14 +554,16 @@ function nomeDoTorneio(nivel: number, r: Rng): string {
  * O ano do tenista, torneio a torneio: cada chave é jogada rodada a rodada
  * (a chance de cada jogo nasce da nota do ano, e a rodada seguinte é mais
  * difícil). Daí saem as vitórias e derrotas, as finais, os títulos, a melhor
- * fase e os torneios que marcaram — não números soltos.
+ * fase, os torneios que marcaram — e os pontos do ranking (a rodada
+ * alcançada × o peso do torneio), de onde sai a posição no mundo.
  */
 function jogarCircuito(_v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, nota: number): void {
   const aproveitamento = clamp(0.32 + (nota - 5.5) * 0.12, 0.08, 0.86);
   const rodadas = e.nivel === 1 ? 4 : 5;
-  let vit = 0, der = 0, tit = 0, fin = 0, melhor = 0;
+  let vit = 0, der = 0, tit = 0, fin = 0, melhor = 0, pontos = 0;
   const marcantes: { nome: string; fase: string; v: number }[] = [];
   for (let k = 0; k < t.partidas; k++) {
+    const porte = e.nivel >= 4 ? porteNoPrincipal(r) : 0;
     let rd = 0;
     while (rd < rodadas) {
       // Cada rodada é um adversário melhor: chegar à final já é raro; o título, mais.
@@ -554,9 +573,11 @@ function jogarCircuito(_v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, not
     if (rd === rodadas) tit++;
     if (rd >= rodadas - 1) fin++;
     melhor = Math.max(melhor, rd);
-    if (rd >= rodadas - 2 && (rd >= rodadas - 1 || e.nivel >= 3)) marcantes.push({ nome: nomeDoTorneio(e.nivel, r), fase: faseDoTenis(rd, rodadas), v: rd });
+    pontos += pontosDaRodada(rd, rodadas, e.nivel >= 4 ? PONTOS_PRINCIPAL[porte] : PONTOS_CAMPEAO[e.nivel]);
+    if (rd >= rodadas - 2 && (rd >= rodadas - 1 || e.nivel >= 3)) marcantes.push({ nome: nomeDoTorneio(e.nivel, r, porte), fase: faseDoTenis(rd, rodadas), v: rd });
   }
   t.vitorias = vit; t.derrotas = der; t.titulos = tit; t.finais = fin;
+  t.pontosRanking = pontos;
   t.melhorFase = t.partidas ? faseDoTenis(melhor, rodadas) : undefined;
   t.torneios = marcantes.sort((a, b) => b.v - a.v).slice(0, 4).map(({ nome, fase }) => ({ nome, fase }));
   t.gols = 0; t.assistencias = 0; t.titular = t.partidas;
@@ -568,8 +589,19 @@ export function linhaDaTemporada(_v: Vida, t: Temporada, modalidade?: Dominio): 
   const d = modalidade ?? _v.caminhos.esporte?.modalidade;
   if (t.pontos !== undefined) return `${cap(DIVISAO_BASQUETE[t.nivel])} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'} · ${String(t.pontos).replace('.', ',')} pontos, ${String(t.rebotes ?? 0).replace('.', ',')} rebotes e ${String(t.assistencias).replace('.', ',')} assistências por jogo${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
   if (t.vitorias !== undefined) return `${cap(CIRCUITO_TENIS[t.nivel])} · ${t.partidas} torneios · ${t.vitorias} vitórias e ${t.derrotas ?? 0} derrotas${t.titulos ? ` · ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}${(t.finais ?? 0) > (t.titulos ?? 0) ? ` · ${(t.finais ?? 0) - (t.titulos ?? 0)} ${(t.finais ?? 0) - (t.titulos ?? 0) === 1 ? 'final perdida' : 'finais perdidas'}` : ''}${t.ranking ? ` · ranking ${t.ranking}º` : ''}${t.premio !== undefined ? ` · prêmios de ${dinheiro(t.premio)}, custos de ${dinheiro(t.custos ?? 0)}` : ''}${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
-  if (!t.posicao && d === 'volei') return `${cap(DIVISAO_VOLEI[t.nivel])} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}, ${t.titular} como titular${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
-  if (!t.posicao) return `${cap(['', 'competições regionais', 'circuito nacional de acesso', 'circuito nacional', 'elite nacional'][t.nivel])} · ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'} · ${t.gols} ${t.gols === 1 ? 'pódio' : 'pódios'}${t.colocacao <= 8 ? ` · melhor colocação: ${t.colocacao}º` : ''}${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
+  const fora = t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : '';
+  if (!t.posicao && d === 'volei') return `${cap(DIVISAO_VOLEI[t.nivel])} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}, ${t.titular} como titular${t.volei && t.funcao ? ` · ${NOME_FUNCAO_VOLEI[t.funcao as FuncaoVolei] ?? t.funcao}: ${numeroDaFuncao(t)}` : ''}${fora}`;
+  const nivelInd = cap(['', 'competições regionais', 'circuito nacional de acesso', 'circuito nacional', 'elite nacional'][t.nivel]);
+  if (!t.posicao && t.prova) {
+    const x = t.prova;
+    const resultados = [x.finais ? `${x.finais} ${x.finais === 1 ? 'final' : 'finais'}` : '', x.podios ? `${x.podios} ${x.podios === 1 ? 'pódio' : 'pódios'}` : '', x.vitorias ? `${x.vitorias} ${x.vitorias === 1 ? 'vitória' : 'vitórias'}` : ''].filter(Boolean);
+    return `${nivelInd} · ${x.nome}: ${formatarMarca(x.unidade, x.marca)}${x.recorde ? ' (recorde pessoal)' : ''} · ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'}${resultados.length ? `: ${resultados.join(', ')}` : ', sem final'}${fora}`;
+  }
+  if (!t.posicao && t.luta) {
+    const x = t.luta;
+    return `${nivelInd} · ${x.categoria} · ${t.partidas} ${t.partidas === 1 ? 'evento' : 'eventos'} · ${x.lutas} ${x.lutas === 1 ? 'luta' : 'lutas'}: ${x.vitorias} ${x.vitorias === 1 ? 'vitória' : 'vitórias'}${x.antesDoTempo ? ` (${x.antesDoTempo} antes do tempo)` : ''}, ${x.derrotas} ${x.derrotas === 1 ? 'derrota' : 'derrotas'}${x.titulos ? ` · ${x.titulos} ${x.titulos === 1 ? 'título' : 'títulos'}` : ''}${x.podios > x.titulos ? ` · ${x.podios} ${x.podios === 1 ? 'pódio' : 'pódios'}` : ''}${fora}`;
+  }
+  if (!t.posicao) return `${nivelInd} · ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'} · ${podiosDe(t)} ${podiosDe(t) === 1 ? 'pódio' : 'pódios'}${t.colocacao <= 8 ? ` · melhor colocação: ${t.colocacao}º` : ''}${fora}`;
   const div = DIVISAO_DO_NIVEL[t.nivel];
   const partes = [`${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}`, `${t.titular} como titular`];
   if (t.posicao === 'goleiro') partes.push(`${t.defesa ?? 0} sem sofrer gol`);
@@ -651,11 +683,13 @@ export function processarEsporte(v: Vida, r: Rng): void {
         const lugar = ondeTreina(v, mod.d);
         const clube = clubeAmador(v, mod.d, lugar);
         v.fatos[`testes_amador_${mod.d}`] = testes + 1;
-        const quem = mod.d === 'futebol' ? 'Num jogo do campeonato amador da cidade, um auxiliar' : 'Num jogo da liga amadora, o técnico';
+        const porta = portaAmadora(mod.d);
+        const quem = porta.quem;
+        const individual = individualComEquipe(mod.d);
         novaOportunidade(v, {
           tipo: mod.d === 'futebol' ? 'peneira' : 'seletiva', dominio: mod.d, municipioId: lugar, meses: 12, chave: `amador_${mod.d}`, atividade: 'amador',
           titulo: `Teste ${noClube(clube)}`,
-          texto: `${quem} ${doClube(clube)}${lugar !== v.moradia.municipioId ? `, de ${municipio(lugar).nome},` : ''} viu você e chamou para uma semana de treino com o time de cima. Não é a base: é o elenco adulto, o salário pequeno de um clube pequeno — e quase ninguém chega por aqui.`
+          texto: `${quem} ${doClube(clube)}${lugar !== v.moradia.municipioId ? `, de ${municipio(lugar).nome},` : ''} ${individual ? `${mod.d === 'lutas' ? 'viu você lutar' : 'viu a sua marca'} e chamou para treinar com a equipe adulta. Não é a categoria de base: é a equipe principal, a ajuda de custo pequena de uma equipe pequena` : 'viu você e chamou para uma semana de treino com o time de cima. Não é a base: é o elenco adulto, o salário pequeno de um clube pequeno'} — e quase ninguém chega por aqui.`
         });
       }
     }
@@ -673,8 +707,13 @@ export function processarEsporte(v: Vida, r: Rng): void {
   else if (e.fase === 'profissional') anoProfissional(v, r, e);
 }
 
-/** As modalidades em que o campeonato amador de adultos é porta (a várzea, a liga amadora). */
-export const MODALIDADES_AMADORAS: Dominio[] = ['futebol', 'basquete', 'volei'];
+/**
+ * As modalidades em que a competição de adultos é porta (a várzea, a liga amadora, a prova aberta, o torneio
+ * aberto). FIX final da generalização: o atletismo (quem corre e arremessa em prova aberta é visto pela marca) e a
+ * luta (o torneio aberto) entraram. A natação não (o auge é cedo: quem não nadou base não chega ao adulto), e o
+ * tênis também não (não há "time de cima": o caminho é o ranking, desde o juvenil).
+ */
+export const MODALIDADES_AMADORAS: Dominio[] = ['futebol', 'basquete', 'volei', 'atletismo', 'lutas'];
 
 /** O clube pequeno que olha o campeonato amador: no futebol, um clube regional do estado; nos outros, a equipe da cidade. */
 function clubeAmador(v: Vida, d: Dominio, lugar: string): string {
@@ -694,7 +733,7 @@ export function entrarPeloAmador(v: Vida, d: Dominio, municipioId: string, clube
   const cidade = d === 'futebol' ? CLUBES.find(c => c.nome === clube)?.cidade ?? municipioId : municipioId;
   v.caminhos.esporte = { modalidade: d, fase: 'base', clube, nivel: 1, tInicio: v.t, tFase: v.t, lesoes: 0, municipioId: cidade, origem: 'amador' };
   v.fatos['contrato_nivel'] = 1;
-  const texto = `Passou no teste ${doClube(clube)}: do campeonato amador para o elenco adulto, aos ${idade(v)}.`;
+  const texto = `Passou no teste ${doClube(clube)}: ${daPorta(d)} para ${portaAmadora(d).elenco}, aos ${idade(v)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'oportunidade', texto, 3, { dominio: d });
 }
@@ -764,7 +803,8 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   // Contrato profissional: só para quem segue evoluindo.
   const { idade: idadeContrato, tecnica: limiar } = contratoDaBase(e.modalidade);
   if (i >= idadeContrato[0] && i <= idadeContrato[1] && h >= limiar && r.chance(clamp((h - limiar + 2) / 16, 0.08, 0.6))) {
-    const nivel = nivelPelaHabilidade(h);
+    // O tenista sem ranking não entra direto nos torneios grandes: começa no nacional ou na entrada internacional.
+    const nivel = e.modalidade === 'tenis' ? circuitoDeEstreia(h) : nivelPelaHabilidade(h);
     novaOportunidade(v, {
       tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'contrato_esporte',
       titulo: e.modalidade === 'tenis' ? 'Virar profissional' : 'Contrato profissional',
@@ -824,7 +864,7 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
   assinarContrato(v, e, 24);
   // O tenista começa sem prêmio no bolso: a renda do ano é a estimativa do circuito em que entra (a temporada acerta a conta).
   if (e.modalidade === 'tenis') emp.salario = Math.round(premiacaoTenis(e, { nota: 6, partidas: [0, 14, 20, 22, 22][e.nivel] }) / 12 / 10) * 10;
-  const outroClube = e.origem === 'amador' ? ' — vindo do campeonato amador, sem passar por base' : e.clube !== daBase ? ` (${oClube(daBase)} não tinha lugar no time de cima)` : '';
+  const outroClube = e.origem === 'amador' ? ` — vindo ${daPorta(e.modalidade)}, sem passar por base` : e.clube !== daBase ? ` (${oClube(daBase)} não tinha lugar no time de cima)` : '';
   const texto = e.modalidade === 'tenis' ? `Virou tenista profissional aos ${idade(v)}, no ${CIRCUITO_TENIS[e.nivel]}: sem clube, sem salário, a raquete e o ranking.` : e.modalidade === 'basquete' ? `Assinou o primeiro contrato de ${NOME_FUNCAO[funcaoBasquete(v)]} ${peloClube(e.clube)}, aos ${idade(v)}${e.origem === 'amador' ? ', vindo da liga amadora' : ''}.` : e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, ${peloClube(e.clube)}, aos ${idade(v)}${outroClube}.` : `Virou atleta profissional de ${NOME_MOD[e.modalidade]}, ${peloClube(e.clube)}, aos ${idade(v)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'profissional', texto, 3, { dominio: e.modalidade, ocupacaoId: oc.id });
@@ -923,9 +963,9 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   const antes = e.espaco;
   const passou = Math.max(0, i - auge);
   e.espaco = h + (t.nota - 6) * 2.5 + conversa - passou * 1.2 >= barraDeTitular(e.modalidade, e.nivel) && !(lesaoAtiva(v)?.lesao.gravidade === 3) ? 'titular' : 'reserva';
-  if (antes === 'titular' && e.espaco === 'reserva') { escrever(v, { texto: `${nomeClube === 'A equipe' ? 'Perdeu a vaga na equipe principal' : 'Perdeu a posição'}: a próxima temporada começa no banco.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' }); abalar(v, 'perder a posição no time', -4, 3); }
+  if (antes === 'titular' && e.espaco === 'reserva') { escrever(v, { texto: individualComEquipe(e.modalidade) ? 'Perdeu a vaga nas provas principais da equipe: a próxima temporada começa fora delas.' : `${nomeClube === 'A equipe' ? 'Perdeu a vaga entre os titulares' : 'Perdeu a posição'}: a próxima temporada começa no banco.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' }); abalar(v, 'perder a posição no time', -4, 3); }
   else if (antes === 'reserva' && e.espaco === 'titular') {
-    escrever(v, { texto: `Ganhou a posição: a próxima temporada começa como titular${e.clausulaTitular ? ' — e o salário sobe, como o contrato dizia' : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: `${individualComEquipe(e.modalidade) ? 'Ganhou a vaga nas provas principais da equipe' : 'Ganhou a posição: a próxima temporada começa como titular'}${e.clausulaTitular ? ' — e o salário sobe, como o contrato dizia' : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
     // A cláusula da proposta aceita: o que foi dito antes de assinar é cumprido aqui.
     if (e.clausulaTitular && emp && OCUPACOES_DE_ATLETA.includes(emp.ocupacaoId)) { emp.salario = Math.max(emp.salario, e.clausulaTitular); e.clausulaTitular = undefined; }
   }
@@ -975,13 +1015,13 @@ function anoDeCircuito(v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada): voi
   const texto = `O ano no ${CIRCUITO_TENIS[e.nivel]}: ${t.vitorias} vitórias${t.titulos ? `, ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}, ranking ${t.ranking}º. Prêmios de ${dinheiro(premio)}; treinador e viagens custaram ${dinheiro(custos)} — ${liquido >= 0 ? `sobraram ${dinheiro(liquido)}` : `faltaram ${dinheiro(-liquido)}`}.`;
   escrever(v, { texto, relevancia: t.titulos ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: liquido >= 0 ? 'bom' : t.titulos ? undefined : 'ruim' });
   registrarCircuito(v, e, t);
-  // O ranking decide onde se joga: subir (a porta do circuito maior) ou descer (o nome não sustentou).
-  const oferta = nivelQueOMercadoOferece(v, e);
-  if (oferta > e.nivel && e.nivel < 4) {
-    e.nivel = (e.nivel + 1) as 1 | 2 | 3 | 4;
+  // O ranking decide onde se joga: subir (a porta do circuito maior) ou descer (os pontos do ano não sustentaram).
+  const proximo = circuitoPeloRanking(e.nivel, t.ranking ?? 2200);
+  if (proximo > e.nivel) {
+    e.nivel = proximo;
     escrever(v, { texto: `O ranking subiu o bastante: o próximo ano é no ${CIRCUITO_TENIS[e.nivel]}. Prêmios maiores — e viagens mais caras.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
-  } else if (oferta < e.nivel && e.nivel > 1) {
-    e.nivel = (e.nivel - 1) as 1 | 2 | 3 | 4;
+  } else if (proximo < e.nivel) {
+    e.nivel = proximo;
     escrever(v, { texto: `O ranking caiu: o próximo ano é de volta ao ${CIRCUITO_TENIS[e.nivel]}.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
   }
   // Dois anos no vermelho e sem reserva para o próximo: a pergunta de continuar (ninguém decide por você).
@@ -1060,7 +1100,7 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
   const nome = (e.reputacao ?? 0) >= 50 && e.nivel >= 3 && i >= 28;
   if (eraPro && (temFato(v, 'pos_treinador') || (nome && hash(`${v.id}:comissao`) < 0.35))) {
     const oc = e.modalidade === 'tenis' ? 'professor_tenis' : i >= 28 ? 'auxiliar_tecnico' : 'treinador_escolinha';
-    novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: e.modalidade === 'tenis' ? 'Da quadra para a aula' : 'Do campo para o banco', texto: oc === 'professor_tenis' ? 'Um clube da cidade quer alguém com passado de circuito para as turmas e os juvenis: aula por hora, alunos seus.' : oc === 'auxiliar_tecnico' ? (temFato(v, 'pos_treinador') ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Um treinador que trabalhou com você montou uma comissão técnica: quer alguém que o vestiário respeite. Os cursos, você tira no caminho.') : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
+    novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: e.modalidade === 'tenis' ? 'Da quadra para a aula' : e.modalidade === 'futebol' ? 'Do campo para o banco' : perfilDe(e.modalidade).estrutura === 'clube' ? 'Da quadra para o banco' : 'Do outro lado do treino', texto: oc === 'professor_tenis' ? 'Um clube da cidade quer alguém com passado de circuito para as turmas e os juvenis: aula por hora, alunos seus.' : oc === 'auxiliar_tecnico' ? (temFato(v, 'pos_treinador') ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Um treinador que trabalhou com você montou uma comissão técnica: quer alguém que o vestiário respeite. Os cursos, você tira no caminho.') : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
   }
   abalar(v, eraPro ? 'o fim da carreira no esporte' : `a dispensa ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'}`, -(eraPro ? 8 : 10), 6);
 }

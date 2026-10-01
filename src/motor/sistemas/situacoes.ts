@@ -40,6 +40,7 @@ import { doClube, oClube, peloClube } from '../dados/clubes';
 import { cursoOuNulo } from '../dados/cursos';
 import { OCUPACOES } from '../dados/ocupacoes';
 import { estatura, funcaoBasquete, vantagemDeEstatura } from './modalidades';
+import { categoriaDeLuta, funcaoVolei, provaDe } from './provas';
 import { NOME_MOD } from './esporte';
 import { registrarNoMandato, NOME_PRIORIDADE } from './politica';
 import { novaOportunidade } from './oportunidades';
@@ -728,7 +729,16 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
     id: 'atl_final', trajetoria: 'atleta', peso: () => 2,
     cabe: v => esporteDe(v, 'atleta') && individualEsp(v),
     titulo: v => (v.caminhos.esporte?.modalidade === 'lutas' ? 'A final' : 'A final'),
-    texto: v => { const d = v.caminhos.esporte!.modalidade; return d === 'natacao' ? 'Final do campeonato nacional, raia quatro. O adversário da raia cinco é o favorito.' : d === 'lutas' ? 'Final do campeonato nacional. A adversária conhece o seu jogo; você conhece o dela.'.replace('A adversária conhece o seu jogo; você conhece o dela', 'Do outro lado, alguém que já venceu você uma vez') : 'Final do campeonato nacional. Oito atletas, uma pista, o estádio quase vazio — e a comissão da seleção na arquibancada.'; },
+    // A final da SUA prova (ou da sua categoria): a natação tem raia, o salto tem tentativas, a luta tem chave.
+    texto: v => {
+      const d = v.caminhos.esporte!.modalidade;
+      if (d === 'lutas') return `Final do campeonato nacional, categoria ${categoriaDeLuta(v)}. Do outro lado, alguém que já venceu você uma vez.`;
+      const p = provaDe(v, d);
+      const da = !p ? '' : /^\d/.test(p.nome) ? ` dos ${p.nome}` : p.nome === 'maratona' ? ' da maratona' : ` do ${p.nome}`;
+      if (d === 'natacao') return `Final${da} do campeonato nacional, raia quatro. O adversário da raia cinco é o favorito.`;
+      if (p?.unidade === 'm') return `Final${da} do campeonato nacional. Três tentativas para ficar entre os oito, mais três para a medalha — e a comissão da seleção na arquibancada.`;
+      return `Final${da} do campeonato nacional. Oito atletas, uma pista, o estádio quase vazio — e a comissão da seleção na arquibancada.`;
+    },
     intencoes: v => {
       const d = v.caminhos.esporte!.modalidade;
       const forte = d === 'lutas' ? 'Partir para cima desde o primeiro segundo' : 'Sair forte desde o começo';
@@ -752,7 +762,8 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
   },
   {
     id: 'vol_saque', trajetoria: 'atleta', peso: () => 2,
-    cabe: v => esporteDe(v, 'atleta') && v.caminhos.esporte?.modalidade === 'volei',
+    // O líbero não saca (é a regra): o tie-break dele é outro.
+    cabe: v => esporteDe(v, 'atleta') && v.caminhos.esporte?.modalidade === 'volei' && funcaoVolei(v) !== 'libero',
     contexto: (_v, r) => ({ placar: r.pick(['13 a 14', '14 a 14', '12 a 14']) }),
     titulo: 'O saque do tie-break',
     texto: (_v, d) => `Quinto set, ${d.placar}. O técnico olha para o banco e para você. A bola é sua no saque.`,
@@ -760,6 +771,29 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
       { id: 'viagem', texto: 'Saque viagem, forçado', dica: 'Ace — ou bola na rede.', risco: 0.65, fatores: (v, d) => [tecnicaEsp(v), cabeca(v, d), coragem(v)], desfechos: { otimo: { texto: 'Ace. E outro. O ginásio desabou.', efeitos: { nome: 3, humor: 5, confianca: 1 }, memoria: 'Virou um quinto set com dois aces seguidos.' }, bom: { texto: 'O passe deles saiu ruim; o bloqueio fez o ponto.', efeitos: { nome: 1 } }, ruim: { texto: 'Bola na rede.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Na rede, no match point. Fim de jogo.', efeitos: { nome: -2, estresse: 6, confianca: -1 } } } },
       { id: 'tatico', texto: 'Saque flutuante no líbero deles', dica: 'Menos força, mais pontaria.', risco: 0.3, fatores: v => [leitura(v), tecnicaEsp(v)], desfechos: D('O líbero errou o passe; o contra-ataque foi seu.', 'O passe deles saiu fora da rede.', 'Passe perfeito deles.', 'Saque fácil, ponto deles.') },
       { id: 'seguro', texto: 'Só colocar a bola em jogo', dica: 'Não erra. Não pressiona.', risco: 0.1, fatores: v => [disciplina(v)], desfechos: D('Rali longo, e o seu bloqueio fechou o jogo.', 'O rali seguiu.', 'Eles atacaram de primeira.', 'Ponto deles no contra-ataque.', { otimo: { nome: 1 }, bom: { nome: 0 } }) }
+    ]
+  },
+  {
+    id: 'vol_passe', trajetoria: 'atleta', peso: () => 2,
+    cabe: v => esporteDe(v, 'atleta') && v.caminhos.esporte?.modalidade === 'volei' && funcaoVolei(v) === 'libero',
+    titulo: 'O passe',
+    texto: () => 'O sacador deles mira você desde o primeiro set: saque viagem, o mais forte da liga. O técnico pede para você pegar a zona do ponteiro também.',
+    intencoes: [
+      { id: 'tudo', texto: 'Cobrir a quadra inteira', dica: 'Se der certo, o ataque de vocês joga solto.', risco: 0.55, fatores: v => [tecnicaEsp(v), F('fôlego', (v.corpo.forma - 70) / 50)], desfechos: D('Passe na mão do levantador a noite inteira. O sacador deles desistiu de você.', 'Segurou a recepção; dois aces passaram.', 'O saque achou o buraco entre você e o ponteiro.', 'Três aces seguidos em cima de você. O técnico pediu tempo.', { otimo: { nome: 2, humor: 3, confianca: 1 }, ruim: { nome: -1 }, pessimo: { nome: -2, estresse: 3 } }) },
+      { id: 'zona', texto: 'Ficar na sua zona e falar com o ponteiro', dica: 'Menos heroísmo, mais combinação.', risco: 0.3, fatores: v => [leitura(v), social(v)], desfechos: D('A recepção combinada fechou a quadra: nenhum ace no jogo.', 'Funcionou quase sempre.', 'O ponteiro errou o que era dele.', 'Os dois ficaram parados na mesma bola.') },
+      { id: 'defesa', texto: 'Ceder um pouco no passe e caprichar na defesa', dica: 'O passe fica meia-boca; o contra-ataque ganha.', risco: 0.35, fatores: v => [tecnicaEsp(v), coragem(v)], desfechos: D('Defendeu o impossível no ponto do set. A torcida levantou.', 'Duas defesas boas; o passe sofreu.', 'O passe ruim virou ponto deles.', 'Nem passe, nem defesa: noite ruim.') }
+    ]
+  },
+  {
+    id: 'vol_levantamento', trajetoria: 'atleta', peso: () => 2,
+    cabe: v => esporteDe(v, 'atleta') && v.caminhos.esporte?.modalidade === 'volei' && funcaoVolei(v) === 'levantador',
+    contexto: (_v, r) => ({ placar: r.pick(['23 a 24', '24 a 24', '13 a 14']) }),
+    titulo: 'A bola da decisão',
+    texto: (_v, d) => `${d.placar}, passe perfeito na sua mão. O oposto pede a bola; o central está sozinho no meio; o bloqueio deles já sabe para onde ela costuma ir.`,
+    intencoes: [
+      { id: 'oposto', texto: 'Dar para o oposto, que pediu', dica: 'A bola de segurança — que o bloqueio também espera.', risco: 0.4, fatores: v => [tecnicaEsp(v), cabeca(v)], desfechos: D('O oposto passou pelo triplo. Ponto.', 'Explorou o bloqueio; ponto.', 'Bloqueado.', 'Bloqueio simples, bola no chão do seu lado.') },
+      { id: 'central', texto: 'Surpreender com a china pelo meio', dica: 'Se o bloqueio cair no oposto, o central entra sozinho.', risco: 0.55, fatores: v => [leitura(v), tecnicaEsp(v), coragem(v)], desfechos: D('O bloqueio foi no oposto; a china caiu no meio. Ninguém tocou.', 'Ponto pelo meio.', 'O central chegou atrasado.', 'Bola longe do central: erro seu.', { otimo: { nome: 3, humor: 4, confianca: 1 } }) },
+      { id: 'segunda', texto: 'Largar de segunda', dica: 'Ninguém espera o levantador atacar — às vezes.', risco: 0.65, fatores: v => [leitura(v), coragem(v)], desfechos: D('A largada de segunda caiu no meio da quadra deles. O ginásio não acreditou.', 'Deu certo, por pouco.', 'O líbero deles leu.', 'Bloqueada na cara.', { otimo: { nome: 3, humor: 5 }, pessimo: { nome: -1, estresse: 2 } }) }
     ]
   }
 ];

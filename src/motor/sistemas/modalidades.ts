@@ -13,11 +13,12 @@
  *   treinador, viagens do circuito juvenil). O profissional vive de
  *   PREMIAÇÃO (o que o ranking alcança) e paga do bolso treinador e viagens:
  *   bruto → custos → líquido, e o líquido pode ser negativo por anos. O
- *   ranking decide o circuito em que se joga (nacional → entrada
- *   internacional → intermediário → principal).
+ *   ranking (os pontos dos torneios do ano) decide o circuito em que se
+ *   joga (nacional → entrada internacional → intermediário → principal).
  *
  * Tudo aqui é derivado do estado (sem estado novo persistido): a estatura sai
- * da semente da pessoa; o ranking, da reputação e do nível.
+ * da semente da pessoa. O ranking do tênis sai dos pontos dos torneios do
+ * ano (`rankingPorPontos`).
  */
 
 import type { Rng } from '../rng';
@@ -81,24 +82,67 @@ export const CIRCUITO_TENIS = ['', 'torneios nacionais', 'circuito de entrada in
 
 /* ------------------------------------------------------------ Tênis: dinheiro */
 
-/** O ranking mundial (abstrato) que o nome e o circuito sustentam. */
-export function rankingTenis(e: CarreiraEsportiva): number {
-  const rep = e.reputacao ?? 20;
-  const faixa: [number, number][] = [[0, 0], [1500, 900], [900, 350], [350, 120], [120, 1]];
-  const [pior, melhor] = faixa[e.nivel];
-  return Math.max(1, Math.round(pior - (pior - melhor) * clamp(rep / 100, 0, 1)));
+/**
+ * O ranking mundial nasce dos RESULTADOS (FIX final da generalização): cada
+ * torneio dá pontos pela rodada alcançada e pelo peso do torneio, e o ranking
+ * é a posição que esses pontos do ano ocupam no mundo. Antes, o ranking era
+ * uma conta da reputação dentro do circuito — e quase todo profissional
+ * acabava entre os trinta melhores do mundo.
+ *
+ * O campeão de cada nível (no universo do jogo, na escala do ranking
+ * mundial): torneio nacional 10, internacional de entrada 40, challenger 125;
+ * no principal, pelo porte do torneio (250, 500, masters, os quatro grandes).
+ */
+export const PONTOS_CAMPEAO = [0, 10, 40, 125, 250];
+export const PONTOS_PRINCIPAL = [250, 500, 1000, 2000];
+/** A fração dos pontos do campeão por rodadas vencidas (chave de 4 rodadas no nacional; de 5 nos outros). */
+const FRACAO: Record<number, number[]> = { 4: [0, 0.15, 0.35, 0.6, 1], 5: [0, 0.08, 0.18, 0.36, 0.6, 1] };
+export const pontosDaRodada = (vencidas: number, rodadas: number, campeao: number) => Math.round((FRACAO[rodadas]?.[vencidas] ?? 0) * campeao);
+
+/** Quantos pontos tem quem ocupa cada posição do ranking mundial (a curva do mundo: poucos no topo, a multidão embaixo). */
+const CURVA: [number, number][] = [[12000, 1], [5000, 5], [3000, 10], [1900, 20], [1300, 35], [1000, 50], [650, 100], [380, 150], [260, 200], [150, 300], [90, 400], [55, 500], [25, 700], [12, 1000], [5, 1500], [1, 2000]];
+
+/** A posição no ranking mundial que os pontos do ano ocupam. */
+export function rankingPorPontos(pontos: number): number {
+  if (pontos >= CURVA[0][0]) return 1;
+  if (pontos < 1) return 2200;
+  for (let k = 1; k < CURVA.length; k++) {
+    const [p1, r1] = CURVA[k - 1], [p0, r0] = CURVA[k];
+    if (pontos >= p0) {
+      // Interpolação em escala logarítmica (dobrar os pontos sobe muito mais posições lá embaixo do que no topo).
+      const f = (Math.log(pontos) - Math.log(p0)) / (Math.log(p1) - Math.log(p0));
+      return Math.max(1, Math.round(Math.exp(Math.log(r0) + (Math.log(r1) - Math.log(r0)) * f)));
+    }
+  }
+  return 2200;
 }
+
+/**
+ * O circuito que o ranking abre no ano seguinte. Subir pede ranking para a
+ * porta de cima (a entrada nos torneios é por ranking); descer, cair abaixo
+ * da linha de baixo — há uma faixa entre as duas em que se fica onde está.
+ */
+const SOBE = [0, 0, 900, 350, 120];
+const DESCE = [0, 0, 1300, 550, 180];
+export function circuitoPeloRanking(nivel: number, ranking: number): 1 | 2 | 3 | 4 {
+  if (nivel < 4 && ranking <= SOBE[nivel + 1]) return (nivel + 1) as 1 | 2 | 3 | 4;
+  if (nivel > 1 && ranking > DESCE[nivel]) return (nivel - 1) as 1 | 2 | 3 | 4;
+  return nivel as 1 | 2 | 3 | 4;
+}
+
+/** O circuito em que o tenista recém-profissional começa: sem ranking, ninguém entra direto nos torneios grandes. */
+export const circuitoDeEstreia = (tecnica: number): 1 | 2 => (tecnica >= 88 ? 2 : 1);
 
 /**
  * A premiação do ano (bruta): o circuito, as vitórias da temporada, o nome.
  * O extraordinário (o circuito principal com ranking alto) é raro por
  * construção — o nível 4 pede reputação que poucos juntam.
  */
-export function premiacaoTenis(e: CarreiraEsportiva, t: Pick<Temporada, 'nota' | 'partidas'>, r?: Rng): number {
+export function premiacaoTenis(e: CarreiraEsportiva, t: Pick<Temporada, 'nota' | 'partidas'> & { ranking?: number }, r?: Rng): number {
   const base = [0, 18000, 70000, 230000, 900000][e.nivel];
   const forma = clamp(0.35 + (t.nota - 5) * 0.22, 0.1, 1.8);
   const torneios = Math.max(0.2, t.partidas / [1, 14, 20, 22, 22][e.nivel]);
-  const topo = e.nivel === 4 && rankingTenis(e) <= 30 ? 2.6 : 1;
+  const topo = e.nivel === 4 && (t.ranking ?? 9999) <= 30 ? 2.6 : 1;
   const sorte = r ? 0.8 + r.next() * 0.4 : 1;
   return Math.round(base * forma * torneios * topo * sorte / 100) * 100;
 }

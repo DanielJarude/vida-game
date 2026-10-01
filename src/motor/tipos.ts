@@ -1301,12 +1301,20 @@ export interface Temporada {
   custos?: number;
   /** Tênis: finais disputadas (vencidas e perdidas), a melhor fase do ano e os torneios que marcaram (nomes do universo do jogo). */
   finais?: number;
+  /** Tênis: os pontos do ranking que o ano somou (a rodada alcançada em cada torneio × o peso dele); o ranking sai daqui. */
+  pontosRanking?: number;
   melhorFase?: string;
   torneios?: { nome: string; fase: string }[];
   /** A temporada foi de empréstimo: o clube detentor do contrato. */
   emprestado?: string;
-  /** Basquete: a função em quadra naquela temporada. */
+  /** Basquete e vôlei: a função em quadra naquela temporada. */
   funcao?: string;
+  /** Vôlei: os sets jogados e o que a função produziu neles (totais da temporada; a recepção, em %, de quem passa). */
+  volei?: { sets: number; pontos: number; bloqueios: number; aces: number; levantamentos: number; defesas: number; recepcao?: number };
+  /** Natação e atletismo: a prova, a melhor marca do ano (segundos ou metros), se foi recorde pessoal, e o ano de competições. */
+  prova?: { nome: string; unidade: 's' | 'm'; marca: number; recorde?: boolean; finais: number; podios: number; vitorias: number };
+  /** Luta: a categoria de peso e o cartel do ano (sem empate: a chave decide), os títulos e pódios, a maior sequência de vitórias. */
+  luta?: { categoria: string; lutas: number; vitorias: number; derrotas: number; antesDoTempo: number; titulos: number; podios: number; sequencia: number };
 }
 
 /** Um projeto artístico coletivo (banda, grupo de teatro, companhia). */

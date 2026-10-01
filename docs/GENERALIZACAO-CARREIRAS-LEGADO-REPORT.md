@@ -518,3 +518,335 @@ O que a auditoria não cobre: os textos de decisão (o corpo do popup) das propo
 | `motor-carreira` | 164 kB |
 
 O limite de 800 kB não foi aumentado.
+
+## 18. FIX FINAL DA GENERALIZAÇÃO
+
+Base: `394badc` (este pacote), mesma branch. Delimitado às pendências que a auditoria do próprio pacote encontrou.
+
+Ficaram fora, de propósito:
+
+- América do Sul, ATT4, ATT5 e a simulação final de 1.000 vidas;
+- nenhuma reescrita de arquitetura;
+- a curva do futebol por idade de início (18.6 confirma que ela não mudou).
+
+O save continua na **v18**: os campos novos são opcionais e validados.
+
+### 18.1 Causas encontradas
+
+**Tênis.** Antes de mexer em número, a auditoria achou quatro causas:
+
+1. **A régua da temporada era a escada genérica** (`70 + 3 × nível`): 82 no circuito principal. Para o circuito dos cem melhores do mundo, técnica 85 virava "acima da média", e a nota do ano saía de destaque.
+2. **O ranking não vinha dos resultados.** `rankingTenis` era uma conta linear da reputação dentro do circuito, e a reputação vinha da nota da etapa anterior. A conta se realimentava: nota alta → reputação alta → ranking alto.
+3. **A subida de circuito usava a reputação** (`LIMIAR_TENIS` sobre o valor de mercado), não o ranking.
+4. **A equipe do país tinha corte absoluto** (`100 − 15·log10(ranking)`): todo top 160 era convocado, sem disputa com os outros tenistas do país. A nota do ano, que é relativa ao circuito, também entrava. Quem dominava torneio de entrada ganhava "forma" de seleção.
+
+Além disso, a amostra M do pacote começava todo mundo com técnica 80+ (ver 18.5).
+
+**Política.**
+
+- O legado só contava mandatos e o que saiu do papel. Trabalho de base, filiação, candidatura perdida, reeleição e crise atravessada não viravam história.
+- **Bug de integridade:** ao tomar posse em outro cargo, o mandato anterior só era fechado no histórico se o emprego registrado naquele momento fosse o do mandato. Na simulação, 5% das carreiras políticas mostravam mandatos sobrepostos ("vereador 2069–2075" e "deputado 2071–2073").
+- O pareamento eleição → fim de mandato era feito pelo ano e deixava um fim fechar dois mandatos.
+
+**Farda.** O legado só contava postos a partir do segundo, cursos, elogios e reserva. Por isso:
+
+- o serviço inicial não tinha nenhum marco (94% sem realização);
+- o ingresso, a formação concluída, a especialidade, as guarnições e a baixa não entravam;
+- a especialidade aparecia com o id cru ("especialidade: administracao").
+
+**Modalidades.**
+
+- O vôlei só tinha jogos e titularidade.
+- Natação, atletismo e luta compartilhavam um registro só ("competições e pódios"), com os pódios guardados no campo `gols`.
+- O momento "O saque do tie-break" valia também para o líbero, que não saca.
+
+**Textos.**
+
+- As decisões de mercado e treinador falavam a língua do futebol para todos, inclusive nas memórias que viram Linha da Vida: "Nenhum clube ligou", "Estádio menor, gramado pior — e o seu nome na escalação", "Abaixo daqui, só o futebol amador", "Mais uma rodada no banco".
+- Para as individuais apareciam "Primeira temporada como titular (10 jogos começando jogando)", "começa no banco" e "Perguntar o que falta para jogar".
+- O tênis via "A próxima temporada começa como titular".
+
+### 18.2 Alterações
+
+**Tênis** (`modalidades.ts`, `esporte.ts`, `selecao.ts`):
+
+- **Régua própria do tênis** (`BARRA_TENIS = 74 · 80 · 85 · 91`): a técnica de quem joga cada circuito.
+- **Ranking por pontos.**
+  - Cada torneio dá pontos pela rodada alcançada × o peso dele (nacional 10, entrada 40, challenger 125; no principal, 250, 500, 1000 ou 2000 pelo porte).
+  - A soma do ano (`Temporada.pontosRanking`) vira a posição numa curva fixa do mundo (`rankingPorPontos`: 650 pontos = 100º, 1.900 = 20º).
+- **O circuito do ano seguinte é o que o ranking abre** (`circuitoPeloRanking`). Sobe ao principal com ranking ≤ 120 e cai abaixo de 180, com uma faixa entre as duas linhas em que se fica onde está. Quem estreia sem ranking começa no nacional ou na entrada internacional (`circuitoDeEstreia`), nunca direto no principal.
+- **A equipe do país é dos melhores do país naquele ano** (`concorrenciaNoTenis`).
+  - A régua é o ranking do 4º melhor tenista do país (convocação) e do 2º (simples). Varia por ano e por gênero e é a mesma para todas as vidas daquele ano.
+  - A fama e a nota relativa ao circuito não entram: o ranking já contém a forma do ano.
+- A premiação de topo e a tela leem o ranking da temporada. A tela usa a mesma regra do motor ("o ranking já dá o circuito acima").
+
+**Política** (`politica.ts`, `legado.ts`):
+
+- O mandato anterior é fechado na posse de outro cargo, qualquer que seja o emprego registrado.
+- O pareamento eleição → fim é feito por índice, e cada fim fecha um mandato só. A eleição ganha com posse ainda por vir aparece como "à espera da posse".
+- **Realizações, só do que aconteceu:**
+  - o mandato, e a reeleição como reeleição ("Reeleita deputada estadual");
+  - o que saiu do papel;
+  - a crise atravessada de pé;
+  - a candidatura perdida, como derrota ("Candidatura a vereadora em 2052: não se elegeu");
+  - a filiação e as trocas de partido (ou a indicação de militar da ativa);
+  - os anos de trabalho de base (contados um por ano no `pol_comunidade`);
+  - a bandeira;
+  - a entrada (o marco mais leve).
+- Fama não é realização: nenhuma linha vem de notoriedade.
+
+**Farda** (`legado.ts`):
+
+- Ingresso no primeiro posto, "Concluiu a formação: sargento" quando o posto anterior era de formação, cada posto, os cursos.
+- A especialidade pelo nome ("comunicações e sistemas"), as guarnições por onde passou, o engajamento do temporário, os elogios.
+- O fim real: a baixa "com o certificado de reservista", a saída ou a reserva.
+- Nada de medalha ou condecoração inventada, e nenhum vocabulário de combate.
+
+**Modalidades** (novo `provas.ts`, ligado em `fecharTemporada`):
+
+| Modalidade | O que a temporada passou a guardar | O que o histórico e o resumo mostram |
+| --- | --- | --- |
+| Vôlei | a função pela estatura (líbero, levantador, ponteiro, oposto, central; régua pelos quantis medidos da população do jogo); sets, pontos, bloqueios, aces, levantamentos, defesas, recepção (líbero e ponteiro) | por equipe: Função, Sets, Pontos/set, Bloqueios/set, Aces, Defesas/set; "980 sets como líbero: 3,7 defesas por set, 61% de recepção" |
+| Natação | a prova (8 provas; a semente escolhe e a estatura inclina), a melhor marca do ano pela técnica e pela forma, o recorde pessoal (melhor que todas as anteriores na prova), finais, pódios e vitórias competição a competição | ano a ano: Prova, Marca do ano (RP), Finais, Pódios, Vitórias; "recorde pessoal de 52s84 (2050)" |
+| Atletismo | o mesmo princípio, com 9 provas e a unidade da prova: tempo (10s21, 1min47s20, 2h08min15) ou distância (8,12 m) | idem |
+| Luta | a categoria de peso, o cartel evento a evento (chave de quatro rodadas; derrota na semifinal = pódio; sem empate), as vitórias antes do tempo, a maior sequência | ano a ano: Categoria, Eventos, V–D, Antes do tempo, Títulos, Pódios; "cartel de 228 vitórias (89 antes do tempo) e 113 derrotas" |
+
+- O vôlei mede a produção da temporada pela função (`producaoVolei`). As individuais leem os pódios de `podiosDe`, compatível com temporadas antigas.
+- O título individual diz onde foi conquistado: "Campeã do circuito nacional de natação nos 100 m costas", com a marca do ano.
+- **Momentos novos do vôlei, por função:** "O passe" (líbero) e "A bola da decisão" (levantador). "O saque do tie-break" deixou de valer para o líbero.
+- A final do atletismo e da natação cita a prova; a da luta, a categoria.
+
+**Textos na fonte** (`perfisEsportivos.mercadoEsportivo` e `portaAmadora`):
+
+- Renovação, proposta, pedir para sair, treinador, doping, fechamento do ano, perder ou ganhar a posição e o convite pós-carreira consultam o vocabulário da modalidade.
+  - Futebol: clube, estádio, escalação.
+  - Basquete e vôlei: equipe, ginásio.
+  - Individuais: equipe, provas principais.
+  - Tênis: o circuito.
+- No tênis, "Conversar com o treinador" e "Pedir para ser negociado" ficam bloqueados com o motivo ("não há banco nem escalação"; "o ranking decide onde se joga").
+
+### 18.3 Rota amadora e empréstimo, por modalidade
+
+| Modalidade | Empréstimo | Rota amadora | Estado depois do fix |
+| --- | --- | --- | --- |
+| Futebol | aplicável (o mercado de empréstimo é dele) | aplicável (campeonato amador) | já existiam; inalterados |
+| Basquete | aplicável em tese, raro no país (contratos de temporada) | aplicável (liga amadora) | rota existia; empréstimo documentado como expansão futura |
+| Vôlei | idem | aplicável (liga amadora) | idem |
+| Atletismo | não se aplica (o atleta troca de equipe, não é emprestado) | **aplicável**: a prova aberta da federação, a marca vista | **implementado** (o mesmo mecanismo, régua de titular de equipe pequena, chance até 25%/ano, texto da modalidade) |
+| Luta | não se aplica | **aplicável**: o torneio aberto | **implementado** |
+| Natação | não se aplica | não se aplica (o auge é cedo; quem não nadou base não chega ao adulto) | documentado |
+| Tênis | não se aplica (individual, sem contrato) | não se aplica (não há "time de cima"; o caminho é o ranking desde o juvenil) | documentado |
+
+### 18.4 Simulações antes/depois
+
+Script novo: `scripts/sim/fixGeneralizacao.ts` (`SO=T,P,F,E`).
+
+- O "antes" é **o mesmo script** rodando sobre o código de `394badc`, numa worktree separada.
+- As sementes são as mesmas e os resultados são determinísticos.
+
+**Tênis — amostra de elite** (300 carreiras, técnica 80+ aos 18, até os 34; a amostra M do pacote):
+
+| | antes | depois |
+| --- | --- | --- |
+| chegou ao circuito principal | 89% | **31%** |
+| maior circuito: challengers · entrada | 10% · 0% | 57% · 12% |
+| melhor ranking (p10 · p25 · mediana · p75 · p90) | 6 · 16 · 27 · 38 · 198 | **34 · 104 · 154 · 227 · 357** |
+| top 10 · top 50 · top 100 | 16% · 89% · 89% | **1% · 15% · 24%** |
+| ranking aos 25 (mediana) | 36º | 238º |
+| títulos no circuito principal (média · % com) | 4,9 · 64% | 0,23 · 8% |
+| títulos (média) · finais (média) | 9,7 · 24,4 | 3,1 · 9,4 |
+| convocados para a equipe do país | 94% | **68%** |
+| convocados: top 100 · 101–300 · acima de 300 | 99% · 58% · 0% | 100% · 70% · 11% |
+| titulares em algum confronto | 81% | 37% |
+
+A simulação M do pacote, refeita depois do fix (120 carreiras):
+
+- melhor ranking mediano: 170º (antes, 31º);
+- representação nacional: 63% (antes, 95%);
+- 90% com algum título (antes, 100%);
+- maior circuito mediano: o de challengers.
+
+**Tênis — população natural** (300 vidas com tênis desde os 7 e dedicação alta):
+
+- 5% chegam a uma academia e 3% (9) viram profissionais, iguais antes e depois.
+- Entre esses 9:
+
+| | antes | depois |
+| --- | --- | --- |
+| melhor ranking (mediana) | 6º | 15º |
+| top 10 | 67% | 33% |
+| circuito principal | 89% | 78% |
+| equipe do país | 100% | 89% |
+
+- **A causa foi medida:** esses 9 chegam a **técnica 95–98** (p10 89, mediana 95, p90 98), acima da régua do principal (91). Com essa técnica, ranking alto é coerente. O que os põe ali é a progressão de técnica da juventude, que é comum a todos os esportes (ver pendências).
+
+**Política** (60 vidas por agente, que entram aos 25 pela associação do bairro, até os 70):
+
+| Agente | candidaturas (mediana) | eleições ganhas (mediana) | trajetórias sem realização: antes → depois | realizações (mediana): antes → depois | mandatos sobrepostos: antes → depois |
+| --- | --- | --- | --- | --- | --- |
+| só trabalho de base | 0 | 0 | 100% → **0%** | 0 → 2 | 0% → 0% |
+| uma candidatura | 1 (3% se elegem) | 0 | 97% → **0%** | 0 → 5 | 0% → 0% |
+| carreira (toda eleição) | 17 | 9 (97% com reeleição) | 3% → 0% | 6 → 6 | **5% → 0%** |
+
+- Quem só fez trabalho de base tem a entrada e os anos de base.
+- Quem perdeu tem a derrota registrada como derrota.
+- Na população natural da simulação L, as 7 trajetórias políticas passaram de 0 para 7 com realização.
+- Exemplo: "45 anos de trabalho de base nos bairros; Candidatura a vereadora em 2052: não se elegeu; Filiação ao PCdoB (2051); A bandeira: saúde — posto, fila, remédio".
+
+**Farda** (80 vidas por agente, ingresso aos 19, até os 62):
+
+| Agente | anos de farda (mediana · p90) | sem realização: antes → depois | realizações (mediana): antes → depois | longa (15+) vs curta |
+| --- | --- | --- | --- | --- |
+| carreira (sargentos ou academia) | 5 · 30 | 13% → **0%** | 1 → 5 | 6,0 vs 4,6 (antes 4,3 vs 1,1) |
+| serviço inicial | 1 · 3 | 94% → **0%** | 0 → 2 | — |
+
+- A carreira longa tem mais marcos que a curta.
+- O serviço inicial tem 2 ou 3 marcos, e honestos: "Ingresso: soldado do Exército (2045); Deu baixa do Exército em 2046, com o certificado de reservista".
+- Na população natural (L), as 3 trajetórias de farda passaram de 0 para 3 com realização.
+
+**Esportes** (20 carreiras por modalidade, 18 → 34). Uma temporada, antes → depois:
+
+- **Vôlei:**
+  - antes: "Superliga · 14º lugar · 21 jogos, 18 como titular";
+  - depois: "Superliga · 15º lugar · 20 jogos, 18 como titular · ponteiro: 3,5 pontos por set, 19 aces" e "· líbero: 3,0 defesas por set, 61% de recepção".
+- **Natação:**
+  - antes: "Circuito nacional · 11 competições · 2 pódios · melhor colocação: 6º";
+  - depois: "Elite nacional · 100 m costas: 53s29 (recorde pessoal) · 11 competições: 11 finais, 8 pódios, 4 vitórias".
+- **Atletismo:** "Elite nacional · arremesso de peso: 21,51 m (recorde pessoal) · 10 competições: 10 finais, 4 pódios, 3 vitórias".
+- **Luta:** "Elite nacional · até 60 kg · 9 eventos · 28 lutas: 20 vitórias (9 antes do tempo), 8 derrotas · 1 título · 7 pódios".
+
+Sanidade:
+
+- Finais, pódios e vitórias são subconjuntos, nessa ordem.
+- Na luta, cada evento não vencido termina numa derrota.
+- O recorde pessoal só aparece quando melhora a marca.
+- Na primeira calibragem das individuais, 147 das 148 competições terminavam em final. Ficou mais duro: colocação `10 − 1,8 × (nota − 5) ± 2,8`. Na luta, cada rodada vale −0,08.
+
+### 18.5 A curva do futebol (não mexida)
+
+`generalizacao.ts SO=I` (150 vidas por grupo), refeita depois do fix:
+
+| início | dedicação alta | dedicação regular |
+| --- | --- | --- |
+| 7 | 62% | 8% |
+| 10 | 46% | 3% |
+| 12 | 32% | 0% |
+| 14 | 8% | 0% |
+| 16 | 1% | 0% |
+
+Os números são idênticos aos da seção 11, incluindo as rotas (base 94 e amadora 11 aos 7). Fica registrado para a simulação de 1.000 vidas que, com dedicação regular (só o futebol da semana), ninguém chega a profissional a partir dos 12.
+
+### 18.6 Testes
+
+**Novos: `src/motor/__tests__/fixGeneralizacao.test.ts`, 20 casos causais.**
+
+| Grupo | O que cobre |
+| --- | --- |
+| T · tênis | a curva do ranking; técnica 86 no principal fica fora dos 100 e 99 fica entre os 40 (o mesmo atleta, 6 temporadas); o circuito pelo ranking; a estreia embaixo; os pontos na temporada e no reload |
+| N · representação | o top 50 é convocado e o 600º não; o mesmo ranking com fama 0 e 95, e com nota 6 e 9,2, dá o mesmo olhar |
+| P · política | trabalho de base, filiação e candidatura perdida, registradas como são (sem fama, sem "eleito"); a reeleição; assumir outro cargo fecha o anterior; sem sobreposição depois do reload |
+| F · farda | ingresso, formação concluída pelo motor, especialidade pelo nome, guarnições, sem combate e sem medalha; serviço inicial com a baixa e o engajamento, no máximo 4 marcos |
+| V · vôlei | função e números; histórico por set; nada de gol ou rebote; função pelo corpo (do líbero ao central; 5–30% de líberos); reload |
+| N · natação | prova e marca; recorde pessoal só quando melhora; finais ≥ pódios ≥ vitórias; reload |
+| A · atletismo | mais técnica, marca melhor, na direção da unidade; a escrita das marcas |
+| L · luta | lutas = V + D; derrotas = eventos − títulos; títulos ≤ pódios; sem empate; reload |
+| S · save | nadador que vira jogador de vôlei: a natação arquivada guarda a marca e o legado conta as duas; save com marca corrompida é recusado |
+| X · textos | basquete e vôlei sem clube, estádio ou escalação; individuais sem banco nem "jogar"; tênis sem treinador de banco nem negociação |
+
+**Interface: `src/ui/__tests__/fixGeneralizacao.test.tsx`, 4 casos.** A tela lê a mesma fonte do motor:
+
+- vôlei: a função no placar, a linha da temporada idêntica à do motor, as colunas Sets e Pontos/set, sem Gols;
+- natação: a prova e a Marca do ano, sem "começa no banco";
+- luta: a categoria e "Antes do tempo";
+- tênis: o ranking do placar é o dos pontos.
+
+**Testes existentes ajustados por mudança intencional:**
+
+- `generalizacao.test.ts` C (dois casos): o tenista do teste tinha o condicionamento de quem não treina (o adulto de cenário). Com a régua nova (o challenger pede 85), ele não ganhava torneio. O teste passou a usar forma 78, a de um profissional. As asserções não mudaram.
+- `profissao.test.ts` (doping) **não foi alterado**: ele lê o texto da decisão sem vida (`{}`) e quebrou quando o texto passou a consultar a modalidade. A correção foi no código: o texto ganhou fallback.
+
+### 18.7 Auditoria transversal
+
+`auditoriaGeneralizacao.ts` foi estendida.
+
+- **O que passou a ler:** abre, aos 25 anos de cada carreira, as decisões de mercado (renovação, proposta, pedir para sair, treinador, doping, depois do esporte) e a resposta de cada opção.
+- **Regras novas:**
+  - estádio, gramado, chuteira, escalação e "futebol" fora do futebol;
+  - banco, time reserva e "escalado" fora das coletivas;
+  - "jogar", "jogo" e "titular" nas individuais (os jogos continentais e multiesportivos são permitidos);
+  - "quadra" na natação, no atletismo e na luta.
+
+| modalidade | carreiras | temporadas | textos conferidos |
+| --- | --- | --- | --- |
+| futebol | 20 | 316 | 3.247 |
+| basquete | 20 | 320 | 3.454 |
+| vôlei | 20 | 320 | 3.385 |
+| tênis | 20 | 320 | 3.919 |
+| natação | 20 | 301 | 3.427 |
+| atletismo | 20 | 319 | 3.737 |
+| luta | 20 | 320 | 3.841 |
+
+- **Durante o fix, a auditoria achou e o código corrigiu:**
+  - "Primeira temporada como titular (10 jogos começando jogando)" nas individuais;
+  - "Aqui, você é titular — mas quer mais." (pedir para sair);
+  - "Perguntar o que falta para jogar";
+  - além dos textos de mercado de 18.1.
+- **Resultado final:** 3 ocorrências, todas falso positivo. São o emprego depois da carreira de natação ("Novo emprego: auxiliar técnica num clube."; o técnico trabalha num clube de verdade) e a crise econômica nesse clube.
+- **Texto quebrado:** nenhum.
+
+### 18.8 O que deliberadamente NÃO foi implementado
+
+- Rebalancear a progressão de técnica da juventude (comum a todos os esportes; mexeria na curva do futebol).
+- Empréstimo no basquete e no vôlei.
+- Rota amadora na natação e no tênis (não cabem no modelo; ver 18.3).
+- Empate na luta (a chave decide).
+- Tempos por prova na natação competição a competição: a temporada guarda a melhor marca do ano, não cada tomada de tempo.
+- Escalação por posição no vôlei (a função vem do corpo, sem escolha).
+- Medalhas ou condecorações militares e "pontos políticos".
+
+### 18.9 Pendências restantes
+
+1. **Progressão de técnica da juventude.**
+   - Os 3% de jovens tenistas dedicados que viram profissionais chegam a técnica 95–98, e por isso 78% deles chegam ao circuito principal.
+   - O tênis agora traduz técnica em ranking de forma coerente. A calibragem de quanta técnica uma juventude dedicada constrói é transversal e fica para a simulação de 1.000 vidas.
+   - A amostra natural é pequena (9 profissionais em 300 vidas).
+2. **Natação, atletismo e luta continuam com a régua genérica** (`70 + 3 × nível`). O tênis ganhou a sua; as individuais ganharam números próprios, mas não uma régua por nível.
+3. **A política só conta anos de trabalho de base daqui em diante:** saves antigos não têm o contador. Os mandatos de saves antigos com o defeito da posse ficam como estavam: o histórico novo não reescreve o passado.
+4. **Vôlei:** a estatura não entra na nota (no basquete, entra). A função é escolhida pelo corpo, não pelo jogador.
+5. **Prova da natação e do atletismo:** uma por carreira (não há troca de prova nem prova secundária).
+6. **Tamanho do build:** o pacote `motor` foi a 790 kB (limite 800, não aumentado). Ainda sem aviso, mas é a próxima coisa a estourar. Um novo sistema no motor pede mover módulos para outro pacote.
+7. **Ambiente:** a suíte completa no WSL pode perder o worker do `interface.test.tsx` por timeout. O arquivo passa isolado.
+
+### 18.10 Validação final
+
+| Verificação | Resultado |
+| --- | --- |
+| Testes direcionados (os 4 arquivos de generalização, motor e interface) | 47/47 |
+| Suíte completa (Node 22.23.2, `npx vitest run`) | **872 testes em 41 arquivos, todos passando**, em 496 s. O timeout conhecido do worker do WSL não ocorreu nesta rodada, então não houve rodada isolada |
+| Typecheck (`tsc --noEmit`) | limpo |
+| Build (`npm run build:itch`) | sem aviso de tamanho; `vida-itch.zip` com 14 arquivos (780,2 kB comprimido) |
+| Smoke itch.io | **18/18** |
+| `auditoriaGeneralizacao` (20 sementes × 7 modalidades) | 3 ocorrências, todas falso positivo (emprego depois da carreira); nenhum texto quebrado |
+
+Tamanho dos pacotes depois do fix (o limite de 800 kB não foi aumentado):
+
+| Pacote | Antes | Depois |
+| --- | --- | --- |
+| `motor` | 775 kB | 790 kB |
+| `motor-conteudo` | 772 kB | 774 kB |
+| `motor-carreira` | 164 kB | 169 kB |
+
+**Arquivos do fix.**
+
+- Novos:
+  - `src/motor/sistemas/provas.ts`
+  - `scripts/sim/fixGeneralizacao.ts`
+  - `src/motor/__tests__/fixGeneralizacao.test.ts`
+  - `src/ui/__tests__/fixGeneralizacao.test.tsx`
+- Alterados:
+  - `tipos.ts`, `save.ts`
+  - sistemas: `esporte`, `modalidades`, `selecao`, `perfisEsportivos`, `palmares`, `legado`, `politica`, `situacoes`, `profissao`, `fechamento`
+  - conteúdo: `profissao`, `caminhos`
+  - interface: `Trabalho.tsx`
+  - scripts: `auditoriaGeneralizacao.ts`
+  - testes: `generalizacao.test.ts`

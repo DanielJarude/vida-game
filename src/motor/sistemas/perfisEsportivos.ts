@@ -32,6 +32,7 @@ import { clamp, type Rng } from '../rng';
 import type { CarreiraEsportiva, Dominio, Temporada, Vida } from '../tipos';
 import { flex, ge, dinheiro } from '../texto';
 import type { FuncaoBasquete } from './modalidades';
+import { formatarMarca, melhorMarca, naProva, NOME_FUNCAO_VOLEI, numeroDaFuncao, podiosDe, producaoVolei, type FuncaoVolei } from './provas';
 
 export type Estrutura = 'clube' | 'circuito' | 'equipe';
 
@@ -67,6 +68,49 @@ export const PERFIS: Record<string, PerfilEsportivo> = {
 };
 export const perfilDe = (d: Dominio): PerfilEsportivo => PERFIS[d] ?? PERFIS.atletismo;
 export const individualComEquipe = (d: Dominio) => perfilDe(d).estrutura === 'equipe';
+/**
+ * As palavras do mercado de cada modalidade (FIX final da generalização): as
+ * decisões de contrato, proposta e treinador consultam aqui, em vez de falar
+ * a língua do futebol para todos. O futebol tem clube, estádio, banco e
+ * escalação; basquete e vôlei têm equipe e ginásio; natação, atletismo e luta
+ * têm equipe, a prova principal e o lugar onde se treina.
+ */
+export function mercadoEsportivo(d: Dominio) {
+  const fut = d === 'futebol';
+  const individual = perfilDe(d).estrutura !== 'clube';
+  const casa = fut ? 'estádio' : d === 'natacao' ? 'parque aquático' : d === 'atletismo' ? 'pista' : d === 'lutas' ? 'centro de treinamento' : 'ginásio';
+  return {
+    o: fut ? 'o clube' : 'a equipe', O: fut ? 'O clube' : 'A equipe', um: fut ? 'um clube' : 'uma equipe', outro: fut ? 'outro clube' : 'outra equipe',
+    nenhum: fut ? 'Nenhum clube' : 'Nenhuma equipe', maior: fut ? 'um clube maior' : 'uma equipe maior', menor: fut ? 'um clube menor' : 'uma equipe menor',
+    mesmo: fut ? 'Um clube do mesmo tamanho' : 'Uma equipe do mesmo nível', pequeno: fut ? 'clube pequeno' : 'equipe pequena', no: fut ? 'no clube' : 'na equipe', do: fut ? 'do clube' : 'da equipe',
+    time: fut ? 'no time' : 'na equipe', casa,
+    amador: ({ futebol: 'o futebol amador', basquete: 'o basquete amador', volei: 'o vôlei amador' } as Partial<Record<Dominio, string>>)[d] ?? 'as competições amadoras',
+    /** Ficar de fora: o banco no coletivo; nas individuais, ficar fora da prova principal. */
+    banco: individual ? 'fora da prova principal' : 'no banco',
+    assinatura: individual ? 'Mais uma assinatura com a equipe.' : 'Mais uma assinatura, mais uma foto com a camisa.',
+    descer: fut ? 'Estádio menor, gramado pior — e o seu nome na escalação.' : individual ? 'Equipe menor, calendário mais curto — e você nas provas principais.' : 'Ginásio menor, viagem de ônibus — e o seu nome entre os titulares.',
+    apresentacao: `Apresentação ${fut ? 'no estádio novo, camisa nova' : individual ? 'na equipe nova, uniforme novo' : 'no ginásio novo, camisa nova'}`,
+    reserva: individual ? 'Nos treinos seguintes, você ficou no grupo de trás.' : 'Nos treinos seguintes, você ficou no time reserva.',
+    entraTitular: individual ? 'Na competição seguinte, seu nome estava na prova principal.' : 'No jogo seguinte, seu nome estava entre os titulares.'
+  };
+}
+
+/**
+ * A porta tardia de cada modalidade (a rota amadora), nas palavras dela: o
+ * campeonato amador no futebol, a liga amadora no basquete e no vôlei, a
+ * prova aberta da federação no atletismo, o torneio aberto na luta.
+ */
+export function portaAmadora(d: Dominio): { onde: string; quem: string; elenco: string } {
+  if (d === 'futebol') return { onde: 'o campeonato amador', quem: 'Num jogo do campeonato amador da cidade, um auxiliar', elenco: 'o elenco adulto' };
+  if (d === 'atletismo') return { onde: 'as provas abertas da federação', quem: 'Numa prova aberta da federação, o técnico', elenco: 'a equipe adulta' };
+  if (d === 'lutas') return { onde: 'os torneios abertos', quem: 'Num torneio aberto, o técnico', elenco: 'a equipe adulta' };
+  return { onde: 'a liga amadora', quem: 'Num jogo da liga amadora, o técnico', elenco: 'o elenco adulto' };
+}
+const DA_PORTA: Record<string, string> = { 'o campeonato amador': 'do campeonato amador', 'as provas abertas da federação': 'das provas abertas da federação', 'os torneios abertos': 'dos torneios abertos', 'a liga amadora': 'da liga amadora' };
+const PELA_PORTA: Record<string, string> = { 'o campeonato amador': 'pelo campeonato amador', 'as provas abertas da federação': 'pelas provas abertas da federação', 'os torneios abertos': 'pelos torneios abertos', 'a liga amadora': 'pela liga amadora' };
+export const daPorta = (d: Dominio) => DA_PORTA[portaAmadora(d).onde];
+export const pelaPorta = (d: Dominio) => PELA_PORTA[portaAmadora(d).onde];
+
 /** "sem clube" só onde há clube: o nadador fica sem equipe; o tenista, sem quem banque o circuito. */
 export const semVinculo = (d: Dominio) => (perfilDe(d).estrutura === 'clube' ? 'sem clube' : perfilDe(d).estrutura === 'equipe' ? 'sem equipe' : 'sem quem banque o circuito');
 
@@ -76,7 +120,7 @@ const um = (n: number, [s, p]: [string, string]) => `${n} ${n === 1 ? s : p}`;
 export const daCompeticao = (c: string) => (c === 'campeonato estadual' ? 'do estadual' : /^(divisões|competições)/.test(c) ? `das ${c}` : /^(NBB|circuito|campeonato|torneio)/.test(c) ? `do ${c}` : `da ${c}`);
 /** "a Série A", "o NBB", "as divisões de acesso", "o estadual". */
 export const aCompeticao = (c: string) => daCompeticao(c).replace(/^do /, 'o ').replace(/^da /, 'a ').replace(/^das /, 'as ').replace(/^dos /, 'os ');
-const virgula = (x: number) => String(Math.round(x * 10) / 10).replace('.', ',');
+const virgula = (x: number, casas = 1) => String(Math.round(x * 10 ** casas) / 10 ** casas).replace('.', ',');
 
 /* ------------------------------------------------------------ Basquete: a função */
 
@@ -115,9 +159,10 @@ export function avaliarPelaModalidade(e: CarreiraEsportiva, t: Temporada, max: n
     coletivo = (t.titulos ?? 0) * 4 + Math.max(0, (t.finais ?? 0) - (t.titulos ?? 0)) * 2;
   } else if (individualComEquipe(e.modalidade)) {
     // Natação, atletismo, luta: pódios e a melhor colocação nas provas que importam.
-    producao = clamp(t.gols / Math.max(1, t.partidas * 0.35), 0, 2);
+    producao = clamp(podiosDe(t) / Math.max(1, t.partidas * 0.35), 0, 2);
     coletivo = t.colocacao === 1 ? 6 : t.colocacao <= 3 ? 3 : 0;
-  } else producao = clamp(t.nota / 6.5, 0, 2);
+  } else if (e.modalidade === 'volei' && t.volei) producao = producaoVolei(t);
+  else producao = clamp(t.nota / 6.5, 0, 2);
   const indice = clamp(participacao * 30 + (t.nota - 4) * 10 + (producao - 1) * 25 + coletivo, 0, 100);
   return { indice: Math.round(indice), participacao, producao: Math.round(producao * 100) / 100 };
 }
@@ -151,10 +196,18 @@ export function historicoDaCarreira(e: CarreiraEsportiva): HistoricoEsportivo {
       linhas: ts.map(t => [String(t.ano), CIRCUITO_CURTO[t.nivel] ?? '', String(t.partidas), `${t.vitorias ?? 0}–${t.derrotas ?? 0}`, String(t.finais ?? t.titulos ?? 0), String(t.titulos ?? 0), t.ranking ? `${t.ranking}º` : '—', t.premio !== undefined ? dinheiro(t.premio) : '—'])
     };
   }
-  if (p.estrutura === 'equipe') {
+  if (p.estrutura === 'equipe' && e.modalidade === 'lutas') {
+    // A luta: o cartel ano a ano (temporadas antigas, sem cartel, mostram só os pódios).
     return {
-      agrupado: 'ano', colunas: ['Ano', 'Equipe', 'Nível', 'Competições', 'Pódios', 'Melhor colocação'],
-      linhas: ts.map(t => [String(t.ano), t.clube, NIVEL_INDIVIDUAL[t.nivel] ?? '', String(t.partidas), String(t.gols), t.colocacao <= 8 ? `${t.colocacao}º` : '—'])
+      agrupado: 'ano', colunas: ['Ano', 'Nível', 'Categoria', 'Eventos', 'V–D', 'Antes do tempo', 'Títulos', 'Pódios'],
+      linhas: ts.map(t => [String(t.ano), NIVEL_INDIVIDUAL[t.nivel] ?? '', t.luta?.categoria ?? '—', String(t.partidas), t.luta ? `${t.luta.vitorias}–${t.luta.derrotas}` : '—', t.luta ? String(t.luta.antesDoTempo) : '—', t.luta ? String(t.luta.titulos) : '—', String(podiosDe(t))])
+    };
+  }
+  if (p.estrutura === 'equipe') {
+    // Natação e atletismo: a prova e a marca do ano (o recorde pessoal marcado), as finais e os pódios.
+    return {
+      agrupado: 'ano', colunas: ['Ano', 'Nível', 'Prova', 'Marca do ano', 'Competições', 'Finais', 'Pódios', 'Vitórias'],
+      linhas: ts.map(t => [String(t.ano), NIVEL_INDIVIDUAL[t.nivel] ?? '', t.prova?.nome ?? '—', t.prova ? `${formatarMarca(t.prova.unidade, t.prova.marca)}${t.prova.recorde ? ' (RP)' : ''}` : '—', String(t.partidas), t.prova ? String(t.prova.finais) : '—', String(podiosDe(t)), t.prova ? String(t.prova.vitorias) : t.colocacao === 1 ? '1' : '—'])
     };
   }
   // Por clube (a passagem): soma as temporadas seguidas no mesmo clube.
@@ -184,11 +237,31 @@ export function historicoDaCarreira(e: CarreiraEsportiva): HistoricoEsportivo {
       linhas: grupos.map(g => [nome(g), anos(g), String(soma(g.ts, t => t.partidas)), String(soma(g.ts, t => t.titular)), String(soma(g.ts, t => t.gols)), String(soma(g.ts, t => t.assistencias)), ...(def ? [String(soma(g.ts, t => t.defesa ?? 0))] : [])])
     };
   }
+  if (e.modalidade === 'volei') {
+    // O vôlei: por equipe, os sets e o que a função produz por set (a função da última temporada da passagem).
+    return {
+      agrupado: 'clube', colunas: ['Equipe', 'Anos', 'Jogos', 'Titular', 'Função', 'Sets', 'Pontos/set', 'Bloqueios/set', 'Aces', 'Defesas/set'],
+      linhas: grupos.map(g => {
+        const vs = g.ts.filter(t => t.volei);
+        const sets = soma(vs, t => t.volei!.sets) || 1;
+        const ps = (f: (t: Temporada) => number, casas = 1) => (vs.length ? virgula(soma(vs, f) / sets, casas) : '—');
+        const fn = vs[vs.length - 1]?.funcao as FuncaoVolei | undefined;
+        return [nome(g), anos(g), String(soma(g.ts, t => t.partidas)), String(soma(g.ts, t => t.titular)), fn ? NOME_FUNCAO_VOLEI[fn] ?? fn : '—', vs.length ? String(soma(vs, t => t.volei!.sets)) : '—', ps(t => t.volei!.pontos), ps(t => t.volei!.bloqueios, 2), vs.length ? String(soma(vs, t => t.volei!.aces)) : '—', ps(t => t.volei!.defesas)];
+      })
+    };
+  }
   return { agrupado: 'clube', colunas: ['Equipe', 'Anos', 'Jogos', 'Titular'], linhas: grupos.map(g => [nome(g), anos(g), String(soma(g.ts, t => t.partidas)), String(soma(g.ts, t => t.titular))]) };
 }
 
 const CIRCUITO_CURTO = ['', 'nacional', 'entrada internacional', 'challengers', 'principal'];
 const NIVEL_INDIVIDUAL = ['', 'regional', 'nacional de acesso', 'nacional', 'elite nacional'];
+
+/** Os números do vôlei somados (a recepção, a média das temporadas). */
+function somaVolei(vs: Temporada[]): Partial<NonNullable<Temporada['volei']>> {
+  const k = (f: (x: NonNullable<Temporada['volei']>) => number) => vs.reduce((a, t) => a + f(t.volei!), 0);
+  const rec = vs.filter(t => t.volei!.recepcao !== undefined);
+  return { pontos: k(x => x.pontos), bloqueios: k(x => x.bloqueios), aces: k(x => x.aces), levantamentos: k(x => x.levantamentos), defesas: k(x => x.defesas), ...(rec.length ? { recepcao: Math.round(rec.reduce((a, t) => a + t.volei!.recepcao!, 0) / rec.length) } : {}) };
+}
 
 /** A carreira inteira em uma frase (totais), no idioma da modalidade. */
 export function resumoDaCarreira(e: CarreiraEsportiva): string {
@@ -204,10 +277,35 @@ export function resumoDaCarreira(e: CarreiraEsportiva): string {
     return `${anos}, ${soma(t => t.vitorias ?? 0)} vitórias e ${soma(t => t.derrotas ?? 0)} derrotas${titulos ? `, ${um(titulos, ['título', 'títulos'])}` : ''}${soma(t => t.finais ?? 0) > titulos ? `, ${soma(t => t.finais ?? 0)} finais` : ''}${melhor < 9999 ? `, melhor ranking ${melhor}º` : ''}${premios ? `, ${dinheiro(premios)} em prêmios` : ''}`;
   }
   const equipes = new Set(ts.map(t => t.clube)).size;
-  if (p.estrutura === 'equipe') return `${anos}, ${um(soma(t => t.partidas), p.disputas)}, ${um(soma(t => t.gols), ['pódio', 'pódios'])}`;
+  if (p.estrutura === 'equipe') {
+    const podios = um(soma(podiosDe), ['pódio', 'pódios']);
+    const lutas = ts.filter(t => t.luta);
+    if (lutas.length) {
+      const l = (f: (x: NonNullable<Temporada['luta']>) => number) => lutas.reduce((a, t) => a + f(t.luta!), 0);
+      const titulos = l(x => x.titulos);
+      return `${anos}, ${um(soma(t => t.partidas), ['evento', 'eventos'])}, cartel de ${l(x => x.vitorias)} vitórias (${l(x => x.antesDoTempo)} antes do tempo) e ${l(x => x.derrotas)} derrotas${titulos ? `, ${um(titulos, ['título', 'títulos'])}` : ''}, ${podios}; ${lutas[lutas.length - 1].luta!.categoria}`;
+    }
+    const provas = ts.filter(t => t.prova);
+    if (provas.length) {
+      // O recorde pessoal: a melhor marca da carreira na prova principal (a mais disputada).
+      const nomes = provas.map(t => t.prova!.nome);
+      const principal = nomes.sort((a, b) => nomes.filter(x => x === b).length - nomes.filter(x => x === a).length)[0];
+      const daProva = provas.filter(t => t.prova!.nome === principal);
+      const rp = daProva.reduce((a, t) => (melhorMarca(t.prova!, a.prova!.marca, t.prova!.marca) === t.prova!.marca && t.prova!.marca !== a.prova!.marca ? t : a));
+      const finais = provas.reduce((a, t) => a + t.prova!.finais, 0);
+      return `${anos} ${p.modalidade === 'natacao' ? `nadando os ${principal}` : `competindo ${naProva(principal)}`}, recorde pessoal de ${formatarMarca(rp.prova!.unidade, rp.prova!.marca)} (${rp.ano}), ${um(soma(t => t.partidas), p.disputas)}, ${um(finais, ['final', 'finais'])}, ${podios}`;
+    }
+    return `${anos}, ${um(soma(t => t.partidas), p.disputas)}, ${podios}`;
+  }
   const jogos = soma(t => t.partidas);
   const casa = um(equipes, e.modalidade === 'futebol' ? ['clube', 'clubes'] : ['equipe', 'equipes']);
   if (e.modalidade === 'futebol') return `${anos}, ${casa}, ${um(jogos, p.disputas)}, ${um(soma(t => t.gols), ['gol', 'gols'])}`;
   if (e.modalidade === 'basquete') return `${anos}, ${casa}, ${um(jogos, p.disputas)}, ${virgula(soma(t => (t.pontos ?? 0) * t.partidas) / (jogos || 1))} pontos por jogo`;
+  const vs = ts.filter(t => t.volei);
+  if (e.modalidade === 'volei' && vs.length) {
+    const fn = vs[vs.length - 1].funcao as FuncaoVolei;
+    const sets = vs.reduce((a, t) => a + t.volei!.sets, 0);
+    return `${anos}, ${casa}, ${um(jogos, p.disputas)}, ${sets} sets como ${NOME_FUNCAO_VOLEI[fn] ?? fn}: ${numeroDaFuncao({ ...vs[0], funcao: fn, volei: { sets, pontos: 0, bloqueios: 0, aces: 0, levantamentos: 0, defesas: 0, ...somaVolei(vs) } })}`;
+  }
   return `${anos}, ${casa}, ${um(jogos, p.disputas)}`;
 }

@@ -41,7 +41,7 @@ import { arrendamentoMensal } from '../sistemas/rural';
 import { MUNIC_POR_INDICE } from '../sistemas/militar';
 import { anoDe } from '../tempo';
 import { dinheiro as fmt, listaNatural } from '../texto';
-import { semVinculo } from '../sistemas/perfisEsportivos';
+import { mercadoEsportivo, perfilDe, semVinculo } from '../sistemas/perfisEsportivos';
 import { criarPessoa, vincular } from '../pessoas';
 import { experienciaNaTrilha } from '../sistemas/trabalho';
 import { noTrabalho } from '../sistemas/ambiente';
@@ -366,20 +366,20 @@ export const PROFISSAO: Conteudo[] = [
       const t = es.temporadas?.[es.temporadas.length - 1];
       const oferta = nivelQueOMercadoOferece(c.v, es);
       const leitura = t ? `Vem de ${palavraDaNota(t.nota)}. ` : '';
-      if (clubeQuerRenovar(c.v, es)) return `${leitura}${cap(c.v.trabalho.atual!.empregador)} quer renovar${es.espaco === 'titular' ? '' : ', mas como opção de banco'}. O empresário diz que dá para testar o mercado — e que mercado é mercado.`;
-      if (oferta >= 1) return `${leitura}${cap(c.v.trabalho.atual!.empregador)} avisou que não vai renovar. ${oferta < es.nivel ? `O empresário tem sondagens de clubes ${oferta === 1 ? 'do estadual' : 'de divisão menor'}: menos salário, mais chance de jogar.` : 'Há interesse de outros clubes do mesmo tamanho.'}`;
+      if (clubeQuerRenovar(c.v, es)) return `${leitura}${cap(c.v.trabalho.atual!.empregador)} quer renovar${es.espaco === 'titular' ? '' : `, mas como opção ${mercadoEsportivo(es.modalidade).banco === 'no banco' ? 'de banco' : 'de apoio, fora da prova principal'}`}. O empresário diz que dá para testar o mercado — e que mercado é mercado.`;
+      if (oferta >= 1) return `${leitura}${cap(c.v.trabalho.atual!.empregador)} avisou que não vai renovar. ${oferta < es.nivel ? `O empresário tem sondagens de ${es.modalidade === 'futebol' ? 'clubes' : 'equipes'} ${oferta === 1 ? (es.modalidade === 'futebol' ? 'do estadual' : 'regionais') : 'de nível menor'}: menos salário, mais chance de ${perfilDe(es.modalidade).estrutura === 'clube' ? 'jogar' : 'competir'}.` : `Há interesse de ${es.modalidade === 'futebol' ? 'outros clubes do mesmo tamanho' : 'outras equipes do mesmo nível'}.`}`;
       return `${leitura}${cap(c.v.trabalho.atual!.empregador)} não vai renovar — e o empresário não tem nenhuma proposta na mesa. ${idade(c.v) >= augeDe(c.v, es) + 2 ? 'O mercado anda olhando para os mais novos.' : 'A última temporada pesou.'}`;
     },
     opcoes: [
       { id: 'renovar', texto: 'Renovar', disponivel: c => (clubeQuerRenovar(c.v, c.v.caminhos.esporte!) ? true : false),
         consequencia: c => { const es = c.v.caminhos.esporte!; return `Salário do novo contrato: ${fmt(salarioDaRenovacao(c.v, es))} por mês (bruto), ${prazoDeContrato(es, es.espaco === 'titular' ? 36 : 24) / 12 === 1 ? 'um ano' : es.espaco === 'titular' ? 'três anos' : 'dois anos'}.`; },
-        resolver: c => ({ texto: 'Mais uma assinatura, mais uma foto com a camisa.', memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; assinarContrato(c.v, es, es.espaco === 'titular' ? 36 : 24, 1, true); } }) },
+        resolver: c => ({ texto: mercadoEsportivo(c.v.caminhos.esporte!.modalidade).assinatura, memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; assinarContrato(c.v, es, es.espaco === 'titular' ? 36 : 24, 1, true); } }) },
       { id: 'descer', texto: c => { const p = propostaNaMesa(c.v)!; return c.v.caminhos.esporte?.modalidade === 'futebol' ? `Aceitar a proposta ${doClube(p.clube)} (${divisaoDe('futebol', p.nivel)})` : `Aceitar a proposta de uma equipe ${p.nivel === 1 ? 'regional' : 'de nível menor'}`; },
         disponivel: c => { const es = c.v.caminhos.esporte!; const p = propostaNaMesa(c.v); return p && p.nivel < es.nivel ? true : false; },
         consequencia: c => consequenciaDaProposta(c, propostaNaMesa(c.v)!),
-        resolver: c => ({ texto: 'Estádio menor, gramado pior — e o seu nome na escalação.', memoria: null, efeito: () => aceitarProposta(c, propostaNaMesa(c.v)!) }) },
-      { id: 'mercado', texto: c => (clubeQuerRenovar(c.v, c.v.caminhos.esporte!) ? 'Testar o mercado' : 'Procurar outro clube'), comportamento: { coragem: 1 },
-        consequencia: c => (nivelQueOMercadoOferece(c.v, c.v.caminhos.esporte!) === 0 ? 'Sem propostas agora: seria esperar sem clube, treinando por conta.' : undefined),
+        resolver: c => ({ texto: mercadoEsportivo(c.v.caminhos.esporte!.modalidade).descer, memoria: null, efeito: () => aceitarProposta(c, propostaNaMesa(c.v)!) }) },
+      { id: 'mercado', texto: c => (clubeQuerRenovar(c.v, c.v.caminhos.esporte!) ? 'Testar o mercado' : `Procurar ${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).outro}`), comportamento: { coragem: 1 },
+        consequencia: c => (nivelQueOMercadoOferece(c.v, c.v.caminhos.esporte!) === 0 ? `Sem propostas agora: seria esperar ${semVinculo(c.v.caminhos.esporte!.modalidade)}, treinando por conta.` : undefined),
         resolver: c => {
           const es = c.v.caminhos.esporte!;
           const oferta = nivelQueOMercadoOferece(c.v, es);
@@ -389,11 +389,12 @@ export const PROFISSAO: Conteudo[] = [
             const nivel = Math.min(4, Math.max(1, oferta)) as 1 | 2 | 3 | 4;
             es.proposta = undefined;
             criarProposta(c.v, es, nivel, nivel > es.nivel ? 'maior' : 'menor');
-            return { texto: nivel > es.nivel ? 'Uma proposta de um clube maior chegou antes do fim do mês.' : nivel < es.nivel ? 'A proposta que veio é de um clube menor. Melhor do que nenhuma.' : 'Um clube do mesmo tamanho ofereceu mais tempo de contrato.', memoria: null, tom: nivel >= es.nivel ? 'bom' : 'neutro', abrir: { id: 'esp_proposta' } };
+            const m = mercadoEsportivo(es.modalidade);
+            return { texto: nivel > es.nivel ? `Uma proposta de ${m.maior} chegou antes do fim do mês.` : nivel < es.nivel ? `A proposta que veio é de ${m.menor}. Melhor do que nenhuma.` : `${m.mesmo} ofereceu mais tempo de contrato.`, memoria: null, tom: nivel >= es.nivel ? 'bom' : 'neutro', abrir: { id: 'esp_proposta' } };
           }
-          if (clubeQuerRenovar(c.v, es)) return { texto: 'O mercado não respondeu. O clube renovou — por menos.', memoria: null, tom: 'ruim', efeito: () => assinarContrato(c.v, es, 24, 0.85, true) };
-          if (oferta >= 1) return { texto: 'Só apareceu clube pequeno, sem garantia. Você ficou sem contrato, treinando por conta, esperando o telefone.', memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
-          return { texto: 'Nenhum clube ligou. Você ficou treinando por conta, esperando.', memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
+          if (clubeQuerRenovar(c.v, es)) return { texto: `O mercado não respondeu. ${mercadoEsportivo(es.modalidade).O} renovou — por menos.`, memoria: null, tom: 'ruim', efeito: () => assinarContrato(c.v, es, 24, 0.85, true) };
+          if (oferta >= 1) return { texto: `Só apareceu ${mercadoEsportivo(es.modalidade).pequeno}, sem garantia. Você ficou sem contrato, treinando por conta, esperando o telefone.`, memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
+          return { texto: `${mercadoEsportivo(es.modalidade).nenhum} ligou. Você ficou treinando por conta, esperando.`, memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia', tom: 'ruim', efeito: () => semClube(c) };
         } },
       { id: 'encerrar', texto: 'Encerrar a carreira', resolver: c => ({ texto: 'Você disse ao empresário que era hora.', memoria: null, efeito: () => encerrarCarreira(c.v, c.v.caminhos.esporte!, 'escolha') }) }
     ]
@@ -401,12 +402,12 @@ export const PROFISSAO: Conteudo[] = [
   {
     id: 'esp_treinador', tipo: 'decisao', idade: [16, 42], tema: 'trabalho', manual: true, repetir: 0,
     titulo: 'A conversa com o treinador',
-    texto: () => 'Mais uma rodada no banco. Você bateu na porta da sala da comissão técnica.',
+    texto: c => (mercadoEsportivo(c.v.caminhos.esporte?.modalidade ?? 'futebol').banco === 'no banco' ? 'Mais uma rodada no banco. Você bateu na porta da sala da comissão técnica.' : 'Mais uma competição fora da prova principal. Você bateu na porta da sala do técnico.'),
     opcoes: [
-      { id: 'perguntar', texto: 'Perguntar o que falta para jogar',
+      { id: 'perguntar', texto: c => (perfilDe(c.v.caminhos.esporte!.modalidade).estrutura === 'clube' ? 'Perguntar o que falta para jogar' : 'Perguntar o que falta para as provas principais'),
         resolver: c => { const es = c.v.caminhos.esporte!; const h = habilidade(c.v, es.modalidade); return { texto: h < barraDeTitular(es.modalidade, es.nivel) - 4 ? 'A resposta foi dura: ritmo de jogo, força, leitura. Coisa de meses de treino, não de conversa.' : 'Ele disse que você está perto. Que é detalhe. Que é para continuar.', memoria: null, efeito: () => { c.v.fatos['esp_treinador_ok'] = c.v.t; } }; } },
       { id: 'reclamar', texto: 'Reclamar da falta de chances', comportamento: { coragem: 1, impulsividade: 1 },
-        resolver: c => { const deu = c.r.chance(0.4); return { texto: deu ? 'No jogo seguinte, seu nome estava entre os titulares.' : 'O treinador não gostou do tom. Nos treinos seguintes, você ficou no time reserva.', memoria: null, tom: deu ? 'bom' : 'ruim', efeito: () => { if (deu) c.v.fatos['esp_treinador_ok'] = c.v.t; else c.v.fatos['esp_treinador_ok'] = c.v.t - 24; } }; } },
+        resolver: c => { const deu = c.r.chance(0.4); const m = mercadoEsportivo(c.v.caminhos.esporte!.modalidade); return { texto: deu ? m.entraTitular : `O treinador não gostou do tom. ${m.reserva}`, memoria: null, tom: deu ? 'bom' : 'ruim', efeito: () => { if (deu) c.v.fatos['esp_treinador_ok'] = c.v.t; else c.v.fatos['esp_treinador_ok'] = c.v.t - 24; } }; } },
       { id: 'treinar', texto: 'Dizer que vai treinar dobrado', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Primeiro a chegar, último a sair. Os preparadores notaram.', memoria: null, efeito: () => { c.v.fatos['esp_treinador_ok'] = c.v.t; c.v.caminhos.esporte!.foco = 'forcar'; } }) }
     ]
@@ -414,12 +415,12 @@ export const PROFISSAO: Conteudo[] = [
   {
     id: 'esp_mercado', tipo: 'decisao', idade: [16, 40], tema: 'trabalho', manual: true, repetir: 0,
     titulo: 'Pedir para sair',
-    texto: c => `Você pediu ao empresário para procurar outro clube. ${c.v.caminhos.esporte?.espaco === 'reserva' ? 'Aqui, você é reserva.' : 'Aqui, você é titular — mas quer mais.'}`,
+    texto: c => `Você pediu ao empresário para procurar ${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).outro}. ${perfilDe(c.v.caminhos.esporte!.modalidade).estrutura !== 'clube' ? (c.v.caminhos.esporte?.espaco === 'reserva' ? 'Aqui, você fica fora das provas principais.' : 'Aqui, você está nas provas principais — mas quer mais.') : c.v.caminhos.esporte?.espaco === 'reserva' ? 'Aqui, você é reserva.' : 'Aqui, você é titular — mas quer mais.'}`,
     opcoes: [
-      { id: 'menor', texto: 'Procurar um clube menor, para jogar', disponivel: c => ((c.v.caminhos.esporte?.nivel ?? 1) >= 2 ? true : 'Abaixo daqui, só o futebol amador.'),
+      { id: 'menor', texto: c => `Procurar ${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).menor}, para ${perfilDe(c.v.caminhos.esporte!.modalidade).estrutura === 'clube' ? 'jogar' : 'competir'}`, disponivel: c => ((c.v.caminhos.esporte?.nivel ?? 1) >= 2 ? true : `Abaixo daqui, só ${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).amador}.`),
         resolver: c => { const es = c.v.caminhos.esporte!; es.proposta = undefined; criarProposta(c.v, es, (es.nivel - 1) as 1 | 2 | 3 | 4, 'menor'); return { texto: 'Em uma semana, o empresário voltou com um nome.', memoria: null, abrir: { id: 'esp_proposta' } }; } },
-      { id: 'maior', texto: 'Esperar uma proposta de um clube maior', comportamento: { coragem: 1 },
-        consequencia: c => { const es = c.v.caminhos.esporte!; return nivelQueOMercadoOferece(c.v, es) > es.nivel ? 'Há sondagens; nada garantido.' : 'Hoje, o mercado não vê você num clube maior.'; },
+      { id: 'maior', texto: c => `Esperar uma proposta de ${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).maior}`, comportamento: { coragem: 1 },
+        consequencia: c => { const es = c.v.caminhos.esporte!; return nivelQueOMercadoOferece(c.v, es) > es.nivel ? 'Há sondagens; nada garantido.' : `Hoje, o mercado não vê você em ${mercadoEsportivo(es.modalidade).maior}.`; },
         resolver: c => {
           const es = c.v.caminhos.esporte!;
           const deu = es.nivel < 4 && nivelQueOMercadoOferece(c.v, es) > es.nivel && c.r.chance(0.55);
@@ -459,10 +460,10 @@ export const PROFISSAO: Conteudo[] = [
     peso: c => (c.v.caminhos.esporte?.espaco === 'reserva' || (c.v.caminhos.esporte?.lesoes ?? 0) >= 2 ? 1.2 : 0.5),
     quando: c => c.v.caminhos.esporte?.fase === 'profissional' && !c.v.caminhos.esporte.doping && !c.v.caminhos.esporte.suspensoAte && OCUPACOES_DE_ATLETA.includes(c.v.trabalho.atual?.ocupacaoId ?? ''),
     titulo: 'Uma ajuda',
-    texto: () => 'Um preparador de fora do clube chama você num canto: uma "ajuda" para voltar ao ritmo, que — garante — não aparece no exame. Outros já usam, diz. O controle antidoping, diz também, é questão de sorte.',
+    texto: c => `Um preparador de fora ${mercadoEsportivo(c.v?.caminhos.esporte?.modalidade ?? 'futebol').do} chama você num canto: uma "ajuda" para voltar ao ritmo, que — garante — não aparece no exame. Outros já usam, diz. O controle antidoping, diz também, é questão de sorte.`,
     opcoes: [
       { id: 'recusar', texto: 'Recusar', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você disse que não e foi para o treino.', memoria: null }) },
-      { id: 'contar', texto: 'Recusar e contar ao médico do clube', comportamento: { coragem: 1 }, resolver: () => ({ texto: 'O médico agradeceu e pediu discrição. O preparador sumiu do centro de treinamento.', memoria: 'Recusou uma substância proibida e contou ao médico do clube.', relevancia: 'biografia' }) },
+      { id: 'contar', texto: c => `Recusar e contar ao médico ${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).do}`, comportamento: { coragem: 1 }, resolver: c => ({ texto: 'O médico agradeceu e pediu discrição. O preparador sumiu do centro de treinamento.', memoria: `Recusou uma substância proibida e contou ao médico ${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).do}.`, relevancia: 'biografia' }) },
       { id: 'aceitar', texto: 'Aceitar', comportamento: { impulsividade: 2 },
         resolver: c => ({ texto: 'Nas semanas seguintes, o corpo respondeu como não respondia havia anos. O medo de cada sorteio do exame também.', memoria: 'Aceitou usar uma substância proibida.', relevancia: 'marco', tom: 'ruim', efeito: () => { c.v.caminhos.esporte!.doping = c.v.t; } }) }
     ]
@@ -472,7 +473,7 @@ export const PROFISSAO: Conteudo[] = [
     // trouxe, a do clube que quer liberar você. O que aparece aqui é o que se assina (`aceitarProposta` → `transferirPara`).
     id: 'esp_proposta', tipo: 'decisao', idade: [17, 45], tema: 'trabalho', prioritario: true, prioridade: 5, repetir: 0,
     quando: c => { const es = c.v.caminhos.esporte; if (!es || es.fase !== 'profissional' || !propostaNaMesa(c.v)) return false; return deHoje(c, 'esp_proposta_hoje') && OCUPACOES_DE_ATLETA.includes(c.v.trabalho.atual?.ocupacaoId ?? ''); },
-    titulo: c => { const o = propostaNaMesa(c.v)?.origem; return o === 'liberacao' ? 'O clube quer liberar você' : o === 'emprestimo' ? 'Um empréstimo' : o === 'compra' ? 'Ficar de vez?' : 'Uma proposta'; },
+    titulo: c => { const o = propostaNaMesa(c.v)?.origem; return o === 'liberacao' ? `${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).O} quer liberar você` : o === 'emprestimo' ? 'Um empréstimo' : o === 'compra' ? 'Ficar de vez?' : 'Uma proposta'; },
     texto: c => {
       const es = c.v.caminhos.esporte!;
       const p = propostaNaMesa(c.v)!;
@@ -484,15 +485,15 @@ export const PROFISSAO: Conteudo[] = [
         : p.origem === 'compra'
           ? `O empréstimo acaba. ${cap(oClube(es.clube))} quer ficar com você de vez: contrato de ${anos}${es.emprestimo ? ` — e ${oClube(es.emprestimo.clube)} topa negociar` : ''}. Se não, é a volta ${es.emprestimo ? aoClube(es.emprestimo.clube) : 'ao clube de origem'}.`
           : p.origem === 'liberacao'
-        ? `Sem espaço no time, ${oClube(es.clube)} quer liberar você. ${quem} topa: ${divisaoDe(es.modalidade, p.nivel)}, contrato de ${anos}, lugar no time.`
+        ? `Sem espaço ${mercadoEsportivo(es.modalidade).time}, ${oClube(es.clube)} quer liberar você. ${quem} topa: ${divisaoDe(es.modalidade, p.nivel)}, contrato de ${anos}, lugar entre os titulares.`
         : `${quem} quer você: ${divisaoDe(es.modalidade, p.nivel)}${p.nivel > es.nivel ? ', divisão acima' : p.nivel < es.nivel ? ', divisão abaixo' : ''}, contrato de ${anos}${p.espaco === 'reserva' ? ', para brigar por posição' : ', para jogar'}.`;
       return `${comeco}${d.id !== c.v.moradia.municipioId ? ` A mudança seria para ${d.nome}.` : ''} ${comFamilia(c.v) && d.id !== c.v.moradia.municipioId ? 'A família iria junto — ou não.' : ''}`.trim();
     },
     opcoes: [
       { id: 'aceitar', texto: c => { const p = propostaNaMesa(c.v); return p?.origem === 'emprestimo' ? 'Aceitar o empréstimo' : p?.origem === 'compra' ? 'Ficar de vez' : comFamilia(c.v) && p?.municipioId !== c.v.moradia.municipioId ? 'Aceitar e ir com a família' : 'Aceitar'; }, consequencia: c => consequenciaDaProposta(c, propostaNaMesa(c.v)!),
-        resolver: c => ({ texto: propostaNaMesa(c.v)?.municipioId !== c.v.moradia.municipioId ? 'Apresentação no estádio novo, camisa nova, cidade nova.' : 'Apresentação no estádio novo, camisa nova.', memoria: null, tom: 'bom', efeito: () => aceitarProposta(c, propostaNaMesa(c.v)!) }) },
+        resolver: c => ({ texto: `${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).apresentacao}${propostaNaMesa(c.v)?.municipioId !== c.v.moradia.municipioId ? ', cidade nova' : ''}.`, memoria: null, tom: 'bom', efeito: () => aceitarProposta(c, propostaNaMesa(c.v)!) }) },
       { id: 'ficar', texto: c => { const o = propostaNaMesa(c.v)?.origem; return o === 'liberacao' || o === 'emprestimo' ? 'Ficar e brigar pela vaga' : o === 'compra' ? `Voltar ${c.v.caminhos.esporte?.emprestimo ? aoClube(c.v.caminhos.esporte.emprestimo.clube) : 'ao clube de origem'}` : 'Ficar onde está'; }, comportamento: { familia: 1 }, disponivel: c => { const o = propostaNaMesa(c.v)?.origem; return comFamilia(c.v) || o === 'liberacao' || o === 'emprestimo' || o === 'compra' ? true : false; },
-        resolver: c => recusarProposta(c, comFamilia(c.v) && propostaNaMesa(c.v)?.origem !== 'compra' && propostaNaMesa(c.v)?.origem !== 'emprestimo' ? 'Recusou uma proposta de outro clube para não tirar a família do lugar.' : null) },
+        resolver: c => recusarProposta(c, comFamilia(c.v) && propostaNaMesa(c.v)?.origem !== 'compra' && propostaNaMesa(c.v)?.origem !== 'emprestimo' ? `Recusou uma proposta de ${mercadoEsportivo(c.v.caminhos.esporte!.modalidade).outro} para não tirar a família do lugar.` : null) },
       { id: 'recusar', texto: 'Recusar', disponivel: c => { const o = propostaNaMesa(c.v)?.origem; return comFamilia(c.v) || o === 'liberacao' || o === 'emprestimo' || o === 'compra' ? false : true; }, resolver: c => recusarProposta(c, null) }
     ]
   },
@@ -624,9 +625,9 @@ function recusarProposta(c: Ctx, memoria: string | null) {
   if (propostaNaMesa(c.v)?.origem === 'compra') { const texto = voltarDoEmprestimo(c.v, es); return { texto: texto || 'Você voltou ao clube de origem.', memoria: null }; }
   es.proposta = undefined;
   const vencido = es.contratoAte !== undefined && c.v.t >= es.contratoAte;
-  if (vencido && clubeQuerRenovar(c.v, es)) return { texto: 'Você ficou. O clube renovou — por menos.', memoria, relevancia: 'biografia' as const, efeito: () => assinarContrato(c.v, es, 24, 0.85, true) };
-  if (vencido) return { texto: 'Você recusou — e o contrato antigo não foi renovado. Ficou sem clube, treinando por conta.', memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia' as const, tom: 'ruim' as const, efeito: () => semClube(c) };
-  return { texto: memoria ? 'Você ficou. A família também.' : 'Você ficou no clube que conhece o seu jogo.', memoria, relevancia: 'biografia' as const };
+  if (vencido && clubeQuerRenovar(c.v, es)) return { texto: `Você ficou. ${mercadoEsportivo(es.modalidade).O} renovou — por menos.`, memoria, relevancia: 'biografia' as const, efeito: () => assinarContrato(c.v, es, 24, 0.85, true) };
+  if (vencido) return { texto: `Você recusou — e o contrato antigo não foi renovado. Ficou ${semVinculo(es.modalidade)}, treinando por conta.`, memoria: `Ficou ${semVinculo(c.v.caminhos.esporte!.modalidade)}, esperando proposta.`, relevancia: 'biografia' as const, tom: 'ruim' as const, efeito: () => semClube(c) };
+  return { texto: memoria ? 'Você ficou. A família também.' : `Você ficou ${mercadoEsportivo(es.modalidade).no} que conhece o seu jogo.`, memoria, relevancia: 'biografia' as const };
 }
 
 /** O que a proposta diz antes do sim: os números DELA (os mesmos que o contrato vai ter). */
