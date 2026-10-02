@@ -71,6 +71,24 @@ export interface Pessoa {
   vida?: VidaNpc;
   /** Gestação de uma pessoa que não é o jogador (filha, nora, genro...). */
   gestacao?: { tParto: number; outroId?: string; anunciada: boolean };
+  /** Onde nasceu (descendentes nascidos depois da sucessão; os anteriores herdam a cidade da casa em que nasceram). */
+  municipioNatal?: string;
+  /**
+   * O que é DESTA pessoa (sucessão): o que guardou do próprio trabalho e o que
+   * recebeu de herança. Não é dinheiro do protagonista — mas entra na conta
+   * da família: o que sai de uma vida chega inteiro a outra (`sucessao`).
+   */
+  posses?: Posses;
+}
+
+/** O patrimônio de alguém que não é o protagonista (simplificado: dinheiro, bens, um negócio). */
+export interface Posses {
+  dinheiro: number;
+  bens: Bem[];
+  /** O negócio da família que passou a ser desta pessoa (o mesmo negócio, com a sua história). */
+  negocio?: Negocio;
+  /** De onde veio (herança de quem, as economias), em poucas linhas. */
+  historia: { t: number; texto: string; valor: number }[];
 }
 
 /**
@@ -104,6 +122,8 @@ export interface InfoPet {
   tVeterinario?: number;
   /** Idade máxima que o corpo aguenta (derivada ao chegar, não aparece). */
   vidaMax: number;
+  /** A semente do desenho (o id que tinha no abrigo): o bicho adotado é o mesmo que se viu na lista, não outro. */
+  semente?: string;
 }
 
 export interface Aperto {
@@ -200,6 +220,13 @@ export type Parentesco =
   /** Cônjuge de um filho (genro ou nora). */
   | 'genro'
   | 'sogro'
+  /**
+   * Sucessão (geração seguinte): a família vista por quem herdou a câmera. O
+   * filho de um irmão é sobrinho; o cônjuge de um irmão, cunhado. Nascem só
+   * da reconciliação de parentescos (`sucessao`), nunca de sorteio.
+   */
+  | 'sobrinho'
+  | 'cunhado'
   | 'pet';
 
 /** Onde duas pessoas convivem. É o que faz relações nascerem e se manterem. */
@@ -641,6 +668,14 @@ export interface Trabalho {
   horasExtras: boolean;
   desempregadoDesde?: number;
   /**
+   * A INTENÇÃO profissional declarada de quem está sem trabalho — que não é a
+   * ocupação (sem emprego) nem a situação econômica (o patrimônio): voltar a
+   * procurar, ou não procurar (viver do que juntou, por escolha). Sem
+   * declaração, vale o que a vida mostra (`sistemas/intencao`). Opcional:
+   * saves antigos não têm, e a leitura deduz.
+   */
+  intencao?: { quer: 'procurar' | 'nao_procurar'; t: number };
+  /**
    * Uma pausa (ou redução) do trabalho pago para cuidar de alguém ou da casa.
    * Não é profissão: é uma trajetória de vida, com custo e sentido.
    */
@@ -817,6 +852,8 @@ export interface Aplicacao {
   pico?: number;
   /** Quanto o preço variou no último ano (sem contar aportes e resgates). */
   retornoAno?: number;
+  /** Herança de menor: fica aplicada em nome da pessoa e só pode ser movida a partir de `tutelaAte` (a maioridade). */
+  tutelaAte?: number;
 }
 
 /** Como estava o dinheiro a cada aniversário (para a evolução e as métricas). */
@@ -844,6 +881,37 @@ export interface Financas {
   /** Razão do último ano (para a interface). */
   razao: LinhaRazao[];
   historico: FotoFinanceira[];
+  /** O extrato do último ano fechado: de onde veio e para onde foi cada real da conta e das aplicações (`sistemas/extrato`). */
+  extrato?: ExtratoDoAno;
+  /** O extrato em aberto, desde o último fechamento (escolhas, acontecimentos e o fechamento do ano que vem). */
+  extratoAberto?: ExtratoDoAno;
+}
+
+/** O que move dinheiro, para o extrato: renda e despesa do mês a mês, o que se põe e se tira das aplicações, e o resto. */
+export type TipoMovimento = 'renda' | 'despesa' | 'rendimento' | 'aporte' | 'resgate' | 'divida' | 'familia' | 'acontecimento' | 'escolha' | 'ajuste';
+
+/** Uma linha do extrato: quanto mexeu na conta e quanto mexeu nas aplicações (um aporte é −conta, +aplicado). */
+export interface LinhaExtrato {
+  rotulo: string;
+  tipo: TipoMovimento;
+  conta: number;
+  aplicado: number;
+}
+
+/**
+ * A conta de um período (em geral, um ano): saldo inicial + linhas = saldo
+ * final, na conta e nas aplicações. Nenhum real some sem linha.
+ */
+export interface ExtratoDoAno {
+  /** Quando o período começou (o fechamento anterior). */
+  tInicio: number;
+  /** Quando fechou (ausente enquanto aberto). */
+  tFim?: number;
+  contaInicial: number;
+  aplicadoInicial: number;
+  contaFinal?: number;
+  aplicadoFinal?: number;
+  linhas: LinhaExtrato[];
 }
 
 /**
@@ -932,6 +1000,14 @@ export interface Origem {
   contribuicao?: 'nada' | 'combinado' | 'mais';
   /** O bairro onde cresceu, em palavras (dado da origem, estável). */
   bairro?: string;
+  /**
+   * Sucessão: de quem é a reserva (a pessoa da casa de origem que ficou com o
+   * dinheiro da família). Quando ela morre, a herança dela sai DESTA reserva
+   * — a mesma que ajudou em vida —, e não de um sorteio pela classe.
+   */
+  reservaDe?: string;
+  /** Quem assumiu a guarda (a menor órfã que vai morar com a irmã mais velha, com o avô, com a tia). */
+  responsavelId?: string;
 }
 
 export interface ApoioFamiliar {
@@ -1246,6 +1322,97 @@ export interface RegistroDeSituacao {
   intencao: string;
   desfecho: 'otimo' | 'bom' | 'ruim' | 'pessimo';
   texto: string;
+}
+
+/**
+ * A carreira de técnico (Carreira de técnico 2.0). Não é "um emprego com
+ * outro nome": cada passagem tem clube real, divisão, temporadas jogadas
+ * partida a partida (V/E/D saem da simulação: a força do elenco, o trabalho
+ * do técnico, o vestiário, o acaso), títulos, acessos, rebaixamentos, a
+ * pressão da diretoria e o jeito como acabou. A carreira de jogador fica onde
+ * estava (`caminhos.esporte`/`carreirasEsportivas`): as duas convivem.
+ */
+export interface CarreiraDeTecnico {
+  tInicio: number;
+  /** Como chegou ao banco (a biografia, não um menu). */
+  origem: 'auxiliar' | 'ex_atleta' | 'convite';
+  /** O nome no mercado de técnicos, 0..100: o que os clubes olham para chamar, renovar, pagar. Não decide jogo. */
+  reputacao: number;
+  /** O jeito de jogar (escolha tática que muda o desenho dos jogos: mais vitórias e derrotas, ou mais empates). */
+  estilo?: 'ofensivo' | 'equilibrado' | 'defensivo';
+  /** As passagens, em ordem (a última pode estar aberta: sem `ate`). */
+  passagens: PassagemDeTecnico[];
+  /** A proposta na mesa (criada UMA vez; a decisão mostra esta e, se aceita, executa esta). */
+  proposta?: PropostaDeTecnico;
+  /** Sem clube desde (entre uma passagem e outra). */
+  semClubeDesde?: number;
+  /** Quantos convites chegaram (aceitos ou não). */
+  convites?: number;
+  /** A carreira acabou (outra profissão, aposentadoria, anos sem clube). */
+  tFim?: number;
+  motivoFim?: string;
+}
+
+export interface PassagemDeTecnico {
+  clube: string;
+  municipioId: string;
+  /** A divisão do clube agora (muda com acesso e rebaixamento). */
+  nivel: 1 | 2 | 3 | 4;
+  /** Seleção nacional (a passagem não é de clube). */
+  selecao?: boolean;
+  desde: number;
+  ate?: number;
+  contratoAte: number;
+  salario: number;
+  temporadas: TemporadaDeTecnico[];
+  saida?: 'demissao' | 'proposta' | 'fim_de_contrato' | 'saiu' | 'encerrou' | 'selecao';
+  /** Quando o emprego acabou por fora (a mudança, a aposentadoria): o motivo, como o histórico de trabalho o guardou. */
+  motivo?: string;
+  renovacoes?: number;
+  /** A pressão da diretoria, 0..100 (o cargo cai perto do alto). Nunca aparece como número. */
+  pressao: number;
+  /** O vestiário, 0..100 (50 = nada a dizer). Pesa nos jogos. */
+  vestiario: number;
+  /** Ajuste de força do elenco para a próxima temporada (reforços, preparação, titulares poupados). */
+  ajuste?: number;
+  /** A decisão (a final do estadual) que ficou para o momento — ou para o sorteio neutro, se o ano não a mostrar. */
+  decisao?: { competicao: string; adversario: string; forca: number; ano: number; t: number };
+  /** Quando renovou pela última vez (o momento da renovação lê isto). */
+  tRenovacao?: number;
+}
+
+export interface TemporadaDeTecnico {
+  ano: number;
+  nivel: 1 | 2 | 3 | 4;
+  /** Jogos dirigidos (estadual + liga, ou só os da seleção): J = V + E + D. */
+  jogos: number;
+  v: number;
+  e: number;
+  d: number;
+  /** Na liga: a colocação ao fim (ou no dia da saída, se saiu no meio). */
+  colocacao?: number;
+  /** O estadual: até onde foi. */
+  estadual?: 'campeão' | 'vice' | 'semifinal' | 'primeira fase';
+  titulos?: string[];
+  acesso?: boolean;
+  rebaixamento?: boolean;
+  /** Saiu no meio da temporada (demissão, proposta): os números são até ali. */
+  parcial?: boolean;
+  /** Seleção: os torneios disputados no ano e a campanha. */
+  torneio?: string;
+}
+
+export interface PropostaDeTecnico {
+  id: string;
+  clube: string;
+  municipioId: string;
+  nivel: 1 | 2 | 3 | 4;
+  meses: number;
+  salario: number;
+  t: number;
+  validaAte: number;
+  origem: 'mercado' | 'sem_clube' | 'selecao';
+  selecao?: boolean;
 }
 
 /**
@@ -1680,6 +1847,12 @@ export interface Caminhos {
   situacao?: SituacaoAberta;
   /** As situações de carreira vividas: a intenção escolhida e o que aconteceu (memória da vida profissional). */
   situacoes?: RegistroDeSituacao[];
+  /**
+   * A carreira de técnico de futebol (Carreira de técnico 2.0): clubes,
+   * passagens, jogos, títulos, demissões — a gramática do banco, separada da
+   * carreira de jogador (`esporte`), que continua consultável.
+   */
+  tecnico?: CarreiraDeTecnico;
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
   /**
@@ -1914,7 +2087,7 @@ export interface Notoriedade {
 export type FonteDoNome = 'esporte' | 'arte' | 'politica' | 'negocio';
 
 export interface Vida {
-  versao: 18;
+  versao: 19;
   id: string;
   rng: number;
   seq: number;
@@ -1959,7 +2132,66 @@ export interface Vida {
   notoriedade?: Notoriedade;
   /** Como prefere ir ao trabalho e ao estudo. Ausente = o jeito mais rápido que tem (`sistemas/transporte`). */
   deslocamento?: { modo: 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro'; t: number };
-  morte?: { t: number; causa: string; heranca?: Heranca };
+  morte?: {
+    t: number; causa: string; heranca?: Heranca;
+    /** O que o jogador decidiu sobre o patrimônio na tela do legado (guardado: recarregar mostra as mesmas escolhas). */
+    decisoes?: DecisoesDeHeranca;
+    /** A história foi encerrada aqui (a partilha já foi feita e registrada em `heranca`). */
+    encerrada?: boolean;
+  };
+  /**
+   * As vidas da família jogadas ANTES desta (sucessão): quem foram, o que
+   * deixaram, quem continuou. Ausente = a primeira geração. A biografia de
+   * cada uma fica aqui — nunca misturada com a Linha da Vida de quem continua.
+   */
+  linhagem?: Linhagem;
+}
+
+/* ----------------------------------------------------------------- Sucessão */
+
+/**
+ * O que o jogador decide sobre o destino do patrimônio (dentro do que a regra
+ * do país permite: `dados/sucessao`). Ausente = a sucessão legal, sem
+ * testamento.
+ */
+export interface DecisoesDeHeranca {
+  /** Como a PARTE DISPONÍVEL (a que a lei deixa decidir) se divide: frações por pessoa (o resto, a sucessão legal). */
+  disponivel?: { pessoaId: string; fracao: number }[];
+  /** Parte da disponível doada (0..1 da disponível) e para quê. */
+  doacao?: { fracao: number; destino: string };
+  /** Bens específicos para alguém (o bem entra no quinhão da pessoa): id do bem → id da pessoa. `negocio` é o negócio. */
+  bens?: Record<string, string>;
+}
+
+/** Uma vida jogada antes desta. */
+export interface Geracao {
+  /** A pessoa (falecida) no mundo desta vida: é por ela que os parentescos a enxergam. */
+  pessoaId: string;
+  nome: string;
+  sobrenome: string;
+  genero: Genero;
+  tratamento?: Genero;
+  visual: Visual;
+  tNasc: number;
+  tMorte: number;
+  causa: string;
+  municipioNatal: string;
+  municipioMorte: string;
+  /** O que marcou a vida (a retrospectiva) e o que construiu (as trajetórias), como ficaram no fim. */
+  resumo: string[];
+  trajetorias: { titulo: string; periodo: string; resumo: string }[];
+  /** A Linha da Vida dela: só o que é marco ou biografia (o cotidiano fica com quem viveu). */
+  biografia: { t: number; idade: number; texto: string; marco: boolean }[];
+  /** A partilha como foi feita. */
+  heranca: Heranca;
+  /** Quem continuou a história: o nome e o laço com quem morreu ("filha"). */
+  sucessor?: { nome: string; laco: string; idade: number };
+  /** Notoriedade no fim (o filho de alguém conhecido é conhecido por associação, nunca por mérito herdado). */
+  notoriedade?: { pico: number; fonte?: FonteDoNome };
+}
+
+export interface Linhagem {
+  geracoes: Geracao[];
 }
 
 /**
@@ -1995,11 +2227,32 @@ export interface Segredo {
 export interface Heranca {
   /** Patrimônio líquido deixado. */
   liquido: number;
-  partes: { pessoaId: string; valor: number; papel: 'conjuge' | 'filho' | 'neto' | 'outro'; meacao?: boolean }[];
+  partes: {
+    pessoaId: string; valor: number; papel: 'conjuge' | 'filho' | 'neto' | 'outro'; meacao?: boolean;
+    /** Sucessão: o que a parte foi, em dinheiro e em bens (com o nome de cada bem). */
+    dinheiro?: number;
+    bens?: string[];
+  }[];
   /** Os bens que existiam, em palavras. */
   bens: string[];
   /** Obrigações que o patrimônio pagou. */
   dividas: number;
+  /**
+   * Sucessão (a partilha completa, quando feita pelo legado): o inventário
+   * bruto, os custos da transmissão, a doação, o que as dívidas deixaram sem
+   * cobertura e a regra (país) usada. A conta fecha: bruto = dívidas pagas +
+   * meação + partes + doação + custos + vacante.
+   */
+  bruto?: number;
+  custos?: number;
+  doacao?: { valor: number; destino: string };
+  /** Sem herdeiro nenhum: o que foi para o poder público. */
+  vacante?: number;
+  /** Dívida que o patrimônio não cobriu (e se extinguiu com ele: ninguém herda dívida). */
+  naoCoberto?: number;
+  regra?: string;
+  /** Vendido no inventário para virar dinheiro (bens que ninguém recebeu). */
+  vendidos?: string[];
 }
 
 /** Resultado de um comando do jogador. */

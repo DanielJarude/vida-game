@@ -143,6 +143,62 @@ export function eleicaoNaJanela(v: Vida): { ano: number; tipo: 'municipal' | 'ge
   return e.t <= v.t + 12 ? e : undefined;
 }
 
+/** Esta eleição encerra o mandato? (a posse que ela produz é o fim dele: a eleição de outubro do último ano). */
+export const mandatoAcabaNaEleicao = (m: { tFim: number }, anoEleicao: number) => m.tFim <= tDaPosse(anoEleicao);
+
+/**
+ * O CALENDÁRIO DO MANDATO — a fonte única (pós-playtest): início, fim,
+ * duração, o ano do mandato em curso, o último ano, a eleição que decide a
+ * sucessão e a eleição na janela. O motor (a janela da candidatura, a
+ * janela partidária, a reeleição), os textos (`pol_eleicao`, `pol_deixar`)
+ * e a interface (`leituraPolitica`) leem daqui — nenhum deles conta anos
+ * por conta própria.
+ *
+ * A posse é 1º de janeiro, então o mandato anda em ANOS CIVIS: o ano 1 é o
+ * ano da posse; o último é o ano anterior a `tFim`. O tique do jogo é o
+ * aniversário (pode cair em qualquer mês): o ano do mandato vem do ano
+ * civil de `v.t`, nunca da idade nem de meses corridos desde o tique.
+ * (O bug do playtest: a pergunta da eleição dizia "entra no último ano"
+ * sempre que havia mandato — inclusive na eleição GERAL do meio do mandato
+ * de prefeito, e no primeiro ano de quem faz aniversário depois de outubro.)
+ */
+export interface CalendarioDoMandato {
+  cargo: CargoEletivo;
+  tInicio: number;
+  tFim: number;
+  /** Duração em anos (4; senador, 8). */
+  anos: number;
+  /** O ano do mandato em curso, 1..anos (ano civil). */
+  ano: number;
+  /** Ano civil da posse e do último ano de exercício. */
+  anoPosse: number;
+  anoFinal: number;
+  /** O ano civil de agora é o último do mandato. */
+  ultimoAno: boolean;
+  /** Meses até o fim (0 quando já passou). */
+  mesesRestantes: number;
+  /** A eleição que decide quem fica com o cargo depois (outubro do último ano). */
+  eleicaoDoFim: { ano: number; t: number };
+  /** A eleição dos próximos doze meses, se houver — e se é ela que encerra este mandato. */
+  naJanela?: { ano: number; tipo: 'municipal' | 'geral'; t: number; encerra: boolean };
+}
+
+export function calendarioDoMandato(v: Vida, m = v.caminhos.politica?.mandato): CalendarioDoMandato | undefined {
+  if (!m) return undefined;
+  const anos = Math.max(1, Math.round((m.tFim - m.tInicio) / 12));
+  const anoPosse = anoDe(m.tInicio);
+  const anoFinal = anoDe(m.tFim) - 1;
+  const ano = Math.min(anos, Math.max(1, anoDe(v.t) - anoPosse + 1));
+  const e = eleicaoNaJanela(v);
+  return {
+    cargo: m.cargo, tInicio: m.tInicio, tFim: m.tFim, anos, ano, anoPosse, anoFinal,
+    ultimoAno: anoDe(v.t) >= anoFinal,
+    mesesRestantes: Math.max(0, m.tFim - v.t),
+    eleicaoDoFim: { ano: anoFinal, t: tDaEleicao(anoFinal) },
+    naJanela: e ? { ...e, encerra: mandatoAcabaNaEleicao(m, e.ano) } : undefined
+  };
+}
+
 /** O nome público visto pelo eleitor (a notoriedade, pela metade): reconhecer o nome não é apoiar. */
 export const nomePublico = (v: Vida) => (v.notoriedade?.valor ?? 0) * 0.5;
 
@@ -213,7 +269,7 @@ export function leituraPolitica(v: Vida): LeituraPolitica | undefined {
   if (!base || !p) return base;
   const ultima = [...p.historico].reverse().find(h => h.resultado === 'eleito' || h.resultado === 'derrotado');
   const e = eleicaoNaJanela(v) ?? proximaEleicao(v.t);
-  const cargo = p.mandato && p.mandato.tFim <= tDaPosse(e.ano) && CARGOS[p.mandato.cargo].tipo === e.tipo ? p.mandato.cargo : ORDEM_CARGOS.find(c => CARGOS[c].tipo === e.tipo && podeTentar(podeConcorrer(v, c, e.t)));
+  const cargo = p.mandato && mandatoAcabaNaEleicao(p.mandato, e.ano) && CARGOS[p.mandato.cargo].tipo === e.tipo ? p.mandato.cargo : ORDEM_CARGOS.find(c => CARGOS[c].tipo === e.tipo && podeTentar(podeConcorrer(v, c, e.t)));
   const passados = (p.partidos ?? []).filter(x => x.tFim !== undefined);
   return {
     ...base,
@@ -240,9 +296,8 @@ function leituraPoliticaBase(v: Vida): LeituraPolitica | undefined {
   const prox = proximaEleicao(v.t);
   if (p.fase === 'mandato' && p.mandato) {
     const m = p.mandato;
-    const total = Math.round((m.tFim - m.tInicio) / 12);
-    const ano = Math.min(total, Math.floor((v.t - m.tInicio) / 12) + 1);
-    return { fase: p.fase, titulo: `${cap(nomeCargo(v, m.cargo))}${p.consecutivos >= 2 && CARGOS[m.cargo].executivo ? ', segundo mandato' : ''}`, etapa: `Ano ${ano} de ${total} do mandato · termina em ${anoDe(m.tFim)}`, reputacao: rep, apoio, aprovacao: palavraAprovacao(m.aprovacao), prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: horizonteDoMandato(v), historico: hist };
+    const cal = calendarioDoMandato(v, m)!;
+    return { fase: p.fase, titulo: `${cap(nomeCargo(v, m.cargo))}${p.consecutivos >= 2 && CARGOS[m.cargo].executivo ? ', segundo mandato' : ''}`, etapa: `${cal.ultimoAno ? `Último ano do mandato (${cal.anos} de ${cal.anos})` : `Ano ${cal.ano} de ${cal.anos} do mandato`} · ${cal.anoPosse}–${cal.anoFinal}`, reputacao: rep, apoio, aprovacao: palavraAprovacao(m.aprovacao), prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: horizonteDoMandato(v), historico: hist };
   }
   if (p.fase === 'eleito' && p.posse) return { fase: p.fase, titulo: `${cap(flex(g, 'Eleito', 'Eleita', 'Eleite'))} ${nomeCargo(v, p.posse.cargo)}`, etapa: `Posse em ${anoDe(p.posse.t)}`, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), historico: hist };
   if (p.fase === 'candidato' && p.campanha) return { fase: p.fase, titulo: `${flex(g, 'Candidato', 'Candidata', 'Candidate')} a ${nomeCargo(v, p.campanha.cargo)}`, etapa: `Eleição em outubro de ${anoDe(p.campanha.tEleicao)}`, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: 'A campanha está na rua. Agora, é a apuração.', historico: hist };
@@ -259,9 +314,12 @@ function horizonteDoMandato(v: Vida): string {
   const p = v.caminhos.politica!;
   const m = p.mandato!;
   const c = CARGOS[m.cargo];
-  const ultimo = m.tFim - v.t <= 16;
-  if (c.executivo && p.consecutivos >= 2) return ultimo ? 'Último ano: reeleição, só depois de um mandato de intervalo. Outro cargo, ou a vida fora.' : 'Segundo mandato: não há terceiro seguido.';
-  if (ultimo) return 'O mandato termina: reeleição, outro cargo ou voltar para a vida de antes.';
+  const cal = calendarioDoMandato(v, m)!;
+  // O fim à vista: o último ano, ou a eleição que encerra o mandato já na janela (o aniversário pode cair antes de janeiro).
+  const fim = cal.ultimoAno ? 'Último ano' : cal.naJanela?.encerra ? `O mandato vai até o fim de ${cal.anoFinal}` : undefined;
+  if (c.executivo && p.consecutivos >= 2) return fim ? `${fim}: reeleição, só depois de um mandato de intervalo. Outro cargo, ou a vida fora.` : 'Segundo mandato: não há terceiro seguido.';
+  if (fim) return `${fim}: reeleição, outro cargo ou voltar para a vida de antes.`;
+  if (cal.naJanela) return `O mandato vai até ${cal.anoFinal}; a eleição ${cal.naJanela.tipo === 'municipal' ? 'municipal' : 'geral'} de ${cal.naJanela.ano} é para outros cargos${c.executivo ? ' (disputar é renunciar seis meses antes)' : ' (dá para disputar sem largar a cadeira)'}.`;
   return m.aprovacao < 42 ? 'A aprovação caiu: sem recuperar, a reeleição fica difícil.' : 'O mandato segue; a próxima eleição vai medir o que foi feito.';
 }
 
@@ -306,7 +364,7 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   const mand = p.mandato;
   if (mand && p.fase === 'mandato') {
     if (mand.cargo === cargo && c.executivo && p.consecutivos >= 2) return bloqueio('ilegal', 'Para prefeito e governador, só uma reeleição seguida.');
-    if (mand.tFim > tDaPosse(ano) && mand.cargo === cargo) return bloqueio('impossivel', 'O mandato atual ainda não termina nessa eleição.');
+    if (!mandatoAcabaNaEleicao(mand, ano) && mand.cargo === cargo) return bloqueio('impossivel', 'O mandato atual ainda não termina nessa eleição.');
     if (CARGOS[mand.cargo].executivo && mand.cargo !== cargo) return { grau: 'irregular', motivo: `Para disputar outro cargo, é preciso renunciar ao mandato de ${nomeCargo(v, mand.cargo)} seis meses antes.` };
   }
   if (cargo === 'prefeito' && p.apoio < (v.fatos['pol_partido_porte'] === 2 ? 10 : 18)) return { grau: 'improvavel', chance: 0.1, motivo: 'Para prefeito, sem base nenhuma, o partido nem lança o nome.' };
@@ -428,8 +486,7 @@ export function regraDaTroca(v: Vida): { como: 'janela' | 'fora_da_janela' | 'ma
   if (posse && !majoritario(posse.cargo)) return { como: 'fora_da_janela', texto: `Eleito para ${nomeCargo(v, posse.cargo)}, o mandato que vai começar pertence ao partido pelo qual se elegeu: trocando agora, ele pode pedir o cargo na Justiça Eleitoral.` };
   if (!m) return { como: 'majoritario', texto: `Mandato de ${nomeCargo(v, posse!.cargo)} é de quem foi eleito: trocar de partido não tira o cargo.` };
   if (majoritario(m.cargo)) return { como: 'majoritario', texto: `Mandato de ${nomeCargo(v, m.cargo)} é de quem foi eleito: trocar de partido não tira o cargo.` };
-  const e = eleicaoNaJanela(v);
-  if (e && m.tFim <= tDaPosse(e.ano)) return { como: 'janela', texto: 'É a janela partidária do fim do mandato: dá para trocar sem perder o cargo.' };
+  if (calendarioDoMandato(v, m)?.naJanela?.encerra) return { como: 'janela', texto: 'É a janela partidária do fim do mandato: dá para trocar sem perder o cargo.' };
   return { como: 'fora_da_janela', texto: `Fora da janela partidária, o mandato de ${nomeCargo(v, m.cargo)} pertence ao partido: ele pode pedir o cargo na Justiça Eleitoral.` };
 }
 
@@ -682,8 +739,9 @@ function apurar(v: Vida, r: Rng): void {
     if (par) lembrarCom(v, par.p.id, `A noite da apuração: ${nome}.`, 'apoio', 3);
   } else {
     // Perder a reeleição encerra o mandato; perder disputando outro cargo, não.
-    const acaba = !!p.mandato && (p.mandato.cargo === cargo || p.mandato.tFim <= tDaPosse(Math.floor(c.tEleicao / 12)));
-    const texto = `Não se elegeu ${nome} em ${anoDe(c.tEleicao)}.${acaba ? ' O mandato acaba no fim do ano.' : p.mandato ? ` Segue no mandato de ${nomeCargo(v, p.mandato.cargo)}.` : ''}`;
+    const acaba = !!p.mandato && (p.mandato.cargo === cargo || mandatoAcabaNaEleicao(p.mandato, anoDe(c.tEleicao)));
+    // O tique é o aniversário: a apuração pode ser lida já depois de janeiro, com o mandato terminado.
+    const texto = `Não se elegeu ${nome} em ${anoDe(c.tEleicao)}.${acaba ? (v.t >= p.mandato!.tFim ? ` O mandato terminou em janeiro de ${anoDe(p.mandato!.tFim)}.` : ' O mandato acaba no fim do ano.') : p.mandato ? ` Segue no mandato de ${nomeCargo(v, p.mandato.cargo)}.` : ''}`;
     escrever(v, { texto: `${texto} ${porque}`.trim(), relevancia: p.historico.filter(x => x.resultado === 'derrotado').length <= 1 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'derrota', texto, 3);
     abalar(v, 'a derrota na eleição', -10, 5);
@@ -951,7 +1009,7 @@ export function processarPolitica(v: Vida, r: Rng): void {
   }
   // A janela de uma eleição: a vida pergunta (conteúdo `pol_eleicao`).
   const e = eleicaoNaJanela(v);
-  if (e && !p.campanha && !p.posse && p.partido && (p.fase !== 'mandato' || (p.mandato && (p.mandato.tFim <= tDaPosse(e.ano) || CARGOS[p.mandato.cargo].tipo !== e.tipo)))) {
+  if (e && !p.campanha && !p.posse && p.partido && (p.fase !== 'mandato' || (p.mandato && (mandatoAcabaNaEleicao(p.mandato, e.ano) || CARGOS[p.mandato.cargo].tipo !== e.tipo)))) {
     const quer = v.fatos['pol_quer'] !== undefined || p.fase === 'mandato' || p.apoio >= 25 || p.historico.length > 0;
     if (quer) v.fatos['pol_eleicao'] = v.t;
   }

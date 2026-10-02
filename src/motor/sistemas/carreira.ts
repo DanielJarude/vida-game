@@ -96,6 +96,14 @@ export function custosDoTrabalho(v: Vida): { rotulo: string; valor: number }[] {
     if (oc.id === 'produtor_rural' && v.caminhos.rural?.terra === 'arrendada') out.push({ rotulo: 'Arrendamento da terra', valor: arrendamentoMensal(v) });
   }
   if (v.trabalho.pausa?.facultativo) out.push({ rotulo: 'INSS como contribuinte facultativo', valor: CUSTO_FACULTATIVO });
+  // O tenista paga o próprio circuito (treinador, viagens, hotel, inscrições): o custo da última temporada, mês a mês.
+  // (A1, playtest: o custo saía da conta direto no ano do esporte, fora do orçamento — a tela mostrava a premiação
+  // entrando e uma sobra de R$ 14 mil por mês, e a conta não saía do zero, comendo as aplicações. Agora é linha do mês.)
+  const es = v.caminhos.esporte;
+  if (e?.ocupacaoId === 'tenista' && es?.modalidade === 'tenis') {
+    const ultima = [...(es.temporadas ?? [])].reverse().find(t => t.custos !== undefined);
+    if (ultima?.custos) out.push({ rotulo: 'Circuito: treinador, viagens, hotel e inscrições', valor: Math.round(ultima.custos / 12) });
+  }
   return out;
 }
 

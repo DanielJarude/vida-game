@@ -26,6 +26,7 @@
 
 import type { CarreiraEsportiva, ConquistaEsportiva, Dominio, Emprego, Vida } from '../tipos';
 import { anoDe } from '../tempo';
+import { oClube } from '../dados/clubes';
 import { flex, ge, listaNatural } from '../texto';
 import { ocupacaoOuNula, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { municipio } from '../dados/lugares';
@@ -39,8 +40,9 @@ import { obraAcademica, OCUPACOES_ACADEMICAS } from './academia';
 import { modeloEspecialidade } from '../dados/especialidades';
 import { mercadoDe } from './mercados';
 import { nomeOcupacao } from './trabalho';
+import { comoAcabou, linhaDoTecnico, periodoDaPassagem, resumoDaPassagem, resumoDoTecnico } from './tecnico';
 
-export type AreaTrajetoria = 'esporte' | 'atuacao' | 'musica' | 'escrita' | 'artes' | 'academia' | 'medicina' | 'politica' | 'militar' | 'rural' | 'negocio' | 'emprego' | 'formacao';
+export type AreaTrajetoria = 'esporte' | 'tecnico' | 'atuacao' | 'musica' | 'escrita' | 'artes' | 'academia' | 'medicina' | 'politica' | 'militar' | 'rural' | 'negocio' | 'emprego' | 'formacao';
 
 export interface DetalheTrajetoria { titulo: string; linhas: string[]; tabela?: HistoricoEsportivo }
 
@@ -477,6 +479,45 @@ function trajetoriasDeEmprego(v: Vida): TrajetoriaDaVida[] {
   return out;
 }
 
+/* ============================================================ O banco (Carreira de técnico 2.0) */
+
+/**
+ * A carreira de técnico é uma trajetória própria — não se mistura com a de
+ * jogador (que continua listada ao lado, com a tabela dela). O resumo fala a
+ * língua do banco: clubes, jogos, V/E/D, títulos; as realizações são os
+ * títulos, os acessos, a seleção; o histórico é passagem a passagem.
+ */
+function trajetoriaDeTecnico(v: Vida): TrajetoriaDaVida | undefined {
+  const c = v.caminhos.tecnico;
+  if (!c || !c.passagens.length) return undefined;
+  const g = ge(v);
+  const res = resumoDoTecnico(c);
+  const ativa = c.tFim === undefined;
+  const de = periodoDaPassagem(c.passagens[0]).de;
+  const ultima = c.passagens[c.passagens.length - 1];
+  const ate = ativa ? undefined : periodoDaPassagem(ultima).ate ?? de;
+  const r: Realizacao[] = [];
+  for (const p of c.passagens) for (const t of p.temporadas) {
+    for (const x of t.titulos ?? []) r.push({ texto: `${x} com ${p.selecao ? 'a seleção brasileira' : oClube(p.clube)} (${t.ano})`, peso: /Série A|mundial/.test(x) ? 9 : /Série B|continental/.test(x) ? 7 : /divisões de acesso/.test(x) ? 5 : 4 });
+    if (t.acesso) r.push({ texto: `Acesso com ${oClube(p.clube)} (${t.ano})`, peso: 4 });
+  }
+  const selecao = c.passagens.find(p => p.selecao);
+  if (selecao) r.push({ texto: `${flex(g, 'Técnico', 'Técnica')} da seleção brasileira (${periodoDaPassagem(selecao).de})`, peso: 8 });
+  const primeira = c.passagens[0];
+  r.push({ texto: `Primeiro time como ${flex(g, 'técnico', 'técnica')} principal: ${primeira.clube} (${periodoDaPassagem(primeira).de})`, peso: 1 });
+  // O que o banco viveu e marcou (os momentos ótimos: o vestiário unido, a final, o cargo salvo).
+  for (const x of (v.caminhos.situacoes ?? []).filter(y => y.trajetoria === 'tecnico' && y.desfecho === 'otimo')) r.push({ texto: `${x.texto.replace(/\.$/, '')} (${anoDe(x.t)})`, peso: 3 });
+  const demissoes = c.passagens.filter(p => p.saida === 'demissao');
+  const reconhecimento = selecao ? [`${flex(g, 'Chamado', 'Chamada')} para dirigir a seleção brasileira`] : [];
+  return {
+    id: 'tecnico', area: 'tecnico', titulo: `${flex(g, 'Técnico', 'Técnica')} de futebol`, periodo: periodo(de, ate, ativa), de, ate, ativa,
+    resumo: `${linhaDoTecnico(c)}${res.acessos ? `, ${res.acessos} ${res.acessos === 1 ? 'acesso' : 'acessos'}` : ''}${res.rebaixamentos ? `, ${res.rebaixamentos} ${res.rebaixamentos === 1 ? 'rebaixamento' : 'rebaixamentos'}` : ''}${demissoes.length ? `; ${demissoes.length} ${demissoes.length === 1 ? 'demissão' : 'demissões'}` : ''}.`,
+    realizacoes: top(r), reconhecimento,
+    detalhe: [{ titulo: 'Passagens', linhas: [...c.passagens].reverse().map(p => { const x = resumoDaPassagem(p); const pr = periodoDaPassagem(p); return `${p.selecao ? 'Seleção brasileira' : p.clube} · ${pr.de}${p.ate === undefined ? '–' : pr.ate !== pr.de ? `–${pr.ate}` : ''} — ${x.jogos} jogos · ${x.v} V · ${x.e} E · ${x.d} D${x.titulos.length ? ` · ${x.titulos.join(', ')}` : ''} · ${comoAcabou(v, p)}`; }) }],
+    peso: res.temporadas * 2 + r.reduce((a, x) => a + x.peso, 0)
+  };
+}
+
 /* ============================================================ Formação (a universidade vivida) */
 
 function trajetoriaDeFormacao(v: Vida): TrajetoriaDaVida | undefined {
@@ -510,6 +551,7 @@ export function trajetoriasDaVida(v: Vida): TrajetoriaDaVida[] {
   const out: (TrajetoriaDaVida | undefined)[] = [
     trajetoriaDeFormacao(v),
     ...carreirasEsportivas(v).map((e, k) => trajetoriaEsportiva(v, e, k)),
+    trajetoriaDeTecnico(v),
     trajetoriaDeAtuacao(v),
     ...(['musica', 'danca', 'escrita', 'desenho', 'fotografia'] as Dominio[]).map(d => trajetoriaArtistica(v, d)),
     trajetoriaAcademica(v),

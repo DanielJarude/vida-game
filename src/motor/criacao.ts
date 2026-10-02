@@ -113,7 +113,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   // Predisposições: da semente, sem gastar o gerador (a vida criada é a mesma de antes, com elas guardadas).
   const pred = derivarPredisposicoes(id);
   const v: Vida = {
-    versao: 18,
+    versao: 19,
     id,
     rng: 0,
     seq: 0,

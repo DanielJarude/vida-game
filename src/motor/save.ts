@@ -42,7 +42,7 @@ import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 import { atribuirVersoesAosVeiculos } from './sistemas/versoesVeiculo';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 
-export const VERSAO_SAVE = 18;
+export const VERSAO_SAVE = 19;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -104,12 +104,26 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
+  // v18 → v19 (sucessão): a vida pode ser de uma geração seguinte (linhagem, posses de quem não é o protagonista,
+  // parentescos de sobrinho e cunhado). Os campos novos são opcionais; a versão sobe porque um jogo v18 não sabe
+  // ler esses parentescos nem a herança aplicada a menores — e não pode abrir um save v19 como se fosse dele.
+  if (d.versao === 18) {
+    const erro18 = validar(d, 18);
+    if (erro18) return { tipo: 'invalido', motivo: erro18 };
+    try {
+      const v = migrarV18(d as unknown as Vida);
+      const erro = validar(v as unknown as Record<string, unknown>);
+      return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+    } catch (e) {
+      return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+    }
+  }
   // v17 → v18 (REWORK 3): a casa de origem com reserva e bairro, as vivências da formação, o estilo.
   if (d.versao === 17) {
     const erro17 = validar(d, 17);
     if (erro17) return { tipo: 'invalido', motivo: erro17 };
     try {
-      const v = migrarV17(d as unknown as Vida);
+      const v = migrarV18(migrarV17(d as unknown as Vida));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -120,7 +134,7 @@ export function interpretar(bruto: string): Leitura {
   const ate16 = interpretarAte16(d);
   if (ate16.tipo !== 'ok') return ate16;
   try {
-    const v = migrarV17(migrarV16(ate16.vida));
+    const v = migrarV18(migrarV17(migrarV16(ate16.vida)));
     const erro = validar(v as unknown as Record<string, unknown>);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
   } catch (e) {
@@ -335,6 +349,8 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (c.envolvimento && (!finito(c.envolvimento.exposicao) || !finito(c.envolvimento.nivel))) return 'Envolvimento inválido.';
     const t = d.trabalho as Vida['trabalho'];
     if (t.pausa && (!finito(t.pausa.tInicio) || typeof t.pausa.motivo !== 'string')) return 'Pausa inválida.';
+    // A intenção profissional declarada (opcional; saves antigos não têm).
+    if (t.intencao !== undefined && (!t.intencao || (t.intencao.quer !== 'procurar' && t.intencao.quer !== 'nao_procurar') || !finito(t.intencao.t))) return 'Intenção profissional inválida.';
   }
   if (versao >= 12) {
     const e = (d.trabalho as Vida['trabalho']).atual;
@@ -422,6 +438,27 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     }
     if ((viv ?? []).some(x => (x.etapa !== undefined && typeof x.etapa !== 'string') || (x.marcos !== undefined && (!Array.isArray(x.marcos) || x.marcos.some(m => !m || !finito(m.t) || typeof m.texto !== 'string'))))) return 'História de atividade inválida.';
   }
+  if (versao >= 19) {
+    const lin = d.linhagem as Vida['linhagem'];
+    if (lin !== undefined && (typeof lin !== 'object' || !Array.isArray(lin.geracoes) || lin.geracoes.some(g => !g || typeof g.pessoaId !== 'string' || typeof g.nome !== 'string' || !finito(g.tNasc) || !finito(g.tMorte) || !Array.isArray(g.biografia) || !g.heranca || !Array.isArray(g.heranca.partes)))) return 'Linhagem inválida.';
+    for (const p of Object.values(d.pessoas as Record<string, Pessoa>)) {
+      const pos = p.posses;
+      if (pos !== undefined && (typeof pos !== 'object' || !finito(pos.dinheiro) || !Array.isArray(pos.bens) || pos.bens.some(b => !b || !finito(b.valor)) || !Array.isArray(pos.historia))) return 'Patrimônio de pessoa inválido.';
+    }
+    const o = d.origem as Vida['origem'];
+    if (o.reservaDe !== undefined && !(d.pessoas as Record<string, Pessoa>)[o.reservaDe]) return 'Reserva da família aponta para pessoa inexistente.';
+    if (o.responsavelId !== undefined && !(d.pessoas as Record<string, Pessoa>)[o.responsavelId]) return 'Guarda aponta para pessoa inexistente.';
+    if ((d.financas as Vida['financas']).investimentos.some(a => a.tutelaAte !== undefined && !finito(a.tutelaAte))) return 'Aplicação sob tutela inválida.';
+    const mo = d.morte as Vida['morte'];
+    if (mo?.decisoes !== undefined && (typeof mo.decisoes !== 'object' || (mo.decisoes.disponivel !== undefined && (!Array.isArray(mo.decisoes.disponivel) || mo.decisoes.disponivel.some(x => !x || typeof x.pessoaId !== 'string' || !finito(x.fracao)))) || (mo.decisoes.doacao !== undefined && !finito(mo.decisoes.doacao.fracao)))) return 'Decisões de herança inválidas.';
+    // Carreira de técnico 2.0: as passagens e as temporadas (J = V + E + D é invariante do motor; aqui, só a forma).
+    const tec = (d.caminhos as Vida['caminhos']).tecnico;
+    if (tec !== undefined && (typeof tec !== 'object' || !finito(tec.tInicio) || !finito(tec.reputacao) || !Array.isArray(tec.passagens)
+      || tec.passagens.some(p => !p || typeof p.clube !== 'string' || !finito(p.desde) || !finito(p.contratoAte) || !finito(p.pressao) || !finito(p.vestiario) || ![1, 2, 3, 4].includes(p.nivel) || !Array.isArray(p.temporadas)
+        || p.temporadas.some(t => !t || !finito(t.ano) || !finito(t.jogos) || !finito(t.v) || !finito(t.e) || !finito(t.d)))
+      || (tec.proposta !== undefined && (typeof tec.proposta.id !== 'string' || typeof tec.proposta.clube !== 'string' || !finito(tec.proposta.salario))))) return 'Carreira de técnico inválida.';
+  }
+  for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) if (vin.parentesco !== undefined && !PARENTESCOS_VALIDOS.has(vin.parentesco)) return 'Parentesco inválido.';
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -467,6 +504,8 @@ function pendenteValido(p: unknown): boolean {
     default: return false;
   }
 }
+
+const PARENTESCOS_VALIDOS = new Set<string>(['mae', 'pai', 'madrasta', 'padrasto', 'irmao', 'meio_irmao', 'avo', 'tio', 'primo', 'filho', 'enteado', 'neto', 'bisneto', 'genro', 'sogro', 'sobrinho', 'cunhado', 'pet']);
 
 const PRIORIDADES_VALIDAS = ['saude', 'educacao', 'mobilidade', 'emprego', 'seguranca', 'ambiente', 'contas', 'cultura'];
 
@@ -640,6 +679,18 @@ export function migrarV17(v: Vida): Vida {
     if (clube) viv.push({ tipo: 'ciencias', t: clube.tInicio, anos: Math.max(1, Math.floor((x.t - clube.tInicio) / 12)), instituicao: chave, area: 'ciencias' });
     e.vivencias = viv;
   }
+  return x;
+}
+
+/**
+ * v18 → v19 (sucessão). Nada a converter: tudo o que a sucessão acrescenta é
+ * opcional (linhagem, posses, guarda, tutela, decisões de herança). Uma vida
+ * v18 é a primeira geração de uma família; uma vida v18 já morta abre na tela
+ * do legado e pode continuar com um filho, como qualquer outra.
+ */
+export function migrarV18(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 19;
   return x;
 }
 
@@ -1049,7 +1100,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 18,
+    versao: 7 as unknown as 19,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,

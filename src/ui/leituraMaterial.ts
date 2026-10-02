@@ -223,6 +223,56 @@ export function leituraDoMes(v: Vida): LeituraMes {
   return { orcamento: o, entradas, saidas, sobra: o.sobra, frase, dependente, casa };
 }
 
+/* ------------------------------------------------------- O ano, real por real */
+
+export interface LeituraDoExtrato {
+  ano: number;
+  /** Na conta: como começou e como terminou o ano fechado. */
+  inicio: number;
+  fim: number;
+  /** O que mexeu na conta, agrupado (positivo entra, negativo sai), na ordem de leitura. */
+  conta: { rotulo: string; valor: number; linhas: { rotulo: string; valor: number }[] }[];
+  /** As aplicações no mesmo ano: começo, fim e o que as moveu. */
+  aplicacoes?: { inicio: number; fim: number; rendeu: number; posto: number; tirado: number; outros: number };
+  /** O que mudou na conta DEPOIS do fechamento (acontecimentos e escolhas deste ano, ainda em aberto). */
+  depois: number;
+}
+
+const GRUPOS_EXTRATO: { rotulo: string; tipos: string[] }[] = [
+  { rotulo: 'Entrou: trabalho, rendas e o que a casa divide', tipos: ['renda'] },
+  { rotulo: 'Da família', tipos: ['familia'] },
+  { rotulo: 'Saiu: as despesas do mês, vezes doze', tipos: ['despesa'] },
+  { rotulo: 'Dívidas: parcelas, atrasados, cartão', tipos: ['divida'] },
+  { rotulo: 'Rendimentos (e a inflação no dinheiro parado)', tipos: ['rendimento'] },
+  { rotulo: 'Posto nas aplicações', tipos: ['aporte'] },
+  { rotulo: 'Tirado das aplicações', tipos: ['resgate'] },
+  { rotulo: 'Acontecimentos do ano', tipos: ['acontecimento'] },
+  { rotulo: 'Escolhas e compras', tipos: ['escolha'] },
+  { rotulo: 'Diferença sem explicação', tipos: ['ajuste'] }
+];
+
+/**
+ * A conta do último ano fechado, real por real (`sistemas/extrato`): começou
+ * com X, entrou, saiu, foi para as aplicações, voltou delas, terminou com Y.
+ * É o que responde "a sobra do mês foi para onde?".
+ */
+export function leituraDoExtrato(v: Vida): LeituraDoExtrato | undefined {
+  const e = v.financas.extrato;
+  if (!e || !Array.isArray(e.linhas) || e.contaFinal === undefined) return undefined;
+  const conta = GRUPOS_EXTRATO.map(g => {
+    const linhas = e.linhas.filter(l => g.tipos.includes(l.tipo) && Math.round(l.conta) !== 0).map(l => ({ rotulo: l.rotulo, valor: Math.round(l.conta) }));
+    return { rotulo: g.rotulo, valor: linhas.reduce((s, l) => s + l.valor, 0), linhas };
+  }).filter(g => g.linhas.length > 0);
+  const soma = (tipos: string[]) => Math.round(e.linhas.filter(l => tipos.includes(l.tipo)).reduce((s, l) => s + l.aplicado, 0));
+  const fimAplicado = Math.round(e.aplicadoFinal ?? e.aplicadoInicial);
+  const rendeu = soma(['rendimento']);
+  const posto = soma(['aporte']);
+  const tirado = soma(['resgate']);
+  const outros = fimAplicado - Math.round(e.aplicadoInicial) - rendeu - posto - tirado;
+  const aplicacoes = e.aplicadoInicial > 0 || fimAplicado > 0 ? { inicio: Math.round(e.aplicadoInicial), fim: fimAplicado, rendeu, posto, tirado, outros } : undefined;
+  return { ano: anoDe(e.tFim ?? v.t), inicio: Math.round(e.contaInicial), fim: Math.round(e.contaFinal), conta, aplicacoes, depois: Math.round(v.financas.conta - e.contaFinal) };
+}
+
 /* ------------------------------------------------------------- Segurança */
 
 export const ESCALA_SEGURANCA: NivelSeguranca[] = ['no_vermelho', 'apertado', 'no_limite', 'equilibrado', 'seguro', 'folgado'];

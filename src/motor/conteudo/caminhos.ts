@@ -45,6 +45,8 @@ import { anoDe } from '../tempo';
 import { clamp } from '../rng';
 import { editaisAbertos } from '../sistemas/concurso';
 import { noTrabalho } from '../sistemas/ambiente';
+import { declararIntencao, mesesProcurando, podeDeclararIntencao } from '../sistemas/intencao';
+import { podeTentar } from '../plausibilidade';
 
 const mod = (c: Ctx) => MODS[c.v.fatos['peneira_mod'] ?? 0] ?? 'futebol';
 const clubeDaBase = (c: Ctx) => conviteDaBase(c.v)?.clube ?? nomeDeClube(lugarPeneira(c), `${c.v.id}:${c.v.fatos['convite_base']}`, mod(c));
@@ -332,8 +334,9 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'des_longo', tipo: 'decisao', idade: [20, 62], tema: 'trabalho', repetir: 3, prioritario: true, prioridade: 1,
-    quando: c => semOcupacao(c.v) && !c.v.trabalho.aposentadoria && !c.v.educacao.matricula && c.v.trabalho.desempregadoDesde !== undefined && c.v.t - c.v.trabalho.desempregadoDesde >= 24,
-    titulo: c => `${Math.floor((c.v.t - c.v.trabalho.desempregadoDesde!) / 12)} anos sem trabalho fixo`,
+    // Só para quem PROCURA (quem escolheu viver do que juntou não manda currículo): `intencao`.
+    quando: c => semOcupacao(c.v) && !c.v.educacao.matricula && mesesProcurando(c.v) >= 24,
+    titulo: c => `${Math.floor(mesesProcurando(c.v) / 12)} anos procurando trabalho`,
     texto: c => `Currículo enviado para tudo quanto é lugar. ${c.v.rotinas.some(r => r.id === 'bico') ? 'Os bicos seguram parte das contas.' : 'As contas chegam do mesmo jeito.'} ${parceiro(c.v) ? `${parceiro(c.v)!.p.nome} pergunta, com cuidado, o que você pensa fazer.` : ''}`,
     opcoes: [
       { id: 'qualquer', texto: 'Aceitar o que aparecer', disponivel: c => (melhorEntrada(c) ? true : 'Nem isso apareceu por aqui.'),
@@ -345,7 +348,10 @@ export const CAMINHOS: Conteudo[] = [
         resolver: c => ({ texto: 'Uma mala, um endereço de conhecido, a rodoviária de madrugada.', memoria: null, efeito: () => { const d = capitalDoEstado(c.v.moradia.municipioId); c.v.financas.conta -= custoDeMudanca(c.v.moradia.municipioId, d); mudarAgora(c.v, d, 'atrás de trabalho'); marcar(c.v, 'mudanca_cidade', `Mudou-se para ${municipio(d).nome} atrás de trabalho.`, 2); marcarFato(c.v, 'mudou_por_trabalho'); } }) },
       { id: 'conta', texto: 'Trabalhar por conta', disponivel: c => (autonomoPossivel(c) ? true : false),
         resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: `Você imprimiu uns cartões e avisou todo mundo: ${nomeOcupacao(c.v, oc)}, atende em casa.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'por_conta'); escrever(c.v, { texto: textoDeContratacao(c.v, oc, e), relevancia: 'marco', tema: 'trabalho' }); } }; } },
-      { id: 'procurar', texto: 'Continuar procurando', resolver: () => ({ texto: 'Mais um mês de currículo. Mais um.', memoria: null }) }
+      { id: 'procurar', texto: 'Continuar procurando', resolver: () => ({ texto: 'Mais um mês de currículo. Mais um.', memoria: null }) },
+      // Quem tem como viver do que juntou pode parar de procurar — a escolha fica dita, e a procura deixa de pesar.
+      { id: 'parar', texto: 'Parar de procurar e viver do que juntou', disponivel: c => (podeTentar(podeDeclararIntencao(c.v, 'nao_procurar')) ? true : false),
+        resolver: c => ({ texto: 'Você parou de mandar currículo. O que juntou paga a vida; o tempo, agora, é seu.', memoria: 'Parou de procurar trabalho e passou a viver do que juntou.', efeito: () => declararIntencao(c.v, 'nao_procurar') }) }
     ]
   },
   {

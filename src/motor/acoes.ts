@@ -6,9 +6,10 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { declararIntencao, patrimonioPagaAVida, podeDeclararIntencao, registrarProcura } from './sistemas/intencao';
 import { OCUPACOES_DE_ATLETA } from './sistemas/esporte';
 import type { Rng } from './rng';
-import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, Veiculo, Vida } from './tipos';
+import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import { abrirDecisao, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
@@ -34,11 +35,12 @@ import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
 import { curso } from './dados/cursos';
 import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras, type Modo } from './sistemas/transporte';
 import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, rendaPropriaMensal, saldoMensal, capacidade, tirarDasAplicacoes, vereditoDePagar } from './sistemas/dinheiro';
+import { conferir } from './sistemas/extrato';
 import { animalDoAbrigo, nomeImovel, ofertaDeImovel, ofertaDePet, ofertaDeVeiculo, ofertaPorModelo, ofertaVeiculoPorModelo } from './sistemas/mercado';
 import { disponibilidadeVeiculo, executarVeiculo, textoVeiculo, valorDeVenda, type AcaoVeiculo } from './sistemas/veiculos';
 import { disponibilidadeImovel, executarImovel, valorDeVendaImovel, type AcaoImovel } from './sistemas/imoveis';
 import { disponibilidadeUsoCasa, disponibilidadeUsoVeiculo, executarUsoCasa, executarUsoVeiculo, rotuloUsoCasa, rotuloUsoVeiculo, type UsoCasa, type UsoVeiculo } from './sistemas/usos';
-import { aplicacao, aplicar, resgatar } from './sistemas/investimentos';
+import { aplicacao, aplicar, emTutela, resgatar } from './sistemas/investimentos';
 import { PRODUTOS, produto } from './dados/investimentos';
 import { podeRenegociarFinanciamento, renegociarFinanciamento } from './sistemas/obrigacoes';
 import { adotarPet, disponibilidadeVeterinario, entregarPet, executarVeterinario, infoPet, podeTerPet, type OpcaoVeterinario } from './sistemas/pets';
@@ -158,6 +160,8 @@ export type Acao =
   | { tipo: 'cuidar_da_casa'; intensidade: 'parcial' | 'total' }
   /** Encerrar a pausa de cuidado: voltar à jornada inteira ou ao mercado. */
   | { tipo: 'voltar_mercado' }
+  /** Sem trabalho: voltar a procurar, ou parar de procurar (viver do que juntou) — a intenção profissional (`intencao`). */
+  | { tipo: 'intencao_trabalho'; quer: 'procurar' | 'nao_procurar' }
   /** Largar o que se faz por fora. */
   | { tipo: 'parar_por_fora' }
   /** A vida profissional: ritmo, conversa de promoção, o negócio, o clube, a farda, a terra, a obra. */
@@ -387,6 +391,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'resgatar': {
       const ap = aplicacao(v, a.origem);
+      if (ap && emTutela(v, ap)) return bloqueio('ilegal', `É a herança em seu nome: fica aplicada até os 18 (${Math.floor(ap.tutelaAte! / 12)}).`);
       return ap && a.valor > 0 && a.valor <= ap.valor + 0.5 ? PERMITIDO : bloqueio('requisito', 'Não há esse valor aplicado.');
     }
     case 'amortizar': {
@@ -450,6 +455,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return { grau: 'permitido', motivo: 'Sem renda própria, o INSS para — a não ser que pague como facultativo.' };
     }
     case 'voltar_mercado': return v.trabalho.pausa ? PERMITIDO : bloqueio('incompativel', 'Não há pausa para encerrar.');
+    case 'intencao_trabalho': return podeDeclararIntencao(v, a.quer);
     case 'parar_por_fora': return v.caminhos.envolvimento && v.caminhos.envolvimento.parou === undefined ? PERMITIDO : bloqueio('incompativel', 'Não se aplica.');
     case 'adotar_pet': {
       const an = animalDoAbrigo(v, a.animalId);
@@ -623,6 +629,9 @@ export function executar(vida: Vida, a: Acao): Retorno {
   let pessoaId: string | undefined;
   const antes = vida.biografia.length;
   const { vida: nova } = transacao(vida, (v, r) => {
+    // O extrato (`extrato`): o que mexeu no dinheiro antes (os acontecimentos do fim do ano) e o que esta escolha
+    // mexeu ficam, cada um, com o seu nome — nenhum real some sem linha.
+    conferir(v, 'Acontecimentos do fim do ano', 'acontecimento');
     const out = executarNaTransacao(v, r, a);
     resultado = out.resultado;
     aviso = out.aviso;
@@ -630,9 +639,26 @@ export function executar(vida: Vida, a: Acao): Retorno {
     pessoaId = out.pessoaId;
     // Um conflito de trajetórias criado pela ação vira pergunta na hora (nunca fica resolvido em silêncio).
     if (v.caminhos.pendente && !v.momento) abrirConflitoPendente(v, r);
+    conferir(v, ...linhaDoExtrato(a));
   });
   const mudancas = nova.biografia.slice(antes).filter(e => e.relevancia !== 'tecnico').map(e => e.texto);
   return { vida: nova, resultado, aviso, titulo, pessoaId: pessoaId ?? (a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined), ...(mudancas.length ? { mudancas } : {}) };
+}
+
+/** Como cada escolha aparece no extrato do ano (o rótulo e o tipo do movimento). */
+function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
+  switch (a.tipo) {
+    case 'investir': return ['Posto nas aplicações', 'aporte'];
+    case 'resgatar': return ['Tirado das aplicações', 'resgate'];
+    case 'resgatar_e': return ['Compras pagas com resgate das aplicações', 'escolha'];
+    case 'emprestimo': return ['Empréstimo recebido', 'divida'];
+    case 'amortizar': case 'renegociar': case 'renegociar_financiamento': return ['Dívidas amortizadas e acordos', 'divida'];
+    case 'pedir_ajuda_familia': return ['Ajuda pedida à família', 'familia'];
+    case 'comprar_imovel': case 'vender_bem': case 'imovel': case 'comprar_veiculo': case 'veiculo': return ['Imóveis e veículos: compra, venda e reparo', 'escolha'];
+    case 'decidir': return ['Decisões do ano', 'escolha'];
+    case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
+    default: return ['Compras, viagens e outras escolhas', 'escolha'];
+  }
 }
 
 interface Saida { resultado?: string; aviso?: Retorno['aviso']; titulo?: string; pessoaId?: string }
@@ -775,6 +801,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'candidatar': {
       const oc = ocupacao(a.ocupacaoId);
       v.anoAtual.acoes.push(`candidatura:${oc.id}`);
+      // Mandar currículo é dizer que quer trabalhar: a procura (e o que ela pesa) começa aqui (`intencao`).
+      registrarProcura(v);
       if (oc.concurso) {
         const reprovou = v.caminhos.concurso.tentativas > v.caminhos.concurso.aprovacoes;
         inscrever(v, oc);
@@ -842,6 +870,16 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok(a.ativo ? 'O INSS volta a contar, pago como facultativo.' : 'Sem pagar o INSS, o tempo de contribuição para.');
     case 'cuidar_da_casa': iniciarPausa(v, 'casa', a.intensidade); return ok(a.intensidade === 'parcial' ? 'Jornada reduzida.' : 'Você parou de trabalhar para cuidar da casa e da família.');
     case 'voltar_mercado': encerrarPausa(v, 'procurar'); return ok('Hora de voltar.');
+    case 'intencao_trabalho': {
+      const livre = patrimonioPagaAVida(v);
+      declararIntencao(v, a.quer);
+      if (a.quer === 'nao_procurar') {
+        escrever(v, { texto: livre ? 'Parou de procurar trabalho: o que juntou paga a vida, e o tempo agora é seu.' : 'Parou de procurar trabalho por um tempo, vivendo do que guardou.', relevancia: 'marco', tema: 'trabalho', escolha: true });
+        return ok(livre ? 'Você não está mais procurando trabalho. Dá para voltar quando quiser.' : 'Você parou de procurar por agora. O guardado vai diminuindo.');
+      }
+      escrever(v, { texto: 'Decidiu voltar a procurar trabalho.', relevancia: 'marco', tema: 'trabalho', escolha: true });
+      return ok('Você voltou a procurar trabalho.');
+    }
     case 'parar_por_fora': pararIlicito(v, ''); return ok('Você saiu. O que ficou para trás ainda pode aparecer.');
     case 'pessoa': {
       const out = executarInteracao(v, r, a.pessoaId, a.interacao);

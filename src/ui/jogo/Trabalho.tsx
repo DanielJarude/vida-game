@@ -52,8 +52,10 @@ import { circuitoPeloRanking, estatura, estaturaEmPalavras, funcaoBasquete, NOME
 import { categoriaDeLuta, funcaoVolei, NOME_FUNCAO_VOLEI, provaDe } from '../../motor/sistemas/provas';
 import { lesaoAtiva } from '../../motor/sistemas/lesoes';
 import { leituraDoNome } from '../../motor/sistemas/notoriedade';
-import { leituraDoPalmares } from '../../motor/sistemas/palmares';
+import { leituraDoPalmares, palmaresDe } from '../../motor/sistemas/palmares';
+import { celulaDoHistorico, GlifoConquista, GlifoDaLinha } from '../iconesConquista';
 import { historicoDaCarreira, perfilDe, resumoDaCarreira, semVinculo } from '../../motor/sistemas/perfisEsportivos';
+import { comoAcabou, linhaDoTecnico, passagemAtual, periodoDaPassagem, resumoDaPassagem, resumoDoTecnico } from '../../motor/sistemas/tecnico';
 import { momentosDaCarreira } from '../../motor/sistemas/situacoes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Renomear, Secao } from '../comum';
@@ -72,7 +74,7 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => vo
 const KICKER: Partial<Record<ModoTrabalho, string>> = {
   negocio: 'o próprio negócio', autonomo: 'por conta própria', informal: 'por conta, na rua', plataforma: 'sem chefe, sem piso', rural: 'a terra', pesca: 'a água',
   artista: 'a obra', atleta: 'o esporte', militar: 'a farda', seguranca: 'a segurança pública', servidor: 'o serviço público', docente: 'a sala de aula', saude: 'o cuidado',
-  empregado: 'com carteira', politica: 'a vida pública', formacao: 'a formação', aprendiz: 'o primeiro trabalho', estagio: 'o estágio', procurando: 'a procura',
+  empregado: 'com carteira', politica: 'a vida pública', formacao: 'a formação', aprendiz: 'o primeiro trabalho', estagio: 'o estágio', procurando: 'a procura', sem_procurar: 'por escolha',
   aposentado: 'depois do trabalho', pausa: 'cuidando', preso: 'a pena', estudante: 'antes do trabalho', base: 'a base', crianca: 'ainda não'
 };
 
@@ -149,6 +151,7 @@ export function Trabalho({ vida, agir, irPara }: Props) {
       <Trajetorias vida={vida} />
       <CurriculoArtistico vida={vida} agir={agir} />
       <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta'} />
+      <CarreiraComoTecnico vida={vida} />
       <MomentosDaCarreira vida={vida} />
       {(vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <PorOndePassou vida={vida} />}
     </div>
@@ -864,17 +867,18 @@ function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolean }) {
   // Todas as carreiras esportivas da pessoa (a de agora e as que acabaram antes de uma nova começar).
   const carreiras = carreirasEsportivas(vida).filter(c => c.fase !== 'base' && (c.temporadas?.length ?? 0) > 0);
   const p = leituraDoPalmares(vida);
+  const pal = palmaresDe(vida);
   if (!carreiras.length && !p.titulos.length && !p.premios.length) return null;
   const es = vida.caminhos.esporte;
   const futebol = carreiras.some(c => c.modalidade === 'futebol');
   return (
     <Secao titulo={es?.fase === 'encerrada' ? 'A carreira no esporte (encerrada)' : 'A carreira no esporte'} recolhivel aberta={aberta}>
       {carreiras.map((c, k) => <p key={k} className="painel__frase">{carreiras.length > 1 ? `${(NOME_MOD[c.modalidade] ?? c.modalidade).replace(/^./, x => x.toUpperCase())}: ` : ''}{resumoDaCarreira(c)}{p.titulos.length && carreiras.length === 1 ? ` · ${p.titulos.length} ${p.titulos.length === 1 ? 'conquista' : 'conquistas'}` : ''}.</p>)}
-      {p.titulos.length > 0 && <div className="palmares__grupo"><h4>Títulos e acessos</h4><ul className="marcos-caminho">{p.titulos.slice().reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
-      {p.finais.length > 0 && <div className="palmares__grupo"><h4>Finais</h4><ul className="marcos-caminho">{p.finais.slice().reverse().slice(0, 10).map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
-      {p.premios.length > 0 && <div className="palmares__grupo"><h4>Prêmios individuais</h4><ul className="marcos-caminho">{p.premios.slice().reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
-      {p.selecao && <div className="palmares__grupo"><h4>Pelo país</h4><p>{p.selecao}</p></div>}
-      {p.marcos.length > 0 && <div className="palmares__grupo"><h4>Marcos</h4><ul className="marcos-caminho">{p.marcos.slice(-8).reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
+      {p.titulos.length > 0 && <div className="palmares__grupo"><h4>Títulos e acessos</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.titulos.slice().reverse().map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="taca" /><span>{x}</span></li>)}</ul></div>}
+      {p.finais.length > 0 && <div className="palmares__grupo"><h4>Finais</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.finais.slice().reverse().slice(0, 10).map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="final" /><span>{x}</span></li>)}</ul></div>}
+      {p.premios.length > 0 && <div className="palmares__grupo"><h4>Prêmios individuais</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.premios.slice().reverse().map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="premio" /><span>{x}</span></li>)}</ul></div>}
+      {p.selecao && <div className="palmares__grupo"><h4>Pelo país</h4><p className="palmares__com-glifo"><GlifoConquista glifo="bandeira" />{p.selecao}</p></div>}
+      {p.marcos.length > 0 && <div className="palmares__grupo"><h4>Marcos</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.marcos.slice(-8).reverse().map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="marco" /><span>{x}</span></li>)}</ul></div>}
       {carreiras.map((c, k) => {
         const h = historicoDaCarreira(c);
         if (!h.linhas.length) return null;
@@ -884,7 +888,7 @@ function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolean }) {
             <div className="palmares__historico-rolagem">
               <table className="palmares__historico">
                 <thead><tr>{h.colunas.map(col => <th key={col}>{col}</th>)}</tr></thead>
-                <tbody>{h.linhas.slice().reverse().map((l, j) => <tr key={j}>{l.map((x, i) => <td key={i}>{x}</td>)}</tr>)}</tbody>
+                <tbody>{h.linhas.slice().reverse().map((l, j) => <tr key={j}>{l.map((x, i) => <td key={i}>{celulaDoHistorico(x)}</td>)}</tr>)}</tbody>
               </table>
             </div>
           </div>
@@ -892,6 +896,56 @@ function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolean }) {
       })}
       {futebol && <p className="nota">{CLUBES_REAIS}</p>}
     </Secao>
+  );
+}
+
+/**
+ * A carreira de técnico (Carreira de técnico 2.0): a linha da carreira, o
+ * clube de agora (a cobrança e o vestiário em palavras, nunca em número), os
+ * títulos e a tabela passagem a passagem. Mora ao lado da carreira de
+ * jogador — as duas trajetórias, cada uma com a sua tabela.
+ */
+function CarreiraComoTecnico({ vida }: { vida: Vida }) {
+  const c = vida.caminhos.tecnico;
+  if (!c || !c.passagens.length) return null;
+  const atual = passagemAtual(vida);
+  const res = resumoDoTecnico(c);
+  const g = vida.eu.tratamento ?? vida.eu.genero;
+  const titulos = c.passagens.flatMap(p => p.temporadas.flatMap(t => (t.titulos ?? []).map(x => `${t.ano} · ${x} — ${p.selecao ? 'seleção brasileira' : p.clube}`)));
+  const acessos = c.passagens.flatMap(p => p.temporadas.filter(t => t.acesso).map(t => `${t.ano} · Acesso — ${p.clube}`));
+  const pressao = (x: number) => (x < 35 ? 'tranquila' : x < 55 ? 'a de sempre' : x < 72 ? 'cobrança forte' : 'o cargo está ameaçado');
+  const vestiario = (x: number) => (x >= 65 ? 'fechado com você' : x >= 45 ? 'sem problemas' : 'dividido');
+  const estilo = { ofensivo: 'ofensivo (pressão alta)', defensivo: 'defensivo (contra-ataque)', equilibrado: 'equilibrado' }[c.estilo ?? 'equilibrado'];
+  const rotulo = `Carreira como ${g === 'feminino' ? 'técnica' : 'técnico'}`;
+  return (
+    <div role="region" aria-label={rotulo} className="tecnico">
+    <Secao titulo={c.tFim !== undefined ? `${rotulo} (encerrada)` : rotulo} recolhivel aberta={!!atual}>
+      <p className="painel__frase tecnico__linha"><strong>{linhaDoTecnico(c)}</strong>{res.jogos ? ` · ${res.aproveitamento}% de aproveitamento` : ''}{res.acessos ? ` · ${res.acessos} ${res.acessos === 1 ? 'acesso' : 'acessos'}` : ''}{res.rebaixamentos ? ` · ${res.rebaixamentos} ${res.rebaixamentos === 1 ? 'rebaixamento' : 'rebaixamentos'}` : ''}{res.demissoes ? ` · ${res.demissoes} ${res.demissoes === 1 ? 'demissão' : 'demissões'}` : ''}.</p>
+      {atual && (
+        <dl className="ficha-trabalho">
+          <Dado rotulo="No comando">{atual.selecao ? 'Seleção brasileira' : `${atual.clube} · ${atual.nivel === 1 ? 'campeonato estadual' : atual.nivel === 2 ? 'divisões de acesso' : atual.nivel === 3 ? 'Série B' : 'Série A'}`}</Dado>
+          <Dado rotulo="Contrato">até {anoDe(atual.contratoAte)}</Dado>
+          <Dado rotulo="Diretoria">{pressao(atual.pressao)}</Dado>
+          <Dado rotulo="Vestiário">{vestiario(atual.vestiario)}</Dado>
+          <Dado rotulo="Jeito de jogar">{estilo}</Dado>
+        </dl>
+      )}
+      {!atual && c.tFim === undefined && <p className="painel__frase">Sem clube desde {anoDe(c.semClubeDesde ?? vida.t)}: o telefone pode tocar.</p>}
+      {titulos.length + acessos.length > 0 && <div className="palmares__grupo"><h4>Títulos e acessos</h4><ul className="marcos-caminho">{[...titulos, ...acessos].sort().reverse().map((x, k) => <li key={k}><span>{x}</span></li>)}</ul></div>}
+      <div className="palmares__grupo">
+        <h4>Por clube</h4>
+        <div className="palmares__historico-rolagem">
+          <table className="palmares__historico tecnico__passagens">
+            <thead><tr><th>Clube</th><th>Período</th><th>J</th><th>V</th><th>E</th><th>D</th><th>Aprov.</th><th>Títulos</th><th>Saída</th></tr></thead>
+            <tbody>{[...c.passagens].reverse().map((p, k) => { const r = resumoDaPassagem(p); const pr = periodoDaPassagem(p); return (
+              <tr key={k}><td>{p.selecao ? 'Seleção brasileira' : p.clube}</td><td>{pr.de}{p.ate === undefined ? '–' : pr.ate !== pr.de ? `–${pr.ate}` : ''}</td><td>{r.jogos}</td><td>{r.v}</td><td>{r.e}</td><td>{r.d}</td><td>{r.jogos ? `${r.aproveitamento}%` : '—'}</td><td>{r.titulos.length || '—'}</td><td>{comoAcabou(vida, p)}</td></tr>
+            ); })}</tbody>
+          </table>
+        </div>
+      </div>
+      <p className="nota">{CLUBES_REAIS}</p>
+    </Secao>
+    </div>
   );
 }
 

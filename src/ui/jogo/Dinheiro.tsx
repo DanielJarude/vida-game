@@ -15,7 +15,8 @@ import { balanco, rendaPropriaMensal } from '../../motor/sistemas/dinheiro';
 import { totalAplicado } from '../../motor/sistemas/investimentos';
 import { negocioAberto } from '../../motor/sistemas/negocio';
 import { BotaoAcao, Dado, Escolha, Linha } from '../comum';
-import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoMes } from '../leituraMaterial';
+import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoExtrato, leituraDoMes, type LeituraDoExtrato } from '../leituraMaterial';
+import { intencaoProfissional } from '../../motor/sistemas/intencao';
 
 const TONS = ['t1', 't2', 't3', 't4', 't5', 't6'];
 
@@ -62,6 +63,8 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
   const parcelas = f.dividas.filter(d => d.parcela > 0 && d.saldo > 0);
   const atrasadas = f.dividas.filter(d => (d.atraso ?? 0) > 0).length + ((vida.moradia.atraso ?? 0) > 0 ? 1 : 0);
   const t = tendencia(vida);
+  const extrato = leituraDoExtrato(vida);
+  const intencao = intencaoProfissional(vida);
   const total = Math.max(m.orcamento.renda, m.orcamento.despesa, 1);
   const principais = m.saidas.slice(0, 5);
   const outras = m.saidas.slice(5);
@@ -74,7 +77,8 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
       </div>
       <p className="mes__frase">{m.frase}</p>
       <dl className="dados dados--dinheiro">
-        <Dado rotulo="Na conta">{dinheiroCurto(Math.max(0, f.conta))}</Dado>
+        {/* A conta como ela está: no vermelho aparece no vermelho (antes, um saldo negativo virava "R$ 0" na tela). */}
+        <Dado rotulo="Na conta">{dinheiroCurto(f.conta)}{f.conta < -0.5 ? <small> (no vermelho)</small> : null}</Dado>
         {aplicado > 0 && <Dado rotulo="Aplicado">{dinheiroCurto(aplicado)}<small> (dá para tirar)</small></Dado>}
         <Dado rotulo="Seu, por mês">{proprio > 0 ? dinheiroCurto(proprio) : 'nada ainda'}</Dado>
         {emCasa > 0 && <Dado rotulo="Casa e família">{dinheiroCurto(emCasa)}/mês</Dado>}
@@ -82,6 +86,8 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
         <Dado rotulo="Patrimônio">{dinheiroCurto(b.liquido)}{t && <small> {t.seta} {t.palavra}</small>}</Dado>
       </dl>
       {aplicado > 0 && <p className="nota">{rendeuTexto(vida)}</p>}
+      {/* A mesma leitura que Trabalho e Você usam (`intencao`): o patrimônio que paga a vida e o que a pessoa quer fazer com o tempo. */}
+      {intencao.intencao !== 'nao_se_aplica' && (intencao.livre || intencao.intencao === 'sem_procurar') && <p className="nota">{intencao.texto}</p>}
       {negocio && (negocio.caixa ?? 0) >= 1000 && <p className="nota">No caixa de {negocio.nome}: {dinheiroCurto(negocio.caixa ?? 0)} — do negócio; vira seu quando você tira (em Trabalho).</p>}
       {parcelas.length > 0 && <p className="nota">Compromissos de todo mês: {parcelas.length === 1 ? parcelas[0].descricao.toLowerCase() : `${parcelas.length} parcelas`}, {dinheiroCurto(parcelas.reduce((s, d) => s + d.parcela, 0))} por mês.</p>}
       {(m.orcamento.renda > 0 || m.orcamento.despesa > 0) && (
@@ -116,6 +122,7 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
           </details>
         </div>
       )}
+      {extrato && <ContaDoAno x={extrato} />}
       {m.casa && <p className="nota">{m.casa.texto}</p>}
       {i >= 18 && (
         <div className="campo">
@@ -148,7 +155,32 @@ function rendeuTexto(v: Vida): string {
   else if (val < 0) partes.push(`perderam ${dinheiroCurto(-val)} de valor`);
   if (pago > 0) partes.push(`pagaram ${dinheiroCurto(pago)} na conta`);
   const ano = partes.length ? `No último ano, as aplicações ${partes.join(' e ')}.` : 'As aplicações ainda não fecharam um ano.';
-  return `${ano}${tirado > 0 ? ` Para cobrir o ano, saíram ${dinheiroCurto(tirado)} delas.` : ''} Quando falta na conta, dá para tirar delas — o jogo pergunta antes.`;
+  // (A1: a frase dizia "o jogo pergunta antes" — verdade para uma compra, não para o ano que fecha no vermelho, quando
+  // elas cobrem a diferença sozinhas. Agora diz as duas coisas, e o resgate do ano aparece com o valor.)
+  return `${ano}${tirado > 0 ? ` O ano fechou no vermelho e saíram ${dinheiroCurto(tirado)} delas para cobrir.` : ''} Para uma compra que a conta não cobre, o jogo pergunta antes de tirar delas; se o ano fechar no vermelho, elas cobrem a diferença.`;
+}
+
+/**
+ * A conta do último ano, real por real (`sistemas/extrato`): começou com X,
+ * entrou, saiu, foi para as aplicações, voltou delas, terminou com Y. Responde
+ * "a sobra do mês foi para onde?" — sem isso, uma conta parada em zero com
+ * sobra todo mês parece dinheiro sumindo (A1, playtest).
+ */
+function ContaDoAno({ x }: { x: LeituraDoExtrato }) {
+  const sinal = (n: number) => `${n >= 0 ? '+' : '−'} ${dinheiroCheio(Math.abs(n))}`;
+  const a = x.aplicacoes;
+  return (
+    <details className="detalhes">
+      <summary>A conta de {x.ano}: começou com {dinheiroCurto(x.inicio)}, terminou com {dinheiroCurto(x.fim)}</summary>
+      <Linha rotulo="Na conta, no começo do ano" valor={dinheiroCheio(x.inicio)} />
+      {x.conta.map(g => (
+        <Linha key={g.rotulo} rotulo={g.linhas.length === 1 ? g.linhas[0].rotulo : <>{g.rotulo} <small>({g.linhas.map(l => l.rotulo.toLowerCase()).slice(0, 4).join('; ')}{g.linhas.length > 4 ? '…' : ''})</small></>} valor={sinal(g.valor)} tom={g.valor < 0 ? 'ruim' : undefined} />
+      ))}
+      <Linha rotulo="Na conta, no fim do ano" valor={<strong>{dinheiroCheio(x.fim)}</strong>} />
+      {x.depois !== 0 && <p className="nota">Depois do fechamento, {x.depois > 0 ? 'entraram' : 'saíram'} {dinheiroCurto(Math.abs(x.depois))} (acontecimentos e escolhas deste ano, que entram na conta do ano que vem).</p>}
+      {a && <p className="nota">Nas aplicações: {dinheiroCurto(a.inicio)} no começo, {dinheiroCurto(a.fim)} no fim{[a.rendeu ? `${a.rendeu > 0 ? 'renderam' : 'perderam'} ${dinheiroCurto(Math.abs(a.rendeu))}` : '', a.posto ? `você pôs ${dinheiroCurto(a.posto)}` : '', a.tirado ? `saíram ${dinheiroCurto(-a.tirado)}` : '', a.outros ? `${a.outros > 0 ? 'entraram' : 'saíram'} ${dinheiroCurto(Math.abs(a.outros))} por outros caminhos (herança, partilha, compras pagas com elas)` : ''].filter(Boolean).map((p, k) => `${k === 0 ? ' — ' : '; '}${p}`).join('')}. Nada vai para as aplicações sozinho: só o que você põe.</p>}
+    </details>
+  );
 }
 
 function Seguranca({ s }: { s: ReturnType<typeof leituraDaSeguranca> }) {

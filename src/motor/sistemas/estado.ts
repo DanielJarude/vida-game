@@ -37,7 +37,7 @@ import { casaApertada } from './imoveis';
 import { pesoDoTrabalhoNaCabeca, sentidoDoTrabalho } from './carreira';
 import { pesoDoClima, pesoDoNegocio, pesoDoRitmo } from './ritmo';
 import { pesoDaPolitica } from './politica';
-import { semOcupacao } from './trabalho';
+import { intencaoProfissional, mesesProcurando, mesesSemProcurar } from './intencao';
 import { perdaDaCondicao, SINAIS } from './saude';
 import { pesoNaSaude } from './lesoes';
 import { pesoDaExposicao } from './notoriedade';
@@ -215,7 +215,11 @@ export function fatoresHumor(v: Vida): Fator[] {
   // A companhia de um bicho: pesa mais para quem mora sozinho.
   const bicho = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa')).sort((a, b) => b.vin.proximidade - a.vin.proximidade)[0];
   if (bicho && i >= 6) out.push({ id: 'pet', texto: `a companhia de ${bicho.p.nome}`, efeito: moraCom(v).length === 0 ? 4 : 2, pessoaId: bicho.p.id });
-  if (i >= 18 && semOcupacao(v) && !v.trabalho.aposentadoria && !v.educacao.matricula && !v.trabalho.pausa && !v.justica?.prisao) out.push({ id: 'sem_trabalho', texto: 'estar sem trabalho', efeito: -6 });
+  // Sem trabalho ≠ procurando trabalho (`intencao`): pesa em quem procura; quem escolheu viver do que juntou
+  // sente, com o tempo, a falta de um projeto — e só se a semana não tem nada que dê sentido a ela.
+  const li = intencaoProfissional(v);
+  if (li.intencao === 'procurando' && !v.educacao.matricula) out.push({ id: 'sem_trabalho', texto: li.livre ? 'querer trabalhar e não ter onde' : 'estar sem trabalho', efeito: -6 });
+  else if (li.intencao === 'sem_procurar' && !v.educacao.matricula && mesesSemProcurar(v) >= 24 && !v.rotinas.some(r => (BEM_ESTAR[r.id]?.humor ?? 0) > 0)) out.push({ id: 'sem_projeto', texto: 'os dias sem um projeto', efeito: -3 });
   const sentido = sentidoDoTrabalho(v);
   if (sentido) out.push({ id: 'sentido', texto: sentido.texto, efeito: sentido.efeito });
   const ritmoH = pesoDoRitmo(v).humor;
@@ -302,8 +306,10 @@ export function fatoresCabeca(v: Vida): Fator[] {
   const quebrado = v.financas.bens.find(b => b.tipo === 'veiculo' && (b.problema?.gravidade ?? 0) >= 3 && !b.parado);
   if (quebrado && (v.trabalho.atual || filhos(v).some(f => v.vinculos[f.id]?.convivio.includes('casa')))) out.push({ id: 'carro_parado', texto: 'o carro parado na oficina', efeito: 3 });
   if (moraComFamiliaDeOrigem(v) && i < 18 && rendaPerCapita(v) < 500) out.push({ id: 'aperto_casa', texto: 'o dinheiro curto em casa', efeito: 7 });
-  const desde = v.trabalho.desempregadoDesde;
-  if (!e && desde !== undefined && i >= 18 && !v.trabalho.aposentadoria && v.t - desde >= 12) out.push({ id: 'procura', texto: 'procurar trabalho há tanto tempo', efeito: 6 });
+  // A procura longa enche a cabeça de quem PROCURA — e só dela (`intencao`): quem vive do patrimônio por escolha
+  // não "procura há tanto tempo"; quem tem patrimônio e quer voltar a trabalhar, sim (a frustração não é de dinheiro).
+  const procura = intencaoProfissional(v);
+  if (!e && procura.intencao === 'procurando' && mesesProcurando(v) >= 12) out.push({ id: 'procura', texto: procura.livre ? 'querer voltar a trabalhar e não conseguir' : 'procurar trabalho há tanto tempo', efeito: 6 });
   const par = parceiro(v);
   if (par?.vin.romance?.segredo) out.push({ id: 'segredo', texto: `guardar um segredo de ${par.p.nome}`, efeito: 7, pessoaId: par.p.id });
   const luto = pesoDoLuto(v);
@@ -334,7 +340,7 @@ export function fatoresSaude(v: Vida): Fator[] {
     : i < 50 ? (80 - c.saude) * 0.07 - 0.3
     : i < 65 ? (76 - c.saude) * 0.05 - 0.3
     : i < 80 ? -0.75 : -1.4;
-  out.push({ id: 'idade', texto: idadeDelta >= 0 ? (i < 35 ? 'um corpo jovem, que se recupera' : 'o corpo, que ainda se recupera') : i >= 65 ? 'a idade' : 'os anos, que começam a cobrar', efeito: idadeDelta });
+  out.push({ id: 'idade', texto: idadeDelta >= 0 ? (i < 35 ? 'um corpo jovem, que se recupera' : 'o corpo, que ainda se recupera') : i >= 65 ? 'a idade' : i < 35 ? 'uma fase de saúde acima do comum, que tende a voltar ao normal' : 'os anos, que começam a cobrar', efeito: idadeDelta });
   const forma = (c.forma - 45) / 70;
   out.push({ id: 'forma', texto: forma >= 0 ? 'se mexer com frequência' : 'o corpo parado', efeito: forma });
   if (c.habitos.fuma) out.push({ id: 'fuma', texto: 'o cigarro', efeito: -1.6 });

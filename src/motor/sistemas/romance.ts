@@ -37,6 +37,7 @@ import { abalar } from './abalo';
 import { ficouSabendo, registrarSegredo } from './exposicao';
 import { semOcupacao } from './trabalho';
 import { registrarFase } from './relacoes';
+import { mesesProcurando } from './intencao';
 
 const ESTAGIOS_ATIVOS: EstagioRomance[] = ['saindo', 'namoro', 'morando_junto', 'casamento'];
 
@@ -182,7 +183,8 @@ export function processarRomance(v: Vida, r: Rng): void {
     alvo += (vin.confianca - 60) / 8;
     if (v.financas.negativado) alvo -= 8;
     // Desemprego longo pesa na relação; uma pausa combinada para cuidar da casa, não.
-    const semTrabalho = semOcupacao(v) && !v.trabalho.aposentadoria && !v.trabalho.pausa && !v.educacao.matricula && v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde >= 24;
+    // (E quem escolheu viver do que juntou não está "desempregado": `intencao`.)
+    const semTrabalho = semOcupacao(v) && !v.educacao.matricula && mesesProcurando(v) >= 24;
     if (semTrabalho) alvo -= 5;
     // O que se esconde da parceria (um dinheiro por fora) também.
     if (v.caminhos.envolvimento && v.caminhos.envolvimento.parou === undefined) alvo -= 4;

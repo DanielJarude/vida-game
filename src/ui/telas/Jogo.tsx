@@ -201,7 +201,7 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
           {casa.pessoas.map(p => (
             <li key={p.id}>
               <button type="button" className="agora-pessoa" onClick={() => abrirPessoa(p.id)}>
-                <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={34} rotulo={p.nome} especie={p.especie} />
+                <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={34} rotulo={p.nome} especie={p.especie} porte={p.pet?.porte} />
                 <span className="agora-pessoa__nome">{p.nome}</span>
               </button>
             </li>

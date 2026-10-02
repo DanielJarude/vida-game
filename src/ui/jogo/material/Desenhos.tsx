@@ -755,18 +755,128 @@ const BIKES: Record<'urbana' | 'estrada' | 'mtb' | 'eletrica', () => ReactNode> 
   </>
 };
 
-const OUTROS: Record<'jetski' | 'lancha' | 'veleiro' | 'ultraleve' | 'monomotor', () => ReactNode> = {
-  jetski: () => <><path d="M3 16c9 4 27 4 38-2M9 15l6-6h9l4 5M24 9l3-3" {...TRACO} /><path d="M1 20c4-1 8 1 12 0s8-1 12 0" {...TRACO} strokeWidth={1} /></>,
+/**
+ * A água (marolas) e o leque de espuma: a linha d'água das embarcações.
+ */
+const Marola = ({ de = 1, ate = 47, y = 21 }: { de?: number; ate?: number; y?: number }) => {
+  let d = `M${de} ${y}`;
+  for (let x = de; x < ate; x += 6) d += `q1.5 -1 3 0t3 0`;
+  return <path d={d} {...TRACO} strokeWidth={0.9} opacity={0.7} />;
+};
+
+/**
+ * Moto aquática: casco curto em cunha (proa alta, popa rente à água), o
+ * capô em corcova na frente, a coluna com o guidão em T, o banco de selim
+ * comprido e o jato de espuma saindo da popa. Nada de cabine nem convés.
+ */
+function JetSki() {
+  return <>
+    <path d="M9 17.4C6.4 15.6 4.6 12.6 4.2 9M7.6 18.4C4.8 17.6 2.6 15.4 1.6 12.6" {...TRACO} strokeWidth={1} opacity={0.75} />
+    <circle cx={3.4} cy={8.2} r={0.6} fill="currentColor" opacity={0.7} /><circle cx={1.4} cy={11} r={0.5} fill="currentColor" opacity={0.6} />
+    <path d="M9.2 14.2L11.4 19.2H33.6C36.6 19.2 39.2 17.2 41.4 13.2L36 12.8C33.8 10.6 31.6 9.8 29.8 10.2L27.4 13H11.2Z" {...TRACO} {...MASSA} />
+    <path d="M12.6 13C12.6 11.2 13.8 10.2 15.6 10.2H23.4C25.2 10.2 26.6 11.4 27 13Z" fill="currentColor" fillOpacity={0.55} stroke="currentColor" strokeWidth={1.2} strokeLinejoin="round" />
+    <path d="M29.6 10.4L28 6.4" {...TRACO} />
+    <path d="M26.2 6.2L30.2 5.6" {...GROSSO} />
+    <path d="M12 16.4H38.4" {...FINO} opacity={0.6} />
+    <Marola de={10} ate={47} />
+  </>;
+}
+
+/**
+ * Os aviões, de perfil (nariz à direita), por família: o que separa um do
+ * outro é a posição da asa (no alto do teto, com montante; ou embaixo da
+ * cabine, com o trem saindo dela), o número de motores (hélice no nariz;
+ * duas naceles na asa e nariz liso; reatores na cauda, sem hélice) e o
+ * porte (ultraleve: casulo e cauda em tubo; jato: fuselagem longa de
+ * janelinhas redondas e cauda em T). Desenho original, sem copiar modelo.
+ */
+const HELICE = (x: number, y: number, a: number) => <>
+  <ellipse cx={x + 0.9} cy={y} rx={0.7} ry={a} fill="currentColor" fillOpacity={0.22} stroke="currentColor" strokeWidth={0.5} />
+  <ellipse cx={x} cy={y} rx={1.1} ry={1.2} fill="currentColor" />
+</>;
+const RODINHA = (x: number, r = 1.3) => <circle cx={x} cy={CHAO_V - r} r={r} {...TRACO} strokeWidth={1.1} fill="currentColor" fillOpacity={0.5} />;
+/** A asa vista de perto, em leve perspectiva: a meia-asa do nosso lado, chapada. */
+const MEIA_ASA = (pts: Pt[]) => <path d={poligono(pts)} fill="currentColor" fillOpacity={0.3} stroke="currentColor" strokeWidth={0.9} strokeLinejoin="round" />;
+
+const AVIOES: Record<'ultraleve' | 'monomotor' | 'asa_baixa' | 'bimotor' | 'jato', () => ReactNode> = {
+  // Ultraleve: pequeno e leve, de nariz empinado sobre a bequilha (o trem convencional), fuselagem fina de tela, asa alta comprida com montantes em V, hélice grande.
+  ultraleve: () => <>
+    <g transform="rotate(-9 31 18)">
+      <path d="M6.6 11.4L6 5.2H8.8L12.6 10.6" {...TRACO} {...MASSA} strokeWidth={1.2} />
+      <path d="M5.6 11.6C5.6 11 6 10.8 6.8 10.8L22 9.4H30.6L33.6 11.2H37.4C38.4 11.6 38.8 12.4 38.8 13.2C38.8 14.2 38.2 14.8 37.2 15L31.6 15.6H23L6.6 12.4C6 12.3 5.6 12 5.6 11.6Z" {...TRACO} {...MASSA} />
+      <ellipse cx={8.6} cy={11.6} rx={4} ry={0.8} fill="currentColor" />
+      <path d="M24.4 10.6H29.8L32 12.6H24.4Z" {...VIDRO} />
+      <path d="M17.4 8.2C17.4 7.4 18 7 19 7H37.4C38.2 7.2 38.2 8.2 37.4 8.4L18.4 9C17.8 9 17.4 8.8 17.4 8.2Z" {...TRACO} {...MASSA} strokeWidth={1.1} />
+      <path d="M25.6 15.4L20.6 9M25.6 15.4L32.6 8.6" {...FINO} />
+      {HELICE(39.6, 13.2, 5.6)}
+      <path d="M30 15.6L31 19.6" {...TRACO} strokeWidth={1.2} />
+    </g>
+    {RODINHA(31.4, 1.5)}
+    <path d="M6.8 17.4L6.4 19.8" {...TRACO} strokeWidth={1} /><circle cx={6.4} cy={20.2} r={0.7} fill="currentColor" />
+  </>,
+  // Monomotor de asa alta: a asa sobre o teto da cabine, um montante diagonal até a barriga, trem fixo com carenagem, hélice no nariz.
+  monomotor: () => <>
+    <path d="M4 11.2L5 3.6H8.4L13.4 9.8" {...TRACO} {...MASSA} />
+    <path d="M3.4 11.4C3.4 10.6 4 10.2 5 10.4L18.6 8.8H30.2L33.6 11H38.8C40 11.4 40.6 12.4 40.6 13.6C40.6 14.8 40 15.8 38.8 16.2L33 17H19L4.4 13C3.8 12.8 3.4 12.2 3.4 11.4Z" {...TRACO} {...MASSA} />
+    <ellipse cx={7.4} cy={11.4} rx={5} ry={0.9} fill="currentColor" />
+    <path d="M19.8 10.2H24.4V12.8H19.8ZM25.6 10.2H29.6L32.2 12.4L25.6 12.8Z" {...VIDRO} />
+    <path d="M16.4 8C16.4 7 17.2 6.6 18.4 6.6H33.6C34.4 6.8 34.6 7.8 33.8 8.2L17.6 9.2C16.8 9.2 16.4 8.8 16.4 8Z" {...TRACO} {...MASSA} strokeWidth={1.2} />
+    <path d="M25.4 8.4L21.6 16.2" {...TRACO} strokeWidth={1.1} />
+    <path d="M22.6 17L24 19M36.6 16.4V19" {...TRACO} strokeWidth={1.1} />
+    <ellipse cx={24.4} cy={19.2} rx={2} ry={1.4} {...TRACO} strokeWidth={1.1} fill="currentColor" fillOpacity={0.5} />{RODINHA(36.6, 1.2)}
+    {HELICE(41, 13.6, 5.4)}
+  </>,
+  // Monomotor de asa baixa: a cabine é uma capota baixa, a asa sai da barriga (com o trem saindo dela) e a meia-asa aparece por baixo.
+  asa_baixa: () => <>
+    <path d="M4 11.4L4.8 4.4H8L12.6 10.4" {...TRACO} {...MASSA} />
+    <path d="M3.4 11.6C3.4 10.8 4 10.4 5 10.6L18.4 10.4C20.4 8.2 24 7.8 28.4 8.4L33.4 11H38.8C40 11.4 40.6 12.4 40.6 13.6C40.6 14.8 40 15.8 38.8 16.2L33 16.6H19L4.4 13C3.8 12.8 3.4 12.2 3.4 11.6Z" {...TRACO} {...MASSA} />
+    <ellipse cx={7.4} cy={11.6} rx={5} ry={0.9} fill="currentColor" />
+    <path d="M20.6 10.4C21.8 9.4 23.6 9.2 25.6 9.4V11.4H20.6ZM26.6 9.5C28.8 9.6 30.8 10.4 32 11.4H26.6Z" {...VIDRO} />
+    <path d="M17.4 16.4C17.4 15.6 18 15.2 19 15.2H32.4C33.2 15.4 33.2 16.4 32.4 16.6L18.4 17.2C17.8 17.2 17.4 16.8 17.4 16.4Z" {...TRACO} {...MASSA} strokeWidth={1.2} />
+    {MEIA_ASA([[19, 16.8], [31.6, 16.4], [27.6, 19.4], [21, 19.4]])}
+    <path d="M24.6 17.2V19M36.6 16.4V19" {...TRACO} strokeWidth={1.1} />
+    {RODINHA(24.6, 1.2)}{RODINHA(36.6, 1.2)}
+    {HELICE(41, 13.6, 5.4)}
+  </>,
+  // Bimotor: nariz liso e comprido (sem hélice), cabine de várias janelas, asa baixa com a nacele do motor à frente dela e a sua hélice.
+  bimotor: () => <>
+    <path d="M3.6 10.4L4.2 2.4H7.6L12.6 9.6" {...TRACO} {...MASSA} />
+    <path d="M3 10.8C3 10 3.6 9.6 4.6 9.8L15.6 8.8H33L36.2 10.4C40 10.6 43.4 11.6 45.4 13.2C43.6 14.6 40.6 15.2 37 15.2H17L4 12.2C3.4 12 3 11.6 3 10.8Z" {...TRACO} {...MASSA} />
+    <ellipse cx={6.8} cy={10.8} rx={4.8} ry={0.9} fill="currentColor" />
+    <path d="M36.2 10.4C38 10.6 39.8 11.2 41 12L36.6 12.2Z" {...VIDRO} />
+    {[16.4, 20, 23.6].map(x => <rect key={x} x={x} y={10.2} width={2.2} height={1.8} rx={0.8} {...VIDRO} />)}
+    <path d="M14.8 15.6C14.8 14.8 15.4 14.4 16.4 14.4H30C30.8 14.6 30.8 15.8 30 16L15.8 16.6C15.2 16.6 14.8 16.2 14.8 15.6Z" {...TRACO} {...MASSA} strokeWidth={1.2} />
+    <path d="M24 15.4C24 13.6 25.4 12.6 27.4 12.6H32.6C34.6 12.8 35.8 14 35.8 15.4C35.8 16.8 34.6 17.8 32.6 17.8H27.4C25.4 17.8 24 17 24 15.4Z" fill="currentColor" fillOpacity={0.55} stroke="currentColor" strokeWidth={1.4} />
+    {HELICE(36.6, 15.2, 4.2)}
+    <path d="M30 17.8V19.4M41 15.2V19.4" {...TRACO} strokeWidth={1.1} />
+    {RODINHA(30, 1.1)}{RODINHA(41, 1)}
+  </>,
+  // Jato executivo: fuselagem longa e fina, nariz em ponta, fileira de janelinhas redondas, cauda alta em T, os reatores colados atrás, asa enflechada.
+  jato: () => <>
+    <path d="M5.4 9.8L3 2.4H5.6L11.6 9.4" {...TRACO} {...MASSA} />
+    <path d="M1 2.6H8.6" {...TRACO} strokeWidth={1.5} />
+    <path d="M2.4 10.4C2.4 9.6 3 9.2 4 9.2H36.6C40.4 9.4 44.6 11 46.6 13C44.6 14.8 41 15.4 37 15.4H11L3.6 12C2.8 11.6 2.4 11.2 2.4 10.4Z" {...TRACO} {...MASSA} />
+    <path d="M38 10C40.2 10.4 42 11.2 43 12L38.4 12.2Z" {...VIDRO} />
+    {[17, 20.2, 23.4, 26.6, 29.8, 33].map(x => <circle key={x} cx={x} cy={11.6} r={0.75} {...VIDRO} />)}
+    <path d="M8.6 7.2C8.6 6.2 9.4 5.6 10.6 5.6H17.4C18.4 5.8 18.4 7.6 17.4 7.8H10.6C9.4 7.8 8.6 7.6 8.6 7.2Z" {...TRACO} {...MASSA} strokeWidth={1.2} />
+    <path d="M17.6 5.9V7.5" {...TRACO} strokeWidth={1.4} />
+    <path d="M13.4 7.8L14.4 9.2" {...TRACO} strokeWidth={1.2} />
+    {MEIA_ASA([[20, 15.2], [30, 15.2], [22.4, 18.6], [17, 18.6]])}
+    <path d="M22.6 15.4V19.4M39.4 15V19.4" {...TRACO} strokeWidth={1.1} />
+    {RODINHA(22.6, 1.1)}{RODINHA(39.4, 1)}
+  </>
+};
+
+const OUTROS: Record<'jetski' | 'lancha' | 'veleiro', () => ReactNode> = {
+  jetski: () => <JetSki />,
   lancha: () => <><path d="M2 13h42l-6 6H8zM15 13l4-5h10l3 5M34 13v-3" {...TRACO} /><path d="M1 21c5-1 10 1 15 0s10-1 15 0 9 1 14 0" {...TRACO} strokeWidth={1} /></>,
-  veleiro: () => <><path d="M5 16h34l-5 4H10zM21 16V2M21 3l13 12H21M21 5l-9 10h9" {...TRACO} /></>,
-  ultraleve: () => <><path d="M3 7h42M24 7v6M14 13h18l4 2M18 13l-3 5M30 13l3 5M36 15l6-4" {...TRACO} /></>,
-  monomotor: () => <><path d="M4 13h33l7-3M21 13l-7 7M21 13l-7-7M40 10v6M4 11v4M9 13c0-2 3-3 6-3" {...TRACO} /></>
+  veleiro: () => <><path d="M5 16h34l-5 4H10zM21 16V2M21 3l13 12H21M21 5l-9 10h9" {...TRACO} /></>
 };
 
 /** O desenho de uma forma (com a semente, a pequena variação do modelo). */
 function desenhoDaForma(forma: FormaVeiculo, semente?: string): ReactNode {
   if (forma in CARROCERIAS) return <Carro c={CARROCERIAS[forma as keyof typeof CARROCERIAS]} semente={semente} />;
-  const f = (MOTOS as Record<string, () => ReactNode>)[forma] ?? (BIKES as Record<string, () => ReactNode>)[forma] ?? (OUTROS as Record<string, () => ReactNode>)[forma];
+  const f = (MOTOS as Record<string, () => ReactNode>)[forma] ?? (BIKES as Record<string, () => ReactNode>)[forma] ?? (OUTROS as Record<string, () => ReactNode>)[forma] ?? (AVIOES as Record<string, () => ReactNode>)[forma];
   return f ? f() : <Carro c={CARROCERIAS.hatch} />;
 }
 

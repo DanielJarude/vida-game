@@ -1032,6 +1032,27 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .experiencia__texto strong { font-family: var(--font-serif); font-weight: 500; }
 .experiencia__texto span { font-size: var(--type-caption); color: var(--text-secondary); }
 
+/* A viagem em passos: um nível por vez (país, cidade, duração, resumo), com "Voltar". */
+.viagem { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.viagem__trilha { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); font-size: var(--type-caption); }
+.viagem__voltar { min-height: var(--touch-target); color: var(--text-secondary); }
+.viagem__onde { color: var(--text-muted); }
+.viagem__pergunta { font-family: var(--font-serif); font-weight: 500; font-size: var(--type-body); margin: 0; }
+.viagem__pergunta:focus { outline: none; }
+.viagem__pergunta:focus-visible { outline: 2px solid var(--tom); outline-offset: 2px; }
+.viagem__secao-nome { font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin: var(--space-2) 0 0; }
+.viagem__opcoes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.viagem__opcao { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3); min-height: var(--touch-target); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); text-align: left; color: var(--text-primary); }
+.viagem__opcao:hover .viagem__nome, .viagem__opcao:focus-visible .viagem__nome { text-decoration: underline; text-decoration-color: var(--tom); text-underline-offset: 4px; }
+.viagem__nome { font-family: var(--font-serif); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.viagem__sub { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); }
+.viagem__preco { font-size: var(--type-caption); color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.viagem__seta { color: var(--text-muted); }
+.viagem__resumo { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.viagem__destino { font-family: var(--font-serif); font-size: var(--type-lead); margin: 0; }
+.viagem__total { margin: 0; color: var(--text-secondary); }
+.viagem__total strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
 /* A trajetória de uma relação (Pessoas) e os momentos da carreira e o palmarés (Trabalho). */
 .ficha__trajetoria { font-size: var(--type-caption); color: var(--text-muted); }
 .momentos-carreira { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
@@ -1080,3 +1101,67 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .trajetoria-vida__abrir { font-size: var(--type-caption); }
 .trajetoria-vida__detalhe { margin-top: var(--space-2); min-width: 0; }
 .trajetoria-vida__detalhe .marcos-caminho li span { overflow-wrap: anywhere; }
+
+/* Iconografia das conquistas (iconesConquista.tsx): glifo do tamanho da letra, monocromático, ao lado do texto. */
+.glifo-conquista { flex: none; width: 1.05em; height: 1.05em; color: var(--text-muted); vertical-align: -0.16em; }
+.marcos-caminho--glifos li { align-items: baseline; gap: var(--space-2); }
+.marcos-caminho--glifos li > .glifo-conquista { position: relative; top: 0.16em; }
+.trajetoria-vida__marcos--glifos { list-style: none; padding-left: 0; }
+.trajetoria-vida__marcos--glifos li { display: flex; gap: 0.45em; align-items: baseline; }
+.trajetoria-vida__marcos--glifos li > .glifo-conquista { position: relative; top: 0.16em; }
+.palmares__com-glifo { display: flex; gap: 0.45em; align-items: baseline; }
+.palmares__com-glifo > .glifo-conquista { position: relative; top: 0.16em; }
+.glifo-conquista__rotulo .glifo-conquista { color: var(--tom-trabalho); }
+
+/* ------------------------------------------------------------------ Legado (sucessão) */
+/* A morte encerra uma vida; a família pode continuar. Tom de obituário: serifa, réguas finas, sem cartões. */
+.fim__olho { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); margin: 0; }
+.fim__legado h2, .fim__decisao h2 { font-size: var(--type-heading); margin: 0 0 var(--space-3); }
+.fim__legado h3, .fim__decisao h3 { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); margin: var(--space-5) 0 var(--space-2); font-weight: var(--weight-semibold); }
+.fim__ficou { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-secondary); }
+.legado__nota { font-family: var(--font-serif); color: var(--text-secondary); max-width: var(--measure-prosa); margin: var(--space-2) 0; line-height: var(--leading-prose); }
+.legado__erro { color: var(--ruim, #d98c7a); font-size: var(--type-caption); margin: var(--space-2) 0; }
+.legado__conta { margin: 0; display: grid; gap: 2px; max-width: 520px; }
+.legado__conta div { display: flex; justify-content: space-between; gap: var(--space-3); padding: 6px 0; border-bottom: 1px solid var(--rule); font-size: var(--type-body); }
+.legado__conta dt { color: var(--text-secondary); }
+.legado__conta dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.legado__conta-total { border-bottom: 1px solid var(--rule-strong) !important; font-weight: var(--weight-semibold); }
+.legado__quinhoes { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: flex; flex-direction: column; }
+.legado__quinhoes li { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--rule); }
+.legado__quem { font-family: var(--font-serif); font-size: var(--type-subheading); }
+.legado__laco { color: var(--text-muted); font-family: var(--font-sans); font-size: var(--type-caption); }
+.legado__valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.legado__como { grid-column: 1 / -1; color: var(--text-secondary); font-size: var(--type-caption); }
+.legado__decidir { margin-top: var(--space-5); border-top: 1px solid var(--rule); padding-top: var(--space-3); }
+.legado__decidir summary { cursor: pointer; font-weight: var(--weight-medium); color: var(--accent); padding: var(--space-2) 0; min-height: 44px; display: flex; align-items: center; }
+.legado__decidir fieldset { border: 0; padding: 0; margin: var(--space-4) 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.legado__decidir legend { font-family: var(--font-serif); font-size: var(--type-subheading); margin-bottom: var(--space-2); }
+.legado__linha { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.legado__passos { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 6px; overflow: hidden; }
+.legado__passo { background: none; border: 0; border-left: 1px solid var(--rule); color: var(--text-secondary); padding: 0 10px; min-height: 36px; min-width: 44px; font: inherit; font-size: var(--type-caption); cursor: pointer; }
+.legado__passo:first-child { border-left: 0; }
+.legado__passo[aria-pressed='true'] { background: var(--surface-hover); color: var(--text-primary); font-weight: var(--weight-semibold); }
+.legado__select { margin-left: var(--space-2); background: var(--bg-inset); color: var(--text-primary); border: 1px solid var(--rule-strong); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: var(--type-caption); max-width: 100%; }
+.legado__sucessores { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.legado__sucessor { width: 100%; display: grid; grid-template-columns: 56px 1fr; gap: var(--space-3); align-items: start; text-align: left; background: none; border: 0; border-top: 1px solid var(--rule); padding: var(--space-3) var(--space-2); color: inherit; font: inherit; cursor: pointer; }
+.legado__sucessor:hover:not(:disabled) { background: var(--surface); }
+.legado__sucessor[aria-pressed='true'] { background: var(--surface-hover); box-shadow: inset 2px 0 0 var(--accent); }
+.legado__sucessor:disabled { opacity: 0.6; cursor: not-allowed; }
+.legado__sucessor .retrato { border-radius: 50%; }
+.legado__sucessor-texto { display: flex; flex-direction: column; gap: 2px; font-size: var(--type-caption); color: var(--text-secondary); min-width: 0; }
+.legado__sucessor-nome { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); }
+.legado__confirmar { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--rule-strong); display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
+.legado__confirmar p { font-family: var(--font-serif); font-size: var(--type-lead); margin: 0; max-width: var(--measure-prosa); }
+.linhagem { display: flex; flex-direction: column; }
+.linhagem__geracao { border-top: 1px solid var(--rule); padding: var(--space-3) 0; }
+.linhagem__geracao summary { cursor: pointer; display: grid; grid-template-columns: 48px 1fr; gap: var(--space-3); align-items: center; min-height: 44px; }
+.linhagem__geracao summary .retrato { border-radius: 50%; filter: sepia(0.35); }
+.linhagem__nome { font-family: var(--font-serif); font-size: var(--type-subheading); }
+.linhagem__datas { display: block; color: var(--text-muted); font-size: var(--type-caption); }
+.linhagem__corpo { padding: var(--space-3) 0 0 calc(48px + var(--space-3)); display: flex; flex-direction: column; gap: var(--space-2); font-family: var(--font-serif); color: var(--text-secondary); }
+.linhagem__corpo ul { margin: 0; padding-left: var(--space-4); }
+@media (max-width: 480px) {
+  .legado__linha { flex-direction: column; align-items: stretch; }
+  .legado__passos { align-self: flex-start; }
+  .linhagem__corpo { padding-left: 0; }
+}

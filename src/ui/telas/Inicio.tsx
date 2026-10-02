@@ -11,7 +11,7 @@ export function Inicio({ c }: { c: ControleVida }) {
         <p className="inicio__frase">Você não escolhe tudo o que acontece na sua vida.<br />Escolhe o que fazer com a vida que aconteceu com você.</p>
         {!c.pronto && <p className="nota" role="status">Carregando…</p>}
         {c.pronto && <div className="inicio__acoes">
-          {c.salva && <button type="button" className="botao botao--principal" onClick={c.continuar}>Continuar a vida de {c.salva.nome}, {c.salva.idade} {c.salva.idade === 1 ? 'ano' : 'anos'}</button>}
+          {c.salva && <button type="button" className="botao botao--principal" onClick={c.continuar}>{c.salva.morta ? `Voltar ao legado de ${c.salva.nome}` : `Continuar a vida de ${c.salva.nome}, ${c.salva.idade} ${c.salva.idade === 1 ? 'ano' : 'anos'}`}</button>}
           <button type="button" className={`botao ${c.salva ? 'botao--secundario' : 'botao--principal'}`} onClick={() => c.setTela('criacao')}>Nascer de novo</button>
           {est.vidasJogadas > 0 && <button type="button" className="botao botao--discreto" onClick={() => c.setTela('vidas')}>Vidas passadas ({est.vidasJogadas})</button>}
           <ImportarVida c={c} />

@@ -55,13 +55,16 @@ export function depositar(v: Vida, p: Produto, valor: number): Aplicacao {
   return a;
 }
 
+/** Herança de menor (sucessão): fica aplicada em nome da pessoa e ninguém a move antes da maioridade — nem ela, nem o resgate automático. */
+export const emTutela = (v: Vida, a: Aplicacao) => a.tutelaAte !== undefined && v.t < a.tutelaAte;
+
 /**
  * Tira dinheiro de uma aplicação e põe na conta. A base de custo cai na
  * mesma proporção: vender com perda REALIZA a perda.
  */
 export function resgatar(v: Vida, id: string, valor: number): number {
   const a = v.financas.investimentos.find(x => x.id === id);
-  if (!a || a.valor <= 0) return 0;
+  if (!a || a.valor <= 0 || emTutela(v, a)) return 0;
   const tirado = Math.round(Math.min(valor, a.valor));
   const fracao = tirado / a.valor;
   a.aportado = Math.round(a.aportado * (1 - fracao));

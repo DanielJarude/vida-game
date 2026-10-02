@@ -29,7 +29,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
           <div className="momento__pessoas">
             {pessoas.map(p => (
               <figure key={p.id} className="momento__pessoa">
-                <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={56} especie={p.especie} rotulo={p.nome || 'Bebê'} />
+                <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={56} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome || 'Bebê'} />
                 <figcaption>
                   <span>{p.nome || 'bebê'}</span>
                   {vida.vinculos[p.id] && <span className="momento__relacao">{rotuloDe(vida, p, vida.vinculos[p.id])}</span>}
@@ -65,7 +65,7 @@ export function Resultado({ titulo, texto, aoFechar, vida, pessoaId, mudancas }:
         {p && vida && (
           <div className="momento__pessoas">
             <figure className="momento__pessoa">
-              <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={64} especie={p.especie} rotulo={p.nome} />
+              <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={64} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} />
               <figcaption><span>{p.nome}</span>{vida.vinculos[p.id] && <span className="momento__relacao">{rotuloDe(vida, p, vida.vinculos[p.id])}</span>}</figcaption>
             </figure>
           </div>

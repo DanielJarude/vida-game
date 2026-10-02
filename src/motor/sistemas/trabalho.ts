@@ -17,6 +17,7 @@
  * mudar de cargo. Não existe escada infinita.
  */
 
+import { lancar } from './extrato';
 import { areaMedica, faltaTituloPara, fatorRendaMedica } from './medicina';
 import { vivenciaQuePesa } from './formacao';
 import type { Rng } from '../rng';
@@ -48,6 +49,7 @@ import { fatorDaEpoca, riscoDaEpoca } from './carreira';
 import { familiaDaTrilha } from '../dados/carreiras';
 import { aoEntrarNasForcas, aoFormarNasForcas, horizonteMilitar, processarMilitar, proximoPassoMilitar } from './militar';
 import { climaDe, deltaDeFreguesia, fatorDeFreguesia, fatorJornada, ritmoDe } from './ritmo';
+import { mesesProcurando, procurandoTrabalho } from './intencao';
 
 export const nomeOcupacao = (v: Vida, oc: Ocupacao) => nomeDoPosto(oc.id, v.caminhos?.militar?.forca, ge(v) === 'feminino') ?? (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
 export const nomeOcupacaoId = (v: Vida, id: string) => nomeOcupacao(v, ocupacao(id));
@@ -352,6 +354,8 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   if (areaMed) e.especialidade = areaMed;
   if (fatorRendaMedica(v, oc) !== 1) e.faixa = fatorRendaMedica(v, oc);
   t.desempregadoDesde = undefined;
+  // A intenção declarada valia para o tempo sem trabalho que acabou aqui.
+  t.intencao = undefined;
   if (primeiro) {
     marcarFato(v, 'primeiro_emprego');
     marcar(v, 'primeiro_emprego', `Primeiro trabalho: ${nomeOcupacao(v, oc)}, aos ${idade(v)}.`, 2, { trilha: oc.trilha, ocupacaoId: oc.id });
@@ -458,9 +462,10 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   const e = t.atual;
 
   if (!e) {
-    if (t.desempregadoDesde !== undefined && i >= 18 && !t.aposentadoria && !v.educacao.matricula) {
-      const anos = Math.floor((v.t - t.desempregadoDesde) / 12);
-      if (anos === 1) abalar(v, 'um ano inteiro sem trabalho', -6, 8);
+    // O ano inteiro sem trabalho pesa em quem PROCURA (não em quem escolheu não trabalhar): `intencao`.
+    if (procurandoTrabalho(v) && !v.educacao.matricula) {
+      const anos = Math.floor(mesesProcurando(v) / 12);
+      if (anos === 1) abalar(v, 'um ano inteiro procurando trabalho', -6, 8);
     }
     aposentadoriaAutomatica(v);
     return;
@@ -476,6 +481,8 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   if (oc.nivel >= 4 && oc.promocao !== 'clientela') praticar(v, r, 'lideranca', 0.4, 1);
   if (contribui(e.contrato)) t.contribuicao += 12;
   if (eMilitar(oc)) v.corpo.forma = clamp(v.corpo.forma + 4);
+  // O técnico no comando: contrato, salário, pressão e demissão são do clube (`sistemas/tecnico`), não da escada genérica.
+  if (e.ocupacaoId === 'tecnico_futebol' && v.caminhos.tecnico?.passagens.some(p => p.ate === undefined)) return;
 
   // Desempenho: disciplina, estresse, saúde, esforço, os anos no ofício — e o ofício, quando o trabalho é um.
   const oficio = oc.habilidade ? (habilidade(v, oc.habilidade.dominio) - oc.habilidade.minimo) * 0.25 : 0;
@@ -703,6 +710,7 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
     const fgts = Math.round(e.salario * 0.08 * 12 * anos * 1.4);
     const seguro = Math.round(Math.min(2400, Math.max(SALARIO_MINIMO, e.salario * 0.8)) * (anos >= 2 ? 5 : 3));
     v.financas.conta += fgts + seguro;
+    lancar(v, 'Rescisão: FGTS, multa e seguro-desemprego', 'renda', fgts + seguro);
     const motivo = e.desempenho < 35 ? 'O desempenho vinha caindo.' : epoca > 0.2 && r.chance(0.6) ? 'A função vinha sendo automatizada.' : '';
     escrever(v, { texto: e.desempenho < 35 ? `Foi ${flex(ge(v), 'demitido', 'demitida')} de ${e.empregador}, onde era ${nome}. ${motivo}` : `Foi ${flex(ge(v), 'demitido', 'demitida')} num corte de pessoal ${em(e.empregador)}, depois de ${tempo}.${motivo ? ' ' + motivo : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', `${flex(ge(v), 'Demitido', 'Demitida', 'Demitide')} de ${e.empregador} depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}.`, anos >= 5 ? 3 : 2, { trilha: oc.trilha, ocupacaoId: oc.id });

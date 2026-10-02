@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Vida } from '../motor/tipos';
+import type { DecisoesDeHeranca, Vida } from '../motor/tipos';
 import type { OpcoesCriacao } from '../motor/criacao';
 import type { Acao } from '../motor/acoes';
 import { sound } from './util/som';
@@ -19,7 +19,7 @@ export interface Aviso { id: number; texto: string; tom: 'bom' | 'ruim' | 'neutr
 export function useVida() {
   const [tela, setTela] = useState<Tela>('inicio');
   const [vida, setVida] = useState<Vida | null>(null);
-  const [salva, setSalva] = useState<{ nome: string; idade: number } | null>(null);
+  const [salva, setSalva] = useState<{ nome: string; idade: number; morta?: boolean } | null>(null);
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [resultado, setResultado] = useState<{ titulo: string; texto: string; pessoaId?: string; mudancas?: string[] } | null>(null);
   /** Primeira entrada da biografia gerada pelo último ano vivido (para destacar). */
@@ -39,7 +39,7 @@ export function useVida() {
     if (!motor) return;
     const { ler, idade } = motor;
     const r = ler();
-    if (r.tipo === 'ok') setSalva({ nome: r.vida.eu.nome, idade: idade(r.vida) });
+    if (r.tipo === 'ok') setSalva({ nome: r.vida.eu.nome, idade: idade(r.vida), morta: !!r.vida.morte });
     if (r.tipo === 'invalido') setAvisoSave(`Não foi possível abrir a vida salva: ${r.motivo} Uma cópia foi guardada.`);
     if (r.tipo === 'ok' && r.migrado) setAvisoSave('Sua vida salva veio de uma versão anterior do jogo e foi convertida. Alguns detalhes foram aproximados.');
   }, [motor]);
@@ -58,8 +58,10 @@ export function useVida() {
     const { apagarSave, registrarVidaPassada, idade, nomeLugar, descricaoEmprego, patrimonio, anoDe, salvar } = motor;
     setVida(nova);
     if (nova.morte) {
-      apagarSave();
-      setSalva(null);
+      // Sucessão: a vida que terminou fica salva até o jogador decidir (encerrar ou continuar a família) —
+      // recarregar volta à tela do legado, com as decisões da partilha que já tomou.
+      if (nova.morte.encerrada) { apagarSave(); setSalva(null); } else { salvar(nova); setSalva({ nome: nova.eu.nome, idade: idade(nova), morta: true }); }
+      if (vida?.morte) return; // a morte já foi registrada (aqui só mudaram as decisões da partilha)
       const e = nova.trabalho.atual ?? nova.trabalho.historico[nova.trabalho.historico.length - 1];
       registrarVidaPassada({
         id: nova.id, nome: `${nova.eu.nome} ${nova.eu.sobrenome}`, idadeMorte: idade(nova), lugar: nomeLugar(nova.moradia.municipioId),
@@ -69,7 +71,7 @@ export function useVida() {
       salvar(nova);
       setSalva({ nome: nova.eu.nome, idade: idade(nova) });
     }
-  }, [motor]);
+  }, [motor, vida]);
 
   const nascer = useCallback((o: Omit<OpcoesCriacao, 'semente'> & { semente?: number }) => {
     if (!motor) return;
@@ -170,6 +172,33 @@ export function useVida() {
     return true;
   }, [aplicar, avisar, motor]);
 
+  /** O destino do patrimônio (a partilha, dentro da regra do país): guardado na vida que terminou. */
+  const decidirHeranca = useCallback((d: DecisoesDeHeranca) => {
+    if (!vida || !motor) return;
+    aplicar(motor.decidirHeranca(vida, d));
+  }, [vida, aplicar, motor]);
+
+  /** Continuar a família como um filho ou filha que já vive no mundo (a partilha é feita agora). */
+  const continuarComo = useCallback((pessoaId: string): boolean => {
+    if (!vida || !motor) return false;
+    const r = motor.continuarComo(vida, pessoaId);
+    if (r.erro) { avisar(r.erro, 'ruim'); return false; }
+    setResultado(null);
+    setMarcaAno(0);
+    aplicar(r.vida);
+    setTela('jogo');
+    sound.playSuccess();
+    return true;
+  }, [vida, aplicar, avisar, motor]);
+
+  /** Encerrar a história aqui (a partilha é feita e registrada; nada continua). */
+  const encerrar = useCallback(() => {
+    if (!vida || !motor) return;
+    const r = motor.encerrarHistoria(vida);
+    if (r.erro) { avisar(r.erro, 'ruim'); return; }
+    aplicar(r.vida);
+  }, [vida, aplicar, avisar, motor]);
+
   const recomecar = useCallback(() => {
     motor?.apagarSave();
     setVida(null);
@@ -181,7 +210,7 @@ export function useVida() {
   return {
     pronto: !!motor, estatisticas: motor ? motor.lerEstatisticas() : null,
     tela, setTela, vida, salva, aviso, avisoSave, setAvisoSave, resultado, fecharResultado: () => setResultado(null),
-    marcaAno, som, setSom, nascer, continuar, avancar, agir, recomecar, avisar, exportar, previaImportacao, importar
+    marcaAno, som, setSom, nascer, continuar, avancar, agir, recomecar, avisar, exportar, previaImportacao, importar, decidirHeranca, continuarComo, encerrar
   };
 }
 

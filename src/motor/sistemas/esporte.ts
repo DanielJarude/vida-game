@@ -17,6 +17,7 @@
  * atletismo e lutas usam a mesma estrutura, com seletivas e equipes.
  */
 
+import { lancar } from './extrato';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { CarreiraEsportiva, Dominio, Posicao, PropostaDeClube, Temporada, Vida } from '../tipos';
@@ -788,7 +789,7 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     const custo = custoJuvenilTenis(Math.min(4, 1 + Math.floor(anos)));
     const folga = recursosDaFamilia(v).folga;
     if (folga >= 3) escrever(v, { texto: `Mais um ano de circuito juvenil: a família pagou as viagens (uns ${dinheiro(custo)}).`, relevancia: 'cotidiano', tema: 'lazer' });
-    else if (v.financas.conta >= custo) { v.financas.conta -= custo; escrever(v, { texto: `As viagens do circuito juvenil (${dinheiro(custo)}) saíram da sua conta.`, relevancia: 'cotidiano', tema: 'dinheiro' }); }
+    else if (v.financas.conta >= custo) { v.financas.conta -= custo; lancar(v, 'Viagens do circuito juvenil de tênis', 'despesa', -custo); escrever(v, { texto: `As viagens do circuito juvenil (${dinheiro(custo)}) saíram da sua conta.`, relevancia: 'cotidiano', tema: 'dinheiro' }); }
     else {
       const f = v.caminhos.frentes.tenis;
       if (f) f.habilidade = clamp(f.habilidade - 1.5);
@@ -1008,9 +1009,10 @@ function anoDeCircuito(v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada): voi
   const premio = premiacaoTenis(e, t, r);
   const custos = custoDoCircuito(e.nivel, t.partidas);
   t.premio = premio; t.custos = custos;
-  // O prêmio do ano vira a renda do próximo (entra aos poucos); os custos saem agora.
+  // O prêmio do ano vira a renda do mês (a média); os custos do circuito, uma despesa do mês — os dois no orçamento
+  // (`carreira.custosDoTrabalho`), à vista na tela de Dinheiro. (A1, playtest: antes, os custos saíam da conta aqui,
+  // fora do orçamento: a tela dizia "sobram R$ 14 mil por mês" e o fechamento tirava das aplicações sem dizer por quê.)
   emp.salario = Math.round(premio / 12 / 10) * 10;
-  v.financas.conta -= custos;
   const liquido = premio - custos;
   const texto = `O ano no ${CIRCUITO_TENIS[e.nivel]}: ${t.vitorias} vitórias${t.titulos ? `, ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}, ranking ${t.ranking}º. Prêmios de ${dinheiro(premio)}; treinador e viagens custaram ${dinheiro(custos)} — ${liquido >= 0 ? `sobraram ${dinheiro(liquido)}` : `faltaram ${dinheiro(-liquido)}`}.`;
   escrever(v, { texto, relevancia: t.titulos ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: liquido >= 0 ? 'bom' : t.titulos ? undefined : 'ruim' });

@@ -39,7 +39,7 @@ const RESPONSAVEIS = new Set(['mae', 'pai', 'madrasta', 'padrasto']);
 
 /** Quem criou (e ainda pode ser "a família" a quem se recorre): pais vivos e a avó que criou. */
 export function responsaveis(v: Vida): { p: Pessoa; vin: Vinculo }[] {
-  return vinculosVivos(v).filter(x => !x.p.especie && (RESPONSAVEIS.has(x.vin.parentesco ?? '') || (x.vin.parentesco === 'avo' && v.origem.arranjo === 'avos' && x.vin.proximidade >= 70)));
+  return vinculosVivos(v).filter(x => !x.p.especie && (RESPONSAVEIS.has(x.vin.parentesco ?? '') || x.p.id === v.origem.responsavelId || (x.vin.parentesco === 'avo' && v.origem.arranjo === 'avos' && x.vin.proximidade >= 70)));
 }
 
 /**

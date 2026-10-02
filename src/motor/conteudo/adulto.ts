@@ -122,7 +122,8 @@ export const ADULTO: Conteudo[] = [
   },
   {
     id: 'adu_empresa_fecha', tipo: 'acontecimento', idade: [18, 64], tema: 'trabalho', repetir: 15,
-    quando: c => empregado(c) && ['clt'].includes(c.v.trabalho.atual!.contrato) && noTrabalho(c.v, 'organizacao') && c.r.chance(0.3),
+    // Clube de futebol (real, do catálogo) não "fecha as portas" no VIDA: o banco e o elenco têm o próprio fim (`tecnico`, `esporte`).
+    quando: c => empregado(c) && ['clt'].includes(c.v.trabalho.atual!.contrato) && ocupacao(c.v.trabalho.atual!.ocupacaoId).setor !== 'esporte' && noTrabalho(c.v, 'organizacao') && c.r.chance(0.3),
     narrar: c => ({
       texto: (() => {
         const e = c.v.trabalho.atual!;

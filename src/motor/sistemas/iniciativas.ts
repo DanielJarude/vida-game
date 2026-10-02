@@ -30,6 +30,7 @@ import { flex } from '../texto';
 import { papelDe, vinculoReal, type Papel } from './vinculos';
 import { atraiGenero, podeTerRomance } from './romance';
 import { compatibilidade } from './social';
+import { mesesProcurando } from './intencao';
 
 const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const o = (p: Pessoa) => flex(p.genero, 'o', 'a', 'e');
@@ -247,7 +248,8 @@ function momentoDificil(v: Vida): string | undefined {
   const luto = v.luto.find(l => l.peso >= 25 && v.t - l.t <= 12);
   if (luto) return 'luto';
   if (v.corpo.condicoes.some(c => c.gravidade >= 2 && c.tDiagnostico !== undefined && v.t - c.tDiagnostico <= 12)) return 'doenca';
-  if (v.trabalho.desempregadoDesde !== undefined && !v.trabalho.atual && v.t - v.trabalho.desempregadoDesde >= 12 && idade(v) >= 18 && !v.trabalho.aposentadoria) return 'desemprego';
+  // Desemprego é procurar e não achar — não a escolha de viver do que juntou (`intencao`).
+  if (mesesProcurando(v) >= 12) return 'desemprego';
   if (v.mente.felicidade < 40) return 'fase';
   return undefined;
 }

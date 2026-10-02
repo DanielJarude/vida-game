@@ -26,6 +26,7 @@ import type { DimensaoPessoal } from '../../motor/sistemas/pessoa';
 import { anoDe } from '../../motor/tempo';
 import { AparenciaEEstilo } from './Aparencia';
 import { OQueConstruiu } from './Trajetorias';
+import { Linhagem } from './Linhagem';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import type { Aba } from '../navegacao';
 
@@ -96,6 +97,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       <AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} />
       <OSeuNome vida={vida} agir={agir} />
       {i >= 14 && <OQueConstruiu vida={vida} />}
+      <Linhagem vida={vida} />
 
       {condicoes.length > 0 && (
         <section className="voce-condicoes" aria-label="Condições de saúde">
@@ -179,12 +181,7 @@ function CorpoEAprendizado({ vida, dims, irPara }: { vida: Vida; dims: DimensaoP
               <span className="pessoal__palavra">{l.palavra}</span>
               {l.tendencia === 'melhorando' || l.tendencia === 'piorando' ? <span className={`estado-bloco__tendencia estado-bloco__tendencia--${l.tendencia}`}>{l.tendencia === 'melhorando' ? '↗ vem melhorando' : '↘ vem piorando'}</span> : null}
             </p>
-            {(l.ajuda.length > 0 || l.pesa.length > 0) && (
-              <p className="pessoal__causas">
-                {l.ajuda.length > 0 && <span><span className="pessoal__sinal pessoal__sinal--bom" aria-hidden>+ </span>{l.ajuda.join('; ')}</span>}
-                {l.pesa.length > 0 && <span><span className="pessoal__sinal" aria-hidden>− </span>{l.pesa.join('; ')}</span>}
-              </p>
-            )}
+            {l.causas && <p className="pessoal__causas">{l.causas}</p>}
             <p className="pessoal__uso">{l.uso}</p>
             {l.ir && <button type="button" className="link pessoal__ir" onClick={() => irPara(l.ir!.aba)}>{l.ir.rotulo} →</button>}
           </li>

@@ -31,6 +31,7 @@ import { ajudaDaFamilia } from '../sistemas/dinheiro';
 import { SALARIO_MINIMO } from '../sistemas/renda';
 import { agenteDe, cacheAudiovisual, iniciarProducao, intervaloDeTestes, novaProposta, porteMaximoDoTeste, processarAudiovisual, propostasAbertas, resolverConflitoAV } from '../sistemas/audiovisual';
 import type { ContratoAV, Pessoa, Vida } from '../tipos';
+import { custosDoTrabalho } from '../sistemas/carreira';
 
 /* ------------------------------------------------------------ Cenários */
 
@@ -211,7 +212,7 @@ describe('3. Tênis: individual, caro, de prêmio — sem clube nem salário', (
     expect(modeloRotina('tenis')!.niveis[0].custo).toBeGreaterThan(modeloRotina('volei')!.niveis[1].custo * 3);
   });
 
-  it('profissional: bruto (premiação) − custos do circuito = líquido; os custos saem da conta; o prêmio vira a renda', () => {
+  it('profissional: bruto (premiação) − custos do circuito = líquido; os custos são despesa do mês; o prêmio vira a renda', () => {
     let v = praticante(jovem(19, 53, 'feminino'), 'tenis', 82, 3);
     v.financas.conta = 150000;
     v = transacao(v, (x, r) => { entrarNaBase(x, 'tenis', x.moradia.municipioId, 'academia de tênis de Recife'); profissionalizar(x, r, 2); }).vida;
@@ -224,7 +225,10 @@ describe('3. Tênis: individual, caro, de prêmio — sem clube nem salário', (
     expect(t.custos).toBeGreaterThan(0);
     expect(t.ranking).toBeGreaterThan(0);
     expect(t.vitorias).toBeGreaterThanOrEqual(0);
-    expect(conta - v.financas.conta).toBe(t.custos);
+    // (A1, pós-playtest: os custos não saem mais da conta aqui, fora do orçamento — são a linha do circuito no mês a mês,
+    // que o fechamento do ano cobra junto com o resto: `carreira.custosDoTrabalho`, `contabilidade.test`.)
+    expect(v.financas.conta).toBe(conta);
+    expect(custosDoTrabalho(v).find(l => /Circuito/.test(l.rotulo))?.valor).toBe(Math.round(t.custos! / 12));
     expect(v.trabalho.atual!.salario).toBe(Math.round(t.premio! / 12 / 10) * 10);
     expect(linhaDaTemporada(v, t)).toMatch(/torneios · .* vitórias/);
     expect(v.biografia.some(b => /Prêmios de .* custaram/.test(b.texto))).toBe(true);

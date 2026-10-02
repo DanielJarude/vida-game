@@ -39,6 +39,7 @@ import { abrirProcesso, preso, reincidente } from './justica';
 import { marcar } from './marcas';
 import { flex, ge } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
+import { mesesProcurando, patrimonioPagaAVida } from './intencao';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
@@ -81,7 +82,8 @@ export function chanceDeProposta(v: Vida): number {
   const e = v.trabalho.atual;
   let p = 0.0012;
   if (i >= 14 && i <= 22) p += 0.004;
-  if (!e && v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde >= 12 && i >= 18) p += 0.006;
+  // A tentação do dinheiro por fora vem da procura longa SEM o guardado pagando a vida (`intencao`).
+  if (!e && mesesProcurando(v) >= 12 && !patrimonioPagaAVida(v)) p += 0.006;
   if (seguranca(v).nivel === 'no_vermelho') p += 0.006;
   p += 0.006 * clamp(t.impulsividade / 40, -0.5, 1.5);
   if (v.moradia.padrao <= 2) p += 0.002;

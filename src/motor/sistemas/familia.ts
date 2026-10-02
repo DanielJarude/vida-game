@@ -30,6 +30,7 @@ import { sortearNome } from '../dados/nomes';
 import { registrarMortes } from './luto';
 import { garantirVida } from './filhos';
 import { abalar } from './abalo';
+import { lancar } from './extrato';
 
 /* ----------------------------------------------------------------- Mortes */
 
@@ -41,6 +42,7 @@ export function processarMortes(v: Vida, r: Rng): void {
     if (causa) mortes.push({ p, vin, causa });
   }
   registrarMortes(v, r, mortes, falecido => heranca(v, r, falecido));
+  for (const m of mortes) if (m.p.posses && m.vin.parentesco !== 'mae' && m.vin.parentesco !== 'pai') transmitirPosses(v, m.p);
 }
 
 const rotuloDeFamilia = (v: Vida, p: Pessoa) => ({ mae: 'mãe', pai: 'pai', avo: flex(p.genero, 'avô', 'avó') } as Record<string, string>)[v.vinculos[p.id]?.parentesco ?? ''] ?? 'parente';
@@ -57,6 +59,8 @@ function seuSua(p: Pessoa, rotulo: string): string {
  */
 function heranca(v: Vida, r: Rng, falecido: Pessoa): void {
   const conjugeVivo = falecido.parceiroId && v.pessoas[falecido.parceiroId]?.vivo;
+  // Sucessão: quem tem patrimônio de verdade (o que recebeu de uma geração anterior) deixa ESTE patrimônio — não um sorteio.
+  if (falecido.posses || v.origem.reservaDe === falecido.id) { herancaReal(v, falecido, conjugeVivo ? v.pessoas[falecido.parceiroId!] : undefined); return; }
   if (conjugeVivo) return; // o cônjuge fica com a casa; a herança vem depois
   const classe = v.origem.classe;
   const guardado = { vulneravel: 0, trabalhadora: 6000, media_baixa: 25000, media: 110000, alta: 900000 }[classe] * (0.4 + r.next());
@@ -70,6 +74,7 @@ function heranca(v: Vida, r: Rng, falecido: Pessoa): void {
   const parte = unico ? dinheiroParte : dinheiroParte + Math.round(valorCasa * 0.92 / herdeiros / 1000) * 1000;
   if (parte <= 0 && !unico) return;
   v.financas.conta += parte;
+  lancar(v, `Herança de ${falecido.nome}`, 'familia', parte);
   let total = parte;
   if (unico) {
     v.financas.bens.push({ id: `i${v.seq++}`, tipo: 'imovel', modeloId: modelo.id, nome: 'casa da família', valor: valorCasa, tCompra: v.t, municipioId: falecido.municipioId, estado: 55, herdado: true, dono: 'eu', historia: [{ t: v.t, texto: `Herdada de ${falecido.nome}.` }] });
@@ -80,6 +85,70 @@ function heranca(v: Vida, r: Rng, falecido: Pessoa): void {
     ? `O inventário de ${falecido.nome} terminou meses depois. A casa onde você cresceu ficou para você${parte > 0 ? `, com ${fmt(parte)} que estavam guardados` : ''}.`
     : `O inventário de ${falecido.nome} terminou meses depois: ${fmt(parte)} de herança${herdeiros > 1 ? `, a mesma parte que coube a cada irmão${valorCasa > 0 ? ' depois de vender a casa' : ''}` : ''}.`;
   escrever(v, { texto, relevancia: 'biografia', tema: 'dinheiro' });
+}
+
+/**
+ * A herança de quem tinha patrimônio acompanhado (as posses, a reserva da
+ * casa de origem que ficou com ela). Divide-se entre os filhos vivos dela
+ * (você e seus irmãos) e o cônjuge vivo, por cabeça — a mesma regra
+ * simplificada da partilha. Nada se perde: o que é dos irmãos vai para as
+ * posses deles.
+ */
+function herancaReal(v: Vida, falecido: Pessoa, conjuge?: Pessoa): void {
+  const pos = falecido.posses ?? { dinheiro: 0, bens: [], historia: [] };
+  let dinheiro = pos.dinheiro;
+  if (v.origem.reservaDe === falecido.id) { dinheiro += v.origem.reserva ?? 0; v.origem.reserva = 0; v.origem.reservaDe = undefined; }
+  const bens = pos.bens;
+  falecido.posses = undefined;
+  const irmaosVivos = irmaos(v).filter(i => i.vivo && i.genitores?.includes(falecido.id));
+  const cabecas = 1 + irmaosVivos.length + (conjuge ? 1 : 0);
+  const valorBens = bens.reduce((s, b) => s + b.valor, 0);
+  const total = dinheiro + valorBens;
+  if (total <= 0) return;
+  const parte = Math.round(total / cabecas);
+  // A casa fica com quem já mora nela (o cônjuge); sem cônjuge e com um herdeiro só, com você; senão, é vendida e o dinheiro repartido.
+  let minha = parte;
+  if (conjuge) {
+    const pc = conjuge.posses ?? (conjuge.posses = { dinheiro: 0, bens: [], historia: [] });
+    pc.bens.push(...bens);
+    pc.dinheiro += parte - valorBens;
+    pc.historia.push({ t: v.t, texto: `Herança de ${falecido.nome}`, valor: parte });
+  } else if (cabecas === 1) {
+    for (const b of bens) v.financas.bens.push({ ...b, id: `${b.tipo === 'imovel' ? 'i' : 'b'}${v.seq++}`, dono: 'eu', ...(b.tipo === 'imovel' ? { herdado: true } : {}), historia: [...(b.historia ?? []), { t: v.t, texto: `Herdado de ${falecido.nome}.` }] });
+    v.financas.conta += dinheiro;
+    lancar(v, `Herança de ${falecido.nome}`, 'familia', dinheiro);
+    minha = total;
+  }
+  if (!(cabecas === 1 && !conjuge)) {
+    v.financas.conta += parte;
+    lancar(v, `Herança de ${falecido.nome}`, 'familia', parte);
+    for (const ir of irmaosVivos) {
+      const pi = ir.posses ?? (ir.posses = { dinheiro: 0, bens: [], historia: [] });
+      pi.dinheiro += parte;
+      pi.historia.push({ t: v.t, texto: `Herança de ${falecido.nome}`, valor: parte });
+    }
+  }
+  // O arredondamento por cabeça: o que sobra fica com quem já recebeu a casa (ou na sua conta).
+  v.fatos['herdado_total'] = (v.fatos['herdado_total'] ?? 0) + minha;
+  escrever(v, { texto: `O inventário de ${falecido.nome} terminou meses depois: ${cabecas === 1 && !conjuge && bens.length ? `${bens.map(b => b.nome).join(' e ')} e ${fmt(dinheiro)} ficaram para você` : `${fmt(parte)} de herança${cabecas > 1 ? `, a mesma parte que coube a cada ${conjuge && !irmaosVivos.length ? 'herdeiro' : 'irmão'}` : ''}`}.`, relevancia: 'biografia', tema: 'dinheiro', pessoas: [falecido.id] });
+}
+
+/** Quem tinha patrimônio e não é da sua casa de origem (um irmão, um filho seu) deixa o que tinha para os herdeiros dele. */
+export function transmitirPosses(v: Vida, falecido: Pessoa): void {
+  const pos = falecido.posses;
+  if (!pos || (pos.dinheiro <= 0 && !pos.bens.length && !pos.negocio)) return;
+  const filhosDele = Object.values(v.pessoas).filter(x => x.vivo && !x.especie && x.genitores?.includes(falecido.id));
+  const par = falecido.parceiroId ? v.pessoas[falecido.parceiroId] : Object.values(v.pessoas).find(x => x.vivo && x.parceiroId === falecido.id);
+  const herdeiros = [...filhosDele, ...(par?.vivo ? [par] : [])];
+  falecido.posses = undefined;
+  if (!herdeiros.length) return;
+  const parte = Math.round(pos.dinheiro / herdeiros.length);
+  herdeiros.forEach((h, k) => {
+    const ph = h.posses ?? (h.posses = { dinheiro: 0, bens: [], historia: [] });
+    ph.dinheiro += parte;
+    if (k === 0) { ph.bens.push(...pos.bens); if (pos.negocio) ph.negocio = pos.negocio; }
+    ph.historia.push({ t: v.t, texto: `Herança de ${falecido.nome}`, valor: parte + (k === 0 ? pos.bens.reduce((s, b) => s + b.valor, 0) : 0) });
+  });
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -331,6 +400,7 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
 
 export function registrarNascimento(v: Vida, bebe: Pessoa, nome: string): void {
   bebe.nome = nome;
+  bebe.municipioNatal ??= v.moradia.municipioId;
   const mes = MESES[mesDe(bebe.tNasc)];
   const primeiro = filhos(v).filter(f => f.id !== bebe.id).length === 0;
   const outroId = bebe.genitores?.find(x => x !== 'eu');

@@ -48,6 +48,7 @@ import { propor } from './compromissos';
 import { guarnicaoPerto, indiceDaGuarnicao } from './militar';
 import { aplicarPersonalidade } from '../personalidade';
 import { anoDe } from '../tempo';
+import { intencaoProfissional, querTrabalhar } from './intencao';
 import { dinheiro as fmt, flex, ge } from '../texto';
 import { abalar } from './abalo';
 import { climaDe, comChefia, fatorJornada, fatorRitmoClientela, fatorRitmoSalario, ritmoDe, type Ritmo } from './ritmo';
@@ -69,6 +70,8 @@ import { TRILHAS_ARTISTICAS } from './paralelas';
 
 export type ModoTrabalho =
   | 'crianca' | 'estudante' | 'procurando' | 'aposentado' | 'preso' | 'pausa' | 'base'
+  /** Sem trabalho e sem procurar, por escolha (o patrimônio paga a vida): `intencao`. */
+  | 'sem_procurar'
   | 'formacao' | 'aprendiz' | 'estagio'
   | 'empregado' | 'servidor' | 'docente' | 'saude' | 'seguranca' | 'militar'
   | 'negocio' | 'autonomo' | 'informal' | 'plataforma' | 'rural' | 'pesca' | 'artista' | 'atleta'
@@ -89,6 +92,8 @@ export function modoDoTrabalho(v: Vida): ModoTrabalho {
     if (i < 18 && (v.educacao.basica || v.educacao.matricula)) return 'estudante';
     // Sem emprego, mas com um negócio aberto: é dono (nas horas vagas ou afastado), não alguém procurando trabalho.
     if (negocioAberto(v) && i >= 18) return 'negocio';
+    // Sem emprego não é procurando emprego: a intenção (declarada, ou o patrimônio que paga a vida) decide (`intencao`).
+    if (i >= 18 && !querTrabalhar(v)) return 'sem_procurar';
     return 'procurando';
   }
   const oc = ocupacao(e.ocupacaoId);
@@ -353,9 +358,19 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
         : `Sem outro trabalho: ${n.nome} é o que você faz hoje, ainda no ritmo de horas vagas — sem retirada fixa; o que sobra fica no caixa até você tirar.`);
       return { modo, titulo, frases, onde: 'O próprio negócio', renda: `sem retirada fixa · ${fmt(n.caixa ?? 0)} no caixa`, vinculo: 'dono' };
     }
+    else if (modo === 'sem_procurar') {
+      // A intenção (não a falta de emprego) dá o título: quem não procura não está "procurando o primeiro trabalho".
+      const l = intencaoProfissional(v);
+      titulo = l.livre ? 'Vivendo do que juntou' : 'Sem procurar trabalho';
+      frases.push(l.texto);
+      frases.push('Dá para voltar a procurar quando quiser — e, enquanto isso, a semana é sua: estudar, cuidar, fazer outra coisa.');
+    }
     else {
       const desde = t.desempregadoDesde;
       const anos = desde !== undefined ? Math.floor((v.t - desde) / 12) : 0;
+      // Quem tem a vida paga e mesmo assim procura: a frustração é de trabalho, não de dinheiro — e a tela diz.
+      const li = intencaoProfissional(v);
+      if (li.livre) frases.push(li.texto);
       if (!t.historico.length) {
         titulo = 'Procurando o primeiro trabalho';
         // Quem se formou não é "sem nada": a formação abre as portas da área, mesmo sem estrada.
@@ -498,8 +513,19 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
       if (i >= 14) add({ id: 'aprendiz', rotulo: i < 16 ? 'Procurar vaga de jovem aprendiz' : 'Procurar um primeiro trabalho', porque: 'Sem largar a escola.', ir: 'explorar', peso: 3 });
       return separar(lista);
     }
+    if (modo === 'sem_procurar') {
+      // Sem procurar, por escolha: voltar a procurar é uma decisão (que passa a contar na cabeça), não um empurrão.
+      add({ id: 'voltar_procurar', rotulo: 'Voltar a procurar trabalho', porque: aperto ? 'O guardado já não fecha o mês.' : 'Pelo gosto, pelo sentido ou pela companhia.', acao: { tipo: 'intencao_trabalho', quer: 'procurar' } as Acao, peso: aperto ? 8 : 3 });
+      if (!v.educacao.matricula) add({ id: 'estudar', rotulo: 'Estudar algo novo', ir: 'estudos', peso: 2 });
+      if (!v.rotinas.some(r => r.id === 'voluntariado')) add({ id: 'voluntariado', rotulo: 'Dar o seu tempo a um projeto (voluntariado)', porque: 'Um trabalho sem salário, com sentido.', ir: 'tempo', peso: 2 });
+      add({ id: 'negocio', rotulo: 'Pensar num negócio próprio', ir: 'explorar', peso: 1 });
+      add({ id: 'vagas', rotulo: 'Só olhar as vagas', ir: 'explorar', peso: 1 });
+      return separar(lista);
+    }
     // Procurando.
     const anos = v.trabalho.desempregadoDesde !== undefined ? (v.t - v.trabalho.desempregadoDesde) / 12 : 0;
+    // Quem tem como viver do que juntou pode escolher parar de procurar (a cabeça deixa de contar a procura).
+    if (podeTentar(disp(v, { tipo: 'intencao_trabalho', quer: 'nao_procurar' } as Acao))) add({ id: 'parar_procurar', rotulo: seg.nivel === 'folgado' ? 'Parar de procurar: viver do que juntou' : 'Parar de procurar por um tempo', porque: seg.nivel === 'folgado' ? 'O patrimônio paga a vida; trabalhar vira escolha.' : 'O guardado segura um tempo — e depois volta a apertar.', acao: { tipo: 'intencao_trabalho', quer: 'nao_procurar' } as Acao, peso: seg.nivel === 'folgado' ? 4 : 1 });
     add({ id: 'vagas', rotulo: 'Ver as vagas que cabem em você', porque: anos >= 1 ? 'Cada ano parado pesa mais.' : undefined, ir: 'explorar', peso: 9 });
     if (editaisAbertos(v).some(oc => podeTentar(elegibilidade(v, oc)))) add({ id: 'concursos', rotulo: 'Ver os concursos com edital aberto', ir: 'explorar', peso: 5 });
     if (i >= 18 && !v.rotinas.some(r => r.id === 'bico')) add({ id: 'bico', rotulo: 'Fazer bicos enquanto procura', porque: aperto ? 'As contas não esperam.' : undefined, ir: 'tempo', peso: aperto ? 7 : 3 });

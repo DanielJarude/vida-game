@@ -164,6 +164,72 @@ export function escolhasDaExperiencia(v: Vida, id: TipoExperiencia): EscolhaDeEx
   }
 }
 
+/* ------------------------------------------------------------ O catálogo das viagens (a forma da escolha) */
+
+/**
+ * Para fora, a escolha anda em níveis: o país, depois a cidade. Cada cidade
+ * é um destino de DESTINOS_FORA (o id da escolha continua `cidade:duração` —
+ * saves e ações antigas valem). Um país novo é uma linha aqui e as suas
+ * cidades lá; a tela já sabe mostrar muitos.
+ */
+const PAISES_FORA: readonly { id: string; nome: string; continente: string; cidades: readonly string[] }[] = [
+  { id: 'argentina', nome: 'Argentina', continente: 'América do Sul', cidades: ['buenos_aires'] },
+  { id: 'uruguai', nome: 'Uruguai', continente: 'América do Sul', cidades: ['montevideu'] },
+  { id: 'chile', nome: 'Chile', continente: 'América do Sul', cidades: ['santiago'] },
+  { id: 'peru', nome: 'Peru', continente: 'América do Sul', cidades: ['cusco'] },
+  { id: 'colombia', nome: 'Colômbia', continente: 'América do Sul', cidades: ['cartagena'] },
+  { id: 'mexico', nome: 'México', continente: 'América do Norte', cidades: ['cidade_mexico'] },
+  { id: 'estados_unidos', nome: 'Estados Unidos', continente: 'América do Norte', cidades: ['nova_york'] },
+  { id: 'portugal', nome: 'Portugal', continente: 'Europa', cidades: ['lisboa'] },
+  { id: 'franca', nome: 'França', continente: 'Europa', cidades: ['paris'] },
+  { id: 'italia', nome: 'Itália', continente: 'Europa', cidades: ['roma'] },
+  { id: 'japao', nome: 'Japão', continente: 'Ásia', cidades: ['toquio'] }
+];
+const ORDEM_REGIOES = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul'] as const;
+
+export interface DuracaoDeViagem { /** O id da escolha da ação (`destino:duração`). */ escolha: string; id: string; nome: string; dias: number; custo: number }
+export interface LugarDeViagem { id: string; nome: string; duracoes: DuracaoDeViagem[]; aPartirDe: number }
+export interface GrupoDeViagem { id: string; nome: string; /** Agrupamento acima do grupo (o continente), só para a leitura da lista. */ secao?: string; lugares: LugarDeViagem[]; aPartirDe: number }
+export interface CatalogoDeViagem {
+  tipo: 'viagem_pais' | 'viagem_exterior';
+  /** O que é cada nível: o país e a cidade (fora), a região e o destino (no Brasil). */
+  nivelGrupo: 'país' | 'região';
+  nivelLugar: 'cidade' | 'destino';
+  grupos: GrupoDeViagem[];
+  /** Quem vai junto (entra no preço). */
+  companhia: string[];
+}
+
+/**
+ * A viagem em níveis, DERIVADA das mesmas escolhas da ação (mesmos ids,
+ * mesmos preços): a tela percorre país → cidade → duração (ou região →
+ * destino → duração) sem nunca mostrar todas as combinações de uma vez.
+ */
+export function catalogoDeViagem(v: Vida, id: 'viagem_pais' | 'viagem_exterior'): CatalogoDeViagem {
+  const fora = id === 'viagem_exterior';
+  const porLugar = new Map<string, DuracaoDeViagem[]>();
+  for (const e of escolhasDaExperiencia(v, id)) {
+    const [destId, durId] = e.id.split(':');
+    const du = DURACOES.find(d => d.id === durId);
+    if (!du) continue;
+    const xs = porLugar.get(destId) ?? [];
+    xs.push({ escolha: e.id, id: du.id, nome: du.nome, dias: du.dias, custo: e.custo });
+    porLugar.set(destId, xs);
+  }
+  const lugar = (destId: string, nome: string): LugarDeViagem | undefined => {
+    const duracoes = porLugar.get(destId);
+    return duracoes?.length ? { id: destId, nome: cap(nome), duracoes, aPartirDe: Math.min(...duracoes.map(d => d.custo)) } : undefined;
+  };
+  const grupo = (gid: string, nome: string, lugares: (LugarDeViagem | undefined)[], secao?: string): GrupoDeViagem | undefined => {
+    const ls = lugares.filter((x): x is LugarDeViagem => !!x);
+    return ls.length ? { id: gid, nome, secao, lugares: ls, aPartirDe: Math.min(...ls.map(l => l.aPartirDe)) } : undefined;
+  };
+  const grupos = fora
+    ? PAISES_FORA.map(p => grupo(p.id, p.nome, p.cidades.map(c => { const d = DESTINOS_FORA.find(x => x.id === c); return d && lugar(d.id, d.nome); }), p.continente))
+    : ORDEM_REGIOES.map(rg => grupo(rg, rg, DESTINOS_BR.filter(d => regiaoDaUf(d.uf) === rg).map(d => lugar(d.id, d.nome))));
+  return { tipo: id, nivelGrupo: fora ? 'país' : 'região', nivelLugar: fora ? 'cidade' : 'destino', grupos: grupos.filter((g): g is GrupoDeViagem => !!g), companhia: companhia(v).map(p => p.nome) };
+}
+
 export function custoDaExperiencia(v: Vida, id: TipoExperiencia, escolha?: string): number {
   if (id === 'sabatico') return Math.round(Math.max(9000, (v.trabalho.atual?.salario ?? 3000) * 3) / 100) * 100;
   const xs = escolhasDaExperiencia(v, id);

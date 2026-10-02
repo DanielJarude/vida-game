@@ -30,6 +30,7 @@ import { flex, ge } from '../texto';
 import { anoDe, MESES, mesDe } from '../tempo';
 import { faseDeIdade, mesmaCidade, moraJunto } from './vinculos';
 import { abalar } from './abalo';
+import { economiasEstimadas, taxaDePoupanca } from './economiasNpc';
 
 /**
  * Os descendentes usam o MESMO catálogo do jogador (cursos, ocupações,
@@ -133,7 +134,22 @@ export function processarDescendentes(v: Vida, r: Rng): void {
     if (par === 'filho' || par === 'enteado') relacaoParental(v, r, p, vin, i);
     else relacaoComNeto(v, r, p, vin, i);
     trajetoria(v, r, p, vin, i, cota, par === 'filho' || par === 'enteado' ? 'filho' : 'neto');
+    guardar(v, p, i);
   }
+}
+
+/**
+ * Sucessão: quem trabalha guarda um pouco, todo ano (a faixa de renda decide
+ * quanto). É o dinheiro DELA — que vai junto se um dia ela passar a ser a
+ * pessoa jogada, e que nunca é do jogador enquanto não for.
+ */
+function guardar(v: Vida, p: Pessoa, i: number): void {
+  if (i < 18 || p.renda <= 0) return;
+  const anual = Math.round(p.renda * 12 * taxaDePoupanca(p.renda));
+  if (anual <= 0) return;
+  // A primeira vez que a ficha passa a acompanhar: as economias que a trajetória já permitia (saves anteriores).
+  const pos = p.posses ?? (p.posses = { dinheiro: economiasEstimadas(v, p), bens: [], historia: [] });
+  pos.dinheiro += anual;
 }
 
 /* ------------------------------------------------------- Relação parental */
@@ -601,6 +617,7 @@ function nascerDescendente(v: Vida, r: Rng, pai: Pessoa, outro: Pessoa | undefin
   for (let k = 0; k < 12 && usados.has(nome); k++) nome = sortearNome(r, genero, anoDe(tParto));
   bebe.nome = nome;
   bebe.genitores = [pai.id, ...(outro ? [outro.id] : [])];
+  bebe.municipioNatal = pai.municipioId;
   const perto = pai.municipioId === v.moradia.municipioId;
   const vin = vincular(v, bebe, { parentesco, origem: 'familia', proximidade: perto ? 45 : 30, convivio: moraJunto(v.vinculos[pai.id]) ? ['casa'] : [] });
   vin.tInicio = tParto;

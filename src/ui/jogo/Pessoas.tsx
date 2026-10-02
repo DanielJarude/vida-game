@@ -54,7 +54,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
               return (
                 <li key={k}>
                   <button type="button" className="atencao__item" onClick={() => abrir(p.id)}>
-                    <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={40} especie={p.especie} rotulo={p.nome} expressao={expressaoNpc(vida, p)} falecido={!p.vivo} />
+                    <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={40} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} expressao={expressaoNpc(vida, p)} falecido={!p.vivo} />
                     <span>{x.texto}</span>
                   </button>
                 </li>
@@ -121,7 +121,7 @@ function CartaoNucleo({ vida, x, abrir }: { vida: Vida; x: Par; abrir: (id: stri
   const leitura = comoEsta(vida, p, vin);
   return (
     <button type="button" className={`cartao-pessoa${vin.tensao >= 55 ? ' cartao-pessoa--tenso' : ''}`} onClick={() => abrir(p.id)}>
-      <Retrato visual={p.visual} genero={p.genero} idade={ip} semente={p.id} tamanho={84} especie={p.especie} rotulo={p.nome} expressao={expressaoNpc(vida, p)} />
+      <Retrato visual={p.visual} genero={p.genero} idade={ip} semente={p.pet?.semente ?? p.id} tamanho={84} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} expressao={expressaoNpc(vida, p)} />
       <span className="cartao-pessoa__nome">{p.nome || 'Bebê'}</span>
       <span className="cartao-pessoa__papel">{rotuloDe(vida, p, vin)}{p.especie ? '' : ` · ${ip} ${ip === 1 ? 'ano' : 'anos'}`}</span>
       {leitura && <span className="cartao-pessoa__leitura">{leitura}</span>}
@@ -140,7 +140,7 @@ function Rostos({ vida, itens, abrir }: { vida: Vida; itens: Par[]; abrir: (id: 
         {mostrados.map(({ p, vin }) => (
           <li key={p.id}>
             <button type="button" className={`rosto${vin.tensao >= 55 ? ' rosto--tenso' : ''}`} onClick={() => abrir(p.id)}>
-              <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={64} especie={p.especie} rotulo={p.nome} expressao={expressaoNpc(vida, p)} />
+              <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={64} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} expressao={expressaoNpc(vida, p)} />
               <span className="rosto__nome">{p.nome}</span>
               <span className="rosto__rotulo">{rotuloDe(vida, p, vin)}</span>
               <span className="rosto__prox">{etiqueta(vida, p, vin)}</span>
@@ -159,7 +159,7 @@ function Lista({ vida, itens, abrir }: { vida: Vida; itens: Par[]; abrir: (id: s
       {itens.map(({ p, vin }) => (
         <li key={p.id}>
           <button type="button" className={`pessoa${p.vivo ? '' : ' pessoa--falecida'}`} onClick={() => abrir(p.id)}>
-            <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={44} especie={p.especie} rotulo={p.nome} falecido={!p.vivo} expressao={expressaoNpc(vida, p)} />
+            <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={44} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} falecido={!p.vivo} expressao={expressaoNpc(vida, p)} />
             <span className="pessoa__nome">{p.nome || 'Bebê'}</span>
             <span className="pessoa__rotulo">{rotuloDe(vida, p, vin)}{p.vivo ? ` · ${idadePessoa(vida, p)}` : ''}</span>
             <span className={`pessoa__prox${vin.tensao >= 55 && p.vivo ? ' pessoa__prox--tensa' : ''}`}>{etiqueta(vida, p, vin)}</span>
@@ -275,7 +275,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
     <Folha rotulo={p.nome || 'Bebê'} aoFechar={aoFechar}>
       <div className="ficha">
         <div className="ficha__topo">
-          <Retrato visual={p.visual} genero={p.genero} idade={ip} semente={p.id} tamanho={104} especie={p.especie} rotulo={p.nome} falecido={!p.vivo} expressao={expressaoNpc(vida, p)} />
+          <Retrato visual={p.visual} genero={p.genero} idade={ip} semente={p.pet?.semente ?? p.id} tamanho={104} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} falecido={!p.vivo} expressao={expressaoNpc(vida, p)} />
           <div>
             <h2 className="ficha__nome">{p.nome || 'Bebê'} {!p.especie && <span className="ficha__sobrenome">{p.sobrenome}</span>}</h2>
             <p className="ficha__rotulo">{rotuloDe(vida, p, vin)}</p>

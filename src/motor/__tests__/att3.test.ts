@@ -824,7 +824,7 @@ describe('renda com teto: o bug do milionário por aumento', () => {
 
 describe('save v10', () => {
   it('saves v9 reais migram para v10: reserva e ações viram aplicações, valores preservados, a vida continua 5 anos e volta a ler', () => {
-    expect(VERSAO_SAVE).toBe(18); // REWORK 3: v18 (origem, vivências, estilo).
+    expect(VERSAO_SAVE).toBe(19); // Sucessão: v19 (linhagem, posses, guarda; v18 migra sem conversão).
     for (const nome of ['save-v9-adolescente-pet.json', 'save-v9-jovem-carro.json', 'save-v9-familia-financiada.json', 'save-v9-endividado.json', 'save-v9-aposentada-acoes.json']) {
       const antes = JSON.parse(fixture(nome));
       const r = interpretar(fixture(nome));

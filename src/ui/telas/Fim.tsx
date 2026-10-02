@@ -15,6 +15,9 @@ import { anosDaBiografia, dinheiroCurto, rotuloDe } from '../apresentar';
 import { importancia } from '../../motor/sistemas/vinculos';
 import { situacaoAfetiva } from '../leitura';
 import { retrospectiva } from '../../motor/sistemas/retrospectiva';
+import { trajetoriasDaVida } from '../../motor/sistemas/legado';
+import { oQueFicou } from '../../motor/sistemas/sucessao';
+import { ContinuarFamilia, PartilhaDoLegado } from './Legado';
 
 export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
   const i = idade(vida);
@@ -29,9 +32,11 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
   const bisnetos = Object.values(vida.vinculos).filter(v => v.parentesco === 'bisneto').length;
   const tracos = tracosMarcantes(vida);
   const anos = anosDaBiografia(vida, false);
+  const trajetorias = trajetoriasDaVida(vida).filter(t => t.area !== 'formacao').sort((a, b) => b.peso - a.peso);
   return (
     <div className="fim">
       <header className="fim__cabeca">
+        <p className="fim__olho">{vida.linhagem?.geracoes.length ? `Sua vida · ${vida.linhagem.geracoes.length + 1}ª geração` : 'Sua vida'}</p>
         <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={140} rotulo={vida.eu.nome} />
         <h1 className="fim__nome">{vida.eu.nome} {vida.eu.sobrenome}</h1>
         <p className="fim__datas">{anoDe(vida.eu.tNasc)} — {anoDe(vida.t)}</p>
@@ -41,6 +46,25 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
         <h2 id="fim-marcas">O que marcou esta vida</h2>
         <ul>{retrospectiva(vida).map((t, k) => <li key={k}>{t}</li>)}</ul>
       </section>
+      <section className="fim__legado" aria-labelledby="fim-ficou">
+        <h2 id="fim-ficou">O que ficou</h2>
+        <ul className="fim__ficou">
+          {oQueFicou(vida).map((t, k) => <li key={k}>{t}</li>)}
+          {trajetorias.slice(0, 4).map(t => <li key={t.id}>{t.titulo} · {t.periodo}{t.resumo ? ` — ${t.resumo}` : ''}</li>)}
+        </ul>
+        <h3>A partilha</h3>
+        <PartilhaDoLegado vida={vida} c={c} />
+      </section>
+      {!vida.morte?.encerrada && (
+        <section className="fim__decisao" aria-labelledby="fim-decisao">
+          <h2 id="fim-decisao">E agora</h2>
+          <p className="legado__nota">A vida de {vida.eu.nome} terminou. A da família pode continuar.</p>
+          <h3>Continuar a família</h3>
+          <ContinuarFamilia vida={vida} c={c} />
+          <h3>Ou</h3>
+          <button type="button" className="botao botao--secundario" onClick={() => c.encerrar()}>Encerrar esta história</button>
+        </section>
+      )}
       <section className="fim__resumo">
         <h2>Em números</h2>
         <ul>
@@ -70,10 +94,10 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
           </div>
         ))}
       </section>
-      <div className="fim__acoes">
+      {vida.morte?.encerrada && <div className="fim__acoes">
         <button type="button" className="botao botao--principal" onClick={() => { c.recomecar(); c.setTela('criacao'); }}>Viver outra vida</button>
         <button type="button" className="botao botao--secundario" onClick={() => { c.recomecar(); }}>Voltar ao início</button>
-      </div>
+      </div>}
     </div>
   );
 }

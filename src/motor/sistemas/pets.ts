@@ -83,7 +83,7 @@ function vidaMaxima(r: Rng, especie: Especie, porte: InfoPet['porte']): number {
 
 export function adotarPet(v: Vida, r: Rng, a: Omit<AnimalDoAbrigo, 'id'>, origem: InfoPet['origem'], deQuem?: string): Pessoa {
   const pet = criarPessoa(v, r, { especie: a.especie, idade: a.idade, municipioId: v.moradia.municipioId, nome: a.nome, sobrenome: '', genero: a.genero });
-  pet.pet = { porte: a.porte, origem, tChegada: v.t, tutor: 'eu', jeito: a.jeito, vidaMax: Math.max(a.idade + 1, vidaMaxima(r, a.especie, a.porte)), ...(animal(a.especie).silvestre ? { documentado: origem !== 'ilegal' } : {}) };
+  pet.pet = { porte: a.porte, origem, tChegada: v.t, tutor: 'eu', jeito: a.jeito, vidaMax: Math.max(a.idade + 1, vidaMaxima(r, a.especie, a.porte)), ...((a as Partial<AnimalDoAbrigo>).id ? { semente: (a as Partial<AnimalDoAbrigo>).id } : {}), ...(animal(a.especie).silvestre ? { documentado: origem !== 'ilegal' } : {}) };
   vincular(v, pet, { parentesco: 'pet', origem: 'familia', proximidade: 45, convivio: ['casa'] });
   const bicho = umBicho(a.especie, a.genero);
   const idadeTxt = a.idade === 0 ? 'filhote' : `de ${a.idade} ${a.idade === 1 ? 'ano' : 'anos'}`;

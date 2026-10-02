@@ -36,7 +36,7 @@ import type { Fator } from './estado';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
 import { nivelDa } from './rotinas';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
-import { fatorDeTreino, pesoNoCondicionamento } from './lesoes';
+import { fatorDeTreino, lesaoAtiva, pesoNoCondicionamento } from './lesoes';
 
 /* ---------------------------------------------------------- Predisposições */
 
@@ -54,11 +54,17 @@ export const aparenciaBase = (v: Vida) => v.corpo.aparenciaBase ?? v.corpo.apare
  */
 const CARGA: Record<string, number[]> = {
   academia: [1], corrida: [0.6], futebol: [0.45, 0.85, 1.3], volei: [0.4, 0.8, 1.2], natacao: [0.8, 1.05, 1.35],
-  atletismo: [0.5, 0.9, 1.3], lutas: [0.8, 1.1], basquete: [0.45, 0.85, 1.25], tenis: [0.5, 0.9, 1.25], danca: [0.55, 0.85], bico: [0.15]
+  atletismo: [0.5, 0.9, 1.3], lutas: [0.8, 1.1], basquete: [0.45, 0.85, 1.25], tenis: [0.5, 0.9, 1.25], danca: [0.55, 0.85], bico: [0.15],
+  // O time da escola e a atlética treinam de verdade (antes não contavam para o corpo).
+  time_escola: [0.5], atletica: [0.45]
 };
+/** O que não é treino do corpo (é trabalho avulso): a lesão não o tira da semana. */
+const NAO_E_TREINO = new Set(['bico']);
+/** A modalidade, para dizer de qual base é o treino. */
+const NOME_MODALIDADE: Record<string, string> = { futebol: 'futebol', volei: 'vôlei', basquete: 'basquete', tenis: 'tênis', natacao: 'natação', atletismo: 'atletismo', lutas: 'luta' };
 const NOME_CARGA: Record<string, string> = {
   academia: 'a academia', corrida: 'correr', futebol: 'o futebol', volei: 'o vôlei', natacao: 'a natação', atletismo: 'o atletismo',
-  lutas: 'a luta', basquete: 'o basquete', tenis: 'o tênis', danca: 'a dança', bico: 'os bicos', farda: 'o treino da farda', obra: 'o trabalho pesado', profissional: 'o treino de atleta'
+  lutas: 'a luta', basquete: 'o basquete', tenis: 'o tênis', danca: 'a dança', bico: 'os bicos', time_escola: 'o time da escola', atletica: 'a atlética', farda: 'o treino da farda', obra: 'o trabalho pesado', profissional: 'o treino de atleta'
 };
 const TRABALHO_PESADO = new Set(['construcao', 'agro', 'campo', 'pesca', 'limpeza', 'logistica', 'reciclagem', 'marcenaria']);
 const FARDA = new Set(['pm', 'pm_oficial', 'bombeiro', 'exercito_oficial', 'exercito_sargento', 'exercito', 'marinha', 'aeronautica', 'militar', 'policia_civil']);
@@ -69,15 +75,21 @@ export function estimuloFisico(v: Vida): Estimulo {
   const fontes: Estimulo['fontes'] = [];
   const e = v.caminhos.esporte;
   const pro = e?.fase === 'profissional' ? e.modalidade : undefined;
+  const base = e?.fase === 'base' ? e.modalidade : undefined;
+  // A lesão tira dos treinos de QUALQUER um (não só do profissional): a mesma conta do clube (`lesoes.fatorDeTreino`).
+  const ft = fatorDeTreino(v);
   for (const r of v.rotinas) {
     const c = CARGA[r.id];
     if (!c) continue;
     // O treino do atleta profissional é do clube (abaixo): a mesma modalidade não conta duas vezes.
     if (r.id === pro) continue;
-    fontes.push({ id: r.id, texto: NOME_CARGA[r.id] ?? r.id, carga: c[Math.min(c.length, nivelDa(r)) - 1] });
+    const treino = !NAO_E_TREINO.has(r.id);
+    // Na base, o treino é o da categoria (quase todo dia), e a tela diz de qual — não "o futebol" do tempo livre.
+    const nome = r.id === base ? `o treino de base de ${NOME_MODALIDADE[r.id] ?? r.id}` : NOME_CARGA[r.id] ?? r.id;
+    fontes.push({ id: r.id, texto: nome, carga: c[Math.min(c.length, nivelDa(r)) - 1] * (treino ? ft : 1) });
   }
   // O treino do clube, quase todo dia: é trabalho, e o corpo conta — menos quando a lesão tira dos treinos.
-  if (pro && !e!.suspensoAte) fontes.push({ id: 'profissional', texto: NOME_CARGA.profissional, carga: (e!.foco === 'forcar' ? 1.5 : e!.foco === 'preservar' ? 1.15 : 1.35) * fatorDeTreino(v) });
+  if (pro && !e!.suspensoAte) fontes.push({ id: 'profissional', texto: NOME_CARGA.profissional, carga: (e!.foco === 'forcar' ? 1.5 : e!.foco === 'preservar' ? 1.15 : 1.35) * ft });
   const oc = v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.ocupacaoId) : undefined;
   if (oc && FARDA.has(oc.trilha)) fontes.push({ id: 'farda', texto: NOME_CARGA.farda, carga: 0.5 });
   else if (oc && TRABALHO_PESADO.has(oc.trilha)) fontes.push({ id: 'obra', texto: NOME_CARGA.obra, carga: 0.35 });
@@ -89,15 +101,22 @@ const efetivo = (est: number) => 1.6 * (1 - Math.exp(-est / 1.1));
 
 /** O corpo do dia a dia, sem exercício (andar, subir escada, brincar). */
 export function pisoDeForma(i: number): number {
-  return i < 12 ? 48 : i < 50 ? 32 : i < 70 ? 25 : 18;
+  // A infância de brincar o dia inteiro vai ficando para trás DEVAGAR (dos 10 aos 15), não num degrau aos 12:
+  // antes, o piso caía de 48 para 32 de um ano para o outro, e o garoto que entrava na base aos 12 "vinha
+  // piorando" treinando quase todo dia (playtest pós-REWORK 3).
+  return i < 10 ? 48 : i < 15 ? Math.round((48 - (i - 9) * (16 / 6)) * 10) / 10 : i < 50 ? 32 : i < 70 ? 25 : 18;
 }
+
+/** O piso está caindo por causa da idade (o fim da infância), nesta idade? */
+export const infanciaFicandoParaTras = (i: number) => i >= 10 && i < 15;
 
 function tetoDeForma(i: number): number {
   return i < 30 ? 97 : Math.max(50, Math.round(97 - (i - 30) * 0.6));
 }
 
 function fatorIdadeTreino(i: number): number {
-  return i < 14 ? 0.8 : i <= 35 ? 1 : i < 50 ? 0.9 : i < 65 ? 0.8 : 0.65;
+  // O corpo responde cada vez mais ao treino na adolescência (rampa, sem degrau aos 14).
+  return i < 10 ? 0.8 : i < 14 ? 0.8 + (i - 9) * 0.04 : i <= 35 ? 1 : i < 50 ? 0.9 : i < 65 ? 0.8 : 0.65;
 }
 
 /**
@@ -113,7 +132,10 @@ export function fatoresCondicionamento(v: Vida): Fator[] {
   const fis = predisposicao(v, 'fisica');
   if (est.total > 0) {
     const nomes = est.fontes.slice(0, 2).map(f => f.texto);
-    out.push({ id: 'treino', texto: nomes.length > 1 ? `${nomes[0]} e ${nomes[1]}` : nomes[0], efeito: efetivo(est.total) * 40 * fatorIdadeTreino(i) });
+    // A lesão que tira dos treinos é dita junto do treino (o que sobrou dele), uma vez só.
+    const ft = fatorDeTreino(v);
+    const comLesao = ft < 0.95 && est.fontes.some(f => !NAO_E_TREINO.has(f.id) && f.id !== 'farda' && f.id !== 'obra') ? (ft <= 0.6 ? ' (bem reduzido pela lesão)' : ' (reduzido pela lesão)') : '';
+    out.push({ id: 'treino', texto: (nomes.length > 1 ? `${nomes[0]} e ${nomes[1]}` : nomes[0]) + comLesao, efeito: efetivo(est.total) * 40 * fatorIdadeTreino(i) });
     if (Math.abs(fis) >= 0.25) out.push({ id: 'predisposicao', texto: fis > 0 ? 'um corpo que responde rápido ao treino' : 'um corpo que custa a responder ao treino', efeito: fis * 6 * Math.min(1, est.total) });
   }
   if (i >= 14) {
@@ -122,7 +144,7 @@ export function fatoresCondicionamento(v: Vida): Fator[] {
   }
   if (c.saude < 55) out.push({ id: 'saude', texto: 'a saúde fraca', efeito: -(55 - c.saude) * 0.5 });
   for (const cond of c.condicoes) {
-    if (cond.lesao) { out.push({ id: 'condicao:lesao', texto: cond.lesao.cuidado === 'sacrificio' ? `${cond.lesao.parte}, jogando em cima` : cond.lesao.parte, efeito: pesoNoCondicionamento(cond.lesao) }); continue; }
+    if (cond.lesao) { out.push({ id: 'condicao:lesao', texto: cond.lesao.cuidado === 'sacrificio' ? `${cond.lesao.parte} (jogando em cima)` : cond.lesao.parte, efeito: pesoNoCondicionamento(cond.lesao) }); continue; }
     const pesa = cond.id === 'coluna' ? (cond.tratando ? -2 : -6)
       : cond.id === 'cancer' ? (cond.tratando ? -6 : -10)
         : cond.id === 'diabetes' && !cond.tratando ? -3
@@ -287,15 +309,65 @@ export function fatoresPessoais(v: Vida, d: DimensaoPessoal): Fator[] {
   return d === 'condicionamento' ? fatoresCondicionamento(v) : d === 'aparencia' ? fatoresAparencia(v) : fatoresAprendizado(v);
 }
 
-/** Melhorando ou piorando nos últimos dois anos (pelos registros de aniversário). */
-export function tendenciaPessoal(v: Vida, d: DimensaoPessoal): 'melhorando' | 'piorando' | 'estavel' | 'sem_dado' {
+/** O quanto mudou na janela da tendência (os últimos dois anos, pelos registros de aniversário) — e desde quando. */
+export function variacaoPessoal(v: Vida, d: DimensaoPessoal): { dif: number; desde: number } | undefined {
   const campo = d === 'condicionamento' ? 'forma' : d === 'aparencia' ? 'aparencia' : 'cognicao';
   const h = (v.mente.historico ?? []).filter(x => x[campo] !== undefined);
   const antes = h.filter(x => x.t <= v.t - 24).pop() ?? h.filter(x => x.t < v.t).shift();
-  if (!antes) return 'sem_dado';
-  const dif = valorPessoal(v, d) - (antes[campo] as number);
+  if (!antes) return undefined;
+  return { dif: valorPessoal(v, d) - (antes[campo] as number), desde: antes.t };
+}
+
+/** Melhorando ou piorando nos últimos dois anos: a mudança MEDIDA (não o que o alvo promete). */
+export function tendenciaPessoal(v: Vida, d: DimensaoPessoal): 'melhorando' | 'piorando' | 'estavel' | 'sem_dado' {
+  const x = variacaoPessoal(v, d);
+  if (!x) return 'sem_dado';
   const limiar = d === 'aprendizado' ? 1.5 : 4;
-  return dif >= limiar ? 'melhorando' : dif <= -limiar ? 'piorando' : 'estavel';
+  return x.dif >= limiar ? 'melhorando' : x.dif <= -limiar ? 'piorando' : 'estavel';
+}
+
+export interface CausasDaTendencia {
+  tendencia: 'melhorando' | 'piorando' | 'estavel' | 'sem_dado';
+  /** O que puxa para cima (o treino, o corpo que responde) — na ordem do peso. */
+  aFavor: string[];
+  /** O que puxa para baixo (a lesão, o cigarro, a semana parada) — na ordem do peso. */
+  contra: string[];
+}
+
+/**
+ * Por que o condicionamento anda para onde anda: as causas do alvo do ano
+ * (`fatoresCondicionamento`, as mesmas do desenvolvimento) e o que mexeu no
+ * corpo DENTRO da janela da tendência e já não está mais ativo (a lesão que
+ * sarou, o fim da infância de brincar o dia inteiro). Quem "vem piorando"
+ * sempre tem ao menos uma causa do lado que pesa; quem "vem melhorando",
+ * do lado que ajuda — a seta e a explicação dizem a mesma coisa.
+ */
+export function causasDoCondicionamento(v: Vida): CausasDaTendencia {
+  const i = idade(v);
+  const fat = fatoresCondicionamento(v);
+  const tendencia = tendenciaPessoal(v, 'condicionamento');
+  const janela = variacaoPessoal(v, 'condicionamento');
+  const aFavor = fat.filter(f => f.efeito > 0).sort((a, b) => b.efeito - a.efeito).map(f => f.texto);
+  const contra = fat.filter(f => f.efeito < 0).sort((a, b) => a.efeito - b.efeito).map(f => f.texto);
+  const est = estimuloFisico(v);
+  if (i >= 12 && est.total < 0.4) contra.unshift('nenhum exercício na semana');
+  const curada = v.fatos['lesao_curada'];
+  const lesaoNaJanela = curada !== undefined && !!janela && curada > janela.desde && !lesaoAtiva(v);
+  const forma = v.corpo.forma;
+  const alvo = alvoCondicionamento(v);
+  if (tendencia === 'piorando') {
+    if (lesaoNaJanela) { const m = v.fatos['lesao_curada_meses'] ?? 0; contra.push(m >= 2 ? `a lesão que tirou ${m} meses de treino` : 'a lesão que tirou um tempo de treino'); }
+    // O treino de base (ou de clube) que acabou dentro da janela: a semana ficou mais leve que a de antes.
+    const esp = v.caminhos.esporte;
+    if (esp?.fase === 'encerrada' && esp.tFim !== undefined && janela && esp.tFim > janela.desde && forma > alvo) contra.push(esp.temporadas?.length ? 'o fim do treino de atleta' : 'o fim do treino de base, quase todo dia');
+    if (infanciaFicandoParaTras(i) && forma > alvo) contra.push('menos brincadeira solta, como em toda adolescência');
+    if (!contra.length) contra.push(est.total >= 0.4 ? 'um treino que já não sustenta a forma de antes' : 'menos movimento do que antes');
+  } else if (tendencia === 'melhorando') {
+    if (lesaoNaJanela) aFavor.push('a volta aos treinos depois da lesão');
+    if (!aFavor.length) aFavor.push('o corpo se recuperando');
+  }
+  const unico = (xs: string[]) => xs.filter((x, k) => xs.indexOf(x) === k);
+  return { tendencia, aFavor: unico(aFavor), contra: unico(contra) };
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

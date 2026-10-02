@@ -11,12 +11,12 @@ import { modeloFrente } from '../motor/dados/frentes';
 import type { Acao } from '../motor/acoes';
 import { disponibilidade } from '../motor/acoes';
 import { idade } from '../motor/nucleo';
-import { flex } from '../motor/texto';
+import { flex, listaNatural } from '../motor/texto';
 import { leituraDoEstado, tendencia, type Dimensao, type Fator, type Tendencia } from '../motor/sistemas/estado';
 import { sugestoes, type Sugestao } from '../motor/sistemas/cuidados';
 import type { Expressao } from './avatar/Retrato';
 import { palavraEstresse, palavraHumor, palavraSaude } from './apresentar';
-import { CONSUMIDORES, estimuloFisico, fatoresPessoais, NOME_PESSOAL, palavraAparencia, palavraAprendizado, palavraCondicionamento, tendenciaPessoal, valorPessoal, type DimensaoPessoal } from '../motor/sistemas/pessoa';
+import { causasDoCondicionamento, CONSUMIDORES, fatoresPessoais, NOME_PESSOAL, palavraAparencia, palavraAprendizado, palavraCondicionamento, tendenciaPessoal, valorPessoal, type DimensaoPessoal } from '../motor/sistemas/pessoa';
 
 /** O rosto do dia: do estado real, com prioridade para o que mais pesa. */
 export function expressaoDe(v: Vida): Expressao {
@@ -115,6 +115,12 @@ export interface LeituraPessoal {
   tendencia: 'melhorando' | 'piorando' | 'estavel' | 'sem_dado';
   ajuda: string[];
   pesa: string[];
+  /**
+   * As causas numa frase (ou duas), na ordem que a tendência pede: quem vem
+   * piorando lê primeiro o que pesa; quem vem melhorando, o que ajuda. É
+   * ESTA frase que a tela mostra — nunca as listas soltas com sinais.
+   */
+  causas: string;
   /** Quem usa isso no motor, em palavras. */
   uso: string;
   /** Onde se mexe nisso. */
@@ -130,12 +136,34 @@ export function lerPessoal(v: Vida, d: DimensaoPessoal): LeituraPessoal {
   const i = idade(v);
   const valor = valorPessoal(v, d);
   const palavra = d === 'condicionamento' ? palavraCondicionamento(valor) : d === 'aparencia' ? palavraAparencia(valor) : palavraAprendizado(valor);
-  const ajuda = fatores.filter(f => f.efeito > 0).sort((a, b) => b.efeito - a.efeito).map(f => f.texto).slice(0, 2);
-  const pesa = fatores.filter(f => f.efeito < 0).sort((a, b) => a.efeito - b.efeito).map(f => f.texto).slice(0, 2);
-  if (d === 'condicionamento' && i >= 12 && estimuloFisico(v).total < 0.4) pesa.unshift('nenhum exercício na semana');
-  if (d === 'aprendizado' && !fatores.some(f => f.id === 'estimulo') && i >= 10) pesa.push('nada que exercite a cabeça fora da obrigação');
+  const tend = tendenciaPessoal(v, d);
+  let ajuda: string[];
+  let pesa: string[];
+  if (d === 'condicionamento') {
+    // A mesma fonte do motor: causas coerentes com a direção medida (a lesão que já sarou, o fim da infância).
+    const c = causasDoCondicionamento(v);
+    ajuda = c.aFavor;
+    pesa = c.contra;
+  } else {
+    ajuda = fatores.filter(f => f.efeito > 0).sort((a, b) => b.efeito - a.efeito).map(f => f.texto);
+    pesa = fatores.filter(f => f.efeito < 0).sort((a, b) => a.efeito - b.efeito).map(f => f.texto);
+    if (d === 'aprendizado' && !fatores.some(f => f.id === 'estimulo') && i >= 10) pesa.push('nada que exercite a cabeça fora da obrigação');
+  }
+  ajuda = ajuda.slice(0, 2);
+  pesa = pesa.slice(0, 2);
   const ir = d === 'aprendizado' ? { aba: 'tempo' as const, rotulo: 'Ler, xadrez, estudar — em Tempo livre' } : d === 'condicionamento' ? (v.caminhos.esporte?.fase === 'profissional' ? { aba: 'trabalho' as const, rotulo: 'O treino do clube — em Trabalho' } : { aba: 'tempo' as const, rotulo: 'Treino e movimento — em Tempo livre' }) : undefined;
-  return { d, nome: NOME_PESSOAL[d], palavra, tendencia: tendenciaPessoal(v, d), ajuda, pesa: pesa.slice(0, 2), uso: CONSUMIDORES[d], ir };
+  return { d, nome: NOME_PESSOAL[d], palavra, tendencia: tend, ajuda, pesa, causas: fraseDasCausas(tend, ajuda, pesa), uso: CONSUMIDORES[d], ir };
+}
+
+/**
+ * A frase das causas, montada aqui (e não na tela, com "+" e ";" soltos):
+ * cada lista vira uma oração com rótulo, e a ordem segue a tendência.
+ */
+export function fraseDasCausas(t: LeituraPessoal['tendencia'], ajuda: string[], pesa: string[]): string {
+  const a = ajuda.length ? `O que ajuda: ${listaNatural(ajuda)}.` : '';
+  if (t === 'piorando') return [pesa.length ? `O que pesa: ${listaNatural(pesa)}.` : '', ajuda.length ? `O que segura: ${listaNatural(ajuda)}.` : ''].filter(Boolean).join(' ');
+  if (t === 'melhorando') return [a, pesa.length ? `O que pesa agora: ${listaNatural(pesa)}.` : ''].filter(Boolean).join(' ');
+  return [a, pesa.length ? `O que pesa: ${listaNatural(pesa)}.` : ''].filter(Boolean).join(' ');
 }
 
 /* ------------------------------------------------ No que a pessoa é boa */

@@ -102,13 +102,15 @@ describe('Você × Política: o mesmo nome dos dois lados', () => {
 });
 
 describe('Tempo livre: a viagem é uma porta', () => {
-  it('abrir "Uma viagem pelo Brasil" mostra destinos e durações, cada um com o seu preço', () => {
+  it('abrir "Uma viagem pelo Brasil" leva à região, ao destino e às durações, cada uma com o seu preço (em passos: ver viagens.test.tsx)', () => {
     const v = vidaAos(35, x => { x.financas.conta = 300000; x.trabalho.atual = undefined; }, 'feminino', 'recife-pe');
     render(<Tempo vida={v} agir={() => true} />);
     expect(screen.getByText('Uma viagem pelo Brasil')).toBeTruthy();
     fireEvent.click(screen.getAllByRole('button', { name: 'Ver destinos' })[0]);
-    expect(screen.getAllByText(/Ouro Preto/).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /uma semana · R\$/ }).length).toBeGreaterThan(3);
+    fireEvent.click(screen.getByRole('button', { name: /^Sudeste/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Ouro Preto/ }));
+    expect(screen.getAllByRole('button', { name: /^Uma semana.*R\$/ }).length).toBe(1);
+    expect(screen.getAllByRole('button', { name: /dias.*R\$/ }).length).toBe(3);
   });
 });
 

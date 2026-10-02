@@ -29,7 +29,7 @@ export type FormaVeiculo =
   | 'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail'
   | 'urbana' | 'estrada' | 'mtb' | 'eletrica'
   | 'jetski' | 'lancha' | 'veleiro'
-  | 'ultraleve' | 'monomotor';
+  | 'ultraleve' | 'monomotor' | 'asa_baixa' | 'bimotor' | 'jato';
 
 /** Habilitação para operar (separada da posse: ter um barco não é saber pilotar um). */
 export type Habilitacao = 'cnh' | 'nautica' | 'piloto';
@@ -194,7 +194,7 @@ export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
   { id: 'inpaer_excel', classe: 'ultraleve', marca: 'Inpaer', modelo: 'Excel', dica: 'ultraleve de dois lugares', faixa: 'intermediaria', preco: 420000, artigo: 'o', pesoUsado: 0.6, forma: 'ultraleve' },
   { id: 'paradise_p1', classe: 'ultraleve', marca: 'Paradise', modelo: 'P1', dica: 'ultraleve de asa alta', faixa: 'economica', preco: 330000, artigo: 'o', pesoUsado: 0.8, forma: 'ultraleve' },
   { id: 'cessna_172', classe: 'monomotor', marca: 'Cessna', modelo: '172 Skyhawk', dica: 'monomotor de quatro lugares', faixa: 'alta', preco: 2600000, artigo: 'o', pesoUsado: 0.5, forma: 'monomotor' },
-  { id: 'piper_archer', classe: 'monomotor', marca: 'Piper', modelo: 'Archer', dica: 'monomotor de asa baixa, quatro lugares', faixa: 'alta', preco: 2300000, artigo: 'o', pesoUsado: 0.5, forma: 'monomotor' }
+  { id: 'piper_archer', classe: 'monomotor', marca: 'Piper', modelo: 'Archer', dica: 'monomotor de asa baixa, quatro lugares', faixa: 'alta', preco: 2300000, artigo: 'o', pesoUsado: 0.5, forma: 'asa_baixa' }
 ];
 
 /** A forma de uma versão (o desenho que a representa). */
@@ -207,7 +207,7 @@ export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): Fo
     case 'bicicleta': return m.eletrica ? 'eletrica' : /trilha|mountain/.test(d) ? 'mtb' : /estrada|speed/.test(d) ? 'estrada' : 'urbana';
     case 'moto': return /scooter/.test(d) || x?.id === 'honda_pop' || x?.id === 'honda_biz' ? 'scooter' : /trail|terra/.test(d) ? 'trail' : /clássica|custom/.test(d) ? 'cruiser' : /esportiva/.test(d) ? 'esportiva' : 'street';
     case 'embarcacao': return c === 'jetski' ? 'jetski' : c === 'veleiro' ? 'veleiro' : 'lancha';
-    case 'aeronave': return c === 'ultraleve' ? 'ultraleve' : 'monomotor';
+    case 'aeronave': return c === 'ultraleve' ? 'ultraleve' : /jato/.test(d) ? 'jato' : /bimotor/.test(d) ? 'bimotor' : /asa baixa/.test(d) ? 'asa_baixa' : 'monomotor';
     default: return /picape/.test(d) ? 'picape' : /suv/.test(d) ? 'suv' : /esportivo/.test(d) ? 'esportivo' : /sedã/.test(d) ? 'seda' : c === 'carro_sedan' ? 'seda' : c.startsWith('carro_suv') ? 'suv' : 'hatch';
   }
 }
@@ -216,7 +216,7 @@ export const NOME_FORMA: Record<FormaVeiculo, string> = {
   hatch: 'hatch', seda: 'sedã', suv: 'SUV', suv_medio: 'SUV médio', suv_grande: 'SUV de sete lugares', picape: 'picape', esportivo: 'esportivo',
   cub: 'motoneta', scooter: 'scooter', street: 'moto de rua', esportiva: 'moto esportiva', cruiser: 'moto clássica', trail: 'moto de trilha',
   urbana: 'bicicleta urbana', estrada: 'bicicleta de estrada', mtb: 'mountain bike', eletrica: 'bicicleta elétrica',
-  jetski: 'moto aquática', lancha: 'lancha', veleiro: 'veleiro', ultraleve: 'ultraleve', monomotor: 'monomotor'
+  jetski: 'moto aquática', lancha: 'lancha', veleiro: 'veleiro', ultraleve: 'ultraleve', monomotor: 'monomotor de asa alta', asa_baixa: 'monomotor de asa baixa', bimotor: 'bimotor', jato: 'jato executivo'
 };
 
 export const versaoVeiculo = (id: string | undefined) => (id ? VERSOES_VEICULO.find(x => x.id === id) : undefined);

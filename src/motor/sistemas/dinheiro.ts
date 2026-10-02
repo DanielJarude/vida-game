@@ -40,7 +40,8 @@ import { custosDoTrabalho } from './carreira';
 import { moraComFamiliaDeOrigem, rendaDosOutros } from './domicilio';
 import { dinheiro as fmt, flex } from '../texto';
 import { abalar } from './abalo';
-import { cobrirComAplicacoes, liquidezImediata, processarInvestimentos, rendaDasAplicacoes, resgatar, totalAplicado } from './investimentos';
+import { conferir, fecharExtrato, lancar, medir } from './extrato';
+import { cobrirComAplicacoes, emTutela, liquidezImediata, processarInvestimentos, rendaDasAplicacoes, resgatar, totalAplicado } from './investimentos';
 import { produto } from '../dados/investimentos';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { custoDosPets } from './pets';
@@ -252,7 +253,28 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
   const base = estilo.lazerBase * c * adultosQueGastam;
   const livre = rendaTotal - somaSaidas(saidas);
   sai('Lazer, restaurante, roupa e extras', base + Math.max(0, livre - base) * estilo.parte, 'lazer');
+  sai('Viagens, reformas e presentes que o patrimônio permite', gastoDoPatrimonio(v, somaSaidas(saidas), rendaTotal - somaSaidas(saidas), estiloForcado ?? f.estilo), 'lazer');
   return fechar(v, arranjo, entradas, saidas);
+}
+
+/**
+ * Efeito riqueza: quem juntou muito (conta + aplicações bem acima de anos de
+ * despesa) passa a gastar parte do que juntou — viagens, reformas, ajuda à
+ * família, carro melhor. É uma linha do MÊS, à vista na tela, e nunca leva
+ * mais que metade do que sobra: quem tem a renda maior que a despesa vê o
+ * dinheiro crescer.
+ *
+ * (A1, playtest: antes, saía só no fechamento do ano, fora do orçamento, e
+ * podia levar "a conta inteira + a sobra do ano" — a tela dizia "sobram
+ * R$ 14 mil por mês" e a conta fechava o ano em zero, sem linha à vista.)
+ */
+export function gastoDoPatrimonio(v: Vida, despesaMensal: number, sobraMensal: number, estilo: EstiloDeVida = v.financas.estilo): number {
+  if (idade(v) < 30 || sobraMensal <= 0) return 0;
+  const financeiro = Math.max(0, v.financas.conta) + totalAplicado(v);
+  const limiar = Math.max(300000, despesaMensal * 12 * 8);
+  if (financeiro <= limiar) return 0;
+  const taxa = { apertado: 0.015, modesto: 0.02, confortavel: 0.03, folgado: 0.05 }[estilo];
+  return Math.min((financeiro - limiar) * taxa / 12, sobraMensal * 0.5);
 }
 
 /** Despesas que existem em qualquer arranjo: transporte, saúde, estudo, rotinas, compromissos, dívidas. */
@@ -396,8 +418,11 @@ export function seguranca(v: Vida): Seguranca {
   if (atraso > 0 || v.financas.negativado || b.cartao > renda * 3) {
     return { nivel: 'no_vermelho', meses, texto: atraso > 0 ? `${atraso >= 2 ? `${Math.round(atraso)} meses` : 'Um mês'} de contas atrasadas.` : v.financas.negativado ? 'O nome está sujo: sem crédito até acertar.' : 'A dívida do cartão já é maior que três meses de renda.' };
   }
-  if (financeiro >= despesa * 12 * 15) return { nivel: 'folgado', meses, texto: 'O que você juntou paga muitos anos de vida. Dinheiro deixou de ser a preocupação.' };
-  if (meses >= 12 || financeiro >= despesa * 12 * 4) return { nivel: 'seguro', meses, texto: `Se a renda parasse hoje, o guardado seguraria ${meses >= 24 ? `uns ${Math.floor(meses / 12)} anos` : `${Math.floor(meses)} meses`}.` };
+  // "O guardado paga a vida" mede a vida por conta própria: quem mora com a família quase não tem despesa sua, e
+  // R$ 418 não "pagam 15 anos" (pacote pré-América do Sul — a mesma régua decide se a pessoa pode viver do patrimônio).
+  const custoDeVida = o.arranjo === 'familia' ? Math.max(despesa, Math.round(2000 * economiaLocal(v.moradia.municipioId).custo)) : despesa;
+  if (financeiro >= custoDeVida * 12 * 15) return { nivel: 'folgado', meses, texto: 'O que você juntou paga muitos anos de vida. Dinheiro deixou de ser a preocupação.' };
+  if ((meses >= 12 && financeiro >= custoDeVida * 12) || financeiro >= custoDeVida * 12 * 4) return { nivel: 'seguro', meses, texto: `Se a renda parasse hoje, o guardado seguraria ${meses >= 24 ? `uns ${Math.floor(meses / 12)} anos` : `${Math.floor(meses)} meses`}.` };
   // A leitura olha as DUAS coisas que decidem o aperto: a margem do mês (o que sobra da renda depois do que sai)
   // e a reserva (quantos meses o guardado segura). Antes, só a reserva contava: quem sobrava um terço da renda
   // todo mês, mas ainda não tinha juntado três meses, aparecia "no limite".
@@ -453,6 +478,11 @@ export function mesesRestantes(v: Vida, d: Divida): number {
 export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
   const f = v.financas;
   const i = idade(v);
+  // O extrato do ano (`extrato`): o que já mexeu na conta antes do fechamento ganha nome agora — o prejuízo do
+  // negócio pelo nome dele; o resto (prêmios, cachês, custos e imprevistos dos outros sistemas) numa linha só.
+  const neg = v.caminhos.negocio;
+  if (neg?.devolvidoAno && neg.estado !== 'fechado') lancar(v, `Prejuízo de ${neg.nome} coberto do seu bolso`, 'despesa', -neg.devolvidoAno);
+  conferir(v, 'Acontecimentos do ano: heranças, rescisões, prêmios, cachês e imprevistos', 'acontecimento');
   const o = orcamento(v);
   // Os dividendos do ano entram direto na conta pelos investimentos: aqui não contam duas vezes.
   const renda = o.renda - rendaDasAplicacoes(v);
@@ -464,17 +494,16 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
   const guardado = Math.max(0, f.conta) + totalAplicado(v);
   if ((despesa - renda) * 12 > guardado && f.estilo !== 'apertado' && o.arranjo !== 'familia') {
     const minimo = orcamento(v, 'apertado').despesa;
-    const corte = Math.min(Math.max(0, despesa - minimo), despesa - renda);
+    const corte = Math.round(Math.min(Math.max(0, despesa - minimo), despesa - renda));
     if (corte > 0) {
       despesa -= corte;
-      linhas.push({ rotulo: 'Cortes no mercado, no lazer e nos extras', valor: Math.round(corte), grupo: 'lazer' });
+      linhas.push({ rotulo: 'Cortes no mercado, no lazer e nos extras', valor: corte, grupo: 'lazer' });
       abalar(v, 'os cortes para o dinheiro fechar', -Math.min(8, Math.round(corte / 250)), 0);
       narrarAperto(v);
     }
   }
   f.razao = linhas.map(l => ({ ...l, valor: l.valor * 12 }));
   // O prejuízo do negócio que saiu da conta (já descontado em `processarNegocio`): aparece na conta do ano.
-  const neg = v.caminhos.negocio;
   if (neg?.devolvidoAno && neg.estado !== 'fechado') f.razao.push({ rotulo: `Prejuízo de ${neg.nome} coberto do seu bolso`, valor: -neg.devolvidoAno, grupo: 'outros' });
   if (o.sobra < 0) { if (v.fatos['sem_sobra_desde'] === undefined) v.fatos['sem_sobra_desde'] = v.t; } else delete v.fatos['sem_sobra_desde'];
 
@@ -499,31 +528,30 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
     escrever(v, { texto: vezes === 1 ? 'Cinco anos depois, a dívida velha caducou e o nome saiu do cadastro de devedores.' : 'Mais uma dívida velha caducou.', relevancia: vezes === 1 ? 'cotidiano' : 'tecnico', tema: 'dinheiro' });
   }
 
-  // As aplicações rendem (ou perdem) e pagam o que pagam.
-  if (ec) f.razao.push(...processarInvestimentos(v, ec).map(l => ({ ...l })));
-  // A inflação do ano corrói o que ficou parado na conta.
+  // As aplicações rendem (ou perdem) e pagam o que pagam: a valorização fica nelas; os dividendos caem na conta.
+  if (ec) {
+    const doAno = processarInvestimentos(v, ec);
+    f.razao.push(...doAno.map(l => ({ ...l })));
+    for (const l of doAno) lancar(v, l.rotulo, 'rendimento', l.rotulo === 'Valorização das aplicações' ? 0 : l.valor, l.rotulo === 'Valorização das aplicações' ? l.valor : 0);
+  }
+  // A inflação do ano corrói o que ficou parado na conta (o jogo é em reais de hoje: a conta não rende, as aplicações sim).
   const inflacao = ec?.inflacao ?? 0.045;
   if (f.conta > 0) {
     const perda = Math.round(f.conta - f.conta / (1 + inflacao));
     f.conta -= perda;
+    lancar(v, 'O que a inflação levou do dinheiro parado', 'rendimento', -perda);
     if (perda >= 50) f.razao.push({ rotulo: 'O que a inflação levou do dinheiro parado', valor: -perda, grupo: 'outros' });
   }
-  // Efeito riqueza: quem juntou muito passa a gastar parte do que juntou
-  // (viagens, reformas, ajuda à família, carro melhor).
-  const financeiro = Math.max(0, f.conta) + totalAplicado(v);
-  const limiar = Math.max(300000, despesa * 12 * 8);
-  if (financeiro > limiar && i >= 30) {
-    const taxa = { apertado: 0.015, modesto: 0.02, confortavel: 0.03, folgado: 0.05 }[f.estilo];
-    // O que o patrimônio permite gastar sai do que está livre na conta — não obriga a vender aplicação.
-    const gasto = Math.min(Math.round((financeiro - limiar) * taxa), Math.max(0, Math.round(f.conta + (renda - despesa) * 12)));
-    if (gasto > 0) f.razao.push({ rotulo: 'Viagens, reformas e presentes que o patrimônio permitiu', valor: -gasto, grupo: 'lazer' });
-    f.conta -= gasto;
-  }
+  // (A1, playtest: o "efeito riqueza" — viagens, reformas e presentes que o patrimônio permite — saía AQUI, fora do mês,
+  // limitado a "tudo o que há na conta + a sobra do ano": a tela dizia "sobram R$ 14 mil por mês" e a conta fechava o
+  // ano em zero, sem linha à vista. Agora é uma linha do orçamento do mês (`gastoDoPatrimonio`), e nunca leva a sobra inteira.)
 
+  // O ano do mês a mês: cada linha do orçamento, vezes doze, na conta — e no extrato, uma a uma.
+  for (const l of linhas) lancar(v, l.rotulo, l.valor >= 0 ? (l.grupo === 'renda' ? (l.de === 'familia' ? 'familia' : 'renda') : 'despesa') : l.grupo === 'dividas' ? 'divida' : 'despesa', l.valor * 12);
   f.conta += (renda - despesa) * 12;
 
   // Com o que sobrou: primeiro o que está atrasado, depois a dívida cara.
-  pagarAtrasos(v);
+  lancar(v, 'Atrasados pagos (parcelas e aluguel)', 'divida', -pagarAtrasos(v));
   let pagoNoCartao = 0;
   // O cartão rotativo é o mais caro de todos: qualquer sobra vai para ele primeiro.
   for (const d of f.dividas.filter(x => x.tipo === 'cartao' && x.saldo > 0)) {
@@ -533,14 +561,18 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
     f.conta -= pago;
     pagoNoCartao += pago;
   }
+  lancar(v, 'Pago no cartão e no cheque especial', 'divida', -pagoNoCartao);
   const colchao = despesa;
+  let quitado = 0;
   for (const d of [...f.dividas].sort((a, b) => b.jurosMes - a.jurosMes)) {
     if (f.conta <= colchao || d.saldo <= 0 || d.tipo === 'cartao') continue;
     if (d.tipo === 'financiamento_imovel' || d.tipo === 'financiamento_veiculo' || d.tipo === 'fies') continue; // amortizar é decisão do jogador
     const pago = Math.min(d.saldo, f.conta - colchao);
     d.saldo -= pago;
     f.conta -= pago;
+    quitado += pago;
   }
+  lancar(v, 'Empréstimos adiantados com a sobra', 'divida', -quitado);
   const cartaoAberto = f.dividas.find(d => d.tipo === 'cartao' && d.saldo > 0);
   if (cartaoAberto && pagoNoCartao === 0 && !f.negativado && i >= 18) negativar(v, 'A fatura do cartão ficou sem pagar e o nome foi parar no cadastro de devedores.');
   if (f.negativado && !f.dividas.some(d => d.saldo > 0 && (d.tipo === 'cartao' || d.tipo === 'emprestimo')) && obrigacoesAtrasadas(v) === 0) {
@@ -553,6 +585,10 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
 
   // Faltou dinheiro: aplicações, família, crédito caro e, por fim, atraso.
   if (f.conta < 0) cobrirRombo(v, r);
+
+  // A conferência do fechamento: tudo o que ele mexeu tem linha. O que sobrar aqui é erro de contabilidade (os testes
+  // de `contabilidade` exigem que não haja) — fica escrito, nunca some.
+  conferir(v, 'Diferença sem explicação no fechamento do ano', 'ajuste');
 }
 
 function narrarAperto(v: Vida): void {
@@ -597,18 +633,21 @@ function negativar(v: Vida, texto: string): void {
   escrever(v, { texto: primeira ? texto : vezes === 2 ? 'O nome voltou para o cadastro de devedores.' : 'Nome sujo de novo.', relevancia: primeira ? 'biografia' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
 }
 
-/** Paga parcelas e aluguéis atrasados com o que há na conta. */
-function pagarAtrasos(v: Vida): void {
+/** Paga parcelas e aluguéis atrasados com o que há na conta. Devolve quanto pagou (para o extrato). */
+function pagarAtrasos(v: Vida): number {
   const f = v.financas;
   const itens: { valor: number; quitar: () => void }[] = [];
   if ((v.moradia.atraso ?? 0) > 0) itens.push({ valor: v.moradia.atraso! * v.moradia.aluguel, quitar: () => { v.moradia.atraso = 0; v.moradia.atrasoDesde = undefined; } });
   // O saldo da dívida já inclui as parcelas que ficaram para trás: pagar o atraso abate dele.
   for (const d of f.dividas) if ((d.atraso ?? 0) > 0) { const valor = Math.round(d.atraso! * d.parcela); itens.push({ valor, quitar: () => { d.atraso = 0; d.atrasoDesde = undefined; d.saldo = Math.max(0, d.saldo - valor); } }); }
+  let pago = 0;
   for (const it of itens.sort((a, b) => a.valor - b.valor)) {
     if (f.conta < it.valor) continue;
     f.conta -= it.valor;
+    pago += it.valor;
     it.quitar();
   }
+  return pago;
 }
 
 /**
@@ -620,44 +659,57 @@ function pagarAtrasos(v: Vida): void {
 function cobrirRombo(v: Vida, r: Rng): void {
   const f = v.financas;
   const i = idade(v);
-  let falta = -f.conta;
-  f.conta = 0;
-  const aplic = cobrirComAplicacoes(v, falta);
-  const resgatado = falta - aplic.resta;
-  falta = aplic.resta;
-  f.conta = 0;
+  // Cada passo cobre parte do vermelho e entra no extrato: a conta sobe em direção ao zero pelo que de fato entrou.
+  // (Antes, a conta era zerada logo no começo e a ajuda da família ainda CAÍA na conta: o mesmo buraco era coberto
+  // duas vezes — dinheiro que nascia do nada. Agora a ajuda tapa o buraco, e só.)
+  const aplic = medir(v, 'Tirado das aplicações para cobrir o ano', 'resgate', () => {
+    const falta = -f.conta;
+    const res = cobrirComAplicacoes(v, falta);
+    f.conta += falta - res.resta;
+    return { ...res, resgatado: falta - res.resta };
+  });
+  const resgatado = Math.round(aplic.resgatado);
   // O ano fechou no vermelho e as aplicações cobriram: não é silêncio — fica na conta do ano e na Linha da Vida.
   if (resgatado >= 100) {
-    f.razao.push({ rotulo: 'Tirado das aplicações para cobrir o ano', valor: Math.round(resgatado), grupo: 'outros' });
+    f.razao.push({ rotulo: 'Tirado das aplicações para cobrir o ano', valor: resgatado, grupo: 'outros' });
     escrever(v, { texto: `As contas do ano passaram do que entrou: saíram ${fmt(resgatado)} das aplicações para cobrir.`, relevancia: resgatado >= 20000 ? 'cotidiano' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
   }
   if (aplic.vendeuNaBaixa.length && !temFato(v, 'vendeu_na_baixa')) {
     marcarFato(v, 'vendeu_na_baixa');
     escrever(v, { texto: `Para fechar as contas, precisou vender ${aplic.vendeuNaBaixa[0]} num momento ruim — por menos do que tinha posto.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
   }
-  if (falta <= 0) return;
-  if (i >= 18) falta = ajudaDaFamilia(v, r, falta);
-  if (falta <= 0) return;
+  if (f.conta >= 0) return;
+  if (i >= 18) medir(v, 'A família cobriu parte do buraco do ano', 'familia', () => ajudaDaFamilia(v, r, -f.conta));
+  if (f.conta >= 0) return;
+  if (i < 18) {
+    // Menor de idade: quem cobre é a casa (não há crédito nem atraso em nome de criança).
+    lancar(v, 'O que a casa cobriu', 'familia', -f.conta);
+    f.conta = 0;
+    return;
+  }
 
   let cartao = f.dividas.find(d => d.tipo === 'cartao');
   const cabe = Math.max(0, limiteDeCredito(v) - (cartao?.saldo ?? 0));
-  const noCredito = Math.min(cabe, falta);
+  const noCredito = Math.round(Math.min(cabe, -f.conta));
   if (noCredito > 0) {
     if (!cartao) {
       cartao = { id: `cartao${v.seq++}`, tipo: 'cartao', saldo: 0, jurosMes: 0.045, parcela: 0, descricao: 'Cartão e cheque especial', tInicio: v.t };
       f.dividas.push(cartao);
     }
     const antes = cartao.saldo;
-    cartao.saldo += Math.round(noCredito);
+    cartao.saldo += noCredito;
+    f.conta += noCredito;
+    lancar(v, 'Coberto no cartão e no cheque especial (dívida nova)', 'divida', noCredito);
     if (!temFato(v, 'teve_divida_cartao') && cartao.saldo >= 300) {
       marcarFato(v, 'teve_divida_cartao');
       escrever(v, { texto: `As contas não fecharam e o buraco foi para o cartão de crédito: ${fmt(cartao.saldo)} rodando a juros altos.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
     } else if (antes < 20000 && cartao.saldo >= 20000) {
       escrever(v, { texto: `A dívida do cartão passou de ${fmt(20000)}. Os juros comem o salário antes dele chegar.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
     }
-    falta -= noCredito;
   }
-  if (falta <= 0 || i < 18) return;
+  if (f.conta >= 0) return;
+  const falta = -f.conta;
+  f.conta = 0;
 
   // O que não coube em lugar nenhum vira atraso: parcelas e aluguel ficam devendo.
   const parceladas = f.dividas.filter(d => d.parcela > 0 && d.saldo > 0);
@@ -672,7 +724,9 @@ function cobrirRombo(v: Vida, r: Rng): void {
       escrever(v, { texto: `Pela primeira vez, as parcelas${aluguel ? ' e o aluguel' : ''} atrasaram. Chegou a primeira carta de cobrança.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
     }
     abalar(v, 'as contas atrasadas', -3, 8);
+    lancar(v, 'Parcelas e aluguel que ficaram em atraso (viram dívida)', 'divida', falta);
   } else {
+    lancar(v, 'Contas que ficaram sem pagar (viraram nome sujo)', 'divida', falta);
     negativar(v, 'Contas de luz, água e telefone atrasadas viraram nome sujo. Crédito, agora, só depois de acertar.');
     abalar(v, 'as contas atrasadas', 0, 6);
     v.corpo.saude = clamp(v.corpo.saude - Math.min(2, Math.round(falta / 10000)));
@@ -741,8 +795,9 @@ export function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
   return Math.max(0, falta);
 }
 
-/** Registra como estava o dinheiro neste aniversário (evolução e métricas). */
+/** Registra como estava o dinheiro neste aniversário (evolução e métricas) e fecha o extrato do ano. */
 export function fotografar(v: Vida): void {
+  fecharExtrato(v, 'Depois do fechamento: obrigações e acontecimentos');
   const b = balanco(v);
   const o = orcamento(v);
   const h = v.financas.historico;
@@ -792,6 +847,7 @@ export function planoDeResgate(v: Vida, valor: number): { itens: { id: string; n
   let falta = valor;
   for (const a of [...v.financas.investimentos].sort((x, y) => produto(x.produto).ordemResgate - produto(y.produto).ordemResgate)) {
     if (falta <= 0) break;
+    if (emTutela(v, a)) continue;
     const tirar = Math.min(falta, a.valor);
     if (tirar <= 0) continue;
     const nome = produto(a.produto).nome.toLowerCase();

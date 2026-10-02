@@ -13,3 +13,4 @@ export { patrimonio } from './sistemas/dinheiro';
 export { nomeLugar } from './dados/lugares';
 export { descricaoEmprego } from './sistemas/trabalho';
 export { anoDe } from './tempo';
+export { continuarComo, decidirHeranca, encerrarHistoria } from './sistemas/sucessao';

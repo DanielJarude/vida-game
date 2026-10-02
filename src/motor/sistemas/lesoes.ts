@@ -164,6 +164,10 @@ export function processarLesoes(v: Vida, r: Rng): void {
   if (v.t < l.tFim) return;
   v.corpo.condicoes = v.corpo.condicoes.filter(x => x !== c);
   const meses = Math.max(1, l.tFim - c.tInicio);
+  // A lesão some das condições, mas o que ela tirou do corpo continua na tendência por um tempo:
+  // a tela que explica "vem piorando" precisa dizer que foi ela (`pessoa.causasDoCondicionamento`).
+  v.fatos['lesao_curada'] = v.t;
+  v.fatos['lesao_curada_meses'] = Math.min(meses, 24);
   if (l.gravidade >= 2) {
     const texto = `Voltou ${l.origem === 'profissional' ? 'a jogar' : 'a treinar'} depois de ${meses} ${meses === 1 ? 'mês' : 'meses'} por causa d${/^[ao] /.test(l.parte) ? l.parte.slice(0, 1) + ' ' + l.parte.slice(2) : 'a lesão'}.`;
     escrever(v, { texto: l.cuidado === 'cirurgia' && l.gravidade >= 3 ? `${texto} A cirurgia e a recuperação deram certo.` : texto, relevancia: l.gravidade >= 3 ? 'biografia' : 'cotidiano', tema: 'saude', tom: 'bom' });

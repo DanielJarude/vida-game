@@ -38,6 +38,7 @@ import { MODS as MODS_ESPORTE } from '../../motor/sistemas/oportunidades';
 import { custoDaExperiencia, descricaoDaExperiencia, escolhasDaExperiencia, experienciasPossiveis, nomeDaExperiencia, type TipoExperiencia } from '../../motor/sistemas/experiencias';
 import { estadoDoArco } from '../../motor/sistemas/arcos';
 import { VIVENCIA_DA_ROTINA } from '../../motor/sistemas/formacao';
+import { EscolherViagem } from './Viagem';
 
 /** A história da atividade (a etapa e o papel), quando ela tem uma (`arcos`). */
 const estadoDaAtividade = (vida: Vida, id: string) => { const viv = (vida.educacao.vivencias ?? []).find(x => x.tipo === VIVENCIA_DA_ROTINA[id] && x.tFim === undefined); const e = estadoDoArco(id, viv); return e ? `Agora: ${e}.` : undefined; };
@@ -193,7 +194,9 @@ function ComoVoceVai({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => bo
  * O que o dinheiro compra além de objetos: aparece conforme o que a vida tem
  * (não o catálogo inteiro). Cada categoria é uma PORTA: abrir mostra as
  * escolhas concretas desta vida (o destino e a duração, o curso, o projeto,
- * a pessoa e o presente), cada uma com o seu preço.
+ * a pessoa e o presente), cada uma com o seu preço. A viagem vai em passos
+ * (país → cidade → duração → resumo; região → destino → duração → resumo),
+ * em EscolherViagem: nunca todas as combinações de uma vez.
  */
 function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const [aberta, setAberta] = useState<TipoExperiencia | null>(null);
@@ -206,14 +209,23 @@ function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
         {lista.map(id => {
           const escolhas = escolhasDaExperiencia(vida, id);
           const porta = escolhas.length > 0;
+          const viagem = id === 'viagem_pais' || id === 'viagem_exterior';
+          // A restrição da porta inteira (foi há pouco, nem a mais barata cabe) é dita uma vez, aqui — não em cada escolha lá dentro.
+          const d = disponibilidade(vida, { tipo: 'experiencia', id });
+          const fechada = porta && !podeTentar(d) && !d.resgate;
           const grupos = [...new Set(escolhas.map(e => e.grupo ?? ''))];
           return (
             <li key={id} className="experiencia">
-              <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)}</strong><span>{descricaoDaExperiencia(id)} {porta ? `A partir de ${dinheiroCurto(custoDaExperiencia(vida, id))}.` : `Uns ${dinheiroCurto(custoDaExperiencia(vida, id))}.`}</span></span>
-              {porta
+              <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)}</strong><span>{descricaoDaExperiencia(id)} {porta ? `A partir de ${dinheiroCurto(custoDaExperiencia(vida, id))}.` : `Uns ${dinheiroCurto(custoDaExperiencia(vida, id))}.`}</span>{fechada && d.motivo && <span className="acao__motivo">{d.motivo}</span>}</span>
+              {porta && !fechada
                 ? <button type="button" className="botao botao--discreto" aria-expanded={aberta === id} onClick={() => setAberta(a => (a === id ? null : id))}>{aberta === id ? 'Fechar' : id === 'bancar_projeto' ? 'Ver projetos' : id === 'presente_familia' ? 'Escolher' : id === 'curso_caro' ? 'Ver cursos' : 'Ver destinos'}</button>
-                : <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id }} agir={agir} variante="discreto" ocultarImpossivel>Tirar</BotaoAcao>}
-              {porta && aberta === id && (
+                : !porta && <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id }} agir={agir} variante="discreto" ocultarImpossivel>Tirar</BotaoAcao>}
+              {porta && !fechada && aberta === id && viagem && (
+                <div className="experiencia__escolhas">
+                  <EscolherViagem vida={vida} id={id} agir={agir} aoConcluir={() => setAberta(null)} />
+                </div>
+              )}
+              {porta && !fechada && aberta === id && !viagem && (
                 <div className="experiencia__escolhas">
                   {grupos.map(g => (
                     <div key={g} className="experiencia__grupo">

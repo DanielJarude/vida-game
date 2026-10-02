@@ -502,7 +502,7 @@ function Abrigo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
           const d = disponibilidade(vida, { tipo: 'adotar_pet', animalId: a.id });
           return (
             <li key={a.id} className="animal">
-              <Retrato visual={undefined} genero={a.genero} idade={a.idade} semente={a.id} tamanho={64} especie={a.especie} rotulo={a.nome} />
+              <Retrato visual={undefined} genero={a.genero} idade={a.idade} semente={a.id} tamanho={64} especie={a.especie} porte={a.porte} rotulo={a.nome} />
               <div className="animal__texto">
                 <strong>{a.nome}</strong>
                 <span>{capitalizar(palavraDoBicho(a.especie, a.genero, false))}{a.especie === 'cachorro' ? ` de porte ${a.porte === 'medio' ? 'médio' : a.porte}` : ''} · {a.idade === 0 ? 'filhote' : `${a.idade} ${a.idade === 1 ? 'ano' : 'anos'}`}</span>

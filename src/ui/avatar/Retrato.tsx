@@ -11,6 +11,7 @@
 import { memo, type ReactElement } from 'react';
 import type { Especie } from '../../motor/tipos';
 import { animal, palavraDoBicho } from '../../motor/dados/animais';
+import { FiguraCao, FiguraGato, morfologiaCao, morfologiaGato, type Porte } from './caesEGatos';
 import type { Genero, Visual } from '../../motor/tipos';
 
 const PELE: Record<string, [string, string]> = {
@@ -88,12 +89,14 @@ interface Props {
    * sobrancelha, pálpebra e cor do rosto — o mesmo rosto, noutro dia.
    */
   expressao?: Expressao;
+  /** Pet: o porte (de `pessoa.pet.porte`) — entra na morfologia do cão. */
+  porte?: Porte;
 }
 
 export type Expressao = 'bem' | 'neutro' | 'cansado' | 'abatido' | 'tenso' | 'doente';
 
-export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido, expressao = 'neutro' }: Props) {
-  if (especie) return <RetratoPet especie={especie} tamanho={tamanho} rotulo={rotulo} semente={semente} />;
+export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido, expressao = 'neutro', porte }: Props) {
+  if (especie) return <RetratoPet especie={especie} tamanho={tamanho} rotulo={rotulo} semente={semente} porte={porte} />;
   const v: Visual = visual ?? { pele: 'p3', cabelo: 'curto', corCabelo: 'castanho', olhos: 'castanho' };
   const f = faseDe(idade);
   const fem = genero === 'feminino';
@@ -530,13 +533,14 @@ function Barba({ tipo, cor, cx, olhoY, w, queixo, jaw, bigode: comBigode = true 
 
 /**
  * Os bichos têm a sua própria linguagem, por família, e NUNCA um rosto de
- * gente: nada de dois olhos e uma boca num círculo chapado. O cão e os
- * pequenos mamíferos vêm de perfil (focinho, olho do lado, orelha no lugar
- * certo); o gato, de frente, mas com orelhas, almofadas de bigode e a boca
- * em "w"; o hamster é uma bola sem pescoço, de bochechas cheias e patinhas;
- * o porquinho-da-índia, um pão comprido sem pescoço nem rabo; as aves, de
+ * gente: nada de dois olhos e uma boca num círculo chapado. O cão e o gato
+ * vêm de corpo inteiro, de perfil, montados por morfologia (`caesEGatos`:
+ * porte, corpo, perna, focinho, orelha, cauda, pelagem); os pequenos
+ * mamíferos, de perfil (focinho, olho do lado, orelha no lugar certo); o
+ * hamster é uma bola sem pescoço, de bochechas cheias e patinhas; o
+ * porquinho-da-índia, um pão comprido sem pescoço nem rabo; as aves, de
  * perfil num poleiro, cada uma com o seu bico, cauda e marca; os répteis e
- * os peixes, pela silhueta. A semente varia a pelagem (e a orelha do cão),
+ * os peixes, pela silhueta. A semente varia a pelagem (e, no cão e no gato, a forma),
  * nunca a espécie. Sem gradiente, cor contida, olho de conta com um brilho.
  */
 const ESCURO = '#141110';
@@ -554,63 +558,25 @@ const escolha = <T,>(xs: readonly T[], semente: string, sal = 0): T => xs[(hash(
 
 const FUNDO_PET: Record<string, string> = { cao: '#dfe6f0', gato: '#e6e0ea', roedor: '#e9e2d4', coelho: '#e3ebe2', ave: '#e8e4d2', peixe: '#cfe3ea', reptil: '#dfe8d4' };
 
-function RetratoPet({ especie, tamanho, rotulo, semente }: { especie: Especie; tamanho: number; rotulo?: string; semente: string }) {
+function RetratoPet({ especie, tamanho, rotulo, semente, porte }: { especie: Especie; tamanho: number; rotulo?: string; semente: string; porte?: Porte }) {
   const a = animal(especie);
   const Desenho = DESENHO_PET[especie] ?? DESENHO_PET[a.grupo === 'gato' ? 'gato' : 'cachorro'];
   return (
     <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} style={{ background: FUNDO_PET[a.grupo] ?? '#dfe6f0' }} role="img" aria-label={rotulo ?? palavraDoBicho(especie, 'masculino', false)} data-especie={especie}>
-      <Desenho semente={semente} />
+      <Desenho semente={semente} porte={porte} />
     </svg>
   );
 }
 
-type DesenhoBicho = (p: { semente: string }) => ReactElement;
+type DesenhoBicho = (p: { semente: string; porte?: Porte }) => ReactElement;
 
-/** Cão: de perfil, focinho comprido com a trufa na ponta, orelha caída ou em pé, coleira. */
-const Cao: DesenhoBicho = ({ semente }) => {
-  const c = escolha(['#8a5a32', '#2b2622', '#d9c3a0', '#a8752f', '#6b6560', '#efe6d8'], semente);
-  const escuro = misturar(c, '#000000', 0.3), claro = misturar(c, '#ffffff', 0.35);
-  const emPe = hash(semente) % 3 === 0;
-  return (
-    <g>
-      <path d="M 30 54 C 22 68 18 84 17 100 H 70 C 66 88 62 74 62 60 Z" fill={c} />
-      {hash(semente) % 2 === 0 && <path d="M 36 74 C 32 84 32 94 34 100 H 52 C 52 90 48 80 36 74 Z" fill={claro} />}
-      <ellipse cx="46" cy="42" rx="18" ry="16" fill={c} />
-      <path d="M 51 32 C 64 31 78 37 82 45 C 85 52 80 58 72 59 L 55 61 C 50 54 48 42 51 32 Z" fill={claro} />
-      <ellipse cx="81" cy="45" rx="3.8" ry="3.1" fill={ESCURO} />
-      <path d="M 80 53 Q 72 57 63 56" stroke={ESCURO} strokeWidth="1.3" fill="none" />
-      <Olho x={58} y={37} r={2.8} aro={aroSe(c)} />
-      {emPe
-        ? <><path d="M 33 34 L 36 10 L 51 28 Z" fill={escuro} /><path d="M 37 30 L 38 17 L 46 27 Z" fill={ROSA} opacity="0.6" /></>
-        : <path d="M 38 28 C 28 28 24 42 27 56 C 29 62 35 61 38 55 C 41 46 44 34 38 28 Z" fill={escuro} />}
-      <path d="M 31 63 Q 46 71 62 66" stroke="#b8442e" strokeWidth="4" fill="none" strokeLinecap="round" />
-      <circle cx="47" cy="72" r="2.6" fill="#c9a23a" />
-    </g>
-  );
-};
-
-/** Gato: de frente, cabeça larga, orelhas em triângulo, olho amendoado de pupila fenda, boca em "w". */
-const Gato: DesenhoBicho = ({ semente }) => {
-  const c = escolha(['#2b2622', '#7d7670', '#c98a43', '#efe6d8', '#8a7a66'], semente);
-  const escuro = misturar(c, '#000000', 0.35), claro = c === '#efe6d8' ? '#ffffff' : misturar(c, '#ffffff', 0.55);
-  const listrado = c === '#c98a43' || c === '#8a7a66' || c === '#7d7670';
-  const iris = escolha(['#c9b23a', '#7fa04a', '#d08a2a'], semente, 3);
-  return (
-    <g>
-      <ellipse cx="50" cy="98" rx="27" ry="22" fill={c} />
-      <path d="M 26 48 L 28 15 L 48 32 Z M 74 48 L 72 15 L 52 32 Z" fill={c} />
-      <path d="M 30 40 L 31 22 L 42 32 Z M 70 40 L 69 22 L 58 32 Z" fill={ROSA} opacity="0.75" />
-      <ellipse cx="50" cy="53" rx="27" ry="21" fill={c} />
-      {listrado && <path d="M 44 36 L 46 43 M 50 34 V 42 M 56 36 L 54 43 M 24 54 H 31 M 25 59 H 31 M 76 54 H 69 M 75 59 H 69" stroke={escuro} strokeWidth="2.2" strokeLinecap="round" />}
-      <ellipse cx="45.5" cy="64.5" rx="5.4" ry="4" fill={claro} /><ellipse cx="54.5" cy="64.5" rx="5.4" ry="4" fill={claro} />
-      <ellipse cx="39" cy="51" rx="5" ry="4.2" fill={iris} /><ellipse cx="61" cy="51" rx="5" ry="4.2" fill={iris} />
-      <ellipse cx="39" cy="51" rx="1.3" ry="3.7" fill={ESCURO} /><ellipse cx="61" cy="51" rx="1.3" ry="3.7" fill={ESCURO} />
-      <path d="M 47 59 H 53 L 50 62 Z" fill="#d07a7a" />
-      <path d="M 50 62 V 64 M 50 64 Q 47.5 67 45 65.5 M 50 64 Q 52.5 67 55 65.5" stroke={ESCURO} strokeWidth="0.9" fill="none" strokeLinecap="round" />
-      <Bigodes x={40} y={64} lado={-1} comp={17} /><Bigodes x={60} y={64} lado={1} comp={17} />
-    </g>
-  );
-};
+/**
+ * Cão e gato: o corpo inteiro, por morfologia (porte, corpo, perna, focinho,
+ * orelha, cauda, pelagem — ver `caesEGatos`). A cor é variação dentro da
+ * forma; dois vira-latas caramelo não saem iguais.
+ */
+const Cao: DesenhoBicho = ({ semente, porte }) => <FiguraCao m={morfologiaCao(semente, porte)} />;
+const Gato: DesenhoBicho = ({ semente }) => <FiguraGato m={morfologiaGato(semente)} />;
 
 /** Hamster: uma bola sem pescoço, bochechas estufadas, orelhinhas redondas no alto, patinhas no peito. */
 const Hamster: DesenhoBicho = ({ semente }) => {

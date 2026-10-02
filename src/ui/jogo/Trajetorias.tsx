@@ -17,6 +17,19 @@
 import { useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import { trajetoriasDaVida, type TrajetoriaDaVida } from '../../motor/sistemas/legado';
+import { palmaresDe } from '../../motor/sistemas/palmares';
+import { celulaDoHistorico, GlifoDaLinha, type Glifo } from '../iconesConquista';
+
+/**
+ * O glifo de uma linha do histórico esportivo que não é uma conquista
+ * registrada (a linha da seleção, a campanha num torneio pelo país).
+ */
+function glifoDoGrupo(grupo: string, linha: string): Glifo | undefined {
+  if (grupo === 'Títulos') return 'taca';
+  if (grupo === 'Finais') return 'final';
+  if (grupo === 'Pelo país' || grupo.startsWith('Prêmios e representação')) return /medalha/i.test(linha) ? 'medalha' : /campe/i.test(linha) ? 'taca' : /convoca/i.test(linha) ? 'bandeira' : grupo === 'Pelo país' ? 'bandeira' : 'premio';
+  return undefined;
+}
 
 export function OQueConstruiu({ vida, titulo = 'O que você construiu', limite }: { vida: Vida; titulo?: string; limite?: number }) {
   const lista = trajetoriasDaVida(vida).filter(t => t.area !== 'formacao' || t.realizacoes.length > 0 || t.detalhe.length > 0);
@@ -26,13 +39,13 @@ export function OQueConstruiu({ vida, titulo = 'O que você construiu', limite }
     <section className="trajetorias-vida" aria-labelledby="titulo-construiu">
       <h2 id="titulo-construiu" className="voce-subtitulo">{titulo}</h2>
       <ol className="trajetorias-vida__lista">
-        {mostradas.map(t => <Trajetoria key={t.id} t={t} />)}
+        {mostradas.map(t => <Trajetoria key={t.id} t={t} palmares={t.area === 'esporte' ? palmaresDe(vida) : undefined} />)}
       </ol>
     </section>
   );
 }
 
-function Trajetoria({ t }: { t: TrajetoriaDaVida }) {
+function Trajetoria({ t, palmares }: { t: TrajetoriaDaVida; palmares?: ReturnType<typeof palmaresDe> }) {
   const [aberta, setAberta] = useState(false);
   const temDetalhe = t.detalhe.some(d => d.linhas.length || d.tabela?.linhas.length);
   const id = `trajetoria-${t.id.replace(/[^a-z0-9]/gi, '-')}`;
@@ -41,8 +54,8 @@ function Trajetoria({ t }: { t: TrajetoriaDaVida }) {
       <p className="trajetoria-vida__cabeca"><span className="trajetoria-vida__titulo">{t.titulo}</span> <span className="trajetoria-vida__periodo">{t.periodo}</span></p>
       <p className="trajetoria-vida__resumo">{t.resumo}</p>
       {t.realizacoes.length > 0 && (
-        <ul className="trajetoria-vida__marcos" aria-label={`O que marcou: ${t.titulo}`}>
-          {t.realizacoes.slice(0, 3).map((r, k) => <li key={k}>{r}</li>)}
+        <ul className={`trajetoria-vida__marcos${palmares ? ' trajetoria-vida__marcos--glifos' : ''}`} aria-label={`O que marcou: ${t.titulo}`}>
+          {t.realizacoes.slice(0, 3).map((r, k) => <li key={k}>{palmares && <GlifoDaLinha palmares={palmares} linha={r} padrao="marco" />}{r}</li>)}
         </ul>
       )}
       {temDetalhe && (
@@ -53,7 +66,7 @@ function Trajetoria({ t }: { t: TrajetoriaDaVida }) {
       {aberta && (
         <div id={id} className="trajetoria-vida__detalhe">
           {t.realizacoes.length > 3 && (
-            <div className="palmares__grupo"><h4>Mais do que marcou</h4><ul className="marcos-caminho">{t.realizacoes.slice(3).map((r, k) => <li key={k}><span>{r}</span></li>)}</ul></div>
+            <div className="palmares__grupo"><h4>Mais do que marcou</h4><ul className="marcos-caminho marcos-caminho--glifos">{t.realizacoes.slice(3).map((r, k) => <li key={k}>{palmares && <GlifoDaLinha palmares={palmares} linha={r} padrao="marco" />}<span>{r}</span></li>)}</ul></div>
           )}
           {t.detalhe.map((d, k) => (
             <div key={k} className="palmares__grupo">
@@ -62,11 +75,11 @@ function Trajetoria({ t }: { t: TrajetoriaDaVida }) {
                 <div className="palmares__historico-rolagem">
                   <table className="palmares__historico">
                     <thead><tr>{d.tabela.colunas.map(c => <th key={c} scope="col">{c}</th>)}</tr></thead>
-                    <tbody>{[...d.tabela.linhas].reverse().map((l, j) => <tr key={j}>{l.map((c, i) => <td key={i}>{c}</td>)}</tr>)}</tbody>
+                    <tbody>{[...d.tabela.linhas].reverse().map((l, j) => <tr key={j}>{l.map((c, i) => <td key={i}>{celulaDoHistorico(c)}</td>)}</tr>)}</tbody>
                   </table>
                 </div>
               )}
-              {d.linhas.length > 0 && <ul className="marcos-caminho">{d.linhas.map((x, j) => <li key={j}><span>{x}</span></li>)}</ul>}
+              {d.linhas.length > 0 && <ul className={`marcos-caminho${palmares ? ' marcos-caminho--glifos' : ''}`}>{d.linhas.map((x, j) => { const g = palmares && glifoDoGrupo(d.titulo, x); return <li key={j}>{palmares && <GlifoDaLinha palmares={palmares} linha={x} padrao={g} />}<span>{x}</span></li>; })}</ul>}
             </div>
           ))}
         </div>

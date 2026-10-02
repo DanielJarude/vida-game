@@ -127,6 +127,9 @@ export function porOrigem(v: Vida, f: FonteDoNome | undefined = origemDoNome(v))
   if (f === 'arte') return 'pela obra e pelos trabalhos';
   if (f === 'politica') return 'pela vida pública';
   if (f === 'negocio') return 'pelo negócio';
+  // Sucessão: sem nome próprio, o que o público conhece é o sobrenome — a associação com quem veio antes (nunca o mérito dela).
+  const antes = [...(v.linhagem?.geracoes ?? [])].reverse().find(g => (g.notoriedade?.pico ?? 0) >= 25);
+  if (!f && antes) { const g = v.eu.tratamento ?? v.eu.genero; return `por ser ${g === 'masculino' ? 'filho' : g === 'feminino' ? 'filha' : 'filhe'} de ${antes.nome} ${antes.sobrenome}`; }
   return '';
 }
 

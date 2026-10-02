@@ -5,7 +5,7 @@
  */
 
 import type { Conteudo, Ctx } from './base';
-import { intencoesDe, memoriaDaSituacao, resolverSituacao, situacaoAberta } from '../sistemas/situacoes';
+import { intencoesDe, memoriaDaSituacao, resolverSituacao, situacaoAberta, textoDaSituacao } from '../sistemas/situacoes';
 
 const it = (c: Ctx, k: number) => { const a = situacaoAberta(c.v); return a ? intencoesDe(a.m, c.v, a.d)[k] : undefined; };
 
@@ -14,7 +14,7 @@ export const SITUACOES: Conteudo[] = [
     id: 'car_situacao', tipo: 'decisao', idade: [16, 90], tema: 'trabalho', prioritario: true, prioridade: 2, repetir: 0,
     quando: c => !!situacaoAberta(c.v),
     titulo: c => { const a = situacaoAberta(c.v)!; return typeof a.m.titulo === 'string' ? a.m.titulo : a.m.titulo(c.v, a.d); },
-    texto: c => { const a = situacaoAberta(c.v)!; return a.m.texto(c.v, a.d); },
+    texto: c => { const a = situacaoAberta(c.v)!; return textoDaSituacao(c.v, a.m, a.d); },
     opcoes: [0, 1, 2, 3].map(k => ({
       id: `i${k}`,
       texto: (c: Ctx) => { const x = it(c, k); const a = situacaoAberta(c.v); return x && a ? (typeof x.texto === 'string' ? x.texto : x.texto(c.v, a.d)) : '—'; },

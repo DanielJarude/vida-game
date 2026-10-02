@@ -19,9 +19,11 @@ import { abalar } from '../sistemas/abalo';
 import { marcar } from '../sistemas/marcas';
 import { valorDoNegocio } from '../sistemas/negocio';
 import {
-  CARGOS, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, PARTIDOS,
+  calendarioDoMandato, CARGOS, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, PARTIDOS,
   podeConcorrer, PRIORIDADES, registrarCandidatura, registrarNoMandato, renunciar, voltarAoTrabalho, perspectiva, regraDaTroca, trocarDePartido } from '../sistemas/politica';
 import { anoDe } from '../tempo';
+import { registrarMomento } from '../sistemas/situacoes';
+import { habilidade } from '../sistemas/frentes';
 import { dinheiro as fmt } from '../texto';
 import { aoPartido, nomeCompletoPartido, oPartido, partidoDe, peloPartido } from '../dados/partidos';
 
@@ -109,6 +111,25 @@ function indicar(c: Ctx, k: number): Resultado {
     relevancia: 'biografia',
     efeito: () => { const p = pol(c); p.partido = sigla; p.tFiliacao = undefined; p.indicacaoMilitar = true; (p.partidos ??= []).push({ sigla, tInicio: c.v.t }); p.fase = p.fase === 'envolvido' ? 'filiado' : p.fase; c.v.fatos['pol_partido_porte'] = k; marcar(c.v, 'politica', `Indicado ${peloPartido(sigla)}, ainda na farda.`, 2); }
   };
+}
+
+/**
+ * A pergunta da eleição para quem tem mandato: o texto sai do calendário do
+ * mandato (`calendarioDoMandato`), o mesmo que abre a janela no motor. "Último
+ * ano" só quando é mesmo o último; a eleição do meio do mandato é outra conversa.
+ */
+function textoDoMandatoNaEleicao(c: Ctx): string {
+  const p = pol(c);
+  const cal = calendarioDoMandato(c.v)!;
+  const cargo = nomeCargo(c.v, cal.cargo);
+  const e = cal.naJanela;
+  if (!e || e.encerra) {
+    const quando = cal.ultimoAno ? `O mandato de ${cargo} entra no último ano.` : `Em janeiro começa o último ano do mandato de ${cargo}, e a eleição de outubro de ${cal.eleicaoDoFim.ano} decide quem fica com o cargo.`;
+    return `${quando} O partido quer saber o que você vai fazer — e a casa também.`;
+  }
+  const tipo = e.tipo === 'municipal' ? 'municipal' : 'geral';
+  const regra = CARGOS[cal.cargo].executivo ? `Para disputar outro cargo, é preciso renunciar ao mandato de ${cargo} seis meses antes.` : `Dá para disputar outro cargo sem largar o mandato de ${cargo}.`;
+  return `O mandato de ${cargo} vai até ${cal.anoFinal} (este é o ano ${cal.ano} de ${cal.anos}), mas em outubro de ${e.ano} tem eleição ${tipo}. ${regra} ${cap(oPartido(p.partido))} quer saber o que você vai fazer.`;
 }
 
 function cargoOpcao(cargo: CargoEletivo) {
@@ -246,7 +267,7 @@ export const POLITICA: Conteudo[] = [
     texto: c => {
       const e = etapa(c);
       const p = pol(c);
-      if (e === 0) return p.mandato ? `O mandato de ${nomeCargo(c.v, p.mandato.cargo)} entra no último ano. O partido quer saber o que você vai fazer — e a casa também.` : `Em outubro tem eleição ${eleicaoNaJanela(c.v)?.tipo === 'municipal' ? 'municipal' : 'geral'}. ${cap(oPartido(p.partido))} quer saber se você vem.${comFamilia(c.v) ? ' Em casa, a pergunta é outra: vale o preço?' : ''}`;
+      if (e === 0) return p.mandato ? textoDoMandatoNaEleicao(c) : `Em outubro tem eleição ${eleicaoNaJanela(c.v)?.tipo === 'municipal' ? 'municipal' : 'geral'}. ${cap(oPartido(p.partido))} quer saber se você vem.${comFamilia(c.v) ? ' Em casa, a pergunta é outra: vale o preço?' : ''}`;
       if (e === 1) return `De onde vem o dinheiro da campanha? Material, carro de som, gente na rua: uma campanha como se deve custa uns ${fmt(custoDeCampanha(c.v, p.campanha!.cargo))}.`;
       if (e === 2) return 'Como chegar em quem vota?';
       return 'Faltam três semanas. O debate é quinta-feira.';
@@ -255,8 +276,13 @@ export const POLITICA: Conteudo[] = [
       ...CARGO_OPCOES,
       { id: 'nao', texto: 'Não concorrer desta vez', disponivel: c => (etapa(c) === 0 && !pol(c).mandato ? true : false),
         resolver: c => ({ texto: 'Você disse ao partido que desta vez não. A próxima eleição fica no horizonte.', memoria: null, efeito: () => { delete c.v.fatos['pol_quer']; } }) },
-      { id: 'voltar', texto: 'Não concorrer: terminar o mandato e voltar para a vida de antes', disponivel: c => (etapa(c) === 0 && !!pol(c).mandato ? true : false),
-        resolver: () => ({ texto: 'Você avisou que não vai disputar. O último ano do mandato começa com outra cabeça.', memoria: null }) },
+      // O mesmo calendário do texto: só a eleição que encerra o mandato é "terminar e voltar"; a do meio do mandato é "seguir nele".
+      { id: 'voltar', texto: c => (calendarioDoMandato(c.v)?.naJanela?.encerra === false ? `Não disputar: seguir no mandato de ${nomeCargo(c.v, pol(c).mandato!.cargo)} até o fim` : 'Não concorrer: terminar o mandato e voltar para a vida de antes'), disponivel: c => (etapa(c) === 0 && !!pol(c).mandato ? true : false),
+        resolver: c => {
+          const cal = calendarioDoMandato(c.v);
+          const texto = cal?.naJanela?.encerra === false ? `Você fica onde está: o mandato segue até ${cal.anoFinal}.` : cal?.ultimoAno ? 'Você avisou que não vai disputar. O último ano do mandato segue com outra cabeça.' : 'Você avisou que não vai disputar. O último ano do mandato vai começar com outra cabeça.';
+          return { texto, memoria: null };
+        } },
       { id: 'encerrar', texto: 'Encerrar a vida pública ao fim do mandato', comportamento: { familia: 1 }, disponivel: c => (etapa(c) === 0 && !!pol(c).mandato ? true : false),
         resolver: c => ({ texto: 'Você anunciou que este é o último mandato. Houve quem chorasse na reunião.', memoria: 'Anunciou que não disputaria mais eleições.', relevancia: 'biografia', efeito: () => { c.v.fatos['pol_nao_concorre'] = c.v.t; } }) },
       // Etapa 1: o dinheiro.
@@ -320,7 +346,7 @@ export const POLITICA: Conteudo[] = [
     id: 'pol_crise', tipo: 'decisao', idade: [18, 95], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 0,
     quando: c => !!c.v.caminhos.politica?.mandato?.crise && c.v.caminhos.politica.mandato.crise.t === c.v.t,
     titulo: c => ({ chuva: 'A chuva', greve: 'A greve', verba: 'O dinheiro que não fecha', obra: 'A obra parada', aliado: 'O aliado no noticiário', votacao: 'A votação', pedido: 'O pedido' } as Record<string, string>)[crise(c)] ?? 'Uma crise',
-    texto: c => ({
+    texto: c => (({
       chuva: 'Uma chuva de uma noite derrubou uma barreira e alagou três bairros. Tem gente dormindo na escola.',
       greve: 'Os professores entraram em greve: o reajuste prometido não veio.',
       verba: 'A arrecadação caiu e o dinheiro não fecha a folha do fim do ano.',
@@ -328,28 +354,53 @@ export const POLITICA: Conteudo[] = [
       aliado: 'Um aliado próximo apareceu no noticiário num caso mal explicado. Os jornalistas ligam para você.',
       votacao: 'O seu grupo quer o seu voto num projeto que contraria o que você prometeu na campanha.',
       pedido: 'Um apoiador de campanha pede "uma força" num contrato público. Diz que é tudo dentro da lei.'
-    } as Record<string, string>)[crise(c)] ?? 'Uma crise.',
+    } as Record<string, string>)[crise(c)] ?? 'Uma crise.') + lembrancaDaCrise(c),
     opcoes: [
+      // As três respostas mudam coisas DIFERENTES (não só a frase final): a aprovação, a base, o desgaste, o nome, o
+      // que sai do papel e a memória. E o desfecho sai do estado (liderança, cabeça, capital político, base), não de
+      // uma moeda fixa.
       { id: 'frente', texto: 'Ir até lá e assumir a frente', comportamento: { coragem: 1 }, disponivel: c => ['chuva', 'greve', 'verba', 'obra'].includes(crise(c)) || false,
-        resolver: c => { const deu = c.r.chance(0.65); return { texto: deu ? 'Você passou a madrugada no lugar. A foto correu a cidade — e o problema andou.' : 'Você foi, falou, prometeu. O problema continuou lá depois que as câmeras saíram.', memoria: null, tom: deu ? 'bom' : 'ruim', efeito: () => fecharCrise(c, deu ? 6 : 1, 0, 6) }; } },
+        consequencia: () => 'A base vê você lá. Se não resolver, a foto vira cobrança.',
+        resolver: c => {
+          const p = pol(c);
+          const deu = c.r.chance(chanceDaCrise(c, (habilidade(c.v, 'lideranca') - 40) / 40 + c.v.personalidade.tracos.coragem / 200 + (p.apoio - 40) / 80 - p.desgaste / 120));
+          const fim = ({ greve: deu ? 'A greve acabou num acordo costurado por você, na mesa com o sindicato.' : 'A greve continuou depois que as câmeras saíram.', chuva: deu ? 'As famílias voltaram para casa em uma semana; a barreira foi refeita.' : 'O abrigo na escola durou um mês.', verba: deu ? 'A folha fechou: você cortou na própria carne e explicou na rua.' : 'A folha atrasou duas semanas.', obra: deu ? 'A obra recomeçou com outra empresa em três meses.' : 'A obra continuou parada.' } as Record<string, string>)[crise(c)] ?? '';
+          return { texto: deu ? `Você passou a madrugada no lugar. A foto correu a cidade — e o problema andou. ${fim}` : `Você foi, falou, prometeu. ${fim}`, memoria: null, tom: deu ? 'bom' : 'ruim',
+            efeito: () => { p.apoio = clamp(p.apoio + (deu ? 4 : -1)); p.reputacao = clamp(p.reputacao + (deu ? 2 : 0)); if (deu && p.mandato) p.mandato.feito += 1; fecharCrise(c, deu ? 6 : 1, deu ? 2 : 6, 6, 'assumiu a frente', deu ? `Assumiu a frente ${daCrise(c)} — e resolveu: ${fim.charAt(0).toLowerCase()}${fim.slice(1)}` : undefined); } };
+        } },
       { id: 'tecnica', texto: 'Montar uma equipe técnica e explicar os números', comportamento: { disciplina: 1 }, disponivel: c => ['chuva', 'greve', 'verba', 'obra'].includes(crise(c)) || false,
-        resolver: c => ({ texto: 'Planilha, entrevista, calendário. Menos aplauso, menos vaia.', memoria: null, efeito: () => fecharCrise(c, 2, -2, 3) }) },
+        consequencia: () => 'Menos aplauso, menos vaia. A base pode achar frio.',
+        resolver: c => {
+          const p = pol(c);
+          const deu = c.r.chance(chanceDaCrise(c, (c.v.mente.cognicao - 50) / 40 + c.v.personalidade.tracos.disciplina / 200 + Math.min(8, (c.v.t - (p.mandato?.tInicio ?? c.v.t)) / 12) / 16));
+          const fim = ({ greve: deu ? 'Com os números na mesa, o reajuste saiu parcelado e as aulas voltaram.' : 'Os números não convenceram o sindicato; a greve seguiu.', chuva: deu ? 'O plano de contenção das encostas virou obra no orçamento.' : 'O plano ficou no papel.', verba: deu ? 'O corte técnico fechou a conta sem atrasar salário.' : 'A conta não fechou mesmo assim.', obra: deu ? 'A nova licitação saiu rápida e limpa.' : 'A licitação nova empacou.' } as Record<string, string>)[crise(c)] ?? '';
+          return { texto: `Planilha, entrevista, calendário. ${fim}`, memoria: null, tom: deu ? 'bom' : 'neutro',
+            efeito: () => { p.apoio = clamp(p.apoio - 2); if (deu && p.mandato) p.mandato.feito += 1; fecharCrise(c, deu ? 3 : -1, deu ? -3 : 1, 3, 'montou uma equipe técnica', undefined); } };
+        } },
       { id: 'culpar', texto: 'Culpar a gestão anterior', comportamento: { impulsividade: 1 }, disponivel: c => ['chuva', 'greve', 'verba', 'obra'].includes(crise(c)) || false,
-        resolver: c => { const colou = c.r.chance(0.45); return { texto: colou ? 'A culpa colou no outro — por enquanto.' : 'Ninguém quis saber de quem era a culpa: queriam solução.', memoria: null, tom: colou ? 'neutro' : 'ruim', efeito: () => fecharCrise(c, colou ? 2 : -5, 4, 2) }; } },
+        consequencia: () => 'Tira o peso de agora. O eleitor pode cobrar a solução.',
+        resolver: c => {
+          const p = pol(c);
+          // Colar depende de quanto tempo de cargo já se tem: no primeiro ano, a culpa do antecessor convence; no quarto, não.
+          const anosNoCargo = (c.v.t - (p.mandato?.tInicio ?? c.v.t)) / 12;
+          const colou = c.r.chance(chanceDaCrise(c, (p.reputacao - 40) / 60 - anosNoCargo / 2 + 0.4));
+          return { texto: colou ? 'A culpa colou no outro — por enquanto. O problema continua lá.' : 'Ninguém quis saber de quem era a culpa: queriam solução. O vídeo da entrevista virou piada.', memoria: null, tom: colou ? 'neutro' : 'ruim',
+            efeito: () => { p.apoio = clamp(p.apoio + (colou ? 1 : -3)); if (!colou) c.v.fatos['vis_polemica'] = c.v.t; fecharCrise(c, colou ? 2 : -5, colou ? 4 : 5, 2, 'culpou a gestão anterior', undefined); } };
+        } },
       { id: 'afastar', texto: 'Afastar o aliado', comportamento: { coragem: 1 }, disponivel: c => crise(c) === 'aliado' || false,
-        resolver: c => ({ texto: 'Você anunciou o afastamento antes do fim do dia. Parte do grupo nunca perdoou.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio - 6); fecharCrise(c, 5, 0, 4); } }) },
+        resolver: c => ({ texto: 'Você anunciou o afastamento antes do fim do dia. Parte do grupo nunca perdoou.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio - 6); fecharCrise(c, 5, 0, 4, 'afastou o aliado'); } }) },
       { id: 'defender', texto: 'Defender o aliado', disponivel: c => crise(c) === 'aliado' || false,
-        resolver: c => ({ texto: 'Você disse que confiava nele. A oposição guardou o vídeo.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio + 3); fecharCrise(c, -6, 6, 3); } }) },
+        resolver: c => ({ texto: 'Você disse que confiava nele. A oposição guardou o vídeo.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio + 3); fecharCrise(c, -6, 6, 3, 'defendeu o aliado'); } }) },
       { id: 'promessa', texto: 'Votar como prometeu na campanha', comportamento: { independencia: 1 }, disponivel: c => crise(c) === 'votacao' || false,
-        resolver: c => ({ texto: 'Você votou contra o próprio grupo. No corredor, silêncio; na rua, respeito.', memoria: 'Votou contra o próprio grupo para cumprir uma promessa de campanha.', relevancia: 'biografia', efeito: () => { pol(c).apoio = clamp(pol(c).apoio - 5); fecharCrise(c, 4, 0, 2); } }) },
+        resolver: c => ({ texto: 'Você votou contra o próprio grupo. No corredor, silêncio; na rua, respeito.', memoria: 'Votou contra o próprio grupo para cumprir uma promessa de campanha.', relevancia: 'biografia', efeito: () => { pol(c).apoio = clamp(pol(c).apoio - 5); fecharCrise(c, 4, 0, 2, 'votou como prometeu'); } }) },
       { id: 'grupo', texto: 'Votar com o grupo', disponivel: c => crise(c) === 'votacao' || false,
-        resolver: c => ({ texto: 'O projeto passou. Na rua, alguém lembrou do que você tinha dito.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio + 5); fecharCrise(c, -4, 2, 1); } }) },
+        resolver: c => ({ texto: 'O projeto passou. Na rua, alguém lembrou do que você tinha dito.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio + 5); fecharCrise(c, -4, 2, 1, 'votou com o grupo'); } }) },
       { id: 'faltar', texto: 'Não aparecer na sessão', disponivel: c => crise(c) === 'votacao' || false,
-        resolver: c => ({ texto: 'Você não foi. Os dois lados notaram.', memoria: null, efeito: () => fecharCrise(c, -2, 3, 1) }) },
+        resolver: c => ({ texto: 'Você não foi. Os dois lados notaram.', memoria: null, efeito: () => fecharCrise(c, -2, 3, 1, 'não apareceu na sessão') }) },
       { id: 'recusar', texto: 'Recusar o pedido', comportamento: { coragem: 1 }, disponivel: c => crise(c) === 'pedido' || false,
-        resolver: c => ({ texto: 'Você disse que não. O apoiador foi procurar outro nome para a próxima eleição.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio - 4); fecharCrise(c, 0, 0, 2); } }) },
+        resolver: c => ({ texto: 'Você disse que não. O apoiador foi procurar outro nome para a próxima eleição.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio - 4); fecharCrise(c, 0, 0, 2, 'recusou o pedido'); } }) },
       { id: 'ajudar', texto: 'Ajudar, "dentro da lei", como ele diz', comportamento: { impulsividade: 1, generosidade: -1 }, disponivel: c => crise(c) === 'pedido' || false,
-        resolver: c => ({ texto: 'Um telefonema, uma reunião, um contrato assinado. Nada no seu nome — por enquanto.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio + 4); c.v.fatos['pol_risco'] = c.v.t; fecharCrise(c, 0, 2, 1); } }) }
+        resolver: c => ({ texto: 'Um telefonema, uma reunião, um contrato assinado. Nada no seu nome — por enquanto.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio + 4); c.v.fatos['pol_risco'] = c.v.t; fecharCrise(c, 0, 2, 1, 'ajudou o apoiador'); } }) }
     ]
   },
   {
@@ -382,7 +433,7 @@ export const POLITICA: Conteudo[] = [
   {
     id: 'pol_deixar', tipo: 'decisao', idade: [16, 99], tema: 'escolha', manual: true, repetir: 0,
     titulo: 'Sair da vida pública?',
-    texto: c => { const p = pol(c); return p.mandato ? `Faltam ${Math.max(0, Math.round((p.mandato.tFim - c.v.t) / 12))} anos de mandato. Quem votou em você espera até o fim.` : `${Math.max(1, Math.round((c.v.t - p.tInicio) / 12))} anos de reunião, campanha, telefone tocando.`; },
+    texto: c => { const p = pol(c); const cal = calendarioDoMandato(c.v); return p.mandato && cal ? `${cal.ultimoAno ? `É o último ano do mandato (vai até o fim de ${cal.anoFinal}).` : `O mandato vai até ${cal.anoFinal}: ${cal.anos - cal.ano === 1 ? 'falta mais um ano' : `faltam mais ${cal.anos - cal.ano} anos`} depois deste.`} Quem votou em você espera até o fim.` : `${Math.max(1, Math.round((c.v.t - p.tInicio) / 12))} anos de reunião, campanha, telefone tocando.`; },
     opcoes: [
       { id: 'renunciar', texto: 'Renunciar ao mandato', comportamento: { independencia: 1 }, disponivel: c => (pol(c).mandato ? true : false),
         resolver: c => ({ texto: 'A carta de renúncia foi lida numa sessão esvaziada.', memoria: null, efeito: () => { renunciar(c.v, 'por decisão própria'); voltarAoTrabalho(c.v, 'depois da renúncia'); } }) },
@@ -403,15 +454,46 @@ const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 
 function crise(c: Ctx): string { return c.v.caminhos.politica?.mandato?.crise?.tipo ?? ''; }
 
-/** A crise se resolve (bem ou mal): aprovação, desgaste, cabeça. */
-function fecharCrise(c: Ctx, aprovacao: number, desgaste: number, cabeca: number): void {
+const NOME_CRISE: Record<string, string> = { chuva: 'a chuva que alagou os bairros', greve: 'a greve dos professores', verba: 'o dinheiro que não fechava', obra: 'a obra parada', aliado: 'o aliado no noticiário', votacao: 'a votação contra a promessa', pedido: 'o pedido de um apoiador' };
+const daCrise = (c: Ctx) => (NOME_CRISE[crise(c)] ?? 'uma crise').replace(/^a /, 'na ').replace(/^o /, 'no ');
+/** A chance de a resposta dar certo: o estado (o que a pessoa é e o que o mandato tem), não uma moeda fixa. */
+const chanceDaCrise = (_c: Ctx, x: number) => 1 / (1 + Math.exp(-(x + 0.5) * 1.6));
+
+/**
+ * Quando a mesma crise volta (a segunda greve, outra chuva), a cena lembra do
+ * que aconteceu da outra vez — o que se fez e como saiu — pelos marcos do
+ * mandato (deste e dos anteriores).
+ */
+function lembrancaDaCrise(c: Ctx): string {
+  const nome = NOME_CRISE[crise(c)];
+  if (!nome) return '';
+  const p = pol(c);
+  const marcos = [...(p.historico ?? []).flatMap(h => h.marcos ?? []), ...(p.mandato?.marcos ?? [])];
+  const antes = [...marcos].reverse().find(m => m.includes(nome));
+  if (!antes) return '';
+  const ano = /^(\d{4})/.exec(antes)?.[1];
+  const como = /\(([^)]+)\)/.exec(antes)?.[1];
+  const saiu = /saiu maior/.test(antes) ? 'saiu maior do que entrou' : /saiu mal/.test(antes) ? 'saiu mal' : 'atravessou sem ganhar nem perder muito';
+  return ` De novo. Em ${ano}, você ${como ?? 'respondeu'} — e ${saiu}.`;
+}
+
+/**
+ * A crise se resolve (bem ou mal): aprovação, desgaste, cabeça — e a memória:
+ * o marco no mandato (com a resposta escolhida, que a próxima crise do mesmo
+ * tipo lê), o registro nos momentos da carreira (a crise É o momento do ano)
+ * e, quando marca, a Linha da Vida.
+ */
+function fecharCrise(c: Ctx, aprovacao: number, desgaste: number, cabeca: number, como: string, memoria?: string): void {
   const p = pol(c);
   const m = p.mandato;
   if (!m) return;
   m.aprovacao = clamp(m.aprovacao + aprovacao);
-  // O que a crise deixou no mandato (a história política, não só a aprovação de agora).
-  const nome = ({ chuva: 'a chuva que alagou os bairros', greve: 'a greve dos professores', verba: 'o dinheiro que não fechava', obra: 'a obra parada', aliado: 'o aliado no noticiário', votacao: 'a votação contra a promessa', pedido: 'o pedido de um apoiador' } as Record<string, string>)[m.crise?.tipo ?? ''] ?? 'uma crise';
-  registrarNoMandato(c.v, `${anoDe(c.v.t)} · ${nome}: ${aprovacao >= 4 ? 'saiu maior do que entrou' : aprovacao <= -4 ? 'saiu mal' : 'atravessou sem ganhar nem perder muito'}`);
+  const tipo = m.crise?.tipo ?? '';
+  const nome = NOME_CRISE[tipo] ?? 'uma crise';
+  const saiu = aprovacao >= 4 ? 'saiu maior do que entrou' : aprovacao <= -4 ? 'saiu mal' : 'atravessou sem ganhar nem perder muito';
+  registrarNoMandato(c.v, `${anoDe(c.v.t)} · ${nome} (${como}): ${saiu}`);
+  registrarMomento(c.v, { id: `pol_crise_${tipo}`, t: c.v.t, trajetoria: 'politica', intencao: como.charAt(0).toUpperCase() + como.slice(1), desfecho: aprovacao >= 5 ? 'otimo' : aprovacao >= 1 ? 'bom' : aprovacao > -4 ? 'ruim' : 'pessimo', texto: memoria ?? `${nome.charAt(0).toUpperCase()}${nome.slice(1)}: ${como}; ${saiu}.` });
+  if (memoria) escrever(c.v, { texto: memoria.endsWith('.') ? memoria : `${memoria}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
   m.crise = undefined;
   p.desgaste = clamp(p.desgaste + desgaste);
   estresse(c, cabeca);
