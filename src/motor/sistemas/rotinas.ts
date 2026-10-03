@@ -31,9 +31,15 @@ import type { Categoria } from '../dados/frentes';
 import { categoriaDoVeiculo } from './veiculos';
 import { esfriarPreparo, prepararVestibular } from './vestibular';
 import { diagnosticar, encaminhado } from './saude';
+
 import { modeloFrente } from '../dados/frentes';
 import { anoDaAtividade, ofereceAqui } from './formacao';
 import { cursoOuNulo } from '../dados/cursos';
+import { textoLocal, type ChaveLocal } from '../mundo/locais';
+import { lugarDe, noEscopo, type Escopo } from '../mundo/escopo';
+import { regrasDaVida } from '../mundo/regras';
+import { educacaoDaVida, perfilDaVida } from '../mundo/vida';
+import { redeDeSaude } from './saude';
 
 export type CategoriaAtividade = Categoria | 'corpo' | 'lazer' | 'renda' | 'cuidado';
 
@@ -51,7 +57,14 @@ export interface NivelRotina {
 export interface ModeloRotina {
   id: string;
   nome: string;
-  descricao: string;
+  /** A descrição universal (vale em qualquer país); o que muda com o lugar vem de `local` (`mundo/locais`) ou é função. */
+  descricao: string | ((v: Vida) => string);
+  /** A descrição tem variante por lugar (o SESC no Brasil, a YMCA nos EUA; o universal em todo o resto). */
+  local?: ChaveLocal;
+  /** Onde a atividade existe (ausente: em todo lugar). */
+  escopo?: Escopo;
+  /** A atividade só existe onde o SISTEMA do país a tem (o concurso, a prova de ingresso) — vale antes de qualquer prática. */
+  existeNoPais?: (v: Vida) => boolean;
   categoria: CategoriaAtividade;
   idadeMin: number;
   idadeMax?: number;
@@ -175,7 +188,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     pratica: { tenis: 1 }, social: { onde: 'no tênis', fluxo: 0.6, amplitude: 3 }
   },
   {
-    id: 'natacao', nome: 'Natação', descricao: 'Piscina do clube, do SESC ou da prefeitura.', categoria: 'esporte', idadeMin: 4,
+    id: 'natacao', nome: 'Natação', descricao: '', local: 'natacao', categoria: 'esporte', idadeMin: 4,
     oferta: v => cidade(v) >= 1 || janela(v, 'natacao', 0.35),
     niveis: [
       { rotulo: 'Aulas de natação', tempo: 1, custo: 150, qualidade: 1, requer: pago(150, 'natacao') },
@@ -195,7 +208,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     pratica: { atletismo: 1 }, social: { onde: 'no atletismo', fluxo: 0.6, amplitude: 4 }
   },
   {
-    id: 'lutas', nome: 'Arte marcial', descricao: 'Judô, jiu-jítsu, karatê ou capoeira.', categoria: 'esporte', idadeMin: 6,
+    id: 'lutas', nome: 'Arte marcial', descricao: '', local: 'lutas', categoria: 'esporte', idadeMin: 6,
     oferta: v => cidade(v) >= 1 || janela(v, 'lutas', 0.6),
     niveis: [
       { rotulo: 'Aulas', tempo: 1, custo: 110, qualidade: 1.1, requer: pago(110, 'lutas') },
@@ -210,14 +223,14 @@ export const ROTINAS: readonly ModeloRotina[] = [
     social: { onde: 'na academia', fluxo: 0.5, amplitude: 10 }, comportamento: { disciplina: 1 }
   },
   {
-    id: 'corrida', nome: 'Correr ou caminhar', descricao: 'Na praça, na orla, no parque. De graça.', categoria: 'corpo', idadeMin: 12,
+    id: 'corrida', nome: 'Correr ou caminhar', descricao: '', local: 'corrida', categoria: 'corpo', idadeMin: 12,
     niveis: [{ rotulo: 'Algumas vezes por semana', tempo: 0.5, custo: 0 }],
     comportamento: { disciplina: 1 }, pratica: { atletismo: 0.25 }
   },
 
   // ---------------------------------------------------------------- arte
   {
-    id: 'musica', nome: 'Tocar um instrumento', descricao: 'Violão, teclado, bateria, cavaquinho.', categoria: 'arte', idadeMin: 6,
+    id: 'musica', nome: 'Tocar um instrumento', descricao: '', local: 'musica', categoria: 'arte', idadeMin: 6,
     niveis: [
       { rotulo: 'Tocar em casa, por conta', tempo: 0.5, custo: 0, qualidade: 0.75 },
       { rotulo: 'Aulas de instrumento', tempo: 1, custo: 140, qualidade: 1.2, requer: pago(140, 'musica') },
@@ -227,7 +240,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     efeito: v => { marcarAnos(v, 'musica'); }
   },
   {
-    id: 'danca', nome: 'Dança', descricao: 'Balé, jazz, forró, hip-hop, dança de salão.', categoria: 'arte', idadeMin: 4,
+    id: 'danca', nome: 'Dança', descricao: '', local: 'danca', categoria: 'arte', idadeMin: 4,
     niveis: [
       { rotulo: 'Aulas de dança', tempo: 1, custo: 150, qualidade: 1.1, requer: pago(150, 'danca') },
       { rotulo: 'Grupo ou companhia', tempo: 1.6, custo: 180, qualidade: 1.35, requer: pago(180, 'danca', v => (habilidade(v, 'danca') >= 48 ? true : 'O grupo pede quem já dança bem.')) }
@@ -287,7 +300,9 @@ export const ROTINAS: readonly ModeloRotina[] = [
     pratica: { linguagens: 0.5, escrita: 0.25, humanas: 0.3 }
   },
   {
-    id: 'ingles', nome: 'Inglês', descricao: 'Séries, aplicativos, um curso de idiomas.', categoria: 'estudo', idadeMin: 8,
+    id: 'ingles', nome: 'Inglês', descricao: 'Séries, aplicativos, um curso de idiomas.',
+    // Para quem mora num país de língua inglesa, inglês não é atividade de tempo livre: é a língua da rua.
+    escopo: { excetoPaises: ['US', 'GB', 'CA', 'AU', 'NZ'] }, categoria: 'estudo', idadeMin: 8,
     niveis: [
       { rotulo: 'Séries e aplicativos', tempo: 0.5, custo: 0, qualidade: 0.7 },
       { rotulo: 'Curso de inglês', tempo: 1, custo: 260, qualidade: 1.2, requer: pago(260, 'ingles') }
@@ -324,7 +339,9 @@ export const ROTINAS: readonly ModeloRotina[] = [
     efeito: (v, _r, n) => anoDaAtividade(v, 'clube_ciencias', n)
   },
   {
-    id: 'cursinho', nome: 'Cursinho pré-vestibular', descricao: 'Aulas para a prova de ingresso na universidade. Ajuda muito na nota.', categoria: 'estudo', idadeMin: 16,
+    id: 'cursinho', nome: 'Cursinho preparatório', descricao: v => `Aulas para ${educacaoDaVida(v).o}. Ajuda muito na nota.`, categoria: 'estudo', idadeMin: 16,
+    // Só onde há prova para entrar: no acesso aberto (Argentina, Uruguai, Itália...) não há para que se preparar.
+    existeNoPais: v => !educacaoDaVida(v).aberto,
     niveis: [{ rotulo: 'Todas as noites', tempo: 1, custo: 0 }],
     social: { onde: 'no cursinho', fluxo: 1, amplitude: 3 },
     requer: v => (v.educacao.matricula ? 'Já está fazendo faculdade.' : true),
@@ -333,6 +350,8 @@ export const ROTINAS: readonly ModeloRotina[] = [
   },
   {
     id: 'estudar_concurso', nome: 'Estudar para concurso', descricao: 'Apostilas, videoaulas e simulados à noite.', categoria: 'estudo', idadeMin: 17,
+    // Só onde o serviço público entra por concurso (o perfil do país).
+    existeNoPais: v => perfilDaVida(v).trabalho.concurso,
     niveis: [
       { rotulo: 'Um pouco, à noite', tempo: 0.5, custo: 60 },
       { rotulo: 'Estudo firme', tempo: 1, custo: 180 },
@@ -349,7 +368,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
 
   // --------------------------------------------------------------- social
   {
-    id: 'gremio', nome: 'Grêmio estudantil', descricao: 'Reunião, eleição, festa junina, briga com a diretoria.', categoria: 'social', idadeMin: 12, idadeMax: 18,
+    id: 'gremio', nome: 'Grêmio estudantil', descricao: '', local: 'gremio', categoria: 'social', idadeMin: 12, idadeMax: 18,
     requer: v => (v.educacao.basica && ['fundamental2', 'medio'].includes(v.educacao.basica.etapa) ? true : 'É coisa da escola.'),
     oferta: v => ofereceAqui(v, 'gremio'),
     niveis: [{ rotulo: 'Participar', tempo: 0.5, custo: 0 }],
@@ -391,7 +410,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     efeito: (v, _r, n) => anoDaAtividade(v, 'projeto_escola', n)
   },
   {
-    id: 'fanfarra', nome: 'Fanfarra da escola', descricao: 'Tambor, corneta e o desfile de Sete de Setembro.', categoria: 'arte', idadeMin: 9, idadeMax: 18,
+    id: 'fanfarra', nome: 'Fanfarra da escola', descricao: '', local: 'fanfarra', categoria: 'arte', idadeMin: 9, idadeMax: 18,
     requer: v => (naEscola(v) ? true : 'É uma atividade da escola.'),
     oferta: v => ofereceAqui(v, 'fanfarra'),
     niveis: [{ rotulo: 'Ensaios depois da aula', tempo: 0.5, custo: 0 }],
@@ -476,6 +495,8 @@ export const ROTINAS: readonly ModeloRotina[] = [
   },
   {
     id: 'sair_noite', nome: 'Sair à noite', descricao: 'Bar, balada, show. Gente nova toda semana.', categoria: 'lazer', idadeMin: 18,
+    // A idade de entrar no bar é a do lugar (21 nos EUA, 20 no Japão): `mundo/regras`.
+    requer: v => (idade(v) >= regrasDaVida(v).vidaNoturna ? true : `Aqui, bar e balada só a partir dos ${regrasDaVida(v).vidaNoturna}.`),
     niveis: [{ rotulo: 'Fins de semana', tempo: 1, custo: 280 }],
     social: { onde: 'na noite', fluxo: 1.5, amplitude: 8 }, comportamento: { sociabilidade: 1 },
     efeito: (v, r) => {
@@ -490,7 +511,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     social: { onde: 'jogando online', fluxo: 0.4, amplitude: 6 }
   },
   {
-    id: 'terapia', nome: 'Terapia', descricao: 'Sessão semanal com psicólogo (particular ou pelo SUS, com fila).', categoria: 'cuidado', idadeMin: 12,
+    id: 'terapia', nome: 'Terapia', descricao: v => (redeDeSaude(v).sistema === 'seguro' ? 'Sessão semanal com psicólogo (particular ou pelo plano).' : `Sessão semanal com psicólogo (particular ou ${redeDeSaude(v).pelo}, com fila).`), categoria: 'cuidado', idadeMin: 12,
     niveis: [{ rotulo: 'Uma sessão por semana', tempo: 0.5, custo: 280 }],
     efeito: v => {
       for (const c of v.corpo.condicoes) {
@@ -605,7 +626,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     renda: v => Math.round(550 * (0.5 + melhorDe(v, ['exatas', 'linguagens', 'idiomas', 'musica']) / 100))
   },
   {
-    id: 'vender_doces', nome: 'Vender doces na rua', descricao: 'Bala, brigadeiro, paçoca no semáforo ou na porta da escola.', categoria: 'renda', idadeMin: 8, idadeMax: 15,
+    id: 'vender_doces', nome: 'Vender doces na rua', descricao: '', local: 'vender_doces', categoria: 'renda', idadeMin: 8, idadeMax: 15,
     niveis: [{ rotulo: 'Depois da aula', tempo: 1, custo: 0 }],
     requer: v => (moraComFamiliaDeOrigem(v) ? true : 'Só faz sentido morando com a família.'),
     irregular: () => 'Trabalho infantil é proibido. Acontece — e tem consequência.',
@@ -615,7 +636,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       if (v.educacao.basica) v.educacao.basica.desempenho = clamp(v.educacao.basica.desempenho - 8);
       if (!temFato(v, 'conselho_tutelar') && r.chance(0.25)) {
         marcarFato(v, 'conselho_tutelar');
-        escrever(v, { texto: 'O Conselho Tutelar apareceu em casa depois de alguém denunciar criança trabalhando na rua. A família levou uma advertência.', relevancia: 'biografia', tema: 'familia', tom: 'ruim' });
+        escrever(v, { texto: `${textoLocal(v, 'conselho_tutelar')} Alguém tinha denunciado criança trabalhando na rua; a família levou uma advertência.`, relevancia: 'biografia', tema: 'familia', tom: 'ruim' });
       }
     }
   }
@@ -631,6 +652,8 @@ const POR_ID = new Map(ROTINAS.map(r => [r.id, r]));
  */
 export const DE_ESTUDOS = new Set(['cursinho', 'estudar_concurso']);
 export const modeloRotina = (id: string) => POR_ID.get(id);
+/** A descrição da atividade para esta vida (com o lugar: `local`; ou a função). */
+export const descricaoDaRotina = (v: Vida, m: ModeloRotina): string => (m.local ? textoLocal(v, m.local) : typeof m.descricao === 'function' ? m.descricao(v) : m.descricao);
 
 export const nivelDa = (r: Rotina) => (r.nivel ?? 1) as 1 | 2 | 3;
 export function nivelModelo(m: ModeloRotina, n: number): NivelRotina {
@@ -642,11 +665,13 @@ export const tempoDaRotina = (r: Rotina) => {
 };
 
 for (const r of ROTINAS) if (r.social) ROTINAS_SOCIAIS[r.id] = r.social;
-/** O custo de uma atividade para esta vida (a terapia com encaminhamento é pelo SUS: de graça). */
+/** A terapia com encaminhamento sai pela rede pública, de graça — onde a rede pública existe (no sistema de seguro, não). */
+export const terapiaPublica = (v: Vida) => encaminhado(v) && redeDeSaude(v).sistema !== 'seguro';
+/** O custo de uma atividade para esta vida. */
 export function custoDaRotina(v: Vida, id: string, nivel: number): number {
   const m = modeloRotina(id);
   if (!m) return 0;
-  if (id === 'terapia' && encaminhado(v)) return 0;
+  if (id === 'terapia' && terapiaPublica(v)) return 0;
   return nivelModelo(m, nivel).custo;
 }
 CUSTO_ROTINA.de = (v, rot) => custoDaRotina(v, rot.id, nivelDa(rot));
@@ -669,6 +694,8 @@ export function atividadeExiste(v: Vida, m: ModeloRotina): boolean {
   if (v.justica?.prisao && !NA_PRISAO.has(m.id)) return false;
   if (i < m.idadeMin || (m.idadeMax && i > m.idadeMax)) return false;
   if (v.rotinas.some(r => r.id === m.id)) return true;
+  if (!noEscopo(m.escopo, lugarDe(v.moradia.municipioId))) return false;
+  if (m.existeNoPais && !m.existeNoPais(v)) return false;
   if (v.caminhos.frentes && m.pratica && Object.keys(m.pratica).some(d => (v.caminhos.frentes[d as Dominio]?.meses ?? 0) >= 12)) return true;
   return m.oferta ? m.oferta(v) : true;
 }

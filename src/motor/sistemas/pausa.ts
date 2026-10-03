@@ -18,6 +18,7 @@
  * ser quem reduz.
  */
 
+import { previdenciaDaVida, textoLocal } from '../mundo/locais';
 import type { PausaDeCuidado, Vida } from '../tipos';
 import { clamp } from '../rng';
 import { escrever, filhos, idade, idadePessoa, marcarFato } from '../nucleo';
@@ -126,7 +127,7 @@ export function leituraDaPausa(v: Vida): string | undefined {
   if (!pa) return undefined;
   const p = pa.pessoaId ? v.pessoas[pa.pessoaId] : undefined;
   const quem = pa.motivo === 'casa' ? 'da casa e da família' : p ? `de ${p.nome}` : ({ filhos: 'dos filhos', pais: 'de quem é da família', parceiro: 'da parceria', familiar: 'de quem é da família', casa: 'da casa' } as const)[pa.motivo];
-  const inss = pa.intensidade === 'total' ? (pa.facultativo ? ' O INSS segue, pago como facultativo.' : ' O tempo de contribuição do INSS parou.') : '';
+  const inss = pa.intensidade === 'total' ? (pa.facultativo ? ` ${previdenciaDaVida(v).O} segue, pago ${textoLocal(v, 'facultativo')}.` : ` O tempo de contribuição ${previdenciaDaVida(v).do} parou.`) : '';
   return pa.intensidade === 'total' ? `Sem trabalho pago desde ${anoDe(pa.tInicio)}: cuidando ${quem}.${inss}` : `Jornada reduzida para cuidar ${quem}.`;
 }
 

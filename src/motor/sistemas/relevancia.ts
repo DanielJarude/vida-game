@@ -18,7 +18,7 @@ import { familiaDaTrilha } from '../dados/carreiras';
 import { podeTentar } from '../plausibilidade';
 import { idade, filhos, parceiro } from '../nucleo';
 import { DE_FORMACAO } from './formacao';
-import { DE_ESTUDOS, ROTINAS, atividadeExiste, podeComecarRotina, type ModeloRotina } from './rotinas';
+import { DE_ESTUDOS, ROTINAS, descricaoDaRotina, atividadeExiste, podeComecarRotina, type ModeloRotina } from './rotinas';
 import { BEM_ESTAR, fatoresHumor } from './estado';
 import { habilidade } from './frentes';
 import { OCUPACOES, ocupacao, type Ocupacao } from '../dados/ocupacoes';
@@ -92,13 +92,13 @@ export function atividadesParaVoce(v: Vida): { para: Relevante<ModeloRotina>[]; 
     // A fase da vida: criança brinca e se mexe; adolescente procura turma.
     if (i < 12 && (m.categoria === 'esporte' || m.categoria === 'arte')) add(1, 'Coisa boa de começar criança.');
     if (i >= 12 && i < 18 && m.social && m.social.fluxo >= 1) add(0.8, 'Onde a turma está.');
-    return { item: m, motivo: motivo || m.descricao, pontos };
+    return { item: m, motivo: motivo || descricaoDaRotina(v, m), pontos };
   });
   const r = primarias(lista, MAX_PRIMARIAS.atividades);
   // Sem motivo nenhum: algumas ideias variadas (uma por categoria), não o catálogo.
   if (r.para.length === 0) {
     const vistas = new Set<string>();
-    const ideias = lista.filter(x => (vistas.has(x.item.categoria) ? false : (vistas.add(x.item.categoria), true))).slice(0, 3).map(x => ({ ...x, motivo: x.item.descricao }));
+    const ideias = lista.filter(x => (vistas.has(x.item.categoria) ? false : (vistas.add(x.item.categoria), true))).slice(0, 3).map(x => ({ ...x, motivo: descricaoDaRotina(v, x.item) }));
     const usados = new Set(ideias.map(x => x.item));
     return { para: ideias, resto: r.resto.filter(m => !usados.has(m)) };
   }

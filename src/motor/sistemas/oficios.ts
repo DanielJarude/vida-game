@@ -64,7 +64,7 @@ O(['medicina'], {
   areas: [],
   desafios: [
     { texto: a => casoMedico(a), encarar: 'Assumir o caso', passar: 'Chamar alguém mais experiente', deu: 'O paciente saiu bem. A equipe passou a chamar você para os casos difíceis.', naoDeu: 'Você fez o que podia; o caso não terminou bem. Não foi erro — mas pesou por semanas.' },
-    { texto: a => (a === 'medicina de família' ? 'A UBS está sem médico em outra equipe: pediram para você cobrir a área vizinha por um mês.' : a === 'psiquiatria' ? 'Um colega pediu que você assumisse os pacientes dele durante uma licença.' : `Faltou gente no plantão${a ? ` de ${a}` : ''}: pediram para você segurar a escala de um mês difícil.`), encarar: 'Topar', passar: 'Dizer que não aguenta mais', deu: 'O mês passou, os pacientes também — bem. A chefia não esqueceu.', naoDeu: 'Um erro de cansaço, sem gravidade, mas ficou no prontuário e na cabeça.' }
+    { texto: a => (a === 'medicina de família' ? 'O posto de saúde do bairro vizinho está sem médico: pediram para você cobrir a área vizinha por um mês.' : a === 'psiquiatria' ? 'Um colega pediu que você assumisse os pacientes dele durante uma licença.' : `Faltou gente no plantão${a ? ` de ${a}` : ''}: pediram para você segurar a escala de um mês difícil.`), encarar: 'Topar', passar: 'Dizer que não aguenta mais', deu: 'O mês passou, os pacientes também — bem. A chefia não esqueceu.', naoDeu: 'Um erro de cansaço, sem gravidade, mas ficou no prontuário e na cabeça.' }
   ]
 });
 O(['engenharia', 'eng_industrial'], {

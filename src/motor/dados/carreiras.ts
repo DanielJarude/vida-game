@@ -102,7 +102,7 @@ export const FAMILIAS: readonly FamiliaCarreira[] = [
     renda: 'estavel', desgaste: { cabeca: 0.5, noite: 0.45 }, sentido: ['ciencias', 'comunidade'], anuidade: 70, custoAutonomo: { valor: 380, rotulo: 'Sala, material e conselho do consultório' },
     expansao: { desde: 2035, intensidade: 0.2 }, saidas: ['educacao', 'publico', 'cuidado'] }),
   F({ id: 'cuidado', nome: 'cuidado e trabalho doméstico', trilhas: ['cuidado', 'domestico', 'limpeza'], progressao: 'cuidado', entrada: 'indicação de família para família, confiança',
-    degraus: ['primeiras casas', 'famílias que indicam', 'carteira assinada ou agenda cheia'], renda: 'estavel', desgaste: { corpo: 0.45, cabeca: 0.35 }, sentido: ['comunidade'],
+    degraus: ['primeiras casas', 'famílias que indicam', 'contrato fixo ou agenda cheia'], renda: 'estavel', desgaste: { corpo: 0.45, cabeca: 0.35 }, sentido: ['comunidade'],
     expansao: { desde: 2034, intensidade: 0.3 }, saidas: ['enfermagem', 'alimentacao', 'predial'] }),
   F({ id: 'predial', nome: 'portaria, zeladoria e vigilância', trilhas: ['predial', 'vigilancia'], progressao: 'empresa', entrada: 'curso de vigilante, indicação, currículo',
     degraus: ['posto', 'turno fixo', 'supervisão'], renda: 'estavel', desgaste: { noite: 0.5 }, automacao: { desde: 2045, ate: 2075, intensidade: 0.3 }, saidas: ['limpeza', 'manutencao', 'guarda'] }),
@@ -112,10 +112,10 @@ export const FAMILIAS: readonly FamiliaCarreira[] = [
   F({ id: 'academia', nome: 'ciência e universidade', trilhas: ['academia', 'pesquisa', 'docencia_superior'], progressao: 'academica', entrada: 'iniciação, mestrado e doutorado com bolsa, concurso docente',
     degraus: ['iniciação científica', 'pós-graduação com bolsa', 'pós-doutorado (contrato com prazo)', 'concurso: docência ou instituto'], renda: 'projeto', desgaste: { cabeca: 0.4 }, sentido: ['ciencias', 'exatas', 'humanas', 'linguagens'],
     saidas: ['educacao', 'dados', 'publico'] }),
-  F({ id: 'direito', nome: 'direito', trilhas: ['direito'], progressao: 'liberal', entrada: 'faculdade, estágio e o Exame da OAB',
+  F({ id: 'direito', nome: 'direito', trilhas: ['direito'], progressao: 'liberal', entrada: 'faculdade, estágio e o exame da ordem dos advogados',
     degraus: ['estágio', 'advocacia empregada', 'carteira própria de clientes', 'sociedade num escritório'], renda: 'variavel', desgaste: { cabeca: 0.45 }, sentido: ['linguagens', 'humanas'], anuidade: 90,
-    custoAutonomo: { valor: 300, rotulo: 'Escritório, sistemas e OAB' }, saidas: ['publico', 'judiciario', 'educacao'] }),
-  F({ id: 'engenharia', nome: 'engenharia e arquitetura', trilhas: ['engenharia', 'arquitetura'], progressao: 'liberal', entrada: 'faculdade, estágio e registro (CREA, CAU)',
+    custoAutonomo: { valor: 300, rotulo: 'Escritório, sistemas e a ordem dos advogados' }, saidas: ['publico', 'judiciario', 'educacao'] }),
+  F({ id: 'engenharia', nome: 'engenharia e arquitetura', trilhas: ['engenharia', 'arquitetura'], progressao: 'liberal', entrada: 'faculdade, estágio e o registro profissional',
     degraus: ['estágio', 'projeto e obra', 'responsabilidade técnica', 'gerência ou escritório próprio'], renda: 'estavel', desgaste: { cabeca: 0.4 }, sentido: ['exatas', 'desenho'], anuidade: 60,
     custoAutonomo: { valor: 280, rotulo: 'Softwares, registro e deslocamento' }, saidas: ['publico', 'educacao', 'construcao'] }),
   F({ id: 'publico', nome: 'serviço público', trilhas: ['publico', 'judiciario', 'fiscal'], progressao: 'publica', entrada: 'edital, anos de estudo, prova e nomeação',
@@ -140,7 +140,7 @@ export const FAMILIAS: readonly FamiliaCarreira[] = [
     entrada: 'peneira ou seletiva, na idade certa', degraus: ['base', 'primeiro contrato', 'auge curto', 'transição: treinar, preparar, ensinar'], renda: 'projeto', desgaste: { corpo: 0.6, longe: 0.3 },
     sentido: ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'], saidas: ['treino', 'educacao_fisica', 'comercio', 'vigilancia'] }),
   F({ id: 'informal', nome: 'rua, feira e bicos', trilhas: ['informal', 'reciclagem'], progressao: 'informal', entrada: 'começar amanhã: mercadoria, ponto, gente conhecida',
-    degraus: ['ponto incerto', 'freguesia', 'banca fixa', 'formalizar (MEI) ou abrir um comércio'], renda: 'variavel', desgaste: { corpo: 0.45, cabeca: 0.35 }, sentido: ['vendas'],
+    degraus: ['ponto incerto', 'freguesia', 'banca fixa', 'formalizar o negócio ou abrir um comércio'], renda: 'variavel', desgaste: { corpo: 0.45, cabeca: 0.35 }, sentido: ['vendas'],
     custoAutonomo: { valor: 90, rotulo: 'Mercadoria que encalha e transporte' }, saidas: ['comercio', 'limpeza', 'alimentacao'] })
 ];
 

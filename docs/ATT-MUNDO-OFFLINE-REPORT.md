@@ -32,7 +32,7 @@
 | PWA offline (`scripts/pwa/offline.mjs`, 390 px) | 18/18 na entrega do PWA (antes dos pacotes do mundo) |
 | Simulação mundial (`scripts/sim/mundo.ts`) | 168 vidas em 28 países: 0 erros, 0 saves que não reabrem, 8.399 extratos anuais, 0 sem fechar |
 | Capturas (`scripts/playtest/mundo.mjs`) | 39 em 1440/820/390, sem rolagem horizontal, erro de página ou texto técnico vazando |
-| **Não rodado nesta entrega** | a suíte de interface completa (jsdom), `build:itch` + smoke e o PWA offline com os pacotes do mundo — ver seção 26 |
+| **Não rodado no checkpoint `99f2868`** | a suíte de interface, `build:itch` + smoke e o PWA offline com os pacotes do mundo — rodados no fechamento (seção 27) |
 
 ## 1. Auditoria inicial
 
@@ -254,3 +254,136 @@ v19 → v20 (`migrarV19`): escreve `eu.nacionalidades = ['BR']` (toda vida anter
 6. Calibrações declaradas (nível salarial ^0,75, mercados do futebol, custo de passagens, chance de proposta de fora) pedem a simulação de 1.000 vidas.
 7. Herança: um país por herança (o do domicílio), sem conflito de leis entre bens em lugares diferentes.
 8. PWA: conferir instalação e ícone maskable em aparelho real; a cópia antiga do localStorage fica por uma versão; sem botão de instalar.
+
+## 27. PLAYTEST HUMANO — FIX DE FECHAMENTO
+
+Base: o checkpoint `99f2868` (save v20, 193 países no catálogo, 28 vivíveis, PWA, IndexedDB). Nada foi reiniciado nem revertido; o save continua **v20** (os campos novos são opcionais, validados e com padrão seguro — seção 27.10).
+
+### 27.1 Validação final
+
+| Verificação | Resultado |
+| --- | --- |
+| Typecheck (`tsc --noEmit`) | Limpo |
+| Suíte completa, Node 22.23.2 (`vitest run`, motor + interface) | **1.090 testes em 63 arquivos, todos passando** — motor 940 (40 arquivos), interface 150 (23 arquivos) |
+| Suíte de interface (jsdom) | Roda na cópia do disco Linux (no `/mnt/c` o worker do jsdom estoura o tempo — infraestrutura, não falha funcional). Baseline do checkpoint: 145/145 em 22; agora 150/150 em 23 |
+| Build (`npm run build`) e `build:itch` | Sem aviso de tamanho; o limite de 800 kB **não foi aumentado** (27.9) |
+| Smoke itch.io (`npm run smoke:itch`) | **21/21** |
+| PWA offline com o mundo (`scripts/pwa/offline.mjs`) | **23/23** — os 7 pacotes regionais no precache; offline, nasce uma vida no Japão (o pacote da Ásia vem do cache), vive, salva, recarrega idêntica, sem R$ na tela; versão nova detectada e aplicada sem perder o save |
+| Auditoria automática de vazamento Brasil → Mundo (`scripts/sim/vazamentos.ts`) | **0 achados** em 120 vidas inteiras (12 países × 10, idade final média 72) |
+| Teste transversal (`transversal.test.ts`) | Passa (27.8) |
+| Capturas (`scripts/playtest/fechamento.mjs`) | 36 (12 cenas × 1440/820/390): sem rolagem horizontal, erro de página, texto técnico, botão fora da tela ou instituição brasileira numa vida que mora nos EUA |
+
+Durante o fechamento, três passadas da suíte pegaram falhas funcionais causadas pelos próprios fixes (5, depois 11, depois 2 arquivos) — todas corrigidas na causa, nenhum teste antigo afrouxado: (a) o evento novo de emigração da família consumia o sorteio principal no `quando` e deslocava o acaso de todas as vidas de teste (passou a usar sorteio derivado, sem papéis sorteados); (b) com 0,4%/ano, ~5% das vidas emigravam na infância (frequência irreal; agora 0,2%/ano e só quando o pai ou a mãe tem ofício qualificado); (c) um ciclo de import escola → rotinas.
+
+### 27.2 SESC nos EUA — a causa e a classe
+
+**Causa:** a descrição da natação no Tempo livre era uma string única ("Piscina do clube, do SESC ou da prefeitura") — conteúdo brasileiro tratado como universal porque não declarava escopo. A auditoria mostrou que era uma CLASSE: o catálogo de conteúdo (`conteudo/base.ts`) não tinha campo de lugar, e toda restrição de país era feita à mão dentro de `quando` — ou esquecida.
+
+**Arquitetura de escopo geográfico** (`mundo/escopo.ts`, `mundo/locais.ts`, `mundo/regras.ts`):
+
+```
+universal → país ('BR') → divisão ('US-CA', 'BR-PE') → cidade (id)
+```
+
+- `Escopo` + `noEscopo`: onde um conteúdo vale. Está no catálogo de acontecimentos/decisões (filtrado centralmente em `conteudo/motor.preparar`) e nas atividades (`rotinas.escopo`, `rotinas.existeNoPais`). Ausência de escopo = universal de verdade. Exemplos: o São João e a seca do sertão têm escopo de **divisão** (os estados do Nordeste); "Inglês" não é atividade para quem mora em país de língua inglesa.
+- `PorLugar` + `resolver`: uma coisa que muda com o lugar tem a forma **universal** (neutra e plausível) e variantes; a mais específica vence. `TEXTOS_LOCAIS` reúne as frases miúdas sem campo no perfil (natação: universal "piscina pública do bairro, do clube ou da academia", Brasil "do SESC ou da prefeitura", EUA "da YMCA"; o órgão ambiental; o imposto do veículo; o conselho de classe; o exame da ordem; a EJA; o "nome sujo"; o 13º; a justiça juvenil...).
+- O que é instituição com campo no perfil (exame, rede de saúde, previdência, cartório) continua no perfil — sem `if (país)` nas telas.
+
+### 27.3 Outros vazamentos encontrados (e corrigidos)
+
+Três auditorias de leitura (motor e interface) + a auditoria automática. ~120 ocorrências em ~40 arquivos, todas ou com escopo, ou com forma universal + variante:
+
+| Domínio | Exemplos que vazavam | Agora |
+| --- | --- | --- |
+| Tempo livre | SESC, capoeira, cavaquinho, forró, "na orla", festa junina no grêmio, desfile de Sete de Setembro, brigadeiro/paçoca, Conselho Tutelar, terapia "pelo SUS" (e de graça nos EUA) | `TEXTOS_LOCAIS`; terapia gratuita só onde há rede pública |
+| Saúde | "SUS" fixo em Você, Tempo, Jogo, corpo; UBS/CAPS/UPA como empregadores e especialidades | `redeDeSaude`; nomes neutros ("posto de saúde"), com o nome brasileiro no comentário |
+| Trabalho e previdência | INSS (facultativo, pausa, carreira, tela), jovem aprendiz (regra e oportunidade em todo país), CRM/OAB/CREA, "carteira assinada", "com carteira", 13º | `previdenciaDaVida`, `regrasDaVida().trabalho`, `nomeDoRegistro`, `TEXTOS_LOCAIS` |
+| Dinheiro | "nome sujo" em 7 vereditos, IPVA, consignado; **bug de unidade**: os campos "valor em reais" liam a moeda local como unidade do motor (100.000 ienes viravam 100.000 "reais") | `TEXTOS_LOCAIS`; os três campos de valor convertem pela moeda do país |
+| Escola | ver 27.4–27.6 | |
+| Esporte | "Seleção brasileira" e "Série A/B, estadual" no painel do técnico e no legado; torneios de tênis em Florianópolis/Campinas para quem mora em Tóquio; NBB/Superliga na linha da temporada fora do Brasil; títulos da elite de outras ligas não pesavam na notoriedade | o nome guardado da seleção; `divisaoDoNivel` do país do clube; cidades do país; `ehElite` único |
+| Política | "outubro" fixo (o perfil tem o mês), filiação "aos 16 com título de eleitor", CF art. 142 citada em todo país; **estrangeiro residente podia se candidatar** | mês do país, idade da regra local, citação só no Brasil, candidatura exige a nacionalidade |
+| Farda | alistamento obrigatório chamava estrangeiro residente, sempre aos 18 | alistamento só para quem tem a nacionalidade, na idade do perfil |
+| Bichos | IBAMA, Lei 9.605, "música da novela"; nomes brasileiros (Paçoca, Nescau) para bichos de vidas no Japão | `TEXTOS_LOCAIS`; nomes universais fora do Brasil |
+| Cotidiano | cartório, churrasco, réveillon na laje, uva-passa, farofa, "preço do dólar", "comunidade no morro" | `registroCivil`, `TEXTOS_LOCAIS`, `temFesta` |
+
+### 27.4 ENEM na UI, SAT no motor — a causa
+
+`Estudos.tsx` escrevia "Fazer o ENEM deste ano" (e mais 14 rótulos: SISU, ProUni, FIES, supletivo, "Melhor ENEM recente"...) à mão; o motor (`acoes.ts`) já falava pelo perfil (`educacaoDaVida(v).o`). **Duas fontes para a mesma regra.**
+
+Agora a fonte é uma só: `educacaoDoPais(pais)` / `educacaoDaVida(v)` dá o nome do exame, o rótulo da ação (`acao`: "Fazer o SAT deste ano"), a frase do resultado (`fez`), as etapas com artigo, os rótulos das vias (vagas, bolsa, crédito com os nomes do país). A tela, a elegibilidade, a ação, o resultado, a biografia e a Linha da Vida leem dela. Onde o "exame" não é uma prova (o Canadá: o boletim do último ano), o perfil diz `prova: false` e nada "faz o boletim". Onde a universidade pública tem matrícula aberta (Argentina, Uruguai, Itália, Marrocos), não há cursinho nem "nota do exame" na tela.
+
+As notas guardam **o país e o exame** (`educacao.enem[].pais/exame`): a nota do ENEM fica na história, mas não abre a universidade nos EUA (`notasDaqui`). As notas antigas sem país (saves anteriores) ganham o país de origem na primeira mudança.
+
+### 27.5 Educação acompanha onde a pessoa mora
+
+- **Histórico ≠ sistema atual:** `educacao.historicoEscolar` guarda, a cada troca de país, onde se estudou e até que etapa (nos nomes daquele sistema); a escola de agora é sempre a do país da moradia. Formação mostra "Estudou no Brasil, até o 3º ano do fundamental".
+- **Transição** (`trocarDeSistemaEscolar`, chamada por toda migração): a série é reconciliada (o jogo conta a escola em 9 + 3 em todo país — a série de chegada é a equivalente, nunca recomeço); a rede é a da casa; chegar noutra língua pesa nas notas do primeiro ano; o técnico integrado de um instituto federal não continua noutro país; o cursinho e o estudo para concurso acabam onde não fazem sentido. Voltar ao Brasil faz a mesma conta.
+- **Criança que muda de país:** antes impossível (menor não migrava). Agora a FAMÍLIA muda (`migrarComAFamilia`): a casa inteira vai, a criança continua morando com os seus, o dinheiro atravessa pelo câmbio, a nacionalidade não muda, a língua e a adaptação começam. Um acontecimento raro (0,2%/ano, de 3 a 15 anos, só com pai ou mãe de ofício qualificado e uma porta aberta para eles) leva famílias para fora — o destino pesa língua, região, livre circulação e renda.
+- **Consumidores auditados:** etapas e séries, escola pública/particular (nomes de escola particular sem santo brasileiro fora do Brasil; a creche pública do país), exame, vias, bolsa, crédito (rótulo do FIES na mensalidade), cotas, EJA/supletivo, cursinho, técnico integrado, olimpíada, abandono (a idade da escola obrigatória do lugar), retorno, decisões de fim do médio (sem "prova em novembro"), registros profissionais e o exame da ordem.
+
+### 27.6 Habilitação e idades legais — regras nacionais e regionais
+
+`mundo/regras.ts`: `REGRAS_UNIVERSAIS` → `PerfilDePais.regras` → `REGRAS_DAS_DIVISOES`. Uma fonte para a ação, a tela, o processo e a biografia.
+
+- **Carteira de motorista:** etapas `aprendiz` (dirigir acompanhado), `provisoria` (sozinho, com restrição) e `plena`, o nome do documento e se a autoescola é obrigatória. Brasil: CNH, Permissão para Dirigir aos 18, autoescola obrigatória. EUA: **por estado** (13 estados do perfil, IIHS GDL: Montana aprendiz aos 15; Califórnia e Nova York 16 → provisória 16/17; Kentucky plena aos 17...). Canadá e Austrália: por província/estado. Reino Unido 17, Alemanha BF17 + 18, França conduite accompagnée 15 + permis 17, Argentina 17, África do Sul learner 17. Meio ano (15½) arredonda para o ano seguinte — nunca antes da lei. O processo espera a idade de dirigir sozinho para a prova prática ("com a permissão de aprendiz, já dá para dirigir acompanhada; a prática fica para os 16"). Não é simulador de DMV.
+- **Outras idades** auditadas e resolvidas pela mesma hierarquia: maioridade (18; 19 na Coreia do Sul), trabalho (16 universal; Brasil 16 com aprendiz aos 14; EUA 14), escola obrigatória (16 universal; 17 Brasil; 18 EUA/Portugal/Inglaterra/França/Canadá), vida noturna (18; 21 EUA; 20 Japão; 19 Coreia), filiação partidária (18; 16 Brasil). Ficaram como **abstração universal documentada**: casamento (18), maioridade penal (18), transferência de atleta (18, FIFA), cursos livres (15), aposentadoria (já por país), candidatura (já por país).
+
+### 27.7 Residência × origem
+
+Seguem a **moradia**: escola, exame, saúde, lazer, trabalho, idades legais, carteira, impostos, nomes de bicho e de bebê sugeridos, torneios, divisões, mês da eleição. Seguem a **nacionalidade**: seleção (já seguia), naturalização (já), **candidatura** (corrigido), **alistamento** (corrigido). Pendência documentada: a carteira e os registros profissionais atravessam a fronteira sem revalidação (abstração).
+
+### 27.8 Teste transversal
+
+`transversal.test.ts`: nasce no Recife → escola no Brasil → muda com a família para Chicago aos 8 (série mantida, histórico brasileiro guardado, SAT) → em Illinois, aprendiz aos 15 e sozinha aos 16 → depois da mudança, nada na biografia fala do Brasil como o lugar → amizade no trabalho e uma discussão com consequência → filho nascido nos EUA (americano pelo solo, brasileiro pelo sangue) → patrimônio → morte → herança → continua como o filho (nasceu nos EUA, duas nacionalidades, mora nos EUA, dólar) → a linhagem lembra a mãe do Recife → salvar e reabrir: JSON idêntico. A metade offline (desligar a rede, salvar, fechar, abrir) é o PWA (27.1).
+
+### 27.9 Bundle
+
+| Pacote | Checkpoint | Fechamento |
+| --- | --- | --- |
+| `motor` | 713 kB | **733 kB** |
+| `motor-textos` | 679 kB | 680 kB |
+| `motor-dados` | 350 kB | 359 kB |
+| `motor-carreira` | 273 kB | 276 kB |
+| `motor-conteudo` | 123 kB | 124 kB |
+| `Jogo` (telas) | — | 308 kB |
+| `mundo-*` | 16–72 kB | 16–72 kB (sem mudança) |
+| Precache do PWA | 35 entradas, 3,7 MB | 35 entradas, 3,8 MB |
+
+Limite de 800 kB **inalterado**; nenhum pacote passou dele. O `motor` ficou com 67 kB de folga — o próximo pacote grande deve modularizar (pendência).
+
+### 27.10 Relações 2.0
+
+**Tipo ≠ proximidade ≠ estado.** O motor já tinha proximidade, confiança, tensão, fases e história; o problema era a síntese ("muito próximo" como identidade) e três bugs.
+
+- **Tipo** (`EstagioSocial` + parentesco + romance): conhecido, colega, amigo, amigo íntimo, **melhor amigo** (no máximo um, por história, confiança e tempo), amigo de outros tempos (afastado sem briga), **ex-amigo** (ruptura), **rival**; interesse romântico, saindo, namoro, casamento, ex; família continua família com proximidade 8 — e rompida, continua irmã.
+- **Estado** (`lacos.estadoDaRelacao`, derivado, sem máquina rígida): se aproximando, estável, esfriando (pela proximidade do começo do ano), em tensão, em conflito (o conflito aberto: assunto, gravidade, quem começou), afastados, rompidos (a ruptura: quando, por quê, de quem foi o passo), reconciliação.
+- **A tela** (lista e ficha): o tipo no rótulo e o estado à direita ("melhor amiga · há 7 anos", "amiga na escola · em conflito", "ex-amiga · não se falam", "rival na escola · em tensão", "irmã · romperam"); a ficha diz por quê ("A amizade acabou numa briga por causa de um segredo que vazou."; "Vocês têm muita história juntos, mas estão brigados — por causa de...").
+- **Como uma amizade nasce:** a ficha de um colega/conhecido explica o caminho (conviver abre a chance; um gesto correspondido — chamar para algo — faz acontecer; afinidade, tempo e temperamento decidem). Não é XP: nos testes, 3 anos de tentativas entre colegas viram amizade em parte das vidas, não em todas.
+- **Bugs corrigidos:** (1) quem só estava **saindo** tinha a proximidade puxada para o envolvimento (~70) e virava "próximo"; agora sobe devagar e para no meio; (2) o **término** fazia do ex um "amigo" se a proximidade passasse de 45; agora o ex é ex (amigo de antes do romance volta a ser amigo de outros tempos); (3) o interesse romântico aparecia como "conhecida por aí" em "Gente que passou"; agora é "interesse romântico, na escola", no dia a dia; a origem romântica (app, noite, viagem) é dita como foi.
+- **Gramática contextual** (`conflitos.ts`): discordar, cobrar (só com motivo), pedir desculpas (aceitas, em parte ou recusadas — pelo temperamento, gravidade, confiança e quantas vezes já foi preciso), fazer as pazes (só com ruptura; recusa espera 24 meses), encerrar amizade (só com amigo), provocar (só o rival). Depois de uma ruptura, os gestos de sempre somem — fica fazer as pazes, responder, o prático (filhos em comum, o médico), tomar distância. Uma discussão por ano com a mesma pessoa: não é farm.
+- **Conflito com consequência** (`lacos.discutir`): resolve (tensão cai, confiança sobe — "falaram francamente"), desconforto (dito, sem fim), briga (conflito aberto), ruptura (entre amigos, quando já havia pouco a perder). Nos testes, o mesmo assunto com alguém de bom gênio resolve muito mais do que com alguém de pavio curto.
+- **As pessoas agem:** além dos chamados que já existiam (pedir ajuda, convidar, cobrar a distância, interesse...), quem começou a briga e tem bom gênio pede desculpas; quem foi ferido volta ao assunto (cobrança); o ex-amigo reaparece 5+ anos depois ("lembrei de você hoje"). Só a partir dos estados novos: os fluxos antigos não mudam de comportamento. Ao longo do ano, o conflito que não era grave esfria; o que segue fervendo entre amigos endurece em ruptura; a implicância com briga de verdade vira rivalidade.
+- **História:** marcos de começo, amizade, apoio, conflito, ruptura, reconciliação e reaparição; a ruptura não apaga o passado.
+- **Save:** `estagio` aceita `ex_amigo`/`rival`; `conflito`, `ruptura`, `reconciliacao`, `proxAno` são opcionais e validados; saves antigos abrem sem nada disso (estado "estável"). Por isso **v20 continua v20**.
+- **Testes** (`fechamentoMundo.test.ts`, os 12 casos da Parte 27 + o teste fundamental): a mesma proximidade 80 é irmã, melhor amiga, namorado e ex, quatro rótulos diferentes e nenhum "próximo"; colega → amizade possível; romance não vira amigo íntimo; interesse não correspondido; discussão depende do temperamento; amizade encerrada guarda a história; desculpas com três desfechos; ações contextuais; sem farm; ex-amigo reaparece; save/reload; sucessão (a herdeira mantém a parceria, os irmãos e a mãe que morreu — com a briga que ficou); migração (amizades ficam, longe, e esfriam); família continua família.
+
+### 27.11 Cães e gatos — segundo passe
+
+`ui/avatar/caesEGatos.tsx` foi reescrito por **famílias morfológicas**: retriever, pastor, terrier, galgo, spitz, braquicefálico, molosso, "salsicha" e o vira-lata (o mais comum, que herda cada traço de uma de duas famílias possíveis para o porte). A família amarra porte, crânio (larga, cunha, redonda, quadrada, fina), focinho, orelha (em pé, dobrada, caída, longa, rosa), dorso (reto, inclinado do pastor, arqueado do galgo), peito e cintura, pernas com coxa e jarrete, cauda (enrolada do spitz, bandeira do retriever, espanador do pastor, fina do galgo) e pelagem (curta, longa, dura com barba, densa com juba) — e as cores da família. Gatos: tipos (doméstico, oriental, persa, peludo grande, britânico) e três posturas de corpo inteiro (sentado, deitado em "pão", em pé). Teste de cor fixa: com nome, raça, descrição e cor removidos, os 24 cães e 24 gatos continuam indivíduos diferentes; e o teste novo exige ≥6 famílias em 60 cães e as quatro posturas nos gatos.
+
+### 27.12 Níveis de suporte (honesto)
+
+- **193 países no catálogo** — existem no mundo: nome, região, moeda, economia; são origem de alguém, destino de viagem, a lista.
+- **28 países vivíveis** — perfil completo no modelo do jogo (cidades e divisões, economia, trabalho, escola, política, farda, esporte com clubes reais, saúde, migração, herança, nomes, regras legais onde mudam).
+- **Brasil** — camadas extras (117 cidades, 94 clubes, partidos reais, o `cotidiano`, os textos locais).
+- **Regras por divisão** — só a carteira de motorista (EUA, Canadá, Austrália) e o São João/seca (Nordeste). O resto das regras estaduais (idade escolar nos EUA, regras do México) é nacional, por abstração declarada.
+- **Textos locais** — fora do Brasil, a forma universal é a regra; variantes só onde há uma instituição real e conhecida (YMCA, bar exam, SQE...).
+
+### 27.13 Pendências reais
+
+1. Carteira de motorista e registros profissionais atravessam a fronteira sem revalidação.
+2. Regras de carreira militar brasileiras (reserva aos 35 anos de serviço, temporário de 8 anos) valem como abstração em todo país.
+3. A justiça penal (regimes fechado/semiaberto) é o modelo brasileiro com textos neutros.
+4. Rede própria de NPCs (os amigos do herdeiro) não é modelada: a sucessão preserva família, parceria e o vínculo com quem morreu.
+5. O `motor` está a 67 kB do limite: o próximo pacote grande deve modularizar.
+6. Calibração das frequências novas (emigração de famílias, rivalidade, reaparição de ex-amigos) fica para a simulação de 1.000 vidas.

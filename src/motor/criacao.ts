@@ -290,7 +290,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     const especie = r.chance(0.72) ? 'cachorro' : 'gato';
     const pet = criarPessoa(v, r, { especie, idade: r.int(1, 6), municipioId: cidade, nome: r.pick(especie === 'cachorro' ? NOMES_PET_CACHORRO : NOMES_PET_GATO), sobrenome: '' });
     const rp = criarRng((o.semente ^ 0x5bd1e995) >>> 0);
-    pet.nome = nomeDePet(rp, especie, pet.genero);
+    pet.nome = nomeDePet(rp, especie, pet.genero, paisDaCidade(cidade));
     const porte = especie === 'gato' ? 'pequeno' : rp.pick(['pequeno', 'medio', 'grande'] as const);
     pet.pet = { porte, origem: 'familia', tChegada: t - (Math.floor((t - pet.tNasc) / 12) * 12), tutor: 'familia', jeito: especie === 'gato' ? 'dono da casa' : 'fiel, late para o carteiro', vidaMax: especie === 'gato' ? rp.int(13, 18) : porte === 'pequeno' ? rp.int(13, 16) : porte === 'medio' ? rp.int(11, 14) : rp.int(9, 12) };
     vincular(v, pet, { parentesco: 'pet', origem: 'familia', proximidade: 60, convivio: ['casa'] });

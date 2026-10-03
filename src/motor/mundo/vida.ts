@@ -70,12 +70,45 @@ export function penaDeChegada(v: Vida): number {
  * escrito à mão.
  */
 export function educacaoDaVida(v: Vida) {
-  const e = perfilDaVida(v).educacao;
+  return educacaoDoPais(paisDaVida(v));
+}
+
+/** O gênero do nome de uma etapa ("a primária", "o liceu", "a ESO", "o Gymnasium"). */
+const artigoEtapa = (n: string): 'o' | 'a' => (/^(escola|primária|preparatória|ESO|Grundschule|senior school)/i.test(n) ? 'a' : 'o');
+const formas = (nome: string) => {
+  const a = artigoEtapa(nome);
+  return { nome, o: `${a} ${nome}`, no: `${a === 'o' ? 'no' : 'na'} ${nome}`, do: `${a === 'o' ? 'do' : 'da'} ${nome}`, completo: `${nome} ${a === 'o' ? 'completo' : 'completa'}` };
+};
+
+/**
+ * A escola de um país, em palavras e regras — a FONTE ÚNICA do exame de
+ * ingresso: o rótulo do botão, a elegibilidade, a ação, o resultado, a
+ * Linha da Vida e a tela leem daqui. Se o lugar usa o SAT, tudo diz SAT.
+ */
+export function educacaoDoPais(pais: string) {
+  const e = perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO).educacao;
   const a = e.exame.artigo;
   const nome = e.exame.nome;
+  const prova = e.exame.prova !== false;
   return {
     ...e,
+    pais,
     nome,
+    /** O exame é uma prova (o ENEM, o SAT) — ou é o boletim do último ano (o Canadá), que não "se faz". */
+    prova,
+    /** O rótulo da ação, o mesmo em toda tela: "Fazer o SAT deste ano". */
+    acao: e.exame.acao ?? `Fazer ${a} ${nome} deste ano`,
+    /** "Você fez o SAT e tirou 640." / "Fechou o boletim do último ano com média 640." */
+    fez: (nota: number) => (prova ? `Você fez ${a} ${nome} e tirou ${nota}.` : `Fechou ${a} ${nome} com média ${nota}.`),
+    /** As etapas da escola com artigo ("o fundamental", "a primária", "o liceu"). */
+    fundamental: formas(e.etapas.fundamental),
+    medio: formas(e.etapas.medio),
+    /** O rótulo de cada via de ingresso (as ids `sisu`/`prouni`/`fies` são internas; o nome é do país). */
+    via: {
+      sisu: e.ingresso === 'acesso_aberto' ? 'Universidade pública — matrícula aberta' : `Universidade pública — ${e.sistemaDeVagas ? e.sistemaDeVagas.replace(/^(o|a) /, '') : e.ingresso === 'candidatura' ? 'candidatura' : 'pela nota'}`,
+      prouni: e.bolsa ? `${e.bolsa.nome} — bolsa` : 'Bolsa pública',
+      fies: e.credito ? `${e.credito.nome} — crédito estudantil` : 'Crédito estudantil'
+    },
     o: `${a} ${nome}`, O: `${a.toUpperCase()} ${nome}`,
     do: `${a === 'o' ? 'do' : 'da'} ${nome}`, no: `${a === 'o' ? 'no' : 'na'} ${nome}`, No: `${a === 'o' ? 'No' : 'Na'} ${nome}`,
     pelo: `${a === 'o' ? 'pelo' : 'pela'} ${nome}`, para: `para ${a} ${nome}`,

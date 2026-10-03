@@ -17,6 +17,8 @@
  * mudar de cargo. Não existe escada infinita.
  */
 
+import { nomeDoRegistro } from '../mundo/locais';
+import { regrasDaVida } from '../mundo/regras';
 import { paisDaVida, penaDeChegada, perfilDaVida } from '../mundo/vida';
 import { parametrosFiscais, salarioMinimoDoPais } from '../mundo/economia';
 import { perfilDoPais } from '../mundo/registro';
@@ -39,7 +41,7 @@ import { ORDEM_NIVEL, ROTULO_AREA, cursoOuNulo } from '../dados/cursos';
 import { forcaDoSetor, sobraNaEpoca } from '../dados/mercado';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { contribui, liquido, salarioLocal } from './renda';
-import { em, nivelEsc, ROTULO_ESCOLARIDADE, temEscolaridade } from './escola';
+import { em, nivelEsc, rotuloEscolaridade, temEscolaridade } from './escola';
 import { habilidade, praticar } from './frentes';
 import { marcar } from './marcas';
 import { chanceNoConcurso, editalAberto } from './concurso';
@@ -78,8 +80,8 @@ const EMPREGADORES: Record<string, string[]> = {
   vendas: ['uma distribuidora', 'uma imobiliária'], alimentacao: ['um restaurante', 'uma lanchonete', 'uma padaria', 'um bar do centro'], confeitaria: ['por encomenda', 'uma padaria', 'uma confeitaria do bairro'],
   administrativo: ['um escritório de contabilidade', 'uma distribuidora', 'uma clínica', 'uma empresa de logística', 'uma concessionária'], contabil: ['um escritório de contabilidade'],
   logistica: ['um centro de distribuição', 'uma transportadora', 'um atacadista'], ti: ['uma empresa de software', 'uma startup', 'um banco digital', 'uma consultoria de tecnologia'],
-  dados: ['um banco', 'uma varejista grande', 'uma consultoria'], enfermagem: ['o hospital municipal', 'um hospital particular', 'uma UPA'], radiologia: ['uma clínica de imagem', 'o hospital regional'],
-  saude_publica: ['a Unidade Básica de Saúde'], medicina: ['o hospital municipal', 'uma rede de clínicas', 'um hospital particular'], psicologia: ['uma clínica', 'o CAPS da cidade'],
+  dados: ['um banco', 'uma varejista grande', 'uma consultoria'], enfermagem: ['o hospital municipal', 'um hospital particular', 'um pronto-atendimento'], radiologia: ['uma clínica de imagem', 'o hospital regional'],
+  saude_publica: ['o posto de saúde'], medicina: ['o hospital municipal', 'uma rede de clínicas', 'um hospital particular'], psicologia: ['uma clínica', 'o serviço de saúde mental da cidade'],
   nutricao: ['uma clínica', 'uma rede de academias'], fisioterapia: ['uma clínica de reabilitação', 'o hospital regional'], odontologia: ['um consultório'], farmacia: ['uma farmácia', 'um laboratório'],
   veterinaria: ['uma clínica veterinária', 'uma cooperativa agrícola'], educacao_fisica: ['uma academia'], direito: ['um escritório de advocacia'], engenharia: ['uma construtora', 'uma incorporadora'],
   arquitetura: ['por conta própria'], eng_industrial: ['uma fábrica', 'uma montadora'], educacao: ['uma escola particular', 'uma creche', 'a rede municipal de ensino'], idiomas: ['um curso de idiomas'],
@@ -145,8 +147,12 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   const ano = anoDe(v.t);
 
   if (oc.surge && ano < oc.surge) return bloqueio('impossivel', 'Ainda não existe.');
-  if (i < 14) return bloqueio('ilegal', 'Trabalho é proibido antes dos 14 anos.');
-  if (i < 16 && oc.contrato !== 'aprendiz') return bloqueio('ilegal', 'Entre 14 e 15 anos, só como jovem aprendiz.');
+  // A idade de trabalhar é a do lugar (`mundo/regras`): no Brasil, 16 — e o jovem aprendiz a partir dos 14.
+  const lei = regrasDaVida(v).trabalho;
+  const antes = lei.aprendiz?.idade ?? lei.minima;
+  if (i < antes) return bloqueio('ilegal', `Aqui, trabalho é proibido antes dos ${antes} anos.`);
+  if (oc.contrato === 'aprendiz' && !lei.aprendiz) return bloqueio('impossivel', 'Aqui não há programa de aprendiz para quem ainda estuda.');
+  if (i < lei.minima && oc.contrato !== 'aprendiz') return bloqueio('ilegal', `Entre ${antes} e ${lei.minima - 1} anos, só como ${lei.aprendiz?.nome ?? 'aprendiz'}.`);
   if (i < oc.idadeMin) return bloqueio(oc.idadeMin <= 18 ? 'ilegal' : 'requisito', `Exige ${oc.idadeMin} anos.`);
   if (oc.idadeMax && i > oc.idadeMax) return bloqueio('requisito', `É para quem tem até ${oc.idadeMax} anos.`);
   if (via !== 'promocao' && oc.idadeMaxIngresso && i > oc.idadeMaxIngresso) return bloqueio('requisito', `A seleção tem limite de idade (até ${oc.idadeMaxIngresso} anos).`);
@@ -177,7 +183,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
     return bloqueio('requisito', 'Estágio exige estar estudando.');
   }
   if (oc.escolaridade && !temEscolaridade(v, oc.escolaridade)) {
-    return bloqueio('requisito', `Exige ${ROTULO_ESCOLARIDADE[oc.escolaridade]}.`);
+    return bloqueio('requisito', `Exige ${rotuloEscolaridade(v, oc.escolaridade)}.`);
   }
   if (oc.area) {
     const formado = temFormacaoPara(v, oc);
@@ -195,7 +201,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   }
   { const titulo = faltaTituloPara(v, oc); if (titulo) return bloqueio('requisito', titulo); }
   if (oc.licenca && oc.licenca !== 'cnh' && !t.licencas.includes(oc.licenca)) {
-    return bloqueio('requisito', `Exige registro profissional (${oc.licenca.toUpperCase()}).`);
+    return bloqueio('requisito', `Exige registro profissional (${nomeDoRegistro(v, oc.licenca)}).`);
   }
   if (oc.licenca === 'cnh' && !t.licencas.includes('cnh')) return bloqueio('requisito', 'Exige carteira de motorista.');
   if (oc.veiculo) {
@@ -558,7 +564,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
       contratar(v, r, ocupacao('aux_adm'), 'efetivacao');
       escrever(v, { texto: `O contrato de aprendiz acabou e a empresa ${flex(ge(v), 'o', 'a')} efetivou como auxiliar administrativ${flex(ge(v), 'o', 'a')}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     } else {
-      escrever(v, { texto: 'O contrato de jovem aprendiz chegou ao fim.', relevancia: 'biografia', tema: 'trabalho' });
+      escrever(v, { texto: `O contrato de ${regrasDaVida(v).trabalho.aprendiz?.nome ?? 'aprendiz'} chegou ao fim.`, relevancia: 'biografia', tema: 'trabalho' });
     }
     return;
   }
@@ -970,13 +976,13 @@ export function proximoPasso(v: Vida): ProximoPasso | undefined {
     reqs.push({ tipo: 'posto', ok: falta === 0, ano: falta ? ano + falta : undefined, texto: falta === 0 ? `${minimo} anos como ${agora}: cumprido.` : `${minimo} anos como ${agora} — você tem ${Math.floor(noPosto)}; completa em ${ano + falta}.` });
   }
   // Formação, escolaridade, registro.
-  if (x.escolaridade && !temEscolaridade(v, x.escolaridade)) reqs.push({ tipo: 'formacao', ok: false, texto: `Pede ${ROTULO_ESCOLARIDADE[x.escolaridade]}.` });
+  if (x.escolaridade && !temEscolaridade(v, x.escolaridade)) reqs.push({ tipo: 'formacao', ok: false, texto: `Pede ${rotuloEscolaridade(v, x.escolaridade)}.` });
   const peloOficio = !!x.habilidade?.ouFormacao && habilidade(v, x.habilidade.dominio) >= x.habilidade.minimo;
   if (x.area && !temFormacaoPara(v, x) && !peloOficio && !(x.matriculado && cursandoNaArea(v, x))) {
     const areas = x.area.map(a => ROTULO_AREA[a]).join(' ou ');
     reqs.push({ tipo: 'formacao', ok: false, texto: `Pede formação em ${areas}${x.nivelCurso && x.nivelCurso !== 'superior' ? ` (${x.nivelCurso === 'tecnico' ? 'técnico ou mais' : x.nivelCurso === 'livre' ? 'curso de qualificação' : x.nivelCurso})` : ''}.` });
   }
-  if (x.licenca && x.licenca !== 'cnh' && !v.trabalho.licencas.includes(x.licenca)) reqs.push({ tipo: 'registro', ok: false, texto: `Pede registro profissional (${x.licenca.toUpperCase()}).` });
+  if (x.licenca && x.licenca !== 'cnh' && !v.trabalho.licencas.includes(x.licenca)) reqs.push({ tipo: 'registro', ok: false, texto: `Pede registro profissional (${nomeDoRegistro(v, x.licenca)}).` });
   // Desempenho (mérito) e cidade.
   if (como === 'merito') reqs.push({ tipo: 'desempenho', ok: e.desempenho >= 62, texto: e.desempenho >= 62 ? 'O trabalho vem indo bem: isso conta.' : 'O trabalho precisa estar indo melhor — promoção por mérito olha o desempenho.' });
   if (como === 'antiguidade' && e.desempenho < 40) reqs.push({ tipo: 'desempenho', ok: false, texto: 'Conceito baixo: com o trabalho indo mal, a antiguidade não basta.' });

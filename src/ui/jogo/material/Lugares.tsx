@@ -6,6 +6,9 @@
  * fica o orçamento, confirmar — sem oito telas.
  */
 
+import { daMoedaLocal, emMoedaLocal, moedaDoPais, simboloDaMoeda } from '../../../motor/mundo/moeda';
+import { textoLocal } from '../../../motor/mundo/locais';
+import { habilitacaoDaVida } from '../../../motor/sistemas/autoescola';
 import { useId, useState } from 'react';
 import type { Produto, Vida } from '../../../motor/tipos';
 import { condicoesImovel, condicoesVeiculo, condicoesEmprestimo, disponibilidade, type Acao } from '../../../motor/acoes';
@@ -251,7 +254,7 @@ function Veiculos({ vida, agir, lugar }: { vida: Vida; agir: (a: Acao) => boolea
       <Escolha rotulo="O que ver" valor={vista} aoMudar={setVista} opcoes={[{ id: 'loja', rotulo: 'Para você, agora' }, { id: 'catalogo', rotulo: `Catálogo completo (${catalogo.length})` }]} />
       {vista === 'catalogo' ? <CatalogoVeiculos ofertas={catalogo} abrir={setAberta} categorias={categorias} /> : (
         <>
-          <p className="nota">{lugar === 'usados' ? 'Usado custa menos e dá mais oficina. Cada anúncio tem uma história.' : lugar === 'concessionaria' ? 'Zero quilômetro: garantia, cheiro de novo — e o valor cai assim que sai da loja.' : lugar === 'nautica' ? 'Barco é caro de comprar e mais caro de manter: marina, seguro, combustível, o casco que pede cuidado.' : lugar === 'aeroclube' ? 'Avião é raro e caro: hangar, inspeção obrigatória, seguro — uma conta de empresa.' : 'Moto e bicicleta: baratas de manter, expostas no trânsito.'}{!vida.trabalho.licencas.includes('cnh') && (lugar === 'concessionaria' || lugar === 'usados') ? ' Sem carteira de motorista, não dá para dirigir.' : !vida.trabalho.licencas.includes('cnh') && lugar === 'motos' ? ' Moto pede carteira de motorista; bicicleta, não.' : ''}</p>
+          <p className="nota">{lugar === 'usados' ? 'Usado custa menos e dá mais oficina. Cada anúncio tem uma história.' : lugar === 'concessionaria' ? 'Zero quilômetro: garantia, cheiro de novo — e o valor cai assim que sai da loja.' : lugar === 'nautica' ? 'Barco é caro de comprar e mais caro de manter: marina, seguro, combustível, o casco que pede cuidado.' : lugar === 'aeroclube' ? 'Avião é raro e caro: hangar, inspeção obrigatória, seguro — uma conta de empresa.' : 'Moto e bicicleta: baratas de manter, expostas no trânsito.'}{!vida.trabalho.licencas.includes('cnh') && (lugar === 'concessionaria' || lugar === 'usados') ? ` Sem ${habilitacaoDaVida(vida).a}, não dá para dirigir.` : !vida.trabalho.licencas.includes('cnh') && lugar === 'motos' ? ` Moto pede ${habilitacaoDaVida(vida).a}; bicicleta, não.` : ''}</p>
           {(lugar === 'nautica' || lugar === 'aeroclube') && (() => { const h = lugar === 'nautica' ? 'nautica' : temHabilitacao(vida, 'piloto') ? 'multimotor' : 'piloto'; return <div className="habilitacao"><p className="nota">Ter não é saber operar. {lugar === 'aeroclube' && h === 'multimotor' ? 'Você tem a licença de piloto. ' : ''}{leituraDaHabilitacao(vida, h)}{lugar === 'aeroclube' ? ' O jato executivo voa com tripulação própria.' : ''}</p><BotaoAcao vida={vida} acao={{ tipo: 'habilitacao', qual: h }} agir={agir} variante="discreto" ocultarBloqueado ocultarImpossivel>{h === 'nautica' ? 'Fazer o curso de habilitação náutica' : h === 'multimotor' ? 'Fazer a habilitação de multimotor' : 'Começar a formação de piloto'}</BotaoAcao></div>; })()}
           {para.length > 0 ? <><h3 className="subtitulo">Para você, agora</h3><ul className="ofertas">{para.map(x => <li key={x.item.id}><CartaoVeiculo o={x.item} motivo={x.motivo} abrir={() => setAberta(x.item.id)} /></li>)}</ul></>
             : <p className="nota">{motivoDeNadaCaber(vida, resto)}</p>}
@@ -269,7 +272,7 @@ function motivoDeNadaCaber(vida: Vida, resto: OfertaVeiculo[]): string {
   const barato = resto[0];
   if (!barato) return 'Nada à venda agora.';
   const m = modeloVeiculo(barato.modeloId);
-  if (m.cnh && !vida.trabalho.licencas.includes('cnh')) return 'Sem carteira de motorista, nenhum destes sai da loja com você: a autoescola fica em Compras, em Transporte.';
+  if (m.cnh && !vida.trabalho.licencas.includes('cnh')) return `Sem ${habilitacaoDaVida(vida).a}, nenhum destes sai da loja com você: ${habilitacaoDaVida(vida).escola === 'autoescola' ? 'a autoescola' : 'as aulas e a prova'} ficam em Compras, em Transporte.`;
   const d = disponibilidade(vida, { tipo: 'comprar_veiculo', ofertaId: barato.id, financiar: false });
   const f = disponibilidade(vida, { tipo: 'comprar_veiculo', ofertaId: barato.id, financiar: true });
   return `Nada cabe agora. O mais barato (${dinheiroCurto(barato.preco)}): ${d.motivo ?? 'à vista não dá'}${f.motivo && f.motivo !== d.motivo ? ` Financiado: ${f.motivo.charAt(0).toLowerCase() + f.motivo.slice(1)}` : ''}`;
@@ -359,7 +362,7 @@ function DetalheVeiculo({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao)
         <div><dt>Preço</dt><dd>{dinheiroCheio(o.preco)}</dd></div>
         {financiar && <div><dt>Parcela</dt><dd>{dinheiroCheio(c.parcela)} × {c.meses}</dd></div>}
         {financiar && <div><dt>Total pago</dt><dd>{dinheiroCurto(c.total)}</dd></div>}
-        <div><dt>{m.raro ? 'Para manter' : 'Para rodar'}</dt><dd>uns {dinheiroCurto(uso)}/mês{m.taxaAnual ? (m.categoria === 'embarcacao' ? ' + seguro e marina' : m.categoria === 'aeronave' ? ' + seguro, hangar e inspeção' : ' + IPVA e seguro') : ''}{m.tripulacao ? ` + tripulação, ${dinheiroCurto(m.tripulacao)}/mês` : ''}</dd></div>
+        <div><dt>{m.raro ? 'Para manter' : 'Para rodar'}</dt><dd>uns {dinheiroCurto(uso)}/mês{m.taxaAnual ? (m.categoria === 'embarcacao' ? ' + seguro e marina' : m.categoria === 'aeronave' ? ' + seguro, hangar e inspeção' : ` + ${textoLocal(vida, 'impostoVeiculo')} e seguro`) : ''}{m.tripulacao ? ` + tripulação, ${dinheiroCurto(m.tripulacao)}/mês` : ''}</dd></div>
         <div><dt>Tipo</dt><dd>{NOME_FORMA[formaDaVersao(x, o.modeloId)]}</dd></div>
         {m.categoria === 'carro' && <div><dt>Lugares</dt><dd>{lugares}</dd></div>}
       </dl>
@@ -451,7 +454,7 @@ function Guardar({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
           </ul>
           <label className="campo">
             <span className="campo__rotulo">Quanto</span>
-            <input type="number" inputMode="numeric" min={0} step={100} value={valor || ''} placeholder="valor em reais" onChange={e => setValor(Math.max(0, Math.round(Number(e.target.value))))} />
+            <input type="number" inputMode="numeric" min={0} step={100} value={valor ? Math.round(emMoedaLocal(valor)) : ''} placeholder={`valor (${simboloDaMoeda(moedaDoPais())})`} onChange={e => setValor(Math.max(0, Math.round(daMoedaLocal(Number(e.target.value)))))} />
           </label>
           {sugestoes.length > 0 && <div className="fichas-valor">{sugestoes.map(x => <button key={x} type="button" className="ficha-valor" onClick={() => setValor(x)}>{dinheiroCurto(x)}</button>)}<button type="button" className="ficha-valor" onClick={() => setValor(conta)}>Tudo ({dinheiroCurto(conta)})</button></div>}
           <div className="grupo-acoes grupo-acoes--linha">
@@ -470,8 +473,8 @@ function Emprestimo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) 
   const c = condicoesEmprestimo(vida, valor, meses);
   return (
     <div className="detalhe">
-      <p className="nota">{c.consignado ? 'Com salário garantido ou aposentadoria, o banco oferece consignado: a parcela sai direto do pagamento, com juro menor.' : 'Empréstimo pessoal: juro alto. Ajuda a atravessar um aperto — e pesa todo mês depois.'} Pela sua renda, até {dinheiroCurto(c.maximo)}.</p>
-      <label className="campo"><span className="campo__rotulo">Quanto</span><input type="number" inputMode="numeric" min={500} step={500} value={valor || ''} onChange={e => setValor(Math.max(0, Math.round(Number(e.target.value))))} /></label>
+      <p className="nota">{c.consignado ? `Com salário garantido ou aposentadoria, o banco oferece ${textoLocal(vida, 'consignado')}: a parcela sai direto do pagamento, com juro menor.` : 'Empréstimo pessoal: juro alto. Ajuda a atravessar um aperto — e pesa todo mês depois.'} Pela sua renda, até {dinheiroCurto(c.maximo)}.</p>
+      <label className="campo"><span className="campo__rotulo">Quanto</span><input type="number" inputMode="numeric" min={0} step={500} value={valor ? Math.round(emMoedaLocal(valor)) : ''} placeholder={`valor (${simboloDaMoeda(moedaDoPais())})`} onChange={e => setValor(Math.max(0, Math.round(daMoedaLocal(Number(e.target.value)))))} /></label>
       <div className="campo"><span className="campo__rotulo">Em quantas vezes</span><Escolha rotulo="Prazo" valor={String(meses)} aoMudar={x => setMeses(Number(x))} opcoes={[12, 24, 48, ...(c.consignado ? [72] : [])].map(x => ({ id: String(x), rotulo: `${x}×` }))} /></div>
       <dl className="objeto__numeros">
         <div><dt>Parcela</dt><dd>{dinheiroCheio(c.parcela)}</dd></div>
@@ -533,7 +536,7 @@ function LojaDeAnimais({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean 
   const custo = economiaLocal(vida.moradia.municipioId).custo;
   return (
     <>
-      <p className="nota">Aqui só se vende o que a lei permite: aves domésticas, roedores, coelhos, peixes — e silvestres nativos de criadouro autorizado pelo IBAMA, com nota fiscal e marcação. Macaco, cobra e bicho tirado do mato não se compram: é crime (Lei 9.605/1998).</p>
+      <p className="nota">Aqui só se vende o que a lei permite: aves domésticas, roedores, coelhos, peixes — e silvestres de criadouro autorizado {textoLocal(vida, 'orgaoAmbiental').replace(/^o /, 'pelo ').replace(/^a /, 'pela ')}, com nota fiscal e marcação. Macaco, cobra e bicho tirado do mato não se compram: é crime ({textoLocal(vida, 'leiDeFauna')}).</p>
       <ul className="animais">
         {lista.map((o: OfertaDePet) => {
           const a = animal(o.especie);

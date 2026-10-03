@@ -10,6 +10,7 @@
  * gesta. Adoção é um processo de anos.
  */
 
+import { paisCorrente } from '../mundo/moeda';
 import { sobrenomeDeQuemNasce, usaDoisSobrenomes } from '../dados/nomes';
 import { anosNoPais, nacionalidadesDaPessoa, nacionalidadesDaVida, nacionalidadesDoBebe } from '../mundo/vida';
 import type { Rng } from '../rng';
@@ -439,6 +440,7 @@ export const NOMES_SUGERIDOS = (r: Rng, g: 'masculino' | 'feminino', ano: number
 };
 
 function criarNomeBebe(r: Rng, g: 'masculino' | 'feminino', ano: number): string {
-  return sortearNome(r, g, ano);
+  // O nome sugerido é do país onde a família mora (nunca a lista brasileira para quem vive em Tóquio).
+  return sortearNome(r, g, ano, paisCorrente());
 }
 

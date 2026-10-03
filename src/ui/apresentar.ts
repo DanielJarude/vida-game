@@ -3,6 +3,7 @@
  * Relações, saúde e humor aparecem como palavras, nunca como números.
  */
 
+import { melhorAmigoId } from '../motor/sistemas/lacos';
 import { formatarDinheiroCurto } from '../motor/mundo/moeda';
 import { nomeDoPais } from '../motor/mundo/registro';
 import { capituloDaVida } from '../motor/sistemas/vinculos';
@@ -65,13 +66,20 @@ export function rotuloDe(v: Vida, p: Pessoa, vin: Vinculo): string {
   const n = v.caminhos.negocio;
   if (n && n.estado !== 'fechado' && n.socioId === p.id) return `${flex(p.genero, 'sócio', 'sócia', 'sócie')} ${n.nome.match(/^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/) ? 'na' : 'no'} ${n.nome}`;
   if (n && n.estado !== 'fechado' && n.equipe?.some(f => f.pessoaId === p.id)) return `trabalha ${n.nome.match(/^(Lanchonete|Loja|Marcenaria|Clínica|Auto)/) ? 'na' : 'no'} ${n.nome}`;
-  const onde = descricaoOrigem(v, vin);
+  // Sem um lugar de origem conhecido, o tipo fica sozinho ("amiga", não "amiga por aí").
+  const origem = descricaoOrigem(v, vin);
+  const onde = origem === 'por aí' ? '' : origem;
+  // O interesse romântico de agora é isso — não um "conhecido por aí" (Relações 2.0).
+  if (vin.romance?.estagio === 'interesse') return onde ? `interesse romântico, ${onde}` : 'interesse romântico';
+  const amigo = flex(p.genero, 'amigo', 'amiga', 'amigue');
   switch (vin.estagio) {
-    case 'amigo_proximo': return `${flex(p.genero, 'amigo', 'amiga', 'amigue')} de longa data`;
-    case 'amigo': return `${flex(p.genero, 'amigo', 'amiga', 'amigue')} ${onde}`;
-    case 'colega': return `${flex(p.genero, 'colega', 'colega')} ${onde}`;
-    case 'afastado': return `já foi ${flex(p.genero, 'próximo', 'próxima', 'próxime')}`;
-    default: return `conhecid${flex(p.genero, 'o', 'a', 'e')} ${onde}`;
+    case 'amigo_proximo': return melhorAmigoId(v) === p.id ? `${flex(p.genero, 'melhor amigo', 'melhor amiga', 'melhor amigue')}` : `${amigo} íntim${flex(p.genero, 'o', 'a', 'e')}`;
+    case 'amigo': return `${amigo} ${onde}`.trim();
+    case 'colega': return `colega ${onde}`.trim();
+    case 'afastado': return `${amigo} de outros tempos`;
+    case 'ex_amigo': return `ex-${amigo}`;
+    case 'rival': return `rival ${onde}`.trim();
+    default: return `conhecid${flex(p.genero, 'o', 'a', 'e')} ${onde}`.trim();
   }
 }
 

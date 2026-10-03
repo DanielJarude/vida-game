@@ -49,7 +49,7 @@ export function agendarMudanca(v: Vida, destinoId: string, motivo: string, tEfet
 let migrador: ((v: Vida, destinoId: string, motivo: string) => void) | undefined;
 export const registrarMigrador = (f: typeof migrador) => { migrador = f; };
 
-export function mudarAgora(v: Vida, destinoId: string, motivo: string, opcoes: { internacional?: boolean } = {}): void {
+export function mudarAgora(v: Vida, destinoId: string, motivo: string, opcoes: { internacional?: boolean; comAFamilia?: boolean } = {}): void {
   // Outra cidade em outro país não é mudança de cidade: é migração — com porta, câmbio, língua (`migracao`). Quem
   // chama (a proposta de um clube de fora, a casa do filho que mora no exterior) passa por ela; sem porta, não se muda.
   if (!opcoes.internacional && paisDaCidade(destinoId) !== paisDaCidade(v.moradia.municipioId)) { migrador?.(v, destinoId, motivo); return; }
@@ -64,14 +64,17 @@ export function mudarAgora(v: Vida, destinoId: string, motivo: string, opcoes: {
  * trás. O emprego local acaba, a faculdade presencial também (a não ser que
  * a mudança seja por causa dela), amizades passam a ser à distância.
  */
-export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' }>, opcoes: { internacional?: boolean } = {}): void {
+export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' }>, opcoes: { internacional?: boolean; comAFamilia?: boolean } = {}): void {
   v.processos = v.processos.filter(x => x.id !== p.id);
   const origem = v.moradia.municipioId;
   if (origem === p.destinoId) return;
   // Domicílio eleitoral: desde quando se vive na cidade (conta para candidatura).
   v.fatos['chegou_cidade'] = v.t;
-  // Quem morava com a família de origem vai sozinho: a família fica.
-  if (v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') {
+  // A FAMÍLIA INTEIRA se muda (a criança vai porque a casa vai): continua morando com os seus, na cidade nova.
+  if (opcoes.comAFamilia && (v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente')) {
+    v.moradia = { ...v.moradia, municipioId: p.destinoId, bairro: undefined };
+  } else if (v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') {
+    // Quem morava com a família de origem vai sozinho: a família fica.
     marcarSaidaDeCasa(v);
     for (const { p: pessoa, vin } of vinculosVivos(v)) {
       if (vin.parentesco && vin.parentesco !== 'filho' && (vin.parentesco !== 'pet' || pessoa.pet?.tutor !== 'eu')) vin.convivio = vin.convivio.filter(c => c !== 'casa');

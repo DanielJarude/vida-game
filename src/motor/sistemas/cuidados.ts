@@ -99,7 +99,7 @@ function consulta(v: Vida, r: Rng): SaidaCuidado {
     // Saúde mental: o posto encaminha para acompanhamento pela rede pública (no Brasil, o SUS: UBS, CAPSi para quem é menor) — de graça.
     if (MENTAIS.has(sinal.id)) {
       const ondeJovem = perfilDaVida(v).cotidiano?.saudeMentalJovem;
-      return { resultado: `${texto} ${i < 18 ? 'No posto de saúde, com a família junto, veio o encaminhamento' : 'Veio o encaminhamento'} para acompanhamento com psicólogo ${redeDeSaude(v).pelo}${i < 18 && ondeJovem ? ` (${ondeJovem})` : ''}: é de graça. Começar é com você.` };
+      return { resultado: `${texto} ${i < 18 ? 'No posto de saúde, com a família junto, veio o encaminhamento' : 'Veio o encaminhamento'} para acompanhamento com psicólogo ${redeDeSaude(v).pelo}${i < 18 && ondeJovem ? ` (${ondeJovem})` : ''}${redeDeSaude(v).sistema === 'seguro' ? ': pelo plano, quem tem; sem plano, a clínica comunitária cobra pouco' : ': é de graça'}. Começar é com você.` };
     }
     if (v.financas.planoDeSaude) { sinal.tratando = true; return { resultado: `${texto} O plano cobriu o tratamento, que começou logo.` }; }
     if (i >= 18 && !v.processos.some(p => p.tipo === 'tratamento')) return { resultado: texto, decisao: 'sau_tratamento' };
@@ -211,7 +211,7 @@ export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vi
     if (quem) out.push({ id: 'desabafar', texto: `Desabafar com ${quem.nome}`, motivo: 'Falar do que pesa, com quem escuta.', acao: { tipo: 'pessoa', pessoaId: quem.id, interacao: 'desabafar' } });
     if ((v.mente.estresse >= 55 || v.corpo.condicoes.some(c => c.id === 'ansiedade' || c.id === 'depressao')) && !v.rotinas.some(x => x.id === 'terapia')) {
       const a: Acao = { tipo: 'rotina', id: 'terapia', ativa: true, nivel: 1 };
-      out.push({ id: 'terapia', texto: encaminhado(v) ? `Começar o acompanhamento ${redeDeSaude(v).pelo}` : 'Procurar terapia', motivo: encaminhado(v) ? 'Com o encaminhamento, o psicólogo do posto é de graça.' : 'Quando a pressão dura, ajuda ter alguém de fora.', acao: a });
+      out.push({ id: 'terapia', texto: encaminhado(v) ? `Começar o acompanhamento ${redeDeSaude(v).pelo}` : 'Procurar terapia', motivo: encaminhado(v) ? (redeDeSaude(v).sistema === 'seguro' ? 'Com o encaminhamento, o plano (ou a clínica comunitária) cobre parte.' : 'Com o encaminhamento, o psicólogo do posto é de graça.') : 'Quando a pressão dura, ajuda ter alguém de fora.', acao: a });
     }
     const possiveis = out.filter(x => !x.acao || junto(x.acao));
     // Nunca sem saída: se nada direto cabe agora, sobra procurar alguém.

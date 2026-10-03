@@ -13,6 +13,7 @@
  * do mais relevante para o menos.
  */
 
+import { textoLocal } from '../../motor/mundo/locais';
 import { useState } from 'react';
 import { custoDaConsulta, custoDoTratamento, estadoDoPet, infoPet } from '../../motor/sistemas/pets';
 import { dinheiroCurto } from '../leituraMaterial';
@@ -32,6 +33,7 @@ import { Retrato, type Expressao } from '../avatar/Retrato';
 import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
 import { leituraDaOrigem } from '../../motor/sistemas/origem';
 import { trajetoriaDaRelacao } from '../../motor/sistemas/relacoes';
+import { descricaoOrigem } from '../../motor/sistemas/social';
 import { saudeConhecida } from '../../motor/sistemas/corpo';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void }
@@ -293,6 +295,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
         {saude && <p className="ficha__origem ficha__saude">Saúde: {saude}.</p>}
         {(quem || onde) && <p className="ficha__origem">{[quem, onde].filter(Boolean).join(' ')}</p>}
         {trajetoria && (vin.fases?.length ?? 0) > 1 && <p className="ficha__origem ficha__trajetoria" aria-label="A trajetória de vocês">{trajetoria}</p>}
+        {p.vivo && !p.especie && <CaminhoDaAmizade vida={vida} p={p} vin={vin} />}
         {esperando && gest && <p className="ficha__nota">Um bebê a caminho — o parto é previsto para {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</p>}
         {ultima && <p className="ficha__ultima"><span className="ficha__ano">{anoDe(ultima.t)}</span> {ultima.texto}</p>}
 
@@ -365,7 +368,7 @@ function FichaPet({ vida, agir, p }: { vida: Vida; agir: (a: Acao) => boolean; p
     <div className="ficha-pet">
       <p className="ficha-pet__estado">{estadoDoPet(vida, p).charAt(0).toUpperCase() + estadoDoPet(vida, p).slice(1)}.</p>
       <p className="nota">{origem}{info.origem === 'familia' ? '' : `, em ${chegou}`}. {info.jeito.charAt(0).toUpperCase() + info.jeito.slice(1)}.{info.tutor === 'familia' ? ' Quem cuida é a família.' : ''}</p>
-      {info.origem === 'ilegal' && <p className="nota nota--ruim"><span aria-hidden>! </span>Sem documento, é crime manter um silvestre (Lei 9.605/1998): a fiscalização pode levar e multar. Entregar por conta própria não tem multa.</p>}
+      {info.origem === 'ilegal' && <p className="nota nota--ruim"><span aria-hidden>! </span>Sem documento, é crime manter um silvestre ({textoLocal(vida, 'leiDeFauna')}): a fiscalização pode levar e multar. Entregar por conta própria não tem multa.</p>}
       <div className="grupo-acoes grupo-acoes--linha">
         {info.origem === 'ilegal' && <BotaoAcao vida={vida} acao={{ tipo: 'entregar_pet', petId: p.id }} agir={agir} variante="secundario">Entregar ao órgão ambiental</BotaoAcao>}
         {d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'tratar' }} agir={agir}>{`Tratar (${dinheiroCurto(custoDoTratamento(vida, p, true))})`}</BotaoAcao>}
@@ -384,4 +387,24 @@ function tituloDePessoas(v: Vida, nucleo: { p: Pessoa }[]): string {
   if (par) return nucleo.length > 1 ? `A vida com ${par.p.nome} e mais ${nucleo.length - 1}` : `A vida com ${par.p.nome}`;
   if (nucleo.length) return `Perto: ${nucleo.slice(0, 2).map(x => x.p.nome).join(' e ')}${nucleo.length > 2 ? ` e mais ${nucleo.length - 2}` : ''}`;
   return 'Gente da sua vida';
+}
+
+/**
+ * "GOSTEI DESSA PESSOA. COMO TENTO ME APROXIMAR?" — o caminho, dito na ficha
+ * de quem ainda não é amigo (Relações 2.0). Não é uma barra: conviver abre a
+ * chance; um gesto correspondido (seu ou da pessoa) é o que faz uma amizade
+ * acontecer — e afinidade, tempo e o jeito de cada um decidem o resto.
+ */
+function CaminhoDaAmizade({ vida, p, vin }: { vida: Vida; p: Pessoa; vin: Vinculo }) {
+  if (vin.parentesco || vin.romance || idade(vida) < 12 || idadePessoa(vida, p) < 12) return null;
+  const papel = papelDe(p, vin);
+  if (papel !== 'colega' && papel !== 'conhecido') return null;
+  const convivem = vin.convivio.length > 0;
+  const gesto = vin.aproximacao !== undefined && vida.t - vin.aproximacao <= 24;
+  const texto = !convivem
+    ? 'Hoje vocês não convivem: sem um lugar em comum (a escola, o trabalho, uma atividade), uma amizade quase não tem por onde começar.'
+    : gesto
+      ? 'Já houve um gesto correspondido entre vocês. Agora é tempo: convivendo, a amizade pode acontecer — se a afinidade ajudar.'
+      : `Vocês convivem${descricaoOrigem(vida, vin) === 'por aí' ? '' : ` ${descricaoOrigem(vida, vin)}`}. Conviver abre a chance; uma amizade começa quando alguém dá um passo (chamar para algo) e o outro vem.`;
+  return <p className="ficha__origem ficha__caminho" aria-label="Como uma amizade nasce">{texto}</p>;
 }

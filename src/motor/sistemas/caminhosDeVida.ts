@@ -19,6 +19,7 @@
  *   resposta para ESTA vida — e a primeira ação, quando dá para dar agora.
  */
 
+import { perfilDaVida } from '../mundo/vida';
 import { educacaoDaVida } from '../mundo/vida';
 import type { Acao } from '../acoes';
 import type { Dominio, Vida } from '../tipos';
@@ -228,6 +229,14 @@ export interface CaminhoPossivel {
   passo?: PassoDoCaminho;
 }
 
+/** O serviço militar do país onde se mora, em uma frase (obrigatório, seletivo ou voluntário; e a idade). */
+function servicoMilitarEmPalavras(v: Vida): string {
+  const m = perfilDaVida(v).militar;
+  return m.servico === 'obrigatorio' ? `O serviço militar aos ${m.idade} (obrigatório para quem tem a nacionalidade daqui)`
+    : m.servico === 'seletivo' ? `O registro militar aos ${m.idade} (a convocação é rara; servir é quase sempre escolha)`
+      : `O alistamento voluntário, a partir dos ${m.idade}`;
+}
+
 export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
   const i = idade(v);
   const e = v.trabalho.atual;
@@ -282,7 +291,7 @@ export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
     const escola = ['aluno_sargento', 'cadete'].map(ocupacao).find(oc => podeTentar(elegibilidade(v, oc, 'oportunidade')));
     out.push({
       id: 'forcas', titulo: 'Forças Armadas',
-      como: 'O serviço militar aos 18 (obrigatório para homens, voluntário para mulheres) — ou o concurso para a escola de sargentos ou a academia, com estudo e teste físico. Formação longe de casa; transferências pela carreira.',
+      como: `${servicoMilitarEmPalavras(v)} — ou o concurso para a escola de sargentos ou a academia, com estudo e teste físico. Formação longe de casa; transferências pela carreira.`,
       agora: dentro ? 'Você está na farda.' : escola ? `Dá para prestar ${nomeOcupacao(v, escola)} (estudo para concurso, área de carreiras policiais e militares).` : i < 17 ? 'Aos 17, os concursos das escolas militares abrem para você.' : 'Os concursos das escolas têm limite de idade (e pedem ensino médio).',
       estado: dentro ? 'aqui' : escola ? 'pronto' : i < 17 ? 'preparar' : 'fora',
       passo: dentro ? undefined : escola ? { rotulo: 'Estudar para o concurso (e ver os editais)', ir: 'concursos' } : undefined
@@ -294,14 +303,14 @@ export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
     const alvo = ['aluno_pm', 'policial_penal', 'guarda_municipal', 'policial_civil'].map(ocupacao).find(oc => podeTentar(elegibilidade(v, oc, 'oportunidade')));
     out.push({
       id: 'seguranca', titulo: 'Polícia e bombeiros',
-      como: 'Concurso estadual (prova, teste físico, investigação social: pede ficha limpa) → curso de formação → a carreira, que sobe por antiguidade.',
+      como: `${perfilDaVida(v).trabalho.concurso ? 'Concurso' : 'Seleção'} (prova, teste físico, investigação social: pede ficha limpa) → curso de formação → a carreira, que sobe por antiguidade.`,
       agora: dentro ? 'Você está na segurança pública.' : alvo ? `Dá para prestar ${nomeOcupacao(v, alvo)}: estudo dirigido para carreiras policiais, e o físico em dia.` : 'Fora do alcance agora (idade, escolaridade ou antecedentes).',
       estado: dentro ? 'aqui' : alvo ? 'pronto' : 'fora',
       passo: dentro || !alvo ? undefined : { rotulo: 'Estudar para o concurso (e ver os editais)', ir: 'concursos' }
     });
   }
-  // Serviço público (civil).
-  {
+  // Serviço público (civil) — por concurso, onde o país entra assim no serviço público (o perfil).
+  if (perfilDaVida(v).trabalho.concurso) {
     const dentro = e?.contrato === 'servidor';
     out.push({
       id: 'publico', titulo: 'Serviço público',

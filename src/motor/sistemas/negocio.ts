@@ -32,6 +32,7 @@
  * tela fala em palavras.
  */
 
+import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { EstrategiaNegocio, Funcionario, Negocio, Vida } from '../tipos';
@@ -116,7 +117,7 @@ export function podeAbrirNegocio(v: Vida, id: string): Veredito {
   const conhece = estrada >= t.meses || oficio >= (t.habilidade ?? 101);
   // Sem conhecer o ramo dá para tentar — e o jogo diz o que isso significa.
   if (!conhece) return { grau: 'improvavel', chance: 0.35, motivo: `Sem conhecer o ramo (quem abre ${t.nome} costuma ter uns ${Math.round(t.meses / 12)} anos na área${t.habilidade ? ' ou o ofício na mão' : ''}), o começo é mais duro e dar errado é mais provável.` };
-  if (v.financas.negativado) return { grau: 'improvavel', chance: 0.4, motivo: 'Com o nome sujo, fornecedor não vende a prazo.' };
+  if (v.financas.negativado) return { grau: 'improvavel', chance: 0.4, motivo: `${textoLocal(v, 'comNomeSujo')}, fornecedor não vende a prazo.` };
   return { grau: 'permitido', chance: 0.6 };
 }
 
@@ -132,7 +133,7 @@ export function modosDeAbrir(v: Vida, id: string): { modo: ModoAbertura; custo: 
   out.push({ modo: 'guardado', custo, ...comOQueTem(custo) });
   if (t.emCasa) { const c = Math.round(custo * 0.4 / 100) * 100; out.push({ modo: 'pequeno', custo: c, ...comOQueTem(c) }); }
   const falta = custo - Math.min(tem, custo * 0.3);
-  out.push({ modo: 'emprestimo', custo, motivo: v.financas.negativado ? 'Com o nome sujo, o banco não empresta.' : emprestimoPossivel(v, falta) ? undefined : 'O banco não empresta tanto para a sua renda.' });
+  out.push({ modo: 'emprestimo', custo, motivo: v.financas.negativado ? `${textoLocal(v, 'comNomeSujo')}, o banco não empresta.` : emprestimoPossivel(v, falta) ? undefined : 'O banco não empresta tanto para a sua renda.' });
   return out;
 }
 

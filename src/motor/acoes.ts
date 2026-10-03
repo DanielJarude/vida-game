@@ -72,7 +72,9 @@ import { autonomia } from './sistemas/autonomia';
 import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, usarItem, type MudancaVisual } from './sistemas/estilo';
 import { clamp } from './rng';
 import { disponibilidadeParalela, encerrarParalela, encerrarPausada, trocarPrincipal } from './sistemas/paralelas';
-import { cnhEmProva, disponibilidadePrepararCnh, prepararCnh } from './sistemas/autoescola';
+import { regrasDaVida } from './mundo/regras';
+import { previdenciaDaVida, textoLocal } from './mundo/locais';
+import { cnhEmProva, disponibilidadePrepararCnh, habilitacaoDaVida, podeComecarCnh, prepararCnh } from './sistemas/autoescola';
 import { disponibilidadeHabilitacao, iniciarHabilitacao } from './sistemas/habilitacoes';
 import { disponibilidadeExperiencia, nomeDaExperiencia, viverExperiencia, type TipoExperiencia } from './sistemas/experiencias';
 import { disponibilidadeRenomear, renomear, type AlvoDeNome } from './sistemas/autoria';
@@ -291,7 +293,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'largar_escola':
       if (!v.educacao.basica) return bloqueio('incompativel', 'Você não está na escola.');
       if (i < 15) return bloqueio('ilegal', 'Criança não decide largar a escola.');
-      return { grau: 'irregular', motivo: 'Escola é obrigatória até os 17. Dá para largar — e tem consequência.' };
+      // Até que idade a escola é obrigatória é regra do lugar (17 no Brasil, 18 em Portugal e na Inglaterra, 16 no universal).
+      return i >= regrasDaVida(v).escolaObrigatoriaAte ? PERMITIDO : { grau: 'irregular', motivo: `Aqui, a escola é obrigatória até os ${regrasDaVida(v).escolaObrigatoriaAte}. Dá para largar — e tem consequência.` };
     case 'voltar_a_estudar':
       return v.educacao.evadiu && !v.educacao.basica ? (i >= 15 ? PERMITIDO : bloqueio('impossivel', 'A partir dos 15.')) : bloqueio('incompativel', 'Não se aplica.');
     case 'candidatar': {
@@ -325,7 +328,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'aposentar': return podeAposentar(v);
     case 'pessoa': return disponibilidadeInteracao(v, a.pessoaId, a.interacao);
     case 'adotar':
-      if (i < 18) return bloqueio('ilegal', 'Adoção exige maioridade.');
+      if (i < maioridade(v)) return bloqueio('ilegal', 'Adoção exige maioridade.');
       if (v.processos.some(p => p.tipo === 'adocao')) return bloqueio('incompativel', 'Já há um processo de adoção em andamento.');
       if (moraComFamiliaDeOrigem(v)) return bloqueio('requisito', 'A Vara da Infância exige casa própria (alugada ou não).');
       if (saldoMensal(v).renda < 1600) return bloqueio('requisito', 'É preciso comprovar renda.');
@@ -355,7 +358,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'naturalizar': return podeNaturalizar(v);
     case 'mudar_cidade': {
-      if (i < 18) return bloqueio('ilegal', 'Menor de idade não muda de cidade sozinho.');
+      if (i < maioridade(v)) return bloqueio('ilegal', 'Menor de idade não muda de cidade sozinho.');
       if (a.municipioId === v.moradia.municipioId) return bloqueio('incompativel', 'Você já mora aqui.');
       // Outro país não é uma mudança de cidade: é uma migração, com porta, câmbio e consequências (`migracao`).
       if (paisDaCidade(a.municipioId) !== paisDaVida(v)) return bloqueio('incompativel', 'Morar em outro país é uma migração, não uma mudança de cidade.');
@@ -374,7 +377,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return condicoesVeiculo(v, o.preco, a.financiar, a.entrada).veredito;
     }
     case 'comprar_imovel': {
-      if (i < 18) return bloqueio('ilegal', 'Compra de imóvel exige maioridade.');
+      if (i < maioridade(v)) return bloqueio('ilegal', 'Compra de imóvel exige maioridade.');
       const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId) : a.modeloId ? ofertaPorModelo(v, 'venda', a.modeloId) : undefined;
       if (!o || o.modo !== 'venda') return bloqueio('impossivel', 'Esse imóvel já foi vendido.');
       return condicoesImovel(v, o.preco, a.financiar, a.entrada, a.prazo).veredito;
@@ -382,7 +385,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'vender_bem': {
       const b = v.financas.bens.find(x => x.id === a.bemId);
       if (!b) return bloqueio('impossivel', 'Bem não encontrado.');
-      if (i < 18) return bloqueio('ilegal', 'Exige maioridade.');
+      if (i < maioridade(v)) return bloqueio('ilegal', 'Exige maioridade.');
       const d = v.financas.dividas.find(x => x.bemId === b.id);
       const vale = b.tipo === 'veiculo' ? valorDeVenda(b) : valorDeVendaImovel(b);
       if (d && d.saldo > vale + disponivel(v)) return bloqueio('requisito', `A venda (${fmt(vale)}) não cobre o que falta do financiamento (${fmt(d.saldo)}).`);
@@ -405,7 +408,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'usar_casa': { const d = disponibilidadeUsoCasa(v, a.oque); return deOk(d); }
     case 'investir': {
-      if (i < 18) return bloqueio('ilegal', 'Investir exige maioridade (ou um responsável).');
+      if (i < maioridade(v)) return bloqueio('ilegal', 'Investir exige maioridade (ou um responsável).');
       const pr = PRODUTOS.find(x => x.id === (a.destino as string));
       if (!pr) return bloqueio('impossivel', 'Produto desconhecido.');
       if (a.valor < pr.minimo) return bloqueio('requisito', `O mínimo é ${fmt(pr.minimo)}.`);
@@ -446,7 +449,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const e = v.trabalho.atual;
       // O regime simplificado é do país (no Brasil, o MEI); onde não existe, a ação não existe.
       const regime = perfilDaVida(v).trabalho.microempreendedor;
-      if (!regime) return bloqueio('impossivel', 'Aqui não existe um regime simplificado como o MEI.');
+      if (!regime) return bloqueio('impossivel', 'Aqui não existe um regime simplificado para quem trabalha por conta.');
       if (!e || (e.contrato !== 'informal' && e.contrato !== 'autonomo')) return bloqueio('impossivel', 'Só para quem trabalha por conta.');
       if (e.mei) return bloqueio('impossivel', 'Já é MEI.');
       if (v.caminhos.negocio && ['comecando', 'firme', 'apertado'].includes(v.caminhos.negocio.estado)) return bloqueio('impossivel', 'O negócio já tem CNPJ próprio.');
@@ -471,14 +474,14 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'cuidar_da_casa': {
       if (v.trabalho.pausa) return bloqueio('incompativel', 'Você já está cuidando.');
-      if (i < 18) return bloqueio('impossivel', 'Não se aplica.');
+      if (i < maioridade(v)) return bloqueio('impossivel', 'Não se aplica.');
       if (a.intensidade === 'parcial') { const r = podeReduzir(v); return r === true ? PERMITIDO : bloqueio('incompativel', r); }
       if (!v.trabalho.atual) return bloqueio('incompativel', 'Você não está trabalhando.');
       if (v.trabalho.atual.contrato === 'militar') return bloqueio('incompativel', 'A carreira militar não tem pausa assim.');
       const par = parceiro(v);
       const casa = filhos(v).some(f => v.vinculos[f.id]?.convivio.includes('casa') && idadePessoa(v, f) < 14);
       if (!(par && par.vin.convivio.includes('casa') && par.p.renda > 0) && !casa) return bloqueio('requisito', 'Sem outra renda em casa, parar de trabalhar não se sustenta.');
-      return { grau: 'permitido', motivo: 'Sem renda própria, o INSS para — a não ser que pague como facultativo.' };
+      return { grau: 'permitido', motivo: `Sem renda própria, a contribuição ${previdenciaDaVida(v).ao} para — a não ser que se pague ${textoLocal(v, 'facultativo')}.` };
     }
     case 'voltar_mercado': return v.trabalho.pausa ? PERMITIDO : bloqueio('incompativel', 'Não há pausa para encerrar.');
     case 'intencao_trabalho': return podeDeclararIntencao(v, a.quer);
@@ -493,7 +496,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'comprar_pet': {
       const o = ofertaDePet(v, a.ofertaId);
       if (!o) return bloqueio('impossivel', 'Esse animal já foi vendido.');
-      if (i < 18) return bloqueio('ilegal', 'Comprar um animal é coisa de adulto.');
+      if (i < maioridade(v)) return bloqueio('ilegal', 'Comprar um animal é coisa de adulto.');
       if (jaFez(v, 'adotou_pet')) return bloqueio('incompativel', 'Um bicho novo por ano já é bastante.');
       const d = podeTerPet(v, o.especie, o.porte);
       if (d.grau !== 'permitido' && d.grau !== 'improvavel') return bloqueio(d.grau, d.motivo!);
@@ -539,14 +542,23 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'renomear': return disponibilidadeRenomear(v, a.alvo, a.nome, a.k);
     case 'cnh_prova': return cnhEmProva(v) ? PERMITIDO : bloqueio('incompativel', 'A prova ainda não foi marcada.');
     case 'cnh':
-      if (i < 18) return bloqueio('ilegal', 'A CNH é a partir dos 18.');
-      if (v.trabalho.licencas.includes('cnh')) return bloqueio('incompativel', 'Você já tem carteira.');
-      if (v.processos.some(p => p.tipo === 'cnh')) return bloqueio('incompativel', 'Já está na autoescola.');
-      return vereditoDePagar(v, custoCnh(v), 'A autoescola custa cerca de');
+    {
+      const pode = podeComecarCnh(v);
+      if (pode.grau !== 'permitido') return pode;
+      const h = habilitacaoDaVida(v);
+      if (v.trabalho.licencas.includes('cnh')) return bloqueio('incompativel', `Você já tem ${h.a}.`);
+      if (v.processos.some(p => p.tipo === 'cnh')) return bloqueio('incompativel', `Já está ${h.naEscola}.`);
+      return vereditoDePagar(v, custoCnh(v), h.regra.autoescolaObrigatoria ? 'A autoescola custa cerca de' : 'As aulas e as taxas custam cerca de');
+    }
   }
 }
 
-const custoCnh = (v: Vida) => Math.round(3200 * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
+/** Onde a autoescola é obrigatória, o pacote dela; onde não é, as taxas e umas aulas. */
+/** A maioridade civil do lugar onde a pessoa mora (18 quase sempre; 19 na Coreia do Sul): `mundo/regras`. */
+const maioridade = (v: Vida) => regrasDaVida(v).maioridade;
+
+/** Onde a autoescola é obrigatória, o pacote dela; onde não é, as taxas e umas aulas. */
+const custoCnh = (v: Vida) => Math.round((habilitacaoDaVida(v).regra.autoescolaObrigatoria ? 3200 : 1100) * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
 
 /** `{ ok, motivo, resgate }` dos sistemas vira veredito (com o resgate possível, quando é só a conta que não cobre). */
 const deOk = (d: { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] }): Veredito => (d.ok ? PERMITIDO : { grau: 'requisito', motivo: d.motivo, ...(d.resgate ? { resgate: d.resgate } : {}) });
@@ -598,7 +610,7 @@ export function condicoesImovel(v: Vida, preco: number, financiar: boolean, entr
   const parcela = meses > 0 ? Math.round(parcelaPrice(financiado, jurosMes, meses)) : 0;
   const peso = parcela / Math.max(1, renda);
   const out = { ...base, entrada: ent, financiado, parcela, meses, jurosMes, peso, total: ent + custos + parcela * meses };
-  if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco financia.') };
+  if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', `${textoLocal(v, 'comNomeSujo')}, nenhum banco financia.`) };
   if (prazoMaximo < 5) return { ...out, veredito: bloqueio('requisito', 'Nenhum banco financia com esse prazo na sua idade.') };
   if (renda <= 0) return { ...out, veredito: bloqueio('requisito', 'Sem renda comprovada, não há financiamento.') };
   if (peso > 0.3) return { ...out, veredito: bloqueio('requisito', `A parcela (${fmt(parcela)}) passaria de 30% da renda${renda !== rendaPropriaMensal(v) ? ' de vocês' : ''}.`) };
@@ -618,7 +630,7 @@ export function condicoesVeiculo(v: Vida, preco: number, financiar: boolean, ent
   const parcela = Math.round(parcelaPrice(financiado, jurosMes, meses));
   const renda = rendaPropriaMensal(v);
   const out = { ...base, entrada: ent, financiado, parcela, meses, jurosMes, peso: parcela / Math.max(1, renda), total: ent + parcela * meses };
-  if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco financia.') };
+  if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', `${textoLocal(v, 'comNomeSujo')}, nenhum banco financia.`) };
   if (renda <= 0) return { ...out, veredito: bloqueio('requisito', 'Sem renda, não há financiamento.') };
   if (out.peso > 0.3) return { ...out, veredito: bloqueio('requisito', `A parcela (${fmt(parcela)}) passaria de 30% da sua renda.`) };
   if (comprometimento(v, parcela) > 0.45) return { ...out, veredito: bloqueio('requisito', 'Somada às parcelas que você já tem, não cabe na renda.') };
@@ -635,8 +647,8 @@ export function condicoesEmprestimo(v: Vida, valor: number, meses: number): Cond
   const prazo = Math.max(6, Math.min(consignado ? 84 : 48, meses));
   const parcela = Math.round(parcelaPrice(valor, jurosMes, prazo));
   const base = { preco: valor, entrada: 0, entradaMinima: 0, financiado: valor, parcela, meses: prazo, jurosMes, custos: 0, peso: parcela / Math.max(1, renda), total: parcela * prazo, social: false, prazoMaximo: consignado ? 7 : 4, consignado, maximo };
-  if (idade(v) < 18) return { ...base, veredito: bloqueio('ilegal', 'Empréstimo exige maioridade.') };
-  if (v.financas.negativado) return { ...base, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco empresta.') };
+  if (idade(v) < maioridade(v)) return { ...base, veredito: bloqueio('ilegal', 'Empréstimo exige maioridade.') };
+  if (v.financas.negativado) return { ...base, veredito: bloqueio('requisito', `${textoLocal(v, 'comNomeSujo')}, nenhum banco empresta.`) };
   if (renda <= 0) return { ...base, veredito: bloqueio('requisito', 'Sem renda, ninguém empresta.') };
   if (valor < 500) return { ...base, veredito: bloqueio('requisito', `O mínimo é ${moeda(500)}.`) };
   if (valor > maximo) return { ...base, veredito: bloqueio('requisito', `Pela sua renda, o banco empresta até ${fmt(maximo)}.`) };
@@ -793,7 +805,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const nota = fazerEnem(v, r);
       // Com um curso em vista, a prova deixa devolutiva: onde ficou diante do corte e o que pesou.
       const dev = v.educacao.objetivo ? [...v.caminhos.devolutivas].reverse().find(d => d.tipo === 'vestibular' && d.t === v.t) : undefined;
-      return { resultado: `Você fez ${educacaoDaVida(v).o} e tirou ${nota}.${dev ? ` ${dev.texto}` : ''}`, titulo: dev ? educacaoDaVida(v).O : undefined };
+      return { resultado: `${educacaoDaVida(v).fez(nota)}${dev ? ` ${dev.texto}` : ''}`, titulo: dev ? educacaoDaVida(v).O : undefined };
     }
     case 'objetivo_estudo': return ok(definirObjetivo(v, a.cursoId));
     case 'conhecer_alguem': {
@@ -825,7 +837,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok('Curso abandonado.');
     }
     case 'largar_escola': largarEscola(v); return ok('Você deixou a escola.', 'ruim');
-    case 'voltar_a_estudar': voltarAEstudar(v); return ok('Matrícula feita no supletivo.', 'bom');
+    case 'voltar_a_estudar': voltarAEstudar(v); return ok(`Matrícula feita ${textoLocal(v, 'supletivo').replace(/^o /, 'no ').replace(/^a /, 'na ')}.`, 'bom');
     case 'candidatar': {
       const oc = ocupacao(a.ocupacaoId);
       v.anoAtual.acoes.push(`candidatura:${oc.id}`);
@@ -895,7 +907,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'facultativo':
       v.trabalho.pausa!.facultativo = a.ativo;
-      return ok(a.ativo ? 'O INSS volta a contar, pago como facultativo.' : 'Sem pagar o INSS, o tempo de contribuição para.');
+      return ok(a.ativo ? `${previdenciaDaVida(v).O} volta a contar, pago ${textoLocal(v, 'facultativo')}.` : `Sem pagar ${previdenciaDaVida(v).o}, o tempo de contribuição para.`);
     case 'cuidar_da_casa': iniciarPausa(v, 'casa', a.intensidade); return ok(a.intensidade === 'parcial' ? 'Jornada reduzida.' : 'Você parou de trabalhar para cuidar da casa e da família.');
     case 'voltar_mercado': encerrarPausa(v, 'procurar'); return ok('Hora de voltar.');
     case 'intencao_trabalho': {
@@ -1119,7 +1131,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'cnh':
       pagarTudo(v, custoCnh(v));
       iniciarCnh(v);
-      return ok('Matrícula na autoescola feita. A prova teórica é em alguns meses (as perguntas, você responde); estudar a apostila e fazer aulas extras ajudam.');
+      return ok(`${habilitacaoDaVida(v).regra.autoescolaObrigatoria ? 'Matrícula na autoescola feita' : 'Inscrição para a prova feita, com algumas aulas de direção'}. A prova teórica é em alguns meses (as perguntas, você responde); estudar o manual e fazer aulas extras ajudam.`);
     case 'cnh_preparar': return ok(prepararCnh(v, a.como));
     case 'habilitacao': return ok(iniciarHabilitacao(v, a.qual));
     case 'experiencia': return { resultado: viverExperiencia(v, r, a.id, a.escolha), titulo: nomeDaExperiencia(a.id) };

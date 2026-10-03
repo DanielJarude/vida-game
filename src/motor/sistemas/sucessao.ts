@@ -882,7 +882,7 @@ function reconciliarParentescos(v: Vida, antigos: Vida['vinculos'], herdeiroId: 
     const junto = estagio !== 'namoro';
     novos[par.id] = {
       pessoaId: par.id, origem: 'romance', tInicio: desde, proximidade: 72, confianca: 70, tensao: 6, convivio: par.vivo && junto ? ['casa'] : [], tUltimoContato: v.t,
-      historia: [{ t: desde, texto: `Começaram a namorar.`, tipo: 'romance', peso: 2 }, ...(casou !== undefined ? [{ t: casou, texto: estagio === 'casamento' ? 'Casaram no cartório.' : 'Foram morar juntos.', tipo: 'casamento' as const, peso: 3 }] : [])],
+      historia: [{ t: desde, texto: `Começaram a namorar.`, tipo: 'romance', peso: 2 }, ...(casou !== undefined ? [{ t: casou, texto: estagio === 'casamento' ? 'Casaram no civil.' : 'Foram morar juntos.', tipo: 'casamento' as const, peso: 3 }] : [])],
       romance: { estagio, tEstagio: casou ?? desde, tInicio: desde, envolvimento: 70, planoFilhos: 'sem_planejar' }
     };
     par.parceiroId = undefined;

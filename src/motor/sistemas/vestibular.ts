@@ -23,7 +23,7 @@ import type { Devolutiva, Vida } from '../tipos';
 import { escrever, idade } from '../nucleo';
 import { cursoOuNulo, type Curso, type Materia } from '../dados/cursos';
 import { praticar } from './frentes';
-import { NOME_MATERIA, notaEsperadaArea, AREAS_ENEM, temCota } from './escola';
+import { NOME_MATERIA, notaEsperadaArea, notasDaqui, AREAS_ENEM, temCota } from './escola';
 import { registrarDevolutiva } from './devolutivas';
 import { anoDe } from '../tempo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
@@ -185,7 +185,7 @@ export function estimativaParaCurso(v: Vida, c: Curso): Estimativa {
   const corte = c.corte - (cota(v) ? 45 : 0);
   const situacao = situacaoDa(nota, corte);
   const fraca = areaQueMaisPesa(porArea, c, corte);
-  const ultimaProva = [...v.educacao.enem].reverse().find(x => x.areas);
+  const ultimaProva = [...notasDaqui(v)].reverse().find(x => x.areas);
   const ultima = ultimaProva ? { t: ultimaProva.t, nota: ponderada(ultimaProva.areas!, c) } : undefined;
   const falta = corte - nota;
   const partes: string[] = [];
@@ -212,7 +212,7 @@ function ponderada(areas: Partial<Record<Materia, number>>, c: Curso): number {
 
 /** O que falta fazer, em palavras — o próximo passo da preparação. */
 export function proximoPassoVestibular(v: Vida, e: Estimativa): string {
-  if (e.situacao === 'no_corte') return v.educacao.enem.some(x => x.t > v.t - 12) ? `A nota está no nível: é tentar a vaga ${educacaoDaVida(v).vagas === 'o SISU' ? 'pelo SISU' : 'pela nota'}.` : `No nível do corte: fazer ${educacaoDaVida(v).o} é o próximo passo (o dia ainda pesa).`;
+  if (e.situacao === 'no_corte') return notasDaqui(v).some(x => x.t > v.t - 12) ? `A nota está no nível: é tentar a vaga ${educacaoDaVida(v).vagas === 'o SISU' ? 'pelo SISU' : 'pela nota'}.` : `No nível do corte: fazer ${educacaoDaVida(v).o} é o próximo passo (o dia ainda pesa).`;
   const cursinho = fazCursinho(v);
   const meses = mesesDePreparo(v);
   const d = v.educacao.postura;

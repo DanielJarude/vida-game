@@ -9,6 +9,7 @@
  * Os lugares da cidade (concessionária, banco, abrigo) moram em Cidade.
  */
 
+import { daMoedaLocal, emMoedaLocal, moedaDoPais, simboloDaMoeda } from '../../motor/mundo/moeda';
 import { useState } from 'react';
 import { disponibilidadeUsoCasa, disponibilidadeUsoVeiculo, rotuloUsoCasa, rotuloUsoVeiculo, USOS_CASA, USOS_VEICULO } from '../../motor/sistemas/usos';
 import type { Aplicacao, Vida } from '../../motor/tipos';
@@ -211,7 +212,7 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
         <div className="objeto__amortizar">
           <label className="campo">
             <span className="campo__rotulo">Adiantar parcelas</span>
-            <input type="number" inputMode="numeric" min={0} step={1000} value={valor || ''} placeholder="valor em reais" onChange={e => setValor(Math.max(0, Math.round(Number(e.target.value))))} />
+            <input type="number" inputMode="numeric" min={0} step={1000} value={valor ? Math.round(emMoedaLocal(valor)) : ''} placeholder={`valor (${simboloDaMoeda(moedaDoPais())})`} onChange={e => setValor(Math.max(0, Math.round(daMoedaLocal(Number(e.target.value)))))} />
           </label>
           <BotaoAcao vida={vida} acao={{ tipo: 'amortizar', dividaId: f.dividaId, valor }} agir={agir} variante="discreto" aoAgir={() => setValor(0)}>Amortizar</BotaoAcao>
         </div>

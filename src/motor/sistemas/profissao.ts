@@ -26,6 +26,8 @@
  *   sentido.
  */
 
+import { regrasDaVida } from '../mundo/regras';
+import { previdenciaDaVida, textoLocal } from '../mundo/locais';
 import { perfilDoPais, temPerfil } from '../mundo/registro';
 import { perfilDaVida } from '../mundo/vida';
 import { especialidadeMedica } from './medicina';
@@ -353,7 +355,7 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
     else if (modo === 'pausa') { titulo = flex(g, 'Cuidando', 'Cuidando'); frases.push('Fora do trabalho pago, por um tempo, para cuidar.'); }
     else if (modo === 'aposentado' && t.aposentadoria) { titulo = flex(g, 'Aposentado', 'Aposentada', 'Aposentade'); frases.push(`${fmt(t.aposentadoria.beneficio)} por mês, desde ${anoDe(t.aposentadoria.t)}.`); }
     else if (modo === 'base' && v.caminhos.esporte) { titulo = `Na base ${doClube(v.caminhos.esporte.clube)}`; frases.push('Treino quase todo dia. Quase ninguém da base vira profissional — e quem vira, vira cedo.'); }
-    else if (modo === 'estudante') { titulo = 'Estudando'; frases.push(idade(v) < 16 ? 'Aos 14 e 15, só como jovem aprendiz.' : 'Dá para começar como aprendiz ou estagiário, sem largar a escola.'); }
+    else if (modo === 'estudante') { titulo = 'Estudando'; { const lei = regrasDaVida(v).trabalho; frases.push(idade(v) < lei.minima && lei.aprendiz ? `Antes dos ${lei.minima}, só como ${lei.aprendiz.nome}.` : 'Dá para começar como aprendiz ou estagiário, sem largar a escola.'); } }
     else if (modo === 'negocio') {
       const n = negocioAberto(v)!;
       titulo = n.nome;
@@ -499,7 +501,7 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     if (modo === 'pausa') {
       const pa = v.trabalho.pausa!;
       add({ id: 'voltar', rotulo: pa.intensidade === 'parcial' ? 'Voltar à jornada inteira' : 'Voltar ao mercado', acao: { tipo: 'voltar_mercado' }, peso: 6 });
-      if (pa.intensidade === 'total') add({ id: 'facultativo', rotulo: pa.facultativo ? 'Parar de pagar o INSS facultativo' : 'Pagar o INSS como facultativo', porque: pa.facultativo ? undefined : 'Para o tempo de aposentadoria não parar.', acao: { tipo: 'facultativo', ativo: !pa.facultativo }, peso: pa.facultativo ? 1 : 5 });
+      if (pa.intensidade === 'total') add({ id: 'facultativo', rotulo: pa.facultativo ? `Parar de pagar ${previdenciaDaVida(v).o}` : `Pagar ${previdenciaDaVida(v).o} ${textoLocal(v, 'facultativo')}`, porque: pa.facultativo ? undefined : 'Para o tempo de aposentadoria não parar.', acao: { tipo: 'facultativo', ativo: !pa.facultativo }, peso: pa.facultativo ? 1 : 5 });
       return separar(lista);
     }
     if (modo === 'aposentado') {
@@ -514,7 +516,7 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
       return separar(lista);
     }
     if (modo === 'estudante' || modo === 'base') {
-      if (i >= 14) add({ id: 'aprendiz', rotulo: i < 16 ? 'Procurar vaga de jovem aprendiz' : 'Procurar um primeiro trabalho', porque: 'Sem largar a escola.', ir: 'explorar', peso: 3 });
+      if (i >= (regrasDaVida(v).trabalho.aprendiz?.idade ?? regrasDaVida(v).trabalho.minima)) add({ id: 'aprendiz', rotulo: i < regrasDaVida(v).trabalho.minima ? `Procurar vaga de ${regrasDaVida(v).trabalho.aprendiz?.nome ?? 'aprendiz'}` : 'Procurar um primeiro trabalho', porque: 'Sem largar a escola.', ir: 'explorar', peso: 3 });
       return separar(lista);
     }
     if (modo === 'sem_procurar') {
@@ -865,7 +867,7 @@ export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito
       if (modo !== 'rural' || !ru) return semTrabalho;
       if (a.valor === 'terra') return ru.terra === 'arrendada' ? PERMITIDO : bloqueio('impossivel', 'A terra já não é arrendada.');
       if ((e!.estrutura ?? 0) >= 2) return bloqueio('impossivel', 'Já investiu o que a terra comporta.');
-      if (v.financas.negativado) return bloqueio('requisito', 'Com o nome sujo, não há crédito rural.');
+      if (v.financas.negativado) return bloqueio('requisito', `${textoLocal(v, 'comNomeSujo')}, não há crédito rural.`);
       if (v.anoAtual.acoes.includes('investir_terra')) return bloqueio('incompativel', 'Já pediu crédito neste ano.');
       return limiteDeCredito(v) * 4 >= custoInvestirTerra(v) ? PERMITIDO : bloqueio('requisito', 'O banco não libera tanto para a renda que a terra dá.');
     }

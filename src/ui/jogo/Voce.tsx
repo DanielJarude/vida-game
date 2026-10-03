@@ -8,6 +8,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
+import { redeDeSaude } from '../../motor/sistemas/saude';
 import { QuemNoMundo } from './Mundo';
 import { imagemPublica, leituraDoNome } from '../../motor/sistemas/notoriedade';
 import { USOS } from '../../motor/sistemas/visibilidade';
@@ -81,7 +82,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
           </ul>
           <p className="nota">Ainda sem nome. Ir ao médico é o que dá diagnóstico — e tratamento. Ignorar também é escolha: às vezes passa, às vezes o corpo cobra depois.</p>
           {i >= 12 && <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="secundario" ocultarImpossivel>{i < 18 ? 'Pedir ajuda: contar em casa ou na escola e ir ao posto de saúde' : 'Ir ao médico ver o que é'}</BotaoAcao></div>}
-          {i < 18 && <p className="nota">No posto de saúde (SUS), o atendimento é de graça — e, quando precisa, encaminha para acompanhamento.</p>}
+          {i < 18 && <p className="nota">{redeDeSaude(vida).sistema === 'seguro' ? 'O pediatra do plano (ou a clínica comunitária, para quem não tem) atende — e, quando precisa, encaminha para acompanhamento.' : `No posto de saúde (${redeDeSaude(vida).nome}), o atendimento é de graça — e, quando precisa, encaminha para acompanhamento.`}</p>}
         </section>
       )}
 
@@ -108,7 +109,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
             {condicoes.map(c => (
               <li key={c.id}>
                 <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</strong>
-                <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? 'na fila do SUS' : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}{c.tarde ? ' · descoberto tarde' : ''}</span>
+                <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? `na fila ${redeDeSaude(vida).do}` : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}{c.tarde ? ' · descoberto tarde' : ''}</span>
               </li>
             ))}
           </ul>

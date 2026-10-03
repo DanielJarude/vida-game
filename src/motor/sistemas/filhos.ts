@@ -338,7 +338,7 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
     } else {
       v.fatos[`fil_quer_${k}`] = 0;
       vida.parouDeEstudar = true;
-      comunicar(v, f, cota, { texto: `${f.nome} não passou no vestibular e foi trabalhar.`, tipo: 'estudo', relevancia: 'cotidiano' });
+      comunicar(v, f, cota, { texto: `${f.nome} não entrou na universidade e foi trabalhar.`, tipo: 'estudo', relevancia: 'cotidiano' });
     }
     return;
   }

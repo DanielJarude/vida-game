@@ -25,6 +25,9 @@
  * sequência do gerador principal.
  */
 
+import { educacaoDoPais } from '../mundo/vida';
+import { textoLocal } from '../mundo/locais';
+import { capitalizar } from '../texto';
 import { rngDe } from '../rng';
 import type { Pessoa, TipoVivencia, Vida, Vivencia } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
@@ -71,6 +74,8 @@ function hash(s: string): number {
 
 const PATRONOS = ['Castro Alves', 'Cecília Meireles', 'Anísio Teixeira', 'Paulo Freire', 'Machado de Assis', 'Rui Barbosa', 'Santos Dumont', 'Monteiro Lobato', 'Carlos Drummond de Andrade', 'Chico Mendes', 'Zumbi dos Palmares', 'Nise da Silveira', 'Darcy Ribeiro', 'Oswaldo Cruz', 'Carolina Maria de Jesus', 'Tiradentes', 'Dom Pedro II', 'Clarice Lispector', 'Vital Brazil', 'Maria Quitéria', 'Joaquim Nabuco', 'Graciliano Ramos', 'Anita Garibaldi', 'Luiz Gonzaga'];
 const PARTICULARES = ['Colégio Horizonte', 'Colégio São José', 'Colégio Santa Maria', 'Colégio Alfa', 'Colégio Crescer', 'Colégio Integração', 'Colégio Dom Bosco', 'Colégio Novo Tempo', 'Colégio Pioneiro', 'Colégio Vértice'];
+/** Fora do Brasil, a escola particular não ganha nome de santo brasileiro: um nome neutro, traduzido. */
+const PARTICULARES_UNIVERSAIS = ['Colégio Horizonte', 'Colégio Alfa', 'Colégio Crescer', 'Colégio Integração', 'Colégio Novo Tempo', 'Colégio Pioneiro', 'Colégio Vértice', 'Escola Internacional'];
 
 const grupoEscolar = (etapa: string) => (etapa === 'creche' || etapa === 'pre' ? 'infantil' : etapa === 'medio' ? 'medio' : etapa === 'fundamental1' ? 'fund1' : 'fund2');
 
@@ -110,7 +115,7 @@ function perfil(v: Vida, chave: string, tipo: TipoInstituicao | 'fund1', publica
 const NOME_OFERTA: Record<OfertaFormacao, string> = {
   time: 'um time que disputa os jogos escolares', olimpiada: 'turma de preparação para as olimpíadas', reforco: 'aula de reforço à tarde',
   projeto: 'um projeto que junta alunos e professores', gremio: 'um grêmio atuante', ciencias: 'um laboratório e um clube de ciências',
-  teatro: 'um grupo de teatro', fanfarra: 'uma fanfarra', xadrez: 'tabuleiros de xadrez no recreio', parceria: 'parceria com empresas da cidade (jovem aprendiz)',
+  teatro: 'um grupo de teatro', fanfarra: 'uma fanfarra', xadrez: 'tabuleiros de xadrez no recreio', parceria: 'parceria com empresas da cidade (vagas de aprendiz)',
   projeto_tecnico: 'laboratórios e projetos técnicos', iniciacao: 'iniciação científica', monitoria: 'monitoria', extensao: 'projetos de extensão',
   centro_academico: 'um centro acadêmico', atletica: 'uma atlética', grupo_estudos: 'grupos de estudo', empresa_junior: 'uma empresa júnior'
 };
@@ -149,13 +154,13 @@ export function instituicaoAtual(v: Vida): Instituicao | undefined {
     }
     if (g === 'infantil') {
       const chave = `${ambiente}`;
-      return { chave, ambiente, tipo: 'infantil', nome: b.etapa === 'creche' ? (b.rede === 'publica' ? 'Creche municipal' : 'Creche particular') : (b.rede === 'publica' ? 'Escola de educação infantil' : 'Escolinha particular'), rotulo: 'Escola', descricao: descrever('infantil', b.rede === 'publica', [], cidade), ofertas: [], municipioId: cidade, publica: b.rede === 'publica' };
+      return { chave, ambiente, tipo: 'infantil', nome: b.etapa === 'creche' ? (b.rede === 'publica' ? capitalizar(educacaoDoPais(paisDaCidade(cidade)).etapas.publica.creche.replace(/^(o|a) /, '')) : 'Creche particular') : (b.rede === 'publica' ? 'Escola de educação infantil' : 'Escolinha particular'), rotulo: 'Escola', descricao: descrever('infantil', b.rede === 'publica', [], cidade), ofertas: [], municipioId: cidade, publica: b.rede === 'publica' };
     }
     // Do 1º ao 9º ano, a escola municipal é uma; o médio, estadual, é outra.
     const chave = `escola:${cidade}:${b.rede}:${g === 'medio' ? 'medio' : 'fund'}`;
     const k = Math.floor(hash(`${v.id}:${chave}:nome`) * 1000);
     // A escola pública brasileira tem patrono (Castro Alves, Cecília Meireles); fora, o jogo não inventa homenagem: um número.
-    const nome = b.rede === 'privada' ? PARTICULARES[k % PARTICULARES.length] : paisDaCidade(cidade) === 'BR' ? `${g === 'medio' ? inst(cidade).nomeEscolaMedio : inst(cidade).nomeEscolaFundamental} ${PATRONOS[k % PATRONOS.length]}` : `${g === 'medio' ? inst(cidade).nomeEscolaMedio : inst(cidade).nomeEscolaFundamental} nº ${(k % 40) + 1}`;
+    const nome = b.rede === 'privada' ? (paisDaCidade(cidade) === 'BR' ? PARTICULARES[k % PARTICULARES.length] : PARTICULARES_UNIVERSAIS[k % PARTICULARES_UNIVERSAIS.length]) : paisDaCidade(cidade) === 'BR' ? `${g === 'medio' ? inst(cidade).nomeEscolaMedio : inst(cidade).nomeEscolaFundamental} ${PATRONOS[k % PATRONOS.length]}` : `${g === 'medio' ? inst(cidade).nomeEscolaMedio : inst(cidade).nomeEscolaFundamental} nº ${(k % 40) + 1}`;
     const ofertas = perfil(v, chave, g === 'fund1' ? 'fund1' : 'escola', b.rede === 'publica', cidade).filter(o => o !== 'gremio' || g !== 'fund1').filter(o => o !== 'parceria' || g === 'medio');
     return { chave, ambiente, tipo: 'escola', nome, rotulo: 'Escola', descricao: descrever('escola', b.rede === 'publica', ofertas, cidade, b.etapa), ofertas, municipioId: cidade, publica: b.rede === 'publica' };
   }
@@ -462,7 +467,7 @@ export function conviteDoProfessor(v: Vida): { pessoaId: string; atividade?: str
   const ela = p.nome;
   const faz = (id: string) => v.rotinas.some(x => x.id === id);
   if (inst.tipo === 'escola' && b && (b.etapa === 'fundamental2' || b.etapa === 'medio' && b.serie === 1) && i >= 13 && i <= 15 && nivelDeOferta(v.moradia.municipioId) >= 0 && !b.integrado) {
-    return { pessoaId: p.id, incentivoIf: true, titulo: `${ela} sugeriu a prova do instituto federal`, texto: `${ela} disse que você daria conta da prova do instituto federal — e ofereceu umas aulas de preparação depois do horário.` };
+    return { pessoaId: p.id, incentivoIf: true, titulo: `${ela} sugeriu ${textoLocal(v, 'provaTecnica')}`, texto: `${ela} disse que você daria conta ${textoLocal(v, 'provaTecnica').replace(/^a /, 'da ')} — e ofereceu umas aulas de preparação depois do horário.` };
   }
   if ((inst.tipo === 'escola' || inst.tipo === 'if') && inst.ofertas.includes('olimpiada') && !faz('olimpiada') && i >= 11 && i <= 17) {
     return { pessoaId: p.id, atividade: 'olimpiada', titulo: `${ela} chamou para a turma da olimpíada`, texto: `${ela} montou uma turma para as olimpíadas de matemática e ciências e chamou você pelo nome.` };

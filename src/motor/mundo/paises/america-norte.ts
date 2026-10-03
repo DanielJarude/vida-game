@@ -36,6 +36,13 @@ import type { PerfilDePais } from '../tipos';
 
 export const ESTADOS_UNIDOS: PerfilDePais = {
   id: 'US',
+  // Regras legais: FLSA (trabalho a partir dos 14, com horas limitadas até os 16); idade para beber, 21 (National
+  // Minimum Drinking Age Act); escola obrigatória por estado (16–18: abstração em 18). A carteira é ESTADUAL
+  // (`REGRAS_DAS_DIVISOES`); o padrão abaixo é o graduado mais comum (permit 15–16, provisória 16, plena 18).
+  regras: {
+    trabalho: { minima: 14 }, vidaNoturna: 21, escolaObrigatoriaAte: 18,
+    direcao: { aprendiz: { idade: 16, nome: 'permissão de aprendiz (learner’s permit)' }, provisoria: { idade: 16, nome: 'licença provisória' }, plena: 18 }
+  },
   gentilico: ['americano', 'americana'],
   idiomas: ['inglês', 'espanhol'],
   divisao: {
@@ -313,6 +320,8 @@ export const ESTADOS_UNIDOS: PerfilDePais = {
 
 export const CANADA: PerfilDePais = {
   id: 'CA',
+  // Regras legais: a carteira é PROVINCIAL (`REGRAS_DAS_DIVISOES`; padrão G1/G2/G de Ontário); escola até os 18 em Ontário (abstração).
+  regras: { escolaObrigatoriaAte: 18, direcao: { aprendiz: { idade: 16, nome: 'licença de aprendiz' }, provisoria: { idade: 17, nome: 'licença provisória' }, plena: 18 } },
   gentilico: ['canadense', 'canadense'],
   idiomas: ['inglês', 'francês'],
   divisao: {
@@ -388,7 +397,7 @@ export const CANADA: PerfilDePais = {
     // Não há exame nacional: as universidades admitem pelas notas do último ano
     // do secundário (no Quebec, a "cote R" do CEGEP). O "exame" do jogo é o boletim.
     ingresso: 'candidatura',
-    exame: { nome: 'boletim do último ano', artigo: 'o' },
+    exame: { nome: 'boletim do último ano', artigo: 'o', prova: false, acao: 'Fechar o boletim do último ano e se candidatar' },
     // Quase todas as universidades são públicas; anuidade média de graduação
     // ~CA$ 7,4 mil (Statistics Canada, 2024/25).
     publicaCobra: 0.35,

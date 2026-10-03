@@ -65,6 +65,8 @@ import type { PerfilDePais } from '../tipos';
  */
 const PORTUGAL: PerfilDePais = {
   id: 'PT',
+  // Regras legais: escolaridade obrigatória até os 18 (Lei 85/2009); carta aos 18 com escola de condução obrigatória.
+  regras: { escolaObrigatoriaAte: 18, direcao: { nome: 'carta de condução', autoescolaObrigatoria: true } },
   gentilico: ['português', 'portuguesa'],
   idiomas: ['português'],
   divisao: {
@@ -302,6 +304,8 @@ const PORTUGAL: PerfilDePais = {
  */
 const ESPANHA: PerfilDePais = {
   id: 'ES',
+  // Regras legais: permiso B aos 18, com prova da DGT (autoescola comum, não obrigatória).
+  regras: { direcao: { nome: 'carteira de motorista (permiso de conducir)' } },
   gentilico: ['espanhol', 'espanhola'],
   idiomas: ['espanhol', 'catalão', 'galego', 'basco'],
   divisao: {
@@ -620,6 +624,8 @@ const ESPANHA: PerfilDePais = {
  */
 const FRANCA: PerfilDePais = {
   id: 'FR',
+  // Regras legais: conduite accompagnée a partir dos 15; permis B aos 17 (desde 2024); formação obrigatória até os 18.
+  regras: { escolaObrigatoriaAte: 18, direcao: { aprendiz: { idade: 15, nome: 'conduite accompagnée' }, plena: 17, autoescolaObrigatoria: true } },
   gentilico: ['francês', 'francesa'],
   idiomas: ['francês'],
   divisao: {
@@ -885,6 +891,8 @@ const FRANCA: PerfilDePais = {
  */
 const ALEMANHA: PerfilDePais = {
   id: 'DE',
+  // Regras legais: BF17 (dirigir acompanhado aos 17), carteira aos 18 (FeV); autoescola obrigatória (Fahrschule).
+  regras: { direcao: { aprendiz: { idade: 17, nome: 'BF17 (dirigir acompanhado)' }, plena: 18, autoescolaObrigatoria: true } },
   gentilico: ['alemão', 'alemã'],
   idiomas: ['alemão'],
   divisao: {
@@ -1426,6 +1434,9 @@ const ITALIA: PerfilDePais = {
  */
 const REINO_UNIDO: PerfilDePais = {
   id: 'GB',
+  // Regras legais: provisional licence aos 17 (dirige acompanhado) e a carteira plena com a prova, aos 17 (DVLA);
+  // educação ou formação até os 18 na Inglaterra (Education and Skills Act 2008).
+  regras: { escolaObrigatoriaAte: 18, direcao: { aprendiz: { idade: 17, nome: 'licença provisória (L)' }, plena: 17 } },
   gentilico: ['britânico', 'britânica'],
   idiomas: ['inglês', 'galês', 'gaélico escocês'],
   divisao: {

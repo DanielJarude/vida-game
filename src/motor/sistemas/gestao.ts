@@ -19,6 +19,7 @@
  * Linha da Vida quando muda alguma coisa de verdade.
  */
 
+import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Acao } from '../acoes';
@@ -160,7 +161,7 @@ export function disponibilidadeGestao(v: Vida, oque: OqueGestao, valor?: string)
     case 'treinar': return tamanhoDaEquipe(n) >= 1 && !tem(n, 'treino') ? custa(0.02 * tamanhoDaEquipe(n), 'Treinar a equipe') : bloqueio('impossivel', 'Não se aplica.');
     case 'gestao': return tem(n, 'gestao') ? bloqueio('impossivel', 'Já é assim.') : custa(0.05, 'Isso');
     case 'credito_negocio': {
-      if (v.financas.negativado) return bloqueio('requisito', 'Com o nome sujo, o banco não empresta nem para o negócio.');
+      if (v.financas.negativado) return bloqueio('requisito', `${textoLocal(v, 'comNomeSujo')}, o banco não empresta nem para o negócio.`);
       if (ja('neg_credito')) return bloqueio('incompativel', 'Já pediu crédito neste ano.');
       if (v.financas.dividas.some(d => d.descricao.startsWith('Crédito para ') && d.saldo > 0)) return bloqueio('incompativel', 'Ainda está pagando o último crédito do negócio.');
       return PERMITIDO;

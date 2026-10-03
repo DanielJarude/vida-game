@@ -15,6 +15,9 @@
  *      da vida política. Cada coisa diz, antes, com o que ela conflitaria.
  */
 
+import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
+import { regrasDaVida } from '../../motor/mundo/regras';
+import { nomeDoRegistro, previdenciaDaVida, textoLocal } from '../../motor/mundo/locais';
 import { useMemo, useRef, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -45,7 +48,8 @@ import { leituraRural } from '../../motor/sistemas/rural';
 import { leituraDaOrigem, responsaveis } from '../../motor/sistemas/origem';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
-import { doClube } from '../../motor/dados/clubes';
+import { divisaoDoNivel, doClube } from '../../motor/dados/clubes';
+import { paisDaCidade } from '../../motor/dados/lugares';
 import { augeDe, carreirasEsportivas, categoriaDaBase, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
 import { capitalizar as cap } from '../../motor/texto';
 import { circuitoPeloRanking, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
@@ -98,7 +102,7 @@ export function Trabalho({ vida, agir, irPara }: Props) {
   const pol = leituraPolitica(vida);
   return (
     <div className={`trabalho trabalho--${modo}`}>
-      <Folio kicker={<><span className="folio__area">Trabalho</span> · {KICKER[modo] ?? ''}{desde ? ` · ${desde}` : ''}</>} titulo={modo === 'politica' && pol ? pol.titulo : l.titulo} lede={modo === 'politica' && pol ? pol.etapa : l.frases[0]} />
+      <Folio kicker={<><span className="folio__area">Trabalho</span> · {modo === 'empregado' ? textoLocal(vida, 'comContrato') : KICKER[modo] ?? ''}{desde ? ` · ${desde}` : ''}</>} titulo={modo === 'politica' && pol ? pol.titulo : l.titulo} lede={modo === 'politica' && pol ? pol.etapa : l.frases[0]} />
 
       <section className="camada camada--agora" aria-labelledby="camada-agora">
         <h2 id="camada-agora" className="camada__titulo">A sua situação agora</h2>
@@ -263,7 +267,7 @@ function PainelFreguesia({ vida }: { vida: Vida }) {
         <Dado rotulo="Preço">{e.preco === 'alto' ? 'acima do mercado' : e.preco === 'baixo' ? 'abaixo do mercado' : 'o de mercado'}</Dado>
         <Dado rotulo="Ritmo">{ritmoDe(e) === 'puxado' ? rotulosDoRitmo(vida).puxado.toLowerCase() : ritmoDe(e) === 'leve' ? rotulosDoRitmo(vida).leve.toLowerCase() : 'o de sempre'}</Dado>
         <Dado rotulo="Estrutura">{(e.estrutura ?? 0) === 0 ? 'o básico' : e.estrutura === 1 ? 'equipamento próprio' : 'espaço próprio'}</Dado>
-        <Dado rotulo="Formalização">{e.mei ? 'MEI: nota fiscal e INSS' : e.contrato === 'informal' ? 'informal: sem CNPJ, sem INSS' : 'por conta própria'}</Dado>
+        <Dado rotulo="Formalização">{e.mei ? 'MEI: nota fiscal e INSS' : e.contrato === 'informal' ? `informal: sem registro, sem ${previdenciaDaVida(vida).nome}` : 'por conta própria'}</Dado>
         {p?.ativo && <Dado rotulo={p.tipo === 'banda' ? 'A banda' : 'O grupo'}>{p.nome}: {p.publico < 15 ? 'quase ninguém conhece ainda' : p.publico < 40 ? 'já tem quem vá ver' : p.publico < 65 ? 'público fiel na cidade' : 'gente de fora já conhece'}</Dado>}
       </dl>
       {vida.caminhos.palco && <PalcoDoAno vida={vida} />}
@@ -911,7 +915,7 @@ function CarreiraComoTecnico({ vida }: { vida: Vida }) {
   const atual = passagemAtual(vida);
   const res = resumoDoTecnico(c);
   const g = vida.eu.tratamento ?? vida.eu.genero;
-  const titulos = c.passagens.flatMap(p => p.temporadas.flatMap(t => (t.titulos ?? []).map(x => `${t.ano} · ${x} — ${p.selecao ? 'seleção brasileira' : p.clube}`)));
+  const titulos = c.passagens.flatMap(p => p.temporadas.flatMap(t => (t.titulos ?? []).map(x => `${t.ano} · ${x} — ${p.clube}`)));
   const acessos = c.passagens.flatMap(p => p.temporadas.filter(t => t.acesso).map(t => `${t.ano} · Acesso — ${p.clube}`));
   const pressao = (x: number) => (x < 35 ? 'tranquila' : x < 55 ? 'a de sempre' : x < 72 ? 'cobrança forte' : 'o cargo está ameaçado');
   const vestiario = (x: number) => (x >= 65 ? 'fechado com você' : x >= 45 ? 'sem problemas' : 'dividido');
@@ -923,7 +927,7 @@ function CarreiraComoTecnico({ vida }: { vida: Vida }) {
       <p className="painel__frase tecnico__linha"><strong>{linhaDoTecnico(c)}</strong>{res.jogos ? ` · ${res.aproveitamento}% de aproveitamento` : ''}{res.acessos ? ` · ${res.acessos} ${res.acessos === 1 ? 'acesso' : 'acessos'}` : ''}{res.rebaixamentos ? ` · ${res.rebaixamentos} ${res.rebaixamentos === 1 ? 'rebaixamento' : 'rebaixamentos'}` : ''}{res.demissoes ? ` · ${res.demissoes} ${res.demissoes === 1 ? 'demissão' : 'demissões'}` : ''}.</p>
       {atual && (
         <dl className="ficha-trabalho">
-          <Dado rotulo="No comando">{atual.selecao ? 'Seleção brasileira' : `${atual.clube} · ${atual.nivel === 1 ? 'campeonato estadual' : atual.nivel === 2 ? 'divisões de acesso' : atual.nivel === 3 ? 'Série B' : 'Série A'}`}</Dado>
+          <Dado rotulo="No comando">{atual.selecao ? atual.clube : `${atual.clube} · ${divisaoDoNivel(atual.nivel, paisDaCidade(atual.municipioId))}`}</Dado>
           <Dado rotulo="Contrato">até {anoDe(atual.contratoAte)}</Dado>
           <Dado rotulo="Diretoria">{pressao(atual.pressao)}</Dado>
           <Dado rotulo="Vestiário">{vestiario(atual.vestiario)}</Dado>
@@ -938,7 +942,7 @@ function CarreiraComoTecnico({ vida }: { vida: Vida }) {
           <table className="palmares__historico tecnico__passagens">
             <thead><tr><th>Clube</th><th>Período</th><th>J</th><th>V</th><th>E</th><th>D</th><th>Aprov.</th><th>Títulos</th><th>Saída</th></tr></thead>
             <tbody>{[...c.passagens].reverse().map((p, k) => { const r = resumoDaPassagem(p); const pr = periodoDaPassagem(p); return (
-              <tr key={k}><td>{p.selecao ? 'Seleção brasileira' : p.clube}{p.meioDeTemporada ? <span className="nota"> · assumiu na {p.meioDeTemporada.rodada + 1}ª rodada, em {p.meioDeTemporada.posicao}º</span> : null}</td><td>{pr.de}{p.ate === undefined ? '–' : pr.ate !== pr.de ? `–${pr.ate}` : ''}</td><td>{r.jogos}</td><td>{r.v}</td><td>{r.e}</td><td>{r.d}</td><td>{r.jogos ? `${r.aproveitamento}%` : '—'}</td><td>{r.titulos.length || '—'}</td><td>{comoAcabou(vida, p)}</td></tr>
+              <tr key={k}><td>{p.clube}{p.meioDeTemporada ? <span className="nota"> · assumiu na {p.meioDeTemporada.rodada + 1}ª rodada, em {p.meioDeTemporada.posicao}º</span> : null}</td><td>{pr.de}{p.ate === undefined ? '–' : pr.ate !== pr.de ? `–${pr.ate}` : ''}</td><td>{r.jogos}</td><td>{r.v}</td><td>{r.e}</td><td>{r.d}</td><td>{r.jogos ? `${r.aproveitamento}%` : '—'}</td><td>{r.titulos.length || '—'}</td><td>{comoAcabou(vida, p)}</td></tr>
             ); })}</tbody>
           </table>
         </div>
@@ -970,7 +974,7 @@ function PorOndePassou({ vida }: { vida: Vida }) {
       {marcos.length > 0 && <ul className="marcos-caminho">{marcos.map((m, k) => <li key={k}><span className="marcos-caminho__ano">{anoDe(m.t)}</span><span>{m.texto}</span></li>)}</ul>}
       {t.historico.slice().reverse().slice(0, 12).map((h, k) => <div key={k} className="linha"><span className="linha__rotulo">{anoDe(h.tInicio)}–{anoDe(h.tFim)}</span><span className="linha__valor">{nomeOcupacao(vida, ocupacao(h.ocupacaoId))}, {h.empregador}</span></div>)}
       {trilhas.length > 0 && <p className="nota">Estrada: {trilhas.map(([tr, m]) => `${Math.floor(m / 12)} ${Math.floor(m / 12) === 1 ? 'ano' : 'anos'} em ${ROTULO_TRILHA[tr] ?? tr}`).join(' · ')}.</p>}
-      <p className="nota">INSS: {Math.floor(t.contribuicao / 12)} anos de contribuição.{t.licencas.length ? ` Registros: ${t.licencas.map(l => l.toUpperCase()).join(', ')}.` : ''}</p>
+      <p className="nota">{previdenciaDaVida(vida).nome}: {Math.floor(t.contribuicao / 12)} anos de contribuição.{t.licencas.length ? ` Registros: ${t.licencas.map(l => (l === 'cnh' ? habilitacaoDaVida(vida).regra.nome : nomeDoRegistro(vida, l))).join(', ')}.` : ''}</p>
     </Secao>
   );
 }
@@ -986,7 +990,7 @@ export function TrabalhoAindaNao({ vida, irPara }: { vida: Vida; irPara: (a: Aba
   const quem = responsaveis(vida).filter(x => x.p.renda > 0 || x.p.ocupacao);
   return (
     <div className="trabalho trabalho--crianca">
-      <Folio kicker={<><span className="folio__area">Trabalho</span> · ainda não</>} titulo={i < 10 ? 'Trabalho é coisa dos adultos da casa' : 'O trabalho ainda não é seu'} lede="Antes dos 14 anos, trabalhar é proibido. Aos 14, abre a porta do jovem aprendiz; aos 16, o primeiro emprego e os bicos." />
+      <Folio kicker={<><span className="folio__area">Trabalho</span> · ainda não</>} titulo={i < 10 ? 'Trabalho é coisa dos adultos da casa' : 'O trabalho ainda não é seu'} lede={(() => { const lei = regrasDaVida(vida).trabalho; return lei.aprendiz ? `Antes dos ${lei.aprendiz.idade} anos, trabalhar é proibido. Aos ${lei.aprendiz.idade}, abre a porta do ${lei.aprendiz.nome}; aos ${lei.minima}, o primeiro emprego e os bicos.` : `Aqui, trabalhar é proibido antes dos ${lei.minima} anos; aí vêm o primeiro emprego de meio período e os bicos.`; })()} />
       <Secao titulo="Quem sustenta a casa">
         {quem.length ? (
           <ul className="formacao-lista">

@@ -257,7 +257,13 @@ export type Parentesco =
 /** Onde duas pessoas convivem. É o que faz relações nascerem e se manterem. */
 export type Convivio = 'casa' | 'escola' | 'faculdade' | 'trabalho' | 'vizinhanca' | 'rotina' | 'online';
 
-export type EstagioSocial = 'conhecido' | 'colega' | 'amigo' | 'amigo_proximo' | 'afastado';
+/**
+ * O TIPO do vínculo social (quem essa pessoa é na sua vida) — não a
+ * proximidade. 'afastado' é o amigo de antes de quem a vida afastou, sem
+ * briga; 'ex_amigo', o amigo com quem houve RUPTURA; 'rival', o atrito que
+ * virou identidade (na escola, no trabalho, no esporte).
+ */
+export type EstagioSocial = 'conhecido' | 'colega' | 'amigo' | 'amigo_proximo' | 'afastado' | 'ex_amigo' | 'rival';
 
 export type EstagioRomance =
   | 'interesse'   // alguém chamou atenção; ainda não aconteceu nada
@@ -354,6 +360,18 @@ export interface Vinculo {
   contexto?: ContextoDaRelacao;
   /** A TRAJETÓRIA da relação: as fases por que passou, com a data (colega → amigo → afastado → reconciliação; match → encontro → namoro...). */
   fases?: { fase: string; t: number }[];
+  /**
+   * Relações 2.0 — o ESTADO da relação, separado do tipo e da proximidade.
+   * Um conflito aberto (a discussão que ficou sem fim: o assunto, o peso,
+   * quem começou); a ruptura (a amizade encerrada, o rompimento na família:
+   * quando, por quê, de quem foi o passo); a reconciliação (quando); e a
+   * proximidade do começo do ano (para dizer se a relação se aproxima ou
+   * esfria). Tudo opcional: saves antigos não têm, e o estado sai "estável".
+   */
+  conflito?: { t: number; assunto: string; gravidade: 1 | 2 | 3; quem: 'eu' | 'outro' };
+  ruptura?: { t: number; porque: string; quem: 'eu' | 'outro' | 'ambos' };
+  reconciliacao?: number;
+  proxAno?: number;
 }
 
 /** De onde a relação veio — e o que isso abre (a origem define o contexto e a intenção inicial; não determina o resultado). */
@@ -369,7 +387,9 @@ export interface ContextoDaRelacao {
   quimica?: number;
 }
 
-export type TipoChamado = 'pedido_ajuda' | 'convite' | 'reclamacao' | 'apoio' | 'interesse' | 'conversa_casal' | 'aproximacao' | 'distancia_casal';
+export type TipoChamado = 'pedido_ajuda' | 'convite' | 'reclamacao' | 'apoio' | 'interesse' | 'conversa_casal' | 'aproximacao' | 'distancia_casal'
+  /** Relações 2.0: a pessoa pede desculpas; cobra algo que ficou (a briga que ela traz); ou reaparece anos depois de uma ruptura. */
+  | 'desculpas' | 'cobranca' | 'reaparecer';
 
 export interface Chamado {
   tipo: TipoChamado;
@@ -536,7 +556,19 @@ export interface Educacao {
   evadiu: boolean;
   matricula?: Matricula;
   concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean; /** O desempenho ao se formar (0..100): o histórico que a seleção da pós lê. */ desempenho?: number; /** A especialidade da residência médica (da pessoa: vai para todo emprego). */ especialidade?: EspecialidadeMedica }[];
-  enem: { t: number; nota: number; areas?: Partial<Record<'exatas' | 'linguagens' | 'ciencias' | 'humanas', number>> }[];
+  /**
+   * As notas do exame de ingresso (o nome do campo é histórico: é o exame do
+   * país onde a pessoa morava — o ENEM, o SAT, a PAU). `pais`/`exame` dizem
+   * onde e qual (ausentes nas notas antigas: valem onde a pessoa mora). A
+   * nota de um país não abre a universidade de outro; fica na história.
+   */
+  /**
+   * O HISTÓRICO ESCOLAR por país (separado do sistema ATUAL, que é sempre o
+   * do país onde a pessoa mora): onde estudou e até que etapa, a cada troca
+   * de país. A escola de agora segue a série; o que veio antes fica aqui.
+   */
+  historicoEscolar?: { pais: string; desde: number; ate: number; etapa?: EtapaBasica; serie?: number; escolaridade: Escolaridade }[];
+  enem: { t: number; nota: number; areas?: Partial<Record<'exatas' | 'linguagens' | 'ciencias' | 'humanas', number>>; pais?: string; exame?: string }[];
   /** Postura do ano na escola/curso (escolha comportamental do jogador). */
   postura: 'dedicada' | 'normal' | 'relaxada';
   /**

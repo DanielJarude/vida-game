@@ -18,6 +18,7 @@
  *   semente), e falam em categorias plausíveis, não em profissões de ficção.
  */
 
+import { nomeDoRegistro, previdenciaDaVida, textoLocal } from '../mundo/locais';
 import { salarioMinimoDoPais } from '../mundo/economia';
 import { paisDaVida, perfilDaVida } from '../mundo/vida';
 import type { Vida } from '../tipos';
@@ -93,12 +94,12 @@ export function custosDoTrabalho(v: Vida): { rotulo: string; valor: number }[] {
       const escala = e.clientela !== undefined ? 0.5 + e.clientela / 100 : 1;
       out.push({ rotulo: f.custoAutonomo.rotulo, valor: Math.round(f.custoAutonomo.valor * escala * c * (e.reduzida ? 0.6 : 1)) });
     }
-    if (f.anuidade && oc.licenca && oc.licenca !== 'cnh') out.push({ rotulo: `Anuidade do conselho (${oc.licenca.toUpperCase()})`, valor: f.anuidade });
+    if (f.anuidade && oc.licenca && oc.licenca !== 'cnh') out.push({ rotulo: `Anuidade do ${textoLocal(v, 'conselhoDeClasse')} (${nomeDoRegistro(v, oc.licenca)})`, valor: f.anuidade });
     // A guia mensal do regime simplificado do país (no Brasil, o DAS do MEI: 5% do mínimo + R$ 6), no mínimo de lá.
     if (e.mei) { const reg = perfilDaVida(v).trabalho.microempreendedor; out.push({ rotulo: reg?.nome === 'MEI' ? 'DAS do MEI (INSS e impostos)' : `Guia do regime simplificado${reg ? ` (${reg.nome})` : ''}`, valor: Math.round(salarioMinimoDoPais(paisDaVida(v)) * 0.05 + 6) }); }
     if (oc.id === 'produtor_rural' && v.caminhos.rural?.terra === 'arrendada') out.push({ rotulo: 'Arrendamento da terra', valor: arrendamentoMensal(v) });
   }
-  if (v.trabalho.pausa?.facultativo) out.push({ rotulo: 'INSS como contribuinte facultativo', valor: CUSTO_FACULTATIVO });
+  if (v.trabalho.pausa?.facultativo) out.push({ rotulo: `${previdenciaDaVida(v).O} ${textoLocal(v, 'facultativo')}`, valor: CUSTO_FACULTATIVO });
   // O tenista paga o próprio circuito (treinador, viagens, hotel, inscrições): o custo da última temporada, mês a mês.
   // (A1, playtest: o custo saía da conta direto no ano do esporte, fora do orçamento — a tela mostrava a premiação
   // entrando e uma sobra de R$ 14 mil por mês, e a conta não saía do zero, comendo as aplicações. Agora é linha do mês.)

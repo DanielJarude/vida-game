@@ -7,6 +7,7 @@
  * aparecem quando a criança já age por conta própria.
  */
 
+import { nomeDePet } from '../sistemas/mercado';
 import { dinheiro as moeda } from '../texto';
 import type { Conteudo } from './base';
 import * as P from './papeis';
@@ -297,7 +298,7 @@ export const INFANCIA: Conteudo[] = [
           texto: 'Você escolheu o mais quieto da caixa. Ele dormiu no seu pé a primeira noite inteira.',
           memoria: 'Levou para casa um filhote de uma caixa de papelão na calçada.',
           efeito: () => {
-            const nome = c.r.pick(['Pipoca', 'Thor', 'Mel', 'Paçoca', 'Bidu', 'Nina']);
+            const nome = nomeDePet(c.r, 'cachorro', 'masculino');
             fato(c, 'adotou_pet');
             criarPetInfancia(c, nome);
           }

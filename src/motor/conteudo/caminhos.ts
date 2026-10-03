@@ -10,6 +10,7 @@
  * fracasso, arriscar, voltar atrás — isso é comportamento.
  */
 
+import { textoLocal } from '../mundo/locais';
 import { dinheiro as moeda } from '../texto';
 import { pesoNaSelecaoDoIf, registrarVivencia } from '../sistemas/formacao';
 import { pagar as pagarGuardado } from '../sistemas/dinheiro';
@@ -41,7 +42,7 @@ import { marcar } from '../sistemas/marcas';
 import { abrirNegocio, demitirFuncionario, donoIntegral, fecharNegocio, NEGOCIOS, presencaDe, valorDoNegocio, venderNegocio } from '../sistemas/negocio';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
 import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
-import { paisDaVida, perfilDaVida } from '../mundo/vida';
+import { paisDaVida, perfilDaVida, temNacionalidade } from '../mundo/vida';
 import { doPais, noPais } from '../mundo/registro';
 import { modeloRotina, podeComecarRotina } from '../sistemas/rotinas';
 import { anoDe } from '../tempo';
@@ -237,7 +238,7 @@ export const CAMINHOS: Conteudo[] = [
   /* =============================================================== ESCOLA */
   {
     id: 'esc_selecao_if', tipo: 'decisao', idade: [13, 16], tema: 'escola', manual: true, repetir: 0,
-    titulo: 'A prova do instituto federal',
+    titulo: c => cap(textoLocal(c.v, 'provaTecnica')),
     texto: c => `Três anos de dia inteiro, uniforme, laboratório — e um diploma de técnico junto com o do médio. O campus ${municipio(c.v.moradia.municipioId).perfil === 'pequena' ? 'da região' : 'daqui'} oferece ${cursosDoIf(c).map(x => x.nome.replace(/^Técnico em /, '')).join(', ').replace(/, ([^,]*)$/, ' e $1')}. A prova é concorrida.`,
     opcoes: [0, 1, 2].map(k => ({
       id: `curso${k}`,
@@ -252,7 +253,7 @@ export const CAMINHOS: Conteudo[] = [
     quando: c => !!c.v.educacao.basica && !c.v.rotinas.some(r => r.id === 'olimpiada') && habilidade(c.v, 'exatas') >= 60 && c.r.chance(0.35),
     narrar: c => {
       const ouro = habilidade(c.v, 'exatas') >= 78;
-      const texto = c.vezes === 0 ? `Ganhou uma medalha ${ouro ? 'de prata' : 'de bronze'} na olimpíada de matemática das escolas públicas. O nome saiu num cartaz na entrada da escola.` : `Mais uma medalha na olimpíada de matemática${ouro ? ' — dessa vez, entre as melhores do estado' : ''}.`;
+      const texto = c.vezes === 0 ? `Ganhou uma medalha ${ouro ? 'de prata' : 'de bronze'} na ${textoLocal(c.v, 'olimpiada')}. O nome saiu num cartaz na entrada da escola.` : `Mais uma medalha na olimpíada de matemática${ouro ? ' — dessa vez, entre as melhores do estado' : ''}.`;
       return { texto, relevancia: c.vezes === 0 ? 'biografia' : 'cotidiano', tom: 'bom', efeito: () => { fato(c, 'medalha_obmep'); registrarVivencia(c.v, 'olimpiada', { area: 'exatas', feito: `medalha ${ouro ? 'de prata' : 'de bronze'}` }); feliz(c, 4); const f = c.v.caminhos.frentes.exatas; if (f) f.interesse = clamp(f.interesse + 10); if (c.vezes === 0) marcar(c.v, 'conquista', texto, 2, { dominio: 'exatas' }); } };
     }
   },
@@ -273,9 +274,10 @@ export const CAMINHOS: Conteudo[] = [
 
   /* ============================================================= MILITAR */
   {
-    id: 'mil_alistamento', tipo: 'decisao', idade: [18, 18], tema: 'lugar', garantido: true,
+    id: 'mil_alistamento', tipo: 'decisao', idade: [16, 21], tema: 'lugar', garantido: true,
     // Só onde o serviço é obrigatório (o alistamento de todos) ou seletivo (o registro, e a convocação por sorteio); onde é voluntário, a farda é concurso.
-    quando: c => !c.v.justica?.prisao && perfilDaVida(c.v).militar.servico !== 'voluntario',
+    // O alistamento é de quem tem a NACIONALIDADE do país onde mora (o estrangeiro residente não é convocado), na idade do país.
+    quando: c => !c.v.justica?.prisao && perfilDaVida(c.v).militar.servico !== 'voluntario' && idade(c.v) === perfilDaVida(c.v).militar.idade && temNacionalidade(c.v, paisDaVida(c.v)),
     titulo: 'O alistamento',
     texto: c => {
       const m = perfilDaVida(c.v).militar;
@@ -571,13 +573,13 @@ function selecaoIf(c: Ctx, k: number) {
   const chance = clamp(0.3 + ((c.v.educacao.basica?.desempenho ?? 50) - 55) / 40 + (c.v.educacao.postura === 'dedicada' ? 0.08 : 0) + pesoNaSelecaoDoIf(c.v), 0.05, 0.85);
   if (c.r.chance(chance) && c.v.educacao.basica) {
     return {
-      texto: `Passou. Em fevereiro, começa o médio integrado em ${cc.nome.replace(/^Técnico em /, '')}.`,
-      memoria: `Passou na prova do instituto federal: médio integrado ao técnico em ${cc.nome.replace(/^Técnico em /, '')}.`,
+      texto: `Passou. No começo do ano letivo, começa o médio integrado em ${cc.nome.replace(/^Técnico em /, '')}.`,
+      memoria: `Passou ${textoLocal(c.v, 'provaTecnica').replace(/^a /, 'na ')}: médio integrado ao técnico em ${cc.nome.replace(/^Técnico em /, '')}.`,
       relevancia: 'marco' as const, tom: 'bom' as const,
       efeito: () => { const b = c.v.educacao.basica!; b.integrado = cc.id; b.rede = 'publica'; if (b.etapa === 'fundamental2') { b.etapa = 'medio'; b.serie = 1; } marcar(c.v, 'ingresso', `Médio integrado ao técnico (${curso(cc.id).nome}).`, 3); }
     };
   }
-  return { texto: 'A lista saiu e seu nome não estava. O médio seguiu na escola de sempre.', memoria: 'Não passou na prova do instituto federal.', relevancia: 'biografia' as const, tom: 'ruim' as const };
+  return { texto: 'A lista saiu e seu nome não estava. O médio seguiu na escola de sempre.', memoria: `Não passou ${textoLocal(c.v, 'provaTecnica').replace(/^a /, 'na ')}.`, relevancia: 'biografia' as const, tom: 'ruim' as const };
 }
 
 function alistar(c: Ctx, chance: number) {

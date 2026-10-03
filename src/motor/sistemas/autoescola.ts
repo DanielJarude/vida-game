@@ -20,6 +20,38 @@ import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { economiaLocal } from '../dados/lugares';
 import { vereditoDePagar, pagar } from './dinheiro';
 import { perfilDaVida } from '../mundo/vida';
+import { regrasDaVida, idadeParaComecar, idadeParaDirigir, fraseDaDirecao } from '../mundo/regras';
+import { idade } from '../nucleo';
+
+/**
+ * A CARTEIRA DE MOTORISTA DESTE LUGAR — a fonte única para a ação, a
+ * elegibilidade, o processo, a prova, a tela e a biografia (`mundo/regras`).
+ * O nome do documento (a CNH no Brasil), as etapas (aprendiz, provisória,
+ * plena) e as idades vêm da regra do lugar onde a pessoa mora: universal →
+ * país → estado/província.
+ */
+export function habilitacaoDaVida(v: Vida) {
+  const r = regrasDaVida(v).direcao;
+  const obrig = r.autoescolaObrigatoria;
+  return {
+    regra: r,
+    /** "a CNH", "a carteira de motorista", "a carta de condução" (os nomes do jogo são femininos). */
+    a: `a ${r.nome}`,
+    /** Onde se aprende: a autoescola (obrigatória) ou as aulas de direção (opcionais, a prova é no órgão de trânsito). */
+    escola: obrig ? 'autoescola' : 'aulas de direção',
+    naEscola: obrig ? 'na autoescola' : 'nas aulas de direção',
+    comeca: idadeParaComecar(r),
+    sozinho: idadeParaDirigir(r),
+    frase: fraseDaDirecao(r)
+  };
+}
+
+/** Pode começar o processo da carteira? A idade é a do lugar (a permissão de aprendiz, se houver). */
+export function podeComecarCnh(v: Vida): Veredito {
+  const h = habilitacaoDaVida(v);
+  if (idade(v) < h.comeca) return bloqueio('ilegal', h.frase);
+  return PERMITIDO;
+}
 
 /** Quem aplica a prova (no Brasil, "o Detran" → "do Detran"); sem nome no perfil, a prova é só "de direção". */
 const doTransito = (v: Vida) => { const t = perfilDaVida(v).cotidiano?.transito; return t ? t.replace(/^o /, 'do ').replace(/^a /, 'da ') : 'de direção'; };
@@ -53,7 +85,7 @@ export const cnhEmProva = (v: Vida): ProcessoCnh | undefined => { const p = proc
 
 /** O dia da prova chegou: sorteia as perguntas (a teórica) — ou resolve a prática, se a teórica já passou. */
 export function diaDaProvaCnh(v: Vida, r: Rng, p: ProcessoCnh): void {
-  if (p.teoricaOk) { provaPratica(v, r, p); return; }
+  if (p.teoricaOk) { if (!esperarIdade(v, p)) provaPratica(v, r, p); return; }
   const rr = rngDe(v.id, 'cnh', p.id, p.tentativas);
   const ids = [...PERGUNTAS_CNH.map(x => x.id)];
   const escolhidas: string[] = [];
@@ -93,14 +125,40 @@ export function responderPerguntaCnh(v: Vida, r: Rng, k: number): { continua: tr
     p.tFim = v.t + 3;
     pagar(v, 250);
     const texto = `Prova teórica: ${total} acertos de ${TOTAL_DA_PROVA} (${prova.acertos} das ${PERGUNTAS_DO_JOGADOR} que você respondeu). Precisava de ${MINIMO}. Nova prova em alguns meses — estudar a apostila e fazer simulados é o que mais ajuda.`;
-    escrever(v, { texto: `Reprovou na prova teórica da autoescola (${total} de ${TOTAL_DA_PROVA}).`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+    escrever(v, { texto: `Reprovou na prova teórica ${doTransito(v)} (${total} de ${TOTAL_DA_PROVA}).`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
     if (p.tentativas >= 3) desistir(v, p);
     return { continua: false, texto, tom: 'ruim' };
   }
   p.teoricaOk = true;
   const teorica = `Prova teórica: ${total} acertos de ${TOTAL_DA_PROVA} — aprovad${v.eu.genero === 'feminino' ? 'a' : 'o'}.`;
+  if (esperarIdade(v, p)) {
+    const h = habilitacaoDaVida(v);
+    const aprendiz = h.regra.aprendiz;
+    return { continua: false, texto: `${teorica} ${aprendiz ? `Com ${artigoDe(aprendiz.nome)} ${aprendiz.nome}, já dá para dirigir acompanhad${v.eu.genero === 'feminino' ? 'a' : 'o'} de um adulto habilitado. ` : ''}A prova prática fica para os ${h.sozinho}.`, tom: 'bom' };
+  }
   const pratica = provaPratica(v, r, p);
   return { continua: false, texto: `${teorica} ${pratica.texto}`, tom: pratica.passou ? 'bom' : 'neutro' };
+}
+
+const artigoDe = (nome: string) => (/^(licença|permissão|carteira|carta|conduite)/i.test(nome) ? 'a' : 'o');
+
+/**
+ * Antes da idade de dirigir sozinho, a prática espera (o aprendiz dirige
+ * acompanhado). Marca a prova para quando a idade chegar.
+ */
+function esperarIdade(v: Vida, p: ProcessoCnh): boolean {
+  const falta = habilitacaoDaVida(v).sozinho - idade(v);
+  if (falta <= 0) return false;
+  p.fase = 'aulas';
+  p.tFim = v.t + falta * 12;
+  return true;
+}
+
+/** "Tirou a carteira de motorista." / "Tirou a Permissão para Dirigir; a CNH sem restrições vem aos 19." */
+function tirou(v: Vida): string {
+  const h = habilitacaoDaVida(v);
+  const prov = h.regra.provisoria;
+  return prov && h.regra.plena > idade(v) ? `tirou ${artigoDe(prov.nome)} ${prov.nome} (${h.a} sem restrições vem aos ${h.regra.plena})` : `tirou ${h.a}`;
 }
 
 /** A prova prática: a mão (as aulas, as extras) e os nervos. */
@@ -110,8 +168,9 @@ function provaPratica(v: Vida, r: Rng, p: ProcessoCnh): { passou: boolean; texto
     v.processos = v.processos.filter(x => x.id !== p.id);
     v.trabalho.licencas.push('cnh');
     const primeira = p.tentativas === 0 && !p.tentativasPratica;
-    const texto = primeira ? 'Na prática, o examinador anotou pouco: passou de primeira e tirou a carteira de motorista.' : 'Na prática, desta vez a baliza entrou. Tirou a carteira de motorista.';
-    escrever(v, { texto: primeira ? `Passou na prova ${doTransito(v)} de primeira e tirou a carteira de motorista.` : 'Tirou a carteira de motorista, depois de reprovar antes.', relevancia: 'biografia', tema: 'lugar', tom: 'bom' });
+    const t = tirou(v);
+    const texto = primeira ? `Na prática, o examinador anotou pouco: passou de primeira e ${t}.` : `Na prática, desta vez a baliza entrou. ${t.charAt(0).toUpperCase()}${t.slice(1)}.`;
+    escrever(v, { texto: primeira ? `Passou na prova ${doTransito(v)} de primeira e ${t}.` : `${t.charAt(0).toUpperCase()}${t.slice(1)}, depois de reprovar antes.`, relevancia: 'biografia', tema: 'lugar', tom: 'bom' });
     return { passou: true, texto };
   }
   p.tentativasPratica = (p.tentativasPratica ?? 0) + 1;
@@ -120,7 +179,7 @@ function provaPratica(v: Vida, r: Rng, p: ProcessoCnh): { passou: boolean; texto
   pagar(v, 450);
   const erro = rngDe(v.id, 'cnh_erro', p.id, p.tentativasPratica).pick(['a baliza não entrou', 'o carro morreu na subida', 'faltou olhar o retrovisor na conversão', 'o nervosismo apertou no cruzamento']);
   const texto = `Na prática, ${erro}: reprovad${v.eu.genero === 'feminino' ? 'a' : 'o'}. A teórica continua valendo; a nova prática é em alguns meses — aulas extras ajudam.`;
-  escrever(v, { texto: `Reprovou na prova prática da autoescola: ${erro}.`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+  escrever(v, { texto: `Reprovou na prova prática ${doTransito(v)}: ${erro}.`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
   if (p.tentativasPratica >= 3) desistir(v, p);
   return { passou: false, texto };
 }
@@ -128,7 +187,7 @@ function provaPratica(v: Vida, r: Rng, p: ProcessoCnh): { passou: boolean; texto
 function desistir(v: Vida, p: ProcessoCnh): void {
   v.processos = v.processos.filter(x => x.id !== p.id);
   const t = perfilDaVida(v).cotidiano?.transito;
-  escrever(v, { texto: t ? `Depois de três reprovações ${no(t)}, desistiu da carteira por um tempo.` : 'Depois de três reprovações na prova de direção, desistiu da carteira por um tempo.', relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+  escrever(v, { texto: t ? `Depois de três reprovações ${no(t)}, desistiu da carteira por um tempo.` : `Depois de três reprovações na prova de direção, desistiu ${habilitacaoDaVida(v).a.replace(/^a /, 'da ')} por um tempo.`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
 }
 
 /* ------------------------------------------------------------- Preparação */
@@ -138,7 +197,7 @@ const custoAulas = (v: Vida) => Math.round(480 * economiaLocal(v.moradia.municip
 
 export function disponibilidadePrepararCnh(v: Vida, como: ComoPreparar): Veredito {
   const p = processoCnh(v);
-  if (!p) return bloqueio('incompativel', 'Primeiro, a matrícula na autoescola.');
+  if (!p) return bloqueio('incompativel', `Primeiro, a matrícula ${habilitacaoDaVida(v).naEscola}.`);
   if (p.fase === 'prova') return bloqueio('incompativel', 'A prova é agora.');
   const chave = `cnh_prep_${como}`;
   if (v.fatos[chave] !== undefined && v.t - v.fatos[chave] < 12) return bloqueio('incompativel', como === 'teoria' ? 'A apostila deste ano já foi estudada.' : 'As aulas extras deste ano já foram feitas.');
@@ -162,6 +221,9 @@ export function leituraDaAutoescola(v: Vida): string | undefined {
   if (!p) return undefined;
   const prep = ['a apostila ainda fechada', 'a apostila começada', 'a apostila estudada', 'a apostila na ponta da língua'][Math.min(3, p.preparo ?? 0)];
   const mao = ['só as aulas obrigatórias', 'algumas aulas extras', 'bastante aula extra', 'mão firme'][Math.min(3, p.pratica ?? 0)];
-  if (p.fase === 'prova') return 'Autoescola: a prova teórica é agora.';
-  return `Autoescola: ${p.teoricaOk ? 'teórica aprovada; falta a prática' : 'aulas em andamento'} — ${p.teoricaOk ? mao : `${prep}, ${mao}`}.`;
+  const h = habilitacaoDaVida(v);
+  const Escola = h.escola.charAt(0).toUpperCase() + h.escola.slice(1);
+  if (p.fase === 'prova') return `${Escola}: a prova teórica é agora.`;
+  const espera = p.teoricaOk && idade(v) < h.sozinho ? `teórica aprovada; a prática fica para os ${h.sozinho}` : p.teoricaOk ? 'teórica aprovada; falta a prática' : 'aulas em andamento';
+  return `${Escola}: ${espera} — ${p.teoricaOk ? mao : `${prep}, ${mao}`}.`;
 }

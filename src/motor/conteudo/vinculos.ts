@@ -3,6 +3,7 @@
  * Existe para que quem entrou na história continue nela.
  */
 
+import { textoLocal } from '../mundo/locais';
 import { educacaoDaVida, oPrograma, paisDaVida } from '../mundo/vida';
 import { dinheiro as moeda } from '../texto';
 import { CURSOS_NPC } from '../sistemas/filhos';
@@ -130,7 +131,7 @@ export const VINCULOS: Conteudo[] = [
     narrar: c => ({
       // O tamanho da festa segue o padrão de vida que o jogador escolheu (não o saldo do dia).
       texto: festaGrande(c)
-        ? `Festa de ${idadePessoa(c.v, c.p.filho)} anos de ${c.p.filho.nome} num salão de festas, com pula-pula e docinho de brigadeiro.`
+        ? `Festa de ${idadePessoa(c.v, c.p.filho)} anos de ${c.p.filho.nome} num salão de festas, com pula-pula e ${textoLocal(c.v, 'docinho')}.`
         : `O aniversário de ${idadePessoa(c.v, c.p.filho)} anos de ${c.p.filho.nome} foi no quintal, com bolo feito em casa e os primos.`,
       relevancia: 'cotidiano', tom: 'bom', efeito: () => { dinheiro(c, festaGrande(c) ? -1800 : -250); prox(c, 'filho', 4); }
     })

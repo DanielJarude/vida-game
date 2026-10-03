@@ -16,6 +16,7 @@
  * fala de "seu irmão" só existe se há um irmão, e usa o nome dele.
  */
 
+import type { Escopo } from '../mundo/escopo';
 import type { Rng } from '../rng';
 import type { EventoSocial, Genero, Pessoa, Relevancia, Tema, TipoMarco, Traco, Vida } from '../tipos';
 import { flex } from '../texto';
@@ -43,6 +44,12 @@ interface Base {
   /** Intervalo mínimo em anos para repetir. Ausente = acontece uma vez na vida. */
   repetir?: number;
   papeis?: Record<string, Papel>;
+  /**
+   * ONDE o conteúdo vale (`mundo/escopo`): país, divisão ('BR-PE') ou cidade
+   * da moradia atual. Ausente = universal — e por isso conteúdo de um país
+   * declara o seu escopo (o São João do Nordeste não acontece em Tóquio).
+   */
+  escopo?: Escopo;
   quando?: (c: Ctx) => boolean;
   /**
    * Conteúdo prioritário: disparado por estado (um pedido de namoro, um

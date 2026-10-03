@@ -13,6 +13,10 @@
  * todo ano.
  */
 
+import { educacaoDaVida } from '../mundo/vida';
+import { textoLocal } from '../mundo/locais';
+import { capitalizar } from '../texto';
+import { regrasDaVida } from '../mundo/regras';
 import { perfilDaVida } from '../mundo/vida';
 import { OCUPACOES_DE_ATLETA } from './esporte';
 import { conviteDaEspecialidade } from './medicina';
@@ -70,9 +74,11 @@ export function processarOportunidades(v: Vida, r: Rng): void {
 
   // Jovem aprendiz: a escola divulga.
   // A escola com parceria (empresas da cidade) divulga mais (o perfil da instituição: `formacao`).
-  if (i >= 14 && i <= 17 && b && semTrabalho(v) && podeGerar(v, 'aprendiz', 2) && r.chance(ofereceAqui(v, 'parceria') ? 0.45 : 0.3)) {
+  // Só onde a lei tem o programa (no Brasil, o jovem aprendiz: `mundo/regras`).
+  const aprendiz = regrasDaVida(v).trabalho.aprendiz;
+  if (aprendiz && i >= aprendiz.idade && i <= 17 && b && semTrabalho(v) && podeGerar(v, 'aprendiz', 2) && r.chance(ofereceAqui(v, 'parceria') ? 0.45 : 0.3)) {
     const oc = ocupacao('jovem_aprendiz');
-    if (elegibilidade(v, oc).grau !== 'ilegal') novaOportunidade(v, { tipo: 'aprendiz', ocupacaoId: oc.id, meses: 12, chave: 'aprendiz', bonus: 0.25, titulo: 'Jovem aprendiz', texto: `A escola divulgou vagas de jovem aprendiz ${r.pick(['numa rede de supermercados', 'num escritório do centro', 'numa distribuidora', 'numa agência bancária'])}. Meio período, ${perfilDaVida(v).trabalho.contratoFormal}, escola garantida.` });
+    if (elegibilidade(v, oc).grau !== 'ilegal') novaOportunidade(v, { tipo: 'aprendiz', ocupacaoId: oc.id, meses: 12, chave: 'aprendiz', bonus: 0.25, titulo: aprendiz.nome.charAt(0).toUpperCase() + aprendiz.nome.slice(1), texto: `A escola divulgou vagas de ${aprendiz.nome} ${r.pick(['numa rede de supermercados', 'num escritório do centro', 'numa distribuidora', 'numa agência bancária'])}. Meio período, ${perfilDaVida(v).trabalho.contratoFormal}, escola garantida.` });
   }
 
   // Estágio pelo curso (técnico, integrado ou faculdade).
@@ -171,7 +177,7 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   if (i >= 14 && i <= 15 && b && (b.etapa === 'fundamental2' && b.serie >= 9 || b.etapa === 'medio' && b.serie === 1) && !b.integrado && podeGerar(v, 'selecao_tecnico', 3)
     // Quem vai bem na escola ouve falar da prova (a professora avisa, os colegas comentam); quem vai mal, nem sempre.
     && r.chance(clamp((nivelDeOferta(v.moradia.municipioId) >= 1 ? 0.35 : 0.2) + ((b.desempenho ?? 50) - 50) / 60 + (v.educacao.postura === 'dedicada' ? 0.15 : 0) + (temFato(v, 'incentivo_if') ? 0.4 : 0), 0.1, 0.95))) {
-    novaOportunidade(v, { tipo: 'selecao_tecnico', meses: 12, chave: 'selecao_tecnico', titulo: 'Seleção do instituto federal', texto: `O instituto federal ${nivelDeOferta(v.moradia.municipioId) >= 1 ? 'da cidade' : 'da região'} abriu a prova para o ensino médio integrado ao técnico: três anos, dia inteiro, e um diploma de técnico junto com o do médio.${temFato(v, 'incentivo_if') ? ' A professora que tinha sugerido a prova lembrou você da inscrição.' : ''}` });
+    novaOportunidade(v, { tipo: 'selecao_tecnico', meses: 12, chave: 'selecao_tecnico', titulo: `Seleção ${educacaoDaVida(v).inst.tecnico.replace(/^o /, 'do ').replace(/^a /, 'da ')}`, texto: `${capitalizar(educacaoDaVida(v).inst.tecnico)} ${nivelDeOferta(v.moradia.municipioId) >= 1 ? 'da cidade' : 'da região'} abriu a prova para ${educacaoDaVida(v).medio.o} integrado ao técnico: três anos, dia inteiro, e um diploma de técnico junto com o do médio.${temFato(v, 'incentivo_if') ? ' A professora que tinha sugerido a prova lembrou você da inscrição.' : ''}` });
   }
 
   // Ensinar o ofício: quem tem técnico e muitos anos de estrada vira instrutor.
@@ -185,7 +191,7 @@ export function processarOportunidades(v: Vida, r: Rng): void {
 
   // Quem largou a escola: a EJA à noite.
   if (v.educacao.evadiu && !b && i >= 18 && i <= 60 && podeGerar(v, 'eja', 5) && r.chance(0.3)) {
-    novaOportunidade(v, { tipo: 'convite', meses: 12, chave: 'eja', titulo: 'Terminar a escola', texto: 'A escola do bairro abriu turma de EJA à noite: dá para terminar o ensino que ficou pela metade, sem largar o trabalho.' });
+    novaOportunidade(v, { tipo: 'convite', meses: 12, chave: 'eja', titulo: 'Terminar a escola', texto: `A escola do bairro abriu turma ${textoLocal(v, 'eja').replace(/^o /, 'do ').replace(/^a /, 'da ')} à noite: dá para terminar o ensino que ficou pela metade, sem largar o trabalho.` });
   }
 
   // Pesquisa depois do doutorado.
@@ -223,7 +229,7 @@ function portasDaFormacao(v: Vida): void {
     v.fatos[`convite_prof_${convite.pessoaId}`] = v.t;
     if (convite.incentivoIf) {
       marcarFato(v, 'incentivo_if');
-      lembrarCom(v, convite.pessoaId, 'Sugeriu a prova do instituto federal e ofereceu aulas de preparação.', 'apoio', 2);
+      lembrarCom(v, convite.pessoaId, `Sugeriu ${textoLocal(v, 'provaTecnica')} e ofereceu aulas de preparação.`, 'apoio', 2);
       escrever(v, { texto: `${convite.texto}`, relevancia: 'biografia', tema: 'escola', pessoas: [convite.pessoaId] });
     } else if (convite.atividade) {
       novaOportunidade(v, { tipo: 'iniciacao', meses: 12, chave: `convite_${convite.atividade}`, pessoaId: convite.pessoaId, titulo: convite.titulo, texto: convite.texto, atividade: convite.atividade });

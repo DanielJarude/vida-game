@@ -8,6 +8,7 @@
 import type { Vida } from '../tipos';
 import { paisDaVida, perfilDaVida } from '../mundo/vida';
 import type { PerfilCotidiano } from '../mundo/tipos';
+import { previdenciaDaVida } from '../mundo/locais';
 import { paisDoCatalogo } from '../mundo/registro';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { cidadesDoPais, existeMunicipio, grandesCentros, municipio, paisDaCidade, type Municipio } from '../dados/lugares';
@@ -33,14 +34,7 @@ export const cidadesDaVida = (v: Vida): readonly Municipio[] => cidadesDoPais(pa
  * A previdência pública, nas formas que o texto pede: "o INSS" / "ao INSS" /
  * "do INSS" quando o perfil diz o artigo; senão, "a previdência (Kosei Nenkin)".
  */
-export function previdencia(v: Vida) {
-  const p = perfilDaVida(v).trabalho.previdencia;
-  if (p.artigo === 'o' || p.artigo === 'a') {
-    const o = p.artigo === 'o';
-    return { o: `${p.artigo} ${p.nome}`, O: `${o ? 'O' : 'A'} ${p.nome}`, do: `${o ? 'do' : 'da'} ${p.nome}`, ao: `${o ? 'ao' : 'à'} ${p.nome}` };
-  }
-  return { o: `a previdência (${p.nome})`, O: `A previdência (${p.nome})`, do: 'da previdência', ao: `à previdência (${p.nome})` };
-}
+export const previdencia = previdenciaDaVida;
 
 /** A cidade onde a pessoa mora. */
 export const ondeMora = (v: Vida) => municipio(v.moradia.municipioId);

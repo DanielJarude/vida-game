@@ -1,5 +1,5 @@
 /**
- * A prova teórica da autoescola, pergunta por pergunta (`sistemas/autoescola`).
+ * A prova teórica da carteira de motorista (a idade é a do lugar: `mundo/regras`), pergunta por pergunta (`sistemas/autoescola`).
  * Três perguntas respondidas pelo jogador; as outras, pela preparação do
  * personagem. A decisão reabre a cada pergunta, como as etapas da peneira.
  */
@@ -11,7 +11,7 @@ const prova = (c: Ctx) => cnhEmProva(c.v);
 
 export const AUTOESCOLA: Conteudo[] = [
   {
-    id: 'cnh_prova', tipo: 'decisao', idade: [17, 95], tema: 'lugar', prioritario: true, prioridade: 5, repetir: 0,
+    id: 'cnh_prova', tipo: 'decisao', idade: [13, 95], tema: 'lugar', prioritario: true, prioridade: 5, repetir: 0,
     quando: c => !!prova(c),
     titulo: c => { const p = prova(c); return `A prova teórica · ${Math.min(PERGUNTAS_DO_JOGADOR, (p?.prova?.atual ?? 0) + 1)} de ${PERGUNTAS_DO_JOGADOR}`; },
     texto: c => { const p = prova(c); const q = p ? perguntaAtual(p) : undefined; return q ? q.enunciado : 'A prova já tinha acabado.'; },

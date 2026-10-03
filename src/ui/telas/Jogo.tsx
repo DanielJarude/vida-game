@@ -14,11 +14,13 @@
  * "Agora" (desktop) diz o que pede atenção, sem repetir as áreas.
  */
 
+import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
+import { redeDeSaude } from '../../motor/sistemas/saude';
 import { useEffect, useRef, useState } from 'react';
 import type { ControleVida } from '../useVida';
 import type { Vida } from '../../motor/tipos';
 import { idade, idadePessoa } from '../../motor/nucleo';
-import { anoDe } from '../../motor/tempo';
+import { anoDe, MESES, mesDe } from '../../motor/tempo';
 import { municipio, nomeLugar } from '../../motor/dados/lugares';
 import { entrarNaVida } from '../../motor/mundo/vida';
 import { seguranca } from '../../motor/sistemas/dinheiro';
@@ -184,11 +186,11 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
   const seg = seguranca(vida);
   const aperta = i >= 18 && (seg.nivel === 'no_vermelho' || seg.nivel === 'apertado');
   const processos = vida.processos.filter(p => p.tipo !== 'gestacao');
-  const andamento: string[] = processos.map(p => (p.tipo === 'cnh' ? 'Autoescola' : p.tipo === 'adocao' ? 'Processo de adoção' : p.tipo === 'tratamento' ? 'Na fila de tratamento do SUS' : 'Mudança marcada'));
+  const andamento: string[] = processos.map(p => (p.tipo === 'cnh' ? `Tirando ${habilitacaoDaVida(vida).a}` : p.tipo === 'adocao' ? 'Processo de adoção' : p.tipo === 'tratamento' ? `Na fila de tratamento ${redeDeSaude(vida).do}` : 'Mudança marcada'));
   if (vida.trabalho.candidaturas.length) andamento.push('Esperando o resultado do concurso');
   if (vida.trabalho.atual?.formacaoAte) andamento.push(`Curso de formação até ${anoDe(vida.trabalho.atual.formacaoAte)}`);
   if (vida.caminhos.esporte?.fase === 'base') andamento.push(`Na base ${doClube(vida.caminhos.esporte.clube)}`);
-  if (vida.caminhos.politica?.campanha) andamento.push(`Em campanha até outubro de ${anoDe(vida.caminhos.politica.campanha.tEleicao)}`);
+  if (vida.caminhos.politica?.campanha) andamento.push(`Em campanha até ${MESES[mesDe(vida.caminhos.politica.campanha.tEleicao)]} de ${anoDe(vida.caminhos.politica.campanha.tEleicao)}`);
   const portas = oportunidadesAbertas(vida);
   return (
     <div className="painel-agora">

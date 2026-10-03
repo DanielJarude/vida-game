@@ -75,7 +75,7 @@ export function registrarProducao(v: Vida, item: Omit<ItemAcademico, 't'>): Item
 
 const REVISTA = ['numa revista pequena da área', 'numa revista nacional', 'numa revista internacional', 'numa revista de referência da área'];
 const ABERTURAS = (linha: string) => [`Um olhar novo sobre ${linha}`, `${linha.charAt(0).toUpperCase()}${linha.slice(1)} em perspectiva`, `O que os dados dizem sobre ${linha}`, `Revisitando ${linha}`, `Limites e caminhos em ${linha}`, `Evidências recentes em ${linha}`];
-const RECORTES = ['', ': um estudo de caso', ' no Brasil', ': uma revisão', ' ao longo de dez anos', ' em comunidades do interior', ': o que mudou', ' e as suas controvérsias'];
+const RECORTES = ['', ': um estudo de caso', ' no país', ': uma revisão', ' ao longo de dez anos', ' em comunidades do interior', ': o que mudou', ' e as suas controvérsias'];
 /** Um título que esta obra ainda não tem (a combinação de abertura e recorte, sem repetir). */
 function tituloDeArtigo(v: Vida, r: Rng): string {
   const usados = new Set((vidaAcademica(v).producao ?? []).map(x => x.titulo));

@@ -9,6 +9,7 @@
  * problema pode piorar até o carro parar.
  */
 
+import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { ProblemaBem, Veiculo, Vida } from '../tipos';
@@ -57,7 +58,7 @@ export function custosDeVeiculo(v: Vida, b: Veiculo, c: number, uso = 1): { rotu
     const idadeFator = 1 + Math.min(0.35, anosDoVeiculo(v, b) * 0.015);
     out.push({ rotulo: `${nome}: combustível e manutenção`, valor: usoMensalDoVeiculo(b) * c * idadeFator * (b.estado < 40 ? 1.3 : 1) * uso });
   }
-  const taxas = m.categoria === 'embarcacao' ? 'seguro e marina' : m.categoria === 'aeronave' ? 'seguro, hangar e inspeção' : `IPVA${b.parado ? '' : ' e seguro'}`;
+  const taxas = m.categoria === 'embarcacao' ? 'seguro e marina' : m.categoria === 'aeronave' ? 'seguro, hangar e inspeção' : `${textoLocal(v, 'impostoVeiculo')}${b.parado ? '' : ' e seguro'}`;
   if (m.taxaAnual) out.push({ rotulo: `${nome}: ${taxas}`, valor: b.valor * (b.parado ? 0.035 : m.taxaAnual) / 12 });
   // O jato voa com tripulação própria: salário fixo enquanto não está parado (parado, a tripulação é dispensada).
   if (m.tripulacao && !b.parado) out.push({ rotulo: `${nome}: tripulação (dois pilotos)`, valor: m.tripulacao });

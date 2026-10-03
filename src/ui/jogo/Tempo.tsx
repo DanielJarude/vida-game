@@ -16,7 +16,8 @@ import type { Dominio, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
 import { DE_FORMACAO } from '../../motor/sistemas/formacao';
-import { custoDaRotina, DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
+import { redeDeSaude } from '../../motor/sistemas/saude';
+import { custoDaRotina, descricaoDaRotina, terapiaPublica, DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
 import { estimuloCognitivo, estimuloFisico, palavraAprendizado, palavraCondicionamento } from '../../motor/sistemas/pessoa';
 import { cabeNaSemana, dose, semana, type Semana } from '../../motor/sistemas/semana';
 import { frentesDaVida, leituraDaFrente } from '../../motor/sistemas/frentes';
@@ -329,7 +330,7 @@ function linhaAtividade(vida: Vida, m: ModeloRotina, custo: number, agir: (a: Ac
       <div className="rotina__texto">
         <strong>{m.nome}</strong>
         {motivo && <span className="rotina__motivo">{motivo}</span>}
-        <span>{motivo ? '' : `${m.descricao} `}{dose(n1.tempo)}{custoDaRotina(vida, m.id, 1) ? ` · ${dinheiroCurto(custoDaRotina(vida, m.id, 1) * custo)}/mês` : m.id === 'terapia' ? ' · pelo SUS (com encaminhamento), de graça' : ' · de graça'}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
+        <span>{motivo ? '' : `${descricaoDaRotina(vida, m)} `}{dose(n1.tempo)}{custoDaRotina(vida, m.id, 1) ? ` · ${dinheiroCurto(custoDaRotina(vida, m.id, 1) * custo)}/mês` : m.id === 'terapia' && terapiaPublica(vida) ? ` · ${redeDeSaude(vida).pelo} (com encaminhamento), de graça` : ' · de graça'}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
       </div>
       {comBotao && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir}>{m.niveis.length > 1 ? `Começar: ${n1.rotulo.toLowerCase()}` : 'Começar'}</BotaoAcao>}
     </li>

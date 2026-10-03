@@ -109,6 +109,21 @@ describe('cães e gatos: famílias morfológicas, não a mesma forma com outra c
     expect(a).not.toBe(traco(<Retrato genero="masculino" idade={3} especie="cachorro" semente="pessoa_9" porte="grande" />));
   });
 
+  it('segundo passe: famílias morfológicas reconhecíveis (retriever, pastor, terrier, galgo, spitz, braquicefálico...) e o vira-lata como mistura', () => {
+    const muitos = Array.from({ length: 60 }, (_, i) => morfologiaCao(`cao_${i * 13 + 1}`, (['pequeno', 'medio', 'grande'] as const)[i % 3]));
+    expect(new Set(muitos.map(m => m.familia)).size).toBeGreaterThanOrEqual(6);
+    expect(muitos.filter(m => m.familia === 'srd').length).toBeGreaterThan(10);
+    // A família amarra os traços: todo galgo tem cabeça fina e perna longa; todo pastor, orelha em pé.
+    for (const m of muitos) {
+      if (m.familia === 'galgo') expect([m.cabeca, m.pernas]).toEqual(['fina', 'longas']);
+      if (m.familia === 'pastor') expect(m.orelhas).toBe('empe');
+      if (m.familia === 'braquicefalo') expect(m.focinho).toBe('curto');
+    }
+    const gatos = Array.from({ length: 40 }, (_, i) => morfologiaGato(`gato_${i * 7 + 3}`));
+    expect(new Set(gatos.map(m => m.tipo)).size).toBeGreaterThanOrEqual(4);
+    expect(new Set(gatos.map(m => m.postura))).toEqual(new Set(['em_volta', 'erguida', 'deitado', 'em_pe']));
+  });
+
   it('a raça (quando houver) fixa traços sem quebrar o resto', () => {
     const m = morfologiaCao('x', 'pequeno', { pernas: 'curtas', corpo: 'comprido', orelhas: 'longas' });
     expect([m.pernas, m.corpo, m.orelhas]).toEqual(['curtas', 'comprido', 'longas']);

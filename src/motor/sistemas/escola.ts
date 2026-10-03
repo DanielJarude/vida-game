@@ -10,6 +10,8 @@
  * disponível em Tarauacá.
  */
 
+import { falaALingua, perfilDaVida } from '../mundo/vida';
+import { textoLocal } from '../mundo/locais';
 import { paisCorrente } from '../mundo/moeda';
 import { perfilDoPais, temPerfil } from '../mundo/registro';
 import { salarioMinimoDoPais } from '../mundo/economia';
@@ -55,6 +57,16 @@ export const ROTULO_ESCOLARIDADE: Record<Escolaridade, string> = {
   superior_incompleto: 'superior incompleto', superior: 'superior completo', pos: 'pós-graduação',
   mestrado: 'mestrado', doutorado: 'doutorado'
 };
+
+/** A escolaridade com os nomes das etapas do país onde a pessoa mora ("fundamental completo" no Brasil, "primária completa" no Peru). */
+export function rotuloEscolaridade(v: Vida, e: Escolaridade): string {
+  const ed = educacaoDaVida(v);
+  if (e === 'fundamental') return ed.fundamental.completo;
+  if (e === 'fundamental_incompleto') return `${ed.fundamental.nome} incomplet${ed.fundamental.o.startsWith('a ') ? 'a' : 'o'}`;
+  if (e === 'medio') return ed.medio.completo;
+  if (e === 'medio_incompleto') return `${ed.medio.nome} incomplet${ed.medio.o.startsWith('a ') ? 'a' : 'o'}`;
+  return ROTULO_ESCOLARIDADE[e];
+}
 
 function subir(v: Vida, e: Escolaridade): void {
   if (nivelEsc(e) > nivelEsc(v.educacao.escolaridade)) v.educacao.escolaridade = e;
@@ -187,14 +199,14 @@ export function processarEscola(v: Vida, r: Rng): void {
   // onde se avança por etapas. Antes, uma adulta seguia "repetindo o 4º ano" ano após ano, com "colegas cada vez mais novos".
   if (!b.eja && b.reprovacoes >= 2 && ((b.etapa !== 'medio' && i >= 15) || (b.etapa === 'medio' && i >= 18))) {
     b.eja = true;
-    escrever(v, { texto: `Com ${i} anos ${b.etapa === 'medio' ? 'na' : 'no'} ${rotuloSerie(b)}, foi para a EJA, à noite: turma de gente de todas as idades, avançando por etapas.`, relevancia: 'biografia', tema: 'escola' });
+    escrever(v, { texto: `Com ${i} anos ${b.etapa === 'medio' ? 'na' : 'no'} ${rotuloSerie(b)}, foi para ${textoLocal(v, 'eja')}, à noite: turma de gente de todas as idades, avançando por etapas.`, relevancia: 'biografia', tema: 'escola' });
   }
   // Reprovação: nunca no 1º ano (progressão continuada), mais comum no fundamental II e médio. Na EJA, rara (as etapas são mais curtas).
   const reprova = b.serie > 1 && (b.eja ? b.desempenho < 26 && r.chance(0.3) : b.desempenho < 38 && r.chance(b.desempenho < 28 ? 0.7 : 0.35));
   if (reprova) {
     b.reprovacoes += 1;
     escrever(v, {
-      texto: b.eja ? `Ficou mais um semestre na mesma etapa da EJA${b.reprovacoes >= 4 ? ' — o cansaço do dia pesava na aula da noite' : ''}.` : b.reprovacoes === 1 ? `Repetiu ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)}.`
+      texto: b.eja ? `Ficou mais um semestre na mesma etapa ${textoLocal(v, 'eja').replace(/^o /, 'do ').replace(/^a /, 'da ')}${b.reprovacoes >= 4 ? ' — o cansaço do dia pesava na aula da noite' : ''}.` : b.reprovacoes === 1 ? `Repetiu ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)}.`
         : b.reprovacoes === 2 ? `Repetiu de ano pela segunda vez, agora ${b.etapa === 'medio' ? 'na' : 'no'} ${rotuloSerie(b)}.`
           : `${b.reprovacoes}ª reprovação: ${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b)} de novo, com colegas cada vez mais novos.`,
       relevancia: b.eja ? 'cotidiano' : 'biografia', tema: 'escola', tom: 'ruim'
@@ -210,7 +222,7 @@ export function processarEscola(v: Vida, r: Rng): void {
       b.etapa = 'medio';
       b.serie = 1;
       subir(v, 'medio_incompleto');
-      escrever(v, { texto: `Terminou o fundamental e começou o ensino médio ${em(escola(v, b.rede, 'medio'))}.`, relevancia: 'biografia', tema: 'escola' });
+      escrever(v, { texto: `Terminou ${educacaoDaVida(v).fundamental.o} e começou ${educacaoDaVida(v).medio.o} ${em(escola(v, b.rede, 'medio'))}.`, relevancia: 'biografia', tema: 'escola' });
     } else {
       // Na EJA, cada ano vale por dois (as etapas juntam séries).
       b.serie = Math.min(9, b.serie + (b.eja ? 2 : 1));
@@ -230,7 +242,7 @@ export function processarEscola(v: Vida, r: Rng): void {
       if (b.integrado) {
         const c = cursoOuNulo(b.integrado);
         if (c) {
-          e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: 'o instituto federal', rede: 'publica', modalidade: 'presencial' });
+          e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: educacaoDaVida(v).inst.tecnico, rede: 'publica', modalidade: 'presencial' });
           subir(v, 'tecnico');
           v.fatos['concluiu_integrado'] = v.t;
           escrever(v, { texto: `Terminou o médio integrado: saiu com o diploma de ${c.nome.replace(/^Técnico em /, 'técnico em ')}.`, relevancia: 'marco', tema: 'escola', tom: 'bom' });
@@ -238,13 +250,52 @@ export function processarEscola(v: Vida, r: Rng): void {
         }
       }
       escrever(v, {
-        texto: `Concluiu o ensino médio${b.reprovacoes > 0 ? `, com ${b.reprovacoes === 1 ? 'uma repetência' : `${b.reprovacoes} repetências`} no caminho` : ''}.`,
+        texto: `Concluiu ${educacaoDaVida(v).medio.o}${b.reprovacoes > 0 ? `, com ${b.reprovacoes === 1 ? 'uma repetência' : `${b.reprovacoes} repetências`} no caminho` : ''}.`,
         relevancia: 'marco', tema: 'escola', tom: 'bom'
       });
     } else {
       b.serie = Math.min(3, b.serie + (b.eja ? 2 : 1));
     }
   }
+}
+
+/**
+ * TROCA DE SISTEMA EDUCACIONAL (uma mudança de país). O sistema atual passa
+ * a ser o do país novo — a escola, os nomes das etapas, o exame —, e o que
+ * se estudou antes vira HISTÓRICO (`historicoEscolar`), sem se perder. A
+ * série é reconciliada pela idade e pela etapa (o jogo conta a escola em
+ * 9 + 3 anos em todo país: a série de chegada é a equivalente, nunca um
+ * recomeço do zero). O que só existe no sistema de lá fica para trás: o
+ * técnico integrado de um instituto federal não continua noutro país.
+ */
+export function trocarDeSistemaEscolar(v: Vida, dePais: string, paraPais: string, desde: number): void {
+  if (dePais === paraPais) return;
+  const e = v.educacao;
+  const b = e.basica;
+  (e.historicoEscolar ??= []).push({ pais: dePais, desde, ate: v.t, etapa: b?.etapa, serie: b?.serie, escolaridade: e.escolaridade });
+  // As notas de antes (de saves sem o país gravado) eram do sistema que fica para trás: ganham o país agora.
+  for (const n of e.enem) n.pais ??= dePais;
+  // O que só existe no sistema de lá (o cursinho para uma prova que aqui não há, o estudo para um concurso que aqui
+  // não existe) acaba com a mudança.
+  const antes = v.rotinas.length;
+  // (A mesma regra de `rotinas.existeNoPais`, sem importar as rotinas — a escola é base delas.)
+  v.rotinas = v.rotinas.filter(r => !(r.id === 'cursinho' && educacaoDaVida(v).aberto) && !(r.id === 'estudar_concurso' && !perfilDaVida(v).trabalho.concurso));
+  if (v.rotinas.length < antes) escrever(v, { texto: 'A preparação que fazia sentido no país de antes (a prova, o concurso) ficou para trás.', relevancia: 'cotidiano', tema: 'estudo' });
+  if (!b) return;
+  // A rede da escola nova: a mesma conta da casa (a escola particular de lá é outra conta).
+  b.rede = redeParaCasa(v);
+  if (b.integrado) {
+    const c = cursoOuNulo(b.integrado);
+    b.integrado = undefined;
+    if (c) escrever(v, { texto: `O técnico integrado (${c.nome.replace(/^Técnico em /, '')}) ficou para trás: o ensino de lá não tem esse curso junto.`, relevancia: 'cotidiano', tema: 'escola' });
+  }
+  const ed = educacaoDaVida(v);
+  const lingua = !falaALingua(v);
+  // Chegar no meio do caminho, numa língua nova, pesa nas notas do primeiro ano (a adaptação devolve).
+  if (lingua) b.desempenho = clamp(b.desempenho - 14);
+  else b.desempenho = clamp(b.desempenho - 4);
+  const etapa = b.etapa === 'creche' || b.etapa === 'pre' ? 'a educação infantil' : `${b.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie(b, paraPais)}`;
+  escrever(v, { texto: `Na escola nova, ${b.rede === 'publica' ? ed.etapas.publica[b.etapa === 'medio' ? 'medio' : b.etapa === 'creche' ? 'creche' : 'fundamental'] : 'uma escola particular'}, entrou ${etapa.replace(/^o /, 'no ').replace(/^a /, 'na ')}${lingua ? ', numa língua que ainda não era a sua' : ''}.`, relevancia: 'biografia', tema: 'escola', tom: lingua ? 'ruim' : 'neutro' });
 }
 
 /** Largar a escola — só por decisão do jogador. */
@@ -262,7 +313,7 @@ export function voltarAEstudar(v: Vida): void {
   const esc = v.educacao.escolaridade;
   const etapa = nivelEsc(esc) >= nivelEsc('fundamental') ? 'medio' : 'fundamental2';
   v.educacao.basica = { etapa, serie: etapa === 'medio' ? 1 : 8, rede: 'publica', desempenho: 50, reprovacoes: 0 };
-  escrever(v, { texto: 'Voltou a estudar à noite, no supletivo (EJA).', relevancia: 'marco', tema: 'escola', tom: 'bom', escolha: true });
+  escrever(v, { texto: `Voltou a estudar à noite, ${textoLocal(v, 'supletivo').replace(/^o /, 'no ').replace(/^a /, 'na ')}.`, relevancia: 'marco', tema: 'escola', tom: 'bom', escolha: true });
 }
 
 /* ------------------------------------------------------------------ ENEM */
@@ -299,9 +350,12 @@ export function notaEnem(v: Vida, r: Rng): number {
   return Math.round(AREAS_ENEM.reduce((s, a) => s + n[a], 0) / AREAS_ENEM.length);
 }
 
-/** Nota ponderada para um curso (o SISU usa os pesos do curso). */
+/** As notas que valem AQUI: as do exame do país onde a pessoa mora (a nota do ENEM não abre universidade nos EUA). */
+export const notasDaqui = (v: Vida) => { const pais = paisDaVida(v); return v.educacao.enem.filter(x => !x.pais || x.pais === pais); };
+
+/** Nota ponderada para um curso (o sistema de vagas usa os pesos do curso). */
 export function notaParaCurso(v: Vida, c: Curso): number {
-  const recentes = v.educacao.enem.filter(x => x.t > v.t - 36);
+  const recentes = notasDaqui(v).filter(x => x.t > v.t - 36);
   if (!recentes.length) return 0;
   const pesos = c.pesos ?? {};
   let melhor = 0;
@@ -319,13 +373,13 @@ export function podeFazerEnem(v: Vida): Veredito {
   const ed = educacaoDaVida(v);
   // Onde a universidade pública é de acesso aberto (a Argentina, o Uruguai), não há prova para entrar.
   if (ed.aberto) return bloqueio('impossivel', 'Aqui não há prova para entrar na universidade pública: a matrícula é aberta.');
-  if (i < 15) return bloqueio('impossivel', `${ed.O} é para quem está terminando o ${ed.etapas.medio}.`);
+  if (i < 15) return bloqueio('impossivel', `${ed.O} é para quem está terminando ${ed.medio.o}.`);
   const e = v.educacao;
   const noTerceiro = e.basica?.etapa === 'medio' && e.basica.serie >= 3;
   if (!noTerceiro && !temEscolaridade(v, 'medio') && !(e.basica?.etapa === 'medio')) {
-    return bloqueio('requisito', 'Precisa estar no ensino médio ou tê-lo concluído.');
+    return bloqueio('requisito', `Precisa estar ${ed.medio.no} ou tê-lo concluído.`);
   }
-  if (e.enem.some(x => anoDe(x.t) === anoDe(v.t) || x.t > v.t - 12)) {
+  if (notasDaqui(v).some(x => anoDe(x.t) === anoDe(v.t) || x.t > v.t - 12)) {
     return bloqueio('incompativel', `${ed.O} deste ano já foi feito. A próxima prova é no ano que vem.`);
   }
   return { grau: 'permitido' };
@@ -334,19 +388,21 @@ export function podeFazerEnem(v: Vida): Veredito {
 export function fazerEnem(v: Vida, r: Rng): number {
   const areas = notasEnem(v, r);
   const nota = Math.round(AREAS_ENEM.reduce((s, a) => s + areas[a], 0) / AREAS_ENEM.length);
-  const anterior = v.educacao.enem.reduce((m, x) => Math.max(m, x.nota), 0);
-  v.educacao.enem.push({ t: v.t, nota, areas });
+  const anterior = notasDaqui(v).reduce((m, x) => Math.max(m, x.nota), 0);
+  const ed = educacaoDaVida(v);
+  v.educacao.enem.push({ t: v.t, nota, areas, pais: ed.pais, exame: ed.nome });
   const faixa = nota >= 750 ? 'uma nota que abre quase qualquer porta' : nota >= 650 ? 'uma boa nota' : nota >= 520 ? 'uma nota mediana' : 'uma nota baixa';
+  const fez = ed.prova ? `Fez ${ed.o}` : `Fechou ${ed.o}`;
   const texto = anterior === 0
-    ? `Fez ${educacaoDaVida(v).o} pela primeira vez e tirou ${nota} — ${faixa}.`
-    : nota > anterior ? `Fez ${educacaoDaVida(v).o} de novo e subiu para ${nota}.` : `Fez ${educacaoDaVida(v).o} de novo: ${nota}, sem melhorar.`;
+    ? `${fez} pela primeira vez: ${nota} — ${faixa}.`
+    : nota > anterior ? `${fez} de novo e subiu para ${nota}.` : `${fez} de novo: ${nota}, sem melhorar.`;
   escrever(v, { texto, relevancia: anterior === 0 || nota > anterior + 40 ? 'biografia' : 'cotidiano', tema: 'estudo', tom: nota >= 650 ? 'bom' : nota < 500 ? 'ruim' : 'neutro', escolha: true });
   devolutivaDoEnem(v, areas);
   return nota;
 }
 
 export const melhorNotaRecente = (v: Vida) =>
-  v.educacao.enem.filter(x => x.t > v.t - 36).reduce((m, x) => Math.max(m, x.nota), 0);
+  notasDaqui(v).filter(x => x.t > v.t - 36).reduce((m, x) => Math.max(m, x.nota), 0);
 
 /* ---------------------------------------------------------- Ingresso */
 
@@ -388,14 +444,14 @@ function requisitoDoCurso(v: Vida, c: Curso): Veredito | null {
     return null;
   }
   if (c.nivel === 'tecnico') {
-    if (i < 15) return bloqueio('impossivel', 'Curso técnico é a partir do ensino médio.');
+    if (i < 15) return bloqueio('impossivel', `Curso técnico é a partir ${educacaoDaVida(v).medio.do}.`);
     if (!temEscolaridade(v, 'medio') && !(e.basica?.etapa === 'medio' && e.basica.serie >= 2)) {
-      return bloqueio('requisito', 'Técnico exige estar no 2º ano do médio ou tê-lo concluído.');
+      return bloqueio('requisito', `Técnico exige estar no 2º ano ${educacaoDaVida(v).medio.do} ou tê-lo concluído.`);
     }
     return null;
   }
   if (c.nivel === 'superior') {
-    if (!temEscolaridade(v, 'medio')) return bloqueio('requisito', 'Faculdade exige ensino médio completo.');
+    if (!temEscolaridade(v, 'medio')) return bloqueio('requisito', `Faculdade exige ${educacaoDaVida(v).medio.completo}.`);
     return null;
   }
   // pós, residência, mestrado, doutorado
@@ -675,7 +731,7 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
   if (c.nivel === 'superior') subir(v, 'superior_incompleto');
   const g = v.eu.tratamento ?? v.eu.genero;
   const objetivo = v.educacao.objetivo?.cursoId === c.id;
-  const tentativas = objetivo ? v.educacao.enem.filter(x => x.t >= v.educacao.objetivo!.t).length : 0;
+  const tentativas = objetivo ? notasDaqui(v).filter(x => x.t >= v.educacao.objetivo!.t).length : 0;
   escrever(v, { texto: `${flex(g, 'Aprovado', 'Aprovada')} em ${c.nome}, ${em(m.instituicao)}.${objetivo ? (tentativas > 1 ? ` Era o curso que queria — depois de ${tentativas} tentativas.` : ' Era o curso que queria.') : ''}`, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
   if (objetivo) v.educacao.objetivo = undefined;
 }
@@ -774,7 +830,10 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   void g; void r;
 }
 
-/** Exame da OAB: tentado uma vez por ano depois de formado em Direito. */
+/** "o X" → "no X"/"do X" (a contração com o artigo do nome). */
+const de = (comArtigo: string, p: 'n' | 'd') => comArtigo.replace(/^(o|a) /, (_, a: string) => `${p}${a} `);
+
+/** O exame da ordem (no Brasil, o da OAB; o bar exam nos EUA): tentado uma vez por ano depois de formado em Direito. */
 export function processarOab(v: Vida, r: Rng): void {
   if (!temFato(v, 'pode_prestar_oab') || v.trabalho.licencas.includes('oab')) return;
   const des = v.fatos['tentativas_oab'] ?? 0;
@@ -782,8 +841,8 @@ export function processarOab(v: Vida, r: Rng): void {
   v.fatos['tentativas_oab'] = des + 1;
   if (r.chance(chance)) {
     v.trabalho.licencas.push('oab');
-    escrever(v, { texto: des === 0 ? `Passou no Exame da OAB de primeira.` : `Passou no Exame da OAB, na ${des + 1}ª tentativa.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: des === 0 ? `Passou ${de(textoLocal(v, 'exameDaOrdem'), 'n')} de primeira.` : `Passou ${de(textoLocal(v, 'exameDaOrdem'), 'n')}, na ${des + 1}ª tentativa.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
   } else if (des === 0) {
-    escrever(v, { texto: 'Reprovou na primeira tentativa do Exame da OAB.', relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `Reprovou na primeira tentativa ${de(textoLocal(v, 'exameDaOrdem'), 'd')}.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
   }
 }

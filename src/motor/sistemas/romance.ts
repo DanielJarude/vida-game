@@ -23,6 +23,7 @@
  * descoberto (a reação do jogador é decisão dele; a da outra pessoa, dela).
  */
 
+import { registroCivilDe } from '../mundo/locais';
 import { comecarVidaEmComum, separarVidaMaterial } from './partilha';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -102,7 +103,10 @@ export function mudarEstagio(v: Vida, vin: Vinculo, estagio: EstagioRomance, fim
   if (estagio === 'ex') {
     rom.fim = fim ?? 'termino';
     rom.secreto = undefined;
-    vin.estagio = vin.proximidade >= 45 ? 'amigo' : 'afastado';
+    // Ex não é amigo por ter sido par (Relações 2.0): quem já era amigo ANTES do romance volta a ser um amigo de antes
+    // (afastado, com a porta aberta); quem se conheceu como par fica conhecido — a amizade, se vier, é escolha dos dois.
+    const eramAmigos = vin.historia.some(h => h.tipo === 'amizade' && h.t < (rom.tInicio ?? vin.tInicio));
+    vin.estagio = eramAmigos ? 'afastado' : 'conhecido';
     vin.convivio = vin.convivio.filter(c => c !== 'casa');
     rom.planoFilhos = undefined;
     rom.segredo = undefined;
@@ -204,7 +208,11 @@ export function processarRomance(v: Vida, r: Rng): void {
       alvo -= 15;
     }
     rom.envolvimento = clamp(Math.round(rom.envolvimento + (alvo - rom.envolvimento) * 0.3 + r.normal() * 5));
-    vin.proximidade = clamp(Math.round(vin.proximidade * 0.6 + rom.envolvimento * 0.4));
+    // A intimidade do casal vira proximidade; quem só está SAINDO ainda não tem a história de um namoro:
+    // a proximidade sobe devagar e para no meio (sair junto não é ser íntimo — Relações 2.0).
+    vin.proximidade = rom.estagio === 'saindo'
+      ? clamp(Math.round(vin.proximidade * 0.8 + Math.min(rom.envolvimento, 50) * 0.2))
+      : clamp(Math.round(vin.proximidade * 0.6 + rom.envolvimento * 0.4));
     vin.tensao = Math.round(vin.tensao * 0.7);
     // Confiança se constrói devagar, quando não há motivo para quebrá-la.
     if (vin.tensao < 40) vin.confianca = clamp(Math.round(vin.confianca + (85 - vin.confianca) * 0.06));
@@ -309,7 +317,7 @@ export function terminar(v: Vida, p: Pessoa, vin: Vinculo, quem: 'jogador' | 'el
   let texto: string;
   if (era === 'casamento') {
     texto = quem === 'jogador'
-      ? `Pediu o divórcio. ${anos} anos com ${p.nome} terminaram num cartório.`
+      ? `Pediu o divórcio. ${anos} anos com ${p.nome} terminaram n${registroCivilDe(v).slice(1)}.`
       : motivo === 'traicao' ? `${p.nome} pediu o divórcio depois de descobrir a traição. Eram ${anos} anos juntos.` : `${p.nome} pediu o divórcio depois de ${anos} anos juntos.`;
   } else if (moravam) {
     texto = quem === 'jogador' ? `Decidiu se separar de ${p.nome}. Cada um foi para um lado.` : motivo === 'traicao' ? `${p.nome} fez as malas no mesmo dia em que soube.` : `${p.nome} fez as malas e foi embora.`;

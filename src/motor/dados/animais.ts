@@ -90,10 +90,10 @@ export const ANIMAIS: readonly Animal[] = [
   },
   {
     id: 'calopsita', nome: ['calopsita', 'calopsita'], generoFixo: 'f', grupo: 'ave', vida: [15, 20], custo: 60, semana: 0.1, vinculo: 2.5, espaco: 'qualquer', origens: ['loja', 'criadouro'], preco: [250, 450], barulho: true,
-    descricao: 'Ave doméstica (Portaria IBAMA 93/1998): assobia, pede companhia e voo dentro de casa. Vive quase vinte anos.',
+    descricao: 'Ave doméstica: assobia, pede companhia e voo dentro de casa. Vive quase vinte anos.',
     jeitos: [J('assobia quando alguém chega'), J('gosta de ficar no ombro'), J('arrepia a crista quando se assusta')],
     nomes: [['Kiko', 'Pipo', 'Chico', 'Loro'], ['Pérola', 'Kika', 'Mel', 'Sol']],
-    interacao: { rotulo: 'Soltar na sala', textos: ['{nome} voou duas voltas pela sala e pousou no seu ombro.', '{nome} assobiou a música da novela inteira.'] },
+    interacao: { rotulo: 'Soltar na sala', textos: ['{nome} voou duas voltas pela sala e pousou no seu ombro.', '{nome} assobiou a música da televisão inteira.'] },
     cotidiano: ['{nome} aprendeu a assobiar o toque do seu celular.', '{nome} assobia toda vez que a porta abre.', '{nome} trocou as penas e passou uma semana emburrada.'],
     morteCedo: ['uma infecção respiratória', 'um susto — o coração não aguentou']
   },
@@ -117,7 +117,7 @@ export const ANIMAIS: readonly Animal[] = [
   },
   {
     id: 'papagaio', nome: ['papagaio', 'papagaio'], generoFixo: 'm', grupo: 'ave', vida: [40, 60], custo: 130, semana: 0.2, vinculo: 3, espaco: 'espaco', origens: ['criadouro'], preco: [3500, 6500], silvestre: true, barulho: true,
-    descricao: 'Papagaio-verdadeiro, silvestre nativo: só de criadouro autorizado pelo IBAMA, com nota fiscal e anilha. Fala, grita, pede atenção todo dia — e pode viver mais do que o dono.',
+    descricao: 'Papagaio-verdadeiro, silvestre nativo: só de criadouro autorizado, com nota fiscal e anilha. Fala, grita, pede atenção todo dia — e pode viver mais do que o dono.',
     jeitos: [J('fala o nome de todo mundo da casa'), J('ciumento de quem chega', 'ciumenta de quem chega'), J('grita às seis da manhã')],
     nomes: [['Louro', 'Juca', 'Zeca', 'Chico'], ['Lora', 'Dita', 'Cida', 'Bela']],
     interacao: { rotulo: 'Conversar com', textos: ['{nome} repetiu, com a sua voz, uma frase que você nem lembrava de ter dito.', '{nome} dançou no poleiro com o rádio ligado.'] },
@@ -153,7 +153,7 @@ export const ANIMAIS: readonly Animal[] = [
   },
   {
     id: 'chinchila', nome: ['chinchila', 'chinchila'], generoFixo: 'f', grupo: 'roedor', vida: [10, 15], custo: 90, semana: 0.1, vinculo: 2, espaco: 'qualquer', origens: ['loja', 'criadouro'], preco: [400, 900], calorFaz: true,
-    descricao: 'De cativeiro (Portaria IBAMA 93/1998): noturna, toma banho de pó — e sofre com calor forte.',
+    descricao: 'De cativeiro: noturna, toma banho de pó — e sofre com calor forte.',
     jeitos: [J('pula pela gaiola à noite'), J('rola no pó de banho com gosto')],
     nomes: [['Fumaça', 'Cinza', 'Pompom', 'Tuti'], ['Nuvem', 'Pluma', 'Lua', 'Neblina']],
     interacao: { rotulo: 'Cuidar de', textos: ['Banho de pó; {nome} rolou até ficar branca.'] },

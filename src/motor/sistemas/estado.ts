@@ -22,6 +22,7 @@
  * diz o que a pessoa sente nem como reagiu.
  */
 
+import { textoLocal } from '../mundo/locais';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { abalar, type Abalo } from './abalo';
 import { filhos, idade, idadePessoa, moraCom, parceiro, vinculosVivos } from '../nucleo';
@@ -207,7 +208,7 @@ export function fatoresHumor(v: Vida): Fator[] {
     out.push({ id: 'parceria', texto: e >= 0 ? `a vida com ${par.p.nome}` : `a distância de ${par.p.nome}`, efeito: e, pessoaId: par.p.id });
   }
   const seg = seguranca(v);
-  if (seg.nivel === 'no_vermelho') out.push({ id: 'dividas', texto: obrigacoesAtrasadas(v) > 0 ? 'as contas atrasadas' : v.financas.negativado ? 'o nome sujo e as contas atrasadas' : 'a dívida do cartão', efeito: obrigacoesAtrasadas(v) >= 3 || v.financas.negativado ? -12 : -7 });
+  if (seg.nivel === 'no_vermelho') out.push({ id: 'dividas', texto: obrigacoesAtrasadas(v) > 0 ? 'as contas atrasadas' : v.financas.negativado ? `${textoLocal(v, 'nomeSujo')} e as contas atrasadas` : 'a dívida do cartão', efeito: obrigacoesAtrasadas(v) >= 3 || v.financas.negativado ? -12 : -7 });
   else if (seg.nivel === 'apertado' && v.fatos['sem_sobra_desde'] !== undefined && v.t - v.fatos['sem_sobra_desde'] >= 24) out.push({ id: 'aperto', texto: 'anos de dinheiro contado', efeito: -4 });
   else if (!moraComFamiliaDeOrigem(v) && (v.financas.estilo === 'folgado' || seg.nivel === 'folgado')) out.push({ id: 'folga', texto: 'dinheiro sobrando para o que gosta', efeito: 3 });
   const apertada = casaApertada(v);

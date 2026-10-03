@@ -15,7 +15,7 @@ export type Papel =
   | 'parceiro' | 'saindo' | 'caso' | 'interesse' | 'ex'
   | 'filho' | 'neto' | 'bisneto' | 'genro'
   | 'genitor' | 'irmao' | 'avo' | 'parente' | 'sogro'
-  | 'amigo_proximo' | 'amigo' | 'colega' | 'conhecido' | 'afastado'
+  | 'amigo_proximo' | 'amigo' | 'colega' | 'conhecido' | 'afastado' | 'ex_amigo' | 'rival'
   | 'pet';
 
 export type Fase = 'bebe' | 'crianca' | 'pre' | 'adolescente' | 'jovem' | 'adulto' | 'idoso';
@@ -74,6 +74,8 @@ export function papelDe(p: Pessoa, vin: Vinculo): Papel {
     case 'amigo': return 'amigo';
     case 'colega': return 'colega';
     case 'afastado': return 'afastado';
+    case 'ex_amigo': return 'ex_amigo';
+    case 'rival': return 'rival';
     default: return 'conhecido';
   }
 }
@@ -100,7 +102,9 @@ export function circuloDe(p: Pessoa, vin: Vinculo): Circulo {
   if (ehFamilia(papel) || papel === 'pet') return 'familia';
   if (papel === 'amigo' || papel === 'amigo_proximo') return 'amigos';
   if (papel === 'saindo' || papel === 'caso') return 'nucleo';
-  if (vin.convivio.length > 0 && papel !== 'ex' && papel !== 'afastado') return 'contexto';
+  // O interesse romântico de agora não é "gente que passou": está no seu contexto (Relações 2.0).
+  if (papel === 'interesse') return 'contexto';
+  if (vin.convivio.length > 0 && papel !== 'ex' && papel !== 'afastado' && papel !== 'ex_amigo') return 'contexto';
   return 'passado';
 }
 
@@ -108,7 +112,7 @@ const BASE: Record<Papel, number> = {
   parceiro: 70, saindo: 18, caso: 25, interesse: 4, ex: 8,
   filho: 82, neto: 42, bisneto: 28, genro: 22,
   genitor: 62, irmao: 40, avo: 32, parente: 10, sogro: 18,
-  amigo_proximo: 45, amigo: 24, colega: 6, conhecido: 3, afastado: 8,
+  amigo_proximo: 45, amigo: 24, colega: 6, conhecido: 3, afastado: 8, ex_amigo: 10, rival: 6,
   pet: 20
 };
 

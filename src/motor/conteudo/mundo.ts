@@ -14,6 +14,10 @@ import { emRecessao, idadePessoa, temFato } from '../nucleo';
 import { entrouEmCrise, saiuDaCrise } from '../sistemas/economia';
 import { municipio } from '../dados/lugares';
 import { paisDaVida } from '../mundo/vida';
+import { rngDe } from '../rng';
+import { ocupacaoOuNula } from '../dados/ocupacoes';
+import { destinoDaFamilia, migrarComAFamilia } from '../sistemas/migracao';
+import { moraComFamiliaDeOrigem } from '../sistemas/domicilio';
 import type { Vida } from '../tipos';
 import { cidadesDaVida, temFesta } from './local';
 
@@ -32,6 +36,13 @@ import { anoDe } from '../tempo';
 import { curso } from '../dados/cursos';
 import { em } from '../sistemas/escola';
 import { categoriaDoVeiculo, textoVeiculo } from '../sistemas/veiculos';
+
+
+/** O pai ou a mãe que mora em casa e tem um ofício qualificado — quem um empregador de fora patrocina e leva a família junto. */
+const quemLevaAFamilia = (v: Vida) => P.genitorEmCasa(v).find(p => { const oc = p.ocupacao ? ocupacaoOuNula(p.ocupacao) : undefined; return !!oc && oc.nivel >= 2; });
+
+/** Os estados do Nordeste brasileiro (o escopo do São João e da seca do sertão). */
+const NORDESTE = ['BR-AL', 'BR-BA', 'BR-CE', 'BR-MA', 'BR-PB', 'BR-PE', 'BR-PI', 'BR-RN', 'BR-SE'];
 import type { Veiculo } from '../tipos';
 
 
@@ -82,7 +93,7 @@ export const MUNDO: Conteudo[] = [
       'A economia voltou a respirar. Os anúncios de vaga reapareceram nos postes.',
       'A crise foi passando sem aviso: o shopping encheu de novo, as obras paradas voltaram a ter barulho.',
       'O jornal anunciou o fim da recessão. Na rua, a notícia chegou em forma de "contrata-se" na vitrine.',
-      'Depois de dois anos de aperto, o comércio voltou a contratar e o preço do dólar parou de ser assunto no almoço.'
+      'Depois de dois anos de aperto, o comércio voltou a contratar e o preço das coisas parou de ser assunto no almoço.'
     ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: c.vezes < 3 ? 'cotidiano' : 'tecnico' })
   },
   {
@@ -92,7 +103,9 @@ export const MUNDO: Conteudo[] = [
   },
   {
     id: 'mun_seca', tipo: 'acontecimento', idade: [5, 110], tema: 'lugar', repetir: 10,
-    quando: c => municipio(c.v.moradia.municipioId).regiao === 'Nordeste' && municipio(c.v.moradia.municipioId).perfil !== 'metropole',
+    // O sertão: escopo de DIVISÃO (os estados do Nordeste), não de país.
+    escopo: { divisoes: NORDESTE },
+    quando: c => municipio(c.v.moradia.municipioId).perfil !== 'metropole',
     narrar: c => ({ texto: [
       'Um ano de seca: caminhão-pipa na rua, torneira seca dia sim, dia não, e o preço do feijão lá em cima.',
       'A chuva não veio de novo. O açude baixou até aparecer a torre da igreja velha, e a água passou a ser racionada.',
@@ -101,8 +114,20 @@ export const MUNDO: Conteudo[] = [
     ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: 'cotidiano', efeito: () => estresse(c, 3) })
   },
   {
+    // A família muda de país (o pai ou a mãe foi trabalhar fora) e a criança vai junto — raro, e não é escolha dela.
+    id: 'mun_familia_emigra', tipo: 'acontecimento', idade: [3, 15], tema: 'lugar', prioritario: true,
+    // O sorteio é derivado (da vida e do ano) e sem papéis sorteados: não mexe no fluxo aleatório do resto do ano.
+    quando: c => moraComFamiliaDeOrigem(c.v) && rngDe(c.v.id, 'familia_emigra', c.v.t).chance(0.002) && !!quemLevaAFamilia(c.v) && !!destinoDaFamilia(c.v, rngDe(c.v.id, 'destino_familia', c.v.t)),
+    narrar: c => {
+      const destino = destinoDaFamilia(c.v, rngDe(c.v.id, 'destino_familia', c.v.t));
+      // A mudança acontece aqui (o texto conta onde a família foi parar, já com a moeda e a escola de lá).
+      const texto = destino ? migrarComAFamilia(c.v, destino, quemLevaAFamilia(c.v)?.nome, { escrever: false }) : undefined;
+      return texto ? { texto, relevancia: 'marco' } : null;
+    }
+  },
+  {
     id: 'mun_sao_joao', tipo: 'acontecimento', idade: [5, 90], tema: 'lazer', repetir: 6,
-    quando: c => municipio(c.v.moradia.municipioId).regiao === 'Nordeste',
+    escopo: { divisoes: NORDESTE },
     narrar: c => ({ texto: `O São João de ${municipio(c.v.moradia.municipioId).nome} tomou a cidade por duas semanas: forró até de manhã, milho assado e quadrilha na praça.`, relevancia: 'cotidiano', tom: 'bom', efeito: () => feliz(c, 3) })
   },
   {

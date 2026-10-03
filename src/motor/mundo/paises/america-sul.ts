@@ -97,6 +97,8 @@ const AR_NOMES = {
 
 const ARGENTINA: PerfilDePais = {
   id: 'AR',
+  // Regras legais: licença de conduzir aos 17 (Lei 24.449, art. 11).
+  regras: { direcao: { nome: 'licença de conduzir', plena: 17 } },
   gentilico: ['argentino', 'argentina'],
   idiomas: ['espanhol'],
   divisao: {

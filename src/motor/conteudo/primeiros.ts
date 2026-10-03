@@ -4,6 +4,7 @@
  * criança só entra quando é dela a escolha.
  */
 
+import { textoLocal } from '../mundo/locais';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { feliz, gp, prox, saude } from './efeitos';
@@ -18,7 +19,7 @@ export const PRIMEIROS: Conteudo[] = [
     papeis: { quem: P.genitorEmCasa },
     quando: c => litoral(c.v.moradia.municipioId),
     narrar: c => ({
-      texto: `A primeira vez na praia foi num domingo de sol, com isopor, farofa e ${c.p.quem.nome} segurando sua mão na beira da água.`,
+      texto: `A primeira vez na praia foi num domingo de sol, ${textoLocal(c.v, 'praiaComFarofa')} e ${c.p.quem.nome} segurando sua mão na beira da água.`,
       relevancia: 'biografia', tom: 'bom', efeito: () => prox(c, 'quem', 4)
     })
   },

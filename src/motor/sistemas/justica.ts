@@ -19,6 +19,7 @@
  * continuam abertas (trabalhar por conta, estudar, um programa de egressos).
  */
 
+import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { CategoriaIlicita, Justica, Vida } from '../tipos';
@@ -112,11 +113,11 @@ function medidaSocioeducativa(v: Vida, r: Rng, categoria: CategoriaIlicita): voi
   j.antecedentes.push({ t: v.t, categoria, desfecho: 'socioeducativa' });
   marcarFato(v, 'medida_socioeducativa');
   const texto = internacao
-    ? 'Apreendido com gente do grupo, cumpriu internação numa unidade socioeducativa. A escola ficou para dentro dos muros.'.replace('Apreendido', flex(ge(v), 'Apreendido', 'Apreendida', 'Apreendide'))
-    : 'Pego com a turma, recebeu uma medida socioeducativa: prestação de serviços à comunidade e acompanhamento por um tempo. Pelo ECA, não vira ficha de adulto.'.replace('Pego', flex(ge(v), 'Pego', 'Pega', 'Pegue'));
+    ? `Apreendido com gente do grupo, cumpriu internação n${textoLocal(v, 'unidadeJuvenil').slice(1)}. A escola ficou para dentro dos muros.`.replace('Apreendido', flex(ge(v), 'Apreendido', 'Apreendida', 'Apreendide'))
+    : `Pego com a turma, recebeu ${textoLocal(v, 'medidaJuvenil')}: prestação de serviços à comunidade e acompanhamento por um tempo. Como foi antes da maioridade, não vira ficha de adulto.`.replace('Pego', flex(ge(v), 'Pego', 'Pega', 'Pegue'));
   escrever(v, { texto, relevancia: 'marco', tema: 'familia', tom: 'ruim' });
-  marcar(v, 'fracasso', internacao ? 'Internação numa unidade socioeducativa.' : 'Medida socioeducativa.', internacao ? 3 : 2);
-  abalar(v, 'a medida socioeducativa', -8, 10);
+  marcar(v, 'fracasso', internacao ? `Internação n${textoLocal(v, 'unidadeJuvenil').slice(1)}.` : `${textoLocal(v, 'medidaJuvenil').replace(/^uma m/, 'M')}.`, internacao ? 3 : 2);
+  abalar(v, textoLocal(v, 'medidaJuvenil').replace(/^uma /, 'a '), -8, 10);
   if (v.educacao.basica) v.educacao.basica.desempenho = clamp(v.educacao.basica.desempenho - (internacao ? 12 : 5));
   for (const p of pais(v)) { const vin = v.vinculos[p.id]; if (vin) vin.tensao = clamp(vin.tensao + 18); }
   if (internacao) prender(v, v.t + r.int(8, 24), 'fechado', 'internacao');
@@ -218,7 +219,7 @@ function soltar(v: Vida, motivo: string): void {
   const pol = v.caminhos.politica;
   if (pol?.anterior && !pol.mandato) { if (pol.anterior.negocio) voltarAoTrabalho(v, 'ao sair da prisão'); else pol.anterior = undefined; }
   if (!v.trabalho.atual && !temNegocioAberto(v)) v.trabalho.desempregadoDesde = v.t;
-  const texto = internacao ? 'Saiu da unidade socioeducativa. A rua era a mesma; ele, nem tanto.'.replace('ele', flex(ge(v), 'ele', 'ela', 'elu'))
+  const texto = internacao ? `Saiu d${textoLocal(v, 'unidadeJuvenil').slice(2)}. A rua era a mesma; ele, nem tanto.`.replace('ele', flex(ge(v), 'ele', 'ela', 'elu'))
     : motivo === 'absolvição' ? 'Saiu da prisão com a absolvição na mão.'
       : `Saiu da prisão depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}, com o resto da pena em liberdade.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'neutro' });
@@ -290,7 +291,7 @@ export function situacaoNaJustica(v: Vida): string | undefined {
   if (j.prisao) {
     const regime = j.prisao.regime === 'fechado' ? 'regime fechado' : 'semiaberto';
     const dentro = [v.fatos['remicao_estudo'] !== undefined ? 'estuda' : '', v.fatos['remicao_trabalho'] !== undefined ? 'trabalha' : ''].filter(Boolean).join(' e ');
-    return idade(v) < 18 ? `Internação socioeducativa, até ${anoDe(j.prisao.tFim)}.` : `Regime ${regime === 'regime fechado' ? 'fechado' : 'semiaberto'}; a saída prevista é por volta de ${anoDe(j.prisao.tFim)}. ${dentro ? `Você ${dentro} na unidade — cada ano assim desconta meses da pena.` : 'Estudar e trabalhar dentro encurtam o tempo.'}`;
+    return idade(v) < 18 ? `Internação (${textoLocal(v, 'medidaJuvenil').replace(/^uma /, '')}), até ${anoDe(j.prisao.tFim)}.` : `Regime ${regime === 'regime fechado' ? 'fechado' : 'semiaberto'}; a saída prevista é por volta de ${anoDe(j.prisao.tFim)}. ${dentro ? `Você ${dentro} na unidade — cada ano assim desconta meses da pena.` : 'Estudar e trabalhar dentro encurtam o tempo.'}`;
   }
   if (j.processo) return `Respondendo a processo; o julgamento deve sair em ${anoDe(j.processo.tJulgamento)}.`;
   if (j.alternativa) return `Cumprindo pena alternativa até ${anoDe(j.alternativa.tFim)}: algumas horas por semana de serviço à comunidade.`;

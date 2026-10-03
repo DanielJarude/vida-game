@@ -11,6 +11,8 @@
  * (`sistemas/relevancia`); o resto fica em "ver outras".
  */
 
+import { paisCorrente } from '../mundo/moeda';
+import { textoLocal } from '../mundo/locais';
 import { criarRng, type Rng } from '../rng';
 import { ANIMAIS, animal } from '../dados/animais';
 import type { Especie, Vida } from '../tipos';
@@ -265,8 +267,22 @@ const NOMES: Record<'cachorro' | 'gato', [string[], string[]]> = {
   gato: [['Frajola', 'Mingau', 'Salem', 'Tom', 'Chico', 'Garfield', 'Café'], ['Mia', 'Nala', 'Amora', 'Jade', 'Mimi', 'Lua', 'Canela']]
 };
 
-/** Um nome de bicho que combina com o gênero dele. */
-export const nomeDePet = (r: Rng, especie: Especie, genero: 'masculino' | 'feminino' | 'nao_binario') => r.pick(especie === 'cachorro' || especie === 'gato' ? NOMES[especie][genero === 'feminino' ? 1 : 0] : animal(especie).nomes[genero === 'feminino' ? 1 : 0]);
+/**
+ * Fora do Brasil, os nomes de bicho brasileiros (Paçoca, Nescau, Frajola) não são o padrão: nomes que se ouvem
+ * em quase todo lugar. [masculino, feminino].
+ */
+const NOMES_UNIVERSAIS: Record<'cachorro' | 'gato' | 'outro', [string[], string[]]> = {
+  cachorro: [['Max', 'Rocky', 'Charlie', 'Buddy', 'Toby', 'Leo', 'Milo', 'Bruno'], ['Luna', 'Bella', 'Lola', 'Daisy', 'Nina', 'Kira', 'Maya', 'Coco']],
+  gato: [['Simba', 'Oliver', 'Milo', 'Oscar', 'Tom', 'Leo'], ['Luna', 'Mia', 'Nala', 'Cleo', 'Kiki', 'Lily']],
+  outro: [['Kiwi', 'Pip', 'Sunny', 'Mango', 'Pepper'], ['Coco', 'Kiki', 'Lulu', 'Mimi', 'Pearl']]
+};
+
+/** Um nome de bicho que combina com o gênero dele — e com o lugar onde ele mora (os brasileiros, no Brasil). */
+export const nomeDePet = (r: Rng, especie: Especie, genero: 'masculino' | 'feminino' | 'nao_binario', pais = paisCorrente()) => {
+  const g = genero === 'feminino' ? 1 : 0;
+  if (pais !== 'BR') return r.pick(NOMES_UNIVERSAIS[especie === 'cachorro' || especie === 'gato' ? especie : 'outro'][g]);
+  return r.pick(especie === 'cachorro' || especie === 'gato' ? NOMES[especie][g] : animal(especie).nomes[g]);
+};;
 
 export function animaisDoAbrigo(v: Vida): AnimalDoAbrigo[] {
   const ano = anoDe(v.t);
@@ -280,7 +296,7 @@ export function animaisDoAbrigo(v: Vida): AnimalDoAbrigo[] {
       const esp: Especie = r.chance(0.5) ? 'coelho' : 'porquinho';
       const a = animal(esp);
       const genero = r.chance(0.5) ? 'masculino' : 'feminino';
-      out.push({ id: `ab-${ano}-${k}`, especie: esp, nome: r.pick(a.nomes[genero === 'feminino' ? 1 : 0]), genero, idade: r.int(1, 3), porte: 'pequeno', jeito: r.pick(a.jeitos)[genero === 'feminino' ? 1 : 0], historia: genero === 'feminino' ? 'deixada numa caixa na porta do abrigo' : 'deixado numa caixa na porta do abrigo' });
+      out.push({ id: `ab-${ano}-${k}`, especie: esp, nome: nomeDePet(r, esp, genero), genero, idade: r.int(1, 3), porte: 'pequeno', jeito: r.pick(a.jeitos)[genero === 'feminino' ? 1 : 0], historia: genero === 'feminino' ? 'deixada numa caixa na porta do abrigo' : 'deixado numa caixa na porta do abrigo' });
       continue;
     }
     const especie = r.chance(0.58) ? 'cachorro' : 'gato';
@@ -322,10 +338,10 @@ export function ofertasDePets(v: Vida): OfertaDePet[] {
     const genero = r.chance(0.5) ? 'masculino' : 'feminino';
     const g = genero === 'feminino' ? 1 : 0;
     out.push({
-      id: `pt-${ano}-${k}`, especie: a.id, nome: r.pick(a.nomes[g]), genero, idade: a.grupo === 'reptil' ? r.int(0, 2) : 0, porte: 'pequeno',
+      id: `pt-${ano}-${k}`, especie: a.id, nome: nomeDePet(r, a.id, genero), genero, idade: a.grupo === 'reptil' ? r.int(0, 2) : 0, porte: 'pequeno',
       jeito: r.pick(a.jeitos)[g], historia: a.silvestre ? 'de um criadouro autorizado' : 'nascido em criador', preco: Math.round(r.int(a.preco[0], a.preco[1]) * c / 10) * 10,
       origem: a.origens.includes('criadouro') && (a.silvestre || !a.origens.includes('loja')) ? 'criador' : 'loja',
-      documentos: a.silvestre ? 'Nota fiscal, marcação (anilha ou microchip) e o registro do criadouro no IBAMA.' : undefined
+      documentos: a.silvestre ? `Nota fiscal, marcação (anilha ou microchip) e o registro do criadouro ${textoLocal(v, 'orgaoAmbiental').replace(/^o /, 'no ').replace(/^a /, 'na ')}.` : undefined
     });
   }
   return out;

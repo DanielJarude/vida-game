@@ -9,6 +9,7 @@
  * busca e pelo que faz sentido para esta vida.
  */
 
+import { noPais } from '../../motor/mundo/registro';
 import { useMemo } from 'react';
 import type { Oportunidade, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -18,7 +19,9 @@ import { OCUPACOES, ocupacaoOuNula } from '../../motor/dados/ocupacoes';
 import { nomeLugar } from '../../motor/dados/lugares';
 import { consequenciasDaMudanca } from '../../motor/sistemas/processos';
 import { nomeOcupacao, porContaPropria } from '../../motor/sistemas/trabalho';
-import { areaDaPos, melhorNotaRecente, nomeDaFormacao, nomeDaMatricula, rotuloSerie, ROTULO_ESCOLARIDADE, temCota, NOME_MATERIA } from '../../motor/sistemas/escola';
+import { areaDaPos, melhorNotaRecente, nomeDaFormacao, nomeDaMatricula, notasDaqui, rotuloEscolaridade, rotuloSerie, temCota, NOME_MATERIA } from '../../motor/sistemas/escola';
+import { educacaoDaVida, perfilDaVida } from '../../motor/mundo/vida';
+import { textoLocal } from '../../motor/mundo/locais';
 import { materiasExtremas } from '../../motor/sistemas/frentes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { anoDe } from '../../motor/tempo';
@@ -29,7 +32,7 @@ import { Catalogo, type ItemCatalogo } from './Catalogo';
 import type { Aba } from '../navegacao';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { novaMatricula } from '../../motor/sistemas/escola';
-import { modeloRotina, nivelDa, nivelModelo } from '../../motor/sistemas/rotinas';
+import { descricaoDaRotina, modeloRotina, nivelDa, nivelModelo } from '../../motor/sistemas/rotinas';
 import { NOME_FOCO } from '../../motor/sistemas/concurso';
 import type { FocoConcurso } from '../../motor/tipos';
 import { instituicaoAtual, leituraDasVivencias, pessoasDaFormacao, ROTINA_DA_OFERTA, VIVENCIA_DA_ROTINA } from '../../motor/sistemas/formacao';
@@ -42,10 +45,16 @@ import type { Objetivo } from '../../motor/tipos';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }
 
-const VIA: Record<string, string> = {
-  sisu: 'SISU — universidade pública', selecao_publica: 'Seleção pública', privada: 'Particular',
-  prouni: 'ProUni — bolsa integral', fies: 'FIES — financiamento', ead: 'A distância (EAD)'
-};
+/** O rótulo de cada via: as públicas (vagas, bolsa, crédito) com os nomes do país onde se mora (`educacaoDaVida`). */
+function rotuloDaVia(vida: Vida, via: string): string {
+  const ed = educacaoDaVida(vida);
+  return via === 'sisu' ? ed.via.sisu : via === 'prouni' ? ed.via.prouni : via === 'fies' ? ed.via.fies : ({ selecao_publica: 'Seleção pública', privada: 'Particular', ead: 'A distância (EAD)' } as Record<string, string>)[via] ?? via;
+}
+/** A etapa concluída, como a biografia a registrou (com o nome do país onde foi): "Terminou o fundamental e começou..." → "Fundamental completo". */
+function etapaConcluida(texto: string): string | undefined {
+  const m = /^Terminou (o|a) (.+?) e começou/.exec(texto) ?? /^Concluiu (o|a) (.+?)(,|\.|$)/.exec(texto);
+  return m ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1] === 'a' ? 'completa' : 'completo'}` : undefined;
+}
 
 const NIVEL: Record<string, string> = { livre: 'Ofício e qualificação', tecnico: 'Técnico', superior: 'Faculdade', pos: 'Pós-graduação', residencia: 'Pós-graduação', mestrado: 'Pós-graduação', doutorado: 'Pós-graduação' };
 const TIPO_NIVEL: Record<string, string> = { livre: 'oficio', tecnico: 'tecnico', superior: 'superior', pos: 'pos', residencia: 'pos', mestrado: 'pos', doutorado: 'pos' };
@@ -79,7 +88,7 @@ export function Estudos({ vida, agir, irPara, abrirPessoa }: Props) {
   const e = vida.educacao;
   const inst = instituicaoAtual(vida);
   const titulo = e.basica ? rotuloSerie(e.basica) : e.matricula ? nomeDaMatricula(vida, e.matricula) : i < 4 ? 'Ainda não é hora da escola' : i >= 18 ? 'Estudar de novo, ou pela primeira vez' : 'Sem estudar agora';
-  const lede = e.basica ? `Escola ${e.basica.rede === 'publica' ? 'pública' : 'particular'} · notas ${palavraDesempenho(e.basica.desempenho)}` : e.matricula ? `${e.matricula.instituicao}${e.matricula.trancado ? ' · trancado' : ` · ${e.matricula.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(e.matricula.mesesRestantes / 12)} anos`}`}` : ROTULO_ESCOLARIDADE[e.escolaridade];
+  const lede = e.basica ? `Escola ${e.basica.rede === 'publica' ? 'pública' : 'particular'} · notas ${palavraDesempenho(e.basica.desempenho)}` : e.matricula ? `${e.matricula.instituicao}${e.matricula.trancado ? ' · trancado' : ` · ${e.matricula.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(e.matricula.mesesRestantes / 12)} anos`}`}` : rotuloEscolaridade(vida, e.escolaridade);
   return (
     <div className="estudos rumo">
       <Folio kicker={<><span className="folio__area">Formação</span> · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</>} titulo={titulo} lede={lede} />
@@ -135,7 +144,7 @@ function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Aca
               const ultimo = viv?.marcos?.[viv.marcos.length - 1];
               return (
                 <li key={m.id} className={`atividade-formacao${faz ? ' atividade-formacao--ativa' : ''}`}>
-                  <div className="atividade-formacao__texto"><strong>{m.nome}</strong><span>{estado ? `Agora: ${estado}.` : m.descricao}</span>{ultimo && <span className="nota">{anoDe(ultimo.t)} · {ultimo.texto}</span>}</div>
+                  <div className="atividade-formacao__texto"><strong>{m.nome}</strong><span>{estado ? `Agora: ${estado}.` : descricaoDaRotina(vida, m)}</span>{ultimo && <span className="nota">{anoDe(ultimo.t)} · {ultimo.texto}</span>}</div>
                   {faz
                     ? <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>
                     : <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir} variante="secundario">Entrar</BotaoAcao>}
@@ -172,20 +181,25 @@ function TrajetoriaDeEstudo({ vida }: { vida: Vida }) {
   // O que a biografia já registra (nada é inventado aqui).
   for (const x of vida.biografia) {
     if (x.tema !== 'escola' && x.tema !== 'estudo') continue;
-    if (/^Terminou o fundamental/.test(x.texto)) passado.push({ ano: anoDe(x.t), texto: 'Fundamental completo' });
-    else if (/^Concluiu o ensino médio/.test(x.texto)) passado.push({ ano: anoDe(x.t), texto: 'Ensino médio completo' });
+    const etapa = x.tema === 'escola' ? etapaConcluida(x.texto) : undefined;
+    if (etapa) passado.push({ ano: anoDe(x.t), texto: etapa });
     else if (/^Largou a escola/.test(x.texto)) passado.push({ ano: anoDe(x.t), texto: x.texto.replace(/\.$/, '') });
     else if (/^Trancou /.test(x.texto)) passado.push({ ano: anoDe(x.t), texto: x.texto.replace(/\.$/, '') });
     else if (/^Abandonou o curso/.test(x.texto)) passado.push({ ano: anoDe(x.t), texto: x.texto.replace(/\.$/, '') });
   }
   for (const c of e.concluidos) passado.push({ ano: anoDe(c.tFim), texto: c.nome });
+  // O histórico por país: onde estudou antes de mudar de país (e até onde), nos nomes daquele sistema.
+  for (const h of e.historicoEscolar ?? []) {
+    const ate = h.etapa && h.serie !== undefined ? `, até ${h.etapa === 'creche' ? 'a creche' : h.etapa === 'pre' ? 'a pré-escola' : `${h.etapa === 'medio' ? 'a' : 'o'} ${rotuloSerie({ etapa: h.etapa, serie: h.serie, rede: 'publica', desempenho: 50, reprovacoes: 0 }, h.pais)}`}` : '';
+    passado.push({ ano: anoDe(h.ate), texto: `Estudou ${noPais(h.pais)}${ate}` });
+  }
   passado.sort((a, b) => a.ano - b.ano);
   const b = e.basica;
   const m = e.matricula;
   const agora = b ? `${rotuloSerie(b)}, escola ${b.rede === 'publica' ? 'pública' : 'particular'}` : m ? `${nomeDaMatricula(vida, m)}${m.trancado ? ' (trancado)' : ''}` : i < 4 ? 'Ainda não é hora da escola' : 'Sem estudar agora';
-  const detalhe = b && b.etapa !== 'creche' && b.etapa !== 'pre' ? `Notas: ${palavraDesempenho(b.desempenho)}` : m ? (m.trancado ? `Trancado desde ${anoDe(m.tTrancou ?? vida.t)}: a vaga espera até ${anoDe((m.tTrancou ?? vida.t) + 48)}` : `${m.mesesRestantes <= 12 ? 'Último ano' : `Faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`} · desempenho ${palavraDesempenho(m.desempenho)}`) : ROTULO_ESCOLARIDADE[e.escolaridade];
+  const detalhe = b && b.etapa !== 'creche' && b.etapa !== 'pre' ? `Notas: ${palavraDesempenho(b.desempenho)}` : m ? (m.trancado ? `Trancado desde ${anoDe(m.tTrancou ?? vida.t)}: a vaga espera até ${anoDe((m.tTrancou ?? vida.t) + 48)}` : `${m.mesesRestantes <= 12 ? 'Último ano' : `Faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`} · desempenho ${palavraDesempenho(m.desempenho)}`) : rotuloEscolaridade(vida, e.escolaridade);
   const { para } = i >= 15 && !m ? cursosParaVoce(vida) : { para: [] };
-  const proximo = b ? (b.etapa === 'medio' ? 'Depois do médio: faculdade, técnico, trabalho — ou os três.' : 'Seguir na escola.') : m ? portasDoCurso(vida, m.cursoId) : '';
+  const proximo = b ? (b.etapa === 'medio' ? `Depois ${educacaoDaVida(vida).medio.do}: faculdade, técnico, trabalho — ou os três.` : 'Seguir na escola.') : m ? portasDoCurso(vida, m.cursoId) : '';
   return (
     <section className="trajeto" aria-label="Sua trajetória nos estudos">
       <ol className="trajeto__linha">
@@ -269,7 +283,7 @@ function Formacao({ vida }: { vida: Vida }) {
   );
 }
 
-const SITUACAO_ENEM: Record<string, string> = { acima: 'a nota alcança o corte', perto: 'perto do corte (lista de espera)', longe: 'ainda longe do corte', sem_nota: 'sem nota do ENEM ainda' };
+const situacaoDaNota = (vida: Vida, s: string): string => ({ acima: 'a nota alcança o corte', perto: 'perto do corte (lista de espera)', longe: 'ainda longe do corte' } as Record<string, string>)[s] ?? `sem nota ${educacaoDaVida(vida).do} ainda`;
 
 /**
  * O que você vem tentando: os objetivos que as próprias tentativas formaram
@@ -318,11 +332,13 @@ const MIRAS = ['medicina', 'direito', 'eng_civil', 'psicologia', 'computacao', '
 function Preparacao({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const e = vida.educacao;
   const i = idade(vida);
-  const rumoAoVestibular = !e.matricula && !['superior', 'pos', 'mestrado', 'doutorado'].includes(e.escolaridade) && (e.escolaridade === 'medio' || e.escolaridade === 'tecnico' || e.basica?.etapa === 'medio' || (e.basica?.etapa === 'fundamental2' && i >= 14));
+  // Onde a universidade pública tem matrícula aberta (Argentina, Uruguai, Itália, Marrocos), não há prova a preparar.
+  const rumoAoVestibular = !educacaoDaVida(vida).aberto && !e.matricula && !['superior', 'pos', 'mestrado', 'doutorado'].includes(e.escolaridade) && (e.escolaridade === 'medio' || e.escolaridade === 'tecnico' || e.basica?.etapa === 'medio' || (e.basica?.etapa === 'fundamental2' && i >= 14));
   const alvos = rumoAoVestibular ? alvosDoEnem(vida) : [];
   const cursinho = fazCursinho(vida);
   const concurso = vida.rotinas.some(r => r.id === 'estudar_concurso');
-  const notas = e.enem.slice(-2);
+  const ed = educacaoDaVida(vida);
+  const notas = notasDaqui(vida).slice(-2);
   const objetivo = objetivoCurso(vida);
   const est = objetivo ? estimativaParaCurso(vida, objetivo) : undefined;
   const ultimaDev = [...vida.caminhos.devolutivas].reverse().find(d => d.tipo === 'vestibular');
@@ -337,7 +353,7 @@ function Preparacao({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boo
           <p className="objetivo__titulo"><span className="objetivo__rotulo">Objetivo</span> {objetivo.nome}</p>
           <p className={`objetivo__situacao objetivo__situacao--${est.situacao}`}>{PALAVRA_SITUACAO[est.situacao].charAt(0).toUpperCase() + PALAVRA_SITUACAO[est.situacao].slice(1)}</p>
           <p className="nota">{est.frase}</p>
-          {est.ultima && <p className="nota">{est.nota - est.ultima.nota >= 15 ? `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação subiu.` : est.nota - est.ultima.nota <= -15 ? `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação esfriou.` : `Desde o ENEM de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação está parecida.`}</p>}
+          {est.ultima && <p className="nota">{`Desde ${ed.o} de ${anoDe(est.ultima.t)} (ponderada ${est.ultima.nota}), a preparação ${est.nota - est.ultima.nota >= 15 ? 'subiu' : est.nota - est.ultima.nota <= -15 ? 'esfriou' : 'está parecida'}.`}</p>}
           <p className="objetivo__passo">{proximoPassoVestibular(vida, est)}</p>
           <div className="grupo-acoes grupo-acoes--linha">
             {est.fraca && est.situacao !== 'no_corte' && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'estudo_dirigido', valor: est.fraca } as unknown as Acao} agir={agir} variante="secundario" ocultarImpossivel>{`Estudar ${NOME_MATERIA[est.fraca]} de forma dirigida (este ano)`}</BotaoAcao>}
@@ -367,12 +383,12 @@ function Preparacao({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boo
       )}
       {alvos.length > 0 && (
         <>
-          <p className="nota">{notas.length ? `ENEM: ${notas.map(n => `${n.nota} em ${anoDe(n.t)}`).join(' · ')}${notas.length === 2 ? (notas[1].nota > notas[0].nota ? ' — a nota subiu.' : notas[1].nota < notas[0].nota ? ' — a nota caiu.' : ' — igual.') : '.'}` : 'Ainda sem nota do ENEM: é ela que abre a faculdade pública.'}</p>
+          <p className="nota">{notas.length ? `${ed.nome}: ${notas.map(n => `${n.nota} em ${anoDe(n.t)}`).join(' · ')}${notas.length === 2 ? (notas[1].nota > notas[0].nota ? ' — a nota subiu.' : notas[1].nota < notas[0].nota ? ' — a nota caiu.' : ' — igual.') : '.'}` : `Ainda sem nota ${ed.do}: é ela que abre a universidade pública.`}</p>
           <ul className="nota-alvo" aria-label="A sua nota diante dos cursos">
             {alvos.map(a => (
               <li key={a.curso.id}>
                 <span className="nota-alvo__curso">{a.curso.nome}</span>
-                <span className={`nota-alvo__palavra nota-alvo__palavra--${a.situacao === 'sem_nota' ? 'longe' : a.situacao}`}>{a.situacao === 'sem_nota' && notas.length ? 'sem nota recente (o SISU usa as dos últimos anos)' : SITUACAO_ENEM[a.situacao]}{a.situacao !== 'sem_nota' ? ` (corte ~${a.corte})` : ''}</span>
+                <span className={`nota-alvo__palavra nota-alvo__palavra--${a.situacao === 'sem_nota' ? 'longe' : a.situacao}`}>{a.situacao === 'sem_nota' && notas.length ? 'sem nota recente (valem as dos últimos anos)' : situacaoDaNota(vida, a.situacao)}{a.situacao !== 'sem_nota' ? ` (corte ~${a.corte})` : ''}</span>
               </li>
             ))}
           </ul>
@@ -397,6 +413,8 @@ const FOCOS_UI: { id: FocoConcurso | 'geral'; rotulo: string }[] = [
 function EstudoParaConcurso({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const c = vida.caminhos.concurso;
   const rot = vida.rotinas.find(r => r.id === 'estudar_concurso');
+  // Onde o serviço público não entra por concurso (EUA, Reino Unido, Alemanha...), não há o que estudar.
+  if (!rot && !perfilDaVida(vida).trabalho.concurso) return null;
   const m = modeloRotina('estudar_concurso')!;
   const n = rot ? nivelDa(rot) : 0;
   const anos = Math.round(c.meses / 12);
@@ -453,10 +471,10 @@ function Estudo({ vida, agir }: Props) {
         <>
           <Linha rotulo="Onde" valor={`${m.instituicao}${m.modalidade === 'ead' ? ' · a distância' : ` · ${nomeLugar(m.municipioId)}`}`} />
           <Linha rotulo="Turno" valor={m.modalidade === 'ead' ? 'no seu tempo' : curso(m.cursoId).carga === 'integral' ? 'período integral (não cabe com emprego de dia inteiro)' : 'à noite (cabe com trabalho)'} />
-          {m.mensalidade > 0 && <Linha rotulo={m.financiamento === 'fies' ? 'Mensalidade (FIES)' : 'Mensalidade'} valor={dinheiroCurto(m.mensalidade)} />}
+          {m.mensalidade > 0 && <Linha rotulo={m.financiamento === 'fies' ? `Mensalidade (${educacaoDaVida(vida).credito?.nome ?? 'crédito estudantil'})` : 'Mensalidade'} valor={dinheiroCurto(m.mensalidade)} />}
         </>
       )}
-      {e.evadiu && !b && <p className="nota">Você largou a escola. Dá para voltar pelo supletivo.</p>}
+      {e.evadiu && !b && <p className="nota">{`Você largou a escola. Dá para voltar pelo ${textoLocal(vida, 'supletivo').replace(/^(o|a) /, '')}.`}</p>}
       {estudando && i >= 7 && (
         <div className="campo">
           <span className="campo__rotulo">Como você encara os estudos este ano</span>
@@ -465,14 +483,14 @@ function Estudo({ vida, agir }: Props) {
         </div>
       )}
       <div className="grupo-acoes">
-        {i >= 15 && <BotaoAcao vida={vida} acao={{ tipo: 'enem' }} agir={agir} ocultarImpossivel>Fazer o ENEM deste ano</BotaoAcao>}
+        {i >= 15 && <BotaoAcao vida={vida} acao={{ tipo: 'enem' }} agir={agir} ocultarImpossivel>{educacaoDaVida(vida).acao}</BotaoAcao>}
         {m && !m.trancado && <BotaoAcao vida={vida} acao={{ tipo: 'trancar' }} agir={agir} variante="discreto">Trancar o curso</BotaoAcao>}
         {m?.trancado && <BotaoAcao vida={vida} acao={{ tipo: 'destrancar' }} agir={agir}>Voltar ao curso</BotaoAcao>}
         {m && <BotaoAcao vida={vida} acao={{ tipo: 'abandonar_curso' }} agir={agir} variante="perigo">Abandonar o curso</BotaoAcao>}
         {b && i >= 15 && <BotaoAcao vida={vida} acao={{ tipo: 'largar_escola' }} agir={agir} variante="perigo">Largar a escola</BotaoAcao>}
-        {e.evadiu && <BotaoAcao vida={vida} acao={{ tipo: 'voltar_a_estudar' }} agir={agir}>Voltar a estudar (supletivo)</BotaoAcao>}
+        {e.evadiu && <BotaoAcao vida={vida} acao={{ tipo: 'voltar_a_estudar' }} agir={agir}>{`Voltar a estudar (${textoLocal(vida, 'supletivo').replace(/^(o|a) /, '')})`}</BotaoAcao>}
       </div>
-      {melhorNotaRecente(vida) > 0 && <p className="nota">Melhor ENEM recente: {melhorNotaRecente(vida)}{temCota(vida) ? ' · você concorre por cota (escola pública e baixa renda)' : ''}.</p>}
+      {melhorNotaRecente(vida) > 0 && <p className="nota">Melhor nota recente {educacaoDaVida(vida).do}: {melhorNotaRecente(vida)}{temCota(vida) ? ' · você concorre por cota (escola pública e baixa renda)' : ''}.</p>}
     </Secao>
   );
 }
@@ -529,7 +547,7 @@ function Cursos({ vida, agir }: Props) {
           {vias.map(({ o, indice }) => (
             <div key={indice} className="via">
               <div className="via__texto">
-                <strong>{VIA[o.via]}</strong>
+                <strong>{rotuloDaVia(vida, o.via)}</strong>
                 <span>{o.modalidade === 'ead' ? 'de casa' : nomeLugar(o.municipioId)}{o.mensalidade > 0 ? ` · ${dinheiroCurto(o.mensalidade)}/mês` : o.via === 'fies' ? ' · paga depois de formado' : ' · sem mensalidade'}{o.modalidade !== 'ead' && o.municipioId !== vida.moradia.municipioId ? ' · pede mudança de cidade' : ''}</span>
                 {o.observacao && <span className="via__obs">{o.observacao}</span>}
                 {/* Estudar em outra cidade é mudar: o que fica para trás é dito antes de tentar. */}
@@ -559,7 +577,7 @@ function Cursos({ vida, agir }: Props) {
         </Secao>
       )}
       <Secao titulo="Explorar formações" recolhivel={para.length > 0} aberta={para.length === 0}>
-        {para.length === 0 && melhorNotaRecente(vida) === 0 && idade(vida) >= 16 && <p className="nota">Uma nota do ENEM abre as portas da faculdade pública.</p>}
+        {para.length === 0 && melhorNotaRecente(vida) === 0 && idade(vida) >= 16 && <p className="nota">{educacaoDaVida(vida).aberto ? 'Aqui, a universidade pública tem matrícula aberta: basta o ensino concluído.' : `Uma nota ${educacaoDaVida(vida).do} abre as portas da universidade pública.`}</p>}
         <Catalogo itens={itens} rotulo="Cursos" dicaBusca="enfermagem, direito, solda, técnico, mestrado…" tipos={[{ id: 'oficio', rotulo: 'Ofício' }, { id: 'tecnico', rotulo: 'Técnico' }, { id: 'superior', rotulo: 'Faculdade' }, { id: 'pos', rotulo: 'Pós' }]} vazio="Nenhum curso com esse filtro." porGrupo={6} />
       </Secao>
     </>

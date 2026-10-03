@@ -67,6 +67,8 @@ import type { PerfilDePais } from '../tipos';
 
 export const AFRICA_DO_SUL: PerfilDePais = {
   id: 'ZA',
+  // Regras legais: learner's licence aos 17, carteira aos 18 (National Road Traffic Act).
+  regras: { direcao: { aprendiz: { idade: 17, nome: 'licença de aprendiz (learner’s licence)' }, plena: 18 } },
   gentilico: ['sul-africano', 'sul-africana'],
   idiomas: ['inglês', 'zulu', 'xhosa', 'africâner', 'sepedi', 'tswana', 'soto', 'tsonga', 'suázi', 'venda', 'ndebele'],
   divisao: {

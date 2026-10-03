@@ -16,6 +16,7 @@
  * Linha da Vida quando o nome muda de patamar.
  */
 
+import { ehElite } from '../dados/clubes';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { FonteDoNome, Notoriedade, Vida } from '../tipos';
@@ -56,14 +57,14 @@ export function candidatosDaNotoriedade(v: Vida): { valor: number; fonte: FonteD
   const recentes = pal.filter(x => v.t - x.t <= 36);
   const sel = e?.selecao;
   const daSelecao = sel && sel.tUltima !== undefined && v.t - sel.tUltima <= 24 ? 10 + Math.min(10, sel.jogos / 3) : 0;
-  const conquistas = Math.min(10, recentes.filter(x => x.tipo === 'premio' || (x.tipo === 'titulo' && x.papel === 'protagonista' && /Série A|elite/.test(x.competicao))).length * 4);
+  const conquistas = Math.min(10, recentes.filter(x => x.tipo === 'premio' || (x.tipo === 'titulo' && x.papel === 'protagonista' && ehElite(x.competicao))).length * 4);
   if (e?.fase === 'profissional' && !e.suspensoAte) {
     const rep = e.reputacao ?? 30;
     cands.push({ valor: rep * PESO_DIVISAO[e.nivel] * (e.espaco === 'titular' ? 1 : 0.6) + daSelecao + conquistas, fonte: 'esporte' });
   } else if (pal.length) {
     // O legado: o que ficou registrado, não o que se fazia. Seleção, títulos da elite, prêmios, torneios de seleções.
     const legado = Math.min(10, (sel?.jogos ?? 0) / 4) + (sel?.capitao ? 6 : 0) + pal.filter(x => x.tipo === 'selecao' && /^Campe/.test(x.texto)).length * 14
-      + Math.min(12, pal.filter(x => x.tipo === 'titulo' && /Série A|elite/.test(x.competicao) && x.papel === 'protagonista').length * 4) + Math.min(8, pal.filter(x => x.tipo === 'premio').length * 2);
+      + Math.min(12, pal.filter(x => x.tipo === 'titulo' && ehElite(x.competicao) && x.papel === 'protagonista').length * 4) + Math.min(8, pal.filter(x => x.tipo === 'premio').length * 2);
     if (legado > 0) cands.push({ valor: legado, fonte: 'esporte' });
   }
   const a = v.caminhos.arte;

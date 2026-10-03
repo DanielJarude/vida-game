@@ -6,6 +6,8 @@
  * existe porque um bebê nasceu.
  */
 
+import { perfilDaVida } from '../mundo/vida';
+import { capitalizar } from '../texto';
 import { educacaoDaVida, paisDaVida } from '../mundo/vida';
 import { redeDeSaude } from '../sistemas/saude';
 import { cotidiano, previdencia, registroCivil } from './local';
@@ -256,9 +258,9 @@ export const SISTEMICOS: Conteudo[] = [
     papeis: { filho: P.filhoEmCasa(2, 5) },
     quando: c => !temFato(c.v, 'filhos_escola_decidida'),
     titulo: 'Escola',
-    texto: c => `${c.p.filho.nome} vai começar na escola. A escola pública do bairro é de graça; a particular mais próxima custa perto de ${moeda(1300 * economiaLocal(c.v.moradia.municipioId).custo)} por mês, por filho.`,
+    texto: c => `${c.p.filho.nome} vai começar na escola. ${capitalizar(educacaoDaVida(c.v).etapas.publica.fundamental)} é de graça; a particular mais próxima custa perto de ${moeda(1300 * economiaLocal(c.v.moradia.municipioId).custo)} por mês, por filho.`,
     opcoes: [
-      { id: 'publica', texto: 'Escola pública', resolver: c => ({ texto: `${c.p.filho.nome} foi para a escola municipal.`, memoria: null, efeito: () => fato(c, 'filhos_escola_decidida') }) },
+      { id: 'publica', texto: 'Escola pública', resolver: c => ({ texto: `${c.p.filho.nome} foi para ${educacaoDaVida(c.v).etapas.publica.fundamental}.`, memoria: null, efeito: () => fato(c, 'filhos_escola_decidida') }) },
       { id: 'privada', texto: 'Escola particular', resolver: c => ({ texto: `${c.p.filho.nome} foi para uma escola particular.`, memoria: `Colocou ${c.p.filho.nome} numa escola particular.`, efeito: () => { fato(c, 'filhos_escola_decidida'); fato(c, 'filhos_escola_privada'); } }) }
     ]
   },
@@ -268,16 +270,16 @@ export const SISTEMICOS: Conteudo[] = [
     id: 'esc_fim_do_medio', tipo: 'decisao', idade: [16, 20], tema: 'estudo', garantido: true, biografica: true,
     quando: c => temFato(c.v, 'concluiu_medio') && c.v.fatos['concluiu_medio'] === c.v.t,
     titulo: 'E agora?',
-    texto: c => `O ensino médio acabou. ${P.genitor(c.v)[0] ? `${P.genitor(c.v)[0].nome} quer saber o que você vai fazer. ` : ''}Os colegas se dividem entre ${educacaoDaVida(c.v).nome}, emprego e não saber.`,
+    texto: c => `${capitalizar(educacaoDaVida(c.v).medio.o)} acabou. ${P.genitor(c.v)[0] ? `${P.genitor(c.v)[0].nome} quer saber o que você vai fazer. ` : ''}Os colegas se dividem entre ${educacaoDaVida(c.v).nome}, emprego e não saber.`,
     opcoes: [
       { id: 'enem', texto: c => (educacaoDaVida(c.v).aberto ? 'Fazer a matrícula na universidade' : `Fazer ${educacaoDaVida(c.v).o} e tentar uma faculdade`), resolver: c => {
         const pode = podeFazerEnem(c.v).grau === 'permitido';
-        return { texto: pode ? 'A inscrição foi feita. A prova é em novembro.' : 'Você se prepara para tentar uma faculdade.', memoria: null, efeito: () => { fato(c, 'plano_faculdade'); if (pode) fazerEnem(c.v, c.r); } };
+        return { texto: pode ? (educacaoDaVida(c.v).prova ? 'A inscrição foi feita. A prova é no fim do ano.' : 'As notas do último ano foram para a candidatura.') : 'Você se prepara para tentar uma faculdade.', memoria: null, efeito: () => { fato(c, 'plano_faculdade'); if (pode) fazerEnem(c.v, c.r); } };
       } },
       { id: 'cursinho', texto: 'Um ano de cursinho antes de tentar', resolver: c => ({ texto: 'Um ano de cursinho: manhã de aula, tarde de exercício.', memoria: `Decidiu passar um ano no cursinho antes de tentar ${educacaoDaVida(c.v).o}.`, efeito: () => { fato(c, 'plano_faculdade'); if (!c.v.rotinas.some(r => r.id === 'cursinho')) c.v.rotinas.push({ id: 'cursinho', tInicio: c.v.t }); } }) },
       { id: 'trabalhar', texto: 'Arrumar um emprego', resolver: c => ({ texto: 'Você começou a mandar currículo.', memoria: 'Terminou o médio decidid' + c.g('o', 'a', 'e') + ' a trabalhar.', efeito: () => fato(c, 'plano_trabalho') }) },
       { id: 'tecnico', texto: 'Fazer um curso técnico ou aprender um ofício', resolver: c => ({ texto: 'Você foi pesquisar os cursos técnicos e de qualificação da cidade.', memoria: null, efeito: () => fato(c, 'plano_tecnico') }) },
-      { id: 'concurso', texto: 'Estudar para concurso', disponivel: c => (idade(c.v) >= 17 ? true : false),
+      { id: 'concurso', texto: 'Estudar para concurso', disponivel: c => (idade(c.v) >= 17 && perfilDaVida(c.v).trabalho.concurso ? true : false),
         resolver: c => ({ texto: 'Apostila na mesa da cozinha, videoaula no celular. O próximo edital é o alvo.', memoria: 'Terminou o médio decidid' + c.g('o', 'a', 'e') + ' a estudar para concurso.', efeito: () => { fato(c, 'plano_concurso'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 2 }); } }) }
     ]
   },

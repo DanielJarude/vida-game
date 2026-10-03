@@ -39,9 +39,10 @@ import type { Acao } from '../acoes';
 import type { CargoEletivo, Emprego, Genero, Pessoa, Prioridade, Vida, VidaPolitica } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { capitalDoPais, cidadesDoPais, municipio, siglaDaDivisao } from '../dados/lugares';
-import { PAIS_PADRAO, noPais, perfilDoPais, temPerfil } from '../mundo/registro';
+import { PAIS_PADRAO, gentilico, noPais, perfilDoPais, temPerfil } from '../mundo/registro';
 import { paisCorrente } from '../mundo/moeda';
-import { paisDaVida } from '../mundo/vida';
+import { paisDaVida, temNacionalidade } from '../mundo/vida';
+import { regrasDaVida } from '../mundo/regras';
 import { rendaNoPais } from '../mundo/economia';
 import { aoPartido, nomeCompletoPartido, oPartido, partidoDe, PARTIDOS_GENERICOS, PARTIDOS_REAIS, peloPartido } from '../dados/partidos';
 import { ocupacao } from '../dados/ocupacoes';
@@ -53,7 +54,7 @@ import { mudarAgora } from './processos';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { habilidade } from './frentes';
-import { anoDe, idadeEm } from '../tempo';
+import { anoDe, idadeEm, MESES } from '../tempo';
 import { dinheiro, flex, ge, listaNatural } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { aplicarPersonalidade } from '../personalidade';
@@ -339,13 +340,13 @@ function leituraPoliticaBase(v: Vida): LeituraPolitica | undefined {
     return { fase: p.fase, titulo: `${cap(nomeCargo(v, m.cargo))}${p.consecutivos >= 2 && cargoNoPais(m.cargo).executivo ? ', segundo mandato' : ''}`, etapa: `${cal.ultimoAno ? `Último ano do mandato (${cal.anos} de ${cal.anos})` : `Ano ${cal.ano} de ${cal.anos} do mandato`} · ${cal.anoPosse}–${cal.anoFinal}`, reputacao: rep, apoio, aprovacao: palavraAprovacao(m.aprovacao), prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: horizonteDoMandato(v), historico: hist };
   }
   if (p.fase === 'eleito' && p.posse) return { fase: p.fase, titulo: `${cap(flex(g, 'Eleito', 'Eleita', 'Eleite'))} ${nomeCargo(v, p.posse.cargo)}`, etapa: `Posse em ${anoDe(p.posse.t)}`, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), historico: hist };
-  if (p.fase === 'candidato' && p.campanha) return { fase: p.fase, titulo: `${flex(g, 'Candidato', 'Candidata', 'Candidate')} a ${nomeCargo(v, p.campanha.cargo)}`, etapa: `Eleição em outubro de ${anoDe(p.campanha.tEleicao)}`, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: 'A campanha está na rua. Agora, é a apuração.', historico: hist };
+  if (p.fase === 'candidato' && p.campanha) return { fase: p.fase, titulo: `${flex(g, 'Candidato', 'Candidata', 'Candidate')} a ${nomeCargo(v, p.campanha.cargo)}`, etapa: `Eleição em ${MESES[politicaDo(paisDaVida(v)).mes]} de ${anoDe(p.campanha.tEleicao)}`, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte: 'A campanha está na rua. Agora, é a apuração.', historico: hist };
   if (p.fase === 'encerrada') return { fase: p.fase, titulo: 'Fora da vida pública', etapa: p.tFim ? `Desde ${anoDe(p.tFim)}` : undefined, reputacao: rep, apoio, historico: hist };
   const derrotado = p.historico[p.historico.length - 1]?.resultado === 'derrotado';
   const titulo = p.indicacaoMilitar && p.partido && p.fase === 'filiado' ? `Com a indicação ${doPartido(p.partido)}` : p.fase === 'entre_mandatos' ? (derrotado ? 'Depois da derrota' : 'Entre mandatos') : p.fase === 'filiado' ? `${flex(g, 'Filiado', 'Filiada', 'Filiade')} ${aoPartido(p.partido)}` : 'Envolvido na vida da cidade'.replace('Envolvido', flex(g, 'Envolvido', 'Envolvida', 'Envolvide'));
-  const horizonte = !p.partido && militarDaAtiva(v) ? 'Militar da ativa não se filia a partido (CF, art. 142, §3º, V), mas pode ser candidato: um partido precisa escolher você em convenção. Com menos de dez anos de serviço, candidatar-se é deixar a ativa; com mais, você fica agregado e, se eleito, passa à inatividade (CF, art. 14, §8º).'
+  const horizonte = !p.partido && militarDaAtiva(v) ? `Militar da ativa não se filia a partido${politicaDo(paisDaVida(v)).partidosReais ? ' (CF, art. 142, §3º, V)' : ''}, mas pode ser candidato: um partido precisa escolher você em convenção. Com menos de dez anos de serviço, candidatar-se é deixar a ativa; com mais, você fica agregado e, se eleito, passa à inatividade (CF, art. 14, §8º).`
     : !p.partido ? 'Sem partido, não há candidatura: a filiação precisa de seis meses antes da eleição. Filiar-se está entre as ações acima.'
-      : p.indicacaoMilitar && !militarDaAtiva(v) ? 'Fora da ativa, a indicação de militar não vale mais: para a próxima eleição, é preciso filiar-se.' : e ? `Eleição ${e.tipo === 'municipal' ? 'municipal' : 'geral'} em outubro de ${e.ano}: é agora ou na próxima.` : `A próxima eleição ${prox.tipo === 'municipal' ? 'municipal' : 'geral'} é em ${prox.ano}.`;
+      : p.indicacaoMilitar && !militarDaAtiva(v) ? 'Fora da ativa, a indicação de militar não vale mais: para a próxima eleição, é preciso filiar-se.' : e ? `Eleição ${e.tipo === 'municipal' ? 'municipal' : 'geral'} em ${MESES[politicaDo(paisDaVida(v)).mes]} de ${e.ano}: é agora ou na próxima.` : `A próxima eleição ${prox.tipo === 'municipal' ? 'municipal' : 'geral'} é em ${prox.ano}.`;
   return { fase: p.fase, titulo, reputacao: rep, apoio, prioridade: prio, partido: nomeCompletoPartido(p.partido), horizonte, historico: hist };
 }
 
@@ -390,6 +391,8 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   const quando = cargo === 'vereador' ? ano * 12 + 7 : tDaPosse(ano);
   if (idadeEm(v.eu.tNasc, quando) < c.idade) return bloqueio('ilegal', `A Constituição exige ${c.idade} anos para ${nomeCargo(v, cargo)} (${cargo === 'vereador' ? 'no registro' : 'na posse'}).`);
   if (v.justica?.prisao) return bloqueio('ilegal', 'Preso não se candidata.');
+  // Disputar eleição é direito de quem tem a NACIONALIDADE do país (a residência não basta): `mundo/vida`.
+  if (!temNacionalidade(v, paisDaVida(v))) return bloqueio('ilegal', `Para disputar uma eleição ${noPais(paisDaVida(v))}, é preciso ter a nacionalidade ${gentilico(paisDaVida(v), true)}.`);
   const inel = inelegivelAte(v);
   if (inel && inel > tEleicao) return bloqueio('ilegal', `Inelegível até ${anoDe(inel)}${politicaDo(paisDaVida(v)).partidosReais ? ' (Lei da Ficha Limpa)' : ', pela condenação'}.`);
   const m = v.caminhos.militar;
@@ -1156,8 +1159,8 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
       return PERMITIDO;
     case 'filiar':
       if (!p || !naPolitica(v)) return bloqueio('impossivel', 'Primeiro, é preciso estar no meio.');
-      if (i < 16) return bloqueio('ilegal', 'Filiação partidária, só a partir dos 16 anos (com título de eleitor).');
-      if (militarDaAtiva(v)) return bloqueio('ilegal', 'Militar da ativa não se filia a partido (CF, art. 142, §3º, V) — mas pode ser escolhido em convenção e disputar.');
+      if (i < regrasDaVida(v).filiacao) return bloqueio('ilegal', `Filiação partidária, só a partir dos ${regrasDaVida(v).filiacao} anos${politicaDo(paisDaVida(v)).partidosReais ? ' (com título de eleitor)' : ''}.`);
+      if (militarDaAtiva(v)) return bloqueio('ilegal', `Militar da ativa não se filia a partido${politicaDo(paisDaVida(v)).partidosReais ? ' (CF, art. 142, §3º, V)' : ''} — mas pode ser escolhido em convenção e disputar.`);
       if (p.partido && !p.indicacaoMilitar) return bloqueio('impossivel', `Já é filiado ${aoPartido(p.partido)}.`);
       return PERMITIDO;
     case 'indicacao':

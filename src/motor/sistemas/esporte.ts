@@ -583,7 +583,7 @@ export function faseDoTenis(vencidas: number, rodadas: number): string {
   const falta = rodadas - vencidas;
   return falta <= 0 ? 'título' : falta === 1 ? 'final' : falta === 2 ? 'semifinal' : falta === 3 ? 'quartas de final' : vencidas === 0 ? 'primeira rodada' : 'segunda rodada';
 }
-const CIDADES_TORNEIO = ['Florianópolis', 'Campinas', 'Porto Alegre', 'Belo Horizonte', 'Recife', 'Curitiba', 'Brasília', 'Salvador', 'Goiânia', 'Fortaleza', 'Ribeirão Preto', 'Santos'];
+
 const TORNEIOS_PRINCIPAL = ['um torneio 250 do circuito principal', 'um torneio 500 do circuito principal', 'um masters do circuito principal', 'um dos quatro grandes torneios do ano'];
 
 /** O porte de um torneio do circuito principal (250, 500, masters, um dos quatro grandes): quanto vale e como se chama. */
@@ -592,7 +592,8 @@ function porteNoPrincipal(r: Rng): number { const x = r.next(); return x < 0.55 
 /** O nome de um torneio, no universo do jogo (nenhum torneio real é afirmado). */
 function nomeDoTorneio(nivel: number, r: Rng, porte = 0): string {
   if (nivel >= 4) return TORNEIOS_PRINCIPAL[porte];
-  const cidade = r.pick(CIDADES_TORNEIO);
+  // O torneio do circuito nacional é numa cidade do país onde a pessoa mora (nunca Florianópolis para quem vive em Tóquio).
+  const cidade = r.pick(cidadesDoPais(paisCorrente()).map(m => m.nome));
   return nivel === 3 ? `o challenger de ${cidade}` : nivel === 2 ? `o torneio internacional de ${cidade}` : `o torneio nacional de ${cidade}`;
 }
 
@@ -633,10 +634,10 @@ function jogarCircuito(_v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, not
 /** A temporada em uma linha (tela, resumo do ano, Linha da Vida). */
 export function linhaDaTemporada(_v: Vida, t: Temporada, modalidade?: Dominio): string {
   const d = modalidade ?? _v.caminhos.esporte?.modalidade;
-  if (t.pontos !== undefined) return `${cap(DIVISAO_BASQUETE[t.nivel])} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'} · ${String(t.pontos).replace('.', ',')} pontos, ${String(t.rebotes ?? 0).replace('.', ',')} rebotes e ${String(t.assistencias).replace('.', ',')} assistências por jogo${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
+  if (t.pontos !== undefined) return `${cap(divisaoDe('basquete', t.nivel))} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'} · ${String(t.pontos).replace('.', ',')} pontos, ${String(t.rebotes ?? 0).replace('.', ',')} rebotes e ${String(t.assistencias).replace('.', ',')} assistências por jogo${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
   if (t.vitorias !== undefined) return `${cap(CIRCUITO_TENIS[t.nivel])} · ${t.partidas} torneios · ${t.vitorias} vitórias e ${t.derrotas ?? 0} derrotas${t.titulos ? ` · ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}${(t.finais ?? 0) > (t.titulos ?? 0) ? ` · ${(t.finais ?? 0) - (t.titulos ?? 0)} ${(t.finais ?? 0) - (t.titulos ?? 0) === 1 ? 'final perdida' : 'finais perdidas'}` : ''}${t.ranking ? ` · ranking ${t.ranking}º` : ''}${t.premio !== undefined ? ` · prêmios de ${dinheiro(t.premio)}, custos de ${dinheiro(t.custos ?? 0)}` : ''}${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
   const fora = t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : '';
-  if (!t.posicao && d === 'volei') return `${cap(DIVISAO_VOLEI[t.nivel])} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}, ${t.titular} como titular${t.volei && t.funcao ? ` · ${NOME_FUNCAO_VOLEI[t.funcao as FuncaoVolei] ?? t.funcao}: ${numeroDaFuncao(t)}` : ''}${fora}`;
+  if (!t.posicao && d === 'volei') return `${cap(divisaoDe('volei', t.nivel))} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}, ${t.titular} como titular${t.volei && t.funcao ? ` · ${NOME_FUNCAO_VOLEI[t.funcao as FuncaoVolei] ?? t.funcao}: ${numeroDaFuncao(t)}` : ''}${fora}`;
   const nivelInd = cap(['', 'competições regionais', 'circuito nacional de acesso', 'circuito nacional', 'elite nacional'][t.nivel]);
   if (!t.posicao && t.prova) {
     const x = t.prova;

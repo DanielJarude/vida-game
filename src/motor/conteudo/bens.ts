@@ -4,6 +4,7 @@
  * reação importa, é decisão.
  */
 
+import { textoLocal } from '../mundo/locais';
 import { dinheiro as moeda } from '../texto';
 import type { Conteudo, Ctx } from './base';
 import type { Especie, Pessoa, Vida } from '../tipos';
@@ -46,7 +47,7 @@ export const BENS: Conteudo[] = [
         consequencia: () => 'Tráfico de animal silvestre é crime; denunciar é anônimo.',
         resolver: () => ({ texto: 'Você ligou para a polícia ambiental. Na semana seguinte, a barraca não estava mais lá.', memoria: 'Denunciou um vendedor de animais silvestres na feira.', relevancia: 'cotidiano' }) },
       { id: 'comprar', texto: 'Comprar assim mesmo', comportamento: { impulsividade: 1 },
-        consequencia: () => `É crime (Lei 9.605/1998, art. 29): a fiscalização pode apreender e multar em ${moeda(5000)} por animal de espécie protegida.`,
+        consequencia: c => `É crime (${textoLocal(c.v, 'leiDeFauna')}): a fiscalização pode apreender e multar em ${moeda(5000)} por animal de espécie protegida.`,
         disponivel: c => { const o = ofertaDoAno(c); const d = podeTerPet(c.v, o.especie, 'pequeno'); return d.grau === 'incompativel' ? (d.motivo ?? 'Não cabe agora.') : idade(c.v) < 18 ? false : true; },
         resolver: c => {
           const o = ofertaDoAno(c);

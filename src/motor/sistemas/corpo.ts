@@ -8,6 +8,7 @@
  * causas externas que pesam sobre jovens no Brasil.
  */
 
+import { redeDeSaude } from './saude';
 import { causaDaMortePet, riscoDoPet } from './pets';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
@@ -166,7 +167,7 @@ export function processarCorpo(v: Vida, r: Rng): void {
       escrever(v, {
         texto: repetida
           ? m.id === 'dengue' ? `Dengue outra vez${vezes === 1 ? ' — e a segunda foi pior que a primeira' : ''}.` : `${m.nome[0].toUpperCase() + m.nome.slice(1)} de novo.`
-          : m.descoberta + (nova.tratando ? ' O plano de saúde cobriu o tratamento.' : m.cronica ? ' Tratar ia depender de fila no SUS ou de pagar do bolso.' : ''),
+          : m.descoberta + (nova.tratando ? ' O plano de saúde cobriu o tratamento.' : m.cronica ? (redeDeSaude(v).sistema === 'seguro' ? ' Tratar ia depender de um plano ou de pagar do bolso.' : ` Tratar ia depender de fila ${redeDeSaude(v).no} ou de pagar do bolso.`) : ''),
         relevancia: repetida ? 'cotidiano' : m.gravidade >= 2 ? 'marco' : 'biografia',
         tema: 'saude',
         tom: 'ruim'

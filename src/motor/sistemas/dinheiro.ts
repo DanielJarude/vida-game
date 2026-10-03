@@ -22,6 +22,7 @@
  * Valores em reais de hoje (ver `economia`).
  */
 
+import { textoLocal } from '../mundo/locais';
 import { converterEntrePaises } from '../mundo/moeda';
 import { paisDaPessoa, paisDaVida } from '../mundo/vida';
 import { salarioMinimoDoPais } from '../mundo/economia';
@@ -116,7 +117,7 @@ function entradasProprias(v: Vida): LinhaRazao[] {
     // A mesma conta que a tela Trabalho mostra (`renda.remuneracaoDe`): aqui entra a média do mês no ano.
     const rem = remuneracaoDe(e);
     const liq = rem.liquido;
-    out.push({ rotulo: rem.tem13 ? 'Salário líquido (média do mês, com 13º e férias)' : e.contrato === 'estagio' ? 'Bolsa de estágio' : v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado' && e.ocupacaoId === v.caminhos.negocio.ocupacaoId && (v.caminhos.negocio.dedicacao ?? 'integral') === 'integral' ? `Retirada do negócio` : e.clientela !== undefined ? 'Renda do trabalho por conta (clientes, líquida)' : 'Renda do trabalho (líquida)', valor: rem.mediaMensal, grupo: 'renda', de: 'eu' });
+    out.push({ rotulo: rem.tem13 ? `Salário líquido (média do mês, ${textoLocal(v, 'comSalariosExtras')})` : e.contrato === 'estagio' ? 'Bolsa de estágio' : v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado' && e.ocupacaoId === v.caminhos.negocio.ocupacaoId && (v.caminhos.negocio.dedicacao ?? 'integral') === 'integral' ? `Retirada do negócio` : e.clientela !== undefined ? 'Renda do trabalho por conta (clientes, líquida)' : 'Renda do trabalho (líquida)', valor: rem.mediaMensal, grupo: 'renda', de: 'eu' });
     if (v.anoAtual.acoes.includes('horas_extras')) out.push({ rotulo: 'Horas extras', valor: Math.round(liq * 0.15), grupo: 'renda', de: 'eu' });
   }
   // A segunda trajetória (em paralelo): a mesma conta de remuneração, com o que ela rende em parte da semana.

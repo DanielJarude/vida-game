@@ -31,7 +31,7 @@
 import type { Rng } from '../rng';
 import type { Migracao, MotivoMigracao, Veiculo, Vida } from '../tipos';
 import { escrever, idade, marcarFato, moraCom, vinculosVivos } from '../nucleo';
-import { cidadesDoPais, economiaLocal, municipio, paisDaCidade, existeMunicipio } from '../dados/lugares';
+import { cidadesDoPais, economiaLocal, municipio, paisDaCidade, existeMunicipio, type Municipio } from '../dados/lugares';
 import { blocosDoPais, circulaLivre, linguasDaPessoa, nacionalidadesDaPessoa, nacionalidadesDaVida, paisDaVida, paisNatal } from '../mundo/vida';
 import { converterEntrePaises } from '../mundo/moeda';
 import { aoPais, noPais, paisDoCatalogo, paraPais, paisesVivenciaveis, perfilDoPais, temPerfil, nomeDoPais, doPais } from '../mundo/registro';
@@ -41,7 +41,7 @@ import { bloqueio, type Veredito } from '../plausibilidade';
 import { mudarAgora, registrarMigrador } from './processos';
 import { valorDeVenda } from './veiculos';
 import { extratoAberto, lancar } from './extrato';
-import { temEscolaridade } from './escola';
+import { temEscolaridade, trocarDeSistemaEscolar } from './escola';
 import { ocupacao } from '../dados/ocupacoes';
 import { marcar } from './marcas';
 import { dinheiro as moeda } from '../texto';
@@ -238,7 +238,10 @@ export function migrar(v: Vida, r: Rng, destinoId: string, motivo: MotivoMigraca
   const e = v.trabalho.atual;
   // O contrato de lá já assinado (o clube, o comando técnico) segue como está; o ofício levado vira um contrato do lado de lá.
   const levaOficio = av.via === 'trabalho' && motivo !== 'esporte' && e && e.municipioId !== destinoId ? e : undefined;
+  const desde = v.fatos['chegou_pais'] ?? v.eu.tNasc;
   mudarAgora(v, destinoId, '', { internacional: true });
+  // A escola (ou o supletivo) passa a ser a do país novo; a de antes vira histórico.
+  trocarDeSistemaEscolar(v, paisDaCidade(origemId), pais, desde);
   if (levaOficio) {
     // A porta do trabalho é um contrato no mesmo ofício, do lado de lá (com o salário de lá).
     const oc = ocupacao(levaOficio.ocupacaoId);
@@ -263,6 +266,61 @@ export function migrar(v: Vida, r: Rng, destinoId: string, motivo: MotivoMigraca
   escrever(v, { texto: textoDaMigracao(v, origemId, destinoId, motivo), relevancia: 'marco', tema: 'lugar', escolha: true });
   marcar(v, 'mudanca_cidade', `${paisNatal(v) === pais ? 'Voltou' : 'Mudou-se'} ${paraPais(pais)}, aos ${idade(v)}.`, 3);
   abalar(v, `a mudança ${paraPais(pais)}`, 0, fala ? 10 : 18);
+}
+
+/**
+ * A FAMÍLIA SE MUDA DE PAÍS, e a criança (ou o adolescente) vai junto: não é
+ * escolha dela (menor não migra sozinho), é a casa inteira que vai — o pai
+ * ou a mãe com um trabalho do lado de lá. Quem mora na casa vai; o dinheiro
+ * da criança atravessa pelo câmbio; a escola passa a ser a do país novo
+ * (`trocarDeSistemaEscolar`), com o histórico guardado; a nacionalidade não
+ * muda (a de quem vai fica gravada); a língua e a adaptação começam do zero.
+ */
+export function migrarComAFamilia(v: Vida, destinoId: string, quem?: string, opcoes: { escrever?: boolean } = {}): string | undefined {
+  const aqui = paisDaVida(v);
+  const pais = paisDaCidade(destinoId);
+  if (pais === aqui || !temPerfil(pais)) return undefined;
+  if (v.moradia.tipo !== 'pais' && v.moradia.tipo !== 'parente') return undefined;
+  const origemId = v.moradia.municipioId;
+  const desde = v.fatos['chegou_pais'] ?? v.eu.tNasc;
+  const k = converterEntrePaises(1, aqui, pais);
+  const antes = patrimonio(v);
+  for (const p of moraCom(v)) { p.nacionalidades ??= nacionalidadesDaPessoa(p); p.renda = Math.round(p.renda * k); }
+  redenominar(v, k);
+  mudarAgora(v, destinoId, '', { internacional: true, comAFamilia: true });
+  trocarDeSistemaEscolar(v, aqui, pais, desde);
+  const fala = linguasDaPessoa(v).includes(perfilDoPais(pais).idiomas[0]);
+  const ja = (v.mundo?.migracoes ?? []).some(m => paisDaCidade(m.para) === pais) || paisNatal(v) === pais;
+  const reg: Migracao = { t: v.t, de: origemId, para: destinoId, motivo: 'familia', via: nacionalidadesDaVida(v).includes(pais) ? 'cidadania' : 'familia', cambio: { antes: Math.round(antes), depois: Math.round(patrimonio(v)) } };
+  v.mundo = { migracoes: [...(v.mundo?.migracoes ?? []), reg], adaptacao: ja ? 70 : fala ? 50 : 20, idiomas: v.mundo?.idiomas ?? [], naturalizacao: undefined };
+  v.fatos['chegou_pais'] = v.t;
+  marcarFato(v, 'migrou');
+  const cidade = municipio(destinoId).nome;
+  const texto = `A família ${ja ? 'voltou' : 'se mudou'} para ${cidade}, ${noPais(pais)}${quem ? `: ${quem} foi trabalhar lá` : ''}. Você foi junto, com ${idade(v)} anos.`;
+  if (opcoes.escrever !== false) escrever(v, { texto, relevancia: 'marco', tema: 'lugar' });
+  marcar(v, 'mudanca_cidade', `${ja ? 'Voltou' : 'Mudou-se'} com a família ${paraPais(pais)}, aos ${idade(v)}.`, 3);
+  abalar(v, `a mudança ${paraPais(pais)}`, 0, fala ? 10 : 16);
+  return texto;
+}
+
+/**
+ * Para onde uma família que mora aqui se mudaria por trabalho: um país vivível
+ * cuja porta abre para os pais (livre circulação, ou um país que não fecha o
+ * visto de trabalho), com peso para a mesma língua e a mesma região; a cidade
+ * é uma das grandes de lá.
+ */
+export function destinoDaFamilia(v: Vida, r: Rng): string | undefined {
+  const aqui = paisDaVida(v);
+  const pais = moraCom(v).filter(p => !p.especie && idadeDe(v, p.tNasc) >= 21);
+  if (!pais.length) return undefined;
+  const nac = [...new Set(pais.flatMap(p => nacionalidadesDaPessoa(p)))];
+  const lingua = perfilDoPais(aqui).idiomas[0];
+  const opcoes = paisesComPerfil().filter(p => p !== aqui && (circulaLivre(nac, p) || nac.includes(p) || perfilDoPais(p).migracao.abertura !== 'restrita'));
+  if (!opcoes.length) return undefined;
+  const destino = r.weighted(opcoes, p => (perfilDoPais(p).idiomas[0] === lingua ? 3 : 1) * (paisDoCatalogo(p).regiao === paisDoCatalogo(aqui).regiao ? 1.5 : 1) * (circulaLivre(nac, p) ? 1.5 : 1) * Math.min(3, rendaRelativa(p) / Math.max(0.2, rendaRelativa(aqui))));
+  if (!destino) return undefined;
+  const grandes = cidadesDoPais(destino).filter(m => m.perfil === 'metropole' || m.capitalNacional);
+  return (grandes.length ? r.pick(grandes) : r.pick(cidadesDoPais(destino) as Municipio[]))?.id;
 }
 
 /** "Mudou-se para Buenos Aires, na Argentina, para estudar." / "Depois de seis anos na Argentina, voltou ao Brasil." */

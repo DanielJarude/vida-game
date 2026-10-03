@@ -23,6 +23,7 @@
  * os pais conseguem pagar do estudo, o cursinho, o pedido de ajuda.
  */
 
+import { textoLocalEm } from '../mundo/locais';
 import { converterEntrePaises } from '../mundo/moeda';
 import { paisDaPessoa, paisDaVida } from '../mundo/vida';
 import type { Rng } from '../rng';
@@ -133,7 +134,7 @@ export function reservaInicial(id: string, classe: Classe): number {
 export function bairroDeOrigem(id: string, classe: Classe, municipioId: string): string {
   const pequena = municipio(municipioId).perfil === 'pequena';
   const op: Record<Classe, string[]> = {
-    vulneravel: pequena ? ['na zona rural, longe do centro', 'num bairro de casas sem reboco, na saída da cidade'] : ['numa comunidade no morro', 'num conjunto habitacional da periferia', 'numa ocupação que virou bairro'],
+    vulneravel: pequena ? ['na zona rural, longe do centro', 'num bairro de casas sem reboco, na saída da cidade'] : [textoLocalEm(municipioId, 'bairroPobre'), 'num conjunto habitacional da periferia', 'numa ocupação que virou bairro'],
     trabalhadora: pequena ? ['num bairro de trabalhadores, perto da feira', 'numa rua de terra que depois foi asfaltada'] : ['num bairro da periferia, de casas geminadas', 'num bairro operário perto da linha do trem'],
     media_baixa: ['num bairro residencial simples', 'numa rua de casas iguais, perto da escola'],
     media: ['num bairro de classe média, de prédios baixos', 'num bairro arborizado, perto do centro'],

@@ -23,6 +23,7 @@ import { flex } from '../texto';
 import { rngDe } from '../rng';
 import { carreiraDeAdulto } from './filhos';
 import { registrarFase } from './relacoes';
+import { ehAmizade, romper } from './lacos';
 
 /** Quem tem carreira acompanhada de perto: a parceria (até a de namoro), o amigo próximo, quem é muito próximo. */
 export const importaParaCarreira = (vin: Vinculo) => (!!vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(vin.romance.estagio)) || vin.estagio === 'amigo_proximo' || vin.proximidade >= 60;
@@ -191,7 +192,7 @@ function podarDesconhecidos(v: Vida): void {
 
 /* ------------------------------------------------------ Evolução */
 
-const ORDEM: Record<string, number> = { conhecido: 0, colega: 1, amigo: 2, amigo_proximo: 3, afastado: -1 };
+const ORDEM: Record<string, number> = { conhecido: 0, colega: 1, amigo: 2, amigo_proximo: 3, afastado: -1, ex_amigo: -2, rival: 0 };
 
 const proximosAtuais = (v: Vida) => vinculosVivos(v).filter(x => !x.vin.parentesco && x.vin.estagio === 'amigo_proximo').length;
 
@@ -209,7 +210,15 @@ export function processarSocial(v: Vida, r: Rng): void {
 
   for (const { p, vin } of vinculosVivos(v)) {
     if (p.especie) continue;
+    // A proximidade do começo do ano: é por ela que se diz se a relação se aproxima ou esfria (`lacos.estadoDaRelacao`).
+    vin.proxAno = vin.proximidade;
     vin.tensao = Math.round(vin.tensao * 0.65);
+    // O conflito aberto: o tempo esfria o que não era grave; o que segue fervendo entre amigos endurece em ruptura.
+    const conf = vin.conflito;
+    if (conf) {
+      if (v.t - conf.t >= 36 && vin.tensao < 30) vin.conflito = undefined;
+      else if (ehAmizade(vin) && vin.tensao >= 60 && vin.proximidade < 30 && !vin.ruptura) romper(v, p, vin, `Depois da briga sobre ${conf.assunto}, nenhum dos dois procurou o outro — e a amizade acabou.`, 'ambos');
+    }
 
     if (vin.parentesco && ['filho', 'enteado', 'neto', 'bisneto'].includes(vin.parentesco)) continue; // sistema de filhos
     if (vin.parentesco) {
@@ -256,6 +265,20 @@ export function processarSocial(v: Vida, r: Rng): void {
 
     const conhecidosHa = (v.t - vin.tInicio) / 12;
     const antes = vin.estagio ?? 'conhecido';
+    // Ex-amigo e rival não mudam por conviver: a ex-amizade só volta pela reconciliação (de um lado e do outro);
+    // a rivalidade se desfaz quando a convivência acaba.
+    if (antes === 'ex_amigo') { vin.proximidade = Math.min(vin.proximidade, 45); continue; }
+    if (antes === 'rival') {
+      if (!junto && v.t - vin.tUltimoContato >= 36) { vin.estagio = 'conhecido'; registrarFase(v, vin, 'conhecido'); }
+      continue;
+    }
+    // A implicância que virou briga de verdade, entre quem convive e não se dá: rivalidade (escola, trabalho, esporte).
+    if ((antes === 'colega' || antes === 'conhecido') && junto && c < -0.2 && i >= 10 && (vin.conflito || vin.historia.filter(h => h.tipo === 'conflito').length >= 2)) {
+      vin.estagio = 'rival';
+      registrarFase(v, vin, 'rival');
+      lembrarCom(v, p.id, `A implicância com ${p.nome} virou rivalidade ${descricaoOrigem(v, vin)}.`, 'conflito', 2);
+      continue;
+    }
     let depois = antes;
     const amigosAtuais = vinculosVivos(v).filter(x => !x.vin.parentesco && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo')).length;
     // O passo de colega para amigo: na infância, basta conviver; na adolescência, às vezes basta;
@@ -385,7 +408,19 @@ export function descricaoOrigem(_v: Vida, vin: Vinculo): string {
   if (a.startsWith('trabalho:')) return 'no trabalho';
   if (a.startsWith('rotina:')) return ROTINAS_SOCIAIS[a.split(':')[1]]?.onde ?? 'por aí';
   if (a.startsWith('vizinhanca:')) return 'na rua de casa';
+  // A origem romântica (o app, a noite, a viagem) é contexto — dita como foi, não como "amigos em comum".
+  const via = vin.contexto?.via;
+  if (via === 'app') return 'pelo aplicativo';
+  if (via === 'noite') return 'numa noite fora';
+  if (via === 'viagem') return 'numa viagem';
+  if (via === 'evento') return 'num evento';
   if (vin.origem === 'apresentado') return 'por amigos em comum';
+  // Sem o lugar gravado: onde convivem hoje (ou a origem) diz o bastante — "por aí" só quando nada diz.
+  const lugar = vin.convivio.find(x => x !== 'casa') ?? vin.origem;
+  if (lugar === 'escola') return 'na escola';
+  if (lugar === 'faculdade') return 'na faculdade';
+  if (lugar === 'trabalho') return 'no trabalho';
+  if (lugar === 'vizinhanca') return 'na rua de casa';
   return 'por aí';
 }
 

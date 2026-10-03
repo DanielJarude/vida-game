@@ -72,6 +72,8 @@ const JP_FEM_NOVA = ['Himari', 'Tsumugi', 'Mei', 'Mio', 'Yui', 'Sakura', 'Rin', 
 
 export const JAPAO: PerfilDePais = {
   id: 'JP',
+  // Regras legais: maioridade aos 18 (desde 2022), álcool aos 20; autoescola na prática obrigatória (escola designada).
+  regras: { vidaNoturna: 20, direcao: { autoescolaObrigatoria: true } },
   gentilico: ['japonês', 'japonesa'],
   idiomas: ['japonês'],
   divisao: {
@@ -1172,6 +1174,8 @@ export const INDIA: PerfilDePais = {
 
 export const COREIA_DO_SUL: PerfilDePais = {
   id: 'KR',
+  // Regras legais: álcool aos 19 (Lei de Proteção da Juventude).
+  regras: { vidaNoturna: 19 },
   gentilico: ['sul-coreano', 'sul-coreana'],
   idiomas: ['coreano'],
   divisao: {

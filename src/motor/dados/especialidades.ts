@@ -5,8 +5,8 @@
  *   CLÍNICA MÉDICA — o hospital e o ambulatório, o adulto com muitas doenças.
  *   PEDIATRIA — a criança e a família junto; pronto-socorro infantil, consultório.
  *   CIRURGIA — o centro cirúrgico: a residência mais dura, a renda mais alta, o plantão que não acaba.
- *   PSIQUIATRIA — o consultório e o CAPS: agenda previsível, casos que pesam de outro jeito.
- *   MEDICINA DE FAMÍLIA — a UBS e o território: horário regular, vaga em toda cidade, renda menor.
+ *   PSIQUIATRIA — o consultório e o serviço público de saúde mental (no Brasil, o CAPS): agenda previsível, casos que pesam de outro jeito.
+ *   MEDICINA DE FAMÍLIA — o posto de saúde (no Brasil, a UBS) e o território: horário regular, vaga em toda cidade, renda menor.
  *
  * A especialidade é da PESSOA (fica na residência concluída, em
  * `educacao.concluidos`), e vai com ela para qualquer emprego. Ela decide:
@@ -62,17 +62,17 @@ export const ESPECIALIDADES_MEDICAS: Record<EspecialidadeMedica, ModeloEspeciali
   },
   psiquiatria: {
     id: 'psiquiatria', area: 'psiquiatria', residencia: 'Residência em Psiquiatria', meses: 36, concorrencia: 0.12, fatorRenda: 1.1,
-    ambiente: 'consultório e CAPS',
+    ambiente: 'consultório e serviço público de saúde mental',
     convite: { ocupacaoId: 'medico_especialista', titulo: 'Os pacientes que esperam', texto: 'Há fila de meses para psiquiatra na cidade: uma clínica ofereceu sala e agenda para você atender por conta.' },
-    caso: 'Um paciente em crise grave chegou ao CAPS acompanhado da família, que não sabe mais o que fazer.',
+    caso: 'Um paciente em crise grave chegou ao serviço de saúde mental acompanhado da família, que não sabe mais o que fazer.',
     descricao: 'Três anos. Agenda mais previsível, pouca cirurgia de madrugada — e casos que pesam de outro jeito.'
   },
   familia: {
     id: 'familia', area: 'medicina de família', residencia: 'Residência em Medicina de Família e Comunidade', meses: 24, concorrencia: 0, fatorRenda: 0.95,
-    ambiente: 'UBS e território',
-    convite: { ocupacaoId: 'medico_familia', titulo: 'Uma equipe de saúde da família', texto: 'A prefeitura precisa de médico de família para uma equipe da UBS: horário regular, visitas no bairro, as mesmas famílias por anos.' },
+    ambiente: 'posto de saúde e território',
+    convite: { ocupacaoId: 'medico_familia', titulo: 'Uma equipe de saúde da família', texto: 'A prefeitura precisa de médico de família para uma equipe do posto de saúde: horário regular, visitas no bairro, as mesmas famílias por anos.' },
     caso: 'Uma família inteira da sua área de cobertura adoeceu junto — e o problema parece estar na casa, não nas pessoas.',
-    descricao: 'Dois anos. A UBS e as mesmas famílias por anos: horário regular, vaga em quase toda cidade, renda menor.'
+    descricao: 'Dois anos. O posto de saúde e as mesmas famílias por anos: horário regular, vaga em quase toda cidade, renda menor.'
   }
 };
 

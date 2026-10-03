@@ -11,6 +11,7 @@
  * da Vida.
  */
 
+import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Imovel, Pessoa, Veiculo, Vida } from '../tipos';
@@ -234,7 +235,7 @@ function familiaPerto(v: Vida): Pessoa[] {
 export function rotuloUsoCasa(v: Vida, oque: UsoCasa): string {
   const m = v.moradia.modeloId ? modeloMoradia(v.moradia.modeloId) : undefined;
   switch (oque) {
-    case 'festa': return m?.casa ? 'Fazer um churrasco em casa' : 'Chamar os amigos para uma festa em casa';
+    case 'festa': return m?.casa ? textoLocal(v, 'festaEmCasa') : 'Chamar os amigos para uma festa em casa';
     case 'familia': return 'Juntar a família para um almoço de domingo';
     case 'decorar': return 'Deixar a casa com a sua cara';
     case 'reformar': return m?.casa ? 'Reformar a casa (cozinha, banheiro, pintura)' : 'Reformar o apartamento';

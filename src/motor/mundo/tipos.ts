@@ -19,6 +19,7 @@
 
 import type { Classe, Dominio } from '../tipos';
 import type { RegrasDeSucessao } from '../dados/sucessao';
+import type { RegrasDoPais } from './regras';
 
 export type RegiaoMundial = 'america_sul' | 'america_norte' | 'america_central_caribe' | 'europa' | 'africa' | 'asia' | 'oceania';
 
@@ -158,8 +159,13 @@ export interface PerfilEducacional {
   };
   /** Como se entra na universidade pública. */
   ingresso: 'exame_nacional' | 'acesso_aberto' | 'candidatura';
-  /** O exame que abre a universidade (ENEM, a EBAU, o SAT, o gaokao...). */
-  exame: { nome: string; artigo: 'o' | 'a' };
+  /**
+   * O exame que abre a universidade (ENEM, a EBAU, o SAT, o gaokao...).
+   * `prova: false` quando não é uma prova que se faz, mas o boletim do
+   * último ano (o Canadá); `acao` é o rótulo do botão quando "Fazer o X
+   * deste ano" não serve.
+   */
+  exame: { nome: string; artigo: 'o' | 'a'; prova?: boolean; acao?: string };
   /** Quanto a universidade pública cobra, como fração da mensalidade privada (0 = gratuita). */
   publicaCobra: number;
   /** Bolsa pública para quem tem pouca renda (ProUni, beca...): nome e teto de renda por pessoa em salários mínimos. */
@@ -306,6 +312,8 @@ export interface PerfilDePais {
   /** Nomes e costumes do dia a dia (ausente: tudo genérico). */
   cotidiano?: PerfilCotidiano;
   sucessao: RegrasDeSucessao;
+  /** As regras legais que o país muda em relação às universais (idades, carteira de motorista) — `mundo/regras`. */
+  regras?: RegrasDoPais;
   nomes: PerfilDeNomes;
   /** De onde vêm os dados factuais do perfil. */
   fontes: string[];

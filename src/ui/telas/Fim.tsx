@@ -7,7 +7,7 @@ import { filhos, idade, vinculosVivos } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { nomeLugar } from '../../motor/dados/lugares';
 import { patrimonio } from '../../motor/sistemas/dinheiro';
-import { ROTULO_ESCOLARIDADE } from '../../motor/sistemas/escola';
+import { rotuloEscolaridade } from '../../motor/sistemas/escola';
 import { nomeOcupacaoId } from '../../motor/sistemas/trabalho';
 import { tracosMarcantes } from '../../motor/personalidade';
 import { flex } from '../../motor/texto';
@@ -70,7 +70,7 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
       <section className="fim__resumo">
         <h2>Em números</h2>
         <ul>
-          <li>{vida.educacao.concluidos.length ? `Estudou ${vida.educacao.concluidos.map(c => c.nome).join(', ')}.` : `Escolaridade: ${ROTULO_ESCOLARIDADE[vida.educacao.escolaridade]}.`}</li>
+          <li>{vida.educacao.concluidos.length ? `Estudou ${vida.educacao.concluidos.map(c => c.nome).join(', ')}.` : `Escolaridade: ${rotuloEscolaridade(vida, vida.educacao.escolaridade)}.`}</li>
           <li>{principal ? `Trabalhou sobretudo como ${principal}.` : empregos.length === 0 ? 'Nunca teve emprego fixo.' : ''}</li>
           <li>{nFilhos === 0 ? 'Não teve filhos.' : nFilhos === 1 ? `Teve um filho: ${filhos(vida)[0]?.nome ?? ''}.` : `Teve ${nFilhos} filhos.`}{netos ? ` ${netos === 1 ? 'Um neto' : `${netos} netos`}${bisnetos ? ` e ${bisnetos === 1 ? 'um bisneto' : `${bisnetos} bisnetos`}` : ''}.` : ''}</li>
           {situacaoAfetiva(vida) && <li>Ao fim, {situacaoAfetiva(vida)}.</li>}

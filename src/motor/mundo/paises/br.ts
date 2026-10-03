@@ -11,6 +11,14 @@ import type { PerfilDePais } from '../tipos';
 
 export const BRASIL: PerfilDePais = {
   id: 'BR',
+  // Regras legais (`mundo/regras`): CTB art. 140 (18 anos) e 148 (Permissão para Dirigir por um ano, depois a CNH
+  // definitiva) e autoescola obrigatória (Res. Contran 789/2020); CLT art. 403 (16; aprendiz a partir de 14);
+  // LDB/EC 59 (escola dos 4 aos 17); Lei 9.096 art. 16 (filiação com título de eleitor, 16 anos).
+  regras: {
+    trabalho: { minima: 16, aprendiz: { idade: 14, nome: 'jovem aprendiz' } },
+    direcao: { nome: 'CNH', provisoria: { idade: 18, nome: 'Permissão para Dirigir' }, plena: 19, autoescolaObrigatoria: true },
+    escolaObrigatoriaAte: 17, filiacao: 16
+  },
   gentilico: ['brasileiro', 'brasileira'],
   idiomas: ['português'],
   divisao: { tipo: ['estado', 'estados'], lista: [] }, // as UFs vivem em `dados/lugares` (com as regiões)

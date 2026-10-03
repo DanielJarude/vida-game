@@ -16,6 +16,7 @@ import { gestacaoEmCurso } from '../motor/sistemas/familia';
 import { circuloDe, ehDescendente, estadoCivil, filhosEmComum, importancia, papelDe, parceriaAtual, vinculoReal, type Papel } from '../motor/sistemas/vinculos';
 import { pesoDoLuto } from '../motor/sistemas/luto';
 import { lutoDe } from '../motor/sistemas/rede';
+import { ehAmizade, estadoDaRelacao, porqueDaRelacao } from '../motor/sistemas/lacos';
 
 export type Par = { p: Pessoa; vin: Vinculo };
 
@@ -80,15 +81,24 @@ export function etiqueta(v: Vida, p: Pessoa, vin: Vinculo): string {
   if (p.especie) return vin.proximidade >= 60 ? 'grudado em você' : 'em casa';
   if (vin.tensao >= 55) return 'relação tensa';
   if (p.aperto && v.t - p.aperto.t <= 24 && vin.proximidade >= 35) return ({ desemprego: 'sem trabalho', separacao: 'se separando', doenca: 'saúde frágil', luto: 'de luto', dinheiro: 'no aperto', fase: 'numa fase difícil' })[p.aperto.tipo];
+  // Relações 2.0: à direita do nome vai o ESTADO da relação (o tipo já está no rótulo) — nunca "muito próximo".
+  const e = estadoDaRelacao(v, vin);
+  if (e === 'rompido') return vin.parentesco ? 'romperam' : 'não se falam';
+  if (e === 'conflito') return 'em conflito';
+  if (e === 'tensao') return 'em tensão';
+  if (e === 'reconciliacao') return 'fizeram as pazes';
   if (vin.convivio.includes('casa')) return 'mora com você';
   if (p.municipioId !== v.moradia.municipioId) return `em ${cidade(p.municipioId)}`;
+  if (e === 'aproximando') return 'se aproximando';
+  if (e === 'esfriando') return 'esfriando';
+  if (e === 'afastado') return 'afastados';
+  // Estável: o que descreve a relação é o tempo (amizade) ou a convivência (colega); na família, como se dão.
+  const papel = papelDe(p, vin);
+  const anos = Math.floor((v.t - vin.tInicio) / 12);
+  if (papel === 'amigo' || papel === 'amigo_proximo') return anos >= 2 ? `há ${anos} anos` : 'amizade nova';
+  if (papel === 'colega' || papel === 'rival' || papel === 'conhecido' || papel === 'interesse') return vin.convivio.length ? 'convivem' : `desde ${anoDe(vin.tInicio)}`;
   const n = vin.proximidade;
-  const g = (m: string, f: string) => flex(p.genero, m, f);
-  if (n >= 80) return g('muito próximo', 'muito próxima');
-  if (n >= 60) return g('próximo', 'próxima');
-  if (n >= 40) return 'se dão bem';
-  if (n >= 22) return 'distante';
-  return 'quase estranhos';
+  return n >= 65 ? 'muito ligados' : n >= 40 ? 'se dão bem' : 'pouco contato';
 }
 
 /* ---------------------------------------------------------------- Leitura */
@@ -122,7 +132,7 @@ export function quemE(v: Vida, p: Pessoa, vin: Vinculo): string {
     const rom = vin.romance!;
     const juntos = Math.max(0, Math.floor((v.t - (rom.tInicio ?? vin.tInicio)) / 12));
     const onde = descricaoOrigem(v, vin);
-    const conheceram = vin.origem !== 'romance' ? `Vocês se conheceram ${onde}, em ${anoDe(vin.tInicio)}. ` : '';
+    const conheceram = vin.origem !== 'romance' ? `Vocês se conheceram ${onde === 'por aí' ? 'em' : `${onde}, em`} ${anoDe(vin.tInicio)}. ` : '';
     const casamento = vin.historia.find(h => h.tipo === 'casamento');
     if (papel === 'caso') return `${conheceram}Vocês se veem escondido desde ${anoDe(rom.tInicio ?? rom.tEstagio)}.`;
     if (rom.estagio === 'casamento' && casamento) {
@@ -140,7 +150,7 @@ export function quemE(v: Vida, p: Pessoa, vin: Vinculo): string {
   }
   if (vin.formacao?.papel === 'colega' && vin.formacao.tFim !== undefined) return `Estudaram juntos até ${anoDe(vin.formacao.tFim)}${p.ocupacao && p.ocupacao !== 'estudante' ? `; hoje, ${p.ocupacao}` : ''}.`;
   const onde = descricaoOrigem(v, vin);
-  return `Vocês se conheceram ${onde}, em ${anoDe(vin.tInicio)}${tempo >= 2 ? ` — há ${anos(tempo)}` : ''}.`;
+  return `Vocês se conheceram ${onde === 'por aí' ? 'em' : `${onde}, em`} ${anoDe(vin.tInicio)}${tempo >= 2 ? ` — há ${anos(tempo)}` : ''}.`;
 }
 
 /** Onde a pessoa está em relação à sua vida: em casa, na mesma cidade, longe. */
@@ -191,8 +201,12 @@ export function comoEsta(v: Vida, p: Pessoa, vin: Vinculo): string {
     })[p.aperto.tipo]);
   }
   if (vin.romance?.segredo) frases.push(`${capital(ele(p))} não sabe do caso.`);
-  if (vin.tensao >= 55) frases.push(papel === 'filho' && idadePessoa(v, p) < 18 ? 'Andam em pé de guerra em casa.' : 'Andam brigando.');
+  const estado = estadoDaRelacao(v, vin);
+  if (estado === 'rompido' && vin.ruptura) frases.push(`${vin.ruptura.porque}${vin.parentesco ? ' Continua sendo família — só não se falam.' : ''}`);
+  else if (vin.conflito && estado === 'conflito') frases.push(`${ehAmizade(vin) && (vin.historia.length >= 4 || v.t - vin.tInicio >= 60) ? 'Vocês têm muita história juntos, mas estão brigados' : 'Estão brigados'} — por causa de ${vin.conflito.assunto}.`);
+  else if (vin.tensao >= 55) frases.push(papel === 'filho' && idadePessoa(v, p) < 18 ? 'Andam em pé de guerra em casa.' : 'Andam brigando.');
   else if (vin.tensao >= 35) frases.push('Há um atrito no ar.');
+  else if (estado === 'reconciliacao') frases.push('Fizeram as pazes há pouco: ainda com cuidado, mas perto.');
   if (vin.confianca < 25 && vin.historia.some(h => h.tipo === 'traicao')) frases.push('A confiança não voltou inteira.');
   if (distancia && recente(distancia) && vin.proximidade < 55) frases.push(`Vocês têm se afastado desde que ${ele(p)} foi para longe.`);
 
@@ -211,12 +225,33 @@ export function comoEsta(v: Vida, p: Pessoa, vin: Vinculo): string {
   } else if (papel === 'caso') {
     frases.push('Ninguém mais sabe.');
   } else if (frases.length === 0) {
+    // Relações 2.0: quem a pessoa é e de onde vem a relação — não um grau de proximidade.
     const n = vin.proximidade;
-    if (n >= 80) frases.push(papel === 'amigo_proximo' ? 'Uma das pessoas mais próximas da sua vida.' : 'Muito próximos.');
-    else if (n >= 60) frases.push('Próximos.');
-    else if (n >= 40) frases.push('Se dão bem.');
-    else if (n >= 22) frases.push(ultima && recente(ultima) && ultima.tipo === 'reconciliacao' ? 'Voltaram a se falar há pouco.' : 'Distantes.');
-    else frases.push('Quase estranhos, hoje.');
+    const onde = descricaoOrigem(v, vin);
+    const anos = Math.floor((v.t - vin.tInicio) / 12);
+    const desde = anos >= 1 ? `Vocês se conhecem ${onde === 'por aí' ? '' : `${onde}, `}há ${anos} ${anos === 1 ? 'ano' : 'anos'}.` : `Vocês se conheceram ${onde === 'por aí' ? 'há pouco' : `${onde}, há pouco`}.`;
+    if (papel === 'amigo' || papel === 'amigo_proximo') {
+      frases.push(desde);
+      frases.push(estado === 'esfriando' ? 'A amizade anda esfriando.' : estado === 'aproximando' ? 'Cada vez mais perto.' : estado === 'afastado' ? 'Andam longe um do outro.' : n >= 80 ? 'Uma das pessoas mais importantes da sua vida.' : n >= 55 ? 'Uma amizade firme.' : 'Uma amizade de convivência, ainda sem muita história.');
+    } else if (papel === 'afastado') {
+      frases.push(porqueDaRelacao(v, vin) ?? 'Foram amigos; a vida afastou, sem briga.');
+    } else if (papel === 'ex_amigo') {
+      frases.push(vin.ruptura?.porque ?? 'A amizade acabou.');
+    } else if (papel === 'rival') {
+      frases.push(`Uma rivalidade ${onde}: nenhum dos dois cede.`);
+    } else if (papel === 'interesse') {
+      frases.push(desde, 'Ainda não aconteceu nada — só o interesse.');
+    } else if (papel === 'colega' || papel === 'conhecido') {
+      frases.push(vin.convivio.length && onde !== 'por aí' ? `Vocês convivem ${onde}.` : desde);
+      if (estado === 'aproximando') frases.push('Vocês têm se aproximado.');
+    } else {
+      // Família e o resto: aqui, sim, a proximidade é a medida (a família continua família com proximidade baixa).
+      if (n >= 80) frases.push('Muito ligados.');
+      else if (n >= 60) frases.push('Próximos.');
+      else if (n >= 40) frases.push('Se dão bem.');
+      else if (n >= 22) frases.push(ultima && recente(ultima) && ultima.tipo === 'reconciliacao' ? 'Voltaram a se falar há pouco.' : 'Pouco contato hoje.');
+      else frases.push('Quase não se falam, hoje.');
+    }
   }
   return frases.filter(Boolean).slice(0, 3).join(' ');
 }

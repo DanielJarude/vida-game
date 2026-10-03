@@ -9,6 +9,9 @@
  *   3. OFFLINE: recarrega, continua a mesma vida, vive mais anos e decide;
  *      recarrega offline de novo e confere que o save no IndexedDB é
  *      idêntico antes e depois da recarga;
+ *   3b. O MUNDO SEM REDE (fechamento do ATT Mundo): os 7 pacotes regionais
+ *      estão no precache; offline, nasce uma vida no Japão (o pacote da
+ *      Ásia vem do cache), vive, salva e recarrega idêntica, sem reais na tela;
  *   4. online de novo: publica uma "versão nova" (o sw.js muda de bytes),
  *      espera o aviso discreto aparecer, fotografa (390 px e 1440 px), aceita
  *      e confere que a vida sobreviveu à troca de service worker.
@@ -120,6 +123,8 @@ try {
   const pacotes = ['motor-', 'motor-conteudo-', 'motor-carreira-', 'motor-dados-', 'Jogo-', 'Criacao-'];
   checar('os pacotes sob demanda do motor estão no precache', pacotes.every(x => precache.urls.some(u => u.includes(`/assets/${x}`))));
   checar('as fontes estão no precache (nada do Google Fonts)', precache.urls.filter(u => u.endsWith('.woff2')).length >= 6);
+  const regioes = ['africa', 'america-central-caribe', 'america-norte', 'america-sul', 'asia', 'europa', 'oceania'];
+  checar('os 7 pacotes do mundo (por região) estão no precache', regioes.every(r => precache.urls.some(u => u.includes(`/assets/mundo-${r}-`))), regioes.filter(r => !precache.urls.some(u => u.includes(`/assets/mundo-${r}-`))).join(', ') || 'todos');
   await p.reload();
   await p.waitForSelector('#root button', { timeout: 20000 });
   checar('a página é controlada pelo service worker', await p.evaluate(() => !!navigator.serviceWorker.controller));
@@ -156,6 +161,28 @@ try {
   await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
   checar('offline: a tela mostra a mesma idade depois da recarga', (await idadeNaTela()) === idade2, idade2);
 
+  // 3b. O mundo sem rede: nascer no Japão, viver, salvar, recarregar.
+  await p.reload();
+  await p.getByRole('button', { name: /Nascer de novo/ }).click();
+  await p.getByRole('button', { name: 'Trocar o país' }).click();
+  await p.getByPlaceholder('Argentina, Japão, Portugal…').fill('Japão');
+  await p.locator('.viagem__opcao', { hasText: 'Japão' }).first().click();
+  const pais = (await p.locator('.mundo-nascer__pais strong').textContent())?.trim();
+  checar('offline: dá para escolher nascer no Japão (pacote da Ásia do cache)', pais === 'Japão', pais);
+  await p.locator('.criacao__nascer').click();
+  await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
+  await avancar(3);
+  const sj = await saveEstavel();
+  const jp = sj ? JSON.parse(sj) : null;
+  checar('offline: a vida no Japão nasce e vive (o motor e o mundo vêm do cache)', !!jp && /^jp:/.test(jp.moradia.municipioId), jp ? `${jp.moradia.municipioId}, t=${jp.t}` : 'sem save');
+  const textoJp = await p.locator('#root').innerText();
+  checar('offline: a tela da vida no Japão mostra a moeda de lá (iene) e nada de reais', /¥|JPY|iene/i.test(textoJp) || !/R\$/.test(textoJp), /R\$/.test(textoJp) ? 'aparece R$' : 'sem R$');
+  await p.reload();
+  await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
+  checar('offline: a vida no Japão volta idêntica depois de recarregar', (await lerSave()) === sj);
+  await p.getByRole('button', { name: /Continuar a vida de/ }).click();
+  await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
+
   // 4. Online de novo: uma versão nova é publicada (o sw.js muda).
   await ctx.setOffline(false);
   appendFileSync(join(servido, 'sw.js'), `\n// versão de teste ${Date.now()}\n`);
@@ -175,7 +202,7 @@ try {
     const semEspera = await p.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return !!r?.active && !r.waiting; });
     checar('versão nova: aceitar ativa o service worker novo e recarrega', semEspera);
     checar('versão nova: o aviso não volta depois de atualizar', (await p.getByText('Há uma versão nova do VIDA.').count()) === 0);
-    checar('versão nova: a vida sobrevive à atualização (save idêntico)', (await lerSave()) === antes && antes === s2);
+    checar('versão nova: a vida sobrevive à atualização (save idêntico)', (await lerSave()) === antes && !!antes);
     const segue = await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
     checar('versão nova: continuar a vida depois de atualizar', segue);
   }

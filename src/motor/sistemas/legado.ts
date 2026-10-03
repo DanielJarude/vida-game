@@ -25,6 +25,7 @@
  */
 
 import type { CarreiraEsportiva, ConquistaEsportiva, Dominio, Emprego, Vida } from '../tipos';
+import { ehElite } from '../dados/clubes';
 import { anoDe } from '../tempo';
 import { aSelecao, nivelDaCompeticao, oClube } from '../dados/clubes';
 import { flex, ge, listaNatural } from '../texto';
@@ -80,15 +81,13 @@ const daCasa = (lugar: string) => naCasa(lugar).replace(/^na /, 'da ').replace(/
 
 /* ============================================================ Esporte */
 
-const ELITE = /Série A|NBB|Superliga|circuito principal|elite nacional/;
-/** Elite: a do Brasil e a de qualquer liga do mundo carregada (`dados/clubes.nivelDaCompeticao`). */
-const ehElite = (x: string) => ELITE.test(x) || nivelDaCompeticao(x) === 4;
+
 
 /** O peso biográfico de uma conquista esportiva (o que merece virar memória). */
 export function pesoDaConquista(c: ConquistaEsportiva): number {
   const t = c.texto;
   if (c.tipo === 'selecao') return /^Campe/.test(t) ? 10 : /ouro/.test(t) ? 9 : /^Medalha/.test(t) ? 7 : /Capit/.test(t) ? 6 : /Primeira convocação/.test(t) ? 5 : /Estreia/.test(t) ? 3 : 2;
-  if (c.tipo === 'titulo') return (ehElite(c.competicao) || /quatro grandes|masters/.test(t) ? 8 : /Série B|challenger|circuito nacional/.test(c.competicao + t) ? 5 : 3) - (c.papel === 'elenco' ? 3 : 0);
+  if (c.tipo === 'titulo') return (ehElite(c.competicao) || /quatro grandes|masters/.test(t) ? 8 : (nivelDaCompeticao(c.competicao) === 3 || /challenger|circuito nacional/.test(c.competicao + t)) ? 5 : 3) - (c.papel === 'elenco' ? 3 : 0);
   if (c.tipo === 'premio') return /^Melhor|^Atleta do ano/.test(t) ? 7 : /^Seleção/.test(t) ? 6 : /^Artilheir|^Cestinha|^Líder/.test(t) ? 6 : 4;
   if (c.tipo === 'marco') return /10 melhores/.test(t) ? 7 : /100 melhores/.test(t) ? 4 : /Estreia/.test(t) ? 3 : /titular/.test(t) ? 2 : 1;
   if (c.tipo === 'acesso') return c.papel === 'protagonista' ? 3 : 2;
@@ -515,7 +514,7 @@ function trajetoriaDeTecnico(v: Vida): TrajetoriaDaVida | undefined {
     id: 'tecnico', area: 'tecnico', titulo: `${flex(g, 'Técnico', 'Técnica')} de futebol`, periodo: periodo(de, ate, ativa), de, ate, ativa,
     resumo: `${linhaDoTecnico(c)}${res.acessos ? `, ${res.acessos} ${res.acessos === 1 ? 'acesso' : 'acessos'}` : ''}${res.rebaixamentos ? `, ${res.rebaixamentos} ${res.rebaixamentos === 1 ? 'rebaixamento' : 'rebaixamentos'}` : ''}${demissoes.length ? `; ${demissoes.length} ${demissoes.length === 1 ? 'demissão' : 'demissões'}` : ''}.`,
     realizacoes: top(r), reconhecimento,
-    detalhe: [{ titulo: 'Passagens', linhas: [...c.passagens].reverse().map(p => { const x = resumoDaPassagem(p); const pr = periodoDaPassagem(p); return `${p.selecao ? 'Seleção brasileira' : p.clube} · ${pr.de}${p.ate === undefined ? '–' : pr.ate !== pr.de ? `–${pr.ate}` : ''} — ${x.jogos} jogos · ${x.v} V · ${x.e} E · ${x.d} D${x.titulos.length ? ` · ${x.titulos.join(', ')}` : ''} · ${comoAcabou(v, p)}`; }) }],
+    detalhe: [{ titulo: 'Passagens', linhas: [...c.passagens].reverse().map(p => { const x = resumoDaPassagem(p); const pr = periodoDaPassagem(p); return `${p.clube} · ${pr.de}${p.ate === undefined ? '–' : pr.ate !== pr.de ? `–${pr.ate}` : ''} — ${x.jogos} jogos · ${x.v} V · ${x.e} E · ${x.d} D${x.titulos.length ? ` · ${x.titulos.join(', ')}` : ''} · ${comoAcabou(v, p)}`; }) }],
     peso: res.temporadas * 2 + r.reduce((a, x) => a + x.peso, 0)
   };
 }

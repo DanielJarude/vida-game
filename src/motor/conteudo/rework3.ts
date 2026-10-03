@@ -7,6 +7,7 @@
  * existiam para outro rumo. Anos tranquilos continuam permitidos.
  */
 
+import { regrasDaVida } from '../mundo/regras';
 import { educacaoDaVida } from '../mundo/vida';
 import type { Conteudo, Ctx } from './base';
 import { clamp, rngDe } from '../rng';
@@ -28,6 +29,9 @@ import { podeTentar } from '../plausibilidade';
 import { moraComFamiliaDeOrigem } from '../sistemas/domicilio';
 import { rendaPropriaMensal } from '../sistemas/dinheiro';
 import { dinheiro as fmt, flex } from '../texto';
+
+/** Primeira letra maiúscula. */
+const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] !== undefined && c.v.fatos[chave] === c.v.t;
 /** Um "às vezes" que não mexe no gerador principal. */
@@ -96,9 +100,10 @@ export const REWORK3: Conteudo[] = [
     texto: c => `${c.p.quem?.nome ?? 'Em casa'} perguntou, sem jeito, se você não conseguiria alguma coisa para ajudar. ${c.v.educacao.basica ? cotidiano(c.v).aprendiz ?? 'A escola tem vagas de aprendiz: meio período, com contrato, sem largar os estudos.' : ''}`,
     papeis: { quem: genitorEmCasa },
     opcoes: [
-      { id: 'aprendiz', texto: 'Procurar uma vaga de jovem aprendiz',
-        disponivel: c => (c.v.educacao.basica ? true : 'Jovem aprendiz precisa estar na escola.'),
-        resolver: c => ({ texto: 'Você foi atrás: currículo impresso na lan house, fila na agência.', memoria: 'Foi atrás de uma vaga de jovem aprendiz para ajudar em casa.', efeito: () => { novaOportunidade(c.v, { tipo: 'aprendiz', ocupacaoId: 'jovem_aprendiz', meses: 12, chave: 'aprendiz', bonus: 0.3, titulo: 'Jovem aprendiz', texto: 'Uma empresa da cidade recebe aprendizes indicados pela escola. Meio período, carteira assinada, escola garantida.' }); prox(c, 'quem', 3); } }) },
+      { id: 'aprendiz', texto: c => `Procurar uma vaga de ${regrasDaVida(c.v).trabalho.aprendiz?.nome ?? 'aprendiz'}`,
+        // Só onde a lei tem o programa de aprendiz (`mundo/regras`).
+        disponivel: c => (!regrasDaVida(c.v).trabalho.aprendiz ? 'Aqui não há programa de aprendiz para quem estuda.' : c.v.educacao.basica ? true : 'Aprendiz precisa estar na escola.'),
+        resolver: c => ({ texto: 'Você foi atrás: currículo impresso, fila na agência.', memoria: `Foi atrás de uma vaga de ${regrasDaVida(c.v).trabalho.aprendiz?.nome ?? 'aprendiz'} para ajudar em casa.`, efeito: () => { novaOportunidade(c.v, { tipo: 'aprendiz', ocupacaoId: 'jovem_aprendiz', meses: 12, chave: 'aprendiz', bonus: 0.3, titulo: cap1(regrasDaVida(c.v).trabalho.aprendiz?.nome ?? 'aprendiz'), texto: 'Uma empresa da cidade recebe aprendizes indicados pela escola. Meio período, carteira assinada, escola garantida.' }); prox(c, 'quem', 3); } }) },
       { id: 'bicos', texto: 'Fazer bicos nos fins de semana', disponivel: c => (idade(c.v) >= 16 ? (podeTentar(podeComecarRotina(c.v, 'bico', 1)) ? true : 'A semana não comporta.') : 'Bico é a partir dos 16.'),
         resolver: c => ({ texto: 'Entrega, evento, obra: o que aparecesse no sábado.', memoria: 'Começou a fazer bicos para ajudar em casa.', efeito: () => { if (!c.v.rotinas.some(r => r.id === 'bico')) c.v.rotinas.push({ id: 'bico', tInicio: c.v.t, nivel: 1 }); prox(c, 'quem', 3); } }) },
       { id: 'escola', texto: 'Seguir só estudando, e prometer ajudar depois', comportamento: { disciplina: 1 },
@@ -134,7 +139,7 @@ export const REWORK3: Conteudo[] = [
     texto: c => {
       const t = [...c.v.educacao.concluidos].reverse().find(x => x.nivel === 'tecnico');
       const viv = (c.v.educacao.vivencias ?? []).find(x => x.tipo === 'projeto_tecnico');
-      return `Três anos de instituto federal e um diploma de ${t?.nome.replace(/^Técnico em /, 'técnico em ').toLowerCase() ?? 'técnico'}.${viv?.feito ? ` O projeto do laboratório ainda rende conversa.` : ''} Dá para trabalhar na área já, seguir para uma faculdade que continue o que você aprendeu — ou deixar o técnico como um diploma a mais.`;
+      return `Três anos ${educacaoDaVida(c.v).inst.tecnico.replace(/^o /, 'no ').replace(/^a /, 'na ')} e um diploma de ${t?.nome.replace(/^Técnico em /, 'técnico em ').toLowerCase() ?? 'técnico'}.${viv?.feito ? ` O projeto do laboratório ainda rende conversa.` : ''} Dá para trabalhar na área já, seguir para uma faculdade que continue o que você aprendeu — ou deixar o técnico como um diploma a mais.`;
     },
     opcoes: [
       { id: 'area', texto: 'Procurar trabalho na área técnica',

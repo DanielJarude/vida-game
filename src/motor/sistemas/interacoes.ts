@@ -35,6 +35,8 @@ import { vereditoDePagar, disponivel } from './dinheiro';
 import { responderChamado, rotulosDoChamado } from './iniciativas';
 import { ativo as envolvimentoAtivo, proporPorFora, sabeQueAndaNisso } from './ilicito';
 import { contextoDaRelacao, conversarNoApp, encontroDoApp, etapaDoApp, pesoDoContexto, registrarFase } from './relacoes';
+import { executarDesculpas, INTERACOES_DE_CONFLITO } from './conflitos';
+import { estadoDaRelacao } from './lacos';
 
 
 export interface CtxI {
@@ -871,18 +873,17 @@ export const INTERACOES: Interacao[] = [
     }
   },
   {
+    // Pedir desculpas: depois de uma briga (o conflito aberto) ou de muito atrito. Pode ser aceito, em parte ou recusado (`lacos.desculpar`).
     id: 'desculpas', variante: 'principal',
-    quando: c => humano(c) && c.eu >= 8 && c.ip >= 6 && c.vin.tensao >= 45 && (parceriaAtiva(c) || ehDescendente(c.papel) || c.papel === 'genitor' || c.papel === 'irmao' || c.papel === 'amigo' || c.papel === 'amigo_proximo') && (!c.longe || c.casa),
+    quando: c => humano(c) && c.eu >= 8 && c.ip >= 6 && !c.vin.ruptura && (c.vin.tensao >= 45 || (!!c.vin.conflito && c.v.t - c.vin.conflito.t <= 36))
+      && (parceriaAtiva(c) || c.papel === 'saindo' || ehDescendente(c.papel) || c.papel === 'genitor' || c.papel === 'irmao' || c.papel === 'avo' || c.papel === 'parente' || c.papel === 'amigo' || c.papel === 'amigo_proximo' || c.papel === 'colega') && (!c.longe || c.casa || c.vin.convivio.length > 0 || !!c.vin.conflito),
+    disponivel: c => (c.v.fatos[`desculpas_nao_${c.p.id}`] !== undefined && c.v.t - c.v.fatos[`desculpas_nao_${c.p.id}`] < 12 ? bloqueio('incompativel', `${c.p.nome} não aceitou da última vez. Dê tempo.`) : PERMITIDO),
     prioridade: () => 2,
     rotulo: c => `Pedir desculpas a ${c.p.nome}`,
     destaque: true,
-    executar: c => {
+    executar: (c, r) => {
       aplicarPersonalidade(c.v, 'acao:desculpas', { empatia: 1 });
-      const confia = c.vin.confianca >= 45;
-      acalmar(c, confia ? 26 : 14); confiar(c, confia ? 6 : 3); afeto(c, 2);
-      if (c.vin.romance) envolver(c, 4);
-      lembrarCom(c.v, c.p.id, 'Você pediu desculpas, e as coisas voltaram a andar.', 'reconciliacao', 1);
-      return { resultado: confia ? `${c.p.nome} ouviu, ficou quiet${o(c.p)} um tempo e disse "tá bom". Não precisou de mais.` : `${c.p.nome} aceitou as desculpas — do jeito de quem ainda está esperando para ver.` };
+      return executarDesculpas(c, r);
     }
   },
   {
@@ -1045,7 +1046,9 @@ export const INTERACOES: Interacao[] = [
       const out = responderChamado(c.v, r, c.p, c.vin, false);
       return { resultado: out.resultado, titulo: out.titulo };
     }
-  }
+  },
+  // Relações 2.0: discordar, cobrar, fazer as pazes, encerrar a amizade, provocar o rival (`conflitos`).
+  ...INTERACOES_DE_CONFLITO
 ];
 
 /* ------------------------------------------------------- Aproximação */
@@ -1362,7 +1365,7 @@ function declarar(c: CtxI, r: Rng): Saida {
   return { resultado: `${c.p.nome} ficou sem saber onde pôr as mãos. Disse que não, e nos dias seguintes as mensagens ficaram mais curtas.${motivoDoNao(c, motivo)}`, titulo: c.p.nome };
 }
 
-const LUGARES_ENCONTRO_JOVEM = ['uma sorveteria perto da escola', 'o cinema do shopping, filme escolhido às pressas', 'a praça, dividindo um açaí', 'uma festa junina da escola'];
+const LUGARES_ENCONTRO_JOVEM = ['uma sorveteria perto da escola', 'o cinema do shopping, filme escolhido às pressas', 'a praça, dividindo um sorvete', 'a festa da escola'];
 const LUGARES_ENCONTRO = ['um bar pequeno onde a música deixava conversar', 'um restaurante japonês que nenhum dos dois conhecia', 'um show de uma banda que só um de vocês gostava', 'uma feira de domingo, andando sem pressa', 'um café que fechou antes de a conversa acabar'];
 
 function primeiroEncontro(c: CtxI, r: Rng): Saida {
@@ -1435,10 +1438,21 @@ const PESO_VARIANTE = { principal: 3, secundario: 2, discreto: 1, perigo: 0 } as
  * para a menos: a variante dá a base; o momento (um aniversário redondo, uma
  * briga, alguém em quem você anda pensando) sobe o que importa agora.
  */
+/**
+ * Depois de uma RUPTURA (a amizade encerrada, a família que não se fala), os gestos de sempre não cabem — passar
+ * um tempo junto, contar algo que importa: o que existe é tentar fazer as pazes, responder se a pessoa procurar,
+ * resolver o que é prático (os filhos em comum, o médico de quem envelhece) ou tomar distância.
+ */
+const DEPOIS_DA_RUPTURA = new Set(['reconciliar', 'chamado_sim', 'chamado_nao', 'afastar', 'ex_filhos', 'medico', 'cuidar']);
+function cabeAgora(c: CtxI, x: Interacao): boolean {
+  if (!x.quando(c)) return false;
+  return estadoDaRelacao(c.v, c.vin) !== 'rompido' || DEPOIS_DA_RUPTURA.has(x.id);
+}
+
 export function interacoesPara(v: Vida, id: string): Interacao[] {
   const c = ctxPessoa(v, id);
   if (!c || !c.p.vivo) return [];
-  const lista = INTERACOES.filter(x => x.quando(c));
+  const lista = INTERACOES.filter(x => cabeAgora(c, x));
   const rel = (x: Interacao) => (x.variante === 'perigo' ? -1 : PESO_VARIANTE[x.variante ?? 'secundario'] + (x.prioridade?.(c) ?? 0));
   return lista.map((x, k) => ({ x, k, r: rel(x) })).sort((a, b) => b.r - a.r || a.k - b.k).map(y => y.x);
 }
@@ -1471,7 +1485,7 @@ export function disponibilidadeInteracao(v: Vida, id: string, interacao: string)
   const c = ctxPessoa(v, id);
   if (!c || !c.p.vivo) return bloqueio('impossivel', 'Essa pessoa não está mais na sua vida.');
   const def = porId.get(interacao);
-  if (!def || !def.quando(c)) return bloqueio('impossivel', 'Isso não faz sentido com essa pessoa agora.');
+  if (!def || !cabeAgora(c, def)) return bloqueio('impossivel', 'Isso não faz sentido com essa pessoa agora.');
   if (v.anoAtual.acoes.includes(`pessoa:${interacao}:${id}`)) return bloqueio('incompativel', 'Você já fez isso neste ano.');
   if (ROMANTICAS.has(interacao)) {
     const outra = socialDoAno(v).map(a => a.split(':')).find(([, i, quem]) => ROMANTICAS.has(i) && quem !== id && ['interesse', 'saindo'].includes(v.vinculos[quem]?.romance?.estagio ?? ''));

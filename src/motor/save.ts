@@ -290,6 +290,9 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
   return { tipo: 'invalido', motivo: 'Versão de save desconhecida.' };
 }
 
+/** Os tipos de vínculo social que um save pode ter (Relações 2.0 acrescentou o ex-amigo e o rival, opcionais na v20). */
+const ESTAGIOS_VALIDOS = new Set(['conhecido', 'colega', 'amigo', 'amigo_proximo', 'afastado', 'ex_amigo', 'rival']);
+
 function validarBase(d: Record<string, unknown>): string | null {
   const obrig = ['eu', 'corpo', 'mente', 'pessoas', 'vinculos', 'moradia', 'educacao', 'trabalho', 'financas', 'biografia'];
   for (const k of obrig) if (!d[k] || typeof d[k] !== 'object') return `Campo ausente: ${k}.`;
@@ -497,6 +500,11 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     if (!finito(vin.proximidade) || !finito(vin.tensao) || !finito(vin.confianca)) return 'Vínculo com valores inválidos.';
     if (!Array.isArray(vin.historia) || !Array.isArray(vin.convivio)) return 'Vínculo sem história.';
     if (vin.romance && (!finito(vin.romance.envolvimento) || typeof vin.romance.estagio !== 'string')) return 'Relacionamento inválido.';
+    // Relações 2.0 (campos opcionais da v20): se vierem, vêm inteiros.
+    if (vin.estagio !== undefined && !ESTAGIOS_VALIDOS.has(vin.estagio)) return 'Estágio de relação inválido.';
+    if (vin.conflito !== undefined && (!finito(vin.conflito.t) || typeof vin.conflito.assunto !== 'string' || ![1, 2, 3].includes(vin.conflito.gravidade))) return 'Conflito inválido.';
+    if (vin.ruptura !== undefined && (!finito(vin.ruptura.t) || typeof vin.ruptura.porque !== 'string')) return 'Ruptura inválida.';
+    if ((vin.reconciliacao !== undefined && !finito(vin.reconciliacao)) || (vin.proxAno !== undefined && !finito(vin.proxAno))) return 'Vínculo com valores inválidos.';
   }
   for (const p of Object.values(pessoas)) {
     if (p.genitores && p.genitores.some(g => g !== 'eu' && !pessoas[g])) return 'Árvore da família aponta para pessoa inexistente.';

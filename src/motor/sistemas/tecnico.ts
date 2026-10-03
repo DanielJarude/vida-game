@@ -38,7 +38,7 @@ import type { CarreiraDeTecnico, PassagemDeTecnico, PropostaDeTecnico, TabelaEmC
 import { escrever, idade } from '../nucleo';
 import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
-import { aSelecao, clubePorNome, clubesDoPais, divisaoDoNivel, clubesDoNivel, doClube, nivelDaCompeticao, noClube, nomeDaSelecao, oClube, type Clube } from '../dados/clubes';
+import { aSelecao, clubePorNome, clubesDoPais, daCompeticao, divisaoDoNivel, clubesDoNivel, doClube, nivelDaCompeticao, noClube, nomeDaSelecao, oClube, type Clube } from '../dados/clubes';
 import { capitalDoPais, grandesCentros, municipio, paisDaCidade } from '../dados/lugares';
 import { ocupacao } from '../dados/ocupacoes';
 import { habilidade } from './frentes';
@@ -71,7 +71,7 @@ const tetoDoClube = (nome: string) => { const p = porteDe(nome); return !p ? 2 :
 /** Até onde um acesso pode levar: o tradicional campeão da Série B sobe; o regional, até a Série B. */
 const tetoDeAcesso = (nome: string) => Math.min(4, tetoDoClube(nome) + 1);
 const pisoDoClube = (nome: string) => { const p = porteDe(nome); return !p ? 1 : p === 'grande' ? 3 : p === 'tradicional' ? 2 : 1; };
-const nomeDaCompeticao = (nivel: number) => divisaoDoNivel(nivel) ?? 'campeonato estadual';
+const nomeDaCompeticao = (nivel: number) => divisaoDoNivel(nivel) || 'copa regional';
 /**
  * O torneio curto do começo da temporada: no Brasil, o estadual; fora, a copa
  * nacional (que existe em quase todo país: a Copa del Rey, a FA Cup, a Copa
@@ -81,7 +81,7 @@ const torneioCurto = (municipioId: string) => (paisDaCidade(municipioId) === 'BR
   ? { nome: 'campeonato estadual', no: 'no campeonato estadual', campeao: 'estadual', rival: 'um time do interior' }
   : { nome: 'copa nacional', no: 'na copa nacional', campeao: 'da copa nacional', rival: 'um time menor' });
 /** "da Série A", "do campeonato estadual", "das divisões de acesso". */
-const daComp = (nivel: number) => (nivel === 2 ? 'das divisões de acesso' : nivel === 1 ? 'do campeonato estadual' : `da ${nomeDaCompeticao(nivel)}`);
+const daComp = (nivel: number) => daCompeticao(nomeDaCompeticao(nivel));
 
 export interface ResumoDoTecnico { clubes: number; jogos: number; v: number; e: number; d: number; titulos: number; acessos: number; rebaixamentos: number; demissoes: number; renovacoes: number; aproveitamento: number; temporadas: number }
 

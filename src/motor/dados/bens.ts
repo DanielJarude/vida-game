@@ -78,7 +78,7 @@ export interface ModeloVeiculo {
 
 /** Classes de veículo (os ids ficam: estão nos saves e em toda a simulação). */
 export const VEICULOS: readonly ModeloVeiculo[] = [
-  { id: 'bike', nome: 'bicicleta', categoria: 'bicicleta', preco: 1200, usoMensal: 15, taxaAnual: 0, idadeMin: 8, cnh: false, lugares: 1, conforto: 1, fragilidade: 0.5, descricao: 'Sem combustível, sem IPVA. Vai até onde as pernas deixam.', usado: true, fatorConserto: 1, pesoUsado: 1 },
+  { id: 'bike', nome: 'bicicleta', categoria: 'bicicleta', preco: 1200, usoMensal: 15, taxaAnual: 0, idadeMin: 8, cnh: false, lugares: 1, conforto: 1, fragilidade: 0.5, descricao: 'Sem combustível, sem imposto. Vai até onde as pernas deixam.', usado: true, fatorConserto: 1, pesoUsado: 1 },
   { id: 'bike_eletrica', nome: 'bicicleta elétrica', categoria: 'bicicleta', preco: 5500, usoMensal: 30, taxaAnual: 0, idadeMin: 16, cnh: false, lugares: 1, conforto: 2, fragilidade: 0.8, descricao: 'Anda longe sem chegar suado. A bateria um dia cansa.', usado: true, fatorConserto: 1, pesoUsado: 0.6, eletrica: true },
   { id: 'moto_pequena', nome: 'moto pequena', categoria: 'moto', preco: 19000, usoMensal: 200, taxaAnual: 0.035, idadeMin: 18, cnh: true, lugares: 2, conforto: 2, fragilidade: 0.9, descricao: 'Econômica, fura o trânsito. Ferramenta de trabalho de muita gente — e arriscada.', usado: true, fatorConserto: 1, pesoUsado: 3 },
   { id: 'moto_media', nome: 'moto média', categoria: 'moto', preco: 34000, usoMensal: 280, taxaAnual: 0.04, idadeMin: 18, cnh: true, lugares: 2, conforto: 3, fragilidade: 0.9, descricao: 'Aguenta estrada e garupa.', usado: true, fatorConserto: 1, pesoUsado: 1.5 },

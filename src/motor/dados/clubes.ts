@@ -158,6 +158,16 @@ export const DIVISAO_DO_NIVEL = ['', 'campeonato estadual', 'divisões de acesso
 /** A divisão do nível na liga do país ("Série A", "LaLiga", "J1 League"). */
 export const divisaoDoNivel = (nivel: number, pais = paisCorrente()): string =>
   (nivel < 1 ? '' : perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO).esporte.divisoes[Math.min(4, nivel) - 1] ?? '');
+/** "da Série A", "do campeonato estadual", "das divisões de acesso", "da Bundesliga": a contração com o gênero do nome. */
+export function daCompeticao(nome: string): string {
+  if (/^(divisões|ligas|competições)/i.test(nome)) return `das ${nome}`;
+  if (/^(torneios|campeonatos)/i.test(nome)) return `dos ${nome}`;
+  if (/^(campeonato|torneio|championship|national\b|championnat|circuito)/i.test(nome)) return `do ${nome}`;
+  return `da ${nome}`;
+}
+const ELITE = /Série A|NBB|Superliga|circuito principal|elite nacional|entre os times de ponta/;
+/** Elite: a do Brasil e a de qualquer liga do mundo carregada (o topo das divisões de cada perfil). */
+export const ehElite = (x: string) => ELITE.test(x) || nivelDaCompeticao(x) === 4;
 /** O nível (1..4) de uma competição pelo nome, em qualquer liga carregada (para pesar um título): "LaLiga" → 4. */
 export function nivelDaCompeticao(texto: string): number | undefined {
   for (const pais of POR_PAIS.keys()) {

@@ -32,6 +32,8 @@ import type { PerfilDePais } from '../tipos';
 
 export const AUSTRALIA: PerfilDePais = {
   id: 'AU',
+  // Regras legais: a carteira é ESTADUAL (L, P1/P2, plena — `REGRAS_DAS_DIVISOES`); escola até os 17 (abstração nacional).
+  regras: { escolaObrigatoriaAte: 17, direcao: { aprendiz: { idade: 16, nome: 'licença de aprendiz (L)' }, provisoria: { idade: 17, nome: 'licença provisória (P)' }, plena: 20 } },
   gentilico: ['australiano', 'australiana'],
   idiomas: ['inglês'],
   divisao: {
@@ -261,6 +263,8 @@ export const AUSTRALIA: PerfilDePais = {
 
 export const NOVA_ZELANDIA: PerfilDePais = {
   id: 'NZ',
+  // Regras legais: GDLS (aprendiz aos 16, restrita aos 16½ → 17, plena aos 18 — 17½ com curso).
+  regras: { direcao: { aprendiz: { idade: 16, nome: 'licença de aprendiz' }, provisoria: { idade: 17, nome: 'licença restrita' }, plena: 18 } },
   gentilico: ['neozelandês', 'neozelandesa'],
   idiomas: ['inglês', 'maori'],
   divisao: {

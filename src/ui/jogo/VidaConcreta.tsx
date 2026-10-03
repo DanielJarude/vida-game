@@ -25,7 +25,7 @@ import { Lugar, type QualLugar } from './material/Lugares';
 import { dinheiroCurto } from '../leituraMaterial';
 import { SECOES_VIDA, type Aba, type SecaoVida } from '../navegacao';
 import '../material.css';
-import { leituraDaAutoescola } from '../../motor/sistemas/autoescola';
+import { habilitacaoDaVida, leituraDaAutoescola } from '../../motor/sistemas/autoescola';
 import { lojaNaCidade } from '../../motor/sistemas/mercado';
 import { disponivel } from '../../motor/sistemas/dinheiro';
 import { modeloVeiculo } from '../../motor/dados/bens';
@@ -180,13 +180,14 @@ function Compras({ vida, agir, abrir }: { vida: Vida; agir: (a: Acao) => boolean
               );
             })}
           </ul>
-          {g.titulo === 'Transporte' && i >= 17 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarImpossivel>Tirar carteira de motorista (autoescola)</BotaoAcao>}
+          {g.titulo === 'Transporte' && i >= habilitacaoDaVida(vida).comeca - 1 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarImpossivel>{`Tirar ${habilitacaoDaVida(vida).a} (${habilitacaoDaVida(vida).escola})`}</BotaoAcao>}
+          {g.titulo === 'Transporte' && i >= habilitacaoDaVida(vida).comeca - 2 && !vida.trabalho.licencas.includes('cnh') && <p className="nota">{habilitacaoDaVida(vida).frase}</p>}
           {g.titulo === 'Transporte' && leituraDaAutoescola(vida) && (
             <div className="autoescola">
               <p className="nota">{leituraDaAutoescola(vida)}</p>
               <div className="grupo-acoes grupo-acoes--linha">
                 <BotaoAcao vida={vida} acao={{ tipo: 'cnh_prova' }} agir={agir} variante="secundario" ocultarBloqueado ocultarImpossivel>Fazer a prova teórica</BotaoAcao>
-                <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'teoria' }} agir={agir} variante="discreto" ocultarImpossivel>Estudar a apostila e fazer simulados</BotaoAcao>
+                <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'teoria' }} agir={agir} variante="discreto" ocultarImpossivel>Estudar o manual e fazer simulados</BotaoAcao>
                 <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'pratica' }} agir={agir} variante="discreto" ocultarImpossivel>Fazer aulas extras de direção</BotaoAcao>
               </div>
             </div>

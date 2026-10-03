@@ -31,6 +31,8 @@ import { papelDe, vinculoReal, type Papel } from './vinculos';
 import { atraiGenero, podeTerRomance } from './romance';
 import { compatibilidade } from './social';
 import { mesesProcurando } from './intencao';
+import { discutir } from './lacos';
+import { rngDe } from '../rng';
 
 const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const o = (p: Pessoa) => flex(p.genero, 'o', 'a', 'e');
@@ -75,6 +77,9 @@ export function rotulosDoChamado(p: Pessoa, ch: Chamado): { sim: string; nao: st
     case 'conversa_casal': return { sim: 'Sentar e conversar de verdade', nao: 'Deixar para depois' };
     case 'aproximacao': return { sim: 'Topar', nao: 'Agradecer e deixar para outro dia' };
     case 'distancia_casal': return { sim: 'Conversar sobre o que fazer com a distância', nao: 'Dizer que está bom assim, por enquanto' };
+    case 'desculpas': return { sim: 'Aceitar as desculpas', nao: 'Dizer que ainda não dá' };
+    case 'cobranca': return { sim: 'Ouvir e conversar de verdade', nao: 'Encerrar o assunto' };
+    case 'reaparecer': return { sim: 'Responder e marcar um café', nao: 'Deixar sem resposta' };
   }
 }
 
@@ -151,6 +156,32 @@ export function responderChamado(v: Vida, _r: Rng, p: Pessoa, vin: Vinculo, sim:
       atrito(vin, -6);
       return { resultado: 'Vocês sentaram (cada um numa tela) para falar do que fazer.', titulo: tituloP };
     }
+    case 'desculpas': {
+      // A pessoa veio pedir desculpas pela briga que foi dela. Aceitar fecha o conflito (e, depois de uma ruptura, reabre a porta).
+      if (!sim) { atrito(vin, 4); v.fatos[`desculpas_recusou_${p.id}`] = v.t; return { resultado: `${p.nome} disse que entendia, e que a porta fica aberta.`, titulo: tituloP }; }
+      atrito(vin, -26); confiar(vin, 4); afeto(vin, 5);
+      vin.conflito = undefined;
+      vin.reconciliacao = v.t;
+      if (vin.estagio === 'ex_amigo') vin.estagio = 'afastado';
+      lembrarCom(v, p.id, `${p.nome} pediu desculpas, e você aceitou.`, 'reconciliacao', 2);
+      return { resultado: `Vocês se abraçaram meio sem jeito. Ficou leve — mais do que antes da briga.`, titulo: tituloP };
+    }
+    case 'cobranca': {
+      // A pessoa traz a briga: ouvir pode resolver; encerrar o assunto deixa a ferida aberta.
+      if (!sim) { atrito(vin, 10); afeto(vin, -4); vin.conflito = { t: v.t, assunto: ch.assunto ?? 'o que ficou', gravidade: 2, quem: 'outro' }; lembrarCom(v, p.id, `Quis falar sobre ${ch.assunto ?? 'o que ficou'}; você encerrou o assunto.`, 'conflito', 1); return { resultado: `${p.nome} ficou em silêncio. Depois, mandou um "tá bom" seco.`, titulo: tituloP }; }
+      const d = discutir(v, rngDe(v.id, 'cobranca', p.id, v.t), p, vin, 2, ch.assunto ?? 'o que ficou');
+      return { resultado: d === 'resolveu' ? `Foi difícil de ouvir, e você ouviu. No fim, ${p.nome} disse que fazia tempo que precisava ter dito.` : d === 'desconforto' ? 'Cada um disse a sua parte. Não ficou resolvido, mas ficou dito.' : d === 'ruptura' ? `A conversa virou briga e terminou com uma porta batendo. ${p.nome} disse que não dá mais.` : `A conversa virou briga. Cada um saiu com a sua razão.`, titulo: tituloP };
+    }
+    case 'reaparecer': {
+      if (!sim) { v.fatos[`reaparecer_nao_${p.id}`] = v.t; return { resultado: `A mensagem ficou ali, sem resposta. ${p.nome} não insistiu.`, titulo: tituloP }; }
+      atrito(vin, -20); afeto(vin, 10); confiar(vin, 3);
+      vin.reconciliacao = v.t;
+      vin.conflito = undefined;
+      if (vin.estagio === 'ex_amigo') vin.estagio = 'afastado';
+      const anos = vin.ruptura ? Math.round((v.t - vin.ruptura.t) / 12) : undefined;
+      lembrarCom(v, p.id, anos ? `${p.nome} reapareceu depois de ${anos} anos — e vocês tomaram um café.` : `${p.nome} reapareceu, e vocês tomaram um café.`, 'reconciliacao', 2);
+      return { resultado: `O café durou três horas. Ninguém falou da briga até o fim — e, quando falaram, já não doía igual.`, titulo: tituloP };
+    }
     case 'conversa_casal': {
       const rom = vin.romance;
       if (!sim) {
@@ -204,6 +235,10 @@ function expirarChamados(v: Vida): void {
       // O convite de um colega que ficou sem resposta: nada quebra — a chance só passa.
       case 'aproximacao': afeto(vin, -1); break;
       case 'distancia_casal': if (vin.romance) vin.romance.envolvimento = clamp(vin.romance.envolvimento - 7); atrito(vin, 6); lembrarCom(v, p.id, 'Pediu para falar da distância; a conversa não aconteceu.', 'distancia', 1, ch.t); break;
+      // As desculpas sem resposta e a cobrança ignorada pesam; quem reapareceu e não teve resposta, some de novo.
+      case 'desculpas': atrito(vin, 3); break;
+      case 'cobranca': atrito(vin, 8); afeto(vin, -4); lembrarCom(v, p.id, `Quis falar sobre ${ch.assunto ?? 'o que ficou'}, e a conversa não veio.`, 'conflito', 1, ch.t); break;
+      case 'reaparecer': v.fatos[`reaparecer_nao_${p.id}`] = v.t; break;
     }
   }
 }
@@ -296,6 +331,19 @@ function novaIniciativa(v: Vida, r: Rng): void {
     if (ultimo !== undefined && v.t - ultimo < 24) continue;
     // Quem tomou distância não é procurado (a escolha foi respeitada, por enquanto).
     if (vin.distancia !== undefined && v.t - vin.distancia < 60 && papel !== 'parceiro') continue;
+    // Relações 2.0 — o outro lado também age sobre o conflito (só a partir dos estados novos: o conflito, a ruptura).
+    const conf = vin.conflito;
+    if (conf && v.t - conf.t <= 36 && eu >= 12 && ip >= 12) {
+      const t = p.temperamento;
+      // Quem começou a briga e tem bom gênio pede desculpas; quem foi ferido e é franco volta ao assunto.
+      if (conf.quem === 'outro' && t.afabilidade > -0.1 && v.fatos[`desculpas_recusou_${p.id}`] === undefined) { lista.push({ p, vin, tipo: 'desculpas', peso: 1.4 + t.afabilidade, texto: `${p.nome} procurou você para pedir desculpas pela briga sobre ${conf.assunto}.` }); continue; }
+      if (conf.quem === 'eu' && vin.proximidade >= 30 && t.estabilidade > -0.4) { lista.push({ p, vin, tipo: 'cobranca', peso: 0.9 + Math.max(0, t.extroversao) * 0.5, texto: `${p.nome} disse que precisa falar sobre ${conf.assunto}.`, assunto: conf.assunto }); continue; }
+    }
+    // O ex-amigo que reaparece anos depois da ruptura (uma mensagem, um "lembrei de você").
+    if (vin.estagio === 'ex_amigo' && vin.ruptura && v.t - vin.ruptura.t >= 60 && v.fatos[`reaparecer_nao_${p.id}`] === undefined && eu >= 16) {
+      lista.push({ p, vin, tipo: 'reaparecer', peso: 0.5 + Math.max(0, p.temperamento.afabilidade) * 0.6, texto: `${p.nome} mandou mensagem depois de ${Math.round((v.t - vin.ruptura.t) / 12)} anos sem se falarem: "lembrei de você hoje".` });
+      continue;
+    }
     // O casal em cidades diferentes: alguém pergunta o que fazer com isso.
     if (papel === 'parceiro' && vin.romance && !moraJunto(vin) && p.municipioId !== v.moradia.municipioId && v.t - vin.romance.tEstagio >= 12) {
       lista.push({ p, vin, tipo: 'distancia_casal', peso: 2.2, texto: `${p.nome} perguntou até quando vai ser assim, cada um numa cidade.` });
@@ -354,7 +402,7 @@ function novaIniciativa(v: Vida, r: Rng): void {
     }
     // Convite: amigo por perto chama para alguma coisa.
     if ((papel === 'amigo' || papel === 'amigo_proximo') && eu >= 14 && ip >= 14 && p.municipioId === v.moradia.municipioId) {
-      const assunto = r.pick(eu < 18 ? ['a festa de aniversário', 'o show no fim de semana', 'um dia de praia ou cachoeira'] : ['uma viagem curta de fim de semana', 'o aniversário', 'um show', 'um churrasco com a turma antiga']);
+      const assunto = r.pick(eu < 18 ? ['a festa de aniversário', 'o show no fim de semana', 'um dia de praia ou cachoeira'] : ['uma viagem curta de fim de semana', 'o aniversário', 'um show', 'um almoço com a turma antiga']);
       lista.push({ p, vin, tipo: 'convite', peso: 0.5 + Math.max(0, p.temperamento.extroversao) * 0.6, texto: `${p.nome} chamou você para ${assunto}.`, assunto });
     }
   }

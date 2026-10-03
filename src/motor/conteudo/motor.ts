@@ -2,6 +2,7 @@
  * Seleção e aplicação de conteúdo.
  */
 
+import { lugarDe, noEscopo } from '../mundo/escopo';
 import type { Rng } from '../rng';
 import type { Momento, Pessoa, Vida } from '../tipos';
 import { contexto, txt, type Acontecimento, type Conteudo, type Ctx, type Decisao } from './base';
@@ -26,6 +27,7 @@ function ultimaOcorrencia(v: Vida, id: string): number | undefined {
 export function preparar(c: Conteudo, v: Vida, r: Rng): Ctx | null {
   const i = idade(v);
   if (i < c.idade[0] || i > c.idade[1]) return null;
+  if (!noEscopo(c.escopo, lugarDe(v.moradia.municipioId))) return null;
   const ult = ultimaOcorrencia(v, c.id);
   if (ult !== undefined) {
     if (c.repetir === undefined) return null;

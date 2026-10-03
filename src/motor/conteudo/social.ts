@@ -7,6 +7,7 @@
  * jogador; a das outras pessoas, delas.
  */
 
+import { textoLocal } from '../mundo/locais';
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import * as P from './papeis';
@@ -260,11 +261,11 @@ export const SOCIAL: Conteudo[] = [
         resolver: c => { largar(c); prox(c, 'filho', 4); return { texto: `Vocês montaram um currículo juntos. ${c.p.filho.nome} saiu para entregar numa manhã de chuva.`, memoria: `${c.p.filho.nome} largou a escola aos ${idadePessoa(c.v, c.p.filho)} para trabalhar.`, lembrar: ['filho', 'Largou a escola; você ajudou a procurar emprego.'] }; }
       },
       {
-        id: 'supletivo', texto: 'Propor terminar no supletivo, à noite',
+        id: 'supletivo', texto: c => `Propor terminar ${textoLocal(c.v, 'supletivo').replace(/^o /, 'no ').replace(/^a /, 'na ')}, à noite`,
         resolver: c => {
           const vin = c.v.vinculos[c.p.filho.id];
           if (c.r.chance(0.3 + vin.confianca / 250)) {
-            return { texto: `${c.p.filho.nome} topou trabalhar de dia e estudar à noite. Vai demorar mais; vai terminar.`, memoria: null, lembrar: ['filho', 'Trocou a escola pelo supletivo à noite.'] };
+            return { texto: `${c.p.filho.nome} topou trabalhar de dia e estudar à noite. Vai demorar mais; vai terminar.`, memoria: null, lembrar: ['filho', `Trocou a escola pelo ${textoLocal(c.v, 'supletivo').replace(/^(o|a) /, '')} à noite.`] };
           }
           largar(c);
           return { texto: `${c.p.filho.nome} disse que ia pensar. Não se matriculou.`, memoria: `${c.p.filho.nome} largou a escola aos ${idadePessoa(c.v, c.p.filho)}.` };
