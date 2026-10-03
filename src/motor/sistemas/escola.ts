@@ -10,6 +10,11 @@
  * disponível em Tarauacá.
  */
 
+import { paisCorrente } from '../mundo/moeda';
+import { perfilDoPais, temPerfil } from '../mundo/registro';
+import { salarioMinimoDoPais } from '../mundo/economia';
+import { doPrograma, educacaoDaVida, oPrograma, paisDaVida } from '../mundo/vida';
+import { dinheiroCurto as moedaCurta } from '../texto';
 import { LISTA_ESPECIALIDADES, modeloEspecialidade, type EspecialidadeMedica } from '../dados/especialidades';
 import { avaliacaoDaResidencia, MOTIVO_RESIDENCIA, preparoDaResidencia } from './medicina';
 import type { Rng } from '../rng';
@@ -22,10 +27,9 @@ import { estudarMaterias, habilidade, materiasExtremas, mediaEscolar, praticar }
 export const NOME_MATERIA: Record<string, string> = { exatas: 'matemática', linguagens: 'português', ciencias: 'ciências', humanas: 'história' };
 import { marcar } from './marcas';
 import type { Dominio } from '../tipos';
-import { economiaLocal, municipio, nivelDeOferta, nomeLugar } from '../dados/lugares';
+import { cidadesDoPais, economiaLocal, municipio, nivelDeOferta, nomeLugar } from '../dados/lugares';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { rendaPerCapita } from './domicilio';
-import { SALARIO_MINIMO } from './renda';
 import { flex } from '../texto';
 import { anoDe } from '../tempo';
 import { abalar } from './abalo';
@@ -62,19 +66,22 @@ export function redeParaCasa(v: Vida): 'publica' | 'privada' {
   return pc > 2600 ? 'privada' : 'publica';
 }
 
-export function rotuloSerie(b: EscolaBasica): string {
+export function rotuloSerie(b: EscolaBasica, pais = paisCorrente()): string {
+  // Os nomes das etapas são do país (o "fundamental" e o "ensino médio" do Brasil; a "primária" e a "secundária" alhures).
+  const e = perfilDoPais(temPerfil(pais) ? pais : 'BR').educacao.etapas;
   if (b.etapa === 'creche') return 'creche';
   if (b.etapa === 'pre') return 'pré-escola';
-  if (b.etapa === 'medio') return `${b.serie}ª série do ensino médio`;
-  return `${b.serie}º ano do fundamental`;
+  if (b.etapa === 'medio') return e.serieMedio === 'série' ? `${b.serie}ª série do ${e.medio}` : `${b.serie}º ano do ${e.medio}`;
+  return `${b.serie}º ano do ${e.fundamental}`;
 }
 
 function escola(v: Vida, rede: 'publica' | 'privada', etapa: EscolaBasica['etapa']): string {
   const m = municipio(v.moradia.municipioId);
   if (rede === 'privada') return etapa === 'medio' ? 'um colégio particular' : 'uma escola particular';
-  if (etapa === 'medio') return 'a escola estadual do bairro';
-  if (etapa === 'creche') return 'a creche municipal';
-  return m.perfil === 'pequena' ? 'a escola municipal da cidade' : 'a escola municipal do bairro';
+  const ed = educacaoDaVida(v);
+  if (etapa === 'medio') return `a ${ed.inst.escolaMedio} do bairro`;
+  if (etapa === 'creche') return ed.etapas.publica.creche;
+  return m.perfil === 'pequena' ? `a ${ed.inst.escolaFundamental} da cidade` : `a ${ed.inst.escolaFundamental} do bairro`;
 }
 
 /* ------------------------------------------------------------ Desempenho */
@@ -309,14 +316,17 @@ export function notaParaCurso(v: Vida, c: Curso): number {
 
 export function podeFazerEnem(v: Vida): Veredito {
   const i = idade(v);
-  if (i < 15) return bloqueio('impossivel', 'O ENEM é para quem está terminando o ensino médio.');
+  const ed = educacaoDaVida(v);
+  // Onde a universidade pública é de acesso aberto (a Argentina, o Uruguai), não há prova para entrar.
+  if (ed.aberto) return bloqueio('impossivel', 'Aqui não há prova para entrar na universidade pública: a matrícula é aberta.');
+  if (i < 15) return bloqueio('impossivel', `${ed.O} é para quem está terminando o ${ed.etapas.medio}.`);
   const e = v.educacao;
   const noTerceiro = e.basica?.etapa === 'medio' && e.basica.serie >= 3;
   if (!noTerceiro && !temEscolaridade(v, 'medio') && !(e.basica?.etapa === 'medio')) {
     return bloqueio('requisito', 'Precisa estar no ensino médio ou tê-lo concluído.');
   }
   if (e.enem.some(x => anoDe(x.t) === anoDe(v.t) || x.t > v.t - 12)) {
-    return bloqueio('incompativel', 'O ENEM deste ano já foi feito. A próxima prova é no ano que vem.');
+    return bloqueio('incompativel', `${ed.O} deste ano já foi feito. A próxima prova é no ano que vem.`);
   }
   return { grau: 'permitido' };
 }
@@ -328,8 +338,8 @@ export function fazerEnem(v: Vida, r: Rng): number {
   v.educacao.enem.push({ t: v.t, nota, areas });
   const faixa = nota >= 750 ? 'uma nota que abre quase qualquer porta' : nota >= 650 ? 'uma boa nota' : nota >= 520 ? 'uma nota mediana' : 'uma nota baixa';
   const texto = anterior === 0
-    ? `Fez o ENEM pela primeira vez e tirou ${nota} — ${faixa}.`
-    : nota > anterior ? `Fez o ENEM de novo e subiu para ${nota}.` : `Fez o ENEM de novo: ${nota}, sem melhorar.`;
+    ? `Fez ${educacaoDaVida(v).o} pela primeira vez e tirou ${nota} — ${faixa}.`
+    : nota > anterior ? `Fez ${educacaoDaVida(v).o} de novo e subiu para ${nota}.` : `Fez ${educacaoDaVida(v).o} de novo: ${nota}, sem melhorar.`;
   escrever(v, { texto, relevancia: anterior === 0 || nota > anterior + 40 ? 'biografia' : 'cotidiano', tema: 'estudo', tom: nota >= 650 ? 'bom' : nota < 500 ? 'ruim' : 'neutro', escolha: true });
   devolutivaDoEnem(v, areas);
   return nota;
@@ -362,7 +372,8 @@ function temFormacaoNaArea(v: Vida, area: string, nivel?: NivelCurso): boolean {
 
 /** Cotas (Lei 12.711): estudou em escola pública e tem renda per capita baixa. */
 export function temCota(v: Vida): boolean {
-  return !temFato(v, 'estudou_privada') && rendaPerCapita(v) <= 1.5 * SALARIO_MINIMO;
+  // Só onde a lei reserva vagas (no Brasil, a Lei 12.711); o teto é o salário mínimo do país.
+  return educacaoDaVida(v).cotas && !temFato(v, 'estudou_privada') && rendaPerCapita(v) <= 1.5 * salarioMinimoDoPais(paisDaVida(v));
 }
 
 function requisitoDoCurso(v: Vida, c: Curso): Veredito | null {
@@ -404,6 +415,12 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
   const cota = temCota(v);
   const pc = rendaPerCapita(v);
   const opcoes: OpcaoCurso[] = [];
+  // A universidade do país onde se mora: como se entra (prova, acesso aberto, candidatura), quanto a pública
+  // cobra, que bolsa e que crédito existem (`mundo/paises`, campo `educacao`).
+  const ed = educacaoDaVida(v);
+  const bolsa = ed.bolsa;
+  const credito = ed.credito;
+  const minimo = salarioMinimoDoPais(paisDaVida(v));
 
   for (const c of CURSOS) {
     const req = requisitoDoCurso(v, c);
@@ -416,17 +433,22 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
       const existeAqui = oferta >= c.publica;
       const lugar = existeAqui ? aqui : capitalDoEstado(aqui);
       const observacao = existeAqui ? undefined : `Não existe aqui — só em ${nomeLugar(lugar)}. Exige mudar de cidade.`;
-      if (c.nivel === 'superior') {
+      if (c.nivel === 'superior' && ed.aberto) {
+        // Acesso aberto (a universidade pública argentina, a Udelar): a matrícula é aberta; o filtro é o primeiro ano.
+        const mensP = Math.round(mens * ed.publicaCobra / 10) * 10;
+        add({ via: 'sisu', modalidade: 'presencial', rede: 'publica', mensalidade: mensP, veredito: { grau: 'permitido', chance: 0.95 }, municipioId: lugar, observacao: [observacao, 'Acesso aberto: a matrícula é livre; o primeiro ano é que filtra.'].filter(Boolean).join(' ') });
+      } else if (c.nivel === 'superior') {
         const nota = notaParaCurso(v, c);
         const corte = c.corte - (cota ? 45 : 0);
         const veredito: Veredito = nota === 0
-          ? bloqueio('requisito', 'Precisa de uma nota do ENEM dos últimos três anos.')
+          ? bloqueio('requisito', `Precisa de uma nota ${ed.do} dos últimos três anos.`)
           : nota >= corte
             ? { grau: 'permitido', chance: Math.min(0.95, 0.55 + (nota - corte) / 120) }
             : nota >= corte - 30
               ? { grau: 'improvavel', chance: 0.15, motivo: `Nota ${nota} abaixo do corte (~${corte}). Pode entrar na lista de espera.` }
               : bloqueio('requisito', `Nota ${nota} muito abaixo do corte (~${corte}${cota ? ', já com cota' : ''}).`);
-        add({ via: 'sisu', modalidade: 'presencial', rede: 'publica', mensalidade: 0, veredito, municipioId: lugar, observacao: [observacao, cota ? 'Concorre por cota.' : ''].filter(Boolean).join(' ') || undefined });
+        // Onde a pública cobra (os EUA, o Reino Unido, o Japão), a mensalidade é uma fração da particular.
+        add({ via: 'sisu', modalidade: 'presencial', rede: 'publica', mensalidade: Math.round(mens * ed.publicaCobra / 10) * 10, veredito, municipioId: lugar, observacao: [observacao, cota ? 'Concorre por cota.' : ''].filter(Boolean).join(' ') || undefined });
       } else {
         // qualificação e técnico públicos, residência, mestrado, doutorado: processo seletivo próprio
         if (c.nivel === 'mestrado' || c.nivel === 'doutorado') {
@@ -459,18 +481,21 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
       const lugar = existeAqui ? aqui : capitalDoEstado(aqui);
       const observacao = existeAqui ? undefined : `Não existe aqui — só em ${nomeLugar(lugar)}.`;
       add({ via: 'privada', modalidade: 'presencial', rede: 'privada', mensalidade: mens, veredito: { grau: 'permitido', chance: c.id === 'medicina' ? 0.6 : 0.95 }, municipioId: lugar, observacao });
-      if (c.nivel === 'superior') {
-        // ProUni: bolsa integral para renda per capita até 1,5 SM e ENEM razoável.
+      if (c.nivel === 'superior' && bolsa) {
+        // A bolsa pública (no Brasil, o ProUni: bolsa integral para renda per capita até 1,5 SM e ENEM razoável).
         const nota = notaParaCurso(v, c);
-        const prouni: Veredito = pc > 1.5 * SALARIO_MINIMO
-          ? bloqueio('requisito', 'ProUni é para renda familiar de até 1,5 salário mínimo por pessoa.')
-          : nota < 450 ? bloqueio('requisito', 'ProUni exige ENEM recente com pelo menos 450 pontos.')
+        const prouni: Veredito = pc > bolsa.teto * minimo
+          ? bloqueio('requisito', `${bolsa!.nome} é para renda familiar de até ${bolsa!.teto.toLocaleString('pt-BR')} salário mínimo por pessoa.`)
+          : nota < 450 && !ed.aberto ? bloqueio('requisito', `${bolsa!.nome} exige ${ed.nome} recente com pelo menos 450 pontos.`)
             : { grau: nota >= c.corte - 60 ? 'permitido' : 'improvavel', chance: clamp(0.25 + (nota - (c.corte - 90)) / 200, 0.05, 0.8) };
         add({ via: 'prouni', modalidade: 'presencial', rede: 'privada', mensalidade: 0, veredito: prouni, municipioId: lugar, observacao });
-        // FIES: financiamento, renda per capita até 3 SM.
-        const fies: Veredito = pc > 3 * SALARIO_MINIMO
-          ? bloqueio('requisito', 'FIES é para renda de até 3 salários mínimos por pessoa.')
-          : nota < 450 ? bloqueio('requisito', 'FIES exige ENEM com pelo menos 450 pontos.')
+      }
+      if (c.nivel === 'superior' && credito) {
+        // O crédito estudantil público (no Brasil, o FIES: renda per capita até 3 SM).
+        const nota = notaParaCurso(v, c);
+        const fies: Veredito = pc > (credito.teto ?? Infinity) * minimo
+          ? bloqueio('requisito', `${credito!.nome} é para renda de até ${credito!.teto ?? 0} salários mínimos por pessoa.`)
+          : nota < 450 && !ed.aberto ? bloqueio('requisito', `${credito!.nome} exige ${ed.nome} com pelo menos 450 pontos.`)
             : { grau: 'permitido', chance: 0.7 };
         add({ via: 'fies', modalidade: 'presencial', rede: 'privada', mensalidade: 0, veredito: fies, municipioId: lugar, observacao: `A mensalidade vira dívida a pagar depois de formado. ${observacao ?? ''}`.trim() });
       }
@@ -495,8 +520,11 @@ export function em(instituicao: string): string {
 
 export function capitalDoEstado(id: string): string {
   const m = municipio(id);
-  const capital = CAPITAIS[m.uf];
-  return capital ?? id;
+  if (m.pais === 'BR') return CAPITAIS[m.uf] ?? id;
+  // Fora do Brasil: a sede da divisão (a capital da província, do estado, da região) — ou, sem ela no catálogo, a maior cidade do país.
+  const doPais = cidadesDoPais(m.pais);
+  const sede = doPais.find(x => x.uf === m.uf && x.capital) ?? doPais.find(x => x.uf === m.uf && x.perfil === 'metropole');
+  return (sede ?? doPais.find(x => x.perfil === 'metropole') ?? doPais.find(x => x.capitalNacional) ?? m).id;
 }
 
 const CAPITAIS: Record<string, string> = {
@@ -559,11 +587,11 @@ function motivoDaPos(o: ReturnType<typeof avaliacaoDaPos>['obstaculo']): string 
 }
 
 const INSTITUICOES: Record<Via, (c: Curso, v: Vida, lugar: string) => string> = {
-  sisu: (c, _v, lugar) => (c.nivel === 'superior' ? `a universidade federal em ${municipio(lugar).nome}` : `o instituto federal`),
-  selecao_publica: (c, _v, lugar) => c.nivel === 'livre' ? `um curso gratuito do Sistema S em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? `o instituto federal em ${municipio(lugar).nome}` : c.nivel === 'residencia' ? `o hospital universitário em ${municipio(lugar).nome}` : `a universidade federal em ${municipio(lugar).nome}`,
+  sisu: (c, v, lugar) => (c.nivel === 'superior' ? `${educacaoDaVida(v).inst.universidade} em ${municipio(lugar).nome}` : educacaoDaVida(v).inst.tecnico),
+  selecao_publica: (c, v, lugar) => c.nivel === 'livre' ? `${educacaoDaVida(v).inst.livre} em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? `${educacaoDaVida(v).inst.tecnico} em ${municipio(lugar).nome}` : c.nivel === 'residencia' ? `o hospital universitário em ${municipio(lugar).nome}` : `${educacaoDaVida(v).inst.universidade} em ${municipio(lugar).nome}`,
   privada: (c, _v, lugar) => c.nivel === 'livre' ? `uma escola de cursos livres em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? `uma escola técnica particular em ${municipio(lugar).nome}` : `uma faculdade particular em ${municipio(lugar).nome}`,
-  prouni: (_c, _v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}, com bolsa do ProUni`,
-  fies: (_c, _v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}, pelo FIES`,
+  prouni: (_c, v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}, com bolsa ${doPrograma(educacaoDaVida(v).bolsa?.nome ?? 'programa público')}`,
+  fies: (_c, v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}, com ${oPrograma(educacaoDaVida(v).credito?.nome ?? 'crédito estudantil')}`,
   ead: () => 'uma faculdade a distância'
 };
 
@@ -576,8 +604,8 @@ export function tentarIngresso(v: Vida, r: Rng, o: OpcaoCurso): { entrou: boolea
     const texto = antes > 0
       ? r.pick([`Tentou ${nome} de novo e ficou de fora outra vez.`, `Mais uma lista de aprovados em ${nome} sem o seu nome.`, `A ${antes + 1}ª tentativa em ${nome} também não deu.`])
       : o.via === 'sisu'
-      ? `Não passou em ${nome} pelo SISU. A nota ficou perto, mas não o bastante.`
-      : o.via === 'prouni' ? `Não conseguiu a bolsa do ProUni para ${nome}.`
+      ? `Não passou em ${nome} ${educacaoDaVida(v).vagas === 'o SISU' ? 'pelo SISU' : 'pela nota'}. A nota ficou perto, mas não o bastante.`
+      : o.via === 'prouni' ? `Não conseguiu a bolsa ${doPrograma(educacaoDaVida(v).bolsa?.nome ?? 'programa público')} para ${nome}.`
         : o.via === 'selecao_publica' ? `Não passou na seleção para ${nome}.`
           : `A matrícula em ${nome} não deu certo neste semestre.`;
     marcarFato(v, `tentou_${o.curso.id}_${anoDe(v.t)}`);
@@ -648,7 +676,7 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
   const g = v.eu.tratamento ?? v.eu.genero;
   const objetivo = v.educacao.objetivo?.cursoId === c.id;
   const tentativas = objetivo ? v.educacao.enem.filter(x => x.t >= v.educacao.objetivo!.t).length : 0;
-  escrever(v, { texto: `${flex(g, 'Aprovado', 'Aprovada')} em ${c.nome}, ${em(m.instituicao)}.${objetivo ? (tentativas > 1 ? ` Era o curso que queria — depois de ${tentativas} ENEMs.` : ' Era o curso que queria.') : ''}`, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
+  escrever(v, { texto: `${flex(g, 'Aprovado', 'Aprovada')} em ${c.nome}, ${em(m.instituicao)}.${objetivo ? (tentativas > 1 ? ` Era o curso que queria — depois de ${tentativas} tentativas.` : ' Era o curso que queria.') : ''}`, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
   if (objetivo) v.educacao.objetivo = undefined;
 }
 
@@ -740,8 +768,8 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   // FIES vira dívida.
   if (m.financiamento === 'fies') {
     const total = Math.round(m.mensalidade * c.meses * 0.85);
-    v.financas.dividas.push({ id: `fies${v.seq++}`, tipo: 'fies', saldo: total, jurosMes: 0.001, parcela: Math.round(total / 120), descricao: `FIES de ${c.nome}` });
-    escrever(v, { texto: `A conta do FIES chegou: ${Math.round(total / 1000)} mil reais a pagar nos próximos dez anos.`, relevancia: 'cotidiano', tema: 'dinheiro' });
+    v.financas.dividas.push({ id: `fies${v.seq++}`, tipo: 'fies', saldo: total, jurosMes: 0.001, parcela: Math.round(total / 120), descricao: `${educacaoDaVida(v).credito?.nome ?? 'Crédito estudantil'} de ${c.nome}` });
+    escrever(v, { texto: `A conta ${doPrograma(educacaoDaVida(v).credito?.nome ?? 'crédito estudantil')} chegou: ${moedaCurta(total)} a pagar nos próximos dez anos.`, relevancia: 'cotidiano', tema: 'dinheiro' });
   }
   void g; void r;
 }

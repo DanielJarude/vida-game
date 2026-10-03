@@ -5,11 +5,12 @@
  * memória da família (`vida.linhagem`).
  */
 
+import { formatarDinheiro } from '../../motor/mundo/moeda';
 import type { Vida } from '../../motor/tipos';
 import { anoDe } from '../../motor/tempo';
 import { idadeEm } from '../../motor/tempo';
-import { nomeLugar } from '../../motor/dados/lugares';
-import { dinheiro as fmt, flex } from '../../motor/texto';
+import { nomeLugar, paisDaCidade } from '../../motor/dados/lugares';
+import { flex } from '../../motor/texto';
 import { Retrato } from '../avatar/Retrato';
 
 export function Linhagem({ vida }: { vida: Vida }) {
@@ -36,7 +37,8 @@ export function Linhagem({ vida }: { vida: Vida }) {
                 <p>Nasceu em {nomeLugar(g.municipioNatal)} e morreu aos {i}, em {nomeLugar(g.municipioMorte)} ({g.causa}).</p>
                 {g.resumo.length > 0 && <ul>{g.resumo.slice(0, 6).map((t, k) => <li key={k}>{t}</li>)}</ul>}
                 {g.trajetorias.length > 0 && <ul>{g.trajetorias.slice(0, 5).map((t, k) => <li key={k}>{t.titulo} · {t.periodo}{t.resumo ? ` — ${t.resumo}` : ''}</li>)}</ul>}
-                <p>{(h.bruto ?? h.liquido) > 0 ? `Deixou ${fmt(h.liquido)}${h.partes.length ? `, partilhados entre ${h.partes.length === 1 ? 'uma pessoa' : `${h.partes.length} pessoas`}` : ''}${h.doacao ? `; ${fmt(h.doacao.valor)} doados para ${h.doacao.destino}` : ''}.` : 'Não deixou bens.'}</p>
+                {/* Na moeda do país onde a pessoa morreu (a herança foi feita lá). */}
+                <p>{(h.bruto ?? h.liquido) > 0 ? `Deixou ${formatarDinheiro(h.liquido, paisDaCidade(g.municipioMorte))}${h.partes.length ? `, partilhados entre ${h.partes.length === 1 ? 'uma pessoa' : `${h.partes.length} pessoas`}` : ''}${h.doacao ? `; ${formatarDinheiro(h.doacao.valor, paisDaCidade(g.municipioMorte))} doados para ${h.doacao.destino}` : ''}.` : 'Não deixou bens.'}</p>
                 <details>
                   <summary>A Linha da Vida de {g.nome}</summary>
                   <ul>{g.biografia.map((e, k) => <li key={k} style={e.marco ? { color: 'var(--text-primary)' } : undefined}>{e.idade} · {e.texto}</li>)}</ul>

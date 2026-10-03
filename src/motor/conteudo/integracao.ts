@@ -22,6 +22,7 @@ import { ritmoDe } from '../sistemas/ritmo';
 import { custoDeMudanca, mudarAgora } from '../sistemas/processos';
 import { terminar } from '../sistemas/romance';
 import { municipio } from '../dados/lugares';
+import { redeDeSaude } from '../sistemas/saude';
 import { encerrarCarreira, nomePosicao, POSICOES, posicaoSugerida, SOBRE_POSICAO } from '../sistemas/esporte';
 import { dinheiro as fmt, flex } from '../texto';
 import { abalar } from '../sistemas/abalo';
@@ -43,13 +44,13 @@ function opcaoLesao(cuidado: CuidadoLesao) {
           : cuidado === 'cirurgia' ? 'Operar'
             : pro ? 'Jogar no sacrifício' : 'Seguir treinando assim mesmo';
     },
-    // Nada fica bloqueado por dinheiro: sem ele, o caminho é o SUS (mais lento). Operar só existe para o que é sério.
+    // Nada fica bloqueado por dinheiro: sem ele, o caminho é a rede pública (no Brasil, o SUS; mais lento). Operar só existe para o que é sério.
     disponivel: (c: Ctx) => { const l = lesaoAtiva(c.v)?.lesao; return !!l && !(cuidado === 'cirurgia' && l.gravidade < 2); },
     consequencia: (c: Ctx) => {
       const l = lesaoAtiva(c.v)!.lesao;
       const custo = custoDoCuidado(c.v, l, cuidado);
       const prazo = prazoDoCuidado(l, cuidado, false);
-      const sus = custo > 0 ? ` Pelo bolso, uns ${fmt(custo)}; pelo SUS, de graça e mais demorado (${mesesTexto(prazoDoCuidado(l, cuidado, true))}).` : l.origem === 'profissional' ? ' O clube paga.' : c.v.financas.planoDeSaude ? ' O plano cobre.' : '';
+      const sus = custo > 0 ? ` Pelo bolso, uns ${fmt(custo)}; ${redeDeSaude(c.v).pelo}, de graça e mais demorado (${mesesTexto(prazoDoCuidado(l, cuidado, true))}).` : l.origem === 'profissional' ? ' O clube paga.' : c.v.financas.planoDeSaude ? ' O plano cobre.' : '';
       if (cuidado === 'sacrificio') return `Continua ${l.origem === 'profissional' ? 'jogando' : 'treinando'} — rende menos, a saúde sente, e pode piorar.`;
       if (cuidado === 'repouso') return `Volta em uns ${mesesTexto(prazo)}. Sem custo; o condicionamento cai no meio do caminho.${l.gravidade >= 3 ? ' Numa lesão assim, só repouso demora mais.' : ''}`;
       if (cuidado === 'fisio') return `Volta em uns ${mesesTexto(prazo)}, perdendo menos condicionamento.${sus}`;
@@ -61,7 +62,7 @@ function opcaoLesao(cuidado: CuidadoLesao) {
       const podePagar = custo > 0 && custa(c, custo) === true;
       return {
         texto: cuidado === 'sacrificio' ? 'Você enfaixou, tomou o anti-inflamatório e voltou a campo. A dor foi junto.'
-          : cuidado === 'cirurgia' ? `Cirurgia marcada${custo > 0 && !podePagar ? ' pelo SUS: fila, depois o centro cirúrgico' : ''}. Depois, meses de reabilitação.`
+          : cuidado === 'cirurgia' ? `Cirurgia marcada${custo > 0 && !podePagar ? ` ${redeDeSaude(c.v).pelo}: fila, depois o centro cirúrgico` : ''}. Depois, meses de reabilitação.`
             : cuidado === 'fisio' ? `Três vezes por semana na fisioterapia${custo > 0 && !podePagar ? ' do posto' : ''}. O corpo vai voltando.`
               : 'Você parou. O mais difícil foi ficar vendo de fora.',
         memoria: cuidado === 'sacrificio' ? `Decidiu seguir ${l.origem === 'profissional' ? 'jogando' : 'treinando'} com ${l.parte}.` : cuidado === 'cirurgia' ? `Operou ${l.parte.replace(/^uma |^um |^o |^a /, '')}.` : null,
@@ -120,7 +121,7 @@ export const INTEGRACAO: Conteudo[] = [
       },
       {
         id: 'descansar', texto: 'Tirar férias de verdade, longe de tudo', disponivel: c => (idade(c.v) < 18 ? false : custa(c, 2500)),
-        consequencia: () => 'Uns R$ 2.500. Alivia agora; a semana continua a mesma na volta.',
+        consequencia: () => `Uns ${fmt(2500)}. Alivia agora; a semana continua a mesma na volta.`,
         resolver: c => ({ texto: 'Dez dias sem relógio. Na volta, a pilha de coisas estava lá — mas você também.', memoria: null, efeito: () => { pagar(c.v, 2500); estresse(c, -14); abalar(c.v, 'as férias', 4, -8); if (c.v.mente.sobrecarga) c.v.mente.sobrecarga.anos = Math.max(0, c.v.mente.sobrecarga.anos - 1); } })
       },
       {

@@ -53,8 +53,24 @@ export const PARTIDOS_REAIS: readonly Partido[] = [
   { sigla: 'UP', nome: 'Unidade Popular', chamado: 'UP', artigo: 'a' }
 ];
 
+/**
+ * FORA DO BRASIL o jogo não usa partido real (escolher alguns nomes de outros
+ * países seria um juízo; usá-los numa simulação de escândalos, pior). Os
+ * partidos são descritos pela posição no espectro, sem nome próprio e sem
+ * programa: "o partido de centro-esquerda". A posição não dá bônus nem pena.
+ */
+export const PARTIDOS_GENERICOS: readonly Partido[] = [
+  { sigla: '~esquerda', nome: 'partido de esquerda', chamado: 'partido de esquerda', artigo: 'o' },
+  { sigla: '~centro_esquerda', nome: 'partido de centro-esquerda', chamado: 'partido de centro-esquerda', artigo: 'o' },
+  { sigla: '~centro', nome: 'partido de centro', chamado: 'partido de centro', artigo: 'o' },
+  { sigla: '~centro_direita', nome: 'partido de centro-direita', chamado: 'partido de centro-direita', artigo: 'o' },
+  { sigla: '~direita', nome: 'partido de direita', chamado: 'partido de direita', artigo: 'o' },
+  { sigla: '~verde', nome: 'partido verde', chamado: 'partido verde', artigo: 'o' },
+  { sigla: '~regional', nome: 'partido regional', chamado: 'partido regional', artigo: 'o' }
+];
+
 /** O partido pelo que está guardado na vida (sigla; saves antigos guardam o nome fictício, que continua valendo como está). */
-export const partidoDe = (x: string | undefined): Partido | undefined => (x ? PARTIDOS_REAIS.find(p => p.sigla === x) ?? { sigla: x, nome: x, chamado: x, artigo: 'o' } : undefined);
+export const partidoDe = (x: string | undefined): Partido | undefined => (x ? PARTIDOS_REAIS.find(p => p.sigla === x) ?? PARTIDOS_GENERICOS.find(p => p.sigla === x) ?? { sigla: x, nome: x, chamado: x, artigo: 'o' } : undefined);
 
 /** "o PT", "a Rede". */
 export const oPartido = (x: string | undefined) => { const p = partidoDe(x); return p ? `${p.artigo} ${p.chamado}` : 'o partido'; };

@@ -9,6 +9,7 @@
 
 import type { Genero, Pessoa } from './tipos';
 import { palavraDoBicho } from './dados/animais';
+import { formatarDinheiro, formatarDinheiroCurto } from './mundo/moeda';
 
 /** Gênero gramatical usado para falar do personagem (escolha do jogador). */
 export const ge = (v: { eu: { genero: Genero; tratamento?: Genero } }): Genero => v.eu.tratamento ?? v.eu.genero;
@@ -66,9 +67,13 @@ export function listaNatural(itens: string[]): string {
   return `${itens.slice(0, -1).join(', ')} e ${itens[itens.length - 1]}`;
 }
 
+/** Um valor do motor na moeda do país em que a vida corre agora ("R$ 1.234", "US$ 512", "€ 980" — `mundo/moeda`). */
 export function dinheiro(v: number): string {
-  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+  return formatarDinheiro(v);
 }
+
+/** Por alto, para a fala ("uns R$ 18 mil", "uns € 3 mil"). */
+export const dinheiroCurto = (v: number): string => formatarDinheiroCurto(v);
 
 export function capitalizar(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);

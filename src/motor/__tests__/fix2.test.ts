@@ -701,7 +701,7 @@ describe('divulgação progressiva', () => {
 
 describe('save v9', () => {
   it('saves v8 reais (ATT 2) migram, validam, guardam o estado e continuam sendo vividos', () => {
-    expect(VERSAO_SAVE).toBe(19); // Sucessão: v19 (a v18 migra sem conversão).
+    expect(VERSAO_SAVE).toBe(20); // Mundo: v20 (a v19 migra escrevendo a nacionalidade brasileira).
     for (const nome of ['save-v8-adolescente.json', 'save-v8-adulta.json', 'save-v8-meia-idade.json']) {
       const r = interpretar(fixture(nome));
       expect(r.tipo, nome).toBe('ok');

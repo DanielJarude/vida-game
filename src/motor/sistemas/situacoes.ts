@@ -30,6 +30,7 @@
  * Linha da Vida.
  */
 
+import { dinheiroCurto as moedaCurta } from '../texto';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { Posicao, RegistroDeSituacao, Vida } from '../tipos';
@@ -305,7 +306,8 @@ export function candidatosDoAno(v: Vida, tr: Trajetoria): { m: ModeloSituacao; p
 /** O ano: às vezes, uma situação. Fica aberta para a decisão `car_situacao`. */
 export function processarSituacoes(v: Vida, r: Rng): void {
   const anterior = v.caminhos.situacao;
-  v.caminhos.situacao = undefined;
+  // `delete`, não `= undefined`: a chave some como some no save (a vida recarregada anda igual, até na ordem do JSON).
+  delete v.caminhos.situacao;
   const tr = trajetoriaDeSituacao(v);
   if (!tr || idade(v) < 17 || v.justica?.prisao || anoJaTemCena(v, tr)) return;
   // A cena do ano passado que outra decisão tirou da frente volta, uma vez — se ainda couber.
@@ -340,7 +342,7 @@ export function resolverSituacao(v: Vida, r: Rng, intencaoId: string): { texto: 
   const texto = txt(dm.texto, v, a.d);
   const memoria = dm.memoria ? txt(dm.memoria, v, a.d) : undefined;
   registrarMomento(v, { id: a.m.id, t: v.t, trajetoria: a.m.trajetoria, intencao: typeof it.texto === 'string' ? it.texto : it.texto(v, a.d), desfecho, texto: memoria ?? texto });
-  v.caminhos.situacao = undefined;
+  delete v.caminhos.situacao;
   return { texto, desfecho, memoria };
 }
 
@@ -768,6 +770,34 @@ const MODELOS_PROFISSOES: ModeloSituacao[] = [
       { id: 'preparar', texto: 'Virar a noite preparando', dica: 'Chega pronto — e cansado.', risco: 0.35, fatores: v => [disciplina(v), F('técnica', (habilidade(v, 'teatro') - 60) / 40)], desfechos: D('A diretora de elenco pediu para repetir — e repetiu sorrindo. O seu nome ficou na lista curta.', 'Fez um teste sólido.', 'O cansaço apareceu na segunda leitura.', 'A cabeça travou no meio do texto.', { otimo: { nome: 3 }, ruim: { estresse: 5 }, pessimo: { estresse: 7 } }) },
       { id: 'arriscar', texto: 'Levar uma leitura própria, diferente de tudo', dica: 'Ou marca, ou estranham.', risco: 0.65, fatores: v => [coragem(v), F('técnica', (habilidade(v, 'teatro') - 60) / 40), leitura(v)], desfechos: D('A leitura diferente foi o assunto da sala. Ligaram no dia seguinte.', 'Notaram a ousadia.', 'Não era o que procuravam.', 'Estranharam — e comentaram com outros produtores.', { otimo: { nome: 4, noto: 1 }, pessimo: { nome: -2 } }, { otimo: 'Ganhou a atenção de uma produção grande com uma leitura que ninguém esperava.' }) }
     ] },
+  // Auditoria de unicidade (ATT Mundo): a academia e a cena tinham três modelos cada — a mesma cena voltava na mesma vida.
+  { id: 'aca_congresso', trajetoria: 'academia', peso: () => 0.9, cabe: v => vidaAcademica(v).publicacoes >= 2,
+    titulo: 'O convite de fora', texto: () => 'Um congresso internacional convida você para uma fala plenária. A passagem é por sua conta, e a semana é a do fechamento do semestre.',
+    intencoes: [
+      { id: 'ir', texto: 'Ir e falar', dica: 'Conhece gente que pesa na carreira. Custa dinheiro e uma semana.', risco: 0.35, fatores: v => [competencia(v), social(v), F('produção', (vidaAcademica(v).publicacoes - 6) / 20)], desfechos: D('A fala abriu uma colaboração com um grupo de fora — e um convite para voltar.', 'Uma boa fala; alguns cartões trocados.', 'A sala estava meio vazia.', 'O voo atrasou, a fala foi cortada pela metade e o semestre fechou atrasado.', { otimo: { nome: 4, dinheiro: -3000, feito: 1 }, bom: { nome: 2, dinheiro: -3000 }, ruim: { dinheiro: -3000, estresse: 3 }, pessimo: { dinheiro: -3000, estresse: 6, clima: -3 } }, { otimo: 'Uma fala num congresso internacional abriu uma colaboração com um grupo de fora.' }) },
+      { id: 'aluno', texto: 'Mandar um orientando no seu lugar', dica: 'Bom para ele. O seu nome não aparece.', risco: 0.25, fatores: v => [competencia(v), social(v)], desfechos: D('O orientando brilhou — e citou o laboratório inteiro.', 'O orientando se saiu bem.', 'O orientando travou nas perguntas.', 'O orientando não foi aceito para falar no seu lugar: a vaga se perdeu.', { otimo: { nome: 1, humor: 3 } }) },
+      { id: 'recusar', texto: 'Recusar', dica: 'O semestre agradece.', risco: 0.1, fatores: () => [], desfechos: D('Fechou o semestre com calma — e o convite voltou no ano seguinte.', 'Recusado.', 'Viu depois quem foi no seu lugar.', 'Não chamaram mais.', { pessimo: { nome: -1 } }) }
+    ] },
+  { id: 'aca_copia', trajetoria: 'academia', peso: () => 0.7, cabe: v => vidaAcademica(v).publicacoes >= 3,
+    titulo: 'O parágrafo conhecido', texto: () => 'Lendo um artigo recém-publicado, você reconhece um parágrafo inteiro: é seu, de um texto de anos atrás, sem citação.',
+    intencoes: [
+      { id: 'revista', texto: 'Escrever para a revista, com as provas', dica: 'O caminho certo. Demora e expõe.', risco: 0.4, fatores: v => [disciplina(v), coragem(v)], desfechos: D('A revista publicou uma correção e citou o seu trabalho.', 'Saiu uma nota de correção.', 'A revista respondeu que "vai analisar". Nunca analisou.', 'O autor, alguém influente, passou a falar mal de você em bancas.', { otimo: { nome: 2 }, pessimo: { nome: -1, estresse: 5 } }) },
+      { id: 'conversar', texto: 'Escrever para o autor primeiro', dica: 'Elegante. Pode virar desculpa — ou silêncio.', risco: 0.3, fatores: v => [social(v), leitura(v)], desfechos: D('O autor pediu desculpas e propôs um trabalho conjunto.', 'O autor corrigiu discretamente.', 'Nenhuma resposta.', 'A resposta foi atravessada, com cópia para o seu chefe.', { otimo: { nome: 1, feito: 1 }, pessimo: { clima: -4 } }) },
+      { id: 'deixar', texto: 'Deixar para lá', dica: 'Paz. E o parágrafo continua sendo dele.', risco: 0.1, fatores: () => [], desfechos: D('Ninguém leu o artigo mesmo.', 'Ficou por isso.', 'Viu o parágrafo citado como dele numa tese.', 'O parágrafo virou referência — com o nome dele.', { ruim: { estresse: 3 }, pessimo: { estresse: 5 } }) }
+    ] },
+  { id: 'cena_campanha', trajetoria: 'cena', peso: () => 0.9, cabe: v => idade(v) >= 20,
+    titulo: 'A campanha e a peça', texto: () => 'No mesmo mês: uma campanha publicitária que paga o ano, e uma peça pequena, autoral, que não paga quase nada — e que você queria fazer há tempo.',
+    intencoes: [
+      { id: 'campanha', texto: 'Fazer a campanha', dica: 'O dinheiro do ano. O rosto fica associado a um produto.', risco: 0.2, fatores: v => [F('nome', 0.1), disciplina(v)], desfechos: D('A campanha pagou o ano e ainda rendeu outra.', 'Pagou o ano.', 'Pagou — e o rosto virou "o da propaganda".', 'A marca se meteu numa polêmica, e o seu rosto estava nela.', { otimo: { dinheiro: 30000 }, bom: { dinheiro: 22000 }, ruim: { dinheiro: 18000 }, pessimo: { dinheiro: 15000, imagem: 'polemica' } }) },
+      { id: 'peca', texto: 'Fazer a peça', dica: 'Pouco dinheiro. É o trabalho que você queria.', risco: 0.45, fatores: v => [F('técnica', (habilidade(v, 'teatro') - 60) / 40), coragem(v)], desfechos: D('A peça pequena virou o assunto da cena — e uma crítica que você guardou.', 'Uma temporada bonita, de casa cheia no fim.', 'Pouco público, muito aprendizado.', 'A peça fechou na segunda semana.', { otimo: { nome: 4, noto: 1, humor: 6 }, bom: { nome: 2, humor: 4 }, ruim: { humor: 2 }, pessimo: { estresse: 4 } }, { otimo: 'Trocou uma campanha que pagava o ano por uma peça pequena — e a peça virou assunto.' }) }
+    ] },
+  { id: 'cena_critica', trajetoria: 'cena', peso: () => 0.8, cabe: v => idade(v) >= 22,
+    titulo: 'A crítica', texto: () => 'Saiu uma crítica dura do seu último trabalho. Uma frase sobre você está sendo compartilhada.',
+    intencoes: [
+      { id: 'responder', texto: 'Responder em público', dica: 'Pode virar debate. Pode virar briga.', risco: 0.6, fatores: v => [social(v), cabeca(v), coragem(v)], desfechos: D('A resposta, bem-humorada, rendeu mais que a crítica.', 'Ficou empatado.', 'Pareceu ressentimento.', 'Virou briga — e a briga ficou mais famosa que o trabalho.', { otimo: { noto: 1, nome: 1 }, pessimo: { imagem: 'polemica', estresse: 5 } }) },
+      { id: 'estudar', texto: 'Ler com calma e trabalhar no que ela aponta', dica: 'Dói. Às vezes ensina.', risco: 0.25, fatores: v => [disciplina(v), F('técnica', (habilidade(v, 'teatro') - 60) / 40)], desfechos: D('No trabalho seguinte, o mesmo crítico escreveu que você tinha crescido.', 'Algo mudou no próximo trabalho.', 'Não encontrou o que mudar.', 'A crítica entrou na cabeça e ficou.', { otimo: { nome: 3 }, pessimo: { estresse: 6 } }, { otimo: 'Ouviu uma crítica dura — e, no trabalho seguinte, o mesmo crítico escreveu que você tinha crescido.' }) },
+      { id: 'ignorar', texto: 'Não ler mais nada', dica: 'Protege a cabeça. A frase circula do mesmo jeito.', risco: 0.15, fatores: v => [cabeca(v)], desfechos: D('Uma semana depois, ninguém lembrava.', 'Passou.', 'Os amigos insistiam em mandar.', 'A frase virou apelido nos bastidores.', { ruim: { estresse: 2 }, pessimo: { estresse: 4 } }) }
+    ] },
   { id: 'emp_problema', trajetoria: 'emprego', cabe: () => true,
     titulo: 'Um problema no trabalho', texto: v => `Um problema urgente estourou ${v.trabalho.atual?.empregador ? `no trabalho` : ''} — e a chefia está fora. Alguém precisa decidir.`.replace('  ', ' '),
     intencoes: [
@@ -889,7 +919,7 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
     id: 'ten_preparador', trajetoria: 'tenis', peso: () => 0.8,
     cabe: v => esporteDe(v, 'tenis') && (v.caminhos.esporte?.nivel ?? 1) >= 2,
     titulo: 'A equipe',
-    texto: () => 'O treinador diz que, para o próximo nível, falta um preparador físico de verdade — e isso custa uns R$ 18 mil por ano, do seu bolso.',
+    texto: () => `O treinador diz que, para o próximo nível, falta um preparador físico de verdade — e isso custa uns ${moedaCurta(18000)} por ano, do seu bolso.`,
     intencoes: [
       { id: 'pagar', texto: 'Contratar o preparador', dica: 'Dinheiro agora; corpo melhor depois — talvez.', risco: 0.35, fatores: v => [disciplina(v), F('caixa', v.financas.conta >= 18000 ? 0.1 : -0.3)], desfechos: D('O corpo respondeu: a temporada seguinte foi a melhor fisicamente.', 'Mais fôlego no terceiro set.', 'Pouca diferença por enquanto.', 'O preparador e o treinador não se entenderam.', { otimo: { dinheiro: -18000, extra: v => { v.corpo.forma = clamp(v.corpo.forma + 6); } }, bom: { dinheiro: -18000, extra: v => { v.corpo.forma = clamp(v.corpo.forma + 3); } }, ruim: { dinheiro: -18000 }, pessimo: { dinheiro: -18000 } }) },
       { id: 'seguir', texto: 'Seguir como está', dica: 'A conta fecha; o salto, talvez não.', risco: 0.1, fatores: () => [], desfechos: D('Seguiu bem assim mesmo.', 'Nada mudou.', 'O cansaço apareceu nos torneios longos.', 'Perdeu jogos no terceiro set por falta de perna.', { otimo: { nome: 0 }, bom: { nome: 0 } }) },

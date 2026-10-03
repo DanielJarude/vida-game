@@ -7,6 +7,7 @@
  * franqueza, atalho) — nunca sobre o que defender ideologicamente.
  */
 
+import { paisDaVida } from '../mundo/vida';
 import { podeTentar } from '../plausibilidade';
 import type { Conteudo, Ctx, Resultado } from './base';
 import type { CargoEletivo, Vida, VidaPolitica } from '../tipos';
@@ -19,7 +20,7 @@ import { abalar } from '../sistemas/abalo';
 import { marcar } from '../sistemas/marcas';
 import { valorDoNegocio } from '../sistemas/negocio';
 import {
-  calendarioDoMandato, CARGOS, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, PARTIDOS,
+  calendarioDoMandato, tiposDeEleicao, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, partidosDoPais, existeCargo, cargoNoPais,
   podeConcorrer, PRIORIDADES, registrarCandidatura, registrarNoMandato, renunciar, voltarAoTrabalho, perspectiva, regraDaTroca, trocarDePartido } from '../sistemas/politica';
 import { anoDe } from '../tempo';
 import { registrarMomento } from '../sistemas/situacoes';
@@ -56,7 +57,10 @@ function partidosOferecidos(c: Ctx): string[] {
   let h = anoDe(c.v.t);
   for (const ch of c.v.moradia.municipioId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const out: string[] = [];
-  for (let k = 0; out.length < 3; k++) { const x = PARTIDOS[(h + k * 7) % PARTIDOS.length]; if (!out.includes(x)) out.push(x); }
+  const lista = partidosDoPais(paisDaVida(c.v));
+  // O passo precisa ser primo com o tamanho da lista (7 partidos do espectro: passo 7 voltaria sempre ao mesmo). No Brasil, 7 de sempre.
+  const passo = lista.length % 7 === 0 ? 3 : 7;
+  for (let k = 0; out.length < Math.min(3, lista.length) && k < 200; k++) { const x = lista[(h + k * passo) % lista.length]; if (!out.includes(x)) out.push(x); }
   return out;
 }
 
@@ -66,7 +70,9 @@ function oferecidosParaTroca(c: Ctx): { sigla: string; porte: number }[] {
   let h = anoDe(c.v.t) * 17 + 5;
   for (const ch of c.v.moradia.municipioId + (atual ?? '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const out: { sigla: string; porte: number }[] = [];
-  for (let k = 0; out.length < 3 && k < 60; k++) { const x = PARTIDOS[(h + k * 11) % PARTIDOS.length]; if (x !== atual && !out.some(o => o.sigla === x)) out.push({ sigla: x, porte: out.length }); }
+  const lista = partidosDoPais(paisDaVida(c.v));
+  const passo = lista.length % 11 === 0 ? 3 : 11;
+  for (let k = 0; out.length < 3 && k < 60; k++) { const x = lista[(h + k * passo) % lista.length]; if (x !== atual && !out.some(o => o.sigla === x)) out.push({ sigla: x, porte: out.length }); }
   return out;
 }
 
@@ -128,7 +134,7 @@ function textoDoMandatoNaEleicao(c: Ctx): string {
     return `${quando} O partido quer saber o que você vai fazer — e a casa também.`;
   }
   const tipo = e.tipo === 'municipal' ? 'municipal' : 'geral';
-  const regra = CARGOS[cal.cargo].executivo ? `Para disputar outro cargo, é preciso renunciar ao mandato de ${cargo} seis meses antes.` : `Dá para disputar outro cargo sem largar o mandato de ${cargo}.`;
+  const regra = cargoNoPais(cal.cargo).executivo ? `Para disputar outro cargo, é preciso renunciar ao mandato de ${cargo} seis meses antes.` : `Dá para disputar outro cargo sem largar o mandato de ${cargo}.`;
   return `O mandato de ${cargo} vai até ${cal.anoFinal} (este é o ano ${cal.ano} de ${cal.anos}), mas em outubro de ${e.ano} tem eleição ${tipo}. ${regra} ${cap(oPartido(p.partido))} quer saber o que você vai fazer.`;
 }
 
@@ -139,12 +145,13 @@ function cargoOpcao(cargo: CargoEletivo) {
     disponivel: (c: Ctx) => {
       if (etapa(c) !== 0) return false;
       const e = eleicaoNaJanela(c.v);
-      if (!e || CARGOS[cargo].tipo !== e.tipo) return false;
+      // Um degrau que o país não tem (ou que não cai nesta eleição) não aparece.
+      if (!e || !existeCargo(cargo, paisDaVida(c.v)) || !tiposDeEleicao(e.ano).includes(cargoNoPais(cargo).tipo)) return false;
       const d = podeConcorrer(c.v, cargo, e.t);
       return d.grau === 'permitido' || d.grau === 'improvavel' || d.grau === 'irregular' ? true : (d.motivo ?? 'Não é possível.');
     },
     comportamento: undefined,
-    consequencia: (c: Ctx) => { const e = eleicaoNaJanela(c.v); return e && CARGOS[cargo].tipo === e.tipo && podeTentar(podeConcorrer(c.v, cargo, e.t)) ? perspectiva(c.v, cargo, e.t) : undefined; },
+    consequencia: (c: Ctx) => { const e = eleicaoNaJanela(c.v); return e && tiposDeEleicao(e.ano).includes(cargoNoPais(cargo).tipo) && podeTentar(podeConcorrer(c.v, cargo, e.t)) ? perspectiva(c.v, cargo, e.t) : undefined; },
     resolver: (c: Ctx): Resultado => {
       const e = eleicaoNaJanela(c.v)!;
       const d = podeConcorrer(c.v, cargo, e.t);
@@ -268,7 +275,7 @@ export const POLITICA: Conteudo[] = [
       const e = etapa(c);
       const p = pol(c);
       if (e === 0) return p.mandato ? textoDoMandatoNaEleicao(c) : `Em outubro tem eleição ${eleicaoNaJanela(c.v)?.tipo === 'municipal' ? 'municipal' : 'geral'}. ${cap(oPartido(p.partido))} quer saber se você vem.${comFamilia(c.v) ? ' Em casa, a pergunta é outra: vale o preço?' : ''}`;
-      if (e === 1) return `De onde vem o dinheiro da campanha? Material, carro de som, gente na rua: uma campanha como se deve custa uns ${fmt(custoDeCampanha(c.v, p.campanha!.cargo))}.`;
+      if (e === 1) return `De onde vem o dinheiro da campanha? Material, ${paisDaVida(c.v) === 'BR' ? 'carro de som, ' : ''}gente na rua: uma campanha como se deve custa uns ${fmt(custoDeCampanha(c.v, p.campanha!.cargo))}.`;
       if (e === 2) return 'Como chegar em quem vota?';
       return 'Faltam três semanas. O debate é quinta-feira.';
     },
@@ -290,7 +297,7 @@ export const POLITICA: Conteudo[] = [
         resolver: c => ({ texto: 'Vaquinha, rifa, a cota do partido. Pouco dinheiro, nenhum dono.', memoria: null, reabrir: true, efeito: () => passo(c, x => { x.financiamento = 'pequenas'; }, pol(c).apoio >= 40 ? 3 : 0) }) },
       { id: 'fin_proprio', texto: c => `Pôr dinheiro do próprio bolso (${fmt(custoDeCampanha(c.v, pol(c).campanha?.cargo ?? 'vereador'))})`, comportamento: { coragem: 1 },
         disponivel: c => (etapa(c) !== 1 ? false : custa(c, custoDeCampanha(c.v, pol(c).campanha!.cargo), 'Não há esse dinheiro guardado.')),
-        resolver: c => ({ texto: 'O dinheiro da reserva virou santinho, carro de som e gasolina.', memoria: null, reabrir: true, efeito: () => { const custo = custoDeCampanha(c.v, pol(c).campanha!.cargo); pagar(c.v, custo); passo(c, x => { x.financiamento = 'proprio'; x.gasto += custo; }, 8); } }) },
+        resolver: c => ({ texto: paisDaVida(c.v) === 'BR' ? 'O dinheiro da reserva virou santinho, carro de som e gasolina.' : 'O dinheiro da reserva virou panfleto, cartaz e gasolina.', memoria: null, reabrir: true, efeito: () => { const custo = custoDeCampanha(c.v, pol(c).campanha!.cargo); pagar(c.v, custo); passo(c, x => { x.financiamento = 'proprio'; x.gasto += custo; }, 8); } }) },
       { id: 'fin_empresario', texto: 'Aceitar o apoio de um empresário da cidade', comportamento: { impulsividade: 1 }, disponivel: c => etapa(c) === 1,
         resolver: c => ({ texto: 'Um empresário conhecido bancou boa parte da campanha. "Depois a gente conversa", ele disse.', memoria: null, reabrir: true, efeito: () => { c.v.fatos['pol_empresario'] = c.v.t; passo(c, x => { x.financiamento = 'empresario'; }, 10); } }) },
       // Etapa 2: a rua.

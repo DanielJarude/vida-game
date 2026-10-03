@@ -17,7 +17,7 @@ import type { Vida } from '../tipos';
 import { idade, transacao, vinculosVivos } from '../nucleo';
 import { vincular } from '../pessoas';
 import { podeTentar } from '../plausibilidade';
-import { interpretar, migrarV16, migrarV17, migrarV18, VERSAO_SAVE } from '../save';
+import { interpretar, migrarV16, migrarV17, migrarV18, migrarV19, VERSAO_SAVE } from '../save';
 import { contratar } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
 import { garantirFrente, habilidade, leituraDaFrente } from '../sistemas/frentes';
@@ -600,9 +600,9 @@ describe('fonte única das fases da vida, migração v16 → v17, determinismo',
       expect(a.tipo).toBe('ok');
       if (a.tipo !== 'ok' || b.tipo !== 'ok') continue;
       expect(a.vida.versao).toBe(VERSAO_SAVE);
-      expect(VERSAO_SAVE).toBe(19); // Sucessão: v19 (a v18 migra sem conversão).
+      expect(VERSAO_SAVE).toBe(20); // Mundo: v20 (a v19 migra escrevendo a nacionalidade brasileira).
       expect(a.vida).toEqual(b.vida);
-      expect(migrarV18(migrarV17(migrarV16(clone(a.vida))))).toEqual(a.vida); // Sucessão: a cadeia vai até a v19.
+      expect(migrarV19(migrarV18(migrarV17(migrarV16(clone(a.vida)))))).toEqual(a.vida); // Sucessão: a cadeia vai até a v19.
       const e = a.vida.caminhos.esporte;
       if (e?.fase === 'profissional') {
         expect(a.vida.rotinas.some(r => r.id === 'futebol')).toBe(false);

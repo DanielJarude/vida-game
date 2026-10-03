@@ -17,6 +17,10 @@
  * mudar de cargo. Não existe escada infinita.
  */
 
+import { paisDaVida, penaDeChegada, perfilDaVida } from '../mundo/vida';
+import { parametrosFiscais, salarioMinimoDoPais } from '../mundo/economia';
+import { perfilDoPais } from '../mundo/registro';
+import { dinheiro as moeda } from '../texto';
 import { lancar } from './extrato';
 import { areaMedica, faltaTituloPara, fatorRendaMedica } from './medicina';
 import { vivenciaQuePesa } from './formacao';
@@ -29,12 +33,12 @@ import type { Dominio, Emprego, Vida } from '../tipos';
 import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
 import { ajusteClientela, ajusteContratacao, fatorDemissao, reajusteReal } from './economia';
 import { categoriaDoVeiculo, veiculoUtil } from './veiculos';
-import { OCUPACOES, AFINS, daTrilha, ocupacao, ocupacaoOuNula, ROTULO_TRILHA, type Ocupacao } from '../dados/ocupacoes';
-import { economiaLocal, municipio, nivelDeOferta, nomeLugar } from '../dados/lugares';
+import { OCUPACOES, AFINS, comissaoDe, daTrilha, ocupacao, ocupacaoOuNula, ROTULO_TRILHA, type Ocupacao } from '../dados/ocupacoes';
+import { economiaLocal, municipio, nivelDeOferta, nomeLugar, paisDaCidade } from '../dados/lugares';
 import { ORDEM_NIVEL, ROTULO_AREA, cursoOuNulo } from '../dados/cursos';
 import { forcaDoSetor, sobraNaEpoca } from '../dados/mercado';
 import { bloqueio, type Veredito } from '../plausibilidade';
-import { contribui, liquido, salarioLocal, SALARIO_MINIMO, TETO_INSS } from './renda';
+import { contribui, liquido, salarioLocal } from './renda';
 import { em, nivelEsc, ROTULO_ESCOLARIDADE, temEscolaridade } from './escola';
 import { habilidade, praticar } from './frentes';
 import { marcar } from './marcas';
@@ -207,7 +211,8 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   if (nivelDeOferta(v.moradia.municipioId) < oc.oferta && via !== 'oportunidade') {
     return bloqueio('requisito', `Quase não há vagas assim em ${municipio(v.moradia.municipioId).nome}. Seria preciso morar numa cidade maior.`);
   }
-  if (oc.concurso && via === 'curriculo') {
+  // Onde o serviço público não entra por concurso (o perfil do país), o cargo é uma vaga como as outras: candidatura e seleção.
+  if (oc.concurso && via === 'curriculo' && porConcursoAqui(v, oc)) {
     if (!editalAberto(v, oc)) return bloqueio('incompativel', 'Não há edital aberto para este cargo agora. Os concursos abrem em anos diferentes.');
     const chance = chanceNoConcurso(v, oc);
     return { grau: chance < 0.2 ? 'improvavel' : 'permitido', chance };
@@ -293,6 +298,10 @@ function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   c *= sobraNaEpoca(oc.declinio, anoDe(v.t)) * fatorDaEpoca(oc, anoDe(v.t));
   if (v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde > 24) c -= 0.1;
   c += ajusteContratacao(v);
+  // O lugar: onde quase todo trabalho é informal, a vaga com contrato é rara (o Brasil, ~38%, é a referência); e quem
+  // acabou de chegar de outro país, sem a língua e sem rede, é menos chamado (`mundo/vida`).
+  if (oc.contrato === 'clt') c *= 1 + (0.38 - perfilDaVida(v).economia.informalidade) * 0.5;
+  c -= penaDeChegada(v);
   if (i > 50 && oc.nivel < 4) c -= (i - 50) / 60; // etarismo real no mercado
   // Antecedentes pesam em quem contrata com carteira (o autônomo não passa por isso).
   if (oc.contrato === 'clt' || oc.contrato === 'estagio' || oc.contrato === 'aprendiz') c -= penaDeAntecedentes(v);
@@ -332,7 +341,7 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
   if (eDasForcas(oc)) aoEntrarNasForcas(v, r, oc);
   const e: Emprego = {
     ocupacaoId: oc.id,
-    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(outroLugar(empregadoresPrivados(oc.trilha, oc.contrato === 'autonomo' || oc.contrato === 'informal'), anterior)),
+    empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(outroLugar(oc.modalidade && oc.trilha === 'treino' && oc.nivel >= 4 ? ['um clube', 'uma equipe profissional'] : empregadoresPrivados(oc.trilha, oc.contrato === 'autonomo' || oc.contrato === 'informal'), anterior)),
     contrato: oc.contrato,
     salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : Math.round(salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2) * fatorRendaMedica(v, oc) / 10) * 10,
     tInicio: v.t,
@@ -369,9 +378,12 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
       v.fatos['mudancas_de_carreira'] = (v.fatos['mudancas_de_carreira'] ?? 0) + 1;
     }
   }
-  if (oc.concurso && !oc.duracao) marcar(v, 'aprovacao', `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso: ${nomeOcupacao(v, oc)}.`, 3, { trilha: oc.trilha, ocupacaoId: oc.id });
+  if (oc.concurso && !oc.duracao) marcar(v, 'aprovacao', porConcursoAqui(v, oc) ? `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso: ${nomeOcupacao(v, oc)}.` : `${flex(ge(v), 'Selecionado', 'Selecionada', 'Selecionade')} para o serviço público: ${nomeOcupacao(v, oc)}.`, 3, { trilha: oc.trilha, ocupacaoId: oc.id });
   return e;
 }
+
+/** Este cargo entra por concurso no país onde a pessoa mora? (No Brasil, sim; onde o perfil diz que não, é seleção.) */
+export const porConcursoAqui = (v: Vida, oc: Ocupacao) => perfilDaVida(v).trabalho.concurso || (!!oc.paises && !oc.paises.includes(paisDaVida(v)));
 
 function orgaoDoConcurso(oc: Ocupacao): string {
   return ({
@@ -420,7 +432,7 @@ export function textoDeContratacao(v: Vida, oc: Ocupacao, e: Emprego): string {
   const primeira = v.trabalho.historico.length === 0;
   if (oc.formacaoInicial) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: começou o curso de formação ${em(e.empregador)}.`;
   if (oc.concurso && oc.duracao) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no processo seletivo: ${nome}, com contrato de ${Math.round(oc.duracao / 12)} anos.`;
-  if (oc.concurso) return `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: ${nome} ${em(e.empregador)}, com estabilidade.`;
+  if (oc.concurso) return porConcursoAqui(v, oc) ? `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso: ${nome} ${em(e.empregador)}, com estabilidade.` : `${flex(ge(v), 'Selecionado', 'Selecionada')} para ${nome} ${em(e.empregador)}.`;
   if (e.contrato === 'autonomo' || e.contrato === 'informal') return `${primeira ? 'Começou a ganhar a vida' : 'Passou a trabalhar'} como ${nome}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
   return `${primeira ? 'Primeiro emprego' : 'Novo emprego'}: ${nome} ${em(e.empregador)}${e.via === 'indicacao' ? ', por indicação' : ''}.`;
 }
@@ -471,6 +483,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     return;
   }
 
+  repararComissaoAntiga(v, e);
   const oc = ocupacao(e.ocupacaoId);
   const tPosto = e.tPosto ?? e.tInicio;
 
@@ -641,7 +654,9 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   }
   if (e.clientela >= 70 && !temFato(v, `clientela_firme_${oc.id}`)) {
     marcarFato(v, `clientela_firme_${oc.id}`);
-    escrever(v, { texto: `A freguesia firmou: já não falta trabalho como ${nomeOcupacao(v, oc)}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+    // Quem vive de palco, de obra ou de projeto não tem "freguesia": tem convites (a frase é a do ofício).
+    const deConvite = ['criativo', 'comunicacao'].includes(oc.setor) || ['ator', 'musico', 'artista', 'escritor'].some(x => oc.trilha.includes(x));
+    escrever(v, { texto: deConvite ? `Os convites passaram a vir sozinhos: já não falta trabalho como ${nomeOcupacao(v, oc)}.` : `A freguesia firmou: já não falta trabalho como ${nomeOcupacao(v, oc)}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
   }
   return false;
 }
@@ -706,11 +721,15 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   const nome = nomeOcupacao(v, oc);
   const tempo = noPosto < anos ? `${anos} anos ali, ${noPosto} ${noPosto === 1 ? 'deles' : 'deles'} como ${nome}` : `${anos} ${anos === 1 ? 'ano' : 'anos'} como ${nome}`;
   if (e.contrato === 'clt') {
-    // Rescisão: saldo do FGTS + multa de 40% (aprox.) e seguro-desemprego.
-    const fgts = Math.round(e.salario * 0.08 * 12 * anos * 1.4);
-    const seguro = Math.round(Math.min(2400, Math.max(SALARIO_MINIMO, e.salario * 0.8)) * (anos >= 2 ? 5 : 3));
+    // Rescisão pela lei do país onde se trabalha: no Brasil, o saldo do FGTS + multa de 40% (aprox.) e o seguro-desemprego;
+    // onde o contrato é "à vontade" (boa parte dos EUA), nada além do último salário.
+    const lei = perfilDoPais(paisDaCidade(e.municipioId)).trabalho;
+    const minimo = salarioMinimoDoPais(paisDaCidade(e.municipioId));
+    const fgts = Math.round(e.salario * lei.rescisao.mesesPorAno * anos);
+    const sd = lei.seguroDesemprego;
+    const seguro = sd ? Math.round(Math.min(minimo * 1.48, Math.max(minimo, e.salario * sd.reposicao)) * (anos >= 2 ? sd.meses + 1 : Math.max(1, sd.meses - 1))) : 0;
     v.financas.conta += fgts + seguro;
-    lancar(v, 'Rescisão: FGTS, multa e seguro-desemprego', 'renda', fgts + seguro);
+    if (fgts + seguro > 0) lancar(v, `Rescisão: ${[fgts > 0 ? lei.rescisao.nome : '', seguro > 0 ? 'seguro-desemprego' : ''].filter(Boolean).join(' e ')}`, 'renda', fgts + seguro);
     const motivo = e.desempenho < 35 ? 'O desempenho vinha caindo.' : epoca > 0.2 && r.chance(0.6) ? 'A função vinha sendo automatizada.' : '';
     escrever(v, { texto: e.desempenho < 35 ? `Foi ${flex(ge(v), 'demitido', 'demitida')} de ${e.empregador}, onde era ${nome}. ${motivo}` : `Foi ${flex(ge(v), 'demitido', 'demitida')} num corte de pessoal ${em(e.empregador)}, depois de ${tempo}.${motivo ? ' ' + motivo : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', `${flex(ge(v), 'Demitido', 'Demitida', 'Demitide')} de ${e.empregador} depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}.`, anos >= 5 ? 3 : 2, { trilha: oc.trilha, ocupacaoId: oc.id });
@@ -732,7 +751,42 @@ export function degrausAcima(oc: Ocupacao): Ocupacao[] {
   return daTrilha(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && x.entrada !== 'eleicao' && !x.formacaoInicial
     && (x.entrada !== 'oportunidade' || oc.entrada === 'oportunidade' || !!oc.formacaoInicial || eMilitar(oc))
     // O modelo de trabalho não muda sozinho: quem é empregado não é "promovido" a trabalhar por conta (nem o contrário) — isso é escolha, com a vaga dizendo o que é.
-    && porContaPropria(x) === porContaPropria(oc));
+    && porContaPropria(x) === porContaPropria(oc)
+    // A modalidade é da carreira: a escada não troca de esporte (o auxiliar de vôlei não vira técnico de futebol).
+    && x.modalidade === oc.modalidade);
+}
+
+/**
+ * Saves de antes da comissão por modalidade: o auxiliar técnico era um só
+ * (`auxiliar_tecnico`, que é o do futebol). Quem chegou a ele saindo de uma
+ * carreira de OUTRO esporte (o convite do fim de carreira levava a modalidade,
+ * o emprego a perdia) volta para a comissão do próprio esporte — a única
+ * porta para esse cargo era o fim da carreira de atleta, e é dela a modalidade.
+ */
+function repararComissaoAntiga(v: Vida, e: Emprego): void {
+  if (e.ocupacaoId !== 'auxiliar_tecnico' || v.caminhos.tecnico) return;
+  const es = [v.caminhos.esporte, ...(v.caminhos.carreirasEsportivas ?? [])].filter(x => x && x.fase === 'encerrada' && (x.tFim ?? 0) <= e.tInicio);
+  if (!es.length || es.some(x => x!.modalidade === 'futebol')) return;
+  const ultima = es.sort((a, b) => (b!.tFim ?? 0) - (a!.tFim ?? 0))[0]!;
+  const aux = comissaoDe(ultima.modalidade).auxiliar;
+  if (aux && aux !== e.ocupacaoId) e.ocupacaoId = aux;
+}
+
+/**
+ * Invariante (para testes e simulações): dentro de um mesmo vínculo — os
+ * postos da escada mais o cargo de agora — a modalidade esportiva nunca
+ * muda. Devolve as trocas encontradas ("auxiliar_tecnico_volei → tecnico_futebol").
+ */
+export function saltosDeModalidade(v: Vida): string[] {
+  const out: string[] = [];
+  for (const e of [...v.trabalho.historico, ...(v.trabalho.atual ? [v.trabalho.atual] : [])]) {
+    const ids = [...(e.postos ?? []).map(p => p.ocupacaoId), e.ocupacaoId];
+    for (let k = 1; k < ids.length; k++) {
+      const a = ocupacaoOuNula(ids[k - 1])?.modalidade, b = ocupacaoOuNula(ids[k])?.modalidade;
+      if ((a || b) && a !== b) out.push(`${ids[k - 1]} → ${ids[k]}`);
+    }
+  }
+  return out;
 }
 
 /**
@@ -753,7 +807,7 @@ export function modeloDeTrabalho(oc: Ocupacao): ModeloDeTrabalho {
 }
 
 export const ROTULO_MODELO: Record<ModeloDeTrabalho, { curto: string; explica: string }> = {
-  emprego: { curto: 'vaga de emprego', explica: 'Alguém contrata: salário todo mês, chefia, e (quase sempre) carteira assinada. Tem entrevista.' },
+  emprego: { curto: 'vaga de emprego', explica: 'Alguém contrata: salário todo mês, chefia, e (quase sempre) contrato formal. Tem entrevista.' },
   por_conta: { curto: 'por conta própria', explica: 'Você atende os próprios clientes: define o preço, monta a agenda, pode virar MEI. A renda é a freguesia — começa pequena. Sem entrevista.' },
   negocio: { curto: 'o próprio negócio', explica: 'Você é dono: ponto, caixa, fornecedores, talvez equipe. Abrir custa, e o risco é seu.' },
   concurso: { curto: 'concurso público', explica: 'Edital, prova, estabilidade depois do estágio probatório.' },
@@ -978,10 +1032,13 @@ export function podeAposentar(v: Vida): Veredito {
     if (anos >= 35 || i >= 62) return { grau: 'permitido' };
     return bloqueio('requisito', `A reserva vem com 35 anos de serviço; você tem ${anos}.`);
   }
-  const idadeMin = v.eu.genero === 'feminino' ? 62 : 65;
-  const contribMin = v.eu.genero === 'feminino' ? 180 : 240;
+  // A regra é a do país onde a pessoa mora (o tempo de contribuição de fora conta: abstração dos acordos de previdência).
+  const prev = perfilDaVida(v).trabalho.previdencia;
+  const fem = v.eu.genero === 'feminino';
+  const idadeMin = prev.idade[fem ? 1 : 0];
+  const contribMin = prev.anos[fem ? 1 : 0] * 12;
   if (i < idadeMin) return bloqueio('requisito', `A aposentadoria por idade é aos ${idadeMin}.`);
-  if (t.contribuicao < contribMin) return bloqueio('requisito', `Faltam ${Math.ceil((contribMin - t.contribuicao) / 12)} anos de contribuição ao INSS.`);
+  if (t.contribuicao < contribMin) return bloqueio('requisito', `Faltam ${Math.ceil((contribMin - t.contribuicao) / 12)} anos de contribuição ${prev.nome === 'INSS' ? 'ao INSS' : `à previdência (${prev.nome})`}.`);
   return { grau: 'permitido' };
 }
 
@@ -991,11 +1048,15 @@ export function valorAposentadoria(v: Vida): number {
   // Militares vão para a reserva com a remuneração do posto.
   if (atual && eMilitar(atual) && t.atual) return Math.round(t.atual.salario * 0.95 / 10) * 10;
   const salarios = [...t.historico.filter(h => contribui(h.contrato)).map(h => h.salario), ...(t.atual && contribui(t.atual.contrato) ? [t.atual.salario] : [])];
-  const media = salarios.length ? salarios.reduce((s, x) => s + x, 0) / salarios.length : SALARIO_MINIMO;
+  const pais = paisDaVida(v);
+  const prev = perfilDaVida(v).trabalho.previdencia;
+  const piso = salarioMinimoDoPais(pais);
+  const media = salarios.length ? salarios.reduce((s, x) => s + x, 0) / salarios.length : piso;
   const anos = Math.floor(t.contribuicao / 12);
-  const minimo = v.eu.genero === 'feminino' ? 15 : 20;
-  const pct = Math.min(1, 0.6 + Math.max(0, anos - minimo) * 0.02);
-  return Math.round(clamp(media * pct, SALARIO_MINIMO, TETO_INSS));
+  const minimo = prev.anos[v.eu.genero === 'feminino' ? 1 : 0];
+  const pct = Math.min(1, prev.reposicao + Math.max(0, anos - minimo) * 0.02);
+  const teto = parametrosFiscais(pais).teto;
+  return Math.round(clamp(media * pct, piso, Number.isFinite(teto) ? Math.max(piso, teto) : Math.max(piso, media)));
 }
 
 export function aposentar(v: Vida): void {
@@ -1012,7 +1073,7 @@ export function aposentar(v: Vida): void {
   const vida = trilha && anosNaTrilha >= 10 ? ` — ${anosNaTrilha} deles em ${ROTULO_TRILHA[trilha] ?? trilha}` : '';
   const texto = militar
     ? `Foi para a reserva depois de ${anosDeServicoMilitar(v)} anos de serviço, como ${nomeOcupacao(v, oc)}.`
-    : `Aposentou-se depois de ${Math.floor(v.trabalho.contribuicao / 12)} anos de contribuição${vida}, com um benefício de R$ ${beneficio.toLocaleString('pt-BR')} por mês.`;
+    : `Aposentou-se depois de ${Math.floor(v.trabalho.contribuicao / 12)} anos de contribuição${vida}, com um benefício de ${moeda(beneficio)} por mês.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, militar ? 'reserva' : 'aposentadoria', texto, 3, { trilha });
   if (militar && oc && eDasForcas(oc)) v.fatos['mil_reserva'] = v.t;
@@ -1041,9 +1102,12 @@ function aposentadoriaAutomatica(v: Vida): void {
   if (podeAposentar(v).grau === 'permitido') return; // essa é escolha do jogador
   if (!temFato(v, 'bpc')) {
     marcarFato(v, 'bpc');
-    v.trabalho.aposentadoria = { t: v.t, beneficio: SALARIO_MINIMO };
-    escrever(v, { texto: 'Sem tempo de contribuição para se aposentar, passou a receber o BPC: um salário mínimo por mês.', relevancia: 'biografia', tema: 'dinheiro' });
-    marcar(v, 'aposentadoria', 'Passou a receber o BPC.', 2);
+    // A assistência para o idoso sem contribuição: no Brasil, o BPC (um salário mínimo); fora, a do perfil do país, ou
+    // uma pensão assistencial genérica (abstração declarada: 70% do mínimo).
+    const as = perfilDaVida(v).trabalho.assistencia ?? { nome: 'a pensão assistencial do Estado para idosos', curto: 'a pensão assistencial', fracao: 0.7 };
+    v.trabalho.aposentadoria = { t: v.t, beneficio: Math.round(salarioMinimoDoPais(paisDaVida(v)) * as.fracao) };
+    escrever(v, { texto: `Sem tempo de contribuição para se aposentar, passou a receber ${as.nome}.`, relevancia: 'biografia', tema: 'dinheiro' });
+    marcar(v, 'aposentadoria', `Passou a receber ${as.curto}.`, 2);
   }
 }
 
@@ -1053,6 +1117,6 @@ export function descricaoEmprego(v: Vida): string {
   return `${nomeOcupacaoId(v, e.ocupacaoId)} · ${e.empregador}`;
 }
 
-export const salarioLiquidoAtual = (v: Vida) => (v.trabalho.atual ? liquido(v.trabalho.atual.salario, v.trabalho.atual.contrato) : 0);
+export const salarioLiquidoAtual = (v: Vida) => (v.trabalho.atual ? liquido(v.trabalho.atual.salario, v.trabalho.atual.contrato, paisDaCidade(v.trabalho.atual.municipioId)) : 0);
 
 export { nomeLugar, economiaLocal, nivelEsc };

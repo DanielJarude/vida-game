@@ -23,6 +23,9 @@ const FRACOES = [0, 0.25, 0.5, 0.75, 1];
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 /** A partilha, explicada e (enquanto a história não acabou) decidível. */
+/** "metade", "dois terços", "três quartos" (a legítima do país, em palavras). */
+const fracaoPorExtenso = (f: number) => (Math.abs(f - 0.5) < 0.01 ? 'metade' : Math.abs(f - 2 / 3) < 0.01 ? 'dois terços' : Math.abs(f - 3 / 4) < 0.01 ? 'três quartos' : Math.abs(f - 1 / 3) < 0.01 ? 'um terço' : Math.abs(f - 4 / 5) < 0.01 ? 'quatro quintos' : `${Math.round(f * 100)}%`);
+
 export function PartilhaDoLegado({ vida, c }: { vida: Vida; c: ControleVida }) {
   const d: DecisoesDeHeranca = vida.morte?.decisoes ?? {};
   const p = partilhar(vida, d);
@@ -49,9 +52,10 @@ export function PartilhaDoLegado({ vida, c }: { vida: Vida; c: ControleVida }) {
       {p.naoCoberto > 0 && <p className="legado__nota">As dívidas passavam do que havia: {fmt(p.naoCoberto)} se extinguiram com o espólio. Ninguém herda dívida.</p>}
       {p.legitima > 0 && (
         <p className="legado__nota">
-          Pela lei ({p.regra.nome}), metade da herança é dos herdeiros necessários e se divide entre eles. A outra metade — {fmt(p.disponivel)} — é a parte que um testamento pode decidir.
+          Pela lei ({p.regra.nome}), {fracaoPorExtenso(p.regra.legitima)} da herança {p.regra.legitima > 0.5 ? 'são' : 'é'} dos herdeiros necessários e se divide entre eles. O resto — {fmt(p.disponivel)} — é a parte que um testamento pode decidir.
         </p>
       )}
+      {p.legitima === 0 && p.heranca > 0 && p.herdeiros.length > 0 && <p className="legado__nota">Pela lei ({p.regra.nome}), não há herdeiro necessário: sem testamento, vale a ordem da lei; com ele, decide-se a herança inteira.</p>}
       {p.herdeiros.length === 0 && p.heranca > 0 && <p className="legado__nota">Sem herdeiros: o que não for doado vai para {p.regra.vacancia}.</p>}
 
       <ul className="legado__quinhoes" aria-label="Quem recebe">
@@ -141,6 +145,7 @@ export function ContinuarFamilia({ vida, c }: { vida: Vida; c: ControleVida }) {
                 <span>{x.ocupacao}</span>
                 <span>{[x.onde, x.familia].filter(Boolean).join(' · ')}</span>
                 <span>{x.dinheiro}{x.traco ? ` · ${x.traco}` : ''}</span>
+                {x.saude && <span>Saúde: {x.saude}.</span>}
                 {x.guarda && <span>A guarda ficaria com {x.guarda}.</span>}
                 {!x.pode && <span className="legado__erro">{x.motivo}</span>}
               </span>

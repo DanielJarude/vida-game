@@ -73,12 +73,37 @@ export interface Pessoa {
   gestacao?: { tParto: number; outroId?: string; anunciada: boolean };
   /** Onde nasceu (descendentes nascidos depois da sucessão; os anteriores herdam a cidade da casa em que nasceram). */
   municipioNatal?: string;
+  /** Nacionalidades (ausente: a do país onde nasceu — ou o Brasil, nas vidas anteriores ao mundo). */
+  nacionalidades?: string[];
   /**
    * O que é DESTA pessoa (sucessão): o que guardou do próprio trabalho e o que
    * recebeu de herança. Não é dinheiro do protagonista — mas entra na conta
    * da família: o que sai de uma vida chega inteiro a outra (`sucessao`).
    */
   posses?: Posses;
+  /**
+   * Condições de saúde persistentes (crônicas) — do MESMO catálogo do
+   * protagonista (`corpo.modeloCondicao`), só com o estado. Nascem, ganham
+   * nome, são tratadas ou não, pesam na saúde e no risco de morte enquanto a
+   * pessoa vive (`corpo.anoDeSaudeDaPessoa`); e viram `Condicao` 1:1 se ela
+   * passar a ser jogada (`sucessao.continuarComo`). Ausente = ainda não
+   * acompanhada (saves anteriores): a primeira leitura reconstrói pela idade.
+   */
+  condicoes?: CondicaoNpc[];
+}
+
+/** Uma condição de saúde de quem não é o protagonista: o id do catálogo e o estado (sem textos, sem lesões). */
+export interface CondicaoNpc {
+  id: string;
+  tInicio: number;
+  /** Gravidade 1..3 (a do catálogo). */
+  gravidade: number;
+  /** Já tem nome no consultório? Sem nome, age sobre o corpo — e ninguém da família sabe. */
+  diagnosticada: boolean;
+  tDiagnostico?: number;
+  /** Descoberta tarde (depois de anos de sinais): o tratamento rende menos. */
+  tarde?: boolean;
+  tratando: boolean;
 }
 
 /** O patrimônio de alguém que não é o protagonista (simplificado: dinheiro, bens, um negócio). */
@@ -744,6 +769,13 @@ export interface Divida {
   atraso?: number;
   /** Desde quando está atrasada (as consequências pedem tempo: ninguém perde a casa no primeiro mês). */
   atrasoDesde?: number;
+  /**
+   * Rotativo (cartão e cheque especial): o que foi de fato tomado, sem os
+   * encargos. A Lei 14.690/2023 (art. 28) limita juros e encargos do rotativo
+   * a 100% do valor original — o saldo nunca passa do dobro disto. Ausente =
+   * o saldo de quando o teto passou a ser acompanhado (saves anteriores).
+   */
+  principal?: number;
 }
 
 /** Um episódio na vida de um bem (a compra, o conserto, a mudança). Só o que importa. */
@@ -1286,8 +1318,8 @@ export interface PropostaDeClube {
   t: number;
   /** Até quando vale a resposta. */
   validaAte: number;
-  /** De onde veio: o mercado reagiu à temporada, o empresário buscou (maior, menor), o clube quis liberar, a volta de quem estava sem clube. */
-  origem: 'mercado' | 'maior' | 'menor' | 'liberacao' | 'sem_clube' | 'emprestimo' | 'compra';
+  /** De onde veio (ATT Mundo: 'exterior' é o clube de outro país que buscou quem brilha na elite): o mercado reagiu à temporada, o empresário buscou (maior, menor), o clube quis liberar, a volta de quem estava sem clube. */
+  origem: 'mercado' | 'maior' | 'menor' | 'liberacao' | 'sem_clube' | 'emprestimo' | 'compra' | 'exterior';
 }
 
 /** A trajetória na seleção nacional: só existe depois que o radar ligou. */
@@ -1308,6 +1340,8 @@ export interface TrajetoriaNaSelecao {
   torneios: { ano: number; nome: string; campanha: string; jogos: number }[];
   /** Nas modalidades individuais: medalhas em competições internacionais pelo país. */
   medalhas?: number;
+  /** O país da seleção (a nacionalidade escolhida; ausente: o Brasil, nas vidas anteriores ao mundo). */
+  pais?: string;
 }
 
 /** Uma situação de carreira aberta (`situacoes`): o modelo e o contexto sorteado (o minuto, o placar, o caso). */
@@ -1379,6 +1413,26 @@ export interface PassagemDeTecnico {
   decisao?: { competicao: string; adversario: string; forca: number; ano: number; t: number };
   /** Quando renovou pela última vez (o momento da renovação lê isto). */
   tRenovacao?: number;
+  /** A passagem começou no meio da temporada (o clube em crise demitiu o técnico e chamou você): de onde se pegou o time. */
+  meioDeTemporada?: { rodada: number; rodadas: number; posicao: number };
+  /** A tabela do dia em que se assumiu (só até a primeira temporada ser jogada: dela em diante, os jogos são seus). */
+  retomada?: TabelaEmCurso;
+}
+
+/**
+ * A liga no dia em que o clube em crise demitiu o técnico: as rodadas já
+ * jogadas SEM você, a pontuação dos 20 e a força de cada um (índice 0: o
+ * clube, só o elenco — o técnico novo entra por cima). A proposta mostra
+ * ISTO, e a temporada parcial continua DAQUI.
+ */
+export interface TabelaEmCurso {
+  rodada: number;
+  rodadas: number;
+  posicao: number;
+  /** O que a diretoria esperava daquele elenco (a posição pela força). */
+  esperada: number;
+  pontos: number[];
+  forcas: number[];
 }
 
 export interface TemporadaDeTecnico {
@@ -1398,6 +1452,8 @@ export interface TemporadaDeTecnico {
   rebaixamento?: boolean;
   /** Saiu no meio da temporada (demissão, proposta): os números são até ali. */
   parcial?: boolean;
+  /** Chegou no meio da temporada: dirigiu da rodada seguinte a esta em diante (os números são só desses jogos). */
+  desdeRodada?: number;
   /** Seleção: os torneios disputados no ano e a campanha. */
   torneio?: string;
 }
@@ -1411,8 +1467,10 @@ export interface PropostaDeTecnico {
   salario: number;
   t: number;
   validaAte: number;
-  origem: 'mercado' | 'sem_clube' | 'selecao';
+  origem: 'mercado' | 'sem_clube' | 'selecao' | 'crise';
   selecao?: boolean;
+  /** Contratação no meio da temporada (`origem: 'crise'`): a tabela do dia — a mesma que a temporada parcial continua. */
+  meioDeTemporada?: TabelaEmCurso;
 }
 
 /**
@@ -2046,6 +2104,13 @@ export interface Personagem {
   genero: Genero;
   tNasc: number;
   municipioNatal: string;
+  /**
+   * Nacionalidades (ISO 3166-1), na ordem em que vieram — a primeira é a de
+   * nascença. NASCER, TER NACIONALIDADE E MORAR SÃO COISAS DIFERENTES: o país
+   * de nascimento é o da cidade natal; o de residência, o da moradia; a
+   * nacionalidade só muda por naturalização (`mundo/cidadania`).
+   */
+  nacionalidades: string[];
   atracao?: Atracao;
   visual: Visual;
   /** O estilo escolhido e o que foi comprado para ele (ausente: nada além do básico). */
@@ -2087,7 +2152,7 @@ export interface Notoriedade {
 export type FonteDoNome = 'esporte' | 'arte' | 'politica' | 'negocio';
 
 export interface Vida {
-  versao: 19;
+  versao: 20;
   id: string;
   rng: number;
   seq: number;
@@ -2145,6 +2210,38 @@ export interface Vida {
    * cada uma fica aqui — nunca misturada com a Linha da Vida de quem continua.
    */
   linhagem?: Linhagem;
+  /** A vida no mundo: as mudanças de país, a adaptação ao lugar, as línguas (ausente: nunca saiu do país onde nasceu). */
+  mundo?: MundoDaVida;
+}
+
+/* ------------------------------------------------------------------- Mundo */
+
+export type MotivoMigracao = 'trabalho' | 'estudo' | 'familia' | 'relacionamento' | 'esporte' | 'oportunidade' | 'pessoal' | 'retorno';
+
+/** Uma mudança de país (mudar de cidade dentro do país não é migração). */
+export interface Migracao {
+  t: number;
+  de: string;
+  para: string;
+  motivo: MotivoMigracao;
+  /** Por onde a porta abriu: livre circulação (bloco), trabalho, estudo, família, nacionalidade (voltar para casa), residência. */
+  via: 'livre' | 'trabalho' | 'estudo' | 'familia' | 'cidadania' | 'residencia';
+  /** O que o dinheiro valia na saída e na chegada (o mesmo valor de mercado, em outra moeda). */
+  cambio?: { antes: number; depois: number };
+}
+
+export interface MundoDaVida {
+  migracoes: Migracao[];
+  /**
+   * O quanto a pessoa já está em casa no país onde mora, 0..100: a língua,
+   * o jeito das coisas, a rede. Começa baixa para quem chega de fora e sobe
+   * com os anos (mais rápido quem fala a língua). Pesa no trabalho e na cabeça.
+   */
+  adaptacao: number;
+  /** As línguas que a pessoa fala (em português: "espanhol"), além da de casa. */
+  idiomas: string[];
+  /** Pedido de naturalização em curso (ano em que sai a resposta). */
+  naturalizacao?: { pais: string; t: number };
 }
 
 /* ----------------------------------------------------------------- Sucessão */
@@ -2177,6 +2274,9 @@ export interface Geracao {
   causa: string;
   municipioNatal: string;
   municipioMorte: string;
+  /** Nacionalidades e mudanças de país de quem viveu (ausente: a vida inteira no Brasil). */
+  nacionalidades?: string[];
+  migracoes?: Migracao[];
   /** O que marcou a vida (a retrospectiva) e o que construiu (as trajetórias), como ficaram no fim. */
   resumo: string[];
   trajetorias: { titulo: string; periodo: string; resumo: string }[];

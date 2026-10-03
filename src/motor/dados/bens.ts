@@ -32,8 +32,8 @@ export type FormaVeiculo =
   | 'ultraleve' | 'monomotor' | 'asa_baixa' | 'bimotor' | 'jato';
 
 /** Habilitação para operar (separada da posse: ter um barco não é saber pilotar um). */
-export type Habilitacao = 'cnh' | 'nautica' | 'piloto';
-export const NOME_HABILITACAO: Record<Habilitacao, string> = { cnh: 'carteira de motorista', nautica: 'habilitação náutica', piloto: 'licença de piloto' };
+export type Habilitacao = 'cnh' | 'nautica' | 'piloto' | 'multimotor';
+export const NOME_HABILITACAO: Record<Habilitacao, string> = { cnh: 'carteira de motorista', nautica: 'habilitação náutica', piloto: 'licença de piloto', multimotor: 'habilitação de multimotor' };
 
 export interface ModeloVeiculo {
   id: string;
@@ -66,6 +66,14 @@ export interface ModeloVeiculo {
   habilitacao?: Exclude<Habilitacao, 'cnh'>;
   /** Raro e contextual: onde se vende (perto da água, cidade com aeroclube). */
   raro?: boolean;
+  /**
+   * Tripulação contratada (o jato): custo mensal FIXO de quem o opera (dois
+   * pilotos com a habilitação do tipo), pago enquanto o avião não está parado.
+   * Quem tem, não pilota — e não paga piloto avulso a cada voo.
+   */
+  tripulacao?: number;
+  /** Quem vende pede patrimônio para manter (o jato): abaixo disso, a venda não sai. */
+  patrimonioMin?: number;
 }
 
 /** Classes de veículo (os ids ficam: estão nos saves e em toda a simulação). */
@@ -84,7 +92,12 @@ export const VEICULOS: readonly ModeloVeiculo[] = [
   { id: 'lancha', nome: 'lancha', categoria: 'embarcacao', preco: 420000, usoMensal: 4200, taxaAnual: 0.045, idadeMin: 18, cnh: false, habilitacao: 'nautica', raro: true, lugares: 8, conforto: 5, fragilidade: 1.2, descricao: 'Um dia no mar com gente querida. Marina, combustível, marinheiro de vez em quando: a conta não para.', usado: true, fatorConserto: 2.6, pesoUsado: 0.8 },
   { id: 'veleiro', nome: 'veleiro', categoria: 'embarcacao', preco: 360000, usoMensal: 2600, taxaAnual: 0.04, idadeMin: 18, cnh: false, habilitacao: 'nautica', raro: true, lugares: 6, conforto: 4, fragilidade: 1, descricao: 'Anda com o vento: pouco combustível, muito aprendizado.', usado: true, fatorConserto: 2.2, pesoUsado: 0.5 },
   { id: 'ultraleve', nome: 'ultraleve', categoria: 'aeronave', preco: 390000, usoMensal: 3200, taxaAnual: 0.05, idadeMin: 18, cnh: false, habilitacao: 'piloto', raro: true, lugares: 2, conforto: 3, fragilidade: 1.2, descricao: 'Voar baixo, de manhã cedo. Hangar, combustível e revisões pesam.', usado: true, fatorConserto: 2.8, pesoUsado: 0.6 },
-  { id: 'monomotor', nome: 'avião monomotor', categoria: 'aeronave', preco: 2400000, usoMensal: 12000, taxaAnual: 0.05, idadeMin: 18, cnh: false, habilitacao: 'piloto', raro: true, lugares: 4, conforto: 5, fragilidade: 1.1, descricao: 'Quatro lugares e o país inteiro ao alcance — com hangar, inspeção e uma conta de manutenção de empresa.', usado: true, fatorConserto: 3.2, pesoUsado: 0.4 }
+  { id: 'monomotor', nome: 'avião monomotor', categoria: 'aeronave', preco: 2400000, usoMensal: 12000, taxaAnual: 0.05, idadeMin: 18, cnh: false, habilitacao: 'piloto', raro: true, lugares: 4, conforto: 5, fragilidade: 1.1, descricao: 'Quatro lugares e o país inteiro ao alcance — com hangar, inspeção e uma conta de manutenção de empresa.', usado: true, fatorConserto: 3.2, pesoUsado: 0.4 },
+  // Bimotor e jato (R$ de 2026, câmbio ~5,5): um bimotor a pistão novo custa de US$ 1,3 a 1,8 milhão; um jato executivo leve, de US$ 4,5 a 6 milhões.
+  // O bimotor pede a habilitação de multimotor (além da licença de piloto); o jato voa com tripulação própria (dois pilotos, ~R$ 70 mil/mês com encargos)
+  // e quem vende pede patrimônio para manter (só a operação passa de R$ 1,5 milhão por ano). Seguro e hangar pesam menos em % do valor, mais em reais.
+  { id: 'bimotor', nome: 'avião bimotor', categoria: 'aeronave', preco: 7000000, usoMensal: 26000, taxaAnual: 0.035, idadeMin: 18, cnh: false, habilitacao: 'multimotor', raro: true, lugares: 6, conforto: 5, fragilidade: 1.1, descricao: 'Dois motores e seis lugares: chuva de frente, pista de fazenda, a margem de segurança de um motor a mais — e duas revisões de motor para pagar.', usado: true, fatorConserto: 3.6, pesoUsado: 0.25 },
+  { id: 'jato', nome: 'jato executivo', categoria: 'aeronave', preco: 25000000, usoMensal: 65000, taxaAnual: 0.025, idadeMin: 18, cnh: false, raro: true, tripulacao: 70000, patrimonioMin: 40000000, lugares: 6, conforto: 5, fragilidade: 1, descricao: 'O país em duas horas, de qualquer aeroporto. Dois pilotos na folha, hangar, programa de manutenção por hora voada: uma empresa que só gasta.', usado: true, fatorConserto: 4, pesoUsado: 0.15 }
 ];
 
 /** Faixa de preço dentro da categoria (carros, motos, bicicletas). */
@@ -194,7 +207,11 @@ export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
   { id: 'inpaer_excel', classe: 'ultraleve', marca: 'Inpaer', modelo: 'Excel', dica: 'ultraleve de dois lugares', faixa: 'intermediaria', preco: 420000, artigo: 'o', pesoUsado: 0.6, forma: 'ultraleve' },
   { id: 'paradise_p1', classe: 'ultraleve', marca: 'Paradise', modelo: 'P1', dica: 'ultraleve de asa alta', faixa: 'economica', preco: 330000, artigo: 'o', pesoUsado: 0.8, forma: 'ultraleve' },
   { id: 'cessna_172', classe: 'monomotor', marca: 'Cessna', modelo: '172 Skyhawk', dica: 'monomotor de quatro lugares', faixa: 'alta', preco: 2600000, artigo: 'o', pesoUsado: 0.5, forma: 'monomotor' },
-  { id: 'piper_archer', classe: 'monomotor', marca: 'Piper', modelo: 'Archer', dica: 'monomotor de asa baixa, quatro lugares', faixa: 'alta', preco: 2300000, artigo: 'o', pesoUsado: 0.5, forma: 'asa_baixa' }
+  { id: 'piper_archer', classe: 'monomotor', marca: 'Piper', modelo: 'Archer', dica: 'monomotor de asa baixa, quatro lugares', faixa: 'alta', preco: 2300000, artigo: 'o', pesoUsado: 0.5, forma: 'asa_baixa' },
+  { id: 'piper_seneca', classe: 'bimotor', marca: 'Piper', modelo: 'Seneca V', dica: 'bimotor de seis lugares', faixa: 'intermediaria', preco: 7200000, artigo: 'o', pesoUsado: 0.6, forma: 'bimotor' },
+  { id: 'beech_baron', classe: 'bimotor', marca: 'Beechcraft', modelo: 'Baron G58', dica: 'bimotor de seis lugares', faixa: 'alta', preco: 9600000, artigo: 'o', pesoUsado: 0.4, usoMensal: 30000, forma: 'bimotor' },
+  { id: 'embraer_phenom100', classe: 'jato', marca: 'Embraer', modelo: 'Phenom 100EV', dica: 'jato executivo leve', faixa: 'intermediaria', preco: 25000000, artigo: 'o', pesoUsado: 0.6, forma: 'jato' },
+  { id: 'cessna_citation_m2', classe: 'jato', marca: 'Cessna', modelo: 'Citation M2 Gen2', dica: 'jato executivo leve', faixa: 'alta', preco: 33000000, artigo: 'o', pesoUsado: 0.4, usoMensal: 72000, forma: 'jato' }
 ];
 
 /** A forma de uma versão (o desenho que a representa). */
@@ -207,7 +224,7 @@ export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): Fo
     case 'bicicleta': return m.eletrica ? 'eletrica' : /trilha|mountain/.test(d) ? 'mtb' : /estrada|speed/.test(d) ? 'estrada' : 'urbana';
     case 'moto': return /scooter/.test(d) || x?.id === 'honda_pop' || x?.id === 'honda_biz' ? 'scooter' : /trail|terra/.test(d) ? 'trail' : /clássica|custom/.test(d) ? 'cruiser' : /esportiva/.test(d) ? 'esportiva' : 'street';
     case 'embarcacao': return c === 'jetski' ? 'jetski' : c === 'veleiro' ? 'veleiro' : 'lancha';
-    case 'aeronave': return c === 'ultraleve' ? 'ultraleve' : /jato/.test(d) ? 'jato' : /bimotor/.test(d) ? 'bimotor' : /asa baixa/.test(d) ? 'asa_baixa' : 'monomotor';
+    case 'aeronave': return c === 'ultraleve' || c === 'bimotor' || c === 'jato' ? c : /jato/.test(d) ? 'jato' : /bimotor/.test(d) ? 'bimotor' : /asa baixa/.test(d) ? 'asa_baixa' : 'monomotor';
     default: return /picape/.test(d) ? 'picape' : /suv/.test(d) ? 'suv' : /esportivo/.test(d) ? 'esportivo' : /sedã/.test(d) ? 'seda' : c === 'carro_sedan' ? 'seda' : c.startsWith('carro_suv') ? 'suv' : 'hatch';
   }
 }

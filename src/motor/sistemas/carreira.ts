@@ -18,6 +18,8 @@
  *   semente), e falam em categorias plausíveis, não em profissões de ficção.
  */
 
+import { salarioMinimoDoPais } from '../mundo/economia';
+import { paisDaVida, perfilDaVida } from '../mundo/vida';
 import type { Vida } from '../tipos';
 import { clamp } from '../rng';
 import { idade, temFato } from '../nucleo';
@@ -26,7 +28,7 @@ import { familiaDaTrilha, FAMILIAS, pesoDaAutomacao, pesoDaExpansao, type Famili
 import { economiaLocal } from '../dados/lugares';
 import { habilidade } from './frentes';
 import { anoDe } from '../tempo';
-import { CUSTO_FACULTATIVO, SALARIO_MINIMO } from './renda';
+import { CUSTO_FACULTATIVO } from './renda';
 import { arrendamentoMensal } from './rural';
 
 export const familiaDe = (oc: Ocupacao): FamiliaCarreira => familiaDaTrilha(oc.trilha);
@@ -92,7 +94,8 @@ export function custosDoTrabalho(v: Vida): { rotulo: string; valor: number }[] {
       out.push({ rotulo: f.custoAutonomo.rotulo, valor: Math.round(f.custoAutonomo.valor * escala * c * (e.reduzida ? 0.6 : 1)) });
     }
     if (f.anuidade && oc.licenca && oc.licenca !== 'cnh') out.push({ rotulo: `Anuidade do conselho (${oc.licenca.toUpperCase()})`, valor: f.anuidade });
-    if (e.mei) out.push({ rotulo: 'DAS do MEI (INSS e impostos)', valor: Math.round(SALARIO_MINIMO * 0.05 + 6) });
+    // A guia mensal do regime simplificado do país (no Brasil, o DAS do MEI: 5% do mínimo + R$ 6), no mínimo de lá.
+    if (e.mei) { const reg = perfilDaVida(v).trabalho.microempreendedor; out.push({ rotulo: reg?.nome === 'MEI' ? 'DAS do MEI (INSS e impostos)' : `Guia do regime simplificado${reg ? ` (${reg.nome})` : ''}`, valor: Math.round(salarioMinimoDoPais(paisDaVida(v)) * 0.05 + 6) }); }
     if (oc.id === 'produtor_rural' && v.caminhos.rural?.terra === 'arrendada') out.push({ rotulo: 'Arrendamento da terra', valor: arrendamentoMensal(v) });
   }
   if (v.trabalho.pausa?.facultativo) out.push({ rotulo: 'INSS como contribuinte facultativo', valor: CUSTO_FACULTATIVO });

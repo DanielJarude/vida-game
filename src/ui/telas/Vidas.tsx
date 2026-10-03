@@ -1,9 +1,9 @@
 import type { ControleVida } from '../useVida';
-import { lerEstatisticas } from '../../motor/save';
-import { dinheiroCurto } from '../apresentar';
+import { formatarDinheiroCurto } from '../../motor/mundo/moeda';
 
+// PWA: as estatísticas vêm do controle (lidas pela persistência — IndexedDB ou localStorage), não direto do localStorage.
 export function Vidas({ c }: { c: ControleVida }) {
-  const e = lerEstatisticas();
+  const e = c.estatisticas ?? { vidasJogadas: 0, totalAnosVividos: 0, maiorIdade: 0, maiorPatrimonio: 0, historico: [] };
   return (
     <div className="vidas">
       <h1>Vidas passadas</h1>
@@ -12,7 +12,7 @@ export function Vidas({ c }: { c: ControleVida }) {
         {e.historico.map(v => (
           <li key={v.id + v.ano}>
             <strong>{v.nome}</strong>
-            <span>{v.idadeMorte} anos · {v.lugar}{v.profissao && v.profissao !== '—' ? ` · ${v.profissao}` : ''} · {v.causa} · deixou {dinheiroCurto(v.patrimonio)}</span>
+            <span>{v.idadeMorte} anos · {v.lugar}{v.profissao && v.profissao !== '—' ? ` · ${v.profissao}` : ''} · {v.causa} · deixou {formatarDinheiroCurto(v.patrimonio, v.pais ?? 'BR')}</span>
           </li>
         ))}
       </ul>

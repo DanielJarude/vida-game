@@ -47,7 +47,16 @@ function listar(dir, base = dir) {
 
 // Sempre com '/' — a especificação do ZIP exige barra normal, inclusive
 // quando o pacote é gerado no Windows.
-const arquivos = listar(dist).sort();
+//
+// PWA: o service worker (sw.js e o runtime workbox-*.js) fica FORA do pacote do
+// itch. Lá o jogo roda num iframe de html-classic.itch.zone dentro da página do
+// itch.io — um service worker de terceiros, que o Safari bloqueia e o Chrome
+// isola, e que a cada envio novo (caminho com outro hash) deixaria caches
+// órfãos. O registro já não acontece em iframe (src/ui/pwa/registrar.ts); tirar
+// o arquivo garante isso até contra uma regressão. O jogo no itch segue online,
+// como sempre foi, com o save no IndexedDB (ou no localStorage).
+const SO_PWA = (p) => /^(sw\.js|workbox-[\w-]+\.js)(\.map)?$/.test(p);
+const arquivos = listar(dist).filter((p) => !SO_PWA(p)).sort();
 const paraZip = (p) => p.split(sep).join('/');
 
 const locais = [];

@@ -6,7 +6,7 @@ import { DesenhoVeiculo } from '../jogo/material/Desenhos';
 import { Retrato } from '../avatar/Retrato';
 import { FiguraCao, FiguraGato, morfologiaCao, morfologiaGato } from '../avatar/caesEGatos';
 import { GLIFOS, GlifoConquista, GlifoDaLinha, iconeDaConquista } from '../iconesConquista';
-import { formaDaVersao, VERSOES_VEICULO, type FormaVeiculo } from '../../motor/dados/bens';
+import { formaDaVersao, VEICULOS, VERSOES_VEICULO, type FormaVeiculo } from '../../motor/dados/bens';
 import type { ConquistaEsportiva } from '../../motor/tipos';
 
 afterEach(cleanup);
@@ -52,6 +52,23 @@ describe('aviões: famílias morfológicas', () => {
     expect(f('paradise_p1')).toBe('ultraleve');
     expect(formaDaVersao({ id: 'x', classe: 'monomotor', marca: 'X', modelo: 'Y', dica: 'jato executivo leve', faixa: 'alta', preco: 1, artigo: 'o', pesoUsado: 1 } as never)).toBe('jato');
     expect(formaDaVersao({ id: 'x', classe: 'monomotor', marca: 'X', modelo: 'Y', dica: 'bimotor de seis lugares', faixa: 'alta', preco: 1, artigo: 'o', pesoUsado: 1 } as never)).toBe('bimotor');
+  });
+
+  it('bimotor e jato à venda: cada versão mostra o desenho da sua família (também sem versão, pela classe)', () => {
+    const f = (id: string) => formaDaVersao(VERSOES_VEICULO.find(x => x.id === id));
+    expect(f('piper_seneca')).toBe('bimotor');
+    expect(f('beech_baron')).toBe('bimotor');
+    expect(f('embraer_phenom100')).toBe('jato');
+    expect(f('cessna_citation_m2')).toBe('jato');
+    expect(formaDaVersao(undefined, 'bimotor')).toBe('bimotor');
+    expect(formaDaVersao(undefined, 'jato')).toBe('jato');
+    // Toda classe de aeronave tem versão à venda, e toda família desenhada tem quem a use no catálogo.
+    for (const m of VEICULOS.filter(x => x.categoria === 'aeronave')) expect(VERSOES_VEICULO.some(x => x.classe === m.id), m.id).toBe(true);
+    const usadas = new Set(VERSOES_VEICULO.filter(x => VEICULOS.find(m => m.id === x.classe)?.categoria === 'aeronave').map(x => formaDaVersao(x)));
+    for (const forma of ['ultraleve', 'monomotor', 'asa_baixa', 'bimotor', 'jato'] as FormaVeiculo[]) expect(usadas.has(forma), forma).toBe(true);
+    // O desenho do jato à venda é o do jato (sem hélice), e o do bimotor é o do bimotor.
+    expect(traco(<DesenhoVeiculo forma={f('embraer_phenom100')} />)).toBe(traco(<DesenhoVeiculo forma="jato" />));
+    expect(traco(<DesenhoVeiculo forma={f('piper_seneca')} />)).toBe(traco(<DesenhoVeiculo forma="bimotor" />));
   });
 });
 

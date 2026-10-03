@@ -1,5 +1,6 @@
 /** O fim: um obituário e a vida inteira para ler. */
 
+import { entrarNaVida } from '../../motor/mundo/vida';
 import type { Vida } from '../../motor/tipos';
 import type { ControleVida } from '../useVida';
 import { filhos, idade, vinculosVivos } from '../../motor/nucleo';
@@ -20,6 +21,7 @@ import { oQueFicou } from '../../motor/sistemas/sucessao';
 import { ContinuarFamilia, PartilhaDoLegado } from './Legado';
 
 export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
+  entrarNaVida(vida);
   const i = idade(vida);
   const g = vida.eu.tratamento ?? vida.eu.genero;
   const nFilhos = Object.values(vida.vinculos).filter(v => v.parentesco === 'filho').length;

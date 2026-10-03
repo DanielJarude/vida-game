@@ -324,7 +324,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
     efeito: (v, _r, n) => anoDaAtividade(v, 'clube_ciencias', n)
   },
   {
-    id: 'cursinho', nome: 'Cursinho pré-vestibular', descricao: 'Aulas para o ENEM. Ajuda muito na nota.', categoria: 'estudo', idadeMin: 16,
+    id: 'cursinho', nome: 'Cursinho pré-vestibular', descricao: 'Aulas para a prova de ingresso na universidade. Ajuda muito na nota.', categoria: 'estudo', idadeMin: 16,
     niveis: [{ rotulo: 'Todas as noites', tempo: 1, custo: 0 }],
     social: { onde: 'no cursinho', fluxo: 1, amplitude: 3 },
     requer: v => (v.educacao.matricula ? 'Já está fazendo faculdade.' : true),

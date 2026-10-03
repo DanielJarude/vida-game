@@ -1,0 +1,22 @@
+// Explorador: abre o jogo, executa passos e despeja texto/screenshot.
+import { chromium } from 'playwright';
+const SP = process.env.SP; const URL = process.env.URL ?? 'http://localhost:4180/';
+const W = Number(process.env.W ?? 390);
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: W, height: W < 800 ? 844 : 900 } });
+const p = await ctx.newPage();
+const errs = [];
+p.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
+p.on('console', m => { if (m.type() === 'error' || m.type()==='warning') errs.push('CONSOLE ' + m.type() + ' ' + m.text()); });
+p.on('requestfailed', r => errs.push('REQFAIL ' + r.url()));
+await p.goto(URL); await p.waitForTimeout(1500);
+console.log((await p.locator('body').innerText()).slice(0, 1500));
+await p.screenshot({ path: `${SP}/ex-inicio.png` });
+const bt = p.getByRole('button', { name: /Nascer/ }).first();
+await bt.click(); await p.waitForTimeout(800);
+console.log('=====CRIACAO\n' + (await p.locator('body').innerText()));
+await p.screenshot({ path: `${SP}/ex-criacao.png`, fullPage: true });
+console.log(await p.evaluate(() => [...document.querySelectorAll('button,input,select')].map(e => e.tagName + '.' + e.className + ' [' + (e.textContent||e.getAttribute('aria-label')||e.placeholder||'').trim().slice(0,50) + ']').join('\n')));
+console.log(errs.join('\n'));
+console.log('manifest:', await p.evaluate(() => document.querySelector('link[rel=manifest]')?.href));
+await b.close();

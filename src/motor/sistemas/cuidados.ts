@@ -18,8 +18,9 @@ import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidad
 import { aplicarPersonalidade } from '../personalidade';
 import { abalar } from './abalo';
 import { apoios, fatoresCabeca, fatoresHumor, fatoresSaude, sobrecargaDaSemana } from './estado';
-import { modeloCondicao } from './corpo';
-import { diagnosticar, encaminhado, MENTAIS, registrarDiagnostico, semNome, SINAIS } from './saude';
+import { modeloCondicao, riscoNoAno } from './corpo';
+import { diagnosticar, encaminhado, MENTAIS, redeDeSaude, registrarDiagnostico, semNome, SINAIS } from './saude';
+import { perfilDaVida } from '../mundo/vida';
 import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
 import { interacoesPara } from './interacoes';
@@ -95,8 +96,11 @@ function consulta(v: Vida, r: Rng): SaidaCuidado {
   if (sinal && r.chance(sinal.id === 'depressao' || sinal.id === 'ansiedade' ? 0.75 : 0.9)) {
     diagnosticar(v, sinal, 'consulta');
     const texto = registrarDiagnostico(v, sinal, 'consulta');
-    // Saúde mental: o posto encaminha para acompanhamento pelo SUS (UBS, CAPSi para quem é menor) — de graça.
-    if (MENTAIS.has(sinal.id)) return { resultado: `${texto} ${i < 18 ? 'No posto de saúde, com a família junto, veio o encaminhamento' : 'Veio o encaminhamento'} para acompanhamento com psicólogo pelo SUS${i < 18 ? ' (UBS ou CAPSi)' : ''}: é de graça. Começar é com você.` };
+    // Saúde mental: o posto encaminha para acompanhamento pela rede pública (no Brasil, o SUS: UBS, CAPSi para quem é menor) — de graça.
+    if (MENTAIS.has(sinal.id)) {
+      const ondeJovem = perfilDaVida(v).cotidiano?.saudeMentalJovem;
+      return { resultado: `${texto} ${i < 18 ? 'No posto de saúde, com a família junto, veio o encaminhamento' : 'Veio o encaminhamento'} para acompanhamento com psicólogo ${redeDeSaude(v).pelo}${i < 18 && ondeJovem ? ` (${ondeJovem})` : ''}: é de graça. Começar é com você.` };
+    }
     if (v.financas.planoDeSaude) { sinal.tratando = true; return { resultado: `${texto} O plano cobriu o tratamento, que começou logo.` }; }
     if (i >= 18 && !v.processos.some(p => p.tipo === 'tratamento')) return { resultado: texto, decisao: 'sau_tratamento' };
     return { resultado: texto };
@@ -104,15 +108,15 @@ function consulta(v: Vida, r: Rng): SaidaCuidado {
   if (sinal) return { resultado: `O médico ouviu sobre ${SINAIS[sinal.id] ?? 'o incômodo'} e pediu exames. Nada fechado ainda: voltar no ano que vem, se não passar.` };
   const semTratar = v.corpo.condicoes.find(x => x.cronica && !x.tratando);
   if (semTratar && i >= 18) {
-    if (v.processos.some(p => p.tipo === 'tratamento')) return { resultado: `O médico olhou o encaminhamento: a fila do SUS para ${semTratar.nome} continua andando. Mandou não parar de se cuidar enquanto isso.` };
+    if (v.processos.some(p => p.tipo === 'tratamento')) return { resultado: `O médico olhou o encaminhamento: a fila ${redeDeSaude(v).do} para ${semTratar.nome} continua andando. Mandou não parar de se cuidar enquanto isso.` };
     return { decisao: 'sau_tratamento' };
   }
   // Um check-up pega cedo o que o corpo ainda não mostrou.
   const riscos: { id: 'hipertensao' | 'diabetes'; chance: number }[] = [];
   const hip = modeloCondicao('hipertensao');
   const dia = modeloCondicao('diabetes');
-  if (hip && !v.corpo.condicoes.some(x => x.id === 'hipertensao')) riscos.push({ id: 'hipertensao', chance: Math.min(0.35, hip.risco(v, i) * 3) });
-  if (dia && !v.corpo.condicoes.some(x => x.id === 'diabetes')) riscos.push({ id: 'diabetes', chance: Math.min(0.25, dia.risco(v, i) * 3) });
+  if (hip && !v.corpo.condicoes.some(x => x.id === 'hipertensao')) riscos.push({ id: 'hipertensao', chance: Math.min(0.35, riscoNoAno(v, hip, i) * 3) });
+  if (dia && !v.corpo.condicoes.some(x => x.id === 'diabetes')) riscos.push({ id: 'diabetes', chance: Math.min(0.25, riscoNoAno(v, dia, i) * 3) });
   for (const x of riscos) {
     if (r.chance(x.chance)) {
       const m = modeloCondicao(x.id)!;
@@ -207,7 +211,7 @@ export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vi
     if (quem) out.push({ id: 'desabafar', texto: `Desabafar com ${quem.nome}`, motivo: 'Falar do que pesa, com quem escuta.', acao: { tipo: 'pessoa', pessoaId: quem.id, interacao: 'desabafar' } });
     if ((v.mente.estresse >= 55 || v.corpo.condicoes.some(c => c.id === 'ansiedade' || c.id === 'depressao')) && !v.rotinas.some(x => x.id === 'terapia')) {
       const a: Acao = { tipo: 'rotina', id: 'terapia', ativa: true, nivel: 1 };
-      out.push({ id: 'terapia', texto: encaminhado(v) ? 'Começar o acompanhamento pelo SUS' : 'Procurar terapia', motivo: encaminhado(v) ? 'Com o encaminhamento, o psicólogo do posto é de graça.' : 'Quando a pressão dura, ajuda ter alguém de fora.', acao: a });
+      out.push({ id: 'terapia', texto: encaminhado(v) ? `Começar o acompanhamento ${redeDeSaude(v).pelo}` : 'Procurar terapia', motivo: encaminhado(v) ? 'Com o encaminhamento, o psicólogo do posto é de graça.' : 'Quando a pressão dura, ajuda ter alguém de fora.', acao: a });
     }
     const possiveis = out.filter(x => !x.acao || junto(x.acao));
     // Nunca sem saída: se nada direto cabe agora, sobra procurar alguém.

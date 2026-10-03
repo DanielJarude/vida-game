@@ -7,6 +7,7 @@
  * sendo uma decisão de uma etapa só.
  */
 
+import { dinheiro as moeda } from '../texto';
 import type { Conteudo, Ctx, Resultado } from './base';
 import type { Rng } from '../rng';
 import type { Vida } from '../tipos';
@@ -44,7 +45,7 @@ function legado(c: Ctx, bonus: number): Resultado {
   const base = elegibilidade(c.v, oc).chance ?? 0.4;
   if (c.r.chance(clamp(base + bonus + porta, 0.03, 0.95))) {
     const e = contratar(c.v, c.r, oc, via);
-    return { texto: `Ligaram dois dias depois: a vaga é sua. ${cap(nomeOcupacao(c.v, oc))} em ${e.empregador}, R$ ${e.salario.toLocaleString('pt-BR')} por mês.`, memoria: textoDeContratacao(c.v, oc, e), tom: 'bom', relevancia: 'marco' };
+    return { texto: `Ligaram dois dias depois: a vaga é sua. ${cap(nomeOcupacao(c.v, oc))} em ${e.empregador}, ${moeda(e.salario)} por mês.`, memoria: textoDeContratacao(c.v, oc, e), tom: 'bom', relevancia: 'marco' };
   }
   return { texto: 'O e-mail veio educado: "decidimos seguir com outro candidato".', memoria: null, tom: 'ruim' };
 }
@@ -130,7 +131,7 @@ function concluirEntrevista(c: Ctx): Resultado {
     // A vaga é sua — se ela não couber com o que você já faz (a base, a faculdade do dia inteiro, o negócio), vem a pergunta.
     const saiu = propor(c.v, c.r, { tipo: 'emprego', ocupacaoId: oc.id, via: pr.via, texto: `A vaga de ${nome} é sua.` });
     const e = c.v.trabalho.atual;
-    if (saiu === 'feito' && e?.ocupacaoId === oc.id) return { texto: `Ligaram dois dias depois: a vaga é sua. ${nome.charAt(0).toUpperCase() + nome.slice(1)} em ${e.empregador}, R$ ${e.salario.toLocaleString('pt-BR')} por mês.${elogio}`, memoria: null, tom: 'bom' };
+    if (saiu === 'feito' && e?.ocupacaoId === oc.id) return { texto: `Ligaram dois dias depois: a vaga é sua. ${nome.charAt(0).toUpperCase() + nome.slice(1)} em ${e.empregador}, ${moeda(e.salario)} por mês.${elogio}`, memoria: null, tom: 'bom' };
     return { texto: `Ligaram dois dias depois: a vaga é sua.${elogio}`, memoria: null, tom: 'bom' };
   }
   const perto = a.chance >= 0.4;
@@ -178,7 +179,7 @@ function resolverNegociacao(c: Ctx, bonus: number, arriscado: boolean): { texto:
     const n = (c.v.fatos['aumentos'] ?? 0) + 1;
     c.v.fatos['aumentos'] = n;
     c.v.fatos['ultimo_aumento'] = c.v.t;
-    return { texto: `A chefia pensou dois dias e aprovou: o salário foi para R$ ${e.salario.toLocaleString('pt-BR')}.`, memoria: n === 1 ? `Negociou um aumento e conseguiu: R$ ${e.salario.toLocaleString('pt-BR')}.` : null, tom: 'bom' };
+    return { texto: `A chefia pensou dois dias e aprovou: o salário foi para ${moeda(e.salario)}.`, memoria: n === 1 ? `Negociou um aumento e conseguiu: ${moeda(e.salario)}.` : null, tom: 'bom' };
   }
   if (arriscado && c.r.chance(0.35)) {
     e.desempenho = clamp(e.desempenho - 10);

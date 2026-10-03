@@ -8,6 +8,7 @@ import type { Conteudo } from './base';
 import * as P from './papeis';
 import { feliz, gp, prox, saude } from './efeitos';
 import { municipio } from '../dados/lugares';
+import { cotidiano } from './local';
 
 const litoral = (id: string) => ['AL', 'BA', 'CE', 'ES', 'MA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RS', 'SC', 'SE', 'SP', 'PA', 'AP'].includes(municipio(id).uf);
 
@@ -26,7 +27,7 @@ export const PRIMEIROS: Conteudo[] = [
     papeis: { avo: P.avo },
     quando: c => !c.v.vinculos[c.p.avo.id].convivio.includes('casa'),
     narrar: c => ({
-      texto: `Passou uma semana inteira na casa ${gp(c, 'avo', 'do avô', 'da avó')} ${c.p.avo.nome}${c.p.avo.municipioId !== c.v.moradia.municipioId ? ', em outra cidade' : ''}: café com pão na chapa, novela à noite, cama grande.`,
+      texto: `Passou uma semana inteira na casa ${gp(c, 'avo', 'do avô', 'da avó')} ${c.p.avo.nome}${c.p.avo.municipioId !== c.v.moradia.municipioId ? ', em outra cidade' : ''}: ${cotidiano(c.v).tvDaNoite ? `café com pão na chapa, ${cotidiano(c.v).tvDaNoite} à noite` : 'café da manhã sem pressa, televisão à noite'}, cama grande.`,
       relevancia: 'biografia', efeito: () => prox(c, 'avo', 12), lembrar: ['avo', 'Uma semana na casa dos avós quando você era pequeno.'.replace('pequeno', c.g('pequeno', 'pequena', 'pequene'))]
     })
   },

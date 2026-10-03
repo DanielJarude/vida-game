@@ -10,6 +10,7 @@
  * fracasso, arriscar, voltar atrás — isso é comportamento.
  */
 
+import { dinheiro as moeda } from '../texto';
 import { pesoNaSelecaoDoIf, registrarVivencia } from '../sistemas/formacao';
 import { pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx, Resultado } from './base';
@@ -26,7 +27,7 @@ import { abalar } from '../sistemas/abalo';
 import { MODS, MODS_ARTE, municipioIndice, municipioPorIndice, novaOportunidade } from '../sistemas/oportunidades';
 import { criarProjeto } from '../sistemas/arte';
 import { contratar, degrausAcima, elegibilidade, encerrarEmprego, experienciaNaTrilha, horizonte, nomeOcupacao, porContaPropria, semOcupacao, textoDeContratacao } from '../sistemas/trabalho';
-import { OCUPACOES, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
+import { OCUPACOES, comissaoDe, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { curso, CURSOS } from '../dados/cursos';
 import { capitalDoEstado } from '../sistemas/escola';
 import { analisarEntrada, propor } from '../sistemas/compromissos';
@@ -40,6 +41,8 @@ import { marcar } from '../sistemas/marcas';
 import { abrirNegocio, demitirFuncionario, donoIntegral, fecharNegocio, NEGOCIOS, presencaDe, valorDoNegocio, venderNegocio } from '../sistemas/negocio';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
 import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
+import { paisDaVida, perfilDaVida } from '../mundo/vida';
+import { doPais, noPais } from '../mundo/registro';
 import { modeloRotina, podeComecarRotina } from '../sistemas/rotinas';
 import { anoDe } from '../tempo';
 import { clamp } from '../rng';
@@ -174,9 +177,9 @@ export const CAMINHOS: Conteudo[] = [
       { id: 'seguir', texto: 'Seguir no circuito e apertar tudo o resto', comportamento: { coragem: 1 },
         consequencia: () => 'A conta pode ficar no vermelho. Se o ranking subir, o prêmio sobe junto; se não, a pergunta volta.',
         resolver: () => ({ texto: 'Você cortou o que dava e renovou a inscrição dos torneios.', memoria: null }) },
-      { id: 'nacional', texto: 'Jogar só os torneios do Brasil por um tempo', disponivel: c => ((c.v.caminhos.esporte?.nivel ?? 1) > 1 ? true : 'Já é só o circuito nacional.'),
+      { id: 'nacional', texto: c => `Jogar só os torneios ${doPais(paisDaVida(c.v))} por um tempo`, disponivel: c => ((c.v.caminhos.esporte?.nivel ?? 1) > 1 ? true : 'Já é só o circuito nacional.'),
         consequencia: () => 'Prêmios menores, viagens muito mais baratas. O ranking internacional cai.',
-        resolver: c => ({ texto: 'De volta aos torneios nacionais: ônibus em vez de avião.', memoria: 'Voltou a jogar só no Brasil para a conta fechar.', efeito: () => { const es = c.v.caminhos.esporte!; es.nivel = 1; es.reputacao = Math.round((es.reputacao ?? 20) * 0.8); } }) },
+        resolver: c => ({ texto: 'De volta aos torneios nacionais: ônibus em vez de avião.', memoria: `Voltou a jogar só ${noPais(paisDaVida(c.v))} para a conta fechar.`, efeito: () => { const es = c.v.caminhos.esporte!; es.nivel = 1; es.reputacao = Math.round((es.reputacao ?? 20) * 0.8); } }) },
       { id: 'parar', texto: 'Parar e dar aulas', comportamento: { disciplina: 1 },
         consequencia: () => 'A carreira de competição acaba. O que você sabe de tênis vira trabalho: aula em clube e academia.',
         resolver: c => ({ texto: 'Você guardou a raquete de competição e foi dar aula.', memoria: 'Parou o circuito porque a conta não fechava.', relevancia: 'marco', efeito: () => { const es = c.v.caminhos.esporte; if (es) encerrarCarreira(c.v, es, 'escolha'); c.v.fatos['pos_treinador'] = c.v.t; } }) }
@@ -207,8 +210,9 @@ export const CAMINHOS: Conteudo[] = [
         disponivel: c => (elegibilidade(c.v, ocupacao('treinador_escolinha')).grau === 'permitido' ? true : 'Ainda não dá.'),
         resolver: c => ({ texto: 'Na primeira aula, um menino perguntou se você já tinha jogado na TV.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('treinador_escolinha'), 'transicao'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('treinador_escolinha'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
       { id: 'comissao', texto: 'Aceitar o convite para a comissão técnica',
-        disponivel: c => ((c.v.caminhos.esporte?.nivel ?? 1) >= 3 && idade(c.v) >= 28 ? true : false),
-        resolver: c => ({ texto: 'Do outro lado da linha lateral, o jogo parece outro.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('auxiliar_tecnico'), 'oportunidade'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('auxiliar_tecnico'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
+        // A comissão é a do esporte que se jogou (o auxiliar de vôlei não entra no banco de um time de futebol).
+        disponivel: c => { const aux = c.v.caminhos.esporte && comissaoDe(c.v.caminhos.esporte.modalidade).auxiliar; return !!aux && (c.v.caminhos.esporte?.nivel ?? 1) >= 3 && idade(c.v) >= ocupacao(aux).idadeMin; },
+        resolver: c => ({ texto: 'Do outro lado da linha lateral, o jogo parece outro.', memoria: null, efeito: () => { const aux = ocupacao(comissaoDe(c.v.caminhos.esporte!.modalidade).auxiliar!); const e = contratar(c.v, c.r, aux, 'oportunidade'); escrever(c.v, { texto: textoDeContratacao(c.v, aux, e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
       { id: 'preparo', texto: 'Trabalhar na preparação física de um clube', disponivel: c => (elegibilidade(c.v, ocupacao('preparador_fisico')).grau === 'permitido' ? true : false),
         resolver: c => ({ texto: 'Agora é você quem cobra o treino dos outros.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('preparador_fisico'), 'transicao'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('preparador_fisico'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
       { id: 'lutas', texto: 'Abrir turmas de luta', disponivel: c => (c.v.caminhos.esporte?.modalidade === 'lutas' && elegibilidade(c.v, ocupacao('instrutor_lutas')).grau === 'permitido' ? true : false),
@@ -270,14 +274,20 @@ export const CAMINHOS: Conteudo[] = [
   /* ============================================================= MILITAR */
   {
     id: 'mil_alistamento', tipo: 'decisao', idade: [18, 18], tema: 'lugar', garantido: true,
-    quando: c => !c.v.justica?.prisao,
+    // Só onde o serviço é obrigatório (o alistamento de todos) ou seletivo (o registro, e a convocação por sorteio); onde é voluntário, a farda é concurso.
+    quando: c => !c.v.justica?.prisao && perfilDaVida(c.v).militar.servico !== 'voluntario',
     titulo: 'O alistamento',
-    texto: c => (c.v.eu.genero === 'masculino'
-      ? 'Fila na junta militar, formulário, exame. Na ficha, uma pergunta: você deseja servir?'
-      : 'Desde 2025, mulheres podem se alistar voluntariamente no ano em que fazem 18. O site abre em janeiro; as vagas são poucas e há seleção.'),
+    texto: c => {
+      const m = perfilDaVida(c.v).militar;
+      if (m.alistamento) return c.v.eu.genero === 'masculino' ? m.alistamento.masculino : m.alistamento.feminino;
+      if (c.v.eu.genero !== 'masculino') return 'Para as mulheres, o serviço militar é voluntário: as vagas são poucas e há seleção.';
+      return m.servico === 'seletivo'
+        ? 'O registro militar é obrigatório no ano dos 18; a convocação é por sorteio, e rara. Na ficha, uma pergunta: você deseja servir?'
+        : 'Fila no posto de alistamento, formulário, exame. Na ficha, uma pergunta: você deseja servir?';
+    },
     opcoes: [
-      { id: 'servir', texto: c => (c.v.eu.genero === 'masculino' ? 'Dizer que quer servir' : 'Alistar-se como voluntári' + c.g('o', 'a', 'e')), resolver: c => alistar(c, c.v.eu.genero === 'masculino' ? 0.45 : 0.3) },
-      { id: 'tanto_faz', texto: c => (c.v.eu.genero === 'masculino' ? 'Não fazer questão' : 'Não se alistar'), resolver: c => (c.v.eu.genero === 'masculino' ? alistar(c, 0.05) : { texto: 'Você deixou o site fechado.', memoria: null }) }
+      { id: 'servir', texto: c => (c.v.eu.genero === 'masculino' ? 'Dizer que quer servir' : 'Alistar-se como voluntári' + c.g('o', 'a', 'e')), resolver: c => alistar(c, (c.v.eu.genero === 'masculino' ? 0.45 : 0.3) * fatorDoServico(c)) },
+      { id: 'tanto_faz', texto: c => (c.v.eu.genero === 'masculino' ? 'Não fazer questão' : 'Não se alistar'), resolver: c => (c.v.eu.genero === 'masculino' ? alistar(c, 0.05 * fatorDoServico(c)) : { texto: perfilDaVida(c.v).militar.alistamento ? 'Você deixou o site fechado.' : 'Você não se inscreveu.', memoria: null }) }
     ]
   },
   {
@@ -381,7 +391,7 @@ export const CAMINHOS: Conteudo[] = [
         disponivel: c => ((c.v.caminhos.negocio?.equipe?.length ?? 0) > 0 ? true : false),
         resolver: c => ({ texto: presencaDe(c.v.caminhos.negocio!) === 'rua' ? 'A folha ficou menor. O salão, mais silencioso.' : 'A folha ficou menor. O trabalho, mais pesado para quem ficou.', memoria: null, tom: 'ruim', efeito: () => { const n = c.v.caminhos.negocio!; const f = n.equipe![n.equipe!.length - 1]; demitirFuncionario(c.v, f.pessoaId); n.anosNoVermelho = 1; } }) },
       { id: 'vender', texto: 'Tentar vender enquanto vale alguma coisa',
-        resolver: c => { const n = c.v.caminhos.negocio!; const valor = Math.round(valorDoNegocio(c.v, n) * 0.7 / 1000) * 1000; return { texto: valor > 0 ? `Apareceu um comprador, pagando pouco: ${valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}.` : 'Ninguém quis comprar um negócio no vermelho.', memoria: null, efeito: () => { if (valor > 0) venderNegocio(c.v, valor); } }; } }
+        resolver: c => { const n = c.v.caminhos.negocio!; const valor = Math.round(valorDoNegocio(c.v, n) * 0.7 / 1000) * 1000; return { texto: valor > 0 ? `Apareceu um comprador, pagando pouco: ${moeda(valor)}.` : 'Ninguém quis comprar um negócio no vermelho.', memoria: null, efeito: () => { if (valor > 0) venderNegocio(c.v, valor); } }; } }
     ]
   },
 
@@ -582,7 +592,11 @@ function alistar(c: Ctx, chance: number) {
     };
   }
   if (c.v.eu.genero !== 'masculino') return { texto: 'A seleção foi concorrida. O seu nome não saiu na lista de incorporação.', memoria: 'Alistou-se voluntariamente, mas não foi selecionad' + c.g('o', 'a', 'e') + ' para o serviço militar.', relevancia: 'biografia' as const };
-  return { texto: 'Dispensado por excesso de contingente. O certificado veio pelo correio.', memoria: 'Fez o alistamento militar e foi dispensado por excesso de contingente.', relevancia: 'cotidiano' as const };
+  const dispensa = perfilDaVida(c.v).militar.alistamento?.dispensa ?? ['Não foi convocado: a lista daquele ano não chegou ao seu nome.', 'Fez o registro militar e não foi convocado.'];
+  return { texto: dispensa[0], memoria: dispensa[1], relevancia: 'cotidiano' as const };
 }
+
+/** Onde o serviço é seletivo, a convocação é sorteio e rara. */
+const fatorDoServico = (c: Ctx) => (perfilDaVida(c.v).militar.servico === 'seletivo' ? 0.25 : 1);
 
 void NEGOCIOS; void abrirNegocio; void editaisAbertos; void idadePessoa; void experienciaNaTrilha;

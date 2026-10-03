@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 type InfoDeModulo = { importedIds: readonly string[] } | null;
 const BASE = new Map<string, boolean>();
@@ -33,7 +34,52 @@ export default defineConfig({
   // subdiretório qualquer, ou até `file://` para conferência local. Não afeta
   // `npm run dev`, que continua servindo da raiz.
   base: './',
-  plugins: [react()],
+  plugins: [
+    react(),
+    // PWA offline (docs/notas/PWA-OFFLINE.md). `generateSW`: o service worker é só precache + navegação — nada de
+    // lógica própria que justificasse escrever um (injectManifest). O registro é nosso (ui/pwa/registrar.ts):
+    // silencioso, fora de iframes (itch.io) e com AVISO de versão nova ('prompt') — nunca recarrega no meio de um ano.
+    VitePWA({
+      strategies: 'generateSW',
+      registerType: 'prompt',
+      injectRegister: false,
+      // Os ícones e o manifesto já entram pelo globPatterns abaixo; incluí-los de novo duplicaria entradas no precache.
+      includeManifestIcons: false,
+      manifest: {
+        id: './',
+        name: 'VIDA',
+        short_name: 'VIDA',
+        description: 'VIDA — simulador de vida brasileiro. Pequenas escolhas, grandes histórias.',
+        lang: 'pt-BR',
+        dir: 'ltr',
+        // Relativos ao manifesto: servem na raiz (Netlify) e num subdiretório qualquer.
+        start_url: './',
+        scope: './',
+        display: 'standalone',
+        theme_color: '#121010',
+        background_color: '#121010',
+        categories: ['games', 'entertainment'],
+        icons: [
+          { src: 'icones/icone-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icones/icone-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icones/icone-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ]
+      },
+      workbox: {
+        // TUDO o que o build gera entra no precache — o app, cada pacote sob demanda (o motor e os que vierem), o
+        // CSS, as fontes e os ícones: depois da primeira visita, uma vida inteira roda sem rede.
+        globPatterns: ['**/*.{js,css,html,woff2,woff,ttf,png,svg,jpg,jpeg,webp,ico,json}'],
+        // Os pacotes do motor ficam perto do limite de aviso (800 kB): folga para eles e para os catálogos novos.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        navigateFallback: 'index.html',
+        cleanupOutdatedCaches: true,
+        // 'prompt': a versão nova espera o jogador (sem skipWaiting/clientsClaim automáticos).
+        skipWaiting: false,
+        clientsClaim: false
+      },
+      devOptions: { enabled: false }
+    })
+  ],
   // REWORK 2: o pacote único passou de 1,8 MB (o motor é ~70% dele). Agora a
   // primeira tela carrega só o React e a interface inicial; o motor e as telas
   // do jogo vêm sob demanda (`ui/motor.ts`, `ui/util/sobDemanda.tsx`), logo em
@@ -47,13 +93,22 @@ export default defineConfig({
       output: {
         manualChunks(id: string, { getModuleInfo }) {
           if (/node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react';
+          // ATT Mundo: cada região do mundo é um pacote próprio, carregado sob demanda (`motor/mundo/carregar`) e guardado
+          // pelo service worker. Um país novo engorda só o pacote da região dele — nunca o motor. O Brasil fica na base.
+          const regiao = /[\\/]src[\\/]motor[\\/]mundo[\\/]paises[\\/]([a-z-]+)\.ts$/.exec(id);
+          if (regiao && regiao[1] !== 'br') return `mundo-${regiao[1]}`;
           // O conteúdo (os textos) e o que o orquestra (o ano, as ações, a fachada, a relevância das telas) ficam
           // juntos: são eles que importam o conteúdo, e o conteúdo importa os sistemas — sem ciclo entre pacotes.
-          if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
+          // ATT Mundo (o pacote do conteúdo chegou a 792 kB): os TEXTOS — o catálogo de acontecimentos e os sistemas que só
+          // eles e as ações usam (entrevista, cuidados, interações, experiências...) — vão para um pacote próprio, abaixo
+          // do que os orquestra (o ano, as ações, a fachada, o save, o nascimento). Nenhum deles importa a camada de cima
+          // (só tipos): sem ciclo, e os dois pacotes com folga, sem aumentar o limite.
+          if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria)\.ts)/.test(id)) return 'motor-textos';
+          if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
           // REWORK 3: o que só a camada de cima usa (salvar, nascer, as ações de cuidado, de estilo, de busca, a
           // entrevista, a leitura da independência) vai com ela — o pacote dos sistemas volta a caber no limite, sem ciclo.
           // FIX 3.1: as interações com pessoas, as experiências e a autoria (só as ações e as telas as chamam) também.
-          if (/[\\/]src[\\/]motor[\\/](save\.ts|criacao\.ts|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria)\.ts)/.test(id)) return 'motor-conteudo';
+          if (/[\\/]src[\\/]motor[\\/](save\.ts|criacao\.ts)/.test(id)) return 'motor-conteudo';
           // Pacote pós-playtest: as situações de carreira e o uso da visibilidade num pacote próprio — o conteúdo (e o ano)
           // os chamam; eles só chamam os sistemas. Sem ciclo, e os dois pacotes de cima seguem abaixo do limite.
           // Generalização de carreiras: o legado (as trajetórias da vida) e a retrospectiva, que só a tela e o fim da vida
@@ -93,5 +148,7 @@ export default defineConfig({
     hookTimeout: 60000,
     // Cópias de trabalho paralelas (worktrees de agentes) não são a suíte deste checkout.
     exclude: [...configDefaults.exclude, '.claude/**'],
+    // O mundo (os pacotes de países por região) é carregado antes de cada arquivo de teste, como a interface faz.
+    setupFiles: ['src/motor/__tests__/mundo.setup.ts'],
   },
 });

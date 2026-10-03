@@ -4,6 +4,7 @@
  * bicho adoeceu) — nunca é um "imposto aleatório".
  */
 
+import { unidadeDeConta } from './local';
 import type { Conteudo, Ctx, Resultado } from './base';
 import type { Veiculo } from '../tipos';
 import { vinculosVivos, idadePessoa, lembrarCom } from '../nucleo';
@@ -61,7 +62,7 @@ export const MATERIAL: Conteudo[] = [
           return { texto: liquido >= 0 ? `Vendeu. Pagou o banco e sobraram ${fmt(liquido)}.` : `Vendeu, mas não cobriu tudo: ficaram ${fmt(-liquido)} para acertar.`, memoria: d.tipo === 'financiamento_imovel' ? 'Vendeu a casa para não perdê-la para o banco.' : 'Vendeu o carro para quitar o financiamento atrasado.', relevancia: d.tipo === 'financiamento_imovel' ? 'marco' : 'biografia', tom: 'ruim' };
         }) },
       { id: 'apertar', texto: 'Cortar tudo o que der e tentar pôr em dia', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: 'Padrão de vida no mínimo, cada real contado. O atraso continua — mas agora há um plano.', memoria: null, efeito: () => { c.v.financas.estilo = 'apertado'; estresse(c, 4); } }) }
+        resolver: c => ({ texto: `Padrão de vida no mínimo, cada ${unidadeDeConta(c.v)} contado. O atraso continua — mas agora há um plano.`, memoria: null, efeito: () => { c.v.financas.estilo = 'apertado'; estresse(c, 4); } }) }
     ]
   },
   {

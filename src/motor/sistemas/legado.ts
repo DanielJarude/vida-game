@@ -26,7 +26,7 @@
 
 import type { CarreiraEsportiva, ConquistaEsportiva, Dominio, Emprego, Vida } from '../tipos';
 import { anoDe } from '../tempo';
-import { oClube } from '../dados/clubes';
+import { aSelecao, nivelDaCompeticao, oClube } from '../dados/clubes';
 import { flex, ge, listaNatural } from '../texto';
 import { ocupacaoOuNula, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { municipio } from '../dados/lugares';
@@ -81,12 +81,14 @@ const daCasa = (lugar: string) => naCasa(lugar).replace(/^na /, 'da ').replace(/
 /* ============================================================ Esporte */
 
 const ELITE = /Série A|NBB|Superliga|circuito principal|elite nacional/;
+/** Elite: a do Brasil e a de qualquer liga do mundo carregada (`dados/clubes.nivelDaCompeticao`). */
+const ehElite = (x: string) => ELITE.test(x) || nivelDaCompeticao(x) === 4;
 
 /** O peso biográfico de uma conquista esportiva (o que merece virar memória). */
 export function pesoDaConquista(c: ConquistaEsportiva): number {
   const t = c.texto;
   if (c.tipo === 'selecao') return /^Campe/.test(t) ? 10 : /ouro/.test(t) ? 9 : /^Medalha/.test(t) ? 7 : /Capit/.test(t) ? 6 : /Primeira convocação/.test(t) ? 5 : /Estreia/.test(t) ? 3 : 2;
-  if (c.tipo === 'titulo') return (ELITE.test(c.competicao) || /quatro grandes|masters/.test(t) ? 8 : /Série B|challenger|circuito nacional/.test(c.competicao + t) ? 5 : 3) - (c.papel === 'elenco' ? 3 : 0);
+  if (c.tipo === 'titulo') return (ehElite(c.competicao) || /quatro grandes|masters/.test(t) ? 8 : /Série B|challenger|circuito nacional/.test(c.competicao + t) ? 5 : 3) - (c.papel === 'elenco' ? 3 : 0);
   if (c.tipo === 'premio') return /^Melhor|^Atleta do ano/.test(t) ? 7 : /^Seleção/.test(t) ? 6 : /^Artilheir|^Cestinha|^Líder/.test(t) ? 6 : 4;
   if (c.tipo === 'marco') return /10 melhores/.test(t) ? 7 : /100 melhores/.test(t) ? 4 : /Estreia/.test(t) ? 3 : /titular/.test(t) ? 2 : 1;
   if (c.tipo === 'acesso') return c.papel === 'protagonista' ? 3 : 2;
@@ -498,17 +500,17 @@ function trajetoriaDeTecnico(v: Vida): TrajetoriaDaVida | undefined {
   const ate = ativa ? undefined : periodoDaPassagem(ultima).ate ?? de;
   const r: Realizacao[] = [];
   for (const p of c.passagens) for (const t of p.temporadas) {
-    for (const x of t.titulos ?? []) r.push({ texto: `${x} com ${p.selecao ? 'a seleção brasileira' : oClube(p.clube)} (${t.ano})`, peso: /Série A|mundial/.test(x) ? 9 : /Série B|continental/.test(x) ? 7 : /divisões de acesso/.test(x) ? 5 : 4 });
+    for (const x of t.titulos ?? []) { const n = nivelDaCompeticao(x); r.push({ texto: `${x} com ${p.selecao ? aSelecao(p.clube) : oClube(p.clube)} (${t.ano})`, peso: n === 4 || /mundial/.test(x) ? 9 : n === 3 || /continental/.test(x) ? 7 : n === 2 ? 5 : 4 }); }
     if (t.acesso) r.push({ texto: `Acesso com ${oClube(p.clube)} (${t.ano})`, peso: 4 });
   }
   const selecao = c.passagens.find(p => p.selecao);
-  if (selecao) r.push({ texto: `${flex(g, 'Técnico', 'Técnica')} da seleção brasileira (${periodoDaPassagem(selecao).de})`, peso: 8 });
+  if (selecao) r.push({ texto: `${flex(g, 'Técnico', 'Técnica')} da ${aSelecao(selecao.clube).replace(/^a /, '')} (${periodoDaPassagem(selecao).de})`, peso: 8 });
   const primeira = c.passagens[0];
   r.push({ texto: `Primeiro time como ${flex(g, 'técnico', 'técnica')} principal: ${primeira.clube} (${periodoDaPassagem(primeira).de})`, peso: 1 });
   // O que o banco viveu e marcou (os momentos ótimos: o vestiário unido, a final, o cargo salvo).
   for (const x of (v.caminhos.situacoes ?? []).filter(y => y.trajetoria === 'tecnico' && y.desfecho === 'otimo')) r.push({ texto: `${x.texto.replace(/\.$/, '')} (${anoDe(x.t)})`, peso: 3 });
   const demissoes = c.passagens.filter(p => p.saida === 'demissao');
-  const reconhecimento = selecao ? [`${flex(g, 'Chamado', 'Chamada')} para dirigir a seleção brasileira`] : [];
+  const reconhecimento = selecao ? [`${flex(g, 'Chamado', 'Chamada')} para dirigir ${aSelecao(selecao.clube)}`] : [];
   return {
     id: 'tecnico', area: 'tecnico', titulo: `${flex(g, 'Técnico', 'Técnica')} de futebol`, periodo: periodo(de, ate, ativa), de, ate, ativa,
     resumo: `${linhaDoTecnico(c)}${res.acessos ? `, ${res.acessos} ${res.acessos === 1 ? 'acesso' : 'acessos'}` : ''}${res.rebaixamentos ? `, ${res.rebaixamentos} ${res.rebaixamentos === 1 ? 'rebaixamento' : 'rebaixamentos'}` : ''}${demissoes.length ? `; ${demissoes.length} ${demissoes.length === 1 ? 'demissão' : 'demissões'}` : ''}.`,

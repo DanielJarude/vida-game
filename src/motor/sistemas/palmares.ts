@@ -28,7 +28,7 @@ import { escrever, idade } from '../nucleo';
 import { flex, ge } from '../texto';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
-import { CLUBES, DIVISAO_DO_NIVEL, doClube, noClube, oClube } from '../dados/clubes';
+import { clubePorNome, divisaoDoNivel, doClube, noClube, oClube } from '../dados/clubes';
 import { ASSIST, carreirasEsportivas, DEFESA, divisaoDe, GOL, jogosDaTemporada, linhaDaTemporada, NOME_MOD, nomePosicao } from './esporte';
 import { aCompeticao, avaliarPelaModalidade, daCompeticao, individualComEquipe, lideresDaTemporada, perfilDe } from './perfisEsportivos';
 import { formatarMarca, naProva, podiosDe } from './provas';
@@ -82,13 +82,13 @@ export function avaliarTemporada(e: CarreiraEsportiva, t: Temporada): { indice: 
 }
 
 /** O nome da competição de uma temporada (no universo do jogo). */
-export const competicaoDe = (d: Dominio, nivel: number) => (d === 'futebol' ? DIVISAO_DO_NIVEL[nivel] : divisaoDe(d, nivel).replace(/ —.*$/, '').replace(/ \(acesso\)$/, ''));
+export const competicaoDe = (d: Dominio, nivel: number) => (d === 'futebol' ? divisaoDoNivel(nivel) : divisaoDe(d, nivel).replace(/ —.*$/, '').replace(/ \(acesso\)$/, ''));
 export { daCompeticao };
 
 /** O teto de divisão de um clube na simulação (o mesmo de `esporte`). */
-const tetoDoClube = (nome: string) => { const c = CLUBES.find(x => x.nome === nome); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
+const tetoDoClube = (nome: string) => { const c = clubePorNome(nome); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
 /** O piso: um clube grande cai, mas não some para as divisões de acesso (a simulação não leva um gigante ao estadual). */
-export const pisoDoClube = (nome: string) => { const c = CLUBES.find(x => x.nome === nome); return !c ? 1 : c.porte === 'grande' ? 3 : c.porte === 'tradicional' ? 2 : 1; };
+export const pisoDoClube = (nome: string) => { const c = clubePorNome(nome); return !c ? 1 : c.porte === 'grande' ? 3 : c.porte === 'tradicional' ? 2 : 1; };
 
 /* ------------------------------------------------------------ A temporada no palmarés */
 
@@ -119,7 +119,7 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   }
   if (t.nivel === 4 && !anteriores.some(x => x.nivel === 4)) {
     registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: `Estreia na elite: ${comp}` });
-    escrever(v, { texto: futebol ? `A primeira temporada na Série A, com ${oClube(e.clube)}: ${t.partidas} jogos.` : `A primeira temporada na elite da modalidade: ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: futebol ? `A primeira temporada na ${divisaoDoNivel(4)}, com ${oClube(e.clube)}: ${t.partidas} jogos.` : `A primeira temporada na elite da modalidade: ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
   }
 
   // O título: o do clube — e o seu papel nele.

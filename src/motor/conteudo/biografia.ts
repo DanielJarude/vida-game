@@ -18,6 +18,7 @@
  * acontece uma vez por pessoa, numa janela curta.
  */
 
+import { dinheiro as moeda } from '../texto';
 import type { Conteudo, Ctx } from './base';
 import type { Dominio, Imovel, Pessoa, Vida, Vinculo } from '../tipos';
 import * as P from './papeis';
@@ -25,6 +26,8 @@ import { custa, dinheiro, envolvimento, estresse, feliz, prox, tensao } from './
 import { clamp } from '../rng';
 import { idadePessoa, lembrarCom, temFato, vinculosVivos } from '../nucleo';
 import { flex, listaNatural } from '../texto';
+import { perfilDaVida } from '../mundo/vida';
+import { previdencia } from './local';
 import { anoDe, idadeEm } from '../tempo';
 import { disponivel as guardado, pagar } from '../sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../sistemas/domicilio';
@@ -48,7 +51,7 @@ const anosDesde = (v: Vida, t: number) => Math.floor((v.t - t) / 12);
 const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const dele = (p: Pessoa) => flex(p.genero, 'dele', 'dela', 'delu');
 const o = (p: Pessoa) => flex(p.genero, 'o', 'a', 'e');
-const fmt = (n: number) => `R$ ${Math.round(n).toLocaleString('pt-BR')}`;
+const fmt = (n: number) => moeda(n);
 const minusc = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const numero = (n: number) => (['nenhuma', 'uma', 'duas', 'três', 'quatro', 'cinco'][n] ?? String(n));
 
@@ -1178,13 +1181,14 @@ export const BIOGRAFIA: Conteudo[] = [
     texto: c => {
       const falta = idadeMinimaAposentadoria(c.v) - c.idade;
       const anos = Math.floor(c.v.trabalho.contribuicao / 12);
-      const minimo = c.v.eu.genero === 'feminino' ? 15 : 20;
+      const [minH, minM] = perfilDaVida(c.v).trabalho.previdencia.anos;
+      const minimo = c.v.eu.genero === 'feminino' ? minM : minH;
       const vai = anos + falta >= minimo;
-      return `Faltam ${falta} anos para a idade da aposentadoria. São ${anos} anos de contribuição ao INSS até aqui${vai ? '' : ` — pelo ritmo de hoje, faltarão ${minimo - anos - falta} na data`}. ${c.v.trabalho.atual!.empregador} ainda conta com você.`;
+      return `Faltam ${falta} anos para a idade da aposentadoria. São ${anos} anos de contribuição ${previdencia(c.v).ao} até aqui${vai ? '' : ` — pelo ritmo de hoje, faltarão ${minimo - anos - falta} na data`}. ${c.v.trabalho.atual!.empregador} ainda conta com você.`;
     },
     opcoes: [
       {
-        id: 'simular', texto: 'Ir ao INSS e fazer as contas direito', comportamento: { disciplina: 1 },
+        id: 'simular', texto: c => `Ir ${previdencia(c.v).ao} e fazer as contas direito`, comportamento: { disciplina: 1 },
         consequencia: () => 'Você fica sabendo quanto vai receber e o que falta. Nada muda no trabalho.',
         resolver: c => {
           const beneficio = valorAposentadoria(c.v);

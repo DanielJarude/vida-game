@@ -42,7 +42,7 @@ const CULTURA_DA_REGIAO: Record<string, VidaRural['cultura']> = { Sul: 'lavoura'
 const NOME_CULTURA: Record<VidaRural['cultura'], string> = { lavoura: 'a lavoura', leite: 'o leite', horta: 'a horta', misto: 'um pouco de tudo — roça, criação, horta' };
 
 export function iniciarRural(v: Vida, terra: VidaRural['terra']): VidaRural {
-  const cultura = CULTURA_DA_REGIAO[municipio(v.moradia.municipioId).regiao] ?? 'misto';
+  const cultura = CULTURA_DA_REGIAO[municipio(v.moradia.municipioId).regiao ?? ''] ?? 'misto';
   v.caminhos.rural = { terra, cultura, cooperativa: false, tInicio: v.t, anosRuins: 0 };
   const e = v.trabalho.atual;
   if (e?.ocupacaoId === 'produtor_rural') e.empregador = ONDE_PRODUZ[terra];

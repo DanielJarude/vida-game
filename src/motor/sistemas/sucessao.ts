@@ -32,8 +32,10 @@
  * alguém conhecido é conhecido por associação (um pouco, e isso passa).
  */
 
+import { nacionalidadesDaPessoa, paisDaPessoa, paisDaVida } from '../mundo/vida';
+import { converterEntrePaises } from '../mundo/moeda';
 import type {
-  Bem, DecisoesDeHeranca, Emprego, Entrada, Escolaridade, Genero, Geracao, Heranca, Imovel, Linhagem, Parentesco, Personalidade, Pessoa, Posses, Traco, Vida, Vinculo
+  Bem, Condicao, DecisoesDeHeranca, Emprego, Entrada, Escolaridade, Genero, Geracao, Heranca, Imovel, Linhagem, Parentesco, Personalidade, Pessoa, Posses, Traco, Vida, Vinculo
 } from '../tipos';
 import { clamp } from '../rng';
 import { idadePessoa, escrever, novoId, transacao } from '../nucleo';
@@ -51,18 +53,22 @@ import { cursoPorNome } from '../dados/cursos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { liquido as liquidoDe } from './renda';
 import { pisoDeForma } from './pessoa';
-import { nomeLugar } from '../dados/lugares';
+import { nomeLugar, paisDaCidade } from '../dados/lugares';
 import { retrospectiva } from './retrospectiva';
 import { trajetoriasDaVida } from './legado';
 import { economiasEstimadas } from './economiasNpc';
+import { condicaoDaPessoa, garantirCondicoes, habitosDaPessoa, saudeConhecida } from './corpo';
 import { lancar } from './extrato';
 
 export { economiasEstimadas, taxaDePoupanca } from './economiasNpc';
 
 /* ================================================================ O país */
 
-/** O país da vida (hoje, só o Brasil: é aqui que a expansão internacional vai ler o país do lugar). */
-export const paisDaVida = (_v: Vida): string => 'BR';
+/**
+ * A lei da sucessão é a do país onde a pessoa morava (o domicílio — LINDB art. 10 no Brasil; a residência habitual no
+ * Regulamento europeu 650/2012). Abstração: um só país por herança, sem conflito de leis entre bens em lugares diferentes.
+ */
+export { paisDaVida };
 
 /* ============================================================ Inventário */
 
@@ -335,6 +341,8 @@ export interface Sucessor {
   familia: string;
   dinheiro: string;
   traco?: string;
+  /** O que a família sabe da saúde dela (o que tem nome) — e que vai junto se ela continuar. */
+  saude?: string;
   /** Quem ficaria com a guarda (menor de idade). */
   guarda?: string;
 }
@@ -368,6 +376,7 @@ export function sucessores(v: Vida): Sucessor[] {
       familia,
       dinheiro: i < 18 ? 'depende da família' : p.renda > 0 ? `renda de ${fmt(p.renda)} por mês${guardado > 1000 ? `, ${fmt(guardado)} guardados` : ''}` : guardado > 1000 ? `sem renda; ${fmt(guardado)} guardados` : 'sem renda',
       traco: tracoDe(p),
+      saude: saudeConhecida(p),
       guarda: tutor ? `${tutor.nome} (${lacoDoGuardiao(v, p, tutor)})` : undefined
     });
   }
@@ -436,17 +445,20 @@ function entregarAosNpcs(v: Vida, p: Partilha, nomeMorto: string, exceto?: strin
       const ja = economiasEstimadas(v, { ...pe, posses: undefined });
       if (ja > 0) { pos.dinheiro += ja; pos.historia.push({ t: v.t, texto: 'Economias do próprio trabalho', valor: ja }); }
     }
-    pos.dinheiro += x.dinheiro;
+    // MUNDO: quem herda e mora em outro país recebe o quinhão pelo câmbio (o mesmo valor de mercado, na unidade de
+    // lá — `mundo/moeda`): a herança não cria nem some dinheiro ao atravessar a fronteira.
+    const k = converterEntrePaises(1, paisDaVida(v), paisDaPessoa(pe));
+    pos.dinheiro += x.dinheiro * k;
     for (const b of x.bens) {
       if (b.tipo === 'negocio') {
         const n = v.caminhos.negocio;
         if (n) pos.negocio = { ...structuredClone(n), passivo: true };
       } else {
         const bem = bemDoInventario(v, b);
-        if (bem) pos.bens.push({ ...structuredClone(bem), dono: 'eu', ...(bem.tipo === 'imovel' ? { herdado: true } : {}), historia: [...(bem.historia ?? []), { t: v.t, texto: `Herdad${bem.tipo === 'imovel' ? 'o' : 'o'} de ${nomeMorto}.` }] } as Bem);
+        if (bem) pos.bens.push({ ...structuredClone(bem), valor: bem.valor * k, dono: 'eu', ...(bem.tipo === 'imovel' ? { herdado: true } : {}), historia: [...(bem.historia ?? []), { t: v.t, texto: `Herdad${bem.tipo === 'imovel' ? 'o' : 'o'} de ${nomeMorto}.` }] } as Bem);
       }
     }
-    pos.historia.push({ t: v.t, texto: `Herança de ${nomeMorto}${x.meacao > 0 ? ' (com a meação)' : ''}`, valor: x.valor });
+    pos.historia.push({ t: v.t, texto: `Herança de ${nomeMorto}${x.meacao > 0 ? ' (com a meação)' : ''}`, valor: x.valor * k });
   }
 }
 
@@ -549,6 +561,8 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     const conjuge = conjugeSobrevivente(v);
     const quinhaoDela = p.quinhoes.find(x => x.pessoaId === herdeiroId);
     const geracao = registrarGeracao(v, oldId, p, h);
+    // A saúde dela é a que ela já tinha: as condições acompanhadas (ou, de quem ainda não era, os anos vividos até aqui).
+    garantirCondicoes(v, h);
 
     // 1. Quem morreu passa a ser uma pessoa do mundo (falecida), com quem tinha como pais.
     const paisDoMorto = Object.values(v.vinculos).filter(x => x.parentesco === 'mae' || x.parentesco === 'pai').map(x => x.pessoaId);
@@ -560,7 +574,12 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       temperamento: { extroversao: tp.sociabilidade / 100, afabilidade: tp.empatia / 100, responsabilidade: tp.disciplina / 100, abertura: tp.coragem / 100, estabilidade: -tp.impulsividade / 100 },
       ...(ocMorto ? { ocupacao: v.eu.genero === 'feminino' ? ocMorto.nome[1] : ocMorto.nome[0], ocupacaoId: ocMorto.id } : {}),
       renda: 0, municipioId: v.moradia.municipioId, saude: 0, visual: structuredClone(v.eu.visual),
-      ...(paisDoMorto.length ? { genitores: paisDoMorto } : {}), municipioNatal: v.eu.municipioNatal
+      ...(paisDoMorto.length ? { genitores: paisDoMorto } : {}), municipioNatal: v.eu.municipioNatal,
+      // O que quem morreu tinha de crônico fica na ficha dele: é o histórico da família de quem continua.
+      condicoes: v.corpo.condicoes.filter(c => c.cronica && !c.lesao).map(c => ({
+        id: c.id, tInicio: c.tInicio, gravidade: c.gravidade, diagnosticada: c.diagnosticada !== false, tratando: c.tratando,
+        ...(c.tDiagnostico !== undefined ? { tDiagnostico: c.tDiagnostico } : {}), ...(c.tarde ? { tarde: true } : {})
+      }))
     };
     v.pessoas[oldId] = morto;
 
@@ -584,9 +603,12 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     const aptidao = vidaNpc?.aptidao ?? 0;
     const guarda = i < 18 ? guardiao(vida, vida.pessoas[herdeiroId]) : undefined;
     const tratamento = h.genero === 'nao_binario' ? 'nao_binario' as Genero : undefined;
+    const habitos = habitosDaPessoa(h, i);
     v.eu = {
       nome: h.nome, sobrenome: h.sobrenome, genero: h.genero, tNasc: h.tNasc,
       municipioNatal: h.municipioNatal ?? v.eu.municipioNatal,
+      // A nacionalidade é a que a pessoa já tinha (quem nasceu em Buenos Aires, filha de brasileiro, é das duas).
+      nacionalidades: nacionalidadesDaPessoa(h),
       ...(h.atracao ? { atracao: h.atracao } : {}),
       visual: structuredClone(h.visual ?? v.eu.visual),
       ...(tratamento ? { tratamento } : {})
@@ -596,8 +618,10 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       forma: clamp(Math.round(pisoDeForma(i) + 8 + pred.fisica * 6 + (i < 18 ? 6 : 0))),
       aparencia: clamp(Math.round(55 + pred.artistica * 4)),
       aparenciaBase: clamp(Math.round(55 + pred.artistica * 4)),
-      condicoes: [],
-      habitos: { fuma: false, bebe: i >= 18 ? 'social' : 'nao', sedentario: false },
+      // As condições e os hábitos dela, 1:1: o que tem nome continua com nome, o tratamento continua, o que ninguém
+      // nomeou continua sem nome (e age sobre o corpo, com os sinais na tela "Você").
+      condicoes: (h.condicoes ?? []).map(condicaoDaPessoa).filter((c): c is Condicao => !!c),
+      habitos: { fuma: habitos.fuma, bebe: i >= 18 ? 'social' : 'nao', sedentario: habitos.sedentario },
       podeGestar: h.genero === 'feminino'
     };
     const pesoLuto = clamp(Math.round((vinHerdeiro.proximidade ?? 60) * 0.9 + 20));
@@ -617,8 +641,10 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     const casaFicouCom = casa ? p.quinhoes.find(x => x.bens.some(b => b.id === casa.id))?.pessoaId : undefined;
     const imovelDaCasa = casa ? (vida.financas.bens.find(b => b.id === casa.id) as Imovel | undefined) : undefined;
     const antigaMoradia = vida.moradia;
+    // A herdeira que mora em outro país recebe pelo câmbio (a casa no Brasil passa a valer, para ela, o mesmo em pesos).
+    const kHerdeira = converterEntrePaises(1, paisDaVida(vida), paisDaCidade(h.municipioId));
     const recebidos: Bem[] = (quinhaoDela?.bens ?? []).filter(b => b.tipo !== 'negocio').map(b => vida.financas.bens.find(x => x.id === b.id)).filter((b): b is Bem => !!b)
-      .map(b => ({ ...structuredClone(b), dono: 'eu' as const, ...(b.tipo === 'imovel' ? { herdado: true } : {}), historia: [...(b.historia ?? []), { t: tMorte, texto: `Herdad${b.tipo === 'imovel' ? 'o' : 'o'} de ${nomeMorto}.` }] } as Bem));
+      .map(b => ({ ...structuredClone(b), valor: b.valor * kHerdeira, dono: 'eu' as const, ...(b.tipo === 'imovel' ? { herdado: true } : {}), historia: [...(b.historia ?? []), { t: tMorte, texto: `Herdad${b.tipo === 'imovel' ? 'o' : 'o'} de ${nomeMorto}.` }] } as Bem));
     const proprios = h.posses?.bens ?? [];
     v.financas = {
       conta: 0, investimentos: [], dividas: [], bens: [...proprios.map(b => structuredClone(b)), ...recebidos],
@@ -658,7 +684,7 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
 
     // 6. O dinheiro: o que já era dela e o que herdou. Menor de idade: a herança fica aplicada em nome dela até os 18.
     const ja = h.posses ? h.posses.dinheiro : economiasEstimadas(vida, vida.pessoas[herdeiroId]);
-    const herdou = quinhaoDela?.dinheiro ?? 0;
+    const herdou = (quinhaoDela?.dinheiro ?? 0) * kHerdeira;
     // O extrato dela abre com o que ela já tinha; a herança entra como linha (a conta de cada real continua fechando).
     v.financas.extratoAberto = { tInicio: novoT, contaInicial: ja, aplicadoInicial: 0, linhas: [] };
     if (herdou > 0) lancar(v, `Herança de ${nomeMorto}`, 'familia', i < 18 ? 0 : herdou, i < 18 ? herdou : 0);
@@ -678,6 +704,13 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     for (const [k, x] of Object.entries(vida.fatos)) {
       const m = /^(casou|namoro|uniao_cartorio|saiu_de_casa|adotado|ex_genro)_(.+)$/.exec(k);
       if (m && m[2] !== herdeiroId && v.vinculos[m[2]]) v.fatos[k] = x;
+    }
+    // A história da saúde dela: o diagnóstico já aconteceu (não se anuncia de novo), o controle já veio.
+    for (const c of v.corpo.condicoes) {
+      v.fatos[`teve_${c.id}`] = 1;
+      if (c.diagnosticada === false || c.tDiagnostico === undefined) continue;
+      v.fatos[`diagnostico_${c.id}`] = c.tDiagnostico;
+      if ((c.id === 'hipertensao' || c.id === 'diabetes') && c.tratando && novoT - c.tDiagnostico >= 24) v.fatos[`controle_${c.id}`] = c.tDiagnostico + 24;
     }
     const herdadoTotal = (quinhaoDela?.valor ?? 0);
     if (herdadoTotal > 0) v.fatos['herdado_total'] = herdadoTotal;
@@ -985,7 +1018,9 @@ export function lacoComFalecido(v: Vida, pessoaId: string): string {
 
 /** Total de patrimônio que existe na família (protagonista e as posses de quem está no mundo): o que a conservação compara. */
 export function patrimonioDaFamilia(v: Vida, liquidoProtagonista: number): number {
-  const npcs = Object.values(v.pessoas).reduce((s, p) => s + (p.posses ? p.posses.dinheiro + p.posses.bens.reduce((t, b) => t + b.valor, 0) : 0), 0);
+  // Cada um na unidade do país onde mora, trazido à do protagonista pelo câmbio (a soma só vale numa unidade).
+  const aqui = paisDaVida(v);
+  const npcs = Object.values(v.pessoas).reduce((s, p) => s + (p.posses ? (p.posses.dinheiro + p.posses.bens.reduce((t, b) => t + b.valor, 0)) * converterEntrePaises(1, paisDaPessoa(p), aqui) : 0), 0);
   return liquidoProtagonista + npcs + (v.origem.reservaDe ? v.origem.reserva ?? 0 : 0);
 }
 

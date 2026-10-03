@@ -21,6 +21,8 @@
  *  - regime supletivo: comunhão parcial (art. 1.640) — a meação do que o
  *    casal construiu junto não é herança, é do cônjuge.
  *
+ * (A entrada brasileira mora em `mundo/paises/br.ts`; as dos outros países, nos perfis deles.)
+ *
  * SIMPLIFICAÇÕES DECLARADAS (Brasil): o cônjuge concorre com os descendentes
  * por cabeça, sem distinguir bens particulares e comuns (art. 1.829, I, na
  * leitura completa, depende do regime); a quota mínima de um quarto
@@ -29,6 +31,8 @@
  * única média; o direito real de habitação (art. 1.831) aparece como o
  * padrão de deixar a casa da família com o cônjuge, quando cabe na parte dele.
  */
+
+import { PAIS_PADRAO, perfilDoPais, temPerfil } from '../mundo/registro';
 
 export interface RegrasDeSucessao {
   /** Código do país (o que a expansão internacional vai usar). */
@@ -56,24 +60,8 @@ export interface RegrasDeSucessao {
   vacancia: string;
 }
 
-export const REGRAS_SUCESSAO: Record<string, RegrasDeSucessao> = {
-  BR: {
-    pais: 'BR',
-    nome: 'Brasil',
-    legitima: 0.5,
-    necessarios: ['descendentes', 'ascendentes', 'conjuge'],
-    conjugeComDescendentes: true,
-    conjugeComAscendentes: [1 / 3, 1 / 2],
-    representacao: true,
-    colaterais: true,
-    meacao: true,
-    custoTransmissao: 0.04,
-    rotuloCusto: 'imposto de transmissão (ITCMD) e custas do inventário',
-    vacancia: 'o município'
-  }
-};
-
-export const regrasDoPais = (pais = 'BR'): RegrasDeSucessao => REGRAS_SUCESSAO[pais] ?? REGRAS_SUCESSAO.BR;
+/** As regras de cada país moram no perfil dele (`mundo/paises/*`, campo `sucessao`): a partilha só lê esta função. */
+export const regrasDoPais = (pais = PAIS_PADRAO): RegrasDeSucessao => perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO).sucessao;
 
 /** Para onde pode ir uma doação feita por testamento (causas, nunca uma instituição real com nome). */
 export const DESTINOS_DE_DOACAO: { id: string; nome: string }[] = [

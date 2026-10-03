@@ -29,6 +29,7 @@
 import { criarRng, type Rng } from '../rng';
 import type { Economia, FaseEconomica, Vida } from '../tipos';
 import { anoDe } from '../tempo';
+import { PAIS_PADRAO, perfilDoPais, temPerfil } from '../mundo/registro';
 
 export const ANO_BASE = 2026;
 
@@ -81,7 +82,7 @@ export interface AnoEconomico {
  * Avança a economia um ano. Pura em relação à vida: só a semente e o ano
  * decidem o que acontece.
  */
-export function avancarEconomia(e: Economia, t: number): AnoEconomico {
+export function avancarEconomia(e: Economia, t: number, pais = PAIS_PADRAO): AnoEconomico {
   const ano = anoDe(t);
   const r = rngDoAno(e.semente, ano);
   const anos = Math.max(0, ano - ANO_BASE);
@@ -101,7 +102,11 @@ export function avancarEconomia(e: Economia, t: number): AnoEconomico {
   if (virou) { e.fase = proxima; e.tFase = t; }
   const f = FASE[e.fase];
 
-  const inflacao = Math.max(0.01, f.inflacao + r.normal() * 0.012);
+  // O país dá o patamar e o sobressalto: a mesma fase é uma inflação de 4% no Brasil e de 2% na Alemanha; a de um país
+  // de inflação crônica é várias vezes isso — e é o dinheiro parado que paga (`dinheiro`: a conta perde a inflação do ano).
+  const eco = perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO).economia;
+  const patamar = eco.inflacao / 0.045;
+  const inflacao = Math.max(0.01 * Math.min(1, patamar), f.inflacao * patamar + r.normal() * 0.012 * eco.volatilidade);
   const juroAntes = e.juroReal;
   e.juroReal = Math.min(0.09, Math.max(0.01, e.juroReal * 0.55 + f.juro * 0.45 + r.normal() * 0.004));
   const tendB = Math.pow(1 + TENDENCIA_BOLSA, anos);

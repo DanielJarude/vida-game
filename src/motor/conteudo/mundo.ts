@@ -3,6 +3,7 @@
  * o calendário. E mais cenas de adolescência e juventude.
  */
 
+import { dinheiro as moeda } from '../texto';
 import { OCUPACOES_DE_ATLETA } from '../sistemas/esporte';
 import { perfilDe } from '../sistemas/perfisEsportivos';
 import { disponivel as guardado } from '../sistemas/dinheiro';
@@ -12,6 +13,20 @@ import { dinheiro, estresse, fato, feliz, gp, prox, tensao, custa } from './efei
 import { emRecessao, idadePessoa, temFato } from '../nucleo';
 import { entrouEmCrise, saiuDaCrise } from '../sistemas/economia';
 import { municipio } from '../dados/lugares';
+import { paisDaVida } from '../mundo/vida';
+import type { Vida } from '../tipos';
+import { cidadesDaVida, temFesta } from './local';
+
+/** Para onde foi o primeiro voo: escolhido à mão (o Brasil) ou as cidades grandes do país onde se mora. */
+const VOOS: Record<string, string[]> = { BR: ['visitar um parente em São Paulo', 'um casamento em Recife', 'uma entrevista de emprego em Brasília', 'as férias em Salvador', 'um congresso em Porto Alegre'] };
+function primeirosVoos(v: Vida): string[] {
+  const curados = VOOS[paisDaVida(v)];
+  if (curados) return curados;
+  const grandes = cidadesDaVida(v).filter(m => m.id !== v.moradia.municipioId && (m.perfil === 'metropole' || m.capital));
+  const cidades = (grandes.length ? grandes : cidadesDaVida(v).filter(m => m.id !== v.moradia.municipioId)).map(m => m.nome);
+  if (!cidades.length) return ['uma viagem de férias'];
+  return ['visitar um parente em', 'um casamento em', 'uma entrevista de emprego em', 'as férias em', 'um congresso em'].map((x, i) => `${x} ${cidades[i % cidades.length]}`);
+}
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 import { curso } from '../dados/cursos';
@@ -93,7 +108,7 @@ export const MUNDO: Conteudo[] = [
   {
     id: 'mun_carnaval', tipo: 'decisao', idade: [16, 60], tema: 'lazer', repetir: 3,
     papeis: { amigo: P.amigo },
-    quando: c => ['metropole', 'capital', 'metropolitana'].includes(municipio(c.v.moradia.municipioId).perfil),
+    quando: c => temFesta(c.v, 'carnaval') && ['metropole', 'capital', 'metropolitana'].includes(municipio(c.v.moradia.municipioId).perfil),
     titulo: 'Carnaval',
     texto: c => `${c.p.amigo.nome} chama para os quatro dias de bloco. Você também tem a opção de viajar para o interior e descansar.`,
     opcoes: [
@@ -157,7 +172,7 @@ export const MUNDO: Conteudo[] = [
     id: 'ado_show', tipo: 'decisao', idade: [14, 19], tema: 'lazer', repetir: 3,
     papeis: { amigo: P.amigo, adulto: P.genitorEmCasa },
     titulo: 'O show',
-    texto: c => `A banda preferida de ${c.p.amigo.nome} vai tocar na cidade. O ingresso custa R$ 180 e você tem R$ ${Math.max(0, Math.round(c.v.financas.conta))}.`,
+    texto: c => `A banda preferida de ${c.p.amigo.nome} vai tocar na cidade. O ingresso custa ${moeda(180)} e você tem ${moeda(Math.max(0, c.v.financas.conta))}.`,
     opcoes: [
       { id: 'juntar', texto: 'Juntar o dinheiro e ir', disponivel: c => custa(c, 180, 'Você não tem esse dinheiro.'),
         resolver: c => ({ texto: 'Grade da frente, garganta rouca, celular sem bateria.', memoria: `Foi ao show com ${c.p.amigo.nome}.`, efeito: () => { dinheiro(c, -180); prox(c, 'amigo', 8); feliz(c, 6); } }) },
@@ -189,7 +204,7 @@ export const MUNDO: Conteudo[] = [
     id: 'jov_tcc', tipo: 'decisao', idade: [18, 85], tema: 'estudo',
     quando: c => !!c.v.educacao.matricula && c.v.educacao.matricula.mesesRestantes <= 12 && curso(c.v.educacao.matricula.cursoId).nivel === 'superior',
     titulo: 'O TCC',
-    texto: () => 'Faltam dois meses para entregar o TCC e você escreveu três páginas. Um conhecido diz que "resolve" o trabalho inteiro por R$ 1.500.',
+    texto: () => `Faltam dois meses para entregar o TCC e você escreveu três páginas. Um conhecido diz que "resolve" o trabalho inteiro por ${moeda(1500)}.`,
     opcoes: [
       { id: 'escrever', texto: 'Virar as noites e escrever', comportamento: { disciplina: 2 },
         resolver: c => ({ texto: 'Dois meses de café e madrugada. A banca aprovou com elogios a um capítulo.', memoria: null, efeito: () => estresse(c, 8) }) },
@@ -203,7 +218,7 @@ export const MUNDO: Conteudo[] = [
   {
     id: 'jov_aviao', tipo: 'acontecimento', idade: [16, 90], tema: 'lazer',
     quando: c => c.v.financas.conta > 3000 || ['media', 'alta'].includes(c.v.origem.classe),
-    narrar: c => ({ texto: `A primeira viagem de avião foi para ${c.r.pick(['visitar um parente em São Paulo', 'um casamento em Recife', 'uma entrevista de emprego em Brasília', 'as férias em Salvador', 'um congresso em Porto Alegre'])}. Você não tirou o rosto da janela.`, relevancia: 'biografia', tom: 'bom' })
+    narrar: c => ({ texto: `A primeira viagem de avião foi para ${c.r.pick(primeirosVoos(c.v))}. Você não tirou o rosto da janela.`, relevancia: 'biografia', tom: 'bom' })
   },
   {
     id: 'jov_formatura_amigo', tipo: 'acontecimento', idade: [20, 32], tema: 'amizade',

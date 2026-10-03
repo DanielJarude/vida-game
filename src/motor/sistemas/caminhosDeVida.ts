@@ -19,6 +19,7 @@
  *   resposta para ESTA vida — e a primeira ação, quando dá para dar agora.
  */
 
+import { educacaoDaVida } from '../mundo/vida';
 import type { Acao } from '../acoes';
 import type { Dominio, Vida } from '../tipos';
 import type { Veredito } from '../plausibilidade';
@@ -174,7 +175,7 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
   if (alvoCurso && v.educacao.matricula?.cursoId !== alvoCurso.id) {
     const est = estimativaParaCurso(v, alvoCurso);
     const antes = est.ultima;
-    const progresso = antes ? (est.nota - antes.nota >= 15 ? `Desde o ENEM de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação subiu: hoje aponta uns ${est.nota}.` : est.nota - antes.nota <= -15 ? `Desde o ENEM de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação esfriou: hoje aponta uns ${est.nota}.` : `Desde o ENEM de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação está parecida.`) : undefined;
+    const progresso = antes ? (est.nota - antes.nota >= 15 ? `Desde ${educacaoDaVida(v).o} de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação subiu: hoje aponta uns ${est.nota}.` : est.nota - antes.nota <= -15 ? `Desde ${educacaoDaVida(v).o} de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação esfriou: hoje aponta uns ${est.nota}.` : `Desde ${educacaoDaVida(v).o} de ${anoDe(antes.t)} (ponderada ${antes.nota}), a preparação está parecida.`) : undefined;
     const enem: Acao = { tipo: 'enem' };
     const cursinho: Acao = { tipo: 'rotina', id: 'cursinho', ativa: true, nivel: 1 };
     out.push({
@@ -182,9 +183,9 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
       onde: est.frase,
       progresso,
       falta: [proximoPassoVestibular(v, est)],
-      proximo: est.situacao === 'no_corte' && pode(enem) ? { rotulo: 'Fazer o ENEM deste ano', acao: enem, porque: 'A preparação está no nível: o dia decide o resto.' }
+      proximo: est.situacao === 'no_corte' && pode(enem) ? { rotulo: `Fazer ${educacaoDaVida(v).o} deste ano`, acao: enem, porque: 'A preparação está no nível: o dia decide o resto.' }
         : !fazCursinho(v) && pode(cursinho) ? { rotulo: 'Começar o cursinho', acao: cursinho, porque: 'É a preparação que mais sobe a nota no primeiro ano.' }
-          : pode(enem) ? { rotulo: 'Fazer o ENEM deste ano', acao: enem, porque: 'Tentar também mostra onde está — a devolutiva diz o que faltou.' }
+          : pode(enem) ? { rotulo: `Fazer ${educacaoDaVida(v).o} deste ano`, acao: enem, porque: 'Tentar também mostra onde está — a devolutiva diz o que faltou.' }
             : { rotulo: 'Seguir se preparando', ir: 'estudos' }
     });
   }

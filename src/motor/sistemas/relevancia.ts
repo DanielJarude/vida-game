@@ -26,7 +26,7 @@ import { degrausAcima, elegibilidade, experienciaNaTrilha, porContaPropria } fro
 import { cursoOuNulo, type Curso } from '../dados/cursos';
 import { areaDaPos, nomeDaFormacao, notaParaCurso, opcoesDeCurso, temCota, type OpcaoCurso } from './escola';
 import { animaisDoAbrigo, ofertasDeImoveis, ofertasDeVeiculos, type AnimalDoAbrigo, type OfertaImovel, type OfertaVeiculo } from './mercado';
-import { disponivel, rendaPropriaMensal, seguranca } from './dinheiro';
+import { disponivel, patrimonio, rendaPropriaMensal, seguranca } from './dinheiro';
 import { quartosNecessarios } from './imoveis';
 import { podeTerPet, seusPets } from './pets';
 import { modeloMoradia, modeloVeiculo, versaoVeiculo } from '../dados/bens';
@@ -351,6 +351,8 @@ export function veiculosParaVoce(v: Vida, lugar: OfertaVeiculo['lugar']): { para
     const financiado = podeTentar(condicoesVeiculo(v, o.preco, true).veredito);
     if (!aVista && !financiado) pontos -= 6;
     if (m.cnh && !cnh) pontos -= 6;
+    // O jato: quem vende pede patrimônio para manter (a venda não sai abaixo disso).
+    if (m.patrimonioMin && patrimonio(v) < m.patrimonioMin) pontos -= 6;
     // O que cabe (e se pode dirigir) é o ponto de partida de uma vitrine útil: antes, um zero quilômetro que cabia no bolso nunca aparecia "para você".
     const dirige = !m.cnh || cnh;
     if (aVista && dirige) dar(1.6, 'Dá para pagar à vista.');

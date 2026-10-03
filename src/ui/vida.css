@@ -681,6 +681,11 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .aviso--ruim { border-left-color: #a3321f; }
 .aviso--bom { border-left-color: #2f6d2c; }
 
+/* PWA: a versão nova espera o jogador — uma faixa discreta no alto, que não cobre a ação nem bloqueia nada. */
+.versao-nova { position: fixed; left: 50%; top: calc(var(--space-2) + env(safe-area-inset-top)); transform: translateX(-50%); z-index: var(--z-toast); width: min(480px, calc(100% - 2 * var(--space-4))); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); background: var(--bg-raised); color: var(--text-primary); border: 1px solid var(--rule-strong); border-left: 4px solid var(--accent); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); font-size: var(--type-caption); animation: surgir var(--motion-base) var(--ease-out); }
+.versao-nova__acoes { display: flex; align-items: center; gap: var(--space-1); }
+.versao-nova .botao--principal { background: var(--accent); }
+
 /* ======================================================================= Fim */
 .fim { max-width: 760px; margin: 0 auto; padding: var(--space-8) var(--space-4) var(--space-10); display: flex; flex-direction: column; gap: var(--space-7); }
 .fim__cabeca { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3); }

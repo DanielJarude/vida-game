@@ -300,7 +300,7 @@ export function palavraAprendizado(c: number): string {
 export const CONSUMIDORES: Record<DimensaoPessoal, string> = {
   condicionamento: 'Pesa na saúde, no rendimento do treino de esporte, no fim de uma peneira e nos testes físicos de concurso e farda.',
   aparencia: 'Pesa um pouco no primeiro interesse de alguém, numa entrevista e em quem vende ou atende.',
-  aprendizado: 'Pesa na escola, no ENEM, na faculdade e em concursos, e deixa as matérias e os estudos renderem um pouco mais — não ensina esporte nem arte.'
+  aprendizado: 'Pesa na escola, nas provas de ingresso, na faculdade e em concursos, e deixa as matérias e os estudos renderem um pouco mais — não ensina esporte nem arte.'
 };
 
 export const valorPessoal = (v: Vida, d: DimensaoPessoal) => (d === 'condicionamento' ? v.corpo.forma : d === 'aparencia' ? v.corpo.aparencia : v.mente.cognicao);

@@ -11,6 +11,7 @@
  * antes de dormir entra na história dos dois. Nada disso vira número na tela.
  */
 
+import { dinheiro as moeda } from '../texto';
 import type { Rng } from '../rng';
 import { animal } from '../dados/animais';
 import { clamp } from '../rng';
@@ -375,7 +376,7 @@ export const INTERACOES: Interacao[] = [
       afeto(c, 6); confiar(c, 4);
       aplicarPersonalidade(c.v, 'acao:ajudar', { generosidade: 1 });
       if (c.p.aperto?.tipo === 'dinheiro' || c.p.aperto?.tipo === 'desemprego') lembrarCom(c.v, c.p.id, 'Você ajudou num aperto de dinheiro.', 'apoio', 1);
-      return { resultado: `Você mandou R$ ${valor.toLocaleString('pt-BR')}. ${c.p.nome} agradeceu com a voz embargada.` };
+      return { resultado: `Você mandou ${moeda(valor)}. ${c.p.nome} agradeceu com a voz embargada.` };
     }
   },
   {
@@ -1052,7 +1053,7 @@ export const INTERACOES: Interacao[] = [
 function rotuloAproximar(c: CtxI): string {
   const { p, vin } = c;
   if (c.papel === 'afastado') return `Voltar a chamar ${p.nome} para alguma coisa`;
-  if (vin.convivio.includes('trabalho')) return `Chamar ${p.nome} para um café depois do expediente`;
+  if (vin.convivio.includes('trabalho')) return `Chamar ${p.nome} para um café depois do trabalho`;
   if (vin.convivio.includes('faculdade')) return `Chamar ${p.nome} para estudar junto`;
   if (vin.convivio.includes('escola')) return `Chamar ${p.nome} para fazer o trabalho junto`;
   if (vin.convivio.includes('rotina')) return `Puxar conversa com ${p.nome} depois da atividade`;

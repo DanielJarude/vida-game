@@ -26,6 +26,8 @@
  *   sentido.
  */
 
+import { perfilDoPais, temPerfil } from '../mundo/registro';
+import { perfilDaVida } from '../mundo/vida';
 import { especialidadeMedica } from './medicina';
 import { agenteDe, conflitoDoContrato, contaDoContrato, descricaoDoContrato, emProducao, propostasAbertas, redeAlcancavel } from './audiovisual';
 import { OCUPACOES_DE_ATLETA } from './esporte';
@@ -37,7 +39,7 @@ import type { Emprego, Pessoa, Vida } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, marcarFato, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { ocupacao, ocupacaoOuNula, ROTULO_TRILHA, type Ocupacao } from '../dados/ocupacoes';
 import { familiaDaTrilha } from '../dados/carreiras';
-import { economiaLocal, municipio } from '../dados/lugares';
+import { economiaLocal, municipio, paisDaCidade } from '../dados/lugares';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from '../plausibilidade';
 import { degrausAcima, eDasForcas, elegibilidade, horizonte, nomeOcupacao, podeAposentar, rendaDeClientela, tetoSalarial } from './trabalho';
 import { liquido, remuneracaoDe } from './renda';
@@ -247,7 +249,7 @@ const POR_CONTA = new Set<ModoTrabalho>(['autonomo', 'informal', 'plataforma']);
 export function custoDaEstrutura(v: Vida): number {
   const e = v.trabalho.atual!;
   const oc = ocupacao(e.ocupacaoId);
-  const base = Math.max(3000, liquido(e.salario, e.contrato) * 2.2);
+  const base = Math.max(3000, liquido(e.salario, e.contrato, paisDaCidade(e.municipioId)) * 2.2);
   return Math.round(base * (1 + (e.estrutura ?? 0)) * (familiaDaTrilha(oc.trilha).progressao === 'liberal' || familiaDaTrilha(oc.trilha).progressao === 'saude' ? 1.8 : 1) / 500) * 500;
 }
 
@@ -328,13 +330,15 @@ export interface LeituraTrabalho {
 /** O vínculo, dito com o que ele é: conscrito não tem "carreira militar". */
 function vinculoDe(v: Vida, e: Emprego): string {
   const m = v.caminhos.militar;
-  if (e.contrato === 'militar' && m) return m.quadro === 'temporario' ? (v.t - m.tIngresso < 12 ? 'serviço militar inicial (obrigatório)' : 'temporário, engajado ano a ano') : m.quadro === 'praca' ? 'praça de carreira' : 'oficial de carreira';
+  if (e.contrato === 'militar' && m) return m.quadro === 'temporario' ? (v.t - m.tIngresso < 12 ? `serviço militar inicial${perfilDaVida(v).militar.servico === 'obrigatorio' ? ' (obrigatório)' : ''}` : 'temporário, engajado ano a ano') : m.quadro === 'praca' ? 'praça de carreira' : 'oficial de carreira';
   // Dono ≠ autônomo: quem toca o próprio negócio (empresa, equipe, caixa) não "trabalha por conta" — é dono.
   if (donoIntegral(v)) return 'dono do próprio negócio';
+  // O contrato formal tem o nome do país onde se trabalha ("carteira assinada" no Brasil; "contrato" alhures).
+  if (e.contrato === 'clt') return perfilDoPais(temPerfil(paisDaCidade(e.municipioId)) ? paisDaCidade(e.municipioId) : 'BR').trabalho.contratoFormal;
   return VINCULO[e.contrato];
 }
 
-const VINCULO: Record<string, string> = { eletivo: 'mandato eletivo', clt: 'carteira assinada', servidor: 'servidor público', militar: 'carreira militar', informal: 'informal', autonomo: 'por conta própria (sem empresa)', estagio: 'estágio', temporario: 'contrato temporário', aprendiz: 'jovem aprendiz' };
+const VINCULO: Record<string, string> = { eletivo: 'mandato eletivo', clt: 'contrato formal', servidor: 'servidor público', militar: 'carreira militar', informal: 'informal', autonomo: 'por conta própria (sem empresa)', estagio: 'estágio', temporario: 'contrato temporário', aprendiz: 'jovem aprendiz' };
 
 export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
   const modo = modoDoTrabalho(v);

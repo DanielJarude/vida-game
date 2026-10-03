@@ -18,7 +18,7 @@ import { disponibilidade, executar, type Acao } from '../acoes';
 import { clamp, criarRng } from '../rng';
 import { idade, transacao, vinculosVivos } from '../nucleo';
 import { podeTentar } from '../plausibilidade';
-import { interpretar, migrarV17, migrarV18, VERSAO_SAVE } from '../save';
+import { interpretar, migrarV17, migrarV18, migrarV19, VERSAO_SAVE } from '../save';
 import type { Vida } from '../tipos';
 import { vincular } from '../pessoas';
 import { contratar, elegibilidade } from '../sistemas/trabalho';
@@ -609,12 +609,12 @@ describe('O. save/reload e migração v17 → v18', () => {
     if (a.tipo !== 'ok' || b.tipo !== 'ok') throw new Error('não migrou');
     expect(a.migrado).toBe(true);
     expect(a.vida.versao).toBe(VERSAO_SAVE);
-    expect(VERSAO_SAVE).toBe(19);
+    expect(VERSAO_SAVE).toBe(20);
     expect(a.vida).toEqual(b.vida);
     expect(Number.isFinite(a.vida.origem.reserva)).toBe(true);
     expect(a.vida.origem.bairro).toBeTruthy();
     expect(a.vida.educacao.vivencias?.some(x => x.tipo === 'olimpiada' && !!x.feito)).toBe(true);
-    expect(migrarV18(migrarV17(structuredClone(a.vida)))).toEqual(a.vida);
+    expect(migrarV19(migrarV18(migrarV17(structuredClone(a.vida))))).toEqual(a.vida);
     let x = a.vida;
     for (let k = 0; k < 3 && !x.morte; k++) x = ano(x);
     expect(JSON.stringify(x)).not.toMatch(/NaN/);
@@ -626,7 +626,7 @@ describe('O. save/reload e migração v17 → v18', () => {
       try { bruto = readFileSync(join(__dirname, 'fixtures', f), 'utf8'); } catch { continue; }
       const r = interpretar(bruto);
       if (r.tipo !== 'ok') throw new Error(`${f}: ${r.tipo === 'invalido' ? r.motivo : 'vazio'}`);
-      expect(r.vida.versao).toBe(19);
+      expect(r.vida.versao).toBe(20);
       let x = r.vida;
       x.momento = null;
       for (let k = 0; k < 2 && !x.morte; k++) x = ano(x);

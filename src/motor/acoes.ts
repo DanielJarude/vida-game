@@ -6,7 +6,14 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { educacaoDaVida } from './mundo/vida';
+import { noPais } from './mundo/registro';
+import type { MotivoMigracao } from './tipos';
+import { avaliarMigracao, migrar, pedirNaturalizacao, podeNaturalizar } from './sistemas/migracao';
+import { daMoedaLocal } from './mundo/moeda';
+import { dinheiro as moeda } from './texto';
 import { declararIntencao, patrimonioPagaAVida, podeDeclararIntencao, registrarProcura } from './sistemas/intencao';
+import { entrarNaVida, paisDaVida, perfilDaVida } from './mundo/vida';
 import { OCUPACOES_DE_ATLETA } from './sistemas/esporte';
 import type { Rng } from './rng';
 import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
@@ -31,10 +38,10 @@ import { OCUPACOES, ocupacao } from './dados/ocupacoes';
 import { aluguelDe, alugar, amigoParaDividir, marcarSaidaDeCasa, opcoesDeAluguel, vereditoAluguel, voltarParaCasaDosPais } from './sistemas/moradia';
 import { custoDeMudanca, iniciarAdocao, iniciarCnh, mudarAgora } from './sistemas/processos';
 import { modeloMoradia, modeloVeiculo, nomeDaVersao, versaoVeiculo, VEICULO_ANTIGO } from './dados/bens';
-import { economiaLocal, municipio, nomeLugar } from './dados/lugares';
+import { economiaLocal, existeMunicipio, municipio, nomeLugar, paisDaCidade } from './dados/lugares';
 import { curso } from './dados/cursos';
 import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras, type Modo } from './sistemas/transporte';
-import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, rendaPropriaMensal, saldoMensal, capacidade, tirarDasAplicacoes, vereditoDePagar } from './sistemas/dinheiro';
+import { arranjoDaCasa, comprometimento, disponivel, limiteDeCredito, mesesRestantes, pagar as pagarComGuardado, parcelaPrice, patrimonio, rendaPropriaMensal, saldoMensal, capacidade, tirarDasAplicacoes, vereditoDePagar } from './sistemas/dinheiro';
 import { conferir } from './sistemas/extrato';
 import { animalDoAbrigo, nomeImovel, ofertaDeImovel, ofertaDePet, ofertaDeVeiculo, ofertaPorModelo, ofertaVeiculoPorModelo } from './sistemas/mercado';
 import { disponibilidadeVeiculo, executarVeiculo, textoVeiculo, valorDeVenda, type AcaoVeiculo } from './sistemas/veiculos';
@@ -106,6 +113,10 @@ export type Acao =
   | { tipo: 'trocar_moradia'; modeloId?: string; ofertaId?: string; dividirCom?: string }
   | { tipo: 'voltar_pais' }
   | { tipo: 'mudar_cidade'; municipioId: string }
+  /** Mudar de PAÍS (migração): para uma cidade de outro país, por um motivo — a porta e o custo saem de `migracao`. */
+  | { tipo: 'migrar'; municipioId: string; motivo: MotivoMigracao }
+  /** Pedir a nacionalidade do país onde mora. */
+  | { tipo: 'naturalizar' }
   /** Comprar um veículo de uma oferta (novo ou usado); `entrada` em reais, quando financia. */
   | { tipo: 'comprar_veiculo'; modeloId?: string; ofertaId?: string; financiar: boolean; entrada?: number }
   /** Comprar um imóvel: à vista ou financiado (entrada em reais, prazo em anos). */
@@ -133,7 +144,7 @@ export type Acao =
   | { tipo: 'cnh_preparar'; como: 'teoria' | 'pratica' }
   | { tipo: 'cnh_prova' }
   /** Habilitação para operar barco ou avião (a posse não depende dela). */
-  | { tipo: 'habilitacao'; qual: 'nautica' | 'piloto' }
+  | { tipo: 'habilitacao'; qual: 'nautica' | 'piloto' | 'multimotor' }
   /** O que o dinheiro compra além de objetos: uma viagem, um curso caro, um tempo sabático, uma doação, um presente grande. */
   /** A porta (a categoria) e a escolha de dentro dela (o destino, o curso, a pessoa e o presente): `experiencias`. */
   | { tipo: 'experiencia'; id: TipoExperiencia; escolha?: string }
@@ -335,9 +346,19 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const temCasa = vinculosVivos(v).some(x => (x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai') && x.p.municipioId === v.moradia.municipioId);
       return temCasa ? PERMITIDO : bloqueio('requisito', 'Seus pais não moram nesta cidade.');
     }
+    case 'migrar': {
+      if (!existeMunicipio(a.municipioId)) return bloqueio('impossivel', 'Este lugar ainda não está disponível neste aparelho.');
+      { const preso = presoALugar(v); if (preso) return preso; }
+      const av = avaliarMigracao(v, a.municipioId, a.motivo);
+      if (av.veredito.grau !== 'permitido') return av.veredito;
+      return vereditoDePagar(v, av.custo, 'A mudança de país custa cerca de');
+    }
+    case 'naturalizar': return podeNaturalizar(v);
     case 'mudar_cidade': {
       if (i < 18) return bloqueio('ilegal', 'Menor de idade não muda de cidade sozinho.');
       if (a.municipioId === v.moradia.municipioId) return bloqueio('incompativel', 'Você já mora aqui.');
+      // Outro país não é uma mudança de cidade: é uma migração, com porta, câmbio e consequências (`migracao`).
+      if (paisDaCidade(a.municipioId) !== paisDaVida(v)) return bloqueio('incompativel', 'Morar em outro país é uma migração, não uma mudança de cidade.');
       { const preso = presoALugar(v); if (preso) return preso; }
       const custo = custoDeMudanca(v.moradia.municipioId, a.municipioId);
       return vereditoDePagar(v, custo, 'A mudança custa cerca de');
@@ -348,6 +369,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const m = modeloVeiculo(o.modeloId);
       if (i < m.idadeMin) return bloqueio(m.cnh ? 'ilegal' : 'impossivel', `A partir dos ${m.idadeMin}.`);
       if (m.cnh && !v.trabalho.licencas.includes('cnh')) return bloqueio('requisito', 'Precisa de carteira de motorista.');
+      if (m.patrimonioMin && patrimonio(v) < m.patrimonioMin) return bloqueio('requisito', `Quem vende ${m.nome} pede patrimônio de pelo menos ${fmt(m.patrimonioMin)}: só manter custa mais de ${fmt(Math.round(((m.tripulacao ?? 0) + m.usoMensal) * 12 / 100000) * 100000)} por ano.`);
       if (i < 18 && moraComFamiliaDeOrigem(v) && o.preco > v.financas.conta) return vereditoDePagar(v, o.preco);
       return condicoesVeiculo(v, o.preco, a.financiar, a.entrada).veredito;
     }
@@ -416,18 +438,22 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const parcela = parcelaPrice(caras.reduce((x, d) => x + d.saldo, 0), 0.022, 48);
       const renda = rendaPropriaMensal(v);
       if (renda <= 0 && caras.length) return bloqueio('requisito', 'Sem renda, o banco não fecha acordo.');
-      if (parcela > renda * 0.35) return bloqueio('requisito', `A parcela do acordo (R$ ${Math.round(parcela).toLocaleString('pt-BR')}) não cabe na sua renda. O banco não fecha acordo que vai quebrar.`);
+      if (parcela > renda * 0.35) return bloqueio('requisito', `A parcela do acordo (${moeda(parcela)}) não cabe na sua renda. O banco não fecha acordo que vai quebrar.`);
       return PERMITIDO;
     }
     case 'atracao': return i >= 13 ? PERMITIDO : bloqueio('impossivel', 'Ainda é cedo para isso.');
     case 'mei': {
       const e = v.trabalho.atual;
+      // O regime simplificado é do país (no Brasil, o MEI); onde não existe, a ação não existe.
+      const regime = perfilDaVida(v).trabalho.microempreendedor;
+      if (!regime) return bloqueio('impossivel', 'Aqui não existe um regime simplificado como o MEI.');
       if (!e || (e.contrato !== 'informal' && e.contrato !== 'autonomo')) return bloqueio('impossivel', 'Só para quem trabalha por conta.');
       if (e.mei) return bloqueio('impossivel', 'Já é MEI.');
       if (v.caminhos.negocio && ['comecando', 'firme', 'apertado'].includes(v.caminhos.negocio.estado)) return bloqueio('impossivel', 'O negócio já tem CNPJ próprio.');
       if (e.contrato === 'autonomo' && e.clientela === undefined) return bloqueio('impossivel', 'Não se aplica.');
       if (e.ocupacaoId === 'produtor_rural' || e.ocupacaoId === 'pescador') return bloqueio('impossivel', 'Produtor rural e pescador têm registro próprio, não MEI.');
-      if (e.salario > 6750) return bloqueio('requisito', 'O faturamento passa do limite do MEI (cerca de R$ 81 mil por ano).');
+      const teto = daMoedaLocal(regime.tetoAnual, paisDaVida(v)) / 12;
+      if (e.salario > teto * 1.0) return bloqueio('requisito', `O faturamento passa do limite do ${regime.nome} (cerca de ${moeda(teto * 12)} por ano).`);
       return PERMITIDO;
     }
     case 'deslocamento': {
@@ -612,7 +638,7 @@ export function condicoesEmprestimo(v: Vida, valor: number, meses: number): Cond
   if (idade(v) < 18) return { ...base, veredito: bloqueio('ilegal', 'Empréstimo exige maioridade.') };
   if (v.financas.negativado) return { ...base, veredito: bloqueio('requisito', 'Com o nome sujo, nenhum banco empresta.') };
   if (renda <= 0) return { ...base, veredito: bloqueio('requisito', 'Sem renda, ninguém empresta.') };
-  if (valor < 500) return { ...base, veredito: bloqueio('requisito', 'O mínimo é R$ 500.') };
+  if (valor < 500) return { ...base, veredito: bloqueio('requisito', `O mínimo é ${moeda(500)}.`) };
   if (valor > maximo) return { ...base, veredito: bloqueio('requisito', `Pela sua renda, o banco empresta até ${fmt(maximo)}.`) };
   if (comprometimento(v, parcela) > (consignado ? 0.35 : 0.4)) return { ...base, veredito: bloqueio('requisito', 'A parcela não cabe junto com as que você já tem.') };
   return { ...base, veredito: PERMITIDO };
@@ -621,6 +647,7 @@ export function condicoesEmprestimo(v: Vida, valor: number, meses: number): Cond
 /* ================================================================= Execução */
 
 export function executar(vida: Vida, a: Acao): Retorno {
+  entrarNaVida(vida);
   const disp = disponibilidade(vida, a);
   if (!podeTentar(disp)) return { vida, aviso: { texto: disp.motivo ?? 'Não é possível agora.', tom: 'ruim' } };
   let resultado: string | undefined;
@@ -655,6 +682,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'amortizar': case 'renegociar': case 'renegociar_financiamento': return ['Dívidas amortizadas e acordos', 'divida'];
     case 'pedir_ajuda_familia': return ['Ajuda pedida à família', 'familia'];
     case 'comprar_imovel': case 'vender_bem': case 'imovel': case 'comprar_veiculo': case 'veiculo': return ['Imóveis e veículos: compra, venda e reparo', 'escolha'];
+    case 'migrar': return ['Mudança de país', 'escolha'];
     case 'decidir': return ['Decisões do ano', 'escolha'];
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
@@ -765,7 +793,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const nota = fazerEnem(v, r);
       // Com um curso em vista, a prova deixa devolutiva: onde ficou diante do corte e o que pesou.
       const dev = v.educacao.objetivo ? [...v.caminhos.devolutivas].reverse().find(d => d.tipo === 'vestibular' && d.t === v.t) : undefined;
-      return { resultado: `Você fez o ENEM e tirou ${nota}.${dev ? ` ${dev.texto}` : ''}`, titulo: dev ? 'O ENEM' : undefined };
+      return { resultado: `Você fez ${educacaoDaVida(v).o} e tirou ${nota}.${dev ? ` ${dev.texto}` : ''}`, titulo: dev ? educacaoDaVida(v).O : undefined };
     }
     case 'objetivo_estudo': return ok(definirObjetivo(v, a.cursoId));
     case 'conhecer_alguem': {
@@ -908,6 +936,14 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       mudarAgora(v, a.municipioId, '');
       return ok(`Mudança para ${nomeLugar(a.municipioId)} feita.`);
     }
+    case 'migrar': {
+      // Falta na conta: as aplicações cobrem antes (a disponibilidade já perguntou).
+      const av = avaliarMigracao(v, a.municipioId, a.motivo);
+      if (v.financas.conta < av.custo) pagarTudo(v, 0);
+      migrar(v, r, a.municipioId, a.motivo);
+      return { resultado: v.biografia[v.biografia.length - 1]?.texto, titulo: `A vida ${noPais(paisDaCidade(a.municipioId))}` };
+    }
+    case 'naturalizar': pedirNaturalizacao(v); return ok('Pedido feito: a resposta sai em um ano.', 'neutro');
     case 'comprar_veiculo': {
       const o = a.ofertaId ? ofertaDeVeiculo(v, a.ofertaId)! : ofertaVeiculoPorModelo(v, a.modeloId!, VEICULO_ANTIGO[a.modeloId!]?.usado)!;
       const m = modeloVeiculo(o.modeloId);
@@ -925,7 +961,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       v.fatos['veiculos_comprados'] = nVeiculos;
       // O tipo em palavras ("carro", "moto", "bicicleta elétrica") e o gênero dele; o nome é o da versão.
       const tipo = m.categoria === 'bicicleta' || m.raro ? m.nome : m.categoria;
-      const fem = m.categoria !== 'carro' && !['veleiro', 'ultraleve', 'monomotor'].includes(m.id);
+      const fem = m.categoria !== 'carro' && m.categoria !== 'aeronave' && m.id !== 'veleiro';
       const artigoNome = versao ? versao.artigo : fem ? 'a' : 'o';
       const primeiro = nVeiculos === 1 || !v.biografia.some(e => e.texto.includes(tipo));
       const verbo = anterior.length ? `Comprou também ${fem ? 'uma' : 'um'} ${tipo}` : nVeiculos === 1 || primeiro && m.categoria === 'carro' ? `Comprou ${fem ? 'a primeira' : 'o primeiro'} ${tipo}` : `Comprou ${fem ? 'uma' : 'um'} ${tipo}`;

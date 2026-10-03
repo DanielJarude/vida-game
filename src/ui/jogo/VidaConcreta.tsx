@@ -147,7 +147,7 @@ function Compras({ vida, agir, abrir }: { vida: Vida; agir: (a: Acao) => boolean
       { id: 'motos', nome: 'Motos e bicicletas', oque: 'Novas e usadas; bicicleta é de qualquer idade', icone: 'bicicleta', idadeMin: 10, porque: 'Com essa idade, a bicicleta vem da família.' },
       // Raros e contextuais: a loja náutica perto da água, o aeroclube na cidade grande — para quem tem com que (ou já tem um).
       ...(lojaNaCidade(vida.moradia.municipioId, 'nautica') && (disponivel(vida) >= 60000 || temRaro(vida, 'embarcacao')) ? [{ id: 'nautica' as QualLugar, nome: 'Loja náutica', oque: 'Moto aquática, lancha, veleiro', icone: 'nautica', idadeMin: 18, porque: 'A partir dos 18.' }] : []),
-      ...(lojaNaCidade(vida.moradia.municipioId, 'aeroclube') && (disponivel(vida) >= 350000 || temRaro(vida, 'aeronave')) ? [{ id: 'aeroclube' as QualLugar, nome: 'Aeroclube e hangar', oque: 'Ultraleve, monomotor, a formação de piloto', icone: 'aeroclube', idadeMin: 18, porque: 'A partir dos 18.' }] : []),
+      ...(lojaNaCidade(vida.moradia.municipioId, 'aeroclube') && (disponivel(vida) >= 350000 || temRaro(vida, 'aeronave')) ? [{ id: 'aeroclube' as QualLugar, nome: 'Aeroclube e hangar', oque: 'Ultraleve, monomotor, bimotor, jato; a formação de piloto', icone: 'aeroclube', idadeMin: 18, porque: 'A partir dos 18.' }] : []),
       ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto', icone: 'oficina', idadeMin: 0 }] : [])
     ] },
     { titulo: 'Você', lugares: [{ id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio', icone: 'loja', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes }] },

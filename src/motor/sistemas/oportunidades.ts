@@ -13,6 +13,7 @@
  * todo ano.
  */
 
+import { perfilDaVida } from '../mundo/vida';
 import { OCUPACOES_DE_ATLETA } from './esporte';
 import { conviteDaEspecialidade } from './medicina';
 import type { Rng } from '../rng';
@@ -71,7 +72,7 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   // A escola com parceria (empresas da cidade) divulga mais (o perfil da instituição: `formacao`).
   if (i >= 14 && i <= 17 && b && semTrabalho(v) && podeGerar(v, 'aprendiz', 2) && r.chance(ofereceAqui(v, 'parceria') ? 0.45 : 0.3)) {
     const oc = ocupacao('jovem_aprendiz');
-    if (elegibilidade(v, oc).grau !== 'ilegal') novaOportunidade(v, { tipo: 'aprendiz', ocupacaoId: oc.id, meses: 12, chave: 'aprendiz', bonus: 0.25, titulo: 'Jovem aprendiz', texto: `A escola divulgou vagas de jovem aprendiz ${r.pick(['numa rede de supermercados', 'num escritório do centro', 'numa distribuidora', 'numa agência bancária'])}. Meio período, carteira assinada, escola garantida.` });
+    if (elegibilidade(v, oc).grau !== 'ilegal') novaOportunidade(v, { tipo: 'aprendiz', ocupacaoId: oc.id, meses: 12, chave: 'aprendiz', bonus: 0.25, titulo: 'Jovem aprendiz', texto: `A escola divulgou vagas de jovem aprendiz ${r.pick(['numa rede de supermercados', 'num escritório do centro', 'numa distribuidora', 'numa agência bancária'])}. Meio período, ${perfilDaVida(v).trabalho.contratoFormal}, escola garantida.` });
   }
 
   // Estágio pelo curso (técnico, integrado ou faculdade).
@@ -156,7 +157,7 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   if (e && e.contrato === 'clt' && mercadoDoTrabalho(v, e) === 'emprego' && e.desempenho >= 70 && !e.posAposentadoria && i <= 58 && podeGerar(v, 'proposta', 5)) {
     const oc = ocupacao(e.ocupacaoId);
     if (experienciaNaTrilha(v, oc.trilha) >= 36 && r.chance(0.15)) {
-      const melhor = OCUPACOES_POR_TRILHA(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && !x.entrada && elegibilidade(v, x).grau === 'permitido')[0] ?? oc;
+      const melhor = OCUPACOES_POR_TRILHA(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && x.modalidade === oc.modalidade && !x.concurso && !x.entrada && elegibilidade(v, x).grau === 'permitido')[0] ?? oc;
       novaOportunidade(v, { tipo: 'proposta', ocupacaoId: melhor.id, meses: 12, chave: 'proposta', bonus: 0.18, titulo: 'Uma proposta', texto: `Uma concorrente${melhor.id !== oc.id ? ` quer você como ${nomeOcupacao(v, melhor)}` : ' quer você para a mesma função'}, com salário melhor. Seria recomeçar num lugar novo, sem os anos de casa.` });
     }
   }
@@ -308,7 +309,7 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       if (efetivado) {
         // A efetivação é uma vaga como qualquer outra: se não cabe com o que já existe, o jogo pergunta.
         escrever(v, { texto: 'O temporário de fim de ano acabou em convite para ficar.', relevancia: 'cotidiano', tema: 'trabalho', tom: 'bom' });
-        const res = propor(v, r, { tipo: 'emprego', ocupacaoId: 'atendente', via: 'temporario', texto: 'Em janeiro, a loja chamou para ficar: atendente, de carteira assinada.' });
+        const res = propor(v, r, { tipo: 'emprego', ocupacaoId: 'atendente', via: 'temporario', texto: `Em janeiro, a loja chamou para ficar: atendente, com ${perfilDaVida(v).trabalho.contratoFormal}.` });
         return { texto: res === 'feito' ? 'Três meses de correria — e em janeiro chamaram para ficar.' : 'Três meses de correria — e um convite para ficar.', tom: 'bom' };
       }
       escrever(v, { texto: agro ? 'Trabalhou três meses na colheita. Dinheiro no bolso e as costas doendo.' : 'Trabalhou como temporário no fim de ano. Em janeiro, o contrato acabou.', relevancia: 'biografia', tema: 'trabalho', escolha: true });
@@ -411,9 +412,10 @@ const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jog
 export const MODS: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'];
 export const MODS_ARTE: Dominio[] = ['musica', 'teatro', 'danca'];
 
-import { MUNICIPIOS } from '../dados/lugares';
-const municipioIndex = (id: string) => Math.max(0, MUNICIPIOS.findIndex(m => m.id === id));
-export const municipioPorIndice = (n: number) => MUNICIPIOS[n]?.id;
+import { codigoDoMunicipio, municipioDoCodigo } from '../dados/lugares';
+// (MUNDO: as cidades de fora têm código próprio — `lugares.codigoDoMunicipio`; uma peneira em Rosário não vira Rio Branco.)
+const municipioIndex = (id: string) => Math.max(0, codigoDoMunicipio(id));
+export const municipioPorIndice = (n: number) => municipioDoCodigo(n);
 export const municipioIndice = municipioIndex;
 
 export function recusarOportunidade(v: Vida, id: string): void {

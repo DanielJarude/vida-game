@@ -3,6 +3,7 @@
  * o cigarro experimentado aos 15 pode virar o maço de todo dia aos 40.
  */
 
+import { dinheiro as moeda, dinheiroCurto as moedaCurta } from '../texto';
 import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo } from './base';
 import * as P from './papeis';
@@ -13,6 +14,19 @@ import { encerrarEmprego } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
 import { criarPessoa, vincular } from '../pessoas';
 import { noTrabalho, varianteDoLugar, type Ambiente } from '../sistemas/ambiente';
+import { paisDaVida } from '../mundo/vida';
+import type { Vida } from '../tipos';
+import { cidadesDaVida, cotidiano, deEscritorio } from './local';
+
+/** Destinos de excursão de ônibus escolhidos à mão, por país; sem lista, as cidades do país (o litoral e o interior primeiro). */
+const EXCURSOES: Record<string, string[]> = { BR: ['Aparecida', 'Gramado', 'Porto Seguro', 'Caldas Novas', 'Juazeiro do Norte'] };
+function destinosDeExcursao(v: Vida): string[] {
+  const curados = EXCURSOES[paisDaVida(v)];
+  if (curados) return curados;
+  const outras = cidadesDaVida(v).filter(m => m.id !== v.moradia.municipioId);
+  const passeio = outras.filter(m => m.litoral || m.perfil === 'pequena' || m.perfil === 'polo');
+  return (passeio.length >= 3 ? passeio : outras).slice(0, 6).map(m => m.nome);
+}
 
 export const ESCOLHAS: Conteudo[] = [
   /* ================================================================ HÁBITOS */
@@ -51,12 +65,12 @@ export const ESCOLHAS: Conteudo[] = [
     papeis: { quem: P.qualquer(P.amigo, P.genteDe('trabalho')) },
     quando: c => !temFato(c.v, 'aposta_online'),
     titulo: 'O aplicativo',
-    texto: c => `${c.p.quem.nome} mostra no celular: apostou vinte reais num jogo de futebol e ganhou trezentos. "É só ter cabeça", diz, e manda um link com bônus de cadastro.`,
+    texto: c => `${c.p.quem.nome} mostra no celular: apostou ${moeda(20)} num jogo de futebol e ganhou ${moeda(300)}. "É só ter cabeça", diz, e manda um link com bônus de cadastro.`,
     opcoes: [
       { id: 'apostar', texto: 'Baixar e apostar um pouco', comportamento: { impulsividade: 2 },
         resolver: c => {
           const vicia = c.r.chance(0.3 + Math.max(0, c.v.personalidade.tracos.impulsividade) / 150);
-          return { texto: vicia ? 'Ganhou nas primeiras. Depois, foi apostando para recuperar.' : 'Perdeu cinquenta reais em uma semana e desinstalou.', memoria: vicia ? 'Começou a apostar em bets pelo celular.' : null, tom: vicia ? 'ruim' : 'neutro', efeito: () => { if (vicia) fato(c, 'aposta_online'); else dinheiro(c, -50); } };
+          return { texto: vicia ? 'Ganhou nas primeiras. Depois, foi apostando para recuperar.' : `Perdeu ${moeda(50)} em uma semana e desinstalou.`, memoria: vicia ? 'Começou a apostar em bets pelo celular.' : null, tom: vicia ? 'ruim' : 'neutro', efeito: () => { if (vicia) fato(c, 'aposta_online'); else dinheiro(c, -50); } };
         } },
       { id: 'nao', texto: 'Recusar', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você guardou o celular.', memoria: null }) }
     ]
@@ -65,7 +79,7 @@ export const ESCOLHAS: Conteudo[] = [
     id: 'hab_bets_fundo', tipo: 'decisao', idade: [18, 80], tema: 'dinheiro', repetir: 3, prioritario: true,
     quando: c => temFato(c.v, 'aposta_online') && c.v.t - (c.v.fatos['aposta_online'] ?? c.v.t) >= 12,
     titulo: 'As apostas',
-    texto: c => `As apostas já comeram ${c.r.int(8, 40)} mil reais. Você esconde o celular${P.parceiro(c.v)[0] ? ` de ${P.parceiro(c.v)[0].nome}` : ''} e acorda de madrugada para ver resultado de jogo que nem sabe onde é.`,
+    texto: c => `As apostas já comeram ${moedaCurta(c.r.int(8, 40) * 1000)}. Você esconde o celular${P.parceiro(c.v)[0] ? ` de ${P.parceiro(c.v)[0].nome}` : ''} e acorda de madrugada para ver resultado de jogo que nem sabe onde é.`,
     opcoes: [
       { id: 'ajuda', texto: 'Procurar ajuda e bloquear os aplicativos', comportamento: { coragem: 1, disciplina: 1 },
         resolver: c => ({ texto: 'Um grupo de apoio às quintas, um amigo guardando o cartão. Um dia de cada vez.', memoria: 'Procurou ajuda para parar de apostar.', relevancia: 'marco', efeito: () => { delete c.v.fatos['aposta_online']; estresse(c, -6); } }) },
@@ -130,7 +144,7 @@ export const ESCOLHAS: Conteudo[] = [
         resolver: c => {
           const pego = c.r.chance(0.3);
           return {
-            texto: pego ? 'Meses depois, a Polícia Federal bateu na porta às seis da manhã.' : 'Vinte mil reais em dinheiro vivo, guardados numa caixa de sapato.',
+            texto: pego ? `Meses depois, ${cotidiano(c.v).policiaFederal ?? 'a polícia'} bateu na porta às seis da manhã.` : `${moedaCurta(20000)} em dinheiro vivo, guardados numa caixa de sapato.`,
             memoria: pego ? 'Foi investigad' + c.g('o', 'a', 'e') + ' por corrupção e perdeu o cargo.' : null,
             relevancia: pego ? 'marco' : undefined, tom: pego ? 'ruim' : undefined,
             efeito: () => { if (pego) { encerrarEmprego(c.v, 'demitido por corrupção'); estresse(c, 25); fato(c, 'processado_corrupcao'); dinheiro(c, -15000); } else dinheiro(c, 20000); }
@@ -141,7 +155,7 @@ export const ESCOLHAS: Conteudo[] = [
   {
     id: 'trab_assedio', tipo: 'decisao', idade: [18, 70], tema: 'trabalho', repetir: 8,
     papeis: { colega: P.genteDe('trabalho') },
-    quando: c => noTrabalho(c.v, 'chefia', 'colegas', 'organizacao'),
+    quando: c => deEscritorio(c.v) && noTrabalho(c.v, 'chefia', 'colegas', 'organizacao'),
     titulo: 'Na reunião',
     texto: c => `Na reunião, a chefia humilhou ${c.p.colega.nome} na frente de todo mundo por um atraso de cinco minutos. ${gp(c, 'colega', 'Ele', 'Ela', 'Elu')} saiu da sala com os olhos vermelhos.`,
     opcoes: [
@@ -248,7 +262,7 @@ export const ESCOLHAS: Conteudo[] = [
     id: 'mat_excursao', tipo: 'decisao', idade: [60, 88], tema: 'lazer', repetir: 4,
     quando: c => guardado(c.v) > 2000,
     titulo: 'A excursão',
-    texto: c => `O grupo do bairro está fechando uma excursão de ônibus para ${c.r.pick(['Aparecida', 'Gramado', 'Porto Seguro', 'Caldas Novas', 'Juazeiro do Norte'])}. Quatro dias, R$ 1.500.`,
+    texto: c => `O grupo do bairro está fechando uma excursão de ônibus para ${c.r.pick(destinosDeExcursao(c.v))}. Quatro dias, ${moeda(1500)}.`,
     opcoes: [
       { id: 'ir', texto: 'Ir', resolver: c => {
         const p = criarPessoa(c.v, c.r, { idade: c.r.int(58, 80), municipioId: c.v.moradia.municipioId });

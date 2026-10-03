@@ -7,6 +7,7 @@
  * existiam para outro rumo. Anos tranquilos continuam permitidos.
  */
 
+import { educacaoDaVida } from '../mundo/vida';
 import type { Conteudo, Ctx } from './base';
 import { clamp, rngDe } from '../rng';
 import { idade, lembrarCom, temFato } from '../nucleo';
@@ -17,6 +18,7 @@ import { OCUPACOES } from '../dados/ocupacoes';
 import { elegibilidade, nomeOcupacao } from '../sistemas/trabalho';
 import { novaOportunidade } from '../sistemas/oportunidades';
 import { definirObjetivo, podeDefinirObjetivo } from '../sistemas/vestibular';
+import { cotidiano } from './local';
 import { contribuicaoEsperada, principal, recursosDaFamilia } from '../sistemas/origem';
 import { habilidade, praticar } from '../sistemas/frentes';
 import { marcar } from '../sistemas/marcas';
@@ -53,7 +55,7 @@ export const REWORK3: Conteudo[] = [
     id: 'inf_excursao', tipo: 'decisao', idade: [8, 13], tema: 'escola', prioritario: true, repetir: 3,
     quando: c => !!c.v.educacao.basica && moraComFamiliaDeOrigem(c.v) && recursosDaFamilia(c.v).folga <= 2 && !c.v.biografia.some(b => /excursão da escola/.test(b.texto) && c.v.t - b.t < 48) && asVezes(c, 'inf_excursao', 0.14),
     titulo: 'A excursão da escola',
-    texto: c => `A turma vai ${c.r.pick(['ao museu da capital', 'ao zoológico', 'a um parque de ciências', 'ao teatro, na cidade vizinha'])}. O bilhete pede R$ 120 — ônibus, entrada e lanche. Em casa, o dinheiro anda ${recursosDaFamilia(c.v).folga === 0 ? 'no limite' : 'contado'}.`,
+    texto: c => `A turma vai ${c.r.pick(['ao museu da capital', 'ao zoológico', 'a um parque de ciências', 'ao teatro, na cidade vizinha'])}. O bilhete pede ${fmt(120)} — ônibus, entrada e lanche. Em casa, o dinheiro anda ${recursosDaFamilia(c.v).folga === 0 ? 'no limite' : 'contado'}.`,
     papeis: { quem: genitorEmCasa },
     opcoes: [
       { id: 'pedir', texto: c => `Pedir a ${c.p.quem?.nome ?? 'quem cuida de você'} mesmo assim`,
@@ -91,7 +93,7 @@ export const REWORK3: Conteudo[] = [
     id: 'adol_ajudar_contas', tipo: 'decisao', idade: [15, 17], tema: 'familia', prioritario: true, repetir: 0,
     quando: c => moraComFamiliaDeOrigem(c.v) && !c.v.trabalho.atual && recursosDaFamilia(c.v).folga <= 1 && asVezes(c, 'adol_ajudar_contas', 0.3),
     titulo: 'Uma ajuda nas contas',
-    texto: c => `${c.p.quem?.nome ?? 'Em casa'} perguntou, sem jeito, se você não conseguiria alguma coisa para ajudar. ${c.v.educacao.basica ? 'A escola tem vagas de jovem aprendiz: meio período, carteira assinada, escola garantida.' : ''}`,
+    texto: c => `${c.p.quem?.nome ?? 'Em casa'} perguntou, sem jeito, se você não conseguiria alguma coisa para ajudar. ${c.v.educacao.basica ? cotidiano(c.v).aprendiz ?? 'A escola tem vagas de aprendiz: meio período, com contrato, sem largar os estudos.' : ''}`,
     papeis: { quem: genitorEmCasa },
     opcoes: [
       { id: 'aprendiz', texto: 'Procurar uma vaga de jovem aprendiz',
@@ -144,8 +146,8 @@ export const REWORK3: Conteudo[] = [
           return { texto: `A coordenação do curso passou a lista de empresas que contratam egressos. Uma delas chamou para entrevista: ${nomeOcupacao(c.v, oc)}.`, memoria: 'Terminou o técnico decidido a trabalhar na área.', efeito: () => { novaOportunidade(c.v, { tipo: 'vaga', ocupacaoId: oc.id, meses: 12, chave: 'vaga_egresso', bonus: 0.3, titulo: `Vaga para egressos: ${nomeOcupacao(c.v, oc)}`, texto: 'Uma empresa que contrata quem sai do instituto federal chamou para entrevista.' }); marcar(c.v, 'oportunidade', 'Saiu do técnico com uma vaga da área em vista.', 2); } };
         } },
       { id: 'faculdade', texto: 'Mirar uma faculdade na mesma área',
-        disponivel: c => { const t = [...c.v.educacao.concluidos].reverse().find(x => x.nivel === 'tecnico'); const g = t ? graduacaoDaArea(t.area) : undefined; return g && podeTentar(podeDefinirObjetivo(c.v, g)) ? true : 'Não há uma graduação que continue esta área pelo ENEM.'; },
-        consequencia: c => { const t = [...c.v.educacao.concluidos].reverse().find(x => x.nivel === 'tecnico'); const g = t ? cursoOuNulo(graduacaoDaArea(t.area) ?? '') : undefined; return g ? `A preparação para o ENEM passa a mirar ${g.nome}.` : undefined; },
+        disponivel: c => { const t = [...c.v.educacao.concluidos].reverse().find(x => x.nivel === 'tecnico'); const g = t ? graduacaoDaArea(t.area) : undefined; return g && podeTentar(podeDefinirObjetivo(c.v, g)) ? true : `Não há uma graduação que continue esta área ${educacaoDaVida(c.v).pelo}.`; },
+        consequencia: c => { const t = [...c.v.educacao.concluidos].reverse().find(x => x.nivel === 'tecnico'); const g = t ? cursoOuNulo(graduacaoDaArea(t.area) ?? '') : undefined; return g ? `A preparação ${educacaoDaVida(c.v).para} passa a mirar ${g.nome}.` : undefined; },
         resolver: c => {
           const t = [...c.v.educacao.concluidos].reverse().find(x => x.nivel === 'tecnico')!;
           const g = graduacaoDaArea(t.area)!;
@@ -192,7 +194,7 @@ export const REWORK3: Conteudo[] = [
     // Uma habilidade da escola que nunca virou nada — até alguém lembrar dela.
     id: 'form_time_lembra', tipo: 'acontecimento', idade: [19, 35], tema: 'lazer', prioritario: true, repetir: 0,
     quando: c => (c.v.educacao.vivencias ?? []).some(x => x.tipo === 'time' && x.anos >= 3) && !c.v.rotinas.some(r => r.id === 'futebol') && habilidade(c.v, 'futebol') >= 40 && !temFato(c.v, 'time_lembra') && asVezes(c, 'form_time_lembra', 0.12),
-    narrar: c => ({ texto: 'Um antigo colega do time da escola montou um time de várzea e chamou quem jogava junto. "Você ainda chuta com a esquerda?"', relevancia: 'cotidiano', efeito: () => { fato(c, 'time_lembra'); novaOportunidade(c.v, { tipo: 'retomar', dominio: 'futebol', meses: 12, chave: 'retomar', titulo: 'O time da várzea', texto: 'Um antigo colega do time da escola chamou para o time de várzea do bairro, aos domingos.' }); } })
+    narrar: c => ({ texto: `Um antigo colega do time da escola montou um ${cotidiano(c.v).timeAmador ?? 'time amador do bairro'} e chamou quem jogava junto. "Você ainda chuta com a esquerda?"`, relevancia: 'cotidiano', efeito: () => { fato(c, 'time_lembra'); novaOportunidade(c.v, { tipo: 'retomar', dominio: 'futebol', meses: 12, chave: 'retomar', titulo: 'O time da várzea', texto: 'Um antigo colega do time da escola chamou para o time de várzea do bairro, aos domingos.' }); } })
   }
 ];
 

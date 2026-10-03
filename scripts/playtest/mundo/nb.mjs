@@ -1,0 +1,11 @@
+import { chromium, abrir, logger, foto } from './lib.mjs';
+const log = logger('nb'); const b = await chromium.launch();
+const p = await abrir(b, 390, 'nb', log);
+await p.getByRole('button', { name: /Nascer de novo/ }).click(); await p.waitForTimeout(400);
+await p.locator('.escolha__item', { hasText: /^Não binária/ }).click(); await p.waitForTimeout(200);
+console.log('BR NB', await p.locator('input').evaluateAll(es => es.map(e => `${e.type}:${e.value}`)));
+await p.getByRole('button', { name: 'Trocar o país' }).click();
+await p.locator('input[placeholder^="Argentina"]').fill('Japão'); await p.locator('.viagem__opcao').first().click(); await p.waitForTimeout(300);
+console.log('JP NB', await p.locator('input').evaluateAll(es => es.map(e => `${e.type}:${e.value}`)));
+await foto(p, 'nb-japao', true);
+await b.close();

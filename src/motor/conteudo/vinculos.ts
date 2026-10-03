@@ -3,11 +3,14 @@
  * Existe para que quem entrou na história continue nela.
  */
 
+import { educacaoDaVida, oPrograma, paisDaVida } from '../mundo/vida';
+import { dinheiro as moeda } from '../texto';
 import { CURSOS_NPC } from '../sistemas/filhos';
 import { curso } from '../dados/cursos';
 import type { Conteudo, Ctx } from './base';
 import { mudarAgora } from '../sistemas/processos';
-import { MUNICIPIOS, economiaLocal, municipio } from '../dados/lugares';
+import { economiaLocal, grandesCentros, municipio } from '../dados/lugares';
+import { cidadesDaVida } from './local';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao, custa } from './efeitos';
 import { idadePessoa, lembrarCom, temFato } from '../nucleo';
@@ -154,12 +157,12 @@ export const VINCULOS: Conteudo[] = [
     papeis: { filho: P.filhoEmCasa(17, 20) },
     quando: c => { const t = c.v.fatos[`fil_vest_privada_${c.p.filho.id}`]; return t !== undefined && c.v.t - t < 12 && !c.p.filho.estudo; },
     titulo: c => `A faculdade de ${c.p.filho.nome}`,
-    texto: c => `${c.p.filho.nome} não passou na federal, mas passou em ${cursoDoFilho(c)} numa faculdade particular. A mensalidade é de R$ ${mensalidadeFilho(c).toLocaleString('pt-BR')}. ${gp(c, 'filho', 'Ele', 'Ela', 'Elu')} olha para você esperando uma resposta.`,
+    texto: c => `${c.p.filho.nome} não passou na federal, mas passou em ${cursoDoFilho(c)} numa faculdade particular. A mensalidade é de ${moeda(mensalidadeFilho(c))}. ${gp(c, 'filho', 'Ele', 'Ela', 'Elu')} olha para você esperando uma resposta.`,
     opcoes: [
       { id: 'pagar', texto: 'Pagar, nem que aperte', comportamento: { familia: 2, generosidade: 1 },
         resolver: c => ({ texto: `Você assinou o contrato como responsável financeiro. ${c.p.filho.nome} te abraçou no estacionamento.`, memoria: `Pagou a faculdade de ${c.p.filho.nome}.`, lembrar: ['filho', `Você pagou a faculdade de ${cursoDoFilho(c)}.`], efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'familia', tFim: c.v.t + 48, nivel: 'superior' }; c.v.fatos[`paga_faculdade_${c.p.filho.id}`] = mensalidadeFilho(c); prox(c, 'filho', 12); } }) },
-      { id: 'fies', texto: 'Sugerir o FIES',
-        resolver: c => ({ texto: `${c.p.filho.nome} fez o FIES. Vai começar a vida adulta devendo.`, memoria: null, efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'fies', tFim: c.v.t + 48, nivel: 'superior' }; } }) },
+      { id: 'fies', texto: c => `Sugerir ${oPrograma(educacaoDaVida(c.v).credito?.nome ?? 'crédito estudantil')}`,
+        resolver: c => ({ texto: `${c.p.filho.nome} fez ${oPrograma(educacaoDaVida(c.v).credito?.nome ?? 'crédito estudantil')}. Vai começar a vida adulta devendo.`, memoria: null, efeito: () => { c.p.filho.estudo = { curso: cursoDoFilho(c), paga: 'fies', tFim: c.v.t + 48, nivel: 'superior' }; } }) },
       { id: 'tentar', texto: 'Pedir para tentar a federal de novo', disponivel: c => (idadePessoa(c.v, c.p.filho) < 19 ? true : 'Já foram tentativas demais.'),
         resolver: c => ({ texto: `${c.p.filho.nome} topou mais um ano de cursinho, meio a contragosto.`, memoria: null, efeito: () => { delete c.v.fatos[`fil_vest_privada_${c.p.filho.id}`]; tensao(c, 'filho', 8); } }) },
       { id: 'trabalhar', texto: 'Dizer que agora não dá; é hora de trabalhar', comportamento: { independencia: 1 },
@@ -214,7 +217,7 @@ export const VINCULOS: Conteudo[] = [
     papeis: { amigo: P.amigo },
     quando: c => disponivel(c.v) > 1500,
     titulo: 'A viagem da turma',
-    texto: c => `${c.p.amigo.nome} está organizando uma viagem da turma antiga: feriado prolongado, casa alugada na praia, cada um paga uns R$ 900.`,
+    texto: c => `${c.p.amigo.nome} está organizando uma viagem da turma antiga: feriado prolongado, casa alugada na praia, cada um paga uns ${moeda(900)}.`,
     opcoes: [
       { id: 'ir', texto: 'Ir', comportamento: { sociabilidade: 1 },
         resolver: c => ({ texto: 'Três dias de sol, violão e história antiga repetida até a exaustão.', memoria: `Viajou com a turma de ${c.p.amigo.nome} num feriado.`, efeito: () => { dinheiro(c, -900); prox(c, 'amigo', 10); feliz(c, 6); estresse(c, -8); for (const a of P.amigo(c.v).slice(0, 3)) { const vin = c.v.vinculos[a.id]; vin.proximidade = Math.min(100, vin.proximidade + 4); vin.tUltimoContato = c.v.t; } } }) },
@@ -251,8 +254,9 @@ export const VINCULOS: Conteudo[] = [
 
 function destinoDoCasal(c: Ctx) {
   const aqui = municipio(c.v.moradia.municipioId);
-  const destinos = MUNICIPIOS.filter(m => m.id !== aqui.id && m.regiao === aqui.regiao && (m.perfil === 'metropole' || m.perfil === 'capital'));
-  return destinos[anoDe(c.v.t) % Math.max(1, destinos.length)] ?? MUNICIPIOS.find(m => m.id === 'sao-paulo-sp')!;
+  // No país onde se mora (a proposta é de outra cidade, não de outro país); a região, onde o país a tem.
+  const destinos = cidadesDaVida(c.v).filter(m => m.id !== aqui.id && m.regiao === aqui.regiao && (m.perfil === 'metropole' || m.perfil === 'capital'));
+  return destinos[anoDe(c.v.t) % Math.max(1, destinos.length)] ?? municipio(grandesCentros(paisDaVida(c.v))[0]);
 }
 
 function moverCasal(c: Ctx): void {

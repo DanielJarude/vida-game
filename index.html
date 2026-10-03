@@ -13,38 +13,36 @@
     <meta name="theme-color" content="#121010" />
     <meta
       name="description"
-      content="VIDA — simulador de vida brasileiro. Pequenas escolhas, grandes histórias."
+      content="VIDA — um simulador de vida, nascido no Brasil e aberto ao mundo. Pequenas escolhas, grandes histórias."
     />
     <title>VIDA — Simulador de Vida</title>
+
+    <!--
+      PWA: o manifesto (manifest.webmanifest) é gerado e ligado aqui pelo
+      vite-plugin-pwa no build. Ícones em public/icones/ (gerados por
+      scripts/pwa/gerarIcones.mjs a partir da marca acima). O iOS não lê os
+      ícones do manifesto: precisa do apple-touch-icon e das metas abaixo.
+    -->
+    <link rel="apple-touch-icon" href="icones/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="VIDA" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 
     <!--
       Duas famílias, dois papéis:
 
       · Newsreader (serifa) carrega TODA a voz narrativa — Linha da Vida,
         acontecimentos, nomes. É a fonte que faz o VIDA parecer uma página
-        e não um painel. Carregada como fonte variável, com itálico.
+        e não um painel. Fonte variável, com tamanho óptico e itálico.
       · Inter carrega só a mobília de interface: rótulos, botões, números.
         Quanto mais invisível, melhor — a identidade é da serifa.
 
-      Fontes remotas são um reforço, não um requisito: `media=print onload`
-      as carrega sem bloquear a renderização, e as pilhas locais definidas
-      em tokens.css (Georgia/Charter para a serifa) mantêm o produto
-      legível e proporcional se elas falharem.
+      PWA: as duas vêm do próprio jogo (src/ui/fontes.css, pacotes
+      @fontsource-variable, licença OFL) e entram no precache — nada de
+      Google Fonts, o jogo abre igual offline. As pilhas locais de tokens.css
+      (Georgia/Charter para a serifa) seguem como reserva.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Inter:wght@400;500;600&display=swap"
-      media="print"
-      onload="this.media='all'"
-    />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Inter:wght@400;500;600&display=swap"
-      />
-    </noscript>
   </head>
   <body>
     <div id="root"></div>

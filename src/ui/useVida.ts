@@ -3,18 +3,32 @@
  *
  * Toda mudança passa pelo motor (`executar`, `avancarAno`); este hook só
  * guarda o resultado, salva e mostra avisos. Nenhuma regra de jogo mora aqui.
+ *
+ * PWA: quem lê e grava é a camada de persistência (`persistencia/`), com
+ * IndexedDB e o localStorage de reserva; o motor só transforma texto em vida
+ * (`interpretar`) e vida em texto. Com o localStorage (testes, navegadores sem
+ * IndexedDB) a carga é síncrona como sempre foi; com o IndexedDB, a tela
+ * inicial espera a leitura junto com o motor.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DecisoesDeHeranca, Vida } from '../motor/tipos';
+import type { Armazenamento, Estatisticas } from '../motor/save';
 import type { OpcoesCriacao } from '../motor/criacao';
 import type { Acao } from '../motor/acoes';
 import { sound } from './util/som';
 import { carregarMotor, motorCarregado, type Motor } from './motor';
+import { persistenciaDoJogo, type Carga } from './persistencia';
+import { abrirSalva } from './persistencia/abrir';
 
 export type Tela = 'inicio' | 'criacao' | 'jogo' | 'vidas';
 
 export interface Aviso { id: number; texto: string; tom: 'bom' | 'ruim' | 'neutro' }
+
+/** As estatísticas em texto, com a cara de um armazenamento — para o motor ler e registrar nelas sem saber de onde vieram. */
+function gaveta(bruto: string | null): Armazenamento & { bruto: string | null } {
+  return { bruto, getItem() { return this.bruto; }, setItem(_k: string, v: string) { this.bruto = v; }, removeItem() { this.bruto = null; } };
+}
 
 export function useVida() {
   const [tela, setTela] = useState<Tela>('inicio');
@@ -32,17 +46,47 @@ export function useVida() {
   // O motor chega num pacote à parte: a tela inicial abre antes dele.
   const [motor, setMotor] = useState<Motor | null>(motorCarregado);
   useEffect(() => { if (!motor) { let vivo = true; void carregarMotor().then(m => { if (vivo) setMotor(m); }); return () => { vivo = false; }; } return undefined; }, [motor]);
+  // A persistência nasce com o motor: é ele quem diz se um save abre.
+  const persist = useMemo(() => motor ? persistenciaDoJogo(b => { const r = motor.interpretar(b); return r.tipo === 'invalido' ? r.motivo : null; }) : null, [motor]);
+  const [estatisticas, setEstatisticas] = useState<Estatisticas | null>(null);
+  /** A vida salva já foi lida (até lá, a tela inicial espera — não se nasce por cima de uma vida que ainda vai aparecer). */
+  const [carregado, setCarregado] = useState(false);
+  /** A última vida salva (para continuar sem reler o IndexedDB). */
+  const salvaRef = useRef<Vida | null>(null);
+  const avisouFalhaAoSalvar = useRef(false);
 
   useEffect(() => { sound.enabled = som; try { localStorage.setItem('VIDA_SOM', som ? '1' : '0'); } catch { /* sem armazenamento */ } }, [som]);
 
   useEffect(() => {
-    if (!motor) return;
-    const { ler, idade } = motor;
-    const r = ler();
-    if (r.tipo === 'ok') setSalva({ nome: r.vida.eu.nome, idade: idade(r.vida), morta: !!r.vida.morte });
-    if (r.tipo === 'invalido') setAvisoSave(`Não foi possível abrir a vida salva: ${r.motivo} Uma cópia foi guardada.`);
-    if (r.tipo === 'ok' && r.migrado) setAvisoSave('Sua vida salva veio de uma versão anterior do jogo e foi convertida. Alguns detalhes foram aproximados.');
-  }, [motor]);
+    if (!motor || !persist) return;
+    const { idade, interpretar, lerEstatisticas } = motor;
+    const abrir = (c: Carga) => {
+      setCarregado(true);
+      setEstatisticas(lerEstatisticas(gaveta(c.estatisticas)));
+      if (c.migracaoInvalida) setAvisoSave(`A vida salva neste navegador não pôde ser trazida para o armazenamento novo: ${c.migracaoInvalida} Uma cópia foi guardada.`);
+      const r = abrirSalva(c, interpretar);
+      if (r.tipo === 'invalido') {
+        void persist.guardarBackup(r.descartado);
+        setAvisoSave(`Não foi possível abrir a vida salva: ${r.motivo} Uma cópia foi guardada.`);
+        return;
+      }
+      if (r.tipo !== 'ok') return;
+      salvaRef.current = r.vida;
+      setSalva({ nome: r.vida.eu.nome, idade: idade(r.vida), morta: !!r.vida.morte });
+      // O texto que não abriu (ou o original de um save convertido) vai para o backup; a vida aberta volta a ser o principal.
+      const guardar = r.descartado ?? (r.migrado ? r.bruto : null);
+      if (guardar !== null) void persist.guardarBackup(guardar);
+      if (r.recuperado || r.migrado) void persist.salvar(JSON.stringify(r.vida));
+      if (r.recuperado) setAvisoSave('A última gravação da sua vida estava danificada e não abriu. O jogo voltou ao salvamento anterior — o último passo pode ter se perdido. Uma cópia da gravação danificada foi guardada.');
+      else if (r.migrado) setAvisoSave('Sua vida salva veio de uma versão anterior do jogo e foi convertida. Alguns detalhes foram aproximados.');
+    };
+    // localStorage: na hora (a primeira tela já abre com o "Continuar"). IndexedDB: quando a leitura chegar.
+    const ja = persist.carregarJa();
+    if (ja) { abrir(ja); return; }
+    let vivo = true;
+    void persist.carregar().then(c => { if (vivo) abrir(c); });
+    return () => { vivo = false; };
+  }, [motor, persist]);
 
   const avisar = useCallback((texto: string, tom: Aviso['tom'] = 'neutro') => {
     setAviso({ id: Date.now(), texto, tom });
@@ -52,10 +96,23 @@ export function useVida() {
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  /** Grava a vida (na fila da persistência). Se não der, avisa uma vez — e sugere exportar. */
+  const salvar = useCallback((v: Vida) => {
+    if (!persist) return;
+    salvaRef.current = v;
+    void persist.salvar(JSON.stringify(v)).then(ok => {
+      if (ok || avisouFalhaAoSalvar.current) return;
+      avisouFalhaAoSalvar.current = true;
+      setAvisoSave('Não foi possível salvar neste navegador (o espaço pode ter acabado). Exporte a vida num arquivo, pelo menu, para não perdê-la.');
+    });
+  }, [persist]);
+
+  const apagarSave = useCallback(() => { salvaRef.current = null; void persist?.apagar(); }, [persist]);
+
   /** Aplica uma vida nova: salva, trata a morte. */
   const aplicar = useCallback((nova: Vida) => {
-    if (!motor) return;
-    const { apagarSave, registrarVidaPassada, idade, nomeLugar, descricaoEmprego, patrimonio, anoDe, salvar } = motor;
+    if (!motor || !persist) return;
+    const { registrarVidaPassada, lerEstatisticas, idade, nomeLugar, descricaoEmprego, patrimonio, anoDe, paisDaCidade } = motor;
     setVida(nova);
     if (nova.morte) {
       // Sucessão: a vida que terminou fica salva até o jogador decidir (encerrar ou continuar a família) —
@@ -63,15 +120,18 @@ export function useVida() {
       if (nova.morte.encerrada) { apagarSave(); setSalva(null); } else { salvar(nova); setSalva({ nome: nova.eu.nome, idade: idade(nova), morta: true }); }
       if (vida?.morte) return; // a morte já foi registrada (aqui só mudaram as decisões da partilha)
       const e = nova.trabalho.atual ?? nova.trabalho.historico[nova.trabalho.historico.length - 1];
+      const g = gaveta(persist.estatisticas());
       registrarVidaPassada({
         id: nova.id, nome: `${nova.eu.nome} ${nova.eu.sobrenome}`, idadeMorte: idade(nova), lugar: nomeLugar(nova.moradia.municipioId),
-        profissao: e ? descricaoEmprego(nova).split(' · ')[0] : '—', patrimonio: patrimonio(nova), causa: nova.morte.causa, ano: anoDe(nova.t)
-      });
+        profissao: e ? descricaoEmprego(nova).split(' · ')[0] : '—', patrimonio: patrimonio(nova), causa: nova.morte.causa, ano: anoDe(nova.t), pais: paisDaCidade(nova.moradia.municipioId)
+      }, g);
+      if (g.bruto !== null) void persist.salvarEstatisticas(g.bruto);
+      setEstatisticas(lerEstatisticas(g));
     } else {
       salvar(nova);
       setSalva({ nome: nova.eu.nome, idade: idade(nova) });
     }
-  }, [motor, vida]);
+  }, [motor, persist, vida, salvar, apagarSave]);
 
   const nascer = useCallback((o: Omit<OpcoesCriacao, 'semente'> & { semente?: number }) => {
     if (!motor) return;
@@ -83,13 +143,16 @@ export function useVida() {
   }, [aplicar, motor]);
 
   const continuar = useCallback(() => {
-    if (!motor) return;
-    const r = motor.ler();
-    if (r.tipo !== 'ok') { avisar('Não há vida salva para continuar.', 'ruim'); return; }
-    setVida(r.vida);
-    setMarcaAno(r.vida.biografia.length);
+    if (!motor || !persist) return;
+    // Armazém síncrono: relê (como sempre foi). IndexedDB: a vida já aberta na carga, ou a última salva.
+    const ja = persist.carregarJa();
+    const r = ja ? abrirSalva(ja, motor.interpretar) : null;
+    const v = r ? (r.tipo === 'ok' ? r.vida : null) : salvaRef.current;
+    if (!v) { avisar('Não há vida salva para continuar.', 'ruim'); return; }
+    setVida(v);
+    setMarcaAno(v.biografia.length);
     setTela('jogo');
-  }, [avisar, motor]);
+  }, [avisar, motor, persist]);
 
   const avancar = useCallback(() => {
     if (!vida || !motor) return;
@@ -200,15 +263,15 @@ export function useVida() {
   }, [vida, aplicar, avisar, motor]);
 
   const recomecar = useCallback(() => {
-    motor?.apagarSave();
+    apagarSave();
     setVida(null);
     setSalva(null);
     setResultado(null);
     setTela('inicio');
-  }, [motor]);
+  }, [apagarSave]);
 
   return {
-    pronto: !!motor, estatisticas: motor ? motor.lerEstatisticas() : null,
+    pronto: !!motor && carregado, estatisticas,
     tela, setTela, vida, salva, aviso, avisoSave, setAvisoSave, resultado, fecharResultado: () => setResultado(null),
     marcaAno, som, setSom, nascer, continuar, avancar, agir, recomecar, avisar, exportar, previaImportacao, importar, decidirHeranca, continuarComo, encerrar
   };

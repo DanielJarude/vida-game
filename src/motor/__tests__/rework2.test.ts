@@ -16,7 +16,7 @@ import { disponibilidade, executar, type Acao } from '../acoes';
 import { criarRng } from '../rng';
 import { idade, transacao, vinculosVivos } from '../nucleo';
 import { podeTentar } from '../plausibilidade';
-import { interpretar, migrarV15, migrarV16, migrarV17, migrarV18, VERSAO_SAVE } from '../save';
+import { interpretar, migrarV15, migrarV16, migrarV17, migrarV18, migrarV19, VERSAO_SAVE } from '../save';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { criarPessoa, vincular } from '../pessoas';
 import { ocupacao } from '../dados/ocupacoes';
@@ -491,7 +491,7 @@ describe('13. save/reload e migração v15 → v16', () => {
     expect(a.vida.corpo.aparenciaBase).toBe(v.corpo.aparencia);
     expect(a.vida.educacao.preparo?.meses).toBe(12);
     // Idempotente: aplicar de novo as migrações (v15→v16→v17→v18) não muda nada.
-    expect(migrarV18(migrarV17(migrarV16(migrarV15(structuredClone(a.vida)))))).toEqual(a.vida);
+    expect(migrarV19(migrarV18(migrarV17(migrarV16(migrarV15(structuredClone(a.vida))))))).toEqual(a.vida);
     // E a vida continua.
     let x = a.vida;
     for (let k = 0; k < 3 && !x.morte; k++) x = ano(x);

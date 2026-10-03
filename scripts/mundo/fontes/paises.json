@@ -1,0 +1,4974 @@
+{
+ "fontes": {
+  "membros": "Nações Unidas, Member States (https://www.un.org/en/about-us/member-states), consultado em 2026-10-03: 193 Estados-membros",
+  "regioes": "UNSD, Standard country or area codes for statistical use (M49), https://unstats.un.org/unsd/methodology/m49/overview/, consultado em 2026-10-03",
+  "moedas": "ISO 4217, lista um (SIX Group, publicada em 2026-09-17), https://www.six-group.com/en/products-services/financial-information/data-standards.html",
+  "pibPpc": "Banco Mundial, NY.GDP.PCAP.PP.CD (PIB per capita, PPC, US$ internacionais correntes), último ano disponível 2019-2024",
+  "cambio": "Banco Mundial, PA.NUS.FCRF (câmbio oficial, moeda local por US$, média do período)",
+  "ppc": "Banco Mundial, PA.NUS.PPP (fator de conversão PPC, PIB, moeda local por US$ internacional)",
+  "populacao": "Banco Mundial, SP.POP.TOTL"
+ },
+ "paises": [
+  {
+   "iso2": "AF",
+   "iso3": "AFG",
+   "m49": "004",
+   "nomeEn": "Afghanistan",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "AFN",
+   "pibPpc": [
+    2024,
+    2236.19907311431
+   ],
+   "cambio": [
+    2020,
+    76.8135364354897
+   ],
+   "ppc": [
+    2024,
+    13.2320571626481
+   ],
+   "populacao": [
+    2024,
+    42647492
+   ]
+  },
+  {
+   "iso2": "AL",
+   "iso3": "ALB",
+   "m49": "008",
+   "nomeEn": "Albania",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "ALL",
+   "pibPpc": [
+    2024,
+    26701.7649330157
+   ],
+   "cambio": [
+    2024,
+    93.1233333333333
+   ],
+   "ppc": [
+    2024,
+    39.6672501245719
+   ],
+   "populacao": [
+    2024,
+    2377128
+   ]
+  },
+  {
+   "iso2": "DZ",
+   "iso3": "DZA",
+   "m49": "012",
+   "nomeEn": "Algeria",
+   "regiao": "Africa",
+   "sub": "Northern Africa",
+   "inter": "",
+   "moeda": "DZD",
+   "pibPpc": [
+    2024,
+    17646.332598878
+   ],
+   "cambio": [
+    2024,
+    134.053241666667
+   ],
+   "ppc": [
+    2024,
+    43.703532115018
+   ],
+   "populacao": [
+    2024,
+    46814308
+   ]
+  },
+  {
+   "iso2": "AD",
+   "iso3": "AND",
+   "m49": "020",
+   "nomeEn": "Andorra",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    75394.8581564469
+   ],
+   "cambio": [
+    2024,
+    0.924367447270267
+   ],
+   "ppc": [
+    2024,
+    0.604826658572286
+   ],
+   "populacao": [
+    2024,
+    81938
+   ]
+  },
+  {
+   "iso2": "AO",
+   "iso3": "AGO",
+   "m49": "024",
+   "nomeEn": "Angola",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "AOA",
+   "pibPpc": [
+    2024,
+    9963.59020874287
+   ],
+   "cambio": [
+    2024,
+    869.846189590008
+   ],
+   "ppc": [
+    2024,
+    275.541334427151
+   ],
+   "populacao": [
+    2024,
+    37885849
+   ]
+  },
+  {
+   "iso2": "AG",
+   "iso3": "ATG",
+   "m49": "028",
+   "nomeEn": "Antigua and Barbuda",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "XCD",
+   "pibPpc": [
+    2024,
+    33351.5904481886
+   ],
+   "cambio": [
+    2024,
+    2.7
+   ],
+   "ppc": [
+    2024,
+    1.86682399409076
+   ],
+   "populacao": [
+    2024,
+    93772
+   ]
+  },
+  {
+   "iso2": "AR",
+   "iso3": "ARG",
+   "m49": "032",
+   "nomeEn": "Argentina",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "ARS",
+   "pibPpc": [
+    2024,
+    30475.3876517556
+   ],
+   "cambio": [
+    2024,
+    914.694883333333
+   ],
+   "ppc": [
+    2024,
+    419.292111285901
+   ],
+   "populacao": [
+    2024,
+    45696159
+   ]
+  },
+  {
+   "iso2": "AM",
+   "iso3": "ARM",
+   "m49": "051",
+   "nomeEn": "Armenia",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "AMD",
+   "pibPpc": [
+    2024,
+    22856.32510991
+   ],
+   "cambio": [
+    2024,
+    392.729551399084
+   ],
+   "ppc": [
+    2024,
+    147.017595146307
+   ],
+   "populacao": [
+    2024,
+    3033500
+   ]
+  },
+  {
+   "iso2": "AU",
+   "iso3": "AUS",
+   "m49": "036",
+   "nomeEn": "Australia",
+   "regiao": "Oceania",
+   "sub": "Australia and New Zealand",
+   "inter": "",
+   "moeda": "AUD",
+   "pibPpc": [
+    2024,
+    72117.8826659555
+   ],
+   "cambio": [
+    2024,
+    1.51535803855596
+   ],
+   "ppc": [
+    2024,
+    1.366527
+   ],
+   "populacao": [
+    2024,
+    27194286
+   ]
+  },
+  {
+   "iso2": "AT",
+   "iso3": "AUT",
+   "m49": "040",
+   "nomeEn": "Austria",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    75774.4136543206
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.710451
+   ],
+   "populacao": [
+    2024,
+    9177982
+   ]
+  },
+  {
+   "iso2": "AZ",
+   "iso3": "AZE",
+   "m49": "031",
+   "nomeEn": "Azerbaijan",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "AZN",
+   "pibPpc": [
+    2024,
+    25146.3588844273
+   ],
+   "cambio": [
+    2024,
+    1.7
+   ],
+   "ppc": [
+    2024,
+    0.493148640345599
+   ],
+   "populacao": [
+    2024,
+    10202830
+   ]
+  },
+  {
+   "iso2": "BS",
+   "iso3": "BHS",
+   "m49": "044",
+   "nomeEn": "Bahamas",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "BSD",
+   "pibPpc": [
+    2024,
+    41257.7650774105
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    0.956315655509349
+   ],
+   "populacao": [
+    2024,
+    401283
+   ]
+  },
+  {
+   "iso2": "BH",
+   "iso3": "BHR",
+   "m49": "048",
+   "nomeEn": "Bahrain",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "BHD",
+   "pibPpc": [
+    2024,
+    67230.1000247874
+   ],
+   "cambio": [
+    2024,
+    0.376
+   ],
+   "ppc": [
+    2024,
+    0.166200043745861
+   ],
+   "populacao": [
+    2024,
+    1588670
+   ]
+  },
+  {
+   "iso2": "BD",
+   "iso3": "BGD",
+   "m49": "050",
+   "nomeEn": "Bangladesh",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "BDT",
+   "pibPpc": [
+    2024,
+    9660.77962818873
+   ],
+   "cambio": [
+    2024,
+    115.603653796648
+   ],
+   "ppc": [
+    2024,
+    29.8354579509729
+   ],
+   "populacao": [
+    2024,
+    173562364
+   ]
+  },
+  {
+   "iso2": "BB",
+   "iso3": "BRB",
+   "m49": "052",
+   "nomeEn": "Barbados",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "BBD",
+   "pibPpc": [
+    2024,
+    24539.6254147583
+   ],
+   "cambio": [
+    2024,
+    2
+   ],
+   "ppc": [
+    2024,
+    2.19214431755276
+   ],
+   "populacao": [
+    2024,
+    282467
+   ]
+  },
+  {
+   "iso2": "BY",
+   "iso3": "BLR",
+   "m49": "112",
+   "nomeEn": "Belarus",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "BYN",
+   "pibPpc": [
+    2024,
+    33166.3827902975
+   ],
+   "cambio": [
+    2024,
+    3.24619166666667
+   ],
+   "ppc": [
+    2024,
+    0.842282411048369
+   ],
+   "populacao": [
+    2024,
+    9132629
+   ]
+  },
+  {
+   "iso2": "BE",
+   "iso3": "BEL",
+   "m49": "056",
+   "nomeEn": "Belgium",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    74224.5510568017
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.704288
+   ],
+   "populacao": [
+    2024,
+    11858610
+   ]
+  },
+  {
+   "iso2": "BZ",
+   "iso3": "BLZ",
+   "m49": "084",
+   "nomeEn": "Belize",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Central America",
+   "moeda": "BZD",
+   "pibPpc": [
+    2024,
+    14367.3539278152
+   ],
+   "cambio": [
+    2024,
+    2
+   ],
+   "ppc": [
+    2024,
+    1.06926356021066
+   ],
+   "populacao": [
+    2024,
+    417072
+   ]
+  },
+  {
+   "iso2": "BJ",
+   "iso3": "BEN",
+   "m49": "204",
+   "nomeEn": "Benin",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "XOF",
+   "pibPpc": [
+    2024,
+    4441.00443511982
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    202.803961673608
+   ],
+   "populacao": [
+    2024,
+    14462724
+   ]
+  },
+  {
+   "iso2": "BT",
+   "iso3": "BTN",
+   "m49": "064",
+   "nomeEn": "Bhutan",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "BTN",
+   "pibPpc": [
+    2024,
+    17762.4053956096
+   ],
+   "cambio": [
+    2024,
+    83.669281580941
+   ],
+   "ppc": [
+    2024,
+    19.9161085202988
+   ],
+   "populacao": [
+    2024,
+    791524
+   ]
+  },
+  {
+   "iso2": "BO",
+   "iso3": "BOL",
+   "m49": "068",
+   "nomeEn": "Bolivia (Plurinational State of)",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "BOB",
+   "pibPpc": [
+    2024,
+    12896.3370149215
+   ],
+   "cambio": [
+    2024,
+    6.91
+   ],
+   "ppc": [
+    2024,
+    2.3689096918025
+   ],
+   "populacao": [
+    2024,
+    12413315
+   ]
+  },
+  {
+   "iso2": "BA",
+   "iso3": "BIH",
+   "m49": "070",
+   "nomeEn": "Bosnia and Herzegovina",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "BAM",
+   "pibPpc": [
+    2024,
+    25148.0128390147
+   ],
+   "cambio": [
+    2024,
+    1.80756356165183
+   ],
+   "ppc": [
+    2024,
+    0.675493641070968
+   ],
+   "populacao": [
+    2024,
+    3164253
+   ]
+  },
+  {
+   "iso2": "BW",
+   "iso3": "BWA",
+   "m49": "072",
+   "nomeEn": "Botswana",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Southern Africa",
+   "moeda": "BWP",
+   "pibPpc": [
+    2024,
+    20612.4785435561
+   ],
+   "cambio": [
+    2024,
+    13.5631333333333
+   ],
+   "ppc": [
+    2024,
+    5.03362466866926
+   ],
+   "populacao": [
+    2024,
+    2521139
+   ]
+  },
+  {
+   "iso2": "BR",
+   "iso3": "BRA",
+   "m49": "076",
+   "nomeEn": "Brazil",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "BRL",
+   "pibPpc": [
+    2024,
+    22370.9182253225
+   ],
+   "cambio": [
+    2024,
+    5.3889349057096
+   ],
+   "ppc": [
+    2024,
+    2.48371015372826
+   ],
+   "populacao": [
+    2024,
+    211998573
+   ]
+  },
+  {
+   "iso2": "BN",
+   "iso3": "BRN",
+   "m49": "096",
+   "nomeEn": "Brunei Darussalam",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "BND",
+   "pibPpc": [
+    2024,
+    90009.8912498003
+   ],
+   "cambio": [
+    2024,
+    1.33603327650724
+   ],
+   "ppc": [
+    2024,
+    0.492102974111551
+   ],
+   "populacao": [
+    2024,
+    462721
+   ]
+  },
+  {
+   "iso2": "BG",
+   "iso3": "BGR",
+   "m49": "100",
+   "nomeEn": "Bulgaria",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    41969.595471884
+   ],
+   "cambio": [
+    2024,
+    1.80784166666667
+   ],
+   "ppc": [
+    2024,
+    0.387533240879461
+   ],
+   "populacao": [
+    2024,
+    6441421
+   ]
+  },
+  {
+   "iso2": "BF",
+   "iso3": "BFA",
+   "m49": "854",
+   "nomeEn": "Burkina Faso",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "XOF",
+   "pibPpc": [
+    2024,
+    2901.04214238045
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    205.350368080944
+   ],
+   "populacao": [
+    2024,
+    23548781
+   ]
+  },
+  {
+   "iso2": "BI",
+   "iso3": "BDI",
+   "m49": "108",
+   "nomeEn": "Burundi",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "BIF",
+   "pibPpc": [
+    2024,
+    1193.03528498996
+   ],
+   "cambio": [
+    2024,
+    2885.24549799567
+   ],
+   "ppc": [
+    2024,
+    869.203862502627
+   ],
+   "populacao": [
+    2024,
+    14047786
+   ]
+  },
+  {
+   "iso2": "CV",
+   "iso3": "CPV",
+   "m49": "132",
+   "nomeEn": "Cabo Verde",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "CVE",
+   "pibPpc": [
+    2024,
+    11184.7207350908
+   ],
+   "cambio": [
+    2024,
+    101.922010798199
+   ],
+   "ppc": [
+    2024,
+    47.1140706960402
+   ],
+   "populacao": [
+    2024,
+    524877
+   ]
+  },
+  {
+   "iso2": "KH",
+   "iso3": "KHM",
+   "m49": "116",
+   "nomeEn": "Cambodia",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "KHR",
+   "pibPpc": [
+    2024,
+    7981.50816402382
+   ],
+   "cambio": [
+    2024,
+    4072.39723921642
+   ],
+   "ppc": [
+    2024,
+    1340.8205322666
+   ],
+   "populacao": [
+    2024,
+    17638801
+   ]
+  },
+  {
+   "iso2": "CM",
+   "iso3": "CMR",
+   "m49": "120",
+   "nomeEn": "Cameroon",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "XAF",
+   "pibPpc": [
+    2024,
+    5597.10321648993
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    198.248434490013
+   ],
+   "populacao": [
+    2024,
+    29123744
+   ]
+  },
+  {
+   "iso2": "CA",
+   "iso3": "CAN",
+   "m49": "124",
+   "nomeEn": "Canada",
+   "regiao": "Americas",
+   "sub": "Northern America",
+   "inter": "",
+   "moeda": "CAD",
+   "pibPpc": [
+    2024,
+    65482.9454728344
+   ],
+   "cambio": [
+    2024,
+    1.36935976604092
+   ],
+   "ppc": [
+    2024,
+    1.150472
+   ],
+   "populacao": [
+    2024,
+    41262329
+   ]
+  },
+  {
+   "iso2": "CF",
+   "iso3": "CAF",
+   "m49": "140",
+   "nomeEn": "Central African Republic",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "XAF",
+   "pibPpc": [
+    2024,
+    1264.93671692975
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    247.420911394064
+   ],
+   "populacao": [
+    2024,
+    5330690
+   ]
+  },
+  {
+   "iso2": "TD",
+   "iso3": "TCD",
+   "m49": "148",
+   "nomeEn": "Chad",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "XAF",
+   "pibPpc": [
+    2024,
+    2766.98134913811
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    214.899757142113
+   ],
+   "populacao": [
+    2024,
+    20299123
+   ]
+  },
+  {
+   "iso2": "CL",
+   "iso3": "CHL",
+   "m49": "152",
+   "nomeEn": "Chile",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "CLP",
+   "pibPpc": [
+    2024,
+    36070.892945837
+   ],
+   "cambio": [
+    2024,
+    943.572167421488
+   ],
+   "ppc": [
+    2024,
+    435.778953
+   ],
+   "populacao": [
+    2024,
+    19764771
+   ]
+  },
+  {
+   "iso2": "CN",
+   "iso3": "CHN",
+   "m49": "156",
+   "nomeEn": "China",
+   "regiao": "Asia",
+   "sub": "Eastern Asia",
+   "inter": "",
+   "moeda": "CNY",
+   "pibPpc": [
+    2024,
+    27139.5181633767
+   ],
+   "cambio": [
+    2024,
+    7.19749110789917
+   ],
+   "ppc": [
+    2024,
+    3.52537888953537
+   ],
+   "populacao": [
+    2024,
+    1408975000
+   ]
+  },
+  {
+   "iso2": "CO",
+   "iso3": "COL",
+   "m49": "170",
+   "nomeEn": "Colombia",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "COP",
+   "pibPpc": [
+    2024,
+    22439.4001359818
+   ],
+   "cambio": [
+    2024,
+    4074.43416666667
+   ],
+   "ppc": [
+    2024,
+    1443.718515
+   ],
+   "populacao": [
+    2024,
+    52886363
+   ]
+  },
+  {
+   "iso2": "KM",
+   "iso3": "COM",
+   "m49": "174",
+   "nomeEn": "Comoros",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "KMF",
+   "pibPpc": [
+    2024,
+    4047.95264193561
+   ],
+   "cambio": [
+    2024,
+    454.523861252
+   ],
+   "ppc": [
+    2024,
+    208.61077096406
+   ],
+   "populacao": [
+    2024,
+    866628
+   ]
+  },
+  {
+   "iso2": "CG",
+   "iso3": "COG",
+   "m49": "178",
+   "nomeEn": "Congo",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "XAF",
+   "pibPpc": [
+    2024,
+    7003.66225819816
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    214.901854344569
+   ],
+   "populacao": [
+    2024,
+    6332961
+   ]
+  },
+  {
+   "iso2": "CR",
+   "iso3": "CRI",
+   "m49": "188",
+   "nomeEn": "Costa Rica",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Central America",
+   "moeda": "CRC",
+   "pibPpc": [
+    2024,
+    31552.1489834288
+   ],
+   "cambio": [
+    2024,
+    515.109771921403
+   ],
+   "ppc": [
+    2024,
+    307.792355
+   ],
+   "populacao": [
+    2024,
+    5129910
+   ]
+  },
+  {
+   "iso2": "CI",
+   "iso3": "CIV",
+   "m49": "384",
+   "nomeEn": "Côte d’Ivoire",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "XOF",
+   "pibPpc": [
+    2024,
+    7680.36980823038
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    215.360126120377
+   ],
+   "populacao": [
+    2024,
+    31934230
+   ]
+  },
+  {
+   "iso2": "HR",
+   "iso3": "HRV",
+   "m49": "191",
+   "nomeEn": "Croatia",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    49550.8073348367
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.448418364962435
+   ],
+   "populacao": [
+    2024,
+    3866200
+   ]
+  },
+  {
+   "iso2": "CU",
+   "iso3": "CUB",
+   "m49": "192",
+   "nomeEn": "Cuba",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "CUP",
+   "pibPpc": null,
+   "cambio": null,
+   "ppc": null,
+   "populacao": [
+    2024,
+    10979783
+   ]
+  },
+  {
+   "iso2": "CY",
+   "iso3": "CYP",
+   "m49": "196",
+   "nomeEn": "Cyprus",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    63006.765625
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.567094524089419
+   ],
+   "populacao": [
+    2024,
+    1358282
+   ]
+  },
+  {
+   "iso2": "CZ",
+   "iso3": "CZE",
+   "m49": "203",
+   "nomeEn": "Czechia",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "CZK",
+   "pibPpc": [
+    2024,
+    57625.0961715706
+   ],
+   "cambio": [
+    2024,
+    23.2168333333333
+   ],
+   "ppc": [
+    2024,
+    12.823227
+   ],
+   "populacao": [
+    2024,
+    10905028
+   ]
+  },
+  {
+   "iso2": "KP",
+   "iso3": "PRK",
+   "m49": "408",
+   "nomeEn": "Democratic People's Republic of Korea",
+   "regiao": "Asia",
+   "sub": "Eastern Asia",
+   "inter": "",
+   "moeda": "KPW",
+   "pibPpc": null,
+   "cambio": null,
+   "ppc": null,
+   "populacao": [
+    2024,
+    26498823
+   ]
+  },
+  {
+   "iso2": "CD",
+   "iso3": "COD",
+   "m49": "180",
+   "nomeEn": "Democratic Republic of the Congo",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "CDF",
+   "pibPpc": [
+    2024,
+    1823.27705135453
+   ],
+   "cambio": [
+    2023,
+    2340.03570436145
+   ],
+   "ppc": [
+    2024,
+    1072.67152838377
+   ],
+   "populacao": [
+    2024,
+    109276265
+   ]
+  },
+  {
+   "iso2": "DK",
+   "iso3": "DNK",
+   "m49": "208",
+   "nomeEn": "Denmark",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "DKK",
+   "pibPpc": [
+    2024,
+    80937.8001363997
+   ],
+   "cambio": [
+    2024,
+    6.89448141666666
+   ],
+   "ppc": [
+    2024,
+    6.050211
+   ],
+   "populacao": [
+    2024,
+    5976992
+   ]
+  },
+  {
+   "iso2": "DJ",
+   "iso3": "DJI",
+   "m49": "262",
+   "nomeEn": "Djibouti",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "DJF",
+   "pibPpc": [
+    2024,
+    7821.62138070711
+   ],
+   "cambio": [
+    2024,
+    177.721
+   ],
+   "ppc": [
+    2024,
+    80.7241255864859
+   ],
+   "populacao": [
+    2024,
+    1168722
+   ]
+  },
+  {
+   "iso2": "DM",
+   "iso3": "DMA",
+   "m49": "212",
+   "nomeEn": "Dominica",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "XCD",
+   "pibPpc": [
+    2024,
+    21331.6193698018
+   ],
+   "cambio": [
+    2024,
+    2.7
+   ],
+   "ppc": [
+    2024,
+    1.31702390769821
+   ],
+   "populacao": [
+    2024,
+    66205
+   ]
+  },
+  {
+   "iso2": "DO",
+   "iso3": "DOM",
+   "m49": "214",
+   "nomeEn": "Dominican Republic",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "DOP",
+   "pibPpc": [
+    2024,
+    27581.6606581871
+   ],
+   "cambio": [
+    2024,
+    59.5651333333333
+   ],
+   "ppc": [
+    2024,
+    23.4869920360294
+   ],
+   "populacao": [
+    2024,
+    11427557
+   ]
+  },
+  {
+   "iso2": "EC",
+   "iso3": "ECU",
+   "m49": "218",
+   "nomeEn": "Ecuador",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "USD",
+   "pibPpc": [
+    2024,
+    15848.3400023446
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    0.430740974308494
+   ],
+   "populacao": [
+    2024,
+    18135478
+   ]
+  },
+  {
+   "iso2": "EG",
+   "iso3": "EGY",
+   "m49": "818",
+   "nomeEn": "Egypt",
+   "regiao": "Africa",
+   "sub": "Northern Africa",
+   "inter": "",
+   "moeda": "EGP",
+   "pibPpc": [
+    2024,
+    19121.874936645
+   ],
+   "cambio": [
+    2024,
+    45.29926
+   ],
+   "ppc": [
+    2024,
+    6.23876003840203
+   ],
+   "populacao": [
+    2024,
+    116538258
+   ]
+  },
+  {
+   "iso2": "SV",
+   "iso3": "SLV",
+   "m49": "222",
+   "nomeEn": "El Salvador",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Central America",
+   "moeda": "USD",
+   "pibPpc": [
+    2024,
+    13258.1805042704
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    0.415072277055406
+   ],
+   "populacao": [
+    2024,
+    6338193
+   ]
+  },
+  {
+   "iso2": "GQ",
+   "iso3": "GNQ",
+   "m49": "226",
+   "nomeEn": "Equatorial Guinea",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "XAF",
+   "pibPpc": [
+    2024,
+    17072.4273818835
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    248.739563790205
+   ],
+   "populacao": [
+    2024,
+    1892516
+   ]
+  },
+  {
+   "iso2": "ER",
+   "iso3": "ERI",
+   "m49": "232",
+   "nomeEn": "Eritrea",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "ERN",
+   "pibPpc": null,
+   "cambio": [
+    2024,
+    15.075
+   ],
+   "ppc": [
+    2021,
+    4.93847894668579
+   ],
+   "populacao": [
+    2024,
+    3535603
+   ]
+  },
+  {
+   "iso2": "EE",
+   "iso3": "EST",
+   "m49": "233",
+   "nomeEn": "Estonia",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    50395.7686402966
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.576166
+   ],
+   "populacao": [
+    2024,
+    1372341
+   ]
+  },
+  {
+   "iso2": "SZ",
+   "iso3": "SWZ",
+   "m49": "748",
+   "nomeEn": "Eswatini",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Southern Africa",
+   "moeda": "SZL",
+   "pibPpc": [
+    2024,
+    11822.961305357
+   ],
+   "cambio": [
+    2024,
+    18.3176868310856
+   ],
+   "ppc": [
+    2024,
+    6.05720299883277
+   ],
+   "populacao": [
+    2024,
+    1242822
+   ]
+  },
+  {
+   "iso2": "ET",
+   "iso3": "ETH",
+   "m49": "231",
+   "nomeEn": "Ethiopia",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "ETB",
+   "pibPpc": [
+    2024,
+    3292.3093336937
+   ],
+   "cambio": [
+    2024,
+    82.6013363504764
+   ],
+   "ppc": [
+    2024,
+    27.1045539967632
+   ],
+   "populacao": [
+    2024,
+    132059767
+   ]
+  },
+  {
+   "iso2": "FJ",
+   "iso3": "FJI",
+   "m49": "242",
+   "nomeEn": "Fiji",
+   "regiao": "Oceania",
+   "sub": "Melanesia",
+   "inter": "",
+   "moeda": "FJD",
+   "pibPpc": [
+    2024,
+    15472.737444718
+   ],
+   "cambio": [
+    2024,
+    2.2683
+   ],
+   "ppc": [
+    2024,
+    0.942012332041687
+   ],
+   "populacao": [
+    2024,
+    928784
+   ]
+  },
+  {
+   "iso2": "FI",
+   "iso3": "FIN",
+   "m49": "246",
+   "nomeEn": "Finland",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    65137.1816928289
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.753945
+   ],
+   "populacao": [
+    2024,
+    5619911
+   ]
+  },
+  {
+   "iso2": "FR",
+   "iso3": "FRA",
+   "m49": "250",
+   "nomeEn": "France",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    62524.5434134804
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.681239
+   ],
+   "populacao": [
+    2024,
+    68551653
+   ]
+  },
+  {
+   "iso2": "GA",
+   "iso3": "GAB",
+   "m49": "266",
+   "nomeEn": "Gabon",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "XAF",
+   "pibPpc": [
+    2024,
+    21541.4112646776
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    231.6583571757
+   ],
+   "populacao": [
+    2024,
+    2538952
+   ]
+  },
+  {
+   "iso2": "GM",
+   "iso3": "GMB",
+   "m49": "270",
+   "nomeEn": "Gambia",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "GMD",
+   "pibPpc": [
+    2024,
+    3480.66001035486
+   ],
+   "cambio": [
+    2024,
+    67.661238258942
+   ],
+   "ppc": [
+    2024,
+    16.9545354395068
+   ],
+   "populacao": [
+    2024,
+    2759988
+   ]
+  },
+  {
+   "iso2": "GE",
+   "iso3": "GEO",
+   "m49": "268",
+   "nomeEn": "Georgia",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "GEL",
+   "pibPpc": [
+    2024,
+    27486.8762116648
+   ],
+   "cambio": [
+    2024,
+    2.72061666666667
+   ],
+   "ppc": [
+    2024,
+    0.887666169870326
+   ],
+   "populacao": [
+    2024,
+    3812518
+   ]
+  },
+  {
+   "iso2": "DE",
+   "iso3": "DEU",
+   "m49": "276",
+   "nomeEn": "Germany",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    73957.0012170966
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.700862
+   ],
+   "populacao": [
+    2024,
+    83516593
+   ]
+  },
+  {
+   "iso2": "GH",
+   "iso3": "GHA",
+   "m49": "288",
+   "nomeEn": "Ghana",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "GHS",
+   "pibPpc": [
+    2024,
+    8051.19381149848
+   ],
+   "cambio": [
+    2024,
+    14.1819416666667
+   ],
+   "ppc": [
+    2024,
+    4.26723310217426
+   ],
+   "populacao": [
+    2024,
+    34427414
+   ]
+  },
+  {
+   "iso2": "GR",
+   "iso3": "GRC",
+   "m49": "300",
+   "nomeEn": "Greece",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    44170.9556658376
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.515086
+   ],
+   "populacao": [
+    2024,
+    10405134
+   ]
+  },
+  {
+   "iso2": "GD",
+   "iso3": "GRD",
+   "m49": "308",
+   "nomeEn": "Grenada",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "XCD",
+   "pibPpc": [
+    2024,
+    19903.184889337
+   ],
+   "cambio": [
+    2024,
+    2.7
+   ],
+   "ppc": [
+    2024,
+    1.56397530306305
+   ],
+   "populacao": [
+    2024,
+    117207
+   ]
+  },
+  {
+   "iso2": "GT",
+   "iso3": "GTM",
+   "m49": "320",
+   "nomeEn": "Guatemala",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Central America",
+   "moeda": "GTQ",
+   "pibPpc": [
+    2024,
+    14393.0528302577
+   ],
+   "cambio": [
+    2024,
+    7.7585375
+   ],
+   "ppc": [
+    2024,
+    3.31562389582393
+   ],
+   "populacao": [
+    2024,
+    18406359
+   ]
+  },
+  {
+   "iso2": "GN",
+   "iso3": "GIN",
+   "m49": "324",
+   "nomeEn": "Guinea",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "GNF",
+   "pibPpc": [
+    2024,
+    4571.93087130821
+   ],
+   "cambio": [
+    2020,
+    9565.08218343833
+   ],
+   "ppc": [
+    2024,
+    3181.20500097004
+   ],
+   "populacao": [
+    2024,
+    14754785
+   ]
+  },
+  {
+   "iso2": "GW",
+   "iso3": "GNB",
+   "m49": "624",
+   "nomeEn": "Guinea-Bissau",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "XOF",
+   "pibPpc": [
+    2024,
+    3093.46533465682
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    195.690135293345
+   ],
+   "populacao": [
+    2024,
+    2201352
+   ]
+  },
+  {
+   "iso2": "GY",
+   "iso3": "GUY",
+   "m49": "328",
+   "nomeEn": "Guyana",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "GYD",
+   "pibPpc": [
+    2024,
+    80271.4254322872
+   ],
+   "cambio": [
+    2024,
+    208.5
+   ],
+   "ppc": [
+    2024,
+    77.0796036657078
+   ],
+   "populacao": [
+    2024,
+    831087
+   ]
+  },
+  {
+   "iso2": "HT",
+   "iso3": "HTI",
+   "m49": "332",
+   "nomeEn": "Haiti",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "HTG",
+   "pibPpc": [
+    2024,
+    3168.87908307377
+   ],
+   "cambio": [
+    2024,
+    131.810991666667
+   ],
+   "ppc": [
+    2024,
+    85.9464526212732
+   ],
+   "populacao": [
+    2024,
+    11772557
+   ]
+  },
+  {
+   "iso2": "HN",
+   "iso3": "HND",
+   "m49": "340",
+   "nomeEn": "Honduras",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Central America",
+   "moeda": "HNL",
+   "pibPpc": [
+    2024,
+    7502.56902428309
+   ],
+   "cambio": [
+    2024,
+    24.7992824415521
+   ],
+   "ppc": [
+    2024,
+    11.2912473033807
+   ],
+   "populacao": [
+    2024,
+    10825703
+   ]
+  },
+  {
+   "iso2": "HU",
+   "iso3": "HUN",
+   "m49": "348",
+   "nomeEn": "Hungary",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "HUF",
+   "pibPpc": [
+    2024,
+    48540.1614792293
+   ],
+   "cambio": [
+    2024,
+    365.690833333333
+   ],
+   "ppc": [
+    2024,
+    175.578089
+   ],
+   "populacao": [
+    2024,
+    9562065
+   ]
+  },
+  {
+   "iso2": "IS",
+   "iso3": "ISL",
+   "m49": "352",
+   "nomeEn": "Iceland",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "ISK",
+   "pibPpc": [
+    2024,
+    83561.4294628375
+   ],
+   "cambio": [
+    2024,
+    137.958025978154
+   ],
+   "ppc": [
+    2024,
+    141.758111
+   ],
+   "populacao": [
+    2024,
+    386506
+   ]
+  },
+  {
+   "iso2": "IN",
+   "iso3": "IND",
+   "m49": "356",
+   "nomeEn": "India",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "INR",
+   "pibPpc": [
+    2024,
+    10718.5934040662
+   ],
+   "cambio": [
+    2024,
+    83.669281580941
+   ],
+   "ppc": [
+    2024,
+    20.4522424138694
+   ],
+   "populacao": [
+    2024,
+    1450935791
+   ]
+  },
+  {
+   "iso2": "ID",
+   "iso3": "IDN",
+   "m49": "360",
+   "nomeEn": "Indonesia",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "IDR",
+   "pibPpc": [
+    2024,
+    16472.4825935409
+   ],
+   "cambio": [
+    2024,
+    15855.4482866711
+   ],
+   "ppc": [
+    2024,
+    4740.937043293
+   ],
+   "populacao": [
+    2024,
+    283487931
+   ]
+  },
+  {
+   "iso2": "IR",
+   "iso3": "IRN",
+   "m49": "364",
+   "nomeEn": "Iran (Islamic Republic of)",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "IRR",
+   "pibPpc": [
+    2024,
+    19902.7484779621
+   ],
+   "cambio": [
+    2023,
+    42000
+   ],
+   "ppc": [
+    2024,
+    118096.561683588
+   ],
+   "populacao": [
+    2024,
+    91567738
+   ]
+  },
+  {
+   "iso2": "IQ",
+   "iso3": "IRQ",
+   "m49": "368",
+   "nomeEn": "Iraq",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "IQD",
+   "pibPpc": [
+    2024,
+    14485.3248937523
+   ],
+   "cambio": [
+    2024,
+    1300
+   ],
+   "ppc": [
+    2024,
+    545.082245539464
+   ],
+   "populacao": [
+    2024,
+    46042015
+   ]
+  },
+  {
+   "iso2": "IE",
+   "iso3": "IRL",
+   "m49": "372",
+   "nomeEn": "Ireland",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    140779.203379453
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.740894
+   ],
+   "populacao": [
+    2024,
+    5395790
+   ]
+  },
+  {
+   "iso2": "IL",
+   "iso3": "ISR",
+   "m49": "376",
+   "nomeEn": "Israel",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "ILS",
+   "pibPpc": [
+    2024,
+    57277.8631217651
+   ],
+   "cambio": [
+    2024,
+    3.69971964970892
+   ],
+   "ppc": [
+    2024,
+    3.50198
+   ],
+   "populacao": [
+    2024,
+    10002200
+   ]
+  },
+  {
+   "iso2": "IT",
+   "iso3": "ITA",
+   "m49": "380",
+   "nomeEn": "Italy",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    62292.9012423008
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.599627
+   ],
+   "populacao": [
+    2024,
+    58952704
+   ]
+  },
+  {
+   "iso2": "JM",
+   "iso3": "JAM",
+   "m49": "388",
+   "nomeEn": "Jamaica",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "JMD",
+   "pibPpc": [
+    2024,
+    12908.9862451809
+   ],
+   "cambio": [
+    2024,
+    156.439540115298
+   ],
+   "ppc": [
+    2024,
+    93.9657613558653
+   ],
+   "populacao": [
+    2024,
+    2839175
+   ]
+  },
+  {
+   "iso2": "JP",
+   "iso3": "JPN",
+   "m49": "392",
+   "nomeEn": "Japan",
+   "regiao": "Asia",
+   "sub": "Eastern Asia",
+   "inter": "",
+   "moeda": "JPY",
+   "pibPpc": [
+    2024,
+    54156.2687689605
+   ],
+   "cambio": [
+    2024,
+    151.366291302752
+   ],
+   "ppc": [
+    2024,
+    94.462599
+   ],
+   "populacao": [
+    2024,
+    123975371
+   ]
+  },
+  {
+   "iso2": "JO",
+   "iso3": "JOR",
+   "m49": "400",
+   "nomeEn": "Jordan",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "JOD",
+   "pibPpc": [
+    2024,
+    11916.3623210714
+   ],
+   "cambio": [
+    2024,
+    0.71
+   ],
+   "ppc": [
+    2024,
+    0.302314065193508
+   ],
+   "populacao": [
+    2024,
+    11552876
+   ]
+  },
+  {
+   "iso2": "KZ",
+   "iso3": "KAZ",
+   "m49": "398",
+   "nomeEn": "Kazakhstan",
+   "regiao": "Asia",
+   "sub": "Central Asia",
+   "inter": "",
+   "moeda": "KZT",
+   "pibPpc": [
+    2024,
+    40950.3167392792
+   ],
+   "cambio": [
+    2024,
+    468.9625
+   ],
+   "ppc": [
+    2024,
+    162.098669079355
+   ],
+   "populacao": [
+    2024,
+    20592571
+   ]
+  },
+  {
+   "iso2": "KE",
+   "iso3": "KEN",
+   "m49": "404",
+   "nomeEn": "Kenya",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "KES",
+   "pibPpc": [
+    2024,
+    6649.67919174449
+   ],
+   "cambio": [
+    2024,
+    134.822483279332
+   ],
+   "ppc": [
+    2024,
+    43.2560168752789
+   ],
+   "populacao": [
+    2024,
+    56432944
+   ]
+  },
+  {
+   "iso2": "KI",
+   "iso3": "KIR",
+   "m49": "296",
+   "nomeEn": "Kiribati",
+   "regiao": "Oceania",
+   "sub": "Micronesia",
+   "inter": "",
+   "moeda": "AUD",
+   "pibPpc": [
+    2024,
+    3728.03970809328
+   ],
+   "cambio": [
+    2024,
+    1.51535803855596
+   ],
+   "ppc": [
+    2024,
+    1.03691322245715
+   ],
+   "populacao": [
+    2024,
+    134518
+   ]
+  },
+  {
+   "iso2": "KW",
+   "iso3": "KWT",
+   "m49": "414",
+   "nomeEn": "Kuwait",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "KWD",
+   "pibPpc": [
+    2024,
+    53119.3783662664
+   ],
+   "cambio": [
+    2024,
+    0.306690648597046
+   ],
+   "ppc": [
+    2024,
+    0.189696382555312
+   ],
+   "populacao": [
+    2024,
+    4897263
+   ]
+  },
+  {
+   "iso2": "KG",
+   "iso3": "KGZ",
+   "m49": "417",
+   "nomeEn": "Kyrgyzstan",
+   "regiao": "Asia",
+   "sub": "Central Asia",
+   "inter": "",
+   "moeda": "KGS",
+   "pibPpc": [
+    2024,
+    8208.03081858011
+   ],
+   "cambio": [
+    2024,
+    87.1503126405883
+   ],
+   "ppc": [
+    2024,
+    26.7014758852856
+   ],
+   "populacao": [
+    2024,
+    7221868
+   ]
+  },
+  {
+   "iso2": "LA",
+   "iso3": "LAO",
+   "m49": "418",
+   "nomeEn": "Lao People's Democratic Republic",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "LAK",
+   "pibPpc": [
+    2024,
+    9790.02538664409
+   ],
+   "cambio": [
+    2024,
+    20167.3313803145
+   ],
+   "ppc": [
+    2024,
+    4375.37070071078
+   ],
+   "populacao": [
+    2024,
+    7769819
+   ]
+  },
+  {
+   "iso2": "LV",
+   "iso3": "LVA",
+   "m49": "428",
+   "nomeEn": "Latvia",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    43873.3777849582
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.496528
+   ],
+   "populacao": [
+    2024,
+    1866124
+   ]
+  },
+  {
+   "iso2": "LB",
+   "iso3": "LBN",
+   "m49": "422",
+   "nomeEn": "Lebanon",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "LBP",
+   "pibPpc": [
+    2024,
+    11917.4502960889
+   ],
+   "cambio": [
+    2024,
+    89500
+   ],
+   "ppc": [
+    2024,
+    33594.2483818204
+   ],
+   "populacao": [
+    2024,
+    5805962
+   ]
+  },
+  {
+   "iso2": "LS",
+   "iso3": "LSO",
+   "m49": "426",
+   "nomeEn": "Lesotho",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Southern Africa",
+   "moeda": "LSL",
+   "pibPpc": [
+    2024,
+    3070.79580931865
+   ],
+   "cambio": [
+    2024,
+    18.3286575505
+   ],
+   "ppc": [
+    2024,
+    6.10623212210523
+   ],
+   "populacao": [
+    2024,
+    2337423
+   ]
+  },
+  {
+   "iso2": "LR",
+   "iso3": "LBR",
+   "m49": "430",
+   "nomeEn": "Liberia",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "LRD",
+   "pibPpc": [
+    2024,
+    1873.76133636244
+   ],
+   "cambio": [
+    2024,
+    191.306666666667
+   ],
+   "ppc": [
+    2024,
+    0.45443232675685
+   ],
+   "populacao": [
+    2024,
+    5612817
+   ]
+  },
+  {
+   "iso2": "LY",
+   "iso3": "LBY",
+   "m49": "434",
+   "nomeEn": "Libya",
+   "regiao": "Africa",
+   "sub": "Northern Africa",
+   "inter": "",
+   "moeda": "LYD",
+   "pibPpc": [
+    2024,
+    14324.5818697336
+   ],
+   "cambio": [
+    2024,
+    4.83220833333333
+   ],
+   "ppc": [
+    2024,
+    2.21602051230224
+   ],
+   "populacao": [
+    2024,
+    7381023
+   ]
+  },
+  {
+   "iso2": "LI",
+   "iso3": "LIE",
+   "m49": "438",
+   "nomeEn": "Liechtenstein",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "CHF",
+   "pibPpc": null,
+   "cambio": [
+    2024,
+    0.880440833333333
+   ],
+   "ppc": null,
+   "populacao": [
+    2024,
+    40450
+   ]
+  },
+  {
+   "iso2": "LT",
+   "iso3": "LTU",
+   "m49": "440",
+   "nomeEn": "Lithuania",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    55699.3734421294
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.49104
+   ],
+   "populacao": [
+    2024,
+    2888278
+   ]
+  },
+  {
+   "iso2": "LU",
+   "iso3": "LUX",
+   "m49": "442",
+   "nomeEn": "Luxembourg",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    156079.3685607
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.815579
+   ],
+   "populacao": [
+    2024,
+    677012
+   ]
+  },
+  {
+   "iso2": "MG",
+   "iso3": "MDG",
+   "m49": "450",
+   "nomeEn": "Madagascar",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "MGA",
+   "pibPpc": [
+    2024,
+    1888.66403175151
+   ],
+   "cambio": [
+    2024,
+    4525.42472099152
+   ],
+   "ppc": [
+    2024,
+    1318.76161308914
+   ],
+   "populacao": [
+    2024,
+    31964956
+   ]
+  },
+  {
+   "iso2": "MW",
+   "iso3": "MWI",
+   "m49": "454",
+   "nomeEn": "Malawi",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "MWK",
+   "pibPpc": [
+    2024,
+    1860.31534523381
+   ],
+   "cambio": [
+    2023,
+    1161.09436666667
+   ],
+   "ppc": [
+    2024,
+    488.11530168559
+   ],
+   "populacao": [
+    2024,
+    21655286
+   ]
+  },
+  {
+   "iso2": "MY",
+   "iso3": "MYS",
+   "m49": "458",
+   "nomeEn": "Malaysia",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "MYR",
+   "pibPpc": [
+    2024,
+    38835.6013146653
+   ],
+   "cambio": [
+    2024,
+    4.5764279106858
+   ],
+   "ppc": [
+    2024,
+    1.39929497814426
+   ],
+   "populacao": [
+    2024,
+    35557673
+   ]
+  },
+  {
+   "iso2": "MV",
+   "iso3": "MDV",
+   "m49": "462",
+   "nomeEn": "Maldives",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "MVR",
+   "pibPpc": [
+    2024,
+    26220.8078173473
+   ],
+   "cambio": [
+    2024,
+    15.3891963292547
+   ],
+   "ppc": [
+    2024,
+    7.85244534917178
+   ],
+   "populacao": [
+    2024,
+    527799
+   ]
+  },
+  {
+   "iso2": "ML",
+   "iso3": "MLI",
+   "m49": "466",
+   "nomeEn": "Mali",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "XOF",
+   "pibPpc": [
+    2024,
+    3321.57614442921
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    199.570439584459
+   ],
+   "populacao": [
+    2024,
+    24478595
+   ]
+  },
+  {
+   "iso2": "MT",
+   "iso3": "MLT",
+   "m49": "470",
+   "nomeEn": "Malta",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    70062.9017440762
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.580520850861783
+   ],
+   "populacao": [
+    2024,
+    568847
+   ]
+  },
+  {
+   "iso2": "MH",
+   "iso3": "MHL",
+   "m49": "584",
+   "nomeEn": "Marshall Islands",
+   "regiao": "Oceania",
+   "sub": "Micronesia",
+   "inter": "",
+   "moeda": "USD",
+   "pibPpc": [
+    2024,
+    8237.95897993999
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    0.92137924629206
+   ],
+   "populacao": [
+    2024,
+    37548
+   ]
+  },
+  {
+   "iso2": "MR",
+   "iso3": "MRT",
+   "m49": "478",
+   "nomeEn": "Mauritania",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "MRU",
+   "pibPpc": [
+    2024,
+    7379.45422386145
+   ],
+   "cambio": [
+    2023,
+    36.4891666666666
+   ],
+   "ppc": [
+    2024,
+    11.3284385535821
+   ],
+   "populacao": [
+    2024,
+    5169395
+   ]
+  },
+  {
+   "iso2": "MU",
+   "iso3": "MUS",
+   "m49": "480",
+   "nomeEn": "Mauritius",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "MUR",
+   "pibPpc": [
+    2024,
+    31696.7381226145
+   ],
+   "cambio": [
+    2024,
+    46.414675
+   ],
+   "ppc": [
+    2024,
+    17.5587586975471
+   ],
+   "populacao": [
+    2024,
+    1245779
+   ]
+  },
+  {
+   "iso2": "MX",
+   "iso3": "MEX",
+   "m49": "484",
+   "nomeEn": "Mexico",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Central America",
+   "moeda": "MXN",
+   "pibPpc": [
+    2024,
+    25820.3527960242
+   ],
+   "cambio": [
+    2024,
+    18.3048583333333
+   ],
+   "ppc": [
+    2024,
+    9.916562
+   ],
+   "populacao": [
+    2024,
+    130861007
+   ]
+  },
+  {
+   "iso2": "FM",
+   "iso3": "FSM",
+   "m49": "583",
+   "nomeEn": "Micronesia (Federated States of)",
+   "regiao": "Oceania",
+   "sub": "Micronesia",
+   "inter": "",
+   "moeda": "USD",
+   "pibPpc": [
+    2024,
+    4452.31995062055
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    0.954938228573462
+   ],
+   "populacao": [
+    2024,
+    113160
+   ]
+  },
+  {
+   "iso2": "MC",
+   "iso3": "MCO",
+   "m49": "492",
+   "nomeEn": "Monaco",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": null,
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": null,
+   "populacao": [
+    2024,
+    38631
+   ]
+  },
+  {
+   "iso2": "MN",
+   "iso3": "MNG",
+   "m49": "496",
+   "nomeEn": "Mongolia",
+   "regiao": "Asia",
+   "sub": "Eastern Asia",
+   "inter": "",
+   "moeda": "MNT",
+   "pibPpc": [
+    2024,
+    19172.5295870282
+   ],
+   "cambio": [
+    2024,
+    3389.98152022101
+   ],
+   "ppc": [
+    2024,
+    1193.60938977542
+   ],
+   "populacao": [
+    2024,
+    3524788
+   ]
+  },
+  {
+   "iso2": "ME",
+   "iso3": "MNE",
+   "m49": "499",
+   "nomeEn": "Montenegro",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    34062.8241865953
+   ],
+   "cambio": [
+    2024,
+    0.924367447270267
+   ],
+   "ppc": [
+    2024,
+    0.359928547448717
+   ],
+   "populacao": [
+    2024,
+    623525
+   ]
+  },
+  {
+   "iso2": "MA",
+   "iso3": "MAR",
+   "m49": "504",
+   "nomeEn": "Morocco",
+   "regiao": "Africa",
+   "sub": "Northern Africa",
+   "inter": "",
+   "moeda": "MAD",
+   "pibPpc": [
+    2024,
+    10430.2490234375
+   ],
+   "cambio": [
+    2024,
+    9.94235921679198
+   ],
+   "ppc": [
+    2024,
+    3.95879057156767
+   ],
+   "populacao": [
+    2024,
+    38081173
+   ]
+  },
+  {
+   "iso2": "MZ",
+   "iso3": "MOZ",
+   "m49": "508",
+   "nomeEn": "Mozambique",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "MZN",
+   "pibPpc": [
+    2024,
+    1708.3035966667
+   ],
+   "cambio": [
+    2024,
+    63.905
+   ],
+   "ppc": [
+    2024,
+    24.5764633742049
+   ],
+   "populacao": [
+    2024,
+    34631766
+   ]
+  },
+  {
+   "iso2": "MM",
+   "iso3": "MMR",
+   "m49": "104",
+   "nomeEn": "Myanmar",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "MMK",
+   "pibPpc": [
+    2024,
+    6006.17514543646
+   ],
+   "cambio": [
+    2020,
+    1381.61916666667
+   ],
+   "ppc": [
+    2024,
+    475.178456114576
+   ],
+   "populacao": [
+    2024,
+    54500091
+   ]
+  },
+  {
+   "iso2": "NA",
+   "iso3": "NAM",
+   "m49": "516",
+   "nomeEn": "Namibia",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Southern Africa",
+   "moeda": "NAD",
+   "pibPpc": [
+    2024,
+    11697.9201596588
+   ],
+   "cambio": [
+    2024,
+    18.3286583333333
+   ],
+   "ppc": [
+    2024,
+    7.05363349341884
+   ],
+   "populacao": [
+    2024,
+    3030131
+   ]
+  },
+  {
+   "iso2": "NR",
+   "iso3": "NRU",
+   "m49": "520",
+   "nomeEn": "Naoero",
+   "regiao": "Oceania",
+   "sub": "Micronesia",
+   "inter": "",
+   "moeda": "AUD",
+   "pibPpc": [
+    2024,
+    13612.0368416276
+   ],
+   "cambio": [
+    2024,
+    1.51535803855596
+   ],
+   "ppc": [
+    2024,
+    1.57419303217835
+   ],
+   "populacao": [
+    2024,
+    11947
+   ]
+  },
+  {
+   "iso2": "NP",
+   "iso3": "NPL",
+   "m49": "524",
+   "nomeEn": "Nepal",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "NPR",
+   "pibPpc": [
+    2024,
+    5745.64525192255
+   ],
+   "cambio": [
+    2024,
+    133.726644315443
+   ],
+   "ppc": [
+    2024,
+    33.8112518665645
+   ],
+   "populacao": [
+    2024,
+    29651054
+   ]
+  },
+  {
+   "iso2": "NL",
+   "iso3": "NLD",
+   "m49": "528",
+   "nomeEn": "Netherlands (Kingdom of the)",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    85218.3689343246
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.731421
+   ],
+   "populacao": [
+    2024,
+    17993485
+   ]
+  },
+  {
+   "iso2": "NZ",
+   "iso3": "NZL",
+   "m49": "554",
+   "nomeEn": "New Zealand",
+   "regiao": "Oceania",
+   "sub": "Australia and New Zealand",
+   "inter": "",
+   "moeda": "NZD",
+   "pibPpc": [
+    2024,
+    55793.9990422226
+   ],
+   "cambio": [
+    2024,
+    1.65230833333333
+   ],
+   "ppc": [
+    2024,
+    1.463912
+   ],
+   "populacao": [
+    2024,
+    5290000
+   ]
+  },
+  {
+   "iso2": "NI",
+   "iso3": "NIC",
+   "m49": "558",
+   "nomeEn": "Nicaragua",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Central America",
+   "moeda": "NIO",
+   "pibPpc": [
+    2024,
+    8720.86923379042
+   ],
+   "cambio": [
+    2024,
+    36.6243
+   ],
+   "ppc": [
+    2024,
+    11.9599866316397
+   ],
+   "populacao": [
+    2024,
+    6916140
+   ]
+  },
+  {
+   "iso2": "NE",
+   "iso3": "NER",
+   "m49": "562",
+   "nomeEn": "Niger",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "XOF",
+   "pibPpc": [
+    2024,
+    2044.04904937758
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    216.50417668186
+   ],
+   "populacao": [
+    2024,
+    27032412
+   ]
+  },
+  {
+   "iso2": "NG",
+   "iso3": "NGA",
+   "m49": "566",
+   "nomeEn": "Nigeria",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "NGN",
+   "pibPpc": [
+    2024,
+    9099.86943863676
+   ],
+   "cambio": [
+    2024,
+    1478.96519740023
+   ],
+   "ppc": [
+    2024,
+    176.079684596458
+   ],
+   "populacao": [
+    2024,
+    232679478
+   ]
+  },
+  {
+   "iso2": "MK",
+   "iso3": "MKD",
+   "m49": "807",
+   "nomeEn": "North Macedonia",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "MKD",
+   "pibPpc": [
+    2024,
+    26995.5213483235
+   ],
+   "cambio": [
+    2024,
+    56.8726333333333
+   ],
+   "ppc": [
+    2024,
+    19.5755543274224
+   ],
+   "populacao": [
+    2024,
+    1824359
+   ]
+  },
+  {
+   "iso2": "NO",
+   "iso3": "NOR",
+   "m49": "578",
+   "nomeEn": "Norway",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "NOK",
+   "pibPpc": [
+    2024,
+    105657.0339185
+   ],
+   "cambio": [
+    2024,
+    10.7458333333333
+   ],
+   "ppc": [
+    2024,
+    9.142143
+   ],
+   "populacao": [
+    2024,
+    5572279
+   ]
+  },
+  {
+   "iso2": "OM",
+   "iso3": "OMN",
+   "m49": "512",
+   "nomeEn": "Oman",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "OMR",
+   "pibPpc": [
+    2024,
+    41800.7841364086
+   ],
+   "cambio": [
+    2024,
+    0.3845
+   ],
+   "ppc": [
+    2024,
+    0.186591473077914
+   ],
+   "populacao": [
+    2024,
+    5281538
+   ]
+  },
+  {
+   "iso2": "PK",
+   "iso3": "PAK",
+   "m49": "586",
+   "nomeEn": "Pakistan",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "PKR",
+   "pibPpc": [
+    2024,
+    6263.186935403
+   ],
+   "cambio": [
+    2024,
+    278.580716167563
+   ],
+   "ppc": [
+    2024,
+    66.8726408434692
+   ],
+   "populacao": [
+    2024,
+    251269164
+   ]
+  },
+  {
+   "iso2": "PW",
+   "iso3": "PLW",
+   "m49": "585",
+   "nomeEn": "Palau",
+   "regiao": "Oceania",
+   "sub": "Micronesia",
+   "inter": "",
+   "moeda": "USD",
+   "pibPpc": [
+    2024,
+    21059.1347141726
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    0.862764636970531
+   ],
+   "populacao": [
+    2024,
+    17695
+   ]
+  },
+  {
+   "iso2": "PA",
+   "iso3": "PAN",
+   "m49": "591",
+   "nomeEn": "Panama",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Central America",
+   "moeda": "USD",
+   "pibPpc": [
+    2024,
+    41429.5092511481
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    0.462501709276174
+   ],
+   "populacao": [
+    2024,
+    4515577
+   ]
+  },
+  {
+   "iso2": "PG",
+   "iso3": "PNG",
+   "m49": "598",
+   "nomeEn": "Papua New Guinea",
+   "regiao": "Oceania",
+   "sub": "Melanesia",
+   "inter": "",
+   "moeda": "PGK",
+   "pibPpc": [
+    2024,
+    4886.53186994995
+   ],
+   "cambio": [
+    2024,
+    3.8527502682192
+   ],
+   "ppc": [
+    2024,
+    2.29633236134239
+   ],
+   "populacao": [
+    2024,
+    10576502
+   ]
+  },
+  {
+   "iso2": "PY",
+   "iso3": "PRY",
+   "m49": "600",
+   "nomeEn": "Paraguay",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "PYG",
+   "pibPpc": [
+    2024,
+    18631.6436164051
+   ],
+   "cambio": [
+    2024,
+    7560.24758837744
+   ],
+   "ppc": [
+    2024,
+    2619.92716517367
+   ],
+   "populacao": [
+    2024,
+    6929153
+   ]
+  },
+  {
+   "iso2": "PE",
+   "iso3": "PER",
+   "m49": "604",
+   "nomeEn": "Peru",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "PEN",
+   "pibPpc": [
+    2024,
+    17881.8685833242
+   ],
+   "cambio": [
+    2024,
+    3.7525
+   ],
+   "ppc": [
+    2024,
+    1.78990272678921
+   ],
+   "populacao": [
+    2024,
+    34217848
+   ]
+  },
+  {
+   "iso2": "PH",
+   "iso3": "PHL",
+   "m49": "608",
+   "nomeEn": "Philippines",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "PHP",
+   "pibPpc": [
+    2024,
+    11813.805926453
+   ],
+   "cambio": [
+    2024,
+    57.2906550699734
+   ],
+   "ppc": [
+    2024,
+    19.3265525181874
+   ],
+   "populacao": [
+    2024,
+    115843670
+   ]
+  },
+  {
+   "iso2": "PL",
+   "iso3": "POL",
+   "m49": "616",
+   "nomeEn": "Poland",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "PLN",
+   "pibPpc": [
+    2024,
+    51262.5105756884
+   ],
+   "cambio": [
+    2024,
+    3.98078333333333
+   ],
+   "ppc": [
+    2024,
+    1.949414
+   ],
+   "populacao": [
+    2024,
+    36559233
+   ]
+  },
+  {
+   "iso2": "PT",
+   "iso3": "PRT",
+   "m49": "620",
+   "nomeEn": "Portugal",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    52512.5651003677
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.515993
+   ],
+   "populacao": [
+    2024,
+    10694681
+   ]
+  },
+  {
+   "iso2": "QA",
+   "iso3": "QAT",
+   "m49": "634",
+   "nomeEn": "Qatar",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "QAR",
+   "pibPpc": [
+    2024,
+    126712.582876079
+   ],
+   "cambio": [
+    2024,
+    3.64
+   ],
+   "ppc": [
+    2024,
+    2.17416225674553
+   ],
+   "populacao": [
+    2024,
+    2857822
+   ]
+  },
+  {
+   "iso2": "KR",
+   "iso3": "KOR",
+   "m49": "410",
+   "nomeEn": "Republic of Korea",
+   "regiao": "Asia",
+   "sub": "Eastern Asia",
+   "inter": "",
+   "moeda": "KRW",
+   "pibPpc": [
+    2024,
+    61051.3492502498
+   ],
+   "cambio": [
+    2024,
+    1363.375
+   ],
+   "ppc": [
+    2024,
+    809.26722
+   ],
+   "populacao": [
+    2024,
+    51751065
+   ]
+  },
+  {
+   "iso2": "MD",
+   "iso3": "MDA",
+   "m49": "498",
+   "nomeEn": "Republic of Moldova",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "MDL",
+   "pibPpc": [
+    2024,
+    18661.6606470212
+   ],
+   "cambio": [
+    2024,
+    17.791907688172
+   ],
+   "ppc": [
+    2024,
+    7.22563302713785
+   ],
+   "populacao": [
+    2024,
+    2402306
+   ]
+  },
+  {
+   "iso2": "RO",
+   "iso3": "ROU",
+   "m49": "642",
+   "nomeEn": "Romania",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "RON",
+   "pibPpc": [
+    2024,
+    49076.7137157187
+   ],
+   "cambio": [
+    2024,
+    4.598375
+   ],
+   "ppc": [
+    2024,
+    1.88147960473981
+   ],
+   "populacao": [
+    2024,
+    19051804
+   ]
+  },
+  {
+   "iso2": "RU",
+   "iso3": "RUS",
+   "m49": "643",
+   "nomeEn": "Russian Federation",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "RUB",
+   "pibPpc": [
+    2024,
+    47686.06640625
+   ],
+   "cambio": [
+    2024,
+    92.5524
+   ],
+   "ppc": [
+    2024,
+    29.0330725994197
+   ],
+   "populacao": [
+    2024,
+    143669648
+   ]
+  },
+  {
+   "iso2": "RW",
+   "iso3": "RWA",
+   "m49": "646",
+   "nomeEn": "Rwanda",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "RWF",
+   "pibPpc": [
+    2024,
+    3784.9629495071
+   ],
+   "cambio": [
+    2024,
+    1318.12835733333
+   ],
+   "ppc": [
+    2024,
+    369.127295971439
+   ],
+   "populacao": [
+    2024,
+    14256567
+   ]
+  },
+  {
+   "iso2": "KN",
+   "iso3": "KNA",
+   "m49": "659",
+   "nomeEn": "Saint Kitts and Nevis",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "XCD",
+   "pibPpc": [
+    2024,
+    34897.2104637487
+   ],
+   "cambio": [
+    2024,
+    2.7
+   ],
+   "ppc": [
+    2024,
+    1.85383769695909
+   ],
+   "populacao": [
+    2024,
+    46843
+   ]
+  },
+  {
+   "iso2": "LC",
+   "iso3": "LCA",
+   "m49": "662",
+   "nomeEn": "Saint Lucia",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "XCD",
+   "pibPpc": [
+    2024,
+    28116.7677870924
+   ],
+   "cambio": [
+    2024,
+    2.7
+   ],
+   "ppc": [
+    2024,
+    1.39179859388796
+   ],
+   "populacao": [
+    2024,
+    179744
+   ]
+  },
+  {
+   "iso2": "VC",
+   "iso3": "VCT",
+   "m49": "670",
+   "nomeEn": "Saint Vincent and the Grenadines",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "XCD",
+   "pibPpc": [
+    2024,
+    21302.9730252553
+   ],
+   "cambio": [
+    2024,
+    2.7
+   ],
+   "ppc": [
+    2024,
+    1.45769848948905
+   ],
+   "populacao": [
+    2024,
+    100616
+   ]
+  },
+  {
+   "iso2": "WS",
+   "iso3": "WSM",
+   "m49": "882",
+   "nomeEn": "Samoa",
+   "regiao": "Oceania",
+   "sub": "Polynesia",
+   "inter": "",
+   "moeda": "WST",
+   "pibPpc": [
+    2024,
+    8750.62541028446
+   ],
+   "cambio": [
+    2024,
+    2.75395370512433
+   ],
+   "ppc": [
+    2024,
+    1.69849391008788
+   ],
+   "populacao": [
+    2024,
+    218019
+   ]
+  },
+  {
+   "iso2": "SM",
+   "iso3": "SMR",
+   "m49": "674",
+   "nomeEn": "San Marino",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2023,
+    78810.3378046111
+   ],
+   "cambio": [
+    2024,
+    0.924367447270267
+   ],
+   "ppc": [
+    2023,
+    0.702590229204567
+   ],
+   "populacao": [
+    2024,
+    33977
+   ]
+  },
+  {
+   "iso2": "ST",
+   "iso3": "STP",
+   "m49": "678",
+   "nomeEn": "Sao Tome and Principe",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Middle Africa",
+   "moeda": "STN",
+   "pibPpc": [
+    2024,
+    6274.34741942922
+   ],
+   "cambio": [
+    2024,
+    22.6430098947812
+   ],
+   "ppc": [
+    2024,
+    12.7353502926814
+   ],
+   "populacao": [
+    2024,
+    235536
+   ]
+  },
+  {
+   "iso2": "SA",
+   "iso3": "SAU",
+   "m49": "682",
+   "nomeEn": "Saudi Arabia",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "SAR",
+   "pibPpc": [
+    2024,
+    71936.2510663399
+   ],
+   "cambio": [
+    2024,
+    3.75
+   ],
+   "ppc": [
+    2024,
+    1.85204533468297
+   ],
+   "populacao": [
+    2024,
+    35300280
+   ]
+  },
+  {
+   "iso2": "SN",
+   "iso3": "SEN",
+   "m49": "686",
+   "nomeEn": "Senegal",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "XOF",
+   "pibPpc": [
+    2024,
+    5097.24318834766
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    206.831826179381
+   ],
+   "populacao": [
+    2024,
+    18501984
+   ]
+  },
+  {
+   "iso2": "RS",
+   "iso3": "SRB",
+   "m49": "688",
+   "nomeEn": "Serbia",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "RSD",
+   "pibPpc": [
+    2024,
+    32832.274492238
+   ],
+   "cambio": [
+    2024,
+    108.207741666667
+   ],
+   "ppc": [
+    2024,
+    45.0788639131956
+   ],
+   "populacao": [
+    2024,
+    6586476
+   ]
+  },
+  {
+   "iso2": "SC",
+   "iso3": "SYC",
+   "m49": "690",
+   "nomeEn": "Seychelles",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "SCR",
+   "pibPpc": [
+    2024,
+    33339.491987317
+   ],
+   "cambio": [
+    2024,
+    14.5296931907518
+   ],
+   "ppc": [
+    2024,
+    8.00344901789428
+   ],
+   "populacao": [
+    2024,
+    121354
+   ]
+  },
+  {
+   "iso2": "SL",
+   "iso3": "SLE",
+   "m49": "694",
+   "nomeEn": "Sierra Leone",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "SLE",
+   "pibPpc": [
+    2024,
+    3527.42124292431
+   ],
+   "cambio": [
+    2023,
+    21.3048751103818
+   ],
+   "ppc": [
+    2024,
+    5.16518278736188
+   ],
+   "populacao": [
+    2024,
+    8642022
+   ]
+  },
+  {
+   "iso2": "SG",
+   "iso3": "SGP",
+   "m49": "702",
+   "nomeEn": "Singapore",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "SGD",
+   "pibPpc": [
+    2024,
+    153161.175431382
+   ],
+   "cambio": [
+    2024,
+    1.33623333333333
+   ],
+   "ppc": [
+    2024,
+    0.827911626910006
+   ],
+   "populacao": [
+    2024,
+    6036860
+   ]
+  },
+  {
+   "iso2": "SK",
+   "iso3": "SVK",
+   "m49": "703",
+   "nomeEn": "Slovakia",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    47846.6169154961
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.501903
+   ],
+   "populacao": [
+    2024,
+    5422069
+   ]
+  },
+  {
+   "iso2": "SI",
+   "iso3": "SVN",
+   "m49": "705",
+   "nomeEn": "Slovenia",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    57570.5904042272
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.550461
+   ],
+   "populacao": [
+    2024,
+    2127400
+   ]
+  },
+  {
+   "iso2": "SB",
+   "iso3": "SLB",
+   "m49": "090",
+   "nomeEn": "Solomon Islands",
+   "regiao": "Oceania",
+   "sub": "Melanesia",
+   "inter": "",
+   "moeda": "SBD",
+   "pibPpc": [
+    2024,
+    2679.1210283533
+   ],
+   "cambio": [
+    2024,
+    8.45483560171654
+   ],
+   "ppc": [
+    2024,
+    6.10196161300839
+   ],
+   "populacao": [
+    2024,
+    819198
+   ]
+  },
+  {
+   "iso2": "SO",
+   "iso3": "SOM",
+   "m49": "706",
+   "nomeEn": "Somalia",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "SOS",
+   "pibPpc": [
+    2024,
+    1604.29116285918
+   ],
+   "cambio": null,
+   "ppc": [
+    2024,
+    11033.7002178252
+   ],
+   "populacao": [
+    2024,
+    19009151
+   ]
+  },
+  {
+   "iso2": "ZA",
+   "iso3": "ZAF",
+   "m49": "710",
+   "nomeEn": "South Africa",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Southern Africa",
+   "moeda": "ZAR",
+   "pibPpc": [
+    2024,
+    15478.6456794969
+   ],
+   "cambio": [
+    2024,
+    18.3286575505
+   ],
+   "ppc": [
+    2024,
+    7.4211352928491
+   ],
+   "populacao": [
+    2024,
+    64007187
+   ]
+  },
+  {
+   "iso2": "SS",
+   "iso3": "SSD",
+   "m49": "728",
+   "nomeEn": "South Sudan",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "SSP",
+   "pibPpc": null,
+   "cambio": [
+    2024,
+    2163.10387269883
+   ],
+   "ppc": [
+    2021,
+    126.743049621582
+   ],
+   "populacao": [
+    2024,
+    11943408
+   ]
+  },
+  {
+   "iso2": "ES",
+   "iso3": "ESP",
+   "m49": "724",
+   "nomeEn": "Spain",
+   "regiao": "Europe",
+   "sub": "Southern Europe",
+   "inter": "",
+   "moeda": "EUR",
+   "pibPpc": [
+    2024,
+    58063.7350840487
+   ],
+   "cambio": [
+    2024,
+    0.923889546117607
+   ],
+   "ppc": [
+    2024,
+    0.562107
+   ],
+   "populacao": [
+    2024,
+    48848840
+   ]
+  },
+  {
+   "iso2": "LK",
+   "iso3": "LKA",
+   "m49": "144",
+   "nomeEn": "Sri Lanka",
+   "regiao": "Asia",
+   "sub": "Southern Asia",
+   "inter": "",
+   "moeda": "LKR",
+   "pibPpc": [
+    2024,
+    15701.0907191253
+   ],
+   "cambio": [
+    2023,
+    327.506533333333
+   ],
+   "ppc": [
+    2024,
+    87.4611408490596
+   ],
+   "populacao": [
+    2024,
+    21916000
+   ]
+  },
+  {
+   "iso2": "SD",
+   "iso3": "SDN",
+   "m49": "729",
+   "nomeEn": "Sudan",
+   "regiao": "Africa",
+   "sub": "Northern Africa",
+   "inter": "",
+   "moeda": "SDG",
+   "pibPpc": [
+    2024,
+    2118.88891601563
+   ],
+   "cambio": [
+    2022,
+    546.75885
+   ],
+   "ppc": [
+    2024,
+    728.418821912166
+   ],
+   "populacao": [
+    2024,
+    50448963
+   ]
+  },
+  {
+   "iso2": "SR",
+   "iso3": "SUR",
+   "m49": "740",
+   "nomeEn": "Suriname",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "SRD",
+   "pibPpc": [
+    2024,
+    21832.187015648
+   ],
+   "cambio": [
+    2024,
+    33.1805516666667
+   ],
+   "ppc": [
+    2024,
+    10.5805259163027
+   ],
+   "populacao": [
+    2024,
+    634431
+   ]
+  },
+  {
+   "iso2": "SE",
+   "iso3": "SWE",
+   "m49": "752",
+   "nomeEn": "Sweden",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "SEK",
+   "pibPpc": [
+    2024,
+    71221.9379308266
+   ],
+   "cambio": [
+    2024,
+    10.5676364344775
+   ],
+   "ppc": [
+    2024,
+    8.490485
+   ],
+   "populacao": [
+    2024,
+    10569709
+   ]
+  },
+  {
+   "iso2": "CH",
+   "iso3": "CHE",
+   "m49": "756",
+   "nomeEn": "Switzerland",
+   "regiao": "Europe",
+   "sub": "Western Europe",
+   "inter": "",
+   "moeda": "CHF",
+   "pibPpc": [
+    2024,
+    97467.7447151829
+   ],
+   "cambio": [
+    2024,
+    0.880440833333333
+   ],
+   "ppc": [
+    2024,
+    0.972889
+   ],
+   "populacao": [
+    2024,
+    9005582
+   ]
+  },
+  {
+   "iso2": "SY",
+   "iso3": "SYR",
+   "m49": "760",
+   "nomeEn": "Syrian Arab Republic",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "SYP",
+   "pibPpc": [
+    2022,
+    4905.15252202552
+   ],
+   "cambio": [
+    2022,
+    2505.74691085873
+   ],
+   "ppc": [
+    2022,
+    807.95702765744
+   ],
+   "populacao": [
+    2024,
+    24672760
+   ]
+  },
+  {
+   "iso2": "TJ",
+   "iso3": "TJK",
+   "m49": "762",
+   "nomeEn": "Tajikistan",
+   "regiao": "Asia",
+   "sub": "Central Asia",
+   "inter": "",
+   "moeda": "TJS",
+   "pibPpc": [
+    2024,
+    5413.83109811464
+   ],
+   "cambio": [
+    2024,
+    10.7994916666667
+   ],
+   "ppc": [
+    2024,
+    2.71696406896418
+   ],
+   "populacao": [
+    2024,
+    10590927
+   ]
+  },
+  {
+   "iso2": "TH",
+   "iso3": "THA",
+   "m49": "764",
+   "nomeEn": "Thailand",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "THB",
+   "pibPpc": [
+    2024,
+    24909.2266037939
+   ],
+   "cambio": [
+    2024,
+    35.2935380808081
+   ],
+   "ppc": [
+    2024,
+    10.466022403802
+   ],
+   "populacao": [
+    2024,
+    71668011
+   ]
+  },
+  {
+   "iso2": "TL",
+   "iso3": "TLS",
+   "m49": "626",
+   "nomeEn": "Timor-Leste",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "USD",
+   "pibPpc": [
+    2024,
+    4429.20182282365
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    0.300724727908055
+   ],
+   "populacao": [
+    2024,
+    1400638
+   ]
+  },
+  {
+   "iso2": "TG",
+   "iso3": "TGO",
+   "m49": "768",
+   "nomeEn": "Togo",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Western Africa",
+   "moeda": "XOF",
+   "pibPpc": [
+    2024,
+    3814.83532681353
+   ],
+   "cambio": [
+    2024,
+    606.345297609063
+   ],
+   "ppc": [
+    2024,
+    201.237092771315
+   ],
+   "populacao": [
+    2024,
+    8406558
+   ]
+  },
+  {
+   "iso2": "TO",
+   "iso3": "TON",
+   "m49": "776",
+   "nomeEn": "Tonga",
+   "regiao": "Oceania",
+   "sub": "Polynesia",
+   "inter": "",
+   "moeda": "TOP",
+   "pibPpc": [
+    2024,
+    8174.34840883872
+   ],
+   "cambio": [
+    2024,
+    2.37304157408369
+   ],
+   "ppc": [
+    2024,
+    1.80513568511512
+   ],
+   "populacao": [
+    2024,
+    104175
+   ]
+  },
+  {
+   "iso2": "TT",
+   "iso3": "TTO",
+   "m49": "780",
+   "nomeEn": "Trinidad and Tobago",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "Caribbean",
+   "moeda": "TTD",
+   "pibPpc": [
+    2024,
+    36381.2720794439
+   ],
+   "cambio": [
+    2024,
+    6.75012324870591
+   ],
+   "ppc": [
+    2024,
+    3.47576710505924
+   ],
+   "populacao": [
+    2024,
+    1368333
+   ]
+  },
+  {
+   "iso2": "TN",
+   "iso3": "TUN",
+   "m49": "788",
+   "nomeEn": "Tunisia",
+   "regiao": "Africa",
+   "sub": "Northern Africa",
+   "inter": "",
+   "moeda": "TND",
+   "pibPpc": [
+    2024,
+    14542.0966234293
+   ],
+   "cambio": [
+    2024,
+    3.10745
+   ],
+   "ppc": [
+    2024,
+    0.894842382226534
+   ],
+   "populacao": [
+    2024,
+    12277109
+   ]
+  },
+  {
+   "iso2": "TM",
+   "iso3": "TKM",
+   "m49": "795",
+   "nomeEn": "Turkmenistan",
+   "regiao": "Asia",
+   "sub": "Central Asia",
+   "inter": "",
+   "moeda": "TMT",
+   "pibPpc": [
+    2024,
+    21025.8403822415
+   ],
+   "cambio": null,
+   "ppc": [
+    2024,
+    1.52535772094248
+   ],
+   "populacao": [
+    2024,
+    7494498
+   ]
+  },
+  {
+   "iso2": "TV",
+   "iso3": "TUV",
+   "m49": "798",
+   "nomeEn": "Tuvalu",
+   "regiao": "Oceania",
+   "sub": "Polynesia",
+   "inter": "",
+   "moeda": "AUD",
+   "pibPpc": [
+    2024,
+    6365.76616505123
+   ],
+   "cambio": [
+    2024,
+    1.51535803855596
+   ],
+   "ppc": [
+    2024,
+    1.40055610872817
+   ],
+   "populacao": [
+    2024,
+    9646
+   ]
+  },
+  {
+   "iso2": "UG",
+   "iso3": "UGA",
+   "m49": "800",
+   "nomeEn": "Uganda",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "UGX",
+   "pibPpc": [
+    2024,
+    3278.02086557843
+   ],
+   "cambio": [
+    2024,
+    3757.2625354215
+   ],
+   "ppc": [
+    2024,
+    1242.4954445437
+   ],
+   "populacao": [
+    2024,
+    50015092
+   ]
+  },
+  {
+   "iso2": "UA",
+   "iso3": "UKR",
+   "m49": "804",
+   "nomeEn": "Ukraine",
+   "regiao": "Europe",
+   "sub": "Eastern Europe",
+   "inter": "",
+   "moeda": "UAH",
+   "pibPpc": [
+    2024,
+    18636.13671875
+   ],
+   "cambio": [
+    2024,
+    40.152082715
+   ],
+   "ppc": [
+    2024,
+    11.6164030391157
+   ],
+   "populacao": [
+    2024,
+    37860221
+   ]
+  },
+  {
+   "iso2": "AE",
+   "iso3": "ARE",
+   "m49": "784",
+   "nomeEn": "United Arab Emirates",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "AED",
+   "pibPpc": [
+    2024,
+    79343.7793099888
+   ],
+   "cambio": [
+    2024,
+    3.6725
+   ],
+   "ppc": [
+    2024,
+    2.32695589646038
+   ],
+   "populacao": [
+    2024,
+    10986400
+   ]
+  },
+  {
+   "iso2": "GB",
+   "iso3": "GBR",
+   "m49": "826",
+   "nomeEn": "United Kingdom of Great Britain and Northern Ireland",
+   "regiao": "Europe",
+   "sub": "Northern Europe",
+   "inter": "",
+   "moeda": "GBP",
+   "pibPpc": [
+    2024,
+    62839.4679324927
+   ],
+   "cambio": [
+    2024,
+    0.782414580986262
+   ],
+   "ppc": [
+    2024,
+    0.664153
+   ],
+   "populacao": [
+    2024,
+    69281000
+   ]
+  },
+  {
+   "iso2": "TZ",
+   "iso3": "TZA",
+   "m49": "834",
+   "nomeEn": "United Republic of Tanzania",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "TZS",
+   "pibPpc": [
+    2024,
+    4226.92626953125
+   ],
+   "cambio": [
+    2024,
+    2597.90041666667
+   ],
+   "ppc": [
+    2024,
+    732.984960136712
+   ],
+   "populacao": [
+    2024,
+    68560157
+   ]
+  },
+  {
+   "iso2": "US",
+   "iso3": "USA",
+   "m49": "840",
+   "nomeEn": "United States of America",
+   "regiao": "Americas",
+   "sub": "Northern America",
+   "inter": "",
+   "moeda": "USD",
+   "pibPpc": [
+    2024,
+    86169.6641581914
+   ],
+   "cambio": [
+    2024,
+    1
+   ],
+   "ppc": [
+    2024,
+    1
+   ],
+   "populacao": [
+    2024,
+    340003797
+   ]
+  },
+  {
+   "iso2": "UY",
+   "iso3": "URY",
+   "m49": "858",
+   "nomeEn": "Uruguay",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "UYU",
+   "pibPpc": [
+    2024,
+    36596.7847357669
+   ],
+   "cambio": [
+    2024,
+    40.2127875
+   ],
+   "ppc": [
+    2024,
+    26.710334219867
+   ],
+   "populacao": [
+    2024,
+    3386588
+   ]
+  },
+  {
+   "iso2": "UZ",
+   "iso3": "UZB",
+   "m49": "860",
+   "nomeEn": "Uzbekistan",
+   "regiao": "Asia",
+   "sub": "Central Asia",
+   "inter": "",
+   "moeda": "UZS",
+   "pibPpc": [
+    2024,
+    12518.4323028403
+   ],
+   "cambio": [
+    2024,
+    12652.2868209739
+   ],
+   "ppc": [
+    2024,
+    3373.14097211991
+   ],
+   "populacao": [
+    2024,
+    36361859
+   ]
+  },
+  {
+   "iso2": "VU",
+   "iso3": "VUT",
+   "m49": "548",
+   "nomeEn": "Vanuatu",
+   "regiao": "Oceania",
+   "sub": "Melanesia",
+   "inter": "",
+   "moeda": "VUV",
+   "pibPpc": [
+    2024,
+    4367.82503750089
+   ],
+   "cambio": [
+    2024,
+    119.165
+   ],
+   "ppc": [
+    2024,
+    108.035176038305
+   ],
+   "populacao": [
+    2024,
+    327777
+   ]
+  },
+  {
+   "iso2": "VE",
+   "iso3": "VEN",
+   "m49": "862",
+   "nomeEn": "Venezuela (Bolivarian Republic of)",
+   "regiao": "Americas",
+   "sub": "Latin America and the Caribbean",
+   "inter": "South America",
+   "moeda": "VES",
+   "pibPpc": null,
+   "cambio": null,
+   "ppc": null,
+   "populacao": [
+    2024,
+    28405543
+   ]
+  },
+  {
+   "iso2": "VN",
+   "iso3": "VNM",
+   "m49": "704",
+   "nomeEn": "Viet Nam",
+   "regiao": "Asia",
+   "sub": "South-eastern Asia",
+   "inter": "",
+   "moeda": "VND",
+   "pibPpc": [
+    2024,
+    16387.9087954113
+   ],
+   "cambio": [
+    2024,
+    24164.8858333333
+   ],
+   "ppc": [
+    2024,
+    6954.97823040608
+   ],
+   "populacao": [
+    2024,
+    100987686
+   ]
+  },
+  {
+   "iso2": "YE",
+   "iso3": "YEM",
+   "m49": "887",
+   "nomeEn": "Yemen",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "YER",
+   "pibPpc": null,
+   "cambio": [
+    2023,
+    1355.11637864823
+   ],
+   "ppc": null,
+   "populacao": [
+    2024,
+    40583164
+   ]
+  },
+  {
+   "iso2": "ZM",
+   "iso3": "ZMB",
+   "m49": "894",
+   "nomeEn": "Zambia",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "ZMW",
+   "pibPpc": [
+    2024,
+    4221.01397093025
+   ],
+   "cambio": [
+    2024,
+    26.1664181859876
+   ],
+   "ppc": [
+    2024,
+    7.35899076614158
+   ],
+   "populacao": [
+    2024,
+    21314956
+   ]
+  },
+  {
+   "iso2": "ZW",
+   "iso3": "ZWE",
+   "m49": "716",
+   "nomeEn": "Zimbabwe",
+   "regiao": "Africa",
+   "sub": "Sub-Saharan Africa",
+   "inter": "Eastern Africa",
+   "moeda": "ZWG",
+   "pibPpc": [
+    2024,
+    5932.87021993648
+   ],
+   "cambio": [
+    2024,
+    3266.3319125
+   ],
+   "ppc": [
+    2024,
+    8.33515444469415
+   ],
+   "populacao": [
+    2024,
+    16634373
+   ]
+  },
+  {
+   "iso2": "TR",
+   "iso3": "TUR",
+   "m49": "792",
+   "nomeEn": "Türkiye",
+   "regiao": "Asia",
+   "sub": "Western Asia",
+   "inter": "",
+   "moeda": "TRY",
+   "pibPpc": [
+    2024,
+    45122.9317187258
+   ],
+   "cambio": [
+    2024,
+    32.8058614432703
+   ],
+   "ppc": [
+    2024,
+    11.554529
+   ],
+   "populacao": [
+    2024,
+    85518661
+   ]
+  }
+ ]
+}

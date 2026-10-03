@@ -30,6 +30,9 @@ import { habilidade } from '../sistemas/frentes';
 import { comprarSitio, precoDoSitio } from '../sistemas/rural';
 import { capitalDoEstado } from '../sistemas/escola';
 import { dinheiro as fmt } from '../texto';
+import { flex, ge } from '../texto';
+import { perfilDaVida } from '../mundo/vida';
+import { cidadeLonge, temNomeSujo } from './local';
 import { clamp } from '../rng';
 import { familiaDaTrilha } from '../dados/carreiras';
 import { anoDe } from '../tempo';
@@ -96,7 +99,7 @@ export const TRAJETORIAS: Conteudo[] = [
         resolver: c => ({ texto: c.v.caminhos.envolvimento!.nivel >= 3 ? 'Você avisou que estava fora. Ninguém disse nada — e isso era o que dava medo.' : 'Você parou. O dinheiro fácil fez falta no primeiro mês; o sono voltou no segundo.', memoria: null, efeito: () => parar(c.v, 'decidiu sair') }) },
       { id: 'mudar_de_vez', texto: 'Parar e mudar de cidade, para longe de todo mundo', comportamento: { coragem: 1 },
         disponivel: c => (idade(c.v) < 18 ? 'Sem idade para recomeçar longe sozinho.' : custa(c, custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)), 'Não há dinheiro para recomeçar longe.')),
-        resolver: c => ({ texto: 'Uma mala, um número de telefone novo, uma cidade onde ninguém sabe o seu nome.', memoria: null, efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : 'sao-paulo-sp'; parar(c.v, 'mudou de cidade para cortar os contatos'); pagar(c.v, custoDeMudanca(aqui, d)); mudarAgora(c.v, d, 'para recomeçar longe dos contatos de antes'); delete c.v.fatos['pressao_grupo']; } }) },
+        resolver: c => ({ texto: 'Uma mala, um número de telefone novo, uma cidade onde ninguém sabe o seu nome.', memoria: null, efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : cidadeLonge(c.v, 'sao-paulo-sp'); parar(c.v, 'mudou de cidade para cortar os contatos'); pagar(c.v, custoDeMudanca(aqui, d)); mudarAgora(c.v, d, 'para recomeçar longe dos contatos de antes'); delete c.v.fatos['pressao_grupo']; } }) },
       { id: 'moita', texto: 'Ficar na moita: menos dinheiro, menos exposição', comportamento: { disciplina: 1 }, disponivel: c => (c.v.caminhos.envolvimento?.cautela ? false : true),
         resolver: c => ({ texto: 'Menos encomenda, menos gente sabendo, o telefone desligado mais cedo. O dinheiro cai pela metade; o medo, um pouco.', memoria: null, efeito: () => moita(c.v, true) }) },
       { id: 'seguir_esquema', texto: c => (c.v.caminhos.envolvimento?.cautela ? 'Voltar ao ritmo de antes' : 'Seguir do mesmo jeito'), resolver: c => ({ texto: c.v.caminhos.envolvimento?.cautela ? 'Você voltou ao ritmo de antes. Mais dinheiro, mais gente em volta.' : 'Você seguiu. Cada ano parece o último sem problema.', memoria: null, efeito: () => moita(c.v, false) }) },
@@ -142,7 +145,7 @@ export const TRAJETORIAS: Conteudo[] = [
         resolver: c => ({ texto: 'Você foi ver os cursos gratuitos da cidade. Uma sala cheia de gente recomeçando alguma coisa.', memoria: 'Saiu da prisão decidid' + c.g('o', 'a', 'e') + ' a estudar.', efeito: () => { fato(c, 'plano_tecnico'); delete c.v.fatos['remicao_decidida']; } }) },
       { id: 'longe', texto: 'Recomeçar em outra cidade, longe dos contatos de antes', comportamento: { coragem: 1 },
         disponivel: c => custa(c, 2500, 'Sem dinheiro nem para a passagem e o primeiro mês.'),
-        resolver: c => ({ texto: 'Outra rodoviária, outra cidade. Ninguém ali sabe de onde você veio.', memoria: 'Recomeçou a vida em outra cidade depois da prisão.', efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : 'campinas-sp'; pagar(c.v, 2500); mudarAgora(c.v, d, 'para recomeçar'); const e = c.v.caminhos.envolvimento; if (e) e.contatoId = undefined; delete c.v.fatos['remicao_decidida']; } }) },
+        resolver: c => ({ texto: 'Outra rodoviária, outra cidade. Ninguém ali sabe de onde você veio.', memoria: 'Recomeçou a vida em outra cidade depois da prisão.', efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : cidadeLonge(c.v, 'campinas-sp'); pagar(c.v, 2500); mudarAgora(c.v, d, 'para recomeçar'); const e = c.v.caminhos.envolvimento; if (e) e.contatoId = undefined; delete c.v.fatos['remicao_decidida']; } }) },
       { id: 'antigos', texto: 'Procurar o pessoal de antes', comportamento: { impulsividade: 1 },
         resolver: c => ({ texto: 'Foram os únicos que abriram a porta sem perguntar nada.', memoria: 'Voltou para os contatos de antes da prisão.', relevancia: 'marco', tom: 'ruim', efeito: () => { delete c.v.fatos['remicao_decidida']; const e = c.v.caminhos.envolvimento; entrar(c.v, e?.categoria === 'fraude' ? 'patrimonial' : e?.categoria ?? 'patrimonial', e?.contatoId, c.r); } }) }
     ]
@@ -280,7 +283,7 @@ export const TRAJETORIAS: Conteudo[] = [
     titulo: 'O trabalho mudou',
     texto: c => { const o = ondaAgora(c.v)!; const ts = TEXTO_ONDA[o.familia.id] ?? ['O jeito de trabalhar mudou.']; return `${ts[o.ano % ts.length]} ${idade(c.v) >= 45 ? 'Gente da sua idade anda dizendo que já não compensa aprender tudo de novo.' : ''}`; },
     opcoes: [
-      { id: 'atualizar', texto: 'Fazer um curso de atualização (alguns meses, à noite)', comportamento: { disciplina: 1 }, disponivel: c => custa(c, 1500, 'O curso custa uns R$ 1.500 que não sobram agora.'),
+      { id: 'atualizar', texto: 'Fazer um curso de atualização (alguns meses, à noite)', comportamento: { disciplina: 1 }, disponivel: c => custa(c, 1500, `O curso custa uns ${fmt(1500)} que não sobram agora.`),
         resolver: c => ({ texto: 'Três meses de aula à noite. No fim, o que parecia outra língua virou ferramenta.', memoria: 'Fez um curso de atualização quando o trabalho mudou.', efeito: () => { pagar(c.v, 1500); const e = c.v.trabalho.atual; if (!e) return; e.tAtualizacao = c.v.t; e.desempenho = clamp(e.desempenho + 8); if (e.clientela !== undefined) e.clientela = clamp(e.clientela + 8); estresse(c, 4); } }) },
       { id: 'no_trabalho', texto: 'Aprender no próprio trabalho, errando', comportamento: { coragem: 1 },
         resolver: c => { const deu = c.r.chance(0.5 + c.v.mente.cognicao / 250); return { texto: deu ? 'Você foi aprendendo no susto. Deu certo, com alguns tropeços.' : 'Você tentou aprender sozinho. Ficou pela metade.', memoria: null, efeito: () => { if (deu && c.v.trabalho.atual) c.v.trabalho.atual.tAtualizacao = c.v.t; } }; } },
@@ -324,7 +327,7 @@ export const TRAJETORIAS: Conteudo[] = [
     opcoes: [
       { id: 'vista', texto: 'Comprar à vista', disponivel: c => custa(c, precoDoSitio(c.v), 'Não há esse dinheiro guardado.'),
         resolver: c => ({ texto: 'A escritura saiu no seu nome. Você andou a divisa inteira no primeiro dia.', memoria: 'Comprou a terra onde produzia.', relevancia: 'marco', tom: 'bom', efeito: () => comprarSitio(c.v, false) }) },
-      { id: 'credito', texto: 'Comprar com crédito rural (20% de entrada)', disponivel: c => (c.v.financas.negativado ? 'Com o nome sujo, não há crédito rural.' : custa(c, precoDoSitio(c.v) * 0.2, 'Não há a entrada.')),
+      { id: 'credito', texto: 'Comprar com crédito rural (20% de entrada)', disponivel: c => (c.v.financas.negativado ? (temNomeSujo(c.v) ? 'Com o nome sujo, não há crédito rural.' : 'Com o nome no cadastro de devedores, não há crédito rural.') : custa(c, precoDoSitio(c.v) * 0.2, 'Não há a entrada.')),
         resolver: c => ({ texto: 'Doze anos de parcela. Mas é sua.', memoria: 'Comprou a terra com crédito rural.', relevancia: 'marco', tom: 'bom', efeito: () => comprarSitio(c.v, true) }) },
       { id: 'nao', texto: 'Seguir arrendando', resolver: () => ({ texto: 'Outro comprou. O novo dono renovou o arrendamento — por enquanto.', memoria: null }) }
     ]
@@ -335,10 +338,14 @@ export const TRAJETORIAS: Conteudo[] = [
     id: 'inf_mei', tipo: 'decisao', idade: [18, 70], tema: 'trabalho', prioritario: true, repetir: 5,
     quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato === 'informal' && !e.mei && c.v.t - e.tInicio >= 24 && ((e.clientela ?? 40) >= 35 || e.salario >= 1800) && c.r.chance(0.6); },
     titulo: 'Sair da informalidade?',
-    texto: c => `Faz ${Math.floor((c.v.t - c.v.trabalho.atual!.tInicio) / 12)} anos que você trabalha sem registro nenhum. Uma conhecida formalizou como MEI: paga uma guia todo mês, emite nota, conta tempo para a aposentadoria — e alguns clientes só compram com nota.`,
+    // O regime simplificado do país (no Brasil, o MEI); onde o perfil não traz um, o registro de autônomo, sem nome.
+    texto: c => {
+      const mei = perfilDaVida(c.v).trabalho.microempreendedor;
+      return `Faz ${Math.floor((c.v.t - c.v.trabalho.atual!.tInicio) / 12)} anos que você trabalha sem registro nenhum. ${mei ? `Uma conhecida formalizou como ${mei.nome}: paga uma guia todo mês` : 'Uma conhecida se registrou como autônoma: paga a contribuição todo mês'}, emite nota, conta tempo para a aposentadoria — e alguns clientes só compram com nota.`;
+    },
     opcoes: [
-      { id: 'formalizar', texto: 'Formalizar como MEI', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: 'CNPJ na mão em uma tarde. A guia chega todo mês.', memoria: 'Formalizou o trabalho como MEI.', relevancia: 'biografia', efeito: () => formalizar(c.v) }) },
+      { id: 'formalizar', texto: c => (perfilDaVida(c.v).trabalho.microempreendedor ? `Formalizar como ${perfilDaVida(c.v).trabalho.microempreendedor!.nome}` : `Registrar-se como ${c.g('autônomo', 'autônoma', 'autônome')}`), comportamento: { disciplina: 1 },
+        resolver: c => ({ texto: perfilDaVida(c.v).trabalho.microempreendedor ? 'CNPJ na mão em uma tarde. A guia chega todo mês.' : 'O registro saiu em uma tarde. A contribuição chega todo mês.', memoria: textoDeFormalizar(c.v), relevancia: 'biografia', efeito: () => formalizar(c.v) }) },
       { id: 'seguir', texto: 'Seguir como está', resolver: () => ({ texto: 'Por ora, a guia pesaria mais do que ajudaria.', memoria: null }) }
     ]
   },
@@ -417,7 +424,13 @@ export function formalizar(v: Vida): void {
   if (e.contrato === 'informal') e.contrato = 'autonomo';
   if (e.clientela !== undefined) e.clientela = clamp(e.clientela + 6);
   marcarFato(v, 'formalizou_mei');
-  marcar(v, 'conquista', 'Formalizou o trabalho como MEI.', 2);
+  marcar(v, 'conquista', textoDeFormalizar(v), 2);
+}
+
+/** "Formalizou o trabalho como MEI." (o regime do país) ou, sem regime com nome, como autônomo. */
+export function textoDeFormalizar(v: Vida): string {
+  const mei = perfilDaVida(v).trabalho.microempreendedor;
+  return `Formalizou o trabalho como ${mei ? mei.nome : flex(ge(v), 'autônomo', 'autônoma', 'autônome')}.`;
 }
 
 /** Onde a experiência militar vale na vida civil (reserva). */

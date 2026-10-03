@@ -25,11 +25,12 @@ export function forcaDoSetor(municipioId: string, setor: Setor, ano: number): nu
   switch (setor) {
     case 'agro': {
       const interior = p === 'pequena' || p === 'polo';
-      const regiao = m.regiao === 'Centro-Oeste' || m.regiao === 'Sul' || m.regiao === 'Norte' ? 1.2 : m.regiao === 'Nordeste' ? 1 : 0.9;
+      // A vocação regional é um dado do Brasil (as regiões); fora, neutra.
+      const regiao = !m.regiao ? 1 : m.regiao === 'Centro-Oeste' || m.regiao === 'Sul' || m.regiao === 'Norte' ? 1.2 : m.regiao === 'Nordeste' ? 1 : 0.9;
       return (interior ? 1.35 : grande ? 0.45 : 0.8) * regiao;
     }
     case 'industria': {
-      const regiao = m.regiao === 'Sul' || m.regiao === 'Sudeste' ? 1.25 : m.id === 'manaus-am' ? 1.3 : 0.75;
+      const regiao = !m.regiao ? 1 : m.regiao === 'Sul' || m.regiao === 'Sudeste' ? 1.25 : m.id === 'manaus-am' ? 1.3 : 0.75;
       return (p === 'polo' || p === 'metropolitana' ? 1.25 : p === 'metropole' ? 1 : p === 'capital' ? 0.85 : 0.6) * regiao;
     }
     case 'tecnologia': {

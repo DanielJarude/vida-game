@@ -10,7 +10,9 @@
  * vivem ANOS anos, respondendo às decisões (propostas: aceita a de clube
  * maior; momentos: a estratégia do simulador).
  *
- * Confere: J = V + E + D por temporada, passagem e carreira; títulos,
+ * Confere: J = V + E + D por temporada, passagem e carreira (inclusive as
+ * temporadas parciais de quem chegou no meio do ano); a comissão técnica
+ * dos outros esportes nunca vira técnico de futebol; títulos,
  * acessos, rebaixamentos, demissões, clubes; exemplos de linhas da carreira.
  */
 
@@ -94,4 +96,55 @@ for (const v of [...grupos['ex-jogador'].slice(0, 3), ...grupos['sem passado de 
   if (process.env.DEBUG) console.log('  - saídas do emprego:', v.trabalho.historico.filter(h => h.ocupacaoId === 'tecnico_futebol').map(h => h.motivo).join(' | '), '· agora:', v.trabalho.atual?.ocupacaoId, '· idade', Math.floor((v.t - v.eu.tNasc) / 12));
   const tr = trajetoriasDaVida(v).filter(t => t.area === 'esporte' || t.area === 'tecnico').map(t => `${t.titulo}: ${t.resumo}`);
   for (const t of tr) console.log(`  - legado: ${t}`);
+}
+
+// Contratação no meio da temporada: o clube em crise chama quem está sem clube; a primeira temporada conta só os jogos dirigidos.
+{
+  const todas = Object.values(grupos).flat();
+  const meio = todas.flatMap(v => v.caminhos.tecnico!.passagens.filter(p => p.meioDeTemporada));
+  let foraDaConta = 0;
+  for (const p of meio) { const t = p.temporadas[0]; if (t && (t.jogos !== t.v + t.e + t.d || t.jogos > p.meioDeTemporada!.rodadas - p.meioDeTemporada!.rodada || t.estadual !== undefined)) foraDaConta++; }
+  const primeiras = meio.map(p => p.temporadas[0]).filter(Boolean);
+  console.log(`\n### Contratação no meio da temporada\n`);
+  console.log(`- carreiras com ao menos uma: ${todas.filter(v => v.caminhos.tecnico!.passagens.some(p => p.meioDeTemporada)).length} de ${todas.length} · passagens: ${meio.length} de ${todas.reduce((a, v) => a + v.caminhos.tecnico!.passagens.length, 0)}`);
+  if (meio.length) console.log(`- assumiu em: ${dist(meio.map(p => p.meioDeTemporada!.posicao))} (posição) · na rodada ${dist(meio.map(p => p.meioDeTemporada!.rodada + 1))} · jogos na temporada parcial: ${dist(primeiras.map(t => t.jogos))} · terminou em ${dist(primeiras.map(t => t.colocacao ?? 0))} · títulos na parcial: ${primeiras.filter(t => t.titulos?.length).length} · rebaixados: ${primeiras.filter(t => t.rebaixamento).length} · demitidos na parcial: ${primeiras.filter(t => t.parcial).length}`);
+  console.log(`- temporadas parciais fora da conta (J ≠ V+E+D, mais jogos que as rodadas restantes, ou estadual): ${foraDaConta}`);
+}
+
+// A comissão é da modalidade: ex-atletas de outros esportes que aceitam a comissão técnica e vivem 22 anos pelo motor.
+{
+  const MODS = ['basquete', 'volei', 'natacao', 'atletismo', 'lutas'] as const;
+  const N_MOD = Number(process.env.VIDAS_MOD ?? 6);
+  console.log(`\n### Comissão técnica por modalidade — ${N_MOD} ex-atletas por esporte, 22 anos\n`);
+  console.log('| esporte | convite (cargo) | chegaram a técnico | cargo de técnico | viraram técnico de futebol | carreira de técnico de futebol |');
+  console.log('| --- | --- | --- | --- | --- | --- |');
+  for (const m of MODS) {
+    let futebol = 0, carreira = 0, tecnicos = 0;
+    const convites = new Set<string>(), cargos = new Set<string>();
+    for (let s = 1; s <= N_MOD; s++) {
+      let v = criarVida({ nome: 'Sim', sobrenome: 'Souza', genero: s % 2 ? 'masculino' : 'feminino', municipioId: CIDADES[s % CIDADES.length], semente: 770000 + s * 31 + m.length });
+      for (let k = 0; k < 30 && !v.morte; k++) { v = avancarAno(v).vida; for (let j = 0; j < 12 && v.momento; j++) v = executar(v, { tipo: 'decidir', opcaoId: v.momento.opcoes.find(o => !o.bloqueio)?.id ?? v.momento.opcoes[0].id }).vida; }
+      if (v.morte) continue;
+      v = transacao(v, (x, rr) => {
+        x.trabalho.atual = undefined; x.educacao.matricula = undefined; x.educacao.basica = undefined; x.caminhos.oportunidades = []; x.caminhos.esporte = undefined;
+        garantirFrente(x, m);
+        Object.assign(x.caminhos.frentes[m]!, { habilidade: 80, interesse: 90, meses: 200, auge: 82 });
+        entrarNaBase(x, m, x.moradia.municipioId, 'Clube da Cidade');
+        profissionalizar(x, rr, 3);
+        x.fatos['pos_treinador'] = x.t;
+        encerrarCarreira(x, x.caminhos.esporte!, 'idade');
+        const op = x.caminhos.oportunidades.find(o => o.ocupacaoId && ocupacao(o.ocupacaoId).trilha === 'treino');
+        if (op) { convites.add(op.ocupacaoId!); contratar(x, rr, ocupacao(op.ocupacaoId!), 'oportunidade'); x.trabalho.experiencia['treino'] = 48; }
+        x.momento = null;
+      }).vida;
+      for (let k = 0; k < 22 && !v.morte; k++) { v = avancarAno(v).vida; for (let j = 0; j < 12 && v.momento && !v.morte; j++) v = executar(v, { tipo: 'decidir', opcaoId: v.momento.opcoes.find(o => !o.bloqueio)?.id ?? v.momento.opcoes[0].id }).vida; }
+      const empregos = [...v.trabalho.historico, ...(v.trabalho.atual ? [v.trabalho.atual] : [])];
+      const ids = empregos.flatMap(e => [...(e.postos ?? []).map(p => p.ocupacaoId), e.ocupacaoId]);
+      if (ids.includes('tecnico_futebol')) futebol++;
+      if (v.caminhos.tecnico) carreira++;
+      const tec = ids.filter(id => /^tecnico_/.test(id) && ocupacao(id).trilha === 'treino');
+      if (tec.length) { tecnicos++; tec.forEach(id => cargos.add(id)); }
+    }
+    console.log(`| ${m} | ${[...convites].join(', ') || '—'} | ${tecnicos} | ${[...cargos].join(', ') || '—'} | ${futebol} | ${carreira} |`);
+  }
 }

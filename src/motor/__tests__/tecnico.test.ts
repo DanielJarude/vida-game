@@ -19,7 +19,7 @@ import { CLUBES, oClube } from '../dados/clubes';
 import { garantirFrente } from '../sistemas/frentes';
 import { carreirasEsportivas, encerrarCarreira, entrarNaBase, fecharTemporada, profissionalizar } from '../sistemas/esporte';
 import { registrarTemporada } from '../sistemas/palmares';
-import { aceitarPropostaDeTecnico, criarPropostaDeTecnico, decidirFinal, linhaDoTecnico, passagemAtual, processarTecnico, resumoDaPassagem, resumoDoTecnico } from '../sistemas/tecnico';
+import { aceitarPropostaDeTecnico, criarPropostaDeTecnico, decidirFinal, demitirDoComando, ligaAteACrise, linhaDoTecnico, passagemAtual, processarTecnico, propostaDeCrise, resumoDaPassagem, resumoDoTecnico } from '../sistemas/tecnico';
 import { exportarVida, importarVida } from '../save';
 import { resolverSituacao, situacaoAberta, trajetoriaDeSituacao } from '../sistemas/situacoes';
 import { trajetoriasDaVida } from '../sistemas/legado';
@@ -234,5 +234,118 @@ describe('C3 · a seleção como passagem do técnico', () => {
     // O calendário de seleções do jogo: em quatro anos, ao menos um torneio (mundial ou continental).
     expect(p.temporadas.some(t => !!t.torneio)).toBe(true);
     expect(trajetoriasDaVida(v).find(t => t.area === 'tecnico')!.realizacoes.some(x => /seleção brasileira/.test(x))).toBe(true);
+  });
+});
+
+/**
+ * Contratação no meio da temporada: o clube em crise (a liga jogada SEM você
+ * até ali, bem abaixo do que o elenco prometia) demite o técnico e chama quem
+ * está sem clube. A proposta mostra a tabela do dia; aceitar executa ESTA
+ * proposta; a temporada parcial continua DAQUELA tabela, e os números são só
+ * os dos jogos dirigidos (J = V + E + D; o estadual já passou — não há título
+ * estadual nesse ano).
+ */
+describe('contratação no meio da temporada', () => {
+  /** Um técnico demitido, sem clube, com a proposta de um clube em crise na mesa. */
+  function emCrise(semente = 1): Vida {
+    return transacao(tecnico(), x => {
+      demitirDoComando(x);
+      const c = x.caminhos.tecnico!;
+      for (let s = semente; s < semente + 400 && !c.proposta; s++) propostaDeCrise(x, criarRng(s), c);
+      x.momento = null;
+    }).vida;
+  }
+
+  it('a crise sai da tabela: a liga jogada sem você até o meio, abaixo do que o elenco prometia', () => {
+    let crises = 0;
+    for (let s = 1; s <= 300; s++) {
+      const t = ligaAteACrise(criarRng(s), 'Náutico', 3);
+      if (!t) continue;
+      crises++;
+      expect(t.rodada).toBeGreaterThan(0);
+      expect(t.rodada).toBeLessThan(t.rodadas);
+      // Cada jogo distribui 2 (empate) ou 3 pontos: dez jogos por rodada.
+      const soma = t.pontos.reduce((a, b) => a + b, 0);
+      expect(soma).toBeGreaterThanOrEqual(20 * t.rodada);
+      expect(soma).toBeLessThanOrEqual(30 * t.rodada);
+      // A posição é a da tabela: quem tem mais pontos fica na frente.
+      expect(t.posicao).toBeGreaterThanOrEqual(1 + t.pontos.filter((x, i) => i !== 0 && x > t.pontos[0]).length);
+      expect(t.posicao).toBeLessThanOrEqual(1 + t.pontos.filter((x, i) => i !== 0 && x >= t.pontos[0]).length);
+      expect(t.posicao >= 17 || t.posicao >= Math.max(t.esperada + 5, 13)).toBe(true);
+    }
+    // A crise é um acontecimento, não a regra.
+    expect(crises).toBeGreaterThan(5);
+    expect(crises).toBeLessThan(250);
+  });
+
+  it('a proposta mostrada (a tabela do dia) é a executada; a temporada parcial conta só os jogos dirigidos; save/reload no meio', () => {
+    let v = emCrise(3);
+    const prop = v.caminhos.tecnico!.proposta!;
+    const m = prop.meioDeTemporada!;
+    expect(prop.origem).toBe('crise');
+    expect(m).toBeDefined();
+    v = transacao(v, x => { const d = conteudoPorId('tec_proposta'); if (d?.tipo === 'decisao') abrirDecisao(x, d, contexto(x, criarRng(5))); }).vida;
+    expect(v.momento?.titulo).toBe('Um clube em crise');
+    expect(v.momento?.texto).toContain(prop.clube);
+    expect(v.momento?.texto).toContain(`${m.posicao}º lugar`);
+    expect(v.momento?.texto).toContain(`${m.rodada} rodadas`);
+    expect(v.momento?.texto).toContain(`${m.rodadas - m.rodada} rodadas que faltam`);
+    v = executar(v, { tipo: 'decidir', opcaoId: 'aceitar' }).vida;
+    const p = passagemAtual(v)!;
+    expect(p.clube).toBe(prop.clube);
+    expect(p.salario).toBe(prop.salario);
+    expect(p.nivel).toBe(prop.nivel);
+    expect(p.meioDeTemporada).toEqual({ rodada: m.rodada, rodadas: m.rodadas, posicao: m.posicao });
+    expect(p.retomada).toEqual(m);
+    expect(p.temporadas.length).toBe(0);
+    expect(v.biografia.some(e => e.texto.startsWith('No meio da temporada:') && e.texto.includes(`${m.posicao}º lugar`))).toBe(true);
+    // Save/reload com a temporada pela metade: a tabela do dia volta igual, e a temporada jogada depois é a mesma.
+    const w = recarregar(v);
+    expect(w.caminhos.tecnico).toEqual(v.caminhos.tecnico);
+    const jogar = (x0: Vida) => transacao(x0, x => { x.t += 12; processarTecnico(x, criarRng(31)); if (passagemAtual(x)?.decisao) decidirFinal(x, criarRng(32), 'neutro'); }).vida;
+    const a = jogar(v), b = jogar(w);
+    const pa = a.caminhos.tecnico!.passagens.find(q => !!q.meioDeTemporada)!;
+    expect(b.caminhos.tecnico!.passagens.find(q => !!q.meioDeTemporada)!.temporadas).toEqual(pa.temporadas);
+    const t = pa.temporadas[0];
+    expect(t.desdeRodada).toBe(m.rodada);
+    expect(t.estadual).toBeUndefined();
+    expect(t.jogos).toBe(t.v + t.e + t.d);
+    if (!t.parcial) expect(t.jogos).toBe(m.rodadas - m.rodada); else expect(t.jogos).toBeLessThan(m.rodadas - m.rodada);
+    expect((t.titulos ?? []).some(x => /estadual/.test(x))).toBe(false);
+    // A tabela do dia só serve à primeira temporada.
+    expect(pa.retomada).toBeUndefined();
+    expect(resumoDaPassagem(pa).jogos).toBe(t.jogos);
+  });
+
+  it('muitas crises: J = V + E + D, só os jogos que faltavam, nada de estadual no ano da chegada; o ano seguinte é inteiro', () => {
+    let chegadas = 0;
+    for (let s = 1; s <= 16; s++) {
+      let v = emCrise(s * 50);
+      const prop = v.caminhos.tecnico!.proposta;
+      if (!prop) continue;
+      chegadas++;
+      v = transacao(v, x => {
+        aceitarPropostaDeTecnico(x, criarRng(s), prop.id);
+        for (let k = 0; k < 2 && passagemAtual(x); k++) { x.t += 12; processarTecnico(x, criarRng(s * 10 + k)); if (passagemAtual(x)?.decisao) decidirFinal(x, criarRng(s), 'neutro'); }
+      }).vida;
+      const p = v.caminhos.tecnico!.passagens.find(q => q.clube === prop.clube && q.meioDeTemporada)!;
+      const [t1, t2] = p.temporadas;
+      expect(t1.jogos).toBe(t1.v + t1.e + t1.d);
+      expect(t1.jogos).toBeLessThanOrEqual(prop.meioDeTemporada!.rodadas - prop.meioDeTemporada!.rodada);
+      if (!t1.parcial) expect(t1.jogos).toBe(prop.meioDeTemporada!.rodadas - prop.meioDeTemporada!.rodada);
+      expect(t1.estadual).toBeUndefined();
+      if (t2) { expect(t2.desdeRodada).toBeUndefined(); expect(t2.estadual).toBeDefined(); expect(t2.jogos).toBe(t2.v + t2.e + t2.d); }
+      const r = resumoDoTecnico(v.caminhos.tecnico!);
+      expect(r.jogos).toBe(r.v + r.e + r.d);
+    }
+    expect(chegadas).toBeGreaterThan(8);
+  });
+
+  it('save: a tabela do dia com forma inválida é recusada', () => {
+    const v = transacao(emCrise(3), (x, r) => { aceitarPropostaDeTecnico(x, r, x.caminhos.tecnico!.proposta!.id); }).vida;
+    const ruim = JSON.parse(exportarVida(v));
+    const ps = ruim.vida.caminhos.tecnico.passagens;
+    ps[ps.length - 1].retomada.pontos = [1, 2, 3];
+    expect(importarVida(JSON.stringify(ruim)).tipo).not.toBe('ok');
   });
 });

@@ -1,12 +1,17 @@
 /** Vida adulta (18–59). */
 
+import { dinheiro as moeda, dinheiroCurto as moedaCurta } from '../texto';
 import { familiaDaTrilha } from '../dados/carreiras';
 import { pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao, custa } from './efeitos';
 import { idadePessoa, temFato, marcarFato, lembrarCom } from '../nucleo';
-import { economiaLocal, municipio, MUNICIPIOS } from '../dados/lugares';
+import { economiaLocal, municipio } from '../dados/lugares';
+import { paisDaVida, perfilDaVida } from '../mundo/vida';
+import { oPais, paraPais } from '../mundo/registro';
+import { redeDeSaude } from '../sistemas/saude';
+import { cidadesDaVida, deEscritorio, temFesta, transferencia } from './local';
 import { nomeOcupacaoId, contratar, encerrarEmprego, elegibilidade, degrausAcima } from '../sistemas/trabalho';
 import { editaisAbertos } from '../sistemas/concurso';
 import { noServicoInicial, propor } from '../sistemas/compromissos';
@@ -31,7 +36,7 @@ export const ADULTO: Conteudo[] = [
   /* ============================================================ TRABALHO */
   {
     id: 'adu_chefe_novo', tipo: 'acontecimento', idade: [19, 64], tema: 'trabalho', repetir: 6,
-    quando: c => empregado(c) && comChefia(c.v.trabalho.atual) && noTrabalho(c.v, 'organizacao', 'colegas'),
+    quando: c => empregado(c) && deEscritorio(c.v) && comChefia(c.v.trabalho.atual) && noTrabalho(c.v, 'organizacao', 'colegas'),
     narrar: c => {
       const bom = c.r.chance(0.5);
       const e = c.v.trabalho.atual!;
@@ -141,7 +146,7 @@ export const ADULTO: Conteudo[] = [
   {
     id: 'adu_festa_firma', tipo: 'decisao', idade: [20, 64], tema: 'trabalho', repetir: 4,
     papeis: { colega: P.genteDe('trabalho') },
-    quando: c => empregado(c) && comChefia(c.v.trabalho.atual) && noTrabalho(c.v, 'organizacao', 'colegas'),
+    quando: c => empregado(c) && deEscritorio(c.v) && comChefia(c.v.trabalho.atual) && noTrabalho(c.v, 'organizacao', 'colegas'),
     titulo: 'Confraternização',
     texto: c => `Festa de fim de ano da firma, open bar. ${c.p.colega.nome} já bebeu demais e está falando mal da diretoria em voz alta, perto do diretor.`,
     opcoes: [
@@ -166,10 +171,10 @@ export const ADULTO: Conteudo[] = [
     id: 'adu_golpe_pix', tipo: 'decisao', idade: [18, 90], tema: 'dinheiro', repetir: 6,
     quando: c => c.v.financas.conta > 800,
     titulo: 'Mensagem do banco',
-    texto: () => 'Chega um SMS "do seu banco": compra suspeita de R$ 2.890 aprovada. Um número para ligar e cancelar. Do outro lado, uma voz educada pede um código que chegou no seu celular.',
+    texto: () => `Chega um SMS "do seu banco": compra suspeita de ${moeda(2890)} aprovada. Um número para ligar e cancelar. Do outro lado, uma voz educada pede um código que chegou no seu celular.`,
     opcoes: [
       { id: 'passar', texto: 'Passar o código para cancelar logo', comportamento: { impulsividade: 1 },
-        resolver: c => { const perda = Math.min(c.v.financas.conta, c.r.int(1500, 6000)); return { texto: `Em dez minutos, ${perda.toLocaleString('pt-BR')} reais saíram por Pix para uma conta desconhecida. O banco disse que não podia fazer nada.`, memoria: `Caiu no golpe do falso atendente e perdeu R$ ${perda.toLocaleString('pt-BR')}.`, tom: 'ruim', efeito: () => { dinheiro(c, -perda); estresse(c, 10); } }; } },
+        resolver: c => { const perda = Math.min(c.v.financas.conta, c.r.int(1500, 6000)); return { texto: `Em dez minutos, ${moeda(perda)} saíram por transferência instantânea para uma conta desconhecida. O banco disse que não podia fazer nada.`, memoria: `Caiu no golpe do falso atendente e perdeu ${moeda(perda)}.`, tom: 'ruim', efeito: () => { dinheiro(c, -perda); estresse(c, 10); } }; } },
       { id: 'desligar', texto: 'Desligar e ligar para o número do cartão', comportamento: { disciplina: 1 },
         resolver: () => ({ texto: 'No número oficial, confirmaram: não havia compra nenhuma. Era golpe.', memoria: null }) }
     ]
@@ -179,15 +184,15 @@ export const ADULTO: Conteudo[] = [
     papeis: { amigo: P.amigo },
     quando: c => c.v.financas.conta > 3000,
     titulo: c => `${c.p.amigo.nome} precisa de dinheiro`,
-    texto: c => `${c.p.amigo.nome} liga constrangid${gp(c, 'amigo', 'o', 'a')}: o aluguel atrasou e o dono ameaçou despejo. Precisa de R$ 3.000 e jura que devolve em três meses.`,
+    texto: c => `${c.p.amigo.nome} liga constrangid${gp(c, 'amigo', 'o', 'a')}: o aluguel atrasou e o dono ameaçou despejo. Precisa de ${moeda(3000)} e jura que devolve em três meses.`,
     opcoes: [
       { id: 'emprestar', texto: 'Emprestar', comportamento: { generosidade: 2 },
         resolver: c => {
           const devolve = c.r.chance(0.55);
-          return { texto: devolve ? `${c.p.amigo.nome} devolveu tudo, com atraso de dois meses e uma garrafa de vinho.` : `Os três meses viraram um ano. O assunto ficou pesado entre vocês.`, memoria: `Emprestou três mil reais para ${c.p.amigo.nome}${devolve ? '' : ', que nunca devolveu'}.`, efeito: () => { if (!devolve) { dinheiro(c, -3000); tensao(c, 'amigo', 30); } else prox(c, 'amigo', 10); } };
+          return { texto: devolve ? `${c.p.amigo.nome} devolveu tudo, com atraso de dois meses e uma garrafa de vinho.` : `Os três meses viraram um ano. O assunto ficou pesado entre vocês.`, memoria: `Emprestou ${moeda(3000)} para ${c.p.amigo.nome}${devolve ? '' : ', que nunca devolveu'}.`, efeito: () => { if (!devolve) { dinheiro(c, -3000); tensao(c, 'amigo', 30); } else prox(c, 'amigo', 10); } };
         } },
       { id: 'parte', texto: 'Dar uma parte, sem cobrar', comportamento: { generosidade: 1 },
-        resolver: c => ({ texto: `Você mandou mil reais e disse que não precisava devolver.`, memoria: null, efeito: () => { dinheiro(c, -1000); prox(c, 'amigo', 8); } }) },
+        resolver: c => ({ texto: `Você mandou ${moeda(1000)} e disse que não precisava devolver.`, memoria: null, efeito: () => { dinheiro(c, -1000); prox(c, 'amigo', 8); } }) },
       { id: 'negar', texto: 'Dizer que não pode', resolver: c => ({ texto: `${c.p.amigo.nome} disse que entendia.`, memoria: null, efeito: () => prox(c, 'amigo', -6) }) }
     ]
   },
@@ -203,10 +208,10 @@ export const ADULTO: Conteudo[] = [
       const custo = grave ? c.r.int(2500, 6000) : c.r.int(800, 2200);
       const peca = c.r.pick(['a embreagem', 'a suspensão', 'o radiador', 'a bomba de combustível', 'os freios']);
       const texto = c.vezes === 0
-        ? grave ? `${OCarro} deixou você na mão no meio da avenida. O mecânico falou em motor: R$ ${custo.toLocaleString('pt-BR')}.` : `${OCarro} foi para a oficina trocar ${peca}: R$ ${custo.toLocaleString('pt-BR')}.`
+        ? grave ? `${OCarro} deixou você na mão no meio da avenida. O mecânico falou em motor: ${moeda(custo)}.` : `${OCarro} foi para a oficina trocar ${peca}: ${moeda(custo)}.`
         : grave
-          ? c.r.pick([`De novo na oficina, e desta vez era o motor. ${OCarro} já não era o mesmo.`, `${OCarro} ferveu na estrada e voltou de guincho.`, `O mecânico já chamava você pelo nome. Mais R$ ${custo.toLocaleString('pt-BR')} em ${oCarro}.`])
-          : `Mais uma ida à oficina: ${peca}, R$ ${custo.toLocaleString('pt-BR')}.`;
+          ? c.r.pick([`De novo na oficina, e desta vez era o motor. ${OCarro} já não era o mesmo.`, `${OCarro} ferveu na estrada e voltou de guincho.`, `O mecânico já chamava você pelo nome. Mais ${moeda(custo)} em ${oCarro}.`])
+          : `Mais uma ida à oficina: ${peca}, ${moeda(custo)}.`;
       return { texto, relevancia: 'cotidiano', tom: 'ruim', efeito: () => { dinheiro(c, -custo); carro.estado = Math.min(100, carro.estado + 30); } };
     }
   },
@@ -218,7 +223,7 @@ export const ADULTO: Conteudo[] = [
       const moto = c.v.financas.bens.some(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) === 'moto');
       return {
         texto: moto
-          ? c.vezes === 0 ? 'Um carro fechou a moto num cruzamento. Foram dois meses de gesso na perna e fisioterapia pelo SUS.' : 'Outro tombo de moto, outra vez no asfalto. Desta vez foi o braço.'
+          ? c.vezes === 0 ? `Um carro fechou a moto num cruzamento. Foram dois meses de gesso na perna e fisioterapia ${redeDeSaude(c.v).pelo}.` : 'Outro tombo de moto, outra vez no asfalto. Desta vez foi o braço.'
           : c.vezes === 0 ? 'Um motorista avançou o sinal e bateu na lateral do carro. Ninguém se machucou; o conserto levou três semanas.' : 'Levou uma batida na traseira parado no semáforo. Mais três semanas sem carro.',
         relevancia: c.vezes === 0 || moto ? 'biografia' : 'cotidiano', tom: 'ruim',
         efeito: () => { if (moto) { saude(c, -8); estresse(c, 8); } else dinheiro(c, -1800); }
@@ -237,7 +242,7 @@ export const ADULTO: Conteudo[] = [
         ['O piso da cozinha estufou', 'trocar o piso'],
         ['A fiação velha derrubou a energia da casa', 'refazer a parte elétrica']
       ]);
-      return { texto: `${problema[0]}. ${problema[1][0].toUpperCase() + problema[1].slice(1)} custou R$ ${custo.toLocaleString('pt-BR')} e um mês de pó.`, relevancia: 'cotidiano', tom: 'ruim', efeito: () => dinheiro(c, -custo) };
+      return { texto: `${problema[0]}. ${problema[1][0].toUpperCase() + problema[1].slice(1)} custou ${moeda(custo)} e um mês de pó.`, relevancia: 'cotidiano', tom: 'ruim', efeito: () => dinheiro(c, -custo) };
     }
   },
   {
@@ -353,7 +358,7 @@ export const ADULTO: Conteudo[] = [
     texto: c => `${c.p.pai.nome} ligou com a voz baixa: a aposentadoria não está fechando o mês e os remédios subiram.`,
     opcoes: [
       { id: 'mensal', texto: 'Mandar um valor todo mês', comportamento: { familia: 2, generosidade: 1 },
-        resolver: c => ({ texto: `Todo começo de mês, um Pix para ${c.p.pai.nome}.`, memoria: `Passou a ajudar ${c.p.pai.nome} com dinheiro todo mês.`, efeito: () => { prox(c, 'pai', 10); fato(c, `ajuda_mensal_${c.p.pai.id}`); } }) },
+        resolver: c => ({ texto: `Todo começo de mês, ${transferencia(c.v)} para ${c.p.pai.nome}.`, memoria: `Passou a ajudar ${c.p.pai.nome} com dinheiro todo mês.`, efeito: () => { prox(c, 'pai', 10); fato(c, `ajuda_mensal_${c.p.pai.id}`); } }) },
       { id: 'uma_vez', texto: 'Ajudar desta vez', comportamento: { familia: 1 }, resolver: c => ({ texto: 'Você mandou o suficiente para aquele mês.', memoria: null, efeito: () => { dinheiro(c, -1200); prox(c, 'pai', 4); } }) },
       { id: 'nao', texto: 'Explicar que não dá', resolver: c => ({ texto: `${c.p.pai.nome} disse que se virava.`, memoria: null, efeito: () => prox(c, 'pai', -5) }) }
     ]
@@ -365,7 +370,7 @@ export const ADULTO: Conteudo[] = [
       const criancas = P.filho(0, 10)(c.v);
       const cenas = [
         `O Natal foi na casa de ${c.p.quem.nome}: amigo-secreto, uva-passa no arroz e uma discussão sobre política que ninguém venceu.`,
-        `Passou o Ano-Novo com a família de ${c.p.quem.nome}, na praia, todo mundo de branco num apartamento alugado para doze.`,
+        (temFesta(c.v, 'reveillon') ? `Passou o Ano-Novo com a família de ${c.p.quem.nome}, na praia, todo mundo de branco num apartamento alugado para doze.` : `Passou o Ano-Novo com a família de ${c.p.quem.nome}, todo mundo num apartamento alugado para doze.`),
         `O almoço de Páscoa juntou a família toda pela primeira vez em anos, na casa de ${c.p.quem.nome}.`,
         criancas.length ? `No Natal, ${criancas[0].nome} descobriu quem era o Papai Noel: ${c.p.quem.nome}, com a barba de algodão torta.` : `O Natal na casa de ${c.p.quem.nome} foi pequeno este ano: pouca gente, muita comida, conversa até tarde.`,
         `A ceia de Natal acabou em briga por causa de uma herança antiga. ${c.p.quem.nome} foi a primeira pessoa a pedir desculpas.`,
@@ -397,27 +402,29 @@ export const ADULTO: Conteudo[] = [
     titulo: 'Férias',
     texto: c => `Pela primeira vez em muito tempo, sobraram uns dias de folga${P.parceiro(c.v)[0] ? ` junto com ${P.parceiro(c.v)[0].nome}` : ''} e algum dinheiro na conta.`,
     opcoes: [
-      { id: 'praia', texto: c => (mora(c).regiao === 'Nordeste' ? 'Uma semana numa praia do interior do estado' : 'Uma semana no Nordeste'), resolver: c => ({ texto: 'Sol, água de coco e nenhum e-mail.', memoria: mora(c).regiao === 'Nordeste' ? 'Tirou uma semana de férias numa praia tranquila.' : 'Tirou férias no Nordeste.', efeito: () => { dinheiro(c, -3500); feliz(c, 8); estresse(c, -15); for (const par of P.parceiro(c.v)) { const rom = c.v.vinculos[par.id].romance; if (rom) rom.envolvimento += 6; } } }) },
+      { id: 'praia', texto: c => (!mora(c).regiao ? 'Uma semana numa praia' : mora(c).regiao === 'Nordeste' ? 'Uma semana numa praia do interior do estado' : 'Uma semana no Nordeste'), resolver: c => ({ texto: mora(c).regiao ? 'Sol, água de coco e nenhum e-mail.' : 'Sol, mar e nenhum e-mail.', memoria: !mora(c).regiao || mora(c).regiao === 'Nordeste' ? 'Tirou uma semana de férias numa praia tranquila.' : 'Tirou férias no Nordeste.', efeito: () => { dinheiro(c, -3500); feliz(c, 8); estresse(c, -15); for (const par of P.parceiro(c.v)) { const rom = c.v.vinculos[par.id].romance; if (rom) rom.envolvimento += 6; } } }) },
       { id: 'familia', texto: 'Visitar a família', resolver: c => ({ texto: 'Dias de comida caseira e conversa na varanda.', memoria: null, efeito: () => { dinheiro(c, -800); estresse(c, -8); for (const p of P.genitor(c.v)) { const vin = c.v.vinculos[p.id]; vin.proximidade += 6; vin.tUltimoContato = c.v.t; } } }) },
       { id: 'guardar', texto: 'Ficar em casa e guardar o dinheiro', comportamento: { disciplina: 1 }, resolver: c => ({ texto: 'Você maratonou séries e dormiu até tarde.', memoria: null, efeito: () => estresse(c, -4) }) }
     ]
   },
   {
     id: 'adu_copa', tipo: 'acontecimento', idade: [5, 95], tema: 'lazer', repetir: 4,
-    quando: c => [2030, 2034, 2038, 2042, 2046, 2050, 2054, 2058, 2062, 2066, 2070, 2074, 2078, 2082, 2086, 2090, 2094, 2098, 2102, 2106].includes(anoDe(c.v.t)),
-    narrar: c => ({ texto: c.r.chance(0.2) ? `Em ${anoDe(c.v.t)} o Brasil ganhou a Copa. A rua virou festa até de manhã.` : `A Copa de ${anoDe(c.v.t)} acabou para o Brasil nas ${c.r.pick(['oitavas', 'quartas', 'semifinais'])}. O bairro inteiro tinha bandeirinha na janela.`, relevancia: 'cotidiano' })
+    // A Copa é de quem mora onde o futebol é paixão nacional (a popularidade do perfil); a seleção é a do país onde se mora.
+    quando: c => [2030, 2034, 2038, 2042, 2046, 2050, 2054, 2058, 2062, 2066, 2070, 2074, 2078, 2082, 2086, 2090, 2094, 2098, 2102, 2106].includes(anoDe(c.v.t))
+      && (perfilDaVida(c.v).esporte.popularidade.futebol ?? 1) >= 1.2,
+    narrar: c => ({ texto: c.r.chance(0.2) ? `Em ${anoDe(c.v.t)} ${oPais(paisDaVida(c.v))} ganhou a Copa. A rua virou festa até de manhã.` : `A Copa de ${anoDe(c.v.t)} acabou ${paraPais(paisDaVida(c.v))} nas ${c.r.pick(['oitavas', 'quartas', 'semifinais'])}. O bairro inteiro tinha bandeirinha na janela.`, relevancia: 'cotidiano' })
   },
   {
     id: 'adu_sus_fila', tipo: 'acontecimento', idade: [20, 90], tema: 'saude', repetir: 5,
     quando: c => !c.v.financas.planoDeSaude && c.v.corpo.saude < 60,
-    narrar: c => ({ texto: 'Uma dor no joelho virou pedido de ressonância pelo SUS. A marcação saiu para dali a oito meses.', relevancia: 'cotidiano', efeito: () => estresse(c, 3) })
+    narrar: c => ({ texto: redeDeSaude(c.v).sistema === 'seguro' ? 'Uma dor no joelho virou pedido de ressonância. Sem plano, o preço do exame fez você adiar.' : `Uma dor no joelho virou pedido de ressonância ${redeDeSaude(c.v).pelo}. A marcação saiu para dali a ${redeDeSaude(c.v).sistema === 'universal' ? 'dois' : 'oito'} meses.`, relevancia: 'cotidiano', efeito: () => estresse(c, 3) })
   },
   {
     id: 'adu_negocio_proprio', tipo: 'decisao', idade: [23, 60], tema: 'trabalho', repetir: 10,
     papeis: { socio: P.qualquer(P.amigo, P.irmao) },
     quando: c => !c.v.caminhos.negocio || c.v.caminhos.negocio.estado === 'fechado',
     titulo: 'O negócio',
-    texto: c => { const t = tipoDoSocio(c); return `${c.p.socio.nome} quer abrir ${t.nome} e chama você para sócio${c.g('', 'a', 'e')}: entrar com uns R$ ${Math.round(t.capital * 0.5 / 1000)} mil e trabalhar junto. ${c.p.socio.nome} entende do ramo; você entraria com o dinheiro e o braço.`; },
+    texto: c => { const t = tipoDoSocio(c); return `${c.p.socio.nome} quer abrir ${t.nome} e chama você para sócio${c.g('', 'a', 'e')}: entrar com uns ${moedaCurta(t.capital * 0.5)} e trabalhar junto. ${c.p.socio.nome} entende do ramo; você entraria com o dinheiro e o braço.`; },
     opcoes: [
       { id: 'entrar', texto: 'Entrar de sócio', comportamento: { coragem: 2 },
         disponivel: c => custa(c, tipoDoSocio(c).capital * 0.5, 'Não há dinheiro guardado para a sua parte.'),
@@ -466,8 +473,8 @@ function mudarPorProposta(c: Ctx, destinoId: string, juntos: boolean): void {
 function destinoDaProposta(c: Ctx) {
   const aqui = municipio(c.v.moradia.municipioId);
   // Propostas vêm de centros maiores, de preferência na mesma região.
-  const pontuar = (m: typeof aqui) => (m.regiao === aqui.regiao ? 3 : 0) + (m.perfil === 'metropole' ? 3 : m.perfil === 'capital' ? 1 : 0) + (m.uf === aqui.uf ? 1 : 0) + (m.id === 'sao-paulo-sp' ? 1 : 0);
-  const opcoes = MUNICIPIOS.filter(m => m.id !== aqui.id && (m.perfil === 'metropole' || m.perfil === 'capital'))
+  const pontuar = (m: typeof aqui) => (m.regiao && m.regiao === aqui.regiao ? 3 : 0) + (m.perfil === 'metropole' ? 3 : m.perfil === 'capital' ? 1 : 0) + (m.uf === aqui.uf ? 1 : 0) + (m.id === 'sao-paulo-sp' ? 1 : 0);
+  const opcoes = cidadesDaVida(c.v).filter(m => m.id !== aqui.id && (m.perfil === 'metropole' || m.perfil === 'capital'))
     .sort((a, b) => pontuar(b) - pontuar(a)).slice(0, 6);
   // Estável entre abrir e resolver a decisão: depende só da vida e do ano.
   let h = anoDe(c.v.t) * 31;

@@ -233,7 +233,7 @@ describe('H8 · save', () => {
     const antigo = { ...structuredClone(v), versao: 18 } as unknown as Vida;
     const r = interpretar(JSON.stringify(antigo));
     expect(r.tipo).toBe('ok');
-    expect((r as { vida: Vida }).vida.versao).toBe(19);
+    expect((r as { vida: Vida }).vida.versao).toBe(20);
     expect(continuarComo((r as { vida: Vida }).vida, b).erro).toBeUndefined();
   });
 });

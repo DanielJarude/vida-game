@@ -1,57 +1,85 @@
 /**
- * Nomes por geração. Uma avó nascida em 1955 não se chama Valentina, e um
- * bebê de 2030 raramente se chama Francisca.
+ * Nomes por país e por geração. Uma avó nascida em 1955 não se chama
+ * Valentina, e um bebê de 2030 raramente se chama Francisca — em Recife ou
+ * em Osaka. As listas moram nos perfis dos países (`mundo/paises/*`); um
+ * país pode ter vários grupos (as línguas e as regiões dele), e quem nasce
+ * numa divisão onde um grupo é comum tende a nascer nele, sem que ninguém
+ * vire carimbo: há mistura.
  */
 
 import type { Genero } from '../tipos';
 import type { Rng } from '../rng';
+import type { Geracao, GrupoDeNomes } from '../mundo/tipos';
+import { PAIS_PADRAO, perfilDoPais, temPerfil } from '../mundo/registro';
 
-const MASC: Record<'antiga' | 'meio' | 'nova', string[]> = {
-  antiga: ['José', 'João', 'Antônio', 'Francisco', 'Carlos', 'Paulo', 'Sebastião', 'Luiz', 'Raimundo', 'Manoel', 'Geraldo', 'Jorge', 'Roberto', 'Osvaldo', 'Benedito', 'Valdir', 'Edson', 'Nelson', 'Aparecido', 'Waldemar',
-    'Pedro', 'Joaquim', 'Severino', 'Amaro', 'Lourival', 'Milton', 'Wilson', 'Ademir', 'Gilberto', 'Mário', 'Rubens', 'Hélio', 'Otávio', 'Ivo', 'Arlindo', 'Nilton', 'Cícero', 'Expedito', 'Genésio', 'Walter'],
-  meio: ['Marcelo', 'Rodrigo', 'Fábio', 'Anderson', 'Leandro', 'Alexandre', 'Rafael', 'Fernando', 'Márcio', 'Daniel', 'Diego', 'Bruno', 'Thiago', 'Eduardo', 'Renato', 'Leonardo', 'Gustavo', 'André', 'Vinícius', 'Wellington', 'Juliano', 'Cristiano', 'Everton', 'Cleber',
-    'Rogério', 'Sérgio', 'Ricardo', 'Luciano', 'Adriano', 'Flávio', 'Robson', 'Júlio', 'Maurício', 'Alessandro', 'Emerson', 'Wagner', 'Jefferson', 'Ronaldo', 'Felipe', 'Rafael', 'Tiago', 'Douglas', 'Igor', 'Caio', 'Danilo', 'Henrique', 'Guilherme', 'Rodolfo'],
-  nova: ['Miguel', 'Arthur', 'Gael', 'Heitor', 'Theo', 'Davi', 'Bernardo', 'Gabriel', 'Ravi', 'Samuel', 'Noah', 'Pedro', 'Lorenzo', 'Benício', 'Matheus', 'Lucas', 'Isaac', 'Joaquim', 'Enzo', 'Murilo', 'Bento', 'Caio', 'Vicente', 'Anthony',
-    'Otávio', 'Levi', 'Nicolas', 'Lucca', 'Emanuel', 'Henry', 'Rafael', 'Guilherme', 'Felipe', 'Benjamin', 'João Miguel', 'Pietro', 'Antônio', 'Francisco', 'Leonardo', 'Yuri', 'Kauã', 'Ryan', 'Luan', 'Cauã', 'Davi Lucca', 'Martin', 'Augusto', 'Raul']
-};
+const perfilNomes = (pais: string) => perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO).nomes;
 
-const FEM: Record<'antiga' | 'meio' | 'nova', string[]> = {
-  antiga: ['Maria', 'Francisca', 'Antônia', 'Ana', 'Rosa', 'Terezinha', 'Aparecida', 'Sebastiana', 'Luzia', 'Raimunda', 'Marlene', 'Neusa', 'Conceição', 'Zilda', 'Iracema', 'Dalva', 'Cleusa', 'Benedita', 'Irene', 'Lourdes',
-    'Joana', 'Tereza', 'Célia', 'Marta', 'Vera', 'Sônia', 'Nair', 'Helena', 'Rita', 'Glória', 'Odete', 'Jandira', 'Ivone', 'Elza', 'Nilza', 'Hilda', 'Lúcia', 'Regina', 'Fátima', 'Graça'],
-  meio: ['Juliana', 'Patrícia', 'Fernanda', 'Aline', 'Renata', 'Vanessa', 'Camila', 'Priscila', 'Adriana', 'Daniela', 'Cristiane', 'Luciana', 'Tatiane', 'Simone', 'Carla', 'Débora', 'Kelly', 'Viviane', 'Michele', 'Letícia', 'Andreia', 'Sabrina',
-    'Elaine', 'Cláudia', 'Rosana', 'Márcia', 'Silvana', 'Jaqueline', 'Gisele', 'Tânia', 'Sandra', 'Eliane', 'Karina', 'Larissa', 'Bruna', 'Mariana', 'Amanda', 'Natália', 'Raquel', 'Paula', 'Carolina', 'Bianca', 'Roberta', 'Thaís', 'Jéssica', 'Monique'],
-  nova: ['Helena', 'Alice', 'Laura', 'Maria Clara', 'Cecília', 'Valentina', 'Heloísa', 'Manuela', 'Sophia', 'Liz', 'Aurora', 'Isabella', 'Lívia', 'Maitê', 'Antonella', 'Beatriz', 'Lorena', 'Mariana', 'Eloá', 'Júlia', 'Ayla', 'Luna', 'Clara', 'Esther',
-    'Maria Alice', 'Isis', 'Lara', 'Melissa', 'Yasmin', 'Rebeca', 'Agatha', 'Olívia', 'Maria Luiza', 'Mirella', 'Nicole', 'Emanuelly', 'Ana Clara', 'Catarina', 'Rafaela', 'Elisa', 'Stella', 'Gabriela', 'Vitória', 'Marina', 'Pietra', 'Maya', 'Zoe', 'Bianca']
-};
-
-const NEUTROS = ['Alex', 'Sam', 'Cris', 'Dani', 'Ariel', 'Kim', 'Mika', 'Sasha', 'Jules', 'Luz', 'Sol', 'Manu', 'Duda', 'Noah', 'Gabi', 'Eli', 'Rudá', 'Ávila'];
-
-export const SOBRENOMES = [
-  'Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes',
-  'Costa', 'Ribeiro', 'Martins', 'Carvalho', 'Almeida', 'Lopes', 'Soares', 'Fernandes', 'Vieira', 'Barbosa',
-  'Rocha', 'Dias', 'Nascimento', 'Andrade', 'Moreira', 'Nunes', 'Marques', 'Machado', 'Mendes', 'Freitas',
-  'Cardoso', 'Ramos', 'Gonçalves', 'Santana', 'Teixeira', 'Pinto', 'Castro', 'Moura', 'Cavalcanti', 'Dantas',
-  'Araújo', 'Monteiro', 'Batista', 'Correia', 'Farias', 'Miranda', 'Tavares', 'Brito', 'Sales', 'Xavier'
-];
-
-function geracao(anoNasc: number): 'antiga' | 'meio' | 'nova' {
-  if (anoNasc < 1972) return 'antiga';
-  if (anoNasc < 2004) return 'meio';
+function geracao(pais: string, anoNasc: number): Geracao {
+  const [a, b] = perfilNomes(pais).cortes ?? [1972, 2004];
+  if (anoNasc < a) return 'antiga';
+  if (anoNasc < b) return 'meio';
   return 'nova';
 }
 
-export function sortearNome(r: Rng, genero: Genero, anoNasc: number): string {
-  if (genero === 'nao_binario') return r.pick(NEUTROS);
-  // Um pouco de mistura entre gerações vizinhas — nome não é regra.
-  let g = geracao(anoNasc);
-  if (r.chance(0.08)) {
-    if (g === 'antiga' || g === 'nova') g = 'meio';
-    else g = anoNasc < 1995 ? 'antiga' : 'nova';
-  }
-  return r.pick(genero === 'masculino' ? MASC[g] : FEM[g]);
+/** O grupo de nomes de quem nasce numa divisão do país (a maioria no grupo do lugar; alguns em outro). */
+export function grupoDeNomes(r: Rng, pais: string, divisao?: string): GrupoDeNomes {
+  const grupos = perfilNomes(pais).grupos;
+  if (grupos.length === 1) return grupos[0];
+  // `peso` é a parcela NACIONAL do grupo. Dentro das divisões dele, a parcela local é muito maior: ×60 aproxima
+  // "parcela nacional ÷ peso da região na população" (uma região típica tem 1–3% do país); fora delas, quase ninguém
+  // nasce com os nomes de lá (×0,05). Os grupos nacionais (sem `divisoes`) valem o próprio peso em todo lugar.
+  return r.weighted(grupos, g => g.peso * (divisao && g.divisoes ? (g.divisoes.includes(divisao) ? 60 : 0.05) : 1))!;
 }
 
-export const sortearSobrenome = (r: Rng) => r.pick(SOBRENOMES);
+const grupoPorSobrenome = (pais: string, sobrenome?: string) =>
+  sobrenome ? perfilNomes(pais).grupos.find(g => g.sobrenomes.some(s => sobrenome.split(' ').includes(s))) : undefined;
+
+/**
+ * Um prenome. `pais` e `divisao` dizem onde a pessoa nasce; `sobrenome`, se
+ * já se sabe, puxa o grupo da família (o filho de uma família tâmil em
+ * Mumbai tende a ter nome tâmil).
+ */
+export function sortearNome(r: Rng, genero: Genero, anoNasc: number, pais = PAIS_PADRAO, divisao?: string, sobrenome?: string): string {
+  const perfil = perfilNomes(pais);
+  if (genero === 'nao_binario' && perfil.neutros?.length) return r.pick(perfil.neutros);
+  const grupo = grupoPorSobrenome(pais, sobrenome) ?? grupoDeNomes(r, pais, divisao);
+  // Um pouco de mistura entre gerações vizinhas — nome não é regra.
+  let g = geracao(pais, anoNasc);
+  if (r.chance(0.08)) {
+    if (g === 'antiga' || g === 'nova') g = 'meio';
+    else g = anoNasc < (perfil.cortes?.[1] ?? 2004) - 9 ? 'antiga' : 'nova';
+  }
+  return r.pick(genero === 'feminino' ? grupo.fem[g] : grupo.masc[g]);
+}
+
+/** Um sobrenome de família do país (dois, onde se usam dois: "García López"). */
+export function sortearSobrenome(r: Rng, pais = PAIS_PADRAO, divisao?: string): string {
+  const grupo = grupoDeNomes(r, pais, divisao);
+  if (grupo.sobrenome === 'dois') {
+    const a = r.pick(grupo.sobrenomes);
+    let b = r.pick(grupo.sobrenomes);
+    for (let k = 0; k < 4 && b === a; k++) b = r.pick(grupo.sobrenomes);
+    return `${a} ${b}`;
+  }
+  return r.pick(grupo.sobrenomes);
+}
+
+/**
+ * O sobrenome de quem nasce, pelo costume do lugar onde nasce:
+ *  - onde se usam dois (o mundo hispânico), o primeiro do pai e o primeiro da mãe;
+ *  - nos demais (inclusive o costume luso, em que a família já usa o nome
+ *    que passa), o da família: o do pai, ou o da mãe quando não há pai.
+ */
+export function sobrenomeDeQuemNasce(pais: string, doPai?: string, daMae?: string): string | undefined {
+  const base = doPai || daMae;
+  if (!base) return undefined;
+  const grupo = grupoPorSobrenome(pais, base) ?? perfilNomes(pais).grupos[0];
+  if (grupo.sobrenome === 'dois' && doPai && daMae) return `${doPai.split(' ')[0]} ${daMae.split(' ')[0]}`;
+  return base;
+}
+
+/** O país dá dois sobrenomes a quem nasce (o primeiro do pai e o primeiro da mãe)? */
+export const usaDoisSobrenomes = (pais: string) => perfilNomes(pais).grupos.some(g => g.sobrenome === 'dois');
 
 export const NOMES_PET_CACHORRO = ['Pipoca', 'Thor', 'Mel', 'Bidu', 'Luna', 'Paçoca', 'Bob', 'Pretinha', 'Nina', 'Scooby', 'Belinha', 'Fred'];
 export const NOMES_PET_GATO = ['Frajola', 'Mingau', 'Salem', 'Mia', 'Tom', 'Nala', 'Garfield', 'Amora', 'Chico', 'Jade'];

@@ -78,6 +78,27 @@ describe('tela do legado', () => {
     expect(screen.getByRole('heading', { name: 'Quem veio antes' })).toBeTruthy();
   });
 
+  it('a saúde dela aparece na escolha (só o que tem nome) e vai junto: "Você" mostra os sinais do que não tem nome', () => {
+    const { v, b } = morta();
+    const filha = Object.values(v.pessoas).find(p => p.nome === b)!;
+    filha.condicoes = [
+      { id: 'hipertensao', tInicio: v.t - 60, gravidade: 1, diagnosticada: true, tDiagnostico: v.t - 48, tratando: true },
+      { id: 'diabetes', tInicio: v.t - 6, gravidade: 2, diagnosticada: false, tratando: false }
+    ];
+    salvar(v);
+    abrir();
+    const botao = screen.getByRole('button', { name: new RegExp(`${b}, `) });
+    expect(within(botao).getByText('Saúde: pressão alta (em tratamento).')).toBeTruthy();
+    expect(within(botao).queryByText(/diabetes/)).toBeNull();
+    fireEvent.click(botao);
+    fireEvent.click(screen.getByRole('button', { name: `Continuar como ${b}` }));
+    const nova = (ler() as { vida: Vida }).vida;
+    expect(nova.corpo.condicoes.map(c => c.id).sort()).toEqual(['diabetes', 'hipertensao']);
+    // O diabetes que ninguém nomeou continua sem nome: na tela "Você", são os sinais do corpo dela.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Você' })[0]);
+    expect(within(screen.getByRole('region', { name: 'Sinais do corpo' })).getByText(/muita sede/i)).toBeTruthy();
+  });
+
   it('encerrar a história registra a partilha e oferece outra vida', () => {
     const { v } = morta();
     salvar(v);

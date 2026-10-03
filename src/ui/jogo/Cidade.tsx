@@ -8,7 +8,9 @@ import { useMemo, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
-import { economiaLocal, municipio, MUNICIPIOS, NOMES_UF, nomeLugar } from '../../motor/dados/lugares';
+import { cidadesDoPais, economiaLocal, municipio, nomeDaDivisao, nomeLugar, siglaDaDivisao } from '../../motor/dados/lugares';
+import { perfilDoPais } from '../../motor/mundo/registro';
+import { CustoDeViverAqui, MudarDePais } from './Mundo';
 import { consequenciasDaMudanca, custoDeMudanca } from '../../motor/sistemas/processos';
 import { BotaoAcao, Folio, Secao } from '../comum';
 import { deslocamento, NOME_MODO, tempoEmPalavras } from '../../motor/sistemas/transporte';
@@ -27,7 +29,7 @@ export function Cidade({ vida, agir, irCompras }: Props & { irCompras?: () => vo
   const desl = deslocamento(vida);
   return (
     <div className="cidade material">
-      <Folio kicker={<><span className="folio__area">Vida · Cidade</span> · {m.uf}</>} titulo={m.nome} lede={`${PERFIL[m.perfil] ?? 'uma cidade'}${m.capital ? ' — a capital' : ''}. ${anos >= 1 ? `Você vive aqui há ${anos} ${anos === 1 ? 'ano' : 'anos'}.` : 'Você chegou há pouco.'}`} />
+      <Folio kicker={<><span className="folio__area">Vida · Cidade</span> · {siglaDaDivisao(m)}</>} titulo={m.nome} lede={`${PERFIL[m.perfil] ?? 'uma cidade'}${m.capital ? ' — a capital' : ''}. ${anos >= 1 ? `Você vive aqui há ${anos} ${anos === 1 ? 'ano' : 'anos'}.` : 'Você chegou há pouco.'}`} />
       <dl className="dados cidade__dados">
         <div className="dado"><dt>Custo de vida</dt><dd>{ec.custo > 1.15 ? 'alto' : ec.custo < 0.9 ? 'baixo' : 'médio'}</dd></div>
         <div className="dado"><dt>Salários</dt><dd>{ec.salario > 1.1 ? 'acima da média' : ec.salario < 0.9 ? 'abaixo da média' : 'na média'}</dd></div>
@@ -35,9 +37,11 @@ export function Cidade({ vida, agir, irCompras }: Props & { irCompras?: () => vo
         <div className="dado"><dt>Transporte público</dt><dd>{ec.transporte === 'bom' ? 'bom: dá para viver sem carro' : ec.transporte === 'ruim' ? 'fraco: o ônibus demora' : 'razoável'}</dd></div>
         {desl && <div className="dado"><dt>O seu trajeto</dt><dd>{NOME_MODO[desl.modo]}{desl.nomeVeiculo ? ` (${desl.nomeVeiculo})` : ''} · {tempoEmPalavras(desl.minutos)}</dd></div>}
       </dl>
+      <CustoDeViverAqui vida={vida} />
 
       <p className="nota">{i >= 12 ? 'A imobiliária, a concessionária, o banco, as lojas e o abrigo de animais ficam em ' : 'Por enquanto, a cidade é o caminho da escola e a rua de casa. As lojas ficam em '}{irCompras ? <button type="button" className="link" onClick={irCompras}>Vida · Compras →</button> : 'Vida · Compras'}.</p>
       {i >= 18 && <Mudar vida={vida} agir={agir} />}
+      {i >= 18 && <MudarDePais vida={vida} agir={agir} />}
     </div>
   );
 }
@@ -46,8 +50,12 @@ export function Cidade({ vida, agir, irCompras }: Props & { irCompras?: () => vo
 function Mudar({ vida, agir }: Props) {
   const [uf, setUf] = useState('');
   const [destino, setDestino] = useState('');
-  const ufs = useMemo(() => [...new Set(MUNICIPIOS.map(m => m.uf))].sort((a, b) => NOMES_UF[a].localeCompare(NOMES_UF[b])), []);
-  const cidades = MUNICIPIOS.filter(m => m.uf === uf && m.id !== vida.moradia.municipioId);
+  // As cidades do país onde se mora (mudar de país é outra seção: `MudarDePais`).
+  const pais = municipio(vida.moradia.municipioId).pais;
+  const doPais = cidadesDoPais(pais);
+  const ufs = useMemo(() => [...new Set(doPais.map(m => m.uf))].map(u => ({ u, nome: nomeDaDivisao(doPais.find(m => m.uf === u)!) })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')), [doPais]);
+  const cidades = doPais.filter(m => m.uf === uf && m.id !== vida.moradia.municipioId);
+  const tipo = perfilDoPais(pais).divisao.tipo[0];
   const aqui = economiaLocal(vida.moradia.municipioId);
   const efeitos = destino ? consequenciasDaMudanca(vida, destino) : [];
   return (
@@ -55,10 +63,10 @@ function Mudar({ vida, agir }: Props) {
       <p className="nota">Mudar leva quem mora com você e deixa o resto para trás. Escolha o destino para ver, antes, o que muda.</p>
       <div className="campos-linha">
         <label className="campo">
-          <span className="campo__rotulo">Estado</span>
+          <span className="campo__rotulo">{tipo.charAt(0).toUpperCase() + tipo.slice(1)}</span>
           <select value={uf} onChange={e => { setUf(e.target.value); setDestino(''); }}>
             <option value="">Escolha</option>
-            {ufs.map(u => <option key={u} value={u}>{NOMES_UF[u]}</option>)}
+            {ufs.map(x => <option key={x.u} value={x.u}>{x.nome}</option>)}
           </select>
         </label>
         <label className="campo">

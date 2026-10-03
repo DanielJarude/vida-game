@@ -17,7 +17,7 @@ import { clamp } from '../rng';
 import type { Convivio, Pessoa, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
-import { MUNICIPIOS, municipio } from '../dados/lugares';
+import { cidadesDoPais, municipio, paisDaCidade } from '../dados/lugares';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { flex } from '../texto';
 import { rngDe } from '../rng';
@@ -366,7 +366,7 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
     // Amigos também mudam de cidade — e a amizade passa a ser à distância.
     const amigo = vin.estagio === 'amigo' || vin.estagio === 'amigo_proximo';
     if (amigo && i >= 20 && i <= 60 && !vin.romance && p.municipioId === v.moradia.municipioId && r.chance(0.02)) {
-      const destino = r.pick(MUNICIPIOS.filter(m => m.id !== p.municipioId && (m.perfil === 'metropole' || m.perfil === 'capital')));
+      const destino = r.pick(cidadesDoPais(paisDaCidade(p.municipioId)).filter(m => m.id !== p.municipioId && (m.perfil === 'metropole' || m.perfil === 'capital')));
       p.municipioId = destino.id;
       escrever(v, { texto: variante(v, 'amigo_mudou', [
         `${p.nome} se mudou para ${destino.nome}. A amizade passou a caber no celular.`,

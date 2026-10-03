@@ -15,6 +15,7 @@
  * dia quer sair. As reações são sempre do jogador.
  */
 
+import { unidadeDeConta } from './local';
 import type { Conteudo, Ctx, Resultado } from './base';
 import type { Negocio } from '../tipos';
 import { clamp } from '../rng';
@@ -233,7 +234,7 @@ export const NEGOCIOS_CONTEUDO: Conteudo[] = [
     texto: c => `O dono do ponto de ${neg(c).nome} quer reajustar o aluguel bem acima da inflação. "O bairro valorizou", ele diz.`,
     opcoes: [
       { id: 'aceitar', texto: 'Aceitar o reajuste', consequencia: () => 'O custo fixo sobe todo ano.', resolver: c => ({ texto: 'Você assinou o aditivo. A conta do mês ficou mais pesada.', memoria: null, efeito: () => { neg(c).capital = Math.round(neg(c).capital * 1.08); } }) },
-      { id: 'negociar', texto: 'Negociar', comportamento: { coragem: 1 }, resolver: c => { const deu = c.r.chance(0.55); return { texto: deu ? 'Fecharam no meio do caminho.' : 'O dono não cedeu um real. Você aceitou, contrariado.'.replace('contrariado', c.g('contrariado', 'contrariada', 'contrariade')), memoria: null, efeito: () => { neg(c).capital = Math.round(neg(c).capital * (deu ? 1.03 : 1.08)); } }; } },
+      { id: 'negociar', texto: 'Negociar', comportamento: { coragem: 1 }, resolver: c => { const deu = c.r.chance(0.55); return { texto: deu ? 'Fecharam no meio do caminho.' : `O dono não cedeu um ${unidadeDeConta(c.v)}. Você aceitou, contrariado.`.replace('contrariado', c.g('contrariado', 'contrariada', 'contrariade')), memoria: null, efeito: () => { neg(c).capital = Math.round(neg(c).capital * (deu ? 1.03 : 1.08)); } }; } },
       { id: 'mudar', texto: 'Mudar de ponto', consequencia: c => `A mudança custa uns ${fmt(valor(c, 0.2))}, e parte da freguesia não acompanha.`,
         resolver: c => ({ texto: 'Um ponto novo, três ruas adiante. Parte da freguesia achou; parte, não.', memoria: `Mudou ${neg(c).nome} de ponto por causa do aluguel.`, relevancia: 'cotidiano', efeito: () => { caixa(c, -valor(c, 0.2)); mov(c, -8); } }) }
     ]

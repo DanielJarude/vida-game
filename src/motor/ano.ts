@@ -8,7 +8,10 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { educacaoDaVida } from './mundo/vida';
+import { processarMundo } from './sistemas/migracao';
 import type { Rng } from './rng';
+import { entrarNaVida, paisDaVida } from './mundo/vida';
 import { clamp } from './rng';
 import type { Retorno, Vida } from './tipos';
 import { escrever, idade, transacao } from './nucleo';
@@ -70,6 +73,7 @@ export interface ResumoDoAno {
 }
 
 export function avancarAno(vida: Vida): Retorno {
+  entrarNaVida(vida);
   if (vida.morte) return { vida, aviso: { texto: 'Esta vida terminou.', tom: 'neutro' } };
   if (vida.momento) return { vida, aviso: { texto: 'Há uma decisão esperando por você.', tom: 'neutro' } };
   // Uma escolha de trajetória pendente (duas coisas que não cabem juntas) não fica esquecida: vira pergunta antes do ano andar.
@@ -91,7 +95,7 @@ function viverAno(v: Vida, r: Rng): void {
   const inicioBio = v.biografia.length;
   v.t += 12;
   // A economia do país anda antes de tudo (e não depende de nada que a pessoa fez).
-  const ec = avancarEconomia(v.economia, v.t);
+  const ec = avancarEconomia(v.economia, v.t, paisDaVida(v));
 
   // O que a semana do ano faz pela pessoa (treino, leitura) vale no MESMO ano: vem antes do corpo e da escola.
   desenvolverPessoa(v, r);
@@ -105,6 +109,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarFamiliaDeOrigem(v, r);
   // A casa de onde a pessoa veio: a folga real, a reserva que cresce ou se gasta, a família que pode precisar.
   processarOrigem(v);
+  // Quem mudou de país: a adaptação, a língua, a naturalização (`migracao`). Quem nunca saiu não passa por aqui.
+  processarMundo(v, r);
   processarEscola(v, r);
   processarCurso(v, r);
   processarOab(v, r);
@@ -209,7 +215,7 @@ const FAIXA_DECISAO: [number, number][] = [
 const chanceDeDecisao = (i: number) => FAIXA_DECISAO.find(([max]) => i <= max)![1];
 
 function decidiuRecentemente(v: Vida): boolean {
-  return v.biografia.some(e => e.escolha && e.t === v.t - 12 && !e.texto.startsWith('Fez o ENEM'));
+  return v.biografia.some(e => e.escolha && e.t === v.t - 12 && !e.texto.startsWith(`Fez ${educacaoDaVida(v).o}`));
 }
 
 function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {

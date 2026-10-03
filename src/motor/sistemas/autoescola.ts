@@ -19,6 +19,11 @@ import { escrever } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { economiaLocal } from '../dados/lugares';
 import { vereditoDePagar, pagar } from './dinheiro';
+import { perfilDaVida } from '../mundo/vida';
+
+/** Quem aplica a prova (no Brasil, "o Detran" → "do Detran"); sem nome no perfil, a prova é só "de direção". */
+const doTransito = (v: Vida) => { const t = perfilDaVida(v).cotidiano?.transito; return t ? t.replace(/^o /, 'do ').replace(/^a /, 'da ') : 'de direção'; };
+const no = (t: string) => t.replace(/^o /, 'no ').replace(/^a /, 'na ');
 
 export type ProcessoCnh = Extract<Processo, { tipo: 'cnh' }>;
 
@@ -106,7 +111,7 @@ function provaPratica(v: Vida, r: Rng, p: ProcessoCnh): { passou: boolean; texto
     v.trabalho.licencas.push('cnh');
     const primeira = p.tentativas === 0 && !p.tentativasPratica;
     const texto = primeira ? 'Na prática, o examinador anotou pouco: passou de primeira e tirou a carteira de motorista.' : 'Na prática, desta vez a baliza entrou. Tirou a carteira de motorista.';
-    escrever(v, { texto: primeira ? 'Passou na prova do Detran de primeira e tirou a carteira de motorista.' : 'Tirou a carteira de motorista, depois de reprovar antes.', relevancia: 'biografia', tema: 'lugar', tom: 'bom' });
+    escrever(v, { texto: primeira ? `Passou na prova ${doTransito(v)} de primeira e tirou a carteira de motorista.` : 'Tirou a carteira de motorista, depois de reprovar antes.', relevancia: 'biografia', tema: 'lugar', tom: 'bom' });
     return { passou: true, texto };
   }
   p.tentativasPratica = (p.tentativasPratica ?? 0) + 1;
@@ -122,7 +127,8 @@ function provaPratica(v: Vida, r: Rng, p: ProcessoCnh): { passou: boolean; texto
 
 function desistir(v: Vida, p: ProcessoCnh): void {
   v.processos = v.processos.filter(x => x.id !== p.id);
-  escrever(v, { texto: 'Depois de três reprovações no Detran, desistiu da carteira por um tempo.', relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+  const t = perfilDaVida(v).cotidiano?.transito;
+  escrever(v, { texto: t ? `Depois de três reprovações ${no(t)}, desistiu da carteira por um tempo.` : 'Depois de três reprovações na prova de direção, desistiu da carteira por um tempo.', relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
 }
 
 /* ------------------------------------------------------------- Preparação */

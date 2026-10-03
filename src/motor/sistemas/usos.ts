@@ -16,7 +16,7 @@ import { clamp } from '../rng';
 import type { Imovel, Pessoa, Veiculo, Vida } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, moraCom, parceiro, vinculosVivos } from '../nucleo';
 import { modeloMoradia, modeloVeiculo } from '../dados/bens';
-import { economiaLocal, municipio, MUNICIPIOS, pertoDaAgua } from '../dados/lugares';
+import { cidadesDoPais, economiaLocal, municipio, pertoDaAgua } from '../dados/lugares';
 import { dinheiro as fmt, listaNatural } from '../texto';
 import { disponivel, okDePagar, pagar } from './dinheiro';
 import type { Veredito } from '../plausibilidade';
@@ -47,7 +47,7 @@ function amigoQuePede(v: Vida): Pessoa | undefined {
 /** Um destino de estrada plausível (determinístico no ano). */
 function destino(v: Vida): string {
   const aqui = municipio(v.moradia.municipioId);
-  const perto = MUNICIPIOS.filter(m => m.id !== aqui.id && m.uf === aqui.uf);
+  const perto = cidadesDoPais(aqui.pais).filter(m => m.id !== aqui.id && m.uf === aqui.uf);
   const praia = perto.find(m => pertoDaAgua(m.id));
   const lista = praia ? [praia, ...perto] : perto;
   if (!lista.length) return 'a serra';
@@ -88,7 +88,7 @@ function custoUso(v: Vida, b: Veiculo, oque: UsoVeiculo): number {
     // Sem habilitação, vai quem conduza (marinheiro, piloto contratado): posse não é saber operar.
     const contratado = faltaHabilitacao(v, b.modeloId) ? (m.categoria === 'aeronave' ? (oque === 'viajar' ? 6000 : 2500) : (oque === 'viajar' ? 2500 : 900)) : 0;
     if (oque === 'passear') return Math.round((usoMensalDoVeiculo(b) * 0.3 + contratado) * c(v) / 10) * 10;
-    if (oque === 'viajar') return Math.round(((m.categoria === 'aeronave' ? 8000 : 3000) + contratado) * c(v) / 100) * 100;
+    if (oque === 'viajar') return Math.round(((m.categoria === 'aeronave' ? Math.max(8000, usoMensalDoVeiculo(b) * 0.4) : 3000) + contratado) * c(v) / 100) * 100;
   }
   if (oque === 'passear') return m.categoria === 'bicicleta' ? 0 : Math.round(usoMensalDoVeiculo(b) * 0.3 * c(v) / 10) * 10;
   if (oque === 'viajar') return Math.round((m.categoria === 'moto' ? 900 : 1600) * c(v) / 100) * 100;
@@ -99,7 +99,7 @@ function custoUso(v: Vida, b: Veiculo, oque: UsoVeiculo): number {
 export function rotuloUsoVeiculo(v: Vida, b: Veiculo, oque: UsoVeiculo): string {
   const m = modeloVeiculo(b.modeloId);
   const com = companhia(v);
-  const quem = faltaHabilitacao(v, b.modeloId) ? (m.categoria === 'aeronave' ? ' (com um piloto contratado)' : ' (com um marinheiro contratado)') : '';
+  const quem = m.tripulacao ? ' (com a tripulação)' : faltaHabilitacao(v, b.modeloId) ? (m.categoria === 'aeronave' ? ' (com um piloto contratado)' : ' (com um marinheiro contratado)') : '';
   if (m.categoria === 'embarcacao') { if (oque === 'passear') return `Um dia no mar${com.length ? ' com a família' : ''}${quem}`; if (oque === 'viajar') return `Uma travessia até uma ilha, com pernoite${quem}`; }
   if (m.categoria === 'aeronave') { if (oque === 'passear') return `Um voo de fim de semana${quem}`; if (oque === 'viajar') return `Voar até ${destino(v)}${quem}`; }
   switch (oque) {

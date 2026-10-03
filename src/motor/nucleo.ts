@@ -7,6 +7,7 @@
  */
 
 import { criarRng, type Rng } from './rng';
+import { entrarNaVida } from './mundo/vida';
 import type {
   Entrada, EventoSocial, Genero, Marco, Parentesco, Pessoa, Relevancia, Tema, Temperamento, TipoMarco, Vida, Vinculo
 } from './tipos';
@@ -15,8 +16,11 @@ import { idadeEm } from './tempo';
 export function transacao<T>(vida: Vida, fn: (v: Vida, r: Rng) => T): { vida: Vida; valor: T } {
   const v = structuredClone(vida);
   const r = criarRng(v.rng);
+  // O texto desta vida fala na moeda do país onde ela mora (e no de depois, se ela mudou de país no caminho).
+  entrarNaVida(v);
   const valor = fn(v, r);
   v.rng = r.estado();
+  entrarNaVida(v);
   return { vida: v, valor };
 }
 

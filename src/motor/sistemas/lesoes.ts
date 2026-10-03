@@ -14,6 +14,7 @@
  * abstratas de jogo, com custo e consequência.
  */
 
+import { redeDeSaude } from './saude';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Condicao, CuidadoLesao, Lesao, Vida } from '../tipos';
@@ -80,8 +81,10 @@ export function prazoDoCuidado(l: Lesao, cuidado: CuidadoLesao, sus = false): nu
 /** Quem paga o cuidado: o clube paga o atleta; o plano cobre; o resto é SUS (de graça e mais lento) ou bolso. */
 export function custoDoCuidado(v: Vida, l: Lesao, cuidado: CuidadoLesao): number {
   if (l.origem === 'profissional' || v.financas.planoDeSaude) return 0;
-  if (cuidado === 'fisio') return l.gravidade >= 2 ? 2400 : 900;
-  if (cuidado === 'cirurgia') return 18000;
+  // O preço particular é o do país: onde a saúde depende de seguro, sem plano a conta vem cheia (`saude.redeDeSaude`).
+  const k = redeDeSaude(v).fatorParticular;
+  if (cuidado === 'fisio') return Math.round((l.gravidade >= 2 ? 2400 : 900) * k);
+  if (cuidado === 'cirurgia') return Math.round(18000 * k);
   return 0;
 }
 

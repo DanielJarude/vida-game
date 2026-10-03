@@ -7,6 +7,7 @@
  */
 
 import type { Pessoa, Vida } from '../tipos';
+import { paisDaCidade } from '../dados/lugares';
 import { idadePessoa, vinculosVivos } from '../nucleo';
 import { liquido } from './renda';
 
@@ -18,7 +19,7 @@ export function moradores(v: Vida): Pessoa[] {
 export function rendaPropria(v: Vida): number {
   let total = 0;
   const e = v.trabalho.atual;
-  if (e) total += liquido(e.salario, e.contrato);
+  if (e) total += liquido(e.salario, e.contrato, paisDaCidade(e.municipioId));
   if (v.trabalho.aposentadoria) total += v.trabalho.aposentadoria.beneficio;
   return total;
 }

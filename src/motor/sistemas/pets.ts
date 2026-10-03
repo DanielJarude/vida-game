@@ -73,7 +73,7 @@ export function podeTerPet(v: Vida, especie: Especie, porte: InfoPet['porte']): 
   return { grau: 'permitido' };
 }
 
-const regiaoDe = (v: Vida) => municipio(v.moradia.municipioId).regiao;
+const regiaoDe = (v: Vida) => municipio(v.moradia.municipioId).regiao ?? '';
 
 function vidaMaxima(r: Rng, especie: Especie, porte: InfoPet['porte']): number {
   if (especie === 'cachorro') return porte === 'pequeno' ? r.int(13, 16) : porte === 'medio' ? r.int(11, 14) : r.int(9, 12);

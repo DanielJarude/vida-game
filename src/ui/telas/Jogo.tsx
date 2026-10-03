@@ -19,7 +19,8 @@ import type { ControleVida } from '../useVida';
 import type { Vida } from '../../motor/tipos';
 import { idade, idadePessoa } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
-import { municipio } from '../../motor/dados/lugares';
+import { municipio, nomeLugar } from '../../motor/dados/lugares';
+import { entrarNaVida } from '../../motor/mundo/vida';
 import { seguranca } from '../../motor/sistemas/dinheiro';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
@@ -71,6 +72,8 @@ export function Jogo({ c }: { c: ControleVida }) {
 
   if (vida.morte) return <Fim vida={vida} c={c} />;
   const i = idade(vida);
+  // A tela fala na moeda do país onde a vida está (o motor faz o mesmo ao processar a vida).
+  entrarNaVida(vida);
   const m = municipio(vida.moradia.municipioId);
 
   return (
@@ -88,7 +91,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={36} rotulo={vida.eu.nome} expressao={expressaoDe(vida)} />
           <span className="cabecalho__eu-texto">
             <strong>{vida.eu.nome}, {i} {i === 1 ? 'ano' : 'anos'}</strong>
-            <span>{anoDe(vida.t)} · {m.nome}, {m.uf}</span>
+            <span>{anoDe(vida.t)} · {nomeLugar(m.id)}</span>
           </span>
         </button>
       </header>

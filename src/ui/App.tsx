@@ -3,6 +3,7 @@ import { useVida } from './useVida';
 import { Inicio } from './telas/Inicio';
 import { sobDemanda } from './util/sobDemanda';
 import { carregarMotor } from './motor';
+import { AvisoAtualizacao } from './pwa/AvisoAtualizacao';
 
 // O jogo, a criação e as vidas passadas chegam sob demanda (pacotes à parte): a primeira tela é só a inicial.
 const Criacao = sobDemanda(() => import('./telas/Criacao').then(m => m.Criacao));
@@ -23,6 +24,7 @@ export function App() {
       {c.tela === 'criacao' && <Criacao c={c} />}
       {c.tela === 'jogo' && c.vida && <Jogo c={c} />}
       {c.tela === 'vidas' && <Vidas c={c} />}
+      <AvisoAtualizacao />
       <div className="avisos" aria-live="polite">
         {c.aviso && <p key={c.aviso.id} className={`aviso aviso--${c.aviso.tom}`}>{c.aviso.texto}</p>}
       </div>

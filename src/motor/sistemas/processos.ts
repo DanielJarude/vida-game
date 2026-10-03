@@ -7,7 +7,7 @@ import type { Rng } from '../rng';
 import type { Processo, Vida } from '../tipos';
 import { escrever, idade, marcarFato, moraCom, novoId, parceiro, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
-import { municipio, nomeLugar } from '../dados/lugares';
+import { municipio, nomeLugar, paisDaCidade } from '../dados/lugares';
 import { encerrarEmprego } from './trabalho';
 import { modeloMoradia } from '../dados/bens';
 import { aluguelDe, marcarSaidaDeCasa } from './moradia';
@@ -42,11 +42,21 @@ export function agendarMudanca(v: Vida, destinoId: string, motivo: string, tEfet
 }
 
 /** Muda de cidade agora (a decisão já foi tomada e o caminhão já saiu). */
-export function mudarAgora(v: Vida, destinoId: string, motivo: string): void {
+/**
+ * Quem muda alguém de PAÍS: o sistema de migração se registra aqui (ele usa
+ * esta mudança de cidade; esta não o importa — sem ciclo).
+ */
+let migrador: ((v: Vida, destinoId: string, motivo: string) => void) | undefined;
+export const registrarMigrador = (f: typeof migrador) => { migrador = f; };
+
+export function mudarAgora(v: Vida, destinoId: string, motivo: string, opcoes: { internacional?: boolean } = {}): void {
+  // Outra cidade em outro país não é mudança de cidade: é migração — com porta, câmbio, língua (`migracao`). Quem
+  // chama (a proposta de um clube de fora, a casa do filho que mora no exterior) passa por ela; sem porta, não se muda.
+  if (!opcoes.internacional && paisDaCidade(destinoId) !== paisDaCidade(v.moradia.municipioId)) { migrador?.(v, destinoId, motivo); return; }
   const id = novoId(v, 'mud');
   const p = { tipo: 'mudanca' as const, id, tEfetiva: v.t, destinoId, motivo };
   v.processos.push(p);
-  concluirMudanca(v, p);
+  concluirMudanca(v, p, opcoes);
 }
 
 /**
@@ -54,7 +64,7 @@ export function mudarAgora(v: Vida, destinoId: string, motivo: string): void {
  * trás. O emprego local acaba, a faculdade presencial também (a não ser que
  * a mudança seja por causa dela), amizades passam a ser à distância.
  */
-export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' }>): void {
+export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' }>, opcoes: { internacional?: boolean } = {}): void {
   v.processos = v.processos.filter(x => x.id !== p.id);
   const origem = v.moradia.municipioId;
   if (origem === p.destinoId) return;
@@ -117,6 +127,7 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
     es.fase = 'encerrada'; es.tFim = v.t; es.motivoFim = 'escolha';
     escrever(v, { texto: `A mudança deixou para trás ${es.modalidade === 'futebol' ? 'a base' : 'a equipe'} ${doClube(es.clube)}.`, relevancia: 'biografia', tema: 'lazer', tom: 'ruim' });
   }
+  // (Numa mudança de país, os veículos já foram vendidos antes — `migracao`.)
   for (const b of v.financas.bens) if (b.tipo === 'veiculo') (b.historia ??= []).push({ t: v.t, texto: `Foi junto na mudança para ${municipio(p.destinoId).nome}.` });
   // A trajetória em paralelo (por conta, por projeto) vai junto; a de lugar fixo, não.
   const par = v.trabalho.paralela;
@@ -127,6 +138,8 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
   ajustarAoLugarDeFormacao(v);
   marcarFato(v, 'mudou_de_cidade');
   const destino = municipio(p.destinoId);
+  // A mudança de país escreve a própria história (`migracao.textoDaMigracao`).
+  if (opcoes.internacional) return;
   escrever(v, {
     texto: `Mudou-se de ${municipio(origem).nome} para ${destino.nome}${p.motivo ? `, ${p.motivo}` : ''}.`,
     relevancia: 'marco', tema: 'lugar'

@@ -938,7 +938,7 @@ function CarreiraComoTecnico({ vida }: { vida: Vida }) {
           <table className="palmares__historico tecnico__passagens">
             <thead><tr><th>Clube</th><th>Período</th><th>J</th><th>V</th><th>E</th><th>D</th><th>Aprov.</th><th>Títulos</th><th>Saída</th></tr></thead>
             <tbody>{[...c.passagens].reverse().map((p, k) => { const r = resumoDaPassagem(p); const pr = periodoDaPassagem(p); return (
-              <tr key={k}><td>{p.selecao ? 'Seleção brasileira' : p.clube}</td><td>{pr.de}{p.ate === undefined ? '–' : pr.ate !== pr.de ? `–${pr.ate}` : ''}</td><td>{r.jogos}</td><td>{r.v}</td><td>{r.e}</td><td>{r.d}</td><td>{r.jogos ? `${r.aproveitamento}%` : '—'}</td><td>{r.titulos.length || '—'}</td><td>{comoAcabou(vida, p)}</td></tr>
+              <tr key={k}><td>{p.selecao ? 'Seleção brasileira' : p.clube}{p.meioDeTemporada ? <span className="nota"> · assumiu na {p.meioDeTemporada.rodada + 1}ª rodada, em {p.meioDeTemporada.posicao}º</span> : null}</td><td>{pr.de}{p.ate === undefined ? '–' : pr.ate !== pr.de ? `–${pr.ate}` : ''}</td><td>{r.jogos}</td><td>{r.v}</td><td>{r.e}</td><td>{r.d}</td><td>{r.jogos ? `${r.aproveitamento}%` : '—'}</td><td>{r.titulos.length || '—'}</td><td>{comoAcabou(vida, p)}</td></tr>
             ); })}</tbody>
           </table>
         </div>

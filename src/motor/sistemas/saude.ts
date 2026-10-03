@@ -19,6 +19,31 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Condicao, Vida } from '../tipos';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
+import { perfilDaVida } from '../mundo/vida';
+
+const CONTRAI = { o: ['pelo', 'do', 'no'], a: ['pela', 'da', 'na'], os: ['pelos', 'dos', 'nos'], as: ['pelas', 'das', 'nas'] } as const;
+
+/**
+ * A rede pública de saúde do país onde a pessoa mora (`perfil.saude`), nas
+ * formas que o texto pede: "o SUS" → "pelo SUS", "do SUS", "no SUS"; "a
+ * ASSE" → "pela ASSE". E o que o sistema muda na conta:
+ *   - fatorParticular: onde a saúde depende de seguro, quem não tem plano
+ *     paga o preço de verdade (o custo do plano do país mede esse preço);
+ *   - fatorEspera: onde a rede é universal, a fila anda mais rápido.
+ * No Brasil (misto), os dois são 1: tudo como sempre foi.
+ */
+export function redeDeSaude(v: Vida) {
+  const s = perfilDaVida(v).saude;
+  const m = /^(o|a|os|as) (.+)$/.exec(s.redePublica);
+  const art = m?.[1] as keyof typeof CONTRAI | undefined;
+  const nome = m ? m[2] : s.redePublica;
+  const f = (k: 0 | 1 | 2, sem: string) => (art ? `${CONTRAI[art][k]} ${nome}` : `${sem} ${nome}`);
+  return {
+    sistema: s.sistema, nome, o: s.redePublica, pelo: f(0, 'por'), do: f(1, 'de'), no: f(2, 'em'),
+    fatorParticular: s.sistema === 'seguro' ? s.custoPlano : 1,
+    fatorEspera: s.sistema === 'universal' ? 0.5 : 1
+  };
+}
 
 /** Os sinais que o corpo dá antes de a condição ter nome (o que a pessoa percebe). */
 export const SINAIS: Record<string, string> = {
@@ -111,11 +136,11 @@ export function evoluirCondicoes(v: Vida, r: Rng): void {
     const anos = (v.t - cond.tInicio) / 12;
     if (semNome(cond)) {
       // Saúde mental de criança e adolescente: a família ou a escola pode perceber e levar à UBS — o que
-      // dá nome e encaminha (acompanhamento pelo SUS, de graça), mas o acompanhamento em si ainda é escolha.
+      // dá nome e encaminha (acompanhamento pela rede pública — no Brasil, o SUS —, de graça), mas o acompanhamento em si ainda é escolha.
       if (idade(v) < 18 && MENTAIS.has(cond.id)) {
         if (r.chance(0.2)) {
           diagnosticar(v, cond, 'consulta');
-          escrever(v, { texto: `${idade(v) < 12 ? 'A família percebeu' : 'Na escola, perceberam'} que algo não ia bem, e a família levou ao posto de saúde: ${cond.nome}. Veio o encaminhamento para acompanhamento pelo SUS.`, relevancia: 'biografia', tema: 'saude', tom: 'ruim' });
+          escrever(v, { texto: `${idade(v) < 12 ? 'A família percebeu' : 'Na escola, perceberam'} que algo não ia bem, e a família levou ao posto de saúde: ${cond.nome}. Veio o encaminhamento para acompanhamento ${redeDeSaude(v).pelo}.`, relevancia: 'biografia', tema: 'saude', tom: 'ruim' });
         }
         continue;
       }

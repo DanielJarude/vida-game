@@ -320,7 +320,7 @@ function novaIniciativa(v: Vida, r: Rng): void {
       if (eu >= 15 && ip >= 15 && (papel === 'colega' || papel === 'conhecido') && vin.convivio.length > 0 && !vin.romance && !gestoRecente && !daFormacao && vin.proximidade >= 30) {
         const comp = compatibilidade(v, p);
         if (comp > 0.15) {
-          const onde = vin.convivio.includes('trabalho') ? r.pick(['almoçar junto', 'um café depois do expediente', 'uma cerveja na sexta, depois do trabalho'])
+          const onde = vin.convivio.includes('trabalho') ? r.pick(['almoçar junto', 'um café depois do trabalho', 'uma cerveja na sexta, depois do trabalho'])
             : vin.convivio.includes('faculdade') ? r.pick(['estudar junto para a prova', 'um bar depois da aula'])
               : vin.convivio.includes('escola') ? r.pick(['fazer o trabalho junto', 'ir para a casa dele depois da aula'.replace('dele', flex(p.genero, 'dele', 'dela', 'delu'))])
                 : r.pick(['ficar para conversar depois da atividade', 'um lanche depois do encontro']);

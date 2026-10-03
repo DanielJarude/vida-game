@@ -14,18 +14,22 @@
  * sabendo: AUTONOMIA NÃO É OPACIDADE.
  */
 
+import { doPrograma, educacaoDaVida, oPrograma } from '../mundo/vida';
+import { circulaLivre, nacionalidadesDaPessoa, nacionalidadesDoBebe } from '../mundo/vida';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Pessoa, TipoEvento, TipoTrajetoria, Vida, Vinculo, Relevancia } from '../tipos';
 import { emRecessao, escrever, idade, idadePessoa, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
-import { OCUPACOES, OCUPACOES_POR_CLASSE, ocupacao, type Ocupacao } from '../dados/ocupacoes';
+import { OCUPACOES, ocupacoesDaClasse, ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { ORDEM_NIVEL, curso, cursoPorNome, type AreaFormacao } from '../dados/cursos';
 import { degrausAcima } from './trabalho';
 import { liquido, salarioLocal } from './renda';
 import { rendaPerCapita } from './domicilio';
 import { sortearNome } from '../dados/nomes';
-import { MUNICIPIOS, municipio } from '../dados/lugares';
+import { cidadesDoPais, municipio, paisDaCidade } from '../dados/lugares';
+import { converterEntrePaises } from '../mundo/moeda';
+import { noPais, paisesVivenciaveis, perfilDoPais, temPerfil } from '../mundo/registro';
 import { flex, ge } from '../texto';
 import { anoDe, MESES, mesDe } from '../tempo';
 import { faseDeIdade, mesmaCidade, moraJunto } from './vinculos';
@@ -305,15 +309,16 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
     if (r.chance(chancePublica)) {
       f.estudo = { curso, paga: 'publica', tFim: v.t + 48, nivel: 'superior' };
       comunicar(v, f, cota, {
-        texto: doJogador && moraJunto(vin) ? `${f.nome} passou no vestibular da federal para ${curso}. A lista saiu de madrugada; a casa acordou gritando.` : `${f.nome} passou na federal para ${curso}.`,
-        tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 30, marco: `Passou na federal para ${curso}.`, pesoMarco: 2
+        // A universidade pública do país onde a pessoa mora (no Brasil, "a federal"; fora, pelo que é).
+        texto: doJogador && moraJunto(vin) ? `${f.nome} passou ${naPublica(f)} para ${curso}. A lista saiu de madrugada; a casa acordou gritando.` : `${f.nome} passou ${naPublica(f, true)} para ${curso}.`,
+        tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 30, marco: `Passou ${naPublica(f, true)} para ${curso}.`, pesoMarco: 2
       });
-      if (doJogador) abalar(v, `${f.nome} na federal`, 5, 0);
+      if (doJogador) abalar(v, `${f.nome} na universidade`, 5, 0);
       return;
     }
     if (pc < 2200 && vida.aptidao > -0.1 && r.chance(0.4)) {
       f.estudo = { curso, paga: 'bolsa', tFim: v.t + 48, nivel: 'superior' };
-      comunicar(v, f, cota, { texto: `${f.nome} conseguiu bolsa integral do ProUni para ${curso}.`, tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 25, marco: `Bolsa do ProUni para ${curso}.`, pesoMarco: 2 });
+      comunicar(v, f, cota, { texto: `${f.nome} conseguiu bolsa integral ${doPrograma(educacaoDaVida(v).bolsa?.nome ?? 'programa público')} para ${curso}.`, tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 25, marco: `Bolsa ${doPrograma(educacaoDaVida(v).bolsa?.nome ?? 'programa público')} para ${curso}.`, pesoMarco: 2 });
       return;
     }
     // Não passou na pública: se a casa é do jogador, a particular vira conversa em casa (decisão do jogador).
@@ -326,7 +331,7 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
     const x = r.next();
     if (x < 0.45) {
       f.estudo = { curso, paga: 'fies', tFim: v.t + 48, nivel: 'superior' };
-      comunicar(v, f, cota, { texto: `${f.nome} entrou em ${curso} numa particular, com o FIES.`, tipo: 'estudo', relevancia: rel, marco: doJogador ? `Entrou em ${curso}, com o FIES.` : undefined });
+      comunicar(v, f, cota, { texto: `${f.nome} entrou em ${curso} numa particular, com ${oPrograma(educacaoDaVida(v).credito?.nome ?? 'crédito estudantil')}.`, tipo: 'estudo', relevancia: rel, marco: doJogador ? `Entrou em ${curso}, com ${oPrograma(educacaoDaVida(v).credito?.nome ?? 'crédito estudantil')}.` : undefined });
     } else if (x < 0.75) {
       f.estudo = { curso, paga: 'propria', tFim: v.t + 60, nivel: 'superior' };
       comunicar(v, f, cota, { texto: `${f.nome} começou ${curso} à noite, pagando com o próprio trabalho.`, tipo: 'estudo', relevancia: rel, marco: doJogador ? `Começou ${curso} à noite, trabalhando de dia.` : undefined });
@@ -357,7 +362,7 @@ function formar(v: Vida, f: Pessoa, cota: Cota, rel: Relevancia, doJogador: bool
   const primeiro = doJogador && e.nivel !== 'tecnico' && !v.educacao.concluidos.some(c => c.nivel === 'superior');
   const foi = doJogador && v.vinculos[f.id]?.proximidade >= 40;
   comunicar(v, f, cota, {
-    texto: `${f.nome} ${e.nivel === 'tecnico' ? `concluiu o curso ${e.curso.replace(/^Técnico em /, 'técnico de ')}` : `se formou em ${e.curso}`}${primeiro ? ` — ${flex(f.genero, 'o primeiro', 'a primeira', 'e primeire')} da casa com diploma` : ''}${e.paga === 'fies' ? ', com o FIES para pagar' : ''}.${foi ? ' Você aplaudiu até doer a mão.' : ''}`,
+    texto: `${f.nome} ${e.nivel === 'tecnico' ? `concluiu o curso ${e.curso.replace(/^Técnico em /, 'técnico de ')}` : `se formou em ${e.curso}`}${primeiro ? ` — ${flex(f.genero, 'o primeiro', 'a primeira', 'e primeire')} da casa com diploma` : ''}${e.paga === 'fies' ? `, com ${oPrograma(educacaoDaVida(v).credito?.nome ?? 'crédito estudantil')} para pagar` : ''}.${foi ? ' Você aplaudiu até doer a mão.' : ''}`,
     tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 35, marco: foi ? `Formatura ${e.nivel === 'tecnico' ? 'do curso técnico' : `em ${e.curso}`}. Você estava lá.` : `Formou-se em ${e.curso}.`, pesoMarco: 2
   });
   if (doJogador) abalar(v, `a formatura de ${f.nome}`, 6, 0);
@@ -370,7 +375,7 @@ function empregar(v: Vida, f: Pessoa, oc: Ocupacao): void {
   if (f.ocupacaoId && ocupacao(f.ocupacaoId).trilha !== oc.trilha) vida.experiencia = 0;
   f.ocupacaoId = oc.id;
   f.ocupacao = nomeOc(f, oc);
-  f.renda = liquido(salarioLocal(oc, f.municipioId), oc.contrato);
+  f.renda = liquido(salarioLocal(oc, f.municipioId), oc.contrato, paisDaCidade(f.municipioId));
   vida.tCargo = v.t;
   // Resolvido não é esquecido: a relação ainda lembra, um ano depois, quem esteve por perto.
   if (f.aperto?.tipo === 'desemprego') { if (v.t - f.aperto!.t < 24) f.aperto!.resolvido ??= v.t; else f.aperto = undefined; }
@@ -420,7 +425,7 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
       if (cargos.length) escolhida = r.pick(cargos);
     }
     if (!escolhida) {
-      const base = OCUPACOES_POR_CLASSE[vida.escolaridade === 'fundamental' ? 'vulneravel' : vida.escolaridade === 'medio' || vida.escolaridade === 'tecnico' ? 'trabalhadora' : 'media_baixa'].map(id => ocupacao(id));
+      const base = ocupacoesDaClasse(vida.escolaridade === 'fundamental' ? 'vulneravel' : vida.escolaridade === 'medio' || vida.escolaridade === 'tecnico' ? 'trabalhadora' : 'media_baixa', paisDaCidade(f.municipioId)).map(id => ocupacao(id));
       const lista = base.filter(o => acessivel(f, o, i) && o.nivel <= 2);
       escolhida = lista.length ? r.pick(lista) : ocupacao('atendente');
     }
@@ -501,10 +506,10 @@ export function carreiraDeAdulto(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, cota:
   // Quem ainda estuda (sem curso acompanhado) começa a trabalhar aos poucos, não no dia dos 18.
   if (p.ocupacao === 'estudante' && i < 22 && !r.chance(0.35)) return undefined;
   if (p.renda > 0 && !p.ocupacaoId && !p.ocupacao?.startsWith('aposentad')) {
-    const base = OCUPACOES_POR_CLASSE[vida.escolaridade === 'superior' ? 'media' : vida.escolaridade === 'fundamental' ? 'vulneravel' : 'trabalhadora'] ?? OCUPACOES_POR_CLASSE.trabalhadora;
+    const base = ocupacoesDaClasse(vida.escolaridade === 'superior' ? 'media' : vida.escolaridade === 'fundamental' ? 'vulneravel' : 'trabalhadora', paisDaCidade(p.municipioId));
     const lista = base.map(id => ocupacao(id)).filter(o => acessivel(p, o, i));
     if (lista.length) {
-      const oc = lista.reduce((m, o) => (Math.abs(liquido(salarioLocal(o, p.municipioId), o.contrato) - p.renda) < Math.abs(liquido(salarioLocal(m, p.municipioId), m.contrato) - p.renda) ? o : m));
+      const oc = lista.reduce((m, o) => (Math.abs(liquido(salarioLocal(o, p.municipioId), o.contrato, paisDaCidade(p.municipioId)) - p.renda) < Math.abs(liquido(salarioLocal(m, p.municipioId), m.contrato, paisDaCidade(p.municipioId)) - p.renda) ? o : m));
       p.ocupacaoId = oc.id;
       p.ocupacao = nomeOc(p, oc);
       vida.tCargo ??= v.t - 24;
@@ -559,7 +564,7 @@ function amor(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: Cota, d
     // Como foi a união (no cartório ou juntando as coisas): o conteúdo do casamento lê isto.
     v.fatos[`uniao_cartorio_${k}`] = noCartorio ? 1 : 0;
     comunicar(v, f, cota, {
-      texto: noCartorio ? `${f.nome} casou com ${par.nome} no cartório.` : `${f.nome} e ${par.nome} foram morar juntos.`,
+      texto: noCartorio ? `${f.nome} casou com ${par.nome} ${paisDaCidade(f.municipioId) === 'BR' ? 'no cartório' : 'no civil'}.` : `${f.nome} e ${par.nome} foram morar juntos.`,
       tipo: 'amor', relevancia: doJogador ? 'biografia' : 'cotidiano', tom: 'bom', evento: 'filho_marco', peso: 35,
       marco: doJogador ? (noCartorio ? `Casou com ${par.nome}.` : `Foi morar com ${par.nome}.`) : undefined, pesoMarco: 2, importante: doJogador
     });
@@ -614,10 +619,13 @@ function nascerDescendente(v: Vida, r: Rng, pai: Pessoa, outro: Pessoa | undefin
   bebe.tNasc = tParto;
   const usados = new Set([v.eu.nome, ...Object.values(v.pessoas).filter(x => x.vivo).map(x => x.nome)]);
   let nome = bebe.nome;
-  for (let k = 0; k < 12 && usados.has(nome); k++) nome = sortearNome(r, genero, anoDe(tParto));
+  for (let k = 0; k < 12 && usados.has(nome); k++) nome = sortearNome(r, genero, anoDe(tParto), paisDaCidade(pai.municipioId), municipio(pai.municipioId).uf, pai.sobrenome);
   bebe.nome = nome;
   bebe.genitores = [pai.id, ...(outro ? [outro.id] : [])];
   bebe.municipioNatal = pai.municipioId;
+  // O neto nascido em Buenos Aires, filho de uma brasileira, é argentino E brasileiro (`mundo/cidadania`).
+  const nac = nacionalidadesDoBebe(pai.municipioId, [nacionalidadesDaPessoa(pai), ...(outro ? [nacionalidadesDaPessoa(outro)] : [])], 99);
+  if (nac) bebe.nacionalidades = nac;
   const perto = pai.municipioId === v.moradia.municipioId;
   const vin = vincular(v, bebe, { parentesco, origem: 'familia', proximidade: perto ? 45 : 30, convivio: moraJunto(v.vinculos[pai.id]) ? ['casa'] : [] });
   vin.tInicio = tParto;
@@ -669,15 +677,46 @@ function lugar(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, cota: Cota, doJogador: 
   // Mudar de cidade (trabalho, estudo, parceria): raro, e muda a convivência.
   if (!moraJunto(vin) && r.chance(f.renda > 0 ? 0.018 : 0.008)) {
     const aqui = municipio(f.municipioId);
-    const destinos = MUNICIPIOS.filter(m => m.id !== aqui.id && (m.perfil === 'metropole' || m.perfil === 'capital'));
-    const destino = r.pick(destinos);
+    // Quase sempre dentro do país; às vezes, para fora — quem tem formação ou trabalho, para um país de porta aberta
+    // (o mesmo bloco, a mesma língua). A decisão sai de um hash (sem gastar o gerador: a vida no Brasil não muda).
+    const fora = paisParaEmigrar(v, f);
+    const destinos = cidadesDoPais(fora ?? aqui.pais).filter(m => m.id !== aqui.id && (m.perfil === 'metropole' || m.perfil === 'capital'));
+    const destino = r.pick(destinos.length ? destinos : cidadesDoPais(aqui.pais).filter(m => m.id !== aqui.id));
+    if (fora && f.posses) { const k = converterEntrePaises(1, aqui.pais, fora); f.posses.dinheiro *= k; for (const b of f.posses.bens) b.valor *= k; }
+    if (fora) f.nacionalidades ??= nacionalidadesDaPessoa(f);
     f.municipioId = destino.id;
     if (f.parceiroId && v.pessoas[f.parceiroId]) v.pessoas[f.parceiroId].municipioId = destino.id;
     for (const x of Object.values(v.pessoas)) if (x.genitores?.includes(f.id) && x.vivo && idadePessoa(v, x) < 18) x.municipioId = destino.id;
     const eraPerto = aqui.id === v.moradia.municipioId;
-    comunicar(v, f, cota, { texto: `${f.nome} se mudou para ${destino.nome}${eraPerto ? '. As visitas passaram a ser de feriado' : ''}.`, tipo: 'lugar', relevancia: doJogador && eraPerto ? 'biografia' : 'cotidiano', marco: doJogador && eraPerto ? `Mudou-se para ${destino.nome}.` : undefined, pesoMarco: 1 });
+    const ondeFica = fora ? `${destino.nome}, ${noPais(fora)}` : destino.nome;
+    comunicar(v, f, cota, { texto: fora ? `${f.nome} foi morar em ${ondeFica}. As visitas passaram a ser de avião, uma vez por ano, se tanto.` : `${f.nome} se mudou para ${destino.nome}${eraPerto ? '. As visitas passaram a ser de feriado' : ''}.`, tipo: 'lugar', relevancia: doJogador && (eraPerto || fora) ? 'biografia' : 'cotidiano', marco: doJogador && (eraPerto || fora) ? `Mudou-se para ${ondeFica}.` : undefined, pesoMarco: fora ? 2 : 1 });
     if (eraPerto) lembrarCom(v, f.id, `Foi morar em ${destino.nome}, longe.`, 'distancia', 1);
   }
+}
+
+/**
+ * Um filho adulto emigra? Uma em cada dez mudanças vai para fora — de quem tem
+ * formação ou renda —, para um país com porta aberta para ele (o mesmo bloco
+ * de livre residência pesa ×4; a mesma língua, ×3). Sem acaso do gerador.
+ */
+function paisParaEmigrar(v: Vida, f: Pessoa): string | undefined {
+  let h = 2166136261;
+  for (const c of `${f.id}:${v.t}:emigrar`) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  const x = (h >>> 0) / 4294967295;
+  if (x > 0.1 || !(f.formacao || f.renda > 0)) return undefined;
+  const aqui = paisDaCidade(f.municipioId);
+  const nac = nacionalidadesDaPessoa(f);
+  const lingua = temPerfil(aqui) ? perfilDoPais(aqui).idiomas[0] : '';
+  const opcoes = paisesVivenciaveis().filter(p => p.id !== aqui).map(p => ({ p: p.id, peso: (circulaLivre(nac, p.id) ? 4 : 1) * (perfilDoPais(p.id).idiomas[0] === lingua ? 3 : 1) }));
+  const total = opcoes.reduce((s, o) => s + o.peso, 0);
+  let alvo = (x / 0.1) * total;
+  return (opcoes.find(o => (alvo -= o.peso) < 0) ?? opcoes[0])?.p;
+}
+
+/** "no vestibular da federal" (Brasil); "na universidade pública" (fora). */
+function naPublica(f: Pessoa, curto = false): string {
+  const p = paisDaCidade(f.municipioId);
+  return p === 'BR' ? (curto ? 'na federal' : 'no vestibular da federal') : 'na universidade pública';
 }
 
 /** Faixa de vida da pessoa, para quem precisa (UI, conteúdo). */

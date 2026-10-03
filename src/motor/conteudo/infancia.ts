@@ -7,11 +7,17 @@
  * aparecem quando a criança já age por conta própria.
  */
 
+import { dinheiro as moeda } from '../texto';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { art, dinheiro, estresse, fato, feliz, forma, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa } from '../nucleo';
 import { municipio } from '../dados/lugares';
+import { cidadesGrandesLonge, cotidiano, de, temFesta } from './local';
+import { paisDaVida } from '../mundo/vida';
+
+/** Para onde a família de um amigo de infância se muda: escolhidas à mão (o Brasil) ou as cidades grandes do país onde se mora. */
+const MUDANCAS_DE_AMIGO: Record<string, string[]> = { BR: ['sao-paulo-sp', 'curitiba-pr', 'goiania-go', 'salvador-ba', 'manaus-am'] };
 import { rngDe } from '../rng';
 
 export const INFANCIA: Conteudo[] = [
@@ -106,7 +112,7 @@ export const INFANCIA: Conteudo[] = [
     papeis: { quem: P.genitorEmCasa },
     narrar: c => ({ texto: c.v.financas.planoDeSaude || ['media', 'alta'].includes(c.v.origem.classe)
       ? `Uma febre alta de madrugada levou a família ao pronto-socorro. Era virose; voltaram para casa ao amanhecer.`
-      : `Uma febre alta de madrugada levou ${c.p.quem.nome} para a fila da UPA, com o bebê no colo. Era virose; foram atendidos às cinco da manhã.`,
+      : `Uma febre alta de madrugada levou ${c.p.quem.nome} para a fila ${de(cotidiano(c.v).prontoAtendimento ?? 'o pronto-socorro')}, com o bebê no colo. Era virose; foram atendidos às cinco da manhã.`,
       relevancia: 'cotidiano', efeito: () => saude(c, -2) })
   },
   {
@@ -235,12 +241,12 @@ export const INFANCIA: Conteudo[] = [
   {
     id: 'inf_dinheiro_achado', tipo: 'decisao', idade: [7, 13], tema: 'infancia',
     titulo: 'A nota no chão',
-    texto: () => 'Voltando da escola, você acha uma nota de cinquenta reais dobrada na calçada, na frente de uma padaria.',
+    texto: () => `Voltando da escola, você acha dinheiro dobrado na calçada, na frente de uma padaria: ${moeda(50)}.`,
     opcoes: [
-      { id: 'guardar', texto: 'Guardar no bolso', resolver: c => ({ texto: 'Cinquenta reais inteiros, só seus.', memoria: null, efeito: () => dinheiro(c, 50) }) },
+      { id: 'guardar', texto: 'Guardar no bolso', resolver: c => ({ texto: `${moeda(50)} inteiros, só seus.`, memoria: null, efeito: () => dinheiro(c, 50) }) },
       { id: 'padaria', texto: 'Perguntar na padaria se alguém perdeu', comportamento: { generosidade: 1, empatia: 1 },
         resolver: c => c.r.chance(0.5)
-          ? { texto: 'Uma senhora na fila tinha acabado de perder o troco. Agradeceu com um sonho de padaria.', memoria: 'Devolveu cinquenta reais achados na calçada para a dona, uma senhora da fila da padaria.' }
+          ? { texto: 'Uma senhora na fila tinha acabado de perder o troco. Agradeceu com um sonho de padaria.', memoria: `Devolveu ${moeda(50)} achados na calçada para a dona, uma senhora da fila da padaria.` }
           : { texto: 'Ninguém reclamou a nota. O padeiro disse para você ficar com ela.', memoria: null, efeito: () => dinheiro(c, 50) } },
       { id: 'casa', texto: 'Levar para casa e contar', resolver: c => ({ texto: 'Em casa, decidiram que era seu — mas metade ia para o cofrinho.', memoria: null, efeito: () => dinheiro(c, 25) }) }
     ]
@@ -265,7 +271,7 @@ export const INFANCIA: Conteudo[] = [
     id: 'inf_festa_junina', tipo: 'acontecimento', idade: [5, 11], tema: 'escola', repetir: 4,
     quando: c => !!c.v.educacao.basica,
     papeis: { par: P.genteDe('escola') },
-    narrar: c => ({ texto: `Na festa junina da escola, a professora sorteou os pares da quadrilha: foi com ${c.p.par.nome}, os dois de roupa xadrez e chapéu de palha.`, relevancia: 'cotidiano', efeito: () => prox(c, 'par', 5) })
+    narrar: c => ({ texto: temFesta(c.v, 'junina') ? `Na festa junina da escola, a professora sorteou os pares da quadrilha: foi com ${c.p.par.nome}, os dois de roupa xadrez e chapéu de palha.` : `Na festa de fim de ano da escola, a professora sorteou os pares da apresentação de dança: foi com ${c.p.par.nome}.`, relevancia: 'cotidiano', efeito: () => prox(c, 'par', 5) })
   },
   {
     id: 'inf_avo_ensina', tipo: 'acontecimento', idade: [5, 11], tema: 'familia',
@@ -306,7 +312,7 @@ export const INFANCIA: Conteudo[] = [
     narrar: c => ({
       texto: `A família de ${c.p.amigo.nome} se mudou para outra cidade. A despedida foi no portão da escola.`,
       relevancia: 'biografia', tom: 'ruim',
-      efeito: () => { c.p.amigo.municipioId = c.r.pick(['sao-paulo-sp', 'curitiba-pr', 'goiania-go', 'salvador-ba', 'manaus-am']); c.v.vinculos[c.p.amigo.id].ambiente = undefined; feliz(c, -5); },
+      efeito: () => { c.p.amigo.municipioId = c.r.pick(MUDANCAS_DE_AMIGO[paisDaVida(c.v)] ?? (cidadesGrandesLonge(c.v).length ? cidadesGrandesLonge(c.v) : [c.v.moradia.municipioId])); c.v.vinculos[c.p.amigo.id].ambiente = undefined; feliz(c, -5); },
       lembrar: ['amigo', 'Mudou de cidade quando vocês ainda eram crianças.']
     })
   },

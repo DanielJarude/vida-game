@@ -10,7 +10,10 @@
  * gesta. Adoção é um processo de anos.
  */
 
+import { sobrenomeDeQuemNasce, usaDoisSobrenomes } from '../dados/nomes';
+import { anosNoPais, nacionalidadesDaPessoa, nacionalidadesDaVida, nacionalidadesDoBebe } from '../mundo/vida';
 import type { Rng } from '../rng';
+import { paisDaCidade } from '../dados/lugares';
 import { clamp } from '../rng';
 import type { Pessoa, Processo, Vida } from '../tipos';
 import {
@@ -20,7 +23,7 @@ import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { processarCorpoDePessoa } from './corpo';
 import { flex, ge } from '../texto';
 import { MESES, mesDe } from '../tempo';
-import { OCUPACOES, OCUPACOES_POR_CLASSE, ocupacao } from '../dados/ocupacoes';
+import { OCUPACOES, ocupacoesDaClasse, ocupacao } from '../dados/ocupacoes';
 import { liquido, salarioLocal } from './renda';
 import { modeloMoradia } from '../dados/bens';
 import { precoDeImovel } from './mercado';
@@ -38,7 +41,7 @@ import { lancar } from './extrato';
 export function processarMortes(v: Vida, r: Rng): void {
   const mortes: { p: Pessoa; vin: Vida['vinculos'][string]; causa: string }[] = [];
   for (const { p, vin } of vinculosVivos(v)) {
-    const causa = processarCorpoDePessoa(v, r, p);
+    const causa = processarCorpoDePessoa(v, r, p, !!vin.parentesco || !!vin.romance);
     if (causa) mortes.push({ p, vin, causa });
   }
   registrarMortes(v, r, mortes, falecido => heranca(v, r, falecido));
@@ -192,11 +195,11 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     } else if (p.renda === 0 && p.ocupacao?.startsWith('desempregad') && r.chance(0.55)) {
       // Recoloca-se na mesma área, quase sempre; às vezes num degrau abaixo.
       const mesmaArea = ocAtual ? OCUPACOES.filter(o => o.trilha === ocAtual.trilha && Math.abs(o.nivel - ocAtual.nivel) <= 1 && !o.concurso && o.contrato !== 'estagio' && o.contrato !== 'aprendiz' && o.contrato !== 'militar') : [];
-      const oc = mesmaArea.length && r.chance(0.8) ? (r.chance(0.6) && !ocAtual!.concurso && ocAtual!.contrato !== 'militar' && ocAtual!.contrato !== 'servidor' ? ocAtual! : r.pick(mesmaArea)) : ocupacao(r.pick(OCUPACOES_POR_CLASSE[v.origem.classe]));
+      const oc = mesmaArea.length && r.chance(0.8) ? (r.chance(0.6) && !ocAtual!.concurso && ocAtual!.contrato !== 'militar' && ocAtual!.contrato !== 'servidor' ? ocAtual! : r.pick(mesmaArea)) : ocupacao(r.pick(ocupacoesDaClasse(v.origem.classe, paisDaCidade(p.municipioId))));
       if (oc.idadeMin <= ip) {
         p.ocupacaoId = oc.id;
         p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
-        p.renda = liquido(salarioLocal(oc, p.municipioId, 0.85 + r.next() * 0.3), oc.contrato);
+        p.renda = liquido(salarioLocal(oc, p.municipioId, 0.85 + r.next() * 0.3), oc.contrato, paisDaCidade(p.municipioId));
         // Resolvido não é esquecido: a relação ainda lembra, um ano depois, quem esteve por perto.
         if (p.aperto?.tipo === 'desemprego') { if (v.t - p.aperto!.t < 24) p.aperto!.resolvido ??= v.t; else p.aperto = undefined; }
         if (i < 25 && moraComFamiliaDeOrigem(v)) escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} arrumou trabalho de novo, como ${p.ocupacao}.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [p.id] });
@@ -238,6 +241,9 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       const bebe = criarPessoa(v, r, { genero: g, idade: 0, municipioId: maeCasa.municipioId, sobrenome: v.eu.sobrenome, visual: visualHerdado(r, g, maeCasa.visual, outro?.visual) });
       vincular(v, bebe, { parentesco: outro && v.vinculos[outro.id]?.parentesco === 'pai' ? 'irmao' : 'meio_irmao', origem: 'familia', proximidade: 60, convivio: ['casa'] });
       bebe.genitores = [maeCasa.id, ...(outro ? [outro.id] : [])];
+      bebe.municipioNatal = maeCasa.municipioId;
+      const nac = nacionalidadesDoBebe(maeCasa.municipioId, [nacionalidadesDaPessoa(maeCasa), ...(outro ? [nacionalidadesDaPessoa(outro)] : [])], anosNoPais(v));
+      if (nac) bebe.nacionalidades = nac;
       lembrarCom(v, bebe.id, `Nasceu quando você tinha ${i} anos.`, 'inicio', 2);
       escrever(v, { texto: `Nasceu ${flex(g, 'seu irmão', 'sua irmã')}, ${bebe.nome}.`, relevancia: 'marco', tema: 'familia', tom: 'bom', pessoas: [bebe.id] });
     }
@@ -248,8 +254,8 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     const ii = idadePessoa(v, irmao);
     if (ii < 18) { irmao.ocupacao = ii >= 4 ? 'estudante' : undefined; continue; }
     if (irmao.ocupacao === 'estudante' && ii >= 18) {
-      const oc = ocupacao(r.pick(OCUPACOES_POR_CLASSE[v.origem.classe]));
-      if (oc.idadeMin <= ii) { irmao.ocupacao = irmao.genero === 'feminino' ? oc.nome[1] : oc.nome[0]; irmao.renda = liquido(salarioLocal(oc, irmao.municipioId), oc.contrato); }
+      const oc = ocupacao(r.pick(ocupacoesDaClasse(v.origem.classe, paisDaCidade(irmao.municipioId))));
+      if (oc.idadeMin <= ii) { irmao.ocupacao = irmao.genero === 'feminino' ? oc.nome[1] : oc.nome[0]; irmao.renda = liquido(salarioLocal(oc, irmao.municipioId), oc.contrato, paisDaCidade(irmao.municipioId)); }
     }
     const vin = v.vinculos[irmao.id];
     vidaDoIrmao(v, r, irmao, ii);
@@ -380,10 +386,18 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
     return null;
   }
   const genero = r.chance(0.5) ? 'masculino' : 'feminino';
+  // O sobrenome segue o costume do lugar onde nasce (no mundo hispânico, o primeiro do pai e o primeiro da mãe).
+  const paisNatalBebe = paisDaCidade(v.moradia.municipioId);
+  const souPai = v.eu.genero !== 'feminino';
+  const sobrenome = usaDoisSobrenomes(paisNatalBebe) && outro
+    ? sobrenomeDeQuemNasce(paisNatalBebe, souPai ? v.eu.sobrenome : outro.sobrenome, souPai ? outro.sobrenome : v.eu.sobrenome) ?? v.eu.sobrenome
+    : v.eu.sobrenome;
   const bebe = criarPessoa(v, r, {
-    genero, idade: 0, municipioId: v.moradia.municipioId, sobrenome: v.eu.sobrenome,
+    genero, idade: 0, municipioId: v.moradia.municipioId, sobrenome,
     visual: visualHerdado(r, genero, v.eu.visual, outro?.visual)
   });
+  const nac = nacionalidadesDoBebe(v.moradia.municipioId, [nacionalidadesDaVida(v), ...(outro ? [nacionalidadesDaPessoa(outro)] : [])], anosNoPais(v));
+  if (nac) bebe.nacionalidades = nac;
   bebe.tNasc = g.tParto;
   bebe.nome = '';
   const moraComigo = g.gestanteId === 'eu' || (!!outro && v.vinculos[outro.id]?.convivio.includes('casa')) || moraComFamiliaDeOrigem(v);

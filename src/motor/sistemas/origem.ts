@@ -23,6 +23,8 @@
  * os pais conseguem pagar do estudo, o cursinho, o pedido de ajuda.
  */
 
+import { converterEntrePaises } from '../mundo/moeda';
+import { paisDaPessoa, paisDaVida } from '../mundo/vida';
 import type { Rng } from '../rng';
 import { clamp, criarRng } from '../rng';
 import type { ApoioFamiliar, Classe, Pessoa, Vida, Vinculo } from '../tipos';
@@ -89,6 +91,17 @@ export interface RecursosDaFamilia {
   existe: boolean;
 }
 
+/**
+ * MUNDO: a casa de origem conta na moeda do país onde ELA está. Para quem
+ * mora em outro país, o que a família manda atravessa pelo câmbio — este é
+ * o fator (1 quando moram no mesmo país). A reserva continua guardada na
+ * unidade de lá; quem tira dela divide por ele.
+ */
+export function cambioDaFamilia(v: Vida): number {
+  const pr = principal(v);
+  return pr ? converterEntrePaises(1, paisDaPessoa(pr.p), paisDaVida(v)) : 1;
+}
+
 export function recursosDaFamilia(v: Vida): RecursosDaFamilia {
   const pr = principal(v);
   if (!pr) return { renda: 0, porPessoa: 0, folga: 0, reserva: 0, existe: false };
@@ -97,7 +110,9 @@ export function recursosDaFamilia(v: Vida): RecursosDaFamilia {
   const custo = economiaLocal(pr.p.municipioId).custo;
   const porPessoa = renda / Math.max(1, casa.length + dependentes(v)) / Math.max(0.6, custo);
   const folga: Folga = porPessoa < 700 ? 0 : porPessoa < 1300 ? 1 : porPessoa < 2600 ? 2 : porPessoa < 6000 ? 3 : 4;
-  return { renda: Math.round(renda), porPessoa: Math.round(porPessoa), folga, reserva: Math.round(v.origem.reserva ?? 0), existe: true };
+  // A folga é a de lá (no custo de lá); a renda e a reserva, vistas daqui (pelo câmbio).
+  const k = cambioDaFamilia(v);
+  return { renda: Math.round(renda * k), porPessoa: Math.round(porPessoa), folga, reserva: Math.round((v.origem.reserva ?? 0) * k), existe: true };
 }
 
 /* --------------------------------------------------------------- A reserva */
@@ -356,7 +371,7 @@ export function pedirAjuda(v: Vida, r: Rng, motivo: MotivoDeAjuda): { texto: str
   }
   const valor = Math.max(200, Math.min(n.valor, ap.ate));
   v.financas.conta += valor;
-  o.reserva = Math.max(0, Math.round((o.reserva ?? 0) - valor));
+  o.reserva = Math.max(0, Math.round((o.reserva ?? 0) - valor / cambioDaFamilia(v)));
   o.apoios.push({ t: v.t, valor, motivo, sentido: 'recebeu', pessoaId: quem.id });
   pr.vin.confianca = clamp(pr.vin.confianca + 2);
   if (valor >= 5000) pr.vin.tensao = clamp(pr.vin.tensao + 2);
@@ -373,7 +388,7 @@ export function registrarAjudaDada(v: Vida, p: Pessoa, valor: number): void {
   const o = v.origem;
   o.apoios ??= [];
   o.apoios.push({ t: v.t, valor, motivo: 'casa', sentido: 'deu', pessoaId: p.id });
-  if (responsaveis(v).some(x => x.p.id === p.id)) o.reserva = Math.round((o.reserva ?? 0) + valor);
+  if (responsaveis(v).some(x => x.p.id === p.id)) o.reserva = Math.round((o.reserva ?? 0) + valor / cambioDaFamilia(v));
 }
 
 /* ----------------------------------------------------------- Leitura */

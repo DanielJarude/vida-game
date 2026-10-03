@@ -51,15 +51,17 @@ function jogador(): Vida {
 
 /** Um mandato de prefeito em curso, com a greve na mesa. */
 function prefeitoNaGreve(semente = 3): Vida {
-  return transacao(trinta(), x => {
+  const v = transacao(trinta(), x => {
     entrarNaPolitica(x, 'comunidade', 1);
     const p = x.caminhos.politica!;
     p.fase = 'mandato'; p.partido = p.partido ?? 'PRT'; p.apoio = 45; p.desgaste = 20; p.reputacao = 45;
     p.mandato = { cargo: 'prefeito', tInicio: x.t - 12, tFim: x.t + 36, aprovacao: 50, feito: 0, crise: { t: x.t, tipo: 'greve' } };
     x.trabalho.atual = { ocupacaoId: 'prefeito', empregador: 'a prefeitura', contrato: 'eletivo', salario: 15000, tInicio: x.t - 12, desempenho: 60, municipioId: x.moradia.municipioId, carga: 'integral' };
-    x.rng = semente;
     x.momento = null;
   }).vida;
+  // A semente vale depois da transação (dentro dela, o estado do gerador é regravado no fim): cada semente, um sorteio.
+  v.rng = semente;
+  return v;
 }
 const abrir = (v: Vida, id: string): Vida => transacao(v, (x, r) => { const d = conteudoPorId(id); if (d?.tipo === 'decisao') abrirDecisao(x, d, contexto(x, r)); }).vida;
 

@@ -10,7 +10,7 @@ export { executar } from './acoes';
 export { apagarSave, exportarVida, importarVida, ler, lerEstatisticas, registrarVidaPassada, salvar } from './save';
 export { idade } from './nucleo';
 export { patrimonio } from './sistemas/dinheiro';
-export { nomeLugar } from './dados/lugares';
+export { nomeLugar, paisDaCidade } from './dados/lugares';
 export { descricaoEmprego } from './sistemas/trabalho';
 export { anoDe } from './tempo';
 export { continuarComo, decidirHeranca, encerrarHistoria } from './sistemas/sucessao';

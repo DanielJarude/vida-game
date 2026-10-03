@@ -12,6 +12,7 @@ import type { Convivio, Especie, Genero, Parentesco, Pessoa, Vida, Vinculo, Visu
 import { novoId, temperamentoAleatorio } from './nucleo';
 import { sortearNome, sortearSobrenome } from './dados/nomes';
 import { anoDe } from './tempo';
+import { municipio } from './dados/lugares';
 
 export const PELES = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
 export const CORES_CABELO = ['preto', 'castanho_escuro', 'castanho', 'castanho_claro', 'loiro', 'ruivo'];
@@ -64,6 +65,8 @@ export interface NovaPessoa {
   especie?: Especie;
   nome?: string;
   visual?: Visual;
+  /** De que país a pessoa é, quando não é o da cidade onde mora (o nome vem de lá). */
+  paisDeOrigem?: string;
 }
 
 export function criarPessoa(v: Vida, r: Rng, n: NovaPessoa): Pessoa {
@@ -79,12 +82,16 @@ export function criarPessoa(v: Vida, r: Rng, n: NovaPessoa): Pessoa {
       const par = p.parceiroId ? v.pessoas[p.parceiroId] : undefined;
       return par?.vivo ? [p.nome, par.nome] : [p.nome];
     })]);
-  let nome = n.nome ?? sortearNome(r, genero, anoDe(tNasc));
-  for (let k = 0; k < 14 && !n.nome && ocupados.has(nome); k++) nome = sortearNome(r, genero, anoDe(tNasc));
+  // O nome é do lugar de onde a pessoa vem (a cidade dela, ou o país de origem quando é de fora).
+  const lugar = municipio(n.municipioId);
+  const pais = n.paisDeOrigem ?? lugar.pais;
+  const div = pais === lugar.pais ? lugar.uf : undefined;
+  let nome = n.nome ?? sortearNome(r, genero, anoDe(tNasc), pais, div, n.sobrenome);
+  for (let k = 0; k < 14 && !n.nome && ocupados.has(nome); k++) nome = sortearNome(r, genero, anoDe(tNasc), pais, div, n.sobrenome);
   const p: Pessoa = {
     id: novoId(v, 'p'),
     nome,
-    sobrenome: n.sobrenome ?? sortearSobrenome(r),
+    sobrenome: n.sobrenome ?? sortearSobrenome(r, pais, div),
     genero,
     tNasc,
     vivo: true,
@@ -104,6 +111,8 @@ export function criarPessoa(v: Vida, r: Rng, n: NovaPessoa): Pessoa {
     p.atracao = x < 0.86 ? oposto : x < 0.93 ? mesmo : 'ambos';
     p.querFilhos = r.weighted(['sim', 'talvez', 'nao'] as const, q => ({ sim: 5, talvez: 3, nao: 2 })[q]);
   }
+  // De outro país que o da cidade onde mora: a nacionalidade fica escrita (o resto, sem o campo, é a do lugar).
+  if (n.paisDeOrigem && n.paisDeOrigem !== lugar.pais) p.nacionalidades = [n.paisDeOrigem];
   v.pessoas[p.id] = p;
   return p;
 }

@@ -18,7 +18,7 @@ export function Inicio({ c }: { c: ControleVida }) {
         </div>}
         {c.avisoSave && <p className="nota inicio__aviso" role="status">{c.avisoSave} <button type="button" className="botao botao--discreto" onClick={() => c.setAvisoSave(null)}>Entendi</button></p>}
       </div>
-      <p className="inicio__rodape">Um simulador de vida brasileiro. Tudo fica salvo neste navegador — e dá para levar uma vida para outro aparelho, exportando e importando o arquivo.</p>
+      <p className="inicio__rodape">Um simulador de vida nascido no Brasil — e agora com o mundo inteiro por onde viver. Tudo fica salvo neste aparelho, e funciona sem internet depois da primeira visita — e dá para levar uma vida para outro aparelho, exportando e importando o arquivo.</p>
     </div>
   );
 }

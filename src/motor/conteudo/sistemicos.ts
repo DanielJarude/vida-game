@@ -6,6 +6,10 @@
  * existe porque um bebê nasceu.
  */
 
+import { educacaoDaVida, paisDaVida } from '../mundo/vida';
+import { redeDeSaude } from '../sistemas/saude';
+import { cotidiano, previdencia, registroCivil } from './local';
+import { dinheiro as moeda } from '../texto';
 import { disponivel as guardado, pagar as pagarGuardado, parcelaPrice, rendaPropriaMensal } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
@@ -23,7 +27,7 @@ import { sortearNome } from '../dados/nomes';
 import { anoDe } from '../tempo';
 import { descricaoOrigem } from '../sistemas/social';
 import { ROTINAS } from '../sistemas/rotinas';
-import { economiaLocal } from '../dados/lugares';
+import { economiaLocal, existeMunicipio, municipio, paisDaCidade } from '../dados/lugares';
 import { curso } from '../dados/cursos';
 import { saldoMensal } from '../sistemas/dinheiro';
 import { totalAplicado } from '../sistemas/investimentos';
@@ -41,9 +45,12 @@ export function nomesParaBebe(c: Ctx): string[] {
   const g = b.genero === 'feminino' ? 'feminino' : 'masculino';
   // Não sugerir o nome de alguém que já está na vida (nem o do próprio jogador).
   const usados = new Set([c.v.eu.nome, ...Object.values(c.v.vinculos).filter(x => c.v.pessoas[x.pessoaId]?.vivo).map(x => c.v.pessoas[x.pessoaId].nome)]);
+  // Os nomes do país onde o bebê nasce (e do grupo do sobrenome da família): no Japão, nomes japoneses.
+  const natal = existeMunicipio(b.municipioId) ? municipio(b.municipioId) : undefined;
+  const pais = natal ? paisDaCidade(natal.id) : paisDaVida(c.v);
   const nomes: string[] = [];
   for (let k = 0; k < 60 && nomes.length < 3; k++) {
-    const n = sortearNome(r, g, anoDe(b.tNasc));
+    const n = sortearNome(r, g, anoDe(b.tNasc), pais, natal?.uf, b.sobrenome);
     if (!nomes.includes(n) && !usados.has(n)) nomes.push(n);
   }
   return nomes;
@@ -171,10 +178,10 @@ export const SISTEMICOS: Conteudo[] = [
     papeis: { pessoa: P.parceiro },
     quando: c => temFato(c.v, `noivado_${c.p.pessoa.id}`) && c.v.vinculos[c.p.pessoa.id].romance?.estagio !== 'casamento' && c.v.t - (c.v.fatos[`noivado_${c.p.pessoa.id}`] ?? c.v.t) >= 12,
     titulo: 'Como vai ser o casamento',
-    texto: c => `A data está marcada. Falta decidir o tamanho da festa — e de onde vem o dinheiro. Você tem ${c.v.financas.conta > 0 ? `R$ ${Math.round(c.v.financas.conta).toLocaleString('pt-BR')} na conta` : 'pouco dinheiro na conta'}${totalAplicado(c.v) > 1000 ? ` e R$ ${Math.round(totalAplicado(c.v)).toLocaleString('pt-BR')} aplicados` : ''}.`,
+    texto: c => `A data está marcada. Falta decidir o tamanho da festa — e de onde vem o dinheiro. Você tem ${c.v.financas.conta > 0 ? `${moeda(c.v.financas.conta)} na conta` : 'pouco dinheiro na conta'}${totalAplicado(c.v) > 1000 ? ` e ${moeda(totalAplicado(c.v))} aplicados` : ''}.`,
     opcoes: [
-      { id: 'cartorio', texto: 'Só o cartório e um almoço com os mais próximos', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: 'Assinaram no cartório de manhã. O almoço foi na casa de um parente, com churrasco.', memoria: `Casou-se com ${c.p.pessoa.nome} no cartório, com almoço para os mais próximos.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, 2500) }) },
+      { id: 'cartorio', texto: c => `Só ${registroCivil(c.v)} e um almoço com os mais próximos`, comportamento: { disciplina: 1 },
+        resolver: c => ({ texto: cotidiano(c.v).registroCivil ? `Assinaram n${registroCivil(c.v)} de manhã. O almoço foi na casa de um parente, com churrasco.` : `Assinaram n${registroCivil(c.v)} de manhã. O almoço foi na casa de um parente.`, memoria: `Casou-se com ${c.p.pessoa.nome} n${registroCivil(c.v)}, com almoço para os mais próximos.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, 2500) }) },
       { id: 'festa', texto: 'Festa num salão, para uns cem convidados', disponivel: c => cabeFesta(c, 28000), resolver: c => ({ texto: 'Teve DJ, bolo de três andares e tio dançando até o fim.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa para cem convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(28000 * economiaLocal(c.v.moradia.municipioId).custo)) }) },
       { id: 'festao', texto: 'O casamento dos sonhos, nem que seja parcelado', comportamento: { impulsividade: 1 }, disponivel: c => cabeFesta(c, 75000),
         resolver: c => ({ texto: 'Igreja cheia, trezentos convidados, fotos lindas — e um carnê de doze vezes.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa de trezentos convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(75000 * economiaLocal(c.v.moradia.municipioId).custo)) }) }
@@ -249,7 +256,7 @@ export const SISTEMICOS: Conteudo[] = [
     papeis: { filho: P.filhoEmCasa(2, 5) },
     quando: c => !temFato(c.v, 'filhos_escola_decidida'),
     titulo: 'Escola',
-    texto: c => `${c.p.filho.nome} vai começar na escola. A escola pública do bairro é de graça; a particular mais próxima custa perto de R$ ${Math.round(1300 * economiaLocal(c.v.moradia.municipioId).custo).toLocaleString('pt-BR')} por mês, por filho.`,
+    texto: c => `${c.p.filho.nome} vai começar na escola. A escola pública do bairro é de graça; a particular mais próxima custa perto de ${moeda(1300 * economiaLocal(c.v.moradia.municipioId).custo)} por mês, por filho.`,
     opcoes: [
       { id: 'publica', texto: 'Escola pública', resolver: c => ({ texto: `${c.p.filho.nome} foi para a escola municipal.`, memoria: null, efeito: () => fato(c, 'filhos_escola_decidida') }) },
       { id: 'privada', texto: 'Escola particular', resolver: c => ({ texto: `${c.p.filho.nome} foi para uma escola particular.`, memoria: `Colocou ${c.p.filho.nome} numa escola particular.`, efeito: () => { fato(c, 'filhos_escola_decidida'); fato(c, 'filhos_escola_privada'); } }) }
@@ -261,13 +268,13 @@ export const SISTEMICOS: Conteudo[] = [
     id: 'esc_fim_do_medio', tipo: 'decisao', idade: [16, 20], tema: 'estudo', garantido: true, biografica: true,
     quando: c => temFato(c.v, 'concluiu_medio') && c.v.fatos['concluiu_medio'] === c.v.t,
     titulo: 'E agora?',
-    texto: c => `O ensino médio acabou. ${P.genitor(c.v)[0] ? `${P.genitor(c.v)[0].nome} quer saber o que você vai fazer. ` : ''}Os colegas se dividem entre ENEM, emprego e não saber.`,
+    texto: c => `O ensino médio acabou. ${P.genitor(c.v)[0] ? `${P.genitor(c.v)[0].nome} quer saber o que você vai fazer. ` : ''}Os colegas se dividem entre ${educacaoDaVida(c.v).nome}, emprego e não saber.`,
     opcoes: [
-      { id: 'enem', texto: 'Fazer o ENEM e tentar uma faculdade', resolver: c => {
+      { id: 'enem', texto: c => (educacaoDaVida(c.v).aberto ? 'Fazer a matrícula na universidade' : `Fazer ${educacaoDaVida(c.v).o} e tentar uma faculdade`), resolver: c => {
         const pode = podeFazerEnem(c.v).grau === 'permitido';
         return { texto: pode ? 'A inscrição foi feita. A prova é em novembro.' : 'Você se prepara para tentar uma faculdade.', memoria: null, efeito: () => { fato(c, 'plano_faculdade'); if (pode) fazerEnem(c.v, c.r); } };
       } },
-      { id: 'cursinho', texto: 'Um ano de cursinho antes de tentar', resolver: c => ({ texto: 'Um ano de cursinho: manhã de aula, tarde de exercício.', memoria: 'Decidiu passar um ano no cursinho antes de tentar o ENEM.', efeito: () => { fato(c, 'plano_faculdade'); if (!c.v.rotinas.some(r => r.id === 'cursinho')) c.v.rotinas.push({ id: 'cursinho', tInicio: c.v.t }); } }) },
+      { id: 'cursinho', texto: 'Um ano de cursinho antes de tentar', resolver: c => ({ texto: 'Um ano de cursinho: manhã de aula, tarde de exercício.', memoria: `Decidiu passar um ano no cursinho antes de tentar ${educacaoDaVida(c.v).o}.`, efeito: () => { fato(c, 'plano_faculdade'); if (!c.v.rotinas.some(r => r.id === 'cursinho')) c.v.rotinas.push({ id: 'cursinho', tInicio: c.v.t }); } }) },
       { id: 'trabalhar', texto: 'Arrumar um emprego', resolver: c => ({ texto: 'Você começou a mandar currículo.', memoria: 'Terminou o médio decidid' + c.g('o', 'a', 'e') + ' a trabalhar.', efeito: () => fato(c, 'plano_trabalho') }) },
       { id: 'tecnico', texto: 'Fazer um curso técnico ou aprender um ofício', resolver: c => ({ texto: 'Você foi pesquisar os cursos técnicos e de qualificação da cidade.', memoria: null, efeito: () => fato(c, 'plano_tecnico') }) },
       { id: 'concurso', texto: 'Estudar para concurso', disponivel: c => (idade(c.v) >= 17 ? true : false),
@@ -317,8 +324,8 @@ export const SISTEMICOS: Conteudo[] = [
   {
     id: 'trab_aposentar', tipo: 'decisao', idade: [60, 90], tema: 'trabalho', prioritario: true,
     quando: c => podeAposentar(c.v).grau === 'permitido' && !!c.v.trabalho.atual,
-    titulo: 'A carta do INSS',
-    texto: c => `O INSS confirmou: você já pode se aposentar. Seguir trabalhando é possível — ${c.v.trabalho.atual ? 'o trabalho continua lá' : 'se houver trabalho'}.`,
+    titulo: c => `A carta ${previdencia(c.v).do}`,
+    texto: c => `${previdencia(c.v).O} confirmou: você já pode se aposentar. Seguir trabalhando é possível — ${c.v.trabalho.atual ? 'o trabalho continua lá' : 'se houver trabalho'}.`,
     opcoes: [
       { id: 'aposentar', texto: 'Aposentar', resolver: c => ({ texto: 'Na última sexta-feira, teve bolo na firma e discurso curto.', memoria: null, efeito: () => aposentar(c.v) }) },
       { id: 'seguir', texto: 'Continuar trabalhando mais um tempo', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você pediu o benefício para depois. Segunda-feira, trabalho como sempre.', memoria: null }) }
@@ -357,23 +364,37 @@ export const SISTEMICOS: Conteudo[] = [
     titulo: 'O tratamento',
     texto: c => {
       const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando && x.diagnosticada !== false)!;
-      return `O ${cond.nome === 'câncer' ? 'oncologista' : 'médico do posto'} explicou: ${cond.nome} tem tratamento, mas pelo SUS há fila de meses para o especialista. Particular, é para já — e caro.`;
+      const rede = redeDeSaude(c.v);
+      const quem = `O ${cond.nome === 'câncer' ? 'oncologista' : 'médico do posto'} explicou: ${cond.nome} tem tratamento`;
+      // Onde a saúde depende de seguro, a rede pública é para quem tem pouca renda; onde é universal, a fila anda.
+      if (rede.sistema === 'seguro') return `${quem}. Sem plano, é do bolso — e caro: ${rede.o} só cobre quem tem pouca renda.`;
+      return `${quem}, mas ${rede.pelo} há fila de ${rede.sistema === 'universal' ? 'algumas semanas' : 'meses'} para o especialista. Particular, é para já — e caro.`;
     },
     opcoes: [
-      { id: 'sus', texto: 'Entrar na fila do SUS', resolver: c => {
+      { id: 'sus', texto: c => (redeDeSaude(c.v).sistema === 'seguro' ? `Pedir a cobertura ${redeDeSaude(c.v).do}` : `Entrar na fila ${redeDeSaude(c.v).do}`),
+        disponivel: c => (redeDeSaude(c.v).sistema !== 'seguro' || guardado(c.v) < custoParticular(c) ? true : `Com o dinheiro que há, ${redeDeSaude(c.v).o} não cobre: é para quem tem pouca renda.`),
+        resolver: c => {
         const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando && x.diagnosticada !== false)!;
-        return { texto: 'Você saiu do posto com um papel de encaminhamento e uma estimativa vaga.', memoria: `Entrou na fila do SUS para tratar ${cond.nome}.`, relevancia: 'cotidiano', efeito: () => c.v.processos.push({ tipo: 'tratamento', id: `trat${c.v.seq++}`, condicaoId: cond.id, tFim: c.v.t + (cond.id === 'cancer' ? 4 : 10), rede: 'sus' }) };
+        const rede = redeDeSaude(c.v);
+        const espera = Math.round((cond.id === 'cancer' ? 4 : 10) * rede.fatorEspera);
+        return { texto: 'Você saiu do posto com um papel de encaminhamento e uma estimativa vaga.', memoria: `Entrou na fila ${rede.do} para tratar ${cond.nome}.`, relevancia: 'cotidiano', efeito: () => c.v.processos.push({ tipo: 'tratamento', id: `trat${c.v.seq++}`, condicaoId: cond.id, tFim: c.v.t + espera, rede: 'sus' }) };
       } },
-      { id: 'particular', texto: 'Pagar particular', disponivel: c => custa(c, 6000, 'Não há dinheiro para pagar particular.'),
+      { id: 'particular', texto: 'Pagar particular', disponivel: c => custa(c, 6000 * redeDeSaude(c.v).fatorParticular, 'Não há dinheiro para pagar particular.'),
         resolver: c => {
           const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando && x.diagnosticada !== false)!;
-          const custo = cond.id === 'cancer' ? 45000 : 6000;
+          const custo = custoParticular(c);
           return { texto: 'Consulta na mesma semana, exames no mesmo mês.', memoria: `Pagou do bolso o tratamento de ${cond.nome}.`, efeito: () => { cond.tratando = true; dinheiro(c, -custo); } };
         } },
       { id: 'depois', texto: 'Deixar para depois', comportamento: { impulsividade: 1 }, resolver: () => ({ texto: 'Você guardou o papel numa gaveta.', memoria: null }) }
     ]
   }
 ];
+
+/** O tratamento particular da condição que espera: onde a saúde depende de seguro, sem plano, o preço de verdade. */
+function custoParticular(c: Ctx): number {
+  const cond = c.v.corpo.condicoes.find(x => x.cronica && !x.tratando && x.diagnosticada !== false);
+  return (cond?.id === 'cancer' ? 45000 : 6000) * redeDeSaude(c.v).fatorParticular;
+}
 
 /** A festa cabe? O que faltar vira parcela, e a parcela precisa caber na renda do casal. */
 function cabeFesta(c: Ctx, base: number): true | string {

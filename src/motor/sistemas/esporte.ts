@@ -17,27 +17,30 @@
  * atletismo e lutas usam a mesma estrutura, com seletivas e equipes.
  */
 
+import { paisCorrente } from '../mundo/moeda';
+import { PAIS_PADRAO } from '../mundo/registro';
+import { rendaRelativa, salarioMinimoDoPais } from '../mundo/economia';
+import { paisDaVida } from '../mundo/vida';
 import { lancar } from './extrato';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { CarreiraEsportiva, Dominio, Posicao, PropostaDeClube, Temporada, Vida } from '../tipos';
 import { escrever, idade, lembrarCom, marcarFato, pais, temFato } from '../nucleo';
-import { municipio, MUNICIPIOS } from '../dados/lugares';
+import { cidadesDoPais, municipio, municipioDoCodigo, MUNICIPIOS, paisDaCidade } from '../dados/lugares';
 import { estruturaEsportiva } from '../dados/mercado';
-import { ocupacao } from '../dados/ocupacoes';
+import { comissaoDe, ocupacao } from '../dados/ocupacoes';
 import { habilidade, praticar } from './frentes';
 import { marcar } from './marcas';
 import { contratar, encerrarEmprego } from './trabalho';
 import { capitalDoEstado } from './escola';
 import { flex, ge } from '../texto';
 import { novaOportunidade } from './oportunidades';
-import { aoClube, clubeDoNivel, clubesDoNivel, CLUBES, clubesDaCidade, DIVISAO_DO_NIVEL, doClube, equipeDaCidade, noClube, oClube, peloClube } from '../dados/clubes';
+import { aoClube, clubeDoNivel, clubePorNome, clubesDoNivel, clubesDoPais, clubesDaCidade, divisaoDoNivel, doClube, equipeDaCidade, noClube, oClube, peloClube } from '../dados/clubes';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import { abalar } from './abalo';
 import { lesaoAtiva, lesionar, mesesForaNoAno } from './lesoes';
 import { fatorDeRiscoFisico } from './sobrecarga';
-import { SALARIO_MINIMO } from './renda';
 import { anoDe } from '../tempo';
 import { dinheiro } from '../texto';
 import { CIRCUITO_TENIS, custoDoCircuito, custoJuvenilTenis, DIVISAO_BASQUETE, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO, circuitoDeEstreia, circuitoPeloRanking, PONTOS_CAMPEAO, PONTOS_PRINCIPAL, pontosDaRodada, premiacaoTenis, rankingPorPontos, vantagemDeEstatura, vivePremiacao } from './modalidades';
@@ -88,7 +91,7 @@ export const IDADE_CONVITE: [number, number] = [10, 20];
 export function conviteDaBase(v: Vida): { dominio: Dominio; municipioId: string; clube: string } | undefined {
   if (!temFato(v, 'convite_base')) return undefined;
   const dominio = MODALIDADES[v.fatos['peneira_mod'] ?? 0] ?? 'futebol';
-  const municipioId = MUNICIPIOS[v.fatos['peneira_lugar'] ?? -1]?.id ?? v.moradia.municipioId;
+  const municipioId = municipioDoCodigo(v.fatos['peneira_lugar'] ?? -1) ?? v.moradia.municipioId;
   return { dominio, municipioId, clube: nomeDeClube(municipioId, `${v.id}:${v.fatos['convite_base']}`, dominio) };
 }
 
@@ -102,13 +105,18 @@ export function categoriaDaBase(v: Vida, e: CarreiraEsportiva): string {
 export const contratoDaBase = (d: Dominio) => ({ idade: (d === 'futebol' ? [17, 20] : [17, 22]) as [number, number], tecnica: d === 'futebol' ? 79 : 82 });
 
 /** O nome da divisão (ou do circuito) em cada modalidade: fonte única para tela e texto. */
-export function divisaoDe(d: Dominio, nivel: number): string {
-  if (d === 'futebol') return DIVISAO_DO_NIVEL[nivel] ?? '';
-  if (d === 'basquete') return DIVISAO_BASQUETE[nivel] ?? '';
+export function divisaoDe(d: Dominio, nivel: number, pais = paisCorrente()): string {
+  if (d === 'futebol') return divisaoDoNivel(nivel, pais) ?? '';
+  // Basquete e vôlei: as ligas brasileiras (NBB, Superliga) só no Brasil; fora, a liga do país dita pelo que ela é —
+  // sem inventar nome (o perfil dos países só traz as divisões do futebol).
+  if (d === 'basquete') return (pais === PAIS_PADRAO ? DIVISAO_BASQUETE : DIVISAO_GENERICA_QUADRA('basquete'))[nivel] ?? '';
   if (d === 'tenis') return CIRCUITO_TENIS[nivel] ?? '';
-  if (d === 'volei') return DIVISAO_VOLEI[nivel] ?? '';
+  if (d === 'volei') return (pais === PAIS_PADRAO ? DIVISAO_VOLEI : DIVISAO_GENERICA_QUADRA('vôlei'))[nivel] ?? '';
   return ['', 'competições regionais', 'circuito nacional de acesso', 'circuito nacional', 'elite nacional'][nivel] ?? '';
 }
+
+/** Fora do Brasil: as divisões de quadra pelo que são. */
+const DIVISAO_GENERICA_QUADRA = (m: string) => ['', `campeonato regional de ${m}`, `segunda divisão nacional de ${m}`, `liga nacional de ${m}`, `liga nacional de ${m} — entre os times de ponta`];
 
 /** Vôlei: o estadual, a divisão de acesso nacional e a liga nacional (a elite). */
 export const DIVISAO_VOLEI = ['', 'campeonato estadual', 'Superliga B', 'Superliga', 'Superliga — entre os times de ponta'];
@@ -151,7 +159,7 @@ export function ondeTreina(v: Vida, d: Dominio = 'futebol'): string {
 }
 
 /** O teto de divisão de um clube na simulação (os grandes chegam à elite; os regionais, às divisões de acesso). */
-const tetoDoClube = (nome: string) => { const c = CLUBES.find(x => x.nome === nome); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
+const tetoDoClube = (nome: string, pais?: string) => { const c = clubePorNome(nome, pais); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
 /** A modalidade que a pessoa pratica com mais seriedade agora. */
 export function modalidadePrincipal(v: Vida): { d: Dominio; nivel: number } | undefined {
   // O time da escola é futebol de competição (os jogos escolares): conta como treino regular (REWORK 3).
@@ -224,7 +232,7 @@ const BASE_OUTROS = [0, 1800, 4000, 9500, 26000];
 /** Basquete: o NBB paga mais que as outras modalidades de quadra; a Liga Ouro, pouco acima do mínimo. */
 const BASE_BASQUETE = [0, 2200, 4500, 9500, 24000];
 const PORTE_CLUBE: Record<string, number> = { grande: 1.5, tradicional: 1, regional: 0.7 };
-export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number = e.nivel, espaco: CarreiraEsportiva['espaco'] = e.espaco, clube: string = e.clube): number {
+export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number = e.nivel, espaco: CarreiraEsportiva['espaco'] = e.espaco, clube: string = e.clube, pais: string = paisDaCidade(clube === e.clube ? e.municipioId : v.moradia.municipioId)): number {
   const i = idade(v);
   const futebol = e.modalidade === 'futebol';
   // Tênis não tem salário de clube: vive de premiação (`modalidades.premiacaoTenis`).
@@ -233,7 +241,7 @@ export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number =
   const rep = e.reputacao ?? 30;
   const papel = espaco === 'titular' ? 1 : 0.55;
   const nome = 0.45 + (rep / 100) ** 2 * 2.2;
-  const tamanho = futebol ? CLUBES.find(c => c.nome === clube)?.porte ?? 'regional' : 'tradicional';
+  const tamanho = futebol ? clubePorNome(clube, pais)?.porte ?? 'regional' : 'tradicional';
   const porte = futebol ? PORTE_CLUBE[tamanho] ?? 0.8 : 1;
   const t = e.temporadas?.[e.temporadas.length - 1];
   const temporada = t ? 1 + clamp((t.nota - 6) * 0.06, -0.2, 0.2) : 1;
@@ -245,10 +253,13 @@ export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number =
   // (FIX 3.1: o prêmio de estrela e o valor do nome fora da elite são do futebol — o mercado das outras modalidades é bem menor.)
   const mercadoDoNome = futebol ? 1 : 0.2;
   const estrela = nivel >= 4 && rep >= 78 && noto >= 60 ? 1 + ((rep - 78) * 0.12 + (noto - 60) * 0.05) * alcance * mercadoDoNome : 1;
-  let bruto = base * papel * nome * porte * temporada * fase * estrela;
+  // O país do clube: as ligas pagam diferente (em poder de compra de lá) — `MERCADOS`. No Brasil, 1.
+  const paisDoClube = futebol ? pais : paisDaVida(v);
+  const liga = futebol ? (MERCADOS[paisDoClube]?.paga ?? Math.min(2, Math.max(0.4, rendaRelativa(paisDoClube)))) : 1;
+  let bruto = base * papel * nome * porte * temporada * fase * estrela * liga;
   // Fora da elite, um nome conhecido vale por si (o veterano que o clube menor contrata pelo nome).
   if (nivel <= 3 && noto >= 45) bruto += (noto - 40) ** 2 * 60 * fase * mercadoDoNome;
-  return Math.max(SALARIO_MINIMO, Math.round(bruto / 100) * 100);
+  return Math.max(salarioMinimoDoPais(paisDoClube), Math.round(bruto / 100) * 100);
 }
 
 /** Fora da elite, contrato é curto (um ano, uma temporada); na elite, dá para assinar mais longo. */
@@ -288,6 +299,34 @@ export function salarioDaRenovacao(v: Vida, e: CarreiraEsportiva, fator = 1): nu
  */
 export const propostaNaMesa = (v: Vida): PropostaDeClube | undefined => { const p = v.caminhos.esporte?.proposta; return p && v.t <= p.validaAte ? p : undefined; };
 
+/**
+ * OS MERCADOS DO FUTEBOL (calibração do jogo, não estatística): quanto pesa
+ * cada liga na hora de buscar alguém de fora e quanto ela paga, em poder de
+ * compra, em relação a uma divisão equivalente no Brasil. As cinco grandes
+ * ligas europeias pagam várias vezes mais; a argentina, menos. Um país fora
+ * da lista paga pela renda dele e quase não compra de fora.
+ */
+const MERCADOS: Record<string, { peso: number; paga: number }> = {
+  GB: { peso: 6, paga: 4.5 }, ES: { peso: 5, paga: 3.5 }, IT: { peso: 4, paga: 3 }, DE: { peso: 4, paga: 3 }, FR: { peso: 3, paga: 2.5 },
+  PT: { peso: 3, paga: 1.3 }, BR: { peso: 2, paga: 1 }, MX: { peso: 1.5, paga: 1.4 }, US: { peso: 1.5, paga: 1.8 }, AR: { peso: 1, paga: 0.7 },
+  JP: { peso: 0.8, paga: 1.3 }, CN: { peso: 0.5, paga: 1.8 }, KR: { peso: 0.3, paga: 1 }, MA: { peso: 0.2, paga: 0.6 }, AU: { peso: 0.3, paga: 1 }
+};
+
+/** Um clube de outro país quer você? (Só na elite, com nome no mercado; a liga de fora escolhe pelo peso dela.) */
+function clubeDeFora(v: Vida, e: CarreiraEsportiva, origem: PropostaDeClube['origem']): { nome: string; cidade: string } | undefined {
+  if (e.modalidade !== 'futebol' || origem !== 'exterior' || idade(v) < 18) return undefined;
+  const rep = e.reputacao ?? 30;
+  const aqui = paisDaCidade(e.municipioId);
+  const mercados = Object.entries(MERCADOS).filter(([p]) => p !== aqui && clubesDoPais(p).length > 0 && (MERCADOS[p].paga >= (MERCADOS[aqui]?.paga ?? 1) * 0.9 || rep >= 75));
+  if (!mercados.length) return undefined;
+  const total = mercados.reduce((s, [, m]) => s + m.peso, 0);
+  let alvo = hash(`${v.id}:${v.t}:liga`) * total;
+  const pais = (mercados.find(([, m]) => (alvo -= m.peso) < 0) ?? mercados[0])[0];
+  const lista = clubesDoPais(pais).filter(c => (rep >= 75 ? c.porte === 'grande' : c.porte !== 'regional'));
+  const c = (lista.length ? lista : clubesDoPais(pais))[Math.floor(hash(`${v.id}:${v.t}:clube_fora`) * 1000) % (lista.length || clubesDoPais(pais).length)];
+  return c ? { nome: c.nome, cidade: c.cidade } : undefined;
+}
+
 export function criarProposta(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 4, origem: PropostaDeClube['origem']): PropostaDeClube | undefined {
   if (propostaNaMesa(v)) return undefined;
   const futebol = e.modalidade === 'futebol';
@@ -296,14 +335,20 @@ export function criarProposta(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 
   let clube = e.clube;
   let municipioId = v.trabalho.atual?.municipioId ?? v.moradia.municipioId;
   // A compra ao fim de um empréstimo é do clube onde se está (a mesma cidade, o mesmo clube).
+  if (origem === 'exterior' && !clubeDeFora(v, e, origem)) return undefined;
   if (origem === 'compra') { clube = e.clube; municipioId = e.municipioId; }
+  else if (futebol && clubeDeFora(v, e, origem)) {
+    // Uma liga de fora: o clube e a cidade dele (aceitar é migrar — `migracao`, pela porta do esporte).
+    const f = clubeDeFora(v, e, origem)!;
+    clube = f.nome; municipioId = f.cidade;
+  }
   else if (futebol) {
-    const doNivel = clubesDoNivel(nivel, e.emprestimo?.clube ?? e.clube).filter(c => c.nome !== e.clube);
+    const doNivel = clubesDoNivel(nivel, e.emprestimo?.clube ?? e.clube, paisDaCidade(e.municipioId)).filter(c => c.nome !== e.clube);
     const uf = municipio(v.moradia.municipioId).uf;
     const pertos = origem === 'liberacao' || origem === 'emprestimo' ? doNivel.filter(c => municipio(c.cidade).uf === uf) : [];
     const lista = pertos.length ? pertos : doNivel;
     clube = lista[Math.floor(hash(`${v.id}:${v.t}:${origem}:proposta`) * lista.length) % lista.length].nome;
-    municipioId = CLUBES.find(c => c.nome === clube)?.cidade ?? v.moradia.municipioId;
+    municipioId = clubePorNome(clube, paisDaCidade(e.municipioId))?.cidade ?? v.moradia.municipioId;
   } else if (perfilDe(e.modalidade).estrutura === 'clube') {
     // Basquete e vôlei: outra equipe, de outra cidade (a elite fica nas cidades grandes; o acesso, mais perto).
     const alvo = cidadeDeEquipe(v, e, nivel, origem);
@@ -315,7 +360,7 @@ export function criarProposta(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 
   const atual = v.trabalho.atual && OCUPACOES_DE_ATLETA.includes(v.trabalho.atual.ocupacaoId) ? v.trabalho.atual.salario : 0;
   const p: PropostaDeClube = {
     id: `pc${v.t}${Math.floor(hash(`${v.id}:${v.t}:${origem}`) * 1e6)}`, clube, municipioId, nivel, meses, espaco,
-    salario: origem === 'emprestimo' ? atual : salarioDoContrato(v, e, nivel, espaco, clube), salarioTitular: origem === 'emprestimo' ? atual : salarioDoContrato(v, e, nivel, 'titular', clube),
+    salario: origem === 'emprestimo' ? atual : salarioDoContrato(v, e, nivel, espaco, clube, paisDaCidade(municipioId)), salarioTitular: origem === 'emprestimo' ? atual : salarioDoContrato(v, e, nivel, 'titular', clube, paisDaCidade(municipioId)),
     t: v.t, validaAte: v.t + 11, origem
   };
   e.proposta = p;
@@ -351,7 +396,7 @@ export const equipeDaModalidade = (d: Dominio, municipioId: string) => `equipe d
 function cidadeDeEquipe(v: Vida, e: CarreiraEsportiva, nivel: number, origem: PropostaDeClube['origem']): string | undefined {
   const aqui = municipio(e.municipioId ?? v.moradia.municipioId);
   const grandes = ['metropole', 'capital', 'polo'];
-  const lista = MUNICIPIOS.filter(m => m.id !== aqui.id && (nivel >= 3 ? grandes.includes(m.perfil) : m.perfil !== 'pequena') && (nivel >= 3 || m.regiao === aqui.regiao));
+  const lista = cidadesDoPais(aqui.pais).filter(m => m.id !== aqui.id && (nivel >= 3 ? grandes.includes(m.perfil) : m.perfil !== 'pequena') && (nivel >= 3 || m.regiao === aqui.regiao));
   if (!lista.length) return undefined;
   return lista[Math.floor(hash(`${v.id}:${v.t}:${origem}:equipe`) * lista.length) % lista.length].id;
 }
@@ -603,7 +648,7 @@ export function linhaDaTemporada(_v: Vida, t: Temporada, modalidade?: Dominio): 
     return `${nivelInd} · ${x.categoria} · ${t.partidas} ${t.partidas === 1 ? 'evento' : 'eventos'} · ${x.lutas} ${x.lutas === 1 ? 'luta' : 'lutas'}: ${x.vitorias} ${x.vitorias === 1 ? 'vitória' : 'vitórias'}${x.antesDoTempo ? ` (${x.antesDoTempo} antes do tempo)` : ''}, ${x.derrotas} ${x.derrotas === 1 ? 'derrota' : 'derrotas'}${x.titulos ? ` · ${x.titulos} ${x.titulos === 1 ? 'título' : 'títulos'}` : ''}${x.podios > x.titulos ? ` · ${x.podios} ${x.podios === 1 ? 'pódio' : 'pódios'}` : ''}${fora}`;
   }
   if (!t.posicao) return `${nivelInd} · ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'} · ${podiosDe(t)} ${podiosDe(t) === 1 ? 'pódio' : 'pódios'}${t.colocacao <= 8 ? ` · melhor colocação: ${t.colocacao}º` : ''}${fora}`;
-  const div = DIVISAO_DO_NIVEL[t.nivel];
+  const div = divisaoDoNivel(t.nivel);
   const partes = [`${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}`, `${t.titular} como titular`];
   if (t.posicao === 'goleiro') partes.push(`${t.defesa ?? 0} sem sofrer gol`);
   else {
@@ -720,8 +765,8 @@ export const MODALIDADES_AMADORAS: Dominio[] = ['futebol', 'basquete', 'volei', 
 function clubeAmador(v: Vida, d: Dominio, lugar: string): string {
   if (d !== 'futebol') return equipeDaModalidade(d, lugar);
   const uf = municipio(lugar).uf;
-  const lista = CLUBES.filter(c => c.porte === 'regional' && municipio(c.cidade).uf === uf);
-  const todos = lista.length ? lista : CLUBES.filter(c => c.porte === 'regional');
+  const lista = clubesDoPais().filter(c => c.porte === 'regional' && municipio(c.cidade).uf === uf);
+  const todos = lista.length ? lista : clubesDoPais().filter(c => c.porte === 'regional');
   return todos[Math.floor(hash(`${v.id}:amador:${v.t}`) * todos.length) % todos.length].nome;
 }
 
@@ -731,7 +776,7 @@ function clubeAmador(v: Vida, d: Dominio, lugar: string): string {
  */
 export function entrarPeloAmador(v: Vida, d: Dominio, municipioId: string, clube: string): void {
   arquivarCarreiraEsportiva(v);
-  const cidade = d === 'futebol' ? CLUBES.find(c => c.nome === clube)?.cidade ?? municipioId : municipioId;
+  const cidade = d === 'futebol' ? clubePorNome(clube)?.cidade ?? municipioId : municipioId;
   v.caminhos.esporte = { modalidade: d, fase: 'base', clube, nivel: 1, tInicio: v.t, tFase: v.t, lesoes: 0, municipioId: cidade, origem: 'amador' };
   v.fatos['contrato_nivel'] = 1;
   const texto = `Passou no teste ${doClube(clube)}: ${daPorta(d)} para ${portaAmadora(d).elenco}, aos ${idade(v)}.`;
@@ -948,6 +993,10 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     }
     return;
   }
+  // MUNDO: quem brilha na elite chama a atenção de fora — uma liga de outro país (a Europa, a volta para casa). A decisão
+  // sai de um hash do ano (sem gastar o gerador: quem não está na elite vive igual), pela reputação e pela temporada.
+  if (e.modalidade === 'futebol' && e.nivel === 4 && !propostaNaMesa(v) && t.nota >= 6.3 && hash(`${v.id}:${v.t}:exterior`) < Math.min(0.35, Math.max(0, ((e.reputacao ?? 30) - 48) / 70))
+    && criarProposta(v, e, 4, 'exterior')) { v.fatos['esp_proposta_hoje'] = v.t; return; }
   // O mercado reage à temporada: um clube maior pergunta (a resposta é sua: `esp_proposta`).
   const oferta = nivelQueOMercadoOferece(v, e);
   // A proposta nasce aqui, concreta (clube, cidade, salário), e fica na mesa até a resposta (`criarProposta`).
@@ -1101,8 +1150,10 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
   // Quem teve nome no esporte também é lembrado (sem curso, a porta é menor e mais rara).
   const nome = (e.reputacao ?? 0) >= 50 && e.nivel >= 3 && i >= 28;
   if (eraPro && (temFato(v, 'pos_treinador') || (nome && hash(`${v.id}:comissao`) < 0.35))) {
-    const oc = e.modalidade === 'tenis' ? 'professor_tenis' : i >= 28 ? 'auxiliar_tecnico' : 'treinador_escolinha';
-    novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: e.modalidade === 'tenis' ? 'Da quadra para a aula' : e.modalidade === 'futebol' ? 'Do campo para o banco' : perfilDe(e.modalidade).estrutura === 'clube' ? 'Da quadra para o banco' : 'Do outro lado do treino', texto: oc === 'professor_tenis' ? 'Um clube da cidade quer alguém com passado de circuito para as turmas e os juvenis: aula por hora, alunos seus.' : oc === 'auxiliar_tecnico' ? (temFato(v, 'pos_treinador') ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Um treinador que trabalhou com você montou uma comissão técnica: quer alguém que o vestiário respeite. Os cursos, você tira no caminho.') : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
+    // A porta é DA MODALIDADE: a comissão técnica do próprio esporte; a escolinha (futebol) e as turmas (lutas), para quem é novo demais.
+    const aux = comissaoDe(e.modalidade).auxiliar;
+    const oc = e.modalidade === 'tenis' ? 'professor_tenis' : aux && i >= ocupacao(aux).idadeMin ? aux : e.modalidade === 'futebol' ? 'treinador_escolinha' : e.modalidade === 'lutas' ? 'instrutor_lutas' : undefined;
+    if (oc) novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: e.modalidade === 'tenis' ? 'Da quadra para a aula' : e.modalidade === 'futebol' ? 'Do campo para o banco' : perfilDe(e.modalidade).estrutura === 'clube' ? 'Da quadra para o banco' : 'Do outro lado do treino', texto: oc === 'professor_tenis' ? 'Um clube da cidade quer alguém com passado de circuito para as turmas e os juvenis: aula por hora, alunos seus.' : oc === aux ? (temFato(v, 'pos_treinador') ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Um treinador que trabalhou com você montou uma comissão técnica: quer alguém que o vestiário respeite. Os cursos, você tira no caminho.') : oc === 'instrutor_lutas' ? 'Uma academia do bairro quer abrir turmas com alguém que já lutou de verdade.' : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
   }
   abalar(v, eraPro ? 'o fim da carreira no esporte' : `a dispensa ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'}`, -(eraPro ? 8 : 10), 6);
 }

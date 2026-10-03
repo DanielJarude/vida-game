@@ -1,9 +1,10 @@
 /** Nascer: o jogador escolhe o que uma pessoa não escolhe — e o resto é sorte. */
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { ControleVida } from '../useVida';
 import type { Classe, Genero, Visual } from '../../motor/tipos';
-import { MUNICIPIOS, NOMES_UF, rotuloPerfil } from '../../motor/dados/lugares';
+import { cidadesDoPais, MUNICIPIOS, municipio } from '../../motor/dados/lugares';
+import { LugarDeNascimento, notaDoLugar } from '../jogo/Mundo';
 import { sortearNome, sortearSobrenome } from '../../motor/dados/nomes';
 import { criarRng } from '../../motor/rng';
 import { CABELOS_F, CABELOS_M, CABELOS_N, CORES_CABELO, CORES_OLHOS, PELES, visualAleatorio } from '../../motor/pessoas';
@@ -27,31 +28,41 @@ export function Criacao({ c }: { c: ControleVida }) {
   const [podeGestar, setPodeGestar] = useState(false);
   const [nome, setNome] = useState(() => sortearNome(aleatorio(), 'feminino', 2026));
   const [sobrenome, setSobrenome] = useState(() => sortearSobrenome(aleatorio()));
-  const [uf, setUf] = useState('BA');
   const [cidade, setCidade] = useState('salvador-ba');
+  // O nome sugerido é do lugar onde se nasce: trocar de país sugere outro (a não ser que o jogador já tenha escrito o seu).
+  const [nomeEscrito, setNomeEscrito] = useState(false);
+  const mudarCidade = (id: string) => {
+    const antes = municipio(cidade).pais;
+    setCidade(id);
+    const m = municipio(id);
+    if (m.pais !== antes && !nomeEscrito) {
+      const r = aleatorio();
+      setNome(sortearNome(r, genero, 2026, m.pais, m.uf));
+      setSobrenome(sortearSobrenome(r, m.pais, m.uf));
+    }
+  };
   const [classe, setClasse] = useState<Classe | 'sorte'>('sorte');
   const [visual, setVisual] = useState<Visual>(() => visualAleatorio(aleatorio(), 'feminino'));
   const [heranca, setHeranca] = useState(true);
 
-  const ufs = useMemo(() => [...new Set(MUNICIPIOS.map(m => m.uf))].sort((a, b) => NOMES_UF[a].localeCompare(NOMES_UF[b])), []);
-  const cidades = MUNICIPIOS.filter(m => m.uf === uf);
-  const cidadeAtual = MUNICIPIOS.find(m => m.id === cidade);
   const cabelos = genero === 'masculino' ? CABELOS_M : genero === 'feminino' ? CABELOS_F : [...new Set([...CABELOS_N, ...CABELOS_M, ...CABELOS_F])];
 
   const trocarGenero = (g: Genero) => {
     setGenero(g);
-    setNome(sortearNome(aleatorio(), g, 2026));
+    if (!nomeEscrito) { const m = municipio(cidade); setNome(sortearNome(aleatorio(), g, 2026, m.pais, m.uf)); }
     const v = visualAleatorio(aleatorio(), g);
     setVisual(atual => ({ ...atual, cabelo: v.cabelo, barba: g === 'masculino' ? v.barba : undefined }));
   };
   const tudoAleatorio = () => {
     const r = aleatorio();
     const g: Genero = r.chance(0.5) ? 'feminino' : 'masculino';
-    const m = r.pick(MUNICIPIOS);
+    // Ao acaso, dentro do país escolhido (o país é uma escolha grande demais para o dado).
+    const pais = municipio(cidade).pais;
+    const m = pais === 'BR' ? r.pick(MUNICIPIOS) : r.pick([...cidadesDoPais(pais)]);
     setGenero(g);
-    setNome(sortearNome(r, g, 2026));
-    setSobrenome(sortearSobrenome(r));
-    setUf(m.uf);
+    setNome(sortearNome(r, g, 2026, m.pais, m.uf));
+    setSobrenome(sortearSobrenome(r, m.pais, m.uf));
+    setNomeEscrito(false);
     setCidade(m.id);
     setClasse('sorte');
     setVisual(visualAleatorio(r, g));
@@ -102,28 +113,18 @@ export function Criacao({ c }: { c: ControleVida }) {
           <div className="campos-linha">
             <label className="campo">
               <span className="campo__rotulo">Nome</span>
-              <input value={nome} onChange={e => setNome(e.target.value)} maxLength={30} autoComplete="off" />
+              <input value={nome} onChange={e => { setNome(e.target.value); setNomeEscrito(true); }} maxLength={30} autoComplete="off" />
             </label>
             <label className="campo">
               <span className="campo__rotulo">Sobrenome</span>
-              <input value={sobrenome} onChange={e => setSobrenome(e.target.value)} maxLength={30} autoComplete="off" />
+              <input value={sobrenome} onChange={e => { setSobrenome(e.target.value); setNomeEscrito(true); }} maxLength={30} autoComplete="off" />
             </label>
           </div>
-          <div className="campos-linha">
-            <label className="campo">
-              <span className="campo__rotulo">Estado</span>
-              <select value={uf} onChange={e => { setUf(e.target.value); setCidade(MUNICIPIOS.find(m => m.uf === e.target.value)!.id); }}>
-                {ufs.map(u => <option key={u} value={u}>{NOMES_UF[u]}</option>)}
-              </select>
-            </label>
-            <label className="campo">
-              <span className="campo__rotulo">Cidade</span>
-              <select value={cidade} onChange={e => setCidade(e.target.value)}>
-                {cidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
-              </select>
-            </label>
-          </div>
-          {cidadeAtual && <p className="nota">{cidadeAtual.nome}: {rotuloPerfil(cidadeAtual.perfil)} no {cidadeAtual.regiao}. O lugar muda escola, faculdade, trabalho e custo de vida.</p>}
+          <fieldset className="campo">
+            <legend className="campo__rotulo">Onde você nasce</legend>
+            <LugarDeNascimento cidade={cidade} aoMudar={mudarCidade} />
+          </fieldset>
+          <p className="nota">{notaDoLugar(cidade)}</p>
           <fieldset className="campo">
             <legend className="campo__rotulo">Família em que você nasce</legend>
             <Escolha rotulo="Classe social" valor={classe} aoMudar={setClasse} opcoes={[

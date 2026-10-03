@@ -32,6 +32,7 @@ import { Retrato, type Expressao } from '../avatar/Retrato';
 import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
 import { leituraDaOrigem } from '../../motor/sistemas/origem';
 import { trajetoriaDaRelacao } from '../../motor/sistemas/relacoes';
+import { saudeConhecida } from '../../motor/sistemas/corpo';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void }
 
@@ -101,6 +102,7 @@ function expressaoNpc(vida: Vida, p: Pessoa): Expressao {
   if (!p.vivo) return 'neutro';
   if (p.aperto && vida.t - p.aperto.t <= 24) return p.aperto.tipo === 'doenca' ? 'doente' : p.aperto.tipo === 'fase' || p.aperto.tipo === 'desemprego' || p.aperto.tipo === 'dinheiro' ? 'cansado' : 'abatido';
   if (p.saude < 35 && idadePessoa(vida, p) >= 60) return 'doente';
+  if (p.condicoes?.some(c => c.diagnosticada && c.gravidade >= 3)) return 'doente';
   return 'neutro';
 }
 
@@ -259,6 +261,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   const onde = ondeEsta(vida, p, vin);
   const como = comoEsta(vida, p, vin);
   const agora = agoraDela(vida, p, vin);
+  const saude = saudeConhecida(p);
   const trajetoria = !p.especie ? trajetoriaDaRelacao(vida, vin) : undefined;
   const historia = [...vin.historia].sort((a, b) => a.t - b.t);
   const costumes = historia.filter(RITUAL);
@@ -287,6 +290,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
           </div>
         </div>
         {como && <p className="ficha__prox">{como}</p>}
+        {saude && <p className="ficha__origem ficha__saude">Saúde: {saude}.</p>}
         {(quem || onde) && <p className="ficha__origem">{[quem, onde].filter(Boolean).join(' ')}</p>}
         {trajetoria && (vin.fases?.length ?? 0) > 1 && <p className="ficha__origem ficha__trajetoria" aria-label="A trajetória de vocês">{trajetoria}</p>}
         {esperando && gest && <p className="ficha__nota">Um bebê a caminho — o parto é previsto para {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</p>}

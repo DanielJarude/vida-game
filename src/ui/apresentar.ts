@@ -3,6 +3,8 @@
  * Relações, saúde e humor aparecem como palavras, nunca como números.
  */
 
+import { formatarDinheiroCurto } from '../motor/mundo/moeda';
+import { nomeDoPais } from '../motor/mundo/registro';
 import { capituloDaVida } from '../motor/sistemas/vinculos';
 import type { Entrada, Pessoa, Vida, Vinculo } from '../motor/tipos';
 import { idade, idadePessoa, moraCom, parceiro } from '../motor/nucleo';
@@ -13,7 +15,7 @@ import { descricaoOrigem } from '../motor/sistemas/social';
 import { rotuloSerie } from '../motor/sistemas/escola';
 import { curso } from '../motor/dados/cursos';
 import { nomeOcupacaoId } from '../motor/sistemas/trabalho';
-import { municipio, rotuloPerfil } from '../motor/dados/lugares';
+import { municipio, nomeDaDivisao, rotuloPerfil } from '../motor/dados/lugares';
 
 export interface AnoDeVida {
   idade: number;
@@ -113,7 +115,7 @@ export function ocupacaoAtual(v: Vida): string {
 
 export function lugarDescrito(id: string): string {
   const m = municipio(id);
-  return `${m.nome}, ${m.uf} — ${rotuloPerfil(m.perfil)}, ${m.regiao}`;
+  return m.regiao ? `${m.nome}, ${m.uf} — ${rotuloPerfil(m.perfil)}, ${m.regiao}` : `${m.nome} (${nomeDaDivisao(m)}), ${nomeDoPais(m.pais)} — ${rotuloPerfil(m.perfil)}`;
 }
 
 export function palavraSaude(n: number): string {
@@ -156,12 +158,7 @@ export function palavraChance(c?: number): string {
   return 'muito difícil';
 }
 
-export const dinheiroCurto = (v: number) => {
-  const a = Math.abs(v);
-  const s = v < 0 ? '−' : '';
-  if (a >= 1_000_000) return `${s}R$ ${(a / 1_000_000).toFixed(1).replace('.', ',')} mi`;
-  if (a >= 10_000) return `${s}R$ ${Math.round(a / 1000)} mil`;
-  return `${s}R$ ${Math.round(a).toLocaleString('pt-BR')}`;
-};
+/** Por alto, na moeda do país onde a vida está ("R$ 12 mil", "€ 3 mil", "¥ 1,2 mi" — `motor/mundo/moeda`). */
+export const dinheiroCurto = (v: number) => formatarDinheiroCurto(v);
 
 export { idadePessoa, parceiro };

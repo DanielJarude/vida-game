@@ -12,7 +12,7 @@ import { condicoesImovel, condicoesVeiculo, condicoesEmprestimo, disponibilidade
 import { idade, idadePessoa, vinculosVivos } from '../../../motor/nucleo';
 import { podeTentar } from '../../../motor/plausibilidade';
 import { formaDaVersao, modeloMoradia, modeloVeiculo, nomeDaVersao, versaoVeiculo, NOME_CATEGORIA, NOME_FORMA, PALAVRA_FAIXA, type CategoriaVeiculo } from '../../../motor/dados/bens';
-import { leituraDaHabilitacao } from '../../../motor/sistemas/habilitacoes';
+import { leituraDaHabilitacao, temHabilitacao } from '../../../motor/sistemas/habilitacoes';
 import { economiaLocal } from '../../../motor/dados/lugares';
 import { PRODUTOS, PALAVRA_RISCO, produto } from '../../../motor/dados/investimentos';
 import { animaisParaVoce, imoveisParaVoce, investimentosParaVoce, veiculosParaVoce } from '../../../motor/sistemas/relevancia';
@@ -252,7 +252,7 @@ function Veiculos({ vida, agir, lugar }: { vida: Vida; agir: (a: Acao) => boolea
       {vista === 'catalogo' ? <CatalogoVeiculos ofertas={catalogo} abrir={setAberta} categorias={categorias} /> : (
         <>
           <p className="nota">{lugar === 'usados' ? 'Usado custa menos e dá mais oficina. Cada anúncio tem uma história.' : lugar === 'concessionaria' ? 'Zero quilômetro: garantia, cheiro de novo — e o valor cai assim que sai da loja.' : lugar === 'nautica' ? 'Barco é caro de comprar e mais caro de manter: marina, seguro, combustível, o casco que pede cuidado.' : lugar === 'aeroclube' ? 'Avião é raro e caro: hangar, inspeção obrigatória, seguro — uma conta de empresa.' : 'Moto e bicicleta: baratas de manter, expostas no trânsito.'}{!vida.trabalho.licencas.includes('cnh') && (lugar === 'concessionaria' || lugar === 'usados') ? ' Sem carteira de motorista, não dá para dirigir.' : !vida.trabalho.licencas.includes('cnh') && lugar === 'motos' ? ' Moto pede carteira de motorista; bicicleta, não.' : ''}</p>
-          {(lugar === 'nautica' || lugar === 'aeroclube') && (() => { const h = lugar === 'nautica' ? 'nautica' : 'piloto'; return <div className="habilitacao"><p className="nota">Ter não é saber operar. {leituraDaHabilitacao(vida, h)}</p><BotaoAcao vida={vida} acao={{ tipo: 'habilitacao', qual: h }} agir={agir} variante="discreto" ocultarBloqueado ocultarImpossivel>{h === 'nautica' ? 'Fazer o curso de habilitação náutica' : 'Começar a formação de piloto'}</BotaoAcao></div>; })()}
+          {(lugar === 'nautica' || lugar === 'aeroclube') && (() => { const h = lugar === 'nautica' ? 'nautica' : temHabilitacao(vida, 'piloto') ? 'multimotor' : 'piloto'; return <div className="habilitacao"><p className="nota">Ter não é saber operar. {lugar === 'aeroclube' && h === 'multimotor' ? 'Você tem a licença de piloto. ' : ''}{leituraDaHabilitacao(vida, h)}{lugar === 'aeroclube' ? ' O jato executivo voa com tripulação própria.' : ''}</p><BotaoAcao vida={vida} acao={{ tipo: 'habilitacao', qual: h }} agir={agir} variante="discreto" ocultarBloqueado ocultarImpossivel>{h === 'nautica' ? 'Fazer o curso de habilitação náutica' : h === 'multimotor' ? 'Fazer a habilitação de multimotor' : 'Começar a formação de piloto'}</BotaoAcao></div>; })()}
           {para.length > 0 ? <><h3 className="subtitulo">Para você, agora</h3><ul className="ofertas">{para.map(x => <li key={x.item.id}><CartaoVeiculo o={x.item} motivo={x.motivo} abrir={() => setAberta(x.item.id)} /></li>)}</ul></>
             : <p className="nota">{motivoDeNadaCaber(vida, resto)}</p>}
           {resto.length > 0 && <h3 className="subtitulo">{para.length ? 'Os outros' : 'À venda'}, do mais barato ao mais caro</h3>}
@@ -359,11 +359,13 @@ function DetalheVeiculo({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao)
         <div><dt>Preço</dt><dd>{dinheiroCheio(o.preco)}</dd></div>
         {financiar && <div><dt>Parcela</dt><dd>{dinheiroCheio(c.parcela)} × {c.meses}</dd></div>}
         {financiar && <div><dt>Total pago</dt><dd>{dinheiroCurto(c.total)}</dd></div>}
-        <div><dt>{m.raro ? 'Para manter' : 'Para rodar'}</dt><dd>uns {dinheiroCurto(uso)}/mês{m.taxaAnual ? (m.categoria === 'embarcacao' ? ' + seguro e marina' : m.categoria === 'aeronave' ? ' + seguro, hangar e inspeção' : ' + IPVA e seguro') : ''}</dd></div>
+        <div><dt>{m.raro ? 'Para manter' : 'Para rodar'}</dt><dd>uns {dinheiroCurto(uso)}/mês{m.taxaAnual ? (m.categoria === 'embarcacao' ? ' + seguro e marina' : m.categoria === 'aeronave' ? ' + seguro, hangar e inspeção' : ' + IPVA e seguro') : ''}{m.tripulacao ? ` + tripulação, ${dinheiroCurto(m.tripulacao)}/mês` : ''}</dd></div>
         <div><dt>Tipo</dt><dd>{NOME_FORMA[formaDaVersao(x, o.modeloId)]}</dd></div>
         {m.categoria === 'carro' && <div><dt>Lugares</dt><dd>{lugares}</dd></div>}
       </dl>
       {m.habilitacao && <p className="nota">{leituraDaHabilitacao(vida, m.habilitacao)}</p>}
+      {m.tripulacao && <p className="nota">Voa com tripulação contratada (dois pilotos com a habilitação do tipo): você não pilota.</p>}
+      {m.patrimonioMin && <p className="nota">Quem vende pede patrimônio de pelo menos {dinheiroCurto(m.patrimonioMin)}.</p>}
       <BotaoAcao vida={vida} acao={{ tipo: 'comprar_veiculo', ofertaId: o.id, financiar, entrada }} agir={agir} variante="principal">{financiar ? 'Financiar' : 'Comprar'}</BotaoAcao>
     </div>
   );

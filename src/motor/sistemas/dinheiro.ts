@@ -22,8 +22,12 @@
  * Valores em reais de hoje (ver `economia`).
  */
 
+import { converterEntrePaises } from '../mundo/moeda';
+import { paisDaPessoa, paisDaVida } from '../mundo/vida';
+import { salarioMinimoDoPais } from '../mundo/economia';
+import { perfilDaVida } from '../mundo/vida';
 import { rendaDeImagem } from './notoriedade';
-import { ajudaMensalDaFamilia, apoioPossivel, contribuicaoEmCasa, familiaPagaCursinho, familiaPagaEstudo, mesadaDaFamilia, responsaveis } from './origem';
+import { ajudaMensalDaFamilia, apoioPossivel, cambioDaFamilia, contribuicaoEmCasa, familiaPagaCursinho, familiaPagaEstudo, mesadaDaFamilia, responsaveis } from './origem';
 import { rendaDoPalcoParalelo } from './palco';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { remuneracaoDe } from './renda';
@@ -60,6 +64,19 @@ const CONTAS_DA_CASA = 340;
 
 // Mesada, contribuição em casa e o que a família paga do estudo vêm da casa de origem REAL
 // (renda de quem a sustenta hoje, reserva, relação) — `sistemas/origem`. Antes, eram tabelas por classe de nascimento.
+
+/**
+ * O plano de saúde custa o que custa no país onde se mora (`perfil.saude.custoPlano`,
+ * relativo ao brasileiro): onde a saúde depende de seguro, bem mais.
+ */
+const custoDoPlano = (v: Vida) => perfilDaVida(v).saude.custoPlano;
+/** Onde se diz "nome sujo" (`perfil.cotidiano`); fora, o cadastro de devedores, sem gíria. */
+const nomeSujo = (v: Vida) => !!perfilDaVida(v).cotidiano?.nomeSujo;
+/** "Benefício assistencial (BPC)": o nome curto do benefício do país, quando há. */
+function rotuloAssistencia(v: Vida): string {
+  const a = perfilDaVida(v).trabalho.assistencia;
+  return a ? `Benefício assistencial (${a.curto.replace(/^(o|a|os|as) /, '')})` : 'Benefício assistencial';
+}
 
 export function planoDeSaudeMensal(i: number): number {
   return i < 19 ? 230 : i < 34 ? 420 : i < 49 ? 640 : i < 59 ? 1050 : 1600;
@@ -115,7 +132,7 @@ function entradasProprias(v: Vida): LinhaRazao[] {
   if (palco > 0) out.push({ rotulo: 'Shows e apresentações (média do último ano)', valor: palco, grupo: 'renda', de: 'eu' });
   const imagem = rendaDeImagem(v);
   if (imagem > 0) out.push({ rotulo: 'Patrocínio e publicidade', valor: imagem, grupo: 'renda', de: 'eu' });
-  if (v.trabalho.aposentadoria) out.push({ rotulo: temFato(v, 'bpc') ? 'Benefício assistencial (BPC)' : 'Aposentadoria', valor: Math.round(v.trabalho.aposentadoria.beneficio * 13 / 12), grupo: 'renda', de: 'governo' });
+  if (v.trabalho.aposentadoria) out.push({ rotulo: temFato(v, 'bpc') ? rotuloAssistencia(v) : 'Aposentadoria', valor: Math.round(v.trabalho.aposentadoria.beneficio * 13 / 12), grupo: 'renda', de: 'governo' });
   const m = v.educacao.matricula;
   if (m && !m.trancado) {
     const bolsa = curso(m.cursoId).bolsa;
@@ -199,7 +216,7 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
   if (modelo?.condominio && mor.tipo !== 'republica') sai('Condomínio', modelo.condominio * c * parte, 'moradia');
   if (mor.tipo === 'propria') {
     const im = f.bens.find(b => b.id === mor.imovelId);
-    if (im) sai('IPTU e manutenção da casa', im.valor * 0.006 / 12, 'moradia');
+    if (im) sai(`${perfilDaVida(v).cotidiano?.impostoImovel ?? 'Imposto do imóvel'} e manutenção da casa`, im.valor * 0.006 / 12, 'moradia');
   }
   const junto = moraCom(v);
   const adultos = 1 + junto.filter(p => idadePessoa(v, p) >= 18).length;
@@ -245,7 +262,7 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
 
   comuns(v, sai, c, false);
   // Plano de saúde de quem é casado inclui a parceria.
-  if (f.planoDeSaude && par && arranjo === 'casados') sai(`Plano de saúde de ${par.p.nome}`, planoDeSaudeMensal(idadePessoa(v, par.p)) * c, 'saude');
+  if (f.planoDeSaude && par && arranjo === 'casados') sai(`Plano de saúde de ${par.p.nome}`, planoDeSaudeMensal(idadePessoa(v, par.p)) * c * custoDoPlano(v), 'saude');
 
   // Lazer e extras: o que o estilo faz com a renda que sobra depois do essencial.
   const rendaTotal = entradas.reduce((s, l) => s + l.valor, 0);
@@ -291,9 +308,9 @@ function comuns(v: Vida, sai: (r: string, x: number, g: LinhaRazao['grupo']) => 
   // A passagem só existe para quem vai de transporte público (o veículo próprio já custa acima; a pé e de bicicleta, nada).
   if (d && d.modo === 'publico' && d.passagem > 0 && i >= 16) sai('Passagem de ônibus (o trajeto de todo dia)', d.passagem, 'transporte');
   if (f.planoDeSaude && (!naFamilia || i >= 24)) {
-    sai('Plano de saúde', planoDeSaudeMensal(i) * c, 'saude');
+    sai('Plano de saúde', planoDeSaudeMensal(i) * c * custoDoPlano(v), 'saude');
     const pequenos = filhos(v).filter(fl => idadePessoa(v, fl) < 18 && v.vinculos[fl.id].convivio.includes('casa')).length;
-    if (pequenos && !naFamilia) sai('Plano de saúde dos filhos', 250 * pequenos * c, 'saude');
+    if (pequenos && !naFamilia) sai('Plano de saúde dos filhos', 250 * pequenos * c * custoDoPlano(v), 'saude');
   }
   const tratamentos = v.corpo.condicoes.filter(x => x.tratando && x.cronica).length;
   if (tratamentos) sai('Remédios e consultas', 180 * tratamentos, 'saude');
@@ -515,8 +532,12 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
       d.saldo = Math.max(0, Math.round(devido - pago));
     } else {
       // Rotativo: em cobrança (nome sujo), vira juro de mora; caduca em cinco anos.
+      // Juros e encargos do rotativo não passam de 100% do que foi tomado (Lei 14.690/2023, art. 28): o saldo para no
+      // dobro do principal. (Auditoria das dívidas: sem o teto, quem pagava um
+      // pouco todo ano — e por isso não ia para a cobrança — via o rotativo crescer 70% ao ano, sem limite.)
       const juros = f.negativado ? 0.01 : d.jurosMes;
-      d.saldo = Math.round(d.saldo * Math.pow(1 + juros, 12));
+      const teto = 2 * (d.principal ??= d.saldo);
+      d.saldo = Math.round(Math.min(Math.max(d.saldo, teto), d.saldo * Math.pow(1 + juros, 12)));
     }
   }
   if (f.negativado && v.fatos['negativado_desde'] !== undefined && v.t - v.fatos['negativado_desde'] >= 60) {
@@ -560,6 +581,8 @@ export function processarDinheiro(v: Vida, r: Rng, ec?: AnoEconomico): void {
     d.saldo -= pago;
     f.conta -= pago;
     pagoNoCartao += pago;
+    // O pagamento abate primeiro os encargos: o principal só cai quando o saldo fica abaixo dele.
+    if (d.principal !== undefined) d.principal = Math.min(d.principal, d.saldo);
   }
   lancar(v, 'Pago no cartão e no cheque especial', 'divida', -pagoNoCartao);
   const colchao = despesa;
@@ -630,7 +653,7 @@ function negativar(v: Vida, texto: string): void {
   v.fatos['ja_foi_negativado'] = v.t;
   const vezes = (v.fatos['negativacoes'] ?? 0) + 1;
   v.fatos['negativacoes'] = vezes;
-  escrever(v, { texto: primeira ? texto : vezes === 2 ? 'O nome voltou para o cadastro de devedores.' : 'Nome sujo de novo.', relevancia: primeira ? 'biografia' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
+  escrever(v, { texto: primeira ? texto : vezes === 2 ? 'O nome voltou para o cadastro de devedores.' : nomeSujo(v) ? 'Nome sujo de novo.' : 'De novo no cadastro de devedores.', relevancia: primeira ? 'biografia' : 'tecnico', tema: 'dinheiro', tom: 'ruim' });
 }
 
 /** Paga parcelas e aluguéis atrasados com o que há na conta. Devolve quanto pagou (para o extrato). */
@@ -697,6 +720,7 @@ function cobrirRombo(v: Vida, r: Rng): void {
       f.dividas.push(cartao);
     }
     const antes = cartao.saldo;
+    cartao.principal = (cartao.principal ?? cartao.saldo) + noCredito;
     cartao.saldo += noCredito;
     f.conta += noCredito;
     lancar(v, 'Coberto no cartão e no cheque especial (dívida nova)', 'divida', noCredito);
@@ -726,8 +750,8 @@ function cobrirRombo(v: Vida, r: Rng): void {
     abalar(v, 'as contas atrasadas', -3, 8);
     lancar(v, 'Parcelas e aluguel que ficaram em atraso (viram dívida)', 'divida', falta);
   } else {
-    lancar(v, 'Contas que ficaram sem pagar (viraram nome sujo)', 'divida', falta);
-    negativar(v, 'Contas de luz, água e telefone atrasadas viraram nome sujo. Crédito, agora, só depois de acertar.');
+    lancar(v, nomeSujo(v) ? 'Contas que ficaram sem pagar (viraram nome sujo)' : 'Contas que ficaram sem pagar (foram para o cadastro de devedores)', 'divida', falta);
+    negativar(v, nomeSujo(v) ? 'Contas de luz, água e telefone atrasadas viraram nome sujo. Crédito, agora, só depois de acertar.' : 'Contas de luz, água e telefone atrasadas foram para o cadastro de devedores. Crédito, agora, só depois de acertar.');
     abalar(v, 'as contas atrasadas', 0, 6);
     v.corpo.saude = clamp(v.corpo.saude - Math.min(2, Math.round(falta / 10000)));
   }
@@ -757,8 +781,9 @@ export function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
     .map(x => {
       const pais = x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai' || x.vin.parentesco === 'avo';
       // A folga de quem ajuda: o que sobra da renda depois do próprio custo de vida (o mínimo para viver e o grosso do resto).
-      const folga = Math.max(0, x.p.renda - (SALARIO_MINIMO * 1.2 + x.p.renda * 0.35));
-      const capacidade = daOrigem.has(x.p.id) ? capOrigem : folga * (pais ? 2 : 3);
+      // (MUNDO: na unidade de quem ajuda — o mínimo do país dela —, e trazida pelo câmbio para a de quem recebe.)
+      const folga = Math.max(0, x.p.renda - (salarioMinimoDoPais(paisDaPessoa(x.p)) * 1.2 + x.p.renda * 0.35));
+      const capacidade = daOrigem.has(x.p.id) ? capOrigem : folga * (pais ? 2 : 3) * converterEntrePaises(1, paisDaPessoa(x.p), paisDaVida(v));
       return { ...x, capacidade, vontade: (x.vin.proximidade - 35) / 50 + x.vin.confianca / 200 - x.vin.tensao / 100 + (pais ? 0.15 : 0) };
     })
     .filter(x => x.vontade > 0 && x.capacidade >= 500)
@@ -773,7 +798,7 @@ export function ajudaDaFamilia(v: Vida, r: Rng, falta: number): number {
     falta -= valor;
     v.fatos[`ajudou_${x.p.id}`] = v.t;
     if (daOrigem.has(x.p.id)) {
-      v.origem.reserva = Math.max(0, Math.round((v.origem.reserva ?? 0) - valor));
+      v.origem.reserva = Math.max(0, Math.round((v.origem.reserva ?? 0) - valor / cambioDaFamilia(v)));
       (v.origem.apoios ??= []).push({ t: v.t, valor, motivo: 'emergencia', sentido: 'recebeu', pessoaId: x.p.id });
       daOrigem.clear();
     }

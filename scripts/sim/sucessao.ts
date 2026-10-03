@@ -5,8 +5,12 @@
  *   npx esbuild scripts/sim/sucessao.ts --bundle --platform=node --outfile=/tmp/suc.cjs
  *   FAMILIAS=40 GERACOES=4 node /tmp/suc.cjs
  *
- * Cada família: uma vida vivida até morrer (respondendo com a primeira opção
- * livre; quem passa dos 95 morre por decisão do script). Se há filho elegível,
+ * Cada família: uma vida vivida até morrer (pelo agente de `agentes.ts`:
+ * AGENTE=primeira — o padrão, a primeira opção livre e nenhuma ação —,
+ * primeira_trabalha ou prudente; quem passa dos 95 morre por decisão do
+ * script). A auditoria das dívidas (`dividas.ts`) mostrou que o agente
+ * "primeira" quase nunca trabalha: a dívida maior que o patrimônio na morte
+ * é dele, não da sucessão. Se há filho elegível,
  * escolhe um (o do meio, para não favorecer o primogênito) e uma partilha que
  * varia por família (lei, testamento a favor de alguém, doação). Confere a
  * cada sucessão:
@@ -31,15 +35,22 @@ import type { DecisoesDeHeranca, Vida } from '../../src/motor/tipos';
 import { criarRng } from '../../src/motor/rng';
 import { criarPessoa, vincular } from '../../src/motor/pessoas';
 import { garantirVida } from '../../src/motor/sistemas/filhos';
+import { disponibilidade } from '../../src/motor/acoes';
+import { podeTentar } from '../../src/motor/plausibilidade';
+import { agente } from './agentes';
 
 const FAMILIAS = Number(process.env.FAMILIAS ?? 30);
 const GERACOES = Number(process.env.GERACOES ?? 3);
+const AGENTE = agente(process.env.AGENTE ?? 'primeira');
+const rAgente = criarRng(4242);
 
 function responder(v: Vida): Vida {
-  for (let k = 0; k < 12 && v.momento && !v.morte; k++) {
-    const op = v.momento.opcoes.find(o => !o.bloqueio) ?? v.momento.opcoes[0];
-    v = executar(v, { tipo: 'decidir', opcaoId: op.id }).vida;
-  }
+  for (let k = 0; k < 12 && v.momento && !v.morte; k++) v = executar(v, { tipo: 'decidir', opcaoId: AGENTE.decidir(v, v.momento, rAgente) }).vida;
+  return v;
+}
+
+function agir(v: Vida): Vida {
+  for (const a of AGENTE.agir(v, rAgente)) { if (v.morte) break; if (!podeTentar(disponibilidade(v, a))) continue; v = responder(executar(v, a).vida); }
   return v;
 }
 
@@ -69,7 +80,7 @@ function garantirFamilia(v: Vida): Vida {
 }
 
 function viverAteMorrer(v: Vida, limite = 95): Vida {
-  while (!v.morte && idade(v) < limite) { v = garantirFamilia(responder(avancarAno(v).vida)); }
+  while (!v.morte && idade(v) < limite) { v = garantirFamilia(responder(avancarAno(agir(v)).vida)); }
   if (!v.morte) v = { ...structuredClone(v), morte: { t: v.t, causa: 'velhice', heranca: calcularHeranca(v) } };
   return v;
 }
@@ -80,7 +91,7 @@ function patrimonioTotal(v: Vida): number {
 }
 
 const problemas: string[] = [];
-const contagem = { familias: 0, sucessoes: 0, encerradas: 0, semFilhos: 0, menores: 0, geracoesMax: 0, comCasaHerdada: 0, doacoes: 0, insolventes: 0 };
+const contagem = { familias: 0, sucessoes: 0, encerradas: 0, semFilhos: 0, menores: 0, geracoesMax: 0, comCasaHerdada: 0, doacoes: 0, insolventes: 0, comCondicao: 0 };
 const idadesSucessor: number[] = [];
 
 for (let f = 0; f < FAMILIAS; f++) {
@@ -112,6 +123,12 @@ for (let f = 0; f < FAMILIAS; f++) {
     if (r.erro) { problemas.push(`f${f} g${g}: continuar: ${r.erro}`); break; }
     const n = r.vida;
     contagem.sucessoes++;
+    // A saúde vem junto, 1:1: as condições que ela tinha (com nome ou sem) e a saúde em número.
+    const condsAntes = (morta.pessoas[escolhido.pessoa.id].condicoes ?? []).map(c => `${c.id}:${c.diagnosticada}:${c.tratando}`).sort().join(',');
+    const condsDepois = n.corpo.condicoes.map(c => `${c.id}:${c.diagnosticada !== false}:${c.tratando}`).sort().join(',');
+    if (morta.pessoas[escolhido.pessoa.id].condicoes && condsAntes !== condsDepois) problemas.push(`f${f} g${g}: condições de saúde não vieram 1:1 (${condsAntes} → ${condsDepois})`);
+    if (n.corpo.saude !== Math.round(morta.pessoas[escolhido.pessoa.id].saude)) problemas.push(`f${f} g${g}: saúde mudou na sucessão`);
+    if (n.corpo.condicoes.length) contagem.comCondicao++;
     idadesSucessor.push(idade(n));
     if (idade(n) < 18) contagem.menores++;
     if (n.moradia.tipo === 'propria' && n.financas.bens.some(b => b.id === n.moradia.imovelId && b.tipo === 'imovel' && b.herdado)) contagem.comCasaHerdada++;

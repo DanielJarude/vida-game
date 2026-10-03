@@ -4,12 +4,13 @@
  * número da interface é calculado fora do motor.
  */
 
+import { formatarDinheiroCheio, formatarDinheiroCurto } from '../motor/mundo/moeda';
 import type { Especie } from '../motor/tipos';
 import type { Bem, Imovel, LinhaRazao, Veiculo, Vida } from '../motor/tipos';
 import { idade, idadePessoa, moraCom } from '../motor/nucleo';
 import { listaNatural, flex } from '../motor/texto';
 import { formaDaVersao, modeloMoradia, modeloVeiculo, versaoVeiculo, type FormaVeiculo } from '../motor/dados/bens';
-import { municipio, rotuloPerfil } from '../motor/dados/lugares';
+import { municipio, nomeLugar, rotuloPerfil } from '../motor/dados/lugares';
 import { mesesRestantes, orcamento, seguranca, type NivelSeguranca, type Orcamento } from '../motor/sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../motor/sistemas/domicilio';
 import { petsDaCasa, estadoDoPet } from '../motor/sistemas/pets';
@@ -17,15 +18,9 @@ import { estadoDoVeiculo, anosDoVeiculo, nomeDoVeiculo, versaoDoVeiculo } from '
 import { casaApertada } from '../motor/sistemas/imoveis';
 import { anoDe } from '../motor/tempo';
 
-export const dinheiroCheio = (v: number) => `${v < 0 ? '−' : ''}R$ ${Math.round(Math.abs(v)).toLocaleString('pt-BR')}`;
-
-export const dinheiroCurto = (v: number) => {
-  const a = Math.abs(v);
-  const s = v < 0 ? '−' : '';
-  if (a >= 1_000_000) return `${s}R$ ${(a / 1_000_000).toFixed(a >= 10_000_000 ? 0 : 1).replace('.', ',')} mi`;
-  if (a >= 10_000) return `${s}R$ ${Math.round(a / 1000)} mil`;
-  return `${s}R$ ${Math.round(a).toLocaleString('pt-BR')}`;
-};
+/** Na moeda do país onde a vida está (`motor/mundo/moeda`). */
+export const dinheiroCheio = (v: number) => formatarDinheiroCheio(v);
+export const dinheiroCurto = (v: number) => formatarDinheiroCurto(v, undefined, 'auto');
 
 /* --------------------------------------------------------------- Moradia */
 
@@ -152,7 +147,7 @@ export function leituraDoLar(v: Vida): LeituraLar {
     rural: !!modelo?.rural,
     funcional: !!m.funcional,
     condicao: condicaoDoLar(v),
-    onde: `${mun.nome}, ${mun.uf} · ${rotuloPerfil(mun.perfil)}`,
+    onde: `${nomeLugar(mun.id)} · ${rotuloPerfil(mun.perfil)}`,
     frase,
     selos,
     moradores: junto.map(p => ({ id: p.id, nome: p.nome })),

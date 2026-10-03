@@ -34,8 +34,9 @@ import { clamp } from '../rng';
 import type { CarreiraMilitar, Emprego, Especialidade, Forca, Vida } from '../tipos';
 import { escrever, idade, marcarFato, parceiro, temFato } from '../nucleo';
 import { ocupacao, type Ocupacao } from '../dados/ocupacoes';
-import { ESCOLA, ESPECIALIDADES, GUARNICOES, NOME_FORCA, SIGLA_DA } from '../dados/forcas';
-import { municipio, pertoDaAgua } from '../dados/lugares';
+import { ESCOLA, ESPECIALIDADES, GUARNICOES, NOME_FORCA, SIGLA_DA, guarnicoesDoPais, temEscolasProprias } from '../dados/forcas';
+import { PAIS_PADRAO } from '../mundo/registro';
+import { codigoDoMunicipio, municipio, municipioDoCodigo, paisDaCidade, pertoDaAgua } from '../dados/lugares';
 import { marcar } from './marcas';
 import { contratar, encerrarEmprego, nomeOcupacao, registrarPosto, salarioLiquidoAtual, type ProximoPasso, type Requisito } from './trabalho';
 import { salarioLocal } from './renda';
@@ -142,7 +143,15 @@ export function aoEntrarNasForcas(v: Vida, r: Rng, oc: Ocupacao): void {
   if (oc.formacaoInicial && guarnicao !== v.moradia.municipioId && idade(v) < 30) v.fatos['mil_mudar_para'] = MUNIC_INDICE(guarnicao);
 }
 
-const MUNIC_INDICE = (id: string) => [...GUARNICOES.exercito, ...GUARNICOES.marinha, ...GUARNICOES.aeronautica, 'juiz-de-fora-mg', 'volta-redonda-rj', 'sao-jose-dos-campos-sp', 'rio-de-janeiro-rj', 'sao-paulo-sp'].indexOf(id);
+/**
+ * O índice de uma cidade de guarnição (os fatos guardam números). No Brasil,
+ * a posição na lista de sempre (saves antigos); fora, o código estável da
+ * cidade (`codigoDoMunicipio`, a partir de 10000).
+ */
+const LISTA_BR = () => { const g = guarnicoesDoPais(PAIS_PADRAO); return [...g.exercito, ...g.marinha, ...g.aeronautica, 'juiz-de-fora-mg', 'volta-redonda-rj', 'sao-jose-dos-campos-sp', 'rio-de-janeiro-rj', 'sao-paulo-sp']; };
+function MUNIC_INDICE(id: string): number {
+  return paisDaCidade(id) === PAIS_PADRAO ? LISTA_BR().indexOf(id) : codigoDoMunicipio(id);
+}
 /** A guarnição da Força mais perto de uma cidade (a própria, uma do mesmo estado ou nenhuma). */
 export function guarnicaoPerto(forca: Forca, municipioId: string): string | undefined {
   const g = GUARNICOES[forca];
@@ -151,7 +160,9 @@ export function guarnicaoPerto(forca: Forca, municipioId: string): string | unde
   return g.find(x => municipio(x).uf === uf);
 }
 export const indiceDaGuarnicao = (id: string) => MUNIC_INDICE(id);
-export const MUNIC_POR_INDICE = (n: number) => [...GUARNICOES.exercito, ...GUARNICOES.marinha, ...GUARNICOES.aeronautica, 'juiz-de-fora-mg', 'volta-redonda-rj', 'sao-jose-dos-campos-sp', 'rio-de-janeiro-rj', 'sao-paulo-sp'][n];
+export function MUNIC_POR_INDICE(n: number): string | undefined {
+  return n < 10000 ? LISTA_BR()[n] : municipioDoCodigo(n);
+}
 
 /** A guarnição entra na história da carreira (a mesma cidade seguida não se repete). */
 export function registrarGuarnicao(m: CarreiraMilitar, municipioId: string, t: number): void {
@@ -406,7 +417,7 @@ export function perspectivasMilitares(v: Vida): { oque: string; depende: string 
     if (meses < 12) out.push({ oque: 'Cumprir o serviço inicial até o fim', depende: 'É obrigatório: sair antes só por desincorporação (doença, arrimo de família) — largar é deserção.' });
     out.push({ oque: 'Engajar por mais um ano', depende: `Depende de vaga e do conceito com o comando. O temporário vai no máximo até oito anos (${anos < 1 ? 'você está no primeiro' : `você tem ${anos}`}).${m.empregoGuardado ? ' Engajar faz perder o emprego guardado.' : ''}` });
     if (e.ocupacaoId === 'soldado_ep') out.push({ oque: 'Chegar a cabo', depende: 'Pelo curso de formação de cabos, com classificação e vaga — não é automático.' });
-    out.push({ oque: 'Seguir carreira: a escola de sargentos (EsSA)', depende: medio && i <= 24 ? 'Concurso: ensino médio e até 24 anos. Estudar no alojamento conta.' : !medio ? 'Pede o ensino médio completo.' : 'O limite de idade (24 anos) já passou.' });
+    out.push({ oque: `Seguir carreira: a escola de sargentos${temEscolasProprias() ? ' (EsSA)' : ''}`, depende: medio && i <= 24 ? 'Concurso: ensino médio e até 24 anos. Estudar no alojamento conta.' : !medio ? 'Pede o ensino médio completo.' : 'O limite de idade (24 anos) já passou.' });
     out.push({ oque: 'Dar baixa no fim do ano', depende: `Sai com o certificado de reservista${m.empregoGuardado ? ' e volta ao emprego guardado' : ''}.` });
     return out;
   }

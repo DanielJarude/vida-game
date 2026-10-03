@@ -70,7 +70,7 @@ export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id:
           <span className="viagem__onde">{trilha}</span>
         </div>
       )}
-      <h3 ref={titulo} tabIndex={-1} className="viagem__pergunta">{PERGUNTA[cat.nivelGrupo][passo]}</h3>
+      <h3 ref={titulo} tabIndex={-1} className="viagem__pergunta">{passo === 'grupo' ? cat.perguntaGrupo : PERGUNTA[cat.nivelGrupo][passo]}</h3>
 
       {passo === 'grupo' && secoes.map(s => (
         <div key={s.secao ?? '-'} className="viagem__secao">

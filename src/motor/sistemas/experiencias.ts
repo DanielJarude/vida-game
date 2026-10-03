@@ -8,9 +8,12 @@
  * AÇÕES GENÉRICAS SÃO PORTAS, NÃO RESULTADOS (pacote pós-playtest). A
  * categoria continua limpa na tela; a profundidade vem DEPOIS de abri-la:
  *
- *   viagem pelo Brasil   → o destino e a duração (o preço sai da origem, do
- *                           destino, de quantos vão e de quantos dias)
- *   viagem para fora     → o país/cidade e a duração
+ *   viagem pelo país     → o destino e a duração (o preço sai da origem, do
+ *                           destino, de quantos vão e de quantos dias) — o
+ *                           país é o de onde a pessoa MORA (viajar não é
+ *                           migrar: a casa continua onde está)
+ *   viagem para fora     → o país/cidade e a duração (o mundo menos o país
+ *                           onde se mora — o Brasil entra para quem mora fora)
  *   curso                → o domínio (fotografia, gastronomia, cerâmica,
  *                           dança, escrita) — e, na música, o instrumento
  *   bancar um projeto    → de quem/do quê, entre o que existe nesta vida (o
@@ -26,12 +29,15 @@
  * virar notícia local — e isso é imagem, não fama.
  */
 
+import { educacaoDaVida, paisDaVida } from '../mundo/vida';
+import { ORDEM_REGIOES, PAIS_PADRAO, ROTULO_REGIAO, doPais, existePais, paisDoCatalogo, paisesVivenciaveis, perfilDoPais } from '../mundo/registro';
+import { paisCorrente, precosDoPais } from '../mundo/moeda';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Pessoa, Vida } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, moraCom, parceiro, vinculosVivos } from '../nucleo';
 import { bloqueio, type Veredito } from '../plausibilidade';
-import { economiaLocal, municipio, regiaoDaUf } from '../dados/lugares';
+import { cidadesDoPais, economiaLocal, grandesCentros, municipio, nomeDaDivisao, regiaoDaUf, type Municipio } from '../dados/lugares';
 import { dinheiro as fmt, flex, listaNatural } from '../texto';
 import { disponivel, pagar, vereditoDePagar } from './dinheiro';
 import { garantirFrente, praticar } from './frentes';
@@ -54,7 +60,7 @@ interface ModeloExperiencia {
 }
 
 export const EXPERIENCIAS: readonly ModeloExperiencia[] = [
-  { id: 'viagem_pais', nome: 'Uma viagem pelo Brasil', custo: 5500, intervalo: 12, aparece: 12000, descricao: 'Escolher o destino e quantos dias.' },
+  { id: 'viagem_pais', nome: 'Uma viagem pelo país', custo: 5500, intervalo: 12, aparece: 12000, descricao: 'Escolher o destino e quantos dias.' },
   { id: 'viagem_exterior', nome: 'Uma viagem para fora do país', custo: 16000, intervalo: 24, aparece: 45000, descricao: 'Escolher o país, a cidade e quanto tempo.' },
   { id: 'curso_caro', nome: 'Um curso de um gosto antigo', custo: 7000, intervalo: 24, aparece: 25000, descricao: 'Escolher o quê: fotografia, gastronomia, cerâmica, música, dança, escrita.' },
   { id: 'sabatico', nome: 'Três meses sem trabalhar (um tempo sabático)', custo: 0, intervalo: 60, aparece: 120000, descricao: 'Parar por uns meses, com o dinheiro que se guardou. O trabalho espera — ou não.' },
@@ -125,7 +131,7 @@ function projetosPossiveis(v: Vida): { id: string; rotulo: string; pessoaId?: st
   if (parente) out.push({ id: `familia:${parente.p.id}`, pessoaId: parente.p.id, rotulo: `o pequeno negócio de ${parente.p.nome}`, custo: 20000, descricao: `${parente.p.nome} vende por encomenda e precisa de equipamento para crescer.` });
   const natal = municipio(v.eu.municipioNatal).nome;
   out.push({ id: 'escola', rotulo: `a biblioteca da escola onde você estudou, em ${natal}`, custo: 18000, descricao: 'Livros, cadeiras, computador: a escola que ajudou a fazer você.' });
-  out.push({ id: 'ong', rotulo: 'o cursinho popular do bairro', custo: 15000, descricao: 'Um ano de aulas de graça para quem vai fazer o ENEM.' });
+  out.push({ id: 'ong', rotulo: 'o cursinho popular do bairro', custo: 15000, descricao: `Um ano de aulas de graça para quem vai fazer ${educacaoDaVida(v).o}.` });
   if (Object.entries(v.caminhos.frentes).some(([d, f]) => ['musica', 'teatro', 'danca', 'escrita'].includes(d) && (f?.habilidade ?? 0) >= 40)) out.push({ id: 'cultura', rotulo: 'um grupo de cultura da cidade', custo: 20000, descricao: 'O grupo que ensaia na quadra precisa de som, luz e transporte.' });
   if (v.educacao.concluidos.some(c => ['mestrado', 'doutorado'].includes(c.nivel)) || (v.educacao.vivencias ?? []).some(x => x.tipo === 'iniciacao')) out.push({ id: 'pesquisa', rotulo: 'a pesquisa de um laboratório da universidade', custo: 30000, descricao: 'Um equipamento que o edital não cobriu.' });
   return out;
@@ -135,18 +141,11 @@ function projetosPossiveis(v: Vida): { id: string; rotulo: string; pessoaId?: st
 export function escolhasDaExperiencia(v: Vida, id: TipoExperiencia): EscolhaDeExperiencia[] {
   const c = economiaLocal(v.moradia.municipioId).custo;
   const gente = 1 + companhia(v).length * 0.8;
-  const aqui = municipio(v.moradia.municipioId);
-  const longe = aqui.perfil === 'pequena' || aqui.perfil === 'polo' ? 1 : 0;
   switch (id) {
-    case 'viagem_pais':
-      return DESTINOS_BR.filter(d => d.uf !== aqui.uf || d.id === 'noronha').flatMap(d => {
-        // O transporte: na mesma região, ônibus ou um voo curto; de outra região, avião (mais caro saindo de cidade pequena).
-        const mesmaRegiao = regiaoDaUf(d.uf) === aqui.regiao;
-        const ida = (mesmaRegiao ? 650 : 1500) + longe * 450 + (d.id === 'noronha' ? 900 : 0);
-        return DURACOES.map(du => ({ id: `${d.id}:${du.id}`, grupo: d.nome, rotulo: `${cap(d.nome)} — ${du.nome}`, custo: Math.round((ida + d.diaria * du.dias) * gente / 100) * 100 }));
-      });
-    case 'viagem_exterior':
-      return DESTINOS_FORA.flatMap(d => DURACOES.filter(du => du.id !== 'curta' || d.passagem < 3000).map(du => ({ id: `${d.id}:${du.id}`, grupo: d.nome, rotulo: `${cap(d.nome)} — ${du.nome}`, custo: Math.round(((d.passagem + longe * 700) + d.diaria * du.dias) * gente / 100) * 100 })));
+    case 'viagem_pais': case 'viagem_exterior':
+      return destinosDeViagem(v, id === 'viagem_exterior').flatMap(d => DURACOES.filter(du => du.id !== 'curta' || d.curta).map(du => ({
+        id: `${d.id}:${du.id}`, grupo: d.nome, rotulo: `${cap(d.nome)} — ${du.nome}`, custo: Math.round((d.ida + d.diaria * du.dias) * gente / 100) * 100
+      })));
     case 'curso_caro':
       return CURSOS.map(x => ({ id: x.id, rotulo: x.instrumento ? `Música: ${x.nome}` : cap(x.nome), custo: Math.round(x.custo * c / 100) * 100, grupo: x.instrumento ? 'música' : undefined }));
     case 'bancar_projeto':
@@ -167,25 +166,113 @@ export function escolhasDaExperiencia(v: Vida, id: TipoExperiencia): EscolhaDeEx
 /* ------------------------------------------------------------ O catálogo das viagens (a forma da escolha) */
 
 /**
- * Para fora, a escolha anda em níveis: o país, depois a cidade. Cada cidade
- * é um destino de DESTINOS_FORA (o id da escolha continua `cidade:duração` —
- * saves e ações antigas valem). Um país novo é uma linha aqui e as suas
- * cidades lá; a tela já sabe mostrar muitos.
+ * Para fora, a escolha anda em níveis: o país, depois a cidade. Os países
+ * daqui têm cidades escolhidas à mão (DESTINOS_FORA — o id da escolha
+ * continua `cidade:duração`: saves e ações antigas valem); os outros países
+ * que podem ser vividos entram com a capital e o maior centro. O Brasil
+ * entra para quem mora fora (com destinos de DESTINOS_BR).
  */
-const PAISES_FORA: readonly { id: string; nome: string; continente: string; cidades: readonly string[] }[] = [
-  { id: 'argentina', nome: 'Argentina', continente: 'América do Sul', cidades: ['buenos_aires'] },
-  { id: 'uruguai', nome: 'Uruguai', continente: 'América do Sul', cidades: ['montevideu'] },
-  { id: 'chile', nome: 'Chile', continente: 'América do Sul', cidades: ['santiago'] },
-  { id: 'peru', nome: 'Peru', continente: 'América do Sul', cidades: ['cusco'] },
-  { id: 'colombia', nome: 'Colômbia', continente: 'América do Sul', cidades: ['cartagena'] },
-  { id: 'mexico', nome: 'México', continente: 'América do Norte', cidades: ['cidade_mexico'] },
-  { id: 'estados_unidos', nome: 'Estados Unidos', continente: 'América do Norte', cidades: ['nova_york'] },
-  { id: 'portugal', nome: 'Portugal', continente: 'Europa', cidades: ['lisboa'] },
-  { id: 'franca', nome: 'França', continente: 'Europa', cidades: ['paris'] },
-  { id: 'italia', nome: 'Itália', continente: 'Europa', cidades: ['roma'] },
-  { id: 'japao', nome: 'Japão', continente: 'Ásia', cidades: ['toquio'] }
+const PAISES_FORA: readonly { id: string; iso: string; nome: string; continente: string; cidades: readonly string[] }[] = [
+  { id: 'argentina', iso: 'AR', nome: 'Argentina', continente: 'América do Sul', cidades: ['buenos_aires'] },
+  { id: 'uruguai', iso: 'UY', nome: 'Uruguai', continente: 'América do Sul', cidades: ['montevideu'] },
+  { id: 'chile', iso: 'CL', nome: 'Chile', continente: 'América do Sul', cidades: ['santiago'] },
+  { id: 'peru', iso: 'PE', nome: 'Peru', continente: 'América do Sul', cidades: ['cusco'] },
+  { id: 'colombia', iso: 'CO', nome: 'Colômbia', continente: 'América do Sul', cidades: ['cartagena'] },
+  { id: 'mexico', iso: 'MX', nome: 'México', continente: 'América do Norte', cidades: ['cidade_mexico'] },
+  { id: 'estados_unidos', iso: 'US', nome: 'Estados Unidos', continente: 'América do Norte', cidades: ['nova_york'] },
+  { id: 'portugal', iso: 'PT', nome: 'Portugal', continente: 'Europa', cidades: ['lisboa'] },
+  { id: 'franca', iso: 'FR', nome: 'França', continente: 'Europa', cidades: ['paris'] },
+  { id: 'italia', iso: 'IT', nome: 'Itália', continente: 'Europa', cidades: ['roma'] },
+  { id: 'japao', iso: 'JP', nome: 'Japão', continente: 'Ásia', cidades: ['toquio'] }
 ];
-const ORDEM_REGIOES = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul'] as const;
+/** O Brasil, visto de fora: destinos de DESTINOS_BR. */
+const BRASIL_DE_FORA = ['rio', 'salvador', 'foz'] as const;
+const REGIOES_BR = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul'] as const;
+
+/**
+ * A passagem de avião (ida e volta, por pessoa) entre dois países, na
+ * unidade do Brasil: a mesma régua dos destinos de DESTINOS_FORA (vizinho,
+ * mesmo continente, oceano no meio, meio mundo).
+ */
+function passagemEntre(de: string, para: string): number {
+  const a = paisDoCatalogo(de), b = paisDoCatalogo(para);
+  if (a.sub === b.sub) return 2400;
+  if (a.regiao === b.regiao) return 3200;
+  const bloco = (r: string) => (r.startsWith('america') ? 'A' : r === 'europa' || r === 'africa' ? 'E' : 'O');
+  const x = bloco(a.regiao), y = bloco(b.regiao);
+  if (x === y) return 4800;
+  return x === 'A' && y === 'O' || x === 'O' && y === 'A' ? 9800 : 6000;
+}
+
+/** Um destino, já com o preço desta vida: `ida` é o transporte (ida e volta, por pessoa); `diaria`, o custo local por pessoa e dia. */
+interface DestinoDeViagem {
+  id: string; nome: string; ida: number; diaria: number;
+  /** Aceita o fim de semana prolongado (perto o bastante). */
+  curta: boolean;
+  grupo: string; grupoNome: string; secao?: string; ordem: number;
+}
+
+const pontoDeTurismo = (m: Municipio) => (m.capitalNacional ? 4 : 0) + (m.perfil === 'metropole' ? 3 : 0) + (m.litoral ? 2 : 0) + (m.capital ? 1 : 0);
+
+/** Os destinos de uma viagem: pelo país onde se mora, ou para fora dele. */
+function destinosDeViagem(v: Vida, fora: boolean): DestinoDeViagem[] {
+  const aqui = municipio(v.moradia.municipioId);
+  const pais = paisDaVida(v);
+  const longe = aqui.perfil === 'pequena' || aqui.perfil === 'polo' ? 1 : 0;
+  if (!fora) {
+    if (pais === PAIS_PADRAO) {
+      return DESTINOS_BR.filter(d => d.uf !== aqui.uf || d.id === 'noronha').map(d => {
+        // O transporte: na mesma região, ônibus ou um voo curto; de outra região, avião (mais caro saindo de cidade pequena).
+        const mesmaRegiao = regiaoDaUf(d.uf) === aqui.regiao;
+        const rg = regiaoDaUf(d.uf);
+        return { id: d.id, nome: d.nome, ida: (mesmaRegiao ? 650 : 1500) + longe * 450 + (d.id === 'noronha' ? 900 : 0), diaria: d.diaria, curta: true, grupo: rg, grupoNome: rg, ordem: REGIOES_BR.indexOf(rg) };
+      });
+    }
+    // Fora do Brasil: as cidades do país que atraem visita (a capital, as metrópoles, o litoral), longe de casa.
+    const divisoes = perfilDoPais(pais).divisao.lista.map(d => d.codigo);
+    const mesmaMetro = (m: Municipio) => m.id === aqui.id || m.metropole === aqui.id || aqui.metropole === m.id || (!!m.metropole && m.metropole === aqui.metropole);
+    return cidadesDoPais(pais).filter(m => !mesmaMetro(m) && pontoDeTurismo(m) > 0)
+      .sort((a, b) => pontoDeTurismo(b) - pontoDeTurismo(a)).slice(0, 12)
+      .map(m => ({
+        id: m.id.replace(':', '.'), nome: m.nome,
+        ida: (m.uf === aqui.uf ? 650 : 1500) + longe * 450,
+        diaria: Math.round(400 * economiaLocal(m.id).custo / 10) * 10,
+        curta: true, grupo: m.uf, grupoNome: nomeDaDivisao(m), ordem: Math.max(0, divisoes.indexOf(m.uf))
+      }));
+  }
+  // Para fora: a passagem e a diária estão na unidade do Brasil (o preço de mercado de lá); quem mora num país de preços
+  // mais altos paga menos unidades pelo mesmo voo e pelo mesmo hotel (o câmbio, `mundo/moeda`). Do Brasil, os de sempre.
+  const f = 1 / precosDoPais(pais);
+  const regiao = (iso: string) => Math.max(0, ORDEM_REGIOES.indexOf(paisDoCatalogo(iso).regiao));
+  const out: DestinoDeViagem[] = [];
+  const curados = new Set(PAISES_FORA.map(p => p.iso));
+  for (const p of PAISES_FORA) {
+    if (p.iso === pais) continue;
+    for (const c of p.cidades) {
+      const d = DESTINOS_FORA.find(x => x.id === c)!;
+      const passagem = pais === PAIS_PADRAO ? d.passagem : passagemEntre(pais, p.iso);
+      out.push({ id: d.id, nome: d.nome, ida: (passagem + longe * 700) * f, diaria: d.diaria * f, curta: passagem < 3000, grupo: p.id, grupoNome: p.nome, secao: p.continente, ordem: regiao(p.iso) });
+    }
+  }
+  if (pais !== PAIS_PADRAO) {
+    const passagem = passagemEntre(pais, PAIS_PADRAO);
+    for (const c of BRASIL_DE_FORA) {
+      const d = DESTINOS_BR.find(x => x.id === c)!;
+      out.push({ id: d.id, nome: d.nome, ida: (passagem + longe * 700) * f, diaria: d.diaria * f, curta: passagem < 3000, grupo: 'brasil', grupoNome: 'Brasil', secao: ROTULO_REGIAO.america_sul, ordem: regiao(PAIS_PADRAO) });
+    }
+  }
+  for (const p of paisesVivenciaveis()) {
+    if (p.id === pais || p.id === PAIS_PADRAO || curados.has(p.id) || !p.economia) continue;
+    const passagem = passagemEntre(pais, p.id);
+    const diaria = Math.round(560 * precosDoPais(p.id) / 10) * 10;
+    for (const id of [...new Set(grandesCentros(p.id))].reverse()) {
+      const m = municipio(id);
+      out.push({ id: m.id.replace(':', '.'), nome: m.nome, ida: (passagem + longe * 700) * f, diaria: diaria * f, curta: passagem < 3000, grupo: p.id.toLowerCase(), grupoNome: p.nome, secao: ROTULO_REGIAO[p.regiao], ordem: regiao(p.id) });
+    }
+  }
+  // Por continente (a ordem de sempre dentro dele).
+  return out.map((d, i) => ({ d, i })).sort((a, b) => a.d.ordem - b.d.ordem || a.i - b.i).map(x => x.d);
+}
 
 export interface DuracaoDeViagem { /** O id da escolha da ação (`destino:duração`). */ escolha: string; id: string; nome: string; dias: number; custo: number }
 export interface LugarDeViagem { id: string; nome: string; duracoes: DuracaoDeViagem[]; aPartirDe: number }
@@ -198,6 +285,8 @@ export interface CatalogoDeViagem {
   grupos: GrupoDeViagem[];
   /** Quem vai junto (entra no preço). */
   companhia: string[];
+  /** A pergunta do primeiro nível ("Para que parte do Brasil?", "Para que parte do Japão?"). */
+  perguntaGrupo: string;
 }
 
 /**
@@ -224,10 +313,18 @@ export function catalogoDeViagem(v: Vida, id: 'viagem_pais' | 'viagem_exterior')
     const ls = lugares.filter((x): x is LugarDeViagem => !!x);
     return ls.length ? { id: gid, nome, secao, lugares: ls, aPartirDe: Math.min(...ls.map(l => l.aPartirDe)) } : undefined;
   };
-  const grupos = fora
-    ? PAISES_FORA.map(p => grupo(p.id, p.nome, p.cidades.map(c => { const d = DESTINOS_FORA.find(x => x.id === c); return d && lugar(d.id, d.nome); }), p.continente))
-    : ORDEM_REGIOES.map(rg => grupo(rg, rg, DESTINOS_BR.filter(d => regiaoDaUf(d.uf) === rg).map(d => lugar(d.id, d.nome))));
-  return { tipo: id, nivelGrupo: fora ? 'país' : 'região', nivelLugar: fora ? 'cidade' : 'destino', grupos: grupos.filter((g): g is GrupoDeViagem => !!g), companhia: companhia(v).map(p => p.nome) };
+  const destinos = destinosDeViagem(v, fora);
+  const ordemGrupos: string[] = [];
+  for (const d of [...destinos].sort((a, b) => a.ordem - b.ordem)) if (!ordemGrupos.includes(d.grupo)) ordemGrupos.push(d.grupo);
+  const grupos = ordemGrupos.map(gid => {
+    const ds = destinos.filter(d => d.grupo === gid);
+    return grupo(gid, ds[0].grupoNome, ds.map(d => lugar(d.id, d.nome)), ds[0].secao);
+  });
+  const pais = paisDaVida(v);
+  return {
+    tipo: id, nivelGrupo: fora ? 'país' : 'região', nivelLugar: fora ? 'cidade' : 'destino', grupos: grupos.filter((g): g is GrupoDeViagem => !!g), companhia: companhia(v).map(p => p.nome),
+    perguntaGrupo: fora ? 'Para qual país?' : `Para que parte ${doPais(pais)}?`
+  };
 }
 
 export function custoDaExperiencia(v: Vida, id: TipoExperiencia, escolha?: string): number {
@@ -272,7 +369,7 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
     case 'viagem_pais': case 'viagem_exterior': {
       const fora = id === 'viagem_exterior';
       const [destId, durId] = (esc?.id ?? '').split(':');
-      const dest = (fora ? DESTINOS_FORA : DESTINOS_BR).find(d => d.id === destId)!;
+      const dest = destinosDeViagem(v, fora).find(d => d.id === destId) ?? destinosDeViagem(v, fora)[0];
       const dur = DURACOES.find(d => d.id === durId) ?? DURACOES[1];
       const fator = dur.dias / 7;
       v.mente.felicidade = clamp(v.mente.felicidade + (fora ? 7 : 5) * Math.min(1.4, 0.6 + fator * 0.4));
@@ -365,5 +462,8 @@ function acontecimentoDeViagem(v: Vida, r: Rng, onde: string, sozinho: boolean, 
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-export const nomeDaExperiencia = (id: TipoExperiencia) => modelo(id).nome;
+/** O nome da porta; a viagem "pelo país" fala do país onde a pessoa mora ("pelo Brasil", "pela Argentina", "por Portugal"). */
+export const nomeDaExperiencia = (id: TipoExperiencia, pais = paisCorrente()) =>
+  id === 'viagem_pais' && existePais(pais) ? `Uma viagem ${pelo(pais)}` : modelo(id).nome;
+const pelo = (pais: string) => { const p = paisDoCatalogo(pais); return ({ '': 'por ', o: 'pelo ', a: 'pela ', os: 'pelos ', as: 'pelas ' } as const)[p.artigo] + p.nome; };
 export const descricaoDaExperiencia = (id: TipoExperiencia) => modelo(id).descricao;

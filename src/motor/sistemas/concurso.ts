@@ -15,6 +15,7 @@
  *              distância dita em palavras. Reprovar não fecha a porta.
  */
 
+import { paisDaVida, perfilDaVida } from '../mundo/vida';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { FocoConcurso, Vida } from '../tipos';
@@ -85,9 +86,13 @@ function hash(s: string): number {
 /** O edital deste cargo está aberto neste ano, para quem mora aqui? (Estável: o mundo, não a pessoa.) */
 export function editalAberto(v: Vida, oc: Ocupacao): boolean {
   if (!oc.concurso) return false;
+  // Onde o serviço público não entra por concurso de provas (o perfil do país), não há edital.
+  if (!perfilDaVida(v).trabalho.concurso) return false;
+  if (oc.paises && !oc.paises.includes(paisDaVida(v))) return false;
   const p = perfilConcurso(oc.id);
   const m = municipio(v.moradia.municipioId);
-  const onde = p.esfera === 'municipal' ? m.id : p.esfera === 'estadual' ? m.uf : 'BR';
+  // O edital federal é do país onde se mora (no Brasil, a chave de sempre: 'BR').
+  const onde = p.esfera === 'municipal' ? m.id : p.esfera === 'estadual' ? m.uf : paisDaVida(v);
   return hash(`edital:${oc.id}:${onde}:${anoDe(v.t)}`) < p.frequencia;
 }
 

@@ -25,10 +25,16 @@
  * Os torneios são do universo do jogo ("o torneio mundial de seleções", "o
  * torneio continental") — nenhuma história real é afirmada.
  *
- * Costura para a América do Sul: `nacionalidadeEsportiva` é o único ponto
- * que diz por qual seleção a pessoa joga (hoje, sempre a brasileira).
+ * MUNDO: `nacionalidadeEsportiva` é o único ponto que diz por qual seleção a
+ * pessoa joga — a da NACIONALIDADE, nunca a da residência: o argentino que
+ * joga no Brasil continua sendo da Argentina. Com mais de uma nacionalidade,
+ * a de nascença; e, uma vez convocado, a escolha fica (como na regra das
+ * federações: quem jogou por uma seleção não troca). A concorrência é a do
+ * país: entrar na seleção brasileira é mais difícil que na costarriquenha.
  */
 
+import { nomeDoPais, paisDoCatalogo, perfilDoPais, temPerfil } from '../mundo/registro';
+import { nacionalidadesDaVida } from '../mundo/vida';
 import type { Rng } from '../rng';
 import { clamp, criarRng } from '../rng';
 import type { CarreiraEsportiva, Dominio, Posicao, Temporada, TrajetoriaNaSelecao, Vida } from '../tipos';
@@ -41,16 +47,39 @@ import { marcar } from './marcas';
 import { lesaoAtiva } from './lesoes';
 import { avaliarTemporada, conquistasRecentes, registrarConquista } from './palmares';
 
-/** Por qual seleção a pessoa joga. (Hoje o VIDA é brasileiro; é aqui que outro país entra.) */
-export const nacionalidadeEsportiva = (_v: Vida) => ({ pais: 'brasil', selecao: 'a seleção brasileira', daSelecao: 'da seleção brasileira', naSelecao: 'na seleção brasileira' });
+/** O país da seleção da pessoa (a da nacionalidade; depois da primeira convocação, a que ela escolheu). */
+export const paisEsportivo = (v: Vida): string => v.caminhos.esporte?.selecao?.pais ?? nacionalidadesDaVida(v)[0];
+
+/** "brasileira", "argentina", "japonesa" — o adjetivo da seleção. */
+export const adjetivoDaSelecao = (pais: string) => (temPerfil(pais) ? perfilDoPais(pais).gentilico[1] : nomeDoPais(pais));
+
+/** Por qual seleção a pessoa joga: a do país da nacionalidade (nunca o da residência). */
+export const nacionalidadeEsportiva = (v: Vida) => {
+  const pais = paisEsportivo(v);
+  const a = adjetivoDaSelecao(pais);
+  return { pais, selecao: `a seleção ${a}`, daSelecao: `da seleção ${a}`, naSelecao: `na seleção ${a}` };
+};
 
 /** O nome da representação nacional NA modalidade (a seleção de basquete; a equipe de tênis; a seleção de natação). */
 export function representacaoDe(v: Vida, d: Dominio): { selecao: string; daSelecao: string; naSelecao: string; paraSelecao: string } {
   const n = nacionalidadeEsportiva(v);
-  if (d === 'futebol') return { ...n, paraSelecao: 'para a seleção brasileira' };
-  if (d === 'tenis') return { selecao: 'a equipe brasileira de tênis', daSelecao: 'da equipe brasileira de tênis', naSelecao: 'na equipe brasileira de tênis', paraSelecao: 'para a equipe brasileira de tênis' };
+  const a = adjetivoDaSelecao(n.pais);
+  if (d === 'futebol') return { selecao: n.selecao, daSelecao: n.daSelecao, naSelecao: n.naSelecao, paraSelecao: `para a seleção ${a}` };
+  if (d === 'tenis') return { selecao: `a equipe ${a} de tênis`, daSelecao: `da equipe ${a} de tênis`, naSelecao: `na equipe ${a} de tênis`, paraSelecao: `para a equipe ${a} de tênis` };
   const mod = NOME_MOD[d] ?? d;
-  return { selecao: `a seleção brasileira de ${mod}`, daSelecao: `da seleção brasileira de ${mod}`, naSelecao: `na seleção brasileira de ${mod}`, paraSelecao: `para a seleção brasileira de ${mod}` };
+  return { selecao: `a seleção ${a} de ${mod}`, daSelecao: `da seleção ${a} de ${mod}`, naSelecao: `na seleção ${a} de ${mod}`, paraSelecao: `para a seleção ${a} de ${mod}` };
+}
+
+/**
+ * A concorrência da seleção no país (calibração do jogo): onde o esporte é
+ * forte e popular, há mais gente boa por vaga — a régua sobe; onde não é,
+ * desce. Pela popularidade do esporte no perfil (1 = o Brasil no vôlei).
+ * Pontos somados aos limiares (radar, convocação, titular).
+ */
+export function concorrenciaNoPais(pais: string, d: Dominio): number {
+  const pop = temPerfil(pais) ? perfilDoPais(pais).esporte.popularidade[d] ?? 1 : 1;
+  const tamanho = Math.log10(Math.max(1, paisDoCatalogo(pais).populacao) / 1000);  // milhões, em log: o Brasil ~2,3
+  return Math.round(clamp((pop - 1.25) * 10 + (tamanho - 2.33) * 3, -12, 4));
 }
 
 /** Os limiares (radar, convocação, titular) de cada tipo de representação: a régua é a mesma ideia, o critério é da modalidade. */
@@ -139,11 +168,13 @@ export function processarSelecao(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tempo
   const g = ge(v);
   const nac = representacaoDe(v, e.modalidade);
   const estrutura = perfilDe(e.modalidade).estrutura;
-  const [RADAR, CONVOCACAO, TITULAR] = e.modalidade === 'futebol' ? [RADAR_FUT, CONVOCACAO_FUT, TITULAR_FUT] : LIMIARES[estrutura];
+  // Medido contra o Brasil (a régua que o jogo sempre teve): no Brasil, 0.
+  const ajuste = concorrenciaNoPais(paisEsportivo(v), e.modalidade) - concorrenciaNoPais('BR', e.modalidade);
+  const [RADAR, CONVOCACAO, TITULAR] = (e.modalidade === 'futebol' ? [RADAR_FUT, CONVOCACAO_FUT, TITULAR_FUT] : LIMIARES[estrutura]).map(x => x + ajuste);
   const individual = estrutura !== 'clube';
   if (!s) {
     if (x < RADAR) return;
-    e.selecao = { radar: v.t, convocacoes: 0, jogos: 0, gols: 0, torneios: [] };
+    e.selecao = { radar: v.t, convocacoes: 0, jogos: 0, gols: 0, torneios: [], pais: paisEsportivo(v) };
     escrever(v, { texto: `O nome entrou na lista de observados da comissão técnica ${nac.daSelecao}.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'bom' });
   }
   const sel = e.selecao as TrajetoriaNaSelecao;

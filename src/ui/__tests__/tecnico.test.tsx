@@ -19,7 +19,7 @@ import { encerrarCarreira, entrarNaBase, fecharTemporada, profissionalizar } fro
 import { registrarTemporada } from '../../motor/sistemas/palmares';
 import { contratar } from '../../motor/sistemas/trabalho';
 import { ocupacao } from '../../motor/dados/ocupacoes';
-import { passagemAtual, processarTecnico, resumoDaPassagem } from '../../motor/sistemas/tecnico';
+import { aceitarPropostaDeTecnico, demitirDoComando, passagemAtual, processarTecnico, propostaDeCrise, resumoDaPassagem } from '../../motor/sistemas/tecnico';
 
 beforeAll(async () => { await precarregar(); });
 
@@ -72,5 +72,22 @@ describe('Trabalho · "Carreira como técnico"', () => {
     // A carreira de jogador não foi apagada nem fundida: a seção dela continua, com a tabela por clube.
     fireEvent.click(screen.getByRole('button', { name: /A carreira no esporte/ }));
     expect(screen.getAllByText(/\d+ temporadas, 1 clube/).length).toBeGreaterThan(0);
+  });
+
+  it('a passagem que começou no meio da temporada diz de onde pegou o time, e conta só os jogos dirigidos', () => {
+    const v = transacao(exJogadorTecnico(), x => {
+      demitirDoComando(x);
+      const c = x.caminhos.tecnico!;
+      for (let s = 1; s < 400 && !c.proposta; s++) propostaDeCrise(x, criarRng(s), c);
+      aceitarPropostaDeTecnico(x, criarRng(2), c.proposta!.id);
+      x.t += 12;
+      processarTecnico(x, criarRng(77));
+      x.momento = null;
+    }).vida;
+    const p = v.caminhos.tecnico!.passagens.find(q => q.meioDeTemporada)!;
+    render(<Trabalho vida={v} agir={() => true} irPara={() => {}} />);
+    const sec = screen.getByRole('region', { name: 'Carreira como técnico' });
+    expect(within(sec).getByText(`· assumiu na ${p.meioDeTemporada!.rodada + 1}ª rodada, em ${p.meioDeTemporada!.posicao}º`, { exact: false })).toBeTruthy();
+    expect(p.temporadas[0].jogos).toBeLessThanOrEqual(p.meioDeTemporada!.rodadas - p.meioDeTemporada!.rodada);
   });
 });

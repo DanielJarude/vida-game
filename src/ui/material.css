@@ -216,3 +216,11 @@
 .balanco__liquido strong, .balanca__resultado strong, .valor-grande, .balanca__valor, .objeto__numeros dd { white-space: nowrap; }
 .objeto__numeros dd { white-space: normal; }
 .objeto__numeros dd > span { white-space: nowrap; }
+
+/* ATT Mundo: o país escolhido em passos (reaproveita a viagem), a linha de baixo e as mudanças de país. */
+.mundo-nascer__pais { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.mundo-nascer__pais strong { font-family: var(--font-serif); font-size: 1.05rem; }
+.mundo__rodape { margin-top: 0.75rem; }
+.mundo__mudancas, .mundo__partes { margin: 0.5rem 0; padding-left: 1.1rem; }
+.mundo__mudancas li, .mundo__partes li { margin: 0.2rem 0; }
+.mundo__custo { margin-top: 0.75rem; }

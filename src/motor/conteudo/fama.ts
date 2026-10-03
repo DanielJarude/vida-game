@@ -8,6 +8,7 @@
  * camisa; pela novela, pede para repetir a fala) — `notoriedade.origemDoNome`.
  */
 
+import { dinheiroCurto as moedaCurta } from '../texto';
 import type { Conteudo, Ctx } from './base';
 import { clamp } from '../rng';
 import { dinheiro as fmt } from '../texto';
@@ -64,7 +65,7 @@ export const FAMA: Conteudo[] = [
     opcoes: [
       { id: 'pagar', texto: 'Ajudar com o tratamento',
         disponivel: c => (disponivel(c.v) >= 8000 ? true : 'Não há dinheiro para isso agora.'),
-        consequencia: () => 'Uns R$ 8 mil.',
+        consequencia: () => `Uns ${moedaCurta(8000)}.`,
         resolver: c => ({ texto: 'O tratamento começou no mês seguinte. A mãe mandou um áudio que você ouviu três vezes.', memoria: 'Pagou o tratamento de um menino que pediu para conhecer você.', relevancia: 'biografia', tom: 'bom', efeito: () => { pagar(c.v, 8000); c.v.mente.felicidade = clamp(c.v.mente.felicidade + 5); c.v.fatos['vis_boa'] = c.v.t; } }) },
       { id: 'visitar', texto: 'Visitar o menino',
         resolver: c => ({ texto: 'Uma tarde no hospital, camisa autografada, um sorriso que você não esquece.', memoria: 'Visitou no hospital um menino que tinha pedido para conhecer você.', relevancia: 'biografia', tom: 'bom', efeito: () => { c.v.mente.felicidade = clamp(c.v.mente.felicidade + 4); c.v.fatos['vis_boa'] = c.v.t; } }) },

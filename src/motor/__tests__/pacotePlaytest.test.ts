@@ -502,7 +502,7 @@ describe('J · save/load: os estados novos voltam iguais', () => {
     for (const vin of Object.values(v.vinculos)) { delete vin.contexto; delete vin.fases; }
     if (v.notoriedade) delete v.notoriedade.origens;
     const r = recarregar(v);
-    expect(r.versao).toBe(19); // lido como a versão atual (a v19 só acrescentou campos opcionais)
+    expect(r.versao).toBe(20); // lido como a versão atual (migrado até a v20)
     expect(contextoDaRelacao(r, Object.values(r.vinculos)[0]).via).toBeTruthy();
   });
 });

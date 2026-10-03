@@ -1,5 +1,6 @@
 /** Adolescência (12–17). */
 
+import { dinheiro as moeda } from '../texto';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
@@ -122,7 +123,7 @@ export const ADOLESCENCIA: Conteudo[] = [
     id: 'ado_vaquinha', tipo: 'decisao', idade: [12, 17], tema: 'amizade',
     papeis: { amigo: P.amigo },
     titulo: 'A vaquinha',
-    texto: c => `A mãe de ${c.p.amigo.nome} ficou doente e a turma está fazendo uma vaquinha. Você tem R$ ${Math.max(20, Math.round(c.v.financas.conta))} guardados.`,
+    texto: c => `A mãe de ${c.p.amigo.nome} ficou doente e a turma está fazendo uma vaquinha. Você tem ${moeda(Math.max(20, c.v.financas.conta))} guardados.`,
     quando: c => c.v.financas.conta >= 20,
     opcoes: [
       { id: 'tudo', texto: 'Dar quase tudo', comportamento: { generosidade: 2 }, resolver: c => ({ texto: `${c.p.amigo.nome} não soube o que dizer.`, memoria: `Deu quase todo o dinheiro guardado para a vaquinha da mãe de ${c.p.amigo.nome}.`, efeito: () => { dinheiro(c, -Math.round(c.v.financas.conta * 0.8)); prox(c, 'amigo', 12); } }) },

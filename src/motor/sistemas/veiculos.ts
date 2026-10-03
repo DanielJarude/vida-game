@@ -59,6 +59,8 @@ export function custosDeVeiculo(v: Vida, b: Veiculo, c: number, uso = 1): { rotu
   }
   const taxas = m.categoria === 'embarcacao' ? 'seguro e marina' : m.categoria === 'aeronave' ? 'seguro, hangar e inspeção' : `IPVA${b.parado ? '' : ' e seguro'}`;
   if (m.taxaAnual) out.push({ rotulo: `${nome}: ${taxas}`, valor: b.valor * (b.parado ? 0.035 : m.taxaAnual) / 12 });
+  // O jato voa com tripulação própria: salário fixo enquanto não está parado (parado, a tripulação é dispensada).
+  if (m.tripulacao && !b.parado) out.push({ rotulo: `${nome}: tripulação (dois pilotos)`, valor: m.tripulacao });
   return out;
 }
 
@@ -158,7 +160,7 @@ export function textoVeiculo(b: Veiculo): string {
   const x = versaoVeiculo(b.versaoId);
   if (x) return `${x.artigo} ${nomeDaVersao(x)}`;
   const m = modeloVeiculo(b.modeloId);
-  return m.categoria === 'carro' || m.id === 'veleiro' || m.id === 'ultraleve' || m.id === 'monomotor' ? `o ${m.nome}` : `a ${m.nome}`;
+  return m.categoria === 'carro' || m.categoria === 'aeronave' || m.id === 'veleiro' ? `o ${m.nome}` : `a ${m.nome}`;
 }
 
 /** Concorda com o veículo: "o Onix ficou parado", "a Biz ficou parada". */

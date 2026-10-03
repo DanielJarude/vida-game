@@ -15,11 +15,14 @@ import type { Classe, Genero, Origem, Pessoa, Vida, Visual } from './tipos';
 import { tDe, MESES, mesDe, anoDe } from './tempo';
 import { criarPessoa, vincular, visualAleatorio, visualHerdado } from './pessoas';
 import { escrever } from './nucleo';
-import { OCUPACOES_POR_CLASSE, ocupacao } from './dados/ocupacoes';
+import { ocupacoesDaClasse, ocupacao } from './dados/ocupacoes';
 import { liquido, salarioLocal } from './sistemas/renda';
 import { economiaInicial } from './sistemas/economia';
 import { nomeDePet } from './sistemas/mercado';
-import { municipio, nomeLugar } from './dados/lugares';
+import { municipio, nomeLugar, grandesCentros, paisDaCidade } from './dados/lugares';
+import { perfilDoPais } from './mundo/registro';
+import { nacionalidadesAoNascer } from './mundo/cidadania';
+import { rendaNoPais } from './mundo/economia';
 import { NOMES_PET_CACHORRO, NOMES_PET_GATO } from './dados/nomes';
 import { flex, listaNatural, artigo } from './texto';
 
@@ -52,11 +55,12 @@ export const ROTULO_CLASSE: Record<Classe, string> = {
 
 function sortearClasse(r: Rng, municipioId: string): Classe {
   const m = municipio(municipioId);
-  const pesos: Record<Classe, number> = { vulneravel: 22, trabalhadora: 31, media_baixa: 22, media: 17, alta: 8 };
+  // A distribuição é do país (a desigualdade de cada lugar); a região brasileira é uma desigualdade real do Brasil.
+  const pesos: Record<Classe, number> = { ...perfilDoPais(m.pais).economia.classes };
   if (m.regiao === 'Nordeste' || m.regiao === 'Norte') { pesos.vulneravel += 10; pesos.media -= 4; pesos.alta -= 3; }
   if (m.perfil === 'metropole') { pesos.alta += 3; pesos.media += 3; }
   if (m.perfil === 'pequena') { pesos.alta -= 4; pesos.vulneravel += 6; }
-  return r.weighted(CLASSES, c => pesos[c])!;
+  return r.weighted(CLASSES, c => Math.max(0.5, pesos[c]))!;
 }
 
 function sortearArranjo(r: Rng, classe: Classe): Origem['arranjo'] {
@@ -83,7 +87,7 @@ function empregarPai(v: Vida, r: Rng, p: Pessoa, classe: Classe, municipioId: st
   const idx = CLASSES.indexOf(classe);
   const vizinha = CLASSES[Math.max(0, Math.min(4, idx + (r.chance(0.25) ? (r.chance(0.5) ? -1 : 1) : 0)))];
   const idadeP = Math.floor((v.t - p.tNasc) / 12);
-  const possiveis = OCUPACOES_POR_CLASSE[vizinha].map(ocupacao).filter(x => x.idadeMin <= idadeP);
+  const possiveis = ocupacoesDaClasse(vizinha, paisDaCidade(municipioId)).map(ocupacao).filter(x => x.idadeMin <= idadeP);
   if (possiveis.length === 0) {
     p.ocupacao = 'estudante';
     p.renda = 0;
@@ -93,7 +97,14 @@ function empregarPai(v: Vida, r: Rng, p: Pessoa, classe: Classe, municipioId: st
   const bruto = salarioLocal(oc, municipioId, 0.85 + r.next() * 0.3);
   p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
   p.ocupacaoId = oc.id;
-  p.renda = liquido(bruto, oc.contrato);
+  p.renda = liquido(bruto, oc.contrato, paisDaCidade(municipioId));
+}
+
+/** O plano de saúde da casa ao nascer: depende do sistema do país (onde o público atende todos, quase ninguém paga; onde a saúde é de seguro, quase todos têm um). */
+function planoAoNascer(sistema: 'universal' | 'misto' | 'seguro', classe: Classe): boolean {
+  if (sistema === 'universal') return classe === 'alta';
+  if (sistema === 'seguro') return classe !== 'vulneravel';
+  return classe === 'media' || classe === 'alta';
 }
 
 function avoVivo(r: Rng, idadeAvo: number): boolean {
@@ -110,10 +121,12 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const podeGestar = o.genero === 'feminino' ? true : o.genero === 'masculino' ? false : !!o.podeGestar;
 
   const id = `vida-${o.semente.toString(36)}`;
+  const paisNatal = municipio(o.municipioId).pais;
+  const perfil = perfilDoPais(paisNatal);
   // Predisposições: da semente, sem gastar o gerador (a vida criada é a mesma de antes, com elas guardadas).
   const pred = derivarPredisposicoes(id);
   const v: Vida = {
-    versao: 19,
+    versao: 20,
     id,
     rng: 0,
     seq: 0,
@@ -124,6 +137,8 @@ export function criarVida(o: OpcoesCriacao): Vida {
       genero: o.genero,
       tNasc: t,
       municipioNatal: o.municipioId,
+      // Nasce da terra e dos pais, que são daqui (a família de origem é do lugar onde a vida começa).
+      nacionalidades: nacionalidadesAoNascer(paisNatal, [paisNatal]),
       visual: o.visual ?? visualAleatorio(r, o.genero),
       tratamento: o.genero === 'nao_binario' ? o.tratamento ?? 'nao_binario' : undefined
     },
@@ -163,7 +178,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     trabalho: { historico: [], experiencia: {}, candidaturas: [], contribuicao: 0, licencas: [], horasExtras: false },
     financas: {
       conta: 0, investimentos: [], dividas: [], bens: [],
-      estilo: 'modesto', planoDeSaude: classe === 'media' || classe === 'alta', negativado: false, razao: [], historico: []
+      estilo: 'modesto', planoDeSaude: planoAoNascer(perfil.saude.sistema, classe), negativado: false, razao: [], historico: []
     },
     // A economia tem semente própria, derivada — criar a vida não consome o gerador dela.
     economia: economiaInicial(((o.semente ^ 0x6a09e667) >>> 0) % 2 ** 30 + 1, t),
@@ -201,7 +216,8 @@ export function criarVida(o: OpcoesCriacao): Vida {
   empregarPai(v, r, mae, classe, cidade, arranjo === 'pais_juntos');
   if (pai) empregarPai(v, r, pai, classe, cidade, false);
   if (pai && arranjo === 'pais_juntos') { mae.parceiroId = pai.id; pai.parceiroId = mae.id; }
-  if (pai && arranjo === 'mae_solo' && r.chance(0.3)) pai.municipioId = r.chance(0.5) ? cidade : 'sao-paulo-sp';
+  const [grandeCentro, outraCapital] = grandesCentros(paisNatal);
+  if (pai && arranjo === 'mae_solo' && r.chance(0.3)) pai.municipioId = r.chance(0.5) ? cidade : grandeCentro;
 
   vincular(v, mae, { parentesco: 'mae', origem: 'familia', proximidade: comMae ? 90 : 45, convivio: comMae ? ['casa'] : [] });
   if (pai) vincular(v, pai, { parentesco: 'pai', origem: 'familia', proximidade: comPai ? 85 : 25, convivio: comPai ? ['casa'] : [] });
@@ -219,7 +235,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     const avo = criarPessoa(v, r, { genero, idade: idadeAvo, municipioId: r.chance(0.7) ? cidade : v.moradia.municipioId, sobrenome });
     if (idadeAvo >= 62) {
       avo.ocupacao = flex(genero, 'aposentado', 'aposentada');
-      avo.renda = 1800;
+      avo.renda = rendaNoPais(paisNatal, 1800);
     } else {
       empregarPai(v, r, avo, classe, avo.municipioId, true);
     }
@@ -230,7 +246,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   if (arranjo === 'avos' && !avosCriados.some(a => v.vinculos[a.id].convivio.includes('casa'))) {
     const avo = criarPessoa(v, r, { genero: 'feminino', idade: idadeMae + r.int(20, 28), municipioId: cidade, sobrenome: ladoMae });
     avo.ocupacao = 'aposentada';
-    avo.renda = 1800;
+    avo.renda = rendaNoPais(paisNatal, 1800);
     vincular(v, avo, { parentesco: 'avo', origem: 'familia', proximidade: 92, convivio: ['casa'] });
     avosCriados.push(avo);
   }
@@ -255,7 +271,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   for (let i = 0; i < nTios; i++) {
     const lado = r.chance(0.5) ? mae : pai ?? mae;
     const g: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
-    const tio = criarPessoa(v, r, { genero: g, idade: Math.max(18, (lado === mae ? idadeMae : idadePai) + r.int(-8, 8)), municipioId: r.chance(0.65) ? cidade : r.pick(['sao-paulo-sp', 'brasilia-df', cidade]), sobrenome: lado.sobrenome });
+    const tio = criarPessoa(v, r, { genero: g, idade: Math.max(18, (lado === mae ? idadeMae : idadePai) + r.int(-8, 8)), municipioId: r.chance(0.65) ? cidade : r.pick([grandeCentro, outraCapital, cidade]), sobrenome: lado.sobrenome });
     empregarPai(v, r, tio, classe, tio.municipioId, false);
     vincular(v, tio, { parentesco: 'tio', origem: 'familia', proximidade: r.int(30, 60) });
     if (r.chance(0.6)) {

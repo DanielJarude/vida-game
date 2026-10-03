@@ -29,7 +29,8 @@ import { rngDe } from '../rng';
 import type { Pessoa, TipoVivencia, Vida, Vivencia } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { cursoOuNulo, ROTULO_AREA, type AreaFormacao } from '../dados/cursos';
-import { municipio, nivelDeOferta } from '../dados/lugares';
+import { municipio, nivelDeOferta, paisDaCidade } from '../dados/lugares';
+import { perfilDoPais, temPerfil } from '../mundo/registro';
 import { OCUPACOES } from '../dados/ocupacoes';
 import { criarPessoa, vincular } from '../pessoas';
 import { habilidade, materiasExtremas } from './frentes';
@@ -114,13 +115,17 @@ const NOME_OFERTA: Record<OfertaFormacao, string> = {
   centro_academico: 'um centro acadêmico', atletica: 'uma atlética', grupo_estudos: 'grupos de estudo', empresa_junior: 'uma empresa júnior'
 };
 
+/** Os nomes das instituições públicas do país onde fica a escola (`mundo/vida.educacaoDaVida`, a mesma tabela). */
+const inst = (municipioId: string) => { const p = paisDaCidade(municipioId); return (perfilDoPais(temPerfil(p) ? p : 'BR').educacao.instituicoes ?? INSTITUICOES_GENERICAS); };
+const INSTITUICOES_GENERICAS = { universidade: 'a universidade pública', tecnico: 'a escola técnica pública', livre: 'um curso gratuito de formação profissional', escolaFundamental: 'escola pública', escolaMedio: 'escola secundária pública', nomeEscolaFundamental: 'Escola Pública', nomeEscolaMedio: 'Escola Secundária' };
+
 function descrever(tipo: TipoInstituicao, publica: boolean, ofertas: OfertaFormacao[], municipioId: string, etapa?: string): string {
   const m = municipio(municipioId);
   const destaque = ofertas.filter(o => o !== 'grupo_estudos').slice(0, 3).map(o => NOME_OFERTA[o]);
   const lista = destaque.length > 1 ? `${destaque.slice(0, -1).join(', ')} e ${destaque[destaque.length - 1]}` : destaque[0] ?? '';
   const abre = tipo === 'infantil' ? (publica ? 'Uma escola pública de educação infantil' : 'Uma escolinha particular')
-    : tipo === 'escola' ? (publica ? (etapa === 'medio' ? 'Uma escola estadual' : m.perfil === 'pequena' ? 'A escola municipal da cidade' : 'Uma escola municipal de bairro') : 'Um colégio particular')
-      : tipo === 'if' ? 'Um campus do instituto federal, de dia inteiro'
+    : tipo === 'escola' ? (publica ? (etapa === 'medio' ? `Uma ${inst(municipioId).escolaMedio}` : m.perfil === 'pequena' ? `A ${inst(municipioId).escolaFundamental} da cidade` : `Uma ${inst(municipioId).escolaFundamental} de bairro`) : 'Um colégio particular')
+      : tipo === 'if' ? `Um campus d${inst(municipioId).tecnico.replace(/^(o|a) /, (x: string) => (x === 'o ' ? 'o ' : 'a '))}, de dia inteiro`
         : tipo === 'universidade' ? 'Uma universidade pública' : tipo === 'faculdade' ? 'Uma faculdade particular'
           : tipo === 'ead' ? 'Um curso a distância: aula no celular, prova no polo' : tipo === 'tecnico' ? 'Uma escola técnica' : tipo === 'pos' ? 'Uma pós-graduação' : 'Um curso livre';
   if (tipo === 'infantil') return `${abre}: brincar, cantar, aprender a esperar a vez.`;
@@ -139,7 +144,8 @@ export function instituicaoAtual(v: Vida): Instituicao | undefined {
       const c = cursoOuNulo(b.integrado);
       const ofertas = perfil(v, chave, 'if', true, cidade, c?.area);
       const m = municipio(cidade);
-      return { chave, ambiente, tipo: 'if', nome: `Instituto Federal, campus ${m.perfil === 'pequena' ? 'da região' : m.nome}`, rotulo: 'Instituto Federal', descricao: descrever('if', true, ofertas, cidade), ofertas, municipioId: cidade, publica: true, area: c?.area };
+      const brasil = paisDaCidade(cidade) === 'BR';
+      return { chave, ambiente, tipo: 'if', nome: brasil ? `Instituto Federal, campus ${m.perfil === 'pequena' ? 'da região' : m.nome}` : `Escola técnica pública de ${m.nome}`, rotulo: brasil ? 'Instituto Federal' : 'Escola técnica', descricao: descrever('if', true, ofertas, cidade), ofertas, municipioId: cidade, publica: true, area: c?.area };
     }
     if (g === 'infantil') {
       const chave = `${ambiente}`;
@@ -148,7 +154,8 @@ export function instituicaoAtual(v: Vida): Instituicao | undefined {
     // Do 1º ao 9º ano, a escola municipal é uma; o médio, estadual, é outra.
     const chave = `escola:${cidade}:${b.rede}:${g === 'medio' ? 'medio' : 'fund'}`;
     const k = Math.floor(hash(`${v.id}:${chave}:nome`) * 1000);
-    const nome = b.rede === 'privada' ? PARTICULARES[k % PARTICULARES.length] : `${g === 'medio' ? 'Escola Estadual' : 'Escola Municipal'} ${PATRONOS[k % PATRONOS.length]}`;
+    // A escola pública brasileira tem patrono (Castro Alves, Cecília Meireles); fora, o jogo não inventa homenagem: um número.
+    const nome = b.rede === 'privada' ? PARTICULARES[k % PARTICULARES.length] : paisDaCidade(cidade) === 'BR' ? `${g === 'medio' ? inst(cidade).nomeEscolaMedio : inst(cidade).nomeEscolaFundamental} ${PATRONOS[k % PATRONOS.length]}` : `${g === 'medio' ? inst(cidade).nomeEscolaMedio : inst(cidade).nomeEscolaFundamental} nº ${(k % 40) + 1}`;
     const ofertas = perfil(v, chave, g === 'fund1' ? 'fund1' : 'escola', b.rede === 'publica', cidade).filter(o => o !== 'gremio' || g !== 'fund1').filter(o => o !== 'parceria' || g === 'medio');
     return { chave, ambiente, tipo: 'escola', nome, rotulo: 'Escola', descricao: descrever('escola', b.rede === 'publica', ofertas, cidade, b.etapa), ofertas, municipioId: cidade, publica: b.rede === 'publica' };
   }

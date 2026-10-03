@@ -32,7 +32,6 @@ import { conteudoPorId } from '../conteudo/motor';
 import { contexto } from '../conteudo/base';
 import { PROFISSAO } from '../conteudo/profissao';
 import { criarPessoa, vincular } from '../pessoas';
-import { municipio } from '../dados/lugares';
 import { guarnicaoPerto } from '../sistemas/militar';
 
 const fixture = (nome: string) => readFileSync(join(__dirname, 'fixtures', nome), 'utf8');
@@ -539,10 +538,17 @@ describe('farda e serviço público: transferência e remoção com família no 
     v = executar(v, P('movimentacao')).vida;
     expect(v.momento?.situacaoId).toBe('mil_movimentacao');
     v = executar(v, { tipo: 'decidir', opcaoId: 'pedir' }).vida;
+    // Seis anos de vida de verdade: se a vida acaba antes (uma morte sorteada aos 30 e poucos), a mesma situação
+    // segue com outro sorteio — o que se testa é o pedido virar transferência, não a sobrevivência.
+    const pedido = v;
     let foi = false;
-    for (let k = 0; k < 6 && !foi; k++) {
-      v = avancarAno(v).vida;
-      while (v.momento) { if (v.momento.situacaoId === 'mil_transferencia') { foi = municipio(v.moradia.municipioId).id !== 'porto-alegre-rs'; v = responder(v, 'familia'); foi = v.moradia.municipioId === 'porto-alegre-rs'; } else v = responder(v); }
+    for (let tentativa = 0; tentativa < 5 && !foi; tentativa++) {
+      v = { ...structuredClone(pedido), rng: (pedido.rng + tentativa * 7919) >>> 0 };
+      for (let k = 0; k < 6 && !foi && !v.morte; k++) {
+        v = avancarAno(v).vida;
+        while (v.momento && !v.morte) { if (v.momento.situacaoId === 'mil_transferencia') { v = responder(v, 'familia'); foi = v.moradia.municipioId === 'porto-alegre-rs'; } else v = responder(v); }
+      }
+      if (!v.morte) break;
     }
     expect(foi).toBe(true);
   });
@@ -623,7 +629,7 @@ describe('personalidade só por escolha; acontecimento não decide por você', (
 
 describe('save v12', () => {
   it('saves v11 reais (motor do PLAYTEST #3) migram, validam, seguem vivendo anos, salvam e reabrem', () => {
-    expect(VERSAO_SAVE).toBe(19); // Sucessão: v19 (a v18 migra sem conversão).
+    expect(VERSAO_SAVE).toBe(20); // Mundo: v20 (a v19 migra escrevendo a nacionalidade brasileira).
     for (const nome of ['save-v11-negocio.json', 'save-v11-atleta.json', 'save-v11-professora.json']) {
       const bruto = fixture(nome);
       expect(JSON.parse(bruto).versao).toBe(11);

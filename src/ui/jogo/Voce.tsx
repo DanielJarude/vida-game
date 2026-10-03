@@ -8,6 +8,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
+import { QuemNoMundo } from './Mundo';
 import { imagemPublica, leituraDoNome } from '../../motor/sistemas/notoriedade';
 import { USOS } from '../../motor/sistemas/visibilidade';
 import type { Vida } from '../../motor/tipos';
@@ -96,6 +97,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
 
       <AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} />
       <OSeuNome vida={vida} agir={agir} />
+      <QuemNoMundo vida={vida} agir={agir} />
       {i >= 14 && <OQueConstruiu vida={vida} />}
       <Linhagem vida={vida} />
 

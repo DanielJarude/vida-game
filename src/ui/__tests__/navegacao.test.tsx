@@ -85,7 +85,7 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     estudar: /Formação/, atividade_escolar: /O que dá para fazer aqui|Sem estudar agora|caminhos possíveis/, faculdade: /Formação/,
     falar_mae: /Família/, namoro: /Conhecer alguém/, emprego: /Procurar outro caminho|Vagas/, negocio: /Procurar outro caminho/,
     futebol: /Jogar bola|Sua semana/, carro: /Concessionária/, casa: /Procurar (um|outro) lugar/, onde_moro: /Quem paga a casa/,
-    mudar_cidade: /Mudar de cidade/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /Linha da Vida/
+    mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /Linha da Vida/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {
     const v = vida(30, x => { adulta(x); x.moradia = { tipo: 'aluguel', municipioId: x.moradia.municipioId, modeloId: 'apto_1q', aluguel: 1300, padrao: 3, tInicio: x.t }; for (const vin of Object.values(x.vinculos)) vin.convivio = vin.convivio.filter(c => c !== 'casa'); });

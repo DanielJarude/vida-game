@@ -124,6 +124,9 @@ describe('A · futebol: a rota tardia emerge do sistema (sem bônus por começar
         Object.assign(x.caminhos.frentes.futebol!, { habilidade: 82, interesse: 90, meses: 60, auge: 82 });
         x.rotinas = x.rotinas.filter(r => r.id !== 'futebol'); x.rotinas.push({ id: 'futebol', tInicio: x.t - 36, nivel: 3 });
       }).vida;
+      // Cada tentativa com o seu dia de teste (o acaso da peneira sai do gerador da vida: sem isto, as 30 tentativas
+      // partiam do mesmo estado e eram um sorteio só).
+      v.rng = (v.rng + s * 7919) >>> 0;
       for (let k = 0; k < 4 && !v.caminhos.oportunidades.some(o => o.atividade === 'amador'); k++) v = transacao(v, (x) => { x.t += 12; processarEsporte(x, criarRng(s * 100 + k)); }).vida;
       const o = v.caminhos.oportunidades.find(x => x.atividade === 'amador');
       if (!o) continue;

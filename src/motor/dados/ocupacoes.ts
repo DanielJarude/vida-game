@@ -74,6 +74,13 @@ export interface Ocupacao {
    * jornalismo). Sem `ouFormacao`, é exigida além do resto.
    */
   habilidade?: { dominio: Dominio; minimo: number; ouFormacao?: boolean };
+  /**
+   * A modalidade esportiva da ocupação (jogar, treinar, dirigir UM esporte):
+   * informação ESTRUTURAL da carreira. A escada (promoção, clientela) nunca
+   * troca de modalidade — o auxiliar de vôlei sobe a técnico de vôlei, nunca
+   * ao comando de um clube de futebol. Sem ela, a ocupação não é de um esporte.
+   */
+  modalidade?: Dominio;
   /** Não se entra por currículo: só por uma oportunidade concreta (peneira, convite, contrato). */
   entrada?: 'oportunidade' | 'negocio' | 'eleicao';
   /** Condicionamento mínimo (teste físico). */
@@ -96,6 +103,12 @@ export interface Ocupacao {
   risco?: boolean;
   /** Oferta mínima do município (0 pequena .. 3 metrópole). */
   oferta: 0 | 1 | 2 | 3;
+  /**
+   * A instituição é de um país só (a Polícia Militar, a Polícia Rodoviária
+   * Federal): o cargo existe só onde a pessoa mora num destes países.
+   * Ausente: existe em todo lugar.
+   */
+  paises?: string[];
   estresse: 1 | 2 | 3 | 4 | 5;
   /** Época: a função encolhe depois deste ano (automação), ou só existe a partir dele. */
   declinio?: number;
@@ -108,6 +121,15 @@ export interface Ocupacao {
 
 type O = Ocupacao;
 const o = (x: O) => x;
+
+/** A comissão técnica de cada modalidade fora do futebol: [modalidade, "de basquete", salário do auxiliar, do técnico]. */
+const COMISSOES: [Dominio, string, number, number][] = [
+  ['basquete', 'de basquete', 5500, 12000],
+  ['volei', 'de vôlei', 5500, 12000],
+  ['natacao', 'de natação', 4200, 8500],
+  ['atletismo', 'de atletismo', 4200, 8500],
+  ['lutas', 'de lutas', 3800, 7500]
+];
 
 export const OCUPACOES: readonly Ocupacao[] = [
   // ---------------------------------------------------------- Mandatos (só por eleição; nunca vaga de catálogo)
@@ -160,7 +182,7 @@ export const OCUPACOES: readonly Ocupacao[] = [
   o({ id: 'operador_confeccao', nome: ['costureiro de confecção', 'costureira de confecção'], trilha: 'costura', setor: 'industria', nivel: 1, salario: 1800, contrato: 'clt', carga: 'integral', idadeMin: 18, oferta: 0, estresse: 3, declinio: 2050 }),
   o({ id: 'costureiro_piloto', nome: ['costureiro piloto', 'costureira piloto'], trilha: 'costura', setor: 'industria', nivel: 2, salario: 2400, contrato: 'clt', carga: 'integral', idadeMin: 18, experiencia: 24, oferta: 1, estresse: 3 }),
   o({ id: 'padeiro', nome: ['padeiro', 'padeira'], trilha: 'alimentacao', setor: 'alimentacao', nivel: 2, salario: 2300, contrato: 'clt', carga: 'integral', idadeMin: 18, experiencia: 12, oferta: 0, estresse: 3 }),
-  o({ id: 'instrutor_lutas', nome: ['professor de artes marciais', 'professora de artes marciais'], trilha: 'treino', setor: 'esporte', nivel: 3, salario: 2800, contrato: 'autonomo', carga: 'parcial', idadeMin: 20, habilidade: { dominio: 'lutas', minimo: 64 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
+  o({ id: 'instrutor_lutas', nome: ['professor de artes marciais', 'professora de artes marciais'], trilha: 'treino', modalidade: 'lutas', setor: 'esporte', nivel: 3, salario: 2800, contrato: 'autonomo', carga: 'parcial', idadeMin: 20, habilidade: { dominio: 'lutas', minimo: 64 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
   o({ id: 'preparador_fisico', nome: ['preparador físico', 'preparadora física'], trilha: 'treino', setor: 'esporte', nivel: 3, salario: 5200, contrato: 'clt', carga: 'integral', idadeMin: 23, area: ['educacao_fisica'], nivelCurso: 'superior', oferta: 1, estresse: 3, jornada: 'fora' }),
 
   // ------------------------------------------------------ Água e campo
@@ -176,10 +198,10 @@ export const OCUPACOES: readonly Ocupacao[] = [
   o({ id: 'supervisor_vigilancia', nome: ['supervisor de segurança', 'supervisora de segurança'], trilha: 'vigilancia', setor: 'seguranca', nivel: 2, salario: 3600, contrato: 'clt', carga: 'integral', idadeMin: 23, area: ['vigilancia'], nivelCurso: 'livre', experiencia: 48, oferta: 1, estresse: 3 }),
   o({ id: 'policial_penal', nome: ['policial penal', 'policial penal'], trilha: 'penal', setor: 'seguranca', nivel: 2, salario: 5000, contrato: 'servidor', carga: 'integral', idadeMin: 18, escolaridade: 'medio', concurso: true, idoneidade: true, forma: 45, oferta: 1, estresse: 5, promocao: 'antiguidade', jornada: 'plantao', fundamento: 'EC 104/2019: polícia penal estadual, por concurso; escolaridade e requisitos variam por estado.' }),
   o({ id: 'perito_criminal', nome: ['perito criminal', 'perita criminal'], trilha: 'pericia', setor: 'seguranca', nivel: 4, salario: 12500, contrato: 'servidor', carga: 'integral', idadeMin: 18, area: ['computacao', 'exatas', 'farmacia', 'engenharia', 'engenharia_civil', 'medicina', 'contabilidade'], nivelCurso: 'superior', concurso: true, idoneidade: true, oferta: 2, estresse: 4, promocao: 'antiguidade' }),
-  o({ id: 'policial_rodoviario', nome: ['policial rodoviário federal', 'policial rodoviária federal'], trilha: 'federal', setor: 'seguranca', nivel: 4, salario: 11000, contrato: 'servidor', carga: 'integral', idadeMin: 18, escolaridade: 'superior', licenca: 'cnh', concurso: true, idoneidade: true, forma: 55, oferta: 1, estresse: 4, risco: true, promocao: 'antiguidade', jornada: 'plantao', fundamento: 'Concurso federal: nível superior em qualquer área, CNH B, teste físico e curso de formação.' }),
-  o({ id: 'aluno_oficial_pm', nome: ['cadete da academia da PM', 'cadete da academia da PM'], trilha: 'pm_oficial', setor: 'seguranca', nivel: 0, salario: 4200, contrato: 'militar', carga: 'integral', idadeMin: 18, idadeMaxIngresso: 30, escolaridade: 'superior', concurso: true, idoneidade: true, forma: 55, formacaoInicial: { meses: 24, destino: 'tenente_pm' }, oferta: 1, estresse: 4, fundamento: 'Curso de formação de oficiais da PM: concurso estadual; vários estados exigem graduação (abstraída como superior completo).' }),
-  o({ id: 'tenente_pm', nome: ['tenente da PM', 'tenente da PM'], trilha: 'pm_oficial', setor: 'seguranca', nivel: 3, salario: 10500, contrato: 'militar', carga: 'integral', idadeMin: 21, entrada: 'oportunidade', oferta: 0, estresse: 5, promocao: 'antiguidade', anosNoPosto: 6, jornada: 'longa' }),
-  o({ id: 'capitao_pm', nome: ['capitão da PM', 'capitã da PM'], trilha: 'pm_oficial', setor: 'seguranca', nivel: 4, salario: 14000, contrato: 'militar', carga: 'integral', idadeMin: 27, entrada: 'oportunidade', experiencia: 72, oferta: 0, estresse: 5, promocao: 'antiguidade' }),
+  o({ id: 'policial_rodoviario', paises: ['BR'], nome: ['policial rodoviário federal', 'policial rodoviária federal'], trilha: 'federal', setor: 'seguranca', nivel: 4, salario: 11000, contrato: 'servidor', carga: 'integral', idadeMin: 18, escolaridade: 'superior', licenca: 'cnh', concurso: true, idoneidade: true, forma: 55, oferta: 1, estresse: 4, risco: true, promocao: 'antiguidade', jornada: 'plantao', fundamento: 'Concurso federal: nível superior em qualquer área, CNH B, teste físico e curso de formação.' }),
+  o({ id: 'aluno_oficial_pm', paises: ['BR'], nome: ['cadete da academia da PM', 'cadete da academia da PM'], trilha: 'pm_oficial', setor: 'seguranca', nivel: 0, salario: 4200, contrato: 'militar', carga: 'integral', idadeMin: 18, idadeMaxIngresso: 30, escolaridade: 'superior', concurso: true, idoneidade: true, forma: 55, formacaoInicial: { meses: 24, destino: 'tenente_pm' }, oferta: 1, estresse: 4, fundamento: 'Curso de formação de oficiais da PM: concurso estadual; vários estados exigem graduação (abstraída como superior completo).' }),
+  o({ id: 'tenente_pm', paises: ['BR'], nome: ['tenente da PM', 'tenente da PM'], trilha: 'pm_oficial', setor: 'seguranca', nivel: 3, salario: 10500, contrato: 'militar', carga: 'integral', idadeMin: 21, entrada: 'oportunidade', oferta: 0, estresse: 5, promocao: 'antiguidade', anosNoPosto: 6, jornada: 'longa' }),
+  o({ id: 'capitao_pm', paises: ['BR'], nome: ['capitão da PM', 'capitã da PM'], trilha: 'pm_oficial', setor: 'seguranca', nivel: 4, salario: 14000, contrato: 'militar', carga: 'integral', idadeMin: 27, entrada: 'oportunidade', experiencia: 72, oferta: 0, estresse: 5, promocao: 'antiguidade' }),
 
   // ------------------------------------------------------ Forças Armadas (além do Exército)
   o({ id: 'aluno_oficial_tecnico', nome: ['aluno do curso de oficiais técnicos', 'aluna do curso de oficiais técnicos'], trilha: 'exercito_oficial', setor: 'seguranca', nivel: 0, salario: 7500, contrato: 'militar', carga: 'integral', idadeMin: 22, idadeMaxIngresso: 36, escolaridade: 'superior', concurso: true, idoneidade: true, forma: 45, formacaoInicial: { meses: 12, destino: 'tenente' }, oferta: 0, estresse: 3, fundamento: 'Quadros complementar, técnico e de saúde: concurso para graduados, curso de formação de cerca de um ano (idade-limite abstraída como 36).' }),
@@ -369,14 +391,21 @@ export const OCUPACOES: readonly Ocupacao[] = [
   o({ id: 'bailarino', nome: ['bailarino profissional', 'bailarina profissional'], trilha: 'danca', setor: 'criativo', nivel: 4, salario: 4200, contrato: 'clt', carga: 'integral', idadeMin: 17, habilidade: { dominio: 'danca', minimo: 72 }, entrada: 'oportunidade', oferta: 2, estresse: 4 }),
 
   // ------------------------------------------------------------- Esporte
-  o({ id: 'jogador_futebol', nome: ['jogador de futebol', 'jogadora de futebol'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 3200, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Lei Pelé (9.615/1998): contrato especial de trabalho desportivo, com prazo.' }),
+  o({ id: 'jogador_futebol', nome: ['jogador de futebol', 'jogadora de futebol'], trilha: 'atleta', modalidade: 'futebol', setor: 'esporte', nivel: 3, salario: 3200, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Lei Pelé (9.615/1998): contrato especial de trabalho desportivo, com prazo.' }),
   o({ id: 'atleta', nome: ['atleta profissional', 'atleta profissional'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 2800, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora' }),
-  o({ id: 'jogador_basquete', nome: ['jogador de basquete', 'jogadora de basquete'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 3000, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Lei Pelé (9.615/1998): contrato especial de trabalho desportivo, com prazo (uma temporada, em geral).' }),
-  o({ id: 'tenista', nome: ['tenista profissional', 'tenista profissional'], trilha: 'atleta', setor: 'esporte', nivel: 3, salario: 0, contrato: 'autonomo', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Sem clube nem salário: vive de premiação e patrocínio, e paga do bolso treinador e viagens.' }),
-  o({ id: 'treinador_escolinha', nome: ['treinador de escolinha', 'treinadora de escolinha'], trilha: 'treino', setor: 'esporte', nivel: 2, salario: 2200, contrato: 'autonomo', carga: 'parcial', idadeMin: 22, habilidade: { dominio: 'futebol', minimo: 62 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
-  o({ id: 'professor_tenis', nome: ['professor de tênis', 'professora de tênis'], trilha: 'treino', setor: 'esporte', nivel: 2, salario: 3800, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, habilidade: { dominio: 'tenis', minimo: 62 }, oferta: 1, estresse: 2, promocao: 'clientela' }),
-  o({ id: 'auxiliar_tecnico', nome: ['auxiliar técnico', 'auxiliar técnica'], trilha: 'treino', setor: 'esporte', nivel: 4, salario: 6500, contrato: 'clt', carga: 'integral', idadeMin: 28, entrada: 'oportunidade', oferta: 1, estresse: 4, jornada: 'fora' }),
-  o({ id: 'tecnico_futebol', nome: ['técnico de futebol', 'técnica de futebol'], trilha: 'treino', setor: 'esporte', nivel: 5, salario: 14000, contrato: 'clt', carga: 'integral', idadeMin: 32, experiencia: 36, entrada: 'oportunidade', oferta: 1, estresse: 5, jornada: 'fora', fundamento: 'O comando do time: acima do auxiliar técnico, e mais instável (cai com os resultados).' }),
+  o({ id: 'jogador_basquete', nome: ['jogador de basquete', 'jogadora de basquete'], trilha: 'atleta', modalidade: 'basquete', setor: 'esporte', nivel: 3, salario: 3000, contrato: 'clt', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Lei Pelé (9.615/1998): contrato especial de trabalho desportivo, com prazo (uma temporada, em geral).' }),
+  o({ id: 'tenista', nome: ['tenista profissional', 'tenista profissional'], trilha: 'atleta', modalidade: 'tenis', setor: 'esporte', nivel: 3, salario: 0, contrato: 'autonomo', carga: 'integral', idadeMin: 16, entrada: 'oportunidade', oferta: 0, estresse: 4, risco: true, jornada: 'fora', fundamento: 'Sem clube nem salário: vive de premiação e patrocínio, e paga do bolso treinador e viagens.' }),
+  o({ id: 'treinador_escolinha', nome: ['treinador de escolinha', 'treinadora de escolinha'], trilha: 'treino', modalidade: 'futebol', setor: 'esporte', nivel: 2, salario: 2200, contrato: 'autonomo', carga: 'parcial', idadeMin: 22, habilidade: { dominio: 'futebol', minimo: 62 }, oferta: 0, estresse: 2, promocao: 'clientela' }),
+  o({ id: 'professor_tenis', nome: ['professor de tênis', 'professora de tênis'], trilha: 'treino', modalidade: 'tenis', setor: 'esporte', nivel: 2, salario: 3800, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, habilidade: { dominio: 'tenis', minimo: 62 }, oferta: 1, estresse: 2, promocao: 'clientela' }),
+  o({ id: 'auxiliar_tecnico', nome: ['auxiliar técnico', 'auxiliar técnica'], trilha: 'treino', modalidade: 'futebol', setor: 'esporte', nivel: 4, salario: 6500, contrato: 'clt', carga: 'integral', idadeMin: 28, entrada: 'oportunidade', oferta: 1, estresse: 4, jornada: 'fora' }),
+  o({ id: 'tecnico_futebol', nome: ['técnico de futebol', 'técnica de futebol'], trilha: 'treino', modalidade: 'futebol', setor: 'esporte', nivel: 5, salario: 14000, contrato: 'clt', carga: 'integral', idadeMin: 32, experiencia: 36, entrada: 'oportunidade', oferta: 1, estresse: 5, jornada: 'fora', fundamento: 'O comando do time: acima do auxiliar técnico, e mais instável (cai com os resultados).' }),
+  // A comissão técnica dos outros esportes: a mesma escada (auxiliar → técnico), DENTRO da modalidade.
+  // Emprego de clube/equipe (sem o sistema de clubes reais do futebol). Salários de referência (R$ 2026):
+  // NBB e Superliga pagam menos que o futebol; natação, atletismo e lutas, menos ainda.
+  ...COMISSOES.flatMap(([m, de, aux, tec]) => [
+    o({ id: `auxiliar_tecnico_${m}`, nome: [`auxiliar técnico ${de}`, `auxiliar técnica ${de}`], trilha: 'treino', modalidade: m, setor: 'esporte', nivel: 4, salario: aux, contrato: 'clt', carga: 'integral', idadeMin: 25, entrada: 'oportunidade', oferta: 1, estresse: 4, jornada: 'fora' }),
+    o({ id: `tecnico_${m}`, nome: [`técnico ${de}`, `técnica ${de}`], trilha: 'treino', modalidade: m, setor: 'esporte', nivel: 5, salario: tec, contrato: 'clt', carga: 'integral', idadeMin: 30, experiencia: 36, entrada: 'oportunidade', oferta: 1, estresse: 5, jornada: 'fora', fundamento: 'O comando da equipe: acima do auxiliar técnico da mesma modalidade.' })
+  ]),
   o({ id: 'arbitro', nome: ['árbitro de futebol', 'árbitra de futebol'], trilha: 'arbitragem', setor: 'esporte', nivel: 2, salario: 1800, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, area: ['arbitragem'], nivelCurso: 'livre', escolaridade: 'medio', forma: 55, oferta: 1, estresse: 4 }),
   o({ id: 'personal', nome: ['personal trainer', 'personal trainer'], trilha: 'educacao_fisica', setor: 'esporte', nivel: 3, salario: 3800, contrato: 'autonomo', carga: 'integral', idadeMin: 22, area: ['educacao_fisica'], nivelCurso: 'superior', oferta: 0, estresse: 2, promocao: 'clientela', fundamento: 'Lei 9.696/1998: profissional de Educação Física exige graduação e CREF.' }),
   o({ id: 'coordenador_academia', nome: ['coordenador técnico de academia', 'coordenadora técnica de academia'], trilha: 'educacao_fisica', setor: 'esporte', nivel: 4, salario: 5600, contrato: 'clt', carga: 'integral', idadeMin: 25, area: ['educacao_fisica'], nivelCurso: 'superior', experiencia: 48, oferta: 1, estresse: 3 }),
@@ -396,10 +425,10 @@ export const OCUPACOES: readonly Ocupacao[] = [
   o({ id: 'major', nome: ['major do Exército', 'major do Exército'], trilha: 'exercito_oficial', setor: 'seguranca', nivel: 5, salario: 16500, contrato: 'militar', carga: 'integral', idadeMin: 34, entrada: 'oportunidade', experiencia: 156, oferta: 0, estresse: 4, promocao: 'antiguidade' }),
 
   // ------------------------------------------------------ Polícias e bombeiros
-  o({ id: 'aluno_pm', nome: ['aluno soldado da PM', 'aluna soldado da PM'], trilha: 'pm', setor: 'seguranca', nivel: 0, salario: 3300, contrato: 'militar', carga: 'integral', idadeMin: 18, idadeMaxIngresso: 30, escolaridade: 'medio', concurso: true, idoneidade: true, forma: 55, formacaoInicial: { meses: 12, destino: 'soldado_pm' }, oferta: 0, estresse: 4, fundamento: 'Concurso estadual; escolaridade, CNH e limite de idade variam por estado (abstraídos: médio, 30 anos; a CNH, quando exigida, pode ser apresentada até a formatura).' }),
-  o({ id: 'soldado_pm', nome: ['soldado da PM', 'soldado da PM'], trilha: 'pm', setor: 'seguranca', nivel: 2, salario: 5000, contrato: 'militar', carga: 'integral', idadeMin: 19, entrada: 'oportunidade', oferta: 0, estresse: 5, risco: true, promocao: 'antiguidade', anosNoPosto: 6, jornada: 'plantao' }),
-  o({ id: 'cabo_pm', nome: ['cabo da PM', 'cabo da PM'], trilha: 'pm', setor: 'seguranca', nivel: 3, salario: 6000, contrato: 'militar', carga: 'integral', idadeMin: 25, entrada: 'oportunidade', experiencia: 72, oferta: 0, estresse: 5, risco: true, promocao: 'antiguidade', anosNoPosto: 7, jornada: 'longa' }),
-  o({ id: 'sargento_pm', nome: ['sargento da PM', 'sargento da PM'], trilha: 'pm', setor: 'seguranca', nivel: 4, salario: 7600, contrato: 'militar', carga: 'integral', idadeMin: 31, entrada: 'oportunidade', experiencia: 156, oferta: 0, estresse: 4, risco: true, promocao: 'antiguidade' }),
+  o({ id: 'aluno_pm', paises: ['BR'], nome: ['aluno soldado da PM', 'aluna soldado da PM'], trilha: 'pm', setor: 'seguranca', nivel: 0, salario: 3300, contrato: 'militar', carga: 'integral', idadeMin: 18, idadeMaxIngresso: 30, escolaridade: 'medio', concurso: true, idoneidade: true, forma: 55, formacaoInicial: { meses: 12, destino: 'soldado_pm' }, oferta: 0, estresse: 4, fundamento: 'Concurso estadual; escolaridade, CNH e limite de idade variam por estado (abstraídos: médio, 30 anos; a CNH, quando exigida, pode ser apresentada até a formatura).' }),
+  o({ id: 'soldado_pm', paises: ['BR'], nome: ['soldado da PM', 'soldado da PM'], trilha: 'pm', setor: 'seguranca', nivel: 2, salario: 5000, contrato: 'militar', carga: 'integral', idadeMin: 19, entrada: 'oportunidade', oferta: 0, estresse: 5, risco: true, promocao: 'antiguidade', anosNoPosto: 6, jornada: 'plantao' }),
+  o({ id: 'cabo_pm', paises: ['BR'], nome: ['cabo da PM', 'cabo da PM'], trilha: 'pm', setor: 'seguranca', nivel: 3, salario: 6000, contrato: 'militar', carga: 'integral', idadeMin: 25, entrada: 'oportunidade', experiencia: 72, oferta: 0, estresse: 5, risco: true, promocao: 'antiguidade', anosNoPosto: 7, jornada: 'longa' }),
+  o({ id: 'sargento_pm', paises: ['BR'], nome: ['sargento da PM', 'sargento da PM'], trilha: 'pm', setor: 'seguranca', nivel: 4, salario: 7600, contrato: 'militar', carga: 'integral', idadeMin: 31, entrada: 'oportunidade', experiencia: 156, oferta: 0, estresse: 4, risco: true, promocao: 'antiguidade' }),
   o({ id: 'aluno_bombeiro', nome: ['aluno do curso de bombeiros', 'aluna do curso de bombeiros'], trilha: 'bombeiro', setor: 'seguranca', nivel: 0, salario: 3300, contrato: 'militar', carga: 'integral', idadeMin: 18, idadeMaxIngresso: 30, escolaridade: 'medio', concurso: true, idoneidade: true, forma: 62, formacaoInicial: { meses: 12, destino: 'bombeiro' }, oferta: 1, estresse: 4, fundamento: 'Concurso estadual com teste físico exigente e limite de idade (abstraído como 30 anos).' }),
   o({ id: 'bombeiro', nome: ['bombeiro militar', 'bombeira militar'], trilha: 'bombeiro', setor: 'seguranca', nivel: 2, salario: 5200, contrato: 'militar', carga: 'integral', idadeMin: 19, entrada: 'oportunidade', oferta: 1, estresse: 4, risco: true, promocao: 'antiguidade', anosNoPosto: 7, jornada: 'plantao' }),
   o({ id: 'sargento_bombeiro', nome: ['sargento bombeiro', 'sargento bombeira'], trilha: 'bombeiro', setor: 'seguranca', nivel: 3, salario: 7800, contrato: 'militar', carga: 'integral', idadeMin: 28, entrada: 'oportunidade', experiencia: 120, oferta: 1, estresse: 4, risco: true, promocao: 'antiguidade' }),
@@ -429,6 +458,17 @@ export const ocupacaoOuNula = (id: string) => POR_ID.get(id);
 const POR_TRILHA = new Map<string, Ocupacao[]>();
 for (const x of OCUPACOES) POR_TRILHA.set(x.trilha, [...(POR_TRILHA.get(x.trilha) ?? []), x]);
 export const daTrilha = (trilha: string): readonly Ocupacao[] => POR_TRILHA.get(trilha) ?? [];
+
+/**
+ * A comissão técnica DE UMA modalidade: o auxiliar e o técnico daquele
+ * esporte (futebol: `auxiliar_tecnico` → `tecnico_futebol`, o comando de
+ * clube real). Tênis não tem comissão (é aula e circuito): devolve vazio.
+ */
+export function comissaoDe(m: Dominio): { auxiliar?: string; tecnico?: string } {
+  const aux = OCUPACOES.find(x => x.trilha === 'treino' && x.modalidade === m && x.nivel === 4);
+  const tec = OCUPACOES.find(x => x.trilha === 'treino' && x.modalidade === m && x.nivel === 5);
+  return { auxiliar: aux?.id, tecnico: tec?.id };
+}
 
 /**
  * Trilhas afins: experiência numa conta, em parte, na outra. Quem foi
@@ -483,6 +523,10 @@ export const ROTULO_SETOR: Record<Setor, string> = {
 };
 
 /** Ocupações típicas dos pais por classe — para gerar a família de origem. */
+/** As ocupações de uma classe que existem no país (a Polícia Militar é do Brasil: um pai em Lisboa não é "soldado da PM"). */
+export const ocupacoesDaClasse = (classe: string, pais: string): string[] =>
+  (OCUPACOES_POR_CLASSE[classe] ?? []).filter(id => { const oc = ocupacao(id); return !oc.paises || oc.paises.includes(pais); });
+
 export const OCUPACOES_POR_CLASSE: Record<string, string[]> = {
   vulneravel: ['ambulante', 'diarista', 'ajudante_obras', 'trabalhador_rural', 'manicure', 'aux_cozinha', 'entregador_app', 'cuidador', 'estoquista', 'catador', 'trabalhador_domestico', 'aux_limpeza', 'feirante', 'pescador', 'costureiro'],
   trabalhadora: ['atendente', 'caixa', 'pedreiro', 'mecanico', 'aux_adm', 'garcom', 'cozinheiro', 'motorista_app', 'cabeleireiro', 'aux_manutencao', 'tec_enfermagem', 'operador_maquinas', 'operador_producao', 'vigilante', 'barbeiro', 'confeiteiro', 'motorista_onibus', 'caminhoneiro', 'porteiro', 'frentista', 'padeiro', 'pintor', 'encanador', 'operador_telemarketing', 'motorista_caminhao', 'baba'],

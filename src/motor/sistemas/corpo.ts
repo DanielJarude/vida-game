@@ -10,21 +10,51 @@
 
 import { causaDaMortePet, riscoDoPet } from './pets';
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
-import type { Condicao, Pessoa, Vida } from '../tipos';
-import { escrever, idade, novoId } from '../nucleo';
+import { clamp, rngDe } from '../rng';
+import type { Condicao, CondicaoNpc, Pessoa, Vida } from '../tipos';
+import { escrever, idade, novoId, pais } from '../nucleo';
 import { municipio } from '../dados/lugares';
 import { idadeEm } from '../tempo';
 import { derivaDaSaude } from './estado';
 import { registrarQuemApareceu } from './rede';
-import { checkupDoPlano, evoluirCondicoes, SINAIS } from './saude';
+import { checkupDoPlano, evoluirCondicoes, MENTAIS, perdaDaCondicao, SINAIS } from './saude';
+import { flex, listaNatural, rotuloParentesco } from '../texto';
+
+/**
+ * O que pesa no risco de uma condição surgir. É o MESMO para o protagonista
+ * (lido do estado dele) e para as pessoas do mundo (lido da ficha delas,
+ * mais leve): um catálogo só, uma conta só.
+ */
+export interface FatoresDeRisco {
+  sedentario: boolean;
+  fuma: boolean;
+  estresse: number;
+  felicidade: number;
+  /** Trabalho que cobra do corpo (obra, roça, cuidado). */
+  trabalhoPesado: boolean;
+  municipioId: string;
+  /** Pai ou mãe com a mesma condição (com nome: a família sabe). */
+  naFamilia: (id: string) => boolean;
+}
+
+const PESADO = ['construcao', 'agro', 'cuidado'];
+const temNaFamilia = (genitores: (Condicao | CondicaoNpc)[][]) => (id: string) => genitores.some(cs => cs.some(c => c.id === id && c.diagnosticada !== false));
+
+export function fatoresDoProtagonista(v: Vida): FatoresDeRisco {
+  return {
+    sedentario: v.corpo.habitos.sedentario, fuma: v.corpo.habitos.fuma, estresse: v.mente.estresse, felicidade: v.mente.felicidade,
+    trabalhoPesado: !!v.trabalho.atual && PESADO.some(t => v.trabalho.atual!.ocupacaoId.includes(t)),
+    municipioId: v.moradia.municipioId,
+    naFamilia: temNaFamilia(pais(v).map(p => p.condicoes ?? []))
+  };
+}
 
 export interface ModeloCondicao {
   id: string;
   nome: string;
   cronica: boolean;
-  /** Chance anual de surgir, dada a idade e o estado. */
-  risco: (v: Vida, idade: number) => number;
+  /** Chance anual de surgir, dada a idade e o que pesa (`FatoresDeRisco`). */
+  risco: (f: FatoresDeRisco, idade: number) => number;
   gravidade: number;
   /** Perda anual de saúde sem tratamento / com tratamento. */
   perda: [number, number];
@@ -35,38 +65,38 @@ export interface ModeloCondicao {
 const MODELOS: ModeloCondicao[] = [
   {
     id: 'hipertensao', nome: 'pressão alta', cronica: true, gravidade: 1, perda: [1, 0.2],
-    risco: (v, i) => i < 28 ? 0 : (0.004 + (i - 28) * 0.0012) * (v.corpo.habitos.sedentario ? 1.5 : 1) * (v.mente.estresse > 60 ? 1.4 : 1),
+    risco: (f, i) => i < 28 ? 0 : (0.004 + (i - 28) * 0.0012) * (f.sedentario ? 1.5 : 1) * (f.estresse > 60 ? 1.4 : 1) * (f.naFamilia('hipertensao') ? 1.4 : 1),
     descoberta: 'Uma medição de pressão num posto de saúde deu alta. O médico falou em remédio para o resto da vida.'
   },
   {
     id: 'diabetes', nome: 'diabetes', cronica: true, gravidade: 2, perda: [1.5, 0.4],
-    risco: (v, i) => i < 35 ? 0 : (0.002 + (i - 35) * 0.0006) * (v.corpo.habitos.sedentario ? 1.8 : 1),
+    risco: (f, i) => i < 35 ? 0 : (0.002 + (i - 35) * 0.0006) * (f.sedentario ? 1.8 : 1) * (f.naFamilia('diabetes') ? 1.5 : 1),
     descoberta: 'Um exame de sangue apontou diabetes. A comida da casa precisou mudar.'
   },
   {
     id: 'depressao', nome: 'depressão', cronica: true, gravidade: 2, perda: [1.5, 0.3],
-    risco: (v, i) => i < 14 ? 0 : 0.006 + Math.max(0, v.mente.estresse - 55) * 0.0012 + Math.max(0, 40 - v.mente.felicidade) * 0.0012,
+    risco: (f, i) => i < 14 ? 0 : (0.006 + Math.max(0, f.estresse - 55) * 0.0012 + Math.max(0, 40 - f.felicidade) * 0.0012) * (f.naFamilia('depressao') ? 1.3 : 1),
     descoberta: 'Os meses pesados ganharam um nome no consultório: depressão.'
   },
   {
     id: 'ansiedade', nome: 'transtorno de ansiedade', cronica: true, gravidade: 1, perda: [1, 0.2],
-    risco: (v, i) => i < 13 ? 0 : 0.005 + Math.max(0, v.mente.estresse - 50) * 0.0015,
+    risco: (f, i) => i < 13 ? 0 : 0.005 + Math.max(0, f.estresse - 50) * 0.0015,
     descoberta: 'As crises de falta de ar sem motivo tinham diagnóstico: ansiedade.'
   },
   {
     id: 'coluna', nome: 'problema de coluna', cronica: true, gravidade: 1, perda: [0.6, 0.2],
-    risco: (v, i) => i < 25 ? 0 : 0.006 + (v.trabalho.atual && ['construcao', 'agro', 'cuidado'].some(t => v.trabalho.atual!.ocupacaoId.includes(t)) ? 0.01 : 0),
+    risco: (f, i) => i < 25 ? 0 : 0.006 + (f.trabalhoPesado ? 0.01 : 0),
     descoberta: 'A dor nas costas virou hérnia de disco na ressonância.'
   },
   {
     id: 'cancer', nome: 'câncer', cronica: true, gravidade: 3, perda: [9, 3],
-    risco: (v, i) => i < 35 ? 0.00015 : (0.0005 + (i - 35) * 0.00018) * (v.corpo.habitos.fuma ? 2.2 : 1),
+    risco: (f, i) => (i < 35 ? 0.00015 : (0.0005 + (i - 35) * 0.00018) * (f.fuma ? 2.2 : 1)) * (f.naFamilia('cancer') ? 1.3 : 1),
     descoberta: 'Um nódulo, uma biópsia, uma palavra que ninguém quer ouvir: câncer.'
   },
   {
     id: 'dengue', nome: 'dengue', cronica: false, gravidade: 1, perda: [4, 2],
-    risco: v => {
-      const m = municipio(v.moradia.municipioId);
+    risco: f => {
+      const m = municipio(f.municipioId);
       return m.regiao === 'Sudeste' || m.regiao === 'Centro-Oeste' || m.regiao === 'Nordeste' || m.regiao === 'Norte' ? 0.02 : 0.004;
     },
     descoberta: 'Febre alta, dor atrás dos olhos, manchas pelo corpo: dengue. Foram duas semanas de cama.'
@@ -74,6 +104,9 @@ const MODELOS: ModeloCondicao[] = [
 ];
 
 export const modeloCondicao = (id: string) => MODELOS.find(m => m.id === id);
+
+/** A chance de a condição surgir neste ano para o protagonista. */
+export const riscoNoAno = (v: Vida, m: ModeloCondicao, i = idade(v)) => m.risco(fatoresDoProtagonista(v), i);
 
 /** Envelhecimento e condições do ano. Devolve se algo marcante aconteceu. */
 export function processarCorpo(v: Vida, r: Rng): void {
@@ -110,8 +143,9 @@ export function processarCorpo(v: Vida, r: Rng): void {
 
   // Novas condições (no máximo uma por ano, para não virar lista)
   const candidatas = MODELOS.filter(m => !c.condicoes.some(x => x.id === m.id));
+  const fatores = fatoresDoProtagonista(v);
   for (const m of candidatas) {
-    if (r.chance(m.risco(v, i))) {
+    if (r.chance(m.risco(fatores, i))) {
       // Uma condição crônica nasce sem nome: o corpo dá sinais, e o diagnóstico depende de alguém procurar cuidado
       // (`sistemas/saude`). Com plano, o check-up pega parte logo; criança e adolescente, quem leva são os adultos.
       const pegaCedo = m.cronica && (v.financas.planoDeSaude ? r.chance(0.5) : i < 14 && r.chance(0.5));
@@ -173,29 +207,171 @@ export function causaDaMorte(r: Rng, i: number, masculino: boolean, condicoes: s
   return r.weighted(['infarto', 'AVC', 'pneumonia', 'câncer', 'insuficiência renal'], c => ({ infarto: 3, AVC: 2.5, pneumonia: 2, 'câncer': 2, 'insuficiência renal': 1 } as Record<string, number>)[c])!;
 }
 
+/** O risco de morrer no ano: idade, saúde e condições — a mesma conta para o protagonista e para as pessoas do mundo. */
+function riscoDeMorte(i: number, saude: number, masculino: boolean, condicoes: { id: string; tratando: boolean; tarde?: boolean }[]): number {
+  return riscoBase(i, saude, masculino, condicoes)
+    + condicoes.reduce((s, c) => s + (c.id === 'cancer' ? (c.tratando ? (c.tarde ? 0.045 : 0.025) : 0.08) : 0), 0);
+}
+
 /** Sorteia a morte do personagem neste ano. */
 export function morreEsteAno(v: Vida, r: Rng): string | null {
   const i = idade(v);
-  const risco = riscoBase(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes)
-    + v.corpo.condicoes.reduce((s, c) => s + (c.id === 'cancer' ? (c.tratando ? (c.tarde ? 0.045 : 0.025) : 0.08) : 0), 0);
+  const risco = riscoDeMorte(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes);
   if (!r.chance(Math.min(0.95, risco))) return null;
   return causaDaMorte(r, i, v.eu.genero === 'masculino', v.corpo.condicoes.map(c => c.id));
 }
 
-/** Envelhece e, às vezes, leva uma pessoa da vida do jogador. */
-export function processarCorpoDePessoa(v: Vida, r: Rng, p: Pessoa): string | null {
+/**
+ * Envelhece e, às vezes, leva uma pessoa da vida do jogador. De quem é da
+ * família (`acompanhar`), a saúde é acompanhada com as condições dela: o que
+ * surgiu, o que tem nome, o que é tratado — e isso pesa na saúde e no risco
+ * de morte pela mesma conta do protagonista.
+ */
+export function processarCorpoDePessoa(v: Vida, r: Rng, p: Pessoa, acompanhar = false): string | null {
   if (!p.vivo) return null;
   const i = idadeEm(p.tNasc, v.t);
   if (p.especie) {
     if (!r.chance(riscoDoPet(v, p))) return null;
     return causaDaMortePet(v, p, r);
   }
-  const deriva = i < 40 ? 0 : i < 60 ? -0.8 : i < 75 ? -1.5 : -2.5;
-  p.saude = clamp(Math.round(p.saude + deriva + r.normal() * 2));
-  if (r.chance(riscoBase(i, p.saude, p.genero === 'masculino'))) {
-    return causaDaMorte(r, i, p.genero === 'masculino', []);
+  let perda = 0;
+  if (acompanhar) {
+    garantirCondicoes(v, p);
+    // Um gerador derivado (da pessoa e do ano): a saúde dela não mexe na sequência do gerador da vida.
+    perda = anoDeSaudeDaPessoa(v, p, v.t, rngDe(v.id, 'saude', p.id, v.t), true);
+  }
+  // A deriva da idade. De quem é acompanhado, parte do que ela embutia (a pressão alta, o diabetes que ninguém
+  // nomeava) agora vem das condições, com nome e causa: a deriva é menor, e a expectativa de vida fica a mesma.
+  const deriva = acompanhar ? (i < 60 ? 0 : i < 75 ? -0.3 : -1.3) : i < 40 ? 0 : i < 60 ? -0.8 : i < 75 ? -1.5 : -2.5;
+  p.saude = clamp(Math.round(p.saude + deriva - perda + r.normal() * 2));
+  const conds = p.condicoes ?? [];
+  if (r.chance(Math.min(0.95, riscoDeMorte(i, p.saude, p.genero === 'masculino', conds)))) {
+    return causaDaMorte(r, i, p.genero === 'masculino', conds.map(c => c.id));
   }
   return null;
+}
+
+/* ------------------------------------------- A saúde de quem não é o protagonista */
+
+function hashDe(s: string): number {
+  let h = 2166136261;
+  for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); }
+  return (h >>> 0) / 4294967295;
+}
+
+/**
+ * Os hábitos de uma pessoa do mundo: da semente dela (estáveis, sem gastar o
+ * gerador). Perto da proporção do país: ~12% fumam, ~45% quase não se mexem.
+ * Se ela passar a ser jogada, os hábitos vão junto (`sucessao`).
+ */
+export function habitosDaPessoa(p: Pessoa, i: number): { fuma: boolean; sedentario: boolean } {
+  return { fuma: i >= 16 && hashDe(`${p.id}:fuma`) < 0.12, sedentario: i >= 12 && hashDe(`${p.id}:sedentario`) < 0.45 };
+}
+
+/** Os fatores de risco de uma pessoa do mundo: os hábitos dela, o aperto que atravessa, o trabalho, a família. */
+export function fatoresDaPessoa(v: Vida, p: Pessoa, t = v.t): FatoresDeRisco {
+  const i = idadeEm(p.tNasc, t);
+  const h = habitosDaPessoa(p, i);
+  const aperto = p.aperto && t - p.aperto.t <= 24 && t >= p.aperto.t ? p.aperto.tipo : undefined;
+  const genitores = (p.genitores ?? []).map(g => (g === 'eu' ? v.corpo.condicoes : v.pessoas[g]?.condicoes ?? []));
+  return {
+    ...h,
+    estresse: aperto && aperto !== 'fase' ? 70 : 35,
+    felicidade: aperto === 'luto' || aperto === 'separacao' ? 30 : 60,
+    trabalhoPesado: !!p.ocupacaoId && PESADO.some(x => p.ocupacaoId!.includes(x)),
+    municipioId: p.municipioId,
+    naFamilia: temNaFamilia(genitores)
+  };
+}
+
+/** A condição de uma pessoa do mundo lida como a do protagonista (o mesmo catálogo, os mesmos campos). */
+export function condicaoDaPessoa(c: CondicaoNpc): Condicao | undefined {
+  const m = modeloCondicao(c.id);
+  if (!m) return undefined;
+  return {
+    id: c.id, nome: m.nome, tInicio: c.tInicio, cronica: m.cronica, gravidade: c.gravidade, tratando: c.tratando, diagnosticada: c.diagnosticada,
+    ...(c.tDiagnostico !== undefined ? { tDiagnostico: c.tDiagnostico } : {}), ...(c.tarde ? { tarde: true } : {})
+  };
+}
+
+/**
+ * Um ano de saúde de uma pessoa do mundo, pelas regras do protagonista em
+ * versão leve: a condição surge pelo risco do catálogo (no máximo uma por
+ * ano), nasce sem nome, ganha nome (a criança, pelos adultos da casa; o
+ * adulto, num consultório — mais cedo com renda para um plano), é tratada ou
+ * não, entra em remissão ou se controla. `efeitos`: o ano é de verdade (a
+ * família fica sabendo); sem ele, é a reconstrução do passado de quem ainda
+ * não era acompanhado. Devolve o que as condições tiram da saúde no ano (a
+ * deriva do ano soma, como a do protagonista: frações de ponto contam).
+ */
+export function anoDeSaudeDaPessoa(v: Vida, p: Pessoa, t: number, r: Rng, efeitos: boolean): number {
+  const i = idadeEm(p.tNasc, t);
+  const conds = p.condicoes ?? (p.condicoes = []);
+  const f = fatoresDaPessoa(v, p, t);
+  for (const c of [...conds]) {
+    const m = modeloCondicao(c.id);
+    if (!m) continue;
+    // Saúde mental melhora com o tempo e com a vida melhorando — com tratamento, bem mais.
+    if (MENTAIS.has(c.id) && f.estresse < 60 && r.chance(c.tratando ? 0.3 : 0.12)) { conds.splice(conds.indexOf(c), 1); continue; }
+    if (!c.diagnosticada) {
+      const anos = (t - c.tInicio) / 12;
+      const chance = i < 18 ? (MENTAIS.has(c.id) ? 0.2 : 0.6) : c.id === 'cancer' ? (anos >= 1 ? 0.45 : 0.15) : 0.15 + (p.renda > 5000 ? 0.15 : 0) + (anos >= 3 ? 0.1 : 0);
+      if (!r.chance(chance)) continue;
+      c.diagnosticada = true;
+      c.tDiagnostico = t;
+      c.tarde = c.id === 'cancer' ? anos >= 1 : anos >= 3;
+      c.tratando = i < 18 || r.chance(0.8);
+      if (efeitos) noticiaDoDiagnostico(v, p, c, m.nome);
+      continue;
+    }
+    if (!c.tratando) { if (r.chance(0.3)) c.tratando = true; continue; }
+    const tratandoHa = (t - (c.tDiagnostico ?? c.tInicio)) / 12;
+    if ((c.id === 'cancer' && tratandoHa >= 1 && r.chance(c.tarde ? 0.14 : 0.32)) || (c.id === 'coluna' && tratandoHa >= 1 && r.chance(0.2))) {
+      conds.splice(conds.indexOf(c), 1);
+      if (efeitos && c.id === 'cancer') registrarNaVidaDela(p, t, 'Terminou o tratamento do câncer: remissão.');
+    }
+  }
+  for (const m of MODELOS) {
+    if (!m.cronica || conds.some(c => c.id === m.id)) continue;
+    if (!r.chance(m.risco(f, i))) continue;
+    const cedo = i < 14 && r.chance(0.5);
+    conds.push({ id: m.id, tInicio: t, gravidade: m.gravidade, diagnosticada: cedo, tratando: cedo, ...(cedo ? { tDiagnostico: t } : {}) });
+    break;
+  }
+  // O que as condições tiram da saúde no ano: a mesma perda do protagonista (`estado.fatoresSaude`).
+  return conds.reduce((s, c) => { const m = modeloCondicao(c.id); return s + (m ? perdaDaCondicao(condicaoDaPessoa(c)!, m.perda) : 0); }, 0) * (i < 45 ? 0.5 : 1);
+}
+
+/** A reconstrução de quem ainda não era acompanhado (saves anteriores, quem acabou de entrar na família): os anos vividos até aqui. */
+export function garantirCondicoes(v: Vida, p: Pessoa): CondicaoNpc[] {
+  if (p.condicoes) return p.condicoes;
+  p.condicoes = [];
+  const i = idadeEm(p.tNasc, v.t);
+  for (let a = 1; a < i; a++) { const t = p.tNasc + a * 12; anoDeSaudeDaPessoa(v, p, t, rngDe(v.id, 'saude', p.id, t), false); }
+  return p.condicoes;
+}
+
+function registrarNaVidaDela(p: Pessoa, t: number, texto: string): void {
+  if (!p.vida) return;
+  p.vida.trajetoria.push({ t, texto, tipo: 'saude' });
+  if (p.vida.trajetoria.length > 24) p.vida.trajetoria.splice(0, p.vida.trajetoria.length - 24);
+}
+
+/** O diagnóstico de alguém da família: entra na vida dela; o que é grave chega a você (e vira um momento difícil em que dá para estar junto). */
+function noticiaDoDiagnostico(v: Vida, p: Pessoa, c: CondicaoNpc, nome: string): void {
+  registrarNaVidaDela(p, v.t, `Recebeu o diagnóstico: ${nome}${c.tratando ? '. Começou o tratamento' : ''}.`);
+  const vin = v.vinculos[p.id];
+  if (!vin || c.gravidade < 2 || MENTAIS.has(c.id) || vin.proximidade < 35) return;
+  const quem = vin.parentesco ? `${flex(p.genero, 'seu', 'sua', 'sue')} ${rotuloParentesco(p, vin.parentesco)}, ${p.nome},` : p.nome;
+  escrever(v, { texto: `${quem.charAt(0).toUpperCase() + quem.slice(1)} recebeu o diagnóstico: ${nome}${c.tarde ? ', descoberto tarde' : ''}.`, relevancia: c.gravidade >= 3 ? 'biografia' : 'cotidiano', tema: 'familia', tom: 'ruim', pessoas: [p.id] });
+  if (c.gravidade >= 3 && (!p.aperto || v.t - p.aperto.t > 24)) p.aperto = { tipo: 'doenca', t: v.t };
+}
+
+/** O que a família sabe da saúde de uma pessoa do mundo — só o que tem nome —, em palavras (a ficha e o legado leem daqui). */
+export function saudeConhecida(p: Pessoa): string | undefined {
+  const conhecidas = p.vivo && !p.especie ? (p.condicoes ?? []).filter(c => c.diagnosticada) : [];
+  if (!conhecidas.length) return undefined;
+  return listaNatural(conhecidas.map(c => `${modeloCondicao(c.id)?.nome ?? c.id} (${c.tratando ? 'em tratamento' : 'sem tratamento'})`));
 }
 
 export { novoId };

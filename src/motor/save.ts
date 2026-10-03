@@ -23,10 +23,11 @@ import { derivarPredisposicoes } from './sistemas/pessoa';
 import { posicaoSugerida } from './sistemas/esporte';
 import { alvoDaNotoriedade } from './sistemas/notoriedade';
 import type {
-  Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, Tema, Vida, Vinculo
+  Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, TabelaEmCurso, Tema, Vida, Vinculo
 } from './tipos';
 import { anoDe, tDe, idadeEm } from './tempo';
-import { municipioPorNome, MUNICIPIOS } from './dados/lugares';
+import { existeMunicipio, municipioPorNome, MUNICIPIOS } from './dados/lugares';
+import { existePais } from './mundo/registro';
 import { cursoOuNulo } from './dados/cursos';
 import { ocupacaoOuNula } from './dados/ocupacoes';
 import { modeloVeiculo, VEICULO_ANTIGO } from './dados/bens';
@@ -42,7 +43,7 @@ import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 import { atribuirVersoesAosVeiculos } from './sistemas/versoesVeiculo';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 
-export const VERSAO_SAVE = 19;
+export const VERSAO_SAVE = 20;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
 export const CHAVE_BACKUP = 'VIDA_GAME_SAVE_BACKUP';
 export const CHAVE_ESTATISTICAS = 'VIDA_GLOBAL_STATS_V1';
@@ -104,6 +105,14 @@ export function interpretar(bruto: string): Leitura {
     const erro = validar(d);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
+  // v19 → v20 (o mundo): nascer, ter nacionalidade e morar viram três coisas. Toda vida anterior nasceu e mora no
+  // Brasil e é brasileira; a migração só escreve isso. A versão sobe porque um jogo v19 não sabe ler uma cidade de
+  // outro país nem converter a moeda — e não pode abrir uma vida v20 como se fosse dele.
+  if (d.versao === 19) {
+    const erro19 = validar(d, 19);
+    if (erro19) return { tipo: 'invalido', motivo: erro19 };
+    return depoisDeMigrar(() => migrarV19(d as unknown as Vida));
+  }
   // v18 → v19 (sucessão): a vida pode ser de uma geração seguinte (linhagem, posses de quem não é o protagonista,
   // parentescos de sobrinho e cunhado). Os campos novos são opcionais; a versão sobe porque um jogo v18 não sabe
   // ler esses parentescos nem a herança aplicada a menores — e não pode abrir um save v19 como se fosse dele.
@@ -111,7 +120,7 @@ export function interpretar(bruto: string): Leitura {
     const erro18 = validar(d, 18);
     if (erro18) return { tipo: 'invalido', motivo: erro18 };
     try {
-      const v = migrarV18(d as unknown as Vida);
+      const v = migrarV19(migrarV18(d as unknown as Vida));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -123,7 +132,7 @@ export function interpretar(bruto: string): Leitura {
     const erro17 = validar(d, 17);
     if (erro17) return { tipo: 'invalido', motivo: erro17 };
     try {
-      const v = migrarV18(migrarV17(d as unknown as Vida));
+      const v = migrarV19(migrarV18(migrarV17(d as unknown as Vida)));
       const erro = validar(v as unknown as Record<string, unknown>);
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
@@ -134,7 +143,7 @@ export function interpretar(bruto: string): Leitura {
   const ate16 = interpretarAte16(d);
   if (ate16.tipo !== 'ok') return ate16;
   try {
-    const v = migrarV18(migrarV17(migrarV16(ate16.vida)));
+    const v = migrarV19(migrarV18(migrarV17(migrarV16(ate16.vida))));
     const erro = validar(v as unknown as Record<string, unknown>);
     return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
   } catch (e) {
@@ -153,7 +162,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro15) return { tipo: 'invalido', motivo: erro15 };
     try {
       const v = migrarV15(d as unknown as Vida);
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -165,7 +174,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro14) return { tipo: 'invalido', motivo: erro14 };
     try {
       const v = migrarV15(migrarV14(d as unknown as Vida));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -177,7 +186,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro13) return { tipo: 'invalido', motivo: erro13 };
     try {
       const v = migrarV15(migrarV14(migrarV13(d as unknown as Vida)));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -189,7 +198,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro12) return { tipo: 'invalido', motivo: erro12 };
     try {
       const v = migrarV15(migrarV14(migrarV13(migrarV12(d as unknown as Vida))));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -201,7 +210,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro11) return { tipo: 'invalido', motivo: erro11 };
     try {
       const v = migrarV15(migrarV14(migrarV13(migrarV12(migrarV11(d as unknown as Vida)))));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -213,7 +222,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro10) return { tipo: 'invalido', motivo: erro10 };
     try {
       const v = migrarV15(migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(d as unknown as Vida))))));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -225,7 +234,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro9) return { tipo: 'invalido', motivo: erro9 };
     try {
       const v = migrarV15(migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(d as unknown as Vida)))))));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -237,7 +246,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro8) return { tipo: 'invalido', motivo: erro8 };
     try {
       const v = migrarV15(migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(d as unknown as Vida))))))));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -249,7 +258,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro7) return { tipo: 'invalido', motivo: erro7 };
     try {
       const v = migrarV15(migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(d as unknown as Vida)))))))));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -261,7 +270,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
     if (erro6) return { tipo: 'invalido', motivo: erro6 };
     try {
       const v = migrarV15(migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(d as unknown as Vida))))))))));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
@@ -272,7 +281,7 @@ function interpretarAte16(d: Record<string, unknown>): Leitura {
       const v5 = migrarV5(d);
       if (!v5) return { tipo: 'invalido', motivo: 'Esta vida já tinha terminado.' };
       const v = migrarV15(migrarV14(migrarV13(migrarV12(migrarV11(migrarV10(migrarV9(migrarV8(migrarV7(migrarV6(v5))))))))));
-      const erro = validar(v as unknown as Record<string, unknown>);
+      const erro = validar(v as unknown as Record<string, unknown>, 16); // (a cadeia antiga vai até a v16; a v20 é validada no fim)
       return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
     } catch (e) {
       return { tipo: 'invalido', motivo: `Não foi possível migrar o save antigo (${(e as Error).message}).` };
@@ -444,11 +453,15 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     for (const p of Object.values(d.pessoas as Record<string, Pessoa>)) {
       const pos = p.posses;
       if (pos !== undefined && (typeof pos !== 'object' || !finito(pos.dinheiro) || !Array.isArray(pos.bens) || pos.bens.some(b => !b || !finito(b.valor)) || !Array.isArray(pos.historia))) return 'Patrimônio de pessoa inválido.';
+      // Condições de saúde de quem não é o protagonista (opcional: ausente = ainda não acompanhada).
+      if (p.condicoes !== undefined && (!Array.isArray(p.condicoes) || p.condicoes.some(c => !c || typeof c.id !== 'string' || !finito(c.tInicio) || ![1, 2, 3].includes(c.gravidade)
+        || typeof c.diagnosticada !== 'boolean' || typeof c.tratando !== 'boolean' || (c.tDiagnostico !== undefined && !finito(c.tDiagnostico))))) return 'Condição de saúde de pessoa inválida.';
     }
     const o = d.origem as Vida['origem'];
     if (o.reservaDe !== undefined && !(d.pessoas as Record<string, Pessoa>)[o.reservaDe]) return 'Reserva da família aponta para pessoa inexistente.';
     if (o.responsavelId !== undefined && !(d.pessoas as Record<string, Pessoa>)[o.responsavelId]) return 'Guarda aponta para pessoa inexistente.';
     if ((d.financas as Vida['financas']).investimentos.some(a => a.tutelaAte !== undefined && !finito(a.tutelaAte))) return 'Aplicação sob tutela inválida.';
+    if ((d.financas as Vida['financas']).dividas.some(x => x.principal !== undefined && (!finito(x.principal) || x.principal < 0))) return 'Dívida inválida.';
     const mo = d.morte as Vida['morte'];
     if (mo?.decisoes !== undefined && (typeof mo.decisoes !== 'object' || (mo.decisoes.disponivel !== undefined && (!Array.isArray(mo.decisoes.disponivel) || mo.decisoes.disponivel.some(x => !x || typeof x.pessoaId !== 'string' || !finito(x.fracao)))) || (mo.decisoes.doacao !== undefined && !finito(mo.decisoes.doacao.fracao)))) return 'Decisões de herança inválidas.';
     // Carreira de técnico 2.0: as passagens e as temporadas (J = V + E + D é invariante do motor; aqui, só a forma).
@@ -457,6 +470,25 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
       || tec.passagens.some(p => !p || typeof p.clube !== 'string' || !finito(p.desde) || !finito(p.contratoAte) || !finito(p.pressao) || !finito(p.vestiario) || ![1, 2, 3, 4].includes(p.nivel) || !Array.isArray(p.temporadas)
         || p.temporadas.some(t => !t || !finito(t.ano) || !finito(t.jogos) || !finito(t.v) || !finito(t.e) || !finito(t.d)))
       || (tec.proposta !== undefined && (typeof tec.proposta.id !== 'string' || typeof tec.proposta.clube !== 'string' || !finito(tec.proposta.salario))))) return 'Carreira de técnico inválida.';
+    // Contratação no meio da temporada (campos opcionais): a tabela do dia e de onde se pegou o time.
+    if (tec !== undefined && ((tec.proposta?.meioDeTemporada !== undefined && !tabelaEmCursoValida(tec.proposta.meioDeTemporada))
+      || tec.passagens.some(p => (p.retomada !== undefined && !tabelaEmCursoValida(p.retomada))
+        || (p.meioDeTemporada !== undefined && (typeof p.meioDeTemporada !== 'object' || !finito(p.meioDeTemporada.rodada) || !finito(p.meioDeTemporada.rodadas) || !finito(p.meioDeTemporada.posicao)))
+        || p.temporadas.some(t => t.desdeRodada !== undefined && !finito(t.desdeRodada))))) return 'Contratação de técnico no meio da temporada inválida.';
+  }
+  if (versao >= 20) {
+    const eu = d.eu as Vida['eu'];
+    if (!Array.isArray(eu.nacionalidades) || !eu.nacionalidades.length || eu.nacionalidades.some(n => typeof n !== 'string' || !existePais(n))) return 'Nacionalidade inválida.';
+    // Uma cidade de outro país só existe se o pacote do mundo daquela região chegou (a interface carrega o mundo antes de ler).
+    const lugares = [eu.municipioNatal, (d.moradia as Vida['moradia']).municipioId];
+    if (lugares.some(id => typeof id !== 'string' || !existeMunicipio(id))) return 'A vida mora ou nasceu num lugar que este aparelho ainda não conhece (o pacote do mundo não foi carregado).';
+    const mu = d.mundo as Vida['mundo'];
+    if (mu !== undefined && (typeof mu !== 'object' || !Array.isArray(mu.migracoes) || !finito(mu.adaptacao) || !Array.isArray(mu.idiomas)
+      || mu.migracoes.some(m => !m || !finito(m.t) || typeof m.de !== 'string' || typeof m.para !== 'string' || typeof m.motivo !== 'string' || typeof m.via !== 'string')
+      || (mu.naturalizacao !== undefined && (typeof mu.naturalizacao.pais !== 'string' || !finito(mu.naturalizacao.t))))) return 'Vida no mundo inválida.';
+    for (const p of Object.values(d.pessoas as Record<string, Pessoa>)) {
+      if (p.nacionalidades !== undefined && (!Array.isArray(p.nacionalidades) || p.nacionalidades.some(n => typeof n !== 'string' || !existePais(n)))) return 'Nacionalidade de pessoa inválida.';
+    }
   }
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) if (vin.parentesco !== undefined && !PARENTESCOS_VALIDOS.has(vin.parentesco)) return 'Parentesco inválido.';
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
@@ -495,14 +527,22 @@ function pendenteValido(p: unknown): boolean {
   if (!n || typeof n !== 'object' || typeof x!.oferta !== 'string' || !textos(x!.conflitos) || !Array.isArray(x!.planos) || !x!.planos.length) return false;
   if (x!.planos.some(q => !q || typeof q.texto !== 'string' || !textos(q.larga) || !textos(q.consequencias))) return false;
   switch (n.tipo) {
-    case 'base': return typeof n.dominio === 'string' && typeof n.clube === 'string' && typeof n.municipioId === 'string' && MUNICIPIOS.some(m => m.id === n.municipioId);
+    case 'base': return typeof n.dominio === 'string' && typeof n.clube === 'string' && typeof n.municipioId === 'string' && existeMunicipio(n.municipioId);
     case 'contrato_esporte': return finito(n.nivel);
     case 'emprego': return typeof n.ocupacaoId === 'string' && !!ocupacaoOuNula(n.ocupacaoId) && typeof n.via === 'string';
     case 'negocio': return typeof n.negocioId === 'string' && !!tipoNegocio(n.negocioId);
     case 'dedicar_negocio': case 'servico_militar': return true;
-    case 'curso': return typeof n.cursoId === 'string' && !!cursoOuNulo(n.cursoId) && typeof n.municipioId === 'string' && MUNICIPIOS.some(m => m.id === n.municipioId) && (n.modalidade === 'presencial' || n.modalidade === 'ead') && typeof n.instituicao === 'string';
+    case 'curso': return typeof n.cursoId === 'string' && !!cursoOuNulo(n.cursoId) && typeof n.municipioId === 'string' && existeMunicipio(n.municipioId) && (n.modalidade === 'presencial' || n.modalidade === 'ead') && typeof n.instituicao === 'string';
     default: return false;
   }
+}
+
+/** A liga no dia da contratação no meio da temporada: 20 pontuações e 20 forças, rodada dentro da tabela. */
+function tabelaEmCursoValida(x: unknown): boolean {
+  if (!x || typeof x !== 'object') return false;
+  const t = x as TabelaEmCurso;
+  const vinte = (a: unknown) => Array.isArray(a) && a.length === 20 && a.every(finito);
+  return finito(t.rodada) && finito(t.rodadas) && t.rodada >= 0 && t.rodada < t.rodadas && finito(t.posicao) && finito(t.esperada) && vinte(t.pontos) && vinte(t.forcas);
 }
 
 const PARENTESCOS_VALIDOS = new Set<string>(['mae', 'pai', 'madrasta', 'padrasto', 'irmao', 'meio_irmao', 'avo', 'tio', 'primo', 'filho', 'enteado', 'neto', 'bisneto', 'genro', 'sogro', 'sobrinho', 'cunhado', 'pet']);
@@ -692,6 +732,31 @@ export function migrarV18(v: Vida): Vida {
   const x = v as Vida & { versao: number };
   (x as { versao: number }).versao = 19;
   return x;
+}
+
+/**
+ * v19 → v20 (o mundo). Toda vida anterior é brasileira, nasceu e mora no
+ * Brasil (as cidades dela são as do catálogo brasileiro): a nacionalidade de
+ * nascença passa a ser escrita. As pessoas do mundo dela ficam sem o campo —
+ * ausente quer dizer "do país onde nasceu", o Brasil. Nenhum valor muda: a
+ * unidade do motor continua sendo o real de poder de compra brasileiro.
+ */
+export function migrarV19(v: Vida): Vida {
+  const x = v as Vida & { versao: number };
+  (x as { versao: number }).versao = 20;
+  if (!Array.isArray(x.eu.nacionalidades) || !x.eu.nacionalidades.length) x.eu.nacionalidades = ['BR'];
+  return x;
+}
+
+/** Roda uma migração e valida o resultado (o mesmo envelope de erro de todas). */
+function depoisDeMigrar(f: () => Vida): Leitura {
+  try {
+    const v = f();
+    const erro = validar(v as unknown as Record<string, unknown>);
+    return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: v, migrado: true };
+  } catch (e) {
+    return { tipo: 'invalido', motivo: `Não foi possível atualizar o save (${(e as Error).message}).` };
+  }
 }
 
 /* ------------------------------------------------------------------ Exportar */
@@ -1100,7 +1165,7 @@ export function migrarV5(a: Antigo): Vida | null {
   }
 
   const v: Vida = {
-    versao: 7 as unknown as 19,
+    versao: 7 as unknown as 20,
     caminhos: undefined as unknown as Vida['caminhos'],
     luto: [],
     id: `vida-migrada-${hashTexto(String(p.id ?? p.nome)).toString(36)}`,
@@ -1108,7 +1173,7 @@ export function migrarV5(a: Antigo): Vida | null {
     seq: 5000,
     t,
     eu: {
-      nome: p.nome, sobrenome: p.sobrenome ?? '', genero, tNasc, municipioNatal: municipio,
+      nome: p.nome, sobrenome: p.sobrenome ?? '', genero, tNasc, municipioNatal: municipio, nacionalidades: ['BR'],
       visual: visualAleatorio(r, genero)
     },
     corpo: {
@@ -1298,6 +1363,8 @@ export interface VidaPassada {
   patrimonio: number;
   causa: string;
   ano: number;
+  /** O país onde morreu (o patrimônio é contado na moeda de lá). Ausente: o Brasil. */
+  pais?: string;
 }
 
 export interface Estatisticas {

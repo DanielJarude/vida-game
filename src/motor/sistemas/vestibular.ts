@@ -17,6 +17,7 @@
  *                  última tentativa.
  */
 
+import { educacaoDaVida } from '../mundo/vida';
 import type { Rng } from '../rng';
 import type { Devolutiva, Vida } from '../tipos';
 import { escrever, idade } from '../nucleo';
@@ -101,7 +102,7 @@ export function podeDefinirObjetivo(v: Vida, cursoId?: string): Veredito {
   if (!cursoId) return v.educacao.objetivo ? PERMITIDO : bloqueio('incompativel', 'Não há objetivo definido.');
   if (idade(v) < 14) return bloqueio('impossivel', 'Ainda é cedo para escolher um curso.');
   const c = cursoOuNulo(cursoId);
-  if (!c || c.nivel !== 'superior' || c.corte <= 0) return bloqueio('impossivel', 'Esse curso não entra pelo ENEM.');
+  if (!c || c.nivel !== 'superior' || c.corte <= 0) return bloqueio('impossivel', `Esse curso não entra ${educacaoDaVida(v).pelo}.`);
   if (v.educacao.objetivo?.cursoId === cursoId) return bloqueio('incompativel', 'Esse já é o seu objetivo.');
   if (v.educacao.concluidos.some(x => x.cursoId === cursoId)) return bloqueio('incompativel', 'Você já se formou nesse curso.');
   if (v.educacao.matricula?.cursoId === cursoId) return bloqueio('incompativel', 'Você já está nesse curso.');
@@ -196,8 +197,8 @@ export function estimativaParaCurso(v: Vida, c: Curso): Estimativa {
   if (dev && dev.fraca !== fraca && situacao !== 'no_corte') {
     const nome = (x?: string) => NOME_MATERIA[x as Materia];
     partes.push(dev.fracaPrevista === fraca
-      ? `(No ENEM de ${anoDe(dev.t)}, quem mais pesou foi ${nome(dev.fraca)} — rendeu abaixo do que a preparação indicava, foi o dia; pela preparação, continua sendo ${nome(fraca)}.)`
-      : `(No ENEM de ${anoDe(dev.t)}, quem mais pesou foi ${nome(dev.fraca)}; desde então a preparação mudou, e hoje é ${nome(fraca)} que mais pesa.)`);
+      ? `(${educacaoDaVida(v).No} de ${anoDe(dev.t)}, quem mais pesou foi ${nome(dev.fraca)} — rendeu abaixo do que a preparação indicava, foi o dia; pela preparação, continua sendo ${nome(fraca)}.)`
+      : `(${educacaoDaVida(v).No} de ${anoDe(dev.t)}, quem mais pesou foi ${nome(dev.fraca)}; desde então a preparação mudou, e hoje é ${nome(fraca)} que mais pesa.)`);
   }
   return { curso: c, nota, faixa: [nota - 30, nota + 30], corte, situacao, nivel: NIVEL_SITUACAO[situacao], fraca, ultima, frase: partes.join(' ') };
 }
@@ -211,7 +212,7 @@ function ponderada(areas: Partial<Record<Materia, number>>, c: Curso): number {
 
 /** O que falta fazer, em palavras — o próximo passo da preparação. */
 export function proximoPassoVestibular(v: Vida, e: Estimativa): string {
-  if (e.situacao === 'no_corte') return v.educacao.enem.some(x => x.t > v.t - 12) ? 'A nota está no nível: é tentar a vaga pelo SISU.' : 'No nível do corte: fazer o ENEM é o próximo passo (o dia ainda pesa).';
+  if (e.situacao === 'no_corte') return v.educacao.enem.some(x => x.t > v.t - 12) ? `A nota está no nível: é tentar a vaga ${educacaoDaVida(v).vagas === 'o SISU' ? 'pelo SISU' : 'pela nota'}.` : `No nível do corte: fazer ${educacaoDaVida(v).o} é o próximo passo (o dia ainda pesa).`;
   const cursinho = fazCursinho(v);
   const meses = mesesDePreparo(v);
   const d = v.educacao.postura;
@@ -248,10 +249,10 @@ export function devolutivaDoEnem(v: Vida, areas: Record<Materia, number>): Devol
   if (anterior && anterior.nivel !== undefined) {
     const antes = Number((anterior.texto.match(/ponderada foi (\d+)/) ?? [])[1] ?? 0);
     const dif = nota - antes;
-    partes.push(antes ? (dif >= 15 ? `Desde o ENEM de ${anoDe(anterior.t)}, subiu ${dif} pontos.` : dif <= -15 ? `Desde o ENEM de ${anoDe(anterior.t)}, caiu ${-dif} pontos.` : `Desde o ENEM de ${anoDe(anterior.t)}, ficou onde estava.`) : '');
+    partes.push(antes ? (dif >= 15 ? `Desde ${educacaoDaVida(v).o} de ${anoDe(anterior.t)}, subiu ${dif} pontos.` : dif <= -15 ? `Desde ${educacaoDaVida(v).o} de ${anoDe(anterior.t)}, caiu ${-dif} pontos.` : `Desde ${educacaoDaVida(v).o} de ${anoDe(anterior.t)}, ficou onde estava.`) : '');
   }
   return registrarDevolutiva(v, {
-    tipo: 'vestibular', titulo: `ENEM ${anoDe(v.t)} — ${c.nome}`, texto: partes.filter(Boolean).join(' '),
+    tipo: 'vestibular', titulo: `${educacaoDaVida(v).nome} ${anoDe(v.t)} — ${c.nome}`, texto: partes.filter(Boolean).join(' '),
     passou: nota >= corte, perto: nota < corte && situacao === 'perto', falta: nota >= corte ? undefined : 'preparo', nivel: NIVEL_SITUACAO[situacao],
     fraca, fracaPrevista
   });
