@@ -8,6 +8,7 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { processarCoisas } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
 import { processarMundo } from './sistemas/migracao';
 import type { Rng } from './rng';
@@ -105,6 +106,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarLuto(v);
   limparApertos(v);
   processarPets(v, r);
+  processarCoisas(v);
   processarMortes(v, r);
   processarFamiliaDeOrigem(v, r);
   // A casa de onde a pessoa veio: a folga real, a reserva que cresce ou se gasta, a família que pode precisar.

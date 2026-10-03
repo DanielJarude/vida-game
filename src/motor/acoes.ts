@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { comprarCoisa, disponibilidadeComprarCoisa, disponibilidadeVenderCoisa, venderCoisa } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
 import { noPais } from './mundo/registro';
 import type { MotivoMigracao } from './tipos';
@@ -197,6 +198,9 @@ export type Acao =
   | { tipo: 'comprar_item'; itemId: string }
   /** Usar ou guardar um item que é seu. */
   | { tipo: 'usar_item'; itemId: string; usar: boolean }
+  /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
+  | { tipo: 'comprar_coisa'; coisaId: string }
+  | { tipo: 'vender_coisa'; coisaTidaId: string }
   /** As outras trajetórias: deixar a paralela, trocar a principal, voltar a (ou encerrar) uma carreira pausada. */
   | { tipo: 'trajetoria'; oque: 'deixar' | 'principal' | 'retomar' | 'encerrar_pausada'; k?: number }
   /** Usar a própria visibilidade (entrevista, causa, evento, publicidade, privacidade, projeto, política): `visibilidade`. */
@@ -535,6 +539,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
+    case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId);
+    case 'vender_coisa': return disponibilidadeVenderCoisa(v, a.coisaTidaId);
     case 'trajetoria': return disponibilidadeParalela(v, a.oque, a.k);
     case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
     case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
@@ -695,6 +701,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'pedir_ajuda_familia': return ['Ajuda pedida à família', 'familia'];
     case 'comprar_imovel': case 'vender_bem': case 'imovel': case 'comprar_veiculo': case 'veiculo': return ['Imóveis e veículos: compra, venda e reparo', 'escolha'];
     case 'migrar': return ['Mudança de país', 'escolha'];
+    case 'comprar_coisa': case 'vender_coisa': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     case 'decidir': return ['Decisões do ano', 'escolha'];
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
@@ -1162,6 +1169,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'comprar_item': return ok(comprarItem(v, a.itemId), 'bom');
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
+    case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId), 'bom');
+    case 'vender_coisa': return ok(venderCoisa(v, a.coisaTidaId));
     case 'trajetoria': {
       if (a.oque === 'deixar') { const nome = nomeOcupacao(v, ocupacao(v.trabalho.paralela!.ocupacaoId)); encerrarParalela(v, 'deixou a trajetória paralela'); return ok(`Você deixou ${nome}. O que fez fica no currículo.`); }
       if (a.oque === 'principal') { trocarPrincipal(v); return ok('A principal e a paralela trocaram de lugar.'); }

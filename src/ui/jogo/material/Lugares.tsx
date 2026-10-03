@@ -6,6 +6,10 @@
  * fica o orçamento, confirmar — sem oito telas.
  */
 
+import { municipio } from '../../../motor/dados/lugares';
+import { atividadesQueAjuda, coisasDaLoja, efeitoEmPalavras, precoDaCoisa, temCoisa, temLojaNaCidade } from '../../../motor/sistemas/coisas';
+import { NOME_LOJA, type LojaDeCoisas } from '../../../motor/dados/coisas';
+import { modeloRotina } from '../../../motor/sistemas/rotinas';
 import { daMoedaLocal, emMoedaLocal, moedaDoPais, simboloDaMoeda } from '../../../motor/mundo/moeda';
 import { textoLocal } from '../../../motor/mundo/locais';
 import { habilitacaoDaVida } from '../../../motor/sistemas/autoescola';
@@ -36,12 +40,16 @@ import { precoDoItem, temItem } from '../../../motor/sistemas/estilo';
 const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 import { dinheiroCheio, dinheiroCurto } from '../../leituraMaterial';
 
-export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo';
+export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | LojaDeCoisas;
+/** As lojas das coisas da vida (`dados/coisas`). */
+export const LOJAS_DE_COISAS: LojaDeCoisas[] = ['eletronicos', 'casa', 'instrumentos', 'esportes', 'livraria'];
+export const ICONE_DA_LOJA: Record<LojaDeCoisas, string> = { eletronicos: 'eletronicos', casa: 'eletrodomesticos', instrumentos: 'instrumentos', esportes: 'esportes', livraria: 'livraria' };
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFechar: () => void; trocar: (l: QualLugar) => void }
 
 const TITULO: Record<QualLugar, string> = {
-  alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', nautica: 'Loja náutica', aeroclube: 'Aeroclube e hangar', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios'
+  alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', nautica: 'Loja náutica', aeroclube: 'Aeroclube e hangar', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios',
+  ...NOME_LOJA
 };
 
 export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
@@ -62,6 +70,7 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
         {qual === 'abrigo' && <Abrigo vida={vida} agir={agirEFechar} />}
         {qual === 'pets' && <LojaDeAnimais vida={vida} agir={agirEFechar} />}
         {qual === 'estilo' && <LojaDeEstilo vida={vida} agir={agir} />}
+        {(LOJAS_DE_COISAS as string[]).includes(qual) && <LojaDeCoisasDaVida vida={vida} agir={agir} loja={qual as LojaDeCoisas} />}
       </div>
     </Folha>
   );
@@ -74,6 +83,35 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
  * seu (e dá para usar ou guardar, em Você · Aparência e estilo). Nada aqui
  * dá fama: um relógio caro num anônimo é só um relógio caro.
  */
+/**
+ * Uma loja das coisas da vida: o que vende, por quanto aqui, o que cada coisa MUDA (a atividade que rende
+ * mais, o peso que tira da casa, o descanso) — e, quando não cabe, o porquê. Sem loja na cidade, pela internet.
+ */
+function LojaDeCoisasDaVida({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) => boolean; loja: LojaDeCoisas }) {
+  const naCidade = temLojaNaCidade(vida, loja);
+  return (
+    <div className="loja-estilo">
+      <p className="nota">{naCidade ? 'O que se compra aqui fica com você: rende, cansa, quebra um dia — e dá para vender usado.' : `Em ${municipio(vida.moradia.municipioId).nome} não há essa loja: compra-se pela internet, com frete.`}</p>
+      <ul className="ofertas">
+        {coisasDaLoja(loja).map(c => {
+          const atividades = atividadesQueAjuda(c).map(id => modeloRotina(id)?.nome).filter(Boolean) as string[];
+          return (
+            <li key={c.id} className="oferta oferta--estilo">
+              <span className="oferta__texto">
+                <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)} · {dinheiroCurto(precoDaCoisa(vida, c.id))}</strong>
+                <span>{c.descricao}</span>
+                <span className="nota">{[atividades.length ? `Rende mais: ${atividades.slice(0, 3).join(', ').toLowerCase()}.` : '', efeitoEmPalavras(vida, { ...c, ajuda: undefined }), `Dura uns ${c.vida} anos.`].filter(Boolean).join(' ')}</span>
+              </span>
+              {temCoisa(vida, c.id) ? <span className="loja-estilo__seu"><span className="nota">É seu.</span></span>
+                : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_coisa', coisaId: c.id }} agir={agir} variante="secundario" ocultarImpossivel>Comprar</BotaoAcao>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function LojaDeEstilo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   // Três balcões (não uma prateleira só): a ótica, as roupas e chapéus, a relojoaria e a joalheria.
   const [balcao, setBalcao] = useState<(typeof BALCOES)[number]['id']>('otica');

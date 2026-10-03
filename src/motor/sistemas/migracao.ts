@@ -28,6 +28,8 @@
  * vender ou alugar de longe); os bichos vão junto, com papelada.
  */
 
+import { coisasNaMudancaDePais } from './coisas';
+import { coisa } from '../dados/coisas';
 import type { Rng } from '../rng';
 import type { Migracao, MotivoMigracao, Veiculo, Vida } from '../tipos';
 import { escrever, idade, marcarFato, moraCom, vinculosVivos } from '../nucleo';
@@ -173,6 +175,7 @@ function consequenciasDe(v: Vida, destinoId: string, via: ViaMigratoria | undefi
   if (e && via === 'trabalho' && motivo !== 'estudo') out.push('O emprego atual acaba; lá, um contrato no mesmo ofício já espera você.');
   else if (e && !['autonomo', 'informal'].includes(e.contrato)) out.push('O emprego atual acaba na mudança.');
   if (v.financas.bens.some(b => b.tipo === 'veiculo')) out.push('Os veículos não atravessam: são vendidos antes da viagem.');
+  if ((v.financas.coisas ?? []).some(t => coisa(t.coisaId)?.daCasa)) out.push('Os móveis e os eletrodomésticos ficam (vendidos usados); o celular, o notebook e o instrumento vão na mala.');
   if (v.moradia.tipo === 'propria') out.push('A casa própria fica: dá para vender ou alugar de longe.');
   if (v.educacao.matricula && v.educacao.matricula.modalidade === 'presencial') out.push('O curso presencial fica trancado.');
   const linguas = linguasDaPessoa(v);
@@ -218,6 +221,8 @@ export function migrar(v: Vida, r: Rng, destinoId: string, motivo: MotivoMigraca
     f.bens = f.bens.filter(x => x.id !== b.id);
     f.dividas = f.dividas.filter(d => d.bemId !== b.id);
   }
+  // 1b. O que é da casa (móveis, eletrodomésticos) fica: vendido pelo valor de usado. O resto vai na mala.
+  coisasNaMudancaDePais(v);
   // 2. O custo da mudança, pago aqui.
   f.conta -= av.custo;
   lancar(v, `Mudança ${paraPais(pais)}: passagens, documentos e instalação`, 'escolha', -av.custo);

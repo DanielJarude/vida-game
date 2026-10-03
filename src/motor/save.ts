@@ -22,7 +22,7 @@ import { ehEspecialidadeMedica } from './dados/especialidades';
 import { derivarPredisposicoes } from './sistemas/pessoa';
 import { posicaoSugerida } from './sistemas/esporte';
 import { alvoDaNotoriedade } from './sistemas/notoriedade';
-import type {
+import type { Financas,
   Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, TabelaEmCurso, Tema, Vida, Vinculo
 } from './tipos';
 import { anoDe, tDe, idadeEm } from './tempo';
@@ -494,6 +494,9 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
     }
   }
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) if (vin.parentesco !== undefined && !PARENTESCOS_VALIDOS.has(vin.parentesco)) return 'Parentesco inválido.';
+  // As coisas da vida (opcional na v20): se vierem, cada uma com o seu número.
+  const coisas = (d.financas as Financas | undefined)?.coisas;
+  if (coisas !== undefined && (!Array.isArray(coisas) || coisas.some(c => !c || typeof c.id !== 'string' || typeof c.coisaId !== 'string' || !finito(c.t) || !finito(c.preco) || !finito(c.estado)))) return 'Coisas inválidas.';
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {

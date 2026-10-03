@@ -4,6 +4,10 @@
  * As lojas (imobiliária, concessionária, banco, óticas) moram em Compras.
  */
 
+import { LOJAS_DE_COISAS, ICONE_DA_LOJA, type QualLugar } from './material/Lugares';
+import { NOME_LOJA } from '../../motor/dados/coisas';
+import { temLojaNaCidade } from '../../motor/sistemas/coisas';
+import { Icone } from './material/Desenhos';
 import { useMemo, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -21,7 +25,7 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean }
 
 const PERFIL: Record<string, string> = { metropole: 'uma metrópole', metropolitana: 'uma cidade colada numa metrópole', capital: 'uma capital de estado', polo: 'uma cidade média, polo da região', pequena: 'uma cidade pequena do interior' };
 
-export function Cidade({ vida, agir, irCompras }: Props & { irCompras?: () => void }) {
+export function Cidade({ vida, agir, irCompras, abrir }: Props & { irCompras?: () => void; abrir?: (l: QualLugar) => void }) {
   const i = idade(vida);
   const m = municipio(vida.moradia.municipioId);
   const ec = economiaLocal(m.id);
@@ -40,6 +44,21 @@ export function Cidade({ vida, agir, irCompras }: Props & { irCompras?: () => vo
       <CustoDeViverAqui vida={vida} />
 
       <p className="nota">{i >= 12 ? 'A imobiliária, a concessionária, o banco, as lojas e o abrigo de animais ficam em ' : 'Por enquanto, a cidade é o caminho da escola e a rua de casa. As lojas ficam em '}{irCompras ? <button type="button" className="link" onClick={irCompras}>Vida · Compras →</button> : 'Vida · Compras'}.</p>
+      {abrir && i >= 10 && (
+        <Secao titulo="Lojas da cidade" recolhivel aberta={false}>
+          <ul className="lugares">
+            {LOJAS_DE_COISAS.map(l => (
+              <li key={l}>
+                <button type="button" className="lugar-botao" onClick={() => abrir(l)}>
+                  <Icone nome={ICONE_DA_LOJA[l]} tamanho={26} />
+                  <span className="lugar-botao__nome">{NOME_LOJA[l]}</span>
+                  <span className="lugar-botao__oque">{temLojaNaCidade(vida, l) ? `Aqui em ${m.nome}` : `Não há em ${m.nome}: pela internet, com frete`}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Secao>
+      )}
       {i >= 18 && <Mudar vida={vida} agir={agir} />}
       {i >= 18 && <MudarDePais vida={vida} agir={agir} />}
     </div>

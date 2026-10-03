@@ -42,6 +42,11 @@ const cenas = [
   ['adulta', 'Pessoas', null],
   ['adulta', 'ficha-cachorro', abrirPessoa('Bolt')],
   ['adulta', 'mudar-de-pais', async p => { await aba(p, 'Vida'); await p.getByRole('tab', { name: 'Cidade' }).click(); await p.waitForTimeout(250); const s = p.getByRole('button', { name: /^Mudar de país/ }).first(); if (await s.count()) { await s.click(); await p.waitForTimeout(250); } }],
+  // As coisas da vida: as lojas em Compras, uma loja aberta, as lojas na aba Cidade, as coisas dela em Casa.
+  ['adulta', 'compras', async p => { await aba(p, 'Vida'); await p.getByRole('tab', { name: 'Compras' }).click(); await p.waitForTimeout(300); }],
+  ['adulta', 'loja-instrumentos', async p => { await aba(p, 'Vida'); await p.getByRole('tab', { name: 'Compras' }).click(); await p.getByRole('button', { name: /Loja de instrumentos musicais/ }).click(); await p.waitForTimeout(400); }],
+  ['adulta', 'cidade-lojas', async p => { await aba(p, 'Vida'); await p.getByRole('tab', { name: 'Cidade' }).click(); await p.getByRole('button', { name: /^Lojas da cidade/ }).click(); await p.waitForTimeout(300); }],
+  ['adulta', 'casa-coisas', async p => { await aba(p, 'Vida'); await p.getByRole('tab', { name: 'Casa' }).click(); await p.waitForTimeout(300); }],
   ['nascer', 'pais', async p => { await p.getByRole('button', { name: 'Trocar o país' }).click(); await p.getByLabel('Buscar pelo nome').fill('Est'); await p.waitForTimeout(200); }]
 ];
 for (const [cen, nome, depois] of cenas.filter(c => !process.env.SO || process.env.SO.split(',').includes(c[1]))) {

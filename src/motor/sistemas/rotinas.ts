@@ -14,6 +14,7 @@
  * para sempre, e o que já se pratica continua disponível.
  */
 
+import { bonusDaAtividade } from './coisas';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Rotina, Traco, Vida } from '../tipos';
@@ -756,7 +757,8 @@ export function processarRotinas(v: Vida, r: Rng): void {
     const peso = n === 1 ? 0.5 : n === 2 ? 1 : 1.6;
     if (m.pratica) {
       for (const [d, w] of Object.entries(m.pratica) as [Dominio, number][]) {
-        praticar(v, r, d, peso * w, nm.qualidade ?? 1);
+        // O que se tem em casa (o instrumento, o notebook, a câmera) faz a mesma hora render mais (`coisas`).
+        praticar(v, r, d, peso * w, (nm.qualidade ?? 1) * (1 + bonusDaAtividade(v, m.id)));
         praticadas.add(d);
       }
     }

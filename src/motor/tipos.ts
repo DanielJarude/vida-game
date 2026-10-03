@@ -932,12 +932,17 @@ export interface FotoFinanceira {
   despesa: number;
 }
 
+/** Uma coisa que a pessoa tem (`dados/coisas`): quando comprou, por quanto, e o estado (100 nova, 0 acabou). */
+export interface CoisaTida { id: string; coisaId: string; t: number; preco: number; estado: number }
+
 export interface Financas {
   /** Dinheiro SEU, disponível. Na casa dos pais, não é o dinheiro da casa. */
   conta: number;
   investimentos: Aplicacao[];
   dividas: Divida[];
   bens: Bem[];
+  /** As coisas da vida (eletrônicos, casa, instrumentos, esporte, livros): `sistemas/coisas`. Ausente nos saves antigos. */
+  coisas?: CoisaTida[];
   estilo: EstiloDeVida;
   planoDeSaude: boolean;
   /** Nome sujo: crédito negado. */

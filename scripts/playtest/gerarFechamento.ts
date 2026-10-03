@@ -5,7 +5,7 @@
  *   chicago   nasceu no Recife, mudou-se com a família para Chicago aos 8; aos 17, no ensino médio americano
  *             (o SAT, a carteira de Illinois); amigas, uma ex-amiga depois de uma briga, um rival, um interesse
  *             romântico; um cachorro e um gato da casa
- *   adulta    a mesma vida aos 26, morando sozinha em Chicago (Pessoas com tipos e estados; os bichos dela)
+ *   adulta    a mesma vida aos 26, morando sozinha em Chicago (Pessoas com tipos e estados; os bichos dela; as coisas dela)
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -83,6 +83,8 @@ async function main() {
       for (const vin of Object.values(x.vinculos)) vin.convivio = vin.convivio.filter(c => c !== 'casa');
     }
     x.financas.conta += 30000;
+    // As coisas da vida dela (`sistemas/coisas`): o notebook de trabalho, o violão da adolescência, a máquina de lavar.
+    x.financas.coisas = [{ id: 'cs1', coisaId: 'notebook', t: x.t - 24, preco: 3800, estado: 62 }, { id: 'cs2', coisaId: 'violao', t: x.t - 96, preco: 900, estado: 55 }, { id: 'cs3', coisaId: 'maquina_lavar', t: x.t - 12, preco: 2500, estado: 90 }];
     rede(x);
     for (const [k, nome] of ['Bolt', 'Luna', 'Rex', 'Mia'].entries()) adotarPet(x, r, { especie: k % 2 ? 'gato' : 'cachorro', nome, genero: k % 2 ? 'feminino' : 'masculino', idade: 1 + k, porte: (['grande', 'pequeno', 'pequeno', 'pequeno'] as const)[k], jeito: 'curioso', historia: 'adoção' }, 'abrigo');
   }).vida;

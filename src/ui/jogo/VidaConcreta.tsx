@@ -7,6 +7,10 @@
  * que dá para fazer — e o porquê, quando ainda não dá).
  */
 
+import { LOJAS_DE_COISAS, ICONE_DA_LOJA } from './material/Lugares';
+import { NOME_LOJA, O_QUE_A_LOJA_VENDE } from '../../motor/dados/coisas';
+import { temLojaNaCidade } from '../../motor/sistemas/coisas';
+import { SuasCoisas } from './Casa';
 import { useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -54,6 +58,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'casa' && (
           <div className="casa">
             <Lar vida={vida} agir={agir} abrir={setLugar} />
+            <SuasCoisas vida={vida} agir={agir} abrir={setLugar} />
             <Independencia vida={vida} agir={agir} irSecao={irSecao} />
             {i >= 18 && <ViverACasa vida={vida} agir={agir} />}
           </div>
@@ -66,7 +71,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
           </div>
         )}
         {secao === 'compras' && <Compras vida={vida} agir={agir} abrir={setLugar} />}
-        {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} />}
+        {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
       </div>
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
     </div>
@@ -151,6 +156,8 @@ function Compras({ vida, agir, abrir }: { vida: Vida; agir: (a: Acao) => boolean
       ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto', icone: 'oficina', idadeMin: 0 }] : [])
     ] },
     { titulo: 'Você', lugares: [{ id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio', icone: 'loja', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes }] },
+    // As coisas da vida: o que se usa e rende (eletrônicos, casa, instrumentos, esporte, livros) — `dados/coisas`.
+    { titulo: 'Coisas da casa e da vida', lugares: LOJAS_DE_COISAS.map(l => ({ id: l, nome: NOME_LOJA[l], oque: `${O_QUE_A_LOJA_VENDE[l]}${temLojaNaCidade(vida, l) ? '' : ' · pela internet'}`, icone: ICONE_DA_LOJA[l], idadeMin: 10, porque: 'Com essa idade, quem compra são os adultos da casa.' })) },
     { titulo: 'Dinheiro', lugares: [{ id: 'banco', nome: 'Banco', oque: 'Guardar, investir, empréstimo', icone: 'banco', idadeMin: 18, porque: 'Conta e investimento no seu nome, a partir dos 18.' }] },
     { titulo: 'Animais', lugares: [
       { id: 'abrigo', nome: 'Abrigo de animais', oque: 'Adotar um cão, um gato — às vezes, outro bicho', icone: 'abrigo', idadeMin: 18, porque: 'Adotar é coisa de adulto.' },

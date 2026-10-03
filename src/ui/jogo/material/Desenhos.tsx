@@ -900,6 +900,12 @@ function Gato({ x }: { x: number }) {
 }
 
 const ICONES: Record<string, string> = {
+  // As lojas das coisas da vida (`dados/coisas`).
+  eletronicos: 'M3 6h12v9H3zM1 18h16M18 8h4v12h-4zM19.5 17h1',
+  eletrodomesticos: 'M5 3h14v18H5zM5 7h14M8 5h1M8 14a4 4 0 1 0 8 0a4 4 0 1 0-8 0',
+  instrumentos: 'M14 4l6 6M17 7l-6 6M10 12a4 4 0 1 0 1 5a3 3 0 0 0-1-5zM7.5 16.5h.5',
+  esportes: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  livraria: 'M4 5c3-1 6-1 8 1c2-2 5-2 8-1v14c-3-1-6-1-8 1c-2-2-5-2-8-1zM12 6v14',
   predio: 'M5 21V4h10v17M15 9h4v12M8 8h1M11 8h1M8 12h1M11 12h1M8 16h1M11 16h1M3 21h18',
   kitnet: 'M4 21V5h16v16M8 9h2M14 9h2M8 13h2M14 13h2M11 21v-4h2v4M2 21h20',
   casa: 'M3 11l9-7 9 7M5 10v11h14V10M10 21v-6h4v6',

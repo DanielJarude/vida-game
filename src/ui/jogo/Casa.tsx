@@ -9,6 +9,9 @@
  * Os lugares da cidade (concessionária, banco, abrigo) moram em Cidade.
  */
 
+import { anoDe } from '../../motor/tempo';
+import { coisasDaVida, valorDeRevenda } from '../../motor/sistemas/coisas';
+import { coisa } from '../../motor/dados/coisas';
 import { daMoedaLocal, emMoedaLocal, moedaDoPais, simboloDaMoeda } from '../../motor/mundo/moeda';
 import { useState } from 'react';
 import { disponibilidadeUsoCasa, disponibilidadeUsoVeiculo, rotuloUsoCasa, rotuloUsoVeiculo, USOS_CASA, USOS_VEICULO } from '../../motor/sistemas/usos';
@@ -297,6 +300,32 @@ export function ViverACasa({ vida, agir }: Props) {
       <div className="grupo-acoes grupo-acoes--linha">
         {usos.map(u => <BotaoAcao key={u} vida={vida} acao={{ tipo: 'usar_casa', oque: u }} agir={agir} variante="secundario">{rotuloUsoCasa(vida, u)}</BotaoAcao>)}
       </div>
+    </Secao>
+  );
+}
+
+/**
+ * As coisas que a pessoa tem (`sistemas/coisas`): o estado (nova, boa, gasta, no fim), o que ainda vale usada
+ * — e vender. As lojas ficam em Compras e na aba Cidade.
+ */
+export function SuasCoisas({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
+  const lista = coisasDaVida(vida);
+  if (!lista.length) return idade(vida) >= 10 ? <p className="nota">Nenhuma coisa sua ainda — celular, notebook, instrumento, livros. <button type="button" className="link" onClick={() => abrir('eletronicos')}>As lojas</button> ficam em Compras.</p> : null;
+  const estado = (e: number) => (e >= 80 ? 'nova' : e >= 50 ? 'boa' : e >= 25 ? 'gasta' : 'no fim');
+  return (
+    <Secao titulo="Suas coisas" recolhivel aberta={lista.length <= 6}>
+      <ul className="ofertas">
+        {lista.map(t => {
+          const c = coisa(t.coisaId);
+          if (!c) return null;
+          return (
+            <li key={t.id} className="oferta oferta--estilo">
+              <span className="oferta__texto"><strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</strong><span className="nota">Desde {anoDe(t.t)} · {estado(t.estado)} · usada, vale uns {dinheiroCurto(valorDeRevenda(vida, t))}</span></span>
+              <BotaoAcao vida={vida} acao={{ tipo: 'vender_coisa', coisaTidaId: t.id }} agir={agir} variante="discreto">Vender</BotaoAcao>
+            </li>
+          );
+        })}
+      </ul>
     </Secao>
   );
 }
