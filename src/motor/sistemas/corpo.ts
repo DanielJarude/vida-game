@@ -214,12 +214,30 @@ function riscoDeMorte(i: number, saude: number, masculino: boolean, condicoes: {
     + condicoes.reduce((s, c) => s + (c.id === 'cancer' ? (c.tratando ? (c.tarde ? 0.045 : 0.025) : 0.08) : 0), 0);
 }
 
+/**
+ * REWORK 4: o estresse PROLONGADO entra no risco — nunca sozinho ("estresse 100 = morte" não existe). Só pesa depois
+ * de anos seguidos com a cabeça no limite E com o corpo já vulnerável: pressão alta, diabetes, uma condição crônica
+ * séria, a idade (50+) ou a saúde baixa. Aí multiplica o risco (até 1,6×) e puxa a causa para o coração.
+ */
+export function fatorDoEstresseProlongado(v: Vida): number {
+  const anos = v.mente.estresseAlto?.anos ?? 0;
+  if (anos < 3) return 1;
+  const vulneravel = v.corpo.condicoes.some(c => c.id === 'hipertensao' || c.id === 'diabetes' || (c.cronica && c.gravidade >= 2));
+  const i = idade(v);
+  if (!vulneravel && i < 50 && v.corpo.saude >= 50) return 1;
+  return Math.min(1.6, 1 + 0.06 * Math.min(8, anos) * (vulneravel ? 1.4 : 1) * (i >= 50 ? 1.2 : 1) * (v.corpo.saude < 40 ? 1.2 : 1));
+}
+
 /** Sorteia a morte do personagem neste ano. */
 export function morreEsteAno(v: Vida, r: Rng): string | null {
   const i = idade(v);
-  const risco = riscoDeMorte(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes);
+  const fator = fatorDoEstresseProlongado(v);
+  const risco = riscoDeMorte(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes) * fator;
   if (!r.chance(Math.min(0.95, risco))) return null;
-  return causaDaMorte(r, i, v.eu.genero === 'masculino', v.corpo.condicoes.map(c => c.id));
+  const causa = causaDaMorte(r, i, v.eu.genero === 'masculino', v.corpo.condicoes.map(c => c.id));
+  // O coração cobra o que a cabeça carregou (sorteio derivado: não mexe no acaso de quem não chegou aqui).
+  if (fator > 1.15 && causa !== 'câncer' && !/violência|acidente/.test(causa) && rngDe(v.id, 'causa_estresse', v.t).chance(0.5)) return rngDe(v.id, 'causa_estresse2', v.t).chance(0.6) ? 'infarto' : 'AVC';
+  return causa;
 }
 
 /**

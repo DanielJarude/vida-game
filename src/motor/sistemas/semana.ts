@@ -171,3 +171,16 @@ export function cabeNaSemana(v: Vida, extra: number, ignorar?: string): { cabe: 
   const saida = soltar ? ` Para caber, seria preciso largar ou diminuir ${soltar.rotulo.replace(/ — .*/, '').toLowerCase()}.` : s.rotinas.length ? ' Seria preciso largar mais de uma coisa.' : s.fixos.length ? ' Sobra pouco além disso.' : '';
   return { cabe: false, motivo: `Sua semana já está cheia: ${ocupam}. ${pede}.${saida}` };
 }
+
+/**
+ * REWORK 4: o teto HUMANO da semana (não o confortável). "Cabe" (`cabeNaSemana`) diz o que entra sem apertar; isto
+ * diz o que uma pessoa consegue TENTAR: faculdade + emprego, trabalho + curso + filhos, dá — e cobra (estresse,
+ * sobrecarga, notas, saúde: `estado`, `sobrecarga`, `estresseProlongado`). Cinco empregos integrais, duas faculdades
+ * integrais e um contrato de atleta ao mesmo tempo, não: passam deste teto.
+ */
+export const TETO_HUMANO = 1.55;
+export function cargaHumana(v: Vida, extra: number): { possivel: boolean; aperta: boolean } {
+  const s = semana(v);
+  const total = s.fixos.reduce((a, x) => a + x.peso, 0) - s.ganhos.reduce((a, x) => a + x.peso, 0) + s.ocupado + extra;
+  return { possivel: total <= s.base * TETO_HUMANO + 0.01, aperta: s.ocupado + extra > s.capacidade + 0.01 };
+}

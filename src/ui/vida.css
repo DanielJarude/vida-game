@@ -680,6 +680,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .aviso { background: var(--papel); color: var(--papel-tinta); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: var(--type-caption); animation: surgir var(--motion-base) var(--ease-out); border-left: 4px solid var(--accent-deep); }
 .aviso--ruim { border-left-color: #a3321f; }
 .aviso--bom { border-left-color: #2f6d2c; }
+.aviso__quem { display: block; font-size: var(--type-micro, 0.72rem); letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 2px; }
 
 /* PWA: a versão nova espera o jogador — uma faixa discreta no alto, que não cobre a ação nem bloqueia nada. */
 .versao-nova { position: fixed; left: 50%; top: calc(var(--space-2) + env(safe-area-inset-top)); transform: translateX(-50%); z-index: var(--z-toast); width: min(480px, calc(100% - 2 * var(--space-4))); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); background: var(--bg-raised); color: var(--text-primary); border: 1px solid var(--rule-strong); border-left: 4px solid var(--accent); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); font-size: var(--type-caption); animation: surgir var(--motion-base) var(--ease-out); }

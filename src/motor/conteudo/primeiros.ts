@@ -4,6 +4,7 @@
  * criança só entra quando é dela a escolha.
  */
 
+import { fatoPerdido, narrarPerdido } from './narracao';
 import { textoLocal } from '../mundo/locais';
 import type { Conteudo } from './base';
 import * as P from './papeis';
@@ -87,10 +88,8 @@ export const PRIMEIROS: Conteudo[] = [
     id: 'pri_perdido', tipo: 'acontecimento', idade: [3, 6], tema: 'infancia',
     papeis: { quem: P.genitorEmCasa },
     quando: c => ['metropole', 'metropolitana', 'capital'].includes(municipio(c.v.moradia.municipioId).perfil),
-    narrar: c => ({
-      texto: `Num sábado de supermercado cheio, você sumiu da vista de ${c.p.quem.nome} por dez minutos. Chamaram seu nome no alto-falante. ${c.p.quem.nome} conta essa história com as mãos tremendo até hoje.`,
-      relevancia: 'biografia'
-    })
+    // REWORK 4: onde (pelo lugar real), quanto tempo, como foi achada, no que deu — o fato, e a narração dele.
+    narrar: c => { const dados = fatoPerdido(c, c.p.quem); return { texto: narrarPerdido(c, c.p.quem, dados), relevancia: 'biografia', fato: { tipo: 'perdido', dados } }; }
   },
   {
     id: 'pri_foto_estudio', tipo: 'acontecimento', idade: [3, 5], tema: 'familia',

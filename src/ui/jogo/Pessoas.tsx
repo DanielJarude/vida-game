@@ -27,16 +27,25 @@ import { gestacaoEmCurso } from '../../motor/sistemas/familia';
 import { interacoesPara, rotuloInteracao } from '../../motor/sistemas/interacoes';
 import { ehDescendente, faseDeIdade, papelDe } from '../../motor/sistemas/vinculos';
 import { rotuloDe } from '../apresentar';
-import { circulos, comoEsta, etiqueta, ondeEsta, quemE, sinaisSociais, vidaPropria, type Par } from '../leitura';
+import { circulos, comoEsta, etiqueta, ondeEsta, quemE, sinaisSociais, vidaPropria, type Par, type TipoDeSinal } from '../leitura';
 import { BotaoAcao, Escolha, Folha, Folio, Secao, Vazio } from '../comum';
 import { Retrato, type Expressao } from '../avatar/Retrato';
 import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
 import { leituraDaOrigem } from '../../motor/sistemas/origem';
 import { trajetoriaDaRelacao } from '../../motor/sistemas/relacoes';
+import { estadoDaRelacao, forcaDaRelacao } from '../../motor/sistemas/lacos';
+import { fraseDoSaber, pendentes, saberes } from '../../motor/sistemas/conhecimento';
+import { presentesDados, presentesPara } from '../../motor/sistemas/presentes';
+import { contaAtiva } from '../../motor/sistemas/redesBase';
+import { DesenhoObjeto } from './material/Objetos';
+import { NaRede } from './Rede';
+import { dinheiroCurto as precoCurto } from '../leituraMaterial';
 import { descricaoOrigem } from '../../motor/sistemas/social';
 import { saudeConhecida } from '../../motor/sistemas/corpo';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void }
+
+const ROTULO_SINAL: Record<TipoDeSinal, string> = { urgente: 'Precisa de você', importante: 'Importante', noticia: 'Notícia', oportunidade: 'Para retomar' };
 
 export function Pessoas({ vida, agir, aberta, abrir }: Props) {
   const c = circulos(vida);
@@ -56,9 +65,10 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
               const p = vida.pessoas[x.pessoaId!];
               return (
                 <li key={k}>
-                  <button type="button" className="atencao__item" onClick={() => abrir(p.id)}>
+                  <button type="button" className={`atencao__item atencao__item--${x.tipo}`} onClick={() => abrir(p.id)}>
                     <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={40} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} expressao={expressaoNpc(vida, p)} falecido={!p.vivo} />
-                    <span>{x.texto}</span>
+                    <span className="atencao__texto"><span className="atencao__tipo">{ROTULO_SINAL[x.tipo]}</span>{x.texto}</span>
+                    <span className="atencao__ir" aria-hidden="true">{p.vivo ? 'abrir →' : 'ver →'}</span>
                   </button>
                 </li>
               );
@@ -92,10 +102,26 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
         Quem convive com você continua perto sem esforço; quem está longe, esfria. Com a mesma pessoa, no mesmo ano, cada coisa a mais aproxima menos.
       </p>
 
+      <NaRede vida={vida} agir={agir} />
       <ConhecerAlguem vida={vida} agir={agir} />
       <Voce vida={vida} agir={agir} />
-      {pessoa && <FichaPessoa vida={vida} p={pessoa} vin={vida.vinculos[pessoa.id]} agir={agir} aoFechar={() => abrir(null)} />}
+      {pessoa && <FichaPessoa key={pessoa.id} vida={vida} p={pessoa} vin={vida.vinculos[pessoa.id]} agir={agir} aoFechar={() => abrir(null)} />}
     </div>
+  );
+}
+
+/**
+ * A leitura rápida da relação (REWORK 4): uma barra discreta da FORÇA do laço (afeto, confiança, atrito —
+ * `forcaDaRelacao`). Não substitui o tipo, o estado nem a síntese; o número fica para o leitor de tela.
+ */
+export function BarraRelacao({ vida, vin, grande }: { vida: Vida; vin: Vinculo; grande?: boolean }) {
+  const f = forcaDaRelacao(vida, vin);
+  const estado = estadoDaRelacao(vida, vin);
+  const tom = estado === 'rompido' || estado === 'conflito' ? 'tensa' : estado === 'tensao' || estado === 'esfriando' ? 'fria' : f >= 70 ? 'forte' : f >= 40 ? 'media' : 'fraca';
+  return (
+    <span className={`barra-relacao barra-relacao--${tom}${grande ? ' barra-relacao--grande' : ''}`} role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={f} aria-label={`Força da relação: ${f >= 70 ? 'forte' : f >= 40 ? 'média' : 'fraca'}`}>
+      <span className="barra-relacao__cheio" style={{ width: `${Math.max(4, f)}%` }} />
+    </span>
   );
 }
 
@@ -128,6 +154,7 @@ function CartaoNucleo({ vida, x, abrir }: { vida: Vida; x: Par; abrir: (id: stri
       <Retrato visual={p.visual} genero={p.genero} idade={ip} semente={p.pet?.semente ?? p.id} tamanho={84} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} expressao={expressaoNpc(vida, p)} />
       <span className="cartao-pessoa__nome">{p.nome || 'Bebê'}</span>
       <span className="cartao-pessoa__papel">{rotuloDe(vida, p, vin)}{p.especie ? '' : ` · ${ip} ${ip === 1 ? 'ano' : 'anos'}`}</span>
+      {!p.especie && <BarraRelacao vida={vida} vin={vin} />}
       {leitura && <span className="cartao-pessoa__leitura">{leitura}</span>}
       {esperando && gest && <span className="cartao-pessoa__nota">Um bebê a caminho — {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</span>}
     </button>
@@ -147,6 +174,7 @@ function Rostos({ vida, itens, abrir }: { vida: Vida; itens: Par[]; abrir: (id: 
               <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={64} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} expressao={expressaoNpc(vida, p)} />
               <span className="rosto__nome">{p.nome}</span>
               <span className="rosto__rotulo">{rotuloDe(vida, p, vin)}</span>
+              {!p.especie && <BarraRelacao vida={vida} vin={vin} />}
               <span className="rosto__prox">{etiqueta(vida, p, vin)}</span>
             </button>
           </li>
@@ -166,7 +194,7 @@ function Lista({ vida, itens, abrir }: { vida: Vida; itens: Par[]; abrir: (id: s
             <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={44} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} falecido={!p.vivo} expressao={expressaoNpc(vida, p)} />
             <span className="pessoa__nome">{p.nome || 'Bebê'}</span>
             <span className="pessoa__rotulo">{rotuloDe(vida, p, vin)}{p.vivo ? ` · ${idadePessoa(vida, p)}` : ''}</span>
-            <span className={`pessoa__prox${vin.tensao >= 55 && p.vivo ? ' pessoa__prox--tensa' : ''}`}>{etiqueta(vida, p, vin)}</span>
+            <span className={`pessoa__prox${vin.tensao >= 55 && p.vivo ? ' pessoa__prox--tensa' : ''}`}>{p.vivo && !p.especie && <BarraRelacao vida={vida} vin={vin} />}{etiqueta(vida, p, vin)}</span>
           </button>
         </li>
       ))}
@@ -267,7 +295,12 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   const trajetoria = !p.especie ? trajetoriaDaRelacao(vida, vin) : undefined;
   const historia = [...vin.historia].sort((a, b) => a.t - b.t);
   const costumes = historia.filter(RITUAL);
-  const sabe = historia.filter(DESCOBERTA);
+  // REWORK 4: o que você SABE é o fato guardado (`conhecimento`), não a frase "descobriu de onde veio". As descobertas
+  // antigas de jeito (curiosidade, preocupações) continuam pelo que dizem.
+  const fatos = !p.especie ? saberes(vida, p, vin) : [];
+  const sabe = historia.filter(h => DESCOBERTA(h) && !/^Descobriu de onde |^Entendeu o trabalho de /.test(h.texto) && !fatos.some(f => fraseDoSaber(vida, p, f) === h.texto));
+  const falta = !p.especie && p.vivo ? pendentes(vida, p, vin).length : 0;
+  const ganhou = presentesDados(p);
   const narrada = historia.filter(h => !RITUAL(h) && !DESCOBERTA(h));
   const importantes = narrada.filter(h => (h.peso ?? 1) >= 2);
   const mostrada = historiaToda || narrada.length <= 7 ? narrada : importantes.length >= 4 ? importantes.slice(-7) : narrada.slice(-7);
@@ -284,6 +317,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
           <div>
             <h2 className="ficha__nome">{p.nome || 'Bebê'} {!p.especie && <span className="ficha__sobrenome">{p.sobrenome}</span>}</h2>
             <p className="ficha__rotulo">{rotuloDe(vida, p, vin)}</p>
+            {p.vivo && !p.especie && <BarraRelacao vida={vida} vin={vin} grande />}
             <p className="ficha__meta">
               {p.vivo ? `${ip} ${ip === 1 ? 'ano' : 'anos'}` : `${anoDe(p.tNasc)} — ${p.tMorte ? anoDe(p.tMorte) : ''}`}
               {agora ? ` · ${agora}` : ''}
@@ -320,15 +354,22 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
           </div>
         )}
 
-        {(costumes.length > 0 || sabe.length > 0 || (!p.especie && p.vivo && ip >= 4)) && (
+        {p.vivo && !p.especie && <PresenteERede vida={vida} p={p} vin={vin} agir={agir} />}
+
+        {(costumes.length > 0 || sabe.length > 0 || fatos.length > 0 || (!p.especie && p.vivo && ip >= 4)) && (
           <div className="ficha__retrato-dela">
             {!p.especie && p.vivo && ip >= 4 && <p className="ficha__jeito">{flex(p.genero, 'Ele', 'Ela', 'Elu')} é {jeitoDe(p)}.</p>}
-            {sabe.length > 0 && (
+            {(fatos.length > 0 || sabe.length > 0) && (
               <>
                 <h3 className="ficha__subtitulo">O que você sabe {dele}</h3>
-                <ul className="ficha__sabe">{sabe.slice(-4).map((h, k) => <li key={k}>{h.texto}</li>)}</ul>
+                <ul className="ficha__sabe">
+                  {fatos.map(f => <li key={f.k}>{fraseDoSaber(vida, p, f)}</li>)}
+                  {sabe.slice(-3).map((h, k) => <li key={`h${k}`}>{h.texto}</li>)}
+                </ul>
+                {falta > 0 && p.vivo && <p className="nota">{fatos.length + sabe.length <= 1 ? 'Vocês ainda se conhecem pouco.' : 'Ainda há coisas que você não sabe.'}</p>}
               </>
             )}
+            {ganhou.length > 0 && <p className="ficha__jeito">Tem, presente seu: {ganhou.join(', ')}.</p>}
             {costumes.length > 0 && (
               <>
                 <h3 className="ficha__subtitulo">Coisas de vocês</h3>
@@ -407,4 +448,46 @@ function CaminhoDaAmizade({ vida, p, vin }: { vida: Vida; p: Pessoa; vin: Vincul
       ? 'Já houve um gesto correspondido entre vocês. Agora é tempo: convivendo, a amizade pode acontecer — se a afinidade ajudar.'
       : `Vocês convivem${descricaoOrigem(vida, vin) === 'por aí' ? '' : ` ${descricaoOrigem(vida, vin)}`}. Conviver abre a chance; uma amizade começa quando alguém dá um passo (chamar para algo) e o outro vem.`;
   return <p className="ficha__origem ficha__caminho" aria-label="Como uma amizade nasce">{texto}</p>;
+}
+
+/**
+ * REWORK 4: o presente (do catálogo das lojas, com o gosto da pessoa à vista) e o contato digital (seguir, deixar de
+ * seguir, bloquear) — na ficha de quem recebe, não num catálogo à parte.
+ */
+function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vinculo; agir: (a: Acao) => boolean }) {
+  const [presentes, setPresentes] = useState(false);
+  const conta = contaAtiva(vida);
+  const ip = idadePessoa(vida, p);
+  const bloqueado = vin.digital?.bloqueado !== undefined;
+  const lista = presentes ? presentesPara(vida, p.id).slice(0, 8) : [];
+  const GOSTO = { certeiro: 'a cara dela', bom: 'deve gostar', neutro: '' } as const;
+  return (
+    <div className="ficha__extras">
+      {bloqueado && <p className="ficha__nota-rede">Você bloqueou {p.nome} na rede. Enquanto isso, quase nada entre vocês acontece.</p>}
+      {idade(vida) >= 10 && !bloqueado && (
+        <div className="ficha__presente">
+          <button type="button" className="botao botao--discreto" aria-expanded={presentes} onClick={() => setPresentes(x => !x)}>{presentes ? 'Fechar os presentes' : `Dar um presente a ${p.nome}`}</button>
+          {presentes && (
+            <ul className="presentes">
+              {lista.map(x => (
+                <li key={x.coisa.id} className="presente">
+                  <DesenhoObjeto coisaId={x.coisa.id} tamanho={36} />
+                  <span className="presente__texto"><strong>{x.coisa.nome.charAt(0).toUpperCase() + x.coisa.nome.slice(1)}</strong><span className="nota">{precoCurto(x.preco)}{GOSTO[x.gosto] ? ` · ${GOSTO[x.gosto].replace('dela', p.genero === 'feminino' ? 'dela' : p.genero === 'masculino' ? 'dele' : 'delu')}` : ''}</span></span>
+                  <BotaoAcao vida={vida} acao={{ tipo: 'presentear', pessoaId: p.id, coisaId: x.coisa.id }} agir={agir} variante={x.gosto === 'certeiro' ? 'principal' : 'secundario'}>Dar</BotaoAcao>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {conta && ip >= 13 && (
+        <div className="grupo-acoes grupo-acoes--linha ficha__rede">
+          {!bloqueado && !vin.digital?.segue && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'seguir', pessoaId: p.id } }} agir={agir} variante="discreto">Seguir no Mural</BotaoAcao>}
+          {!bloqueado && vin.digital?.segue && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'deixar', pessoaId: p.id } }} agir={agir} variante="discreto">Deixar de seguir</BotaoAcao>}
+          {!bloqueado && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'bloquear', pessoaId: p.id } }} agir={agir} variante="perigo">Bloquear</BotaoAcao>}
+          {bloqueado && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'desbloquear', pessoaId: p.id } }} agir={agir} variante="secundario">Desbloquear</BotaoAcao>}
+        </div>
+      )}
+    </div>
+  );
 }

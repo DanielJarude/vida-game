@@ -118,6 +118,9 @@ describe('H3–H6 · herança ≠ quem continua', () => {
 
   it('imóvel, veículo e aplicação: cada bem tem um dono só', () => {
     const { v, b, a } = familia();
+    // A casa cabe na parte de quem a recebe (o que se testa aqui é o dono único, não o limite da parte — outro teste).
+    (v.financas.bens.find(x => x.id === 'icasa') as Imovel).valor = 450000;
+    v.morte!.heranca = calcularHeranca(v);
     const d = { bens: { icasa: v.morte ? Object.values(v.vinculos).find(x => x.romance)!.pessoaId : '', vcarro: a } };
     const v2 = decidirHeranca(v, d);
     const n = continuarComo(v2, b).vida;

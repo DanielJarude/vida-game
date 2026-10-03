@@ -27,7 +27,8 @@ export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario',
   const pode = podeTentar(d);
   if (ocultarImpossivel && d.grau === 'impossivel') return null;
   if (ocultarBloqueado && !pode) return null;
-  const aviso = d.grau === 'irregular' || d.grau === 'improvavel' ? d.motivo : undefined;
+  // REWORK 4: o 'pode, mas custa' (a semana que passa do que cabe) também é dito antes.
+  const aviso = d.grau === 'irregular' || d.grau === 'improvavel' || d.grau === 'permitido' ? d.motivo : undefined;
   const chance = mostrarChance && pode && d.chance !== undefined ? palavraChance(d.chance) : undefined;
   // Falta só na conta, e as aplicações cobrem: a saída aparece — com o que sai, dito antes. Nada é vendido sem este clique.
   const comResgate: Acao | undefined = !pode && d.resgate ? { tipo: 'resgatar_e', acao } : undefined;

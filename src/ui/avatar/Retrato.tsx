@@ -126,13 +126,22 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
     idoso:   { w: 35.5, hh: 45.5, cy: 45, jaw: 0.22, olho: 2.3, olhoY: -0.5, esp: 7.6, corpo: 0.98 }
   }[f];
   const adultoOuAdol = f === 'adol' || f === 'adulto' || f === 'meia' || f === 'idoso';
-  const w = G.w * (adultoOuAdol && masc ? 1.04 : adultoOuAdol && fem ? 0.97 : 1);
-  const hh = G.hh;
+  // REWORK 4: os traços modulares herdados (rosto, olhos, nariz, boca, sobrancelha). Ausentes: o desenho de sempre.
+  const ro = v.rosto;
+  const fw = ro === 'redondo' ? 1.04 : ro === 'longo' ? 0.95 : ro === 'coracao' ? 1.02 : 1;
+  const fh = ro === 'longo' ? 1.05 : ro === 'redondo' ? 0.97 : 1;
+  const fj = ro === 'quadrado' ? 1.35 : ro === 'redondo' ? 1.2 : ro === 'coracao' ? 0.72 : ro === 'longo' ? 0.9 : 1;
+  const w = G.w * (adultoOuAdol && masc ? 1.04 : adultoOuAdol && fem ? 0.97 : 1) * (f === 'bebe' ? 1 : fw);
+  const hh = G.hh * (f === 'bebe' ? 1 : fh);
   const cx = 50;
   const cy = G.cy;
   const topo = cy - hh / 2;
   const queixo = cy + hh / 2;
-  const jaw = w * (adultoOuAdol ? (masc ? G.jaw + 0.07 : fem ? G.jaw - 0.02 : G.jaw + 0.02) : G.jaw);
+  const jaw = w * (adultoOuAdol ? (masc ? G.jaw + 0.07 : fem ? G.jaw - 0.02 : G.jaw + 0.02) : G.jaw) * (f === 'bebe' ? 1 : fj);
+  const formaOlho = f === 'bebe' ? undefined : v.olhosForma;
+  const olhoRx = formaOlho === 'puxado' ? 1.22 : formaOlho === 'redondo' ? 1.08 : 1.15;
+  const olhoRy = formaOlho === 'puxado' ? 0.62 : formaOlho === 'redondo' ? 1.1 : formaOlho === 'caido' ? 0.88 : 0.95;
+  const grossura = v.sobrancelha === 'fina' ? 0.7 : v.sobrancelha === 'grossa' ? 1.45 : 1;
 
   const rosto = `M ${cx - w / 2} ${cy}
     C ${cx - w / 2} ${cy - hh * 0.63} ${cx + w / 2} ${cy - hh * 0.63} ${cx + w / 2} ${cy}
@@ -206,7 +215,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {/* Sobrancelhas */}
       {f !== 'bebe' && (
         <g stroke={f === 'idoso' ? misturar(cor, '#8a8580', 0.3) : misturar(cor, '#000000', 0.15)} strokeLinecap="round" fill="none"
-           strokeWidth={masc && adultoOuAdol ? 1.9 : 1.25}>
+           strokeWidth={(masc && adultoOuAdol ? 1.9 : 1.25) * grossura}>
           {/* Sobrancelha: o canto de dentro sobe na tristeza, desce na tensão. */}
           <path d={`M ${cx - esp - 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)} Q ${cx - esp} ${olhoY - 6.2 - (x === 'bem' ? 0.6 : 0)} ${cx - esp + 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)}`} />
           <path d={`M ${cx + esp - 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)} Q ${cx + esp} ${olhoY - 6.2 - (x === 'bem' ? 0.6 : 0)} ${cx + esp + 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)}`} />
@@ -216,10 +225,13 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {/* Olhos */}
       {[-1, 1].map(lado => (
         <g key={lado}>
-          <ellipse cx={cx + lado * esp} cy={olhoY} rx={G.olho * 1.15} ry={G.olho * (f === 'idoso' ? 0.8 : 0.95)} fill="#f7f2ea" />
-          <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={G.olho * 0.72} fill={iris} />
-          <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={G.olho * 0.36} fill="#141110" />
-          <circle cx={cx + lado * esp + G.olho * 0.28} cy={olhoY - G.olho * 0.3} r={G.olho * 0.22} fill="#ffffff" opacity={0.85} />
+          <ellipse cx={cx + lado * esp} cy={olhoY} rx={G.olho * olhoRx} ry={G.olho * (f === 'idoso' ? 0.8 : olhoRy)} fill="#f7f2ea" />
+          <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={G.olho * Math.min(0.72, olhoRy * 0.82)} fill={iris} />
+          <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={G.olho * Math.min(0.36, olhoRy * 0.42)} fill="#141110" />
+          <circle cx={cx + lado * esp + G.olho * 0.28} cy={olhoY - G.olho * 0.3 * olhoRy} r={G.olho * 0.22} fill="#ffffff" opacity={0.85} />
+          {/* A pálpebra: puxada (a linha de cima mais longa e reta), caída (o canto de fora desce). */}
+          {formaOlho === 'puxado' && <path d={`M ${cx + lado * esp - G.olho * 1.3} ${olhoY - G.olho * 0.45} Q ${cx + lado * esp} ${olhoY - G.olho * 0.9} ${cx + lado * esp + G.olho * 1.35} ${olhoY - G.olho * 0.6}`} fill="none" stroke={misturar(sombra, '#000000', 0.35)} strokeWidth={0.7} strokeLinecap="round" />}
+          {formaOlho === 'caido' && <path d={`M ${cx + lado * esp - lado * G.olho * 0.4} ${olhoY - G.olho * 0.95} Q ${cx + lado * esp + lado * G.olho * 0.6} ${olhoY - G.olho * 0.95} ${cx + lado * esp + lado * G.olho * 1.3} ${olhoY - G.olho * 0.2}`} fill="none" stroke={misturar(sombra, '#000000', 0.3)} strokeWidth={0.7} strokeLinecap="round" />}
           {fem && adultoOuAdol && (
             <path d={`M ${cx + lado * (esp + G.olho * 1.05)} ${olhoY - 0.6} l ${lado * 1.6} -1.4`} stroke="#1c1917" strokeWidth={0.9} strokeLinecap="round" />
           )}
@@ -247,8 +259,11 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
 
       {/* Nariz */}
       <path d={f === 'bebe' || f === 'crianca'
-        ? `M ${cx - 1.6} ${olhoY + 6.2} q 1.6 1.4 3.2 0`
-        : `M ${cx - 0.4} ${olhoY + 1.5} L ${cx - 1.6} ${olhoY + 7.6} Q ${cx} ${olhoY + 8.8} ${cx + 1.8} ${olhoY + 7.6}`}
+        ? `M ${cx - 1.6 * (v.nariz === 'largo' ? 1.3 : v.nariz === 'fino' ? 0.8 : 1)} ${olhoY + 6.2} q ${1.6 * (v.nariz === 'largo' ? 1.3 : v.nariz === 'fino' ? 0.8 : 1)} 1.4 ${3.2 * (v.nariz === 'largo' ? 1.3 : v.nariz === 'fino' ? 0.8 : 1)} 0`
+        : v.nariz === 'largo' ? `M ${cx - 0.4} ${olhoY + 1.5} L ${cx - 1.4} ${olhoY + 6.6} Q ${cx - 3.4} ${olhoY + 7.6} ${cx - 2.2} ${olhoY + 8.6} Q ${cx} ${olhoY + 9.4} ${cx + 2.2} ${olhoY + 8.6} Q ${cx + 3.4} ${olhoY + 7.6} ${cx + 1.6} ${olhoY + 6.8}`
+          : v.nariz === 'fino' ? `M ${cx - 0.3} ${olhoY + 1.5} L ${cx - 1.1} ${olhoY + 7.8} Q ${cx} ${olhoY + 8.6} ${cx + 1.2} ${olhoY + 7.8}`
+            : v.nariz === 'arrebitado' ? `M ${cx - 0.4} ${olhoY + 2.5} Q ${cx - 1.8} ${olhoY + 6.4} ${cx - 1.5} ${olhoY + 7.2} Q ${cx} ${olhoY + 7.4} ${cx + 1.7} ${olhoY + 6.6}`
+              : `M ${cx - 0.4} ${olhoY + 1.5} L ${cx - 1.6} ${olhoY + 7.6} Q ${cx} ${olhoY + 8.8} ${cx + 1.8} ${olhoY + 7.6}`}
         fill="none" stroke={misturar(sombra, '#000000', 0.12)} strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" />
 
       {/* Boca */}
@@ -259,8 +274,16 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
             const larg = (fem ? 3.6 : 3.8) * (x === 'tenso' ? 0.85 : x === 'bem' ? 1.08 : 1);
             const curva = x === 'bem' ? (fem ? 3.4 : 2.8) : x === 'tenso' ? 0.3 : x === 'abatido' ? -1.6 : x === 'doente' ? -0.7 : x === 'cansado' ? 0.8 : fem ? 2.4 : 1.6;
             const cantos = olhoY + 12.2 + (x === 'abatido' ? 0.8 : 0);
-            return <path d={`M ${cx - larg} ${cantos} Q ${cx} ${cantos + curva} ${cx + larg} ${cantos}`}
-              fill={fem && adultoOuAdol && curva > 1 ? '#b9606b' : 'none'} stroke={fem && adultoOuAdol ? '#a85460' : misturar(sombra, '#6a2e2e', 0.45)} strokeWidth={fem && adultoOuAdol ? (curva > 1 ? 0.8 : 1.2) : 1.3} strokeLinecap="round" />;
+            const lb = v.boca === 'fina' ? 0.92 : v.boca === 'cheia' ? 1.08 : 1;
+            const traco = (fem && adultoOuAdol ? (curva > 1 ? 0.8 : 1.2) : 1.3) * (v.boca === 'fina' ? 0.75 : v.boca === 'cheia' ? 1.15 : 1);
+            return (
+              <>
+                {/* A boca cheia: o lábio de baixo aparece, em qualquer rosto. */}
+                {v.boca === 'cheia' && <path d={`M ${cx - larg * lb * 0.8} ${cantos + 0.6} Q ${cx} ${cantos + Math.max(curva, 0.4) + 2.4} ${cx + larg * lb * 0.8} ${cantos + 0.6}`} fill={misturar(sombra, '#a0505a', 0.35)} opacity={0.55} />}
+                <path d={`M ${cx - larg * lb} ${cantos} Q ${cx} ${cantos + curva} ${cx + larg * lb} ${cantos}`}
+                  fill={fem && adultoOuAdol && curva > 1 ? '#b9606b' : 'none'} stroke={fem && adultoOuAdol ? '#a85460' : misturar(sombra, '#6a2e2e', 0.45)} strokeWidth={traco} strokeLinecap="round" />
+              </>
+            );
           })()}
 
       {/* Barba e bigode: de quem tem (a escolha é da pessoa; a barba aparece do fim da adolescência em diante) */}
@@ -558,12 +581,31 @@ const escolha = <T,>(xs: readonly T[], semente: string, sal = 0): T => xs[(hash(
 
 const FUNDO_PET: Record<string, string> = { cao: '#dfe6f0', gato: '#e6e0ea', roedor: '#e9e2d4', coelho: '#e3ebe2', ave: '#e8e4d2', peixe: '#cfe3ea', reptil: '#dfe8d4' };
 
+/**
+ * REWORK 4: o fundo do retrato do bicho é escolhido pelo CONTRASTE com a pelagem (o gato branco não some mais num
+ * fundo quase branco; o cachorro preto não some num fundo escuro) — a mesma ideia do retrato das pessoas. E um
+ * contorno discreto segura a silhueta em qualquer cor.
+ */
+const FUNDOS_PET = ['#dfe6f0', '#e6e0ea', '#e9e2d4', '#c9d6c4', '#b8c7d4', '#4a5c68', '#5b4b60', '#4a6052', '#6b5642', '#39424a'];
+export function fundoDoPet(cor: string | undefined, grupo: string, semente: string): string {
+  if (!cor || !/^#[0-9a-f]{6}$/i.test(cor)) return FUNDO_PET[grupo] ?? '#dfe6f0';
+  const nota = FUNDOS_PET.map(f => ({ f, n: contraste(f, cor) }));
+  const melhor = Math.max(...nota.map(x => x.n));
+  const bons = nota.filter(x => x.n >= Math.max(2.2, melhor * 0.82));
+  return (bons.length ? bons : nota.sort((x, y) => y.n - x.n).slice(0, 1))[hash(semente) % Math.max(1, bons.length)]?.f ?? FUNDO_PET[grupo];
+}
+
 function RetratoPet({ especie, tamanho, rotulo, semente, porte }: { especie: Especie; tamanho: number; rotulo?: string; semente: string; porte?: Porte }) {
   const a = animal(especie);
   const Desenho = DESENHO_PET[especie] ?? DESENHO_PET[a.grupo === 'gato' ? 'gato' : 'cachorro'];
+  const cor = a.grupo === 'gato' ? morfologiaGato(semente).cor : a.grupo === 'cao' ? morfologiaCao(semente, porte).cor : undefined;
+  const fundo = fundoDoPet(cor, a.grupo, semente);
+  const claro = cor ? luminancia(cor) > 0.45 : false;
   return (
-    <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} style={{ background: FUNDO_PET[a.grupo] ?? '#dfe6f0' }} role="img" aria-label={rotulo ?? palavraDoBicho(especie, 'masculino', false)} data-especie={especie}>
-      <Desenho semente={semente} porte={porte} />
+    <svg className="retrato retrato--pet" viewBox="0 0 100 100" width={tamanho} height={tamanho} style={{ background: fundo }} role="img" aria-label={rotulo ?? palavraDoBicho(especie, 'masculino', false)} data-especie={especie} data-fundo={fundo}>
+      <g style={{ filter: `drop-shadow(0 0 0.7px ${claro ? 'rgba(20,16,12,0.75)' : 'rgba(255,250,240,0.55)'})` }}>
+        <Desenho semente={semente} porte={porte} />
+      </g>
     </svg>
   );
 }

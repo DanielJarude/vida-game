@@ -30,7 +30,11 @@ import type { Rng } from '../rng';
 import { pesoDaSaudeNoTrabalho } from './saude';
 import { pesoNoDesempenho } from './sobrecarga';
 import { trabalhoDePalco } from './palco';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
+import { areaParaTrilha, viveuAArea } from './areasDoOficio';
+import { areaProfissional } from '../dados/areasProfissionais';
+import { OFICIOS } from './oficios';
+import { comArtigo, guardarOrganizacao, naOrganizacao, vagaDaOrganizacao } from './organizacoes';
 import type { Dominio, Emprego, Vida } from '../tipos';
 import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
 import { ajusteClientela, ajusteContratacao, fatorDemissao, reajusteReal } from './economia';
@@ -239,6 +243,11 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
     }
   }
   if (via === 'promocao' && oc.experiencia && exp < oc.experiencia) return bloqueio('requisito', `Pede ${anosTxt(oc.experiencia)} de estrada na área.`);
+  // A vaga que procura uma área de aprofundamento reconhece quem a escolheu e viveu; para quem não, é aposta.
+  if (oc.areaProfissional && oc.nivel >= 4 && via !== 'promocao' && !viveuAArea(v, oc.areaProfissional)) {
+    chance *= 0.4;
+    return { grau: 'improvavel', chance, motivo: `Procuram quem já trabalha com ${oc.areaProfissional}.` };
+  }
   if (v.financas.negativado && oc.trilha === 'financas') chance *= 0.3;
   return { grau: chance < 0.25 ? 'improvavel' : 'permitido', chance };
 }
@@ -322,6 +331,9 @@ export function vagasDisponiveis(v: Vida): { oc: Ocupacao; veredito: Veredito }[
   return OCUPACOES.map(oc => ({ oc, veredito: elegibilidade(v, oc) }));
 }
 
+/** A vaga é de uma organização com nome (empregado comum — não concurso, farda, clube, palco, conta própria). */
+export const temOrganizacao = (oc: Ocupacao) => !['domestico', 'cuidado', 'limpeza'].includes(oc.trilha) && !oc.concurso && !eDasForcas(oc) && !oc.entrada && !oc.modalidade && ['clt', 'temporario', 'estagio', 'aprendiz'].includes(oc.contrato);
+
 /** Autônomos e informais não passam por entrevista: começam a pegar trabalho. */
 export const porContaPropria = (oc: Ocupacao) => (oc.contrato === 'autonomo' || oc.contrato === 'informal') && !oc.entrada;
 
@@ -360,10 +372,26 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
     formacaoAte: oc.formacaoInicial ? v.t + oc.formacaoInicial.meses : undefined,
     posAposentadoria: t.aposentadoria ? true : undefined
   };
+  // REWORK 4: quem contrata tem nome — uma organização do lugar e do setor (`organizacoes`), a mesma que oferecia a
+  // vaga. O sorteio genérico acima continua acontecendo (o acaso da vida é o mesmo); o nome é que passa a ser de alguém.
+  if (temOrganizacao(oc)) {
+    const org = vagaDaOrganizacao(v.moradia.municipioId, oc.setor, oc.id, anoDe(v.t));
+    if (org) {
+      const antes = t.historico.filter(h => h.orgId === org.id).pop();
+      guardarOrganizacao(v, org);
+      e.orgId = org.id;
+      e.empregador = comArtigo(org.nome);
+      if (antes) escrever(v, { texto: `Voltou a trabalhar ${naOrganizacao(org.nome)}, ${Math.max(1, Math.round((v.t - antes.tFim) / 12))} anos depois de sair.`, relevancia: 'biografia', tema: 'trabalho' });
+    }
+  }
   t.atual = e;
-  // A área escolhida vai junto para o próximo trabalho da mesma profissão (é do profissional, não do emprego).
-  const antes = [...t.historico].reverse().find(h => h.especialidade && ocupacaoOuNula(h.ocupacaoId)?.trilha === oc.trilha);
-  if (antes) e.especialidade = antes.especialidade;
+  // A área escolhida é da PESSOA (`areasDoOficio`): vai para todo trabalho do mesmo ofício — outra trilha dele (dev → dados),
+  // uma carreira retomada, um emprego depois de anos parado. O mercado paga pela área que se domina.
+  const area = areaParaTrilha(v, oc.trilha);
+  if (area) {
+    e.especialidade = area;
+    if (clientela === undefined) e.salario = Math.round(e.salario * (areaProfissional(area)?.salario ?? 1) / 10) * 10;
+  }
   // Médico: a área é a do título (a residência), não uma escolha do emprego; a faixa de renda vem junto.
   const areaMed = areaMedica(v, oc);
   if (areaMed) e.especialidade = areaMed;
@@ -497,6 +525,9 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   t.experiencia[oc.trilha] = (t.experiencia[oc.trilha] ?? 0) + (e.carga === 'parcial' ? 8 : 12);
   const pratica = PRATICA_DO_TRABALHO[oc.trilha];
   if (pratica) for (const [d, w] of Object.entries(pratica) as [Dominio, number][]) praticar(v, r, d, w, 1);
+  // A área de aprofundamento exercita a sua competência (sorteio derivado: não mexe no acaso do resto da vida).
+  const daArea = areaProfissional(e.especialidade)?.pratica;
+  if (daArea && OFICIOS[oc.trilha]) { const ra = rngDe(v.id, 'area', v.t); for (const [d, w] of Object.entries(daArea) as [Dominio, number][]) praticar(v, ra, d, w, 1); }
   if (oc.nivel >= 4 && oc.promocao !== 'clientela') praticar(v, r, 'lideranca', 0.4, 1);
   if (contribui(e.contrato)) t.contribuicao += 12;
   if (eMilitar(oc)) v.corpo.forma = clamp(v.corpo.forma + 4);
@@ -515,7 +546,9 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     // A semana maior do que a vida: cansaço erra (`sistemas/sobrecarga`).
     + pesoNoDesempenho(v)
     // O que a carreira construiu aqui (casos, turmas, projetos que deram certo) e a área que se domina.
-    + Math.min(6, (e.feitos ?? 0) * 1.5) + (e.especialidade ? 2 : 0);
+    + Math.min(6, (e.feitos ?? 0) * 1.5) + (e.especialidade ? 2 : 0)
+    // A vaga que procura uma área: quem a domina rende mais nela; quem entrou de aposta, menos no começo.
+    + (oc.areaProfissional ? (viveuAArea(v, oc.areaProfissional) ? 3 : -4) : 0);
   e.desempenho = clamp(Math.round(e.desempenho * 0.5 + alvo * 0.5 + r.normal() * 8));
 
   // Estresse do cargo
@@ -754,7 +787,9 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
  * carreira que já é assim (soldado → cabo, tenente → capitão).
  */
 export function degrausAcima(oc: Ocupacao): Ocupacao[] {
-  return daTrilha(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso && x.contrato !== 'estagio' && x.entrada !== 'negocio' && x.entrada !== 'eleicao' && !x.formacaoInicial
+  return daTrilha(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && !x.concurso
+    // A vaga de uma área (segurança, produto) se alcança por candidatura, não pela escada — salvo dentro da mesma área (analista → cientista de dados).
+    && (!x.areaProfissional || x.areaProfissional === oc.areaProfissional) && x.contrato !== 'estagio' && x.entrada !== 'negocio' && x.entrada !== 'eleicao' && !x.formacaoInicial
     && (x.entrada !== 'oportunidade' || oc.entrada === 'oportunidade' || !!oc.formacaoInicial || eMilitar(oc))
     // O modelo de trabalho não muda sozinho: quem é empregado não é "promovido" a trabalhar por conta (nem o contrário) — isso é escolha, com a vaga dizendo o que é.
     && porContaPropria(x) === porContaPropria(oc)

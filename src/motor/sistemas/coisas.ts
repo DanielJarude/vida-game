@@ -22,6 +22,7 @@ import { clamp, rngDe } from '../rng';
 import { escrever, idade, novoId } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { coisa, COISAS, type Coisa, type LojaDeCoisas } from '../dados/coisas';
+import { variantesDaCoisa } from '../dados/pertences';
 import { economiaLocal, municipio, nivelDeOferta, paisDaCidade, pertoDaAgua } from '../dados/lugares';
 import { pagar, vereditoDePagar } from './dinheiro';
 import { autonomia } from './autonomia';
@@ -90,7 +91,12 @@ export function comprarCoisa(v: Vida, id: string): string {
   const c = coisa(id)!;
   const preco = precoDaCoisa(v, id);
   pagar(v, preco);
-  (v.financas.coisas ??= []).push({ id: novoId(v, 'cs'), coisaId: id, t: v.t, preco, estado: 100 });
+  const nova: CoisaTida = { id: novoId(v, 'cs'), coisaId: id, t: v.t, preco, estado: 100 };
+  // A cor e o acabamento desta coisa (o violão de madeira escura, a raquete vermelha): da compra para sempre.
+  const vs = variantesDaCoisa(id);
+  const x = vs[Math.floor(rngDe(nova.id, 'cor').next() * vs.length)];
+  nova.cor = x.cor; nova.acabamento = x.nome;
+  (v.financas.coisas ??= []).push(nova);
   // Só o que marca vai para a Linha da Vida (o primeiro instrumento, o primeiro computador, o piano); o resto é compra.
   const marca = c.loja === 'instrumentos' || id === 'computador' || id === 'notebook' || preco >= 8000;
   if (marca) escrever(v, { texto: `Comprou ${c.artigo} ${c.nome}.`, relevancia: c.loja === 'instrumentos' || id === 'piano' ? 'biografia' : 'cotidiano', tema: c.loja === 'instrumentos' ? 'lazer' : 'casa', escolha: true });

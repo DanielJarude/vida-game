@@ -1517,6 +1517,7 @@ const REINO_UNIDO: PerfilDePais = {
     // Student Finance: empréstimo de mensalidade e manutenção, pago só acima
     // de um limiar de renda (Plan 5) — sem teto de renda para tomar.
     credito: { nome: 'empréstimo estudantil (Student Finance)' },
+    publicaDiferida: true,
     cotas: false,
     privadaComum: false
   },

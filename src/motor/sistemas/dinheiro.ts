@@ -28,7 +28,9 @@ import { paisDaPessoa, paisDaVida } from '../mundo/vida';
 import { salarioMinimoDoPais } from '../mundo/economia';
 import { perfilDaVida } from '../mundo/vida';
 import { rendaDeImagem } from './notoriedade';
-import { ajudaMensalDaFamilia, apoioPossivel, cambioDaFamilia, contribuicaoEmCasa, familiaPagaCursinho, familiaPagaEstudo, mesadaDaFamilia, responsaveis } from './origem';
+import { rendaDaRede } from './redesBase';
+import { ajudaMensalDaFamilia, apoioEmCasa, apoioPossivel, cambioDaFamilia, contribuicaoEmCasa, familiaPagaCursinho, mesadaDaFamilia, responsaveis } from './origem';
+import { custoDoEstudo } from './custoDoEstudo';
 import { rendaDoPalcoParalelo } from './palco';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { remuneracaoDe } from './renda';
@@ -131,6 +133,9 @@ function entradasProprias(v: Vida): LinhaRazao[] {
   // A banda que toca por fora: o que o palco deixou no último ano (quem vive do palco já tem isso como renda do trabalho).
   const palco = rendaDoPalcoParalelo(v);
   if (palco > 0) out.push({ rotulo: 'Shows e apresentações (média do último ano)', valor: palco, grupo: 'renda', de: 'eu' });
+  // REWORK 4: a conta monetizada nas redes (`redesBase`).
+  const rede = rendaDaRede(v);
+  if (rede > 0) out.push({ rotulo: 'Publicidade e parcerias na rede', valor: rede, grupo: 'renda', de: 'eu' });
   const imagem = rendaDeImagem(v);
   if (imagem > 0) out.push({ rotulo: 'Patrocínio e publicidade', valor: imagem, grupo: 'renda', de: 'eu' });
   if (v.trabalho.aposentadoria) out.push({ rotulo: temFato(v, 'bpc') ? rotuloAssistencia(v) : 'Aposentadoria', valor: Math.round(v.trabalho.aposentadoria.beneficio * 13 / 12), grupo: 'renda', de: 'governo' });
@@ -204,7 +209,12 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
     const parteEmCasa = contribuicaoEmCasa(v);
     if (propria > 0 && parteEmCasa > 0) sai('Ajuda nas contas de casa', propria * parteEmCasa, 'moradia');
     comuns(v, sai, c, true);
-    const livre = propria - somaSaidas(saidas);
+    // REWORK 4: fazer 18 em casa não é virar independente — a família segue ajudando com o essencial (`origem.apoioEmCasa`).
+    const essenciais = saidas.filter(l => l.grupo === 'transporte' || l.grupo === 'saude' || l.grupo === 'educacao').reduce((s, l) => s - l.valor, 0)
+      + saidas.filter(l => l.grupo === 'lazer').reduce((s, l) => s - l.valor, 0) * 0.5;
+    const apoio = apoioEmCasa(v, essenciais, propria);
+    if (apoio > 0) entradas.push({ rotulo: 'A família ajuda com os seus gastos', valor: apoio, grupo: 'renda', de: 'familia' });
+    const livre = propria + apoio - somaSaidas(saidas);
     if (propria > 0) sai('Gastos pessoais e lazer', estilo.lazerBase * c * 0.6 + Math.max(0, livre - estilo.lazerBase * c * 0.6) * estilo.parte, 'lazer');
     return fechar(v, arranjo, entradas, saidas, daCasa);
   }
@@ -315,11 +325,9 @@ function comuns(v: Vida, sai: (r: string, x: number, g: LinhaRazao['grupo']) => 
   }
   const tratamentos = v.corpo.condicoes.filter(x => x.tratando && x.cronica).length;
   if (tratamentos) sai('Remédios e consultas', 180 * tratamentos, 'saude');
-  const m = v.educacao.matricula;
-  if (m && !m.trancado && m.mensalidade > 0 && m.financiamento !== 'fies') {
-    const pagoPelosPais = Math.min(m.mensalidade, familiaPagaEstudo(v));
-    sai(pagoPelosPais > 0 ? 'Mensalidade (a parte que não é da família)' : 'Mensalidade da faculdade', m.mensalidade - pagoPelosPais, 'educacao');
-  }
+  // O regime da matrícula decide se há mensalidade (`custoDoEstudo`): a pública gratuita, a bolsa e o crédito não cobram no mês.
+  const ce = custoDoEstudo(v);
+  if (ce && ce.regime === 'paga') sai(ce.daFamilia > 0 ? 'Mensalidade (a parte que não é da família)' : 'Mensalidade da faculdade', ce.doEstudante, 'educacao');
   if (fazCursinho(v)) sai('Cursinho', (familiaPagaCursinho(v) ? 0 : 450) * c, 'educacao');
   for (const rot of v.rotinas) {
     const custo = CUSTO_ROTINA.de(v, rot);

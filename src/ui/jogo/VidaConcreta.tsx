@@ -10,7 +10,7 @@
 import { LOJAS_DE_COISAS, ICONE_DA_LOJA } from './material/Lugares';
 import { NOME_LOJA, O_QUE_A_LOJA_VENDE } from '../../motor/dados/coisas';
 import { temLojaNaCidade } from '../../motor/sistemas/coisas';
-import { SuasCoisas } from './Casa';
+import { Pertences } from './Pertences';
 import { useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -58,7 +58,6 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'casa' && (
           <div className="casa">
             <Lar vida={vida} agir={agir} abrir={setLugar} />
-            <SuasCoisas vida={vida} agir={agir} abrir={setLugar} />
             <Independencia vida={vida} agir={agir} irSecao={irSecao} />
             {i >= 18 && <ViverACasa vida={vida} agir={agir} />}
           </div>
@@ -71,6 +70,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
           </div>
         )}
         {secao === 'compras' && <Compras vida={vida} agir={agir} abrir={setLugar} />}
+        {secao === 'pertences' && <Pertences vida={vida} agir={agir} abrir={setLugar} />}
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
       </div>
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}

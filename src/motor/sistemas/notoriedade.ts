@@ -24,6 +24,7 @@ import { escrever } from '../nucleo';
 import { flex, ge } from '../texto';
 import { sinalDoEstilo } from '../dados/estilo';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
+import { nomeDaRede } from './redesBase';
 
 /** Trilhas em que o trabalho, por si, põe o nome na frente do público. */
 const TRILHAS_DE_NOME = new Set(['cena', 'musica', 'danca', 'conteudo', 'literatura']);
@@ -92,6 +93,9 @@ export function candidatosDaNotoriedade(v: Vida): { valor: number; fonte: FonteD
     const grande = (n.porte ?? 1) >= 3 ? 1 : (n.porte ?? 1) === 2 ? 0.5 : 0.2;
     cands.push({ valor: Math.max(0, (n.reputacao ?? 0) - 40) * grande * 0.7 + Math.max(0, (n.unidades ?? 1) - 1) * 4, fonte: 'negocio' });
   }
+  // REWORK 4: a rede também dá nome (muitos seguidores com credibilidade), como mais um motivo — não o único.
+  const rede = nomeDaRede(v);
+  if (rede > 0) cands.push({ valor: rede, fonte: 'rede' });
   return cands.map(c => ({ valor: clamp(c.valor), fonte: c.fonte }));
 }
 
@@ -128,6 +132,7 @@ export function porOrigem(v: Vida, f: FonteDoNome | undefined = origemDoNome(v))
   if (f === 'arte') return 'pela obra e pelos trabalhos';
   if (f === 'politica') return 'pela vida pública';
   if (f === 'negocio') return 'pelo negócio';
+  if (f === 'rede') return 'pelo que publica nas redes';
   // Sucessão: sem nome próprio, o que o público conhece é o sobrenome — a associação com quem veio antes (nunca o mérito dela).
   const antes = [...(v.linhagem?.geracoes ?? [])].reverse().find(g => (g.notoriedade?.pico ?? 0) >= 25);
   if (!f && antes) { const g = v.eu.tratamento ?? v.eu.genero; return `por ser ${g === 'masculino' ? 'filho' : g === 'feminino' ? 'filha' : 'filhe'} de ${antes.nome} ${antes.sobrenome}`; }
@@ -182,7 +187,7 @@ export function processarNotoriedade(v: Vida, _r?: Rng): void {
   // Subiu de patamar pela primeira vez: é biografia.
   if (fd > fa && fd >= 2 && v.fatos[`noto_faixa_${fd}`] === undefined) {
     v.fatos[`noto_faixa_${fd}`] = v.t;
-    const de = alvo.fonte === 'esporte' ? 'pelo que fez em campo' : alvo.fonte === 'arte' ? 'pela obra' : alvo.fonte === 'politica' ? 'pela vida pública' : 'pelo negócio';
+    const de = alvo.fonte === 'esporte' ? 'pelo que fez em campo' : alvo.fonte === 'arte' ? 'pela obra' : alvo.fonte === 'politica' ? 'pela vida pública' : alvo.fonte === 'rede' ? 'pelo que publica nas redes' : 'pelo negócio';
     const texto = fd >= 4 ? `Virou ${flex(ge(v), 'um nome', 'um nome', 'um nome')} que o país inteiro reconhece, ${de}.`
       : fd === 3 ? `Ficou ${flex(ge(v), 'famoso', 'famosa', 'famose')} ${de}: gente que você nunca viu sabe o seu nome.`
         : `Passou a ser ${flex(ge(v), 'reconhecido', 'reconhecida', 'reconhecide')} na rua ${de}.`;

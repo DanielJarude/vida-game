@@ -19,7 +19,7 @@
  */
 
 export type Area = 'linha' | 'voce' | 'pessoas' | 'formacao' | 'trabalho' | 'tempo' | 'vida';
-export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'cidade';
+export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'pertences' | 'cidade';
 
 /** Um destino: uma área, uma seção de Vida — ou um nome antigo que continua aceito. */
 export type Aba = Area | SecaoVida | 'estudos';
@@ -28,7 +28,7 @@ export interface Lugar { area: Area; secao?: SecaoVida }
 
 export function resolverDestino(d: Aba): Lugar {
   if (d === 'estudos') return { area: 'formacao' };
-  if (d === 'casa' || d === 'dinheiro' || d === 'compras' || d === 'cidade') return { area: 'vida', secao: d };
+  if (d === 'casa' || d === 'dinheiro' || d === 'compras' || d === 'pertences' || d === 'cidade') return { area: 'vida', secao: d };
   return { area: d };
 }
 
@@ -46,6 +46,8 @@ export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'casa', rotulo: 'Casa', oque: 'Onde e com quem você mora; sair de casa, voltar' },
   { id: 'dinheiro', rotulo: 'Dinheiro', oque: 'O mês, o que é seu e o que deve; a ajuda da família' },
   { id: 'compras', rotulo: 'Compras', oque: 'Imóveis, carros, motos, bicicletas, óculos e roupas, banco' },
+  // REWORK 4: o que é seu (e o que dá para fazer com isso) saiu de Casa — Casa é onde e com quem se mora.
+  { id: 'pertences', rotulo: 'Pertences', oque: 'O que é seu: usar (tocar, jogar, fotografar), o estado, vender' },
   { id: 'cidade', rotulo: 'Cidade', oque: 'Onde você vive, quanto custa viver aqui, o trajeto, mudar de cidade ou de país' }
 ];
 
@@ -78,6 +80,8 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'mudar_pais', quero: 'Mudar de país, estudar ou trabalhar fora', lugar: { area: 'vida', secao: 'cidade' }, la: '"Mudar de país": o motivo, o país (com a porta de cada um), a cidade' },
   { id: 'custo_de_vida', quero: 'Saber quanto custa viver aqui', lugar: { area: 'vida', secao: 'cidade' }, la: 'a moeda, o custo do mês, o salário mínimo, a saúde' },
   { id: 'nacionalidade', quero: 'Onde nasci, minha nacionalidade, onde moro', lugar: { area: 'voce' }, la: '"No mundo"' },
+  { id: 'pertences', quero: 'Usar o que é meu: tocar o violão, jogar, fotografar', lugar: { area: 'vida', secao: 'pertences' }, la: 'cada coisa sua, com o que dá para fazer com ela' },
+  { id: 'rede', quero: 'Publicar, ver seguidores, a rede social', lugar: { area: 'pessoas' }, la: '"Na rede"' },
   { id: 'dinheiro', quero: 'Ver meu dinheiro, pedir ajuda à família', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês, o que é seu, a família' },
   { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce' }, la: '"Aparência e estilo"' },
   { id: 'saude', quero: 'Cuidar da saúde, da cabeça', lugar: { area: 'voce' }, la: 'humor, cabeça e saúde' },

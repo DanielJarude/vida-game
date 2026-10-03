@@ -36,6 +36,8 @@ import { responderChamado, rotulosDoChamado } from './iniciativas';
 import { ativo as envolvimentoAtivo, proporPorFora, sabeQueAndaNisso } from './ilicito';
 import { contextoDaRelacao, conversarNoApp, encontroDoApp, etapaDoApp, pesoDoContexto, registrarFase } from './relacoes';
 import { executarDesculpas, INTERACOES_DE_CONFLITO } from './conflitos';
+import { INTERACOES_VIVIDAS } from './gestos';
+import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
 import { estadoDaRelacao } from './lacos';
 
 
@@ -321,10 +323,12 @@ export const INTERACOES: Interacao[] = [
   },
   {
     id: 'ligar',
-    quando: c => humano(c) && c.eu >= 9 && c.ip >= 8 && !parceriaAtiva(c) && !soEx(c) && !distante(c) && (c.longe || semContatoHa(c) >= 2) && !c.casa,
+    quando: c => humano(c) && c.eu >= 9 && c.ip >= 8 && !parceriaAtiva(c) && !soEx(c) && !distante(c) && (c.longe || semContatoHa(c) >= 2) && !c.casa && c.vin.digital?.bloqueado === undefined,
     rotulo: c => (c.eu >= 60 || c.ip >= 60 ? `Ligar para ${c.p.nome}` : `Mandar mensagem para ${c.p.nome}`),
     executar: c => {
       const n = habito(c, 'ligar');
+      // O contato digital conta (`redes`): a mensagem segura parte da relação à distância.
+      (c.vin.digital ??= {}).mensagem = c.v.t;
       afeto(c, 3); acalmar(c, 4);
       costume(c, n, 4, 'Uma ligação de vez em quando manteve vocês perto, mesmo longe.');
       return { resultado: variar(n, [`${c.p.nome} atendeu no segundo toque. Falaram quarenta minutos.`, `Uma troca de mensagens que foi da piada antiga à notícia nova.`, `${c.p.nome} mandou áudio de volta. Longo.`]) };
@@ -778,17 +782,19 @@ export const INTERACOES: Interacao[] = [
   },
   {
     id: 'conhecer',
-    quando: c => (c.papel === 'saindo' || (parceriaAtiva(c) && c.v.t - (c.vin.romance?.tInicio ?? c.vin.tInicio) < 36)) && descobertasPendentes(c).length > 0 && pertoOuEmCasa(c),
+    quando: c => (c.papel === 'saindo' || (parceriaAtiva(c) && c.v.t - (c.vin.romance?.tInicio ?? c.vin.tInicio) < 36)) && pendentes(c.v, c.p, c.vin).length > 0 && Object.keys(c.vin.habitos ?? {}).filter(k => k.startsWith('conhecer:')).length < 3 && pertoOuEmCasa(c),
     prioridade: c => (c.papel === 'saindo' ? 1.5 : 0.5),
     rotulo: c => `Conhecer melhor ${c.p.nome}`,
     destaque: true,
     executar: c => {
-      const d = descobertasPendentes(c)[0];
-      habito(c, `conhecer:${d.id}`);
+      // REWORK 4: a descoberta grava o FATO (`conhecimento`): "Eleanor nasceu em Adelaide", não "descobriu de onde veio".
+      const k = pendentes(c.v, c.p, c.vin)[0];
+      habito(c, `conhecer:${k}`);
+      const s = revelar(c.v, c.p, c.vin, k)!;
       const comp = compatibilidade(c.v, c.p);
       envolver(c, 3 + comp * 4); afeto(c, 3); confiar(c, 2); cuidou(c);
-      lembrarCom(c.v, c.p.id, d.marco, 'descoberta', 1);
-      return { resultado: d.texto + (comp < -0.2 ? ' Vocês descobriram também que discordam de muita coisa.' : comp > 0.35 ? ' Quanto mais conversam, mais parece que se conhecem há tempo.' : '') };
+      lembrarCom(c.v, c.p.id, fraseDoSaber(c.v, c.p, s), 'descoberta', 1);
+      return { resultado: cenaDaDescoberta(c.v, c.p, s) + (comp < -0.2 ? ' Vocês descobriram também que discordam de muita coisa.' : comp > 0.35 ? ' Quanto mais conversam, mais parece que se conhecem há tempo.' : '') };
     }
   },
   {
@@ -1048,7 +1054,9 @@ export const INTERACOES: Interacao[] = [
     }
   },
   // Relações 2.0: discordar, cobrar, fazer as pazes, encerrar a amizade, provocar o rival (`conflitos`).
-  ...INTERACOES_DE_CONFLITO
+  ...INTERACOES_DE_CONFLITO,
+  // REWORK 4: perguntar da vida (o fato, não a frase), elogiar, pedir conselho, pedir ajuda com as crianças (`gestos`).
+  ...INTERACOES_VIVIDAS
 ];
 
 /* ------------------------------------------------------- Aproximação */
@@ -1378,23 +1386,6 @@ function primeiroEncontro(c: CtxI, r: Rng): Saida {
   return { resultado: `O primeiro encontro foi em ${lugar}. ${fim}`, titulo: c.p.nome };
 }
 
-/** O que dá para descobrir sobre alguém convivendo (e ainda não foi descoberto). */
-function descobertasPendentes(c: CtxI): { id: string; texto: string; marco: string }[] {
-  const t = c.p.temperamento;
-  const nome = c.p.nome;
-  const todas: { id: string; texto: string; marco: string }[] = [];
-  const ocup = c.p.ocupacao && c.p.ocupacao !== 'estudante' ? c.p.ocupacao : undefined;
-  todas.push({ id: 'origem', texto: `${nome} contou da cidade onde cresceu, da família, de uma infância que você não imaginava.`, marco: `Descobriu de onde ${nome} veio.` });
-  if (t.abertura > 0.3) todas.push({ id: 'curiosa', texto: `${nome} tem uma lista enorme de lugares para conhecer e de coisas para aprender. Falou disso com os olhos brilhando.`, marco: `Descobriu a curiosidade de ${nome}.` });
-  else if (t.abertura < -0.3) todas.push({ id: 'rotina', texto: `${nome} gosta das coisas do jeito de sempre: o mesmo café, o mesmo caminho, a mesma série revista.`, marco: `Descobriu que ${nome} gosta de rotina.` });
-  if (t.extroversao > 0.3) todas.push({ id: 'gente', texto: `${nome} conhece meio mundo e fica mais feliz no meio de gente.`, marco: `Descobriu que ${nome} vive no meio de gente.` });
-  else if (t.extroversao < -0.3) todas.push({ id: 'quieta', texto: `${nome} é de pouca gente: poucos amigos, e para a vida toda.`, marco: `Descobriu que ${nome} é de poucos e bons.` });
-  if (t.estabilidade < -0.3) todas.push({ id: 'ansiosa', texto: `${nome} carrega mais preocupação do que mostra. Contou isso baixinho, quase pedindo desculpa.`, marco: `Descobriu as preocupações de ${nome}.` });
-  if (ocup) todas.push({ id: 'trabalho', texto: `${nome} explicou o que faz como ${ocup} — as partes boas e as que ninguém vê.`, marco: `Entendeu o trabalho de ${nome}.` });
-  const feitas = new Set(Object.keys(c.vin.habitos ?? {}).filter(k => k.startsWith('conhecer:')).map(k => k.slice(9)));
-  return todas.filter(d => !feitas.has(d.id)).slice(0, 3 - Math.min(3, feitas.size));
-}
-
 /** 5, 10, 15... anos juntos neste ano (0 se não é ano redondo). */
 function aniversarioRedondo(c: CtxI): number {
   const ini = c.vin.romance?.tInicio ?? c.vin.tInicio;
@@ -1446,6 +1437,8 @@ const PESO_VARIANTE = { principal: 3, secundario: 2, discreto: 1, perigo: 0 } as
 const DEPOIS_DA_RUPTURA = new Set(['reconciliar', 'chamado_sim', 'chamado_nao', 'afastar', 'ex_filhos', 'medico', 'cuidar']);
 function cabeAgora(c: CtxI, x: Interacao): boolean {
   if (!x.quando(c)) return false;
+  // Bloqueada na rede (REWORK 4): a tela de Pessoas não pode agir como se nada tivesse acontecido.
+  if (c.vin.digital?.bloqueado !== undefined) return DEPOIS_DA_RUPTURA.has(x.id) && x.id !== 'reconciliar';
   return estadoDaRelacao(c.v, c.vin) !== 'rompido' || DEPOIS_DA_RUPTURA.has(x.id);
 }
 

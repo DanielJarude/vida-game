@@ -72,6 +72,8 @@ export interface Narrativa {
   /** Guarda o fato na história compartilhada com uma das pessoas do papel. */
   lembrar?: [papel: string, texto: string, tipo?: TipoMarco];
   evento?: EventoSocial;
+  /** REWORK 4: o fato estruturado que a frase narra (vai para a Linha da Vida junto com o texto). */
+  fato?: { tipo: string; dados: Record<string, string | number> };
 }
 
 export interface Acontecimento extends Base {

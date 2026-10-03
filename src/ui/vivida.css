@@ -1,0 +1,136 @@
+/*
+ * REWORK 4 — VIDA VIVIDA. Os estilos novos deste pacote, num arquivo só.
+ *
+ * "Interface contida, vida colorida": a interface continua nos tons e tokens de sempre (tokens.css); o que EXISTE no
+ * mundo — as coisas que a pessoa tem, os destinos, os bichos — ganha a sua própria cor (--cor-do-objeto, vinda do motor).
+ */
+
+/* ---------------------------------------------------------- A força da relação */
+.barra-relacao { display: inline-block; vertical-align: middle; width: 44px; height: 5px; border-radius: 3px; background: var(--rule); overflow: hidden; margin-right: var(--space-2); }
+.barra-relacao--grande { display: block; width: min(160px, 100%); height: 6px; margin: var(--space-1) 0 0; }
+.barra-relacao__cheio { display: block; height: 100%; border-radius: inherit; background: var(--tom-pessoas); }
+.barra-relacao--forte .barra-relacao__cheio { background: var(--pig-goiaba); }
+.barra-relacao--media .barra-relacao__cheio { background: color-mix(in oklab, var(--pig-goiaba) 70%, var(--neutro-3)); }
+.barra-relacao--fraca .barra-relacao__cheio { background: var(--neutro-3); }
+.barra-relacao--fria .barra-relacao__cheio { background: var(--pig-azulejo); }
+.barra-relacao--tensa .barra-relacao__cheio { background: var(--danger); }
+.rosto .barra-relacao { margin: 2px auto 0; display: block; }
+.cartao-pessoa .barra-relacao { display: block; margin: var(--space-1) auto 0; width: 64px; }
+
+/* ---------------------------------------------------------- Pedem atenção: o tipo dita o tom (nem tudo é vermelho) */
+.atencao__item { grid-template-columns: 40px 1fr auto; }
+.atencao__texto { display: flex; flex-direction: column; gap: 1px; }
+.atencao__tipo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.atencao__item--urgente .atencao__tipo { color: var(--danger); }
+.atencao__item--importante .atencao__tipo { color: var(--tom-pessoas); }
+.atencao__item--oportunidade .atencao__tipo { color: var(--pig-azulejo); }
+.atencao__ir { font-family: var(--font-sans); font-size: var(--type-meta); color: var(--text-muted); white-space: nowrap; padding-right: var(--space-3); }
+.atencao__item:hover .atencao__tipo, .atencao__item:hover .atencao__ir { text-decoration: none; }
+
+/* ---------------------------------------------------------- Pertences: o objeto na cor dele */
+.pertences__lista { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.pertence { display: grid; grid-template-columns: 72px 1fr; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--cor-do-objeto, var(--rule-strong)); }
+.pertence__objeto { width: 72px; height: 72px; border-radius: var(--radius-md); display: grid; place-items: center; background: color-mix(in oklab, var(--cor-do-objeto, #888) 16%, var(--bg-raised)); }
+.pertence__nome { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); }
+.pertence__acabamento { font-family: var(--font-sans); font-size: var(--type-meta); color: var(--text-muted); letter-spacing: 0.02em; }
+.pertence__meta { font-size: var(--type-caption); color: var(--text-secondary); display: flex; align-items: center; gap: var(--space-2); margin: 2px 0 var(--space-2); }
+.pertence__estado { display: inline-block; width: 48px; height: 4px; background: var(--rule); border-radius: 2px; overflow: hidden; }
+.pertence__estado span { display: block; height: 100%; background: var(--cor-do-objeto, var(--accent)); }
+.pertence__usos { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: flex-start; }
+.pertence__uso-com { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); width: 100%; }
+.pertence__uso-rotulo { font-size: var(--type-meta); color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--tracking-meta); width: 100%; }
+.pertence__venda { margin-top: var(--space-2); }
+.link--discreto { font-size: var(--type-caption); color: var(--text-muted); }
+.objeto { display: block; }
+@media (max-width: 480px) { .pertences__lista { grid-template-columns: 1fr; } .pertence { grid-template-columns: 56px 1fr; } .pertence__objeto { width: 56px; height: 56px; } }
+
+/* ---------------------------------------------------------- Ficha: presentes e rede */
+.ficha__extras { margin: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.ficha__nota-rede { font-size: var(--type-caption); color: var(--danger); }
+.presentes { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
+.presente { display: grid; grid-template-columns: 36px 1fr auto; gap: var(--space-2); align-items: center; padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); }
+.presente__texto { display: flex; flex-direction: column; font-size: var(--type-caption); }
+
+/* ---------------------------------------------------------- Na rede (o Mural) */
+.rede__conta { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-2); }
+.rede__arroba { font-family: var(--font-sans); font-weight: 600; color: var(--pig-ipe-roxo); }
+.rede__numero strong { font-family: var(--font-serif); font-size: var(--type-heading); color: var(--text-primary); }
+.rede__cred { font-size: var(--type-caption); color: var(--text-muted); }
+.rede__titulo { font-size: var(--type-meta); text-transform: uppercase; letter-spacing: var(--tracking-meta); color: var(--text-muted); margin: var(--space-3) 0 var(--space-1); }
+.rede__promover { display: flex; align-items: center; gap: var(--space-2); font-size: var(--type-caption); color: var(--text-secondary); margin: var(--space-2) 0; }
+.rede__publicacoes { display: grid; gap: var(--space-2); margin: var(--space-3) 0; }
+.publicacao { display: grid; grid-template-columns: auto 1fr; gap: 2px var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface); border-left: 3px solid var(--pig-ipe-roxo); }
+.publicacao--polemica { border-left-color: var(--danger); }
+.publicacao--viral { border-left-color: var(--pig-ipe); }
+.publicacao__ano { font-size: var(--type-meta); color: var(--text-muted); grid-row: span 2; }
+.publicacao__texto { font-family: var(--font-serif); color: var(--text-primary); }
+.publicacao__alcance { font-size: var(--type-caption); color: var(--text-muted); }
+
+/* ---------------------------------------------------------- Experiências: cada tipo com a sua gramática */
+.experiencia { position: relative; padding-left: 44px; }
+.experiencia__emblema { position: absolute; left: 6px; top: 12px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); }
+.experiencia--viagem .experiencia__emblema { color: #6aa8d8; background: color-mix(in oklab, #2f6f9a 28%, transparent); }
+.experiencia--curso .experiencia__emblema { color: var(--pig-ipe); background: color-mix(in oklab, var(--pig-ipe) 18%, transparent); }
+.experiencia--sabatico .experiencia__emblema { color: var(--pig-folha); background: color-mix(in oklab, var(--pig-folha) 18%, transparent); }
+.experiencia--projeto .experiencia__emblema { color: var(--pig-goiaba); background: color-mix(in oklab, var(--pig-goiaba) 18%, transparent); }
+.experiencia--presente .experiencia__emblema { color: var(--pig-ipe-roxo); background: color-mix(in oklab, var(--pig-ipe-roxo) 18%, transparent); }
+.experiencia__traco { display: block; font-size: var(--type-caption); color: var(--text-muted); font-style: italic; margin-top: 2px; }
+.postal { position: relative; display: grid; grid-template-columns: 1fr auto; align-items: end; min-height: 92px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); color: #fff8ee; background: linear-gradient(135deg, var(--postal), color-mix(in oklab, var(--postal) 55%, #120d0a)); box-shadow: inset 0 0 0 1px rgba(255, 246, 232, 0.15); margin-bottom: var(--space-3); overflow: hidden; }
+.postal::after { content: ''; position: absolute; right: -20px; top: -20px; width: 110px; height: 110px; border-radius: 50%; border: 2px dashed rgba(255, 248, 238, 0.35); }
+.postal__selo { position: absolute; top: var(--space-2); left: var(--space-4); font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; opacity: 0.85; }
+.postal__nome { font-family: var(--font-serif); font-size: var(--type-heading); line-height: 1.1; }
+.postal__dias { font-family: var(--font-sans); font-size: var(--type-caption); opacity: 0.9; }
+.viagem__efeitos { margin: 0 0 var(--space-3); padding-left: var(--space-4); font-size: var(--type-caption); color: var(--text-secondary); list-style: disc; }
+
+/* ---------------------------------------------------------- Carga e estresse (no lugar da moeda de tempo) */
+.carga { display: grid; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.carga__medidor { display: grid; grid-template-columns: 72px 1fr 110px; align-items: center; gap: var(--space-3); }
+.carga__rotulo { font-size: var(--type-meta); text-transform: uppercase; letter-spacing: var(--tracking-meta); color: var(--text-muted); }
+.carga__barra { height: 8px; border-radius: 4px; background: var(--rule); overflow: hidden; }
+.carga__barra span { display: block; height: 100%; border-radius: inherit; background: var(--pig-folha); transition: width var(--motion-base, .3s); }
+.carga__palavra { font-family: var(--font-serif); color: var(--text-primary); }
+.carga__medidor--1 .carga__barra span, .carga__medidor--estresse-moderado .carga__barra span { background: var(--pig-ipe); }
+.carga__medidor--2 .carga__barra span, .carga__medidor--estresse-alto .carga__barra span { background: var(--warning); }
+.carga__medidor--3 .carga__barra span, .carga__medidor--estresse-no-limite .carga__barra span { background: var(--danger); }
+.semana-detalhe > summary { cursor: pointer; font-size: var(--type-caption); color: var(--text-muted); margin: var(--space-2) 0; }
+@media (max-width: 480px) { .carga__medidor { grid-template-columns: 60px 1fr 84px; gap: var(--space-2); } }
+
+/* ---------------------------------------------------------- Vagas: um mercado, não um relatório */
+.vaga-camada { list-style: none; border-bottom: 1px solid var(--rule); }
+.vaga-resumo { display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'cargo salario' 'org compat' 'meta compat'; gap: 2px var(--space-3); width: 100%; text-align: left; padding: var(--space-3) var(--space-2); border-radius: var(--radius-md); min-height: var(--touch-target); }
+.vaga-resumo:hover { background: var(--surface); }
+.vaga-resumo__cargo { grid-area: cargo; font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); }
+.vaga-resumo__org { grid-area: org; font-size: var(--type-caption); color: var(--tom-trabalho); font-weight: 600; }
+.vaga-resumo__meta { grid-area: meta; font-size: var(--type-caption); color: var(--text-muted); }
+.vaga-resumo__salario { grid-area: salario; font-family: var(--font-serif); color: var(--text-primary); text-align: right; white-space: nowrap; }
+.vaga-resumo__compat { grid-area: compat; align-self: center; justify-self: end; font-size: var(--type-meta); text-transform: uppercase; letter-spacing: var(--tracking-meta); padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--text-secondary); white-space: nowrap; }
+.vaga-resumo__compat--3 { background: color-mix(in oklab, var(--pig-folha) 22%, transparent); color: var(--pig-folha); }
+.vaga-resumo__compat--2 { background: color-mix(in oklab, var(--pig-ipe) 18%, transparent); color: var(--pig-ipe); }
+.vaga-resumo__compat--0 { color: var(--text-faint); }
+.vaga-camada__detalhe { display: flex; flex-direction: column; gap: var(--space-2); padding: 0 var(--space-2) var(--space-3); }
+.vaga-acima { display: grid; gap: 2px; padding: var(--space-2) var(--space-2); border-bottom: 1px dashed var(--rule); opacity: 0.85; }
+.vaga-acima strong { font-family: var(--font-serif); font-weight: 400; color: var(--text-secondary); }
+
+/* ---------------------------------------------------------- A história na formação */
+.historia-formacao { margin-bottom: var(--space-4); }
+.historia-formacao__lugar { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); margin-bottom: var(--space-1); }
+.historia-formacao__lugar span { font-family: var(--font-sans); font-size: var(--type-meta); color: var(--text-muted); margin-left: var(--space-2); }
+.historia-formacao ul { display: grid; gap: var(--space-1); border-left: 2px solid var(--tom-estudos); padding-left: var(--space-3); }
+.historia-formacao__momento { font-size: var(--type-body); color: var(--text-secondary); }
+.historia-formacao__momento--reconhecimento, .historia-formacao__momento--formatura { color: var(--text-primary); }
+.historia-formacao__momento--dificuldade, .historia-formacao__momento--conflito, .historia-formacao__momento--disciplina { color: var(--text-muted); }
+.historia-formacao__ano { font-size: var(--type-meta); color: var(--text-muted); margin-right: var(--space-1); }
+
+/* ---------------------------------------------------------- O veículo na cor dele */
+.desenho-veiculo--colorido [fill-opacity="0.14"] { fill: var(--cor-veiculo); fill-opacity: 0.88; }
+.oferta.oferta--objeto { grid-template-columns: 52px 1fr auto; }
+.oferta__objeto { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.oferta__cores { display: flex; gap: 2px; }
+.oferta__cores span { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 1px var(--rule-strong); }
+@media (max-width: 480px) { .oferta.oferta--objeto { grid-template-columns: 44px 1fr; } .oferta.oferta--objeto > :last-child { grid-column: 1 / -1; } }
+
+/* ---------------------------------------------------------- Baixar o app (Android) */
+.baixar-app { margin: var(--space-4) auto 0; max-width: 520px; text-align: center; }
+.baixar-app__nota { margin-top: var(--space-2); font-size: var(--type-caption); }
+.baixar-app--compacto { margin: 0; text-align: left; }
+.baixar-app__botao { display: inline-flex; text-decoration: none; }

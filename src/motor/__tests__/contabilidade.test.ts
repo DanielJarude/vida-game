@@ -51,6 +51,10 @@ function bemPago(o: { aplicado?: number; estilo?: Vida['financas']['estilo']; sa
     x.financas.conta = 0;
     if (o.aplicado) depositar(x, 'pos_fixado', o.aplicado);
     x.financas.extratoAberto = undefined;
+    // (Sem aluguel atrasado de antes: o que se testa é o ano limpo, não o acerto de atrasados da vida sorteada.)
+    x.moradia.atraso = 0; x.moradia.atrasoDesde = undefined;
+    // (Sem filhos em casa: um filho que muda de faixa de idade na virada do ano muda o custo do ano — outro teste.)
+    for (const vin of Object.values(x.vinculos)) if (vin.parentesco === 'filho' || vin.parentesco === 'enteado') vin.convivio = vin.convivio.filter(c => c !== 'casa');
     x.momento = null;
   }).vida;
 }

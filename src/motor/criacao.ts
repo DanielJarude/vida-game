@@ -10,7 +10,8 @@
 import { derivarPredisposicoes } from './sistemas/pessoa';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 import { caminhosVazios } from './sistemas/marcas';
-import { criarRng, type Rng } from './rng';
+import { criarRng, rngDe, type Rng } from './rng';
+import { ancestralidadeDe, ancestralidadesDosPais, familiaInicial, misturar, perfilInicial, visualDaAncestralidade, visualDeQuemGerou, visualDosPais } from './sistemas/identidade';
 import type { Classe, Genero, Origem, Pessoa, Vida, Visual } from './tipos';
 import { tDe, MESES, mesDe, anoDe } from './tempo';
 import { criarPessoa, vincular, visualAleatorio, visualHerdado } from './pessoas';
@@ -201,14 +202,21 @@ export function criarVida(o: OpcoesCriacao): Vida {
   // -------------------------------------------------------------- Pais
   const idadeMae = idadeMaterna(r, classe);
   const idadePai = Math.max(17, idadeMae + r.int(-2, 8));
-  const mae = criarPessoa(v, r, { genero: 'feminino', idade: idadeMae, municipioId: cidade, sobrenome: r.chance(0.5) ? sob : undefined });
+  // REWORK 4: a família da primeira geração — o pai pela tradição do sobrenome escolhido (ou pelo lugar), a mãe quase
+  // sempre de origem próxima, às vezes de outra. Depois disso, os PAIS são a fonte de quem nasce (`identidade`).
+  const fam = familiaInicial(id, paisNatal, sob);
+  const mae = criarPessoa(v, r, { genero: 'feminino', idade: idadeMae, municipioId: cidade, sobrenome: r.chance(0.5) ? sob : undefined, familia: fam.mae });
   const temPai = arranjo !== 'mae_solo' || r.chance(0.7);
-  const pai = temPai ? criarPessoa(v, r, { genero: 'masculino', idade: idadePai, municipioId: cidade, sobrenome: sob }) : undefined;
+  const pai = temPai ? criarPessoa(v, r, { genero: 'masculino', idade: idadePai, municipioId: cidade, sobrenome: sob, familia: fam.pai }) : undefined;
+  const ancFilhos = misturar(mae.ancestralidade, pai?.ancestralidade ?? fam.pai.ancestralidade)!;
+  v.eu.ancestralidade = ancFilhos;
+  v.eu.tradicao = (pai ?? mae).tradicao ?? mae.tradicao;
 
-  // Traços herdados: o bebê puxa os pais (salvo se o jogador escolheu a aparência).
+  // Traços herdados: o bebê puxa os pais em tudo o que é genético (o penteado escolhido pelo jogador fica).
   if (!o.visual || o.herdarCores) {
-    const herd = visualHerdado(r, o.genero, mae.visual, pai?.visual);
-    v.eu.visual = { ...v.eu.visual, pele: herd.pele, corCabelo: herd.corCabelo, olhos: herd.olhos };
+    const herd = visualHerdado(r, o.genero, mae.visual, pai?.visual, ancFilhos);
+    const { pele, corCabelo, olhos, textura, olhosForma, nariz, boca, rosto, sobrancelha } = herd;
+    v.eu.visual = { ...v.eu.visual, pele, corCabelo, olhos, textura, olhosForma, nariz, boca, rosto, sobrancelha, ...(o.visual ? {} : { cabelo: herd.cabelo }) };
   }
 
   const comMae = arranjo === 'pais_juntos' || arranjo === 'mae_solo';
@@ -224,6 +232,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
 
   // -------------------------------------------------------------- Avós
   const avosCriados: Pessoa[] = [];
+  const avosDe: Record<string, Pessoa[]> = {};
   const ladoMae = mae.sobrenome;
   for (const [genero, base, sobrenome] of [
     ['feminino', idadeMae, ladoMae], ['masculino', idadeMae, ladoMae],
@@ -232,7 +241,12 @@ export function criarVida(o: OpcoesCriacao): Vida {
     if (!pai && sobrenome === sob && base === idadePai) continue;
     const idadeAvo = base + r.int(20, 32);
     if (!avoVivo(r, idadeAvo)) continue;
-    const avo = criarPessoa(v, r, { genero, idade: idadeAvo, municipioId: r.chance(0.7) ? cidade : v.moradia.municipioId, sobrenome });
+    // Os avós: gente de quem o pai ou a mãe herdou (a ancestralidade se divide entre os dois; o rosto lembra o do filho).
+    const filhoDoLado = sobrenome === ladoMae && base === idadeMae ? mae : pai!;
+    const [ancA, ancB] = ancestralidadesDosPais(rngDe(id, 'avos', filhoDoLado.id), ancestralidadeDe(filhoDoLado));
+    const avo = criarPessoa(v, r, { genero, idade: idadeAvo, municipioId: r.chance(0.7) ? cidade : v.moradia.municipioId, sobrenome, familia: { ancestralidade: genero === 'feminino' ? ancA : ancB, tradicao: filhoDoLado.tradicao } });
+    avo.visual = visualDeQuemGerou(rngDe(avo.id, 'avo'), genero, avo.ancestralidade!, filhoDoLado.visual!);
+    (avosDe[filhoDoLado.id] ??= []).push(avo);
     if (idadeAvo >= 62) {
       avo.ocupacao = flex(genero, 'aposentado', 'aposentada');
       avo.renda = rendaNoPais(paisNatal, 1800);
@@ -260,7 +274,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   for (let i = 0; i < nIrmaos; i++) {
     const idadeIrmao = r.int(1, Math.max(1, Math.min(14, idadeMae - 17)));
     const g: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
-    const irmao = criarPessoa(v, r, { genero: g, idade: idadeIrmao, municipioId: cidade, sobrenome: sob, visual: visualHerdado(r, g, mae.visual, pai?.visual) });
+    const irmao = criarPessoa(v, r, { genero: g, idade: idadeIrmao, municipioId: cidade, sobrenome: sob, visual: visualHerdado(r, g, mae.visual, pai?.visual, ancFilhos), familia: { ancestralidade: ancFilhos, tradicao: v.eu.tradicao } });
     irmao.ocupacao = idadeIrmao >= 4 ? 'estudante' : undefined;
     irmaosCriados.push(irmao);
     vincular(v, irmao, { parentesco: 'irmao', origem: 'familia', proximidade: r.int(60, 80), convivio: ['casa'] });
@@ -271,14 +285,18 @@ export function criarVida(o: OpcoesCriacao): Vida {
   for (let i = 0; i < nTios; i++) {
     const lado = r.chance(0.5) ? mae : pai ?? mae;
     const g: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
-    const tio = criarPessoa(v, r, { genero: g, idade: Math.max(18, (lado === mae ? idadeMae : idadePai) + r.int(-8, 8)), municipioId: r.chance(0.65) ? cidade : r.pick([grandeCentro, outraCapital, cidade]), sobrenome: lado.sobrenome });
+    const tio = criarPessoa(v, r, { genero: g, idade: Math.max(18, (lado === mae ? idadeMae : idadePai) + r.int(-8, 8)), municipioId: r.chance(0.65) ? cidade : r.pick([grandeCentro, outraCapital, cidade]), sobrenome: lado.sobrenome, familia: { ancestralidade: ancestralidadeDe(lado), tradicao: lado.tradicao } });
+    // O tio é irmão do pai ou da mãe: filho dos mesmos avós (quando eles existem no jogo), parecido sem ser igual.
+    { const avs = avosDe[lado.id] ?? []; const ra = rngDe(tio.id, 'tio'); tio.visual = avs.length ? visualDosPais(ra, g, ancestralidadeDe(lado), avs[0].visual, avs[1]?.visual ?? lado.visual) : visualDosPais(ra, g, ancestralidadeDe(lado), lado.visual, visualDeQuemGerou(ra, g, ancestralidadeDe(lado), lado.visual!)); }
     empregarPai(v, r, tio, classe, tio.municipioId, false);
     vincular(v, tio, { parentesco: 'tio', origem: 'familia', proximidade: r.int(30, 60) });
     if (r.chance(0.6)) {
       const nPrimos = r.int(1, 2);
       for (let k = 0; k < nPrimos; k++) {
         const gp: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
-        const primo = criarPessoa(v, r, { genero: gp, idade: Math.max(0, r.int(-3, 7)), municipioId: tio.municipioId, sobrenome: tio.sobrenome });
+        const primo = criarPessoa(v, r, { genero: gp, idade: Math.max(0, r.int(-3, 7)), municipioId: tio.municipioId, sobrenome: tio.sobrenome, familia: { ancestralidade: ancestralidadeDe(tio), tradicao: tio.tradicao } });
+        // O primo: filho do tio e de alguém de fora da família (de origem do lugar).
+        { const rp = rngDe(primo.id, 'primo'); const ancConj = perfilInicial(rp, paisNatal).mix; const conj = visualDaAncestralidade(rp, g === 'masculino' ? 'feminino' : 'masculino', ancConj); primo.ancestralidade = misturar(ancestralidadeDe(tio), ancConj); primo.visual = visualDosPais(rp, gp, primo.ancestralidade!, tio.visual, conj); }
         vincular(v, primo, { parentesco: 'primo', origem: 'familia', proximidade: r.int(25, 50) });
       }
     }

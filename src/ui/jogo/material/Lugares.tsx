@@ -32,6 +32,8 @@ import type { AnimalDoAbrigo, OfertaImovel, OfertaVeiculo } from '../../../motor
 import { BotaoAcao, Escolha, Folha } from '../../comum';
 import { Retrato } from '../../avatar/Retrato';
 import { DesenhoVeiculo, Icone, IconeMoradia } from './Desenhos';
+import { DesenhoObjeto } from './Objetos';
+import { variantesDaCoisa } from '../../../motor/dados/pertences';
 import { animal, palavraDoBicho } from '../../../motor/dados/animais';
 import { CATEGORIAS_DA_LOJA, catalogoDeVeiculos, ofertasDePets, type OfertaDePet } from '../../../motor/sistemas/mercado';
 import { BALCOES, ITENS_ESTILO, type CategoriaItem } from '../../../motor/dados/estilo';
@@ -96,7 +98,9 @@ function LojaDeCoisasDaVida({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) 
         {coisasDaLoja(loja).map(c => {
           const atividades = atividadesQueAjuda(c).map(id => modeloRotina(id)?.nome).filter(Boolean) as string[];
           return (
-            <li key={c.id} className="oferta oferta--estilo">
+            <li key={c.id} className="oferta oferta--estilo oferta--objeto">
+              {/* REWORK 4: o objeto como ele é (a silhueta e as cores que a loja tem); o que vier é seu, na cor que vier. */}
+              <span className="oferta__objeto"><DesenhoObjeto coisaId={c.id} cor={variantesDaCoisa(c.id)[0].cor} tamanho={44} rotulo={c.nome} /><span className="oferta__cores">{variantesDaCoisa(c.id).slice(0, 5).map(x => <span key={x.cor} title={x.nome} style={{ background: x.cor }} />)}</span></span>
               <span className="oferta__texto">
                 <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)} · {dinheiroCurto(precoDaCoisa(vida, c.id))}</strong>
                 <span>{c.descricao}</span>

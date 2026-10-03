@@ -135,7 +135,9 @@ describe('saúde vivida: a lesão esportiva conversa com tudo', () => {
 
 describe('sobrecarga: a semana concreta cobra — e o descanso devolve', () => {
   const carregado = () => {
-    const v = trabalhador(26, 5);
+    // (Semente 6: a vida sorteada da 5 passou a ter um serviço militar temporário em andamento, que dá baixa no meio do
+    // ano — outra história, que não é a das horas extras.)
+    const v = trabalhador(26, 6);
     contratar(v, criarRng(1), ocupacao('assistente_adm'));
     v.educacao.matricula = { cursoId: 'medicina', instituicao: 'UF', rede: 'publica', modalidade: 'presencial', tInicio: v.t, mesesRestantes: 60, mensalidade: 0, desempenho: 60, trancado: false, municipioId: v.moradia.municipioId };
     v.trabalho.horasExtras = true;
@@ -304,7 +306,8 @@ describe('"Pede atenção" não é inbox global', () => {
     vincular(v, morta, { parentesco: 'avo', origem: 'familia', proximidade: 80 });
     morta.vivo = false; morta.tMorte = v.t - 72;
     v.luto.push({ pessoaId: morta.id, t: v.t - 72, peso: 60 });
-    const s = sinaisSociais(v);
+    // (A lista inteira: aqui se testa a classificação; quantos cabem de uma vez é outro teste — `rework4`.)
+    const s = sinaisSociais(v, 20);
     expect(s.some(x => x.pessoaId === morta.id)).toBe(false);
     expect(s.some(x => x.pessoaId === pai.id && /sem se falarem/.test(x.texto))).toBe(false);
     expect(s.find(x => x.pessoaId === amiga.id)?.escopo).toBe('pessoas');
@@ -332,7 +335,7 @@ describe('política não é destino padrão', () => {
     const y = anoDe(trabalhador(30, 14), fixo(0.0001), (z, r) => { z.rotinas = []; processarPolitica(z, r); });
     expect(y.fatos['pol_porta']).toBe(y.t);
     // Quem já recusou duas vezes não é mais procurado.
-    const z = trabalhador(30, 15); z.rotinas = [{ id: 'voluntariado', tInicio: z.t - 60, nivel: 2 }]; z.fatos['pol_recusas'] = 2;
+    const z = trabalhador(30, 15); z.rotinas = [{ id: 'voluntariado', tInicio: z.t - 60, nivel: 2 }]; z.fatos['pol_recusas'] = 2; delete z.fatos['pol_porta'];
     expect(anoDe(z, fixo(0.0001), (w, r) => processarPolitica(w, r)).fatos['pol_porta']).toBeUndefined();
   });
   it('quem constrói contexto (voluntariado) tem porta; quem persegue a política encontra o caminho', () => {

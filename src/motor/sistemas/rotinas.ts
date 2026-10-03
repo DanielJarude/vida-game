@@ -27,7 +27,7 @@ import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
 import { nivelDeOferta } from '../dados/lugares';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { esquecerFrentes, habilidade, praticar } from './frentes';
-import { cabeNaSemana } from './semana';
+import { cabeNaSemana, cargaHumana, semana } from './semana';
 import type { Categoria } from '../dados/frentes';
 import { categoriaDoVeiculo } from './veiculos';
 import { esfriarPreparo, prepararVestibular } from './vestibular';
@@ -723,11 +723,18 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   const n = nivelModelo(m, nivel);
   const reqNivel = n.requer?.(v);
   if (typeof reqNivel === 'string') return bloqueio('requisito', reqNivel);
-  const cabe = cabeNaSemana(v, n.tempo - (atual ? tempoDaRotina(atual) : 0), id);
-  if (!cabe.cabe) return bloqueio('incompativel', cabe.motivo);
+  // REWORK 4: a semana cheia não é um muro — é um custo. Passa do que cabe? Dá para tentar, até o teto humano; o
+  // preço é o estresse e a sobrecarga (dito antes, no motivo). Além do teto, não.
+  const extra = n.tempo - (atual ? tempoDaRotina(atual) : 0);
+  const cabe = cabeNaSemana(v, extra, id);
+  // (Criança e adolescente novo: quem organiza a semana é a casa — o "tentar mesmo assim" é de quem já decide a própria.)
+  // (Por cima da semana cheia, cabe o hobby — o ritmo leve; treino regular e "a sério" são quase um segundo trabalho.)
+  const humana = idade(v) >= 16 && nivel <= 1 ? cargaHumana(v, extra) : { possivel: false };
+  if (!cabe.cabe && !humana.possivel) return bloqueio('incompativel', cabe.motivo);
   if (i < 12 && n.custo > 60 && !casaPaga(v, n.custo) && !projetoSocial(v, id)) return bloqueio('requisito', semDinheiro);
   const irr = m.irregular?.(v);
   if (irr) return { grau: 'irregular', motivo: irr };
+  if (!cabe.cabe) return { grau: 'permitido', motivo: `${cabe.motivo} Dá para tentar mesmo assim — o descanso some e a cabeça cobra (estresse, sobrecarga).` };
   return { grau: 'permitido' };
 }
 
@@ -735,6 +742,8 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
 
 export function processarRotinas(v: Vida, r: Rng): void {
   const praticadas = new Set<Dominio>();
+  const sem = semana(v);
+  const semanaPassou = sem.ocupado > sem.capacidade + 0.01;
   for (const rot of [...v.rotinas]) {
     const m = modeloRotina(rot.id);
     if (!m) { v.rotinas = v.rotinas.filter(x => x !== rot); continue; }
@@ -755,10 +764,12 @@ export function processarRotinas(v: Vida, r: Rng): void {
     }
     const nm = nivelModelo(m, n);
     const peso = n === 1 ? 0.5 : n === 2 ? 1 : 1.6;
+    const cansaco = semanaPassou ? 0.7 : 1;
     if (m.pratica) {
       for (const [d, w] of Object.entries(m.pratica) as [Dominio, number][]) {
         // O que se tem em casa (o instrumento, o notebook, a câmera) faz a mesma hora render mais (`coisas`).
-        praticar(v, r, d, peso * w, (nm.qualidade ?? 1) * (1 + bonusDaAtividade(v, m.id)));
+        // REWORK 4: a semana que passa do que cabe também cobra AQUI — cansado, treina e estuda pior.
+        praticar(v, r, d, peso * w, (nm.qualidade ?? 1) * (1 + bonusDaAtividade(v, m.id)) * cansaco);
         praticadas.add(d);
       }
     }

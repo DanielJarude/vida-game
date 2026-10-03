@@ -5,7 +5,7 @@
 
 import type { Rng } from '../rng';
 import type { Processo, Vida } from '../tipos';
-import { escrever, idade, marcarFato, moraCom, novoId, parceiro, vinculosVivos } from '../nucleo';
+import { escrever, idade, lembrarCom, marcarFato, moraCom, novoId, parceiro, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
 import { municipio, nomeLugar, paisDaCidade } from '../dados/lugares';
 import { encerrarEmprego } from './trabalho';
@@ -97,6 +97,12 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
   }
   const juntos = moraCom(v);
   for (const x of juntos) x.municipioId = p.destinoId;
+  // REWORK 4: quem fica para trás sabe que você foi — a distância entra na história de cada relação próxima (e é por
+  // ela que o desgaste depois sabe que a amizade era de perto).
+  const ficam = vinculosVivos(v)
+    .filter(({ p: q, vin }) => !q.especie && q.nome && q.municipioId === origem && !juntos.includes(q) && !vin.ruptura && (vin.proximidade >= 60 || vin.estagio === 'amigo_proximo' || vin.romance))
+    .sort((a, b) => b.vin.proximidade - a.vin.proximidade).slice(0, 6);
+  for (const { p: q } of ficam) lembrarCom(v, q.id, `Você se mudou para ${municipio(p.destinoId).nome}; ${q.nome} ficou em ${municipio(origem).nome}.`, 'distancia', 2);
   for (const { p: pet, vin } of vinculosVivos(v)) if (pet.especie && vin.convivio.includes('casa')) pet.municipioId = p.destinoId;
 
   // O negócio: o que é da cidade fica na cidade (com quem o toque, ou fecha); o que é da internet vai junto.

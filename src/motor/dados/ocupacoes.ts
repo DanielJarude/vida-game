@@ -117,6 +117,11 @@ export interface Ocupacao {
   fundamento?: string;
   /** Vaga que pede um título de especialista específico (residência naquela área). */
   especialidades?: EspecialidadeMedica[];
+  /**
+   * REWORK 4: a vaga procura uma ÁREA de aprofundamento (`dados/areasProfissionais`): quem a escolheu e viveu entra
+   * com o caminho aberto; quem não, entra como aposta (improvável). Não é degrau de promoção: chega-se por candidatura.
+   */
+  areaProfissional?: string;
 }
 
 type O = Ocupacao;
@@ -270,8 +275,11 @@ export const OCUPACOES: readonly Ocupacao[] = [
   o({ id: 'dev_pleno', nome: ['desenvolvedor pleno', 'desenvolvedora plena'], trilha: 'ti', setor: 'tecnologia', nivel: 3, salario: 7800, contrato: 'clt', carga: 'integral', idadeMin: 21, area: ['computacao'], nivelCurso: 'tecnico', habilidade: { dominio: 'programacao', minimo: 58, ouFormacao: true }, experiencia: 36, oferta: 1, estresse: 3 }),
   o({ id: 'dev_senior', nome: ['desenvolvedor sênior', 'desenvolvedora sênior'], trilha: 'ti', setor: 'tecnologia', nivel: 4, salario: 12500, contrato: 'clt', carga: 'integral', idadeMin: 24, area: ['computacao'], nivelCurso: 'tecnico', habilidade: { dominio: 'programacao', minimo: 58, ouFormacao: true }, experiencia: 72, oferta: 1, estresse: 4, anosNoPosto: 3 }),
   o({ id: 'tech_lead', nome: ['líder técnico', 'líder técnica'], trilha: 'ti', setor: 'tecnologia', nivel: 5, salario: 17500, contrato: 'clt', carga: 'integral', idadeMin: 27, area: ['computacao'], nivelCurso: 'tecnico', habilidade: { dominio: 'programacao', minimo: 58, ouFormacao: true }, experiencia: 108, oferta: 2, estresse: 5, anosNoPosto: 3 }),
-  o({ id: 'analista_dados', nome: ['analista de dados', 'analista de dados'], trilha: 'dados', setor: 'tecnologia', nivel: 3, salario: 7200, contrato: 'clt', carga: 'integral', idadeMin: 21, area: ['computacao', 'economia', 'exatas'], nivelCurso: 'superior', oferta: 2, estresse: 3 }),
-  o({ id: 'cientista_dados', nome: ['cientista de dados', 'cientista de dados'], trilha: 'dados', setor: 'tecnologia', nivel: 4, salario: 12800, contrato: 'clt', carga: 'integral', idadeMin: 25, area: ['computacao', 'economia', 'exatas'], nivelCurso: 'superior', experiencia: 48, oferta: 2, estresse: 4, anosNoPosto: 3 }),
+  o({ id: 'analista_seguranca', nome: ['analista de segurança da informação', 'analista de segurança da informação'], trilha: 'ti', setor: 'tecnologia', nivel: 4, salario: 13200, contrato: 'clt', carga: 'integral', idadeMin: 23, area: ['computacao'], nivelCurso: 'tecnico', habilidade: { dominio: 'programacao', minimo: 60, ouFormacao: true }, experiencia: 36, oferta: 2, estresse: 4, areaProfissional: 'segurança' }),
+  o({ id: 'engenheiro_infra', nome: ['engenheiro de infraestrutura', 'engenheira de infraestrutura'], trilha: 'ti', setor: 'tecnologia', nivel: 4, salario: 12900, contrato: 'clt', carga: 'integral', idadeMin: 23, area: ['computacao'], nivelCurso: 'tecnico', habilidade: { dominio: 'programacao', minimo: 58, ouFormacao: true }, experiencia: 36, oferta: 2, estresse: 4, areaProfissional: 'infraestrutura' }),
+  o({ id: 'gerente_produto', nome: ['gerente de produto', 'gerente de produto'], trilha: 'ti', setor: 'tecnologia', nivel: 4, salario: 14200, contrato: 'clt', carga: 'integral', idadeMin: 25, area: ['computacao', 'administracao', 'economia'], nivelCurso: 'superior', experiencia: 48, oferta: 2, estresse: 3, areaProfissional: 'produto' }),
+  o({ id: 'analista_dados', nome: ['analista de dados', 'analista de dados'], trilha: 'dados', setor: 'tecnologia', nivel: 3, salario: 7200, contrato: 'clt', carga: 'integral', idadeMin: 21, area: ['computacao', 'economia', 'exatas'], nivelCurso: 'superior', oferta: 2, estresse: 3, areaProfissional: 'dados' }),
+  o({ id: 'cientista_dados', nome: ['cientista de dados', 'cientista de dados'], trilha: 'dados', setor: 'tecnologia', nivel: 4, salario: 12800, contrato: 'clt', carga: 'integral', idadeMin: 25, area: ['computacao', 'economia', 'exatas'], nivelCurso: 'superior', experiencia: 48, oferta: 2, estresse: 4, anosNoPosto: 3, areaProfissional: 'dados' }),
 
   // ------------------------------------------------------------- Saúde
   o({ id: 'cuidador', nome: ['cuidador de idosos', 'cuidadora de idosos'], trilha: 'cuidado', setor: 'cuidado', nivel: 1, salario: 1950, contrato: 'clt', carga: 'integral', idadeMin: 18, escolaridade: 'fundamental', oferta: 0, estresse: 3 }),

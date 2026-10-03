@@ -11,7 +11,7 @@
  */
 
 import { paisCorrente } from '../mundo/moeda';
-import { sobrenomeDeQuemNasce, usaDoisSobrenomes } from '../dados/nomes';
+import { sobrenomeDeQuemNasce } from '../dados/nomes';
 import { anosNoPais, nacionalidadesDaPessoa, nacionalidadesDaVida, nacionalidadesDoBebe } from '../mundo/vida';
 import type { Rng } from '../rng';
 import { paisDaCidade } from '../dados/lugares';
@@ -20,6 +20,7 @@ import type { Pessoa, Processo, Vida } from '../tipos';
 import {
   emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, temFato, vinculosVivos
 } from '../nucleo';
+import { ancestralidadeDe, misturar, tradicaoDoFilho } from './identidade';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { processarCorpoDePessoa } from './corpo';
 import { flex, ge } from '../texto';
@@ -239,7 +240,8 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     if (r.chance(chance)) {
       const g = r.chance(0.5) ? 'masculino' : 'feminino';
       const outro = v.pessoas[maeCasa.parceiroId];
-      const bebe = criarPessoa(v, r, { genero: g, idade: 0, municipioId: maeCasa.municipioId, sobrenome: v.eu.sobrenome, visual: visualHerdado(r, g, maeCasa.visual, outro?.visual) });
+      const ancIrmao = misturar(ancestralidadeDe(maeCasa), outro ? ancestralidadeDe(outro) : undefined);
+      const bebe = criarPessoa(v, r, { genero: g, idade: 0, municipioId: maeCasa.municipioId, sobrenome: v.eu.sobrenome, visual: visualHerdado(r, g, maeCasa.visual, outro?.visual, ancIrmao), familia: { ancestralidade: ancIrmao, tradicao: outro?.tradicao ?? maeCasa.tradicao } });
       vincular(v, bebe, { parentesco: outro && v.vinculos[outro.id]?.parentesco === 'pai' ? 'irmao' : 'meio_irmao', origem: 'familia', proximidade: 60, convivio: ['casa'] });
       bebe.genitores = [maeCasa.id, ...(outro ? [outro.id] : [])];
       bebe.municipioNatal = maeCasa.municipioId;
@@ -390,12 +392,17 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
   // O sobrenome segue o costume do lugar onde nasce (no mundo hispânico, o primeiro do pai e o primeiro da mãe).
   const paisNatalBebe = paisDaCidade(v.moradia.municipioId);
   const souPai = v.eu.genero !== 'feminino';
-  const sobrenome = usaDoisSobrenomes(paisNatalBebe) && outro
-    ? sobrenomeDeQuemNasce(paisNatalBebe, souPai ? v.eu.sobrenome : outro.sobrenome, souPai ? outro.sobrenome : v.eu.sobrenome) ?? v.eu.sobrenome
+  // REWORK 4: e no costume luso (Brasil, Portugal), muitos casais dão os dois: o da mãe e o do pai.
+  const sobrenome = outro
+    ? sobrenomeDeQuemNasce(paisNatalBebe, souPai ? v.eu.sobrenome : outro.sobrenome, souPai ? outro.sobrenome : v.eu.sobrenome, `${v.id}:${outro.id}`) ?? v.eu.sobrenome
     : v.eu.sobrenome;
+  // REWORK 4: o bebê é dos pais — a ancestralidade é a média deles, os traços vêm deles (a cor natural do cabelo,
+  // não a tinta), a tradição de nomes da família segue. Onde mora a família não muda nada disso.
+  const ancBebe = misturar(ancestralidadeDe(v.eu), outro ? ancestralidadeDe(outro) : undefined);
   const bebe = criarPessoa(v, r, {
     genero, idade: 0, municipioId: v.moradia.municipioId, sobrenome,
-    visual: visualHerdado(r, genero, v.eu.visual, outro?.visual)
+    visual: visualHerdado(r, genero, v.eu.visual, outro?.visual, ancBebe, [v.eu.estilo?.corNatural, undefined]),
+    familia: { ancestralidade: ancBebe, tradicao: tradicaoDoFilho(souPai ? v.eu.tradicao : outro?.tradicao, souPai ? outro?.tradicao : v.eu.tradicao) }
   });
   const nac = nacionalidadesDoBebe(v.moradia.municipioId, [nacionalidadesDaVida(v), ...(outro ? [nacionalidadesDaPessoa(outro)] : [])], anosNoPais(v));
   if (nac) bebe.nacionalidades = nac;

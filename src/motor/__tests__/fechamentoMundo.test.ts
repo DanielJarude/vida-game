@@ -74,7 +74,9 @@ describe('escopo geográfico: o que não é universal declara onde vale', () => 
   it('o São João e a seca do sertão têm escopo de divisão: o Nordeste — nem São Paulo, nem Tóquio', () => {
     const sj = conteudoPorId('mun_sao_joao')!;
     const r = criarRng(1);
-    expect(preparar(sj, ate('recife-pe', 20), r)).not.toBeNull();
+    // (Sem um São João recente na vida sorteada: o intervalo de repetição é outra regra.)
+    const recife = ate('recife-pe', 20); recife.ocorrencias = recife.ocorrencias.filter(o => o.id !== 'mun_sao_joao');
+    expect(preparar(sj, recife, r)).not.toBeNull();
     expect(preparar(sj, ate('sao-paulo-sp', 20), r)).toBeNull();
     expect(preparar(sj, ate(maior('JP'), 20), r)).toBeNull();
   });
@@ -307,7 +309,7 @@ describe('Relações 2.0 — tipo, estado e história', () => {
       return resolveu / 120;
     };
     expect(contar(0.9)).toBeGreaterThan(contar(-0.9) + 0.25);
-  });
+  }, 60_000); // (REWORK 4: 240 vidas de 30 anos; o estado da vida cresceu ~20% — o teto padrão de 20 s ficou curto no WSL.)
 
   it('5–7. amigos brigam, a amizade acaba — e a história fica; pedir desculpas pode reconciliar', () => {
     const v = adulto(30, { semente: 18 });

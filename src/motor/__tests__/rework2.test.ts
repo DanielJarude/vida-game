@@ -538,11 +538,13 @@ describe('fundação pessoal', () => {
 
   it('prática que dura vira marco da biografia uma vez só (a ida de cada semana, não)', () => {
     let v = pessoa(9, 280);
+    const t0 = v.t;
     for (let k = 0; k < 6; k++) v = ano(v, [{ tipo: 'rotina', id: 'futebol', ativa: true, nivel: 2 }]);
     const marcos = v.biografia.filter(e => /virou parte da vida/.test(e.texto));
     expect(marcos.length).toBe(1);
     // Seis anos de treino não viram seis linhas: o marco, e no máximo um ou outro destaque de campeonato.
-    expect(v.biografia.filter(e => /bola|futebol|escolinha|artilheir/i.test(e.texto) && e.relevancia !== 'tecnico').length).toBeLessThanOrEqual(3);
+    // (Só as linhas destes seis anos: a primeira infância da vida sorteada pode ter tido a sua bola.)
+    expect(v.biografia.filter(e => e.t > t0 && /bola|futebol|escolinha|artilheir/i.test(e.texto) && e.relevancia !== 'tecnico').length).toBeLessThanOrEqual(3);
   });
 });
 

@@ -182,9 +182,11 @@ describe('interface', () => {
     expect(within(main).getByText(/Antes de qualquer escolha, a semana já tem/)).toBeTruthy();
     expect(within(main).getAllByText(/Trabalho \(/).length).toBeGreaterThan(0);
     expect(within(main).getAllByText(/Faculdade \(/).length).toBeGreaterThan(0);
-    // Uma atividade que não cabe mostra o motivo com o que ocupa a semana.
-    expect(within(main).getAllByText(/Sua semana já está cheia: .*trabalho.*faculdade/i).length).toBe(1);
-    expect(within(main).getByRole('button', { name: /o que caberia com mais tempo/ })).toBeTruthy();
+    // REWORK 4: a semana cheia é custo, não muro — a atividade a mais diz o que ocupa a semana e o preço; a carga e o
+    // estresse são a leitura principal.
+    expect(within(main).getAllByText(/Sua semana já está cheia: .*trabalho.*faculdade/i).length).toBeGreaterThan(0);
+    expect(within(main).getAllByText(/o descanso some/).length).toBeGreaterThan(0);
+    expect(within(main).getByText('Carga')).toBeTruthy();
   });
 
   it('trabalho: as portas de trabalho aparecem com o motivo, e a carreira é contada em palavras', () => {
@@ -274,6 +276,8 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     fireEvent.click(screen.getAllByRole('button', { name: /^Trabalho$/ })[0]);
+    // REWORK 4: a vaga é um resumo escaneável; o botão está no detalhe (abre ao tocar).
+    for (const b of Array.from(screen.getByRole('main').querySelectorAll('.vaga-resumo'))) fireEvent.click(b);
     fireEvent.click(within(screen.getByRole('main')).getAllByRole('button', { name: /Candidatar-se/ })[0]);
     let etapas = 0;
     while (screen.queryByText('O que você responde?') && etapas < 5) {

@@ -7,14 +7,14 @@
  * aparecem quando a criança já age por conta própria.
  */
 
+import { fatoFebre, fatoPrimeiroDia, narrarFebre, narrarPrimeiroDia } from './narracao';
 import { nomeDePet } from '../sistemas/mercado';
 import { dinheiro as moeda } from '../texto';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { art, dinheiro, estresse, fato, feliz, forma, gp, prox, saude, tensao } from './efeitos';
 import { idadePessoa } from '../nucleo';
-import { municipio } from '../dados/lugares';
-import { cidadesGrandesLonge, cotidiano, de, temFesta } from './local';
+import { cidadesGrandesLonge, temFesta } from './local';
 import { paisDaVida } from '../mundo/vida';
 
 /** Para onde a família de um amigo de infância se muda: escolhidas à mão (o Brasil) ou as cidades grandes do país onde se mora. */
@@ -68,20 +68,13 @@ export const INFANCIA: Conteudo[] = [
     id: 'inf_primeiro_dia_aula', tipo: 'acontecimento', idade: [6, 7], tema: 'escola', garantido: true,
     quando: c => !!c.v.educacao.basica && c.v.educacao.basica.etapa === 'fundamental1' && c.v.educacao.basica.serie === 1,
     papeis: { quem: P.genitorEmCasa },
-    narrar: c => ({
-      texto: (() => {
-        const irmao = P.irmaoEmCasa(c.v).find(x => idadePessoa(c.v, x) > 7);
-        const prof = c.r.pick(['Dona Célia', 'Tia Rose', 'Professora Márcia', 'Tia Kátia', 'Professora Sônia', 'Professor Anderson', 'Tia Jô', 'Professora Luíza']);
-        const lugar = municipio(c.v.moradia.municipioId).perfil === 'pequena' ? 'da cidade' : 'do bairro';
-        return c.r.pick([
-          c.v.educacao.basica!.rede === 'privada' ? `Primeiro dia no 1º ano, de uniforme novo e mochila maior que as costas. ${c.p.quem.nome} ficou no portão até a porta da sala fechar.` : `Primeiro dia no 1º ano da escola ${lugar}. ${c.p.quem.nome} levou até o portão; a professora se chamava ${prof}.`,
-          `No primeiro dia do 1º ano, chorou na porta e, meia hora depois, já tinha um amigo. A professora, ${prof}, disse que é sempre assim.`,
-          `Primeiro dia de aula: não chorou, não falou com ninguém, voltou para casa com a lancheira intacta e uma história inventada sobre um dinossauro.`,
-          ...(irmao ? [`Primeiro dia no 1º ano, na mesma escola de ${irmao.nome} — que fingiu não conhecer ninguém no recreio.`] : [])
-        ]);
-      })(),
-      relevancia: 'marco'
-    })
+    // REWORK 4: o FATO (quem levou, como você reagiu, o que ficou, o irmão na mesma escola, o primeiro colega) e a
+    // narração dele (`narracao`). Os dois sorteios de antes continuam consumidos: o acaso do resto da vida não muda.
+    narrar: c => {
+      c.r.next(); c.r.next();
+      const dados = fatoPrimeiroDia(c, c.p.quem);
+      return { texto: narrarPrimeiroDia(c, dados), relevancia: 'marco', fato: { tipo: 'primeiro_dia', dados } };
+    }
   },
   {
     id: 'inf_alfabetizacao', tipo: 'acontecimento', idade: [7, 8], tema: 'escola', garantido: true,
@@ -111,10 +104,7 @@ export const INFANCIA: Conteudo[] = [
   {
     id: 'bb_febre', tipo: 'acontecimento', idade: [1, 2], tema: 'saude', peso: 2,
     papeis: { quem: P.genitorEmCasa },
-    narrar: c => ({ texto: c.v.financas.planoDeSaude || ['media', 'alta'].includes(c.v.origem.classe)
-      ? `Uma febre alta de madrugada levou a família ao pronto-socorro. Era virose; voltaram para casa ao amanhecer.`
-      : `Uma febre alta de madrugada levou ${c.p.quem.nome} para a fila ${de(cotidiano(c.v).prontoAtendimento ?? 'o pronto-socorro')}, com o bebê no colo. Era virose; foram atendidos às cinco da manhã.`,
-      relevancia: 'cotidiano', efeito: () => saude(c, -2) })
+    narrar: c => { const dados = fatoFebre(c, c.p.quem); return { texto: narrarFebre(c, dados), relevancia: 'cotidiano', efeito: () => saude(c, -2), fato: { tipo: 'febre', dados } }; }
   },
   {
     id: 'bb_irmao_ciumes', tipo: 'acontecimento', idade: [1, 2], tema: 'familia', peso: 2,

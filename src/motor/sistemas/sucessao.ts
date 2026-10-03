@@ -53,7 +53,7 @@ import { cursoPorNome } from '../dados/cursos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { liquido as liquidoDe } from './renda';
 import { pisoDeForma } from './pessoa';
-import { nomeLugar, paisDaCidade } from '../dados/lugares';
+import { economiaLocal, nomeLugar, paisDaCidade } from '../dados/lugares';
 import { retrospectiva } from './retrospectiva';
 import { trajetoriasDaVida } from './legado';
 import { economiasEstimadas } from './economiasNpc';
@@ -574,6 +574,7 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       temperamento: { extroversao: tp.sociabilidade / 100, afabilidade: tp.empatia / 100, responsabilidade: tp.disciplina / 100, abertura: tp.coragem / 100, estabilidade: -tp.impulsividade / 100 },
       ...(ocMorto ? { ocupacao: v.eu.genero === 'feminino' ? ocMorto.nome[1] : ocMorto.nome[0], ocupacaoId: ocMorto.id } : {}),
       renda: 0, municipioId: v.moradia.municipioId, saude: 0, visual: structuredClone(v.eu.visual),
+      ...(v.eu.ancestralidade ? { ancestralidade: v.eu.ancestralidade } : {}), ...(v.eu.tradicao ? { tradicao: v.eu.tradicao } : {}),
       ...(paisDoMorto.length ? { genitores: paisDoMorto } : {}), municipioNatal: v.eu.municipioNatal,
       // O que quem morreu tinha de crônico fica na ficha dele: é o histórico da família de quem continua.
       condicoes: v.corpo.condicoes.filter(c => c.cronica && !c.lesao).map(c => ({
@@ -611,7 +612,11 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       nacionalidades: nacionalidadesDaPessoa(h),
       ...(h.atracao ? { atracao: h.atracao } : {}),
       visual: structuredClone(h.visual ?? v.eu.visual),
-      ...(tratamento ? { tratamento } : {})
+      ...(tratamento ? { tratamento } : {}),
+      // REWORK 4: quem continua é quem já era — a ancestralidade, a tradição e a semente do retrato dela (a roupa e o
+      // fundo do rosto não mudam na troca).
+      ...(h.ancestralidade ? { ancestralidade: h.ancestralidade } : {}), ...(h.tradicao ? { tradicao: h.tradicao } : {}),
+      semente: h.id
     };
     v.corpo = {
       saude: clamp(Math.round(h.saude)),
@@ -912,7 +917,7 @@ function educacaoDe(v: Vida, h: Pessoa, i: number, aptidao: number): Vida['educa
   if (est && ce && est.tFim > v.t) {
     e.matricula = {
       cursoId: ce.id, instituicao: est.paga === 'publica' ? 'a universidade pública' : 'a faculdade', rede: est.paga === 'publica' ? 'publica' : 'privada', modalidade: 'presencial',
-      tInicio: est.tFim - ce.meses, mesesRestantes: Math.max(1, est.tFim - v.t), mensalidade: est.paga === 'publica' ? 0 : ce.mensalidade, ...(est.paga === 'fies' ? { financiamento: 'fies' as const } : {}),
+      tInicio: est.tFim - ce.meses, mesesRestantes: Math.max(1, est.tFim - v.t), mensalidade: est.paga === 'publica' || est.paga === 'bolsa' ? 0 : Math.round(ce.mensalidade * economiaLocal(h.municipioId).custo), ...(est.paga === 'fies' ? { financiamento: 'fies' as const } : est.paga === 'bolsa' ? { financiamento: 'prouni' as const } : {}),
       desempenho, trancado: false, municipioId: h.municipioId
     };
     if (e.escolaridade === 'medio') e.escolaridade = 'superior_incompleto';

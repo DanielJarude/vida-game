@@ -497,6 +497,8 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
   // As coisas da vida (opcional na v20): se vierem, cada uma com o seu número.
   const coisas = (d.financas as Financas | undefined)?.coisas;
   if (coisas !== undefined && (!Array.isArray(coisas) || coisas.some(c => !c || typeof c.id !== 'string' || typeof c.coisaId !== 'string' || !finito(c.t) || !finito(c.preco) || !finito(c.estado)))) return 'Coisas inválidas.';
+  // REWORK 4 (campos opcionais da v20): se vierem, vêm inteiros. Saves sem eles abrem como antes.
+  { const r4 = validarVidaVivida(d); if (r4) return r4; }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -1414,4 +1416,42 @@ export function registrarVidaPassada(p: VidaPassada, s: Armazenamento | null = a
   e.maiorPatrimonio = Math.max(e.maiorPatrimonio, p.patrimonio);
   e.historico = [p, ...e.historico].slice(0, 50);
   try { s?.setItem(CHAVE_ESTATISTICAS, JSON.stringify(e)); } catch { /* sem espaço */ }
+}
+
+/* ================================================================== REWORK 4 */
+
+const ehTexto = (x: unknown) => typeof x === 'string';
+const opcional = (x: unknown, ok: (y: unknown) => boolean) => x === undefined || ok(x);
+const listaDe = (x: unknown, ok: (y: Record<string, unknown>) => boolean) => Array.isArray(x) && x.every(y => !!y && typeof y === 'object' && ok(y as Record<string, unknown>));
+const numeros = (x: unknown) => !!x && typeof x === 'object' && Object.values(x as object).every(finito);
+
+/** Os campos novos do REWORK 4 (todos opcionais): identidade, áreas da carreira, conhecimento, rede, formação, bens. */
+function validarVidaVivida(d: Record<string, unknown>): string | null {
+  const eu = d.eu as Record<string, unknown>;
+  if (!opcional(eu.ancestralidade, numeros) || !opcional(eu.tradicao, ehTexto) || !opcional(eu.semente, ehTexto)) return 'Identidade inválida.';
+  const t = d.trabalho as Record<string, unknown>;
+  if (!opcional(t.areas, x => listaDe(x, f => ehTexto(f.oficio) && ehTexto(f.area) && finito(f.tInicio) && opcional(f.tFim, finito)))) return 'Áreas da carreira inválidas.';
+  for (const e of [t.atual, ...((t.historico as unknown[]) ?? [])] as (Record<string, unknown> | undefined)[]) if (e && !opcional(e.orgId, ehTexto)) return 'Organização do emprego inválida.';
+  if (!opcional(d.organizacoes, x => !!x && typeof x === 'object' && Object.values(x as object).every((o: Record<string, unknown>) => ehTexto(o.id) && ehTexto(o.nome) && ehTexto(o.setor) && ehTexto(o.municipioId)))) return 'Organizações inválidas.';
+  for (const vin of Object.values(d.vinculos as Record<string, Record<string, unknown>>)) {
+    if (!opcional(vin.sabe, x => listaDe(x, s => ehTexto(s.k) && finito(s.t) && ehTexto(s.v)))) return 'Conhecimento sobre pessoa inválido.';
+    if (!opcional(vin.digital, x => !!x && typeof x === 'object' && Object.values(x as object).every(y => typeof y === 'boolean' || finito(y) || y === undefined))) return 'Contato digital inválido.';
+  }
+  for (const p of Object.values(d.pessoas as Record<string, Record<string, unknown>>)) {
+    if (!opcional(p.ancestralidade, numeros) || !opcional(p.tradicao, ehTexto)) return 'Identidade de pessoa inválida.';
+    if (!opcional(p.ganhou, x => listaDe(x, g => ehTexto(g.coisaId) && finito(g.t)))) return 'Presentes inválidos.';
+  }
+  const redes = d.redes as { contas?: Record<string, Record<string, unknown>> } | undefined;
+  if (redes !== undefined && (typeof redes !== 'object' || !redes.contas || typeof redes.contas !== 'object'
+    || Object.values(redes.contas).some(c => !ehTexto(c.plataforma) || !ehTexto(c.arroba) || !finito(c.seguidores) || !finito(c.credibilidade) || !finito(c.tCriada)
+      || !listaDe(c.publicacoes, x => ehTexto(x.id) && finito(x.t) && ehTexto(x.tema) && ehTexto(x.texto) && finito(x.alcance))))) return 'Rede social inválida.';
+  const mente = d.mente as Record<string, unknown>;
+  if (!opcional(mente.estresseAlto, x => !!x && finito((x as Record<string, unknown>).anos) && finito((x as Record<string, unknown>).t))) return 'Estresse inválido.';
+  const edu = d.educacao as Record<string, unknown>;
+  if (!opcional(edu.trajetoria, x => listaDe(x, m => finito(m.t) && finito(m.idade) && ehTexto(m.instituicao) && ehTexto(m.tipo) && ehTexto(m.texto)))) return 'História da formação inválida.';
+  const fin = d.financas as Record<string, unknown>;
+  if (!opcional(fin.coisas, x => listaDe(x, c => opcional(c.cor, ehTexto) && opcional(c.acabamento, ehTexto)))) return 'Coisas inválidas.';
+  if (!listaDe(fin.bens, b => opcional(b.cor, ehTexto) && opcional(b.corNome, ehTexto))) return 'Bens inválidos.';
+  if (!listaDe(d.biografia, e => opcional(e.fato, f => !!f && typeof f === 'object' && ehTexto((f as Record<string, unknown>).tipo) && typeof (f as Record<string, unknown>).dados === 'object'))) return 'Linha da Vida inválida.';
+  return null;
 }

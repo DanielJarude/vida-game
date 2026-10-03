@@ -315,7 +315,8 @@ describe('G. renda → sair de casa → moradia → despesas', () => {
     expect(emCasa.arranjo).toBe('familia');
     const esperado = contribuicaoEsperada(v);
     if (esperado > 0) expect(emCasa.saidas.some(l => l.rotulo === 'Ajuda nas contas de casa')).toBe(true);
-    expect(['contribui', 'parcial']).toContain(independencia(v).fase);
+    // ('voltou': a vida sorteada já tinha saído e voltado — continua na casa da família, com a renda dela.)
+    expect(['contribui', 'parcial', 'voltou']).toContain(independencia(v).fase);
     // Não pôr nada tem custo na relação.
     const pr = principal(v)!;
     const nada = executar(v, { tipo: 'contribuicao', valor: 'nada' });

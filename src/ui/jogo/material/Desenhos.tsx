@@ -884,9 +884,10 @@ function desenhoDaForma(forma: FormaVeiculo, semente?: string): ReactNode {
 const formaNaPorta = (l: LeituraLar): FormaVeiculo | undefined => l.formaVeiculo ?? (l.veiculo === 'carro' ? 'hatch' : l.veiculo === 'moto' ? 'street' : l.veiculo === 'bicicleta' ? 'urbana' : undefined);
 
 /** `semente` (o id da versão, opcional): a variação de proporção do modelo — dois sedãs não saem idênticos. */
-export function DesenhoVeiculo({ forma, rotulo, largura = 48, semente }: { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string }) {
+export function DesenhoVeiculo({ forma, rotulo, largura = 48, semente, cor }: { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string; cor?: string }) {
+  // REWORK 4: com cor (o veículo desta vida), a lataria ganha a cor dele; o traço continua o da interface.
   return (
-    <svg className={`desenho-veiculo desenho-veiculo--${forma}`} viewBox="0 0 48 24" width={largura} height={largura / 2} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-forma={forma}>
+    <svg className={`desenho-veiculo desenho-veiculo--${forma}${cor ? ' desenho-veiculo--colorido' : ''}`} style={cor ? { ['--cor-veiculo' as string]: cor } : undefined} viewBox="0 0 48 24" width={largura} height={largura / 2} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-forma={forma}>
       {desenhoDaForma(forma, semente)}
     </svg>
   );

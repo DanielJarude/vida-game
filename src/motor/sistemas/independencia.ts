@@ -12,7 +12,8 @@
 import type { Vida } from '../tipos';
 import { escrever, idade, parceiro, temFato, marcarFato } from '../nucleo';
 import { moraComFamiliaDeOrigem } from './domicilio';
-import { ajudaMensalDaFamilia, contribuicaoEmCasa, contribuicaoEsperada, familiaPagaEstudo, responsaveis } from './origem';
+import { ajudaMensalDaFamilia, contribuicaoEmCasa, contribuicaoEsperada, responsaveis } from './origem';
+import { custoDoEstudo } from './custoDoEstudo';
 import { rendaPropriaMensal } from './dinheiro';
 import { marcar } from './marcas';
 
@@ -60,7 +61,7 @@ export function independencia(v: Vida): LeituraDaIndependencia {
   } else {
     const par = parceiro(v);
     const juntos = !!par && v.vinculos[par.p.id].convivio.includes('casa');
-    const ajuda = ajudaMensalDaFamilia(v) + (v.educacao.matricula ? Math.min(v.educacao.matricula.mensalidade, familiaPagaEstudo(v)) : 0);
+    const ajuda = ajudaMensalDaFamilia(v) + (custoDoEstudo(v)?.daFamilia ?? 0);
     const recebeu = (v.origem.apoios ?? []).filter(a => a.sentido === 'recebeu' && v.t - a.t <= 12).reduce((s, a) => s + a.valor, 0);
     if (ajudaAFamilia(v) && renda > 0) { fase = 'sustenta_familia'; texto = 'As contas são suas — e ainda sai dinheiro para ajudar quem ficou na casa de origem.'; }
     else if (ajuda > 0 && ajuda >= renda * 0.25 || recebeu >= Math.max(3000, renda * 3)) { fase = 'ajudado'; texto = ajuda > 0 ? 'Mora por conta própria, mas a família ainda segura parte da vida (o estudo, o aluguel do mês).' : 'Mora por conta própria; no último ano, precisou da família para fechar as contas.'; }

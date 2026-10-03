@@ -71,6 +71,17 @@ export function estadoDaRelacao(v: Vida, vin: Vinculo): EstadoDaRelacao {
   return 'estavel';
 }
 
+/**
+ * A FORÇA da relação, 0..100, para a leitura rápida (a barra da tela — REWORK 4). Não substitui o tipo, o estado nem a
+ * história: resume o afeto (proximidade), a confiança e o atrito num número só. Uma ruptura derruba; uma briga aberta pesa.
+ */
+export function forcaDaRelacao(v: Vida, vin: Vinculo): number {
+  const e = estadoDaRelacao(v, vin);
+  const base = vin.proximidade * 0.62 + vin.confianca * 0.28 + (100 - vin.tensao) * 0.1;
+  const corte = e === 'rompido' ? 35 : e === 'conflito' ? 12 : e === 'tensao' ? 5 : 0;
+  return Math.max(0, Math.min(100, Math.round(base - corte)));
+}
+
 /** Por que a relação está como está (o marco que explica), em palavras — ou nada, se não há um porquê registrado. */
 export function porqueDaRelacao(v: Vida, vin: Vinculo): string | undefined {
   const e = estadoDaRelacao(v, vin);

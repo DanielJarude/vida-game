@@ -16,7 +16,9 @@ import type { Dominio, Vida } from '../tipos';
 import type { Veredito } from '../plausibilidade';
 import { familiaDaTrilha } from '../dados/carreiras';
 import { podeTentar } from '../plausibilidade';
-import { idade, filhos, parceiro } from '../nucleo';
+import { emRecessao, idade, filhos, parceiro } from '../nucleo';
+import { rngDe } from '../rng';
+import { nivelDeOferta } from '../dados/lugares';
 import { DE_FORMACAO } from './formacao';
 import { DE_ESTUDOS, ROTINAS, descricaoDaRotina, atividadeExiste, podeComecarRotina, type ModeloRotina } from './rotinas';
 import { BEM_ESTAR, fatoresHumor } from './estado';
@@ -137,7 +139,8 @@ export function vagasEmCamadas(v: Vida): VagasEmCamadas {
   for (const x of alcance) {
     const perfil = perfilParaVaga(v, x.oc);
     let pontos = perfil.compatibilidade * 1.5 + (x.d.chance ?? 0.4) * 1.5 + x.oc.nivel * 0.25;
-    const daFormacao = !!x.oc.area && !x.oc.area.includes('qualquer') && superiores.filter(c => x.oc.area!.includes(c.area as never));
+    // A formação pesa inteira na área PRINCIPAL da vaga; numa área só aceita (computação para o drone agrícola), pouco.
+    const daFormacao = !!x.oc.area && !x.oc.area.includes('qualquer') && superiores.filter(c => x.oc.area![0] === c.area || (x.oc.area!.length === 1 && x.oc.area!.includes(c.area as never)));
     if (daFormacao && daFormacao.length) pontos += 1.5 + (daFormacao.some(c => v.t - c.tFim <= 60) ? 1 : 0);
     // Experiência antiga numa área em que não se trabalha há anos (o varejo de quando estudava): continua possível, não domina.
     { const ult = ultimaNaTrilha(x.oc.trilha); if (superiores.length && atual?.trilha !== x.oc.trilha && ult > -Infinity && v.t - ult > 48 && !(daFormacao && daFormacao.length)) pontos -= 1.2; }
@@ -148,7 +151,30 @@ export function vagasEmCamadas(v: Vida): VagasEmCamadas {
     (perfil.camada === 'trajetoria' ? out.trajetoria : perfil.camada === 'relacionada' ? out.relacionadas : out.outras).push(item);
   }
   for (const l of [out.trajetoria, out.relacionadas, out.outras]) l.sort((a, b) => b.pontos - a.pontos);
+  // REWORK 4: o mercado existe sem o jogador — fora da sua trajetória, nem toda vaga está aberta todo ano (a cidade, o
+  // setor, o momento da economia). As da trajetória e as vizinhas seguem visíveis (a sua procura não some).
+  const ano = Math.floor(v.t / 12);
+  const oferta = nivelDeOferta(v.moradia.municipioId);
+  out.outras = out.outras.filter(x => rngDe('mercado', v.moradia.municipioId, x.item.oc.id, ano).chance(0.5 + oferta * 0.12 - (emRecessao(v) ? 0.12 : 0)));
   return out;
+}
+
+/**
+ * REWORK 4: as vagas ACIMA do nível — o que a estrada de agora ainda não alcança (pedem mais experiência), para a
+ * ambição ter rosto. Só da sua trilha (ou da área da sua formação), no máximo duas, com o que falta.
+ */
+export function vagasAcima(v: Vida): { oc: Ocupacao; falta: string }[] {
+  const atual = v.trabalho.atual ? ocupacao(v.trabalho.atual.ocupacaoId) : undefined;
+  const areas = new Set(v.educacao.concluidos.filter(c => c.nivel !== 'livre').map(c => c.area));
+  const out: { oc: Ocupacao; falta: string }[] = [];
+  for (const oc of OCUPACOES) {
+    if (oc.concurso || oc.entrada || oc.id === atual?.id) continue;
+    const daTrilha = atual ? oc.trilha === atual.trilha && oc.nivel >= atual.nivel + 1 : !!oc.area?.some(a => areas.has(a)) && oc.nivel >= 4;
+    if (!daTrilha) continue;
+    const d = elegibilidade(v, oc);
+    if (d.grau === 'requisito' && /experiência|estrada/.test(d.motivo ?? '')) out.push({ oc, falta: d.motivo! });
+  }
+  return out.sort((a, b) => a.oc.nivel - b.oc.nivel || b.oc.salario - a.oc.salario).slice(0, 2);
 }
 
 /**

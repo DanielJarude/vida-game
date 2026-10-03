@@ -581,7 +581,10 @@ describe('curso integral × trabalho integral passa por propor()', () => {
     expect(vida.educacao.matricula).toBeUndefined();
     expect(p.planos.map(x => x.texto)).toEqual(expect.arrayContaining([expect.stringMatching(/^Matricular-se e deixar o trabalho de/), 'Não fazer a matrícula']));
     for (const pl of p.planos) expect(pl.consequencias.length).toBeGreaterThan(0);
-    expect(p.planos.some(pl => pl.conciliar)).toBe(false);
+    // REWORK 4: tentar os dois passou a ser possível (gente de verdade faz) — e o plano diz o preço antes.
+    const tentar = p.planos.find(pl => pl.conciliar);
+    expect(tentar).toBeDefined();
+    expect(tentar!.consequencias.join(' ')).toMatch(/estresse|descanso/);
   });
 
   it('escolher estudar deixa o emprego com o motivo; recusar mantém o emprego e registra', () => {

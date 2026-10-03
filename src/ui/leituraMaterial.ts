@@ -4,6 +4,7 @@
  * número da interface é calculado fora do motor.
  */
 
+import { variantesDeVeiculo } from '../motor/dados/pertences';
 import { formatarDinheiroCheio, formatarDinheiroCurto } from '../motor/mundo/moeda';
 import type { Especie } from '../motor/tipos';
 import type { Bem, Imovel, LinhaRazao, Veiculo, Vida } from '../motor/tipos';
@@ -289,6 +290,9 @@ export interface LeituraBem {
   icone: string;
   /** Veículo: a forma (o desenho próprio — hatch, picape, scooter, lancha). */
   forma?: FormaVeiculo;
+  /** REWORK 4: a cor do veículo (e o nome dela). */
+  cor?: string;
+  corNome?: string;
   modeloId: string;
   titulo: string;
   meta: string;
@@ -332,6 +336,9 @@ export function leituraDoBem(v: Vida, b: Bem): LeituraBem {
   const anos = anosDoVeiculo(v, b);
   return {
     id: b.id, tipo: 'veiculo', icone: m.categoria, forma: formaDaVersao(versaoVeiculo(b.versaoId), m.id), modeloId: m.id,
+    // REWORK 4: a cor deste veículo (da compra; saves antigos: estável pelo id).
+    cor: b.cor ?? variantesDeVeiculo(m.categoria)[parseInt(b.id.replace(/\D/g, '') || '0', 10) % variantesDeVeiculo(m.categoria).length].cor,
+    corNome: b.corNome ?? variantesDeVeiculo(m.categoria)[parseInt(b.id.replace(/\D/g, '') || '0', 10) % variantesDeVeiculo(m.categoria).length].nome,
     titulo: `${cap(nomeDoVeiculo(b))}${b.anoFabricacao ? ` ${b.anoFabricacao}` : ''}`,
     meta: cap(`${versaoDoVeiculo(b) ? `${versaoDoVeiculo(b)!.dica} · ` : ''}${b.usado ? 'comprado usado' : 'comprado zero'} em ${anoDe(b.tCompra)} · ${anos <= 1 ? 'quase novo' : `${anos} anos${m.raro ? '' : ' de estrada'}`} · ${dono}`),
     estado: cap(estadoDoVeiculo(b)) + '.',

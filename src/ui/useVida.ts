@@ -23,7 +23,12 @@ import { abrirSalva } from './persistencia/abrir';
 
 export type Tela = 'inicio' | 'criacao' | 'jogo' | 'vidas';
 
-export interface Aviso { id: number; texto: string; tom: 'bom' | 'ruim' | 'neutro' }
+/**
+ * Um aviso curto. `pessoaId`/`quem`: a interação a que ele pertence (REWORK 4 — o playtest viu "A conversa com
+ * Danielle foi longe" embaixo da ficha de Adam: o aviso de uma pessoa sobrevivia à troca de ficha). Agora o aviso
+ * diz de quem é, e morre quando a ficha muda de pessoa ou o ano passa.
+ */
+export interface Aviso { id: number; texto: string; tom: 'bom' | 'ruim' | 'neutro'; pessoaId?: string; quem?: string }
 
 /** As estatísticas em texto, com a cara de um armazenamento — para o motor ler e registrar nelas sem saber de onde vieram. */
 function gaveta(bruto: string | null): Armazenamento & { bruto: string | null } {
@@ -88,8 +93,8 @@ export function useVida() {
     return () => { vivo = false; };
   }, [motor, persist]);
 
-  const avisar = useCallback((texto: string, tom: Aviso['tom'] = 'neutro') => {
-    setAviso({ id: Date.now(), texto, tom });
+  const avisar = useCallback((texto: string, tom: Aviso['tom'] = 'neutro', de?: { pessoaId: string; quem: string }) => {
+    setAviso({ id: Date.now(), texto, tom, ...(de ?? {}) });
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setAviso(null), 4200);
   }, []);
@@ -159,6 +164,8 @@ export function useVida() {
     const antes = vida.biografia.length;
     const r = motor.avancarAno(vida);
     if (r.aviso) { avisar(r.aviso.texto, r.aviso.tom); return; }
+    // O que foi dito sobre o ano que passou não fica pendurado no ano novo.
+    setResultado(null); setAviso(null);
     setMarcaAno(antes);
     aplicar(r.vida);
     if (r.vida.morte) sound.playDeath();
@@ -176,6 +183,10 @@ export function useVida() {
       return false;
     }
     aplicar(r.vida);
+    // A interação com uma pessoa leva o nome dela no aviso (e o aviso some quando outra ficha abre).
+    const idAlvo = a.tipo === 'pessoa' || a.tipo === 'presentear' ? a.pessoaId : a.tipo === 'usar_coisa' ? a.pessoaId : a.tipo === 'rede' && 'pessoaId' in a.op ? a.op.pessoaId : undefined;
+    const alvo = idAlvo ? r.vida.pessoas[idAlvo] : undefined;
+    const deQuem = alvo ? { pessoaId: alvo.id, quem: alvo.nome } : undefined;
     // O que a ação mudou na vida (as consequências, como ficaram na Linha da Vida).
     const mudancas = (r.mudancas ?? []).filter(m => m !== r.resultado);
     if (r.resultado) {
@@ -183,10 +194,10 @@ export function useVida() {
       // resultado de ação que não abriu decisão vira aviso — a não ser que tenha mudado coisas na vida.
       if (a.tipo === 'decidir') setResultado({ titulo, texto: r.resultado, mudancas });
       else if (r.titulo || mudancas.length >= 2) setResultado({ titulo: r.titulo ?? 'O que aconteceu', texto: r.resultado, pessoaId: r.pessoaId, mudancas });
-      else avisar(r.resultado, 'neutro');
+      else avisar(r.resultado, 'neutro', deQuem);
     } else if (r.aviso) {
       if (mudancas.length >= 2 && !r.vida.momento) setResultado({ titulo: 'O que mudou', texto: r.aviso.texto, mudancas });
-      else avisar(r.aviso.texto, r.aviso.tom);
+      else avisar(r.aviso.texto, r.aviso.tom, deQuem);
     }
     sound.playClick();
     return true;
@@ -273,6 +284,11 @@ export function useVida() {
   return {
     pronto: !!motor && carregado, estatisticas,
     tela, setTela, vida, salva, aviso, avisoSave, setAvisoSave, resultado, fecharResultado: () => setResultado(null),
+    /** Outra pessoa entrou em foco: o que era de outra interação sai da tela. */
+    focarPessoa: (id: string | null) => {
+      setAviso(x => (x?.pessoaId && x.pessoaId !== id ? null : x));
+      setResultado(x => (x?.pessoaId && x.pessoaId !== id ? null : x));
+    },
     marcaAno, som, setSom, nascer, continuar, avancar, agir, recomecar, avisar, exportar, previaImportacao, importar, decidirHeranca, continuarComo, encerrar
   };
 }

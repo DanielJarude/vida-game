@@ -358,7 +358,7 @@ export function pessoasDaFormacao(v: Vida): { p: Pessoa; papel: 'professor' | 'o
 
 const MATERIA_PROF: Record<string, string> = { exatas: 'matemática', linguagens: 'português', ciencias: 'ciências', humanas: 'história' };
 
-function criarProfessor(v: Vida, inst: Instituicao, papel: 'professor' | 'orientador', disciplina?: string): Pessoa | undefined {
+export function criarProfessor(v: Vida, inst: Instituicao, papel: 'professor' | 'orientador', disciplina?: string): Pessoa | undefined {
   if (!inst.ambiente && inst.tipo !== 'ead') return undefined;
   const r = rngDe(v.id, 'professor', inst.chave, v.t);
   const p = criarPessoa(v, r, { idade: r.int(29, 58), municipioId: inst.municipioId });

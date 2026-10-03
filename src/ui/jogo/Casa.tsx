@@ -9,9 +9,6 @@
  * Os lugares da cidade (concessionária, banco, abrigo) moram em Cidade.
  */
 
-import { anoDe } from '../../motor/tempo';
-import { coisasDaVida, valorDeRevenda } from '../../motor/sistemas/coisas';
-import { coisa } from '../../motor/dados/coisas';
 import { daMoedaLocal, emMoedaLocal, moedaDoPais, simboloDaMoeda } from '../../motor/mundo/moeda';
 import { useState } from 'react';
 import { disponibilidadeUsoCasa, disponibilidadeUsoVeiculo, rotuloUsoCasa, rotuloUsoVeiculo, USOS_CASA, USOS_VEICULO } from '../../motor/sistemas/usos';
@@ -177,7 +174,7 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
   return (
     <article className={`objeto objeto--${b.tipo}`}>
       <div className="objeto__cabeca">
-        {b.tipo === 'imovel' ? <IconeMoradia modeloId={b.modeloId} /> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={NOME_FORMA[b.forma]} largura={56} semente={b.modeloId} /> : <Icone nome={b.icone} />}
+        {b.tipo === 'imovel' ? <IconeMoradia modeloId={b.modeloId} /> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={`${NOME_FORMA[b.forma]}${b.corNome ? `, ${b.corNome}` : ''}`} largura={56} semente={b.id} cor={b.cor} /> : <Icone nome={b.icone} />}
         <div className="objeto__nome">
           <h3>{b.titulo}</h3>
           <p>{b.meta}</p>
@@ -304,28 +301,3 @@ export function ViverACasa({ vida, agir }: Props) {
   );
 }
 
-/**
- * As coisas que a pessoa tem (`sistemas/coisas`): o estado (nova, boa, gasta, no fim), o que ainda vale usada
- * — e vender. As lojas ficam em Compras e na aba Cidade.
- */
-export function SuasCoisas({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
-  const lista = coisasDaVida(vida);
-  if (!lista.length) return idade(vida) >= 10 ? <p className="nota">Nenhuma coisa sua ainda — celular, notebook, instrumento, livros. <button type="button" className="link" onClick={() => abrir('eletronicos')}>As lojas</button> ficam em Compras.</p> : null;
-  const estado = (e: number) => (e >= 80 ? 'nova' : e >= 50 ? 'boa' : e >= 25 ? 'gasta' : 'no fim');
-  return (
-    <Secao titulo="Suas coisas" recolhivel aberta={lista.length <= 6}>
-      <ul className="ofertas">
-        {lista.map(t => {
-          const c = coisa(t.coisaId);
-          if (!c) return null;
-          return (
-            <li key={t.id} className="oferta oferta--estilo">
-              <span className="oferta__texto"><strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</strong><span className="nota">Desde {anoDe(t.t)} · {estado(t.estado)} · usada, vale uns {dinheiroCurto(valorDeRevenda(vida, t))}</span></span>
-              <BotaoAcao vida={vida} acao={{ tipo: 'vender_coisa', coisaTidaId: t.id }} agir={agir} variante="discreto">Vender</BotaoAcao>
-            </li>
-          );
-        })}
-      </ul>
-    </Secao>
-  );
-}

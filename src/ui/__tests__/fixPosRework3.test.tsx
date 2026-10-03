@@ -63,7 +63,7 @@ describe('13. o pet nunca usa o avatar de pessoa', () => {
     const faltando: string[] = [];
     for (const f of arquivos) {
       const txt = readFileSync(f, 'utf8');
-      for (const m of txt.matchAll(/<Retrato [^>]*semente=\{([^}]+)\}[^>]*\/>/g)) if (!m[0].includes('especie=') && m[1] !== '"eu"') faltando.push(`${f}: ${m[0].slice(0, 80)}`);
+      for (const m of txt.matchAll(/<Retrato [^>]*semente=\{([^}]+)\}[^>]*\/>/g)) if (!m[0].includes('especie=') && m[1] !== '"eu"' && !/^vida\.eu\.semente/.test(m[1])) faltando.push(`${f}: ${m[0].slice(0, 80)}`);
     }
     expect(faltando).toEqual([]);
   });

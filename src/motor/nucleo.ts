@@ -122,6 +122,8 @@ export interface NovaEntrada {
   t?: number;
   /** Acontecimento social estruturado. */
   evento?: EventoSocial;
+  /** REWORK 4: o fato estruturado por trás da frase. */
+  fato?: Entrada['fato'];
 }
 
 export function escrever(v: Vida, e: NovaEntrada): Entrada {
@@ -136,7 +138,8 @@ export function escrever(v: Vida, e: NovaEntrada): Entrada {
     tom: e.tom,
     pessoas: e.pessoas,
     escolha: e.escolha,
-    evento: e.evento
+    evento: e.evento,
+    ...(e.fato ? { fato: e.fato } : {})
   };
   v.biografia.push(entrada);
   return entrada;

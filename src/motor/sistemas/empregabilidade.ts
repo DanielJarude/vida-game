@@ -25,6 +25,7 @@ import { familiaDaTrilha } from '../dados/carreiras';
 import { nivelDeOferta } from '../dados/lugares';
 import { habilidade } from './frentes';
 import { anosTxt, degrausAcima, experienciaNaTrilha, porContaPropria, titulacaoNaTrilha } from './trabalho';
+import { viveuAArea } from './areasDoOficio';
 
 export type Camada = 'trajetoria' | 'relacionada' | 'outra';
 
@@ -122,9 +123,18 @@ export function perfilParaVaga(v: Vida, oc: Ocupacao): PerfilVaga {
   const vizinha = trilhas.some(t => (AFINS[t] ?? []).includes(oc.trilha) || familiaDaTrilha(t).id === familia) || (!!oc.habilidade && habilidade(v, oc.habilidade.dominio) >= oc.habilidade.minimo);
   // Um passo atrás (bem abaixo do que se faz ou da formação que se tem) não é trajetória.
   const passoAtras = (atual && naTrilha && oc.nivel < atual.nivel) || (nivelF >= 2 && oc.nivel <= 2 && !naFormacao);
+  // REWORK 4: "na área da formação" só quando é a área PRINCIPAL da vaga. Computação é aceita para operar drone
+  // agrícola, mas a vaga é do agro: formação relacionada, não "na área". (Direta → relacionada → transferível.)
+  const direta = naFormacao && !!oc.area && !oc.area.includes('qualquer') && (oc.area.length === 1 || areas.has(oc.area[0]));
+  const aceita = naFormacao && !direta && !oc.area!.includes('qualquer') ? oc.area!.find(a => areas.has(a)) : undefined;
+  // A área de aprofundamento (segurança, dados, produto): a vaga que a procura reconhece quem a viveu.
+  const daArea = oc.areaProfissional && viveuAArea(v, oc.areaProfissional);
+  if (oc.areaProfissional && !daArea) fracos.push(`Procuram quem já trabalha com ${oc.areaProfissional}.`);
   let camada: Camada = 'outra';
   let porque = 'Outro caminho: nada na sua estrada ou formação aponta para cá — o que não impede.';
   if (acima) { camada = 'trajetoria'; porque = 'O próximo passo da sua estrada.'; }
+  else if (daArea) { camada = 'trajetoria'; porque = `Procuram exatamente a sua área: ${oc.areaProfissional}.`; }
+  else if (aceita && !naTrilha && !passoAtras) { camada = 'relacionada'; porque = `A sua formação (${ROTULO_AREA[aceita as keyof typeof ROTULO_AREA] ?? aceita}) é aceita aqui — mas a vaga é de ${ROTULO_TRILHA[oc.trilha] ?? 'outra área'}.`; }
   else if ((naTrilha || naFormacao) && !passoAtras) { camada = 'trajetoria'; porque = naTrilha ? `Na sua estrada: ${ROTULO_TRILHA[oc.trilha] ?? 'a sua área'}.` : tit.meses ? `A sua formação avançada aponta para cá.` : `Na área da sua formação.`; }
   else if (vizinha && !passoAtras) { camada = 'relacionada'; porque = 'Perto do que você já fez: parte da estrada se transfere.'; }
   else if (naTrilha || naFormacao) { camada = 'relacionada'; porque = 'Da sua área, mas abaixo do ponto em que você está.'; }

@@ -13,6 +13,7 @@
  */
 
 import type { Rng } from '../rng';
+import { contatoReal, desgasteSemConvivio, soReacao } from './desgaste';
 import { clamp } from '../rng';
 import type { Convivio, Pessoa, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
@@ -224,7 +225,7 @@ export function processarSocial(v: Vida, r: Rng): void {
     if (vin.parentesco) {
       // Família: proximidade anda devagar; distância pesa pouco, ausência de contato pesa.
       const junto = vin.convivio.length > 0;
-      const contatoRecente = v.t - vin.tUltimoContato < 24;
+      const contatoRecente = contatoReal(v, vin, 24);
       const alvo = junto ? 70 : contatoRecente ? 55 : 40;
       vin.proximidade = clamp(Math.round(vin.proximidade + (alvo - vin.proximidade) * 0.08 + r.normal() * 1.5));
       if (junto) vin.tUltimoContato = v.t;
@@ -248,9 +249,9 @@ export function processarSocial(v: Vida, r: Rng): void {
       vin.tUltimoContato = v.t;
       if (c < -0.35 && r.chance(0.25)) vin.tensao = clamp(vin.tensao + 25);
     } else {
-      const semContato = v.t - vin.tUltimoContato;
-      delta = semContato < 12 ? -2 : outraCidade ? -11 : -6;
-      if (vin.estagio === 'amigo_proximo') delta *= 0.6; // amizade antiga resiste mais
+      // REWORK 4: o desgaste é contextual (contato, digital incluído; distância; história; confiança; temperamento).
+      delta = desgasteSemConvivio(v, p, vin);
+      if (soReacao(v, vin)) vin.confianca = clamp(vin.confianca - 2);
     }
     // Sem gesto, a convivência vira familiaridade, não amizade: o afeto de quem só divide o lugar cresce devagar.
     // (Com muita afinidade, a familiaridade cresce um pouco mais depressa — é o que às vezes vira amizade sem que ninguém "decida".)
@@ -326,13 +327,9 @@ export function processarSocial(v: Vida, r: Rng): void {
       } else if (depois === 'afastado' && antes === 'amigo_proximo') {
         linhas.push({ prioridade: 3, fazer: () => { escrever(v, { texto: textoAfastamento(v, p, outraCidade), relevancia: 'biografia', tema: 'amizade', tom: 'ruim', pessoas: [p.id], evento: { tipo: 'amizade_fim', pessoaId: p.id, peso: 25 } }); lembrarCom(v, p.id, outraCidade ? 'A distância afastou vocês.' : 'Foram se afastando.', 'distancia', 1); } });
       } else if (depois === 'afastado' && antes === 'amigo') {
-        linhas.push({ prioridade: 1, fazer: () => escrever(v, { texto: variante(v, 'perdendo', [
-          `Você e ${p.nome} foram se perdendo de vista.`,
-          `As mensagens com ${p.nome} foram ficando mais espaçadas, até pararem.`,
-          `${p.nome} virou alguém de quem você lembra no aniversário, e só.`,
-          `A amizade com ${p.nome} ficou para trás, sem briga nenhuma.`,
-          `Você e ${p.nome} deixaram de combinar coisas. Ninguém percebeu quando.`
-        ]), relevancia: 'cotidiano', tema: 'amizade', pessoas: [p.id] }) });
+        // REWORK 4: o afastamento conta COMO foi (de onde vinha a amizade, há quanto tempo, a distância, o que sobrou
+        // na rede) — não uma de cinco frases iguais em toda vida.
+        linhas.push({ prioridade: 1, fazer: () => escrever(v, { texto: textoDoEsfriar(v, p, vin, outraCidade), relevancia: 'cotidiano', tema: 'amizade', pessoas: [p.id] }) });
       }
     }
   }
@@ -482,3 +479,19 @@ export function apresentarAlguem(v: Vida, r: Rng, opts: { idade: [number, number
 }
 
 export const cidadeDe = (id: string) => municipio(id).nome;
+
+/** O esfriar de uma amizade, contado pelo que ela era (REWORK 4). */
+function textoDoEsfriar(v: Vida, p: Pessoa, vin: Vinculo, outraCidade: boolean): string {
+  const anos = Math.max(1, Math.round((v.t - vin.tInicio) / 12));
+  const onde = descricaoOrigem(v, vin);
+  const r = rngDe(v.id, 'esfriar', p.id, v.t);
+  const opcoes = [
+    `Você e ${p.nome} foram se perdendo de vista.`,
+    `${p.nome} virou alguém de quem você lembra no aniversário, e só.`,
+    ...(/^(na|no|nas|nos) /.test(onde) ? [`A amizade ${onde} com ${p.nome} não sobreviveu ao fim do convívio.`, `Sem ${onde.replace(/^na /, 'a ').replace(/^no /, 'o ').replace(/^nas /, 'as ').replace(/^nos /, 'os ').replace(/^em /, '')} em comum, você e ${p.nome} deixaram de ter assunto.`] : []),
+    ...(outraCidade ? [`Com ${p.nome} em ${municipio(p.municipioId).nome}, as visitas viraram promessa e as promessas viraram silêncio.`] : []),
+    ...(vin.digital?.reacao !== undefined && v.t - vin.digital.reacao < 24 ? [`Com ${p.nome}, sobrou a curtida de vez em quando no Mural. Conversa, nenhuma.`] : []),
+    ...(anos >= 8 ? [`Depois de ${anos} anos, a amizade com ${p.nome} foi ficando no passado, sem briga nenhuma.`] : [`Era uma amizade nova; sem tempo junto, ${p.nome} foi saindo da sua vida.`])
+  ];
+  return opcoes[Math.floor(r.next() * opcoes.length)];
+}

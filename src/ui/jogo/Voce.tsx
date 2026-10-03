@@ -50,7 +50,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
   return (
     <div className="voce">
       <section className="voce-rosto" aria-label="Como você está">
-        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={176} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
+        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={176} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
         <div className="voce-rosto__texto">
           <p className="folio__kicker"><span className="folio__area">Você</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
           <h1 className="voce-rosto__momento">{momentoAtual(vida)}</h1>

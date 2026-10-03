@@ -1,3 +1,4 @@
+import { naCasa } from '../sistemas/legado';
 /**
  * Desafios de vida: processos em que o desempenho importa.
  *
@@ -45,7 +46,7 @@ function legado(c: Ctx, bonus: number): Resultado {
   const base = elegibilidade(c.v, oc).chance ?? 0.4;
   if (c.r.chance(clamp(base + bonus + porta, 0.03, 0.95))) {
     const e = contratar(c.v, c.r, oc, via);
-    return { texto: `Ligaram dois dias depois: a vaga é sua. ${cap(nomeOcupacao(c.v, oc))} em ${e.empregador}, ${moeda(e.salario)} por mês.`, memoria: textoDeContratacao(c.v, oc, e), tom: 'bom', relevancia: 'marco' };
+    return { texto: `Ligaram dois dias depois: a vaga é sua. ${cap(nomeOcupacao(c.v, oc))} ${naCasa(e.empregador)}, ${moeda(e.salario)} por mês.`, memoria: textoDeContratacao(c.v, oc, e), tom: 'bom', relevancia: 'marco' };
   }
   return { texto: 'O e-mail veio educado: "decidimos seguir com outro candidato".', memoria: null, tom: 'ruim' };
 }
@@ -131,7 +132,7 @@ function concluirEntrevista(c: Ctx): Resultado {
     // A vaga é sua — se ela não couber com o que você já faz (a base, a faculdade do dia inteiro, o negócio), vem a pergunta.
     const saiu = propor(c.v, c.r, { tipo: 'emprego', ocupacaoId: oc.id, via: pr.via, texto: `A vaga de ${nome} é sua.` });
     const e = c.v.trabalho.atual;
-    if (saiu === 'feito' && e?.ocupacaoId === oc.id) return { texto: `Ligaram dois dias depois: a vaga é sua. ${nome.charAt(0).toUpperCase() + nome.slice(1)} em ${e.empregador}, ${moeda(e.salario)} por mês.${elogio}`, memoria: null, tom: 'bom' };
+    if (saiu === 'feito' && e?.ocupacaoId === oc.id) return { texto: `Ligaram dois dias depois: a vaga é sua. ${nome.charAt(0).toUpperCase() + nome.slice(1)} ${naCasa(e.empregador)}, ${moeda(e.salario)} por mês.${elogio}`, memoria: null, tom: 'bom' };
     return { texto: `Ligaram dois dias depois: a vaga é sua.${elogio}`, memoria: null, tom: 'bom' };
   }
   const perto = a.chance >= 0.4;
@@ -195,7 +196,7 @@ export const DESAFIOS: Conteudo[] = [
   {
     id: 'trab_negociacao', tipo: 'decisao', idade: [16, 80], tema: 'trabalho', manual: true, repetir: 0,
     titulo: 'A conversa do aumento',
-    texto: c => `Você marcou quinze minutos com a chefia${c.v.trabalho.atual ? ` em ${c.v.trabalho.atual.empregador}` : ''}. Sala fechada, café frio. É a sua vez de falar.`,
+    texto: c => `Você marcou quinze minutos com a chefia${c.v.trabalho.atual ? ` ${naCasa(c.v.trabalho.atual.empregador)}` : ''}. Sala fechada, café frio. É a sua vez de falar.`,
     opcoes: [
       { id: 'resultados', texto: 'Mostrar números: o que você entregou este ano', comportamento: { disciplina: 1 },
         resolver: c => ({ ...resolverNegociacao(c, 0.05 + Math.max(0, c.v.personalidade.tracos.disciplina) / 300, false), relevancia: 'biografia' }) },

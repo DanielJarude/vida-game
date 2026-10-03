@@ -19,3 +19,6 @@ vida-itch.zip
 
 # Cache do tsc incremental (gerado a cada typecheck/build).
 *.tsbuildinfo
+
+# Área de trabalho do gerador do APK (scripts/android/gerar-apk.mjs)
+.android/

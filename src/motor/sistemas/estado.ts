@@ -43,6 +43,7 @@ import { perdaDaCondicao, SINAIS } from './saude';
 import { pesoNaSaude } from './lesoes';
 import { pesoDaExposicao } from './notoriedade';
 import { pesoDaSobrecargaNaSaude } from './sobrecarga';
+import { areaProfissional } from '../dados/areasProfissionais';
 
 export { abalar, type Abalo };
 
@@ -255,6 +256,7 @@ export function alvoHumor(v: Vida): number {
 
 /* ------------------------------------------------------------ Cabeça */
 
+
 export const baseCabeca = (v: Vida) => (idade(v) < 12 ? 10 : 18);
 
 /** O que enche (ou alivia) a cabeça agora (soma = alvo − base). */
@@ -271,6 +273,9 @@ export function fatoresCabeca(v: Vida): Fator[] {
     if (ritmo) out.push({ id: 'ritmo', texto: ritmo.texto, efeito: ritmo.efeito });
     const clima = pesoDoClima(v).cabeca;
     if (clima) out.push({ id: 'clima', texto: clima.texto, efeito: clima.efeito });
+    // A área de aprofundamento pesa do seu jeito (a UTI, o júri, o plantão de segurança; a saúde da família, quase nada).
+    const area = areaProfissional(e.especialidade);
+    if (area?.peso) out.push({ id: 'area', texto: `o peso da área (${e.especialidade})`, efeito: area.peso * 2 });
     const negocio = pesoDoNegocio(v);
     if (negocio) out.push({ id: 'negocio', texto: negocio.texto, efeito: negocio.efeito });
   }

@@ -71,7 +71,8 @@ import { buscarAlguem, disponibilidadeBusca, type ContextoBusca } from './sistem
 import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, type MotivoDeAjuda } from './sistemas/origem';
 import { autonomia } from './sistemas/autonomia';
 import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, usarItem, type MudancaVisual } from './sistemas/estilo';
-import { clamp } from './rng';
+import { clamp, rngDe } from './rng';
+import { variantesDeVeiculo } from './dados/pertences';
 import { disponibilidadeParalela, encerrarParalela, encerrarPausada, trocarPrincipal } from './sistemas/paralelas';
 import { regrasDaVida } from './mundo/regras';
 import { previdenciaDaVida, textoLocal } from './mundo/locais';
@@ -80,6 +81,10 @@ import { disponibilidadeHabilitacao, iniciarHabilitacao } from './sistemas/habil
 import { disponibilidadeExperiencia, nomeDaExperiencia, viverExperiencia, type TipoExperiencia } from './sistemas/experiencias';
 import { disponibilidadeRenomear, renomear, type AlvoDeNome } from './sistemas/autoria';
 import { DE_FORMACAO, instituicaoAtual } from './sistemas/formacao';
+// REWORK 4 (por último: a ordem de inicialização dos módulos não muda para quem já vinha antes).
+import { disponibilidadeUsarCoisa, usarCoisa } from './sistemas/pertences';
+import { disponibilidadePresentear, presentear } from './sistemas/presentes';
+import { disponibilidadeRede, executarRede, type OpRede } from './sistemas/redes';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -201,6 +206,12 @@ export type Acao =
   /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
   | { tipo: 'comprar_coisa'; coisaId: string }
   | { tipo: 'vender_coisa'; coisaTidaId: string }
+  /** REWORK 4: usar uma coisa sua (tocar, jogar, fotografar...), sozinho ou com alguém (`pertences`). */
+  | { tipo: 'usar_coisa'; coisaTidaId: string; uso: string; pessoaId?: string }
+  /** REWORK 4: dar a alguém uma coisa do catálogo das lojas (`presentes`). */
+  | { tipo: 'presentear'; pessoaId: string; coisaId: string }
+  /** REWORK 4: as redes sociais do jogo (`redes`). */
+  | { tipo: 'rede'; op: OpRede }
   /** As outras trajetórias: deixar a paralela, trocar a principal, voltar a (ou encerrar) uma carreira pausada. */
   | { tipo: 'trajetoria'; oque: 'deixar' | 'principal' | 'retomar' | 'encerrar_pausada'; k?: number }
   /** Usar a própria visibilidade (entrevista, causa, evento, publicidade, privacidade, projeto, política): `visibilidade`. */
@@ -541,6 +552,9 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
     case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId);
     case 'vender_coisa': return disponibilidadeVenderCoisa(v, a.coisaTidaId);
+    case 'usar_coisa': return disponibilidadeUsarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId);
+    case 'presentear': return disponibilidadePresentear(v, a.pessoaId, a.coisaId);
+    case 'rede': return disponibilidadeRede(v, a.op);
     case 'trajetoria': return disponibilidadeParalela(v, a.oque, a.k);
     case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
     case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
@@ -702,6 +716,8 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'comprar_imovel': case 'vender_bem': case 'imovel': case 'comprar_veiculo': case 'veiculo': return ['Imóveis e veículos: compra, venda e reparo', 'escolha'];
     case 'migrar': return ['Mudança de país', 'escolha'];
     case 'comprar_coisa': case 'vender_coisa': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
+    case 'presentear': return ['Presentes', 'escolha'];
+    case 'rede': return ['Rede social', 'escolha'];
     case 'decidir': return ['Decisões do ano', 'escolha'];
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
@@ -825,7 +841,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (!res.entrou) { v.fatos[`tentou_${o.curso.id}_${Math.floor(v.t / 12)}`] = v.t; return { resultado: res.texto }; }
       // Aprovado: a matrícula entra pelo mesmo caminho de tudo que chega — se não cabe com o trabalho, a vida pergunta antes.
       const situacao = propor(v, r, novaMatricula(v, o));
-      return { resultado: situacao === 'pendente' ? `${res.texto} Mas ${o.curso.carga === 'integral' && o.modalidade === 'presencial' ? 'o curso é em período integral' : 'o curso é em outra cidade'}, e isso não cabe junto com o que você já tem.` : res.texto };
+      return { resultado: situacao === 'pendente' ? `${res.texto} Mas ${o.curso.carga === 'integral' && o.modalidade === 'presencial' ? 'o curso é em período integral' : 'o curso é em outra cidade'}: junto com o que você já tem, é preciso escolher o que fazer.` : res.texto };
     }
     case 'trancar':
       v.educacao.matricula!.trancado = true;
@@ -975,7 +991,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (financiou) v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'financiamento_veiculo', saldo: cond.financiado, jurosMes: cond.jurosMes, parcela: cond.parcela, bemId: id, descricao: `Financiamento: ${nome}`, tInicio: v.t, prazo: cond.meses });
       const casal = arranjoDaCasa(v) === 'casados';
       const anterior = v.financas.bens.filter(b => b.tipo === 'veiculo');
-      v.financas.bens.push({ id, tipo: 'veiculo', modeloId: m.id, versaoId: versao?.id, nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: casal ? 'casal' : 'eu', historia: [{ t: v.t, texto: o.usado ? `Comprado usado, ano ${o.anoFabricacao}${o.historico ? ` (${o.historico})` : ''}, por ${fmt(o.preco)}.` : `Comprado zero, por ${fmt(o.preco)}.` }] });
+      // A cor deste veículo (REWORK 4): o carro azul continua azul — da compra para sempre.
+      const cores = variantesDeVeiculo(m.categoria);
+      const cor = cores[Math.floor(rngDe(v.id, id, 'cor').next() * cores.length)];
+      v.financas.bens.push({ id, tipo: 'veiculo', cor: cor.cor, corNome: cor.nome, modeloId: m.id, versaoId: versao?.id, nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: casal ? 'casal' : 'eu', historia: [{ t: v.t, texto: o.usado ? `Comprado usado, ano ${o.anoFabricacao}${o.historico ? ` (${o.historico})` : ''}, por ${fmt(o.preco)}.` : `Comprado zero, por ${fmt(o.preco)}.` }] });
       const nVeiculos = (v.fatos['veiculos_comprados'] ?? 0) + 1;
       v.fatos['veiculos_comprados'] = nVeiculos;
       // O tipo em palavras ("carro", "moto", "bicicleta elétrica") e o gênero dele; o nome é o da versão.
@@ -1171,6 +1190,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
     case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId), 'bom');
     case 'vender_coisa': return ok(venderCoisa(v, a.coisaTidaId));
+    case 'usar_coisa': return ok(usarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId), 'bom');
+    case 'presentear': return ok(presentear(v, a.pessoaId, a.coisaId), 'bom');
+    case 'rede': return ok(executarRede(v, a.op));
     case 'trajetoria': {
       if (a.oque === 'deixar') { const nome = nomeOcupacao(v, ocupacao(v.trabalho.paralela!.ocupacaoId)); encerrarParalela(v, 'deixou a trajetória paralela'); return ok(`Você deixou ${nome}. O que fez fica no currículo.`); }
       if (a.oque === 'principal') { trocarPrincipal(v); return ok('A principal e a paralela trocaram de lugar.'); }

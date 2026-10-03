@@ -12,7 +12,9 @@ import type { Convivio, Especie, Genero, Parentesco, Pessoa, Vida, Vinculo, Visu
 import { novoId, temperamentoAleatorio } from './nucleo';
 import { sortearNome, sortearSobrenome } from './dados/nomes';
 import { anoDe } from './tempo';
-import { municipio } from './dados/lugares';
+import { cidadesDoPais, municipio } from './dados/lugares';
+import { rngDe } from './rng';
+import { ancestralidadeDe, chanceDoNomeDaTradicao, identidadeInicial, misturar, rngDosTracos, visualDaAncestralidade, visualDosPais, type Ancestralidade } from './sistemas/identidade';
 
 export const PELES = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
 export const CORES_CABELO = ['preto', 'castanho_escuro', 'castanho', 'castanho_claro', 'loiro', 'ruivo'];
@@ -34,25 +36,33 @@ export function visualAleatorio(r: Rng, genero: Genero): Visual {
   let cabelo = r.pick(cabelos);
   if (escura && r.chance(0.45)) cabelo = genero === 'masculino' ? 'crespo_curto' : r.pick(['black', 'trancas', 'cacheado_longo']);
   const barba = genero === 'masculino' && r.chance(0.35) ? r.pick(['bigode', 'cavanhaque', 'curta', 'cheia']) : undefined;
-  return { pele, cabelo, corCabelo, olhos, barba };
+  // REWORK 4: os traços modulares (textura, olhos, nariz, boca, rosto, sobrancelha), de um gerador semeado pelos
+  // traços já sorteados — a sequência do gerador da vida fica a mesma.
+  const base: Visual = { pele, cabelo, corCabelo, olhos, barba };
+  return comTracos(base, genero);
 }
 
-/** Filho puxa pai ou mãe em cada traço, com alguma mistura na pele. */
-export function visualHerdado(r: Rng, genero: Genero, a?: Visual, b?: Visual): Visual {
+/** Os traços modulares de quem não tem ancestralidade conhecida: coerentes com o tom de pele e o cabelo. */
+function comTracos(base: Visual, genero: Genero): Visual {
+  const anc = ancestralidadeDe({ visual: base });
+  const t = visualDaAncestralidade(rngDosTracos(base, 'tracos'), genero, anc);
+  const textura = /crespo|black|trancas/.test(base.cabelo) ? 'crespo' : /cacheado/.test(base.cabelo) ? 'cacheado' : /ondulado/.test(base.cabelo) ? 'ondulado' : t.textura;
+  return { ...base, textura, olhosForma: t.olhosForma, nariz: t.nariz, boca: t.boca, rosto: t.rosto, sobrancelha: t.sobrancelha };
+}
+
+/**
+ * Filho puxa pai ou mãe em cada traço (REWORK 4: todos os traços modulares, a textura que tende ao meio, a cor
+ * NATURAL do cabelo — tinta não passa —, às vezes um traço de mais longe). Os sorteios do gerador da vida são os
+ * mesmos de antes; a herança sai de um gerador semeado por eles.
+ */
+export function visualHerdado(r: Rng, genero: Genero, a?: Visual, b?: Visual, anc?: Ancestralidade, naturais: [string?, string?] = []): Visual {
   const base = visualAleatorio(r, genero);
   if (!a && !b) return base;
-  const x = a ?? b!;
-  const y = b ?? a!;
-  const i1 = PELES.indexOf(x.pele);
-  const i2 = PELES.indexOf(y.pele);
-  const peleIdx = Math.round((i1 + i2) / 2 + (r.next() - 0.5));
-  return {
-    pele: PELES[Math.max(0, Math.min(PELES.length - 1, peleIdx))],
-    corCabelo: r.chance(0.5) ? x.corCabelo : y.corCabelo,
-    olhos: r.chance(0.5) ? x.olhos : y.olhos,
-    cabelo: base.cabelo,
-    barba: base.barba
-  };
+  const j = r.next(); const c1 = r.chance(0.5); const c2 = r.chance(0.5);
+  const anc2 = anc ?? misturar(a ? ancestralidadeDe({ visual: a }) : undefined, b ? ancestralidadeDe({ visual: b }) : undefined)!;
+  const v = visualDosPais(rngDosTracos(base, j, String(c1), String(c2), a?.pele, b?.pele, a?.olhos, b?.olhos), genero, anc2, a, b, naturais);
+  if (genero === 'masculino') v.barba = base.barba;
+  return v;
 }
 
 export interface NovaPessoa {
@@ -67,6 +77,8 @@ export interface NovaPessoa {
   visual?: Visual;
   /** De que país a pessoa é, quando não é o da cidade onde mora (o nome vem de lá). */
   paisDeOrigem?: string;
+  /** REWORK 4: a família de onde a pessoa vem (a ancestralidade e a tradição de nomes), quando já se sabe. */
+  familia?: { ancestralidade?: Ancestralidade; tradicao?: string };
 }
 
 export function criarPessoa(v: Vida, r: Rng, n: NovaPessoa): Pessoa {
@@ -113,8 +125,46 @@ export function criarPessoa(v: Vida, r: Rng, n: NovaPessoa): Pessoa {
   }
   // De outro país que o da cidade onde mora: a nacionalidade fica escrita (o resto, sem o campo, é a do lugar).
   if (n.paisDeOrigem && n.paisDeOrigem !== lugar.pais) p.nacionalidades = [n.paisDeOrigem];
+  if (!n.especie) aplicarIdentidade(p, n, pais, anoDe(tNasc), ocupados);
   v.pessoas[p.id] = p;
   return p;
+}
+
+/**
+ * REWORK 4: quem a pessoa é por FAMÍLIA. Sem família conhecida, o contexto do lugar dá uma origem (às vezes de
+ * fora: a família japonesa de São Paulo, a mexicana de Los Angeles — com o sobrenome de lá e, às vezes, o prenome);
+ * com família, ela vem dos pais. Tudo por sorteio derivado (o gerador da vida não muda).
+ */
+function aplicarIdentidade(p: Pessoa, n: NovaPessoa, pais: string, ano: number, ocupados: Set<string>): void {
+  const r = rngDe(p.id, 'nome_da_familia');
+  let primeiraGeracao = false;
+  if (n.familia) {
+    p.ancestralidade = n.familia.ancestralidade ?? (n.visual ? ancestralidadeDe({ visual: n.visual }) : undefined);
+    p.tradicao = n.familia.tradicao;
+    if (!n.visual && p.ancestralidade) p.visual = visualDaAncestralidade(rngDe(p.id, 'identidade'), p.genero, p.ancestralidade, p.visual);
+  } else if (n.visual) {
+    p.ancestralidade = ancestralidadeDe({ visual: n.visual });
+  } else {
+    const id = identidadeInicial(p.id, pais, p.genero, p.visual!);
+    p.ancestralidade = id.ancestralidade;
+    p.tradicao = id.tradicao && id.tradicao !== pais ? id.tradicao : undefined;
+    p.visual = id.visual;
+    // Parte de quem é de família de fora nasceu lá (a primeira geração): a cidade natal e a nacionalidade de lá.
+    if (p.tradicao && !n.paisDeOrigem && r.chance(ano < 1990 ? 0.45 : 0.3) && cidadesDoPais(p.tradicao).length) {
+      primeiraGeracao = true;
+      p.municipioNatal = r.pick(cidadesDoPais(p.tradicao)).id;
+      p.nacionalidades = r.chance(0.5) ? [p.tradicao, pais] : [p.tradicao];
+    }
+  }
+  // O nome vem da família: o sobrenome de quem é de fora é o de lá; o prenome, às vezes (mais nos mais velhos).
+  if (p.tradicao && p.tradicao !== pais) {
+    if (!n.sobrenome) p.sobrenome = sortearSobrenome(r, p.tradicao);
+    // (Nunca o nome de alguém vivo e relevante na vida: duas pessoas com o mesmo nome confundem a história.)
+    if (!n.nome && r.chance(chanceDoNomeDaTradicao(ano, primeiraGeracao))) {
+      const outro = sortearNome(r, p.genero, ano, p.tradicao, undefined, p.sobrenome);
+      if (!ocupados.has(outro)) p.nome = outro;
+    }
+  }
 }
 
 export interface NovoVinculo {

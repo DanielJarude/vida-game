@@ -32,6 +32,9 @@ import { mexerNoClima, temChefia } from '../sistemas/profissao';
 import { negocioAberto } from '../sistemas/negocio';
 
 import { OFICIOS } from '../sistemas/oficios';
+import { areaAtual, chaveDoOficio, escolherArea, fasesDaArea } from '../sistemas/areasDoOficio';
+import { areaProfissional } from '../dados/areasProfissionais';
+import { rngDe } from '../rng';
 
 const oficioDe = (e?: Emprego) => (e ? OFICIOS[ocupacaoOuNula(e.ocupacaoId)?.trilha ?? ''] : undefined);
 const emprego = (c: Ctx) => c.v.trabalho.atual!;
@@ -46,36 +49,73 @@ function chanceDoDesafio(c: Ctx): number {
 
 /** O desafio da vez (estável entre abrir e resolver: sai do ano). */
 const indiceDesafio = (c: Ctx) => { const o = oficioDe(emprego(c))!; return Math.floor(c.v.t / 12) % o.desafios.length; };
+/**
+ * O caso grande da vez: o do ofício, ou — um ano sim, outro não, para quem tem área — o caso com a cara da área
+ * (`dados/areasProfissionais`): Segurança tem invasão; Dados, o modelo que errou; Produto, o lançamento.
+ */
+function desafioDaVez(c: Ctx): { texto: string; encarar: string; passar: string; deu: string; naoDeu: string } {
+  const o = oficioDe(emprego(c))!;
+  const d = o.desafios[indiceDesafio(c)];
+  const daArea = areaProfissional(emprego(c).especialidade)?.desafio;
+  if (daArea && Math.floor(c.v.t / 12) % 2 === 0) return { ...d, ...daArea };
+  return { ...d, texto: d.texto(emprego(c).especialidade) };
+}
+const chave = (c: Ctx) => chaveDoOficio(ocupacao(emprego(c).ocupacaoId).trilha);
+/** A área para onde dá para migrar (estável no ano: a primeira das outras, girando com o tempo). */
+function novaArea(c: Ctx): string | undefined {
+  const o = oficioDe(emprego(c))!; const a = areaAtual(c.v, chave(c));
+  const outras = o.areas.filter(x => x !== a && !fasesDaArea(c.v, chave(c)!).some(f => f.area === x));
+  return outras.length ? outras[Math.floor(c.v.t / 12) % outras.length] : undefined;
+}
 
 export const OFICIOS_CONTEUDO: Conteudo[] = [
   {
+    // REWORK 4: a primeira escolha da área é UM marco da carreira. Elegível só enquanto a pessoa não tem área NAQUELE
+    // ofício (`areasDoOficio`: da pessoa, não do emprego — sobrevive a troca de emprego, promoção, demissão, mudança de
+    // país, save/reload). Quem escolheu nunca mais vê esta pergunta; mudar de área é outra decisão (`ofi_area_troca`).
     id: 'ofi_area', tipo: 'decisao', idade: [23, 70], tema: 'trabalho', prioritario: true, prioridade: 2, repetir: 0,
-    quando: c => vivo(c) && !emprego(c).especialidade && oficioDe(emprego(c))!.areas.length > 0 && anosNaTrilha(c) >= 2 && (c.v.fatos['ofi_generalista'] === undefined || c.v.t - c.v.fatos['ofi_generalista'] >= 60) && c.r.chance(0.5),
+    quando: c => vivo(c) && !emprego(c).especialidade && !areaAtual(c.v, chave(c)) && oficioDe(emprego(c))!.areas.length > 0 && anosNaTrilha(c) >= 2 && (c.v.fatos['ofi_generalista'] === undefined || c.v.t - c.v.fatos['ofi_generalista'] >= 60) && c.r.chance(0.5),
     titulo: 'A área',
-    texto: c => oficioDe(emprego(c))!.area,
+    texto: c => (c.v.fatos['ofi_generalista'] !== undefined ? `Faz anos que você segue generalista. ${oficioDe(emprego(c))!.area.replace(/^Depois de [^,]+, /, 'Mas ').replace(/^(.)/, x => x.toUpperCase())}` : oficioDe(emprego(c))!.area),
     opcoes: [...[0, 1, 2, 3].map((k): Opcao => ({
       id: `a${k}`,
       texto: (c: Ctx) => { const a = oficioDe(emprego(c))!.areas[k]; return a.charAt(0).toUpperCase() + a.slice(1); },
       disponivel: (c: Ctx) => (oficioDe(emprego(c))!.areas[k] ? true : false),
-      consequencia: () => 'Cursos, leitura, os casos certos: os desafios dessa área rendem mais — e ela vai junto para o próximo emprego.',
-      resolver: (c: Ctx) => { const a = oficioDe(emprego(c))!.areas[k]; return { texto: `Você decidiu: ${a}. Os primeiros cursos vieram no mesmo ano.`, memoria: `Escolheu se aprofundar em ${a}.`, relevancia: 'cotidiano', efeito: () => { emprego(c).especialidade = a; emprego(c).desempenho = clamp(emprego(c).desempenho + 4); } }; }
-    })), { id: 'geral', texto: () => 'Seguir generalista, por enquanto', disponivel: () => true, consequencia: () => 'Nada muda — e dá para escolher depois.', resolver: (c: Ctx) => ({ texto: 'Você preferiu não se prender a uma área só.', memoria: null, efeito: () => { c.v.fatos['ofi_generalista'] = c.v.t; } }) }]
+      // Cada área diz o que é e o que muda (`dados/areasProfissionais`) — não a mesma frase para todas.
+      consequencia: (c: Ctx) => { const a = areaProfissional(oficioDe(emprego(c))!.areas[k]); return a ? `${a.descricao} ${a.muda}` : 'Os desafios dessa área rendem mais — e ela vai junto para o próximo emprego.'; },
+      resolver: (c: Ctx) => { const a = oficioDe(emprego(c))!.areas[k]; return { texto: `Você decidiu: ${a}. Os primeiros cursos vieram no mesmo ano.`, memoria: `Escolheu se aprofundar em ${a}.`, relevancia: 'biografia', efeito: () => { escolherArea(c.v, chave(c)!, a); const e = emprego(c); e.desempenho = clamp(e.desempenho + 4); if (e.clientela === undefined) e.salario = Math.round(e.salario * (areaProfissional(a)?.salario ?? 1) / 10) * 10; } }; }
+    })), { id: 'geral', texto: () => 'Seguir generalista, por enquanto', disponivel: () => true, consequencia: () => 'Nada muda agora. Daqui a uns anos, a pergunta pode voltar — com a estrada de generalista na conta.', resolver: (c: Ctx) => ({ texto: 'Você preferiu não se prender a uma área só.', memoria: null, efeito: () => { c.v.fatos['ofi_generalista'] = c.v.t; } }) }]
+  },
+  {
+    // Mudar de área depois de anos numa: OUTRA decisão, com consequência própria. A fase anterior fecha, não some —
+    // "generalista → Segurança → anos depois, Dados" fica no currículo e na Linha da Vida.
+    id: 'ofi_area_troca', tipo: 'decisao', idade: [27, 66], tema: 'trabalho', prioritario: true, prioridade: 1, repetir: 8,
+    quando: c => { if (!vivo(c)) return false; const k = chave(c); const a = areaAtual(c.v, k); if (!a || !k) return false; const f = fasesDaArea(c.v, k); const desde = f[f.length - 1].tInicio; return c.v.t - desde >= 60 && !!novaArea(c) && rngDe(c.v.id, 'troca_area', c.v.t).chance(0.14); },
+    titulo: 'Outra área',
+    texto: c => { const k = chave(c)!; const a = areaAtual(c.v, k)!; const f = fasesDaArea(c.v, k); const anos = Math.max(1, Math.round((c.v.t - f[f.length - 1].tInicio) / 12)); return `Depois de ${anos} anos em ${a}, surgiu a oportunidade de migrar para ${novaArea(c)}. ${areaProfissional(novaArea(c))?.descricao ?? ''}`; },
+    opcoes: [
+      { id: 'migrar', texto: c => `Migrar para ${novaArea(c)}`, comportamento: { coragem: 1 },
+        consequencia: c => `${areaProfissional(novaArea(c))?.muda ?? ''} O começo é de aprendiz de novo: o desempenho cai um pouco antes de subir. O que você sabe de ${areaAtual(c.v, chave(c))} não se perde.`.trim(),
+        resolver: c => { const de = areaAtual(c.v, chave(c))!; const para = novaArea(c)!; const k = chave(c)!; const f = fasesDaArea(c.v, k); const anos = Math.max(1, Math.round((c.v.t - f[f.length - 1].tInicio) / 12)); return { texto: `Você topou. Na primeira semana, voltou a se sentir ${c.g('novato', 'novata', 'novate')}.`, memoria: `Depois de ${anos} anos em ${de}, migrou para ${para}.`, relevancia: 'biografia', efeito: () => { escolherArea(c.v, k, para); const e = emprego(c); e.desempenho = clamp(e.desempenho - 6); marcar(c.v, 'mudanca_carreira', `Migrou de ${de} para ${para}.`, 2); } }; } },
+      { id: 'ficar', texto: c => `Continuar em ${areaAtual(c.v, chave(c))}`, consequencia: () => 'A área de sempre, com a estrada de sempre.',
+        resolver: () => ({ texto: 'Você agradeceu e ficou onde já é referência.', memoria: null }) }
+    ]
   },
   {
     // O trabalho também acontece: de dois em dois anos, mais ou menos, aparece o caso, a turma, a obra, a pauta.
     id: 'ofi_desafio', tipo: 'decisao', idade: [22, 75], tema: 'trabalho', prioritario: true, prioridade: 1, repetir: 2,
     quando: c => vivo(c) && anosNaTrilha(c) >= 1 && c.r.chance(0.45),
     titulo: 'No trabalho',
-    texto: c => { const o = oficioDe(emprego(c))!; return o.desafios[indiceDesafio(c)].texto(emprego(c).especialidade); },
+    texto: c => desafioDaVez(c).texto,
     opcoes: [
       { id: 'encarar', texto: c => oficioDe(emprego(c))!.desafios[indiceDesafio(c)].encarar, comportamento: { coragem: 1 },
         consequencia: c => { const x = chanceDoDesafio(c); return `${x >= 0.6 ? 'Você tem estrada para isso' : x >= 0.4 ? 'Pode dar certo — ou não' : 'É arriscado para quem está onde você está'}. Mais trabalho no ano.`; },
         resolver: c => {
-          const d = oficioDe(emprego(c))!.desafios[indiceDesafio(c)];
+          const d = desafioDaVez(c);
           const deu = c.r.chance(chanceDoDesafio(c));
           const g = (s: string) => s.replace('{o}', c.g('o', 'a', 'e'));
           return {
-            texto: g(deu ? d.deu : d.naoDeu), memoria: deu && (emprego(c).feitos ?? 0) === 0 ? `O primeiro grande ${/caso|paciente/.test(d.texto()) ? 'caso' : 'trabalho'} de verdade como ${ocupacao(emprego(c).ocupacaoId).nome[0]}: deu certo.` : null, relevancia: deu ? 'biografia' : undefined, tom: deu ? 'bom' : 'ruim',
+            texto: g(deu ? d.deu : d.naoDeu), memoria: deu && (emprego(c).feitos ?? 0) === 0 ? `O primeiro grande ${/caso|paciente/.test(d.texto) ? 'caso' : 'trabalho'} de verdade como ${ocupacao(emprego(c).ocupacaoId).nome[0]}: deu certo.` : null, relevancia: deu ? 'biografia' : undefined, tom: deu ? 'bom' : 'ruim',
             efeito: () => {
               const e = emprego(c);
               estresse(c, 4);

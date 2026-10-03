@@ -50,6 +50,29 @@ const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'renda', rotulo: 'Dinheiro por fora' }, { id: 'cuidado', rotulo: 'Cuidado' }, { id: 'lazer', rotulo: 'Lazer' }
 ];
 
+/** A carga (a sobrecarga da semana) e o estresse (a cabeça), lado a lado — o que a vida está cobrando. */
+function CargaEEstresse({ vida }: { vida: Vida }) {
+  const l = leituraDaSobrecarga(vida);
+  const e = Math.round(vida.mente.estresse);
+  const anos = vida.mente.estresseAlto?.anos ?? 0;
+  const palavra = e >= 75 ? 'no limite' : e >= 55 ? 'alto' : e >= 35 ? 'moderado' : 'baixo';
+  return (
+    <div className="carga">
+      <div className={`carga__medidor carga__medidor--${l.nivel}`}>
+        <span className="carga__rotulo">Carga</span>
+        <span className="carga__barra"><span style={{ width: `${[18, 48, 76, 98][l.nivel]}%` }} /></span>
+        <span className="carga__palavra">{l.palavra}</span>
+      </div>
+      <div className={`carga__medidor carga__medidor--estresse-${palavra.replace(' ', '-')}`}>
+        <span className="carga__rotulo">Estresse</span>
+        <span className="carga__barra" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={e} aria-label="Estresse"><span style={{ width: `${Math.max(4, e)}%` }} /></span>
+        <span className="carga__palavra">{palavra}</span>
+      </div>
+      {anos >= 2 && <p className="nota carga__anos">{anos} anos seguidos com a cabeça no limite: o sono, o humor e o corpo já sentem{anos >= 3 ? ' — e com a saúde frágil, o risco cresce' : ''}.</p>}
+    </div>
+  );
+}
+
 function resumoDaSemana(s: Semana, fixosPassam = false): string {
   // Os compromissos fixos já passam do que cabe: a folga mínima que a conta garante não é "tempo sobrando".
   if (fixosPassam) return 'Os compromissos fixos já passam do que cabe na semana.';
@@ -216,8 +239,12 @@ function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
           const fechada = porta && !podeTentar(d) && !d.resgate;
           const grupos = [...new Set(escolhas.map(e => e.grupo ?? ''))];
           return (
-            <li key={id} className="experiencia">
-              <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)}</strong><span>{descricaoDaExperiencia(id)} {porta ? `A partir de ${dinheiroCurto(custoDaExperiencia(vida, id))}.` : `Uns ${dinheiroCurto(custoDaExperiencia(vida, id))}.`}</span>{fechada && d.motivo && <span className="acao__motivo">{d.motivo}</span>}</span>
+            <li key={id} className={`experiencia experiencia--${GRAMATICA[id]}`}>
+              {/* REWORK 4: cada tipo com a sua cara — o postal da viagem, o que o curso vira, o preço do sabático, quem recebe. */}
+              <span className="experiencia__emblema" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path d={EMBLEMA[GRAMATICA[id]]} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+              <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)}</strong><span>{descricaoDaExperiencia(id)} {porta ? `A partir de ${dinheiroCurto(custoDaExperiencia(vida, id))}.` : `Uns ${dinheiroCurto(custoDaExperiencia(vida, id))}.`}</span>
+                <span className="experiencia__traco">{tracoDaExperiencia(vida, id)}</span>
+                {fechada && d.motivo && <span className="acao__motivo">{d.motivo}</span>}</span>
               {porta && !fechada
                 ? <button type="button" className="botao botao--discreto" aria-expanded={aberta === id} onClick={() => setAberta(a => (a === id ? null : id))}>{aberta === id ? 'Fechar' : id === 'bancar_projeto' ? 'Ver projetos' : id === 'presente_familia' ? 'Escolher' : id === 'curso_caro' ? 'Ver cursos' : 'Ver destinos'}</button>
                 : !porta && <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id }} agir={agir} variante="discreto" ocultarImpossivel>Tirar</BotaoAcao>}
@@ -251,6 +278,25 @@ function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   );
 }
 
+const GRAMATICA: Record<TipoExperiencia, string> = { viagem_pais: 'viagem', viagem_exterior: 'viagem', curso_caro: 'curso', sabatico: 'sabatico', bancar_projeto: 'projeto', presente_familia: 'presente' };
+const EMBLEMA: Record<string, string> = {
+  viagem: 'M2 16l20-8-6 12-4-5-5 3 1-5zM12 15l4-7',
+  curso: 'M4 19V6l8-3 8 3v13l-8-3zM12 3v13',
+  sabatico: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l4 2M4 4l3 3',
+  projeto: 'M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z',
+  presente: 'M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7c-2-4-6-3-5 0M12 7c2-4 6-3 5 0'
+};
+/** A linha que diz o que este TIPO de experiência é (não o preço de novo). */
+function tracoDaExperiencia(v: Vida, id: TipoExperiencia): string {
+  switch (id) {
+    case 'viagem_pais': case 'viagem_exterior': return '4, 7 ou 14 dias — a duração muda o descanso, o que acontece e o que fica parado.';
+    case 'curso_caro': return 'Vira prática de verdade: a competência sobe e a atividade pode entrar na semana.';
+    case 'sabatico': { const e = v.trabalho.atual; return `Três meses sem trabalho · descanso grande · ${e && e.clientela !== undefined ? 'parte da freguesia vai embora' : 'na volta, um tempo de readaptação'}.`; }
+    case 'bancar_projeto': return 'O sonho de alguém (ou uma causa): o dinheiro vira história — com o seu nome no começo.';
+    case 'presente_familia': return 'Os presentes grandes (a reforma, a entrada da casa, o estudo). Um violão ou um livro, você dá pela ficha da pessoa, em Pessoas.';
+  }
+}
+
 export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const i = idade(vida);
   if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
@@ -266,7 +312,10 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
       <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
       <section className="tempo-semana" aria-labelledby="titulo-semana">
         <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
-        <FaixaDaSemana s={s} />
+        {/* REWORK 4: a leitura principal é o que a semana COBRA (carga e estresse), não uma moeda de horas: dá para
+            tentar mais do que cabe — e a vida mostra o preço. A divisão da semana fica logo abaixo, como detalhe. */}
+        {i >= 12 && <CargaEEstresse vida={vida} />}
+        <details className="semana-detalhe"><summary>Como a semana se divide</summary><FaixaDaSemana s={s} /></details>
         {i >= 10 && (() => { const l = leituraDaSobrecarga(vida); return <p className={`semana-carga semana-carga--${l.nivel}`}><span className="semana-carga__palavra">{l.palavra.charAt(0).toUpperCase() + l.palavra.slice(1)}.</span> {l.nivel === 0 ? l.texto.replace(/^A semana cabe na vida: /, '') : l.texto.replace(/^[^:.]*[:.] ?/, '')}{l.nivel >= 2 ? ' Descanso, férias, menos compromissos ou um ritmo mais leve no trabalho aliviam.' : ''}</p>; })()}
         {s.fixos.length === 0 && <p className="nota">{i < 18 ? 'Além da escola, a semana é sua.' : 'Nada fixo ocupa a semana: nem trabalho, nem curso.'}</p>}
       </section>
@@ -355,7 +404,7 @@ function Comecar({ vida, agir, custo }: { vida: Vida; agir: (a: Acao) => boolean
   const cheia = cabeNaSemana(vida, 0.5);
   return (
     <Secao titulo="Para começar">
-      {!cheia.cabe && <p className="nota">{cheia.motivo.replace(/Isso pede [^.]*\./, 'Uma atividade nova, mesmo leve, não cabe.')}</p>}
+      {!cheia.cabe && <p className="nota">A semana já está cheia. Dá para começar mais coisas — o preço é o descanso, e a cabeça cobra.</p>}
       {para.length > 0 && <ul className="lista-rotinas lista-rotinas--sugestoes">{para.map(x => linhaAtividade(vida, x.item, custo, agir, x.motivo))}</ul>}
       {para.length === 0 && cheia.cabe && <Vazio>Nada novo por aqui agora.</Vazio>}
       {resto.length > 0 && (

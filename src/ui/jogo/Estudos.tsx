@@ -31,6 +31,8 @@ import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
 import type { Aba } from '../navegacao';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
+import { custoDoEstudo } from '../../motor/sistemas/custoDoEstudo';
+import { historiaDaFormacao } from '../../motor/sistemas/vidaEstudantil';
 import { novaMatricula } from '../../motor/sistemas/escola';
 import { descricaoDaRotina, modeloRotina, nivelDa, nivelModelo } from '../../motor/sistemas/rotinas';
 import { NOME_FOCO } from '../../motor/sistemas/concurso';
@@ -159,15 +161,30 @@ function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Aca
   );
 }
 
-/** O que a formação deixou (e continua valendo): vivências, com o que deu certo. */
+/** O que a formação deixou (e continua valendo): vivências, com o que deu certo — e a história de dentro (REWORK 4). */
 function OQueFicou({ vida }: { vida: Vida }) {
   const xs = leituraDasVivencias(vida);
-  if (!xs.length) return null;
+  const historia = historiaDaFormacao(vida);
+  if (!xs.length && !historia.length) return null;
   return (
-    <Secao titulo="O que ficou da formação">
-      <ul className="formacao-lista">{xs.map((x, k) => <li key={k}><span className="formacao-lista__nome">{x}</span></li>)}</ul>
-      <p className="nota">Isso pesa em portas futuras: uma seleção, um estágio, uma vaga, um mestrado.</p>
-    </Secao>
+    <>
+      {xs.length > 0 && (
+        <Secao titulo="O que ficou da formação">
+          <ul className="formacao-lista">{xs.map((x, k) => <li key={k}><span className="formacao-lista__nome">{x}</span></li>)}</ul>
+          <p className="nota">Isso pesa em portas futuras: uma seleção, um estágio, uma vaga, um mestrado.</p>
+        </Secao>
+      )}
+      {historia.length > 0 && (
+        <Secao titulo="Sua história na formação" recolhivel aberta={idade(vida) < 30}>
+          {historia.slice().reverse().map((h, k) => (
+            <div key={k} className="historia-formacao">
+              <p className="historia-formacao__lugar">{h.instituicao.charAt(0).toUpperCase() + h.instituicao.slice(1)} <span>{anoDe(h.de)}{anoDe(h.ate) !== anoDe(h.de) ? `–${anoDe(h.ate)}` : ''}</span></p>
+              <ul>{h.momentos.map((m, j) => <li key={j} className={`historia-formacao__momento historia-formacao__momento--${m.tipo}`}><span className="historia-formacao__ano">{m.idade} anos</span> {m.texto}</li>)}</ul>
+            </div>
+          ))}
+        </Secao>
+      )}
+    </>
   );
 }
 
@@ -470,8 +487,10 @@ function Estudo({ vida, agir }: Props) {
       {m && (
         <>
           <Linha rotulo="Onde" valor={`${m.instituicao}${m.modalidade === 'ead' ? ' · a distância' : ` · ${nomeLugar(m.municipioId)}`}`} />
-          <Linha rotulo="Turno" valor={m.modalidade === 'ead' ? 'no seu tempo' : curso(m.cursoId).carga === 'integral' ? 'período integral (não cabe com emprego de dia inteiro)' : 'à noite (cabe com trabalho)'} />
-          {m.mensalidade > 0 && <Linha rotulo={m.financiamento === 'fies' ? `Mensalidade (${educacaoDaVida(vida).credito?.nome ?? 'crédito estudantil'})` : 'Mensalidade'} valor={dinheiroCurto(m.mensalidade)} />}
+          <Linha rotulo="Turno" valor={m.modalidade === 'ead' ? 'no seu tempo' : curso(m.cursoId).carga === 'integral' ? 'período integral (com emprego, a semana passa muito do que cabe)' : 'à noite (cabe com trabalho)'} />
+          {/* O custo pela mesma fonte do extrato e dos acontecimentos (`custoDoEstudo`): a tela não diz uma coisa e o mês outra. */}
+          {(() => { const ce = custoDoEstudo(vida, m); if (!ce) return null; const credito = educacaoDaVida(vida).credito?.nome ?? 'crédito estudantil';
+            return <Linha rotulo="Custo" valor={ce.regime === 'gratuita' ? 'sem mensalidade' : ce.regime === 'bolsa_integral' ? 'bolsa integral: nada a pagar' : ce.regime === 'credito' ? `${dinheiroCurto(m.mensalidade)}/mês, pelo ${credito.replace(/^(o|a) /, '')}: paga depois de formado` : ce.daFamilia > 0 ? `${dinheiroCurto(m.mensalidade)}/mês · a família põe ${dinheiroCurto(ce.daFamilia)}` : `${dinheiroCurto(m.mensalidade)}/mês`} />; })()}
         </>
       )}
       {e.evadiu && !b && <p className="nota">{`Você largou a escola. Dá para voltar pelo ${textoLocal(vida, 'supletivo').replace(/^(o|a) /, '')}.`}</p>}
@@ -533,7 +552,7 @@ function Cursos({ vida, agir }: Props) {
       ...grupoDoCurso(cc, formado, areasFormadas),
       ordem: pontos.get(cc.id) ?? 0,
       tipo: TIPO_NIVEL[cc.nivel],
-      meta: `${NIVEL[cc.nivel]} · ${duracao}${cc.carga === 'integral' ? ' · período integral' : ''}${melhor ? ` · ${melhor.mensalidade > 0 ? `${dinheiroCurto(melhor.mensalidade)}/mês` : melhor.via === 'fies' ? 'paga depois de formado' : 'sem mensalidade'}` : ''}`,
+      meta: `${NIVEL[cc.nivel]} · ${duracao}${cc.carga === 'integral' ? ' · período integral' : ''}${melhor ? ` · ${melhor.via === 'fies' || (melhor.rede === 'publica' && melhor.mensalidade > 0 && educacaoDaVida(vida).publicaDiferida) ? 'paga depois de formado' : melhor.mensalidade > 0 ? `${dinheiroCurto(melhor.mensalidade)}/mês` : 'sem mensalidade'}` : ''}`,
       motivo: sugestao.get(cc.id),
       destaque: sugestao.has(cc.id),
       possivel: c.possivel,
@@ -548,7 +567,7 @@ function Cursos({ vida, agir }: Props) {
             <div key={indice} className="via">
               <div className="via__texto">
                 <strong>{rotuloDaVia(vida, o.via)}</strong>
-                <span>{o.modalidade === 'ead' ? 'de casa' : nomeLugar(o.municipioId)}{o.mensalidade > 0 ? ` · ${dinheiroCurto(o.mensalidade)}/mês` : o.via === 'fies' ? ' · paga depois de formado' : ' · sem mensalidade'}{o.modalidade !== 'ead' && o.municipioId !== vida.moradia.municipioId ? ' · pede mudança de cidade' : ''}</span>
+                <span>{o.modalidade === 'ead' ? 'de casa' : nomeLugar(o.municipioId)}{o.via === 'fies' || (o.rede === 'publica' && o.mensalidade > 0 && educacaoDaVida(vida).publicaDiferida) ? ' · paga depois de formado' : o.mensalidade > 0 ? ` · ${dinheiroCurto(o.mensalidade)}/mês` : ' · sem mensalidade'}{o.modalidade !== 'ead' && o.municipioId !== vida.moradia.municipioId ? ' · pede mudança de cidade' : ''}</span>
                 {o.observacao && <span className="via__obs">{o.observacao}</span>}
                 {/* Estudar em outra cidade é mudar: o que fica para trás é dito antes de tentar. */}
                 {o.modalidade !== 'ead' && o.municipioId !== vida.moradia.municipioId && (() => { const efeitos = consequenciasDaMudanca(vida, o.municipioId); return efeitos.length ? <ul className="via__consequencias">{efeitos.map((x, k) => <li key={k}>{x}</li>)}</ul> : null; })()}

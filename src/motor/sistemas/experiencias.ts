@@ -29,6 +29,7 @@
  * virar notícia local — e isso é imagem, não fama.
  */
 
+import { temCoisa } from './coisas';
 import { educacaoDaVida, paisDaVida } from '../mundo/vida';
 import { ORDEM_REGIOES, PAIS_PADRAO, ROTULO_REGIAO, doPais, existePais, paisDoCatalogo, paisesVivenciaveis, perfilDoPais } from '../mundo/registro';
 import { paisCorrente, precosDoPais } from '../mundo/moeda';
@@ -355,6 +356,24 @@ export function disponibilidadeExperiencia(v: Vida, id: TipoExperiencia, escolha
   return vereditoDePagar(v, custoDaExperiencia(v, id, escolha), 'Custa uns');
 }
 
+/**
+ * REWORK 4: o que a duração da viagem muda, dito ANTES (a mesma conta que `viverExperiencia` aplica): descanso,
+ * trabalho e estudo, a companhia, a câmera.
+ */
+export function previsaoDaViagem(v: Vida, dias: number): string[] {
+  const out: string[] = [];
+  out.push(dias <= 4 ? 'Descanso curto: alivia, não apaga o cansaço.' : dias <= 7 ? 'Uma semana inteira fora: a cabeça volta mais leve.' : 'Duas semanas: descanso de verdade — e mais coisa acontece pelo caminho.');
+  const e = v.trabalho.atual;
+  if (e && e.clientela !== undefined && dias >= 7) out.push('A agenda parada custa alguns clientes.');
+  const m = v.educacao.matricula;
+  if (m && !m.trancado && dias >= 14) out.push('Duas semanas de aula ficam para recuperar.');
+  if (dias >= 7 && v.mente.estresseAlto) out.push('Desfaz parte do cansaço acumulado de anos.');
+  const tensos = companhia(v).filter(p => (v.vinculos[p.id]?.tensao ?? 0) >= 40);
+  if (dias >= 14 && tensos.length) out.push(`Duas semanas junto de ${tensos.map(p => p.nome).join(' e ')} não resolvem o que anda mal — podem piorar.`);
+  if (temCoisa(v, 'camera')) out.push('A câmera vai junto: volta com um álbum (e com prática).');
+  return out;
+}
+
 /** Viver a experiência escolhida. Sem escolha (saves e simulações antigas), vale a primeira opção da porta. */
 export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?: string): string {
   const opcoes = escolhasDaExperiencia(v, id);
@@ -375,10 +394,21 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
       v.mente.felicidade = clamp(v.mente.felicidade + (fora ? 7 : 5) * Math.min(1.4, 0.6 + fator * 0.4));
       v.mente.estresse = clamp(v.mente.estresse - (fora ? 9 : 6) * Math.min(1.5, 0.6 + fator * 0.4));
       perto(Math.round((fora ? 7 : 5) * Math.min(1.3, 0.7 + fator * 0.3)), `A viagem para ${dest.nome}.`);
+      // REWORK 4: a duração muda mais do que o preço — o trabalho e o estudo sentem a ausência, a companhia de duas
+      // semanas aproxima (ou expõe o que já andava mal), o descanso longo desfaz parte da cabeça no limite, e quem tem
+      // câmera volta com um álbum (a prática da fotografia).
+      const efeitos: string[] = [];
+      const e = v.trabalho.atual;
+      if (e && e.clientela !== undefined && dur.dias >= 7) { e.clientela = clamp(e.clientela - Math.round(dur.dias / 7) * 2); efeitos.push('a agenda parada custou alguns clientes'); }
+      const m = v.educacao.matricula;
+      if (m && !m.trancado && dur.dias >= 14) { m.desempenho = clamp(m.desempenho - 2); efeitos.push('duas semanas de aula ficaram para recuperar'); }
+      if (dur.dias >= 7 && v.mente.estresseAlto) { v.mente.estresseAlto.anos = Math.max(0, v.mente.estresseAlto.anos - 1); efeitos.push('o descanso de verdade desfez parte do cansaço acumulado'); }
+      if (dur.dias >= 14) for (const p of com) { const vin = v.vinculos[p.id]; if (vin && vin.tensao >= 40) { vin.tensao = clamp(vin.tensao + 8); efeitos.push(`duas semanas juntos não resolveram o que anda entre você e ${p.nome}`); } }
+      if (temCoisa(v, 'camera')) { praticar(v, r, 'fotografia', 0.3 * fator, 1.2); efeitos.push('a câmera voltou com um álbum inteiro'); }
       const texto = `Viajou para ${dest.nome} (${dur.nome})${com.length ? `, com ${nomes}` : flex(v.eu.genero, ', sozinho', ', sozinha', ', sozinhe')}.`;
       escrever(v, { texto, relevancia: 'biografia', tema: 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id) });
-      const extra = acontecimentoDeViagem(v, r, dest.nome, com.length === 0, fora);
-      return `${fmt(custo)} entre passagem, hospedagem e o resto. ${com.length ? 'Voltaram com fotos demais e uma história que vão repetir por anos.' : 'Voltou outra pessoa — um pouco.'}${extra ? ` ${extra}` : ''}`;
+      const extra = acontecimentoDeViagem(v, r, dest.nome, com.length === 0, fora, fator);
+      return `${fmt(custo)} entre passagem, hospedagem e o resto. ${com.length ? 'Voltaram com fotos demais e uma história que vão repetir por anos.' : 'Voltou outra pessoa — um pouco.'}${efeitos.length ? ` ${cap(efeitos.join('; '))}.` : ''}${extra ? ` ${extra}` : ''}`;
     }
     case 'curso_caro': {
       const curso = CURSOS.find(x => x.id === esc?.id) ?? CURSOS[0];
@@ -441,9 +471,10 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
  * (quem viaja sozinho conhece mais gente — com o contexto de onde veio) ou
  * um imprevisto contado depois rindo. Nem toda viagem traz algo.
  */
-function acontecimentoDeViagem(v: Vida, r: Rng, onde: string, sozinho: boolean, fora: boolean): string | undefined {
+function acontecimentoDeViagem(v: Vida, r: Rng, onde: string, sozinho: boolean, fora: boolean, fator = 1): string | undefined {
   const x = r.next();
-  if (sozinho && x < 0.28 && idade(v) >= 18 && idade(v) <= 70) {
+  // Quanto mais longa, mais coisa acontece (conhecer alguém, o imprevisto que vira história).
+  if (sozinho && x < 0.28 * Math.min(1.5, Math.max(0.6, fator)) && idade(v) >= 18 && idade(v) <= 70) {
     const genero = v.eu.atracao === 'homens' ? 'masculino' : v.eu.atracao === 'mulheres' ? 'feminino' : r.chance(0.5) ? 'masculino' : 'feminino';
     const p = criarPessoa(v, r, { idade: clamp(idade(v) + r.int(-5, 5), 18, 85), genero, municipioId: r.chance(0.5) ? v.moradia.municipioId : v.eu.municipioNatal });
     const vin = vincular(v, p, { origem: 'apresentado', proximidade: r.int(26, 38), estagio: 'conhecido' });
@@ -453,7 +484,7 @@ function acontecimentoDeViagem(v: Vida, r: Rng, onde: string, sozinho: boolean, 
     escrever(v, { texto: `Na viagem para ${onde}, conheceu ${p.nome}. Trocaram contato na volta.`, relevancia: 'biografia', tema: parceiro(v) ? 'amizade' : 'amor', pessoas: [p.id] });
     return `E ${p.nome}, ${flex(p.genero, 'que você conheceu', 'que você conheceu')} lá, mandou mensagem na semana seguinte.`;
   }
-  if (x > 0.86) {
+  if (x > 1 - 0.14 * Math.min(1.6, Math.max(0.6, fator))) {
     const imprevisto = fora ? 'A mala foi para outro país e chegou três dias depois.' : 'O voo de volta atrasou um dia inteiro; a história virou piada de família.';
     escrever(v, { texto: imprevisto, relevancia: 'cotidiano', tema: 'lazer' });
     return imprevisto;

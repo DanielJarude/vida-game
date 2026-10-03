@@ -56,7 +56,9 @@ function listar(dir, base = dir) {
 // o arquivo garante isso até contra uma regressão. O jogo no itch segue online,
 // como sempre foi, com o save no IndexedDB (ou no localStorage).
 const SO_PWA = (p) => /^(sw\.js|workbox-[\w-]+\.js)(\.map)?$/.test(p);
-const arquivos = listar(dist).filter((p) => !SO_PWA(p)).sort();
+// O APK do Android (`public/android/`) também fica fora: o download é do site; no itch, ele só pesaria.
+const SO_SITE = (p) => /^android[\\/]/.test(p);
+const arquivos = listar(dist).filter((p) => !SO_PWA(p) && !SO_SITE(p)).sort();
 const paraZip = (p) => p.split(sep).join('/');
 
 const locais = [];

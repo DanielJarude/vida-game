@@ -26,7 +26,7 @@ export function App() {
       {c.tela === 'vidas' && <Vidas c={c} />}
       <AvisoAtualizacao />
       <div className="avisos" aria-live="polite">
-        {c.aviso && <p key={c.aviso.id} className={`aviso aviso--${c.aviso.tom}`}>{c.aviso.texto}</p>}
+        {c.aviso && <p key={c.aviso.id} className={`aviso aviso--${c.aviso.tom}`}>{c.aviso.quem && <strong className="aviso__quem">{c.aviso.quem}</strong>}{c.aviso.texto}</p>}
       </div>
     </div>
   );

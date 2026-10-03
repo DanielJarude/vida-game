@@ -87,7 +87,8 @@ export function aplicarAcontecimento(v: Vida, a: Acontecimento, ctx: Ctx): boole
     tema: a.tema,
     tom: n.tom,
     pessoas: Object.values(ctx.p).map(p => p.id),
-    evento: n.evento
+    evento: n.evento,
+    ...(n.fato ? { fato: n.fato } : {})
   });
   if (n.lembrar) {
     const pessoa = ctx.p[n.lembrar[0]];

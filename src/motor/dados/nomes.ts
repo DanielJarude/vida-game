@@ -70,11 +70,21 @@ export function sortearSobrenome(r: Rng, pais = PAIS_PADRAO, divisao?: string): 
  *  - nos demais (inclusive o costume luso, em que a família já usa o nome
  *    que passa), o da família: o do pai, ou o da mãe quando não há pai.
  */
-export function sobrenomeDeQuemNasce(pais: string, doPai?: string, daMae?: string): string | undefined {
+export function sobrenomeDeQuemNasce(pais: string, doPai?: string, daMae?: string, semente?: string): string | undefined {
   const base = doPai || daMae;
   if (!base) return undefined;
   const grupo = grupoPorSobrenome(pais, base) ?? perfilNomes(pais).grupos[0];
   if (grupo.sobrenome === 'dois' && doPai && daMae) return `${doPai.split(' ')[0]} ${daMae.split(' ')[0]}`;
+  // REWORK 4 — o costume luso (Brasil, Portugal): muitas famílias dão os dois, o último da mãe e depois o do pai
+  // ("Souza Lima"); outras, só o da família. A escolha é de cada casal (estável pela semente: o mesmo bebê, o mesmo nome).
+  if (perfilNomes(pais).grupos.some(g => g.sobrenome === 'luso') && doPai && daMae && semente !== undefined) {
+    let h = 0;
+    for (const ch of semente) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    if (h % 10 < 6) {
+      const m = daMae.split(' ').pop()!, p = doPai.split(' ').pop()!;
+      return m === p ? p : `${m} ${p}`;
+    }
+  }
   return base;
 }
 

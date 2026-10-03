@@ -162,11 +162,15 @@ describe('iniciativa romântica', () => {
 
   it('rejeição é possível e não arbitrária: vínculo forte aceita muito mais que vínculo fraco; sem atração, nunca', () => {
     const v = adulto(26, { semente: 33 });
+    // (Um ânimo comum: o que se compara é o vínculo, não a fase da vida sorteada.)
+    v.mente.felicidade = 62; v.mente.estresse = 30;
     const forte = amigo(v, { proximidade: 92, confianca: 85 });
     forte.vin.historia.push(...Array.from({ length: 6 }, (_, k) => ({ t: v.t - 12 * k, texto: `Um marco ${k}.`, tipo: 'amizade' as const, peso: 2 })));
     const fraco = amigo(v, { proximidade: 56, confianca: 40 });
     fraco.vin.tensao = 30;
     const semAtracao = amigo(v, { proximidade: 50, confianca: 60, atracao: 'homens', estagio: 'colega' });
+    // (O mesmo jeito para os dois — o que se compara é o VÍNCULO, não o temperamento sorteado de cada um.)
+    for (const x of [forte, fraco]) x.p.temperamento = { extroversao: 0.3, afabilidade: 0.5, responsabilidade: 0.3, abertura: 0.3, estabilidade: 0.3 };
     const f = tentativas(v, forte.p.id, 'declarar');
     const w = tentativas(v, fraco.p.id, 'declarar');
     const s = tentativas(v, semAtracao.p.id, 'convidar', 60);

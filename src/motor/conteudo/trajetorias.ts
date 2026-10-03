@@ -37,6 +37,7 @@ import { clamp } from '../rng';
 import { familiaDaTrilha } from '../dados/carreiras';
 import { anoDe } from '../tempo';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
+import { naCasa } from '../sistemas/legado';
 
 const categoria = (c: Ctx): CategoriaIlicita => CATEGORIAS[c.v.fatos['proposta_categoria'] ?? 1] ?? 'patrimonial';
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] === c.v.t;
@@ -56,7 +57,7 @@ const CENA: Record<CategoriaIlicita, (c: Ctx) => string> = {
   grupo: c => `${quem(c)?.nome ?? 'Gente do esquema'} quer você mais perto do grupo. Mais dinheiro, mais compromisso — e sair depois fica mais difícil.`,
   fraude: c => {
     const e = c.v.trabalho.atual;
-    return `${e ? `No trabalho, em ${e.empregador},` : 'No negócio,'} apareceu um jeito de fazer dinheiro sumir sem que ninguém perceba tão cedo. ${quem(c) ? `${quem(c)!.nome} insinuou que já faz isso há anos.` : 'Ninguém ofereceu: a brecha está ali, e você viu.'} As contas de casa estão ${c.v.financas.negativado ? 'atrasadas' : 'apertadas'}.`;
+    return `${e ? `No trabalho, ${naCasa(e.empregador)},` : 'No negócio,'} apareceu um jeito de fazer dinheiro sumir sem que ninguém perceba tão cedo. ${quem(c) ? `${quem(c)!.nome} insinuou que já faz isso há anos.` : 'Ninguém ofereceu: a brecha está ali, e você viu.'} As contas de casa estão ${c.v.financas.negativado ? 'atrasadas' : 'apertadas'}.`;
   }
 };
 

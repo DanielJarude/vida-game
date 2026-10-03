@@ -537,7 +537,11 @@ function trajetoriaDeFormacao(v: Vida): TrajetoriaDaVida | undefined {
     id: 'formacao', area: 'formacao', titulo: 'A faculdade', periodo: periodo(de, ate, ativa), de, ate, ativa,
     resumo: `${sup.length ? listaNatural(sup.map(c => c.nome)) : m ? 'Em curso' : 'Sem diploma'}${viv.length ? `; ${listaNatural(viv.map(x => (NOME[x.tipo] ?? x.tipo).toLowerCase()))}` : ''}.`,
     realizacoes: top(r), reconhecimento: [],
-    detalhe: viv.length ? [{ titulo: 'O que viveu além das aulas', linhas: viv.map(x => `${anoDe(x.t)} · ${NOME[x.tipo] ?? x.tipo}${x.anos >= 2 ? `, ${anos(x.anos)}` : ''}${x.papel ? ` — ${x.papel}` : ''}${x.feito ? ` — ${x.feito}` : ''}${(x.marcos ?? []).length ? ` · ${x.marcos![x.marcos!.length - 1].texto}` : ''}`) }] : [],
+    detalhe: [
+      ...(viv.length ? [{ titulo: 'O que viveu além das aulas', linhas: viv.map(x => `${anoDe(x.t)} · ${NOME[x.tipo] ?? x.tipo}${x.anos >= 2 ? `, ${anos(x.anos)}` : ''}${x.papel ? ` — ${x.papel}` : ''}${x.feito ? ` — ${x.feito}` : ''}${(x.marcos ?? []).length ? ` · ${x.marcos![x.marcos!.length - 1].texto}` : ''}`) }] : []),
+      // REWORK 4: a história de dentro (`vidaEstudantil`): o laboratório de anatomia, o júri simulado, o estágio, a formatura.
+      ...((v.educacao.trajetoria ?? []).filter(x => x.idade >= 17).length ? [{ titulo: 'Momentos da formação', linhas: (v.educacao.trajetoria ?? []).filter(x => x.idade >= 17).slice(-10).map(x => `${anoDe(x.t)} · ${x.texto}`) }] : [])
+    ],
     peso: sup.length * 4 + r.reduce((s, x) => s + x.peso, 0) + viv.length
   };
 }

@@ -166,7 +166,7 @@ export function processarOrigem(v: Vida): void {
   if (pr.p.aperto?.tipo === 'desemprego' && !pr.p.aperto.resolvido) reserva = reserva * 0.7 - 400;
   // O que a família pôs no seu estudo e na sua vida fora saiu de algum lugar: metade da margem do mês, metade da reserva.
   const m = v.educacao.matricula;
-  const noEstudo = m && !m.trancado && m.mensalidade > 0 && m.financiamento !== 'fies' ? Math.min(m.mensalidade, familiaPagaEstudo(v)) : 0;
+  const noEstudo = m && !m.trancado && m.mensalidade > 0 && !m.financiamento ? Math.min(m.mensalidade, familiaPagaEstudo(v)) : 0;
   reserva -= (noEstudo + ajudaMensalDaFamilia(v)) * 12 * 0.5;
   const teto = rec.renda * 12 * 8 + reservaInicial(v.id, o.classe);
   o.reserva = Math.round(clamp(reserva, 0, Math.max(teto, 0)));
@@ -244,6 +244,28 @@ export function ajudaMensalDaFamilia(v: Vida): number {
   if (e && e.contrato !== 'estagio' && e.contrato !== 'aprendiz') return 0;
   const base = [0, 0, 250, 700, 2500][recursosDaFamilia(v).folga];
   return Math.round(base * fatorDaRelacao(pr.vin) / 10) * 10;
+}
+
+/**
+ * REWORK 4: MAIORIDADE ≠ SAIR DE CASA ≠ INDEPENDÊNCIA. Quem faz 18 e continua na casa da família não passa, no dia
+ * seguinte, a bancar sozinho a passagem, o remédio, o estudo e as atividades: a família segue ajudando com os gastos
+ * essenciais — no tamanho da folga dela, pela relação, mais enquanto a pessoa estuda (ou acabou de fazer 18) e menos
+ * quando já tem renda. Família no limite ajuda pouco (às vezes só a passagem); família com folga cobre quase tudo.
+ * A casa, a comida e a luz já são da família (não entram no orçamento de quem mora nela).
+ */
+export function apoioEmCasa(v: Vida, essenciais: number, rendaPropria: number): number {
+  if (essenciais <= 0 || !moraComFamiliaDeOrigem(v)) return 0;
+  const i = idade(v);
+  if (i < 18 || i >= 30) return 0;
+  const pr = principal(v);
+  if (!pr) return 0;
+  const rec = recursosDaFamilia(v);
+  const teto = [60, 220, 600, 1400, 3500][rec.folga] * economiaLocal(v.moradia.municipioId).custo;
+  const m = v.educacao.matricula;
+  const estuda = (!!m && !m.trancado) || !!v.educacao.basica || !!v.educacao.cursinho;
+  const fase = estuda ? 1 : i < 21 ? 0.7 : i < 25 ? 0.35 : 0.15;
+  const comRenda = rendaPropria > 0 ? clamp(1 - rendaPropria / 3000, 0.1, 1) : 1;
+  return Math.round(Math.min(essenciais, teto * Math.max(0.35, fatorDaRelacao(pr.vin)) * fase * comRenda) / 10) * 10;
 }
 
 /** A família banca o cursinho? (Numa casa com folga, sim; apertada, é com a pessoa.) */

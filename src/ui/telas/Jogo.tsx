@@ -14,6 +14,7 @@
  * "Agora" (desktop) diz o que pede atenção, sem repetir as áreas.
  */
 
+import { BaixarApp } from './BaixarApp';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { useEffect, useRef, useState } from 'react';
@@ -67,7 +68,8 @@ export function Jogo({ c }: { c: ControleVida }) {
   const area = lugar.area;
   const ir = (d: Aba) => { const l = resolverDestino(d); if (l.secao) setSecao(l.secao); setLugar(l); };
   const irLugar = (l: Lugar) => { if (l.secao) setSecao(l.secao); setLugar(l); };
-  const abrirPessoa = (id: string | null) => { setPessoaAberta(id); if (id) ir('pessoas'); };
+  const focar = (id: string | null) => { setPessoaAberta(id); c.focarPessoa(id); };
+  const abrirPessoa = (id: string | null) => { focar(id); if (id) ir('pessoas'); };
 
   useEffect(() => { conteudo.current?.scrollTo?.({ top: 0 }); window.scrollTo?.({ top: 0 }); }, [area, secao]);
   useEffect(() => { if (c.marcaAno > 0) { setLugar({ area: 'linha' }); window.scrollTo?.({ top: 0 }); } }, [c.marcaAno]);
@@ -90,7 +92,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           ))}
         </nav>
         <button type="button" className="cabecalho__eu" onClick={() => ir('voce')} aria-label={`${vida.eu.nome}, ${i} anos: ver como você está`}>
-          <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={36} rotulo={vida.eu.nome} expressao={expressaoDe(vida)} />
+          <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={36} rotulo={vida.eu.nome} expressao={expressaoDe(vida)} />
           <span className="cabecalho__eu-texto">
             <strong>{vida.eu.nome}, {i} {i === 1 ? 'ano' : 'anos'}</strong>
             <span>{anoDe(vida.t)} · {nomeLugar(m.id)}</span>
@@ -102,7 +104,7 @@ export function Jogo({ c }: { c: ControleVida }) {
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
           {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <FechamentoDoAno vida={vida} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
-          {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={setPessoaAberta} />}
+          {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
           {area === 'formacao' && <Estudos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'trabalho' && (temTrabalho(vida) ? <Trabalho vida={vida} agir={c.agir} irPara={ir} /> : <TrabalhoAindaNao vida={vida} irPara={ir} />)}
           {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} />}
@@ -161,7 +163,7 @@ function Hoje({ vida, irPara }: { vida: Vida; irPara: (a: Aba) => void }) {
   return (
     <header className="hoje">
       <button type="button" className="hoje__rosto" onClick={() => irPara('voce')} aria-label="Ver como você está">
-        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={72} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
+        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={72} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
       </button>
       <div className="hoje__texto">
         <p className="folio__kicker"><span className="folio__area">Linha da Vida</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
@@ -181,7 +183,7 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
   const casa = emCasa(vida);
   const pessoal = sinalPessoal(vida);
   // Só o urgente atravessa as áreas; a vida social normal mora em Pessoas (FIX pós-REWORK 2).
-  const sinais = area === 'pessoas' ? [] : sinaisSociais(vida).filter(x => x.escopo === 'global').slice(0, 2);
+  const sinais = area === 'pessoas' ? [] : sinaisSociais(vida, 12).filter(x => x.escopo === 'global').slice(0, 2);
   const i = idade(vida);
   const seg = seguranca(vida);
   const aperta = i >= 18 && (seg.nivel === 'no_vermelho' || seg.nivel === 'apertado');
@@ -196,7 +198,7 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
     <div className="painel-agora">
       {pessoal && area !== 'voce' && (
         <button type="button" className="agora-voce" onClick={() => irPara('voce')}>
-          <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={34} rotulo="Você" expressao={expressaoDe(vida)} />
+          <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={34} rotulo="Você" expressao={expressaoDe(vida)} />
           <span>{pessoal}</span>
         </button>
       )}
@@ -259,6 +261,7 @@ function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: 
         <div className="folha__corpo menu">
           <p className="nota">Sua vida é salva a cada passo, neste navegador. Para continuar em outro aparelho, exporte a vida num arquivo e importe lá.</p>
           <button type="button" className="botao botao--secundario" onClick={() => c.exportar()}>Exportar esta vida (arquivo)</button>
+          <BaixarApp compacto />
           <ImportarVida c={c} aoTerminar={aoFechar} />
           <button type="button" className="botao botao--secundario" onClick={() => { c.setSom(!c.som); }}>{c.som ? 'Desligar o som' : 'Ligar o som'}</button>
           <button type="button" className="botao botao--secundario" onClick={() => { aoFechar(); c.setTela('inicio'); }}>Voltar ao início</button>

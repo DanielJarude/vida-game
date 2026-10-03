@@ -27,7 +27,7 @@ import { anoDe } from '../../motor/tempo';
 import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, ocupacaoOuNula, type Ocupacao } from '../../motor/dados/ocupacoes';
 import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
-import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, proximoPasso, ROTULO_MODELO } from '../../motor/sistemas/trabalho';
+import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, proximoPasso, ROTULO_MODELO, temOrganizacao } from '../../motor/sistemas/trabalho';
 import { acoesDasTrajetorias, acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
 import { acoesDoNegocio } from '../../motor/sistemas/gestao';
 import { contaDoAno, dedicacaoDe, donoIntegral, estrategiaDe, leituraDoNegocio, negocioAberto, negociosPossiveis, parteDoSocio, presencaDe, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
@@ -49,7 +49,7 @@ import { leituraDaOrigem, responsaveis } from '../../motor/sistemas/origem';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { divisaoDoNivel, doClube } from '../../motor/dados/clubes';
-import { paisDaCidade } from '../../motor/dados/lugares';
+import { nomeLugar, paisDaCidade } from '../../motor/dados/lugares';
 import { augeDe, carreirasEsportivas, categoriaDaBase, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
 import { capitalizar as cap } from '../../motor/texto';
 import { circuitoPeloRanking, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
@@ -72,6 +72,10 @@ import { leituraDasTrajetorias } from '../../motor/sistemas/paralelas';
 import { leituraDoCurriculo } from '../../motor/sistemas/cena';
 import { empregoAcademico, leituraAcademica } from '../../motor/sistemas/academia';
 import type { Aba } from '../navegacao';
+import { areaProfissional } from '../../motor/dados/areasProfissionais';
+import { vagaDaOrganizacao } from '../../motor/sistemas/organizacoes';
+import { vagasAcima } from '../../motor/sistemas/relevancia';
+import { trajetoriaDeAreas } from '../../motor/sistemas/areasDoOficio';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }
 
@@ -114,7 +118,7 @@ export function Trabalho({ vida, agir, irPara }: Props) {
             {l.vinculo && <Dado rotulo="Vínculo">{l.vinculo}</Dado>}
             {e?.especialidade && modo !== 'militar' && (ocupacaoOuNula(e.ocupacaoId)?.trilha === 'medicina'
               ? <Dado rotulo="Especialidade">{e.especialidade} <small>(o título da residência: decide as vagas, a faixa de renda e os casos)</small></Dado>
-              : <Dado rotulo="Área">{e.especialidade} <small>(pesa nos casos grandes e no desempenho)</small></Dado>)}
+              : <Dado rotulo="Área">{e.especialidade} <small>{areaProfissional(e.especialidade)?.descricao ?? '(pesa nos casos grandes e no desempenho)'}</small></Dado>)}
           </dl>
         )}
         {l.frases.length > 1 && modo !== 'politica' && <div className="como-vai">{l.frases.slice(1).map((f, k) => <p key={k}>{f}</p>)}</div>}
@@ -627,22 +631,39 @@ function avisoDeConflito(vida: Vida, oc: Ocupacao): string | undefined {
 
 const TEXTO_BOTAO: Record<string, string> = { por_conta: 'Começar por conta própria', emprego: 'Candidatar-se' };
 
-/** Uma vaga numa camada: o nome, o MODELO de trabalho (dito antes), o porquê, o currículo, o botão. */
+/**
+ * Uma vaga numa camada (REWORK 4): ESCANEÁVEL primeiro — o cargo, quem contrata (uma organização com nome, do lugar
+ * e do setor), o setor e a cidade, o salário, a compatibilidade numa palavra. A profundidade (por que combina, o que
+ * falta, a jornada, o conflito com o que você já tem, o botão) abre quando se quer: "profundidade não é mostrar toda a
+ * profundidade ao mesmo tempo".
+ */
 function VagaNaCamada({ vida, x, agir }: { vida: Vida; x: Relevante<Vaga>; agir: (a: Acao) => boolean }) {
+  const [aberta, setAberta] = useState(false);
   const oc = x.item.oc;
   const modelo = modeloDeTrabalho(oc);
   const aviso = avisoDeConflito(vida, oc);
+  const org = temOrganizacao(oc) ? vagaDaOrganizacao(vida.moradia.municipioId, oc.setor, oc.id, anoDe(vida.t)) : undefined;
+  const quem = org ? org.nome : modelo === 'por_conta' ? 'por conta própria' : ROTULO_MODELO[modelo].curto;
+  const compat = x.item.perfil?.compatibilidade ?? 1;
   return (
-    <li className="vaga-camada">
-      <div>
-        <strong className="vaga-camada__nome">{nomeOcupacao(vida, oc)}</strong>
-        <span className="vaga-camada__modelo">{ROTULO_MODELO[modelo].curto}</span>
-        <span className="vaga-camada__meta">{ROTULO_SETOR[oc.setor]} · {modelo === 'por_conta' ? `rende conforme a freguesia (referência ${dinheiroCurto(oc.salario)})` : `a partir de ${dinheiroCurto(oc.salario)}`}{oc.carga === 'parcial' ? ' · meio período' : ''}{oc.jornada === 'plantao' ? ' · plantões' : oc.jornada === 'longa' ? ' · jornada longa' : oc.jornada === 'fora' ? ' · dias fora de casa' : ''}</span>
-        <span className="vaga-camada__porque">{x.motivo}</span>
-        {x.item.perfil && <PerfilDaVaga perfil={x.item.perfil} curto />}
-        {aviso && <span className="vaga-camada__aviso"><span aria-hidden>! </span>{aviso}</span>}
-      </div>
-      <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={modelo !== 'por_conta'}>{TEXTO_BOTAO[modelo] ?? 'Candidatar-se'}</BotaoAcao>
+    <li className={`vaga-camada vaga-camada--c${compat}${aberta ? ' vaga-camada--aberta' : ''}`}>
+      <button type="button" className="vaga-resumo" aria-expanded={aberta} onClick={() => setAberta(a => !a)}>
+        <span className="vaga-resumo__cargo">{nomeOcupacao(vida, oc).charAt(0).toUpperCase() + nomeOcupacao(vida, oc).slice(1)}</span>
+        <span className="vaga-resumo__org">{org ? `${quem} · ${ROTULO_MODELO[modelo].curto}` : quem}</span>
+        <span className="vaga-resumo__meta">{ROTULO_SETOR[oc.setor]} · {nomeLugar(vida.moradia.municipioId)}{oc.carga === 'parcial' ? ' · meio período' : ''}</span>
+        <span className="vaga-resumo__salario">{modelo === 'por_conta' ? `~${dinheiroCurto(oc.salario)}` : dinheiroCurto(oc.salario)}</span>
+        <span className={`vaga-resumo__compat vaga-resumo__compat--${compat}`}>{x.item.perfil?.palavra ?? '—'}</span>
+      </button>
+      {aberta && (
+        <div className="vaga-camada__detalhe">
+          <span className="vaga-camada__modelo">{ROTULO_MODELO[modelo].curto}{oc.jornada === 'plantao' ? ' · plantões' : oc.jornada === 'longa' ? ' · jornada longa' : oc.jornada === 'fora' ? ' · dias fora de casa' : ''}</span>
+          <span className="vaga-camada__porque">{x.motivo}</span>
+          {x.item.perfil && <PerfilDaVaga perfil={x.item.perfil} />}
+          {x.item.d.motivo && x.item.d.grau !== 'permitido' && <span className="vaga-camada__aviso">{x.item.d.motivo}</span>}
+          {aviso && <span className="vaga-camada__aviso"><span aria-hidden>! </span>{aviso}</span>}
+          <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={modelo !== 'por_conta'}>{TEXTO_BOTAO[modelo] ?? 'Candidatar-se'}</BotaoAcao>
+        </div>
+      )}
     </li>
   );
 }
@@ -673,6 +694,11 @@ function Vagas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <BlocoDeVagas titulo={vazio ? 'Para começar' : 'Mudar de rumo'} dica={vazio ? 'Nada na sua estrada aponta ainda para um lado: estas são portas de entrada.' : 'Fora da sua trajetória — possíveis, se a vida pedir outra coisa.'}>
           <ul>{outras.map(x => <VagaNaCamada key={x.item.oc.id} vida={vida} x={x} agir={agir} />)}</ul>
           {camadas.outras.length > outras.length && <button type="button" className="dobra__botao" onClick={() => setMaisOutras(true)}>Ver mais {Math.min(8, camadas.outras.length - outras.length)}</button>}
+        </BlocoDeVagas>
+      )}
+      {vagasAcima(vida).length > 0 && (
+        <BlocoDeVagas titulo="Acima do seu nível, por enquanto" dica="O que a estrada de agora ainda não alcança — e o que falta.">
+          <ul>{vagasAcima(vida).map(({ oc, falta }) => <li key={oc.id} className="vaga-acima"><strong>{nomeOcupacao(vida, oc).charAt(0).toUpperCase() + nomeOcupacao(vida, oc).slice(1)}</strong><span>{ROTULO_SETOR[oc.setor]} · {dinheiroCurto(oc.salario)}</span><span className="nota">{falta}</span></li>)}</ul>
         </BlocoDeVagas>
       )}
       <div className="explorar-todas">
@@ -973,6 +999,8 @@ function PorOndePassou({ vida }: { vida: Vida }) {
     <Secao titulo="Por onde você passou" recolhivel aberta={false}>
       {marcos.length > 0 && <ul className="marcos-caminho">{marcos.map((m, k) => <li key={k}><span className="marcos-caminho__ano">{anoDe(m.t)}</span><span>{m.texto}</span></li>)}</ul>}
       {t.historico.slice().reverse().slice(0, 12).map((h, k) => <div key={k} className="linha"><span className="linha__rotulo">{anoDe(h.tInicio)}–{anoDe(h.tFim)}</span><span className="linha__valor">{nomeOcupacao(vida, ocupacao(h.ocupacaoId))}, {h.empregador}</span></div>)}
+      {/* As áreas da carreira, em fases: a mudança não apaga a anterior. */}
+      {trajetoriaDeAreas(vida).length > 0 && <p className="nota">Áreas: {trajetoriaDeAreas(vida).map(f => `${f.area} (${anoDe(f.tInicio)}${f.tFim !== undefined ? `–${anoDe(f.tFim)}` : '–hoje'})`).join(' → ')}.</p>}
       {trilhas.length > 0 && <p className="nota">Estrada: {trilhas.map(([tr, m]) => `${Math.floor(m / 12)} ${Math.floor(m / 12) === 1 ? 'ano' : 'anos'} em ${ROTULO_TRILHA[tr] ?? tr}`).join(' · ')}.</p>}
       <p className="nota">{previdenciaDaVida(vida).nome}: {Math.floor(t.contribuicao / 12)} anos de contribuição.{t.licencas.length ? ` Registros: ${t.licencas.map(l => (l === 'cnh' ? habilitacaoDaVida(vida).regra.nome : nomeDoRegistro(vida, l))).join(', ')}.` : ''}</p>
     </Secao>

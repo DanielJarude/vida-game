@@ -118,6 +118,7 @@ export const AUSTRALIA: PerfilDePais = {
     publicaCobra: 0.4,
     bolsa: { nome: 'Youth Allowance', teto: 1.5 },
     credito: { nome: 'HECS-HELP' },
+    publicaDiferida: true,
     cotas: false,
     privadaComum: false
   },
@@ -349,6 +350,7 @@ export const NOVA_ZELANDIA: PerfilDePais = {
     bolsa: { nome: 'Student Allowance', teto: 1.5 },
     // Student Loan sem juros para residentes na Nova Zelândia.
     credito: { nome: 'Student Loan' },
+    publicaDiferida: true,
     cotas: false,
     privadaComum: false
   },

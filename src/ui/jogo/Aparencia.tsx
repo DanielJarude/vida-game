@@ -39,7 +39,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
       {fase === 'familia_decide' ? <p className="nota">{AUTONOMIA.aparencia_basica.antes}</p> : (
         <div className="aparencia__corpo">
           <div className="aparencia__previa">
-            <Retrato visual={previa} genero={vida.eu.genero} idade={i} semente="eu" tamanho={96} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
+            <Retrato visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={96} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
             <span className="nota">{mudou ? 'Como ficaria' : 'Hoje'}</span>
           </div>
           <div className="aparencia__escolhas">

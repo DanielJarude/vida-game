@@ -170,6 +170,7 @@ export const INTEGRACAO: Conteudo[] = [
       esporte: 'Uma marca de material esportivo quer você na campanha da temporada: foto, vídeo, uma frase sua no outdoor.',
       arte: 'Um programa de TV de domingo quer você ao vivo, contando a sua história e mostrando o trabalho novo.',
       politica: 'Um podcast de entrevistas longas, desses que meio país ouve, chamou para três horas de conversa.',
+      rede: 'Uma marca de roupas quer uma série de publicações patrocinadas no seu perfil — e um encontro com quem segue você.',
       negocio: 'Uma revista de negócios quer contar a história de como você começou.'
     }[origemDoNome(c.v)!]),
     opcoes: [

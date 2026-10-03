@@ -24,6 +24,23 @@ import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { OCUPACOES, ocupacoesDaClasse, ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { ORDEM_NIVEL, curso, cursoPorNome, type AreaFormacao } from '../dados/cursos';
 import { degrausAcima } from './trabalho';
+import { ancestralidadeDe, misturar, tradicaoDoFilho } from './identidade';
+import { sobrenomeDeQuemNasce } from '../dados/nomes';
+
+/** O sobrenome do neto: pelo costume do lugar onde nasce (um ou dois sobrenomes), com o do pai e o da mãe. */
+function sobrenomeDoNeto(doSangue: Pessoa, outro?: Pessoa): string {
+  const pais = paisDaCidade(doSangue.municipioId);
+  const ehPai = doSangue.genero !== 'feminino';
+  const doPai = ehPai ? doSangue.sobrenome : outro?.sobrenome;
+  const daMae = ehPai ? outro?.sobrenome : doSangue.sobrenome;
+  return sobrenomeDeQuemNasce(pais, doPai, daMae, doSangue.id) ?? doSangue.sobrenome;
+}
+
+/** Quantas gerações a família já está no lugar (para o nome da tradição ir ficando do lugar). */
+function geracaoNoLugar(_v: Vida, p: Pessoa): number {
+  const natal = p.municipioNatal ?? p.municipioId;
+  return p.tradicao && paisDaCidade(natal) !== p.tradicao ? 2 : 1;
+}
 import { liquido, salarioLocal } from './renda';
 import { rendaPerCapita } from './domicilio';
 import { sortearNome } from '../dados/nomes';
@@ -615,7 +632,8 @@ function nascerDescendente(v: Vida, r: Rng, pai: Pessoa, outro: Pessoa | undefin
   const grauPai = v.vinculos[pai.id].parentesco;
   const parentesco = grauPai === 'neto' ? 'bisneto' : 'neto';
   const genero = r.chance(0.5) ? 'masculino' : 'feminino';
-  const bebe = criarPessoa(v, r, { genero, idade: 0, municipioId: pai.municipioId, sobrenome: pai.sobrenome, visual: visualHerdado(r, genero, pai.visual, outro?.visual) });
+  const ancNeto = misturar(ancestralidadeDe(pai), outro ? ancestralidadeDe(outro) : undefined);
+  const bebe = criarPessoa(v, r, { genero, idade: 0, municipioId: pai.municipioId, sobrenome: sobrenomeDoNeto(pai, outro), visual: visualHerdado(r, genero, pai.visual, outro?.visual, ancNeto), familia: { ancestralidade: ancNeto, tradicao: tradicaoDoFilho(pai.tradicao, outro?.tradicao, geracaoNoLugar(v, pai)) } });
   bebe.tNasc = tParto;
   const usados = new Set([v.eu.nome, ...Object.values(v.pessoas).filter(x => x.vivo).map(x => x.nome)]);
   let nome = bebe.nome;

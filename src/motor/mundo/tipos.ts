@@ -168,6 +168,11 @@ export interface PerfilEducacional {
   exame: { nome: string; artigo: 'o' | 'a'; prova?: boolean; acao?: string };
   /** Quanto a universidade pública cobra, como fração da mensalidade privada (0 = gratuita). */
   publicaCobra: number;
+  /**
+   * A contribuição da pública é DIFERIDA por lei: o crédito público paga agora e quem se forma devolve depois (o
+   * HECS-HELP australiano, o Student Finance inglês, o Student Loan neozelandês). Quem estuda não paga mensalidade.
+   */
+  publicaDiferida?: boolean;
   /** Bolsa pública para quem tem pouca renda (ProUni, beca...): nome e teto de renda por pessoa em salários mínimos. */
   bolsa?: { nome: string; teto: number };
   /** Crédito estudantil público (FIES, student loan, HECS...): nome e teto de renda por pessoa em salários mínimos (ausente: sem teto). */

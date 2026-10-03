@@ -90,6 +90,15 @@ export interface Pessoa {
    * acompanhada (saves anteriores): a primeira leitura reconstrói pela idade.
    */
   condicoes?: CondicaoNpc[];
+  /** REWORK 4: o que a pessoa ganhou de você (do catálogo das lojas, com a cor que veio): `sistemas/presentes`. */
+  ganhou?: { coisaId: string; t: number; cor?: string; acabamento?: string }[];
+  /**
+   * REWORK 4: a ancestralidade (de onde vem a família, em proporções que somam 1) — `sistemas/identidade`. Nasce
+   * do contexto populacional na primeira geração; depois, só dos pais. Migrar não muda; adotar não herda.
+   */
+  ancestralidade?: Record<string, number>;
+  /** REWORK 4: a tradição de nomes da família, quando veio de outro lugar (um país com lista de nomes). */
+  tradicao?: string;
 }
 
 /** Uma condição de saúde de quem não é o protagonista: o id do catálogo e o estado (sem textos, sem lesões). */
@@ -211,6 +220,17 @@ export interface Visual {
   roupa?: EstiloRoupa;
   /** A joia em uso, quando aparece no retrato (a corrente no pescoço, os brincos). O relógio não aparece: fica no pulso, fora do quadro. */
   joia?: 'corrente' | 'corrente_ouro' | 'brincos';
+  /**
+   * REWORK 4 — traços modulares herdáveis (`sistemas/identidade`): a textura do cabelo (o penteado é escolha; a
+   * textura é da família), a forma dos olhos, o nariz, a boca, o rosto, a sobrancelha. Ausentes em saves antigos (o
+   * retrato usa o desenho de sempre).
+   */
+  textura?: string;
+  olhosForma?: string;
+  nariz?: string;
+  boca?: string;
+  rosto?: string;
+  sobrancelha?: string;
 }
 
 export type EstiloRoupa = 'basica' | 'social' | 'esportiva' | 'alternativa' | 'elegante';
@@ -372,7 +392,20 @@ export interface Vinculo {
   ruptura?: { t: number; porque: string; quem: 'eu' | 'outro' | 'ambos' };
   reconciliacao?: number;
   proxAno?: number;
+  /**
+   * REWORK 4: o que o protagonista SABE desta pessoa — o fato, não a frase (`sistemas/conhecimento`). A verdade é da
+   * pessoa; isto é o que se descobriu, quando, e com o valor daquele momento. Opcional (saves antigos: vazio).
+   */
+  sabe?: Saber[];
+  /**
+   * REWORK 4: o contato digital (`sistemas/redes`): a última mensagem trocada e a última interação superficial
+   * (curtir, reagir). Mensagem segura parte da relação à distância; curtida mantém o contato sem intimidade.
+   */
+  digital?: { mensagem?: number; reacao?: number; segue?: boolean; seguidor?: boolean; bloqueado?: number };
 }
+
+/** Um fato que o protagonista sabe sobre alguém: a chave, quando soube, o valor de então. */
+export interface Saber { k: string; t: number; v: string }
 
 /** De onde a relação veio — e o que isso abre (a origem define o contexto e a intenção inicial; não determina o resultado). */
 export interface ContextoDaRelacao {
@@ -472,6 +505,11 @@ export interface Mente {
    * concreta vem cobrando — e o que o descanso devolve. Ausente = 0.
    */
   sobrecarga?: { anos: number; t: number };
+  /**
+   * REWORK 4: anos seguidos com a cabeça no limite (estresse alto ao fim do ano). Não é morte automática: só pesa no
+   * corpo junto com o resto (`corpo.fatorDoEstresseProlongado`: condição, idade, saúde). Ausente = 0.
+   */
+  estresseAlto?: { anos: number; t: number };
 }
 
 /**
@@ -549,7 +587,12 @@ export interface Matricula {
   especialidade?: EspecialidadeMedica;
 }
 
+/** REWORK 4: um momento da história da formação (`sistemas/vidaEstudantil`): o que se consulta anos depois. */
+export interface MarcoDeFormacao { t: number; idade: number; instituicao: string; tipo: string; texto: string }
+
 export interface Educacao {
+  /** REWORK 4: a história de dentro da formação — momentos de cada escola e curso, na ordem (até 60). Opcional. */
+  trajetoria?: MarcoDeFormacao[];
   escolaridade: Escolaridade;
   basica?: EscolaBasica;
   /** Largou a escola básica sem concluir. */
@@ -640,6 +683,8 @@ export type NivelCurso = 'livre' | 'tecnico' | 'superior' | 'pos' | 'mestrado' |
 export type Contrato = 'aprendiz' | 'estagio' | 'clt' | 'servidor' | 'informal' | 'autonomo' | 'temporario' | 'militar' | 'eletivo';
 
 export interface Emprego {
+  /** REWORK 4: a organização (`Vida.organizacoes`) onde se trabalha, quando tem nome. */
+  orgId?: string;
   ocupacaoId: string;
   empregador: string;
   contrato: Contrato;
@@ -750,6 +795,21 @@ export interface Trabalho {
    * retorno, não começo do zero (`sistemas/paralelas`).
    */
   pausadas?: TrajetoriaPausada[];
+  /**
+   * REWORK 4: as ÁREAS de aprofundamento do ofício, da PESSOA (não do emprego): escolher Segurança é uma decisão da
+   * carreira, que atravessa trocas de emprego, promoções, demissões, mudança de país. Uma fase por área, na ordem
+   * (generalista → Segurança → anos depois, Dados): a mudança fecha a fase anterior, não a apaga
+   * (`sistemas/areasDoOficio`). Opcional: saves antigos deduzem a área do emprego.
+   */
+  areas?: FaseDeArea[];
+}
+
+export interface FaseDeArea {
+  /** O ofício (a chave da tabela `OFICIOS`: 'ti' vale para ti e dados). */
+  oficio: string;
+  area: string;
+  tInicio: number;
+  tFim?: number;
 }
 
 export interface TrajetoriaPausada {
@@ -852,6 +912,9 @@ export interface Veiculo {
   historia?: EpisodioBem[];
   /** De quem é: só seu ou do casal (comprado durante o casamento). */
   dono?: 'eu' | 'casal';
+  /** REWORK 4: a cor deste veículo (da compra para sempre). Saves antigos: derivada do id. */
+  cor?: string;
+  corNome?: string;
 }
 
 export interface Imovel {
@@ -933,7 +996,12 @@ export interface FotoFinanceira {
 }
 
 /** Uma coisa que a pessoa tem (`dados/coisas`): quando comprou, por quanto, e o estado (100 nova, 0 acabou). */
-export interface CoisaTida { id: string; coisaId: string; t: number; preco: number; estado: number }
+export interface CoisaTida {
+  id: string; coisaId: string; t: number; preco: number; estado: number;
+  /** REWORK 4: a variante desta coisa (a cor e o acabamento), da compra para sempre. Saves antigos: derivada do id. */
+  cor?: string;
+  acabamento?: string;
+}
 
 export interface Financas {
   /** Dinheiro SEU, disponível. Na casa dos pais, não é o dinheiro da casa. */
@@ -1138,6 +1206,11 @@ export interface Entrada {
   escolha?: boolean;
   /** O acontecimento social, estruturado (para continuidade e para a Linha da Vida). */
   evento?: EventoSocial;
+  /**
+   * REWORK 4: o FATO por trás da frase (`conteudo/narracao`): o que aconteceu, com quem, onde, quanto durou, no que deu.
+   * A frase é uma narração dele; anos depois, a vida pode lembrar do fato (não da frase). Opcional.
+   */
+  fato?: { tipo: string; dados: Record<string, string | number> };
 }
 
 export type TipoEvento =
@@ -2158,6 +2231,11 @@ export interface Personagem {
    * neutras. Ausente = segue o gênero.
    */
   tratamento?: Genero;
+  /** REWORK 4: a ancestralidade e a tradição de nomes da família (`sistemas/identidade`). Opcionais. */
+  ancestralidade?: Record<string, number>;
+  tradicao?: string;
+  /** REWORK 4: a semente do retrato (quem continua na sucessão mantém a própria). Ausente = 'eu'. */
+  semente?: string;
 }
 
 export interface Ocorrencia {
@@ -2186,7 +2264,7 @@ export interface Notoriedade {
    */
   origens?: Partial<Record<FonteDoNome, number>>;
 }
-export type FonteDoNome = 'esporte' | 'arte' | 'politica' | 'negocio';
+export type FonteDoNome = 'esporte' | 'arte' | 'politica' | 'negocio' | 'rede';
 
 export interface Vida {
   versao: 20;
@@ -2232,6 +2310,10 @@ export interface Vida {
   segredos?: Segredo[];
   /** Quanto o público conhece você (ausente = anônimo). */
   notoriedade?: Notoriedade;
+  /** REWORK 4: as redes sociais do jogo (simulação interna, sem internet): `sistemas/redes`. Opcional. */
+  redes?: { contas: Record<string, ContaSocial> };
+  /** REWORK 4: as organizações onde a vida trabalhou (nome, setor, cidade) — `sistemas/organizacoes`. Opcional. */
+  organizacoes?: Record<string, Organizacao>;
   /** Como prefere ir ao trabalho e ao estudo. Ausente = o jeito mais rápido que tem (`sistemas/transporte`). */
   deslocamento?: { modo: 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro'; t: number };
   morte?: {
@@ -2409,4 +2491,51 @@ export interface Retorno {
    * emprego de vendedor". Nada biográfico muda escondido no estado.
    */
   mudancas?: string[];
+}
+
+/* ================================================================ REWORK 4 */
+
+/** Uma conta numa rede social do jogo. */
+export interface ContaSocial {
+  plataforma: string;
+  arroba: string;
+  tCriada: number;
+  seguidores: number;
+  /** 0..100: o quanto quem segue acredita no que vê (seguidores comprados, polêmicas e sumiços derrubam). */
+  credibilidade: number;
+  /** As últimas publicações (no máximo 24). */
+  publicacoes: Publicacao[];
+  /** Desde quando ganha dinheiro com a conta. */
+  monetizada?: number;
+  /** Quantos seguidores foram comprados (ainda contados em `seguidores`, até alguém descobrir). */
+  comprados?: number;
+  /** A conta foi apagada (quando). */
+  apagada?: number;
+}
+
+export type TemaPublicacao = 'cotidiano' | 'viagem' | 'trabalho' | 'conquista' | 'arte' | 'pet' | 'familia' | 'opiniao';
+
+export interface Publicacao {
+  id: string;
+  t: number;
+  tema: TemaPublicacao;
+  texto: string;
+  alcance: number;
+  /** Seguidores que chegaram com ela. */
+  novos: number;
+  /** Quem reagiu (pessoas da sua vida). */
+  pessoas?: string[];
+  promovida?: boolean;
+  polemica?: boolean;
+  viral?: boolean;
+  apagada?: boolean;
+}
+
+/** Uma organização onde se trabalha (simulada, plausível para o lugar): o nome, o setor, a cidade, o porte. */
+export interface Organizacao {
+  id: string;
+  nome: string;
+  setor: string;
+  municipioId: string;
+  porte: 'pequena' | 'media' | 'grande';
 }

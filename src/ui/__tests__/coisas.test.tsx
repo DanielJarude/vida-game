@@ -14,7 +14,7 @@ import type { Vida } from '../../motor/tipos';
 import { transacao } from '../../motor/nucleo';
 import { Lugar } from '../jogo/material/Lugares';
 import { Cidade } from '../jogo/Cidade';
-import { SuasCoisas } from '../jogo/Casa';
+import { Pertences } from '../jogo/Pertences';
 
 beforeAll(async () => { await precarregar(); });
 beforeEach(() => {
@@ -52,11 +52,14 @@ describe('as lojas das coisas da vida', () => {
     expect(abrir).toHaveBeenCalledWith('livraria');
   });
 
-  it('o que é seu aparece em Casa, com o estado e a venda', () => {
+  it('REWORK 4: o que é seu aparece em Pertences — primeiro o que dá para fazer, a venda por último', () => {
     const v = transacao(adulta(), x => { x.financas.coisas = [{ id: 'cs1', coisaId: 'violao', t: x.t, preco: 900, estado: 90 }]; }).vida;
-    render(<SuasCoisas vida={v} agir={() => true} abrir={() => {}} />);
+    render(<Pertences vida={v} agir={() => true} abrir={() => {}} />);
     expect(screen.getByText('Violão')).toBeTruthy();
     expect(screen.getByText(/nova/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Vender' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tocar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Vender \(/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Vender ou se desfazer/ }));
+    expect(screen.getByRole('button', { name: /^Vender \(/ })).toBeTruthy();
   });
 });

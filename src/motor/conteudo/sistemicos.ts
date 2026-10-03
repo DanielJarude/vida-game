@@ -32,6 +32,8 @@ import { ROTINAS } from '../sistemas/rotinas';
 import { economiaLocal, existeMunicipio, municipio, paisDaCidade } from '../dados/lugares';
 import { curso } from '../dados/cursos';
 import { saldoMensal } from '../sistemas/dinheiro';
+import { custoDoEstudo, regimeDaMatricula } from '../sistemas/custoDoEstudo';
+import { moraComFamiliaDeOrigem } from '../sistemas/domicilio';
 import { totalAplicado } from '../sistemas/investimentos';
 
 function hash(s: string): number {
@@ -51,6 +53,10 @@ export function nomesParaBebe(c: Ctx): string[] {
   const natal = existeMunicipio(b.municipioId) ? municipio(b.municipioId) : undefined;
   const pais = natal ? paisDaCidade(natal.id) : paisDaVida(c.v);
   const nomes: string[] = [];
+  // REWORK 4: a família de tradição de fora (a japonesa em São Paulo, a indiana em Londres) também pensa num nome
+  // de lá — uma das três sugestões vem da tradição da família; as outras, do lugar onde o bebê nasce.
+  const tradicao = b.tradicao && b.tradicao !== pais ? b.tradicao : undefined;
+  if (tradicao) for (let k = 0; k < 20 && nomes.length < 1; k++) { const n = sortearNome(r, g, anoDe(b.tNasc), tradicao, undefined, b.sobrenome); if (!usados.has(n)) nomes.push(n); }
   for (let k = 0; k < 60 && nomes.length < 3; k++) {
     const n = sortearNome(r, g, anoDe(b.tNasc), pais, natal?.uf, b.sobrenome);
     if (!nomes.includes(n) && !usados.has(n)) nomes.push(n);
@@ -61,13 +67,19 @@ export function nomesParaBebe(c: Ctx): string[] {
 const nomeCurso = (c: Ctx) => curso(c.v.educacao.matricula!.cursoId).nome;
 
 /** O que está apertando quem faz faculdade (ou nada). */
-function motivoDeAperto(c: Ctx): 'dinheiro' | 'trabalho' | 'bebe' | 'notas' | null {
+function motivoDeAperto(c: Ctx): 'dinheiro' | 'custos' | 'trabalho' | 'bebe' | 'notas' | null {
   const m = c.v.educacao.matricula;
   if (!m || m.trancado || c.v.t - m.tInicio < 10) return null;
   const nivel = curso(m.cursoId).nivel;
   if (nivel !== 'superior' && nivel !== 'tecnico') return null;
   const s = saldoMensal(c.v);
-  if (m.mensalidade > 0 && !m.financiamento && s.renda - s.despesa < 0) return 'dinheiro';
+  // REWORK 4: o REGIME da matrícula decide o que pode apertar. Mensalidade só existe se o estudante paga uma
+  // (`custoDoEstudo`); na pública gratuita, na bolsa e no crédito, o que aperta é o resto (passagem, comida, material).
+  const ce = custoDoEstudo(c.v, m);
+  if (s.renda - s.despesa < 0) {
+    if (ce && ce.doEstudante > 0) return 'dinheiro';
+    if (ce && ce.regime !== 'paga' && m.modalidade === 'presencial' && !moraComFamiliaDeOrigem(c.v)) return 'custos';
+  }
   if (P.filho(0, 0)(c.v).length > 0) return 'bebe';
   if (c.v.trabalho.atual?.carga === 'integral' && m.modalidade === 'presencial' && m.desempenho < 50) return 'trabalho';
   if (m.desempenho < 38) return 'notas';
@@ -308,6 +320,7 @@ export const SISTEMICOS: Conteudo[] = [
     titulo: 'O curso pesa',
     texto: c => ({
       dinheiro: `A mensalidade de ${nomeCurso(c)} vence todo dia 10, e o dinheiro do mês já acabou no dia 3.`,
+      custos: `${regimeDaMatricula(c.v.educacao.matricula!) === 'gratuita' ? `${nomeCurso(c)} não cobra nada` : regimeDaMatricula(c.v.educacao.matricula!) === 'credito' ? `A mensalidade de ${nomeCurso(c)} vai para o crédito, para pagar depois` : `A bolsa cobre ${nomeCurso(c)} inteiro`} — mas o aluguel do quarto, a passagem, as cópias e o almoço não. O mês acabou antes.`,
       trabalho: `O expediente termina às seis; a aula começa às sete. ${deslocamento(c.v)?.modo === 'publico' ? 'Você dorme no ônibus e acorda na prova.' : 'Você janta no caminho e chega à prova com a cabeça no trabalho.'}`,
       bebe: 'O bebê acorda de duas em duas horas. O trabalho de grupo é para sexta.',
       notas: `As notas em ${nomeCurso(c)} desceram, e a coordenação mandou um e-mail sobre risco de reprovação.`

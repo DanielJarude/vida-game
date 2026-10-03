@@ -72,6 +72,20 @@ function textoDeRecessao(c: Ctx): string {
   return `${abertura}: fábricas demitindo, lojas fechando, e as vagas que sobraram pedindo experiência.`;
 }
 
+function recessaoEmCasa(c: Ctx): string {
+  const r = rngDe(c.v.id, 'recessao_casa', c.v.t);
+  const pais = Object.values(c.v.vinculos).filter(x => (x.parentesco === 'mae' || x.parentesco === 'pai') && x.convivio.includes('casa')).map(x => c.v.pessoas[x.pessoaId]).filter(p => p?.vivo);
+  const sem = pais.find(p => p.aperto?.tipo === 'desemprego' || !p.renda);
+  const quem = pais[0];
+  const opcoes = [
+    'O país entrou em recessão. Em casa, a palavra apareceu no jornal da noite e depois na conta do mercado.',
+    ...(sem ? [`O país entrou em recessão, e a recessão entrou em casa: ${sem.nome} passou a procurar trabalho todo dia.`] : []),
+    ...(quem ? [`A crise chegou pelas conversas baixas de ${quem.nome} na cozinha, depois que as crianças iam dormir.`, `Na crise, ${quem.nome} cortou o que dava: a TV a cabo, o lanche da escola, a viagem do fim do ano.`] : []),
+    c.v.origem.classe === 'alta' || c.v.origem.classe === 'media' ? 'A recessão apareceu como notícia na TV e como amigos da escola mudando de colégio no meio do ano.' : 'Na recessão, o mercado do bairro passou a vender fiado — e a anotar tudo num caderno.'
+  ];
+  return opcoes[Math.floor(r.next() * opcoes.length)];
+}
+
 export const MUNDO: Conteudo[] = [
   /* ============================================================== ECONOMIA */
   {
@@ -79,9 +93,9 @@ export const MUNDO: Conteudo[] = [
     id: 'mun_recessao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true,
     quando: c => entrouEmCrise(c.v) || (!c.v.economia && !emRecessao(c.v) && false),
     narrar: c => ({
-      texto: c.idade < 16
-        ? 'O país entrou em recessão. Em casa, a palavra apareceu no jornal da noite e depois na conta do mercado.'
-        : textoDeRecessao(c),
+      // REWORK 4: para a criança, a crise chega pela casa DELA (quem perdeu o trabalho, o que deixou de ter) — não a
+      // mesma frase em toda vida.
+      texto: c.idade < 16 ? recessaoEmCasa(c) : textoDeRecessao(c),
       relevancia: 'biografia', tom: 'ruim',
       efeito: () => { estresse(c, 5); }
     })

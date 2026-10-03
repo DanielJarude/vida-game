@@ -39,7 +39,7 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
     <div className="fim">
       <header className="fim__cabeca">
         <p className="fim__olho">{vida.linhagem?.geracoes.length ? `Sua vida · ${vida.linhagem.geracoes.length + 1}ª geração` : 'Sua vida'}</p>
-        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente="eu" tamanho={140} rotulo={vida.eu.nome} />
+        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={140} rotulo={vida.eu.nome} />
         <h1 className="fim__nome">{vida.eu.nome} {vida.eu.sobrenome}</h1>
         <p className="fim__datas">{anoDe(vida.eu.tNasc)} — {anoDe(vida.t)}</p>
         <p className="fim__causa">{flex(g, 'Nascido', 'Nascida', 'Nascide')} em {nomeLugar(vida.eu.municipioNatal)}. Morreu aos {i} anos, {vida.morte?.causa}, em {nomeLugar(vida.moradia.municipioId)}.</p>

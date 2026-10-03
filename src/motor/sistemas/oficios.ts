@@ -8,6 +8,8 @@
 import { LISTA_ESPECIALIDADES } from '../dados/especialidades';
 
 export interface Oficio {
+  /** A chave do ofício (a primeira trilha da tabela): ti e dados são o MESMO ofício, a área escolhida vale nos dois. */
+  chave?: string;
   /** As áreas possíveis (a primeira palavra é a que aparece no texto). */
   areas: string[];
   /** A pergunta da área. */
@@ -21,7 +23,7 @@ export interface Oficio {
 }
 
 export const OFICIOS: Record<string, Oficio> = {};
-const O = (trilhas: string[], o: Oficio) => { for (const t of trilhas) OFICIOS[t] = o; };
+const O = (trilhas: string[], o: Oficio) => { o.chave = trilhas[0]; for (const t of trilhas) OFICIOS[t] = o; };
 
 O(['direito'], {
   area: 'Depois de uns anos de fórum, dá para escolher onde se aprofundar.',

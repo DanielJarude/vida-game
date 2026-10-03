@@ -12,6 +12,7 @@
  * Tempo livre, antes de abrir — não aqui, nem a cada duração.
  */
 
+import { previsaoDaViagem } from '../../motor/sistemas/experiencias';
 import { useEffect, useRef, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -108,7 +109,7 @@ export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id:
           {lugar.duracoes.map(d => (
             <li key={d.id}>
               <button type="button" className="viagem__opcao" onClick={() => setSel({ grupo: grupo.id, lugar: lugar.id, duracao: d.id })}>
-                <span className="viagem__nome">{d.nome.charAt(0).toUpperCase() + d.nome.slice(1)}<span className="viagem__sub">{d.dias} dias</span></span>
+                <span className="viagem__nome">{d.nome.charAt(0).toUpperCase() + d.nome.slice(1)}<span className="viagem__sub">{d.dias} dias · {previsaoDaViagem(vida, d.dias)[0]}</span></span>
                 <span className="viagem__preco">{dinheiroCurto(d.custo)}</span>
                 <Seta />
               </button>
@@ -119,7 +120,12 @@ export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id:
 
       {passo === 'resumo' && grupo && lugar && duracao && (
         <div className="viagem__resumo">
-          <p className="viagem__destino">{lugar.nome}{fora ? `, ${grupo.nome}` : ''} — {duracao.nome} ({duracao.dias} dias).</p>
+          <div className="postal" style={{ ['--postal' as string]: corDoDestino(lugar.nome) }}>
+            <span className="postal__selo">{fora ? grupo.nome : 'por aqui'}</span>
+            <span className="postal__nome">{lugar.nome}</span>
+            <span className="postal__dias">{duracao.dias} dias</span>
+          </div>
+          <ul className="viagem__efeitos">{previsaoDaViagem(vida, duracao.dias).map((x, k) => <li key={k}>{x}</li>)}</ul>
           <p className="nota">{cat.companhia.length ? `Vão você e ${listaNatural(cat.companhia)}: o preço já conta todo mundo.` : 'Vai só você.'} {fora ? 'Passagem de ida e volta, hospedagem e o dia a dia lá.' : 'O transporte daqui até lá, hospedagem e o dia a dia.'}</p>
           <p className="viagem__total"><span>Ao todo, uns</span> <strong>{dinheiroCurto(duracao.custo)}</strong></p>
           <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id, escolha: duracao.escolha }} agir={agir} variante="principal" aoAgir={aoConcluir}>Confirmar a viagem</BotaoAcao>
@@ -127,4 +133,12 @@ export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id:
       )}
     </div>
   );
+}
+
+/** A cor do cartão-postal: uma das cores do mundo (mar, terra, mata, pôr do sol), estável para o destino. */
+const POSTAIS = ['#2f6f9a', '#b85c3a', '#3f7a52', '#c9962f', '#7a4b8c', '#2a8a86', '#a83f4f', '#4d6a9a'];
+export function corDoDestino(nome: string): string {
+  let h = 0;
+  for (const ch of nome) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return POSTAIS[h % POSTAIS.length];
 }

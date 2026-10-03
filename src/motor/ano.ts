@@ -67,6 +67,11 @@ import { abrirDecisao, aplicarAcontecimento, candidatos, conteudoPorId, preparar
 import { contexto } from './conteudo/base';
 import { CATALOGO } from './conteudo/catalogo';
 import type { Conteudo } from './conteudo/base';
+// REWORK 4 (por último: não muda a ordem de inicialização dos módulos que já vinham antes).
+import { processarRedes } from './sistemas/redes';
+import { processarVidaEstudantil } from './sistemas/vidaEstudantil';
+import { processarEstresseProlongado } from './sistemas/estresseProlongado';
+import { processarConhecimento } from './sistemas/conhecimento';
 
 export interface ResumoDoAno {
   idade: number;
@@ -136,6 +141,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarRotinas(v, r);
   // A formação como lugar: o que ficou para trás com a escola, o professor que repara.
   processarFormacao(v);
+  // REWORK 4: o momento do ano dentro da escola ou do curso (a história interna da formação).
+  processarVidaEstudantil(v);
   processarConcursos(v, r);
   efetivarMudancaMilitar(v);
   processarEsporte(v, r);
@@ -172,9 +179,14 @@ function viverAno(v: Vida, r: Rng): void {
   processarIndependencia(v);
   // O que o público sabe de você (esporte, obra, mandato, negócio) — depois do ano de cada um.
   processarNotoriedade(v, r);
+  // REWORK 4: a rede (quem some perde gente; o comprado pode ser descoberto) e o que se fica sabendo de quem convive.
+  processarRedes(v);
+  processarConhecimento(v);
   // A semana do ano inteiro, contada: se passou do que cabe, cobra (e a vida pergunta).
   processarSobrecarga(v);
   equilibrarMente(v);
+  // REWORK 4: a cabeça no limite por anos passa a conta ao corpo (causal: hábitos, a condição que piora, o risco).
+  processarEstresseProlongado(v);
   registrarEstado(v);
   // As horas extras valiam para ESTE ano (semana, cabeça, sobrecarga, desempenho); no próximo, é outra escolha.
   v.trabalho.horasExtras = false;

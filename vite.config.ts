@@ -103,7 +103,9 @@ export default defineConfig({
           // eles e as ações usam (entrevista, cuidados, interações, experiências...) — vão para um pacote próprio, abaixo
           // do que os orquestra (o ano, as ações, a fachada, o save, o nascimento). Nenhum deles importa a camada de cima
           // (só tipos): sem ciclo, e os dois pacotes com folga, sem aumentar o limite.
-          if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria)\.ts)/.test(id)) return 'motor-textos';
+          // REWORK 4: os sistemas novos que só a camada de cima chama (as ações, o ano, as telas) — os gestos com as pessoas,
+          // os pertences e os presentes, a rede social, a vida estudantil — vão com os textos: o pacote dos sistemas não cresce.
+          if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria|gestos|pertences|presentes|redes|vidaEstudantil)\.ts)/.test(id)) return 'motor-textos';
           if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
           // REWORK 3: o que só a camada de cima usa (salvar, nascer, as ações de cuidado, de estilo, de busca, a
           // entrevista, a leitura da independência) vai com ela — o pacote dos sistemas volta a caber no limite, sem ciclo.

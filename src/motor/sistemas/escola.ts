@@ -26,7 +26,14 @@ import { escrever, idade, marcarFato, temFato } from '../nucleo';
 import { CURSOS, curso, cursoOuNulo, type AreaFormacao, type Curso, type Materia, ROTULO_AREA } from '../dados/cursos';
 import { estudarMaterias, habilidade, materiasExtremas, mediaEscolar, praticar } from './frentes';
 
-export const NOME_MATERIA: Record<string, string> = { exatas: 'matemática', linguagens: 'português', ciencias: 'ciências', humanas: 'história' };
+/**
+ * O nome das matérias. A de língua é a língua do lugar (REWORK 4: "recuperação em português" vazava para vidas no
+ * Japão e nos EUA) — lida do país da vida que está sendo processada (`paisCorrente`, o mesmo contexto da moeda).
+ */
+export const NOME_MATERIA: Record<string, string> = {
+  exatas: 'matemática', ciencias: 'ciências', humanas: 'história',
+  get linguagens() { const p = paisCorrente(); return temPerfil(p) ? perfilDoPais(p).idiomas[0] : 'português'; }
+};
 import { marcar } from './marcas';
 import type { Dominio } from '../tipos';
 import { cidadesDoPais, economiaLocal, municipio, nivelDeOferta, nomeLugar } from '../dados/lugares';
@@ -504,7 +511,7 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
               ? { grau: 'improvavel', chance: 0.15, motivo: `Nota ${nota} abaixo do corte (~${corte}). Pode entrar na lista de espera.` }
               : bloqueio('requisito', `Nota ${nota} muito abaixo do corte (~${corte}${cota ? ', já com cota' : ''}).`);
         // Onde a pública cobra (os EUA, o Reino Unido, o Japão), a mensalidade é uma fração da particular.
-        add({ via: 'sisu', modalidade: 'presencial', rede: 'publica', mensalidade: Math.round(mens * ed.publicaCobra / 10) * 10, veredito, municipioId: lugar, observacao: [observacao, cota ? 'Concorre por cota.' : ''].filter(Boolean).join(' ') || undefined });
+        add({ via: 'sisu', modalidade: 'presencial', rede: 'publica', mensalidade: Math.round(mens * ed.publicaCobra / 10) * 10, veredito, municipioId: lugar, observacao: [observacao, cota ? 'Concorre por cota.' : '', ed.publicaDiferida && ed.publicaCobra > 0 ? `A contribuição vai para ${ed.credito?.nome ?? 'o crédito público'}: paga depois de formado.` : ''].filter(Boolean).join(' ') || undefined });
       } else {
         // qualificação e técnico públicos, residência, mestrado, doutorado: processo seletivo próprio
         if (c.nivel === 'mestrado' || c.nivel === 'doutorado') {
@@ -715,7 +722,8 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
     tInicio: v.t,
     mesesRestantes: n.especialidade ? modeloEspecialidade(n.especialidade).meses : c.meses,
     mensalidade: n.mensalidade,
-    financiamento: n.via === 'fies' ? 'fies' : n.via === 'prouni' ? 'prouni' : undefined,
+    // A pública de contribuição diferida (HECS-HELP, Student Finance) entra pelo crédito público: nada no mês, dívida depois.
+    financiamento: n.via === 'fies' || (n.rede === 'publica' && n.mensalidade > 0 && educacaoDaVida(v).publicaDiferida) ? 'fies' : n.via === 'prouni' ? 'prouni' : undefined,
     desempenho: 60,
     trancado: false,
     municipioId: n.municipioId,
@@ -804,6 +812,8 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   const area = m.area ?? areaDaPos(v, c) ?? c.area;
   const esp = m.especialidade ? modeloEspecialidade(m.especialidade) : undefined;
   e.concluidos.push({ cursoId: c.id, nome: esp?.residencia ?? nomeDaFormacao(c, area), nivel: c.nivel, area, tFim: v.t, instituicao: m.instituicao, rede: m.rede, modalidade: m.modalidade, fies: m.financiamento === 'fies' || undefined, desempenho: Math.round(m.desempenho), ...(esp ? { especialidade: esp.id } : {}) });
+  // REWORK 4: a formatura fecha a história desta formação (`vidaEstudantil`), com o desempenho de como terminou.
+  e.trajetoria = [...(e.trajetoria ?? []), { t: v.t, idade: idade(v), instituicao: m.instituicao, tipo: 'formatura', texto: `Formatura em ${esp?.residencia ?? nomeDaFormacao(c, area)}${m.desempenho >= 80 ? ', entre os melhores da turma' : m.desempenho < 45 ? ', no limite' : ''}.` }].slice(-60);
   const nivelEsc: Partial<Record<NivelCurso, Escolaridade>> = { tecnico: 'tecnico', superior: 'superior', pos: 'pos', residencia: 'pos', mestrado: 'mestrado', doutorado: 'doutorado' };
   const esc = nivelEsc[c.nivel];
   if (esc) subir(v, esc);
