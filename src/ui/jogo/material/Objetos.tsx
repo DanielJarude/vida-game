@@ -17,15 +17,34 @@ const clarear = (hex: string, k = 0.45) => {
   const f = (x: number) => Math.round(x + (255 - x) * k).toString(16).padStart(2, '0');
   return `#${f(n >> 16)}${f((n >> 8) & 255)}${f(n & 255)}`;
 };
+/** Luminância relativa (0 preto .. 1 branco). */
+const luminancia = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  const lin = (x: number) => { const c = x / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+};
+/**
+ * FIX pós-REWORK 4 — contraste: o violão preto fosco num fundo escuro sumia (o mesmo problema do gato branco no fundo
+ * branco, ao contrário). Objeto escuro ganha contorno claro; objeto claro, contorno escuro de verdade.
+ */
+const contorno = (c: string) => (luminancia(c) < 0.08 ? '#d8cbb8' : escurecer(c, luminancia(c) > 0.6 ? 0.55 : 0.35));
 
 type Forma = (c: string, e: string, l: string) => ReactElement;
 const F: Record<string, Forma> = {
-  cordas: (c, e, l) => <g><ellipse cx="24" cy="34" rx="10" ry="9" fill={c} stroke={e} /><ellipse cx="24" cy="23" rx="7.5" ry="7" fill={c} stroke={e} /><circle cx="24" cy="29" r="2.6" fill={e} /><rect x="22.6" y="3" width="2.8" height="18" rx="1" fill={e} /><rect x="21.5" y="2" width="5" height="4" rx="1" fill={l} /></g>,
+  // Violão: corpo grande em oito, boca redonda, braço longo com trastes, mão com tarraxas.
+  cordas: (c, e, l) => <g><ellipse cx="24" cy="36" rx="11" ry="9.5" fill={c} stroke={e} /><ellipse cx="24" cy="24.5" rx="8" ry="7.5" fill={c} stroke={e} /><circle cx="24" cy="31" r="3" fill={e} /><rect x="20.5" y="38.5" width="7" height="2" rx="0.6" fill={e} /><rect x="22.5" y="4" width="3" height="19" rx="1" fill={e} />{[8, 11, 14, 17].map(y => <path key={y} d={`M22.5 ${y}h3`} stroke={l} strokeWidth="0.5" />)}<rect x="21.2" y="1.5" width="5.6" height="4.5" rx="1" fill={l} stroke={e} strokeWidth="0.8" /><path d="M23 6v32.5M25 6v32.5" stroke={l} strokeWidth="0.35" opacity=".8" /></g>,
+  // Violino: corpo pequeno de cintura funda, efes, espelho escuro, voluta enrolada — e o ARCO cruzando (é o que o separa do violão).
+  violino: (c, e, l) => <g><g transform="rotate(-18 24 26)"><path d="M24 15c-5 0-7 2.4-6.4 5.2.5 2-1.6 3-1.6 5 0 2 2.1 3 1.6 5-.7 3 1.6 5.8 6.4 5.8s7.1-2.8 6.4-5.8c-.5-2 1.6-3 1.6-5 0-2-2.1-3-1.6-5 .6-2.8-1.4-5.2-6.4-5.2z" fill={c} stroke={e} /><path d="M21 24.5c-.8 1.5.8 2.5 0 4M27 24.5c.8 1.5-.8 2.5 0 4" fill="none" stroke={e} strokeWidth="0.9" /><rect x="23" y="5" width="2" height="18" rx="0.8" fill={e} /><circle cx="24" cy="4" r="1.8" fill={c} stroke={e} strokeWidth="0.8" /><path d="M22.4 33h3.2" stroke={l} strokeWidth="1" /></g><path d="M6 40L42 13" stroke={e} strokeWidth="1.4" strokeLinecap="round" /><path d="M7.2 40.6L42.6 14.4" stroke={l} strokeWidth="0.5" opacity=".9" /></g>,
   guitarra: (c, e, l) => <g><path d="M14 40c-4-4-2-11 4-11 1-4 5-6 8-4l2-2 8-18 3 1-7 19c3 3 2 8-2 10-3 7-11 9-16 5z" fill={c} stroke={e} /><circle cx="22" cy="33" r="2" fill={l} /></g>,
   teclado: (c, e, l) => <g><rect x="4" y="18" width="40" height="14" rx="2" fill={c} stroke={e} />{[0, 1, 2, 3, 4, 5, 6, 7].map(k => <rect key={k} x={6 + k * 4.6} y="23" width="4" height="8" fill={l} />)}{[0, 1, 3, 4, 5].map(k => <rect key={`p${k}`} x={9 + k * 4.6} y="23" width="2.2" height="5" fill={e} />)}</g>,
-  piano: (c, e, l) => <g><path d="M6 14h30c6 0 8 6 8 10v8H6z" fill={c} stroke={e} /><rect x="6" y="28" width="38" height="5" fill={l} /><rect x="9" y="33" width="3" height="10" fill={e} /><rect x="38" y="33" width="3" height="10" fill={e} /></g>,
-  bateria: (c, e, l) => <g><ellipse cx="24" cy="32" rx="12" ry="9" fill={c} stroke={e} /><ellipse cx="24" cy="26" rx="12" ry="3.5" fill={l} stroke={e} /><ellipse cx="9" cy="20" rx="6" ry="2" fill="#d9b44a" stroke={e} /><ellipse cx="39" cy="18" rx="6" ry="2" fill="#d9b44a" stroke={e} /></g>,
-  tela: (c, e, l) => <g><rect x="5" y="8" width="38" height="24" rx="2" fill={c} stroke={e} /><rect x="8" y="11" width="32" height="18" fill={l} opacity=".55" /><rect x="20" y="33" width="8" height="5" fill={e} /><rect x="14" y="38" width="20" height="3" rx="1" fill={c} /></g>,
+  // Piano de cauda: a tampa aberta em curva, o teclado branco com as teclas pretas, três pernas.
+  piano: (c, e) => <g><path d="M4 22h24c4-7 13-8 16-2 2 4-1 8-5 8H4z" fill={c} stroke={e} /><path d="M8 22l18-13" stroke={e} strokeWidth="1.2" /><rect x="4" y="27" width="26" height="5" fill="#f2ede4" stroke={e} strokeWidth="0.8" />{[0, 1, 3, 4, 5, 7, 8].map(k => <rect key={k} x={5.4 + k * 3} y="27" width="1.6" height="3" fill="#1e1a17" />)}<rect x="6" y="32" width="2.4" height="10" fill={e} /><rect x="26" y="32" width="2.4" height="10" fill={e} /><rect x="36" y="28" width="2.4" height="14" fill={e} /></g>,
+  // Bateria: o bumbo de frente (o círculo grande), dois tons em cima, a caixa ao lado e os pratos dourados nos pedestais.
+  bateria: (c, e, l) => <g><path d="M8 13v28M40 11v30M6 41h6M38 41h6" stroke={e} strokeWidth="1" /><ellipse cx="8" cy="13" rx="6.5" ry="1.8" fill="#d6ad45" stroke={e} strokeWidth="0.8" /><ellipse cx="40" cy="11" rx="6.5" ry="1.8" fill="#d6ad45" stroke={e} strokeWidth="0.8" /><circle cx="24" cy="32" r="10" fill={c} stroke={e} /><circle cx="24" cy="32" r="6.5" fill={l} opacity=".55" stroke={e} strokeWidth="0.6" /><ellipse cx="17.5" cy="19.5" rx="5" ry="3.6" fill={c} stroke={e} /><ellipse cx="30.5" cy="19.5" rx="5" ry="3.6" fill={c} stroke={e} /><ellipse cx="17.5" cy="17.6" rx="5" ry="1.4" fill={l} stroke={e} strokeWidth="0.6" /><ellipse cx="30.5" cy="17.6" rx="5" ry="1.4" fill={l} stroke={e} strokeWidth="0.6" /><rect x="35" y="27" width="8" height="5" rx="1.5" fill={c} stroke={e} /></g>,
+  // TV: tela larga e fina, num pé baixo; computador: monitor, teclado e o gabinete ao lado.
+  tela: (c, e, l) => <g><rect x="2" y="9" width="44" height="26" rx="1.5" fill={c} stroke={e} /><rect x="4.5" y="11.5" width="39" height="21" fill={l} opacity=".5" /><path d="M14 40l5-5h10l5 5z" fill={c} stroke={e} /></g>,
+  computador: (c, e, l) => <g><rect x="3" y="6" width="30" height="21" rx="1.5" fill={c} stroke={e} /><rect x="5.5" y="8.5" width="25" height="16" fill={l} opacity=".55" /><rect x="15.5" y="27" width="5" height="5" fill={e} /><rect x="5" y="36" width="28" height="5" rx="1" fill={c} stroke={e} />{[0, 1, 2, 3, 4, 5].map(k => <rect key={k} x={7 + k * 4.2} y="37.6" width="3" height="1.6" fill={l} />)}<rect x="36" y="10" width="9" height="31" rx="1.2" fill={c} stroke={e} /><circle cx="40.5" cy="14" r="1.2" fill={l} /></g>,
+  tablet: (c, e, l) => <g><rect x="9" y="6" width="30" height="36" rx="3" fill={c} stroke={e} /><rect x="12" y="9.5" width="24" height="28" rx="1" fill={l} opacity=".6" /><path d="M16 30l6-7 4 4 3-3 5 6" fill="none" stroke={e} strokeWidth="1" /></g>,
   notebook: (c, e, l) => <g><rect x="9" y="10" width="30" height="20" rx="2" fill={c} stroke={e} /><rect x="12" y="13" width="24" height="14" fill={l} opacity=".6" /><path d="M4 32h40l-3 5H7z" fill={c} stroke={e} /></g>,
   celular: (c, e, l) => <g><rect x="15" y="4" width="18" height="38" rx="4" fill={c} stroke={e} /><rect x="17.5" y="8" width="13" height="27" rx="1.5" fill={l} opacity=".6" /><circle cx="24" cy="38.5" r="1.5" fill={e} /></g>,
   camera: (c, e, l) => <g><rect x="5" y="14" width="38" height="24" rx="3" fill={c} stroke={e} /><rect x="14" y="9" width="12" height="6" rx="1" fill={c} stroke={e} /><circle cx="24" cy="26" r="9" fill={e} /><circle cx="24" cy="26" r="5.5" fill={l} opacity=".7" /></g>,
@@ -49,8 +68,8 @@ const F: Record<string, Forma> = {
 };
 
 const FORMA_DA_COISA: Record<string, string> = {
-  violao: 'cordas', violino: 'cordas', guitarra: 'guitarra', teclado: 'teclado', piano: 'piano', bateria: 'bateria',
-  tv: 'tela', computador: 'tela', notebook: 'notebook', tablet: 'celular', celular_simples: 'celular', celular_bom: 'celular', celular_topo: 'celular',
+  violao: 'cordas', violino: 'violino', guitarra: 'guitarra', teclado: 'teclado', piano: 'piano', bateria: 'bateria',
+  tv: 'tela', computador: 'computador', notebook: 'notebook', tablet: 'tablet', celular_simples: 'celular', celular_bom: 'celular', celular_topo: 'celular',
   camera: 'camera', videogame: 'controle', caixa_som: 'som', sofa: 'sofa', colchao: 'cama', maquina_lavar: 'eletro', lava_loucas: 'eletro',
   aspirador_robo: 'eletro', ar_condicionado: 'eletro', escrivaninha: 'mesa', cozinha_equipada: 'panela', kit_academia: 'halter', esteira: 'esteira',
   chuteira_bola: 'bola', raquete: 'raquete', prancha: 'prancha', camping: 'barraca', tabuleiro: 'xadrez', livros: 'livros', livros_estudo: 'livros',
@@ -62,7 +81,7 @@ export const DesenhoObjeto = memo(function DesenhoObjeto({ coisaId, cor, tamanho
   const forma = F[FORMA_DA_COISA[coisaId] ?? 'jogos'];
   return (
     <svg className="objeto" viewBox="0 0 48 48" width={tamanho} height={tamanho} role="img" aria-label={rotulo ?? coisaId} strokeWidth="1.2" strokeLinejoin="round">
-      {forma(c, escurecer(c), clarear(c))}
+      {forma(c, contorno(c), clarear(c))}
     </svg>
   );
 });

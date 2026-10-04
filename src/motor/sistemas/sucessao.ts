@@ -542,6 +542,8 @@ const ESCOLARIDADE_NPC: Record<NonNullable<Pessoa['vida']>['escolaridade'], Esco
  * que morreu). Faz a partilha com as decisões guardadas e devolve a vida
  * DELA: mesma pessoa, mesma idade, mesma família — vista dela.
  */
+const NOME_DA_LEMBRANCA: Record<string, string> = { violao: 'o violão', violino: 'o violino', guitarra: 'a guitarra', piano: 'o piano', camera: 'a câmera', bateria: 'a bateria', teclado: 'o teclado' };
+
 export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; erro?: string } {
   if (!vida.morte) return { vida, erro: 'Esta vida ainda não terminou.' };
   if (vida.morte.encerrada) return { vida, erro: 'Esta história foi encerrada.' };
@@ -687,6 +689,17 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       for (const id of Object.keys(novos)) if (novos[id].convivio.includes('casa') && v.moradia.tipo === 'aluguel' && !residentes.includes(id)) novos[id].convivio = novos[id].convivio.filter(c => c !== 'casa');
     }
 
+    // 5b. FIX pós-REWORK 4 — as COISAS de quem morreu (o violão, a câmera, os livros, a TV): não somem. Quem continua
+    // na mesma casa fica com o que é da casa; quem vive em outra leva o que é pessoal e tem uso (a lembrança que se usa).
+    // As redes sociais eram de quem morreu: quem continua começa sem conta (e sem os laços digitais de outra pessoa).
+    const coisasDoMorto = vida.financas.coisas ?? [];
+    const mesmaCasa = moravaJunto && v.moradia.municipioId === antigaMoradia.municipioId && (v.moradia.imovelId === antigaMoradia.imovelId || v.moradia.tipo === antigaMoradia.tipo);
+    const pessoais = new Set(['violao', 'violino', 'guitarra', 'teclado', 'bateria', 'piano', 'camera', 'livros', 'tabuleiro', 'jogos_tabuleiro', 'material_arte', 'videogame', 'raquete', 'prancha', 'camping']);
+    const ficam = coisasDoMorto.filter(c => mesmaCasa || pessoais.has(c.coisaId)).map(c => structuredClone(c));
+    if (ficam.length) v.financas.coisas = ficam;
+    v.redes = undefined;
+    for (const x of Object.values(novos)) x.digital = undefined;
+
     // 6. O dinheiro: o que já era dela e o que herdou. Menor de idade: a herança fica aplicada em nome dela até os 18.
     const ja = h.posses ? h.posses.dinheiro : economiasEstimadas(vida, vida.pessoas[herdeiroId]);
     const herdou = (quinhaoDela?.dinheiro ?? 0) * kHerdeira;
@@ -785,6 +798,9 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     else partes.push('a sua parte foi para outras pessoas da família, como ficou decidido');
     if (p.doacao) partes.push(`${fmt(p.doacao.valor)} foram doados para ${nomeDoDestino(p.doacao.destino)}`);
     escrever(v, { t: tMorte + 1, texto: `O inventário de ${nomeMorto} terminou: ${partes.join('; ')}.`, relevancia: 'biografia', tema: 'dinheiro', pessoas: [oldId] });
+    // A lembrança que se usa: o instrumento, a câmera, os livros de quem morreu ficaram com você.
+    const lembranca = (v.financas.coisas ?? []).find(c => ['violao', 'violino', 'guitarra', 'piano', 'camera', 'bateria', 'teclado'].includes(c.coisaId));
+    if (lembranca) escrever(v, { t: tMorte + 1, texto: `Ficou com ${NOME_DA_LEMBRANCA[lembranca.coisaId] ?? 'uma coisa'} de ${nomeMorto}.`, relevancia: 'biografia', tema: 'familia', pessoas: [oldId] });
     if (i < 18 && guarda) {
       const g = v.pessoas[guarda.id];
       if (!h.genitores?.includes(guarda.id)) escrever(v, { t: tMorte + 1, texto: `A guarda ficou com ${g.nome}. Foi para a casa ${flex(g.genero, 'dele', 'dela', 'delu')}${g.municipioId !== antigaMoradia.municipioId ? `, em ${nomeLugar(g.municipioId)}` : ''}.`, relevancia: 'marco', tema: 'familia', pessoas: [g.id] });

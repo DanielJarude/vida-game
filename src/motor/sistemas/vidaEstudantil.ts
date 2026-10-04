@@ -20,12 +20,11 @@ import { escrever, idade, lembrarCom, vinculosVivos } from '../nucleo';
 import { flex } from '../texto';
 import { curso } from '../dados/cursos';
 import { DETALHES, MOMENTOS_DA_ESCOLA, MOMENTOS_DA_FACULDADE, MOMENTOS_DO_CURSO, familiaDoCurso, type MomentoDeFormacao } from '../dados/vidaEstudantil';
-import { instituicaoAtual, professorDe, type Instituicao } from './formacao';
+import { instituicaoAtual, professorDe, registrarNaFormacao, type Instituicao } from './formacao';
 import { habilidade, materiasExtremas, praticar } from './frentes';
 import { marcar } from './marcas';
 
 const MATERIA: Record<string, string> = { exatas: 'matemática', linguagens: 'redação', ciencias: 'ciências', humanas: 'história' };
-const MAX_TRAJETORIA = 60;
 
 function condicao(v: Vida, se: MomentoDeFormacao['se']): boolean {
   if (!se) return true;
@@ -129,11 +128,8 @@ export function processarVidaEstudantil(v: Vida): void {
   registrarNaFormacao(v, { t: v.t, idade: idade(v), instituicao: inst.nome, tipo: x.tipo, texto });
 }
 
-/** Guarda um momento na história da formação (o que fica para consultar depois). */
-export function registrarNaFormacao(v: Vida, m: MarcoDeFormacao): void {
-  const e = v.educacao;
-  e.trajetoria = [...(e.trajetoria ?? []), m].slice(-MAX_TRAJETORIA);
-}
+/** Guarda um momento na história da formação — a fonte única mora em `formacao` (os verbos da formação também gravam). */
+export { registrarNaFormacao } from './formacao';
 
 /** A história da formação agrupada por instituição (a mais recente por último). */
 export function historiaDaFormacao(v: Vida): { instituicao: string; de: number; ate: number; momentos: MarcoDeFormacao[] }[] {

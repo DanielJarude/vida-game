@@ -523,6 +523,7 @@ const DESCRICAO: Record<FormaDaCasa, string> = {
 export function descricaoDaCasa(l: LeituraLar): string {
   const c = l.condicao;
   const partes = [DESCRICAO[l.forma]];
+  if (l.fachada) partes.push(['apto_1q', 'apto_2q', 'apto_3q', 'kitnet', 'alto_padrao', 'funcional'].includes(l.forma) ? `de fachada ${l.fachada.nome}` : `pintada de ${l.fachada.nome}`);
   if (c.nivel === 'problema') partes.push(`com andaime e rachadura na parede, pedindo reparo${c.problema ? ` (${c.problema})` : ''}`);
   else if (c.nivel === 'ruim') partes.push('com rachaduras na parede');
   else if (c.nivel === 'gasta') partes.push('com manchas de umidade na parede');
@@ -540,14 +541,14 @@ export function CenaDaCasa({ l }: { l: LeituraLar }) {
   const Forma = FORMAS[l.forma];
   const rotulo = `Desenho: ${descricaoDaCasa(l)}; ${acesas} ${acesas === 1 ? 'janela acesa' : 'janelas acesas'}${l.bichos.length ? `, ${l.bichos.map(b => b.nome).join(' e ')} na frente` : ''}${l.veiculo ? `, ${l.veiculo === 'carro' ? 'um carro' : l.veiculo === 'moto' ? 'uma moto' : 'uma bicicleta'} (${NOME_FORMA[formaNaPorta(l)!]}) na porta` : ''}.`;
   return (
-    <svg className={`cena cena--${l.forma} cena--${c.nivel}`} viewBox="0 0 312 140" role="img" aria-label={rotulo} data-forma={l.forma}>
+    <svg className={`cena cena--${l.forma} cena--${c.nivel}${l.fachada ? ' cena--colorida' : ''}`} style={l.fachada ? { ['--fachada' as string]: l.fachada.cor } : undefined} viewBox="0 0 312 140" role="img" aria-label={rotulo} data-forma={l.forma}>
       <path d={`M8 ${CHAO}h296`} {...TRACO} className="cena__chao" />
       <Forma acesas={acesas} tijolo={tijolo} />
       {(c.nivel === 'gasta' || c.nivel === 'ruim') && <Mancha x={w.x + w.l * 0.18} y={w.y + 6} />}
       {(c.nivel === 'ruim' || c.nivel === 'problema') && <Rachadura x={w.x + w.l * 0.74} y={w.y} a={w.a} />}
       {c.nivel === 'problema' && <Andaime x={w.x + 4} topo={Math.max(w.y - 2, 20)} />}
       {c.reformaRecente && c.nivel !== 'problema' && <TintaNova x={w.x + w.l - 36} />}
-      {l.veiculo && <g transform={`translate(${pl.vaga + (l.veiculo === 'carro' ? 0 : 8)} 107)`} className="cena__veiculo" data-forma={formaNaPorta(l)}>{desenhoDaForma(formaNaPorta(l)!)}</g>}
+      {l.veiculo && <g transform={`translate(${pl.vaga + (l.veiculo === 'carro' ? 0 : 8)} 107)`} className={`cena__veiculo${l.corVeiculo ? ' desenho-veiculo--colorido' : ''}`} style={l.corVeiculo ? { ['--cor-veiculo' as string]: l.corVeiculo } : undefined} data-forma={formaNaPorta(l)}>{desenhoDaForma(formaNaPorta(l)!)}</g>}
       {l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro').slice(0, 2).map((b, k) => (b.especie === 'gato' ? <Gato key={b.id} x={pl.bichos + k * 24} /> : <Cachorro key={b.id} x={pl.bichos + k * 24} />))}
     </svg>
   );
@@ -727,20 +728,20 @@ const BIKES: Record<'urbana' | 'estrada' | 'mtb' | 'eletrica', () => ReactNode> 
   urbana: () => <>
     <Roda x={10} r={BIKE_RODA} grossa={1.1} /><Roda x={35} r={BIKE_RODA} grossa={1.1} />
     {paraLama(10, BIKE_RODA, 190, 300, 1)}{paraLama(35, BIKE_RODA, 230, 330, 1)}
-    <path d="M31.2 9C26.4 14.4 23 16.6 20 16.4L10 15.6M20 16.4L16.8 8.4M10 15.6L17.2 10.2M31.2 9L35 15.6M31.2 9L30.6 5.6L27.4 6.4" {...TRACO} strokeWidth={1.3} />
+    <path className="quadro" d="M31.2 9C26.4 14.4 23 16.6 20 16.4L10 15.6M20 16.4L16.8 8.4M10 15.6L17.2 10.2M31.2 9L35 15.6M31.2 9L30.6 5.6L27.4 6.4" {...TRACO} strokeWidth={1.3} />
     <path d="M14.6 7.6H18.8" {...GROSSO} />
     <path d="M32.6 6.2H38.8L38 10.2H33.4Z" {...TRACO} strokeWidth={1.2} {...MASSA} />
   </>,
   // Estrada (speed): quadro em diamante de tubo horizontal, guidão curvo para baixo, pneus finos, selim alto.
   estrada: () => <>
     <Roda x={10} r={BIKE_RODA} grossa={0.9} /><Roda x={35} r={BIKE_RODA} grossa={0.9} />
-    <path d="M10 15.6L20 16.4L17.6 7.6H31.2L31.8 10.2L20 16.4M10 15.6L17.6 7.6M31.8 10.2C32.6 12 34 13.6 35 15.6M31.2 7.6L33.6 7.2C36 7.2 36 10.8 33.6 10.6" {...TRACO} strokeWidth={1.2} />
+    <path className="quadro" d="M10 15.6L20 16.4L17.6 7.6H31.2L31.8 10.2L20 16.4M10 15.6L17.6 7.6M31.8 10.2C32.6 12 34 13.6 35 15.6M31.2 7.6L33.6 7.2C36 7.2 36 10.8 33.6 10.6" {...TRACO} strokeWidth={1.2} />
     <path d="M15.4 6.4H19.8" {...GROSSO} />
   </>,
   // Mountain bike: pneus grossos de cravos, garfo de suspensão, tubo superior inclinado, guidão reto largo.
   mtb: () => <>
     <Roda x={10} r={BIKE_RODA} grossa={2.4} cravos /><Roda x={35} r={BIKE_RODA} grossa={2.4} cravos />
-    <path d="M10 15.6L20 16.4L18 8.6L30.4 7.4L31 10.2L20 16.4M10 15.6L18 8.6M30.4 7.4L30 5.6M28 5.6H33" {...TRACO} strokeWidth={1.5} />
+    <path className="quadro" d="M10 15.6L20 16.4L18 8.6L30.4 7.4L31 10.2L20 16.4M10 15.6L18 8.6M30.4 7.4L30 5.6M28 5.6H33" {...TRACO} strokeWidth={1.5} />
     <path d="M31 10.2L32.6 12.6" {...GROSSO} /><path d="M32.6 12.6L35 15.6" {...TRACO} />
     <path d="M15.8 7.4H20" {...GROSSO} />
   </>,
@@ -748,7 +749,7 @@ const BIKES: Record<'urbana' | 'estrada' | 'mtb' | 'eletrica', () => ReactNode> 
   eletrica: () => <>
     <Roda x={10} r={BIKE_RODA} grossa={1.3} /><Roda x={35} r={BIKE_RODA} grossa={1.3} />
     {paraLama(10, BIKE_RODA, 190, 300, 1)}{paraLama(35, BIKE_RODA, 230, 330, 1)}
-    <path d="M10 15.6L20 16.4L17.2 8.4M10 15.6L17.2 10.6L30.6 8.6M31.2 9L35 15.6M30.6 8.6L30 5.6L27.2 6.2" {...TRACO} strokeWidth={1.3} />
+    <path className="quadro" d="M10 15.6L20 16.4L17.2 8.4M10 15.6L17.2 10.6L30.6 8.6M31.2 9L35 15.6M30.6 8.6L30 5.6L27.2 6.2" {...TRACO} strokeWidth={1.3} />
     <path d="M20.6 15.2L30.2 9.6" stroke="currentColor" strokeWidth={3.6} strokeLinecap="round" />
     <circle cx={10} cy={CHAO_V - BIKE_RODA} r={2} fill="currentColor" />
     <path d="M15 7.4H19.2" {...GROSSO} />
@@ -883,12 +884,32 @@ function desenhoDaForma(forma: FormaVeiculo, semente?: string): ReactNode {
 /** A forma do veículo na porta (sem a versão, a forma típica da categoria). */
 const formaNaPorta = (l: LeituraLar): FormaVeiculo | undefined => l.formaVeiculo ?? (l.veiculo === 'carro' ? 'hatch' : l.veiculo === 'moto' ? 'street' : l.veiculo === 'bicicleta' ? 'urbana' : undefined);
 
+/**
+ * O estado aparece no desenho (FIX pós-REWORK 4), não só no texto: o zero tem brilho na lataria; o usado tem riscos;
+ * o cansado, pintura gasta e ferrugem. Sempre com o texto ao lado (nunca só a forma).
+ */
+function Desgaste({ forma, estado }: { forma: FormaVeiculo; estado: number }) {
+  const carro = forma in CARROCERIAS;
+  const moto = forma in MOTOS;
+  if (estado >= 90 && carro) return <path className="desenho-veiculo__brilho" d="M11 12.6q7-1.1 13-.7" fill="none" stroke="#fffaf0" strokeOpacity={0.6} strokeWidth={0.8} strokeLinecap="round" />;
+  if (estado >= 60) return null;
+  return (
+    <g className="desenho-veiculo__desgaste" data-desgaste={estado < 40 ? 'cansado' : 'usado'}>
+      {carro && <path d="M15 15.6l2.4-.7M30.5 14.6l1.9.9M22 16.4l1.2-.3" fill="none" stroke="#fffaf0" strokeOpacity={0.55} strokeWidth={0.6} strokeLinecap="round" />}
+      {moto && <path d="M21.5 11.2l1.6-.5" fill="none" stroke="#fffaf0" strokeOpacity={0.55} strokeWidth={0.6} strokeLinecap="round" />}
+      {estado < 40 && carro && <><ellipse cx={19.5} cy={16.2} rx={1.5} ry={0.8} fill="#8a5434" fillOpacity={0.9} /><ellipse cx={37.2} cy={15.4} rx={1.1} ry={0.7} fill="#8a5434" fillOpacity={0.85} /></>}
+      {estado < 40 && moto && <ellipse cx={24} cy={9.4} rx={1.1} ry={0.6} fill="#8a5434" fillOpacity={0.85} />}
+    </g>
+  );
+}
+
 /** `semente` (o id da versão, opcional): a variação de proporção do modelo — dois sedãs não saem idênticos. */
-export function DesenhoVeiculo({ forma, rotulo, largura = 48, semente, cor }: { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string; cor?: string }) {
+export function DesenhoVeiculo({ forma, rotulo, largura = 48, semente, cor, estado }: { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string; cor?: string; estado?: number }) {
   // REWORK 4: com cor (o veículo desta vida), a lataria ganha a cor dele; o traço continua o da interface.
   return (
     <svg className={`desenho-veiculo desenho-veiculo--${forma}${cor ? ' desenho-veiculo--colorido' : ''}`} style={cor ? { ['--cor-veiculo' as string]: cor } : undefined} viewBox="0 0 48 24" width={largura} height={largura / 2} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-forma={forma}>
       {desenhoDaForma(forma, semente)}
+      {cor && estado !== undefined && <Desgaste forma={forma} estado={estado} />}
     </svg>
   );
 }
@@ -937,6 +958,20 @@ const ICONES: Record<string, string> = {
 
 /** Cada tipo de moradia tem a sua silhueta (e o tamanho aparece no desenho, não só no texto). */
 const ICONE_MORADIA: Record<string, string> = { republica: 'republica', kitnet: 'kitnet', casa_simples: 'casa_simples', apto_1q: 'apto_1q', apto_2q: 'apto_2q', casa_2q: 'casa_2q', apto_3q: 'apto_3q', casa_3q: 'casa_3q', casa_grande: 'casa_grande', sitio: 'sitio', alto_padrao: 'alto_padrao' };
+
+/**
+ * FIX pós-REWORK 4: a miniatura da casa — a MESMA silhueta da cena (o prédio baixo, a torre, a casa de laje, a casa
+ * grande), na cor da fachada dela. Na vitrine da imobiliária e entre os bens: reconhecível antes do rótulo.
+ */
+export function MiniaturaDaCasa({ forma, fachada, rotulo, largura = 104 }: { forma: FormaDaCasa; fachada?: { cor: string; nome: string }; rotulo?: string; largura?: number }) {
+  const Forma = FORMAS[forma];
+  return (
+    <svg className={`cena cena--miniatura cena--${forma}${fachada ? ' cena--colorida' : ''}`} style={{ ...(fachada ? { ['--fachada' as string]: fachada.cor } : {}), width: largura }} viewBox="30 10 252 124" role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-forma={forma}>
+      <path d={`M24 ${CHAO}h264`} {...TRACO} className="cena__chao" />
+      <Forma acesas={1} tijolo={false} />
+    </svg>
+  );
+}
 
 export function IconeMoradia({ modeloId, estado }: { modeloId: string; estado?: string }) {
   const nome = ICONE_MORADIA[modeloId] ?? 'casa';

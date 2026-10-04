@@ -85,6 +85,10 @@ import { DE_FORMACAO, instituicaoAtual } from './sistemas/formacao';
 import { disponibilidadeUsarCoisa, usarCoisa } from './sistemas/pertences';
 import { disponibilidadePresentear, presentear } from './sistemas/presentes';
 import { disponibilidadeRede, executarRede, type OpRede } from './sistemas/redes';
+// FIX pós-REWORK 4: o miúdo do trabalho (o projeto, a chefia, o colega, o treino extra): `noOficio`.
+import { disponibilidadeOficio, executarOficio, type OqueOficio } from './sistemas/noOficio';
+// FIX pós-REWORK 4: os verbos do ano letivo (estudar para a prova, a festa, o projeto, colar): `naFormacao`.
+import { disponibilidadeFormacao, executarFormacao, type OqueFormacao } from './sistemas/naFormacao';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -212,6 +216,10 @@ export type Acao =
   | { tipo: 'presentear'; pessoaId: string; coisaId: string }
   /** REWORK 4: as redes sociais do jogo (`redes`). */
   | { tipo: 'rede'; op: OpRede }
+  /** FIX pós-REWORK 4: agir dentro do trabalho de agora (`noOficio`). */
+  | { tipo: 'oficio'; oque: OqueOficio }
+  /** FIX pós-REWORK 4: agir dentro da escola ou da faculdade (`naFormacao`). */
+  | { tipo: 'formacao'; oque: OqueFormacao }
   /** As outras trajetórias: deixar a paralela, trocar a principal, voltar a (ou encerrar) uma carreira pausada. */
   | { tipo: 'trajetoria'; oque: 'deixar' | 'principal' | 'retomar' | 'encerrar_pausada'; k?: number }
   /** Usar a própria visibilidade (entrevista, causa, evento, publicidade, privacidade, projeto, política): `visibilidade`. */
@@ -555,6 +563,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'usar_coisa': return disponibilidadeUsarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId);
     case 'presentear': return disponibilidadePresentear(v, a.pessoaId, a.coisaId);
     case 'rede': return disponibilidadeRede(v, a.op);
+    case 'oficio': return disponibilidadeOficio(v, a.oque);
+    case 'formacao': return disponibilidadeFormacao(v, a.oque);
     case 'trajetoria': return disponibilidadeParalela(v, a.oque, a.k);
     case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
     case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
@@ -718,6 +728,8 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'comprar_coisa': case 'vender_coisa': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     case 'presentear': return ['Presentes', 'escolha'];
     case 'rede': return ['Rede social', 'escolha'];
+    case 'oficio': return ['No trabalho', 'escolha'];
+    case 'formacao': return ['Na escola e na faculdade', 'escolha'];
     case 'decidir': return ['Decisões do ano', 'escolha'];
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
@@ -992,8 +1004,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const casal = arranjoDaCasa(v) === 'casados';
       const anterior = v.financas.bens.filter(b => b.tipo === 'veiculo');
       // A cor deste veículo (REWORK 4): o carro azul continua azul — da compra para sempre.
+      // FIX pós-REWORK 4: a cor é a do anúncio (a que se viu na loja); comandos antigos sem anúncio sorteiam como antes.
       const cores = variantesDeVeiculo(m.categoria);
-      const cor = cores[Math.floor(rngDe(v.id, id, 'cor').next() * cores.length)];
+      const cor = o.cor ? { cor: o.cor, nome: o.corNome } : cores[Math.floor(rngDe(v.id, id, 'cor').next() * cores.length)];
       v.financas.bens.push({ id, tipo: 'veiculo', cor: cor.cor, corNome: cor.nome, modeloId: m.id, versaoId: versao?.id, nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: casal ? 'casal' : 'eu', historia: [{ t: v.t, texto: o.usado ? `Comprado usado, ano ${o.anoFabricacao}${o.historico ? ` (${o.historico})` : ''}, por ${fmt(o.preco)}.` : `Comprado zero, por ${fmt(o.preco)}.` }] });
       const nVeiculos = (v.fatos['veiculos_comprados'] ?? 0) + 1;
       v.fatos['veiculos_comprados'] = nVeiculos;
@@ -1193,6 +1206,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'usar_coisa': return ok(usarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId), 'bom');
     case 'presentear': return ok(presentear(v, a.pessoaId, a.coisaId), 'bom');
     case 'rede': return ok(executarRede(v, a.op));
+    case 'oficio': return ok(executarOficio(v, r, a.oque));
+    case 'formacao': return ok(executarFormacao(v, r, a.oque));
     case 'trajetoria': {
       if (a.oque === 'deixar') { const nome = nomeOcupacao(v, ocupacao(v.trabalho.paralela!.ocupacaoId)); encerrarParalela(v, 'deixou a trajetória paralela'); return ok(`Você deixou ${nome}. O que fez fica no currículo.`); }
       if (a.oque === 'principal') { trocarPrincipal(v); return ok('A principal e a paralela trocaram de lugar.'); }

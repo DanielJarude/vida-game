@@ -182,11 +182,19 @@ describe('interface', () => {
     expect(within(main).getByText(/Antes de qualquer escolha, a semana já tem/)).toBeTruthy();
     expect(within(main).getAllByText(/Trabalho \(/).length).toBeGreaterThan(0);
     expect(within(main).getAllByText(/Faculdade \(/).length).toBeGreaterThan(0);
-    // REWORK 4: a semana cheia é custo, não muro — a atividade a mais diz o que ocupa a semana e o preço; a carga e o
-    // estresse são a leitura principal.
-    expect(within(main).getAllByText(/Sua semana já está cheia: .*trabalho.*faculdade/i).length).toBeGreaterThan(0);
-    expect(within(main).getAllByText(/o descanso some/).length).toBeGreaterThan(0);
-    expect(within(main).getByText('Carga')).toBeTruthy();
+    // FIX pós-REWORK 4: o estresse é a leitura principal (um medidor só, com o que pesa e o que ajuda); a "carga" ficou
+    // no motor (é ela que diz se ainda cabe algo), sem segunda barra na tela.
+    expect(within(main).getByRole('meter', { name: /Estresse/ })).toBeTruthy();
+    expect(within(main).getByText('O que está pesando')).toBeTruthy();
+    expect(within(main).queryByText('Carga')).toBeNull();
+    // REWORK 4: a semana cheia é custo, não muro — a atividade a mais diz o que ocupa a semana e o preço. (FIX pós-REWORK
+    // 4: o catálogo mora nas abas; a leitura, um hobby, está em "Hobbies".)
+    fireEvent.click(within(main).getByRole('tab', { name: 'Hobbies' }));
+    const aba = screen.getByRole('main');
+    const explorar = within(aba).queryByRole('button', { name: /Explorar outras atividades/ });
+    if (explorar) fireEvent.click(explorar);
+    expect(within(aba).getAllByText(/Sua semana já está cheia: .*trabalho.*faculdade/i).length).toBeGreaterThan(0);
+    expect(within(aba).getAllByText(/o descanso some/).length).toBeGreaterThan(0);
   });
 
   it('trabalho: as portas de trabalho aparecem com o motivo, e a carreira é contada em palavras', () => {
@@ -242,9 +250,11 @@ describe('interface', () => {
     // FIX pós-REWORK 3: Tempo livre é uma área própria (a mais visitada no dia a dia).
     fireEvent.click(screen.getAllByRole('button', { name: 'Tempo livre' })[0]);
     const main = screen.getByRole('main');
+    expect(within(main).getByRole('img', { name: /A semana:/ })).toBeTruthy();
+    // FIX pós-REWORK 4: o catálogo mora nas abas (aqui, "Hobbies"): poucas sugestões com motivo, o resto a um toque.
+    fireEvent.click(within(main).getByRole('tab', { name: 'Hobbies' }));
     const antes = within(main).queryAllByRole('button', { name: /^Começar/ }).length;
     expect(antes).toBeLessThanOrEqual(4);
-    expect(within(main).getByRole('img', { name: /A semana:/ })).toBeTruthy();
     fireEvent.click(within(main).getByRole('button', { name: /Explorar outras atividades/ }));
     expect(within(main).queryAllByRole('button', { name: /^Começar/ }).length).toBeGreaterThan(antes + 5);
   });

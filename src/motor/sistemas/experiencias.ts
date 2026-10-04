@@ -72,10 +72,38 @@ export const EXPERIENCIAS: readonly ModeloExperiencia[] = [
 const modelo = (id: TipoExperiencia) => EXPERIENCIAS.find(x => x.id === id)!;
 const chave = (id: TipoExperiencia) => `exp_${id}`;
 
-/** Quem vai junto (a parceria, os filhos em casa). */
+/** Quem vai junto, quando ninguém diz (a parceria, os filhos em casa). */
 function companhia(v: Vida): Pessoa[] {
   return moraCom(v).filter(p => !p.especie && (v.vinculos[p.id]?.romance || ['filho', 'enteado'].includes(v.vinculos[p.id]?.parentesco ?? ''))).slice(0, 4);
 }
+
+/**
+ * FIX pós-REWORK 4: COM QUEM viajar é escolha — sozinho, com quem mora com você, só com a parceria, com um amigo, com a
+ * mãe. Cada opção é um id (`so`, `casa`, `par` ou o id da pessoa) que vai no fim da escolha da viagem
+ * (`destino:duração:quem`); sem ele, vale a de sempre (quem mora com você, ou sozinho).
+ */
+export interface CompanhiaDeViagem { id: string; rotulo: string; pessoas: Pessoa[] }
+export function companhiasDeViagem(v: Vida): CompanhiaDeViagem[] {
+  const g = v.eu.tratamento ?? v.eu.genero;
+  const out: CompanhiaDeViagem[] = [{ id: 'so', rotulo: flex(g, 'Sozinho', 'Sozinha', 'Sozinhe'), pessoas: [] }];
+  const casa = companhia(v);
+  if (casa.length) out.push({ id: 'casa', rotulo: `Com ${listaNatural(casa.map(p => p.nome))}`, pessoas: casa });
+  const par = parceiro(v);
+  if (par && casa.length > 1 && casa.some(p => p.id === par.p.id)) out.push({ id: 'par', rotulo: `Só com ${par.p.nome}`, pessoas: [par.p] });
+  const outros = vinculosVivos(v)
+    .filter(x => !x.p.especie && idadePessoa(v, x.p) >= 16 && !casa.some(p => p.id === x.p.id) && x.vin.tensao < 45 && x.vin.digital?.bloqueado === undefined
+      && (x.vin.romance?.estagio === 'namoro' || ['mae', 'pai', 'irmao', 'filho'].includes(x.vin.parentesco ?? '') || ((x.vin.estagio === 'amigo_proximo' || x.vin.estagio === 'amigo') && x.vin.proximidade >= 50)))
+    .sort((a, b) => b.vin.proximidade - a.vin.proximidade).slice(0, 4);
+  for (const { p } of outros) out.push({ id: p.id, rotulo: `Com ${p.nome}`, pessoas: [p] });
+  return out;
+}
+const companhiaPadrao = (v: Vida) => (companhia(v).length ? 'casa' : 'so');
+/** Quem vai, a partir do último pedaço da escolha (`so`, `casa`, `par`, id da pessoa). */
+function quemVai(v: Vida, quem?: string): Pessoa[] {
+  const x = companhiasDeViagem(v).find(c => c.id === (quem ?? companhiaPadrao(v)));
+  return x?.pessoas ?? companhia(v);
+}
+const genteDe = (n: number) => 1 + n * 0.8;
 
 /* ------------------------------------------------------------ Os destinos */
 
@@ -331,6 +359,12 @@ export function catalogoDeViagem(v: Vida, id: 'viagem_pais' | 'viagem_exterior')
 export function custoDaExperiencia(v: Vida, id: TipoExperiencia, escolha?: string): number {
   if (id === 'sabatico') return Math.round(Math.max(9000, (v.trabalho.atual?.salario ?? 3000) * 3) / 100) * 100;
   const xs = escolhasDaExperiencia(v, id);
+  // A viagem com outra companhia: o mesmo destino, outro tanto de gente (o preço por pessoa é o mesmo).
+  const [destId, durId, quem] = (escolha ?? '').split(':');
+  if ((id === 'viagem_pais' || id === 'viagem_exterior') && quem) {
+    const base = xs.find(e => e.id === `${destId}:${durId}`);
+    if (base) return Math.round(base.custo / genteDe(companhia(v).length) * genteDe(quemVai(v, quem).length) / 100) * 100;
+  }
   const x = escolha ? xs.find(e => e.id === escolha) : undefined;
   const aPartirDe = xs.length ? Math.min(...xs.map(e => e.custo)) : modelo(id).custo;
   return x?.custo ?? aPartirDe;
@@ -352,7 +386,10 @@ export function disponibilidadeExperiencia(v: Vida, id: TipoExperiencia, escolha
   if (t !== undefined && v.t - t < m.intervalo) return bloqueio('incompativel', m.intervalo >= 24 ? 'Foi há pouco — a próxima fica para daqui a um tempo.' : 'Já foi este ano.');
   if (id === 'presente_familia' && !presenteaveis(v).length) return bloqueio('impossivel', 'Não há ninguém da família por perto para presentear.');
   if (id === 'sabatico' && !v.trabalho.atual) return bloqueio('impossivel', 'Sem trabalho, não há de que tirar um tempo.');
-  if (escolha && id !== 'sabatico' && !escolhasDaExperiencia(v, id).some(e => e.id === escolha)) return bloqueio('impossivel', 'Essa opção não existe nesta vida.');
+  const viagem = id === 'viagem_pais' || id === 'viagem_exterior';
+  const [destId, durId, quem] = (escolha ?? '').split(':');
+  if (escolha && id !== 'sabatico' && !escolhasDaExperiencia(v, id).some(e => e.id === (viagem && quem ? `${destId}:${durId}` : escolha))) return bloqueio('impossivel', 'Essa opção não existe nesta vida.');
+  if (viagem && quem && !companhiasDeViagem(v).some(c => c.id === quem)) return bloqueio('impossivel', 'Essa pessoa não pode ir agora.');
   return vereditoDePagar(v, custoDaExperiencia(v, id, escolha), 'Custa uns');
 }
 
@@ -360,7 +397,7 @@ export function disponibilidadeExperiencia(v: Vida, id: TipoExperiencia, escolha
  * REWORK 4: o que a duração da viagem muda, dito ANTES (a mesma conta que `viverExperiencia` aplica): descanso,
  * trabalho e estudo, a companhia, a câmera.
  */
-export function previsaoDaViagem(v: Vida, dias: number): string[] {
+export function previsaoDaViagem(v: Vida, dias: number, quem?: string): string[] {
   const out: string[] = [];
   out.push(dias <= 4 ? 'Descanso curto: alivia, não apaga o cansaço.' : dias <= 7 ? 'Uma semana inteira fora: a cabeça volta mais leve.' : 'Duas semanas: descanso de verdade — e mais coisa acontece pelo caminho.');
   const e = v.trabalho.atual;
@@ -368,7 +405,7 @@ export function previsaoDaViagem(v: Vida, dias: number): string[] {
   const m = v.educacao.matricula;
   if (m && !m.trancado && dias >= 14) out.push('Duas semanas de aula ficam para recuperar.');
   if (dias >= 7 && v.mente.estresseAlto) out.push('Desfaz parte do cansaço acumulado de anos.');
-  const tensos = companhia(v).filter(p => (v.vinculos[p.id]?.tensao ?? 0) >= 40);
+  const tensos = quemVai(v, quem).filter(p => (v.vinculos[p.id]?.tensao ?? 0) >= 40);
   if (dias >= 14 && tensos.length) out.push(`Duas semanas junto de ${tensos.map(p => p.nome).join(' e ')} não resolvem o que anda mal — podem piorar.`);
   if (temCoisa(v, 'camera')) out.push('A câmera vai junto: volta com um álbum (e com prática).');
   return out;
@@ -377,11 +414,14 @@ export function previsaoDaViagem(v: Vida, dias: number): string[] {
 /** Viver a experiência escolhida. Sem escolha (saves e simulações antigas), vale a primeira opção da porta. */
 export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?: string): string {
   const opcoes = escolhasDaExperiencia(v, id);
-  const esc = id === 'sabatico' ? undefined : opcoes.find(e => e.id === escolha) ?? opcoes[0];
-  const custo = custoDaExperiencia(v, id, esc?.id);
+  const viagem = id === 'viagem_pais' || id === 'viagem_exterior';
+  const quem = viagem ? (escolha ?? '').split(':')[2] : undefined;
+  const semQuem = quem ? (escolha ?? '').split(':').slice(0, 2).join(':') : escolha;
+  const esc = id === 'sabatico' ? undefined : opcoes.find(e => e.id === semQuem) ?? opcoes[0];
+  const custo = custoDaExperiencia(v, id, quem && esc ? `${esc.id}:${quem}` : esc?.id);
   pagar(v, custo);
   v.fatos[chave(id)] = v.t;
-  const com = companhia(v);
+  const com = viagem ? quemVai(v, quem) : companhia(v);
   const nomes = listaNatural(com.map(p => p.nome));
   const perto = (n: number, texto: string) => { for (const p of com) { const vin = v.vinculos[p.id]; if (vin) { vin.proximidade = clamp(vin.proximidade + n); lembrarCom(v, p.id, texto, 'ritual', 2); } } };
   switch (id) {
@@ -407,7 +447,7 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
       if (temCoisa(v, 'camera')) { praticar(v, r, 'fotografia', 0.3 * fator, 1.2); efeitos.push('a câmera voltou com um álbum inteiro'); }
       const texto = `Viajou para ${dest.nome} (${dur.nome})${com.length ? `, com ${nomes}` : flex(v.eu.genero, ', sozinho', ', sozinha', ', sozinhe')}.`;
       escrever(v, { texto, relevancia: 'biografia', tema: 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id) });
-      const extra = acontecimentoDeViagem(v, r, dest.nome, com.length === 0, fora, fator);
+      const extra = acontecimentoDeViagem(v, r, dest.nome, com, fora, fator);
       return `${fmt(custo)} entre passagem, hospedagem e o resto. ${com.length ? 'Voltaram com fotos demais e uma história que vão repetir por anos.' : 'Voltou outra pessoa — um pouco.'}${efeitos.length ? ` ${cap(efeitos.join('; '))}.` : ''}${extra ? ` ${extra}` : ''}`;
     }
     case 'curso_caro': {
@@ -467,14 +507,22 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
 }
 
 /**
- * O que a viagem pode trazer além da memória: alguém que fica na vida
- * (quem viaja sozinho conhece mais gente — com o contexto de onde veio) ou
- * um imprevisto contado depois rindo. Nem toda viagem traz algo.
+ * O que a viagem pode trazer além da memória (FIX pós-REWORK 4: mais do que "a mala extraviou"). Depende de quem foi,
+ * de para onde, de quanto tempo — e da sorte. Quietude continua permitida: muitas viagens são só boas.
+ *
+ *   sozinho (ou com um amigo)  conhecer alguém que fica na vida
+ *   com quem se ama            o momento que vira porta-retrato (na história dos dois)
+ *   com uma criança            a primeira vez de alguma coisa (o mar, o avião, a neve) — biografia
+ *   fora                       a língua, a comida, o metrô: o estrangeiro que se vira
+ *   qualquer um                o imprevisto que vira história de família
  */
-function acontecimentoDeViagem(v: Vida, r: Rng, onde: string, sozinho: boolean, fora: boolean, fator = 1): string | undefined {
+function acontecimentoDeViagem(v: Vida, r: Rng, onde: string, com: Pessoa[], fora: boolean, fator = 1): string | undefined {
   const x = r.next();
-  // Quanto mais longa, mais coisa acontece (conhecer alguém, o imprevisto que vira história).
-  if (sozinho && x < 0.28 * Math.min(1.5, Math.max(0.6, fator)) && idade(v) >= 18 && idade(v) <= 70) {
+  const longa = Math.min(1.6, Math.max(0.6, fator));
+  const sozinho = com.length === 0;
+  const amigo = com.length === 1 && !v.vinculos[com[0].id]?.romance && !v.vinculos[com[0].id]?.parentesco;
+  // Quem viaja sozinho (ou com um amigo) conhece mais gente — com o contexto de onde veio.
+  if ((sozinho || amigo) && x < 0.26 * longa && idade(v) >= 18 && idade(v) <= 70) {
     const genero = v.eu.atracao === 'homens' ? 'masculino' : v.eu.atracao === 'mulheres' ? 'feminino' : r.chance(0.5) ? 'masculino' : 'feminino';
     const p = criarPessoa(v, r, { idade: clamp(idade(v) + r.int(-5, 5), 18, 85), genero, municipioId: r.chance(0.5) ? v.moradia.municipioId : v.eu.municipioNatal });
     const vin = vincular(v, p, { origem: 'apresentado', proximidade: r.int(26, 38), estagio: 'conhecido' });
@@ -482,10 +530,37 @@ function acontecimentoDeViagem(v: Vida, r: Rng, onde: string, sozinho: boolean, 
     registrarFase(v, vin, 'conhecido');
     lembrarCom(v, p.id, `Se conheceram numa viagem para ${onde}.`, 'inicio', 2);
     escrever(v, { texto: `Na viagem para ${onde}, conheceu ${p.nome}. Trocaram contato na volta.`, relevancia: 'biografia', tema: parceiro(v) ? 'amizade' : 'amor', pessoas: [p.id] });
-    return `E ${p.nome}, ${flex(p.genero, 'que você conheceu', 'que você conheceu')} lá, mandou mensagem na semana seguinte.`;
+    return `E ${p.nome}, que você conheceu lá, mandou mensagem na semana seguinte.`;
   }
-  if (x > 1 - 0.14 * Math.min(1.6, Math.max(0.6, fator))) {
-    const imprevisto = fora ? 'A mala foi para outro país e chegou três dias depois.' : 'O voo de volta atrasou um dia inteiro; a história virou piada de família.';
+  // A primeira vez de uma criança (o avião, outro país, o mar): da biografia dela e da sua.
+  const crianca = com.find(p => idadePessoa(v, p) <= 12 && ['filho', 'neto', 'enteado'].includes(v.vinculos[p.id]?.parentesco ?? ''));
+  if (crianca && x < 0.45) {
+    const k = `primeira_viagem:${crianca.id}${fora ? ':fora' : ''}`;
+    if (v.fatos[k] === undefined) {
+      v.fatos[k] = v.t;
+      const texto = fora ? `A primeira viagem de ${crianca.nome} para fora do país: ${onde}.` : `A primeira viagem de ${crianca.nome} longe de casa: ${onde}.`;
+      lembrarCom(v, crianca.id, texto, 'ritual', 3);
+      escrever(v, { texto, relevancia: 'biografia', tema: 'familia', tom: 'bom', pessoas: [crianca.id] });
+      return r.pick([`${crianca.nome} grudou o rosto na janela do avião e não desgrudou.`, `${crianca.nome} perguntou se dava para morar lá. Duas vezes.`, `${crianca.nome} dormiu no colo na volta, com a areia ainda nos pés.`]);
+    }
+  }
+  // Com quem se ama: o momento que fica (ou, quando a relação anda mal, o que expõe).
+  const par = com.find(p => v.vinculos[p.id]?.romance);
+  if (par && x < 0.6) {
+    const vin = v.vinculos[par.id];
+    if (vin.tensao >= 45 && r.chance(0.5)) { vin.tensao = clamp(vin.tensao + 6); return `No terceiro dia, você e ${par.nome} brigaram no quarto do hotel. O resto da viagem foi educado demais.`; }
+    const momento = r.pick([`um pôr do sol que nenhum dos dois esperava`, `uma noite inteira andando a pé, sem destino`, `o jantar num lugar sem cardápio, escolhido por sorte`, `a foto que virou porta-retrato`]);
+    lembrarCom(v, par.id, `Em ${onde}: ${momento}.`, 'ritual', 2);
+    if (vin.romance) vin.romance.envolvimento = clamp(vin.romance.envolvimento + 3);
+    return `Em ${onde}, você e ${par.nome} tiveram ${momento}.`;
+  }
+  // Fora do país: o estrangeiro que se vira.
+  if (fora && x < 0.72) return r.pick(['Ninguém falava a sua língua no restaurante; você apontou o cardápio e acertou — por sorte.', 'Você se perdeu no metrô e um desconhecido explicou tudo com gestos.', 'A comida de rua foi a melhor coisa da viagem. O estômago discordou no dia seguinte.']);
+  // O imprevisto que vira história de família (nem toda viagem tem um).
+  if (x > 1 - 0.16 * longa) {
+    const imprevisto = r.pick(fora
+      ? ['A mala foi para outro país e chegou três dias depois.', 'O voo de volta foi cancelado: uma noite a mais, num hotel de aeroporto.', 'Perdeu o celular no segundo dia; as fotos, só as dos outros.']
+      : ['O voo de volta atrasou um dia inteiro; a história virou piada de família.', 'Choveu todos os dias. A viagem virou de baralho e pastel.', 'O carro alugado furou o pneu numa estrada de terra, longe de tudo.']);
     escrever(v, { texto: imprevisto, relevancia: 'cotidiano', tema: 'lazer' });
     return imprevisto;
   }

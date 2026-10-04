@@ -2495,15 +2495,19 @@ export interface Retorno {
 
 /* ================================================================ REWORK 4 */
 
+/** As plataformas do jogo (`dados/redes`): cada uma funciona de um jeito. Saves do REWORK 4 tinham o "mural" (vira Instagram). */
+export type PlataformaId = 'instagram' | 'youtube' | 'tiktok' | 'twitch' | 'x' | 'facebook' | 'onlyfans';
+
 /** Uma conta numa rede social do jogo. */
 export interface ContaSocial {
   plataforma: string;
   arroba: string;
   tCriada: number;
+  /** O público (seguidores, inscritos, assinantes), comprados incluídos até alguém descobrir. */
   seguidores: number;
   /** 0..100: o quanto quem segue acredita no que vê (seguidores comprados, polêmicas e sumiços derrubam). */
   credibilidade: number;
-  /** As últimas publicações (no máximo 24). */
+  /** As últimas publicações (no máximo 8: o resto vira número em `totais`). */
   publicacoes: Publicacao[];
   /** Desde quando ganha dinheiro com a conta. */
   monetizada?: number;
@@ -2511,9 +2515,31 @@ export interface ContaSocial {
   comprados?: number;
   /** A conta foi apagada (quando). */
   apagada?: number;
+  /** FIX pós-REWORK 4: 0..100, o quanto quem segue interage (comprado não interage; sumir esfria). */
+  engajamento?: number;
+  /** Verificada desde (o selo); `selo: 'pago'` é o selo comprado (X): verifica a conta, não a pessoa. */
+  verificada?: number;
+  selo?: 'pago';
+  /** O pedido de verificação em análise (sai na virada do ano) e a última recusa. */
+  pedidoVerificacao?: number;
+  recusaVerificacao?: number;
+  /** Suspensa até (a rede puniu); advertências acumuladas (denúncias, briga, compra descoberta). */
+  suspensaAte?: number;
+  advertencias?: number;
+  /** 0..100: a fama de briguento nessa rede (trollar, rebater, xingar). */
+  toxicidade?: number;
+  /** O que a conta já viveu, em números (as publicações antigas saem; a história fica). */
+  totais?: { publicacoes: number; virais: number; receita: number; polemicas: number; maior: number };
+  /** Celebridades que já interagiram (nomes): a curtida, a resposta, o compartilhamento. */
+  celebridades?: string[];
+  /** OnlyFans: quem da vida descobriu (pessoaIds), e se o trabalho soube. */
+  descobriram?: string[];
 }
 
-export type TemaPublicacao = 'cotidiano' | 'viagem' | 'trabalho' | 'conquista' | 'arte' | 'pet' | 'familia' | 'opiniao';
+export type TemaPublicacao =
+  | 'cotidiano' | 'viagem' | 'trabalho' | 'conquista' | 'arte' | 'pet' | 'familia' | 'opiniao'
+  | 'humor' | 'esporte' | 'musica' | 'jogo' | 'tutorial' | 'bastidores' | 'politica' | 'exclusivo'
+  | 'desculpas' | 'rebater' | 'divulgar' | 'conversa' | 'receita' | 'estilo' | 'estudo' | 'comunidade';
 
 export interface Publicacao {
   id: string;
@@ -2529,6 +2555,8 @@ export interface Publicacao {
   polemica?: boolean;
   viral?: boolean;
   apagada?: boolean;
+  /** A reação em uma palavra (o que a rede achou): "elogiada", "ignorada", "criticada"... */
+  reacao?: string;
 }
 
 /** Uma organização onde se trabalha (simulada, plausível para o lugar): o nome, o setor, a cidade, o porte. */

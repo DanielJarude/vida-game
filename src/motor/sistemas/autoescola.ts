@@ -16,6 +16,7 @@ import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { Processo, Vida } from '../tipos';
 import { escrever } from '../nucleo';
+import { fraseDaReprovacaoTeorica } from './composicao';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { economiaLocal } from '../dados/lugares';
 import { vereditoDePagar, pagar } from './dinheiro';
@@ -125,7 +126,8 @@ export function responderPerguntaCnh(v: Vida, r: Rng, k: number): { continua: tr
     p.tFim = v.t + 3;
     pagar(v, 250);
     const texto = `Prova teórica: ${total} acertos de ${TOTAL_DA_PROVA} (${prova.acertos} das ${PERGUNTAS_DO_JOGADOR} que você respondeu). Precisava de ${MINIMO}. Nova prova em alguns meses — estudar a apostila e fazer simulados é o que mais ajuda.`;
-    escrever(v, { texto: `Reprovou na prova teórica ${doTransito(v)} (${total} de ${TOTAL_DA_PROVA}).`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+    // FIX pós-REWORK 4: a reprovação é desta vida (quão perto, a tentativa, o nervoso, quem esperava).
+    escrever(v, { texto: fraseDaReprovacaoTeorica(v, { total, minimo: MINIMO, deTotal: TOTAL_DA_PROVA, tentativa: p.tentativas, preparo: p.preparo ?? 0, nomeDaProva: doTransito(v), chave: p.id }), relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
     if (p.tentativas >= 3) desistir(v, p);
     return { continua: false, texto, tom: 'ruim' };
   }
@@ -187,7 +189,12 @@ function provaPratica(v: Vida, r: Rng, p: ProcessoCnh): { passou: boolean; texto
 function desistir(v: Vida, p: ProcessoCnh): void {
   v.processos = v.processos.filter(x => x.id !== p.id);
   const t = perfilDaVida(v).cotidiano?.transito;
-  escrever(v, { texto: t ? `Depois de três reprovações ${no(t)}, desistiu da carteira por um tempo.` : `Depois de três reprovações na prova de direção, desistiu ${habilitacaoDaVida(v).a.replace(/^a /, 'da ')} por um tempo.`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+  // FIX pós-REWORK 4: desistir também é desta vida (onde emperrou, o que fica no lugar, quanto custou).
+  const r = rngDe(v.id, 'cnh_desistiu', p.id);
+  const onde = p.teoricaOk ? r.pick(['na prova prática', 'na baliza', 'no exame de rua']) : r.pick(['na teórica', 'nas perguntas da teórica']);
+  const depois = r.pick(['O ônibus continuou sendo o jeito de ir', 'A bicicleta ganhou importância', 'Carona virou um assunto delicado', 'A carteira virou um "um dia eu tiro"', 'O dinheiro das taxas doeu mais do que a reprovação']);
+  const carteira = habilitacaoDaVida(v).a.replace(/^a /, 'da ');
+  escrever(v, { texto: t ? `Três reprovações ${no(t)}, ${onde}: desistiu da carteira por um tempo. ${depois}.` : `Três reprovações ${onde}: desistiu ${carteira} por um tempo. ${depois}.`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
 }
 
 /* ------------------------------------------------------------- Preparação */

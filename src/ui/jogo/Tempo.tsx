@@ -1,14 +1,21 @@
 /**
- * Tempo livre: a semana, desenhada.
+ * Tempo livre: a semana — e o que fazer com ela.
  *
- * A faixa no topo é a semana inteira: primeiro o que já vem ocupado
- * (trabalho, estudo, filhos, cuidado), depois o que você escolheu fazer, e
- * o que sobra. Se passa do que cabe, o pedaço a mais aparece fora da faixa,
- * hachurado e com nome — não só vermelho. Os números são os do motor
- * (`sistemas/semana`): a MESMA conta que decide se uma atividade cabe.
+ * FIX pós-REWORK 4: a área acumulava tudo numa página só. Agora há abas que
+ * respondem, de primeira, ao que a pessoa quer:
  *
- * Depois: o que você faz (a rotina), algumas sugestões com motivo, e o
- * resto do catálogo recolhido em "explorar", por tipo.
+ *   A semana        o ESTRESSE (um medidor só: quanto, para onde vai, o que
+ *                   pesa, o que ajuda, se ainda cabe algo, o que acontece se
+ *                   continuar assim) e tudo o que você já faz
+ *   Corpo e mente   esporte, academia, corrida, terapia, descanso
+ *   Hobbies         arte, música, leitura, estudo, ofícios, dinheiro por fora
+ *   Sair e ver gente  comunidade, noite, família — e com quem fazer algo
+ *   Redes sociais   as sete plataformas (`Redes`)
+ *   Viagens         viagens e experiências
+ *
+ * A "carga" (quanto da semana já está tomado) continua no motor — é ela que
+ * diz se ainda cabe algo —, mas a pessoa lê o estresse. Os números são os do
+ * motor (`leituraDoEstresse`, `semana`): a MESMA conta que decide.
  */
 
 import { useState } from 'react';
@@ -33,13 +40,23 @@ import { BotaoAcao, Folio, Secao, Vazio } from '../comum';
 import { dinheiroCurto } from '../apresentar';
 import { areaDaPorta, PortasAbertas } from './Estudos';
 import { doClube } from '../../motor/dados/clubes';
-import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
 import type { Aba } from '../navegacao';
 import { MODS as MODS_ESPORTE } from '../../motor/sistemas/oportunidades';
-import { custoDaExperiencia, descricaoDaExperiencia, escolhasDaExperiencia, experienciasPossiveis, nomeDaExperiencia, type TipoExperiencia } from '../../motor/sistemas/experiencias';
+import { custoDaExperiencia, escolhasDaExperiencia, experienciasPossiveis, nomeDaExperiencia, type TipoExperiencia } from '../../motor/sistemas/experiencias';
 import { estadoDoArco } from '../../motor/sistemas/arcos';
 import { VIVENCIA_DA_ROTINA } from '../../motor/sistemas/formacao';
 import { EscolherViagem } from './Viagem';
+import { RedesSociais } from './Redes';
+import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
+import { SECOES_TEMPO, type SecaoTempo } from '../navegacao';
+import { leituraDoEstresse } from '../../motor/sistemas/leituraDoEstresse';
+import { BEM_ESTAR } from '../../motor/sistemas/estado';
+import { idadePessoa, vinculosVivos } from '../../motor/nucleo';
+import { Retrato } from '../avatar/Retrato';
+import { rotuloDe } from '../apresentar';
+
+const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+const DE_TEMPO = new Set<string>(SECOES_TEMPO.map(x => x.id));
 
 /** A história da atividade (a etapa e o papel), quando ela tem uma (`arcos`). */
 const estadoDaAtividade = (vida: Vida, id: string) => { const viv = (vida.educacao.vivencias ?? []).find(x => x.tipo === VIVENCIA_DA_ROTINA[id] && x.tFim === undefined); const e = estadoDoArco(id, viv); return e ? `Agora: ${e}.` : undefined; };
@@ -50,27 +67,81 @@ const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'renda', rotulo: 'Dinheiro por fora' }, { id: 'cuidado', rotulo: 'Cuidado' }, { id: 'lazer', rotulo: 'Lazer' }
 ];
 
-/** A carga (a sobrecarga da semana) e o estresse (a cabeça), lado a lado — o que a vida está cobrando. */
-function CargaEEstresse({ vida }: { vida: Vida }) {
-  const l = leituraDaSobrecarga(vida);
-  const e = Math.round(vida.mente.estresse);
-  const anos = vida.mente.estresseAlto?.anos ?? 0;
-  const palavra = e >= 75 ? 'no limite' : e >= 55 ? 'alto' : e >= 35 ? 'moderado' : 'baixo';
+/** Para onde leva cada causa do estresse (a causa mora em outra área). */
+const ORIGEM_CAUSA: Record<string, SecaoOuArea> = {
+  trabalho: 'trabalho', horas_extras: 'trabalho', ritmo: 'trabalho', clima: 'trabalho', area: 'trabalho', negocio: 'trabalho', politica: 'trabalho', procura: 'trabalho',
+  dividas: 'dinheiro', aperto: 'dinheiro', aperto_casa: 'dinheiro', reserva: 'dinheiro', casa_pequena: 'casa', carro_parado: 'pertences',
+  bebe: 'pessoas', cuidar: 'pessoas', atrito: 'pessoas', segredo: 'pessoas', luto: 'pessoas', cuidando: 'trabalho',
+  semana: 'semana', semana_fixa: 'semana', semana_apertada: 'semana'
+};
+type SecaoOuArea = Aba;
+
+/**
+ * O ESTRESSE, numa leitura só (FIX pós-REWORK 4): quanto (o número e a palavra), para onde vai, o que pesa, o que
+ * ajuda, se ainda dá para assumir algo, o que acontece se continuar assim — e o que dá para fazer agora.
+ */
+function Estresse({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
+  const l = leituraDoEstresse(vida);
+  const sob = leituraDaSobrecarga(vida);
+  const i = idade(vida);
+  const classe = l.nivel.replace(' ', '-');
+  const ir = (id: string) => { const d = ORIGEM_CAUSA[id]; return d && d !== 'semana' && irPara ? d : undefined; };
+  const temTerapia = vida.rotinas.some(r => r.id === 'terapia');
   return (
-    <div className="carga">
-      <div className={`carga__medidor carga__medidor--${l.nivel}`}>
-        <span className="carga__rotulo">Carga</span>
-        <span className="carga__barra"><span style={{ width: `${[18, 48, 76, 98][l.nivel]}%` }} /></span>
-        <span className="carga__palavra">{l.palavra}</span>
+    <section className={`estresse estresse--${classe}`} aria-labelledby="titulo-estresse">
+      <div className="estresse__topo">
+        <h2 id="titulo-estresse" className="estresse__rotulo">Estresse</h2>
+        <p className="estresse__leitura"><strong className="estresse__valor">{l.valor}%</strong> <span className="estresse__palavra">{l.nivel}</span>{l.tendencia !== 'estável' && <span className={`estresse__tendencia estresse__tendencia--${l.tendencia}`}>{l.tendencia === 'subindo' ? '↑ subindo' : '↓ baixando'}</span>}</p>
       </div>
-      <div className={`carga__medidor carga__medidor--estresse-${palavra.replace(' ', '-')}`}>
-        <span className="carga__rotulo">Estresse</span>
-        <span className="carga__barra" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={e} aria-label="Estresse"><span style={{ width: `${Math.max(4, e)}%` }} /></span>
-        <span className="carga__palavra">{palavra}</span>
+      <div className="estresse__barra" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={l.valor} aria-label={`Estresse: ${l.valor}%, ${l.nivel}`}>
+        <span className="estresse__cheio" style={{ width: `${Math.max(3, l.valor)}%` }} />
+        <span className="estresse__marca" style={{ left: '35%' }} aria-hidden /><span className="estresse__marca" style={{ left: '55%' }} aria-hidden /><span className="estresse__marca" style={{ left: '75%' }} aria-hidden />
       </div>
-      {anos >= 2 && <p className="nota carga__anos">{anos} anos seguidos com a cabeça no limite: o sono, o humor e o corpo já sentem{anos >= 3 ? ' — e com a saúde frágil, o risco cresce' : ''}.</p>}
-    </div>
+      <p className="estresse__frase">{l.frase}</p>
+      <div className="estresse__colunas">
+        <div className="estresse__coluna estresse__coluna--pesa">
+          <h3>O que está pesando</h3>
+          {l.pesando.length ? (
+            <ul>{l.pesando.map(c => { const d = ir(c.id); return <li key={c.id}><span className="estresse__causa">{c.texto}</span> <span className={`estresse__peso estresse__peso--${c.peso}`}>{c.peso}</span>{d && <button type="button" className="link estresse__ir" onClick={() => irPara!(d)}>ver →</button>}</li>; })}</ul>
+          ) : <p className="nota">Nada pesando de verdade agora.</p>}
+        </div>
+        <div className="estresse__coluna estresse__coluna--ajuda">
+          <h3>O que está ajudando</h3>
+          {l.ajudando.length ? (
+            <ul>{l.ajudando.map(c => <li key={c.id}><span className="estresse__causa">{c.texto}</span> <span className={`estresse__peso estresse__peso--alivio`}>{c.peso === 'forte' ? 'alivia muito' : 'alivia'}</span></li>)}</ul>
+          ) : <p className="nota">Nada ajudando de propósito: uma atividade que alivia (corrida, terapia, leitura) faria diferença.</p>}
+        </div>
+      </div>
+      {/* A "carga" (o quanto a semana já está tomada) é do motor: aqui ela é uma palavra e o porquê, não uma segunda barra. */}
+      <p className={`estresse__folego semana-carga semana-carga--${sob.nivel}`}><strong>Dá para assumir mais?</strong> <span className="semana-carga__palavra">{sob.palavra.charAt(0).toUpperCase() + sob.palavra.slice(1)}.</span> {l.folego}{sob.nivel >= 1 ? ` ${cap(sob.texto.replace(/^[^:.]*[:.] ?/, ''))}` : ''}</p>
+      {l.riscos.length > 0 && <p className="estresse__riscos"><strong>Se continuar assim:</strong> {listaNatural(l.riscos)}.</p>}
+      {i >= 14 && (l.nivel !== 'baixo' || l.tendencia === 'subindo') && (
+        <div className="estresse__aliviar">
+          <p className="estresse__sub">Para aliviar</p>
+          <div className="grupo-acoes grupo-acoes--linha">
+            <BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'descansar' }} agir={agir} variante="secundario" ocultarImpossivel>Tirar uns dias de descanso</BotaoAcao>
+            {!temTerapia && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: 'terapia', ativa: true, nivel: 1 }} agir={agir} variante="secundario" ocultarImpossivel>Começar terapia</BotaoAcao>}
+            {irPara && <button type="button" className="botao botao--discreto" onClick={() => irPara('corpo')}>Uma atividade que alivia</button>}
+            {irPara && vida.trabalho.atual && <button type="button" className="botao botao--discreto" onClick={() => irPara('trabalho')}>Um ritmo mais leve no trabalho</button>}
+            {irPara && i >= 16 && <button type="button" className="botao botao--discreto" onClick={() => irPara('viagens')}>Uma viagem</button>}
+          </div>
+        </div>
+      )}
+    </section>
   );
+}
+
+/**
+ * O título da área: a MESMA leitura da semana que o painel do estresse usa (`sobrecarga`) — o título não pode dizer
+ * "passou do que cabe" enquanto o painel diz "ainda cabe".
+ */
+function tituloDaSemana(v: Vida, s: Semana): string {
+  const sob = leituraDaSobrecarga(v);
+  if (sobrecargaDaSemana(v).fixos > 0.01) return resumoDaSemana(s, true);
+  if (sob.nivel === 3) return 'No limite: a semana está cobrando o corpo e a cabeça.';
+  if (sob.nivel === 2) return 'A semana passou do que cabe — o cansaço aparece.';
+  if (sob.nivel === 1) return 'A semana está cheia. Ainda cabe — por pouco.';
+  return resumoDaSemana(s);
 }
 
 function resumoDaSemana(s: Semana, fixosPassam = false): string {
@@ -242,7 +313,8 @@ function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
             <li key={id} className={`experiencia experiencia--${GRAMATICA[id]}`}>
               {/* REWORK 4: cada tipo com a sua cara — o postal da viagem, o que o curso vira, o preço do sabático, quem recebe. */}
               <span className="experiencia__emblema" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path d={EMBLEMA[GRAMATICA[id]]} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
-              <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)}</strong><span>{descricaoDaExperiencia(id)} {porta ? `A partir de ${dinheiroCurto(custoDaExperiencia(vida, id))}.` : `Uns ${dinheiroCurto(custoDaExperiencia(vida, id))}.`}</span>
+              {/* FIX pós-REWORK 4: menos texto — o nome, o que esta experiência muda (uma linha) e o preço como etiqueta. */}
+              <span className="experiencia__texto"><strong>{nomeDaExperiencia(id)} <span className="experiencia__preco">{porta ? `a partir de ${dinheiroCurto(custoDaExperiencia(vida, id))}` : dinheiroCurto(custoDaExperiencia(vida, id))}</span></strong>
                 <span className="experiencia__traco">{tracoDaExperiencia(vida, id)}</span>
                 {fechada && d.motivo && <span className="acao__motivo">{d.motivo}</span>}</span>
               {porta && !fechada
@@ -289,7 +361,7 @@ const EMBLEMA: Record<string, string> = {
 /** A linha que diz o que este TIPO de experiência é (não o preço de novo). */
 function tracoDaExperiencia(v: Vida, id: TipoExperiencia): string {
   switch (id) {
-    case 'viagem_pais': case 'viagem_exterior': return '4, 7 ou 14 dias — a duração muda o descanso, o que acontece e o que fica parado.';
+    case 'viagem_pais': case 'viagem_exterior': return 'O destino, quantos dias e com quem: muda o descanso, o que acontece pelo caminho e quem volta mais perto.';
     case 'curso_caro': return 'Vira prática de verdade: a competência sobe e a atividade pode entrar na semana.';
     case 'sabatico': { const e = v.trabalho.atual; return `Três meses sem trabalho · descanso grande · ${e && e.clientela !== undefined ? 'parte da freguesia vai embora' : 'na volta, um tempo de readaptação'}.`; }
     case 'bancar_projeto': return 'O sonho de alguém (ou uma causa): o dinheiro vira história — com o seu nome no começo.';
@@ -297,7 +369,26 @@ function tracoDaExperiencia(v: Vida, id: TipoExperiencia): string {
   }
 }
 
-export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
+/** As abas de atividades: que categorias (e que atividades avulsas) cada uma mostra. */
+const DA_ABA: Record<'corpo' | 'atividades' | 'gente', { categorias: CategoriaAtividade[]; tambem?: string[]; fora?: string[] }> = {
+  corpo: { categorias: ['esporte', 'corpo'], tambem: ['terapia'] },
+  atividades: { categorias: ['arte', 'estudo', 'oficio', 'lazer', 'renda'], fora: ['sair_noite'] },
+  gente: { categorias: ['social'], tambem: ['tempo_familia', 'sair_noite'] }
+};
+const naAba = (aba: keyof typeof DA_ABA, m: ModeloRotina) => {
+  const x = DA_ABA[aba];
+  if (x.fora?.includes(m.id)) return false;
+  if (x.tambem?.includes(m.id)) return true;
+  if (Object.values(DA_ABA).some(o => o !== x && o.tambem?.includes(m.id))) return false;
+  return x.categorias.includes(m.categoria);
+};
+
+interface PropsTempo { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; aba?: SecaoTempo; irAba?: (a: SecaoTempo) => void; abrirPessoa?: (id: string) => void }
+
+export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }: PropsTempo) {
+  const [abaLocal, setAbaLocal] = useState<SecaoTempo>('semana');
+  const aba = abaDeFora ?? abaLocal;
+  const trocar = (a: SecaoTempo) => { setAbaLocal(a); irAba?.(a); };
   const i = idade(vida);
   if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
   const s = semana(vida);
@@ -305,69 +396,148 @@ export function Tempo({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => b
   const ativas = vida.rotinas.map(r => ({ r, m: modeloRotina(r.id) })).filter((x): x is { r: Vida['rotinas'][number]; m: ModeloRotina } => !!x.m);
   const frentes = frentesDaVida(vida);
   const pesaNaCabeca = fatoresCabeca(vida).some(f => (f.id === 'semana' || f.id === 'semana_fixa') && f.efeito > 0);
+  const abas = SECOES_TEMPO.filter(x => (x.id !== 'redes' || i >= 10) && (x.id !== 'viagens' || i >= 12));
+  const ir = (a: Aba) => (irPara ? irPara(a) : DE_TEMPO.has(a) ? trocar(a as SecaoTempo) : undefined);
+  return (
+    <div className={`tempo tempo--${aba}`}>
+      <Folio kicker={<><span className="folio__area">Tempo livre</span> · {SECOES_TEMPO.find(x => x.id === aba)!.rotulo.toLowerCase()}</>} titulo={tituloDaSemana(vida, s)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
+      <nav className="subnav" aria-label="Seções de Tempo livre">
+        <ul role="tablist" className="subnav__lista">
+          {abas.map(x => (
+            <li key={x.id} role="presentation">
+              <button type="button" role="tab" id={`subnav-tempo-${x.id}`} aria-selected={aba === x.id} aria-controls={`tempo-${x.id}`} className={`subnav__item${aba === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => trocar(x.id)} title={x.oque}>{x.rotulo}</button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div role="tabpanel" id={`tempo-${aba}`} aria-labelledby={`subnav-tempo-${aba}`}>
+        {aba === 'semana' && (
+          <>
+            <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
+            <section className="tempo-semana" aria-labelledby="titulo-semana">
+              <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
+              {i >= 10 ? <Estresse vida={vida} agir={agir} irPara={ir} /> : <p className="nota">{i < 7 ? 'A semana é de brincar — e da escola.' : 'Além da escola, a semana é sua.'}</p>}
+              <details className="semana-detalhe"><summary>Como a semana se divide (o que já vem ocupado)</summary><FaixaDaSemana s={s} /><ParaOndeVai vida={vida} s={s} irPara={irPara} /></details>
+            </section>
+            <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} ativas={ativas} custo={custo} titulo="O que você já faz" vazio="Nada fixo na semana por enquanto. As abas acima mostram o que dá para começar." />
+            <ComoVoceVai vida={vida} agir={agir} irPara={irPara} />
+          </>
+        )}
+        {(aba === 'corpo' || aba === 'atividades' || aba === 'gente') && (
+          <>
+            {aba === 'gente' && <ComQuem vida={vida} abrirPessoa={abrirPessoa} />}
+            {aba === 'corpo' && i >= 14 && <CuidarDeSi vida={vida} agir={agir} />}
+            <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} ativas={ativas.filter(x => naAba(aba, x.m))} custo={custo} titulo="O que você já faz aqui" vazio={aba === 'corpo' ? 'Nada de corpo na semana por enquanto.' : aba === 'gente' ? 'Nenhuma atividade com gente na semana por enquanto.' : 'Nenhum hobby na semana por enquanto.'} />
+            <Comecar vida={vida} agir={agir} custo={custo} filtro={m => naAba(aba, m)} />
+            {aba === 'atividades' && frentes.length > 0 && (
+              <Secao titulo="O que você sabe fazer" recolhivel aberta={false}>
+                <ul className="frentes">
+                  {frentes.map(f => <li key={f.d}><strong>{f.nome.charAt(0).toUpperCase() + f.nome.slice(1)}</strong><span>{f.texto}</span></li>)}
+                </ul>
+              </Secao>
+            )}
+          </>
+        )}
+        {aba === 'redes' && <RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} />}
+        {aba === 'viagens' && <Experiencias vida={vida} agir={agir} />}
+      </div>
+    </div>
+  );
+}
+
+/** O que você faz (a rotina), com o que cada coisa rende e os controles (mais a sério, mais leve, parar). */
+function AtividadesAtivas({ vida, agir, irPara, ativas, custo, titulo, vazio }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; ativas: { r: Vida['rotinas'][number]; m: ModeloRotina }[]; custo: number; titulo: string; vazio: string }) {
+  const i = idade(vida);
   const peneira = ultimaDevolutiva(vida, 'peneira', 36);
   return (
-    <div className="tempo">
-      <Folio kicker={<><span className="folio__area">Tempo livre</span> · a semana</>} titulo={resumoDaSemana(s, sobrecargaDaSemana(vida).fixos > 0.01)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
-      <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
-      <section className="tempo-semana" aria-labelledby="titulo-semana">
-        <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
-        {/* REWORK 4: a leitura principal é o que a semana COBRA (carga e estresse), não uma moeda de horas: dá para
-            tentar mais do que cabe — e a vida mostra o preço. A divisão da semana fica logo abaixo, como detalhe. */}
-        {i >= 12 && <CargaEEstresse vida={vida} />}
-        <details className="semana-detalhe"><summary>Como a semana se divide</summary><FaixaDaSemana s={s} /></details>
-        {i >= 10 && (() => { const l = leituraDaSobrecarga(vida); return <p className={`semana-carga semana-carga--${l.nivel}`}><span className="semana-carga__palavra">{l.palavra.charAt(0).toUpperCase() + l.palavra.slice(1)}.</span> {l.nivel === 0 ? l.texto.replace(/^A semana cabe na vida: /, '') : l.texto.replace(/^[^:.]*[:.] ?/, '')}{l.nivel >= 2 ? ' Descanso, férias, menos compromissos ou um ritmo mais leve no trabalho aliviam.' : ''}</p>; })()}
-        {s.fixos.length === 0 && <p className="nota">{i < 18 ? 'Além da escola, a semana é sua.' : 'Nada fixo ocupa a semana: nem trabalho, nem curso.'}</p>}
-      </section>
-      <Experiencias vida={vida} agir={agir} />
-      <ParaOndeVai vida={vida} s={s} irPara={irPara} />
-      <ComoVoceVai vida={vida} agir={agir} irPara={irPara} />
+    <Secao titulo={titulo}>
+      {ativas.length === 0 && <Vazio>{vazio}</Vazio>}
+      <ul className="lista-rotinas">
+        {ativas.map(({ r, m }) => {
+          const n = nivelDa(r);
+          const nm = nivelModelo(m, n);
+          const dominio = m.pratica ? (Object.keys(m.pratica)[0] as Dominio) : undefined;
+          // O que a atividade faz de verdade: a técnica da frente que pratica, ou o atributo que desenvolve (a mesma leitura de Você).
+          const leitura = dominio && vida.caminhos.frentes[dominio] && (m.pratica?.[dominio] ?? 0) >= 1 ? leituraDaFrente(vida, dominio) : efeitoNoCorpo(vida, r.id);
+          const deEstudos = DE_ESTUDOS.has(r.id) || DE_FORMACAO.has(r.id);
+          const anos = Math.floor((vida.t - r.tInicio) / 12);
+          const renda = m.renda?.(vida, n);
+          const retorno = peneira && peneira.dominio === dominio ? peneira : undefined;
+          const alivio = alivioDa(r.id, n);
+          return (
+            <li key={r.id} className="rotina rotina--ativa">
+              <div className="rotina__texto">
+                <strong>{m.nome}</strong>
+                <span>{m.niveis.length > 1 ? `${nm.rotulo} · ` : ''}{dose(nm.tempo)}{anos >= 1 ? ` · há ${anos} ${anos === 1 ? 'ano' : 'anos'}` : ''}{custoDaRotina(vida, r.id, n) ? ` · ${dinheiroCurto(custoDaRotina(vida, r.id, n) * custo)}/mês` : r.id === 'terapia' && nm.custo ? ' · pelo SUS, de graça' : ''}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
+                {alivio && <span className={`rotina__estresse rotina__estresse--${alivio.tipo}`}>{alivio.texto}</span>}
+                {leitura && <span className="rotina__leitura">{leitura}</span>}
+                {estadoDaAtividade(vida, r.id) && <span className="rotina__leitura">{estadoDaAtividade(vida, r.id)}</span>}
+                {retorno && <span className="rotina__retorno">Na última {dominio === 'futebol' ? 'peneira' : 'seletiva'}: {retorno.texto}</span>}
+              </div>
+              <div className="rotina__acoes">
+                {deEstudos && irPara && <button type="button" className="link rotina__ir" onClick={() => irPara('formacao')}>ver em Formação →</button>}
+                {dominio && MODS_ESPORTE.includes(dominio) && (retorno?.falta === 'tecnica' || (i >= 8 && i <= 18 && (m.pratica?.[dominio] ?? 0) >= 1)) && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'treino_fundamentos', valor: dominio } as unknown as Acao} agir={agir} variante={retorno?.falta === 'tecnica' ? 'secundario' : 'discreto'} ocultarImpossivel>Um ano de fundamentos, com treinador</BotaoAcao>}
+                {!deEstudos && n < m.niveis.length && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${nivelModelo(m, n + 1).rotulo.toLowerCase()}`}</BotaoAcao>}
+                {!deEstudos && n > 1 && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n - 1) as 1 | 2 }} agir={agir} variante="discreto">Mais leve</BotaoAcao>}
+                {!deEstudos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Secao>
+  );
+}
 
-      <Secao titulo="O que você faz">
-        {ativas.length === 0 && <Vazio>Nada fixo na semana por enquanto.</Vazio>}
-        <ul className="lista-rotinas">
-          {ativas.map(({ r, m }) => {
-            const n = nivelDa(r);
-            const nm = nivelModelo(m, n);
-            const dominio = m.pratica ? (Object.keys(m.pratica)[0] as Dominio) : undefined;
-            // O que a atividade faz de verdade: a técnica da frente que pratica, ou o atributo que desenvolve (a mesma leitura de Você).
-            const leitura = dominio && vida.caminhos.frentes[dominio] && (m.pratica?.[dominio] ?? 0) >= 1 ? leituraDaFrente(vida, dominio) : efeitoNoCorpo(vida, r.id);
-            const deEstudos = DE_ESTUDOS.has(r.id) || DE_FORMACAO.has(r.id);
-            const anos = Math.floor((vida.t - r.tInicio) / 12);
-            const renda = m.renda?.(vida, n);
-            const retorno = peneira && peneira.dominio === dominio ? peneira : undefined;
-            return (
-              <li key={r.id} className="rotina rotina--ativa">
-                <div className="rotina__texto">
-                  <strong>{m.nome}</strong>
-                  <span>{m.niveis.length > 1 ? `${nm.rotulo} · ` : ''}{dose(nm.tempo)}{anos >= 1 ? ` · há ${anos} ${anos === 1 ? 'ano' : 'anos'}` : ''}{custoDaRotina(vida, r.id, n) ? ` · ${dinheiroCurto(custoDaRotina(vida, r.id, n) * custo)}/mês` : r.id === 'terapia' && nm.custo ? ' · pelo SUS, de graça' : ''}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
-                  {leitura && <span className="rotina__leitura">{leitura}</span>}
-                  {estadoDaAtividade(vida, r.id) && <span className="rotina__leitura">{estadoDaAtividade(vida, r.id)}</span>}
-                  {retorno && <span className="rotina__retorno">Na última {dominio === 'futebol' ? 'peneira' : 'seletiva'}: {retorno.texto}</span>}
-                </div>
-                <div className="rotina__acoes">
-                  {deEstudos && irPara && <button type="button" className="link rotina__ir" onClick={() => irPara('formacao')}>ver em Formação →</button>}
-                  {dominio && MODS_ESPORTE.includes(dominio) && (retorno?.falta === 'tecnica' || (i >= 8 && i <= 18 && (m.pratica?.[dominio] ?? 0) >= 1)) && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'treino_fundamentos', valor: dominio } as unknown as Acao} agir={agir} variante={retorno?.falta === 'tecnica' ? 'secundario' : 'discreto'} ocultarImpossivel>Um ano de fundamentos, com treinador</BotaoAcao>}
-                  {!deEstudos && n < m.niveis.length && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${nivelModelo(m, n + 1).rotulo.toLowerCase()}`}</BotaoAcao>}
-                  {!deEstudos && n > 1 && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n - 1) as 1 | 2 }} agir={agir} variante="discreto">Mais leve</BotaoAcao>}
-                  {!deEstudos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </Secao>
+/** O que a atividade faz com o estresse (a mesma tabela do motor: `estado.BEM_ESTAR`). */
+function alivioDa(id: string, nivel: number): { tipo: 'alivia' | 'pesa'; texto: string } | undefined {
+  const b = BEM_ESTAR[id];
+  const x = !b ? 0 : typeof b.cabeca === 'function' ? b.cabeca(nivel) : b.cabeca ?? 0;
+  if (x <= -10) return { tipo: 'alivia', texto: 'alivia muito o estresse' };
+  if (x < 0) return { tipo: 'alivia', texto: 'alivia o estresse' };
+  if (x >= 8) return { tipo: 'pesa', texto: 'pesa no estresse' };
+  return undefined;
+}
 
-      <Comecar vida={vida} agir={agir} custo={custo} />
+/** Corpo e mente: cuidar de si (os cuidados que existem no motor: descanso, médico, largar um hábito). */
+function CuidarDeSi({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  return (
+    <Secao titulo="Cuidar de si">
+      <div className="grupo-acoes grupo-acoes--linha">
+        <BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'descansar' }} agir={agir} variante="secundario" ocultarImpossivel>Tirar uns dias de descanso</BotaoAcao>
+        <BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="discreto" ocultarImpossivel>Ir ao médico</BotaoAcao>
+        <BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'parar_fumar' }} agir={agir} variante="discreto" ocultarImpossivel>Tentar parar de fumar</BotaoAcao>
+        <BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'beber_menos' }} agir={agir} variante="discreto" ocultarImpossivel>Tentar beber menos</BotaoAcao>
+      </div>
+    </Secao>
+  );
+}
 
-      {frentes.length > 0 && (
-        <Secao titulo="O que você sabe fazer" recolhivel aberta={false}>
-          <ul className="frentes">
-            {frentes.map(f => <li key={f.d}><strong>{f.nome.charAt(0).toUpperCase() + f.nome.slice(1)}</strong><span>{f.texto}</span></li>)}
-          </ul>
-        </Secao>
-      )}
-    </div>
+/**
+ * Sair e ver gente: com QUEM fazer algo (as pessoas de perto, com o que dá para fazer com cada uma, na ficha). O que
+ * se faz junto mora na ficha da pessoa ("Fazer juntos"); aqui é o atalho para quem quer sair e não sabe com quem.
+ */
+function ComQuem({ vida, abrirPessoa }: { vida: Vida; abrirPessoa?: (id: string) => void }) {
+  const gente = vinculosVivos(vida)
+    .filter(x => !x.p.especie && x.p.nome && (x.vin.romance?.estagio !== 'ex') && (x.vin.convivio.includes('casa') || x.p.municipioId === vida.moradia.municipioId) && (x.vin.parentesco || x.vin.romance || x.vin.proximidade >= 40))
+    .sort((a, b) => (b.vin.romance ? 30 : 0) + b.vin.proximidade - ((a.vin.romance ? 30 : 0) + a.vin.proximidade))
+    .slice(0, 8);
+  if (!gente.length || !abrirPessoa) return null;
+  return (
+    <Secao titulo="Com quem">
+      <p className="nota">Sair, ir ao cinema, cozinhar, jogar, viajar junto: o que dá para fazer com cada pessoa está na ficha dela.</p>
+      <ul className="com-quem">
+        {gente.map(({ p, vin }) => (
+          <li key={p.id}>
+            <button type="button" className="com-quem__pessoa" onClick={() => abrirPessoa(p.id)}>
+              <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={44} rotulo={p.nome} especie={p.especie} />
+              <span className="com-quem__nome">{p.nome}</span>
+              <span className="com-quem__papel">{rotuloDe(vida, p, vin)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Secao>
   );
 }
 
@@ -391,13 +561,16 @@ function linhaAtividade(vida: Vida, m: ModeloRotina, custo: number, agir: (a: Ac
  * em "explorar", por tipo; o que não cabe e o que está fora de alcance,
  * recolhidos, com o motivo uma vez só.
  */
-function Comecar({ vida, agir, custo }: { vida: Vida; agir: (a: Acao) => boolean; custo: number }) {
-  const [explorar, setExplorar] = useState(false);
+function Comecar({ vida, agir, custo, filtro = () => true }: { vida: Vida; agir: (a: Acao) => boolean; custo: number; filtro?: (m: ModeloRotina) => boolean }) {
+  const todas = atividadesParaVoce(vida);
+  const para = todas.para.filter(x => filtro(x.item));
+  const resto = todas.resto.filter(filtro);
+  // Numa aba com pouca coisa, o catálogo já vem aberto (não há o que esconder).
+  const [explorar, setExplorar] = useState(resto.length <= 8);
   const [verSemTempo, setVerSemTempo] = useState(false);
   const [verFora, setVerFora] = useState(false);
-  const { para, resto } = atividadesParaVoce(vida);
   // O cursinho mora em Estudos (é preparação, não tempo livre): aqui só aparece na semana.
-  const outras = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !DE_FORMACAO.has(m.id) && !vida.rotinas.some(x => x.id === m.id) && atividadeExiste(vida, m));
+  const outras = ROTINAS.filter(m => !DE_ESTUDOS.has(m.id) && !DE_FORMACAO.has(m.id) && !vida.rotinas.some(x => x.id === m.id) && atividadeExiste(vida, m) && filtro(m));
   const itens = outras.map(m => ({ m, d: disponibilidade(vida, { tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }) }));
   const semTempo = itens.filter(x => !podeTentar(x.d) && x.d.grau === 'incompativel' && /semana/.test(x.d.motivo ?? ''));
   const fora = itens.filter(x => !podeTentar(x.d) && !semTempo.includes(x));
@@ -410,12 +583,11 @@ function Comecar({ vida, agir, custo }: { vida: Vida; agir: (a: Acao) => boolean
       {resto.length > 0 && (
         <div className="explorar">
           <button type="button" className="botao botao--discreto" aria-expanded={explorar} onClick={() => setExplorar(x => !x)}>{explorar ? 'Recolher' : `Explorar outras atividades (${resto.length})`}</button>
-          {explorar && GRUPOS.map(g => {
+          {explorar && GRUPOS.filter(g => resto.some(m => m.categoria === g.id)).map((g, _k, grupos) => {
             const lista = resto.filter(m => m.categoria === g.id);
-            if (!lista.length) return null;
             return (
               <div key={g.id} className="grupo-atividades">
-                <h3 className="grupo-atividades__titulo">{g.rotulo}</h3>
+                {grupos.length > 1 && <h3 className="grupo-atividades__titulo">{g.rotulo}</h3>}
                 <ul className="lista-rotinas">{lista.map(m => linhaAtividade(vida, m, custo, agir))}</ul>
               </div>
             );

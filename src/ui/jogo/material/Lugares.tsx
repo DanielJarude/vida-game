@@ -27,20 +27,20 @@ import { aplicacao } from '../../../motor/sistemas/investimentos';
 import { rendaPropriaMensal, seguranca, orcamento } from '../../../motor/sistemas/dinheiro';
 import { amigoParaDividir, custoDeEntrada } from '../../../motor/sistemas/moradia';
 import { moraComFamiliaDeOrigem } from '../../../motor/sistemas/domicilio';
-import { estadoDoVeiculo, custoRevisao, nomeDoVeiculo } from '../../../motor/sistemas/veiculos';
+import { estadoDoVeiculo, custoRevisao, nomeComCor, vecFeminino } from '../../../motor/sistemas/veiculos';
 import type { AnimalDoAbrigo, OfertaImovel, OfertaVeiculo } from '../../../motor/sistemas/mercado';
 import { BotaoAcao, Escolha, Folha } from '../../comum';
 import { Retrato } from '../../avatar/Retrato';
-import { DesenhoVeiculo, Icone, IconeMoradia } from './Desenhos';
+import { DesenhoVeiculo, MiniaturaDaCasa } from './Desenhos';
 import { DesenhoObjeto } from './Objetos';
-import { variantesDaCoisa } from '../../../motor/dados/pertences';
+import { chaveDaFachada, corConcordada, corDoVeiculo, fachadaDe, variantesDaCoisa } from '../../../motor/dados/pertences';
 import { animal, palavraDoBicho } from '../../../motor/dados/animais';
 import { CATEGORIAS_DA_LOJA, catalogoDeVeiculos, ofertasDePets, type OfertaDePet } from '../../../motor/sistemas/mercado';
 import { BALCOES, ITENS_ESTILO, type CategoriaItem } from '../../../motor/dados/estilo';
 import { precoDoItem, temItem } from '../../../motor/sistemas/estilo';
 
 const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
-import { dinheiroCheio, dinheiroCurto } from '../../leituraMaterial';
+import { dinheiroCheio, dinheiroCurto, formaDoModelo } from '../../leituraMaterial';
 
 export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | LojaDeCoisas;
 /** As lojas das coisas da vida (`dados/coisas`). */
@@ -100,7 +100,7 @@ function LojaDeCoisasDaVida({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) 
           return (
             <li key={c.id} className="oferta oferta--estilo oferta--objeto">
               {/* REWORK 4: o objeto como ele é (a silhueta e as cores que a loja tem); o que vier é seu, na cor que vier. */}
-              <span className="oferta__objeto"><DesenhoObjeto coisaId={c.id} cor={variantesDaCoisa(c.id)[0].cor} tamanho={44} rotulo={c.nome} /><span className="oferta__cores">{variantesDaCoisa(c.id).slice(0, 5).map(x => <span key={x.cor} title={x.nome} style={{ background: x.cor }} />)}</span></span>
+              <span className="oferta__objeto"><DesenhoObjeto coisaId={c.id} cor={variantesDaCoisa(c.id)[0].cor} tamanho={64} rotulo={c.nome} /><span className="oferta__cores">{variantesDaCoisa(c.id).slice(0, 5).map(x => <span key={x.cor} title={x.nome} style={{ background: x.cor }} />)}</span></span>
               <span className="oferta__texto">
                 <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)} · {dinheiroCurto(precoDaCoisa(vida, c.id))}</strong>
                 <span>{c.descricao}</span>
@@ -190,8 +190,8 @@ function CartaoImovel({ o, motivo, abrir, vida }: { o: OfertaImovel; motivo?: st
   const renda = Math.max(1, rendaPropriaMensal(vida));
   const valor = o.modo === 'aluguel' ? o.aluguel : o.preco;
   return (
-    <button type="button" className="oferta" onClick={abrir}>
-      <IconeMoradia modeloId={o.modeloId} estado={o.estado} />
+    <button type="button" className="oferta oferta--casa" onClick={abrir}>
+      <span className="oferta__casa"><MiniaturaDaCasa forma={formaDoModelo(o.modeloId)} fachada={fachadaDe(chaveDaFachada(vida.moradia.municipioId, o.modeloId, o.bairro, vida.t), formaDoModelo(o.modeloId))} largura={88} />{o.estado !== 'bom' && <span className="oferta__casa-selo">{o.estado === 'reforma' ? 'obra' : 'novo'}</span>}</span>
       <span className="oferta__texto">
         <strong>{m.nome.charAt(0).toUpperCase() + m.nome.slice(1)} {o.bairro}</strong>
         <span>{o.detalhe} · {m.quartos} {m.quartos === 1 ? 'quarto' : 'quartos'}{o.aceitaPet ? ' · aceita animais' : ''}</span>
@@ -366,14 +366,18 @@ function vitrine(o: OfertaVeiculo): { nome: string; linha: string; descricao: st
   return { nome: nomeDaVersao(x), linha: [x.acabamento, x.dica, PALAVRA_FAIXA[x.faixa]].filter(Boolean).join(' · '), descricao: x.descricao ?? m.descricao };
 }
 
+/** "vermelho", "preta": a cor do anúncio, concordando com o veículo. */
+const corDoAnuncio = (o: OfertaVeiculo) => corConcordada(o.corNome, vecFeminino({ versaoId: o.versaoId, modeloId: o.modeloId }));
+
 function CartaoVeiculo({ o, motivo, abrir }: { o: OfertaVeiculo; motivo?: string; abrir: () => void }) {
   const vt = vitrine(o);
+  const forma = formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId);
   return (
-    <button type="button" className="oferta" onClick={abrir}>
-      <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId)} semente={o.modeloId} />
+    <button type="button" className="oferta oferta--veiculo" onClick={abrir}>
+      <span className="oferta__veiculo" style={{ ['--cor-veiculo' as string]: o.cor }}><DesenhoVeiculo forma={forma} semente={o.modeloId} cor={o.cor} estado={o.estado} largura={72} rotulo={`${NOME_FORMA[forma]}, ${corDoAnuncio(o)}`} /></span>
       <span className="oferta__texto">
         <strong>{vt.nome} {o.anoFabricacao}</strong>
-        <span>{o.usado ? 'Usado' : 'Novo, zero km'} · {vt.linha}</span>
+        <span><span className="oferta__cor" style={{ ['--cor-veiculo' as string]: o.cor }}>{corDoAnuncio(o)}</span> · {o.usado ? 'usado' : 'novo, zero km'} · {vt.linha}</span>
         {o.usado && <span>{`${o.historico} · ${o.estado >= 80 ? 'bem conservado' : o.estado >= 60 ? 'marcas de uso' : 'cansado'}`}</span>}
         {motivo && <span className="oferta__motivo">{motivo}</span>}
       </span>
@@ -395,7 +399,8 @@ function DetalheVeiculo({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao)
   return (
     <div className="detalhe">
       <button type="button" className="botao botao--discreto" onClick={voltar}>← Voltar</button>
-      <h3 className="detalhe__titulo">{vt.nome} {o.anoFabricacao}</h3>
+      <div className="detalhe__veiculo"><DesenhoVeiculo forma={formaDaVersao(x, o.modeloId)} semente={o.modeloId} cor={o.cor} estado={o.estado} largura={200} rotulo={`${NOME_FORMA[formaDaVersao(x, o.modeloId)]}, ${corDoAnuncio(o)}`} /></div>
+      <h3 className="detalhe__titulo">{vt.nome} {corDoAnuncio(o)} {o.anoFabricacao}</h3>
       <p className="nota">{o.usado ? 'Usado' : 'Novo, zero km'} · {vt.linha}</p>
       <p className="nota">{vt.descricao}{o.usado ? ` Anúncio: ${o.historico}.` : ''}</p>
       {o.preco >= 8000 && <Escolha rotulo="Forma de pagamento" valor={financiar ? 'fin' : 'vista'} aoMudar={y => setFinanciar(y === 'fin')} opcoes={[{ id: 'vista', rotulo: 'À vista' }, { id: 'fin', rotulo: 'Financiar' }]} />}
@@ -426,8 +431,8 @@ function Oficina({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
       {lista.map(b => b.tipo === 'veiculo' && (
         <li key={b.id} className="oficina">
           <div className="oferta oferta--estatica">
-            <Icone nome={modeloVeiculo(b.modeloId).categoria} />
-            <span className="oferta__texto"><strong>{capitalizar(nomeDoVeiculo(b))} {b.anoFabricacao ?? ''}</strong><span>{estadoDoVeiculo(b)}{b.problema ? ` — ${dinheiroCheio(b.problema.custo)}` : ''}</span></span>
+            <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId)} semente={b.id} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} largura={64} />
+            <span className="oferta__texto"><strong>{capitalizar(nomeComCor(b))} {b.anoFabricacao ?? ''}</strong><span>{estadoDoVeiculo(b)}{b.problema ? ` — ${dinheiroCheio(b.problema.custo)}` : ''}</span></span>
           </div>
           <div className="grupo-acoes grupo-acoes--linha">
             <BotaoAcao vida={vida} acao={{ tipo: 'veiculo', bemId: b.id, oque: 'consertar' }} agir={agir} ocultarBloqueado>Consertar</BotaoAcao>

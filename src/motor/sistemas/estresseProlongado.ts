@@ -1,5 +1,5 @@
 /**
- * Estresse prolongado (REWORK 4): a vida que cobra.
+ * Estresse prolongado (REWORK 4; FIX pós-REWORK 4: também no ano): a vida que cobra.
  *
  * "Você pode tentar. A questão é quanto essa vida vai cobrar de você." A semana
  * maior do que cabe (faculdade + trabalho, dois empregos, filhos e plantão) já
@@ -28,6 +28,18 @@ export function processarEstresseProlongado(v: Vida): void {
   v.mente.estresseAlto = anos > 0 ? { anos, t: v.t } : undefined;
   if (!alto) return;
   const r = rngDe(v.id, 'estresse_prolongado', v.t);
+  // FIX pós-REWORK 4: a cabeça no limite cobra JÁ no ano (não só depois de anos): a paciência curta em casa, o trabalho
+  // e o estudo que rendem menos. É o que a tela "Estresse" avisa em "Se continuar assim".
+  const e = v.trabalho.atual;
+  if (e) e.desempenho = clamp(e.desempenho - 2);
+  const m = v.educacao.matricula;
+  if (m && !m.trancado) m.desempenho = clamp(m.desempenho - 2);
+  else if (v.educacao.basica) v.educacao.basica.desempenho = clamp(v.educacao.basica.desempenho - 2);
+  const rc = rngDe(v.id, 'estresse_em_casa', v.t);
+  for (const vin of Object.values(v.vinculos)) {
+    if (!vin.convivio.includes('casa') || !v.pessoas[vin.pessoaId]?.vivo || v.pessoas[vin.pessoaId]?.especie) continue;
+    if (rc.chance(0.45)) vin.tensao = clamp(vin.tensao + 3);
+  }
   if (anos === 3 && v.fatos['estresse_3anos'] === undefined) {
     v.fatos['estresse_3anos'] = v.t;
     escrever(v, { texto: 'Três anos seguidos com a cabeça no limite. Dormir mal virou costume; o corpo começou a mandar a conta.', relevancia: 'biografia', tema: 'saude', tom: 'ruim' });

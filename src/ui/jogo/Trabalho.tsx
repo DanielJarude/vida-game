@@ -28,6 +28,7 @@ import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, ocupacaoOuNula, type 
 import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
 import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, proximoPasso, ROTULO_MODELO, temOrganizacao } from '../../motor/sistemas/trabalho';
+import { verbosDoOficio } from '../../motor/sistemas/noOficio';
 import { acoesDasTrajetorias, acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
 import { acoesDoNegocio } from '../../motor/sistemas/gestao';
 import { contaDoAno, dedicacaoDe, donoIntegral, estrategiaDe, leituraDoNegocio, negocioAberto, negociosPossiveis, parteDoSocio, presencaDe, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
@@ -138,6 +139,7 @@ export function Trabalho({ vida, agir, irPara }: Props) {
         {pol && modo === 'politica' && <PainelPolitico vida={vida} principal />}
         {e && empregoAcademico(vida) === e && <PainelAcademia vida={vida} />}
 
+        <NoDiaADia vida={vida} agir={agir} />
         {acoes.agora.length > 0 && <AcoesVivas acoes={acoes.agora as AcaoProfissional[]} agir={agir} ir={ir} rotulo="O que dá para fazer agora" />}
         {(acoes.mais.length > 0 || acoes.saidas.length > 0) && <Mais mais={acoes.mais} saidas={acoes.saidas} agir={agir} ir={ir} />}
         {modo === 'crianca' && <p className="vazio">Trabalho é proibido antes dos 14. O trabalho agora é crescer.</p>}
@@ -162,6 +164,29 @@ export function Trabalho({ vida, agir, irPara }: Props) {
       <CarreiraComoTecnico vida={vida} />
       <MomentosDaCarreira vida={vida} />
       {(vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <PorOndePassou vida={vida} />}
+    </div>
+  );
+}
+
+/**
+ * FIX pós-REWORK 4: o miúdo que faz uma carreira por dentro (`noOficio`) — o projeto difícil, a chefia, o colega, a
+ * capacitação; a divulgação e o cliente exigente; o treino extra, o vídeo, a fisioterapia, a torcida. Uma vez por ano
+ * cada um, com o preço e o risco ditos antes.
+ */
+function NoDiaADia({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const verbos = verbosDoOficio(vida);
+  if (!verbos.length) return null;
+  return (
+    <div className="dia-a-dia">
+      <h3 className="dia-a-dia__titulo">{vida.caminhos.esporte?.fase === 'profissional' && vida.trabalho.atual && ocupacaoOuNula(vida.trabalho.atual.ocupacaoId)?.trilha === 'atleta' ? 'No dia a dia de atleta' : 'No dia a dia do trabalho'}</h3>
+      <ul className="dia-a-dia__lista">
+        {verbos.map(x => (
+          <li key={x.oque} className="dia-a-dia__item">
+            <BotaoAcao vida={vida} acao={{ tipo: 'oficio', oque: x.oque }} agir={agir} variante="secundario">{x.rotulo}</BotaoAcao>
+            <span className="dia-a-dia__porque">{x.porque}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

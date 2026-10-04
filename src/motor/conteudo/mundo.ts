@@ -72,6 +72,42 @@ function textoDeRecessao(c: Ctx): string {
   return `${abertura}: fábricas demitindo, lojas fechando, e as vagas que sobraram pedindo experiência.`;
 }
 
+/**
+ * A recuperação, montada: o sinal na rua da cidade de quem vive (o "contrata-se", a obra, o shopping) + o que mudou NA
+ * vida (o trabalho, o negócio, a procura, a casa da infância) + às vezes quem estava junto. Sorteio derivado.
+ */
+function textoDeRecuperacao(c: Ctx, k: number): string {
+  const v = c.v;
+  const r = rngDe(v.id, 'recuperacao', v.t, k);
+  const cidade = municipio(v.moradia.municipioId).nome;
+  const sinal = r.pick([
+    `Em ${cidade}, os anúncios de vaga voltaram aos postes`,
+    `As obras paradas de ${cidade} voltaram a fazer barulho`,
+    `O comércio de ${cidade} voltou a pôr "contrata-se" na vitrine`,
+    `O jornal anunciou o fim da recessão`,
+    `A crise foi passando sem aviso`,
+    `${cidade} voltou a ter fila no restaurante do almoço`
+  ]);
+  const quando = c.vezes === 0 ? '' : r.pick([' — de novo', ', mais uma vez', '']);
+  const e = v.trabalho.atual;
+  const n = v.caminhos.negocio;
+  const pais = Object.values(v.vinculos).filter(x => (x.parentesco === 'mae' || x.parentesco === 'pai') && x.convivio.includes('casa')).map(x => v.pessoas[x.pessoaId]).filter(p => p?.vivo);
+  const par = Object.values(v.vinculos).find(x => x.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.romance.estagio) && v.pessoas[x.pessoaId]?.vivo);
+  let vida: string;
+  if (c.idade < 16) vida = pais[0] ? r.pick([`em casa, ${pais[0].nome} parou de fazer conta na ponta do lápis`, `o lanche da escola voltou para a mochila`, `${pais[0].nome} voltou a falar em viagem de fim de ano`]) : 'em casa, a conta do mercado parou de encolher';
+  else if (v.trabalho.aposentadoria) vida = r.pick(['a aposentadoria voltou a render o mês inteiro', 'a lista do mercado voltou a ter o que tinha antes']);
+  else if (n && n.estado !== 'fechado' && (!e || e.ocupacaoId === n.ocupacaoId)) vida = r.pick([`em ${n.nome}, o movimento voltou antes dos fornecedores`, `${n.nome} voltou a ter cliente na porta antes de abrir`]);
+  else if (e?.contrato === 'servidor') vida = 'no serviço público, o reajuste congelado voltou à mesa';
+  else if (e && (e.contrato === 'autonomo' || e.contrato === 'informal')) vida = r.pick(['os clientes voltaram a pagar à vista', 'a agenda voltou a encher sem precisar baixar o preço']);
+  else if (e && v.caminhos.esporte?.fase === 'profissional') vida = 'o patrocínio voltou a aparecer na camisa';
+  else if (e) vida = r.pick([`${em(e.empregador)}, a palavra "corte" sumiu das reuniões`, `${em(e.empregador)}, voltaram a falar em contratação`, `o medo de ser o próximo da lista foi passando`]);
+  else if (v.educacao.matricula) vida = 'os estágios reapareceram no mural da faculdade';
+  else if (c.idade >= 18) vida = r.pick(['as vagas voltaram — algumas pedindo o que você sabe fazer', 'a procura ficou menos sozinha: o telefone voltou a tocar']);
+  else vida = 'o preço das coisas parou de ser assunto no almoço';
+  const comQuem = par && c.idade >= 18 && r.chance(0.35) ? ` ${v.pessoas[par.pessoaId].nome} respirou junto.` : '';
+  return `${sinal}${quando}; ${vida}.${comQuem}`;
+}
+
 function recessaoEmCasa(c: Ctx): string {
   const r = rngDe(c.v.id, 'recessao_casa', c.v.t);
   const pais = Object.values(c.v.vinculos).filter(x => (x.parentesco === 'mae' || x.parentesco === 'pai') && x.convivio.includes('casa')).map(x => c.v.pessoas[x.pessoaId]).filter(p => p?.vivo);
@@ -103,12 +139,9 @@ export const MUNDO: Conteudo[] = [
   {
     id: 'mun_recuperacao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true,
     quando: c => saiuDaCrise(c.v),
-    narrar: c => ({ texto: [
-      'A economia voltou a respirar. Os anúncios de vaga reapareceram nos postes.',
-      'A crise foi passando sem aviso: o shopping encheu de novo, as obras paradas voltaram a ter barulho.',
-      'O jornal anunciou o fim da recessão. Na rua, a notícia chegou em forma de "contrata-se" na vitrine.',
-      'Depois de dois anos de aperto, o comércio voltou a contratar e o preço das coisas parou de ser assunto no almoço.'
-    ][(c.vezes + c.r.int(0, 1)) % 4], relevancia: c.vezes < 3 ? 'cotidiano' : 'tecnico' })
+    // FIX pós-REWORK 4: a recuperação chega a cada vida do jeito dela (a cidade, o trabalho, a casa) — não a mesma frase
+    // para todas as vidas do país. (O sorteio de sempre é consumido igual: o resto da vida não muda.)
+    narrar: c => ({ texto: textoDeRecuperacao(c, c.r.int(0, 1)), relevancia: c.vezes < 3 ? 'cotidiano' : 'tecnico' })
   },
   {
     id: 'mun_chuva_cidade', tipo: 'acontecimento', idade: [5, 110], tema: 'lugar', repetir: 10,

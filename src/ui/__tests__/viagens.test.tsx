@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 /**
  * Viagens em passos (rework de UX): a escolha anda um nível por vez —
- *   para fora:   país → cidade → duração → resumo → confirmar
- *   no Brasil:   região → destino → duração → resumo → confirmar
+ *   para fora:   país → cidade → duração → com quem → resumo → confirmar
+ *   no Brasil:   região → destino → duração → com quem → resumo → confirmar
+ * (FIX pós-REWORK 4: as viagens moram na aba "Viagens" de Tempo livre, e há o passo "Com quem?" — o id da escolha é o
+ * de sempre, com a companhia no fim.)
  * Nunca todas as combinações destino × duração de uma vez; a restrição da
  * porta (foi há pouco) aparece uma vez só; confirmar executa a MESMA ação do
  * motor de antes (mesmo id de escolha, mesmo preço).
@@ -44,7 +46,7 @@ const porta = (nome: string) => screen.getByText(nome).closest('li') as HTMLElem
 describe('Viagem para fora: país → cidade → duração → resumo', () => {
   it('o primeiro nível mostra só países (nenhuma duração); o país mostra só as suas cidades; a cidade mostra as durações', () => {
     const v = vidaAos(35);
-    render(<Tempo vida={v} agir={() => true} />);
+    render(<Tempo vida={v} agir={() => true} aba="viagens" />);
     const li = porta('Uma viagem para fora do país');
     fireEvent.click(within(li).getByRole('button', { name: 'Ver destinos' }));
 
@@ -81,18 +83,21 @@ describe('Viagem para fora: país → cidade → duração → resumo', () => {
   it('confirmar executa a mesma ação de antes (mesmo id de escolha), com o preço do motor', () => {
     const v = vidaAos(35);
     const feitas: Acao[] = [];
-    render(<Tempo vida={v} agir={a => { feitas.push(a); return true; }} />);
+    render(<Tempo vida={v} agir={a => { feitas.push(a); return true; }} aba="viagens" />);
     const li = porta('Uma viagem para fora do país');
     fireEvent.click(within(li).getByRole('button', { name: 'Ver destinos' }));
     fireEvent.click(within(li).getByRole('button', { name: /^Portugal/ }));
     fireEvent.click(within(li).getByRole('button', { name: /^Lisboa/ }));
     fireEvent.click(within(li).getByRole('button', { name: /^Uma semana/ }));
+    // FIX pós-REWORK 4: com quem (sem ninguém em casa, a primeira opção é ir só — o preço de sempre).
+    expect(within(li).getByText('Com quem?')).toBeTruthy();
+    fireEvent.click(within(li).getByRole('button', { name: /^Sozinh/ }));
 
-    const preco = custoDaExperiencia(v, 'viagem_exterior', 'lisboa:semana');
+    const preco = custoDaExperiencia(v, 'viagem_exterior', 'lisboa:semana:so');
     expect(escolhasDaExperiencia(v, 'viagem_exterior').find(e => e.id === 'lisboa:semana')!.custo).toBe(preco);
     expect(within(li).getByText(dinheiroCurto(preco))).toBeTruthy();
     fireEvent.click(within(li).getByRole('button', { name: 'Confirmar a viagem' }));
-    expect(feitas).toEqual([{ tipo: 'experiencia', id: 'viagem_exterior', escolha: 'lisboa:semana' }]);
+    expect(feitas).toEqual([{ tipo: 'experiencia', id: 'viagem_exterior', escolha: 'lisboa:semana:so' }]);
 
     // E o motor cobra exatamente esse preço e conta essa viagem.
     const r = executar(v, feitas[0]);
@@ -104,7 +109,7 @@ describe('Viagem para fora: país → cidade → duração → resumo', () => {
 describe('Viagem pelo Brasil: região → destino → duração', () => {
   it('a região mostra só os seus destinos; nada de duração antes do destino', () => {
     const v = vidaAos(35);
-    render(<Tempo vida={v} agir={() => true} />);
+    render(<Tempo vida={v} agir={() => true} aba="viagens" />);
     const li = porta('Uma viagem pelo Brasil');
     fireEvent.click(within(li).getByRole('button', { name: 'Ver destinos' }));
     expect(within(li).queryAllByRole('button', { name: DURACOES })).toHaveLength(0);
@@ -120,7 +125,7 @@ describe('Viagem pelo Brasil: região → destino → duração', () => {
 describe('A restrição da porta aparece uma vez só', () => {
   it('foi há pouco: o motivo aparece uma vez, no nível da viagem, e a porta não abre lista de durações', () => {
     const v = vidaAos(35, x => { x.fatos.exp_viagem_exterior = x.t - 3; });
-    render(<Tempo vida={v} agir={() => true} />);
+    render(<Tempo vida={v} agir={() => true} aba="viagens" />);
     expect(screen.getAllByText('Foi há pouco — a próxima fica para daqui a um tempo.')).toHaveLength(1);
     const li = porta('Uma viagem para fora do país');
     expect(within(li).queryByRole('button', { name: 'Ver destinos' })).toBeNull();

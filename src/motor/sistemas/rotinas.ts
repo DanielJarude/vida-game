@@ -705,6 +705,9 @@ export function atividadeExiste(v: Vida, m: ModeloRotina): boolean {
  * Pode começar a atividade (no nível pedido)? O tempo vem da MESMA conta
  * que a interface mostra (`semana`).
  */
+/** O que cuida da cabeça (e não acrescenta carga de verdade): nunca fica de fora por a semana estar cheia. */
+const CUIDAR_DE_SI = new Set(['terapia']);
+
 export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   const m = modeloRotina(id);
   if (!m) return bloqueio('impossivel', 'Atividade desconhecida.');
@@ -730,6 +733,9 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   // (Criança e adolescente novo: quem organiza a semana é a casa — o "tentar mesmo assim" é de quem já decide a própria.)
   // (Por cima da semana cheia, cabe o hobby — o ritmo leve; treino regular e "a sério" são quase um segundo trabalho.)
   const humana = idade(v) >= 16 && nivel <= 1 ? cargaHumana(v, extra) : { possivel: false };
+  // FIX pós-REWORK 4 (achado do playtest adversarial): quem está no limite não pode ser impedido de cuidar da cabeça —
+  // a terapia é uma hora por semana, e é justamente para isso. Passa do teto, com o preço dito.
+  if (!cabe.cabe && !humana.possivel && CUIDAR_DE_SI.has(id) && idade(v) >= 14) return { grau: 'permitido', motivo: `${cabe.motivo} A terapia é uma hora por semana — e é para isso mesmo.` };
   if (!cabe.cabe && !humana.possivel) return bloqueio('incompativel', cabe.motivo);
   if (i < 12 && n.custo > 60 && !casaPaga(v, n.custo) && !projetoSocial(v, id)) return bloqueio('requisito', semDinheiro);
   const irr = m.irregular?.(v);

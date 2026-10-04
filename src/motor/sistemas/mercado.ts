@@ -20,6 +20,7 @@ import { anoDe } from '../tempo';
 import { economiaLocal, municipio, pertoDaAgua } from '../dados/lugares';
 import { MORADIAS, VEICULOS, VERSOES_VEICULO, depreciacao, type CategoriaVeiculo, modeloMoradia, modeloVeiculo, precoImovel, versaoVeiculo, versoesDaClasse, type ModeloMoradia, type ModeloVeiculo, type VersaoVeiculo } from '../dados/bens';
 import { indiceImoveis } from './economia';
+import { corDaOferta } from '../dados/pertences';
 
 function rngDe(v: Vida, chave: string): Rng {
   let h = (v.economia?.semente ?? 1) >>> 0;
@@ -139,6 +140,9 @@ export interface OfertaVeiculo {
   estado: number;
   /** A história do usado, em uma linha. */
   historico?: string;
+  /** FIX pós-REWORK 4: a cor deste veículo (do anúncio; é ela que vai para a garagem). */
+  cor: string;
+  corNome: string;
 }
 
 const HISTORICOS: [string, number, number][] = [
@@ -166,14 +170,14 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   const regional = 0.96 + 0.08 * Math.min(1.3, custo);
   const out: OfertaVeiculo[] = [];
   let k = 0;
-  const novo = (x: VersaoVeiculo) => out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: x.classe, versaoId: x.id, usado: false, anoFabricacao: ano, preco: Math.round(x.preco * regional / 100) * 100, estado: 100 });
+  const novo = (x: VersaoVeiculo) => out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: x.classe, versaoId: x.id, usado: false, anoFabricacao: ano, preco: Math.round(x.preco * regional / 100) * 100, estado: 100, cor: '', corNome: '' });
   const usado = (m: ModeloVeiculo) => {
     const x = r.weighted(versoesDaClasse(m.id), y => y.pesoUsado)!;
     const anos = m.categoria === 'bicicleta' ? r.int(1, 5) : m.raro ? r.int(3, 20) : r.int(2, 14);
     const [historico, de, dp] = r.pick(HISTORICOS);
     const estado = Math.round(Math.max(25, Math.min(95, 92 - anos * 4 + de + r.normal() * 5)));
     const preco = Math.round(x.preco * regional * depreciacao(m, anos) * dp * (0.85 + estado / 600) / 100) * 100;
-    out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: m.id, versaoId: x.id, usado: true, anoFabricacao: ano - anos, preco, estado, historico });
+    out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: m.id, versaoId: x.id, usado: true, anoFabricacao: ano - anos, preco, estado, historico, cor: '', corNome: '' });
   };
   const daCategoria = (f: (m: ModeloVeiculo) => boolean) => VERSOES_VEICULO.filter(x => f(modeloVeiculo(x.classe)));
   if (lugar === 'concessionaria') for (const x of daCategoria(m => m.categoria === 'carro')) novo(x);
@@ -193,6 +197,8 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
     const carros = VEICULOS.filter(m => m.categoria === 'carro' && m.usado);
     for (let q = 0; q < 9; q++) usado(r.weighted(carros, m => m.pesoUsado)!);
   }
+  // A cor de cada anúncio (estável, sem sorteio): o Argo vermelho continua vermelho quando se volta à loja.
+  for (const o of out) { const c = corDaOferta(o.id, v.moradia.municipioId, modeloVeiculo(o.modeloId).categoria); o.cor = c.cor; o.corNome = c.nome; }
   return out;
 }
 

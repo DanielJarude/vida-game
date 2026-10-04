@@ -10,6 +10,7 @@
  * disponível em Tarauacá.
  */
 
+import { fraseDeConclusao } from './composicao';
 import { falaALingua, perfilDaVida } from '../mundo/vida';
 import { textoLocal } from '../mundo/locais';
 import { paisCorrente } from '../mundo/moeda';
@@ -256,8 +257,9 @@ export function processarEscola(v: Vida, r: Rng): void {
           marcar(v, 'formacao', `Técnico em ${c.nome.replace(/^Técnico em /, '')}, pelo médio integrado.`, 3);
         }
       }
+      // FIX pós-REWORK 4: a formatura do médio é desta vida (a escola, as notas, quem estava) — não a mesma frase em todas.
       escrever(v, {
-        texto: `Concluiu ${educacaoDaVida(v).medio.o}${b.reprovacoes > 0 ? `, com ${b.reprovacoes === 1 ? 'uma repetência' : `${b.reprovacoes} repetências`} no caminho` : ''}.`,
+        texto: fraseDeConclusao(v, { nucleo: `Concluiu ${educacaoDaVida(v).medio.o}`, instituicao: inst?.nome, desempenho: b.desempenho, reprovacoes: b.reprovacoes, chave: 'medio' }),
         relevancia: 'marco', tema: 'escola', tom: 'bom'
       });
     } else {
@@ -821,7 +823,7 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   const nomeF = nomeDaFormacao(c, area);
   const titulo = c.nivel === 'superior' ? `Formou-se em ${c.nome}` : c.nivel === 'livre' ? `Terminou o curso de qualificação: ${minusculaInicial(c.nome.replace(/^Curso de /, ''))}` : c.nivel === 'tecnico' ? `Concluiu o ${c.nome}` : c.nivel === 'residencia' ? `Terminou a residência médica${esp ? ` em ${esp.area}` : ''}` : (c.nivel === 'pos' ? `Concluiu a pós (${nomeF})` : `Concluiu o ${minusculaInicial(nomeF)}`);
   const voltou = idade(v) >= 30 && c.nivel !== 'pos' && c.nivel !== 'mestrado' && c.nivel !== 'doutorado' && c.nivel !== 'residencia';
-  escrever(v, { texto: `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, relevancia: c.nivel === 'livre' ? 'biografia' : 'marco', tema: 'estudo', tom: 'bom' });
+  escrever(v, { texto: fraseDeConclusao(v, { nucleo: titulo, instituicao: m.instituicao, desempenho: m.desempenho, chave: c.id, voltou }), relevancia: c.nivel === 'livre' ? 'biografia' : 'marco', tema: 'estudo', tom: 'bom' });
   marcar(v, 'formacao', `${titulo}${voltou ? `, aos ${idade(v)}` : ''}.`, c.nivel === 'livre' ? 1 : c.nivel === 'superior' || c.nivel === 'tecnico' ? 3 : 2);
 
   // Registros profissionais que vêm com o diploma.

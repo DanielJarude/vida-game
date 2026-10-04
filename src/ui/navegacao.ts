@@ -20,17 +20,34 @@
 
 export type Area = 'linha' | 'voce' | 'pessoas' | 'formacao' | 'trabalho' | 'tempo' | 'vida';
 export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'pertences' | 'cidade';
+/**
+ * FIX pós-REWORK 4: Tempo livre acumulava tudo numa superfície só. Agora, abas que respondem a "quero fazer algo
+ * físico", "quero um hobby", "quero sair, ver gente", "quero usar a rede", "quero viajar" — e a semana (o estresse:
+ * por que, o que pesa, o que ajuda) como a primeira.
+ */
+export type SecaoTempo = 'semana' | 'corpo' | 'atividades' | 'gente' | 'redes' | 'viagens';
 
-/** Um destino: uma área, uma seção de Vida — ou um nome antigo que continua aceito. */
-export type Aba = Area | SecaoVida | 'estudos';
+/** Um destino: uma área, uma seção de Vida, uma aba de Tempo livre — ou um nome antigo que continua aceito. */
+export type Aba = Area | SecaoVida | SecaoTempo | 'estudos';
 
-export interface Lugar { area: Area; secao?: SecaoVida }
+export interface Lugar { area: Area; secao?: SecaoVida; aba?: SecaoTempo }
 
+const DE_TEMPO = new Set<string>(['semana', 'corpo', 'atividades', 'gente', 'redes', 'viagens']);
 export function resolverDestino(d: Aba): Lugar {
   if (d === 'estudos') return { area: 'formacao' };
   if (d === 'casa' || d === 'dinheiro' || d === 'compras' || d === 'pertences' || d === 'cidade') return { area: 'vida', secao: d };
-  return { area: d };
+  if (DE_TEMPO.has(d)) return { area: 'tempo', aba: d as SecaoTempo };
+  return { area: d as Area };
 }
+
+export const SECOES_TEMPO: { id: SecaoTempo; rotulo: string; oque: string }[] = [
+  { id: 'semana', rotulo: 'A semana', oque: 'O estresse: por que, o que pesa, o que ajuda; o que você já faz' },
+  { id: 'corpo', rotulo: 'Corpo e mente', oque: 'Esporte, academia, corrida, terapia, descanso' },
+  { id: 'atividades', rotulo: 'Hobbies', oque: 'Arte, música, leitura, estudo, ofícios, dinheiro por fora' },
+  { id: 'gente', rotulo: 'Sair e ver gente', oque: 'Comunidade, noite, família, voluntariado — e com quem fazer' },
+  { id: 'redes', rotulo: 'Redes sociais', oque: 'Instagram, TikTok, YouTube, X, Facebook, Twitch, OnlyFans' },
+  { id: 'viagens', rotulo: 'Viagens', oque: 'Viagens e experiências: destino, duração, com quem' }
+];
 
 export const AREAS: { id: Area; rotulo: string; curto: string; icone: string }[] = [
   { id: 'linha', rotulo: 'Linha da Vida', curto: 'História', icone: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4V4zm0 12a4 4 0 0 0 4 4' },
@@ -53,6 +70,7 @@ export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
 
 export const rotuloDoLugar = (l: Lugar) => {
   const a = AREAS.find(x => x.id === l.area)!.rotulo;
+  if (l.aba) return `${a} · ${SECOES_TEMPO.find(x => x.id === l.aba)!.rotulo}`;
   if (!l.secao) return a;
   return `${a} · ${SECOES_VIDA.find(x => x.id === l.secao)!.rotulo}`;
 };
@@ -70,9 +88,15 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'faculdade', quero: 'Fazer faculdade, técnico, pós', lugar: { area: 'formacao' }, la: 'a preparação e os cursos' },
   { id: 'falar_mae', quero: 'Falar com a mãe, com a família', lugar: { area: 'pessoas' }, la: 'o rosto de quem você quer' },
   { id: 'namoro', quero: 'Procurar alguém para namorar', lugar: { area: 'pessoas' }, la: '"Conhecer alguém"' },
+  { id: 'fazer_junto', quero: 'Fazer algo com quem eu amo, com o meu filho, com um amigo', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Fazer juntos" (cinema, jantar, parque, ensinar, viajar)' },
+  { id: 'agir_trabalho', quero: 'Agir no trabalho: um projeto, a chefia, o treino de atleta', lugar: { area: 'trabalho' }, la: '"No dia a dia do trabalho"' },
   { id: 'emprego', quero: 'Procurar emprego, ver a profissão', lugar: { area: 'trabalho' }, la: 'o trabalho de agora e as vagas' },
   { id: 'negocio', quero: 'Abrir um negócio', lugar: { area: 'trabalho' }, la: '"Outras possibilidades"' },
-  { id: 'futebol', quero: 'Jogar futebol, treinar', lugar: { area: 'tempo' }, la: 'as atividades da semana (o time da escola fica em Formação)' },
+  { id: 'futebol', quero: 'Jogar futebol, treinar, fazer algo físico', lugar: { area: 'tempo', aba: 'corpo' }, la: 'esportes, academia, corrida (o time da escola fica em Formação)' },
+  { id: 'hobby', quero: 'Praticar um hobby: música, desenho, leitura', lugar: { area: 'tempo', aba: 'atividades' }, la: 'as atividades por tipo' },
+  { id: 'sair', quero: 'Sair, ver gente, fazer algo com alguém', lugar: { area: 'tempo', aba: 'gente' }, la: 'o que fazer com quem — e as atividades com gente' },
+  { id: 'estresse', quero: 'Entender (e diminuir) o meu estresse', lugar: { area: 'tempo', aba: 'semana' }, la: '"Estresse": o que pesa, o que ajuda, o que dá para fazer' },
+  { id: 'viajar', quero: 'Viajar (sozinho ou com a família)', lugar: { area: 'tempo', aba: 'viagens' }, la: 'o destino, quanto tempo, com quem' },
   { id: 'carro', quero: 'Comprar carro, moto ou bicicleta', lugar: { area: 'vida', secao: 'compras' }, la: 'concessionária, usados, motos e bicicletas' },
   { id: 'casa', quero: 'Procurar casa, sair da casa dos pais', lugar: { area: 'vida', secao: 'casa' }, la: '"Procurar um lugar para morar"' },
   { id: 'onde_moro', quero: 'Saber onde moro e com quem', lugar: { area: 'vida', secao: 'casa' }, la: 'a casa, no alto' },
@@ -81,7 +105,8 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'custo_de_vida', quero: 'Saber quanto custa viver aqui', lugar: { area: 'vida', secao: 'cidade' }, la: 'a moeda, o custo do mês, o salário mínimo, a saúde' },
   { id: 'nacionalidade', quero: 'Onde nasci, minha nacionalidade, onde moro', lugar: { area: 'voce' }, la: '"No mundo"' },
   { id: 'pertences', quero: 'Usar o que é meu: tocar o violão, jogar, fotografar', lugar: { area: 'vida', secao: 'pertences' }, la: 'cada coisa sua, com o que dá para fazer com ela' },
-  { id: 'rede', quero: 'Publicar, ver seguidores, a rede social', lugar: { area: 'pessoas' }, la: '"Na rede"' },
+  { id: 'rede', quero: 'Postar no Instagram, crescer no YouTube, as redes sociais', lugar: { area: 'tempo', aba: 'redes' }, la: 'cada plataforma: postar, crescer, monetizar, apagar a conta' },
+  { id: 'usar_carro', quero: 'Usar o meu carro, a moto, a bicicleta', lugar: { area: 'vida', secao: 'pertences' }, la: 'o veículo, com o que dá para fazer com ele' },
   { id: 'dinheiro', quero: 'Ver meu dinheiro, pedir ajuda à família', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês, o que é seu, a família' },
   { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce' }, la: '"Aparência e estilo"' },
   { id: 'saude', quero: 'Cuidar da saúde, da cabeça', lugar: { area: 'voce' }, la: 'humor, cabeça e saúde' },

@@ -9,6 +9,9 @@
  *   3. OFFLINE: recarrega, continua a mesma vida, vive mais anos e decide;
  *      recarrega offline de novo e confere que o save no IndexedDB é
  *      idêntico antes e depois da recarga;
+ *   3c. AS REDES SOCIAIS SEM REDE (FIX pós-REWORK 4): offline, aos 13 anos, cria
+ *      a conta no Instagram e publica (é simulação local: nada sai do aparelho);
+ *      salva, recarrega e confere a conta idêntica no save e na tela;
  *   3b. O MUNDO SEM REDE (fechamento do ATT Mundo): os 7 pacotes regionais
  *      estão no precache; offline, nasce uma vida no Japão (o pacote da
  *      Ásia vem do cache), vive, salva e recarrega idêntica, sem reais na tela;
@@ -120,7 +123,7 @@ try {
     return { nome, n: reqs.length, urls: reqs.map(r => new URL(r.url).pathname) };
   });
   checar('precache completo (todas as entradas do sw.js)', precache.n === entradas && entradas > 0, `${precache.n}/${entradas} em ${precache.nome}`);
-  const pacotes = ['motor-', 'motor-conteudo-', 'motor-carreira-', 'motor-dados-', 'Jogo-', 'Criacao-'];
+  const pacotes = ['motor-', 'motor-conteudo-', 'motor-carreira-', 'motor-dados-', 'motor-textos-', 'motor-vida-', 'Jogo-', 'Criacao-'];
   checar('os pacotes sob demanda do motor estão no precache', pacotes.every(x => precache.urls.some(u => u.includes(`/assets/${x}`))));
   checar('as fontes estão no precache (nada do Google Fonts)', precache.urls.filter(u => u.endsWith('.woff2')).length >= 6);
   const regioes = ['africa', 'america-central-caribe', 'america-norte', 'america-sul', 'asia', 'europa', 'oceania'];
@@ -160,6 +163,33 @@ try {
   await p.getByRole('button', { name: /Continuar a vida de/ }).click();
   await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
   checar('offline: a tela mostra a mesma idade depois da recarga', (await idadeNaTela()) === idade2, idade2);
+
+  // 3c. As redes sociais sem rede (simulação local): aos 13, criar a conta no Instagram e publicar — offline.
+  for (let k = 0; k < 12 && Number((await idadeNaTela())?.match(/(\d+) anos/)?.[1] ?? 0) < 13; k++) await avancar(1);
+  await p.locator('.barra__item', { hasText: 'Tempo' }).first().click();
+  await p.getByRole('tab', { name: 'Redes sociais' }).click();
+  const criar = p.getByRole('button', { name: 'Criar uma conta no Instagram' });
+  const temCriar = await criar.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
+  checar('offline: a aba Redes sociais abre e oferece criar a conta', temCriar, await idadeNaTela());
+  if (temCriar) {
+    await criar.click();
+    await p.waitForTimeout(150);
+    const post = p.locator('.plataforma-painel__temas button:not([disabled])').first();
+    if (await post.count()) { await post.click(); await p.waitForTimeout(150); }
+    const sr = await saveEstavel();
+    const conta = sr ? JSON.parse(sr).redes?.contas?.instagram : undefined;
+    checar('offline: a conta existe e publicou (no save)', !!conta && conta.publicacoes.length >= 1, conta ? `@${conta.arroba}, ${conta.seguidores} seguidores, ${conta.publicacoes.length} publicação` : 'sem conta');
+    await p.reload();
+    await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
+    checar('offline: a conta volta idêntica depois de recarregar', (await lerSave()) === sr);
+    await p.getByRole('button', { name: /Continuar a vida de/ }).click();
+    await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
+    await p.locator('.barra__item', { hasText: 'Tempo' }).first().click();
+    await p.getByRole('tab', { name: 'Redes sociais' }).click();
+    const arroba = await p.locator('.plataforma-painel__titulo').first().innerText().catch(() => '');
+    checar('offline: a tela mostra a mesma conta (@arroba)', !!conta && arroba.includes(`@${conta.arroba}`), arroba);
+    await p.screenshot({ path: join(SP, 'redes-offline-390.png'), fullPage: false });
+  }
 
   // 3b. O mundo sem rede: nascer no Japão, viver, salvar, recarregar.
   await p.reload();

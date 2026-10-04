@@ -68,6 +68,33 @@ const MATERIAL: Record<string, Variante[]> = {
 export const variantesDaCoisa = (coisaId: string): Variante[] => MATERIAL[coisaId] ?? ELETRONICO;
 export const variantesDeVeiculo = (categoria: string): Variante[] => (categoria === 'bicicleta' ? BICICLETA : VEICULO);
 
+/** Um número estável de uma semente (FNV-1a): a cor de algo nunca muda entre telas, saves e versões. */
+function estavel(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+/**
+ * FIX pós-REWORK 4: a cor de um veículo à venda — de cada anúncio, estável (o Argo vermelho da vitrine é vermelho
+ * de novo quando você volta à loja, e é ele que vai para a garagem). Não consome sorteio de nada.
+ */
+export function corDaOferta(ofertaId: string, municipioId: string, categoria: string): Variante {
+  const lista = variantesDeVeiculo(categoria);
+  return lista[estavel(`${municipioId}:${ofertaId}`) % lista.length];
+}
+
+/** A cor de um veículo que é seu: a da compra; saves antigos, estável pelo id (a mesma regra em toda tela). */
+export function corDoVeiculo(b: { id: string; cor?: string; corNome?: string }, categoria: string): Variante {
+  if (b.cor) return { cor: b.cor, nome: b.corNome ?? '' };
+  const lista = variantesDeVeiculo(categoria);
+  return lista[parseInt(b.id.replace(/\D/g, '') || '0', 10) % lista.length];
+}
+
+/** A cor concordando com o veículo: "o Argo vermelho", "a Biz vermelha", "a bicicleta azul". */
+export function corConcordada(nome: string, feminino: boolean): string {
+  if (!nome) return '';
+  const genero = (w: string) => (/^(vermelh|branc|pret|amarel|escur|clar)[oa]$/.test(w) ? w.slice(0, -1) + (feminino ? 'a' : 'o') : w);
+  // Só o que varia concorda ("verde-escuro" → "verde-escura"); "prata", "vinho", "azul-celeste" ficam.
+  return nome.split('-').map(genero).join('-');
+}
+
 /** Um uso de uma coisa: o que se faz, com quem, e para onde vai o efeito (sistemas que já existem). */
 export interface UsoDeCoisa {
   id: string;
@@ -137,7 +164,34 @@ export const USOS: Record<string, UsoDeCoisa[]> = {
   livros_estudo: [{ id: 'estudar', rotulo: 'Estudar', estudo: 4, estresse: 2, textos: ['A apostila, um caderno, um mês de domingo à tarde.', 'Fez todos os exercícios do capítulo — até os difíceis.'] }],
   material_arte: [{ id: 'pintar', rotulo: 'Pintar', pratica: ['desenho', 0.35], feliz: 2, textos: ['Uma tela inteira num fim de semana. Ficou estranha. Ficou sua.', 'Aquarela na mesa da cozinha, tinta até nos cotovelos.'] }],
   jogos_tabuleiro: [{ id: 'jogar_mesa', rotulo: 'Jogar com alguém', com: 'perto', rotuloCom: 'Chamar {nome} para os jogos de tabuleiro', feliz: 3, prox: 3, textos: ['Uma noite de jogo com {nome}. Ninguém leu as regras direito.', '{nome} roubou no banco imobiliário e jura que não.'] }],
+  // FIX pós-REWORK 4: a TV e a caixa de som também servem para alguma coisa (com quem mora junto, com quem está perto).
+  tv: [
+    { id: 'maratonar', rotulo: 'Maratonar uma série', feliz: 2, estresse: -3, textos: ['Uma temporada inteira num fim de semana. Valeu cada episódio.', 'Começou uma série por recomendação e não parou mais.'] },
+    { id: 'filme_com', rotulo: 'Ver um filme com alguém', com: 'casa', rotuloCom: 'Ver um filme com {nome}', feliz: 2, prox: 3, estresse: -2, textos: ['Pipoca, sofá e {nome} dormindo antes da metade.', 'Você e {nome} discutiram o final até de madrugada.'] }
+  ],
+  caixa_som: [{ id: 'som_com', rotulo: 'Chamar alguém para ouvir música', com: 'perto', rotuloCom: 'Chamar {nome} para ouvir um disco', feliz: 2, prox: 2, textos: ['Um disco inteiro, do lado A ao lado B, com {nome} cantando errado.', '{nome} trouxe uma música que você nunca tinha ouvido — e agora é sua também.'] }],
   cozinha_equipada: [{ id: 'cozinhar_para', rotulo: 'Cozinhar para alguém', com: 'perto', rotuloCom: 'Cozinhar para {nome}', pratica: ['cozinha', 0.3], prox: 4, feliz: 1, textos: ['Um jantar para {nome}, com a panela boa estreando.', 'A receita da sua avó, para {nome}. Quase igual.'] }]
 };
 
 export const usosDaCoisa = (coisaId: string): UsoDeCoisa[] => USOS[coisaId] ?? [];
+
+/**
+ * FIX pós-REWORK 4: a fachada de cada moradia — a cor de verdade da casa (a casa verde-água da rua, o prédio de
+ * tijolo, a torre de vidro). Estável pela chave (o imóvel, o contrato, a casa da família): a casa não muda de cor
+ * entre uma tela e outra.
+ */
+const FACHADA_CASA: Variante[] = [
+  { nome: 'amarelo-ocre', cor: '#d9a441' }, { nome: 'verde-água', cor: '#6fb3a0' }, { nome: 'rosa-goiaba', cor: '#d98a8a' }, { nome: 'azul-claro', cor: '#7aa6c9' },
+  { nome: 'terracota', cor: '#c0704d' }, { nome: 'branco-gelo', cor: '#e8e0d2' }, { nome: 'lilás', cor: '#a993c4' }, { nome: 'verde-limão', cor: '#a9c46a' }
+];
+const FACHADA_PREDIO: Variante[] = [
+  { nome: 'concreto', cor: '#a9a49a' }, { nome: 'tijolo aparente', cor: '#a65f43' }, { nome: 'bege', cor: '#cbb390' }, { nome: 'azul-acinzentado', cor: '#7f93a3' }, { nome: 'salmão', cor: '#d49a80' }
+];
+const FACHADA_ALTO: Variante[] = [{ nome: 'vidro azulado', cor: '#7f9fb8' }, { nome: 'branco', cor: '#ece6da' }, { nome: 'grafite e vidro', cor: '#6c7178' }, { nome: 'areia', cor: '#cdb894' }];
+const PREDIOS = new Set(['apto_1q', 'apto_2q', 'apto_3q', 'kitnet', 'republica', 'funcional']);
+export function fachadaDe(chave: string, forma: string): Variante {
+  const lista = forma === 'alto_padrao' || forma === 'casa_grande' ? FACHADA_ALTO : PREDIOS.has(forma) ? FACHADA_PREDIO : FACHADA_CASA;
+  return lista[estavel(chave) % lista.length];
+}
+/** A chave da fachada: a mesma para o anúncio (a cidade, o tipo, o bairro, o ano) e para a casa que veio dele. */
+export const chaveDaFachada = (municipioId: string, modeloId: string | undefined, bairro: string | undefined, t: number) => `${municipioId}:${modeloId ?? ''}:${bairro ?? ''}:${Math.floor(t / 12)}`;

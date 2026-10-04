@@ -5,6 +5,7 @@ import { App } from './ui/App';
 import './ui/fontes.css';
 import './ui/vida.css';
 import './ui/vivida.css';
+import './ui/agir.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -29,7 +29,7 @@ import { educacaoDoPais } from '../mundo/vida';
 import { textoLocal } from '../mundo/locais';
 import { capitalizar } from '../texto';
 import { rngDe } from '../rng';
-import type { Pessoa, TipoVivencia, Vida, Vivencia } from '../tipos';
+import type { MarcoDeFormacao, Pessoa, TipoVivencia, Vida, Vivencia } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { cursoOuNulo, ROTULO_AREA, type AreaFormacao } from '../dados/cursos';
 import { municipio, nivelDeOferta, paisDaCidade } from '../dados/lugares';
@@ -566,3 +566,11 @@ export function leituraDasVivencias(v: Vida): string[] {
     .map(x => `${NOME_VIVENCIA[x.tipo].charAt(0).toUpperCase() + NOME_VIVENCIA[x.tipo].slice(1)}${x.anos >= 2 ? `, ${x.anos} anos` : ''}${x.papel && !['participante', 'nos treinos'].includes(x.papel) ? ` — ${x.papel}` : ''}${x.feito ? ` — ${x.feito}` : ''}${x.tFim === undefined ? ' (agora)' : ''}`);
 }
 
+
+/** Quantos momentos a história da formação guarda (os mais antigos saem). */
+const MAX_TRAJETORIA = 60;
+/** Guarda um momento na história da formação (o que fica para consultar depois): o ano na escola e os verbos da formação. */
+export function registrarNaFormacao(v: Vida, m: MarcoDeFormacao): void {
+  const e = v.educacao;
+  e.trajetoria = [...(e.trajetoria ?? []), m].slice(-MAX_TRAJETORIA);
+}

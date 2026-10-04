@@ -20,10 +20,10 @@ import { moraComFamiliaDeOrigem } from '../../motor/sistemas/domicilio';
 import { produto, PALAVRA_RISCO } from '../../motor/dados/investimentos';
 import { resultado } from '../../motor/sistemas/investimentos';
 import { BotaoAcao, Secao } from '../comum';
-import { CenaDaCasa, DesenhoVeiculo, Evolucao, Icone, IconeMoradia } from './material/Desenhos';
+import { CenaDaCasa, DesenhoVeiculo, Evolucao, Icone, MiniaturaDaCasa } from './material/Desenhos';
 import { NOME_FORMA } from '../../motor/dados/bens';
 import { Lugar, type QualLugar } from './material/Lugares';
-import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoLar, leituraDosBens, type LeituraBem } from '../leituraMaterial';
+import { dinheiroCheio, dinheiroCurto, formaDoModelo, leituraDaSeguranca, leituraDoLar, leituraDosBens, type LeituraBem } from '../leituraMaterial';
 import '../material.css';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean }
@@ -174,7 +174,7 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
   return (
     <article className={`objeto objeto--${b.tipo}`}>
       <div className="objeto__cabeca">
-        {b.tipo === 'imovel' ? <IconeMoradia modeloId={b.modeloId} /> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={`${NOME_FORMA[b.forma]}${b.corNome ? `, ${b.corNome}` : ''}`} largura={56} semente={b.id} cor={b.cor} /> : <Icone nome={b.icone} />}
+        {b.tipo === 'imovel' ? <span className={`icone-moradia icone-moradia--miniatura icone-moradia--${b.modeloId}`}><MiniaturaDaCasa forma={formaDoModelo(b.modeloId)} fachada={b.fachada} largura={84} rotulo={b.fachada ? `${b.titulo}, ${b.fachada.nome}` : b.titulo} /></span> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={`${NOME_FORMA[b.forma]}${b.corNome ? `, ${b.corNome}` : ''}`} largura={72} semente={b.id} cor={b.cor} estado={b.estadoNumero} /> : <Icone nome={b.icone} />}
         <div className="objeto__nome">
           <h3>{b.titulo}</h3>
           <p>{b.meta}</p>

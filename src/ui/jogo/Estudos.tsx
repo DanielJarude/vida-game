@@ -9,6 +9,7 @@
  * busca e pelo que faz sentido para esta vida.
  */
 
+import { verbosDaFormacao } from '../../motor/sistemas/naFormacao';
 import { noPais } from '../../motor/mundo/registro';
 import { useMemo } from 'react';
 import type { Oportunidade, Vida } from '../../motor/tipos';
@@ -54,7 +55,7 @@ function rotuloDaVia(vida: Vida, via: string): string {
 }
 /** A etapa concluída, como a biografia a registrou (com o nome do país onde foi): "Terminou o fundamental e começou..." → "Fundamental completo". */
 function etapaConcluida(texto: string): string | undefined {
-  const m = /^Terminou (o|a) (.+?) e começou/.exec(texto) ?? /^Concluiu (o|a) (.+?)(,|\.|$)/.exec(texto);
+  const m = /^Terminou (o|a) (.+?) e começou/.exec(texto) ?? /^Concluiu (o|a) (.+?)( —| n[oa] | em |,|\.|$)/.exec(texto);
   return m ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1] === 'a' ? 'completa' : 'completo'}` : undefined;
 }
 
@@ -96,6 +97,7 @@ export function Estudos({ vida, agir, irPara, abrirPessoa }: Props) {
       <Folio kicker={<><span className="folio__area">Formação</span> · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</>} titulo={titulo} lede={lede} />
       <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'estudos'} titulo="Ao seu alcance agora" />
       {inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
+      {inst && <NoAnoLetivo vida={vida} agir={agir} />}
       <OQueFicou vida={vida} />
       <TrajetoriaDeEstudo vida={vida} />
       <Formacao vida={vida} />
@@ -158,6 +160,27 @@ function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Aca
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * FIX pós-REWORK 4: os verbos do ano letivo (`naFormacao`) — estudar para as provas, pedir ajuda ao professor, a festa,
+ * o trabalho em grupo, matar aula, colar; na faculdade, o projeto com um professor e o congresso. Uma vez por ano cada.
+ */
+function NoAnoLetivo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const verbos = verbosDaFormacao(vida);
+  if (!verbos.length) return null;
+  return (
+    <Secao titulo="Neste ano letivo">
+      <ul className="dia-a-dia__lista">
+        {verbos.map(x => (
+          <li key={x.oque} className="dia-a-dia__item">
+            <BotaoAcao vida={vida} acao={{ tipo: 'formacao', oque: x.oque }} agir={agir} variante={x.risco ? 'discreto' : 'secundario'}>{x.rotulo}</BotaoAcao>
+            <span className="dia-a-dia__porque">{x.porque}</span>
+          </li>
+        ))}
+      </ul>
+    </Secao>
   );
 }
 

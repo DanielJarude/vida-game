@@ -40,7 +40,7 @@ import { faseDaVida } from '../apresentar';
 import { fechamentoDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
-import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type Lugar, type SecaoVida } from '../navegacao';
+import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type Lugar, type SecaoTempo, type SecaoVida } from '../navegacao';
 
 export type { Aba };
 
@@ -62,16 +62,17 @@ export function Jogo({ c }: { c: ControleVida }) {
   const vida = c.vida!;
   const [lugar, setLugar] = useState<Lugar>({ area: 'linha' });
   const [secao, setSecao] = useState<SecaoVida>('casa');
+  const [abaTempo, setAbaTempo] = useState<SecaoTempo>('semana');
   const [menu, setMenu] = useState(false);
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
   const conteudo = useRef<HTMLElement>(null);
   const area = lugar.area;
-  const ir = (d: Aba) => { const l = resolverDestino(d); if (l.secao) setSecao(l.secao); setLugar(l); };
-  const irLugar = (l: Lugar) => { if (l.secao) setSecao(l.secao); setLugar(l); };
+  const ir = (d: Aba) => { const l = resolverDestino(d); if (l.secao) setSecao(l.secao); if (l.aba) setAbaTempo(l.aba); setLugar(l); };
+  const irLugar = (l: Lugar) => { if (l.secao) setSecao(l.secao); if (l.aba) setAbaTempo(l.aba); setLugar(l); };
   const focar = (id: string | null) => { setPessoaAberta(id); c.focarPessoa(id); };
   const abrirPessoa = (id: string | null) => { focar(id); if (id) ir('pessoas'); };
 
-  useEffect(() => { conteudo.current?.scrollTo?.({ top: 0 }); window.scrollTo?.({ top: 0 }); }, [area, secao]);
+  useEffect(() => { conteudo.current?.scrollTo?.({ top: 0 }); window.scrollTo?.({ top: 0 }); }, [area, secao, abaTempo]);
   useEffect(() => { if (c.marcaAno > 0) { setLugar({ area: 'linha' }); window.scrollTo?.({ top: 0 }); } }, [c.marcaAno]);
 
   if (vida.morte) return <Fim vida={vida} c={c} />;
@@ -107,7 +108,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
           {area === 'formacao' && <Estudos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'trabalho' && (temTrabalho(vida) ? <Trabalho vida={vida} agir={c.agir} irPara={ir} /> : <TrabalhoAindaNao vida={vida} irPara={ir} />)}
-          {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} />}
+          {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} aba={abaTempo} irAba={a => ir(a)} abrirPessoa={abrirPessoa} />}
           {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
         </main>
 

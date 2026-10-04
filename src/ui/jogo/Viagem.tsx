@@ -16,16 +16,16 @@ import { previsaoDaViagem } from '../../motor/sistemas/experiencias';
 import { useEffect, useRef, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
-import { catalogoDeViagem, type GrupoDeViagem } from '../../motor/sistemas/experiencias';
+import { catalogoDeViagem, companhiasDeViagem, custoDaExperiencia, type GrupoDeViagem } from '../../motor/sistemas/experiencias';
 import { listaNatural } from '../../motor/texto';
 import { BotaoAcao } from '../comum';
 import { dinheiroCurto } from '../apresentar';
 
-type Passo = 'grupo' | 'lugar' | 'duracao' | 'resumo';
+type Passo = 'grupo' | 'lugar' | 'duracao' | 'quem' | 'resumo';
 
 const PERGUNTA: Record<'país' | 'região', Record<Passo, string>> = {
-  'país': { grupo: 'Para qual país?', lugar: 'Qual cidade?', duracao: 'Por quanto tempo?', resumo: 'A viagem' },
-  'região': { grupo: 'Para que parte do Brasil?', lugar: 'Qual destino?', duracao: 'Por quanto tempo?', resumo: 'A viagem' }
+  'país': { grupo: 'Para qual país?', lugar: 'Qual cidade?', duracao: 'Por quanto tempo?', quem: 'Com quem?', resumo: 'A viagem' },
+  'região': { grupo: 'Para que parte do Brasil?', lugar: 'Qual destino?', duracao: 'Por quanto tempo?', quem: 'Com quem?', resumo: 'A viagem' }
 };
 
 function Seta() {
@@ -34,14 +34,16 @@ function Seta() {
 
 export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id: 'viagem_pais' | 'viagem_exterior'; agir: (a: Acao) => boolean; aoConcluir?: () => void }) {
   const cat = catalogoDeViagem(vida, id);
-  const [sel, setSel] = useState<{ grupo?: string; lugar?: string; duracao?: string }>({});
+  const [sel, setSel] = useState<{ grupo?: string; lugar?: string; duracao?: string; quem?: string }>({});
+  const companhias = companhiasDeViagem(vida);
   const titulo = useRef<HTMLHeadingElement>(null);
   const primeiraVez = useRef(true);
 
   const grupo = cat.grupos.find(g => g.id === sel.grupo);
   const lugar = grupo?.lugares.find(l => l.id === sel.lugar);
   const duracao = lugar?.duracoes.find(d => d.id === sel.duracao);
-  const passo: Passo = !grupo ? 'grupo' : !lugar ? 'lugar' : !duracao ? 'duracao' : 'resumo';
+  const companhiaEscolhida = companhias.find(c => c.id === sel.quem);
+  const passo: Passo = !grupo ? 'grupo' : !lugar ? 'lugar' : !duracao ? 'duracao' : !companhiaEscolhida ? 'quem' : 'resumo';
 
   // A cada passo, o foco vai para a pergunta (quem navega por teclado ou leitor de tela sabe onde está).
   useEffect(() => {
@@ -49,9 +51,12 @@ export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id:
     titulo.current?.focus();
   }, [passo]);
 
-  const voltar = () => setSel(s => (s.duracao ? { grupo: s.grupo, lugar: s.lugar } : s.lugar ? { grupo: s.grupo } : {}));
+  const voltar = () => setSel(s => (s.quem ? { grupo: s.grupo, lugar: s.lugar, duracao: s.duracao } : s.duracao ? { grupo: s.grupo, lugar: s.lugar } : s.lugar ? { grupo: s.grupo } : {}));
+  // O preço com a companhia escolhida (a mesma conta da ação).
+  const escolhaFinal = duracao && companhiaEscolhida ? `${duracao.escolha}:${companhiaEscolhida.id}` : undefined;
+  const custoFinal = escolhaFinal ? custoDaExperiencia(vida, id, escolhaFinal) : 0;
   const fora = cat.nivelGrupo === 'país';
-  const trilha = [grupo?.nome, lugar?.nome, duracao?.nome].filter(Boolean).join(' · ');
+  const trilha = [grupo?.nome, lugar?.nome, duracao?.nome, companhiaEscolhida?.rotulo.toLowerCase()].filter(Boolean).join(' · ');
 
   if (!cat.grupos.length) return <p className="nota">Nenhum destino ao alcance agora.</p>;
 
@@ -118,17 +123,31 @@ export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id:
         </ul>
       )}
 
-      {passo === 'resumo' && grupo && lugar && duracao && (
+      {passo === 'quem' && grupo && lugar && duracao && (
+        <ul className="viagem__opcoes">
+          {companhias.map(c => (
+            <li key={c.id}>
+              <button type="button" className="viagem__opcao" onClick={() => setSel({ grupo: grupo.id, lugar: lugar.id, duracao: duracao.id, quem: c.id })}>
+                <span className="viagem__nome">{c.rotulo}<span className="viagem__sub">{c.pessoas.length === 0 ? 'Viajar só tem os seus encontros (e os seus silêncios).' : c.pessoas.some(p => (vida.vinculos[p.id]?.tensao ?? 0) >= 40) ? 'A relação anda tensa: a viagem pode aproximar — ou expor.' : c.pessoas.length === 1 ? 'Uma viagem a dois fica na história de vocês.' : 'A viagem fica na história de todos.'}</span></span>
+                <span className="viagem__preco">{dinheiroCurto(custoDaExperiencia(vida, id, `${duracao.escolha}:${c.id}`))}</span>
+                <Seta />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {passo === 'resumo' && grupo && lugar && duracao && companhiaEscolhida && escolhaFinal && (
         <div className="viagem__resumo">
           <div className="postal" style={{ ['--postal' as string]: corDoDestino(lugar.nome) }}>
             <span className="postal__selo">{fora ? grupo.nome : 'por aqui'}</span>
             <span className="postal__nome">{lugar.nome}</span>
             <span className="postal__dias">{duracao.dias} dias</span>
           </div>
-          <ul className="viagem__efeitos">{previsaoDaViagem(vida, duracao.dias).map((x, k) => <li key={k}>{x}</li>)}</ul>
-          <p className="nota">{cat.companhia.length ? `Vão você e ${listaNatural(cat.companhia)}: o preço já conta todo mundo.` : 'Vai só você.'} {fora ? 'Passagem de ida e volta, hospedagem e o dia a dia lá.' : 'O transporte daqui até lá, hospedagem e o dia a dia.'}</p>
-          <p className="viagem__total"><span>Ao todo, uns</span> <strong>{dinheiroCurto(duracao.custo)}</strong></p>
-          <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id, escolha: duracao.escolha }} agir={agir} variante="principal" aoAgir={aoConcluir}>Confirmar a viagem</BotaoAcao>
+          <ul className="viagem__efeitos">{previsaoDaViagem(vida, duracao.dias, companhiaEscolhida.id).map((x, k) => <li key={k}>{x}</li>)}</ul>
+          <p className="nota">{companhiaEscolhida.pessoas.length ? `Vão você e ${listaNatural(companhiaEscolhida.pessoas.map(p => p.nome))}: o preço já conta todo mundo.` : 'Vai só você.'} {fora ? 'Passagem de ida e volta, hospedagem e o dia a dia lá.' : 'O transporte daqui até lá, hospedagem e o dia a dia.'}</p>
+          <p className="viagem__total"><span>Ao todo, uns</span> <strong>{dinheiroCurto(custoFinal)}</strong></p>
+          <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id, escolha: escolhaFinal }} agir={agir} variante="principal" aoAgir={aoConcluir}>Confirmar a viagem</BotaoAcao>
         </div>
       )}
     </div>

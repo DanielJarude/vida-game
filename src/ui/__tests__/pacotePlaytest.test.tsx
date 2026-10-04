@@ -104,7 +104,7 @@ describe('Você × Política: o mesmo nome dos dois lados', () => {
 describe('Tempo livre: a viagem é uma porta', () => {
   it('abrir "Uma viagem pelo Brasil" leva à região, ao destino e às durações, cada uma com o seu preço (em passos: ver viagens.test.tsx)', () => {
     const v = vidaAos(35, x => { x.financas.conta = 300000; x.trabalho.atual = undefined; }, 'feminino', 'recife-pe');
-    render(<Tempo vida={v} agir={() => true} />);
+    render(<Tempo vida={v} agir={() => true} aba="viagens" />); // (FIX pós-REWORK 4: as viagens moram na aba "Viagens".)
     expect(screen.getByText('Uma viagem pelo Brasil')).toBeTruthy();
     fireEvent.click(screen.getAllByRole('button', { name: 'Ver destinos' })[0]);
     fireEvent.click(screen.getByRole('button', { name: /^Sudeste/ }));

@@ -37,6 +37,7 @@ import { ativo as envolvimentoAtivo, proporPorFora, sabeQueAndaNisso } from './i
 import { contextoDaRelacao, conversarNoApp, encontroDoApp, etapaDoApp, pesoDoContexto, registrarFase } from './relacoes';
 import { executarDesculpas, INTERACOES_DE_CONFLITO } from './conflitos';
 import { INTERACOES_VIVIDAS } from './gestos';
+import { INTERACOES_JUNTOS } from './juntos';
 import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
 import { estadoDaRelacao } from './lacos';
 
@@ -1056,7 +1057,9 @@ export const INTERACOES: Interacao[] = [
   // Relações 2.0: discordar, cobrar, fazer as pazes, encerrar a amizade, provocar o rival (`conflitos`).
   ...INTERACOES_DE_CONFLITO,
   // REWORK 4: perguntar da vida (o fato, não a frase), elogiar, pedir conselho, pedir ajuda com as crianças (`gestos`).
-  ...INTERACOES_VIVIDAS
+  ...INTERACOES_VIVIDAS,
+  // FIX pós-REWORK 4: programas concretos (cinema, jantar, show, parque, ensinar, cozinhar...): `juntos`.
+  ...INTERACOES_JUNTOS
 ];
 
 /* ------------------------------------------------------- Aproximação */

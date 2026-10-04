@@ -25,6 +25,11 @@ import { flex } from '../../motor/texto';
 import { anoDe, MESES, mesDe } from '../../motor/tempo';
 import { gestacaoEmCurso } from '../../motor/sistemas/familia';
 import { interacoesPara, rotuloInteracao } from '../../motor/sistemas/interacoes';
+import { grupoDaInteracao, type GrupoDeInteracao } from '../../motor/sistemas/juntos';
+import { coisasDaVida } from '../../motor/sistemas/coisas';
+import { usosDaCoisa } from '../../motor/dados/pertences';
+import { disponibilidadeUsarCoisa } from '../../motor/sistemas/pertences';
+import { podeTentar } from '../../motor/plausibilidade';
 import { ehDescendente, faseDeIdade, papelDe } from '../../motor/sistemas/vinculos';
 import { rotuloDe } from '../apresentar';
 import { circulos, comoEsta, etiqueta, ondeEsta, quemE, sinaisSociais, vidaPropria, type Par, type TipoDeSinal } from '../leitura';
@@ -36,9 +41,8 @@ import { trajetoriaDaRelacao } from '../../motor/sistemas/relacoes';
 import { estadoDaRelacao, forcaDaRelacao } from '../../motor/sistemas/lacos';
 import { fraseDoSaber, pendentes, saberes } from '../../motor/sistemas/conhecimento';
 import { presentesDados, presentesPara } from '../../motor/sistemas/presentes';
-import { contaAtiva } from '../../motor/sistemas/redesBase';
+import { contasAtivas } from '../../motor/sistemas/redesBase';
 import { DesenhoObjeto } from './material/Objetos';
-import { NaRede } from './Rede';
 import { dinheiroCurto as precoCurto } from '../leituraMaterial';
 import { descricaoOrigem } from '../../motor/sistemas/social';
 import { saudeConhecida } from '../../motor/sistemas/corpo';
@@ -102,7 +106,6 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
         Quem convive com você continua perto sem esforço; quem está longe, esfria. Com a mesma pessoa, no mesmo ano, cada coisa a mais aproxima menos.
       </p>
 
-      <NaRede vida={vida} agir={agir} />
       <ConhecerAlguem vida={vida} agir={agir} />
       <Voce vida={vida} agir={agir} />
       {pessoa && <FichaPessoa key={pessoa.id} vida={vida} p={pessoa} vin={vida.vinculos[pessoa.id]} agir={agir} aoFechar={() => abrir(null)} />}
@@ -261,7 +264,10 @@ function Voce({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   );
 }
 
-const MAX_ACOES = 4;
+const GRUPOS_DA_FICHA: { id: GrupoDeInteracao | 'chamado'; rotulo: string }[] = [
+  { id: 'chamado', rotulo: 'Como reagir' }, { id: 'juntos', rotulo: 'Fazer juntos' }, { id: 'conversar', rotulo: 'Conversar' },
+  { id: 'cuidar', rotulo: 'Cuidar e ajudar' }, { id: 'relacao', rotulo: 'A relação' }
+];
 
 /** O que está acontecendo com a pessoa agora, em uma linha. */
 function agoraDela(vida: Vida, p: Pessoa, vin: Vinculo): string {
@@ -286,7 +292,8 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   const ip = idadePessoa(vida, p);
   const papel = papelDe(p, vin);
   const acoes = p.vivo ? interacoesPara(vida, p.id) : [];
-  const principais = todas ? acoes : acoes.slice(0, MAX_ACOES);
+  // O que é seu e dá para usar com ESTA pessoa (tocar para ela, jogar, cozinhar, ver um filme): o objeto entra na relação.
+  const usosComEla = p.vivo && !p.especie ? coisasDaVida(vida).flatMap(t => usosDaCoisa(t.coisaId).filter(u => u.com && podeTentar(disponibilidadeUsarCoisa(vida, t.id, u.id, p.id))).map(uso => ({ t, uso }))).slice(0, 4) : [];
   const quem = quemE(vida, p, vin);
   const onde = ondeEsta(vida, p, vin);
   const como = comoEsta(vida, p, vin);
@@ -340,17 +347,31 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
         )}
         {p.vivo && acoes.length > 0 && (
           <div className="ficha__acoes">
-            <h3 className="ficha__subtitulo">{vin.chamado ? 'Como reagir' : 'O que fazer junto'}</h3>
-            <div className="grupo-acoes">
-              {principais.map(x => (
-                <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={x.variante} mostrarChance={x.chance}
-                  ocultarImpossivel={x.id === 'convidar'}>
-                  {rotuloInteracao(vida, p.id, x.id)}
-                </BotaoAcao>
-              ))}
-              {acoes.length > MAX_ACOES && <button type="button" className="botao botao--discreto" aria-expanded={todas} onClick={() => setTodas(t => !t)}>{todas ? 'Menos' : `Mais (${acoes.length - MAX_ACOES})`}</button>}
-              {papel === 'parceiro' && idade(vida) >= 18 && <BotaoAcao vida={vida} acao={{ tipo: 'adotar' }} agir={agir} variante="discreto" ocultarImpossivel>Entrar juntos com um pedido de adoção</BotaoAcao>}
-            </div>
+            {/* FIX pós-REWORK 4: o que dá para fazer com a pessoa, por tipo — fazer junto primeiro (o que se FAZ, não só o
+                que se diz), depois conversar, cuidar e ajudar, e a relação em si. A reação a um chamado vem antes de tudo. */}
+            {GRUPOS_DA_FICHA.map(g => {
+              const lista = acoes.filter(x => (x.id === 'chamado_sim' || x.id === 'chamado_nao' ? 'chamado' : grupoDaInteracao(x.id)) === g.id);
+              const extra = g.id === 'juntos' ? usosComEla : [];
+              if (!lista.length && !extra.length) return null;
+              const aberto = todas || g.id === 'chamado' || g.id === 'juntos';
+              const visiveis = aberto ? lista : lista.slice(0, 3);
+              return (
+                <div key={g.id} className={`ficha__grupo ficha__grupo--${g.id}`}>
+                  <h3 className="ficha__subtitulo">{g.id === 'chamado' ? 'Como reagir' : g.rotulo}</h3>
+                  <div className="grupo-acoes">
+                    {visiveis.map(x => (
+                      <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={x.variante} mostrarChance={x.chance}
+                        ocultarImpossivel={x.id === 'convidar'}>
+                        {rotuloInteracao(vida, p.id, x.id)}
+                      </BotaoAcao>
+                    ))}
+                    {extra.map(x => <BotaoAcao key={`${x.t.id}:${x.uso.id}`} vida={vida} acao={{ tipo: 'usar_coisa', coisaTidaId: x.t.id, uso: x.uso.id, pessoaId: p.id }} agir={agir} variante="secundario">{(x.uso.rotuloCom ?? x.uso.rotulo).replace('{nome}', p.nome)}</BotaoAcao>)}
+                    {g.id === 'relacao' && papel === 'parceiro' && idade(vida) >= 18 && <BotaoAcao vida={vida} acao={{ tipo: 'adotar' }} agir={agir} variante="discreto" ocultarImpossivel>Entrar juntos com um pedido de adoção</BotaoAcao>}
+                    {!aberto && lista.length > 3 && <button type="button" className="botao botao--discreto" aria-expanded={false} onClick={() => setTodas(true)}>{`Mais (${lista.length - 3})`}</button>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -456,7 +477,7 @@ function CaminhoDaAmizade({ vida, p, vin }: { vida: Vida; p: Pessoa; vin: Vincul
  */
 function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vinculo; agir: (a: Acao) => boolean }) {
   const [presentes, setPresentes] = useState(false);
-  const conta = contaAtiva(vida);
+  const conta = contasAtivas(vida).length > 0;
   const ip = idadePessoa(vida, p);
   const bloqueado = vin.digital?.bloqueado !== undefined;
   const lista = presentes ? presentesPara(vida, p.id).slice(0, 8) : [];
@@ -482,7 +503,7 @@ function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vin
       )}
       {conta && ip >= 13 && (
         <div className="grupo-acoes grupo-acoes--linha ficha__rede">
-          {!bloqueado && !vin.digital?.segue && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'seguir', pessoaId: p.id } }} agir={agir} variante="discreto">Seguir no Mural</BotaoAcao>}
+          {!bloqueado && !vin.digital?.segue && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'seguir', pessoaId: p.id } }} agir={agir} variante="discreto">Seguir nas redes</BotaoAcao>}
           {!bloqueado && vin.digital?.segue && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'deixar', pessoaId: p.id } }} agir={agir} variante="discreto">Deixar de seguir</BotaoAcao>}
           {!bloqueado && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'bloquear', pessoaId: p.id } }} agir={agir} variante="perigo">Bloquear</BotaoAcao>}
           {bloqueado && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'desbloquear', pessoaId: p.id } }} agir={agir} variante="secundario">Desbloquear</BotaoAcao>}

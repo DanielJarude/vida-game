@@ -4,7 +4,7 @@
  * número da interface é calculado fora do motor.
  */
 
-import { variantesDeVeiculo } from '../motor/dados/pertences';
+import { chaveDaFachada, corDoVeiculo, fachadaDe } from '../motor/dados/pertences';
 import { formatarDinheiroCheio, formatarDinheiroCurto } from '../motor/mundo/moeda';
 import type { Especie } from '../motor/tipos';
 import type { Bem, Imovel, LinhaRazao, Veiculo, Vida } from '../motor/tipos';
@@ -15,7 +15,7 @@ import { municipio, nomeLugar, rotuloPerfil } from '../motor/dados/lugares';
 import { mesesRestantes, orcamento, seguranca, type NivelSeguranca, type Orcamento } from '../motor/sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../motor/sistemas/domicilio';
 import { petsDaCasa, estadoDoPet } from '../motor/sistemas/pets';
-import { estadoDoVeiculo, anosDoVeiculo, nomeDoVeiculo, versaoDoVeiculo } from '../motor/sistemas/veiculos';
+import { estadoDoVeiculo, anosDoVeiculo, nomeComCor, versaoDoVeiculo } from '../motor/sistemas/veiculos';
 import { casaApertada } from '../motor/sistemas/imoveis';
 import { anoDe } from '../motor/tempo';
 
@@ -68,11 +68,23 @@ export interface LeituraLar {
   veiculo?: 'carro' | 'moto' | 'bicicleta';
   /** A forma do veículo na porta (o desenho): hatch, picape, scooter, mountain bike. */
   formaVeiculo?: FormaVeiculo;
+  /** FIX pós-REWORK 4: a cor do veículo na porta e a fachada da casa (a cor de verdade, do mundo). */
+  corVeiculo?: string;
+  fachada?: { cor: string; nome: string };
   janelasAcesas: number;
 }
 
 const FORMAS_DE_MODELO: readonly FormaDaCasa[] = ['republica', 'kitnet', 'apto_1q', 'apto_2q', 'apto_3q', 'alto_padrao', 'casa_simples', 'casa_2q', 'casa_3q', 'casa_grande', 'sitio'];
-const formaDoModelo = (id: string): FormaDaCasa => (FORMAS_DE_MODELO as readonly string[]).includes(id) ? id as FormaDaCasa : 'apto_2q';
+export const formaDoModelo = (id: string): FormaDaCasa => (FORMAS_DE_MODELO as readonly string[]).includes(id) ? id as FormaDaCasa : 'apto_2q';
+
+/** A chave da fachada da casa onde se mora (a mesma do anúncio de onde ela veio: `dados/pertences.chaveDaFachada`). */
+function chaveDaCasa(v: Vida): string {
+  const m = v.moradia;
+  if (m.tipo === 'pais' || m.tipo === 'parente') return `${v.eu.municipioNatal}:familia:${v.id}`;
+  const im = m.tipo === 'propria' ? v.financas.bens.find((x): x is Imovel => x.tipo === 'imovel' && x.id === m.imovelId) : undefined;
+  return im ? chaveDoImovel(im) : chaveDaFachada(m.municipioId, m.modeloId, m.bairro, m.tInicio);
+}
+export const chaveDoImovel = (im: Imovel) => chaveDaFachada(im.municipioId, im.modeloId, im.bairro, im.tCompra);
 
 /** Só lê: o estado do imóvel próprio onde se mora (o motor é quem o muda). */
 function condicaoDoLar(v: Vida): CondicaoDoLar {
@@ -155,6 +167,8 @@ export function leituraDoLar(v: Vida): LeituraLar {
     bichos,
     veiculo: cat,
     formaVeiculo: vei ? formaDaVersao(versaoVeiculo(vei.versaoId), vei.modeloId) : undefined,
+    corVeiculo: vei ? corDoVeiculo(vei, modeloVeiculo(vei.modeloId).categoria).cor : undefined,
+    fachada: fachadaDe(chaveDaCasa(v), forma),
     janelasAcesas: 1 + junto.length
   };
 }
@@ -293,6 +307,9 @@ export interface LeituraBem {
   /** REWORK 4: a cor do veículo (e o nome dela). */
   cor?: string;
   corNome?: string;
+  /** FIX pós-REWORK 4: o estado em número (o desenho mostra o desgaste) e a fachada do imóvel. */
+  estadoNumero?: number;
+  fachada?: { cor: string; nome: string };
   modeloId: string;
   titulo: string;
   meta: string;
@@ -323,7 +340,7 @@ export function leituraDoBem(v: Vida, b: Bem): LeituraBem {
     const m = modeloMoradia(b.modeloId);
     const aqui = v.moradia.imovelId === b.id;
     return {
-      id: b.id, tipo: 'imovel', icone: m.id, modeloId: m.id,
+      id: b.id, tipo: 'imovel', icone: m.id, modeloId: m.id, fachada: fachadaDe(chaveDoImovel(b), formaDoModelo(m.id)),
       titulo: `${cap(b.herdado && b.nome === 'casa da família' ? 'casa da família' : m.nome)}${b.bairro ? ` ${b.bairro}` : ''}`,
       meta: `${b.herdado ? 'Herdado' : 'Comprado'} em ${anoDe(b.tCompra)} · ${dono}${b.municipioId !== v.moradia.municipioId ? ` · em ${municipio(b.municipioId).nome}` : ''}`,
       estado: aqui ? 'Você mora aqui.' : b.alugadoPor ? `Alugado por ${dinheiroCurto(b.alugadoPor)} por mês.` : 'Vazio.',
@@ -335,11 +352,12 @@ export function leituraDoBem(v: Vida, b: Bem): LeituraBem {
   const m = modeloVeiculo(b.modeloId);
   const anos = anosDoVeiculo(v, b);
   return {
-    id: b.id, tipo: 'veiculo', icone: m.categoria, forma: formaDaVersao(versaoVeiculo(b.versaoId), m.id), modeloId: m.id,
+    id: b.id, tipo: 'veiculo', icone: m.categoria, forma: formaDaVersao(versaoVeiculo(b.versaoId), m.id), modeloId: m.id, estadoNumero: b.estado,
     // REWORK 4: a cor deste veículo (da compra; saves antigos: estável pelo id).
-    cor: b.cor ?? variantesDeVeiculo(m.categoria)[parseInt(b.id.replace(/\D/g, '') || '0', 10) % variantesDeVeiculo(m.categoria).length].cor,
-    corNome: b.corNome ?? variantesDeVeiculo(m.categoria)[parseInt(b.id.replace(/\D/g, '') || '0', 10) % variantesDeVeiculo(m.categoria).length].nome,
-    titulo: `${cap(nomeDoVeiculo(b))}${b.anoFabricacao ? ` ${b.anoFabricacao}` : ''}`,
+    cor: corDoVeiculo(b, m.categoria).cor,
+    corNome: corDoVeiculo(b, m.categoria).nome,
+    // FIX pós-REWORK 4: o nome leva a cor ("Fiat Argo vermelho 2019"): este carro, não um carro.
+    titulo: `${cap(nomeComCor(b))}${b.anoFabricacao ? ` ${b.anoFabricacao}` : ''}`,
     meta: cap(`${versaoDoVeiculo(b) ? `${versaoDoVeiculo(b)!.dica} · ` : ''}${b.usado ? 'comprado usado' : 'comprado zero'} em ${anoDe(b.tCompra)} · ${anos <= 1 ? 'quase novo' : `${anos} anos${m.raro ? '' : ' de estrada'}`} · ${dono}`),
     estado: cap(estadoDoVeiculo(b)) + '.',
     valor: b.valor, financiamento,

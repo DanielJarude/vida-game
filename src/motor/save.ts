@@ -42,6 +42,7 @@ import { CURSOS_NPC } from './sistemas/filhos';
 import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 import { atribuirVersoesAosVeiculos } from './sistemas/versoesVeiculo';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
+import { normalizarRedes } from './sistemas/redesBase';
 
 export const VERSAO_SAVE = 20;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
@@ -103,7 +104,10 @@ export function interpretar(bruto: string): Leitura {
   const d = dados as Record<string, unknown>;
   if (d.versao === VERSAO_SAVE) {
     const erro = validar(d);
-    return erro ? { tipo: 'invalido', motivo: erro } : { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
+    if (erro) return { tipo: 'invalido', motivo: erro };
+    // FIX pós-REWORK 4: a conta do "Mural" (REWORK 4) é a do Instagram — mesma versão, só o nome da plataforma.
+    normalizarRedes(d as unknown as Vida);
+    return { tipo: 'ok', vida: d as unknown as Vida, migrado: false };
   }
   // v19 → v20 (o mundo): nascer, ter nacionalidade e morar viram três coisas. Toda vida anterior nasceu e mora no
   // Brasil e é brasileira; a migração só escreve isso. A versão sobe porque um jogo v19 não sabe ler uma cidade de
@@ -1444,7 +1448,12 @@ function validarVidaVivida(d: Record<string, unknown>): string | null {
   const redes = d.redes as { contas?: Record<string, Record<string, unknown>> } | undefined;
   if (redes !== undefined && (typeof redes !== 'object' || !redes.contas || typeof redes.contas !== 'object'
     || Object.values(redes.contas).some(c => !ehTexto(c.plataforma) || !ehTexto(c.arroba) || !finito(c.seguidores) || !finito(c.credibilidade) || !finito(c.tCriada)
-      || !listaDe(c.publicacoes, x => ehTexto(x.id) && finito(x.t) && ehTexto(x.tema) && ehTexto(x.texto) && finito(x.alcance))))) return 'Rede social inválida.';
+      || !listaDe(c.publicacoes, x => ehTexto(x.id) && finito(x.t) && ehTexto(x.tema) && ehTexto(x.texto) && finito(x.alcance))
+      // FIX pós-REWORK 4 (opcionais): engajamento, verificação, suspensão, toxicidade, totais, celebridades, quem descobriu.
+      || ![c.engajamento, c.verificada, c.pedidoVerificacao, c.recusaVerificacao, c.suspensaAte, c.advertencias, c.toxicidade, c.monetizada, c.comprados, c.apagada].every(x => x === undefined || finito(x))
+      || !opcional(c.selo, x => x === 'pago')
+      || !opcional(c.totais, x => !!x && typeof x === 'object' && Object.values(x as object).every(finito))
+      || !opcional(c.celebridades, x => Array.isArray(x) && x.every(ehTexto)) || !opcional(c.descobriram, x => Array.isArray(x) && x.every(ehTexto))))) return 'Rede social inválida.';
   const mente = d.mente as Record<string, unknown>;
   if (!opcional(mente.estresseAlto, x => !!x && finito((x as Record<string, unknown>).anos) && finito((x as Record<string, unknown>).t))) return 'Estresse inválido.';
   const edu = d.educacao as Record<string, unknown>;

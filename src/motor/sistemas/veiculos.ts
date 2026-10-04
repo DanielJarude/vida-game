@@ -17,6 +17,7 @@ import { escrever } from '../nucleo';
 import { anoDe } from '../tempo';
 import { economiaLocal } from '../dados/lugares';
 import { depreciacao, modeloVeiculo, nomeDaVersao, versaoVeiculo, type CategoriaVeiculo, type ModeloVeiculo } from '../dados/bens';
+import { corConcordada, corDoVeiculo } from '../dados/pertences';
 import { dinheiro as fmt } from '../texto';
 import { abalar } from './abalo';
 import { okDePagar } from './dinheiro';
@@ -35,6 +36,13 @@ export const versaoDoVeiculo = (b: { versaoId?: string }) => versaoVeiculo(b.ver
 
 /** O nome para mostrar: marca e modelo da versão ("Fiat Mobi"); sem versão, o nome guardado. */
 export const nomeDoVeiculo = (b: { versaoId?: string; nome: string }) => { const x = versaoVeiculo(b.versaoId); return x ? nomeDaVersao(x) : b.nome; };
+/** O veículo é "a" (a moto, a Biz, a bicicleta) ou "o" (o carro, o Argo)? */
+export const vecFeminino = (b: { versaoId?: string; modeloId: string }) => { const x = versaoVeiculo(b.versaoId); if (x) return x.artigo === 'a'; const c = modeloVeiculo(b.modeloId).categoria; return c !== 'carro' && c !== 'aeronave' && b.modeloId !== 'veleiro'; };
+/** "Fiat Argo vermelho", "Honda Biz preta", "Caloi Andes azul": o veículo desta vida, com a cor dele. */
+export const nomeComCor = (b: { id: string; versaoId?: string; modeloId: string; nome: string; cor?: string; corNome?: string }) => {
+  const c = corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria);
+  return `${nomeDoVeiculo(b)}${c.nome ? ` ${corConcordada(c.nome, vecFeminino(b))}` : ''}`;
+};
 
 /** Quanto custa um igual zero quilômetro (a versão, senão a classe). */
 export const precoNovoDoVeiculo = (b: { modeloId: string; versaoId?: string }) => versaoVeiculo(b.versaoId)?.preco ?? modeloVeiculo(b.modeloId).preco;

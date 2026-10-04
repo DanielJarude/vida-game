@@ -1,0 +1,143 @@
+/*
+ * FIX pós-REWORK 4 — "eu consigo agir dentro da minha vida".
+ *
+ * A interface continua escura e editorial (tokens.css). A cor vem do MUNDO: a cor de cada plataforma (a que o mundo
+ * associa a ela), a cor do objeto e do veículo, a semântica do estresse (calmo → no limite). Nada de cor por enfeite.
+ */
+
+/* ---------------------------------------------------------- O estresse: um medidor só, grande, com o porquê */
+.estresse { --nivel: var(--pig-folha); margin: var(--space-3) 0 var(--space-6); padding: var(--space-4) var(--space-5); border-radius: var(--radius-lg); background: color-mix(in oklab, var(--nivel) 7%, var(--bg-raised)); border: 1px solid color-mix(in oklab, var(--nivel) 30%, var(--rule)); }
+.estresse--moderado { --nivel: var(--pig-ipe); }
+.estresse--alto { --nivel: var(--warning); }
+.estresse--no-limite { --nivel: var(--danger); }
+.estresse__topo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.estresse__rotulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); margin: 0; }
+.estresse__leitura { display: flex; align-items: baseline; gap: var(--space-2); margin: 0; }
+.estresse__valor { font-family: var(--font-serif); font-size: 2.1rem; line-height: 1; color: var(--text-primary); font-weight: 500; }
+.estresse__palavra { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--nivel); }
+.estresse__tendencia { font-size: var(--type-caption); color: var(--text-secondary); padding: 1px 8px; border-radius: 999px; background: var(--surface); }
+.estresse__tendencia--subindo { color: var(--warning); }
+.estresse__tendencia--baixando { color: var(--pig-folha); }
+.estresse__barra { position: relative; height: 14px; margin: var(--space-3) 0 var(--space-2); border-radius: 7px; background: linear-gradient(90deg, color-mix(in oklab, var(--pig-folha) 22%, transparent) 0 35%, color-mix(in oklab, var(--pig-ipe) 20%, transparent) 35% 55%, color-mix(in oklab, var(--warning) 20%, transparent) 55% 75%, color-mix(in oklab, var(--danger) 22%, transparent) 75%); overflow: hidden; }
+.estresse__cheio { display: block; height: 100%; border-radius: inherit; background: var(--nivel); transition: width var(--motion-base, .3s); }
+.estresse__marca { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(18, 13, 10, 0.55); }
+.estresse__frase { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-primary); margin: var(--space-2) 0 var(--space-4); }
+.estresse__colunas { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.estresse__coluna h3, .estresse__sub { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); margin: 0 0 var(--space-2); }
+.estresse__coluna ul { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.estresse__coluna li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-2); padding-left: var(--space-3); border-left: 3px solid var(--rule-strong); }
+.estresse__coluna--pesa li { border-left-color: color-mix(in oklab, var(--warning) 60%, transparent); }
+.estresse__coluna--ajuda li { border-left-color: color-mix(in oklab, var(--pig-folha) 70%, transparent); }
+.estresse__causa { color: var(--text-primary); }
+.estresse__peso { font-size: var(--type-meta); letter-spacing: 0.03em; color: var(--text-muted); }
+.estresse__peso--forte { color: var(--danger); }
+.estresse__peso--moderado { color: var(--warning); }
+.estresse__peso--alivio { color: var(--pig-folha); }
+.estresse__ir { font-size: var(--type-caption); min-height: 32px; }
+.estresse__folego, .estresse__riscos { font-size: var(--type-body); color: var(--text-secondary); margin: var(--space-4) 0 0; }
+.estresse__folego strong, .estresse__riscos strong { color: var(--text-primary); font-weight: 600; }
+.estresse__riscos { color: color-mix(in oklab, var(--warning) 45%, var(--text-secondary)); }
+.estresse__aliviar { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--rule); }
+.rotina__estresse { font-size: var(--type-caption); }
+.rotina__estresse--alivia { color: var(--pig-folha); }
+.rotina__estresse--pesa { color: var(--warning); }
+@media (max-width: 600px) { .estresse { padding: var(--space-3) var(--space-4); } .estresse__colunas { grid-template-columns: 1fr; } .estresse__valor { font-size: 1.8rem; } }
+
+/* ---------------------------------------------------------- Sair e ver gente: com quem */
+.com-quem { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
+.com-quem__pessoa { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: var(--space-2); border-radius: var(--radius-md); text-align: center; min-height: var(--touch-target); }
+.com-quem__pessoa:hover { background: var(--surface); }
+.com-quem__nome { font-family: var(--font-serif); color: var(--text-primary); }
+.com-quem__papel { font-size: var(--type-meta); color: var(--text-muted); }
+
+/* ---------------------------------------------------------- Redes sociais: cada plataforma com a sua cara */
+.redes__intro { max-width: var(--measure-prosa); }
+.redes__plataformas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); list-style: none; margin: var(--space-3) 0 var(--space-4); padding: 0; }
+.plataforma { --cor-plataforma: var(--accent); display: grid; grid-template-columns: 34px 1fr; grid-template-areas: 'glifo nome' 'glifo estado'; align-items: center; gap: 0 var(--space-2); width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); text-align: left; background: var(--surface); border: 1px solid var(--rule); min-height: 56px; }
+.plataforma:hover { background: var(--surface-hover); }
+.plataforma--aberta { border-color: var(--cor-plataforma); box-shadow: inset 0 0 0 1px var(--cor-plataforma); background: color-mix(in oklab, var(--cor-plataforma) 12%, var(--bg-raised)); }
+.plataforma--fora { opacity: 0.6; }
+.plataforma__glifo { grid-area: glifo; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff8ee; background: var(--cor-plataforma); }
+.plataforma__nome { grid-area: nome; font-weight: 600; color: var(--text-primary); }
+.plataforma__estado { grid-area: estado; font-size: var(--type-caption); color: var(--text-muted); }
+.plataforma--com-conta .plataforma__estado { color: var(--text-secondary); }
+.plataforma-painel { --cor-plataforma: var(--accent); padding: var(--space-4) var(--space-5); border-radius: var(--radius-lg); background: var(--bg-raised); border: 1px solid var(--rule); border-top: 4px solid var(--cor-plataforma); }
+.plataforma-painel__cabeca { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
+.plataforma-painel__titulo { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-sans); font-size: var(--type-subheading); font-weight: 600; color: var(--text-primary); margin: 0; }
+.plataforma-painel__titulo svg { color: var(--cor-plataforma); }
+.plataforma-painel__como { font-family: var(--font-serif); color: var(--text-secondary); margin: var(--space-2) 0 var(--space-3); max-width: var(--measure-prosa); }
+.plataforma-painel__numero { margin: 0; color: var(--text-secondary); }
+.plataforma-painel__numero strong { font-family: var(--font-serif); font-size: var(--type-heading); color: var(--text-primary); font-weight: 500; }
+.plataforma-painel__dados { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: var(--space-3) 0; }
+.plataforma-painel__dados div { display: flex; flex-direction: column; }
+.plataforma-painel__dados dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.plataforma-painel__dados dd { margin: 0; color: var(--text-primary); }
+.plataforma-painel__sub { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--cor-plataforma); margin: var(--space-4) 0 var(--space-1); filter: brightness(1.35); }
+.plataforma-painel__temas { align-items: flex-start; }
+.plataforma-painel__mais { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--rule); }
+.plataforma-painel__bloco { margin-top: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface); }
+.tema-post { display: flex; flex-direction: column; max-width: 260px; }
+.tema-post__dica { font-size: var(--type-meta); color: var(--text-muted); padding: 0 var(--space-1); }
+.publicacao__reacao { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); }
+.selo { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--cor-plataforma); color: #fff8ee; font-size: 11px; font-weight: 700; }
+.confirmar { margin-top: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--danger-line-soft); }
+@media (max-width: 600px) { .redes__plataformas { grid-template-columns: repeat(2, minmax(0, 1fr)); } .plataforma-painel { padding: var(--space-3); } .tema-post { max-width: none; width: 100%; } }
+
+/* ---------------------------------------------------------- Veículos: a cor e o estado são do veículo */
+.desenho-veiculo--colorido [fill-opacity="0.14"] { fill: var(--cor-veiculo); fill-opacity: 0.94; }
+.desenho-veiculo--colorido .quadro { stroke: var(--cor-veiculo); stroke-width: 2.2; }
+.oferta.oferta--veiculo { grid-template-columns: 84px minmax(0, 1fr) auto; }
+.oferta__veiculo { display: grid; place-items: center; width: 84px; height: 52px; border-radius: var(--radius-md); background: radial-gradient(ellipse at 50% 90%, color-mix(in oklab, var(--cor-veiculo, #888) 22%, transparent), transparent 70%), var(--bg-inset); }
+.oferta.oferta--veiculo .desenho-veiculo { width: 72px; height: 36px; }
+.oficina .oferta .desenho-veiculo { width: 64px; height: 32px; }
+.detalhe__veiculo { display: grid; place-items: center; padding: var(--space-4) 0 var(--space-2); margin: var(--space-2) 0; border-radius: var(--radius-lg); background: radial-gradient(ellipse at 50% 85%, color-mix(in oklab, var(--text-primary) 10%, transparent), transparent 65%), var(--bg-inset); }
+.detalhe__veiculo .desenho-veiculo { width: min(220px, 70vw); height: auto; }
+@media (max-width: 480px) { .oferta.oferta--veiculo { grid-template-columns: 76px minmax(0, 1fr); } .oferta__veiculo { width: 76px; } .oferta.oferta--veiculo .oferta__preco { grid-column: 2; } }
+
+/* ---------------------------------------------------------- A casa na cor dela (a fachada é do mundo) */
+.cena--colorida .cena__parede { fill: color-mix(in oklab, var(--fachada) 58%, var(--bg-raised)); }
+.cena--colorida .cena__porta { fill: color-mix(in oklab, var(--fachada) 22%, var(--bg-deep)); }
+.cena__veiculo.desenho-veiculo--colorido .quadro { stroke: var(--cor-veiculo); stroke-width: 2.2; }
+.cena--miniatura { max-width: none; height: auto; flex: none; }
+.oferta.oferta--casa { grid-template-columns: 96px minmax(0, 1fr) auto; }
+.oferta__casa { position: relative; display: grid; place-items: center; width: 96px; min-height: 52px; border-radius: var(--radius-md); background: var(--bg-inset); }
+.oferta__casa-selo { position: absolute; top: 2px; right: 4px; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-secondary); }
+@media (max-width: 480px) { .oferta.oferta--casa { grid-template-columns: 88px minmax(0, 1fr); } .oferta__casa { width: 88px; } .oferta.oferta--casa .oferta__preco { grid-column: 2; } }
+
+/* ---------------------------------------------------------- Pertences: o objeto grande o bastante para ser reconhecido */
+.pertence { grid-template-columns: 88px 1fr; }
+.pertence__objeto { width: 88px; height: 88px; }
+.pertence--veiculo { grid-template-columns: 116px 1fr; }
+.pertence__objeto--veiculo { width: 116px; height: 88px; background: radial-gradient(ellipse at 50% 80%, color-mix(in oklab, var(--cor-do-objeto, #888) 26%, transparent), transparent 70%), var(--bg-inset); }
+.pertence__objeto--veiculo .desenho-veiculo { width: 104px; height: 52px; }
+.pertences__lista--veiculos { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+@media (max-width: 480px) { .pertence { grid-template-columns: 64px 1fr; } .pertence__objeto { width: 64px; height: 64px; } .pertence--veiculo { grid-template-columns: 1fr; } .pertence__objeto--veiculo { width: 100%; height: 84px; } .pertences__lista--veiculos { grid-template-columns: 1fr; } }
+
+/* ---------------------------------------------------------- Trabalho: no dia a dia */
+.dia-a-dia { margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: color-mix(in oklab, var(--tom-trabalho) 6%, var(--bg-raised)); border: 1px solid color-mix(in oklab, var(--tom-trabalho) 22%, var(--rule)); }
+.dia-a-dia__titulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom-trabalho); margin: 0 0 var(--space-2); }
+.dia-a-dia__lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2) var(--space-4); list-style: none; margin: 0; padding: 0; }
+.dia-a-dia__item { display: flex; flex-direction: column; gap: 2px; }
+.dia-a-dia__porque { font-size: var(--type-caption); color: var(--text-muted); }
+
+/* ---------------------------------------------------------- Ficha: os grupos do que fazer com a pessoa */
+.ficha__grupo { margin-top: var(--space-3); }
+.ficha__grupo--juntos .ficha__subtitulo { color: var(--tom-pessoas); }
+.ficha__grupo--chamado .ficha__subtitulo { color: var(--warning); }
+.experiencia__preco { font-family: var(--font-sans); font-size: var(--type-caption); font-weight: 400; color: var(--text-muted); margin-left: var(--space-2); white-space: nowrap; }
+.icone-moradia.icone-moradia--miniatura { width: auto; height: auto; padding: 4px 6px; background: var(--bg-inset); }
+.oferta__cor { color: var(--text-secondary); }
+.oferta__cor::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; background: var(--cor-veiculo); box-shadow: 0 0 0 1px var(--rule-strong); }
+
+/* ---------------------------------------------------------- Tempo livre ocupa a coluna inteira (a página é flex) */
+.tempo { width: 100%; min-width: 0; }
+/* O veículo colorido: o traço (rodas, contorno, vidros) é neutro e claro — a cor que se vê é a da lataria, não a da área. */
+.desenho-veiculo.desenho-veiculo--colorido, .cena__veiculo.desenho-veiculo--colorido { color: #ece3d4; }
+.pertences__lista--veiculos { grid-template-columns: 1fr; }
+.pertence--veiculo .pertence__usos .acao { flex: 0 1 auto; }
+/* Os objetos à venda grandes o bastante para reconhecer o que são antes de ler o nome. */
+.oferta.oferta--objeto { grid-template-columns: 76px minmax(0, 1fr) auto; }
+.oferta--objeto .oferta__objeto { width: 76px; padding: 4px; border-radius: var(--radius-md); background: var(--bg-inset); }
+.oferta--objeto .oferta__objeto .objeto { width: 64px; height: 64px; }
+@media (max-width: 480px) { .oferta.oferta--objeto { grid-template-columns: 72px minmax(0, 1fr); } .oferta--objeto .oferta__objeto { width: 72px; } }
+.ficha__grupo .grupo-acoes { flex-direction: row; flex-wrap: wrap; }

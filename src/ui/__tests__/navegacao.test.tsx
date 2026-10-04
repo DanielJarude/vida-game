@@ -14,7 +14,7 @@ import { salvar } from '../../motor/save';
 import { contratar } from '../../motor/sistemas/trabalho';
 import { ocupacao } from '../../motor/dados/ocupacoes';
 import type { Vida } from '../../motor/tipos';
-import { AREAS, MAPA_DE_INTENCOES, SECOES_VIDA, rotuloDoLugar, type Lugar } from '../navegacao';
+import { AREAS, MAPA_DE_INTENCOES, SECOES_TEMPO, SECOES_VIDA, rotuloDoLugar, type Lugar } from '../navegacao';
 import { Estudos } from '../jogo/Estudos';
 import { Voce } from '../jogo/Voce';
 import { VidaConcreta } from '../jogo/VidaConcreta';
@@ -48,6 +48,8 @@ function ir(l: Lugar): void {
   const a = AREAS.find(x => x.id === l.area)!;
   fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
   if (l.secao) fireEvent.click(screen.getByRole('tab', { name: SECOES_VIDA.find(s => s.id === l.secao)!.rotulo }));
+  // FIX pós-REWORK 4: as abas de Tempo livre.
+  if (l.aba) fireEvent.click(screen.getByRole('tab', { name: SECOES_TEMPO.find(s => s.id === l.aba)!.rotulo }));
 }
 const adulta = (v: Vida) => {
   v.trabalho.atual = undefined;
@@ -84,7 +86,10 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
   const esperado: Record<string, RegExp> = {
     estudar: /Formação/, atividade_escolar: /O que dá para fazer aqui|Sem estudar agora|caminhos possíveis/, faculdade: /Formação/,
     falar_mae: /Família/, namoro: /Conhecer alguém/, emprego: /Procurar outro caminho|Vagas/, negocio: /Procurar outro caminho/,
-    futebol: /Jogar bola|Sua semana/, carro: /Concessionária/, casa: /Procurar (um|outro) lugar/, onde_moro: /Quem paga a casa/,
+    futebol: /Cuidar de si|Esporte|Corpo/, carro: /Concessionária/,
+    // FIX pós-REWORK 4: as intenções novas (e as que não tinham o que conferir) levam a um lugar que mostra o que promete.
+    hobby: /Explorar outras atividades|Arte|Leitura/, sair: /Com quem|Sair e ver gente/, estresse: /O que está pesando/, viajar: /Viagens e experiências/,
+    rede: /Criar uma conta no Instagram|Instagram/, fazer_junto: /Família|Amigos|Perto|Gente da sua vida/, agir_trabalho: /No dia a dia do trabalho|O que dá para fazer agora/, usar_carro: /Nada seu ainda|Seu veículo|Seus veículos/, pertences: /Nada seu ainda|Para usar|Pertences/, casa: /Procurar (um|outro) lugar/, onde_moro: /Quem paga a casa/,
     mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /Linha da Vida/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {
