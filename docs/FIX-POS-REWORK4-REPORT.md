@@ -343,12 +343,15 @@ coerente com o painel, os botões da ficha em linha, a miniatura das casas recor
 
 ## 22. Pendências reais (não declarar pronto o que não está)
 
-- **APK Android:** **não foi regenerado.** O ambiente desta sessão não tem o JDK 17 nem o Android SDK (o pacote anterior
-  os usou de fora do repositório e eles não existem mais aqui), e o pedido era não transformar isso em pipeline. O
-  botão continua funcionando e baixa o APK do REWORK 4 (`b7985ba`): **o app Android está uma versão atrás do site**
-  (sem as redes 2.0, sem as abas de Tempo livre etc.) até alguém rodar `scripts/android/gerar-apk.mjs` (instruções em
-  `docs/notas/ANDROID-APK.md`). Continua **sem teste em aparelho real**; continua com chave de depuração. O PWA segue
-  sendo o caminho offline validado.
+- **APK Android — regenerado depois do commit `1b10163`** (pedido de correção): `public/android/vida.apk` (5,6 MB,
+  `br.vida.jogo`, minSdk 22, alvo SDK 34, chave de depuração) gerado com `scripts/android/gerar-apk.mjs` a partir do
+  build desta versão (JDK 17.0.20 Temurin e Android SDK 34 instalados FORA do repositório, no diretório de trabalho da
+  sessão). Conferido: o APK leva os pacotes deste FIX (`motor-vida`, o `index` novo) e não leva o service worker; o
+  `www` do app, servido localmente num Chromium a 390 px, nasce, vive 14 anos e abre Tempo livre → Redes sociais.
+  Correção junto: dentro do app (Capacitor) o jogo tentava registrar o service worker que não vai no APK (um 404 no
+  console) — `pwa/registrar.deveRegistrar` agora não registra no app. **Continua sem teste em aparelho real** (não há
+  aparelho nem emulador neste ambiente) e sem atualização automática: a cada versão do jogo, gerar de novo. O PWA
+  segue sendo o caminho offline validado.
 - **Desempenho:** o custo do clone por transação (44% do tempo) é o próximo gargalo; recomendação na seção 14.
 - **Futebol base × amador** (13 × 21): fica para a simulação de 1.000 vidas.
 - **Redes:** sem mensagens diretas com conteúdo, sem "rede de terceiros" (os perfis dos outros), sem tendências por

@@ -27,6 +27,8 @@ export function deveRegistrar(): boolean {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
     if (!('serviceWorker' in navigator)) return false;
     if (window.self !== window.top) return false;
+    // Dentro do app Android (Capacitor) os arquivos já estão no aparelho: o service worker nem vai no APK.
+    if ((window as unknown as { Capacitor?: unknown }).Capacitor) return false;
     if (/(^|\.)itch\.(io|zone)$/.test(location.hostname)) return false;
     return true;
   } catch {

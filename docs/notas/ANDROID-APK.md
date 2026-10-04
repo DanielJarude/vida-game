@@ -45,3 +45,10 @@ para dentro do projeto Android, gera os ícones, roda `gradlew assembleDebug` e 
   instalado num aparelho real** nesta etapa.
 - Assinatura de depuração (veja acima).
 - O APK é um binário de ~5,5 MB versionado em `public/android/`: cada regeneração acrescenta esse tamanho ao histórico.
+
+## Histórico de geração
+
+- REWORK 4 (`b7985ba`): primeira geração.
+- FIX pós-REWORK 4 (depois de `1b10163`): regenerado a partir do build com as redes sociais 2.0 e as abas de Tempo
+  livre; JDK 17.0.20 (Temurin) e Android SDK (platforms;android-34, build-tools;34.0.0) baixados fora do repositório.
+  Junto: o jogo não tenta mais registrar o service worker dentro do app (`ui/pwa/registrar.ts`). Não testado em aparelho.
