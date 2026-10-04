@@ -93,7 +93,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
   return (
     <section className="plataforma-painel" style={estilo} aria-label={pl.nome}>
       <header className="plataforma-painel__cabeca">
-        <h3 className="plataforma-painel__titulo"><Glifo id={id} tamanho={26} /> @{c.arroba}{l.verificacao && (l.verificacao.startsWith('verificada') || l.verificacao === 'selo pago' || l.verificacao === 'identidade verificada') ? <span className="selo" title={l.verificacao} aria-label={l.verificacao}>✓</span> : null}</h3>
+        <h3 className="plataforma-painel__titulo"><Glifo id={id} tamanho={26} /> @{c.arroba}{l.verificacao && (l.verificacao.startsWith('verificada') || l.verificacao === 'selo pago' || l.verificacao === 'identidade verificada') ? <span className="selo-verificado" title={l.verificacao} aria-label={l.verificacao}>✓</span> : null}</h3>
         <p className="plataforma-painel__numero"><strong>{seguidoresEmPalavras(c.seguidores)}</strong> {pl.publico[1]}{c.comprados ? <span className="nota"> ({seguidoresEmPalavras(l.real)} de verdade)</span> : null}</p>
       </header>
       <dl className="plataforma-painel__dados">

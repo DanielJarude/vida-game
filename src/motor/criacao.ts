@@ -11,7 +11,7 @@ import { derivarPredisposicoes } from './sistemas/pessoa';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 import { caminhosVazios } from './sistemas/marcas';
 import { criarRng, rngDe, type Rng } from './rng';
-import { ancestralidadeDe, ancestralidadesDosPais, familiaInicial, misturar, perfilInicial, visualDaAncestralidade, visualDeQuemGerou, visualDosPais } from './sistemas/identidade';
+import { geneticaDe, ancestralidadeDe, ancestralidadesDosPais, familiaInicial, misturar, perfilInicial, visualDaAncestralidade, visualDeQuemGerou, visualDosPais } from './sistemas/identidade';
 import type { Classe, Genero, Origem, Pessoa, Vida, Visual } from './tipos';
 import { tDe, MESES, mesDe, anoDe } from './tempo';
 import { criarPessoa, vincular, visualAleatorio, visualHerdado } from './pessoas';
@@ -20,8 +20,10 @@ import { ocupacoesDaClasse, ocupacao } from './dados/ocupacoes';
 import { liquido, salarioLocal } from './sistemas/renda';
 import { economiaInicial } from './sistemas/economia';
 import { nomeDePet } from './sistemas/mercado';
-import { municipio, nomeLugar, grandesCentros, paisDaCidade } from './dados/lugares';
-import { perfilDoPais } from './mundo/registro';
+import { municipio, nomeLugar, grandesCentros, paisDaCidade, sortearMunicipio } from './dados/lugares';
+import { paisesVivenciaveis, perfilDoPais } from './mundo/registro';
+import { sortearNome, sortearSobrenome } from './dados/nomes';
+import { estiloPara } from './sistemas/identidade';
 import { nacionalidadesAoNascer } from './mundo/cidadania';
 import { rendaNoPais } from './mundo/economia';
 import { NOMES_PET_CACHORRO, NOMES_PET_GATO } from './dados/nomes';
@@ -42,6 +44,39 @@ export interface OpcoesCriacao {
   herdarCores?: boolean;
   semente: number;
   ano?: number;
+}
+
+/**
+ * "Tudo ao acaso" (FIX pós-playtest humano): o nascimento sorteado no MUNDO, não no Brasil.
+ * A ordem é a da vida: país → (divisão e) cidade do país, pelo tamanho → o sobrenome da família, pelos grupos de nomes
+ * daquele lugar (que incluem as famílias de outras origens que vivem lá) → o nome, pela tradição do sobrenome. A
+ * origem e a aparência NÃO saem daqui: saem dos pais (`familiaInicial` lê a tradição do sobrenome; o bebê herda).
+ * O país é sorteado entre os que podem ser vividos agora (os pacotes carregados), com um peso que cresce devagar com
+ * a população — a Índia aparece mais do que a Nova Zelândia, mas a Nova Zelândia aparece.
+ */
+export interface NascimentoSorteado { genero: Genero; nome: string; sobrenome: string; municipioId: string; semente: number }
+export function pesoDoPaisAoAcaso(populacao: number | undefined): number { return Math.pow(Math.max(1, populacao ?? 5), 0.3); }
+export function sortearNascimento(r: Rng, ano = 2026): NascimentoSorteado {
+  const paises = paisesVivenciaveis();
+  const pais = r.weighted(paises, p => pesoDoPaisAoAcaso(p.populacao))?.id ?? paises[0].id;
+  const m = sortearMunicipio(() => r.next(), pais);
+  const genero: Genero = r.chance(0.5) ? 'feminino' : 'masculino';
+  const sobrenome = sortearSobrenome(r, m.pais, m.uf);
+  const nome = sortearNome(r, genero, ano, m.pais, m.uf, sobrenome);
+  return { genero, nome, sobrenome, municipioId: m.id, semente: r.int(1, 2 ** 31 - 2) };
+}
+
+/** A prévia de quem nasce: o MESMO nascimento que `criarVida` fará com estas opções (o bebê e os pais), para a tela
+ *  mostrar de onde os traços vêm. Não guarda nada. */
+export function previaDoNascimento(o: OpcoesCriacao): { eu: Visual; mae?: Visual; pai?: Visual } {
+  const v = criarVida(o);
+  const de = (k: string) => Object.entries(v.vinculos).find(([, x]) => x.parentesco === k)?.[0];
+  const mae = de('mae'), pai = de('pai');
+  return { eu: v.eu.visual, mae: mae ? v.pessoas[mae].visual : undefined, pai: pai ? v.pessoas[pai].visual : undefined };
+}
+/** O corte que combina com a textura que veio dos pais (o acaso não põe "black" em cabelo liso). */
+export function corteCoerente(r: Rng, genero: Genero, textura: string | undefined, atual: string): string {
+  return textura ? estiloPara(r, genero, textura) : atual;
 }
 
 const CLASSES: Classe[] = ['vulneravel', 'trabalhadora', 'media_baixa', 'media', 'alta'];
@@ -214,9 +249,12 @@ export function criarVida(o: OpcoesCriacao): Vida {
 
   // Traços herdados: o bebê puxa os pais em tudo o que é genético (o penteado escolhido pelo jogador fica).
   if (!o.visual || o.herdarCores) {
-    const herd = visualHerdado(r, o.genero, mae.visual, pai?.visual, ancFilhos);
-    const { pele, corCabelo, olhos, textura, olhosForma, nariz, boca, rosto, sobrancelha } = herd;
-    v.eu.visual = { ...v.eu.visual, pele, corCabelo, olhos, textura, olhosForma, nariz, boca, rosto, sobrancelha, ...(o.visual ? {} : { cabelo: herd.cabelo }) };
+    const herd = visualHerdado(r, o.genero, geneticaDe(mae), geneticaDe(pai), ancFilhos);
+    // Tudo o que é genético vem dos pais (os traços de sempre e os universais da Aparência 2.0); o corte e a barba
+    // escolhidos ficam.
+    const { cabelo: _corte, barba: _barba, bigode: _bigode, ...geneticos } = herd;
+    void _corte; void _barba; void _bigode;
+    v.eu.visual = { ...v.eu.visual, ...geneticos, ...(o.visual ? {} : { cabelo: herd.cabelo }) };
   }
 
   const comMae = arranjo === 'pais_juntos' || arranjo === 'mae_solo';
@@ -245,7 +283,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     const filhoDoLado = sobrenome === ladoMae && base === idadeMae ? mae : pai!;
     const [ancA, ancB] = ancestralidadesDosPais(rngDe(id, 'avos', filhoDoLado.id), ancestralidadeDe(filhoDoLado));
     const avo = criarPessoa(v, r, { genero, idade: idadeAvo, municipioId: r.chance(0.7) ? cidade : v.moradia.municipioId, sobrenome, familia: { ancestralidade: genero === 'feminino' ? ancA : ancB, tradicao: filhoDoLado.tradicao } });
-    avo.visual = visualDeQuemGerou(rngDe(avo.id, 'avo'), genero, avo.ancestralidade!, filhoDoLado.visual!);
+    avo.visual = visualDeQuemGerou(rngDe(avo.id, 'avo'), genero, avo.ancestralidade!, geneticaDe(filhoDoLado)!);
     (avosDe[filhoDoLado.id] ??= []).push(avo);
     if (idadeAvo >= 62) {
       avo.ocupacao = flex(genero, 'aposentado', 'aposentada');
@@ -274,7 +312,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   for (let i = 0; i < nIrmaos; i++) {
     const idadeIrmao = r.int(1, Math.max(1, Math.min(14, idadeMae - 17)));
     const g: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
-    const irmao = criarPessoa(v, r, { genero: g, idade: idadeIrmao, municipioId: cidade, sobrenome: sob, visual: visualHerdado(r, g, mae.visual, pai?.visual, ancFilhos), familia: { ancestralidade: ancFilhos, tradicao: v.eu.tradicao } });
+    const irmao = criarPessoa(v, r, { genero: g, idade: idadeIrmao, municipioId: cidade, sobrenome: sob, visual: visualHerdado(r, g, geneticaDe(mae), geneticaDe(pai), ancFilhos), familia: { ancestralidade: ancFilhos, tradicao: v.eu.tradicao } });
     irmao.ocupacao = idadeIrmao >= 4 ? 'estudante' : undefined;
     irmaosCriados.push(irmao);
     vincular(v, irmao, { parentesco: 'irmao', origem: 'familia', proximidade: r.int(60, 80), convivio: ['casa'] });
@@ -287,7 +325,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     const g: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
     const tio = criarPessoa(v, r, { genero: g, idade: Math.max(18, (lado === mae ? idadeMae : idadePai) + r.int(-8, 8)), municipioId: r.chance(0.65) ? cidade : r.pick([grandeCentro, outraCapital, cidade]), sobrenome: lado.sobrenome, familia: { ancestralidade: ancestralidadeDe(lado), tradicao: lado.tradicao } });
     // O tio é irmão do pai ou da mãe: filho dos mesmos avós (quando eles existem no jogo), parecido sem ser igual.
-    { const avs = avosDe[lado.id] ?? []; const ra = rngDe(tio.id, 'tio'); tio.visual = avs.length ? visualDosPais(ra, g, ancestralidadeDe(lado), avs[0].visual, avs[1]?.visual ?? lado.visual) : visualDosPais(ra, g, ancestralidadeDe(lado), lado.visual, visualDeQuemGerou(ra, g, ancestralidadeDe(lado), lado.visual!)); }
+    { const avs = avosDe[lado.id] ?? []; const ra = rngDe(tio.id, 'tio'); tio.visual = avs.length ? visualDosPais(ra, g, ancestralidadeDe(lado), geneticaDe(avs[0]), geneticaDe(avs[1]) ?? geneticaDe(lado)) : visualDosPais(ra, g, ancestralidadeDe(lado), geneticaDe(lado), visualDeQuemGerou(ra, g, ancestralidadeDe(lado), geneticaDe(lado)!)); }
     empregarPai(v, r, tio, classe, tio.municipioId, false);
     vincular(v, tio, { parentesco: 'tio', origem: 'familia', proximidade: r.int(30, 60) });
     if (r.chance(0.6)) {
@@ -296,7 +334,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
         const gp: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
         const primo = criarPessoa(v, r, { genero: gp, idade: Math.max(0, r.int(-3, 7)), municipioId: tio.municipioId, sobrenome: tio.sobrenome, familia: { ancestralidade: ancestralidadeDe(tio), tradicao: tio.tradicao } });
         // O primo: filho do tio e de alguém de fora da família (de origem do lugar).
-        { const rp = rngDe(primo.id, 'primo'); const ancConj = perfilInicial(rp, paisNatal).mix; const conj = visualDaAncestralidade(rp, g === 'masculino' ? 'feminino' : 'masculino', ancConj); primo.ancestralidade = misturar(ancestralidadeDe(tio), ancConj); primo.visual = visualDosPais(rp, gp, primo.ancestralidade!, tio.visual, conj); }
+        { const rp = rngDe(primo.id, 'primo'); const ancConj = perfilInicial(rp, paisNatal).mix; const conj = visualDaAncestralidade(rp, g === 'masculino' ? 'feminino' : 'masculino', ancConj); primo.ancestralidade = misturar(ancestralidadeDe(tio), ancConj); primo.visual = visualDosPais(rp, gp, primo.ancestralidade!, geneticaDe(tio), conj); }
         vincular(v, primo, { parentesco: 'primo', origem: 'familia', proximidade: r.int(25, 50) });
       }
     }

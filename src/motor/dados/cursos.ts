@@ -19,6 +19,7 @@
  * têm seleção própria. Música e Artes Cênicas têm prova de habilidade.
  */
 
+import { paisCorrente } from '../mundo/moeda';
 import type { Dominio, NivelCurso } from '../tipos';
 
 export type AreaFormacao =
@@ -76,12 +77,12 @@ export const CURSOS: readonly Curso[] = [
   // ------------------------------------------------------ Qualificação (ofício)
   { id: 'q_barbeiro', nome: 'Curso de barbeiro', nivel: 'livre', area: 'beleza', meses: 4, publica: 1, privada: 0, ead: false, mensalidade: 380, corte: 0, carga: 'parcial', descricao: 'Corte, barba, atendimento. Sai com tesoura na mão.', pratica: { beleza: 1.4 } },
   { id: 'q_cabeleireiro', nome: 'Curso de cabeleireiro', nivel: 'livre', area: 'beleza', meses: 6, publica: 1, privada: 0, ead: false, mensalidade: 420, corte: 0, carga: 'parcial', descricao: 'Corte, química e escova. Abre a porta dos salões.', pratica: { beleza: 1.4 } },
-  { id: 'q_eletricista', nome: 'Eletricista instalador (NR-10)', nivel: 'livre', area: 'eletrica', meses: 6, publica: 0, privada: 0, ead: false, mensalidade: 360, corte: 0, carga: 'parcial', descricao: 'Instalação residencial e predial com a norma de segurança.', pratica: { manual: 1.3 } },
+  { id: 'q_eletricista', get nome() { return paisCorrente() === 'BR' ? 'Eletricista instalador (NR-10)' : 'Eletricista instalador'; }, nivel: 'livre', area: 'eletrica', meses: 6, publica: 0, privada: 0, ead: false, mensalidade: 360, corte: 0, carga: 'parcial', descricao: 'Instalação residencial e predial com a norma de segurança.', pratica: { manual: 1.3 } },
   { id: 'q_solda', nome: 'Soldagem', nivel: 'livre', area: 'soldagem', meses: 5, publica: 1, privada: 1, ead: false, mensalidade: 450, corte: 0, carga: 'parcial', descricao: 'Solda elétrica e MIG. Muita vaga na indústria e na construção.', pratica: { manual: 1.3 } },
   { id: 'q_mecanica', nome: 'Mecânica de automóveis', nivel: 'livre', area: 'mecanica', meses: 8, publica: 1, privada: 0, ead: false, mensalidade: 400, corte: 0, carga: 'parcial', descricao: 'Motor, suspensão, freio. Oficina de verdade no curso.', pratica: { manual: 1.4 } },
   { id: 'q_cozinha', nome: 'Cozinha profissional', nivel: 'livre', area: 'gastronomia', meses: 6, publica: 1, privada: 0, ead: false, mensalidade: 420, corte: 0, carga: 'parcial', descricao: 'Técnicas de cozinha, higiene, ritmo de restaurante.', pratica: { cozinha: 1.4 } },
   { id: 'q_confeitaria', nome: 'Confeitaria', nivel: 'livre', area: 'gastronomia', meses: 4, publica: 1, privada: 0, ead: false, mensalidade: 380, corte: 0, carga: 'parcial', descricao: 'Bolos, doces, encomendas. Muita gente começa em casa.', pratica: { cozinha: 1.3 } },
-  { id: 'q_empilhadeira', nome: 'Operador de empilhadeira', nivel: 'livre', area: 'logistica', meses: 3, publica: 1, privada: 0, ead: false, mensalidade: 350, corte: 0, carga: 'parcial', descricao: 'Capacitação exigida pela NR-11.' },
+  { id: 'q_empilhadeira', nome: 'Operador de empilhadeira', nivel: 'livre', area: 'logistica', meses: 3, publica: 1, privada: 0, ead: false, mensalidade: 350, corte: 0, carga: 'parcial', get descricao() { return paisCorrente() === 'BR' ? 'Capacitação exigida pela NR-11.' : 'A capacitação que a lei do trabalho exige para operar.'; } },
   { id: 'q_vigilante', nome: 'Formação de vigilante', nivel: 'livre', area: 'vigilancia', meses: 3, publica: null, privada: 0, ead: false, mensalidade: 550, corte: 0, carga: 'parcial', descricao: 'Curso obrigatório por lei para trabalhar em segurança privada.', idadeMin: 21 },
   { id: 'q_arbitragem', nome: 'Curso de arbitragem', nivel: 'livre', area: 'arbitragem', meses: 8, publica: null, privada: 1, ead: false, mensalidade: 250, corte: 0, carga: 'parcial', descricao: 'Regras, preparo físico e os primeiros jogos amadores.' },
 
@@ -98,6 +99,17 @@ export const CURSOS: readonly Curso[] = [
   { id: 'tec_automacao', nome: 'Técnico em Automação Industrial', nivel: 'tecnico', area: 'automacao', meses: 24, publica: 1, privada: 1, ead: false, mensalidade: 520, corte: 0, carga: 'parcial', descricao: 'Robôs, sensores, linhas de produção.', pratica: { manual: 0.8, exatas: 0.6, programacao: 0.4 } },
   { id: 'tec_radiologia', nome: 'Técnico em Radiologia', nivel: 'tecnico', area: 'radiologia', meses: 24, publica: 2, privada: 1, ead: false, mensalidade: 560, corte: 0, carga: 'parcial', descricao: 'Raio-X, tomografia. Jornada reduzida por lei.', pratica: { ciencias: 0.5 } },
   { id: 'tec_imoveis', nome: 'Técnico em Transações Imobiliárias', nivel: 'tecnico', area: 'imoveis', meses: 12, publica: null, privada: 0, ead: true, mensalidade: 290, corte: 0, carga: 'parcial', descricao: 'O curso que dá direito ao CRECI.', pratica: { vendas: 0.6 } },
+  // FIX pós-playtest humano: a formação técnica deixou de ser um trio. Cada curso abaixo existe em ALGUMAS instituições
+  // (`sistemas/ensinoTecnico`: o perfil da escola decide o catálogo) e leva a uma área com trabalho de verdade.
+  { id: 'tec_desenvolvimento', nome: 'Técnico em Desenvolvimento de Sistemas', nivel: 'tecnico', area: 'computacao', meses: 24, publica: 1, privada: 1, ead: true, mensalidade: 460, corte: 0, carga: 'parcial', descricao: 'Programar de verdade: lógica, banco de dados, sistemas web.', pratica: { programacao: 1.5, exatas: 0.4 }, integravel: true },
+  { id: 'tec_redes', nome: 'Técnico em Redes de Computadores', nivel: 'tecnico', area: 'computacao', meses: 18, publica: 1, privada: 1, ead: false, mensalidade: 430, corte: 0, carga: 'parcial', descricao: 'Cabos, servidores, a rede de uma empresa funcionando.', pratica: { programacao: 0.8, manual: 0.4 }, integravel: true },
+  { id: 'tec_eletronica', nome: 'Técnico em Eletrônica', nivel: 'tecnico', area: 'eletrotecnica', meses: 24, publica: 1, privada: 1, ead: false, mensalidade: 470, corte: 0, carga: 'parcial', descricao: 'Placas, circuitos, solda fina, conserto de equipamentos.', pratica: { manual: 0.9, exatas: 0.6 }, integravel: true },
+  { id: 'tec_mecatronica', nome: 'Técnico em Mecatrônica', nivel: 'tecnico', area: 'automacao', meses: 24, publica: 1, privada: 1, ead: false, mensalidade: 540, corte: 0, carga: 'parcial', descricao: 'Mecânica, eletrônica e programação na mesma máquina.', pratica: { manual: 0.8, exatas: 0.6, programacao: 0.5 }, integravel: true },
+  { id: 'tec_contabilidade', nome: 'Técnico em Contabilidade', nivel: 'tecnico', area: 'contabilidade', meses: 18, publica: 1, privada: 0, ead: true, mensalidade: 320, corte: 0, carga: 'parcial', descricao: 'Lançamentos, impostos, folha — o escritório por dentro.', pratica: { exatas: 0.7 }, integravel: true },
+  { id: 'tec_design', nome: 'Técnico em Design Gráfico', nivel: 'tecnico', area: 'design', meses: 18, publica: 1, privada: 1, ead: false, mensalidade: 440, corte: 0, carga: 'parcial', descricao: 'Identidade visual, diagramação, a peça que vai para a rua.', pratica: { desenho: 1.2 }, integravel: true },
+  { id: 'tec_audiovisual', nome: 'Técnico em Produção Audiovisual', nivel: 'tecnico', area: 'comunicacao', meses: 18, publica: 2, privada: 1, ead: false, mensalidade: 520, corte: 0, carga: 'parcial', descricao: 'Câmera, som, edição: o vídeo do começo ao fim.', pratica: { fotografia: 1.1 }, integravel: true },
+  { id: 'tec_alimentos', nome: 'Técnico em Alimentos', nivel: 'tecnico', area: 'agro', meses: 24, publica: 1, privada: null, ead: false, mensalidade: 0, corte: 0, carga: 'parcial', descricao: 'Da matéria-prima à embalagem: a indústria que alimenta a região.', pratica: { ciencias: 0.7, cozinha: 0.4 }, integravel: true },
+  { id: 'tec_hospedagem', nome: 'Técnico em Hospedagem', nivel: 'tecnico', area: 'administracao', meses: 18, publica: 1, privada: 0, ead: false, mensalidade: 360, corte: 0, carga: 'parcial', descricao: 'Recepção, reservas, o hotel funcionando — e os idiomas na prática.', pratica: { idiomas: 0.6, vendas: 0.4 }, integravel: true },
   { id: 'tecn_gastronomia', nome: 'Gastronomia (tecnólogo)', nivel: 'tecnico', area: 'gastronomia', meses: 24, publica: 2, privada: 1, ead: false, mensalidade: 900, corte: 600, carga: 'parcial', descricao: 'Cozinha profissional e gestão de restaurante.', pratica: { cozinha: 1.3 } },
 
   // ---------------------------------------------------------- Graduações
@@ -148,8 +160,11 @@ export function curso(id: string): Curso {
 }
 export const cursoOuNulo = (id: string) => POR_ID.get(id);
 const POR_NOME = new Map(CURSOS.map(c => [c.nome, c]));
-/** Curso pelo nome (as pessoas da família guardam o nome do curso que fizeram). */
-export const cursoPorNome = (nome?: string) => (nome ? POR_NOME.get(nome) : undefined);
+/** Curso pelo nome (as pessoas da família guardam o nome do curso que fizeram). O nome pode ser o do país (a norma
+ *  brasileira entre parênteses só no Brasil): a busca ignora o parêntese final. */
+const semParentese = (x: string) => x.replace(/ \([^)]*\)$/, '');
+const POR_NOME_BASE = new Map(CURSOS.map(c => [semParentese(c.nome), c]));
+export const cursoPorNome = (nome?: string) => (nome ? POR_NOME.get(nome) ?? POR_NOME_BASE.get(semParentese(nome)) : undefined);
 
 /** Ordem dos níveis de formação (qualificação < técnico < graduação < pós...). */
 export const ORDEM_NIVEL: Record<NivelCurso, number> = { livre: 0.5, tecnico: 1, superior: 2, pos: 3, residencia: 3, mestrado: 4, doutorado: 5 };

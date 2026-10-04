@@ -9,6 +9,8 @@
  *   3. OFFLINE: recarrega, continua a mesma vida, vive mais anos e decide;
  *      recarrega offline de novo e confere que o save no IndexedDB é
  *      idêntico antes e depois da recarga;
+ *   3d. TUDO AO ACASO SEM REDE (FIX pós-playtest humano): o mundo sorteado (pacotes do cache), mãe e pai na tela,
+ *       os traços novos no save, recarregar idêntico.
  *   3c. AS REDES SOCIAIS SEM REDE (FIX pós-REWORK 4): offline, aos 13 anos, cria
  *      a conta no Instagram e publica (é simulação local: nada sai do aparelho);
  *      salva, recarrega e confere a conta idêntica no save e na tela;
@@ -190,6 +192,28 @@ try {
     checar('offline: a tela mostra a mesma conta (@arroba)', !!conta && arroba.includes(`@${conta.arroba}`), arroba);
     await p.screenshot({ path: join(SP, 'redes-offline-390.png'), fullPage: false });
   }
+
+  // 3d. FIX pós-playtest humano — sem rede: "Tudo ao acaso" sorteia o MUNDO (os pacotes vêm do cache), a tela mostra
+  // de quem vêm os traços (mãe e pai), a vida nasce com a Aparência 2.0 (os traços novos no save) e volta idêntica.
+  await p.reload();
+  await p.getByRole('button', { name: /Nascer de novo/ }).click();
+  const paisesAoAcaso = new Set();
+  for (let k = 0; k < 8; k++) {
+    await p.getByRole('button', { name: 'Tudo ao acaso' }).click();
+    await p.waitForTimeout(120);
+    paisesAoAcaso.add((await p.locator('.mundo-nascer__pais strong').textContent())?.trim());
+  }
+  checar('offline: "Tudo ao acaso" sorteia países diferentes (não só o Brasil)', paisesAoAcaso.size >= 3, [...paisesAoAcaso].join(', '));
+  checar('offline: o Nascer mostra de quem vêm os traços (mãe e pai)', (await p.getByText('De quem vêm os traços').count()) === 1 && (await p.locator('.criacao__retrato figcaption', { hasText: /^mãe$/ }).count()) === 1);
+  await p.locator('.criacao__nascer').click();
+  await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
+  await avancar(2);
+  const sa = await saveEstavel();
+  const va = sa ? JSON.parse(sa) : null;
+  checar('offline: a vida ao acaso nasce com os traços da Aparência 2.0 (no save)', !!va && typeof va.eu.visual.calvicie === 'string', va ? `${va.moradia.municipioId} · calvície ${va.eu.visual.calvicie}, olhos ${va.eu.visual.olhosTam ?? 'médios'}` : 'sem save');
+  await p.reload();
+  await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
+  checar('offline: a vida ao acaso volta idêntica depois de recarregar', (await lerSave()) === sa);
 
   // 3b. O mundo sem rede: nascer no Japão, viver, salvar, recarregar.
   await p.reload();

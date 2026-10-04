@@ -31,6 +31,66 @@ import { habilidade, praticar } from './frentes';
 import { compatibilidade } from './social';
 import { ehDescendente } from './vinculos';
 import { estadoDaRelacao } from './lacos';
+import { viverCena, type ProgramaDeCena } from './microcenas';
+
+/**
+ * FIX pós-playtest humano: cada programa é também uma CENA (`microcenas`) — o que mora aqui é o lugar (o que se vê,
+ * do que se discorda, o ponto alto e o ruim de cada um); o que acontece de fato é decidido lá, pelo contexto.
+ */
+const P: Record<string, ProgramaDeCena> = {
+  cinema: { id: 'cinema', oque: 'o cinema', onde: 'no cinema', depois: 'na saída do cinema', pago: true,
+    mico: ['{nome} riu alto na cena triste — a única risada da sala inteira.', 'A pipoca virou inteira no colo de quem estava na frente. Vocês assistiram o resto pedindo desculpas.'],
+    comum: ['Pipoca dividida, um filme bom o bastante, e {nome} comentando os trailers como se fossem o filme.', 'Sessão das nove, sala meio vazia. Vocês escolheram o lugar do meio e ninguém atrapalhou.', 'O filme era longo; a conversa na fila do estacionamento, mais longa ainda.'],
+    alto: n => `${n} saiu do cinema falando do filme — e falou até em casa. Vocês já marcaram o próximo.`,
+    ruim: n => `${n} queria ver outro filme e passou a sessão no celular. Na saída, cada um foi para um lado.`,
+    discordia: [['achou o final perfeito', 'achou o final preguiçoso'], ['torceu pelo vilão', 'não perdoou o vilão'], ['dormiu na metade e jura que não', 'viu cada minuto e conta tudo']] },
+  jantar: { id: 'jantar', oque: 'o jantar', onde: 'no restaurante', depois: 'na sobremesa', pago: true,
+    mico: ['{nome} chamou o garçom pelo nome errado três vezes. Vocês saíram rindo da vergonha.', 'A conta veio com o prato de outra mesa. Descobriram depois de pagar.'],
+    comum: ['Um prato cada, um pedaço do seu para {nome} provar, e a conta dividida certinha.', 'O restaurante de sempre, a mesa de sempre — e o garçom já sabendo o pedido.', 'Comida boa, conversa boa, e a hora passou sem ninguém olhar o relógio.'],
+    alto: n => `Um jantar que virou três horas de conversa. Fecharam o restaurante — o garçom empilhando as cadeiras em volta de você e ${n}.`,
+    ruim: n => `A conta chegou e veio junto uma conversa atravessada. ${n} pagou a parte e foi embora antes do café.`,
+    discordia: [['jura que o lugar de antes era melhor', 'defende o novo'], ['achou o prato salgado demais', 'achou perfeito']] },
+  show: { id: 'show', oque: 'o show', onde: 'no show', depois: 'na volta do show', pago: true,
+    mico: ['Você cantou o refrão errado, alto, no silêncio entre duas músicas.', '{nome} perdeu o celular no meio da multidão — e um estranho devolveu no fim do show.'],
+    comum: ['Um show bom: a música que vocês esperavam veio no bis.', 'Lugar lotado, um copo derrubado no seu tênis, e uma noite boa mesmo assim.', '{nome} conhecia todas as letras; você, metade. Ninguém reparou.'],
+    alto: n => `Vocês cantaram tudo, perderam a voz e voltaram de madrugada. ${n} guardou o ingresso.`,
+    ruim: n => `${n} odiou a banda e não fez questão de esconder. A noite acabou cedo.`,
+    discordia: [['achou que a banda envelheceu mal', 'achou o melhor show da vida'], ['queria ficar na frente do palco', 'queria ficar no fundo, perto da saída']] },
+  estadio: { id: 'estadio', oque: 'o jogo', onde: 'no estádio', depois: 'na saída do estádio', pago: true,
+    mico: ['Você comemorou o gol do outro time, no meio da torcida errada.', 'O cachorro-quente caiu na arquibancada de baixo. Pediram desculpas por dois tempos.'],
+    comum: ['Arquibancada, o grito da torcida e um empate com gosto de nada. O cachorro-quente valeu.', 'O time jogou mal, a torcida cantou bem. Vocês voltaram rouco.', 'Um jogo morno; o que ficou foi a conversa no intervalo.'],
+    alto: n => `O time virou no último minuto. ${n} pulou no seu pescoço — e vocês saíram abraçados com estranhos.`,
+    ruim: n => `Derrota, chuva e trânsito na volta. ${n} não falou nada no caminho.`,
+    discordia: [['culpa o técnico', 'culpa o juiz'], ['quer o atacante no banco', 'acha que o atacante é a única esperança']] },
+  parque: { id: 'parque', oque: 'o parque', onde: 'no parque', depois: 'na volta do parque', infantil: true,
+    comum: ['Balanço, escorregador, sorvete derretendo na mão. {nome} dormiu no caminho de volta.', '{nome} fez amizade com outra criança em dez minutos e esqueceu que você existia.', 'Uma tarde inteira atrás de {nome} no parque. Valeu o cansaço.'],
+    alto: n => `${n} descobriu o escorregador grande e quis descer quarenta vezes. Na trigésima, você desceu junto.`,
+    ruim: n => `Choveu no meio da tarde. Voltaram correndo, ${n} reclamando de tudo.` },
+  cozinhar: { id: 'cozinhar', oque: 'a cozinha', onde: 'na cozinha', depois: 'com a louça na pia', infantil: true,
+    comum: ['A receita da avó, com {nome} errando a medida e acertando o resto.', 'Farinha até no teto, e o melhor bolo do mês.', 'Vocês inventaram um prato que ainda não tem nome. Ficou bom.'],
+    alto: n => `Ficou tão bom que ${n} tirou foto antes de comer — e pediu para fazerem de novo no domingo.`,
+    ruim: () => 'Queimou. Vocês discutiram sobre de quem foi a culpa — e pediram uma pizza.',
+    discordia: [['acha que leva alho', 'acha que alho estraga'], ['quer seguir a receita', 'quer inventar']] },
+  caminhar: { id: 'caminhar', oque: 'a caminhada', onde: 'na caminhada', depois: 'no fim da caminhada',
+    mico: ['Um cachorro resolveu acompanhar vocês o caminho todo. {nome} já tinha dado nome a ele na volta.', 'Pegaram uma rua errada e andaram meia hora a mais. Ninguém admitiu a culpa.'],
+    comum: ['Uma volta longa no fim da tarde. A conversa veio sozinha.', '{nome} puxou o ritmo. Você chegou sem fôlego e rindo.', 'Caminharam sem pressa, olhando as casas, sem precisar falar.'],
+    alto: n => `Era para ser uma volta no quarteirão; viraram duas horas e um pôr do sol. ${n} disse que precisava daquilo.`,
+    ruim: n => `${n} estava de mau humor; foram calados até o fim.` },
+  fim_de_semana: { id: 'fim_de_semana', oque: 'o fim de semana', onde: 'na viagem curta', depois: 'na estrada de volta', pago: true,
+    mico: ['A pousada da foto não era a pousada que existia. Riram disso a viagem inteira.', 'Esqueceram a mala de um dos dois em casa. Foram comprar escova de dente juntos.'],
+    comum: ['Dois dias fora. Voltaram mais leves.', 'Uma pousada simples, café da manhã demorado, nada para fazer — e foi isso que fez bem.', 'Choveu um dia, fez sol no outro. Deu para tudo.'],
+    alto: n => `Uma pousada simples, uma cachoeira, e a conversa que você e ${n} estavam devendo um ao outro.`,
+    ruim: () => 'Dois dias juntos demais. Na volta, cada um com o seu fone.',
+    discordia: [['queria acordar cedo e fazer trilha', 'queria dormir até tarde'], ['quer voltar no ano que vem', 'quer conhecer outro lugar']] },
+  romantico: { id: 'romantico', oque: 'o jantar', onde: 'no restaurante', depois: 'na volta para casa', pago: true,
+    mico: ['O garçom acendeu a vela e quase pôs fogo no cardápio. A noite virou piada — boa.', 'Você derramou o vinho na toalha. {nome} derramou o dele em solidariedade.'],
+    comum: ['Um jantar bonito. Voltaram de mãos dadas.', 'A mesa do canto, a conversa sem pressa, e {nome} roubando a sua sobremesa.', 'Vinho da casa, prato do dia — e a sensação boa de ter parado o resto do mundo por uma noite.'],
+    alto: n => `Vela na mesa, vinho que você não sabia pronunciar e ${n} olhando para você como no começo.`,
+    ruim: () => 'Um assunto antigo voltou na sobremesa. O jantar acabou cedo.',
+    discordia: [['quer viajar no fim do ano', 'quer guardar dinheiro'], ['acha que vocês trabalham demais', 'acha que é só uma fase']] }
+};
+/** O efeito-base do programa (`efeito`) + a cena: o texto e o título do popup saem da cena. */
+const cena = (c: CtxI, foi: ReturnType<typeof comoFoi>, prog: ProgramaDeCena, n: number) => { const x = viverCena(c, foi, prog, n); return { resultado: x.texto, titulo: x.titulo }; };
 
 const humano = (c: CtxI) => !c.p.especie;
 const perto = (c: CtxI) => c.casa || !c.longe;
@@ -97,7 +157,7 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       efeito(c, foi, 4); humor(c, 2);
       if (c.papel === 'colega' || c.papel === 'conhecido') c.vin.aproximacao = c.v.t;
       costume(c, n, 3, `O cinema com ${c.p.nome} virou costume.`);
-      return { resultado: foi === 'otimo' ? `${c.p.nome} saiu do cinema falando do filme — e falou até em casa.` : foi === 'bom' ? `Pipoca, um filme bom o bastante e a conversa na saída.` : foi === 'morno' ? `O filme era ruim. ${c.p.nome} dormiu na metade, e vocês riram disso depois.` : `${c.p.nome} queria ver outro filme e passou a sessão no celular.` };
+      return cena(c, foi, { ...P.cinema, infantil: crianca(c) }, n);
     }
   },
   {
@@ -111,7 +171,7 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       efeito(c, foi, 5); confiar(c, 1);
       costume(c, n, 3, `Os jantares com ${c.p.nome} viraram coisa de vocês.`);
       const pais = c.papel === 'genitor' || c.papel === 'avo';
-      return { resultado: foi === 'otimo' ? (pais ? `${c.p.nome} pediu o mais barato do cardápio e você trocou pelo melhor. Contou para todo mundo depois.` : `Um jantar que virou três horas de conversa.`) : foi === 'bom' ? `Comida boa, conversa boa.` : foi === 'morno' ? `O restaurante estava cheio e barulhento; mal se ouviram.` : `A conta chegou e veio junto uma conversa atravessada.` };
+      return cena(c, foi, pais ? { ...P.jantar, alto: x => `${x} pediu o mais barato do cardápio e você trocou pelo melhor. Contou para todo mundo depois.` } : P.jantar, n);
     }
   },
   {
@@ -126,7 +186,7 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       const foi = comoFoi(c, r, 0.15 + musica);
       efeito(c, foi, 6); humor(c, 3); cabeca(c, -2);
       if (n === 1 && foi === 'otimo') lembrarCom(c.v, c.p.id, `O show que vocês viram juntos.`, 'ritual', 2);
-      return { resultado: foi === 'otimo' ? `Vocês cantaram tudo, perderam a voz e voltaram de madrugada. ${c.p.nome} guardou o ingresso.` : foi === 'bom' ? `Um show bom, uma noite boa.` : foi === 'morno' ? `O som estava ruim e a fila do banheiro, enorme. Ainda assim, foi bom estar junto.` : `${c.p.nome} odiou a banda e não fez questão de esconder.` };
+      return cena(c, foi, P.show, n);
     }
   },
   {
@@ -141,8 +201,9 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       efeito(c, foi, 5); humor(c, 2);
       if (n === 1 && c.papel === 'filho' && c.ip <= 12) { lembrarCom(c.v, c.p.id, `O primeiro jogo de ${c.p.nome} no estádio foi com você.`, 'ritual', 3); }
       costume(c, n, 3, `Ir ao estádio virou programa de vocês.`);
+      // O placar é do jogo, não da relação: um sorteio próprio (sempre consumido, como antes).
       const ganhou = r.chance(0.45);
-      return { resultado: ganhou ? `O time ganhou no fim. ${c.p.nome} pulou no seu pescoço.` : foi === 'ruim' ? `Derrota, chuva e trânsito na volta. ${c.p.nome} não falou nada no caminho.` : `O time perdeu, mas a arquibancada valeu o dia.` };
+      return cena(c, ganhou && foi !== 'ruim' ? 'otimo' : foi, { ...P.estadio, infantil: crianca(c) }, n);
     }
   },
   {
@@ -154,7 +215,8 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       const chuva = r.chance(0.15);
       afeto(c, chuva ? 3 : 6); presente(c, 8); cabeca(c, -2); humor(c, 2);
       costume(c, n, 3, `O parque de domingo era de vocês.`);
-      return { resultado: chuva ? `Choveu no meio da tarde. Voltaram correndo, ${c.p.nome} rindo e encharcad${flex(c.p.genero, 'o', 'a', 'e')}.` : [`Balanço, escorregador, sorvete derretendo na mão. ${c.p.nome} dormiu no caminho de volta.`, `${c.p.nome} fez amizade com outra criança em dez minutos e esqueceu que você existia.`, `Uma tarde inteira atrás de ${c.p.nome} no parque. Valeu o cansaço.`][n % 3] };
+      if (chuva) return { resultado: `Choveu no meio da tarde. Voltaram correndo, ${c.p.nome} rindo e encharcad${flex(c.p.genero, 'o', 'a', 'e')}.`, titulo: `O parque com ${c.p.nome}` };
+      return cena(c, n % 4 === 0 ? 'otimo' : 'bom', P.parque, n);
     }
   },
   {
@@ -185,7 +247,7 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       efeito(c, foi, 4); presente(c, 5);
       praticar(c.v, r, 'cozinha', 0.15, 1);
       costume(c, n, 3, `Cozinhar junto virou coisa de vocês.`);
-      return { resultado: foi === 'ruim' ? `Queimou. Vocês discutiram sobre de quem foi a culpa — e pediram uma pizza.` : foi === 'morno' ? `Ficou comível. A cozinha, nem tanto.` : [`A receita da avó, com ${c.p.nome} errando a medida e acertando o resto.`, `Farinha até no teto, e o melhor bolo do mês.`, `Vocês inventaram um prato que ainda não tem nome. Ficou bom.`][n % 3] };
+      return cena(c, foi, { ...P.cozinhar, infantil: crianca(c) }, n);
     }
   },
   {
@@ -197,7 +259,7 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       efeito(c, foi, 3); cabeca(c, -3);
       c.v.corpo.forma = clamp(c.v.corpo.forma + 1);
       costume(c, n, 4, `As caminhadas com ${c.p.nome} viraram costume.`);
-      return { resultado: foi === 'ruim' ? `${c.p.nome} estava de mau humor; foram calados até o fim.` : [`Uma volta longa no fim da tarde. A conversa veio sozinha.`, `${c.p.nome} puxou o ritmo. Você chegou sem fôlego e rindo.`, `Caminharam sem pressa, olhando as casas, como faziam antes.`][n % 3] };
+      return cena(c, foi, P.caminhar, n);
     }
   },
   {
@@ -210,7 +272,7 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       const foi = comoFoi(c, r, 0.2);
       efeito(c, foi, 9); cabeca(c, -5); humor(c, 3);
       if (foi !== 'ruim') lembrarCom(c.v, c.p.id, `Um fim de semana fora, só vocês.`, 'ritual', 2);
-      return { resultado: foi === 'otimo' ? `Uma pousada simples, uma cachoeira, e a conversa que vocês estavam devendo um ao outro.` : foi === 'bom' ? `Dois dias fora. Voltaram mais leves.` : foi === 'morno' ? `Choveu o fim de semana inteiro; restou o baralho e o quarto pequeno.` : `Dois dias juntos demais. Na volta, cada um com o seu fone.` };
+      return cena(c, foi, P.fim_de_semana, conta(c, 'fim_de_semana'));
     }
   },
   {
@@ -240,13 +302,13 @@ export const INTERACOES_JUNTOS: Interacao[] = [
       const n = conta(c, 'romantico'); const foi = comoFoi(c, r, 0.2);
       efeito(c, foi, 4); envolver(c, foi === 'otimo' ? 6 : 3);
       costume(c, n, 3, `Os jantares de vocês dois nunca saíram da agenda.`);
-      return { resultado: foi === 'otimo' ? `Vela na mesa, vinho que você não sabia pronunciar e ${c.p.nome} olhando para você como no começo.` : foi === 'bom' ? `Um jantar bonito. Voltaram de mãos dadas.` : foi === 'morno' ? `A comida demorou; o assunto também. Mas foi um esforço — e ${ele(c.p)} percebeu.` : `Um assunto antigo voltou na sobremesa. O jantar acabou cedo.` };
+      return cena(c, foi, P.romantico, n);
     }
   }
 ];
 
 /** O grupo de cada interação na ficha: fazer junto, conversar, cuidar e ajudar, a relação (a ordem da tela). */
-export type GrupoDeInteracao = 'juntos' | 'conversar' | 'cuidar' | 'relacao';
+export type GrupoDeInteracao = 'juntos' | 'conversar' | 'cuidar' | 'romance' | 'relacao';
 const GRUPOS: Record<string, GrupoDeInteracao> = {
   // Fazer junto: o que se FAZ (não o que se diz).
   cinema: 'juntos', jantar_fora: 'juntos', show: 'juntos', estadio: 'juntos', parque: 'juntos', ensinar: 'juntos', cozinhar_junto: 'juntos', caminhar_junto: 'juntos',
@@ -254,7 +316,9 @@ const GRUPOS: Record<string, GrupoDeInteracao> = {
   brincar: 'juntos', ler: 'juntos', treinar_junto: 'juntos', visitar_par: 'juntos', app_encontro: 'juntos', comemorar: 'juntos', intimidade: 'juntos',
   // Conversar.
   conversar: 'conversar', desabafar: 'conversar', aconselhar: 'conversar', ligar: 'conversar', ligar_par: 'conversar', duvidas: 'conversar', conselho_futuro: 'conversar',
-  perguntar_vida: 'conversar', elogiar: 'conversar', pedir_conselho: 'conversar', ex_conversar: 'conversar', app_conversar: 'conversar', flertar: 'conversar',
+  perguntar_vida: 'conversar', elogiar: 'conversar', pedir_conselho: 'conversar', ex_conversar: 'conversar', app_conversar: 'conversar',
+  // FIX pós-playtest humano: o que pode virar romance tem lugar próprio na ficha ("Algo mais").
+  flertar: 'romance', declarar: 'romance', demonstrar_interesse: 'romance', convidar: 'romance',
   carinho: 'conversar', futuro_casal: 'conversar', dinheiro_casal: 'conversar', agradecer_professor: 'conversar', conhecer: 'conversar', futuro: 'conversar',
   // Cuidar e ajudar.
   cuidar: 'cuidar', apoiar: 'cuidar', dinheiro: 'cuidar', medico: 'cuidar', estudos: 'cuidar', escola: 'cuidar', incentivar: 'cuidar', limite: 'cuidar',

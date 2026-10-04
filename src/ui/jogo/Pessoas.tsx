@@ -24,7 +24,7 @@ import { nomeLugar } from '../../motor/dados/lugares';
 import { flex } from '../../motor/texto';
 import { anoDe, MESES, mesDe } from '../../motor/tempo';
 import { gestacaoEmCurso } from '../../motor/sistemas/familia';
-import { interacoesPara, rotuloInteracao } from '../../motor/sistemas/interacoes';
+import { interacoesPara, prioridadesDaFicha, rotuloInteracao } from '../../motor/sistemas/interacoes';
 import { grupoDaInteracao, type GrupoDeInteracao } from '../../motor/sistemas/juntos';
 import { coisasDaVida } from '../../motor/sistemas/coisas';
 import { usosDaCoisa } from '../../motor/dados/pertences';
@@ -266,7 +266,7 @@ function Voce({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
 
 const GRUPOS_DA_FICHA: { id: GrupoDeInteracao | 'chamado'; rotulo: string }[] = [
   { id: 'chamado', rotulo: 'Como reagir' }, { id: 'juntos', rotulo: 'Fazer juntos' }, { id: 'conversar', rotulo: 'Conversar' },
-  { id: 'cuidar', rotulo: 'Cuidar e ajudar' }, { id: 'relacao', rotulo: 'A relação' }
+  { id: 'cuidar', rotulo: 'Cuidar e ajudar' }, { id: 'romance', rotulo: 'Algo mais' }, { id: 'relacao', rotulo: 'A relação' }
 ];
 
 /** O que está acontecendo com a pessoa agora, em uma linha. */
@@ -287,7 +287,6 @@ const DESCOBERTA = (m: Marco) => m.tipo === 'descoberta';
 const RITUAL = (m: Marco) => m.tipo === 'ritual';
 
 function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; vin: Vinculo; agir: (a: Acao) => boolean; aoFechar: () => void }) {
-  const [todas, setTodas] = useState(false);
   const [historiaToda, setHistoriaToda] = useState(false);
   const ip = idadePessoa(vida, p);
   const papel = papelDe(p, vin);
@@ -347,31 +346,54 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
         )}
         {p.vivo && acoes.length > 0 && (
           <div className="ficha__acoes">
-            {/* FIX pós-REWORK 4: o que dá para fazer com a pessoa, por tipo — fazer junto primeiro (o que se FAZ, não só o
-                que se diz), depois conversar, cuidar e ajudar, e a relação em si. A reação a um chamado vem antes de tudo. */}
-            {GRUPOS_DA_FICHA.map(g => {
-              const lista = acoes.filter(x => (x.id === 'chamado_sim' || x.id === 'chamado_nao' ? 'chamado' : grupoDaInteracao(x.id)) === g.id);
-              const extra = g.id === 'juntos' ? usosComEla : [];
-              if (!lista.length && !extra.length) return null;
-              const aberto = todas || g.id === 'chamado' || g.id === 'juntos';
-              const visiveis = aberto ? lista : lista.slice(0, 3);
-              return (
-                <div key={g.id} className={`ficha__grupo ficha__grupo--${g.id}`}>
-                  <h3 className="ficha__subtitulo">{g.id === 'chamado' ? 'Como reagir' : g.rotulo}</h3>
-                  <div className="grupo-acoes">
-                    {visiveis.map(x => (
-                      <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={x.variante} mostrarChance={x.chance}
-                        ocultarImpossivel={x.id === 'convidar'}>
-                        {rotuloInteracao(vida, p.id, x.id)}
-                      </BotaoAcao>
-                    ))}
-                    {extra.map(x => <BotaoAcao key={`${x.t.id}:${x.uso.id}`} vida={vida} acao={{ tipo: 'usar_coisa', coisaTidaId: x.t.id, uso: x.uso.id, pessoaId: p.id }} agir={agir} variante="secundario">{(x.uso.rotuloCom ?? x.uso.rotulo).replace('{nome}', p.nome)}</BotaoAcao>)}
-                    {g.id === 'relacao' && papel === 'parceiro' && idade(vida) >= 18 && <BotaoAcao vida={vida} acao={{ tipo: 'adotar' }} agir={agir} variante="discreto" ocultarImpossivel>Entrar juntos com um pedido de adoção</BotaoAcao>}
-                    {!aberto && lista.length > 3 && <button type="button" className="botao botao--discreto" aria-expanded={false} onClick={() => setTodas(true)}>{`Mais (${lista.length - 3})`}</button>}
-                  </div>
-                </div>
+            {/* FIX pós-playtest humano: a ficha responde "o que faz sentido fazer AGORA" (até três ações, pelo contexto —
+                `prioridadesDaFicha`) e guarda o resto por tipo, recolhido: nenhuma ação some, nada grita igual. A reação
+                a um chamado vem antes de tudo. */}
+            {(() => {
+              const chamado = acoes.filter(x => x.id === 'chamado_sim' || x.id === 'chamado_nao');
+              const pri = prioridadesDaFicha(vida, p.id);
+              const agoraIds = new Set(pri.ids);
+              const botao = (x: { id: string; variante?: 'principal' | 'secundario' | 'discreto' | 'perigo'; chance?: boolean }, destaque = false) => (
+                <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={destaque ? 'principal' : x.variante} mostrarChance={x.chance}
+                  ocultarImpossivel={x.id === 'convidar'}>
+                  {rotuloInteracao(vida, p.id, x.id)}
+                </BotaoAcao>
               );
-            })}
+              return (
+                <>
+                  {chamado.length > 0 && (
+                    <div className="ficha__grupo ficha__grupo--chamado">
+                      <h3 className="ficha__subtitulo">Como reagir</h3>
+                      <div className="grupo-acoes">{chamado.map(x => botao(x))}</div>
+                    </div>
+                  )}
+                  {pri.ids.length > 0 && (
+                    <div className="ficha__agora">
+                      <h3 className="ficha__subtitulo">O que faz sentido agora</h3>
+                      {pri.porque && <p className="ficha__porque">{pri.porque}</p>}
+                      <div className="grupo-acoes">{pri.ids.map(id => acoes.find(x => x.id === id)).filter(Boolean).map(x => botao(x!, true))}</div>
+                    </div>
+                  )}
+                  {GRUPOS_DA_FICHA.filter(g => g.id !== 'chamado').map(g => {
+                    const lista = acoes.filter(x => x.id !== 'chamado_sim' && x.id !== 'chamado_nao' && grupoDaInteracao(x.id) === g.id && !agoraIds.has(x.id));
+                    const extra = g.id === 'juntos' ? usosComEla : [];
+                    const adocao = g.id === 'relacao' && papel === 'parceiro' && idade(vida) >= 18;
+                    const n = lista.length + extra.length;
+                    if (!n && !adocao) return null;
+                    return (
+                      <details key={g.id} className={`ficha__grupo ficha__grupo--${g.id}`}>
+                        <summary className="ficha__grupo-titulo"><span className="ficha__subtitulo">{g.rotulo}</span> <span className="ficha__conta">{n}</span></summary>
+                        <div className="grupo-acoes">
+                          {lista.map(x => botao(x))}
+                          {extra.map(x => <BotaoAcao key={`${x.t.id}:${x.uso.id}`} vida={vida} acao={{ tipo: 'usar_coisa', coisaTidaId: x.t.id, uso: x.uso.id, pessoaId: p.id }} agir={agir} variante="secundario">{(x.uso.rotuloCom ?? x.uso.rotulo).replace('{nome}', p.nome)}</BotaoAcao>)}
+                          {adocao && <BotaoAcao vida={vida} acao={{ tipo: 'adotar' }} agir={agir} variante="discreto" ocultarImpossivel>Entrar juntos com um pedido de adoção</BotaoAcao>}
+                        </div>
+                      </details>
+                    );
+                  })}
+                </>
+              );
+            })()}
           </div>
         )}
 

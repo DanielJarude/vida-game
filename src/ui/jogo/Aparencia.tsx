@@ -28,7 +28,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
   const mudou = Object.keys(m).length > 0;
   const natural = vida.eu.estilo?.corNatural ?? vis.corCabelo;
   const cores = [...new Set([natural, ...(i >= AUTONOMIA.aparencia.idade ? [...CORES_NATURAIS, ...CORES_TINTA] : [])])];
-  const cortes = CORTES.filter(c => i >= AUTONOMIA.aparencia.idade || !['raspado', 'black', 'trancas'].includes(c.id));
+  const cortes = CORTES.filter(c => i >= AUTONOMIA.aparencia.idade || !['raspado', 'black', 'trancas', 'locs'].includes(c.id));
   const itens = itensDaPessoa(vida);
   const barba = podeTerBarba(vida);
   const barbaAtual = vis.barba ?? 'nenhuma';

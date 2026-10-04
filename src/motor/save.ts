@@ -503,6 +503,7 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
   if (coisas !== undefined && (!Array.isArray(coisas) || coisas.some(c => !c || typeof c.id !== 'string' || typeof c.coisaId !== 'string' || !finito(c.t) || !finito(c.preco) || !finito(c.estado)))) return 'Coisas inválidas.';
   // REWORK 4 (campos opcionais da v20): se vierem, vêm inteiros. Saves sem eles abrem como antes.
   { const r4 = validarVidaVivida(d); if (r4) return r4; }
+  { const rh = validarPlaytestHumano(d); if (rh) return rh; }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -1453,7 +1454,8 @@ function validarVidaVivida(d: Record<string, unknown>): string | null {
       || ![c.engajamento, c.verificada, c.pedidoVerificacao, c.recusaVerificacao, c.suspensaAte, c.advertencias, c.toxicidade, c.monetizada, c.comprados, c.apagada].every(x => x === undefined || finito(x))
       || !opcional(c.selo, x => x === 'pago')
       || !opcional(c.totais, x => !!x && typeof x === 'object' && Object.values(x as object).every(finito))
-      || !opcional(c.celebridades, x => Array.isArray(x) && x.every(ehTexto)) || !opcional(c.descobriram, x => Array.isArray(x) && x.every(ehTexto))))) return 'Rede social inválida.';
+      || !opcional(c.celebridades, x => Array.isArray(x) && x.every(ehTexto)) || !opcional(c.descobriram, x => Array.isArray(x) && x.every(ehTexto))
+      || !opcional(c.ecos, x => Array.isArray(x) && x.length <= 6 && x.every(ehTexto))))) return 'Rede social inválida.';
   const mente = d.mente as Record<string, unknown>;
   if (!opcional(mente.estresseAlto, x => !!x && finito((x as Record<string, unknown>).anos) && finito((x as Record<string, unknown>).t))) return 'Estresse inválido.';
   const edu = d.educacao as Record<string, unknown>;
@@ -1462,5 +1464,24 @@ function validarVidaVivida(d: Record<string, unknown>): string | null {
   if (!opcional(fin.coisas, x => listaDe(x, c => opcional(c.cor, ehTexto) && opcional(c.acabamento, ehTexto)))) return 'Coisas inválidas.';
   if (!listaDe(fin.bens, b => opcional(b.cor, ehTexto) && opcional(b.corNome, ehTexto))) return 'Bens inválidos.';
   if (!listaDe(d.biografia, e => opcional(e.fato, f => !!f && typeof f === 'object' && ehTexto((f as Record<string, unknown>).tipo) && typeof (f as Record<string, unknown>).dados === 'object'))) return 'Linha da Vida inválida.';
+  return null;
+}
+
+/* ====================================================== FIX pós-playtest humano */
+
+/** Os campos novos do FIX pós-playtest humano (todos opcionais): a escola técnica, a genética, o corpo adquirido, as
+ *  cenas recentes de cada relação, o interesse romântico declarado. */
+function validarPlaytestHumano(d: Record<string, unknown>): string | null {
+  const edu = d.educacao as Record<string, unknown>;
+  const b = edu.basica as Record<string, unknown> | undefined;
+  if (b && !opcional(b.integradoInst, ehTexto)) return 'Escola técnica inválida.';
+  const textos = (x: unknown) => !!x && typeof x === 'object' && Object.values(x as object).every(y => y === undefined || typeof y === 'string' || typeof y === 'boolean' || finito(y));
+  const eu = d.eu as Record<string, unknown>;
+  if (!opcional(eu.genes, textos)) return 'Genética inválida.';
+  if (!opcional(eu.procedimentos, x => listaDe(x, q => ehTexto(q.id) && finito(q.t) && ehTexto(q.resultado)))) return 'Procedimentos inválidos.';
+  for (const p of Object.values(d.pessoas as Record<string, Record<string, unknown>>)) if (!opcional(p.genes, textos)) return 'Genética de pessoa inválida.';
+  for (const vin of Object.values(d.vinculos as Record<string, Record<string, unknown>>)) {
+    if (!opcional(vin.cenas, x => Array.isArray(x) && x.length <= 8 && x.every(ehTexto))) return 'Cenas da relação inválidas.';
+  }
   return null;
 }

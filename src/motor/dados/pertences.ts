@@ -147,7 +147,7 @@ export const USOS: Record<string, UsoDeCoisa[]> = {
   kit_academia: [{ id: 'treinar', rotulo: 'Treinar em casa', forma: 3, estresse: -2, textos: ['Três meses de treino na sala. A calça ficou mais folgada.', 'O colchonete virou parte da rotina — quase todo dia.'] }],
   esteira: [{ id: 'correr', rotulo: 'Correr na esteira', pratica: ['atletismo', 0.2], forma: 3, estresse: -2, textos: ['Cinco quilômetros vendo série. A série acabou antes.', 'A esteira deixou de ser cabide.'] }],
   chuteira_bola: [
-    { id: 'bater_bola', rotulo: 'Bater uma bola', pratica: ['futebol', 0.3], forma: 1, feliz: 2, textos: ['Uma pelada no fim da tarde, com quem apareceu.', 'Chute a gol até escurecer.'] },
+    { id: 'bater_bola', rotulo: 'Bater uma bola', pratica: ['futebol', 0.3], forma: 1, feliz: 2, textos: ['Uma bola no fim da tarde, com quem apareceu.', 'Chute a gol até escurecer.'] },
     { id: 'bater_bola_com', rotulo: 'Bater bola com alguém', com: 'perto', rotuloCom: 'Bater bola com {nome}', pratica: ['futebol', 0.2], prox: 3, textos: ['Você e {nome} na quadra do bairro, como antigamente.', '{nome} jurou que foi gol. Não foi.'] }
   ],
   raquete: [{ id: 'jogar_tenis', rotulo: 'Jogar tênis com alguém', com: 'perto', rotuloCom: 'Jogar tênis com {nome}', pratica: ['tenis', 0.3], forma: 1, prox: 2, textos: ['Um set apertado com {nome}. A revanche ficou marcada.', '{nome} tem um saque que você não esperava.'] }],

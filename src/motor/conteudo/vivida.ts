@@ -11,6 +11,7 @@
  * acaso do resto da vida não muda quando estas decisões não acontecem.
  */
 
+import { nomeDaMateria } from '../mundo/materias';
 import type { Conteudo, Ctx } from './base';
 import { clamp, rngDe } from '../rng';
 import { lembrarCom, vinculosVivos } from '../nucleo';
@@ -23,7 +24,8 @@ import { registrarNaFormacao } from '../sistemas/vidaEstudantil';
 import { estresse, feliz } from './efeitos';
 import { memoriaContavel, narrarMemoria } from './narracao';
 
-const MATERIA: Record<string, string> = { exatas: 'matemática', linguagens: 'redação', ciencias: 'ciências', humanas: 'história' };
+/** O nome da matéria: fonte única (`mundo/materias`, a língua de onde se estuda). */
+const MATERIA = new Proxy({} as Record<string, string>, { get: (_o, k: string) => (['exatas', 'linguagens', 'ciencias', 'humanas'].includes(k) ? nomeDaMateria(k) : undefined) });
 const ano = (c: Ctx) => Math.floor(c.v.t / 12);
 const materiaFraca = (c: Ctx) => materiasExtremas(c.v).fraca;
 const anoDoCurso = (c: Ctx) => { const m = c.v.educacao.matricula; return m ? Math.floor((c.v.t - m.tInicio) / 12) + 1 : 0; };

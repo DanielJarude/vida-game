@@ -21,6 +21,7 @@ import { clamp } from '../rng';
 import type { Pessoa, TipoEvento, TipoTrajetoria, Vida, Vinculo, Relevancia } from '../tipos';
 import { emRecessao, escrever, idade, idadePessoa, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
+import { geneticaDe } from './identidade';
 import { OCUPACOES, ocupacoesDaClasse, ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { ORDEM_NIVEL, curso, cursoPorNome, type AreaFormacao } from '../dados/cursos';
 import { degrausAcima } from './trabalho';
@@ -633,7 +634,7 @@ function nascerDescendente(v: Vida, r: Rng, pai: Pessoa, outro: Pessoa | undefin
   const parentesco = grauPai === 'neto' ? 'bisneto' : 'neto';
   const genero = r.chance(0.5) ? 'masculino' : 'feminino';
   const ancNeto = misturar(ancestralidadeDe(pai), outro ? ancestralidadeDe(outro) : undefined);
-  const bebe = criarPessoa(v, r, { genero, idade: 0, municipioId: pai.municipioId, sobrenome: sobrenomeDoNeto(pai, outro), visual: visualHerdado(r, genero, pai.visual, outro?.visual, ancNeto), familia: { ancestralidade: ancNeto, tradicao: tradicaoDoFilho(pai.tradicao, outro?.tradicao, geracaoNoLugar(v, pai)) } });
+  const bebe = criarPessoa(v, r, { genero, idade: 0, municipioId: pai.municipioId, sobrenome: sobrenomeDoNeto(pai, outro), visual: visualHerdado(r, genero, geneticaDe(pai), geneticaDe(outro), ancNeto), familia: { ancestralidade: ancNeto, tradicao: tradicaoDoFilho(pai.tradicao, outro?.tradicao, geracaoNoLugar(v, pai)) } });
   bebe.tNasc = tParto;
   const usados = new Set([v.eu.nome, ...Object.values(v.pessoas).filter(x => x.vivo).map(x => x.nome)]);
   let nome = bebe.nome;

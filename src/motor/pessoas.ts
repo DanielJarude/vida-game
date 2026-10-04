@@ -19,9 +19,9 @@ import { ancestralidadeDe, chanceDoNomeDaTradicao, identidadeInicial, misturar, 
 export const PELES = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
 export const CORES_CABELO = ['preto', 'castanho_escuro', 'castanho', 'castanho_claro', 'loiro', 'ruivo'];
 export const CORES_OLHOS = ['castanho_escuro', 'castanho', 'mel', 'verde', 'azul'];
-export const CABELOS_M = ['raspado', 'curto', 'curto_lado', 'ondulado', 'crespo_curto', 'cacheado'];
-export const CABELOS_F = ['longo_liso', 'longo_ondulado', 'cacheado_longo', 'black', 'chanel', 'coque', 'trancas', 'rabo'];
-export const CABELOS_N = ['curto', 'ondulado', 'chanel', 'cacheado', 'black', 'rabo'];
+export const CABELOS_M = ['raspado', 'curto', 'curto_lado', 'topete', 'ondulado', 'crespo_curto', 'cacheado', 'locs'];
+export const CABELOS_F = ['longo_liso', 'longo_ondulado', 'cacheado_longo', 'black', 'chanel', 'pixie', 'coque', 'trancas', 'rabo', 'locs'];
+export const CABELOS_N = ['curto', 'ondulado', 'chanel', 'pixie', 'cacheado', 'black', 'rabo', 'locs'];
 
 export function visualAleatorio(r: Rng, genero: Genero): Visual {
   const pele = r.weighted(PELES, p => ({ p1: 2, p2: 3, p3: 3, p4: 3, p5: 2, p6: 1.5 } as Record<string, number>)[p]) ?? 'p3';
@@ -46,8 +46,9 @@ export function visualAleatorio(r: Rng, genero: Genero): Visual {
 function comTracos(base: Visual, genero: Genero): Visual {
   const anc = ancestralidadeDe({ visual: base });
   const t = visualDaAncestralidade(rngDosTracos(base, 'tracos'), genero, anc);
-  const textura = /crespo|black|trancas/.test(base.cabelo) ? 'crespo' : /cacheado/.test(base.cabelo) ? 'cacheado' : /ondulado/.test(base.cabelo) ? 'ondulado' : t.textura;
-  return { ...base, textura, olhosForma: t.olhosForma, nariz: t.nariz, boca: t.boca, rosto: t.rosto, sobrancelha: t.sobrancelha };
+  const textura = /crespo|black|trancas|locs/.test(base.cabelo) ? 'crespo' : /cacheado/.test(base.cabelo) ? 'cacheado' : /ondulado/.test(base.cabelo) ? 'ondulado' : t.textura;
+  const { olhosTam, olhosDist, sobrancelhaForma, bocaLarg, queixo, orelhas, linhaCabelo, sardas, calvicie } = t;
+  return { ...base, textura, olhosForma: t.olhosForma, nariz: t.nariz, boca: t.boca, rosto: t.rosto, sobrancelha: t.sobrancelha, olhosTam, olhosDist, sobrancelhaForma, bocaLarg, queixo, orelhas, linhaCabelo, sardas, calvicie };
 }
 
 /**

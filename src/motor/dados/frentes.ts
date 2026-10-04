@@ -9,6 +9,7 @@
  * Nada aqui é mostrado como número.
  */
 
+import { linguaEstrangeiraDaEscola, nomeDaMateria } from '../mundo/materias';
 import type { Dominio } from '../tipos';
 
 export type Categoria = 'esporte' | 'arte' | 'estudo' | 'social' | 'oficio';
@@ -76,8 +77,10 @@ export const FRENTES: readonly ModeloFrente[] = [
   m({ id: 'exatas', nome: 'matemática', categoria: 'estudo', janela: [8, 22], esquece: 1,
     estagios: ['sofre com os números', 'se vira em matemática', 'vai bem em matemática', 'é destaque da turma em matemática', 'tem cabeça de exatas', 'é fora de série em matemática'],
     facilidade: 'tem cabeça para números' }),
-  m({ id: 'linguagens', nome: 'português e redação', categoria: 'estudo', janela: [8, 25], esquece: 0.8,
-    estagios: ['tropeça na redação', 'se vira em português', 'escreve bem na escola', 'faz das melhores redações da turma', 'escreve e argumenta muito bem', 'tem domínio raro da língua'],
+  // FIX pós-playtest humano: a língua da escola é a de onde se estuda (`mundo/materias`) — "se vira em português" no
+  // Japão era vazamento. Getters: o nome é lido na hora, no país da vida que está sendo lida.
+  m({ id: 'linguagens', get nome() { return nomeDaMateria('linguagens', 'aula'); }, categoria: 'estudo', janela: [8, 25], esquece: 0.8,
+    get estagios() { const l = nomeDaMateria('linguagens'); return ['tropeça na redação', `se vira em ${l}`, 'escreve bem na escola', 'faz das melhores redações da turma', 'escreve e argumenta muito bem', 'tem domínio raro da língua'] as [string, string, string, string, string, string]; },
     facilidade: 'tem jeito com texto' }),
   m({ id: 'ciencias', nome: 'ciências', categoria: 'estudo', janela: [9, 22], esquece: 1,
     estagios: ['acha ciências difícil', 'se vira em ciências', 'vai bem em ciências', 'transforma curiosidade em nota alta', 'tem cabeça de cientista', 'é fora de série em ciências'],
@@ -91,8 +94,8 @@ export const FRENTES: readonly ModeloFrente[] = [
   m({ id: 'programacao', nome: 'programação', categoria: 'estudo', janela: [11, 35], esquece: 2,
     estagios: ['está nos primeiros códigos', 'faz uns programinhas', 'programa bem', 'programa de verdade', 'programa como gente do mercado', 'programa como poucos'],
     facilidade: 'pega lógica rápido' }),
-  m({ id: 'idiomas', nome: 'inglês', categoria: 'estudo', janela: [6, 25], esquece: 1.5,
-    estagios: ['sabe umas palavras', 'lê e entende o básico', 'conversa em inglês', 'fala inglês bem', 'fala inglês com fluência', 'fala como nativo'],
+  m({ id: 'idiomas', get nome() { return linguaEstrangeiraDaEscola(); }, categoria: 'estudo', janela: [6, 25], esquece: 1.5,
+    get estagios() { const l = linguaEstrangeiraDaEscola(); return ['sabe umas palavras', 'lê e entende o básico', `conversa em ${l}`, `fala ${l} bem`, `fala ${l} com fluência`, 'fala como nativo'] as [string, string, string, string, string, string]; },
     facilidade: 'pega idioma de ouvido' }),
 
   m({ id: 'lideranca', nome: 'liderança', categoria: 'social', janela: [12, 35], esquece: 1,

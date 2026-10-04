@@ -32,6 +32,7 @@
  * alguém conhecido é conhecido por associação (um pouco, e isso passa).
  */
 
+import { genesDe } from './identidade';
 import { nacionalidadesDaPessoa, paisDaPessoa, paisDaVida } from '../mundo/vida';
 import { converterEntrePaises } from '../mundo/moeda';
 import type {
@@ -576,6 +577,8 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       temperamento: { extroversao: tp.sociabilidade / 100, afabilidade: tp.empatia / 100, responsabilidade: tp.disciplina / 100, abertura: tp.coragem / 100, estabilidade: -tp.impulsividade / 100 },
       ...(ocMorto ? { ocupacao: v.eu.genero === 'feminino' ? ocMorto.nome[1] : ocMorto.nome[0], ocupacaoId: ocMorto.id } : {}),
       renda: 0, municipioId: v.moradia.municipioId, saude: 0, visual: structuredClone(v.eu.visual),
+      // FIX pós-playtest humano: quem morreu deixa os GENES (os netos herdam o nariz de nascença, não o operado).
+      ...(v.eu.genes || v.eu.estilo?.corNatural ? { genes: genesDe(v.eu) } : {}),
       ...(v.eu.ancestralidade ? { ancestralidade: v.eu.ancestralidade } : {}), ...(v.eu.tradicao ? { tradicao: v.eu.tradicao } : {}),
       ...(paisDoMorto.length ? { genitores: paisDoMorto } : {}), municipioNatal: v.eu.municipioNatal,
       // O que quem morreu tinha de crônico fica na ficha dele: é o histórico da família de quem continua.
@@ -614,6 +617,7 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       nacionalidades: nacionalidadesDaPessoa(h),
       ...(h.atracao ? { atracao: h.atracao } : {}),
       visual: structuredClone(h.visual ?? v.eu.visual),
+      ...(h.genes ? { genes: structuredClone(h.genes) } : {}),
       ...(tratamento ? { tratamento } : {}),
       // REWORK 4: quem continua é quem já era — a ancestralidade, a tradição e a semente do retrato dela (a roupa e o
       // fundo do rosto não mudam na troca).

@@ -88,6 +88,8 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'faculdade', quero: 'Fazer faculdade, técnico, pós', lugar: { area: 'formacao' }, la: 'a preparação e os cursos' },
   { id: 'falar_mae', quero: 'Falar com a mãe, com a família', lugar: { area: 'pessoas' }, la: 'o rosto de quem você quer' },
   { id: 'namoro', quero: 'Procurar alguém para namorar', lugar: { area: 'pessoas' }, la: '"Conhecer alguém"' },
+  // FIX pós-playtest humano: da amizade ao romance — na ficha, "Algo mais".
+  { id: 'romance_amigo', quero: 'Tentar transformar uma amizade em romance', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Algo mais" (demonstrar interesse — a resposta é dela)' },
   { id: 'fazer_junto', quero: 'Fazer algo com quem eu amo, com o meu filho, com um amigo', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Fazer juntos" (cinema, jantar, parque, ensinar, viajar)' },
   { id: 'agir_trabalho', quero: 'Agir no trabalho: um projeto, a chefia, o treino de atleta', lugar: { area: 'trabalho' }, la: '"No dia a dia do trabalho"' },
   { id: 'emprego', quero: 'Procurar emprego, ver a profissão', lugar: { area: 'trabalho' }, la: 'o trabalho de agora e as vagas' },
@@ -109,6 +111,7 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'usar_carro', quero: 'Usar o meu carro, a moto, a bicicleta', lugar: { area: 'vida', secao: 'pertences' }, la: 'o veículo, com o que dá para fazer com ele' },
   { id: 'dinheiro', quero: 'Ver meu dinheiro, pedir ajuda à família', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês, o que é seu, a família' },
   { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce' }, la: '"Aparência e estilo"' },
+  { id: 'cirurgia', quero: 'Fazer uma cirurgia plástica (nariz, orelhas, cabelo, lifting)', lugar: { area: 'vida', secao: 'compras' }, la: '"Você": a clínica de cirurgia plástica' },
   { id: 'saude', quero: 'Cuidar da saúde, da cabeça', lugar: { area: 'voce' }, la: 'humor, cabeça e saúde' },
   { id: 'historia', quero: 'Acompanhar a minha história', lugar: { area: 'linha' }, la: 'a biografia, ano a ano' }
 ];

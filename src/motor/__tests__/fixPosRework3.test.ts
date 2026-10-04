@@ -327,7 +327,9 @@ describe('P1/P2 · veículos, lojas, estilo', () => {
     const formas = new Set(VERSOES_VEICULO.map(x => formaDaVersao(x)));
     for (const f of ['hatch', 'seda', 'suv', 'picape', 'esportivo', 'scooter', 'street', 'trail', 'urbana', 'mtb', 'jetski', 'lancha', 'veleiro', 'monomotor']) expect(formas.has(f as never)).toBe(true);
     expect(formaDaVersao(VERSOES_VEICULO.find(x => x.id === 'toyota_hilux'))).toBe('picape');
-    expect(formaDaVersao(VERSOES_VEICULO.find(x => x.id === 'fiat_mobi'))).toBe('hatch');
+    // FIX pós-playtest humano: o compacto de entrada (Mobi, Kwid, C3) ganhou silhueta própria — não é mais o hatch médio.
+    expect(formaDaVersao(VERSOES_VEICULO.find(x => x.id === 'fiat_mobi'))).toBe('compacto');
+    expect(formaDaVersao(VERSOES_VEICULO.find(x => x.id === 'vw_polo'))).toBe('hatch');
   });
 
   it('15. relógio e joia: comprar, usar, guardar — e o save guarda o que está em uso', () => {

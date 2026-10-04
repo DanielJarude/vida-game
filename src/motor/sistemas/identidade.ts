@@ -23,7 +23,7 @@
  * testes antigos seguem iguais no resto.
  */
 
-import type { Genero, Pessoa, Visual } from '../tipos';
+import type { Genero, Genes, Pessoa, Visual } from '../tipos';
 import { criarRng, rngDe, type Rng } from '../rng';
 import { ORIGENS, PELE_MEDIA, POPULACOES, POPULACOES_POR_REGIAO, TRACOS, type Ancestralidade, type Origem, type PerfilPopulacional } from '../dados/populacoes';
 import { paisDoCatalogo, paisesVivenciaveis, existePais, perfilDoPais, temPerfil } from '../mundo/registro';
@@ -35,7 +35,7 @@ export const TEXTURAS = ['liso', 'ondulado', 'cacheado', 'crespo'] as const;
 const CORES_CABELO = ['preto', 'castanho_escuro', 'castanho', 'castanho_claro', 'loiro', 'ruivo'];
 const CORES_OLHOS = ['castanho_escuro', 'castanho', 'mel', 'verde', 'azul'];
 export const FORMAS_OLHOS = ['amendoado', 'redondo', 'caido', 'puxado'] as const;
-export const NARIZES = ['fino', 'medio', 'largo', 'arrebitado'] as const;
+export const NARIZES = ['fino', 'medio', 'largo', 'arrebitado', 'curvo', 'pequeno'] as const;
 export const BOCAS = ['fina', 'media', 'cheia'] as const;
 export const ROSTOS = ['oval', 'redondo', 'quadrado', 'longo', 'coracao'] as const;
 export const SOBRANCELHAS = ['fina', 'media', 'grossa'] as const;
@@ -43,11 +43,78 @@ const LISTAS: Record<string, readonly string[]> = { textura: TEXTURAS, corCabelo
 const CAMPO: Record<string, keyof Visual> = { textura: 'textura', corCabelo: 'corCabelo', olhos: 'olhos', olhosForma: 'olhosForma', nariz: 'nariz', boca: 'boca', rosto: 'rosto', sobrancelha: 'sobrancelha' };
 const TINTAS = new Set(['platinado', 'vermelho', 'azul', 'rosa', 'grisalho']);
 
+/**
+ * FIX pós-playtest humano — os traços UNIVERSAIS: variação individual que existe em toda família do mundo, sem peso
+ * por origem (nacionalidade, país e "raça" não decidem o tamanho dos olhos, as orelhas ou o queixo). A única exceção
+ * física é a sarda, que depende da pele clara (melanina), não da origem. Todos aparecem no retrato.
+ */
+export const UNIVERSAIS: Record<string, { lista: readonly string[]; pesos: number[] }> = {
+  olhosTam: { lista: ['pequenos', 'medios', 'grandes'], pesos: [1.2, 3, 1.2] },
+  olhosDist: { lista: ['proximos', 'medios', 'afastados'], pesos: [1, 3, 1] },
+  sobrancelhaForma: { lista: ['reta', 'arqueada', 'angulosa'], pesos: [2, 2, 1.2] },
+  bocaLarg: { lista: ['estreita', 'media', 'larga'], pesos: [1.2, 3, 1.2] },
+  queixo: { lista: ['suave', 'medio', 'marcado'], pesos: [2, 3, 2] },
+  orelhas: { lista: ['coladas', 'medias', 'de_abano'], pesos: [2, 4, 1] },
+  linhaCabelo: { lista: ['reta', 'bico', 'alta'], pesos: [3, 1.2, 1.4] },
+  sardas: { lista: ['nao', 'poucas', 'muitas'], pesos: [10, 0.4, 0.1] },
+  calvicie: { lista: ['nao', 'tardia', 'cedo'], pesos: [3, 2, 1.4] }
+};
+const CHAVES_UNIVERSAIS = Object.keys(UNIVERSAIS) as (keyof Visual)[];
+/**
+ * O valor padrão de cada traço universal: NÃO vai para o save (o retrato e a herança leem o padrão — `tracoUniversal`).
+ * Só quem tem a Aparência 2.0 (a `calvicie`, sempre gravada, é a marca) é lido assim; quem veio de antes, como
+ * desconhecido. Economiza o save sem perder nada (medido: ~7 kB por vida → a metade).
+ */
+const PADRAO: Partial<Record<keyof Visual, string>> = { olhosTam: 'medios', olhosDist: 'medios', bocaLarg: 'media', queixo: 'medio', orelhas: 'medias', linhaCabelo: 'reta', sardas: 'nao' };
+export function tracoUniversal(v: Visual | undefined, k: keyof Visual): string | undefined {
+  if (!v) return undefined;
+  return (v[k] as string | undefined) ?? (v.calvicie !== undefined ? PADRAO[k] : undefined);
+}
+function compactar(v: Visual): Visual {
+  for (const [k, padrao] of Object.entries(PADRAO)) if ((v as unknown as Record<string, unknown>)[k] === padrao) delete (v as unknown as Record<string, unknown>)[k];
+  return v;
+}
+function sortearUniversal(r: Rng, k: string, pele: string): string {
+  const u = UNIVERSAIS[k];
+  const pesos = k === 'sardas' ? (pele === 'p1' ? [3, 1.4, 0.6] : pele === 'p2' ? [6, 0.8, 0.2] : u.pesos) : u.pesos;
+  return r.weighted([...u.lista], x => pesos[u.lista.indexOf(x)]) ?? u.lista[0];
+}
+/** Os traços universais de alguém sem pais conhecidos (de um gerador próprio — não muda os outros sorteios). */
+function universais(r: Rng, pele: string): Partial<Visual> {
+  const out: Record<string, string> = {};
+  for (const k of CHAVES_UNIVERSAIS) out[k] = sortearUniversal(r, k, pele);
+  return out as Partial<Visual>;
+}
+
+/**
+ * A GENÉTICA de alguém: os traços de nascença (`genes`), ou — para quem nunca mudou nada além do corte — o visual com
+ * a cor NATURAL do cabelo. É isto que os filhos herdam: a cirurgia, a tinta e o transplante ficam com a pessoa.
+ */
+export function geneticaDe(p: { visual?: Visual; genes?: Genes; estilo?: { corNatural?: string } } | undefined): Visual | undefined {
+  if (!p?.visual && !p?.genes) return undefined;
+  const base: Visual = { ...(p.visual as Visual), ...(p.genes ?? {}) } as Visual;
+  const natural = p.genes?.corCabelo ?? p.estilo?.corNatural;
+  if (natural && !TINTAS.has(natural)) base.corCabelo = natural;
+  delete base.transplante; delete base.lifting;
+  return base;
+}
+/** Guarda os genes antes da primeira mudança no corpo (idempotente): depois disso, o visual pode mudar à vontade. */
+export function guardarGenes(p: { visual: Visual; genes?: Genes; estilo?: { corNatural?: string } }): void {
+  if (!p.genes) p.genes = genesDe(p);
+}
+/** Os genes como dado (sem o que é escolha: corte, barba, óculos, roupa). */
+export function genesDe(p: { visual?: Visual; genes?: Genes; estilo?: { corNatural?: string } }): Genes {
+  const g = geneticaDe(p)!;
+  const { cabelo: _c, barba: _b, bigode: _bi, oculos: _o, chapeu: _ch, roupa: _r, joia: _j, ...genes } = g;
+  void _c; void _b; void _bi; void _o; void _ch; void _r; void _j;
+  return genes;
+}
+
 /** Os penteados que combinam com cada textura (o estilo é da pessoa; a textura, da família). */
 const ESTILOS: Record<Genero, Record<(typeof TEXTURAS)[number], string[]>> = {
-  masculino: { liso: ['curto', 'curto_lado', 'raspado'], ondulado: ['ondulado', 'curto', 'curto_lado', 'raspado'], cacheado: ['cacheado', 'ondulado', 'raspado'], crespo: ['crespo_curto', 'raspado', 'cacheado'] },
-  feminino: { liso: ['longo_liso', 'chanel', 'rabo', 'coque'], ondulado: ['longo_ondulado', 'chanel', 'rabo', 'coque'], cacheado: ['cacheado_longo', 'longo_ondulado', 'coque', 'trancas'], crespo: ['black', 'trancas', 'cacheado_longo', 'coque'] },
-  nao_binario: { liso: ['curto', 'chanel', 'rabo'], ondulado: ['ondulado', 'chanel', 'rabo'], cacheado: ['cacheado', 'black'], crespo: ['black', 'cacheado', 'curto'] }
+  masculino: { liso: ['curto', 'curto_lado', 'raspado', 'topete'], ondulado: ['ondulado', 'curto', 'curto_lado', 'topete', 'raspado'], cacheado: ['cacheado', 'ondulado', 'raspado'], crespo: ['crespo_curto', 'raspado', 'cacheado', 'locs'] },
+  feminino: { liso: ['longo_liso', 'chanel', 'rabo', 'coque', 'pixie'], ondulado: ['longo_ondulado', 'chanel', 'rabo', 'coque', 'pixie'], cacheado: ['cacheado_longo', 'longo_ondulado', 'coque', 'trancas'], crespo: ['black', 'trancas', 'cacheado_longo', 'coque', 'locs'] },
+  nao_binario: { liso: ['curto', 'chanel', 'rabo', 'pixie'], ondulado: ['ondulado', 'chanel', 'rabo', 'topete'], cacheado: ['cacheado', 'black'], crespo: ['black', 'cacheado', 'curto', 'locs'] }
 };
 
 /* ------------------------------------------------------------ Ancestralidade */
@@ -110,7 +177,7 @@ function peleDa(r: Rng, anc: Ancestralidade): string {
   const k = Math.round(media + r.normal() * (0.45 + mistura * 0.6));
   return PELES[Math.max(0, Math.min(5, k))];
 }
-function estiloPara(r: Rng, genero: Genero, textura: string): string {
+export function estiloPara(r: Rng, genero: Genero, textura: string): string {
   return r.pick(ESTILOS[genero][textura as (typeof TEXTURAS)[number]] ?? ESTILOS[genero].liso);
 }
 
@@ -127,7 +194,9 @@ export function visualDaAncestralidade(r: Rng, genero: Genero, anc: Ancestralida
     cabelo: estiloPara(r, genero, textura)
   } as Visual;
   if (base?.barba !== undefined) v.barba = base.barba;
-  return v;
+  // Os universais saem de um gerador derivado do que já foi sorteado (os sorteios de antes ficam os mesmos).
+  Object.assign(v, universais(rngDe(v.pele, v.corCabelo, v.olhos, v.nariz ?? '', v.rosto ?? '', String(r.next())), v.pele));
+  return compactar(v);
 }
 
 /** A cor natural do cabelo (tinta não passa para filho). */
@@ -157,17 +226,26 @@ export function visualDosPais(r: Rng, genero: Genero, anc: Ancestralidade, a?: V
   if (tx >= 0 && ty >= 0 && Math.abs(tx - ty) >= 2 && r.chance(0.55)) textura = TEXTURAS[Math.round((tx + ty) / 2)];
   const v: Visual = { pele, corCabelo: de('corCabelo'), olhos: de('olhos'), textura, olhosForma: de('olhosForma'), nariz: de('nariz'), boca: de('boca'), rosto: de('rosto'), sobrancelha: de('sobrancelha'), cabelo: estiloPara(r, genero, textura) } as Visual;
   if (genero === 'masculino' && r.chance(0.35)) v.barba = r.pick(['bigode', 'cavanhaque', 'curta', 'cheia']);
-  return v;
+  // FIX pós-playtest humano: os universais também vêm de um dos pais (às vezes, de mais longe) — num gerador derivado.
+  const ru = rngDe(v.pele, v.nariz ?? '', v.boca ?? '', v.rosto ?? '', String(r.next()));
+  for (const k of CHAVES_UNIVERSAIS) {
+    const px = tracoUniversal(x, k), py = tracoUniversal(y, k);
+    const z = ru.next();
+    (v as unknown as Record<string, unknown>)[k] = z < 0.12 || (!px && !py) ? tracoUniversal(proprio, k) : z < 0.56 ? (px ?? py) : (py ?? px);
+  }
+  return compactar(v);
 }
 
 /** O avô e a avó: gente de quem o pai ou a mãe herdou — parecidos com o filho, e um com o outro só pela origem. */
 export function visualDeQuemGerou(r: Rng, genero: Genero, anc: Ancestralidade, filho: Visual): Visual {
   const v = visualDaAncestralidade(r, genero, anc);
   // Metade dos traços do filho veio deste lado: leva alguns de volta.
-  for (const t of ['corCabelo', 'olhos', 'olhosForma', 'nariz', 'boca', 'rosto', 'sobrancelha', 'textura']) {
-    const campo = CAMPO[t];
-    if (r.chance(0.5) && filho[campo] && !(t === 'corCabelo' && TINTAS.has(filho.corCabelo))) (v as unknown as Record<string, unknown>)[campo] = filho[campo];
+  for (const t of ['corCabelo', 'olhos', 'olhosForma', 'nariz', 'boca', 'rosto', 'sobrancelha', 'textura', ...CHAVES_UNIVERSAIS]) {
+    const campo = (CAMPO[t] ?? t) as keyof Visual;
+    const doFilho = (CHAVES_UNIVERSAIS as string[]).includes(t) ? tracoUniversal(filho, campo) : filho[campo];
+    if (r.chance(0.5) && doFilho && !(t === 'corCabelo' && TINTAS.has(filho.corCabelo))) (v as unknown as Record<string, unknown>)[campo] = doFilho;
   }
+  compactar(v);
   const k = PELES.indexOf(filho.pele);
   v.pele = PELES[Math.max(0, Math.min(5, k + Math.round(r.normal() * 0.8)))];
   v.cabelo = estiloPara(r, genero, v.textura ?? 'liso');
@@ -244,4 +322,16 @@ export function familiaInicial(id: string, pais: string, sobrenome: string, pais
   const pai = { ancestralidade: normalizar(perfilPai.mix), tradicao: tradicaoValida(perfilPai.nomes) };
   const mae = { ancestralidade: normalizar(perfilMae.mix), tradicao: tradicaoValida(perfilMae.nomes) };
   return { pai, mae };
+}
+
+/**
+ * A calvície HERDADA (`Visual.calvicie`) ao longo da vida — fonte única do retrato e da clínica: 0 nada, 1 entradas,
+ * 2 calvo. O transplante capilar não deixa aparecer. Sem o traço (quem veio de antes), indefinido.
+ */
+export function estagioDaCalvicie(calvicie: string | undefined, masc: boolean, idade: number, transplante?: boolean): 0 | 1 | 2 | undefined {
+  if (calvicie === undefined) return undefined;
+  if (!masc || transplante) return 0;
+  if (calvicie === 'cedo') return idade >= 44 ? 2 : idade >= 28 ? 1 : 0;
+  if (calvicie === 'tardia') return idade >= 66 ? 2 : idade >= 48 ? 1 : 0;
+  return 0;
 }

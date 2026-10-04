@@ -90,6 +90,7 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     // FIX pós-REWORK 4: as intenções novas (e as que não tinham o que conferir) levam a um lugar que mostra o que promete.
     hobby: /Explorar outras atividades|Arte|Leitura/, sair: /Com quem|Sair e ver gente/, estresse: /O que está pesando/, viajar: /Viagens e experiências/,
     rede: /Criar uma conta no Instagram|Instagram/, fazer_junto: /Família|Amigos|Perto|Gente da sua vida/, agir_trabalho: /No dia a dia do trabalho|O que dá para fazer agora/, usar_carro: /Nada seu ainda|Seu veículo|Seus veículos/, pertences: /Nada seu ainda|Para usar|Pertences/, casa: /Procurar (um|outro) lugar/, onde_moro: /Quem paga a casa/,
+    romance_amigo: /Família|Amigos|Perto|Gente da sua vida/, cirurgia: /Clínica de cirurgia plástica/,
     mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /Linha da Vida/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {

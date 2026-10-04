@@ -25,6 +25,7 @@
  * sequência do gerador principal.
  */
 
+import { nomeDaMateria } from '../mundo/materias';
 import { educacaoDoPais } from '../mundo/vida';
 import { textoLocal } from '../mundo/locais';
 import { capitalizar } from '../texto';
@@ -38,6 +39,7 @@ import { OCUPACOES } from '../dados/ocupacoes';
 import { criarPessoa, vincular } from '../pessoas';
 import { habilidade, materiasExtremas } from './frentes';
 import { marcar } from './marcas';
+import { instituicaoTecnica, quemOferece } from './ensinoTecnico';
 import { flex } from '../texto';
 import { anoDoArco } from './arcos';
 
@@ -145,12 +147,17 @@ export function instituicaoAtual(v: Vida): Instituicao | undefined {
     const g = grupoEscolar(b.etapa);
     const ambiente = `escola:${cidade}:${b.rede}:${g}`;
     if (b.integrado) {
-      const chave = `if:${cidade}`;
       const c = cursoOuNulo(b.integrado);
+      // FIX pós-playtest humano: a escola técnica tem identidade (`ensinoTecnico`): nome, perfil e catálogo da cidade.
+      // Save de antes (sem a chave): a escola pública da cidade que oferece o curso; a chave antiga fica (os
+      // professores e colegas daquela escola continuam ligados a ela).
+      const tec = (b.integradoInst ? instituicaoTecnica(b.integradoInst) : undefined) ?? quemOferece(cidade, b.integrado, true);
+      const chave = b.integradoInst ?? `if:${cidade}`;
       const ofertas = perfil(v, chave, 'if', true, cidade, c?.area);
       const m = municipio(cidade);
       const brasil = paisDaCidade(cidade) === 'BR';
-      return { chave, ambiente, tipo: 'if', nome: brasil ? `Instituto Federal, campus ${m.perfil === 'pequena' ? 'da região' : m.nome}` : `Escola técnica pública de ${m.nome}`, rotulo: brasil ? 'Instituto Federal' : 'Escola técnica', descricao: descrever('if', true, ofertas, cidade), ofertas, municipioId: cidade, publica: true, area: c?.area };
+      const nome = tec?.nome ?? (brasil ? `Instituto Federal, campus ${m.perfil === 'pequena' ? 'da região' : m.nome}` : `Escola técnica pública de ${m.nome}`);
+      return { chave, ambiente, tipo: 'if', nome, rotulo: 'Escola técnica', descricao: descrever('if', true, ofertas, cidade), ofertas, municipioId: cidade, publica: true, area: c?.area };
     }
     if (g === 'infantil') {
       const chave = `${ambiente}`;
@@ -356,7 +363,8 @@ export function pessoasDaFormacao(v: Vida): { p: Pessoa; papel: 'professor' | 'o
   return out;
 }
 
-const MATERIA_PROF: Record<string, string> = { exatas: 'matemática', linguagens: 'português', ciencias: 'ciências', humanas: 'história' };
+/** A matéria do professor que repara: da fonte única (`mundo/materias` — a língua é a de onde se estuda). */
+const MATERIA_PROF = (frente: string) => nomeDaMateria(frente);
 
 export function criarProfessor(v: Vida, inst: Instituicao, papel: 'professor' | 'orientador', disciplina?: string): Pessoa | undefined {
   if (!inst.ambiente && inst.tipo !== 'ead') return undefined;
@@ -433,10 +441,10 @@ function formacaoDoAno(v: Vida, inst: NonNullable<ReturnType<typeof instituicaoA
       motivo = { disc: inst.tipo === 'escola' ? disc[deAtividade.tipo] : undefined, texto: `reparou no seu trabalho ${deAtividade.tipo === 'time' ? 'na quadra' : `no ${NOME_VIVENCIA[deAtividade.tipo]}`}` };
     } else if (desempenho >= 80 && r.chance(0.22)) {
       const forte = materiasExtremas(v).forte;
-      motivo = { disc: inst.tipo === 'escola' && forte ? MATERIA_PROF[forte] : undefined, texto: 'reparou em como você pensa nas aulas' };
+      motivo = { disc: inst.tipo === 'escola' && forte ? MATERIA_PROF(forte) : undefined, texto: 'reparou em como você pensa nas aulas' };
     } else if (emReforco && r.chance(0.3)) {
       const fraca = materiasExtremas(v).fraca;
-      motivo = { disc: inst.tipo === 'escola' && fraca ? MATERIA_PROF[fraca] : undefined, texto: 'ficou depois da aula para explicar de novo o que não tinha entrado' };
+      motivo = { disc: inst.tipo === 'escola' && fraca ? MATERIA_PROF(fraca) : undefined, texto: 'ficou depois da aula para explicar de novo o que não tinha entrado' };
     }
     if (motivo) {
       const p = criarProfessor(v, inst, 'professor', motivo.disc);

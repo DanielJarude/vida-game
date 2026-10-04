@@ -548,7 +548,7 @@ export function CenaDaCasa({ l }: { l: LeituraLar }) {
       {(c.nivel === 'ruim' || c.nivel === 'problema') && <Rachadura x={w.x + w.l * 0.74} y={w.y} a={w.a} />}
       {c.nivel === 'problema' && <Andaime x={w.x + 4} topo={Math.max(w.y - 2, 20)} />}
       {c.reformaRecente && c.nivel !== 'problema' && <TintaNova x={w.x + w.l - 36} />}
-      {l.veiculo && <g transform={`translate(${pl.vaga + (l.veiculo === 'carro' ? 0 : 8)} 107)`} className={`cena__veiculo${l.corVeiculo ? ' desenho-veiculo--colorido' : ''}`} style={l.corVeiculo ? { ['--cor-veiculo' as string]: l.corVeiculo } : undefined} data-forma={formaNaPorta(l)}>{desenhoDaForma(formaNaPorta(l)!)}</g>}
+      {l.veiculo && <g transform={`translate(${pl.vaga + (l.veiculo === 'carro' ? 0 : 8)} 107)`} className={`cena__veiculo${l.corVeiculo ? ' desenho-veiculo--colorido' : ''}`} style={l.corVeiculo ? estiloDaLataria(l.corVeiculo) : undefined} data-forma={formaNaPorta(l)}>{desenhoDaForma(formaNaPorta(l)!)}</g>}
       {l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro').slice(0, 2).map((b, k) => (b.especie === 'gato' ? <Gato key={b.id} x={pl.bichos + k * 24} /> : <Cachorro key={b.id} x={pl.bichos + k * 24} />))}
     </svg>
   );
@@ -567,8 +567,28 @@ export function CenaDaCasa({ l }: { l: LeituraLar }) {
  * saírem idênticos. Chão em y = 21 (a cena da casa conta com isso).
  */
 const CHAO_V = 21;
-const MASSA = { fill: 'currentColor', fillOpacity: 0.14 };
-const VIDRO = { fill: 'currentColor', fillOpacity: 0.5, stroke: 'none' };
+/**
+ * FIX pós-playtest humano — "a cor deve pertencer ao objeto": a lataria e o vidro leem a cor do veículo direto do
+ * estilo (`--lataria`, `--vidro`, postos por `estiloDaLataria`), não de um seletor de CSS. Sem cor (o ícone da
+ * interface), o traço de sempre no tom da área.
+ */
+// (Os atributos ficam — o ícone sem cor e quem lê o desenho os veem; o estilo, quando há cor, prevalece.)
+const MASSA = { fill: 'currentColor', fillOpacity: 0.14, style: { fill: 'var(--lataria, currentColor)', fillOpacity: 'var(--lataria-op, 0.14)' } };
+const VIDRO = { fill: 'currentColor', fillOpacity: 0.5, style: { fill: 'var(--vidro, currentColor)', fillOpacity: 'var(--vidro-op, 0.5)' }, stroke: 'none' };
+/** A pintura no próprio quadro/para-lama (a bicicleta, a moto). */
+const PINTADO = { stroke: 'var(--lataria, currentColor)' } as const;
+function luminancia(hex: string): number {
+  const c = [1, 3, 5].map(k => parseInt(hex.slice(k, k + 2), 16) / 255).map(x => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const escurecer = (hex: string, t: number) => '#' + [1, 3, 5].map(k => Math.round(parseInt(hex.slice(k, k + 2), 16) * (1 - t)).toString(16).padStart(2, '0')).join('');
+/** O estilo de um veículo com cor: a lataria na cor (opaca), o vidro escuro, o contorno escuro da própria cor — claro
+ *  só quando a lataria é escura (o carro preto não some no fundo escuro). */
+export function estiloDaLataria(cor: string): Record<string, string | number> {
+  const valida = /^#[0-9a-f]{6}$/i.test(cor) ? cor : '#888888';
+  const escura = luminancia(valida) < 0.025;
+  return { '--cor-veiculo': valida, '--lataria': valida, '--lataria-op': 1, '--vidro': escura ? '#9fb2c2' : '#1f2a33', '--vidro-op': escura ? 0.55 : 0.82, '--pneu': '#181513', '--cubo': '#a8a29a', color: escura ? '#d8d1c4' : escurecer(valida, 0.62) };
+}
 type Pt = [number, number];
 const f1 = (n: number) => Math.round(n * 10) / 10;
 /** Polilinha com os cantos arredondados (corta `r` de cada lado do vértice). */
@@ -599,7 +619,8 @@ const variacao = (s?: string) => { if (!s) return [0, 0, 0, 0]; const h = hashV(
 
 /** A roda: aro, cubo; o pneu de trilha tem cravos (traço interrompido). */
 function Roda({ x, r, grossa = 1.6, cravos }: { x: number; r: number; grossa?: number; cravos?: boolean }) {
-  return <g><circle cx={x} cy={CHAO_V - r} r={r - grossa / 2 + 0.8} {...TRACO} strokeWidth={grossa} strokeDasharray={cravos ? '1.3 0.9' : undefined} /><circle cx={x} cy={CHAO_V - r} r={r > 4 ? 1 : 0.8} fill="currentColor" /></g>;
+  // O pneu é pneu (escuro, cheio) e o cubo, metal — com cor; sem cor (o ícone), o traço de sempre.
+  return <g><circle cx={x} cy={CHAO_V - r} r={r - grossa / 2 + 0.8} {...TRACO} style={{ fill: 'var(--pneu, none)' }} strokeWidth={grossa} strokeDasharray={cravos ? '1.3 0.9' : undefined} /><circle cx={x} cy={CHAO_V - r} r={r > 4 ? 1.4 : 1} style={{ fill: 'var(--cubo, currentColor)' }} /></g>;
 }
 
 type Traseira = 'hatch' | 'tres' | 'caixa' | 'cacamba' | 'fastback';
@@ -617,7 +638,9 @@ interface Carroceria {
   colunas: number[];
   rack?: boolean;
 }
-const CARROCERIAS: Record<'hatch' | 'seda' | 'suv' | 'suv_medio' | 'suv_grande' | 'picape' | 'esportivo', Carroceria> = {
+const CARROCERIAS: Record<'compacto' | 'hatch' | 'seda' | 'suv' | 'suv_medio' | 'suv_grande' | 'picape' | 'esportivo', Carroceria> = {
+  // O compacto de entrada: curto, teto alto, rodas pequenas, quase sem capô (Kwid, Mobi, C3).
+  compacto: { traseira: 'hatch', x0: 8.5, x1: 39.5, eixoT: 13.5, eixoD: 33.5, r: 3.2, folga: 1.2, cintura: 12, teto: 4.6, capo: 12.8, tetoD: 24.5, parabrisa: 29.5, colunas: [0.5] },
   hatch: { traseira: 'hatch', x0: 6, x1: 41.5, eixoT: 12.5, eixoD: 34.5, r: 3.6, folga: 0.8, cintura: 12.4, teto: 6, capo: 13.4, tetoD: 24, parabrisa: 30.5, colunas: [0.52] },
   seda: { traseira: 'tres', x0: 2, x1: 46, eixoT: 11.5, eixoD: 37, r: 3.5, folga: 0.6, cintura: 12.6, teto: 6.6, capo: 13.4, tetoD: 26, parabrisa: 33, volume: 11, colunas: [0.5] },
   suv: { traseira: 'caixa', x0: 4.5, x1: 43.5, eixoT: 12, eixoD: 35.5, r: 4.1, folga: 1.6, cintura: 11.2, teto: 4.6, capo: 11.8, tetoD: 26, parabrisa: 32, colunas: [0.5], rack: true },
@@ -664,7 +687,7 @@ const GROSSO = { ...TRACO, strokeWidth: 2.4 };
 /** Para-lama colado na roda (arco por cima). */
 const paraLama = (x: number, r: number, de = 200, ate = 340, folga = 1.4) => {
   const R = r + folga, cy = CHAO_V - r, p = (g: number) => `${f1(x + R * Math.cos(g * Math.PI / 180))} ${f1(cy + R * Math.sin(g * Math.PI / 180))}`;
-  return <path d={`M${p(de)}A${f1(R)} ${f1(R)} 0 0 1 ${p(ate)}`} {...TRACO} />;
+  return <path d={`M${p(de)}A${f1(R)} ${f1(R)} 0 0 1 ${p(ate)}`} {...TRACO} {...PINTADO} strokeWidth={2} />;
 };
 
 const MOTOS: Record<'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail', () => ReactNode> = {
@@ -690,6 +713,7 @@ const MOTOS: Record<'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'tr
     <rect x={18.6} y={12.2} width={7.6} height={5.4} rx={1.2} {...TRACO} {...MASSA} />
     <path d="M21 9.8C22 6.6 27.6 6.2 30.8 7.4L29.6 10.2Z" {...TRACO} {...MASSA} />
     <path d="M11.2 9.8L21 9.8M6.4 8.4L11.2 9.8" {...GROSSO} />
+    <path d="M5.6 8.6L11.4 10.6L19.8 10.8L18.6 13.2L10.6 12.4Z" {...TRACO} {...MASSA} />
     <path d="M36 16.4L32.4 5.2M30.6 4.8L34.4 4.2" {...TRACO} /><circle cx={34.6} cy={7.6} r={1.4} {...TRACO} />
     {paraLama(36, 4.6, 215, 310, 1.2)}
   </>,
@@ -718,6 +742,7 @@ const MOTOS: Record<'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'tr
     <path d="M21 10C22 6.6 27.8 6 31 6.8L29.2 11Z" {...TRACO} {...MASSA} />
     <rect x={19.4} y={12.2} width={6.4} height={4.4} rx={1} {...TRACO} {...MASSA} />
     <path d="M11 8.2L24.6 7.6M4.4 6.6L11 8.2" {...GROSSO} />
+    <path d="M10.6 9L18.8 9.4L18.4 12L12.4 11.2Z M31.6 5.6L41 7.4L39.6 8.8L32.4 7.6Z" {...TRACO} {...MASSA} />
   </>
 };
 
@@ -728,20 +753,20 @@ const BIKES: Record<'urbana' | 'estrada' | 'mtb' | 'eletrica', () => ReactNode> 
   urbana: () => <>
     <Roda x={10} r={BIKE_RODA} grossa={1.1} /><Roda x={35} r={BIKE_RODA} grossa={1.1} />
     {paraLama(10, BIKE_RODA, 190, 300, 1)}{paraLama(35, BIKE_RODA, 230, 330, 1)}
-    <path className="quadro" d="M31.2 9C26.4 14.4 23 16.6 20 16.4L10 15.6M20 16.4L16.8 8.4M10 15.6L17.2 10.2M31.2 9L35 15.6M31.2 9L30.6 5.6L27.4 6.4" {...TRACO} strokeWidth={1.3} />
+    <path className="quadro" style={{ stroke: 'var(--lataria, currentColor)' }} d="M31.2 9C26.4 14.4 23 16.6 20 16.4L10 15.6M20 16.4L16.8 8.4M10 15.6L17.2 10.2M31.2 9L35 15.6M31.2 9L30.6 5.6L27.4 6.4" {...TRACO} strokeWidth={1.3} />
     <path d="M14.6 7.6H18.8" {...GROSSO} />
     <path d="M32.6 6.2H38.8L38 10.2H33.4Z" {...TRACO} strokeWidth={1.2} {...MASSA} />
   </>,
   // Estrada (speed): quadro em diamante de tubo horizontal, guidão curvo para baixo, pneus finos, selim alto.
   estrada: () => <>
     <Roda x={10} r={BIKE_RODA} grossa={0.9} /><Roda x={35} r={BIKE_RODA} grossa={0.9} />
-    <path className="quadro" d="M10 15.6L20 16.4L17.6 7.6H31.2L31.8 10.2L20 16.4M10 15.6L17.6 7.6M31.8 10.2C32.6 12 34 13.6 35 15.6M31.2 7.6L33.6 7.2C36 7.2 36 10.8 33.6 10.6" {...TRACO} strokeWidth={1.2} />
+    <path className="quadro" style={{ stroke: 'var(--lataria, currentColor)' }} d="M10 15.6L20 16.4L17.6 7.6H31.2L31.8 10.2L20 16.4M10 15.6L17.6 7.6M31.8 10.2C32.6 12 34 13.6 35 15.6M31.2 7.6L33.6 7.2C36 7.2 36 10.8 33.6 10.6" {...TRACO} strokeWidth={1.2} />
     <path d="M15.4 6.4H19.8" {...GROSSO} />
   </>,
   // Mountain bike: pneus grossos de cravos, garfo de suspensão, tubo superior inclinado, guidão reto largo.
   mtb: () => <>
     <Roda x={10} r={BIKE_RODA} grossa={2.4} cravos /><Roda x={35} r={BIKE_RODA} grossa={2.4} cravos />
-    <path className="quadro" d="M10 15.6L20 16.4L18 8.6L30.4 7.4L31 10.2L20 16.4M10 15.6L18 8.6M30.4 7.4L30 5.6M28 5.6H33" {...TRACO} strokeWidth={1.5} />
+    <path className="quadro" style={{ stroke: 'var(--lataria, currentColor)' }} d="M10 15.6L20 16.4L18 8.6L30.4 7.4L31 10.2L20 16.4M10 15.6L18 8.6M30.4 7.4L30 5.6M28 5.6H33" {...TRACO} strokeWidth={1.5} />
     <path d="M31 10.2L32.6 12.6" {...GROSSO} /><path d="M32.6 12.6L35 15.6" {...TRACO} />
     <path d="M15.8 7.4H20" {...GROSSO} />
   </>,
@@ -749,7 +774,7 @@ const BIKES: Record<'urbana' | 'estrada' | 'mtb' | 'eletrica', () => ReactNode> 
   eletrica: () => <>
     <Roda x={10} r={BIKE_RODA} grossa={1.3} /><Roda x={35} r={BIKE_RODA} grossa={1.3} />
     {paraLama(10, BIKE_RODA, 190, 300, 1)}{paraLama(35, BIKE_RODA, 230, 330, 1)}
-    <path className="quadro" d="M10 15.6L20 16.4L17.2 8.4M10 15.6L17.2 10.6L30.6 8.6M31.2 9L35 15.6M30.6 8.6L30 5.6L27.2 6.2" {...TRACO} strokeWidth={1.3} />
+    <path className="quadro" style={{ stroke: 'var(--lataria, currentColor)' }} d="M10 15.6L20 16.4L17.2 8.4M10 15.6L17.2 10.6L30.6 8.6M31.2 9L35 15.6M30.6 8.6L30 5.6L27.2 6.2" {...TRACO} strokeWidth={1.3} />
     <path d="M20.6 15.2L30.2 9.6" stroke="currentColor" strokeWidth={3.6} strokeLinecap="round" />
     <circle cx={10} cy={CHAO_V - BIKE_RODA} r={2} fill="currentColor" />
     <path d="M15 7.4H19.2" {...GROSSO} />
@@ -907,7 +932,7 @@ function Desgaste({ forma, estado }: { forma: FormaVeiculo; estado: number }) {
 export function DesenhoVeiculo({ forma, rotulo, largura = 48, semente, cor, estado }: { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string; cor?: string; estado?: number }) {
   // REWORK 4: com cor (o veículo desta vida), a lataria ganha a cor dele; o traço continua o da interface.
   return (
-    <svg className={`desenho-veiculo desenho-veiculo--${forma}${cor ? ' desenho-veiculo--colorido' : ''}`} style={cor ? { ['--cor-veiculo' as string]: cor } : undefined} viewBox="0 0 48 24" width={largura} height={largura / 2} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-forma={forma}>
+    <svg className={`desenho-veiculo desenho-veiculo--${forma}${cor ? ' desenho-veiculo--colorido' : ''}`} style={cor ? estiloDaLataria(cor) : undefined} viewBox="0 0 48 24" width={largura} height={largura / 2} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-forma={forma}>
       {desenhoDaForma(forma, semente)}
       {cor && estado !== undefined && <Desgaste forma={forma} estado={estado} />}
     </svg>
@@ -937,6 +962,8 @@ const ICONES: Record<string, string> = {
   nautica: 'M3 15h18l-3 4H6zM12 15V4M12 5l6 8h-6M2 21c3-1 5 1 8 0s5-1 8 0 3 1 4 0',
   aeroclube: 'M2 13h16l4-2M11 13l-4 6M11 13l-4-6M20 11v4M2 11v4',
   banco: 'M3 9l9-5 9 5M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18',
+  // A clínica: o prédio com a cruz e o perfil de um rosto (estética, não hospital).
+  clinica: 'M4 21V7h10v14M9 10v4M7 12h4M17 9c2 0 3 2 3 4s-1 2-2 2l1 3h-3M2 21h20',
   abrigo: 'M4 12c0-4 3-6 5-6M20 12c0-4-3-6-5-6M7 14c1 4 9 4 10 0M9 9h.01M15 9h.01M12 12v1',
   oficina: 'M14 6a4 4 0 0 0 5 5l-9 9-3-3 9-9M7 17l-3 3',
   imobiliaria: 'M4 20V9l6-4 6 4v11M16 12h4v8M8 13h4M8 16h4M2 20h20',

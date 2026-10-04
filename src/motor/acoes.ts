@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { disponibilidadeProcedimento, fazerProcedimento, type Clinica, type IdProcedimento } from './sistemas/estetica';
 import { comprarCoisa, disponibilidadeComprarCoisa, disponibilidadeVenderCoisa, venderCoisa } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
 import { noPais } from './mundo/registro';
@@ -205,6 +206,7 @@ export type Acao =
   | { tipo: 'aparencia'; mudanca: MudancaVisual }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string }
+  | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
   /** Usar ou guardar um item que é seu. */
   | { tipo: 'usar_item'; itemId: string; usar: boolean }
   /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
@@ -557,6 +559,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId);
+    case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
     case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId);
     case 'vender_coisa': return disponibilidadeVenderCoisa(v, a.coisaTidaId);
@@ -1200,6 +1203,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok(res.texto, res.tom);
     }
     case 'comprar_item': return ok(comprarItem(v, a.itemId), 'bom');
+    case 'estetica': { const x = fazerProcedimento(v, r, a.id as IdProcedimento, a.clinica, a.alvo, a.revisao); return { resultado: x.texto, titulo: x.titulo }; }
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
     case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId), 'bom');
     case 'vender_coisa': return ok(venderCoisa(v, a.coisaTidaId));

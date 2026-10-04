@@ -6,6 +6,7 @@
  * fica o orçamento, confirmar — sem oito telas.
  */
 
+import { CLINICAS, PROCEDIMENTOS, emRecuperacao, precoDoProcedimento, revisavel, riscoDe, type Clinica } from '../../../motor/sistemas/estetica';
 import { municipio } from '../../../motor/dados/lugares';
 import { atividadesQueAjuda, coisasDaLoja, efeitoEmPalavras, precoDaCoisa, temCoisa, temLojaNaCidade } from '../../../motor/sistemas/coisas';
 import { NOME_LOJA, type LojaDeCoisas } from '../../../motor/dados/coisas';
@@ -42,7 +43,7 @@ import { precoDoItem, temItem } from '../../../motor/sistemas/estilo';
 const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 import { dinheiroCheio, dinheiroCurto, formaDoModelo } from '../../leituraMaterial';
 
-export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | LojaDeCoisas;
+export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | 'clinica' | LojaDeCoisas;
 /** As lojas das coisas da vida (`dados/coisas`). */
 export const LOJAS_DE_COISAS: LojaDeCoisas[] = ['eletronicos', 'casa', 'instrumentos', 'esportes', 'livraria'];
 export const ICONE_DA_LOJA: Record<LojaDeCoisas, string> = { eletronicos: 'eletronicos', casa: 'eletrodomesticos', instrumentos: 'instrumentos', esportes: 'esportes', livraria: 'livraria' };
@@ -50,7 +51,7 @@ export const ICONE_DA_LOJA: Record<LojaDeCoisas, string> = { eletronicos: 'eletr
 interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFechar: () => void; trocar: (l: QualLugar) => void }
 
 const TITULO: Record<QualLugar, string> = {
-  alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', nautica: 'Loja náutica', aeroclube: 'Aeroclube e hangar', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios',
+  alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', nautica: 'Loja náutica', aeroclube: 'Aeroclube e hangar', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios', clinica: 'Clínica de cirurgia plástica',
   ...NOME_LOJA
 };
 
@@ -72,9 +73,62 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
         {qual === 'abrigo' && <Abrigo vida={vida} agir={agirEFechar} />}
         {qual === 'pets' && <LojaDeAnimais vida={vida} agir={agirEFechar} />}
         {qual === 'estilo' && <LojaDeEstilo vida={vida} agir={agir} />}
+        {qual === 'clinica' && <ClinicaEstetica vida={vida} agir={agirEFechar} />}
         {(LOJAS_DE_COISAS as string[]).includes(qual) && <LojaDeCoisasDaVida vida={vida} agir={agir} loja={qual as LojaDeCoisas} />}
       </div>
     </Folha>
+  );
+}
+
+/* ------------------------------------------------------ Clínica de estética */
+
+const RISCO_DA_CIRURGIA = (x: number) => (x < 0.025 ? 'baixo' : x < 0.05 ? 'moderado' : 'alto');
+
+/**
+ * FIX pós-playtest humano: a clínica. A clínica (preço, mão, risco) → o procedimento (o que muda, a recuperação) →
+ * a prévia de como deve ficar (o mesmo retrato, com a mudança) → a decisão. O resultado não é garantido — e a genética
+ * não muda (`sistemas/estetica`).
+ */
+function ClinicaEstetica({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const [clinica, setClinica] = useState<Clinica>('boa');
+  const c = CLINICAS[clinica];
+  const eu = vida.eu;
+  const i = idade(vida);
+  const lista = PROCEDIMENTOS.filter(p => i >= p.idadeMin && (!p.cabe(vida) || revisavel(vida, p.id)));
+  const rec = emRecuperacao(vida);
+  return (
+    <div className="loja-estilo clinica">
+      <p className="nota">Mexer no rosto muda o retrato — não a genética: filho herda o que você tinha ao nascer. O resultado depende da clínica, do corpo e da sorte; nenhum preço garante.</p>
+      {rec && <p className="nota nota--atencao">Ainda em recuperação da {rec}.</p>}
+      <Escolha rotulo="Clínica" valor={clinica} aoMudar={setClinica} opcoes={(Object.keys(CLINICAS) as Clinica[]).map(k => ({ id: k, rotulo: CLINICAS[k].nome }))} />
+      <p className="nota">{c.sobre}</p>
+      {!lista.length && <p className="nota">Nada aqui faz sentido para você agora.</p>}
+      <ul className="ofertas">
+        {lista.map(p => {
+          const rev = revisavel(vida, p.id);
+          const alvos = rev ? [] : p.alvos?.(vida) ?? [{ id: '', rotulo: 'Fazer' }];
+          const depois = (alvo?: string) => { const x = structuredClone(vida); p.aplicar(x, alvo); return x.eu.visual; };
+          return (
+            <li key={p.id} className="oferta oferta--estilo clinica__item">
+              <span className="clinica__previa" aria-hidden>
+                <Retrato visual={eu.visual} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={56} />
+                <span className="clinica__seta">→</span>
+                <Retrato visual={depois(alvos[0]?.id || undefined)} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={56} />
+              </span>
+              <span className="oferta__texto">
+                <strong>{p.nome} · {dinheiroCurto(precoDoProcedimento(vida, p.id, clinica, rev))}</strong>
+                <span>{capitalizar(p.oque)}. {p.recuperacao ? `Recuperação: ${p.recuperacao === 1 ? 'um mês' : `${p.recuperacao} meses`}.` : 'Sem recuperação.'} Risco {RISCO_DA_CIRURGIA(riscoDe(vida, p.id, clinica))}.</span>
+                {rev && <span className="nota">O último resultado ficou abaixo do esperado: a revisão sai pela metade.</span>}
+              </span>
+              <span className="grupo-acoes grupo-acoes--linha">
+                {rev ? <BotaoAcao vida={vida} acao={{ tipo: 'estetica', id: p.id, clinica, revisao: true }} agir={agir} variante="secundario">Revisar</BotaoAcao>
+                  : alvos.map(a => <BotaoAcao key={a.id || 'fazer'} vida={vida} acao={{ tipo: 'estetica', id: p.id, clinica, ...(a.id ? { alvo: a.id } : {}) }} agir={agir} variante="secundario">{a.rotulo}</BotaoAcao>)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -134,7 +188,7 @@ function LojaDeEstilo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
               return (
                 <li key={x.id} className="oferta oferta--estilo">
                   <span className="oferta__texto">
-                    <strong>{x.nome}{x.luxo ? <span className="selo selo--luxo"> luxo</span> : null}</strong>
+                    <strong>{x.nome}{x.luxo ? <span className="etiqueta-luxo">luxo</span> : null}</strong>
                     <span>{x.descricao}</span>
                   </span>
                   <span className="oferta__preco">{dinheiroCurto(precoDoItem(vida, x.id))}</span>
@@ -374,7 +428,7 @@ function CartaoVeiculo({ o, motivo, abrir }: { o: OfertaVeiculo; motivo?: string
   const forma = formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId);
   return (
     <button type="button" className="oferta oferta--veiculo" onClick={abrir}>
-      <span className="oferta__veiculo" style={{ ['--cor-veiculo' as string]: o.cor }}><DesenhoVeiculo forma={forma} semente={o.modeloId} cor={o.cor} estado={o.estado} largura={72} rotulo={`${NOME_FORMA[forma]}, ${corDoAnuncio(o)}`} /></span>
+      <span className="oferta__veiculo" style={{ ['--cor-veiculo' as string]: o.cor }}><DesenhoVeiculo forma={forma} semente={o.versaoId ?? o.modeloId} cor={o.cor} estado={o.estado} largura={72} rotulo={`${NOME_FORMA[forma]}, ${corDoAnuncio(o)}`} /></span>
       <span className="oferta__texto">
         <strong>{vt.nome} {o.anoFabricacao}</strong>
         <span><span className="oferta__cor" style={{ ['--cor-veiculo' as string]: o.cor }}>{corDoAnuncio(o)}</span> · {o.usado ? 'usado' : 'novo, zero km'} · {vt.linha}</span>
@@ -399,7 +453,7 @@ function DetalheVeiculo({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao)
   return (
     <div className="detalhe">
       <button type="button" className="botao botao--discreto" onClick={voltar}>← Voltar</button>
-      <div className="detalhe__veiculo"><DesenhoVeiculo forma={formaDaVersao(x, o.modeloId)} semente={o.modeloId} cor={o.cor} estado={o.estado} largura={200} rotulo={`${NOME_FORMA[formaDaVersao(x, o.modeloId)]}, ${corDoAnuncio(o)}`} /></div>
+      <div className="detalhe__veiculo"><DesenhoVeiculo forma={formaDaVersao(x, o.modeloId)} semente={o.versaoId ?? o.modeloId} cor={o.cor} estado={o.estado} largura={200} rotulo={`${NOME_FORMA[formaDaVersao(x, o.modeloId)]}, ${corDoAnuncio(o)}`} /></div>
       <h3 className="detalhe__titulo">{vt.nome} {corDoAnuncio(o)} {o.anoFabricacao}</h3>
       <p className="nota">{o.usado ? 'Usado' : 'Novo, zero km'} · {vt.linha}</p>
       <p className="nota">{vt.descricao}{o.usado ? ` Anúncio: ${o.historico}.` : ''}</p>

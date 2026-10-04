@@ -58,7 +58,7 @@ export function disponibilidadeAparencia(v: Vida, m: MudancaVisual): Veredito {
       const c = CORTES.find(y => y.id === x);
       if (!c) return bloqueio('impossivel', 'Esse corte não existe.');
       if (x === vis.cabelo) return bloqueio('incompativel', 'Já é esse o corte.');
-      if (i < AUTONOMIA.aparencia.idade && (x === 'raspado' || x === 'black' || x === 'trancas')) return bloqueio('impossivel', AUTONOMIA.aparencia.antes);
+      if (i < AUTONOMIA.aparencia.idade && (x === 'raspado' || x === 'black' || x === 'trancas' || x === 'locs')) return bloqueio('impossivel', AUTONOMIA.aparencia.antes);
     }
     if (k === 'corCabelo') {
       if (x === vis.corCabelo) return bloqueio('incompativel', 'Já é essa a cor.');

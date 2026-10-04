@@ -55,8 +55,16 @@ const TERMOS: [RegExp, string][] = [
   [/Série A|Série B|Brasileirão|campeonato estadual|\bNBB\b|Superliga|[Ss]eleção [Bb]rasileira|várzea/, 'esporte (Brasil)'],
   [/festa junina|São João|carnaval|réveillon|novela|feijoada|brigadeiro|farofa|paçoca|capoeira|forró|cavaquinho|Sete de Setembro|laje\b/i, 'costumes (Brasil)'],
   [/\bR\$|\breais\b|\breal brasileiro/, 'moeda (Brasil)'],
-  [/\bBrasília\b|no Brasil\b|brasileir/, 'o Brasil como lugar']
+  [/\bBrasília\b|no Brasil\b|brasileir/, 'o Brasil como lugar'],
+  // FIX pós-playtest humano: os brasileirismos INVISÍVEIS (a matéria, o cotidiano) — só onde a língua não é o português.
+  [/portugu[eê]s e redação|professora? de [Pp]ortugu[eê]s|em [Pp]ortugu[eê]s|se vira em português/, 'matéria em português fora de país lusófono'],
+  [/\bmerenda\b|\bpelada\b|campinho|feijão com arroz|\bchurrasco\b/i, 'cotidiano brasileiro (merenda, pelada, churrasco)'],
+  [/Mecânica, Eletrotécnica e Administração/, 'o trio da escola técnica'],
+  [/\bNR-\d+/, 'norma regulamentadora (Brasil)']
 ];
+/** O que só é vazamento fora dos países de língua portuguesa. */
+const SO_FORA_DO_PORTUGUES = new Set(['matéria em português fora de país lusófono']);
+const LUSOFONOS = new Set(['BR', 'PT', 'AO', 'MZ', 'CV', 'GW', 'ST', 'TL']);
 
 interface Achado { pais: string; vida: string; idade: number; fonte: string; termo: string; texto: string }
 const achados: Achado[] = [];
@@ -68,6 +76,7 @@ function procurar(pais: string, vida: string, i: number, fonte: string, texto: s
   if (!texto) return;
   for (const [re, termo] of TERMOS) {
     if (!re.test(texto)) continue;
+    if (SO_FORA_DO_PORTUGUES.has(termo) && LUSOFONOS.has(pais)) continue;
     const chave = `${termo}|${texto}`;
     if (vistos.has(chave)) continue;
     vistos.add(chave);

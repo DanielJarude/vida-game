@@ -110,18 +110,19 @@ export function Jogo({ c }: { c: ControleVida }) {
           {area === 'trabalho' && (temTrabalho(vida) ? <Trabalho vida={vida} agir={c.agir} irPara={ir} /> : <TrabalhoAindaNao vida={vida} irPara={ir} />)}
           {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} aba={abaTempo} irAba={a => ir(a)} abrirPessoa={abrirPessoa} />}
           {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
+          {/* FIX pós-playtest humano: "Viver mais um ano" é "terminei o que queria fazer neste ano" — mora no FIM da
+              página, depois de tudo o que dá para ver e fazer nela; nunca por cima do conteúdo. */}
+          <div className="avancar">
+            <button type="button" className="avancar__botao" onClick={c.avancar} disabled={!!vida.momento}>
+              <span className="avancar__rotulo">Viver mais um ano</span>
+              <span className="avancar__idade">{i} → {i + 1}</span>
+            </button>
+          </div>
         </main>
 
         <aside className="agora" aria-label="Agora">
           <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} />
         </aside>
-      </div>
-
-      <div className="avancar">
-        <button type="button" className="avancar__botao" onClick={c.avancar} disabled={!!vida.momento}>
-          <span className="avancar__rotulo">Viver mais um ano</span>
-          <span className="avancar__idade">{i} → {i + 1}</span>
-        </button>
       </div>
 
       <nav className={`barra barra--${AREAS.length}`} aria-label="Áreas">

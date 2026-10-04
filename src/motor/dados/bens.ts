@@ -25,7 +25,7 @@ export const NOME_CATEGORIA: Record<CategoriaVeiculo, { um: string; varios: stri
  * uma scooter não é uma moto de trilha. Derivada da versão (ou dita nela).
  */
 export type FormaVeiculo =
-  | 'hatch' | 'seda' | 'suv' | 'suv_medio' | 'suv_grande' | 'picape' | 'esportivo'
+  | 'compacto' | 'hatch' | 'seda' | 'suv' | 'suv_medio' | 'suv_grande' | 'picape' | 'esportivo'
   | 'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail'
   | 'urbana' | 'estrada' | 'mtb' | 'eletrica'
   | 'jetski' | 'lancha' | 'veleiro'
@@ -225,12 +225,13 @@ export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): Fo
     case 'moto': return /scooter/.test(d) || x?.id === 'honda_pop' || x?.id === 'honda_biz' ? 'scooter' : /trail|terra/.test(d) ? 'trail' : /clássica|custom/.test(d) ? 'cruiser' : /esportiva/.test(d) ? 'esportiva' : 'street';
     case 'embarcacao': return c === 'jetski' ? 'jetski' : c === 'veleiro' ? 'veleiro' : 'lancha';
     case 'aeronave': return c === 'ultraleve' || c === 'bimotor' || c === 'jato' ? c : /jato/.test(d) ? 'jato' : /bimotor/.test(d) ? 'bimotor' : /asa baixa/.test(d) ? 'asa_baixa' : 'monomotor';
-    default: return /picape/.test(d) ? 'picape' : /suv/.test(d) ? 'suv' : /esportivo/.test(d) ? 'esportivo' : /sedã/.test(d) ? 'seda' : c === 'carro_sedan' ? 'seda' : c.startsWith('carro_suv') ? 'suv' : 'hatch';
+    // FIX pós-playtest humano: o compacto de entrada (curto, alto, roda pequena) não é o hatch médio.
+    default: return /^compacto/.test(d) ? 'compacto' : /picape/.test(d) ? 'picape' : /suv/.test(d) ? 'suv' : /esportivo/.test(d) ? 'esportivo' : /sedã/.test(d) ? 'seda' : c === 'carro_sedan' ? 'seda' : c.startsWith('carro_suv') ? 'suv' : 'hatch';
   }
 }
 
 export const NOME_FORMA: Record<FormaVeiculo, string> = {
-  hatch: 'hatch', seda: 'sedã', suv: 'SUV', suv_medio: 'SUV médio', suv_grande: 'SUV de sete lugares', picape: 'picape', esportivo: 'esportivo',
+  compacto: 'compacto', hatch: 'hatch', seda: 'sedã', suv: 'SUV', suv_medio: 'SUV médio', suv_grande: 'SUV de sete lugares', picape: 'picape', esportivo: 'esportivo',
   cub: 'motoneta', scooter: 'scooter', street: 'moto de rua', esportiva: 'moto esportiva', cruiser: 'moto clássica', trail: 'moto de trilha',
   urbana: 'bicicleta urbana', estrada: 'bicicleta de estrada', mtb: 'mountain bike', eletrica: 'bicicleta elétrica',
   jetski: 'moto aquática', lancha: 'lancha', veleiro: 'veleiro', ultraleve: 'ultraleve', monomotor: 'monomotor de asa alta', asa_baixa: 'monomotor de asa baixa', bimotor: 'bimotor', jato: 'jato executivo'

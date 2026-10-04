@@ -14,6 +14,7 @@
  * Nenhum momento se repete na mesma vida. Sorteios derivados.
  */
 
+import { nomeDaMateria } from '../mundo/materias';
 import type { MarcoDeFormacao, Pessoa, Vida } from '../tipos';
 import { clamp, rngDe, type Rng } from '../rng';
 import { escrever, idade, lembrarCom, vinculosVivos } from '../nucleo';
@@ -24,7 +25,8 @@ import { instituicaoAtual, professorDe, registrarNaFormacao, type Instituicao } 
 import { habilidade, materiasExtremas, praticar } from './frentes';
 import { marcar } from './marcas';
 
-const MATERIA: Record<string, string> = { exatas: 'matemática', linguagens: 'redação', ciencias: 'ciências', humanas: 'história' };
+/** O nome da matéria, da fonte única (`mundo/materias`). */
+const MATERIA = (d: string) => nomeDaMateria(d, 'escrita');
 
 function condicao(v: Vida, se: MomentoDeFormacao['se']): boolean {
   if (!se) return true;
@@ -76,7 +78,7 @@ function colegaDaTurma(v: Vida, r: Rng): Pessoa | undefined {
 
 function aplicar(v: Vida, inst: Instituicao, x: MomentoDeFormacao, r: Rng): string {
   const ex = materiasExtremas(v);
-  const materia = MATERIA[(x.se === 'fraca' ? ex.fraca : ex.forte) ?? 'linguagens'] ?? 'redação';
+  const materia = MATERIA((x.se === 'fraca' ? ex.fraca : ex.forte) ?? 'linguagens');
   let prof: Pessoa | undefined;
   // Só o professor que já existe na vida (o que reparou): o momento não cria gente nova — a história usa quem está lá.
   if (x.professor) prof = professorDe(v, inst);

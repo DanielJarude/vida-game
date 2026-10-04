@@ -82,8 +82,9 @@ export const TRACOS: Record<string, Record<Origem, Dist>> = {
   olhos: { eu: [1.5, 3, 2, 1.2, 2], af: [7, 2.5, 0.4, 0.03, 0.01], ea: [7, 2.5, 0.3, 0.01, 0.01], sa: [6, 3, 0.7, 0.1, 0.02], mena: [4, 4, 1.5, 0.4, 0.15], am: [6, 3, 0.6, 0.05, 0.02], oc: [6, 3, 0.6, 0.05, 0.05] },
   // amendoado, redondo, caido, puxado
   olhosForma: { eu: [3, 3, 1, 0.1], af: [3, 3, 1, 0.2], ea: [2, 0.3, 0.5, 5], sa: [3, 3, 1, 0.2], mena: [4, 2, 1, 0.1], am: [3, 1, 1, 2], oc: [3, 2, 1, 0.5] },
-  // fino, medio, largo, arrebitado
-  nariz: { eu: [3, 3, 0.5, 1.5], af: [0.2, 2, 5, 0.3], ea: [0.5, 3, 2, 0.5], sa: [1.5, 3, 1.5, 0.3], mena: [2, 3, 1, 0.2], am: [1, 3, 2, 0.3], oc: [0.3, 2, 4, 0.3] },
+  // fino, medio, largo, arrebitado, curvo, pequeno — os dois últimos (FIX pós-playtest humano) com o MESMO peso em toda
+  // origem: variação individual, não marca de origem.
+  nariz: { eu: [3, 3, 0.5, 1.5, 0.9, 0.9], af: [0.2, 2, 5, 0.3, 0.9, 0.9], ea: [0.5, 3, 2, 0.5, 0.9, 0.9], sa: [1.5, 3, 1.5, 0.3, 0.9, 0.9], mena: [2, 3, 1, 0.2, 0.9, 0.9], am: [1, 3, 2, 0.3, 0.9, 0.9], oc: [0.3, 2, 4, 0.3, 0.9, 0.9] },
   // fina, media, cheia
   boca: { eu: [3, 4, 1], af: [0.3, 2, 5], ea: [2, 4, 1.5], sa: [1.5, 4, 2], mena: [1.5, 4, 2], am: [2, 4, 2], oc: [0.5, 3, 4] },
   // oval, redondo, quadrado, longo, coracao

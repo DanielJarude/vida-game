@@ -179,8 +179,101 @@ export function cabeNaSemana(v: Vida, extra: number, ignorar?: string): { cabe: 
  * integrais e um contrato de atleta ao mesmo tempo, não: passam deste teto.
  */
 export const TETO_HUMANO = 1.55;
+/** O teto pela idade: criança não "se sobrecarrega" por escolha (os pais não levam a três coisas por dia) — a semana
+ *  dela pode encher, não estourar. Do pré-adolescente em diante, o teto humano. */
+const tetoDa = (i: number, base: number) => (i < 12 ? base + 0.75 : base * TETO_HUMANO);
 export function cargaHumana(v: Vida, extra: number): { possivel: boolean; aperta: boolean } {
+  const e = encaixe(v, extra);
+  return { possivel: e.possivel, aperta: e.faixa !== 'folgada' && e.faixa !== 'ocupada' };
+}
+
+/**
+ * FIX pós-playtest humano — A SEMANA EM FAIXAS, FONTE ÚNICA de tudo o que diz "cabe": o painel "Dá para assumir
+ * mais?", a lista de atividades (`podeComecarRotina`), o título de Tempo livre, a faixa desenhada e os testes.
+ *
+ * O playtest viu "Cabe." no painel e, na mesma tela, as atividades em "caberia com mais tempo": eram três contas
+ * (pontos de sobrecarga, teto humano com 0,5 fixo e uma trava de idade só na lista). Agora há UMA conta, e ela separa
+ * três coisas que a tela misturava:
+ *
+ *   TEMPO (esta conta) ≠ SOBRECARGA (o que a semana cobra por ano: `estado`, `sobrecarga`) ≠ ESTRESSE (a cabeça hoje).
+ *
+ *   folgada        — sobra tempo de verdade (≥ 1 pedaço livre): entra sem pensar.
+ *   ocupada        — entra; sobra menos tempo livre.
+ *   cheia          — entra, tirando do descanso e do lazer (até ¾ de pedaço além do confortável).
+ *   sobrecarregada — ainda dá para assumir, com custo claro: estresse, sono, notas, trabalho — o mundo cobra depois.
+ *   alem           — não há horas: passa do teto humano (ou, criança, do que a semana dela comporta). Só aqui bloqueia.
+ *
+ * Não é uma barra de energia: ninguém "gasta" nada para agir. É o tamanho da semana.
+ */
+export type FaixaDaSemana = 'folgada' | 'ocupada' | 'cheia' | 'sobrecarregada' | 'alem';
+export const PALAVRA_DA_FAIXA: Record<FaixaDaSemana, string> = { folgada: 'folgada', ocupada: 'ocupada', cheia: 'cheia', sobrecarregada: 'sobrecarregada', alem: 'no teto' };
+export const ORDEM_DA_FAIXA: FaixaDaSemana[] = ['folgada', 'ocupada', 'cheia', 'sobrecarregada', 'alem'];
+/** Quanto do descanso a semana "cheia" ainda come sem passar a sobrecarregar. */
+export const MARGEM_DO_DESCANSO = 0.75;
+
+export interface Encaixe {
+  /** A faixa da semana DEPOIS de somar `extra`. */
+  faixa: FaixaDaSemana;
+  /** Dá para assumir (tudo menos "além")? */
+  possivel: boolean;
+  /** Folga depois de somar (negativa: o que passa do confortável, em pedaços). */
+  folga: number;
+  /** Total que a semana carrega (fixos + escolhas + extra) e o teto humano dela. */
+  total: number;
+  teto: number;
+  /** O preço, em palavras (cheia / sobrecarregada), ou o porquê do "não" (além). */
+  motivo?: string;
+}
+
+export function encaixe(v: Vida, extra: number, ignorar?: string): Encaixe {
   const s = semana(v);
-  const total = s.fixos.reduce((a, x) => a + x.peso, 0) - s.ganhos.reduce((a, x) => a + x.peso, 0) + s.ocupado + extra;
-  return { possivel: total <= s.base * TETO_HUMANO + 0.01, aperta: s.ocupado + extra > s.capacidade + 0.01 };
+  const i = idade(v);
+  const somaFixos = s.fixos.reduce((a, x) => a + x.peso, 0) - s.ganhos.reduce((a, x) => a + x.peso, 0);
+  // `ignorar`: a atividade que está mudando de nível (o peso dela já entra no `extra`, pela diferença).
+  const ocupado = s.ocupado;
+  // A folga usa a capacidade CRUA (sem o piso de meio pedaço): quando os fixos já passam da semana, isso aparece.
+  const folga = s.base - somaFixos - ocupado - Math.max(0, extra);
+  const total = somaFixos + ocupado + Math.max(0, extra);
+  const teto = tetoDa(i, s.base);
+  const faixa: FaixaDaSemana = folga >= 1 - 0.01 ? 'folgada' : folga >= -0.01 ? 'ocupada' : folga >= -MARGEM_DO_DESCANSO - 0.01 ? 'cheia' : total <= teto + 0.01 ? 'sobrecarregada' : 'alem';
+  const e: Encaixe = { faixa, possivel: faixa !== 'alem', folga, total, teto };
+  if (faixa === 'folgada' || faixa === 'ocupada') return e;
+  // O porquê, sempre com nome: o que já ocupa os dias (os fixos que pesam e as escolhas) — o jogador entende a conta.
+  const pesados = s.fixos.filter(f => f.peso >= 0.5).map(f => f.rotulo.replace(/ \(.*\)$/, '').toLowerCase());
+  const outras = s.rotinas.filter(r => r.id !== ignorar).map(r => r.rotulo.replace(/ — .*/, '').toLowerCase());
+  const ocupam = listaNatural([...pesados, ...outras]);
+  const ja = ocupam ? `Sua semana já está cheia: ${ocupam}. ` : '';
+  if (faixa === 'cheia') e.motivo = `${ja}Cabe apertando: sai do descanso e do lazer.`;
+  else if (faixa === 'sobrecarregada') e.motivo = `${ja}Dá para assumir — mas passa do que cabe: o descanso some e a cabeça cobra (estresse, sono, notas, trabalho).`;
+  else {
+    const falta = total - teto;
+    const soltar = s.rotinas.filter(r => r.id !== ignorar && r.peso >= falta - 0.01).sort((a, b) => a.peso - b.peso)[0];
+    const pede = extra > 0 ? ` Isso pede ${dose(extra)}.` : '';
+    const porque = i < 12 ? `Com ${i} anos, a semana não comporta mais${ocupam ? ` do que ${ocupam}` : ''}: não há quem leve, nem tarde que sobre.` : `Não há horas na semana${ocupam ? `: ${ocupam} já ocupam os dias` : ''}.`;
+    const saida = soltar ? ` Para caber, seria preciso largar ou diminuir ${soltar.rotulo.replace(/ — .*/, '').toLowerCase()}.` : s.rotinas.length ? ' Seria preciso largar mais de uma coisa.' : '';
+    e.motivo = `${porque}${pede}${saida}`;
+  }
+  return e;
+}
+
+/** A faixa da semana como está. */
+export const faixaDaSemana = (v: Vida): FaixaDaSemana => encaixe(v, 0).faixa;
+
+/** O pedaço mais leve que uma atividade nova pede (uma vez por semana). */
+export const PEDACO_LEVE = 0.5;
+
+/**
+ * "Dá para assumir mais?" — a resposta do painel, da MESMA conta que a lista de atividades usa. Se diz que dá, ao
+ * menos uma atividade leve (meio pedaço) é selecionável; se diz que não dá, nenhuma é.
+ */
+export function folegoDaSemana(v: Vida): { faixa: FaixaDaSemana; palavra: string; texto: string; leve: Encaixe } {
+  const agora = encaixe(v, 0);
+  const leve = encaixe(v, PEDACO_LEVE);
+  const terapia = idade(v) >= 14 ? ' (Cuidar da cabeça — a terapia, uma hora por semana — ainda cabe.)' : '';
+  const texto = !leve.possivel ? (agora.faixa === 'alem' ? `A semana passou do teto: os compromissos já não cabem nos dias. Algo vai ter de sair.${terapia}` : `A semana chegou no teto: não cabe mais nada sem tirar alguma coisa.${terapia}`)
+    : leve.faixa === 'folgada' ? 'Sobra espaço: dá para assumir uma ou duas coisas sem apertar.'
+      : leve.faixa === 'ocupada' ? 'Cabe mais uma coisa leve sem apertar.'
+        : leve.faixa === 'cheia' ? 'Dá para assumir mais — tirando do descanso e do lazer.'
+          : 'Dá para assumir mais, mas a semana já passa do que cabe: cada coisa nova cobra estresse, sono e desempenho.';
+  return { faixa: agora.faixa, palavra: PALAVRA_DA_FAIXA[agora.faixa], texto, leve };
 }

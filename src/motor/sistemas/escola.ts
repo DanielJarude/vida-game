@@ -10,6 +10,8 @@
  * disponível em Tarauacá.
  */
 
+import { nomeDaMateria } from '../mundo/materias';
+import { quemOferece } from './ensinoTecnico';
 import { fraseDeConclusao } from './composicao';
 import { falaALingua, perfilDaVida } from '../mundo/vida';
 import { textoLocal } from '../mundo/locais';
@@ -33,7 +35,8 @@ import { estudarMaterias, habilidade, materiasExtremas, mediaEscolar, praticar }
  */
 export const NOME_MATERIA: Record<string, string> = {
   exatas: 'matemática', ciencias: 'ciências', humanas: 'história',
-  get linguagens() { const p = paisCorrente(); return temPerfil(p) ? perfilDoPais(p).idiomas[0] : 'português'; }
+  // FIX pós-playtest humano: a fonte única das matérias é `mundo/materias` (a língua de onde se estuda).
+  get linguagens() { return nomeDaMateria('linguagens'); }
 };
 import { marcar } from './marcas';
 import type { Dominio } from '../tipos';
@@ -493,9 +496,13 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
     const add = (o: Omit<OpcaoCurso, 'curso' | 'municipioId'> & { municipioId?: string }) =>
       opcoes.push({ curso: c, municipioId: o.municipioId ?? aqui, ...o, veredito: req ?? o.veredito });
 
+    // FIX pós-playtest humano: o curso técnico existe onde uma ESCOLA técnica o oferece (`ensinoTecnico` — o catálogo
+    // de cada escola da cidade); não havendo aqui, na capital; não havendo nem lá, não há essa porta presencial.
+    const tecnico = c.nivel === 'tecnico';
+    const ofereceTec = (cidade: string, publica: boolean) => !!quemOferece(cidade, c.id, publica);
     // Rede pública presencial
-    if (c.publica !== null) {
-      const existeAqui = oferta >= c.publica;
+    if (c.publica !== null && (!tecnico || ofereceTec(aqui, true) || ofereceTec(capitalDoEstado(aqui), true))) {
+      const existeAqui = tecnico ? ofereceTec(aqui, true) : oferta >= c.publica;
       const lugar = existeAqui ? aqui : capitalDoEstado(aqui);
       const observacao = existeAqui ? undefined : `Não existe aqui — só em ${nomeLugar(lugar)}. Exige mudar de cidade.`;
       if (c.nivel === 'superior' && ed.aberto) {
@@ -541,8 +548,8 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
     }
 
     // Rede privada presencial
-    if (c.privada !== null) {
-      const existeAqui = oferta >= c.privada;
+    if (c.privada !== null && (!tecnico || ofereceTec(aqui, false) || ofereceTec(capitalDoEstado(aqui), false))) {
+      const existeAqui = tecnico ? ofereceTec(aqui, false) : oferta >= c.privada;
       const lugar = existeAqui ? aqui : capitalDoEstado(aqui);
       const observacao = existeAqui ? undefined : `Não existe aqui — só em ${nomeLugar(lugar)}.`;
       add({ via: 'privada', modalidade: 'presencial', rede: 'privada', mensalidade: mens, veredito: { grau: 'permitido', chance: c.id === 'medicina' ? 0.6 : 0.95 }, municipioId: lugar, observacao });
@@ -653,8 +660,8 @@ function motivoDaPos(o: ReturnType<typeof avaliacaoDaPos>['obstaculo']): string 
 
 const INSTITUICOES: Record<Via, (c: Curso, v: Vida, lugar: string) => string> = {
   sisu: (c, v, lugar) => (c.nivel === 'superior' ? `${educacaoDaVida(v).inst.universidade} em ${municipio(lugar).nome}` : educacaoDaVida(v).inst.tecnico),
-  selecao_publica: (c, v, lugar) => c.nivel === 'livre' ? `${educacaoDaVida(v).inst.livre} em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? `${educacaoDaVida(v).inst.tecnico} em ${municipio(lugar).nome}` : c.nivel === 'residencia' ? `o hospital universitário em ${municipio(lugar).nome}` : `${educacaoDaVida(v).inst.universidade} em ${municipio(lugar).nome}`,
-  privada: (c, _v, lugar) => c.nivel === 'livre' ? `uma escola de cursos livres em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? `uma escola técnica particular em ${municipio(lugar).nome}` : `uma faculdade particular em ${municipio(lugar).nome}`,
+  selecao_publica: (c, v, lugar) => c.nivel === 'livre' ? `${educacaoDaVida(v).inst.livre} em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? (quemOferece(lugar, c.id, true)?.nome ?? `${educacaoDaVida(v).inst.tecnico} em ${municipio(lugar).nome}`) : c.nivel === 'residencia' ? `o hospital universitário em ${municipio(lugar).nome}` : `${educacaoDaVida(v).inst.universidade} em ${municipio(lugar).nome}`,
+  privada: (c, _v, lugar) => c.nivel === 'livre' ? `uma escola de cursos livres em ${municipio(lugar).nome}` : c.nivel === 'tecnico' ? (quemOferece(lugar, c.id, false)?.nome ?? `uma escola técnica particular em ${municipio(lugar).nome}`) : `uma faculdade particular em ${municipio(lugar).nome}`,
   prouni: (_c, v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}, com bolsa ${doPrograma(educacaoDaVida(v).bolsa?.nome ?? 'programa público')}`,
   fies: (_c, v, lugar) => `uma faculdade particular em ${municipio(lugar).nome}, com ${oPrograma(educacaoDaVida(v).credito?.nome ?? 'crédito estudantil')}`,
   ead: () => 'uma faculdade a distância'

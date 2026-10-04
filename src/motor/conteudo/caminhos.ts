@@ -11,6 +11,7 @@
  */
 
 import { textoLocal } from '../mundo/locais';
+import { ofertaIntegrada, rotaTecnica } from '../sistemas/ensinoTecnico';
 import { dinheiro as moeda } from '../texto';
 import { pesoNaSelecaoDoIf, registrarVivencia } from '../sistemas/formacao';
 import { pagar as pagarGuardado } from '../sistemas/dinheiro';
@@ -29,7 +30,7 @@ import { MODS, MODS_ARTE, municipioIndice, municipioPorIndice, novaOportunidade 
 import { criarProjeto } from '../sistemas/arte';
 import { contratar, degrausAcima, elegibilidade, encerrarEmprego, experienciaNaTrilha, horizonte, nomeOcupacao, porContaPropria, semOcupacao, textoDeContratacao } from '../sistemas/trabalho';
 import { OCUPACOES, comissaoDe, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
-import { curso, CURSOS } from '../dados/cursos';
+import { curso } from '../dados/cursos';
 import { capitalDoEstado } from '../sistemas/escola';
 import { analisarEntrada, propor } from '../sistemas/compromissos';
 import { listaNatural } from '../texto';
@@ -41,7 +42,7 @@ import { habilidade } from '../sistemas/frentes';
 import { marcar } from '../sistemas/marcas';
 import { abrirNegocio, demitirFuncionario, donoIntegral, fecharNegocio, NEGOCIOS, presencaDe, valorDoNegocio, venderNegocio } from '../sistemas/negocio';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
-import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
+import { municipio, nivelDeOferta } from '../dados/lugares';
 import { paisDaVida, perfilDaVida, temNacionalidade } from '../mundo/vida';
 import { doPais, noPais } from '../mundo/registro';
 import { modeloRotina, podeComecarRotina } from '../sistemas/rotinas';
@@ -239,10 +240,15 @@ export const CAMINHOS: Conteudo[] = [
   {
     id: 'esc_selecao_if', tipo: 'decisao', idade: [13, 16], tema: 'escola', manual: true, repetir: 0,
     titulo: c => cap(textoLocal(c.v, 'provaTecnica')),
-    texto: c => `Três anos de dia inteiro, uniforme, laboratório — e um diploma de técnico junto com o do médio. O campus ${municipio(c.v.moradia.municipioId).perfil === 'pequena' ? 'da região' : 'daqui'} oferece ${cursosDoIf(c).map(x => x.nome.replace(/^Técnico em /, '')).join(', ').replace(/, ([^,]*)$/, ' e $1')}. A prova é concorrida.`,
-    opcoes: [0, 1, 2].map(k => ({
+    texto: c => {
+      const ofs = cursosDoIf(c);
+      const escolas = [...new Map(ofs.map(o => [o.inst.chave, o.inst])).values()];
+      const quem = escolas.map(e => `${e.nome} (${e.sobre}: ${listaNatural(ofs.filter(o => o.inst.chave === e.chave).map(o => nomeCurto(o.curso)))})`);
+      return `${capRota(paisDaVida(c.v))}: dia inteiro, laboratório — e um diploma de técnico junto com o do ensino médio. ${quem.length > 1 ? `Abriram seleção: ${listaNatural(quem)}.` : `Abriu seleção: ${quem[0] ?? 'a escola técnica'}.`} A prova é concorrida.`;
+    },
+    opcoes: [0, 1, 2, 3].map(k => ({
       id: `curso${k}`,
-      texto: (c: Ctx) => { const x = cursosDoIf(c)[k]; return x ? `Tentar ${x.nome.replace(/^Técnico em /, '')}` : '—'; },
+      texto: (c: Ctx) => { const x = cursosDoIf(c)[k]; return x ? `Tentar ${nomeCurto(x.curso)}${new Set(cursosDoIf(c).map(o => o.inst.chave)).size > 1 ? ` — ${x.inst.nome}` : ''}` : '—'; },
       disponivel: (c: Ctx) => (cursosDoIf(c)[k] ? true : false),
       resolver: (c: Ctx) => selecaoIf(c, k)
     })).concat([{ id: 'nao', texto: () => 'Não fazer a prova', disponivel: () => true, resolver: () => ({ texto: 'Você seguiu na escola de sempre.', memoria: null }) } as never])
@@ -548,38 +554,40 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
 }
 
 /**
- * Os cursos do campus: cada instituto oferece os seus (o da capital não é o do
- * interior agrícola). Determinístico pela cidade — é o mesmo campus para
- * quem nasce ali. (FIX pós-REWORK 2: antes, toda vida via Informática,
- * Eletrotécnica e mais um; a reestruturação da escola fica para o REWORK 3.)
+ * Os cursos do médio integrado na cidade (FIX pós-playtest humano): as escolas técnicas PÚBLICAS de lá que juntam o
+ * médio, cada uma com o catálogo dela (`sistemas/ensinoTecnico` — a rota do país, o perfil da escola). Até quatro
+ * portas, alternando entre as escolas (a mesma cidade mostra as mesmas). Antes: 3 de uma lista fixa de 5, no mundo todo.
  */
+const capRota = (pais: string) => { const x = rotaTecnica(pais).via.replace(/^(o|a) /, ''); return x.charAt(0).toUpperCase() + x.slice(1); };
+const feminina = (nome: string) => /^(Escola|Escuela|Berufsschule)/.test(nome);
+const em = (nome: string) => `${feminina(nome) ? 'na' : 'no'} ${nome}`;
+const doNome = (nome: string) => `${feminina(nome) ? 'da' : 'do'} ${nome}`;
 function cursosDoIf(c: Ctx) {
-  const m = municipio(c.v.moradia.municipioId);
-  const agro = economiaLocal(m.id).custo < 0.95 || m.perfil === 'pequena';
-  const pool = agro ? ['tec_agropecuaria', 'tec_informatica', 'tec_administracao', 'tec_mecanica', 'tec_edificacoes', 'tec_eletrotecnica']
-    : ['tec_informatica', 'tec_eletrotecnica', 'tec_edificacoes', 'tec_administracao', 'tec_mecanica'];
-  let h = 0;
-  for (const ch of m.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const escolhidos: string[] = [];
-  for (let k = 0; escolhidos.length < 3 && k < 20; k++) { const x = pool[(h + k * 7) % pool.length]; if (!escolhidos.includes(x)) escolhidos.push(x); }
-  void anoDe;
-  return escolhidos.map(id => CURSOS.find(x => x.id === id)!).filter(Boolean);
+  const oferta = ofertaIntegrada(c.v.moradia.municipioId);
+  const porEscola = new Map<string, typeof oferta>();
+  for (const o of oferta) porEscola.set(o.inst.chave, [...(porEscola.get(o.inst.chave) ?? []), o]);
+  const filas = [...porEscola.values()];
+  const out: typeof oferta = [];
+  for (let k = 0; out.length < 4 && filas.some(f => f.length > k); k++) for (const f of filas) if (f[k] && out.length < 4) out.push(f[k]);
+  return out;
 }
+const nomeCurto = (x: { nome: string }) => x.nome.replace(/^Técnico em /, '').replace(/ \(tecnólogo\)$/, '');
 
 function selecaoIf(c: Ctx, k: number) {
-  const cc = cursosDoIf(c)[k];
+  const escolha = cursosDoIf(c)[k];
+  const cc = escolha.curso;
   // A prova compara com quem está na mesma série: vai bem quem vai bem na escola.
   // A preparação que um professor ofereceu e a medalha da olimpíada também contam (`formacao`).
   const chance = clamp(0.3 + ((c.v.educacao.basica?.desempenho ?? 50) - 55) / 40 + (c.v.educacao.postura === 'dedicada' ? 0.08 : 0) + pesoNaSelecaoDoIf(c.v), 0.05, 0.85);
   if (c.r.chance(chance) && c.v.educacao.basica) {
     return {
-      texto: `Passou. No começo do ano letivo, começa o médio integrado em ${cc.nome.replace(/^Técnico em /, '')}.`,
-      memoria: `Passou ${textoLocal(c.v, 'provaTecnica').replace(/^a /, 'na ')}: médio integrado ao técnico em ${cc.nome.replace(/^Técnico em /, '')}.`,
+      texto: `Passou. No começo do ano letivo, começa ${rotaTecnica(paisDaVida(c.v)).via} em ${nomeCurto(cc)}, ${em(escolha.inst.nome)}.`,
+      memoria: `Passou na seleção ${doNome(escolha.inst.nome)}: ${nomeCurto(cc)}.`,
       relevancia: 'marco' as const, tom: 'bom' as const,
-      efeito: () => { const b = c.v.educacao.basica!; b.integrado = cc.id; b.rede = 'publica'; if (b.etapa === 'fundamental2') { b.etapa = 'medio'; b.serie = 1; } marcar(c.v, 'ingresso', `Médio integrado ao técnico (${curso(cc.id).nome}).`, 3); }
+      efeito: () => { const b = c.v.educacao.basica!; b.integrado = cc.id; b.integradoInst = escolha.inst.chave; b.rede = 'publica'; if (b.etapa === 'fundamental2') { b.etapa = 'medio'; b.serie = 1; } marcar(c.v, 'ingresso', `${capRota(paisDaVida(c.v))} (${curso(cc.id).nome}, ${escolha.inst.nome}).`, 3); }
     };
   }
-  return { texto: 'A lista saiu e seu nome não estava. O médio seguiu na escola de sempre.', memoria: `Não passou ${textoLocal(c.v, 'provaTecnica').replace(/^a /, 'na ')}.`, relevancia: 'biografia' as const, tom: 'ruim' as const };
+  return { texto: 'A lista saiu e seu nome não estava. O médio seguiu na escola de sempre.', memoria: `Não passou na seleção ${doNome(escolha.inst.nome)} (${nomeCurto(cc)}).`, relevancia: 'biografia' as const, tom: 'ruim' as const };
 }
 
 function alistar(c: Ctx, chance: number) {

@@ -165,8 +165,13 @@ details summary { cursor: pointer; }
 .criacao__cabeca { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-5); }
 .criacao__cabeca h1 { font-size: var(--type-title); }
 .criacao__corpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
-.criacao__retratos { display: flex; justify-content: center; gap: var(--space-3); flex-wrap: wrap; }
+.criacao__retratos { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
 .criacao__retratos .retrato { border-radius: var(--radius-lg); }
+/* Quem é cada rosto: uma legenda curta (você em quatro idades; a mãe e o pai de quem os traços vêm). */
+.criacao__legenda { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-secondary); margin-top: var(--space-2); }
+.criacao__fileira { display: flex; justify-content: center; gap: var(--space-3); flex-wrap: wrap; }
+.criacao__retrato { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0; }
+.criacao__retrato figcaption { font-size: var(--type-caption); color: var(--text-muted); }
 .criacao__form { display: flex; flex-direction: column; gap: var(--space-5); }
 .criacao__nascer { justify-content: center; min-height: 52px; font-size: var(--type-subheading); background: var(--accent); }
 .amostras { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -177,7 +182,8 @@ details summary { cursor: pointer; }
 .amostra--ativa::after { content: '✓'; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 16px; text-shadow: 0 0 3px #000, 0 0 1px #000; }
 @media (min-width: 860px) {
   .criacao__corpo { grid-template-columns: 240px minmax(0, 1fr); }
-  .criacao__retratos { flex-direction: column; align-items: center; justify-content: flex-start; position: sticky; top: var(--space-5); align-self: start; }
+  .criacao__retratos { position: sticky; top: var(--space-5); align-self: start; }
+  .criacao__fileira { display: grid; grid-template-columns: repeat(2, auto); }
 }
 
 /* ===================================================================== Jogo */
@@ -209,12 +215,13 @@ details summary { cursor: pointer; }
 .cabecalho__eu-texto strong { font-family: var(--font-serif); font-size: var(--type-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 .cabecalho__eu-texto span { color: var(--text-muted); font-size: var(--type-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.palco { display: grid; grid-template-columns: minmax(0, 1fr) var(--aside-width); gap: var(--space-9); max-width: var(--content-max); margin: 0 auto; padding: var(--space-7) var(--space-6) 150px; }
+.palco { display: grid; grid-template-columns: minmax(0, 1fr) var(--aside-width); gap: var(--space-9); max-width: var(--content-max); margin: 0 auto; padding: var(--space-7) var(--space-6) var(--space-9); }
 .conteudo { min-width: 0; max-width: 780px; }
-.agora { position: sticky; top: calc(var(--header-height) + var(--space-6)); align-self: start; max-height: calc(100dvh - var(--header-height) - 150px); overflow-y: auto; padding-left: var(--space-5); border-left: 1px solid var(--rule); }
+.agora { position: sticky; top: calc(var(--header-height) + var(--space-6)); align-self: start; max-height: calc(100dvh - var(--header-height) - var(--space-9)); overflow-y: auto; padding-left: var(--space-5); border-left: 1px solid var(--rule); }
 
-/* Avançar: sempre ao alcance do polegar. É o âmbar da marca, não o tom da área. */
-.avancar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sticky); display: flex; justify-content: center; padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom)); pointer-events: none; background: linear-gradient(to top, var(--bg-app) 55%, transparent); }
+/* Avançar: o fim natural da página (FIX pós-playtest humano — fixo por cima, cobria a trilha de Formação). É o âmbar
+   da marca, não o tom da área. Fica no fluxo: nada passa por baixo dele. */
+.avancar { display: flex; justify-content: center; margin-top: var(--space-8); padding-top: var(--space-6); border-top: 1px solid var(--rule); }
 .avancar__botao {
   pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-5);
   min-height: 56px; width: min(420px, 100%); padding: 0 var(--space-5); border-radius: var(--radius-lg);
@@ -613,6 +620,8 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .semana__alem { font-size: var(--type-caption); color: var(--danger); }
 .semana__alem::before { content: '! '; font-weight: 700; }
 .semana__alem-faixa { position: absolute; top: 0; bottom: 0; right: 0; border-left: 3px dashed var(--text-primary); background: repeating-linear-gradient(135deg, rgba(12, 9, 7, 0.62) 0 6px, transparent 6px 11px); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px 5px; }
+.semana__alem-faixa--cheia { border-left-color: var(--warning); background: repeating-linear-gradient(135deg, rgba(12, 9, 7, 0.45) 0 6px, transparent 6px 11px); }
+.semana__alem--cheia { color: var(--warning); }
 .semana__alem-faixa span { font-size: var(--type-meta); color: var(--text-primary); background: var(--bg-deep); padding: 0 4px; border-radius: 3px; white-space: nowrap; }
 .semana__legenda ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-2) var(--space-5); }
 .semana__legenda li { display: grid; grid-template-columns: 18px 1fr; column-gap: var(--space-2); align-items: baseline; font-size: var(--type-caption); padding: 2px 0; }
@@ -724,9 +733,9 @@ button.agora-sinal:hover { color: var(--text-primary); }
 @media (max-width: 760px) {
   .cabecalho { gap: var(--space-2); padding: 0 var(--space-3); }
   .abas { display: none; }
-  .palco { padding: var(--space-5) var(--space-4) 180px; }
+  /* A barra de áreas é fixa embaixo: o fim da página reserva a altura dela (e a área segura), para o avançar não ficar sob ela. */
+  .palco { padding: var(--space-5) var(--space-4) calc(62px + var(--space-6) + env(safe-area-inset-bottom)); }
   .folio__titulo { max-width: none; }
-  .avancar { bottom: calc(62px + env(safe-area-inset-bottom)); padding-bottom: var(--space-2); background: linear-gradient(to top, var(--bg-app) 60%, transparent); }
   .barra {
     display: grid; grid-template-columns: repeat(7, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sticky);
     height: calc(62px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--bg-deep); border-top: 1px solid var(--rule);
@@ -991,7 +1000,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .lugar-botao--bloqueado .lugar-botao__oque { color: var(--text-muted); font-style: italic; }
 .oferta--estilo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: center; padding: var(--space-3); border-bottom: 1px solid var(--rule); }
 .oferta--estilo .acao, .oferta--estilo > .nota { grid-column: 1 / -1; }
-.selo--luxo { font-size: var(--type-caption); color: var(--text-muted); margin-left: var(--space-1); }
+.etiqueta-luxo { font-size: var(--type-caption); color: var(--text-muted); margin-left: var(--space-1); }
 
 /* Casa e Dinheiro: quem paga, e a família. */
 .independencia { max-width: 62ch; }

@@ -155,7 +155,11 @@ function Compras({ vida, agir, abrir }: { vida: Vida; agir: (a: Acao) => boolean
       ...(lojaNaCidade(vida.moradia.municipioId, 'aeroclube') && (disponivel(vida) >= 350000 || temRaro(vida, 'aeronave')) ? [{ id: 'aeroclube' as QualLugar, nome: 'Aeroclube e hangar', oque: 'Ultraleve, monomotor, bimotor, jato; a formação de piloto', icone: 'aeroclube', idadeMin: 18, porque: 'A partir dos 18.' }] : []),
       ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto', icone: 'oficina', idadeMin: 0 }] : [])
     ] },
-    { titulo: 'Você', lugares: [{ id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio', icone: 'loja', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes }] },
+    { titulo: 'Você', lugares: [
+      { id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio', icone: 'loja', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes },
+      // FIX pós-playtest humano: mexer no rosto (o que se vê no retrato; a genética fica).
+      { id: 'clinica', nome: 'Clínica de cirurgia plástica', oque: 'Nariz, orelhas, pálpebras, lifting, cabelo, lábios', icone: 'clinica', idadeMin: 16, porque: 'Cirurgia estética, só depois dos 16 (a maior parte, dos 18).' }
+    ] },
     // As coisas da vida: o que se usa e rende (eletrônicos, casa, instrumentos, esporte, livros) — `dados/coisas`.
     { titulo: 'Coisas da casa e da vida', lugares: LOJAS_DE_COISAS.map(l => ({ id: l, nome: NOME_LOJA[l], oque: `${O_QUE_A_LOJA_VENDE[l]}${temLojaNaCidade(vida, l) ? '' : ' · pela internet'}`, icone: ICONE_DA_LOJA[l], idadeMin: 10, porque: 'Com essa idade, quem compra são os adultos da casa.' })) },
     { titulo: 'Dinheiro', lugares: [{ id: 'banco', nome: 'Banco', oque: 'Guardar, investir, empréstimo', icone: 'banco', idadeMin: 18, porque: 'Conta e investimento no seu nome, a partir dos 18.' }] },

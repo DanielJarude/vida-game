@@ -3,6 +3,7 @@
  * o calendário. E mais cenas de adolescência e juventude.
  */
 
+import { materiasDoProfessor } from '../mundo/materias';
 import { dinheiro as moeda } from '../texto';
 import { OCUPACOES_DE_ATLETA } from '../sistemas/esporte';
 import { perfilDe } from '../sistemas/perfisEsportivos';
@@ -195,9 +196,11 @@ export const MUNDO: Conteudo[] = [
     id: 'ado_professor', tipo: 'acontecimento', idade: [12, 17], tema: 'escola',
     quando: c => !!c.v.educacao.basica,
     narrar: c => {
-      const materia = c.r.pick(['História', 'Matemática', 'Português', 'Biologia', 'Química', 'Artes']);
+      // A matéria é da escola de onde se estuda (`mundo/materias`): a língua do lugar, nunca "Português" fixo.
+      const mat = c.r.pick(materiasDoProfessor());
+      const materia = mat.nome;
       // Um professor marcante acende o gosto pela matéria dele.
-      const frente = ({ História: 'humanas', Matemática: 'exatas', Português: 'linguagens', Biologia: 'ciencias', Química: 'ciencias', Artes: 'desenho' } as const)[materia as 'História'];
+      const frente = mat.frente as 'humanas';
       const fr = c.v.caminhos.frentes[frente];
       if (fr) fr.interesse = Math.min(100, fr.interesse + 15);
       const p = criarPessoa(c.v, c.r, { idade: c.r.int(28, 58), municipioId: c.v.moradia.municipioId });

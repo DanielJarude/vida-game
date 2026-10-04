@@ -22,6 +22,7 @@ import {
 } from '../nucleo';
 import { ancestralidadeDe, misturar, tradicaoDoFilho } from './identidade';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
+import { geneticaDe } from './identidade';
 import { processarCorpoDePessoa } from './corpo';
 import { flex, ge } from '../texto';
 import { MESES, mesDe } from '../tempo';
@@ -241,7 +242,7 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       const g = r.chance(0.5) ? 'masculino' : 'feminino';
       const outro = v.pessoas[maeCasa.parceiroId];
       const ancIrmao = misturar(ancestralidadeDe(maeCasa), outro ? ancestralidadeDe(outro) : undefined);
-      const bebe = criarPessoa(v, r, { genero: g, idade: 0, municipioId: maeCasa.municipioId, sobrenome: v.eu.sobrenome, visual: visualHerdado(r, g, maeCasa.visual, outro?.visual, ancIrmao), familia: { ancestralidade: ancIrmao, tradicao: outro?.tradicao ?? maeCasa.tradicao } });
+      const bebe = criarPessoa(v, r, { genero: g, idade: 0, municipioId: maeCasa.municipioId, sobrenome: v.eu.sobrenome, visual: visualHerdado(r, g, geneticaDe(maeCasa), geneticaDe(outro), ancIrmao), familia: { ancestralidade: ancIrmao, tradicao: outro?.tradicao ?? maeCasa.tradicao } });
       vincular(v, bebe, { parentesco: outro && v.vinculos[outro.id]?.parentesco === 'pai' ? 'irmao' : 'meio_irmao', origem: 'familia', proximidade: 60, convivio: ['casa'] });
       bebe.genitores = [maeCasa.id, ...(outro ? [outro.id] : [])];
       bebe.municipioNatal = maeCasa.municipioId;
@@ -401,7 +402,8 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
   const ancBebe = misturar(ancestralidadeDe(v.eu), outro ? ancestralidadeDe(outro) : undefined);
   const bebe = criarPessoa(v, r, {
     genero, idade: 0, municipioId: v.moradia.municipioId, sobrenome,
-    visual: visualHerdado(r, genero, v.eu.visual, outro?.visual, ancBebe, [v.eu.estilo?.corNatural, undefined]),
+    // FIX pós-playtest humano: a herança lê os GENES (a cirurgia e a tinta ficam com quem fez).
+    visual: visualHerdado(r, genero, geneticaDe(v.eu), geneticaDe(outro), ancBebe),
     familia: { ancestralidade: ancBebe, tradicao: tradicaoDoFilho(souPai ? v.eu.tradicao : outro?.tradicao, souPai ? outro?.tradicao : v.eu.tradicao) }
   });
   const nac = nacionalidadesDoBebe(v.moradia.municipioId, [nacionalidadesDaVida(v), ...(outro ? [nacionalidadesDaPessoa(outro)] : [])], anosNoPais(v));

@@ -1,9 +1,11 @@
 /** Nascer: o jogador escolhe o que uma pessoa não escolhe — e o resto é sorte. */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ControleVida } from '../useVida';
 import type { Classe, Genero, Visual } from '../../motor/tipos';
-import { cidadesDoPais, MUNICIPIOS, municipio } from '../../motor/dados/lugares';
+import { municipio } from '../../motor/dados/lugares';
+import { corteCoerente, previaDoNascimento, sortearNascimento } from '../../motor/criacao';
+import { carregarMundo } from '../../motor/mundo/carregar';
 import { LugarDeNascimento, notaDoLugar } from '../jogo/Mundo';
 import { sortearNome, sortearSobrenome } from '../../motor/dados/nomes';
 import { criarRng } from '../../motor/rng';
@@ -14,13 +16,14 @@ import { Escolha } from '../comum';
 const ROTULO_CABELO: Record<string, string> = {
   raspado: 'Raspado', curto: 'Curto', curto_lado: 'Curto de lado', ondulado: 'Ondulado', crespo_curto: 'Crespo curto', cacheado: 'Cacheado',
   longo_liso: 'Longo liso', longo_ondulado: 'Longo ondulado', cacheado_longo: 'Cacheado longo', black: 'Black', chanel: 'Chanel',
-  coque: 'Coque', trancas: 'Tranças', rabo: 'Rabo de cavalo'
+  coque: 'Coque', trancas: 'Tranças', rabo: 'Rabo de cavalo', topete: 'Topete', pixie: 'Pixie', locs: 'Dreads (locs)'
 };
 const COR_PELE: Record<string, string> = { p1: '#f3d7c2', p2: '#e9c09d', p3: '#d49f75', p4: '#b27b52', p5: '#8b5b3a', p6: '#5f3c27' };
 const COR_CABELO: Record<string, string> = { preto: '#1c1917', castanho_escuro: '#35251c', castanho: '#563a28', castanho_claro: '#86603f', loiro: '#caa25e', ruivo: '#a24a27' };
 const COR_OLHO: Record<string, string> = { castanho_escuro: '#2f1d14', castanho: '#553620', mel: '#86662b', verde: '#56764a', azul: '#4b75a0' };
 
 const aleatorio = () => criarRng(Math.floor(Math.random() * 2 ** 31));
+const novaSemente = () => Math.floor(Math.random() * (2 ** 31 - 2)) + 1;
 
 export function Criacao({ c }: { c: ControleVida }) {
   const [genero, setGenero] = useState<Genero>('feminino');
@@ -44,6 +47,22 @@ export function Criacao({ c }: { c: ControleVida }) {
   const [classe, setClasse] = useState<Classe | 'sorte'>('sorte');
   const [visual, setVisual] = useState<Visual>(() => visualAleatorio(aleatorio(), 'feminino'));
   const [heranca, setHeranca] = useState(true);
+  // A semente do nascimento é da tela: a prévia (o bebê e os pais) é o MESMO nascimento que "Nascer" vai criar.
+  const [semente, setSemente] = useState(novaSemente);
+  const opcoes = {
+    nome: nome.trim() || 'Ana', sobrenome: sobrenome.trim() || 'Silva', genero, municipioId: cidade,
+    classe: classe === 'sorte' ? undefined : classe,
+    podeGestar: genero === 'nao_binario' ? podeGestar : undefined,
+    tratamento: genero === 'nao_binario' ? tratamento : undefined,
+    visual,
+    herdarCores: heranca,
+    semente
+  };
+  const previa = useMemo(() => {
+    try { return previaDoNascimento(opcoes); } catch { return null; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente]);
+  const visualDoBebe = previa?.eu ?? visual;
 
   const cabelos = genero === 'masculino' ? CABELOS_M : genero === 'feminino' ? CABELOS_F : [...new Set([...CABELOS_N, ...CABELOS_M, ...CABELOS_F])];
 
@@ -53,29 +72,27 @@ export function Criacao({ c }: { c: ControleVida }) {
     const v = visualAleatorio(aleatorio(), g);
     setVisual(atual => ({ ...atual, cabelo: v.cabelo, barba: g === 'masculino' ? v.barba : undefined }));
   };
-  const tudoAleatorio = () => {
+  // Tudo ao acaso é o MUNDO (os pacotes de países chegam antes do sorteio; sem eles, o que já está aqui).
+  const tudoAleatorio = async () => {
+    try { await carregarMundo(); } catch { /* sem rede e sem cache: sorteia entre os países que já chegaram */ }
     const r = aleatorio();
-    const g: Genero = r.chance(0.5) ? 'feminino' : 'masculino';
-    // Ao acaso, dentro do país escolhido (o país é uma escolha grande demais para o dado).
-    const pais = municipio(cidade).pais;
-    const m = pais === 'BR' ? r.pick(MUNICIPIOS) : r.pick([...cidadesDoPais(pais)]);
-    setGenero(g);
-    setNome(sortearNome(r, g, 2026, m.pais, m.uf));
-    setSobrenome(sortearSobrenome(r, m.pais, m.uf));
+    const n = sortearNascimento(r);
+    const vis = visualAleatorio(r, n.genero);
+    const base = { ...opcoes, nome: n.nome, sobrenome: n.sobrenome, genero: n.genero, municipioId: n.municipioId, classe: undefined, podeGestar: undefined, tratamento: undefined, visual: vis, herdarCores: true, semente: n.semente };
+    // O corte que combina com o cabelo que veio dos pais (trocar o corte não muda o nascimento).
+    let cabelo = vis.cabelo;
+    try { cabelo = corteCoerente(r, n.genero, previaDoNascimento(base).eu.textura, vis.cabelo); } catch { /* fica o sorteado */ }
+    setGenero(n.genero);
+    setNome(n.nome);
+    setSobrenome(n.sobrenome);
     setNomeEscrito(false);
-    setCidade(m.id);
+    setCidade(n.municipioId);
     setClasse('sorte');
-    setVisual(visualAleatorio(r, g));
+    setVisual({ ...vis, cabelo });
     setHeranca(true);
+    setSemente(n.semente);
   };
-  const nascer = () => c.nascer({
-    nome: nome.trim() || 'Ana', sobrenome: sobrenome.trim() || 'Silva', genero, municipioId: cidade,
-    classe: classe === 'sorte' ? undefined : classe,
-    podeGestar: genero === 'nao_binario' ? podeGestar : undefined,
-    tratamento: genero === 'nao_binario' ? tratamento : undefined,
-    visual,
-    herdarCores: heranca
-  });
+  const nascer = () => c.nascer(opcoes);
 
   return (
     <div className="criacao">
@@ -86,11 +103,22 @@ export function Criacao({ c }: { c: ControleVida }) {
       </header>
 
       <div className="criacao__corpo">
-        <div className="criacao__retratos" aria-hidden>
-          <Retrato visual={visual} genero={genero} idade={1} semente="eu" tamanho={96} />
-          <Retrato visual={visual} genero={genero} idade={9} semente="eu" tamanho={96} />
-          <Retrato visual={visual} genero={genero} idade={30} semente="eu" tamanho={96} />
-          <Retrato visual={visual} genero={genero} idade={75} semente="eu" tamanho={96} />
+        <div className="criacao__retratos">
+          <p className="criacao__legenda">Você</p>
+          <div className="criacao__fileira" aria-hidden>
+            {([[1, 'bebê'], [9, 'aos 9'], [30, 'aos 30'], [75, 'aos 75']] as const).map(([i, r]) => (
+              <figure key={i} className="criacao__retrato"><Retrato visual={visualDoBebe} genero={genero} idade={i} semente="eu" tamanho={96} /><figcaption>{r}</figcaption></figure>
+            ))}
+          </div>
+          {heranca && previa && (previa.mae || previa.pai) && (
+            <>
+              <p className="criacao__legenda">De quem vêm os traços</p>
+              <div className="criacao__fileira criacao__fileira--pais" aria-hidden>
+                {previa.mae && <figure className="criacao__retrato"><Retrato visual={previa.mae} genero="feminino" idade={29} semente="mae" tamanho={72} /><figcaption>mãe</figcaption></figure>}
+                {previa.pai && <figure className="criacao__retrato"><Retrato visual={previa.pai} genero="masculino" idade={31} semente="pai" tamanho={72} /><figcaption>pai</figcaption></figure>}
+              </div>
+            </>
+          )}
         </div>
 
         <form className="criacao__form" onSubmit={e => { e.preventDefault(); nascer(); }}>
@@ -137,7 +165,7 @@ export function Criacao({ c }: { c: ControleVida }) {
             <legend className="campo__rotulo">Aparência</legend>
             <label className="campo campo--check">
               <input type="checkbox" checked={heranca} onChange={e => setHeranca(e.target.checked)} />
-              <span>Puxar os traços dos pais (pele, olhos, cor do cabelo)</span>
+              <span>Puxar os traços dos pais (pele, rosto, olhos, cabelo)</span>
             </label>
             {!heranca && (
               <>

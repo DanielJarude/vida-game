@@ -2,7 +2,7 @@
  * O estresse, lido para a pessoa (FIX pós-REWORK 4). FONTE ÚNICA da tela "A
  * semana" e dos testes: o mesmo número que o ano usa (`mente.estresse`), as
  * mesmas causas que o movem (`estado.fatoresCabeca`), o mesmo teto da semana
- * (`semana.cargaHumana`) e o que a persistência cobra (`estresseProlongado`,
+ * (`semana.folegoDaSemana`) e o que a persistência cobra (`estresseProlongado`,
  * `sobrecarga`).
  *
  * O playtest não entendia duas barras ("carga" e "estresse"). A carga continua
@@ -15,8 +15,7 @@
 import type { Vida } from '../tipos';
 import { idade } from '../nucleo';
 import { alvoCabeca, leituraDoEstado, type Fator } from './estado';
-import { cargaHumana, semana } from './semana';
-import { leituraDaSobrecarga } from './sobrecarga';
+import { folegoDaSemana } from './semana';
 import { LIMITE_DO_ESTRESSE } from './estresseProlongado';
 
 export type NivelDeEstresse = 'baixo' | 'moderado' | 'alto' | 'no limite';
@@ -58,12 +57,9 @@ export function leituraDoEstresse(v: Vida): LeituraDoEstresse {
   const tendencia = alvo > valor + 4 ? 'subindo' : alvo < valor - 4 ? 'baixando' : 'estável';
   const { pesando, ajudando } = leituraDoEstado(v, 'cabeca', 4);
   const anos = v.mente.estresseAlto?.anos ?? 0;
-  const s = semana(v);
-  const cabeLeve = cargaHumana(v, 0.5);
-  const sob = leituraDaSobrecarga(v);
-  const folego = !cabeLeve.possivel ? 'A semana chegou no teto: não cabe mais nada sem tirar alguma coisa.'
-    : !cabeLeve.aperta ? (s.livre >= 1 ? 'Ainda sobra espaço: dá para assumir uma ou duas coisas sem apertar.' : 'Ainda cabe uma coisa leve, uma vez por semana.')
-      : sob.nivel >= 2 ? 'Dá para assumir mais — mas a semana já passa do que cabe, e cada coisa nova sobe o estresse.' : 'A semana está cheia: dá para assumir mais, e o estresse vai sentir.';
+  // O TEMPO da semana, da fonte única (`semana.folegoDaSemana`): estresse baixo com a semana cheia, ou alto com a
+  // semana folgada, são leituras diferentes — e a tela mostra as duas sem misturar.
+  const folego = folegoDaSemana(v).texto;
   const frase = nivel === 'baixo' ? (tendencia === 'subindo' ? 'Por enquanto tranquilo — mas o que está pesando vai fazer subir.' : 'A cabeça está tranquila. Sobra espaço para descansar.')
     : nivel === 'moderado' ? (tendencia === 'subindo' ? 'Dá para levar — e está subindo.' : tendencia === 'baixando' ? 'Dá para levar, e está aliviando.' : 'Dá para levar. Vale olhar o que pesa.')
       : nivel === 'alto' ? (tendencia === 'baixando' ? 'Está alto, mas começou a ceder.' : 'Está alto: o sono, a paciência e o trabalho já sentem.')

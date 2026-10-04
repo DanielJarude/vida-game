@@ -122,7 +122,7 @@
 .historia-formacao__ano { font-size: var(--type-meta); color: var(--text-muted); margin-right: var(--space-1); }
 
 /* ---------------------------------------------------------- O veículo na cor dele */
-.desenho-veiculo--colorido [fill-opacity="0.14"] { fill: var(--cor-veiculo); fill-opacity: 0.88; }
+
 .oferta.oferta--objeto { grid-template-columns: 52px 1fr auto; }
 .oferta__objeto { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .oferta__cores { display: flex; gap: 2px; }

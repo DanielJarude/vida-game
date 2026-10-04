@@ -224,3 +224,9 @@
 .mundo__mudancas, .mundo__partes { margin: 0.5rem 0; padding-left: 1.1rem; }
 .mundo__mudancas li, .mundo__partes li { margin: 0.2rem 0; }
 .mundo__custo { margin-top: 0.75rem; }
+
+/* FIX pós-playtest humano: a clínica — a prévia (como está → como deve ficar) ao lado do procedimento. */
+.clinica__item { align-items: center; }
+.clinica__previa { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.clinica__previa .retrato { border-radius: var(--radius-md); }
+.clinica__seta { color: var(--text-muted); }

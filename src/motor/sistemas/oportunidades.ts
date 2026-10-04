@@ -13,9 +13,9 @@
  * todo ano.
  */
 
-import { educacaoDaVida } from '../mundo/vida';
+import { ofertaIntegrada, rotaTecnica } from './ensinoTecnico';
+import { educacaoDaVida, paisDaVida } from '../mundo/vida';
 import { textoLocal } from '../mundo/locais';
-import { capitalizar } from '../texto';
 import { regrasDaVida } from '../mundo/regras';
 import { perfilDaVida } from '../mundo/vida';
 import { OCUPACOES_DE_ATLETA } from './esporte';
@@ -174,10 +174,14 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   }
 
   // Seleção do instituto federal (médio integrado ao técnico).
-  if (i >= 14 && i <= 15 && b && (b.etapa === 'fundamental2' && b.serie >= 9 || b.etapa === 'medio' && b.serie === 1) && !b.integrado && podeGerar(v, 'selecao_tecnico', 3)
+  // FIX pós-playtest humano: só onde há escola técnica pública que junta o médio (`ensinoTecnico`), com o nome dela.
+  const integradas = i >= 14 && i <= 15 ? ofertaIntegrada(v.moradia.municipioId) : [];
+  if (i >= 14 && i <= 15 && integradas.length > 0 && b && (b.etapa === 'fundamental2' && b.serie >= 9 || b.etapa === 'medio' && b.serie === 1) && !b.integrado && podeGerar(v, 'selecao_tecnico', 3)
     // Quem vai bem na escola ouve falar da prova (a professora avisa, os colegas comentam); quem vai mal, nem sempre.
     && r.chance(clamp((nivelDeOferta(v.moradia.municipioId) >= 1 ? 0.35 : 0.2) + ((b.desempenho ?? 50) - 50) / 60 + (v.educacao.postura === 'dedicada' ? 0.15 : 0) + (temFato(v, 'incentivo_if') ? 0.4 : 0), 0.1, 0.95))) {
-    novaOportunidade(v, { tipo: 'selecao_tecnico', meses: 12, chave: 'selecao_tecnico', titulo: `Seleção ${educacaoDaVida(v).inst.tecnico.replace(/^o /, 'do ').replace(/^a /, 'da ')}`, texto: `${capitalizar(educacaoDaVida(v).inst.tecnico)} ${nivelDeOferta(v.moradia.municipioId) >= 1 ? 'da cidade' : 'da região'} abriu a prova para ${educacaoDaVida(v).medio.o} integrado ao técnico: três anos, dia inteiro, e um diploma de técnico junto com o do médio.${temFato(v, 'incentivo_if') ? ' A professora que tinha sugerido a prova lembrou você da inscrição.' : ''}` });
+    const escola = integradas[0].inst;
+    const via = rotaTecnica(paisDaVida(v)).via;
+    novaOportunidade(v, { tipo: 'selecao_tecnico', meses: 12, chave: 'selecao_tecnico', titulo: `Seleção para ${via.replace(/ \(.*\)$/, '')}`, texto: `${escola.nome} — ${escola.sobre} — abriu a prova${new Set(integradas.map(x => x.inst.chave)).size > 1 ? ' (e não é a única escola técnica da cidade)' : ''}: ${via}, dia inteiro, e um diploma de técnico junto com o do ${educacaoDaVida(v).medio.o.replace(/^o /, '')}.${temFato(v, 'incentivo_if') ? ' A professora que tinha sugerido a prova lembrou você da inscrição.' : ''}` });
   }
 
   // Ensinar o ofício: quem tem técnico e muitos anos de estrada vira instrutor.

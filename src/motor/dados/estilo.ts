@@ -13,6 +13,10 @@ export const CORTES: { id: string; nome: string; curto?: boolean }[] = [
   { id: 'raspado', nome: 'Raspado', curto: true },
   { id: 'curto', nome: 'Curto', curto: true },
   { id: 'curto_lado', nome: 'Curto, repartido de lado', curto: true },
+  // FIX pós-playtest humano: três silhuetas novas — reconhecíveis antes de ler o nome.
+  { id: 'topete', nome: 'Topete', curto: true },
+  { id: 'pixie', nome: 'Pixie (curtinho com franja)', curto: true },
+  { id: 'locs', nome: 'Dreads (locs)' },
   { id: 'crespo_curto', nome: 'Crespo curto', curto: true },
   { id: 'ondulado', nome: 'Ondulado', curto: true },
   { id: 'cacheado', nome: 'Cacheado' },

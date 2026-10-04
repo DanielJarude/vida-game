@@ -14,6 +14,7 @@
  * para sempre, e o que já se pratica continua disponível.
  */
 
+import { paisCorrente } from '../mundo/moeda';
 import { bonusDaAtividade } from './coisas';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -27,7 +28,7 @@ import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
 import { nivelDeOferta } from '../dados/lugares';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { esquecerFrentes, habilidade, praticar } from './frentes';
-import { cabeNaSemana, cargaHumana, semana } from './semana';
+import { encaixe } from './semana';
 import type { Categoria } from '../dados/frentes';
 import { categoriaDoVeiculo } from './veiculos';
 import { esfriarPreparo, prepararVestibular } from './vestibular';
@@ -148,9 +149,10 @@ const melhorDe = (v: Vida, ds: Dominio[]) => Math.max(...ds.map(d => habilidade(
 export const ROTINAS: readonly ModeloRotina[] = [
   // ------------------------------------------------------------- esporte
   {
-    id: 'futebol', nome: 'Jogar bola', descricao: 'Pelada no campinho, futsal na quadra, time do bairro.', categoria: 'esporte', idadeMin: 5,
+    // FIX pós-playtest humano (auditoria Mundo): "pelada" e "campinho" são do Brasil — no resto do mundo, a bola na rua.
+    id: 'futebol', nome: 'Jogar bola', descricao: v => (paisCorrente() === 'BR' || !v ? 'Pelada no campinho, futsal na quadra, time do bairro.' : 'Bola na rua ou no parque, futsal na quadra, o time do bairro.'), categoria: 'esporte', idadeMin: 5,
     niveis: [
-      { rotulo: 'Pelada, por diversão', tempo: 0.5, custo: 0, qualidade: 0.8 },
+      { get rotulo() { return paisCorrente() === 'BR' ? 'Pelada, por diversão' : 'Bola com os amigos, por diversão'; }, tempo: 0.5, custo: 0, qualidade: 0.8 },
       // Todo bairro tem um time: o futebol regular não depende de dinheiro em casa (a chuteira, sim, um pouco).
       { rotulo: 'Escolinha ou time do bairro', tempo: 1, custo: 40, qualidade: 1.1 },
       { rotulo: 'Treino de base, todo dia', tempo: 2, custo: 0, qualidade: 1.45, requer: naBase('futebol') }
@@ -726,21 +728,19 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   const n = nivelModelo(m, nivel);
   const reqNivel = n.requer?.(v);
   if (typeof reqNivel === 'string') return bloqueio('requisito', reqNivel);
-  // REWORK 4: a semana cheia não é um muro — é um custo. Passa do que cabe? Dá para tentar, até o teto humano; o
-  // preço é o estresse e a sobrecarga (dito antes, no motivo). Além do teto, não.
+  // REWORK 4 + FIX pós-playtest humano: a semana cheia não é um muro — é um custo. A conta é UMA (`semana.encaixe`,
+  // a mesma do painel "Dá para assumir mais?"): folgada/ocupada entram; cheia entra tirando do descanso; sobrecarregada
+  // entra com o preço dito; só "além" (não há horas — ou, criança, a semana dela não comporta) bloqueia, com o porquê.
   const extra = n.tempo - (atual ? tempoDaRotina(atual) : 0);
-  const cabe = cabeNaSemana(v, extra, id);
-  // (Criança e adolescente novo: quem organiza a semana é a casa — o "tentar mesmo assim" é de quem já decide a própria.)
-  // (Por cima da semana cheia, cabe o hobby — o ritmo leve; treino regular e "a sério" são quase um segundo trabalho.)
-  const humana = idade(v) >= 16 && nivel <= 1 ? cargaHumana(v, extra) : { possivel: false };
+  const enc = encaixe(v, extra, id);
   // FIX pós-REWORK 4 (achado do playtest adversarial): quem está no limite não pode ser impedido de cuidar da cabeça —
   // a terapia é uma hora por semana, e é justamente para isso. Passa do teto, com o preço dito.
-  if (!cabe.cabe && !humana.possivel && CUIDAR_DE_SI.has(id) && idade(v) >= 14) return { grau: 'permitido', motivo: `${cabe.motivo} A terapia é uma hora por semana — e é para isso mesmo.` };
-  if (!cabe.cabe && !humana.possivel) return bloqueio('incompativel', cabe.motivo);
+  if (!enc.possivel && CUIDAR_DE_SI.has(id) && idade(v) >= 14) return { grau: 'permitido', motivo: `${enc.motivo} A terapia é uma hora por semana — e é para isso mesmo.` };
+  if (!enc.possivel) return bloqueio('incompativel', enc.motivo ?? 'Não há horas na semana.');
   if (i < 12 && n.custo > 60 && !casaPaga(v, n.custo) && !projetoSocial(v, id)) return bloqueio('requisito', semDinheiro);
   const irr = m.irregular?.(v);
   if (irr) return { grau: 'irregular', motivo: irr };
-  if (!cabe.cabe) return { grau: 'permitido', motivo: `${cabe.motivo} Dá para tentar mesmo assim — o descanso some e a cabeça cobra (estresse, sobrecarga).` };
+  if (extra > 0 && enc.motivo) return { grau: 'permitido', motivo: enc.motivo };
   return { grau: 'permitido' };
 }
 
@@ -748,8 +748,9 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
 
 export function processarRotinas(v: Vida, r: Rng): void {
   const praticadas = new Set<Dominio>();
-  const sem = semana(v);
-  const semanaPassou = sem.ocupado > sem.capacidade + 0.01;
+  // A semana que passa do que cabe cobra AQUI também: cansado, treina e estuda pior (cheia: um pouco; além: muito).
+  const faixa = encaixe(v, 0).faixa;
+  const cansaco = faixa === 'sobrecarregada' || faixa === 'alem' ? 0.7 : faixa === 'cheia' ? 0.88 : 1;
   for (const rot of [...v.rotinas]) {
     const m = modeloRotina(rot.id);
     if (!m) { v.rotinas = v.rotinas.filter(x => x !== rot); continue; }
@@ -770,7 +771,6 @@ export function processarRotinas(v: Vida, r: Rng): void {
     }
     const nm = nivelModelo(m, n);
     const peso = n === 1 ? 0.5 : n === 2 ? 1 : 1.6;
-    const cansaco = semanaPassou ? 0.7 : 1;
     if (m.pratica) {
       for (const [d, w] of Object.entries(m.pratica) as [Dominio, number][]) {
         // O que se tem em casa (o instrumento, o notebook, a câmera) faz a mesma hora render mais (`coisas`).

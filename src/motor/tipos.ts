@@ -55,6 +55,8 @@ export interface Pessoa {
   parceiroId?: string;
   saude: number;
   visual?: Visual;
+  /** Os traços de nascença, quando o visual mudou (cirurgia): é daqui que os filhos herdam (`identidade.geneticaDe`). */
+  genes?: Genes;
   /** Faculdade em curso (filhos do jogador): quem paga e quando termina. */
   estudo?: { curso: string; paga: 'publica' | 'familia' | 'fies' | 'bolsa' | 'propria'; tFim: number; nivel?: 'tecnico' | 'superior' };
   /** Formou-se em (nome do curso). */
@@ -231,7 +233,33 @@ export interface Visual {
   boca?: string;
   rosto?: string;
   sobrancelha?: string;
+  /**
+   * FIX pós-playtest humano — APARÊNCIA 2.0: mais traços herdáveis, todos VISÍVEIS no retrato (nada que o desenho não
+   * mostre). O tamanho e a distância dos olhos, a forma da sobrancelha, a largura da boca, o queixo, as orelhas, a
+   * linha do cabelo, as sardas e a calvície (que antes era sorteio do retrato — agora passa de pai para filho).
+   */
+  olhosTam?: string;
+  olhosDist?: string;
+  sobrancelhaForma?: string;
+  bocaLarg?: string;
+  queixo?: string;
+  orelhas?: string;
+  linhaCabelo?: string;
+  sardas?: string;
+  calvicie?: string;
+  /** O que foi feito no corpo e se vê (`sistemas/estetica`): o transplante capilar (a calvície herdada não aparece) e
+   *  o ano do lifting (as rugas voltam devagar). NUNCA vai para os filhos: a herança lê `genes`, não o visual. */
+  transplante?: boolean;
+  lifting?: number;
 }
+
+/**
+ * GENÉTICA ≠ APARÊNCIA ATUAL (FIX pós-playtest humano). `genes` guarda os traços com que a pessoa nasceu; o `visual`
+ * é como ela está agora (o corte, a tinta, a barba, a cirurgia). Quem nunca mudou nada não precisa de `genes` (o
+ * visual É a genética, a não ser a tinta — `estilo.corNatural`). A herança lê `identidade.geneticaDe`, nunca o visual:
+ * o filho de quem fez rinoplastia herda o nariz de antes.
+ */
+export type Genes = Omit<Visual, 'cabelo' | 'barba' | 'bigode' | 'oculos' | 'chapeu' | 'roupa' | 'joia' | 'transplante' | 'lifting'> & { cabelo?: string };
 
 export type EstiloRoupa = 'basica' | 'social' | 'esportiva' | 'alternativa' | 'elegante';
 
@@ -402,6 +430,8 @@ export interface Vinculo {
    * (curtir, reagir). Mensagem segura parte da relação à distância; curtida mantém o contato sem intimidade.
    */
   digital?: { mensagem?: number; reacao?: number; segue?: boolean; seguidor?: boolean; bloqueado?: number };
+  /** FIX pós-playtest humano: os TIPOS das últimas 4 microcenas com esta pessoa (antirrepetição — ids curtos, nunca texto). */
+  cenas?: string[];
 }
 
 /** Um fato que o protagonista sabe sobre alguém: a chave, quando soube, o valor de então. */
@@ -556,6 +586,8 @@ export interface EscolaBasica {
   rede: 'publica' | 'privada';
   /** Médio integrado ao técnico (instituto federal, escola técnica): o curso técnico que vem junto. */
   integrado?: string;
+  /** FIX pós-playtest humano: a escola técnica onde o integrado acontece (`ensinoTecnico`, chave estável da cidade). */
+  integradoInst?: string;
   desempenho: number;  // 0..100
   reprovacoes: number;
   /** Na EJA (Educação de Jovens e Adultos): quem passou da idade da série estuda por etapas, à noite. */
@@ -2223,6 +2255,10 @@ export interface Personagem {
   nacionalidades: string[];
   atracao?: Atracao;
   visual: Visual;
+  /** Os traços de nascença (só depois que o visual mudou por cirurgia): a herança lê daqui. */
+  genes?: Genes;
+  /** Os procedimentos estéticos feitos (`sistemas/estetica`, no máximo os 12 últimos): o resultado e a escolha. */
+  procedimentos?: { id: string; t: number; resultado: string; alvo?: string; clinica?: string; revisado?: boolean }[];
   /** O estilo escolhido e o que foi comprado para ele (ausente: nada além do básico). */
   estilo?: EstiloPessoal;
   /**
@@ -2530,6 +2566,8 @@ export interface ContaSocial {
   toxicidade?: number;
   /** O que a conta já viveu, em números (as publicações antigas saem; a história fica). */
   totais?: { publicacoes: number; virais: number; receita: number; polemicas: number; maior: number };
+  /** FIX pós-playtest humano: os tipos dos últimos ecos de publicação (antirrepetição; ids curtos, no máximo 3). */
+  ecos?: string[];
   /** Celebridades que já interagiram (nomes): a curtida, a resposta, o compartilhamento. */
   celebridades?: string[];
   /** OnlyFans: quem da vida descobriu (pessoaIds), e se o trabalho soube. */

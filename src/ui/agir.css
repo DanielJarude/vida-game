@@ -79,13 +79,13 @@
 .tema-post { display: flex; flex-direction: column; max-width: 260px; }
 .tema-post__dica { font-size: var(--type-meta); color: var(--text-muted); padding: 0 var(--space-1); }
 .publicacao__reacao { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); }
-.selo { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--cor-plataforma); color: #fff8ee; font-size: 11px; font-weight: 700; }
+.selo-verificado { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--cor-plataforma); color: #fff8ee; font-size: 11px; font-weight: 700; }
 .confirmar { margin-top: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--danger-line-soft); }
 @media (max-width: 600px) { .redes__plataformas { grid-template-columns: repeat(2, minmax(0, 1fr)); } .plataforma-painel { padding: var(--space-3); } .tema-post { max-width: none; width: 100%; } }
 
 /* ---------------------------------------------------------- Veículos: a cor e o estado são do veículo */
-.desenho-veiculo--colorido [fill-opacity="0.14"] { fill: var(--cor-veiculo); fill-opacity: 0.94; }
-.desenho-veiculo--colorido .quadro { stroke: var(--cor-veiculo); stroke-width: 2.2; }
+/* A lataria, o vidro e o contorno vêm do próprio desenho (`estiloDaLataria`): aqui, só a espessura do quadro pintado. */
+.desenho-veiculo--colorido .quadro { stroke-width: 2.2; }
 .oferta.oferta--veiculo { grid-template-columns: 84px minmax(0, 1fr) auto; }
 .oferta__veiculo { display: grid; place-items: center; width: 84px; height: 52px; border-radius: var(--radius-md); background: radial-gradient(ellipse at 50% 90%, color-mix(in oklab, var(--cor-veiculo, #888) 22%, transparent), transparent 70%), var(--bg-inset); }
 .oferta.oferta--veiculo .desenho-veiculo { width: 72px; height: 36px; }
@@ -97,7 +97,7 @@
 /* ---------------------------------------------------------- A casa na cor dela (a fachada é do mundo) */
 .cena--colorida .cena__parede { fill: color-mix(in oklab, var(--fachada) 58%, var(--bg-raised)); }
 .cena--colorida .cena__porta { fill: color-mix(in oklab, var(--fachada) 22%, var(--bg-deep)); }
-.cena__veiculo.desenho-veiculo--colorido .quadro { stroke: var(--cor-veiculo); stroke-width: 2.2; }
+.cena__veiculo.desenho-veiculo--colorido .quadro { stroke-width: 2.2; }
 .cena--miniatura { max-width: none; height: auto; flex: none; }
 .oferta.oferta--casa { grid-template-columns: 96px minmax(0, 1fr) auto; }
 .oferta__casa { position: relative; display: grid; place-items: center; width: 96px; min-height: 52px; border-radius: var(--radius-md); background: var(--bg-inset); }
@@ -122,6 +122,19 @@
 
 /* ---------------------------------------------------------- Ficha: os grupos do que fazer com a pessoa */
 .ficha__grupo { margin-top: var(--space-3); }
+/* FIX pós-playtest humano: a ficha em hierarquia — "o que faz sentido agora" em destaque; o resto, por tipo, recolhido. */
+.ficha__agora { padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface); box-shadow: inset 3px 0 0 var(--tom-pessoas); }
+.ficha__agora .grupo-acoes { flex-direction: row; flex-wrap: wrap; }
+.ficha__porque { margin: 0 0 var(--space-1); color: var(--text-secondary); font-size: var(--type-caption); }
+details.ficha__grupo { border-bottom: 1px solid var(--rule); padding: var(--space-1) 0; margin-top: 0; }
+details.ficha__grupo:last-child { border-bottom: 0; }
+.ficha__grupo-titulo { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); cursor: pointer; list-style: none; }
+.ficha__grupo-titulo::-webkit-details-marker { display: none; }
+.ficha__grupo-titulo::after { content: '▾'; margin-left: auto; color: var(--text-muted); transition: transform 0.15s; }
+details[open] > .ficha__grupo-titulo::after { transform: rotate(180deg); }
+.ficha__grupo-titulo .ficha__subtitulo { margin: 0; }
+.ficha__conta { font-size: var(--type-caption); color: var(--text-muted); }
+details.ficha__grupo .grupo-acoes { padding-bottom: var(--space-2); }
 .ficha__grupo--juntos .ficha__subtitulo { color: var(--tom-pessoas); }
 .ficha__grupo--chamado .ficha__subtitulo { color: var(--warning); }
 .experiencia__preco { font-family: var(--font-sans); font-size: var(--type-caption); font-weight: 400; color: var(--text-muted); margin-left: var(--space-2); white-space: nowrap; }
@@ -131,8 +144,6 @@
 
 /* ---------------------------------------------------------- Tempo livre ocupa a coluna inteira (a página é flex) */
 .tempo { width: 100%; min-width: 0; }
-/* O veículo colorido: o traço (rodas, contorno, vidros) é neutro e claro — a cor que se vê é a da lataria, não a da área. */
-.desenho-veiculo.desenho-veiculo--colorido, .cena__veiculo.desenho-veiculo--colorido { color: #ece3d4; }
 .pertences__lista--veiculos { grid-template-columns: 1fr; }
 .pertence--veiculo .pertence__usos .acao { flex: 0 1 auto; }
 /* Os objetos à venda grandes o bastante para reconhecer o que são antes de ler o nome. */
@@ -141,3 +152,4 @@
 .oferta--objeto .oferta__objeto .objeto { width: 64px; height: 64px; }
 @media (max-width: 480px) { .oferta.oferta--objeto { grid-template-columns: 72px minmax(0, 1fr); } .oferta--objeto .oferta__objeto { width: 72px; } }
 .ficha__grupo .grupo-acoes { flex-direction: row; flex-wrap: wrap; }
+.ficha__grupo--romance .ficha__subtitulo { color: var(--tom-pessoas); }

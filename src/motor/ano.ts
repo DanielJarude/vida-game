@@ -8,6 +8,7 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { processarEstetica } from './sistemas/estetica';
 import { processarCoisas } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
 import { processarMundo } from './sistemas/migracao';
@@ -139,6 +140,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarNegocio(v, r);
   treinoProfissional(v, r);
   processarRotinas(v, r);
+  processarEstetica(v);
   // A formação como lugar: o que ficou para trás com a escola, o professor que repara.
   processarFormacao(v);
   // REWORK 4: o momento do ano dentro da escola ou do curso (a história interna da formação).

@@ -8,6 +8,8 @@
  * sobrancelha, cílios, lábios e o repertório de cabelo, sem caricatura.
  */
 
+import { misturar } from './cores';
+import { CabeloAtras, CabeloFrente, Calvo, Entradas, estagioDaCalvicie } from './cabelos';
 import { memo, type ReactElement } from 'react';
 import type { Especie } from '../../motor/tipos';
 import { animal, palavraDoBicho } from '../../motor/dados/animais';
@@ -62,11 +64,6 @@ function faseDe(i: number): Fase {
   return 'idoso';
 }
 
-function misturar(a: string, b: string, t: number): string {
-  const pa = [1, 3, 5].map(k => parseInt(a.slice(k, k + 2), 16));
-  const pb = [1, 3, 5].map(k => parseInt(b.slice(k, k + 2), 16));
-  return '#' + pa.map((x, k) => Math.round(x + (pb[k] - x) * t).toString(16).padStart(2, '0')).join('');
-}
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -128,8 +125,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   const adultoOuAdol = f === 'adol' || f === 'adulto' || f === 'meia' || f === 'idoso';
   // REWORK 4: os traços modulares herdados (rosto, olhos, nariz, boca, sobrancelha). Ausentes: o desenho de sempre.
   const ro = v.rosto;
-  const fw = ro === 'redondo' ? 1.04 : ro === 'longo' ? 0.95 : ro === 'coracao' ? 1.02 : 1;
-  const fh = ro === 'longo' ? 1.05 : ro === 'redondo' ? 0.97 : 1;
+  const fw = ro === 'redondo' ? 1.07 : ro === 'longo' ? 0.92 : ro === 'coracao' ? 1.03 : ro === 'quadrado' ? 1.03 : 1;
+  const fh = ro === 'longo' ? 1.08 : ro === 'redondo' ? 0.95 : 1;
   const fj = ro === 'quadrado' ? 1.35 : ro === 'redondo' ? 1.2 : ro === 'coracao' ? 0.72 : ro === 'longo' ? 0.9 : 1;
   const w = G.w * (adultoOuAdol && masc ? 1.04 : adultoOuAdol && fem ? 0.97 : 1) * (f === 'bebe' ? 1 : fw);
   const hh = G.hh * (f === 'bebe' ? 1 : fh);
@@ -137,11 +134,21 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   const cy = G.cy;
   const topo = cy - hh / 2;
   const queixo = cy + hh / 2;
-  const jaw = w * (adultoOuAdol ? (masc ? G.jaw + 0.07 : fem ? G.jaw - 0.02 : G.jaw + 0.02) : G.jaw) * (f === 'bebe' ? 1 : fj);
+  const fq = f === 'bebe' ? 1 : v.queixo === 'marcado' ? 1.12 : v.queixo === 'suave' ? 0.9 : 1;
+  const jaw = w * (adultoOuAdol ? (masc ? G.jaw + 0.07 : fem ? G.jaw - 0.02 : G.jaw + 0.02) : G.jaw) * (f === 'bebe' ? 1 : fj) * fq;
   const formaOlho = f === 'bebe' ? undefined : v.olhosForma;
   const olhoRx = formaOlho === 'puxado' ? 1.22 : formaOlho === 'redondo' ? 1.08 : 1.15;
   const olhoRy = formaOlho === 'puxado' ? 0.62 : formaOlho === 'redondo' ? 1.1 : formaOlho === 'caido' ? 0.88 : 0.95;
   const grossura = v.sobrancelha === 'fina' ? 0.7 : v.sobrancelha === 'grossa' ? 1.45 : 1;
+  // FIX pós-playtest humano (Aparência 2.0): os traços universais herdados — todos visíveis.
+  const bebe = f === 'bebe';
+  const tamOlho = bebe ? 1 : v.olhosTam === 'pequenos' ? 0.8 : v.olhosTam === 'grandes' ? 1.22 : 1;
+  const distOlho = bebe ? 0 : v.olhosDist === 'proximos' ? -1.3 : v.olhosDist === 'afastados' ? 1.4 : 0;
+  const arco = v.sobrancelhaForma === 'arqueada' ? 1.2 : v.sobrancelhaForma === 'reta' ? -0.9 : 0;
+  const angulo = v.sobrancelhaForma === 'angulosa';
+  const largBoca = v.bocaLarg === 'estreita' ? 0.76 : v.bocaLarg === 'larga' ? 1.25 : 1;
+  const orelhaRx = v.orelhas === 'de_abano' ? 3.5 : v.orelhas === 'coladas' ? 2.1 : 2.6;
+  const orelhaFora = v.orelhas === 'de_abano' ? 1.6 : v.orelhas === 'coladas' ? -0.3 : 0;
 
   const rosto = `M ${cx - w / 2} ${cy}
     C ${cx - w / 2} ${cy - hh * 0.63} ${cx + w / 2} ${cy - hh * 0.63} ${cx + w / 2} ${cy}
@@ -154,10 +161,16 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   const corpoTopo = queixo + (f === 'bebe' ? -2 : 4);
 
   const olhoY = cy + G.olhoY;
-  const esp = G.esp;
+  const esp = G.esp + distOlho;
+  const olho = G.olho * tamOlho;
   const iris = OLHOS[v.olhos] ?? OLHOS.castanho;
   const estilo = f === 'bebe' ? 'bebe' : v.cabelo;
-  const calvo = f === 'idoso' && masc && (h % 3 !== 0) || (f === 'meia' && masc && h % 5 === 0);
+  // A calvície é HERDADA (Aparência 2.0: `calvicie` — passa de pai para filho); quem veio de antes, o sorteio antigo.
+  const estagio = estagioDaCalvicie(v.calvicie, masc, idade, v.transplante);
+  const calvo = estagio === undefined ? (f === 'idoso' && masc && (h % 3 !== 0) || (f === 'meia' && masc && h % 5 === 0)) : estagio === 2;
+  const entradas = estagio === 1 && !bebe;
+  // O lifting apaga as rugas por uns dez anos (depois, o tempo volta).
+  const rugas = v.lifting !== undefined && idade - v.lifting < 10 ? 0.35 : 1;
 
   const fundo = fundoDoRetrato(cor, pele, h);
   return (
@@ -167,7 +180,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       role="img" aria-label={rotulo ?? 'Retrato'}
     >
       {/* Cabelo de trás */}
-      <CabeloAtras estilo={estilo} cor={cor} cx={cx} cy={cy} w={w} hh={hh} fase={f} />
+      {!calvo && <CabeloAtras estilo={estilo} cor={cor} cx={cx} cy={cy} w={w} hh={hh} fase={f} linha={v.linhaCabelo} />}
 
       {/* Corpo */}
       <path d={`M ${cx - ombro} 101 C ${cx - ombro} ${corpoTopo + 10} ${cx - ombro * 0.55} ${corpoTopo + 3} ${cx} ${corpoTopo + 3}
@@ -193,8 +206,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       )}
 
       {/* Orelhas */}
-      <ellipse cx={cx - w / 2 + 0.6} cy={olhoY + 3} rx={2.6} ry={4} fill={sombra} />
-      <ellipse cx={cx + w / 2 - 0.6} cy={olhoY + 3} rx={2.6} ry={4} fill={sombra} />
+      <ellipse cx={cx - w / 2 + 0.6 - orelhaFora} cy={olhoY + 3} rx={orelhaRx} ry={4} fill={sombra} transform={orelhaFora > 1 ? `rotate(-12 ${cx - w / 2} ${olhoY + 3})` : undefined} />
+      <ellipse cx={cx + w / 2 - 0.6 + orelhaFora} cy={olhoY + 3} rx={orelhaRx} ry={4} fill={sombra} transform={orelhaFora > 1 ? `rotate(12 ${cx + w / 2} ${olhoY + 3})` : undefined} />
 
       {/* Rosto */}
       <path d={rosto} fill={pele} />
@@ -212,28 +225,40 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
         </>
       )}
 
+      {/* Sardas (herdadas; mais visíveis na pele clara). */}
+      {!bebe && v.sardas && v.sardas !== 'nao' && (
+        <g fill={misturar(sombra, '#6a3a1e', 0.6)} opacity={0.75}>
+          {(v.sardas === 'muitas' ? [[-9, 6], [-7, 7.6], [-10.5, 7.8], [-5.5, 6.2], [-8, 9.2], [9, 6], [7, 7.6], [10.5, 7.8], [5.5, 6.2], [8, 9.2], [-1.6, 4.8], [1.6, 4.8]] : [[-8, 6.4], [-6, 7.6], [-9.6, 8], [8, 6.4], [6, 7.6], [9.6, 8]]).map(([dx, dy], k) => <circle key={k} cx={cx + dx} cy={olhoY + dy} r={0.6} />)}
+        </g>
+      )}
+
       {/* Sobrancelhas */}
       {f !== 'bebe' && (
         <g stroke={f === 'idoso' ? misturar(cor, '#8a8580', 0.3) : misturar(cor, '#000000', 0.15)} strokeLinecap="round" fill="none"
            strokeWidth={(masc && adultoOuAdol ? 1.9 : 1.25) * grossura}>
           {/* Sobrancelha: o canto de dentro sobe na tristeza, desce na tensão. */}
-          <path d={`M ${cx - esp - 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)} Q ${cx - esp} ${olhoY - 6.2 - (x === 'bem' ? 0.6 : 0)} ${cx - esp + 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)}`} />
-          <path d={`M ${cx + esp - 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)} Q ${cx + esp} ${olhoY - 6.2 - (x === 'bem' ? 0.6 : 0)} ${cx + esp + 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)}`} />
+          {/* A forma é herdada (reta, arqueada, angulosa); a expressão mexe no canto de dentro. */}
+          <path d={angulo
+            ? `M ${cx - esp - 3.4} ${olhoY - 4.4} L ${cx - esp - 0.6} ${olhoY - 6.6 - (x === 'bem' ? 0.5 : 0)} L ${cx - esp + 3.2} ${olhoY - 5 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)}`
+            : `M ${cx - esp - 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)} Q ${cx - esp} ${olhoY - 6.2 - arco - (x === 'bem' ? 0.6 : 0)} ${cx - esp + 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)}`} />
+          <path d={angulo
+            ? `M ${cx + esp - 3.2} ${olhoY - 5 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)} L ${cx + esp + 0.6} ${olhoY - 6.6 - (x === 'bem' ? 0.5 : 0)} L ${cx + esp + 3.4} ${olhoY - 4.4}`
+            : `M ${cx + esp - 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)} Q ${cx + esp} ${olhoY - 6.2 - arco - (x === 'bem' ? 0.6 : 0)} ${cx + esp + 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)}`} />
         </g>
       )}
 
       {/* Olhos */}
       {[-1, 1].map(lado => (
         <g key={lado}>
-          <ellipse cx={cx + lado * esp} cy={olhoY} rx={G.olho * olhoRx} ry={G.olho * (f === 'idoso' ? 0.8 : olhoRy)} fill="#f7f2ea" />
-          <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={G.olho * Math.min(0.72, olhoRy * 0.82)} fill={iris} />
-          <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={G.olho * Math.min(0.36, olhoRy * 0.42)} fill="#141110" />
-          <circle cx={cx + lado * esp + G.olho * 0.28} cy={olhoY - G.olho * 0.3 * olhoRy} r={G.olho * 0.22} fill="#ffffff" opacity={0.85} />
+          <ellipse cx={cx + lado * esp} cy={olhoY} rx={olho * olhoRx} ry={olho * (f === 'idoso' ? 0.8 : olhoRy)} fill="#f7f2ea" />
+          <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={olho * Math.min(0.72, olhoRy * 0.82)} fill={iris} />
+          <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={olho * Math.min(0.36, olhoRy * 0.42)} fill="#141110" />
+          <circle cx={cx + lado * esp + olho * 0.28} cy={olhoY - olho * 0.3 * olhoRy} r={olho * 0.22} fill="#ffffff" opacity={0.85} />
           {/* A pálpebra: puxada (a linha de cima mais longa e reta), caída (o canto de fora desce). */}
-          {formaOlho === 'puxado' && <path d={`M ${cx + lado * esp - G.olho * 1.3} ${olhoY - G.olho * 0.45} Q ${cx + lado * esp} ${olhoY - G.olho * 0.9} ${cx + lado * esp + G.olho * 1.35} ${olhoY - G.olho * 0.6}`} fill="none" stroke={misturar(sombra, '#000000', 0.35)} strokeWidth={0.7} strokeLinecap="round" />}
-          {formaOlho === 'caido' && <path d={`M ${cx + lado * esp - lado * G.olho * 0.4} ${olhoY - G.olho * 0.95} Q ${cx + lado * esp + lado * G.olho * 0.6} ${olhoY - G.olho * 0.95} ${cx + lado * esp + lado * G.olho * 1.3} ${olhoY - G.olho * 0.2}`} fill="none" stroke={misturar(sombra, '#000000', 0.3)} strokeWidth={0.7} strokeLinecap="round" />}
+          {formaOlho === 'puxado' && <path d={`M ${cx + lado * esp - olho * 1.3} ${olhoY - olho * 0.45} Q ${cx + lado * esp} ${olhoY - olho * 0.9} ${cx + lado * esp + olho * 1.35} ${olhoY - olho * 0.6}`} fill="none" stroke={misturar(sombra, '#000000', 0.35)} strokeWidth={0.7} strokeLinecap="round" />}
+          {formaOlho === 'caido' && <path d={`M ${cx + lado * esp - lado * olho * 0.4} ${olhoY - olho * 0.95} Q ${cx + lado * esp + lado * olho * 0.6} ${olhoY - olho * 0.95} ${cx + lado * esp + lado * olho * 1.3} ${olhoY - olho * 0.2}`} fill="none" stroke={misturar(sombra, '#000000', 0.3)} strokeWidth={0.7} strokeLinecap="round" />}
           {fem && adultoOuAdol && (
-            <path d={`M ${cx + lado * (esp + G.olho * 1.05)} ${olhoY - 0.6} l ${lado * 1.6} -1.4`} stroke="#1c1917" strokeWidth={0.9} strokeLinecap="round" />
+            <path d={`M ${cx + lado * (esp + olho * 1.05)} ${olhoY - 0.6} l ${lado * 1.6} -1.4`} stroke="#1c1917" strokeWidth={0.9} strokeLinecap="round" />
           )}
         </g>
       ))}
@@ -241,14 +266,14 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {/* Cansaço: pálpebra caída e olheira. */}
       {f !== 'bebe' && (x === 'cansado' || x === 'doente' || x === 'abatido') && [-1, 1].map(lado => (
         <g key={`p${lado}`}>
-          <path d={`M ${cx + lado * esp - G.olho * 1.25} ${olhoY - G.olho * 0.2} Q ${cx + lado * esp} ${olhoY - G.olho * (x === 'abatido' ? 1.05 : 1.3)} ${cx + lado * esp + G.olho * 1.25} ${olhoY - G.olho * 0.2} L ${cx + lado * esp + G.olho * 1.25} ${olhoY - G.olho * 1.3} L ${cx + lado * esp - G.olho * 1.25} ${olhoY - G.olho * 1.3} Z`} fill={pele} />
-          <path d={`M ${cx + lado * esp - G.olho * 1.05} ${olhoY + G.olho * 1.15} q ${G.olho * 1.05} ${G.olho * 0.7} ${G.olho * 2.1} 0`} fill="none" stroke={misturar(sombra, '#4a3a4a', 0.35)} strokeWidth={0.7} opacity={x === 'abatido' ? 0.35 : 0.6} strokeLinecap="round" />
+          <path d={`M ${cx + lado * esp - olho * 1.25} ${olhoY - olho * 0.2} Q ${cx + lado * esp} ${olhoY - olho * (x === 'abatido' ? 1.05 : 1.3)} ${cx + lado * esp + olho * 1.25} ${olhoY - olho * 0.2} L ${cx + lado * esp + olho * 1.25} ${olhoY - olho * 1.3} L ${cx + lado * esp - olho * 1.25} ${olhoY - olho * 1.3} Z`} fill={pele} />
+          <path d={`M ${cx + lado * esp - olho * 1.05} ${olhoY + olho * 1.15} q ${olho * 1.05} ${olho * 0.7} ${olho * 2.1} 0`} fill="none" stroke={misturar(sombra, '#4a3a4a', 0.35)} strokeWidth={0.7} opacity={x === 'abatido' ? 0.35 : 0.6} strokeLinecap="round" />
         </g>
       ))}
 
       {/* Rugas e marcas do tempo */}
       {(f === 'meia' || f === 'idoso') && (
-        <g stroke={misturar(sombra, '#000000', 0.2)} strokeWidth={0.6} fill="none" opacity={f === 'idoso' ? 0.75 : 0.45} strokeLinecap="round">
+        <g stroke={misturar(sombra, '#000000', 0.2)} strokeWidth={0.6} fill="none" opacity={(f === 'idoso' ? 0.75 : 0.45) * rugas} strokeLinecap="round">
           <path d={`M ${cx - esp - 5.5} ${olhoY + 1.5} q -1.5 1.2 -1.4 2.8`} />
           <path d={`M ${cx + esp + 5.5} ${olhoY + 1.5} q 1.5 1.2 1.4 2.8`} />
           {f === 'idoso' && <path d={`M ${cx - 7} ${topo + hh * 0.2} q 7 -1.6 14 0`} />}
@@ -263,8 +288,11 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
         : v.nariz === 'largo' ? `M ${cx - 0.4} ${olhoY + 1.5} L ${cx - 1.4} ${olhoY + 6.6} Q ${cx - 3.4} ${olhoY + 7.6} ${cx - 2.2} ${olhoY + 8.6} Q ${cx} ${olhoY + 9.4} ${cx + 2.2} ${olhoY + 8.6} Q ${cx + 3.4} ${olhoY + 7.6} ${cx + 1.6} ${olhoY + 6.8}`
           : v.nariz === 'fino' ? `M ${cx - 0.3} ${olhoY + 1.5} L ${cx - 1.1} ${olhoY + 7.8} Q ${cx} ${olhoY + 8.6} ${cx + 1.2} ${olhoY + 7.8}`
             : v.nariz === 'arrebitado' ? `M ${cx - 0.4} ${olhoY + 2.5} Q ${cx - 1.8} ${olhoY + 6.4} ${cx - 1.5} ${olhoY + 7.2} Q ${cx} ${olhoY + 7.4} ${cx + 1.7} ${olhoY + 6.6}`
+              // Curvo: o dorso com a curva no meio; pequeno: curto, a ponta alta.
+              : v.nariz === 'curvo' ? `M ${cx - 0.2} ${olhoY + 1.2} Q ${cx - 2.4} ${olhoY + 4.2} ${cx - 1.6} ${olhoY + 6.4} Q ${cx - 2.6} ${olhoY + 8.6} ${cx - 0.6} ${olhoY + 8.8} Q ${cx + 1.2} ${olhoY + 9} ${cx + 2} ${olhoY + 7.8}`
+                : v.nariz === 'pequeno' ? `M ${cx - 0.3} ${olhoY + 3.2} L ${cx - 1.1} ${olhoY + 6.6} Q ${cx} ${olhoY + 7.2} ${cx + 1.1} ${olhoY + 6.6}`
               : `M ${cx - 0.4} ${olhoY + 1.5} L ${cx - 1.6} ${olhoY + 7.6} Q ${cx} ${olhoY + 8.8} ${cx + 1.8} ${olhoY + 7.6}`}
-        fill="none" stroke={misturar(sombra, '#000000', 0.12)} strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" />
+        fill="none" stroke={misturar(sombra, '#000000', 0.22)} strokeWidth={1.15} strokeLinecap="round" strokeLinejoin="round" />
 
       {/* Boca */}
       {f === 'bebe'
@@ -274,7 +302,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
             const larg = (fem ? 3.6 : 3.8) * (x === 'tenso' ? 0.85 : x === 'bem' ? 1.08 : 1);
             const curva = x === 'bem' ? (fem ? 3.4 : 2.8) : x === 'tenso' ? 0.3 : x === 'abatido' ? -1.6 : x === 'doente' ? -0.7 : x === 'cansado' ? 0.8 : fem ? 2.4 : 1.6;
             const cantos = olhoY + 12.2 + (x === 'abatido' ? 0.8 : 0);
-            const lb = v.boca === 'fina' ? 0.92 : v.boca === 'cheia' ? 1.08 : 1;
+            const lb = (v.boca === 'fina' ? 0.92 : v.boca === 'cheia' ? 1.08 : 1) * largBoca;
             const traco = (fem && adultoOuAdol ? (curva > 1 ? 0.8 : 1.2) : 1.3) * (v.boca === 'fina' ? 0.75 : v.boca === 'cheia' ? 1.15 : 1);
             return (
               <>
@@ -286,6 +314,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
             );
           })()}
 
+      {/* O queixo marcado: a sombra do queixo (herdada). */}
+      {!bebe && v.queixo === 'marcado' && <path d={`M ${cx - jaw * 0.55} ${queixo - 2.6} Q ${cx} ${queixo - 1.2} ${cx + jaw * 0.55} ${queixo - 2.6}`} fill="none" stroke={misturar(sombra, '#000000', 0.18)} strokeWidth={0.7} opacity={0.6} strokeLinecap="round" />}
+
       {/* Barba e bigode: de quem tem (a escolha é da pessoa; a barba aparece do fim da adolescência em diante) */}
       {!fem && (f === 'adol' && idade >= 16 || f === 'adulto' || f === 'meia' || f === 'idoso') && v.barba && (
         <Barba tipo={v.barba} bigode={v.bigode !== false} cor={f === 'idoso' ? misturar(cor, '#e6e2dc', 0.3) : misturar(cor, '#000000', 0.05)} cx={cx} olhoY={olhoY} w={w} queixo={queixo} jaw={jaw} />
@@ -295,185 +326,14 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {v.oculos ? <Oculos tipo={v.oculos} cx={cx} olhoY={olhoY} esp={esp} /> : f === 'idoso' && h % 2 === 0 && <Oculos tipo="grau" cx={cx} olhoY={olhoY} esp={esp} />}
 
       {/* Cabelo da frente */}
-      <CabeloFrente estilo={estilo} cor={cor} cx={cx} cy={cy} w={w} hh={hh} fase={f} calvo={calvo} semente={h} fem={fem} />
+      {calvo ? <Calvo cx={cx} cy={cy} w={w} hh={hh} cor={cor} semente={h} /> : <CabeloFrente estilo={estilo} cor={cor} cx={cx} cy={cy} w={w} hh={hh} fase={f} linha={v.linhaCabelo} />}
+      {entradas && !calvo && <Entradas cx={cx} cy={cy} w={w} hh={hh} pele={pele} />}
 
       {/* O que vai na cabeça */}
       {v.chapeu && f !== 'bebe' && <Chapeu tipo={v.chapeu} cx={cx} cy={cy} w={w} hh={hh} semente={h} />}
     </svg>
   );
 });
-
-/* ---------------------------------------------------------------- Cabelo */
-
-interface CabeloProps { estilo: string; cor: string; cx: number; cy: number; w: number; hh: number; fase: Fase }
-
-/** Calota de cabelo com linha de testa configurável. */
-function calota(cx: number, cy: number, w: number, hh: number, o: { volume?: number; testa?: number; franja?: number; lado?: number; temporas?: number }) {
-  const vol = o.volume ?? 1.5;
-  const testaY = cy - hh * (o.testa ?? 0.22);
-  const tempY = cy + (o.temporas ?? -hh * 0.02);
-  const L = cx - w / 2 - vol * 0.6;
-  const R = cx + w / 2 + vol * 0.6;
-  const topoY = cy - hh * 0.5 - vol;
-  const lado = o.lado ?? 0;
-  const franja = o.franja ?? 3;
-  return `M ${L} ${tempY}
-    C ${L - 0.5} ${topoY + hh * 0.08} ${cx - w * 0.3} ${topoY} ${cx} ${topoY}
-    C ${cx + w * 0.3} ${topoY} ${R + 0.5} ${topoY + hh * 0.08} ${R} ${tempY}
-    C ${R - 1.8} ${testaY + 2} ${cx + w * 0.25 + lado} ${testaY - 1} ${cx + lado * 2} ${testaY + franja}
-    C ${cx - w * 0.25 + lado} ${testaY - 1} ${L + 1.8} ${testaY + 2} ${L} ${tempY} Z`;
-}
-
-function CabeloAtras({ estilo, cor, cx, cy, w, hh, fase }: CabeloProps) {
-  const escuro = misturar(cor, '#000000', 0.18);
-  const topo = cy - hh / 2;
-  const longo = (y: number, ondas: boolean) => {
-    const L = cx - w / 2 - 3;
-    const R = cx + w / 2 + 3;
-    const baixo = Math.min(99, y);
-    if (!ondas) return `M ${L} ${cy - 4} C ${L - 1} ${topo - 2} ${R + 1} ${topo - 2} ${R} ${cy - 4} L ${R + 2} ${baixo} Q ${cx} ${baixo + 3} ${L - 2} ${baixo} Z`;
-    return `M ${L} ${cy - 4} C ${L - 1} ${topo - 2} ${R + 1} ${topo - 2} ${R} ${cy - 4}
-      Q ${R + 5} ${cy + 10} ${R + 1} ${cy + 18} Q ${R + 6} ${cy + 28} ${R + 2} ${baixo}
-      Q ${cx} ${baixo + 4} ${L - 2} ${baixo} Q ${L - 6} ${cy + 28} ${L - 1} ${cy + 18} Q ${L - 5} ${cy + 10} ${L} ${cy - 4} Z`;
-  };
-  const curto = fase === 'crianca' || fase === 'pre';
-  switch (estilo) {
-    case 'longo_liso': return <path d={longo(curto ? cy + 22 : cy + 40, false)} fill={escuro} />;
-    case 'longo_ondulado': return <path d={longo(curto ? cy + 22 : cy + 40, true)} fill={escuro} />;
-    case 'chanel': return <path d={longo(cy + 14, false)} fill={escuro} />;
-    case 'cacheado_longo': return <Cachos cx={cx} cy={cy + 8} rx={w / 2 + 9} ry={hh / 2 + 10} cor={escuro} n={20} r={6.5} />;
-    case 'black': return <Cachos cx={cx} cy={cy - 4} rx={w / 2 + 9} ry={hh / 2 + 7} cor={escuro} n={22} r={7} cheio />;
-    case 'trancas':
-      return (
-        <g fill={escuro}>
-          {[-1, 1].map(l => <path key={l} d={`M ${cx + l * (w / 2 - 1)} ${cy - 2} q ${l * 4} 20 ${l * 2} ${curto ? 26 : 42} l ${-l * 4} 0 q ${l * 1} -22 ${-l * 2} -40 Z`} />)}
-        </g>
-      );
-    case 'rabo': return <path d={`M ${cx + w / 2 - 2} ${cy - hh * 0.3} q 9 6 6 ${curto ? 20 : 28} q -2 6 -5 2 q 1 -16 -5 -26 Z`} fill={escuro} />;
-    case 'coque': return <circle cx={cx} cy={topo - 4} r={7.5} fill={cor} />;
-    default: return null;
-  }
-}
-
-function Cachos({ cx, cy, rx, ry, cor, n, r, cheio, frente }: { cx: number; cy: number; rx: number; ry: number; cor: string; n: number; r: number; cheio?: boolean; frente?: boolean }) {
-  const pts = Array.from({ length: n }, (_, k) => {
-    const a = Math.PI + (k / (n - 1)) * Math.PI * (cheio ? 1 : 1);
-    const ang = cheio ? (k / n) * Math.PI * 2 : a;
-    return [cx + Math.cos(ang) * rx, cy + Math.sin(ang) * ry * (cheio ? 1 : 1.05)];
-  });
-  return (
-    <g fill={cor}>
-      {cheio && <ellipse cx={cx} cy={cy} rx={rx} ry={ry} />}
-      {!cheio && !frente && <path d={`M ${cx - rx} ${cy + ry * 0.6} Q ${cx - rx - 2} ${cy - ry} ${cx} ${cy - ry} Q ${cx + rx + 2} ${cy - ry} ${cx + rx} ${cy + ry * 0.6} Z`} />}
-      {pts.filter(([, y]) => !frente || y < cy - ry * 0.35).map(([x, y], k) => <circle key={k} cx={x} cy={y} r={r * (0.85 + (k % 3) * 0.1)} />)}
-    </g>
-  );
-}
-
-function CabeloFrente({ estilo, cor, cx, cy, w, hh, fase, calvo, semente, fem }: CabeloProps & { calvo: boolean; semente: number; fem: boolean }) {
-  const brilho = misturar(cor, '#ffffff', 0.12);
-  const topo = cy - hh / 2;
-  if (estilo === 'bebe') {
-    // Poucos fios: uma mecha e uma penugem.
-    return (
-      <g fill="none" stroke={cor} strokeLinecap="round" opacity={0.85}>
-        <path d={`M ${cx - 3} ${topo + 2} q 3 -5 6 -1`} strokeWidth={1.6} />
-        <path d={`M ${cx + 1} ${topo + 1.5} q 3 -4 5 0`} strokeWidth={1.3} />
-        <path d={calota(cx, cy, w * 0.92, hh, { volume: -0.5, testa: 0.36, franja: 0 })} fill={cor} stroke="none" opacity={0.18} />
-      </g>
-    );
-  }
-  if (calvo) {
-    // Entradas ou calvície: sobra a coroa e as laterais.
-    return (
-      <g fill={cor}>
-        <path d={`M ${cx - w / 2 - 0.5} ${cy + 2} C ${cx - w / 2 - 1} ${cy - hh * 0.2} ${cx - w / 2 + 3} ${cy - hh * 0.32} ${cx - w / 2 + 5} ${cy - hh * 0.28} L ${cx - w / 2 + 3} ${cy + 1} Z`} />
-        <path d={`M ${cx + w / 2 + 0.5} ${cy + 2} C ${cx + w / 2 + 1} ${cy - hh * 0.2} ${cx + w / 2 - 3} ${cy - hh * 0.32} ${cx + w / 2 - 5} ${cy - hh * 0.28} L ${cx + w / 2 - 3} ${cy + 1} Z`} />
-        {semente % 2 === 0 && <path d={`M ${cx - 9} ${topo + 2.5} q 9 -3.5 18 0`} fill="none" stroke={cor} strokeWidth={1.2} opacity={0.5} />}
-      </g>
-    );
-  }
-  const curto = fase === 'crianca' || fase === 'pre';
-  switch (estilo) {
-    case 'raspado':
-      return <path d={calota(cx, cy, w, hh, { volume: 0.2, testa: 0.28, franja: 1, temporas: -hh * 0.08 })} fill={cor} opacity={0.82} />;
-    case 'curto':
-      return <path d={calota(cx, cy, w, hh, { volume: 2.2, testa: 0.24, franja: 2.5 })} fill={cor} />;
-    case 'curto_lado':
-      return (
-        <g>
-          <path d={calota(cx, cy, w, hh, { volume: 2.6, testa: 0.24, franja: 1, lado: -5 })} fill={cor} />
-          <path d={`M ${cx - 6} ${topo + 1} q 7 2 14 7`} stroke={brilho} strokeWidth={0.8} fill="none" opacity={0.6} />
-        </g>
-      );
-    case 'ondulado':
-      return (
-        <g fill={cor}>
-          <path d={calota(cx, cy, w, hh, { volume: 3.2, testa: 0.2, franja: 4, lado: 3 })} />
-          <path d={`M ${cx - w / 2 - 1.5} ${cy} q -2 5 0 9 q 3 -3 3 -9 Z M ${cx + w / 2 + 1.5} ${cy} q 2 5 0 9 q -3 -3 -3 -9 Z`} />
-        </g>
-      );
-    case 'crespo_curto':
-      return (
-        <g fill={cor}>
-          <path d={calota(cx, cy, w, hh, { volume: 3.2, testa: 0.25, franja: 0.5 })} />
-          {Array.from({ length: 11 }, (_, k) => {
-            const a = Math.PI * (1.05 + (k / 10) * 0.9);
-            return <circle key={k} cx={cx + Math.cos(a) * (w / 2 + 1.5)} cy={cy - 2 + Math.sin(a) * (hh / 2 + 2)} r={2.4} />;
-          })}
-        </g>
-      );
-    case 'cacheado':
-      return (
-        <g>
-          <Cachos cx={cx} cy={cy - 3} rx={w / 2 + 2.5} ry={hh / 2 + 1.5} cor={cor} n={13} r={4.2} frente />
-          <path d={calota(cx, cy, w, hh, { volume: 3.5, testa: 0.22, franja: 2.5 })} fill={cor} />
-        </g>
-      );
-    case 'black':
-      return <path d={calota(cx, cy, w, hh, { volume: 4, testa: 0.24, franja: 1 })} fill={cor} />;
-    case 'cacheado_longo':
-      return (
-        <g>
-          <Cachos cx={cx} cy={cy - 3} rx={w / 2 + 3} ry={hh / 2 + 2} cor={cor} n={14} r={4.6} frente />
-          <path d={calota(cx, cy, w, hh, { volume: 3.5, testa: 0.22, franja: 3, lado: 4 })} fill={cor} />
-        </g>
-      );
-    case 'longo_liso':
-    case 'longo_ondulado':
-      return (
-        <g fill={cor}>
-          <path d={calota(cx, cy, w, hh, { volume: 2.5, testa: 0.2, franja: curto ? 5 : 3, lado: fem ? 4 : 2 })} />
-          <path d={`M ${cx - w / 2 - 2} ${cy - 4} L ${cx - w / 2 + 2} ${cy + (curto ? 12 : 20)} L ${cx - w / 2 - 3} ${cy + (curto ? 14 : 24)} Z`} />
-          <path d={`M ${cx + w / 2 + 2} ${cy - 4} L ${cx + w / 2 - 2} ${cy + (curto ? 12 : 20)} L ${cx + w / 2 + 3} ${cy + (curto ? 14 : 24)} Z`} />
-        </g>
-      );
-    case 'chanel':
-      return (
-        <g fill={cor}>
-          <path d={calota(cx, cy, w, hh, { volume: 2.6, testa: 0.18, franja: 6 })} />
-          <path d={`M ${cx - w / 2 - 2.5} ${cy - 2} L ${cx - w / 2 + 1} ${cy + 12} L ${cx - w / 2 - 3} ${cy + 13} Z M ${cx + w / 2 + 2.5} ${cy - 2} L ${cx + w / 2 - 1} ${cy + 12} L ${cx + w / 2 + 3} ${cy + 13} Z`} />
-        </g>
-      );
-    case 'coque':
-    case 'rabo':
-      return (
-        <g>
-          <path d={calota(cx, cy, w, hh, { volume: 1.2, testa: 0.25, franja: 0.5 })} fill={cor} />
-          <path d={`M ${cx - w * 0.3} ${topo + 3} q ${w * 0.3} -4 ${w * 0.6} 0`} stroke={brilho} strokeWidth={0.7} fill="none" opacity={0.5} />
-        </g>
-      );
-    case 'trancas':
-      return (
-        <g>
-          <path d={calota(cx, cy, w, hh, { volume: 1.6, testa: 0.24, franja: 0.5 })} fill={cor} />
-          {[-6, 0, 6].map(dx => <path key={dx} d={`M ${cx + dx} ${topo - 0.5} L ${cx + dx * 1.3} ${cy - hh * 0.2}`} stroke={misturar(cor, '#000000', 0.3)} strokeWidth={0.7} />)}
-        </g>
-      );
-    default:
-      return <path d={calota(cx, cy, w, hh, { volume: 2, testa: 0.24, franja: 2 })} fill={cor} />;
-  }
-}
 
 function Oculos({ tipo, cx, olhoY, esp }: { tipo: 'grau' | 'redondo' | 'sol'; cx: number; olhoY: number; esp: number }) {
   const lente = tipo === 'sol' ? '#1e2227' : 'none';

@@ -22,6 +22,7 @@
  * `formacao.instituicaoAtual`): nada aqui presume um país.
  */
 
+import { nomeDaMateria } from '../mundo/materias';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Pessoa, Vida } from '../tipos';
@@ -38,7 +39,8 @@ import { marcar } from './marcas';
 export type OqueFormacao = 'estudar' | 'professor' | 'festa' | 'matar' | 'colar' | 'grupo' | 'projeto' | 'congresso';
 export interface VerboDaFormacao { oque: OqueFormacao; rotulo: string; porque: string; risco?: boolean }
 
-const MATERIA: Partial<Record<Dominio, string>> = { exatas: 'matemática', linguagens: 'português e redação', ciencias: 'ciências', humanas: 'história' };
+/** O nome da matéria, da fonte única (`mundo/materias`). */
+const MATERIA = (d: Dominio | undefined) => (d && ['exatas', 'linguagens', 'ciencias', 'humanas'].includes(d) ? nomeDaMateria(d, 'aula') : undefined);
 const chave = (v: Vida, oque: OqueFormacao) => `formacao:${oque}:${Math.floor(v.t / 12)}`;
 const feito = (v: Vida, oque: OqueFormacao) => v.fatos[chave(v, oque)] !== undefined;
 const naFaculdade = (v: Vida) => { const m = v.educacao.matricula; return !!m && !m.trancado && ['superior', 'tecnico', 'pos', 'mestrado', 'doutorado'].includes(curso(m.cursoId).nivel); };
@@ -71,7 +73,7 @@ export function verbosDaFormacao(v: Vida): VerboDaFormacao[] {
   if (!fac && !naEscola(v)) return [];
   if (i >= 10) add({ oque: 'estudar', rotulo: 'Estudar de verdade para as provas', porque: 'As notas sobem; o estresse também, um pouco.' });
   const fraca = materiasExtremas(v).fraca;
-  if (!fac && fraca && i >= 9) add({ oque: 'professor', rotulo: `Pedir ajuda ao professor de ${MATERIA[fraca] ?? 'a matéria mais difícil'}`, porque: 'Quem pede, aprende — e o professor passa a reparar em você.' });
+  if (!fac && fraca && i >= 9) add({ oque: 'professor', rotulo: `Pedir ajuda ao professor ${MATERIA(fraca) ? `de ${MATERIA(fraca)}` : 'da matéria mais difícil'}`, porque: 'Quem pede, aprende — e o professor passa a reparar em você.' });
   if (i >= 13) add({ oque: 'festa', rotulo: fac ? 'Ir à festa da faculdade' : 'Ir à festa da turma', porque: 'Gente nova, amizades — e a manhã seguinte.' });
   if (!fac && i >= 12 && colega(v)) add({ oque: 'grupo', rotulo: 'Puxar o trabalho em grupo', porque: 'Nota melhor, e quem trabalha junto se aproxima.' });
   if (!fac && i >= 13) add({ oque: 'matar', rotulo: 'Matar aula com a turma', porque: 'Uma tarde boa com os amigos. A escola avisa em casa, às vezes.', risco: true });
@@ -113,8 +115,8 @@ export function executarFormacao(v: Vida, r: Rng, oque: OqueFormacao): string {
       mexerNaNota(v, 4);
       praticar(v, r, d, 0.35, 1.2);
       const prof = professorDe(v, inst);
-      if (prof && v.vinculos[prof.id]) { v.vinculos[prof.id].confianca = clamp(v.vinculos[prof.id].confianca + 5); v.vinculos[prof.id].proximidade = clamp(v.vinculos[prof.id].proximidade + 4); lembrarCom(v, prof.id, `Você pediu ajuda em ${MATERIA[d] ?? 'uma matéria'} — e voltou na semana seguinte.`, 'escola', 1); }
-      const texto = `Pediu ajuda em ${MATERIA[d] ?? 'a matéria mais difícil'} depois da aula. ${prof ? `${prof.nome} explicou do zero.` : 'O professor explicou do zero.'}`;
+      if (prof && v.vinculos[prof.id]) { v.vinculos[prof.id].confianca = clamp(v.vinculos[prof.id].confianca + 5); v.vinculos[prof.id].proximidade = clamp(v.vinculos[prof.id].proximidade + 4); lembrarCom(v, prof.id, `Você pediu ajuda em ${MATERIA(d) ?? 'uma matéria'} — e voltou na semana seguinte.`, 'escola', 1); }
+      const texto = `Pediu ajuda em ${MATERIA(d) ?? 'a matéria mais difícil'} depois da aula. ${prof ? `${prof.nome} explicou do zero.` : 'O professor explicou do zero.'}`;
       registrar('professor', texto);
       return `${prof ? prof.nome : 'O professor'} ficou meia hora a mais explicando. Na prova seguinte, a matéria entrou.`;
     }

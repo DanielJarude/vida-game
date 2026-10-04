@@ -15,6 +15,7 @@
  *              distância dita em palavras. Reprovar não fecha a porta.
  */
 
+import { nomeDaMateria } from '../mundo/materias';
 import { paisDaVida, perfilDaVida } from '../mundo/vida';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -31,7 +32,7 @@ import { flex, ge } from '../texto';
 import { registrarDevolutiva } from './devolutivas';
 import { abalar } from './abalo';
 
-const NOME_DA_PROVA: Record<string, string> = { exatas: 'matemática e raciocínio lógico', linguagens: 'português', humanas: 'conhecimentos gerais e legislação', ciencias: 'conhecimentos específicos', idiomas: 'língua estrangeira', musica: 'a prova prática' };
+const NOME_DA_PROVA: Record<string, string> = { exatas: 'matemática e raciocínio lógico', get linguagens() { return nomeDaMateria('linguagens'); }, humanas: 'conhecimentos gerais e legislação', ciencias: 'conhecimentos específicos', idiomas: 'língua estrangeira', musica: 'a prova prática' };
 
 interface PerfilConcurso {
   /** Meses de estudo sério que a aprovação costuma pedir. */

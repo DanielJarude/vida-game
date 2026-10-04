@@ -20,6 +20,7 @@ import { clamp } from '../rng';
 import type { Vida } from '../tipos';
 import { idade, parceiro, vinculosVivos } from '../nucleo';
 import { sobrecargaDaSemana } from './estado';
+import { faixaDaSemana, PALAVRA_DA_FAIXA } from './semana';
 import { seguranca } from './dinheiro';
 import { ritmoDe } from './ritmo';
 import { lesaoAtiva } from './lesoes';
@@ -29,7 +30,8 @@ export type NivelSobrecarga = 0 | 1 | 2 | 3;
 
 export interface LeituraSobrecarga {
   nivel: NivelSobrecarga;
-  /** Uma palavra: "cabe", "cheia", "sobrecarregada", "no limite". */
+  /** A palavra do TEMPO da semana (folgada · ocupada · cheia · sobrecarregada · no teto) — a mesma de
+   *  `semana.folegoDaSemana` (FIX pós-playtest humano: o painel não pode dizer "cabe" com a lista dizendo que não). */
   palavra: string;
   /** O que mais pesa (em palavras). */
   causas: string[];
@@ -39,7 +41,6 @@ export interface LeituraSobrecarga {
   texto: string;
 }
 
-const PALAVRAS = ['cabe', 'cheia', 'sobrecarregada', 'no limite'];
 
 /** A conta da sobrecarga agora (fonte única: motor e tela). */
 export function leituraDaSobrecarga(v: Vida): LeituraSobrecarga {
@@ -61,7 +62,7 @@ export function leituraDaSobrecarga(v: Vida): LeituraSobrecarga {
   const texto = nivel === 0 ? 'A semana cabe na vida: sobra tempo para descansar.'
     : nivel === 1 ? `A semana está cheia${lista ? `: ${lista}` : ''}. Ainda cabe — por pouco.`
       : `${nivel === 3 ? 'No limite' : 'Sobrecarregada'}${lista ? `: ${lista}` : ''}.${anos >= 2 ? ` Há ${anos} anos assim — o corpo, o trabalho e quem está perto já sentem.` : anos === 1 ? ' Foi assim o ano passado inteiro.' : ''}`;
-  return { nivel, palavra: PALAVRAS[nivel], causas: [...new Set(causas)], anos, texto };
+  return { nivel, palavra: PALAVRA_DA_FAIXA[faixaDaSemana(v)], causas: [...new Set(causas)], anos, texto };
 }
 
 /** Anos de sobrecarga que ainda pesam (0 = nada). */

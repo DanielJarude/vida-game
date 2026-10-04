@@ -9,6 +9,7 @@
  * + `familia`), às vezes uma adoção) e mede a concordância de traços entre pai/mãe e filho, irmãos, avô e neto — contra
  * pares de desconhecidos do mesmo lugar. E o sobrenome e a tradição de nomes ao longo das gerações.
  */
+import { geneticaDe, tracoUniversal } from '../../src/motor/sistemas/identidade';
 import { criarVida } from '../../src/motor/criacao';
 import { criarPessoa } from '../../src/motor/pessoas';
 import { visualHerdado } from '../../src/motor/pessoas';
@@ -20,13 +21,16 @@ import { paisDaCidade } from '../../src/motor/dados/lugares';
 import type { Pessoa, Vida, Visual } from '../../src/motor/tipos';
 
 const PELES = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
-const TRACOS: (keyof Visual)[] = ['corCabelo', 'olhos', 'textura', 'olhosForma', 'nariz', 'boca', 'rosto', 'sobrancelha'];
+const TRACOS_R4: (keyof Visual)[] = ['corCabelo', 'olhos', 'textura', 'olhosForma', 'nariz', 'boca', 'rosto', 'sobrancelha'];
+/** FIX pós-playtest humano: os traços universais da Aparência 2.0 (lidos com o padrão não gravado). */
+const UNIVERSAIS: (keyof Visual)[] = ['olhosTam', 'olhosDist', 'sobrancelhaForma', 'bocaLarg', 'queixo', 'orelhas', 'linhaCabelo', 'sardas'];
+const TODOS = process.env.TRACOS === 'r4' ? TRACOS_R4 : [...TRACOS_R4, ...UNIVERSAIS];
 /** Concordância de traços (0..1): a pele conta se a diferença é de no máximo um tom. */
 export function concordancia(a?: Visual, b?: Visual): number {
   if (!a || !b) return 0;
   let n = Math.abs(PELES.indexOf(a.pele) - PELES.indexOf(b.pele)) <= 1 ? 1 : 0;
-  for (const t of TRACOS) if (a[t] && a[t] === b[t]) n++;
-  return n / (TRACOS.length + 1);
+  for (const t of TODOS) { const x = tracoUniversal(a, t) ?? a[t], y = tracoUniversal(b, t) ?? b[t]; if (x && x === y) n++; }
+  return n / (TODOS.length + 1);
 }
 
 type No = { p: Pessoa; geracao: number; pais: No[]; adotado?: boolean };
@@ -37,7 +41,7 @@ function filho(v: Vida, s: number, pai: No, mae: No, cidade: string): No {
   const anc = misturar(ancestralidadeDe(pai.p), ancestralidadeDe(mae.p));
   const pais = paisDaCidade(cidade);
   const sob = sobrenomeDeQuemNasce(pais, pai.p.sobrenome, mae.p.sobrenome, `${pai.p.id}:${mae.p.id}`) ?? pai.p.sobrenome;
-  const p = criarPessoa(v, r, { genero: g, idade: 0, municipioId: cidade, sobrenome: sob, visual: visualHerdado(r, g, pai.p.visual, mae.p.visual, anc), familia: { ancestralidade: anc, tradicao: tradicaoDoFilho(pai.p.tradicao, mae.p.tradicao, pai.geracao >= 3 ? 3 : 1) } });
+  const p = criarPessoa(v, r, { genero: g, idade: 0, municipioId: cidade, sobrenome: sob, visual: visualHerdado(r, g, geneticaDe(pai.p), geneticaDe(mae.p), anc), familia: { ancestralidade: anc, tradicao: tradicaoDoFilho(pai.p.tradicao, mae.p.tradicao, pai.geracao >= 3 ? 3 : 1) } });
   return { p, geracao: pai.geracao + 1, pais: [pai, mae] };
 }
 

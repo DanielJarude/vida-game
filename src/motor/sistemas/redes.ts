@@ -456,6 +456,8 @@ function publicar(v: Vida, pl: Plataforma, c: ContaSocial, tema: TemaPublicacao,
   if (chanceBriga > 0 && r.chance(Math.min(0.85, chanceBriga))) extras.push(...polemica(v, pl, c, pub, reagiram, r));
   // O que o post faz na carreira e na vida.
   extras.push(...efeitosNaVida(v, pl, c, pub, r));
+  // FIX pós-playtest humano: o post comum também tem acontecimento (não só números) — sem repetir o último eco.
+  if (!viral && !pub.polemica) { const eco = ecoDoPost(v, pl, c, pub, reagiram, r); if (eco) extras.push(eco); }
   c.publicacoes = [...c.publicacoes, pub].slice(-MAX_PUBLICACOES);
   t.maior = Math.max(t.maior, c.seguidores);
   if (viral) extras.push(...viralizou(v, pl, pub, r));
@@ -464,6 +466,34 @@ function publicar(v: Vida, pl: Plataforma, c: ContaSocial, tema: TemaPublicacao,
   const quem = comentou.length ? ` ${listaNatural(comentou.map(p => p.nome))} comentou${comentou.length > 1 ? 'aram' : ''} — fazia tempo que vocês não se falavam.` : reagiram.length ? ` Reagiram: ${reagiram.slice(0, 3).map(p => p.nome).join(', ')}${reagiram.length > 3 ? ` e mais ${reagiram.length - 3}` : ''}.` : '';
   const viram = pl.id === 'onlyfans' ? `${seguidoresEmPalavras(Math.round(alcance))} assinantes e curiosos viram` : `${seguidoresEmPalavras(Math.round(alcance))} pessoas viram`;
   return `${viral ? 'Viralizou. ' : ''}${viram}${novos ? `; ${seguidoresEmPalavras(novos)} ${novos === 1 ? pl.publico[0] : pl.publico[1]} ${novos === 1 ? 'novo' : 'novos'}` : ''}.${quem}${extras.length ? ` ${extras.join(' ')}` : ''}`;
+}
+
+/**
+ * O ECO de uma publicação comum (FIX pós-playtest humano): "foto do dia" não pode ser sempre o mesmo acontecimento com
+ * outros números. O que pode acontecer depende de quem segue (a família, alguém do trabalho, quem está longe), do tamanho
+ * da conta (a permuta da loja pequena, a colaboração com uma conta maior, o print de uma página) e do tema — e o eco
+ * não repete o anterior da mesma conta (`ContaSocial.ecos`, só os tipos). Metade das vezes, nada: post comum é comum.
+ */
+function ecoDoPost(v: Vida, pl: Plataforma, c: ContaSocial, pub: Publicacao, reagiram: Pessoa[], r: Rng): string | undefined {
+  if (!r.chance(0.55)) return undefined;
+  const real = publicoReal(c);
+  const recentes = c.ecos ?? [];
+  const opcoes: { id: string; peso: number; fazer: () => string }[] = [];
+  const fam = reagiram.find(p => v.vinculos[p.id]?.parentesco && ['mae', 'pai', 'avo', 'tio'].includes(v.vinculos[p.id].parentesco!));
+  if (fam) opcoes.push({ id: 'familia', peso: 2, fazer: () => { v.vinculos[fam.id].proximidade = clamp(v.vinculos[fam.id].proximidade + 1); return `${fam.nome} comentou três corações e uma pergunta que deveria ter sido mensagem privada. Todo mundo leu.`; } });
+  const colega = reagiram.find(p => v.vinculos[p.id]?.convivio.includes('trabalho'));
+  if (colega) opcoes.push({ id: 'colega', peso: 1.4, fazer: () => { v.vinculos[colega.id].proximidade = clamp(v.vinculos[colega.id].proximidade + 2); return `No dia seguinte, ${colega.nome} puxou o assunto do post no café — e a conversa foi além do trabalho.`; } });
+  opcoes.push({ id: 'estranho_gentil', peso: 1, fazer: () => `Um estranho do outro lado do ${pl.id === 'onlyfans' ? 'mundo' : 'país'} escreveu um comentário comprido, gentil, sobre o post. Você respondeu.` });
+  opcoes.push({ id: 'chato', peso: 0.8, fazer: () => { v.mente.estresse = clamp(v.mente.estresse + 1); return 'Um comentário maldoso de um perfil sem foto. Você apagou — e pensou nele o resto do dia.'; } });
+  if (['receita', 'tutorial', 'pet', 'viagem'].includes(pub.tema)) opcoes.push({ id: 'pergunta', peso: 1.6, fazer: () => { c.engajamento = clamp((c.engajamento ?? 50) + 3); return pub.tema === 'receita' ? 'Choveram pedidos da receita. Você virou, por uma semana, a pessoa da receita.' : pub.tema === 'viagem' ? 'Três pessoas perguntaram onde era, e uma foi no mês seguinte.' : 'As perguntas nos comentários renderam mais que o post.'; } });
+  if (real >= 1500 && real < 60000 && pl.id !== 'onlyfans') opcoes.push({ id: 'permuta', peso: 1.2, fazer: () => { v.financas.conta += Math.round(150 * economiaLocal(v.moradia.municipioId).custo); return 'Uma loja pequena da cidade mandou mensagem: um produto em troca de um post. O primeiro "publi" — pequeno, e seu.'; } });
+  if (real >= 8000 && pl.id !== 'onlyfans') opcoes.push({ id: 'colab', peso: 1, fazer: () => { const g = Math.round(real * (0.03 + r.next() * 0.04)); c.seguidores += g; pub.novos += g; return `Uma conta maior que a sua chamou para uma colaboração. ${seguidoresEmPalavras(g)} ${pl.publico[1]} vieram de lá.`; } });
+  if (real >= 300) opcoes.push({ id: 'print', peso: 0.6, fazer: () => { const g = Math.round(pub.alcance * 0.3); pub.alcance += g; return 'Uma página de memes da cidade repostou — sem dar crédito. Ainda assim, chegou gente.'; } });
+  const livres = opcoes.filter(o => o.id !== recentes[recentes.length - 1]).map(o => ({ ...o, peso: recentes.includes(o.id) ? o.peso * 0.3 : o.peso }));
+  const e = r.weighted(livres, o => o.peso);
+  if (!e) return undefined;
+  c.ecos = [...recentes, e.id].slice(-3);
+  return e.fazer();
 }
 
 /** A publicação virou briga: alcance maior, confiança menor — e quem da sua vida pensa diferente. */

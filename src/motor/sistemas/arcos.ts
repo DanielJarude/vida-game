@@ -141,7 +141,7 @@ const PROJETO: ModeloDeArco = {
       if (r.chance(clamp((h - 35) / 55 + (x.papel?.startsWith('responsável') ? 0.1 : 0), 0.08, 0.6))) {
         etapa(x, 'reconhecido');
         x.feito = 'o projeto apresentado e premiado na mostra da cidade';
-        marco(v, x, `O projeto da escola ${r.pick(['— a horta que abastece a merenda —', '— a rádio do recreio —', '— o jornal da turma —', '— a oficina de reciclagem —'])} foi apresentado na mostra da cidade e levou menção.`, true, 2, 'comunidade');
+        marco(v, x, `O projeto da escola ${r.pick(['— a horta que abastece o refeitório —', '— a rádio do recreio —', '— o jornal da turma —', '— a oficina de reciclagem —'])} foi apresentado na mostra da cidade e levou menção.`, true, 2, 'comunidade');
         praticar(v, r, 'comunidade', 0.6, 1);
       } else { x.feito ??= 'o projeto apresentado na mostra da escola'; marco(v, x, 'O projeto foi apresentado na mostra da escola. Não ganhou nada — e funcionou.'); }
     }

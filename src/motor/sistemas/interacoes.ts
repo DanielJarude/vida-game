@@ -28,6 +28,7 @@ import { morarJuntos } from './moradia';
 import { gestacaoEmCurso } from './familia';
 import { aplicarPersonalidade } from '../personalidade';
 import { abalar } from './abalo';
+import { faiscaRecente } from './microcenas';
 import { flex, ge } from '../texto';
 import { ehDescendente, faseDeIdade, filhosEmComum, mesmaCidade, moraJunto, papelDe, type Fase, type Papel } from './vinculos';
 import { lacoCom, oLaco } from './rede';
@@ -628,6 +629,17 @@ export const INTERACOES: Interacao[] = [
     prioridade: () => 2.5,
     rotulo: c => (c.longe ? `Ligar e dizer a ${c.p.nome} o que sente` : c.eu < 18 ? `Contar para ${c.p.nome} que gosta ${dele(c.p)}` : `Dizer a ${c.p.nome} o que sente`),
     executar: (c, r) => declarar(c, r)
+  },
+  {
+    // FIX pós-playtest humano: da AMIZADE, o primeiro passo — sem garantia. Uma amiga próxima de anos não oferecia
+    // caminho nenhum (o flerte é para quem mal se conhece; o "dizer o que sente" se escondia quando a outra pessoa
+    // "não se interessaria"). Agora dá para tentar: a resposta é que diz — retribuir, se surpreender, pedir tempo,
+    // preferir a amizade, estar com alguém, não sentir isso por você. A faísca de uma noite junto (`microcenas`) conta.
+    id: 'demonstrar_interesse', destaque: true,
+    quando: c => interesseEntreAmigos(c),
+    prioridade: c => (faiscaRecente(c.v, c.p.id) ? 4 : 1.4),
+    rotulo: c => (faiscaRecente(c.v, c.p.id) ? `Falar com ${c.p.nome} sobre aquele abraço` : c.eu < 18 ? `Mostrar a ${c.p.nome} que gosta ${dele(c.p)} de outro jeito` : `Demonstrar interesse em ${c.p.nome}`),
+    executar: (c, r) => demonstrarInteresse(c, r)
   },
   {
     // O aplicativo: depois do match, a conversa (pode seguir, esfriar, sumir).
@@ -1245,6 +1257,63 @@ function iniciativaPossivel(c: CtxI): boolean {
   return true;
 }
 
+/**
+ * Entre amigos, tentar é possível mesmo sem saber se a outra pessoa sente o mesmo (orientação e compromisso dela não
+ * escondem o botão — a resposta diz). Valem as regras de sempre: idade, família não, você sem parceria, uma história
+ * de cada vez, não logo depois de um não.
+ */
+function interesseEntreAmigos(c: CtxI): boolean {
+  if (!humano(c) || c.vin.parentesco || !c.p.vivo || c.vin.romance) return false;
+  if (!['amigo', 'amigo_proximo', 'colega'].includes(c.papel) || c.vin.proximidade < 30) return false;
+  if (c.vin.formacao && c.vin.formacao.papel !== 'colega' && (c.vin.formacao.tFim === undefined || c.eu < 18)) return false;
+  if (!podeTentarIdade(c) || parceiro(c.v)) return false;
+  if (c.v.eu.atracao && !atraiGenero(c.v.eu.atracao, c.p.genero)) return false;
+  if (Object.values(c.v.vinculos).some(x => x.pessoaId !== c.p.id && c.v.pessoas[x.pessoaId]?.vivo && x.romance && !x.romance.secreto && (x.romance.estagio === 'saindo' || x.romance.pediuTempo !== undefined))) return false;
+  const recusa = c.v.fatos[`recusa_romance_${c.p.id}`];
+  return recusa === undefined || c.v.t - recusa >= 36;
+}
+
+function demonstrarInteresse(c: CtxI, r: Rng): Saida {
+  if (!c.v.eu.atracao) c.v.eu.atracao = c.p.genero === 'masculino' ? 'homens' : c.p.genero === 'feminino' ? 'mulheres' : 'ambos';
+  aplicarPersonalidade(c.v, 'acao:declarar', { coragem: 1 });
+  const faisca = faiscaRecente(c.v, c.p.id);
+  const base = interesseDoOutro(c, r);
+  const valor = base.valor + (faisca && !base.motivo ? 8 : 0);
+  const motivo = base.motivo;
+  const anos = Math.max(1, Math.floor((c.v.t - c.vin.tInicio) / 12));
+  const amizade = anos >= 3 ? `${anos} anos de amizade` : 'a amizade';
+  delete c.v.fatos[`faisca:${c.p.id}`];
+  if (valor >= 56 && !motivo) {
+    c.vin.romance = { estagio: 'interesse', tEstagio: c.v.t, envolvimento: clamp(valor + 4) };
+    afeto(c, 4); confiar(c, 2);
+    lembrarCom(c.v, c.p.id, `Você mostrou o que sentia — e ${c.p.nome} retribuiu.`, 'romance', 2);
+    abalar(c.v, `o olhar de ${c.p.nome}`, 4, 0);
+    return { resultado: faisca
+      ? `Você puxou o assunto do abraço. ${c.p.nome} riu, nervos${o(c.p)}: "achei que você não tinha percebido". Ficou combinado, sem combinar nada: tem alguma coisa ali. O próximo passo é chamar para sair.`
+      : `${c.p.nome} entendeu antes de você terminar a frase — e não fugiu do assunto. Depois de ${amizade}, ficou no ar uma coisa nova. O próximo passo é chamar para sair.`, titulo: c.p.nome };
+  }
+  if (valor >= 46 && !motivo) {
+    c.vin.romance = { estagio: 'interesse', tEstagio: c.v.t, envolvimento: valor, pediuTempo: c.v.t };
+    lembrarCom(c.v, c.p.id, `Você mostrou o que sentia; ${c.p.nome} se surpreendeu e pediu um tempo.`, 'romance', 1);
+    return { resultado: `${c.p.nome} se surpreendeu — de verdade: nunca tinha pensado em vocês assim. Não disse não. Disse que precisava de um tempo para entender o que sente.`, titulo: c.p.nome };
+  }
+  recusar(c);
+  if (motivo === 'momento') c.v.fatos[`recusa_romance_${c.p.id}`] = c.v.t - 24;
+  if (motivo === 'orientacao' || motivo === 'compromisso' || motivo === 'momento') {
+    confiar(c, 1);
+    lembrarCom(c.v, c.p.id, `Você mostrou o que sentia; ${c.p.nome} foi honest${o(c.p)}.`, 'romance', 1);
+    return { resultado: `${c.p.nome} entendeu — e foi honest${o(c.p)}.${motivoDoNao(c, motivo)} A amizade ficou; o assunto, não.`, titulo: c.p.nome };
+  }
+  if (motivo === 'amizade' || c.vin.proximidade >= 55) {
+    c.vin.tensao = clamp(c.vin.tensao + 3);
+    abalar(c.v, `o não de ${c.p.nome}`, -3, 1);
+    lembrarCom(c.v, c.p.id, `Você mostrou o que sentia; ${c.p.nome} preferiu a amizade.`, 'romance', 1);
+    return { resultado: `${c.p.nome} ficou em silêncio um tempo.${motivoDoNao(c, 'amizade')} Uns dias meio esquisitos — depois, quase tudo voltou ao lugar.`, titulo: c.p.nome };
+  }
+  c.v.fatos[`recusa_romance_${c.p.id}`] = c.v.t - 24;
+  return { resultado: `${c.p.nome} não pareceu perceber — ou preferiu não perceber. A conversa mudou de assunto sozinha.`, titulo: c.p.nome };
+}
+
 const podeTentarIdade = (c: CtxI) => { const g = regraDeIdade(c.eu, c.ip).grau; return g === 'permitido' || g === 'improvavel'; };
 
 /**
@@ -1468,7 +1537,7 @@ export function interacoesPara(v: Vida, id: string): Interacao[] {
  * Nada disso impede de procurar mais gente: impede de "farmar" um estado.
  */
 const REACOES = new Set(['chamado_sim', 'chamado_nao']);
-const ROMANTICAS = new Set(['flertar', 'declarar', 'convidar']);
+const ROMANTICAS = new Set(['flertar', 'declarar', 'convidar', 'demonstrar_interesse']);
 const socialDoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('pessoa:') && !REACOES.has(a.split(':')[1]));
 /** Quantas coisas já foram feitas com esta pessoa neste ano. */
 export const vezesComEla = (v: Vida, id: string) => socialDoAno(v).filter(a => a.endsWith(`:${id}`)).length;
@@ -1523,3 +1592,43 @@ export const rotuloInteracao = (v: Vida, id: string, interacao: string) => {
   const def = porId.get(interacao);
   return c && def ? def.rotulo(c) : interacao;
 };
+
+/**
+ * FIX pós-playtest humano — A FICHA ENTENDE QUEM É A PESSOA PARA VOCÊ: o que faz sentido fazer AGORA, pelo contexto
+ * (até três ações, com o porquê em uma linha). O resto continua lá, recolhido por tipo — nenhuma agência some; o que
+ * muda é a hierarquia. Quem está triste pede apoio; a briga pede conversa; o interesse pede o convite; a criança
+ * pede brincadeira; quem mora longe, a ligação; o amigo, um programa. É a mesma lista (`interacoesPara`), lida pelo
+ * contexto — não um segundo catálogo.
+ */
+export function prioridadesDaFicha(v: Vida, id: string): { ids: string[]; porque?: string } {
+  const c = ctxPessoa(v, id);
+  if (!c || !c.p.vivo) return { ids: [] };
+  const lista = interacoesPara(v, id).filter(x => !REACOES.has(x.id) && x.variante !== 'perigo');
+  const pode = (x: Interacao) => { const d = disponibilidadeInteracao(v, id, x.id); return d.grau === 'permitido' || d.grau === 'improvavel'; };
+  const disponiveis = lista.filter(pode);
+  const tem = new Set(disponiveis.map(x => x.id));
+  const nome = c.p.nome;
+  const escolher = (ids: string[], n = 3) => ids.filter(x => tem.has(x)).slice(0, n);
+  let ids: string[] = [];
+  let porque: string | undefined;
+  const ap = c.p.aperto && v.t - c.p.aperto.t <= 18 ? c.p.aperto : undefined;
+  const rom = c.vin.romance;
+  if (c.p.especie) ids = disponiveis.slice(0, 3).map(x => x.id);
+  else if (ap) { porque = `${nome} está numa fase difícil.`; ids = escolher(['apoiar', 'visitar', 'ligar', 'tempo', 'caminhar_junto', 'conversar']); }
+  else if (c.vin.tensao >= 40 || c.vin.conflito) { porque = 'Vocês estão estremecidos.'; ids = escolher(['reconciliar', 'desculpas', 'reaproximar', 'conversar', 'cobrar']); }
+  else if (rom?.estagio === 'interesse' && rom.pediuTempo === undefined) { porque = 'Tem alguma coisa entre vocês.'; ids = escolher(['convidar', 'app_encontro', 'cinema', 'caminhar_junto']); }
+  else if (faiscaRecente(v, id) && tem.has('demonstrar_interesse')) { porque = 'Aquele abraço ainda está na sua cabeça.'; ids = escolher(['demonstrar_interesse', 'cinema', 'show', 'conversar']); }
+  else if (c.papel === 'saindo') { porque = 'Vocês estão se conhecendo.'; ids = escolher(['pedir_namoro', 'jantar_romantico', 'conhecer', 'sair_juntos', 'show']); }
+  else if (c.papel === 'parceiro') { ids = escolher(['jantar_romantico', 'fim_de_semana', 'carinho', 'cozinhar_junto', 'comemorar', 'conversar']); }
+  else if (ehDescendenteOuCrianca(c) && c.ip <= 11) { porque = c.ip <= 3 ? undefined : 'Criança quer tempo junto, não conversa.'; ids = escolher(['brincar', 'parque', 'ensinar', 'ler', 'cozinhar_junto', 'cinema', 'cuidar']); }
+  else if (c.longe) { porque = `${nome} mora longe.`; ids = escolher(['ligar', 'visitar', 'ligar_par', 'visitar_par', 'fim_de_semana', 'conversar']); }
+  else if ((c.papel === 'genitor' || c.papel === 'avo') && c.ip >= 65) { ids = escolher(['visitar', 'jantar_fora', 'aniversario', 'caminhar_junto', 'ligar', 'medico']); }
+  else if (['amigo', 'amigo_proximo', 'colega', 'conhecido'].includes(c.papel)) {
+    const programas = escolher(['cinema', 'show', 'jantar_fora', 'caminhar_junto', 'estadio', 'sair_juntos', 'treinar_junto'], 2);
+    ids = [...programas, ...escolher(['conversar', 'perguntar_vida', 'desabafar', 'tempo'], 1)];
+  }
+  // Completa com o que a lista já considera mais relevante (nunca mais de três).
+  for (const x of disponiveis) { if (ids.length >= 3) break; if (!ids.includes(x.id)) ids.push(x.id); }
+  return { ids: ids.slice(0, 3), porque };
+}
+const ehDescendenteOuCrianca = (c: CtxI) => ['filho', 'neto', 'bisneto'].includes(c.papel) || ((c.papel === 'irmao' || c.papel === 'parente') && c.eu - c.ip >= 8);
