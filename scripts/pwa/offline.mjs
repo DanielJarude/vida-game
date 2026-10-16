@@ -17,6 +17,8 @@
  *   3b. O MUNDO SEM REDE (fechamento do ATT Mundo): os 7 pacotes regionais
  *      estão no precache; offline, nasce uma vida no Japão (o pacote da
  *      Ásia vem do cache), vive, salva e recarrega idêntica, sem reais na tela;
+ *   3e. O TEMA SEM REDE (REWORK 6.5): Escuro escolhido no Menu sobrevive à recarga offline e pinta já escuro;
+ *       Claro idem; o save não muda.
  *   4. online de novo: publica uma "versão nova" (o sw.js muda de bytes),
  *      espera o aviso discreto aparecer, fotografa (390 px e 1440 px), aceita
  *      e confere que a vida sobreviveu à troca de service worker.
@@ -234,6 +236,26 @@ try {
   await p.reload();
   await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
   checar('offline: a vida no Japão volta idêntica depois de recarregar', (await lerSave()) === sj);
+  await p.getByRole('button', { name: /Continuar a vida de/ }).click();
+  await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
+
+  // 3e. REWORK 6.5 — o tema sem rede: escolher Escuro no Menu, recarregar offline e a página já abre escura (o script
+  // de index.html, do cache, aplica antes da pintura); o fundo pintado é o grafite da paleta, e voltar ao Claro também
+  // persiste. A preferência não entra no save.
+  const antesDoTema = await lerSave();
+  await p.locator('.marca').click();
+  await p.getByRole('radio', { name: /Escuro/ }).click();
+  await p.keyboard.press('Escape');
+  await p.reload();
+  await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
+  const pintura = await p.evaluate(() => ({ tema: document.documentElement.dataset.tema, fundo: getComputedStyle(document.body).backgroundColor, barra: document.querySelector('meta[name="theme-color"]')?.getAttribute('content') }));
+  checar('offline: o tema Escuro persiste e abre já escuro (fundo grafite, barra do navegador escura)', pintura.tema === 'escuro' && pintura.fundo === 'rgb(26, 29, 33)' && pintura.barra === '#131518', JSON.stringify(pintura));
+  checar('offline: a preferência de tema não mexeu no save', (await lerSave()) === antesDoTema);
+  await p.getByRole('radio', { name: /Claro/ }).click();
+  await p.reload();
+  await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
+  const clara = await p.evaluate(() => ({ tema: document.documentElement.dataset.tema, fundo: getComputedStyle(document.body).backgroundColor }));
+  checar('offline: voltar ao Claro também persiste (fundo marfim)', clara.tema === 'claro' && clara.fundo === 'rgb(242, 238, 229)', JSON.stringify(clara));
   await p.getByRole('button', { name: /Continuar a vida de/ }).click();
   await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
 

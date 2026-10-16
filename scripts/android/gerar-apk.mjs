@@ -30,7 +30,7 @@ if (!existsSync(join(dir, 'node_modules/@capacitor/android'))) {
   if (!existsSync(join(dir, 'package.json'))) writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'vida-android', private: true }, null, 2));
   sh('npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6');
 }
-writeFileSync(join(dir, 'capacitor.config.json'), JSON.stringify({ appId: 'br.vida.jogo', appName: 'VIDA', webDir: 'www', android: { backgroundColor: '#121010' } }, null, 2));
+writeFileSync(join(dir, 'capacitor.config.json'), JSON.stringify({ appId: 'br.vida.jogo', appName: 'VIDA', webDir: 'www', android: { backgroundColor: '#22262c' } }, null, 2));
 
 // 2. O jogo dentro do app: o build inteiro, menos o service worker (no app, os arquivos já estão no aparelho) e o
 //    próprio APK (que não cabe dentro dele mesmo).

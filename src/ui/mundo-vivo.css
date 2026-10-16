@@ -42,7 +42,7 @@
 .pena__subtitulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin: var(--space-2) 0 0; }
 
 /* ----------------------------------------------- A trajetória dos estados */
-.linha-estado { display: block; width: 100%; max-width: 160px; height: 28px; margin: 0 0 var(--space-1); overflow: visible; }
+.linha-estado { display: block; width: 100%; height: auto; overflow: visible; }
 .linha-estado__meio { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
 .linha-estado__linha { fill: none; stroke: var(--tom-e, var(--text-muted)); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
 .linha-estado__agora { fill: var(--tom-e, var(--text-primary)); }
@@ -60,7 +60,7 @@
 .botao > span { overflow-wrap: anywhere; }
 @media (max-width: 420px) {
   .balanca__valor, .legenda__valor, .oferta__preco, .objeto__numeros dd > span, .experiencia__preco, .vaga-resumo__salario,
-  .viagem__preco, .legado__conta dd, .legado__valor, .balanca__resultado strong, .balanco__liquido strong, .valor-grande,
+  .viagem__preco, .balanca__resultado strong, .balanco__liquido strong, .valor-grande,
   .estado-bloco__tendencia { white-space: normal; overflow-wrap: anywhere; }
   .enquanto__item { grid-template-columns: minmax(0, 1fr); }
   .enquanto__pessoa { grid-column: 1; }

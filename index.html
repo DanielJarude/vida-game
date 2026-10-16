@@ -10,7 +10,25 @@
     />
     <!-- user-scalable=no removido: impedir zoom é uma barreira de acessibilidade. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#121010" />
+    <meta name="theme-color" content="#22262c" />
+    <!--
+      REWORK 6.5 — o tema (Claro · Escuro · Automático) entra ANTES do CSS e do React: a primeira pintura já sai no
+      tema certo, sem piscar, e offline (só lê o localStorage e o sistema). O mesmo algoritmo de src/ui/tema.ts
+      (resolverTema/aplicarTema), que assume depois. As cores são as de --p-moldura em tokens.css.
+    -->
+    <script>
+      (function () {
+        var a = 'auto', t;
+        try { a = localStorage.getItem('VIDA_APARENCIA') || 'auto'; } catch (e) {}
+        if (a !== 'claro' && a !== 'escuro') a = 'auto';
+        try { t = a === 'auto' ? (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro') : a; } catch (e) { t = 'claro'; }
+        var r = document.documentElement;
+        r.setAttribute('data-tema', t);
+        r.setAttribute('data-aparencia', a);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', t === 'escuro' ? '#131518' : '#22262c');
+      })();
+    </script>
     <meta
       name="description"
       content="VIDA — um simulador de vida, nascido no Brasil e aberto ao mundo. Pequenas escolhas, grandes histórias."

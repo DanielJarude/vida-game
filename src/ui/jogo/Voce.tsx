@@ -130,18 +130,22 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
  */
 function Trajetoria({ pontos, nome }: { pontos: number[]; nome: string }) {
   if (pontos.length < 2) return null;
-  const L = 120, A = 28;
+  const L = 240, A = 28;
   const x = (k: number) => (k / (pontos.length - 1)) * (L - 6) + 3;
   const y = (p: number) => A - 3 - (p / 100) * (A - 6);
   const d = pontos.map((p, k) => `${k ? 'L' : 'M'}${x(k).toFixed(1)} ${y(p).toFixed(1)}`).join(' ');
   const ultimo = pontos[pontos.length - 1];
   const dir = ultimo - pontos[0];
+  // REWORK 6.5: a linha ocupa a largura do cartão e diz o que é (antes, 160 px soltos num cartão largo, sem legenda).
   return (
+    <figure className="linha-estado__quadro">
     <svg className={`linha-estado linha-estado--${dir >= 6 ? 'sobe' : dir <= -6 ? 'desce' : 'estavel'}`} viewBox={`0 0 ${L} ${A}`} role="img" aria-label={`${nome} nos últimos ${pontos.length - 1} anos: ${dir >= 6 ? 'subiu' : dir <= -6 ? 'caiu' : 'ficou parecido'}`}>
       <line className="linha-estado__meio" x1="3" x2={L - 3} y1={y(50)} y2={y(50)} />
       <path className="linha-estado__linha" d={d} />
       <circle className="linha-estado__agora" cx={x(pontos.length - 1)} cy={y(ultimo)} r="2.6" />
     </svg>
+    <figcaption className="linha-estado__legenda" aria-hidden><span>há {pontos.length - 1} {pontos.length - 1 === 1 ? 'ano' : 'anos'}</span><span>agora</span></figcaption>
+    </figure>
   );
 }
 

@@ -1,6 +1,6 @@
 /** Peças comuns da interface. */
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent as TeclaReact, type ReactNode } from 'react';
 import type { Vida } from '../motor/tipos';
 import { disponibilidade, type Acao } from '../motor/acoes';
 import { podeTentar } from '../motor/plausibilidade';
@@ -47,11 +47,26 @@ export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario',
   );
 }
 
+/**
+ * REWORK 6.5 — teclado nas abas (o padrão de `tablist`): setas esquerda/direita, Home e End passam de aba e levam o
+ * foco junto. Vai no `onKeyDown` do contêiner `role="tablist"` (delegação: as abas não precisam saber umas das outras).
+ */
+export function navegarAbas(e: TeclaReact<HTMLElement>) {
+  const abas = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]:not([disabled])')];
+  const k = abas.indexOf(document.activeElement as HTMLElement);
+  if (k < 0) return;
+  const destino = e.key === 'ArrowRight' ? (k + 1) % abas.length : e.key === 'ArrowLeft' ? (k - 1 + abas.length) % abas.length : e.key === 'Home' ? 0 : e.key === 'End' ? abas.length - 1 : -1;
+  if (destino < 0) return;
+  e.preventDefault();
+  abas[destino].focus();
+  abas[destino].click();
+}
+
 export function Secao({ titulo, children, recolhivel, aberta: abertaInicial = true, extra, id }: { titulo: string; children: ReactNode; recolhivel?: boolean; aberta?: boolean; extra?: ReactNode; id?: string }) {
   const [aberta, setAberta] = useState(abertaInicial);
   const idConteudo = useId();
   return (
-    <section className="secao" id={id}>
+    <section className={`secao${recolhivel ? ` secao--recolhivel${aberta ? '' : ' secao--fechada'}` : ''}`} id={id}>
       <header className="secao__cabeca">
         {recolhivel ? (
           <button type="button" className="secao__titulo secao__titulo--botao" aria-expanded={aberta} aria-controls={idConteudo} onClick={() => setAberta(a => !a)}>

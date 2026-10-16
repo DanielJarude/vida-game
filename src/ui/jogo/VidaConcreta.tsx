@@ -20,7 +20,7 @@ import { independencia } from '../../motor/sistemas/independencia';
 import { contribuicaoEsperada, leituraDaOrigem, MOTIVOS_DE_AJUDA, necessidadeDe, ROTULO_MOTIVO, principal } from '../../motor/sistemas/origem';
 import { rendaPropriaMensal } from '../../motor/sistemas/dinheiro';
 import { AUTONOMIA } from '../../motor/sistemas/autonomia';
-import { BotaoAcao, Secao } from '../comum';
+import { BotaoAcao, navegarAbas, Secao } from '../comum';
 import { Lar, OQueTem, ViverACasa } from './Casa';
 import { ODinheiro } from './Dinheiro';
 import { Cidade } from './Cidade';
@@ -44,10 +44,10 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
   return (
     <div className={`vida-concreta vida-concreta--${secao} material`}>
       <nav className="subnav" aria-label="Seções de Vida">
-        <ul role="tablist" className="subnav__lista">
+        <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
           {SECOES_VIDA.map(s => (
             <li key={s.id} role="presentation">
-              <button type="button" role="tab" id={`subnav-${s.id}`} aria-selected={secao === s.id} aria-controls={`secao-${s.id}`} className={`subnav__item${secao === s.id ? ' subnav__item--ativo' : ''}`} onClick={() => irSecao(s.id)} title={s.oque}>
+              <button type="button" role="tab" id={`subnav-${s.id}`} aria-selected={secao === s.id} tabIndex={secao === s.id ? 0 : -1} aria-controls={`secao-${s.id}`} className={`subnav__item${secao === s.id ? ' subnav__item--ativo' : ''}`} onClick={() => irSecao(s.id)} title={s.oque}>
                 {s.rotulo}
               </button>
             </li>

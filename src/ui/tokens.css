@@ -56,6 +56,9 @@
   --p-vida: #56662a;           /* Vida (casa, dinheiro, compras): oliva */
   --p-cidade: #4a6478;         /* Cidade: cinza-azulado */
   --p-saude: #3a7438;          /* Saúde: folha */
+  --p-sobre-tom: #ffffff;      /* o texto sobre um tom preenchido (botão principal, selo, chip ativo) */
+  --p-sombra: #1d2126;         /* a cor das sombras */
+  --p-acao-pastilha: rgb(0 0 0 / 0.2); /* a pastilha da idade dentro do botão de avançar */
   --p-esquema: light;
 
   /* ================================================================ FONTES */
@@ -111,6 +114,7 @@
   --acao: var(--p-acao);
   --acao-sobre: var(--p-acao-sobre);
   --acao-texto: var(--p-acao-forte);
+  --acao-pastilha: var(--p-acao-pastilha);
   --bom: var(--p-bom);
   --ruim: var(--p-ruim);
   --alerta: var(--p-alerta);
@@ -182,7 +186,7 @@
 
   /* O tom da página em que se está (cada página redefine `--tom`; o véu e o fio seguem — ver abaixo). */
   --tom: var(--accent);
-  --tom-sobre: #ffffff;
+  --tom-sobre: var(--p-sobre-tom);
 
   --success: var(--bom);
   --success-wash: color-mix(in oklab, var(--bom) 11%, transparent);
@@ -234,10 +238,10 @@
   --radius-lg: 14px;
   --radius-pill: 999px;
 
-  --sombra-cor: color-mix(in oklab, var(--p-tinta) 22%, transparent);
+  --sombra-cor: color-mix(in oklab, var(--p-sombra) 22%, transparent);
   --shadow-sm: 0 1px 2px var(--sombra-cor);
   --shadow-md: 0 6px 18px -10px var(--sombra-cor), 0 1px 2px var(--sombra-cor);
-  --shadow-lg: 0 24px 60px -24px color-mix(in oklab, var(--p-tinta) 45%, transparent);
+  --shadow-lg: 0 24px 60px -24px color-mix(in oklab, var(--p-sombra) 45%, transparent);
   --shadow-papel: var(--shadow-lg);
   --shadow-accent: 0 8px 22px -12px color-mix(in oklab, var(--accent) 60%, transparent);
   --shadow-accent-alta: 0 12px 30px -12px color-mix(in oklab, var(--accent) 70%, transparent);
@@ -266,6 +270,57 @@
   --z-sticky: 40;
   --z-overlay: 80;
   --z-toast: 90;
+}
+
+/* ==========================================================================
+   REWORK 6.5 — MEMÓRIA À NOITE (tema escuro)
+
+   O mesmo caderno com a luz apagada: SÓ a camada de paleta muda — a semântica, os nomes antigos e todos os
+   componentes seguem sozinhos (nenhum componente pergunta qual é o tema). O atributo vem de `ui/tema.ts` (e do
+   script em linha de index.html, antes da primeira pintura); o Automático resolve `prefers-color-scheme` lá.
+
+   · A página é grafite profundo, não preto: três degraus de superfície (página < cartão < carta) separam as coisas
+     pela luz, não por bordas.
+   · A moldura fica MAIS escura que a página (a mesma lógica do claro: o jogo se opera na moldura, a vida se lê no
+     papel).
+   · A tinta é marfim suave (não branco); os tons das áreas sobem de luminosidade para continuar legíveis como texto,
+     todos na mesma altura, sem neon.
+   · Preenchido = aceso: o coral e os tons preenchidos são claros e levam tinta escura por cima (`--p-sobre-tom`,
+     `--p-acao-sobre`) — o coral continua sendo a única cor de agir.
+   Contraste: `scripts/playtest/contraste.mjs` confere os mesmos pares nos dois temas.
+   ========================================================================== */
+:root[data-tema='escuro'] {
+  --p-papel: #1a1d21;
+  --p-papel-alto: #22262b;
+  --p-papel-topo: #292e34;
+  --p-tinta: #ebe5d9;
+  --p-tinta-2: #c6bfb3;
+  --p-tinta-3: #a39c91;
+  --p-moldura: #131518;
+  --p-moldura-2: #1d2024;
+  --p-moldura-tinta: #ebe5d9;
+  --p-moldura-tinta-2: #a2a9b2;
+  --p-acao: #e0765a;
+  --p-acao-forte: #ef8d70;
+  --p-acao-sobre: #1b1210;
+  --p-bom: #acbd72;
+  --p-ruim: #ec8d98;
+  --p-alerta: #ddb066;
+  --p-info: #9fb7ca;
+  --p-neutro: #9a9ea4;
+  --p-linha: #ef8d70;
+  --p-voce: #c9a5d6;
+  --p-pessoas: #e997ae;
+  --p-formacao: #92b9e2;
+  --p-trabalho: #d9b463;
+  --p-tempo: #78c4b6;
+  --p-vida: #acbd72;
+  --p-cidade: #9fb7ca;
+  --p-saude: #92c98c;
+  --p-sobre-tom: #15171a;
+  --p-sombra: #000000;
+  --p-acao-pastilha: rgb(255 255 255 / 0.24);
+  --p-esquema: dark;
 }
 
 /* O véu e o fio do tom são calculados EM CADA elemento a partir do `--tom` herdado. (Declarados só no :root, eles

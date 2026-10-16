@@ -118,9 +118,11 @@
 .formacao-lista__nome { font-family: var(--font-serif); color: var(--text-primary); }
 .formacao-lista__nivel { display: block; font-size: var(--type-caption); color: var(--text-muted); font-family: var(--font-sans); }
 .nota-alvo { display: flex; flex-direction: column; }
-.nota-alvo li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
-.nota-alvo__curso { font-family: var(--font-serif); color: var(--text-primary); }
-.nota-alvo__palavra { font-size: var(--type-caption); color: var(--text-secondary); text-align: right; }
+/* REWORK 6.5: o nome do curso tem o seu espaço garantido; a leitura da nota desce para a linha de baixo quando não cabe
+   (antes, a coluna `auto` da leitura espremia "Análise e Desenvolvimento de Sistemas" em uma palavra por linha). */
+.nota-alvo li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
+.nota-alvo__curso { flex: 1 1 11rem; min-width: 0; font-family: var(--font-serif); color: var(--text-primary); overflow-wrap: anywhere; }
+.nota-alvo__palavra { flex: 0 1 auto; font-size: var(--type-caption); color: var(--text-secondary); text-align: right; }
 .nota-alvo__palavra::before { margin-right: 0.35em; font-weight: 700; }
 .nota-alvo__palavra--acima::before { content: '✓'; color: var(--success); }
 .nota-alvo__palavra--perto::before { content: '◷'; color: var(--tom); }

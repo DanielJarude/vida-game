@@ -16,9 +16,11 @@
 
 import { noticiasDoAno, type Noticia } from '../../motor/sistemas/mundoVivo';
 import { BaixarApp } from './BaixarApp';
+import { SeletorTema } from '../SeletorTema';
+import { Folha } from '../comum';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { redeDeSaude } from '../../motor/sistemas/saude';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ControleVida } from '../useVida';
 import type { Vida } from '../../motor/tipos';
 import { idade, idadePessoa } from '../../motor/nucleo';
@@ -68,6 +70,7 @@ export function Jogo({ c }: { c: ControleVida }) {
   const [menu, setMenu] = useState(false);
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
   const conteudo = useRef<HTMLElement>(null);
+  const fecharMenu = useCallback(() => setMenu(false), []);
   const area = lugar.area;
   const ir = (d: Aba) => { const l = resolverDestino(d); if (l.secao) setSecao(l.secao); if (l.aba) setAbaTempo(l.aba); setLugar(l); };
   const irLugar = (l: Lugar) => { if (l.secao) setSecao(l.secao); if (l.aba) setAbaTempo(l.aba); setLugar(l); };
@@ -155,7 +158,7 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       {vida.momento && <Momento vida={vida} agir={c.agir} />}
       {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} mudancas={c.resultado.mudancas} />}
-      {menu && <Menu c={c} aoFechar={() => setMenu(false)} ir={l => { irLugar(l); setMenu(false); }} />}
+      {menu && <Menu c={c} aoFechar={fecharMenu} ir={l => { irLugar(l); setMenu(false); }} />}
     </div>
   );
 }
@@ -322,10 +325,10 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
 
 function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: (l: Lugar) => void }) {
   return (
-    <div className="veu" onClick={e => { if (e.target === e.currentTarget) aoFechar(); }}>
-      <div className="folha folha--media" role="dialog" aria-modal="true" aria-label="Menu">
-        <div className="folha__topo"><div className="folha__titulo">VIDA</div><button type="button" className="folha__fechar" onClick={aoFechar} aria-label="Fechar">×</button></div>
-        <div className="folha__corpo menu">
+    // REWORK 6.5: a folha comum (prende o foco, fecha com Esc, devolve o foco a quem abriu) — antes, uma cópia sem teclado.
+    <Folha titulo="VIDA" rotulo="Menu" aoFechar={aoFechar}>
+        <div className="menu">
+          <SeletorTema />
           <p className="nota">Sua vida é salva a cada passo, neste navegador. Para continuar em outro aparelho, exporte a vida num arquivo e importe lá.</p>
           <button type="button" className="botao botao--secundario" onClick={() => c.exportar()}>Exportar esta vida (arquivo)</button>
           <BaixarApp compacto />
@@ -335,8 +338,7 @@ function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: 
           <button type="button" className="botao botao--perigo" onClick={() => { if (window.confirm('Apagar esta vida e começar outra? Não dá para desfazer.')) { aoFechar(); c.recomecar(); } }}>Abandonar esta vida</button>
           <OndeFica ir={ir} />
         </div>
-      </div>
-    </div>
+    </Folha>
   );
 }
 

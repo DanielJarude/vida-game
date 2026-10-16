@@ -36,7 +36,7 @@ import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras } from '../../moto
 import { idade } from '../../motor/nucleo';
 import { listaNatural } from '../../motor/texto';
 import { podeTentar } from '../../motor/plausibilidade';
-import { BotaoAcao, Folio, Secao, Vazio } from '../comum';
+import { BotaoAcao, Folio, navegarAbas, Secao, Vazio } from '../comum';
 import { dinheiroCurto } from '../apresentar';
 import { areaDaPorta, PortasAbertas } from './Estudos';
 import { doClube } from '../../motor/dados/clubes';
@@ -401,10 +401,10 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
     <div className={`tempo tempo--${aba}`}>
       <Folio kicker={<><span className="folio__area">Tempo livre</span> · {SECOES_TEMPO.find(x => x.id === aba)!.rotulo.toLowerCase()}</>} titulo={tituloDaSemana(vida, s)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
       <nav className="subnav" aria-label="Seções de Tempo livre">
-        <ul role="tablist" className="subnav__lista">
+        <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
           {abas.map(x => (
             <li key={x.id} role="presentation">
-              <button type="button" role="tab" id={`subnav-tempo-${x.id}`} aria-selected={aba === x.id} aria-controls={`tempo-${x.id}`} className={`subnav__item${aba === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => trocar(x.id)} title={x.oque}>{x.rotulo}</button>
+              <button type="button" role="tab" id={`subnav-tempo-${x.id}`} aria-selected={aba === x.id} tabIndex={aba === x.id ? 0 : -1} aria-controls={`tempo-${x.id}`} className={`subnav__item${aba === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => trocar(x.id)} title={x.oque}>{x.rotulo}</button>
             </li>
           ))}
         </ul>

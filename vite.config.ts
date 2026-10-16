@@ -56,8 +56,9 @@ export default defineConfig({
         start_url: './',
         scope: './',
         display: 'standalone',
-        theme_color: '#121010',
-        background_color: '#121010',
+        // A moldura grafite do tema claro (REWORK 6.5: no app aberto, a cor da barra segue o tema — ui/tema.ts).
+        theme_color: '#22262c',
+        background_color: '#22262c',
         categories: ['games', 'entertainment'],
         icons: [
           { src: 'icones/icone-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

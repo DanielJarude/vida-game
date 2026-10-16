@@ -348,7 +348,8 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
           <div className="ficha__acoes">
             {/* FIX pós-playtest humano: a ficha responde "o que faz sentido fazer AGORA" (até três ações, pelo contexto —
                 `prioridadesDaFicha`) e guarda o resto por tipo, recolhido: nenhuma ação some, nada grita igual. A reação
-                a um chamado vem antes de tudo. */}
+                a um chamado vem antes de tudo. REWORK 6.5: só a PRIMEIRA prioridade é preenchida (a ação principal); as
+                outras são secundárias — três botões cheios iguais eram três gritos. */}
             {(() => {
               const chamado = acoes.filter(x => x.id === 'chamado_sim' || x.id === 'chamado_nao');
               const pri = prioridadesDaFicha(vida, p.id);
@@ -371,7 +372,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
                     <div className="ficha__agora">
                       <h3 className="ficha__subtitulo">O que faz sentido agora</h3>
                       {pri.porque && <p className="ficha__porque">{pri.porque}</p>}
-                      <div className="grupo-acoes">{pri.ids.map(id => acoes.find(x => x.id === id)).filter(Boolean).map(x => botao(x!, true))}</div>
+                      <div className="grupo-acoes">{pri.ids.map(id => acoes.find(x => x.id === id)).filter(Boolean).map((x, k) => botao(x!, k === 0))}</div>
                     </div>
                   )}
                   {GRUPOS_DA_FICHA.filter(g => g.id !== 'chamado').map(g => {

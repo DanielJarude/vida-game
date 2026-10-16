@@ -11,6 +11,11 @@
  * o ano que acabou de passar ganha o destaque de "este ano", e uma vida longa
  * abre em partes — os últimos anos primeiro, o resto a um toque — para que
  * 80 anos de biografia não pesem a cada aniversário.
+ *
+ * REWORK 6.5: cada acontecimento segue a mesma ordem de leitura — a idade/o ano na margem → o tipo (o tema do marco,
+ * "sua escolha") numa linha própria → a narrativa. Nada se sobrepõe: a margem é medida em rem e só leva o número (o
+ * nascimento é "0 · ao nascer"; a palavra "Nascimento" em 2rem não cabia na margem e se deitava sobre o tema do
+ * marco), e o tema não repete o que a margem já diz (o marco do nascimento no ano 0).
  */
 
 import { useMemo, useState } from 'react';
@@ -53,12 +58,12 @@ export function LinhaDaVida({ vida, marca }: { vida: Vida; marca: number }) {
               {!novoCapitulo && salto > 2 && <p className="ano__silencio" aria-hidden>· · ·</p>}
               <div className="ano__corpo">
                 <h3 className="ano__cabeca">
-                  <span className="ano__idade">{a.idade === 0 ? 'Nascimento' : <>{a.idade}<span className="ano__unidade"> {a.idade === 1 ? 'ano' : 'anos'}</span></>}</span>
+                  <span className="ano__idade">{a.idade}<span className="ano__unidade"> {a.idade === 0 ? 'ao nascer' : a.idade === 1 ? 'ano' : 'anos'}</span></span>
                   <span className="ano__calendario">{a.ano}</span>
                   {novo && <span className="ano__selo">este ano</span>}
                 </h3>
                 <ul className="entradas">
-                  {a.entradas.map(e => <ItemBiografia key={e.id} e={e} nova={idNovas.has(e.id)} />)}
+                  {a.entradas.map(e => <ItemBiografia key={e.id} e={e} nova={idNovas.has(e.id)} idade={a.idade} />)}
                 </ul>
               </div>
             </li>
@@ -74,15 +79,24 @@ export function LinhaDaVida({ vida, marca }: { vida: Vida; marca: number }) {
   );
 }
 
-function ItemBiografia({ e, nova }: { e: Entrada; nova: boolean }) {
+/** O tema que a margem já diz não se repete: o marco do nascimento, no ano 0, já está na idade ("0 · ao nascer"). */
+export function temaDoMarco(e: Entrada, idadeDoAno: number): string | null {
+  if (e.relevancia !== 'marco') return null;
+  if (e.tema === 'nascimento' && idadeDoAno === 0) return null;
+  return TEMA_ROTULO[e.tema] ?? null;
+}
+
+function ItemBiografia({ e, nova, idade }: { e: Entrada; nova: boolean; idade: number }) {
+  const tema = temaDoMarco(e, idade);
   return (
     <li className={`entrada entrada--${e.relevancia} entrada--tema-${e.tema}${nova ? ' entrada--nova' : ''}${e.tom ? ` entrada--${e.tom}` : ''}${e.escolha ? ' entrada--escolha' : ''}`}>
-      <span className="entrada__marca" aria-hidden />
-      {e.relevancia === 'marco' && TEMA_ROTULO[e.tema] && <span className="entrada__tema">{TEMA_ROTULO[e.tema]}</span>}
-      <p className="entrada__texto">
-        {e.texto}
-        {e.escolha && <span className="entrada__escolha" title="Uma escolha sua"> sua escolha</span>}
-      </p>
+      {(tema || e.escolha) && (
+        <p className="entrada__tipo">
+          {tema && <span className="entrada__tema">{tema}</span>}
+          {e.escolha && <span className="entrada__escolha" title="Uma escolha sua">sua escolha</span>}
+        </p>
+      )}
+      <p className="entrada__texto">{e.texto}</p>
     </li>
   );
 }
