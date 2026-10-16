@@ -20,7 +20,7 @@
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { Emprego, TrajetoriaPausada, Vida } from '../tipos';
-import { escrever, idade } from '../nucleo';
+import { escrever, idade, somarExperiencia } from '../nucleo';
 import { ocupacao, ocupacaoOuNula, ROTULO_TRILHA, type Ocupacao } from '../dados/ocupacoes';
 import { habilidade, praticar } from './frentes';
 import { marcar } from './marcas';
@@ -218,7 +218,7 @@ export function processarParalelas(v: Vida, _r?: Rng): void {
   const e = t.paralela;
   if (e) {
     const oc = ocupacao(e.ocupacaoId);
-    t.experiencia[oc.trilha] = (t.experiencia[oc.trilha] ?? 0) + 6;
+    somarExperiencia(v, oc.trilha, 6);
     if (oc.duracao && v.t - e.tInicio >= oc.duracao) {
       encerrarParalela(v, 'fim do contrato', false);
     } else if (e.clientela !== undefined) {

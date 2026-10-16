@@ -313,6 +313,8 @@ export function disponibilidadeRede(v: Vida, op: OpRede): Veredito {
     case 'comprar':
       if (i < 16) return bloqueio('ilegal', 'A partir dos 16 anos.');
       if (pl.id === 'onlyfans') return bloqueio('impossivel', 'Assinante comprado não paga assinatura.');
+      // REWORK 5: um pacote por ano e por conta — a rede derruba quem enche a conta de perfil falso de uma vez.
+      if (v.t - (v.fatos[`rede_compra_${pl.id}`] ?? -999) < 12) return bloqueio('incompativel', 'Você já comprou um pacote para esta conta neste ano: mais um agora chamaria atenção da rede.');
       return vereditoDePagar(v, custoDoPacote(v, op.pacote));
   }
 }
@@ -355,6 +357,7 @@ export function executarRede(v: Vida, op: OpRede): string {
     case 'comprar': {
       const pk = PACOTES[op.pacote];
       pagar(v, custoDoPacote(v, op.pacote));
+      v.fatos[`rede_compra_${pl.id}`] = v.t;
       c.seguidores += pk.n; c.comprados = (c.comprados ?? 0) + pk.n;
       c.credibilidade = clamp(c.credibilidade - pk.perde);
       // Comprado não interage: o engajamento cai na mesma proporção.
@@ -398,29 +401,57 @@ function qualidade(v: Vida, pl: Plataforma, tema: TemaPublicacao): number {
   return Math.max(0.3, (1 + camera + celular + pc + arte + jeito) * (pl.temas[tema] ?? 0.6) * demografia);
 }
 
+/**
+ * A conta grande cresce devagar: o público possível já a conhece (REWORK 5). 1 até ~1 milhão; metade aos 5 milhões;
+ * ~1/9 aos 20 milhões. Vale para todo ganho PROPORCIONAL ao público (o post, o catálogo, a constância do ano).
+ */
+export const saturacaoDoPublico = (real: number) => 1 / (1 + (real / 5_000_000) ** 1.5);
+
+/** Teto do que uma publicação pode alcançar (o maior post já visto no mundo fica nessa ordem). */
+export const ALCANCE_MAXIMO = 250_000_000;
+
+/**
+ * A CONTA de uma publicação (REWORK 5 — o playtest viu 3,7 bilhões de visualizações e 127 milhões de seguidores num post).
+ * Fonte única, pura e testável:
+ * - `alcance` da plataforma é a FRAÇÃO do público real que vê o post (antes era multiplicada por 3 — o post comum já
+ *   alcançava mais que o público inteiro);
+ * - a qualidade conta até 2×, a fama até 2,2×, o impulso 2×; ainda assim um post comum não passa de ~2,5× o público real
+ *   (mais a vitrine da plataforma, `piso`);
+ * - o viral é um público NOVO que cresce com o tamanho da conta e com o algoritmo da rede (o TikTok empurra mais), não um
+ *   multiplicador sem fim;
+ * - quem chega é uma fração de quem viu, com teto (6% do público num post comum, 60% num viral) e retorno decrescente para
+ *   contas enormes: dobrar 10 milhões é muito mais difícil que dobrar mil.
+ */
+export function contaDoPost(pl: Plataforma, real: number, comprados: number, f: { q: number; notoriedade: number; criador: number; saturacao: number; credibilidade: number; promover: boolean; sorte: [number, number, number, number] }): { alcance: number; novos: number; viral: boolean } {
+  const q = Math.min(2, f.q);
+  const fama = 1 + Math.min(1.2, f.notoriedade / 60);
+  const base = Math.max(pl.piso, real * pl.alcance + comprados * 0.01);
+  let alcance = base * (0.3 + 0.7 * f.credibilidade / 100) * q * fama * f.criador * f.saturacao * (0.5 + f.sorte[0]) * (f.promover ? 2 : 1);
+  alcance = Math.min(alcance, pl.piso * 6 + real * 2.5);
+  const viral = pl.viral[0] > 0 && f.sorte[1] < pl.viral[0] * q * (f.promover ? 1.5 : 1);
+  if (viral) alcance += (pl.piso * pl.viral[1] * 4 + real * pl.alcance * pl.viral[1] * 0.5) * (0.6 + f.sorte[2] * 0.8) * q / 1.5 * Math.sqrt(fama);
+  alcance = Math.min(ALCANCE_MAXIMO, alcance);
+  let novos = alcance * pl.conversao * Math.min(1.5, q) * (0.6 + f.sorte[3] * 0.8);
+  novos = Math.min(novos, viral ? Math.max(5000, real * 0.5) : Math.max(pl.piso * 0.5, real * 0.04));
+  novos *= saturacaoDoPublico(real);
+  return { alcance: Math.round(alcance), novos: Math.round(novos), viral };
+}
+
 function publicar(v: Vida, pl: Plataforma, c: ContaSocial, tema: TemaPublicacao, promover: boolean): string {
   const t = totais(c);
   const n = t.publicacoes;
   const r = rngDe(v.id, 'post', v.t, tema, n, pl.id);
   if (promover) pagar(v, custoDePromover(v));
   const q = qualidade(v, pl, tema);
-  const fama = 1 + (v.notoriedade?.valor ?? 0) / 25;
   const criador = v.trabalho.atual?.ocupacaoId === 'criador_conteudo' ? 1.3 : 1;
   const ano = doAno(v, c).length;
   // Quem posta demais no ano satura: a quinta publicação não alcança como a primeira.
   const saturacao = ano < 3 ? 1 : Math.max(0.35, 1 - (ano - 2) * 0.15);
   const real = publicoReal(c);
-  const base = Math.max(pl.piso, real * pl.alcance * 3 + (c.comprados ?? 0) * 0.01);
-  let alcance = base * (0.3 + 0.7 * c.credibilidade / 100) * q * fama * criador * saturacao * (0.5 + r.next()) * (promover ? 3 : 1);
-  const viral = pl.viral[0] > 0 && r.chance(pl.viral[0] * q * (promover ? 1.5 : 1));
-  if (viral) alcance *= pl.viral[1] * (0.6 + r.next() * 0.8);
-  let novos = Math.round(alcance * pl.conversao * Math.min(2, q) * (0.6 + r.next() * 0.8));
-  // TikTok: o público do viral vem e vai — metade some antes do fim do ano (`processarRedes` cobra o resto).
-  // OnlyFans não tem vitrine: assinante vem do nome e da divulgação nas outras redes (que deixa a conta à vista).
-  if (pl.id === 'onlyfans') {
-    const vitrine = tema === 'divulgar' ? Math.max(0, ...contasAtivas(v).filter(x => x.plataforma !== 'onlyfans').map(publicoReal)) * 0.004 : 0;
-    novos = Math.round(novos * (0.5 + (v.notoriedade?.valor ?? 0) / 60) + vitrine * (0.6 + r.next() * 0.8));
-  }
+  const conta = contaDoPost(pl, real, c.comprados ?? 0, { q, notoriedade: v.notoriedade?.valor ?? 0, criador, saturacao, credibilidade: c.credibilidade, promover, sorte: [r.next(), r.next(), r.next(), r.next()] });
+  const { alcance, viral } = conta;
+  let novos = conta.novos;
+  const conhecido = (v.notoriedade?.valor ?? 0) > 25;
   c.seguidores += novos;
   if (!c.comprados) c.credibilidade = clamp(c.credibilidade + 1);
   const eng = clamp(35 + q * 15 + (viral ? 20 : 0) - (c.comprados ? 15 : 0) - (ano >= 5 ? 10 : 0));
@@ -452,7 +483,7 @@ function publicar(v: Vida, pl: Plataforma, c: ContaSocial, tema: TemaPublicacao,
   const extras: string[] = [];
   // A briga: a opinião, a política, a resposta à torcida. A rede de briga (X) briga mais; quem já é briguento, também.
   const PESO_BRIGA: Partial<Record<TemaPublicacao, number>> = { opiniao: 0.6, politica: 0.9, rebater: 1.2, humor: 0.12, trabalho: 0.08 };
-  const chanceBriga = (PESO_BRIGA[tema] ?? 0) * pl.briga * (0.7 + (c.toxicidade ?? 0) / 100) * (fama > 2 ? 1.3 : 1);
+  const chanceBriga = (PESO_BRIGA[tema] ?? 0) * pl.briga * (0.7 + (c.toxicidade ?? 0) / 100) * (conhecido ? 1.3 : 1);
   if (chanceBriga > 0 && r.chance(Math.min(0.85, chanceBriga))) extras.push(...polemica(v, pl, c, pub, reagiram, r));
   // O que o post faz na carreira e na vida.
   extras.push(...efeitosNaVida(v, pl, c, pub, r));
@@ -461,11 +492,13 @@ function publicar(v: Vida, pl: Plataforma, c: ContaSocial, tema: TemaPublicacao,
   c.publicacoes = [...c.publicacoes, pub].slice(-MAX_PUBLICACOES);
   t.maior = Math.max(t.maior, c.seguidores);
   if (viral) extras.push(...viralizou(v, pl, pub, r));
+  pub.alcance = Math.min(ALCANCE_MAXIMO, pub.alcance);
   pub.reacao = pub.polemica ? 'virou briga' : viral ? 'viralizou' : alcance >= Math.max(200, real * 0.8) ? 'foi bem' : alcance < real * 0.15 ? 'passou batido' : 'o de sempre';
   marcosDeSeguidores(v, pl, c);
   const quem = comentou.length ? ` ${listaNatural(comentou.map(p => p.nome))} comentou${comentou.length > 1 ? 'aram' : ''} — fazia tempo que vocês não se falavam.` : reagiram.length ? ` Reagiram: ${reagiram.slice(0, 3).map(p => p.nome).join(', ')}${reagiram.length > 3 ? ` e mais ${reagiram.length - 3}` : ''}.` : '';
-  const viram = pl.id === 'onlyfans' ? `${seguidoresEmPalavras(Math.round(alcance))} assinantes e curiosos viram` : `${seguidoresEmPalavras(Math.round(alcance))} pessoas viram`;
-  return `${viral ? 'Viralizou. ' : ''}${viram}${novos ? `; ${seguidoresEmPalavras(novos)} ${novos === 1 ? pl.publico[0] : pl.publico[1]} ${novos === 1 ? 'novo' : 'novos'}` : ''}.${quem}${extras.length ? ` ${extras.join(' ')}` : ''}`;
+  // A manchete conta o que ficou na publicação (a briga, o print e a colaboração entram no mesmo número da lista).
+  const viram = pl.id === 'onlyfans' ? `${seguidoresEmPalavras(pub.alcance)} assinantes e curiosos viram` : `${seguidoresEmPalavras(pub.alcance)} pessoas viram`;
+  return `${viral ? 'Viralizou. ' : ''}${viram}${pub.novos ? `; ${seguidoresEmPalavras(pub.novos)} ${pub.novos === 1 ? pl.publico[0] : pl.publico[1]} ${pub.novos === 1 ? 'novo' : 'novos'}` : ''}.${quem}${extras.length ? ` ${extras.join(' ')}` : ''}`;
 }
 
 /**
@@ -487,7 +520,7 @@ function ecoDoPost(v: Vida, pl: Plataforma, c: ContaSocial, pub: Publicacao, rea
   opcoes.push({ id: 'chato', peso: 0.8, fazer: () => { v.mente.estresse = clamp(v.mente.estresse + 1); return 'Um comentário maldoso de um perfil sem foto. Você apagou — e pensou nele o resto do dia.'; } });
   if (['receita', 'tutorial', 'pet', 'viagem'].includes(pub.tema)) opcoes.push({ id: 'pergunta', peso: 1.6, fazer: () => { c.engajamento = clamp((c.engajamento ?? 50) + 3); return pub.tema === 'receita' ? 'Choveram pedidos da receita. Você virou, por uma semana, a pessoa da receita.' : pub.tema === 'viagem' ? 'Três pessoas perguntaram onde era, e uma foi no mês seguinte.' : 'As perguntas nos comentários renderam mais que o post.'; } });
   if (real >= 1500 && real < 60000 && pl.id !== 'onlyfans') opcoes.push({ id: 'permuta', peso: 1.2, fazer: () => { v.financas.conta += Math.round(150 * economiaLocal(v.moradia.municipioId).custo); return 'Uma loja pequena da cidade mandou mensagem: um produto em troca de um post. O primeiro "publi" — pequeno, e seu.'; } });
-  if (real >= 8000 && pl.id !== 'onlyfans') opcoes.push({ id: 'colab', peso: 1, fazer: () => { const g = Math.round(real * (0.03 + r.next() * 0.04)); c.seguidores += g; pub.novos += g; return `Uma conta maior que a sua chamou para uma colaboração. ${seguidoresEmPalavras(g)} ${pl.publico[1]} vieram de lá.`; } });
+  if (real >= 8000 && real < 5_000_000 && pl.id !== 'onlyfans') opcoes.push({ id: 'colab', peso: 1, fazer: () => { const g = Math.round(real * (0.03 + r.next() * 0.04)); c.seguidores += g; pub.novos += g; return `Uma conta maior que a sua chamou para uma colaboração. ${seguidoresEmPalavras(g)} ${pl.publico[1]} vieram de lá.`; } });
   if (real >= 300) opcoes.push({ id: 'print', peso: 0.6, fazer: () => { const g = Math.round(pub.alcance * 0.3); pub.alcance += g; return 'Uma página de memes da cidade repostou — sem dar crédito. Ainda assim, chegou gente.'; } });
   const livres = opcoes.filter(o => o.id !== recentes[recentes.length - 1]).map(o => ({ ...o, peso: recentes.includes(o.id) ? o.peso * 0.3 : o.peso }));
   const e = r.weighted(livres, o => o.peso);
@@ -503,8 +536,10 @@ function polemica(v: Vida, pl: Plataforma, c: ContaSocial, pub: Publicacao, reag
   totais(c).polemicas++;
   c.credibilidade = clamp(c.credibilidade - 8);
   c.toxicidade = clamp((c.toxicidade ?? 0) + 6);
-  pub.alcance = Math.round(pub.alcance * 2);
-  const ganho = Math.round(pub.alcance * pl.conversao * 0.6);
+  // REWORK 5: a briga dobra quem vê — não o público. Quem chega pela briga é pouco e já está no número da publicação.
+  const extra = Math.round(pub.alcance * 0.8);
+  pub.alcance += extra;
+  const ganho = Math.min(Math.round(extra * pl.conversao * 0.3), Math.round(publicoReal(c) * 0.04) + pl.piso);
   c.seguidores += ganho; pub.novos += ganho;
   const alvo = reagiram.concat(seguidoresConhecidos(v, pl.id)).filter(p => !v.vinculos[p.id]?.romance).sort((a, b) => a.temperamento.afabilidade - b.temperamento.afabilidade)[0];
   if (alvo && r.chance(0.6)) {
@@ -805,13 +840,13 @@ export function processarRedes(v: Vida): void {
     const noAno = publicacoesDoAno(v, c);
     const real = publicoReal(c);
     if (noAno === 0) { c.seguidores = Math.round(c.seguidores - real * pl.esquece[0]); c.credibilidade = clamp(c.credibilidade - 2); c.engajamento = clamp((c.engajamento ?? 50) - 8); }
-    else c.seguidores = Math.round(c.seguidores - real * pl.esquece[1] + real * 0.01 * Math.min(6, noAno));
+    else c.seguidores = Math.round(c.seguidores - real * pl.esquece[1] + real * 0.01 * Math.min(6, noAno) * saturacaoDoPublico(real));
     // Quem faz da criação de conteúdo uma atividade da semana (`rotinas: criar_conteudo`) publica sem o jogador clicar
     // em cada vídeo: o ano de trabalho aparece no público das redes de criador.
     const criando = v.rotinas.find(x => x.id === 'criar_conteudo');
-    if (criando && DE_CRIADOR.includes(pl.id)) c.seguidores += Math.round(pl.piso * pl.conversao * 8 * (criando.nivel ?? 1) * (0.6 + r.next() * 0.8) * (1 + real / 20000));
+    if (criando && DE_CRIADOR.includes(pl.id)) c.seguidores += Math.round(pl.piso * pl.conversao * 8 * (criando.nivel ?? 1) * (0.6 + r.next() * 0.8) * (1 + real / 20000 * saturacaoDoPublico(real)));
     // YouTube: o catálogo continua sendo visto (quem ensina de verdade cresce devagar e não para).
-    if (pl.id === 'youtube' && t.publicacoes >= 5) c.seguidores += Math.round(Math.min(t.publicacoes, 80) * (8 + real * 0.0008) * (0.6 + r.next() * 0.8));
+    if (pl.id === 'youtube' && t.publicacoes >= 5) c.seguidores += Math.round(Math.min(t.publicacoes, 80) * (8 + real * 0.0008 * saturacaoDoPublico(real)) * (0.6 + r.next() * 0.8));
     // Quem é famoso ganha público sozinho — mais onde o público da idade dele está.
     const fama = v.notoriedade?.valor ?? 0;
     const peso = ({ instagram: 1, tiktok: 0.8, x: 0.7, youtube: 0.5, facebook: 0.45, twitch: 0.2, onlyfans: 0.12 } as Record<PlataformaId, number>)[pl.id];
@@ -821,7 +856,7 @@ export function processarRedes(v: Vida): void {
     if (c.comprados) {
       const chance = pl.deteccao + (c.comprados / Math.max(1, c.seguidores)) * 0.4 + fama / 200;
       if (r.chance(chance)) {
-        c.seguidores = Math.max(0, c.seguidores - Math.round(c.comprados * 0.9));
+        c.seguidores = Math.max(0, c.seguidores - c.comprados);
         c.comprados = 0;
         c.credibilidade = clamp(c.credibilidade - 20);
         c.advertencias = (c.advertencias ?? 0) + 1;

@@ -6,6 +6,7 @@ import './ui/fontes.css';
 import './ui/vida.css';
 import './ui/vivida.css';
 import './ui/agir.css';
+import './ui/mundo-vivo.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

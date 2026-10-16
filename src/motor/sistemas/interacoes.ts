@@ -11,6 +11,7 @@
  * antes de dormir entra na história dos dois. Nada disso vira número na tela.
  */
 
+import { interacaoNaPrisao } from './prisao';
 import { dinheiro as moeda } from '../texto';
 import type { Rng } from '../rng';
 import { animal } from '../dados/animais';
@@ -1517,7 +1518,8 @@ function cabeAgora(c: CtxI, x: Interacao): boolean {
 export function interacoesPara(v: Vida, id: string): Interacao[] {
   const c = ctxPessoa(v, id);
   if (!c || !c.p.vivo) return [];
-  const lista = INTERACOES.filter(x => cabeAgora(c, x));
+  // REWORK 5: da prisão, a ficha mostra o que cabe numa visita — não o cinema e o jantar.
+  const lista = INTERACOES.filter(x => cabeAgora(c, x) && !interacaoNaPrisao(v, x.id));
   const rel = (x: Interacao) => (x.variante === 'perigo' ? -1 : PESO_VARIANTE[x.variante ?? 'secundario'] + (x.prioridade?.(c) ?? 0));
   return lista.map((x, k) => ({ x, k, r: rel(x) })).sort((a, b) => b.r - a.r || a.k - b.k).map(y => y.x);
 }
@@ -1552,6 +1554,8 @@ export function disponibilidadeInteracao(v: Vida, id: string, interacao: string)
   const def = porId.get(interacao);
   if (!def || !cabeAgora(c, def)) return bloqueio('impossivel', 'Isso não faz sentido com essa pessoa agora.');
   if (v.anoAtual.acoes.includes(`pessoa:${interacao}:${id}`)) return bloqueio('incompativel', 'Você já fez isso neste ano.');
+  const naPrisao = interacaoNaPrisao(v, interacao);
+  if (naPrisao) return naPrisao;
   if (ROMANTICAS.has(interacao)) {
     const outra = socialDoAno(v).map(a => a.split(':')).find(([, i, quem]) => ROMANTICAS.has(i) && quem !== id && ['interesse', 'saindo'].includes(v.vinculos[quem]?.romance?.estagio ?? ''));
     if (outra && !parceiro(v)) return bloqueio('incompativel', `Você já está vendo no que dá com ${v.pessoas[outra[2]]?.nome ?? 'outra pessoa'}.`);

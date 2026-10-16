@@ -1,0 +1,68 @@
+/* ==========================================================================
+   REWORK 5 — Mundo vivo, a pena, a trajetória dos estados e o que cabe no celular.
+
+   A mesma linguagem do resto (tinta, fio de cor por área, serifa para o que é vida, sans para o rótulo):
+   a cor DIZ algo — o tom da categoria na notícia, o regime na pena, a direção da linha do estado.
+   ========================================================================== */
+
+/* ---------------------------------------------------------- Enquanto isso */
+.enquanto { margin: var(--space-3) 0 var(--space-5); padding-top: var(--space-3); border-top: 1px solid var(--rule-strong); }
+.enquanto__titulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin: 0 0 var(--space-2); }
+.enquanto__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.enquanto__item { --tom-n: var(--tom-pessoas); display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: var(--space-1) var(--space-3); align-items: baseline; padding-left: var(--space-3); border-left: 3px solid var(--tom-n); min-width: 0; }
+.enquanto__item--familia { --tom-n: var(--tom-casa); }
+.enquanto__item--trabalho { --tom-n: var(--tom-trabalho); }
+.enquanto__item--cidade { --tom-n: var(--tom-cidade); }
+.enquanto__item--portas { --tom-n: var(--accent); }
+.enquanto__item--ruim .enquanto__texto { color: var(--text-secondary); }
+.enquanto__tipo { font-family: var(--font-sans); font-size: var(--type-caption); text-transform: uppercase; letter-spacing: 0.06em; color: var(--tom-n); font-weight: 600; }
+.enquanto__texto { font-family: var(--font-serif); color: var(--text-primary); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+.enquanto__pessoa { grid-column: 2; justify-self: start; background: none; border: 0; padding: 0; color: var(--text-muted); font-size: var(--type-caption); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 32px; }
+.enquanto__pessoa:hover { color: var(--text-primary); }
+
+/* ------------------------------------------------------------------ A pena */
+.pena { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); background: var(--bg-inset); border-top: 3px solid var(--cinza-quente); }
+.pena--fechado { border-top-color: var(--danger-line); }
+.pena--semiaberto { border-top-color: var(--warning); }
+.pena--foragido { border-top-color: var(--danger); }
+.pena__ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: var(--space-2) var(--space-4); margin: 0; }
+.pena__barra { height: 6px; border-radius: var(--radius-pill); background: var(--rule); overflow: hidden; }
+.pena__barra > span { display: block; height: 100%; background: var(--cinza-quente); }
+.pena--fechado .pena__barra > span { background: var(--danger-line); }
+.pena--semiaberto .pena__barra > span { background: var(--warning); }
+.pena__legenda { font-size: var(--type-caption); color: var(--text-muted); margin: 0; }
+.pena__beneficios { margin: 0; padding-left: var(--space-4); color: var(--text-secondary); font-family: var(--font-serif); }
+.pena__disciplina { text-transform: capitalize; }
+.pena__disciplina--boa { color: var(--success); }
+.pena__disciplina--ruim { color: var(--danger); }
+.pena__situacao { padding: var(--space-3); border-radius: var(--radius-sm); background: var(--warning-wash); border-left: 3px solid var(--warning); }
+.pena__situacao h3 { font-family: var(--font-serif); font-size: var(--type-subheading); margin: 0 0 var(--space-1); }
+.pena__situacao p { margin: 0 0 var(--space-2); color: var(--text-secondary); }
+.pena__respostas, .pena__acoes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pena__subtitulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin: var(--space-2) 0 0; }
+
+/* ----------------------------------------------- A trajetória dos estados */
+.linha-estado { display: block; width: 100%; max-width: 160px; height: 28px; margin: 0 0 var(--space-1); overflow: visible; }
+.linha-estado__meio { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
+.linha-estado__linha { fill: none; stroke: var(--tom-e, var(--text-muted)); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.linha-estado__agora { fill: var(--tom-e, var(--text-primary)); }
+.linha-estado--desce .linha-estado__linha { stroke: var(--danger-line); }
+.linha-estado--desce .linha-estado__agora { fill: var(--danger); }
+.pessoal__item .linha-estado { --tom-e: var(--tom-voce); }
+.estado-bloco__uso { font-size: var(--type-caption); color: var(--text-muted); line-height: var(--leading-snug); margin: 0; }
+
+/* ------------------------------------------------ O valor que cabe no celular */
+.valor-toque { font: inherit; font-weight: 700; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; max-width: 100%; overflow-wrap: anywhere; white-space: normal; text-align: left; }
+
+/* Nada essencial passa da borda no celular: os valores "que não se partem" passam a quebrar inteiros, como unidade. */
+.palco, .conteudo, .folha, .momento { min-width: 0; max-width: 100%; }
+.folha, .momento, .aviso, .mudancas li, .opcao__texto, .opcao__detalhe { overflow-wrap: anywhere; }
+.botao > span { overflow-wrap: anywhere; }
+@media (max-width: 420px) {
+  .balanca__valor, .legenda__valor, .oferta__preco, .objeto__numeros dd > span, .experiencia__preco, .vaga-resumo__salario,
+  .viagem__preco, .legado__conta dd, .legado__valor, .balanca__resultado strong, .balanco__liquido strong, .valor-grande,
+  .estado-bloco__tendencia { white-space: normal; overflow-wrap: anywhere; }
+  .enquanto__item { grid-template-columns: minmax(0, 1fr); }
+  .enquanto__pessoa { grid-column: 1; }
+  .pena { padding: var(--space-3); }
+}

@@ -179,3 +179,20 @@ export const generoEu = (v: Vida): Genero => v.eu.genero;
 
 /** O país está em recessão? (estado do mundo, não da pessoa) */
 export const emRecessao = (v: Vida) => v.economia?.fase === 'crise' || (v.fatos['recessao_ate'] ?? 0) > v.t;
+
+/**
+ * REWORK 5 — a ÚNICA porta para somar experiência numa trilha. O emprego, o bico, o ofício da família, a oportunidade e
+ * a caserna somavam cada um os seus meses; juntos, uma trilha chegava a ganhar 20+ meses num ano ("25 anos de estrada" aos
+ * 30). Aqui, nenhuma trilha ganha mais que 12 meses por ano de calendário — o tempo de verdade.
+ */
+export function somarExperiencia(v: Vida, trilha: string, meses: number): number {
+  const ano = Math.floor(v.t / 12);
+  const t = v.trabalho;
+  if (!t.expAno || t.expAno.ano !== ano) t.expAno = { ano, m: {} };
+  const ja = t.expAno.m[trilha] ?? 0;
+  const ganho = Math.max(0, Math.min(meses, 12 - ja));
+  if (ganho <= 0) return 0;
+  t.expAno.m[trilha] = ja + ganho;
+  t.experiencia[trilha] = (t.experiencia[trilha] ?? 0) + ganho;
+  return ganho;
+}

@@ -5,6 +5,7 @@
  * persiste.
  */
 
+import { processarFundamentos } from '../sistemas/perseguir';
 import { describe, expect, it } from 'vitest';
 import { adulto, comParceiro, pessoaNova } from './cenarios';
 import { transacao, idadePessoa } from '../nucleo';
@@ -189,6 +190,8 @@ describe('P1 · progressão acionável (a ação mexe na variável que a avalia�
     const antes = aspectos(v, 'futebol').tecnica;
     v.financas.conta = 20000;
     v = executar(v, { tipo: 'perseguir', oque: 'treino_fundamentos', valor: 'futebol' } as unknown as Acao).vida;
+    // REWORK 5: o programa dura o ano — o treino acontece quando o ano passa (não no clique).
+    v = transacao(v, x => { x.t += 12; processarFundamentos(x); }).vida;
     expect(aspectos(v, 'futebol').tecnica).toBeGreaterThan(antes);
   });
 

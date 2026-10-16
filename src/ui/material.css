@@ -216,6 +216,8 @@
 .balanco__liquido strong, .balanca__resultado strong, .valor-grande, .balanca__valor, .objeto__numeros dd { white-space: nowrap; }
 .objeto__numeros dd { white-space: normal; }
 .objeto__numeros dd > span { white-space: nowrap; }
+/* REWORK 5: o valor grande encolhe com a tela (e o componente `Valor` abrevia o que não cabe, com o completo a um toque). */
+.balanco__liquido strong.valor-grande, strong.valor-grande, button.valor-grande { font-size: clamp(1.5rem, 7.5vw, var(--type-title)); max-width: 100%; }
 
 /* ATT Mundo: o país escolhido em passos (reaproveita a viagem), a linha de baixo e as mudanças de país. */
 .mundo-nascer__pais { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }

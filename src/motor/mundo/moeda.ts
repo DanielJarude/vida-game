@@ -94,6 +94,8 @@ export function formatarDinheiroCurto(valor: number, pais = corrente, casasMilha
   const a = Math.abs(local);
   const s = local < 0 ? '−' : '';
   const sim = simboloDaMoeda(moedaDoPais(pais));
+  // REWORK 5: acima do bilhão, 'tri' (sem '1.000,0 bi' estourando a tela do celular).
+  if (a >= 1_000_000_000_000) return `${s}${sim} ${(a / 1_000_000_000_000).toFixed(1).replace('.', ',')} tri`;
   if (a >= 1_000_000_000) return `${s}${sim} ${(a / 1_000_000_000).toFixed(1).replace('.', ',')} bi`;
   if (a >= 1_000_000) return `${s}${sim} ${(a / 1_000_000).toFixed(casasMilhao === 'auto' ? (a >= 10_000_000 ? 0 : 1) : casasMilhao).replace('.', ',')} mi`;
   if (a >= 10_000) return `${s}${sim} ${Math.round(a / 1000)} mil`;

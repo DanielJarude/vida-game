@@ -271,7 +271,9 @@ export function chanceDeMomento(v: Vida, tr: Trajetoria): number {
   // já pode produzir a sua primeira cena (a política demorava anos para ter uma situação jogável).
   const nunca = !(v.caminhos.situacoes ?? []).some(x => x.trajetoria === tr);
   // O expediente comum tem cadência mansa (a vida em volta — a família, a casa — também pede o ano): o silêncio pesa pouco.
-  if (COMUNS.has(tr)) return clamp(RITMO[tr] * (s < 1.5 && !nunca ? 0.6 : s < 3.5 ? 1 : 1.4), 0, 0.95);
+  // REWORK 5: quem tem um ofício com cenas próprias (a advogada, o professor, a enfermeira) vive o expediente um pouco mais.
+  const oficio = (tr === 'emprego' || tr === 'autonomo') && TRILHAS_COM_OFICIO.has(trilhaAtual(v) ?? '') ? 1.45 : 1;
+  if (COMUNS.has(tr)) return clamp(RITMO[tr] * oficio * (s < 1.5 && !nunca ? 0.6 : s < 3.5 ? 1 : 1.4), 0, 0.95);
   const curva = nunca ? (s < 1 ? 0.7 : s < 2 ? 1.2 : 2) : s < 1.5 ? 0.35 : s < 2.5 ? 1 : s < 3.5 ? 1.6 : 2.4;
   return clamp(RITMO[tr] * curva * intensidade(v, tr), 0, 0.95);
 }
@@ -1412,7 +1414,162 @@ const MODELOS_FUTEBOL_MAIS: ModeloSituacao[] = [
     ] }
 ];
 
-export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO];
+
+/* ============================================================ REWORK 5 — o OFÍCIO de cada profissão */
+
+/*
+ * O emprego comum tinha quatro cenas para todo mundo (o problema urgente, o crédito roubado, o erro, o projeto): a
+ * advogada, o professor e a engenheira viviam o mesmo expediente com nomes trocados. Agora cada FAMÍLIA de profissão
+ * tem as situações dela — a audiência, a turma, o prazo impossível, o plantão, a ocorrência, o cliente furioso, o atalho
+ * na obra, a editora — na mesma arquitetura (contexto → intenção → fatores do estado → desfecho → efeito → memória),
+ * pesando mais que as genéricas quando a profissão tem as suas. Casos e clientes são fictícios; nada aqui ensina
+ * procedimento real de coisa alguma.
+ */
+const trilhaAtual = (v: Vida) => { const e = v.trabalho.atual; return e ? ocupacaoOuNula(e.ocupacaoId)?.trilha : undefined; };
+const naTrilha = (...ts: string[]) => (v: Vida) => { const t = trilhaAtual(v); return !!t && ts.includes(t); };
+const DIREITO = ['direito', 'judiciario'];
+const DOCENCIA = ['educacao', 'docencia_superior', 'ensino_tecnico', 'idiomas', 'ensino_musica', 'ensino_danca'];
+const TECNOLOGIA = ['ti', 'dados', 'engenharia', 'eng_industrial', 'arquitetura', 'design', 'tecnico_industrial'];
+const SAUDE = ['enfermagem', 'fisioterapia', 'odontologia', 'psicologia', 'nutricao', 'farmacia', 'radiologia', 'saude_publica', 'cuidado'];
+const SEGURANCA = ['pm', 'pm_oficial', 'policia_civil', 'bombeiro', 'guarda', 'penal', 'federal', 'pericia', 'vigilancia'];
+const BALCAO = ['comercio', 'atendimento', 'administrativo', 'logistica', 'vendas', 'financas', 'contabil', 'alimentacao', 'beleza'];
+const OBRA = ['construcao', 'eletrica', 'hidraulica', 'mecanica', 'marcenaria', 'manutencao', 'predial', 'reparos', 'industria'];
+const ESCRITA = ['literatura', 'comunicacao', 'conteudo'];
+/** As famílias que têm cenas próprias (a cadência do emprego sobe um pouco para elas: o ofício produz história). */
+export const TRILHAS_COM_OFICIO = new Set([...DIREITO, ...DOCENCIA, ...TECNOLOGIA, ...SAUDE, ...SEGURANCA, ...BALCAO, ...OBRA, ...ESCRITA]);
+const anosNoEmprego = (v: Vida) => { const e = v.trabalho.atual; return e ? (v.t - e.tInicio) / 12 : 0; };
+const area = (v: Vida) => v.trabalho.atual?.especialidade;
+const PESO_OFICIO = () => 1.8;
+
+const MODELOS_OFICIO: ModeloSituacao[] = [
+  /* --------------------------------------------------------------- Direito */
+  { id: 'dir_audiencia', trajetoria: 'emprego', tema: 'dir_caso', peso: PESO_OFICIO, cabe: naTrilha(...DIREITO),
+    contexto: (v, r) => ({ causa: area(v) ? String(area(v)).toLowerCase() : r.pick(['trabalhista', 'de família', 'do consumidor', 'contratual']), cliente: r.pick(['uma costureira demitida sem acerto', 'um casal brigando pela guarda', 'um pequeno comerciante cobrado em dobro', 'uma aposentada com o benefício cortado']) }),
+    titulo: 'A audiência', texto: (_v, d) => `Causa ${d.causa}: ${d.cliente}. Na porta da sala, o advogado do outro lado oferece um acordo menor do que vocês pediram — e pequeno demais para ser recusado sem pensar.`,
+    intencoes: [
+      { id: 'acordo', texto: 'Levar o acordo ao cliente e recomendar', dica: 'Certo e rápido. Menor do que o direito.', risco: 0.15, fatores: v => [competencia(v), social(v)], desfechos: D('O cliente saiu aliviado — e indicou você para dois conhecidos.', 'Acordo fechado. Ninguém saiu feliz, ninguém saiu sem nada.', 'O cliente aceitou e reclamou depois.', 'O cliente achou que você vendeu a causa e trocou de advogado.', { otimo: { feito: 1, clima: 3 }, pessimo: { clima: -4 } }) },
+      { id: 'sustentar', texto: 'Recusar e sustentar a tese na audiência', dica: 'Pode ganhar tudo. Pode perder tudo.', risco: 0.6, fatores: v => [competencia(v), leitura(v), cabeca(v), coragem(v)], desfechos: D('A sentença veio inteira a favor. O caso virou referência no escritório.', 'Ganhou boa parte do pedido.', 'O juiz deu pouco — menos que o acordo.', 'Perdeu a causa. O cliente ficou sem nada, e você com a conta.', { otimo: { feito: 1, clima: 5, nome: 3 }, pessimo: { clima: -6, estresse: 8 } }, { otimo: 'Recusou um acordo pequeno e ganhou a causa inteira na audiência.', pessimo: 'Sustentou uma tese até o fim — e perdeu a causa.' }) },
+      { id: 'adiar', texto: 'Pedir tempo para reunir mais provas', dica: 'O cliente espera. A paciência dele, nem sempre.', risco: 0.3, fatores: v => [disciplina(v), leitura(v)], desfechos: D('A prova nova mudou o jogo: o outro lado subiu a proposta.', 'Ganhou tempo e uma testemunha.', 'O adiamento irritou o juiz.', 'O prazo correu — e a prova não veio.', { otimo: { feito: 1 }, pessimo: { clima: -3, estresse: 4 } }) }
+    ] },
+  { id: 'dir_cliente', trajetoria: 'emprego', tema: 'dir_etica', peso: PESO_OFICIO, cabe: v => naTrilha(...DIREITO)(v) && idade(v) >= 24,
+    titulo: 'O cliente que mentiu', texto: () => 'Na véspera do prazo, um documento novo mostra que o seu cliente mentiu para você desde o começo. O caso inteiro estava apoiado na versão dele.',
+    intencoes: [
+      { id: 'confrontar', texto: 'Chamar o cliente e confrontar', dica: 'A verdade primeiro. Ele pode sumir.', risco: 0.4, fatores: v => [social(v), coragem(v)], desfechos: D('Ele contou o resto. Com a verdade, a defesa ficou melhor do que era.', 'Ele admitiu; vocês refizeram a estratégia.', 'Ele negou e foi embora irritado.', 'Ele trocou de advogado e falou mal de você para quem quisesse ouvir.', { pessimo: { clima: -3, estresse: 5 } }) },
+      { id: 'seguir', texto: 'Seguir com o que tem, sem perguntar', dica: 'Mais fácil agora. Pode estourar na sua mão.', risco: 0.55, fatores: v => [F('sorte', 0), leitura(v)], desfechos: D('O outro lado nunca chegou ao documento.', 'Passou.', 'O documento apareceu na audiência — e a sua cara também.', 'O juiz oficiou a ordem dos advogados para apurar sua conduta.', { pessimo: { clima: -8, estresse: 10, nome: -4 } }) },
+      { id: 'renunciar', texto: 'Renunciar ao caso', dica: 'Limpo. Perde o honorário.', risco: 0.1, fatores: v => [disciplina(v)], desfechos: D('O sócio mais velho elogiou: "é assim que se faz carreira longa".', 'Saiu do caso sem barulho.', 'O escritório perdeu o cliente — e reclamou.', 'O cliente processou o escritório por abandono. Não ganhou, mas incomodou.', { otimo: { clima: 5 }, ruim: { clima: -2 }, pessimo: { estresse: 6 } }) }
+    ] },
+  /* ---------------------------------------------------------------- Docência */
+  { id: 'doc_turma', trajetoria: 'emprego', tema: 'doc_sala', peso: PESO_OFICIO, cabe: naTrilha(...DOCENCIA),
+    contexto: (_v, r) => ({ turma: r.pick(['o oitavo ano da tarde', 'a turma do noturno', 'o primeiro ano que ninguém quer', 'uma turma de trinta e oito']) }),
+    titulo: 'A turma difícil', texto: (_v, d) => `Ninguém quer pegar ${d.turma}. Coube a você. Na terceira semana, a aula ainda não começou de verdade nenhuma vez.`,
+    intencoes: [
+      { id: 'projeto', texto: 'Inventar um projeto que fale com eles', dica: 'Dá trabalho fora do horário. Pode virar a turma.', risco: 0.5, fatores: v => [competencia(v), social(v), F('ideias', (v.mente.cognicao - 55) / 120)], desfechos: D('O projeto virou exposição na escola — e a turma, a mais falada do ano.', 'A turma topou. Nem todos, mas a maioria.', 'Metade aderiu; a outra metade sabotou.', 'O projeto morreu na segunda semana, junto com as suas noites.', { otimo: { feito: 1, clima: 5, humor: 6 }, bom: { estresse: 2 }, pessimo: { estresse: 8 } }, { otimo: 'Pegou a turma que ninguém queria e a transformou com um projeto.' }) },
+      { id: 'firme', texto: 'Pulso firme: regras claras e cobrança', dica: 'Funciona com uns, fecha a porta com outros.', risco: 0.35, fatores: v => [disciplina(v), cabeca(v)], desfechos: D('Em um mês, a turma entendeu os limites — e passou a respeitar.', 'A sala ficou em ordem.', 'Ordem, com raiva.', 'Um aluno levou a briga para os pais, e os pais para a direção.', { pessimo: { clima: -5, estresse: 6 } }) },
+      { id: 'apoio', texto: 'Pedir apoio à coordenação', dica: 'Divide o peso. Pode parecer fraqueza.', risco: 0.2, fatores: v => [clima(v)], desfechos: D('A coordenação entrou junto e a turma mudou de rumo.', 'Ajudou um pouco.', 'A coordenação prometeu e não veio.', 'Ouviu que "turma difícil faz parte" — e ficou só.', { otimo: { clima: 4 }, pessimo: { estresse: 5 } }) }
+    ] },
+  { id: 'doc_aluno', trajetoria: 'emprego', tema: 'doc_sala', peso: PESO_OFICIO, cabe: naTrilha(...DOCENCIA),
+    contexto: (_v, r) => ({ aluno: r.pick(['um aluno que era o melhor da sala', 'uma aluna quieta da última fileira', 'um aluno que chega sempre com fome']) }),
+    titulo: 'O aluno que sumiu', texto: (_v, d) => `Faz duas semanas que ${d.aluno} não aparece. Na lista de chamada, é só mais um nome com falta.`,
+    intencoes: [
+      { id: 'familia', texto: 'Procurar a família', dica: 'Fora do seu papel — e às vezes é o que salva.', risco: 0.4, fatores: v => [social(v), coragem(v)], desfechos: D('Você descobriu o que estava acontecendo em casa. O aluno voltou — e terminou o ano.', 'O aluno voltou, ainda irregular.', 'A família agradeceu e nada mudou.', 'A família não gostou da visita e reclamou na escola.', { otimo: { feito: 1, humor: 8 }, pessimo: { clima: -3 } }, { otimo: 'Foi atrás de um aluno que tinha sumido — e ele terminou o ano.' }) },
+      { id: 'escola', texto: 'Levar o caso à escola e ao conselho', dica: 'O caminho oficial. Mais lento.', risco: 0.2, fatores: v => [clima(v), disciplina(v)], desfechos: D('O caso chegou a quem podia ajudar. O aluno voltou.', 'A escola acompanhou.', 'O caso entrou numa pasta.', 'Quando a resposta veio, o aluno já tinha largado.', { pessimo: { humor: -4 } }) },
+      { id: 'programa', texto: 'Seguir o programa: é falta, não é com você', dica: 'Nada muda na sua semana.', risco: 0.25, fatores: () => [F('sorte', 0)], desfechos: D('Ele voltou por conta própria.', 'Voltou, um mês depois.', 'Não voltou.', 'Você soube, no fim do ano, por que ele tinha sumido. E ficou com isso.', { ruim: { humor: -2 }, pessimo: { humor: -5, estresse: 3 } }) }
+    ] },
+  { id: 'doc_coordenacao', trajetoria: 'emprego', tema: 'doc_carreira', peso: PESO_OFICIO, recarga: 8, cabe: v => naTrilha(...DOCENCIA)(v) && anosNoEmprego(v) >= 4 && (v.trabalho.atual?.desempenho ?? 0) >= 58,
+    titulo: 'O convite para coordenar', texto: () => 'A direção quer você na coordenação: menos sala, mais reunião, um pouco mais de salário — e os colegas passando a responder a você.',
+    intencoes: [
+      { id: 'aceitar', texto: 'Aceitar a coordenação', dica: 'Outra profissão dentro da mesma escola.', risco: 0.4, fatores: v => [competencia(v), lideranca(v), social(v)], desfechos: D('A escola mudou de ritmo com você. Os colegas pediram para continuar.', 'Deu conta, com muito café.', 'As reuniões comeram a sua vida.', 'Os colegas fecharam a cara; no fim do ano, você pediu para voltar à sala.', { otimo: { feito: 1, clima: 6, extra: v => { const e = v.trabalho.atual; if (e) e.salario = Math.round(e.salario * 1.12); } }, bom: { estresse: 4, extra: v => { const e = v.trabalho.atual; if (e) e.salario = Math.round(e.salario * 1.1); } }, ruim: { estresse: 8, extra: v => { const e = v.trabalho.atual; if (e) e.salario = Math.round(e.salario * 1.1); } }, pessimo: { estresse: 8, clima: -4 } }, { otimo: 'Assumiu a coordenação da escola — e a escola mudou de ritmo.' }) },
+      { id: 'sala', texto: 'Continuar em sala', dica: 'O que você escolheu fazer da vida.', risco: 0.1, fatores: v => [clima(v)], desfechos: D('A direção respeitou — e passou a ouvir mais você.', 'Seguiu na sala.', 'A direção ficou com pé atrás.', 'O cargo foi para alguém de quem você discorda em tudo.', { otimo: { clima: 3 }, pessimo: { estresse: 4 } }) }
+    ] },
+  /* ------------------------------------------------- Tecnologia e engenharia */
+  { id: 'tec_prazo', trajetoria: 'emprego', tema: 'tec_entrega', peso: PESO_OFICIO, cabe: naTrilha(...TECNOLOGIA),
+    contexto: (v, r) => ({ coisa: ['ti', 'dados'].includes(trilhaAtual(v) ?? '') ? r.pick(['o sistema novo do cliente', 'a migração dos dados', 'o aplicativo da campanha']) : r.pick(['o projeto executivo', 'a revisão da estrutura', 'o protótipo da linha nova']) }),
+    titulo: 'O prazo impossível', texto: (_v, d) => `Venderam ${d.coisa} para daqui a três semanas. Na conta da equipe, seriam dois meses.`,
+    intencoes: [
+      { id: 'minimo', texto: 'Entregar o mínimo que funciona e avisar o resto', dica: 'Honesto. O cliente pode não gostar.', risco: 0.3, fatores: v => [competencia(v), social(v)], desfechos: D('O cliente gostou da franqueza; o resto veio na segunda entrega, com prazo de verdade.', 'Entregou o essencial no prazo.', 'O cliente reclamou do que faltou.', 'O cliente escalou a reclamação e a culpa desceu para você.', { otimo: { feito: 1, clima: 4 }, pessimo: { clima: -5 } }) },
+      { id: 'noites', texto: 'Virar noites e entregar tudo', dica: 'Pode dar certo. O corpo cobra de qualquer jeito.', risco: 0.55, fatores: v => [competencia(v), F('fôlego', (v.corpo.saude - 60) / 80), cabeca(v)], desfechos: D('Entregou tudo — e virou a pessoa que a empresa chama quando aperta.', 'Entregou, exausto.', 'Entregou com defeitos que voltaram no mês seguinte.', 'Não entregou, e a saúde também não aguentou o mês.', { otimo: { feito: 1, clima: 6, estresse: 6 }, bom: { estresse: 7 }, ruim: { estresse: 9 }, pessimo: { estresse: 12, extra: v => { v.corpo.saude = clamp(v.corpo.saude - 4); } } }, { otimo: 'Virou noites para entregar um projeto impossível — e entregou.' }) },
+      { id: 'escopo', texto: 'Brigar pelo escopo com a gerência', dica: 'Se ganhar, a equipe agradece. Se perder, fica marcado.', risco: 0.45, fatores: v => [coragem(v), leitura(v), clima(v)], desfechos: D('A gerência renegociou com o cliente. A equipe passou a confiar em você.', 'Ganhou uma semana.', 'Não ganhou nada e ficou com fama de difícil.', 'A gerência entendeu como insubordinação.', { otimo: { clima: 4, extra: v => { v.mente.estresse = clamp(v.mente.estresse - 3); } }, pessimo: { clima: -8 } }) }
+    ] },
+  { id: 'tec_falha', trajetoria: 'emprego', tema: 'tec_entrega', peso: PESO_OFICIO, cabe: v => naTrilha(...TECNOLOGIA)(v) && anosNoEmprego(v) >= 1,
+    titulo: 'A falha', texto: v => ['ti', 'dados'].includes(trilhaAtual(v) ?? '') ? 'Duas da manhã: o sistema caiu, e o erro está numa parte que você escreveu.' : 'Na vistoria, apareceu uma falha num cálculo que tem a sua assinatura.',
+    intencoes: [
+      { id: 'assumir', texto: 'Assumir e corrigir na hora', dica: 'A noite é sua. O nome também.', risco: 0.35, fatores: v => [competencia(v), cabeca(v)], desfechos: D('Corrigiu antes do amanhecer e escreveu como evitar de novo. Virou o padrão da equipe.', 'Corrigido.', 'Corrigido — e o relatório lembrou de quem errou.', 'A correção quebrou outra coisa.', { otimo: { feito: 1, clima: 5 }, pessimo: { clima: -6, estresse: 6 } }) },
+      { id: 'causa', texto: 'Investigar a causa antes de mexer', dica: 'Mais demorado agora; menos surpresa depois.', risco: 0.25, fatores: v => [leitura(v), disciplina(v)], desfechos: D('A causa era maior que o seu erro — e a sua investigação salvou o resto do projeto.', 'Achou e corrigiu com calma.', 'Demorou, e cobraram a demora.', 'Enquanto investigava, o problema cresceu.', { otimo: { feito: 1, clima: 4 } }) },
+      { id: 'outro', texto: 'Apontar a parte de outra equipe', dica: 'Tem um pouco de verdade. Tem muito de risco.', risco: 0.5, fatores: v => [social(v), F('sorte', 0)], desfechos: D('A outra equipe tinha mesmo culpa — e assumiu.', 'Dividiram a culpa.', 'Descobriram que o erro era seu.', 'Descobriram que o erro era seu — e que você tentou empurrar.', { ruim: { clima: -4 }, pessimo: { clima: -10, nome: -3 } }) }
+    ] },
+  { id: 'tec_novidade', trajetoria: 'emprego', tema: 'tec_carreira', peso: PESO_OFICIO, recarga: 6, cabe: naTrilha(...TECNOLOGIA),
+    titulo: 'A ferramenta nova', texto: () => 'Uma ferramenta nova está mudando a área: metade da equipe já usa, a outra metade acha moda. Quem dominar primeiro vai liderar os próximos projetos.',
+    intencoes: [
+      { id: 'estudar', texto: 'Estudar por conta, à noite', dica: 'Horas suas. Pode virar a sua vantagem.', risco: 0.35, fatores: v => [F('cabeça boa', (v.mente.cognicao - 55) / 80), disciplina(v)], desfechos: D('Em seis meses, você era a referência na empresa — e o mercado notou.', 'Aprendeu o bastante para liderar uma parte.', 'Aprendeu pela metade.', 'A ferramenta mudou de novo antes de você terminar.', { otimo: { feito: 1, estresse: 3, extra: v => { const f = v.caminhos.frentes.programacao; if (f) f.habilidade = clamp(f.habilidade + 4); } }, bom: { estresse: 2 } }, { otimo: 'Estudou sozinho uma tecnologia nova e virou referência na empresa.' }) },
+      { id: 'curso', texto: 'Pedir um curso pago pela empresa', dica: 'Depende da chefia.', risco: 0.2, fatores: v => [clima(v)], desfechos: D('A empresa pagou o curso e mandou você ensinar a equipe depois.', 'Curso aprovado.', 'Ficou para o ano que vem.', 'Negado — e o curso foi para outro.', { otimo: { feito: 1, clima: 3 } }) },
+      { id: 'esperar', texto: 'Esperar a moda passar', dica: 'Às vezes passa.', risco: 0.4, fatores: () => [F('sorte', 0)], desfechos: D('Passou mesmo. Quem correu, correu à toa.', 'Ninguém cobrou.', 'Você ficou para trás nos projetos novos.', 'O próximo projeto grande foi para quem estudou.', { ruim: { nome: -1 }, pessimo: { nome: -3 } }) }
+    ] },
+  /* ---------------------------------------------------- Saúde (não médica) */
+  { id: 'sau_plantao', trajetoria: 'emprego', tema: 'sau_turno', peso: PESO_OFICIO, cabe: naTrilha(...SAUDE),
+    titulo: 'O turno que não acaba', texto: () => 'Fim do seu turno. A pessoa que viria render você avisou que não vem, e há pacientes que não podem esperar.',
+    intencoes: [
+      { id: 'ficar', texto: 'Ficar mais um turno', dica: 'Os pacientes agradecem. O corpo, não.', risco: 0.45, fatores: v => [F('fôlego', (v.corpo.saude - 60) / 80), cabeca(v)], desfechos: D('Uma paciente que você acompanhou naquela madrugada voltou meses depois só para agradecer.', 'A noite passou sem drama.', 'Saiu sem saber o próprio nome.', 'No cansaço, um erro pequeno — que a chefia anotou.', { otimo: { feito: 1, humor: 6, estresse: 4 }, bom: { estresse: 5 }, ruim: { estresse: 8 }, pessimo: { estresse: 9, clima: -5 } }, { otimo: 'Ficou um turno a mais num plantão sem substituto — e uma paciente voltou para agradecer.' }) },
+      { id: 'reforco', texto: 'Chamar a chefia e exigir reforço', dica: 'O certo. Às vezes não tem.', risco: 0.25, fatores: v => [coragem(v), clima(v)], desfechos: D('O reforço veio, e a escala foi refeita para não acontecer de novo.', 'Veio alguém de outro setor.', 'Ninguém veio; você ficou de qualquer jeito.', 'Ouviu que "todo mundo dá um jeito".', { otimo: { clima: 3 }, ruim: { estresse: 5 }, pessimo: { estresse: 6 } }) },
+      { id: 'ir', texto: 'Passar o plantão e ir para casa', dica: 'O seu limite também é segurança.', risco: 0.2, fatores: v => [disciplina(v)], desfechos: D('Dormiu, voltou inteiro — e trabalhou melhor que todo mundo no dia seguinte.', 'Foi para casa.', 'Cobraram no dia seguinte.', 'Uma reclamação formal por "abandono" — arquivada, mas pesou.', { otimo: { estresse: -4 }, ruim: { clima: -3 }, pessimo: { clima: -6 } }) }
+    ] },
+  { id: 'sau_paciente', trajetoria: 'emprego', tema: 'sau_cuidado', peso: PESO_OFICIO, cabe: naTrilha(...SAUDE),
+    titulo: 'Quem não volta', texto: () => 'Um paciente que precisava continuar o tratamento parou de vir. O telefone dele está na ficha.',
+    intencoes: [
+      { id: 'ligar', texto: 'Ligar, mesmo fora do horário', dica: 'Pequeno gesto. Às vezes muda tudo.', risco: 0.3, fatores: v => [social(v)], desfechos: D('Ele voltou — e trouxe o irmão, que também precisava.', 'Remarcou.', 'Não atendeu.', 'Atendeu irritado e pediu para não ligarem mais.', { otimo: { feito: 1, humor: 5 } }) },
+      { id: 'protocolo', texto: 'Seguir o protocolo: carta e registro', dica: 'Correto e frio.', risco: 0.15, fatores: v => [disciplina(v)], desfechos: D('A carta funcionou.', 'Registrado.', 'Sem resposta.', 'Meses depois, ele voltou pior.', { pessimo: { humor: -4 } }) }
+    ] },
+  /* ---------------------------------------------------- Segurança pública */
+  { id: 'seg_ocorrencia', trajetoria: 'emprego', tema: 'seg_rua', peso: PESO_OFICIO, cabe: naTrilha(...SEGURANCA),
+    contexto: (_v, r) => ({ onde: r.pick(['uma briga de família que a vizinhança ouviu', 'uma discussão de trânsito que começou a juntar gente', 'um homem transtornado na porta de um posto de saúde']) }),
+    titulo: 'A ocorrência', texto: (_v, d) => `O chamado é ${d.onde}. Quando você chega, a situação ainda pode ir para qualquer lado.`,
+    intencoes: [
+      { id: 'mediar', texto: 'Conversar e baixar a temperatura', dica: 'Pede calma e tempo. Pode não bastar.', risco: 0.45, fatores: v => [social(v), cabeca(v)], desfechos: D('Ninguém se machucou, e a conversa terminou com um aperto de mão. O comando citou o atendimento.', 'Resolveu na conversa.', 'Demorou, e a gente em volta filmou tudo.', 'A situação saiu do controle antes de a conversa dar certo.', { otimo: { feito: 1, clima: 5 }, pessimo: { estresse: 10, clima: -4 } }, { otimo: 'Resolveu uma ocorrência tensa na conversa, sem ninguém se machucar.' }) },
+      { id: 'protocolo', texto: 'Seguir o protocolo à risca', dica: 'O previsto. Nem sempre o melhor.', risco: 0.25, fatores: v => [disciplina(v), competencia(v)], desfechos: D('Protocolo cumprido, ocorrência encerrada, relatório elogiado.', 'Encerrada.', 'Cumpriu o protocolo e criou um ressentimento na vizinhança.', 'O protocolo não previa aquilo — e alguém se machucou.', { pessimo: { estresse: 10 } }) },
+      { id: 'apoio', texto: 'Pedir apoio e esperar', dica: 'Mais gente, mais segurança. Mais tempo.', risco: 0.2, fatores: v => [clima(v)], desfechos: D('O apoio chegou a tempo e tudo terminou bem.', 'Tudo bem.', 'O apoio demorou; o chamado virou reclamação.', 'Enquanto esperava, a situação piorou.', { pessimo: { estresse: 8 } }) }
+    ] },
+  { id: 'seg_colega', trajetoria: 'emprego', tema: 'seg_etica', peso: PESO_OFICIO, recarga: 8, cabe: v => naTrilha(...SEGURANCA)(v) && anosNoEmprego(v) >= 2,
+    titulo: 'O colega que passou do limite', texto: () => 'Você viu um colega de turno passar do limite com alguém detido. Ninguém mais viu — ou todo mundo fingiu não ver.',
+    intencoes: [
+      { id: 'corregedoria', texto: 'Levar à corregedoria', dica: 'O certo, com preço alto dentro da corporação.', risco: 0.5, fatores: v => [coragem(v), disciplina(v)], desfechos: D('A apuração andou, e outros colegas, aliviados, confirmaram o que você viu.', 'Abriram apuração.', 'A apuração não deu em nada — e o turno passou a evitar você.', 'Transferiram você para longe de casa, "por necessidade do serviço".', { otimo: { humor: 4 }, ruim: { clima: -6, estresse: 6 }, pessimo: { clima: -10, estresse: 10 } }, { otimo: 'Denunciou um colega que passou do limite — e a apuração andou.' }) },
+      { id: 'conversar', texto: 'Conversar com ele, cara a cara', dica: 'Pode mudar alguém. Pode virar inimigo.', risco: 0.35, fatores: v => [social(v), coragem(v)], desfechos: D('Ele ouviu — e não fez de novo.', 'Ficou um silêncio pesado entre vocês.', 'Ele riu.', 'Ele avisou o turno inteiro que você "não é de confiança".', { pessimo: { clima: -6, estresse: 6 } }) },
+      { id: 'calar', texto: 'Ficar calado', dica: 'A paz do turno. E a sua cabeça?', risco: 0.25, fatores: () => [], desfechos: D('Nada aconteceu.', 'Nada aconteceu — por fora.', 'Você pensa nisso mais do que gostaria.', 'Aconteceu de novo, pior, e você sabia.', { otimo: { nome: 0 }, bom: { estresse: 3 }, ruim: { estresse: 6 }, pessimo: { estresse: 10, humor: -6 } }) }
+    ] },
+  /* --------------------------------------------- Balcão, escritório, comércio */
+  { id: 'bal_cliente', trajetoria: 'emprego', tema: 'bal_publico', peso: PESO_OFICIO, cabe: naTrilha(...BALCAO),
+    titulo: 'O cliente furioso', texto: () => 'Um cliente começa a gritar no meio de todo mundo: o problema é real, mas não foi você quem causou.',
+    intencoes: [
+      { id: 'resolver', texto: 'Resolver no seu limite, ali mesmo', dica: 'Você pode passar da sua alçada.', risco: 0.4, fatores: v => [social(v), cabeca(v), competencia(v)], desfechos: D('O cliente saiu agradecendo — e escreveu um elogio com o seu nome.', 'Resolvido.', 'Resolveu, mas a gerência não gostou do desconto.', 'Prometeu o que não podia, e a conta voltou para você.', { otimo: { feito: 1, clima: 4 }, ruim: { clima: -3 }, pessimo: { clima: -6 } }) },
+      { id: 'gerente', texto: 'Chamar a gerência', dica: 'Tira de você. Às vezes, tira a sua autoridade também.', risco: 0.15, fatores: v => [clima(v)], desfechos: D('A gerência resolveu e elogiou como você segurou até ela chegar.', 'A gerência assumiu.', 'O cliente gritou mais com a gerência — e com você.', 'A gerência deu razão ao cliente na sua frente.', { otimo: { clima: 3 }, pessimo: { estresse: 5 } }) },
+      { id: 'regra', texto: 'Seguir a regra e não ceder', dica: 'Correto. O cliente não vai achar.', risco: 0.3, fatores: v => [disciplina(v), cabeca(v)], desfechos: D('O cliente se acalmou e acabou entendendo.', 'Ele foi embora reclamando.', 'Uma avaliação péssima com o seu nome.', 'O vídeo da discussão circulou no grupo da cidade.', { ruim: { estresse: 3 }, pessimo: { estresse: 6, clima: -3 } }) }
+    ] },
+  { id: 'bal_processo', trajetoria: 'emprego', tema: 'bal_melhoria', peso: PESO_OFICIO, recarga: 6, cabe: v => naTrilha(...BALCAO)(v) && anosNoEmprego(v) >= 1,
+    titulo: 'O jeito errado de sempre', texto: () => 'Há um processo que todo mundo faz do jeito errado desde antes de você chegar. Você sabe como fazer melhor — mas mexer é mexer no jeito dos outros.',
+    intencoes: [
+      { id: 'propor', texto: 'Propor a mudança, com números', dica: 'Se a chefia comprar, o mérito é seu.', risco: 0.4, fatores: v => [competencia(v), social(v), clima(v)], desfechos: D('A mudança pegou — e virou padrão em outras unidades. O seu nome foi junto.', 'Aprovaram em parte.', 'Disseram que "agora não é o momento".', 'Os colegas acharam que você queria aparecer.', { otimo: { feito: 1, clima: 5 }, pessimo: { clima: -4 } }, { otimo: 'Mudou um processo errado de anos — e a mudança virou padrão.' }) },
+      { id: 'quieto', texto: 'Fazer melhor só a sua parte', dica: 'Sem barulho.', risco: 0.15, fatores: v => [disciplina(v)], desfechos: D('A chefia notou que a sua parte nunca dá problema.', 'A sua parte melhorou.', 'Ninguém notou.', 'Cobraram por fazer "diferente do padrão".', { otimo: { clima: 3 } }) }
+    ] },
+  /* --------------------------------------------------------- Obra e ofício */
+  { id: 'obr_atalho', trajetoria: 'emprego', tema: 'obr_seguranca', peso: PESO_OFICIO, cabe: naTrilha(...OBRA),
+    titulo: 'O atalho', texto: () => 'O serviço está atrasado e o encarregado manda pular uma etapa de segurança "só desta vez". Todo mundo está olhando para ver se você topa.',
+    intencoes: [
+      { id: 'recusar', texto: 'Recusar e fazer do jeito certo', dica: 'Mais lento. Pode irritar quem manda.', risco: 0.35, fatores: v => [coragem(v), competencia(v)], desfechos: D('No dia seguinte, a fiscalização apareceu — e só o seu trabalho passou.', 'Fez certo; atrasou um dia.', 'O encarregado passou a dar o pior serviço para você.', 'Quase foi mandado embora por "atrasar a obra".', { otimo: { feito: 1, clima: 4 }, ruim: { clima: -4 }, pessimo: { clima: -8, estresse: 6 } }, { otimo: 'Recusou um atalho perigoso na obra — e, no dia seguinte, a fiscalização apareceu.' }) },
+      { id: 'topar', texto: 'Topar, desta vez', dica: 'O serviço anda. O risco é seu.', risco: 0.55, fatores: v => [F('sorte', 0), F('fôlego', (v.corpo.forma - 55) / 90)], desfechos: D('Deu tudo certo, e o encarregado passou a confiar em você.', 'Ninguém viu nada.', 'Um susto: escapou por pouco.', 'O acidente aconteceu. Meses parado, e a lembrança de que você sabia.', { otimo: { clima: 3 }, ruim: { estresse: 6 }, pessimo: { estresse: 10, extra: (v) => { v.corpo.saude = clamp(v.corpo.saude - 10); v.corpo.forma = clamp(v.corpo.forma - 6); } } }, { pessimo: 'Pulou uma etapa de segurança na obra, a pedido do encarregado — e se acidentou.' }) },
+      { id: 'tecnico', texto: 'Chamar o técnico de segurança', dica: 'Ninguém gosta de quem chama. Ninguém se machuca.', risco: 0.25, fatores: v => [disciplina(v), clima(v)], desfechos: D('O técnico parou a frente de serviço e refez o planejamento. O dono da obra agradeceu.', 'O técnico resolveu.', 'Viraram a cara para você no almoço.', 'O técnico não veio, e o encarregado soube quem chamou.', { otimo: { clima: 3 }, ruim: { estresse: 3 }, pessimo: { clima: -6 } }) }
+    ] },
+  /* ------------------------------------------------------------- Escrita */
+  { id: 'esc_editora', trajetoria: 'emprego', tema: 'esc_texto', peso: PESO_OFICIO, cabe: naTrilha(...ESCRITA),
+    titulo: 'O texto que querem mudar', texto: v => trilhaAtual(v) === 'literatura' ? 'A editora quer cortar o capítulo de que você mais gosta: "ninguém vai entender".' : 'A chefia quer suavizar o seu texto antes de publicar: "o anunciante não vai gostar".',
+    intencoes: [
+      { id: 'aceitar', texto: 'Aceitar as mudanças', dica: 'O texto sai. Do jeito deles.', risco: 0.15, fatores: v => [social(v)], desfechos: D('O texto, mais enxuto, teve mais leitores do que tudo o que você já fez.', 'Saiu.', 'Saiu sem gosto.', 'Saiu irreconhecível — com o seu nome.', { pessimo: { humor: -5 } }) },
+      { id: 'brigar', texto: 'Brigar pelo texto', dica: 'Pode ganhar. Pode perder o espaço.', risco: 0.55, fatores: v => [coragem(v), F('o texto', (habilidade(v, 'escrita') - 55) / 60)], desfechos: D('Você ganhou — e o trecho que queriam cortar foi o mais citado.', 'Um meio-termo que ainda era seu.', 'Perdeu, e ficou com fama de difícil.', 'Perdeu o espaço: o próximo texto foi para outra pessoa.', { otimo: { feito: 1, nome: 3, humor: 6 }, ruim: { clima: -3 }, pessimo: { clima: -6, estresse: 5 } }, { otimo: 'Brigou pelo próprio texto — e o trecho que queriam cortar foi o mais citado.' }) }
+    ] }
+];
+
+/** Quem exerce por conta (a advogada do próprio escritório, o eletricista, a revisora freelancer) vive o mesmo ofício. */
+const SO_COM_VINCULO = new Set(['seg_ocorrencia', 'seg_colega', 'doc_coordenacao', 'bal_processo']);
+const MODELOS_OFICIO_AUTONOMO: ModeloSituacao[] = MODELOS_OFICIO.filter(m => !SO_COM_VINCULO.has(m.id)).map(m => ({ ...m, id: `${m.id}_conta`, trajetoria: 'autonomo' as const }));
+
+export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO];
 
 /** As situações vividas, para a tela (as mais recentes primeiro). */
 export function momentosDaCarreira(v: Vida, n = 8): { ano: number; texto: string; desfecho: Desfecho; intencao: string }[] {

@@ -5,6 +5,7 @@
  * a avaliação lê; o estado persiste; nada sobrescreve carreira sem escolha.
  */
 
+import { processarFundamentos } from '../sistemas/perseguir';
 import { describe, expect, it } from 'vitest';
 import { adulto, comParente } from './cenarios';
 import { pais, transacao, vinculosVivos } from '../nucleo';
@@ -254,6 +255,8 @@ describe('4. A técnica que a avaliação lê é a que a ação treina (basquete
       const outra = d === 'tenis' ? 'basquete' : 'tenis';
       const antesOutra = habilidade(v, outra);
       v = executar(v, { tipo: 'perseguir', oque: 'treino_fundamentos', valor: d } as unknown as Acao).vida;
+      // REWORK 5: o programa dura o ano — o treino acontece quando o ano passa (não no clique).
+      v = transacao(v, x => { x.t += 12; processarFundamentos(x); }).vida;
       expect(aspectos(v, d).tecnica).toBeGreaterThan(antes);
       expect(habilidade(v, outra)).toBe(antesOutra);
     }

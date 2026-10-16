@@ -5,6 +5,7 @@ import type { Vida } from '../motor/tipos';
 import { disponibilidade, type Acao } from '../motor/acoes';
 import { podeTentar } from '../motor/plausibilidade';
 import { dinheiroCurto, palavraChance } from './apresentar';
+import { formatarDinheiroCheio, formatarDinheiroCurto } from '../motor/mundo/moeda';
 
 interface BotaoAcaoProps {
   vida: Vida;
@@ -203,5 +204,21 @@ export function Renomear({ vida, agir, alvo, atual, k, rotulo = 'Renomear' }: { 
       <button type="submit" className="botao botao--secundario" disabled={!podeTentar(disponibilidade(vida, { tipo: 'renomear', alvo, nome, k } as Acao))}>Salvar o nome</button>
       <button type="button" className="botao botao--discreto" onClick={() => setAberto(false)}>Manter "{atual}"</button>
     </form>
+  );
+}
+
+/**
+ * REWORK 5 — um valor em dinheiro que CABE (o playtest viu valores passando da tela do celular). Até 13 caracteres, o
+ * valor inteiro; acima, a forma curta ("R$ 12,4 mi") — e um toque mostra o valor completo (consultável, nunca escondido).
+ */
+export function Valor({ valor, className }: { valor: number; className?: string }) {
+  const [cheio, setCheio] = useState(false);
+  const inteiro = formatarDinheiroCheio(valor);
+  if (inteiro.length <= 13) return <strong className={className}>{inteiro}</strong>;
+  const curto = formatarDinheiroCurto(valor, undefined, 'auto');
+  return (
+    <button type="button" className={`valor-toque${className ? ` ${className}` : ''}`} onClick={() => setCheio(x => !x)} aria-label={`${inteiro} (toque para ${cheio ? 'abreviar' : 'ver o valor completo'})`} title={inteiro}>
+      {cheio ? inteiro : curto}
+    </button>
   );
 }

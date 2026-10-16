@@ -22,7 +22,7 @@ import { Retrato } from '../avatar/Retrato';
 import { BotaoAcao, Vazio } from '../comum';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
-import { expressaoDe, lerDimensao, noQueEBom, lerPessoal, momentoAtual, palavraTendencia, type LeituraDimensao } from '../estadoPessoal';
+import { expressaoDe, lerDimensao, noQueEBom, lerPessoal, momentoAtual, palavraTendencia, trajetoria, USO_DIMENSAO, type LeituraDimensao } from '../estadoPessoal';
 import { sinaisDoCorpo } from '../../motor/sistemas/saude';
 import type { DimensaoPessoal } from '../../motor/sistemas/pessoa';
 import { anoDe } from '../../motor/tempo';
@@ -131,6 +131,27 @@ function Escala({ nivel, nome }: { nivel: number; nome: string }) {
   );
 }
 
+/**
+ * REWORK 5 — a linha dos últimos anos (o registro de cada aniversário + agora), sem número: subir é melhorar em todas.
+ * O último ponto é o de hoje. Com menos de dois registros, não há linha para desenhar.
+ */
+function Trajetoria({ pontos, nome }: { pontos: number[]; nome: string }) {
+  if (pontos.length < 2) return null;
+  const L = 120, A = 28;
+  const x = (k: number) => (k / (pontos.length - 1)) * (L - 6) + 3;
+  const y = (p: number) => A - 3 - (p / 100) * (A - 6);
+  const d = pontos.map((p, k) => `${k ? 'L' : 'M'}${x(k).toFixed(1)} ${y(p).toFixed(1)}`).join(' ');
+  const ultimo = pontos[pontos.length - 1];
+  const dir = ultimo - pontos[0];
+  return (
+    <svg className={`linha-estado linha-estado--${dir >= 6 ? 'sobe' : dir <= -6 ? 'desce' : 'estavel'}`} viewBox={`0 0 ${L} ${A}`} role="img" aria-label={`${nome} nos últimos ${pontos.length - 1} anos: ${dir >= 6 ? 'subiu' : dir <= -6 ? 'caiu' : 'ficou parecido'}`}>
+      <line className="linha-estado__meio" x1="3" x2={L - 3} y1={y(50)} y2={y(50)} />
+      <path className="linha-estado__linha" d={d} />
+      <circle className="linha-estado__agora" cx={x(pontos.length - 1)} cy={y(ultimo)} r="2.6" />
+    </svg>
+  );
+}
+
 function Estado({ l, vida, agir, irPara, abrirPessoa }: { l: LeituraDimensao; vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void }) {
   const t = palavraTendencia(l.tendencia);
   const vazio = !l.ajudando.length && !l.pesando.length;
@@ -142,6 +163,8 @@ function Estado({ l, vida, agir, irPara, abrirPessoa }: { l: LeituraDimensao; vi
       </header>
       <p className="estado-bloco__palavra">{l.palavra}</p>
       <Escala nivel={l.nivel} nome={l.nome} />
+      <Trajetoria pontos={trajetoria(vida, l.d)} nome={l.nome} />
+      <p className="estado-bloco__uso">{USO_DIMENSAO[l.d]}</p>
       {l.pesando.length > 0 && (
         <div className="estado-bloco__lista">
           <h3>Tem pesado</h3>
@@ -184,6 +207,7 @@ function CorpoEAprendizado({ vida, dims, irPara }: { vida: Vida; dims: DimensaoP
               <span className="pessoal__palavra">{l.palavra}</span>
               {l.tendencia === 'melhorando' || l.tendencia === 'piorando' ? <span className={`estado-bloco__tendencia estado-bloco__tendencia--${l.tendencia}`}>{l.tendencia === 'melhorando' ? '↗ vem melhorando' : '↘ vem piorando'}</span> : null}
             </p>
+            <Trajetoria pontos={trajetoria(vida, l.d === 'condicionamento' ? 'forma' : l.d === 'aprendizado' ? 'cognicao' : 'aparencia')} nome={l.nome} />
             {l.causas && <p className="pessoal__causas">{l.causas}</p>}
             <p className="pessoal__uso">{l.uso}</p>
             {l.ir && <button type="button" className="link pessoal__ir" onClick={() => irPara(l.ir!.aba)}>{l.ir.rotulo} →</button>}

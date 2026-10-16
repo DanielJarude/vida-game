@@ -14,6 +14,7 @@
  * "Agora" (desktop) diz o que pede atenção, sem repetir as áreas.
  */
 
+import { noticiasDoAno, type Noticia } from '../../motor/sistemas/mundoVivo';
 import { BaixarApp } from './BaixarApp';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { redeDeSaude } from '../../motor/sistemas/saude';
@@ -103,7 +104,7 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       <div className={`palco palco--${area}`}>
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
-          {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <FechamentoDoAno vida={vida} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
+          {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <FechamentoDoAno vida={vida} />}{c.marcaAno > 0 && <EnquantoIsso vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
           {area === 'formacao' && <Estudos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
@@ -137,6 +138,34 @@ export function Jogo({ c }: { c: ControleVida }) {
       {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} mudancas={c.resultado.mudancas} />}
       {menu && <Menu c={c} aoFechar={() => setMenu(false)} ir={l => { irLugar(l); setMenu(false); }} />}
     </div>
+  );
+}
+
+const ROTULO_NOTICIA: Record<Noticia['categoria'], string> = { pessoas: 'Pessoas', familia: 'Família', trabalho: 'Trabalho', cidade: 'A cidade', portas: 'Uma porta', vida: 'Pessoas' };
+
+/**
+ * REWORK 5 — "Enquanto isso": o que o MUNDO fez no ano que passou, sem o jogador escolher (`mundoVivo.noticiasDoAno`,
+ * lido da Linha da Vida — uma fonte só). Ano tranquilo não inventa notícia: a seção some.
+ */
+function EnquantoIsso({ vida, desde, abrirPessoa }: { vida: Vida; desde: number; abrirPessoa: (id: string) => void }) {
+  const ns = noticiasDoAno(vida, desde);
+  if (!ns.length) return null;
+  return (
+    <section className="enquanto" aria-label="Enquanto isso">
+      <h2 className="enquanto__titulo">Enquanto isso</h2>
+      <ul className="enquanto__lista">
+        {ns.map((n, k) => {
+          const p = n.pessoas.map(id => vida.pessoas[id]).find(x => x && vida.vinculos[x.id]);
+          return (
+            <li key={k} className={`enquanto__item enquanto__item--${n.categoria}${n.tom ? ` enquanto__item--${n.tom}` : ''}`}>
+              <span className="enquanto__tipo">{ROTULO_NOTICIA[n.categoria]}</span>
+              <span className="enquanto__texto">{n.texto}</span>
+              {p && <button type="button" className="enquanto__pessoa" onClick={() => abrirPessoa(p.id)}>Ver {p.nome}</button>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

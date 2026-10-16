@@ -46,6 +46,8 @@ function familia(semente = 11): { v: Vida; conjuge: string; a: string; b: string
   v.vinculos[mae.id].convivio = ['casa'];
   v.fatos[`uniao_${mae.id}`] = v.t - 432;
   v.fatos[`patrimonio_uniao_${mae.id}`] = 0;
+  // O patrimônio é montado à mão: herança recebida antes (que o caminho da vida até os 62 pode ou não trazer) não entra.
+  delete v.fatos['herdado_total'];
   v.morte = { t: v.t, causa: 'infarto', heranca: calcularHeranca(v) };
   return { v, conjuge: mae.id, a: a.id, b: b.id, neto: neto.id, parB: parB.id };
 }

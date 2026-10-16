@@ -126,6 +126,8 @@ export function surgirInteresse(v: Vida, r: Rng): void {
   const temParceiro = !!parceiro(v);
   const chance = temParceiro ? 0.05 : i < 16 ? 0.35 : i < 30 ? 0.4 : i < 50 ? 0.24 : i < 70 ? 0.14 : 0.07;
   if (!r.chance(chance)) return;
+  // REWORK 5: na prisão não se conhece ninguém no bar (os de dentro são outra conversa: `prisao.conviver`).
+  if (v.justica?.prisao) return;
   const jaInteressado = vinculosVivos(v).some(x => x.vin.romance?.estagio === 'interesse' || (x.vin.romance?.estagio === 'saindo'));
   if (jaInteressado) return;
   // Quem desperta interesse é alguém do convívio (ou amigo). O jogador

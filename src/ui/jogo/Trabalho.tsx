@@ -43,6 +43,7 @@ import { vagasEmCamadas, type Vaga } from '../../motor/sistemas/relevancia';
 import type { Relevante } from '../../motor/sistemas/relevancia';
 import { O_QUE_TRABALHAR } from '../../motor/sistemas/devolutivas';
 import { situacaoNaJustica } from '../../motor/sistemas/justica';
+import { foragido, leituraDaPena, situacaoDeForagido, type OquePrisao } from '../../motor/sistemas/prisao';
 import { leituraDaPausa } from '../../motor/sistemas/pausa';
 import { leituraDoEnvolvimento } from '../../motor/sistemas/ilicito';
 import { leituraRural } from '../../motor/sistemas/rural';
@@ -124,7 +125,8 @@ export function Trabalho({ vida, agir, irPara }: Props) {
         )}
         {l.frases.length > 1 && modo !== 'politica' && <div className="como-vai">{l.frases.slice(1).map((f, k) => <p key={k}>{f}</p>)}</div>}
 
-        {preso && <SituacaoDaPena vida={vida} />}
+        {preso && <PainelDaPena vida={vida} agir={agir} />}
+        {foragido(vida) && <PainelForagido vida={vida} agir={agir} />}
         {modo === 'pausa' && <p className="nota-grande">{leituraDaPausa(vida)}</p>}
         {modo === 'negocio' && <PainelNegocio vida={vida} />}
         {modo === 'negocio' && negocioAberto(vida) && <Renomear vida={vida} agir={agir} alvo="negocio" atual={negocioAberto(vida)!.nome} rotulo={`Dar outro nome a ${negocioAberto(vida)!.nome}`} />}
@@ -369,6 +371,9 @@ function PainelAtleta({ vida }: { vida: Vida }) {
           <p className="nota">{palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)}. {tenis ? (t.premio !== undefined ? `Bruto ${dinheiroCurto(t.premio)} − custos do circuito ${dinheiroCurto(t.custos ?? 0)} = ${(t.premio - (t.custos ?? 0)) >= 0 ? '' : '−'}${dinheiroCurto(Math.abs(t.premio - (t.custos ?? 0)))} no ano.` : '') : individual ? (es.espaco === 'titular' ? 'O próximo ano começa nas provas principais da equipe.' : 'O próximo ano começa fora das provas principais da equipe.') : es.espaco === 'titular' ? 'O próximo ano começa como titular.' : 'O próximo ano começa no banco.'}</p>
         </div>
       )}
+      {es.totais && es.totais.temporadas >= 2 && !tenis && !individual && (
+        <p className="nota carreira-totais">Na carreira: {es.totais.temporadas} temporadas · {es.totais.partidas} jogos{es.modalidade === 'futebol' ? ` · ${es.totais.gols} gols · ${es.totais.assistencias} assistências · ${es.totais.minutos.toLocaleString('pt-BR')} minutos` : ''}{es.transferencias?.length ? ` · ${es.transferencias.length} ${es.transferencias.length === 1 ? 'transferência' : 'transferências'} (a maior: ${dinheiroCurto(Math.max(...es.transferencias.map(x => x.taxa)))} entre os clubes)` : ''}</p>
+      )}
       <dl className="dados">
         <Dado rotulo={tenis ? 'Circuito' : 'Divisão (no jogo)'}>{divisaoDe(es.modalidade, es.nivel)}</Dado>
         {tenis
@@ -551,9 +556,58 @@ function PainelPolitico({ vida, principal }: { vida: Vida; principal: boolean })
   );
 }
 
-function SituacaoDaPena({ vida }: { vida: Vida }) {
+/**
+ * REWORK 5 — A PENA COMO CAMADA PRÓPRIA: a situação (regime, tempo cumprido, saída prevista, disciplina, benefícios), o
+ * que o pavilhão pede agora (com as respostas), e a rotina de dentro. Tudo lido de `leituraDaPena` (a fonte única).
+ */
+function PainelDaPena({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const l = leituraDaPena(vida);
   const t = situacaoNaJustica(vida);
-  return t ? <section className="painel painel--pena" aria-label="A pena"><p className="painel__frase">{t}</p></section> : null;
+  if (!l) return t ? <section className="painel painel--pena" aria-label="A pena"><p className="painel__frase">{t}</p></section> : null;
+  const total = Math.max(1, l.saida - l.inicio);
+  const feito = Math.min(100, Math.round(l.cumpridos / total * 100));
+  const P = (oque: OquePrisao) => ({ tipo: 'prisao', oque }) as Acao;
+  return (
+    <section className={`painel painel--pena pena pena--${l.regime}`} aria-label="A pena">
+      <dl className="pena__ficha">
+        <Dado rotulo="Regime">{l.regime === 'fechado' ? 'Fechado' : 'Semiaberto'}</Dado>
+        <Dado rotulo="Desde">{anoDe(l.inicio)}</Dado>
+        <Dado rotulo={l.preventiva ? 'Situação' : 'Pena'}>{l.preventiva ? 'Preventiva, à espera do julgamento' : l.pena ? `${Math.round(l.pena / 12)} anos` : '—'}</Dado>
+        <Dado rotulo="Saída prevista">{anoDe(l.saida)}</Dado>
+        <Dado rotulo="Comportamento"><span className={`pena__disciplina pena__disciplina--${l.disciplina}`}>{l.disciplina}</span></Dado>
+      </dl>
+      <div className="pena__barra" role="img" aria-label={`${feito}% do tempo até a saída já cumprido`}><span style={{ width: `${feito}%` }} /></div>
+      <p className="pena__legenda">{Math.floor(l.cumpridos / 12)} ano{l.cumpridos >= 24 ? 's' : ''} e {l.cumpridos % 12} meses cumpridos{l.remidos ? ` · ${l.remidos} meses remidos` : ''}{l.faccao === 'dentro' ? ' · sob a proteção de um grupo do pavilhão' : ''}</p>
+      {l.beneficios.length > 0 && <ul className="pena__beneficios">{l.beneficios.map((b, k) => <li key={k}>{b}</li>)}</ul>}
+      {l.situacao && (
+        <div className="pena__situacao" role="group" aria-label={l.situacao.titulo}>
+          <h3>{l.situacao.titulo}</h3>
+          <p>{l.situacao.texto}</p>
+          <div className="pena__respostas">{l.situacao.respostas.map(x => <BotaoAcao key={x.oque} vida={vida} agir={agir} acao={P(x.oque)} variante="secundario">{x.rotulo}</BotaoAcao>)}</div>
+        </div>
+      )}
+      <h3 className="pena__subtitulo">A rotina de dentro{l.rotina.length ? ` — você ${l.rotina.join(' e ')}` : ''}</h3>
+      <div className="pena__acoes">
+        <BotaoAcao vida={vida} agir={agir} acao={P('estudar')} ocultarBloqueado>Estudar na escola da unidade (remição)</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={P('trabalhar')} ocultarImpossivel>Trabalhar na unidade (remição e pecúlio)</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={P('visitas')}>Pôr a família na lista de visitas</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={P('conviver')}>Aproximar-se de alguém do pavilhão</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={P('defensoria')} ocultarImpossivel>Pedir à defensoria que reveja a pena</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={P('preparar_saida')} ocultarImpossivel>Preparar a saída (curso e programa de egressos)</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={P('fugir')} variante="discreto" mostrarChance>Tentar fugir</BotaoAcao>
+      </div>
+      {t && <p className="nota">{t}</p>}
+    </section>
+  );
+}
+
+function PainelForagido({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  return (
+    <section className="painel painel--pena pena pena--foragido" aria-label="Foragido">
+      <p className="painel__frase">{situacaoDeForagido(vida)}</p>
+      <BotaoAcao vida={vida} agir={agir} acao={{ tipo: 'prisao', oque: 'entregar_se' } as Acao}>Entregar-se à Justiça</BotaoAcao>
+    </section>
+  );
 }
 
 /* ============================================================ Em paralelo */

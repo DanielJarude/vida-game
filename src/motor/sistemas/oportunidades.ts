@@ -23,7 +23,7 @@ import { conviteDaEspecialidade } from './medicina';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Oportunidade, TipoOportunidade, Vida } from '../tipos';
-import { escrever, idade, idadePessoa, lembrarCom, marcarFato, novoId, parentes, temFato, vinculosVivos } from '../nucleo';
+import { escrever, idade, idadePessoa, lembrarCom, marcarFato, novoId, parentes, temFato, vinculosVivos, somarExperiencia } from '../nucleo';
 import { ocupacao, ocupacaoOuNula, type Ocupacao } from '../dados/ocupacoes';
 import { cursoOuNulo } from '../dados/cursos';
 import { municipio, nivelDeOferta } from '../dados/lugares';
@@ -312,7 +312,7 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
     case 'temporario': {
       const agro = o.ocupacaoId === 'trabalhador_rural';
       const trilha = agro ? 'agro' : 'comercio';
-      v.trabalho.experiencia[trilha] = (v.trabalho.experiencia[trilha] ?? 0) + 3;
+      somarExperiencia(v, trilha, 3);
       v.financas.conta += agro ? 5200 : 4600;
       if (!temFato(v, 'primeiro_emprego')) { marcarFato(v, 'primeiro_emprego'); marcar(v, 'primeiro_emprego', `Primeiro trabalho: temporário ${agro ? 'na colheita' : 'no comércio'}, aos ${idade(v)}.`, 2, { trilha }); }
       const efetivado = !agro && r.chance(0.3 + v.personalidade.tracos.disciplina / 300);

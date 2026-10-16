@@ -10,7 +10,8 @@
  */
 
 import type { Vida } from '../tipos';
-import { idadePessoa, vinculosVivos } from '../nucleo';
+import { idade, idadePessoa, vinculosVivos } from '../nucleo';
+import { anosDePratica } from './frentes';
 import { tipoNegocio } from '../dados/negocios';
 import { NOME_PRIORIDADE } from './politica';
 import { infoPet } from './pets';
@@ -47,6 +48,44 @@ export function verificarCoerencia(v: Vida, desde = 0): string[] {
     if (!oc || oc.trilha !== 'atleta') out.push(`Atleta profissional ${es.clube ? `do ${es.clube} ` : ''}sem contrato de atleta.`);
   }
   if (!Number.isFinite(v.financas.conta)) out.push('Conta bancária não é um número.');
+  out.push(...coerenciaTemporal(v));
   for (const e of v.biografia.slice(desde)) if (TEXTO_QUEBRADO.test(e.texto)) out.push(`Texto quebrado na Linha da Vida: "${e.texto}"`);
+  return out;
+}
+
+/**
+ * REWORK 5 — INVARIANTES DE TEMPO (o playtest viu 25 anos de futebol aos 17 e 3,7 bilhões de visualizações num post):
+ * nenhuma duração cabe além da vida; nenhuma temporada se repete; nenhuma pena termina antes de começar; o preso não
+ * tem emprego de carteira no regime fechado; a rede não passa do tamanho do mundo.
+ */
+export function coerenciaTemporal(v: Vida): string[] {
+  const out: string[] = [];
+  const i = idade(v);
+  for (const [d, f] of Object.entries(v.caminhos.frentes)) {
+    if (!f) continue;
+    if (f.tInicio < v.eu.tNasc) out.push(`A prática de ${d} começou antes do nascimento.`);
+    if (anosDePratica(v, f) > i) out.push(`${anosDePratica(v, f)} anos de prática de ${d} aos ${i}.`);
+  }
+  for (const [t, m] of Object.entries(v.trabalho.experiencia)) if (m > Math.max(0, i - 9) * 12 + 12) out.push(`${Math.floor(m / 12)} anos de experiência em ${t} aos ${i}.`);
+  const es = v.caminhos.esporte;
+  for (const c of [es, ...(v.caminhos.carreirasEsportivas ?? [])]) {
+    if (!c) continue;
+    if (c.tInicio < v.eu.tNasc + 48) out.push(`Carreira de ${c.modalidade} começou antes dos 4 anos.`);
+    const anos = (c.temporadas ?? []).map(x => x.ano);
+    if (new Set(anos).size !== anos.length) out.push(`Temporada repetida na carreira de ${c.modalidade}.`);
+    const duracao = Math.floor(((c.tFim ?? v.t) - c.tInicio) / 12) + 1;
+    if (anos.length > duracao + 1) out.push(`${anos.length} temporadas em ${duracao} anos de carreira de ${c.modalidade}.`);
+  }
+  const pr = v.justica?.prisao;
+  if (pr) {
+    if (pr.tFim < pr.tInicio) out.push('A pena termina antes de começar.');
+    if (pr.regime === 'fechado' && v.trabalho.atual && v.trabalho.atual.contrato !== 'informal') out.push('Preso em regime fechado com emprego de carteira.');
+  }
+  if (v.justica?.prisao && v.justica.foragido) out.push('Preso e foragido ao mesmo tempo.');
+  for (const c of Object.values(v.redes?.contas ?? {})) {
+    if (!c) continue;
+    if (c.seguidores > 1_000_000_000) out.push(`Conta com ${c.seguidores} seguidores.`);
+    for (const p of c.publicacoes) if (p.alcance > 300_000_000) out.push(`Publicação com ${p.alcance} visualizações.`);
+  }
   return out;
 }

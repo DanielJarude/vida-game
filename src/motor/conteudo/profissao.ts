@@ -652,13 +652,19 @@ function consequenciaDaProposta(c: Ctx, p: PropostaDeClube): string {
   const sal = p.espaco === 'reserva' && p.salarioTitular > p.salario
     ? `Salário de ${f(p.salario)} por mês para começar (${f(p.salarioTitular)} se ganhar a posição), contrato de ${anos}. Clube maior, briga por posição.`
     : `Salário de ${f(p.espaco === 'titular' ? p.salarioTitular : p.salario)} por mês, contrato de ${anos}${p.espaco === 'titular' ? ', e chance real de jogar' : ''}.`;
+  // REWORK 5: os dois dinheiros da transferência, cada um com o seu dono.
+  const es = c.v.caminhos.esporte;
+  const liga = es ? ` Liga: ${divisaoDe(es.modalidade, p.nivel, lá)}${fora ? `, ${noPais(lá)}` : ''}.` : '';
+  const papel = p.espaco === 'titular' ? ' Papel esperado: titular.' : ' Papel esperado: brigar por posição.';
+  const dinheiros = (p.taxa ? ` ${cap(oClube(p.clube))} paga ${f(p.taxa)} ${es ? aoClube(es.clube) : 'ao seu clube'} pela transferência — esse dinheiro é entre os clubes, não seu.` : '') + (p.luvas ? ` Para você, luvas de ${f(p.luvas)} na assinatura.` : '');
+  const extra = `${liga}${papel}${dinheiros}`;
   if (fora) {
     const lingua = perfilDoPais(lá).idiomas[0];
     const mesmaLingua = linguasDaPessoa(c.v).includes(lingua);
     const juntos = comFamilia(c.v) ? ' Quem mora com você vai junto.' : '';
-    return `${sal} Seria mudar de país: ${municipio(p.municipioId).nome}, ${noPais(lá)} — ${mesmaLingua ? 'a mesma língua' : `outra língua (${lingua})`}, outra moeda; o clube cuida do visto.${juntos}`;
+    return `${sal}${extra} Seria mudar de país: ${municipio(p.municipioId).nome}, ${noPais(lá)} — ${mesmaLingua ? 'a mesma língua' : `outra língua (${lingua})`}, outra moeda; o clube cuida do visto.${juntos}`;
   }
-  return p.municipioId !== c.v.moradia.municipioId ? `${sal} Mudança para ${municipio(p.municipioId).nome}: quem mora com você vai junto.` : sal;
+  return p.municipioId !== c.v.moradia.municipioId ? `${sal}${extra} Mudança para ${municipio(p.municipioId).nome}: quem mora com você vai junto.` : `${sal}${extra}`;
 }
 
 /** Para onde um servidor pode pedir remoção: perto da família, e só se o órgão tem onde pôr. */

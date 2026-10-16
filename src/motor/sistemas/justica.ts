@@ -157,8 +157,12 @@ function sentenca(v: Vida, r: Rng): void {
   const fechado = Math.round(anos * 12 * (rein ? 0.45 : 0.3));
   const inicio = presoAntes ? presoAntes.tInicio : v.t;
   const fim = Math.max(v.t + 6, inicio + fechado);
-  prender(v, fim, anos >= 8 || presoAntes ? 'fechado' : 'semiaberto', 'pena');
-  escrever(v, { texto: `Condenad${flex(ge(v), 'o', 'a', 'e')} a ${anos} anos de prisão${presoAntes ? ', depois de esperar o julgamento preso' : ''}. A pena começa fechada; o regime abre com o tempo e o comportamento.`.replace('preso', flex(ge(v), 'preso', 'presa', 'prese')), relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+  const regime = anos >= 8 || presoAntes ? 'fechado' : 'semiaberto';
+  prender(v, fim, regime, 'pena');
+  j.prisao!.penaMeses = anos * 12;
+  if (presoAntes) j.prisao!.regime = 'fechado';
+  // REWORK 5: o texto dizia "a pena começa fechada" também quando o regime era o semiaberto.
+  escrever(v, { texto: `Condenad${flex(ge(v), 'o', 'a', 'e')} a ${anos} anos de prisão${presoAntes ? ', depois de esperar o julgamento preso' : ''}. ${regime === 'fechado' ? 'A pena começa fechada; o regime abre com o tempo e o comportamento.' : 'A pena começa no semiaberto: trabalho de dia, a unidade à noite.'}`.replace('preso', flex(ge(v), 'preso', 'presa', 'prese')), relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
   marcar(v, 'prisao', `Condenação: ${anos} anos de prisão.`, 3);
 }
 
@@ -198,6 +202,7 @@ function prender(v: Vida, tFim: number, regime: 'fechado' | 'semiaberto', motivo
 function soltar(v: Vida, motivo: string): void {
   const j = v.justica!;
   const anos = Math.max(1, Math.round((v.t - (j.prisao?.tInicio ?? v.t)) / 12));
+  const preparou = j.prisao?.preparouSaida !== undefined;
   const internacao = idade(v) < 19 && v.fatos['internado'] !== undefined && !v.fatos['esteve_preso'];
   j.prisao = undefined;
   j.tSaida = v.t;
@@ -226,8 +231,9 @@ function soltar(v: Vida, motivo: string): void {
   marcar(v, 'saida_prisao', texto, 3);
   abalar(v, 'a saída', 10, -6);
   // Programas de egressos existem — nem sempre, nem em todo lugar.
-  if (!internacao && r0(v) < 0.6) {
-    novaOportunidade(v, { tipo: 'reinsercao', ocupacaoId: ['aux_limpeza', 'estoquista', 'ajudante_obras', 'cooperado_reciclagem', 'aux_cozinha'][Math.floor(r0(v) * 5)], meses: 24, chave: 'reinsercao', bonus: 0.3, titulo: 'Um programa para quem saiu',
+  // Quem preparou a saída dentro (REWORK 5: o curso e a carta do programa) sai com a porta já aberta.
+  if (!internacao && (preparou || r0(v) < 0.6)) {
+    novaOportunidade(v, { tipo: 'reinsercao', ocupacaoId: ['aux_limpeza', 'estoquista', 'ajudante_obras', 'cooperado_reciclagem', 'aux_cozinha'][Math.floor(r0(v) * 5)], meses: 24, chave: 'reinsercao', bonus: preparou ? 0.5 : 0.3, titulo: 'Um programa para quem saiu',
       texto: 'Um programa de apoio a egressos tem empresas parceiras que contratam quem cumpriu pena. Carteira assinada, salário de começo e ninguém perguntando duas vezes.' });
   }
 }
@@ -277,7 +283,8 @@ export function processarJustica(v: Vida, r: Rng): void {
     if (v.fatos['remicao_trabalho'] !== undefined) v.financas.conta += 3200; // o pecúlio de quem trabalhou dentro
     if (v.fatos['remicao_estudo'] !== undefined) v.mente.cognicao = clamp(v.mente.cognicao + 1);
   }
-  if (p.regime === 'fechado' && anos >= 1 && j.antecedentes.some(a => a.desfecho === 'prisao') && v.t >= p.tInicio + Math.round((p.tFim - p.tInicio) * 0.6)) {
+  // A progressão pede o tempo E o comportamento (REWORK 5: a disciplina de `prisao`).
+  if (p.regime === 'fechado' && anos >= 1 && (p.disciplina ?? 70) >= 40 && j.antecedentes.some(a => a.desfecho === 'prisao') && v.t >= p.tInicio + Math.round((p.tFim - p.tInicio) * 0.6)) {
     p.regime = 'semiaberto';
     escrever(v, { texto: 'A pena progrediu para o semiaberto: trabalho de dia, a unidade à noite.', relevancia: 'biografia', tema: 'trabalho' });
   }

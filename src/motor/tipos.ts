@@ -69,6 +69,8 @@ export interface Pessoa {
   genitores?: string[];
   /** Um momento difícil pelo qual a pessoa está passando (abre "estar junto" como ação). */
   aperto?: Aperto;
+  /** REWORK 5 (mundo vivo): quantos filhos a pessoa teve fora da família do jogador (o amigo que virou pai). */
+  nFilhos?: number;
   /** Vida própria simplificada (descendentes e quem importa): formação, trabalho, marcos. */
   vida?: VidaNpc;
   /** Gestação de uma pessoa que não é o jogador (filha, nora, genro...). */
@@ -791,8 +793,10 @@ export interface Candidatura {
 export interface Trabalho {
   atual?: Emprego;
   historico: (Emprego & { tFim: number; motivo: string })[];
-  /** Meses de experiência por trilha profissional. */
+  /** Meses de experiência por trilha profissional. Só se soma por `somarExperiencia` (no máximo 12 por ano de calendário). */
   experiencia: Record<string, number>;
+  /** REWORK 5: quanto cada trilha já ganhou no ano corrente (`ano` = ano de calendário) — o teto de 12 meses por ano. */
+  expAno?: { ano: number; m: Record<string, number> };
   candidaturas: Candidatura[];
   /** Meses de contribuição ao INSS. */
   contribuicao: number;
@@ -1420,6 +1424,9 @@ export interface CarreiraEsportiva {
   reputacao?: number;
   /** As últimas temporadas, em poucos números (as mais antigas saem). */
   temporadas?: Temporada[];
+  /** REWORK 5: os números da carreira INTEIRA (as temporadas guardam só as 30 últimas) e as transferências com taxa. */
+  totais?: { temporadas: number; partidas: number; gols: number; assistencias: number; minutos: number };
+  transferencias?: { t: number; de: string; para: string; taxa: number }[];
   /** O salário do contrato atual (fonte única: `esporte.salarioDoContrato`). */
   salarioContrato?: number;
   /**
@@ -1460,6 +1467,12 @@ export interface PropostaDeClube {
   t: number;
   /** Até quando vale a resposta. */
   validaAte: number;
+  /**
+   * REWORK 5 — o dinheiro da transferência, separado do seu: `taxa` é o que o clube que compra PAGA ao clube que vende
+   * (não entra na sua conta); `luvas` é o que VOCÊ recebe na assinatura. Ausentes: sem taxa (livre, empréstimo, liberação).
+   */
+  taxa?: number;
+  luvas?: number;
   /** De onde veio (ATT Mundo: 'exterior' é o clube de outro país que buscou quem brilha na elite): o mercado reagiu à temporada, o empresário buscou (maior, menor), o clube quis liberar, a volta de quem estava sem clube. */
   origem: 'mercado' | 'maior' | 'menor' | 'liberacao' | 'sem_clube' | 'emprestimo' | 'compra' | 'exterior';
 }
@@ -1656,6 +1669,8 @@ export interface Temporada {
   colocacao: number;
   /** Meses fora por lesão. */
   mesesFora: number;
+  /** REWORK 5 (futebol): os minutos em campo na temporada (titular joga quase o jogo todo; quem entra, o fim). */
+  minutos?: number;
   /** Basquete: pontos, rebotes e assistências POR JOGO (a função em quadra decide o perfil). */
   pontos?: number;
   rebotes?: number;
@@ -2457,8 +2472,18 @@ export interface Justica {
   antecedentes: { t: number; categoria: CategoriaIlicita; desfecho: 'socioeducativa' | 'alternativa' | 'prisao' | 'absolvicao'; anos?: number }[];
   /** Processo em andamento (a sentença sai em `tJulgamento`). */
   processo?: { tInicio: number; tJulgamento: number; categoria: CategoriaIlicita; defesa: 'publica' | 'particular' };
-  /** Pena de prisão em cumprimento. */
-  prisao?: { tInicio: number; tFim: number; regime: 'fechado' | 'semiaberto' };
+  /**
+   * Pena de prisão em cumprimento. REWORK 5 (a prisão como camada jogável, `sistemas/prisao`): a pena da sentença em meses,
+   * a disciplina (0..100), o que já foi remido, a facção (aceita ou recusada), a situação do pavilhão à espera de resposta,
+   * o último pedido à defensoria e a saída preparada. Todos opcionais (saves antigos seguem válidos).
+   */
+  prisao?: {
+    tInicio: number; tFim: number; regime: 'fechado' | 'semiaberto';
+    penaMeses?: number; disciplina?: number; remidos?: number; faccao?: 'dentro' | 'recusou';
+    pendente?: 'faccao' | 'briga' | 'motim'; tPendente?: number; assistencia?: number; preparouSaida?: number;
+  };
+  /** REWORK 5: fugiu (ou não voltou do semiaberto): o resto da pena espera; a recaptura pode vir a qualquer ano. */
+  foragido?: { t: number; restante: number };
   /** Pena alternativa em cumprimento (prestação de serviços). */
   alternativa?: { tFim: number };
   /** Saiu da prisão em (a volta tem suas próprias portas e barreiras). */

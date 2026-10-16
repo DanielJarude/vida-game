@@ -86,6 +86,8 @@ describe('F/G — a semana: "cabe" e "não cabe" vêm da mesma conta', () => {
     v.momento = null;
     v.educacao.basica = { ...(v.educacao.basica as NonNullable<Vida['educacao']['basica']>), integrado: 'tec_mecanica' };
     v.rotinas = [{ id: 'futebol', tInicio: v.t, nivel: nivelBola }];
+    // O caso do playtest era de estresse baixo: a condição é montada (não depende do caminho da vida até os 15).
+    v.mente.estresse = Math.min(v.mente.estresse, 22);
     return v;
   };
 

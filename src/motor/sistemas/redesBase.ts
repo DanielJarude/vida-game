@@ -74,12 +74,15 @@ export function nomeDaRede(v: Vida): number {
   return Math.max(0, Math.min(80, melhor));
 }
 
-/** "1,2 mil", "34 mil", "1,1 milhão". */
+/** "1,2 mil", "34 mil", "1,1 milhão", "2,3 bilhões" (REWORK 5: sem "3736 milhões", sem "1000 mil"). */
 export function seguidoresEmPalavras(n: number): string {
-  if (n < 1000) return String(Math.round(n));
-  if (n < 1_000_000) { const k = n / 1000; return `${k < 10 ? k.toFixed(1).replace('.', ',').replace(',0', '') : Math.round(k)} mil`; }
-  const m = n / 1_000_000;
-  return `${m < 10 ? m.toFixed(1).replace('.', ',').replace(',0', '') : Math.round(m)} ${m < 2 ? 'milhão' : 'milhões'}`;
+  const x = Math.max(0, Math.round(n));
+  const curto = (k: number) => k < 10 ? k.toFixed(1).replace('.', ',').replace(',0', '') : String(Math.round(k));
+  if (x < 1000) return String(x);
+  if (x < 999_500) return `${curto(x / 1000)} mil`;
+  if (x < 999_500_000) { const m = x / 1_000_000; return `${curto(m)} ${m < 1.95 ? 'milhão' : 'milhões'}`; }
+  const b = x / 1_000_000_000;
+  return `${curto(b)} ${b < 1.95 ? 'bilhão' : 'bilhões'}`;
 }
 
 /**

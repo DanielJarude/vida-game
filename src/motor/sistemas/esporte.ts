@@ -363,8 +363,27 @@ export function criarProposta(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 
     salario: origem === 'emprestimo' ? atual : salarioDoContrato(v, e, nivel, espaco, clube, paisDaCidade(municipioId)), salarioTitular: origem === 'emprestimo' ? atual : salarioDoContrato(v, e, nivel, 'titular', clube, paisDaCidade(municipioId)),
     t: v.t, validaAte: v.t + 11, origem
   };
+  // REWORK 5: a transferência tem DOIS dinheiros — o que um clube paga ao outro (a taxa) e o que você ganha (luvas).
+  const comContrato = e.contratoAte !== undefined && e.contratoAte > v.t;
+  if (['mercado', 'maior', 'menor', 'exterior', 'compra'].includes(origem) && comContrato && (futebol || perfilDe(e.modalidade).estrutura === 'clube')) {
+    p.taxa = taxaDeTransferencia(v, e, p);
+    p.luvas = Math.round(p.taxa * 0.06 / 100) * 100;
+  } else if (origem === 'sem_clube' || origem === 'mercado') p.luvas = Math.round(p.salarioTitular * 1.5 / 100) * 100;
   e.proposta = p;
   return p;
+}
+
+/**
+ * A TAXA de uma transferência (o que o clube comprador paga ao clube vendedor): o salário que o mercado oferece × o
+ * tempo de contrato que falta (contrato longo custa mais para tirar) × a idade (o jovem vale o futuro; o veterano, o
+ * presente) × o nome. Calibração do jogo, em poder de compra local — não uma tabela real.
+ */
+export function taxaDeTransferencia(v: Vida, e: CarreiraEsportiva, p: Pick<PropostaDeClube, 'salarioTitular' | 'nivel'>): number {
+  const i = idade(v);
+  const restante = Math.max(0, ((e.contratoAte ?? v.t) - v.t) / 12);
+  const jovem = i <= 21 ? 2 : i <= 25 ? 1.6 : i <= 29 ? 1.1 : i <= 32 ? 0.6 : 0.3;
+  const nome = 0.6 + clamp(e.reputacao ?? 30, 0, 100) / 80;
+  return Math.round(p.salarioTitular * 12 * (0.6 + Math.min(3, restante) * 0.6) * jovem * nome / 1000) * 1000;
 }
 
 /**
@@ -374,6 +393,7 @@ export function criarProposta(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 
  */
 export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube): void {
   if (p.origem === 'emprestimo') { emprestar(v, e, p); return; }
+  const de = e.clube;
   e.clube = p.clube;
   e.nivel = p.nivel;
   e.espaco = p.espaco;
@@ -381,6 +401,10 @@ export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube
   e.proposta = undefined;
   e.emprestimo = undefined;
   e.clausulaTitular = p.espaco === 'reserva' && p.salarioTitular > p.salario ? p.salarioTitular : undefined;
+  // As luvas são suas; a taxa é do clube que vendeu (fica na história da carreira, não na sua conta).
+  if (p.luvas) v.financas.conta += p.luvas;
+  if (p.taxa && de !== p.clube) (e.transferencias ??= []).push({ t: v.t, de, para: p.clube, taxa: p.taxa });
+  if (e.transferencias && e.transferencias.length > 12) e.transferencias.splice(0, e.transferencias.length - 12);
   if (e.modalidade === 'futebol' || perfilDe(e.modalidade).estrutura === 'clube') e.municipioId = p.municipioId;
   const emp = v.trabalho.atual;
   if (emp && OCUPACOES_DE_ATLETA.includes(emp.ocupacaoId)) {
@@ -565,7 +589,11 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   if (e.modalidade === 'volei') jogarTemporadaVolei(v, r, e, t, nota);
   if (e.modalidade === 'natacao' || e.modalidade === 'atletismo') jogarProvas(v, r, e, t, nota, h);
   if (e.modalidade === 'lutas') jogarLutas(v, r, t, nota);
+  if (futebol) t.minutos = Math.round(titular * (78 + r.next() * 10) + (partidas - titular) * (18 + r.next() * 10));
   (e.temporadas ??= []).push(t);
+  // REWORK 5: os totais da carreira não se perdem quando a lista de temporadas corta as mais antigas.
+  const tot = (e.totais ??= { temporadas: 0, partidas: 0, gols: 0, assistencias: 0, minutos: 0 });
+  tot.temporadas++; tot.partidas += t.partidas; tot.gols += t.gols; tot.assistencias += Math.round(t.assistencias); tot.minutos += t.minutos ?? 0;
   // A carreira inteira cabe aqui (o histórico por clube e o palmarés leem daqui).
   if (e.temporadas.length > 30) e.temporadas.splice(0, e.temporadas.length - 30);
   // O nome no mercado: o que a temporada construiu (ou gastou). Divisão maior conta mais.
@@ -650,7 +678,7 @@ export function linhaDaTemporada(_v: Vida, t: Temporada, modalidade?: Dominio): 
   }
   if (!t.posicao) return `${nivelInd} · ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'} · ${podiosDe(t)} ${podiosDe(t) === 1 ? 'pódio' : 'pódios'}${t.colocacao <= 8 ? ` · melhor colocação: ${t.colocacao}º` : ''}${fora}`;
   const div = divisaoDoNivel(t.nivel);
-  const partes = [`${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}`, `${t.titular} como titular`];
+  const partes = [`${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}`, `${t.titular} como titular`, ...(t.minutos ? [`${t.minutos.toLocaleString('pt-BR')} minutos`] : [])];
   if (t.posicao === 'goleiro') partes.push(`${t.defesa ?? 0} sem sofrer gol`);
   else {
     if (t.gols || t.posicao === 'atacante' || t.posicao === 'ponta' || t.posicao === 'meia') partes.push(`${t.gols} ${t.gols === 1 ? 'gol' : 'gols'}`);

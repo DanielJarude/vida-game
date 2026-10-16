@@ -161,7 +161,8 @@ describe('3. prática esportiva → técnica → peneira → devolutiva → cons
     expect(dev.nivel).toBeDefined();
     expect(dev.texto).toMatch(/treinador/i);
     // Consequência: ou a base (a porta aberta), ou a marca do fracasso e o que falta.
-    if (dev.passou) expect(x.fatos['convite_base']).toBe(x.t);
+    // A porta aberta: o convite da base — ou, quando a decisão seguinte já foi respondida no mesmo laço, a própria base.
+    if (dev.passou) expect(x.fatos['convite_base'] === x.t || x.caminhos.esporte?.fase === 'base').toBe(true);
     else { expect(dev.falta).toBeTruthy(); expect(x.caminhos.marcas.some(m => m.tipo === 'fracasso')).toBe(true); }
   });
 

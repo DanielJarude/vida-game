@@ -35,6 +35,9 @@ import { processarTrabalho } from './sistemas/trabalho';
 import { processarProfissao } from './sistemas/profissao';
 import { processarPolitica } from './sistemas/politica';
 import { processarRotinas } from './sistemas/rotinas';
+import { processarFundamentos } from './sistemas/perseguir';
+import { processarPrisao } from './sistemas/prisao';
+import { processarMundoVivo } from './sistemas/mundoVivo';
 import { processarConcursos } from './sistemas/concurso';
 import { processarEsporte, treinoProfissional } from './sistemas/esporte';
 import { processarLesoes } from './sistemas/lesoes';
@@ -123,6 +126,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarCurso(v, r);
   processarOab(v, r);
   processarJustica(v, r);
+  processarPrisao(v);
   processarTrabalho(v, r);
   // A segunda trajetória (a paralela) e as pausadas: experiência, freguesia, prazo (`paralelas`).
   processarParalelas(v);
@@ -139,6 +143,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarPausa(v);
   processarNegocio(v, r);
   treinoProfissional(v, r);
+  // O programa de fundamentos ANTES das rotinas: o ano de treino conta como prática (a frente não 'esfria' no mesmo ano).
+  processarFundamentos(v);
   processarRotinas(v, r);
   processarEstetica(v);
   // A formação como lugar: o que ficou para trás com a escola, o professor que repara.
@@ -172,6 +178,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarDescendentes(v, r);
   recalcularConvivio(v);
   processarOportunidades(v, r);
+  processarMundoVivo(v);
   processarIlicito(v, r);
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);

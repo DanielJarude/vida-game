@@ -32,7 +32,7 @@
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { CarreiraMilitar, Emprego, Especialidade, Forca, Vida } from '../tipos';
-import { escrever, idade, marcarFato, parceiro, temFato } from '../nucleo';
+import { escrever, idade, marcarFato, parceiro, temFato, somarExperiencia } from '../nucleo';
 import { ocupacao, type Ocupacao } from '../dados/ocupacoes';
 import { ESCOLA, ESPECIALIDADES, GUARNICOES, NOME_FORCA, SIGLA_DA, guarnicoesDoPais, temEscolasProprias } from '../dados/forcas';
 import { PAIS_PADRAO } from '../mundo/registro';
@@ -213,7 +213,7 @@ export function processarMilitar(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): voi
 
   // A especialidade é ofício: pratica-se e conta, pela metade, na vida civil.
   const esp = m.especialidade ? ESPECIALIDADES[m.especialidade] : undefined;
-  if (esp?.trilhaCivil) v.trabalho.experiencia[esp.trilhaCivil] = (v.trabalho.experiencia[esp.trilhaCivil] ?? 0) + 5;
+  if (esp?.trilhaCivil) somarExperiencia(v, esp.trilhaCivil, 5);
   if (esp?.pratica) praticar(v, r, esp.pratica as never, 0.5, 1.1);
 
   // Temporário: 12 meses, prorrogáveis até 8 anos (Lei 13.954/2019). Não há estabilidade.

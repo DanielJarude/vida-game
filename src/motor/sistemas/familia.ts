@@ -328,6 +328,8 @@ function gestanteDoCasal(v: Vida, p: Pessoa): 'eu' | 'parceiro' | null {
 
 export function processarConcepcao(v: Vida, r: Rng): void {
   if (gestacaoEmCurso(v)) return;
+  // REWORK 5: o regime fechado separa o casal (a vida não segue "normal" dentro da cela).
+  if (v.justica?.prisao?.regime === 'fechado') return;
   const par = parceiro(v) ?? vinculosVivos(v).find(x => x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto);
   if (!par || !par.vin.romance) return;
   // Sem gravidez entre adolescente e adulto, nem antes dos 16.

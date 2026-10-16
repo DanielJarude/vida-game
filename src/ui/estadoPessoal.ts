@@ -46,6 +46,30 @@ export function palavraTendencia(t: Tendencia): string | undefined {
   return t === 'melhorando' ? 'vem melhorando' : t === 'piorando' ? 'vem piorando' : t === 'estavel' ? 'estável' : undefined;
 }
 
+/**
+ * REWORK 5 — o que cada dimensão MUDA na vida (o motor de verdade a lê; não há atributo decorativo): a mesma ideia de
+ * `CONSUMIDORES` das dimensões pessoais.
+ */
+export const USO_DIMENSAO: Record<Dimensao, string> = {
+  humor: 'Pesa na vontade de praticar e estudar, no rendimento no trabalho e no jeito com as pessoas.',
+  cabeca: 'Cabeça cheia por muito tempo cobra do corpo, derruba o desempenho e aumenta as brigas em casa.',
+  saude: 'Decide quanto o corpo aguenta: treino, jornada, risco de doença — e quanto tempo se vive.'
+};
+
+/**
+ * A TRAJETÓRIA de uma dimensão (REWORK 5): o registro anual que o motor já guarda (`mente.historico`, os últimos 8
+ * aniversários) mais o agora — 0..100, "mais alto é melhor" (a cabeça vem invertida). A tela desenha a linha; nenhum
+ * número aparece.
+ */
+export function trajetoria(v: Vida, d: Dimensao | 'forma' | 'cognicao' | 'aparencia'): number[] {
+  const h = v.mente.historico ?? [];
+  const de = (x: { humor: number; cabeca: number; saude: number; forma?: number; cognicao?: number; aparencia?: number }) =>
+    d === 'humor' ? x.humor : d === 'cabeca' ? 100 - x.cabeca : d === 'saude' ? x.saude : x[d];
+  const agora = d === 'humor' ? v.mente.felicidade : d === 'cabeca' ? 100 - v.mente.estresse : d === 'saude' ? v.corpo.saude : d === 'forma' ? v.corpo.forma : d === 'cognicao' ? v.mente.cognicao : v.corpo.aparencia;
+  const pontos = h.filter(x => x.t < v.t).map(de).filter((x): x is number => typeof x === 'number');
+  return [...pontos, agora].map(x => Math.max(0, Math.min(100, x)));
+}
+
 export interface LeituraDimensao {
   d: Dimensao;
   nome: string;

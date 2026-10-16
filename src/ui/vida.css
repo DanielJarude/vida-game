@@ -66,7 +66,7 @@ details summary { cursor: pointer; }
 
 /* ------------------------------------------------------------------ Botões */
 .botao {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  display: inline-flex; max-width: 100%; align-items: center; justify-content: center; gap: var(--space-2);
   min-height: var(--touch-target); padding: 0 var(--space-4); border-radius: var(--radius-md);
   font-weight: var(--weight-medium); font-size: var(--type-body); text-align: left;
   transition: background var(--motion-fast) var(--ease-out), color var(--motion-fast), box-shadow var(--motion-fast);
@@ -216,7 +216,7 @@ details summary { cursor: pointer; }
 .cabecalho__eu-texto span { color: var(--text-muted); font-size: var(--type-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .palco { display: grid; grid-template-columns: minmax(0, 1fr) var(--aside-width); gap: var(--space-9); max-width: var(--content-max); margin: 0 auto; padding: var(--space-7) var(--space-6) var(--space-9); }
-.conteudo { min-width: 0; max-width: 780px; }
+.conteudo { min-width: 0; max-width: 780px; overflow-x: clip; }
 .agora { position: sticky; top: calc(var(--header-height) + var(--space-6)); align-self: start; max-height: calc(100dvh - var(--header-height) - var(--space-9)); overflow-y: auto; padding-left: var(--space-5); border-left: 1px solid var(--rule); }
 
 /* Avançar: o fim natural da página (FIX pós-playtest humano — fixo por cima, cobria a trilha de Formação). É o âmbar

@@ -36,7 +36,7 @@ import { areaProfissional } from '../dados/areasProfissionais';
 import { OFICIOS } from './oficios';
 import { comArtigo, guardarOrganizacao, naOrganizacao, vagaDaOrganizacao } from './organizacoes';
 import type { Dominio, Emprego, Vida } from '../tipos';
-import { emRecessao, escrever, idade, marcarFato, temFato } from '../nucleo';
+import { emRecessao, escrever, idade, marcarFato, temFato, somarExperiencia } from '../nucleo';
 import { ajusteClientela, ajusteContratacao, fatorDemissao, reajusteReal } from './economia';
 import { categoriaDoVeiculo, veiculoUtil } from './veiculos';
 import { OCUPACOES, AFINS, comissaoDe, daTrilha, ocupacao, ocupacaoOuNula, ROTULO_TRILHA, type Ocupacao } from '../dados/ocupacoes';
@@ -522,7 +522,7 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   const tPosto = e.tPosto ?? e.tInicio;
 
   // Experiência, ofício e contribuição
-  t.experiencia[oc.trilha] = (t.experiencia[oc.trilha] ?? 0) + (e.carga === 'parcial' ? 8 : 12);
+  somarExperiencia(v, oc.trilha, e.carga === 'parcial' ? 8 : 12);
   const pratica = PRATICA_DO_TRABALHO[oc.trilha];
   if (pratica) for (const [d, w] of Object.entries(pratica) as [Dominio, number][]) praticar(v, r, d, w, 1);
   // A área de aprofundamento exercita a sua competência (sorteio derivado: não mexe no acaso do resto da vida).

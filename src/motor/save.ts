@@ -504,6 +504,7 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
   // REWORK 4 (campos opcionais da v20): se vierem, vêm inteiros. Saves sem eles abrem como antes.
   { const r4 = validarVidaVivida(d); if (r4) return r4; }
   { const rh = validarPlaytestHumano(d); if (rh) return rh; }
+  { const r5 = validarRework5(d); if (r5) return r5; }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -1483,5 +1484,32 @@ function validarPlaytestHumano(d: Record<string, unknown>): string | null {
   for (const vin of Object.values(d.vinculos as Record<string, Record<string, unknown>>)) {
     if (!opcional(vin.cenas, x => Array.isArray(x) && x.length <= 8 && x.every(ehTexto))) return 'Cenas da relação inválidas.';
   }
+  return null;
+}
+
+/**
+ * REWORK 5 — o que é novo é opcional (saves antigos seguem válidos, sem migração): a pena jogável, a fuga, a experiência
+ * do ano, a transferência com taxa, os totais da carreira esportiva, os filhos do amigo. Quando existe, tem forma.
+ */
+function validarRework5(d: Record<string, unknown>): string | null {
+  const j = d.justica as Record<string, unknown> | undefined;
+  const pr = j?.prisao as Record<string, unknown> | undefined;
+  if (pr) {
+    for (const k of ['penaMeses', 'disciplina', 'remidos', 'tPendente', 'assistencia', 'preparouSaida']) if (!opcional(pr[k], finito)) return 'Pena inválida.';
+    if (!opcional(pr.faccao, x => x === 'dentro' || x === 'recusou')) return 'Pena inválida.';
+    if (!opcional(pr.pendente, x => x === 'faccao' || x === 'briga' || x === 'motim')) return 'Pena inválida.';
+  }
+  const f = j?.foragido as Record<string, unknown> | undefined;
+  if (f !== undefined && (typeof f !== 'object' || !finito(f.t) || !finito(f.restante))) return 'Fuga inválida.';
+  const t = d.trabalho as Record<string, unknown>;
+  const ea = t.expAno as Record<string, unknown> | undefined;
+  if (ea !== undefined && (typeof ea !== 'object' || !finito(ea.ano) || typeof ea.m !== 'object' || !Object.values(ea.m as object).every(finito))) return 'Experiência do ano inválida.';
+  const es = (d.caminhos as Record<string, unknown>)?.esporte as Record<string, unknown> | undefined;
+  if (es) {
+    const tot = es.totais as Record<string, unknown> | undefined;
+    if (tot !== undefined && (typeof tot !== 'object' || !['temporadas', 'partidas', 'gols', 'assistencias', 'minutos'].every(k => finito(tot[k])))) return 'Totais da carreira inválidos.';
+    if (!opcional(es.transferencias, x => listaDe(x, q => finito(q.t) && ehTexto(q.de) && ehTexto(q.para) && finito(q.taxa)))) return 'Transferências inválidas.';
+  }
+  for (const p of Object.values(d.pessoas as Record<string, Record<string, unknown>>)) if (!opcional(p.nFilhos, finito)) return 'Pessoa inválida.';
   return null;
 }

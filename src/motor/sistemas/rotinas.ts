@@ -19,7 +19,7 @@ import { bonusDaAtividade } from './coisas';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Rotina, Traco, Vida } from '../tipos';
-import { escrever, filhos, idade, marcarFato, temFato, parceiro, parentes } from '../nucleo';
+import { escrever, filhos, idade, marcarFato, temFato, parceiro, parentes, somarExperiencia } from '../nucleo';
 import { bloqueio, type Veredito } from '../plausibilidade';
 import { ROTINAS_SOCIAIS } from './social';
 import { CUSTO_ROTINA } from './dinheiro';
@@ -549,7 +549,7 @@ export const ROTINAS: readonly ModeloRotina[] = [
       const o = oficioDaFamilia(v);
       if (!o) return;
       praticar(v, r, o.dominio, n === 2 ? 1.1 : 0.6, 1.15);
-      if (idade(v) >= 14) v.trabalho.experiencia[o.trilha] = (v.trabalho.experiencia[o.trilha] ?? 0) + (n === 2 ? 6 : 3);
+      if (idade(v) >= 14) somarExperiencia(v, o.trilha, n === 2 ? 6 : 3);
       v.financas.conta += n === 2 ? 1800 : 700;
       if (v.educacao.basica && n === 2) v.educacao.basica.desempenho = clamp(v.educacao.basica.desempenho - 3);
     }

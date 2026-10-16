@@ -165,13 +165,23 @@ export function materiasExtremas(v: Vida): { forte?: Dominio; fraca?: Dominio } 
 
 /* ------------------------------------------------------------- Palavras */
 
+/**
+ * REWORK 5 — os ANOS de prática de verdade (bug do playtest: 17 anos de idade, "há 25 anos" jogando futebol). `meses` é a
+ * prática PONDERADA pela intensidade (a pelada, o time da escola e a escolinha somam no mesmo ano) — serve ao aprendizado,
+ * não ao calendário. Os anos que se dizem são os do calendário desde que começou, e nunca mais que a intensidade justifica.
+ */
+export function anosDePratica(v: Vida, f: Frente): number {
+  const calendario = Math.max(0, (v.t - f.tInicio) / 12);
+  return Math.floor(Math.min(calendario, f.meses / 12));
+}
+
 /** Uma frase humana sobre uma frente ("Tem ouvido para música, mas pratica pouco"). */
 export function leituraDaFrente(v: Vida, d: Dominio): string {
   const f = v.caminhos.frentes[d];
   const m = modeloFrente(d);
   if (!f) return '';
   const e = estagioDe(f.habilidade);
-  const anos = Math.floor(f.meses / 12);
+  const anos = anosDePratica(v, f);
   const parado = (v.t - f.tUltimo) / 12;
   const apt = aptidao(v, d);
   const base = m.estagios[e];

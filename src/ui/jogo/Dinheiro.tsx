@@ -14,7 +14,7 @@ import { idade } from '../../motor/nucleo';
 import { balanco, rendaPropriaMensal } from '../../motor/sistemas/dinheiro';
 import { totalAplicado } from '../../motor/sistemas/investimentos';
 import { negocioAberto } from '../../motor/sistemas/negocio';
-import { BotaoAcao, Dado, Escolha, Linha } from '../comum';
+import { BotaoAcao, Dado, Escolha, Linha, Valor } from '../comum';
 import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoExtrato, leituraDoMes, type LeituraDoExtrato } from '../leituraMaterial';
 import { intencaoProfissional } from '../../motor/sistemas/intencao';
 
@@ -42,7 +42,7 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
         <div className="mes mes--dependente">
           <div className="mes__seu">
             <span className="rotulo-pequeno">O que é seu</span>
-            <strong className="valor-grande">{dinheiroCheio(Math.max(0, f.conta))}</strong>
+            <Valor className="valor-grande" valor={Math.max(0, f.conta)} />
             <p className="nota">{m.frase}</p>
           </div>
           {m.casa && (
@@ -108,7 +108,7 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
             <span className="balanca__valor">{dinheiroCurto(m.orcamento.despesa)}</span>
           </div>
           <p className={`balanca__resultado balanca__resultado--${m.sobra >= 0 ? 'bom' : 'ruim'}`}>
-            {m.sobra >= 0 ? 'Sobra' : 'Falta'} <strong>{dinheiroCheio(Math.abs(m.sobra))}</strong> por mês
+            {m.sobra >= 0 ? 'Sobra' : 'Falta'} <Valor valor={Math.abs(m.sobra)} /> por mês
           </p>
           <ul className="legenda">
             {m.entradas.map((e, k) => <li key={e.origem}><span className={`legenda__cor mes-barra__parte--entra-${k}`} aria-hidden />{e.origem}<span className="legenda__valor">+ {dinheiroCurto(e.valor)}</span></li>)}

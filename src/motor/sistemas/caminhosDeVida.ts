@@ -127,7 +127,7 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
       proximo: (() => {
         const fund = P('treino_fundamentos', d);
         const pediuTecnica = [...v.caminhos.devolutivas].reverse().find(x => x.tipo === 'peneira' && x.dominio === d && v.t - x.t <= 24)?.falta === 'tecnica';
-        if (t.nivel < 4 && pode(fund) && (pediuTecnica || !podeTentar(veredito))) return { rotulo: 'Um ano de treino de fundamentos, com treinador', acao: fund, porque: 'A técnica é o que a peneira mais pesa — e é o que este treino trabalha.' };
+        if (t.nivel < 4 && pode(fund) && (pediuTecnica || !podeTentar(veredito))) return { rotulo: 'Entrar num programa de fundamentos, com treinador (dura o próximo ano)', acao: fund, porque: 'A técnica é o que a peneira mais pesa — e é o que este treino trabalha.' };
         return podeTentar(veredito) ? { rotulo: 'Pedir um teste num clube', acao: pedir, porque: t.nivel >= 3 ? 'O nível já permite tentar.' : 'Dá para tentar — sabendo que ainda falta técnica.' } : { rotulo: 'Treinar mais antes do próximo teste', ir: 'tempo', porque: veredito.motivo };
       })()
     });

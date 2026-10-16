@@ -12,7 +12,7 @@ import type { Conteudo, Ctx, Resultado } from './base';
 import type { CategoriaIlicita, Especialidade, Pessoa, Vida } from '../tipos';
 import * as P from './papeis';
 import { estresse, fato, feliz, prox, tensao, custa } from './efeitos';
-import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, vinculosVivos } from '../nucleo';
+import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, somarExperiencia, temFato, vinculosVivos } from '../nucleo';
 import { CATEGORIAS, entrar, escalar, moita, parar } from '../sistemas/ilicito';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
 import { disponivel, pagar } from '../sistemas/dinheiro';
@@ -124,7 +124,7 @@ export const TRAJETORIAS: Conteudo[] = [
       { id: 'estudar', texto: 'Estudar (a escola e os cursos da unidade)', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Caderno emprestado, turma de gente de todas as idades, aula à tarde. Cada mês de estudo desconta dias da pena.', memoria: 'Na prisão, voltou a estudar.', efeito: () => { fato(c, 'remicao_decidida'); fato(c, 'remicao_estudo'); if (c.v.educacao.evadiu && !c.v.educacao.basica) { c.v.educacao.basica = { etapa: 'medio', serie: 1, rede: 'publica', desempenho: 50, reprovacoes: 0 }; c.v.educacao.evadiu = false; } if (!c.v.rotinas.some(r => r.id === 'leitura')) c.v.rotinas.push({ id: 'leitura', tInicio: c.v.t, nivel: 1 }); } }) },
       { id: 'trabalhar', texto: 'Trabalhar na unidade (cozinha, oficina, limpeza)', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: 'Você foi para a oficina. Pouco dinheiro, os dias contados a menos, e as mãos ocupadas.', memoria: 'Na prisão, trabalhou na oficina da unidade.', efeito: () => { fato(c, 'remicao_decidida'); fato(c, 'remicao_trabalho'); c.v.trabalho.experiencia['manutencao'] = (c.v.trabalho.experiencia['manutencao'] ?? 0) + 6; } }) },
+        resolver: c => ({ texto: 'Você foi para a oficina. Pouco dinheiro, os dias contados a menos, e as mãos ocupadas.', memoria: 'Na prisão, trabalhou na oficina da unidade.', efeito: () => { fato(c, 'remicao_decidida'); fato(c, 'remicao_trabalho'); somarExperiencia(c.v, 'manutencao', 6); } }) },
       { id: 'os_dois', texto: 'Os dois: estudar e trabalhar', comportamento: { disciplina: 2 }, disponivel: c => (c.v.personalidade.tracos.disciplina >= 5 ? true : 'Os dois ao mesmo tempo pedem uma disciplina que ainda não está lá.'),
         resolver: c => ({ texto: 'De manhã, a oficina; à tarde, a escola. À noite, cansaço — do bom, às vezes.', memoria: 'Na prisão, estudou e trabalhou.', efeito: () => { fato(c, 'remicao_decidida'); fato(c, 'remicao_estudo'); fato(c, 'remicao_trabalho'); } }) },
       { id: 'quieto', texto: 'Ficar na sua, contando os dias', resolver: c => ({ texto: 'Você ficou na sua. Os dias não passaram mais rápido por isso.', memoria: null, efeito: () => fato(c, 'remicao_decidida') }) }
@@ -302,7 +302,7 @@ export const TRAJETORIAS: Conteudo[] = [
     texto: c => `Duas safras ruins seguidas. ${c.v.caminhos.rural!.terra === 'arrendada' ? 'O arrendamento vence de qualquer jeito.' : 'A terra continua lá; o dinheiro, não.'} ${parceiro(c.v) ? `${parceiro(c.v)!.p.nome} pergunta se não é hora de mudar alguma coisa.` : ''}`,
     opcoes: [
       { id: 'diversificar', texto: 'Diversificar: horta, criação, venda direta na feira', comportamento: { coragem: 1 },
-        resolver: c => ({ texto: 'Você plantou o que não plantava e foi vender na feira da cidade.', memoria: 'Diversificou a produção depois de duas safras ruins.', efeito: () => { const ru = c.v.caminhos.rural!; ru.cultura = 'misto'; ru.anosRuins = 0; const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + 10); c.v.trabalho.experiencia['informal'] = (c.v.trabalho.experiencia['informal'] ?? 0) + 6; } }) },
+        resolver: c => ({ texto: 'Você plantou o que não plantava e foi vender na feira da cidade.', memoria: 'Diversificou a produção depois de duas safras ruins.', efeito: () => { const ru = c.v.caminhos.rural!; ru.cultura = 'misto'; ru.anosRuins = 0; const e = c.v.trabalho.atual; if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + 10); somarExperiencia(c.v, 'informal', 6); } }) },
       { id: 'cooperativa', texto: 'Entrar para a cooperativa', disponivel: c => (!c.v.caminhos.rural!.cooperativa ? true : false),
         resolver: c => ({ texto: 'Na cooperativa, o preço é combinado e a perda é dividida.', memoria: 'Entrou para a cooperativa agrícola.', efeito: () => { c.v.caminhos.rural!.cooperativa = true; c.v.caminhos.rural!.anosRuins = 0; } }) },
       { id: 'largar', texto: 'Largar a terra e ir trabalhar na cidade',

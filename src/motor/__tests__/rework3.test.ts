@@ -8,6 +8,7 @@
  * há acaso, o teste mede a chance, não o resultado de uma semente.
  */
 
+import { MATERIAS, garantirFrente as garantirMateria } from '../sistemas/frentes';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -258,7 +259,8 @@ describe('E. curso técnico → experiência → estágio/trabalho', () => {
     const sem = transacao(v, x => { x.educacao.vivencias = []; }).vida;
     expect(vivenciaQuePesa(sem, oc).bonus).toBe(0);
     // O fim do integrado abre a pergunta — com a vaga da área como uma das saídas.
-    v = transacao(v, x => { x.educacao.basica!.serie = 3; x.educacao.basica!.desempenho = 75; x.corpo.saude = 90; }).vida;
+    // O desempenho do ano é recalculado das matérias e da cabeça (não do número da ficha): a boa aluna é montada por elas.
+    v = transacao(v, x => { x.educacao.basica!.serie = 3; x.educacao.basica!.desempenho = 75; x.corpo.saude = 90; x.mente.estresse = 25; x.educacao.postura = 'dedicada'; for (const m of MATERIAS) { garantirMateria(x, m); x.caminhos.frentes[m]!.habilidade = 78; } }).vida;
     v = avancarAno(v).vida;
     if (v.momento?.situacaoId === 'if_depois') {
       expect(v.momento.opcoes.map(o => o.id)).toEqual(expect.arrayContaining(['area', 'faculdade', 'outro']));

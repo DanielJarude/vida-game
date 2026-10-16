@@ -90,11 +90,14 @@ import { disponibilidadeRede, executarRede, type OpRede } from './sistemas/redes
 import { disponibilidadeOficio, executarOficio, type OqueOficio } from './sistemas/noOficio';
 // FIX pós-REWORK 4: os verbos do ano letivo (estudar para a prova, a festa, o projeto, colar): `naFormacao`.
 import { disponibilidadeFormacao, executarFormacao, type OqueFormacao } from './sistemas/naFormacao';
+import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
 
 export type Acao =
+  /** REWORK 5: o que se faz cumprindo pena (ou foragido): a rotina de dentro e as respostas ao pavilhão (`sistemas/prisao`). */
+  | { tipo: 'prisao'; oque: OquePrisao }
   /** `resgatar`: a opção custa mais do que há na conta, e o jogador aceitou tirar das aplicações. */
   | { tipo: 'decidir'; opcaoId: string; resgatar?: boolean }
   /** Tirar das aplicações o que falta na conta e fazer (o jogador consentiu: nada é vendido sozinho). */
@@ -253,7 +256,12 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
   if (v.morte) return bloqueio('impossivel', 'Esta vida terminou.');
   if (v.momento && a.tipo !== 'decidir') return bloqueio('incompativel', 'Há uma decisão esperando por você.');
   const i = idade(v);
+  // REWORK 5: a porta CENTRAL da liberdade — o preso não segue vivendo a vida da rua (comprar carro, mudar de cidade,
+  // matricular-se, viajar); o foragido não aparece em cartório. Antes de qualquer outra regra.
+  const presa = bloqueioDaLiberdade(v, a.tipo === 'resgatar_e' ? a.acao.tipo : a.tipo);
+  if (presa) return presa;
   switch (a.tipo) {
+    case 'prisao': return disponibilidadePrisao(v, a.oque);
     case 'decidir': {
       if (!v.momento) return bloqueio('incompativel', 'Não há decisão aberta.');
       if (!a.resgatar) return PERMITIDO;
@@ -745,6 +753,7 @@ const ok = (texto: string, tom: 'bom' | 'ruim' | 'neutro' = 'neutro'): Saida => 
 function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
   const i = idade(v);
   switch (a.tipo) {
+    case 'prisao': { const x = executarPrisao(v, a.oque); return a.oque === 'conviver' || a.oque === 'visitas' || a.oque === 'fugir' ? { resultado: x.texto, titulo: a.oque === 'fugir' ? 'A fuga' : a.oque === 'visitas' ? 'Dia de visita' : 'No pavilhão' } : ok(x.texto, x.tom); }
     case 'resgatar_e': {
       const d = disponibilidade(v, a.acao);
       tirarDasAplicacoes(v, d.resgate!.valor, 'para pagar');

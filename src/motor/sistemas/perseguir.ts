@@ -19,7 +19,7 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { Dominio, FocoConcurso, Vida } from '../tipos';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { escrever, idade } from '../nucleo';
@@ -293,7 +293,7 @@ function podeTreinarFundamentos(v: Vida, valor?: string): Veredito {
   if (v.justica?.prisao) return bloqueio('impossivel', 'Não enquanto cumpre pena.');
   if (v.caminhos.esporte?.fase === 'profissional') return bloqueio('impossivel', 'No clube, o treino é do clube.');
   const t = v.fatos[`fundamentos_${d}_t`];
-  if (t !== undefined && v.t - t < 12) return bloqueio('incompativel', 'O treino de fundamentos deste ano já está em andamento.');
+  if ((t !== undefined && v.t - t < 12) || v.fatos[`fundamentos_${d}_ate`] !== undefined) return bloqueio('incompativel', 'O programa de fundamentos deste ano já está em andamento.');
   // Menor de idade não paga do próprio bolso: a família paga a escolinha quando pode; quando não pode, há o projeto social do bairro.
   if (i < 18) return PERMITIDO;
   return vereditoDePagar(v, custoFundamentos(v), 'A escolinha com treinador custa uns');
@@ -304,23 +304,43 @@ const escolinhaPaga = (v: Vida) => idade(v) < 18 && recursosDaFamilia(v).folga >
 
 const custoFundamentos = (v: Vida) => Math.round(1800 * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
 
-function treinarFundamentos(v: Vida, r: Rng, d: Dominio): { texto: string; tom: 'neutro' } {
+/**
+ * REWORK 5 (bug do playtest: "Um ano de fundamentos" parecia envelhecer o personagem). Antes, o clique aplicava NA HORA
+ * um ano inteiro de prática (+19 meses de "experiência", a técnica de um ano) — e a frase "Há N anos" pulava. Agora a ação
+ * é o que ela é: a INSCRIÇÃO num programa que dura o próximo ano. Paga-se (ou entra-se no projeto social) agora; o treino
+ * acontece quando o ano passa, pelo mecanismo central (`processarFundamentos`, chamado por `viverAno`). Nada avança a idade.
+ */
+function treinarFundamentos(v: Vida, _r: Rng, d: Dominio): { texto: string; tom: 'neutro' } {
   v.fatos[`fundamentos_${d}_t`] = v.t;
+  v.fatos[`fundamentos_${d}_ate`] = v.t + 12;
   const menor = idade(v) < 18;
   const projeto = menor && !escolinhaPaga(v);
+  if (projeto) v.fatos[`fundamentos_${d}_projeto`] = 1; else delete v.fatos[`fundamentos_${d}_projeto`];
   if (!menor) pagar(v, custoFundamentos(v));
   garantirFrente(v, d);
-  const antes = habilidade(v, d);
-  // Treino com treinador, focado: qualidade alta (a pelada é quantidade; isto é método). O projeto social tem menos estrutura.
-  praticar(v, r, d, projeto ? 0.95 : 1.1, projeto ? 1.3 : 1.5);
-  const f = v.caminhos.frentes[d]!;
-  f.meses += 6;
-  const depois = habilidade(v, d);
   const nome = NOME_MOD[d] ?? d;
-  const onde = projeto ? 'no projeto social do bairro, com um treinador voluntário' : menor ? 'numa escolinha paga pela família' : 'com treinador';
-  const texto = `Um ano de treino de fundamentos em ${nome}, ${onde}: ${d === 'futebol' ? 'passe, domínio, finalização' : 'fundamentos'}, repetição até cansar.${depois - antes >= 2 ? ' A técnica deu um passo à frente.' : ' A técnica anda devagar — mas anda.'}`;
-  escrever(v, { texto, relevancia: 'cotidiano', tema: 'lazer', escolha: true });
+  const onde = projeto ? 'no projeto social do bairro, com um treinador voluntário' : menor ? 'numa escolinha paga pela família' : 'com um treinador';
+  const texto = `Inscrição feita: um programa de fundamentos em ${nome}, ${onde}, ao longo do próximo ano — ${d === 'futebol' ? 'passe, domínio, finalização' : 'os fundamentos'}, repetição até cansar. O efeito aparece com o tempo, não no primeiro treino.`;
+  escrever(v, { texto: `Entrou num programa de fundamentos em ${nome}, ${onde}.`, relevancia: 'cotidiano', tema: 'lazer', escolha: true });
   return { texto, tom: 'neutro' };
+}
+
+/** O ano do programa de fundamentos (chamado por `viverAno`, depois das rotinas): o treino com método, de verdade. */
+export function processarFundamentos(v: Vida): void {
+  for (const d of MODS) {
+    const ate = v.fatos[`fundamentos_${d}_ate`];
+    if (ate === undefined) continue;
+    delete v.fatos[`fundamentos_${d}_ate`];
+    if (v.t < ate - 1 || v.justica?.prisao || v.caminhos.esporte?.fase === 'profissional') continue;
+    const projeto = !!v.fatos[`fundamentos_${d}_projeto`];
+    delete v.fatos[`fundamentos_${d}_projeto`];
+    const r = rngDe(v.id, 'fundamentos', d, v.t);
+    const antes = habilidade(v, d);
+    // Treino com treinador, focado: qualidade alta (a pelada é quantidade; isto é método). O projeto social tem menos estrutura.
+    praticar(v, r, d, projeto ? 0.95 : 1.1, projeto ? 1.3 : 1.5);
+    const depois = habilidade(v, d);
+    escrever(v, { texto: `Um ano de fundamentos em ${NOME_MOD[d] ?? d}${projeto ? ', no projeto social' : ''}.${depois - antes >= 2 ? ' A técnica deu um passo à frente.' : ' A técnica anda devagar — mas anda.'}`, relevancia: 'cotidiano', tema: 'lazer' });
+  }
 }
 
 /* ------------------------------------------------------------ Entrada única */

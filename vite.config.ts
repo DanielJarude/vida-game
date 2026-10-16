@@ -108,7 +108,7 @@ export default defineConfig({
           // FIX pós-REWORK 4: os verbos novos (as redes sociais, o estresse lido, o que se faz junto, na formação e no
           // trabalho) num pacote próprio, ENTRE os sistemas e os textos: importam só os sistemas (e a base); os textos, as
           // ações, o ano e as telas os importam. Sem ciclo, e nenhum dos dois pacotes grandes cresce.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas)\.ts/.test(id)) return 'motor-vida';
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo)\.ts/.test(id)) return 'motor-vida';
           if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria|gestos|pertences|presentes|vidaEstudantil|estetica)\.ts)/.test(id)) return 'motor-textos';
           if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
           // REWORK 3: o que só a camada de cima usa (salvar, nascer, as ações de cuidado, de estilo, de busca, a
