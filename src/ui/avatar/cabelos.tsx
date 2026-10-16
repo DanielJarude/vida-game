@@ -23,7 +23,9 @@ import { misturar } from './cores';
 export { estagioDaCalvicie } from '../../motor/sistemas/identidade';
 
 export type Fase = 'bebe' | 'crianca' | 'pre' | 'adol' | 'adulto' | 'meia' | 'idoso';
-export type Textura = 'liso' | 'ondulado' | 'cacheado' | 'crespo';
+/** As texturas do desenho. `encaracolado` (HOTFIX dos cabelos): cachos largos e soltos, entre o ondulado e o cacheado —
+ *  o "tipo" que o jogador pode escolher (Você · Aparência e estilo); a genética continua com as quatro de sempre. */
+export type Textura = 'liso' | 'ondulado' | 'encaracolado' | 'cacheado' | 'crespo';
 export interface CabeloProps {
   estilo: string; cor: string; cx: number; cy: number; w: number; hh: number; fase: Fase; linha?: string;
   /** A textura herdada; ausente (saves antigos), a do próprio corte. */
@@ -102,7 +104,7 @@ function contorno(pts: Pt[], tex: Textura, o: { esc?: number; sem?: number; fech
     return `M${pts2.join('L')}${fechado ? 'Z' : ''}`;
   }
   // Cachos: arcos para fora, de tamanho levemente irregular; o trecho sem textura segue a curva.
-  const passo = (tex === 'crespo' ? 2.3 : 3.5) * esc;
+  const passo = (tex === 'crespo' ? 2.3 : tex === 'encaracolado' ? 5.2 : 3.5) * esc;
   const cum: number[] = [0];
   for (let i = 1; i < ds.length; i++) cum.push(cum[i - 1] + Math.hypot(ds[i].x - ds[i - 1].x, ds[i].y - ds[i - 1].y));
   const total = cum[cum.length - 1] + (fechado ? Math.hypot(ds[0].x - ds[ds.length - 1].x, ds[0].y - ds[ds.length - 1].y) : 0);
@@ -117,7 +119,7 @@ function contorno(pts: Pt[], tex: Textura, o: { esc?: number; sem?: number; fech
       if (fechado && total - cum[j] < passo * 0.6) j = ds.length - 1;
       const p = ds[j];
       const corda = Math.hypot(p.x - ds[i].x, p.y - ds[i].y);
-      const raio = corda * (0.54 + ruido(k + 7, sem) * 0.2) * (t < 0.8 ? 1.5 : 1);
+      const raio = corda * (tex === 'encaracolado' ? 0.6 + ruido(k + 7, sem) * 0.14 : 0.54 + ruido(k + 7, sem) * 0.2) * (t < 0.8 ? 1.5 : 1);
       d += `A${r1(raio)} ${r1(raio)} 0 0 ${horario ? 1 : 0} ${r1(p.x)} ${r1(p.y)}`;
       i = j; k++;
     } else {
@@ -166,11 +168,24 @@ function linhaDaTesta(cx: number, cy: number, w: number, hh: number, o: { linha?
   return [...esq, ...meio, ...dir];
 }
 
+/** O ponto da linha do cabelo na altura `x` (interpolado entre os pontos da linha): onde nasce um cordão do alto. */
+function pontoNaLinha(linha: Pt[], x: number): Pt {
+  for (let i = 0; i < linha.length - 1; i++) {
+    const a = linha[i], b = linha[i + 1];
+    if ((x - a.x) * (x - b.x) <= 0 && a.x !== b.x) { const s = (x - a.x) / (b.x - a.x); return { x, y: a.y + (b.y - a.y) * s }; }
+  }
+  const perto = linha.reduce((m, p) => (Math.abs(p.x - x) < Math.abs(m.x - x) ? p : m), linha[0]);
+  return { x, y: perto.y };
+}
+
 const TEXTURA_DO_CORTE: Record<string, Textura> = {
   black: 'crespo', crespo_curto: 'crespo', locs: 'crespo', trancas: 'crespo', cacheado: 'cacheado', cacheado_longo: 'cacheado', ondulado: 'ondulado', longo_ondulado: 'ondulado'
 };
-const texturaDe = (estilo: string, t?: string): Textura => (t === 'liso' || t === 'ondulado' || t === 'cacheado' || t === 'crespo' ? t : TEXTURA_DO_CORTE[estilo] ?? 'liso');
-const crespa = (t: Textura) => t === 'cacheado' || t === 'crespo';
+export const texturaDe = (estilo: string, t?: string): Textura => (t === 'liso' || t === 'ondulado' || t === 'encaracolado' || t === 'cacheado' || t === 'crespo' ? t : TEXTURA_DO_CORTE[estilo] ?? 'liso');
+/** Com cachos (a borda em arcos, cachinhos dentro da massa). */
+const crespa = (t: Textura) => t === 'encaracolado' || t === 'cacheado' || t === 'crespo';
+/** O tamanho do cachinho dentro da massa: o encaracolado tem cachos maiores e mais abertos. */
+const rCacho = (t: Textura, r: number) => (t === 'encaracolado' ? r * 1.55 : r);
 
 /* ------------------------------------------------------------------ O desenho */
 
@@ -199,31 +214,44 @@ function espalhar(cx: number, cy: number, rx: number, ry: number, n: number, sem
   return out;
 }
 
-/** Um cordão (loc ou trança) com caimento natural: levemente curvo, mais fino na ponta, com as marcas da textura. */
-function Cordao({ x0, y0, x1, y1, curva: cv, larg, cor, marca, tipo, k }: { x0: number; y0: number; x1: number; y1: number; curva: number; larg: number; cor: string; marca: string; tipo: 'loc' | 'tranca'; k: number }) {
-  const mx = (x0 + x1) / 2 + cv, my = (y0 + y1) / 2;
-  const d = `M${r1(x0)} ${r1(y0)}Q${r1(mx)} ${r1(my)} ${r1(x1)} ${r1(y1)}`;
-  const n = Math.max(2, Math.floor((y1 - y0) / (tipo === 'tranca' ? 2.2 : 3.4)));
+/**
+ * Um cordão (loc ou trança) com caimento natural: uma curva (a quadrática de `x0,y0` a `x1,y1`, puxada por `qx,qy` —
+ * ou, sem eles, pelo meio deslocado `curva`), mais fino na ponta, com as marcas da textura ao longo dela.
+ * HOTFIX dos cabelos: as marcas são contadas pelo COMPRIMENTO da curva (antes, pela altura — um cordão que sobe pela
+ * cabeça ficava sem trama) e seguem a direção do cordão.
+ */
+function Cordao({ x0, y0, x1, y1, curva: cv = 0, qx, qy, larg, cor, marca, tipo, k, ponta = 0.7 }: { x0: number; y0: number; x1: number; y1: number; curva?: number; qx?: number; qy?: number; larg: number; cor: string; marca: string; tipo: 'loc' | 'tranca'; k: number; ponta?: number }) {
+  const mx = qx ?? (x0 + x1) / 2 + cv, my = qy ?? (y0 + y1) / 2;
   const ponto = (s: number) => { const u = 1 - s; return [u * u * x0 + 2 * u * s * mx + s * s * x1, u * u * y0 + 2 * u * s * my + s * s * y1]; };
+  const direcao = (s: number) => { const u = 1 - s; const dx = 2 * u * (mx - x0) + 2 * s * (x1 - mx), dy = 2 * u * (my - y0) + 2 * s * (y1 - my); const l = Math.hypot(dx, dy) || 1; return [dx / l, dy / l]; };
+  let comp = 0;
+  for (let j = 1, [ax, ay] = ponto(0); j <= 12; j++) { const [bx, by] = ponto(j / 12); comp += Math.hypot(bx - ax, by - ay); ax = bx; ay = by; }
+  const n = Math.max(2, Math.floor(comp / (tipo === 'tranca' ? 2.1 : 3.3)));
+  // O corpo: a base com a largura cheia e a ponta afinando (dois traços: o de cima cheio, o de baixo mais fino).
+  const corte = 0.62;
+  const [cxp, cyp] = ponto(corte);
+  const d1 = `M${r1(x0)} ${r1(y0)}Q${r1(x0 + (mx - x0) * corte)} ${r1(y0 + (my - y0) * corte)} ${r1(cxp)} ${r1(cyp)}`;
+  const q2x = mx + (x1 - mx) * corte, q2y = my + (y1 - my) * corte;
+  const d2 = `M${r1(cxp)} ${r1(cyp)}Q${r1(q2x)} ${r1(q2y)} ${r1(x1)} ${r1(y1)}`;
+  const gomo = (j: number, l: number, sobe: number, desce: number) => {
+    const s = (j + 0.6) / (n + 0.4); const [x, y] = ponto(s); const [dx, dy] = direcao(s); const nx = -dy, ny = dx;
+    const lw = l * (s > corte ? 0.8 : 1);
+    // Um "V" atravessado no cordão, apontando para a ponta.
+    return `M${r1(x + nx * lw - dx * sobe)} ${r1(y + ny * lw - dy * sobe)}L${r1(x + dx * desce)} ${r1(y + dy * desce)}L${r1(x - nx * lw - dx * sobe)} ${r1(y - ny * lw - dy * sobe)}`;
+  };
   return (
-    <g>
-      <path d={d} stroke={cor} strokeWidth={larg} strokeLinecap="round" fill="none" />
+    <g data-raiz={`${r1(x0)},${r1(y0)}`}>
+      <path d={d1} stroke={cor} strokeWidth={larg} strokeLinecap="round" fill="none" />
+      <path d={d2} stroke={cor} strokeWidth={larg * ponta} strokeLinecap="round" fill="none" />
       <g stroke={marca} strokeWidth={0.5} strokeLinecap="round" fill="none" opacity={tipo === 'tranca' ? 0.7 : 0.32}>
-        {Array.from({ length: n }, (_, j) => {
-          const s = (j + 0.6) / (n + 0.4); const [x, y] = ponto(s); const l = larg * 0.42;
-          return tipo === 'tranca'
-            ? <path key={j} d={`M${r1(x - l)} ${r1(y - 0.7)}L${r1(x)} ${r1(y + 0.5)}L${r1(x + l)} ${r1(y - 0.7)}`} />
-            : <path key={j} d={`M${r1(x - l)} ${r1(y + (j + k) % 2 * 0.4)}l${r1(l * 2)} 0.7`} />;
-        })}
+        {Array.from({ length: n }, (_, j) => tipo === 'tranca'
+          ? <path key={j} d={gomo(j, larg * 0.42, 0.7, 0.5)} />
+          : (() => { const s = (j + 0.6) / (n + 0.4); const [x, y] = ponto(s); const [dx, dy] = direcao(s); const l = larg * 0.42 * (s > corte ? 0.8 : 1); const o = ((j + k) % 2) * 0.4; return <path key={j} d={`M${r1(x + dy * l + dx * o)} ${r1(y - dx * l + dy * o)}L${r1(x - dy * l + dx * (o + 0.7))} ${r1(y + dx * l + dy * (o + 0.7))}`} />; })())}
       </g>
-      {/* Na trança, o alto de cada gomo pega luz: é o que faz a trama aparecer também no cabelo escuro (onde a marca
-          escura some). */}
+      {/* Na trança, o alto de cada gomo pega luz: é o que faz a trama aparecer também no cabelo escuro. */}
       {tipo === 'tranca' && (
         <g stroke={misturar(cor, '#ffffff', 0.38)} strokeWidth={0.45} strokeLinecap="round" fill="none" opacity={0.75}>
-          {Array.from({ length: n }, (_, j) => {
-            const s = (j + 0.6) / (n + 0.4); const [x, y] = ponto(s); const l = larg * 0.3;
-            return <path key={j} d={`M${r1(x - l)} ${r1(y - 1.3)}L${r1(x)} ${r1(y - 0.3)}L${r1(x + l)} ${r1(y - 1.3)}`} />;
-          })}
+          {Array.from({ length: n }, (_, j) => <path key={j} d={gomo(j, larg * 0.3, 1.3, -0.3)} />)}
         </g>
       )}
     </g>
@@ -247,7 +275,7 @@ export function desenharCabelo(p: CabeloProps): Desenho {
   const sombra = misturar(cor, '#000000', 0.38);
   const brilho = misturar(cor, '#ffffff', 0.2);
   const entradas = p.estagio === 1 && fase !== 'bebe';
-  const tTesta = tex === 'crespo' ? 0.55 : tex === 'cacheado' ? 0.5 : 0.2;
+  const tTesta = tex === 'crespo' ? 0.55 : tex === 'cacheado' ? 0.5 : tex === 'encaracolado' ? 0.4 : 0.2;
   const testa = (o: { costeleta?: number; baixa?: number; t?: number } = {}) => linhaDaTesta(cx, cy, w, hh, { linha, entradas, idoso, t: o.t ?? tTesta, ...o });
   const ty = cy - hh * (0.215 + (linha === 'alta' ? 0.045 : 0) + (idoso ? 0.018 : 0));
   const sem = Math.round(cx * 7 + w * 13 + hh) % 97;
@@ -298,7 +326,7 @@ export function desenharCabelo(p: CabeloProps): Desenho {
           <g>
             <path d={ct(cap, 0.75)} fill={cor} />
             {!crespa(tex) && <Fios d={[`M${cx - 8} ${r1(ty + 1)}q2 -5 7 -8`, `M${cx - 1} ${r1(ty + 0.5)}q3 -5 8 -7`, `M${cx + 6} ${r1(ty + 1.5)}q2 -3 5 -5`]} cor={brilho} op={0.55} />}
-            {crespa(tex) && <Cachinhos pts={espalhar(cx, ty - 4, w * 0.3, 3.5, 6, sem)} r={1.1} cor={sombra} sem={sem} />}
+            {crespa(tex) && <Cachinhos pts={espalhar(cx, ty - 4, w * 0.3, 3.5, tex === 'encaracolado' ? 4 : 6, sem)} r={rCacho(tex, 1.1)} cor={sombra} sem={sem} />}
           </g>
         )
       };
@@ -318,7 +346,7 @@ export function desenharCabelo(p: CabeloProps): Desenho {
         frente: (
           <g>
             <path d={ct(frente, 0.8)} fill={cor} />
-            <Fios d={[`M${r1(risca + 0.5)} ${r1(ty - 2)}Q${cx + 2} ${r1(ty - 6)} ${r1(R - 2)} ${r1(ty + 3)}`, `M${r1(risca + 2)} ${r1(ty - 5.5)}Q${cx + 5} ${r1(ty - 8)} ${r1(R - 1)} ${r1(ty - 1)}`]} cor={brilho} op={0.6} />
+            {crespa(tex) ? <Cachinhos pts={espalhar(cx + w * 0.05, ty - 3, w * 0.3, 3, 5, sem)} r={rCacho(tex, 1.1)} cor={sombra} sem={sem} op={0.4} /> : <Fios d={[`M${r1(risca + 0.5)} ${r1(ty - 2)}Q${cx + 2} ${r1(ty - 6)} ${r1(R - 2)} ${r1(ty + 3)}`, `M${r1(risca + 2)} ${r1(ty - 5.5)}Q${cx + 5} ${r1(ty - 8)} ${r1(R - 1)} ${r1(ty - 1)}`]} cor={brilho} op={0.6} />}
             <path d={`M${r1(risca)} ${r1(ty - 0.8)}Q${r1(risca - 0.5)} ${r1(ty - 6)} ${r1(risca + 1)} ${r1(cy - hh * 0.47)}`} stroke={sombra} strokeWidth={0.7} fill="none" opacity={0.6} />
           </g>
         )
@@ -332,7 +360,7 @@ export function desenharCabelo(p: CabeloProps): Desenho {
         frente: (
           <g>
             <path d={ct(cap, 0.85)} fill={cor} />
-            <Fios d={[`M${cx - w * 0.28} ${r1(ty + 0.5)}C${cx - w * 0.3} ${r1(ty - 9)} ${cx + w * 0.05} ${r1(ty - 13)} ${cx + w * 0.3} ${r1(ty - 8)}`, `M${cx - w * 0.12} ${r1(ty)}C${cx - w * 0.1} ${r1(ty - 7)} ${cx + w * 0.12} ${r1(ty - 10)} ${cx + w * 0.34} ${r1(ty - 5)}`]} cor={brilho} op={0.6} />
+            {crespa(tex) ? <Cachinhos pts={espalhar(cx, ty - 5, w * 0.28, 3.5, 5, sem)} r={rCacho(tex, 1.1)} cor={sombra} sem={sem} op={0.4} /> : <Fios d={[`M${cx - w * 0.28} ${r1(ty + 0.5)}C${cx - w * 0.3} ${r1(ty - 9)} ${cx + w * 0.05} ${r1(ty - 13)} ${cx + w * 0.3} ${r1(ty - 8)}`, `M${cx - w * 0.12} ${r1(ty)}C${cx - w * 0.1} ${r1(ty - 7)} ${cx + w * 0.12} ${r1(ty - 10)} ${cx + w * 0.34} ${r1(ty - 5)}`]} cor={brilho} op={0.6} />}
           </g>
         )
       };
@@ -352,7 +380,7 @@ export function desenharCabelo(p: CabeloProps): Desenho {
         frente: (
           <g>
             <path d={ct(frente)} fill={cor} />
-            <Fios d={[`M${cx - 4} ${r1(ty - 5)}q4 2 7 -1q3 -3 7 0`, `M${L + 1} ${r1(ty + 2)}q-1 4 0.5 8`]} cor={brilho} op={0.45} />
+            {crespa(tex) ? <Cachinhos pts={espalhar(cx, ty - 3, w * 0.33, 4, 5, sem)} r={rCacho(tex, 1.1)} cor={sombra} sem={sem} op={0.4} /> : <Fios d={[`M${cx - 4} ${r1(ty - 5)}q4 2 7 -1q3 -3 7 0`, `M${L + 1} ${r1(ty + 2)}q-1 4 0.5 8`]} cor={brilho} op={0.45} />}
           </g>
         )
       };
@@ -382,16 +410,19 @@ export function desenharCabelo(p: CabeloProps): Desenho {
         atras: <path d={contorno(atras, 'cacheado', { esc: 1.05, sem })} fill={escuro} />,
         frente: (
           <g>
-            <path d={contorno(frente, tex === 'crespo' ? 'crespo' : 'cacheado', { esc: 0.95, sem })} fill={cor} />
-            <Cachinhos pts={espalhar(cx, ty - 4, w * 0.36, 5, 10, sem)} r={1.4} cor={sombra} sem={sem} />
+            <path d={contorno(frente, tex === 'crespo' || tex === 'encaracolado' ? tex : 'cacheado', { esc: 0.95, sem })} fill={cor} />
+            <Cachinhos pts={espalhar(cx, ty - 4, w * 0.36, 5, tex === 'encaracolado' ? 6 : 10, sem)} r={rCacho(tex, 1.4)} cor={sombra} sem={sem} />
           </g>
         )
       };
     }
     case 'black': {
       // O black: a coroa grande e redonda (crespo miúdo na borda), a linha da testa com cachinhos.
-      const rx = (w / 2 + (infancia ? 7 : 10.5)) * dens ** 0.5, ry = (hh / 2 + (infancia ? 5 : 8)) * dens ** 0.5;
-      const ccy = cy - (infancia ? 4 : 5.5);
+      // HOTFIX dos cabelos: a coroa cabe no retrato (o quadro começa em y = 8; com os cachinhos da borda, o black adulto
+      // passava do alto e saía com o topo reto, cortado). O volume que não cabe para cima vai para os lados.
+      const ccy = cy - (infancia ? 4 : 4.5);
+      const ry = Math.min((hh / 2 + (infancia ? 5 : 8)) * dens ** 0.5, ccy - 10.2);
+      const rx = (w / 2 + (infancia ? 7 : 10.5)) * dens ** 0.5 + (infancia ? 0 : 0.8);
       const massa = Array.from({ length: 18 }, (_, k) => { const a = (k / 18) * Math.PI * 2; return { x: cx + Math.cos(a) * rx, y: ccy + Math.sin(a) * ry * (Math.sin(a) > 0 ? 0.92 : 1), t: 1 }; });
       const cap = calota(1.2, 2.5, { costeleta: 1, t: 0.7 });
       return {
@@ -406,29 +437,83 @@ export function desenharCabelo(p: CabeloProps): Desenho {
     }
     case 'locs':
     case 'trancas': {
-      // Locs (cordões grossos) e tranças soltas (box braids, mais finas e trançadas): muitos cordões com caimento,
-      // de comprimentos diferentes, atrás e na frente dos ombros — não duas tiras rígidas.
+      // HOTFIX dos cabelos — tranças soltas (box braids) e locs. Antes: uma tampa lisa no alto e seis cordões que
+      // nasciam na altura da orelha, os de fora no AR (a até 1,25 × a meia-largura da cabeça) e abrindo em leque — a
+      // trança parecia pendurada ao lado da cabeça, sem raiz. Agora a regra é física: TODO cordão nasce dentro de uma
+      // área já pintada de cabelo e cai pela gravidade.
+      //   · no alto, os próprios cordões saem da linha do cabelo e vão para trás pela cabeça (as repartições entre eles
+      //     mostram o couro): é o que liga a testa ao comprimento;
+      //   · atrás, uma massa (o volume de todos os cordões de trás) desce da cabeça até o fim, e os cordões visíveis dos
+      //     lados nascem NA borda do crânio (debaixo da calota) e descem quase retos, rentes à cabeça;
+      //   · na frente, as mechas que caem ao lado do rosto nascem na têmpora, dentro da calota.
+      // A idade muda o comprimento (criança: até o queixo), a densidade (idoso: menos cordões, mais finos) e a cor.
       const tipo = estilo === 'locs' ? 'loc' : 'tranca';
-      const fim = cy + (infancia ? 15 : tipo === 'tranca' ? 34 : 30) * (idoso ? 0.85 : 1);
-      const larg = tipo === 'loc' ? 3.4 : 2.4;
+      const fim = cy + (infancia ? 16 : tipo === 'tranca' ? 34 : 30) * (idoso ? 0.86 : 1);
+      const larg = (tipo === 'loc' ? 3.2 : 2.3) * (idoso ? 0.88 : 1) * (infancia ? 0.9 : 1);
       const marca = misturar(cor, '#000000', 0.45);
-      const atrasX = [-1.25, -1.0, -0.72, 0.72, 1.0, 1.25];
-      const cap = calota(1.3, 1.8, { costeleta: 0, t: 0.3 });
+      const couro = p.pele ? misturar(p.pele, cor, 0.55) : sombra;
+      const nLado = Math.max(3, Math.round((tipo === 'tranca' ? 6 : 4) * dens));
+      // Atrás: a massa e os cordões dos lados.
+      const abre = (tipo === 'tranca' ? 3.2 : 3.8) * dens;
+      const massa: Pt[] = [
+        H(178, 1.6), H(140, 2), H(90, 2), H(40, 2), H(2, 1.6),
+        { x: R + abre, y: cy + 6 }, { x: R + abre + 0.6, y: fim - 6 }, { x: R + abre - 0.4, y: fim - 1.5 }, { x: cx + w * 0.22, y: fim }, { x: cx - w * 0.22, y: fim },
+        { x: L - abre + 0.4, y: fim - 1.5 }, { x: L - abre - 0.6, y: fim - 6 }, { x: L - abre, y: cy + 6 }
+      ];
+      const lados: ReactElement[] = [];
+      for (const l of [-1, 1]) for (let j = 0; j < nLado; j++) {
+        const f = j / (nLado - 1); // 0 = o mais de dentro (atrás do pescoço), 1 = o mais de fora
+        const g = l < 0 ? 178 - f * 52 : 2 + f * 52; // a raiz: do lado da cabeça (178°/2°) até perto do alto (126°/54°)
+        const raiz = H(g, -0.6);
+        const xFim = cx + l * (w * 0.2 + f * (w / 2 - w * 0.2 + abre - 0.4));
+        const yFim = fim - ((j * 7 + (l > 0 ? 3 : 0)) % 4) * 1.1;
+        // A curva encosta na cabeça (o controle fica para fora, na altura da orelha) e depois cai reta.
+        const qx = cx + l * (w / 2 + 0.6 + f * (abre - 0.4));
+        lados.push(<Cordao key={`${l}${j}`} k={j} tipo={tipo} x0={raiz.x} y0={raiz.y} qx={qx} qy={cy + 2} x1={xFim} y1={yFim} larg={larg} cor={(j + (l > 0 ? 1 : 0)) % 2 ? escuro : cor} marca={marca} />);
+      }
+      // No alto: a calota (o couro coberto) e os cordões que saem da testa e passam por cima da cabeça.
+      const cap = calota(1.1, 1.5, { costeleta: 0.5, t: 0 });
+      const linhaTesta = testa({ t: 0 });
+      const nTopo = tipo === 'tranca' ? (infancia ? 5 : 6) : (infancia ? 4 : 5);
+      const topoCordoes: ReactElement[] = [];
+      const reparticoes: string[] = [];
+      // A risca no meio: cada cordão sai da linha do cabelo e vai para o lado e para trás, terminando na borda do crânio
+      // — exatamente onde nascem os cordões que descem pelos lados. É essa continuidade que liga o alto ao comprimento.
+      const fimNoCranio = (u: number) => H(u < 0 ? 96 + (-u / 0.5) * 66 : 84 - (u / 0.5) * 66, -0.4);
+      for (let j = 0; j < nTopo; j++) {
+        const u = (j + 0.5) / nTopo - 0.5; // −0,5 … 0,5, da esquerda para a direita
+        // A raiz na linha do cabelo (a linha herdada: reta, em bico, alta; recua com a calvície).
+        const base = pontoNaLinha(linhaTesta, cx + u * w * 0.8);
+        const fimC = fimNoCranio(u);
+        const q = { x: base.x + (fimC.x - base.x) * 0.15, y: Math.min(base.y, fimC.y) - 4.2 + Math.abs(u) * 4 };
+        topoCordoes.push(<Cordao key={j} k={j} tipo={tipo} x0={base.x} y0={base.y - 0.4} qx={q.x} qy={q.y} x1={fimC.x} y1={fimC.y} larg={Math.min(larg, (w * 0.8) / nTopo) * 0.98} cor={j % 2 ? cor : misturar(cor, '#000000', 0.08)} marca={marca} ponta={0.95} />);
+        if (j > 0) {
+          const ub = j / nTopo - 0.5;
+          const b2 = pontoNaLinha(linhaTesta, cx + ub * w * 0.8);
+          const f2 = fimNoCranio(ub);
+          reparticoes.push(`M${r1(b2.x)} ${r1(b2.y - 0.2)}Q${r1(b2.x + (f2.x - b2.x) * 0.15)} ${r1(Math.min(b2.y, f2.y) - 4.2 + Math.abs(ub) * 4)} ${r1(f2.x)} ${r1(f2.y)}`);
+        }
+      }
+      // As mechas da frente: nascem na têmpora (dentro da calota) e caem ao lado do rosto, por cima da orelha.
+      const nFrente = tipo === 'tranca' ? 2 : 1;
+      const frente: ReactElement[] = [];
+      for (const l of [-1, 1]) for (let j = 0; j < nFrente; j++) {
+        const raiz = H(l < 0 ? 166 + j * 8 : 14 - j * 8, -1.2);
+        frente.push(<Cordao key={`${l}${j}`} k={j + 3} tipo={tipo} x0={raiz.x} y0={raiz.y} qx={cx + l * (w / 2 + 0.4 + j * 0.6)} qy={cy + 3} x1={cx + l * (w / 2 + 1.2 + j * 1.9)} y1={fim - 2.5 - j * 2} larg={larg} cor={cor} marca={marca} />);
+      }
       return {
         atras: (
           <g>
-            <path d={curva([H(178, 2), H(120, 2.6), H(60, 2.6), H(2, 2), { x: R + 5, y: cy + 8 }, { x: cx, y: cy + 10 }, { x: L - 5, y: cy + 8 }])} fill={escuro} />
-            {atrasX.map((f, k) => <Cordao key={k} k={k} tipo={tipo} x0={cx + f * (w / 2)} y0={cy - 6} x1={cx + f * (w / 2 + 4)} y1={fim - (k % 3) * 2.2} curva={f * 1.5} larg={larg} cor={k % 2 ? escuro : cor} marca={marca} />)}
+            <path d={contorno(massa, 'crespo', { esc: 0.7, sem })} fill={sombra} />
+            {lados}
           </g>
         ),
         frente: (
           <g>
-            <path d={curva(cap)} fill={cor} />
-            {[-1, 1].map(l => (
-              <g key={l}>
-                <Cordao k={l + 2} tipo={tipo} x0={cx + l * (w / 2 - 0.2)} y0={ty + 1} x1={cx + l * (w / 2 + 2.6)} y1={fim - 2} curva={l * 1.2} larg={larg} cor={cor} marca={marca} />
-              </g>
-            ))}
+            <path d={curva(cap)} fill={couro} />
+            <path d={reparticoes.join('')} stroke={misturar(couro, '#000000', 0.25)} strokeWidth={0.5} fill="none" opacity={0.6} />
+            {topoCordoes}
+            {frente}
           </g>
         )
       };
@@ -470,9 +555,10 @@ export function desenharCabelo(p: CabeloProps): Desenho {
         frente: (
           <g>
             <path d={contorno(frente, tex, { esc: cach ? 1.15 : 1, sem })} fill={cor} />
-            {!cach && <Fios d={[`M${r1(fioX - 1)} ${r1(ty - 2)}Q${r1(L + 3)} ${r1(ty - 2)} ${r1(L - 1)} ${r1(cy + 6)}`, `M${r1(fioX + 1)} ${r1(ty - 3)}Q${r1(R - 2)} ${r1(ty - 3)} ${r1(R + 1)} ${r1(cy + 4)}`, `M${r1(L - 1.5)} ${r1(cy + 10)}L${r1(L - 1)} ${r1(fim - 4)}`]} cor={brilho} op={0.42} />}
-            {!cach && <path d={`M${r1(fioX)} ${r1(ty - 1.4)}L${r1(fioX - lado * 0.3)} ${r1(cy - hh * 0.46)}`} stroke={sombra} strokeWidth={0.6} opacity={0.55} />}
-            {cach && <Cachinhos pts={espalhar(cx, ty - 4, w * 0.33, 4.5, 6, sem)} r={1.4} cor={sombra} sem={sem} op={0.3} />}
+            {/* O brilho em fios retos é do liso e do ondulado; com cachos, a massa mostra cachinhos (HOTFIX dos cabelos). */}
+            {!cach && !crespa(tex) && <Fios d={[`M${r1(fioX - 1)} ${r1(ty - 2)}Q${r1(L + 3)} ${r1(ty - 2)} ${r1(L - 1)} ${r1(cy + 6)}`, `M${r1(fioX + 1)} ${r1(ty - 3)}Q${r1(R - 2)} ${r1(ty - 3)} ${r1(R + 1)} ${r1(cy + 4)}`, `M${r1(L - 1.5)} ${r1(cy + 10)}L${r1(L - 1)} ${r1(fim - 4)}`]} cor={brilho} op={0.42} />}
+            {!cach && !crespa(tex) && <path d={`M${r1(fioX)} ${r1(ty - 1.4)}L${r1(fioX - lado * 0.3)} ${r1(cy - hh * 0.46)}`} stroke={sombra} strokeWidth={0.6} opacity={0.55} />}
+            {(cach || crespa(tex)) && <Cachinhos pts={[...espalhar(cx, ty - 4, w * 0.33, 4.5, 6, sem), ...espalhar(L - 1, cy + 12, 2.2, 8, 3, sem + 5), ...espalhar(R + 1, cy + 12, 2.2, 8, 3, sem + 9)]} r={rCacho(tex, 1.4)} cor={sombra} sem={sem} op={0.3} />}
           </g>
         )
       };
@@ -489,11 +575,13 @@ export function desenharCabelo(p: CabeloProps): Desenho {
         { x: R + vol + 0.6, y: corte - 4 }, ...arco(H, 0, 180, 11, () => vol), { x: L - vol - 0.6, y: corte - 4 }, { x: L - vol * 0.6, y: corte + 0.4, t: 0.6 }
       ];
       return {
-        atras: <path d={curva([H(176, vol), H(90, vol + 0.5), H(4, vol), { x: R + vol + 0.8, y: corte - 3 }, { x: R + 1, y: corte + 1 }, { x: cx, y: corte + 1.5 }, { x: L - 1, y: corte + 1 }, { x: L - vol - 0.8, y: corte - 3 }])} fill={escuro} />,
+        atras: (() => { const pts: Pt[] = [H(176, vol, 0), H(90, vol + 0.5, 0), H(4, vol, 0), { x: R + vol + 0.8, y: corte - 3 }, { x: R + 1, y: corte + 1 }, { x: cx, y: corte + 1.5 }, { x: L - 1, y: corte + 1 }, { x: L - vol - 0.8, y: corte - 3 }]; return <path d={crespa(tex) ? contorno(pts, tex, { esc: 0.7, sem }) : curva(pts)} fill={escuro} />; })(),
         frente: (
           <g>
             <path d={contorno(frente, tex === 'liso' ? 'liso' : tex, { esc: 0.7, sem })} fill={cor} />
-            <Fios d={[`M${r1(cx - w * 0.36)} ${r1(ty - 4)}Q${cx} ${r1(ty - 9)} ${r1(cx + w * 0.36)} ${r1(ty - 4)}`, `M${r1(L - 0.5)} ${r1(cy)}L${r1(L)} ${r1(corte - 3)}`]} cor={brilho} op={0.45} />
+            {crespa(tex)
+              ? <Cachinhos pts={espalhar(cx, ty - 4, w * 0.32, 3.5, 5, sem)} r={rCacho(tex, 1.2)} cor={sombra} sem={sem} op={0.35} />
+              : <Fios d={[`M${r1(cx - w * 0.36)} ${r1(ty - 4)}Q${cx} ${r1(ty - 9)} ${r1(cx + w * 0.36)} ${r1(ty - 4)}`, `M${r1(L - 0.5)} ${r1(cy)}L${r1(L)} ${r1(corte - 3)}`]} cor={brilho} op={0.45} />}
           </g>
         )
       };
@@ -509,7 +597,7 @@ export function desenharCabelo(p: CabeloProps): Desenho {
         frente: (
           <g>
             <path d={ct(frente, 0.7)} fill={cor} />
-            <Fios d={[`M${r1(R - 3)} ${r1(ty - 3)}Q${cx} ${r1(ty - 2)} ${r1(L + 4)} ${r1(ty + 6.5)}`, `M${r1(R - 6)} ${r1(ty - 7)}Q${cx - 3} ${r1(ty - 4)} ${r1(L + 2)} ${r1(ty + 2)}`]} cor={brilho} op={0.5} />
+            {crespa(tex) ? <Cachinhos pts={espalhar(cx, ty - 3, w * 0.3, 3.5, 5, sem)} r={rCacho(tex, 1.1)} cor={sombra} sem={sem} op={0.4} /> : <Fios d={[`M${r1(R - 3)} ${r1(ty - 3)}Q${cx} ${r1(ty - 2)} ${r1(L + 4)} ${r1(ty + 6.5)}`, `M${r1(R - 6)} ${r1(ty - 7)}Q${cx - 3} ${r1(ty - 4)} ${r1(L + 2)} ${r1(ty + 2)}`]} cor={brilho} op={0.5} />}
           </g>
         )
       };

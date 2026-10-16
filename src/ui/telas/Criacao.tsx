@@ -11,6 +11,8 @@ import { sortearNome, sortearSobrenome } from '../../motor/dados/nomes';
 import { criarRng } from '../../motor/rng';
 import { CABELOS_F, CABELOS_M, CABELOS_N, CORES_CABELO, CORES_OLHOS, PELES, visualAleatorio } from '../../motor/pessoas';
 import { Retrato } from '../avatar/Retrato';
+import { texturaDe } from '../avatar/cabelos';
+import { TIPOS_DE_CABELO } from '../../motor/dados/estilo';
 import { Escolha } from '../comum';
 
 const ROTULO_CABELO: Record<string, string> = {
@@ -181,6 +183,13 @@ export function Criacao({ c }: { c: ControleVida }) {
                 <div className="amostras" role="radiogroup" aria-label="Cor dos olhos">
                   {CORES_OLHOS.map(p => <button key={p} type="button" role="radio" aria-checked={visual.olhos === p} aria-label={p.replace('_', ' ')} className={`amostra amostra--olho${visual.olhos === p ? ' amostra--ativa' : ''}`} style={{ background: COR_OLHO[p] }} onClick={() => setVisual(v => ({ ...v, olhos: p }))} />)}
                 </div>
+                {/* HOTFIX dos cabelos: o tipo de cabelo de nascença (o retrato aos 9, 30 e 75 já mostra). */}
+                <label className="campo">
+                  <span className="campo__rotulo">Tipo de cabelo</span>
+                  <select value={texturaDe(visual.cabelo, visual.textura)} onChange={e => setVisual(v => ({ ...v, textura: e.target.value }))}>
+                    {TIPOS_DE_CABELO.map(t => <option key={t.id} value={t.id}>{t.nome} — {t.nota}</option>)}
+                  </select>
+                </label>
               </>
             )}
             <label className="campo">

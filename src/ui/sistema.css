@@ -71,3 +71,6 @@
 /* -------------------------------------------------- A trajetória dos estados (Você): largura do cartão, com legenda */
 .linha-estado__quadro { margin: 0 0 var(--space-2); max-width: 22rem; }
 .linha-estado__legenda { display: flex; justify-content: space-between; font-size: var(--type-meta); color: var(--text-muted); margin-top: 2px; }
+
+/* -------------------------------------------------- HOTFIX dos cabelos: a nota curta debaixo de um campo (o tipo de cabelo) */
+.campo__nota { font-size: var(--type-caption); color: var(--text-muted); line-height: var(--leading-snug); }

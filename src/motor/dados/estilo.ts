@@ -38,6 +38,20 @@ export const NOME_COR: Record<string, string> = {
   platinado: 'Platinado', vermelho: 'Vermelho (tinta)', azul: 'Azul (tinta)', rosa: 'Rosa (tinta)', grisalho: 'Grisalho'
 };
 
+/**
+ * HOTFIX dos cabelos — os TIPOS de cabelo (a textura do fio), na ordem do mais liso ao mais crespo. A genética conhece
+ * quatro (`identidade.TEXTURAS`); "encaracolado" (cachos largos e soltos) existe como escolha: é o que se consegue
+ * com permanente, fitagem ou definição — e qualquer tipo pode ser o natural de quem nasce sem puxar os pais.
+ * Mudar o tipo é química (alisar, relaxar, fazer cachos): o natural fica guardado nos genes e é o que os filhos herdam.
+ */
+export const TIPOS_DE_CABELO: { id: string; nome: string; nota: string }[] = [
+  { id: 'liso', nome: 'Liso', nota: 'fio reto, cai junto' },
+  { id: 'ondulado', nome: 'Ondulado', nota: 'em ondas largas' },
+  { id: 'encaracolado', nome: 'Encaracolado', nota: 'cachos largos e soltos' },
+  { id: 'cacheado', nome: 'Cacheado', nota: 'cachos definidos, com volume' },
+  { id: 'crespo', nome: 'Crespo', nota: 'cachos miúdos e densos' }
+];
+
 export const BARBAS: { id: string; nome: string }[] = [
   { id: 'nenhuma', nome: 'Sem barba' }, { id: 'por_fazer', nome: 'Por fazer' }, { id: 'curta', nome: 'Curta' },
   { id: 'cheia', nome: 'Cheia' }, { id: 'cavanhaque', nome: 'Cavanhaque' }, { id: 'bigode', nome: 'Só bigode' }

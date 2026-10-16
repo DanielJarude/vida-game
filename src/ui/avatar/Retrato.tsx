@@ -182,7 +182,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       role="img" aria-label={rotulo ?? 'Retrato'}
     >
       {/* Cabelo de trás */}
-      {cabelo.atras}
+      {/* As camadas do cabelo marcadas (a auditoria geométrica dos retratos mede o que é cabelo — playtest/cabelos.mjs). */}
+      {cabelo.atras && <g className="retrato__cabelo retrato__cabelo--atras">{cabelo.atras}</g>}
 
       {/* Corpo */}
       <path d={`M ${cx - ombro} 101 C ${cx - ombro} ${corpoTopo + 10} ${cx - ombro * 0.55} ${corpoTopo + 3} ${cx} ${corpoTopo + 3}
@@ -252,7 +253,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {/* Olhos */}
       {[-1, 1].map(lado => (
         <g key={lado}>
-          <ellipse cx={cx + lado * esp} cy={olhoY} rx={olho * olhoRx} ry={olho * (f === 'idoso' ? 0.8 : olhoRy)} fill="#f7f2ea" />
+          <ellipse className="retrato__olho" cx={cx + lado * esp} cy={olhoY} rx={olho * olhoRx} ry={olho * (f === 'idoso' ? 0.8 : olhoRy)} fill="#f7f2ea" />
           <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={olho * Math.min(0.72, olhoRy * 0.82)} fill={iris} />
           <circle cx={cx + lado * esp} cy={olhoY + 0.2} r={olho * Math.min(0.36, olhoRy * 0.42)} fill="#141110" />
           <circle cx={cx + lado * esp + olho * 0.28} cy={olhoY - olho * 0.3 * olhoRy} r={olho * 0.22} fill="#ffffff" opacity={0.85} />
@@ -328,7 +329,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {v.oculos ? <Oculos tipo={v.oculos} cx={cx} olhoY={olhoY} esp={esp} /> : f === 'idoso' && h % 2 === 0 && <Oculos tipo="grau" cx={cx} olhoY={olhoY} esp={esp} />}
 
       {/* Cabelo da frente */}
-      {cabelo.frente}
+      {cabelo.frente && <g className="retrato__cabelo retrato__cabelo--frente">{cabelo.frente}</g>}
 
       {/* O que vai na cabeça */}
       {v.chapeu && f !== 'bebe' && <Chapeu tipo={v.chapeu} cx={cx} cy={cy} w={w} hh={hh} semente={h} />}

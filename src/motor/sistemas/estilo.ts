@@ -17,13 +17,17 @@ import { rngDe } from '../rng';
 import { escrever, idade, marcarFato, novoId, temFato } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { AUTONOMIA, autonomia } from './autonomia';
-import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, ITENS_ESTILO, itemEstilo, ROUPAS, sinalDoEstilo } from '../dados/estilo';
+import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, ITENS_ESTILO, itemEstilo, ROUPAS, sinalDoEstilo, TIPOS_DE_CABELO } from '../dados/estilo';
+import { geneticaDe, guardarGenes } from './identidade';
 import { economiaLocal } from '../dados/lugares';
 import { vereditoDePagar, pagar } from './dinheiro';
 import { dinheiro as fmt } from '../texto';
 import { moraComFamiliaDeOrigem } from './domicilio';
 
-export type MudancaVisual = Partial<Pick<Visual, 'cabelo' | 'corCabelo' | 'barba' | 'bigode' | 'oculos' | 'chapeu' | 'roupa'>>;
+export type MudancaVisual = Partial<Pick<Visual, 'cabelo' | 'corCabelo' | 'textura' | 'barba' | 'bigode' | 'oculos' | 'chapeu' | 'roupa'>>;
+
+/** O tipo de cabelo com que a pessoa nasceu (os genes; sem genes guardados, o visual é a genética). */
+export const texturaNatural = (v: Vida): string | undefined => geneticaDe(v.eu)?.textura;
 
 /** O rosto já permite barba? (O corpo, não o gênero, decide; aqui a aproximação é pelo retrato.) */
 export const podeTerBarba = (v: Vida) => v.eu.genero !== 'feminino' && idade(v) >= AUTONOMIA.barba.idade;
@@ -67,6 +71,12 @@ export function disponibilidadeAparencia(v: Vida, m: MudancaVisual): Veredito {
       if (!tinta && x !== natural) return bloqueio('impossivel', 'Essa cor não existe.');
       if (tinta && i < AUTONOMIA.aparencia.idade) return bloqueio('impossivel', 'Pintar o cabelo ainda passa pela família.');
     }
+    if (k === 'textura') {
+      if (!TIPOS_DE_CABELO.some(t => t.id === x)) return bloqueio('impossivel', 'Esse tipo de cabelo não existe.');
+      if (x === vis.textura) return bloqueio('incompativel', 'O cabelo já é assim.');
+      // Voltar ao natural é sempre possível; alisar ou fazer cachos é química — passa pela idade de decidir o visual.
+      if (x !== texturaNatural(v) && i < AUTONOMIA.aparencia.idade) return bloqueio('impossivel', 'Alisar ou fazer cachos ainda passa pela família.');
+    }
     if (k === 'barba' || k === 'bigode') {
       if (!podeTerBarba(v)) return bloqueio('impossivel', i < AUTONOMIA.barba.idade ? AUTONOMIA.barba.antes : 'O rosto não tem barba.');
       if (k === 'barba' && !BARBAS.some(b => b.id === x)) return bloqueio('impossivel', 'Essa barba não existe.');
@@ -99,6 +109,8 @@ export function mudarAparencia(v: Vida, m: MudancaVisual): string {
   const antes = { ...vis };
   v.eu.estilo ??= { itens: [] };
   if (m.corCabelo && !v.eu.estilo.corNatural) v.eu.estilo.corNatural = vis.corCabelo;
+  // O tipo de cabelo é genético: antes da primeira química, os genes ficam guardados (os filhos herdam o natural).
+  if (m.textura) guardarGenes(v.eu);
   for (const k of Object.keys(m) as (keyof MudancaVisual)[]) {
     const x = m[k];
     if (k === 'barba') vis.barba = x === 'nenhuma' ? undefined : x as string;

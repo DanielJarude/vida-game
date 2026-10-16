@@ -10,8 +10,9 @@ import type { Vida, Visual } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { AUTONOMIA, faseDeAutonomia } from '../../motor/sistemas/autonomia';
-import { itensDaPessoa, podeTerBarba, precisaDeOculos, type MudancaVisual } from '../../motor/sistemas/estilo';
-import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, NOME_COR, itemEstilo } from '../../motor/dados/estilo';
+import { itensDaPessoa, podeTerBarba, precisaDeOculos, texturaNatural, type MudancaVisual } from '../../motor/sistemas/estilo';
+import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, NOME_COR, TIPOS_DE_CABELO, itemEstilo } from '../../motor/dados/estilo';
+import { texturaDe } from '../avatar/cabelos';
 import { Retrato } from '../avatar/Retrato';
 import { BotaoAcao } from '../comum';
 import type { Aba } from '../navegacao';
@@ -29,6 +30,12 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
   const natural = vida.eu.estilo?.corNatural ?? vis.corCabelo;
   const cores = [...new Set([natural, ...(i >= AUTONOMIA.aparencia.idade ? [...CORES_NATURAIS, ...CORES_TINTA] : [])])];
   const cortes = CORTES.filter(c => i >= AUTONOMIA.aparencia.idade || !['raspado', 'black', 'trancas', 'locs'].includes(c.id));
+  // HOTFIX dos cabelos — o TIPO de cabelo (liso, ondulado, encaracolado, cacheado, crespo). O natural vem dos genes; os
+  // outros são química (alisar, fazer cachos), liberados na idade de decidir o visual. Voltar ao natural, sempre.
+  const tipoAtual = texturaDe(vis.cabelo, vis.textura);
+  const tipoNatural = texturaNatural(vida) ?? tipoAtual;
+  const tipos = TIPOS_DE_CABELO.filter(t => i >= AUTONOMIA.aparencia.idade || t.id === tipoAtual || t.id === tipoNatural);
+  const tipoEscolhido = TIPOS_DE_CABELO.find(t => t.id === (m.textura ?? tipoAtual));
   const itens = itensDaPessoa(vida);
   const barba = podeTerBarba(vida);
   const barbaAtual = vis.barba ?? 'nenhuma';
@@ -49,6 +56,13 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
                 {cortes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </label>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="tipo-cabelo">Tipo de cabelo</label>
+              <select id="tipo-cabelo" value={m.textura ?? tipoAtual} onChange={e => set('textura', e.target.value, tipoAtual)} aria-describedby="tipo-cabelo-nota">
+                {tipos.map(t => <option key={t.id} value={t.id}>{t.nome}{t.id === tipoNatural ? ' (natural)' : ''}</option>)}
+              </select>
+              <span className="campo__nota" id="tipo-cabelo-nota">{tipoEscolhido?.nota}{m.textura && m.textura !== tipoNatural ? ' — química no salão; o natural volta quando quiser' : ''}</span>
+            </div>
             <label className="campo">
               <span className="campo__rotulo">Cor do cabelo</span>
               <select value={m.corCabelo ?? vis.corCabelo} onChange={e => set('corCabelo', e.target.value, vis.corCabelo)}>

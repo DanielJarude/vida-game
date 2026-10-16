@@ -178,7 +178,8 @@ function peleDa(r: Rng, anc: Ancestralidade): string {
   return PELES[Math.max(0, Math.min(5, k))];
 }
 export function estiloPara(r: Rng, genero: Genero, textura: string): string {
-  return r.pick(ESTILOS[genero][textura as (typeof TEXTURAS)[number]] ?? ESTILOS[genero].liso);
+  // "encaracolado" (HOTFIX dos cabelos: o tipo que se escolhe ao nascer sem puxar os pais) combina com os cortes do cacheado.
+  return r.pick(ESTILOS[genero][textura as (typeof TEXTURAS)[number]] ?? ESTILOS[genero][textura === 'encaracolado' ? 'cacheado' : 'liso']);
 }
 
 /** A aparência de quem é gerado sem pais conhecidos: pela ancestralidade (o estilo de cabelo e a barba são da pessoa). */
