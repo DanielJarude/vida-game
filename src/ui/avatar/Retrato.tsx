@@ -9,7 +9,7 @@
  */
 
 import { misturar } from './cores';
-import { CabeloAtras, CabeloFrente, Calvo, Entradas, estagioDaCalvicie } from './cabelos';
+import { desenharCabelo, estagioDaCalvicie } from './cabelos';
 import { memo, type ReactElement } from 'react';
 import type { Especie } from '../../motor/tipos';
 import { animal, palavraDoBicho } from '../../motor/dados/animais';
@@ -172,6 +172,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   // O lifting apaga as rugas por uns dez anos (depois, o tempo volta).
   const rugas = v.lifting !== undefined && idade - v.lifting < 10 ? 0.35 : 1;
 
+  // REWORK 6: o cabelo é uma forma só (atrás e na frente), com a textura herdada e a calvície no próprio desenho da testa.
+  const cabelo = desenharCabelo({ estilo: calvo && !bebe ? 'calvo' : estilo, cor, cx, cy, w, hh, fase: f, linha: v.linhaCabelo, textura: v.textura, estagio: entradas ? 1 : 0, pele });
   const fundo = fundoDoRetrato(cor, pele, h);
   return (
     <svg
@@ -180,7 +182,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       role="img" aria-label={rotulo ?? 'Retrato'}
     >
       {/* Cabelo de trás */}
-      {!calvo && <CabeloAtras estilo={estilo} cor={cor} cx={cx} cy={cy} w={w} hh={hh} fase={f} linha={v.linhaCabelo} />}
+      {cabelo.atras}
 
       {/* Corpo */}
       <path d={`M ${cx - ombro} 101 C ${cx - ombro} ${corpoTopo + 10} ${cx - ombro * 0.55} ${corpoTopo + 3} ${cx} ${corpoTopo + 3}
@@ -326,8 +328,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {v.oculos ? <Oculos tipo={v.oculos} cx={cx} olhoY={olhoY} esp={esp} /> : f === 'idoso' && h % 2 === 0 && <Oculos tipo="grau" cx={cx} olhoY={olhoY} esp={esp} />}
 
       {/* Cabelo da frente */}
-      {calvo ? <Calvo cx={cx} cy={cy} w={w} hh={hh} cor={cor} semente={h} /> : <CabeloFrente estilo={estilo} cor={cor} cx={cx} cy={cy} w={w} hh={hh} fase={f} linha={v.linhaCabelo} />}
-      {entradas && !calvo && <Entradas cx={cx} cy={cy} w={w} hh={hh} pele={pele} />}
+      {cabelo.frente}
 
       {/* O que vai na cabeça */}
       {v.chapeu && f !== 'bebe' && <Chapeu tipo={v.chapeu} cx={cx} cy={cy} w={w} hh={hh} semente={h} />}

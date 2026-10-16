@@ -20,7 +20,7 @@
 .estresse__tendencia--baixando { color: var(--pig-folha); }
 .estresse__barra { position: relative; height: 14px; margin: var(--space-3) 0 var(--space-2); border-radius: 7px; background: linear-gradient(90deg, color-mix(in oklab, var(--pig-folha) 22%, transparent) 0 35%, color-mix(in oklab, var(--pig-ipe) 20%, transparent) 35% 55%, color-mix(in oklab, var(--warning) 20%, transparent) 55% 75%, color-mix(in oklab, var(--danger) 22%, transparent) 75%); overflow: hidden; }
 .estresse__cheio { display: block; height: 100%; border-radius: inherit; background: var(--nivel); transition: width var(--motion-base, .3s); }
-.estresse__marca { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(18, 13, 10, 0.55); }
+.estresse__marca { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in oklab, var(--moldura) 55%, transparent); }
 .estresse__frase { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-primary); margin: var(--space-2) 0 var(--space-4); }
 .estresse__colunas { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 .estresse__coluna h3, .estresse__sub { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); margin: 0 0 var(--space-2); }

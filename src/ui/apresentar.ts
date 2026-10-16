@@ -170,3 +170,10 @@ export function palavraChance(c?: number): string {
 export const dinheiroCurto = (v: number) => formatarDinheiroCurto(v);
 
 export { idadePessoa, parceiro };
+
+/** O nome de cada tema da biografia e das decisões (uma fonte: o modal e a Linha da Vida). */
+export const TEMA_ROTULO: Record<string, string> = {
+  infancia: 'Infância', familia: 'Família', amizade: 'Amizade', amor: 'Amor', escola: 'Escola', estudo: 'Estudos',
+  trabalho: 'Trabalho', dinheiro: 'Dinheiro', casa: 'Casa', saude: 'Saúde', lugar: 'Lugar', lazer: 'Tempo livre',
+  perda: 'Perda', filhos: 'Filhos', morte: 'Fim', escolha: 'Escolha', nascimento: 'Nascimento'
+};

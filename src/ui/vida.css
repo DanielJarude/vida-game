@@ -37,6 +37,8 @@ small { font-size: 0.85em; color: var(--text-muted); }
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--tom, var(--accent-soft)); outline-offset: 2px; border-radius: var(--radius-xs); }
 details summary { cursor: pointer; }
+/* Na moldura escura (abas, barra), o foco é claro — o tom da área sumiria no grafite. */
+.cabecalho :focus-visible, .barra :focus-visible { outline-color: var(--moldura-tinta); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -46,7 +48,7 @@ details summary { cursor: pointer; }
 .icone { width: 20px; height: 20px; flex: none; }
 
 /* A luz da página: fim de tarde entrando pelo alto — mais forte num bom momento, cinza num difícil. */
-.jogo { min-height: 100dvh; background-image: radial-gradient(1100px 620px at 12% -8%, var(--glow-quente), transparent 62%), radial-gradient(900px 520px at 100% 0%, var(--glow-memoria), transparent 60%); background-attachment: fixed; }
+.jogo { min-height: 100dvh; background: var(--fundo); }
 
 /* Tom de cada página. */
 .pagina--vida { --tom: var(--tom-vida); }
@@ -119,6 +121,11 @@ details summary { cursor: pointer; }
 .lugar { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-secondary); margin-bottom: var(--space-2); }
 .link { color: inherit; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; text-align: left; }
 .link:hover { text-decoration-color: var(--tom); }
+/* REWORK 6 — o link de texto é pequeno de ler, não de tocar: a área de toque cresce para 32 px por dentro do
+   padding (a margem negativa devolve o espaço, a linha não muda de altura). */
+.link { display: inline-block; padding-block: 6px; margin-block: -6px; }
+/* A caixa de marcar: grande o bastante para o dedo, na cor de agir (o rótulo em volta também marca). */
+input[type='checkbox'] { width: 1.25rem; height: 1.25rem; accent-color: var(--acao); vertical-align: -0.25rem; }
 
 .linha { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); font-size: var(--type-caption); }
 .linha__rotulo { color: var(--text-muted); }
@@ -177,7 +184,7 @@ details summary { cursor: pointer; }
 .amostras { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .amostras__rotulo { font-size: var(--type-caption); color: var(--text-secondary); margin-top: var(--space-2); }
 /* Amostra: o anel claro deixa o cabelo preto visível no fundo escuro; a escolhida ganha anel no tom e ✓. */
-.amostra { position: relative; width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(255, 246, 232, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
+.amostra { position: relative; width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--fio-forte), inset 0 0 0 1px rgba(0, 0, 0, 0.2); }
 .amostra--ativa { box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4.5px var(--tom); }
 .amostra--ativa::after { content: '✓'; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 16px; text-shadow: 0 0 3px #000, 0 0 1px #000; }
 @media (min-width: 860px) {
@@ -189,14 +196,18 @@ details summary { cursor: pointer; }
 /* ===================================================================== Jogo */
 .cabecalho {
   position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--space-4);
-  height: var(--header-height); padding: 0 var(--space-4); background: var(--veu-cabecalho); backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--rule);
+  height: var(--header-height); padding: env(safe-area-inset-top) var(--space-4) 0 var(--space-3);
+  background: var(--moldura); color: var(--moldura-tinta);
 }
-.marca { font-family: var(--font-serif); font-size: 1.35rem; letter-spacing: 0.2em; font-weight: 600; min-height: var(--touch-target); padding: 0 var(--space-2); color: var(--text-primary); }
+/* A marca: VIDA com o ponto coral (o mesmo coral do avançar). */
+.marca { position: relative; font-family: var(--font-serif); font-size: 1.3rem; letter-spacing: 0.2em; font-weight: 600; min-height: var(--touch-target); padding: 0 var(--space-3) 0 var(--space-2); color: var(--moldura-tinta); border-radius: var(--radius-md); }
+.marca::after { content: ''; position: absolute; right: 2px; top: 50%; width: 6px; height: 6px; margin-top: -1px; border-radius: 50%; background: var(--acao); }
+.marca:hover { background: var(--moldura-2); }
 .abas { display: flex; gap: 2px; flex: 1; min-width: 0; }
-.aba { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); padding: 0 var(--space-3); color: var(--text-muted); white-space: nowrap; font-size: var(--type-caption); border-radius: var(--radius-md); }
-.aba:hover { color: var(--text-primary); background: var(--surface); }
-.aba--ativa { color: var(--text-primary); box-shadow: inset 0 -3px 0 var(--tom-aba); border-radius: 0; }
+.aba { position: relative; display: flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); color: var(--moldura-tinta-2); white-space: nowrap; font-size: var(--type-caption); font-weight: var(--weight-medium); border-radius: var(--radius-pill); }
+.aba:hover { color: var(--moldura-tinta); background: var(--moldura-2); }
+/* A aba ativa: a pílula clara (a cor da página — a aba "abre" para a página), o ícone no tom da área. */
+.aba--ativa, .aba--ativa:hover { color: var(--tinta); background: var(--fundo); }
 .aba--ativa .icone { color: var(--tom-aba); }
 .aba--vida, .barra__item--vida { --tom-aba: var(--tom-casa); }
 .aba--linha, .barra__item--linha { --tom-aba: var(--tom-vida); }
@@ -208,29 +219,40 @@ details summary { cursor: pointer; }
 .aba--cidade, .barra__item--cidade { --tom-aba: var(--tom-cidade); }
 .aba--casa, .barra__item--casa { --tom-aba: var(--tom-casa); }
 .aba--tempo, .barra__item--tempo { --tom-aba: var(--tom-tempo); }
-.cabecalho__eu { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; min-width: 0; min-height: var(--touch-target); text-align: left; border-radius: var(--radius-md); padding: 0 var(--space-2); }
-.cabecalho__eu:hover { background: var(--surface); }
+.cabecalho__eu { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; min-width: 0; min-height: var(--touch-target); text-align: left; border-radius: var(--radius-pill); padding: 0 var(--space-3) 0 4px; color: var(--moldura-tinta); }
+.cabecalho__eu:hover { background: var(--moldura-2); }
 .cabecalho__eu .retrato { border-radius: 50%; flex: none; }
 .cabecalho__eu-texto { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .cabecalho__eu-texto strong { font-family: var(--font-serif); font-size: var(--type-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-.cabecalho__eu-texto span { color: var(--text-muted); font-size: var(--type-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cabecalho__eu-texto span { color: var(--moldura-tinta-2); font-size: var(--type-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.palco { display: grid; grid-template-columns: minmax(0, 1fr) var(--aside-width); gap: var(--space-9); max-width: var(--content-max); margin: 0 auto; padding: var(--space-7) var(--space-6) var(--space-9); }
+.palco { display: grid; grid-template-columns: minmax(0, 1fr) var(--aside-width); gap: var(--space-9); max-width: var(--content-max); margin: 0 auto; padding: var(--space-7) var(--space-6) var(--space-6); }
 .conteudo { min-width: 0; max-width: 780px; overflow-x: clip; }
 .agora { position: sticky; top: calc(var(--header-height) + var(--space-6)); align-self: start; max-height: calc(100dvh - var(--header-height) - var(--space-9)); overflow-y: auto; padding-left: var(--space-5); border-left: 1px solid var(--rule); }
 
-/* Avançar: o fim natural da página (FIX pós-playtest humano — fixo por cima, cobria a trilha de Formação). É o âmbar
-   da marca, não o tom da área. Fica no fluxo: nada passa por baixo dele. */
-.avancar { display: flex; justify-content: center; margin-top: var(--space-8); padding-top: var(--space-6); border-top: 1px solid var(--rule); }
+/* REWORK 6 — "Viver mais um ano" SEMPRE À MÃO. Continua sendo o último elemento da página (nada passa por baixo
+   dele no fim), mas é `sticky`: enquanto a página rola, fica preso embaixo da janela, sempre no mesmo lugar — o
+   jogador não precisa descer 80 anos de biografia para achar o botão. Não é `fixed`: não sai da coluna de leitura,
+   não cobre o painel lateral e, no fim da página, volta ao seu lugar. O véu do papel por trás apaga o texto que passa
+   embaixo (em vez de o botão cortar uma linha no meio). No celular, fica acima da barra de áreas e da área segura. */
+.avancar {
+  position: sticky; bottom: var(--space-4); z-index: calc(var(--z-sticky) - 1);
+  display: flex; justify-content: center; margin-top: var(--space-7); padding: var(--space-6) 0 0;
+  background: linear-gradient(180deg, transparent, var(--fundo) 50%); pointer-events: none;
+}
 .avancar__botao {
   pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-5);
-  min-height: 56px; width: min(420px, 100%); padding: 0 var(--space-5); border-radius: var(--radius-lg);
-  background: var(--accent); color: #1a120a; box-shadow: var(--shadow-accent-alta); font-weight: var(--weight-semibold);
+  min-height: var(--avancar-altura); width: min(420px, 100%); padding: 0 var(--space-2) 0 var(--space-5); border-radius: var(--radius-pill);
+  background: var(--acao); color: var(--acao-sobre); box-shadow: var(--shadow-accent-alta); font-weight: var(--weight-semibold);
+  transition: transform var(--motion-fast) var(--ease-out), background var(--motion-fast);
 }
-.avancar__botao:hover:not(:disabled) { background: var(--accent-soft); }
-.avancar__botao:disabled { opacity: 0.55; }
-.avancar__rotulo { font-size: var(--type-subheading); }
-.avancar__idade { font-family: var(--font-serif); font-size: var(--type-lead); }
+.avancar__botao:hover:not(:disabled) { background: color-mix(in oklab, var(--acao) 86%, black); }
+.avancar__botao:active:not(:disabled) { transform: scale(0.98); }
+.avancar__botao:focus-visible { outline: 3px solid var(--tinta); outline-offset: 3px; border-radius: var(--radius-pill); }
+.avancar__botao:disabled { background: var(--fio-forte); color: var(--tinta-2); box-shadow: none; }
+.avancar__rotulo { font-size: var(--type-subheading); letter-spacing: 0.01em; }
+/* A idade: uma pastilha dentro do botão ("37 → 38"), em algarismos alinhados. */
+.avancar__idade { font-family: var(--font-sans); font-size: var(--type-body); font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); padding: 7px 14px; border-radius: var(--radius-pill); background: color-mix(in oklab, black 20%, transparent); white-space: nowrap; }
 .barra { display: none; }
 
 /* ---------------------------------------------------------- Painel "Agora" */
@@ -257,28 +279,70 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .agora-processos li { color: var(--text-secondary); font-family: var(--font-serif); padding: 2px 0; }
 
 /* ------------------------------------------------------------ Linha da Vida */
-.hoje { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-5); align-items: center; padding-bottom: var(--space-6); margin-bottom: var(--space-5); border-bottom: 1px solid var(--rule); }
+/* O alto: o rosto e o nome, a frase de agora e, embaixo, os sinais num relance. */
+.hoje { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4) var(--space-5); align-items: center; padding-bottom: var(--space-5); margin-bottom: var(--space-5); border-bottom: 1px solid var(--rule); }
 .hoje__rosto { border-radius: 50%; }
-.hoje__rosto .retrato { border-radius: 50%; display: block; box-shadow: 0 0 0 3px var(--bg-app), 0 0 0 5px var(--tom-linha); }
+.hoje__rosto .retrato { border-radius: 50%; display: block; box-shadow: 0 0 0 3px var(--fundo), 0 0 0 5px var(--tom-linha); }
 .hoje__texto { min-width: 0; }
 .hoje__texto .folio__kicker { margin-bottom: var(--space-2); }
 .hoje__nome { font-size: var(--type-hero); line-height: 1.02; font-weight: 500; letter-spacing: var(--tracking-display); overflow-wrap: anywhere; }
 .hoje__nome span { color: var(--text-muted); font-weight: 400; }
 .hoje__frase { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-secondary); margin-top: var(--space-2); max-width: 46ch; line-height: var(--leading-snug); }
+.hoje .sinais { grid-column: 1 / -1; }
 
+/* Os sinais: um painel compacto (nome, cinco marcas, a palavra, a seta). Mesma gramática em todo lugar. */
+.sinais { display: flex; flex-direction: column; gap: var(--space-2); }
+.sinais__lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; border-radius: var(--radius-lg); overflow: hidden; background: var(--fio); box-shadow: 0 0 0 1px var(--fio); }
+.sinal { --tom-s: var(--tom-voce); display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'nome medidor' 'palavra palavra'; gap: 4px var(--space-2); align-items: center; padding: var(--space-3); background: var(--superficie); min-width: 0; }
+.sinal--cabeca { --tom-s: var(--tom-cidade); }
+.sinal--saude { --tom-s: var(--tom-saude); }
+.sinal--condicionamento { --tom-s: var(--tom-tempo); }
+.sinal--aprendizado { --tom-s: var(--tom-rumo); }
+.sinal--aparencia { --tom-s: var(--tom-pessoas); }
+.sinal__nome { grid-area: nome; font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--tom-s); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sinal .medidor { grid-area: medidor; }
+.sinal__palavra { grid-area: palavra; font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); line-height: 1.25; }
+.sinal--n1 .sinal__palavra, .sinal--n2 .sinal__palavra { color: var(--ruim); }
+.sinal__seta { font-family: var(--font-sans); font-weight: 700; white-space: nowrap; }
+.sinal__seta--sobe { color: var(--bom); }
+.sinal__seta--desce { color: var(--ruim); }
+.sinais__abrir { align-self: flex-end; min-height: 40px; padding: 0 var(--space-2); font-size: var(--type-caption); color: var(--text-secondary); font-weight: var(--weight-medium); border-radius: var(--radius-md); }
+.sinais__abrir:hover { color: var(--text-primary); background: var(--veu-1); }
+/* O medidor: cinco marcas; as cheias no tom do sinal, as baixas (1–2) no tom de alerta. */
+.medidor { display: inline-flex; gap: 3px; }
+.medidor__marca { width: 12px; height: 6px; border-radius: 3px; background: var(--veu-2); }
+.medidor__marca--cheia { background: var(--tom-s, var(--tom)); }
+.sinal--n1 .medidor__marca--cheia, .sinal--n2 .medidor__marca--cheia { background: var(--ruim); }
+/* A escala das outras telas (a segurança do dinheiro, o risco de uma aplicação): a mesma gramática do medidor. */
+.escala { display: inline-flex; gap: 3px; margin-bottom: var(--space-2); }
+.escala__marca { width: 12px; height: 6px; border-radius: 3px; background: var(--veu-2); }
+.escala__marca--cheia { background: var(--tom, var(--text-secondary)); }
+
+/* Controles da leitura: chips (alternam, mostram o estado com aria-pressed). */
 .linha-da-vida__controles { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-5); }
+.chip { min-height: 40px; padding: 0 var(--space-4); border-radius: var(--radius-pill); font-size: var(--type-caption); font-weight: var(--weight-medium); color: var(--text-secondary); background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio-forte); }
+.chip:hover { color: var(--text-primary); box-shadow: inset 0 0 0 1.5px var(--tom); }
+.chip[aria-pressed='true'] { color: var(--tom-sobre); background: var(--tinta); box-shadow: none; }
+
+/* O ano que passou: o fechamento e o "Enquanto isso", juntos, logo acima da biografia. */
+.ano-que-passou { display: flex; flex-direction: column; gap: var(--space-4); margin-bottom: var(--space-6); scroll-margin-top: calc(var(--header-height) + var(--space-3)); }
+
+/* Os anos: a idade grande na margem (a régua da vida), os acontecimentos ao lado. */
 .anos { display: flex; flex-direction: column; }
-.ano { position: relative; padding-left: var(--space-6); padding-bottom: var(--space-6); }
-.ano::before { content: ''; position: absolute; left: 5px; top: 12px; bottom: 0; width: 1px; background: var(--rule-strong); }
-.ano:last-child::before { display: none; }
-.ano__capitulo { font-family: var(--font-serif); font-style: italic; font-size: var(--type-lead); color: var(--tom); margin: var(--space-3) 0 var(--space-4) calc(-1 * var(--space-6)); display: flex; align-items: center; gap: var(--space-3); }
-.ano__capitulo::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--tom-linha), transparent 70%); }
-.ano__silencio { color: var(--text-muted); margin: 0 0 var(--space-4) calc(-1 * var(--space-5)); letter-spacing: 0.3em; }
-.ano__cabeca { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-3); position: relative; }
-.ano__cabeca::before { content: ''; position: absolute; left: calc(-1 * var(--space-6) + 1px); top: 0.45em; width: 9px; height: 9px; border-radius: 50%; background: var(--bg-app); box-shadow: inset 0 0 0 1.5px var(--text-muted); }
-.ano__idade { font-size: var(--type-heading); }
-.ano__calendario { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); }
-.entradas { display: flex; flex-direction: column; gap: var(--space-3); }
+.ano { position: relative; scroll-margin-top: calc(var(--header-height) + var(--space-3)); }
+.ano__corpo { position: relative; display: grid; grid-template-columns: 76px minmax(0, 1fr); column-gap: var(--space-5); padding: var(--space-4) 0 var(--space-5); border-top: 1px solid var(--fio); }
+.ano__capitulo { font-family: var(--font-serif); font-style: italic; font-size: var(--type-heading); color: var(--tom); margin: var(--space-6) 0 var(--space-2); display: flex; align-items: center; gap: var(--space-3); }
+.ano:first-child .ano__capitulo { margin-top: 0; }
+.ano__capitulo::after { content: ''; flex: 1; height: 2px; border-radius: 1px; background: var(--tom-linha); }
+.ano__silencio { color: var(--text-muted); margin: 0 0 var(--space-2) var(--space-6); letter-spacing: 0.3em; }
+.ano__cabeca { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; font-family: var(--font-serif); }
+.ano__idade { font-size: 2rem; line-height: 1; font-weight: 500; letter-spacing: var(--tracking-display); color: var(--text-primary); font-variant-numeric: lining-nums; }
+.ano__unidade { display: block; font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-top: 4px; }
+.ano__calendario { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ano__selo { margin-top: var(--space-2); font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--acao-sobre); background: var(--acao); padding: 3px 8px; border-radius: var(--radius-pill); }
+/* O ano que acabou de passar: a folha mais clara, com a borda coral na margem. */
+.ano--novo .ano__corpo { background: var(--superficie); border-top: 0; border-radius: var(--radius-lg); box-shadow: inset 4px 0 0 var(--acao), 0 0 0 1px var(--fio); padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5); margin: var(--space-2) 0 var(--space-3); }
+.entradas { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .entrada { position: relative; --tema: var(--text-muted); }
 .entrada--tema-trabalho { --tema: var(--tom-trabalho); }
 .entrada--tema-escola, .entrada--tema-estudo { --tema: var(--tom-rumo); }
@@ -289,14 +353,17 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .entrada--tema-escolha { --tema: var(--tom-voce); }
 .entrada--tema-perda, .entrada--tema-morte { --tema: var(--cinza-quente); }
 .entrada__texto { font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-lead); line-height: var(--leading-prose); max-width: var(--measure-prosa); user-select: text; }
-.entrada--marco .entrada__texto { color: var(--text-primary); font-size: 1.32rem; line-height: 1.45; }
-.entrada--marco::before { content: ''; position: absolute; left: calc(-1 * var(--space-6) + 1px); top: 0.55em; width: 9px; height: 9px; border-radius: 50%; background: var(--tema); }
-.entrada--marco.entrada--ruim::before { background: transparent; box-shadow: inset 0 0 0 2px var(--tema); }
+/* Marco: o tema em versalete (no tom do tema), o texto maior e em tinta cheia. */
+.entrada__tema { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; color: var(--tema); margin-bottom: 2px; }
+.entrada__tema::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--tema); }
+.entrada--ruim .entrada__tema::before { background: transparent; box-shadow: inset 0 0 0 2px var(--tema); }
+.entrada--marco .entrada__texto { color: var(--text-primary); font-size: 1.28rem; line-height: 1.42; }
 .entrada--cotidiano .entrada__texto { color: var(--text-muted); font-size: var(--type-body); }
 .entrada--nova .entrada__texto { animation: surgir var(--motion-slow) var(--ease-out); }
-.entrada--nova { box-shadow: -3px 0 0 -1px var(--tom-linha); margin-left: -12px; padding-left: 12px; }
-.entrada__escolha { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; color: var(--tom-voce); margin-left: var(--space-2); white-space: nowrap; }
+.entrada__escolha { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; color: var(--tom-voce); margin-left: var(--space-2); white-space: nowrap; font-weight: 600; }
 .entrada__escolha::before { content: '✎ '; }
+.linha-da-vida__mais { margin: var(--space-3) 0 0; }
+.linha-da-vida__faltam { color: var(--text-muted); font-weight: 400; font-size: var(--type-caption); }
 @keyframes surgir { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 /* ------------------------------------------------------------------- Pessoas */
@@ -313,10 +380,11 @@ button.agora-sinal:hover { color: var(--text-primary); }
 
 .nucleo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-5); }
 .nucleo--1 { grid-template-columns: 1fr; }
-.cartao-pessoa { display: grid; grid-template-columns: 84px 1fr; column-gap: var(--space-4); row-gap: 2px; width: 100%; text-align: left; padding: var(--space-3) var(--space-2); border-radius: var(--radius-lg); align-items: start; height: 100%; }
-.cartao-pessoa:hover { background: var(--surface); }
-.cartao-pessoa .retrato { grid-row: span 4; border-radius: 50%; align-self: start; width: 84px; height: 84px; box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--tom-linha); }
-.cartao-pessoa--tenso .retrato { box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--danger-line); }
+.cartao-pessoa { display: grid; grid-template-columns: 84px 1fr; column-gap: var(--space-4); row-gap: 2px; width: 100%; text-align: left; padding: var(--space-4); border-radius: var(--radius-lg); align-items: start; align-content: start; height: 100%; background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); transition: box-shadow var(--motion-fast), transform var(--motion-fast); }
+.cartao-pessoa:hover { box-shadow: 0 0 0 1.5px var(--tom-linha), var(--shadow-md); }
+.cartao-pessoa:active { transform: scale(0.99); }
+.cartao-pessoa .retrato { grid-row: span 5; border-radius: 50%; align-self: start; width: 84px; height: 84px; box-shadow: 0 0 0 2px var(--superficie), 0 0 0 4px var(--tom-linha); }
+.cartao-pessoa--tenso .retrato { box-shadow: 0 0 0 2px var(--superficie), 0 0 0 4px var(--danger-line); }
 .cartao-pessoa__nome { font-family: var(--font-serif); font-size: var(--type-heading); color: var(--text-primary); }
 .cartao-pessoa__papel { font-size: var(--type-caption); color: var(--tom); font-weight: 500; }
 .cartao-pessoa__leitura { font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-body); line-height: var(--leading-snug); }
@@ -326,7 +394,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .dobra__botao:hover { color: var(--text-primary); text-decoration-color: var(--tom); }
 .retrato--falecido { filter: grayscale(0.9); }
 
-.atencao { margin-bottom: var(--space-6); padding: var(--space-4) 0 var(--space-3) var(--space-4); border-left: 3px solid var(--tom-pessoas); background: linear-gradient(90deg, var(--warm-memory-wash), transparent 80%); }
+.atencao { margin-bottom: var(--space-6); padding: var(--space-4) var(--space-2) var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), inset 4px 0 0 var(--tom-pessoas); }
 .atencao__titulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom-pessoas); font-weight: 600; margin-bottom: var(--space-2); }
 .atencao__lista { display: flex; flex-direction: column; }
 .atencao__item { display: grid; grid-template-columns: 40px 1fr; gap: var(--space-3); align-items: center; width: 100%; text-align: left; padding: var(--space-2) 0; min-height: var(--touch-target); font-family: var(--font-serif); color: var(--text-primary); font-size: var(--type-subheading); line-height: var(--leading-snug); }
@@ -369,35 +437,39 @@ button.agora-sinal:hover { color: var(--text-primary); }
 /* ---------------------------------------------------------------- Você */
 .voce { display: flex; flex-direction: column; gap: var(--space-7); }
 .voce-rosto { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-6); align-items: center; padding-bottom: var(--space-6); border-bottom: 1px solid var(--rule); }
-.voce-rosto .retrato { border-radius: 50%; box-shadow: 0 0 0 4px var(--bg-app), 0 0 0 6px var(--tom-linha), 0 24px 50px -26px var(--tom); }
+.voce-rosto .retrato { border-radius: 50%; box-shadow: 0 0 0 4px var(--fundo), 0 0 0 6px var(--tom-linha), var(--shadow-md); }
 .voce-rosto__texto { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .voce-rosto__momento { font-family: var(--font-serif); font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.35rem); font-weight: 500; line-height: 1.15; color: var(--text-primary); letter-spacing: var(--tracking-display); max-width: 24ch; }
 .voce-rosto__linha { font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-subheading); line-height: var(--leading-snug); }
 
-/* Três leituras, três tons: humor (pêssego), cabeça (azulejo), saúde (folha). */
-.estados { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); }
+/* Três leituras (bem-estar, cabeça, saúde): cartões que abrem. O resumo (nome, tendência, palavra, medidor) sempre
+   à vista; o porquê e o que fazer, no corpo — aberto sozinho quando a dimensão pede atenção. */
+.estados { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); align-items: start; }
 .estados--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.estado-bloco { --tom-e: var(--tom-voce); display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-4); border-top: 3px solid var(--tom-e); min-width: 0; }
-.estado-bloco--cabeca { --tom-e: var(--tom-rumo); }
+.estado-bloco { --tom-e: var(--tom-voce); --tom-s: var(--tom-e); min-width: 0; background: var(--superficie); border-radius: var(--radius-lg); box-shadow: 0 0 0 1px var(--fio), inset 0 3px 0 var(--tom-e); }
+.estado-bloco--cabeca { --tom-e: var(--tom-cidade); }
 .estado-bloco--saude { --tom-e: var(--tom-saude); }
-.estado-bloco__cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
-.estado-bloco__nome { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom-e); font-weight: 600; }
-.estado-bloco__tendencia { font-size: var(--type-caption); color: var(--text-muted); white-space: nowrap; }
+.estado-bloco__resumo { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'nome tend' 'palavra palavra' 'medidor medidor'; align-items: baseline; gap: var(--space-1) var(--space-2); padding: var(--space-4) var(--space-4) var(--space-3); list-style: none; cursor: pointer; border-radius: var(--radius-lg); position: relative; }
+.estado-bloco__resumo::-webkit-details-marker { display: none; }
+.estado-bloco__resumo::after { content: '+'; position: absolute; right: var(--space-4); bottom: var(--space-3); font-size: 1.1rem; color: var(--text-muted); }
+.estado-bloco[open] .estado-bloco__resumo::after { content: '−'; }
+.estado-bloco__resumo:hover { background: var(--veu-1); }
+.estado-bloco__nome { grid-area: nome; font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom-e); font-weight: 700; }
+.estado-bloco__tendencia { grid-area: tend; font-size: var(--type-caption); color: var(--text-muted); white-space: nowrap; font-weight: var(--weight-medium); }
 .estado-bloco__tendencia--melhorando { color: var(--success); }
 .estado-bloco__tendencia--piorando { color: var(--danger); }
-.estado-bloco__palavra { font-family: var(--font-serif); font-size: var(--type-title); line-height: 1.05; color: var(--text-primary); font-weight: 500; }
-.estado-bloco--n1 .estado-bloco__palavra, .estado-bloco--n2 .estado-bloco__palavra { font-style: italic; color: var(--text-secondary); }
-.escala { display: inline-flex; gap: 4px; margin-bottom: var(--space-2); }
-.escala__marca { width: 18px; height: 6px; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--rule-strong); }
-.escala__marca--cheia { background: var(--tom-e, var(--text-secondary)); box-shadow: none; }
-.estado-bloco--n1 .escala__marca--cheia, .estado-bloco--n2 .escala__marca--cheia { background: var(--text-muted); }
-.estado-bloco__lista h3 { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin: var(--space-2) 0 var(--space-1); }
+.estado-bloco__palavra { grid-area: palavra; font-family: var(--font-serif); font-size: var(--type-title); line-height: 1.05; color: var(--text-primary); font-weight: 500; }
+.estado-bloco--n1 .estado-bloco__palavra, .estado-bloco--n2 .estado-bloco__palavra { color: var(--ruim); }
+.estado-bloco--n1 .medidor__marca--cheia, .estado-bloco--n2 .medidor__marca--cheia { background: var(--ruim); }
+.estado-bloco .medidor { grid-area: medidor; margin-top: var(--space-1); }
+.estado-bloco__detalhe { display: flex; flex-direction: column; gap: var(--space-2); padding: 0 var(--space-4) var(--space-4); border-top: 1px solid var(--fio); padding-top: var(--space-3); }
+.estado-bloco__lista h3 { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin: var(--space-2) 0 var(--space-1); }
 .estado-bloco__lista li { font-family: var(--font-serif); color: var(--text-secondary); line-height: var(--leading-snug); padding: 2px 0 2px var(--space-4); position: relative; }
 .estado-bloco__lista li::before { content: '−'; position: absolute; left: 0; color: var(--danger); font-weight: 700; }
 .estado-bloco__lista--bom li::before { content: '+'; color: var(--success); }
-.estado-bloco__lista .link { display: inline-block; min-height: 40px; padding: 9px 0; }
+.estado-bloco__lista .link { display: inline-block; min-height: 40px; padding: 9px 0; text-align: left; }
 .estado-bloco__quando { font-family: var(--font-sans); font-size: var(--type-meta); color: var(--text-muted); }
-.estado-bloco__cuidar { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); margin-top: auto; padding-top: var(--space-4); }
+.estado-bloco__cuidar { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding-top: var(--space-3); }
 .estado-bloco__cuidar .botao { min-height: 44px; font-size: var(--type-caption); text-align: left; --tom: var(--tom-e); }
 .estado-bloco__motivo { font-size: var(--type-caption); color: var(--text-muted); font-style: italic; font-family: var(--font-serif); max-width: 32ch; }
 .voce-subtitulo { font-size: var(--type-heading); margin-bottom: var(--space-3); }
@@ -408,7 +480,8 @@ button.agora-sinal:hover { color: var(--text-primary); }
 /* Corpo e aprendizado: três leituras em linhas, sem cartões. */
 .voce-pessoal .pessoal { display: flex; flex-direction: column; }
 .pessoal__item { padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: var(--space-1); }
-.pessoal__cabeca { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); }
+.pessoal__cabeca { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.pessoal__cabeca .medidor { --tom-s: var(--tom-voce); margin-left: auto; }
 .pessoal__nome { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom-voce); font-weight: 600; }
 .pessoal__palavra { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-primary); }
 .pessoal__causas { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-family: var(--font-serif); color: var(--text-secondary); }
@@ -425,8 +498,9 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .dinheiro__cabeca .secao-fio { flex: 1; margin-bottom: var(--space-2); min-width: 200px; }
 
 /* Dados: faixa editorial (sem caixa). */
-.dados { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--space-4) var(--space-5); margin: var(--space-4) 0; }
-.dado { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-left: var(--space-3); border-left: 2px solid var(--tom-linha); }
+/* Dados: fichas pequenas (o número ou a palavra que importa em cima, o rótulo em versalete). Servem a toda área. */
+.dados { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-2); margin: var(--space-4) 0; }
+.dado { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), inset 0 2px 0 var(--tom-linha); }
 .dado dt { font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
 .dado dd { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); line-height: var(--leading-snug); overflow-wrap: anywhere; }
 .dado dd small { font-family: var(--font-sans); display: inline; }
@@ -489,7 +563,8 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .placar__espaco--titular { background: var(--tom); color: var(--tom-sobre); }
 .placar__espaco--titular::before { content: '● '; }
 .placar__espaco--reserva { box-shadow: inset 0 0 0 1.5px var(--tom-linha); color: var(--text-secondary); }
-.temporada { border-top: 1px solid var(--tom-linha); border-bottom: 1px solid var(--tom-linha); padding: var(--space-2) 0; margin: var(--space-2) 0 var(--space-3); }
+/* A temporada (e todo fechamento de ano de carreira): um placar — papel alto, o título em versalete, números alinhados. */
+.temporada { padding: var(--space-3) var(--space-4); margin: var(--space-2) 0 var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), inset 4px 0 0 var(--tom); }
 .temporada__titulo { font-family: var(--font-sans); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: var(--type-caption); margin: 0; }
 .temporada__linha { font-family: var(--font-serif, inherit); margin: 4px 0; font-variant-numeric: tabular-nums; }
 .semana-carga { margin: var(--space-2) 0; }
@@ -501,7 +576,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .historico-politico li { font-family: var(--font-serif); color: var(--text-secondary); padding: 4px 0; border-bottom: 1px dashed var(--rule); }
 
 /* O que se faz "por fora": outra moldura, sem o tom do trabalho. */
-.por-fora { margin: var(--space-4) 0; padding: var(--space-4); border: 1.5px dashed var(--cinza-quente); border-radius: var(--radius-md); color: var(--text-secondary); font-family: var(--font-serif); background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(154, 143, 130, 0.05) 10px 20px); }
+.por-fora { margin: var(--space-4) 0; padding: var(--space-4); border: 1.5px dashed var(--cinza-quente); border-radius: var(--radius-md); color: var(--text-secondary); font-family: var(--font-serif); background: repeating-linear-gradient(135deg, transparent 0 10px, var(--veu-1) 10px 20px); }
 .por-fora__titulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: var(--space-2); }
 .por-fora .botao { --tom: var(--cinza-quente); margin-top: var(--space-3); }
 
@@ -607,22 +682,22 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .semana__faixa { position: relative; display: flex; height: 64px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg-inset); box-shadow: inset 0 0 0 1px var(--rule-strong); gap: 3px; padding: 3px; }
 /* Cada pedaço tem cor E padrão (e rótulo): não depende de ver cor. */
 .semana__pedaco { position: relative; display: flex; align-items: flex-end; min-width: 6px; padding: 0 var(--space-2) var(--space-2); overflow: hidden; border-radius: 5px; }
-.semana__rotulo { font-size: var(--type-caption); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1a140e; background: rgba(255, 255, 255, 0.82); padding: 0 5px; border-radius: 3px; position: relative; z-index: 2; }
+.semana__rotulo { font-size: var(--type-caption); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--p-tinta); background: rgba(255, 255, 255, 0.86); padding: 0 5px; border-radius: 3px; position: relative; z-index: 2; }
 /* A faixa do "passa da semana" escurece o fundo, não o nome do que está ali. */
 .semana__pedaco--trabalho { background: var(--tom-trabalho); }
-.semana__pedaco--estudo { background: repeating-linear-gradient(135deg, var(--tom-rumo) 0 7px, color-mix(in oklab, var(--tom-rumo) 72%, #102040) 7px 11px); }
-.semana__pedaco--casa { background: radial-gradient(circle at 3px 3px, color-mix(in oklab, var(--tom-pessoas) 55%, #3a1010) 1.6px, transparent 2px) 0 0 / 8px 8px, var(--tom-pessoas); }
-.semana__pedaco--atividade { background: repeating-linear-gradient(90deg, var(--tom-tempo) 0 10px, color-mix(in oklab, var(--tom-tempo) 80%, #1b0f33) 10px 12px); }
+.semana__pedaco--estudo { background: repeating-linear-gradient(135deg, var(--tom-rumo) 0 7px, color-mix(in oklab, var(--tom-rumo) 72%, black) 7px 11px); }
+.semana__pedaco--casa { background: radial-gradient(circle at 3px 3px, color-mix(in oklab, var(--tom-pessoas) 55%, black) 1.6px, transparent 2px) 0 0 / 8px 8px, var(--tom-pessoas); }
+.semana__pedaco--atividade { background: repeating-linear-gradient(90deg, var(--tom-tempo) 0 10px, color-mix(in oklab, var(--tom-tempo) 80%, black) 10px 12px); }
 /* Livre: papel claro, tracejado — um espaço aberto que se vê. */
 .semana__pedaco--livre { background: var(--papel); box-shadow: inset 0 0 0 2px var(--papel-2); outline: 2px dashed color-mix(in oklab, var(--papel-tinta) 35%, transparent); outline-offset: -6px; }
 .semana__pedaco--livre .semana__rotulo { color: var(--papel-tinta); background: transparent; font-style: italic; font-family: var(--font-serif); font-size: var(--type-body); }
 .semana__pedaco--excesso { background: repeating-linear-gradient(135deg, var(--danger) 0 6px, var(--bg-deep) 6px 10px); }
 .semana__alem { font-size: var(--type-caption); color: var(--danger); }
 .semana__alem::before { content: '! '; font-weight: 700; }
-.semana__alem-faixa { position: absolute; top: 0; bottom: 0; right: 0; border-left: 3px dashed var(--text-primary); background: repeating-linear-gradient(135deg, rgba(12, 9, 7, 0.62) 0 6px, transparent 6px 11px); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px 5px; }
-.semana__alem-faixa--cheia { border-left-color: var(--warning); background: repeating-linear-gradient(135deg, rgba(12, 9, 7, 0.45) 0 6px, transparent 6px 11px); }
+.semana__alem-faixa { position: absolute; top: 0; bottom: 0; right: 0; border-left: 3px dashed var(--text-primary); background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--moldura) 62%, transparent) 0 6px, transparent 6px 11px); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px 5px; }
+.semana__alem-faixa--cheia { border-left-color: var(--warning); background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--moldura) 45%, transparent) 0 6px, transparent 6px 11px); }
 .semana__alem--cheia { color: var(--warning); }
-.semana__alem-faixa span { font-size: var(--type-meta); color: var(--text-primary); background: var(--bg-deep); padding: 0 4px; border-radius: 3px; white-space: nowrap; }
+.semana__alem-faixa span { font-size: var(--type-meta); color: var(--moldura-tinta); background: var(--moldura); padding: 0 4px; border-radius: 3px; white-space: nowrap; }
 .semana__legenda ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-2) var(--space-5); }
 .semana__legenda li { display: grid; grid-template-columns: 18px 1fr; column-gap: var(--space-2); align-items: baseline; font-size: var(--type-caption); padding: 2px 0; }
 .semana__amostra { width: 16px; height: 16px; border-radius: 4px; align-self: center; box-shadow: inset 0 0 0 1px var(--rule-strong); }
@@ -651,15 +726,13 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .menu { display: flex; flex-direction: column; gap: var(--space-3); }
 .menu .botao { justify-content: flex-start; --tom: var(--accent); }
 
-/* Carta: quando é a sua vez, sobe uma carta escura e quente, com a luz do âmbar na borda —
-   destaca sem ofuscar (o antigo papel claro era uma página branca sobre o jogo). */
+/* Carta: quando é a sua vez, sobe uma carta — o papel mais alto do jogo, com a faixa coral no alto (a cor de agir).
+   No celular, sobe de baixo, como uma carta tirada do baralho; no desktop, fica no centro. */
 .folha--papel {
-  --tom: var(--accent); --tom-sobre: #1a120a; --tom-linha: var(--accent-line); --tom-wash: var(--accent-wash);
-  --text-secondary: #e2d7c7;
+  --tom: var(--accent); --tom-sobre: var(--acao-sobre);
   background: var(--carta); color: var(--text-primary);
-  box-shadow: 0 0 0 1px var(--carta-borda), 0 30px 80px -24px rgba(0, 0, 0, 0.95), 0 0 60px -20px var(--carta-luz);
-  background-image: radial-gradient(900px 260px at 50% -60px, var(--carta-luz), transparent 70%), linear-gradient(180deg, var(--carta-2), var(--carta) 180px);
-  border-top: 3px solid var(--accent);
+  box-shadow: 0 0 0 1px var(--fio), var(--shadow-lg);
+  border-top: 4px solid var(--accent);
 }
 .folha--papel .folha__fechar:hover { background: var(--surface-hover); }
 
@@ -668,15 +741,18 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .momento__titulo { font-size: var(--type-title); font-weight: 500; letter-spacing: var(--tracking-display); }
 .momento__pessoas { display: flex; gap: var(--space-3); flex-wrap: wrap; }
 .momento__pessoa { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); font-size: var(--type-caption); color: var(--text-muted); }
-.momento__pessoa .retrato { border-radius: 50%; box-shadow: 0 0 0 2px var(--carta), 0 0 0 3.5px var(--carta-borda); }
+.momento__pessoa .retrato { border-radius: 50%; box-shadow: 0 0 0 2px var(--carta), 0 0 0 3.5px var(--fio-forte); }
 .momento__pessoa figcaption { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 120px; color: var(--text-primary); font-family: var(--font-serif); }
 .momento__relacao { font-size: var(--type-meta); color: var(--text-muted); font-family: var(--font-sans); }
 .momento__texto { font-family: var(--font-serif); font-size: var(--type-lead); line-height: var(--leading-prose); color: var(--text-secondary); user-select: text; }
 .momento__pergunta { font-family: var(--font-serif); font-style: italic; font-size: var(--type-subheading); color: var(--text-primary); padding-top: var(--space-3); border-top: 1px solid var(--rule-strong); display: flex; align-items: center; gap: var(--space-3); }
-.momento__vez { font-family: var(--font-sans); font-style: normal; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: 700; color: var(--tom-sobre); background: var(--tom); padding: 3px 8px; border-radius: var(--radius-sm); }
+.momento__vez { font-family: var(--font-sans); font-style: normal; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: 700; color: var(--tom-sobre); background: var(--tom); padding: 4px 10px; border-radius: var(--radius-pill); }
 .momento__opcoes { display: flex; flex-direction: column; gap: var(--space-2); }
-.opcao { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: var(--space-3) var(--space-4); min-height: 52px; border-radius: var(--radius-md); background: var(--carta-opcao); box-shadow: inset 0 0 0 1.5px var(--rule-strong); font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); transition: background var(--motion-fast), box-shadow var(--motion-fast); }
-.opcao:hover:not(:disabled), .opcao:focus-visible { background: var(--carta-opcao-hover); box-shadow: inset 0 0 0 2px var(--tom), 0 8px 20px -12px rgba(0, 0, 0, 0.8); }
+/* A opção: um cartão que se toca (borda, sombra curta, a seta à direita) — parece clicável antes do toque. */
+.opcao { position: relative; display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; padding: var(--space-3) calc(var(--space-4) + 22px) var(--space-3) var(--space-4); min-height: 54px; border-radius: var(--radius-md); background: var(--carta-opcao); box-shadow: inset 0 0 0 1.5px var(--fio-forte), var(--shadow-sm); font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); transition: background var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast); }
+.opcao:not(:disabled)::after { content: '›'; position: absolute; right: var(--space-4); top: 50%; transform: translateY(-52%); font-family: var(--font-sans); font-size: 1.4rem; color: var(--tom); }
+.opcao:hover:not(:disabled), .opcao:focus-visible { background: var(--carta-opcao-hover); box-shadow: inset 0 0 0 2px var(--tom), var(--shadow-md); }
+.opcao:active:not(:disabled) { transform: scale(0.99); }
 .opcao:disabled { opacity: 1; background: transparent; color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--rule); text-decoration: line-through; text-decoration-color: var(--rule-strong); }
 .opcao__detalhe { font-family: var(--font-sans); font-size: var(--type-caption); line-height: var(--leading-normal); color: var(--text-secondary); }
 .opcao__seta { color: var(--tom); font-weight: 700; }
@@ -687,8 +763,8 @@ button.agora-sinal:hover { color: var(--text-primary); }
 
 .avisos { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: var(--z-toast); width: min(480px, calc(100% - 2 * var(--space-4))); pointer-events: none; }
 .aviso { background: var(--papel); color: var(--papel-tinta); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: var(--type-caption); animation: surgir var(--motion-base) var(--ease-out); border-left: 4px solid var(--accent-deep); }
-.aviso--ruim { border-left-color: #a3321f; }
-.aviso--bom { border-left-color: #2f6d2c; }
+.aviso--ruim { border-left-color: var(--ruim); }
+.aviso--bom { border-left-color: var(--bom); }
 .aviso__quem { display: block; font-size: var(--type-micro, 0.72rem); letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 2px; }
 
 /* PWA: a versão nova espera o jogador — uma faixa discreta no alto, que não cobre a ação nem bloqueia nada. */
@@ -734,34 +810,42 @@ button.agora-sinal:hover { color: var(--text-primary); }
   .cabecalho { gap: var(--space-2); padding: 0 var(--space-3); }
   .abas { display: none; }
   /* A barra de áreas é fixa embaixo: o fim da página reserva a altura dela (e a área segura), para o avançar não ficar sob ela. */
-  .palco { padding: var(--space-5) var(--space-4) calc(62px + var(--space-6) + env(safe-area-inset-bottom)); }
+  .palco { padding: var(--space-5) var(--space-4) calc(var(--barra-altura) + var(--space-3) + env(safe-area-inset-bottom)); }
+  .avancar { bottom: calc(var(--barra-altura) + env(safe-area-inset-bottom) + var(--space-2)); margin-top: var(--space-6); }
   .folio__titulo { max-width: none; }
   .barra {
     display: grid; grid-template-columns: repeat(7, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sticky);
-    height: calc(62px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--bg-deep); border-top: 1px solid var(--rule);
+    height: calc(var(--barra-altura) + env(safe-area-inset-bottom)); padding: 4px 2px env(safe-area-inset-bottom); background: var(--moldura);
   }
   .barra--6 { grid-template-columns: repeat(6, 1fr); }
   .barra--7 { grid-template-columns: repeat(7, 1fr); }
-  .barra--7 .barra__item span { font-size: 0.62rem; letter-spacing: -0.01em; }
   .barra--8 { grid-template-columns: repeat(8, 1fr); }
-  .barra--8 .barra__item { font-size: 0.6rem; }
-  .barra__item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 0.66rem; color: var(--text-muted); min-height: 52px; min-width: 0; }
+  .barra__item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 0.66rem; font-weight: var(--weight-medium); color: var(--moldura-tinta-2); min-height: 52px; min-width: 0; border-radius: var(--radius-md); }
+  .barra__item .icone { box-sizing: content-box; width: 22px; height: 22px; padding: 3px 10px; border-radius: var(--radius-pill); }
   .barra__item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .barra__item--ativo { color: var(--text-primary); font-weight: 600; }
-  .barra__item--ativo .icone { color: var(--tom-aba); }
-  .barra__item--ativo::before { content: ''; position: absolute; top: 0; left: 22%; right: 22%; height: 3px; border-radius: 0 0 3px 3px; background: var(--tom-aba); }
+  /* Ativo: o ícone ganha a pílula clara (a cor da página) com o tom da área; o rótulo fica claro e em negrito. */
+  .barra__item--ativo { color: var(--moldura-tinta); font-weight: 700; }
+  .barra__item--ativo .icone { background: var(--fundo); color: var(--tom-aba); }
   .avisos { bottom: 160px; }
-  .hoje { grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-4); }
+  .hoje { grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-3) var(--space-4); }
   .hoje__rosto .retrato { width: 64px; height: 64px; }
   .hoje__nome { font-size: var(--type-title); }
+  .sinais__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sinal { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'nome' 'medidor' 'palavra'; padding: var(--space-2) var(--space-3); gap: 3px; }
   .entrada__texto { font-size: var(--type-subheading); }
   .entrada--marco .entrada__texto { font-size: var(--type-lead); }
-  .ano { padding-left: var(--space-5); }
-  .ano__cabeca::before { left: calc(-1 * var(--space-5) + 1px); }
-  .entrada--marco::before { left: calc(-1 * var(--space-5)); }
-  .ano__capitulo { margin-left: calc(-1 * var(--space-5)); }
+  /* No celular, a idade sobe para a linha de cima do ano (a margem roubaria a leitura). */
+  .ano__corpo { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-2); }
+  .ano__cabeca { flex-direction: row; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+  .ano__idade { font-size: 1.6rem; }
+  .ano__unidade { display: inline; margin-left: 2px; }
+  .ano__selo { margin: 0 0 0 auto; align-self: center; }
+  .ano--novo .ano__corpo { padding: var(--space-3) var(--space-4) var(--space-4) var(--space-5); }
   .veu { align-items: flex-end; padding: 0; }
   .folha { width: 100%; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 92dvh; }
+  /* A folha sobe de baixo e cobre a barra: o fim dela respeita a área segura (a última escolha não fica sob o
+     indicador do aparelho). */
+  .folha__corpo { padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); }
   .momento__titulo { font-size: var(--type-heading); }
   .fim__nome { font-size: var(--type-title); }
   .via, .vaga, .bem, .rotina { flex-direction: column; align-items: stretch; gap: var(--space-2); }
@@ -951,12 +1035,13 @@ button.agora-sinal:hover { color: var(--text-primary); }
 /* ================================================================ REWORK 3 */
 
 /* Navegação interna de Vida: seções estáveis, que rolam de lado no celular (sem rolagem da página). */
-.subnav { margin: 0 0 var(--space-5); border-bottom: 1px solid var(--rule); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.subnav { margin: 0 0 var(--space-5); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .subnav::-webkit-scrollbar { display: none; }
-.subnav__lista { display: flex; gap: var(--space-1); list-style: none; margin: 0; padding: 0; min-width: max-content; }
-.subnav__item { min-height: var(--touch-target); padding: 0 var(--space-4); color: var(--text-muted); font-size: var(--type-body); white-space: nowrap; border-radius: var(--radius-md) var(--radius-md) 0 0; }
-.subnav__item:hover { color: var(--text-primary); background: var(--surface); }
-.subnav__item--ativo { color: var(--text-primary); font-weight: var(--weight-semibold); box-shadow: inset 0 -3px 0 var(--tom); }
+/* As seções internas: um seletor em pílulas (a ativa preenchida, em tinta) — o mesmo vocabulário dos chips. */
+.subnav__lista { display: flex; gap: var(--space-2); list-style: none; margin: 0; padding: 2px; min-width: max-content; }
+.subnav__item { min-height: 40px; padding: 0 var(--space-4); color: var(--text-secondary); font-size: var(--type-body); font-weight: var(--weight-medium); white-space: nowrap; border-radius: var(--radius-pill); background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio-forte); }
+.subnav__item:hover { color: var(--text-primary); box-shadow: inset 0 0 0 1.5px var(--tom); }
+.subnav__item--ativo, .subnav__item--ativo:hover { color: var(--fundo); background: var(--tinta); box-shadow: none; font-weight: var(--weight-semibold); }
 .subnav__item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* "Onde fica cada coisa" (no menu): intenção → lugar. */
@@ -1011,7 +1096,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 /* No celular, as cinco seções de Vida cabem em duas linhas (nenhuma escondida atrás da rolagem). */
 @media (max-width: 520px) {
   .subnav { overflow: visible; }
-  .subnav__lista { flex-wrap: wrap; min-width: 0; row-gap: 0; }
+  .subnav__lista { flex-wrap: wrap; min-width: 0; }
   .subnav__item { padding: 0 var(--space-3); }
 }
 
@@ -1135,7 +1220,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .fim__legado h3, .fim__decisao h3 { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); margin: var(--space-5) 0 var(--space-2); font-weight: var(--weight-semibold); }
 .fim__ficou { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-secondary); }
 .legado__nota { font-family: var(--font-serif); color: var(--text-secondary); max-width: var(--measure-prosa); margin: var(--space-2) 0; line-height: var(--leading-prose); }
-.legado__erro { color: var(--ruim, #d98c7a); font-size: var(--type-caption); margin: var(--space-2) 0; }
+.legado__erro { color: var(--ruim); font-size: var(--type-caption); margin: var(--space-2) 0; }
 .legado__conta { margin: 0; display: grid; gap: 2px; max-width: 520px; }
 .legado__conta div { display: flex; justify-content: space-between; gap: var(--space-3); padding: 6px 0; border-bottom: 1px solid var(--rule); font-size: var(--type-body); }
 .legado__conta dt { color: var(--text-secondary); }

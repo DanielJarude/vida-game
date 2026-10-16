@@ -283,15 +283,21 @@ export type DimensaoPessoal = 'condicionamento' | 'aparencia' | 'aprendizado';
 
 export const NOME_PESSOAL: Record<DimensaoPessoal, string> = { condicionamento: 'Condicionamento', aparencia: 'Aparência', aprendizado: 'Aprendizado' };
 
-export function palavraCondicionamento(f: number): string {
-  return f >= 82 ? 'em forma de atleta' : f >= 68 ? 'em boa forma' : f >= 52 ? 'razoável' : f >= 38 ? 'fora de forma' : 'bem fora de forma';
-}
-export function palavraAparencia(a: number): string {
-  return a >= 78 ? 'chama atenção por onde passa' : a >= 63 ? 'boa aparência' : a >= 45 ? 'aparência comum' : a >= 32 ? 'aparência descuidada' : 'aparência abatida';
-}
-export function palavraAprendizado(c: number): string {
-  return c >= 80 ? 'aprende com muita facilidade' : c >= 66 ? 'aprende com facilidade' : c >= 50 ? 'aprende no ritmo da maioria' : c >= 36 ? 'precisa de mais tempo para aprender' : 'aprender custa bastante';
-}
+/**
+ * As faixas de cada dimensão (do pior para o melhor) e a palavra de cada faixa — UMA fonte para a palavra e para o
+ * nível 1–5 que a tela desenha (REWORK 6: o medidor e a palavra nunca discordam).
+ */
+const FAIXAS_PESSOAIS: Record<DimensaoPessoal, { limites: number[]; palavras: string[] }> = {
+  condicionamento: { limites: [38, 52, 68, 82], palavras: ['bem fora de forma', 'fora de forma', 'razoável', 'em boa forma', 'em forma de atleta'] },
+  aparencia: { limites: [32, 45, 63, 78], palavras: ['aparência abatida', 'aparência descuidada', 'aparência comum', 'boa aparência', 'chama atenção por onde passa'] },
+  aprendizado: { limites: [36, 50, 66, 80], palavras: ['aprender custa bastante', 'precisa de mais tempo para aprender', 'aprende no ritmo da maioria', 'aprende com facilidade', 'aprende com muita facilidade'] }
+};
+const faixa = (d: DimensaoPessoal, x: number) => FAIXAS_PESSOAIS[d].limites.filter(l => x >= l).length;
+export const palavraCondicionamento = (f: number): string => FAIXAS_PESSOAIS.condicionamento.palavras[faixa('condicionamento', f)];
+export const palavraAparencia = (a: number): string => FAIXAS_PESSOAIS.aparencia.palavras[faixa('aparencia', a)];
+export const palavraAprendizado = (c: number): string => FAIXAS_PESSOAIS.aprendizado.palavras[faixa('aprendizado', c)];
+/** O nível 1–5 da dimensão (a mesma faixa da palavra). */
+export const nivelPessoal = (v: Vida, d: DimensaoPessoal): number => 1 + faixa(d, valorPessoal(v, d));
 
 /**
  * Quem USA cada dimensão (em palavras, para a tela): nada aqui é

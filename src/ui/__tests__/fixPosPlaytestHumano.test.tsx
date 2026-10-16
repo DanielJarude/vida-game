@@ -165,7 +165,9 @@ describe('Materialidade e lojas', () => {
   });
 });
 
-describe('"Viver mais um ano" no fim da página, nunca por cima', () => {
+// REWORK 6: continua o último elemento da página e nunca `fixed`; agora é `sticky` (sempre à mão ao rolar) — ver
+// rework6.test.tsx, que cobre a posição no celular acima da barra de áreas.
+describe('"Viver mais um ano" no fim da página, nunca fixo por cima', () => {
   it('o botão mora dentro do conteúdo, depois de tudo — e não é fixo', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Nascer de novo' }));

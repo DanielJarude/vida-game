@@ -16,7 +16,7 @@ import { leituraDoEstado, tendencia, type Dimensao, type Fator, type Tendencia }
 import { sugestoes, type Sugestao } from '../motor/sistemas/cuidados';
 import type { Expressao } from './avatar/Retrato';
 import { palavraEstresse, palavraHumor, palavraSaude } from './apresentar';
-import { causasDoCondicionamento, CONSUMIDORES, fatoresPessoais, NOME_PESSOAL, palavraAparencia, palavraAprendizado, palavraCondicionamento, tendenciaPessoal, valorPessoal, type DimensaoPessoal } from '../motor/sistemas/pessoa';
+import { causasDoCondicionamento, CONSUMIDORES, fatoresPessoais, NOME_PESSOAL, nivelPessoal, palavraAparencia, palavraAprendizado, palavraCondicionamento, tendenciaPessoal, valorPessoal, type DimensaoPessoal } from '../motor/sistemas/pessoa';
 
 /** O rosto do dia: do estado real, com prioridade para o que mais pesa. */
 export function expressaoDe(v: Vida): Expressao {
@@ -226,4 +226,21 @@ export function noQueEBom(v: Vida): { rotulo: string; texto: string }[] {
     else if (c < 40 && diploma) out.push({ rotulo: 'Formação', texto: 'o diploma está lá; o aprendizado, hoje, anda mais lento (cansaço, cabeça cheia, a idade).' });
   }
   return out.slice(0, 5);
+}
+
+/**
+ * REWORK 6 — OS SINAIS: a leitura curta de cada dimensão que existe no motor (bem-estar, cabeça, saúde e, com a idade,
+ * condicionamento, aprendizado e aparência), para o painel compacto da Linha da Vida e do alto de Você. Cada sinal é
+ * a mesma palavra, o mesmo nível e a mesma tendência que a leitura detalhada usa — nada calculado de novo, nada
+ * inventado. Antes da idade em que uma dimensão aparece em Você, ela também não aparece aqui.
+ */
+export interface Sinal { id: Dimensao | DimensaoPessoal; nome: string; palavra: string; nivel: number; tendencia: Tendencia }
+export function sinaisDaVida(v: Vida): Sinal[] {
+  const i = idade(v);
+  const dims: Dimensao[] = i >= 10 ? ['humor', 'cabeca', 'saude'] : ['humor', 'saude'];
+  const pessoais: DimensaoPessoal[] = [...(i >= 6 ? ['condicionamento' as const] : []), ...(i >= 7 ? ['aprendizado' as const] : []), ...(i >= 14 ? ['aparencia' as const] : [])];
+  return [
+    ...dims.map(d => ({ id: d, nome: NOME_DIMENSAO[d], palavra: palavra(v, d), nivel: nivel(v, d), tendencia: tendencia(v, d) })),
+    ...pessoais.map(d => ({ id: d, nome: d === 'condicionamento' ? 'Corpo' : NOME_PESSOAL[d], palavra: d === 'condicionamento' ? palavraCondicionamento(valorPessoal(v, d)) : d === 'aparencia' ? palavraAparencia(valorPessoal(v, d)) : palavraAprendizado(valorPessoal(v, d)), nivel: nivelPessoal(v, d), tendencia: tendenciaPessoal(v, d) }))
+  ];
 }

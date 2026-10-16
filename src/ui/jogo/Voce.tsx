@@ -24,11 +24,12 @@ import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
 import { expressaoDe, lerDimensao, noQueEBom, lerPessoal, momentoAtual, palavraTendencia, trajetoria, USO_DIMENSAO, type LeituraDimensao } from '../estadoPessoal';
 import { sinaisDoCorpo } from '../../motor/sistemas/saude';
-import type { DimensaoPessoal } from '../../motor/sistemas/pessoa';
+import { nivelPessoal, type DimensaoPessoal } from '../../motor/sistemas/pessoa';
 import { anoDe } from '../../motor/tempo';
 import { AparenciaEEstilo } from './Aparencia';
 import { OQueConstruiu } from './Trajetorias';
 import { Linhagem } from './Linhagem';
+import { Medidor } from './Sinais';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import type { Aba } from '../navegacao';
 
@@ -123,14 +124,6 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
   );
 }
 
-function Escala({ nivel, nome }: { nivel: number; nome: string }) {
-  return (
-    <span className="escala" role="img" aria-label={`${nome}: ${nivel} de 5`}>
-      {[1, 2, 3, 4, 5].map(k => <span key={k} className={`escala__marca${k <= nivel ? ' escala__marca--cheia' : ''}`} />)}
-    </span>
-  );
-}
-
 /**
  * REWORK 5 — a linha dos últimos anos (o registro de cada aniversário + agora), sem número: subir é melhorar em todas.
  * O último ponto é o de hoje. Com menos de dois registros, não há linha para desenhar.
@@ -155,38 +148,43 @@ function Trajetoria({ pontos, nome }: { pontos: number[]; nome: string }) {
 function Estado({ l, vida, agir, irPara, abrirPessoa }: { l: LeituraDimensao; vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void }) {
   const t = palavraTendencia(l.tendencia);
   const vazio = !l.ajudando.length && !l.pesando.length;
+  // REWORK 6 — divulgação progressiva: o bloco abre sozinho quando pede atenção (nível baixo, piorando, ou há o que
+  // fazer); o resto fica fechado no resumo (nome, palavra, tendência) e abre com um toque.
+  const atencao = l.nivel <= 2 || l.tendencia === 'piorando' || l.cuidados.length > 0;
   return (
-    <article className={`estado-bloco estado-bloco--${l.d} estado-bloco--n${l.nivel}`} aria-labelledby={`estado-${l.d}`}>
-      <header className="estado-bloco__cabeca">
+    <details className={`estado-bloco estado-bloco--${l.d} estado-bloco--n${l.nivel}`} open={atencao} aria-labelledby={`estado-${l.d}`}>
+      <summary className="estado-bloco__resumo">
         <h2 id={`estado-${l.d}`} className="estado-bloco__nome">{l.nome}</h2>
         {t && <span className={`estado-bloco__tendencia estado-bloco__tendencia--${l.tendencia}`}>{l.tendencia === 'melhorando' ? '↗ ' : l.tendencia === 'piorando' ? '↘ ' : ''}{t}</span>}
-      </header>
-      <p className="estado-bloco__palavra">{l.palavra}</p>
-      <Escala nivel={l.nivel} nome={l.nome} />
-      <Trajetoria pontos={trajetoria(vida, l.d)} nome={l.nome} />
-      <p className="estado-bloco__uso">{USO_DIMENSAO[l.d]}</p>
-      {l.pesando.length > 0 && (
-        <div className="estado-bloco__lista">
-          <h3>Tem pesado</h3>
-          <ul>{l.pesando.map(f => <li key={f.id}>{f.pessoaId && vida.pessoas[f.pessoaId] ? <button type="button" className="link" onClick={() => abrirPessoa(f.pessoaId!)}>{f.texto}</button> : f.texto}{f.pontual ? <span className="estado-bloco__quando"> · este ano</span> : null}</li>)}</ul>
-        </div>
-      )}
-      {l.ajudando.length > 0 && (
-        <div className="estado-bloco__lista estado-bloco__lista--bom">
-          <h3>Tem ajudado</h3>
-          <ul>{l.ajudando.map(f => <li key={f.id}>{f.pessoaId && vida.pessoas[f.pessoaId] ? <button type="button" className="link" onClick={() => abrirPessoa(f.pessoaId!)}>{f.texto}</button> : f.texto}</li>)}</ul>
-        </div>
-      )}
-      {vazio && <Vazio>Nada pesando muito, nada puxando muito.</Vazio>}
-      {l.cuidados.length > 0 && (
-        <div className="estado-bloco__cuidar">
-          {l.cuidados.map(s => s.acao
-            ? <BotaoAcao key={s.id} vida={vida} acao={s.acao} agir={agir} variante="secundario" ocultarImpossivel>{s.texto}</BotaoAcao>
-            : <button key={s.id} type="button" className="botao botao--discreto" onClick={() => (s.pessoaId ? abrirPessoa(s.pessoaId) : s.aba ? irPara(s.aba) : undefined)}>{s.texto} →</button>)}
-          {l.cuidados[0]?.motivo && <p className="estado-bloco__motivo">{l.cuidados[0].motivo}</p>}
-        </div>
-      )}
-    </article>
+        <span className="estado-bloco__palavra">{l.palavra}</span>
+        <Medidor nivel={l.nivel} nome={l.nome} />
+      </summary>
+      <div className="estado-bloco__detalhe">
+        <Trajetoria pontos={trajetoria(vida, l.d)} nome={l.nome} />
+        <p className="estado-bloco__uso">{USO_DIMENSAO[l.d]}</p>
+        {l.pesando.length > 0 && (
+          <div className="estado-bloco__lista">
+            <h3>Tem pesado</h3>
+            <ul>{l.pesando.map(f => <li key={f.id}>{f.pessoaId && vida.pessoas[f.pessoaId] ? <button type="button" className="link" onClick={() => abrirPessoa(f.pessoaId!)}>{f.texto}</button> : f.texto}{f.pontual ? <span className="estado-bloco__quando"> · este ano</span> : null}</li>)}</ul>
+          </div>
+        )}
+        {l.ajudando.length > 0 && (
+          <div className="estado-bloco__lista estado-bloco__lista--bom">
+            <h3>Tem ajudado</h3>
+            <ul>{l.ajudando.map(f => <li key={f.id}>{f.pessoaId && vida.pessoas[f.pessoaId] ? <button type="button" className="link" onClick={() => abrirPessoa(f.pessoaId!)}>{f.texto}</button> : f.texto}</li>)}</ul>
+          </div>
+        )}
+        {vazio && <Vazio>Nada pesando muito, nada puxando muito.</Vazio>}
+        {l.cuidados.length > 0 && (
+          <div className="estado-bloco__cuidar">
+            {l.cuidados.map(s => s.acao
+              ? <BotaoAcao key={s.id} vida={vida} acao={s.acao} agir={agir} variante="secundario" ocultarImpossivel>{s.texto}</BotaoAcao>
+              : <button key={s.id} type="button" className="botao botao--discreto" onClick={() => (s.pessoaId ? abrirPessoa(s.pessoaId) : s.aba ? irPara(s.aba) : undefined)}>{s.texto} →</button>)}
+            {l.cuidados[0]?.motivo && <p className="estado-bloco__motivo">{l.cuidados[0].motivo}</p>}
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -205,6 +203,7 @@ function CorpoEAprendizado({ vida, dims, irPara }: { vida: Vida; dims: DimensaoP
             <p className="pessoal__cabeca">
               <strong className="pessoal__nome">{l.nome}</strong>
               <span className="pessoal__palavra">{l.palavra}</span>
+              <Medidor nivel={nivelPessoal(vida, l.d)} nome={l.nome} />
               {l.tendencia === 'melhorando' || l.tendencia === 'piorando' ? <span className={`estado-bloco__tendencia estado-bloco__tendencia--${l.tendencia}`}>{l.tendencia === 'melhorando' ? '↗ vem melhorando' : '↘ vem piorando'}</span> : null}
             </p>
             <Trajetoria pontos={trajetoria(vida, l.d === 'condicionamento' ? 'forma' : l.d === 'aprendizado' ? 'cognicao' : 'aparencia')} nome={l.nome} />

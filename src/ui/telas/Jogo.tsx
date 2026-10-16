@@ -37,6 +37,7 @@ import { Trabalho, TrabalhoAindaNao } from '../jogo/Trabalho';
 import { VidaConcreta } from '../jogo/VidaConcreta';
 import { expressaoDe, momentoAtual, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
+import { Sinais } from '../jogo/Sinais';
 import { faseDaVida } from '../apresentar';
 import { fechamentoDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
@@ -74,7 +75,25 @@ export function Jogo({ c }: { c: ControleVida }) {
   const abrirPessoa = (id: string | null) => { focar(id); if (id) ir('pessoas'); };
 
   useEffect(() => { conteudo.current?.scrollTo?.({ top: 0 }); window.scrollTo?.({ top: 0 }); }, [area, secao, abaTempo]);
-  useEffect(() => { if (c.marcaAno > 0) { setLugar({ area: 'linha' }); window.scrollTo?.({ top: 0 }); } }, [c.marcaAno]);
+  // REWORK 6: depois de viver um ano, a tela vai para a Linha da Vida e mostra O ANO QUE PASSOU — sem jogar o jogador
+  // no começo da página nem obrigá-lo a reler a biografia. Se o alto da página já cabe na janela junto com o ano, fica
+  // no alto (vê-se também como você está); se não cabe (celular), desce direto até o ano.
+  const rolouAte = useRef(0);
+  useEffect(() => { if (c.marcaAno > 0) setLugar({ area: 'linha' }); }, [c.marcaAno]);
+  // A rolagem espera as decisões e o resultado do ano fecharem (com a folha aberta, a página está travada).
+  const livre = !vida.momento && !c.resultado;
+  useEffect(() => {
+    if (c.marcaAno <= 0 || !livre || rolouAte.current === c.marcaAno) return;
+    const id = requestAnimationFrame?.(() => {
+      rolouAte.current = c.marcaAno;
+      const alvo = document.getElementById('ano-que-passou') ?? document.querySelector('.ano--novo');
+      const r = alvo?.getBoundingClientRect?.();
+      const suave = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (alvo && r && r.top + window.scrollY > window.innerHeight * 0.45) alvo.scrollIntoView?.({ block: 'start', behavior: suave ? 'smooth' : 'auto' });
+      else window.scrollTo?.({ top: 0 });
+    });
+    return () => { if (id) cancelAnimationFrame?.(id); };
+  }, [c.marcaAno, livre]);
 
   if (vida.morte) return <Fim vida={vida} c={c} />;
   const i = idade(vida);
@@ -104,7 +123,7 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       <div className={`palco palco--${area}`}>
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
-          {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <FechamentoDoAno vida={vida} />}{c.marcaAno > 0 && <EnquantoIsso vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
+          {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
           {area === 'formacao' && <Estudos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
@@ -170,8 +189,24 @@ function EnquantoIsso({ vida, desde, abrirPessoa }: { vida: Vida; desde: number;
 }
 
 /**
- * O alto da Linha da Vida: o rosto, o nome, a idade, uma frase sobre agora —
- * e nada mais. O resto é biografia.
+ * REWORK 6 — o ano que passou, junto: o fechamento das carreiras especiais e o que o mundo fez (`EnquantoIsso`). Ano
+ * tranquilo, sem nada disso, não ganha caixa vazia — a biografia logo abaixo já marca "este ano".
+ */
+function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number; abrirPessoa: (id: string) => void }) {
+  const temFechamento = fechamentoDoAno(vida).length > 0;
+  const temNoticias = noticiasDoAno(vida, desde).length > 0;
+  if (!temFechamento && !temNoticias) return null;
+  return (
+    <div className="ano-que-passou" id="ano-que-passou">
+      {temFechamento && <FechamentoDoAno vida={vida} />}
+      {temNoticias && <EnquantoIsso vida={vida} desde={desde} abrirPessoa={abrirPessoa} />}
+    </div>
+  );
+}
+
+/**
+ * O alto da Linha da Vida: o rosto, o nome, a idade, uma frase sobre agora e,
+ * num relance, os sinais (REWORK 6) — o detalhe mora em Você. O resto é biografia.
  */
 /** O fechamento do ano das carreiras especiais (temporada, obra, mandato, negócio): só quando há o que contar. */
 export function FechamentoDoAno({ vida }: { vida: Vida }) {
@@ -201,6 +236,7 @@ function Hoje({ vida, irPara }: { vida: Vida; irPara: (a: Aba) => void }) {
         <h1 className="hoje__nome">{vida.eu.nome} <span>{vida.eu.sobrenome}</span></h1>
         <p className="hoje__frase">{momentoAtual(vida)}</p>
       </div>
+      <Sinais vida={vida} aoAbrir={() => irPara('voce')} />
     </header>
   );
 }

@@ -1,6 +1,6 @@
-// Contraste dos tokens (WCAG): texto sobre tinta, tons das áreas sobre tinta,
-// texto escuro sobre os tons (botões, faixas), tinta sobre papel — também
-// com os tons dessaturados do clima difícil (mistura em oklab com o cinza).
+// Contraste dos tokens (WCAG), REWORK 6 — a paleta "Memória" (camada `--p-*` de tokens.css): a tinta sobre o papel
+// (página, cartão, carta), os tons das áreas como texto, o branco sobre os tons (botões, selos) e sobre o coral, a
+// moldura (abas e barra) e os tons dessaturados do clima difícil (mistura em oklab com o cinza).
 //   node scripts/playtest/contraste.mjs
 import { readFileSync } from 'node:fs';
 const css = readFileSync(new URL('../../src/ui/tokens.css', import.meta.url), 'utf8');
@@ -13,21 +13,17 @@ const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
 const toOklab = h => { const [r, g, b] = rgb(h).map(lin); const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b); return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s]; };
 const fromOklab = ([L, a, b]) => { const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3; const r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, bb = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s; const g2 = c => { const x = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055; return Math.round(Math.max(0, Math.min(1, x)) * 255).toString(16).padStart(2, '0'); }; return '#' + [r, g, bb].map(g2).join(''); };
 const mix = (a, b, t) => { const A = toOklab(a), B = toOklab(b); return fromOklab(A.map((x, k) => x * t + B[k] * (1 - t))); };
-const fundos = ['bg-app', 'bg-raised', 'bg-elevated'];
-const textos = ['text-primary', 'text-secondary', 'text-muted', 'text-faint'];
-const pig = ['pig-ambar', 'pig-pessego', 'pig-goiaba', 'pig-ipe', 'pig-azulejo', 'pig-fachada', 'pig-ipe-roxo', 'pig-folha', 'success', 'danger', 'warning'];
+const P = n => hex(`p-${n}`);
+const papeis = ['papel', 'papel-alto', 'papel-topo'];
+const areas = ['linha', 'voce', 'pessoas', 'formacao', 'trabalho', 'tempo', 'vida', 'cidade', 'saude'];
 let falhas = 0;
 const checa = (rot, a, b, min) => { const r = ratio(a, b); const ok = r >= min; if (!ok) falhas++; console.log(`${ok ? '✓' : '✗'} ${rot.padEnd(46)} ${r.toFixed(2)}:1 (mín. ${min})`); };
-for (const f of fundos) for (const t of textos) checa(`${t} sobre ${f}`, hex(t), hex(f), 4.5);
-for (const f of ['bg-app', 'bg-raised']) for (const p of pig) checa(`${p} sobre ${f}`, hex(p), hex(f), 4.5);
-for (const p of pig) checa(`tinta escura sobre ${p}`, '#1a140e', hex(p), 4.5);
-for (const p of pig.slice(0, 8)) { const d = mix(hex(p), hex('cinza-quente'), 0.52); checa(`${p} (clima difícil) sobre bg-app`, d, hex('bg-app'), 4.5); checa(`tinta sobre ${p} (clima difícil)`, '#1a140e', d, 4.5); }
-checa('papel-tinta sobre papel', hex('papel-tinta'), hex('papel'), 7);
-checa('papel-tinta-2 sobre papel', hex('papel-tinta-2'), hex('papel'), 4.5);
-checa('papel-tinta-2 sobre papel-2', hex('papel-tinta-2'), hex('papel-2'), 4.5);
-// A carta de decisão (escura, FIX #3): texto e tons sobre a carta e sobre a opção.
-for (const f of ['carta', 'carta-2']) for (const t of ['text-primary', 'text-secondary', 'text-muted']) checa(`${t} sobre ${f}`, hex(t), hex(f), 4.5);
-for (const f of ['carta', 'carta-2']) for (const p of ['pig-ambar', 'pig-goiaba', 'pig-cal']) checa(`${p} sobre ${f}`, hex(p), hex(f), 4.5);
-checa('pig-cal (Cidade) sobre bg-app', hex('pig-cal'), hex('bg-app'), 4.5);
+for (const f of papeis) { checa(`tinta sobre ${f}`, P('tinta'), P(f), 7); for (const t of ['tinta-2', 'tinta-3']) checa(`${t} sobre ${f}`, P(t), P(f), 4.5); }
+for (const f of ['papel', 'papel-alto']) for (const a of [...areas, 'bom', 'ruim', 'alerta', 'info', 'acao-forte']) checa(`${a} sobre ${f}`, P(a), P(f), 4.5);
+for (const a of areas) checa(`branco sobre ${a} (botão, selo)`, '#ffffff', P(a), 4.5);
+checa('texto do botão sobre o coral (avançar)', P('acao-sobre'), P('acao'), 4.5);
+for (const f of ['moldura', 'moldura-2']) for (const t of ['moldura-tinta', 'moldura-tinta-2']) checa(`${t} sobre ${f}`, P(t), P(f), 4.5);
+checa('aba ativa: tinta sobre a pílula de papel', P('tinta'), P('papel'), 7);
+for (const a of areas) checa(`${a} (clima difícil) sobre papel`, mix(P(a), P('neutro'), 0.55), P('papel'), 4.5);
 console.log(falhas ? `\n${falhas} par(es) abaixo do mínimo` : '\nTodos os pares acima do mínimo.');
 process.exitCode = falhas ? 1 : 0;

@@ -1,39 +1,64 @@
 /* ==========================================================================
-   VIDA — Design tokens (rework visual e do Trabalho)
+   VIDA — Design tokens (REWORK 6: identidade visual "Memória")
 
-   A base continua escura — é a noite em que a vida acontece —, mas deixou
-   de ser quase monocromática. Três ideias carregam a identidade:
+   FONTE ÚNICA. Três camadas, e só a primeira tem cor escrita à mão:
 
-   1. TINTA E CARTA. A vida acontece no escuro (tinta quente, não preto);
-      quando é a SUA vez de decidir, sobe uma carta — uma superfície mais
-      alta e mais quente, com a luz do âmbar na borda. Destaca sem virar uma
-      página branca aberta em cima do jogo (FIX #3: o papel claro ofuscava).
+   1. PALETA (`--p-*`). Os pigmentos da direção de arte. Trocar a direção é
+      trocar só esta camada (é o que `scripts/playtest/direcoes.mjs` faz para
+      comparar Atlas, Memória e Horizonte nas telas de verdade).
 
-   2. COR COMO LINGUAGEM. Cada área tem um tom próprio, tirado de coisas
-      brasileiras e cotidianas — e cada tom diz o que a área é:
-        Vida      âmbar de fim de tarde (a marca)
-        Você      pêssego, cor de pele e de rosto
-        Pessoas   goiaba: calor, gente
-        Trabalho  ipê-amarelo: energia, coisa feita
-        Estudos   azulejo: estudo, o que se abre
-        Casa      verde-água de fachada
-        Tempo     ipê-roxo: leveza, escolha
-        Cidade    cal de muro: rua, serviço, lugar
-        Saúde     folha
-      O tom aparece em pouco lugar (a aba, o fio da seção, o número que
-      importa, a ilustração), nunca como fundo de tela inteira.
+   2. SEMÂNTICA. Fundo, superfícies, tinta, fios, ação, bom/ruim/atenção e o
+      tom de cada área — tudo derivado da paleta (color-mix), funcionando em
+      fundo claro ou escuro sem regra nova.
 
-   3. CLIMA. Em tempos difíceis (cabeça no limite, humor no chão, doença
-      séria) a página perde saturação; num bom momento, ganha luz. Os tons
-      são misturados em oklab com um cinza quente — o texto nunca perde
-      contraste.
+   3. COMPATIBILIDADE. Os nomes antigos (`--bg-app`, `--text-primary`,
+      `--carta`…) continuam valendo, mas agora apontam para a semântica — não
+      há um segundo sistema: é o mesmo, com os nomes de antes.
+
+   A direção escolhida — MEMÓRIA — é um caderno de marfim numa moldura de
+   grafite: a vida se lê em papel (a biografia, as pessoas, as decisões), o
+   jogo se opera na moldura escura (as abas, a barra de baixo, o "viver mais
+   um ano"). O coral envelhecido é a cor de agir; o oliva, a de crescer; o
+   cinza-azulado, a de informar. Cada área tem um tom próprio, todos na mesma
+   luminosidade (nenhum grita mais que o outro) e legíveis como texto.
 
    Nenhuma informação depende só da cor: tudo tem texto, forma ou padrão.
    Contraste verificado por `scripts/playtest/contraste.mjs` (texto ≥ 4,5:1).
    ========================================================================== */
 
 :root {
-  /* ---------------------------------------------------------------- Fontes */
+  /* ================================================================ PALETA */
+  --p-papel: #f2eee5;          /* a página (marfim) */
+  --p-papel-alto: #fbf9f4;     /* o que é uma coisa (cartão, ficha) */
+  --p-papel-topo: #fffdf9;     /* a carta da decisão, o modal */
+  --p-tinta: #1d2126;          /* grafite: o texto */
+  --p-tinta-2: #434a53;        /* texto secundário */
+  --p-tinta-3: #5c636c;        /* texto auxiliar (≥ 4,5:1 no marfim) */
+  --p-moldura: #22262c;        /* a moldura do jogo: abas, barra, avançar */
+  --p-moldura-2: #2d323a;
+  --p-moldura-tinta: #f2eee5;
+  --p-moldura-tinta-2: #a9b0b9;
+  --p-acao: #bf4f35;           /* coral envelhecido: agir, a marca */
+  --p-acao-forte: #a8432c;     /* o coral como texto no papel */
+  --p-acao-sobre: #ffffff;
+  --p-bom: #56662a;            /* oliva */
+  --p-ruim: #a12f3c;           /* vinho (≠ coral: mais escuro, mais frio) */
+  --p-alerta: #8f5f0c;         /* ocre */
+  --p-info: #4a6478;           /* cinza-azulado */
+  --p-neutro: #62666b;         /* o cinza do clima difícil */
+  /* Os tons das áreas (mesma luminosidade; todos legíveis como texto no papel). */
+  --p-linha: #a8432c;          /* Linha da Vida: o coral */
+  --p-voce: #7a4b86;           /* Você: ameixa */
+  --p-pessoas: #a63d5a;        /* Pessoas: rosa antigo */
+  --p-formacao: #2f6390;       /* Formação: azul de caderno */
+  --p-trabalho: #85600f;       /* Trabalho: mostarda */
+  --p-tempo: #1f6f64;          /* Tempo livre: verde-mar */
+  --p-vida: #56662a;           /* Vida (casa, dinheiro, compras): oliva */
+  --p-cidade: #4a6478;         /* Cidade: cinza-azulado */
+  --p-saude: #3a7438;          /* Saúde: folha */
+  --p-esquema: light;
+
+  /* ================================================================ FONTES */
   --font-serif:
     'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Palatino,
     Charter, Georgia, 'Times New Roman', serif;
@@ -43,13 +68,11 @@
   --font-display: var(--font-serif);
   --font-hand: var(--font-serif);
 
-  /* ------------------------------------------------------- Escala tipográfica
-     Variação de escala é hierarquia: o título contextual de uma página é
-     grande de verdade; o rótulo de interface é pequeno de verdade. */
-  --type-hero: clamp(2.1rem, 1.4rem + 2.6vw, 3.4rem);
+  /* Escala: o título contextual é grande de verdade; o rótulo, pequeno de verdade. */
+  --type-hero: clamp(2rem, 1.4rem + 2.4vw, 3.2rem);
   --type-display: 3rem;
-  --type-title: 2rem;
-  --type-heading: 1.45rem;
+  --type-title: 1.9rem;
+  --type-heading: 1.4rem;
   --type-lead: 1.1875rem;
   --type-subheading: 1.0625rem;
   --type-body: 0.9375rem;
@@ -60,127 +83,139 @@
   --leading-tight: 1.1;
   --leading-snug: 1.3;
   --leading-normal: 1.55;
-  --leading-prose: 1.62;
+  --leading-prose: 1.6;
 
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  --tracking-meta: 0.12em;
+  --tracking-meta: 0.1em;
   --tracking-tight: -0.018em;
   --tracking-display: -0.025em;
   --measure-prosa: 62ch;
 
-  /* ------------------------------------------------------------ Superfícies
-     Tinta quente em quatro alturas. Mais clara que antes: o escuro é
-     noite, não buraco. */
-  --bg-deep: #100d0b;
-  --bg-app: #17130f;
-  --bg-raised: #221c17;
-  --bg-elevated: #2e2620;
-  --bg-inset: rgba(255, 246, 232, 0.035);
+  /* ============================================================ SEMÂNTICA */
+  color-scheme: var(--p-esquema);
+  --fundo: var(--p-papel);
+  --superficie: var(--p-papel-alto);
+  --superficie-topo: var(--p-papel-topo);
+  --tinta: var(--p-tinta);
+  --tinta-2: var(--p-tinta-2);
+  --tinta-3: var(--p-tinta-3);
+  /* Véus e fios: a própria tinta em transparência — funcionam no claro e no escuro. */
+  --veu-1: color-mix(in oklab, var(--p-tinta) 4%, transparent);
+  --veu-2: color-mix(in oklab, var(--p-tinta) 8%, transparent);
+  --fio: color-mix(in oklab, var(--p-tinta) 13%, transparent);
+  --fio-forte: color-mix(in oklab, var(--p-tinta) 26%, transparent);
+  --acao: var(--p-acao);
+  --acao-sobre: var(--p-acao-sobre);
+  --acao-texto: var(--p-acao-forte);
+  --bom: var(--p-bom);
+  --ruim: var(--p-ruim);
+  --alerta: var(--p-alerta);
+  --info: var(--p-info);
+  --moldura: var(--p-moldura);
+  --moldura-2: var(--p-moldura-2);
+  --moldura-tinta: var(--p-moldura-tinta);
+  --moldura-tinta-2: var(--p-moldura-tinta-2);
 
-  --surface: rgba(255, 246, 232, 0.05);
-  --surface-hover: rgba(255, 246, 232, 0.085);
-  --surface-strong: rgba(34, 28, 23, 0.97);
+  /* ======================================================= COMPATIBILIDADE */
+  --bg-deep: var(--moldura);
+  --bg-app: var(--fundo);
+  --bg-raised: var(--superficie);
+  --bg-elevated: var(--superficie-topo);
+  --bg-inset: var(--veu-1);
+  --surface: var(--veu-1);
+  --surface-hover: var(--veu-2);
+  --surface-strong: var(--superficie-topo);
+  --rule: var(--fio);
+  --rule-strong: var(--fio-forte);
 
-  --rule: rgba(255, 246, 232, 0.1);
-  --rule-strong: rgba(255, 246, 232, 0.2);
+  /* A carta: a superfície das decisões (mais alta que a página, com o coral no alto). */
+  --carta: var(--superficie-topo);
+  --carta-2: var(--superficie-topo);
+  --carta-borda: color-mix(in oklab, var(--acao) 40%, transparent);
+  --carta-luz: color-mix(in oklab, var(--acao) 8%, transparent);
+  --carta-opcao: var(--superficie);
+  --carta-opcao-hover: color-mix(in oklab, var(--acao) 7%, var(--superficie));
+  --papel: var(--superficie-topo);
+  --papel-2: var(--superficie);
+  --papel-tinta: var(--tinta);
+  --papel-tinta-2: var(--tinta-2);
+  --papel-linha: var(--fio);
 
-  /* Carta: a superfície das decisões e dos resultados (escura, quente, mais alta que a página). */
-  --carta: #2b231c;
-  --carta-2: #342a21;
-  --carta-borda: color-mix(in oklab, var(--pig-ambar) 38%, transparent);
-  --carta-luz: color-mix(in oklab, var(--pig-ambar) 12%, transparent);
-  --carta-opcao: rgba(255, 246, 232, 0.045);
-  --carta-opcao-hover: rgba(255, 246, 232, 0.09);
-  /* Papel (legado: algumas telas antigas ainda podem pedir). */
-  --papel: #f4ecdd;
-  --papel-2: #e9dec9;
-  --papel-tinta: #2a211a;
-  --papel-tinta-2: #5a4c3f;
-  --papel-linha: rgba(42, 33, 26, 0.16);
+  --text-primary: var(--tinta);
+  --text-secondary: var(--tinta-2);
+  --text-muted: var(--tinta-3);
+  --text-faint: var(--tinta-3);
 
-  /* Texto sobre tinta (≥ 4,5:1 contra --bg-app e --bg-raised). */
-  --text-primary: #f7f0e4;
-  --text-secondary: #d2c6b5;
-  --text-muted: #b0a493;
-  --text-faint: #9c907f;
+  /* Os pigmentos (nomes antigos) → os tons das áreas. */
+  --pig-ambar: var(--p-linha);
+  --pig-pessego: var(--p-voce);
+  --pig-goiaba: var(--p-pessoas);
+  --pig-ipe: var(--p-trabalho);
+  --pig-azulejo: var(--p-formacao);
+  --pig-fachada: var(--p-vida);
+  --pig-ipe-roxo: var(--p-tempo);
+  --pig-folha: var(--p-saude);
+  --pig-cal: var(--p-cidade);
+  --cinza-quente: var(--p-neutro);
 
-  /* --------------------------------------------------------------- Matizes
-     Os pigmentos. Nunca usados direto nos componentes: passam pelos tons
-     de área (abaixo), que o clima pode dessaturar. */
-  --pig-ambar: #eab468;
-  --pig-pessego: #f2a684;
-  --pig-goiaba: #f38b83;
-  --pig-ipe: #f2c64f;
-  --pig-azulejo: #86b6f2;
-  --pig-fachada: #62cdb9;
-  --pig-ipe-roxo: #bea1f6;
-  --pig-folha: #93cf72;
-  --pig-cal: #d7c6b0;
-  --cinza-quente: #9a8f82;
-
-  /* -------------------------------------------------------- Tons das áreas */
-  --tom-vida: var(--pig-ambar);
-  --tom-voce: var(--pig-pessego);
-  --tom-pessoas: var(--pig-goiaba);
-  --tom-trabalho: var(--pig-ipe);
-  --tom-rumo: var(--pig-azulejo);
+  --tom-vida: var(--p-linha);
+  --tom-voce: var(--p-voce);
+  --tom-pessoas: var(--p-pessoas);
+  --tom-trabalho: var(--p-trabalho);
+  --tom-rumo: var(--p-formacao);
   --tom-estudos: var(--tom-rumo);
-  --tom-casa: var(--pig-fachada);
-  --tom-tempo: var(--pig-ipe-roxo);
-  --tom-cidade: var(--pig-cal);
-  --tom-saude: var(--pig-folha);
+  --tom-casa: var(--p-vida);
+  --tom-tempo: var(--p-tempo);
+  --tom-cidade: var(--p-cidade);
+  --tom-saude: var(--p-saude);
 
-  /* O acento da marca continua o âmbar (avançar, escolhido, marca). */
-  --accent: var(--tom-vida);
-  --accent-soft: #f5cf98;
-  --accent-deep: #b27a37;
-  --accent-wash: color-mix(in oklab, var(--accent) 14%, transparent);
-  --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
+  /* O acento da marca: o coral (avançar, escolhido, marca). */
+  --accent: var(--acao);
+  --accent-soft: color-mix(in oklab, var(--acao) 82%, white);
+  --accent-deep: var(--acao-texto);
+  --accent-wash: color-mix(in oklab, var(--acao) 10%, transparent);
+  --accent-line: color-mix(in oklab, var(--acao) 42%, transparent);
 
-  /* O tom da página em que se está (cada página redefine). */
+  /* O tom da página em que se está (cada página redefine `--tom`; o véu e o fio seguem — ver abaixo). */
   --tom: var(--accent);
-  --tom-wash: color-mix(in oklab, var(--tom) 13%, transparent);
-  --tom-linha: color-mix(in oklab, var(--tom) 42%, transparent);
-  --tom-sobre: #1a140e;
+  --tom-sobre: #ffffff;
 
-  /* Semânticos: bom, ruim, atenção — sempre com texto ou forma junto. */
-  --success: #98d68b;
-  --success-wash: color-mix(in oklab, var(--success) 14%, transparent);
-  --danger: #f2826f;
-  --danger-wash: color-mix(in oklab, var(--danger) 14%, transparent);
-  --danger-line: color-mix(in oklab, var(--danger) 45%, transparent);
-  --danger-line-soft: color-mix(in oklab, var(--danger) 35%, transparent);
-  --danger-fill: color-mix(in oklab, var(--danger) 22%, transparent);
-  --warning: #f5a24e;
-  --warning-wash: color-mix(in oklab, var(--warning) 14%, transparent);
-  --aviso-borda: color-mix(in oklab, var(--warning) 40%, transparent);
+  --success: var(--bom);
+  --success-wash: color-mix(in oklab, var(--bom) 11%, transparent);
+  --danger: var(--ruim);
+  --danger-wash: color-mix(in oklab, var(--ruim) 9%, transparent);
+  --danger-line: color-mix(in oklab, var(--ruim) 42%, transparent);
+  --danger-line-soft: color-mix(in oklab, var(--ruim) 30%, transparent);
+  --danger-fill: color-mix(in oklab, var(--ruim) 18%, transparent);
+  --warning: var(--alerta);
+  --warning-wash: color-mix(in oklab, var(--alerta) 11%, transparent);
+  --aviso-borda: color-mix(in oklab, var(--alerta) 40%, transparent);
 
-  /* Compatibilidade: memória (família) e estudo, agora ligados às áreas. */
   --warm-memory: var(--tom-pessoas);
-  --warm-memory-wash: color-mix(in oklab, var(--tom-pessoas) 13%, transparent);
+  --warm-memory-wash: color-mix(in oklab, var(--tom-pessoas) 9%, transparent);
   --cool-study: var(--tom-rumo);
-  --cool-study-wash: color-mix(in oklab, var(--tom-rumo) 13%, transparent);
+  --cool-study-wash: color-mix(in oklab, var(--tom-rumo) 9%, transparent);
 
-  /* Degraus neutros da balança do mês (o que sai). */
-  --neutro-1: #d9cebf;
-  --neutro-2: #b5a998;
-  --neutro-3: #928675;
-  --neutro-4: #726757;
-  --neutro-5: #564d42;
-  --neutro-6: #3a332c;
-  --patrimonio-imovel: color-mix(in oklab, var(--tom-casa) 42%, transparent);
-  --patrimonio-veiculo: color-mix(in oklab, var(--tom-casa) 24%, transparent);
-  --patrimonio-aplicado: color-mix(in oklab, var(--tom-rumo) 32%, transparent);
-  --patrimonio-negocio: color-mix(in oklab, var(--tom-trabalho) 34%, transparent);
-  --patrimonio-conta: rgba(255, 246, 232, 0.1);
-  --patrimonio-obrigacao: rgba(255, 246, 232, 0.1);
-  --patrimonio-obrigacao-fraca: rgba(255, 246, 232, 0.035);
+  /* Degraus neutros da balança do mês (o que sai): da tinta ao papel. */
+  --neutro-1: color-mix(in oklab, var(--tinta) 78%, var(--fundo));
+  --neutro-2: color-mix(in oklab, var(--tinta) 62%, var(--fundo));
+  --neutro-3: color-mix(in oklab, var(--tinta) 48%, var(--fundo));
+  --neutro-4: color-mix(in oklab, var(--tinta) 36%, var(--fundo));
+  --neutro-5: color-mix(in oklab, var(--tinta) 24%, var(--fundo));
+  --neutro-6: color-mix(in oklab, var(--tinta) 14%, var(--fundo));
+  --patrimonio-imovel: color-mix(in oklab, var(--tom-casa) 48%, transparent);
+  --patrimonio-veiculo: color-mix(in oklab, var(--tom-casa) 26%, transparent);
+  --patrimonio-aplicado: color-mix(in oklab, var(--tom-rumo) 34%, transparent);
+  --patrimonio-negocio: color-mix(in oklab, var(--tom-trabalho) 36%, transparent);
+  --patrimonio-conta: var(--veu-2);
+  --patrimonio-obrigacao: var(--veu-2);
+  --patrimonio-obrigacao-fraca: var(--veu-1);
 
-  /* ------------------------------------------------------------- Espaço */
+  /* ================================================================ ESPAÇO */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -196,21 +231,22 @@
   --radius-xs: 3px;
   --radius-sm: 5px;
   --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-lg: 14px;
   --radius-pill: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
-  --shadow-md: 0 8px 24px -12px rgba(0, 0, 0, 0.8);
-  --shadow-lg: 0 28px 70px -28px rgba(0, 0, 0, 0.9);
-  --shadow-papel: 0 30px 80px -30px rgba(0, 0, 0, 0.85), 0 2px 0 rgba(255, 255, 255, 0.4) inset;
-  --shadow-accent: 0 10px 28px -14px color-mix(in oklab, var(--accent) 50%, transparent);
-  --shadow-accent-alta: 0 16px 38px -14px color-mix(in oklab, var(--accent) 60%, transparent);
+  --sombra-cor: color-mix(in oklab, var(--p-tinta) 22%, transparent);
+  --shadow-sm: 0 1px 2px var(--sombra-cor);
+  --shadow-md: 0 6px 18px -10px var(--sombra-cor), 0 1px 2px var(--sombra-cor);
+  --shadow-lg: 0 24px 60px -24px color-mix(in oklab, var(--p-tinta) 45%, transparent);
+  --shadow-papel: var(--shadow-lg);
+  --shadow-accent: 0 8px 22px -12px color-mix(in oklab, var(--accent) 60%, transparent);
+  --shadow-accent-alta: 0 12px 30px -12px color-mix(in oklab, var(--accent) 70%, transparent);
 
-  --glow-quente: color-mix(in oklab, var(--tom-vida) 9%, transparent);
-  --glow-quente-forte: color-mix(in oklab, var(--tom-vida) 14%, transparent);
-  --glow-memoria: color-mix(in oklab, var(--tom-pessoas) 5%, transparent);
-  --veu-modal: rgba(12, 9, 7, 0.72);
-  --veu-cabecalho: rgba(23, 19, 15, 0.88);
+  --glow-quente: transparent;
+  --glow-quente-forte: color-mix(in oklab, var(--acao) 7%, transparent);
+  --glow-memoria: transparent;
+  --veu-modal: color-mix(in oklab, var(--p-moldura) 62%, transparent);
+  --veu-cabecalho: var(--moldura);
 
   --motion-fast: 120ms;
   --motion-base: 200ms;
@@ -222,6 +258,9 @@
   --content-max: 1180px;
   --header-height: 60px;
   --touch-target: 44px;
+  /* A barra de áreas do celular e a barra de avançar (a página reserva as duas alturas). */
+  --barra-altura: 64px;
+  --avancar-altura: 56px;
 
   --z-base: 1;
   --z-sticky: 40;
@@ -229,23 +268,23 @@
   --z-toast: 90;
 }
 
+/* O véu e o fio do tom são calculados EM CADA elemento a partir do `--tom` herdado. (Declarados só no :root, eles
+   congelavam o tom da raiz: a página de Trabalho redefinia `--tom` e os fios continuavam na cor da marca.) Um
+   componente que precise de outro fio declara o seu, e vale para ele e para os filhos. */
+* { --tom-wash: color-mix(in oklab, var(--tom) 9%, transparent); --tom-linha: color-mix(in oklab, var(--tom) 38%, transparent); }
+
 /* ---------------------------------------------------------------- Clima
-   Tempo difícil: os tons perdem cor (a tinta continua legível). Tempo bom:
-   a luz do fim de tarde fica mais forte. */
+   Tempo difícil: os tons das áreas perdem cor (a tinta continua legível).
+   Tempo bom: nada muda além do retrato — a página não comemora por você. */
 .jogo[data-clima='dificil'] {
-  --tom-voce: color-mix(in oklab, var(--pig-pessego) 52%, var(--cinza-quente));
-  --tom-pessoas: color-mix(in oklab, var(--pig-goiaba) 52%, var(--cinza-quente));
-  --tom-trabalho: color-mix(in oklab, var(--pig-ipe) 52%, var(--cinza-quente));
-  --tom-rumo: color-mix(in oklab, var(--pig-azulejo) 52%, var(--cinza-quente));
-  --tom-casa: color-mix(in oklab, var(--pig-fachada) 52%, var(--cinza-quente));
-  --tom-tempo: color-mix(in oklab, var(--pig-ipe-roxo) 52%, var(--cinza-quente));
-  --tom-saude: color-mix(in oklab, var(--pig-folha) 52%, var(--cinza-quente));
-  --tom-vida: color-mix(in oklab, var(--pig-ambar) 60%, var(--cinza-quente));
-  --glow-quente: rgba(154, 143, 130, 0.05);
-}
-.jogo[data-clima='bom'] {
-  --glow-quente: color-mix(in oklab, var(--tom-vida) 15%, transparent);
-  --glow-memoria: color-mix(in oklab, var(--tom-pessoas) 9%, transparent);
+  --tom-voce: color-mix(in oklab, var(--p-voce) 55%, var(--p-neutro));
+  --tom-pessoas: color-mix(in oklab, var(--p-pessoas) 55%, var(--p-neutro));
+  --tom-trabalho: color-mix(in oklab, var(--p-trabalho) 55%, var(--p-neutro));
+  --tom-rumo: color-mix(in oklab, var(--p-formacao) 55%, var(--p-neutro));
+  --tom-casa: color-mix(in oklab, var(--p-vida) 55%, var(--p-neutro));
+  --tom-tempo: color-mix(in oklab, var(--p-tempo) 55%, var(--p-neutro));
+  --tom-saude: color-mix(in oklab, var(--p-saude) 55%, var(--p-neutro));
+  --tom-vida: color-mix(in oklab, var(--p-linha) 62%, var(--p-neutro));
 }
 
 @supports not (font-variation-settings: normal) {

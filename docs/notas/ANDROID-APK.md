@@ -52,3 +52,7 @@ para dentro do projeto Android, gera os ícones, roda `gradlew assembleDebug` e 
 - FIX pós-REWORK 4 (depois de `1b10163`): regenerado a partir do build com as redes sociais 2.0 e as abas de Tempo
   livre; JDK 17.0.20 (Temurin) e Android SDK (platforms;android-34, build-tools;34.0.0) baixados fora do repositório.
   Junto: o jogo não tenta mais registrar o service worker dentro do app (`ui/pwa/registrar.ts`). Não testado em aparelho.
+- REWORK 6 (identidade visual): regenerado a partir do build final do pacote (o REWORK 5 não tinha regenerado);
+  JDK 17.0.20.1 (Temurin) e Android SDK 34 baixados fora do repositório. SHA-256
+  `b26ea1f7a6060d1473c07fdf6828cd2c6f473b03bf4bf47c41f98034da5da9cd`; `assets/public` idêntico ao `dist/` (sem
+  service worker). Não testado em aparelho.

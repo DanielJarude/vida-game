@@ -9,13 +9,8 @@ import { Folha } from '../comum';
 import { Retrato } from '../avatar/Retrato';
 import { idadePessoa } from '../../motor/nucleo';
 import { rotuloDe } from '../apresentar';
-import { dinheiroCurto } from '../apresentar';
+import { dinheiroCurto, TEMA_ROTULO } from '../apresentar';
 
-const TEMA_ROTULO: Record<string, string> = {
-  infancia: 'Infância', familia: 'Família', amizade: 'Amizade', amor: 'Amor', escola: 'Escola', estudo: 'Estudos',
-  trabalho: 'Trabalho', dinheiro: 'Dinheiro', casa: 'Casa', saude: 'Saúde', lugar: 'Lugar', lazer: 'Tempo livre',
-  perda: 'Perda', filhos: 'Filhos', morte: 'Fim', escolha: 'Escolha', nascimento: 'Nascimento'
-};
 
 export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const m = vida.momento!;

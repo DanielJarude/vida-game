@@ -15,7 +15,7 @@
 .barra-relacao--fria .barra-relacao__cheio { background: var(--pig-azulejo); }
 .barra-relacao--tensa .barra-relacao__cheio { background: var(--danger); }
 .rosto .barra-relacao { margin: 2px auto 0; display: block; }
-.cartao-pessoa .barra-relacao { display: block; margin: var(--space-1) auto 0; width: 64px; }
+.cartao-pessoa .barra-relacao { display: block; margin: var(--space-1) 0 2px; width: min(120px, 100%); }
 
 /* ---------------------------------------------------------- Pedem atenção: o tipo dita o tom (nem tudo é vermelho) */
 .atencao__item { grid-template-columns: 40px 1fr auto; }
