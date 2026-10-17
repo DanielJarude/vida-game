@@ -24,7 +24,7 @@ import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
 import { DE_FORMACAO } from '../../motor/sistemas/formacao';
 import { redeDeSaude } from '../../motor/sistemas/saude';
-import { custoDaRotina, descricaoDaRotina, terapiaPublica, DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
+import { custoDaRotina, descricaoDaRotina, terapiaPublica, DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
 import { estimuloCognitivo, estimuloFisico, palavraAprendizado, palavraCondicionamento } from '../../motor/sistemas/pessoa';
 import { dose, encaixe, folegoDaSemana, semana, type FaixaDaSemana as Faixa, type Semana } from '../../motor/sistemas/semana';
 import { frentesDaVida, leituraDaFrente } from '../../motor/sistemas/frentes';
@@ -43,22 +43,19 @@ import { doClube } from '../../motor/dados/clubes';
 import type { Aba } from '../navegacao';
 import { MODS as MODS_ESPORTE } from '../../motor/sistemas/oportunidades';
 import { custoDaExperiencia, escolhasDaExperiencia, experienciasPossiveis, nomeDaExperiencia, type TipoExperiencia } from '../../motor/sistemas/experiencias';
-import { estadoDoArco } from '../../motor/sistemas/arcos';
-import { VIVENCIA_DA_ROTINA } from '../../motor/sistemas/formacao';
 import { EscolherViagem } from './Viagem';
 import { RedesSociais } from './Redes';
 import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
 import { SECOES_TEMPO, type SecaoTempo } from '../navegacao';
 import { leituraDoEstresse } from '../../motor/sistemas/leituraDoEstresse';
-import { BEM_ESTAR } from '../../motor/sistemas/estado';
 import { idadePessoa, vinculosVivos } from '../../motor/nucleo';
 import { Retrato } from '../avatar/Retrato';
 import { rotuloDe } from '../apresentar';
+import { leituraDaPratica } from '../leituraPratica';
+import { CartaoPratica, FichaPratica } from './Pratica';
+import { Emblema } from './Emblemas';
 
 const DE_TEMPO = new Set<string>(SECOES_TEMPO.map(x => x.id));
-
-/** A história da atividade (a etapa e o papel), quando ela tem uma (`arcos`). */
-const estadoDaAtividade = (vida: Vida, id: string) => { const viv = (vida.educacao.vivencias ?? []).find(x => x.tipo === VIVENCIA_DA_ROTINA[id] && x.tFim === undefined); const e = estadoDoArco(id, viv); return e ? `Agora: ${e}.` : undefined; };
 
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'esporte', rotulo: 'Esporte' }, { id: 'arte', rotulo: 'Arte' }, { id: 'estudo', rotulo: 'Estudo' },
@@ -413,12 +410,14 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
         {aba === 'semana' && (
           <>
             <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
+            {/* REWORK 7: o que você PRATICA vem primeiro (é a sua vida na semana); o estresse e a divisão da semana, depois. */}
+            {ativas.length > 0 && <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas} titulo="O que você pratica" vazio="" />}
             <section className="tempo-semana" aria-labelledby="titulo-semana">
               <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
               {i >= 10 ? <Estresse vida={vida} agir={agir} irPara={ir} /> : <p className="nota">{i < 7 ? 'A semana é de brincar — e da escola.' : 'Além da escola, a semana é sua.'}</p>}
               <details className="semana-detalhe"><summary>Como a semana se divide (o que já vem ocupado)</summary><FaixaDaSemana vida={vida} s={s} /><ParaOndeVai vida={vida} s={s} irPara={irPara} /></details>
             </section>
-            <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} ativas={ativas} custo={custo} titulo="O que você já faz" vazio="Nada fixo na semana por enquanto. As abas acima mostram o que dá para começar." />
+            {ativas.length === 0 && <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas} titulo="O que você pratica" vazio="Nada fixo na semana por enquanto. As abas acima mostram o que dá para começar." />}
             <ComoVoceVai vida={vida} agir={agir} irPara={irPara} />
           </>
         )}
@@ -426,7 +425,7 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
           <>
             {aba === 'gente' && <ComQuem vida={vida} abrirPessoa={abrirPessoa} />}
             {aba === 'corpo' && i >= 14 && <CuidarDeSi vida={vida} agir={agir} />}
-            <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} ativas={ativas.filter(x => naAba(aba, x.m))} custo={custo} titulo="O que você já faz aqui" vazio={aba === 'corpo' ? 'Nada de corpo na semana por enquanto.' : aba === 'gente' ? 'Nenhuma atividade com gente na semana por enquanto.' : 'Nenhum hobby na semana por enquanto.'} />
+            <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas.filter(x => naAba(aba, x.m))} titulo="O que você já faz aqui" vazio={aba === 'corpo' ? 'Nada de corpo na semana por enquanto.' : aba === 'gente' ? 'Nenhuma atividade com gente na semana por enquanto.' : 'Nenhum hobby na semana por enquanto.'} />
             <Comecar vida={vida} agir={agir} custo={custo} filtro={m => naAba(aba, m)} />
             {aba === 'atividades' && frentes.length > 0 && (
               <Secao titulo="O que você sabe fazer" recolhivel aberta={false}>
@@ -444,58 +443,40 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
   );
 }
 
-/** O que você faz (a rotina), com o que cada coisa rende e os controles (mais a sério, mais leve, parar). */
-function AtividadesAtivas({ vida, agir, irPara, ativas, custo, titulo, vazio }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; ativas: { r: Vida['rotinas'][number]; m: ModeloRotina }[]; custo: number; titulo: string; vazio: string }) {
+/**
+ * O que você faz (REWORK 7): cada atividade como uma PRÁTICA — o cartão diz há quanto tempo, como você está nisso
+ * (os degraus da habilidade), o que está acontecendo e o que ela faz com a sua vida; um toque abre a ficha (a evolução,
+ * com o quê, com quem, a história, a dedicação, parar). Tudo de `leituraDaPratica`.
+ */
+function AtividadesAtivas({ vida, agir, irPara, ativas, titulo, vazio, abrirPessoa }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; ativas: { r: Vida['rotinas'][number]; m: ModeloRotina }[]; titulo: string; vazio: string; abrirPessoa?: (id: string) => void }) {
+  const [aberta, setAberta] = useState<string | null>(null);
   const i = idade(vida);
   const peneira = ultimaDevolutiva(vida, 'peneira', 36);
+  const lista = ativas.map(({ r, m }) => {
+    const l = leituraDaPratica(vida, r, DE_ESTUDOS.has(r.id) || DE_FORMACAO.has(r.id));
+    if (!l) return undefined;
+    const dominio = m.pratica ? (Object.keys(m.pratica)[0] as Dominio) : undefined;
+    // O que a atividade faz de verdade: a técnica da frente que pratica, ou o atributo que desenvolve (a mesma leitura de Você).
+    const leitura = dominio && vida.caminhos.frentes[dominio] && (m.pratica?.[dominio] ?? 0) >= 1 ? leituraDaFrente(vida, dominio) : efeitoNoCorpo(vida, r.id);
+    const retorno = peneira && peneira.dominio === dominio ? `Na última ${dominio === 'futebol' ? 'peneira' : 'seletiva'}: ${peneira.texto}` : undefined;
+    const fundamentos = dominio && MODS_ESPORTE.includes(dominio) && (retorno && peneira?.falta === 'tecnica' || (i >= 8 && i <= 18 && (m.pratica?.[dominio] ?? 0) >= 1));
+    return { l, leitura: [leitura, retorno].filter(Boolean).join(' '), fundamentos, dominio };
+  }).filter((x): x is NonNullable<typeof x> => !!x);
+  const aberto = lista.find(x => x.l.id === aberta);
   return (
     <Secao titulo={titulo}>
-      {ativas.length === 0 && <Vazio>{vazio}</Vazio>}
-      <ul className="lista-rotinas">
-        {ativas.map(({ r, m }) => {
-          const n = nivelDa(r);
-          const nm = nivelModelo(m, n);
-          const dominio = m.pratica ? (Object.keys(m.pratica)[0] as Dominio) : undefined;
-          // O que a atividade faz de verdade: a técnica da frente que pratica, ou o atributo que desenvolve (a mesma leitura de Você).
-          const leitura = dominio && vida.caminhos.frentes[dominio] && (m.pratica?.[dominio] ?? 0) >= 1 ? leituraDaFrente(vida, dominio) : efeitoNoCorpo(vida, r.id);
-          const deEstudos = DE_ESTUDOS.has(r.id) || DE_FORMACAO.has(r.id);
-          const anos = Math.floor((vida.t - r.tInicio) / 12);
-          const renda = m.renda?.(vida, n);
-          const retorno = peneira && peneira.dominio === dominio ? peneira : undefined;
-          const alivio = alivioDa(r.id, n);
-          return (
-            <li key={r.id} className="rotina rotina--ativa">
-              <div className="rotina__texto">
-                <strong>{m.nome}</strong>
-                <span>{m.niveis.length > 1 ? `${nm.rotulo} · ` : ''}{dose(nm.tempo)}{anos >= 1 ? ` · há ${anos} ${anos === 1 ? 'ano' : 'anos'}` : ''}{custoDaRotina(vida, r.id, n) ? ` · ${dinheiroCurto(custoDaRotina(vida, r.id, n) * custo)}/mês` : r.id === 'terapia' && nm.custo ? ' · pelo SUS, de graça' : ''}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
-                {alivio && <span className={`rotina__estresse rotina__estresse--${alivio.tipo}`}>{alivio.texto}</span>}
-                {leitura && <span className="rotina__leitura">{leitura}</span>}
-                {estadoDaAtividade(vida, r.id) && <span className="rotina__leitura">{estadoDaAtividade(vida, r.id)}</span>}
-                {retorno && <span className="rotina__retorno">Na última {dominio === 'futebol' ? 'peneira' : 'seletiva'}: {retorno.texto}</span>}
-              </div>
-              <div className="rotina__acoes">
-                {deEstudos && irPara && <button type="button" className="link rotina__ir" onClick={() => irPara('formacao')}>ver em Formação →</button>}
-                {dominio && MODS_ESPORTE.includes(dominio) && (retorno?.falta === 'tecnica' || (i >= 8 && i <= 18 && (m.pratica?.[dominio] ?? 0) >= 1)) && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'treino_fundamentos', valor: dominio } as unknown as Acao} agir={agir} variante={retorno?.falta === 'tecnica' ? 'secundario' : 'discreto'} ocultarImpossivel>Programa de fundamentos, com treinador (dura o próximo ano)</BotaoAcao>}
-                {!deEstudos && n < m.niveis.length && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${nivelModelo(m, n + 1).rotulo.toLowerCase()}`}</BotaoAcao>}
-                {!deEstudos && n > 1 && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: true, nivel: (n - 1) as 1 | 2 }} agir={agir} variante="discreto">Mais leve</BotaoAcao>}
-                {!deEstudos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: r.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>}
-              </div>
-            </li>
-          );
-        })}
+      {lista.length === 0 && <Vazio>{vazio}</Vazio>}
+      <ul className="praticas">
+        {lista.map(x => <CartaoPratica key={x.l.id} vida={vida} l={x.l} agir={agir} irPara={irPara} abrir={() => setAberta(x.l.id)} leitura={x.leitura || undefined} />)}
       </ul>
+      {lista.some(x => x.fundamentos && !x.l.daFormacao) && (
+        <div className="grupo-acoes grupo-acoes--linha">
+          {lista.filter(x => x.fundamentos && !x.l.daFormacao).map(x => <BotaoAcao key={x.l.id} vida={vida} acao={{ tipo: 'perseguir', oque: 'treino_fundamentos', valor: x.dominio } as unknown as Acao} agir={agir} variante={peneira?.falta === 'tecnica' ? 'secundario' : 'discreto'} ocultarImpossivel>Programa de fundamentos, com treinador (dura o próximo ano)</BotaoAcao>)}
+        </div>
+      )}
+      {aberto && <FichaPratica vida={vida} l={leituraDaPratica(vida, vida.rotinas.find(r => r.id === aberto.l.id)!, aberto.l.daFormacao) ?? aberto.l} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} aoFechar={() => setAberta(null)} />}
     </Secao>
   );
-}
-
-/** O que a atividade faz com o estresse (a mesma tabela do motor: `estado.BEM_ESTAR`). */
-function alivioDa(id: string, nivel: number): { tipo: 'alivia' | 'pesa'; texto: string } | undefined {
-  const b = BEM_ESTAR[id];
-  const x = !b ? 0 : typeof b.cabeca === 'function' ? b.cabeca(nivel) : b.cabeca ?? 0;
-  if (x <= -10) return { tipo: 'alivia', texto: 'alivia muito o estresse' };
-  if (x < 0) return { tipo: 'alivia', texto: 'alivia o estresse' };
-  if (x >= 8) return { tipo: 'pesa', texto: 'pesa no estresse' };
-  return undefined;
 }
 
 /** Corpo e mente: cuidar de si (os cuidados que existem no motor: descanso, médico, largar um hábito). */
@@ -540,17 +521,23 @@ function ComQuem({ vida, abrirPessoa }: { vida: Vida; abrirPessoa?: (id: string)
   );
 }
 
+/**
+ * Uma atividade que dá para começar (REWORK 7): o emblema, o nome, o que é (ou o motivo de estar entre as sugestões),
+ * quanto da semana toma e quanto custa — e o botão. Em grade, não em parede de linhas.
+ */
 function linhaAtividade(vida: Vida, m: ModeloRotina, custo: number, agir: (a: Acao) => boolean, motivo?: string, comBotao = true) {
   const n1 = m.niveis[0];
   const renda = m.renda?.(vida, 1);
   return (
-    <li key={m.id} className="rotina">
-      <div className="rotina__texto">
+    <li key={m.id} className={`nova-atividade pratica--${m.categoria}${motivo ? ' nova-atividade--sugerida' : ''}`}>
+      <Emblema id={m.id} categoria={m.categoria} tamanho={36} />
+      <div className="nova-atividade__texto">
         <strong>{m.nome}</strong>
-        {motivo && <span className="rotina__motivo">{motivo}</span>}
-        <span>{motivo ? '' : `${descricaoDaRotina(vida, m)} `}{dose(n1.tempo)}{custoDaRotina(vida, m.id, 1) ? ` · ${dinheiroCurto(custoDaRotina(vida, m.id, 1) * custo)}/mês` : m.id === 'terapia' && terapiaPublica(vida) ? ` · ${redeDeSaude(vida).pelo} (com encaminhamento), de graça` : ' · de graça'}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
+        {motivo && <span className="nova-atividade__motivo rotina__motivo">{motivo}</span>}
+        <span className="nova-atividade__descricao">{motivo ? '' : `${descricaoDaRotina(vida, m)} `}</span>
+        <span className="nova-atividade__meta">{dose(n1.tempo)}{custoDaRotina(vida, m.id, 1) ? ` · ${dinheiroCurto(custoDaRotina(vida, m.id, 1) * custo)}/mês` : m.id === 'terapia' && terapiaPublica(vida) ? ` · ${redeDeSaude(vida).pelo} (com encaminhamento), de graça` : ' · de graça'}{renda ? ` · rende uns ${dinheiroCurto(renda)}/mês` : ''}</span>
       </div>
-      {comBotao && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir}>{m.niveis.length > 1 ? `Começar: ${n1.rotulo.toLowerCase()}` : 'Começar'}</BotaoAcao>}
+      {comBotao && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir} variante={motivo ? 'secundario' : 'discreto'}>{m.niveis.length > 1 ? `Começar: ${n1.rotulo.toLowerCase()}` : 'Começar'}</BotaoAcao>}
     </li>
   );
 }
@@ -579,7 +566,7 @@ function Comecar({ vida, agir, custo, filtro = () => true }: { vida: Vida; agir:
   return (
     <Secao titulo="Para começar">
       {!cheia.cabe && <p className="nota">{fol.texto}</p>}
-      {para.length > 0 && <ul className="lista-rotinas lista-rotinas--sugestoes">{para.map(x => linhaAtividade(vida, x.item, custo, agir, x.motivo))}</ul>}
+      {para.length > 0 && <ul className="novas-atividades novas-atividades--sugestoes">{para.map(x => linhaAtividade(vida, x.item, custo, agir, x.motivo))}</ul>}
       {para.length === 0 && cheia.cabe && <Vazio>Nada novo por aqui agora.</Vazio>}
       {resto.length > 0 && (
         <div className="explorar">
@@ -589,7 +576,7 @@ function Comecar({ vida, agir, custo, filtro = () => true }: { vida: Vida; agir:
             return (
               <div key={g.id} className="grupo-atividades">
                 {grupos.length > 1 && <h3 className="grupo-atividades__titulo">{g.rotulo}</h3>}
-                <ul className="lista-rotinas">{lista.map(m => linhaAtividade(vida, m, custo, agir))}</ul>
+                <ul className="novas-atividades">{lista.map(m => linhaAtividade(vida, m, custo, agir))}</ul>
               </div>
             );
           })}
@@ -598,7 +585,7 @@ function Comecar({ vida, agir, custo, filtro = () => true }: { vida: Vida; agir:
       {semTempo.length > 0 && (
         <div className="explorar">
           <button type="button" className="botao botao--discreto" aria-expanded={verSemTempo} onClick={() => setVerSemTempo(x => !x)}>{verSemTempo ? 'Esconder' : 'Ver'} o que não cabe nos dias agora ({semTempo.length})</button>
-          {verSemTempo && <ul className="lista-rotinas lista-vagas--bloqueadas">{semTempo.map(x => linhaAtividade(vida, x.m, custo, agir, undefined, false))}</ul>}
+          {verSemTempo && <ul className="novas-atividades novas-atividades--fora">{semTempo.map(x => linhaAtividade(vida, x.m, custo, agir, undefined, false))}</ul>}
         </div>
       )}
       {fora.length > 0 && (

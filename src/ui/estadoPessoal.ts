@@ -108,9 +108,12 @@ export function momentoAtual(v: Vida): string {
   if (v.mente.estresse >= 55) return `Anda sobrecarregad${o}${causa(cab.pesando[0])}.`;
   if (v.mente.felicidade < 36) return `Um tempo difícil${causa(hum.pesando[0])}.`;
   if (v.corpo.saude < 45) return `O corpo tem pedido atenção${causa(sau.pesando[0])}.`;
-  if (v.mente.felicidade < 48) return `Anda para baixo${causa(hum.pesando[0])}.`;
-  if (tendencia(v, 'cabeca') === 'piorando' && cab.pesando[0]) return `A cabeça vem enchendo${causa(cab.pesando[0])}.`;
-  if (tendencia(v, 'humor') === 'piorando' && hum.pesando[0]) return `O humor vem caindo${causa(hum.pesando[0])}.`;
+  // REWORK 7: o mesmo corte da palavra ("para baixo" é abaixo de 45 — `palavraHumor`): a frase e o cartão dizem o mesmo.
+  if (v.mente.felicidade < 45) return `Anda para baixo${causa(hum.pesando[0])}.`;
+  // REWORK 7: a frase não contradiz a palavra ao lado — "a cabeça vem enchendo" ao lado de "Cabeça: tranquilo" lia como
+  // erro. Com a cabeça ainda tranquila, é o começo de pesar; só depois é "vem enchendo".
+  if (tendencia(v, 'cabeca') === 'piorando' && cab.pesando[0]) return v.mente.estresse < 35 ? `A cabeça segue tranquila, mas ${cab.pesando[0].texto} começa a pesar.` : `A cabeça vem enchendo${causa(cab.pesando[0])}.`;
+  if (tendencia(v, 'humor') === 'piorando' && hum.pesando[0]) return v.mente.felicidade >= 62 ? `Anda bem, mas ${hum.pesando[0].texto} começa a pesar.` : `O humor vem caindo${causa(hum.pesando[0])}.`;
   // Saúde ainda boa que desce não é "cobrança": é o começo de pedir cuidado.
   if (tendencia(v, 'saude') === 'piorando' && sau.pesando[0]) return v.corpo.saude >= 75 ? `A saúde segue boa, mas começa a pedir cuidado${causa(sau.pesando[0])}.` : `A saúde vem pesando${causa(sau.pesando[0])}.`;
   if (v.mente.felicidade >= 70 && v.mente.estresse < 40) return `Um bom momento${causa(hum.ajudando[0])}.`;

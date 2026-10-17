@@ -1,0 +1,301 @@
+/* ==========================================================================
+   REWORK 7 — VIDA COMO JOGO: as peças novas da experiência.
+
+   Mesma paleta e mesmos tokens (nenhuma cor escrita à mão; nada pergunta pelo tema). O que muda é a COMPOSIÇÃO:
+   cada coisa ganha a forma que a natureza dela pede — a prática tem degraus e uma história; a relação, um retrato e
+   abas de convivência; a loja, uma vitrine com os objetos de verdade; a carreira, o emblema do ofício.
+
+   Regras desta folha:
+   · cor semântica e material: o tom da categoria (esporte, arte, estudo...) sai dos tons das áreas; a cor de um
+     objeto é a do próprio objeto (`--cor-do-objeto`);
+   · menos caixas: separação por fio, alinhamento e luz da superfície — caixa só para o que é uma COISA (um cartão de
+     prática, uma vitrine, uma ficha);
+   · movimento só quando ajuda a entender (abrir, mudar de estado), e nunca com `prefers-reduced-motion`.
+   ========================================================================== */
+
+/* ----------------------------------------------------- O tom de cada categoria */
+.pratica--esporte, .pratica--corpo { --tom-cat: var(--tom-saude); }
+.pratica--arte { --tom-cat: var(--tom-voce); }
+.pratica--estudo { --tom-cat: var(--tom-rumo); }
+.pratica--social { --tom-cat: var(--tom-pessoas); }
+.pratica--oficio, .pratica--renda { --tom-cat: var(--tom-trabalho); }
+.pratica--lazer { --tom-cat: var(--tom-tempo); }
+.pratica--cuidado { --tom-cat: var(--tom-cidade); }
+
+/* ------------------------------------------------------------------ Emblema */
+.emblema { --tom-cat-fundo: color-mix(in oklab, var(--tom-cat, var(--tom)) 12%, transparent); display: inline-grid; place-items: center; flex: none; border-radius: 50%; color: var(--tom-cat, var(--tom)); background: var(--tom-cat-fundo); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tom-cat, var(--tom)) 28%, transparent); }
+.emblema--esporte, .emblema--corpo { --tom-cat: var(--tom-saude); }
+.emblema--arte { --tom-cat: var(--tom-voce); }
+.emblema--estudo { --tom-cat: var(--tom-rumo); }
+.emblema--social { --tom-cat: var(--tom-pessoas); }
+.emblema--oficio, .emblema--renda { --tom-cat: var(--tom-trabalho); }
+.emblema--lazer { --tom-cat: var(--tom-tempo); }
+.emblema--cuidado { --tom-cat: var(--tom-cidade); }
+
+/* ------------------------------------------------------------------ Degraus */
+.degraus { display: inline-flex; align-items: flex-end; gap: var(--space-2); min-width: 0; }
+.degraus__escada { --degrau-largura: 7px; display: inline-grid; grid-template-columns: repeat(6, 7px); align-items: end; gap: 3px; height: 22px; flex: none; }
+.degraus__degrau { display: block; border-radius: 2px 2px 1px 1px; background: var(--veu-2); box-shadow: inset 0 0 0 1px var(--fio); transition: background var(--motion-base) var(--ease-out); }
+.degraus__degrau--feito { background: color-mix(in oklab, var(--tom-cat, var(--tom)) 55%, transparent); box-shadow: none; }
+.degraus__degrau--agora { background: var(--tom-cat, var(--tom)); }
+.degraus__degrau--auge { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--tom-cat, var(--tom)) 60%, transparent); }
+.degraus__palavra { font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); line-height: 1.2; overflow-wrap: anywhere; }
+.degraus--compacto .degraus__escada { --degrau-largura: 5px; height: 16px; gap: 2px; }
+
+/* ------------------------------------------------------------------ Percurso */
+.percurso { min-width: 0; }
+.percurso__lista { list-style: none; margin: 0; padding: 0; position: relative; }
+.percurso__lista::before { content: ''; position: absolute; left: 3.15rem; top: 0.55rem; bottom: 0.55rem; width: 1px; background: var(--fio-forte); }
+.percurso__passo { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); column-gap: 1.2rem; padding: 0.3rem 0; position: relative; align-items: baseline; }
+.percurso__passo::before { content: ''; position: absolute; left: calc(3.15rem - 3.5px); top: 0.72rem; width: 8px; height: 8px; border-radius: 50%; background: var(--fundo); box-shadow: inset 0 0 0 1.5px var(--fio-forte); }
+.percurso__passo--p2::before { box-shadow: inset 0 0 0 2px var(--tom-cat, var(--tom)); }
+.percurso__passo--p3::before { background: var(--tom-cat, var(--tom)); box-shadow: none; width: 10px; height: 10px; left: calc(3.15rem - 4.5px); top: 0.62rem; }
+.percurso__passo--agora::before { background: var(--tom-cat, var(--tom)); box-shadow: 0 0 0 3px var(--tom-wash); }
+.percurso__quando { font-size: var(--type-meta); font-variant-numeric: tabular-nums; color: var(--text-muted); text-align: right; white-space: nowrap; }
+.percurso__texto { font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-secondary); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+.percurso__passo--p2 .percurso__texto, .percurso__passo--agora .percurso__texto { color: var(--text-primary); }
+.percurso__passo--p3 .percurso__texto { color: var(--text-primary); font-weight: var(--weight-medium); }
+.percurso__mais { margin-top: var(--space-1); }
+
+/* ------------------------------------------------------------- Abas locais */
+.abas-locais { min-width: 0; }
+.abas-locais__lista { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--fio); margin-bottom: var(--space-3); }
+.abas-locais__lista::-webkit-scrollbar { display: none; }
+.abas-locais__aba { flex: none; min-height: var(--touch-target); padding: 0 var(--space-3); font-size: var(--type-caption); font-weight: var(--weight-medium); color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.abas-locais__aba:hover { color: var(--text-primary); }
+.abas-locais__aba--ativa { color: var(--text-primary); border-bottom-color: var(--tom); }
+.abas-locais__aba--chamado { color: var(--warning); }
+.abas-locais__conta { font-size: var(--type-meta); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.abas-locais__painel { min-width: 0; }
+.abas-locais__painel .grupo-acoes { flex-direction: row; flex-wrap: wrap; margin-top: 0; }
+
+/* ----------------------------------------------------------- As práticas */
+.praticas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-3); }
+.pratica { min-width: 0; display: flex; flex-direction: column; border-radius: var(--radius-lg); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), inset 3px 0 0 var(--tom-cat, var(--tom)); overflow: hidden; }
+.pratica__abrir { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'emb cab' 'emb deg'; align-items: center; column-gap: var(--space-3); row-gap: 4px; width: 100%; padding: var(--space-3) var(--space-4) var(--space-2); text-align: left; cursor: pointer; transition: background var(--motion-fast) var(--ease-out); }
+.pratica__abrir:hover { background: var(--veu-1); }
+.pratica__abrir:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pratica__abrir .emblema { grid-area: emb; }
+.pratica__cabeca { grid-area: cab; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--space-2); min-width: 0; }
+.pratica__nome { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: var(--weight-semibold); color: var(--text-primary); overflow-wrap: anywhere; }
+.pratica__tempo { font-size: var(--type-caption); color: var(--text-muted); white-space: nowrap; }
+.pratica__abrir .degraus { grid-area: deg; }
+.pratica__corpo { display: flex; flex-direction: column; gap: 4px; padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + 44px + var(--space-3)); min-width: 0; }
+.pratica__linha { font-size: var(--type-caption); color: var(--text-secondary); }
+.pratica__efeitos { display: flex; flex-wrap: wrap; gap: 4px; }
+.pratica__efeito { font-size: var(--type-meta); padding: 2px 8px; border-radius: var(--radius-pill); background: var(--veu-1); color: var(--text-secondary); }
+.pratica__efeito--bom { color: var(--success); background: var(--success-wash); }
+.pratica__efeito--pesa { color: var(--warning); background: var(--warning-wash); }
+.pratica__leitura, .pratica__agora { font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-secondary); line-height: var(--leading-snug); }
+.pratica__agora { color: var(--text-primary); padding-left: var(--space-2); border-left: 2px solid var(--tom-cat, var(--tom)); }
+.pratica__acao .acao { margin: 0; }
+.pratica__acao .botao { padding-left: 0; }
+.pratica__ir { align-self: flex-start; font-size: var(--type-caption); }
+@media (max-width: 420px) { .pratica__corpo { padding-left: var(--space-4); } }
+
+/* --------------------------------------------------- Começar uma atividade */
+.novas-atividades { list-style: none; margin: var(--space-2) 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: var(--space-2) var(--space-4); }
+.nova-atividade { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); row-gap: var(--space-1); align-items: start; padding: var(--space-3) 0; border-top: 1px solid var(--fio); min-width: 0; }
+.nova-atividade .emblema { margin-top: 2px; }
+.nova-atividade__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nova-atividade__texto strong { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: var(--weight-semibold); color: var(--text-primary); }
+.nova-atividade__motivo { font-family: var(--font-serif); font-style: italic; color: var(--tom-cat, var(--tom)); font-size: var(--type-body); }
+.nova-atividade__descricao { font-size: var(--type-caption); color: var(--text-secondary); line-height: var(--leading-snug); }
+.nova-atividade__descricao:empty { display: none; }
+.nova-atividade__meta { font-size: var(--type-meta); color: var(--text-muted); letter-spacing: 0.01em; }
+.nova-atividade > .acao { grid-column: 2; margin: 0; align-items: flex-start; }
+.nova-atividade > .acao .botao--discreto { padding-left: 0; }
+.novas-atividades--sugestoes .nova-atividade { border-top: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); }
+.novas-atividades--fora .nova-atividade { opacity: 0.75; }
+
+/* -------------------------------------------------------- A ficha da prática */
+.ficha-pratica { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.ficha-pratica__topo { display: flex; align-items: center; gap: var(--space-4); padding-bottom: var(--space-3); border-bottom: 1px solid var(--fio); }
+.ficha-pratica__titulos { min-width: 0; }
+.ficha-pratica__kicker { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom-cat, var(--tom)); font-weight: var(--weight-semibold); }
+.ficha-pratica__nome { font-size: var(--type-title); line-height: 1.1; letter-spacing: var(--tracking-tight); margin: 2px 0; overflow-wrap: anywhere; }
+.ficha-pratica__agora { font-size: var(--type-caption); color: var(--text-secondary); }
+.ficha-pratica__colunas { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+@media (min-width: 761px) { .ficha-pratica__colunas { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); } }
+.ficha-pratica__coluna { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.ficha-pratica__bloco { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.ficha-pratica__sub { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.ficha-pratica__frase { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-primary); line-height: var(--leading-snug); }
+.ficha-pratica__bloco .degraus__escada { --degrau-largura: 10px; height: 30px; gap: 4px; }
+.ficha-pratica__bloco .degraus__palavra { font-size: var(--type-subheading); }
+.ficha-pratica__habilidades .degraus__escada { --degrau-largura: 6px; height: 18px; gap: 2px; }
+.ficha-pratica__habilidades .degraus__palavra { font-size: var(--type-caption); color: var(--text-secondary); }
+.ficha-pratica__arco { font-family: var(--font-serif); color: var(--text-primary); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--veu-1); }
+.ficha-pratica__habilidades { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.ficha-pratica__habilidades li { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: var(--space-3); align-items: end; }
+.ficha-pratica__hab { font-size: var(--type-caption); color: var(--text-muted); }
+.ficha-pratica__efeitos { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.ficha-pratica__efeitos li { font-size: var(--type-body); color: var(--text-secondary); padding-left: var(--space-4); position: relative; }
+.ficha-pratica__efeitos li::before { content: ''; position: absolute; left: 2px; top: 0.6em; width: 6px; height: 6px; border-radius: 50%; background: var(--fio-forte); }
+.ficha-pratica__efeitos .ficha-pratica__efeito--bom::before { background: var(--success); }
+.ficha-pratica__efeitos .ficha-pratica__efeito--pesa::before { background: var(--warning); }
+.ficha-pratica__coisas, .ficha-pratica__gente { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+.ficha-pratica__coisas li { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.ficha-pratica__coisas li > span, .ficha-pratica__pessoa > span { display: flex; flex-direction: column; min-width: 0; }
+.ficha-pratica__ajudaria { display: flex; align-items: center; gap: var(--space-3); max-width: none; }
+.ficha-pratica__pessoa { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); text-align: left; border-radius: var(--radius-md); padding-right: var(--space-2); }
+.ficha-pratica__pessoa:hover:not(:disabled) { background: var(--veu-1); }
+.ficha-pratica__pessoa .retrato { border-radius: 50%; }
+.ficha-pratica__agir { padding: var(--space-4); border-radius: var(--radius-lg); background: var(--veu-1); }
+.ficha-pratica__agir .acao { margin: 0; }
+.ficha-pratica__porta { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-2); border-bottom: 1px solid var(--fio); }
+.dedicacao { display: flex; flex-direction: column; gap: var(--space-1); }
+.dedicacao__niveis { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.dedicacao__atual { display: flex; flex-direction: column; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: inset 3px 0 0 var(--tom-cat, var(--tom)), 0 0 0 1px var(--fio); }
+.dedicacao__atual strong { font-family: var(--font-serif); font-weight: var(--weight-semibold); }
+.dedicacao__atual span { font-size: var(--type-caption); color: var(--text-muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .pratica { transition: box-shadow var(--motion-base) var(--ease-out); }
+  .pratica:hover { box-shadow: 0 0 0 1px var(--fio-forte), inset 3px 0 0 var(--tom-cat, var(--tom)), var(--shadow-md); }
+  .ficha-pratica__colunas, .abas-locais__painel { animation: surgir var(--motion-base) var(--ease-out); }
+}
+
+/* ------------------------------------------------------- Linha da Vida (REWORK 7) */
+/* O marco: o fio do tema na margem do texto — a página não precisa de caixa para dizer "isto mudou a vida". */
+.entradas .entrada--marco { padding-left: var(--space-3); box-shadow: inset 3px 0 0 var(--tema); }
+.entradas .entrada--escolha .entrada__texto { color: var(--text-primary); }
+.entrada__rostos { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin-top: var(--space-1); }
+.entrada__rosto { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 2px 10px 2px 2px; border-radius: var(--radius-pill); font-size: var(--type-caption); color: var(--text-secondary); background: var(--veu-1); }
+.entrada__rosto .retrato { border-radius: 50%; flex: none; }
+button.entrada__rosto:hover { color: var(--text-primary); background: var(--veu-2); }
+
+/* ------------------------------------------------------------- Você (REWORK 7) */
+.habilidades { list-style: none; padding: 0; margin: var(--space-2) 0 var(--space-3); display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--space-3) var(--space-5); }
+.habilidade { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding-top: var(--space-2); border-top: 1px solid var(--fio-forte); min-width: 0; }
+.habilidade__nome { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--tom-cat, var(--tom)); }
+.habilidade__frase { font-size: var(--type-caption); color: var(--text-muted); line-height: var(--leading-snug); }
+.habilidade--parada .degraus__degrau--agora { background: color-mix(in oklab, var(--tom-cat, var(--tom)) 45%, transparent); }
+.voce-jeito__tracos { list-style: none; padding: 0; margin: var(--space-2) 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.voce-jeito__tracos li { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); padding: 4px 14px; border-radius: var(--radius-pill); background: var(--tom-wash); box-shadow: inset 0 0 0 1px var(--tom-linha); }
+.voce-saude { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--space-4); }
+
+/* ------------------------------------------------------ A ficha de uma pessoa (REWORK 7) */
+/* O retrato de uma relação: no celular, uma coluna (quem é → como estão → conviver → a memória); a partir de 761 px,
+   duas — o retrato e a memória à esquerda, conviver à direita, sempre à mão. */
+.ficha--relacao { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'topo' 'retrato' 'conviver' 'memoria'; gap: var(--space-4); }
+.ficha--relacao > .ficha__topo { grid-area: topo; }
+.ficha--relacao > .ficha__retrato-relacao { grid-area: retrato; }
+.ficha--relacao > .ficha__conviver { grid-area: conviver; }
+.ficha--relacao > .ficha__memoria { grid-area: memoria; }
+@media (min-width: 761px) {
+  .ficha--relacao { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-areas: 'topo conviver' 'retrato conviver' 'memoria conviver'; column-gap: var(--space-6); align-items: start; }
+  .ficha--relacao > .ficha__conviver { position: sticky; top: 0; }
+}
+.ficha__identidade { min-width: 0; }
+.ficha__retrato-relacao, .ficha__memoria { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.ficha__conviver { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--veu-1); }
+.ficha__conviver .ficha__acoes { border: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.ficha__conviver .ficha__agora { background: var(--superficie); }
+.ficha__estado { color: var(--text-muted); font-family: var(--font-sans); font-size: var(--type-caption); }
+.ficha__estado--conflito, .ficha__estado--rompido, .ficha__estado--tensao { color: var(--danger); }
+.ficha__estado--aproximando, .ficha__estado--reconciliacao { color: var(--success); }
+.ficha__convivencia { min-width: 0; }
+.abas-locais__painel--fora { display: none; }
+.laco { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.laco__item { display: flex; flex-direction: column; gap: 2px; padding-top: var(--space-2); border-top: 2px solid var(--fio-forte); min-width: 0; }
+.laco__item--bom { border-top-color: color-mix(in oklab, var(--success) 60%, transparent); }
+.laco__item--ruim { border-top-color: color-mix(in oklab, var(--danger) 60%, transparent); }
+.laco__rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.laco__palavra { font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); overflow-wrap: anywhere; }
+.ficha__memoria .ficha__historia h3 { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.ficha--relacao { --tom-cat: var(--tom-pessoas); }
+
+/* ------------------------------------------------------------- Formação (REWORK 7) */
+.como-vai-estudo { display: flex; flex-direction: column; gap: var(--space-2); margin: var(--space-4) 0; }
+.como-vai-estudo__frase { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-secondary); max-width: var(--measure-prosa); }
+.habilidades--materias { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+.habilidade--forte .habilidade__nome::after { content: ' · o forte'; color: var(--success); letter-spacing: 0.02em; text-transform: none; }
+.habilidade--fraca .habilidade__nome::after { content: ' · o que pesa'; color: var(--warning); letter-spacing: 0.02em; text-transform: none; }
+
+/* ------------------------------------------------------------- Trabalho (REWORK 7) */
+/* O emblema do ofício ao lado do título; o tom da página é o da família de carreira (a saúde não é mostarda). */
+.folio--oficio { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: var(--space-4); }
+.folio--oficio .emblema { align-self: start; margin-top: 2px; }
+.folio__corpo { min-width: 0; }
+.folio__familia { color: var(--text-secondary); }
+.trabalho--familia-saude, .trabalho--familia-cuidado { --tom: var(--tom-saude); }
+.trabalho--familia-docencia, .trabalho--familia-academia, .trabalho--familia-tecnologia, .trabalho--familia-estudante { --tom: var(--tom-rumo); }
+.trabalho--familia-criacao, .trabalho--familia-palco, .trabalho--familia-artista, .trabalho--familia-politica { --tom: var(--tom-voce); }
+.trabalho--familia-esporte, .trabalho--familia-atleta, .trabalho--familia-base { --tom: var(--tom-tempo); }
+.trabalho--familia-publico, .trabalho--familia-seguranca, .trabalho--familia-militar, .trabalho--familia-direito { --tom: var(--tom-cidade); }
+.trabalho--familia-rural { --tom: var(--tom-vida); }
+.trabalho--familia-preso { --tom: var(--cinza-quente); }
+@media (max-width: 420px) { .folio--oficio { column-gap: var(--space-3); } .folio--oficio .emblema { width: 44px !important; height: 44px !important; } }
+
+/* ------------------------------------------------------------- Compras (REWORK 7) */
+/* Cada lugar é uma VITRINE: os objetos de verdade deste ano em cima (o carro na cor do anúncio, a casa, o violão, o
+   cão do abrigo), o nome, o que resolve, a partir de quanto, o que já é seu dali e o que rende no que você pratica. */
+.vitrines { padding: var(--space-4) 0 var(--space-5); border-bottom: 1px solid var(--fio); }
+.vitrines:last-child { border-bottom: 0; }
+.vitrines__titulo { font-size: var(--type-heading); margin-bottom: var(--space-3); }
+.vitrines__lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: var(--space-3); }
+.vitrine { min-width: 0; display: flex; }
+.vitrine__abrir { width: 100%; display: flex; flex-direction: column; text-align: left; border-radius: var(--radius-lg); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); overflow: hidden; cursor: pointer; transition: box-shadow var(--motion-fast) var(--ease-out), transform var(--motion-fast); }
+.vitrine__abrir:hover:not(:disabled) { box-shadow: 0 0 0 1.5px var(--tom-linha), var(--shadow-md); }
+.vitrine__abrir:active:not(:disabled) { transform: scale(0.99); }
+.vitrine__abrir:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.vitrine__abrir:disabled { cursor: default; }
+.vitrine__objetos { display: flex; align-items: flex-end; justify-content: center; gap: var(--space-2); min-height: 92px; padding: var(--space-4) var(--space-3) var(--space-2); background: linear-gradient(to bottom, transparent 62%, var(--veu-2) 62%, var(--veu-2) calc(62% + 1px), var(--veu-1) calc(62% + 1px)); color: var(--tom); overflow: hidden; }
+.vitrine__objetos > * { flex: none; max-width: 34%; }
+.vitrine__objetos .retrato { border-radius: 50%; }
+.vitrine__texto { display: flex; flex-direction: column; gap: 3px; padding: var(--space-3) var(--space-4) var(--space-4); min-width: 0; }
+.vitrine__nome { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: var(--weight-semibold); color: var(--text-primary); }
+.vitrine__oque { font-size: var(--type-caption); color: var(--text-secondary); line-height: var(--leading-snug); }
+.vitrine__preco { font-size: var(--type-caption); font-variant-numeric: tabular-nums; color: var(--text-primary); font-weight: var(--weight-medium); }
+.vitrine__seu { font-size: var(--type-caption); color: var(--tom); font-weight: var(--weight-medium); }
+.vitrine__rende { font-size: var(--type-caption); color: var(--success); }
+.vitrine__rende::before { content: '↑ '; }
+.vitrine--cedo .vitrine__abrir { opacity: 0.6; }
+.vitrines__depois { margin-top: var(--space-2); font-size: var(--type-caption); color: var(--text-secondary); }
+.quem-compra, .vitrines__seus { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); }
+.quem-compra li, .vitrines__seus li { display: flex; align-items: center; gap: var(--space-2); }
+.quem-compra li > span { display: flex; flex-direction: column; }
+.quem-compra .retrato { border-radius: 50%; }
+.vitrines__seus li { flex-direction: column; font-size: var(--type-caption); color: var(--text-secondary); }
+.vitrines__idades { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.vitrines__idades > li { display: grid; grid-template-columns: 4rem minmax(0, 1fr); gap: var(--space-3); align-items: baseline; }
+.vitrines__idades ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--type-caption); }
+.vitrines__idade { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--tom); }
+.folio--compras strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------- Casa (REWORK 7) */
+.moradores, .na-casa { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); }
+.morador { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 84px; padding: var(--space-2); border-radius: var(--radius-md); text-align: center; }
+.morador:hover { background: var(--veu-1); }
+.morador .retrato { border-radius: 50%; }
+.morador__nome { font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); }
+.morador__papel { font-size: var(--type-meta); color: var(--text-muted); max-width: 12ch; }
+.na-casa li { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 84px; text-align: center; font-size: var(--type-meta); color: var(--text-secondary); }
+
+/* ------------------------------------------------------------- Redes (REWORK 7) */
+/* Cada rede com a sua forma (sem copiar nenhuma): a grade quadrada, os vídeos em pé, a fila de vídeos com miniatura,
+   as lives, a linha do tempo de texto, o mural, o conteúdo trancado. A cor da rede (`--cor-plataforma`) é a marca. */
+.redes .plataforma-painel__cabeca { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; justify-content: flex-start; }
+.plataforma-painel__avatar .retrato { border-radius: 50%; box-shadow: 0 0 0 2px var(--fundo), 0 0 0 4px var(--cor-plataforma, var(--tom)); }
+.plataforma-painel__cabeca--youtube .plataforma-painel__avatar .retrato, .plataforma-painel__cabeca--twitch .plataforma-painel__avatar .retrato { border-radius: var(--radius-md); }
+.redes .plataforma-painel__cabeca .plataforma-painel__numero { margin-left: auto; }
+.rede__publicacoes--instagram, .rede__publicacoes--onlyfans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px var(--space-1); max-width: 520px; }
+.rede__publicacoes--tiktok { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--space-2); max-width: 640px; }
+.publicacao--instagram, .publicacao--onlyfans, .publicacao--tiktok { display: flex; flex-direction: column; gap: 2px; min-width: 0; border: 0; padding: 0; }
+.publicacao__quadro { position: relative; display: grid; place-items: center; aspect-ratio: 1; color: var(--cor-plataforma, var(--tom)); background: color-mix(in oklab, var(--cor-plataforma, var(--tom)) 12%, var(--superficie)); border-radius: 2px; }
+.publicacao--tiktok .publicacao__quadro { aspect-ratio: 9 / 14; border-radius: var(--radius-md); background: color-mix(in oklab, var(--cor-plataforma, var(--tom)) 18%, var(--moldura)); color: var(--moldura-tinta); }
+.publicacao--onlyfans .publicacao__quadro { background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--cor-plataforma, var(--tom)) 14%, var(--superficie)) 0 8px, color-mix(in oklab, var(--cor-plataforma, var(--tom)) 22%, var(--superficie)) 8px 16px); }
+.publicacao--instagram .publicacao__texto, .publicacao--tiktok .publicacao__texto, .publicacao--onlyfans .publicacao__texto { font-size: var(--type-meta); color: var(--text-secondary); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.publicacao--instagram .publicacao__alcance, .publicacao--tiktok .publicacao__alcance, .publicacao--onlyfans .publicacao__alcance { font-size: var(--type-meta); color: var(--text-muted); }
+.publicacao__selo { position: absolute; top: 4px; left: 4px; font-size: var(--type-meta); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 6px; border-radius: var(--radius-pill); color: var(--tom-sobre); background: var(--acao); }
+.publicacao__selo--live { background: var(--cor-plataforma, var(--acao)); color: var(--tom-sobre); }
+.publicacao--youtube, .publicacao--twitch { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: var(--space-3); align-items: start; }
+.publicacao--youtube .publicacao__quadro, .publicacao--twitch .publicacao__quadro { aspect-ratio: 16 / 9; border-radius: var(--radius-sm); }
+.publicacao__corpo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.publicacao--youtube .publicacao__texto, .publicacao--twitch .publicacao__texto { font-weight: var(--weight-medium); color: var(--text-primary); }
+.publicacao--x { border-left: 2px solid var(--fio-forte); padding-left: var(--space-3); }
+.publicacao--x .publicacao__texto { font-family: var(--font-sans); font-size: var(--type-body); color: var(--text-primary); }
+.publicacao--facebook { padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); }
+.publicacao--polemica .publicacao__quadro { box-shadow: inset 0 0 0 2px var(--danger-line); }
+.entrada__rosto--nome { padding-left: 12px; }

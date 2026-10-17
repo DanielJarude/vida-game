@@ -136,18 +136,20 @@ input[type='checkbox'] { width: 1.25rem; height: 1.25rem; accent-color: var(--ac
 .detalhes summary { min-height: var(--touch-target); display: flex; align-items: center; }
 
 /* ------------------------------------------------- Folio e fios (editorial) */
-.folio { padding: var(--space-2) 0 var(--space-6); margin-bottom: var(--space-4); border-bottom: 1px solid var(--rule); }
-.folio__kicker { font-size: var(--type-caption); color: var(--text-muted); letter-spacing: 0.02em; margin-bottom: var(--space-3); }
+/* REWORK 7: o alto da página é uma linha de contexto, não um cartaz — o título diz a situação em tamanho de leitura
+   (antes, 3,2 rem em duas linhas empurravam o que dá para fazer para fora da primeira tela). */
+.folio { padding: var(--space-1) 0 var(--space-4); margin-bottom: var(--space-3); border-bottom: 1px solid var(--rule); }
+.folio__kicker { font-size: var(--type-caption); color: var(--text-muted); letter-spacing: 0.02em; margin-bottom: var(--space-2); }
 .folio__area { color: var(--tom); font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: var(--tracking-meta); font-size: var(--type-meta); }
 .folio__area::before { content: ''; display: inline-block; width: 18px; height: 3px; border-radius: 2px; background: var(--tom); vertical-align: middle; margin-right: 8px; transform: translateY(-1px); }
-.folio__titulo { font-size: var(--type-hero); line-height: 1.04; letter-spacing: var(--tracking-display); font-weight: 500; color: var(--text-primary); max-width: 20ch; overflow-wrap: anywhere; }
-.folio__lede { font-family: var(--font-serif); font-size: var(--type-lead); color: var(--text-secondary); margin-top: var(--space-3); max-width: var(--measure-prosa); line-height: var(--leading-snug); }
+.folio__titulo { font-size: var(--type-hero); line-height: 1.12; letter-spacing: var(--tracking-tight); font-weight: 500; color: var(--text-primary); max-width: 34ch; overflow-wrap: anywhere; text-wrap: balance; }
+.folio__lede { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-secondary); margin-top: var(--space-2); max-width: var(--measure-prosa); line-height: var(--leading-snug); }
 
 /* Título de seção: serifa, com um fio no tom da área. */
 .secao-fio { font-size: var(--type-heading); display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .secao-fio::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--tom-linha), transparent 80%); }
 
-.secao { padding: var(--space-6) 0 var(--space-5); border-bottom: 1px solid var(--rule); }
+.secao { padding: var(--space-5) 0 var(--space-4); border-bottom: 1px solid var(--rule); }
 .secao:last-child { border-bottom: 0; }
 .secao__cabeca { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); flex-wrap: wrap; }
 .secao__titulo { font-size: var(--type-heading); color: var(--text-primary); }
@@ -296,13 +298,14 @@ button.agora-sinal:hover { color: var(--text-primary); }
 /* REWORK 6.5: cada sinal é a sua ficha (antes, a grade pintava de cinza as casas vazias: um bebê com dois sinais
    tinha um terço de faixa cinza sem nada). auto-fit: as colunas são as que existem. */
 .sinais__lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: var(--space-2); }
-.sinal { --tom-s: var(--tom-voce); display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'nome medidor' 'palavra palavra'; gap: 4px var(--space-2); align-items: center; padding: var(--space-3); background: var(--superficie); min-width: 0; border-radius: var(--radius-md); box-shadow: inset 0 0 0 1px var(--fio); }
+/* REWORK 7: o nome em cima, inteiro ("BEM-E…", "APREN…" cortados liam como defeito), o medidor e a palavra abaixo. */
+.sinal { --tom-s: var(--tom-voce); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'nome' 'medidor' 'palavra'; gap: 4px var(--space-2); align-items: center; padding: var(--space-3); background: var(--superficie); min-width: 0; border-radius: var(--radius-md); box-shadow: inset 0 0 0 1px var(--fio); }
 .sinal--cabeca { --tom-s: var(--tom-cidade); }
 .sinal--saude { --tom-s: var(--tom-saude); }
 .sinal--condicionamento { --tom-s: var(--tom-tempo); }
 .sinal--aprendizado { --tom-s: var(--tom-rumo); }
 .sinal--aparencia { --tom-s: var(--tom-pessoas); }
-.sinal__nome { grid-area: nome; font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--tom-s); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sinal__nome { grid-area: nome; font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--tom-s); overflow-wrap: anywhere; }
 .sinal .medidor { grid-area: medidor; }
 .sinal__palavra { grid-area: palavra; font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); line-height: 1.25; }
 .sinal--n1 .sinal__palavra, .sinal--n2 .sinal__palavra { color: var(--ruim); }
@@ -344,7 +347,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .ano__idade { font-size: 2rem; line-height: 1; font-weight: 500; letter-spacing: var(--tracking-display); color: var(--text-primary); font-variant-numeric: lining-nums; }
 .ano__unidade { display: block; font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-top: 4px; }
 .ano__calendario { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.ano__selo { margin-top: var(--space-2); font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--acao-sobre); background: var(--acao); padding: 3px 8px; border-radius: var(--radius-pill); max-width: 100%; }
+.ano__selo { margin-top: var(--space-2); font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.03em; text-transform: uppercase; font-weight: 700; color: var(--acao-sobre); background: var(--acao); padding: 3px 7px; border-radius: var(--radius-pill); max-width: 100%; white-space: nowrap; }
 /* O ano que acabou de passar: a folha mais clara, com a borda coral na margem. */
 .ano--novo .ano__corpo { background: var(--superficie); border-top: 0; border-radius: var(--radius-lg); box-shadow: inset 4px 0 0 var(--acao), 0 0 0 1px var(--fio); padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5); margin: var(--space-2) 0 var(--space-3); }
 .entradas { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
@@ -443,11 +446,11 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .ficha__costumes li::before { content: '♥'; position: absolute; left: 0; font-size: 0.7em; top: 0.45em; color: var(--tom-pessoas); }
 
 /* ---------------------------------------------------------------- Você */
-.voce { display: flex; flex-direction: column; gap: var(--space-7); }
-.voce-rosto { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-6); align-items: center; padding-bottom: var(--space-6); border-bottom: 1px solid var(--rule); }
+.voce { display: flex; flex-direction: column; gap: var(--space-6); }
+.voce-rosto { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-5); align-items: center; padding-bottom: var(--space-5); border-bottom: 1px solid var(--rule); }
 .voce-rosto .retrato { border-radius: 50%; box-shadow: 0 0 0 4px var(--fundo), 0 0 0 6px var(--tom-linha), var(--shadow-md); }
 .voce-rosto__texto { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
-.voce-rosto__momento { font-family: var(--font-serif); font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.35rem); font-weight: 500; line-height: 1.15; color: var(--text-primary); letter-spacing: var(--tracking-display); max-width: 24ch; }
+.voce-rosto__momento { font-family: var(--font-serif); font-size: var(--type-hero); font-weight: 500; line-height: 1.15; color: var(--text-primary); letter-spacing: var(--tracking-tight); max-width: 30ch; text-wrap: balance; }
 .voce-rosto__linha { font-family: var(--font-serif); color: var(--text-secondary); font-size: var(--type-subheading); line-height: var(--leading-snug); }
 
 /* Três leituras (bem-estar, cabeça, saúde): cartões que abrem. O resumo (nome, tendência, palavra, medidor) sempre
@@ -506,10 +509,10 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .dinheiro__cabeca { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .dinheiro__cabeca .secao-fio { flex: 1; margin-bottom: var(--space-2); min-width: 200px; }
 
-/* Dados: faixa editorial (sem caixa). */
-/* Dados: fichas pequenas (o número ou a palavra que importa em cima, o rótulo em versalete). Servem a toda área. */
-.dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-2); margin: var(--space-4) 0; }
-.dado { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), inset 0 2px 0 var(--tom-linha); }
+/* Dados (REWORK 7): uma FAIXA EDITORIAL, não mais uma grade de cartões iguais — o rótulo em versalete, o valor em
+   serifa, um fio fino no alto de cada um. Caixa fica para o que é uma coisa (um bem, uma prática, uma vitrine). */
+.dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3) var(--space-5); margin: var(--space-4) 0; }
+.dado { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--space-2) 0 0; border-top: 1px solid var(--fio-forte); }
 .dado dt { font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
 .dado dd { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); line-height: var(--leading-snug); overflow-wrap: anywhere; }
 .dado dd small { font-family: var(--font-sans); display: inline; }
@@ -1047,7 +1050,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 /* ================================================================ REWORK 3 */
 
 /* Navegação interna de Vida: seções estáveis, que rolam de lado no celular (sem rolagem da página). */
-.subnav { margin: 0 0 var(--space-5); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.subnav { margin: 0 0 var(--space-4); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .subnav::-webkit-scrollbar { display: none; }
 /* As seções internas: um seletor em pílulas (a ativa preenchida, em tinta) — o mesmo vocabulário dos chips. */
 .subnav__lista { display: flex; gap: var(--space-2); list-style: none; margin: 0; padding: 2px; min-width: max-content; }

@@ -20,6 +20,64 @@ import { celebridadesDoPais, conteudosPossiveis, custoDaCampanha, custoDePromove
 import { contaAtiva, seguidoresEmPalavras } from '../../motor/sistemas/redesBase';
 import { BotaoAcao } from '../comum';
 import { dinheiroCurto } from '../leituraMaterial';
+import { Retrato } from '../avatar/Retrato';
+import { DESENHOS } from './Emblemas';
+import type { Publicacao, TemaPublicacao } from '../../motor/tipos';
+
+const DESENHO_DO_TEMA: Record<TemaPublicacao, string> = {
+  cotidiano: 'semana', viagem: 'camera', trabalho: 'pasta', conquista: 'estrela', arte: 'pincel', pet: 'coracao', familia: 'familia', opiniao: 'conversa',
+  humor: 'mascaras', esporte: 'bola', musica: 'nota', jogo: 'controle', tutorial: 'estudo', bastidores: 'video', politica: 'bandeira', exclusivo: 'coracao',
+  desculpas: 'conversa', rebater: 'conversa', divulgar: 'microfone', conversa: 'conversa', receita: 'panela', estilo: 'tesoura', estudo: 'livro', comunidade: 'maos'
+};
+const TemaDesenho = ({ tema, tamanho = 28 }: { tema: TemaPublicacao; tamanho?: number }) => <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} aria-hidden fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d={DESENHOS[DESENHO_DO_TEMA[tema]] ?? DESENHOS.semana} /></svg>;
+
+/** O que cada rede chama de "ver": viram, visualizações, espectadores, assinantes... */
+const VER: Record<PlataformaId, string> = { instagram: 'viram', tiktok: 'visualizações', youtube: 'visualizações', twitch: 'assistiram ao vivo', x: 'leram', facebook: 'viram', onlyfans: 'assinantes viram' };
+
+/**
+ * REWORK 7 — O QUE VOCÊ PUBLICOU, no formato de cada rede (não a mesma lista com outro nome): a grade quadrada do
+ * Instagram, os vídeos em pé do TikTok, a fila de vídeos do YouTube, as lives da Twitch, a linha do tempo de texto do
+ * X, o mural com quem reagiu do Facebook, o conteúdo trancado do OnlyFans. As publicações são as do motor (o tema, o
+ * texto, o alcance, quem reagiu, a polêmica); só a forma muda.
+ */
+function Feed({ vida, agir, id, lista }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; lista: Publicacao[] }) {
+  const nomes = (x: Publicacao) => (x.pessoas ?? []).map(p => vida.pessoas[p]?.nome).filter(Boolean).slice(0, 3) as string[];
+  const apagar = (x: Publicacao) => x.polemica && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'apagar_publicacao', plataforma: id, id: x.id } }} agir={agir} variante="discreto">Apagar</BotaoAcao>;
+  return (
+    <ul className={`rede__publicacoes rede__publicacoes--${id}`} aria-label="O que você publicou">
+      {lista.map(x => {
+        const cls = `publicacao publicacao--${id}${x.polemica ? ' publicacao--polemica' : ''}${x.viral ? ' publicacao--viral' : ''}`;
+        const alcance = `${seguidoresEmPalavras(x.alcance)} ${VER[id]}`;
+        if (id === 'instagram' || id === 'tiktok' || id === 'onlyfans') return (
+          <li key={x.id} className={cls} title={x.texto}>
+            <span className="publicacao__quadro">{id === 'onlyfans' ? <TemaDesenho tema="exclusivo" tamanho={30} /> : <TemaDesenho tema={x.tema} tamanho={30} />}{x.viral && <span className="publicacao__selo">viral</span>}</span>
+            <span className="publicacao__texto">{x.texto}</span>
+            <span className="publicacao__alcance">{id === 'tiktok' ? '▶ ' : ''}{alcance}{x.reacao ? ` · ${x.reacao}` : ''}</span>
+            {apagar(x)}
+          </li>
+        );
+        if (id === 'youtube' || id === 'twitch') return (
+          <li key={x.id} className={cls}>
+            <span className="publicacao__quadro">{id === 'twitch' && <span className="publicacao__selo publicacao__selo--live">live</span>}<TemaDesenho tema={x.tema} tamanho={32} /></span>
+            <span className="publicacao__corpo">
+              <span className="publicacao__texto">{x.texto}</span>
+              <span className="publicacao__alcance">{alcance} · {anoDe(x.t)}{x.reacao ? ` · ${x.reacao}` : ''}</span>
+              {apagar(x)}
+            </span>
+          </li>
+        );
+        return (
+          <li key={x.id} className={cls}>
+            <span className="publicacao__ano">{anoDe(x.t)}</span>
+            <span className="publicacao__texto">{x.texto}{x.reacao ? <span className="publicacao__reacao"> — {x.reacao}</span> : null}</span>
+            <span className="publicacao__alcance">{alcance}{nomes(x).length ? ` · ${id === 'facebook' ? 'curtiram' : 'responderam'}: ${nomes(x).join(', ')}` : ''}</span>
+            {apagar(x)}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 /** A marca de cada plataforma: uma forma simples e genérica (nada de logotipo), na cor que o mundo associa a ela. */
 const GLIFO: Record<PlataformaId, string> = {
@@ -43,7 +101,6 @@ export function RedesSociais({ vida, agir, abrirPessoa }: { vida: Vida; agir: (a
   if (i < 10) return <p className="nota">Rede social, por enquanto, é coisa dos mais velhos da casa.</p>;
   return (
     <div className="redes">
-      <p className="nota redes__intro">Tudo aqui é simulado dentro do jogo. Cada rede funciona de um jeito: o mesmo vídeo explode numa e passa batido na outra. Quem da sua vida está em cada uma reage ao que você publica.</p>
       <ul className="redes__plataformas" role="tablist" aria-label="Plataformas">
         {ORDEM_PLATAFORMAS.map(id => {
           const pl = PLATAFORMAS[id];
@@ -61,6 +118,7 @@ export function RedesSociais({ vida, agir, abrirPessoa }: { vida: Vida; agir: (a
         })}
       </ul>
       <Plataforma key={aberta} vida={vida} agir={agir} id={aberta} abrirPessoa={abrirPessoa} />
+      <p className="nota redes__intro">Tudo é simulado dentro do jogo, sem internet. Cada rede funciona de um jeito: o mesmo vídeo explode numa e passa batido na outra — e quem da sua vida está lá reage.</p>
     </div>
   );
 }
@@ -87,12 +145,13 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
   const c = l.conta;
   const conteudos = conteudosPossiveis(vida, id);
   const conhecidos = seguidoresConhecidos(vida, id);
-  const ultimas = c.publicacoes.filter(x => !x.apagada).slice(-3).reverse();
+  const ultimas = c.publicacoes.filter(x => !x.apagada).slice(-6).reverse();
   const celebridades = celebridadesDoPais(vida);
   const provocaveis = conhecidos.slice(0, 4);
   return (
     <section className="plataforma-painel" style={estilo} aria-label={pl.nome}>
-      <header className="plataforma-painel__cabeca">
+      <header className={`plataforma-painel__cabeca plataforma-painel__cabeca--${id}`}>
+        <span className="plataforma-painel__avatar"><Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} tamanho={id === 'youtube' || id === 'twitch' ? 48 : 56} rotulo={`@${c.arroba}`} /></span>
         <h3 className="plataforma-painel__titulo"><Glifo id={id} tamanho={26} /> @{c.arroba}{l.verificacao && (l.verificacao.startsWith('verificada') || l.verificacao === 'selo pago' || l.verificacao === 'identidade verificada') ? <span className="selo-verificado" title={l.verificacao} aria-label={l.verificacao}>✓</span> : null}</h3>
         <p className="plataforma-painel__numero"><strong>{seguidoresEmPalavras(c.seguidores)}</strong> {pl.publico[1]}{c.comprados ? <span className="nota"> ({seguidoresEmPalavras(l.real)} de verdade)</span> : null}</p>
       </header>
@@ -118,18 +177,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         ))}
       </div>
       {id !== 'onlyfans' && <label className="rede__promover"><input type="checkbox" checked={promover} onChange={e => setPromover(e.target.checked)} /> Impulsionar a publicação ({dinheiroCurto(custoDePromover(vida))})</label>}
-      {ultimas.length > 0 && (
-        <ul className="rede__publicacoes">
-          {ultimas.map(x => (
-            <li key={x.id} className={`publicacao${x.polemica ? ' publicacao--polemica' : ''}${x.viral ? ' publicacao--viral' : ''}`}>
-              <span className="publicacao__ano">{anoDe(x.t)}</span>
-              <span className="publicacao__texto">{x.texto}{x.reacao ? <span className="publicacao__reacao"> — {x.reacao}</span> : null}</span>
-              <span className="publicacao__alcance">{seguidoresEmPalavras(x.alcance)} viram{x.pessoas?.length ? ` · ${x.pessoas.map(p => vida.pessoas[p]?.nome).filter(Boolean).slice(0, 2).join(', ')}` : ''}</span>
-              {x.polemica && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'apagar_publicacao', plataforma: id, id: x.id } }} agir={agir} variante="discreto">Apagar</BotaoAcao>}
-            </li>
-          ))}
-        </ul>
-      )}
+      {ultimas.length > 0 && <Feed vida={vida} agir={agir} id={id} lista={ultimas} />}
 
       <div className="plataforma-painel__mais" role="group" aria-label="Mais coisas para fazer">
         {id !== 'onlyfans' && <button type="button" className="botao botao--discreto" aria-expanded={mais === 'celebridade'} onClick={() => setMais(m => (m === 'celebridade' ? null : 'celebridade'))}>Marcar uma celebridade</button>}

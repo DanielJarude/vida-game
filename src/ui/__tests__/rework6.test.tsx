@@ -30,7 +30,7 @@ import { AREAS, SECOES_TEMPO, SECOES_VIDA } from '../navegacao';
 import { dinheiroCurto } from '../apresentar';
 import { Valor } from '../comum';
 
-const CSS = ['tokens.css', 'vida.css', 'vivida.css', 'agir.css', 'mundo-vivo.css', 'material.css', 'caminhos.css'].map(f => readFileSync(join(__dirname, '..', f), 'utf8')).join('\n');
+const CSS = ['tokens.css', 'vida.css', 'vivida.css', 'agir.css', 'mundo-vivo.css', 'material.css', 'caminhos.css', 'experiencia.css'].map(f => readFileSync(join(__dirname, '..', f), 'utf8')).join('\n');
 const VIDA_CSS = readFileSync(join(__dirname, '..', 'vida.css'), 'utf8');
 
 beforeAll(async () => { await precarregar(); });
@@ -215,6 +215,8 @@ describe('tokens: uma fonte só, contraste e foco', () => {
     expect(hex('vida.css').filter(h => h.toLowerCase() !== '#ffffff')).toEqual([]);
     expect(hex('mundo-vivo.css')).toEqual([]);
     expect(hex('caminhos.css')).toEqual([]);
+    // REWORK 7: a folha nova também só usa os tokens.
+    expect(hex('experiencia.css')).toEqual([]);
   });
   it('o contraste da paleta passa (texto ≥ 4,5:1; tinta ≥ 7:1; moldura; clima difícil)', () => {
     expect(() => execFileSync(process.execPath, [join(__dirname, '..', '..', '..', 'scripts', 'playtest', 'contraste.mjs')], { stdio: 'pipe' })).not.toThrow();

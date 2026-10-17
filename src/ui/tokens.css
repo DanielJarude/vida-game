@@ -72,7 +72,8 @@
   --font-hand: var(--font-serif);
 
   /* Escala: o título contextual é grande de verdade; o rótulo, pequeno de verdade. */
-  --type-hero: clamp(2rem, 1.4rem + 2.4vw, 3.2rem);
+  /* REWORK 7: o título contextual voltou ao tamanho de leitura (era 3,2 rem: um cartaz que empurrava as ações). */
+  --type-hero: clamp(1.55rem, 1.25rem + 1.1vw, 2.15rem);
   --type-display: 3rem;
   --type-title: 1.9rem;
   --type-heading: 1.4rem;

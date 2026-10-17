@@ -71,7 +71,8 @@ function Pertence({ vida, agir, t }: { vida: Vida; agir: (a: Acao) => boolean; t
   if (!c) return null;
   const vari = varianteDe(t);
   const usos = usosPara(vida, t);
-  const rende = atividadesQueAjuda(c).map(id => modeloRotina(id)?.nome.toLowerCase()).filter(Boolean).slice(0, 3);
+  // REWORK 7: o objeto e a prática se conhecem — a atividade que você mantém aparece com o tempo de semana dela.
+  const rende = atividadesQueAjuda(c).map(id => { const n = modeloRotina(id)?.nome.toLowerCase(); const r = vida.rotinas.find(x => x.id === id); if (!n) return undefined; if (!r) return n; const a = Math.floor((vida.t - r.tInicio) / 12); return `${n} (você pratica${a >= 1 ? ` há ${a} ${a === 1 ? 'ano' : 'anos'}` : ''})`; }).filter(Boolean).slice(0, 3);
   return (
     <li className="pertence" style={{ ['--cor-do-objeto' as string]: vari.cor }}>
       <div className="pertence__objeto"><DesenhoObjeto coisaId={t.coisaId} cor={vari.cor} tamanho={76} rotulo={`${c.nome}, ${vari.nome}`} /></div>

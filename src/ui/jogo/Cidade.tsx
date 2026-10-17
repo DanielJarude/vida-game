@@ -16,7 +16,12 @@ import { cidadesDoPais, economiaLocal, municipio, nomeDaDivisao, nomeLugar, sigl
 import { perfilDoPais } from '../../motor/mundo/registro';
 import { CustoDeViverAqui, MudarDePais } from './Mundo';
 import { consequenciasDaMudanca, custoDeMudanca } from '../../motor/sistemas/processos';
-import { BotaoAcao, Folio, Secao } from '../comum';
+import { BotaoAcao, Folio, Percurso, Secao } from '../comum';
+import { instituicaoAtual } from '../../motor/sistemas/formacao';
+import { redeDeSaude } from '../../motor/sistemas/saude';
+import { ROTINAS_SOCIAIS } from '../../motor/sistemas/social';
+import { modeloRotina } from '../../motor/sistemas/rotinas';
+import { anoDe } from '../../motor/tempo';
 import { deslocamento, NOME_MODO, tempoEmPalavras } from '../../motor/sistemas/transporte';
 import { lugarDescrito, dinheiroCurto } from '../apresentar';
 import '../material.css';
@@ -42,6 +47,8 @@ export function Cidade({ vida, agir, irCompras, abrir }: Props & { irCompras?: (
         {desl && <div className="dado"><dt>O seu trajeto</dt><dd>{NOME_MODO[desl.modo]}{desl.nomeVeiculo ? ` (${desl.nomeVeiculo})` : ''} · {tempoEmPalavras(desl.minutos)}</dd></div>}
       </dl>
       <CustoDeViverAqui vida={vida} />
+      <SeusLugares vida={vida} />
+      <NaCidade vida={vida} />
 
       <p className="nota">{i >= 12 ? 'A imobiliária, a concessionária, o banco, as lojas e o abrigo de animais ficam em ' : 'Por enquanto, a cidade é o caminho da escola e a rua de casa. As lojas ficam em '}{irCompras ? <button type="button" className="link" onClick={irCompras}>Vida · Compras →</button> : 'Vida · Compras'}.</p>
       {abrir && i >= 10 && (
@@ -62,6 +69,40 @@ export function Cidade({ vida, agir, irCompras, abrir }: Props & { irCompras?: (
       {i >= 18 && <Mudar vida={vida} agir={agir} />}
       {i >= 18 && <MudarDePais vida={vida} agir={agir} />}
     </div>
+  );
+}
+
+/**
+ * REWORK 7 — os lugares desta vida na cidade: onde estuda, onde trabalha, onde pratica o que pratica, onde se trata.
+ * Cada um é o que o motor já sabe (a instituição, o empregador, a rotina, a rede de saúde do país) — a cidade deixa de
+ * ser só uma tabela de custo.
+ */
+function SeusLugares({ vida }: { vida: Vida }) {
+  const inst = instituicaoAtual(vida);
+  const e = vida.trabalho.atual;
+  const saude = redeDeSaude(vida);
+  const lugares: { rotulo: string; texto: string }[] = [];
+  if (inst) lugares.push({ rotulo: 'Estuda', texto: inst.nome });
+  if (e && e.municipioId === vida.moradia.municipioId) lugares.push({ rotulo: 'Trabalha', texto: e.empregador.replace(/^(o|a|os|as) /, x => x.toUpperCase()) });
+  for (const r of vida.rotinas) { const onde = ROTINAS_SOCIAIS[r.id]?.onde; const m = modeloRotina(r.id); if (onde && m && lugares.length < 7) lugares.push({ rotulo: m.nome, texto: onde.charAt(0).toUpperCase() + onde.slice(1) }); }
+  lugares.push({ rotulo: 'Saúde', texto: `${saude.nome}${vida.financas.planoDeSaude ? ' · e o plano de saúde' : ''}` });
+  return (
+    <section className="seus-lugares" aria-labelledby="seus-lugares">
+      <h2 id="seus-lugares" className="secao-fio">Os seus lugares aqui</h2>
+      <dl className="dados">{lugares.map((x, k) => <div key={k} className="dado"><dt>{x.rotulo}</dt><dd>{x.texto}</dd></div>)}</dl>
+    </section>
+  );
+}
+
+/** O que a cidade viveu nos últimos anos (a festa, a obra, a crise): os acontecimentos do mundo que são DAQUI. */
+function NaCidade({ vida }: { vida: Vida }) {
+  const locais = vida.biografia.filter(x => !x.escolha && vida.t - x.t <= 60 && ((x.fato?.tipo === 'mundo' && x.fato.dados.categoria === 'cidade') || x.tema === 'lugar')).slice(-5).reverse();
+  if (!locais.length) return null;
+  return (
+    <section className="na-cidade" aria-labelledby="na-cidade">
+      <h2 id="na-cidade" className="secao-fio">Na cidade, nos últimos anos</h2>
+      <Percurso rotulo="O que a cidade viveu" passos={locais.map(x => ({ chave: x.id, quando: anoDe(x.t), texto: x.texto, peso: x.relevancia === 'marco' ? 2 : 1 }))} />
+    </section>
   );
 }
 

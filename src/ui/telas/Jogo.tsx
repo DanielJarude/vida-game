@@ -126,7 +126,7 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       <div className={`palco palco--${area}`}>
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
-          {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} /></>}
+          {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} abrirPessoa={abrirPessoa} /></>}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
           {area === 'formacao' && <Estudos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
@@ -344,11 +344,21 @@ function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: 
 
 /** "Eu quero fazer X. Onde eu começo?" — o mapa de intenções (`navegacao`), com o caminho de cada uma. */
 function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
+  // REWORK 7: com quarenta intenções, procurar é mais rápido que rolar ("violão", "salário", "mãe").
+  const [busca, setBusca] = useState('');
+  const sem = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const termo = sem(busca.trim());
+  const lista = MAPA_DE_INTENCOES.filter(x => !termo || sem(`${x.quero} ${x.la} ${rotuloDoLugar(x.lugar)}`).includes(termo));
   return (
     <section className="onde-fica" aria-labelledby="onde-fica-titulo">
       <h2 id="onde-fica-titulo" className="subtitulo">Onde fica cada coisa</h2>
+      <label className="catalogo__busca onde-fica__busca"><span className="sr-only">Procurar o que você quer fazer</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
+        <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="O que você quer fazer? (violão, salário, mãe…)" autoComplete="off" />
+      </label>
+      {lista.length === 0 && <p className="nota">Nada com essa palavra. Tente outra — ou percorra as áreas no alto.</p>}
       <ul className="onde-fica__lista">
-        {MAPA_DE_INTENCOES.map(x => (
+        {lista.map(x => (
           <li key={x.id}>
             <button type="button" className="onde-fica__item" onClick={() => ir(x.lugar)}>
               <span className="onde-fica__quero">{x.quero}</span>

@@ -26,7 +26,8 @@ import { textoLocal } from '../../motor/mundo/locais';
 import { materiasExtremas } from '../../motor/sistemas/frentes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { anoDe } from '../../motor/tempo';
-import { BotaoAcao, Escolha, Folio, Linha, Secao } from '../comum';
+import { BotaoAcao, Degraus, Escolha, Folio, Linha, Secao } from '../comum';
+import { estagioDe, MATERIAS, modeloFrente } from '../../motor/dados/frentes';
 import { alvosDoEnem, cursosAgrupados, cursosParaVoce, pontuarCursos } from '../../motor/sistemas/relevancia';
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
@@ -91,22 +92,64 @@ export function Estudos({ vida, agir, irPara, abrirPessoa }: Props) {
   const e = vida.educacao;
   const inst = instituicaoAtual(vida);
   const titulo = e.basica ? rotuloSerie(e.basica) : e.matricula ? nomeDaMatricula(vida, e.matricula) : i < 4 ? 'Ainda não é hora da escola' : i >= 18 ? 'Estudar de novo, ou pela primeira vez' : 'Sem estudar agora';
-  const lede = e.basica ? `Escola ${e.basica.rede === 'publica' ? 'pública' : 'particular'} · notas ${palavraDesempenho(e.basica.desempenho)}` : e.matricula ? `${e.matricula.instituicao}${e.matricula.trancado ? ' · trancado' : ` · ${e.matricula.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(e.matricula.mesesRestantes / 12)} anos`}`}` : rotuloEscolaridade(vida, e.escolaridade);
+  const lede = e.basica ? `Escola ${e.basica.rede === 'publica' ? 'pública' : 'particular'} · desempenho ${palavraDesempenho(e.basica.desempenho)}` : e.matricula ? `${e.matricula.instituicao}${e.matricula.trancado ? ' · trancado' : ` · ${e.matricula.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(e.matricula.mesesRestantes / 12)} anos`}`}` : rotuloEscolaridade(vida, e.escolaridade);
   return (
     <div className="estudos rumo">
       <Folio kicker={<><span className="folio__area">Formação</span> · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</>} titulo={titulo} lede={lede} />
+      {/* REWORK 7 — três camadas: AGORA (o caminho até aqui e o próximo passo, como você está se saindo, o lugar e o
+          que dá para fazer nele), DEPOIS (as portas, a preparação, os cursos) e, por último, o HISTÓRICO (a
+          formação que já é sua, o que ficou, a história de cada escola) — antes, a história vinha antes do agora. */}
+      <TrajetoriaDeEstudo vida={vida} />
+      <ComoVai vida={vida} />
       <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'estudos'} titulo="Ao seu alcance agora" />
       {inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
       {inst && <NoAnoLetivo vida={vida} agir={agir} />}
-      <OQueFicou vida={vida} />
-      <TrajetoriaDeEstudo vida={vida} />
-      <Formacao vida={vida} />
       <Estudo vida={vida} agir={agir} />
       {i >= 14 && <Preparacao vida={vida} agir={agir} irPara={irPara} />}
       <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => /^(selecao|vestibular):/.test(o.id)} />
       {i >= 15 && <Cursos vida={vida} agir={agir} />}
+      <Formacao vida={vida} />
+      <OQueFicou vida={vida} />
       {i < 14 && !vida.educacao.basica && <p className="vazio">Por enquanto, o estudo é crescer.</p>}
     </div>
+  );
+}
+
+/* ------------------------------------------------- Como vai (REWORK 7) */
+
+/**
+ * "Como estou me saindo?": na escola, cada matéria com os degraus da habilidade (a mesma escada das frentes — o nome
+ * da matéria é o do país onde se estuda, `mundo/materias`), a mais forte e a mais fraca; no curso, o desempenho e o
+ * tempo que falta. Tudo é o que o motor usa para a nota, a aprovação e o vestibular.
+ */
+function ComoVai({ vida }: { vida: Vida }) {
+  const b = vida.educacao.basica;
+  const m = vida.educacao.matricula;
+  if (b && (b.etapa === 'creche' || b.etapa === 'pre')) return null;
+  if (!b && !(m && !m.trancado)) return null;
+  const materias = b ? MATERIAS.filter(d => vida.caminhos.frentes[d]) : [];
+  const { forte, fraca } = b ? materiasExtremas(vida) : {};
+  return (
+    <section className="como-vai-estudo" aria-labelledby="titulo-como-vai">
+      <h2 id="titulo-como-vai" className="secao-fio">Como você está se saindo</h2>
+      {b && <p className="como-vai-estudo__frase">Desempenho {palavraDesempenho(b.desempenho)}{b.reprovacoes ? ` · ${b.reprovacoes === 1 ? 'uma reprovação' : `${b.reprovacoes} reprovações`} no caminho` : ''}.{forte ? ` O forte: ${modeloFrente(forte).nome}.` : ''}{fraca ? ` O que pesa: ${modeloFrente(fraca).nome}.` : ''}</p>}
+      {m && !m.trancado && <p className="como-vai-estudo__frase">Desempenho {palavraDesempenho(m.desempenho)} · {m.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`}.</p>}
+      {materias.length > 0 && (
+        <ul className="habilidades habilidades--materias">
+          {materias.map(d => {
+            const f = vida.caminhos.frentes[d]!;
+            const mf = modeloFrente(d);
+            const e = estagioDe(f.habilidade);
+            return (
+              <li key={d} className={`habilidade pratica--estudo${d === forte ? ' habilidade--forte' : d === fraca ? ' habilidade--fraca' : ''}`}>
+                <span className="habilidade__nome">{mf.nome}</span>
+                <Degraus estagio={e} rotulo={mf.nome} palavra={mf.estagios[e]} />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -198,7 +241,7 @@ function OQueFicou({ vida }: { vida: Vida }) {
         </Secao>
       )}
       {historia.length > 0 && (
-        <Secao titulo="Sua história na formação" recolhivel aberta={idade(vida) < 30}>
+        <Secao titulo="Sua história na formação" recolhivel aberta={false}>
           {historia.slice().reverse().map((h, k) => (
             <div key={k} className="historia-formacao">
               <p className="historia-formacao__lugar">{h.instituicao.charAt(0).toUpperCase() + h.instituicao.slice(1)} <span>{anoDe(h.de)}{anoDe(h.ate) !== anoDe(h.de) ? `–${anoDe(h.ate)}` : ''}</span></p>
@@ -237,7 +280,7 @@ function TrajetoriaDeEstudo({ vida }: { vida: Vida }) {
   const b = e.basica;
   const m = e.matricula;
   const agora = b ? `${rotuloSerie(b)}, escola ${b.rede === 'publica' ? 'pública' : 'particular'}` : m ? `${nomeDaMatricula(vida, m)}${m.trancado ? ' (trancado)' : ''}` : i < 4 ? 'Ainda não é hora da escola' : 'Sem estudar agora';
-  const detalhe = b && b.etapa !== 'creche' && b.etapa !== 'pre' ? `Notas: ${palavraDesempenho(b.desempenho)}` : m ? (m.trancado ? `Trancado desde ${anoDe(m.tTrancou ?? vida.t)}: a vaga espera até ${anoDe((m.tTrancou ?? vida.t) + 48)}` : `${m.mesesRestantes <= 12 ? 'Último ano' : `Faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`} · desempenho ${palavraDesempenho(m.desempenho)}`) : rotuloEscolaridade(vida, e.escolaridade);
+  const detalhe = b && b.etapa !== 'creche' && b.etapa !== 'pre' ? `Desempenho: ${palavraDesempenho(b.desempenho)}` : m ? (m.trancado ? `Trancado desde ${anoDe(m.tTrancou ?? vida.t)}: a vaga espera até ${anoDe((m.tTrancou ?? vida.t) + 48)}` : `${m.mesesRestantes <= 12 ? 'Último ano' : `Faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`} · desempenho ${palavraDesempenho(m.desempenho)}`) : rotuloEscolaridade(vida, e.escolaridade);
   const { para } = i >= 15 && !m ? cursosParaVoce(vida) : { para: [] };
   const proximo = b ? (b.etapa === 'medio' ? `Depois ${educacaoDaVida(vida).medio.do}: faculdade, técnico, trabalho — ou os três.` : 'Seguir na escola.') : m ? portasDoCurso(vida, m.cursoId) : '';
   return (

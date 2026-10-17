@@ -19,7 +19,9 @@ import { idade } from '../../motor/nucleo';
 import { tracosMarcantes } from '../../motor/personalidade';
 import type { Dimensao } from '../../motor/sistemas/estado';
 import { Retrato } from '../avatar/Retrato';
-import { BotaoAcao, Vazio } from '../comum';
+import { BotaoAcao, Degraus, Vazio } from '../comum';
+import { frentesDaVida } from '../../motor/sistemas/frentes';
+import { estagioDe, modeloFrente } from '../../motor/dados/frentes';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
 import { expressaoDe, lerDimensao, noQueEBom, lerPessoal, momentoAtual, palavraTendencia, trajetoria, USO_DIMENSAO, type LeituraDimensao } from '../estadoPessoal';
@@ -51,7 +53,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
   return (
     <div className="voce">
       <section className="voce-rosto" aria-label="Como você está">
-        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={176} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
+        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={132} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
         <div className="voce-rosto__texto">
           <p className="folio__kicker"><span className="folio__area">Você</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
           <h1 className="voce-rosto__momento">{momentoAtual(vida)}</h1>
@@ -68,24 +70,48 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
 
       {pessoais.length > 0 && <CorpoEAprendizado vida={vida} dims={pessoais} irPara={irPara} />}
 
-      {(() => { const bom = noQueEBom(vida); return bom.length ? (
-        <section className="voce-bom" aria-labelledby="titulo-bom">
-          <h2 id="titulo-bom" className="voce-subtitulo">No que você é bom</h2>
-          <dl className="dados">{bom.map(x => <div key={x.rotulo} className="dado"><dt>{x.rotulo}</dt><dd>{x.texto}</dd></div>)}</dl>
-        </section>
-      ) : null; })()}
+      {/* REWORK 7: o que a pessoa SABE FAZER, com os degraus de cada habilidade (a mesma escada da ficha da prática) —
+          e, ao lado, os jeitos de nascença que o motor guarda. Antes eram linhas de texto soltas. */}
+      <Habilidades vida={vida} irPara={irPara} />
 
-      {sinais.length > 0 && (
-        <section className="voce-condicoes voce-sinais" aria-label="Sinais do corpo">
-          <h2 className="voce-subtitulo">O corpo tem dado sinais</h2>
-          <ul>
-            {sinais.map(x => <li key={x.id}><strong>{x.texto.charAt(0).toUpperCase() + x.texto.slice(1)}</strong><span>desde {anoDe(x.desde)}</span></li>)}
-          </ul>
-          <p className="nota">Ainda sem nome. Ir ao médico é o que dá diagnóstico — e tratamento. Ignorar também é escolha: às vezes passa, às vezes o corpo cobra depois.</p>
-          {i >= 12 && <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="secundario" ocultarImpossivel>{i < 18 ? 'Pedir ajuda: contar em casa ou na escola e ir ao posto de saúde' : 'Ir ao médico ver o que é'}</BotaoAcao></div>}
-          {i < 18 && <p className="nota">{redeDeSaude(vida).sistema === 'seguro' ? 'O pediatra do plano (ou a clínica comunitária, para quem não tem) atende — e, quando precisa, encaminha para acompanhamento.' : `No posto de saúde (${redeDeSaude(vida).nome}), o atendimento é de graça — e, quando precisa, encaminha para acompanhamento.`}</p>}
+      {tracos.length > 0 && (
+        <section className="voce-jeito" aria-labelledby="titulo-jeito">
+          <h2 id="titulo-jeito" className="voce-subtitulo">O seu jeito</h2>
+          <ul className="voce-jeito__tracos">{tracos.map(t => <li key={t}>{t}</li>)}</ul>
+          <p className="voce-tracos">Quem convive diz que você é {tracos.join(', ').replace(/, ([^,]*)$/, ' e $1')} — é o que suas escolhas têm mostrado.</p>
         </section>
       )}
+
+      {(sinais.length > 0 || condicoes.length > 0) && (
+        <div className="voce-saude">
+          {sinais.length > 0 && (
+            <section className="voce-condicoes voce-sinais" aria-label="Sinais do corpo">
+              <h2 className="voce-subtitulo">O corpo tem dado sinais</h2>
+              <ul>
+                {sinais.map(x => <li key={x.id}><strong>{x.texto.charAt(0).toUpperCase() + x.texto.slice(1)}</strong><span>desde {anoDe(x.desde)}</span></li>)}
+              </ul>
+              <p className="nota">Ainda sem nome. Ir ao médico é o que dá diagnóstico — e tratamento. Ignorar também é escolha: às vezes passa, às vezes o corpo cobra depois.</p>
+              {i >= 12 && <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="secundario" ocultarImpossivel>{i < 18 ? 'Pedir ajuda: contar em casa ou na escola e ir ao posto de saúde' : 'Ir ao médico ver o que é'}</BotaoAcao></div>}
+              {i < 18 && <p className="nota">{redeDeSaude(vida).sistema === 'seguro' ? 'O pediatra do plano (ou a clínica comunitária, para quem não tem) atende — e, quando precisa, encaminha para acompanhamento.' : `No posto de saúde (${redeDeSaude(vida).nome}), o atendimento é de graça — e, quando precisa, encaminha para acompanhamento.`}</p>}
+            </section>
+          )}
+          {condicoes.length > 0 && (
+            <section className="voce-condicoes" aria-label="Condições de saúde">
+              <h2 className="voce-subtitulo">O que o corpo carrega</h2>
+              <ul>
+                {condicoes.map(c => (
+                  <li key={c.id}>
+                    <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</strong>
+                    <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? `na fila ${redeDeSaude(vida).do}` : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}{c.tarde ? ' · descoberto tarde' : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      )}
+
+      <AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} />
 
       {i >= 8 && (
         <section className="voce-dinheiro" aria-label="O dinheiro">
@@ -97,29 +123,10 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
         </section>
       )}
 
-      <AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} />
       <OSeuNome vida={vida} agir={agir} />
       <QuemNoMundo vida={vida} agir={agir} />
       {i >= 14 && <OQueConstruiu vida={vida} />}
       <Linhagem vida={vida} />
-
-      {condicoes.length > 0 && (
-        <section className="voce-condicoes" aria-label="Condições de saúde">
-          <h2 className="voce-subtitulo">O que o corpo carrega</h2>
-          <ul>
-            {condicoes.map(c => (
-              <li key={c.id}>
-                <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</strong>
-                <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? `na fila ${redeDeSaude(vida).do}` : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}{c.tarde ? ' · descoberto tarde' : ''}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {tracos.length > 0 && (
-        <p className="voce-tracos">Quem convive diz que você é {tracos.join(', ').replace(/, ([^,]*)$/, ' e $1')} — é o que suas escolhas têm mostrado.</p>
-      )}
     </div>
   );
 }
@@ -128,7 +135,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
  * REWORK 5 — a linha dos últimos anos (o registro de cada aniversário + agora), sem número: subir é melhorar em todas.
  * O último ponto é o de hoje. Com menos de dois registros, não há linha para desenhar.
  */
-function Trajetoria({ pontos, nome }: { pontos: number[]; nome: string }) {
+export function Trajetoria({ pontos, nome }: { pontos: number[]; nome: string }) {
   if (pontos.length < 2) return null;
   const L = 240, A = 28;
   const x = (k: number) => (k / (pontos.length - 1)) * (L - 6) + 3;
@@ -244,3 +251,41 @@ function OSeuNome({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
     </section>
   );
 }
+
+const CATEGORIA_DA_FRENTE: Record<string, string> = { esporte: 'esporte', arte: 'arte', estudo: 'estudo', social: 'social', oficio: 'oficio' };
+
+/**
+ * REWORK 7 — "No que você é bom", com forma: cada habilidade que conta na vida (as praticadas e as que já foram
+ * fortes — `frentesDaVida`) com os degraus da escada real, a palavra do estágio e se está praticando ou parou; os
+ * jeitos de nascença e a cabeça para aprender (`noQueEBom`), em palavras, ao lado. Um toque leva a Tempo livre.
+ */
+function Habilidades({ vida, irPara }: { vida: Vida; irPara: (a: Destino) => void }) {
+  const frentes = frentesDaVida(vida);
+  const jeitos = noQueEBom(vida).filter(x => !frentes.some(f => cap(f.nome) === x.rotulo));
+  if (!frentes.length && !jeitos.length) return null;
+  return (
+    <section className="voce-bom" aria-labelledby="titulo-bom">
+      <h2 id="titulo-bom" className="voce-subtitulo">No que você é bom</h2>
+      {frentes.length > 0 && (
+        <ul className="habilidades">
+          {frentes.map(f => {
+            const fr = vida.caminhos.frentes[f.d]!;
+            const m = modeloFrente(f.d);
+            const e = estagioDe(fr.habilidade);
+            return (
+              <li key={f.d} className={`habilidade pratica--${CATEGORIA_DA_FRENTE[m.categoria] ?? 'estudo'}${f.ativa ? '' : ' habilidade--parada'}`}>
+                <span className="habilidade__nome">{cap(f.nome)}</span>
+                <Degraus estagio={e} auge={estagioDe(fr.auge)} rotulo={cap(f.nome)} palavra={m.estagios[e]} />
+                <span className="habilidade__frase">{f.ativa ? f.texto : `Parou. ${f.texto}`.replace('Parou. Parou', 'Parou')}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {jeitos.length > 0 && <dl className="dados">{jeitos.map(x => <div key={x.rotulo} className="dado"><dt>{x.rotulo}</dt><dd>{x.texto}</dd></div>)}</dl>}
+      <button type="button" className="link" onClick={() => irPara('atividades')}>Praticar algo — em Tempo livre →</button>
+    </section>
+  );
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

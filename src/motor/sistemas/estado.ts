@@ -394,7 +394,15 @@ export function leituraDoEstado(v: Vida, d: Dimensao, limite = 3): LeituraEstado
   // Uma perda já aparece como luto (que continua); o abalo da notícia não se repete ao lado.
   const pontuais = d === 'saude' ? [] : abalosAtivos(v, d).filter(a => !(base.some(f => f.id === 'luto') && /^a morte de /.test(a.texto)));
   // Na saúde, a idade antes dos 35 só "ajuda" em silêncio; não vale citar.
-  const todos = [...base, ...pontuais].filter(f => !(d === 'saude' && f.id === 'idade' && f.efeito >= 0 && idade(v) < 35 && v.corpo.saude >= 80));
+  const filtrados = [...base, ...pontuais].filter(f => !(d === 'saude' && f.id === 'idade' && f.efeito >= 0 && idade(v) < 35 && v.corpo.saude >= 80));
+  // REWORK 7: a mesma causa com o mesmo nome (o peso de fundo das contas atrasadas e o abalo do mês em que atrasaram)
+  // aparece UMA vez, com o tamanho somado — "as contas atrasadas · moderado" e "· leve", lado a lado, liam como duas
+  // coisas diferentes. Só a leitura junta; a conta do ano continua com cada fator.
+  const todos: Fator[] = [];
+  for (const f of filtrados) {
+    const igual = todos.find(x => x.texto.toLowerCase() === f.texto.toLowerCase() && Math.sign(x.efeito) === Math.sign(f.efeito));
+    if (igual) igual.efeito += f.efeito; else todos.push({ ...f });
+  }
   const minimo = d === 'saude' ? 0.35 : 2;
   const ajudando = todos.filter(f => f.efeito * sinal >= minimo).sort((a, b) => b.efeito * sinal - a.efeito * sinal).slice(0, limite);
   const pesando = todos.filter(f => f.efeito * sinal <= -minimo).sort((a, b) => a.efeito * sinal - b.efeito * sinal).slice(0, limite);

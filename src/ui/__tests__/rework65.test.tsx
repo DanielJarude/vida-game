@@ -196,9 +196,9 @@ describe('um sistema de cor só, nos dois temas', () => {
     expect([...doClaro].filter(n => !doEscuro.has(n))).toEqual([]);
   });
   it('nenhum componente pergunta qual é o tema (sem verificações espalhadas)', () => {
-    const fontes = ['vida.css', 'vivida.css', 'agir.css', 'mundo-vivo.css', 'material.css', 'caminhos.css', 'sistema.css'].map(ler).join('\n');
+    const fontes = ['vida.css', 'vivida.css', 'agir.css', 'mundo-vivo.css', 'material.css', 'caminhos.css', 'sistema.css', 'experiencia.css'].map(ler).join('\n');
     expect(fontes).not.toMatch(/data-tema|prefers-color-scheme/);
-    const tsx = ['telas/Jogo.tsx', 'jogo/LinhaDaVida.tsx', 'jogo/Pessoas.tsx', 'jogo/Voce.tsx', 'jogo/Trabalho.tsx', 'jogo/Tempo.tsx', 'jogo/VidaConcreta.tsx', 'jogo/Estudos.tsx'].map(ler).join('\n');
+    const tsx = ['telas/Jogo.tsx', 'jogo/LinhaDaVida.tsx', 'jogo/Pessoas.tsx', 'jogo/Voce.tsx', 'jogo/Trabalho.tsx', 'jogo/Tempo.tsx', 'jogo/VidaConcreta.tsx', 'jogo/Estudos.tsx', 'jogo/Pratica.tsx', 'jogo/Compras.tsx', 'jogo/Emblemas.tsx'].map(ler).join('\n');
     expect(tsx).not.toMatch(/dataset\.tema|data-tema|prefers-color-scheme/);
   });
   it('nenhuma cor "contra o tema" nas folhas: nada de branco/preto fixo como fundo de texto', () => {

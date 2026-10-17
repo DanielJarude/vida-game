@@ -7,9 +7,15 @@
  * que dá para fazer — e o porquê, quando ainda não dá).
  */
 
-import { LOJAS_DE_COISAS, ICONE_DA_LOJA } from './material/Lugares';
-import { NOME_LOJA, O_QUE_A_LOJA_VENDE } from '../../motor/dados/coisas';
-import { temLojaNaCidade } from '../../motor/sistemas/coisas';
+import { Compras } from './Compras';
+import { emCasa } from '../leitura';
+import { rotuloDe } from '../apresentar';
+import { idadePessoa } from '../../motor/nucleo';
+import { Retrato } from '../avatar/Retrato';
+import { coisasDaVida } from '../../motor/sistemas/coisas';
+import { coisa } from '../../motor/dados/coisas';
+import { varianteDe } from '../../motor/sistemas/pertences';
+import { DesenhoObjeto } from './material/Objetos';
 import { Pertences } from './Pertences';
 import { useState } from 'react';
 import type { Vida } from '../../motor/tipos';
@@ -24,17 +30,10 @@ import { BotaoAcao, navegarAbas, Secao } from '../comum';
 import { Lar, OQueTem, ViverACasa } from './Casa';
 import { ODinheiro } from './Dinheiro';
 import { Cidade } from './Cidade';
-import { Icone } from './material/Desenhos';
 import { Lugar, type QualLugar } from './material/Lugares';
 import { dinheiroCurto } from '../leituraMaterial';
 import { SECOES_VIDA, type Aba, type SecaoVida } from '../navegacao';
 import '../material.css';
-import { habilitacaoDaVida, leituraDaAutoescola } from '../../motor/sistemas/autoescola';
-import { lojaNaCidade } from '../../motor/sistemas/mercado';
-import { disponivel } from '../../motor/sistemas/dinheiro';
-import { modeloVeiculo } from '../../motor/dados/bens';
-
-const temRaro = (v: Vida, cat: 'embarcacao' | 'aeronave') => v.financas.bens.some(b => b.tipo === 'veiculo' && modeloVeiculo(b.modeloId).categoria === cat);
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; secao: SecaoVida; irSecao: (s: SecaoVida) => void; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }
 
@@ -58,6 +57,8 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'casa' && (
           <div className="casa">
             <Lar vida={vida} agir={agir} abrir={setLugar} />
+            <QuemMoraAqui vida={vida} abrirPessoa={abrirPessoa} />
+            <NaCasa vida={vida} irSecao={irSecao} />
             <Independencia vida={vida} agir={agir} irSecao={irSecao} />
             {i >= 18 && <ViverACasa vida={vida} agir={agir} />}
           </div>
@@ -75,6 +76,46 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
       </div>
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
     </div>
+  );
+}
+
+/* ------------------------------------------------- Quem mora, o que há (REWORK 7) */
+
+/** Quem divide a casa com você: os rostos (e os bichos), um toque abre a ficha — a casa é gente antes de ser imóvel. */
+function QuemMoraAqui({ vida, abrirPessoa }: { vida: Vida; abrirPessoa: (id: string) => void }) {
+  const c = emCasa(vida);
+  if (!c.pessoas.length) return null;
+  return (
+    <Secao titulo="Quem mora com você">
+      <ul className="moradores">
+        {c.pessoas.map(p => {
+          const vin = vida.vinculos[p.id];
+          return (
+            <li key={p.id}>
+              <button type="button" className="morador" onClick={() => abrirPessoa(p.id)}>
+                <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={56} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} />
+                <span className="morador__nome">{p.nome || 'Bebê'}</span>
+                {vin && <span className="morador__papel">{rotuloDe(vida, p, vin)}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Secao>
+  );
+}
+
+/** O que há dentro de casa: as coisas (as suas e as da casa), como objetos — o uso e a venda moram em Pertences. */
+function NaCasa({ vida, irSecao }: { vida: Vida; irSecao: (s: SecaoVida) => void }) {
+  const lista = coisasDaVida(vida);
+  if (!lista.length) return null;
+  return (
+    <Secao titulo="O que há em casa">
+      <ul className="na-casa">
+        {lista.slice(0, 10).map(t => { const c = coisa(t.coisaId); const x = varianteDe(t); return c ? <li key={t.id} title={c.nome}><DesenhoObjeto coisaId={t.coisaId} cor={x.cor} tamanho={52} rotulo={`${c.nome}, ${x.nome}`} /><span>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</span></li> : null; })}
+      </ul>
+      <button type="button" className="link" onClick={() => irSecao('pertences')}>Usar, cuidar, vender — em Pertences →</button>
+    </Secao>
   );
 }
 
@@ -133,78 +174,5 @@ function AFamilia({ vida, agir, abrirPessoa }: { vida: Vida; agir: (a: Acao) => 
       )}
       {pr && <button type="button" className="link" onClick={() => abrirPessoa(pr.p.id)}>Falar com {pr.p.nome}, em Pessoas →</button>}
     </Secao>
-  );
-}
-
-/* --------------------------------------------------------------- Compras */
-
-interface LugarDaCidade { id: QualLugar; nome: string; oque: string; icone: string; idadeMin: number; porque?: string }
-
-/** As lojas úteis da vida (não um shopping): o que cada uma resolve, e quando ainda não é a sua hora. */
-function Compras({ vida, agir, abrir }: { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) => void }) {
-  const i = idade(vida);
-  const temVeiculo = vida.financas.bens.some(b => b.tipo === 'veiculo');
-  const grupos: { titulo: string; lugares: LugarDaCidade[] }[] = [
-    { titulo: 'Moradia', lugares: [{ id: 'alugar', nome: 'Imobiliária', oque: 'Alugar ou comprar onde morar', icone: 'imobiliaria', idadeMin: 18, porque: AUTONOMIA.moradia.antes }] },
-    { titulo: 'Transporte', lugares: [
-      { id: 'concessionaria', nome: 'Concessionária', oque: 'Carros zero', icone: 'concessionaria', idadeMin: 18, porque: 'Carro é a partir dos 18, com carteira.' },
-      { id: 'usados', nome: 'Carros usados', oque: 'Anúncios, cada um com uma história', icone: 'usados', idadeMin: 18, porque: 'Carro é a partir dos 18, com carteira.' },
-      { id: 'motos', nome: 'Motos e bicicletas', oque: 'Novas e usadas; bicicleta é de qualquer idade', icone: 'bicicleta', idadeMin: 10, porque: 'Com essa idade, a bicicleta vem da família.' },
-      // Raros e contextuais: a loja náutica perto da água, o aeroclube na cidade grande — para quem tem com que (ou já tem um).
-      ...(lojaNaCidade(vida.moradia.municipioId, 'nautica') && (disponivel(vida) >= 60000 || temRaro(vida, 'embarcacao')) ? [{ id: 'nautica' as QualLugar, nome: 'Loja náutica', oque: 'Moto aquática, lancha, veleiro', icone: 'nautica', idadeMin: 18, porque: 'A partir dos 18.' }] : []),
-      ...(lojaNaCidade(vida.moradia.municipioId, 'aeroclube') && (disponivel(vida) >= 350000 || temRaro(vida, 'aeronave')) ? [{ id: 'aeroclube' as QualLugar, nome: 'Aeroclube e hangar', oque: 'Ultraleve, monomotor, bimotor, jato; a formação de piloto', icone: 'aeroclube', idadeMin: 18, porque: 'A partir dos 18.' }] : []),
-      ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto', icone: 'oficina', idadeMin: 0 }] : [])
-    ] },
-    { titulo: 'Você', lugares: [
-      { id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio', icone: 'loja', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes },
-      // FIX pós-playtest humano: mexer no rosto (o que se vê no retrato; a genética fica).
-      { id: 'clinica', nome: 'Clínica de cirurgia plástica', oque: 'Nariz, orelhas, pálpebras, lifting, cabelo, lábios', icone: 'clinica', idadeMin: 16, porque: 'Cirurgia estética, só depois dos 16 (a maior parte, dos 18).' }
-    ] },
-    // As coisas da vida: o que se usa e rende (eletrônicos, casa, instrumentos, esporte, livros) — `dados/coisas`.
-    { titulo: 'Coisas da casa e da vida', lugares: LOJAS_DE_COISAS.map(l => ({ id: l, nome: NOME_LOJA[l], oque: `${O_QUE_A_LOJA_VENDE[l]}${temLojaNaCidade(vida, l) ? '' : ' · pela internet'}`, icone: ICONE_DA_LOJA[l], idadeMin: 10, porque: 'Com essa idade, quem compra são os adultos da casa.' })) },
-    { titulo: 'Dinheiro', lugares: [{ id: 'banco', nome: 'Banco', oque: 'Guardar, investir, empréstimo', icone: 'banco', idadeMin: 18, porque: 'Conta e investimento no seu nome, a partir dos 18.' }] },
-    { titulo: 'Animais', lugares: [
-      { id: 'abrigo', nome: 'Abrigo de animais', oque: 'Adotar um cão, um gato — às vezes, outro bicho', icone: 'abrigo', idadeMin: 18, porque: 'Adotar é coisa de adulto.' },
-      { id: 'pets', nome: 'Loja e criadouro de animais', oque: 'Aves, roedores, peixes; silvestres só com documento', icone: 'loja_pets', idadeMin: 18, porque: 'Comprar um animal é coisa de adulto.' }
-    ] }
-  ];
-  return (
-    <div className="compras">
-      <header className="folio">
-        <p className="folio__kicker"><span className="folio__area">Vida · Compras</span></p>
-        <h1 className="folio__titulo">{i < 12 ? 'As compras são dos adultos da casa' : i < 18 ? 'O que dá para comprar com o seu dinheiro' : 'Onde se resolve a vida material'}</h1>
-        <p className="folio__lede">Casa, transporte, o que se usa no corpo, o banco. O preço importa: o que não cabe aparece com o motivo.</p>
-      </header>
-      {grupos.map(g => (
-        <Secao key={g.titulo} titulo={g.titulo}>
-          <ul className="lugares">
-            {g.lugares.map(l => {
-              const cedo = i < l.idadeMin;
-              return (
-                <li key={l.id}>
-                  <button type="button" className={`lugar-botao${cedo ? ' lugar-botao--bloqueado' : ''}`} onClick={() => abrir(l.id)} disabled={cedo} aria-describedby={cedo ? `porque-${l.id}` : undefined}>
-                    <Icone nome={l.icone} tamanho={26} />
-                    <span className="lugar-botao__nome">{l.nome}</span>
-                    <span className="lugar-botao__oque" id={cedo ? `porque-${l.id}` : undefined}>{cedo ? l.porque : l.oque}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          {g.titulo === 'Transporte' && i >= habilitacaoDaVida(vida).comeca - 1 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarImpossivel>{`Tirar ${habilitacaoDaVida(vida).a} (${habilitacaoDaVida(vida).escola})`}</BotaoAcao>}
-          {g.titulo === 'Transporte' && i >= habilitacaoDaVida(vida).comeca - 2 && !vida.trabalho.licencas.includes('cnh') && <p className="nota">{habilitacaoDaVida(vida).frase}</p>}
-          {g.titulo === 'Transporte' && leituraDaAutoescola(vida) && (
-            <div className="autoescola">
-              <p className="nota">{leituraDaAutoescola(vida)}</p>
-              <div className="grupo-acoes grupo-acoes--linha">
-                <BotaoAcao vida={vida} acao={{ tipo: 'cnh_prova' }} agir={agir} variante="secundario" ocultarBloqueado ocultarImpossivel>Fazer a prova teórica</BotaoAcao>
-                <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'teoria' }} agir={agir} variante="discreto" ocultarImpossivel>Estudar o manual e fazer simulados</BotaoAcao>
-                <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'pratica' }} agir={agir} variante="discreto" ocultarImpossivel>Fazer aulas extras de direção</BotaoAcao>
-              </div>
-            </div>
-          )}
-        </Secao>
-      ))}
-    </div>
   );
 }

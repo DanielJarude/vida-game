@@ -91,7 +91,11 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     hobby: /Explorar outras atividades|Arte|Leitura/, sair: /Com quem|Sair e ver gente/, estresse: /O que está pesando/, viajar: /Viagens e experiências/,
     rede: /Criar uma conta no Instagram|Instagram/, fazer_junto: /Família|Amigos|Perto|Gente da sua vida/, agir_trabalho: /No dia a dia do trabalho|O que dá para fazer agora/, usar_carro: /Nada seu ainda|Seu veículo|Seus veículos/, pertences: /Nada seu ainda|Para usar|Pertences/, casa: /Procurar (um|outro) lugar/, onde_moro: /Quem paga a casa/,
     romance_amigo: /Família|Amigos|Perto|Gente da sua vida/, cirurgia: /Clínica de cirurgia plástica/,
-    mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /Linha da Vida/
+    mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /Linha da Vida/,
+    // REWORK 7: os testes de intenção do playtest.
+    sair_amigo: /Família|Amigos|Perto|Gente da sua vida/, violao: /Tocar um instrumento|Explorar outras atividades/, condicionamento: /Academia|Correr ou caminhar|Cuidar de si/,
+    praticas: /O que você pratica/, carreira: /A sua situação agora|Procurar outro caminho/, quanto_ganho: /O mês|Entra|entra/, em_casa: /O que há em casa|Quem mora com você|Quem paga a casa/,
+    historico_escolar: /Sua formação|Sua história na formação|Ensino médio|ensino médio/, familia_aconteceu: /Família/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {
     const v = vida(30, x => { adulta(x); x.moradia = { tipo: 'aluguel', municipioId: x.moradia.municipioId, modeloId: 'apto_1q', aluguel: 1300, padrao: 3, tInicio: x.t }; for (const vin of Object.values(x.vinculos)) vin.convivio = vin.convivio.filter(c => c !== 'casa'); });
@@ -138,12 +142,18 @@ describe('Formação: o lugar, as pessoas, as atividades (ações parecem açõe
 });
 
 describe('Vida: moradia, dinheiro, compras, tempo, cidade — num lugar só', () => {
-  it('Compras para uma criança: as lojas existem, bloqueadas com o motivo (não somem)', () => {
+  // REWORK 7: para uma criança, Compras não é mais uma parede de lojas desabilitadas — é a casa de onde as coisas vêm
+  // (quem compra, o que já é seu). As lojas continuam existindo e descobríveis: recolhidas, com a idade e o motivo.
+  it('Compras para uma criança: primeiro a família; as lojas existem, recolhidas, com a idade e o motivo (não somem)', () => {
     const v = vida(9);
     render(<main><VidaConcreta vida={v} agir={() => true} secao="compras" irSecao={() => {}} irPara={() => {}} abrirPessoa={() => {}} /></main>);
-    const imob = screen.getByRole('button', { name: /Imobiliária/ }) as HTMLButtonElement;
-    expect(imob.disabled).toBe(true);
+    expect(screen.getByText('Quem compra as coisas')).toBeTruthy();
+    expect(screen.getByText('O que já é seu')).toBeTruthy();
+    expect(screen.queryAllByRole('button').filter(b => (b as HTMLButtonElement).disabled)).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: /Quando cada lugar se abre/ }));
+    expect(screen.getByText('Imobiliária')).toBeTruthy();
     expect(screen.getByText(/Menor de idade não decide onde mora/)).toBeTruthy();
+    expect(screen.getByText('aos 18')).toBeTruthy();
   });
 
   it('a ótica vende o que se usa no corpo; o luxo não promete fama', () => {

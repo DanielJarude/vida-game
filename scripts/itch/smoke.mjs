@@ -120,6 +120,10 @@ const bundleSave = execFileSync('npx', ['esbuild', 'scripts/itch/gerarSaveReal.t
 const saveReal = execFileSync('node', ['-'], { cwd: raiz, input: bundleSave, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 }).trim();
 const segunda = await abrir(saveReal);
 checar('save persiste após recarregar a página', (await segunda.p.evaluate(k => localStorage.getItem(k), CHAVE)) === saveReal);
+// REWORK 7: a leitura do save é assíncrona (o IndexedDB vem antes do localStorage) — o primeiro botão da tela inicial
+// pode aparecer antes do "Continuar". Espera-se o texto (até 15 s) em vez de ler no primeiro quadro: a exigência é a
+// mesma; só some a corrida (a base 40be963 falhava igual neste ambiente).
+await segunda.p.waitForFunction(() => /continuar/i.test(document.getElementById('root')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
 const texto2 = (await segunda.p.evaluate(() => document.getElementById('root')?.textContent ?? '')).toLowerCase();
 checar('com save presente, a interface oferece continuar', /continuar/.test(texto2));
 await segunda.ctx.close();

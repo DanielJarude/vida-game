@@ -778,7 +778,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
           atual.nivel = nivel;
           return ok(nivel > antes ? `${m.nome}: agora ${nivelModelo(m, nivel).rotulo.toLowerCase()}.` : `${m.nome}: mais leve, ${nivelModelo(m, nivel).rotulo.toLowerCase()}.`);
         }
-        const f = v.caminhos.frentes[a.id as keyof typeof v.caminhos.frentes];
+        // REWORK 7: a frente da atividade é a que ela pratica (a leitura pratica a língua; o teatro, o teatro) — antes,
+        // procurava a frente pelo id da atividade, e quem voltava a ler ou a desenhar depois de anos não "retomava".
+        const dPrincipal = (Object.entries(m.pratica ?? {}) as [string, number][]).sort((x, y) => y[1] - x[1])[0]?.[0] as keyof typeof v.caminhos.frentes | undefined;
+        const f = dPrincipal ? v.caminhos.frentes[dPrincipal] : undefined;
         const retomada = f && f.meses >= 12 && v.t - f.tUltimo >= 24;
         // Atividade institucional nasce presa à instituição de agora (o time da escola A não vira o da escola B).
         const inst = DE_FORMACAO.has(a.id) ? instituicaoAtual(v)?.chave : undefined;
@@ -786,7 +789,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         if (retomada) {
           const anos = Math.floor((v.t - f!.tUltimo) / 12);
           escrever(v, { texto: `Voltou a ${m.nome.toLowerCase()} depois de ${anos} anos parad${ge(v) === 'feminino' ? 'a' : ge(v) === 'masculino' ? 'o' : 'e'}.`, relevancia: 'cotidiano', tema: 'lazer', escolha: true });
-          marcar(v, 'retomada', `Retomou: ${m.nome.toLowerCase()}.`, 1, { dominio: a.id as never });
+          marcar(v, 'retomada', `Retomou: ${m.nome.toLowerCase()}.`, 1, { dominio: dPrincipal as never });
         } else if (m.pratica && i < 18) {
           marcar(v, 'comecou', `Começou: ${m.nome.toLowerCase()}, aos ${i}.`, 1, { dominio: Object.keys(m.pratica)[0] as never });
         }

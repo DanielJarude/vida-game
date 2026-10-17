@@ -10,6 +10,8 @@ import './ui/agir.css';
 import './ui/mundo-vivo.css';
 // REWORK 6.5: o sistema visual global (aparência, ritmo e componentes compartilhados entre as áreas).
 import './ui/sistema.css';
+// REWORK 7: as peças da experiência (práticas, degraus, percursos, abas locais, vitrines, fichas).
+import './ui/experiencia.css';
 
 iniciarTema();
 

@@ -82,6 +82,9 @@ describe('Pessoas: a ficha entende quem é a pessoa', () => {
     for (const x of Object.values(v.vinculos)) if (x.romance) x.romance = undefined;
   };
 
+  // REWORK 7: o resto, por tipo, deixou de ser gavetas fechadas (<details>) e virou ABAS de convivência — uma à vista
+  // por vez, todas na página (nada some). O teste continua cobrando o mesmo: o "agora" primeiro (até três), o resto
+  // agrupado e recolhido, "Algo mais" com a amizade e a ação lá dentro.
   it('"o que faz sentido agora" vem primeiro; o resto, por tipo, recolhido (nada some) — e há "Algo mais" com a amizade', () => {
     const v = vida(29, comAmiga);
     const id = Object.values(v.vinculos).find(x => x.estagio === 'amigo_proximo' && v.pessoas[x.pessoaId].nome)!.pessoaId;
@@ -90,10 +93,15 @@ describe('Pessoas: a ficha entende quem é a pessoa', () => {
     const agora = within(ficha).getByText('O que faz sentido agora').closest('.ficha__agora') as HTMLElement;
     expect(within(agora).getAllByRole('button').length).toBeGreaterThan(0);
     expect(within(agora).getAllByRole('button').length).toBeLessThanOrEqual(3);
-    const grupos = [...ficha.querySelectorAll('details.ficha__grupo')];
-    expect(grupos.length).toBeGreaterThanOrEqual(3);
-    expect(grupos.every(g => !(g as HTMLDetailsElement).open)).toBe(true);
-    expect(within(ficha).getByText('Algo mais')).toBeTruthy();
+    const abas = within(ficha).getAllByRole('tab');
+    const paineis = [...ficha.querySelectorAll('[role="tabpanel"].ficha__grupo')];
+    expect(abas.length).toBeGreaterThanOrEqual(3);
+    expect(paineis.length).toBe(abas.length);
+    expect(paineis.filter(g => !g.classList.contains('abas-locais__painel--fora')).length).toBe(1);
+    const algoMais = within(ficha).getByRole('tab', { name: /Algo mais/ });
+    fireEvent.click(algoMais);
+    expect(algoMais.getAttribute('aria-selected')).toBe('true');
+    expect(ficha.querySelector(`#${algoMais.getAttribute('aria-controls')}`)!.classList.contains('abas-locais__painel--fora')).toBe(false);
     expect(within(ficha).getByRole('button', { name: /Demonstrar interesse/ })).toBeTruthy();
   });
 

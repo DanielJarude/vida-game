@@ -33,7 +33,7 @@ import { podeTentar } from '../../motor/plausibilidade';
 import { ehDescendente, faseDeIdade, papelDe } from '../../motor/sistemas/vinculos';
 import { rotuloDe } from '../apresentar';
 import { circulos, comoEsta, etiqueta, ondeEsta, quemE, sinaisSociais, vidaPropria, type Par, type TipoDeSinal } from '../leitura';
-import { BotaoAcao, Escolha, Folha, Folio, Secao, Vazio } from '../comum';
+import { BotaoAcao, Escolha, Folha, Folio, navegarAbas, Percurso, Secao, Vazio } from '../comum';
 import { Retrato, type Expressao } from '../avatar/Retrato';
 import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
 import { leituraDaOrigem } from '../../motor/sistemas/origem';
@@ -286,8 +286,24 @@ function agoraDela(vida: Vida, p: Pessoa, vin: Vinculo): string {
 const DESCOBERTA = (m: Marco) => m.tipo === 'descoberta';
 const RITUAL = (m: Marco) => m.tipo === 'ritual';
 
+/** O laço em palavras (REWORK 7): afeto, confiança e atrito — os números do vínculo, lidos, nunca mostrados. */
+function lacoEmPalavras(vin: Vinculo): { id: string; rotulo: string; palavra: string; tom: 'bom' | 'neutro' | 'ruim' }[] {
+  const p = vin.proximidade, c = vin.confianca, t = vin.tensao;
+  return [
+    { id: 'afeto', rotulo: 'Afeto', palavra: p >= 75 ? 'muito próximos' : p >= 55 ? 'próximos' : p >= 35 ? 'cordiais' : p >= 15 ? 'distantes' : 'quase estranhos', tom: p >= 55 ? 'bom' : p >= 35 ? 'neutro' : 'ruim' },
+    { id: 'confianca', rotulo: 'Confiança', palavra: c >= 75 ? 'total' : c >= 55 ? 'firme' : c >= 35 ? 'com reservas' : 'abalada', tom: c >= 55 ? 'bom' : c >= 35 ? 'neutro' : 'ruim' },
+    { id: 'atrito', rotulo: 'Atrito', palavra: t >= 55 ? 'muito' : t >= 30 ? 'algum' : t >= 12 ? 'pouco' : 'nenhum', tom: t >= 55 ? 'ruim' : t >= 30 ? 'neutro' : 'bom' }
+  ];
+}
+
+const ROTULO_ESTADO: Partial<Record<ReturnType<typeof estadoDaRelacao>, string>> = { aproximando: 'se aproximando', esfriando: 'esfriando', tensao: 'com tensão', conflito: 'em conflito', afastado: 'afastados', rompido: 'rompidos', reconciliacao: 'se reconciliando' };
+
+/**
+ * A FICHA DE UMA PESSOA (REWORK 7): o retrato de uma relação, não um menu. De um lado, quem ela é, como vocês estão
+ * (o laço em palavras, o estado, o que aconteceu por último) e a história; do outro, CONVIVER — o que faz sentido
+ * agora, primeiro, e o resto por tipo de convivência, uma aba de cada vez (todas continuam lá: nenhuma ação some).
+ */
 function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; vin: Vinculo; agir: (a: Acao) => boolean; aoFechar: () => void }) {
-  const [historiaToda, setHistoriaToda] = useState(false);
   const ip = idadePessoa(vida, p);
   const papel = papelDe(p, vin);
   const acoes = p.vivo ? interacoesPara(vida, p.id) : [];
@@ -308,21 +324,40 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   const falta = !p.especie && p.vivo ? pendentes(vida, p, vin).length : 0;
   const ganhou = presentesDados(p);
   const narrada = historia.filter(h => !RITUAL(h) && !DESCOBERTA(h));
-  const importantes = narrada.filter(h => (h.peso ?? 1) >= 2);
-  const mostrada = historiaToda || narrada.length <= 7 ? narrada : importantes.length >= 4 ? importantes.slice(-7) : narrada.slice(-7);
   const ultima = [...narrada].reverse().find(h => vida.t - h.t <= 24);
   const vidaDele = ehDescendente(papel) && p.vivo ? vidaPropria(p) : [];
   const gest = gestacaoEmCurso(vida);
   const esperando = gest?.descoberta && (gest.gestanteId === p.id || (gest.gestanteId === 'eu' && gest.outroId === p.id));
   const dele = flex(p.genero, 'dele', 'dela', 'delu');
+  const estado = p.vivo && !p.especie ? estadoDaRelacao(vida, vin) : undefined;
+
+  const chamado = acoes.filter(x => x.id === 'chamado_sim' || x.id === 'chamado_nao');
+  const pri = p.vivo ? prioridadesDaFicha(vida, p.id) : { ids: [] as string[], porque: undefined as string | undefined };
+  const agoraIds = new Set(pri.ids);
+  const grupos = GRUPOS_DA_FICHA.filter(g => g.id !== 'chamado').map(g => {
+    const lista = acoes.filter(x => x.id !== 'chamado_sim' && x.id !== 'chamado_nao' && grupoDaInteracao(x.id) === g.id && !agoraIds.has(x.id));
+    const extra = g.id === 'juntos' ? usosComEla : [];
+    const adocao = g.id === 'relacao' && papel === 'parceiro' && idade(vida) >= 18;
+    return { ...g, lista, extra, adocao, n: lista.length + extra.length + (adocao ? 1 : 0) };
+  }).filter(g => g.n > 0);
+  const [aba, setAba] = useState<string>(() => grupos[0]?.id ?? '');
+  const abaAtual = grupos.some(g => g.id === aba) ? aba : grupos[0]?.id ?? '';
+  const botao = (x: { id: string; variante?: 'principal' | 'secundario' | 'discreto' | 'perigo'; chance?: boolean }, destaque = false) => (
+    <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={destaque ? 'principal' : x.variante} mostrarChance={x.chance}
+      ocultarImpossivel={x.id === 'convidar'}>
+      {rotuloInteracao(vida, p.id, x.id)}
+    </BotaoAcao>
+  );
+  const passos = narrada.map((h, k) => ({ chave: `${h.t}:${k}`, quando: anoDe(h.t), texto: h.texto, peso: ((h.peso ?? 1) >= 3 ? 3 : (h.peso ?? 1) >= 2 ? 2 : 1) as 1 | 2 | 3 })).reverse();
+
   return (
-    <Folha rotulo={p.nome || 'Bebê'} aoFechar={aoFechar}>
-      <div className="ficha">
+    <Folha rotulo={p.nome || 'Bebê'} aoFechar={aoFechar} largura="larga">
+      <div className={`ficha ficha--relacao${estado ? ` ficha--${estado}` : ''}`}>
         <div className="ficha__topo">
           <Retrato visual={p.visual} genero={p.genero} idade={ip} semente={p.pet?.semente ?? p.id} tamanho={104} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} falecido={!p.vivo} expressao={expressaoNpc(vida, p)} />
-          <div>
+          <div className="ficha__identidade">
             <h2 className="ficha__nome">{p.nome || 'Bebê'} {!p.especie && <span className="ficha__sobrenome">{p.sobrenome}</span>}</h2>
-            <p className="ficha__rotulo">{rotuloDe(vida, p, vin)}</p>
+            <p className="ficha__rotulo">{rotuloDe(vida, p, vin)}{estado && ROTULO_ESTADO[estado] ? <span className={`ficha__estado ficha__estado--${estado}`}> · {ROTULO_ESTADO[estado]}</span> : null}</p>
             {p.vivo && !p.especie && <BarraRelacao vida={vida} vin={vin} grande />}
             <p className="ficha__meta">
               {p.vivo ? `${ip} ${ip === 1 ? 'ano' : 'anos'}` : `${anoDe(p.tNasc)} — ${p.tMorte ? anoDe(p.tMorte) : ''}`}
@@ -331,112 +366,111 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
             </p>
           </div>
         </div>
-        {como && <p className="ficha__prox">{como}</p>}
-        {saude && <p className="ficha__origem ficha__saude">Saúde: {saude}.</p>}
-        {(quem || onde) && <p className="ficha__origem">{[quem, onde].filter(Boolean).join(' ')}</p>}
-        {trajetoria && (vin.fases?.length ?? 0) > 1 && <p className="ficha__origem ficha__trajetoria" aria-label="A trajetória de vocês">{trajetoria}</p>}
-        {p.vivo && !p.especie && <CaminhoDaAmizade vida={vida} p={p} vin={vin} />}
-        {esperando && gest && <p className="ficha__nota">Um bebê a caminho — o parto é previsto para {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</p>}
-        {ultima && <p className="ficha__ultima"><span className="ficha__ano">{anoDe(ultima.t)}</span> {ultima.texto}</p>}
 
-        {p.vivo && p.especie && <FichaPet vida={vida} agir={agir} p={p} />}
+        <div className="ficha__retrato-relacao">
+          {como && <p className="ficha__prox">{como}</p>}
+          {p.vivo && !p.especie && (
+            <ul className="laco" aria-label="Como está o laço">
+              {lacoEmPalavras(vin).map(x => <li key={x.id} className={`laco__item laco__item--${x.tom}`}><span className="laco__rotulo">{x.rotulo}</span><span className="laco__palavra">{x.palavra}</span></li>)}
+            </ul>
+          )}
+          {ultima && <p className="ficha__ultima"><span className="ficha__ano">{anoDe(ultima.t)}</span> {ultima.texto}</p>}
+          {saude && <p className="ficha__origem ficha__saude">Saúde: {saude}.</p>}
+          {(quem || onde) && <p className="ficha__origem">{[quem, onde].filter(Boolean).join(' ')}</p>}
+          {trajetoria && (vin.fases?.length ?? 0) > 1 && <p className="ficha__origem ficha__trajetoria" aria-label="A trajetória de vocês">{trajetoria}</p>}
+          {p.vivo && !p.especie && <CaminhoDaAmizade vida={vida} p={p} vin={vin} />}
+          {esperando && gest && <p className="ficha__nota">Um bebê a caminho — o parto é previsto para {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</p>}
+          {p.vivo && p.especie && <FichaPet vida={vida} agir={agir} p={p} />}
+        </div>
 
-        {p.vivo && vin.chamado && (
-          <p className="ficha__chamado"><span className="ficha__ano">{anoDe(vin.chamado.t)}</span> {vin.chamado.texto} <span className="ficha__chamado-nota">{vin.chamado.tipo === 'apoio' ? 'Aconteceu — e dá para responder.' : 'Espera uma resposta; o silêncio também responde.'}</span></p>
-        )}
-        {p.vivo && acoes.length > 0 && (
-          <div className="ficha__acoes">
-            {/* FIX pós-playtest humano: a ficha responde "o que faz sentido fazer AGORA" (até três ações, pelo contexto —
-                `prioridadesDaFicha`) e guarda o resto por tipo, recolhido: nenhuma ação some, nada grita igual. A reação
-                a um chamado vem antes de tudo. REWORK 6.5: só a PRIMEIRA prioridade é preenchida (a ação principal); as
-                outras são secundárias — três botões cheios iguais eram três gritos. */}
-            {(() => {
-              const chamado = acoes.filter(x => x.id === 'chamado_sim' || x.id === 'chamado_nao');
-              const pri = prioridadesDaFicha(vida, p.id);
-              const agoraIds = new Set(pri.ids);
-              const botao = (x: { id: string; variante?: 'principal' | 'secundario' | 'discreto' | 'perigo'; chance?: boolean }, destaque = false) => (
-                <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={destaque ? 'principal' : x.variante} mostrarChance={x.chance}
-                  ocultarImpossivel={x.id === 'convidar'}>
-                  {rotuloInteracao(vida, p.id, x.id)}
-                </BotaoAcao>
-              );
-              return (
-                <>
-                  {chamado.length > 0 && (
-                    <div className="ficha__grupo ficha__grupo--chamado">
-                      <h3 className="ficha__subtitulo">Como reagir</h3>
-                      <div className="grupo-acoes">{chamado.map(x => botao(x))}</div>
+        {p.vivo && (acoes.length > 0 || (!p.especie && idade(vida) >= 10)) && (
+          <section className="ficha__conviver" aria-label={`Conviver com ${p.nome || 'o bebê'}`}>
+            {p.vivo && vin.chamado && (
+              <p className="ficha__chamado"><span className="ficha__ano">{anoDe(vin.chamado.t)}</span> {vin.chamado.texto} <span className="ficha__chamado-nota">{vin.chamado.tipo === 'apoio' ? 'Aconteceu — e dá para responder.' : 'Espera uma resposta; o silêncio também responde.'}</span></p>
+            )}
+            {acoes.length > 0 && (
+              <div className="ficha__acoes">
+                {/* FIX pós-playtest humano: a ficha responde "o que faz sentido fazer AGORA" (até três ações, pelo
+                    contexto — `prioridadesDaFicha`). REWORK 7: o resto mora em abas por tipo de convivência — todas
+                    presentes na página (as de fora da aba só não aparecem), nenhuma ação some, nada grita igual. */}
+                {chamado.length > 0 && (
+                  <div className="ficha__grupo ficha__grupo--chamado">
+                    <h3 className="ficha__subtitulo">Como reagir</h3>
+                    <div className="grupo-acoes">{chamado.map(x => botao(x))}</div>
+                  </div>
+                )}
+                {pri.ids.length > 0 && (
+                  <div className="ficha__agora">
+                    <h3 className="ficha__subtitulo">O que faz sentido agora</h3>
+                    {pri.porque && <p className="ficha__porque">{pri.porque}</p>}
+                    <div className="grupo-acoes">{pri.ids.map(id => acoes.find(x => x.id === id)).filter(Boolean).map((x, k) => botao(x!, k === 0))}</div>
+                  </div>
+                )}
+                {grupos.length > 0 && (
+                  <div className="ficha__convivencia">
+                    <div role="tablist" aria-label="Outras coisas para fazer juntos" className="abas-locais__lista" onKeyDown={navegarAbas}>
+                      {grupos.map(g => (
+                        <button key={g.id} type="button" role="tab" id={`ficha-aba-${g.id}`} aria-selected={abaAtual === g.id} aria-controls={`ficha-painel-${g.id}`} tabIndex={abaAtual === g.id ? 0 : -1}
+                          className={`abas-locais__aba abas-locais__aba--${g.id}${abaAtual === g.id ? ' abas-locais__aba--ativa' : ''}`} onClick={() => setAba(g.id)}>
+                          {g.rotulo}<span className="abas-locais__conta">{g.n}</span>
+                        </button>
+                      ))}
                     </div>
-                  )}
-                  {pri.ids.length > 0 && (
-                    <div className="ficha__agora">
-                      <h3 className="ficha__subtitulo">O que faz sentido agora</h3>
-                      {pri.porque && <p className="ficha__porque">{pri.porque}</p>}
-                      <div className="grupo-acoes">{pri.ids.map(id => acoes.find(x => x.id === id)).filter(Boolean).map((x, k) => botao(x!, k === 0))}</div>
-                    </div>
-                  )}
-                  {GRUPOS_DA_FICHA.filter(g => g.id !== 'chamado').map(g => {
-                    const lista = acoes.filter(x => x.id !== 'chamado_sim' && x.id !== 'chamado_nao' && grupoDaInteracao(x.id) === g.id && !agoraIds.has(x.id));
-                    const extra = g.id === 'juntos' ? usosComEla : [];
-                    const adocao = g.id === 'relacao' && papel === 'parceiro' && idade(vida) >= 18;
-                    const n = lista.length + extra.length;
-                    if (!n && !adocao) return null;
-                    return (
-                      <details key={g.id} className={`ficha__grupo ficha__grupo--${g.id}`}>
-                        <summary className="ficha__grupo-titulo"><span className="ficha__subtitulo">{g.rotulo}</span> <span className="ficha__conta">{n}</span></summary>
+                    {grupos.map(g => (
+                      <div key={g.id} role="tabpanel" id={`ficha-painel-${g.id}`} aria-labelledby={`ficha-aba-${g.id}`} className={`abas-locais__painel ficha__grupo ficha__grupo--${g.id}${abaAtual === g.id ? '' : ' abas-locais__painel--fora'}`}>
                         <div className="grupo-acoes">
-                          {lista.map(x => botao(x))}
-                          {extra.map(x => <BotaoAcao key={`${x.t.id}:${x.uso.id}`} vida={vida} acao={{ tipo: 'usar_coisa', coisaTidaId: x.t.id, uso: x.uso.id, pessoaId: p.id }} agir={agir} variante="secundario">{(x.uso.rotuloCom ?? x.uso.rotulo).replace('{nome}', p.nome)}</BotaoAcao>)}
-                          {adocao && <BotaoAcao vida={vida} acao={{ tipo: 'adotar' }} agir={agir} variante="discreto" ocultarImpossivel>Entrar juntos com um pedido de adoção</BotaoAcao>}
+                          {g.lista.map(x => botao(x))}
+                          {g.extra.map(x => <BotaoAcao key={`${x.t.id}:${x.uso.id}`} vida={vida} acao={{ tipo: 'usar_coisa', coisaTidaId: x.t.id, uso: x.uso.id, pessoaId: p.id }} agir={agir} variante="secundario">{(x.uso.rotuloCom ?? x.uso.rotulo).replace('{nome}', p.nome)}</BotaoAcao>)}
+                          {g.adocao && <BotaoAcao vida={vida} acao={{ tipo: 'adotar' }} agir={agir} variante="discreto" ocultarImpossivel>Entrar juntos com um pedido de adoção</BotaoAcao>}
                         </div>
-                      </details>
-                    );
-                  })}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {!p.especie && <PresenteERede vida={vida} p={p} vin={vin} agir={agir} />}
+          </section>
+        )}
+
+        <div className="ficha__memoria">
+          {(costumes.length > 0 || sabe.length > 0 || fatos.length > 0 || (!p.especie && p.vivo && ip >= 4)) && (
+            <div className="ficha__retrato-dela">
+              {!p.especie && p.vivo && ip >= 4 && <p className="ficha__jeito">{flex(p.genero, 'Ele', 'Ela', 'Elu')} é {jeitoDe(p)}.</p>}
+              {(fatos.length > 0 || sabe.length > 0) && (
+                <>
+                  <h3 className="ficha__subtitulo">O que você sabe {dele}</h3>
+                  <ul className="ficha__sabe">
+                    {fatos.map(f => <li key={f.k}>{fraseDoSaber(vida, p, f)}</li>)}
+                    {sabe.slice(-3).map((h, k) => <li key={`h${k}`}>{h.texto}</li>)}
+                  </ul>
+                  {falta > 0 && p.vivo && <p className="nota">{fatos.length + sabe.length <= 1 ? 'Vocês ainda se conhecem pouco.' : 'Ainda há coisas que você não sabe.'}</p>}
                 </>
-              );
-            })()}
-          </div>
-        )}
+              )}
+              {ganhou.length > 0 && <p className="ficha__jeito">Tem, presente seu: {ganhou.join(', ')}.</p>}
+              {costumes.length > 0 && (
+                <>
+                  <h3 className="ficha__subtitulo">Coisas de vocês</h3>
+                  <ul className="ficha__costumes">{costumes.map((h, k) => <li key={k}>{h.texto}</li>)}</ul>
+                </>
+              )}
+            </div>
+          )}
 
-        {p.vivo && !p.especie && <PresenteERede vida={vida} p={p} vin={vin} agir={agir} />}
+          {vidaDele.length > 0 && (
+            <div className="ficha__historia">
+              <h3>A vida {dele}</h3>
+              <ul>{vidaDele.map((t, k) => <li key={k}>{t}</li>)}</ul>
+            </div>
+          )}
 
-        {(costumes.length > 0 || sabe.length > 0 || fatos.length > 0 || (!p.especie && p.vivo && ip >= 4)) && (
-          <div className="ficha__retrato-dela">
-            {!p.especie && p.vivo && ip >= 4 && <p className="ficha__jeito">{flex(p.genero, 'Ele', 'Ela', 'Elu')} é {jeitoDe(p)}.</p>}
-            {(fatos.length > 0 || sabe.length > 0) && (
-              <>
-                <h3 className="ficha__subtitulo">O que você sabe {dele}</h3>
-                <ul className="ficha__sabe">
-                  {fatos.map(f => <li key={f.k}>{fraseDoSaber(vida, p, f)}</li>)}
-                  {sabe.slice(-3).map((h, k) => <li key={`h${k}`}>{h.texto}</li>)}
-                </ul>
-                {falta > 0 && p.vivo && <p className="nota">{fatos.length + sabe.length <= 1 ? 'Vocês ainda se conhecem pouco.' : 'Ainda há coisas que você não sabe.'}</p>}
-              </>
-            )}
-            {ganhou.length > 0 && <p className="ficha__jeito">Tem, presente seu: {ganhou.join(', ')}.</p>}
-            {costumes.length > 0 && (
-              <>
-                <h3 className="ficha__subtitulo">Coisas de vocês</h3>
-                <ul className="ficha__costumes">{costumes.map((h, k) => <li key={k}>{h.texto}</li>)}</ul>
-              </>
-            )}
-          </div>
-        )}
-
-        {vidaDele.length > 0 && (
-          <div className="ficha__historia">
-            <h3>A vida {dele}</h3>
-            <ul>{vidaDele.map((t, k) => <li key={k}>{t}</li>)}</ul>
-          </div>
-        )}
-
-        {narrada.length > 0 && (
-          <div className="ficha__historia">
-            <h3>O que viveram juntos</h3>
-            <ul>{mostrada.map((h, k) => <li key={k} className={(h.peso ?? 1) >= 3 ? 'ficha__marco' : ''}><span className="ficha__ano">{anoDe(h.t)}</span> {h.texto}</li>)}</ul>
-            {mostrada.length < narrada.length && <button type="button" className="botao botao--discreto" onClick={() => setHistoriaToda(true)}>Toda a história ({narrada.length})</button>}
-          </div>
-        )}
+          {narrada.length > 0 && (
+            <div className="ficha__historia">
+              <h3>O que viveram juntos</h3>
+              <Percurso rotulo={`O que viveram juntos: ${p.nome}`} passos={passos} mostrar={7} />
+            </div>
+          )}
+        </div>
       </div>
     </Folha>
   );

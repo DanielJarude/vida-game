@@ -1,0 +1,243 @@
+/**
+ * REWORK 7 — COMPRAS: o mundo material da vida, não uma loja virtual.
+ *
+ * Antes: um título enorme, categorias pequenas, um ícone por loja e uma frase de descrição — cartões iguais para
+ * coisas que não se parecem. Agora cada lugar mostra a sua VITRINE DE VERDADE, deste ano e desta cidade: os carros e
+ * as motos que estão à venda (o desenho, a cor do anúncio), as casas para alugar, os instrumentos, os bichos do abrigo.
+ * E diz o que importa para esta vida: o que você já tem dali, o que rende numa atividade que você pratica, a partir de
+ * quanto — e, para quem ainda não decide, quando aquilo vai ser possível.
+ *
+ * A ordem segue a vida, não o catálogo: morar, ir e vir, as coisas do dia a dia, o que se usa no corpo, os serviços
+ * (banco, oficina, a carteira de motorista), os bichos.
+ *
+ * Criança não recebe uma loja de portas fechadas: vê a casa de onde as coisas vêm (quem paga, como está o dinheiro
+ * de casa), o que já é dela e, recolhido, quando cada lugar se abre. Nada aqui calcula preço ou regra: os números são
+ * os das ofertas do motor (`mercado`, `coisas`), os bloqueios os de `autonomia`.
+ */
+
+import { useMemo, type ReactNode } from 'react';
+import type { Vida } from '../../motor/tipos';
+import type { Acao } from '../../motor/acoes';
+import { idade, idadePessoa } from '../../motor/nucleo';
+import { AUTONOMIA } from '../../motor/sistemas/autonomia';
+import { coisasDaVida, coisasDaLoja, precoDaCoisa, temLojaNaCidade } from '../../motor/sistemas/coisas';
+import { coisa, NOME_LOJA, type LojaDeCoisas } from '../../motor/dados/coisas';
+import { animaisDoAbrigo, lojaNaCidade, ofertasDeImoveis, ofertasDeVeiculos, type LojaDeVeiculo } from '../../motor/sistemas/mercado';
+import { disponivel, seguranca } from '../../motor/sistemas/dinheiro';
+import { formaDaVersao, modeloVeiculo, versaoVeiculo } from '../../motor/dados/bens';
+import { habilitacaoDaVida, leituraDaAutoescola } from '../../motor/sistemas/autoescola';
+import { leituraDaOrigem, responsaveis } from '../../motor/sistemas/origem';
+import { modeloRotina } from '../../motor/sistemas/rotinas';
+import { varianteDe } from '../../motor/sistemas/pertences';
+import { BotaoAcao, Secao } from '../comum';
+import { dinheiroCurto, formaDoModelo, leituraDaSeguranca } from '../leituraMaterial';
+import { DesenhoVeiculo, Icone, MiniaturaDaCasa } from './material/Desenhos';
+import { DesenhoObjeto } from './material/Objetos';
+import { Retrato } from '../avatar/Retrato';
+import { LOJAS_DE_COISAS, type QualLugar } from './material/Lugares';
+
+interface Props { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) => void }
+
+interface Vitrine {
+  id: QualLugar;
+  nome: string;
+  /** O que se resolve ali, em poucas palavras. */
+  oque: string;
+  /** A idade em que o lugar se abre para você (e o porquê, antes). */
+  idadeMin: number;
+  porque?: string;
+  /** O que aparece na vitrine (os objetos de verdade deste ano). */
+  vitrine: ReactNode;
+  /** "a partir de R$ X" (ou o aluguel do mês). */
+  preco?: string;
+  /** O que esta vida já tem dali / o que rende numa atividade que você pratica. */
+  seu?: string;
+  rende?: string;
+  /** Pela internet: na cidade não há loja disso. */
+  online?: boolean;
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const temRaro = (v: Vida, cat: 'embarcacao' | 'aeronave') => v.financas.bens.some(b => b.tipo === 'veiculo' && modeloVeiculo(b.modeloId).categoria === cat);
+
+/** Os veículos à venda numa loja, este ano: três formas diferentes, com a cor do anúncio. */
+function vitrineDeVeiculos(v: Vida, loja: LojaDeVeiculo): { desenho: ReactNode; preco?: number } {
+  const ofertas = ofertasDeVeiculos(v, loja);
+  const formas = new Set<string>();
+  const escolhidas = [...ofertas].sort((a, b) => a.preco - b.preco).filter(o => { const f = formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId); if (formas.has(f)) return false; formas.add(f); return true; }).slice(0, 3);
+  return {
+    preco: ofertas.length ? Math.min(...ofertas.map(o => o.preco)) : undefined,
+    desenho: escolhidas.map(o => <DesenhoVeiculo key={o.id} forma={formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId)} cor={o.cor} semente={o.id} estado={o.estado} largura={78} />)
+  };
+}
+
+function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] {
+  const i = idade(v);
+  const meus = coisasDaVida(v);
+  const praticas = new Set(v.rotinas.map(r => r.id));
+  const temVeiculo = v.financas.bens.some(b => b.tipo === 'veiculo');
+  const din = disponivel(v);
+
+  const daLoja = (l: LojaDeCoisas): Vitrine => {
+    const itens = coisasDaLoja(l);
+    const tem = meus.filter(t => coisa(t.coisaId)?.loja === l);
+    const util = itens.filter(c => Object.keys(c.ajuda ?? {}).some(r => praticas.has(r)) && !tem.some(t => t.coisaId === c.id));
+    const mostrar = [...util, ...itens.filter(c => !util.includes(c))].slice(0, 3);
+    const rende = util[0] ? `${cap(util[0].nome)} rende em "${modeloRotina(Object.keys(util[0].ajuda!).find(r => praticas.has(r))!)?.nome.toLowerCase()}"` : undefined;
+    return {
+      id: l, nome: NOME_LOJA[l], oque: O_QUE[l], idadeMin: 10, porque: 'Com essa idade, quem compra são os adultos da casa.',
+      vitrine: mostrar.map(c => <DesenhoObjeto key={c.id} coisaId={c.id} tamanho={52} rotulo={c.nome} />),
+      preco: `a partir de ${dinheiroCurto(Math.min(...itens.map(c => precoDaCoisa(v, c.id))))}`,
+      seu: tem.length ? `Seu: ${tem.slice(0, 2).map(t => coisa(t.coisaId)!.nome).join(', ')}${tem.length > 2 ? ` e mais ${tem.length - 2}` : ''}` : undefined,
+      rende, online: !temLojaNaCidade(v, l)
+    };
+  };
+
+  const casas = i >= 16 ? ofertasDeImoveis(v, 'aluguel').slice(0, 3) : [];
+  const conc = vitrineDeVeiculos(v, 'concessionaria');
+  const usad = vitrineDeVeiculos(v, 'usados');
+  const motos = vitrineDeVeiculos(v, 'motos');
+  const bichos = i >= 14 ? animaisDoAbrigo(v).slice(0, 2) : [];
+  const nautica = lojaNaCidade(v.moradia.municipioId, 'nautica') && (din >= 60000 || temRaro(v, 'embarcacao'));
+  const aero = lojaNaCidade(v.moradia.municipioId, 'aeroclube') && (din >= 350000 || temRaro(v, 'aeronave'));
+  const veiculosSeus = v.financas.bens.filter(b => b.tipo === 'veiculo');
+
+  return [
+    { grupo: 'Onde morar', id: 'moradia', lugares: [{
+      id: 'alugar', nome: 'Imobiliária', oque: 'Alugar ou comprar onde morar', idadeMin: 18, porque: AUTONOMIA.moradia.antes,
+      vitrine: casas.length ? casas.map(o => <MiniaturaDaCasa key={o.id} forma={formaDoModelo(o.modeloId)} largura={84} />) : <MiniaturaDaCasa forma="apto_2q" largura={84} />,
+      preco: casas.length ? `aluguel a partir de ${dinheiroCurto(Math.min(...casas.map(o => o.aluguel)))}/mês` : undefined
+    }] },
+    { grupo: 'Ir e vir', id: 'veiculos', lugares: [
+      { id: 'concessionaria', nome: 'Concessionária', oque: 'Carros zero, de todas as marcas da cidade', idadeMin: 18, porque: 'Carro é a partir dos 18, com carteira.', vitrine: conc.desenho, preco: conc.preco ? `a partir de ${dinheiroCurto(conc.preco)}` : undefined, seu: veiculosSeus.length ? `Na garagem: ${veiculosSeus.length === 1 ? veiculosSeus[0].nome : `${veiculosSeus.length} veículos`}` : undefined },
+      { id: 'usados', nome: 'Carros usados', oque: 'Anúncios deste ano, cada um com a sua história', idadeMin: 18, porque: 'Carro é a partir dos 18, com carteira.', vitrine: usad.desenho, preco: usad.preco ? `a partir de ${dinheiroCurto(usad.preco)}` : undefined },
+      { id: 'motos', nome: 'Motos e bicicletas', oque: 'Novas e usadas; bicicleta é de qualquer idade', idadeMin: 10, porque: 'Com essa idade, a bicicleta vem da família.', vitrine: motos.desenho, preco: motos.preco ? `a partir de ${dinheiroCurto(motos.preco)}` : undefined },
+      ...(nautica ? [{ id: 'nautica' as QualLugar, nome: 'Loja náutica', oque: 'Moto aquática, lancha, veleiro', idadeMin: 18, porque: 'A partir dos 18.', vitrine: vitrineDeVeiculos(v, 'nautica').desenho }] : []),
+      ...(aero ? [{ id: 'aeroclube' as QualLugar, nome: 'Aeroclube e hangar', oque: 'Do ultraleve ao jato; a formação de piloto', idadeMin: 18, porque: 'A partir dos 18.', vitrine: vitrineDeVeiculos(v, 'aeroclube').desenho }] : []),
+      ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto do que é seu', idadeMin: 0, vitrine: <Icone nome="oficina" tamanho={44} />, seu: veiculosSeus.some(b => b.tipo === 'veiculo' && b.problema) ? 'Há um conserto esperando' : undefined }] : [])
+    ] },
+    { grupo: 'As coisas do dia a dia', id: 'objetos', lugares: LOJAS_DE_COISAS.map(daLoja) },
+    { grupo: 'O que se usa no corpo', id: 'aparencia', lugares: [
+      { id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio — o que aparece no retrato', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes, vitrine: <Icone nome="loja" tamanho={44} /> },
+      { id: 'clinica', nome: 'Clínica de cirurgia plástica', oque: 'Nariz, orelhas, pálpebras, lifting, cabelo, lábios', idadeMin: 16, porque: 'Cirurgia estética, só depois dos 16 (a maior parte, dos 18).', vitrine: <Icone nome="clinica" tamanho={44} /> }
+    ] },
+    { grupo: 'Serviços', id: 'servicos', lugares: [
+      { id: 'banco', nome: 'Banco', oque: 'Guardar, investir, pedir empréstimo', idadeMin: 18, porque: 'Conta e investimento no seu nome, a partir dos 18.', vitrine: <Icone nome="banco" tamanho={44} />, seu: v.financas.investimentos.length ? `${v.financas.investimentos.length} ${v.financas.investimentos.length === 1 ? 'aplicação' : 'aplicações'}` : undefined }
+    ] },
+    { grupo: 'Os bichos', id: 'animais', lugares: [
+      { id: 'abrigo', nome: 'Abrigo de animais', oque: 'Adotar um cão, um gato — às vezes, outro bicho', idadeMin: 18, porque: 'Adotar é coisa de adulto.', vitrine: bichos.length ? bichos.map(a => <Retrato key={a.id} visual={undefined} genero={a.genero} idade={a.idade} semente={a.id} tamanho={52} especie={a.especie} porte={a.porte} rotulo={a.nome} />) : <Icone nome="abrigo" tamanho={44} />, preco: 'adoção, sem custo' },
+      { id: 'pets', nome: 'Loja e criadouro de animais', oque: 'Aves, roedores, peixes; silvestres só com documento', idadeMin: 18, porque: 'Comprar um animal é coisa de adulto.', vitrine: <Icone nome="loja_pets" tamanho={44} /> }
+    ] }
+  ];
+}
+
+const O_QUE: Record<LojaDeCoisas, string> = {
+  eletronicos: 'Celular, notebook, câmera, videogame', casa: 'Máquina de lavar, ar-condicionado, cama, cozinha', instrumentos: 'Violão, teclado, guitarra, bateria, violino',
+  esportes: 'Chuteira, raquete, kit de academia, esteira', livraria: 'Livros, apostilas, material de arte, jogos'
+};
+
+function CartaoVitrine({ x, i, abrir }: { x: Vitrine; i: number; abrir: (l: QualLugar) => void }) {
+  const cedo = i < x.idadeMin;
+  return (
+    <li className={`vitrine${cedo ? ' vitrine--cedo' : ''}`}>
+      <button type="button" className="vitrine__abrir" onClick={() => abrir(x.id)} disabled={cedo} aria-describedby={cedo ? `cedo-${x.id}` : undefined}>
+        <span className="vitrine__objetos" aria-hidden>{x.vitrine}</span>
+        <span className="vitrine__texto">
+          <span className="vitrine__nome">{x.nome}</span>
+          <span className="vitrine__oque" id={cedo ? `cedo-${x.id}` : undefined}>{cedo ? x.porque : x.oque}</span>
+          {!cedo && (x.preco || x.online) && <span className="vitrine__preco">{x.preco}{x.online ? `${x.preco ? ' · ' : ''}pela internet` : ''}</span>}
+          {!cedo && x.seu && <span className="vitrine__seu">{x.seu}</span>}
+          {!cedo && x.rende && <span className="vitrine__rende">{x.rende}</span>}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+export function Compras({ vida, agir, abrir }: Props) {
+  const i = idade(vida);
+  const grupos = useMemo(() => vitrines(vida), [vida]);
+  if (i < 10) return <ComprasDaCrianca vida={vida} grupos={grupos} />;
+  const seg = seguranca(vida);
+  const hab = habilitacaoDaVida(vida);
+  return (
+    <div className="compras">
+      <header className="folio folio--compras">
+        <p className="folio__kicker"><span className="folio__area">Vida · Compras</span>{i >= 12 ? <> · na conta: <strong>{dinheiroCurto(Math.max(0, vida.financas.conta))}</strong>{i >= 18 ? ` · ${leituraDaSeguranca(vida).palavra.toLowerCase()}` : ''}</> : null}</p>
+        <h1 className="folio__titulo">{i < 12 ? 'Quase tudo ainda vem dos adultos da casa' : i < 18 ? 'O que dá para comprar com o seu dinheiro' : seg.nivel === 'no_vermelho' || seg.nivel === 'apertado' ? 'O dinheiro está curto: olhe antes de comprar' : 'O que esta cidade tem para a sua vida'}</h1>
+      </header>
+      {grupos.map(g => {
+        const abertos = g.lugares.filter(x => i >= x.idadeMin);
+        const cedo = g.lugares.filter(x => i < x.idadeMin);
+        if (!abertos.length && !cedo.length) return null;
+        return (
+          <section key={g.id} className={`vitrines vitrines--${g.id}`} aria-labelledby={`vitrines-${g.id}`}>
+            <h2 id={`vitrines-${g.id}`} className="vitrines__titulo">{g.grupo}</h2>
+            {abertos.length > 0 && <ul className="vitrines__lista">{abertos.map(x => <CartaoVitrine key={x.id} x={x} i={i} abrir={abrir} />)}</ul>}
+            {cedo.length > 0 && (
+              <p className="vitrines__depois">{abertos.length ? 'Mais tarde: ' : ''}{cedo.map((x, k) => <span key={x.id}>{k ? ' · ' : ''}{x.nome.toLowerCase()} <span className="nota">(aos {x.idadeMin})</span></span>)}</p>
+            )}
+            {g.id === 'veiculos' && i >= hab.comeca - 1 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarImpossivel>{`Tirar ${hab.a} (${hab.escola})`}</BotaoAcao>}
+            {g.id === 'veiculos' && i >= hab.comeca - 2 && !vida.trabalho.licencas.includes('cnh') && <p className="nota">{hab.frase}</p>}
+            {g.id === 'veiculos' && leituraDaAutoescola(vida) && (
+              <div className="autoescola">
+                <p className="nota">{leituraDaAutoescola(vida)}</p>
+                <div className="grupo-acoes grupo-acoes--linha">
+                  <BotaoAcao vida={vida} acao={{ tipo: 'cnh_prova' }} agir={agir} variante="secundario" ocultarBloqueado ocultarImpossivel>Fazer a prova teórica</BotaoAcao>
+                  <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'teoria' }} agir={agir} variante="discreto" ocultarImpossivel>Estudar o manual e fazer simulados</BotaoAcao>
+                  <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'pratica' }} agir={agir} variante="discreto" ocultarImpossivel>Fazer aulas extras de direção</BotaoAcao>
+                </div>
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Antes dos 10: a casa de onde as coisas vêm — quem paga, como anda o dinheiro de casa, o que já é seu — e, recolhido,
+ * quando cada lugar se abre. Nenhuma vitrine de portas fechadas.
+ */
+function ComprasDaCrianca({ vida, grupos }: { vida: Vida; grupos: ReturnType<typeof vitrines> }) {
+  const quem = responsaveis(vida).filter(x => x.p.vivo);
+  const meus = coisasDaVida(vida);
+  const lugares = grupos.flatMap(g => g.lugares).filter(x => x.idadeMin > 0).sort((a, b) => a.idadeMin - b.idadeMin);
+  const porIdade = [...new Set(lugares.map(x => x.idadeMin))];
+  return (
+    <div className="compras compras--crianca">
+      <header className="folio folio--compras">
+        <p className="folio__kicker"><span className="folio__area">Vida · Compras</span></p>
+        <h1 className="folio__titulo">As compras são dos adultos da casa</h1>
+        <p className="folio__lede">{leituraDaOrigem(vida)}</p>
+      </header>
+      {quem.length > 0 && (
+        <section className="vitrines" aria-labelledby="quem-compra">
+          <h2 id="quem-compra" className="vitrines__titulo">Quem compra as coisas</h2>
+          <ul className="quem-compra">
+            {quem.map(({ p }) => (
+              <li key={p.id}><Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.id} tamanho={44} rotulo={p.nome} especie={p.especie} /><span><strong>{p.nome}</strong><span className="nota">{p.ocupacao ?? (p.renda > 0 ? 'trabalha' : 'sem trabalho agora')}</span></span></li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <section className="vitrines" aria-labelledby="o-que-e-seu">
+        <h2 id="o-que-e-seu" className="vitrines__titulo">O que já é seu</h2>
+        {meus.length ? (
+          <ul className="vitrines__seus">{meus.map(t => { const c = coisa(t.coisaId); const x = varianteDe(t); return c ? <li key={t.id}><DesenhoObjeto coisaId={t.coisaId} cor={x.cor} tamanho={56} rotulo={c.nome} /><span>{cap(c.nome)}</span></li> : null; })}</ul>
+        ) : <p className="vazio">Por enquanto, o que é seu cabe numa gaveta: os brinquedos, o material da escola.</p>}
+      </section>
+      <Secao titulo="Quando cada lugar se abre" recolhivel aberta={false}>
+        <ul className="vitrines__idades">
+          {porIdade.map(a => (
+            <li key={a}>
+              <span className="vitrines__idade">aos {a}</span>
+              <ul>{lugares.filter(x => x.idadeMin === a).map(x => <li key={x.id}><strong>{x.nome}</strong>{x.porque ? <span className="nota"> — {x.porque}</span> : null}</li>)}</ul>
+            </li>
+          ))}
+        </ul>
+      </Secao>
+    </div>
+  );
+}

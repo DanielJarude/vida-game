@@ -223,6 +223,51 @@ export function Renomear({ vida, agir, alvo, atual, k, rotulo = 'Renomear' }: { 
 }
 
 /**
+ * REWORK 7 — OS DEGRAUS de uma habilidade: os seis estágios que o motor já usa para falar dela (`dados/frentes`), em
+ * altura crescente — o de hoje aceso, os que ficaram para trás cheios, o auge (quando já se esteve mais alto) marcado
+ * com um contorno. Não é uma barra de progresso: cada degrau é uma frase real ("toca bem", "se apresenta"), e a
+ * palavra vem sempre escrita ao lado.
+ */
+export function Degraus({ estagio, auge, rotulo, palavra, compacto, total = 6 }: { estagio: number; auge?: number; rotulo: string; palavra: string; compacto?: boolean; total?: number }) {
+  const topo = Math.max(estagio, auge ?? 0);
+  return (
+    <span className={`degraus${compacto ? ' degraus--compacto' : ''}`} role="img" aria-label={`${rotulo}: ${palavra}${auge !== undefined && auge > estagio ? ' (já esteve melhor)' : ''}`}>
+      <span className="degraus__escada" aria-hidden style={{ gridTemplateColumns: `repeat(${total}, var(--degrau-largura, 7px))` }}>
+        {Array.from({ length: total }, (_, k) => <span key={k} className={`degraus__degrau${k <= estagio ? ' degraus__degrau--feito' : ''}${k === estagio ? ' degraus__degrau--agora' : ''}${k > estagio && k <= topo ? ' degraus__degrau--auge' : ''}`} style={{ height: `${30 + k * (70 / Math.max(1, total - 1))}%` }} />)}
+      </span>
+      {!compacto && <span className="degraus__palavra">{palavra}</span>}
+    </span>
+  );
+}
+
+/** Um passo de uma trajetória: quando, o quê, quanto pesou. */
+export interface Passo { chave: string; quando: ReactNode; texto: ReactNode; peso?: 1 | 2 | 3; tipo?: string; agora?: boolean }
+
+/**
+ * REWORK 7 — O PERCURSO: a mesma forma para qualquer trajetória contada (a atividade, a carreira, a relação, a
+ * formação): um fio vertical, o ano na margem, o que pesou mais com mais tinta. É a camada 3 (o histórico), sempre
+ * com poucos passos visíveis e o resto a um toque.
+ */
+export function Percurso({ passos, rotulo, mostrar = 5, vazio }: { passos: Passo[]; rotulo: string; mostrar?: number; vazio?: ReactNode }) {
+  const [todos, setTodos] = useState(false);
+  if (!passos.length) return vazio ? <p className="vazio">{vazio}</p> : null;
+  const visiveis = todos ? passos : passos.slice(0, mostrar);
+  return (
+    <div className="percurso">
+      <ol className="percurso__lista" aria-label={rotulo}>
+        {visiveis.map(p => (
+          <li key={p.chave} className={`percurso__passo percurso__passo--p${p.peso ?? 1}${p.tipo ? ` percurso__passo--${p.tipo}` : ''}${p.agora ? ' percurso__passo--agora' : ''}`}>
+            <span className="percurso__quando">{p.quando}</span>
+            <span className="percurso__texto">{p.texto}</span>
+          </li>
+        ))}
+      </ol>
+      {passos.length > mostrar && <button type="button" className="botao botao--discreto percurso__mais" aria-expanded={todos} onClick={() => setTodos(x => !x)}>{todos ? 'Mostrar menos' : `Toda a história (${passos.length})`}</button>}
+    </div>
+  );
+}
+
+/**
  * REWORK 5 — um valor em dinheiro que CABE (o playtest viu valores passando da tela do celular). Até 13 caracteres, o
  * valor inteiro; acima, a forma curta ("R$ 12,4 mi") — e um toque mostra o valor completo (consultável, nunca escondido).
  */

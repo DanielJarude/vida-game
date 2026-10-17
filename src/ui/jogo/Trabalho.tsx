@@ -64,7 +64,8 @@ import { historicoDaCarreira, perfilDe, resumoDaCarreira, semVinculo } from '../
 import { comoAcabou, linhaDoTecnico, passagemAtual, periodoDaPassagem, resumoDaPassagem, resumoDoTecnico } from '../../motor/sistemas/tecnico';
 import { momentosDaCarreira } from '../../motor/sistemas/situacoes';
 import { podeTentar } from '../../motor/plausibilidade';
-import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Renomear, Secao } from '../comum';
+import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Percurso, Renomear, Secao, type Passo } from '../comum';
+import { EmblemaDoOficio } from './Emblemas';
 import { Retrato } from '../avatar/Retrato';
 import { idadePessoa } from '../../motor/nucleo';
 import { dinheiroCurto } from '../apresentar';
@@ -80,6 +81,22 @@ import { vagasAcima } from '../../motor/sistemas/relevancia';
 import { trajetoriaDeAreas } from '../../motor/sistemas/areasDoOficio';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }
+
+/** As situações que não são uma família de carreira (a pena, a procura, a aposentadoria, o próprio negócio). */
+const SITUACOES = new Set<string>(['preso', 'procurando', 'sem_procurar', 'aposentado', 'pausa', 'crianca', 'estudante', 'negocio', 'politica', 'base', 'plataforma', 'atleta', 'artista']);
+
+/** A chave do emblema e do tom: a família de carreira do trabalho de agora (`dados/carreiras`), ou a situação. */
+export function chaveDoOficio(vida: Vida, modo: ModoTrabalho): string {
+  if (SITUACOES.has(modo)) return modo;
+  const oc = vida.trabalho.atual ? ocupacaoOuNula(vida.trabalho.atual.ocupacaoId) : undefined;
+  return oc ? familiaDaTrilha(oc.trilha).id : modo;
+}
+
+const NOME_FAMILIA: Record<string, string> = {
+  varejo: 'comércio e vendas', escritorio: 'escritório', transporte: 'transporte', cozinha: 'cozinha', beleza: 'beleza', oficio: 'obra e conserto', industria: 'indústria',
+  tecnologia: 'tecnologia', saude: 'saúde', cuidado: 'cuidado', predial: 'portaria e vigilância', docencia: 'ensino', academia: 'ciência', direito: 'direito',
+  engenharia: 'engenharia', publico: 'serviço público', seguranca: 'segurança pública', militar: 'Forças Armadas', rural: 'campo e água', criacao: 'criação', palco: 'palco', esporte: 'esporte', informal: 'rua e bicos'
+};
 
 const KICKER: Partial<Record<ModoTrabalho, string>> = {
   negocio: 'o próprio negócio', autonomo: 'por conta própria', informal: 'por conta, na rua', plataforma: 'sem chefe, sem piso', rural: 'a terra', pesca: 'a água',
@@ -106,9 +123,19 @@ export function Trabalho({ vida, agir, irPara }: Props) {
   const desde = e ? `desde ${anoDe(e.tInicio)}` : '';
   const preso = modo === 'preso';
   const pol = leituraPolitica(vida);
+  const familia = chaveDoOficio(vida, modo);
   return (
-    <div className={`trabalho trabalho--${modo}`}>
-      <Folio kicker={<><span className="folio__area">Trabalho</span> · {modo === 'empregado' ? textoLocal(vida, 'comContrato') : KICKER[modo] ?? ''}{desde ? ` · ${desde}` : ''}</>} titulo={modo === 'politica' && pol ? pol.titulo : l.titulo} lede={modo === 'politica' && pol ? pol.etapa : l.frases[0]} />
+    <div className={`trabalho trabalho--${modo} trabalho--familia-${familia}`}>
+      {/* REWORK 7: cada família de carreira tem o seu emblema e o seu tom — a enfermeira, o advogado, o pedreiro, a
+          atleta e o preso não abrem a mesma página com outro nome. O resto (os painéis) já era de cada ofício. */}
+      <header className="folio folio--oficio">
+        <EmblemaDoOficio chave={familia} tamanho={56} />
+        <div className="folio__corpo">
+          <p className="folio__kicker"><span className="folio__area">Trabalho</span> · {modo === 'empregado' ? textoLocal(vida, 'comContrato') : KICKER[modo] ?? ''}{desde ? ` · ${desde}` : ''}{NOME_FAMILIA[familia] ? <span className="folio__familia"> · {NOME_FAMILIA[familia]}</span> : null}</p>
+          <h1 className="folio__titulo">{modo === 'politica' && pol ? pol.titulo : l.titulo}</h1>
+          {(modo === 'politica' && pol ? pol.etapa : l.frases[0]) && <p className="folio__lede">{modo === 'politica' && pol ? pol.etapa : l.frases[0]}</p>}
+        </div>
+      </header>
 
       <section className="camada camada--agora" aria-labelledby="camada-agora">
         <h2 id="camada-agora" className="camada__titulo">A sua situação agora</h2>
@@ -1070,14 +1097,27 @@ function MomentosDaCarreira({ vida }: { vida: Vida }) {
   );
 }
 
+const DE_CARREIRA = new Set(['primeiro_emprego', 'promocao', 'demissao', 'mudanca_carreira', 'profissional', 'fim_carreira', 'negocio_aberto', 'negocio_fechado', 'aposentadoria', 'transferencia', 'prisao', 'saida_prisao', 'eleicao', 'derrota', 'candidatura', 'lideranca', 'pausa', 'retorno', 'recomeco', 'reserva', 'fim_politica', 'politica']);
+
+/** Os passos da carreira: o trabalho de agora, os empregos que passaram e os marcos de carreira (sem repetir o mesmo fato). */
+function passosDaCarreira(vida: Vida, marcos: Vida['caminhos']['marcas']): Passo[] {
+  const t = vida.trabalho;
+  const out: (Passo & { t: number })[] = [];
+  if (t.atual) out.push({ chave: 'atual', t: t.atual.tInicio, quando: `${anoDe(t.atual.tInicio)}–`, texto: `${cap(nomeOcupacao(vida, ocupacao(t.atual.ocupacaoId)))}, ${t.atual.empregador}`, peso: 2, agora: true });
+  t.historico.forEach((h, k) => out.push({ chave: `h${k}`, t: h.tInicio, quando: anoDe(h.tFim) !== anoDe(h.tInicio) ? `${anoDe(h.tInicio)}–${String(anoDe(h.tFim)).slice(-2)}` : anoDe(h.tInicio), texto: `${cap(nomeOcupacao(vida, ocupacao(h.ocupacaoId)))}, ${h.empregador}`, peso: 1 }));
+  marcos.forEach((m, k) => out.push({ chave: `m${k}`, t: m.t + 0.5, quando: anoDe(m.t), texto: m.texto, peso: m.peso, tipo: 'marco' }));
+  return out.sort((a, b) => b.t - a.t);
+}
+
 function PorOndePassou({ vida }: { vida: Vida }) {
   const t = vida.trabalho;
   const trilhas = Object.entries(t.experiencia).filter(([, m]) => m >= 12).sort((a, b) => b[1] - a[1]);
-  const marcos = vida.caminhos.marcas.filter(m => m.peso === 3).slice(-8);
+  const marcos = vida.caminhos.marcas.filter(m => m.peso === 3 || (m.peso >= 2 && DE_CARREIRA.has(m.tipo))).slice(-10);
   return (
-    <Secao titulo="Por onde você passou" recolhivel aberta={false}>
-      {marcos.length > 0 && <ul className="marcos-caminho">{marcos.map((m, k) => <li key={k}><span className="marcos-caminho__ano">{anoDe(m.t)}</span><span>{m.texto}</span></li>)}</ul>}
-      {t.historico.slice().reverse().slice(0, 12).map((h, k) => <div key={k} className="linha"><span className="linha__rotulo">{anoDe(h.tInicio)}–{anoDe(h.tFim)}</span><span className="linha__valor">{nomeOcupacao(vida, ocupacao(h.ocupacaoId))}, {h.empregador}</span></div>)}
+    <Secao titulo="Por onde você passou" recolhivel aberta={t.historico.length + marcos.length > 0}>
+      {/* REWORK 7: um percurso só — os empregos (de quando a quando, onde) e os marcos que mudaram o rumo, do mais recente
+          ao mais antigo; o trabalho de agora no alto. */}
+      <Percurso rotulo="A trajetória profissional" mostrar={6} passos={passosDaCarreira(vida, marcos)} />
       {/* As áreas da carreira, em fases: a mudança não apaga a anterior. */}
       {trajetoriaDeAreas(vida).length > 0 && <p className="nota">Áreas: {trajetoriaDeAreas(vida).map(f => `${f.area} (${anoDe(f.tInicio)}${f.tFim !== undefined ? `–${anoDe(f.tFim)}` : '–hoje'})`).join(' → ')}.</p>}
       {trilhas.length > 0 && <p className="nota">Estrada: {trilhas.map(([tr, m]) => `${Math.floor(m / 12)} ${Math.floor(m / 12) === 1 ? 'ano' : 'anos'} em ${ROTULO_TRILHA[tr] ?? tr}`).join(' · ')}.</p>}

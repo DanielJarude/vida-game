@@ -113,5 +113,15 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce' }, la: '"Aparência e estilo"' },
   { id: 'cirurgia', quero: 'Fazer uma cirurgia plástica (nariz, orelhas, cabelo, lifting)', lugar: { area: 'vida', secao: 'compras' }, la: '"Você": a clínica de cirurgia plástica' },
   { id: 'saude', quero: 'Cuidar da saúde, da cabeça', lugar: { area: 'voce' }, la: 'humor, cabeça e saúde' },
-  { id: 'historia', quero: 'Acompanhar a minha história', lugar: { area: 'linha' }, la: 'a biografia, ano a ano' }
+  { id: 'historia', quero: 'Acompanhar a minha história', lugar: { area: 'linha' }, la: 'a biografia, ano a ano' },
+  // REWORK 7: os testes de intenção do playtest — cada um com um lugar previsível (e conferido por `navegacao.test`).
+  { id: 'sair_amigo', quero: 'Sair com um amigo', lugar: { area: 'pessoas' }, la: 'o rosto do amigo: "Fazer juntos"' },
+  { id: 'violao', quero: 'Começar a tocar violão (ou outro instrumento)', lugar: { area: 'tempo', aba: 'atividades' }, la: '"Tocar um instrumento" — e o violão, nas lojas de Vida · Compras' },
+  { id: 'condicionamento', quero: 'Melhorar o condicionamento', lugar: { area: 'tempo', aba: 'corpo' }, la: 'academia, corrida, um esporte (Você mostra como o corpo está)' },
+  { id: 'praticas', quero: 'Ver o que eu pratico e como venho evoluindo', lugar: { area: 'tempo', aba: 'semana' }, la: '"O que você pratica": um toque abre a história de cada atividade' },
+  { id: 'carreira', quero: 'Ver a minha carreira', lugar: { area: 'trabalho' }, la: 'a situação agora e "Por onde você passou"' },
+  { id: 'quanto_ganho', quero: 'Saber quanto ganho e quanto gasto', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês: o que entra, o que sai, o que sobra' },
+  { id: 'em_casa', quero: 'Ver o que tenho em casa', lugar: { area: 'vida', secao: 'casa' }, la: '"O que há em casa" (usar e vender, em Pertences)' },
+  { id: 'historico_escolar', quero: 'Ver o meu histórico escolar', lugar: { area: 'formacao' }, la: 'o caminho no alto; a formação e a história de cada escola, no fim' },
+  { id: 'familia_aconteceu', quero: 'Saber o que aconteceu com a minha família', lugar: { area: 'pessoas' }, la: '"Pedem atenção", a ficha de cada um — e "Enquanto isso", depois de cada ano' }
 ];
