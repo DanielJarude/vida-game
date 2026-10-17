@@ -42,6 +42,7 @@ import { INTERACOES_VIVIDAS } from './gestos';
 import { INTERACOES_JUNTOS } from './juntos';
 import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
 import { estadoDaRelacao } from './lacos';
+import { aAgradecer, agradecer, companhiaAgradecivel, conversar as textoDaConversa, demonstrarCarinho, passarTempo, rotuloAgradecer } from './conversas';
 
 
 export interface CtxI {
@@ -286,8 +287,20 @@ export const INTERACOES: Interacao[] = [
       if (tensa) lembrarCom(c.v, c.p.id, 'Conversaram e acertaram as coisas.', 'reconciliacao', 1);
       if (c.papel === 'filho' && c.fase === 'adolescente') { presente(c, 6); return { resultado: c.vin.confianca >= 50 ? `${c.p.nome} contou uma coisa que não tinha contado para ninguém.` : `${c.p.nome} falou pouco. Mas ficou mais tempo na cozinha do que precisava.` }; }
       if (c.papel === 'filho' && c.ip < 13) { presente(c, 5); return { resultado: `${c.p.nome} contou do dia inteiro, com personagens, reviravolta e um colega que comeu cola.` }; }
-      return { resultado: tensa ? (comp > 0 ? `Não foi fácil, mas você e ${c.p.nome} saíram da conversa mais leves.` : 'Nem tudo ficou resolvido, mas o clima melhorou.') : comp > 0 ? `A conversa com ${c.p.nome} foi longe e fez bem aos dois.` : `Vocês conversaram. ${c.p.nome} agradeceu por você ter perguntado.` };
+      // REWORK 7.5: a conversa é uma situação desta relação, agora (`conversas`), não uma frase do rodízio.
+      return { resultado: textoDaConversa(c, habito(c, 'conversar')) };
     }
+  },
+
+  {
+    // REWORK 7.5: agradecer por uma ajuda QUE ACONTECEU (o motor consulta a história de vocês — `conversas.ajudasRecebidas`);
+    // sem ajuda registrada, só pela companhia, e só quando a relação sustenta.
+    id: 'agradecer',
+    quando: c => humano(c) && c.eu >= 6 && c.ip >= 6 && !soEx(c) && c.vin.estagio !== 'rival' && c.papel !== 'caso' && !distante(c) && !c.vin.ruptura
+      && (aAgradecer(c.v, c.p).length > 0 || companhiaAgradecivel(c)),
+    prioridade: c => (aAgradecer(c.v, c.p).some(a => c.v.t - a.t <= 24) ? 1.6 : 0),
+    rotulo: c => rotuloAgradecer(c),
+    executar: c => ({ resultado: agradecer(c) })
   },
 
   /* ============================================================ TEMPO JUNTO */
@@ -307,7 +320,7 @@ export const INTERACOES: Interacao[] = [
       if (c.papel === 'filho' && c.ip >= 18) costume(c, n, 4, c.casa ? 'Vocês mantinham um programa só de vocês, mesmo morando juntos.' : 'O almoço com você nunca saiu da agenda.');
       else if (c.papel === 'genitor' && c.eu >= 25) costume(c, n, 4, `Você nunca deixou de visitar ${c.p.nome}.`);
       else if (c.papel === 'amigo' || c.papel === 'amigo_proximo') costume(c, n, 5, 'Os encontros de vocês resistiram aos anos.');
-      return { resultado: variar(n, frasesTempo(c)) };
+      return { resultado: passarTempo(c, frasesTempo(c), n) };
     }
   },
   {
@@ -346,7 +359,7 @@ export const INTERACOES: Interacao[] = [
       if (c.vin.romance) envolver(c, 6);
       const tipo = c.p.aperto!.tipo;
       // Um marco por momento difícil (estar junto de novo no mesmo aperto não é um marco novo).
-      if (!c.vin.historia.some(h => h.tipo === 'apoio' && h.t >= c.p.aperto!.t)) lembrarCom(c.v, c.p.id, textoApoio(c), 'apoio', 2);
+      if (!c.vin.historia.some(h => h.tipo === 'apoio' && h.t >= c.p.aperto!.t)) lembrarCom(c.v, c.p.id, textoApoio(c), 'apoio', 2, c.v.t, 'eu');
       aplicarPersonalidade(c.v, 'acao:apoiar', { empatia: 1 });
       // Quem tem apoio atravessa o aperto mais rápido.
       if (c.p.aperto && (tipo === 'fase' || tipo === 'luto' || tipo === 'separacao')) c.p.aperto.t -= 8;
@@ -364,7 +377,7 @@ export const INTERACOES: Interacao[] = [
       const confia = c.vin.confianca >= 45;
       abalar(c.v, `desabafar com ${c.p.nome}`, confia ? 3 + comp * 2 : 1, confia ? -(6 + c.vin.confianca / 20) : -3);
       afeto(c, 3); confiar(c, 4);
-      if (!c.vin.historia.some(h => h.tipo === 'apoio' && h.texto.startsWith('Esteve do seu lado') && c.v.t - h.t < 36)) lembrarCom(c.v, c.p.id, 'Esteve do seu lado quando a vida pesou.', 'apoio', 2);
+      if (!c.vin.historia.some(h => h.tipo === 'apoio' && h.texto.startsWith('Esteve do seu lado') && c.v.t - h.t < 36)) lembrarCom(c.v, c.p.id, 'Esteve do seu lado quando a vida pesou.', 'apoio', 2, c.v.t, 'ela');
       if (!confia) return { resultado: `${c.p.nome} ouviu, mas pareceu não saber o que dizer. Mesmo assim, falar em voz alta ajudou um pouco.` };
       return { resultado: variar(n, [
         `Você falou mais do que pretendia. ${c.p.nome} não tentou resolver nada — só ficou.`,
@@ -579,7 +592,7 @@ export const INTERACOES: Interacao[] = [
       const alvo = c.v.educacao.objetivo?.cursoId;
       const fala = temSup ? `"Se for fazer mestrado, comece pelo projeto — é o que a banca lê primeiro. E chegue com alguém que conheça o seu trabalho."`
         : alvo ? `"Foque no que mais pesa para o curso que você quer — e não largue a leitura."` : `"Escolha pelo que você gosta de estudar, não pelo que os outros esperam. Dá para mudar depois — custa, mas dá."`;
-      lembrarCom(c.v, c.p.id, 'Deu um conselho sobre o futuro que você guardou.', 'escola', 1);
+      lembrarCom(c.v, c.p.id, 'Deu um conselho sobre o futuro que você guardou.', 'escola', 1, c.v.t, 'ela');
       return { resultado: `${c.p.nome} pensou um pouco antes de responder: ${fala}` };
     }
   },
@@ -766,7 +779,8 @@ export const INTERACOES: Interacao[] = [
       const n = habito(c, 'carinho');
       envolver(c, 3); confiar(c, 2); acalmar(c, 3); cuidou(c);
       costume(c, n, 5, 'Os pequenos carinhos do dia a dia nunca sumiram.');
-      return { resultado: variar(n, [`Um bilhete no espelho do banheiro. ${c.p.nome} guardou.`, `Você levou café na cama, num dia qualquer. ${c.p.nome} desconfiou e depois riu.`, `Um abraço demorado na cozinha, sem motivo.`, `Você lembrou de uma coisa pequena que ${c.p.nome} tinha dito meses atrás.`]) };
+      // REWORK 7.5: o gesto depende do momento do casal (`conversas`): a semana puxada, a relação morna, a lembrança.
+      return { resultado: romanceAdolescente(c.v, c.p) ? variar(n, [`${c.p.nome} respondeu com três corações e uma foto.`, `${c.p.nome} visualizou, demorou, e respondeu: "eu também".`]) : demonstrarCarinho(c, n) };
     }
   },
   {
@@ -883,7 +897,7 @@ export const INTERACOES: Interacao[] = [
       cuidou(c);
       if (comp > -0.1 || c.vin.confianca >= 60) {
         acalmar(c, 12); confiar(c, 4); envolver(c, 3);
-        lembrarCom(c.v, c.p.id, 'Enfrentaram juntos um aperto de dinheiro.', 'apoio', 2);
+        lembrarCom(c.v, c.p.id, 'Enfrentaram juntos um aperto de dinheiro.', 'apoio', 2, c.v.t, 'juntos');
         abalar(c.v, `dividir o aperto com ${c.p.nome}`, 1, -4);
         return { resultado: 'Planilha na mesa da cozinha, lista do que dá para cortar. Não fechou a conta, mas vocês ficaram do mesmo lado dela.' };
       }
@@ -1631,6 +1645,9 @@ export function prioridadesDaFicha(v: Vida, id: string): { ids: string[]; porque
     const programas = escolher(['cinema', 'show', 'jantar_fora', 'caminhar_junto', 'estadio', 'sair_juntos', 'treinar_junto'], 2);
     ids = [...programas, ...escolher(['conversar', 'perguntar_vida', 'desabafar', 'tempo'], 1)];
   }
+  // REWORK 7.5: uma ajuda recente que ainda não foi agradecida entra no que faz sentido (logo depois do principal).
+  const ajuda = tem.has('agradecer') && !c.p.especie ? aAgradecer(v, c.p).find(a => v.t - a.t <= 24) : undefined;
+  if (ajuda && !ids.includes('agradecer')) { ids.splice(Math.min(1, ids.length), 0, 'agradecer'); porque ??= `${nome} ajudou você há pouco.`; }
   // Completa com o que a lista já considera mais relevante (nunca mais de três).
   for (const x of disponiveis) { if (ids.length >= 3) break; if (!ids.includes(x.id)) ids.push(x.id); }
   return { ids: ids.slice(0, 3), porque };

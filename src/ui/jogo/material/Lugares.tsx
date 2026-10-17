@@ -9,7 +9,7 @@
 import { CLINICAS, PROCEDIMENTOS, emRecuperacao, precoDoProcedimento, revisavel, riscoDe, type Clinica } from '../../../motor/sistemas/estetica';
 import { municipio } from '../../../motor/dados/lugares';
 import { atividadesQueAjuda, coisasDaLoja, efeitoEmPalavras, precoDaCoisa, temCoisa, temLojaNaCidade } from '../../../motor/sistemas/coisas';
-import { NOME_LOJA, type LojaDeCoisas } from '../../../motor/dados/coisas';
+import { NOME_LOJA, type Coisa, type LojaDeCoisas } from '../../../motor/dados/coisas';
 import { modeloRotina } from '../../../motor/sistemas/rotinas';
 import { daMoedaLocal, emMoedaLocal, moedaDoPais, simboloDaMoeda } from '../../../motor/mundo/moeda';
 import { textoLocal } from '../../../motor/mundo/locais';
@@ -145,12 +145,18 @@ function ClinicaEstetica({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolea
  */
 function LojaDeCoisasDaVida({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) => boolean; loja: LojaDeCoisas }) {
   const naCidade = temLojaNaCidade(vida, loja);
+  // REWORK 7.5: a vitrine começa pelo que rende no que você PRATICA (o motor sabe: `coisas.ajuda` × as suas rotinas).
+  const minhas = new Set(vida.rotinas.map(r => r.id));
+  const paraMim = (c: Coisa) => atividadesQueAjuda(c).filter(id => minhas.has(id));
+  const itens = [...coisasDaLoja(loja)].sort((a, b) => (paraMim(b).length ? 1 : 0) - (paraMim(a).length ? 1 : 0));
   return (
     <div className="loja-estilo">
       <p className="nota">{naCidade ? 'O que se compra aqui fica com você: rende, cansa, quebra um dia — e dá para vender usado.' : `Em ${municipio(vida.moradia.municipioId).nome} não há essa loja: compra-se pela internet, com frete.`}</p>
+      <ComparaCoisas vida={vida} itens={itens} minhas={minhas} />
       <ul className="ofertas">
-        {coisasDaLoja(loja).map(c => {
+        {itens.map(c => {
           const atividades = atividadesQueAjuda(c).map(id => modeloRotina(id)?.nome).filter(Boolean) as string[];
+          const rendeEmMim = paraMim(c).map(id => ({ nome: modeloRotina(id)?.nome ?? id, quanto: Math.round((c.ajuda?.[id] ?? 0) * 100) }));
           return (
             <li key={c.id} className="oferta oferta--estilo oferta--objeto">
               {/* REWORK 4: o objeto como ele é (a silhueta e as cores que a loja tem); o que vier é seu, na cor que vier. */}
@@ -159,6 +165,7 @@ function LojaDeCoisasDaVida({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) 
                 <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)} · {dinheiroCurto(precoDaCoisa(vida, c.id))}</strong>
                 <span>{c.descricao}</span>
                 <span className="nota">{[atividades.length ? `Rende mais: ${atividades.slice(0, 3).join(', ').toLowerCase()}.` : '', efeitoEmPalavras(vida, { ...c, ajuda: undefined }), `Dura uns ${c.vida} anos.`].filter(Boolean).join(' ')}</span>
+                {rendeEmMim.length > 0 && <span className="oferta__para-voce">Para o que você pratica: {rendeEmMim.map(x => `${x.nome.toLowerCase()} rende +${x.quanto}%`).join('; ')}.</span>}
               </span>
               {temCoisa(vida, c.id) ? <span className="loja-estilo__seu"><span className="nota">É seu.</span></span>
                 : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_coisa', coisaId: c.id }} agir={agir} variante="secundario" ocultarImpossivel>Comprar</BotaoAcao>}
@@ -167,6 +174,35 @@ function LojaDeCoisasDaVida({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) 
         })}
       </ul>
     </div>
+  );
+}
+
+/**
+ * REWORK 7.5 — as diferenças entre as opções, lado a lado: o preço daqui, quanto dura, onde rende (a sua prática em
+ * destaque), se tira peso da semana, se é descanso — e o que já é seu. Os números são os do catálogo (`dados/coisas`).
+ */
+function ComparaCoisas({ vida, itens, minhas }: { vida: Vida; itens: readonly Coisa[]; minhas: Set<string> }) {
+  if (itens.length < 2) return null;
+  return (
+    <details className="comparar">
+      <summary>Comparar as opções ({itens.length})</summary>
+      <div className="comparar__rolagem" data-rola-x>
+        <table className="comparar__tabela">
+          <thead><tr><th scope="col">O quê</th><th scope="col">Preço aqui</th><th scope="col">Dura</th><th scope="col">Rende em</th><th scope="col">Na vida</th></tr></thead>
+          <tbody>
+            {itens.map(c => (
+              <tr key={c.id} className={temCoisa(vida, c.id) ? 'comparar__seu' : undefined}>
+                <th scope="row">{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}{temCoisa(vida, c.id) ? ' · seu' : ''}</th>
+                <td>{dinheiroCurto(precoDaCoisa(vida, c.id))}</td>
+                <td>{c.vida} anos</td>
+                <td>{atividadesQueAjuda(c).map(id => <span key={id} className={minhas.has(id) ? 'comparar__minha' : undefined}>{(modeloRotina(id)?.nome ?? id).toLowerCase()} +{Math.round((c.ajuda?.[id] ?? 0) * 100)}%</span>).reduce<React.ReactNode[]>((a, x, k) => (k ? [...a, ', ', x] : [x]), []) }{!atividadesQueAjuda(c).length && '—'}</td>
+                <td>{[c.alivio ? 'tira peso da semana' : '', c.lazer ? 'descanso' : '', c.daCasa ? 'é da casa' : ''].filter(Boolean).join(' · ') || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   );
 }
 

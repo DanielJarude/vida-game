@@ -12,21 +12,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#22262c" />
     <!--
-      REWORK 6.5 — o tema (Claro · Escuro · Automático) entra ANTES do CSS e do React: a primeira pintura já sai no
+      REWORK 6.5 / 7.5 — a paleta (Memória Clara · Horizonte Claro · Memória Escura · Atlântico Noturno · Automático) entra ANTES do CSS e do React: a primeira pintura já sai no
       tema certo, sem piscar, e offline (só lê o localStorage e o sistema). O mesmo algoritmo de src/ui/tema.ts
-      (resolverTema/aplicarTema), que assume depois. As cores são as de --p-moldura em tokens.css.
+      (resolverPaleta/aplicarTema), que assume depois. As cores são as de --p-moldura em tokens.css.
     -->
     <script>
       (function () {
-        var a = 'auto', t;
+        var a = 'auto', p, t;
+        var luz = { claro: 'claro', horizonte: 'claro', escuro: 'escuro', atlantico: 'escuro' };
+        var moldura = { claro: '#22262c', horizonte: '#163430', escuro: '#131518', atlantico: '#0a1118' };
         try { a = localStorage.getItem('VIDA_APARENCIA') || 'auto'; } catch (e) {}
-        if (a !== 'claro' && a !== 'escuro') a = 'auto';
-        try { t = a === 'auto' ? (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro') : a; } catch (e) { t = 'claro'; }
+        if (!luz[a]) a = 'auto';
+        try { p = a === 'auto' ? (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro') : a; } catch (e) { p = 'claro'; }
+        t = luz[p];
         var r = document.documentElement;
         r.setAttribute('data-tema', t);
+        r.setAttribute('data-paleta', p);
         r.setAttribute('data-aparencia', a);
         var m = document.querySelector('meta[name="theme-color"]');
-        if (m) m.setAttribute('content', t === 'escuro' ? '#131518' : '#22262c');
+        if (m) m.setAttribute('content', moldura[p]);
       })();
     </script>
     <meta

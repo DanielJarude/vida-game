@@ -32,7 +32,7 @@ import { modeloRotina, nivelDa } from './rotinas';
 import { semana } from './semana';
 import { papelDe } from './vinculos';
 import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
-import { pesoDoLuto } from './luto';
+import { faseDoLuto, pesoDoLuto } from './luto';
 import { obrigacoesAtrasadas, seguranca } from './dinheiro';
 import { casaApertada } from './imoveis';
 import { pesoDoTrabalhoNaCabeca, sentidoDoTrabalho } from './carreira';
@@ -76,10 +76,16 @@ function restoDoAbalo(v: Vida, a: Abalo, d: 'humor' | 'cabeca'): number {
   return d === 'humor' ? a.humor * Math.pow(0.65, anos) : a.cabeca * Math.pow(0.7, anos);
 }
 
+/**
+ * Os abalos que a tela ainda cita. REWORK 7.5: um acontecimento pode ficar na biografia sem continuar pesando no
+ * presente — a repetência do ano passado aparecia como "pesando" no ano seguinte. Um abalo comum (menos de 8 no que
+ * mexeu) é citado só no ano em que aconteceu; um grande, até o ano seguinte. (A conta do humor e da cabeça não muda:
+ * o empurrão já foi dado e o equilíbrio anual o absorve — só a leitura deixa de culpar o que já passou.)
+ */
 function abalosAtivos(v: Vida, d: 'humor' | 'cabeca'): Fator[] {
   return (v.mente.abalos ?? [])
     .map(a => ({ a, resto: restoDoAbalo(v, a, d) }))
-    .filter(x => Math.abs(x.resto) >= 2.5 && v.t - x.a.t <= 36)
+    .filter(x => Math.abs(x.resto) >= 2.5 && v.t - x.a.t < (Math.max(Math.abs(x.a.humor), Math.abs(x.a.cabeca)) >= 8 ? 24 : 12))
     .map(x => ({ id: `abalo:${x.a.t}:${x.a.texto}`, texto: x.a.texto, efeito: Math.round(x.resto), pontual: true }));
 }
 
@@ -243,7 +249,9 @@ export function fatoresHumor(v: Vida): Fator[] {
   if (luto > 0) {
     const maior = [...v.luto].sort((a, b) => b.peso - a.peso)[0];
     const p = maior && v.pessoas[maior.pessoaId];
-    out.push({ id: 'luto', texto: p ? `a falta de ${p.nome}` : 'uma perda recente', efeito: -Math.min(20, luto * 0.22), pessoaId: p?.id });
+    // REWORK 7.5: a frase diz em que ponto o luto está — a falta (ativo) ou a saudade que vai se acalmando.
+    const ativo = faseDoLuto(maior) === 'ativo';
+    out.push({ id: 'luto', texto: p ? (ativo ? `a falta de ${p.nome}` : `a saudade de ${p.nome}, que vai se acalmando`) : 'uma perda recente', efeito: -Math.min(20, luto * 0.22), pessoaId: p?.id });
   }
   const atrito = atritoEmCasa(v);
   if (atrito.soma > 0) out.push({ id: 'atrito', texto: `o clima em casa com ${atrito.nome}`, efeito: -Math.min(10, atrito.soma / 8), pessoaId: atrito.pessoaId });
@@ -320,8 +328,9 @@ export function fatoresCabeca(v: Vida): Fator[] {
   if (!e && procura.intencao === 'procurando' && mesesProcurando(v) >= 12) out.push({ id: 'procura', texto: procura.livre ? 'querer voltar a trabalhar e não conseguir' : 'procurar trabalho há tanto tempo', efeito: 6 });
   const par = parceiro(v);
   if (par?.vin.romance?.segredo) out.push({ id: 'segredo', texto: `guardar um segredo de ${par.p.nome}`, efeito: 7, pessoaId: par.p.id });
-  const luto = pesoDoLuto(v);
-  if (luto * 0.08 >= 1) out.push({ id: 'luto', texto: 'o luto', efeito: luto * 0.08 });
+  // REWORK 7.5: na cabeça (o estresse), só o luto ATIVO pesa — o que já se acalma fica no humor, como saudade.
+  const lutoAtivo = (v.luto ?? []).filter(l => faseDoLuto(l) === 'ativo').reduce((s, l) => s + l.peso, 0);
+  if (lutoAtivo * 0.08 >= 1) out.push({ id: 'luto', texto: 'o luto', efeito: lutoAtivo * 0.08 });
   const atrito = atritoEmCasa(v);
   if (atrito.soma > 0) out.push({ id: 'atrito', texto: `as brigas em casa com ${atrito.nome}`, efeito: Math.min(12, atrito.soma / 10), pessoaId: atrito.pessoaId });
   out.push(...fatoresDeAtividades(v, 'cabeca'));

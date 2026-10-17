@@ -123,5 +123,14 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'quanto_ganho', quero: 'Saber quanto ganho e quanto gasto', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês: o que entra, o que sai, o que sobra' },
   { id: 'em_casa', quero: 'Ver o que tenho em casa', lugar: { area: 'vida', secao: 'casa' }, la: '"O que há em casa" (usar e vender, em Pertences)' },
   { id: 'historico_escolar', quero: 'Ver o meu histórico escolar', lugar: { area: 'formacao' }, la: 'o caminho no alto; a formação e a história de cada escola, no fim' },
-  { id: 'familia_aconteceu', quero: 'Saber o que aconteceu com a minha família', lugar: { area: 'pessoas' }, la: '"Pedem atenção", a ficha de cada um — e "Enquanto isso", depois de cada ano' }
+  { id: 'familia_aconteceu', quero: 'Saber o que aconteceu com a minha família', lugar: { area: 'pessoas' }, la: '"Pedem atenção", a ficha de cada um — e "Enquanto isso", depois de cada ano' },
+  // REWORK 7.5 — as intenções do playtest das interfaces do cotidiano.
+  { id: 'agenda', quero: 'Consultar a minha semana, a agenda', lugar: { area: 'tempo', aba: 'semana' }, la: '"A agenda da semana": cada compromisso, quantas vezes, o que passa do que cabe' },
+  { id: 'dedicacao', quero: 'Diminuir (ou aumentar) a dedicação a uma atividade', lugar: { area: 'tempo', aba: 'semana' }, la: 'na agenda, "Mais leve" e "Mais a sério" — ou na ficha da prática' },
+  { id: 'celular', quero: 'Abrir o celular, o Instagram, publicar um vídeo', lugar: { area: 'tempo', aba: 'redes' }, la: 'o celular: um app por rede, a tela inicial com o que chegou' },
+  { id: 'homenagear', quero: 'Homenagear alguém que morreu, ir ao velório, visitar o túmulo', lugar: { area: 'pessoas' }, la: '"Em memória" (ou "Quem se foi"): a ficha da pessoa, "Lembrar de…"' },
+  { id: 'agradecer', quero: 'Agradecer a alguém por uma ajuda', lugar: { area: 'pessoas' }, la: 'a ficha da pessoa, "Conversar": só aparece pelo que ela fez de verdade' },
+  { id: 'triste', quero: 'Saber por que ainda estou triste', lugar: { area: 'voce' }, la: '"Como você está": o que pesa (o luto que se acalma, um acontecimento recente) e o que ajuda' },
+  { id: 'aparencia', quero: 'Mudar a aparência do jogo, as cores', lugar: { area: 'linha' }, la: 'o Menu (a marca VIDA, no alto): "Aparência", com as quatro paletas' },
+  { id: 'profissional', quero: 'Ver as minhas informações profissionais', lugar: { area: 'trabalho' }, la: 'o ofício no alto, a situação agora, "Por onde você passou"' }
 ];

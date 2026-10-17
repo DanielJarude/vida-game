@@ -99,6 +99,8 @@ describe('a condição de uma pessoa do mundo pesa nela', () => {
   it('o histórico da família conta: o filho de quem tem pressão alta com nome tem mais risco', () => {
     const v = adulto(40, { semente: 9 });
     const { p } = comFilho(v, 30, { casa: false });
+    // Sem história de pressão alta na família antes (a vida sorteada pode já ter a sua).
+    v.corpo.condicoes = v.corpo.condicoes.filter(c => c.id !== 'hipertensao');
     const m = modeloCondicao('hipertensao')!;
     const antes = m.risco(fatoresDaPessoa(v, p), 40);
     v.corpo.condicoes.push({ id: 'hipertensao', nome: 'pressão alta', tInicio: v.t - 24, cronica: true, gravidade: 1, tratando: true, diagnosticada: true, tDiagnostico: v.t - 24 });
@@ -135,7 +137,9 @@ describe('nenhuma condição antes da idade que o catálogo permite', () => {
         if (c.id === 'coluna') expect(i).toBeGreaterThanOrEqual(25);
         if (c.id === 'depressao' || c.id === 'ansiedade') expect(i).toBeGreaterThanOrEqual(13);
       }
-      if (k % 95 < 13) expect(p.condicoes).toEqual([]);
+      // Criança não tem as condições de adulto. O câncer infantil é raro mas existe — o catálogo o permite em qualquer
+      // idade, com a incidência real (risco > 0, conferido acima) —; nada além dele antes dos 13.
+      if (k % 95 < 13) expect(p.condicoes!.filter(c => c.id !== 'cancer')).toEqual([]);
     }
     // A reconstrução não é vazia: gente mais velha tem o que a idade traz.
     expect(total).toBeGreaterThan(30);

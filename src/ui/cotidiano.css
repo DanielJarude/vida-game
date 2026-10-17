@@ -1,0 +1,164 @@
+/* ==========================================================================
+   VIDA — REWORK 7.5: interfaces do cotidiano
+
+   Só tokens (nenhum hex; nenhuma pergunta pelo tema): vale nas quatro paletas.
+   ========================================================================== */
+
+/* -------------------------------------------------- Linha da Vida: fios de um ano
+   O que é da mesma história fica junto (um fio fino na margem, pouco espaço entre as frases); o que é independente
+   ganha distância e um traço curto de separação. O fio de um marco respira mais. O cotidiano solto do ano vira uma
+   linha só, miúda, no fim. Nada de cartão: continua sendo uma página. */
+.fio { min-width: 0; }
+.fio + .fio::before { content: ''; display: block; width: 2.25rem; height: 1px; margin: 0 0 var(--space-5); background: var(--fio-forte); }
+.fio--peso-2 + .fio, .fio + .fio--peso-2 { margin-top: var(--space-2); }
+.fio__entradas { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.fio--junto > .fio__entradas { position: relative; padding-left: var(--space-4); }
+.fio--junto > .fio__entradas::before { content: ''; position: absolute; left: 0; top: 0.55em; bottom: 0.55em; width: 2px; border-radius: 1px; background: var(--fio-forte); }
+/* Dentro de um fio, o marco não leva a segunda barra (o fio já o liga às outras frases). */
+.fio--junto .entrada--marco { padding-left: 0; box-shadow: none; }
+.fio--miudo > .fio__entradas { gap: var(--space-1); }
+.fio__miudo { margin: 0 0 var(--space-1); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-bold); color: var(--text-muted); }
+
+/* A natureza do acontecimento: dita em palavra (nunca só cor). */
+.entrada__virada, .entrada__consequencia {
+  font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.06em; text-transform: uppercase; font-weight: var(--weight-bold); color: var(--text-muted);
+}
+.entrada__virada { color: var(--tema); }
+.entrada__virada::before { content: '↗ '; }
+.entrada__consequencia { text-transform: none; letter-spacing: 0; font-weight: var(--weight-medium); font-size: var(--type-caption); overflow-wrap: anywhere; }
+.entrada__consequencia::before { content: '↳ '; }
+.entrada--natureza-virada .entrada__texto { color: var(--text-primary); }
+.entrada--natureza-consequencia .entrada__texto { color: var(--text-primary); }
+
+/* -------------------------------------------------- A ficha de quem se foi: lembrar */
+.ficha__memoria-de { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) 0; border-top: 1px solid var(--fio); }
+.ficha__memoria-de .grupo-acoes { gap: var(--space-2); }
+
+/* -------------------------------------------------- A agenda da semana (Tempo livre)
+   Uma página de caderno: linhas pautadas, a margem no tom da área, um quadrinho por vez na semana. O que já vem
+   ocupado é cinza de lápis; o que você escolheu, o tom do Tempo livre; o livre, só o contorno. O que passa do tamanho
+   da semana muda de textura (tracejado de atenção; vinho além do que cabe) — e diz em palavra (nunca só a cor). */
+.agenda {
+  position: relative; display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-2) 0 var(--space-6);
+  padding: var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) + 6px);
+  background: var(--superficie); border-radius: var(--radius-lg); box-shadow: 0 0 0 1px var(--fio), inset 4px 0 0 var(--tom-tempo);
+}
+.agenda__cabeca { display: flex; flex-direction: column; gap: 2px; }
+.agenda__titulo { margin: 0; font-family: var(--font-serif); font-size: var(--type-heading); font-weight: var(--weight-medium); color: var(--text-primary); }
+.agenda__ritmo { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); }
+.agenda__faixa { font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--type-meta); color: var(--tom-tempo); }
+.agenda__faixa--cheia { color: var(--alerta); }
+.agenda__faixa--sobrecarregada, .agenda__faixa--alem { color: var(--ruim); }
+.agenda__como { margin: 0; font-size: var(--type-meta); color: var(--text-muted); max-width: 62ch; }
+.agenda__linhas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* A fileira da semana inteira: os mesmos quadrinhos, em sequência; o traço marca até onde cabe com folga. */
+.agenda__semana { position: relative; display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--space-2); padding: var(--space-2); border-radius: var(--radius-md); background: var(--veu-1); }
+.agenda__semana .agenda__q { width: 22px; height: 22px; }
+.agenda__linha {
+  display: grid; grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr) auto; grid-template-areas: 'nome quadros dose' '. acoes acoes';
+  align-items: center; column-gap: var(--space-3); row-gap: 2px; min-height: 44px; padding: 6px 0; border-bottom: 1px solid var(--fio);
+}
+.agenda__linha:last-child { border-bottom: 0; }
+.agenda__nome { grid-area: nome; display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; font-size: var(--type-body); color: var(--text-primary); overflow-wrap: anywhere; }
+.agenda__abrir { min-height: 40px; padding: 2px 8px 2px 2px; margin-left: -2px; border-radius: var(--radius-md); text-align: left; font-weight: var(--weight-medium); }
+.agenda__abrir:hover { background: var(--veu-2); }
+.agenda__abrir .emblema { flex: none; }
+.agenda__marca { width: 10px; height: 10px; flex: none; border-radius: 2px; background: var(--neutro-3); }
+.agenda__marca--escola { background: var(--tom-rumo); }
+.agenda__marca--livre { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fio-forte); }
+.agenda__nota { grid-column: 2 / -1; font-size: var(--type-caption); color: var(--text-muted); }
+.agenda__quadros { grid-area: quadros; display: flex; flex-wrap: wrap; gap: 4px; min-width: 4.5rem; }
+.agenda__q { width: 16px; height: 16px; border-radius: 4px; background: var(--neutro-4); }
+.agenda__q--pratica { background: var(--tom-tempo); }
+.agenda__q--livre { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fio-forte); }
+.agenda__q--descanso { background: repeating-linear-gradient(135deg, var(--alerta) 0 3px, transparent 3px 6px); box-shadow: inset 0 0 0 1.5px var(--alerta); }
+.agenda__q--alem { background: repeating-linear-gradient(135deg, var(--ruim) 0 3px, transparent 3px 6px); box-shadow: inset 0 0 0 1.5px var(--ruim); }
+.agenda__q--impossivel { background: var(--ruim); }
+.agenda__dose { grid-area: dose; max-width: 22rem; font-size: var(--type-caption); color: var(--text-muted); text-align: right; }
+.agenda__acoes { grid-area: acoes; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.agenda__acoes:empty { display: none; }
+.agenda__acoes .botao { min-height: 36px; font-size: var(--type-caption); }
+.agenda__linha--escola { grid-template-areas: 'nome nota nota'; }
+.agenda__conflito { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); font-size: var(--type-caption); background: var(--warning-wash); color: var(--text-primary); }
+.agenda__conflito--sobrecarregada, .agenda__conflito--alem { background: var(--danger-wash); }
+.agenda__estresse { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); }
+
+@media (max-width: 560px) {
+  .agenda { padding: var(--space-3) var(--space-3) var(--space-3) calc(var(--space-3) + 6px); }
+  .agenda__linha { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'nome' 'quadros' 'dose' 'acoes'; }
+  .agenda__dose { text-align: left; max-width: none; }
+  .agenda__linha--escola { grid-template-areas: 'nome nome' 'nota nota'; }
+  .agenda__nota { grid-column: 1 / -1; }
+}
+
+/* -------------------------------------------------- O celular (Tempo livre → Redes sociais)
+   Um aparelho do jogo, sem marca: a moldura em grafite da paleta, a tela no papel mais alto, a barra de status, o
+   "‹ Início" e a fileira de apps embaixo (o `tablist`, sempre à vista). Cada app leva a cor do mundo (a da rede, de
+   `dados/redes`), não a da paleta — trocar a aparência não troca a cor do Instagram. A página rola; a tela não tem
+   rolagem própria (nada de rolagem dentro de rolagem). */
+.celular { display: flex; justify-content: center; margin: var(--space-3) 0 var(--space-4); }
+.celular__tela {
+  width: min(100%, 26rem); display: flex; flex-direction: column; overflow: hidden;
+  background: var(--superficie-topo); border-radius: 34px; box-shadow: 0 0 0 10px var(--moldura), 0 0 0 11px var(--fio-forte), var(--shadow-lg);
+}
+.celular__status { display: flex; justify-content: space-between; align-items: center; padding: 10px 22px 4px; font-size: var(--type-meta); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.celular__camera { width: 56px; height: 14px; border-radius: 10px; background: var(--moldura); }
+.celular__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-3); border-bottom: 1px solid var(--fio); }
+.celular__voltar { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-2); border-radius: var(--radius-md); font-weight: var(--weight-semibold); color: var(--acao-texto); }
+.celular__voltar:hover { background: var(--veu-2); }
+.celular__contador { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; font-size: var(--type-meta); background: var(--acao); color: var(--acao-sobre); }
+.celular__titulo { font-weight: var(--weight-semibold); color: var(--text-primary); }
+.celular__app-nome { display: inline-flex; align-items: center; gap: 6px; font-weight: var(--weight-semibold); color: var(--text-primary); }
+.celular__app-nome svg { color: var(--cor-plataforma); }
+.celular__conteudo { padding: var(--space-3); min-height: 12rem; }
+.celular__conteudo .plataforma-painel { border: 0; border-radius: 0; background: transparent; padding: 0; border-top: 0; }
+.celular__apps.redes__plataformas {
+  grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; margin: 0; padding: var(--space-2) var(--space-2) var(--space-3);
+  background: var(--superficie); border-top: 1px solid var(--fio);
+}
+.celular__apps .plataforma {
+  grid-template-columns: minmax(0, 1fr); grid-template-areas: 'glifo' 'nome' 'estado'; justify-items: center; text-align: center;
+  min-height: 72px; padding: 6px 2px; gap: 1px; border: 0; background: transparent; border-radius: var(--radius-md);
+}
+.celular__apps .plataforma:hover { background: var(--veu-2); }
+.celular__apps .plataforma--aberta { box-shadow: inset 0 0 0 2px var(--cor-plataforma); background: color-mix(in oklab, var(--cor-plataforma) 10%, transparent); }
+.celular__apps .plataforma__glifo { width: 38px; height: 38px; border-radius: 11px; }
+.celular__apps .plataforma__nome { font-size: var(--type-meta); line-height: 1.2; overflow-wrap: anywhere; }
+.celular__apps .plataforma__estado { font-size: 0.66rem; line-height: 1.2; overflow-wrap: anywhere; }
+.celular__secao { margin: 0 0 var(--space-2); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.celular__avisos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.celular__aviso { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3); text-align: left; border-radius: var(--radius-md); background: var(--superficie); box-shadow: inset 3px 0 0 var(--cor-plataforma), 0 0 0 1px var(--fio); }
+.celular__aviso:hover { background: var(--veu-2); }
+.celular__aviso-app { display: inline-flex; align-items: center; gap: 6px; font-size: var(--type-meta); font-weight: var(--weight-bold); color: var(--text-secondary); }
+.celular__aviso-app svg { color: var(--cor-plataforma); }
+.celular__aviso-texto { font-size: var(--type-caption); color: var(--text-primary); overflow-wrap: anywhere; }
+.celular__aviso--ruim .celular__aviso-texto { color: var(--ruim); }
+.plataforma-painel__perfil { flex-basis: 100%; margin: 0; font-size: var(--type-caption); color: var(--text-muted); }
+/* O formato de cada rede no perfil: o banner do canal (YouTube, Twitch), a tela escura do vídeo em pé (TikTok). */
+.celular--youtube .plataforma-painel__cabeca, .celular--twitch .plataforma-painel__cabeca { padding-top: 46px; background: linear-gradient(color-mix(in oklab, var(--cor-plataforma) 22%, transparent) 0 40px, transparent 40px); border-radius: var(--radius-md); }
+.celular--tiktok .celular__conteudo { background: color-mix(in oklab, var(--cor-plataforma) 6%, var(--superficie-topo)); }
+.celular--x .plataforma-painel__cabeca, .celular--facebook .plataforma-painel__cabeca { border-bottom: 1px solid var(--fio); padding-bottom: var(--space-2); }
+.celular--onlyfans .plataforma-painel__cabeca { box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--cor-plataforma) 50%, transparent); padding-bottom: var(--space-2); }
+
+@media (max-width: 560px) {
+  .celular__tela { width: 100%; border-radius: 22px; box-shadow: 0 0 0 6px var(--moldura), 0 0 0 7px var(--fio-forte); }
+  .celular { margin-left: 6px; margin-right: 6px; }
+  .celular__conteudo { padding: var(--space-3) var(--space-2); }
+}
+.agenda__ir { min-height: 32px; }
+.agenda__acoes .acao { align-items: flex-start; text-align: left; }
+/* Na tela inicial, os apps vêm primeiro (como num aparelho); dentro de um app, ficam embaixo, à mão. */
+.celular--inicio .celular__apps { order: 1; border-top: 0; border-bottom: 1px solid var(--fio); padding-top: var(--space-3); }
+.celular--inicio .celular__conteudo { order: 2; }
+
+/* -------------------------------------------------- Compras: o que rende para você; comparar as opções */
+.oferta__para-voce { font-size: var(--type-caption); font-weight: var(--weight-semibold); color: var(--bom); }
+.comparar { margin: var(--space-2) 0 var(--space-3); }
+.comparar > summary { min-height: 40px; display: flex; align-items: center; cursor: pointer; font-weight: var(--weight-semibold); color: var(--text-secondary); }
+.comparar__rolagem { overflow-x: auto; max-width: 100%; }
+.comparar__tabela { width: 100%; border-collapse: collapse; font-size: var(--type-caption); }
+.comparar__tabela th, .comparar__tabela td { padding: 6px var(--space-2); text-align: left; vertical-align: top; border-bottom: 1px solid var(--fio); }
+.comparar__tabela thead th { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-bold); }
+.comparar__tabela tbody th { font-weight: var(--weight-semibold); color: var(--text-primary); min-width: 9rem; }
+.comparar__seu th { color: var(--tom-casa); }
+.comparar__minha { font-weight: var(--weight-bold); color: var(--bom); }

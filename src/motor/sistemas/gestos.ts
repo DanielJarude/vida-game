@@ -14,6 +14,7 @@
  * é fechado nem sempre abre a conversa).
  */
 
+import { elogiar as elogio } from './conversas';
 import type { CtxI, Interacao } from './interacoes';
 import { clamp } from '../rng';
 import { lembrarCom } from '../nucleo';
@@ -80,7 +81,8 @@ export const INTERACOES_VIVIDAS: Interacao[] = [
     rotulo: c => {
       const n = c.p.nome;
       if (c.papel === 'filho' || c.papel === 'neto') return `Dizer a ${n} que tem orgulho ${dele(c)}`;
-      if (c.papel === 'genitor' || c.papel === 'avo') return `Agradecer a ${n} por algo que nunca agradeceu`;
+      // REWORK 7.5: não afirma uma ajuda que o motor não registrou (o agradecimento de verdade é `agradecer`, com a evidência).
+      if (c.papel === 'genitor' || c.papel === 'avo') return `Dizer a ${n} o quanto ${flex(c.p.genero, 'ele', 'ela', 'elu')} importa para você`;
       if (c.papel === 'colega' && c.vin.convivio.includes('trabalho')) return `Reconhecer o trabalho de ${n} na frente dos outros`;
       if (c.papel === 'colega') return `Dizer a ${n} que o trabalho ${dele(c)} ficou bom`;
       return `Dizer a ${n} o que admira ${c.papel === 'amigo_proximo' ? 'nessa amizade' : `n${flex(c.p.genero, 'ele', 'ela', 'elu')}`}`;
@@ -93,10 +95,9 @@ export const INTERACOES_VIVIDAS: Interacao[] = [
       afeto(c, Math.round((tensa ? 1 : 4) * sente)); confiar(c, tensa ? 0 : 2);
       if (c.papel === 'filho' && c.ip < 18) c.vin.presenca = clamp((c.vin.presenca ?? 30) + 3);
       if (c.papel === 'colega' && c.vin.convivio.includes('trabalho') && c.v.trabalho.atual) c.v.trabalho.atual.clima = clamp((c.v.trabalho.atual.clima ?? 50) + 2);
-      if (tensa) return { resultado: `${c.p.nome} ouviu, desconfiad${flex(c.p.genero, 'o', 'a', 'e')}. No meio do que anda entre vocês, soou estranho.` };
-      if (n >= 4) return { resultado: `${c.p.nome} sorriu — mas já ouviu isso de você antes.` };
-      if (n === 1 && (c.papel === 'genitor' || c.papel === 'avo')) lembrarCom(c.v, c.p.id, 'Você agradeceu, com todas as letras.', 'apoio', 2);
-      return { resultado: c.papel === 'filho' && c.ip < 18 ? `${c.p.nome} fingiu que não ligou. Mais tarde, contou para alguém.` : c.papel === 'genitor' || c.papel === 'avo' ? `${c.p.nome} ficou com os olhos cheios. "Não precisava", disse — e precisava.` : `${c.p.nome} ficou sem graça, e depois muito contente.` };
+      if (n === 1 && !tensa && (c.papel === 'genitor' || c.papel === 'avo')) lembrarCom(c.v, c.p.id, 'Você disse, com todas as letras, o quanto importava.', undefined, 2);
+      // REWORK 7.5: a reação é uma situação (`conversas.elogiar`): o atrito, o elogio repetido, o que vocês viveram.
+      return { resultado: elogio(c, n) };
     }
   },
   {
@@ -110,7 +111,7 @@ export const INTERACOES_VIVIDAS: Interacao[] = [
       const sensata = c.p.temperamento.responsabilidade > 0.1 || c.ip >= 50;
       afeto(c, 3); confiar(c, 4);
       c.v.mente.estresse = clamp(c.v.mente.estresse - (sensata ? 4 : 1));
-      if (conta(c, 'conselho') === 1) lembrarCom(c.v, c.p.id, `Pediu conselho sobre ${assuntoDoConselho(c)}.`, 'apoio', 1);
+      if (conta(c, 'conselho') === 1) lembrarCom(c.v, c.p.id, `Pediu conselho sobre ${assuntoDoConselho(c)}.`, 'apoio', 1, c.v.t, 'ela');
       return { resultado: sensata ? `${c.p.nome} ouviu tudo antes de falar. O conselho não resolveu nada sozinho — mas a decisão ficou mais clara.` : `${c.p.nome} deu um conselho que você não vai seguir. Mas falar ajudou.` };
     }
   },
@@ -125,6 +126,8 @@ export const INTERACOES_VIVIDAS: Interacao[] = [
       if (!pode) return { resultado: `${c.p.nome} quis muito, mas já não dá conta de criança pequena um fim de semana inteiro.` };
       c.v.mente.estresse = clamp(c.v.mente.estresse - 6);
       afeto(c, 2);
+      // REWORK 7.5: uma ajuda de verdade — fica na história de vocês (e é o que um agradecimento pode lembrar).
+      lembrarCom(c.v, c.p.id, 'Ficou com as crianças um fim de semana para você descansar.', 'apoio', 1, c.v.t, 'ela');
       return { resultado: `Um fim de semana inteiro de silêncio em casa. As crianças voltaram com doce, histórias e uma bronca que ${c.p.nome} jura que não deu.` };
     }
   }

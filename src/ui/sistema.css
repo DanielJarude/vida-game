@@ -20,33 +20,41 @@
   }
 }
 
-/* -------------------------------------------------- O seletor de aparência (Menu e tela inicial) */
+/* -------------------------------------------------- O seletor de aparência (Menu e tela inicial)
+   REWORK 7.5: quatro paletas + Automático, cada uma com a prévia da página que dá. A prévia usa a paleta DELA
+   (`data-amostra` em tokens.css dá ao elemento as `--p-*` daquela paleta): por isso aqui se lê `--p-*` direto — a
+   semântica (`--fundo`, `--tinta`) é a da página atual, não a da amostra. */
 .tema-seletor { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
 .tema-seletor__rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-bold); color: var(--text-muted); }
-.tema-seletor__opcoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.tema-seletor__opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: var(--space-2); }
 .tema-seletor__opcao {
-  display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'amostra nome' 'amostra nota';
-  align-items: center; column-gap: var(--space-2); min-height: var(--touch-target); padding: var(--space-2) var(--space-3);
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'amostra' 'nome' 'nota'; justify-items: stretch;
+  align-content: start; row-gap: 4px; min-height: var(--touch-target); padding: var(--space-2);
   border-radius: var(--radius-md); background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio-forte); text-align: left;
 }
 .tema-seletor__opcao:hover { box-shadow: inset 0 0 0 1.5px var(--acao); }
 .tema-seletor__opcao--ativa, .tema-seletor__opcao--ativa:hover { box-shadow: inset 0 0 0 2px var(--acao); background: var(--superficie-topo); }
-.tema-seletor__amostra { grid-area: amostra; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--fio-forte); }
-/* As amostras mostram o tema que a opção dá (cores fixas de propósito: são a foto de cada tema, não o tema atual). */
-.tema-seletor__amostra--claro { background: linear-gradient(135deg, #f2eee5 0 50%, #22262c 50%); }
-.tema-seletor__amostra--escuro { background: linear-gradient(135deg, #22262b 0 50%, #131518 50%); }
-.tema-seletor__amostra--auto { background: linear-gradient(135deg, #f2eee5 0 50%, #1a1d21 50%); }
-.tema-seletor__nome { grid-area: nome; font-size: var(--type-caption); font-weight: var(--weight-semibold); color: var(--text-primary); }
-.tema-seletor__nota { grid-area: nota; font-size: var(--type-meta); color: var(--text-muted); overflow-wrap: anywhere; }
+.tema-seletor__amostra { grid-area: amostra; display: flex; gap: 3px; height: 54px; }
+.tema-seletor__nome { grid-area: nome; font-size: var(--type-caption); font-weight: var(--weight-semibold); color: var(--text-primary); line-height: var(--leading-snug); }
+.tema-seletor__nota { grid-area: nota; font-size: var(--type-meta); color: var(--text-muted); overflow-wrap: anywhere; line-height: var(--leading-snug); }
 .tema-seletor__opcao--ativa .tema-seletor__nome::after { content: ' ✓'; color: var(--acao-texto); }
-.tema-seletor--compacto { max-width: 380px; margin-top: var(--space-6); }
+
+.tema-previa { flex: 1; min-width: 0; display: flex; flex-direction: column; border-radius: var(--radius-sm); overflow: hidden; background: var(--p-papel); box-shadow: 0 0 0 1px color-mix(in oklab, var(--p-tinta) 18%, transparent); }
+.tema-previa__moldura { height: 11px; flex: none; background: var(--p-moldura); }
+.tema-previa__papel { position: relative; flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 6px 7px; }
+.tema-previa__linha { height: 4px; width: 78%; border-radius: 2px; background: var(--p-tinta); }
+.tema-previa__linha--curta { width: 48%; background: var(--p-tinta-3); }
+.tema-previa__tons { display: flex; gap: 3px; margin-top: auto; }
+.tema-previa__tons i { width: 8px; height: 8px; border-radius: 50%; background: var(--p-pessoas); }
+.tema-previa__tons i:nth-child(2) { background: var(--p-formacao); }
+.tema-previa__tons i:nth-child(3) { background: var(--p-tempo); }
+.tema-previa__acao { position: absolute; right: 6px; bottom: 6px; width: 22px; height: 9px; border-radius: 5px; background: var(--p-acao); }
+
+.tema-seletor--compacto { max-width: 560px; margin-top: var(--space-6); }
 .tema-seletor--compacto .tema-seletor__rotulo { text-align: center; }
-.tema-seletor--compacto .tema-seletor__opcao { grid-template-areas: 'amostra nome'; padding: 0 var(--space-2); justify-content: center; }
-/* No celular, a amostra sobe para cima do nome: três colunas de ~100 px não cabem amostra + "Automático" lado a lado. */
-@media (max-width: 560px) {
-  .tema-seletor:not(.tema-seletor--compacto) .tema-seletor__opcao { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'amostra' 'nome' 'nota'; justify-items: start; row-gap: 2px; padding: var(--space-2); }
-  .tema-seletor--compacto .tema-seletor__opcao { column-gap: 6px; }
-}
+.tema-seletor--compacto .tema-seletor__opcoes { grid-template-columns: repeat(auto-fill, minmax(min(100%, 6.5rem), 1fr)); }
+.tema-seletor--compacto .tema-seletor__amostra { height: 40px; }
+.tema-seletor--compacto .tema-seletor__nome { text-align: center; }
 
 /* -------------------------------------------------- Seções recolhidas: uma linha, não um vão
    Uma seção recolhida é um convite ("Lojas da cidade ›"), não um capítulo: antes ocupava ~90 px de espaço vazio

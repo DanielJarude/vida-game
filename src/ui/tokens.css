@@ -26,8 +26,9 @@
    Contraste verificado por `scripts/playtest/contraste.mjs` (texto ≥ 4,5:1).
    ========================================================================== */
 
-:root {
-  /* ================================================================ PALETA */
+:root,
+[data-amostra='claro'] {
+  /* ======================================== PALETA · MEMÓRIA CLARA (a base) */
   --p-papel: #f2eee5;          /* a página (marfim) */
   --p-papel-alto: #fbf9f4;     /* o que é uma coisa (cartão, ficha) */
   --p-papel-topo: #fffdf9;     /* a carta da decisão, o modal */
@@ -61,6 +62,9 @@
   --p-acao-pastilha: rgb(0 0 0 / 0.2); /* a pastilha da idade dentro do botão de avançar */
   --p-esquema: light;
 
+}
+
+:root {
   /* ================================================================ FONTES */
   --font-serif:
     'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Palatino,
@@ -290,7 +294,8 @@
      `--p-acao-sobre`) — o coral continua sendo a única cor de agir.
    Contraste: `scripts/playtest/contraste.mjs` confere os mesmos pares nos dois temas.
    ========================================================================== */
-:root[data-tema='escuro'] {
+:root[data-tema='escuro'],
+[data-amostra='escuro'] {
   --p-papel: #1a1d21;
   --p-papel-alto: #22262b;
   --p-papel-topo: #292e34;
@@ -321,6 +326,90 @@
   --p-sobre-tom: #15171a;
   --p-sombra: #000000;
   --p-acao-pastilha: rgb(255 255 255 / 0.24);
+  --p-esquema: dark;
+}
+
+/* ==========================================================================
+   REWORK 7.5 — HORIZONTE CLARO
+
+   A segunda paleta clara: papel mineral (um cinza-esverdeado de pedra clara, não marfim), a moldura em verde
+   profundo, o azul-petróleo como cor de agir. A mesma estrutura da Memória — página < cartão < carta, moldura mais
+   escura que a página, um tom por área na mesma luminosidade —, outra luz. Só a paleta muda.
+   ========================================================================== */
+:root[data-paleta='horizonte'],
+[data-amostra='horizonte'] {
+  --p-papel: #eaeeeb;
+  --p-papel-alto: #f5f7f5;
+  --p-papel-topo: #fcfdfc;
+  --p-tinta: #152120;
+  --p-tinta-2: #374846;
+  --p-tinta-3: #4f5f5c;
+  --p-moldura: #163430;
+  --p-moldura-2: #204039;
+  --p-moldura-tinta: #eaeeeb;
+  --p-moldura-tinta-2: #a5bcb6;
+  --p-acao: #1b5e72;
+  --p-acao-forte: #175467;
+  --p-acao-sobre: #ffffff;
+  --p-bom: #3b682c;
+  --p-ruim: #a0303e;
+  --p-alerta: #855808;
+  --p-info: #575d55;
+  --p-neutro: #5c6664;
+  --p-linha: #175467;
+  --p-voce: #6a4785;
+  --p-pessoas: #9a3b5a;
+  --p-formacao: #275b8e;
+  --p-trabalho: #7a5a0e;
+  --p-tempo: #176a5b;
+  --p-vida: #4b642c;
+  --p-cidade: #455e73;
+  --p-saude: #2d6c3a;
+  --p-sobre-tom: #ffffff;
+  --p-sombra: #152120;
+  --p-acao-pastilha: rgb(0 0 0 / 0.2);
+  --p-esquema: light;
+}
+
+/* ==========================================================================
+   REWORK 7.5 — ATLÂNTICO NOTURNO
+
+   A segunda paleta escura: o azul muito escuro do mar à noite (não preto), a tinta em cinza mineral, o azul
+   dessaturado como cor de agir. Preenchido = aceso, como na Memória Escura: o azul e os tons preenchidos são claros e
+   levam tinta escura por cima. Os tons das áreas sobem de luminosidade, todos na mesma altura, sem neon.
+   ========================================================================== */
+:root[data-paleta='atlantico'],
+[data-amostra='atlantico'] {
+  --p-papel: #101923;
+  --p-papel-alto: #17212c;
+  --p-papel-topo: #1e2935;
+  --p-tinta: #e1e6eb;
+  --p-tinta-2: #b9c2cb;
+  --p-tinta-3: #95a0ab;
+  --p-moldura: #0a1118;
+  --p-moldura-2: #121b25;
+  --p-moldura-tinta: #e1e6eb;
+  --p-moldura-tinta-2: #98a5b2;
+  --p-acao: #8bafd6;
+  --p-acao-forte: #a2c1e3;
+  --p-acao-sobre: #0b131c;
+  --p-bom: #a6c48a;
+  --p-ruim: #ec949f;
+  --p-alerta: #dbb46c;
+  --p-info: #bdbcae;
+  --p-neutro: #939ca6;
+  --p-linha: #a2c1e3;
+  --p-voce: #c3aadb;
+  --p-pessoas: #e59db2;
+  --p-formacao: #84c0d8;
+  --p-trabalho: #d7b867;
+  --p-tempo: #7cc6b4;
+  --p-vida: #a9c17b;
+  --p-cidade: #a9b7c5;
+  --p-saude: #95cc8f;
+  --p-sobre-tom: #0c131b;
+  --p-sombra: #000000;
+  --p-acao-pastilha: rgb(255 255 255 / 0.22);
   --p-esquema: dark;
 }
 

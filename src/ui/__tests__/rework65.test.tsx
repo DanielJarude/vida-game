@@ -124,7 +124,7 @@ describe('aparência: Claro, Escuro e Automático', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     const menu = screen.getByRole('dialog', { name: 'Menu' });
     const grupo = within(menu).getByRole('radiogroup', { name: 'Aparência' });
-    fireEvent.click(within(grupo).getByRole('radio', { name: /Escuro/ }));
+    fireEvent.click(within(grupo).getByRole('radio', { name: /Memória Escura/ }));
     expect(tema()).toBe('escuro');
     unmount();
     // "Reabrir": a página nova começa sem atributo; o script de index.html (aqui, iniciarTema) o devolve.
@@ -134,7 +134,7 @@ describe('aparência: Claro, Escuro e Automático', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
-    expect(within(screen.getByRole('dialog', { name: 'Menu' })).getByRole('radio', { name: /Escuro/ }).getAttribute('aria-checked')).toBe('true');
+    expect(within(screen.getByRole('dialog', { name: 'Menu' })).getByRole('radio', { name: /Memória Escura/ }).getAttribute('aria-checked')).toBe('true');
   });
 
   it('a tela inicial também tem o seletor (antes de nascer já dá para escolher)', () => {
@@ -299,7 +299,7 @@ describe('saves: a aparência é do aparelho, não da vida', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     const antes = localStorage.getItem('VIDA_GAME_SAVE_V1')!;
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Menu' })).getByRole('radio', { name: /Escuro/ }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Menu' })).getByRole('radio', { name: /Memória Escura/ }));
     const salvo = localStorage.getItem('VIDA_GAME_SAVE_V1')!;
     expect(salvo).toBe(antes);
     expect(JSON.parse(salvo).versao).toBe(VERSAO_SAVE);
@@ -315,12 +315,13 @@ describe('acessibilidade do seletor e do sistema', () => {
   it('é um grupo de rádio: um só marcado, setas trocam e levam o foco junto', () => {
     render(<SeletorTema />);
     const radios = screen.getAllByRole('radio');
-    expect(radios.map(r => r.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
+    // REWORK 7.5: cinco opções (quatro paletas + Automático, por último); a primeira é a Memória Clara.
+    expect(radios.map(r => r.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false', 'false', 'true']);
     expect(radios.filter(r => r.tabIndex === 0)).toHaveLength(1);
-    radios[2].focus();
-    fireEvent.keyDown(radios[2], { key: 'ArrowRight' });
+    radios[4].focus();
+    fireEvent.keyDown(radios[4], { key: 'ArrowRight' });
     expect(tema()).toBe('claro');
-    expect(document.activeElement).toBe(screen.getByRole('radio', { name: /Claro/ }));
+    expect(document.activeElement).toBe(screen.getByRole('radio', { name: /Memória Clara/ }));
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
     expect(screen.getByRole('radio', { name: /Automático/ }).getAttribute('aria-checked')).toBe('true');
   });

@@ -16,12 +16,17 @@
  * "sua escolha") numa linha própria → a narrativa. Nada se sobrepõe: a margem é medida em rem e só leva o número (o
  * nascimento é "0 · ao nascer"; a palavra "Nascimento" em 2rem não cabia na margem e se deitava sobre o tema do
  * marco), e o tema não repete o que a margem já diz (o marco do nascimento no ano 0).
+ *
+ * REWORK 7.5: um ano se lê em FIOS (`apresentar.fiosDoAno`): o que é da mesma história fica junto, com um fio fino na
+ * margem (as mesmas pessoas; a consequência e a sua origem); o que é independente ganha distância e um fio de
+ * separação. Cada acontecimento diz a sua natureza — sua escolha, por causa de uma escolha, mudança de rumo, marco —
+ * e o que aconteceu sozinho não leva rótulo (é a vida acontecendo). O cotidiano solto vira uma linha de miudezas.
  */
 
 import { useMemo, useState } from 'react';
 import type { Entrada, Vida } from '../../motor/tipos';
 import { idadePessoa } from '../../motor/nucleo';
-import { anosDaBiografia, faseDaVida, TEMA_ROTULO } from '../apresentar';
+import { anosDaBiografia, faseDaVida, fiosDoAno, naturezaDe, TEMA_ROTULO } from '../apresentar';
 import { Retrato } from '../avatar/Retrato';
 
 /** Quantos anos aparecem de cada vez (o resto abre a pedido). */
@@ -33,6 +38,7 @@ export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: n
   const [limite, setLimite] = useState(ANOS_POR_VEZ);
   const anos = useMemo(() => anosDaBiografia(vida, discreto), [vida, discreto]);
   const idNovas = useMemo(() => new Set(vida.biografia.slice(marca).map(e => e.id)), [vida, marca]);
+  const porId = useMemo(() => new Map(vida.biografia.map(e => [e.id, e])), [vida]);
   const ordem = doComeco ? anos : [...anos].reverse();
   const visiveis = ordem.slice(0, limite);
   const faltam = ordem.length - visiveis.length;
@@ -68,7 +74,14 @@ export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: n
                   {novo && <span className="ano__selo">este ano</span>}
                 </h3>
                 <ul className="entradas">
-                  {a.entradas.map(e => <ItemBiografia key={e.id} e={e} nova={idNovas.has(e.id)} idade={a.idade} vida={vida} abrirPessoa={abrirPessoa} rosto={comRosto.has(e.id)} />)}
+                  {fiosDoAno(a.entradas).map((f, _k, todos) => (
+                    <li key={f.id} className={`fio${f.entradas.length > 1 ? ' fio--junto' : ''}${f.miudo ? ' fio--miudo' : ''} fio--peso-${f.peso} fio--tema-${f.entradas[0].tema}`}>
+                      {f.miudo && todos.length > 1 && <p className="fio__miudo">E também, naquele ano</p>}
+                      <ul className="fio__entradas">
+                        {f.entradas.map(e => <ItemBiografia key={e.id} e={e} nova={idNovas.has(e.id)} idade={a.idade} vida={vida} abrirPessoa={abrirPessoa} rosto={comRosto.has(e.id)} origem={e.segue ? porId.get(e.segue) : undefined} junto={f.entradas.length > 1} />)}
+                      </ul>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </li>
@@ -91,6 +104,12 @@ export function temaDoMarco(e: Entrada, idadeDoAno: number): string | null {
   return TEMA_ROTULO[e.tema] ?? null;
 }
 
+/** A frase de origem em poucas palavras (para "por causa de: …"). */
+function resumo(t: string): string {
+  const limpo = t.replace(/\.$/, '');
+  return limpo.length <= 56 ? `“${limpo}”` : `“${limpo.slice(0, 54).replace(/\s+\S*$/, '')}…”`;
+}
+
 /** Quantas histórias de gente ganham o rosto desenhado por página (as outras, o nome). */
 const ROSTOS_NA_PAGINA = 4;
 
@@ -102,15 +121,21 @@ const DE_GENTE = new Set<Entrada['tema']>(['amor', 'familia', 'filhos', 'amizade
  * sinal de "sua escolha"; a história de uma RELAÇÃO, o rosto de quem estava nela (um toque abre a ficha); o
  * COTIDIANO fica miúdo. A ordem de leitura continua: o tipo numa linha própria → a narrativa → os rostos.
  */
-function ItemBiografia({ e, nova, idade, vida, abrirPessoa, rosto = true }: { e: Entrada; nova: boolean; idade: number; vida?: Vida; abrirPessoa?: (id: string) => void; rosto?: boolean }) {
+function ItemBiografia({ e, nova, idade, vida, abrirPessoa, rosto = true, origem, junto = false }: { e: Entrada; nova: boolean; idade: number; vida?: Vida; abrirPessoa?: (id: string) => void; rosto?: boolean; origem?: Entrada; junto?: boolean }) {
   const tema = temaDoMarco(e, idade);
+  const natureza = naturezaDe(e);
   const gente = vida && e.relevancia !== 'cotidiano' && DE_GENTE.has(e.tema) ? (e.pessoas ?? []).map(id => vida.pessoas[id]).filter(p => p && p.nome).slice(0, 3) : [];
+  // A origem de outro ano é dita (no mesmo fio, ela está logo acima e o fio já liga as duas).
+  const deOutroAno = origem && origem.idade !== e.idade ? origem : undefined;
+  const consequencia = natureza === 'consequencia' && (!junto || deOutroAno);
   return (
-    <li className={`entrada entrada--${e.relevancia} entrada--tema-${e.tema}${nova ? ' entrada--nova' : ''}${e.tom ? ` entrada--${e.tom}` : ''}${e.escolha ? ' entrada--escolha' : ''}${gente.length ? ' entrada--gente' : ''}`}>
-      {(tema || e.escolha) && (
+    <li className={`entrada entrada--${e.relevancia} entrada--tema-${e.tema} entrada--natureza-${natureza}${nova ? ' entrada--nova' : ''}${e.tom ? ` entrada--${e.tom}` : ''}${e.escolha ? ' entrada--escolha' : ''}${gente.length ? ' entrada--gente' : ''}`}>
+      {(tema || e.escolha || natureza === 'virada' || consequencia) && (
         <p className="entrada__tipo">
           {tema && <span className="entrada__tema">{tema}</span>}
+          {natureza === 'virada' && <span className="entrada__virada">mudança de rumo</span>}
           {e.escolha && <span className="entrada__escolha" title="Uma escolha sua">sua escolha</span>}
+          {consequencia && <span className="entrada__consequencia">{deOutroAno ? `por causa de: ${resumo(deOutroAno.texto)} (aos ${deOutroAno.idade})` : 'consequência'}</span>}
         </p>
       )}
       <p className="entrada__texto">{e.texto}</p>

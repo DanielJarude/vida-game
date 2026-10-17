@@ -94,31 +94,131 @@ function Glifo({ id, tamanho = 22 }: { id: PlataformaId; tamanho?: number }) {
   return <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} aria-hidden fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d={GLIFO[id]} /></svg>;
 }
 
+/**
+ * REWORK 7.5 — O CELULAR. As redes deixam de ser uma fileira de botões: são aplicativos num celular (um aparelho do
+ * jogo, sem marca, sem logotipo de ninguém — cada app tem uma forma simples na cor que o mundo associa a ele). Abrir
+ * um app é abrir a conta naquela rede, no formato dela (a grade, os vídeos, a linha do tempo, a live, o conteúdo
+ * trancado), com o que dá para fazer ali. A tela inicial é o que chegou: o alcance da última publicação de cada conta,
+ * quem reagiu, a renda, a verificação em análise, a suspensão — tudo do motor, nada inventado.
+ *
+ * O celular abre no app que você mais usa (como um aparelho de verdade volta ao último app); sem conta nenhuma, no
+ * Instagram, para criar. A fileira de apps embaixo é a navegação (um `tablist`, pelo teclado também) e está sempre ali.
+ * Tudo é local: nenhuma internet, nenhum serviço de fora.
+ */
 export function RedesSociais({ vida, agir, abrirPessoa }: { vida: Vida; agir: (a: Acao) => boolean; abrirPessoa?: (id: string) => void }) {
   const i = idade(vida);
-  const primeira = ORDEM_PLATAFORMAS.find(p => contaAtiva(vida, p)) ?? 'instagram';
-  const [aberta, setAberta] = useState<PlataformaId>(primeira);
+  const contas = ORDEM_PLATAFORMAS.filter(p => contaAtiva(vida, p));
+  const primeira = [...contas].sort((a, b) => (contaAtiva(vida, b)!.seguidores - contaAtiva(vida, a)!.seguidores))[0] ?? 'instagram';
+  const [tela, setTela] = useState<PlataformaId | 'inicio'>(primeira);
   if (i < 10) return <p className="nota">Rede social, por enquanto, é coisa dos mais velhos da casa.</p>;
+  const avisos = notificacoes(vida);
+  const mover = (e: React.KeyboardEvent, k: number) => {
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!d) return;
+    e.preventDefault();
+    const prox = ORDEM_PLATAFORMAS[(k + d + ORDEM_PLATAFORMAS.length) % ORDEM_PLATAFORMAS.length];
+    setTela(prox);
+    (e.currentTarget.parentElement?.parentElement?.querySelector(`[data-app="${prox}"]`) as HTMLElement | null)?.focus();
+  };
   return (
     <div className="redes">
-      <ul className="redes__plataformas" role="tablist" aria-label="Plataformas">
-        {ORDEM_PLATAFORMAS.map(id => {
-          const pl = PLATAFORMAS[id];
-          const c = contaAtiva(vida, id);
-          const fora = i < pl.idadeMin;
-          return (
-            <li key={id} role="presentation">
-              <button type="button" role="tab" aria-selected={aberta === id} className={`plataforma${aberta === id ? ' plataforma--aberta' : ''}${c ? ' plataforma--com-conta' : ''}${fora ? ' plataforma--fora' : ''}`} style={{ ['--cor-plataforma' as string]: pl.cor }} onClick={() => setAberta(id)}>
-                <span className="plataforma__glifo"><Glifo id={id} /></span>
-                <span className="plataforma__nome">{pl.nome}</span>
-                <span className="plataforma__estado">{c ? `${seguidoresEmPalavras(c.seguidores)} ${c.seguidores === 1 ? pl.publico[0] : pl.publico[1]}` : fora ? `a partir dos ${pl.idadeMin}` : 'sem conta'}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      <Plataforma key={aberta} vida={vida} agir={agir} id={aberta} abrirPessoa={abrirPessoa} />
+      <div className={`celular celular--${tela}`} role="region" aria-label="Seu celular">
+        <div className="celular__tela">
+          <div className="celular__status" aria-hidden>
+            <span>{anoDe(vida.t)}</span>
+            <span className="celular__camera" />
+            <span>{contas.length ? `${contas.length} ${contas.length === 1 ? 'conta' : 'contas'}` : 'sem contas'}</span>
+          </div>
+          <div className="celular__topo">
+            {tela !== 'inicio'
+              ? <button type="button" className="celular__voltar" onClick={() => setTela('inicio')} aria-label="Voltar para a tela inicial do celular">‹ Início{avisos.length ? <span className="celular__contador" aria-label={`${avisos.length} notificações`}>{avisos.length}</span> : null}</button>
+              : <span className="celular__titulo">Tela inicial</span>}
+            {tela !== 'inicio' && <span className="celular__app-nome" style={{ ['--cor-plataforma' as string]: PLATAFORMAS[tela].cor }}><Glifo id={tela} tamanho={18} /> {PLATAFORMAS[tela].nome}</span>}
+          </div>
+          <div className="celular__conteudo">
+            {tela === 'inicio'
+              ? <TelaInicial vida={vida} avisos={avisos} abrir={setTela} />
+              : <Plataforma key={tela} vida={vida} agir={agir} id={tela} abrirPessoa={abrirPessoa} />}
+          </div>
+          <ul className="redes__plataformas celular__apps" role="tablist" aria-label="Plataformas">
+            {ORDEM_PLATAFORMAS.map((id, k) => {
+              const pl = PLATAFORMAS[id];
+              const c = contaAtiva(vida, id);
+              const fora = i < pl.idadeMin;
+              return (
+                <li key={id} role="presentation">
+                  <button type="button" role="tab" data-app={id} aria-selected={tela === id} tabIndex={tela === id || (tela === 'inicio' && k === 0) ? 0 : -1}
+                    className={`plataforma${tela === id ? ' plataforma--aberta' : ''}${c ? ' plataforma--com-conta' : ''}${fora ? ' plataforma--fora' : ''}`} style={{ ['--cor-plataforma' as string]: pl.cor }}
+                    onClick={() => setTela(id)} onKeyDown={e => mover(e, k)}>
+                    <span className="plataforma__glifo"><Glifo id={id} /></span>
+                    <span className="plataforma__nome">{pl.nome}</span>
+                    <span className="plataforma__estado">{c ? `${seguidoresEmPalavras(c.seguidores)} ${c.seguidores === 1 ? pl.publico[0] : pl.publico[1]}` : fora ? `a partir dos ${pl.idadeMin}` : 'sem conta'}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
       <p className="nota redes__intro">Tudo é simulado dentro do jogo, sem internet. Cada rede funciona de um jeito: o mesmo vídeo explode numa e passa batido na outra — e quem da sua vida está lá reage.</p>
+    </div>
+  );
+}
+
+/** O que cada rede conta no perfil (o motor guarda o total de publicações, os virais, o maior alcance). */
+function perfilDaRede(id: PlataformaId, c: NonNullable<ReturnType<typeof contaAtiva>>): string {
+  const n = c.totais?.publicacoes ?? c.publicacoes.length;
+  const virais = c.totais?.virais ?? 0;
+  const maior = c.totais?.maior ? seguidoresEmPalavras(c.totais.maior) : undefined;
+  const pl = (um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+  switch (id) {
+    case 'youtube': return [pl('vídeo no canal', 'vídeos no canal'), maior && `o mais visto: ${maior} visualizações`].filter(Boolean).join(' · ');
+    case 'tiktok': return [pl('vídeo', 'vídeos'), virais ? `${virais} ${virais === 1 ? 'viralizou' : 'viralizaram'}` : undefined].filter(Boolean).join(' · ');
+    case 'twitch': return [pl('live', 'lives'), maior && `o maior público: ${maior}`].filter(Boolean).join(' · ');
+    case 'x': return [pl('post', 'posts'), (c.totais?.polemicas ?? 0) ? `${c.totais!.polemicas} ${c.totais!.polemicas === 1 ? 'polêmica' : 'polêmicas'}` : undefined].filter(Boolean).join(' · ');
+    case 'facebook': return pl('publicação no mural', 'publicações no mural');
+    case 'onlyfans': return [pl('conteúdo exclusivo', 'conteúdos exclusivos'), c.monetizada !== undefined ? 'assinatura ativa' : 'sem assinatura ainda'].join(' · ');
+    default: return [pl('publicação', 'publicações'), maior && `a mais vista: ${maior}`].filter(Boolean).join(' · ');
+  }
+}
+
+interface Notificacao { id: string; app: PlataformaId; texto: string; tom: 'bom' | 'ruim' | 'neutro' }
+
+/** O que chegou no celular: só o que o motor registrou (a última publicação de cada conta, a renda, a verificação, a punição). */
+function notificacoes(vida: Vida): Notificacao[] {
+  const out: Notificacao[] = [];
+  for (const id of ORDEM_PLATAFORMAS) {
+    const l = leituraDaConta(vida, id);
+    if (!l) continue;
+    const c = l.conta;
+    const pl = PLATAFORMAS[id];
+    const ult = c.publicacoes.filter(x => !x.apagada).slice(-1)[0];
+    if (l.suspensa) out.push({ id: `${id}:susp`, app: id, texto: `A conta foi suspensa depois das denúncias.`, tom: 'ruim' });
+    if (ult && vida.t - ult.t <= 12) out.push({ id: `${id}:${ult.id}`, app: id, texto: `${ult.viral ? 'Viralizou: ' : ''}“${ult.texto}” — ${seguidoresEmPalavras(ult.alcance)} ${VER[id]}${ult.novos > 0 ? `, +${seguidoresEmPalavras(ult.novos)} ${ult.novos === 1 ? pl.publico[0] : pl.publico[1]}` : ''}${ult.reacao ? ` · ${ult.reacao}` : ''}.`, tom: ult.polemica ? 'ruim' : ult.viral ? 'bom' : 'neutro' });
+    if (l.renda > 0) out.push({ id: `${id}:renda`, app: id, texto: `Rendendo ${dinheiroCurto(l.renda)} por mês.`, tom: 'bom' });
+    if (c.pedidoVerificacao !== undefined) out.push({ id: `${id}:verif`, app: id, texto: 'O pedido de verificação está em análise — a resposta sai na virada do ano.', tom: 'neutro' });
+  }
+  return out;
+}
+
+function TelaInicial({ vida, avisos, abrir }: { vida: Vida; avisos: Notificacao[]; abrir: (id: PlataformaId) => void }) {
+  return (
+    <div className="celular__inicio">
+      <h3 className="celular__secao">Notificações</h3>
+      {avisos.length === 0
+        ? <p className="nota">{ORDEM_PLATAFORMAS.some(p => contaAtiva(vida, p)) ? 'Nada novo neste ano.' : 'Nenhuma conta ainda. Toque num app embaixo para criar.'}</p>
+        : (
+          <ul className="celular__avisos">
+            {avisos.map(a => (
+              <li key={a.id}>
+                <button type="button" className={`celular__aviso celular__aviso--${a.tom}`} style={{ ['--cor-plataforma' as string]: PLATAFORMAS[a.app].cor }} onClick={() => abrir(a.app)}>
+                  <span className="celular__aviso-app"><Glifo id={a.app} tamanho={16} /> {PLATAFORMAS[a.app].nome}</span>
+                  <span className="celular__aviso-texto">{a.texto}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
     </div>
   );
 }
@@ -151,9 +251,11 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
   return (
     <section className="plataforma-painel" style={estilo} aria-label={pl.nome}>
       <header className={`plataforma-painel__cabeca plataforma-painel__cabeca--${id}`}>
+        {/* REWORK 7.5: o perfil no formato da rede — o banner do canal, a fileira de números do perfil, o "ao vivo". */}
         <span className="plataforma-painel__avatar"><Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} tamanho={id === 'youtube' || id === 'twitch' ? 48 : 56} rotulo={`@${c.arroba}`} /></span>
         <h3 className="plataforma-painel__titulo"><Glifo id={id} tamanho={26} /> @{c.arroba}{l.verificacao && (l.verificacao.startsWith('verificada') || l.verificacao === 'selo pago' || l.verificacao === 'identidade verificada') ? <span className="selo-verificado" title={l.verificacao} aria-label={l.verificacao}>✓</span> : null}</h3>
         <p className="plataforma-painel__numero"><strong>{seguidoresEmPalavras(c.seguidores)}</strong> {pl.publico[1]}{c.comprados ? <span className="nota"> ({seguidoresEmPalavras(l.real)} de verdade)</span> : null}</p>
+        <p className="plataforma-painel__perfil">{perfilDaRede(id, c)}</p>
       </header>
       <dl className="plataforma-painel__dados">
         <div><dt>Engajamento</dt><dd>{l.engajamento}</dd></div>

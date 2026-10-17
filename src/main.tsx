@@ -12,6 +12,7 @@ import './ui/mundo-vivo.css';
 import './ui/sistema.css';
 // REWORK 7: as peças da experiência (práticas, degraus, percursos, abas locais, vitrines, fichas).
 import './ui/experiencia.css';
+import './ui/cotidiano.css';
 
 iniciarTema();
 

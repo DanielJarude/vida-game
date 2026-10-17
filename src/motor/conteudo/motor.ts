@@ -6,7 +6,7 @@ import { lugarDe, noEscopo } from '../mundo/escopo';
 import type { Rng } from '../rng';
 import type { Momento, Pessoa, Vida } from '../tipos';
 import { contexto, txt, type Acontecimento, type Conteudo, type Ctx, type Decisao } from './base';
-import { escrever, idade, lembrarCom, novoId } from '../nucleo';
+import { entradaDaMorte, escrever, idade, lembrarCom, novoId } from '../nucleo';
 import { CATALOGO } from './catalogo';
 import { aplicarPersonalidade } from '../personalidade';
 
@@ -81,7 +81,9 @@ export function aplicarAcontecimento(v: Vida, a: Acontecimento, ctx: Ctx): boole
   n.efeito?.(ctx);
   // A segunda vez de algo comum já não é biografia: é textura.
   const relevancia = n.relevancia ?? (ctx.vezes > 0 ? 'cotidiano' : 'biografia');
+  const segue = a.origem?.(ctx) ?? origemDosPapeis(v, ctx);
   escrever(v, {
+    ...(segue ? { segue } : {}),
     texto: n.texto,
     relevancia,
     tema: a.tema,
@@ -119,7 +121,8 @@ export function abrirDecisao(v: Vida, d: Decisao, ctx: Ctx): Momento {
     texto: d.texto(ctx),
     tema: d.tema,
     papeis: Object.fromEntries(Object.entries(ctx.p).map(([k, p]) => [k, p.id])),
-    opcoes
+    opcoes,
+    ...((d.origem?.(ctx) ?? origemDosPapeis(v, ctx)) ? { segue: d.origem?.(ctx) ?? origemDosPapeis(v, ctx) } : {})
   };
   v.momento = m;
   if (d.id === 'comp_conflito' && v.caminhos.pendente) v.caminhos.pendente.perguntado = true;
@@ -160,8 +163,10 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
   const res = opcao.resolver(ctx);
   res.efeito?.(ctx);
   if (opcao.comportamento && !d.biografica) aplicarPersonalidade(v, `${d.id}:${opcao.id}`, opcao.comportamento);
+  let escrita: string | undefined;
   if (res.memoria !== null) {
-    escrever(v, {
+    escrita = escrever(v, {
+      ...(m.segue ? { segue: m.segue } : {}),
       texto: res.memoria ?? res.texto,
       relevancia: res.relevancia ?? 'biografia',
       tema: d.tema,
@@ -169,7 +174,7 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
       pessoas: Object.values(p).map(x => x.id).filter(id => v.pessoas[id]),
       escolha: true,
       evento: res.evento
-    });
+    }).id;
   }
   if (res.lembrar) {
     const pessoa = p[res.lembrar[0]];
@@ -186,5 +191,18 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
       abrirDecisao(v, alvo, contexto(v, r, q));
     }
   }
+  // A etapa seguinte de um processo (ou a decisão que este resultado abriu) é desdobramento desta escolha.
+  const elo = escrita ?? m.segue;
+  const seguinte = v.momento as Momento | null;
+  if (seguinte && seguinte !== m && elo && (res.reabrir || res.abrir)) seguinte.segue = elo;
   return { texto: res.texto };
+}
+
+/**
+ * REWORK 7.5: a origem que o motor CONHECE de um conteúdo — hoje, a morte de quem está no papel `falecido` (a
+ * despedida, a lembrança de um ano depois, o luto do casal). Sem papel assim, não há origem (nada por semelhança).
+ */
+function origemDosPapeis(v: Vida, ctx: Ctx): string | undefined {
+  const f = ctx.p.falecido;
+  return f && !f.vivo ? entradaDaMorte(v, f.id)?.id : undefined;
 }

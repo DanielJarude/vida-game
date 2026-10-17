@@ -7,7 +7,7 @@
  */
 
 import type { Pessoa, Vida, Vinculo } from '../motor/tipos';
-import { idade, idadePessoa, moraCom, vinculosVivos } from '../motor/nucleo';
+import { idade, idadeAoMorrer, idadePessoa, moraCom, vinculosVivos } from '../motor/nucleo';
 import { anoDe, MESES, mesDe } from '../motor/tempo';
 import { flex, listaNatural } from '../motor/texto';
 import { municipio } from '../motor/dados/lugares';
@@ -305,7 +305,9 @@ function presencaTexto(v: Vida, p: Pessoa, vin: Vinculo): string {
 
 function comoFoi(v: Vida, p: Pessoa, vin: Vinculo): string {
   const papel = papelDe(p, vin);
-  const morte = p.tMorte ? `Morreu em ${anoDe(p.tMorte)}, aos ${Math.floor((p.tMorte - p.tNasc) / 12)} anos${p.causaMorte ? ` (${p.causaMorte})` : ''}.` : '';
+  // A idade de quem morreu tem uma porta só (`nucleo.idadeAoMorrer`): a mesma da biografia e da história de vocês.
+  const ao = idadeAoMorrer(p);
+  const morte = p.tMorte ? `Morreu em ${anoDe(p.tMorte)}, aos ${ao ?? Math.floor((p.tMorte - p.tNasc) / 12)} ${ao === 1 ? 'ano' : 'anos'}${p.causaMorte ? ` (${p.causaMorte})` : ''}.` : '';
   if (papel === 'parceiro' && vin.romance?.fim === 'morte') {
     const juntos = Math.max(1, Math.round(((p.tMorte ?? v.t) - (vin.romance.tInicio ?? vin.tInicio)) / 12));
     return `${morte} Foram ${anos(juntos)} juntos.`;

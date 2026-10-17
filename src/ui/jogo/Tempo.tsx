@@ -54,6 +54,7 @@ import { rotuloDe } from '../apresentar';
 import { leituraDaPratica } from '../leituraPratica';
 import { CartaoPratica, FichaPratica } from './Pratica';
 import { Emblema } from './Emblemas';
+import { Agenda } from './Agenda';
 
 const DE_TEMPO = new Set<string>(SECOES_TEMPO.map(x => x.id));
 
@@ -410,14 +411,17 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
         {aba === 'semana' && (
           <>
             <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'tempo'} titulo="Portas que a vida abriu" />
-            {/* REWORK 7: o que você PRATICA vem primeiro (é a sua vida na semana); o estresse e a divisão da semana, depois. */}
-            {ativas.length > 0 && <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas} titulo="O que você pratica" vazio="" />}
+            {/* REWORK 7.5: a AGENDA abre a semana (cada compromisso, quantas vezes, o que passa do que cabe; um toque abre a
+                prática). As práticas, com a evolução de cada uma, vêm logo depois. */}
             <section className="tempo-semana" aria-labelledby="titulo-semana">
               <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
+              {/* REWORK 7.5: a semana como agenda (frequência, não horário: o motor não simula dias). A lista de antes
+                  continua logo abaixo, como alternativa de leitura. */}
+              <Agenda vida={vida} s={s} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />
               {i >= 10 ? <Estresse vida={vida} agir={agir} irPara={ir} /> : <p className="nota">{i < 7 ? 'A semana é de brincar — e da escola.' : 'Além da escola, a semana é sua.'}</p>}
-              <details className="semana-detalhe"><summary>Como a semana se divide (o que já vem ocupado)</summary><FaixaDaSemana vida={vida} s={s} /><ParaOndeVai vida={vida} s={s} irPara={irPara} /></details>
+              <details className="semana-detalhe"><summary>A semana em lista: como se divide e para onde vai</summary><FaixaDaSemana vida={vida} s={s} /><ParaOndeVai vida={vida} s={s} irPara={irPara} /></details>
             </section>
-            {ativas.length === 0 && <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas} titulo="O que você pratica" vazio="Nada fixo na semana por enquanto. As abas acima mostram o que dá para começar." />}
+            <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas} titulo="O que você pratica" vazio="Nada fixo na semana por enquanto. As abas acima mostram o que dá para começar." />
             <ComoVoceVai vida={vida} agir={agir} irPara={irPara} />
           </>
         )}

@@ -127,7 +127,9 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
 
     // O humor sente, na medida do vínculo. Não é uma reação decidida pelo jogo.
     if (peso >= 16) {
-      v.luto.push({ pessoaId: p.id, t: v.t, peso });
+      // REWORK 7.5: uma perda grande reaviva as que ainda doem (não as já atravessadas: essas ficam na memória).
+      if (peso >= 38) reavivar(v, p.id, peso);
+      v.luto.push({ pessoaId: p.id, t: v.t, peso, inicial: peso });
       abalar(v, `a morte de ${p.nome}`, -peso * 0.15, peso * 0.1);
     }
 
@@ -196,16 +198,53 @@ function textoDaMorte(v: Vida, p: Pessoa, vin: Vinculo, causa: string, nivel: Ni
  * O luto anda com os anos, mais depressa com gente por perto. Não há
  * número de anos "certo": depende do vínculo, da rede e de como o jogador
  * escolheu atravessar a despedida.
+ *
+ * REWORK 7.5 — o playtest viu a morte de um avô pesando igual no ano seguinte. Agora o ritmo é PROPORCIONAL ao tamanho
+ * da perda (`inicial`): a de alguém central (≥ 62: o cônjuge, um filho, quem criou você) atravessa anos, devagar; a
+ * de alguém importante mas não central (o avô, um amigo) se acalma em dois ou três; uma perda menor, em um ou dois.
+ * Ajudam a rede de apoio, a despedida vivida (homenagem, reunir, cuidar de quem ficou, as homenagens depois) e o
+ * jeito de quem procura gente para falar; pesa enfrentar sozinho. A memória não sai: a perda continua na Linha da Vida e na ficha —
+ * só o impacto de agora diminui. Nenhum prazo é igual para todos.
  */
 export function processarLuto(v: Vida): void {
   if (!v.luto?.length) return;
   const suporte = redeDeApoio(v);
+  // Quem procura gente para falar atravessa um pouco mais depressa; quem se fecha, um pouco mais devagar.
+  const abre = (v.personalidade?.tracos?.sociabilidade ?? 0) / 100;
   for (const l of v.luto) {
+    const inicial = l.inicial ?? l.peso;
     const como = l.como === 'reunir' || l.como === 'homenagem' || l.como === 'apoiar' ? 0.05 : l.como === 'sozinho' ? -0.02 : 0;
-    const decaimento = 0.72 - Math.min(0.18, suporte * 0.045) - como;
+    // O ritmo pelo tamanho da perda: a central anda devagar; a menor, depressa.
+    const ritmo = inicial >= 62 ? 0.74 : inicial >= 38 ? 0.6 : 0.46;
+    const reavivado = l.reativado !== undefined && v.t - l.reativado <= 12 ? 0.08 : 0;
+    const decaimento = Math.max(0.3, ritmo - Math.min(0.18, suporte * 0.045) - como - Math.max(-0.03, Math.min(0.03, abre * 0.06)) - homenagensDoAno(v, l.pessoaId) + reavivado);
     l.peso = Math.round(l.peso * decaimento);
   }
   v.luto = v.luto.filter(l => l.peso >= 6);
+}
+
+/** As homenagens feitas a alguém no último ano (cada uma ajuda um pouco a atravessar: −0,03 no ritmo, até −0,06). */
+function homenagensDoAno(v: Vida, pessoaId: string): number {
+  let n = 0;
+  for (const [k, t] of Object.entries(v.fatos)) if (k.startsWith('hom:') && k.endsWith(`:${pessoaId}`) && v.t - t <= 12) n++;
+  return Math.min(0.06, n * 0.03);
+}
+
+/** Outra perda grande reaviva o luto que ainda não passou (um pouco, nunca acima do que ele já foi). */
+function reavivar(v: Vida, exceto: string, pesoNovo: number): void {
+  for (const l of v.luto) {
+    if (l.pessoaId === exceto) continue;
+    const inicial = l.inicial ?? l.peso;
+    l.peso = Math.min(inicial, Math.round(l.peso + Math.min(10, pesoNovo * 0.12)));
+    l.reativado = v.t;
+  }
+}
+
+export type FaseDoLuto = 'ativo' | 'recuperando';
+
+/** Em que ponto está um luto: ATIVO (o impacto ainda é mais da metade do que foi) ou se RECUPERANDO. */
+export function faseDoLuto(l: { peso: number; inicial?: number }): FaseDoLuto {
+  return l.peso >= (l.inicial ?? l.peso) * 0.55 ? 'ativo' : 'recuperando';
 }
 
 /** Quantas pessoas próximas estão, de fato, presentes (parceria, amigos, filhos, irmãos). */

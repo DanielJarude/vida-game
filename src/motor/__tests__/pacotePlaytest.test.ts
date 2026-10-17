@@ -410,7 +410,8 @@ describe('H · luxo não cria fama', () => {
     expect(texto).not.toMatch(/sabe quem você é/);
     // Anônimo: o luxo continua não criando nome.
     let w = adulto(35, { semente: 20 });
-    w = transacao(w, x => { x.financas.conta = 200000; x.notoriedade = undefined; texto = comprarItem(x, 'relogio_luxo'); processarNotoriedade(x); }).vida;
+    // Anônimo de verdade: sem mandato, palco ou carreira de atleta que já deem nome (a vida sorteada pode ter um).
+    w = transacao(w, x => { x.financas.conta = 200000; x.notoriedade = undefined; x.caminhos.politica = undefined; x.caminhos.esporte = undefined; x.caminhos.arte = undefined; texto = comprarItem(x, 'relogio_luxo'); processarNotoriedade(x); }).vida;
     expect(w.notoriedade).toBeUndefined();
     expect(texto).toMatch(/Ninguém na rua passa a saber/);
   });

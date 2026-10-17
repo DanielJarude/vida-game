@@ -123,11 +123,21 @@ function recessaoEmCasa(c: Ctx): string {
   return opcoes[Math.floor(r.next() * opcoes.length)];
 }
 
+/** REWORK 7.5: a notícia da cidade sobre a mesma virada da economia, deste ano (a origem do que chega em casa). */
+function noticiaDaEconomia(v: Vida, qual: 'crise' | 'recuperacao'): string | undefined {
+  for (let k = v.biografia.length - 1; k >= 0; k--) {
+    const e = v.biografia[k];
+    if (v.t - e.t > 12) return undefined;
+    if (e.fato?.dados?.economia === qual) return e.id;
+  }
+  return undefined;
+}
+
 export const MUNDO: Conteudo[] = [
   /* ============================================================== ECONOMIA */
   {
     // A crise vem da economia do país (`sistemas/economia`): a biografia só conta quando ela chega.
-    id: 'mun_recessao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true,
+    id: 'mun_recessao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true, origem: c => noticiaDaEconomia(c.v, 'crise'),
     quando: c => entrouEmCrise(c.v) || (!c.v.economia && !emRecessao(c.v) && false),
     narrar: c => ({
       // REWORK 4: para a criança, a crise chega pela casa DELA (quem perdeu o trabalho, o que deixou de ter) — não a
@@ -138,7 +148,7 @@ export const MUNDO: Conteudo[] = [
     })
   },
   {
-    id: 'mun_recuperacao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true,
+    id: 'mun_recuperacao', tipo: 'acontecimento', idade: [6, 110], tema: 'dinheiro', repetir: 7, prioritario: true, origem: c => noticiaDaEconomia(c.v, 'recuperacao'),
     quando: c => saiuDaCrise(c.v),
     // FIX pós-REWORK 4: a recuperação chega a cada vida do jeito dela (a cidade, o trabalho, a casa) — não a mesma frase
     // para todas as vidas do país. (O sorteio de sempre é consumido igual: o resto da vida não muda.)

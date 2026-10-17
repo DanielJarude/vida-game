@@ -107,7 +107,8 @@ describe('Pessoas: a ficha entende quem é a pessoa', () => {
 
   it('ir ao cinema com o amigo abre uma cena com título — não só um aviso de número', () => {
     const v = vida(29, comAmiga);
-    const id = Object.values(v.vinculos).find(x => x.estagio === 'amigo_proximo' && v.pessoas[x.pessoaId].nome)!.pessoaId;
+    // O amigo do cenário (mora na mesma cidade): uma vida pode ter outros amigos próximos, que moram longe.
+    const id = Object.values(v.vinculos).find(x => x.estagio === 'amigo_proximo' && v.pessoas[x.pessoaId].nome && v.pessoas[x.pessoaId].municipioId === v.moradia.municipioId)!.pessoaId;
     const r = executar(v, { tipo: 'pessoa', pessoaId: id, interacao: 'cinema' });
     expect(r.titulo).toMatch(/^Cinema com /);
     expect((r.resultado ?? '').length).toBeGreaterThan(40);

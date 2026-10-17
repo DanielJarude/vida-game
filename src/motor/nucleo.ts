@@ -32,7 +32,23 @@ export function novoId(v: Vida, prefixo: string): string {
 /* ------------------------------------------------------------------ Idade */
 
 export const idade = (v: Vida) => idadeEm(v.eu.tNasc, v.t);
-export const idadePessoa = (v: Vida, p: Pessoa) => idadeEm(p.tNasc, v.t);
+/**
+ * A idade de alguém AGORA — e, de quem morreu, a idade com que morreu (REWORK 7.5: a ficha de um avô dizia "morreu
+ * aos 75" num lugar e "aos 76" noutro, porque metade das telas contava até hoje). Uma porta só para a idade de uma
+ * pessoa: quem morreu para de envelhecer em `tMorte`.
+ */
+export const idadePessoa = (v: Vida, p: Pessoa) => idadeEm(p.tNasc, !p.vivo && p.tMorte !== undefined ? Math.min(v.t, p.tMorte) : v.t);
+/** A idade com que alguém morreu (undefined se está vivo). */
+export const idadeAoMorrer = (p: Pessoa): number | undefined => (!p.vivo && p.tMorte !== undefined ? idadeEm(p.tNasc, p.tMorte) : undefined);
+
+/** REWORK 7.5: a entrada da Linha da Vida que conta a morte de alguém (a mais recente), para ligar o que vem depois. */
+export function entradaDaMorte(v: Vida, pessoaId: string): Entrada | undefined {
+  for (let k = v.biografia.length - 1; k >= 0; k--) {
+    const e = v.biografia[k];
+    if ((e.evento?.tipo === 'morte' || e.evento?.tipo === 'viuvez') && (e.evento.pessoaId === pessoaId || (!e.evento.pessoaId && e.pessoas?.includes(pessoaId)))) return e;
+  }
+  return undefined;
+}
 
 /* ---------------------------------------------------------------- Pessoas */
 
@@ -124,6 +140,8 @@ export interface NovaEntrada {
   evento?: EventoSocial;
   /** REWORK 4: o fato estruturado por trás da frase. */
   fato?: Entrada['fato'];
+  /** REWORK 7.5: a entrada de que esta é consequência (ver `Entrada.segue`). */
+  segue?: string;
 }
 
 export function escrever(v: Vida, e: NovaEntrada): Entrada {
@@ -139,10 +157,22 @@ export function escrever(v: Vida, e: NovaEntrada): Entrada {
     pessoas: e.pessoas,
     escolha: e.escolha,
     evento: e.evento,
-    ...(e.fato ? { fato: e.fato } : {})
+    ...(e.fato ? { fato: e.fato } : {}),
+    ...(e.segue ? { segue: e.segue } : {})
   };
   v.biografia.push(entrada);
   return entrada;
+}
+
+/**
+ * REWORK 7.5: guarda a marca de uma cena vivida com alguém (`Vinculo.cenas`, a antirrepetição compacta). As
+ * microcenas (marcas sem prefixo, "comum.2") e as situações de conversa (com prefixo, "conv:lembranca") têm
+ * memórias separadas, de quatro cada — uma não apaga a outra.
+ */
+export function marcarCena(vin: Vinculo, marca: string): void {
+  const todas = [...(vin.cenas ?? []), marca];
+  const temPrefixo = (x: string) => x.includes(':');
+  vin.cenas = [...todas.filter(x => !temPrefixo(x)).slice(-4), ...todas.filter(temPrefixo).slice(-4)];
 }
 
 /** Quantos marcos a história com uma pessoa guarda (os menos importantes saem primeiro). */
@@ -153,11 +183,11 @@ export const LIMITE_HISTORIA = 30;
  * quem chama decide o peso (1 corriqueiro, 2 importante, 3 marcante). Quando
  * a história enche, sai o marco mais antigo entre os de menor peso.
  */
-export function lembrarCom(v: Vida, pessoaId: string, texto: string, tipo?: TipoMarco, peso = 1, t = v.t): void {
+export function lembrarCom(v: Vida, pessoaId: string, texto: string, tipo?: TipoMarco, peso = 1, t = v.t, de?: Marco['de']): void {
   const vin = v.vinculos[pessoaId];
   if (!vin) return;
   if (vin.historia.some(h => h.texto === texto && Math.abs(h.t - t) < 12)) return;
-  const m: Marco = { t, texto, tipo, peso };
+  const m: Marco = { t, texto, tipo, peso, ...(de ? { de } : {}) };
   vin.historia.push(m);
   vin.historia.sort((a, b) => a.t - b.t);
   while (vin.historia.length > LIMITE_HISTORIA) {

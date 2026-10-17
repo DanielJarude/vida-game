@@ -304,6 +304,15 @@ export function criarVida(o: OpcoesCriacao): Vida {
   }
   // Avós que criam o neto: a mãe mora em outro lugar.
   if (arranjo === 'avos') v.vinculos[mae.id].convivio = [];
+  // REWORK 7.5: a árvore sabe de quem a mãe e o pai são filhos (antes os avós ficavam soltos: a ficha do avô dizia
+  // "não tem filhos", e a morte dele não chegava ao filho). Os dois avós do mesmo lado formam o casal.
+  if (arranjo === 'avos' && !avosDe[mae.id]?.length) { const a = avosCriados.find(x => v.vinculos[x.id].convivio.includes('casa')); if (a) avosDe[mae.id] = [a]; }
+  for (const filho of [mae, pai]) {
+    const avs = filho ? avosDe[filho.id] ?? [] : [];
+    if (!filho || !avs.length) continue;
+    filho.genitores = avs.map(a => a.id);
+    if (avs.length === 2) { avs[0].parceiroId = avs[1].id; avs[1].parceiroId = avs[0].id; }
+  }
 
   // ----------------------------------------------------------- Irmãos
   const maxIrmaos = { vulneravel: 3, trabalhadora: 2, media_baixa: 2, media: 1, alta: 1 }[classe];
@@ -327,6 +336,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     // O tio é irmão do pai ou da mãe: filho dos mesmos avós (quando eles existem no jogo), parecido sem ser igual.
     { const avs = avosDe[lado.id] ?? []; const ra = rngDe(tio.id, 'tio'); tio.visual = avs.length ? visualDosPais(ra, g, ancestralidadeDe(lado), geneticaDe(avs[0]), geneticaDe(avs[1]) ?? geneticaDe(lado)) : visualDosPais(ra, g, ancestralidadeDe(lado), geneticaDe(lado), visualDeQuemGerou(ra, g, ancestralidadeDe(lado), geneticaDe(lado)!)); }
     empregarPai(v, r, tio, classe, tio.municipioId, false);
+    if (lado.genitores?.length) tio.genitores = [...lado.genitores];
     vincular(v, tio, { parentesco: 'tio', origem: 'familia', proximidade: r.int(30, 60) });
     if (r.chance(0.6)) {
       const nPrimos = r.int(1, 2);

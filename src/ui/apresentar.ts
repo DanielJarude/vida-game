@@ -45,6 +45,75 @@ export function anosDaBiografia(v: Vida, incluirCotidiano = true): AnoDeVida[] {
 
 const peso = (e: Entrada) => (e.relevancia === 'marco' ? 2 : e.relevancia === 'biografia' ? 1 : 0);
 
+/* ------------------------------------------------------- REWORK 7.5 — os fios de um ano
+   No playtest, a amizade feita no futebol aparecia colada à escolha sobre o vaso quebrado: duas histórias
+   independentes, lidas como uma só. Um ano agora se lê em FIOS: o que é da mesma história fica junto (as mesmas
+   pessoas; uma consequência e a sua origem), o que é independente ganha distância. Cada acontecimento diz a sua
+   NATUREZA — e a natureza vem do motor (escolha do jogador, `segue`, relevância, tema, pessoas), nunca de adivinhar
+   pelo texto. */
+
+/** O que um acontecimento é, para a leitura. */
+export type Natureza = 'consequencia' | 'escolha' | 'virada' | 'marco' | 'gente' | 'acontecimento' | 'cotidiano';
+
+/** Temas em que um marco muda a trajetória (o rumo da vida, não só o ano): trabalho, estudo, casa, lugar. */
+const TEMAS_DE_RUMO = new Set<Entrada['tema']>(['trabalho', 'estudo', 'escola', 'casa', 'lugar']);
+/** Acontecimentos sociais que mudam a vida de forma duradoura. */
+const EVENTOS_DE_RUMO = new Set(['casamento', 'uniao', 'divorcio', 'viuvez', 'filho_nasceu']);
+const TEMAS_DE_GENTE = new Set<Entrada['tema']>(['amor', 'familia', 'filhos', 'amizade', 'perda', 'morte', 'nascimento']);
+
+export function naturezaDe(e: Entrada): Natureza {
+  if (e.segue) return 'consequencia';
+  if (e.escolha) return 'escolha';
+  if (e.relevancia === 'marco' && (TEMAS_DE_RUMO.has(e.tema) || (e.evento && EVENTOS_DE_RUMO.has(e.evento.tipo)))) return 'virada';
+  if (e.relevancia === 'marco') return 'marco';
+  if (e.relevancia === 'cotidiano') return 'cotidiano';
+  if (TEMAS_DE_GENTE.has(e.tema) && e.pessoas?.length) return 'gente';
+  return 'acontecimento';
+}
+
+export interface Fio {
+  /** O id da primeira entrada (chave estável para a tela). */
+  id: string;
+  entradas: Entrada[];
+  /** O peso do fio: o da entrada mais pesada (2 marco · 1 biografia · 0 cotidiano). */
+  peso: number;
+  /** Fio de miudezas: o cotidiano solto do ano, junto numa linha discreta (não um fio por frase). */
+  miudo?: boolean;
+}
+
+/**
+ * Os fios de um ano. Duas entradas são da mesma história quando o motor as liga: uma é consequência da outra
+ * (`segue`), ou falam das mesmas pessoas. O resto é independente. O cotidiano que não se liga a nada vira um fio só,
+ * de miudezas, no fim. Ordem: os fios mais pesados primeiro (o marco do ano abre o ano), depois a ordem em que
+ * começaram; dentro do fio, a ordem em que aconteceram (a origem antes da consequência).
+ */
+export function fiosDoAno(entradas: Entrada[]): Fio[] {
+  const pai = entradas.map((_, k) => k);
+  const raiz = (k: number): number => (pai[k] === k ? k : (pai[k] = raiz(pai[k])));
+  const unir = (a: number, b: number) => { const x = raiz(a), y = raiz(b); if (x !== y) pai[Math.max(x, y)] = Math.min(x, y); };
+  const porId = new Map(entradas.map((e, k) => [e.id, k]));
+  const porPessoa = new Map<string, number>();
+  entradas.forEach((e, k) => {
+    if (e.segue && porId.has(e.segue)) unir(k, porId.get(e.segue)!);
+    for (const id of e.pessoas ?? []) {
+      const j = porPessoa.get(id);
+      if (j === undefined) porPessoa.set(id, k); else unir(k, j);
+    }
+  });
+  const grupos = new Map<number, Entrada[]>();
+  entradas.forEach((e, k) => { const r = raiz(k); grupos.set(r, [...(grupos.get(r) ?? []), e]); });
+  const fios: Fio[] = [];
+  const miudezas: Entrada[] = [];
+  for (const g of grupos.values()) {
+    if (g.length === 1 && g[0].relevancia === 'cotidiano') { miudezas.push(g[0]); continue; }
+    const ordem = [...g].sort((a, b) => a.t - b.t || (a.segue === b.id ? 1 : b.segue === a.id ? -1 : 0));
+    fios.push({ id: ordem[0].id, entradas: ordem, peso: Math.max(...g.map(peso)) });
+  }
+  fios.sort((a, b) => b.peso - a.peso || a.entradas[0].t - b.entradas[0].t);
+  if (miudezas.length) fios.push({ id: miudezas[0].id, entradas: [...miudezas].sort((a, b) => a.t - b.t), peso: 0, miudo: true });
+  return fios;
+}
+
 /** O capítulo da vida: a mesma tabela do motor (`vinculos.FASES_DA_VIDA`). */
 export const faseDaVida = (i: number): string => capituloDaVida(i);
 

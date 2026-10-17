@@ -20,6 +20,9 @@ afterEach(() => cleanup());
 
 function morta(): { v: Vida; a: string; b: string } {
   const v = adulto(66, { semente: 11, genero: 'masculino' });
+  // A família do cenário é a única descendência (a vida sorteada até os 66 pode ter tido filhos: saem da conta).
+  for (const p of Object.values(v.pessoas)) if (p.genitores?.includes('eu')) { delete v.pessoas[p.id]; delete v.vinculos[p.id]; }
+  for (const [id, vin] of Object.entries(v.vinculos)) if (vin.parentesco === 'filho' || vin.parentesco === 'neto' || vin.parentesco === 'enteado') { delete v.vinculos[id]; delete v.pessoas[id]; }
   const { p: mae } = comParceiro(v, { idade: 63, estagio: 'casamento', anos: 35, genero: 'feminino' });
   const { p: a } = comFilho(v, 33, { outroId: mae.id, casa: false, genero: 'masculino' });
   const { p: b } = comFilho(v, 28, { outroId: mae.id, casa: false, genero: 'feminino' });
@@ -80,7 +83,8 @@ describe('tela do legado', () => {
 
   it('a saúde dela aparece na escolha (só o que tem nome) e vai junto: "Você" mostra os sinais do que não tem nome', () => {
     const { v, b } = morta();
-    const filha = Object.values(v.pessoas).find(p => p.nome === b)!;
+    // A filha (não alguém com o mesmo nome na família).
+    const filha = Object.values(v.pessoas).find(p => p.nome === b && p.genitores?.includes('eu'))!;
     filha.condicoes = [
       { id: 'hipertensao', tInicio: v.t - 60, gravidade: 1, diagnosticada: true, tDiagnostico: v.t - 48, tratando: true },
       { id: 'diabetes', tInicio: v.t - 6, gravidade: 2, diagnosticada: false, tratando: false }

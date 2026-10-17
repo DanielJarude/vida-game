@@ -41,8 +41,8 @@ import { dinheiro } from '../texto';
 const MUNDO = 'mundo';
 type Categoria = 'pessoas' | 'familia' | 'trabalho' | 'cidade' | 'portas';
 
-function noticia(v: Vida, categoria: Categoria, texto: string, o: { pessoas?: string[]; relevancia?: Entrada['relevancia']; tema?: Entrada['tema']; tom?: Entrada['tom'] } = {}): void {
-  escrever(v, { texto, relevancia: o.relevancia ?? 'cotidiano', tema: o.tema ?? (categoria === 'trabalho' ? 'trabalho' : categoria === 'familia' ? 'familia' : categoria === 'cidade' ? 'lugar' : 'amizade'), tom: o.tom, pessoas: o.pessoas, fato: { tipo: MUNDO, dados: { categoria } } });
+function noticia(v: Vida, categoria: Categoria, texto: string, o: { pessoas?: string[]; relevancia?: Entrada['relevancia']; tema?: Entrada['tema']; tom?: Entrada['tom']; economia?: 'crise' | 'recuperacao' } = {}): void {
+  escrever(v, { texto, relevancia: o.relevancia ?? 'cotidiano', tema: o.tema ?? (categoria === 'trabalho' ? 'trabalho' : categoria === 'familia' ? 'familia' : categoria === 'cidade' ? 'lugar' : 'amizade'), tom: o.tom, pessoas: o.pessoas, fato: { tipo: MUNDO, dados: { categoria, ...(o.economia ? { economia: o.economia } : {}) } } });
 }
 
 const nomeDominio = (d: Dominio) => FRENTES.find(f => f.id === d)?.nome ?? d;
@@ -94,10 +94,10 @@ function anoDaCidade(v: Vida): void {
   const antes = v.fatos['mv_crise'] !== undefined;
   if (crise && !antes) {
     v.fatos['mv_crise'] = v.t;
-    noticia(v, 'cidade', `A economia entrou em crise em ${municipio(v.moradia.municipioId).nome}: lojas fechando na avenida, gente conhecida procurando emprego.`, { tom: 'ruim', relevancia: 'biografia', tema: 'dinheiro' });
+    noticia(v, 'cidade', `A economia entrou em crise em ${municipio(v.moradia.municipioId).nome}: lojas fechando na avenida, gente conhecida procurando emprego.`, { tom: 'ruim', relevancia: 'biografia', tema: 'dinheiro', economia: 'crise' });
   } else if (!crise && antes) {
     delete v.fatos['mv_crise'];
-    noticia(v, 'cidade', 'A crise foi passando: as vagas voltaram aos poucos, os preços pararam de subir toda semana.', { tom: 'bom', tema: 'dinheiro' });
+    noticia(v, 'cidade', 'A crise foi passando: as vagas voltaram aos poucos, os preços pararam de subir toda semana.', { tom: 'bom', tema: 'dinheiro', economia: 'recuperacao' });
   }
 }
 

@@ -350,7 +350,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .ano__selo { margin-top: var(--space-2); font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: 0.03em; text-transform: uppercase; font-weight: 700; color: var(--acao-sobre); background: var(--acao); padding: 3px 7px; border-radius: var(--radius-pill); max-width: 100%; white-space: nowrap; }
 /* O ano que acabou de passar: a folha mais clara, com a borda coral na margem. */
 .ano--novo .ano__corpo { background: var(--superficie); border-top: 0; border-radius: var(--radius-lg); box-shadow: inset 4px 0 0 var(--acao), 0 0 0 1px var(--fio); padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5); margin: var(--space-2) 0 var(--space-3); }
-.entradas { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.entradas { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
 .entrada { position: relative; --tema: var(--text-muted); }
 .entrada--tema-trabalho { --tema: var(--tom-trabalho); }
 .entrada--tema-escola, .entrada--tema-estudo { --tema: var(--tom-rumo); }

@@ -46,6 +46,8 @@ import { DesenhoObjeto } from './material/Objetos';
 import { dinheiroCurto as precoCurto } from '../leituraMaterial';
 import { descricaoOrigem } from '../../motor/sistemas/social';
 import { saudeConhecida } from '../../motor/sistemas/corpo';
+import { gestosDeMemoria, memoriasRecentes } from '../../motor/sistemas/memoria';
+import { faseDoLuto } from '../../motor/sistemas/luto';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void }
 
@@ -53,6 +55,9 @@ const ROTULO_SINAL: Record<TipoDeSinal, string> = { urgente: 'Precisa de você',
 
 export function Pessoas({ vida, agir, aberta, abrir }: Props) {
   const c = circulos(vida);
+  // REWORK 7.5: quem morreu há pouco (ou ainda é luto) fica à vista — "Quem se foi" é recolhido e fica para o resto.
+  const memorias = memoriasRecentes(vida).map(p => ({ p, vin: vida.vinculos[p.id] }));
+  const mortos = c.mortos.filter(x => !memorias.some(m => m.p.id === x.p.id));
   const pessoa = aberta ? vida.pessoas[aberta] : null;
   const i = idade(vida);
   const moraComPais = vida.moradia.tipo === 'pais' || vida.moradia.tipo === 'parente';
@@ -89,6 +94,12 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
         </Secao>
       )}
 
+      {memorias.length > 0 && (
+        <Secao titulo="Em memória">
+          <p className="nota">Quem se foi há pouco. Um toque abre o que dá para fazer pela memória de cada um.</p>
+          <Lista vida={vida} itens={memorias} abrir={abrir} />
+        </Secao>
+      )}
       {(c.familia.length > 0 || c.familiaExtensa.length > 0) && (
         <Secao titulo="Família" recolhivel aberta>
           <p className="nota origem-linha">{leituraDaOrigem(vida)}{vida.origem.bairro ? ` Você cresceu ${vida.origem.bairro}.` : ''}</p>
@@ -99,7 +110,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
       {c.amigos.length > 0 && <Secao titulo="Amigos" recolhivel aberta><Rostos vida={vida} itens={c.amigos} abrir={abrir} /></Secao>}
       {c.contexto.length > 0 && <Secao titulo={i < 18 ? 'Da escola e do bairro' : 'Do dia a dia'} recolhivel aberta={c.contexto.length <= 5}><Lista vida={vida} itens={c.contexto} abrir={abrir} /></Secao>}
       {c.passado.length > 0 && <Secao titulo="Gente que passou" recolhivel aberta={false}><Lista vida={vida} itens={c.passado} abrir={abrir} /></Secao>}
-      {c.mortos.length > 0 && <Secao titulo="Quem se foi" recolhivel aberta={false}><Lista vida={vida} itens={c.mortos} abrir={abrir} /></Secao>}
+      {mortos.length > 0 && <Secao titulo="Quem se foi" recolhivel aberta={false}><Lista vida={vida} itens={mortos} abrir={abrir} /></Secao>}
       {vazio && <Vazio>Ninguém por perto ainda.</Vazio>}
 
       <p className="dica pessoas__tempo">
@@ -283,7 +294,32 @@ function agoraDela(vida: Vida, p: Pessoa, vin: Vinculo): string {
   return partes.join(' · ');
 }
 
+/**
+ * REWORK 7.5 — a ficha de quem morreu: onde está a perda agora (a falta, a saudade que se acalma, a memória que fica)
+ * e os gestos possíveis pela memória (`sistemas/memoria`): só os que fazem sentido para esta relação, com o motivo
+ * quando não dá. Nenhum promete alívio: o que o gesto faz se vê na família e, com o tempo, no luto.
+ */
+function EmMemoria({ vida, p, agir }: { vida: Vida; p: Pessoa; agir: (a: Acao) => boolean }) {
+  const gestos = gestosDeMemoria(vida, p.id);
+  const l = vida.luto.find(x => x.pessoaId === p.id);
+  const ponto = l ? (faseDoLuto(l) === 'ativo' ? 'A falta ainda pesa no dia a dia.' : 'A saudade continua, mas vai se acalmando.') : vida.t - (p.tMorte ?? vida.t) < 12 ? '' : 'A perda ficou na memória — já não pesa como pesou.';
+  if (!gestos.length && !ponto) return null;
+  return (
+    <section className="ficha__memoria-de" aria-label={`Lembrar de ${p.nome}`}>
+      <h3 className="ficha__subtitulo">Lembrar de {p.nome}</h3>
+      {ponto && <p className="ficha__porque">{ponto}</p>}
+      {gestos.length > 0 && (
+        <div className="grupo-acoes">
+          {gestos.map(g => <BotaoAcao key={g.gesto} vida={vida} acao={{ tipo: 'memoria', pessoaId: p.id, gesto: g.gesto }} agir={agir} variante={g.gesto === 'despedida' ? 'principal' : 'secundario'}>{g.rotulo}</BotaoAcao>)}
+        </div>
+      )}
+    </section>
+  );
+}
+
 const DESCOBERTA = (m: Marco) => m.tipo === 'descoberta';
+/** As frases de `fraseDoSaber` no presente (as que a ficha de quem morreu diz no passado). */
+const PRESENTE_DO_SABER = /^(Tem \S+ filhos?|Não tem filhos|Trabalha como|Está aposentad|Estuda\.|Tem uma lista enorme|Gosta das coisas|Conhece meio mundo|É de pouca gente|Carrega mais preocupação|Tem curso superior)/;
 const RITUAL = (m: Marco) => m.tipo === 'ritual';
 
 /** O laço em palavras (REWORK 7): afeto, confiança e atrito — os números do vínculo, lidos, nunca mostrados. */
@@ -320,7 +356,10 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   // REWORK 4: o que você SABE é o fato guardado (`conhecimento`), não a frase "descobriu de onde veio". As descobertas
   // antigas de jeito (curiosidade, preocupações) continuam pelo que dizem.
   const fatos = !p.especie ? saberes(vida, p, vin) : [];
-  const sabe = historia.filter(h => DESCOBERTA(h) && !/^Descobriu de onde |^Entendeu o trabalho de /.test(h.texto) && !fatos.some(f => fraseDoSaber(vida, p, f) === h.texto));
+  // REWORK 7.5: de quem morreu, a descoberta antiga escrita no presente ("Tem dois filhos", "Está aposentado") não volta
+  // como se fosse de hoje — o fato já está em `fatos`, dito no passado.
+  const sabe = historia.filter(h => DESCOBERTA(h) && !/^Descobriu de onde |^Entendeu o trabalho de /.test(h.texto) && !fatos.some(f => fraseDoSaber(vida, p, f) === h.texto)
+    && (p.vivo || !PRESENTE_DO_SABER.test(h.texto)));
   const falta = !p.especie && p.vivo ? pendentes(vida, p, vin).length : 0;
   const ganhou = presentesDados(p);
   const narrada = historia.filter(h => !RITUAL(h) && !DESCOBERTA(h));
@@ -382,6 +421,8 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
           {esperando && gest && <p className="ficha__nota">Um bebê a caminho — o parto é previsto para {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</p>}
           {p.vivo && p.especie && <FichaPet vida={vida} agir={agir} p={p} />}
         </div>
+
+        {!p.vivo && <EmMemoria vida={vida} p={p} agir={agir} />}
 
         {p.vivo && (acoes.length > 0 || (!p.especie && idade(vida) >= 10)) && (
           <section className="ficha__conviver" aria-label={`Conviver com ${p.nome || 'o bebê'}`}>
@@ -447,7 +488,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
                   {falta > 0 && p.vivo && <p className="nota">{fatos.length + sabe.length <= 1 ? 'Vocês ainda se conhecem pouco.' : 'Ainda há coisas que você não sabe.'}</p>}
                 </>
               )}
-              {ganhou.length > 0 && <p className="ficha__jeito">Tem, presente seu: {ganhou.join(', ')}.</p>}
+              {ganhou.length > 0 && <p className="ficha__jeito">{p.vivo ? 'Tem' : 'Tinha'}, presente seu: {ganhou.join(', ')}.</p>}
               {costumes.length > 0 && (
                 <>
                   <h3 className="ficha__subtitulo">Coisas de vocês</h3>

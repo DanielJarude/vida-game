@@ -319,7 +319,7 @@ const GRUPOS: Record<string, GrupoDeInteracao> = {
   perguntar_vida: 'conversar', elogiar: 'conversar', pedir_conselho: 'conversar', ex_conversar: 'conversar', app_conversar: 'conversar',
   // FIX pós-playtest humano: o que pode virar romance tem lugar próprio na ficha ("Algo mais").
   flertar: 'romance', declarar: 'romance', demonstrar_interesse: 'romance', convidar: 'romance',
-  carinho: 'conversar', futuro_casal: 'conversar', dinheiro_casal: 'conversar', agradecer_professor: 'conversar', conhecer: 'conversar', futuro: 'conversar',
+  carinho: 'conversar', agradecer: 'conversar', futuro_casal: 'conversar', dinheiro_casal: 'conversar', agradecer_professor: 'conversar', conhecer: 'conversar', futuro: 'conversar',
   // Cuidar e ajudar.
   cuidar: 'cuidar', apoiar: 'cuidar', dinheiro: 'cuidar', medico: 'cuidar', estudos: 'cuidar', escola: 'cuidar', incentivar: 'cuidar', limite: 'cuidar',
   pedir_ajuda_criancas: 'cuidar', ex_filhos: 'cuidar', chamado_sim: 'cuidar', chamado_nao: 'cuidar'

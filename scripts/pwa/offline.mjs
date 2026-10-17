@@ -244,14 +244,25 @@ try {
   // persiste. A preferência não entra no save.
   const antesDoTema = await lerSave();
   await p.locator('.marca').click();
-  await p.getByRole('radio', { name: /Escuro/ }).click();
+  await p.getByRole('radio', { name: /Memória Escura/ }).click();
   await p.keyboard.press('Escape');
   await p.reload();
   await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
   const pintura = await p.evaluate(() => ({ tema: document.documentElement.dataset.tema, fundo: getComputedStyle(document.body).backgroundColor, barra: document.querySelector('meta[name="theme-color"]')?.getAttribute('content') }));
   checar('offline: o tema Escuro persiste e abre já escuro (fundo grafite, barra do navegador escura)', pintura.tema === 'escuro' && pintura.fundo === 'rgb(26, 29, 33)' && pintura.barra === '#131518', JSON.stringify(pintura));
   checar('offline: a preferência de tema não mexeu no save', (await lerSave()) === antesDoTema);
-  await p.getByRole('radio', { name: /Claro/ }).click();
+  // REWORK 7.5: as duas paletas novas também abrem já pintadas, sem rede (o Atlântico é escuro; o Horizonte, claro).
+  await p.getByRole('radio', { name: /Atlântico Noturno/ }).click();
+  await p.reload();
+  await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
+  const atl = await p.evaluate(() => ({ tema: document.documentElement.dataset.tema, paleta: document.documentElement.dataset.paleta, fundo: getComputedStyle(document.body).backgroundColor, barra: document.querySelector('meta[name="theme-color"]')?.getAttribute('content') }));
+  checar('offline: o Atlântico Noturno persiste e abre já pintado (azul da noite)', atl.tema === 'escuro' && atl.paleta === 'atlantico' && atl.fundo === 'rgb(16, 25, 35)' && atl.barra === '#0a1118', JSON.stringify(atl));
+  await p.getByRole('radio', { name: /Horizonte Claro/ }).click();
+  await p.reload();
+  await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
+  const hor = await p.evaluate(() => ({ tema: document.documentElement.dataset.tema, paleta: document.documentElement.dataset.paleta, fundo: getComputedStyle(document.body).backgroundColor }));
+  checar('offline: o Horizonte Claro persiste (pedra clara)', hor.tema === 'claro' && hor.paleta === 'horizonte' && hor.fundo === 'rgb(234, 238, 235)', JSON.stringify(hor));
+  await p.getByRole('radio', { name: /Memória Clara/ }).click();
   await p.reload();
   await p.getByRole('button', { name: /Continuar a vida de/ }).waitFor({ timeout: 20000 });
   const clara = await p.evaluate(() => ({ tema: document.documentElement.dataset.tema, fundo: getComputedStyle(document.body).backgroundColor }));

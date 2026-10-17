@@ -349,6 +349,12 @@ export interface Marco {
   tipo?: TipoMarco;
   /** 1 corriqueiro · 2 importante · 3 marcante. */
   peso?: number;
+  /**
+   * REWORK 7.5: num marco de apoio, QUEM ajudou quem — 'ela' (a pessoa ajudou o jogador: o conselho, o fim de semana
+   * com as crianças, o lado dela quando a vida pesou), 'eu' (o jogador ajudou), 'juntos'. É a evidência que o
+   * agradecimento consulta: ninguém agradece por uma ajuda que não aconteceu.
+   */
+  de?: 'eu' | 'ela' | 'juntos';
 }
 
 export type TipoMarco =
@@ -1247,6 +1253,12 @@ export interface Entrada {
    * A frase é uma narração dele; anos depois, a vida pode lembrar do fato (não da frase). Opcional.
    */
   fato?: { tipo: string; dados: Record<string, string | number> };
+  /**
+   * REWORK 7.5: o acontecimento é CONSEQUÊNCIA de outro, já escrito (o id da entrada de origem): a despedida segue a
+   * morte, a homenagem segue a perda, a etapa seguinte de um processo segue a escolha que o abriu. Só se escreve
+   * quando o motor SABE a origem (nunca por semelhança); a Linha da Vida usa para agrupar e dizer "por causa de".
+   */
+  segue?: string;
 }
 
 export type TipoEvento =
@@ -1265,9 +1277,14 @@ export interface EventoSocial {
 export interface Luto {
   pessoaId: string;
   t: number;
+  /** O impacto de AGORA (cai com os anos; some abaixo de 6 — a perda continua na biografia e na história de vocês). */
   peso: number;
   /** Como o jogador escolheu atravessar a despedida (quando escolheu). */
   como?: string;
+  /** REWORK 7.5: o tamanho da perda quando aconteceu (não muda; sem ele, saves de antes usam o peso de agora). */
+  inicial?: number;
+  /** REWORK 7.5: quando o luto foi reavivado (outra perda grande, o primeiro ano sem a pessoa numa data que importa). */
+  reativado?: number;
 }
 
 /* ---------------------------------------------------------------- Momentos */
@@ -1288,6 +1305,8 @@ export interface Momento {
   /** `detalhe`: o que a escolha muda, dito ANTES de escolher ("a faculdade fica trancada"). */
   /** `resgate`: a opção custa mais do que há na conta, e as aplicações cobrem esse valor (tirar é escolha do jogador). */
   opcoes: { id: string; texto: string; bloqueio?: string; detalhe?: string; resgate?: number }[];
+  /** REWORK 7.5: a entrada de que esta decisão é desdobramento (a etapa anterior do processo; a morte, na despedida). */
+  segue?: string;
 }
 
 /* ------------------------------------------------------------------- Rotina */

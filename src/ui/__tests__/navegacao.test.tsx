@@ -95,7 +95,10 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     // REWORK 7: os testes de intenção do playtest.
     sair_amigo: /Família|Amigos|Perto|Gente da sua vida/, violao: /Tocar um instrumento|Explorar outras atividades/, condicionamento: /Academia|Correr ou caminhar|Cuidar de si/,
     praticas: /O que você pratica/, carreira: /A sua situação agora|Procurar outro caminho/, quanto_ganho: /O mês|Entra|entra/, em_casa: /O que há em casa|Quem mora com você|Quem paga a casa/,
-    historico_escolar: /Sua formação|Sua história na formação|Ensino médio|ensino médio/, familia_aconteceu: /Família/
+    historico_escolar: /Sua formação|Sua história na formação|Ensino médio|ensino médio/, familia_aconteceu: /Família/,
+    // REWORK 7.5: as intenções das interfaces do cotidiano.
+    agenda: /A agenda da semana/, dedicacao: /A agenda da semana/, celular: /Tela inicial|Instagram/, homenagear: /Em memória|Quem se foi|Família/,
+    agradecer: /Família|Amigos|Perto|Gente da sua vida/, triste: /pesa|Cabeça|Como você está/, aparencia: /Linha da Vida/, profissional: /A sua situação agora|Procurar outro caminho/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {
     const v = vida(30, x => { adulta(x); x.moradia = { tipo: 'aluguel', municipioId: x.moradia.municipioId, modeloId: 'apto_1q', aluguel: 1300, padrao: 3, tInicio: x.t }; for (const vin of Object.values(x.vinculos)) vin.convivio = vin.convivio.filter(c => c !== 'casa'); });

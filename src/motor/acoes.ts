@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistemas/memoria';
 import { disponibilidadeProcedimento, fazerProcedimento, type Clinica, type IdProcedimento } from './sistemas/estetica';
 import { comprarCoisa, disponibilidadeComprarCoisa, disponibilidadeVenderCoisa, venderCoisa } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
@@ -123,6 +124,8 @@ export type Acao =
   | { tipo: 'pedir_aumento' }
   | { tipo: 'aposentar' }
   | { tipo: 'pessoa'; pessoaId: string; interacao: InteracaoPessoa }
+  /** REWORK 7.5: um gesto pela memória de quem morreu (ir à despedida, recordar, visitar…) — `sistemas/memoria`. */
+  | { tipo: 'memoria'; pessoaId: string; gesto: GestoDeMemoria }
   | { tipo: 'adotar' }
   /** Alugar: uma oferta do mercado (ou, nos comandos antigos, só o tipo). Dá para dividir com um amigo. */
   | { tipo: 'sair_de_casa'; modeloId?: string; ofertaId?: string; dividirCom?: string }
@@ -360,6 +363,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return jaFez(v, 'aumento') ? bloqueio('incompativel', 'Você já pediu neste ano.') : PERMITIDO;
     case 'aposentar': return podeAposentar(v);
     case 'pessoa': return disponibilidadeInteracao(v, a.pessoaId, a.interacao);
+    case 'memoria': return disponibilidadeGesto(v, a.pessoaId, a.gesto);
     case 'adotar':
       if (i < maioridade(v)) return bloqueio('ilegal', 'Adoção exige maioridade.');
       if (v.processos.some(p => p.tipo === 'adocao')) return bloqueio('incompativel', 'Já há um processo de adoção em andamento.');
@@ -984,6 +988,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       }
       return out;
     }
+    case 'memoria': return { resultado: fazerGesto(v, r, a.pessoaId, a.gesto), titulo: v.pessoas[a.pessoaId]?.nome, pessoaId: a.pessoaId };
     case 'adotar': iniciarAdocao(v, parceiro(v)?.p.id); return ok('Processo de adoção iniciado.');
     case 'sair_de_casa': case 'trocar_moradia': {
       const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId)! : ofertaPorModelo(v, 'aluguel', a.modeloId!)!;

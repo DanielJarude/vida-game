@@ -97,7 +97,17 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
   return res;
 }
 
+/**
+ * Lê um save (qualquer versão aceita). REWORK 7.5: toda leitura que dá certo — da v20 ou migrada de qualquer versão —
+ * passa pela mesma normalização na saída (`normalizarRework75`), uma porta só: nenhum caminho de migração escapa dela.
+ */
 export function interpretar(bruto: string): Leitura {
+  const r = interpretarSemNormalizar(bruto);
+  if (r.tipo === 'ok') normalizarRework75(r.vida);
+  return r;
+}
+
+function interpretarSemNormalizar(bruto: string): Leitura {
   let dados: unknown;
   try { dados = JSON.parse(bruto); } catch { return { tipo: 'invalido', motivo: 'O save não é um JSON válido.' }; }
   if (!dados || typeof dados !== 'object') return { tipo: 'invalido', motivo: 'Formato desconhecido.' };
@@ -505,6 +515,7 @@ function validar(d: Record<string, unknown>, versao = VERSAO_SAVE): string | nul
   { const r4 = validarVidaVivida(d); if (r4) return r4; }
   { const rh = validarPlaytestHumano(d); if (rh) return rh; }
   { const r5 = validarRework5(d); if (r5) return r5; }
+  { const r75 = validarRework75(d); if (r75) return r75; }
   if (!Array.isArray(d.luto)) return 'Luto inválido.';
   const pessoas = d.pessoas as Record<string, Pessoa>;
   for (const vin of Object.values(d.vinculos as Record<string, Vinculo>)) {
@@ -1512,4 +1523,41 @@ function validarRework5(d: Record<string, unknown>): string | null {
   }
   for (const p of Object.values(d.pessoas as Record<string, Record<string, unknown>>)) if (!opcional(p.nFilhos, finito)) return 'Pessoa inválida.';
   return null;
+}
+
+/* ============================================================ REWORK 7.5 */
+
+/**
+ * Os campos novos do REWORK 7.5 (todos opcionais na v20): a consequência de uma entrada da Linha da Vida e de uma
+ * decisão aberta (`segue`), o tamanho inicial e a reativação de um luto, quem ajudou quem num marco (`de`). Saves sem
+ * eles abrem como antes.
+ */
+function validarRework75(d: Record<string, unknown>): string | null {
+  if (Array.isArray(d.biografia) && (d.biografia as Record<string, unknown>[]).some(e => !e || !opcional(e.segue, ehTexto))) return 'Linha da Vida inválida.';
+  const m = d.momento as Record<string, unknown> | null | undefined;
+  if (m && !opcional(m.segue, ehTexto)) return 'Decisão inválida.';
+  if (Array.isArray(d.luto) && (d.luto as Record<string, unknown>[]).some(l => !l || !opcional(l.inicial, finito) || !opcional(l.reativado, finito))) return 'Luto inválido.';
+  for (const vin of Object.values((d.vinculos ?? {}) as Record<string, Record<string, unknown>>)) {
+    if (Array.isArray(vin?.historia) && (vin.historia as Record<string, unknown>[]).some(h => !h || !opcional(h.de, x => x === 'eu' || x === 'ela' || x === 'juntos'))) return 'Vínculo com história inválida.';
+  }
+  return null;
+}
+
+/**
+ * REWORK 7.5 — ao abrir uma vida salva antes: a idade com que alguém morreu, nos textos já escritos, passa a ser a
+ * de `tMorte` (o motor contava até o fim do ano: "morreu aos 76" na história de vocês, "aos 75" na ficha). Só se
+ * corrige o número quando ele é exatamente o do erro (um a mais que a idade verdadeira) — nada mais é reescrito.
+ */
+export function normalizarRework75(v: Vida): void {
+  for (const p of Object.values(v.pessoas ?? {})) {
+    if (p.vivo || p.tMorte === undefined) continue;
+    const certa = Math.floor((p.tMorte - p.tNasc) / 12);
+    const errada = `aos ${certa + 1} anos`;
+    const vin = v.vinculos?.[p.id];
+    if (vin) for (const h of vin.historia) if (h.tipo === 'perda' && h.texto === `Morreu, ${errada}.`) h.texto = `Morreu, aos ${certa} anos.`;
+    for (const e of v.biografia ?? []) {
+      if (e.evento?.pessoaId !== p.id || (e.evento.tipo !== 'morte' && e.evento.tipo !== 'viuvez')) continue;
+      if (e.texto.includes(errada) && !e.texto.includes(`aos ${certa} anos`)) e.texto = e.texto.replace(errada, `aos ${certa} anos`);
+    }
+  }
 }

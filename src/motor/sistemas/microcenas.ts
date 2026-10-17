@@ -22,7 +22,7 @@
 import { clamp, rngDe, type Rng } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import type { CtxI } from './interacoes';
-import { escrever, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
+import { escrever, idadePessoa, lembrarCom, marcarCena, vinculosVivos } from '../nucleo';
 import { flex } from '../texto';
 import { municipio, existeMunicipio } from '../dados/lugares';
 import { fraseDoSaber, pendentes, revelar, saberes } from './conhecimento';
@@ -62,9 +62,9 @@ export interface ProgramaDeCena {
 export interface CenaVivida { tipo: TipoDeCena; texto: string; titulo: string }
 
 /** As marcas das últimas cenas ("comum.2" = a noite comum de variação 2): o tipo antes do ponto. */
-const marcas = (vin: Vinculo) => vin.cenas ?? [];
+const marcas = (vin: Vinculo) => (vin.cenas ?? []).filter(x => !x.includes(':'));
 const ultimas = (vin: Vinculo) => marcas(vin).map(x => x.split('.')[0]);
-const lembrar = (vin: Vinculo, marca: string) => { vin.cenas = [...marcas(vin), marca].slice(-4); };
+const lembrar = (vin: Vinculo, marca: string) => marcarCena(vin, marca);
 const afeto = (c: CtxI, n: number) => { c.vin.proximidade = clamp(Math.round(c.vin.proximidade + n)); };
 const confiar = (c: CtxI, n: number) => { c.vin.confianca = clamp(Math.round(c.vin.confianca + n)); };
 const tensao = (c: CtxI, n: number) => { c.vin.tensao = clamp(Math.round(c.vin.tensao + n)); };

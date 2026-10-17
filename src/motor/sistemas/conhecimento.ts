@@ -56,9 +56,9 @@ function verdade(v: Vida, p: Pessoa, k: ChaveSaber): string | undefined {
     case 'trabalho': return p.ocupacao || undefined;
     case 'formacao': return p.formacao ?? (p.estudo ? `cursando:${p.estudo.curso}` : p.vida?.escolaridade);
     case 'familia': {
-      const filhos = Object.values(v.pessoas).filter(x => x.genitores?.includes(p.id) && !x.especie && x.vivo).length;
+      const f = filhosDe(v, p);
       const par = p.parceiroId ? v.pessoas[p.parceiroId] : undefined;
-      return `${filhos}|${par?.vivo ? par.nome : ''}`;
+      return `${p.vivo ? f.vivos : f.todos}|${par?.vivo && p.vivo ? par.nome : ''}`;
     }
     case 'curiosa': return t.abertura > 0.3 ? '1' : undefined;
     case 'rotina': return t.abertura < -0.3 ? '1' : undefined;
@@ -66,6 +66,33 @@ function verdade(v: Vida, p: Pessoa, k: ChaveSaber): string | undefined {
     case 'quieta': return t.extroversao < -0.3 ? '1' : undefined;
     case 'ansiosa': return t.estabilidade < -0.3 ? '1' : undefined;
   }
+}
+
+/**
+ * REWORK 7.5 — os filhos de alguém, pela árvore E pelo parentesco com o jogador. A ficha de um avô dizia "não tem
+ * filhos" porque os pais do jogador (e os irmãos) nascem no jogo sem `genitores`: o filho da mãe é o próprio jogador.
+ * Quem é avô/avó do jogador tem pelo menos um filho (o pai ou a mãe dele), mesmo num save de antes do elo.
+ */
+export function filhosDe(v: Vida, p: Pessoa): { vivos: number; todos: number } {
+  const vin = v.vinculos[p.id];
+  const ids = new Set<string>();
+  let vivos = 0;
+  const contar = (x: Pessoa) => { if (ids.has(x.id) || x.especie) return; ids.add(x.id); if (x.vivo) vivos++; };
+  for (const x of Object.values(v.pessoas)) if (x.genitores?.includes(p.id)) contar(x);
+  if (vin?.parentesco === 'mae' || vin?.parentesco === 'pai') {
+    if (!ids.has('eu')) { ids.add('eu'); vivos++; }
+    for (const iv of Object.values(v.vinculos)) {
+      const x = v.pessoas[iv.pessoaId];
+      if (x && iv.parentesco === 'irmao' && !x.genitores?.length) contar(x);
+    }
+  }
+  if (vin?.parentesco === 'avo' && ids.size === 0) {
+    // Save de antes do elo: o filho (o pai ou a mãe do jogador) existe, só não está ligado.
+    const pais = Object.values(v.vinculos).filter(iv => iv.parentesco === 'mae' || iv.parentesco === 'pai').map(iv => v.pessoas[iv.pessoaId]).filter(Boolean);
+    const doLado = pais.find(x => x.sobrenome && x.sobrenome === p.sobrenome) ?? pais[0];
+    if (doLado) contar(doLado); else { ids.add('?'); vivos++; }
+  }
+  return { vivos, todos: ids.size };
 }
 
 const ORDEM: ChaveSaber[] = ['origem', 'trabalho', 'curiosa', 'rotina', 'gente', 'quieta', 'ansiosa', 'formacao', 'familia'];
@@ -128,25 +155,35 @@ export function fraseDoSaber(v: Vida, p: Pessoa, s: Saber): string {
       const mesmaCidade = s.v === p.municipioId;
       return `${nome} nasceu em ${m.nome}${paisNatal !== daqui ? `, ${noPais(paisNatal)}` : ''}${mesmaCidade ? ' — e nunca saiu de lá' : ''}.`;
     }
+    // REWORK 7.5: de quem morreu, o fato é história — "estava aposentado quando morreu", nunca "está aposentado".
     case 'trabalho': {
       const quando = p.ocupacao === s.v;
+      if (!p.vivo) {
+        if (s.v === 'estudante') return 'Estudava quando morreu.';
+        if (/^aposentad/.test(s.v)) return `Estava aposentad${o} quando morreu.`;
+        return `Trabalhava como ${s.v}.`;
+      }
       if (s.v === 'estudante') return quando ? `Estuda.` : `Quando vocês falaram disso, estudava.`;
       if (/^aposentad/.test(s.v)) return `Está aposentad${o}.`;
       return quando ? `Trabalha como ${s.v}.` : `Quando vocês falaram disso, trabalhava como ${s.v}.`;
     }
     case 'formacao':
       if (s.v.startsWith('cursando:')) return `Estava cursando ${s.v.slice(9)}.`;
+      if (!p.vivo && s.v === 'superior') return 'Tinha curso superior.';
       return NOMES_ESCOLARIDADE[s.v] ? `${NOMES_ESCOLARIDADE[s.v]}.` : `Formou-se em ${s.v}.`;
     case 'familia': {
-      const [n, par] = s.v.split('|');
-      const filhos = Number(n) || 0;
-      return `${filhos ? `Tem ${extenso(filhos)} ${filhos === 1 ? 'filho' : 'filhos'}` : 'Não tem filhos'}${par ? `; vive com ${par}` : ''}.`;
+      // A família se lê pela árvore de agora (não pelo que se guardou quando se soube: um filho pode ter nascido depois).
+      const [, par] = s.v.split('|');
+      const f = filhosDe(v, p);
+      const filhos = p.vivo ? f.vivos : f.todos;
+      if (!p.vivo) return filhos ? `Teve ${extenso(filhos)} ${filhos === 1 ? 'filho' : 'filhos'}.` : 'Não teve filhos.';
+      return `${filhos ? `Tem ${extenso(filhos)} ${filhos === 1 ? 'filho' : 'filhos'}` : 'Não tem filhos'}${par && p.parceiroId && v.pessoas[p.parceiroId]?.vivo ? `; vive com ${par}` : ''}.`;
     }
-    case 'curiosa': return 'Tem uma lista enorme de lugares para conhecer e de coisas para aprender.';
-    case 'rotina': return 'Gosta das coisas do jeito de sempre: o mesmo café, o mesmo caminho.';
-    case 'gente': return 'Conhece meio mundo e fica mais feliz no meio de gente.';
-    case 'quieta': return 'É de pouca gente: poucos amigos, e para a vida toda.';
-    case 'ansiosa': return 'Carrega mais preocupação do que mostra.';
+    case 'curiosa': return p.vivo ? 'Tem uma lista enorme de lugares para conhecer e de coisas para aprender.' : 'Tinha sempre uma lista de lugares para conhecer e de coisas para aprender.';
+    case 'rotina': return p.vivo ? 'Gosta das coisas do jeito de sempre: o mesmo café, o mesmo caminho.' : 'Gostava das coisas do jeito de sempre: o mesmo café, o mesmo caminho.';
+    case 'gente': return p.vivo ? 'Conhece meio mundo e fica mais feliz no meio de gente.' : 'Conhecia meio mundo e ficava mais feliz no meio de gente.';
+    case 'quieta': return p.vivo ? 'É de pouca gente: poucos amigos, e para a vida toda.' : 'Era de pouca gente: poucos amigos, e para a vida toda.';
+    case 'ansiosa': return p.vivo ? 'Carrega mais preocupação do que mostra.' : 'Carregava mais preocupação do que mostrava.';
   }
   return '';
 }

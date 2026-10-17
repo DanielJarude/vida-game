@@ -5,10 +5,18 @@
 import { readFileSync } from 'node:fs';
 // REWORK 6.5: os mesmos pares nos DOIS temas — o claro (`:root`) e o escuro (`:root[data-tema='escuro']`, que só
 // redefine a paleta: o que ele não redefine vale o do claro).
+// REWORK 7.5: as QUATRO paletas — Memória Clara (a base), Memória Escura, Horizonte Claro e Atlântico Noturno. Cada
+// bloco é lido pelo seletor; o que um bloco não redefine vale o da base (a mesma cascata do navegador).
 const todo = readFileSync(new URL('../../src/ui/tokens.css', import.meta.url), 'utf8');
-const inicioEscuro = todo.indexOf(":root[data-tema='escuro']");
-const BLOCOS = { claro: [todo.slice(0, inicioEscuro)], escuro: [todo.slice(inicioEscuro, todo.indexOf('}', inicioEscuro)), todo.slice(0, inicioEscuro)] };
-let css = BLOCOS.claro;
+const bloco = sel => { const i = todo.indexOf(sel); if (i < 0) throw new Error(`bloco ${sel} não achado`); return todo.slice(i, todo.indexOf('}', i)); };
+const base = todo.slice(0, todo.indexOf(":root[data-tema='escuro']"));
+const BLOCOS = {
+  'memória clara': [base],
+  'memória escura': [bloco(":root[data-tema='escuro']"), base],
+  'horizonte claro': [bloco(":root[data-paleta='horizonte']"), base],
+  'atlântico noturno': [bloco(":root[data-paleta='atlantico']"), bloco(":root[data-tema='escuro']"), base]
+};
+let css = BLOCOS['memória clara'];
 const hex = n => { for (const b of css) { const m = b.match(new RegExp(`--${n}:\\s*(#[0-9a-fA-F]{6})`)); if (m) return m[1]; } throw new Error(n); };
 const rgb = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16) / 255);
 const lin = c => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
@@ -23,7 +31,7 @@ const papeis = ['papel', 'papel-alto', 'papel-topo'];
 const areas = ['linha', 'voce', 'pessoas', 'formacao', 'trabalho', 'tempo', 'vida', 'cidade', 'saude'];
 let falhas = 0;
 const checa = (rot, a, b, min) => { const r = ratio(a, b); const ok = r >= min; if (!ok) falhas++; console.log(`${ok ? '✓' : '✗'} ${rot.padEnd(46)} ${r.toFixed(2)}:1 (mín. ${min})`); };
-for (const tema of ['claro', 'escuro']) {
+for (const tema of Object.keys(BLOCOS)) {
 css = BLOCOS[tema];
 console.log(`\n— tema ${tema} —`);
 for (const f of papeis) { checa(`tinta sobre ${f}`, P('tinta'), P(f), 7); for (const t of ['tinta-2', 'tinta-3']) checa(`${t} sobre ${f}`, P(t), P(f), 4.5); }
@@ -33,6 +41,14 @@ checa('texto sobre a tinta preenchida (chip ativo)', P('sobre-tom'), P('tinta'),
 checa('texto do botão sobre o coral (avançar)', P('acao-sobre'), P('acao'), 4.5);
 for (const f of ['moldura', 'moldura-2']) for (const t of ['moldura-tinta', 'moldura-tinta-2']) checa(`${t} sobre ${f}`, P(t), P(f), 4.5);
 checa('aba ativa: tinta sobre a pílula de papel', P('tinta'), P('papel'), 7);
+// REWORK 7.5: os estados do mundo continuam distinguíveis entre si em cada paleta (bom ≠ ruim ≠ atenção ≠ agir), e
+// nenhum tom de área se confunde com outro — distância em oklab (ΔE ≥ 0,06 entre estados; ≥ 0,035 entre áreas).
+const dE = (a, b) => { const A = toOklab(a), B = toOklab(b); return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); };
+const separa = (rot, a, b, min) => { const d = dE(a, b); const ok = d >= min; if (!ok) falhas++; console.log(`${ok ? '✓' : '✗'} ${rot.padEnd(46)} ΔE ${d.toFixed(3)} (mín. ${min})`); };
+const estados = ['bom', 'ruim', 'alerta', 'acao', 'info'];
+for (let i = 0; i < estados.length; i++) for (let j = i + 1; j < estados.length; j++) separa(`${estados[i]} × ${estados[j]}`, P(estados[i]), P(estados[j]), 0.06);
+const tonsDistintos = ['voce', 'pessoas', 'formacao', 'trabalho', 'tempo', 'saude'];
+for (let i = 0; i < tonsDistintos.length; i++) for (let j = i + 1; j < tonsDistintos.length; j++) separa(`área ${tonsDistintos[i]} × ${tonsDistintos[j]}`, P(tonsDistintos[i]), P(tonsDistintos[j]), 0.035);
 for (const a of areas) checa(`${a} (clima difícil) sobre papel`, mix(P(a), P('neutro'), 0.55), P('papel'), 4.5);
 }
 console.log(falhas ? `\n${falhas} par(es) abaixo do mínimo` : '\nTodos os pares acima do mínimo.');

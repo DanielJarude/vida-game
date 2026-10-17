@@ -62,6 +62,11 @@ interface Base {
   garantido?: boolean;
   /** Só abre por comando do jogador (ex.: entrevista de emprego). Nunca sorteado. */
   manual?: boolean;
+  /**
+   * REWORK 7.5: a entrada da Linha da Vida de que este conteúdo é consequência, quando o motor SABE (a crise em casa
+   * segue a crise da cidade). Vira `Entrada.segue`. Ausente = sem origem conhecida (nada por semelhança).
+   */
+  origem?: (c: Ctx) => string | undefined;
 }
 
 export interface Narrativa {

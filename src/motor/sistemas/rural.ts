@@ -29,6 +29,9 @@ import { modeloMoradia, precoImovel } from '../dados/bens';
 function hash(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  // REWORK 7.5: a mistura final (avalanche). Sem ela, anos seguidos ("…:2057", "…:2058") só mexiam nos bits baixos e a
+  // safra quase não mudava de um ano para o outro: o Paraná passava 100 anos sem safra ruim; Mato Grosso, dez seguidas.
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
   return (h >>> 0) / 4294967295;
 }
 
