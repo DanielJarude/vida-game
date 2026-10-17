@@ -70,6 +70,9 @@ export interface LeituraLar {
   formaVeiculo?: FormaVeiculo;
   /** FIX pós-REWORK 4: a cor do veículo na porta e a fachada da casa (a cor de verdade, do mundo). */
   corVeiculo?: string;
+  /** REWORK 8: o modelo e o estado do veículo na porta (o desenho é o do modelo, com o desgaste dele). */
+  versaoVeiculo?: string;
+  estadoVeiculo?: number;
   fachada?: { cor: string; nome: string };
   janelasAcesas: number;
 }
@@ -168,6 +171,8 @@ export function leituraDoLar(v: Vida): LeituraLar {
     veiculo: cat,
     formaVeiculo: vei ? formaDaVersao(versaoVeiculo(vei.versaoId), vei.modeloId) : undefined,
     corVeiculo: vei ? corDoVeiculo(vei, modeloVeiculo(vei.modeloId).categoria).cor : undefined,
+    versaoVeiculo: vei?.versaoId,
+    estadoVeiculo: vei?.estado,
     fachada: fachadaDe(chaveDaCasa(v), forma),
     janelasAcesas: 1 + junto.length
   };
@@ -304,6 +309,8 @@ export interface LeituraBem {
   icone: string;
   /** Veículo: a forma (o desenho próprio — hatch, picape, scooter, lancha). */
   forma?: FormaVeiculo;
+  /** REWORK 8: o modelo (o desenho é o dele). */
+  versaoId?: string;
   /** REWORK 4: a cor do veículo (e o nome dela). */
   cor?: string;
   corNome?: string;
@@ -353,6 +360,7 @@ export function leituraDoBem(v: Vida, b: Bem): LeituraBem {
   const anos = anosDoVeiculo(v, b);
   return {
     id: b.id, tipo: 'veiculo', icone: m.categoria, forma: formaDaVersao(versaoVeiculo(b.versaoId), m.id), modeloId: m.id, estadoNumero: b.estado,
+    versaoId: b.versaoId,
     // REWORK 4: a cor deste veículo (da compra; saves antigos: estável pelo id).
     cor: corDoVeiculo(b, m.categoria).cor,
     corNome: corDoVeiculo(b, m.categoria).nome,

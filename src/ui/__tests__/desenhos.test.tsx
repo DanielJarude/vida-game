@@ -26,7 +26,9 @@ describe('veículos: famílias de desenho', () => {
   });
 
   it('carros: a altura do teto separa o sedã do SUV, e o SUV de sete lugares tem mais janelas', () => {
-    const vidros = (f: FormaVeiculo) => { const { container } = render(<DesenhoVeiculo forma={f} />); const n = [...container.querySelectorAll('path[fill-opacity="0.5"]')].length; cleanup(); return n; };
+    // REWORK 8: o desenho passou para o renderizador de peças (`ilustracao/`); cada parte diz o que é em `data-peca`
+    // (antes, o vidro era reconhecido pela opacidade do preenchimento, um detalhe do traço antigo).
+    const vidros = (f: FormaVeiculo) => { const { container } = render(<DesenhoVeiculo forma={f} />); const n = [...container.querySelectorAll('[data-peca="vidro"]')].length; cleanup(); return n; };
     expect(vidros('suv_grande')).toBeGreaterThan(vidros('seda'));
     expect(vidros('suv_medio')).toBeGreaterThan(vidros('suv'));
   });

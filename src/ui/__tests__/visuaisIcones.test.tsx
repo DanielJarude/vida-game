@@ -32,17 +32,21 @@ describe('aviões: famílias morfológicas', () => {
 
   it('o que separa as famílias está no desenho: hélice no nariz, naceles, janelinhas do jato, asa alta × baixa', () => {
     const conta = (f: FormaVeiculo, sel: string) => { const { container } = render(<DesenhoVeiculo forma={f} />); const n = container.querySelectorAll(sel).length; cleanup(); return n; };
-    // O jato não tem hélice (o disco translúcido); o bimotor tem a da nacele; o monomotor, a do nariz.
-    const helices = (f: FormaVeiculo) => conta(f, 'ellipse[fill-opacity="0.22"]');
+    // REWORK 8: as partes são lidas pelo que SÃO (`data-peca`), não pelo detalhe do traço antigo (a opacidade do disco
+    // da hélice, a espessura da linha da asa) — o desenho mudou de linguagem, a regra continua a mesma.
+    // O jato não tem hélice; o bimotor tem a da nacele; o monomotor, a do nariz.
+    const helices = (f: FormaVeiculo) => conta(f, '[data-peca="helice"]');
     expect(helices('jato')).toBe(0);
     expect(helices('monomotor')).toBe(1);
     expect(helices('bimotor')).toBeGreaterThanOrEqual(1);
+    expect(conta('bimotor', '[data-peca="nacele"]')).toBeGreaterThanOrEqual(1);
     // O jato tem a fileira de janelinhas redondas.
-    expect(conta('jato', 'circle[fill-opacity="0.5"]')).toBeGreaterThanOrEqual(5);
-    // Asa alta (montante) × asa baixa: a asa do monomotor fica acima da cabine, a do asa-baixa embaixo.
-    const asaY = (f: FormaVeiculo) => { const { container } = render(<DesenhoVeiculo forma={f} />); const ys = [...container.querySelectorAll('path[stroke-width="1.2"]')].map(p => Number((p.getAttribute('d') ?? '').match(/^M[\d.]+ ([\d.]+)/)?.[1] ?? NaN)).filter(Number.isFinite); cleanup(); return ys[0]; };
-    expect(asaY('monomotor')).toBeLessThan(10);
-    expect(asaY('asa_baixa')).toBeGreaterThan(14);
+    expect(conta('jato', '[data-peca="janela"]')).toBeGreaterThanOrEqual(5);
+    // Asa alta (montante) × asa baixa: a asa do monomotor fica acima da cabine, a do asa-baixa embaixo da fuselagem.
+    const asaY = (f: FormaVeiculo) => { const { container } = render(<DesenhoVeiculo forma={f} />); const y = Number(container.querySelector('[data-peca="asa"]')?.getAttribute('data-y')); cleanup(); return y; };
+    expect(asaY('monomotor')).toBeLessThan(60);
+    expect(asaY('asa_baixa')).toBeGreaterThan(80);
+    expect(conta('monomotor', '[data-peca="escora"]')).toBe(1);
   });
 
   it('o catálogo usa as famílias: Archer é asa baixa, Skyhawk é asa alta, os ultraleves são ultraleves', () => {
@@ -78,10 +82,11 @@ describe('moto aquática: desenho próprio', () => {
     expect(jet).not.toBe(traco(<DesenhoVeiculo forma="lancha" />));
     expect(jet).not.toBe(traco(<DesenhoVeiculo forma="veleiro" />));
     const { container } = render(<DesenhoVeiculo forma="jetski" rotulo="moto aquática" />);
-    // O banco (massa mais cheia), o guidão (traço grosso), as gotas do jato.
-    expect(container.querySelectorAll('path[fill-opacity="0.55"]').length).toBe(1);
-    expect(container.querySelectorAll('path[stroke-width="2.4"]').length).toBe(1);
-    expect(container.querySelectorAll('circle').length).toBeGreaterThanOrEqual(2);
+    // O banco, o guidão, o jato de espuma (REWORK 8: lidos em `data-peca`, não na espessura do traço antigo).
+    expect(container.querySelectorAll('[data-peca="banco"]').length).toBe(1);
+    expect(container.querySelectorAll('[data-peca="guidao"]').length).toBe(1);
+    expect(container.querySelectorAll('[data-peca="espuma"]').length).toBeGreaterThanOrEqual(1);
+    expect(container.querySelector('[data-peca="vela"]')).toBeNull();
   });
 });
 

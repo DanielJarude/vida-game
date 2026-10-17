@@ -46,7 +46,6 @@ import { dinheiroCheio, dinheiroCurto, formaDoModelo } from '../../leituraMateri
 export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | 'clinica' | LojaDeCoisas;
 /** As lojas das coisas da vida (`dados/coisas`). */
 export const LOJAS_DE_COISAS: LojaDeCoisas[] = ['eletronicos', 'casa', 'instrumentos', 'esportes', 'livraria'];
-export const ICONE_DA_LOJA: Record<LojaDeCoisas, string> = { eletronicos: 'eletronicos', casa: 'eletrodomesticos', instrumentos: 'instrumentos', esportes: 'esportes', livraria: 'livraria' };
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFechar: () => void; trocar: (l: QualLugar) => void }
 
@@ -521,7 +520,7 @@ function Oficina({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
       {lista.map(b => b.tipo === 'veiculo' && (
         <li key={b.id} className="oficina">
           <div className="oferta oferta--estatica">
-            <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId)} semente={b.id} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} largura={64} />
+            <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId)} semente={b.id} versaoId={b.versaoId} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} largura={64} />
             <span className="oferta__texto"><strong>{capitalizar(nomeComCor(b))} {b.anoFabricacao ?? ''}</strong><span>{estadoDoVeiculo(b)}{b.problema ? ` — ${dinheiroCheio(b.problema.custo)}` : ''}</span></span>
           </div>
           <div className="grupo-acoes grupo-acoes--linha">

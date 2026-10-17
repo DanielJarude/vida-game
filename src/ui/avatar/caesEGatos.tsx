@@ -229,7 +229,7 @@ export function morfologiaCao(semente: string, porte?: Porte, raca?: Partial<Mor
 
 const PERNA = { curtas: 8, medias: 16, longas: 23 };
 const CORPO = { compacto: [31, 16, 2], atletico: [37, 17, 6], comprido: [48, 14, 1.5], robusto: [39, 20, 2] } as const;
-const ESCALA_CAO = { pequeno: 0.76, medio: 0.86, grande: 1 };
+const ESCALA_CAO = { pequeno: 0.84, medio: 0.92, grande: 1 };
 const CRANIO = { larga: 1.12, cunha: 0.96, redonda: 1.14, quadrada: 1, fina: 0.84 };
 
 /** O cão inteiro, de perfil (cabeça à direita), no chão em y = 90. */
@@ -317,15 +317,19 @@ export function FiguraCao({ m }: { m: MorfoCao }): ReactElement {
   const xsCauda = { enrolada: bx - 4, reta: bx - 16, peluda: bx - 13, foice: bx - 8, curta: bx - 4, fina: bx - 14 }[m.cauda];
   const minX = Math.min(xsCauda, x0 - 3, m.orelhas === 'rosa' ? ex - R * 1.1 : x0), maxX = tx + 1.5;
   const topo = Math.min(ey - R * 1.15 * alta - 1, hy - R - 1, m.cauda === 'enrolada' ? yr - 16 : m.cauda === 'foice' ? by - 18 : G);
-  const k = Math.min(ESCALA_CAO[m.porte], 92 / (maxX - minX), 84 / (G - topo));
+  // REWORK 8: o bicho PREENCHE o retrato (antes ficava pequeno, com muito fundo em cima): a escala sai da caixa do
+  // corpo, o porte só tira um pouco (o pequeno continua menor que o grande, sem virar um ponto no quadro), e o corpo
+  // fica centrado na altura — o chão desce até onde o bicho couber.
+  const k = Math.min(92 / (maxX - minX), 82 / (G - topo)) * ESCALA_CAO[m.porte];
   const dx = 50 - (minX + maxX) / 2;
+  const chao = Math.min(94, 50 + ((G - topo) * k) / 2 + 3);
   const meia = m.padrao === 'peito' && m.pelo !== 'longo';
   const longo = m.pelo === 'longo', denso = m.pelo === 'denso', duro = m.pelo === 'duro';
 
   return (
     <g data-morfo={`cao:${m.porte}/${m.familia}/${m.corpo}/${m.pernas}/${m.focinho}/${m.orelhas}/${m.cauda}/${m.pelo}/${m.cabeca}`}>
-      <ellipse cx="50" cy={G + 0.5} rx={n(Math.min(44, (maxX - minX) * k * 0.45))} ry="3" fill="#000000" opacity="0.08" />
-      <g transform={`translate(50 ${G}) scale(${n(k * 100) / 100}) translate(${n(dx - 50)} ${-G})`}>
+      <ellipse cx="50" cy={n(chao + 0.5)} rx={n(Math.min(46, (maxX - minX) * k * 0.45))} ry="3" fill="#000000" opacity="0.1" />
+      <g transform={`translate(50 ${n(chao)}) scale(${n(k * 100) / 100}) translate(${n(dx - 50)} ${-G})`}>
         {/* do lado de lá */}
         <path d={frente(fx - 5)} fill={longe} />
         {coxa(4, longe)}
@@ -411,9 +415,20 @@ export function morfologiaGato(semente: string, raca?: Partial<MorfoGato>): Morf
 
 /** O gato inteiro, de perfil (cabeça à direita): a postura escolhe o corpo; a cabeça é a mesma. */
 export function FiguraGato({ m }: { m: MorfoGato }): ReactElement {
-  const corpo = m.postura === 'deitado' ? <GatoDeitado m={m} /> : m.postura === 'em_pe' ? <GatoEmPe m={m} /> : <GatoSentado m={m} />;
-  return <g data-morfo={`gato:${m.tipo}/${m.corpo}/${m.cabeca}/${m.orelhas}/${m.cauda}/${m.postura}/${m.pelo}`}>{corpo}</g>;
+  const [corpo, [x0, y0, x1, y1]] = m.postura === 'deitado' ? gatoDeitado(m) : m.postura === 'em_pe' ? gatoEmPe(m) : gatoSentado(m);
+  // REWORK 8: o gato preenche o retrato como o cão (centrado, sem o fundo vazio em cima), pela caixa da postura.
+  const k = Math.min(90 / (x1 - x0), 80 / (y1 - y0), 1.45);
+  const chao = Math.min(95, 50 + ((y1 - y0) * k) / 2 + 2);
+  return (
+    <g data-morfo={`gato:${m.tipo}/${m.corpo}/${m.cabeca}/${m.orelhas}/${m.cauda}/${m.postura}/${m.pelo}`}>
+      <g transform={`translate(50 ${n(chao)}) scale(${n(k * 100) / 100}) translate(${n(-(x0 + x1) / 2)} ${n(-y1)})`}>{corpo}</g>
+    </g>
+  );
 }
+/** A caixa de uma postura (x0, y0, x1, y1) — o que o retrato enquadra. */
+type Caixa = [number, number, number, number];
+const fimDaCabeca = (m: MorfoGato, hx: number, R: number) => hx + R * (m.cabeca === 'cunha' ? 1.6 : 1.15) + 1;
+const topoDaCabeca = (m: MorfoGato, hy: number, R: number) => hy - R * (m.orelhas === 'dobradas' ? 1.2 : m.orelhas === 'pequenas' ? 1.45 : 2.05) - (m.orelhas === 'tufos' ? 3 : 0);
 
 /** As cores de um gato (a ponta escura do siamês, o claro do bicolor, o escuro das listras). */
 function coresGato(m: MorfoGato) {
@@ -427,7 +442,7 @@ function coresGato(m: MorfoGato) {
 const RAIO_CABECA_GATO = { esguio: 8.8, medio: 10, robusto: 11.2 };
 
 /** Deitado de bruços, "em pão": o corpo é um domo baixo, as patas da frente aparecem, a cauda contorna o chão. */
-function GatoDeitado({ m }: { m: MorfoGato }): ReactElement {
+function gatoDeitado(m: MorfoGato): [ReactElement, Caixa] {
   const { c, escuro, longe, claro, ponta } = coresGato(m);
   const G = 88;
   const [aj1, , aj3] = m.ajuste ?? [0, 0, 0];
@@ -441,7 +456,8 @@ function GatoDeitado({ m }: { m: MorfoGato }): ReactElement {
   const cauda = m.cauda === 'curta' ? `M${P(x0 + 1, G - 6)}l-3 -1` : `M${P(x0 + 2, G - 3)}C${P(x0 - 8, G - 1, x0 - 6, G + 1, x0 + 6, G - 0.5)}C${P(x0 + 16, G - 1, x0 + 26, G - 1, x0 + 32, G - 3)}`;
   const largCauda = m.cauda === 'curta' ? 6 : m.cauda === 'peluda' ? (longo ? 9 : 7.5) : 4;
   const listras = m.padrao === 'tigrado' ? [0.2, 0.36, 0.52, 0.68].map(f => `M${P(x0 + comp * f, G - alt * (f < 0.3 ? 0.78 : 0.98))}l${P(-1.5, alt * 0.45)}`).join('') : '';
-  return (
+  const caixa: Caixa = [x0 - (m.cauda === 'curta' ? 3 : 6), Math.min(topoDaCabeca(m, hy, R), G - alt - 2), Math.max(fimDaCabeca(m, hx, R), x1 + 8 + 6 * w), G + 3];
+  return [(
     <g>
       <ellipse cx={n((x0 + x1) / 2 + 4)} cy={G + 0.5} rx={n(comp * 0.62)} ry="3" fill="#000000" opacity="0.08" />
       <path d={domo} fill={c} />
@@ -456,11 +472,11 @@ function GatoDeitado({ m }: { m: MorfoGato }): ReactElement {
       <ellipse cx={n(x1 + 8)} cy={G - 1.8} rx={n(6 * w)} ry="2.6" fill={m.padrao === 'bicolor' ? claro : m.padrao === 'pontas' ? ponta : c} />
       <CabecaGato m={m} hx={hx} hy={hy} R={R} />
     </g>
-  );
+  ), caixa];
 }
 
 /** Em pé, de perfil, andando: costas retas, pernas finas, a cauda em ponto de interrogação. */
-function GatoEmPe({ m }: { m: MorfoGato }): ReactElement {
+function gatoEmPe(m: MorfoGato): [ReactElement, Caixa] {
   const { c, escuro, longe, claro, ponta } = coresGato(m);
   const G = 90;
   const [aj1, aj2, aj3] = m.ajuste ?? [0, 0, 0];
@@ -474,18 +490,21 @@ function GatoEmPe({ m }: { m: MorfoGato }): ReactElement {
   const hx = x1 + 6, hy = yt - R * 0.45;
   const corpo = `M${P(x1 - 2, yt + 1)}C${P(x1 + 5, yt + 2, x1 + 6, yb - 2, x1 - 2, yb)}C${P(x1 - comp * 0.4, yb + 2, x0 + comp * 0.3, yb + (longo ? 3 : 1), x0 + 3, yb - 1)}C${P(x0 - 4, yb - 3, x0 - 4, yt + 1, x0 + 3, yt)}C${P(x0 + comp * 0.4, yt - 3, x1 - comp * 0.3, yt - 1, x1 - 2, yt + 1)}Z`;
   const pescoco = `M${P(x1 - 7, yt + 3)}C${P(x1 - 4, yt - 4, hx - R * 0.6, hy - R * 0.3, hx - R * 0.2, hy)}L${P(hx + R * 0.3, hy + R * 0.7)}C${P(x1 + 4, yt + 4, x1 + 4, yt + alt * 0.5, x1 + 1, yt + alt * 0.6)}Z`;
-  const pernaD = (x: number, dx: number) => `M${P(x, yb - 4)}L${P(x + dx, G - 1.5)}`;
   const largPerna = 4.2 * w;
   const cauda = m.cauda === 'curta' ? `M${P(x0 + 1, yt + 3)}l-2.5 -3` : `M${P(x0 + 1, yt + 3)}C${P(x0 - 6, yt - 2, x0 - 6, yt - 16, x0 - 1, yt - 22)}C${P(x0 + 2, yt - 26, x0 + 6, yt - 23, x0 + 4, yt - 19)}`;
   const largCauda = m.cauda === 'curta' ? 6 : m.cauda === 'peluda' ? (longo ? 9 : 7.5) : 4 * (m.corpo === 'esguio' ? 0.8 : 1);
   const patas = m.padrao === 'bicolor' ? claro : m.padrao === 'pontas' ? ponta : c;
   const listras = m.padrao === 'tigrado' ? [0.25, 0.42, 0.59, 0.76].map(f => `M${P(x0 + comp * f, yt + 0.5)}l${P(-1, alt * 0.55)}`).join('') : '';
-  return (
+  const caixa: Caixa = [x0 - 7, Math.min(topoDaCabeca(m, hy, R), m.cauda === 'curta' ? yt : yt - 27), fimDaCabeca(m, hx, R), G + 3];
+  // REWORK 8: as pernas afinam até a pata (coxa → canela → pata), não são mais um bastão do mesmo grosso.
+  const perninha = (x: number, dx: number, cor: string) => <path d={membroGato([[x, yb - 4], [x + dx * 0.6, yb + (G - yb) * 0.55], [x + dx, G - 1.6]], [largPerna * 1.25, largPerna * 0.85, largPerna * 0.8])} fill={cor} />;
+  return [(
     <g>
       <ellipse cx="50" cy={G + 0.5} rx={n(comp * 0.7)} ry="3" fill="#000000" opacity="0.08" />
       {/* do lado de lá */}
-      <path d={pernaD(x1 - 9, 1.5)} stroke={m.padrao === 'pontas' ? ponta : longe} strokeWidth={n(largPerna)} strokeLinecap="round" />
-      <path d={pernaD(x0 + 9, -1)} stroke={m.padrao === 'pontas' ? ponta : longe} strokeWidth={n(largPerna)} strokeLinecap="round" />
+      {perninha(x1 - 9, 1.5, m.padrao === 'pontas' ? ponta : longe)}
+      {perninha(x0 + 9, -1, m.padrao === 'pontas' ? ponta : longe)}
+      <ellipse cx={n(x1 - 7.6)} cy={G - 1.2} rx={n(largPerna * 0.75)} ry="1.4" fill={m.padrao === 'pontas' ? ponta : longe} />
       <path d={cauda} stroke={m.padrao === 'pontas' ? ponta : c} strokeWidth={n(largCauda)} strokeLinecap="round" fill="none" />
       {m.padrao === 'tigrado' && m.cauda !== 'curta' && <path d={cauda} stroke={escuro} strokeWidth={n(largCauda)} strokeDasharray="1.6 4" fill="none" />}
       <path d={pescoco} fill={c} />
@@ -496,11 +515,22 @@ function GatoEmPe({ m }: { m: MorfoGato }): ReactElement {
       {listras && <path d={listras} stroke={escuro} strokeWidth="2" strokeLinecap="round" fill="none" />}
       {/* coxa e as pernas de cá */}
       <ellipse cx={n(x0 + 6)} cy={n(yt + alt * 0.6)} rx={n(8 * w)} ry={n(alt * 0.55)} fill={c} />
-      <path d={`M${P(x0 + 7, yb - 2)}L${P(x0 + 2, G - perna * 0.4)}L${P(x0 + 4, G - 1.5)}`} stroke={patas} strokeWidth={n(largPerna)} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d={pernaD(x1 - 5, 0.5)} stroke={patas} strokeWidth={n(largPerna)} strokeLinecap="round" />
+      <path d={membroGato([[x0 + 7, yb - 3], [x0 + 2, G - perna * 0.4], [x0 + 4.5, G - 1.6]], [largPerna * 1.6, largPerna * 0.8, largPerna * 0.8])} fill={patas} />
+      <ellipse cx={n(x0 + 5.8)} cy={G - 1.2} rx={n(largPerna * 0.8)} ry="1.5" fill={patas} />
+      {perninha(x1 - 5, 0.5, patas)}
+      <ellipse cx={n(x1 - 3.8)} cy={G - 1.2} rx={n(largPerna * 0.8)} ry="1.5" fill={patas} />
       <CabecaGato m={m} hx={hx} hy={hy} R={R} />
     </g>
-  );
+  ), caixa];
+}
+
+/** Um membro que afina (o eixo e a largura em cada ponto) → um contorno liso, com a ponta redonda. */
+function membroGato(eixo: [number, number][], larg: number[]): string {
+  const nrm = (k: number) => { const a = eixo[Math.max(0, k - 1)], b = eixo[Math.min(eixo.length - 1, k + 1)]; const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1; return [-dy / L, dx / L]; };
+  const esq = eixo.map((p, k) => { const [nx, ny] = nrm(k); return [p[0] + nx * larg[k] / 2, p[1] + ny * larg[k] / 2]; });
+  const dir = eixo.map((p, k) => { const [nx, ny] = nrm(k); return [p[0] - nx * larg[k] / 2, p[1] - ny * larg[k] / 2]; }).reverse();
+  const r = larg[larg.length - 1] / 2;
+  return `M${esq.map(p => P(p[0], p[1])).join('L')}A${P(r, r)} 0 0 1 ${P(dir[0][0], dir[0][1])}L${dir.map(p => P(p[0], p[1])).join('L')}Z`;
 }
 
 /** A cabeça do gato (a mesma em toda postura): crânio, orelhas, focinho, olho, bigode e a juba do pelo longo. */
@@ -547,7 +577,7 @@ function CabecaGato({ m, hx, hy, R }: { m: MorfoGato; hx: number; hy: number; R:
 }
 
 /** Sentado de perfil (cabeça à direita), no chão em y = 91. */
-function GatoSentado({ m }: { m: MorfoGato }): ReactElement {
+function gatoSentado(m: MorfoGato): [ReactElement, Caixa] {
   const c = m.cor;
   const escuro = misturar(c, '#000000', 0.38), longe = misturar(c, '#000000', 0.18);
   const claro = luminancia(c) > 0.55 ? '#fbf7f0' : misturar(c, '#ffffff', 0.62);
@@ -577,8 +607,9 @@ function GatoSentado({ m }: { m: MorfoGato }): ReactElement {
     ? [listra(ax - 10 * w, ay - 8, 7, -1), listra(ax - 4 * w, ay - 11, 7, -1.5), listra(ax + 2, ay - 12, 6, -1.6), listra(sx - 7, sy + 4, 6, -1), listra(hx - R * 0.3, hy - R * 0.85, 4, 0.4), listra(hx + R * 0.05, hy - R * 0.9, 3.6, 0.5)].join('')
     : '';
   const dx = m.postura === 'erguida' ? 4 : 0;
+  const caixa: Caixa = [Math.min(ax - 14 * w - 2, m.cauda === 'curta' ? ax : m.postura === 'erguida' ? tb.x - 12 : tb.x - 6) + dx, Math.min(topoDaCabeca(m, hy, R), m.postura === 'erguida' && m.cauda !== 'curta' ? tb.y - 40 : G), fimDaCabeca(m, hx, R) + dx, G + 3];
 
-  return (
+  return [(
     <g>
       <ellipse cx="50" cy={G + 0.5} rx="30" ry="3" fill="#000000" opacity="0.08" />
       <g transform={`translate(${dx} 0)`}>
@@ -601,5 +632,5 @@ function GatoSentado({ m }: { m: MorfoGato }): ReactElement {
         <CabecaGato m={m} hx={hx} hy={hy} R={R} />
       </g>
     </g>
-  );
+  ), caixa];
 }

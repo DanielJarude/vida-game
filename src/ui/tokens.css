@@ -28,6 +28,8 @@
 
 :root,
 [data-amostra='claro'] {
+  /* REWORK 8: as fachadas da rua (cores do material, não da paleta) — no papel escuro, a rua à noite, um pouco mais baixa. */
+  --p-filtro-rua: none;
   /* ======================================== PALETA · MEMÓRIA CLARA (a base) */
   --p-papel: #f2eee5;          /* a página (marfim) */
   --p-papel-alto: #fbf9f4;     /* o que é uma coisa (cartão, ficha) */
@@ -296,6 +298,7 @@
    ========================================================================== */
 :root[data-tema='escuro'],
 [data-amostra='escuro'] {
+  --p-filtro-rua: brightness(0.82) saturate(0.9);
   --p-papel: #1a1d21;
   --p-papel-alto: #22262b;
   --p-papel-topo: #292e34;
@@ -338,6 +341,7 @@
    ========================================================================== */
 :root[data-paleta='horizonte'],
 [data-amostra='horizonte'] {
+  --p-filtro-rua: none;
   --p-papel: #eaeeeb;
   --p-papel-alto: #f5f7f5;
   --p-papel-topo: #fcfdfc;
@@ -380,6 +384,7 @@
    ========================================================================== */
 :root[data-paleta='atlantico'],
 [data-amostra='atlantico'] {
+  --p-filtro-rua: brightness(0.82) saturate(0.9);
   --p-papel: #101923;
   --p-papel-alto: #17212c;
   --p-papel-topo: #1e2935;

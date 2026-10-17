@@ -4,10 +4,10 @@
  * As lojas (imobiliária, concessionária, banco, óticas) moram em Compras.
  */
 
-import { LOJAS_DE_COISAS, ICONE_DA_LOJA, type QualLugar } from './material/Lugares';
+import { LOJAS_DE_COISAS, type QualLugar } from './material/Lugares';
 import { NOME_LOJA } from '../../motor/dados/coisas';
 import { temLojaNaCidade } from '../../motor/sistemas/coisas';
-import { Icone } from './material/Desenhos';
+import { Fachada } from '../ilustracao/Fachada';
 import { useMemo, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -57,7 +57,7 @@ export function Cidade({ vida, agir, irCompras, abrir }: Props & { irCompras?: (
             {LOJAS_DE_COISAS.map(l => (
               <li key={l}>
                 <button type="button" className="lugar-botao" onClick={() => abrir(l)}>
-                  <Icone nome={ICONE_DA_LOJA[l]} tamanho={26} />
+                  <Fachada lugar={l} recorte largura={64} className="lugar-botao__fachada" />
                   <span className="lugar-botao__nome">{NOME_LOJA[l]}</span>
                   <span className="lugar-botao__oque">{temLojaNaCidade(vida, l) ? `Aqui em ${m.nome}` : `Não há em ${m.nome}: pela internet, com frete`}</span>
                 </button>

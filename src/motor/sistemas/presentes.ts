@@ -95,11 +95,82 @@ export function presentear(v: Vida, pessoaId: string, coisaId: string): string {
   vin.tUltimoContato = v.t;
   v.anoAtual.acoes.push(`pessoa:presente:${pessoaId}`);
   lembrarCom(v, pessoaId, `Ganhou de você ${c.artigo} ${c.nome} (${cor.nome}).`, gosto === 'certeiro' ? 'apoio' : 'ritual', gosto === 'certeiro' ? 2 : 1);
-  const ele = flex(p.genero, 'ele', 'ela', 'elu');
-  if (tensa) return `${p.nome} agradeceu, meio sem jeito. O presente não resolveu o que está entre vocês — mas abriu uma porta.`;
-  if (gosto === 'certeiro') return `${p.nome} abriu ${c.artigo} ${c.nome} ${cor.nome} e ficou um tempo sem falar. Era exatamente o que ${ele} queria.`;
-  if (gosto === 'bom') return `${p.nome} gostou de verdade d${c.artigo} ${c.nome} — e usou na mesma semana.`;
-  return `${p.nome} agradeceu ${c.artigo === 'a' || c.artigo === 'as' ? 'a' : 'o'} ${c.nome}. Talvez não fosse bem o que ${ele} usaria, mas o gesto ficou.`;
+  return reacaoAoPresente(v, p, vin, c, cor.nome, gosto, gesto, tensa);
+}
+
+/* ------------------------------------------------------------------ A reação */
+
+type Tipo = 'instrumento' | 'tela' | 'casa' | 'esporte' | 'leitura' | 'jogo' | 'arte';
+const TIPO_DA_COISA = (c: Coisa): Tipo =>
+  c.loja === 'instrumentos' ? 'instrumento' : c.loja === 'eletronicos' ? 'tela' : c.loja === 'esportes' ? 'esporte'
+    : c.id === 'material_arte' ? 'arte' : c.id === 'livros' || c.id === 'livros_estudo' ? 'leitura' : c.loja === 'livraria' ? 'jogo' : 'casa';
+
+/**
+ * REWORK 8 (Fase B) — a reação ao presente sai do CONTEXTO, não de três frases fixas: o tipo da coisa (um instrumento
+ * se experimenta, uma tela se configura, um jogo se joga), a idade de quem ganha (a criança não larga; o adolescente
+ * disfarça; quem tem mais idade pede ajuda com o aparelho), o jeito (quem é expansivo mostra para todo mundo; quem é
+ * reservado agradece baixo), a relação (o par, o pai ou a mãe, o filho, o amigo) e o tamanho do gesto. Um presente
+ * simples pode ser o mais certeiro. A reação fala só do que acontece AGORA — nunca inventa uma lembrança que vocês não
+ * viveram (nada de "lembrou daquela viagem"). As variações são estáveis por presente (a mesma semente dá a mesma frase;
+ * dois presentes diferentes não dão a mesma frase).
+ */
+export function reacaoAoPresente(v: Vida, p: Pessoa, vin: { tensao: number; proximidade: number; parentesco?: string; romance?: unknown }, c: Coisa, corNome: string, gosto: Gosto, gesto: number, tensa: boolean): string {
+  const r = rngDe(v.id, p.id, c.id, v.t, 'reacao');
+  const um = <T,>(xs: T[]): T => xs[Math.floor(r.next() * xs.length)];
+  const ip = idadePessoa(v, p);
+  const fase = ip < 13 ? 'crianca' : ip < 18 ? 'adolescente' : ip < 65 ? 'adulto' : 'idoso';
+  const t = p.temperamento;
+  const tipo = TIPO_DA_COISA(c);
+  const g = (m: string, f: string, n?: string) => flex(p.genero, m, f, n);
+  const ele = g('ele', 'ela', 'elu');
+  const o = `${c.artigo} ${c.nome}`;
+  const doObjeto = `${c.artigo === 'a' ? 'da' : c.artigo === 'as' ? 'das' : c.artigo === 'os' ? 'dos' : 'do'} ${c.nome}`;
+  const par = !!vin.romance;
+  const paiOuMae = vin.parentesco === 'mae' || vin.parentesco === 'pai';
+  const filho = vin.parentesco === 'filho' || vin.parentesco === 'neto';
+
+  if (tensa) return um([
+    `${p.nome} agradeceu, meio sem jeito. O presente não resolveu o que está entre vocês — mas abriu uma porta.`,
+    `${p.nome} recebeu ${o} com um "obrigad${g('o', 'a', 'e')}" curto. Ainda há coisa por dizer entre vocês; o gesto, pelo menos, foi visto.`,
+    `${p.nome} não esperava. Guardou ${o} sem muita conversa — mas a conversa seguinte foi menos dura.`
+  ]);
+
+  // A abertura: o jeito de quem ganha e a idade.
+  const abertura = fase === 'crianca'
+    ? um([`${p.nome} rasgou o papel antes de você terminar de entregar`, `${p.nome} deu um grito quando viu o que era`, `${p.nome} abraçou a caixa antes de abrir`])
+    : fase === 'adolescente'
+      ? (t.extroversao > 0.2 ? um([`${p.nome} tirou foto ${doObjeto} na hora`, `${p.nome} abriu e já mandou mensagem para alguém contando`]) : um([`${p.nome} disse "valeu" do jeito de quem gostou mais do que mostra`, `${p.nome} tentou parecer indiferente e não conseguiu`]))
+      : t.extroversao > 0.3 ? um([`${p.nome} mostrou ${o} para quem estava por perto`, `${p.nome} riu alto quando abriu`])
+        : t.afabilidade > 0.3 ? um([`${p.nome} agradeceu duas vezes`, `${p.nome} segurou ${o} com cuidado e agradeceu baixinho`])
+          : um([`${p.nome} abriu devagar`, `${p.nome} olhou ${o} ${corNome} por um tempo`]);
+
+  // O uso: o que se faz com ESTA coisa, nesta idade (o que acontece agora, nada de lembrança inventada).
+  const uso: Record<Tipo, string[]> = {
+    instrumento: fase === 'crianca' ? ['e quis tirar uma música antes do jantar', 'e não deixou ninguém mais encostar'] : fase === 'idoso' ? ['e pediu um tempo para se acostumar com o instrumento', 'e tocou umas notas, devagar'] : ['e tocou umas notas ali mesmo', 'e passou a noite tentando a primeira música'],
+    tela: fase === 'idoso' ? ['e pediu ajuda para configurar', 'e quis que você mostrasse como liga'] : fase === 'crianca' ? ['e já estava mexendo antes de você ir embora', 'e não largou mais'] : ['e passou a tarde configurando', 'e começou a usar no mesmo dia'],
+    esporte: fase === 'idoso' ? ['e disse que vai usar com calma', 'e marcou de estrear na semana'] : ['e quis estrear no fim de semana', 'e já combinou de usar no próximo jogo'],
+    leitura: t.abertura > 0.2 ? ['e começou a ler ali mesmo', 'e leu a primeira página em voz alta'] : ['e deixou na cabeceira', 'e folheou com curiosidade'],
+    jogo: ['e quis jogar uma partida com você na hora', 'e leu as regras em voz alta'],
+    arte: fase === 'crianca' ? ['e fez um desenho na mesma tarde', 'e espalhou tudo na mesa'] : ['e testou as cores no papel', 'e separou um canto para usar'],
+    casa: ['e já pensou onde vai ficar', 'e arrumou um lugar para o presente na casa']
+  };
+
+  // A nota: o gosto, o gesto e a relação (o presente simples também pode ser o certeiro).
+  const interesse = interesseDe(p);
+  const nota = gosto === 'certeiro'
+    ? (gesto <= 1
+      ? um([`Não era caro — e não precisava ser: ${interesse} é a coisa d${g('ele', 'ela', 'elu')}.`, `Um presente simples, e acertou em cheio: é de ${interesse} que ${ele} gosta.`])
+      : um([`Você acertou: ${interesse} é a coisa d${g('ele', 'ela', 'elu')}.`, `Era exatamente o que ${ele} queria.`]))
+    : gosto === 'bom'
+      ? um([`Gostou de verdade.`, `Combinou com ${ele}.`, `Foi bem escolhido.`])
+      : um([`Talvez não seja bem o que ${ele} usaria — mas o gesto ficou.`, `Não é bem o estilo d${g('ele', 'ela', 'elu')}, e ${ele} agradeceu assim mesmo.`, `Não era o que ${ele} esperava; agradeceu com sinceridade.`]);
+  const relacao = par ? um([' Ganhou um beijo de agradecimento.', ' E segurou sua mão por um tempo.'])
+    : paiOuMae && gesto >= 2 ? ` Disse que você não precisava gastar com isso — e ficou ${g('orgulhoso', 'orgulhosa', 'orgulhose')}.`
+      : filho && fase === 'crianca' ? ' Dormiu com o presente do lado.'
+        : gesto >= 3 && vin.proximidade < 50 ? ' Percebeu o tamanho do gesto.'
+          : '';
+
+  return `${abertura} ${um(uso[tipo])}. ${nota}${relacao}`;
 }
 
 /** O que a pessoa tem que ganhou de você (para a ficha). */

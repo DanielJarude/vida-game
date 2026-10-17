@@ -174,7 +174,7 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
   return (
     <article className={`objeto objeto--${b.tipo}`}>
       <div className="objeto__cabeca">
-        {b.tipo === 'imovel' ? <span className={`icone-moradia icone-moradia--miniatura icone-moradia--${b.modeloId}`}><MiniaturaDaCasa forma={formaDoModelo(b.modeloId)} fachada={b.fachada} largura={84} rotulo={b.fachada ? `${b.titulo}, ${b.fachada.nome}` : b.titulo} /></span> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={`${NOME_FORMA[b.forma]}${b.corNome ? `, ${b.corNome}` : ''}`} largura={72} semente={b.id} cor={b.cor} estado={b.estadoNumero} /> : <Icone nome={b.icone} />}
+        {b.tipo === 'imovel' ? <span className={`icone-moradia icone-moradia--miniatura icone-moradia--${b.modeloId}`}><MiniaturaDaCasa forma={formaDoModelo(b.modeloId)} fachada={b.fachada} largura={84} rotulo={b.fachada ? `${b.titulo}, ${b.fachada.nome}` : b.titulo} /></span> : b.forma ? <DesenhoVeiculo forma={b.forma} rotulo={`${NOME_FORMA[b.forma]}${b.corNome ? `, ${b.corNome}` : ''}`} largura={72} semente={b.id} versaoId={b.versaoId} cor={b.cor} estado={b.estadoNumero} /> : <Icone nome={b.icone} />}
         <div className="objeto__nome">
           <h3>{b.titulo}</h3>
           <p>{b.meta}</p>

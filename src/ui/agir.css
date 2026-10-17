@@ -94,10 +94,7 @@
 .detalhe__veiculo .desenho-veiculo { width: min(220px, 70vw); height: auto; }
 @media (max-width: 480px) { .oferta.oferta--veiculo { grid-template-columns: 76px minmax(0, 1fr); } .oferta__veiculo { width: 76px; } .oferta.oferta--veiculo .oferta__preco { grid-column: 2; } }
 
-/* ---------------------------------------------------------- A casa na cor dela (a fachada é do mundo) */
-.cena--colorida .cena__parede { fill: color-mix(in oklab, var(--fachada) 58%, var(--bg-raised)); }
-.cena--colorida .cena__porta { fill: color-mix(in oklab, var(--fachada) 22%, var(--bg-deep)); }
-.cena__veiculo.desenho-veiculo--colorido .quadro { stroke-width: 2.2; }
+/* ---------------------------------------------------------- A casa na cor dela (a fachada é do mundo: `ilustracao/casas`) */
 .cena--miniatura { max-width: none; height: auto; flex: none; }
 .oferta.oferta--casa { grid-template-columns: 96px minmax(0, 1fr) auto; }
 .oferta__casa { position: relative; display: grid; place-items: center; width: 96px; min-height: 52px; border-radius: var(--radius-md); background: var(--bg-inset); }

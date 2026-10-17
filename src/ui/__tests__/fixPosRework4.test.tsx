@@ -122,8 +122,10 @@ describe('materialidade: o veículo tem cor (na loja e em Pertences), os objetos
     const violao = a.innerHTML; cleanup();
     const { container: b } = render(<DesenhoObjeto coisaId="violino" cor="#6e3f22" />);
     expect(b.innerHTML).not.toBe(violao); cleanup();
+    // REWORK 8: o contorno discreto da linguagem nova; no objeto quase preto, um fio claro (#857e75) segura a
+    // silhueta no papel escuro — a regra de antes, com o tom do renderizador novo.
     const { container: c } = render(<DesenhoObjeto coisaId="violao" cor="#2b2523" />);
-    expect(c.innerHTML).toMatch(/#d8cbb8/);
+    expect(c.querySelector('[data-peca="corpo"] path')?.getAttribute('stroke')).toBe('#857e75');
   });
 });
 

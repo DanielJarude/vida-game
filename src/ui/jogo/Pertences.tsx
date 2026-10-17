@@ -119,7 +119,7 @@ function VeiculoSeu({ vida, agir, b }: { vida: Vida; agir: (a: Acao) => boolean;
   const nome = cap(nomeComCor(b));
   return (
     <li className="pertence pertence--veiculo" style={{ ['--cor-do-objeto' as string]: cor.cor }}>
-      <div className="pertence__objeto pertence__objeto--veiculo"><DesenhoVeiculo forma={forma} semente={b.id} cor={cor.cor} estado={b.estado} largura={96} rotulo={`${NOME_FORMA[forma]}, ${corConcordada(cor.nome, vecFeminino(b))}`} /></div>
+      <div className="pertence__objeto pertence__objeto--veiculo"><DesenhoVeiculo forma={forma} semente={b.id} versaoId={b.versaoId} cor={cor.cor} estado={b.estado} largura={96} rotulo={`${NOME_FORMA[forma]}, ${corConcordada(cor.nome, vecFeminino(b))}`} /></div>
       <div className="pertence__corpo">
         <p className="pertence__nome"><strong>{nome}</strong> {b.anoFabricacao ? <span className="pertence__acabamento">{b.anoFabricacao}</span> : null}</p>
         <p className="pertence__meta">

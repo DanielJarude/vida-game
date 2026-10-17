@@ -31,7 +31,9 @@ import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { varianteDe } from '../../motor/sistemas/pertences';
 import { BotaoAcao, Secao } from '../comum';
 import { dinheiroCurto, formaDoModelo, leituraDaSeguranca } from '../leituraMaterial';
-import { DesenhoVeiculo, Icone, MiniaturaDaCasa } from './material/Desenhos';
+import { DesenhoVeiculo, MiniaturaDaCasa } from './material/Desenhos';
+import { Fachada } from '../ilustracao/Fachada';
+import { corDoVeiculo } from '../../motor/dados/pertences';
 import { DesenhoObjeto } from './material/Objetos';
 import { Retrato } from '../avatar/Retrato';
 import { LOJAS_DE_COISAS, type QualLugar } from './material/Lugares';
@@ -67,7 +69,7 @@ function vitrineDeVeiculos(v: Vida, loja: LojaDeVeiculo): { desenho: ReactNode; 
   const escolhidas = [...ofertas].sort((a, b) => a.preco - b.preco).filter(o => { const f = formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId); if (formas.has(f)) return false; formas.add(f); return true; }).slice(0, 3);
   return {
     preco: ofertas.length ? Math.min(...ofertas.map(o => o.preco)) : undefined,
-    desenho: escolhidas.map(o => <DesenhoVeiculo key={o.id} forma={formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId)} cor={o.cor} semente={o.id} estado={o.estado} largura={78} />)
+    desenho: escolhidas.map(o => <DesenhoVeiculo key={o.id} forma={formaDaVersao(versaoVeiculo(o.versaoId), o.modeloId)} versaoId={o.versaoId} cor={o.cor} semente={o.id} estado={o.estado} largura={78} />)
   };
 }
 
@@ -105,7 +107,7 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
   return [
     { grupo: 'Onde morar', id: 'moradia', lugares: [{
       id: 'alugar', nome: 'Imobiliária', oque: 'Alugar ou comprar onde morar', idadeMin: 18, porque: AUTONOMIA.moradia.antes,
-      vitrine: casas.length ? casas.map(o => <MiniaturaDaCasa key={o.id} forma={formaDoModelo(o.modeloId)} largura={84} />) : <MiniaturaDaCasa forma="apto_2q" largura={84} />,
+      vitrine: casas.map(o => <MiniaturaDaCasa key={o.id} forma={formaDoModelo(o.modeloId)} largura={84} />),
       preco: casas.length ? `aluguel a partir de ${dinheiroCurto(Math.min(...casas.map(o => o.aluguel)))}/mês` : undefined
     }] },
     { grupo: 'Ir e vir', id: 'veiculos', lugares: [
@@ -114,19 +116,19 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
       { id: 'motos', nome: 'Motos e bicicletas', oque: 'Novas e usadas; bicicleta é de qualquer idade', idadeMin: 10, porque: 'Com essa idade, a bicicleta vem da família.', vitrine: motos.desenho, preco: motos.preco ? `a partir de ${dinheiroCurto(motos.preco)}` : undefined },
       ...(nautica ? [{ id: 'nautica' as QualLugar, nome: 'Loja náutica', oque: 'Moto aquática, lancha, veleiro', idadeMin: 18, porque: 'A partir dos 18.', vitrine: vitrineDeVeiculos(v, 'nautica').desenho }] : []),
       ...(aero ? [{ id: 'aeroclube' as QualLugar, nome: 'Aeroclube e hangar', oque: 'Do ultraleve ao jato; a formação de piloto', idadeMin: 18, porque: 'A partir dos 18.', vitrine: vitrineDeVeiculos(v, 'aeroclube').desenho }] : []),
-      ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto do que é seu', idadeMin: 0, vitrine: <Icone nome="oficina" tamanho={44} />, seu: veiculosSeus.some(b => b.tipo === 'veiculo' && b.problema) ? 'Há um conserto esperando' : undefined }] : [])
+      ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto do que é seu', idadeMin: 0, vitrine: veiculosSeus.slice(0, 1).map(b => b.tipo === 'veiculo' ? <DesenhoVeiculo key={b.id} forma={formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId)} versaoId={b.versaoId} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} largura={88} /> : null), seu: veiculosSeus.some(b => b.tipo === 'veiculo' && b.problema) ? 'Há um conserto esperando' : undefined }] : [])
     ] },
     { grupo: 'As coisas do dia a dia', id: 'objetos', lugares: LOJAS_DE_COISAS.map(daLoja) },
     { grupo: 'O que se usa no corpo', id: 'aparencia', lugares: [
-      { id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio — o que aparece no retrato', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes, vitrine: <Icone nome="loja" tamanho={44} /> },
-      { id: 'clinica', nome: 'Clínica de cirurgia plástica', oque: 'Nariz, orelhas, pálpebras, lifting, cabelo, lábios', idadeMin: 16, porque: 'Cirurgia estética, só depois dos 16 (a maior parte, dos 18).', vitrine: <Icone nome="clinica" tamanho={44} /> }
+      { id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio — o que aparece no retrato', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes, vitrine: null },
+      { id: 'clinica', nome: 'Clínica de cirurgia plástica', oque: 'Nariz, orelhas, pálpebras, lifting, cabelo, lábios', idadeMin: 16, porque: 'Cirurgia estética, só depois dos 16 (a maior parte, dos 18).', vitrine: null }
     ] },
     { grupo: 'Serviços', id: 'servicos', lugares: [
-      { id: 'banco', nome: 'Banco', oque: 'Guardar, investir, pedir empréstimo', idadeMin: 18, porque: 'Conta e investimento no seu nome, a partir dos 18.', vitrine: <Icone nome="banco" tamanho={44} />, seu: v.financas.investimentos.length ? `${v.financas.investimentos.length} ${v.financas.investimentos.length === 1 ? 'aplicação' : 'aplicações'}` : undefined }
+      { id: 'banco', nome: 'Banco', oque: 'Guardar, investir, pedir empréstimo', idadeMin: 18, porque: 'Conta e investimento no seu nome, a partir dos 18.', vitrine: null, seu: v.financas.investimentos.length ? `${v.financas.investimentos.length} ${v.financas.investimentos.length === 1 ? 'aplicação' : 'aplicações'}` : undefined }
     ] },
     { grupo: 'Os bichos', id: 'animais', lugares: [
-      { id: 'abrigo', nome: 'Abrigo de animais', oque: 'Adotar um cão, um gato — às vezes, outro bicho', idadeMin: 18, porque: 'Adotar é coisa de adulto.', vitrine: bichos.length ? bichos.map(a => <Retrato key={a.id} visual={undefined} genero={a.genero} idade={a.idade} semente={a.id} tamanho={52} especie={a.especie} porte={a.porte} rotulo={a.nome} />) : <Icone nome="abrigo" tamanho={44} />, preco: 'adoção, sem custo' },
-      { id: 'pets', nome: 'Loja e criadouro de animais', oque: 'Aves, roedores, peixes; silvestres só com documento', idadeMin: 18, porque: 'Comprar um animal é coisa de adulto.', vitrine: <Icone nome="loja_pets" tamanho={44} /> }
+      { id: 'abrigo', nome: 'Abrigo de animais', oque: 'Adotar um cão, um gato — às vezes, outro bicho', idadeMin: 18, porque: 'Adotar é coisa de adulto.', vitrine: bichos.length ? bichos.map(a => <Retrato key={a.id} visual={undefined} genero={a.genero} idade={a.idade} semente={a.id} tamanho={52} especie={a.especie} porte={a.porte} rotulo={a.nome} />) : null, preco: 'adoção, sem custo' },
+      { id: 'pets', nome: 'Loja e criadouro de animais', oque: 'Aves, roedores, peixes; silvestres só com documento', idadeMin: 18, porque: 'Comprar um animal é coisa de adulto.', vitrine: null }
     ] }
   ];
 }
@@ -136,12 +138,15 @@ const O_QUE: Record<LojaDeCoisas, string> = {
   esportes: 'Chuteira, raquete, kit de academia, esteira', livraria: 'Livros, apostilas, material de arte, jogos'
 };
 
+/** A vitrine tem objetos de verdade na frente (senão, a fachada mostra o interior da loja). */
+const temObjetos = (v: ReactNode) => (Array.isArray(v) ? v.some(Boolean) : Boolean(v));
+
 function CartaoVitrine({ x, i, abrir }: { x: Vitrine; i: number; abrir: (l: QualLugar) => void }) {
   const cedo = i < x.idadeMin;
   return (
     <li className={`vitrine${cedo ? ' vitrine--cedo' : ''}`}>
       <button type="button" className="vitrine__abrir" onClick={() => abrir(x.id)} disabled={cedo} aria-describedby={cedo ? `cedo-${x.id}` : undefined}>
-        <span className="vitrine__objetos" aria-hidden>{x.vitrine}</span>
+        <span className="vitrine__objetos" aria-hidden><Fachada lugar={x.id === 'comprar' ? 'alugar' : x.id} largura={360} altura={112} vazia={!temObjetos(x.vitrine)} className="vitrine__fachada" />{x.vitrine}</span>
         <span className="vitrine__texto">
           <span className="vitrine__nome">{x.nome}</span>
           <span className="vitrine__oque" id={cedo ? `cedo-${x.id}` : undefined}>{cedo ? x.porque : x.oque}</span>

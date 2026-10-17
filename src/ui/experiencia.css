@@ -235,14 +235,22 @@ button.entrada__rosto:hover { color: var(--text-primary); background: var(--veu-
 .vitrines:last-child { border-bottom: 0; }
 .vitrines__titulo { font-size: var(--type-heading); margin-bottom: var(--space-3); }
 .vitrines__lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: var(--space-3); }
-.vitrine { min-width: 0; display: flex; }
+.vitrine { min-width: 0; display: flex; content-visibility: auto; contain-intrinsic-size: auto 260px; }
+/* REWORK 8: cada vitrine tem a fachada e os objetos desenhados; as que estão fora da tela não entram no layout nem na
+   pintura até chegarem perto (o tamanho reservado evita o pulo da rolagem). */
 .vitrine__abrir { width: 100%; display: flex; flex-direction: column; text-align: left; border-radius: var(--radius-lg); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); overflow: hidden; cursor: pointer; transition: box-shadow var(--motion-fast) var(--ease-out), transform var(--motion-fast); }
 .vitrine__abrir:hover:not(:disabled) { box-shadow: 0 0 0 1.5px var(--tom-linha), var(--shadow-md); }
 .vitrine__abrir:active:not(:disabled) { transform: scale(0.99); }
 .vitrine__abrir:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .vitrine__abrir:disabled { cursor: default; }
 .vitrine__objetos { display: flex; align-items: flex-end; justify-content: center; gap: var(--space-2); min-height: 92px; padding: var(--space-4) var(--space-3) var(--space-2); background: linear-gradient(to bottom, transparent 62%, var(--veu-2) 62%, var(--veu-2) calc(62% + 1px), var(--veu-1) calc(62% + 1px)); color: var(--tom); overflow: hidden; }
-.vitrine__objetos > * { flex: none; max-width: 34%; }
+.vitrine__objetos > * { flex: none; max-width: 34%; position: relative; }
+/* REWORK 8: a fachada do lugar é o fundo da vitrine (preenche a caixa; os objetos de verdade ficam na frente, na
+   calçada). Ela tem as cores do material (a pedra do banco, o tijolo da oficina), não as da paleta; nas paletas escuras,
+   é a rua à noite: um pouco mais baixa de luz, para não ofuscar o papel escuro. */
+.vitrine__objetos:has(> .vitrine__fachada) { position: relative; min-height: 112px; background: var(--veu-1); }
+.vitrine__objetos > .vitrine__fachada { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; }
+.vitrine__fachada { filter: var(--p-filtro-rua); }
 .vitrine__objetos .retrato { border-radius: 50%; }
 .vitrine__texto { display: flex; flex-direction: column; gap: 3px; padding: var(--space-3) var(--space-4) var(--space-4); min-width: 0; }
 .vitrine__nome { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: var(--weight-semibold); color: var(--text-primary); }

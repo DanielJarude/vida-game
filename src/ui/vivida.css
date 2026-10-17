@@ -29,7 +29,7 @@
 
 /* ---------------------------------------------------------- Pertences: o objeto na cor dele */
 .pertences__lista { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
-.pertence { display: grid; grid-template-columns: 72px 1fr; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--cor-do-objeto, var(--rule-strong)); }
+.pertence { display: grid; grid-template-columns: 72px 1fr; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--cor-do-objeto, var(--rule-strong)); content-visibility: auto; contain-intrinsic-size: auto 220px; }
 .pertence__objeto { width: 72px; height: 72px; border-radius: var(--radius-md); display: grid; place-items: center; background: color-mix(in oklab, var(--cor-do-objeto, #888) 16%, var(--bg-raised)); }
 .pertence__nome { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); }
 .pertence__acabamento { font-family: var(--font-sans); font-size: var(--type-meta); color: var(--text-muted); letter-spacing: 0.02em; }
