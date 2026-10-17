@@ -100,7 +100,7 @@ export function disponibilidadeAparencia(v: Vida, m: MudancaVisual): Veredito {
 
 /** Uma mudança que se nota de longe (e, em quem é conhecido, pode virar assunto). */
 function marcante(antes: Visual, m: MudancaVisual): boolean {
-  return (m.cabelo === 'raspado' && antes.cabelo !== 'raspado') || (!!m.corCabelo && CORES_TINTA.includes(m.corCabelo)) || (m.barba === 'cheia' && antes.barba !== 'cheia') || (!!m.chapeu && m.chapeu !== antes.chapeu) || (m.cabelo === 'black' && antes.cabelo !== 'black');
+  return (m.cabelo === 'raspado' && antes.cabelo !== 'raspado') || (!!m.corCabelo && CORES_TINTA.includes(m.corCabelo)) || (!!m.barba && ['cheia', 'longa', 'bigodao'].includes(m.barba) && antes.barba !== m.barba) || (!!m.chapeu && m.chapeu !== antes.chapeu) || (m.cabelo === 'black' && antes.cabelo !== 'black');
 }
 
 /** Muda o visual. Não entra na Linha da Vida (cortar o cabelo não é biografia) — a não ser que o público repare. */

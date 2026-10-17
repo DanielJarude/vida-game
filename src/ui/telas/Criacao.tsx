@@ -12,7 +12,7 @@ import { criarRng } from '../../motor/rng';
 import { CABELOS_F, CABELOS_M, CABELOS_N, CORES_CABELO, CORES_OLHOS, PELES, visualAleatorio } from '../../motor/pessoas';
 import { Retrato } from '../avatar/Retrato';
 import { texturaDe } from '../avatar/cabelos';
-import { TIPOS_DE_CABELO } from '../../motor/dados/estilo';
+import { BARBAS, TIPOS_DE_CABELO } from '../../motor/dados/estilo';
 import { Escolha } from '../comum';
 
 const ROTULO_CABELO: Record<string, string> = {
@@ -202,7 +202,7 @@ export function Criacao({ c }: { c: ControleVida }) {
               <label className="campo">
                 <span className="campo__rotulo">Barba quando adulto</span>
                 <select value={visual.barba ?? ''} onChange={e => setVisual(v => ({ ...v, barba: e.target.value || undefined }))}>
-                  <option value="">Sem barba</option><option value="bigode">Bigode</option><option value="cavanhaque">Cavanhaque</option><option value="curta">Barba curta</option><option value="cheia">Barba cheia</option>
+                  {BARBAS.map(b => <option key={b.id} value={b.id === 'nenhuma' ? '' : b.id}>{b.nome}</option>)}
                 </select>
               </label>
             )}

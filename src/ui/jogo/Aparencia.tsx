@@ -11,7 +11,7 @@ import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { AUTONOMIA, faseDeAutonomia } from '../../motor/sistemas/autonomia';
 import { itensDaPessoa, podeTerBarba, precisaDeOculos, texturaNatural, type MudancaVisual } from '../../motor/sistemas/estilo';
-import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, NOME_COR, TIPOS_DE_CABELO, itemEstilo } from '../../motor/dados/estilo';
+import { BARBAS, BARBAS_COM_BIGODE, CORES_NATURAIS, CORES_TINTA, CORTES, NOME_COR, TIPOS_DE_CABELO, itemEstilo } from '../../motor/dados/estilo';
 import { texturaDe } from '../avatar/cabelos';
 import { Retrato } from '../avatar/Retrato';
 import { BotaoAcao } from '../comum';
@@ -77,7 +77,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
                 </select>
               </label>
             )}
-            {barba && ['curta', 'cheia', 'por_fazer'].includes(m.barba ?? barbaAtual) && (
+            {barba && BARBAS_COM_BIGODE.includes(m.barba ?? barbaAtual) && (
               <label className="marcar"><input type="checkbox" checked={(m.bigode ?? vis.bigode) !== false} onChange={e => set('bigode', e.target.checked ? undefined : false, vis.bigode === false ? false : undefined)} /> Com bigode</label>
             )}
             {!barba && i < AUTONOMIA.barba.idade && vida.eu.genero !== 'feminino' && <p className="nota">{AUTONOMIA.barba.antes}</p>}

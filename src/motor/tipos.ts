@@ -209,10 +209,10 @@ export interface Visual {
   cabelo: string;
   corCabelo: string;
   olhos: string;
-  /** Barba: 'curta', 'cheia', 'por_fazer', 'cavanhaque' — ou só 'bigode'. */
+  /** Barba (`dados/estilo.BARBAS`): 'por_fazer', 'curta', 'cheia', 'longa', 'cavanhaque', 'costeletas' — ou só 'bigode', 'bigodao'. */
   barba?: string;
   /**
-   * Com a barba (curta, cheia, por fazer), o bigode vai junto — a não ser
+   * Com a barba (`dados/estilo.BARBAS_COM_BIGODE`), o bigode vai junto — a não ser
    * que a pessoa escolha tirar (`false`). Ausente = junto (saves antigos).
    */
   bigode?: boolean;

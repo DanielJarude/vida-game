@@ -234,7 +234,7 @@ export function visualDosPais(r: Rng, genero: Genero, anc: Ancestralidade, a?: V
     const z = ru.next();
     (v as unknown as Record<string, unknown>)[k] = z < 0.12 || (!px && !py) ? tracoUniversal(proprio, k) : z < 0.56 ? (px ?? py) : (py ?? px);
   }
-  return compactar(v);
+  return compactar(variarBarba(v));
 }
 
 /** O avô e a avó: gente de quem o pai ou a mãe herdou — parecidos com o filho, e um com o outro só pela origem. */
@@ -264,6 +264,22 @@ export function ancestralidadesDosPais(r: Rng, filho: Ancestralidade): [Ancestra
     a[o] = Math.max(0, w + desvio); b[o] = Math.max(0, w - desvio);
   }
   return [normalizar(a), normalizar(b)];
+}
+
+/**
+ * HOTFIX barbas: o sorteio de sempre escolhe entre bigode, cavanhaque, curta e cheia; daqui sai a variação (longa,
+ * bigodão, por fazer, costeletas, cavanhaque sem bigode) — num gerador semeado pelo rosto, sem gastar a sequência da
+ * vida e sem mexer no que já foi sorteado a partir da barba de origem. Aplicar duas vezes dá o mesmo resultado.
+ */
+export function variarBarba(v: Visual): Visual {
+  if (!v.barba) return v;
+  const r = rngDe('barba', v.pele, v.nariz ?? '', v.rosto ?? '', v.olhos, v.boca ?? '', v.corCabelo);
+  const z = r.next();
+  if (v.barba === 'cheia' && z < 0.22) return { ...v, barba: 'longa' };
+  if (v.barba === 'bigode' && z < 0.3) return { ...v, barba: 'bigodao' };
+  if (v.barba === 'curta') return z < 0.25 ? { ...v, barba: 'por_fazer' } : z < 0.32 ? { ...v, barba: 'costeletas' } : v;
+  if (v.barba === 'cavanhaque' && z < 0.25) return { ...v, bigode: false };
+  return v;
 }
 
 /** Um gerador semeado pelos traços que o gerador principal já sorteou: dá variação sem gastar a sequência da vida. */

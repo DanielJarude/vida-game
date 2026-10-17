@@ -54,8 +54,11 @@ export const TIPOS_DE_CABELO: { id: string; nome: string; nota: string }[] = [
 
 export const BARBAS: { id: string; nome: string }[] = [
   { id: 'nenhuma', nome: 'Sem barba' }, { id: 'por_fazer', nome: 'Por fazer' }, { id: 'curta', nome: 'Curta' },
-  { id: 'cheia', nome: 'Cheia' }, { id: 'cavanhaque', nome: 'Cavanhaque' }, { id: 'bigode', nome: 'Só bigode' }
+  { id: 'cheia', nome: 'Cheia' }, { id: 'longa', nome: 'Longa' }, { id: 'cavanhaque', nome: 'Cavanhaque' },
+  { id: 'costeletas', nome: 'Costeletas' }, { id: 'bigode', nome: 'Só bigode' }, { id: 'bigodao', nome: 'Bigodão' }
 ];
+/** As barbas que podem ir com ou sem bigode (o cavanhaque sem bigode é o tufo do queixo). */
+export const BARBAS_COM_BIGODE = ['por_fazer', 'curta', 'cheia', 'longa', 'cavanhaque', 'costeletas'];
 
 export const ROUPAS: { id: EstiloRoupa; nome: string }[] = [
   { id: 'basica', nome: 'Do dia a dia' }, { id: 'esportiva', nome: 'Esportiva' }, { id: 'social', nome: 'Social' },

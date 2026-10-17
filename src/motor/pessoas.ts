@@ -14,7 +14,7 @@ import { sortearNome, sortearSobrenome } from './dados/nomes';
 import { anoDe } from './tempo';
 import { cidadesDoPais, municipio } from './dados/lugares';
 import { rngDe } from './rng';
-import { ancestralidadeDe, chanceDoNomeDaTradicao, identidadeInicial, misturar, rngDosTracos, visualDaAncestralidade, visualDosPais, type Ancestralidade } from './sistemas/identidade';
+import { ancestralidadeDe, chanceDoNomeDaTradicao, identidadeInicial, misturar, rngDosTracos, variarBarba, visualDaAncestralidade, visualDosPais, type Ancestralidade } from './sistemas/identidade';
 
 export const PELES = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
 export const CORES_CABELO = ['preto', 'castanho_escuro', 'castanho', 'castanho_claro', 'loiro', 'ruivo'];
@@ -23,7 +23,13 @@ export const CABELOS_M = ['raspado', 'curto', 'curto_lado', 'topete', 'ondulado'
 export const CABELOS_F = ['longo_liso', 'longo_ondulado', 'cacheado_longo', 'black', 'chanel', 'pixie', 'coque', 'trancas', 'rabo', 'locs'];
 export const CABELOS_N = ['curto', 'ondulado', 'chanel', 'pixie', 'cacheado', 'black', 'rabo', 'locs'];
 
+/** O visual de quem não tem pais conhecidos (com a variação das barbas — `variarBarba`). */
 export function visualAleatorio(r: Rng, genero: Genero): Visual {
+  return variarBarba(visualSorteado(r, genero));
+}
+
+/** Os sorteios de sempre (a barba de origem: a herança é semeada por eles, e não pode mudar). */
+function visualSorteado(r: Rng, genero: Genero): Visual {
   const pele = r.weighted(PELES, p => ({ p1: 2, p2: 3, p3: 3, p4: 3, p5: 2, p6: 1.5 } as Record<string, number>)[p]) ?? 'p3';
   const escura = ['p4', 'p5', 'p6'].includes(pele);
   const corCabelo = escura
@@ -57,13 +63,13 @@ function comTracos(base: Visual, genero: Genero): Visual {
  * mesmos de antes; a herança sai de um gerador semeado por eles.
  */
 export function visualHerdado(r: Rng, genero: Genero, a?: Visual, b?: Visual, anc?: Ancestralidade, naturais: [string?, string?] = []): Visual {
-  const base = visualAleatorio(r, genero);
-  if (!a && !b) return base;
+  const base = visualSorteado(r, genero);
+  if (!a && !b) return variarBarba(base);
   const j = r.next(); const c1 = r.chance(0.5); const c2 = r.chance(0.5);
   const anc2 = anc ?? misturar(a ? ancestralidadeDe({ visual: a }) : undefined, b ? ancestralidadeDe({ visual: b }) : undefined)!;
   const v = visualDosPais(rngDosTracos(base, j, String(c1), String(c2), a?.pele, b?.pele, a?.olhos, b?.olhos), genero, anc2, a, b, naturais);
   if (genero === 'masculino') v.barba = base.barba;
-  return v;
+  return variarBarba(v);
 }
 
 export interface NovaPessoa {
