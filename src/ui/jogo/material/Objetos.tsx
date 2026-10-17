@@ -80,7 +80,7 @@ export const DesenhoObjeto = memo(function DesenhoObjeto({ coisaId, cor, tamanho
   const c = cor && /^#[0-9a-f]{6}$/i.test(cor) ? cor : '#a49a8c';
   const forma = F[FORMA_DA_COISA[coisaId] ?? 'jogos'];
   return (
-    <svg className="objeto" viewBox="0 0 48 48" width={tamanho} height={tamanho} role="img" aria-label={rotulo ?? coisaId} strokeWidth="1.2" strokeLinejoin="round">
+    <svg className="desenho-objeto" viewBox="0 0 48 48" width={tamanho} height={tamanho} role="img" aria-label={rotulo ?? coisaId} strokeWidth="1.2" strokeLinejoin="round">
       {forma(c, contorno(c), clarear(c))}
     </svg>
   );

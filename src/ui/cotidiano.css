@@ -156,9 +156,10 @@
 .comparar { margin: var(--space-2) 0 var(--space-3); }
 .comparar > summary { min-height: 40px; display: flex; align-items: center; cursor: pointer; font-weight: var(--weight-semibold); color: var(--text-secondary); }
 .comparar__rolagem { overflow-x: auto; max-width: 100%; }
-.comparar__tabela { width: 100%; border-collapse: collapse; font-size: var(--type-caption); }
+.comparar__tabela { width: 100%; min-width: 36rem; border-collapse: collapse; font-size: var(--type-caption); }
 .comparar__tabela th, .comparar__tabela td { padding: 6px var(--space-2); text-align: left; vertical-align: top; border-bottom: 1px solid var(--fio); }
 .comparar__tabela thead th { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-bold); }
 .comparar__tabela tbody th { font-weight: var(--weight-semibold); color: var(--text-primary); min-width: 9rem; }
 .comparar__seu th { color: var(--tom-casa); }
 .comparar__minha { font-weight: var(--weight-bold); color: var(--bom); }
+.comparar__tabela td:nth-child(4), .comparar__tabela td:last-child { min-width: 9rem; }

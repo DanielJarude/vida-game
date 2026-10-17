@@ -41,15 +41,25 @@
 .pertence__uso-rotulo { font-size: var(--type-meta); color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--tracking-meta); width: 100%; }
 .pertence__venda { margin-top: var(--space-2); }
 .link--discreto { font-size: var(--type-caption); color: var(--text-muted); }
-.objeto { display: block; }
+.desenho-objeto { display: block; flex: none; }
 @media (max-width: 480px) { .pertences__lista { grid-template-columns: 1fr; } .pertence { grid-template-columns: 56px 1fr; } .pertence__objeto { width: 56px; height: 56px; } }
 
 /* ---------------------------------------------------------- Ficha: presentes e rede */
 .ficha__extras { margin: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .ficha__nota-rede { font-size: var(--type-caption); color: var(--danger); }
 .presentes { display: grid; gap: var(--space-2); margin-top: var(--space-2); }
-.presente { display: grid; grid-template-columns: 36px 1fr auto; gap: var(--space-2); align-items: center; padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); }
-.presente__texto { display: flex; flex-direction: column; font-size: var(--type-caption); }
+/* O presente: [desenho | o que é | o botão]; o motivo de não dar, embaixo, em toda a largura. A coluna do texto é
+   `minmax(0, 1fr)` (nunca é espremida pelo botão), e o `.acao` some da grade (`display: contents`) para que o motivo
+   vire uma linha própria — antes ele morava na coluna `auto` do botão, que crescia até caber a frase inteira. */
+.presente { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: 'objeto texto botao' '. motivo motivo'; column-gap: var(--space-3); row-gap: 2px; align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.presente > .desenho-objeto { grid-area: objeto; align-self: start; }
+.presente__texto { grid-area: texto; display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: var(--type-caption); overflow-wrap: break-word; }
+.presente__nome { font-size: var(--type-body); color: var(--text-primary); }
+.presente__tipo { color: var(--text-secondary); }
+.presente__descricao { color: var(--text-muted); }
+.presente > .acao { display: contents; }
+.presente > .acao > .botao { grid-area: botao; min-width: 4.5rem; white-space: nowrap; }
+.presente > .acao > .acao__motivo, .presente > .acao > .acao__aviso, .presente > .acao > .acao__resgate { grid-area: motivo; margin: 0; }
 
 /* ---------------------------------------------------------- Na rede (o Mural) */
 .rede__conta { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-2); }

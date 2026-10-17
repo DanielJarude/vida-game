@@ -167,7 +167,9 @@ describe('Materialidade e lojas', () => {
       for (const m of readFileSync(join(dir, f), 'utf8').matchAll(/^\.([a-zA-Z0-9_-]+) *\{/gm)) porClasse.set(m[1], new Set([...(porClasse.get(m[1]) ?? []), f]));
     }
     // As redefinições conhecidas e intencionais (uma folha refina a outra, mesmo componente).
-    const conhecidas = new Set(['atencao__item', 'experiencia', 'objeto', 'pertence', 'pertence__objeto', 'vaga-camada']);
+    // REWORK 8: 'objeto' saiu da lista — eram dois componentes (o cartão de Pertences e o desenho), não um refinando o
+    // outro; o desenho passou a ser `.desenho-objeto` (o cartão encolhia o desenho do presente a um quadradinho).
+    const conhecidas = new Set(['atencao__item', 'experiencia', 'pertence', 'pertence__objeto', 'vaga-camada']);
     const novas = [...porClasse].filter(([c, fs]) => fs.size > 1 && !conhecidas.has(c)).map(([c]) => c);
     expect(novas).toEqual([]);
     expect(porClasse.get('selo')?.size ?? 0).toBeLessThanOrEqual(1);

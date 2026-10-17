@@ -573,6 +573,8 @@ function CaminhoDaAmizade({ vida, p, vin }: { vida: Vida; p: Pessoa; vin: Vincul
  * REWORK 4: o presente (do catálogo das lojas, com o gosto da pessoa à vista) e o contato digital (seguir, deixar de
  * seguir, bloquear) — na ficha de quem recebe, não num catálogo à parte.
  */
+const TIPO_DO_PRESENTE: Record<string, string> = { eletronicos: 'eletrônico', casa: 'para a casa', instrumentos: 'instrumento', esportes: 'esporte', livraria: 'livros e papelaria' };
+
 function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vinculo; agir: (a: Acao) => boolean }) {
   const [presentes, setPresentes] = useState(false);
   const conta = contasAtivas(vida).length > 0;
@@ -589,9 +591,16 @@ function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vin
           {presentes && (
             <ul className="presentes">
               {lista.map(x => (
-                <li key={x.coisa.id} className="presente">
-                  <DesenhoObjeto coisaId={x.coisa.id} tamanho={36} />
-                  <span className="presente__texto"><strong>{x.coisa.nome.charAt(0).toUpperCase() + x.coisa.nome.slice(1)}</strong><span className="nota">{precoCurto(x.preco)}{GOSTO[x.gosto] ? ` · ${GOSTO[x.gosto].replace('dela', p.genero === 'feminino' ? 'dela' : p.genero === 'masculino' ? 'dele' : 'delu')}` : ''}</span></span>
+                // REWORK 8 (correção): o nome, o tipo, a descrição, o preço e o gosto numa coluna que nunca encolhe a zero; o
+                // botão na sua; o motivo de não dar (o dinheiro, o ano) numa linha própria, embaixo — antes ele morava na
+                // coluna do botão, a coluna crescia até caber a frase e espremia o nome letra por letra.
+                <li key={x.coisa.id} className={`presente${podeTentar(x.veredito) ? '' : ' presente--bloqueado'}`}>
+                  <DesenhoObjeto coisaId={x.coisa.id} tamanho={40} rotulo={x.coisa.nome} />
+                  <span className="presente__texto">
+                    <strong className="presente__nome">{x.coisa.nome.charAt(0).toUpperCase() + x.coisa.nome.slice(1)}</strong>
+                    <span className="presente__tipo">{TIPO_DO_PRESENTE[x.coisa.loja]} · {precoCurto(x.preco)}{GOSTO[x.gosto] ? ` · ${GOSTO[x.gosto].replace('dela', p.genero === 'feminino' ? 'dela' : p.genero === 'masculino' ? 'dele' : 'delu')}` : ''}</span>
+                    <span className="presente__descricao">{x.coisa.descricao}</span>
+                  </span>
                   <BotaoAcao vida={vida} acao={{ tipo: 'presentear', pessoaId: p.id, coisaId: x.coisa.id }} agir={agir} variante={x.gosto === 'certeiro' ? 'principal' : 'secundario'}>Dar</BotaoAcao>
                 </li>
               ))}
