@@ -99,7 +99,7 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Nascer' }));
     avancar(8);
     // FIX pós-REWORK 3: Tempo livre é uma área própria (a mais visitada no dia a dia).
-    fireEvent.click(screen.getAllByRole('button', { name: 'Tempo livre' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Minha Semana' })[0]);
     expect(screen.getByText('Sua semana')).toBeTruthy();
   });
 
@@ -111,7 +111,7 @@ describe('interface', () => {
     });
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Trabalho' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
     if (!screen.queryByRole('button', { name: /Pedir aumento/ })) fireEvent.click(screen.getByRole('button', { name: /Mais ações/ }));
     fireEvent.click(screen.getByRole('button', { name: /Pedir aumento/ }));
     const dialogo = screen.getByRole('dialog');
@@ -128,7 +128,7 @@ describe('interface', () => {
     });
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
-    fireEvent.click(screen.getAllByRole('button', { name: /Formação/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
     expect(screen.getByText(/\(trancado\)/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Voltar ao curso/ }));
     expect(screen.queryByText(/\(trancado\)/)).toBeNull();
@@ -177,7 +177,7 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     // FIX pós-REWORK 3: Tempo livre é uma área própria (a mais visitada no dia a dia).
-    fireEvent.click(screen.getAllByRole('button', { name: 'Tempo livre' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Minha Semana' })[0]);
     const main = screen.getByRole('main');
     expect(within(main).getByText(/Antes de qualquer escolha, a semana já tem/)).toBeTruthy();
     expect(within(main).getAllByText(/Trabalho \(/).length).toBeGreaterThan(0);
@@ -207,7 +207,7 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
-    fireEvent.click(screen.getAllByRole('button', { name: /^Trabalho$/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
     const main = screen.getByRole('main');
     expect(within(main).getByText('Portas de trabalho')).toBeTruthy();
     expect(within(main).getByText(/pode indicar você/)).toBeTruthy();
@@ -248,7 +248,7 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     // FIX pós-REWORK 3: Tempo livre é uma área própria (a mais visitada no dia a dia).
-    fireEvent.click(screen.getAllByRole('button', { name: 'Tempo livre' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Minha Semana' })[0]);
     const main = screen.getByRole('main');
     expect(within(main).getByRole('img', { name: /A semana:/ })).toBeTruthy();
     // FIX pós-REWORK 4: o catálogo mora nas abas (aqui, "Hobbies"): poucas sugestões com motivo, o resto a um toque.
@@ -285,7 +285,7 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
-    fireEvent.click(screen.getAllByRole('button', { name: /^Trabalho$/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
     // REWORK 4: a vaga é um resumo escaneável; o botão está no detalhe (abre ao tocar).
     for (const b of Array.from(screen.getByRole('main').querySelectorAll('.vaga-resumo'))) fireEvent.click(b);
     fireEvent.click(within(screen.getByRole('main')).getAllByRole('button', { name: /Candidatar-se/ })[0]);

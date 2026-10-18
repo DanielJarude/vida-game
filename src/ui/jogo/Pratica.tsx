@@ -73,7 +73,7 @@ export function CartaoPratica({ vida, l, abrir, agir, irPara, leitura }: PropsCa
         {bom.length > 0 && <p className="pratica__efeitos">{bom.map(e => <span key={e.id} className={`pratica__efeito pratica__efeito--${e.tom}`}>{e.texto}</span>)}</p>}
         {leitura && <p className="pratica__leitura rotina__leitura">{leitura}</p>}
         {agora && <p className="pratica__agora">{agora}</p>}
-        {l.daFormacao && irPara && <button type="button" className="link pratica__ir" onClick={() => irPara('formacao')}>ver em Formação →</button>}
+        {l.daFormacao && irPara && <button type="button" className="link pratica__ir" onClick={() => irPara('formacao')}>ver em Caminhos →</button>}
         {!l.daFormacao && l.niveis.length > 1 && l.nivel < l.niveis.length && (
           <div className="pratica__acao">
             <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: l.id, ativa: true, nivel: (l.nivel + 1) as 2 | 3 }} agir={agir} variante="discreto" ocultarBloqueado>{`Mais a sério: ${l.niveis[l.nivel].rotulo.toLowerCase()}`}</BotaoAcao>
@@ -181,7 +181,7 @@ export function FichaPratica({ vida, l, agir, aoFechar, irPara, abrirPessoa }: P
                 </div>
               ))}
               {l.daFormacao ? (
-                <p className="nota">Esta atividade é da sua formação: a dedicação e a saída ficam em {irPara ? <button type="button" className="link" onClick={() => ir('formacao')}>Formação →</button> : 'Formação'}.</p>
+                <p className="nota">Esta atividade é da sua formação: a dedicação e a saída ficam em {irPara ? <button type="button" className="link" onClick={() => ir('formacao')}>Caminhos →</button> : 'Caminhos'}.</p>
               ) : (
                 <>
                   {l.niveis.length > 1 && (
@@ -199,7 +199,7 @@ export function FichaPratica({ vida, l, agir, aoFechar, irPara, abrirPessoa }: P
                     </div>
                   )}
                   {fundamentos && <BotaoAcao vida={vida} acao={{ tipo: 'perseguir', oque: 'treino_fundamentos', valor: p!.d } as unknown as Acao} agir={agir} variante={peneira?.falta === 'tecnica' ? 'secundario' : 'discreto'} ocultarImpossivel>Programa de fundamentos, com treinador (dura o próximo ano)</BotaoAcao>}
-                  {carreira && irPara && <button type="button" className="botao botao--discreto" onClick={() => ir('trabalho')}>{l.categoria === 'esporte' ? 'Tentar ir mais longe (peneiras, clubes) — em Trabalho' : 'Tentar viver disso (banda, grupo, editais) — em Trabalho'}</button>}
+                  {carreira && irPara && <button type="button" className="botao botao--discreto" onClick={() => ir('oportunidades')}>{l.categoria === 'esporte' ? 'Tentar ir mais longe (peneiras, clubes) — em Caminhos' : 'Tentar viver disso (banda, grupo, editais) — em Caminhos'}</button>}
                   <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: l.id, ativa: false }} agir={agir} variante="discreto" aoAgir={aoFechar}>Parar</BotaoAcao>
                 </>
               )}

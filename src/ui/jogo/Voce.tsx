@@ -257,7 +257,7 @@ const CATEGORIA_DA_FRENTE: Record<string, string> = { esporte: 'esporte', arte: 
 /**
  * REWORK 7 — "No que você é bom", com forma: cada habilidade que conta na vida (as praticadas e as que já foram
  * fortes — `frentesDaVida`) com os degraus da escada real, a palavra do estágio e se está praticando ou parou; os
- * jeitos de nascença e a cabeça para aprender (`noQueEBom`), em palavras, ao lado. Um toque leva a Tempo livre.
+ * jeitos de nascença e a cabeça para aprender (`noQueEBom`), em palavras, ao lado. Um toque leva a Minha Semana.
  */
 function Habilidades({ vida, irPara }: { vida: Vida; irPara: (a: Destino) => void }) {
   const frentes = frentesDaVida(vida);
@@ -283,7 +283,7 @@ function Habilidades({ vida, irPara }: { vida: Vida; irPara: (a: Destino) => voi
         </ul>
       )}
       {jeitos.length > 0 && <dl className="dados">{jeitos.map(x => <div key={x.rotulo} className="dado"><dt>{x.rotulo}</dt><dd>{x.texto}</dd></div>)}</dl>}
-      <button type="button" className="link" onClick={() => irPara('atividades')}>Praticar algo — em Tempo livre →</button>
+      <button type="button" className="link" onClick={() => irPara('atividades')}>Praticar algo — em Minha Semana →</button>
     </section>
   );
 }

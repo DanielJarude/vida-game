@@ -15,3 +15,35 @@
 .balanco-publico__causa { color: var(--text-primary); overflow-wrap: anywhere; }
 .balanco-publico__motivo { color: var(--text-secondary); }
 .balanco-publico__marcos { margin-top: var(--space-2); }
+
+/* -------------------------------------------------- Caminhos: a formação e o trabalho numa trajetória só */
+.pagina-caminhos { display: block; }
+.folio--caminhos .folio__titulo { overflow-wrap: anywhere; }
+.situacao-atual { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.situacao-atual__item { display: grid; gap: 1px; min-width: 0; max-width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: inset 3px 0 0 var(--tom), 0 0 0 1px var(--fio); }
+.situacao-atual__item--formacao { box-shadow: inset 3px 0 0 var(--bom), 0 0 0 1px var(--fio); }
+.situacao-atual__lado { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.situacao-atual__rotulo { font-weight: var(--weight-semibold); color: var(--text-primary); overflow-wrap: anywhere; }
+.situacao-atual__detalhe { font-size: var(--type-caption); color: var(--text-secondary); overflow-wrap: anywhere; }
+/* As quatro abas ficam no documento; só a ativa aparece. */
+.caminhos__painel { display: none; }
+.caminhos__painel--ativo { display: block; }
+.lado-caminho:empty { display: none; }
+.lado-caminho + .lado-caminho { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--fio); }
+.lado-caminho:has(> :only-child:empty) { display: none; }
+/* Uma aba sem nada nos dois lados diz o que mora ali (e some quando há conteúdo). */
+.caminhos__vazio { display: none; }
+.caminhos__painel:not(:has(section, .camada, .painel, .secao, .folio, .lado-caminho__cabeca, .vazio, .trajeto, .portas-abertas)) .caminhos__vazio { display: block; }
+.lado-caminho__cabeca { margin: 0 0 var(--space-3); }
+.lado-caminho__kicker { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.lado-caminho__titulo { margin: 2px 0 0; font-size: var(--type-heading); line-height: 1.2; font-weight: 500; color: var(--text-primary); }
+.lado-caminho__lede { margin: var(--space-1) 0 0; color: var(--text-secondary); }
+.folio--compacto .folio__titulo { font-size: var(--type-heading); }
+.explorar-trabalho__titulo--fixo { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 0; margin: 0 0 var(--space-2); padding-bottom: var(--space-2); }
+.explorar-trabalho__titulo--fixo::after { content: none; }
+.lado-caminho__cabeca .lado-caminho__kicker { font-weight: var(--weight-semibold); }
+/* As quatro partes de Caminhos: uma linha só; no celular estreito, duas por linha, do mesmo tamanho. */
+@media (max-width: 480px) {
+  .subnav--caminhos .subnav__lista { display: grid; grid-template-columns: 1fr 1fr; min-width: 0; }
+  .subnav--caminhos .subnav__item { width: 100%; padding: 0 var(--space-2); }
+}

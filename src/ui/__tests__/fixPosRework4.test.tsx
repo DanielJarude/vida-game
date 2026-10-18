@@ -54,12 +54,13 @@ describe('Tempo livre: abas — e o estresse como leitura principal', () => {
     expect(within(main).getByText(/Dá para assumir mais\?/)).toBeTruthy();
     expect(within(main).queryByText('Carga')).toBeNull();
   });
-  it('as abas respondem ao que se quer: corpo, hobbies, gente, redes, viagens', () => {
+  it('as abas respondem ao que se quer: corpo, hobbies, gente, o celular (REWORK 9: as viagens foram para Vida)', () => {
     render(<Ligado v0={vida(30, adulta)} tela={(v, agir) => <Tempo vida={v} agir={agir} />} />);
-    for (const nome of ['Corpo e mente', 'Hobbies', 'Sair e ver gente', 'Redes sociais', 'Viagens']) expect(screen.getByRole('tab', { name: nome })).toBeTruthy();
+    for (const nome of ['Agenda', 'Corpo e mente', 'Hobbies', 'Sair e ver gente', 'Celular']) expect(screen.getByRole('tab', { name: nome })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Viagens' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Corpo e mente' }));
     expect(screen.getByText('Cuidar de si')).toBeTruthy();
-    fireEvent.click(screen.getByRole('tab', { name: 'Redes sociais' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Celular' }));
     for (const pl of ['Instagram', 'TikTok', 'YouTube', 'X (Twitter)', 'Facebook', 'Twitch', 'OnlyFans']) expect(screen.getAllByText(pl).length).toBeGreaterThan(0);
   });
 });

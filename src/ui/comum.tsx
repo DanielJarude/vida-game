@@ -150,11 +150,13 @@ export function Escolha<T extends string>({ opcoes, valor, aoMudar, rotulo }: { 
  * um título grande e contextual (o que é a vida agora) e, às vezes, uma
  * frase. Composição editorial, não cabeçalho de painel.
  */
-export function Folio({ kicker, titulo, lede, children }: { kicker: ReactNode; titulo: ReactNode; lede?: ReactNode; children?: ReactNode }) {
+export function Folio({ kicker, titulo, lede, children, compacto }: { kicker: ReactNode; titulo: ReactNode; lede?: ReactNode; children?: ReactNode; compacto?: boolean }) {
+  // `compacto` (REWORK 9): o cabeçalho de um lado dentro de uma página (Caminhos) — h2, sem o peso de abertura.
+  const T = compacto ? 'h2' : 'h1';
   return (
-    <header className="folio">
+    <header className={compacto ? 'folio folio--compacto' : 'folio'}>
       <p className="folio__kicker">{kicker}</p>
-      <h1 className="folio__titulo">{titulo}</h1>
+      <T className="folio__titulo">{titulo}</T>
       {lede && <p className="folio__lede">{lede}</p>}
       {children}
     </header>

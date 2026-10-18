@@ -114,15 +114,15 @@ describe('12. professora que atua: a turnê não aparece entre as ações da uni
   });
 });
 
-describe('38. o tempo livre está a um toque', () => {
+describe('38. o tempo livre está a um toque (REWORK 9: Minha Semana)', () => {
   it('é uma área própria, no topo e na barra do celular', () => {
     const v = vidaAos(16);
     salvar(v);
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
     const navs = screen.getAllByRole('navigation', { name: 'Áreas' });
-    for (const nav of navs) expect(within(nav).getByRole('button', { name: /Tempo livre|Tempo/ })).toBeTruthy();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Tempo livre' })[0]);
+    for (const nav of navs) expect(within(nav).getByRole('button', { name: /Minha Semana|Semana/ })).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Minha Semana' })[0]);
     expect(screen.getByText('Sua semana')).toBeTruthy();
   });
 });

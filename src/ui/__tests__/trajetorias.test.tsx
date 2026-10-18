@@ -27,7 +27,7 @@ function vidaSalva(idade: number, ajuste: (v: Vida) => void): void {
 function abrirTrabalho(): void {
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
-  fireEvent.click(screen.getAllByRole('button', { name: 'Trabalho' })[0]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
 }
 
 beforeEach(() => { localStorage.clear(); window.scrollTo = () => {}; window.confirm = () => true; });

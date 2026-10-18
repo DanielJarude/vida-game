@@ -1,5 +1,5 @@
 /**
- * Tempo livre → Redes sociais (FIX pós-REWORK 4).
+ * Minha Semana → Celular (FIX pós-REWORK 4; REWORK 9: a aba chama-se Celular).
  *
  * Sete plataformas, cada uma com o seu jeito (`dados/redes`), todas simuladas
  * dentro do jogo (offline). A tela responde a "quero postar no Instagram",

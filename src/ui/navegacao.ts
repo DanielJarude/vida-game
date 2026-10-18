@@ -1,76 +1,100 @@
 /**
- * A arquitetura de navegação (REWORK 3): seis áreas estáveis, que não mudam
- * de lugar a cada aniversário — muda o conteúdo, o destaque, o que está
- * disponível. Cada área responde a uma pergunta:
+ * A arquitetura de navegação. REWORK 9 — a vida organizada: SEIS áreas
+ * estáveis, que não mudam de lugar a cada aniversário (muda o conteúdo, o
+ * destaque, o que está disponível). Cada área responde a uma pergunta:
  *
- *   Linha da Vida  o que aconteceu (a biografia)
- *   Você           como eu estou: corpo, cabeça, aparência e estilo
- *   Pessoas        quem está na minha vida (família, amigos, amor)
- *   Formação       onde estudo, com quem, o que faço lá, o que posso estudar
- *   Trabalho       o que faço para viver (e o que posso vir a fazer)
- *   Tempo livre    a semana: atividades, esporte, arte, lazer (a área mais
- *                  visitada no dia a dia — FIX pós-REWORK 3: saiu de dentro
- *                  de Vida para não pedir dois toques toda vez)
- *   Vida           a vida concreta: onde moro, o dinheiro, as compras, a cidade
+ *   História       o que aconteceu (a Linha da Vida, as trajetórias, o ano que passou)
+ *   Você           quem eu sou: corpo, cabeça, aparência, habilidades
+ *   Pessoas        com quem vivo e me relaciono
+ *   Caminhos       estudos, trabalho e trajetória — UMA página (antes, Formação e
+ *                  Trabalho eram duas áreas): a situação agora, o desenvolvimento,
+ *                  as oportunidades e o histórico, com a formação e o trabalho
+ *                  lado a lado (a ordem segue a fase da vida)
+ *   Minha Semana   como organizo o tempo: a agenda, o corpo, os hobbies, sair, o celular
+ *   Vida           a vida concreta: casa, dinheiro, compras, pertences, cidade, viagens
  *
- * Dentro de Vida há seções (navegação contextual interna), em vez de mais
- * abas no topo. O MAPA DE INTENÇÕES é a fonte única de "onde começo?": o
- * menu o mostra e os testes de navegação o percorrem.
+ * Os ids internos de duas áreas ficam os de antes ('linha' = História, 'tempo'
+ * = Minha Semana): só o nome mudou. Os destinos antigos ('formacao',
+ * 'trabalho', 'estudos', 'viagens' em Tempo livre) continuam aceitos e levam
+ * ao lugar novo. O MAPA DE INTENÇÕES é a fonte única de "onde começo?": o menu
+ * o mostra e os testes de navegação o percorrem.
  */
 
-export type Area = 'linha' | 'voce' | 'pessoas' | 'formacao' | 'trabalho' | 'tempo' | 'vida';
-export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'pertences' | 'cidade';
-/**
- * FIX pós-REWORK 4: Tempo livre acumulava tudo numa superfície só. Agora, abas que respondem a "quero fazer algo
- * físico", "quero um hobby", "quero sair, ver gente", "quero usar a rede", "quero viajar" — e a semana (o estresse:
- * por que, o que pesa, o que ajuda) como a primeira.
- */
-export type SecaoTempo = 'semana' | 'corpo' | 'atividades' | 'gente' | 'redes' | 'viagens';
+export type Area = 'linha' | 'voce' | 'pessoas' | 'caminhos' | 'tempo' | 'vida';
+export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'pertences' | 'cidade' | 'viagens';
+/** As abas de Minha Semana: a agenda primeiro; depois "quero fazer algo físico", "um hobby", "sair, ver gente", "o celular". */
+export type SecaoTempo = 'semana' | 'corpo' | 'atividades' | 'gente' | 'redes';
+/** As partes de Caminhos: o que ocupa a vida agora, como venho me desenvolvendo, o que está ao alcance, por onde passei. */
+export type ParteCaminhos = 'agora' | 'desenvolvimento' | 'oportunidades' | 'historico';
 
-/** Um destino: uma área, uma seção de Vida, uma aba de Tempo livre — ou um nome antigo que continua aceito. */
-export type Aba = Area | SecaoVida | SecaoTempo | 'estudos';
+/** Um destino: uma área, uma seção de Vida, uma aba de Minha Semana, uma parte de Caminhos — ou um nome antigo que continua aceito. */
+export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio';
 
-export interface Lugar { area: Area; secao?: SecaoVida; aba?: SecaoTempo }
+export interface Lugar {
+  area: Area;
+  secao?: SecaoVida;
+  aba?: SecaoTempo;
+  parte?: ParteCaminhos;
+  /** Em Caminhos, qual dos dois lados o destino quer à vista (a formação ou o trabalho). */
+  foco?: 'formacao' | 'trabalho';
+  /** Em Caminhos · Oportunidades, o que procurar (vagas, concursos, negócio). */
+  explorar?: 'vagas' | 'concursos' | 'negocio';
+}
 
-const DE_TEMPO = new Set<string>(['semana', 'corpo', 'atividades', 'gente', 'redes', 'viagens']);
+const DE_TEMPO = new Set<string>(['semana', 'corpo', 'atividades', 'gente', 'redes']);
+const DE_VIDA = new Set<string>(['casa', 'dinheiro', 'compras', 'pertences', 'cidade', 'viagens']);
+const DE_CAMINHOS = new Set<string>(['agora', 'desenvolvimento', 'oportunidades', 'historico']);
 export function resolverDestino(d: Aba): Lugar {
-  if (d === 'estudos') return { area: 'formacao' };
-  if (d === 'casa' || d === 'dinheiro' || d === 'compras' || d === 'pertences' || d === 'cidade') return { area: 'vida', secao: d };
+  if (d === 'estudos' || d === 'formacao') return { area: 'caminhos', parte: 'agora', foco: 'formacao' };
+  if (d === 'trabalho') return { area: 'caminhos', parte: 'agora', foco: 'trabalho' };
+  if (d === 'cursos') return { area: 'caminhos', parte: 'oportunidades', foco: 'formacao' };
+  if (d === 'vagas' || d === 'concursos' || d === 'negocio') return { area: 'caminhos', parte: 'oportunidades', foco: 'trabalho', explorar: d };
+  if (DE_VIDA.has(d)) return { area: 'vida', secao: d as SecaoVida };
   if (DE_TEMPO.has(d)) return { area: 'tempo', aba: d as SecaoTempo };
+  if (DE_CAMINHOS.has(d)) return { area: 'caminhos', parte: d as ParteCaminhos };
   return { area: d as Area };
 }
 
 export const SECOES_TEMPO: { id: SecaoTempo; rotulo: string; oque: string }[] = [
-  { id: 'semana', rotulo: 'A semana', oque: 'O estresse: por que, o que pesa, o que ajuda; o que você já faz' },
+  { id: 'semana', rotulo: 'Agenda', oque: 'A semana em horários: cada compromisso, os conflitos, o tempo livre — e o estresse' },
   { id: 'corpo', rotulo: 'Corpo e mente', oque: 'Esporte, academia, corrida, terapia, descanso' },
   { id: 'atividades', rotulo: 'Hobbies', oque: 'Arte, música, leitura, estudo, ofícios, dinheiro por fora' },
   { id: 'gente', rotulo: 'Sair e ver gente', oque: 'Comunidade, noite, família, voluntariado — e com quem fazer' },
-  { id: 'redes', rotulo: 'Redes sociais', oque: 'Instagram, TikTok, YouTube, X, Facebook, Twitch, OnlyFans' },
-  { id: 'viagens', rotulo: 'Viagens', oque: 'Viagens e experiências: destino, duração, com quem' }
+  { id: 'redes', rotulo: 'Celular', oque: 'As redes sociais: Instagram, TikTok, YouTube, X, Facebook, Twitch, OnlyFans' }
+];
+
+export const SECOES_CAMINHOS: { id: ParteCaminhos; rotulo: string; oque: string }[] = [
+  { id: 'agora', rotulo: 'Agora', oque: 'O que ocupa a sua vida agora: a escola, o curso, o trabalho, a carreira — e o que dá para fazer neles' },
+  { id: 'desenvolvimento', rotulo: 'Desenvolvimento', oque: 'Como você vem se saindo: as matérias, as competências, a experiência, o desempenho' },
+  { id: 'oportunidades', rotulo: 'Oportunidades', oque: 'O que está ao alcance: cursos, vagas, seleções, concursos, propostas, outros caminhos' },
+  { id: 'historico', rotulo: 'Histórico', oque: 'Por onde você passou: escolas, diplomas, empregos, temporadas, conquistas' }
 ];
 
 export const AREAS: { id: Area; rotulo: string; curto: string; icone: string }[] = [
-  { id: 'linha', rotulo: 'Linha da Vida', curto: 'História', icone: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4V4zm0 12a4 4 0 0 0 4 4' },
+  { id: 'linha', rotulo: 'História', curto: 'História', icone: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4V4zm0 12a4 4 0 0 0 4 4' },
   { id: 'voce', rotulo: 'Você', curto: 'Você', icone: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm-7.5 9a7.5 7.5 0 0 1 15 0' },
   { id: 'pessoas', rotulo: 'Pessoas', curto: 'Pessoas', icone: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M17 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3' },
-  { id: 'formacao', rotulo: 'Formação', curto: 'Formação', icone: 'M12 3l10 5-10 5L2 8l10-5zm-6 7.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5' },
-  { id: 'trabalho', rotulo: 'Trabalho', curto: 'Trabalho', icone: 'M3.5 8h17v11.5h-17zM9 8V5.5h6V8M3.5 13.5h17' },
-  { id: 'tempo', rotulo: 'Tempo livre', curto: 'Tempo', icone: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2' },
+  // Caminhos: a estrada que se bifurca (a formação e o trabalho são partes de uma trajetória só).
+  { id: 'caminhos', rotulo: 'Caminhos', curto: 'Caminhos', icone: 'M12 21v-7M12 14l-6-6M12 14l6-6M6 8V4M18 8V4M4 6l2-2 2 2M16 6l2-2 2 2' },
+  { id: 'tempo', rotulo: 'Minha Semana', curto: 'Semana', icone: 'M4 6.5h16V20H4zM4 10.5h16M8.5 4v4M15.5 4v4M8 14h3M13 14h3M8 17h3' },
   { id: 'vida', rotulo: 'Vida', curto: 'Vida', icone: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z' }
 ];
 
 export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'casa', rotulo: 'Casa', oque: 'Onde e com quem você mora; sair de casa, voltar' },
-  { id: 'dinheiro', rotulo: 'Dinheiro', oque: 'O mês, o que é seu e o que deve; a ajuda da família' },
-  { id: 'compras', rotulo: 'Compras', oque: 'Imóveis, carros, motos, bicicletas, óculos e roupas, banco' },
+  { id: 'dinheiro', rotulo: 'Dinheiro', oque: 'O mês, o patrimônio e as dívidas; a ajuda da família' },
+  { id: 'compras', rotulo: 'Compras', oque: 'Imóveis, carros, motos, bicicletas, óculos e roupas, serviços, banco' },
   // REWORK 4: o que é seu (e o que dá para fazer com isso) saiu de Casa — Casa é onde e com quem se mora.
   { id: 'pertences', rotulo: 'Pertences', oque: 'O que é seu: usar (tocar, jogar, fotografar), o estado, vender' },
-  { id: 'cidade', rotulo: 'Cidade', oque: 'Onde você vive, quanto custa viver aqui, o trajeto, mudar de cidade ou de país' }
+  { id: 'cidade', rotulo: 'Cidade', oque: 'Onde você vive, quanto custa viver aqui, o trajeto, mudar de cidade ou de país' },
+  // REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram do tempo livre para Vida.
+  { id: 'viagens', rotulo: 'Viagens', oque: 'Viagens e experiências: destino, duração, com quem' }
 ];
 
 export const rotuloDoLugar = (l: Lugar) => {
   const a = AREAS.find(x => x.id === l.area)!.rotulo;
   if (l.aba) return `${a} · ${SECOES_TEMPO.find(x => x.id === l.aba)!.rotulo}`;
+  if (l.parte) return `${a} · ${SECOES_CAMINHOS.find(x => x.id === l.parte)!.rotulo}`;
   if (!l.secao) return a;
   return `${a} · ${SECOES_VIDA.find(x => x.id === l.secao)!.rotulo}`;
 };
@@ -83,22 +107,22 @@ export const rotuloDoLugar = (l: Lugar) => {
 export interface Intencao { id: string; quero: string; lugar: Lugar; la: string }
 
 export const MAPA_DE_INTENCOES: Intencao[] = [
-  { id: 'estudar', quero: 'Estudar, ver a escola, a faculdade', lugar: { area: 'formacao' }, la: 'a instituição, as atividades de lá, os cursos possíveis' },
-  { id: 'atividade_escolar', quero: 'Entrar numa atividade da escola ou da faculdade', lugar: { area: 'formacao' }, la: '"O que dá para fazer aqui"' },
-  { id: 'faculdade', quero: 'Fazer faculdade, técnico, pós', lugar: { area: 'formacao' }, la: 'a preparação e os cursos' },
+  { id: 'estudar', quero: 'Estudar, ver a escola, a faculdade', lugar: { area: 'caminhos', parte: 'agora' }, la: 'a escola ou o curso, as atividades de lá (os cursos possíveis estão em Oportunidades)' },
+  { id: 'atividade_escolar', quero: 'Entrar numa atividade da escola ou da faculdade', lugar: { area: 'caminhos', parte: 'agora' }, la: '"O que dá para fazer aqui"' },
+  { id: 'faculdade', quero: 'Fazer faculdade, técnico, pós', lugar: { area: 'caminhos', parte: 'oportunidades' }, la: 'a preparação e os cursos' },
   { id: 'falar_mae', quero: 'Falar com a mãe, com a família', lugar: { area: 'pessoas' }, la: 'o rosto de quem você quer' },
   { id: 'namoro', quero: 'Procurar alguém para namorar', lugar: { area: 'pessoas' }, la: '"Conhecer alguém"' },
   // FIX pós-playtest humano: da amizade ao romance — na ficha, "Algo mais".
   { id: 'romance_amigo', quero: 'Tentar transformar uma amizade em romance', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Algo mais" (demonstrar interesse — a resposta é dela)' },
   { id: 'fazer_junto', quero: 'Fazer algo com quem eu amo, com o meu filho, com um amigo', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Fazer juntos" (cinema, jantar, parque, ensinar, viajar)' },
-  { id: 'agir_trabalho', quero: 'Agir no trabalho: um projeto, a chefia, o treino de atleta', lugar: { area: 'trabalho' }, la: '"No dia a dia do trabalho"' },
-  { id: 'emprego', quero: 'Procurar emprego, ver a profissão', lugar: { area: 'trabalho' }, la: 'o trabalho de agora e as vagas' },
-  { id: 'negocio', quero: 'Abrir um negócio', lugar: { area: 'trabalho' }, la: '"Outras possibilidades"' },
-  { id: 'futebol', quero: 'Jogar futebol, treinar, fazer algo físico', lugar: { area: 'tempo', aba: 'corpo' }, la: 'esportes, academia, corrida (o time da escola fica em Formação)' },
+  { id: 'agir_trabalho', quero: 'Agir no trabalho: um projeto, a chefia, o treino de atleta', lugar: { area: 'caminhos', parte: 'agora' }, la: '"No dia a dia do trabalho"' },
+  { id: 'emprego', quero: 'Procurar emprego, ver a profissão', lugar: { area: 'caminhos', parte: 'oportunidades' }, la: 'as vagas, os concursos, as portas abertas' },
+  { id: 'negocio', quero: 'Abrir um negócio', lugar: { area: 'caminhos', parte: 'oportunidades' }, la: '"Outras possibilidades": abrir um negócio' },
+  { id: 'futebol', quero: 'Jogar futebol, treinar, fazer algo físico', lugar: { area: 'tempo', aba: 'corpo' }, la: 'esportes, academia, corrida (o time da escola fica em Caminhos)' },
   { id: 'hobby', quero: 'Praticar um hobby: música, desenho, leitura', lugar: { area: 'tempo', aba: 'atividades' }, la: 'as atividades por tipo' },
   { id: 'sair', quero: 'Sair, ver gente, fazer algo com alguém', lugar: { area: 'tempo', aba: 'gente' }, la: 'o que fazer com quem — e as atividades com gente' },
   { id: 'estresse', quero: 'Entender (e diminuir) o meu estresse', lugar: { area: 'tempo', aba: 'semana' }, la: '"Estresse": o que pesa, o que ajuda, o que dá para fazer' },
-  { id: 'viajar', quero: 'Viajar (sozinho ou com a família)', lugar: { area: 'tempo', aba: 'viagens' }, la: 'o destino, quanto tempo, com quem' },
+  { id: 'viajar', quero: 'Viajar (sozinho ou com a família)', lugar: { area: 'vida', secao: 'viagens' }, la: 'o destino, quanto tempo, com quem' },
   { id: 'carro', quero: 'Comprar carro, moto ou bicicleta', lugar: { area: 'vida', secao: 'compras' }, la: 'concessionária, usados, motos e bicicletas' },
   { id: 'casa', quero: 'Procurar casa, sair da casa dos pais', lugar: { area: 'vida', secao: 'casa' }, la: '"Procurar um lugar para morar"' },
   { id: 'onde_moro', quero: 'Saber onde moro e com quem', lugar: { area: 'vida', secao: 'casa' }, la: 'a casa, no alto' },
@@ -119,18 +143,18 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'violao', quero: 'Começar a tocar violão (ou outro instrumento)', lugar: { area: 'tempo', aba: 'atividades' }, la: '"Tocar um instrumento" — e o violão, nas lojas de Vida · Compras' },
   { id: 'condicionamento', quero: 'Melhorar o condicionamento', lugar: { area: 'tempo', aba: 'corpo' }, la: 'academia, corrida, um esporte (Você mostra como o corpo está)' },
   { id: 'praticas', quero: 'Ver o que eu pratico e como venho evoluindo', lugar: { area: 'tempo', aba: 'semana' }, la: '"O que você pratica": um toque abre a história de cada atividade' },
-  { id: 'carreira', quero: 'Ver a minha carreira', lugar: { area: 'trabalho' }, la: 'a situação agora e "Por onde você passou"' },
+  { id: 'carreira', quero: 'Ver a minha carreira', lugar: { area: 'caminhos', parte: 'historico' }, la: 'a situação em Agora; "Por onde você passou" em Histórico' },
   { id: 'quanto_ganho', quero: 'Saber quanto ganho e quanto gasto', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês: o que entra, o que sai, o que sobra' },
   { id: 'em_casa', quero: 'Ver o que tenho em casa', lugar: { area: 'vida', secao: 'casa' }, la: '"O que há em casa" (usar e vender, em Pertences)' },
-  { id: 'historico_escolar', quero: 'Ver o meu histórico escolar', lugar: { area: 'formacao' }, la: 'o caminho no alto; a formação e a história de cada escola, no fim' },
+  { id: 'historico_escolar', quero: 'Ver o meu histórico escolar', lugar: { area: 'caminhos', parte: 'historico' }, la: 'a formação que já é sua e a história de cada escola' },
   { id: 'familia_aconteceu', quero: 'Saber o que aconteceu com a minha família', lugar: { area: 'pessoas' }, la: '"Pedem atenção", a ficha de cada um — e "Enquanto isso", depois de cada ano' },
   // REWORK 7.5 — as intenções do playtest das interfaces do cotidiano.
-  { id: 'agenda', quero: 'Consultar a minha semana, a agenda', lugar: { area: 'tempo', aba: 'semana' }, la: '"A agenda da semana": cada compromisso, quantas vezes, o que passa do que cabe' },
+  { id: 'agenda', quero: 'Consultar a minha semana, a agenda', lugar: { area: 'tempo', aba: 'semana' }, la: 'a agenda: cada compromisso no seu horário, os conflitos, o tempo livre' },
   { id: 'dedicacao', quero: 'Diminuir (ou aumentar) a dedicação a uma atividade', lugar: { area: 'tempo', aba: 'semana' }, la: 'na agenda, "Mais leve" e "Mais a sério" — ou na ficha da prática' },
   { id: 'celular', quero: 'Abrir o celular, o Instagram, publicar um vídeo', lugar: { area: 'tempo', aba: 'redes' }, la: 'o celular: um app por rede, a tela inicial com o que chegou' },
   { id: 'homenagear', quero: 'Homenagear alguém que morreu, ir ao velório, visitar o túmulo', lugar: { area: 'pessoas' }, la: '"Em memória" (ou "Quem se foi"): a ficha da pessoa, "Lembrar de…"' },
   { id: 'agradecer', quero: 'Agradecer a alguém por uma ajuda', lugar: { area: 'pessoas' }, la: 'a ficha da pessoa, "Conversar": só aparece pelo que ela fez de verdade' },
   { id: 'triste', quero: 'Saber por que ainda estou triste', lugar: { area: 'voce' }, la: '"Como você está": o que pesa (o luto que se acalma, um acontecimento recente) e o que ajuda' },
   { id: 'aparencia', quero: 'Mudar a aparência do jogo, as cores', lugar: { area: 'linha' }, la: 'o Menu (a marca VIDA, no alto): "Aparência", com as quatro paletas' },
-  { id: 'profissional', quero: 'Ver as minhas informações profissionais', lugar: { area: 'trabalho' }, la: 'o ofício no alto, a situação agora, "Por onde você passou"' }
+  { id: 'profissional', quero: 'Ver as minhas informações profissionais', lugar: { area: 'caminhos', parte: 'agora' }, la: 'o ofício, a situação agora; a trajetória em Histórico' }
 ];

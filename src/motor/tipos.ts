@@ -2411,6 +2411,26 @@ export interface Vida {
   linhagem?: Linhagem;
   /** A vida no mundo: as mudanças de país, a adaptação ao lugar, as línguas (ausente: nunca saiu do país onde nasceu). */
   mundo?: MundoDaVida;
+  /** REWORK 9: o que o jogador decidiu na agenda da semana (turnos e lugares das atividades). Ausente: tudo no padrão. */
+  agenda?: AgendaGuardada;
+}
+
+/* ------------------------------------------------------------------- Agenda (REWORK 9) */
+
+/** Dia da semana: 0 segunda … 6 domingo. */
+export type Dia = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export type Turno = 'manha' | 'tarde' | 'noite' | 'integral';
+/** O lugar escolhido para uma atividade: os dias e a hora de começar (minutos desde a meia-noite). */
+export interface LugarNaAgenda { dias: Dia[]; inicio: number }
+/**
+ * A agenda guarda SÓ as escolhas (`sistemas/agenda`): o turno do que tem turno e o lugar das atividades que o
+ * jogador marcou. Os blocos em si são derivados do estado a cada leitura — nunca uma cópia que envelhece.
+ */
+export interface AgendaGuardada {
+  turnos?: Partial<Record<'escola' | 'curso' | 'trabalho', Turno>>;
+  lugares?: Record<string, LugarNaAgenda>;
+  /** Conflitos que já viraram nota na Linha da Vida (para não repetir todo ano). */
+  avisados?: string[];
 }
 
 /* ------------------------------------------------------------------- Mundo */

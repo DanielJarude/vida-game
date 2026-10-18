@@ -88,7 +88,7 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
       {aplicado > 0 && <p className="nota">{rendeuTexto(vida)}</p>}
       {/* A mesma leitura que Trabalho e Você usam (`intencao`): o patrimônio que paga a vida e o que a pessoa quer fazer com o tempo. */}
       {intencao.intencao !== 'nao_se_aplica' && (intencao.livre || intencao.intencao === 'sem_procurar') && <p className="nota">{intencao.texto}</p>}
-      {negocio && (negocio.caixa ?? 0) >= 1000 && <p className="nota">No caixa de {negocio.nome}: {dinheiroCurto(negocio.caixa ?? 0)} — do negócio; vira seu quando você tira (em Trabalho).</p>}
+      {negocio && (negocio.caixa ?? 0) >= 1000 && <p className="nota">No caixa de {negocio.nome}: {dinheiroCurto(negocio.caixa ?? 0)} — do negócio; vira seu quando você tira (em Caminhos).</p>}
       {parcelas.length > 0 && <p className="nota">Compromissos de todo mês: {parcelas.length === 1 ? parcelas[0].descricao.toLowerCase() : `${parcelas.length} parcelas`}, {dinheiroCurto(parcelas.reduce((s, d) => s + d.parcela, 0))} por mês.</p>}
       {(m.orcamento.renda > 0 || m.orcamento.despesa > 0) && (
         <div className="balanca" role="group" aria-label="Quanto entra e quanto sai por mês">

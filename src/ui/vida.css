@@ -55,6 +55,8 @@ details summary { cursor: pointer; }
 /* REWORK 3: seis áreas estáveis (Linha da Vida · Você · Pessoas · Formação · Trabalho · Vida). */
 .pagina--linha { --tom: var(--tom-vida); }
 .pagina--formacao { --tom: var(--tom-estudos); }
+/* REWORK 9: Caminhos (a formação e o trabalho numa trajetória só) leva o tom do rumo. */
+.pagina--caminhos { --tom: var(--tom-estudos); }
 .pagina--vida.pagina--vida-casa, .pagina--vida.pagina--vida-dinheiro, .pagina--vida.pagina--vida-compras { --tom: var(--tom-casa); }
 .pagina--vida.pagina--vida-tempo { --tom: var(--tom-tempo); }
 .pagina--vida.pagina--vida-cidade { --tom: var(--tom-cidade); }
@@ -215,6 +217,7 @@ input[type='checkbox'] { width: 1.25rem; height: 1.25rem; accent-color: var(--ac
 .aba--vida, .barra__item--vida { --tom-aba: var(--tom-casa); }
 .aba--linha, .barra__item--linha { --tom-aba: var(--tom-vida); }
 .aba--formacao, .barra__item--formacao { --tom-aba: var(--tom-estudos); }
+.aba--caminhos, .barra__item--caminhos { --tom-aba: var(--tom-estudos); }
 .aba--voce, .barra__item--voce { --tom-aba: var(--tom-voce); }
 .aba--pessoas, .barra__item--pessoas { --tom-aba: var(--tom-pessoas); }
 .aba--trabalho, .barra__item--trabalho { --tom-aba: var(--tom-trabalho); }

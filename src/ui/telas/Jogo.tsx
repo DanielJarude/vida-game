@@ -1,16 +1,16 @@
 /**
  * O jogo em andamento.
  *
- * Seis áreas ESTÁVEIS (REWORK 3 — `ui/navegacao`), cada uma respondendo a
+ * Seis áreas ESTÁVEIS (REWORK 9 — `ui/navegacao`), cada uma respondendo a
  * uma pergunta; o que muda com a idade é o conteúdo e o destaque, não o
  * lugar das coisas:
- *   Linha da Vida  o que aconteceu (a biografia — o centro)
- *   Você           como eu estou (corpo, cabeça, humor, aparência e estilo)
- *   Pessoas        quem está na minha vida
- *   Formação       onde estudo, com quem, o que faço lá, o que posso estudar
- *   Trabalho       o que faço para viver (antes dos 14: quem sustenta a casa)
- *   Vida           a vida concreta: Casa · Dinheiro · Compras · Tempo livre · Cidade
- * Dentro de Vida, seções internas — em vez de mais abas no topo. O painel
+ *   História       o que aconteceu (a Linha da Vida — o centro)
+ *   Você           quem eu sou (corpo, cabeça, humor, aparência e estilo)
+ *   Pessoas        com quem vivo e me relaciono
+ *   Caminhos       estudos, trabalho e trajetória: Agora · Desenvolvimento · Oportunidades · Histórico
+ *   Minha Semana   como organizo o tempo: Agenda · Corpo e mente · Hobbies · Sair · Celular
+ *   Vida           a vida concreta: Casa · Dinheiro · Compras · Pertences · Cidade · Viagens
+ * Dentro das áreas, seções internas — em vez de mais abas no topo. O painel
  * "Agora" (desktop) diz o que pede atenção, sem repetir as áreas.
  */
 
@@ -33,9 +33,9 @@ import { Retrato } from '../avatar/Retrato';
 import { LinhaDaVida } from '../jogo/LinhaDaVida';
 import { Momento, Resultado } from '../jogo/Momento';
 import { Pessoas } from '../jogo/Pessoas';
-import { Estudos, areaDaPorta } from '../jogo/Estudos';
+import { areaDaPorta } from '../jogo/Estudos';
 import { Voce } from '../jogo/Voce';
-import { Trabalho, TrabalhoAindaNao } from '../jogo/Trabalho';
+import { PaginaCaminhos } from '../jogo/CaminhosDaVida';
 import { VidaConcreta } from '../jogo/VidaConcreta';
 import { expressaoDe, momentoAtual, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
@@ -44,7 +44,7 @@ import { faseDaVida } from '../apresentar';
 import { fechamentoDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
-import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type Lugar, type SecaoTempo, type SecaoVida } from '../navegacao';
+import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
 
 export type { Aba };
 
@@ -60,24 +60,37 @@ export function climaDe(v: Vida): 'dificil' | 'bom' | 'normal' {
   return 'normal';
 }
 
-const temTrabalho = (v: Vida) => idade(v) >= 14 || v.trabalho.historico.length > 0;
-
 export function Jogo({ c }: { c: ControleVida }) {
   const vida = c.vida!;
   const [lugar, setLugar] = useState<Lugar>({ area: 'linha' });
   const [secao, setSecao] = useState<SecaoVida>('casa');
   const [abaTempo, setAbaTempo] = useState<SecaoTempo>('semana');
+  const [parte, setParte] = useState<ParteCaminhos>('agora');
+  const [explorar, setExplorar] = useState<string | undefined>(undefined);
+  const foco = useRef<'formacao' | 'trabalho' | undefined>(undefined);
   const [menu, setMenu] = useState(false);
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
   const conteudo = useRef<HTMLElement>(null);
   const fecharMenu = useCallback(() => setMenu(false), []);
   const area = lugar.area;
-  const ir = (d: Aba) => { const l = resolverDestino(d); if (l.secao) setSecao(l.secao); if (l.aba) setAbaTempo(l.aba); setLugar(l); };
-  const irLugar = (l: Lugar) => { if (l.secao) setSecao(l.secao); if (l.aba) setAbaTempo(l.aba); setLugar(l); };
+  const irLugar = (l: Lugar) => {
+    if (l.secao) setSecao(l.secao);
+    if (l.aba) setAbaTempo(l.aba);
+    if (l.parte) setParte(l.parte);
+    if (l.explorar) setExplorar(l.explorar);
+    foco.current = l.foco;
+    setLugar(l);
+  };
+  const ir = (d: Aba) => irLugar(resolverDestino(d));
   const focar = (id: string | null) => { setPessoaAberta(id); c.focarPessoa(id); };
   const abrirPessoa = (id: string | null) => { focar(id); if (id) ir('pessoas'); };
 
-  useEffect(() => { conteudo.current?.scrollTo?.({ top: 0 }); window.scrollTo?.({ top: 0 }); }, [area, secao, abaTempo]);
+  useEffect(() => {
+    conteudo.current?.scrollTo?.({ top: 0 });
+    // Em Caminhos, um destino que pede um lado (a formação, o trabalho) leva a ele; o resto começa no alto.
+    const lado = foco.current && area === 'caminhos' ? document.querySelector(`.caminhos__painel--ativo [data-lado="${foco.current}"]`) : null;
+    if (lado && lado.previousElementSibling) lado.scrollIntoView?.({ block: 'start' }); else window.scrollTo?.({ top: 0 });
+  }, [area, secao, abaTempo, parte]);
   // REWORK 6: depois de viver um ano, a tela vai para a Linha da Vida e mostra O ANO QUE PASSOU — sem jogar o jogador
   // no começo da página nem obrigá-lo a reler a biografia. Se o alto da página já cabe na janela junto com o ano, fica
   // no alto (vê-se também como você está); se não cabe (celular), desce direto até o ano.
@@ -129,8 +142,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} abrirPessoa={abrirPessoa} /></>}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
-          {area === 'formacao' && <Estudos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
-          {area === 'trabalho' && (temTrabalho(vida) ? <Trabalho vida={vida} agir={c.agir} irPara={ir} /> : <TrabalhoAindaNao vida={vida} irPara={ir} />)}
+          {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parte} irParte={p => irLugar({ area: 'caminhos', parte: p })} explorar={explorar} aoExplorar={setExplorar} />}
           {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} aba={abaTempo} irAba={a => ir(a)} abrirPessoa={abrirPessoa} />}
           {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
           {/* FIX pós-playtest humano: "Viver mais um ano" é "terminei o que queria fazer neste ano" — mora no FIM da
@@ -235,7 +247,7 @@ function Hoje({ vida, irPara }: { vida: Vida; irPara: (a: Aba) => void }) {
         <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={72} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
       </button>
       <div className="hoje__texto">
-        <p className="folio__kicker"><span className="folio__area">Linha da Vida</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
+        <p className="folio__kicker"><span className="folio__area">História</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
         <h1 className="hoje__nome">{vida.eu.nome} <span>{vida.eu.sobrenome}</span></h1>
         <p className="hoje__frase">{momentoAtual(vida)}</p>
       </div>
@@ -301,7 +313,7 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
         <>
           <h2 className="painel-agora__titulo painel-agora__titulo--rumo">Portas abertas</h2>
           <ul className="agora-sinais">
-            {portas.map(o => { const area = areaDaPorta(o); return <li key={o.id}><button type="button" className="agora-sinal agora-sinal--porta" onClick={() => irPara(area === 'trabalho' && temTrabalho(vida) ? 'trabalho' : area === 'tempo' ? 'tempo' : 'formacao')}>{o.titulo}<span className="agora-sinal__prazo"> · até {anoDe(o.tFim)}</span></button></li>; })}
+            {portas.map(o => { const area = areaDaPorta(o); return <li key={o.id}><button type="button" className="agora-sinal agora-sinal--porta" onClick={() => irPara(area === 'tempo' ? 'semana' : 'oportunidades')}>{o.titulo}<span className="agora-sinal__prazo"> · até {anoDe(o.tFim)}</span></button></li>; })}
           </ul>
         </>
       )}

@@ -14,7 +14,7 @@ import { salvar } from '../../motor/save';
 import { contratar } from '../../motor/sistemas/trabalho';
 import { ocupacao } from '../../motor/dados/ocupacoes';
 import type { Vida } from '../../motor/tipos';
-import { AREAS, MAPA_DE_INTENCOES, SECOES_TEMPO, SECOES_VIDA, rotuloDoLugar, type Lugar } from '../navegacao';
+import { AREAS, MAPA_DE_INTENCOES, SECOES_CAMINHOS, SECOES_TEMPO, SECOES_VIDA, rotuloDoLugar, type Lugar } from '../navegacao';
 import { Estudos } from '../jogo/Estudos';
 import { Voce } from '../jogo/Voce';
 import { VidaConcreta } from '../jogo/VidaConcreta';
@@ -48,8 +48,16 @@ function ir(l: Lugar): void {
   const a = AREAS.find(x => x.id === l.area)!;
   fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
   if (l.secao) fireEvent.click(screen.getByRole('tab', { name: SECOES_VIDA.find(s => s.id === l.secao)!.rotulo }));
-  // FIX pós-REWORK 4: as abas de Tempo livre.
+  // FIX pós-REWORK 4: as abas de Tempo livre (REWORK 9: Minha Semana).
   if (l.aba) fireEvent.click(screen.getByRole('tab', { name: SECOES_TEMPO.find(s => s.id === l.aba)!.rotulo }));
+  // REWORK 9: as partes de Caminhos.
+  if (l.parte) fireEvent.click(screen.getByRole('tab', { name: SECOES_CAMINHOS.find(s => s.id === l.parte)!.rotulo }));
+}
+/** O que está À VISTA no destino: em Caminhos, o cabeçalho e a aba aberta (as outras ficam no documento, escondidas). */
+function visivel(l: Lugar): string {
+  const main = document.querySelector('main')!;
+  if (l.area !== 'caminhos') return main.textContent ?? '';
+  return `${main.querySelector('.folio--caminhos')?.textContent ?? ''} ${main.querySelector('.caminhos__painel--ativo')?.textContent ?? ''}`;
 }
 const adulta = (v: Vida) => {
   v.trabalho.atual = undefined;
@@ -57,26 +65,28 @@ const adulta = (v: Vida) => {
   v.financas.conta = 40000; v.financas.negativado = false;
 };
 
-describe('as sete áreas são estáveis (não mudam de lugar com a idade)', () => {
+describe('as seis áreas são estáveis (não mudam de lugar com a idade) — REWORK 9', () => {
   for (const idade of [5, 15, 32]) {
-    it(`aos ${idade}: Linha da Vida, Você, Pessoas, Formação, Trabalho, Tempo livre, Vida — e nada de "Casa" ou "Cidade" no topo`, () => {
+    it(`aos ${idade}: História, Você, Pessoas, Caminhos, Minha Semana, Vida — e nada de "Formação", "Trabalho", "Casa" ou "Cidade" no topo`, () => {
       abrirJogo(vida(idade, idade >= 18 ? adulta : undefined));
       const navs = screen.getAllByRole('navigation', { name: 'Áreas' });
       expect(navs.length).toBe(2); // o topo (desktop) e a barra (celular): a mesma estrutura
       for (const nav of navs) {
         const nomes = within(nav).getAllByRole('button').map(b => b.getAttribute('aria-label') ?? b.textContent);
-        expect(nomes.length).toBe(7);
+        expect(nomes).toEqual(nav === navs[0] ? ['História', 'Você', 'Pessoas', 'Caminhos', 'Minha Semana', 'Vida'] : ['História', 'Você', 'Pessoas', 'Caminhos', 'Semana', 'Vida']);
       }
       for (const a of AREAS) expect(screen.getAllByRole('button', { name: a.rotulo }).length).toBeGreaterThan(0);
-      for (const velho of ['Casa', 'Cidade', 'Estudos']) expect(within(navs[0]).queryByRole('button', { name: velho })).toBeNull();
-      // A barra do celular foi desenhada para sete (layout responsivo estrutural).
-      expect(document.querySelector('.barra.barra--7')).toBeTruthy();
+      for (const velho of ['Casa', 'Cidade', 'Estudos', 'Formação', 'Trabalho', 'Tempo livre', 'Linha da Vida']) expect(within(navs[0]).queryByRole('button', { name: velho })).toBeNull();
+      // A barra do celular foi desenhada para seis (layout responsivo estrutural).
+      expect(document.querySelector('.barra.barra--6')).toBeTruthy();
     });
   }
 
-  it('criança: Trabalho existe e explica (quem sustenta a casa, quando o trabalho vira possibilidade)', () => {
+  it('criança: em Caminhos, a escola vem primeiro — e o trabalho explica (quem sustenta a casa, quando vira possibilidade)', () => {
     abrirJogo(vida(8));
-    ir({ area: 'trabalho' });
+    ir({ area: 'caminhos', parte: 'agora' });
+    const lados = [...document.querySelectorAll('.caminhos__painel--ativo [data-lado]')].map(x => x.getAttribute('data-lado'));
+    expect(lados).toEqual(['formacao', 'trabalho']);
     expect(screen.getByText(/Quem sustenta a casa/)).toBeTruthy();
     expect(screen.getByText(/Antes dos 14 anos, trabalhar é proibido/)).toBeTruthy();
   });
@@ -84,29 +94,28 @@ describe('as sete áreas são estáveis (não mudam de lugar com a idade)', () =
 
 describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliques de verdade)', () => {
   const esperado: Record<string, RegExp> = {
-    estudar: /Formação/, atividade_escolar: /O que dá para fazer aqui|Sem estudar agora|caminhos possíveis/, faculdade: /Formação/,
+    estudar: /Formação/, atividade_escolar: /O que dá para fazer aqui|Sem estudar agora|caminhos possíveis/, faculdade: /Cursos|cursos|Ao seu alcance/,
     falar_mae: /Família/, namoro: /Conhecer alguém/, emprego: /Procurar outro caminho|Vagas/, negocio: /Procurar outro caminho/,
     futebol: /Cuidar de si|Esporte|Corpo/, carro: /Concessionária/,
     // FIX pós-REWORK 4: as intenções novas (e as que não tinham o que conferir) levam a um lugar que mostra o que promete.
     hobby: /Explorar outras atividades|Arte|Leitura/, sair: /Com quem|Sair e ver gente/, estresse: /O que está pesando/, viajar: /Viagens e experiências/,
     rede: /Criar uma conta no Instagram|Instagram/, fazer_junto: /Família|Amigos|Perto|Gente da sua vida/, agir_trabalho: /No dia a dia do trabalho|O que dá para fazer agora/, usar_carro: /Nada seu ainda|Seu veículo|Seus veículos/, pertences: /Nada seu ainda|Para usar|Pertences/, casa: /Procurar (um|outro) lugar/, onde_moro: /Quem paga a casa/,
     romance_amigo: /Família|Amigos|Perto|Gente da sua vida/, cirurgia: /Clínica de cirurgia plástica/,
-    mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /Linha da Vida/,
+    mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /História/,
     // REWORK 7: os testes de intenção do playtest.
     sair_amigo: /Família|Amigos|Perto|Gente da sua vida/, violao: /Tocar um instrumento|Explorar outras atividades/, condicionamento: /Academia|Correr ou caminhar|Cuidar de si/,
-    praticas: /O que você pratica/, carreira: /A sua situação agora|Procurar outro caminho/, quanto_ganho: /O mês|Entra|entra/, em_casa: /O que há em casa|Quem mora com você|Quem paga a casa/,
+    praticas: /O que você pratica/, carreira: /Por onde você passou|Ainda não há história|Sua formação/, quanto_ganho: /O mês|Entra|entra/, em_casa: /O que há em casa|Quem mora com você|Quem paga a casa/,
     historico_escolar: /Sua formação|Sua história na formação|Ensino médio|ensino médio/, familia_aconteceu: /Família/,
     // REWORK 7.5: as intenções das interfaces do cotidiano.
     agenda: /A agenda da semana/, dedicacao: /A agenda da semana/, celular: /Tela inicial|Instagram/, homenagear: /Em memória|Quem se foi|Família/,
-    agradecer: /Família|Amigos|Perto|Gente da sua vida/, triste: /pesa|Cabeça|Como você está/, aparencia: /Linha da Vida/, profissional: /A sua situação agora|Procurar outro caminho/
+    agradecer: /Família|Amigos|Perto|Gente da sua vida/, triste: /pesa|Cabeça|Como você está/, aparencia: /História/, profissional: /A sua situação agora|Procurar outro caminho/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {
     const v = vida(30, x => { adulta(x); x.moradia = { tipo: 'aluguel', municipioId: x.moradia.municipioId, modeloId: 'apto_1q', aluguel: 1300, padrao: 3, tInicio: x.t }; for (const vin of Object.values(x.vinculos)) vin.convivio = vin.convivio.filter(c => c !== 'casa'); });
     abrirJogo(v);
     for (const x of MAPA_DE_INTENCOES) {
       ir(x.lugar);
-      const main = document.querySelector('main')!;
-      expect(main.textContent, `${x.quero} → ${rotuloDoLugar(x.lugar)}`).toMatch(esperado[x.id]);
+      expect(visivel(x.lugar), `${x.quero} → ${rotuloDoLugar(x.lugar)}`).toMatch(esperado[x.id]);
     }
   });
 

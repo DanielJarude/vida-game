@@ -178,7 +178,7 @@ export function lerPessoal(v: Vida, d: DimensaoPessoal): LeituraPessoal {
   }
   ajuda = ajuda.slice(0, 2);
   pesa = pesa.slice(0, 2);
-  const ir = d === 'aprendizado' ? { aba: 'tempo' as const, rotulo: 'Ler, xadrez, estudar — em Tempo livre' } : d === 'condicionamento' ? (v.caminhos.esporte?.fase === 'profissional' ? { aba: 'trabalho' as const, rotulo: 'O treino do clube — em Trabalho' } : { aba: 'tempo' as const, rotulo: 'Treino e movimento — em Tempo livre' }) : undefined;
+  const ir = d === 'aprendizado' ? { aba: 'tempo' as const, rotulo: 'Ler, xadrez, estudar — em Minha Semana' } : d === 'condicionamento' ? (v.caminhos.esporte?.fase === 'profissional' ? { aba: 'trabalho' as const, rotulo: 'O treino do clube — em Caminhos' } : { aba: 'tempo' as const, rotulo: 'Treino e movimento — em Minha Semana' }) : undefined;
   return { d, nome: NOME_PESSOAL[d], palavra, tendencia: tend, ajuda, pesa, causas: fraseDasCausas(tend, ajuda, pesa), uso: CONSUMIDORES[d], ir };
 }
 

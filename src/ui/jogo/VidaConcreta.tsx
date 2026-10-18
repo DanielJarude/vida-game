@@ -1,6 +1,6 @@
 /**
  * Vida: a vida concreta, numa área só, com seções internas estáveis —
- * Casa · Dinheiro · Compras · Tempo livre · Cidade. Antes eram três abas no
+ * Casa · Dinheiro · Compras · Pertences · Cidade · Viagens (REWORK 9). Antes eram três abas no
  * topo (Casa, Tempo, Cidade) e o dinheiro morava em Você; agora "onde eu
  * moro", "quanto eu tenho", "onde compro", "o que faço da semana" e "onde
  * vivo" ficam lado a lado, sem mudar de lugar com a idade (o que muda é o
@@ -33,6 +33,7 @@ import { Cidade } from './Cidade';
 import { Lugar, type QualLugar } from './material/Lugares';
 import { dinheiroCurto } from '../leituraMaterial';
 import { SECOES_VIDA, type Aba, type SecaoVida } from '../navegacao';
+import { Experiencias } from './Tempo';
 import '../material.css';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; secao: SecaoVida; irSecao: (s: SecaoVida) => void; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }
@@ -73,6 +74,8 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'compras' && <Compras vida={vida} agir={agir} abrir={setLugar} />}
         {secao === 'pertences' && <Pertences vida={vida} agir={agir} abrir={setLugar} />}
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
+        {/* REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram de Tempo livre. */}
+        {secao === 'viagens' && (i >= 12 ? <Experiencias vida={vida} agir={agir} /> : <p className="nota">Viajar, por enquanto, é com a família — quando ela decide ir.</p>)}
       </div>
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
     </div>

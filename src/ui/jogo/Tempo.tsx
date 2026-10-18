@@ -1,5 +1,5 @@
 /**
- * Tempo livre: a semana — e o que fazer com ela.
+ * Minha Semana (REWORK 9; antes, "Tempo livre"): a semana — e o que fazer com ela. As viagens foram para Vida.
  *
  * FIX pós-REWORK 4: a área acumulava tudo numa página só. Agora há abas que
  * respondem, de primeira, ao que a pessoa quer:
@@ -207,9 +207,9 @@ function FaixaDaSemana({ vida, s }: { vida: Vida; s: Semana }) {
 
 /** Para onde leva cada pedaço fixo da semana (a causa mora em outra área). */
 const ORIGEM: Record<string, { area: Aba; rotulo: string }> = {
-  trabalho: { area: 'trabalho', rotulo: 'Trabalho' }, horas_extras: { area: 'trabalho', rotulo: 'Trabalho' }, politica: { area: 'trabalho', rotulo: 'Trabalho' }, negocio: { area: 'trabalho', rotulo: 'Trabalho' },
-  curso: { area: 'formacao', rotulo: 'Formação' }, integrado: { area: 'formacao', rotulo: 'Formação' },
-  filhos_pequenos: { area: 'pessoas', rotulo: 'Pessoas' }, filhos_escola: { area: 'pessoas', rotulo: 'Pessoas' }, cuidar: { area: 'pessoas', rotulo: 'Pessoas' }, cuidado_pausa: { area: 'trabalho', rotulo: 'Trabalho' }, pets: { area: 'pessoas', rotulo: 'Pessoas' },
+  trabalho: { area: 'trabalho', rotulo: 'Caminhos' }, horas_extras: { area: 'trabalho', rotulo: 'Caminhos' }, politica: { area: 'trabalho', rotulo: 'Caminhos' }, negocio: { area: 'trabalho', rotulo: 'Caminhos' },
+  curso: { area: 'formacao', rotulo: 'Caminhos' }, integrado: { area: 'formacao', rotulo: 'Caminhos' },
+  filhos_pequenos: { area: 'pessoas', rotulo: 'Pessoas' }, filhos_escola: { area: 'pessoas', rotulo: 'Pessoas' }, cuidar: { area: 'pessoas', rotulo: 'Pessoas' }, cuidado_pausa: { area: 'trabalho', rotulo: 'Caminhos' }, pets: { area: 'pessoas', rotulo: 'Pessoas' },
   deslocamento: { area: 'cidade', rotulo: 'Cidade' }
 };
 
@@ -290,7 +290,7 @@ function ComoVoceVai({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => bo
  * (país → cidade → duração → resumo; região → destino → duração → resumo),
  * em EscolherViagem: nunca todas as combinações de uma vez.
  */
-function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+export function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const [aberta, setAberta] = useState<TipoExperiencia | null>(null);
   const lista = experienciasPossiveis(vida);
   if (!lista.length) return null;
@@ -387,18 +387,18 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
   const aba = abaDeFora ?? abaLocal;
   const trocar = (a: SecaoTempo) => { setAbaLocal(a); irAba?.(a); };
   const i = idade(vida);
-  if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Tempo livre</span></>} titulo="O tempo é de quem cuida de você." /></div>;
+  if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Minha Semana</span></>} titulo="O tempo é de quem cuida de você." /></div>;
   const s = semana(vida);
   const custo = economiaLocal(vida.moradia.municipioId).custo;
   const ativas = vida.rotinas.map(r => ({ r, m: modeloRotina(r.id) })).filter((x): x is { r: Vida['rotinas'][number]; m: ModeloRotina } => !!x.m);
   const frentes = frentesDaVida(vida);
   const pesaNaCabeca = fatoresCabeca(vida).some(f => (f.id === 'semana' || f.id === 'semana_fixa') && f.efeito > 0);
-  const abas = SECOES_TEMPO.filter(x => (x.id !== 'redes' || i >= 10) && (x.id !== 'viagens' || i >= 12));
+  const abas = SECOES_TEMPO.filter(x => x.id !== 'redes' || i >= 10);
   const ir = (a: Aba) => (irPara ? irPara(a) : DE_TEMPO.has(a) ? trocar(a as SecaoTempo) : undefined);
   return (
     <div className={`tempo tempo--${aba}`}>
-      <Folio kicker={<><span className="folio__area">Tempo livre</span> · {SECOES_TEMPO.find(x => x.id === aba)!.rotulo.toLowerCase()}</>} titulo={tituloDaSemana(vida, s)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
-      <nav className="subnav" aria-label="Seções de Tempo livre">
+      <Folio kicker={<><span className="folio__area">Minha Semana</span> · {SECOES_TEMPO.find(x => x.id === aba)!.rotulo.toLowerCase()}</>} titulo={tituloDaSemana(vida, s)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
+      <nav className="subnav" aria-label="Seções de Minha Semana">
         <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
           {abas.map(x => (
             <li key={x.id} role="presentation">
@@ -441,7 +441,6 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
           </>
         )}
         {aba === 'redes' && <RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} />}
-        {aba === 'viagens' && <Experiencias vida={vida} agir={agir} />}
       </div>
     </div>
   );

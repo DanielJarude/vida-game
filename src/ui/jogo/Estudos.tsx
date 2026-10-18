@@ -31,7 +31,7 @@ import { estagioDe, MATERIAS, modeloFrente } from '../../motor/dados/frentes';
 import { alvosDoEnem, cursosAgrupados, cursosParaVoce, pontuarCursos } from '../../motor/sistemas/relevancia';
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
-import type { Aba } from '../navegacao';
+import type { Aba, ParteCaminhos } from '../navegacao';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { custoDoEstudo } from '../../motor/sistemas/custoDoEstudo';
 import { historiaDaFormacao } from '../../motor/sistemas/vidaEstudantil';
@@ -87,7 +87,15 @@ export function areaDaPorta(o: Oportunidade): 'trabalho' | 'estudos' | 'tempo' {
 /** A porta é de trabalho? (compatibilidade com quem já chamava assim) */
 export const ehPortaDeTrabalho = (o: Oportunidade) => areaDaPorta(o) === 'trabalho';
 
-export function Estudos({ vida, agir, irPara, abrirPessoa }: Props) {
+/**
+ * A FORMAÇÃO como um lado de Caminhos (REWORK 9). Sem `parte`, a página inteira (como antes — os testes de componente
+ * e quem a usa sozinha); com `parte`, só o que pertence a ela: AGORA (o caminho e o próximo passo, o lugar, o ano
+ * letivo, os estudos agora), DESENVOLVIMENTO (como você está se saindo, matéria por matéria), OPORTUNIDADES (as
+ * portas, a preparação, os cursos) e HISTÓRICO (a formação que já é sua, o que ficou, a história de cada escola).
+ * Cada seção pertence a uma parte só: nada se repete entre as abas, nada some.
+ */
+export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { parte?: ParteCaminhos }) {
+  const em = (p: ParteCaminhos) => !parte || parte === p;
   const i = idade(vida);
   const e = vida.educacao;
   const inst = instituicaoAtual(vida);
@@ -95,22 +103,30 @@ export function Estudos({ vida, agir, irPara, abrirPessoa }: Props) {
   const lede = e.basica ? `Escola ${e.basica.rede === 'publica' ? 'pública' : 'particular'} · desempenho ${palavraDesempenho(e.basica.desempenho)}` : e.matricula ? `${e.matricula.instituicao}${e.matricula.trancado ? ' · trancado' : ` · ${e.matricula.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(e.matricula.mesesRestantes / 12)} anos`}`}` : rotuloEscolaridade(vida, e.escolaridade);
   return (
     <div className="estudos rumo">
-      <Folio kicker={<><span className="folio__area">Formação</span> · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</>} titulo={titulo} lede={lede} />
+      {!parte && <Folio kicker={<><span className="folio__area">Formação</span> · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</>} titulo={titulo} lede={lede} />}
+      {parte === 'agora' && (
+        <header className="lado-caminho__cabeca">
+          {/* O título (a série, o curso) já está na situação, no alto de Caminhos, e no caminho logo abaixo: aqui, o lado e o como vai. */}
+          <h2 className="lado-caminho__kicker">Formação · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</h2>
+          {!inst && !e.matricula && <p className="lado-caminho__titulo">{titulo}</p>}
+          {lede && <p className="lado-caminho__lede">{lede}</p>}
+        </header>
+      )}
       {/* REWORK 7 — três camadas: AGORA (o caminho até aqui e o próximo passo, como você está se saindo, o lugar e o
           que dá para fazer nele), DEPOIS (as portas, a preparação, os cursos) e, por último, o HISTÓRICO (a
           formação que já é sua, o que ficou, a história de cada escola) — antes, a história vinha antes do agora. */}
-      <TrajetoriaDeEstudo vida={vida} />
-      <ComoVai vida={vida} />
-      <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'estudos'} titulo="Ao seu alcance agora" />
-      {inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
-      {inst && <NoAnoLetivo vida={vida} agir={agir} />}
-      <Estudo vida={vida} agir={agir} />
-      {i >= 14 && <Preparacao vida={vida} agir={agir} irPara={irPara} />}
-      <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => /^(selecao|vestibular):/.test(o.id)} />
-      {i >= 15 && <Cursos vida={vida} agir={agir} />}
-      <Formacao vida={vida} />
-      <OQueFicou vida={vida} />
-      {i < 14 && !vida.educacao.basica && <p className="vazio">Por enquanto, o estudo é crescer.</p>}
+      {em('agora') && <TrajetoriaDeEstudo vida={vida} />}
+      {em('desenvolvimento') && <ComoVai vida={vida} />}
+      {em('oportunidades') && <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'estudos'} titulo="Ao seu alcance agora" />}
+      {em('agora') && inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
+      {em('agora') && inst && <NoAnoLetivo vida={vida} agir={agir} />}
+      {em('agora') && <Estudo vida={vida} agir={agir} />}
+      {em('oportunidades') && i >= 14 && <Preparacao vida={vida} agir={agir} irPara={irPara} />}
+      {em('oportunidades') && <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => /^(selecao|vestibular):/.test(o.id)} />}
+      {em('oportunidades') && i >= 15 && <Cursos vida={vida} agir={agir} />}
+      {em('historico') && <Formacao vida={vida} />}
+      {em('historico') && <OQueFicou vida={vida} />}
+      {em('agora') && i < 14 && !vida.educacao.basica && <p className="vazio">Por enquanto, o estudo é crescer.</p>}
     </div>
   );
 }
@@ -158,7 +174,7 @@ function ComoVai({ vida }: { vida: Vida }) {
 /**
  * A instituição como ambiente: como ela é, quem está lá (a professora que
  * reparou, os colegas), e o que dá para fazer ali — atividades de verdade,
- * que ocupam a semana (a mesma rotina que Tempo livre conta) e deixam
+ * que ocupam a semana (a mesma rotina que Minha Semana conta) e deixam
  * vivências que pesam depois (`formacao`).
  */
 function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Acao) => boolean; abrirPessoa?: (id: string) => void; irPara?: (a: Aba) => void }) {
@@ -199,7 +215,7 @@ function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Aca
               );
             })}
           </ul>
-          <p className="nota">Cada atividade ocupa parte da semana (veja em <button type="button" className="link" onClick={() => irPara?.('tempo')}>Tempo livre</button>).</p>
+          <p className="nota">Cada atividade ocupa parte da semana (veja em <button type="button" className="link" onClick={() => irPara?.('tempo')}>Minha Semana</button>).</p>
         </>
       )}
     </section>
@@ -525,7 +541,7 @@ function EstudoParaConcurso({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
           <p className="nota">Estudo dirigido rende mais nos editais daquela área; mudar de área não apaga o que se estudou. A sua estrada (a farda para a polícia, o Direito para tribunal, Contábeis para o fiscal) também pesa.</p>
         </div>
       )}
-      {irPara && (rot || c.meses >= 6) && <button type="button" className="link rotina__ir" onClick={() => irPara('trabalho')}>Os editais e o preparo de cada um, em Trabalho →</button>}
+      {irPara && (rot || c.meses >= 6) && <button type="button" className="link rotina__ir" onClick={() => irPara('oportunidades')}>Os editais e o preparo de cada um, em Caminhos · Oportunidades →</button>}
     </div>
   );
 }

@@ -21,7 +21,7 @@ import { executar } from '../../motor/acoes';
 import { transacao } from '../../motor/nucleo';
 import { catalogoDeViagem, custoDaExperiencia, escolhasDaExperiencia } from '../../motor/sistemas/experiencias';
 import { dinheiroCurto } from '../apresentar';
-import { Tempo } from '../jogo/Tempo';
+import { VidaConcreta } from '../jogo/VidaConcreta';
 
 beforeAll(async () => { await precarregar(); });
 
@@ -46,7 +46,7 @@ const porta = (nome: string) => screen.getByText(nome).closest('li') as HTMLElem
 describe('Viagem para fora: país → cidade → duração → resumo', () => {
   it('o primeiro nível mostra só países (nenhuma duração); o país mostra só as suas cidades; a cidade mostra as durações', () => {
     const v = vidaAos(35);
-    render(<Tempo vida={v} agir={() => true} aba="viagens" />);
+    render(<VidaConcreta vida={v} agir={() => true} secao="viagens" irSecao={() => {}} irPara={() => {}} abrirPessoa={() => {}} />);
     const li = porta('Uma viagem para fora do país');
     fireEvent.click(within(li).getByRole('button', { name: 'Ver destinos' }));
 
@@ -83,7 +83,7 @@ describe('Viagem para fora: país → cidade → duração → resumo', () => {
   it('confirmar executa a mesma ação de antes (mesmo id de escolha), com o preço do motor', () => {
     const v = vidaAos(35);
     const feitas: Acao[] = [];
-    render(<Tempo vida={v} agir={a => { feitas.push(a); return true; }} aba="viagens" />);
+    render(<VidaConcreta vida={v} agir={a => { feitas.push(a); return true; }} secao="viagens" irSecao={() => {}} irPara={() => {}} abrirPessoa={() => {}} />);
     const li = porta('Uma viagem para fora do país');
     fireEvent.click(within(li).getByRole('button', { name: 'Ver destinos' }));
     fireEvent.click(within(li).getByRole('button', { name: /^Portugal/ }));
@@ -109,7 +109,7 @@ describe('Viagem para fora: país → cidade → duração → resumo', () => {
 describe('Viagem pelo Brasil: região → destino → duração', () => {
   it('a região mostra só os seus destinos; nada de duração antes do destino', () => {
     const v = vidaAos(35);
-    render(<Tempo vida={v} agir={() => true} aba="viagens" />);
+    render(<VidaConcreta vida={v} agir={() => true} secao="viagens" irSecao={() => {}} irPara={() => {}} abrirPessoa={() => {}} />);
     const li = porta('Uma viagem pelo Brasil');
     fireEvent.click(within(li).getByRole('button', { name: 'Ver destinos' }));
     expect(within(li).queryAllByRole('button', { name: DURACOES })).toHaveLength(0);
@@ -125,7 +125,7 @@ describe('Viagem pelo Brasil: região → destino → duração', () => {
 describe('A restrição da porta aparece uma vez só', () => {
   it('foi há pouco: o motivo aparece uma vez, no nível da viagem, e a porta não abre lista de durações', () => {
     const v = vidaAos(35, x => { x.fatos.exp_viagem_exterior = x.t - 3; });
-    render(<Tempo vida={v} agir={() => true} aba="viagens" />);
+    render(<VidaConcreta vida={v} agir={() => true} secao="viagens" irSecao={() => {}} irPara={() => {}} abrirPessoa={() => {}} />);
     expect(screen.getAllByText('Foi há pouco — a próxima fica para daqui a um tempo.')).toHaveLength(1);
     const li = porta('Uma viagem para fora do país');
     expect(within(li).queryByRole('button', { name: 'Ver destinos' })).toBeNull();
