@@ -57,6 +57,8 @@ describe('Fase A · Minha Semana: as três leituras da rotina', () => {
     expect(tudo).not.toMatch(/não cabe mais nada|Sobra espaço para descansar|mais atividades do que cabe/i);
     // cada nota diz uma coisa: horários, exigência, cabeça — com o número do motor
     expect(within(notas).getByRole('article', { name: 'Horários' }).textContent).toContain(`${av.horarios.livres} h livres`);
+    // e a agenda diz o MESMO número (uma conta só para "horas livres" em Minha Semana)
+    expect(screen.getByRole('region', { name: 'A agenda da semana' }).textContent).toContain(`uns ${av.horarios.livres} h livres na semana`);
     expect(within(notas).getByRole('article', { name: 'Cabeça' }).textContent).toContain(`${av.cabeca.valor}%`);
   });
 
@@ -144,6 +146,17 @@ describe('Cenário 6 · Caminhos aos 17, com técnico e procurando emprego', () 
     expect(within(acoes).queryByText(/partido|bandeira/i)).toBeNull();
     // só a parte aberta é desenhada
     expect(document.querySelectorAll('[role=tabpanel]')).toHaveLength(1);
+  });
+
+  it('aos 20, procurando: as ações políticas existem, mas ficam na seção "Vida pública", abaixo das vagas', () => {
+    const v = transacao(adulto(20, { semente: 33 }), x => { x.trabalho.atual = undefined; x.educacao.basica = undefined; x.educacao.matricula = undefined; x.momento = null; }).vida;
+    caminhos(v, 'agora');
+    const publica = document.querySelector('details.pasta-secao');
+    expect(publica, 'a vida pública aparece agrupada').toBeTruthy();
+    expect(publica!.textContent).toMatch(/partido|bandeira|comunidade|concurso/i);
+    const principais = screen.getByRole('list', { name: 'O que dá para fazer agora' });
+    expect(principais.textContent).not.toMatch(/partido|bandeira/i);
+    expect(within(principais).getAllByRole('button')[0].textContent).toMatch(/vagas/i);
   });
 
   it('em Oportunidades, as pastas mantêm tudo acessível: profissões, vida pública, outras trajetórias', () => {

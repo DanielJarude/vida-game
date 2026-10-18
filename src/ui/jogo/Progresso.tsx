@@ -68,7 +68,8 @@ export function FichaDeHabilidade({ vida, e, nome, frase, ativa = true }: { vida
         <h4 className="ficha-hab__nome">{titulo}</h4>
         <p className="ficha-hab__nivel">{cap(regua.palavra)}{regua.relacao ? <span className="ficha-hab__relacao"> · {PALAVRA_DA_RELACAO[regua.relacao]}</span> : null}</p>
       </div>
-      {frase && <p className="ficha-hab__frase">{ativa ? frase : `Parou. ${frase}`.replace('Parou. Parou', 'Parou')}</p>}
+      {/* A frase só aparece quando diz algo além do nível (às vezes ela É a palavra do estágio). */}
+      {frase && frase.replace(/\.$/, '').toLowerCase() !== regua.palavra.toLowerCase() && <p className="ficha-hab__frase">{ativa ? frase : `Parou. ${frase}`.replace('Parou. Parou', 'Parou')}</p>}
       <p className="ficha-hab__linha"><span className="ficha-hab__rotulo">No último ano</span> <span className={`ficha-hab__mudou ficha-hab__mudou--${direcao}`} data-agora={e.agora}>{mudou}</span>{auge.estagio > regua.estagio && <span className="ficha-hab__auge"> · já esteve melhor ({auge.palavra})</span>}</p>
       {causas.length > 0 && (
         <p className="ficha-hab__linha ficha-hab__origem"><span className="ficha-hab__rotulo">De onde veio</span>{' '}

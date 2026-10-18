@@ -86,7 +86,8 @@
   .boletim__tabela, .boletim__tabela tbody, .boletim__tabela tr, .boletim__tabela th, .boletim__tabela td { display: block; }
   .boletim__tabela tr { padding: var(--space-2) 0; border-bottom: 1px solid var(--fio); }
   .boletim__tabela th, .boletim__tabela td { border: 0; padding: 2px 0; }
-  .boletim__tabela td[data-rotulo] { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: var(--space-2); }
+  .boletim__tabela td[data-rotulo] { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: var(--space-2); align-items: baseline; }
+  .boletim__celula { min-width: 0; }
   .boletim__tabela td[data-rotulo]::before { content: attr(data-rotulo); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); padding-top: 2px; }
   .boletim__esperado { display: inline; }
 }
@@ -137,7 +138,7 @@
 /* ============================================================ Caminhos: a pasta de trajetórias (UX-07 / VIS-01) */
 /* As partes viram abas de pasta (o papel-cartão de uma pasta de documentos); cada caminho possível, uma ficha curta. */
 .pagina-caminhos .subnav--caminhos .subnav__item { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
-.pagina-caminhos .subnav--caminhos .subnav__item--ativo { background: color-mix(in oklab, var(--tom-estudos) 9%, var(--superficie)); box-shadow: inset 0 3px 0 color-mix(in oklab, var(--tom-estudos) 65%, transparent); }
+.pagina-caminhos .subnav--caminhos .subnav__item--ativo { color: var(--text-primary); background: color-mix(in oklab, var(--tom-estudos) 14%, var(--superficie)); box-shadow: inset 0 3px 0 color-mix(in oklab, var(--tom-estudos) 65%, transparent); }
 .pagina-caminhos .caminhos__painel--ativo { border-top: 2px solid color-mix(in oklab, var(--tom-estudos) 25%, var(--fio)); padding-top: var(--space-3); }
 .pasta-secao { margin: var(--space-3) 0; border-radius: var(--radius-md); background: color-mix(in oklab, var(--tom-estudos) 4%, var(--superficie)); box-shadow: 0 0 0 1px var(--fio); }
 .pasta-secao__aba { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--space-2); min-height: var(--touch-target); padding: var(--space-2) var(--space-3); font-weight: var(--weight-semibold); color: var(--text-primary); }
@@ -173,7 +174,9 @@
 .pessoas .rosto .retrato { border-radius: 2px; }
 .pessoas .rosto__nome { font-style: italic; }
 /* História: o diário — a margem do caderno entre o ano e o que se escreveu dele. */
-.linha-da-vida .ano__corpo { background-image: linear-gradient(to right, transparent calc(5rem + var(--space-5) / 2 - 1px), color-mix(in oklab, var(--ruim) 28%, transparent) calc(5rem + var(--space-5) / 2 - 1px), color-mix(in oklab, var(--ruim) 28%, transparent) calc(5rem + var(--space-5) / 2), transparent calc(5rem + var(--space-5) / 2)); }
+@media (min-width: 761px) {
+  .linha-da-vida .ano__corpo { background-image: linear-gradient(to right, transparent calc(5rem + var(--space-5) / 2 - 1px), color-mix(in oklab, var(--ruim) 28%, transparent) calc(5rem + var(--space-5) / 2 - 1px), color-mix(in oklab, var(--ruim) 28%, transparent) calc(5rem + var(--space-5) / 2), transparent calc(5rem + var(--space-5) / 2)); }
+}
 /* Minha Semana: o planner — os dias como cabeçalhos de página, o fim de semana em outra cor de papel. */
 .agenda-semana .grade-semana__nome { border-bottom: 2px solid color-mix(in oklab, var(--tom-tempo) 45%, var(--fio)); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-size: var(--type-meta); }
 .agenda-semana .grade-semana__corpo { background-image: linear-gradient(to right, color-mix(in oklab, var(--tom-tempo) 10%, transparent) 0 3px, transparent 3px); }

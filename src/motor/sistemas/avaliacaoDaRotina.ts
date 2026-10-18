@@ -63,19 +63,21 @@ const janelaDa = (i: number): [number, number] => (i < 12 ? [h(8), h(19, 30)] : 
 const horaEmPalavras = (m: number) => `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}`;
 
 /** As horas livres na janela da idade e quantos dias têm uma hora seguida livre. */
-export function folgaNosHorarios(v: Vida, a: Agenda = agendaDaSemana(v)): { livres: number; diasComFolga: number; janela: string } {
+export function folgaNosHorarios(v: Vida, a: Agenda = agendaDaSemana(v)): { livres: number; diasComFolga: number; janela: string; porDia: number[] } {
   const [ini, fim] = janelaDa(idade(v));
   let minutos = 0;
   let dias = 0;
+  const porDia: number[] = [];
   for (let d = 0; d < 7; d++) {
-    let seguido = 0, maior = 0;
+    let seguido = 0, maior = 0, doDia = 0;
     for (let t = ini; t < fim; t += 15) {
       const livre = !a.blocos.some(b => b.dias.includes(d as never) && t < b.fim && b.inicio < t + 15);
-      if (livre) { minutos += 15; seguido += 15; maior = Math.max(maior, seguido); } else seguido = 0;
+      if (livre) { minutos += 15; doDia += 15; seguido += 15; maior = Math.max(maior, seguido); } else seguido = 0;
     }
+    porDia.push(doDia);
     if (maior >= 60) dias += 1;
   }
-  return { livres: Math.round(minutos / 60), diasComFolga: dias, janela: `das ${horaEmPalavras(ini)} às ${horaEmPalavras(fim)}` };
+  return { livres: Math.round(minutos / 60), diasComFolga: dias, janela: `das ${horaEmPalavras(ini)} às ${horaEmPalavras(fim)}`, porDia };
 }
 
 export function avaliarRotina(v: Vida, a: Agenda = agendaDaSemana(v)): AvaliacaoDaRotina {

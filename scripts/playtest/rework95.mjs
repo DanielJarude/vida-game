@@ -103,6 +103,47 @@ function sobreposicoes() {
   return [...new Set(achados)].slice(0, 6);
 }
 
+
+/** Roda NA PÁGINA: textos visíveis com contraste abaixo de 3:1 contra o fundo efetivo (o primeiro ancestral com cor de
+ *  fundo opaca; color-mix já vem resolvido em rgb pelo navegador). Aproximação: ignora imagens e gradientes de fundo. */
+function contrasteBaixo() {
+  // rgb(), rgba() e oklab() (o que color-mix devolve), sempre para rgb 0..255.
+  const rgb = c => {
+    const ok = c.match(/oklab\(([^)]+)\)/);
+    if (ok) {
+      const v = ok[1].split(/[ ,\/]+/).filter(Boolean).map(Number); const [L, A, B] = v; const a = v[3] ?? 1;
+      const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3, m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3, s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
+      const lin = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+      const enc = x => 255 * Math.min(1, Math.max(0, x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055));
+      return { r: enc(lin[0]), g: enc(lin[1]), b: enc(lin[2]), a };
+    }
+    const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const v = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); return { r: v[0], g: v[1], b: v[2], a: v[3] ?? 1 };
+  };
+  const lin = x => { x /= 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  const lum = c => 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+  const misturar = (fg, bg) => ({ r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a), a: 1 });
+  const fundo = el => { const camadas = []; for (let a = el; a; a = a.parentElement) { const c = rgb(getComputedStyle(a).backgroundColor); if (c && c.a > 0) { camadas.push(c); if (c.a >= 0.99) break; } } let bg = { r: 255, g: 255, b: 255, a: 1 }; for (const c of camadas.reverse()) bg = misturar(c, bg); return bg; };
+  const out = [];
+  const raiz = document.querySelector('main') ?? document.body;
+  const w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT);
+  const vistos = new Set();
+  while (w.nextNode()) {
+    const n = w.currentNode; const el = n.parentElement;
+    if (!el || vistos.has(el) || !n.textContent.trim() || el.closest('svg, .sr-only, [aria-hidden=true]')) continue;
+    vistos.add(el);
+    if (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
+    const cs = getComputedStyle(el);
+    let fg = rgb(cs.color); if (!fg) continue;
+    let op = 1; for (let a = el; a; a = a.parentElement) op *= Number(getComputedStyle(a).opacity);
+    if (op < 0.95 || el.closest('[disabled], :disabled')) continue; // o esmaecido de propósito (o bloqueado, o fora de alcance)
+    const bg = fundo(el); fg = misturar(fg, bg);
+    const [x, y] = [lum(fg), lum(bg)].sort((p, q) => q - p);
+    const r = (x + 0.05) / (y + 0.05);
+    if (r < 3) out.push(`${r.toFixed(2)} "${n.textContent.trim().slice(0, 24)}" (${el.className || el.tagName})`);
+  }
+  return out.slice(0, 6);
+}
+
 const b = await chromium.launch();
 const problemas = [];
 const notas = [];
@@ -170,7 +211,10 @@ for (const [nome, sv, area, ...passos] of cenas) {
           const t = p.getByRole('radio', { name: passo.slice(6), exact: true }).first(); if (await t.count()) { await t.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem pasta ${passo}`);
         } else if (passo.startsWith('aba:') || passo.startsWith('secao:')) {
           const nomeAba = passo.slice(passo.indexOf(':') + 1);
-          const t = p.getByRole('tab', { name: nomeAba, exact: true }).first(); if (await t.count()) { await t.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem aba ${nomeAba}`);
+          // (no build da base, "Patrimônio" ainda se chamava "Pertences")
+          let t = p.getByRole('tab', { name: nomeAba, exact: true }).first();
+          if (!(await t.count()) && nomeAba === 'Patrimônio') t = p.getByRole('tab', { name: 'Pertences', exact: true }).first();
+          if (await t.count()) { await t.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem aba ${nomeAba}`);
         }
       }
     }
@@ -180,6 +224,7 @@ for (const [nome, sv, area, ...passos] of cenas) {
       const recortado = x => { for (let a = x.parentElement; a; a = a.parentElement) { const cs = getComputedStyle(a); if (cs.overflowX !== 'visible' && a.getBoundingClientRect().right <= document.documentElement.clientWidth + 1) return true; } return false; };
       return [...document.querySelectorAll('main *, .folha *')].filter(x => { const r = x.getBoundingClientRect(); return r.width > 0 && r.right > document.documentElement.clientWidth + 1 && getComputedStyle(x).position !== 'fixed' && !x.closest('[data-rola-x], .palmares__historico-rolagem, .subnav, .abas-tempo, .abas-locais__lista') && !recortado(x); }).slice(0, 4).map(x => `${x.tagName.toLowerCase()}.${[...x.classList].join('.')}`); });
     if (estouram.length) problemas.push(`${rot}: estouram a borda: ${estouram.join(', ')}`);
+    if (w >= 1440 || w === 390) { const cb = await p.evaluate(contrasteBaixo); if (cb.length) problemas.push(`${rot}: contraste < 3: ${cb.join(' | ')}`); }
     const sob = await p.evaluate(sobreposicoes);
     if (sob.length) problemas.push(`${rot}: texto sobre texto: ${sob.join(' | ')}`);
     if (sv && area !== 'fim' && !passos.includes('menu') && !(await p.locator('.folha').count())) {

@@ -72,7 +72,7 @@
 .plataforma-painel__dados div { display: flex; flex-direction: column; }
 .plataforma-painel__dados dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
 .plataforma-painel__dados dd { margin: 0; color: var(--text-primary); }
-.plataforma-painel__sub { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--cor-plataforma); margin: var(--space-4) 0 var(--space-1); filter: brightness(1.35); }
+.plataforma-painel__sub { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: color-mix(in oklab, var(--cor-plataforma) 60%, var(--text-primary)); margin: var(--space-4) 0 var(--space-1); filter: brightness(1.35); }
 .plataforma-painel__temas { align-items: flex-start; }
 .plataforma-painel__mais { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--rule); }
 .plataforma-painel__bloco { margin-top: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background: var(--surface); }

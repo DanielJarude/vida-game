@@ -22,6 +22,7 @@ import { custoDaRotina, DE_ESTUDOS } from '../../motor/sistemas/rotinas';
 import { DE_FORMACAO } from '../../motor/sistemas/formacao';
 import { ABRE, agendaDaSemana, alternativasDoConflito, DIAS, DIAS_CURTOS, FECHA, faixaDeHoras, fichaDoBloco, hora, PALAVRA_TURNO, quando, TODOS, type Bloco } from '../../motor/sistemas/agenda';
 import { idade } from '../../motor/nucleo';
+import { folgaNosHorarios } from '../../motor/sistemas/avaliacaoDaRotina';
 import { BotaoAcao, navegarAbas } from '../comum';
 import { dinheiroCurto } from '../apresentar';
 import { leituraDaPratica } from '../leituraPratica';
@@ -60,7 +61,8 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; agir: 
   const ocupados = a.blocos.filter(b => b.origem !== 'trajeto').flatMap(b => b.dias);
   const [dia, setDia] = useState<Dia>(() => (comConflito.length ? Math.min(...comConflito) : ocupados.length ? Math.min(...ocupados) : 0) as Dia);
   const bloco = aberto ? a.blocos.find(b => b.id === aberto) : undefined;
-  const livreSemana = Math.round(a.livre.reduce((x, y) => x + y, 0) / 60);
+  // REWORK 9.5: as horas livres são as da avaliação da rotina (a janela da idade) — um número só em Minha Semana.
+  const folga = folgaNosHorarios(vida, a);
   const conflitoDe = (id: string) => a.conflitos.find(c => c.perde === id || c.perde === a.blocos.find(b => b.id === id)?.ref);
   const pratica = ficha ? vida.rotinas.find(r => r.id === ficha) : undefined;
   const lp = pratica ? leituraDaPratica(vida, pratica, DE_ESTUDOS.has(pratica.id) || DE_FORMACAO.has(pratica.id)) : undefined;
@@ -73,7 +75,7 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; agir: 
         <h3 id="titulo-agenda" className="agenda__titulo">A agenda da semana</h3>
         {/* REWORK 9.5: a agenda diz só o que é dela (os compromissos e as horas); a exigência e a cabeça estão nas notas da rotina. */}
         <p className="agenda__ritmo">
-          {a.blocos.filter(b => b.origem !== 'trajeto').length} {a.blocos.length === 1 ? 'compromisso' : 'compromissos'} · uns {livreSemana} h livres na semana (das 7h às 23h)
+          {a.blocos.filter(b => b.origem !== 'trajeto').length} {a.blocos.length === 1 ? 'compromisso' : 'compromissos'} · uns {folga.livres} h livres na semana ({folga.janela})
         </p>
         {origens.length > 1 && (
           <ul className="agenda-semana__legenda" aria-label="Legenda">
@@ -107,7 +109,7 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; agir: 
             <li key={d} role="presentation">
               <button type="button" role="tab" aria-selected={dia === d} tabIndex={dia === d ? 0 : -1} className={`agenda-semana__dia-botao${dia === d ? ' agenda-semana__dia-botao--ativo' : ''}`} onClick={() => setDia(d)} aria-label={`${DIAS[d]}: ${Math.round(a.livre[d] / 60)} h livres`}>
                 <span>{DIAS_CURTOS[d]}</span>
-                <span className="agenda-semana__dia-livre" aria-hidden>{Math.round(a.livre[d] / 60)}h</span>
+                <span className="agenda-semana__dia-livre" aria-hidden>{Math.round(folga.porDia[d] / 60)}h</span>
               </button>
             </li>
           ))}
@@ -122,7 +124,7 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; agir: 
           const doDia = a.blocos.filter(b => b.dias.includes(d));
           return (
             <section key={d} className={`grade-semana__dia${d === dia ? ' grade-semana__dia--escolhido' : ''}${d >= 5 ? ' grade-semana__dia--fds' : ''}`} aria-label={`${DIAS[d]}${doDia.length ? '' : ': livre'}`}>
-              <h4 className="grade-semana__nome">{DIAS_CURTOS[d]}<span className="grade-semana__livre"> · {Math.round(a.livre[d] / 60)}h livres</span></h4>
+              <h4 className="grade-semana__nome">{DIAS_CURTOS[d]}<span className="grade-semana__livre"> · {Math.round(folga.porDia[d] / 60)}h livres</span></h4>
               <div className="grade-semana__corpo">
                 {REGUA.map(m => <span key={m} className="grade-semana__linha" style={{ top: pos(m) }} aria-hidden />)}
                 {doDia.map(b => {

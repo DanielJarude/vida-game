@@ -152,7 +152,7 @@
 .app-abas { list-style: none; margin: 0 0 var(--space-3); padding: 3px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; border-radius: var(--radius-pill); background: var(--veu-1); }
 .app-abas__item { width: 100%; min-height: 36px; border-radius: var(--radius-pill); font-size: var(--type-caption); font-weight: var(--weight-semibold); color: var(--text-secondary); }
 .app-abas__item--aberta { background: var(--superficie-topo); color: var(--text-primary); box-shadow: 0 0 0 1px var(--fio-forte); }
-.app-abas__n { color: var(--cor-plataforma); }
+.app-abas__n { color: color-mix(in oklab, var(--cor-plataforma) 45%, var(--text-primary)); }
 .app-tela { display: none; }
 .app-tela--aberta { display: block; }
 .app-tela__aviso { margin: 0 0 var(--space-2); }

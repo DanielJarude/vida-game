@@ -100,7 +100,7 @@ details summary { cursor: pointer; }
   color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--rule-strong); font-size: var(--type-caption);
 }
 .escolha__item:hover { color: var(--text-primary); box-shadow: inset 0 0 0 1px var(--tom-linha); }
-.escolha__item--ativo { color: var(--tom-sobre); background: var(--tom); box-shadow: none; font-weight: var(--weight-semibold); }
+.escolha__item--ativo, .escolha__item--ativo:hover { color: var(--tom-sobre); background: var(--tom); box-shadow: none; font-weight: var(--weight-semibold); }
 .escolha__item--ativo::before { content: '✓ '; }
 
 /* ------------------------------------------------------------------ Campos */

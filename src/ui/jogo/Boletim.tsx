@@ -67,16 +67,16 @@ export function Boletim({ vida }: { vida: Vida }) {
             return (
               <tr key={d} className={`boletim__linha boletim__linha--${direcao}${d === forte ? ' boletim__linha--forte' : d === fraca ? ' boletim__linha--fraca' : ''}`} data-frente={d}>
                 <th scope="row" className="boletim__materia">{cap(NOME_MATERIA[d])}</th>
-                <td className="boletim__dominio" data-rotulo="Domínio"><strong data-agora={e.agora}>{num(e.agora)}</strong>{r.esperado !== undefined && <span className="boletim__esperado"> esperado ~{num(r.esperado)}</span>}</td>
-                <td className="boletim__ano" data-rotulo="No ano">
+                <td className="boletim__dominio" data-rotulo="Domínio"><span className="boletim__celula"><strong data-agora={e.agora}>{num(e.agora)}</strong>{r.esperado !== undefined && <span className="boletim__esperado"> esperado ~{num(r.esperado)}</span>}</span></td>
+                <td className="boletim__ano" data-rotulo="No ano"><span className="boletim__celula">
                   {e.antes !== undefined ? <span className={`boletim__delta boletim__delta--${direcao}`}>{num(e.antes)} → {num(e.agora)} ({sinal(e.delta ?? 0)})</span> : <span className="boletim__delta boletim__delta--nova">primeiro ano registrado</span>}
                   {causa.length > 0 && (
                     <span className="boletim__causas">
                       {causa.map(([fonte, x]) => <span key={fonte} className={`boletim__causa${x < 0 ? ' boletim__causa--perda' : ''}`} data-fonte={fonte}>{nomeDaFonte(fonte)} {sinal(x)}</span>)}
                     </span>
                   )}
-                </td>
-                <td className="boletim__serie" data-rotulo="Diante da série">{cap(r.palavra)}{r.relacao ? <span className="boletim__relacao"> · {PALAVRA_DA_RELACAO[r.relacao]}</span> : null}</td>
+                </span></td>
+                <td className="boletim__serie" data-rotulo="Diante da série"><span className="boletim__celula">{cap(r.palavra)}{r.relacao ? <span className="boletim__relacao"> · {PALAVRA_DA_RELACAO[r.relacao]}</span> : null}</span></td>
               </tr>
             );
           })}
