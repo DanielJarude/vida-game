@@ -18,10 +18,8 @@
 import { useState } from 'react';
 import type { Dia, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
-import { encaixe, PALAVRA_DA_FAIXA, type Semana } from '../../motor/sistemas/semana';
 import { custoDaRotina, DE_ESTUDOS } from '../../motor/sistemas/rotinas';
 import { DE_FORMACAO } from '../../motor/sistemas/formacao';
-import { leituraDoEstresse } from '../../motor/sistemas/leituraDoEstresse';
 import { ABRE, agendaDaSemana, alternativasDoConflito, DIAS, DIAS_CURTOS, FECHA, faixaDeHoras, fichaDoBloco, hora, PALAVRA_TURNO, quando, TODOS, type Bloco } from '../../motor/sistemas/agenda';
 import { idade } from '../../motor/nucleo';
 import { BotaoAcao, navegarAbas } from '../comum';
@@ -32,16 +30,16 @@ import type { Aba } from '../navegacao';
 
 /** Para onde leva a causa de um compromisso fixo (ele mora em outra área). */
 const AREA_DA_ORIGEM: Partial<Record<Bloco['origem'], Aba>> = {
-  escola: 'formacao', curso: 'formacao', trabalho: 'trabalho', paralela: 'trabalho', negocio: 'trabalho', politica: 'trabalho', prisao: 'trabalho', pena: 'trabalho',
+  escola: 'formacao', curso: 'formacao', estudo: 'formacao', trabalho: 'trabalho', paralela: 'trabalho', negocio: 'trabalho', politica: 'trabalho', prisao: 'trabalho', pena: 'trabalho',
   filhos: 'pessoas', cuidado: 'pessoas', pets: 'pessoas', trajeto: 'cidade'
 };
 const ROTULO_DA_ORIGEM: Record<Bloco['origem'], string> = {
-  escola: 'Escola', curso: 'Curso', trabalho: 'Trabalho', paralela: 'Trabalho por fora', negocio: 'Negócio', politica: 'Política', rotina: 'Atividade',
+  escola: 'Escola', curso: 'Curso', estudo: 'Estudo', trabalho: 'Trabalho', paralela: 'Trabalho por fora', negocio: 'Negócio', politica: 'Política', rotina: 'Atividade',
   filhos: 'Filhos', cuidado: 'Cuidado', pets: 'Bichos', prisao: 'Pena', pena: 'Pena', trajeto: 'Trajeto'
 };
 /** A família visual do bloco (a cor vem do tom de cada área — as quatro paletas). */
 const FAMILIA: Record<Bloco['origem'], string> = {
-  escola: 'estudo', curso: 'estudo', trabalho: 'trabalho', paralela: 'trabalho', negocio: 'trabalho', politica: 'trabalho', rotina: 'atividade',
+  escola: 'estudo', curso: 'estudo', estudo: 'estudo', trabalho: 'trabalho', paralela: 'trabalho', negocio: 'trabalho', politica: 'trabalho', rotina: 'atividade',
   filhos: 'casa', cuidado: 'casa', pets: 'casa', prisao: 'pena', pena: 'pena', trajeto: 'trajeto'
 };
 
@@ -52,7 +50,7 @@ const alt = (de: number, ate: number) => `${((Math.min(ate, FECHA) - de) / (FECH
 /** Os horários que dá para escolher para uma atividade (de meia em meia hora). */
 const HORAS_ESCOLHA = Array.from({ length: (22 * 60 - ABRE) / 30 + 1 }, (_, k) => ABRE + k * 30);
 
-export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; s?: Semana; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }) {
+export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }) {
   const [aberto, setAberto] = useState<string | null>(null);
   const [ficha, setFicha] = useState<string | null>(null);
   const i = idade(vida);
@@ -61,8 +59,6 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; s?: Se
   const comConflito = a.conflitos.flatMap(c => c.dias);
   const ocupados = a.blocos.filter(b => b.origem !== 'trajeto').flatMap(b => b.dias);
   const [dia, setDia] = useState<Dia>(() => (comConflito.length ? Math.min(...comConflito) : ocupados.length ? Math.min(...ocupados) : 0) as Dia);
-  const enc = encaixe(vida, 0);
-  const estresse = i >= 10 ? leituraDoEstresse(vida) : undefined;
   const bloco = aberto ? a.blocos.find(b => b.id === aberto) : undefined;
   const livreSemana = Math.round(a.livre.reduce((x, y) => x + y, 0) / 60);
   const conflitoDe = (id: string) => a.conflitos.find(c => c.perde === id || c.perde === a.blocos.find(b => b.id === id)?.ref);
@@ -75,9 +71,9 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; s?: Se
     <section className="agenda agenda-semana" aria-labelledby="titulo-agenda">
       <header className="agenda-semana__cabeca">
         <h3 id="titulo-agenda" className="agenda__titulo">A agenda da semana</h3>
+        {/* REWORK 9.5: a agenda diz só o que é dela (os compromissos e as horas); a exigência e a cabeça estão nas notas da rotina. */}
         <p className="agenda__ritmo">
-          <span className={`agenda__faixa agenda__faixa--${enc.faixa}`}>{PALAVRA_DA_FAIXA[enc.faixa]}</span>
-          {' '}· {a.blocos.filter(b => b.origem !== 'trajeto').length} {a.blocos.length === 1 ? 'compromisso' : 'compromissos'} · uns {livreSemana} h livres na semana (das 7h às 23h)
+          {a.blocos.filter(b => b.origem !== 'trajeto').length} {a.blocos.length === 1 ? 'compromisso' : 'compromissos'} · uns {livreSemana} h livres na semana (das 7h às 23h)
         </p>
         {origens.length > 1 && (
           <ul className="agenda-semana__legenda" aria-label="Legenda">
@@ -155,14 +151,6 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; s?: Se
 
       {i >= 4 && i < 18 && vida.educacao.basica && <p className="nota agenda-semana__nota">Nas férias (o fim do ano e o meio do ano), as aulas saem da semana; a agenda mostra a semana de aula.</p>}
 
-      {estresse && (estresse.pesando.length > 0 || estresse.ajudando.length > 0) && (
-        <p className="agenda__estresse">
-          {estresse.pesando.length > 0 && <span><strong>Pesa:</strong> {estresse.pesando.slice(0, 3).map(c => c.texto).join(', ')}.</span>}
-          {estresse.ajudando.length > 0 && <span> <strong>Ajuda:</strong> {estresse.ajudando.slice(0, 3).map(c => c.texto).join(', ')}.</span>}
-          {' '}<a className="link" href="#titulo-estresse">O estresse, em detalhe ↓</a>
-        </p>
-      )}
-
       {lp && <FichaPratica vida={vida} l={lp} agir={agir} aoFechar={() => setFicha(null)} irPara={irPara} abrirPessoa={abrirPessoa} />}
     </section>
   );
@@ -173,6 +161,8 @@ function DetalheDoBloco({ vida, b, agir, irPara, abrirFicha, fechar }: { vida: V
   const f = fichaDoBloco(vida, b, (id, n) => custoDaRotina(vida, id, n));
   const ref = b.ref ?? b.id;
   const rot = b.movel ? vida.rotinas.find(r => r.id === ref) : undefined;
+  // O estudo em casa (a dedicação) também tem lugar escolhido — dias e hora — como uma atividade.
+  const remarcavel = !!rot || ref === 'estudo_casa' || ref === 'curso_ead';
   const lugar = vida.agenda?.lugares?.[ref];
   const doMesmo = agendaDaSemana(vida).blocos.filter(x => (x.ref ?? x.id) === ref);
   const [dias, setDias] = useState<Dia[]>(lugar?.dias ?? doMesmo.flatMap(x => x.dias));
@@ -206,7 +196,7 @@ function DetalheDoBloco({ vida, b, agir, irPara, abrirFicha, fechar }: { vida: V
         </div>
       )}
 
-      {rot && (
+      {remarcavel && (
         <fieldset className="detalhe-agenda__mudar">
           <legend>Dias e horário</legend>
           <div className="detalhe-agenda__dias" role="group" aria-label="Dias">
@@ -233,7 +223,8 @@ function DetalheDoBloco({ vida, b, agir, irPara, abrirFicha, fechar }: { vida: V
         {menos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: ref, ativa: true, nivel: menos.n }} agir={agir} variante="discreto" ocultarBloqueado>Mais leve: {menos.rotulo.toLowerCase()}</BotaoAcao>}
         {mais && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: ref, ativa: true, nivel: mais.n }} agir={agir} variante="discreto" ocultarBloqueado>Mais a sério: {mais.rotulo.toLowerCase()}</BotaoAcao>}
         {lp && <button type="button" className="botao botao--discreto" onClick={() => abrirFicha(ref)}>Abrir a ficha da prática</button>}
-        {!b.movel && area && irPara && <button type="button" className="botao botao--discreto" onClick={() => irPara(area)}>Ver onde isso mora →</button>}
+        {ref === 'estudo_casa' && <BotaoAcao vida={vida} acao={{ tipo: 'postura', valor: 'normal' }} agir={agir} variante="discreto">Estudar no ritmo (tirar as horas a mais)</BotaoAcao>}
+        {(!b.movel || ref === 'estudo_casa') && area && irPara && <button type="button" className="botao botao--discreto" onClick={() => irPara(area)}>Ver onde isso mora →</button>}
       </div>
     </section>
   );

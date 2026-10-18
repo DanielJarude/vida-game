@@ -18,8 +18,8 @@
 
 import type { Dominio, Frente, Oportunidade, Pessoa, Rotina, Vida, Vinculo, CoisaTida } from '../motor/tipos';
 import { modeloRotina, nivelDa, nivelModelo, custoDaRotina, type ModeloRotina } from '../motor/sistemas/rotinas';
-import { estagioDe, modeloFrente, MATERIAS } from '../motor/dados/frentes';
-import { anosDePratica, leituraDaFrente } from '../motor/sistemas/frentes';
+import { modeloFrente, MATERIAS } from '../motor/dados/frentes';
+import { anosDePratica, estagioDaFrente, leituraDaFrente } from '../motor/sistemas/frentes';
 import { BEM_ESTAR } from '../motor/sistemas/estado';
 import { estimuloCognitivo, estimuloFisico, nivelPessoal, palavraAprendizado, palavraCondicionamento } from '../motor/sistemas/pessoa';
 import { trajetoria } from './estadoPessoal';
@@ -96,9 +96,12 @@ const dominios = (m: ModeloRotina): [Dominio, number][] => (Object.entries(m.pra
 
 function habilidadeDe(v: Vida, d: Dominio, f: Frente, peso: number): HabilidadeDaPratica {
   const m = modeloFrente(d);
-  const e = estagioDe(f.habilidade);
-  const a = estagioDe(f.auge);
-  return { d, nome: m.nome, estagio: e, palavra: m.estagios[e], auge: a, palavraAuge: m.estagios[a], anos: anosDePratica(v, f), retomadas: f.retomadas, frase: leituraDaFrente(v, d), peso };
+  // REWORK 9.5 · EDU-02: a régua certa (uma matéria na escola, diante da série) — a mesma de todas as telas.
+  const r = estagioDaFrente(v, d, f.habilidade);
+  const e = r.estagio;
+  const ra = estagioDaFrente(v, d, f.auge);
+  const a = Math.max(e, ra.estagio);
+  return { d, nome: m.nome, estagio: e, palavra: r.palavra, auge: a, palavraAuge: a === e ? r.palavra : ra.palavra, anos: anosDePratica(v, f), retomadas: f.retomadas, frase: leituraDaFrente(v, d), peso };
 }
 
 /** O que a atividade faz com a cabeça e o humor — a mesma tabela do equilíbrio do ano. */

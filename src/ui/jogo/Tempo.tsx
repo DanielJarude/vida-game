@@ -26,10 +26,9 @@ import { DE_FORMACAO } from '../../motor/sistemas/formacao';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { custoDaRotina, descricaoDaRotina, terapiaPublica, DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
 import { estimuloCognitivo, estimuloFisico, palavraAprendizado, palavraCondicionamento } from '../../motor/sistemas/pessoa';
-import { dose, encaixe, folegoDaSemana, semana, type FaixaDaSemana as Faixa, type Semana } from '../../motor/sistemas/semana';
+import { dose, folegoDaSemana } from '../../motor/sistemas/semana';
 import { frentesDaVida, leituraDaFrente } from '../../motor/sistemas/frentes';
 import { atividadesParaVoce } from '../../motor/sistemas/relevancia';
-import { fatoresCabeca } from '../../motor/sistemas/estado';
 import { ultimaDevolutiva } from '../../motor/sistemas/devolutivas';
 import { economiaLocal } from '../../motor/dados/lugares';
 import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras } from '../../motor/sistemas/transporte';
@@ -39,13 +38,11 @@ import { podeTentar } from '../../motor/plausibilidade';
 import { BotaoAcao, Folio, navegarAbas, Secao, Vazio } from '../comum';
 import { dinheiroCurto } from '../apresentar';
 import { areaDaPorta, PortasAbertas } from './Estudos';
-import { doClube } from '../../motor/dados/clubes';
 import type { Aba } from '../navegacao';
 import { MODS as MODS_ESPORTE } from '../../motor/sistemas/oportunidades';
 import { custoDaExperiencia, escolhasDaExperiencia, experienciasPossiveis, nomeDaExperiencia, type TipoExperiencia } from '../../motor/sistemas/experiencias';
 import { EscolherViagem } from './Viagem';
 import { RedesSociais } from './Redes';
-import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
 import { SECOES_TEMPO, type SecaoTempo } from '../navegacao';
 import { leituraDoEstresse } from '../../motor/sistemas/leituraDoEstresse';
 import { idadePessoa, vinculosVivos } from '../../motor/nucleo';
@@ -55,6 +52,8 @@ import { leituraDaPratica } from '../leituraPratica';
 import { CartaoPratica, FichaPratica } from './Pratica';
 import { Emblema } from './Emblemas';
 import { Agenda } from './Agenda';
+import { LeituraDaRotina, tituloDaRotina } from './Rotina';
+import { avaliarRotina } from '../../motor/sistemas/avaliacaoDaRotina';
 
 const DE_TEMPO = new Set<string>(SECOES_TEMPO.map(x => x.id));
 
@@ -79,8 +78,6 @@ type SecaoOuArea = Aba;
  */
 function Estresse({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void }) {
   const l = leituraDoEstresse(vida);
-  const sob = leituraDaSobrecarga(vida);
-  const fol = folegoDaSemana(vida);
   const i = idade(vida);
   const classe = l.nivel.replace(' ', '-');
   const ir = (id: string) => { const d = ORIGEM_CAUSA[id]; return d && d !== 'semana' && irPara ? d : undefined; };
@@ -110,9 +107,8 @@ function Estresse({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boole
           ) : <p className="nota">Nada ajudando de propósito: uma atividade que alivia (corrida, terapia, leitura) faria diferença.</p>}
         </div>
       </div>
-      {/* A "carga" (o quanto a semana já está tomada) é do motor: aqui ela é uma palavra e o porquê, não uma segunda barra. */}
-      {/* FIX pós-playtest humano: a palavra e a frase vêm da MESMA conta que a lista de atividades (`folegoDaSemana`). */}
-      <p className={`estresse__folego semana-carga semana-carga--${fol.faixa}`}><strong>Dá para assumir mais?</strong> <span className="semana-carga__palavra">{fol.palavra.charAt(0).toUpperCase() + fol.palavra.slice(1)}.</span> {l.folego}{fol.faixa !== 'folgada' && fol.faixa !== 'ocupada' && sob.causas.length ? ` O que mais ocupa: ${listaNatural(sob.causas.slice(0, 3))}.` : ''}{sob.anos >= 1 ? ` ${sob.texto.match(/(Há \d+ anos assim.*|Foi assim o ano passado inteiro\.)$/)?.[0] ?? ''}` : ''}</p>
+      {/* REWORK 9.5: o "dá para assumir mais?" (a exigência) e os horários moram nas notas da rotina, logo acima —
+          aqui é só a cabeça: quanto, para onde vai, o que pesa, o que ajuda, o que acontece se continuar. */}
       {l.riscos.length > 0 && <p className="estresse__riscos"><strong>Se continuar assim:</strong> {listaNatural(l.riscos)}.</p>}
       {i >= 14 && (l.nivel !== 'baixo' || l.tendencia === 'subindo') && (
         <div className="estresse__aliviar">
@@ -130,124 +126,6 @@ function Estresse({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boole
   );
 }
 
-/**
- * O título da área: a MESMA leitura da semana que o painel do estresse usa (`sobrecarga`) — o título não pode dizer
- * "passou do que cabe" enquanto o painel diz "ainda cabe".
- */
-function tituloDaSemana(v: Vida, s: Semana): string {
-  const f = folegoDaSemana(v).faixa;
-  if (f === 'alem') return 'A semana passou do teto: os compromissos já não cabem nos dias.';
-  if (f === 'sobrecarregada') return leituraDaSobrecarga(v).nivel >= 3 ? 'No limite: a semana está cobrando o corpo e a cabeça.' : 'A semana passou do que cabe — o descanso sumiu e o cansaço aparece.';
-  if (f === 'cheia') return 'A semana está cheia: o que entra agora sai do descanso.';
-  if (f === 'ocupada') return s.livre >= 0.5 ? 'A semana está ocupada: sobra espaço para uma coisa leve.' : 'A semana está ocupada, sem apertar.';
-  return s.livre >= 1.5 ? 'Sobra bastante tempo para escolher o que fazer.' : 'Sobra tempo para mais uma ou duas coisas.';
-}
-
-type Pedaco = { id: string; rotulo: string; curto: string; peso: number; tipo: 'trabalho' | 'estudo' | 'casa' | 'atividade' | 'livre' | 'excesso' };
-
-const CURTO: Record<string, string> = { negocio: 'Negócio', trabalho: 'Trabalho', horas_extras: 'Horas extras', curso: 'Estudo', integrado: 'Escola técnica', filhos_pequenos: 'Filhos', filhos_escola: 'Filhos', cuidar: 'Cuidar', deslocamento: 'Trajeto' };
-
-/** A semana em pedaços, na ordem: o que já vem ocupado, o que você escolheu, o que sobra, o que passa. */
-function pedacos(s: Semana): Pedaco[] {
-  const out: Pedaco[] = [];
-  for (const f of s.fixos) {
-    if (f.peso < 0.2) continue;
-    out.push({ id: f.id, rotulo: f.rotulo, curto: CURTO[f.id] ?? f.rotulo.replace(/ \(.*\)$/, ''), peso: f.peso, tipo: f.tipo === 'trabalho' || f.tipo === 'deslocamento' ? 'trabalho' : f.tipo === 'estudo' ? 'estudo' : 'casa' });
-  }
-  const ganho = s.ganhos.reduce((t, g) => t + g.peso, 0);
-  // A condução devolve tempo: o pedaço de trabalho encolhe (e a legenda diz por quê).
-  if (ganho > 0) { const t = out.find(p => p.tipo === 'trabalho'); if (t) t.peso = Math.max(0.25, t.peso - ganho); }
-  for (const r of s.rotinas) out.push({ id: r.id, rotulo: r.rotulo, curto: r.rotulo.replace(/ — .*/, ''), peso: r.peso, tipo: 'atividade' });
-  if (s.livre > 0.01) out.push({ id: 'livre', rotulo: 'Livre', curto: 'Livre', peso: s.livre, tipo: 'livre' });
-  return out;
-}
-
-/** O que passa do confortável, dito como gente: o descanso que foi embora — ou o que já não cabe nos dias. */
-const ALEM: Record<Faixa, string> = { folgada: '', ocupada: '', cheia: 'tirado do descanso', sobrecarregada: 'além do que cabe', alem: 'além do possível' };
-
-function FaixaDaSemana({ vida, s }: { vida: Vida; s: Semana }) {
-  const lista = pedacos(s);
-  const total = lista.reduce((t, p) => t + p.peso, 0) || 1;
-  const enc = encaixe(vida, 0);
-  // A semana tem um tamanho (s.base): o que passa dele tem nome humano (descanso tirado / além do que cabe).
-  const dentro = Math.min(total, s.base);
-  const passa = dentro < total - 0.01 && ALEM[enc.faixa];
-  const descricao = lista.map(p => `${p.rotulo}: ${p.tipo === 'livre' ? 'livre' : dose(p.peso)}`).join('; ');
-  const fixos = s.fixos.filter(f => f.peso >= 0.25).map(f => { const x = f.rotulo.replace(/ \(.*\)$/, ''); return x.charAt(0).toLowerCase() + x.slice(1); });
-  const i = idade(vida);
-  // Não há agenda hora a hora no motor: a faixa é a proporção da semana, não um relógio.
-  const fora = i < 18 && vida.educacao.basica ? 'fora as aulas e o sono' : 'fora o sono e o básico de todo dia';
-  return (
-    <figure className="semana" aria-label={`A semana: ${descricao}.`}>
-      <p className="semana__fixos">{fixos.length ? `Antes de qualquer escolha, a semana já tem ${listaNatural(fixos)} (${fora}).` : `A semana é sua para escolher (${fora}).`}</p>
-      <div className="semana__faixa" role="img" aria-label={`A semana: ${descricao}.${passa ? ` Parte disso é ${passa}.` : ''}`}>
-        {lista.map(p => (
-          <span key={p.id} className={`semana__pedaco semana__pedaco--${p.tipo}`} style={{ flexGrow: p.peso, flexBasis: 0 }} title={p.rotulo}>
-            {p.peso / total >= 0.12 && <span className="semana__rotulo">{p.curto}</span>}
-          </span>
-        ))}
-        {passa && <span className={`semana__alem-faixa semana__alem-faixa--${enc.faixa}`} style={{ left: `${(dentro / total) * 100}%` }} aria-hidden><span>{passa}</span></span>}
-      </div>
-      {passa && <p className={`semana__alem semana__alem--${enc.faixa}`}>{enc.faixa === 'cheia' ? 'Depois da linha: o que você faz com o tempo que seria de descanso. Dá para levar assim — o corpo sente.' : enc.faixa === 'sobrecarregada' ? 'Depois da linha: o que passa do que cabe numa semana. Dá para levar por um tempo; o estresse, o sono e o desempenho cobram.' : 'Depois da linha: o que já não cabe nos dias. Algo vai ter de sair.'}</p>}
-      <figcaption className="semana__legenda">
-        <ul>
-          {lista.map(p => (
-            <li key={p.id}>
-              <span className={`semana__amostra semana__pedaco--${p.tipo}`} aria-hidden />
-              <span className="semana__nome">{p.rotulo}</span>
-              <span className="semana__dose">{p.tipo === 'livre' ? (p.peso >= 1 ? 'algumas vezes por semana, livre' : 'um pouco, livre') : dose(p.peso)}</span>
-            </li>
-          ))}
-          {s.ganhos.map(g => <li key={g.id} className="semana__ganho"><span className="semana__amostra" aria-hidden /><span className="semana__nome">{g.rotulo}</span><span className="semana__dose">devolve tempo</span></li>)}
-        </ul>
-      </figcaption>
-    </figure>
-  );
-}
-
-/** Para onde leva cada pedaço fixo da semana (a causa mora em outra área). */
-const ORIGEM: Record<string, { area: Aba; rotulo: string }> = {
-  trabalho: { area: 'trabalho', rotulo: 'Caminhos' }, horas_extras: { area: 'trabalho', rotulo: 'Caminhos' }, politica: { area: 'trabalho', rotulo: 'Caminhos' }, negocio: { area: 'trabalho', rotulo: 'Caminhos' },
-  curso: { area: 'formacao', rotulo: 'Caminhos' }, integrado: { area: 'formacao', rotulo: 'Caminhos' },
-  filhos_pequenos: { area: 'pessoas', rotulo: 'Pessoas' }, filhos_escola: { area: 'pessoas', rotulo: 'Pessoas' }, cuidar: { area: 'pessoas', rotulo: 'Pessoas' }, cuidado_pausa: { area: 'trabalho', rotulo: 'Caminhos' }, pets: { area: 'pessoas', rotulo: 'Pessoas' },
-  deslocamento: { area: 'cidade', rotulo: 'Cidade' }
-};
-
-/**
- * Para onde vai o seu tempo: cada coisa que ocupa a semana, do maior para o
- * menor, com o tamanho em palavras e o caminho até a causa. Quando passa do
- * que cabe, diz o que está apertando — e o que dá para aliviar.
- */
-function ParaOndeVai({ vida, s, irPara }: { vida: Vida; s: Semana; irPara?: (a: Aba) => void }) {
-  const itens = [
-    ...s.fixos.map(f => ({ id: f.id, rotulo: f.rotulo, peso: f.peso, fixo: true })),
-    ...s.rotinas.map(r => ({ id: r.id, rotulo: r.rotulo, peso: r.peso, fixo: false }))
-  ].filter(x => x.peso >= 0.05).sort((a, b) => b.peso - a.peso);
-  if (!itens.length) return null;
-  const passa = encaixe(vida, 0).folga < -0.01;
-  const base = vida.caminhos.esporte?.fase === 'base' ? vida.caminhos.esporte : undefined;
-  return (
-    <section className="para-onde" aria-labelledby="titulo-para-onde">
-      <h2 id="titulo-para-onde" className="secao-fio">Para onde vai o seu tempo</h2>
-      {passa && <p className="nota nota--atencao"><span aria-hidden>! </span>A semana passa do que cabe. O que mais pesa: {listaNatural(itens.slice(0, 2).map(x => x.rotulo.replace(/ \(.*\)$/, '').replace(/ — .*/, '').toLowerCase()))}. Aliviar algo aqui é o que devolve fôlego.</p>}
-      <ul className="para-onde__lista">
-        {itens.map(x => {
-          const origem = ORIGEM[x.id];
-          const treinoBase = base && x.id === base.modalidade;
-          return (
-            <li key={x.id} className={`para-onde__item${x.fixo ? ' para-onde__item--fixo' : ''}`}>
-              <span className="para-onde__barra" aria-hidden><span style={{ width: `${Math.min(100, (x.peso / Math.max(1, s.base)) * 100 * 1.6)}%` }} /></span>
-              <span className="para-onde__nome">{treinoBase ? `Treino de base ${doClube(base!.clube)}` : x.rotulo}</span>
-              <span className="para-onde__dose">{dose(x.peso)}{x.fixo ? ' · fixo' : ' · escolha sua'}</span>
-              {treinoBase && <span className="para-onde__porque">A base toma quase todos os dias: é por isso que outras coisas não cabem.</span>}
-              {origem && irPara && <button type="button" className="link para-onde__ir" onClick={() => irPara(origem.area)}>ver em {origem.rotulo} →</button>}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
 
 /**
  * O trajeto de todo dia: como você vai, quanto tempo leva, quanto custa — e
@@ -388,16 +266,15 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
   const trocar = (a: SecaoTempo) => { setAbaLocal(a); irAba?.(a); };
   const i = idade(vida);
   if (i < 3) return <div className="tempo"><Folio kicker={<><span className="folio__area">Minha Semana</span></>} titulo="O tempo é de quem cuida de você." /></div>;
-  const s = semana(vida);
+  const av = avaliarRotina(vida);
   const custo = economiaLocal(vida.moradia.municipioId).custo;
   const ativas = vida.rotinas.map(r => ({ r, m: modeloRotina(r.id) })).filter((x): x is { r: Vida['rotinas'][number]; m: ModeloRotina } => !!x.m);
   const frentes = frentesDaVida(vida);
-  const pesaNaCabeca = fatoresCabeca(vida).some(f => (f.id === 'semana' || f.id === 'semana_fixa') && f.efeito > 0);
   const abas = SECOES_TEMPO.filter(x => x.id !== 'redes' || i >= 10);
   const ir = (a: Aba) => (irPara ? irPara(a) : DE_TEMPO.has(a) ? trocar(a as SecaoTempo) : undefined);
   return (
     <div className={`tempo tempo--${aba}`}>
-      <Folio kicker={<><span className="folio__area">Minha Semana</span> · {SECOES_TEMPO.find(x => x.id === aba)!.rotulo.toLowerCase()}</>} titulo={tituloDaSemana(vida, s)} lede={pesaNaCabeca ? 'Isso tem pesado na cabeça.' : undefined} />
+      <Folio kicker={<><span className="folio__area">Minha Semana</span> · {SECOES_TEMPO.find(x => x.id === aba)!.rotulo.toLowerCase()}</>} titulo={tituloDaRotina(av)} />
       <nav className="subnav" aria-label="Seções de Minha Semana">
         <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
           {abas.map(x => (
@@ -417,9 +294,10 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
               <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
               {/* REWORK 9: a agenda em horários (`sistemas/agenda`): os dias, as horas, os conflitos. O tamanho da semana
                   (a faixa, o estresse) continua o de `semana`; a lista de antes fica logo abaixo, como outra leitura. */}
-              <Agenda vida={vida} s={s} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />
+              <Agenda vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />
+              {/* REWORK 9.5 · ROT-01: as três leituras da rotina (horários, exigência, cabeça), da mesma conta que decide. */}
+              <LeituraDaRotina vida={vida} av={av} />
               {i >= 10 ? <Estresse vida={vida} agir={agir} irPara={ir} /> : <p className="nota">{i < 7 ? 'A semana é de brincar — e da escola.' : 'Além da escola, a semana é sua.'}</p>}
-              <details className="semana-detalhe"><summary>A semana em lista: como se divide e para onde vai</summary><FaixaDaSemana vida={vida} s={s} /><ParaOndeVai vida={vida} s={s} irPara={irPara} /></details>
             </section>
             <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas} titulo="O que você pratica" vazio="Nada fixo na semana por enquanto. As abas acima mostram o que dá para começar." />
             <ComoVoceVai vida={vida} agir={agir} irPara={irPara} />

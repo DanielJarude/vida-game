@@ -14,6 +14,8 @@ import './ui/sistema.css';
 import './ui/experiencia.css';
 import './ui/cotidiano.css';
 import './ui/organizada.css';
+// REWORK 9.5: a vida em objetos (a agenda, o boletim, a pasta, o álbum, o diário, a ficha, os papéis da casa).
+import './ui/objetos.css';
 
 iniciarTema();
 

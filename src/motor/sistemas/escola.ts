@@ -10,6 +10,7 @@
  * disponível em Tarauacá.
  */
 
+import { esperadoNaSerie } from '../dados/frentes';
 import { nomeDaMateria } from '../mundo/materias';
 import { quemOferece } from './ensinoTecnico';
 import { fraseDeConclusao } from './composicao';
@@ -126,20 +127,19 @@ export function condicoesDeEstudo(v: Vida): number {
  * gosto e a prática de cada ano), e só um pouco da cabeça em geral; depois,
  * a postura, a casa, o trabalho e a escola.
  */
-/**
- * REWORK 9 · EDU-01: o que se espera saber em cada idade — a curva do aluno TÍPICO desta escola (medida numa
- * população simulada: a mediana da média das matérias, 8 → 17 anos). Antes era 5 pontos por ano até 60, mais rápido
- * que qualquer aluno de verdade: a nota caía com a idade e, aos 17, mais da metade estava "com dificuldade".
- */
-export function esperadoNaSerie(i: number): number {
-  const k = Math.max(0, i - 6);
-  return Math.min(60, Math.max(3, 1.9 + 4.25 * k - 0.035 * k * k));
-}
+/** REWORK 9 · EDU-01: a curva do aluno típico (mora em `dados/frentes`, onde as palavras de cada matéria leem também). */
+export { esperadoNaSerie };
 
-export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?: Materia[], presenca = 1): number {
+/**
+ * `estudo` (REWORK 9.5 · ROT-03): quanto do estudo em casa da dedicação aconteceu (a agenda: as vezes sem horário não
+ * estudam). A dedicação só rende o que foi estudado de fato; o resto é intenção. `cansaco`: o que uma rotina que passa
+ * do que se aguenta tira dos estudos (`semana.cansacoNosEstudos`, calculado pelo ano — a escola não lê a semana).
+ */
+export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?: Materia[], presenca = 1, estudo = 1, cansaco = 0): number {
   const d = v.personalidade.tracos.disciplina;
   // REWORK 9 · EDU-01: a postura conta, mas não é destino (antes, ±10 aqui e ×1,3/×0,65 no aprendizado decidiam tudo).
-  const postura = v.educacao.postura === 'dedicada' ? 7 : v.educacao.postura === 'relaxada' ? -7 : 0;
+  // REWORK 9.5: e a dedicação é tempo — rende na proporção das horas que acharam lugar na semana.
+  const postura = (v.educacao.postura === 'dedicada' ? 7 * estudo : v.educacao.postura === 'relaxada' ? -7 : 0) + cansaco;
   // Bem-estar, cabeça e corpo: um ano doente ou para baixo rende menos na escola (sem virar fracasso).
   const casa = (v.mente.felicidade - 50) * 0.1 - Math.max(0, v.mente.estresse - 60) * 0.25 - Math.max(0, 55 - v.corpo.saude) * 0.2;
   const trabalhoPesa = v.trabalho.atual ? (v.trabalho.atual.carga === 'integral' ? -10 : -4) : 0;
@@ -162,7 +162,7 @@ export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?
 /* ------------------------------------------------------ Educação básica */
 
 /** `presenca` (REWORK 9): quanto das aulas acontece de fato (a agenda: o turno que outro compromisso atravessa vira falta). */
-export function processarEscola(v: Vida, r: Rng, presenca = 1): void {
+export function processarEscola(v: Vida, r: Rng, presenca = 1, estudo = 1, cansaco = 0): void {
   const i = idade(v);
   const e = v.educacao;
 
@@ -216,9 +216,9 @@ export function processarEscola(v: Vida, r: Rng, presenca = 1): void {
 
   // As matérias do ano: a escola exercita todas; a particular, com mais estrutura.
   // REWORK 9: só aprende na aula quem está nela — o turno que o trabalho atravessa ensina menos.
-  estudarMaterias(v, r, (b.rede === 'privada' ? 1.12 : 1) * (b.etapa === 'fundamental1' ? 0.85 : 1) * (0.4 + 0.6 * presenca));
+  estudarMaterias(v, r, (b.rede === 'privada' ? 1.12 : 1) * (b.etapa === 'fundamental1' ? 0.85 : 1) * (0.4 + 0.6 * presenca), estudo);
   if (b.integrado) { const c = cursoOuNulo(b.integrado); if (c?.pratica) for (const [dd, w] of Object.entries(c.pratica) as [Dominio, number][]) praticar(v, r, dd, w * 0.8, 1.1); }
-  b.desempenho = calcularDesempenho(v, r, b.rede === 'privada' ? 6 : 0, undefined, presenca);
+  b.desempenho = calcularDesempenho(v, r, b.rede === 'privada' ? 6 : 0, undefined, presenca, estudo, cansaco);
   if (b.rede === 'privada' && b.etapa === 'medio') marcarFato(v, 'estudou_privada');
   // A matéria difícil às vezes vira recuperação — textura, não tragédia.
   if (b.etapa !== 'fundamental1' && b.desempenho >= 38) {
@@ -777,7 +777,7 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
 
 /* --------------------------------------------------- Andamento do curso */
 
-export function processarCurso(v: Vida, r: Rng, presenca = 1): void {
+export function processarCurso(v: Vida, r: Rng, presenca = 1, estudo = 1, cansaco = 0): void {
   const m = v.educacao.matricula;
   if (!m) return;
   if (m.trancado) {
@@ -792,7 +792,7 @@ export function processarCurso(v: Vida, r: Rng, presenca = 1): void {
   for (const [d, w] of Object.entries(c.pratica ?? {}) as [Dominio, number][]) praticar(v, r, d, w * (m.modalidade === 'ead' ? 0.6 : 1), 1.15);
   for (const [d, w] of Object.entries(c.pesos ?? {}) as [Materia, number][]) praticar(v, r, d, Math.min(1, w * 0.3), 1);
   const materias = Object.keys(c.pesos ?? {}) as Materia[];
-  m.desempenho = calcularDesempenho(v, r, c.nivel === 'residencia' || c.nivel === 'mestrado' ? 8 : c.nivel === 'livre' ? 10 : 0, materias, presenca);
+  m.desempenho = calcularDesempenho(v, r, c.nivel === 'residencia' || c.nivel === 'mestrado' ? 8 : c.nivel === 'livre' ? 10 : 0, materias, presenca, estudo, cansaco);
   let atraso = 0;
   if (m.desempenho < 35 && r.chance(0.6)) atraso = 6;
   m.mesesRestantes -= Math.min(12, m.mesesRestantes + atraso) - atraso;

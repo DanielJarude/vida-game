@@ -47,7 +47,7 @@ export function leituraDaSobrecarga(v: Vida): LeituraSobrecarga {
   const i = idade(v);
   const s = sobrecargaDaSemana(v);
   const causas: string[] = [...s.rotulos.slice(0, 3)];
-  let pontos = s.fixos * 2 + s.atividades * 1.4 + (s.apertada ? 0.7 : 0);
+  let pontos = s.fixos * 2 + s.excesso * 1.4 + (s.apertada ? 0.7 : 0);
   if (v.mente.estresse >= 75) { pontos += 0.5; }
   const les = lesaoAtiva(v);
   if (les && les.lesao.gravidade >= 2) { pontos += 0.3; causas.push(les.lesao.cuidado === 'sacrificio' ? 'jogar machucado' : 'a recuperação da lesão'); }

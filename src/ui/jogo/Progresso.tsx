@@ -11,13 +11,15 @@
  */
 
 import type { Dominio, Vida } from '../../motor/tipos';
-import { estagioDe, MATERIAS, modeloFrente } from '../../motor/dados/frentes';
+import { MATERIAS, modeloFrente, PALAVRA_DA_RELACAO } from '../../motor/dados/frentes';
+import { estagioDaFrente } from '../../motor/sistemas/frentes';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { NOME_MATERIA } from '../../motor/sistemas/escola';
 import { evolucaoDaFrente, evolucaoDaNota, evolucaoDoTrabalho, type EvolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
-import { Degraus } from '../comum';
 import { dinheiroCurto } from '../apresentar';
+import { anoDe } from '../../motor/tempo';
+import { Boletim } from './Boletim';
 
 /** De onde veio, em palavras (a fonte que o motor registrou). */
 export function nomeDaFonte(f: string): string {
@@ -42,33 +44,50 @@ function Trajetoria({ serie, rotulo }: { serie: { valor: number }[]; rotulo: str
   return <svg className="evolucao-ano__trajetoria" viewBox="0 0 60 16" width={60} height={16} role="img" aria-label={`${rotulo}: ${vs.map(num).join(' → ')}`}><polyline points={pts} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-/** Uma frente: o estágio, o antes → agora, o porquê. */
-export function LinhaDeProgresso({ vida, e, nome }: { vida: Vida; e: EvolucaoDaFrente; nome?: string }) {
+/**
+ * REWORK 9.5 · UX-03 — A FICHA DE DESENVOLVIMENTO de uma habilidade: o nome, o nível em palavras (a régua certa), a frase
+ * que a descreve, o que mudou no último ano (antes → agora, o número do motor), de onde veio (as fontes que o motor
+ * registrou) e, quando pedido, o histórico ano a ano. Em pé, para ler de cima para baixo — não espalhada numa linha.
+ */
+export function FichaDeHabilidade({ vida, e, nome, frase, ativa = true }: { vida: Vida; e: EvolucaoDaFrente; nome?: string; frase?: string; ativa?: boolean }) {
   const m = modeloFrente(e.d);
-  const titulo = nome ?? (MATERIAS.includes(e.d) ? NOME_MATERIA[e.d] : m.nome);
-  const est = estagioDe(e.agora);
+  const titulo = cap(nome ?? (MATERIAS.includes(e.d) ? NOME_MATERIA[e.d] : m.nome));
+  // REWORK 9.5 · EDU-02: a palavra vem da régua certa (a matéria, diante da série) — nunca de um estado antigo.
+  const regua = estagioDaFrente(vida, e.d, e.agora);
   const f = vida.caminhos.frentes[e.d]!;
+  const auge = estagioDaFrente(vida, e.d, f.auge);
   const direcao = e.delta === undefined ? 'nova' : e.delta >= 0.5 ? 'subiu' : e.delta <= -0.5 ? 'caiu' : 'parou';
+  const causas = e.causas.filter(([, x]) => Math.abs(x) >= 0.1);
+  const mudou = e.delta === undefined ? (e.antes === undefined ? `começou a contar: ${num(e.agora)}` : `${num(e.agora)}`)
+    : direcao === 'subiu' ? `subiu ${num(e.delta)} — de ${num(e.antes!)} para ${num(e.agora)}`
+      : direcao === 'caiu' ? `caiu ${num(-e.delta)} — de ${num(e.antes!)} para ${num(e.agora)}`
+        : `ficou parado em ${num(e.agora)}`;
   return (
-    <li className={`evolucao-ano__linha evolucao-ano__linha--${direcao}`} data-frente={e.d}>
-      <span className="evolucao-ano__nome">{titulo.charAt(0).toUpperCase() + titulo.slice(1)}</span>
-      <Degraus estagio={est} auge={estagioDe(f.auge)} rotulo={titulo} palavra={m.estagios[est]} compacto />
-      <span className="evolucao-ano__valores" data-agora={e.agora}>
-        {e.antes !== undefined ? <>{num(e.antes)} <span aria-hidden>→</span><span className="sr-only">para</span> </> : null}<strong>{num(e.agora)}</strong>
-        {e.delta !== undefined && <span className={`evolucao-ano__delta evolucao-ano__delta--${direcao}`}> ({sinal(e.delta)} no ano)</span>}
-      </span>
-      <span className="evolucao-ano__palavra">{m.estagios[est]}</span>
-      {e.causas.length > 0 && (
-        <span className="evolucao-ano__causas">
-          {e.causas.map(([fonte, x]) => <span key={fonte} className={`evolucao-ano__causa${x < 0 ? ' evolucao-ano__causa--perda' : ''}`} data-fonte={fonte}>{nomeDaFonte(fonte)} {sinal(x)}</span>)}
-        </span>
+    <li className={`ficha-hab ficha-hab--${direcao}${ativa ? '' : ' ficha-hab--parada'}`} data-frente={e.d}>
+      <div className="ficha-hab__cabeca">
+        <h4 className="ficha-hab__nome">{titulo}</h4>
+        <p className="ficha-hab__nivel">{cap(regua.palavra)}{regua.relacao ? <span className="ficha-hab__relacao"> · {PALAVRA_DA_RELACAO[regua.relacao]}</span> : null}</p>
+      </div>
+      {frase && <p className="ficha-hab__frase">{ativa ? frase : `Parou. ${frase}`.replace('Parou. Parou', 'Parou')}</p>}
+      <p className="ficha-hab__linha"><span className="ficha-hab__rotulo">No último ano</span> <span className={`ficha-hab__mudou ficha-hab__mudou--${direcao}`} data-agora={e.agora}>{mudou}</span>{auge.estagio > regua.estagio && <span className="ficha-hab__auge"> · já esteve melhor ({auge.palavra})</span>}</p>
+      {causas.length > 0 && (
+        <p className="ficha-hab__linha ficha-hab__origem"><span className="ficha-hab__rotulo">De onde veio</span>{' '}
+          {causas.map(([fonte, x]) => <span key={fonte} className={`ficha-hab__causa${x < 0 ? ' ficha-hab__causa--perda' : ''}`} data-fonte={fonte}>{nomeDaFonte(fonte)} {sinal(x)}</span>)}
+        </p>
       )}
-      <Trajetoria serie={e.serie} rotulo={titulo} />
+      {e.serie.length >= 2 && (
+        <details className="ficha-hab__historico">
+          <summary>Histórico <Trajetoria serie={e.serie} rotulo={titulo} /></summary>
+          <ol className="ficha-hab__anos">{e.serie.map(x => <li key={x.t}><span>{anoDe(x.t - 6)}</span> <strong>{num(x.valor)}</strong></li>)}</ol>
+        </details>
+      )}
     </li>
   );
 }
 
-/** As frentes de uma lista (as matérias, as do ofício, as da semana), da que mais andou para a que menos. */
+const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+
+/** As frentes de uma lista (as do ofício, as da semana), da que mais andou para a que menos — em fichas. */
 export function Progressao({ vida, dominios, titulo, vazio }: { vida: Vida; dominios: Dominio[]; titulo: string; vazio?: string }) {
   const lista = dominios.map(d => evolucaoDaFrente(vida, d)).filter((x): x is EvolucaoDaFrente => !!x);
   if (!lista.length) return vazio ? <p className="nota">{vazio}</p> : null;
@@ -76,7 +95,7 @@ export function Progressao({ vida, dominios, titulo, vazio }: { vida: Vida; domi
   return (
     <section className="evolucao-ano" aria-label={titulo}>
       <h3 className="evolucao-ano__titulo">{titulo}</h3>
-      <ul className="evolucao-ano__lista">{ordem.map(e => <LinhaDeProgresso key={e.d} vida={vida} e={e} />)}</ul>
+      <ul className="fichas-hab">{ordem.map(e => <FichaDeHabilidade key={e.d} vida={vida} e={e} />)}</ul>
     </section>
   );
 }
@@ -114,9 +133,9 @@ export function DesenvolvimentoReal({ vida }: { vida: Vida }) {
   return (
     <section className="desenvolvimento-real" aria-label="Ano a ano">
       <h2 className="secao-fio">Ano a ano: o que mudou e por quê</h2>
-      {vida.educacao.basica && !vida.educacao.evadiu && <NotaComHistoria vida={vida} qual="escola" />}
+      {/* REWORK 9.5 · UX-04: a escola é o boletim (as matérias, a nota, a frequência, a dedicação) — uma lista só. */}
+      {vida.educacao.basica && !vida.educacao.evadiu && <Boletim vida={vida} />}
       {vida.educacao.matricula && !vida.educacao.matricula.trancado && <NotaComHistoria vida={vida} qual="curso" />}
-      {vida.educacao.basica && !vida.educacao.evadiu && <Progressao vida={vida} dominios={[...MATERIAS]} titulo="As matérias" />}
       {e && t.desempenho && (
         <p className="evolucao-ano__nota" data-nota="trabalho" data-agora={t.desempenho[1]}>
           <span className="evolucao-ano__nome">O desempenho no trabalho</span>{' '}

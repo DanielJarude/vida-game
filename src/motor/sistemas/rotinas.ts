@@ -29,7 +29,7 @@ import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
 import { nivelDeOferta } from '../dados/lugares';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { esquecerFrentes, habilidade, praticar } from './frentes';
-import { encaixe } from './semana';
+import { cargaDaAtividade, encaixe } from './semana';
 import type { Categoria } from '../dados/frentes';
 import { categoriaDoVeiculo } from './veiculos';
 import { esfriarPreparo, prepararVestibular } from './vestibular';
@@ -711,6 +711,14 @@ export function atividadeExiste(v: Vida, m: ModeloRotina): boolean {
 /** O que cuida da cabeça (e não acrescenta carga de verdade): nunca fica de fora por a semana estar cheia. */
 const CUIDAR_DE_SI = new Set(['terapia']);
 
+/**
+ * REWORK 9.5 · ROT-01 — o HORÁRIO (a agenda, num pacote acima deste) se registra aqui: a atividade nova tem dia e hora
+ * livres para as vezes que pede? Sem registro (um teste que não carrega a agenda), só a exigência decide.
+ */
+type HorarioDaAtividade = (v: Vida, id: string, nivel: number) => { vezes: number; cabem: number; motivo?: string } | undefined;
+let horarioDaAtividade: HorarioDaAtividade | undefined;
+export function registrarHorarioDaAtividade(f: HorarioDaAtividade): void { horarioDaAtividade = f; }
+
 export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   const m = modeloRotina(id);
   if (!m) return bloqueio('impossivel', 'Atividade desconhecida.');
@@ -732,8 +740,13 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   // REWORK 4 + FIX pós-playtest humano: a semana cheia não é um muro — é um custo. A conta é UMA (`semana.encaixe`,
   // a mesma do painel "Dá para assumir mais?"): folgada/ocupada entram; cheia entra tirando do descanso; sobrecarregada
   // entra com o preço dito; só "além" (não há horas — ou, criança, a semana dela não comporta) bloqueia, com o porquê.
-  const extra = n.tempo - (atual ? tempoDaRotina(atual) : 0);
+  // REWORK 9.5: o que pesa é a EXIGÊNCIA (`cargaDaAtividade`), não o número de atividades — um livro por mês não cobra
+  // o que cobra um treino.
+  const extra = cargaDaAtividade(id, nivel).carga - (atual ? cargaDaAtividade(id, nivelDa(atual)).carga : 0);
   const enc = encaixe(v, extra, id);
+  // O horário vem antes: sem dia e hora livres, não há o que pesar (a terapia também precisa de uma hora na semana).
+  const hor = horarioDaAtividade?.(v, id, nivel);
+  if (hor && hor.cabem === 0) return bloqueio('incompativel', hor.motivo ?? 'Não há horário livre na semana.');
   // FIX pós-REWORK 4 (achado do playtest adversarial): quem está no limite não pode ser impedido de cuidar da cabeça —
   // a terapia é uma hora por semana, e é justamente para isso. Passa do teto, com o preço dito.
   if (!enc.possivel && CUIDAR_DE_SI.has(id) && idade(v) >= 14) return { grau: 'permitido', motivo: `${enc.motivo} A terapia é uma hora por semana — e é para isso mesmo.` };
@@ -741,7 +754,8 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   if (i < 12 && n.custo > 60 && !casaPaga(v, n.custo) && !projetoSocial(v, id)) return bloqueio('requisito', semDinheiro);
   const irr = m.irregular?.(v);
   if (irr) return { grau: 'irregular', motivo: irr };
-  if (extra > 0 && enc.motivo) return { grau: 'permitido', motivo: enc.motivo };
+  const avisos = [hor?.motivo, extra > 0 ? enc.motivo : undefined].filter(Boolean);
+  if (avisos.length) return { grau: 'permitido', motivo: avisos.join(' ') };
   return { grau: 'permitido' };
 }
 

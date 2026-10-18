@@ -20,7 +20,7 @@
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Frente, Vida } from '../tipos';
-import { FRENTES, MATERIAS, estagioDe, modeloFrente } from '../dados/frentes';
+import { FRENTES, MATERIAS, modeloFrente, reguaDaFrente, type ReguaDaFrente } from '../dados/frentes';
 import { idade } from '../nucleo';
 import { predisposicao } from './predisposicao';
 import { fatorDeTreino } from './lesoes';
@@ -148,9 +148,9 @@ export function esquecerFrentes(v: Vida, praticadas: Set<Dominio>): void {
  * interesse fazem cada matéria ir para um lado: ninguém é bom em tudo porque
  * é "inteligente".
  */
-export function estudarMaterias(v: Vida, r: Rng, fator: number): void {
-  // REWORK 9 · EDU-01: a postura muda o ritmo (não o destino).
-  const postura = v.educacao.postura === 'dedicada' ? 1.2 : v.educacao.postura === 'relaxada' ? 0.75 : 1;
+export function estudarMaterias(v: Vida, r: Rng, fator: number, estudo = 1): void {
+  // REWORK 9 · EDU-01: a postura muda o ritmo (não o destino). REWORK 9.5: a dedicação rende o que foi estudado de fato.
+  const postura = v.educacao.postura === 'dedicada' ? 1 + 0.2 * estudo : v.educacao.postura === 'relaxada' ? 0.75 : 1;
   for (const d of MATERIAS) {
     const f = garantirFrente(v, d);
     // A matéria de que se gosta recebe mais atenção sem ninguém mandar.
@@ -186,16 +186,27 @@ export function anosDePratica(v: Vida, f: Frente): number {
   return Math.floor(Math.min(calendario, f.meses / 12));
 }
 
+/**
+ * REWORK 9.5 · EDU-02 — o estágio de uma frente, pela régua certa (`dados/frentes.reguaDaFrente`): uma matéria,
+ * enquanto se está na escola, diante do esperado para a série; o resto, pela régua absoluta. FONTE ÚNICA das palavras
+ * de cada habilidade (Você, Caminhos, o boletim, a ficha da prática, a progressão) — a tela não escolhe régua.
+ */
+export function estagioDaFrente(v: Vida, d: Dominio, h = v.caminhos.frentes[d]?.habilidade ?? 0): ReguaDaFrente {
+  const naEscola = !!v.educacao.basica && !v.educacao.evadiu && idade(v) < 19;
+  return reguaDaFrente(d, h, { idade: idade(v), naEscola });
+}
+
 /** Uma frase humana sobre uma frente ("Tem ouvido para música, mas pratica pouco"). */
 export function leituraDaFrente(v: Vida, d: Dominio): string {
   const f = v.caminhos.frentes[d];
   const m = modeloFrente(d);
   if (!f) return '';
-  const e = estagioDe(f.habilidade);
+  const regua = estagioDaFrente(v, d);
+  const e = regua.estagio;
   const anos = anosDePratica(v, f);
   const parado = (v.t - f.tUltimo) / 12;
   const apt = aptidao(v, d);
-  const base = m.estagios[e];
+  const base = regua.palavra;
   if (parado >= 2) {
     const quando = parado >= 10 ? 'há muitos anos' : `há ${Math.floor(parado)} anos`;
     return f.auge >= 50 ? `Já foi bom nisso — parou ${quando}, mas não esqueceu de todo.` : `Parou ${quando}.`;

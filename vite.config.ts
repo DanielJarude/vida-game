@@ -111,7 +111,7 @@ export default defineConfig({
           // ações, o ano e as telas os importam. Sem ciclo, e nenhum dos dois pacotes grandes cresce.
           // REWORK 9: a agenda da semana (horários, conflitos, presença) vai com os verbos: só o ano, as ações e as telas a
           // chamam — e ela se registra em `compromissos` (que está embaixo) para dizer o conflito de horário de uma proposta.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda)\.ts/.test(id)) return 'motor-vida';
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina)\.ts/.test(id)) return 'motor-vida';
           if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria|gestos|pertences|presentes|vidaEstudantil|estetica)\.ts)/.test(id)) return 'motor-textos';
           if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
           // REWORK 3: o que só a camada de cima usa (salvar, nascer, as ações de cuidado, de estilo, de busca, a

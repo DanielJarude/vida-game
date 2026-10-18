@@ -14,6 +14,9 @@ import { noPais } from '../../motor/mundo/registro';
 import { useMemo } from 'react';
 import type { Oportunidade, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
+import { disponibilidade } from '../../motor/acoes';
+import { previsaoDaPostura, type Postura } from '../../motor/sistemas/agenda';
+import { PALAVRA_DA_FAIXA, type FaixaDaSemana } from '../../motor/sistemas/semana';
 import { idade } from '../../motor/nucleo';
 import { curso, cursoOuNulo, type AreaFormacao } from '../../motor/dados/cursos';
 import { OCUPACOES, ocupacaoOuNula } from '../../motor/dados/ocupacoes';
@@ -26,8 +29,7 @@ import { textoLocal } from '../../motor/mundo/locais';
 import { materiasExtremas } from '../../motor/sistemas/frentes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { anoDe } from '../../motor/tempo';
-import { BotaoAcao, Degraus, Escolha, Folio, Linha, Secao } from '../comum';
-import { estagioDe, MATERIAS, modeloFrente } from '../../motor/dados/frentes';
+import { BotaoAcao, Folio, Linha, Secao } from '../comum';
 import { alvosDoEnem, cursosAgrupados, cursosParaVoce, pontuarCursos } from '../../motor/sistemas/relevancia';
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
@@ -134,37 +136,16 @@ export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { pa
 /* ------------------------------------------------- Como vai (REWORK 7) */
 
 /**
- * "Como estou me saindo?": na escola, cada matéria com os degraus da habilidade (a mesma escada das frentes — o nome
- * da matéria é o do país onde se estuda, `mundo/materias`), a mais forte e a mais fraca; no curso, o desempenho e o
- * tempo que falta. Tudo é o que o motor usa para a nota, a aprovação e o vestibular.
+ * "Como estou me saindo?" no curso: o desempenho e o tempo que falta. Na escola, as matérias, a nota e a frequência
+ * moram no boletim (REWORK 9.5 · UX-04, `Boletim`) — uma lista só, em Desenvolvimento.
  */
 function ComoVai({ vida }: { vida: Vida }) {
-  const b = vida.educacao.basica;
   const m = vida.educacao.matricula;
-  if (b && (b.etapa === 'creche' || b.etapa === 'pre')) return null;
-  if (!b && !(m && !m.trancado)) return null;
-  const materias = b ? MATERIAS.filter(d => vida.caminhos.frentes[d]) : [];
-  const { forte, fraca } = b ? materiasExtremas(vida) : {};
+  if ((vida.educacao.basica && !vida.educacao.evadiu) || !m || m.trancado) return null;
   return (
     <section className="como-vai-estudo" aria-labelledby="titulo-como-vai">
       <h2 id="titulo-como-vai" className="secao-fio">Como você está se saindo</h2>
-      {b && <p className="como-vai-estudo__frase">Desempenho {palavraDesempenho(b.desempenho)}{b.reprovacoes ? ` · ${b.reprovacoes === 1 ? 'uma reprovação' : `${b.reprovacoes} reprovações`} no caminho` : ''}.{forte ? ` O forte: ${modeloFrente(forte).nome}.` : ''}{fraca ? ` O que pesa: ${modeloFrente(fraca).nome}.` : ''}</p>}
-      {m && !m.trancado && <p className="como-vai-estudo__frase">Desempenho {palavraDesempenho(m.desempenho)} · {m.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`}.</p>}
-      {materias.length > 0 && (
-        <ul className="habilidades habilidades--materias">
-          {materias.map(d => {
-            const f = vida.caminhos.frentes[d]!;
-            const mf = modeloFrente(d);
-            const e = estagioDe(f.habilidade);
-            return (
-              <li key={d} className={`habilidade pratica--estudo${d === forte ? ' habilidade--forte' : d === fraca ? ' habilidade--fraca' : ''}`}>
-                <span className="habilidade__nome">{mf.nome}</span>
-                <Degraus estagio={e} rotulo={mf.nome} palavra={mf.estagios[e]} />
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <p className="como-vai-estudo__frase">Desempenho {palavraDesempenho(m.desempenho)} · {m.mesesRestantes <= 12 ? 'último ano' : `faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`}.</p>
     </section>
   );
 }
@@ -548,6 +529,44 @@ function EstudoParaConcurso({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
 
 /* ------------------------------------------------------------ Estudo */
 
+const ROTULO_POSTURA: Record<Postura, string> = { dedicada: 'Com dedicação', normal: 'No ritmo', relaxada: 'Empurrando' };
+
+/**
+ * REWORK 9.5 · ROT-02/03 — a dedicação aos estudos é uma PRIORIDADE da semana, não um multiplicador de nota: cada opção
+ * diz antes o que pede (as horas de estudo em casa, achadas na agenda) e o que tende a dar; depois do ano, o que de fato
+ * aconteceu (a fotografia do ano: quanto do estudo achou horário, a rotina que se teve). Tudo de `agenda.previsaoDaPostura`.
+ */
+export function DedicacaoNosEstudos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const atual = vida.educacao.postura;
+  const ultima = [...(vida.evolucao ?? [])].reverse().find(f => f.rotina?.postura);
+  const real = ultima?.rotina;
+  return (
+    <fieldset className="dedicacao-estudo" aria-describedby="dedicacao-nota">
+      <legend className="campo__rotulo">Como você encara os estudos este ano</legend>
+      <div className="dedicacao-estudo__opcoes" role="radiogroup" aria-label="Postura nos estudos">
+        {(['dedicada', 'normal', 'relaxada'] as Postura[]).map(p => {
+          const pv = previsaoDaPostura(vida, p);
+          const d = disponibilidade(vida, { tipo: 'postura', valor: p });
+          const ativa = atual === p;
+          const bloqueada = !ativa && d.grau !== 'permitido' && d.grau !== 'irregular';
+          return (
+            <button key={p} type="button" role="radio" aria-checked={ativa} disabled={bloqueada} data-postura={p}
+              className={`dedicacao-estudo__opcao${ativa ? ' dedicacao-estudo__opcao--ativa' : ''}`} onClick={() => !ativa && agir({ tipo: 'postura', valor: p })}>
+              <span className="dedicacao-estudo__nome">{ROTULO_POSTURA[p]}</span>
+              <span className="dedicacao-estudo__horas">{pv.horas > 0 ? `+${String(pv.horas).replace('.', ',')} h por semana de estudo em casa` : pv.horas < 0 ? 'devolve tempo à semana' : 'o dever de casa de sempre'}</span>
+              <span className="dedicacao-estudo__efeito">{pv.efeito}</span>
+              <span className="dedicacao-estudo__custo">{bloqueada ? d.motivo : pv.custo}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p id="dedicacao-nota" className="nota">
+        {real ? `No último ano: ${ROTULO_POSTURA[real.postura!].toLowerCase()}${real.postura === 'dedicada' && real.estudo !== undefined ? (real.estudo >= 0.99 ? ', e todas as horas de estudo aconteceram' : real.estudo <= 0 ? ', mas as horas de estudo não acharam horário na semana' : `, e ${Math.round(real.estudo * 100)}% das horas de estudo aconteceram`) : ''}; a rotina ficou ${real.faixa === 'alem' ? 'além do que se aguenta' : PALAVRA_DA_FAIXA[real.faixa as FaixaDaSemana] ?? real.faixa}. O efeito está no boletim.` : 'A escolha vale até você mudar; o efeito aparece no boletim do fim do ano — tendência, não garantia.'}
+      </p>
+    </fieldset>
+  );
+}
+
 function Estudo({ vida, agir }: Props) {
   const e = vida.educacao;
   const b = e.basica;
@@ -576,13 +595,7 @@ function Estudo({ vida, agir }: Props) {
         </>
       )}
       {e.evadiu && !b && <p className="nota">{`Você largou a escola. Dá para voltar pelo ${textoLocal(vida, 'supletivo').replace(/^(o|a) /, '')}.`}</p>}
-      {estudando && i >= 7 && (
-        <div className="campo">
-          <span className="campo__rotulo">Como você encara os estudos este ano</span>
-          <Escolha rotulo="Postura nos estudos" valor={e.postura} aoMudar={valor => agir({ tipo: 'postura', valor })}
-            opcoes={[{ id: 'dedicada', rotulo: 'Com dedicação' }, { id: 'normal', rotulo: 'No ritmo' }, { id: 'relaxada', rotulo: 'Empurrando' }]} />
-        </div>
-      )}
+      {estudando && i >= 7 && <DedicacaoNosEstudos vida={vida} agir={agir} />}
       <div className="grupo-acoes">
         {i >= 15 && <BotaoAcao vida={vida} acao={{ tipo: 'enem' }} agir={agir} ocultarImpossivel>{educacaoDaVida(vida).acao}</BotaoAcao>}
         {m && !m.trancado && <BotaoAcao vida={vida} acao={{ tipo: 'trancar' }} agir={agir} variante="discreto">Trancar o curso</BotaoAcao>}

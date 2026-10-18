@@ -17,7 +17,7 @@ import { OCUPACOES, ocupacao } from '../dados/ocupacoes';
 import { CURSOS, curso } from '../dados/cursos';
 import { aptidao, habilidade, garantirFrente } from '../sistemas/frentes';
 import { podeComecarRotina, ROTINAS, nivelModelo } from '../sistemas/rotinas';
-import { semana } from '../sistemas/semana';
+import { cargaDaAtividade, semana } from '../sistemas/semana';
 import { contratar, elegibilidade, horizonte, aposentar } from '../sistemas/trabalho';
 import { chanceNoConcurso, editaisAbertos } from '../sistemas/concurso';
 import { mudarAgora } from '../sistemas/processos';
@@ -462,10 +462,12 @@ describe('tempo livre', () => {
   it('25. as atividades ocupam a semana conforme a intensidade', () => {
     const v = ate(14, 2, praticar('futebol', 2, 6));
     const w = semana(v);
-    const soma = v.rotinas.reduce((s, r) => s + (nivelModelo(ROTINAS.find(m => m.id === r.id)!, r.nivel ?? 1).tempo), 0);
+    // REWORK 9.5 · ROT-02: a semana se enche pela EXIGÊNCIA de cada atividade (frequência × intensidade), não pela contagem.
+    const soma = v.rotinas.reduce((s, r) => s + cargaDaAtividade(r.id, r.nivel ?? 1).carga, 0);
     expect(w.ocupado).toBeCloseTo(soma, 5);
     const f = ROTINAS.find(m => m.id === 'futebol')!;
     expect(nivelModelo(f, 2).tempo).toBeGreaterThan(nivelModelo(f, 1).tempo);
+    expect(cargaDaAtividade('futebol', 2).carga).toBeGreaterThan(cargaDaAtividade('futebol', 1).carga);
   });
 
   it('26. trabalho, estudo e filhos pequenos encolhem o tempo — e o motivo diz o quê', () => {

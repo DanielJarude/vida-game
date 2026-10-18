@@ -2429,6 +2429,9 @@ export interface FotoDoAno {
   curso?: number;
   trabalho?: { ocupacaoId: string; desempenho: number; salario: number };
   esporte?: { reputacao: number; nivel: number };
+  /** REWORK 9.5 · ROT-01/03: a rotina do ano que fechou — a exigência (a faixa), a cabeça (o estresse), os conflitos de
+   *  horário, a dedicação aos estudos e quanto do estudo em casa aconteceu (0..1). O que de fato foi, não o previsto. */
+  rotina?: { faixa: string; estresse: number; conflitos: number; postura?: 'dedicada' | 'normal' | 'relaxada'; estudo?: number };
 }
 
 /* ------------------------------------------------------------------- Agenda (REWORK 9) */

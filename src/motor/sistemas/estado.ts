@@ -182,20 +182,31 @@ function fatoresDeAtividades(v: Vida, d: 'humor' | 'cabeca'): Fator[] {
 
 /* ------------------------------------------------------------ Semana */
 
-/** O quanto os compromissos fixos passam do que a semana comporta. */
-export function sobrecargaDaSemana(v: Vida): { fixos: number; atividades: number; rotulos: string[]; apertada: boolean } {
+/**
+ * O quanto os compromissos fixos passam do que a semana comporta — e o quanto as atividades passam do que sobra.
+ *
+ * REWORK 9.5 · ROT-01: `atividades` é a parte MENTAL do excesso (o que pesa na cabeça). O treino que passa do que cabe
+ * cansa (o corpo: `processarRotinas`, `sobrecarga`), mas não enche a cabeça como a apostila; e uma atividade de que se
+ * gosta de verdade (interesse alto) pesa menos — é descanso de outro tipo. `excesso` é o excesso inteiro (o cansaço).
+ */
+export function sobrecargaDaSemana(v: Vida): { fixos: number; atividades: number; excesso: number; rotulos: string[]; apertada: boolean } {
   const s = semana(v);
   const somaFixos = s.fixos.reduce((t, f) => t + f.peso, 0) - s.ganhos.reduce((t, f) => t + f.peso, 0);
   const fixos = Math.max(0, somaFixos - (s.base - 0.5));
   // Sobra só uma fresta da semana depois dos compromissos (e eles são muitos).
   const apertada = fixos <= 0.01 && s.base - somaFixos <= 0.75 && somaFixos >= 2.5;
   // FIX pós-REWORK 4: a hora da terapia não pesa como compromisso a mais na cabeça (cuidar dela é o contrário disso).
-  const cuidar = s.rotinas.filter(r => r.id === 'terapia').reduce((t, r) => t + r.peso, 0);
-  const atividades = Math.max(0, s.ocupado - cuidar - s.capacidade);
+  const contam = s.rotinas.filter(r => r.id !== 'terapia');
+  const ocupado = contam.reduce((t, r) => t + r.peso, 0);
+  const excesso = Math.max(0, ocupado - s.capacidade);
+  // A parte do excesso que é da cabeça: a média do peso mental das atividades, com o gosto aliviando (até metade).
+  const gosto = (id: string) => { const f = v.caminhos.frentes[id as keyof typeof v.caminhos.frentes]; return f && f.interesse >= 60 ? 0.6 : 1; };
+  const mental = ocupado > 0 ? contam.reduce((t, r) => t + r.peso * r.mental * gosto(r.id), 0) / ocupado : 0;
+  const atividades = excesso * mental;
   // Só a primeira letra desce (nomes de gente continuam com maiúscula: "cuidar de Sandra").
   const minuscula = (x: string) => x.charAt(0).toLowerCase() + x.slice(1);
-  const rotulos = [...s.fixos.filter(f => f.peso >= 0.5).map(f => minuscula(f.rotulo.replace(/ \(.*\)$/, ''))), ...s.rotinas.filter(r => r.peso >= 1).map(r => minuscula(r.rotulo.replace(/ — .*/, '')))];
-  return { fixos, atividades, rotulos, apertada };
+  const rotulos = [...s.fixos.filter(f => f.peso >= 0.5).map(f => minuscula(f.rotulo.replace(/ \(.*\)$/, ''))), ...s.rotinas.filter(r => r.peso >= 0.8).map(r => minuscula(r.rotulo.replace(/ — .*/, '')))];
+  return { fixos, atividades, excesso, rotulos, apertada };
 }
 
 /* ------------------------------------------------------------- Humor */
@@ -308,7 +319,8 @@ export function fatoresCabeca(v: Vida): Fator[] {
   const s = sobrecargaDaSemana(v);
   if (s.fixos > 0.01) out.push({ id: 'semana_fixa', texto: `compromissos que não cabem na semana: ${listaNatural(s.rotulos.slice(0, 3))}`, efeito: Math.round(s.fixos * 36) });
   else if (s.apertada) out.push({ id: 'semana_apertada', texto: 'quase nada da semana sobra para você', efeito: 6 });
-  if (s.atividades > 0.01) out.push({ id: 'semana', texto: 'a semana com mais atividades do que cabe', efeito: Math.round(s.atividades * 23) });
+  // REWORK 9.5: a criança sente menos na cabeça o que passa (os pais seguram a rotina) — sente no cansaço.
+  if (s.atividades > 0.01) out.push({ id: 'semana', texto: 'uma rotina de atividades exigente demais', efeito: Math.round(s.atividades * 23 * (i < 12 ? 0.5 : 1)) });
   const pequenos = vinculosVivos(v).filter(x => x.vin.parentesco === 'filho' && x.vin.convivio.includes('casa') && idadePessoa(v, x.p) < 4).length;
   if (pequenos) out.push({ id: 'bebe', texto: pequenos === 1 ? 'as noites curtas com uma criança pequena' : 'as noites curtas com crianças pequenas', efeito: Math.min(10, pequenos * 6) });
   const cuidar = semana(v).fixos.find(f => f.id === 'cuidar');

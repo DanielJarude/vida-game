@@ -114,13 +114,14 @@ describe('F/G — a semana: "cabe" e "não cabe" vêm da mesma conta', () => {
         v.rotinas = disponiveis.slice(0, k).map(m => ({ id: m.id, tInicio: v.t, nivel: (m.niveis.length > 1 ? 2 : 1) as 1 | 2 }));
         const f = folegoDaSemana(v);
         // (A terapia passa do teto de propósito — é para isso — e o painel diz; o resto segue a conta.)
+        // REWORK 9.5: o horário é outra leitura (a agenda) — o painel do fôlego fala do descanso.
         const porTempo = ROTINAS.filter(m => m.id !== 'terapia' && !v.rotinas.some(r => r.id === m.id) && m.niveis[0].tempo <= PEDACO_LEVE && atividadeExiste(v, m))
           .map(m => podeComecarRotina(v, m.id, 1))
-          .filter(d => d.grau !== 'impossivel' && d.grau !== 'requisito');
+          .filter(d => d.grau !== 'impossivel' && d.grau !== 'requisito' && !/Horário incompatível/.test(d.motivo ?? ''));
         if (!porTempo.length) continue;
         casos++;
         const algumaEntra = porTempo.some(d => podeTentar(d) || d.grau === 'irregular');
-        expect(/teto/.test(f.texto), `${idadeAlvo} anos, ${k} atividades: "${f.texto}"`).toBe(!algumaEntra);
+        expect(/limite do descanso|passou do que se aguenta: falta descanso/.test(f.texto), `${idadeAlvo} anos, ${k} atividades: "${f.texto}"`).toBe(!algumaEntra);
         // A faixa desenhada, a palavra do painel e o veredito leem o mesmo encaixe.
         expect(encaixe(v, 0).faixa).toBe(f.faixa);
       }
@@ -161,9 +162,12 @@ describe('F/G — a semana: "cabe" e "não cabe" vêm da mesma conta', () => {
     expect(e.possivel).toBe(false);
     const d = podeComecarRotina(v, 'natacao', 1);
     expect(d.grau).toBe('incompativel');
-    expect(d.motivo).toMatch(/Não há horas na semana/);
+    // REWORK 9.5: o "não" de exigência é de DESCANSO (o horário é da agenda), com o que ocupa e o que largar.
+    expect(d.motivo).toMatch(/Descanso insuficiente/);
+    expect(d.motivo).toMatch(/academia|música|corrida/i);
     expect(d.motivo).toMatch(/largar|mais de uma coisa/);
-    expect(folegoDaSemana(v).texto).toMatch(/teto/);
+    // O painel fala da coisa LEVE (a mais leve que existe): pode ainda caber com custo, mesmo quando a natação não cabe.
+    expect(folegoDaSemana(v).texto).toMatch(/pass(ou|a) do que se aguenta/);
     // Terapia continua possível (é para isso).
     expect(podeTentar(podeComecarRotina(v, 'terapia', 1))).toBe(true);
   });
@@ -176,7 +180,7 @@ describe('F/G — a semana: "cabe" e "não cabe" vêm da mesma conta', () => {
     const prox = dispo.slice(5).find(m => m.niveis[0].tempo >= 0.5);
     if (!prox) return;
     const d = podeComecarRotina(v, prox.id, 1);
-    if (!podeTentar(d)) expect(d.motivo).toMatch(/Com 9 anos/);
+    if (!podeTentar(d)) expect(d.motivo).toMatch(/com 9 anos/i);
   });
 });
 

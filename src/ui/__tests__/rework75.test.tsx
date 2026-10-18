@@ -207,8 +207,8 @@ describe('a agenda da semana', () => {
     expect(agenda.querySelectorAll('.bloco-agenda').length).toBe(a.blocos.reduce((t, b) => t + b.dias.length, 0));
     for (const id of ['corrida', 'teatro', 'desenho']) expect(a.blocos.some(b => b.ref === id)).toBe(true);
     expect(agenda.textContent).toMatch(/Seg|Ter|Qua/);
-    // A lista de antes continua, como outra leitura.
-    expect(screen.getByRole('img', { name: /A semana:/ })).toBeTruthy();
+    // REWORK 9.5: ao lado da agenda, as três leituras da rotina (a lista de antes repetia a agenda e saiu).
+    expect(screen.getByRole('region', { name: 'Como está a rotina' })).toBeTruthy();
   });
 
   it('"Mais a sério" no compromisso aberto muda o nível pelo motor; "Abrir a ficha da prática" abre a ficha', () => {

@@ -451,14 +451,15 @@ describe('estado pessoal: causas como fonte única', () => {
 /* ================================================================== Semana */
 
 describe('semana: a mesma fonte para a tela e para a regra', () => {
-  it('cabe ⇔ o que ocupa + o pedido cabe na capacidade; tirar uma atividade devolve exatamente o tempo dela', () => {
+  it('cabe ⇔ o que ocupa + o pedido cabe na capacidade; tirar uma atividade devolve exatamente o peso dela', () => {
     const v = adulto(24);
     contratar(v, criarRng(3), ocupacao('atendente'));
     v.rotinas = [{ id: 'academia', tInicio: v.t, nivel: 1 }, { id: 'leitura', tInicio: v.t, nivel: 1 }];
     const s = semana(v);
     for (const extra of [0.5, 1, 1.5, 2]) expect(cabeNaSemana(v, extra).cabe).toBe(s.ocupado + extra <= s.capacidade + 0.01);
     const d = executar(v, { tipo: 'rotina', id: 'academia', ativa: false }).vida;
-    expect(semana(d).livre).toBeCloseTo(s.livre + 1, 6);
+    // REWORK 9.5 · ROT-02: devolve exatamente a EXIGÊNCIA dela (o que ela pesava na semana).
+    expect(semana(d).livre).toBeCloseTo(s.livre + s.rotinas.find(r => r.id === 'academia')!.peso, 6);
   });
 
   it('família e trabalho ocupam antes da escolha: filho pequeno em casa, trabalho e faculdade aparecem como fixos', () => {

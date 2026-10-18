@@ -18,12 +18,12 @@ import { disponibilidade } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { tracosMarcantes } from '../../motor/personalidade';
 import type { Dimensao } from '../../motor/sistemas/estado';
-import { Progressao } from './Progresso';
+import { FichaDeHabilidade } from './Progresso';
+import { evolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { MATERIAS } from '../../motor/dados/frentes';
 import { Retrato } from '../avatar/Retrato';
-import { BotaoAcao, Degraus, Vazio } from '../comum';
+import { BotaoAcao, Vazio } from '../comum';
 import { frentesDaVida } from '../../motor/sistemas/frentes';
-import { estagioDe, modeloFrente } from '../../motor/dados/frentes';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
 import { expressaoDe, lerDimensao, noQueEBom, lerPessoal, momentoAtual, palavraTendencia, trajetoria, USO_DIMENSAO, type LeituraDimensao } from '../estadoPessoal';
@@ -85,9 +85,9 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
 
       {/* REWORK 7: o que a pessoa SABE FAZER, com os degraus de cada habilidade (a mesma escada da ficha da prática) —
           e, ao lado, os jeitos de nascença que o motor guarda. Antes eram linhas de texto soltas. */}
+      {/* REWORK 9.5 · UX-03: uma ficha por habilidade (o nível, a frase, o que mudou no ano e por quê, o histórico) — antes
+          eram duas listas das mesmas frentes (os degraus e o "ano a ano"). */}
       <div id="voce-sabe"><Habilidades vida={vida} irPara={irPara} /></div>
-      {/* REWORK 9 · PROG-01: as habilidades fora da escola, ano a ano — quanto andou e por quê (as fontes do motor). */}
-      <Progressao vida={vida} dominios={(Object.keys(vida.caminhos.frentes) as Dominio[]).filter(d => !MATERIAS.includes(d))} titulo="O que você sabe fazer, ano a ano" />
 
       {tracos.length > 0 && (
         <section className="voce-jeito" aria-labelledby="titulo-jeito">
@@ -267,7 +267,6 @@ function OSeuNome({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   );
 }
 
-const CATEGORIA_DA_FRENTE: Record<string, string> = { esporte: 'esporte', arte: 'arte', estudo: 'estudo', social: 'social', oficio: 'oficio' };
 
 /**
  * REWORK 7 — "No que você é bom", com forma: cada habilidade que conta na vida (as praticadas e as que já foram
@@ -277,25 +276,19 @@ const CATEGORIA_DA_FRENTE: Record<string, string> = { esporte: 'esporte', arte: 
 function Habilidades({ vida, irPara }: { vida: Vida; irPara: (a: Destino) => void }) {
   const frentes = frentesDaVida(vida);
   const jeitos = noQueEBom(vida).filter(x => !frentes.some(f => cap(f.nome) === x.rotulo));
-  if (!frentes.length && !jeitos.length) return null;
+  // As outras habilidades (fora da escola) que o motor guarda: a um toque, com a mesma ficha.
+  const outras = (Object.keys(vida.caminhos.frentes) as Dominio[]).filter(d => !MATERIAS.includes(d) && !frentes.some(f => f.d === d));
+  if (!frentes.length && !jeitos.length && !outras.length) return null;
+  const ficha = (d: Dominio, frase?: string, ativa = true) => { const e = evolucaoDaFrente(vida, d); return e ? <FichaDeHabilidade key={d} vida={vida} e={e} frase={frase} ativa={ativa} /> : null; };
   return (
     <section className="voce-bom" aria-labelledby="titulo-bom">
       <h2 id="titulo-bom" className="voce-subtitulo">No que você é bom</h2>
-      {frentes.length > 0 && (
-        <ul className="habilidades">
-          {frentes.map(f => {
-            const fr = vida.caminhos.frentes[f.d]!;
-            const m = modeloFrente(f.d);
-            const e = estagioDe(fr.habilidade);
-            return (
-              <li key={f.d} className={`habilidade pratica--${CATEGORIA_DA_FRENTE[m.categoria] ?? 'estudo'}${f.ativa ? '' : ' habilidade--parada'}`}>
-                <span className="habilidade__nome">{cap(f.nome)}</span>
-                <Degraus estagio={e} auge={estagioDe(fr.auge)} rotulo={cap(f.nome)} palavra={m.estagios[e]} />
-                <span className="habilidade__frase">{f.ativa ? f.texto : `Parou. ${f.texto}`.replace('Parou. Parou', 'Parou')}</span>
-              </li>
-            );
-          })}
-        </ul>
+      {frentes.length > 0 && <ul className="fichas-hab">{frentes.map(f => ficha(f.d, f.texto, f.ativa))}</ul>}
+      {outras.length > 0 && (
+        <details className="voce-bom__outras">
+          <summary>{outras.length === 1 ? 'Outra habilidade' : `Outras ${outras.length} habilidades`} (o que se aprendeu um dia e ficou)</summary>
+          <ul className="fichas-hab">{outras.map(d => ficha(d))}</ul>
+        </details>
       )}
       {jeitos.length > 0 && <dl className="dados">{jeitos.map(x => <div key={x.rotulo} className="dado"><dt>{x.rotulo}</dt><dd>{x.texto}</dd></div>)}</dl>}
       <button type="button" className="link" onClick={() => irPara('atividades')}>Praticar algo — em Minha Semana →</button>

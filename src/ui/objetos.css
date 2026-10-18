@@ -1,0 +1,118 @@
+/*
+ * REWORK 9.5 — A vida em objetos. Classes novas deste pacote: cada área se inspira num objeto da vida real (a agenda,
+ * o boletim, a pasta, o álbum, o diário, a ficha, os papéis da casa) — interpretações originais, em tokens (as quatro
+ * paletas, sem cor fixa). O objeto inspira; a usabilidade manda: texto legível, alvos de toque, nada de imagem estática.
+ */
+
+/* ============================================================ Minha Semana — a rotina em três notas da agenda */
+.rotina-leitura { margin: var(--space-5) 0 var(--space-4); }
+.rotina-leitura__resumo { margin: 0 0 var(--space-3); font-family: var(--font-serif); font-size: var(--type-lead); line-height: 1.4; color: var(--text-primary); max-width: 62ch; }
+.rotina-leitura__notas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: var(--space-3); }
+/* A nota da agenda: papel de bloco, a margem pautada à esquerda e a etiqueta no alto (como a aba de um planner). */
+.nota-agenda { --cor-nota: var(--tom-tempo); position: relative; min-width: 0; padding: var(--space-3) var(--space-3) var(--space-3) calc(var(--space-3) + 6px); border-radius: var(--radius-sm); background: var(--superficie); box-shadow: inset 4px 0 0 color-mix(in oklab, var(--cor-nota) 70%, transparent), 0 0 0 1px var(--fio), var(--shadow-sm); background-image: repeating-linear-gradient(to bottom, transparent 0 23px, color-mix(in oklab, var(--cor-nota) 9%, transparent) 23px 24px); }
+.nota-agenda--horarios { --cor-nota: var(--info); }
+.nota-agenda--exigencia { --cor-nota: var(--tom-tempo); }
+.nota-agenda--pesada { --cor-nota: var(--warning); }
+.nota-agenda--cabeca { --cor-nota: var(--pig-folha); }
+.nota-agenda--estresse-moderado { --cor-nota: var(--pig-ipe); }
+.nota-agenda--estresse-alto, .nota-agenda--estresse-no-limite { --cor-nota: var(--ruim); }
+.nota-agenda__rotulo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--text-muted); }
+.nota-agenda__palavra { margin: 2px 0 var(--space-1); font-family: var(--font-serif); font-size: var(--type-heading); line-height: 1.15; color: var(--text-primary); }
+.nota-agenda__palavra span { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-secondary); margin-left: 4px; }
+.nota-agenda__texto { margin: 0 0 var(--space-1); font-size: var(--type-caption); line-height: 1.5; color: var(--text-secondary); overflow-wrap: anywhere; }
+.nota-agenda__folego strong { color: var(--text-primary); }
+.nota-agenda__ir { font-size: var(--type-caption); display: inline-flex; min-height: 32px; align-items: center; }
+
+/* A mesma leitura numa linha (Caminhos, Você, a escola). */
+.rotina-resumo { margin: var(--space-3) 0 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: color-mix(in oklab, var(--tom-tempo) 6%, var(--superficie)); box-shadow: inset 3px 0 0 color-mix(in oklab, var(--tom-tempo) 60%, transparent); font-size: var(--type-caption); line-height: 1.5; color: var(--text-secondary); max-width: 70ch; }
+.rotina-resumo__rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--text-muted); margin-right: 4px; }
+.rotina-resumo .link { min-height: 32px; }
+
+/* ============================================================ A dedicação aos estudos: três prioridades, ditas antes */
+.dedicacao-estudo { margin: var(--space-3) 0; padding: 0; border: 0; min-width: 0; }
+.dedicacao-estudo__opcoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
+.dedicacao-estudo__opcao { display: grid; align-content: start; gap: 4px; min-width: 0; min-height: var(--touch-target); padding: var(--space-3); text-align: left; font: inherit; color: var(--text-primary); border-radius: var(--radius-md); border: 1px solid var(--fio); background: var(--superficie); cursor: pointer; }
+.dedicacao-estudo__opcao:hover:not(:disabled) { background: var(--veu-1); }
+.dedicacao-estudo__opcao:focus-visible { outline: 2px solid var(--tom-estudos); outline-offset: 2px; }
+.dedicacao-estudo__opcao--ativa { border-color: var(--tom-estudos); box-shadow: inset 0 0 0 1px var(--tom-estudos); background: color-mix(in oklab, var(--tom-estudos) 7%, var(--superficie)); }
+.dedicacao-estudo__opcao:disabled { cursor: not-allowed; opacity: 0.72; }
+.dedicacao-estudo__nome { font-weight: var(--weight-semibold); }
+.dedicacao-estudo__opcao--ativa .dedicacao-estudo__nome::after { content: ' · escolhida'; font-weight: 400; font-size: var(--type-caption); color: var(--tom-estudos); }
+.dedicacao-estudo__horas { font-size: var(--type-caption); color: var(--tom-estudos); font-weight: var(--weight-semibold); }
+.dedicacao-estudo__efeito, .dedicacao-estudo__custo { font-size: var(--type-caption); line-height: 1.45; color: var(--text-secondary); overflow-wrap: anywhere; }
+.dedicacao-estudo__custo { color: var(--text-muted); }
+
+/* ============================================================ O boletim escolar (UX-04) */
+/* Um documento da escola: cabeçalho com a escola e a ficha do aluno, a tabela das matérias, o rodapé do ano. A régua
+   azulada do papel almaço fica só no fundo; o texto é do tamanho de sempre (nada de "documento de letra miúda"). */
+.boletim { --cor-boletim: var(--tom-estudos); margin: var(--space-4) 0; padding: var(--space-4); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); border-top: 6px solid color-mix(in oklab, var(--cor-boletim) 75%, transparent); min-width: 0; }
+.boletim__cabeca { display: grid; gap: 2px; padding-bottom: var(--space-3); margin-bottom: var(--space-3); border-bottom: 2px solid color-mix(in oklab, var(--cor-boletim) 35%, var(--fio)); }
+.boletim__escola { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.boletim__titulo { margin: 0; font-family: var(--font-serif); font-size: var(--type-heading); color: var(--text-primary); }
+.boletim__ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: var(--space-2) var(--space-3); margin: var(--space-2) 0 0; }
+.boletim__ficha div { min-width: 0; }
+.boletim__ficha dt, .boletim__rodape dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.boletim__ficha dd { margin: 0; color: var(--text-primary); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.boletim__tabela { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.boletim__tabela th, .boletim__tabela td { text-align: left; vertical-align: top; padding: var(--space-2); border-bottom: 1px solid var(--fio); }
+.boletim__tabela thead th { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); border-bottom: 2px solid color-mix(in oklab, var(--cor-boletim) 35%, var(--fio)); }
+.boletim__materia { font-weight: var(--weight-semibold); color: var(--text-primary); }
+.boletim__linha--forte .boletim__materia::after { content: ' ★'; color: var(--bom); font-weight: 400; }
+.boletim__dominio strong { font-size: var(--type-lead); color: var(--text-primary); }
+.boletim__esperado, .boletim__relacao { font-size: var(--type-caption); color: var(--text-muted); }
+.boletim__esperado { display: block; }
+.boletim__delta { color: var(--text-secondary); }
+.boletim__delta--subiu { color: var(--bom); }
+.boletim__delta--caiu { color: var(--ruim); }
+.boletim__causas { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.boletim__causa { font-size: var(--type-caption); padding: 0 8px; border-radius: var(--radius-pill); background: color-mix(in oklab, var(--bom) 12%, transparent); color: var(--text-secondary); }
+.boletim__causa--perda { background: color-mix(in oklab, var(--ruim) 12%, transparent); }
+.boletim__serie { color: var(--text-secondary); }
+.boletim__rodape { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--space-3); margin: var(--space-3) 0 0; padding: var(--space-3); border-radius: var(--radius-sm); background: color-mix(in oklab, var(--cor-boletim) 5%, var(--superficie)); }
+.boletim__rodape div { min-width: 0; }
+.boletim__rodape dd { margin: 2px 0 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.boletim__rodape dd strong { font-size: var(--type-lead); color: var(--text-primary); }
+.boletim__observacoes { margin-top: var(--space-3); padding-left: var(--space-3); border-left: 3px solid color-mix(in oklab, var(--cor-boletim) 45%, transparent); }
+.boletim__observacoes p { margin: 0 0 var(--space-1); color: var(--text-secondary); font-size: var(--type-caption); line-height: 1.5; }
+.boletim__obs-titulo { font-size: var(--type-meta) !important; letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted) !important; font-weight: var(--weight-semibold); }
+.boletim__legenda { margin-top: var(--space-3); }
+.boletim__historico { margin-top: var(--space-3); }
+.boletim__historico summary { cursor: pointer; min-height: var(--touch-target); display: flex; align-items: center; font-weight: var(--weight-semibold); color: var(--text-primary); }
+.boletim__tabela--historico { margin-top: var(--space-2); }
+/* No celular, cada matéria vira uma ficha de duas colunas (o rótulo vem do data-rotulo): nada de tabela espremida. */
+@media (max-width: 640px) {
+  .boletim { padding: var(--space-3); }
+  .boletim__tabela thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .boletim__tabela, .boletim__tabela tbody, .boletim__tabela tr, .boletim__tabela th, .boletim__tabela td { display: block; }
+  .boletim__tabela tr { padding: var(--space-2) 0; border-bottom: 1px solid var(--fio); }
+  .boletim__tabela th, .boletim__tabela td { border: 0; padding: 2px 0; }
+  .boletim__tabela td[data-rotulo] { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: var(--space-2); }
+  .boletim__tabela td[data-rotulo]::before { content: attr(data-rotulo); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); padding-top: 2px; }
+  .boletim__esperado { display: inline; }
+}
+
+/* ============================================================ A ficha de desenvolvimento (UX-03) */
+/* Uma ficha por habilidade, lida de cima para baixo: o nome e o nível, a frase, o que mudou e de onde veio. */
+.fichas-hab { list-style: none; margin: var(--space-2) 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--space-3); }
+.ficha-hab { --cor-ficha: var(--tom); min-width: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); border-left: 4px solid color-mix(in oklab, var(--cor-ficha) 55%, transparent); display: flex; flex-direction: column; gap: var(--space-1); }
+.ficha-hab--subiu { --cor-ficha: var(--bom); }
+.ficha-hab--caiu { --cor-ficha: var(--ruim); }
+.ficha-hab--parada { opacity: 0.85; }
+.ficha-hab__cabeca { display: grid; gap: 2px; }
+.ficha-hab__nome { margin: 0; font-size: var(--type-body); font-weight: var(--weight-semibold); color: var(--text-primary); overflow-wrap: anywhere; }
+.ficha-hab__nivel { margin: 0; font-family: var(--font-serif); font-size: var(--type-lead); line-height: 1.3; color: var(--text-primary); }
+.ficha-hab__relacao { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); }
+.ficha-hab__frase { margin: 0; font-size: var(--type-caption); line-height: 1.5; color: var(--text-secondary); }
+.ficha-hab__linha { margin: 0; font-size: var(--type-caption); line-height: 1.5; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-variant-numeric: tabular-nums; }
+.ficha-hab__rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.ficha-hab__mudou--subiu { color: var(--bom); }
+.ficha-hab__mudou--caiu { color: var(--ruim); }
+.ficha-hab__auge { color: var(--text-muted); }
+.ficha-hab__causa { padding: 0 8px; border-radius: var(--radius-pill); background: color-mix(in oklab, var(--bom) 12%, transparent); }
+.ficha-hab__causa--perda { background: color-mix(in oklab, var(--ruim) 12%, transparent); }
+.ficha-hab__historico summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; gap: var(--space-2); font-size: var(--type-caption); color: var(--text-secondary); }
+.ficha-hab__historico .evolucao-ano__trajetoria { color: var(--cor-ficha); }
+.ficha-hab__anos { list-style: none; margin: var(--space-1) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px var(--space-3); font-size: var(--type-caption); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.ficha-hab__anos strong { color: var(--text-primary); }
+.voce-bom__outras { margin: var(--space-2) 0; }
+.voce-bom__outras summary { cursor: pointer; min-height: var(--touch-target); display: flex; align-items: center; color: var(--text-secondary); }

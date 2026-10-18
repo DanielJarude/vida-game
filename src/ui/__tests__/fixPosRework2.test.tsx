@@ -18,7 +18,7 @@ import { garantirFrente } from '../../motor/sistemas/frentes';
 import { lesionar } from '../../motor/sistemas/lesoes';
 import { contratar } from '../../motor/sistemas/trabalho';
 import { ocupacao } from '../../motor/dados/ocupacoes';
-import { leituraDaSobrecarga } from '../../motor/sistemas/sobrecarga';
+import { avaliarRotina } from '../../motor/sistemas/avaliacaoDaRotina';
 import { terminar } from '../../motor/sistemas/romance';
 import { dinheiroCurto } from '../apresentar';
 import type { Vida } from '../../motor/tipos';
@@ -94,11 +94,13 @@ describe('Tempo livre ↔ motor: a semana sobrecarregada tem significado', () =>
     v.educacao.matricula = { cursoId: 'medicina', instituicao: 'UF', rede: 'publica', modalidade: 'presencial', tInicio: v.t, mesesRestantes: 60, mensalidade: 0, desempenho: 60, trancado: false, municipioId: v.moradia.municipioId };
     v.trabalho.horasExtras = true;
     v.mente.sobrecarga = { anos: 3, t: v.t };
-    const l = leituraDaSobrecarga(v);
+    // REWORK 9.5 · ROT-01: a palavra da exigência e os anos assim vêm da avaliação da rotina (a mesma que decide).
+    const av = avaliarRotina(v);
     render(<main><Tempo vida={v} agir={() => true} /></main>);
     const semana = screen.getByRole('region', { name: 'Sua semana' });
-    expect(within(semana).getByText(new RegExp(`^${l.palavra.charAt(0).toUpperCase() + l.palavra.slice(1)}\\.`))).toBeTruthy();
-    expect(within(semana).getByText(/Há 3 anos assim/)).toBeTruthy();
+    expect(av.exigencia.peso).not.toBe('leve');
+    expect(within(semana).getByRole('region', { name: 'Como está a rotina' }).textContent).toMatch(new RegExp(`Exigência${av.exigencia.peso}`));
+    expect(semana.textContent).toMatch(/há 3 anos assim|3 anos de sobrecarga/i);
   });
 });
 

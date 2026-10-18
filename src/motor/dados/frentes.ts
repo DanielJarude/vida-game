@@ -128,5 +128,48 @@ export const modeloFrente = (d: Dominio) => POR_ID.get(d)!;
 /** As matérias da escola: frentes que a escola exercita todo ano. */
 export const MATERIAS: readonly Dominio[] = ['exatas', 'linguagens', 'ciencias', 'humanas'];
 
-/** Estágio (0..5) de uma habilidade. */
+/** Estágio (0..5) de uma habilidade — a régua ABSOLUTA (a de um adulto: o que se sabe, sem comparar com ninguém). */
 export const estagioDe = (h: number) => (h < 15 ? 0 : h < 32 ? 1 : h < 50 ? 2 : h < 64 ? 3 : h < 80 ? 4 : 5);
+
+/**
+ * REWORK 9 · EDU-01 (mudou para cá no REWORK 9.5): o que se espera saber em cada idade — a curva do aluno TÍPICO
+ * (a mediana da média das matérias numa população simulada, 8 → 17 anos).
+ */
+export function esperadoNaSerie(i: number): number {
+  const k = Math.max(0, i - 6);
+  return Math.min(60, Math.max(3, 1.9 + 4.25 * k - 0.035 * k * k));
+}
+
+export type RelacaoComASerie = 'abaixo' | 'perto' | 'no_ritmo' | 'acima' | 'bem_acima';
+export const PALAVRA_DA_RELACAO: Record<RelacaoComASerie, string> = { abaixo: 'abaixo do esperado para a série', perto: 'perto do esperado para a série', no_ritmo: 'no ritmo da turma', acima: 'acima da turma', bem_acima: 'bem acima da turma' };
+
+export interface ReguaDaFrente {
+  /** O estágio (0..5) das palavras da frente (`estagios`). */
+  estagio: number;
+  palavra: string;
+  /** Qual régua: a da SÉRIE (uma matéria, enquanto se está na escola) ou a absoluta. */
+  regua: 'serie' | 'absoluta';
+  relacao?: RelacaoComASerie;
+  /** O que se espera saber na idade (a curva do aluno típico), quando a régua é a da série. */
+  esperado?: number;
+}
+
+/**
+ * REWORK 9.5 · EDU-02 — A RÉGUA CERTA PARA CADA FRASE. O playtest viu Português ir de 3,2 para 8,6 e a frase
+ * continuar "tropeça na redação": a frase vinha da régua ABSOLUTA (abaixo de 15, "tropeça"), e 8,6 aos 8 anos é o que
+ * se espera na série. Uma matéria, enquanto se está na escola, é descrita pela régua da SÉRIE (o domínio diante do aluno
+ * típico daquela idade); o adulto que estuda, e toda frente que não é matéria, pela absoluta. Domínio ≠ nota: a nota do
+ * ano tem outras causas (a presença, a postura, a casa, o ano) e é mostrada à parte.
+ */
+export function reguaDaFrente(d: Dominio, h: number, contexto?: { idade: number; naEscola: boolean }): ReguaDaFrente {
+  const m = modeloFrente(d);
+  const abs = estagioDe(h);
+  if (!contexto?.naEscola || !MATERIAS.includes(d)) return { estagio: abs, palavra: m.estagios[abs], regua: 'absoluta' };
+  const esperado = esperadoNaSerie(contexto.idade);
+  const r = h / esperado;
+  const relacao: RelacaoComASerie = r < 0.6 ? 'abaixo' : r < 0.9 ? 'perto' : r < 1.2 ? 'no_ritmo' : r < 1.5 ? 'acima' : 'bem_acima';
+  const rel = ({ abaixo: 0, perto: 1, no_ritmo: 2, acima: 3, bem_acima: 4 } as const)[relacao];
+  // Quem já sabe como um adulto que domina a matéria (a régua absoluta lá em cima) é dito assim, em qualquer idade.
+  const estagio = abs >= 4 && abs > rel ? abs : rel;
+  return { estagio, palavra: m.estagios[estagio], regua: 'serie', relacao, esperado: Math.round(esperado * 10) / 10 };
+}

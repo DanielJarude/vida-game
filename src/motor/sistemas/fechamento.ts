@@ -54,3 +54,26 @@ export function fechamentoDoAno(v: Vida): Fechamento[] {
   }
   return out;
 }
+
+const PESO_DA_SEMANA: Record<string, string> = { folgada: 'leve', ocupada: 'movimentada', cheia: 'exigente', sobrecarregada: 'pesada', alem: 'além do que se aguenta' };
+
+/**
+ * REWORK 9.5 · ROT-01 — a rotina do ano que fechou (a fotografia do ano, `FotoDoAno.rotina`: o que de fato foi). Só
+ * aparece quando há o que dizer: a semana mudou de peso, passou do que se aguenta, teve conflito de horário, a
+ * dedicação aos estudos não achou horário, ou a cabeça mudou de verdade.
+ */
+export function rotinaDoAno(v: Vida): Fechamento | undefined {
+  const ev = v.evolucao ?? [];
+  const f = ev[ev.length - 1];
+  const r = f?.rotina;
+  if (!f || !r || f.t < v.t - 12) return undefined;
+  const antes = ev[ev.length - 2]?.rotina;
+  const linhas: string[] = [];
+  const peso = PESO_DA_SEMANA[r.faixa] ?? r.faixa;
+  const mudou = antes && PESO_DA_SEMANA[antes.faixa] !== peso;
+  if (mudou || r.faixa === 'sobrecarregada' || r.faixa === 'alem') linhas.push(`A semana foi ${peso}${mudou ? ` (no ano anterior, ${PESO_DA_SEMANA[antes!.faixa] ?? antes!.faixa})` : ''}.`);
+  if (r.conflitos) linhas.push(r.conflitos === 1 ? 'Um conflito de horário ficou sem resolver: o que perdeu as horas não aconteceu inteiro.' : `${r.conflitos} conflitos de horário ficaram sem resolver.`);
+  if (r.postura === 'dedicada' && r.estudo !== undefined && r.estudo < 0.99) linhas.push(r.estudo <= 0 ? 'A dedicação aos estudos não achou horário na semana: ficou na intenção.' : `Das horas de estudo em casa, ${Math.round(r.estudo * 100)}% acharam horário — a dedicação rendeu nessa medida.`);
+  if (antes && Math.abs(r.estresse - antes.estresse) >= 12) linhas.push(`A cabeça ${r.estresse > antes.estresse ? 'pesou mais' : 'aliviou'}: o estresse foi de ${antes.estresse}% para ${r.estresse}%.`);
+  return linhas.length ? { titulo: `A rotina em ${anoDe(v.t - 6)}`, linhas } : undefined;
+}

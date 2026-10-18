@@ -60,7 +60,7 @@ export function leituraDoEstresse(v: Vida): LeituraDoEstresse {
   // O TEMPO da semana, da fonte única (`semana.folegoDaSemana`): estresse baixo com a semana cheia, ou alto com a
   // semana folgada, são leituras diferentes — e a tela mostra as duas sem misturar.
   const folego = folegoDaSemana(v).texto;
-  const frase = nivel === 'baixo' ? (tendencia === 'subindo' ? 'Por enquanto tranquilo — mas o que está pesando vai fazer subir.' : 'A cabeça está tranquila. Sobra espaço para descansar.')
+  const frase = nivel === 'baixo' ? (tendencia === 'subindo' ? 'Por enquanto tranquilo — mas o que está pesando vai fazer subir.' : 'A cabeça está tranquila.')
     : nivel === 'moderado' ? (tendencia === 'subindo' ? 'Dá para levar — e está subindo.' : tendencia === 'baixando' ? 'Dá para levar, e está aliviando.' : 'Dá para levar. Vale olhar o que pesa.')
       : nivel === 'alto' ? (tendencia === 'baixando' ? 'Está alto, mas começou a ceder.' : 'Está alto: o sono, a paciência e o trabalho já sentem.')
         : anos >= 2 ? `No limite há ${anos} anos seguidos. O corpo começou a mandar a conta.` : 'No limite. Se continuar assim, a vida cobra.';

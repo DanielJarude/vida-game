@@ -20,14 +20,19 @@ import { curso } from '../dados/cursos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { listaNatural } from '../texto';
 import { animal } from '../dados/animais';
-import { modeloRotina, nivelDa, nivelModelo } from './rotinas';
+import { atividadeExiste, modeloRotina, nivelDa, nivelModelo, ROTINAS } from './rotinas';
 import { pesoDoRitmoNaSemana, ritmoDe } from './ritmo';
 import { semanaDaPolitica } from './politica';
 
 export interface Compromisso {
   id: string;
   rotulo: string;
+  /** REWORK 9.5 · ROT-01: a EXIGÊNCIA (o que a coisa cobra da semana: duração × intensidade). É ela que enche a semana. */
   peso: number;
+  /** O TEMPO (a frequência, em pedaços: 0,5 uma vez por semana · 1 algumas vezes · 2 quase todo dia) — as palavras de `dose`. */
+  tempo: number;
+  /** Quanto da exigência pesa na cabeça (0..1): o treino cansa o corpo mais do que a cabeça; a apostila, o contrário. */
+  mental: number;
   tipo: 'trabalho' | 'estudo' | 'filhos' | 'cuidado' | 'deslocamento' | 'rotina';
 }
 
@@ -42,9 +47,48 @@ export interface Semana {
   capacidade: number;
   /** As atividades escolhidas. */
   rotinas: Compromisso[];
+  /** A exigência das atividades (não a quantidade delas). */
   ocupado: number;
   livre: number;
 }
+
+/**
+ * REWORK 9.5 · ROT-01/ROT-02 — A EXIGÊNCIA DE UMA ATIVIDADE (não a quantidade de atividades).
+ *
+ * O playtest: escola, futebol duas vezes, leitura e xadrez — e "não cabe mais nada", com a agenda cheia de horas
+ * livres. A conta somava FREQUÊNCIAS (um livro por mês pesava como meio treino de futebol). Agora cada atividade cobra
+ * pelo que exige: a duração e a frequência (`tempo`) vezes a intensidade da categoria (o esporte e o bico cansam; a
+ * leitura e o tabuleiro, pouco), e o nível a sério cobra um pouco mais por vez. A parte MENTAL é o que pesa na cabeça
+ * (o estresse); o resto é cansaço do corpo — que pede descanso, mas não enche a cabeça.
+ */
+const INTENSIDADE: Record<string, { carga: number; mental: number }> = {
+  esporte: { carga: 0.95, mental: 0.3 }, corpo: { carga: 0.8, mental: 0.2 }, arte: { carga: 0.7, mental: 0.5 }, estudo: { carga: 0.8, mental: 0.9 },
+  oficio: { carga: 0.75, mental: 0.5 }, social: { carga: 0.6, mental: 0.5 }, lazer: { carga: 0.4, mental: 0.2 }, cuidado: { carga: 0.45, mental: 0.4 }, renda: { carga: 1.1, mental: 0.8 }
+};
+const INTENSIDADE_DE: Record<string, { carga: number; mental: number }> = {
+  leitura: { carga: 0.45, mental: 0.5 }, xadrez: { carga: 0.6, mental: 0.8 }, videogame: { carga: 0.35, mental: 0.3 }, terapia: { carga: 0.3, mental: 0 },
+  tempo_familia: { carga: 0.4, mental: 0.2 }, igreja: { carga: 0.4, mental: 0.1 }, cursinho: { carga: 1.15, mental: 1 }, estudar_concurso: { carga: 1.05, mental: 1 },
+  reforco: { carga: 0.7, mental: 0.8 }, desenho: { carga: 0.55, mental: 0.3 }, escrever: { carga: 0.6, mental: 0.6 }, corrida: { carga: 0.7, mental: 0.1 }
+};
+/** O que se faz em casa (sem ida e volta, sem hora marcada de outra pessoa). */
+const EM_CASA = new Set(['leitura', 'videogame', 'escrever', 'desenho', 'terapia', 'criar_conteudo', 'tempo_familia', 'cozinhar', 'programacao', 'ajudar_familia']);
+/** A logística de sair de casa para cada vez (ir, voltar, trocar de roupa, depender de horário alheio). */
+const LOGISTICA = 0.1;
+export function cargaDaAtividade(id: string, nivel: number): { carga: number; mental: number; tempo: number } {
+  const mo = modeloRotina(id);
+  if (!mo) return { carga: 0, mental: 0, tempo: 0 };
+  const tempo = nivelModelo(mo, nivel).tempo;
+  const k = INTENSIDADE_DE[id] ?? INTENSIDADE[mo.categoria] ?? { carga: 0.8, mental: 0.5 };
+  // O nível a sério (a base, a equipe de competição, o ensaio de verdade) cobra mais por vez, além de ser mais vezes.
+  const serio = nivel >= 3 ? 1.1 : 1;
+  const fora = EM_CASA.has(id) ? 0 : LOGISTICA;
+  return { carga: Math.round(tempo * (k.carga * serio + fora) * 100) / 100, mental: k.mental, tempo };
+}
+
+/** REWORK 9.5 · ROT-03 — o estudo em casa que a postura escolhida pede (dedicação = horas de verdade na semana). */
+export const ESTUDO_EM_CASA = { tempo: 0.75, carga: 0.6 };
+/** Quem está estudando (a escola básica ou um curso) — a postura só vale para quem estuda. */
+export const estudaAgora = (v: Vida) => (!!v.educacao.basica && !v.educacao.evadiu) || (!!v.educacao.matricula && !v.educacao.matricula.trancado);
 
 export function baseDaSemana(i: number): number {
   if (i < 5) return 1;
@@ -57,8 +101,8 @@ export function baseDaSemana(i: number): number {
 export function semana(v: Vida): Semana {
   const i = idade(v);
   const base = baseDaSemana(i);
-  const fixos: Compromisso[] = [];
-  const ganhos: Compromisso[] = [];
+  const fixos: Bruto[] = [];
+  const ganhos: Bruto[] = [];
 
   const e = v.trabalho.atual;
   const j = v.justica;
@@ -136,14 +180,36 @@ export function semana(v: Vida): Semana {
   const d = deslocamento(v);
   if (d && d.peso >= 0.02) fixos.push({ id: 'deslocamento', rotulo: d.rotulo, peso: d.peso, tipo: 'deslocamento' });
 
+  // REWORK 9.5 · ROT-03: a dedicação à escola é tempo de verdade — o estudo em casa entra na semana (e na agenda, onde
+  // precisa achar horário); estudar só o mínimo devolve tempo. "No ritmo" é o dever de casa de sempre (já está na base).
+  if (estudaAgora(v) && !j?.prisao) {
+    if (v.educacao.postura === 'dedicada') fixos.push({ id: 'estudo_casa', rotulo: 'Estudar em casa (com dedicação)', peso: ESTUDO_EM_CASA.carga, tipo: 'estudo' });
+    else if (v.educacao.postura === 'relaxada') ganhos.push({ id: 'estudo_minimo', rotulo: 'Estudar só o mínimo', peso: 0.25, tipo: 'estudo' });
+  }
+
+  const comp = (x: Bruto): Compromisso => ({ ...x, tempo: x.id === 'estudo_casa' ? ESTUDO_EM_CASA.tempo : x.peso, mental: MENTAL_DO_TIPO[x.tipo] });
   const capacidade = Math.max(0.5, base - fixos.reduce((s, x) => s + x.peso, 0) + ganhos.reduce((s, x) => s + x.peso, 0));
   const rotinas: Compromisso[] = v.rotinas.map(r => {
     const mo = modeloRotina(r.id);
     const n = mo ? nivelModelo(mo, nivelDa(r)) : undefined;
-    return { id: r.id, rotulo: mo ? (mo.niveis.length > 1 ? `${mo.nome} — ${n!.rotulo.toLowerCase()}` : mo.nome) : r.id, peso: n?.tempo ?? 0, tipo: 'rotina' as const };
+    const c = cargaDaAtividade(r.id, nivelDa(r));
+    return { id: r.id, rotulo: mo ? (mo.niveis.length > 1 ? `${mo.nome} — ${n!.rotulo.toLowerCase()}` : mo.nome) : r.id, peso: c.carga, tempo: c.tempo, mental: c.mental, tipo: 'rotina' as const };
   });
   const ocupado = rotinas.reduce((s, x) => s + x.peso, 0);
-  return { base, fixos, ganhos, capacidade, rotinas, ocupado, livre: capacidade - ocupado };
+  return { base, fixos: fixos.map(comp), ganhos: ganhos.map(comp), capacidade, rotinas, ocupado, livre: capacidade - ocupado };
+}
+
+type Bruto = Omit<Compromisso, 'tempo' | 'mental'>;
+/** Quanto de cada compromisso fixo pesa na cabeça (o resto é cansaço do corpo e tempo que não volta). */
+const MENTAL_DO_TIPO: Record<Compromisso['tipo'], number> = { trabalho: 0.75, estudo: 0.85, filhos: 0.6, cuidado: 0.7, deslocamento: 0.4, rotina: 0.5 };
+
+/**
+ * REWORK 9.5 · ROT-03 — o cansaço de uma rotina que passa do que se aguenta (a exigência da semana): estuda-se pior.
+ * Proporcional, e só quando passa — uma semana movimentada que cabe não cobra nada. O ano passa para a escola e o curso.
+ */
+export function cansacoNosEstudos(v: Vida): number {
+  const f = encaixe(v, 0).faixa;
+  return f === 'alem' ? -5 : f === 'sobrecarregada' ? -3 : 0;
 }
 
 /** Palavras para um pedaço de semana. */
@@ -243,15 +309,16 @@ export function encaixe(v: Vida, extra: number, ignorar?: string): Encaixe {
   const outras = s.rotinas.filter(r => r.id !== ignorar).map(r => r.rotulo.replace(/ — .*/, '').toLowerCase());
   const ocupam = listaNatural([...pesados, ...outras]);
   const ja = ocupam ? `Sua semana já está cheia: ${ocupam}. ` : '';
-  if (faixa === 'cheia') e.motivo = `${ja}Cabe apertando: sai do descanso e do lazer.`;
-  else if (faixa === 'sobrecarregada') e.motivo = `${ja}Dá para assumir — mas passa do que cabe: o descanso some e a cabeça cobra (estresse, sono, notas, trabalho).`;
+  if (faixa === 'cheia') e.motivo = `${ocupam ? `A rotina já é movimentada (${ocupam}): c` : 'C'}abe, tirando um pouco do descanso e do lazer.`;
+  else if (faixa === 'sobrecarregada') e.motivo = `${ja}Dá para assumir — mas passa do que se aguenta descansando: o cansaço e a cabeça cobram (estresse, sono, notas, trabalho).`;
   else {
     const falta = total - teto;
     const soltar = s.rotinas.filter(r => r.id !== ignorar && r.peso >= falta - 0.01).sort((a, b) => a.peso - b.peso)[0];
-    const pede = extra > 0 ? ` Isso pede ${dose(extra)}.` : '';
-    const porque = i < 12 ? `Com ${i} anos, a semana não comporta mais${ocupam ? ` do que ${ocupam}` : ''}: não há quem leve, nem tarde que sobre.` : `Não há horas na semana${ocupam ? `: ${ocupam} já ocupam os dias` : ''}.`;
+    // REWORK 9.5 · ROT-01: o "não" daqui é de DESCANSO (o que um corpo aguenta numa semana), não de horário — o horário é
+    // da agenda (`agenda.horarioDaAtividade`), que diz quando não há hora livre.
+    const porque = i < 12 ? `Descanso insuficiente: com ${i} anos, ${ocupam || 'a escola'} já ${ocupam.includes(' e ') ? 'pedem' : 'pede'} o que a semana de uma criança aguenta — sobrariam horários, não fôlego.` : `Descanso insuficiente: ${ocupam ? `${ocupam} já tomam` : 'os compromissos já tomam'} o que uma pessoa aguenta numa semana.`;
     const saida = soltar ? ` Para caber, seria preciso largar ou diminuir ${soltar.rotulo.replace(/ — .*/, '').toLowerCase()}.` : s.rotinas.length ? ' Seria preciso largar mais de uma coisa.' : '';
-    e.motivo = `${porque}${pede}${saida}`;
+    e.motivo = `${porque}${saida}`;
   }
   return e;
 }
@@ -263,17 +330,31 @@ export const faixaDaSemana = (v: Vida): FaixaDaSemana => encaixe(v, 0).faixa;
 export const PEDACO_LEVE = 0.5;
 
 /**
+ * REWORK 9.5 · ROT-02: a exigência da atividade leve mais leve que existe para esta pessoa (uma vez por semana, a de
+ * menor intensidade) — é ela que diz se "ainda cabe uma coisa leve". Antes, meio pedaço fixo (o tempo, não a exigência).
+ */
+export function cargaLeve(v: Vida): number {
+  let menor = Infinity;
+  for (const m of ROTINAS) {
+    if (m.id === 'terapia' || m.niveis[0].tempo > PEDACO_LEVE || v.rotinas.some(r => r.id === m.id) || !atividadeExiste(v, m)) continue;
+    menor = Math.min(menor, cargaDaAtividade(m.id, 1).carga);
+  }
+  return Number.isFinite(menor) ? menor : PEDACO_LEVE;
+}
+
+/**
  * "Dá para assumir mais?" — a resposta do painel, da MESMA conta que a lista de atividades usa. Se diz que dá, ao
- * menos uma atividade leve (meio pedaço) é selecionável; se diz que não dá, nenhuma é.
+ * menos uma atividade leve é selecionável pelo descanso; se diz que não dá, nenhuma é. (O HORÁRIO é outra leitura: a
+ * agenda diz quando não há hora livre — `agenda.horarioDaAtividade`.)
  */
 export function folegoDaSemana(v: Vida): { faixa: FaixaDaSemana; palavra: string; texto: string; leve: Encaixe } {
   const agora = encaixe(v, 0);
-  const leve = encaixe(v, PEDACO_LEVE);
+  const leve = encaixe(v, cargaLeve(v));
   const terapia = idade(v) >= 14 ? ' (Cuidar da cabeça — a terapia, uma hora por semana — ainda cabe.)' : '';
-  const texto = !leve.possivel ? (agora.faixa === 'alem' ? `A semana passou do teto: os compromissos já não cabem nos dias. Algo vai ter de sair.${terapia}` : `A semana chegou no teto: não cabe mais nada sem tirar alguma coisa.${terapia}`)
-    : leve.faixa === 'folgada' ? 'Sobra espaço: dá para assumir uma ou duas coisas sem apertar.'
+  const texto = !leve.possivel ? (agora.faixa === 'alem' ? `A rotina passou do que se aguenta: falta descanso. Algo vai ter de sair ou diminuir.${terapia}` : `A rotina chegou no limite do descanso: outra coisa só entra se algo sair ou diminuir.${terapia}`)
+    : leve.faixa === 'folgada' ? 'A rotina é leve: dá para assumir uma ou duas coisas sem apertar.'
       : leve.faixa === 'ocupada' ? 'Cabe mais uma coisa leve sem apertar.'
         : leve.faixa === 'cheia' ? 'Dá para assumir mais — tirando do descanso e do lazer.'
-          : 'Dá para assumir mais, mas a semana já passa do que cabe: cada coisa nova cobra estresse, sono e desempenho.';
+          : 'Dá para assumir mais, mas a rotina já passa do que se aguenta descansando: cada coisa nova cobra cansaço, sono e desempenho.';
   return { faixa: agora.faixa, palavra: PALAVRA_DA_FAIXA[agora.faixa], texto, leve };
 }

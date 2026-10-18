@@ -41,7 +41,7 @@ import { expressaoDe, momentoAtual, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
 import { Sinais } from '../jogo/Sinais';
 import { faseDaVida } from '../apresentar';
-import { fechamentoDoAno } from '../../motor/sistemas/fechamento';
+import { fechamentoDoAno, rotinaDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
 import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
@@ -210,10 +210,17 @@ function EnquantoIsso({ vida, desde, abrirPessoa }: { vida: Vida; desde: number;
 function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number; abrirPessoa: (id: string) => void }) {
   const temFechamento = fechamentoDoAno(vida).length > 0;
   const temNoticias = noticiasDoAno(vida, desde).length > 0;
-  if (!temFechamento && !temNoticias) return null;
+  // REWORK 9.5: a rotina que o ano teve (a fotografia do ano) — só quando há o que dizer.
+  const rotina = rotinaDoAno(vida);
+  if (!temFechamento && !temNoticias && !rotina) return null;
   return (
     <div className="ano-que-passou" id="ano-que-passou">
       {temFechamento && <FechamentoDoAno vida={vida} />}
+      {rotina && (
+        <section className="fechamento fechamento--rotina" aria-label="A rotina do ano">
+          <div className="temporada"><p className="temporada__titulo">{rotina.titulo}</p>{rotina.linhas.map((l, k) => <p key={k} className={k === 0 ? 'temporada__linha' : 'nota'}>{l}</p>)}</div>
+        </section>
+      )}
       {temNoticias && <EnquantoIsso vida={vida} desde={desde} abrirPessoa={abrirPessoa} />}
     </div>
   );

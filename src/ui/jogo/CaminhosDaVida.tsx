@@ -41,6 +41,7 @@ import { SECOES_CAMINHOS, type Aba, type ParteCaminhos } from '../navegacao';
 import { Estudos, PortasAbertas } from './Estudos';
 import { Trabalho, TrabalhoAindaNao } from './Trabalho';
 import { DesenvolvimentoReal } from './Progresso';
+import { ResumoDaRotina } from './Rotina';
 
 /** Uma coisa que ocupa a vida agora (a situação atual, em uma linha). */
 export interface Ocupacao { id: string; lado: 'formacao' | 'trabalho'; rotulo: string; detalhe?: string }
@@ -139,6 +140,8 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, parte, irParte
             </li>
           ))}
         </ul>
+        {/* REWORK 9.5 · ROT-01: o estudo e o trabalho vivem na mesma semana — a mesma leitura da rotina de Minha Semana. */}
+        {parte === 'agora' && i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
       </header>
       <nav className="subnav subnav--caminhos" aria-label="Partes de Caminhos">
         <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>

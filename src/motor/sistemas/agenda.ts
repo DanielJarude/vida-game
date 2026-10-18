@@ -32,7 +32,8 @@ import { escrever, filhos, idade, idadePessoa, moraCom, vinculosVivos } from '..
 import { curso, cursoOuNulo } from '../dados/cursos';
 import { animal } from '../dados/animais';
 import { listaNatural } from '../texto';
-import { modeloRotina, nivelDa, nivelModelo, type CategoriaAtividade } from './rotinas';
+import { modeloRotina, nivelDa, nivelModelo, registrarHorarioDaAtividade, type CategoriaAtividade } from './rotinas';
+import { encaixe, estudaAgora, type FaixaDaSemana } from './semana';
 import { semanaDaPolitica } from './politica';
 import { deslocamento } from './transporte';
 import { rngDe } from '../rng';
@@ -48,7 +49,7 @@ export const TODOS: Dia[] = [0, 1, 2, 3, 4, 5, 6];
 export const ABRE = 6 * 60;
 export const FECHA = 24 * 60;
 
-export type OrigemDoBloco = 'escola' | 'curso' | 'trabalho' | 'paralela' | 'negocio' | 'politica' | 'rotina' | 'filhos' | 'cuidado' | 'pets' | 'prisao' | 'pena' | 'trajeto';
+export type OrigemDoBloco = 'escola' | 'curso' | 'estudo' | 'trabalho' | 'paralela' | 'negocio' | 'politica' | 'rotina' | 'filhos' | 'cuidado' | 'pets' | 'prisao' | 'pena' | 'trajeto';
 /** As fontes que têm turno (e o jogador pode escolher). */
 export type FonteDeTurno = 'escola' | 'curso' | 'trabalho';
 
@@ -306,6 +307,8 @@ const giro = (id: string) => { let x = 2166136261; for (let k = 0; k < id.length
 /** Os dias de uma atividade, pela quantidade de vezes (espalhados pela semana, como gente faz). */
 function padraoDeDias(vezes: number, fds: boolean): Dia[][] {
   if (vezes >= 5) return [UTEIS, [0, 1, 2, 3, 5], [1, 2, 3, 4, 5]];
+  // REWORK 9.5: quatro vezes (o estudo em casa da dedicação) — antes caía no padrão de uma vez e só um dia achava lugar.
+  if (vezes === 4) return fds ? [[0, 2, 4, 6], [1, 3, 5, 6]] : [[0, 1, 3, 4], [0, 1, 2, 3], [1, 2, 3, 4], [0, 2, 4, 6]];
   if (vezes === 3) return [[0, 2, 4], [1, 3, 5], [0, 2, 5]];
   if (vezes === 2) return fds ? [[4, 5], [5, 6], [1, 3]] : [[1, 3], [0, 2], [2, 4], [5, 6]];
   return fds ? [[5], [6], [4], [2]] : [[2], [5], [3], [1], [6]];
@@ -340,7 +343,8 @@ function encaixar(v: Vida, ocupados: Bloco[], cat: CategoriaAtividade, vezes: nu
   const ordem: Dia[] = [...padroes[0], ...TODOS.filter(d => !padroes[0].includes(d))];
   const extras = [...horas, ...[h(8), h(10), h(13), h(15), h(16), h(20), h(21)].filter(x => x + dur <= limite && !horas.includes(x) && (i >= 12 || x >= h(13)))];
   for (const d of ordem) {
-    if (usados.length >= vezes) break;
+    // (conta os DIAS, não os grupos: dias no mesmo horário viram um grupo só)
+    if (diasJa.size >= vezes) break;
     if (diasJa.has(d)) continue;
     const ini = extras.find(x => livreEm([...ocupados, ...usados.map(u => ({ dias: u.dias, inicio: u.inicio, fim: u.inicio + dur }) as Bloco)], d, x, x + dur));
     if (ini === undefined) continue;
@@ -386,7 +390,7 @@ export function agendaDaSemana(v: Vida, o: { trabalho?: TrabalhoHipotetico; turn
   // As atividades: primeiro as de lugar escolhido (fixadas), depois as encaixadas, das que pedem mais para as que pedem menos.
   const lugares = { ...(guardada?.lugares ?? {}), ...(o.lugares ?? {}) };
   const ocupados: Bloco[] = [...fixos.filter(b => !b.movel)];
-  const atividades: { id: string; rotulo: string; cat: CategoriaAtividade; vezes: number; dur: number; origem: 'rotina' | 'curso' }[] = [];
+  const atividades: { id: string; rotulo: string; cat: CategoriaAtividade; vezes: number; dur: number; origem: 'rotina' | 'curso' | 'estudo' }[] = [];
   for (const r of sobre.rotinas) {
     const m = modeloRotina(r.id);
     if (!m) continue;
@@ -395,14 +399,17 @@ export function agendaDaSemana(v: Vida, o: { trabalho?: TrabalhoHipotetico; turn
   }
   const ead = fixos.find(b => b.id === 'curso_ead');
   if (ead) atividades.push({ id: 'curso_ead', rotulo: ead.rotulo, cat: 'estudo', vezes: 3, dur: 120, origem: 'curso' });
+  // REWORK 9.5 · ROT-03: a dedicação à escola pede horas de verdade — o estudo em casa precisa achar horário (é o último a
+  // escolher: o que você já faz não sai do lugar por ele). As vezes sem horário não estudam.
+  if (temEstudoEmCasa(sobre)) atividades.push({ id: 'estudo_casa', rotulo: 'Estudar em casa', cat: 'estudo', vezes: VEZES_DO_ESTUDO, dur: duracaoDoEstudo(idade(sobre)), origem: 'estudo' });
   // Na prisão fechada não há agenda de fora: as atividades possíveis lá dentro acontecem dentro da rotina da casa.
   const fechado = sobre.justica?.prisao?.regime === 'fechado';
   const blocosAtiv: Bloco[] = [];
-  const ordem = [...atividades].sort((a, b) => Number(!!lugares[b.id]) - Number(!!lugares[a.id]) || b.vezes * b.dur - a.vezes * a.dur);
+  const ordem = [...atividades].sort((a, b) => Number(!!lugares[b.id]) - Number(!!lugares[a.id]) || Number(a.origem === 'estudo') - Number(b.origem === 'estudo') || b.vezes * b.dur - a.vezes * a.dur);
   for (const x of ordem) {
     if (fechado) { presenca[x.id] = 1; continue; }
     const lugar = lugares[x.id];
-    const base = { origem: x.origem === 'curso' ? 'curso' as const : 'rotina' as const, ref: x.id, rotulo: x.rotulo, obrigatorio: false, movel: true, vezes: x.vezes, categoria: x.cat };
+    const base = { origem: x.origem, ref: x.id, rotulo: x.rotulo, obrigatorio: false, movel: true, vezes: x.vezes, categoria: x.cat };
     if (lugar) {
       // O lugar escolhido é respeitado — e, se algo fixo chegou depois nesse horário, é conflito (não remarcação silenciosa).
       const b: Bloco = { ...base, id: x.id, dias: lugar.dias, inicio: lugar.inicio, fim: lugar.inicio + x.dur, fixado: true };
@@ -447,6 +454,14 @@ export const presencaNaAtividade = (v: Vida, id: string, a = agendaDaSemana(v)) 
 export const presencaNaEscola = (v: Vida, a = agendaDaSemana(v)) => a.presenca['escola'] ?? 1;
 /** Quanto das aulas do curso acontece. */
 export const presencaNoCurso = (v: Vida, a = agendaDaSemana(v)) => a.presenca['curso'] ?? a.presenca['curso_ead'] ?? 1;
+/** REWORK 9.5 · ROT-03: quanto do estudo em casa (a dedicação) acontece de fato (as vezes sem horário não estudam). */
+export const presencaNoEstudo = (v: Vida, a = agendaDaSemana(v)) => a.presenca['estudo_casa'] ?? 1;
+
+/** A dedicação à escola pede o estudo em casa (quem estuda, com a postura dedicada, fora da prisão). */
+export const temEstudoEmCasa = (v: Vida) => v.educacao.postura === 'dedicada' && estudaAgora(v) && !v.justica?.prisao;
+/** Quatro vezes por semana; a criança, uma hora; do pré-adolescente em diante, uma hora e meia. */
+export const VEZES_DO_ESTUDO = 4;
+export const duracaoDoEstudo = (i: number) => (i < 12 ? 60 : 90);
 
 /* ------------------------------------------------------------ Alternativas de um conflito */
 
@@ -455,7 +470,7 @@ export interface AlternativaDaAgenda {
   /** O que acontece (dito antes). */
   efeito: string;
   /** A ação de verdade (`acoes`): mudar o turno, remarcar, diminuir, largar, trancar. */
-  acao: { tipo: 'agenda'; op: OpAgenda } | { tipo: 'rotina'; id: string; ativa: boolean; nivel?: 1 | 2 | 3 } | { tipo: 'trancar' };
+  acao: { tipo: 'agenda'; op: OpAgenda } | { tipo: 'rotina'; id: string; ativa: boolean; nivel?: 1 | 2 | 3 } | { tipo: 'trancar' } | { tipo: 'postura'; valor: 'normal' };
 }
 
 export type OpAgenda =
@@ -492,6 +507,8 @@ export function alternativasDoConflito(v: Vida, c: Conflito, agora = agendaDaSem
     const rot = v.rotinas.find(x => x.id === id);
     if (rot && nivelDa(rot) > 1 && c.tipo === 'sem_horario') out.push({ texto: `Diminuir a dedicação a ${perde.rotulo.replace(/ — .*/, '').toLowerCase()}`, efeito: 'Menos vezes por semana: cabe no que sobra.', acao: { tipo: 'rotina', id, ativa: true, nivel: (nivelDa(rot) - 1) as 1 | 2 | 3 } });
     if (rot) out.push({ texto: `Largar ${perde.rotulo.replace(/ — .*/, '').toLowerCase()}`, efeito: 'A atividade sai da semana (o que se aprendeu fica).', acao: { tipo: 'rotina', id, ativa: false } });
+    // O estudo em casa não se "larga": a dedicação volta ao ritmo de sempre (o dever de casa de todo aluno).
+    if (id === 'estudo_casa') out.push({ texto: 'Estudar no ritmo (sem as horas a mais)', efeito: 'O estudo volta ao dever de casa de sempre: as horas saem da semana, e a preparação a mais também.', acao: { tipo: 'postura', valor: 'normal' } });
   }
   if (perde?.origem === 'curso' && !perde.movel && v.educacao.matricula && !out.length) out.push({ texto: 'Trancar o curso', efeito: 'A vaga espera; as aulas saem da semana.', acao: { tipo: 'trancar' } });
   return out;
@@ -504,10 +521,11 @@ export function validarLugar(v: Vida, id: string, dias: Dia[], inicio: number): 
   if (!dias.length) return 'Escolha ao menos um dia.';
   const r = v.rotinas.find(x => x.id === id);
   const m = r ? modeloRotina(r.id) : undefined;
-  if (!m && id !== 'curso_ead') return 'Essa atividade não está na sua semana.';
-  const dur = m ? duracaoDa(id, m.categoria) : 120;
+  const estudo = id === 'estudo_casa' && temEstudoEmCasa(v);
+  if (!m && id !== 'curso_ead' && !estudo) return 'Essa atividade não está na sua semana.';
+  const dur = m ? duracaoDa(id, m.categoria) : estudo ? duracaoDoEstudo(idade(v)) : 120;
   // A dedicação diz quantas vezes; o lugar diz quando. Mudar quantas vezes é mudar a dedicação (outro comando).
-  const vezes = r && m ? vezesPorSemana(nivelModelo(m, nivelDa(r)).tempo) : 3;
+  const vezes = r && m ? vezesPorSemana(nivelModelo(m, nivelDa(r)).tempo) : estudo ? VEZES_DO_ESTUDO : 3;
   if (dias.length !== vezes) return `Do jeito que está, isso é ${vezes === 1 ? 'uma vez' : `${vezes} vezes`} por semana: escolha ${vezes === 1 ? 'um dia' : `${vezes} dias`} (ou mude a dedicação).`;
   if (inicio < ABRE || inicio + dur > Math.min(FECHA, ultimaHora(idade(v)) + 30)) return idade(v) < 12 ? 'Nesse horário, criança não vai sozinha a lugar nenhum.' : 'Fora do horário em que a atividade acontece.';
   const a = agendaDaSemana(v, { lugares: { [id]: null } });
@@ -521,7 +539,7 @@ export function validarLugar(v: Vida, id: string, dias: Dia[], inicio: number): 
 export function limparAgenda(v: Vida): void {
   const g = v.agenda;
   if (!g) return;
-  if (g.lugares) for (const id of Object.keys(g.lugares)) if (!(v.rotinas.some(r => r.id === id) || (id === 'curso_ead' && v.educacao.matricula?.modalidade === 'ead'))) delete g.lugares[id];
+  if (g.lugares) for (const id of Object.keys(g.lugares)) if (!(v.rotinas.some(r => r.id === id) || (id === 'curso_ead' && v.educacao.matricula?.modalidade === 'ead') || (id === 'estudo_casa' && temEstudoEmCasa(v)))) delete g.lugares[id];
   if (g.turnos) {
     if (!v.educacao.basica) delete g.turnos.escola;
     if (!v.educacao.matricula || v.educacao.matricula.modalidade === 'ead') delete g.turnos.curso;
@@ -677,7 +695,7 @@ export interface FichaDoBloco {
 }
 
 const ORIGEM_EM_PALAVRAS: Record<OrigemDoBloco, string> = {
-  escola: 'a escola', curso: 'a matrícula', trabalho: 'o trabalho', paralela: 'a trajetória em paralelo', negocio: 'o negócio',
+  escola: 'a escola', curso: 'a matrícula', estudo: 'a dedicação que você escolheu para os estudos', trabalho: 'o trabalho', paralela: 'a trajetória em paralelo', negocio: 'o negócio',
   politica: 'a vida política', rotina: 'uma atividade que você escolheu', filhos: 'os filhos em casa', cuidado: 'quem precisa de você',
   pets: 'os bichos da casa', prisao: 'a pena', pena: 'a pena', trajeto: 'o trajeto de todo dia'
 };
@@ -689,6 +707,7 @@ export function fichaDoBloco(v: Vida, b: Bloco, custoDe?: (id: string, nivel: nu
   switch (b.origem) {
     case 'escola': return { ...base, efeito: 'as aulas: o que se aprende em cada matéria e a nota do ano (faltar pesa nos dois)', termina: v.educacao.basica?.etapa === 'medio' ? 'até o fim do ensino médio' : 'até a escola acabar' };
     case 'curso': return { ...base, efeito: 'o curso: o desempenho e o diploma (faltar atrasa)', termina: v.educacao.matricula ? `uns ${Math.ceil(v.educacao.matricula.mesesRestantes / 12)} anos ainda` : 'até a formatura' };
+    case 'estudo': return { ...base, efeito: 'a preparação a mais: aprende-se mais em cada matéria e chega-se melhor às provas — só nas vezes que acontecem', termina: 'enquanto a dedicação for essa (dá para estudar no ritmo a qualquer hora)' };
     case 'trabalho': return { ...base, efeito: 'o salário, a experiência, o desempenho — e o cansaço', termina: v.trabalho.atual?.contrato === 'eletivo' ? 'até o fim do mandato' : 'enquanto durar o trabalho' };
     case 'paralela': case 'negocio': case 'politica': return { ...base, efeito: 'renda e experiência por fora, ao custo de noites e sábados', termina: 'enquanto você mantiver' };
     case 'filhos': return { ...base, efeito: 'a rotina das crianças: não é escolha, é a casa', termina: 'até as crianças crescerem' };
@@ -742,5 +761,94 @@ function conflitoDeHorario(v: Vida, ocupacaoId: string): ConflitoDeEntrada | und
   return { com: 'agenda', rotulo: escola ? 'a escola' : 'a sua semana', motivo: primeiro.texto.replace(/\.$/, ''), alternativas };
 }
 
-// A regra mora aqui (num pacote acima de `compromissos`): ao carregar, a agenda se registra lá.
+/* ------------------------------------------------------------ Antes de começar: a atividade tem horário? */
+
+export interface HorarioDaAtividade { vezes: number; cabem: number; motivo?: string }
+
+/**
+ * REWORK 9.5 · ROT-01 — a DISPONIBILIDADE DE HORÁRIOS de uma atividade (uma das três leituras da rotina; as outras são a
+ * exigência, `semana.encaixe`, e a cabeça, `leituraDoEstresse`). A mesma agenda do ano encaixa a atividade nova junto
+ * com o que já existe: se nenhuma vez acha horário, o "não" é de horário — dito com o que ocupa os horários possíveis.
+ */
+export function horarioDaAtividade(v: Vida, id: string, nivel: number): HorarioDaAtividade | undefined {
+  const m = modeloRotina(id);
+  if (!m || v.justica?.prisao?.regime === 'fechado') return undefined;
+  const vezes = vezesPorSemana(nivelModelo(m, nivel).tempo);
+  const antes = agendaDaSemana(v);
+  const hip = { ...v, rotinas: [...v.rotinas.filter(r => r.id !== id), { id, nivel: nivel as 1 | 2 | 3, tInicio: v.t }] } as Vida;
+  const depois = agendaDaSemana(hip);
+  const cabem = Math.round((depois.presenca[id] ?? 1) * vezes);
+  // O que a atividade nova tiraria das outras (o encaixe automático reacomoda; o que não couber vira conflito).
+  const perdem = depois.conflitos.filter(c => c.tipo === 'sem_horario' && c.perde !== id && !antes.conflitos.some(x => x.id === c.id));
+  const i = idade(v);
+  const dur = duracaoDa(id, m.categoria);
+  const janela = i < 12 ? 'até as 19h30 (criança não treina mais tarde)' : i < 16 ? 'até as 21h30' : '';
+  const ocupam = listaNatural([...new Set(antes.blocos.filter(b => b.origem !== 'trajeto' && b.ref !== id).sort((a, b) => (b.fim - b.inicio) * b.dias.length - (a.fim - a.inicio) * a.dias.length).map(b => b.rotulo.replace(/ — .*/, '').replace(/ \(.*\)$/, '').toLowerCase()))].slice(0, 3));
+  if (cabem === 0) return { vezes, cabem, motivo: `Horário incompatível: ${m.nome.toLowerCase()} pede ${vezes === 1 ? 'uma vez' : `${vezes} vezes`} de ${dur >= 60 ? `${dur / 60}h`.replace('.', ',').replace(',5h', 'h30') : `${dur} min`} por semana, e não há horário livre${janela ? ` ${janela}` : ''}${ocupam ? `: ${ocupam} ocupam os dias` : ''}.` };
+  if (cabem < vezes) return { vezes, cabem, motivo: `Só ${cabem === 1 ? 'uma' : cabem} das ${vezes} vezes por semana acha${cabem === 1 ? '' : 'm'} horário livre${janela ? ` ${janela}` : ''}: as outras não acontecem (a agenda mostra o conflito e as saídas).` };
+  if (perdem.length) return { vezes, cabem, motivo: `Cabe — mas tira o horário de ${listaNatural(perdem.map(c => (antes.blocos.find(b => (b.ref ?? b.id) === c.perde)?.rotulo ?? c.perde).replace(/ — .*/, '').toLowerCase()))} (a agenda mostra o conflito e as saídas).` };
+  return { vezes, cabem };
+}
+
+/* ------------------------------------------------------------ A dedicação à escola, dita antes (ROT-03) */
+
+export type Postura = Vida['educacao']['postura'];
+
+export interface PrevisaoDaPostura {
+  postura: Postura;
+  /** Horas por semana de estudo em casa além da aula (0: o dever de casa de sempre; negativo: tempo devolvido). */
+  horas: number;
+  /** Quantas das vezes acham horário na agenda (dedicada). */
+  cabem?: number;
+  vezes?: number;
+  /** A faixa da semana com essa escolha (a exigência). */
+  faixa: FaixaDaSemana;
+  /** O que se espera, em palavras — tendências, nunca garantias. */
+  efeito: string;
+  /** O preço (ou o ganho), em palavras. */
+  custo: string;
+}
+
+/** O que cada postura faz com a semana desta pessoa AGORA (a mesma conta que o ano vai usar). */
+export function previsaoDaPostura(v: Vida, postura: Postura): PrevisaoDaPostura {
+  const hip = { ...v, educacao: { ...v.educacao, postura } } as Vida;
+  const enc = encaixe(hip, 0);
+  const i = idade(v);
+  if (postura === 'dedicada') {
+    const a = agendaDaSemana(hip);
+    const cabem = Math.round((a.presenca['estudo_casa'] ?? 1) * VEZES_DO_ESTUDO);
+    const horas = (VEZES_DO_ESTUDO * duracaoDoEstudo(i)) / 60;
+    const custo = cabem === 0 ? 'Não há horário livre para as horas de estudo: do jeito que a semana está, a dedicação não acontece.'
+      : cabem < VEZES_DO_ESTUDO ? `Só ${cabem} das ${VEZES_DO_ESTUDO} vezes acham horário: a dedicação rende pela metade do caminho.`
+        : enc.faixa === 'sobrecarregada' || enc.faixa === 'alem' ? 'A semana passa do que se aguenta: cansado, estuda-se pior — e a cabeça sente.'
+          : enc.faixa === 'cheia' ? 'Cabe tirando do descanso e do lazer.' : 'A semana comporta: sai do tempo livre, sem apertar.';
+    return { postura, horas, cabem, vezes: VEZES_DO_ESTUDO, faixa: enc.faixa, efeito: 'Aprende-se mais em cada matéria e chega-se mais preparado às provas — na proporção das horas que acontecem.', custo };
+  }
+  if (postura === 'relaxada') return { postura, horas: -1, faixa: enc.faixa, efeito: 'Menos preparação: as matérias andam mais devagar, e a nota tende a cair um pouco — sem ser destino.', custo: 'Devolve tempo à semana (para descansar ou para outra coisa).' };
+  return { postura, horas: 0, faixa: enc.faixa, efeito: 'O que se aprende acompanha a aula, as facilidades de cada matéria e o ano que você tiver.', custo: 'O dever de casa de sempre: nenhuma hora a mais na semana.' };
+}
+
+/** Pode escolher essa postura? (a dedicação precisa de horário e de fôlego de verdade). */
+export function disponibilidadeDaPostura(v: Vida, postura: Postura): Veredito {
+  if (postura === v.educacao.postura) return naoDa('Já é assim.');
+  if (postura !== 'dedicada') return PERMITIDO;
+  const p = previsaoDaPostura(v, postura);
+  if (p.cabem === 0) return naoDa(`Horário incompatível: ${p.custo.charAt(0).toLowerCase()}${p.custo.slice(1)}`);
+  const enc = encaixe({ ...v, educacao: { ...v.educacao, postura } } as Vida, 0);
+  if (enc.faixa === 'alem') return naoDa(enc.motivo ?? 'Descanso insuficiente.');
+  return p.custo && (p.cabem! < VEZES_DO_ESTUDO || enc.faixa !== 'folgada' && enc.faixa !== 'ocupada') ? { grau: 'permitido', motivo: p.custo } : PERMITIDO;
+}
+
+/** O que a escolha fez com a semana (dito depois de escolher). */
+export function resultadoDaPostura(v: Vida): string {
+  const p = v.educacao.postura;
+  if (p === 'relaxada') return 'Este ano, a escola vem depois: sobra mais tempo na semana.';
+  if (p === 'normal') return 'Estudar no ritmo normal: o dever de casa de sempre.';
+  const a = agendaDaSemana(v);
+  const b = a.blocos.filter(x => x.ref === 'estudo_casa');
+  return b.length ? `Este ano, estudo em primeiro lugar: ${b.map(quando).join('; ')}.` : 'Este ano, estudo em primeiro lugar — mas a semana não tem horário livre para isso.';
+}
+
+// A regra mora aqui (num pacote acima de `compromissos` e de `rotinas`): ao carregar, a agenda se registra lá.
 registrarAnaliseDeHorario(conflitoDeHorario);
+registrarHorarioDaAtividade(horarioDaAtividade);

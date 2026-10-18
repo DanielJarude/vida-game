@@ -9,7 +9,8 @@
  */
 
 import { fotografarEvolucao, praticandoPor } from './sistemas/progressao';
-import { agendaDaSemana, presencaNaEscola, presencaNoCurso, processarAgenda } from './sistemas/agenda';
+import { cansacoNosEstudos, faixaDaSemana, estudaAgora } from './sistemas/semana';
+import { agendaDaSemana, presencaNaEscola, presencaNoCurso, presencaNoEstudo, processarAgenda } from './sistemas/agenda';
 import { processarEstetica } from './sistemas/estetica';
 import { processarCoisas } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
@@ -127,8 +128,11 @@ function viverAno(v: Vida, r: Rng): void {
   // REWORK 9: a semana do ano em horários — o que acontece de fato (as aulas atravessadas viram falta; as atividades
   // sem horário não treinam). Uma conta só, lida pela escola, pelo curso e pelas atividades.
   const semanaDoAno = agendaDaSemana(v);
-  praticandoPor('escola', () => processarEscola(v, r, presencaNaEscola(v, semanaDoAno)));
-  praticandoPor('curso', () => processarCurso(v, r, presencaNoCurso(v, semanaDoAno)));
+  // REWORK 9.5 · ROT-03: a dedicação rende o que o estudo em casa achou de horário na semana.
+  const estudoDoAno = presencaNoEstudo(v, semanaDoAno);
+  const cansaco = cansacoNosEstudos(v);
+  praticandoPor('escola', () => processarEscola(v, r, presencaNaEscola(v, semanaDoAno), estudoDoAno, cansaco));
+  praticandoPor('curso', () => processarCurso(v, r, presencaNoCurso(v, semanaDoAno), estudoDoAno, cansaco));
   processarOab(v, r);
   processarJustica(v, r);
   processarPrisao(v);
@@ -206,6 +210,9 @@ function viverAno(v: Vida, r: Rng): void {
   registrarEstado(v);
   // REWORK 9 · PROG-01: a fotografia do ano (o que andou, por quê) — depois de tudo o que pratica e dá nota.
   fotografarEvolucao(v);
+  // REWORK 9.5: a rotina que o ano de fato teve (a mesma semana que a escola, o curso e as atividades leram).
+  const foto = v.evolucao?.[v.evolucao.length - 1];
+  if (foto && idade(v) >= 4) foto.rotina = { faixa: faixaDaSemana(v), estresse: Math.round(v.mente.estresse), conflitos: agendaDoAno.conflitos.filter(c => c.perda >= 0.05).length, ...(estudaAgora(v) ? { postura: v.educacao.postura, ...(v.educacao.postura === 'dedicada' ? { estudo: Math.round(estudoDoAno * 100) / 100 } : {}) } : {}) };
   // As horas extras valiam para ESTE ano (semana, cabeça, sobrecarga, desempenho); no próximo, é outra escolha.
   v.trabalho.horasExtras = false;
   fotografar(v);

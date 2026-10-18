@@ -7,7 +7,7 @@
  */
 
 import { praticandoPor } from './sistemas/progressao';
-import { disponibilidadeDaAgenda, executarNaAgenda, limparAgenda, type OpAgenda } from './sistemas/agenda';
+import { disponibilidadeDaAgenda, disponibilidadeDaPostura, executarNaAgenda, limparAgenda, resultadoDaPostura, type OpAgenda } from './sistemas/agenda';
 import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistemas/memoria';
 import { disponibilidadeProcedimento, fazerProcedimento, type Clinica, type IdProcedimento } from './sistemas/estetica';
 import { comprarCoisa, disponibilidadeComprarCoisa, disponibilidadeVenderCoisa, venderCoisa } from './sistemas/coisas';
@@ -312,7 +312,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'profissao': return disponibilidadeProfissao(v, a);
     case 'politica': return disponibilidadePolitica(v, a);
     case 'perseguir': return disponibilidadePerseguir(v, a);
-    case 'postura': return v.educacao.basica || v.educacao.matricula ? PERMITIDO : bloqueio('impossivel', 'Você não está estudando.');
+    case 'postura': return v.educacao.basica || v.educacao.matricula ? disponibilidadeDaPostura(v, a.valor) : bloqueio('impossivel', 'Você não está estudando.');
     case 'enem': return podeFazerEnem(v);
     case 'objetivo_estudo': return podeDefinirObjetivo(v, a.cursoId);
     case 'conhecer_alguem': return disponibilidadeBusca(v, a.contexto);
@@ -863,7 +863,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'postura':
       v.educacao.postura = a.valor;
-      return ok(a.valor === 'dedicada' ? 'Este ano, estudo em primeiro lugar.' : a.valor === 'relaxada' ? 'Este ano, a escola vem depois.' : 'Estudar no ritmo normal.');
+      limparAgenda(v);
+      return ok(resultadoDaPostura(v));
     case 'enem': {
       const nota = fazerEnem(v, r);
       // Com um curso em vista, a prova deixa devolutiva: onde ficou diante do corte e o que pesou.

@@ -25,6 +25,7 @@ import { contratar } from '../../motor/sistemas/trabalho';
 import { ocupacao } from '../../motor/dados/ocupacoes';
 import { interpretar } from '../../motor/save';
 import { estagioDe, modeloFrente, MATERIAS } from '../../motor/dados/frentes';
+import { estagioDaFrente } from '../../motor/sistemas/frentes';
 import { bonusDaAtividade } from '../../motor/sistemas/coisas';
 import { ofertasDeVeiculos } from '../../motor/sistemas/mercado';
 import { continuarComo } from '../../motor/sistemas/sucessao';
@@ -37,7 +38,8 @@ import { Voce } from '../jogo/Voce';
 import { Pessoas } from '../jogo/Pessoas';
 import { Pertences } from '../jogo/Pertences';
 import { Trabalho } from '../jogo/Trabalho';
-import { Estudos } from '../jogo/Estudos';
+import { DesenvolvimentoReal } from '../jogo/Progresso';
+import { NOME_MATERIA } from '../../motor/sistemas/escola';
 import { VidaConcreta } from '../jogo/VidaConcreta';
 import { LinhaDaVida } from '../jogo/LinhaDaVida';
 import { dinheiroCurto } from '../leituraMaterial';
@@ -239,7 +241,8 @@ describe('atributo: o motor calcula, Você mostra exatamente o resultado', () =>
     const palavra = modeloFrente('desenho').estagios[estagioDe(f.habilidade)];
     render(<main><Voce vida={v} agir={() => true} irPara={nada} abrirPessoa={nada} /></main>);
     const bom = screen.getByRole('region', { name: 'No que você é bom' });
-    expect(within(bom).getByRole('img', { name: new RegExp(`^Desenho: ${palavra}`) })).toBeTruthy();
+    // REWORK 9.5 · UX-03: a ficha de desenvolvimento diz o nível em palavras (a mesma palavra do cartão da prática).
+    expect(bom.querySelector('.ficha-hab[data-frente="desenho"] .ficha-hab__nivel')!.textContent!.toLowerCase()).toContain(palavra.toLowerCase());
     cleanup();
     render(<main><Tempo vida={v} agir={() => true} irPara={nada} abrirPessoa={nada} /></main>);
     expect(screen.getByRole('img', { name: new RegExp(`^Desenho: ${palavra}`) })).toBeTruthy();
@@ -253,13 +256,15 @@ describe('atributo: o motor calcula, Você mostra exatamente o resultado', () =>
 });
 
 describe('formação: estudar → progredir → a tela mostra o caminho e as matérias do motor', () => {
-  it('na escola, "Como você está se saindo" mostra cada matéria com a palavra do estágio — o nome é o do país', () => {
+  it('na escola, o boletim mostra cada matéria com o domínio do motor e a palavra da série — o nome é o do país', () => {
+    // REWORK 9.5 · UX-04: as matérias moram no boletim (Desenvolvimento), uma lista só.
     const v = vida(13);
-    render(<main><Estudos vida={v} agir={() => true} irPara={nada} /></main>);
-    const sec = screen.getByRole('region', { name: 'Como você está se saindo' });
+    render(<main><DesenvolvimentoReal vida={v} /></main>);
+    const sec = screen.getByRole('region', { name: 'Boletim escolar' });
     for (const d of MATERIAS.filter(m => v.caminhos.frentes[m])) {
-      const m = modeloFrente(d);
-      expect(within(sec).getByRole('img', { name: `${m.nome}: ${m.estagios[estagioDe(v.caminhos.frentes[d]!.habilidade)]}` })).toBeTruthy();
+      const linha = sec.querySelector(`[data-frente="${d}"]`)!;
+      expect(linha.textContent).toContain(NOME_MATERIA[d].charAt(0).toUpperCase() + NOME_MATERIA[d].slice(1));
+      expect(linha.textContent!.toLowerCase()).toContain(estagioDaFrente(v, d).palavra.toLowerCase());
     }
   });
 });
