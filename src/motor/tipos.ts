@@ -2037,6 +2037,8 @@ export interface LigaDoPais {
 export interface Caminhos {
   /** REWORK 9: as ligas de futebol dos países onde a vida jogou ou dirigiu (opcional; nasce quando se precisa). */
   ligas?: Record<string, LigaDoPais>;
+  /** REWORK 9 · PROG-01: o que cada frente andou, por fonte, desde o último fechamento de ano (zera na fotografia). */
+  praticaDoPeriodo?: Partial<Record<Dominio, Record<string, number>>>;
   /** Processo seletivo em andamento (a decisão aberta é uma etapa dele). */
   processo?: ProcessoSeletivo;
   /** Perguntas de entrevista usadas recentemente (para não repetir) e quantas entrevistas já fez. */
@@ -2413,6 +2415,20 @@ export interface Vida {
   mundo?: MundoDaVida;
   /** REWORK 9: o que o jogador decidiu na agenda da semana (turnos e lugares das atividades). Ausente: tudo no padrão. */
   agenda?: AgendaGuardada;
+  /** REWORK 9 · PROG-01: a fotografia de cada ano (os últimos oito): o que andou e por quê (`sistemas/progressao`). */
+  evolucao?: FotoDoAno[];
+}
+
+/** Um ano fotografado: só as frentes que mudaram, as causas que pesaram, as notas, o trabalho, o esporte. */
+export interface FotoDoAno {
+  t: number;
+  frentes: Partial<Record<Dominio, number>>;
+  /** Por frente: [fonte, quanto] (a escola, `rotina:futebol`, o trabalho, `acao:oficio`, `sem_pratica`, a idade). */
+  causas?: Partial<Record<Dominio, [string, number][]>>;
+  escola?: number;
+  curso?: number;
+  trabalho?: { ocupacaoId: string; desempenho: number; salario: number };
+  esporte?: { reputacao: number; nivel: number };
 }
 
 /* ------------------------------------------------------------------- Agenda (REWORK 9) */

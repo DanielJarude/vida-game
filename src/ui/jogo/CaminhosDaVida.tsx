@@ -40,6 +40,7 @@ import { navegarAbas } from '../comum';
 import { SECOES_CAMINHOS, type Aba, type ParteCaminhos } from '../navegacao';
 import { Estudos } from './Estudos';
 import { Trabalho, TrabalhoAindaNao } from './Trabalho';
+import { DesenvolvimentoReal } from './Progresso';
 
 /** Uma coisa que ocupa a vida agora (a situação atual, em uma linha). */
 export interface Ocupacao { id: string; lado: 'formacao' | 'trabalho'; rotulo: string; detalhe?: string }
@@ -150,6 +151,8 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, parte, irParte
       </nav>
       {SECOES_CAMINHOS.map(x => (
         <div key={x.id} role="tabpanel" id={`caminhos-${x.id}`} aria-labelledby={`subnav-caminhos-${x.id}`} className={`caminhos__painel caminhos__painel--${x.id}${parte === x.id ? ' caminhos__painel--ativo' : ''}`} data-ativo={parte === x.id ? 'sim' : 'nao'}>
+          {/* PROG-01: o que se mede no estudo e no trabalho, ano a ano (as notas, as matérias, o desempenho, o salário). */}
+          {x.id === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} />}
           {lados.map(l => <div key={l} className={`lado-caminho lado-caminho--${l}`} data-lado={l}>{lado(l, x.id)}</div>)}
           <p className="caminhos__vazio nota">{VAZIO[x.id]}</p>
         </div>

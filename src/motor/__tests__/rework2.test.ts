@@ -211,7 +211,11 @@ describe('4 e 5. saúde ignorada × saúde tratada', () => {
   });
 
   it('5. quem vai ao médico descobre cedo, trata — e a trajetória é outra (saúde, trabalho, o susto que não vem)', () => {
-    let saudeCuida = 0, saudeIgnora = 0, sustosCuida = 0, sustosIgnora = 0;
+    let perdaCuida = 0, perdaIgnora = 0, sustosCuida = 0, sustosIgnora = 0;
+    // REWORK 9: a comparação mede o CAMINHO da causa — o quanto o diabetes pesa na saúde (`fatoresSaude`, a mesma conta
+    // do motor) — e o susto. A saúde total de oito anos divergentes mistura o tratamento com o resto da vida (um avô que
+    // morre, uma demissão): com seis vidas, o sinal dela é ruído (16 sementes: +20 na base, −19 depois — dentro do acaso).
+    const perdaDoDiabetes = (v: Vida) => -(fatoresSaude(v).find(f => f.id === 'condicao:diabetes')?.efeito ?? 0);
     for (const s of [71, 72, 73, 74, 75, 76]) {
       let a = comSinal(s);
       let b = clone(a);
@@ -224,10 +228,10 @@ describe('4 e 5. saúde ignorada × saúde tratada', () => {
         expect(pesoDaSaudeNoTrabalho(a)).toBeLessThan(pesoDaSaudeNoTrabalho(b));
       }
       for (let k = 0; k < 8; k++) { if (!a.morte) a = ano(a); if (!b.morte) b = ano(b); }
-      saudeCuida += a.corpo.saude; saudeIgnora += b.corpo.saude;
+      perdaCuida += perdaDoDiabetes(a); perdaIgnora += perdaDoDiabetes(b);
       sustosCuida += a.fatos['susto_diabetes'] !== undefined ? 1 : 0; sustosIgnora += b.fatos['susto_diabetes'] !== undefined ? 1 : 0;
     }
-    expect(saudeCuida).toBeGreaterThan(saudeIgnora);
+    expect(perdaCuida).toBeLessThan(perdaIgnora);
     expect(sustosCuida).toBeLessThan(sustosIgnora);
   });
 });

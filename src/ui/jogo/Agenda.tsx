@@ -1,148 +1,157 @@
 /**
- * REWORK 7.5 — a semana como uma AGENDA.
+ * REWORK 9 — A AGENDA DA SEMANA, em horários.
  *
- * O motor não simula dias nem horas: simula a FREQUÊNCIA (o "pedaço" de `sistemas/semana` — meio pedaço é uma vez por
- * semana) e o TAMANHO da semana (a base pela idade, o que já vem ocupado, o teto humano). A agenda é honesta com isso:
- * uma página de caderno com uma linha por compromisso e um quadrinho por "vez na semana", sem dia nem hora marcados.
- * Os quadrinhos enchem a semana na ordem — o que já vem ocupado, o que você escolheu — e, quando passam do tamanho
- * dela, mudam de natureza com as MESMAS faixas de `encaixe`: tirado do descanso, além do que cabe, além do possível.
+ * Sete colunas, segunda a domingo; cada compromisso ocupa as horas dele (o bloco tem a altura da duração). Tudo vem
+ * de `sistemas/agenda` — a mesma conta que o ano usa para saber o que de fato aconteceu: a escola e o curso no turno
+ * deles, o trabalho no expediente, o que corre em paralelo, a casa (as crianças, quem precisa de cuidado, o bicho), o
+ * trajeto, cada atividade no lugar dela.
  *
- * O que dá para fazer daqui: abrir a ficha de uma prática (um toque na linha), deixar uma atividade mais leve ou mais a
- * sério (o mesmo comando de sempre, `rotina` com outro nível — o motor diz se cabe), ver o que pesa e o que ajuda no
- * estresse, ir à causa de um compromisso fixo. A lista de sempre continua logo abaixo, como alternativa.
+ * O que dá para fazer daqui: tocar num compromisso e ver de onde ele vem, até quando vai, o que faz na vida e quanto
+ * custa; mudar o turno do que tem turno; escolher os dias e a hora de uma atividade (ou devolvê-la ao encaixe
+ * automático); deixá-la mais leve ou mais a sério; abrir a ficha da prática. Conflitos aparecem no alto, com as saídas
+ * que existem — nunca em silêncio. No celular, um dia de cada vez (as sete colunas não cabem legíveis).
+ *
+ * O tamanho da semana (folgada, ocupada, cheia…) continua o de `semana`: é ele que diz se ainda cabe algo, e o
+ * estresse lê dele.
  */
 
 import { useState } from 'react';
-import type { Vida } from '../../motor/tipos';
+import type { Dia, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
-import { dose, encaixe, MARGEM_DO_DESCANSO, PALAVRA_DA_FAIXA, TETO_HUMANO, type Semana } from '../../motor/sistemas/semana';
-import { DE_ESTUDOS, modeloRotina } from '../../motor/sistemas/rotinas';
+import { encaixe, PALAVRA_DA_FAIXA, type Semana } from '../../motor/sistemas/semana';
+import { custoDaRotina, DE_ESTUDOS } from '../../motor/sistemas/rotinas';
 import { DE_FORMACAO } from '../../motor/sistemas/formacao';
 import { leituraDoEstresse } from '../../motor/sistemas/leituraDoEstresse';
+import { ABRE, agendaDaSemana, alternativasDoConflito, DIAS, DIAS_CURTOS, FECHA, faixaDeHoras, fichaDoBloco, hora, PALAVRA_TURNO, quando, TODOS, type Bloco } from '../../motor/sistemas/agenda';
 import { idade } from '../../motor/nucleo';
-import { BotaoAcao } from '../comum';
-import { leituraDaPratica, type LeituraPratica } from '../leituraPratica';
+import { BotaoAcao, navegarAbas } from '../comum';
+import { dinheiroCurto } from '../apresentar';
+import { leituraDaPratica } from '../leituraPratica';
 import { FichaPratica } from './Pratica';
-import { Emblema } from './Emblemas';
 import type { Aba } from '../navegacao';
 
-/** Um quadrinho é meio pedaço: "uma vez por semana". */
-const POR_PEDACO = 2;
-const quadrinhos = (peso: number) => Math.max(1, Math.round(peso * POR_PEDACO));
-
-type Zona = 'dentro' | 'descanso' | 'alem' | 'impossivel';
-
-const NOME_DA_ZONA: Record<Exclude<Zona, 'dentro'>, string> = { descanso: 'tirado do descanso', alem: 'além do que cabe', impossivel: 'além do possível' };
-
-interface Linha {
-  id: string;
-  rotulo: string;
-  peso: number;
-  tipo: 'fixo' | 'pratica';
-  /** Para onde leva (a causa de um fixo mora em outra área). */
-  area?: Aba;
-  l?: LeituraPratica;
-}
-
-const AREA_DO_FIXO: Record<string, Aba> = {
-  trabalho: 'trabalho', horas_extras: 'trabalho', politica: 'trabalho', negocio: 'trabalho', paralela: 'trabalho', cuidado_pausa: 'trabalho', pena: 'trabalho',
-  curso: 'formacao', integrado: 'formacao', filhos_pequenos: 'pessoas', filhos_escola: 'pessoas', cuidar: 'pessoas', pets: 'pessoas', deslocamento: 'cidade'
+/** Para onde leva a causa de um compromisso fixo (ele mora em outra área). */
+const AREA_DA_ORIGEM: Partial<Record<Bloco['origem'], Aba>> = {
+  escola: 'formacao', curso: 'formacao', trabalho: 'trabalho', paralela: 'trabalho', negocio: 'trabalho', politica: 'trabalho', prisao: 'trabalho', pena: 'trabalho',
+  filhos: 'pessoas', cuidado: 'pessoas', pets: 'pessoas', trajeto: 'cidade'
+};
+const ROTULO_DA_ORIGEM: Record<Bloco['origem'], string> = {
+  escola: 'Escola', curso: 'Curso', trabalho: 'Trabalho', paralela: 'Trabalho por fora', negocio: 'Negócio', politica: 'Política', rotina: 'Atividade',
+  filhos: 'Filhos', cuidado: 'Cuidado', pets: 'Bichos', prisao: 'Pena', pena: 'Pena', trajeto: 'Trajeto'
+};
+/** A família visual do bloco (a cor vem do tom de cada área — as quatro paletas). */
+const FAMILIA: Record<Bloco['origem'], string> = {
+  escola: 'estudo', curso: 'estudo', trabalho: 'trabalho', paralela: 'trabalho', negocio: 'trabalho', politica: 'trabalho', rotina: 'atividade',
+  filhos: 'casa', cuidado: 'casa', pets: 'casa', prisao: 'pena', pena: 'pena', trajeto: 'trajeto'
 };
 
-export function Agenda({ vida, s, agir, irPara, abrirPessoa }: { vida: Vida; s: Semana; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }) {
-  const [aberta, setAberta] = useState<string | null>(null);
+/** As horas da régua (a cada duas, das 6h à meia-noite). */
+const REGUA = Array.from({ length: (FECHA - ABRE) / 120 + 1 }, (_, k) => ABRE + k * 120);
+const pos = (m: number) => `${((m - ABRE) / (FECHA - ABRE)) * 100}%`;
+const alt = (de: number, ate: number) => `${((Math.min(ate, FECHA) - de) / (FECHA - ABRE)) * 100}%`;
+/** Os horários que dá para escolher para uma atividade (de meia em meia hora). */
+const HORAS_ESCOLHA = Array.from({ length: (22 * 60 - ABRE) / 30 + 1 }, (_, k) => ABRE + k * 30);
+
+export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; s?: Semana; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }) {
+  const [aberto, setAberto] = useState<string | null>(null);
+  const [ficha, setFicha] = useState<string | null>(null);
+  const hoje = 0 as Dia;
+  const [dia, setDia] = useState<Dia>(hoje);
   const i = idade(vida);
+  const a = agendaDaSemana(vida);
   const enc = encaixe(vida, 0);
-  // A capacidade em quadrinhos: o tamanho da semana; a margem do descanso; o teto humano (as faixas de `encaixe`).
-  const base = Math.round(s.base * POR_PEDACO);
-  const descanso = Math.round((s.base + MARGEM_DO_DESCANSO) * POR_PEDACO);
-  const teto = Math.round((i < 12 ? s.base + 0.75 : s.base * TETO_HUMANO) * POR_PEDACO);
-  const ganho = s.ganhos.reduce((t, g) => t + g.peso, 0);
-  const linhas: Linha[] = [
-    ...s.fixos.filter(f => f.peso >= 0.2).map(f => ({ id: f.id, rotulo: f.rotulo, peso: Math.max(0.25, f.id === 'trabalho' ? f.peso - ganho : f.peso), tipo: 'fixo' as const, area: AREA_DO_FIXO[f.id] })),
-    ...s.rotinas.map(r => {
-      const rot = vida.rotinas.find(x => x.id === r.id);
-      const l = rot ? leituraDaPratica(vida, rot, DE_ESTUDOS.has(r.id) || DE_FORMACAO.has(r.id)) : undefined;
-      return { id: r.id, rotulo: l?.nome ?? r.rotulo.replace(/ — .*/, ''), peso: r.peso, tipo: 'pratica' as const, l };
-    })
-  ];
-  // Os quadrinhos andam pela semana na ordem das linhas: cada um sabe em que zona caiu.
-  let n = 0;
-  // O arredondamento dos quadrinhos nunca contradiz o motor: a zona de um quadrinho não passa da faixa que `encaixe` deu.
-  const ORDEM: Zona[] = ['dentro', 'descanso', 'alem', 'impossivel'];
-  const maxima = ORDEM.indexOf(enc.faixa === 'folgada' || enc.faixa === 'ocupada' ? 'dentro' : enc.faixa === 'cheia' ? 'descanso' : enc.faixa === 'sobrecarregada' ? 'alem' : 'impossivel');
-  const zonaDe = (k: number): Zona => ORDEM[Math.min(maxima, ORDEM.indexOf(k < base ? 'dentro' : k < descanso ? 'descanso' : k < teto ? 'alem' : 'impossivel'))];
-  const comQuadros = linhas.map(x => ({ ...x, zonas: Array.from({ length: quadrinhos(x.peso) }, () => zonaDe(n++)) }));
-  const usados = n;
-  const livres = Math.max(0, base - usados);
   const estresse = i >= 10 ? leituraDoEstresse(vida) : undefined;
-  const aberto = comQuadros.find(x => x.id === aberta)?.l;
-  const escola = i >= 4 && i < 18 && vida.educacao.basica;
-  const fora = escola ? 'fora as aulas e o sono' : 'fora o sono e o básico de todo dia';
+  const bloco = aberto ? a.blocos.find(b => b.id === aberto) : undefined;
+  const livreSemana = Math.round(a.livre.reduce((x, y) => x + y, 0) / 60);
+  const conflitoDe = (id: string) => a.conflitos.find(c => c.perde === id || c.perde === a.blocos.find(b => b.id === id)?.ref);
+  const pratica = ficha ? vida.rotinas.find(r => r.id === ficha) : undefined;
+  const lp = pratica ? leituraDaPratica(vida, pratica, DE_ESTUDOS.has(pratica.id) || DE_FORMACAO.has(pratica.id)) : undefined;
+  const origens = [...new Set(a.blocos.map(b => FAMILIA[b.origem]))];
+  const nomeFamilia: Record<string, string> = { estudo: 'Estudo', trabalho: 'Trabalho', atividade: 'Atividades', casa: 'Casa e família', pena: 'Pena', trajeto: 'Trajeto' };
 
   return (
-    <section className="agenda" aria-labelledby="titulo-agenda">
-      <header className="agenda__cabeca">
+    <section className="agenda agenda-semana" aria-labelledby="titulo-agenda">
+      <header className="agenda-semana__cabeca">
         <h3 id="titulo-agenda" className="agenda__titulo">A agenda da semana</h3>
         <p className="agenda__ritmo">
           <span className={`agenda__faixa agenda__faixa--${enc.faixa}`}>{PALAVRA_DA_FAIXA[enc.faixa]}</span>
-          {' '}· {usados} {usados === 1 ? 'vez' : 'vezes'} na semana para {base} que cabem com folga
+          {' '}· {a.blocos.filter(b => b.origem !== 'trajeto').length} {a.blocos.length === 1 ? 'compromisso' : 'compromissos'} · uns {livreSemana} h livres na semana (das 7h às 23h)
         </p>
-        <p className="agenda__como">Cada quadrinho é uma vez por semana ({fora}). O jogo conta quantas vezes, não em que dia nem a que horas.</p>
-        {/* A semana inteira numa fileira: de quem é cada vez; o livre é só contorno; o que passa do que cabe muda de textura. */}
-        <div className="agenda__semana" role="img" aria-label={`A semana inteira: ${usados} de ${base} vezes${usados > base ? `, ${usados - base} além do que cabe com folga` : ''}.`}>
-          {comQuadros.flatMap(x => x.zonas.map((z, k) => <span key={`${x.id}${k}`} className={`agenda__q agenda__q--${x.tipo} agenda__q--${z}`} title={x.rotulo} />))}
-          {Array.from({ length: livres }, (_, k) => <span key={`l${k}`} className="agenda__q agenda__q--livre" />)}
-        </div>
+        {origens.length > 1 && (
+          <ul className="agenda-semana__legenda" aria-label="Legenda">
+            {origens.map(o => <li key={o} className={`agenda-semana__chave agenda-semana__chave--${o}`}>{nomeFamilia[o]}</li>)}
+          </ul>
+        )}
       </header>
 
-      <ol className="agenda__linhas">
-        {escola && (
-          <li className="agenda__linha agenda__linha--escola">
-            <span className="agenda__nome"><span className="agenda__marca agenda__marca--escola" aria-hidden />Escola</span>
-            <span className="agenda__nota">as aulas da semana — já descontadas do tamanho dela</span>
-          </li>
-        )}
-        {comQuadros.map(x => {
-          const nivel = x.l?.nivel;
-          const podeMudar = x.tipo === 'pratica' && x.l && !x.l.daFormacao;
-          const mais = podeMudar && nivel && nivel < 3 ? x.l!.niveis.find(q => q.n === nivel + 1) : undefined;
-          const menos = podeMudar && nivel && nivel > 1 ? x.l!.niveis.find(q => q.n === nivel - 1) : undefined;
-          const passa = x.zonas.find(z => z !== 'dentro');
-          return (
-            <li key={x.id} className={`agenda__linha agenda__linha--${x.tipo}${passa ? ` agenda__linha--${passa}` : ''}`}>
-              {x.tipo === 'pratica' && x.l
-                ? <button type="button" className="agenda__nome agenda__abrir" onClick={() => setAberta(x.id)} aria-label={`${x.rotulo}: ${dose(x.peso)}. Abrir a ficha`}>
-                    <Emblema id={x.id} categoria={modeloRotina(x.id)?.categoria} tamanho={26} />
-                    <span>{x.rotulo}</span>
-                  </button>
-                : <span className="agenda__nome"><span className="agenda__marca" aria-hidden />{x.rotulo.replace(/ \(.*\)$/, '')}</span>}
-              <span className="agenda__quadros" role="img" aria-label={`${dose(x.peso)}${passa ? `, parte ${NOME_DA_ZONA[passa as Exclude<Zona, 'dentro'>]}` : ''}`}>
-                {x.zonas.map((z, k) => <span key={k} className={`agenda__q agenda__q--${x.tipo} agenda__q--${z}`} />)}
-              </span>
-              <span className="agenda__dose">
-                {dose(x.peso)}{x.tipo === 'fixo' ? ' · fixo' : x.l && !/semana|mês|dia/.test(x.l.rotuloNivel) ? ` · ${x.l.rotuloNivel.toLowerCase()}` : ''}
-                {x.tipo === 'fixo' && x.area && irPara && <> · <button type="button" className="link agenda__ir" onClick={() => irPara(x.area!)} aria-label={`${x.rotulo.replace(/ \(.*\)$/, '')}: ver onde isso mora`}>ver →</button></>}
-              </span>
-              <span className="agenda__acoes">
-                {menos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: x.id, ativa: true, nivel: menos.n }} agir={agir} variante="discreto" ocultarBloqueado>Mais leve: {menos.rotulo.toLowerCase()}</BotaoAcao>}
-                {mais && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: x.id, ativa: true, nivel: mais.n }} agir={agir} variante="discreto" ocultarBloqueado>Mais a sério: {mais.rotulo.toLowerCase()}</BotaoAcao>}
-              </span>
+      {a.conflitos.length > 0 && (
+        <div className="agenda-semana__conflitos" role="group" aria-label="Conflitos de horário">
+          {a.conflitos.map(c => {
+            const alts = alternativasDoConflito(vida, c, a);
+            return (
+              <div key={c.id} className="conflito-agenda">
+                <p className="conflito-agenda__texto"><strong>Conflito de horário.</strong> {c.texto}</p>
+                {alts.length > 0 && (
+                  <div className="grupo-acoes grupo-acoes--linha conflito-agenda__saidas">
+                    {alts.map(x => <BotaoAcao key={x.texto} vida={vida} acao={x.acao as Acao} agir={agir} variante="discreto">{x.texto}</BotaoAcao>)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* No celular, um dia de cada vez: a fileira de dias escolhe a coluna que aparece. */}
+      <nav className="agenda-semana__dias" aria-label="Dia da agenda">
+        <ul role="tablist" className="agenda-semana__dias-lista" onKeyDown={navegarAbas}>
+          {TODOS.map(d => (
+            <li key={d} role="presentation">
+              <button type="button" role="tab" aria-selected={dia === d} tabIndex={dia === d ? 0 : -1} className={`agenda-semana__dia-botao${dia === d ? ' agenda-semana__dia-botao--ativo' : ''}`} onClick={() => setDia(d)} aria-label={`${DIAS[d]}: ${Math.round(a.livre[d] / 60)} h livres`}>
+                <span>{DIAS_CURTOS[d]}</span>
+                <span className="agenda-semana__dia-livre" aria-hidden>{Math.round(a.livre[d] / 60)}h</span>
+              </button>
             </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className="grade-semana" data-dia={dia}>
+        <div className="grade-semana__regua" aria-hidden>
+          {REGUA.map(m => <span key={m} className="grade-semana__hora" style={{ top: pos(m) }}>{hora(m)}</span>)}
+        </div>
+        {TODOS.map(d => {
+          const doDia = a.blocos.filter(b => b.dias.includes(d));
+          return (
+            <section key={d} className={`grade-semana__dia${d === dia ? ' grade-semana__dia--escolhido' : ''}${d >= 5 ? ' grade-semana__dia--fds' : ''}`} aria-label={`${DIAS[d]}${doDia.length ? '' : ': livre'}`}>
+              <h4 className="grade-semana__nome">{DIAS_CURTOS[d]}<span className="grade-semana__livre"> · {Math.round(a.livre[d] / 60)}h livres</span></h4>
+              <div className="grade-semana__corpo">
+                {REGUA.map(m => <span key={m} className="grade-semana__linha" style={{ top: pos(m) }} aria-hidden />)}
+                {doDia.map(b => {
+                  const c = conflitoDe(b.id);
+                  const perdeAqui = c && c.dias.includes(d) && c.tipo === 'sobreposicao';
+                  const curto = b.fim - b.inicio < 60;
+                  return (
+                    <button key={`${b.id}${d}`} type="button" data-bloco={b.id}
+                      className={`bloco-agenda bloco-agenda--${FAMILIA[b.origem]}${b.movel ? ' bloco-agenda--movel' : ''}${perdeAqui ? ' bloco-agenda--conflito' : ''}${b.alternado ? ' bloco-agenda--alternado' : ''}${curto ? ' bloco-agenda--curto' : ''}${aberto === b.id ? ' bloco-agenda--aberto' : ''}`}
+                      style={{ top: pos(b.inicio), height: alt(b.inicio, b.fim) }}
+                      onClick={() => setAberto(x => (x === b.id ? null : b.id))}
+                      aria-expanded={aberto === b.id}
+                      aria-label={`${b.rotulo}, ${DIAS[d]}, ${faixaDeHoras(b)}${perdeAqui ? ' — em conflito' : ''}`}>
+                      <span className="bloco-agenda__nome">{b.rotulo.replace(/ — .*/, '').replace(/ \(.*\)$/, '')}</span>
+                      {!curto && <span className="bloco-agenda__horas">{faixaDeHoras(b)}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           );
         })}
-        {livres > 0 && (
-          <li className="agenda__linha agenda__linha--livre">
-            <span className="agenda__nome"><span className="agenda__marca agenda__marca--livre" aria-hidden />Livre</span>
-            <span className="agenda__quadros" role="img" aria-label={`${livres} ${livres === 1 ? 'vez livre' : 'vezes livres'} na semana`}>
-              {Array.from({ length: livres }, (_, k) => <span key={k} className="agenda__q agenda__q--livre" />)}
-            </span>
-            <span className="agenda__dose">{livres === 1 ? 'uma vez livre' : `${livres} vezes livres`}</span>
-          </li>
-        )}
-      </ol>
+      </div>
 
-      {enc.motivo && enc.faixa !== 'folgada' && enc.faixa !== 'ocupada' && <p className={`agenda__conflito agenda__conflito--${enc.faixa}`}><strong>Conflito de tempo.</strong> {enc.motivo}</p>}
+      {bloco && <DetalheDoBloco vida={vida} b={bloco} agir={agir} irPara={irPara} abrirFicha={id => setFicha(id)} fechar={() => setAberto(null)} />}
+
+      {i >= 4 && i < 18 && vida.educacao.basica && <p className="nota agenda-semana__nota">Nas férias (o fim do ano e o meio do ano), as aulas saem da semana; a agenda mostra a semana de aula.</p>}
 
       {estresse && (estresse.pesando.length > 0 || estresse.ajudando.length > 0) && (
         <p className="agenda__estresse">
@@ -152,7 +161,78 @@ export function Agenda({ vida, s, agir, irPara, abrirPessoa }: { vida: Vida; s: 
         </p>
       )}
 
-      {aberto && <FichaPratica vida={vida} l={aberto} agir={agir} aoFechar={() => setAberta(null)} irPara={irPara} abrirPessoa={abrirPessoa} />}
+      {lp && <FichaPratica vida={vida} l={lp} agir={agir} aoFechar={() => setFicha(null)} irPara={irPara} abrirPessoa={abrirPessoa} />}
+    </section>
+  );
+}
+
+/** A ficha de um compromisso: de onde vem, até quando, o que faz, quanto custa — e o que dá para mudar nele. */
+function DetalheDoBloco({ vida, b, agir, irPara, abrirFicha, fechar }: { vida: Vida; b: Bloco; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirFicha: (id: string) => void; fechar: () => void }) {
+  const f = fichaDoBloco(vida, b, (id, n) => custoDaRotina(vida, id, n));
+  const ref = b.ref ?? b.id;
+  const rot = b.movel ? vida.rotinas.find(r => r.id === ref) : undefined;
+  const lugar = vida.agenda?.lugares?.[ref];
+  const doMesmo = agendaDaSemana(vida).blocos.filter(x => (x.ref ?? x.id) === ref);
+  const [dias, setDias] = useState<Dia[]>(lugar?.dias ?? doMesmo.flatMap(x => x.dias));
+  const [inicio, setInicio] = useState<number>(lugar?.inicio ?? b.inicio);
+  const lp = rot ? leituraDaPratica(vida, rot, DE_ESTUDOS.has(rot.id) || DE_FORMACAO.has(rot.id)) : undefined;
+  const area = AREA_DA_ORIGEM[b.origem];
+  const nivel = lp?.nivel;
+  const podeMudarNivel = lp && !lp.daFormacao;
+  const mais = podeMudarNivel && nivel && nivel < 3 ? lp!.niveis.find(q => q.n === nivel + 1) : undefined;
+  const menos = podeMudarNivel && nivel && nivel > 1 ? lp!.niveis.find(q => q.n === nivel - 1) : undefined;
+  return (
+    <section className="detalhe-agenda" aria-label={`Compromisso: ${b.rotulo}`}>
+      <header className="detalhe-agenda__cabeca">
+        <p className="detalhe-agenda__tipo">{ROTULO_DA_ORIGEM[b.origem]}{f.obrigatorio ? ' · obrigatório' : ' · escolhido por você'}</p>
+        <h4 className="detalhe-agenda__titulo">{b.rotulo}</h4>
+        <button type="button" className="botao botao--discreto detalhe-agenda__fechar" onClick={fechar} aria-label="Fechar o compromisso">Fechar</button>
+      </header>
+      <dl className="detalhe-agenda__dados">
+        <div><dt>Quando</dt><dd>{doMesmo.map(x => quando(x)).join('; ')}{b.alternado ? ' (alternado)' : ''}</dd></div>
+        <div><dt>Na semana</dt><dd>{doMesmo.reduce((s2, x) => s2 + fichaDoBloco(vida, x).horas, 0).toString().replace('.', ',')} h{b.vezes ? ` · ${b.vezes} ${b.vezes === 1 ? 'vez' : 'vezes'}` : ''}</dd></div>
+        <div><dt>De onde vem</dt><dd>{f.origem}</dd></div>
+        <div><dt>O que faz</dt><dd>{f.efeito}</dd></div>
+        <div><dt>Até quando</dt><dd>{f.termina}</dd></div>
+        {f.custo !== undefined && f.custo > 0 && <div><dt>Custo</dt><dd>{dinheiroCurto(f.custo)}/mês</dd></div>}
+      </dl>
+
+      {b.turnos && b.turnos.length > 1 && b.fonteDoTurno && (
+        <div className="grupo-acoes grupo-acoes--linha" aria-label="Turno">
+          <span className="rotulo-pequeno">Turno: {b.turno ? PALAVRA_TURNO[b.turno] : '—'}</span>
+          {b.turnos.filter(t => t !== b.turno).map(t => <BotaoAcao key={t} vida={vida} acao={{ tipo: 'agenda', op: { oque: 'turno', fonte: b.fonteDoTurno!, turno: t } }} agir={agir} variante="discreto">{`Passar para a ${PALAVRA_TURNO[t]}`}</BotaoAcao>)}
+        </div>
+      )}
+
+      {rot && (
+        <fieldset className="detalhe-agenda__mudar">
+          <legend>Dias e horário</legend>
+          <div className="detalhe-agenda__dias" role="group" aria-label="Dias">
+            {TODOS.map(d => (
+              <label key={d} className={`detalhe-agenda__dia${dias.includes(d) ? ' detalhe-agenda__dia--sim' : ''}`}>
+                <input type="checkbox" checked={dias.includes(d)} onChange={e => setDias(x => (e.target.checked ? [...x, d].sort() as Dia[] : x.filter(y => y !== d)))} />
+                {DIAS_CURTOS[d]}
+              </label>
+            ))}
+          </div>
+          <label className="detalhe-agenda__hora">Começa às{' '}
+            <select value={inicio} onChange={e => setInicio(Number(e.target.value))}>
+              {HORAS_ESCOLHA.map(m => <option key={m} value={m}>{hora(m)}</option>)}
+            </select>
+          </label>
+          <div className="grupo-acoes grupo-acoes--linha">
+            <BotaoAcao vida={vida} acao={{ tipo: 'agenda', op: { oque: 'mover', id: ref, dias, inicio } }} agir={agir} variante="secundario">Marcar nesse horário</BotaoAcao>
+            {lugar && <BotaoAcao vida={vida} acao={{ tipo: 'agenda', op: { oque: 'soltar', id: ref } }} agir={agir} variante="discreto">Voltar ao encaixe automático</BotaoAcao>}
+          </div>
+        </fieldset>
+      )}
+
+      <div className="grupo-acoes grupo-acoes--linha">
+        {menos && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: ref, ativa: true, nivel: menos.n }} agir={agir} variante="discreto" ocultarBloqueado>Mais leve: {menos.rotulo.toLowerCase()}</BotaoAcao>}
+        {mais && <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: ref, ativa: true, nivel: mais.n }} agir={agir} variante="discreto" ocultarBloqueado>Mais a sério: {mais.rotulo.toLowerCase()}</BotaoAcao>}
+        {lp && <button type="button" className="botao botao--discreto" onClick={() => abrirFicha(ref)}>Abrir a ficha da prática</button>}
+        {!b.movel && area && irPara && <button type="button" className="botao botao--discreto" onClick={() => irPara(area)}>Ver onde isso mora →</button>}
+      </div>
     </section>
   );
 }

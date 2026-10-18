@@ -599,7 +599,8 @@ describe('O. save/reload e migração v17 → v18', () => {
     const lido = interpretar(bruto);
     if (lido.tipo !== 'ok') throw new Error(lido.tipo === 'invalido' ? lido.motivo : 'vazio');
     expect(lido.vida).toEqual(v);
-    expect(JSON.stringify(avancarAno(lido.vida).vida)).toBe(JSON.stringify(avancarAno(v).vida));
+    // O MESMO estado (não o mesmo texto de JSON: a ordem das chaves muda quando um campo vira undefined e volta — REWORK 9).
+    expect(avancarAno(lido.vida).vida).toEqual(avancarAno(v).vida);
   });
 
   it('v17 migra: reserva e bairro da origem (da semente), vivências do que os fatos já diziam; idempotente', () => {

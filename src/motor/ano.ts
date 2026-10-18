@@ -8,6 +8,8 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { fotografarEvolucao, praticandoPor } from './sistemas/progressao';
+import { agendaDaSemana, presencaNaEscola, presencaNoCurso, processarAgenda } from './sistemas/agenda';
 import { processarEstetica } from './sistemas/estetica';
 import { processarCoisas } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
@@ -108,7 +110,7 @@ function viverAno(v: Vida, r: Rng): void {
   const ec = avancarEconomia(v.economia, v.t, paisDaVida(v));
 
   // O que a semana do ano faz pela pessoa (treino, leitura) vale no MESMO ano: vem antes do corpo e da escola.
-  desenvolverPessoa(v, r);
+  praticandoPor('vida', () => desenvolverPessoa(v, r));
   processarCorpo(v, r);
   // A vista que pede óculos (a família compra, na infância).
   processarEstilo(v);
@@ -122,46 +124,51 @@ function viverAno(v: Vida, r: Rng): void {
   processarOrigem(v);
   // Quem mudou de país: a adaptação, a língua, a naturalização (`migracao`). Quem nunca saiu não passa por aqui.
   processarMundo(v, r);
-  processarEscola(v, r);
-  processarCurso(v, r);
+  // REWORK 9: a semana do ano em horários — o que acontece de fato (as aulas atravessadas viram falta; as atividades
+  // sem horário não treinam). Uma conta só, lida pela escola, pelo curso e pelas atividades.
+  const semanaDoAno = agendaDaSemana(v);
+  praticandoPor('escola', () => processarEscola(v, r, presencaNaEscola(v, semanaDoAno)));
+  praticandoPor('curso', () => processarCurso(v, r, presencaNoCurso(v, semanaDoAno)));
   processarOab(v, r);
   processarJustica(v, r);
   processarPrisao(v);
-  processarTrabalho(v, r);
+  praticandoPor('trabalho', () => processarTrabalho(v, r));
   // A segunda trajetória (a paralela) e as pausadas: experiência, freguesia, prazo (`paralelas`).
-  processarParalelas(v);
+  praticandoPor('paralela', () => processarParalelas(v));
   // A vida acadêmica: projetos que terminam em artigo, orientandos que defendem (`academia`).
   processarAcademia(v);
   // Os cursos de habilitação rara (barco, avião) que terminam no ano (`habilitacoes`).
   processarHabilitacoes(v);
   // Quem vive da arte e guardou tempo para a própria obra pratica mais (o efeito do ritmo leve).
-  tempoParaAObra(v);
-  processarProfissao(v, r);
+  praticandoPor('obra', () => tempoParaAObra(v));
+  praticandoPor('trabalho', () => processarProfissao(v, r));
   processarPolitica(v, r);
   processarTransformacao(v);
   processarRural(v, r);
   processarPausa(v);
   processarNegocio(v, r);
-  treinoProfissional(v, r);
+  praticandoPor('treino', () => treinoProfissional(v, r));
   // O programa de fundamentos ANTES das rotinas: o ano de treino conta como prática (a frente não 'esfria' no mesmo ano).
-  processarFundamentos(v);
-  processarRotinas(v, r);
+  praticandoPor('treino', () => processarFundamentos(v));
+  // REWORK 9: a agenda da semana (o que não existe mais sai; o conflito novo vira nota) — antes das rotinas, que leem a presença.
+  processarAgenda(v);
+  processarRotinas(v, r, agendaDaSemana(v).presenca);
   processarEstetica(v);
   // A formação como lugar: o que ficou para trás com a escola, o professor que repara.
   processarFormacao(v);
   // REWORK 4: o momento do ano dentro da escola ou do curso (a história interna da formação).
-  processarVidaEstudantil(v);
+  praticandoPor('escola', () => processarVidaEstudantil(v));
   processarConcursos(v, r);
   efetivarMudancaMilitar(v);
-  processarEsporte(v, r);
+  praticandoPor('treino', () => processarEsporte(v, r));
   // O banco: a temporada de quem dirige um time (clube real, jogos, pressão, contrato, propostas) — `tecnico`.
   processarTecnico(v, r);
   // A lesão volta (ou piora) depois da temporada que ela atravessou.
   processarLesoes(v, r);
-  processarArte(v, r);
+  praticandoPor('obra', () => processarArte(v, r));
   processarAudiovisual(v, r);
   // A carreira, às vezes, produz um momento (o lance, o caso difícil, o crédito roubado): a escolha vem na fase de conteúdo.
-  processarSituacoes(v, r);
+  praticandoPor('acontecimento', () => processarSituacoes(v, r));
   processarProcessos(v, r);
   recalcularConvivio(v);
   conhecerGente(v, r);
@@ -197,6 +204,8 @@ function viverAno(v: Vida, r: Rng): void {
   // REWORK 4: a cabeça no limite por anos passa a conta ao corpo (causal: hábitos, a condição que piora, o risco).
   processarEstresseProlongado(v);
   registrarEstado(v);
+  // REWORK 9 · PROG-01: a fotografia do ano (o que andou, por quê) — depois de tudo o que pratica e dá nota.
+  fotografarEvolucao(v);
   // As horas extras valiam para ESTE ano (semana, cabeça, sobrecarga, desempenho); no próximo, é outra escolha.
   v.trabalho.horasExtras = false;
   fotografar(v);

@@ -12,12 +12,14 @@ import { redeDeSaude } from '../../motor/sistemas/saude';
 import { QuemNoMundo } from './Mundo';
 import { imagemPublica, leituraDoNome } from '../../motor/sistemas/notoriedade';
 import { USOS } from '../../motor/sistemas/visibilidade';
-import type { Vida } from '../../motor/tipos';
+import type { Dominio, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { tracosMarcantes } from '../../motor/personalidade';
 import type { Dimensao } from '../../motor/sistemas/estado';
+import { Progressao } from './Progresso';
+import { MATERIAS } from '../../motor/dados/frentes';
 import { Retrato } from '../avatar/Retrato';
 import { BotaoAcao, Degraus, Vazio } from '../comum';
 import { frentesDaVida } from '../../motor/sistemas/frentes';
@@ -73,6 +75,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       {/* REWORK 7: o que a pessoa SABE FAZER, com os degraus de cada habilidade (a mesma escada da ficha da prática) —
           e, ao lado, os jeitos de nascença que o motor guarda. Antes eram linhas de texto soltas. */}
       <Habilidades vida={vida} irPara={irPara} />
+      {/* REWORK 9 · PROG-01: as habilidades fora da escola, ano a ano — quanto andou e por quê (as fontes do motor). */}
+      <Progressao vida={vida} dominios={(Object.keys(vida.caminhos.frentes) as Dominio[]).filter(d => !MATERIAS.includes(d))} titulo="O que você sabe fazer, ano a ano" />
 
       {tracos.length > 0 && (
         <section className="voce-jeito" aria-labelledby="titulo-jeito">

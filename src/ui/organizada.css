@@ -47,3 +47,144 @@
   .subnav--caminhos .subnav__lista { display: grid; grid-template-columns: 1fr 1fr; min-width: 0; }
   .subnav--caminhos .subnav__item { width: 100%; padding: 0 var(--space-2); }
 }
+
+/* -------------------------------------------------- Minha Semana: a agenda em horários */
+.agenda-semana { --hora-px: 30px; --cabeca-dia: 2.1rem; }
+.agenda-semana__cabeca { display: flex; flex-direction: column; gap: 4px; }
+.agenda-semana__legenda { list-style: none; margin: var(--space-1) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--type-meta); color: var(--text-secondary); }
+.agenda-semana__chave { display: inline-flex; align-items: center; gap: 6px; }
+.agenda-semana__chave::before { content: ''; width: 12px; height: 12px; border-radius: 3px; background: color-mix(in oklab, var(--cor-bloco) 28%, var(--superficie)); box-shadow: inset 3px 0 0 var(--cor-bloco); }
+.agenda-semana__chave--estudo, .bloco-agenda--estudo { --cor-bloco: var(--tom-estudos); }
+.agenda-semana__chave--trabalho, .bloco-agenda--trabalho { --cor-bloco: var(--tom-trabalho); }
+.agenda-semana__chave--atividade, .bloco-agenda--atividade { --cor-bloco: var(--tom-tempo); }
+.agenda-semana__chave--casa, .bloco-agenda--casa { --cor-bloco: var(--tom-pessoas); }
+.agenda-semana__chave--pena, .bloco-agenda--pena { --cor-bloco: var(--ruim); }
+.agenda-semana__chave--trajeto, .bloco-agenda--trajeto { --cor-bloco: var(--neutro-3); }
+.agenda-semana__conflitos { display: flex; flex-direction: column; gap: var(--space-2); }
+.conflito-agenda { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--danger-wash); box-shadow: inset 3px 0 0 var(--ruim); }
+.conflito-agenda__texto { margin: 0; font-size: var(--type-caption); color: var(--text-primary); }
+.conflito-agenda__saidas { margin-top: var(--space-2); }
+.agenda-semana__dias { display: none; }
+.agenda-semana__dias-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.agenda-semana__dia-botao { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 44px; border-radius: var(--radius-md); background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio-forte); font-weight: var(--weight-semibold); color: var(--text-secondary); }
+.agenda-semana__dia-botao--ativo { background: var(--tinta); color: var(--fundo); box-shadow: none; }
+.agenda-semana__dia-livre { font-size: 0.66rem; font-weight: var(--weight-medium); opacity: 0.8; }
+.grade-semana { display: grid; grid-template-columns: 2.6rem repeat(7, minmax(0, 1fr)); gap: 0 3px; margin-top: var(--space-2); }
+.grade-semana__regua { position: relative; height: calc(var(--hora-px) * 18); margin-top: var(--cabeca-dia); }
+.grade-semana__hora { position: absolute; right: 6px; transform: translateY(-50%); font-size: var(--type-meta); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.grade-semana__dia { min-width: 0; }
+.grade-semana__nome { height: var(--cabeca-dia); margin: 0; display: flex; align-items: center; justify-content: center; font-size: var(--type-caption); font-weight: var(--weight-semibold); color: var(--text-secondary); }
+.grade-semana__livre { display: none; }
+.grade-semana__dia--fds .grade-semana__corpo { background: var(--veu-1); }
+.grade-semana__corpo { position: relative; height: calc(var(--hora-px) * 18); border-radius: var(--radius-sm, 6px); background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio); overflow: hidden; }
+.grade-semana__linha { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--fio); }
+.bloco-agenda { position: absolute; left: 2px; right: 2px; display: flex; flex-direction: column; justify-content: flex-start; gap: 0; min-height: 14px; padding: 3px 5px; overflow: hidden; text-align: left; border-radius: 5px; background: color-mix(in oklab, var(--cor-bloco) 24%, var(--superficie)); box-shadow: inset 3px 0 0 var(--cor-bloco); color: var(--text-primary); font-size: var(--type-meta); line-height: 1.2; }
+.bloco-agenda:hover, .bloco-agenda--aberto { background: color-mix(in oklab, var(--cor-bloco) 38%, var(--superficie)); }
+.bloco-agenda--aberto { outline: 2px solid var(--cor-bloco); outline-offset: 1px; z-index: 2; }
+.bloco-agenda__nome { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.bloco-agenda__horas { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.bloco-agenda--curto { flex-direction: row; align-items: center; padding-block: 0; }
+.bloco-agenda--curto .bloco-agenda__nome { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: var(--weight-medium); }
+.bloco-agenda--trajeto { background: repeating-linear-gradient(90deg, color-mix(in oklab, var(--cor-bloco) 18%, var(--superficie)) 0 6px, var(--superficie) 6px 9px); }
+.bloco-agenda--alternado { background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--cor-bloco) 26%, var(--superficie)) 0 6px, var(--superficie) 6px 12px); }
+.bloco-agenda--conflito { box-shadow: inset 3px 0 0 var(--ruim), inset 0 0 0 2px var(--ruim); }
+.agenda-semana__nota { margin-top: var(--space-2); }
+.detalhe-agenda { margin-top: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio-forte); display: flex; flex-direction: column; gap: var(--space-2); }
+.detalhe-agenda__cabeca { display: grid; grid-template-columns: 1fr auto; align-items: start; column-gap: var(--space-2); }
+.detalhe-agenda__tipo { grid-column: 1; margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.detalhe-agenda__titulo { grid-column: 1; margin: 2px 0 0; font-size: var(--type-subheading); color: var(--text-primary); overflow-wrap: anywhere; }
+.detalhe-agenda__fechar { grid-column: 2; grid-row: 1 / span 2; }
+.detalhe-agenda__dados { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: var(--space-2) var(--space-4); margin: 0; }
+.detalhe-agenda__dados dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.detalhe-agenda__dados dd { margin: 0; font-size: var(--type-caption); color: var(--text-primary); }
+.detalhe-agenda__mudar { margin: 0; padding: var(--space-2) var(--space-3) var(--space-3); border: 1px solid var(--fio); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-2); }
+.detalhe-agenda__mudar legend { padding: 0 4px; font-size: var(--type-caption); font-weight: var(--weight-semibold); color: var(--text-secondary); }
+.detalhe-agenda__dias { display: flex; flex-wrap: wrap; gap: 6px; }
+.detalhe-agenda__dia { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 10px; border-radius: var(--radius-pill); background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio-forte); font-size: var(--type-caption); cursor: pointer; }
+.detalhe-agenda__dia--sim { box-shadow: inset 0 0 0 2px var(--tom-tempo); }
+.detalhe-agenda__hora { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--type-caption); }
+.detalhe-agenda__hora select { min-height: 40px; }
+/* No celular: um dia de cada vez (a fileira de dias escolhe). */
+@media (max-width: 719px) {
+  .agenda-semana { --hora-px: 34px; }
+  .agenda-semana__dias { display: block; margin-top: var(--space-2); }
+  .grade-semana { grid-template-columns: 2.6rem minmax(0, 1fr); }
+  .grade-semana__dia { display: none; }
+  .grade-semana__dia--escolhido { display: block; }
+  .grade-semana__livre { display: inline; font-weight: var(--weight-regular, 400); }
+  .bloco-agenda { font-size: var(--type-caption); }
+}
+
+/* -------------------------------------------------- PROG-01: o que mudou, quanto e por quê */
+.desenvolvimento-real { margin-bottom: var(--space-5); }
+.evolucao-ano { margin: var(--space-3) 0; }
+.evolucao-ano__titulo { margin: 0 0 var(--space-2); font-size: var(--type-caption); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.evolucao-ano__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.evolucao-ano__linha { display: grid; grid-template-columns: minmax(7rem, 11rem) auto minmax(0, 1fr) auto; grid-template-areas: 'nome degraus valores trajeto' 'palavra palavra causas causas'; align-items: center; gap: 2px var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--fio); }
+.evolucao-ano__linha:last-child { border-bottom: 0; }
+.evolucao-ano__nome { grid-area: nome; font-weight: var(--weight-semibold); color: var(--text-primary); overflow-wrap: anywhere; }
+.evolucao-ano__linha .degraus { grid-area: degraus; }
+.evolucao-ano__valores { grid-area: valores; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.evolucao-ano__valores strong { color: var(--text-primary); }
+.evolucao-ano__palavra { grid-area: palavra; font-size: var(--type-caption); color: var(--text-muted); }
+.evolucao-ano__causas { grid-area: causas; display: flex; flex-wrap: wrap; gap: 4px var(--space-2); font-size: var(--type-caption); color: var(--text-secondary); }
+.evolucao-ano__causa { padding: 1px 8px; border-radius: var(--radius-pill); background: color-mix(in oklab, var(--bom) 12%, transparent); }
+.evolucao-ano__causa--perda { background: color-mix(in oklab, var(--ruim) 12%, transparent); }
+.evolucao-ano__trajetoria { grid-area: trajeto; color: var(--tom); }
+.evolucao-ano__delta--subiu { color: var(--bom); }
+.evolucao-ano__delta--caiu { color: var(--ruim); }
+.evolucao-ano__delta--parou, .evolucao-ano__delta--nova { color: var(--text-muted); }
+.evolucao-ano__nota { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--space-2); margin: var(--space-2) 0; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.evolucao-ano__nota strong { color: var(--text-primary); }
+.evolucao-ano__nota .evolucao-ano__nome { min-width: 11rem; }
+@media (max-width: 560px) {
+  .evolucao-ano__linha { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'nome degraus' 'valores trajeto' 'palavra palavra' 'causas causas'; }
+}
+
+/* -------------------------------------------------- UX-02: o celular compacto, com os números ao lado */
+.redes--com-lado { display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+.redes--com-lado .celular { margin: var(--space-3) 0 var(--space-4); justify-content: flex-start; }
+.redes__lado { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); min-width: 0; }
+.numeros-rede { padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); }
+.numeros-rede__titulo { display: flex; align-items: center; gap: 6px; margin: 0 0 var(--space-2); font-size: var(--type-subheading); color: var(--text-primary); }
+.numeros-rede__titulo svg { color: var(--cor-plataforma, var(--tom)); }
+.numeros-rede .balanco-publico { margin: 0 0 var(--space-3); padding: 0; box-shadow: none; background: transparent; }
+.numeros-rede__anos { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--type-caption); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.numeros-rede__ano { color: var(--text-muted); }
+.numeros-rede__totais { display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); gap: var(--space-2); margin: 0; }
+.numeros-rede__totais dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.numeros-rede__totais dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.numeros-rede__contas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.numeros-rede__conta { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: 'g n v' 'd d d'; align-items: center; gap: 2px var(--space-2); width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3); text-align: left; border-radius: var(--radius-md); box-shadow: inset 3px 0 0 var(--cor-plataforma), 0 0 0 1px var(--fio); }
+.numeros-rede__conta:hover { background: var(--veu-2); }
+.numeros-rede__conta svg { grid-area: g; color: var(--cor-plataforma); }
+.numeros-rede__conta strong { grid-area: v; font-variant-numeric: tabular-nums; }
+.numeros-rede__delta { grid-area: d; font-size: var(--type-caption); }
+.numeros-rede__delta--ganho { color: var(--bom); }
+.numeros-rede__delta--perda { color: var(--ruim); }
+.app-abas { list-style: none; margin: 0 0 var(--space-3); padding: 3px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; border-radius: var(--radius-pill); background: var(--veu-1); }
+.app-abas__item { width: 100%; min-height: 36px; border-radius: var(--radius-pill); font-size: var(--type-caption); font-weight: var(--weight-semibold); color: var(--text-secondary); }
+.app-abas__item--aberta { background: var(--superficie-topo); color: var(--text-primary); box-shadow: 0 0 0 1px var(--fio-forte); }
+.app-abas__n { color: var(--cor-plataforma); }
+.app-tela { display: none; }
+.app-tela--aberta { display: block; }
+.app-tela__aviso { margin: 0 0 var(--space-2); }
+@media (max-width: 860px) {
+  .redes--com-lado { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+  .redes--com-lado .celular { justify-content: center; }
+}
+/* O avançar fica preso embaixo da janela: o foco do teclado nunca para escondido atrás dele. */
+html { scroll-padding-bottom: calc(var(--avancar-altura, 56px) + 3rem); }
+
+/* -------------------------------------------------- Pessoas: a vida deles, nossa história */
+.pessoas__circulo--oculto { display: none; }
+.vida-deles__lista, .nossa-historia__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.vida-deles__item, .nossa-historia__item { display: grid; grid-template-columns: 3.2rem auto minmax(0, 1fr); align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--fio); }
+.vida-deles__ano { font-size: var(--type-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.vida-deles__quem { display: inline-flex; border-radius: 50%; }
+.vida-deles__quem:hover { box-shadow: 0 0 0 2px var(--tom); }
+.vida-deles__texto { color: var(--text-primary); overflow-wrap: anywhere; }
+.vida-deles__papel { display: block; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.nossa-historia__item--peso3 .vida-deles__texto { font-weight: var(--weight-semibold); }
+.nossa-historia__filtros { margin-bottom: var(--space-2); }
+.botao--ativo { box-shadow: inset 0 0 0 2px var(--tom); color: var(--text-primary); }

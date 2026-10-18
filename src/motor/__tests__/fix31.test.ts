@@ -44,6 +44,10 @@ function medica(semente = 3, municipioId = 'recife-pe', i = 26): Vida {
   if (!v.trabalho.licencas.includes('crm')) v.trabalho.licencas.push('crm');
   v.trabalho.atual = undefined;
   v.financas.conta = 40000;
+  // Premissa (REWORK 9: a vida semeada até os 26 mudou de rumo): quem se formou em Medicina chega com a cabeça e as
+  // ciências de quem se formou — a residência mede o que vem depois, não o acaso da vida sorteada.
+  v.mente.cognicao = Math.max(v.mente.cognicao, 62);
+  for (const d of ['ciencias', 'exatas', 'linguagens'] as const) { const f = v.caminhos.frentes[d]; if (f) f.habilidade = Math.max(f.habilidade, 62); }
   return v;
 }
 

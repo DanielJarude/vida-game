@@ -37,6 +37,9 @@ import { tDe } from '../tempo';
 import { cargaHumana } from './semana';
 import { efetivarMatricula } from './escola';
 import { mudarAgora } from './processos';
+import { modeloRotina } from './rotinas';
+import { largarEscola } from './escola';
+import type { Turno } from '../tipos';
 import { entrarComoParalela, moverParaParalela, novaViraPrincipal, pausadaDe, pausarAtual, podeConciliar, podePausar, retomarPausada } from './paralelas';
 
 /**
@@ -51,9 +54,9 @@ const VIA_CURSO = '__curso__';
 
 /* ============================================================== O que existe */
 
-type IdAtual = 'curso' | 'emprego' | 'base' | 'negocio' | 'servico' | 'mandato' | 'cidade';
+type IdAtual = 'curso' | 'emprego' | 'base' | 'negocio' | 'servico' | 'mandato' | 'cidade' | 'agenda';
 
-interface Alternativa {
+export interface Alternativa {
   /** O que se larga (id aplicável) — ou `conciliar`. */
   larga?: string;
   conciliar?: boolean;
@@ -63,7 +66,7 @@ interface Alternativa {
   consequencia: string;
 }
 
-interface Conflito {
+export interface ConflitoDeEntrada {
   com: IdAtual;
   /** Em palavras, para a pergunta ("a faculdade de Direito, em período integral"). */
   rotulo: string;
@@ -96,7 +99,7 @@ function nomeEmprego(v: Vida): string {
 
 /* ======================================================= Conflitos, por novo */
 
-function conflitoComCurso(v: Vida, novo: NovoCompromisso, pesado: boolean, municipioDoNovo?: string): Conflito | undefined {
+function conflitoComCurso(v: Vida, novo: NovoCompromisso, pesado: boolean, municipioDoNovo?: string): ConflitoDeEntrada | undefined {
   const m = cursoEmAndamento(v);
   if (!m || m.modalidade === 'ead') return undefined;
   const c = curso(m.cursoId);
@@ -115,7 +118,17 @@ function conflitoComCurso(v: Vida, novo: NovoCompromisso, pesado: boolean, munic
   return { com: 'curso', rotulo: nomeC, motivo, alternativas };
 }
 
-function conflitoComEmprego(v: Vida, novo: NovoCompromisso): Conflito | undefined {
+/**
+ * REWORK 9 · a agenda: o conflito de HORÁRIO (o expediente novo atravessa a escola, uma atividade marcada) é dito pela
+ * agenda (`sistemas/agenda`, que mora num pacote acima deste e registra a regra aqui ao carregar). Sem a agenda
+ * carregada, só os conflitos grandes de sempre.
+ */
+export type AnaliseDeHorario = (v: Vida, ocupacaoId: string) => ConflitoDeEntrada | undefined;
+let analiseDeHorario: AnaliseDeHorario | undefined;
+export function registrarAnaliseDeHorario(f: AnaliseDeHorario): void { analiseDeHorario = f; }
+const conflitoDeHorario = (v: Vida, ocupacaoId: string) => analiseDeHorario?.(v, ocupacaoId);
+
+function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada | undefined {
   const e = v.trabalho.atual;
   if (!e || e.contrato === 'eletivo') return undefined;
   if (noServicoInicial(v)) return { com: 'servico', rotulo: 'o serviço militar', motivo: 'Durante o serviço militar inicial, o quartel não libera: são doze meses obrigatórios', alternativas: [], impede: true };
@@ -160,20 +173,20 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): Conflito | undefine
 }
 
 /** Um curso presencial em outra cidade: ninguém muda de cidade sem dizer que sim. */
-function conflitoComCidade(v: Vida, municipioId: string, oque: string): Conflito | undefined {
+function conflitoComCidade(v: Vida, municipioId: string, oque: string): ConflitoDeEntrada | undefined {
   if (municipioId === v.moradia.municipioId) return undefined;
   const destino = municipio(municipioId).nome;
   return { com: 'cidade', rotulo: `a vida em ${municipio(v.moradia.municipioId).nome}`, motivo: `${cap(oque)} é presencial em ${destino} — e você mora em ${municipio(v.moradia.municipioId).nome}`, alternativas: [{ larga: 'mudar', texto: `se mudar para ${destino}`, consequencia: `Você se muda para ${destino}: casa nova, custo de mudança, e o que é de lugar fixo aqui fica para trás.` }] };
 }
 
-function conflitoComBase(v: Vida): Conflito | undefined {
+function conflitoComBase(v: Vida): ConflitoDeEntrada | undefined {
   const es = v.caminhos.esporte;
   if (es?.fase !== 'base') return undefined;
   const equipe = es.modalidade === 'futebol' ? 'a base' : 'a equipe';
   return { com: 'base', rotulo: `${equipe} ${doClube(es.clube)}`, motivo: `${cap(equipe)} ${doClube(es.clube)} treina quase todo dia`, alternativas: [{ larga: 'base', texto: `deixar ${equipe} ${doClube(es.clube)}`, consequencia: `O sonho de viver do ${NOME_MOD[es.modalidade] ?? 'esporte'} fica para trás; ${NOME_MOD[es.modalidade] ?? 'o esporte'} volta a ser por gosto.` }] };
 }
 
-function conflitoComNegocioParalelo(v: Vida, novo: NovoCompromisso): Conflito | undefined {
+function conflitoComNegocioParalelo(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada | undefined {
   const n = negocioAberto(v);
   if (!n || (n.dedicacao ?? 'integral') !== 'paralela' || novo.tipo === 'negocio' || novo.tipo === 'dedicar_negocio') return undefined;
   if (novo.tipo !== 'base' && novo.tipo !== 'servico_militar') return undefined;
@@ -185,9 +198,9 @@ function conflitoComNegocioParalelo(v: Vida, novo: NovoCompromisso): Conflito | 
 }
 
 /** O que conflita com a entrada de algo novo. */
-export function analisarEntrada(v: Vida, novo: NovoCompromisso): Conflito[] {
-  const out: Conflito[] = [];
-  const push = (c?: Conflito) => { if (c) out.push(c); };
+export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada[] {
+  const out: ConflitoDeEntrada[] = [];
+  const push = (c?: ConflitoDeEntrada) => { if (c) out.push(c); };
   // Durante o serviço inicial, nada novo entra — a não ser estudar à noite na cidade do quartel.
   const cursoLeve = novo.tipo === 'curso' && (novo.modalidade === 'ead' || (curso(novo.cursoId).carga !== 'integral' && novo.municipioId === v.moradia.municipioId));
   if (noServicoInicial(v) && novo.tipo !== 'servico_militar' && !cursoLeve) return [{ com: 'servico', rotulo: 'o serviço militar', motivo: 'Durante o serviço militar inicial, o quartel não libera: são doze meses obrigatórios', alternativas: [], impede: true }];
@@ -209,6 +222,9 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): Conflito[] {
       push(conflitoComCurso(v, novo, pesado && cursoIntegral, oc.formacaoInicial ? '__longe__' : undefined));
       push(conflitoComBase(v));
       push(conflitoComEmprego(v, novo));
+      // REWORK 9: o horário — a escola, as atividades da semana. Os conflitos grandes (o curso integral, outro
+      // emprego) já foram ditos acima; aqui, o que o expediente novo atravessa na agenda.
+      if (!oc.formacaoInicial) push(conflitoDeHorario(v, oc.id));
       break;
     }
     case 'negocio':
@@ -322,7 +338,7 @@ export function descreverOferta(v: Vida, novo: NovoCompromisso): { oferta: strin
 }
 
 /** Monta os planos possíveis (no máximo três de aceitar, e o de recusar quando dá). */
-export function planosDeConflito(v: Vida, novo: NovoCompromisso, conflitos: Conflito[]): PlanoDeConflito[] {
+export function planosDeConflito(v: Vida, novo: NovoCompromisso, conflitos: ConflitoDeEntrada[]): PlanoDeConflito[] {
   const { curto } = descreverOferta(v, novo);
   const planos: PlanoDeConflito[] = [];
   const impede = conflitos.find(c => c.impede);
@@ -462,6 +478,21 @@ function largar(v: Vida, id: string, motivo: string, novo: NovoCompromisso): voi
     case 'emprego_pausa': case 'emprego_licenca': pausarAtual(v, motivo); return;
     case 'emprego_paralela': moverParaParalela(v, motivo); return;
     case 'novo_paralela': case 'mudar': return; // o novo entra em paralelo / a mudança vai junto com o novo (ver `aplicarNovo`)
+    default: {
+      // REWORK 9: as saídas de horário (a agenda).
+      if (id.startsWith('turno_trabalho:')) { ((v.agenda ??= {}).turnos ??= {}).trabalho = id.slice(15) as Turno; return; }
+      if (id.startsWith('turno_escola:')) { ((v.agenda ??= {}).turnos ??= {}).escola = id.slice(13) as Turno; escrever(v, { texto: `Passou a escola para o turno da ${({ manha: 'manhã', tarde: 'tarde', noite: 'noite', integral: 'período integral' } as Record<Turno, string>)[id.slice(13) as Turno]} ${motivo}.`, relevancia: 'cotidiano', tema: 'escola', escolha: true }); return; }
+      if (id === 'escola') { largarEscola(v); escrever(v, { texto: `Largou a escola ${motivo}.`, relevancia: 'biografia', tema: 'escola', escolha: true }); return; }
+      if (id.startsWith('soltar:')) { delete v.agenda?.lugares?.[id.slice(7)]; return; }
+      if (id.startsWith('rotina:')) {
+        const rid = id.slice(7);
+        const m = modeloRotina(rid);
+        v.rotinas = v.rotinas.filter(x => x.id !== rid);
+        if (m) escrever(v, { texto: `Largou ${m.nome.charAt(0).toLowerCase()}${m.nome.slice(1)} ${motivo}: o horário não cabia mais.`, relevancia: 'cotidiano', tema: 'lazer', escolha: true });
+        return;
+      }
+      return;
+    }
     case 'adiar_servico': {
       v.fatos['mil_adiado'] = v.t;
       escrever(v, { texto: 'Pediu o adiamento da incorporação pelo curso: o serviço militar fica para depois da formatura.', relevancia: 'biografia', tema: 'lugar', escolha: true });

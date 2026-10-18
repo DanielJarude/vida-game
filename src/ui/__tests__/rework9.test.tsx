@@ -126,3 +126,35 @@ describe('Fase A · Caminhos une Formação e Trabalho sem perder ação nenhuma
 });
 
 const idadeDe = (v: Vida) => idade(v);
+
+/* =============================================================== FASE B — a agenda e a progressão na tela */
+
+import { DesenvolvimentoReal, Progressao } from '../jogo/Progresso';
+import { evolucaoDaFrente } from '../../motor/sistemas/progressao';
+import { MATERIAS } from '../../motor/dados/frentes';
+
+describe('PROG-01 · a tela mostra o número do motor e a causa que ele registrou', () => {
+  it('Caminhos · Desenvolvimento: a nota e as matérias, antes → agora, com as causas do ano', () => {
+    const v = vidaAos(13);
+    render(<main><DesenvolvimentoReal vida={v} /></main>);
+    const nota = document.querySelector('[data-nota="escola"]')!;
+    expect(Number(nota.getAttribute('data-agora'))).toBe(v.educacao.basica!.desempenho);
+    for (const d of MATERIAS) {
+      const linha = document.querySelector(`[data-frente="${d}"]`);
+      const e = evolucaoDaFrente(v, d)!;
+      expect(Number(linha!.querySelector('[data-agora]')!.getAttribute('data-agora'))).toBe(e.agora);
+      for (const [fonte] of e.causas) expect(linha!.querySelector(`[data-fonte="${fonte}"]`)).toBeTruthy();
+    }
+    expect(document.querySelector('[data-fonte="escola"]')).toBeTruthy();
+  });
+
+  it('Você: uma atividade da semana aparece com a causa "a atividade" (o nome dela), não um número solto', () => {
+    let v = vidaAos(11);
+    v = executar(v, { tipo: 'rotina', id: 'xadrez', ativa: true, nivel: 2 }).vida;
+    v = avancarAno(v).vida; v.momento = null; v.caminhos.pendente = undefined;
+    v = avancarAno(v).vida; v.momento = null;
+    render(<main><Progressao vida={v} dominios={['xadrez']} titulo="Teste" /></main>);
+    const linha = document.querySelector('[data-frente="xadrez"]')!;
+    expect(linha.querySelector('[data-fonte="rotina:xadrez"]')?.textContent).toMatch(/xadrez/i);
+  });
+});

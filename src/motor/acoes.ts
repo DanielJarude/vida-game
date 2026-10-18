@@ -6,6 +6,8 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { praticandoPor } from './sistemas/progressao';
+import { disponibilidadeDaAgenda, executarNaAgenda, limparAgenda, type OpAgenda } from './sistemas/agenda';
 import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistemas/memoria';
 import { disponibilidadeProcedimento, fazerProcedimento, type Clinica, type IdProcedimento } from './sistemas/estetica';
 import { comprarCoisa, disponibilidadeComprarCoisa, disponibilidadeVenderCoisa, venderCoisa } from './sistemas/coisas';
@@ -231,7 +233,9 @@ export type Acao =
   /** As outras trajetórias: deixar a paralela, trocar a principal, voltar a (ou encerrar) uma carreira pausada. */
   | { tipo: 'trajetoria'; oque: 'deixar' | 'principal' | 'retomar' | 'encerrar_pausada'; k?: number }
   /** Usar a própria visibilidade (entrevista, causa, evento, publicidade, privacidade, projeto, política): `visibilidade`. */
-  | { tipo: 'visibilidade'; oque: UsoDaVisibilidade };
+  | { tipo: 'visibilidade'; oque: UsoDaVisibilidade }
+  /** REWORK 9: a agenda da semana — o turno do que tem turno, o lugar (dias e hora) de cada atividade: `agenda`. */
+  | { tipo: 'agenda'; op: OpAgenda };
 
 
 const TITULO_CUIDADO: Record<TipoCuidado, string> = { descansar: 'Uns dias de descanso', consulta: 'No médico', parar_fumar: 'Parar de fumar', beber_menos: 'Beber menos' };
@@ -283,6 +287,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const { valor: depois } = transacao(v, x => { tirarDasAplicacoes(x, d.resgate!.valor, 'para pagar'); return disponibilidade(x, a.acao); });
       return podeTentar(depois) ? { grau: 'permitido', motivo: `Tira ${fmt(d.resgate.valor)} das aplicações.` } : depois;
     }
+    case 'agenda': return disponibilidadeDaAgenda(v, a.op);
     case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
     case 'oportunidade': {
       const o = v.caminhos.oportunidades.find(x => x.id === a.id);
@@ -716,7 +721,8 @@ export function executar(vida: Vida, a: Acao): Retorno {
     // O extrato (`extrato`): o que mexeu no dinheiro antes (os acontecimentos do fim do ano) e o que esta escolha
     // mexeu ficam, cada um, com o seu nome — nenhum real some sem linha.
     conferir(v, 'Acontecimentos do fim do ano', 'acontecimento');
-    const out = executarNaTransacao(v, r, a);
+    // REWORK 9 · PROG-01: o que a escolha fizer com uma frente é atribuído a ela (`acao:oficio`, `acao:formacao`…).
+    const out = praticandoPor(`acao:${a.tipo}`, () => executarNaTransacao(v, r, a));
     resultado = out.resultado;
     aviso = out.aviso;
     titulo = out.titulo;
@@ -724,6 +730,8 @@ export function executar(vida: Vida, a: Acao): Retorno {
     // Um conflito de trajetórias criado pela ação vira pergunta na hora (nunca fica resolvido em silêncio).
     if (v.caminhos.pendente && !v.momento) abrirConflitoPendente(v, r);
     conferir(v, ...linhaDoExtrato(a));
+    // REWORK 9: a agenda guarda só escolhas de coisas que existem (a atividade largada leva o lugar dela junto).
+    limparAgenda(v);
   });
   const mudancas = nova.biografia.slice(antes).filter(e => e.relevancia !== 'tecnico').map(e => e.texto);
   return { vida: nova, resultado, aviso, titulo, pessoaId: pessoaId ?? (a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined), ...(mudancas.length ? { mudancas } : {}) };
@@ -757,6 +765,7 @@ const ok = (texto: string, tom: 'bom' | 'ruim' | 'neutro' = 'neutro'): Saida => 
 function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
   const i = idade(v);
   switch (a.tipo) {
+    case 'agenda': return ok(executarNaAgenda(v, a.op));
     case 'prisao': { const x = executarPrisao(v, a.oque); return a.oque === 'conviver' || a.oque === 'visitas' || a.oque === 'fugir' ? { resultado: x.texto, titulo: a.oque === 'fugir' ? 'A fuga' : a.oque === 'visitas' ? 'Dia de visita' : 'No pavilhão' } : ok(x.texto, x.tom); }
     case 'resgatar_e': {
       const d = disponibilidade(v, a.acao);

@@ -24,6 +24,7 @@ import { FRENTES, MATERIAS, estagioDe, modeloFrente } from '../dados/frentes';
 import { idade } from '../nucleo';
 import { predisposicao } from './predisposicao';
 import { fatorDeTreino } from './lesoes';
+import { fonteDaPratica, registrarMudancaDeFrente } from './progressao';
 import { NIVEL_TECNICA, nivelTecnico } from './peneira';
 
 function hash(s: string): number {
@@ -78,6 +79,7 @@ function fatorIdade(d: Dominio, i: number): number {
  */
 export function praticar(v: Vida, r: Rng, d: Dominio, peso: number, qualidade = 1): number {
   const f = garantirFrente(v, d);
+  const antes = f.habilidade;
   const i = idade(v);
   const m = modeloFrente(d);
   if (v.t - f.tUltimo > 24 && f.meses > 0) f.retomadas += 1;
@@ -104,6 +106,8 @@ export function praticar(v: Vida, r: Rng, d: Dominio, peso: number, qualidade = 
   const teto = Math.max(0.03, 1 - f.habilidade / (topo + 4));
   const ganho = 7.2 * peso * velocidade * aprende * vontade * fatorIdade(d, i) * qualidade * corpo * teto * (0.8 + r.next() * 0.4);
   f.habilidade = clamp(Math.round((f.habilidade + ganho) * 10) / 10);
+  // REWORK 9 · PROG-01: o que esta prática fez com a frente, atribuído a quem praticou (`progressao.praticandoPor`).
+  registrarMudancaDeFrente(v, d, fonteDaPratica(), f.habilidade - antes);
   f.meses += Math.round(12 * peso);
   f.tUltimo = v.t;
   f.auge = Math.max(f.auge, f.habilidade);
@@ -112,7 +116,11 @@ export function praticar(v: Vida, r: Rng, d: Dominio, peso: number, qualidade = 
   const cansaco = (v.mente.estresse > 70 ? -3 : 0) + (v.mente.felicidade < 35 ? -2 : 0);
   f.interesse = clamp(Math.round(f.interesse + rendeu + cansaco + apt * 2 + (r.next() - 0.5) * 4));
   // O corpo cobra depois de certa idade, mesmo praticando.
-  if (m.declinio && i > m.declinio) f.habilidade = clamp(Math.round((f.habilidade - (i - m.declinio) * 0.5) * 10) / 10);
+  if (m.declinio && i > m.declinio) {
+    const h0 = f.habilidade;
+    f.habilidade = clamp(Math.round((f.habilidade - (i - m.declinio) * 0.5) * 10) / 10);
+    registrarMudancaDeFrente(v, d, 'idade', f.habilidade - h0);
+  }
   return ganho;
 }
 
@@ -128,7 +136,9 @@ export function esquecerFrentes(v: Vida, praticadas: Set<Dominio>): void {
     // O que se aprendeu fundo não some: cai até metade do auge, não abaixo.
     const piso = f.auge * 0.45;
     const corpo = m.declinio && i > m.declinio ? 1.6 : 1;
+    const h0 = f.habilidade;
     f.habilidade = Math.max(piso, Math.round((f.habilidade - m.esquece * corpo) * 10) / 10);
+    registrarMudancaDeFrente(v, d, 'sem_pratica', f.habilidade - h0);
     f.interesse = clamp(Math.round(f.interesse - (parado < 4 ? 5 : 2)));
   }
 }
@@ -139,7 +149,8 @@ export function esquecerFrentes(v: Vida, praticadas: Set<Dominio>): void {
  * é "inteligente".
  */
 export function estudarMaterias(v: Vida, r: Rng, fator: number): void {
-  const postura = v.educacao.postura === 'dedicada' ? 1.3 : v.educacao.postura === 'relaxada' ? 0.65 : 1;
+  // REWORK 9 · EDU-01: a postura muda o ritmo (não o destino).
+  const postura = v.educacao.postura === 'dedicada' ? 1.2 : v.educacao.postura === 'relaxada' ? 0.75 : 1;
   for (const d of MATERIAS) {
     const f = garantirFrente(v, d);
     // A matéria de que se gosta recebe mais atenção sem ninguém mandar.

@@ -14,6 +14,7 @@
  * para sempre, e o que já se pratica continua disponível.
  */
 
+import { praticandoPor } from './progressao';
 import { paisCorrente } from '../mundo/moeda';
 import { bonusDaAtividade } from './coisas';
 import type { Rng } from '../rng';
@@ -746,7 +747,11 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
 
 /* ---------------------------------------------------------------- O ano */
 
-export function processarRotinas(v: Vida, r: Rng): void {
+/**
+ * `presenca` (REWORK 9): quanto de cada atividade acontece de fato na agenda da semana (`agenda.agendaDaSemana(v).presenca`,
+ * calculada por quem chama o ano — aqui não, para não prender este módulo à agenda). Ausente: tudo acontece.
+ */
+export function processarRotinas(v: Vida, r: Rng, presenca: Record<string, number> = {}): void {
   const praticadas = new Set<Dominio>();
   // A semana que passa do que cabe cobra AQUI também: cansado, treina e estuda pior (cheia: um pouco; além: muito).
   const faixa = encaixe(v, 0).faixa;
@@ -770,19 +775,21 @@ export function processarRotinas(v: Vida, r: Rng): void {
       escrever(v, { texto: `${m.nome}: ${nivelModelo(m, n).rotulo.toLowerCase()}, agora.`, relevancia: 'tecnico', tema: 'lazer' });
     }
     const nm = nivelModelo(m, n);
-    const peso = n === 1 ? 0.5 : n === 2 ? 1 : 1.6;
+    // REWORK 9: a agenda — as vezes que não têm horário (ou que outro compromisso atravessa) não acontecem.
+    const vezes = presenca[rot.id] ?? 1;
+    const peso = (n === 1 ? 0.5 : n === 2 ? 1 : 1.6) * vezes;
     if (m.pratica) {
       for (const [d, w] of Object.entries(m.pratica) as [Dominio, number][]) {
         // O que se tem em casa (o instrumento, o notebook, a câmera) faz a mesma hora render mais (`coisas`).
         // REWORK 4: a semana que passa do que cabe também cobra AQUI — cansado, treina e estuda pior.
-        praticar(v, r, d, peso * w, (nm.qualidade ?? 1) * (1 + bonusDaAtividade(v, m.id)) * cansaco);
+        praticandoPor(`rotina:${rot.id}`, () => praticar(v, r, d, peso * w, (nm.qualidade ?? 1) * (1 + bonusDaAtividade(v, m.id)) * cansaco));
         praticadas.add(d);
       }
     }
-    m.efeito?.(v, r, n);
+    praticandoPor(`rotina:${rot.id}`, () => m.efeito?.(v, r, n));
     if (m.comportamento && v.t - rot.tInicio >= 12) aplicarPersonalidade(v, `rotina:${m.id}`, m.comportamento);
     const renda = m.renda?.(v, n);
-    if (renda) v.financas.conta += Math.round(renda * 12 * (0.8 + r.next() * 0.4));
+    if (renda) v.financas.conta += Math.round(renda * 12 * vezes * (0.8 + r.next() * 0.4));
   }
   // Frentes praticadas por outras vias (escola, curso, trabalho) são registradas por quem as pratica.
   for (const [d, f] of Object.entries(v.caminhos.frentes)) if (f && v.t - f.tUltimo < 12) praticadas.add(d as Dominio);

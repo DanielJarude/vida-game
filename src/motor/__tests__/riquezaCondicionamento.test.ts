@@ -47,6 +47,8 @@ function semTrabalho(anos: number, semente = 11): Vida {
   v.educacao.matricula = undefined;
   v.financas.dividas = [];
   v.financas.negativado = false;
+  // Premissa (REWORK 9: as vidas semeadas mudaram de rumo): sem aluguel atrasado — o teste é sobre trabalho e propósito.
+  v.moradia.atraso = undefined;
   v.momento = null;
   return v;
 }

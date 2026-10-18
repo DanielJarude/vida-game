@@ -32,6 +32,8 @@ function rico(): Vida {
   v.educacao.matricula = undefined;
   v.financas.dividas = [];
   v.financas.negativado = false;
+  // Premissa (REWORK 9: as vidas semeadas mudaram de rumo): sem aluguel atrasado.
+  v.moradia.atraso = undefined;
   v.trabalho.intencao = undefined;
   v.caminhos.politica = undefined;
   v.financas.conta = 6_000_000;

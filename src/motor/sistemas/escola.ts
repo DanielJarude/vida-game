@@ -126,24 +126,43 @@ export function condicoesDeEstudo(v: Vida): number {
  * gosto e a prática de cada ano), e só um pouco da cabeça em geral; depois,
  * a postura, a casa, o trabalho e a escola.
  */
-export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?: Materia[]): number {
+/**
+ * REWORK 9 · EDU-01: o que se espera saber em cada idade — a curva do aluno TÍPICO desta escola (medida numa
+ * população simulada: a mediana da média das matérias, 8 → 17 anos). Antes era 5 pontos por ano até 60, mais rápido
+ * que qualquer aluno de verdade: a nota caía com a idade e, aos 17, mais da metade estava "com dificuldade".
+ */
+export function esperadoNaSerie(i: number): number {
+  const k = Math.max(0, i - 6);
+  return Math.min(60, Math.max(3, 1.9 + 4.25 * k - 0.035 * k * k));
+}
+
+export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?: Materia[], presenca = 1): number {
   const d = v.personalidade.tracos.disciplina;
-  const postura = v.educacao.postura === 'dedicada' ? 10 : v.educacao.postura === 'relaxada' ? -10 : 0;
+  // REWORK 9 · EDU-01: a postura conta, mas não é destino (antes, ±10 aqui e ×1,3/×0,65 no aprendizado decidiam tudo).
+  const postura = v.educacao.postura === 'dedicada' ? 7 : v.educacao.postura === 'relaxada' ? -7 : 0;
   // Bem-estar, cabeça e corpo: um ano doente ou para baixo rende menos na escola (sem virar fracasso).
   const casa = (v.mente.felicidade - 50) * 0.1 - Math.max(0, v.mente.estresse - 60) * 0.25 - Math.max(0, 55 - v.corpo.saude) * 0.2;
   const trabalhoPesa = v.trabalho.atual ? (v.trabalho.atual.carga === 'integral' ? -10 : -4) : 0;
+  // REWORK 9: a agenda — a aula que outro compromisso atravessa é falta (`agenda.presencaNaEscola`/`presencaNoCurso`).
+  const faltas = -(1 - presenca) * 20;
   // A nota compara o que a pessoa sabe com o que se espera na série (ou no curso).
   const media = materias?.length ? materias.reduce((s, m) => s + habilidade(v, m), 0) / materias.length : mediaEscolar(v);
-  const esperado = materias?.length ? 52 : Math.min(60, Math.max(6, 5 * (idade(v) - 5)));
+  const esperado = materias?.length ? 52 : esperadoNaSerie(idade(v));
   // O reforço e o grupo de estudos (atividades da formação) contam aqui — a mesma rotina que ocupa a semana.
   const apoio = bonusDeEstudo(v, materias === undefined);
-  const base = 52 + (media - esperado) * 0.9 + (v.mente.cognicao - 50) * 0.18 + d * 0.1 + postura + bonusRede + casa + trabalhoPesa + condicoesDeEstudo(v) + apoio;
+  // REWORK 9 · EDU-01: o que se sabe diante da série pesa mais (antes, 0,9: todo mundo ficava perto do meio), e a
+  // cabeça um pouco mais — sem virar destino (o ano, a casa, a postura e o acaso continuam pesando).
+  // Na escola básica (sem `materias`): a escala nova. No curso, a de sempre — adulto que volta a estudar tem as matérias
+  // mais frias, e o curso tem as próprias régua e prova (a residência, o mestrado).
+  const escola = !materias?.length;
+  const base = (escola ? 50 : 52) + (media - esperado) * (escola ? 1.5 : 0.9) + (v.mente.cognicao - 50) * (escola ? 0.22 : 0.18) + d * 0.1 + postura + bonusRede + casa + trabalhoPesa + faltas + condicoesDeEstudo(v) + apoio;
   return clamp(Math.round(base + r.normal() * 6), 5, 100);
 }
 
 /* ------------------------------------------------------ Educação básica */
 
-export function processarEscola(v: Vida, r: Rng): void {
+/** `presenca` (REWORK 9): quanto das aulas acontece de fato (a agenda: o turno que outro compromisso atravessa vira falta). */
+export function processarEscola(v: Vida, r: Rng, presenca = 1): void {
   const i = idade(v);
   const e = v.educacao;
 
@@ -196,9 +215,10 @@ export function processarEscola(v: Vida, r: Rng): void {
   }
 
   // As matérias do ano: a escola exercita todas; a particular, com mais estrutura.
-  estudarMaterias(v, r, (b.rede === 'privada' ? 1.12 : 1) * (b.etapa === 'fundamental1' ? 0.85 : 1));
+  // REWORK 9: só aprende na aula quem está nela — o turno que o trabalho atravessa ensina menos.
+  estudarMaterias(v, r, (b.rede === 'privada' ? 1.12 : 1) * (b.etapa === 'fundamental1' ? 0.85 : 1) * (0.4 + 0.6 * presenca));
   if (b.integrado) { const c = cursoOuNulo(b.integrado); if (c?.pratica) for (const [dd, w] of Object.entries(c.pratica) as [Dominio, number][]) praticar(v, r, dd, w * 0.8, 1.1); }
-  b.desempenho = calcularDesempenho(v, r, b.rede === 'privada' ? 6 : 0);
+  b.desempenho = calcularDesempenho(v, r, b.rede === 'privada' ? 6 : 0, undefined, presenca);
   if (b.rede === 'privada' && b.etapa === 'medio') marcarFato(v, 'estudou_privada');
   // A matéria difícil às vezes vira recuperação — textura, não tragédia.
   if (b.etapa !== 'fundamental1' && b.desempenho >= 38) {
@@ -339,11 +359,13 @@ export const AREAS_ENEM: Materia[] = ['exatas', 'linguagens', 'ciencias', 'human
  */
 export function notaEsperadaArea(v: Vida, a: Materia): number {
   const hist = v.educacao.basica?.desempenho ?? 55;
-  const privada = v.educacao.basica?.rede === 'privada' ? 35 : 0;
+  const privada = v.educacao.basica?.rede === 'privada' ? 30 : 0;
   const preparo = bonusDoPreparo(v);
   const idadeFora = v.educacao.basica ? 0 : Math.min(40, Math.max(0, idade(v) - 18) * 4);
-  const postura = v.educacao.postura === 'dedicada' ? 20 : v.educacao.postura === 'relaxada' ? -20 : 0;
-  return 250 + habilidade(v, a) * 4.4 + hist * 1.2 + (v.mente.cognicao - 50) * 1.2 + privada + preparo + postura - idadeFora;
+  const postura = v.educacao.postura === 'dedicada' ? 15 : v.educacao.postura === 'relaxada' ? -15 : 0;
+  // REWORK 9 · EDU-01: o que se sabe na área e o histórico pesam mais — a nota se espalha como a de verdade (antes, o
+  // desvio era de uns 45 pontos: quase todo mundo entre 470 e 590).
+  return 190 + habilidade(v, a) * 5 + hist * 1.8 + (v.mente.cognicao - 50) * 1.6 + privada + preparo + postura - idadeFora;
 }
 
 /** Nota do ENEM por área: cada matéria vai para um lado, e o dia pesa. */
@@ -755,7 +777,7 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
 
 /* --------------------------------------------------- Andamento do curso */
 
-export function processarCurso(v: Vida, r: Rng): void {
+export function processarCurso(v: Vida, r: Rng, presenca = 1): void {
   const m = v.educacao.matricula;
   if (!m) return;
   if (m.trancado) {
@@ -770,7 +792,7 @@ export function processarCurso(v: Vida, r: Rng): void {
   for (const [d, w] of Object.entries(c.pratica ?? {}) as [Dominio, number][]) praticar(v, r, d, w * (m.modalidade === 'ead' ? 0.6 : 1), 1.15);
   for (const [d, w] of Object.entries(c.pesos ?? {}) as [Materia, number][]) praticar(v, r, d, Math.min(1, w * 0.3), 1);
   const materias = Object.keys(c.pesos ?? {}) as Materia[];
-  m.desempenho = calcularDesempenho(v, r, c.nivel === 'residencia' || c.nivel === 'mestrado' ? 8 : c.nivel === 'livre' ? 10 : 0, materias);
+  m.desempenho = calcularDesempenho(v, r, c.nivel === 'residencia' || c.nivel === 'mestrado' ? 8 : c.nivel === 'livre' ? 10 : 0, materias, presenca);
   let atraso = 0;
   if (m.desempenho < 35 && r.chance(0.6)) atraso = 6;
   m.mesesRestantes -= Math.min(12, m.mesesRestantes + atraso) - atraso;

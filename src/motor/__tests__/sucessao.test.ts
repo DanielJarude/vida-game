@@ -40,7 +40,10 @@ function familia(semente = 11): { v: Vida; conjuge: string; a: string; b: string
   v.fatos[`namoro_${b.id}`] = v.t - 72; v.fatos[`casou_${b.id}`] = v.t - 48; v.fatos[`uniao_cartorio_${b.id}`] = 1;
   v.vinculos[parB.id] = { pessoaId: parB.id, parentesco: 'genro', origem: 'familia', tInicio: v.t - 48, proximidade: 40, confianca: 50, tensao: 0, convivio: [], tUltimoContato: v.t, historia: [] };
   const { p: neto } = comNeto(v, b, 3, parB.id);
-  // Patrimônio: conta, aplicação, a casa onde moram, um carro.
+  // Patrimônio: conta, aplicação, a casa onde moram, um carro — e nenhuma dívida (REWORK 9: a vida sorteada até os 62
+  // mudou de rumo e pode chegar endividada; o cenário monta o patrimônio inteiro à mão).
+  v.financas.dividas = [];
+  v.financas.negativado = false;
   v.financas.conta = 50000;
   v.financas.investimentos = [{ id: 'apl_pos_fixado', produto: 'pos_fixado', aportado: 200000, valor: 240000, tInicio: v.t - 120, historico: [], pico: 240000 }];
   const casa: Imovel = { id: 'icasa', tipo: 'imovel', modeloId: 'casa_3q', nome: 'casa de três quartos', valor: 600000, tCompra: v.t - 200, municipioId: v.moradia.municipioId, estado: 70, dono: 'casal' };

@@ -163,7 +163,11 @@ export function viverCena(c: CtxI, foi: ComoFoi, prog: ProgramaDeCena, n: number
   const usadas = new Set(marcas(c.vin).filter(x => x.startsWith('comum.')).map(x => Number(x.split('.')[1])));
   const livres = prog.comum.map((_x, k) => k).filter(k => !usadas.has(k));
   const variacao = tipo === 'comum' ? (livres.length ? livres[(n + r.int(0, 2)) % livres.length] : n % prog.comum.length) : 0;
-  lembrar(c.vin, tipo === 'comum' ? `comum.${variacao}` : tipo);
+  // A discussão também não repete a mesma (o motivo de cada uma fica na marca: "discordaram.2").
+  const discordiasUsadas = new Set(marcas(c.vin).filter(x => x.startsWith('discordaram.')).map(x => Number(x.split('.')[1])));
+  const discordiasLivres = (prog.discordia ?? []).map((_x, k) => k).filter(k => !discordiasUsadas.has(k));
+  const qualDiscordia = tipo === 'discordaram' ? (discordiasLivres.length ? r.pick(discordiasLivres) : r.int(0, (prog.discordia?.length ?? 1) - 1)) : 0;
+  lembrar(c.vin, tipo === 'comum' ? `comum.${variacao}` : tipo === 'discordaram' ? `discordaram.${qualDiscordia}` : tipo);
   const titulo = tituloDe(prog, nome);
 
   switch (tipo) {
@@ -183,10 +187,11 @@ export function viverCena(c: CtxI, foi: ComoFoi, prog: ProgramaDeCena, n: number
       return { tipo, titulo, texto: `${cap(prog.onde)}, do nada, ${nome} parou e perguntou ${q}. Vocês ficaram um tempão inventando a resposta.` };
     }
     case 'discordaram': {
-      const [dela, sua] = r.pick(prog.discordia!);
+      const [dela, sua] = prog.discordia![qualDiscordia];
       afeto(c, 1);
       if (c.p.temperamento.afabilidade < -0.2) tensao(c, 2);
-      return { tipo, titulo, texto: `${cap(prog.depois)}, a discussão: ${nome} ${dela}; você ${sua}. Ninguém mudou de ideia — ${c.p.temperamento.afabilidade < -0.2 ? 'e o caminho de volta foi meio calado' : 'e foi o melhor da noite'}.` };
+      const fim = c.p.temperamento.afabilidade < -0.2 ? ['e o caminho de volta foi meio calado', 'e a despedida saiu seca'][n % 2] : ['e foi o melhor da noite', 'e a discussão continuou por mensagem até tarde', 'e combinaram de tirar a dúvida na próxima'][n % 3];
+      return { tipo, titulo, texto: `${cap(prog.depois)}, a discussão: ${nome} ${dela}; você ${sua}. Ninguém mudou de ideia — ${fim}.` };
     }
     case 'conversa_seria': {
       confiar(c, 4); afeto(c, 2);

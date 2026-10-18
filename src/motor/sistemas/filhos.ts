@@ -17,7 +17,7 @@
 import { doPrograma, educacaoDaVida, oPrograma } from '../mundo/vida';
 import { circulaLivre, nacionalidadesDaPessoa, nacionalidadesDoBebe } from '../mundo/vida';
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { Pessoa, TipoEvento, TipoTrajetoria, Vida, Vinculo, Relevancia } from '../tipos';
 import { emRecessao, escrever, idade, idadePessoa, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
@@ -105,9 +105,24 @@ function garantirVidaEm(v: Vida, p: Pessoa): NonNullable<Pessoa['vida']> {
   if (nova) {
     const i = idadePessoa(v, p);
     if (!p.formacao && i >= 18 && p.ocupacao && p.ocupacao !== 'estudante') vida.escolaridade = 'medio';
+    // REWORK 9 · NPC-01: o adulto que entra na vida (a parceria, o amigo) não nasce "com fundamental" por padrão — antes,
+    // quem não trazia diploma caía sempre na lista dos ofícios de menor salário. A escolaridade vem de onde vocês se
+    // conheceram (a faculdade, o trabalho) e, sem isso, de uma mistura plausível de população; estável por pessoa.
+    const vin = v.vinculos[p.id];
+    const descendente = vin?.parentesco === 'filho' || vin?.parentesco === 'neto';
+    if (!descendente && !p.formacao && i >= 18) vida.escolaridade = escolaridadeDeAdulto(p, vin?.origem ?? '', vin?.convivio ?? []);
     if (p.ocupacaoId) vida.tCargo = v.t - 12;
   }
   return vida;
+}
+
+/** A escolaridade de um adulto que entra na vida: pelo lugar onde vocês se conheceram e, sem pista, uma mistura plausível. */
+function escolaridadeDeAdulto(p: Pessoa, origem: string, convivio: string[]): 'fundamental' | 'medio' | 'tecnico' | 'superior' {
+  const daFaculdade = origem === 'faculdade' || convivio.includes('faculdade');
+  const pesos: [ReturnType<typeof escolaridadeDeAdulto>, number][] = daFaculdade
+    ? [['medio', 0.15], ['tecnico', 0.1], ['superior', 0.75]]
+    : [['fundamental', 0.28], ['medio', 0.42], ['tecnico', 0.1], ['superior', 0.2]];
+  return rngDe(p.id, 'escolaridade-adulto').weighted(pesos, x => x[1])![0];
 }
 
 /* ------------------------------------------------------------ Comunicação */
@@ -508,6 +523,33 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
 
 /* ----------------------------------------------- Adultos importantes que não são descendentes */
 
+/** De onde vêm os cargos de quem estudou até cada ponto: as classes de ocupação e o peso de cada uma. */
+const CLASSES_DA_ESCOLARIDADE: Record<string, [string, number][]> = {
+  fundamental: [['vulneravel', 1], ['trabalhadora', 0.9]],
+  medio: [['vulneravel', 0.35], ['trabalhadora', 1], ['media_baixa', 0.7]],
+  tecnico: [['trabalhadora', 0.7], ['media_baixa', 1], ['media', 0.25]],
+  superior: [['media_baixa', 0.55], ['media', 1], ['alta', 0.35]]
+};
+
+/**
+ * REWORK 9 · NPC-01: um cargo plausível para um adulto da vida (a parceria, o amigo próximo) — pelo que a pessoa
+ * estudou e pelo que existe no país, sorteado por pessoa (o mesmo cargo a cada leitura). Sem lista "de parceiro":
+ * é o mesmo catálogo da população.
+ */
+export function ocupacaoDeAdulto(p: Pessoa, escolaridade: string, i: number): Ocupacao | undefined {
+  const pais = paisDaCidade(p.municipioId);
+  const pesos = CLASSES_DA_ESCOLARIDADE[escolaridade] ?? CLASSES_DA_ESCOLARIDADE.medio;
+  const vistos = new Map<string, { o: Ocupacao; w: number }>();
+  for (const [classe, w] of pesos) {
+    const lista = ocupacoesDaClasse(classe, pais).map(id => ocupacao(id)).filter(o => acessivel(p, o, i));
+    // Cada classe pesa o mesmo no todo (uma lista comprida não engole as curtas).
+    for (const o of lista) { const x = vistos.get(o.id); const peso = w / lista.length; if (x) x.w += peso; else vistos.set(o.id, { o, w: peso }); }
+  }
+  const opcoes = [...vistos.values()];
+  if (!opcoes.length) return undefined;
+  return rngDe(p.id, 'ocupacao-adulto').weighted(opcoes, x => x.w)!.o;
+}
+
 /**
  * A carreira de quem importa e não é filho nem neto — a parceria, o amigo
  * próximo: a MESMA simulação dos descendentes (entrada, experiência,
@@ -524,12 +566,15 @@ export function carreiraDeAdulto(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, cota:
   // Quem ainda estuda (sem curso acompanhado) começa a trabalhar aos poucos, não no dia dos 18.
   if (p.ocupacao === 'estudante' && i < 22 && !r.chance(0.35)) return undefined;
   if (p.renda > 0 && !p.ocupacaoId && !p.ocupacao?.startsWith('aposentad')) {
-    const base = ocupacoesDaClasse(vida.escolaridade === 'superior' ? 'media' : vida.escolaridade === 'fundamental' ? 'vulneravel' : 'trabalhadora', paisDaCidade(p.municipioId));
-    const lista = base.map(id => ocupacao(id)).filter(o => acessivel(p, o, i));
-    if (lista.length) {
-      const oc = lista.reduce((m, o) => (Math.abs(liquido(salarioLocal(o, p.municipioId), o.contrato, paisDaCidade(p.municipioId)) - p.renda) < Math.abs(liquido(salarioLocal(m, p.municipioId), m.contrato, paisDaCidade(p.municipioId)) - p.renda) ? o : m));
+    // REWORK 9 · NPC-01: antes, o cargo era o da lista da classe com o salário MAIS PERTO da renda sorteada — uma conta
+    // que caía sempre nos mesmos poucos ofícios (babá, diarista, limpeza). Agora o cargo vem do que a pessoa estudou
+    // (as classes vizinhas pesam), sorteado por pessoa (estável), e a renda passa a ser a do cargo: a casa, a ficha e o
+    // orçamento concordam. Sem regra de gênero: o catálogo é o mesmo para todos.
+    const oc = ocupacaoDeAdulto(p, vida.escolaridade, i);
+    if (oc) {
       p.ocupacaoId = oc.id;
       p.ocupacao = nomeOc(p, oc);
+      p.renda = liquido(salarioLocal(oc, p.municipioId), oc.contrato, paisDaCidade(p.municipioId));
       vida.tCargo ??= v.t - 24;
     }
   }

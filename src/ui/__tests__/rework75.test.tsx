@@ -19,8 +19,10 @@ import { criarVida } from '../../motor/criacao';
 import { avancarAno } from '../../motor/ano';
 import { executar, type Acao } from '../../motor/acoes';
 import { interpretar } from '../../motor/save';
-import { encaixe, semana } from '../../motor/sistemas/semana';
-import { ROTINAS } from '../../motor/sistemas/rotinas';
+import { agendaDaSemana } from '../../motor/sistemas/agenda';
+import { contratar } from '../../motor/sistemas/trabalho';
+import { ocupacao } from '../../motor/dados/ocupacoes';
+import { transacao } from '../../motor/nucleo';
 import { registrarMortes } from '../../motor/sistemas/luto';
 import { lembrarCom } from '../../motor/nucleo';
 import { vincular } from '../../motor/pessoas';
@@ -196,44 +198,48 @@ describe('a agenda da semana', () => {
     return v;
   };
 
-  it('as linhas e os quadrinhos são os da semana do motor (uma vez por semana = um quadrinho), sem dia nem hora', () => {
+  // REWORK 9: a agenda deixou de ser frequência sem dia nem hora — é a semana em horários (`sistemas/agenda`).
+  it('REWORK 9 — os blocos são os da agenda do motor: cada compromisso nos seus dias e horas', () => {
     const v = comAtividades();
     render(<main><Tempo vida={v} agir={() => true} aba="semana" /></main>);
     const agenda = screen.getByRole('region', { name: 'A agenda da semana' });
-    const s = semana(v);
-    expect(within(agenda).getAllByRole('button', { name: /Abrir a ficha/ })).toHaveLength(s.rotinas.length);
-    const quadros = agenda.querySelectorAll('.agenda__linhas .agenda__q:not(.agenda__q--livre)').length;
-    const esperado = [...s.fixos.filter(f => f.peso >= 0.2), ...s.rotinas].reduce((t, x) => t + Math.max(1, Math.round((x.id === 'trabalho' ? Math.max(0.25, x.peso - s.ganhos.reduce((g, y) => g + y.peso, 0)) : x.peso) * 2)), 0);
-    expect(quadros).toBe(esperado);
-    expect(agenda.textContent).toMatch(/não em que dia nem a que horas/);
-    expect(agenda.textContent).not.toMatch(/segunda|terça|quarta|\d+h/i);
-    // A lista de antes continua, como alternativa.
+    const a = agendaDaSemana(v);
+    expect(agenda.querySelectorAll('.bloco-agenda').length).toBe(a.blocos.reduce((t, b) => t + b.dias.length, 0));
+    for (const id of ['corrida', 'teatro', 'desenho']) expect(a.blocos.some(b => b.ref === id)).toBe(true);
+    expect(agenda.textContent).toMatch(/Seg|Ter|Qua/);
+    // A lista de antes continua, como outra leitura.
     expect(screen.getByRole('img', { name: /A semana:/ })).toBeTruthy();
   });
 
-  it('"Mais a sério" na agenda muda o nível pelo motor; um toque na linha abre a ficha da prática', () => {
+  it('"Mais a sério" no compromisso aberto muda o nível pelo motor; "Abrir a ficha da prática" abre a ficha', () => {
     let atual = comAtividades();
     render(<Ligado v0={atual} aoMudar={v => { atual = v; }} tela={(v, agir) => <Tempo vida={v} agir={agir} aba="semana" />} />);
-    const agenda = screen.getByRole('region', { name: 'A agenda da semana' });
-    const mais = within(agenda).getAllByRole('button', { name: /^Mais a sério:/ }).find(b => !(b as HTMLButtonElement).disabled)!;
-    const linha = mais.closest('.agenda__linha')!;
-    const nome = linha.querySelector('.agenda__abrir span:last-child')!.textContent!;
+    const agenda = () => screen.getByRole('region', { name: 'A agenda da semana' });
+    fireEvent.click(within(agenda()).getAllByRole('button', { name: /^Teatro/ })[0]);
+    const mais = within(agenda()).getAllByRole('button', { name: /^Mais a sério:/ }).find(b => !(b as HTMLButtonElement).disabled)!;
     fireEvent.click(mais);
-    const id = atual.rotinas.find(r => r.nivel === 2)?.id;
-    expect(id).toBeTruthy();
-    fireEvent.click(within(screen.getByRole('region', { name: 'A agenda da semana' })).getByRole('button', { name: new RegExp(`^${nome}:`) }));
-    expect(screen.getByRole('dialog', { name: nome })).toBeTruthy();
+    expect(atual.rotinas.find(r => r.id === 'teatro')?.nivel).toBe(2);
+    // O compromisso continua aberto depois da mudança (a escolha não fecha a ficha dele).
+    fireEvent.click(within(agenda()).getByRole('button', { name: 'Abrir a ficha da prática' }));
+    expect(screen.getByRole('dialog', { name: /Teatro/ })).toBeTruthy();
   });
 
-  it('a semana cheia demais mostra o conflito com o porquê do motor e os quadrinhos além do que cabe', () => {
-    let v = adulto(28, { semente: 12 });
-    // Enche a semana com o que o motor aceita, até passar do que cabe.
-    for (const m of ROTINAS) { if (!['folgada', 'ocupada'].includes(encaixe(v, 0).faixa)) break; v = fazer(v, { tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }); }
-    expect(['cheia', 'sobrecarregada', 'alem']).toContain(encaixe(v, 0).faixa);
-    render(<main><Tempo vida={v} agir={() => true} aba="semana" /></main>);
+  it('um compromisso que chega depois em cima de uma atividade marcada vira conflito, com as saídas de verdade', () => {
+    let v = transacao(comAtividades(), x => { x.trabalho.atual = undefined; }).vida;
+    v = fazer(v, { tipo: 'agenda', op: { oque: 'mover', id: 'corrida', dias: [1], inicio: 10 * 60 } });
+    expect(v.agenda?.lugares?.corrida).toEqual({ dias: [1], inicio: 600 });
+    v = transacao(v, (x, r) => { x.trabalho.atual = undefined; contratar(x, r, ocupacao('assistente_adm')); }).vida;
+    const a = agendaDaSemana(v);
+    expect(a.conflitos.some(c => c.perde === 'corrida')).toBe(true);
+    expect(a.presenca.corrida).toBeLessThan(1);
+    let atual = v;
+    render(<Ligado v0={atual} aoMudar={x => { atual = x; }} tela={(x, agir) => <Tempo vida={x} agir={agir} aba="semana" />} />);
     const agenda = screen.getByRole('region', { name: 'A agenda da semana' });
-    expect(agenda.textContent).toMatch(/Conflito de tempo/);
-    expect(agenda.querySelectorAll('.agenda__q--descanso, .agenda__q--alem, .agenda__q--impossivel').length).toBeGreaterThan(0);
+    expect(agenda.textContent).toMatch(/Conflito de horário/);
+    expect(within(agenda).getByRole('button', { name: /^Largar correr/i })).toBeTruthy();
+    fireEvent.click(within(agenda).getByRole('button', { name: /^Remarcar correr/i }));
+    expect(atual.agenda?.lugares?.corrida).toBeUndefined();
+    expect(agendaDaSemana(atual).presenca.corrida).toBe(1);
   });
 });
 
@@ -355,7 +361,8 @@ describe('integração: os fluxos até salvar, reabrir e continuar', () => {
     v = reabrir(anos(v, 1));
     render(<main><Tempo vida={v} agir={() => true} aba="semana" /></main>);
     const agenda = screen.getByRole('region', { name: 'A agenda da semana' });
-    fireEvent.click(within(agenda).getByRole('button', { name: /^Tocar um instrumento:/ }));
+    fireEvent.click(within(agenda).getAllByRole('button', { name: /^Tocar um instrumento/ })[0]);
+    fireEvent.click(within(agenda).getByRole('button', { name: 'Abrir a ficha da prática' }));
     const ficha = screen.getByRole('dialog', { name: 'Tocar um instrumento' });
     expect(within(ficha).getByRole('region', { name: 'Com o que você pratica' }).textContent).toMatch(/Violão/i);
   });
