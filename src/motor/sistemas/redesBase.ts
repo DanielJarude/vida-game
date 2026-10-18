@@ -10,7 +10,7 @@
  * As redes são SIMULAÇÃO interna (funcionam offline; nenhuma rede de verdade é tocada).
  */
 
-import type { ContaSocial, PlataformaId, Vida } from '../tipos';
+import type { BalancoDoPublico, ContaSocial, PlataformaId, Vida } from '../tipos';
 import { ORDEM_PLATAFORMAS, PLATAFORMAS, ehPlataforma } from '../dados/redes';
 
 export { PLATAFORMAS, ORDEM_PLATAFORMAS };
@@ -21,6 +21,47 @@ export const PLATAFORMA_PADRAO: PlataformaId = 'instagram';
 export function contaAtiva(v: Vida, plataforma: PlataformaId = PLATAFORMA_PADRAO): ContaSocial | undefined {
   const c = v.redes?.contas[plataforma];
   return c && c.apagada === undefined ? c : undefined;
+}
+
+/* ---------------------------------------------------------------- O balanço do público (REWORK 9 · SOC-01) */
+
+export type FonteDoPublico = 'organico' | 'publicacoes' | 'exposicao' | 'comprados' | 'perdas';
+
+/** O balanço aberto da conta (uma conta de antes do REWORK 9 abre o primeiro aqui, a partir do que tem). */
+export function balancoAberto(c: ContaSocial, t: number, fama?: number): BalancoDoPublico {
+  return (c.balanco ??= { desde: t, inicio: c.seguidores, organico: 0, publicacoes: 0, exposicao: 0, comprados: 0, perdas: 0, ...(fama !== undefined ? { famaInicio: fama } : {}) });
+}
+
+/**
+ * A ÚNICA porta por onde o número de seguidores muda: soma (ou tira) e diz
+ * por quê. Um ganho negativo vira perda; a conta nunca fica abaixo de zero
+ * (e o balanço guarda só o que de fato aconteceu). Devolve o que foi aplicado.
+ */
+export function mudarPublico(c: ContaSocial, delta: number, fonte: FonteDoPublico, t: number, motivo?: string): number {
+  const b = balancoAberto(c, t);
+  let d = Math.round(fonte === 'perdas' ? -Math.abs(delta) : delta);
+  if (d < -c.seguidores) d = -c.seguidores;
+  if (d === 0) return 0;
+  c.seguidores += d;
+  if (d < 0) b.perdas += -d;
+  else b[fonte === 'perdas' ? 'organico' : fonte] += d;
+  if (motivo && d !== 0) b.motivos = [...new Set([...(b.motivos ?? []), motivo])].slice(-4);
+  return d;
+}
+
+/** A soma que fecha o balanço (o teste e a tela conferem a mesma conta). */
+export const fimDoBalanco = (b: BalancoDoPublico) => b.inicio + b.organico + b.publicacoes + b.exposicao + b.comprados - b.perdas;
+
+/** Fecha o ano da conta: guarda o balanço (os últimos 10) e abre o próximo a partir do número de agora. */
+export function fecharBalanco(c: ContaSocial, t: number, fama: number): BalancoDoPublico {
+  const b = balancoAberto(c, t);
+  b.ate = t;
+  b.fim = c.seguidores;
+  b.famaFim = fama;
+  (c.anos ??= []).push(b);
+  if (c.anos.length > 10) c.anos.splice(0, c.anos.length - 10);
+  c.balanco = { desde: t, inicio: c.seguidores, organico: 0, publicacoes: 0, exposicao: 0, comprados: 0, perdas: 0, famaInicio: fama };
+  return b;
 }
 
 /** Todas as contas ativas, na ordem das plataformas. */

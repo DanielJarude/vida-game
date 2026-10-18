@@ -156,6 +156,7 @@ export const AUSTRALIA: PerfilDePais = {
     // Sem acesso e descenso entre a A-League e as divisões abaixo. O Australian
     // Championship (2025) é a 2ª divisão nacional, com clubes das NPL estaduais.
     divisoes: ['State League', 'National Premier Leagues', 'Australian Championship', 'A-League Men'],
+    acesso: 'fechada',
     clubes: [
       { nome: 'Sydney FC', artigo: 'o', porte: 'grande', cidade: 'Sydney' },
       { nome: 'Melbourne Victory', artigo: 'o', porte: 'grande', cidade: 'Melbourne' },
@@ -382,6 +383,7 @@ export const NOVA_ZELANDIA: PerfilDePais = {
     // a National League é a 1ª divisão nacional, alimentada pelas ligas Northern,
     // Central e Southern.
     divisoes: ['ligas regionais das federações', 'Northern, Central e Southern League', 'National League', 'A-League Men'],
+    acesso: 'fechada',
     clubes: [
       { nome: 'Auckland FC', artigo: 'o', porte: 'grande', cidade: 'Auckland' },
       { nome: 'Wellington Phoenix', artigo: 'o', porte: 'grande', cidade: 'Wellington' },

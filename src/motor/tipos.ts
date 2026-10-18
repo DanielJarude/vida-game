@@ -2026,7 +2026,17 @@ export interface Devolutiva {
   fracaPrevista?: string;
 }
 
+/** REWORK 9 · FUT-01: a tabela de um país no universo da vida — em que divisão cada clube está (`sistemas/ligas`). */
+export interface LigaDoPais {
+  /** A última temporada já jogada (a divisão guardada vale para a seguinte). */
+  ano: number;
+  div: Record<string, 1 | 2 | 3 | 4>;
+  ultima?: { ano: number; campeoes: Partial<Record<1 | 2 | 3 | 4, string>>; subiram: string[]; cairam: string[] };
+}
+
 export interface Caminhos {
+  /** REWORK 9: as ligas de futebol dos países onde a vida jogou ou dirigiu (opcional; nasce quando se precisa). */
+  ligas?: Record<string, LigaDoPais>;
   /** Processo seletivo em andamento (a decisão aberta é uma etapa dele). */
   processo?: ProcessoSeletivo;
   /** Perguntas de entrevista usadas recentemente (para não repetir) e quantas entrevistas já fez. */
@@ -2616,6 +2626,38 @@ export interface ContaSocial {
   celebridades?: string[];
   /** OnlyFans: quem da vida descobriu (pessoaIds), e se o trabalho soube. */
   descobriram?: string[];
+  /** REWORK 9 · SOC-01: o balanço do público no ano em curso — cada seguidor ganho ou perdido, com a causa. */
+  balanco?: BalancoDoPublico;
+  /** Os balanços dos anos já fechados (os últimos 10), na ordem. */
+  anos?: BalancoDoPublico[];
+}
+
+/**
+ * De onde veio (e para onde foi) o público num ano. A conta fecha:
+ * inicio + organico + publicacoes + exposicao + comprados − perdas = fim.
+ * Nada aqui é escrito depois: cada parcela é somada no instante em que o
+ * seguidor chega ou vai embora (`redesBase.mudarPublico`).
+ */
+export interface BalancoDoPublico {
+  desde: number;
+  ate?: number;
+  inicio: number;
+  /** Quem chegou sem uma publicação específica: conhecidos, a constância, o catálogo que continua sendo visto. */
+  organico: number;
+  /** O que as publicações, as colaborações, as campanhas e a rotina de criar conteúdo trouxeram. */
+  publicacoes: number;
+  /** O nome fora da rede: a notoriedade, uma celebridade que compartilhou, o que aconteceu na vida pública. */
+  exposicao: number;
+  /** Seguidores comprados (contados até alguém descobrir). */
+  comprados: number;
+  /** Quem foi embora: a rede esquece, quem deixou de seguir, a compra descoberta. */
+  perdas: number;
+  fim?: number;
+  /** A notoriedade no começo e no fim do período (o motor sabe; a tela mostra). */
+  famaInicio?: number;
+  famaFim?: number;
+  /** As causas conhecidas da exposição (textos curtos de acontecimentos que existem no estado). */
+  motivos?: string[];
 }
 
 export type TemaPublicacao =

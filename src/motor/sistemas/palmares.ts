@@ -28,7 +28,9 @@ import { escrever, idade } from '../nucleo';
 import { flex, ge } from '../texto';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
-import { clubePorNome, divisaoDoNivel, doClube, noClube, oClube } from '../dados/clubes';
+import { divisaoDoNivel, doClube, noClube, oClube } from '../dados/clubes';
+import { paisDaCidade } from '../dados/lugares';
+import { fecharTemporadaDaLiga } from './ligas';
 import { ASSIST, carreirasEsportivas, DEFESA, divisaoDe, GOL, jogosDaTemporada, linhaDaTemporada, NOME_MOD, nomePosicao } from './esporte';
 import { aCompeticao, avaliarPelaModalidade, daCompeticao, individualComEquipe, lideresDaTemporada, perfilDe } from './perfisEsportivos';
 import { formatarMarca, naProva, podiosDe } from './provas';
@@ -85,10 +87,6 @@ export function avaliarTemporada(e: CarreiraEsportiva, t: Temporada): { indice: 
 export const competicaoDe = (d: Dominio, nivel: number) => (d === 'futebol' ? divisaoDoNivel(nivel) : divisaoDe(d, nivel).replace(/ —.*$/, '').replace(/ \(acesso\)$/, ''));
 export { daCompeticao };
 
-/** O teto de divisão de um clube na simulação (o mesmo de `esporte`). */
-const tetoDoClube = (nome: string) => { const c = clubePorNome(nome); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
-/** O piso: um clube grande cai, mas não some para as divisões de acesso (a simulação não leva um gigante ao estadual). */
-export const pisoDoClube = (nome: string) => { const c = clubePorNome(nome); return !c ? 1 : c.porte === 'grande' ? 3 : c.porte === 'tradicional' ? 2 : 1; };
 
 /* ------------------------------------------------------------ A temporada no palmarés */
 
@@ -148,17 +146,20 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   }
 
   // Acesso e rebaixamento: o clube sobe ou cai — e você junto (o contrato continua; a próxima conversa já é em outra divisão).
+  // REWORK 9 · FUT-01: no futebol, quem decide é a tabela do país (`ligas`): sem teto pelo porte, com as regras do país,
+  // e os outros clubes do catálogo jogando a mesma temporada. Nos outros esportes de clube, a regra de sempre.
   if (perfilDe(e.modalidade).estrutura === 'clube') {
-    const sobe = t.nivel < 4 && t.colocacao <= (t.nivel === 1 ? 2 : 4) && (!futebol || tetoDoClube(e.clube) > t.nivel);
-    const cai = t.nivel >= 2 && t.colocacao >= 17 && (!futebol || t.nivel - 1 >= pisoDoClube(e.clube));
-    if (sobe && e.nivel === t.nivel) {
+    const mov = futebol
+      ? fecharTemporadaDaLiga(v, paisDaCidade(e.municipioId), t.ano, t.clube, t.nivel, t.colocacao)
+      : t.nivel < 4 && t.colocacao <= (t.nivel === 1 ? 2 : 4) ? 1 : t.nivel >= 2 && t.colocacao >= 17 ? -1 : 0;
+    if (mov === 1 && e.nivel === t.nivel) {
       e.nivel = (t.nivel + 1) as 1 | 2 | 3 | 4;
       const para = competicaoDe(e.modalidade, e.nivel);
       const texto = `Acesso: ${futebol ? oClube(e.clube) : 'a equipe'} subiu para ${aCompeticao(para)}${ava.participacao >= 0.5 ? ', com você entre os titulares' : ''}.`;
       registrarConquista(v, { tipo: 'acesso', modalidade: e.modalidade, ano: t.ano, competicao: para, clube: t.clube, papel: ava.participacao >= 0.5 ? 'protagonista' : 'elenco', texto: `Acesso para ${aCompeticao(para)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
       escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
       e.reputacao = clamp((e.reputacao ?? 30) + 1);
-    } else if (cai && e.nivel === t.nivel) {
+    } else if (mov === -1 && e.nivel === t.nivel) {
       e.nivel = (t.nivel - 1) as 1 | 2 | 3 | 4;
       const para = competicaoDe(e.modalidade, e.nivel);
       registrarConquista(v, { tipo: 'rebaixamento', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: `Rebaixamento ${daCompeticao(comp)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });

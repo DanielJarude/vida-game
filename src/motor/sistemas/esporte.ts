@@ -35,7 +35,7 @@ import { contratar, encerrarEmprego } from './trabalho';
 import { capitalDoEstado } from './escola';
 import { flex, ge } from '../texto';
 import { novaOportunidade } from './oportunidades';
-import { aoClube, clubeDoNivel, clubePorNome, clubesDoNivel, clubesDoPais, clubesDaCidade, divisaoDoNivel, doClube, equipeDaCidade, noClube, oClube, peloClube } from '../dados/clubes';
+import { aoClube, clubeDoNivel, clubePorNome, clubesDoPais, clubesDaCidade, divisaoDoNivel, doClube, equipeDaCidade, noClube, oClube, peloClube } from '../dados/clubes';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import { abalar } from './abalo';
@@ -46,7 +46,8 @@ import { dinheiro } from '../texto';
 import { CIRCUITO_TENIS, custoDoCircuito, custoJuvenilTenis, DIVISAO_BASQUETE, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO, circuitoDeEstreia, circuitoPeloRanking, PONTOS_CAMPEAO, PONTOS_PRINCIPAL, pontosDaRodada, premiacaoTenis, rankingPorPontos, vantagemDeEstatura, vivePremiacao } from './modalidades';
 import { recursosDaFamilia } from './origem';
 import { mudarAgora } from './processos';
-import { pisoDoClube, registrarTemporada, registrarConquista } from './palmares';
+import { registrarTemporada, registrarConquista } from './palmares';
+import { clubesNaDivisao, divisaoDoClube, forcaDoClube } from './ligas';
 import { processarSelecao } from './selecao';
 import { nomePor } from './notoriedade';
 import { daPorta, individualComEquipe, perfilDe, portaAmadora, semVinculo } from './perfisEsportivos';
@@ -158,8 +159,6 @@ export function ondeTreina(v: Vida, d: Dominio = 'futebol'): string {
   return estruturaEsportiva(aqui) >= 1 ? aqui : capitalDoEstado(aqui);
 }
 
-/** O teto de divisão de um clube na simulação (os grandes chegam à elite; os regionais, às divisões de acesso). */
-const tetoDoClube = (nome: string, pais?: string) => { const c = clubePorNome(nome, pais); return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2; };
 /** A modalidade que a pessoa pratica com mais seriedade agora. */
 export function modalidadePrincipal(v: Vida): { d: Dominio; nivel: number } | undefined {
   // O time da escola é futebol de competição (os jogos escolares): conta como treino regular (REWORK 3).
@@ -327,7 +326,8 @@ function clubeDeFora(v: Vida, e: CarreiraEsportiva, origem: PropostaDeClube['ori
   return c ? { nome: c.nome, cidade: c.cidade } : undefined;
 }
 
-export function criarProposta(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 4, origem: PropostaDeClube['origem']): PropostaDeClube | undefined {
+export function criarProposta(v: Vida, e: CarreiraEsportiva, nivelPedido: 1 | 2 | 3 | 4, origem: PropostaDeClube['origem']): PropostaDeClube | undefined {
+  let nivel = nivelPedido;
   if (propostaNaMesa(v)) return undefined;
   const futebol = e.modalidade === 'futebol';
   // O clube que quer você: no futebol, um clube real do porte da divisão (a liberação, de preferência no mesmo estado);
@@ -341,14 +341,18 @@ export function criarProposta(v: Vida, e: CarreiraEsportiva, nivel: 1 | 2 | 3 | 
     // Uma liga de fora: o clube e a cidade dele (aceitar é migrar — `migracao`, pela porta do esporte).
     const f = clubeDeFora(v, e, origem)!;
     clube = f.nome; municipioId = f.cidade;
+    // REWORK 9: a divisão da proposta é a que o clube joga de fato (a tabela do país dele).
+    nivel = divisaoDoClube(v, clube, paisDaCidade(municipioId));
   }
   else if (futebol) {
-    const doNivel = clubesDoNivel(nivel, e.emprestimo?.clube ?? e.clube, paisDaCidade(e.municipioId)).filter(c => c.nome !== e.clube);
+    const pais = paisDaCidade(e.municipioId);
+    const doNivel = clubesNaDivisao(v, nivel, e.emprestimo?.clube ?? e.clube, pais).filter(c => c.nome !== e.clube);
     const uf = municipio(v.moradia.municipioId).uf;
     const pertos = origem === 'liberacao' || origem === 'emprestimo' ? doNivel.filter(c => municipio(c.cidade).uf === uf) : [];
     const lista = pertos.length ? pertos : doNivel;
     clube = lista[Math.floor(hash(`${v.id}:${v.t}:${origem}:proposta`) * lista.length) % lista.length].nome;
-    municipioId = clubePorNome(clube, paisDaCidade(e.municipioId))?.cidade ?? v.moradia.municipioId;
+    municipioId = clubePorNome(clube, pais)?.cidade ?? v.moradia.municipioId;
+    nivel = divisaoDoClube(v, clube, pais);
   } else if (perfilDe(e.modalidade).estrutura === 'clube') {
     // Basquete e vôlei: outra equipe, de outra cidade (a elite fica nas cidades grandes; o acesso, mais perto).
     const alvo = cidadeDeEquipe(v, e, nivel, origem);
@@ -395,7 +399,8 @@ export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube
   if (p.origem === 'emprestimo') { emprestar(v, e, p); return; }
   const de = e.clube;
   e.clube = p.clube;
-  e.nivel = p.nivel;
+  // REWORK 9: se o clube subiu ou caiu desde a proposta, a divisão é a de agora (a tabela do país).
+  e.nivel = e.modalidade === 'futebol' ? divisaoDoClube(v, p.clube, paisDaCidade(p.municipioId)) : p.nivel;
   e.espaco = p.espaco;
   e.contratoAte = v.t + p.meses;
   e.proposta = undefined;
@@ -439,7 +444,7 @@ function cidadeDeEquipe(v: Vida, e: CarreiraEsportiva, nivel: number, origem: Pr
 export function emprestar(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube): void {
   e.emprestimo = { clube: e.clube, municipioId: e.municipioId, nivel: e.nivel, desde: v.t, ate: Math.min(v.t + p.meses, e.contratoAte ?? v.t + p.meses) };
   e.clube = p.clube;
-  e.nivel = p.nivel;
+  e.nivel = e.modalidade === 'futebol' ? divisaoDoClube(v, p.clube, paisDaCidade(p.municipioId)) : p.nivel;
   e.espaco = 'titular';
   e.municipioId = p.municipioId;
   e.proposta = undefined;
@@ -454,7 +459,8 @@ export function voltarDoEmprestimo(v: Vida, e: CarreiraEsportiva): string {
   const onde = e.clube;
   const jogos = (e.temporadas ?? []).filter(t => t.emprestado === x.clube && t.clube === onde).reduce((a, t) => a + t.partidas, 0);
   e.clube = x.clube;
-  e.nivel = x.nivel;
+  // O clube detentor pode ter subido ou caído enquanto você estava fora: a divisão é a da tabela.
+  e.nivel = e.modalidade === 'futebol' ? divisaoDoClube(v, x.clube, paisDaCidade(x.municipioId)) : x.nivel;
   e.municipioId = x.municipioId;
   e.emprestimo = undefined;
   e.proposta = undefined;
@@ -565,7 +571,7 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   const assistencias = futebol ? Math.round(peso * ASSIST[pos] * (0.75 + r.next() * 0.5)) : 0;
   const defesa = futebol && (pos === 'goleiro' || pos === 'zagueiro' || pos === 'lateral' || pos === 'volante') ? Math.round(peso * DEFESA[pos] * (0.8 + r.next() * 0.4)) : undefined;
   // Onde o time terminou: a força do clube na divisão, a sua temporada, e o resto do elenco.
-  const forcaClube = (tetoDoClube(e.clube) - e.nivel) * 3;
+  const forcaClube = (forcaDoClube(e.clube, paisDaCidade(e.municipioId)) - e.nivel) * 3;
   // Nas modalidades individuais com equipe (natação, atletismo, luta), a colocação é a do atleta na prova que importa — não a do time.
   const individual = individualComEquipe(e.modalidade);
   const colocacao = individual
@@ -883,7 +889,7 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     novaOportunidade(v, {
       tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'contrato_esporte',
       titulo: e.modalidade === 'tenis' ? 'Virar profissional' : 'Contrato profissional',
-      texto: e.modalidade === 'tenis' ? 'Os resultados do circuito juvenil chamaram atenção: dá para virar profissional. Sem clube e sem salário — o que entra é a premiação, e treinador e viagens passam a ser seus.' : e.modalidade === 'basquete' ? `${cap(oClube(e.clube))} ofereceu contrato para o time adulto: uma temporada, salário de atleta, lugar no elenco${nivel >= 3 ? ' do NBB' : ''}.` : e.modalidade === 'futebol' ? `${cap(oClube(e.clube))} ofereceu o primeiro contrato profissional${nivel > tetoDoClube(e.clube) ? ' — e há sondagem de um clube maior' : ''}. Salário de verdade, prazo de dois anos.` : `A equipe ofereceu contrato de atleta profissional, com salário e calendário de competições.`,
+      texto: e.modalidade === 'tenis' ? 'Os resultados do circuito juvenil chamaram atenção: dá para virar profissional. Sem clube e sem salário — o que entra é a premiação, e treinador e viagens passam a ser seus.' : e.modalidade === 'basquete' ? `${cap(oClube(e.clube))} ofereceu contrato para o time adulto: uma temporada, salário de atleta, lugar no elenco${nivel >= 3 ? ' do NBB' : ''}.` : e.modalidade === 'futebol' ? `${cap(oClube(e.clube))} ofereceu o primeiro contrato profissional${nivel > divisaoDoClube(v, e.clube, paisDaCidade(e.municipioId)) ? ' — e há sondagem de um clube maior' : ''}. Salário de verdade, prazo de dois anos.` : `A equipe ofereceu contrato de atleta profissional, com salário e calendário de competições.`,
       bonus: nivel
     });
     return;
@@ -907,24 +913,30 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
       // O clube é de outra cidade: a vida vai junto (quem mora na casa também — a mesma regra de toda mudança).
       if (p.municipioId !== v.moradia.municipioId) { emp.municipioId = p.municipioId; mudarAgora(v, p.municipioId, `para jogar ${noClube(p.clube)}`); }
     }
-    else { e.nivel = Math.max(1, Math.min(4, nivel)) as 1 | 2 | 3 | 4; e.espaco = 'reserva'; assinarContrato(v, e, 12); }
+    else { e.nivel = e.modalidade === 'futebol' ? divisaoDoClube(v, e.clube, paisDaCidade(e.municipioId)) : Math.max(1, Math.min(4, nivel)) as 1 | 2 | 3 | 4; e.espaco = 'reserva'; assinarContrato(v, e, 12); }
     const texto = e.modalidade === 'futebol' ? `Voltou a jogar: assinou com ${oClube(e.clube)}, aos ${idade(v)}.` : `Voltou a competir, aos ${idade(v)}.`;
     escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
     return;
   }
   e.fase = 'profissional';
   e.tFase = v.t;
-  // O primeiro contrato é com o clube da base, na divisão que ele alcança na simulação.
-  e.nivel = Math.max(1, Math.min(4, nivel, e.modalidade === 'futebol' ? tetoDoClube(e.clube) : 4)) as 1 | 2 | 3 | 4;
-  // Um clube grande não joga as divisões de acesso: quem ainda não tem nível para o time de cima começa num clube
-  // do tamanho do próprio jogo (o mesmo estado, de preferência) — e a biografia diz isso.
+  // O primeiro contrato é com o clube da base, na divisão em que ELE joga (REWORK 9: a tabela do país). Nos
+  // outros esportes, a divisão que a técnica alcança.
+  e.nivel = Math.max(1, Math.min(4, nivel)) as 1 | 2 | 3 | 4;
+  // Quem está dois degraus abaixo da divisão do clube não tem lugar no time de cima: começa num clube do tamanho do
+  // próprio jogo (o mesmo estado, de preferência) — e a biografia diz isso. Um degrau abaixo, sobe para o elenco e briga.
   const daBase = e.clube;
-  if (e.modalidade === 'futebol' && e.nivel < pisoDoClube(e.clube)) {
-    const lista = clubesDoNivel(e.nivel, e.clube);
-    const uf = municipio(v.moradia.municipioId).uf;
-    const perto = lista.filter(c => municipio(c.cidade).uf === uf);
-    const alvo = (perto.length ? perto : lista)[Math.floor(hash(`${v.id}:primeiro`) * (perto.length || lista.length)) % (perto.length || lista.length)];
-    if (alvo) { e.clube = alvo.nome; e.municipioId = alvo.cidade; }
+  if (e.modalidade === 'futebol') {
+    const pais = paisDaCidade(e.municipioId);
+    const div = divisaoDoClube(v, e.clube, pais);
+    if (e.nivel < div - 1) {
+      const lista = clubesNaDivisao(v, e.nivel, e.clube, pais);
+      const uf = municipio(v.moradia.municipioId).uf;
+      const perto = lista.filter(c => municipio(c.cidade).uf === uf);
+      const alvo = (perto.length ? perto : lista)[Math.floor(hash(`${v.id}:primeiro`) * (perto.length || lista.length)) % (perto.length || lista.length)];
+      if (alvo) { e.clube = alvo.nome; e.municipioId = alvo.cidade; }
+    }
+    e.nivel = divisaoDoClube(v, e.clube, paisDaCidade(e.municipioId));
   }
   if (e.modalidade === 'futebol') e.posicao ??= posicaoSugerida(v);
   e.reputacao ??= Math.round(clamp(12 + (habilidade(v, e.modalidade) - 70) * 1.5 + e.nivel * 4, 5, 45));

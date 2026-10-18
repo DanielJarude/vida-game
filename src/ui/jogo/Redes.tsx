@@ -16,13 +16,13 @@ import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { PLATAFORMAS, ORDEM_PLATAFORMAS } from '../../motor/dados/redes';
-import { celebridadesDoPais, conteudosPossiveis, custoDaCampanha, custoDePromover, custoDoPacote, custoDoSelo, LIMITE_DO_ANO, leituraDaConta, PACOTES, seguidoresConhecidos, usaPlataforma } from '../../motor/sistemas/redes';
+import { celebridadesDoPais, conteudosPossiveis, custoDaCampanha, custoDePromover, custoDoPacote, custoDoSelo, LIMITE_DO_ANO, leituraDaConta, leituraDoBalanco, PACOTES, seguidoresConhecidos, usaPlataforma } from '../../motor/sistemas/redes';
 import { contaAtiva, seguidoresEmPalavras } from '../../motor/sistemas/redesBase';
 import { BotaoAcao } from '../comum';
 import { dinheiroCurto } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
 import { DESENHOS } from './Emblemas';
-import type { Publicacao, TemaPublicacao } from '../../motor/tipos';
+import type { ContaSocial, Publicacao, TemaPublicacao } from '../../motor/tipos';
 
 const DESENHO_DO_TEMA: Record<TemaPublicacao, string> = {
   cotidiano: 'semana', viagem: 'camera', trabalho: 'pasta', conquista: 'estrela', arte: 'pincel', pet: 'coracao', familia: 'familia', opiniao: 'conversa',
@@ -223,6 +223,35 @@ function TelaInicial({ vida, avisos, abrir }: { vida: Vida; avisos: Notificacao[
   );
 }
 
+/**
+ * REWORK 9 · SOC-01 — DE ONDE VEIO O PÚBLICO: o balanço do último ano fechado, parcela por parcela, com as causas que
+ * o motor registrou no instante em que cada seguidor chegou ou foi embora. A conta fecha (o teste confere a mesma
+ * leitura). Conta sem ano fechado: nada — nenhuma explicação inventada para o que veio antes do registro.
+ */
+export function BalancoDoPublico({ vida, conta, publico }: { vida: Vida; conta: ContaSocial; publico: string }) {
+  const b = leituraDoBalanco(vida, conta);
+  if (!b) return null;
+  return (
+    <section className="balanco-publico" aria-label="De onde veio o público">
+      <h4 className="plataforma-painel__sub">O público em {b.ano}</h4>
+      <p className="balanco-publico__de-para"><span>{seguidoresEmPalavras(b.inicio)}</span> <span aria-hidden>→</span><span className="sr-only">para</span> <strong>{seguidoresEmPalavras(b.fim)}</strong> {publico}</p>
+      {b.linhas.length === 0
+        ? <p className="nota">Ninguém chegou, ninguém foi embora.</p>
+        : (
+          <ul className="balanco-publico__linhas">
+            {b.linhas.map(l => (
+              <li key={l.id} className={`balanco-publico__linha balanco-publico__linha--${l.valor > 0 ? 'ganho' : 'perda'}`} data-parcela={l.id}>
+                <span className="balanco-publico__valor">{l.valor > 0 ? '+' : '−'}{seguidoresEmPalavras(Math.abs(l.valor))}</span>
+                <span className="balanco-publico__causa">{l.rotulo}{l.motivos.length ? <span className="balanco-publico__motivo"> — {l.motivos.join('; ')}</span> : null}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      {b.marcos.length > 0 && <p className="nota balanco-publico__marcos">No período: {b.marcos.join(' · ')}</p>}
+    </section>
+  );
+}
+
 function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; abrirPessoa?: (id: string) => void }) {
   const [promover, setPromover] = useState(false);
   const [mais, setMais] = useState<null | 'celebridade' | 'provocar' | 'conta'>(null);
@@ -263,6 +292,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         <div><dt>Renda</dt><dd>{l.renda > 0 ? `${dinheiroCurto(l.renda)}/mês` : c.monetizada !== undefined ? 'monetizada (sem renda agora)' : 'não monetizada'}</dd></div>
         {l.verificacao && <div><dt>Selo</dt><dd>{l.verificacao}</dd></div>}
       </dl>
+      <BalancoDoPublico vida={vida} conta={c} publico={pl.publico[1]} />
       {l.suspensa && <p className="nota nota--ruim"><span aria-hidden>! </span>A conta está suspensa: a {pl.nome} puniu as denúncias. Até lá, nada de publicar.</p>}
       {l.toxica && !l.suspensa && <p className="nota nota--atencao">A conta ficou com fama de briguenta: menos gente quer ser marcada por você, e a próxima denúncia pesa.</p>}
       {(c.advertencias ?? 0) > 0 && !l.suspensa && <p className="nota">Advertências: {c.advertencias} de 3.</p>}

@@ -173,6 +173,8 @@ export const ESTADOS_UNIDOS: PerfilDePais = {
     popularidade: { futebol: 0.8, volei: 1.05, basquete: 1.5, natacao: 1.35, atletismo: 1.25, lutas: 1.2, tenis: 1.3 },
     // Pirâmide sancionada pela US Soccer, sem acesso e descenso.
     divisoes: ['USL League Two', 'USL League One', 'USL Championship', 'MLS'],
+    // Ligas de franquia: não há acesso nem rebaixamento.
+    acesso: 'fechada',
     clubes: [
       { nome: 'LA Galaxy', artigo: 'o', porte: 'grande', cidade: 'Los Angeles' },
       { nome: 'LAFC', artigo: 'o', porte: 'grande', cidade: 'Los Angeles' },
@@ -436,6 +438,7 @@ export const CANADA: PerfilDePais = {
     // A Canadian Premier League é a 1ª divisão nacional; os três clubes canadenses
     // da MLS (liga binacional) são a elite de fato. League1 Canada: pró-amadora.
     divisoes: ['ligas provinciais', 'League1 Canada', 'Canadian Premier League', 'MLS'],
+    acesso: 'fechada',
     clubes: [
       { nome: 'Toronto FC', artigo: 'o', porte: 'grande', cidade: 'Toronto' },
       { nome: 'CF Montréal', artigo: 'o', porte: 'grande', cidade: 'Montreal' },
@@ -728,6 +731,8 @@ export const MEXICO: PerfilDePais = {
     // com história olímpica; beisebol (fora do jogo) forte no norte.
     popularidade: { futebol: 1.4, volei: 0.8, basquete: 0.85, natacao: 0.75, atletismo: 0.85, lutas: 1.3, tenis: 0.7 },
     divisoes: ['Liga TDP', 'Liga Premier', 'Liga de Expansión MX', 'Liga MX'],
+    // O rebaixamento da Liga MX está suspenso desde 2020.
+    acesso: 'fechada',
     clubes: [
       { nome: 'América', artigo: 'o', porte: 'grande', cidade: 'Cidade do México' },
       { nome: 'Cruz Azul', artigo: 'o', porte: 'grande', cidade: 'Cidade do México' },

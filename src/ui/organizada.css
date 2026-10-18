@@ -1,0 +1,17 @@
+/*
+ * REWORK 9 — A vida organizada. Classes novas deste pacote (as quatro paletas vêm dos tokens; nenhuma cor fixa).
+ */
+
+/* -------------------------------------------------- SOC-01: de onde veio o público (o balanço do ano) */
+.balanco-publico { margin: var(--space-3) 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); }
+.balanco-publico .plataforma-painel__sub { margin-top: 0; }
+.balanco-publico__de-para { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0 0 var(--space-2); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.balanco-publico__de-para strong { font-size: var(--type-lead); color: var(--text-primary); }
+.balanco-publico__linhas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.balanco-publico__linha { display: grid; grid-template-columns: minmax(5.5ch, auto) 1fr; gap: var(--space-2); align-items: baseline; font-size: var(--type-caption); }
+.balanco-publico__valor { font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); text-align: right; }
+.balanco-publico__linha--ganho .balanco-publico__valor { color: var(--bom); }
+.balanco-publico__linha--perda .balanco-publico__valor { color: var(--ruim); }
+.balanco-publico__causa { color: var(--text-primary); overflow-wrap: anywhere; }
+.balanco-publico__motivo { color: var(--text-secondary); }
+.balanco-publico__marcos { margin-top: var(--space-2); }

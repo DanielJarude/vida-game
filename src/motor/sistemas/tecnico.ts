@@ -38,7 +38,7 @@ import type { CarreiraDeTecnico, PassagemDeTecnico, PropostaDeTecnico, TabelaEmC
 import { escrever, idade } from '../nucleo';
 import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
-import { aSelecao, clubePorNome, clubesDoPais, daCompeticao, divisaoDoNivel, clubesDoNivel, doClube, nivelDaCompeticao, noClube, nomeDaSelecao, oClube, type Clube } from '../dados/clubes';
+import { aSelecao, clubePorNome, clubesDoPais, daCompeticao, divisaoDoNivel, doClube, nivelDaCompeticao, noClube, nomeDaSelecao, oClube, type Clube } from '../dados/clubes';
 import { capitalDoPais, grandesCentros, municipio, paisDaCidade } from '../dados/lugares';
 import { ocupacao } from '../dados/ocupacoes';
 import { habilidade } from './frentes';
@@ -47,6 +47,7 @@ import { mudarAgora } from './processos';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { torneioDoAno } from './selecao';
+import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube } from './ligas';
 
 export const OCUPACAO_TECNICO = 'tecnico_futebol';
 /** A seleção que chama um técnico: a do país dele (a nacionalidade de nascença). Sede: a capital (no Brasil, o Rio da CBF). */
@@ -66,11 +67,10 @@ export function passagemAtual(v: Vida): PassagemDeTecnico | undefined {
 export const noComando = (v: Vida) => !!passagemAtual(v) && v.trabalho.atual?.ocupacaoId === OCUPACAO_TECNICO;
 
 const porteDe = (nome: string): Clube['porte'] | undefined => clubePorNome(nome)?.porte;
-/** Onde o clube costuma jogar (a força do elenco na divisão) — a mesma régua da carreira de jogador. */
-const tetoDoClube = (nome: string) => { const p = porteDe(nome); return !p ? 2 : p === 'grande' ? 4 : p === 'tradicional' ? 3 : 2; };
-/** Até onde um acesso pode levar: o tradicional campeão da Série B sobe; o regional, até a Série B. */
-const tetoDeAcesso = (nome: string) => Math.min(4, tetoDoClube(nome) + 1);
-const pisoDoClube = (nome: string) => { const p = porteDe(nome); return !p ? 1 : p === 'grande' ? 3 : p === 'tradicional' ? 2 : 1; };
+/** A força do elenco pelo porte — a mesma régua da carreira de jogador (REWORK 9: força, nunca teto; quem sobe e cai é a tabela, `ligas`). */
+const tetoDoClube = (nome: string) => forcaDoClube(nome);
+/** A divisão em que o clube joga agora, na tabela do país dele. */
+const divisaoDe = (v: Vida, c: Clube): 1 | 2 | 3 | 4 => divisaoDoClube(v, c.nome, paisDaCidade(c.cidade));
 const nomeDaCompeticao = (nivel: number) => divisaoDoNivel(nivel) || 'copa regional';
 /**
  * O torneio curto do começo da temporada: no Brasil, o estadual; fora, a copa
@@ -212,15 +212,14 @@ function iniciarComando(v: Vida, r: Rng): void {
   c.tFim = undefined;
   // O primeiro clube: quem nunca dirigiu começa embaixo; o nome do ex-jogador abre a porta de um clube maior, não a da elite.
   const nivel = nivelPeloNome(c.reputacao);
-  const ultimoClube = es.map(x => x!.clube).find(n => !!clubePorNome(n) && tetoDoClube(n) >= nivel && pisoDoClube(n) <= nivel);
+  const ultimoClube = es.map(x => x!.clube).find(n => !!clubePorNome(n) && divisaoDe(v, clubePorNome(n)!) === nivel);
   const clube = ultimoClube && r.chance(0.35) ? clubePorNome(ultimoClube)! : escolherClube(v, r, nivel);
-  const prop: PropostaDeTecnico = { id: `tec_${v.t}_ini`, clube: clube.nome, municipioId: clube.cidade, nivel: nivelDoClube(clube, nivel), meses: 24, salario: salarioDeTecnico(clube.nome, nivel, c.reputacao), t: v.t, validaAte: v.t, origem: 'mercado' };
+  const prop: PropostaDeTecnico = { id: `tec_${v.t}_ini`, clube: clube.nome, municipioId: clube.cidade, nivel: divisaoDe(v, clube), meses: 24, salario: salarioDeTecnico(clube.nome, divisaoDe(v, clube), c.reputacao), t: v.t, validaAte: v.t, origem: 'mercado' };
   assumir(v, r, c, prop, true);
 }
 
 /** A divisão que o nome abre (o mercado olha a reputação de técnico). */
 const nivelPeloNome = (rep: number): 1 | 2 | 3 | 4 => (rep >= 74 ? 4 : rep >= 52 ? 3 : rep >= 32 ? 2 : 1);
-const nivelDoClube = (c: Clube, alvo: number): 1 | 2 | 3 | 4 => clamp(alvo, c.porte === 'grande' ? 3 : c.porte === 'tradicional' ? 2 : 1, tetoDoClube(c.nome)) as 1 | 2 | 3 | 4;
 
 /** Um clube do nível, de preferência no estado de quem procura (o mercado de técnico começa perto). */
 function escolherClube(v: Vida, r: Rng, nivel: number, excluir?: string): Clube {
@@ -228,7 +227,7 @@ function escolherClube(v: Vida, r: Rng, nivel: number, excluir?: string): Clube 
   // Quem demitiu há pouco não chama de volta; o clube de onde se acabou de sair, também não.
   const ps = v.caminhos.tecnico?.passagens ?? [];
   const fechados = new Set(ps.filter((p, k) => p.ate !== undefined && ((p.saida === 'demissao' && v.t - p.ate < 72) || (k === ps.length - 1 && v.t - p.ate < 36))).map(p => p.clube));
-  const todos = clubesDoNivel(nivel, excluir);
+  const todos = clubesNaDivisao(v, nivel, excluir, paisDaCidade(v.moradia.municipioId));
   const lista = todos.filter(c => !fechados.has(c.nome)).length ? todos.filter(c => !fechados.has(c.nome)) : todos;
   const perto = lista.filter(c => municipio(c.cidade).uf === uf);
   return r.pick(perto.length && r.chance(0.6) ? perto : lista);
@@ -363,7 +362,7 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
   // 2. A liga da divisão (o estadual é a liga de quem está no nível 1: os dois primeiros ganham a vaga nas divisões de acesso).
   if (p.nivel === 1) {
     t.colocacao = posEstadual;
-    if (posEstadual <= 2 && tetoDeAcesso(p.clube) > 1) {
+    if (fecharTemporadaDaLiga(v, paisDaCidade(p.municipioId), ano, p.clube, 1, posEstadual) === 1) {
       t.acesso = true;
       p.nivel = 2;
       escrever(v, { texto: `Acesso: ${oClube(p.clube)} ganhou a vaga nas divisões de acesso com você no banco (${posEstadual}º no estadual).`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
@@ -409,14 +408,16 @@ function jogarLiga(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, 
     c.reputacao = clamp(c.reputacao + 3 + p.nivel * 1.5);
     p.pressao = clamp(p.pressao - 30);
   }
-  if (p.nivel < 4 && pos <= 4 && tetoDeAcesso(p.clube) > p.nivel && (pos <= 2 || tetoDoClube(p.clube) > p.nivel)) {
+  // REWORK 9 · FUT-01: a tabela do país decide (as regras dele, sem teto pelo porte; os outros clubes jogam o mesmo ano).
+  const mov = fecharTemporadaDaLiga(v, paisDaCidade(p.municipioId), t.ano, p.clube, p.nivel, pos);
+  if (mov === 1) {
     t.acesso = true;
     p.nivel = (p.nivel + 1) as 1 | 2 | 3 | 4;
     escrever(v, { texto: `Acesso: ${oClube(p.clube)} subiu para a ${divisaoDoNivel(p.nivel, paisDaCidade(p.municipioId))} com você no banco (${pos}º lugar).`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'conquista', `Acesso com ${oClube(p.clube)} como ${flex(g, 'técnico', 'técnica')}.`, 2, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
     c.reputacao = clamp(c.reputacao + 4);
     p.pressao = clamp(p.pressao - 25);
-  } else if (pos >= 17 && p.nivel - 1 >= pisoDoClube(p.clube)) {
+  } else if (mov === -1) {
     t.rebaixamento = true;
     p.nivel = (p.nivel - 1) as 1 | 2 | 3 | 4;
     escrever(v, { texto: `${oClube(p.clube).replace(/^./, x => x.toUpperCase())} caiu com você no banco: ${pos}º lugar ${daComp(p.nivel + 1)}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
@@ -546,7 +547,7 @@ export function propostaDeCrise(v: Vida, r: Rng, c: CarreiraDeTecnico): Proposta
   const alvo = clamp(nivelPeloNome(c.reputacao) + (r.chance(0.3) ? 1 : 0), 2, 4);
   for (let k = 0; k < 4; k++) {
     const clube = escolherClube(v, r, alvo);
-    const nivel = nivelDoClube(clube, alvo);
+    const nivel = divisaoDe(v, clube);
     if (nivel < 2) continue;
     const tabela = ligaAteACrise(r, clube.nome, nivel as 2 | 3 | 4);
     if (!tabela) continue;
@@ -574,7 +575,7 @@ export function criarPropostaDeTecnico(v: Vida, r: Rng, c: CarreiraDeTecnico, ni
   const clube = sel ? undefined : escolherClube(v, r, nivel, excluir);
   const p: PropostaDeTecnico = sel
     ? { id: `tec_${v.t}_sel`, clube: selecaoDe(v), municipioId: sedeDaSelecao(nacionalidadesDaVida(v)[0]), nivel: 4, meses: 48, salario: salarioDeTecnico(selecaoDe(v), 4, c.reputacao), t: v.t, validaAte: v.t + 12, origem, selecao: true }
-    : { id: `tec_${v.t}_${clube!.nome}`, clube: clube!.nome, municipioId: clube!.cidade, nivel: nivelDoClube(clube!, nivel), meses: 24, salario: salarioDeTecnico(clube!.nome, nivelDoClube(clube!, nivel), c.reputacao), t: v.t, validaAte: v.t + 12, origem };
+    : { id: `tec_${v.t}_${clube!.nome}`, clube: clube!.nome, municipioId: clube!.cidade, nivel: divisaoDe(v, clube!), meses: 24, salario: salarioDeTecnico(clube!.nome, divisaoDe(v, clube!), c.reputacao), t: v.t, validaAte: v.t + 12, origem };
   c.proposta = p;
   c.convites = (c.convites ?? 0) + 1;
   v.fatos['tec_proposta_hoje'] = v.t;

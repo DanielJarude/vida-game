@@ -90,6 +90,8 @@ export const BRASIL: PerfilDePais = {
   esporte: {
     popularidade: { futebol: 1.25, volei: 1.15, basquete: 0.85, lutas: 1.05, natacao: 0.9, atletismo: 0.9, tenis: 0.8 },
     divisoes: ['campeonato estadual', 'divisões de acesso', 'Série B', 'Série A'],
+    // A, B e C trocam quatro clubes por ano; o estadual leva às divisões de acesso.
+    acesso: { troca: [4, 4, 4] },
     clubes: [] // `dados/clubes`
   },
   // Misto: o SUS atende todos, e a classe média costuma pagar um plano.

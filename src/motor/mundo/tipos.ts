@@ -247,6 +247,11 @@ export interface PerfilEsportivo {
   popularidade: Partial<Record<Dominio, number>>;
   /** As divisões do futebol, do nível 1 (o mais baixo) ao 4 (a elite). */
   divisoes: [string, string, string, string];
+  /**
+   * REWORK 9: quantos clubes trocam de divisão a cada temporada (1↔2, 2↔3, 3↔4). Ausente: 3 em cada.
+   * 'fechada': liga de franquias, sem acesso nem rebaixamento (MLS, A-League).
+   */
+  acesso?: { troca: [number, number, number] } | 'fechada';
   clubes: ClubeDoPais[];
 }
 
