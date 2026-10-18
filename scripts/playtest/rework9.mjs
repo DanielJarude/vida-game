@@ -47,7 +47,17 @@ const TODAS = [
   ['semana-agenda-bloco', 'varias', 'Minha Semana', 'bloco'],
   ['semana-adolescente', 'adolescente', 'Minha Semana'],
   ['caminhos-jovem-dev', 'jovem', 'Caminhos', 'aba:Desenvolvimento'],
-  ['celular-perfil', 'influencer', 'Minha Semana', 'aba:Celular', 'aba:Perfil']
+  ['celular-perfil', 'influencer', 'Minha Semana', 'aba:Celular', 'aba:Perfil'],
+  ['semana-conflito', 'conflito', 'Minha Semana'],
+  ['semana-conflito-bloco', 'conflito', 'Minha Semana', 'bloco'],
+  ['caminhos-faculdade', 'faculdade', 'Caminhos'],
+  ['semana-faculdade', 'faculdade', 'Minha Semana'],
+  ['celular-rede', 'rede', 'Minha Semana', 'aba:Celular'],
+  ['caminhos-promovido-hist', 'promovido', 'Caminhos', 'aba:Histórico'],
+  ['historia-conquistas', 'promovido', 'História', 'botao:Conquistas'],
+  ['historia-trabalho', 'faculdade', 'História', 'botao:Trabalho'],
+  ['voce-faculdade', 'faculdade', 'Você'],
+  ['loja-imobiliaria', 'empregado', 'Vida', 'secao:Compras', 'loja']
 ];
 const so = process.env.CENAS?.split(',');
 const cenas = so ? TODAS.filter(c => so.includes(c[0])) : TODAS;
@@ -137,8 +147,9 @@ for (const [nome, sv, area, ...passos] of cenas) {
       await p.getByRole('button', { name: /Continuar a vida/ }).click();
       await p.waitForTimeout(500);
       if (area !== 'História') {
-        let bt = p.getByRole('button', { name: area, exact: true }).locator('visible=true').first();
-        if (!(await bt.count())) bt = p.locator('.barra__item', { hasText: area === 'Minha Semana' ? 'Semana' : area }).first();
+        // a barra de baixo primeiro: no celular, "Pessoas" também é um filtro da História
+        let bt = p.locator('.barra__item', { hasText: area === 'Minha Semana' ? 'Semana' : area }).locator('visible=true').first();
+        if (!(await bt.count())) bt = p.getByRole('button', { name: area, exact: true }).locator('visible=true').first();
         await bt.click();
         await p.waitForTimeout(350);
       }
@@ -166,6 +177,8 @@ for (const [nome, sv, area, ...passos] of cenas) {
           const r = p.locator('.pessoa--falecida').first(); if (await r.count()) { await r.click(); await p.waitForTimeout(350); } else notas.push(`${rot}: sem quem se foi para abrir`);
         } else if (passo.startsWith('rede:')) {
           const r = p.locator('.plataforma', { hasText: passo.slice(5) }).first(); if (await r.count()) { await r.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem rede ${passo}`);
+        } else if (passo.startsWith('botao:')) {
+          const r = p.getByRole('button', { name: passo.slice(6), exact: true }).locator('visible=true').first(); if (await r.count()) { await r.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem botão ${passo}`);
         } else if (passo === 'bloco') {
           const r = p.locator('.bloco-agenda--movel').locator('visible=true').first(); if (await r.count()) { await r.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem bloco móvel`);
         } else if (passo.startsWith('dia:')) {
@@ -177,7 +190,10 @@ for (const [nome, sv, area, ...passos] of cenas) {
       }
     }
     if (await p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)) problemas.push(`${rot}: rolagem horizontal`);
-    const estouram = await p.evaluate(() => [...document.querySelectorAll('main *, .folha *')].filter(x => { const r = x.getBoundingClientRect(); return r.width > 0 && r.right > document.documentElement.clientWidth + 1 && getComputedStyle(x).position !== 'fixed' && !x.closest('[data-rola-x], .palmares__historico-rolagem, .subnav, .abas-tempo, .abas-locais__lista'); }).slice(0, 4).map(x => `${x.tagName.toLowerCase()}.${[...x.classList].join('.')}`));
+    const estouram = await p.evaluate(() => {
+      // um ancestral que recorta (overflow ≠ visible) e cabe na tela esconde o excesso: não estoura
+      const recortado = x => { for (let a = x.parentElement; a; a = a.parentElement) { const cs = getComputedStyle(a); if (cs.overflowX !== 'visible' && a.getBoundingClientRect().right <= document.documentElement.clientWidth + 1) return true; } return false; };
+      return [...document.querySelectorAll('main *, .folha *')].filter(x => { const r = x.getBoundingClientRect(); return r.width > 0 && r.right > document.documentElement.clientWidth + 1 && getComputedStyle(x).position !== 'fixed' && !x.closest('[data-rola-x], .palmares__historico-rolagem, .subnav, .abas-tempo, .abas-locais__lista') && !recortado(x); }).slice(0, 4).map(x => `${x.tagName.toLowerCase()}.${[...x.classList].join('.')}`); });
     if (estouram.length) problemas.push(`${rot}: estouram a borda: ${estouram.join(', ')}`);
     const sob = await p.evaluate(sobreposicoes);
     if (sob.length) problemas.push(`${rot}: texto sobre texto: ${sob.join(' | ')}`);

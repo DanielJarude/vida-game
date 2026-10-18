@@ -550,7 +550,7 @@ const TEMA_DO_CONFLITO = (perde: string): 'escola' | 'trabalho' | 'lazer' => (pe
  * nota na Linha da Vida (uma vez: enquanto o mesmo conflito durar, não se repete). O que o conflito cobra não é
  * daqui: é das presenças, lidas por quem treina e por quem dá nota.
  */
-export function processarAgenda(v: Vida): void {
+export function processarAgenda(v: Vida): Agenda {
   limparAgenda(v);
   const a = agendaDaSemana(v);
   const avisados = new Set(v.agenda?.avisados ?? []);
@@ -562,6 +562,8 @@ export function processarAgenda(v: Vida): void {
   if (pesam.length) (v.agenda ??= {}).avisados = pesam.map(c => c.id);
   else if (v.agenda) delete v.agenda.avisados;
   limparAgenda(v);
+  // A mesma semana serve às atividades do ano (as escolhas guardadas não mudam a semana: só as notas mudaram).
+  return a;
 }
 
 /* ------------------------------------------------------------ As ações */

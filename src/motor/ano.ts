@@ -151,8 +151,8 @@ function viverAno(v: Vida, r: Rng): void {
   // O programa de fundamentos ANTES das rotinas: o ano de treino conta como prática (a frente não 'esfria' no mesmo ano).
   praticandoPor('treino', () => processarFundamentos(v));
   // REWORK 9: a agenda da semana (o que não existe mais sai; o conflito novo vira nota) — antes das rotinas, que leem a presença.
-  processarAgenda(v);
-  processarRotinas(v, r, agendaDaSemana(v).presenca);
+  const agendaDoAno = processarAgenda(v);
+  processarRotinas(v, r, agendaDoAno.presenca);
   processarEstetica(v);
   // A formação como lugar: o que ficou para trás com a escola, o professor que repara.
   processarFormacao(v);

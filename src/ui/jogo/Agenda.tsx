@@ -55,10 +55,12 @@ const HORAS_ESCOLHA = Array.from({ length: (22 * 60 - ABRE) / 30 + 1 }, (_, k) =
 export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; s?: Semana; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }) {
   const [aberto, setAberto] = useState<string | null>(null);
   const [ficha, setFicha] = useState<string | null>(null);
-  const hoje = 0 as Dia;
-  const [dia, setDia] = useState<Dia>(hoje);
   const i = idade(vida);
   const a = agendaDaSemana(vida);
+  // no celular, um dia de cada vez: abre no primeiro dia com um conflito, ou com um compromisso (não numa segunda vazia)
+  const comConflito = a.conflitos.flatMap(c => c.dias);
+  const ocupados = a.blocos.filter(b => b.origem !== 'trajeto').flatMap(b => b.dias);
+  const [dia, setDia] = useState<Dia>(() => (comConflito.length ? Math.min(...comConflito) : ocupados.length ? Math.min(...ocupados) : 0) as Dia);
   const enc = encaixe(vida, 0);
   const estresse = i >= 10 ? leituraDoEstresse(vida) : undefined;
   const bloco = aberto ? a.blocos.find(b => b.id === aberto) : undefined;
