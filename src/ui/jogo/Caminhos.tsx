@@ -104,25 +104,33 @@ export function EmConstrucao({ vida, lista, agir, ir }: { vida: Vida; lista: Cam
 
 const ESTADO_CAMINHO: Record<CaminhoPossivel['estado'], string> = { aqui: 'Já é a sua vida', pronto: 'Dá para começar', preparar: 'Há o que fazer antes', fora: 'Fora do alcance agora' };
 
-/** Por onde se começa cada vida diferente — para esta vida, agora. */
-export function CaminhosPossiveis({ vida, lista, agir, ir }: { vida: Vida; lista: CaminhoPossivel[]; agir: (a: Acao) => boolean; ir: (d: string) => void }) {
+const TIPO_CAMINHO: Record<CaminhoPossivel['id'], string> = { esporte: 'Esporte', arte: 'Arte', academia: 'Universidade', forcas: 'Farda', seguranca: 'Farda', publico: 'Serviço público', negocio: 'Negócio', por_conta: 'Por conta', politica: 'Política' };
+
+/**
+ * Por onde se começa cada vida diferente — para esta vida, agora. REWORK 9.5 · UX-07: cada caminho é uma ficha curta
+ * (como um edital na pasta): o nome, o tipo, onde você está diante dele e o próximo passo; o "como costuma começar"
+ * abre quando pedido. Antes, uma lista longa com todas as explicações abertas.
+ */
+export function CaminhosPossiveis({ vida, lista, agir, ir, titulo }: { vida: Vida; lista: CaminhoPossivel[]; agir: (a: Acao) => boolean; ir: (d: string) => void; titulo?: string }) {
   const ordem = { pronto: 0, preparar: 1, aqui: 2, fora: 3 } as const;
   return (
     <div className="explorar-bloco">
-      <p className="dica">Nenhuma dessas vidas vem garantida. Aqui está como cada uma costuma começar — e o primeiro passo, do ponto em que você está.</p>
-      <ul className="caminhos">
+      {titulo && <h3 className="bloco-vagas__titulo">{titulo}</h3>}
+      <ul className="caminhos caminhos--fichas">
         {[...lista].sort((a, b) => ordem[a.estado] - ordem[b.estado]).map(c => (
           <li key={c.id} className={`caminho caminho--${c.estado}`}>
             <div className="caminho__cabeca">
               <h3 className="caminho__titulo">{c.titulo}</h3>
+              <span className="caminho__tipo">{TIPO_CAMINHO[c.id]}</span>
               <span className="caminho__estado">{ESTADO_CAMINHO[c.estado]}</span>
             </div>
-            <p className="caminho__como">{c.como}</p>
             <p className="caminho__agora">{c.agora}</p>
             {c.passo && <div className="caminho__passo"><BotaoPasso vida={vida} passo={c.passo} agir={agir} ir={ir} />{c.passo.porque && <p className="construindo__porque">{c.passo.porque}</p>}</div>}
+            <details className="caminho__mais"><summary>Como essa vida costuma começar</summary><p className="caminho__como">{c.como}</p></details>
           </li>
         ))}
       </ul>
+      <p className="dica">Nenhuma dessas vidas vem garantida: cada ficha diz onde você está diante dela e o primeiro passo.</p>
     </div>
   );
 }

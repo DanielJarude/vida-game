@@ -150,11 +150,13 @@ describe('os sinais são a leitura do motor', () => {
       expect(vistas.size).toBe(5);
     }
   });
-  it('a Linha da Vida mostra os sinais e leva a Você', () => {
+  it('a História mostra o retrato da vida agora (não os medidores) e leva a Você', () => {
+    // REWORK 9.5 · UX-06: o alto da História conta a vida (onde, agora, quem importa); os medidores moram em Você.
     abrir(vida(25));
-    const sinais = screen.getByRole('region', { name: 'Como você está' });
-    expect(within(sinais).getAllByRole('img').length).toBeGreaterThanOrEqual(3);
-    fireEvent.click(within(sinais).getByRole('button', { name: /Por quê, e o que fazer/ }));
+    const retrato = screen.getByRole('region', { name: 'A vida agora' });
+    expect(within(retrato).getByText('Onde')).toBeTruthy();
+    expect(within(retrato).queryAllByRole('img', { name: /de 5$/ })).toHaveLength(0);
+    fireEvent.click(within(retrato).getByRole('button', { name: /Como você está, em detalhe/ }));
     expect(screen.getAllByRole('button', { name: 'Você' }).some(b => b.getAttribute('aria-current') === 'page')).toBe(true);
   });
 });

@@ -85,7 +85,9 @@ export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'dinheiro', rotulo: 'Dinheiro', oque: 'O mês, o patrimônio e as dívidas; a ajuda da família' },
   { id: 'compras', rotulo: 'Compras', oque: 'Imóveis, carros, motos, bicicletas, óculos e roupas, serviços, banco' },
   // REWORK 4: o que é seu (e o que dá para fazer com isso) saiu de Casa — Casa é onde e com quem se mora.
-  { id: 'pertences', rotulo: 'Pertences', oque: 'O que é seu: usar (tocar, jogar, fotografar), o estado, vender' },
+  // REWORK 9.5: Pertences virou PATRIMÔNIO — o inventário inteiro (o balanço, os imóveis, os veículos, o aplicado, os
+  // objetos). O id fica 'pertences' (destinos antigos continuam valendo); Dinheiro fica com o mês e a família.
+  { id: 'pertences', rotulo: 'Patrimônio', oque: 'O que é seu: imóveis, veículos, aplicações e objetos — o estado, usar, vender' },
   { id: 'cidade', rotulo: 'Cidade', oque: 'Onde você vive, quanto custa viver aqui, o trajeto, mudar de cidade ou de país' },
   // REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram do tempo livre para Vida.
   { id: 'viagens', rotulo: 'Viagens', oque: 'Viagens e experiências: destino, duração, com quem' }
@@ -145,7 +147,7 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'praticas', quero: 'Ver o que eu pratico e como venho evoluindo', lugar: { area: 'tempo', aba: 'semana' }, la: '"O que você pratica": um toque abre a história de cada atividade' },
   { id: 'carreira', quero: 'Ver a minha carreira', lugar: { area: 'caminhos', parte: 'historico' }, la: 'a situação em Agora; "Por onde você passou" em Histórico' },
   { id: 'quanto_ganho', quero: 'Saber quanto ganho e quanto gasto', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês: o que entra, o que sai, o que sobra' },
-  { id: 'em_casa', quero: 'Ver o que tenho em casa', lugar: { area: 'vida', secao: 'casa' }, la: '"O que há em casa" (usar e vender, em Pertences)' },
+  { id: 'em_casa', quero: 'Ver o que tenho em casa', lugar: { area: 'vida', secao: 'casa' }, la: '"O que há em casa" (usar e vender, em Patrimônio)' },
   { id: 'historico_escolar', quero: 'Ver o meu histórico escolar', lugar: { area: 'caminhos', parte: 'historico' }, la: 'a formação que já é sua e a história de cada escola' },
   { id: 'familia_aconteceu', quero: 'Saber o que aconteceu com a minha família', lugar: { area: 'pessoas' }, la: '"Pedem atenção", a ficha de cada um — e "Enquanto isso", depois de cada ano' },
   // REWORK 7.5 — as intenções do playtest das interfaces do cotidiano.

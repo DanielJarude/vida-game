@@ -36,7 +36,7 @@ import { rotuloEstrategia } from '../../motor/dados/negocios';
 import { leituraPolitica, naPolitica, nomeDaBandeira } from '../../motor/sistemas/politica';
 import { escadaMilitar, perspectivasMilitares } from '../../motor/sistemas/militar';
 import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from '../../motor/sistemas/concurso';
-import { caminhosPossiveis, emConstrucao } from '../../motor/sistemas/caminhosDeVida';
+import { caminhosPossiveis, emConstrucao, type CaminhoPossivel } from '../../motor/sistemas/caminhosDeVida';
 import { perfilParaVaga } from '../../motor/sistemas/empregabilidade';
 import { BlocoDeVagas, CaminhosPossiveis, EmConstrucao, PerfilDaVaga, ProximoPassoPainel } from './Caminhos';
 import { vagasEmCamadas, type Vaga } from '../../motor/sistemas/relevancia';
@@ -189,7 +189,25 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {e && empregoAcademico(vida) === e && <PainelAcademia vida={vida} />}
 
         <NoDiaADia vida={vida} agir={agir} />
-        {acoes.agora.length > 0 && <AcoesVivas acoes={acoes.agora as AcaoProfissional[]} agir={agir} ir={ir} rotulo="O que dá para fazer agora" />}
+        {/* REWORK 9.5 · UX-07: a hierarquia segue a situação. Quem procura emprego vê as vagas primeiro; a política e os
+            concursos (vida pública) continuam a um toque, agrupados — a não ser que a vida pública SEJA a situação. */}
+        {(() => {
+          const publicaPrincipal = modo === 'politica' || modo === 'servidor';
+          const ehPublica = (x: AcaoProfissional) => x.id.startsWith('pol_') || x.id === 'concursos';
+          const principais = publicaPrincipal ? acoes.agora : acoes.agora.filter(x => !ehPublica(x));
+          const publicas = publicaPrincipal ? [] : acoes.agora.filter(ehPublica);
+          return (
+            <>
+              {principais.length > 0 && <AcoesVivas acoes={principais as AcaoProfissional[]} agir={agir} ir={ir} rotulo="O que dá para fazer agora" />}
+              {publicas.length > 0 && (
+                <details className="pasta-secao">
+                  <summary className="pasta-secao__aba">Vida pública <span className="pasta-secao__conta">{publicas.length === 1 ? '1 possibilidade' : `${publicas.length} possibilidades`}: concursos, política</span></summary>
+                  <AcoesVivas acoes={publicas as AcaoProfissional[]} agir={agir} ir={ir} rotulo="Vida pública" />
+                </details>
+              )}
+            </>
+          );
+        })()}
         {(acoes.mais.length > 0 || acoes.saidas.length > 0) && <Mais mais={acoes.mais} saidas={acoes.saidas} agir={agir} ir={ir} />}
         {modo === 'crianca' && <p className="vazio">Trabalho é proibido antes dos 14. O trabalho agora é crescer.</p>}
       </section>}
@@ -721,30 +739,33 @@ function separarNegocio(lista: AcaoProfissional[]): { agora: AcaoProfissional[];
 
 function OutrasPossibilidades({ vida, agir, aberto, alternar, irPara, aba, setAba, ir, fixo }: { vida: Vida; agir: (a: Acao) => boolean; aberto: boolean; alternar: () => void; irPara: (a: Aba) => void; aba: string; setAba: (a: string) => void; ir: (d: string) => void; fixo?: boolean }) {
   const i = idade(vida);
+  // REWORK 9.5 · UX-07: a procura em pastas — Profissões, Vida pública, Negócio próprio, Outras trajetórias (os estudos
+  // são o outro lado de Caminhos). Os ids ficam os de antes: a navegação por intenção ('vagas', 'concursos', 'negocio')
+  // continua a cair na pasta certa.
   const abas = [
-    { id: 'vagas', rotulo: 'Vagas e trabalho' },
-    ...(i >= 17 && !vida.justica?.prisao ? [{ id: 'concursos', rotulo: 'Concursos' }] : []),
+    { id: 'vagas', rotulo: 'Profissões' },
+    ...(i >= 16 && !vida.justica?.prisao ? [{ id: 'concursos', rotulo: 'Vida pública' }] : []),
     ...(i >= 18 ? [{ id: 'negocio', rotulo: 'Negócio próprio' }] : []),
-    ...(i >= 14 ? [{ id: 'caminhos', rotulo: 'Outros caminhos' }] : [])
+    ...(i >= 14 ? [{ id: 'caminhos', rotulo: 'Outras trajetórias' }] : [])
   ];
   const atual = abas.some(x => x.id === aba) ? aba : 'vagas';
   return (
     <section className="explorar-trabalho camada camada--explorar" aria-labelledby="titulo-explorar">
       {/* Em Caminhos · Oportunidades, a procura é o assunto da aba: aberta, sem botão de recolher. */}
       {fixo
-        ? <h2 id="titulo-explorar" className="explorar-trabalho__titulo explorar-trabalho__titulo--fixo"><span>Procurar outro caminho</span><span className="explorar-trabalho__sub">vagas, concursos, o próprio negócio, esporte, arte, universidade, farda…</span></h2>
+        ? <h2 id="titulo-explorar" className="explorar-trabalho__titulo explorar-trabalho__titulo--fixo"><span>Procurar outro caminho</span><span className="explorar-trabalho__sub">profissões, vida pública, o próprio negócio, outras trajetórias</span></h2>
         : (
           <button type="button" id="titulo-explorar" className="explorar-trabalho__titulo" aria-expanded={aberto} onClick={alternar}>
-            <span>Procurar outro caminho</span><span className="explorar-trabalho__sub">vagas, concursos, o próprio negócio, esporte, arte, universidade, farda…</span>
+            <span>Procurar outro caminho</span><span className="explorar-trabalho__sub">profissões, vida pública, o próprio negócio, outras trajetórias</span>
           </button>
         )}
       {aberto && (
         <div className="explorar-trabalho__corpo">
           {abas.length > 1 && <Escolha rotulo="O que procurar" valor={atual} aoMudar={setAba} opcoes={abas} />}
-          {atual === 'vagas' && <Vagas vida={vida} agir={agir} />}
-          {atual === 'concursos' && <Concursos vida={vida} agir={agir} irPara={irPara} />}
-          {atual === 'negocio' && <Negocios vida={vida} agir={agir} />}
-          {atual === 'caminhos' && <OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} />}
+          {atual === 'vagas' && <><Vagas vida={vida} agir={agir} /><OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} ids={['por_conta']} titulo="Por conta própria" /></>}
+          {atual === 'concursos' && <>{i >= 17 && <Concursos vida={vida} agir={agir} irPara={irPara} />}<OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} ids={['publico', 'forcas', 'seguranca', 'politica']} titulo="Carreiras públicas e política" /></>}
+          {atual === 'negocio' && <><Negocios vida={vida} agir={agir} /><OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} ids={['negocio']} titulo="Como começa" /></>}
+          {atual === 'caminhos' && <OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} ids={['esporte', 'arte', 'academia']} titulo="Esporte, arte, universidade" estudar />}
         </div>
       )}
     </section>
@@ -810,7 +831,7 @@ function Vagas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const vazio = !camadas.trajetoria.length && !camadas.relacionadas.length;
   return (
     <div className="explorar-bloco">
-      <p className="dica">Vaga de emprego leva a uma entrevista (até três processos por ano: {Math.max(0, 3 - usadas)} {3 - usadas === 1 ? 'restante' : 'restantes'}). Por conta própria não há entrevista: você começa a atender, e a freguesia é que decide. Abrir um negócio fica em "Negócio próprio".</p>
+      <p className="dica">Vaga de emprego leva a uma entrevista (até três processos por ano: {Math.max(0, 3 - usadas)} {3 - usadas === 1 ? 'restante' : 'restantes'}). Por conta própria não há entrevista: você começa a atender, e a freguesia é que decide. Abrir um negócio fica na pasta "Negócio próprio".</p>
       {camadas.trajetoria.length > 0 && (
         <BlocoDeVagas titulo="Para você agora" dica="A formação, a estrada recente e o próximo degrau.">
           <ul>{camadas.trajetoria.slice(0, 5).map(x => <VagaNaCamada key={x.item.oc.id} vida={vida} x={x} agir={agir} />)}</ul>
@@ -938,17 +959,19 @@ function Negocios({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   );
 }
 
-/** Por onde se começa cada vida diferente (esporte, arte, universidade, farda, serviço público, negócio, por conta, política). */
-function OutrosCaminhos({ vida, agir, irPara, ir }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; ir: (d: string) => void }) {
-  const lista = useMemo(() => caminhosPossiveis(vida, disponibilidade), [vida]);
+/** Por onde se começa cada vida diferente — só as da pasta aberta (`ids`), em fichas compactas. */
+function OutrosCaminhos({ vida, agir, irPara, ir, ids, titulo, estudar }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; ir: (d: string) => void; ids: CaminhoPossivel['id'][]; titulo: string; estudar?: boolean }) {
+  const lista = useMemo(() => caminhosPossiveis(vida, disponibilidade).filter(c => ids.includes(c.id)), [vida, ids.join()]);
   return (
     <>
-      <CaminhosPossiveis vida={vida} lista={lista} agir={agir} ir={ir} />
-      <div className="caminho-politico">
-        <h3 className="paralelo__titulo">Estudar para mudar de caminho</h3>
-        <p className="caminho-politico__texto">Cursos, faculdade, pós, qualificação — tudo o que abre outras portas está nas oportunidades de formação.</p>
-        <button type="button" className="botao botao--discreto" onClick={() => irPara('cursos')}>Ver os cursos →</button>
-      </div>
+      {lista.length > 0 && <CaminhosPossiveis vida={vida} lista={lista} agir={agir} ir={ir} titulo={titulo} />}
+      {estudar && (
+        <div className="caminho-politico">
+          <h3 className="paralelo__titulo">Estudar para mudar de caminho</h3>
+          <p className="caminho-politico__texto">Cursos, faculdade, pós, qualificação — tudo o que abre outras portas está nas oportunidades de formação.</p>
+          <button type="button" className="botao botao--discreto" onClick={() => irPara('cursos')}>Ver os cursos →</button>
+        </div>
+      )}
     </>
   );
 }

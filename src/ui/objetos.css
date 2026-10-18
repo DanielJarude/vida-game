@@ -116,3 +116,66 @@
 .ficha-hab__anos strong { color: var(--text-primary); }
 .voce-bom__outras { margin: var(--space-2) 0; }
 .voce-bom__outras summary { cursor: pointer; min-height: var(--touch-target); display: flex; align-items: center; color: var(--text-secondary); }
+
+/* ============================================================ História: o retrato contextual (UX-06) */
+/* A primeira página do diário: a ficha curta (onde, agora, no coração), o que mudou no ano, quem mais importa. */
+.retrato-vida { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--space-3) var(--space-5); min-width: 0; }
+.retrato-vida__ficha { margin: 0; display: grid; gap: var(--space-2); }
+.retrato-vida__ficha div { min-width: 0; }
+.retrato-vida__ficha dt, .retrato-vida__rotulo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.retrato-vida__ficha dd { margin: 2px 0 0; color: var(--text-primary); overflow-wrap: anywhere; line-height: 1.45; }
+.retrato-vida__alerta { grid-column: 1 / -1; margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: color-mix(in oklab, var(--ruim) 10%, var(--superficie)); box-shadow: inset 3px 0 0 var(--ruim); color: var(--text-primary); }
+.retrato-vida__mudou ul, .retrato-vida__gente ul { list-style: none; margin: var(--space-1) 0 0; padding: 0; display: grid; gap: var(--space-1); }
+.retrato-vida__mudou li { font-family: var(--font-serif); color: var(--text-secondary); line-height: 1.45; padding-left: var(--space-3); border-left: 2px solid color-mix(in oklab, var(--tom-linha) 50%, transparent); overflow-wrap: anywhere; }
+.retrato-vida__pessoa { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); padding: 2px var(--space-2) 2px 2px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+.retrato-vida__pessoa:hover { background: var(--veu-1); }
+.retrato-vida__pessoa:focus-visible { outline: 2px solid var(--tom-linha); outline-offset: 2px; }
+.retrato-vida__pessoa .retrato { border-radius: 50%; flex: none; }
+.retrato-vida__papel { color: var(--text-muted); font-size: var(--type-caption); }
+.retrato-vida__voce { grid-column: 1 / -1; justify-self: start; min-height: 32px; }
+
+/* ============================================================ Caminhos: a pasta de trajetórias (UX-07 / VIS-01) */
+/* As partes viram abas de pasta (o papel-cartão de uma pasta de documentos); cada caminho possível, uma ficha curta. */
+.pagina-caminhos .subnav--caminhos .subnav__item { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.pagina-caminhos .subnav--caminhos .subnav__item--ativo { background: color-mix(in oklab, var(--tom-estudos) 9%, var(--superficie)); box-shadow: inset 0 3px 0 color-mix(in oklab, var(--tom-estudos) 65%, transparent); }
+.pagina-caminhos .caminhos__painel--ativo { border-top: 2px solid color-mix(in oklab, var(--tom-estudos) 25%, var(--fio)); padding-top: var(--space-3); }
+.pasta-secao { margin: var(--space-3) 0; border-radius: var(--radius-md); background: color-mix(in oklab, var(--tom-estudos) 4%, var(--superficie)); box-shadow: 0 0 0 1px var(--fio); }
+.pasta-secao__aba { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--space-2); min-height: var(--touch-target); padding: var(--space-2) var(--space-3); font-weight: var(--weight-semibold); color: var(--text-primary); }
+.pasta-secao__conta { font-weight: 400; font-size: var(--type-caption); color: var(--text-muted); }
+.pasta-secao > .acoes-vivas { padding: 0 var(--space-3) var(--space-3); }
+.caminhos--fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: var(--space-3); }
+.caminhos--fichas .caminho { padding: var(--space-3); border-top: 0; border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.caminhos--fichas .caminho--fora { opacity: 0.8; }
+.caminhos--fichas .caminho__cabeca { justify-content: flex-start; }
+.caminhos--fichas .caminho__titulo { flex-basis: 100%; }
+.caminho__tipo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom-estudos); font-weight: var(--weight-semibold); }
+.caminho__tipo + .caminho__estado::before { content: '· '; }
+.caminho__mais summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; font-size: var(--type-caption); color: var(--text-secondary); }
+.caminho__mais .caminho__como { margin-top: var(--space-1); }
+
+/* ============================================================ Vida: os papéis da casa (VIS-01) */
+/* Dinheiro é um extrato: papel com a borda serrilhada no alto, números alinhados, linhas de livro-caixa. */
+.vida-concreta--dinheiro .dinheiro { position: relative; padding: var(--space-4); margin-top: var(--space-3); border-radius: 0 0 var(--radius-md) var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); }
+.vida-concreta--dinheiro .dinheiro::before { content: ''; position: absolute; left: 0; right: 0; top: -6px; height: 6px; background: radial-gradient(circle at 6px 0, transparent 5px, var(--superficie) 5.5px) 0 0 / 12px 6px repeat-x; }
+.vida-concreta--dinheiro .balanca__linha { border-bottom: 1px dashed var(--fio); padding-bottom: 4px; font-variant-numeric: tabular-nums; }
+.vida-concreta--dinheiro .balanca__valor { font-variant-numeric: tabular-nums; }
+/* Casa é a ficha do imóvel: o lugar desenhado em cima, os selos como carimbos do registro. */
+.vida-concreta--casa .lar .selo { box-shadow: none; outline: 1px dashed currentColor; outline-offset: -1px; text-transform: uppercase; letter-spacing: var(--tracking-meta); font-size: var(--type-meta); }
+/* Patrimônio é um inventário: cada bem uma linha de cartão, o balanço como a primeira página. */
+.patrimonio { display: flex; flex-direction: column; gap: var(--space-4); }
+.patrimonio .objetos > * { border-left: 3px solid color-mix(in oklab, var(--tom-casa) 45%, transparent); padding-left: var(--space-3); }
+.patrimonio .balanco__liquido { font-variant-numeric: tabular-nums; }
+
+/* ============================================================ As outras áreas, cada uma o seu objeto (VIS-01) */
+/* Pessoas: o álbum — cada rosto é uma foto revelada (moldura de papel, canto reto), a legenda embaixo. */
+.pessoas .rosto { background: var(--papel); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); border-radius: 3px; padding: var(--space-2) var(--space-2) var(--space-3); }
+.pessoas .rosto:hover { background: var(--papel); box-shadow: 0 0 0 1px var(--fio-forte), var(--shadow-md); }
+.pessoas .rosto .retrato { border-radius: 2px; }
+.pessoas .rosto__nome { font-style: italic; }
+/* História: o diário — a margem do caderno entre o ano e o que se escreveu dele. */
+.linha-da-vida .ano__corpo { background-image: linear-gradient(to right, transparent calc(5rem + var(--space-5) / 2 - 1px), color-mix(in oklab, var(--ruim) 28%, transparent) calc(5rem + var(--space-5) / 2 - 1px), color-mix(in oklab, var(--ruim) 28%, transparent) calc(5rem + var(--space-5) / 2), transparent calc(5rem + var(--space-5) / 2)); }
+/* Minha Semana: o planner — os dias como cabeçalhos de página, o fim de semana em outra cor de papel. */
+.agenda-semana .grade-semana__nome { border-bottom: 2px solid color-mix(in oklab, var(--tom-tempo) 45%, var(--fio)); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-size: var(--type-meta); }
+.agenda-semana .grade-semana__corpo { background-image: linear-gradient(to right, color-mix(in oklab, var(--tom-tempo) 10%, transparent) 0 3px, transparent 3px); }
+/* Você: a ficha pessoal — o retrato e as linhas de identidade numa ficha de papel. */
+.voce .voce-rosto { padding: var(--space-4); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); border-bottom: 0; border-top: 6px solid color-mix(in oklab, var(--tom-linha) 55%, transparent); }

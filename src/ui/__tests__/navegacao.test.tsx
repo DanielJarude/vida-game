@@ -94,7 +94,7 @@ describe('as seis áreas são estáveis (não mudam de lugar com a idade) — RE
 
 describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliques de verdade)', () => {
   const esperado: Record<string, RegExp> = {
-    estudar: /Formação/, atividade_escolar: /O que dá para fazer aqui|Sem estudar agora|caminhos possíveis/, faculdade: /Cursos|cursos|Ao seu alcance/,
+    estudar: /Formação/, atividade_escolar: /O que dá para fazer aqui|Sem estudar agora|caminhos possíveis/, faculdade: /Cursos|cursos|Ao seu alcance|Explorar formações/,
     falar_mae: /Família/, namoro: /Conhecer alguém/, emprego: /Procurar outro caminho|Vagas/, negocio: /Procurar outro caminho/,
     futebol: /Cuidar de si|Esporte|Corpo/, carro: /Concessionária/,
     // FIX pós-REWORK 4: as intenções novas (e as que não tinham o que conferir) levam a um lugar que mostra o que promete.

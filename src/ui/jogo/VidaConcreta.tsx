@@ -1,6 +1,6 @@
 /**
  * Vida: a vida concreta, numa área só, com seções internas estáveis —
- * Casa · Dinheiro · Compras · Pertences · Cidade · Viagens (REWORK 9). Antes eram três abas no
+ * Casa · Dinheiro · Compras · Patrimônio · Cidade · Viagens (REWORK 9; Patrimônio no 9.5). Antes eram três abas no
  * topo (Casa, Tempo, Cidade) e o dinheiro morava em Você; agora "onde eu
  * moro", "quanto eu tenho", "onde compro", "o que faço da semana" e "onde
  * vivo" ficam lado a lado, sem mudar de lugar com a idade (o que muda é o
@@ -68,11 +68,18 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
           <div className="casa">
             {i >= 8 ? <ODinheiro vida={vida} agir={agir} irParaCasa={() => irSecao('casa')} /> : <p className="nota">Dinheiro, por enquanto, é assunto dos adultos da casa. O seu é o do cofrinho.</p>}
             <AFamilia vida={vida} agir={agir} abrirPessoa={abrirPessoa} />
-            {i >= 12 && <OQueTem vida={vida} agir={agir} abrir={setLugar} />}
+            {i >= 12 && <p className="nota">Os bens, o aplicado e o balanço do que é seu estão em <button type="button" className="link" onClick={() => irSecao('pertences')}>Patrimônio →</button></p>}
           </div>
         )}
         {secao === 'compras' && <Compras vida={vida} agir={agir} abrir={setLugar} />}
-        {secao === 'pertences' && <Pertences vida={vida} agir={agir} abrir={setLugar} />}
+        {/* REWORK 9.5: o patrimônio é um inventário — o balanço e os bens grandes (imóveis, veículos, aplicações, dívidas
+            presas a bens) e, depois, os objetos (usar, cuidar, vender). Antes, metade disso morava em Dinheiro. */}
+        {secao === 'pertences' && (
+          <div className="patrimonio">
+            {i >= 12 && <OQueTem vida={vida} agir={agir} abrir={setLugar} />}
+            <Pertences vida={vida} agir={agir} abrir={setLugar} />
+          </div>
+        )}
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
         {/* REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram de Tempo livre. */}
         {secao === 'viagens' && (i >= 12 ? <Experiencias vida={vida} agir={agir} /> : <p className="nota">Viajar, por enquanto, é com a família — quando ela decide ir.</p>)}
@@ -108,7 +115,7 @@ function QuemMoraAqui({ vida, abrirPessoa }: { vida: Vida; abrirPessoa: (id: str
   );
 }
 
-/** O que há dentro de casa: as coisas (as suas e as da casa), como objetos — o uso e a venda moram em Pertences. */
+/** O que há dentro de casa: as coisas (as suas e as da casa), como objetos — o uso e a venda moram em Patrimônio. */
 function NaCasa({ vida, irSecao }: { vida: Vida; irSecao: (s: SecaoVida) => void }) {
   const lista = coisasDaVida(vida);
   if (!lista.length) return null;
@@ -117,7 +124,7 @@ function NaCasa({ vida, irSecao }: { vida: Vida; irSecao: (s: SecaoVida) => void
       <ul className="na-casa">
         {lista.slice(0, 10).map(t => { const c = coisa(t.coisaId); const x = varianteDe(t); return c ? <li key={t.id} title={c.nome}><DesenhoObjeto coisaId={t.coisaId} cor={x.cor} tamanho={52} rotulo={`${c.nome}, ${x.nome}`} /><span>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</span></li> : null; })}
       </ul>
-      <button type="button" className="link" onClick={() => irSecao('pertences')}>Usar, cuidar, vender — em Pertences →</button>
+      <button type="button" className="link" onClick={() => irSecao('pertences')}>Usar, cuidar, vender — em Patrimônio →</button>
     </Secao>
   );
 }

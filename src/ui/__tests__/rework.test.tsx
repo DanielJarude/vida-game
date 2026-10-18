@@ -89,8 +89,13 @@ describe('Trabalho', () => {
     tela(v);
     const abrir = screen.getByRole('button', { name: /Procurar outro caminho/ });
     if (abrir.getAttribute('aria-expanded') !== 'true') fireEvent.click(abrir);
-    fireEvent.click(screen.getByRole('radio', { name: 'Outros caminhos' }));
-    for (const t of ['Esporte', 'Arte', 'Universidade e pesquisa', 'Forças Armadas', 'Polícia e bombeiros', 'Serviço público', 'O próprio negócio', 'Trabalhar por conta própria', 'Vida política']) expect(screen.getByRole('heading', { name: t })).toBeTruthy();
+    // REWORK 9.5 · UX-07: as possibilidades em pastas (Profissões, Vida pública, Negócio próprio, Outras trajetórias) —
+    // todas continuam acessíveis, cada uma na sua pasta.
+    const pastas: [string, string[]][] = [['Outras trajetórias', ['Esporte', 'Arte', 'Universidade e pesquisa']], ['Vida pública', ['Forças Armadas', 'Polícia e bombeiros', 'Serviço público', 'Vida política']], ['Negócio próprio', ['O próprio negócio']], ['Profissões', ['Trabalhar por conta própria']]];
+    for (const [pasta, titulos] of pastas) {
+      fireEvent.click(screen.getByRole('radio', { name: pasta }));
+      for (const t of titulos) expect(screen.getByRole('heading', { name: t })).toBeTruthy();
+    }
   });
 
   it('militar na vida política: o requisito da candidatura vem com a ação que o cumpre', () => {

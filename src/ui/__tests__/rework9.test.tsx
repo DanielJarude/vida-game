@@ -93,8 +93,13 @@ describe('Fase A · Caminhos une Formação e Trabalho sem perder ação nenhuma
         botoes(b.container).forEach(x => antes.add(x));
         b.unmount();
       }
-      const c = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} parte="agora" irParte={() => {}} /></main>);
-      const depois = new Set(botoes(c.container));
+      // REWORK 9.5 · UX-07: só a parte aberta é desenhada — o que existe em Caminhos é a soma das quatro partes.
+      const depois = new Set<string>();
+      for (const parte of ['agora', 'desenvolvimento', 'oportunidades', 'historico'] as const) {
+        const c = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} parte={parte} irParte={() => {}} /></main>);
+        botoes(c.container).forEach(x => depois.add(x));
+        c.unmount();
+      }
       // O que muda de nome por causa da navegação nova (o destino mudou, a ação é a mesma).
       const renomeados = /Formação|em Trabalho|Procurar outro caminho|Tempo livre/;
       const faltando = [...antes].filter(x => !depois.has(x) && !renomeados.test(x));

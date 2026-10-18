@@ -112,3 +112,78 @@ describe('Fase B · o boletim e as fichas', () => {
     if (xadrez) expect(xadrez.textContent).toMatch(/No último ano/);
   });
 });
+
+/* =============================================================== Fase C/D — Caminhos, Vida, História */
+
+import { fireEvent } from '@testing-library/react';
+import { adulto } from '../../motor/__tests__/cenarios';
+import { curso } from '../../motor/dados/cursos';
+import { contratar } from '../../motor/sistemas/trabalho';
+import { ocupacao } from '../../motor/dados/ocupacoes';
+import { executar } from '../../motor/acoes';
+import { PaginaCaminhos } from '../jogo/CaminhosDaVida';
+import { VidaConcreta } from '../jogo/VidaConcreta';
+import { RetratoDaVida, mudancasRecentes } from '../jogo/RetratoDaVida';
+import type { ParteCaminhos } from '../navegacao';
+
+/** 17 anos, técnico concluído, sem escola e sem emprego: procurando o primeiro trabalho. */
+const tecnico = () => transacao(adulto(17, { semente: 29 }), x => {
+  const tc = curso('tec_informatica');
+  x.trabalho.atual = undefined; x.educacao.basica = undefined; x.educacao.matricula = undefined; x.educacao.evadiu = false;
+  x.educacao.escolaridade = 'tecnico';
+  x.educacao.concluidos.push({ cursoId: tc.id, nome: tc.nome, nivel: tc.nivel, area: tc.area, tFim: x.t - 6, instituicao: 'a escola técnica' });
+  x.momento = null;
+}).vida;
+const caminhos = (v: Vida, parte: ParteCaminhos) => render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={nada} parte={parte} irParte={nada} /></main>);
+
+describe('Cenário 6 · Caminhos aos 17, com técnico e procurando emprego', () => {
+  it('em Agora, as vagas vêm primeiro; a vida pública fica a um toque, agrupada', () => {
+    caminhos(tecnico(), 'agora');
+    const acoes = screen.getByRole('list', { name: 'O que dá para fazer agora' });
+    expect(within(acoes).getAllByRole('button')[0].textContent).toMatch(/vagas/i);
+    expect(within(acoes).queryByText(/partido|bandeira/i)).toBeNull();
+    // só a parte aberta é desenhada
+    expect(document.querySelectorAll('[role=tabpanel]')).toHaveLength(1);
+  });
+
+  it('em Oportunidades, as pastas mantêm tudo acessível: profissões, vida pública, outras trajetórias', () => {
+    caminhos(tecnico(), 'oportunidades');
+    expect(screen.getByRole('radio', { name: 'Profissões', checked: true })).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: 'Vida pública' }));
+    expect(screen.getByRole('heading', { name: 'Serviço público' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: 'Outras trajetórias' }));
+    expect(screen.getByRole('heading', { name: 'Esporte' })).toBeTruthy();
+    // cada caminho é uma ficha curta: o "como começa" abre quando pedido
+    expect(document.querySelector('.caminho .caminho__mais summary')?.textContent).toMatch(/Como essa vida costuma começar/);
+  });
+});
+
+describe('Cenário 8 · Vida: o que se compra continua conectado', () => {
+  it('a coisa comprada aparece em Patrimônio, junto do balanço; Dinheiro aponta para lá', () => {
+    let v = transacao(adulto(32, { semente: 5 }), x => { x.financas.conta = 80000; x.momento = null; }).vida;
+    v = executar(v, { tipo: 'comprar_coisa', coisaId: 'violao' }).vida;
+    expect((v.financas.coisas ?? []).some(c => c.coisaId === 'violao')).toBe(true);
+    render(<main><VidaConcreta vida={v} agir={() => true} secao="pertences" irSecao={nada} irPara={nada} abrirPessoa={nada} /></main>);
+    expect(screen.getByRole('tab', { name: 'Patrimônio', selected: true })).toBeTruthy();
+    expect(document.querySelector('.patrimonio')!.textContent).toMatch(/[Vv]iolão/);
+    cleanup();
+    render(<main><VidaConcreta vida={v} agir={() => true} secao="dinheiro" irSecao={nada} irPara={nada} abrirPessoa={nada} /></main>);
+    expect(screen.getByRole('button', { name: /Patrimônio/ })).toBeTruthy();
+  });
+});
+
+describe('Cenário 9 · uma mudança real aparece em Você e, quando é biográfica, no alto da História', () => {
+  it('começar a trabalhar: a ficha de Você diz o trabalho; a História diz que mudou no último ano', () => {
+    let v = transacao(adulto(22, { semente: 14 }), x => { x.trabalho.atual = undefined; x.momento = null; }).vida;
+    v = avancarAno(v).vida; v.momento = null;
+    v = transacao(v, (x, r) => { contratar(x, r, ocupacao('assistente_adm')); }).vida;
+    v = avancarAno(v).vida; v.momento = null;
+    expect(mudancasRecentes(v).some(t => /Começou a trabalhar/.test(t))).toBe(true);
+    render(<main><RetratoDaVida vida={v} irPara={nada} abrirPessoa={nada} /></main>);
+    const retrato = screen.getByRole('region', { name: 'A vida agora' });
+    expect(retrato.textContent).toMatch(/Começou a trabalhar/);
+    expect(retrato.textContent).toMatch(/[Aa]ssistente/);
+    // sem os quatro medidores
+    expect(within(retrato).queryAllByRole('img', { name: /de 5$/ })).toHaveLength(0);
+  });
+});

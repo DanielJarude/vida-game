@@ -37,10 +37,9 @@ import { areaDaPorta } from '../jogo/Estudos';
 import { Voce } from '../jogo/Voce';
 import { PaginaCaminhos } from '../jogo/CaminhosDaVida';
 import { VidaConcreta } from '../jogo/VidaConcreta';
-import { expressaoDe, momentoAtual, sinalPessoal } from '../estadoPessoal';
+import { expressaoDe, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
-import { Sinais } from '../jogo/Sinais';
-import { faseDaVida } from '../apresentar';
+import { RetratoDaVida } from '../jogo/RetratoDaVida';
 import { fechamentoDoAno, rotinaDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
@@ -139,7 +138,7 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       <div className={`palco palco--${area}`}>
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
-          {area === 'linha' && <><Hoje vida={vida} irPara={ir} />{c.marcaAno > 0 && <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} abrirPessoa={abrirPessoa} /></>}
+          {area === 'linha' && <><RetratoDaVida vida={vida} irPara={ir} abrirPessoa={abrirPessoa} />{c.marcaAno > 0 && <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} abrirPessoa={abrirPessoa} /></>}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
           {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parte} irParte={p => irLugar({ area: 'caminhos', parte: p })} explorar={explorar} aoExplorar={setExplorar} />}
@@ -226,10 +225,6 @@ function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number;
   );
 }
 
-/**
- * O alto da Linha da Vida: o rosto, o nome, a idade, uma frase sobre agora e,
- * num relance, os sinais (REWORK 6) — o detalhe mora em Você. O resto é biografia.
- */
 /** O fechamento do ano das carreiras especiais (temporada, obra, mandato, negócio): só quando há o que contar. */
 export function FechamentoDoAno({ vida }: { vida: Vida }) {
   const f = fechamentoDoAno(vida);
@@ -243,23 +238,6 @@ export function FechamentoDoAno({ vida }: { vida: Vida }) {
         </div>
       ))}
     </section>
-  );
-}
-
-function Hoje({ vida, irPara }: { vida: Vida; irPara: (a: Aba) => void }) {
-  const i = idade(vida);
-  return (
-    <header className="hoje">
-      <button type="button" className="hoje__rosto" onClick={() => irPara('voce')} aria-label="Ver como você está">
-        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={72} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
-      </button>
-      <div className="hoje__texto">
-        <p className="folio__kicker"><span className="folio__area">História</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
-        <h1 className="hoje__nome">{vida.eu.nome} <span>{vida.eu.sobrenome}</span></h1>
-        <p className="hoje__frase">{momentoAtual(vida)}</p>
-      </div>
-      <Sinais vida={vida} aoAbrir={() => irPara('voce')} />
-    </header>
   );
 }
 

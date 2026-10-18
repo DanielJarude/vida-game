@@ -20,9 +20,9 @@
  * primeiro; quem trabalha, o trabalho. Estudar não bloqueia trabalhar, nem o
  * contrário: os dois lados estão sempre aqui.
  *
- * As quatro abas ficam no documento (a inativa, escondida pelo CSS): nenhuma
- * ação depende de qual aba está aberta para existir — e a navegação por
- * intenção (`navegacao`) aponta para a aba certa.
+ * REWORK 9.5 · UX-07: só a parte aberta é desenhada (antes, as quatro ficavam no documento e o CSS escondia três —
+ * 15 a 25 ms a mais em cada toque). A navegação por intenção (`navegacao`) aponta para a parte certa; nenhuma ação
+ * depende de outra parte estar desenhada para existir no motor.
  */
 
 import type { Vida } from '../../motor/tipos';
@@ -147,13 +147,13 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, parte, irParte
         <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
           {SECOES_CAMINHOS.map(x => (
             <li key={x.id} role="presentation">
-              <button type="button" role="tab" id={`subnav-caminhos-${x.id}`} aria-selected={parte === x.id} tabIndex={parte === x.id ? 0 : -1} aria-controls={`caminhos-${x.id}`} className={`subnav__item${parte === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => irParte(x.id)} title={x.oque}>{x.rotulo}</button>
+              <button type="button" role="tab" id={`subnav-caminhos-${x.id}`} aria-selected={parte === x.id} tabIndex={parte === x.id ? 0 : -1} aria-controls={parte === x.id ? `caminhos-${x.id}` : undefined} className={`subnav__item${parte === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => irParte(x.id)} title={x.oque}>{x.rotulo}</button>
             </li>
           ))}
         </ul>
       </nav>
-      {SECOES_CAMINHOS.map(x => (
-        <div key={x.id} role="tabpanel" id={`caminhos-${x.id}`} aria-labelledby={`subnav-caminhos-${x.id}`} className={`caminhos__painel caminhos__painel--${x.id}${parte === x.id ? ' caminhos__painel--ativo' : ''}`} data-ativo={parte === x.id ? 'sim' : 'nao'}>
+      {SECOES_CAMINHOS.filter(x => x.id === parte).map(x => (
+        <div key={x.id} role="tabpanel" id={`caminhos-${x.id}`} aria-labelledby={`subnav-caminhos-${x.id}`} className={`caminhos__painel caminhos__painel--${x.id} caminhos__painel--ativo`} data-ativo="sim">
           {/* PROG-01: o que se mede no estudo e no trabalho, ano a ano (as notas, as matérias, o desempenho, o salário). */}
           {x.id === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} />}
           {/* As portas que nascem do que se pratica (a peneira, a seletiva, a banda, o grupo) são caminho também: aparecem aqui

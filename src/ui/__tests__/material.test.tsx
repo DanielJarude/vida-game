@@ -53,6 +53,8 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 // REWORK 3: Casa, Dinheiro e Compras são seções de Vida (a navegação estável de seis áreas).
 function abrirCasa() { abrir('Vida', 'Casa'); }
 function abrirDinheiro() { abrir('Vida', 'Dinheiro'); }
+/** REWORK 9.5: o balanço, os bens e as aplicações moram em Vida · Patrimônio (o inventário). */
+function abrirPatrimonio() { abrir('Vida', 'Patrimônio'); }
 function abrir(area: string, secao?: string) {
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
@@ -84,7 +86,7 @@ describe('Casa e dinheiro (Vida · Casa: moradia; Vida · Dinheiro: o mês, os b
       v.financas.dividas.push({ id: 'd', tipo: 'financiamento_veiculo', saldo: 15000, jurosMes: 0.015, parcela: 500, bemId: 'car', descricao: 'Financiamento: carro compacto', tInicio: v.t, prazo: 36 });
       esperado = balanco(v).liquido;
     });
-    abrirDinheiro();
+    abrirPatrimonio();
     const linha = screen.getByText(/Descontado o que deve/);
     expect(linha.textContent).toContain(dinheiroCheio(esperado));
     // Financiamento aparece como obrigação presa ao bem, não como "dívida" vermelha genérica.
@@ -97,7 +99,7 @@ describe('Casa e dinheiro (Vida · Casa: moradia; Vida · Dinheiro: o mês, os b
       adultaDeAluguel(v);
       v.financas.bens.push({ id: 'car', tipo: 'veiculo', modeloId: 'carro_suv', nome: 'SUV compacto', valor: 60000, tCompra: v.t, estado: 30, anoFabricacao: 2040, usado: true, historia: [], problema: { id: 'p', texto: 'a suspensão batendo', custo: 3200, desde: v.t, gravidade: 2, adiado: 0 } });
     });
-    abrirDinheiro();
+    abrirPatrimonio();
     expect(screen.getAllByText(/Precisa de conserto/).length).toBeGreaterThan(0);
     const consertar = screen.getAllByRole('button', { name: 'Consertar' })[0] as HTMLButtonElement;
     expect(consertar.disabled).toBe(false);
@@ -143,7 +145,7 @@ describe('Casa e dinheiro (Vida · Casa: moradia; Vida · Dinheiro: o mês, os b
       const a = aplicar(v, 'acoes', 40000);
       a.valor = 31000; a.historico = [40000, 36000, 31000]; a.retornoAno = -0.14;
     });
-    abrirDinheiro();
+    abrirPatrimonio();
     expect(screen.getByText('Ações de muitas empresas')).toBeTruthy();
     expect(screen.getByText('Perdeu')).toBeTruthy();
     expect(screen.getByText(/caiu 14/)).toBeTruthy();

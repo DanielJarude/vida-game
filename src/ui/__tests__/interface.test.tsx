@@ -209,14 +209,16 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
+    // Estrada e próximo passo, em frases — nunca "nível 2" ou "sênior" por conta do número interno (Caminhos · Agora).
+    expect(within(screen.getByRole('main')).getAllByText(/anos em escritório|Começando em escritório|Um ano em escritório/).length).toBeGreaterThan(0);
+    expect(within(screen.getByRole('main')).queryByText(/nível \d/i)).toBeNull();
+    // REWORK 9.5 · UX-07: só a parte aberta de Caminhos é desenhada — as portas moram em Oportunidades.
+    fireEvent.click(screen.getByRole('tab', { name: 'Oportunidades' }));
     const main = screen.getByRole('main');
     expect(within(main).getByText('Portas de trabalho')).toBeTruthy();
     expect(within(main).getByText(/pode indicar você/)).toBeTruthy();
     // O botão diz o que aceitar significa: uma vaga de emprego leva à entrevista.
     expect(within(main).getByRole('button', { name: 'Ir à entrevista' })).toBeTruthy();
-    // Estrada e próximo passo, em frases — nunca "nível 2" ou "sênior" por conta do número interno.
-    expect(within(main).getAllByText(/anos em escritório|Começando em escritório|Um ano em escritório/).length).toBeGreaterThan(0);
-    expect(within(main).queryByText(/nível \d/i)).toBeNull();
   });
 
   it('você: a pessoa primeiro — palavras, causas e um cuidado possível, sem números', () => {
@@ -287,6 +289,7 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
+    fireEvent.click(screen.getByRole('tab', { name: 'Oportunidades' }));
     // REWORK 4: a vaga é um resumo escaneável; o botão está no detalhe (abre ao tocar).
     for (const b of Array.from(screen.getByRole('main').querySelectorAll('.vaga-resumo'))) fireEvent.click(b);
     fireEvent.click(within(screen.getByRole('main')).getAllByRole('button', { name: /Candidatar-se/ })[0]);

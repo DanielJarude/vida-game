@@ -19,6 +19,7 @@ import { idade } from '../../motor/nucleo';
 import { tracosMarcantes } from '../../motor/personalidade';
 import type { Dimensao } from '../../motor/sistemas/estado';
 import { FichaDeHabilidade } from './Progresso';
+import { ResumoDaRotina } from './Rotina';
 import { evolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { MATERIAS } from '../../motor/dados/frentes';
 import { Retrato } from '../avatar/Retrato';
@@ -80,6 +81,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       <div id="voce-agora" className={`estados estados--${leituras.length}`}>
         {leituras.map(l => <Estado key={l.d} l={l} vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />)}
       </div>
+      {/* REWORK 9.5 · ROT-01: a cabeça e o corpo vivem a mesma semana — a mesma leitura da rotina de Minha Semana. */}
+      {i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
 
       {pessoais.length > 0 && <div id="voce-corpo"><CorpoEAprendizado vida={vida} dims={pessoais} irPara={irPara} /></div>}
 
