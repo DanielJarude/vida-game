@@ -30,7 +30,7 @@ function desenharVeiculo(forma: FormaVeiculo, cor?: string, versaoId?: string, s
   if (MOTOS.has(forma)) return moto(forma as Parameters<typeof moto>[0], c, versaoId);
   if (BIKES.has(forma)) return bicicleta(forma as Parameters<typeof bicicleta>[0], c, versaoId);
   if (BARCOS.has(forma)) return barco(forma as Parameters<typeof barco>[0], c, versaoId);
-  if (AVIOES.has(forma)) return aviao(forma as Parameters<typeof aviao>[0], c);
+  if (AVIOES.has(forma)) return aviao(forma as Parameters<typeof aviao>[0], c, versaoId);
   return carro(perfilDoCarro('hatch', undefined, semente), c, estado);
 }
 

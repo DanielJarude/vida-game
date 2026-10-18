@@ -41,7 +41,13 @@ const TODAS = [
   ['voce-jovem', 'jovem', 'Você'],
   ['pessoas-familia', 'familia', 'Pessoas'],
   ['ficha-amiga', 'amiga', 'Pessoas', 'ficha'],
-  ['menu', 'empregado', 'História', 'menu']
+  ['menu', 'empregado', 'História', 'menu'],
+  ['pessoas-vida-deles', 'familia', 'Pessoas', 'aba:A vida deles'],
+  ['pessoas-nossa', 'amiga', 'Pessoas', 'aba:Nossa história'],
+  ['semana-agenda-bloco', 'varias', 'Minha Semana', 'bloco'],
+  ['semana-adolescente', 'adolescente', 'Minha Semana'],
+  ['caminhos-jovem-dev', 'jovem', 'Caminhos', 'aba:Desenvolvimento'],
+  ['celular-perfil', 'influencer', 'Minha Semana', 'aba:Celular', 'aba:Perfil']
 ];
 const so = process.env.CENAS?.split(',');
 const cenas = so ? TODAS.filter(c => so.includes(c[0])) : TODAS;
@@ -160,6 +166,8 @@ for (const [nome, sv, area, ...passos] of cenas) {
           const r = p.locator('.pessoa--falecida').first(); if (await r.count()) { await r.click(); await p.waitForTimeout(350); } else notas.push(`${rot}: sem quem se foi para abrir`);
         } else if (passo.startsWith('rede:')) {
           const r = p.locator('.plataforma', { hasText: passo.slice(5) }).first(); if (await r.count()) { await r.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem rede ${passo}`);
+        } else if (passo === 'bloco') {
+          const r = p.locator('.bloco-agenda--movel').locator('visible=true').first(); if (await r.count()) { await r.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem bloco móvel`);
         } else if (passo.startsWith('dia:')) {
           const t = p.getByRole('tab', { name: new RegExp(`^${passo.slice(4)}`) }).locator('visible=true').first(); if (await t.count()) { await t.click(); await p.waitForTimeout(250); } else notas.push(`${rot}: sem dia ${passo}`);
         } else if (passo.startsWith('aba:') || passo.startsWith('secao:')) {

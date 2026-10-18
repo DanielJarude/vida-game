@@ -28,6 +28,21 @@ import type { Entrada, Vida } from '../../motor/tipos';
 import { idadePessoa } from '../../motor/nucleo';
 import { anosDaBiografia, faseDaVida, fiosDoAno, naturezaDe, TEMA_ROTULO } from '../apresentar';
 import { Retrato } from '../avatar/Retrato';
+import { anoDe } from '../../motor/tempo';
+import { leituraDoPalmares } from '../../motor/sistemas/palmares';
+
+/**
+ * REWORK 9 — ver a história por um fio: os estudos, o trabalho, as pessoas, os lugares e a saúde (o tema que o motor
+ * deu a cada acontecimento — nada reclassificado) e as CONQUISTAS (os marcos que a vida registrou: formatura,
+ * aprovação, promoção, título — a semente da sala de troféus, só com o que aconteceu).
+ */
+export type FioDaHistoria = 'tudo' | 'estudos' | 'trabalho' | 'pessoas' | 'lugares' | 'saude' | 'conquistas';
+const TEMAS_DO_FIO: Record<Exclude<FioDaHistoria, 'tudo' | 'conquistas'>, Entrada['tema'][]> = {
+  estudos: ['escola', 'estudo'], trabalho: ['trabalho', 'dinheiro'], pessoas: ['amor', 'familia', 'filhos', 'amizade', 'perda', 'morte', 'nascimento'],
+  lugares: ['lugar', 'casa', 'lazer'], saude: ['saude']
+};
+const ROTULO_DO_FIO: Record<FioDaHistoria, string> = { tudo: 'Tudo', estudos: 'Estudos', trabalho: 'Trabalho', pessoas: 'Pessoas', lugares: 'Lugares e lazer', saude: 'Saúde', conquistas: 'Conquistas' };
+const MARCAS_DE_CONQUISTA = new Set(['conquista', 'aprovacao', 'formacao', 'promocao', 'profissional', 'estreia', 'eleicao', 'lideranca', 'ingresso', 'primeiro_emprego', 'negocio_aberto']);
 
 /** Quantos anos aparecem de cada vez (o resto abre a pedido). */
 export const ANOS_POR_VEZ = 20;
@@ -36,7 +51,13 @@ export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: n
   const [doComeco, setDoComeco] = useState(false);
   const [discreto, setDiscreto] = useState(true);
   const [limite, setLimite] = useState(ANOS_POR_VEZ);
-  const anos = useMemo(() => anosDaBiografia(vida, discreto), [vida, discreto]);
+  const [fio, setFio] = useState<FioDaHistoria>('tudo');
+  const anos = useMemo(() => {
+    const todos = anosDaBiografia(vida, discreto);
+    if (fio === 'tudo' || fio === 'conquistas') return todos;
+    const temas = new Set(TEMAS_DO_FIO[fio]);
+    return todos.map(a => ({ ...a, entradas: a.entradas.filter(e => temas.has(e.tema)) })).filter(a => a.entradas.length);
+  }, [vida, discreto, fio]);
   const idNovas = useMemo(() => new Set(vida.biografia.slice(marca).map(e => e.id)), [vida, marca]);
   const porId = useMemo(() => new Map(vida.biografia.map(e => [e.id, e])), [vida]);
   const ordem = doComeco ? anos : [...anos].reverse();
@@ -56,7 +77,11 @@ export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: n
           {discreto ? 'Só o que marcou' : 'Mostrar tudo'}
         </button>
       </div>
-      <ol className="anos">
+      <div className="linha-da-vida__fios" role="group" aria-label="Ver a história por um fio">
+        {(Object.keys(ROTULO_DO_FIO) as FioDaHistoria[]).map(f => <button key={f} type="button" className="chip" aria-pressed={fio === f} onClick={() => { setFio(f); setLimite(ANOS_POR_VEZ); }}>{ROTULO_DO_FIO[f]}</button>)}
+      </div>
+      {fio === 'conquistas' && <Conquistas vida={vida} />}
+      <ol className={`anos${fio === 'conquistas' ? ' anos--oculto' : ''}`}>
         {visiveis.map((a, k) => {
           const anterior = visiveis[k - 1];
           const salto = anterior ? Math.abs(anterior.idade - a.idade) : 1;
@@ -88,7 +113,7 @@ export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: n
           );
         })}
       </ol>
-      {faltam > 0 && (
+      {faltam > 0 && fio !== 'conquistas' && (
         <button type="button" className="botao botao--secundario linha-da-vida__mais" onClick={() => setLimite(l => l + ANOS_POR_VEZ)}>
           {doComeco ? 'Continuar lendo' : 'Ver anos anteriores'} <span className="linha-da-vida__faltam">({faltam} {faltam === 1 ? 'ano' : 'anos'} com história)</span>
         </button>
@@ -150,5 +175,30 @@ function ItemBiografia({ e, nova, idade, vida, abrirPessoa, rosto = true, origem
         </span>
       )}
     </li>
+  );
+}
+
+/**
+ * As conquistas da vida (REWORK 9): os marcos que o motor registrou como conquista — formar-se, ser aprovado, ser
+ * promovido, estrear, vencer — e o palmarés do esporte, em ordem. A sala de troféus começa aqui, só com o que houve.
+ */
+function Conquistas({ vida }: { vida: Vida }) {
+  const marcas = vida.caminhos.marcas.filter(m => MARCAS_DE_CONQUISTA.has(m.tipo)).sort((a, b) => b.t - a.t);
+  const pal = leituraDoPalmares(vida);
+  if (!marcas.length && !pal.titulos.length && !pal.premios.length) return <p className="nota">Ainda não há conquistas registradas. Formar-se, ser aprovado, ser promovido, ganhar um título: tudo isso aparece aqui.</p>;
+  return (
+    <section className="conquistas" aria-label="Conquistas">
+      {(pal.titulos.length > 0 || pal.premios.length > 0) && (
+        <div className="conquistas__palmares">
+          <h3 className="conquistas__titulo">No esporte</h3>
+          <ul className="conquistas__lista">{[...pal.titulos, ...pal.premios].map(x => <li key={x}>{x}</li>)}</ul>
+        </div>
+      )}
+      {marcas.length > 0 && (
+        <ol className="conquistas__lista conquistas__lista--vida">
+          {marcas.map((m, k) => <li key={`${m.t}${k}`} className={`conquistas__item conquistas__item--peso${m.peso}`}><span className="conquistas__ano">{anoDe(m.t)}</span> {m.texto}</li>)}
+        </ol>
+      )}
+    </section>
   );
 }

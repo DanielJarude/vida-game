@@ -33,6 +33,7 @@ import { BotaoAcao, Secao } from '../comum';
 import { dinheiroCurto, formaDoModelo, leituraDaSeguranca } from '../leituraMaterial';
 import { DesenhoVeiculo, MiniaturaDaCasa } from './material/Desenhos';
 import { Fachada } from '../ilustracao/Fachada';
+import { PORTA_DA_FACHADA, type LugarDaCidade } from '../ilustracao/lugares';
 import { corDoVeiculo } from '../../motor/dados/pertences';
 import { DesenhoObjeto } from './material/Objetos';
 import { Retrato } from '../avatar/Retrato';
@@ -146,7 +147,13 @@ function CartaoVitrine({ x, i, abrir }: { x: Vitrine; i: number; abrir: (l: Qual
   return (
     <li className={`vitrine${cedo ? ' vitrine--cedo' : ''}`}>
       <button type="button" className="vitrine__abrir" onClick={() => abrir(x.id)} disabled={cedo} aria-describedby={cedo ? `cedo-${x.id}` : undefined}>
-        <span className="vitrine__objetos" aria-hidden><Fachada lugar={x.id === 'comprar' ? 'alugar' : x.id} largura={360} altura={112} vazia={!temObjetos(x.vitrine)} className="vitrine__fachada" />{x.vitrine}</span>
+        {/* REWORK 9: na loja de porta lateral, os objetos ficam na frente do vidro (no máximo dois), nunca na porta. */}
+        <span className="vitrine__objetos" aria-hidden data-porta={PORTA_DA_FACHADA[x.id === 'comprar' ? 'alugar' : x.id as LugarDaCidade] ?? undefined}>
+          <Fachada lugar={x.id === 'comprar' ? 'alugar' : x.id} largura={360} altura={112} vazia={!temObjetos(x.vitrine)} className="vitrine__fachada" />
+          {PORTA_DA_FACHADA[x.id === 'comprar' ? 'alugar' : x.id as LugarDaCidade] && temObjetos(x.vitrine)
+            ? <span className="vitrine__produtos">{Array.isArray(x.vitrine) ? x.vitrine.slice(0, 2) : x.vitrine}</span>
+            : x.vitrine}
+        </span>
         <span className="vitrine__texto">
           <span className="vitrine__nome">{x.nome}</span>
           <span className="vitrine__oque" id={cedo ? `cedo-${x.id}` : undefined}>{cedo ? x.porque : x.oque}</span>

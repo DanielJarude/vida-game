@@ -18,7 +18,9 @@ import { anoDe } from '../../motor/tempo';
 import { PLATAFORMAS, ORDEM_PLATAFORMAS } from '../../motor/dados/redes';
 import { celebridadesDoPais, conteudosPossiveis, custoDaCampanha, custoDePromover, custoDoPacote, custoDoSelo, LIMITE_DO_ANO, leituraDaConta, leituraDoBalanco, PACOTES, seguidoresConhecidos, usaPlataforma } from '../../motor/sistemas/redes';
 import { contaAtiva, seguidoresEmPalavras } from '../../motor/sistemas/redesBase';
-import { BotaoAcao } from '../comum';
+import { BotaoAcao, navegarAbas } from '../comum';
+import { disponibilidade } from '../../motor/acoes';
+import { podeTentar } from '../../motor/plausibilidade';
 import { dinheiroCurto } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
 import { DESENHOS } from './Emblemas';
@@ -121,7 +123,7 @@ export function RedesSociais({ vida, agir, abrirPessoa }: { vida: Vida; agir: (a
     (e.currentTarget.parentElement?.parentElement?.querySelector(`[data-app="${prox}"]`) as HTMLElement | null)?.focus();
   };
   return (
-    <div className="redes">
+    <div className="redes redes--com-lado">
       <div className={`celular celular--${tela}`} role="region" aria-label="Seu celular">
         <div className="celular__tela">
           <div className="celular__status" aria-hidden>
@@ -160,8 +162,67 @@ export function RedesSociais({ vida, agir, abrirPessoa }: { vida: Vida; agir: (a
           </ul>
         </div>
       </div>
-      <p className="nota redes__intro">Tudo é simulado dentro do jogo, sem internet. Cada rede funciona de um jeito: o mesmo vídeo explode numa e passa batido na outra — e quem da sua vida está lá reage.</p>
+      {/* REWORK 9 · UX-02: o que não precisa estar DENTRO do aparelho (o público ano a ano, os números da conta) fica ao
+          lado no desktop (a largura que sobrava) e embaixo no celular — o aparelho deixa de ser uma tira comprida. */}
+      <aside className="redes__lado" aria-label="Os números das redes">
+        {tela !== 'inicio' && contaAtiva(vida, tela) ? <NumerosDaConta vida={vida} id={tela} /> : <ResumoDasContas vida={vida} abrir={setTela} />}
+        <p className="nota redes__intro">Tudo é simulado dentro do jogo, sem internet. Cada rede funciona de um jeito: o mesmo vídeo explode numa e passa batido na outra — e quem da sua vida está lá reage.</p>
+      </aside>
     </div>
+  );
+}
+
+/** Ao lado do aparelho, com um app aberto: o público ano a ano (o balanço do motor) e o que a conta já viveu. */
+function NumerosDaConta({ vida, id }: { vida: Vida; id: PlataformaId }) {
+  const c = contaAtiva(vida, id)!;
+  const pl = PLATAFORMAS[id];
+  const t = c.totais;
+  const anos = (c.anos ?? []).slice(-6);
+  return (
+    <section className="numeros-rede" aria-label={`${pl.nome}: histórico e estatísticas`} style={{ ['--cor-plataforma' as string]: pl.cor }}>
+      <h3 className="numeros-rede__titulo"><Glifo id={id} tamanho={18} /> {pl.nome}: histórico e números</h3>
+      <BalancoDoPublico vida={vida} conta={c} publico={pl.publico[1]} />
+      {anos.length > 1 && (
+        <ol className="numeros-rede__anos" aria-label={`${pl.publico[1]} no fim de cada ano`}>
+          {anos.map(b => <li key={b.desde}><span className="numeros-rede__ano">{anoDe(b.ate ?? b.desde)}</span> <strong>{seguidoresEmPalavras(b.fim ?? 0)}</strong></li>)}
+        </ol>
+      )}
+      {t && (
+        <dl className="numeros-rede__totais">
+          <div><dt>Publicações</dt><dd>{t.publicacoes}</dd></div>
+          <div><dt>Virais</dt><dd>{t.virais}</dd></div>
+          <div><dt>Maior público</dt><dd>{seguidoresEmPalavras(t.maior)}</dd></div>
+          {t.receita > 0 && <div><dt>Já rendeu</dt><dd>{dinheiroCurto(t.receita)}</dd></div>}
+        </dl>
+      )}
+    </section>
+  );
+}
+
+/** Na tela inicial: cada conta, o público de agora e o do fim do último ano (um toque abre o app). */
+function ResumoDasContas({ vida, abrir }: { vida: Vida; abrir: (id: PlataformaId) => void }) {
+  const contas = ORDEM_PLATAFORMAS.filter(p => contaAtiva(vida, p));
+  if (!contas.length) return null;
+  return (
+    <section className="numeros-rede" aria-label="As suas contas">
+      <h3 className="numeros-rede__titulo">As suas contas</h3>
+      <ul className="numeros-rede__contas">
+        {contas.map(id => {
+          const c = contaAtiva(vida, id)!;
+          const ult = c.anos?.[c.anos.length - 1];
+          const d = ult && ult.fim !== undefined ? ult.fim - ult.inicio : undefined;
+          return (
+            <li key={id}>
+              <button type="button" className="numeros-rede__conta" style={{ ['--cor-plataforma' as string]: PLATAFORMAS[id].cor }} onClick={() => abrir(id)}>
+                <Glifo id={id} tamanho={18} /> <span>{PLATAFORMAS[id].nome}</span>
+                <strong>{seguidoresEmPalavras(c.seguidores)}</strong>
+                {d !== undefined && d !== 0 && <span className={`numeros-rede__delta numeros-rede__delta--${d > 0 ? 'ganho' : 'perda'}`}>{d > 0 ? '+' : '−'}{seguidoresEmPalavras(Math.abs(d))} no último ano</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -252,8 +313,13 @@ export function BalancoDoPublico({ vida, conta, publico }: { vida: Vida; conta: 
   );
 }
 
+type TelaDoApp = 'perfil' | 'publicar' | 'feed' | 'conta';
+const TELAS_DO_APP: { id: TelaDoApp; rotulo: string }[] = [{ id: 'perfil', rotulo: 'Perfil' }, { id: 'publicar', rotulo: 'Publicar' }, { id: 'feed', rotulo: 'Feed' }, { id: 'conta', rotulo: 'Conta' }];
+
 function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; abrirPessoa?: (id: string) => void }) {
   const [promover, setPromover] = useState(false);
+  // REWORK 9 · UX-02: dentro do app, quatro telas curtas (como num aparelho de verdade) em vez de uma tira comprida.
+  const [telaApp, setTelaApp] = useState<TelaDoApp>('publicar');
   const [mais, setMais] = useState<null | 'celebridade' | 'provocar' | 'conta'>(null);
   const [apagar, setApagar] = useState(false);
   const pl = PLATAFORMAS[id];
@@ -277,8 +343,22 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
   const ultimas = c.publicacoes.filter(x => !x.apagada).slice(-6).reverse();
   const celebridades = celebridadesDoPais(vida);
   const provocaveis = conhecidos.slice(0, 4);
+  // O aviso que vale para todas as publicações (o ano cheio, a semana apertada) é dito UMA vez, acima delas.
+  const avisos = conteudos.map(t => disponibilidade(vida, { tipo: 'rede', op: { oque: 'publicar', plataforma: id, tema: t.tema, promover } })).filter(d => podeTentar(d) && d.motivo).map(d => d.motivo!);
+  const avisoComum = avisos.length === conteudos.length && avisos.length > 0 && avisos.every(x => x === avisos[0]) ? avisos[0] : undefined;
+  const painel = (t: TelaDoApp) => `app-tela app-tela--${t}${telaApp === t ? ' app-tela--aberta' : ''}`;
   return (
     <section className="plataforma-painel" style={estilo} aria-label={pl.nome}>
+      <ul className="app-abas" role="tablist" aria-label={`Telas do ${pl.nome}`} onKeyDown={navegarAbas}>
+        {TELAS_DO_APP.map(x => (
+          <li key={x.id} role="presentation">
+            <button type="button" role="tab" aria-selected={telaApp === x.id} tabIndex={telaApp === x.id ? 0 : -1} className={`app-abas__item${telaApp === x.id ? ' app-abas__item--aberta' : ''}`} onClick={() => setTelaApp(x.id)}>
+              {x.rotulo}{x.id === 'feed' && ultimas.length ? <span className="app-abas__n"> {ultimas.length}</span> : null}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className={painel('perfil')} role="tabpanel" aria-label="Perfil">
       <header className={`plataforma-painel__cabeca plataforma-painel__cabeca--${id}`}>
         {/* REWORK 7.5: o perfil no formato da rede — o banner do canal, a fileira de números do perfil, o "ao vivo". */}
         <span className="plataforma-painel__avatar"><Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} tamanho={id === 'youtube' || id === 'twitch' ? 48 : 56} rotulo={`@${c.arroba}`} /></span>
@@ -292,25 +372,32 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         <div><dt>Renda</dt><dd>{l.renda > 0 ? `${dinheiroCurto(l.renda)}/mês` : c.monetizada !== undefined ? 'monetizada (sem renda agora)' : 'não monetizada'}</dd></div>
         {l.verificacao && <div><dt>Selo</dt><dd>{l.verificacao}</dd></div>}
       </dl>
-      <BalancoDoPublico vida={vida} conta={c} publico={pl.publico[1]} />
       {l.suspensa && <p className="nota nota--ruim"><span aria-hidden>! </span>A conta está suspensa: a {pl.nome} puniu as denúncias. Até lá, nada de publicar.</p>}
       {l.toxica && !l.suspensa && <p className="nota nota--atencao">A conta ficou com fama de briguenta: menos gente quer ser marcada por você, e a próxima denúncia pesa.</p>}
       {(c.advertencias ?? 0) > 0 && !l.suspensa && <p className="nota">Advertências: {c.advertencias} de 3.</p>}
       {conhecidos.length > 0 && <p className="nota">Da sua vida, acompanham você aqui: {conhecidos.slice(0, 4).map(p => p.nome).join(', ')}{conhecidos.length > 4 ? ` e mais ${conhecidos.length - 4}` : ''}.</p>}
+      </div>
 
+      <div className={painel('publicar')} role="tabpanel" aria-label={pl.verbo}>
       <h4 className="plataforma-painel__sub">{pl.verbo}</h4>
       <p className="nota">{l.noAno >= LIMITE_DO_ANO ? 'O ano já teve publicação demais.' : l.noAno >= 3 ? `Já foram ${l.noAno} neste ano: cada nova alcança um pouco menos.` : 'O que a sua vida tem para mostrar agora:'}</p>
+      {avisoComum && <p className="acao__aviso app-tela__aviso">{avisoComum}</p>}
       <div className="grupo-acoes grupo-acoes--linha plataforma-painel__temas">
         {conteudos.map(t => (
           <div key={t.tema} className="tema-post">
-            <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'publicar', plataforma: id, tema: t.tema, promover } }} agir={agir} variante={t.tema === 'opiniao' || t.tema === 'rebater' || t.tema === 'politica' ? 'discreto' : 'secundario'}>{t.rotulo}</BotaoAcao>
+            <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'publicar', plataforma: id, tema: t.tema, promover } }} agir={agir} variante={t.tema === 'opiniao' || t.tema === 'rebater' || t.tema === 'politica' ? 'discreto' : 'secundario'} semAviso={!!avisoComum}>{t.rotulo}</BotaoAcao>
             {t.dica && <span className="tema-post__dica">{t.dica}</span>}
           </div>
         ))}
       </div>
       {id !== 'onlyfans' && <label className="rede__promover"><input type="checkbox" checked={promover} onChange={e => setPromover(e.target.checked)} /> Impulsionar a publicação ({dinheiroCurto(custoDePromover(vida))})</label>}
-      {ultimas.length > 0 && <Feed vida={vida} agir={agir} id={id} lista={ultimas} />}
+      </div>
 
+      <div className={painel('feed')} role="tabpanel" aria-label="Feed">
+      {ultimas.length > 0 ? <Feed vida={vida} agir={agir} id={id} lista={ultimas} /> : <p className="nota">Nada publicado ainda. A primeira publicação começa em "Publicar".</p>}
+      </div>
+
+      <div className={painel('conta')} role="tabpanel" aria-label="Conta">
       <div className="plataforma-painel__mais" role="group" aria-label="Mais coisas para fazer">
         {id !== 'onlyfans' && <button type="button" className="botao botao--discreto" aria-expanded={mais === 'celebridade'} onClick={() => setMais(m => (m === 'celebridade' ? null : 'celebridade'))}>Marcar uma celebridade</button>}
         {id !== 'onlyfans' && <button type="button" className="botao botao--discreto" aria-expanded={mais === 'provocar'} onClick={() => setMais(m => (m === 'provocar' ? null : 'provocar'))}>Provocar, trollar</button>}
@@ -358,6 +445,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         </div>
       )}
       {abrirPessoa && conhecidos.length > 0 && <p className="nota">Seguir, deixar de seguir ou bloquear alguém: na ficha da pessoa, em Pessoas.</p>}
+      </div>
     </section>
   );
 }

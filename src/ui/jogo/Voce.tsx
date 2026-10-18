@@ -66,15 +66,26 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
         </div>
       </section>
 
-      <div className={`estados estados--${leituras.length}`}>
+      {/* REWORK 9: o retrato em partes — um índice curto leva a cada uma (a página é longa numa vida longa). */}
+      <nav className="voce-indice" aria-label="Partes do retrato">
+        <a href="#voce-agora">Como está</a>
+        {pessoais.length > 0 && <a href="#voce-corpo">Corpo e aprendizado</a>}
+        <a href="#voce-sabe">O que sabe fazer</a>
+        {tracos.length > 0 && <a href="#titulo-jeito">O seu jeito</a>}
+        {(sinais.length > 0 || condicoes.length > 0) && <a href="#voce-saude">Saúde</a>}
+        <a href="#voce-aparencia">Aparência</a>
+        <a href="#voce-mundo">No mundo</a>
+      </nav>
+
+      <div id="voce-agora" className={`estados estados--${leituras.length}`}>
         {leituras.map(l => <Estado key={l.d} l={l} vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />)}
       </div>
 
-      {pessoais.length > 0 && <CorpoEAprendizado vida={vida} dims={pessoais} irPara={irPara} />}
+      {pessoais.length > 0 && <div id="voce-corpo"><CorpoEAprendizado vida={vida} dims={pessoais} irPara={irPara} /></div>}
 
       {/* REWORK 7: o que a pessoa SABE FAZER, com os degraus de cada habilidade (a mesma escada da ficha da prática) —
           e, ao lado, os jeitos de nascença que o motor guarda. Antes eram linhas de texto soltas. */}
-      <Habilidades vida={vida} irPara={irPara} />
+      <div id="voce-sabe"><Habilidades vida={vida} irPara={irPara} /></div>
       {/* REWORK 9 · PROG-01: as habilidades fora da escola, ano a ano — quanto andou e por quê (as fontes do motor). */}
       <Progressao vida={vida} dominios={(Object.keys(vida.caminhos.frentes) as Dominio[]).filter(d => !MATERIAS.includes(d))} titulo="O que você sabe fazer, ano a ano" />
 
@@ -87,7 +98,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       )}
 
       {(sinais.length > 0 || condicoes.length > 0) && (
-        <div className="voce-saude">
+        <div id="voce-saude" className="voce-saude">
           {sinais.length > 0 && (
             <section className="voce-condicoes voce-sinais" aria-label="Sinais do corpo">
               <h2 className="voce-subtitulo">O corpo tem dado sinais</h2>
@@ -115,7 +126,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
         </div>
       )}
 
-      <AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} />
+      <div id="voce-aparencia"><AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} /></div>
 
       {i >= 8 && (
         <section className="voce-dinheiro" aria-label="O dinheiro">
@@ -128,7 +139,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       )}
 
       <OSeuNome vida={vida} agir={agir} />
-      <QuemNoMundo vida={vida} agir={agir} />
+      <div id="voce-mundo"><QuemNoMundo vida={vida} agir={agir} /></div>
       {i >= 14 && <OQueConstruiu vida={vida} />}
       <Linhagem vida={vida} />
     </div>

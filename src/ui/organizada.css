@@ -188,3 +188,43 @@ html { scroll-padding-bottom: calc(var(--avancar-altura, 56px) + 3rem); }
 .nossa-historia__item--peso3 .vida-deles__texto { font-weight: var(--weight-semibold); }
 .nossa-historia__filtros { margin-bottom: var(--space-2); }
 .botao--ativo { box-shadow: inset 0 0 0 2px var(--tom); color: var(--text-primary); }
+/* UX-02: no desktop, o avançar é uma pílula compacta à direita, sem o véu largo — cobre o mínimo enquanto a página rola
+   (no fim da página ele volta ao seu lugar, depois de tudo; no celular continua acima da barra de áreas). */
+@media (min-width: 761px) {
+  .avancar { justify-content: flex-end; padding-top: var(--space-3); background: none; }
+  .avancar__botao { width: auto; min-width: 16rem; }
+}
+.agenda-semana { --hora-px: 34px; }
+
+/* -------------------------------------------------- Você: o índice do retrato */
+.voce-indice { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin: var(--space-2) 0 var(--space-4); }
+.voce-indice a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-pill); font-size: var(--type-caption); color: var(--text-secondary); text-decoration: none; box-shadow: inset 0 0 0 1px var(--fio-forte); background: var(--superficie); }
+.voce-indice a:hover { color: var(--text-primary); box-shadow: inset 0 0 0 1.5px var(--tom); }
+#voce-agora, #voce-corpo, #voce-sabe, #voce-saude, #voce-aparencia, #voce-mundo, #titulo-jeito { scroll-margin-top: calc(var(--cabecalho-altura, 64px) + var(--space-3)); }
+
+/* -------------------------------------------------- História: os fios e as conquistas */
+.linha-da-vida__fios { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin: 0 0 var(--space-3); }
+.anos--oculto { display: none; }
+.conquistas { margin: var(--space-2) 0 var(--space-5); }
+.conquistas__titulo { margin: 0 0 var(--space-2); font-size: var(--type-caption); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.conquistas__lista { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.conquistas__item { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr); gap: var(--space-2); padding: var(--space-1) 0; border-bottom: 1px solid var(--fio); color: var(--text-primary); }
+.conquistas__item--peso3 { font-weight: var(--weight-semibold); }
+.conquistas__ano { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+
+/* -------------------------------------------------- REWORK 8, o polimento: o objeto na frente do vidro, não da porta
+   A fachada é desenhada em 480×120 e preenche a caixa por altura ('slice'); a escala é max(largura/480, 112/120).
+   O vidro: x 198–326 na loja de porta à esquerda; x 154–278 na de porta à direita (o meio do desenho é x 240). */
+.vitrine__objetos[data-porta] { container-type: inline-size; }
+.vitrine__produtos { position: absolute; bottom: var(--space-2); display: flex; align-items: flex-end; justify-content: center; gap: var(--space-2); }
+.vitrine__produtos > * { flex: none; max-width: 50%; position: relative; }
+.vitrine__objetos[data-porta='esq'] .vitrine__produtos { left: calc(50% - 42 * max(100cqw / 480, 0.9333px)); width: calc(128 * max(100cqw / 480, 0.9333px)); }
+.vitrine__objetos[data-porta='dir'] .vitrine__produtos { left: calc(50% - 86 * max(100cqw / 480, 0.9333px)); width: calc(124 * max(100cqw / 480, 0.9333px)); }
+/* A casa à venda ou para alugar tem tamanho de casa na lista da imobiliária (antes, 88 px: um ícone). */
+.oferta.oferta--casa { grid-template-columns: 140px minmax(0, 1fr) auto; }
+.oferta.oferta--casa .oferta__casa { width: 140px; min-height: 76px; }
+.oferta.oferta--casa .oferta__casa .cena--miniatura { max-width: 100%; height: auto; }
+@media (max-width: 480px) {
+  .oferta.oferta--casa { grid-template-columns: 112px minmax(0, 1fr); }
+  .oferta.oferta--casa .oferta__casa { width: 112px; min-height: 64px; }
+}

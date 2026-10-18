@@ -170,11 +170,11 @@ try {
 
   // 3c. As redes sociais sem rede (simulação local): aos 13, criar a conta no Instagram e publicar — offline.
   for (let k = 0; k < 12 && Number((await idadeNaTela())?.match(/(\d+) anos/)?.[1] ?? 0) < 13; k++) await avancar(1);
-  await p.locator('.barra__item', { hasText: 'Tempo' }).first().click();
-  await p.getByRole('tab', { name: 'Redes sociais' }).click();
+  await p.locator('.barra__item', { hasText: 'Semana' }).first().click();
+  await p.getByRole('tab', { name: 'Celular' }).click();
   const criar = p.getByRole('button', { name: 'Criar uma conta no Instagram' });
   const temCriar = await criar.waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
-  checar('offline: a aba Redes sociais abre e oferece criar a conta', temCriar, await idadeNaTela());
+  checar('offline: a aba Celular abre e oferece criar a conta', temCriar, await idadeNaTela());
   if (temCriar) {
     await criar.click();
     await p.waitForTimeout(150);
@@ -188,8 +188,10 @@ try {
     checar('offline: a conta volta idêntica depois de recarregar', (await lerSave()) === sr);
     await p.getByRole('button', { name: /Continuar a vida de/ }).click();
     await p.locator('.avancar__botao').waitFor({ timeout: 20000 });
-    await p.locator('.barra__item', { hasText: 'Tempo' }).first().click();
-    await p.getByRole('tab', { name: 'Redes sociais' }).click();
+    await p.locator('.barra__item', { hasText: 'Semana' }).first().click();
+    await p.getByRole('tab', { name: 'Celular' }).click();
+    // REWORK 9: o perfil é uma das telas do app (Perfil · Publicar · Feed · Conta).
+    await p.getByRole('tab', { name: /^Perfil/ }).first().click().catch(() => {});
     const arroba = await p.locator('.plataforma-painel__titulo').first().innerText().catch(() => '');
     checar('offline: a tela mostra a mesma conta (@arroba)', !!conta && arroba.includes(`@${conta.arroba}`), arroba);
     await p.screenshot({ path: join(SP, 'redes-offline-390.png'), fullPage: false });

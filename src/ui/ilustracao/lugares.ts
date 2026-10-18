@@ -335,6 +335,14 @@ const LOJAS: Record<LugarDaCidade, () => Amostra> = {
 
 /** A fachada de um lugar (o mesmo desenho sempre: nada vem do save). */
 const FACHADAS = lembrar<Amostra>(64);
+/**
+ * REWORK 9 — de que lado fica a porta de cada loja de rua (as que têm porta lateral; a vitrine ocupa o resto). A
+ * vitrine de Compras põe os objetos na frente do VIDRO, não da porta. Conferido contra o desenho em `rework9.test`.
+ */
+export const PORTA_DA_FACHADA: Partial<Record<LugarDaCidade, 'esq' | 'dir'>> = {
+  alugar: 'esq', nautica: 'esq', motos: 'dir', oficina: 'dir', pets: 'dir', estilo: 'dir', clinica: 'dir', eletronicos: 'dir', casa: 'dir', instrumentos: 'dir', esportes: 'dir', livraria: 'dir'
+};
+
 export function amostraDaFachada(lugar: LugarDaCidade): Amostra {
   return FACHADAS(lugar, () => (LOJAS[lugar] ?? LOJAS.casa)());
 }

@@ -38,7 +38,7 @@ import { nomeDaMatricula, rotuloSerie } from '../../motor/sistemas/escola';
 import { instituicaoAtual } from '../../motor/sistemas/formacao';
 import { navegarAbas } from '../comum';
 import { SECOES_CAMINHOS, type Aba, type ParteCaminhos } from '../navegacao';
-import { Estudos } from './Estudos';
+import { Estudos, PortasAbertas } from './Estudos';
 import { Trabalho, TrabalhoAindaNao } from './Trabalho';
 import { DesenvolvimentoReal } from './Progresso';
 
@@ -153,6 +153,9 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, parte, irParte
         <div key={x.id} role="tabpanel" id={`caminhos-${x.id}`} aria-labelledby={`subnav-caminhos-${x.id}`} className={`caminhos__painel caminhos__painel--${x.id}${parte === x.id ? ' caminhos__painel--ativo' : ''}`} data-ativo={parte === x.id ? 'sim' : 'nao'}>
           {/* PROG-01: o que se mede no estudo e no trabalho, ano a ano (as notas, as matérias, o desempenho, o salário). */}
           {x.id === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} />}
+          {/* As portas que nascem do que se pratica (a peneira, a seletiva, a banda, o grupo) são caminho também: aparecem aqui
+              (e continuam na semana, onde a prática mora). */}
+          {x.id === 'oportunidades' && <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />}
           {lados.map(l => <div key={l} className={`lado-caminho lado-caminho--${l}`} data-lado={l}>{lado(l, x.id)}</div>)}
           <p className="caminhos__vazio nota">{VAZIO[x.id]}</p>
         </div>

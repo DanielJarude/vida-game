@@ -40,6 +40,14 @@ export const forcaDoClube = (nome: string, pais?: string): number => {
   return !c ? 2 : c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : 2;
 };
 
+/**
+ * A força com que um clube do catálogo disputa a temporada do MUNDO (frações: um grande é melhor que a média da elite;
+ * um tradicional fica entre a elite e a segunda; um regional, pouco acima das de acesso). Com os inteiros, um
+ * tradicional era exatamente a média da segunda divisão e quase nunca voltava — numa liga de catálogo pequeno (a
+ * Espanha), os clubes conhecidos iam se acumulando embaixo. A temporada do clube DA VIDA usa `forcaDoClube`.
+ */
+const forcaNaLiga = (nome: string, pais: string): number => { const c = clubePorNome(nome, pais); return !c ? 2 : c.porte === 'grande' ? 4.5 : c.porte === 'tradicional' ? 3.4 : 2.2; };
+
 /** As regras de acesso do país: quantos trocam de lugar entre cada par de divisões (1↔2, 2↔3, 3↔4) — ou liga fechada. */
 export function regrasDeAcesso(pais: string): { fechada: boolean; troca: [number, number, number] } {
   const a = perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO).esporte.acesso;
@@ -66,6 +74,9 @@ function distribuicaoInicial(v: Vida, pais: string): Record<string, Nivel> {
   const div: Record<string, Nivel> = {};
   for (const c of clubes) div[c.nome] = c.porte === 'grande' ? 4 : c.porte === 'tradicional' ? 3 : (jitter.get(c.nome)! < 0.5 ? 2 : 1);
   const em = (n: number) => clubes.filter(c => div[c.nome] === n).sort((a, b) => forca(b) - forca(a));
+  // A elite do catálogo vem cheia: o catálogo de um país lista os clubes conhecidos, e os tradicionais mais fortes
+  // completam a primeira divisão até as vagas dela (na Espanha, quase todos; no Brasil, os sete mais fortes).
+  for (const c of em(3)) { if (em(4).length >= VAGAS_POR_DIVISAO) break; div[c.nome] = 4; }
   // A elite cheia demais: os mais fracos descem.
   for (const n of [4, 3, 2] as const) {
     const lista = em(n);
@@ -178,7 +189,9 @@ function jogarTemporada(v: Vida, pais: string, liga: LigaDoPais, ano: number, fi
     const ocupadas = new Set<number>();
     if (fixo && liga.div[fixo.clube] === n) { const p = clamp(Math.round(fixo.colocacao), 1, VAGAS_POR_DIVISAO); pos.set(fixo.clube, p); ocupadas.add(p); }
     const xs = nomes.filter(c => liga.div[c] === n && c !== fixo?.clube)
-      .map(c => ({ c, x: 11 - (forcaDoClube(c, pais) - n) * 3 + r.normal() * 4 }))
+      // A força do elenco diante da divisão: um grande na segunda divisão briga pelo acesso (e costuma voltar logo); um
+      // tradicional que subiu briga contra a queda. (4 posições por degrau: com 3, os grandes ficavam anos embaixo.)
+      .map(c => ({ c, x: 11 - (forcaNaLiga(c, pais) - n) * 4 + r.normal() * 4 }))
       .sort((a, b) => a.x - b.x);
     for (const { c, x } of xs) {
       const quer = clamp(Math.round(x), 1, VAGAS_POR_DIVISAO);
@@ -194,7 +207,7 @@ function jogarTemporada(v: Vida, pais: string, liga: LigaDoPais, ano: number, fi
     if (campeao) campeoes[n] = campeao[0];
   }
   // A divisão 1 são os campeonatos regionais: cada clube tem a sua colocação no seu (1..12); sobe quem chega em cima.
-  const regionais = nomes.filter(c => liga.div[c] === 1).map(c => ({ c, x: c === fixo?.clube ? fixo.colocacao : clamp(Math.round(6.5 - (forcaDoClube(c, pais) - 1) * 2 + r.normal() * 3), 1, 12) }));
+  const regionais = nomes.filter(c => liga.div[c] === 1).map(c => ({ c, x: c === fixo?.clube ? fixo.colocacao : clamp(Math.round(6.5 - (forcaNaLiga(c, pais) - 1) * 2 + r.normal() * 3), 1, 12) }));
   for (const { c, x } of regionais) pos.set(c, x);
 
   const subiram: string[] = [], cairam: string[] = [];

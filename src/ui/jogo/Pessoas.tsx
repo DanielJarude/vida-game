@@ -53,7 +53,17 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null;
 
 const ROTULO_SINAL: Record<TipoDeSinal, string> = { urgente: 'Precisa de você', importante: 'Importante', noticia: 'Notícia', oportunidade: 'Para retomar' };
 
+type PartePessoas = 'circulo' | 'deles' | 'nossa';
+const PARTES_PESSOAS: { id: PartePessoas; rotulo: string; oque: string }[] = [
+  { id: 'circulo', rotulo: 'Meu círculo', oque: 'Quem está na sua vida agora: a casa, a família, os amigos, quem pede atenção' },
+  { id: 'deles', rotulo: 'A vida deles', oque: 'O que aconteceu com cada um: emprego, estudo, amor, filhos, perdas' },
+  { id: 'nossa', rotulo: 'Nossa história', oque: 'O que vocês viveram juntos — só o que aconteceu de fato' }
+];
+
 export function Pessoas({ vida, agir, aberta, abrir }: Props) {
+  // REWORK 9: três partes — Meu círculo (quem está aqui), A vida deles (o que aconteceu com cada um), Nossa história
+  // (o que vocês viveram juntos). As outras duas leem só o que o motor registrou (as trajetórias e as memórias).
+  const [parte, setParte] = useState<PartePessoas>('circulo');
   const c = circulos(vida);
   // REWORK 7.5: quem morreu há pouco (ou ainda é luto) fica à vista — "Quem se foi" é recolhido e fica para o resto.
   const memorias = memoriasRecentes(vida).map(p => ({ p, vin: vida.vinculos[p.id] }));
@@ -66,6 +76,18 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
   return (
     <div className="pessoas">
       <Folio kicker={<><span className="folio__area">Pessoas</span> · {c.nucleo.length + c.familia.length + c.amigos.length + c.contexto.length} na sua vida</>} titulo={tituloDePessoas(vida, c.nucleo)} />
+      <nav className="subnav" aria-label="Partes de Pessoas">
+        <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
+          {PARTES_PESSOAS.map(x => (
+            <li key={x.id} role="presentation">
+              <button type="button" role="tab" aria-selected={parte === x.id} tabIndex={parte === x.id ? 0 : -1} className={`subnav__item${parte === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => setParte(x.id)} title={x.oque}>{x.rotulo}</button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      {parte === 'deles' && <AVidaDeles vida={vida} abrir={abrir} />}
+      {parte === 'nossa' && <NossaHistoria vida={vida} abrir={abrir} />}
+      <div className={`pessoas__circulo${parte === 'circulo' ? '' : ' pessoas__circulo--oculto'}`}>
       {sinais.length > 0 && (
         <section className="atencao" aria-label="Pedem atenção">
           <h2 className="atencao__titulo">Pedem atenção</h2>
@@ -119,6 +141,7 @@ export function Pessoas({ vida, agir, aberta, abrir }: Props) {
 
       <ConhecerAlguem vida={vida} agir={agir} />
       <Voce vida={vida} agir={agir} />
+      </div>
       {pessoa && <FichaPessoa key={pessoa.id} vida={vida} p={pessoa} vin={vida.vinculos[pessoa.id]} agir={agir} aoFechar={() => abrir(null)} />}
     </div>
   );
@@ -617,5 +640,80 @@ function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vin
         </div>
       )}
     </div>
+  );
+}
+
+/* ------------------------------------------------- REWORK 9: a vida deles, a nossa história */
+
+const NAO_ANDAM = new Set(['tecnico']);
+
+/**
+ * A VIDA DELES: o que aconteceu com quem está na sua vida, do mais recente ao mais antigo — as trajetórias que o motor
+ * registra para cada pessoa (o emprego, a formatura, o namoro, o filho, a perda do trabalho). Família continua família
+ * mesmo sem contato. Nada inventado: sem registro, a pessoa não aparece aqui.
+ */
+function AVidaDeles({ vida, abrir }: { vida: Vida; abrir: (id: string | null) => void }) {
+  const itens = Object.values(vida.vinculos).flatMap(vin => {
+    const p = vida.pessoas[vin.pessoaId];
+    if (!p || p.especie || !p.vida?.trajetoria?.length) return [];
+    return p.vida.trajetoria.filter(t => !NAO_ANDAM.has(t.tipo)).map(t => ({ p, vin, t }));
+  }).sort((a, b) => b.t.t - a.t.t).slice(0, 30);
+  if (!itens.length) return <section className="vida-deles" aria-label="A vida deles"><p className="nota">Ainda não há o que contar sobre a vida de quem está perto: o que acontecer com cada um aparece aqui.</p></section>;
+  return (
+    <section className="vida-deles" aria-label="A vida deles">
+      <ol className="vida-deles__lista">
+        {itens.map((x, k) => (
+          <li key={`${x.p.id}${x.t.t}${k}`} className={`vida-deles__item vida-deles__item--${x.t.tipo}`}>
+            <span className="vida-deles__ano">{anoDe(x.t.t)}</span>
+            <button type="button" className="vida-deles__quem" onClick={() => abrir(x.p.id)} aria-label={`Abrir ${x.p.nome}`}>
+              <Retrato visual={x.p.visual} genero={x.p.genero} idade={idadePessoa(vida, x.p)} semente={x.p.pet?.semente ?? x.p.id} tamanho={32} especie={x.p.especie} porte={x.p.pet?.porte} rotulo={x.p.nome} falecido={!x.p.vivo} />
+            </button>
+            <span className="vida-deles__texto"><span className="vida-deles__papel">{rotuloDe(vida, x.p, x.vin)}</span> {x.t.texto}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+const TIPO_MEMORIA: Record<string, string> = {
+  inicio: 'Como começou', amizade: 'Amizade', romance: 'Amor', casamento: 'Casamento', filho: 'Filhos', casa: 'Casa', escola: 'Escola', trabalho: 'Trabalho',
+  conflito: 'Conflito', reconciliacao: 'Reconciliação', apoio: 'Apoio', ritual: 'Rituais', distancia: 'Distância', traicao: 'Traição', perda: 'Perda', antigo: 'Antes', descoberta: 'Descobertas'
+};
+
+/**
+ * NOSSA HISTÓRIA: o que vocês viveram juntos — as memórias que as relações guardam (só o que aconteceu: o apoio dado ou
+ * recebido, a briga, a reconciliação, o que fizeram juntos), da mais recente para a mais antiga, com quem foi.
+ */
+function NossaHistoria({ vida, abrir }: { vida: Vida; abrir: (id: string | null) => void }) {
+  const [so, setSo] = useState<string | null>(null);
+  const todas = Object.values(vida.vinculos).flatMap(vin => {
+    const p = vida.pessoas[vin.pessoaId];
+    if (!p || p.especie) return [];
+    return vin.historia.map(m => ({ p, vin, m }));
+  }).sort((a, b) => b.m.t - a.m.t);
+  const tipos = [...new Set(todas.map(x => x.m.tipo).filter((t): t is NonNullable<typeof t> => !!t))];
+  const lista = todas.filter(x => !so || x.m.tipo === so).slice(0, 40);
+  if (!todas.length) return <section className="nossa-historia" aria-label="Nossa história"><p className="nota">Ainda não há memórias guardadas com ninguém: o que vocês viverem juntos aparece aqui.</p></section>;
+  return (
+    <section className="nossa-historia" aria-label="Nossa história">
+      {tipos.length > 1 && (
+        <div className="grupo-acoes grupo-acoes--linha nossa-historia__filtros" role="group" aria-label="Que memórias">
+          <button type="button" className={`botao botao--discreto${so === null ? ' botao--ativo' : ''}`} aria-pressed={so === null} onClick={() => setSo(null)}>Todas</button>
+          {tipos.map(t => <button key={t} type="button" className={`botao botao--discreto${so === t ? ' botao--ativo' : ''}`} aria-pressed={so === t} onClick={() => setSo(t)}>{TIPO_MEMORIA[t] ?? t}</button>)}
+        </div>
+      )}
+      <ol className="nossa-historia__lista">
+        {lista.map((x, k) => (
+          <li key={`${x.p.id}${x.m.t}${k}`} className={`nossa-historia__item nossa-historia__item--peso${x.m.peso ?? 1}`}>
+            <span className="vida-deles__ano">{anoDe(x.m.t)}</span>
+            <button type="button" className="vida-deles__quem" onClick={() => abrir(x.p.id)} aria-label={`Abrir ${x.p.nome}`}>
+              <Retrato visual={x.p.visual} genero={x.p.genero} idade={idadePessoa(vida, x.p)} semente={x.p.pet?.semente ?? x.p.id} tamanho={32} especie={x.p.especie} porte={x.p.pet?.porte} rotulo={x.p.nome} falecido={!x.p.vivo} />
+            </button>
+            <span className="vida-deles__texto"><span className="vida-deles__papel">{x.p.nome}{x.m.tipo ? ` · ${(TIPO_MEMORIA[x.m.tipo] ?? x.m.tipo).toLowerCase()}` : ''}</span> {x.m.texto}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

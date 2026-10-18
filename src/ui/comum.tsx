@@ -20,10 +20,12 @@ interface BotaoAcaoProps {
   ocultarImpossivel?: boolean;
   /** Esconde sempre que não der para fazer (opções secundárias que só poluiriam). */
   ocultarBloqueado?: boolean;
+  /** REWORK 9: o aviso "pode, mas custa" já foi dito uma vez para o grupo (não repetir embaixo de cada botão). */
+  semAviso?: boolean;
 }
 
 /** Botão ligado ao motor: pergunta a disponibilidade e explica o bloqueio. */
-export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario', mostrarChance, aoAgir, ocultarImpossivel, ocultarBloqueado }: BotaoAcaoProps) {
+export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario', mostrarChance, aoAgir, ocultarImpossivel, ocultarBloqueado, semAviso }: BotaoAcaoProps) {
   const d = disponibilidade(vida, acao);
   const pode = podeTentar(d);
   if (ocultarImpossivel && d.grau === 'impossivel') return null;
@@ -42,7 +44,7 @@ export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario',
       </button>
       {!pode && d.motivo && <p className="acao__motivo">{d.motivo}</p>}
       {comResgate && podeResgatar && <button type="button" className="botao botao--discreto acao__resgate" onClick={() => { if (agir(comResgate)) aoAgir?.(); }}>Tirar {dinheiroCurto(d.resgate!.valor)} das aplicações e pagar</button>}
-      {pode && aviso && <p className="acao__aviso">{aviso}</p>}
+      {pode && aviso && !semAviso && <p className="acao__aviso">{aviso}</p>}
     </div>
   );
 }

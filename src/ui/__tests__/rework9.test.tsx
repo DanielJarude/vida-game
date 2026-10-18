@@ -158,3 +158,91 @@ describe('PROG-01 · a tela mostra o número do motor e a causa que ele registro
     expect(linha.querySelector('[data-fonte="rotina:xadrez"]')?.textContent).toMatch(/xadrez/i);
   });
 });
+
+/* =============================================================== FASE C — as experiências das áreas */
+
+import { Pessoas } from '../jogo/Pessoas';
+import { LinhaDaVida } from '../jogo/LinhaDaVida';
+import { amostraDaFachada, PORTA_DA_FACHADA, LUGARES_DA_CIDADE } from '../ilustracao/lugares';
+import { aviao } from '../ilustracao/aguaEAr';
+import { Voce } from '../jogo/Voce';
+
+describe('Fase C · o celular compacto (UX-02)', () => {
+  it('dentro do app, quatro telas curtas; os números ficam ao lado; o aviso comum aparece uma vez', () => {
+    let v: Vida = adulto(24, { semente: 51 });
+    v = transacao(v, x => { x.financas.conta = 1e6; }).vida;
+    v = executar(v, rede('criar')).vida;
+    for (let k = 0; k < 4; k++) v = executar(v, rede('publicar', { tema: 'cotidiano' })).vida;
+    render(<main><RedesSociais vida={v} agir={() => true} /></main>);
+    fireEvent.click(screen.getAllByRole('tab', { name: /Instagram/ })[0]);
+    for (const t of ['Perfil', 'Publicar', 'Feed', 'Conta']) expect(screen.getByRole('tab', { name: new RegExp(`^${t}`) })).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Os números das redes' })).toBeTruthy();
+    const publicar = document.querySelector('.app-tela--publicar')!;
+    const avisos = [...publicar.querySelectorAll('.acao__aviso')].map(x => x.textContent);
+    expect(new Set(avisos).size).toBe(avisos.length);
+  });
+});
+
+describe('Fase C · Pessoas: o círculo, a vida deles, a nossa história — só o que aconteceu', () => {
+  it('A vida deles mostra as trajetórias registradas; Nossa história, as memórias guardadas (e o filtro filtra)', () => {
+    const v = vidaAos(30, x => {
+      const vin = Object.values(x.vinculos).find(w => w.parentesco === 'mae') ?? Object.values(x.vinculos)[0];
+      const p = x.pessoas[vin.pessoaId];
+      (p.vida ??= { aptidao: 0, escolaridade: 'medio', experiencia: 0, trajetoria: [] }).trajetoria.push({ t: x.t - 12, texto: 'Arrumou trabalho de novo, como costureira.', tipo: 'trabalho' });
+      vin.historia.push({ t: x.t - 24, texto: 'Ficou do seu lado quando a vida pesou.', tipo: 'apoio', peso: 2, de: 'ela' });
+    });
+    render(<main><Pessoas vida={v} agir={() => true} aberta={null} abrir={() => {}} /></main>);
+    fireEvent.click(screen.getByRole('tab', { name: 'A vida deles' }));
+    expect(screen.getByRole('region', { name: 'A vida deles' }).textContent).toMatch(/costureira/);
+    fireEvent.click(screen.getByRole('tab', { name: 'Nossa história' }));
+    const nossa = screen.getByRole('region', { name: 'Nossa história' });
+    const total = Object.values(v.vinculos).filter(w => v.pessoas[w.pessoaId] && !v.pessoas[w.pessoaId].especie).reduce((s, w) => s + w.historia.length, 0);
+    expect(nossa.querySelectorAll('.nossa-historia__item').length).toBe(Math.min(40, total));
+    expect(nossa.textContent).toMatch(/Ficou do seu lado/);
+    const apoio = within(nossa).queryByRole('button', { name: 'Apoio' });
+    if (apoio) { fireEvent.click(apoio); expect([...nossa.querySelectorAll('.nossa-historia__item')].every(li => /apoio/i.test(li.textContent ?? ''))).toBe(true); }
+  });
+});
+
+describe('Fase C · História: ver por um fio, e as conquistas', () => {
+  it('o fio "Estudos" mostra só o que o motor marcou como estudo; "Conquistas" mostra os marcos registrados', () => {
+    const v = vidaAos(19);
+    render(<main><LinhaDaVida vida={v} marca={0} /></main>);
+    fireEvent.click(screen.getByRole('button', { name: 'Estudos' }));
+    const temas = [...document.querySelectorAll('.anos .entrada')].map(li => [...li.classList].find(c => c.startsWith('entrada--tema-'))!.slice(14));
+    expect(temas.length).toBeGreaterThan(0);
+    for (const t of temas) expect(['escola', 'estudo']).toContain(t);
+    fireEvent.click(screen.getByRole('button', { name: 'Conquistas' }));
+    expect(document.querySelector('.anos--oculto')).toBeTruthy();
+  });
+});
+
+describe('Fase C · o polimento das ilustrações (REWORK 8)', () => {
+  it('a tabela de portas confere com o desenho de cada loja (a porta está do lado dito)', () => {
+    for (const lugar of LUGARES_DA_CIDADE) {
+      const lado = PORTA_DA_FACHADA[lugar];
+      if (!lado) continue;
+      const achar = (ps: unknown[]): { d: string } | undefined => { for (const p of ps as { marca?: string; d?: string; pecas?: unknown[] }[]) { if (p.marca === 'porta' && p.d) return p as { d: string }; const f = p.pecas && achar(p.pecas); if (f) return f; } return undefined; };
+      const porta = achar(amostraDaFachada(lugar).pecas);
+      expect(porta, lugar).toBeTruthy();
+      const x = Number(/M\s*(-?[\d.]+)/.exec(porta!.d)![1]);
+      expect(lado === 'esq' ? x < 240 : x > 240, `${lugar}: porta em x=${x}`).toBe(true);
+    }
+  });
+
+  it('dois aviões do mesmo tipo, dois desenhos (o Excel de asa baixa, o P1 de asa alta; o Phenom e o Citation com janelas diferentes)', () => {
+    const asa = (id: string) => JSON.stringify(aviao('ultraleve', '#c33', id).pecas.find(p => (p as { marca?: string }).marca === 'asa'));
+    expect(asa('inpaer_excel')).not.toBe(asa('paradise_p1'));
+    const janelas = (id: string) => aviao('jato', '#333', id).pecas.filter(p => (p as { marca?: string }).marca === 'janela').length;
+    expect(janelas('embraer_phenom100')).not.toBe(janelas('cessna_citation_m2'));
+  });
+});
+
+describe('Fase C · Você: o retrato em partes', () => {
+  it('o índice leva a partes que existem na página', () => {
+    const v = vidaAos(25);
+    render(<main><Voce vida={v} agir={() => true} irPara={() => {}} abrirPessoa={() => {}} /></main>);
+    const indice = screen.getByRole('navigation', { name: 'Partes do retrato' });
+    for (const a of indice.querySelectorAll('a')) expect(document.querySelector(a.getAttribute('href')!), a.textContent!).toBeTruthy();
+  });
+});

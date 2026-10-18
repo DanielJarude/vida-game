@@ -280,7 +280,7 @@ function CartaoImovel({ o, motivo, abrir, vida }: { o: OfertaImovel; motivo?: st
   const valor = o.modo === 'aluguel' ? o.aluguel : o.preco;
   return (
     <button type="button" className="oferta oferta--casa" onClick={abrir}>
-      <span className="oferta__casa"><MiniaturaDaCasa forma={formaDoModelo(o.modeloId)} fachada={fachadaDe(chaveDaFachada(vida.moradia.municipioId, o.modeloId, o.bairro, vida.t), formaDoModelo(o.modeloId))} largura={88} />{o.estado !== 'bom' && <span className="oferta__casa-selo">{o.estado === 'reforma' ? 'obra' : 'novo'}</span>}</span>
+      <span className="oferta__casa"><MiniaturaDaCasa forma={formaDoModelo(o.modeloId)} fachada={fachadaDe(chaveDaFachada(vida.moradia.municipioId, o.modeloId, o.bairro, vida.t), formaDoModelo(o.modeloId))} largura={128} />{o.estado !== 'bom' && <span className="oferta__casa-selo">{o.estado === 'reforma' ? 'obra' : 'novo'}</span>}</span>
       <span className="oferta__texto">
         <strong>{m.nome.charAt(0).toUpperCase() + m.nome.slice(1)} {o.bairro}</strong>
         <span>{o.detalhe} · {m.quartos} {m.quartos === 1 ? 'quarto' : 'quartos'}{o.aceitaPet ? ' · aceita animais' : ''}</span>
