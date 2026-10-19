@@ -23,8 +23,7 @@ import { ocupacao } from '../dados/ocupacoes';
 import { curso } from '../dados/cursos';
 import {
   alvoCondicionamento, derivarPredisposicoes, desenvolverPessoa, estimuloFisico, fatoresCondicionamento, predisposicao,
-  tetoDeAprendizado
-} from '../sistemas/pessoa';
+  tetoDeAprendizado, pisoDaPessoa } from '../sistemas/pessoa';
 import { fatoresHumor, fatoresSaude, alvoHumor } from '../sistemas/estado';
 import { lerPreparo } from '../sistemas/concurso';
 import { aspectos, avaliarPeneira } from '../sistemas/peneira';
@@ -528,7 +527,9 @@ describe('fundação pessoal', () => {
     expect(f[0].id).toBe('treino');
     expect(alvoCondicionamento(v)).toBeGreaterThan(60);
     v.rotinas = [];
-    expect(alvoCondicionamento(v)).toBeLessThan(40);
+    // Sem treino, o corpo volta ao do dia a dia — REWORK 9.6: deslocado pela predisposição física (no adulto, até ±12).
+    expect(alvoCondicionamento(v)).toBeLessThanOrEqual(Math.round(pisoDaPessoa(v)) + 1);
+    expect(alvoCondicionamento(v)).toBeLessThan(45);
   });
 
   it('cursinho: a rotina é a fonte única — começou agora, ainda não rende; um ano depois, rende', () => {

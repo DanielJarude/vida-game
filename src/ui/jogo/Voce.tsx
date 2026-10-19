@@ -1,6 +1,9 @@
 /**
  * Você: a pessoa, não as métricas.
  *
+ * REWORK 9.6 · ATR-01: depois do rosto, a FICHA DE ATRIBUTOS (Saúde, Físico, Felicidade, Beleza, Inteligência — de 0 a
+ * 100, com as causas de cada um); a cabeça (o estresse) é um sistema à parte, logo abaixo, com o mesmo bloco de antes.
+ *
  * O rosto em primeiro lugar (com a expressão do momento), a fase da vida e
  * uma frase sobre agora. Depois, Humor, Cabeça e Saúde como três leituras:
  * uma palavra, uma escala que não depende de cor, a tendência, o que tem
@@ -27,9 +30,9 @@ import { BotaoAcao, Vazio } from '../comum';
 import { frentesDaVida } from '../../motor/sistemas/frentes';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
-import { expressaoDe, lerDimensao, noQueEBom, lerPessoal, momentoAtual, palavraTendencia, trajetoria, USO_DIMENSAO, type LeituraDimensao } from '../estadoPessoal';
+import { expressaoDe, lerDimensao, noQueEBom, momentoAtual, palavraTendencia, trajetoria, USO_DIMENSAO, type LeituraDimensao } from '../estadoPessoal';
+import { FichaDeAtributos } from './FichaDeAtributos';
 import { sinaisDoCorpo } from '../../motor/sistemas/saude';
-import { nivelPessoal, type DimensaoPessoal } from '../../motor/sistemas/pessoa';
 import { anoDe } from '../../motor/tempo';
 import { AparenciaEEstilo } from './Aparencia';
 import { OQueConstruiu } from './Trajetorias';
@@ -44,7 +47,8 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) =
 
 export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
   const i = idade(vida);
-  const dims: Dimensao[] = i >= 10 ? ['humor', 'cabeca', 'saude'] : ['humor', 'saude'];
+  // A cabeça (o estresse) continua uma leitura própria; humor e saúde são atributos, na ficha.
+  const dims: Dimensao[] = i >= 10 ? ['cabeca'] : [];
   const leituras = dims.map(d => lerDimensao(vida, d));
   const tracos = tracosMarcantes(vida);
   const afeto = situacaoAfetiva(vida);
@@ -52,7 +56,6 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
   // Só o que tem nome é "condição"; o resto é sinal (e o cuidado é ir ao médico).
   const condicoes = vida.corpo.condicoes.filter(c => c.diagnosticada !== false);
   const sinais = sinaisDoCorpo(vida);
-  const pessoais: DimensaoPessoal[] = [...(i >= 6 ? ['condicionamento' as const] : []), ...(i >= 7 ? ['aprendizado' as const] : []), ...(i >= 14 ? ['aparencia' as const] : [])];
   return (
     <div className="voce">
       <section className="voce-rosto" aria-label="Como você está">
@@ -69,8 +72,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
 
       {/* REWORK 9: o retrato em partes — um índice curto leva a cada uma (a página é longa numa vida longa). */}
       <nav className="voce-indice" aria-label="Partes do retrato">
-        <a href="#voce-agora">Como está</a>
-        {pessoais.length > 0 && <a href="#voce-corpo">Corpo e aprendizado</a>}
+        <a href="#voce-atributos">Atributos</a>
+        {leituras.length > 0 && <a href="#voce-agora">A cabeça</a>}
         <a href="#voce-sabe">O que sabe fazer</a>
         {tracos.length > 0 && <a href="#titulo-jeito">O seu jeito</a>}
         {(sinais.length > 0 || condicoes.length > 0) && <a href="#voce-saude">Saúde</a>}
@@ -78,13 +81,15 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
         <a href="#voce-mundo">No mundo</a>
       </nav>
 
-      <div id="voce-agora" className={`estados estados--${leituras.length}`}>
-        {leituras.map(l => <Estado key={l.d} l={l} vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />)}
-      </div>
+      <FichaDeAtributos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />
+      {leituras.length > 0 && (
+        <div id="voce-agora" className={`estados estados--${leituras.length}`}>
+          {leituras.map(l => <Estado key={l.d} l={l} vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />)}
+        </div>
+      )}
       {/* REWORK 9.5 · ROT-01: a cabeça e o corpo vivem a mesma semana — a mesma leitura da rotina de Minha Semana. */}
       {i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
 
-      {pessoais.length > 0 && <div id="voce-corpo"><CorpoEAprendizado vida={vida} dims={pessoais} irPara={irPara} /></div>}
 
       {/* REWORK 7: o que a pessoa SABE FAZER, com os degraus de cada habilidade (a mesma escada da ficha da prática) —
           e, ao lado, os jeitos de nascença que o motor guarda. Antes eram linhas de texto soltas. */}
@@ -214,35 +219,6 @@ function Estado({ l, vida, agir, irPara, abrirPessoa }: { l: LeituraDimensao; vi
         )}
       </div>
     </details>
-  );
-}
-
-/**
- * Condicionamento, aprendizado e aparência: o que é, o que tem mexido nisso
- * (as causas do motor) e para que serve — com o caminho para mexer.
- */
-function CorpoEAprendizado({ vida, dims, irPara }: { vida: Vida; dims: DimensaoPessoal[]; irPara: (a: Destino) => void }) {
-  const leituras = dims.map(d => lerPessoal(vida, d));
-  return (
-    <section className="voce-pessoal" aria-labelledby="titulo-pessoal">
-      <h2 id="titulo-pessoal" className="voce-subtitulo">Corpo e aprendizado</h2>
-      <ul className="pessoal">
-        {leituras.map(l => (
-          <li key={l.d} className="pessoal__item">
-            <p className="pessoal__cabeca">
-              <strong className="pessoal__nome">{l.nome}</strong>
-              <span className="pessoal__palavra">{l.palavra}</span>
-              <Medidor nivel={nivelPessoal(vida, l.d)} nome={l.nome} />
-              {l.tendencia === 'melhorando' || l.tendencia === 'piorando' ? <span className={`estado-bloco__tendencia estado-bloco__tendencia--${l.tendencia}`}>{l.tendencia === 'melhorando' ? '↗ vem melhorando' : '↘ vem piorando'}</span> : null}
-            </p>
-            <Trajetoria pontos={trajetoria(vida, l.d === 'condicionamento' ? 'forma' : l.d === 'aprendizado' ? 'cognicao' : 'aparencia')} nome={l.nome} />
-            {l.causas && <p className="pessoal__causas">{l.causas}</p>}
-            <p className="pessoal__uso">{l.uso}</p>
-            {l.ir && <button type="button" className="link pessoal__ir" onClick={() => irPara(l.ir!.aba)}>{l.ir.rotulo} →</button>}
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 

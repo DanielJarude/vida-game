@@ -1,0 +1,233 @@
+/*
+ * REWORK 9.6 — A pessoa e seus registros. Classes novas deste pacote: os documentos que a vida deixa (o anúncio de
+ * emprego, a ficha de atributos, o boletim em papel com notas à mão, o currículo, o diário). Interpretações originais,
+ * em tokens (as quatro paletas). O material serve à leitura: texto selecionável, uma coluna no fluxo, nada posicionado
+ * por cima de nada.
+ */
+
+/* ============================================================ O anúncio de uma vaga (UX-08) */
+/* Um anúncio impresso: a faixa do classificado no alto, o cargo grande, as condições numa tabela de duas colunas que
+   vira uma coluna no celular, os requisitos marcados um a um e o rodapé com o estado da candidatura. */
+.anuncio { --cor-anuncio: var(--tom-trabalho); display: grid; gap: var(--space-3); min-width: 0; margin: var(--space-1) 0 0; padding: var(--space-4); border-radius: var(--radius-sm); background: var(--papel, var(--superficie)); color: var(--text-primary); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); border-top: 4px double color-mix(in oklab, var(--cor-anuncio) 70%, transparent); }
+.anuncio__cabeca { display: grid; gap: 2px; min-width: 0; padding-bottom: var(--space-3); border-bottom: 1px solid var(--fio); }
+.anuncio__tipo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--text-muted); overflow-wrap: anywhere; }
+.anuncio__cargo { margin: 0; font-family: var(--font-serif); font-size: var(--type-heading); line-height: 1.2; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
+.anuncio__org { margin: 0; font-weight: var(--weight-semibold); color: var(--tom-trabalho); overflow-wrap: anywhere; }
+.anuncio__lugar { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); overflow-wrap: anywhere; }
+.anuncio__condicoes { display: grid; gap: var(--space-2); margin: 0; min-width: 0; }
+.anuncio__condicoes > div { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); gap: var(--space-3); min-width: 0; }
+.anuncio__condicoes dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); padding-top: 2px; }
+.anuncio__condicoes dd { margin: 0; font-size: var(--type-caption); line-height: 1.5; color: var(--text-primary); overflow-wrap: anywhere; min-width: 0; }
+.anuncio__bloco { display: grid; gap: var(--space-1); min-width: 0; }
+.anuncio__rotulo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.anuncio__texto { margin: 0; font-size: var(--type-caption); line-height: 1.5; color: var(--text-secondary); overflow-wrap: anywhere; max-width: 68ch; }
+.anuncio__texto--porque { font-family: var(--font-serif); font-style: italic; font-size: var(--type-body); }
+.anuncio__requisitos { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.anuncio__req { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: var(--space-1); font-size: var(--type-caption); line-height: 1.45; color: var(--text-primary); overflow-wrap: anywhere; }
+.anuncio__req > span[aria-hidden] { font-weight: 700; text-align: center; }
+.anuncio__req--ok > span[aria-hidden] { color: var(--bom); }
+.anuncio__req--falta > span[aria-hidden] { color: var(--warning); }
+.anuncio__req--falta { color: var(--text-secondary); }
+.anuncio__bloco--aviso { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: color-mix(in oklab, var(--warning) 8%, transparent); box-shadow: inset 3px 0 0 color-mix(in oklab, var(--warning) 70%, transparent); }
+.anuncio__bloco--aviso .anuncio__texto { color: var(--text-primary); }
+.anuncio__passos { margin: 0; padding-left: 1.25rem; display: grid; gap: 2px; font-size: var(--type-caption); line-height: 1.45; color: var(--text-secondary); }
+.anuncio__rodape { display: grid; gap: var(--space-2); justify-items: start; min-width: 0; padding-top: var(--space-3); border-top: 1px dashed var(--fio); }
+.anuncio__rodape > .acao { align-items: flex-start; max-width: 100%; }
+.anuncio__estado { margin: 0; font-size: var(--type-caption); line-height: 1.45; color: var(--text-secondary); overflow-wrap: anywhere; }
+.anuncio__estado strong { color: var(--text-primary); }
+.anuncio__estado--nao_atende strong, .anuncio__estado--recusado strong { color: var(--warning); }
+.anuncio__estado--conflito strong { color: var(--warning); }
+.anuncio__estado--contratado strong, .anuncio__estado--pode strong { color: var(--bom); }
+@media (max-width: 520px) {
+  .anuncio { padding: var(--space-3); }
+  .anuncio__condicoes > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+/* ============================================================ Caminhos: a página inicial e as divisões (UX-09/10) */
+/* As divisões como as abas de um fichário: a aberta "sobe" e encosta na página; no celular, quebram em duas linhas
+   (nunca rolagem lateral escondendo uma divisão). */
+.divisoes-caminhos { margin: 0 0 var(--space-4); }
+.divisoes-caminhos__lista { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin: 0; padding: 0 0 var(--space-2); list-style: none; border-bottom: 1px solid var(--fio-forte); }
+.divisoes-caminhos__item { min-height: var(--touch-target); padding: 0 var(--space-3); font: inherit; font-size: var(--type-caption); font-weight: var(--weight-medium); color: var(--text-secondary); background: transparent; border: 0; border-radius: var(--radius-sm) var(--radius-sm) 0 0; box-shadow: inset 0 -2px 0 transparent; cursor: pointer; }
+.divisoes-caminhos__item:hover { color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--fio-forte); }
+.divisoes-caminhos__item--ativa, .divisoes-caminhos__item--ativa:hover { color: var(--text-primary); font-weight: var(--weight-semibold); background: var(--superficie); box-shadow: inset 0 -3px 0 var(--tom), 0 0 0 1px var(--fio); }
+.divisoes-caminhos__item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.folio--divisao .folio__titulo { margin-bottom: 0; }
+
+/* A situação de agora: cada coisa leva à sua divisão. */
+.situacao-atual__ir { display: grid; gap: 1px; min-width: 0; max-width: 100%; padding: 0; text-align: left; font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.situacao-atual__ir:disabled { cursor: default; }
+.situacao-atual__ir:not(:disabled):hover .situacao-atual__rotulo { text-decoration: underline; text-underline-offset: 3px; }
+.situacao-atual__ir:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 2px; }
+
+/* O próximo passo: um bilhete preso na página, uma linha só. */
+.proximo-caminho { margin: var(--space-5) 0 var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: color-mix(in oklab, var(--tom) 7%, var(--superficie)); box-shadow: inset 4px 0 0 color-mix(in oklab, var(--tom) 70%, transparent), 0 0 0 1px var(--fio); max-width: 70ch; }
+.proximo-caminho__rotulo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--text-muted); }
+.proximo-caminho__texto { margin: var(--space-1) 0; font-family: var(--font-serif); font-size: var(--type-lead); line-height: 1.4; color: var(--text-primary); overflow-wrap: anywhere; }
+.proximo-caminho__ir { min-height: 32px; }
+
+/* As quatro entradas: fichas de pasta, com o estado de agora em cima do que cada divisão guarda. */
+.entradas-caminhos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--space-3); margin: var(--space-4) 0; padding: 0; list-style: none; }
+.entrada-caminho { min-width: 0; }
+.entrada-caminho__botao { display: grid; align-content: start; gap: var(--space-1); width: 100%; height: 100%; min-height: 96px; padding: var(--space-4); text-align: left; font: inherit; color: var(--text-primary); background: var(--superficie); border: 0; border-radius: var(--radius-md); box-shadow: inset 0 4px 0 color-mix(in oklab, var(--cor-entrada, var(--tom)) 75%, transparent), 0 0 0 1px var(--fio), var(--shadow-sm); cursor: pointer; }
+.entrada-caminho__botao:hover { box-shadow: inset 0 4px 0 var(--cor-entrada, var(--tom)), 0 0 0 1px var(--fio-forte), var(--shadow-sm); }
+.entrada-caminho__botao:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.entrada-caminho--estudos { --cor-entrada: var(--tom-estudos); }
+.entrada-caminho--trabalho { --cor-entrada: var(--tom-trabalho); }
+.entrada-caminho--publica { --cor-entrada: var(--info); }
+.entrada-caminho--outros { --cor-entrada: var(--pig-folha); }
+.entrada-caminho__nome { font-family: var(--font-serif); font-size: var(--type-heading); line-height: 1.15; font-weight: 600; }
+.entrada-caminho__estado { font-weight: var(--weight-semibold); font-size: var(--type-caption); color: var(--text-primary); overflow-wrap: anywhere; }
+.entrada-caminho__oque { font-size: var(--type-caption); line-height: 1.45; color: var(--text-muted); overflow-wrap: anywhere; }
+
+/* A ligação entre divisões: uma linha, com o lugar. Nunca a mesma ação repetida. */
+.ligacao-caminho { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-2); margin: var(--space-3) 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px dashed var(--fio-forte); font-size: var(--type-caption); line-height: 1.45; color: var(--text-secondary); max-width: 70ch; }
+.ligacao-caminho > span { min-width: 0; overflow-wrap: anywhere; }
+.ligacao-caminho .link { min-height: 32px; }
+.divisao__secao { margin: var(--space-5) 0; }
+
+/* ============================================================ Nascer: os atributos iniciais (ATR-01) */
+.atributos-iniciais__lista { display: grid; gap: var(--space-3); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+.atributo-inicial { display: grid; gap: 4px; min-width: 0; }
+.atributo-inicial__cabeca { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.atributo-inicial__nome { font-weight: var(--weight-semibold); color: var(--text-primary); }
+.atributo-inicial__valor { font-family: var(--font-serif); font-size: var(--type-subheading); font-variant-numeric: tabular-nums; color: var(--text-primary); min-width: 3ch; text-align: right; }
+.atributo-inicial input[type='range'] { width: 100%; min-height: var(--touch-target); accent-color: var(--tom); }
+.atributo-inicial input[type='range']:disabled { opacity: 0.55; }
+.atributo-inicial__oque { margin: 0; font-size: var(--type-caption); line-height: 1.45; color: var(--text-secondary); overflow-wrap: anywhere; }
+.atributo-inicial__nascer { color: var(--text-muted); }
+
+/* ============================================================ Você: a ficha de atributos (ATR-01) */
+/* Uma ficha de registro: o cabeçalho com a régua dupla, uma linha por atributo (nome, valor, régua, palavra, mudança),
+   pautada como formulário. No celular, a linha quebra em duas: nome e valor em cima, régua e palavra embaixo. */
+.ficha-atributos { margin: var(--space-5) 0; padding: var(--space-4); border-radius: var(--radius-sm); background: var(--papel, var(--superficie)); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); border-top: 3px double color-mix(in oklab, var(--tom) 55%, var(--fio)); min-width: 0; }
+.ficha-atributos__cabeca { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--fio-forte); }
+.ficha-atributos__titulo { margin: 0; font-family: var(--font-serif); font-size: var(--type-heading); }
+.ficha-atributos__nota { margin: 0; font-size: var(--type-caption); color: var(--text-muted); max-width: 52ch; }
+.ficha-atributos__lista { margin: 0; padding: 0; list-style: none; }
+.atributo { border-bottom: 1px solid var(--fio); min-width: 0; }
+.atributo__resumo { display: grid; grid-template-columns: minmax(6.5rem, 9rem) 3ch minmax(4rem, 1fr) minmax(0, 1.4fr) auto; align-items: center; gap: var(--space-3); min-height: var(--touch-target); padding: var(--space-2) var(--space-1); cursor: pointer; list-style: none; }
+.atributo__resumo::-webkit-details-marker { display: none; }
+.atributo__resumo:hover { background: var(--veu-1); }
+.atributo__resumo:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.atributo__nome { font-weight: var(--weight-semibold); color: var(--text-primary); }
+.atributo__nome::before { content: '▸'; display: inline-block; width: 1em; color: var(--text-muted); transition: transform 0.15s; }
+.atributo__dobra[open] .atributo__nome::before { transform: rotate(90deg); }
+.atributo__valor { font-family: var(--font-serif); font-size: var(--type-subheading); font-variant-numeric: tabular-nums; text-align: right; color: var(--text-primary); }
+.atributo__regua { position: relative; height: 6px; border-radius: 999px; background: var(--veu-2, var(--fio)); overflow: hidden; }
+.atributo__regua > span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--cor-atributo, var(--tom)); }
+.atributo--saude { --cor-atributo: var(--bom); }
+.atributo--fisico { --cor-atributo: var(--tom-tempo); }
+.atributo--felicidade { --cor-atributo: var(--pig-ipe); }
+.atributo--beleza { --cor-atributo: var(--tom-trabalho); }
+.atributo--inteligencia { --cor-atributo: var(--tom-estudos); }
+.atributo__palavra { font-size: var(--type-caption); color: var(--text-secondary); overflow-wrap: anywhere; min-width: 0; }
+.atributo__variacao { font-size: var(--type-meta); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-muted); }
+.atributo__variacao--sobe::before { content: '↗ '; color: var(--bom); }
+.atributo__variacao--desce::before { content: '↘ '; color: var(--warning); }
+.atributo__detalhe { display: grid; gap: var(--space-3); padding: var(--space-2) var(--space-1) var(--space-4) calc(1em + var(--space-1)); min-width: 0; }
+.atributo__oque, .atributo__texto { margin: 0; font-size: var(--type-caption); line-height: 1.5; color: var(--text-secondary); max-width: 68ch; overflow-wrap: anywhere; }
+.atributo__oque { font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); }
+.atributo__dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: var(--space-2) var(--space-3); margin: 0; }
+.atributo__dados dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.atributo__dados dd { margin: 0; font-size: var(--type-caption); color: var(--text-primary); overflow-wrap: anywhere; }
+.atributo__causas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-3); }
+.atributo__causas h3, .atributo__consequencias h3 { margin: 0 0 2px; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.atributo__causas ul, .atributo__consequencias ul { margin: 0; padding-left: 1.1rem; font-size: var(--type-caption); line-height: 1.5; color: var(--text-secondary); }
+.atributo__cuidar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.atributo__cuidar .link, .atributo__detalhe > .link { min-height: 32px; display: inline-flex; align-items: center; }
+@media (max-width: 560px) {
+  .ficha-atributos { padding: var(--space-3); }
+  .atributo__resumo { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'nome valor' 'regua regua' 'palavra variacao'; row-gap: 4px; }
+  .atributo__nome { grid-area: nome; } .atributo__valor { grid-area: valor; } .atributo__regua { grid-area: regua; }
+  .atributo__palavra { grid-area: palavra; } .atributo__variacao { grid-area: variacao; }
+  .atributo__detalhe { padding-left: var(--space-1); }
+}
+@media (prefers-reduced-motion: reduce) { .atributo__nome::before { transition: none; } }
+
+/* ============================================================ VIS-02: o MATERIAL (o sistema dos documentos) */
+/* Um sistema pequeno e reutilizável, não uma imagem: a FOLHA (papel com grão e borda), a PAUTA (as linhas do caderno,
+   a margem), a TINTA (a caneta azul de quem preenche, a vermelha de quem corrige), o CARIMBO, a RUBRICA. Os tokens do
+   material vivem aqui, com a versão de cada luz: no escuro, a folha é um papel sob luz baixa (não um branco que ofusca)
+   e a caneta clareia — o contraste se mantém nas quatro paletas. O texto continua texto: selecionável, responsivo. */
+:root {
+  --mat-papel: color-mix(in oklab, #fffdf7 82%, var(--p-papel));
+  --mat-papel-antigo: color-mix(in oklab, #f1e4c4 80%, var(--p-papel));
+  --mat-papel-jornal: color-mix(in oklab, #ece8df 85%, var(--p-papel));
+  --mat-impressao: #23262b;
+  --mat-impressao-suave: #555a61;
+  --mat-caneta: #1d3d8c;
+  --mat-caneta-vermelha: #a8261d;
+  --mat-pauta: rgba(52, 96, 168, 0.16);
+  --mat-margem: rgba(196, 56, 56, 0.38);
+  --mat-carimbo: #8b2d52;
+  --mat-borda: rgba(35, 38, 43, 0.14);
+  --mat-sombra: 0 1px 1px rgba(30, 25, 15, 0.08), 0 4px 14px -6px rgba(30, 25, 15, 0.22);
+  --mat-grao: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+:root[data-tema='escuro'], [data-amostra='escuro'], [data-amostra='atlantico'] {
+  --mat-papel: color-mix(in oklab, #34322d 70%, var(--p-papel-alto));
+  --mat-papel-antigo: color-mix(in oklab, #3a3428 72%, var(--p-papel-alto));
+  --mat-papel-jornal: color-mix(in oklab, #33332f 72%, var(--p-papel-alto));
+  --mat-impressao: #ece6da;
+  --mat-impressao-suave: #bfb8ab;
+  --mat-caneta: #a9c1ff;
+  --mat-caneta-vermelha: #ff9a8f;
+  --mat-pauta: rgba(169, 193, 255, 0.13);
+  --mat-margem: rgba(255, 154, 143, 0.32);
+  --mat-carimbo: #eaa3bf;
+  --mat-borda: rgba(236, 230, 218, 0.16);
+  --mat-sombra: 0 1px 1px rgba(0, 0, 0, 0.3), 0 6px 18px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* A folha: papel, grão sutil, a borda de uma folha de verdade, o canto levemente dobrado. */
+.papel { position: relative; color: var(--mat-impressao); background-color: var(--mat-papel); background-image: var(--mat-grao); border-radius: 2px; box-shadow: 0 0 0 1px var(--mat-borda), var(--mat-sombra); }
+.papel::after { content: ''; position: absolute; top: 0; right: 0; width: 18px; height: 18px; pointer-events: none; background: linear-gradient(225deg, var(--fundo) 0 50%, color-mix(in oklab, var(--mat-papel) 80%, #000) 50% 100%); box-shadow: -1px 1px 2px rgba(0, 0, 0, 0.12); border-bottom-left-radius: 2px; }
+.papel--antigo { background-color: var(--mat-papel-antigo); }
+.papel--jornal { background-color: var(--mat-papel-jornal); }
+.papel--sem-dobra::after { display: none; }
+/* A pauta do caderno (as linhas azuis e a margem vermelha), por baixo do texto. */
+.papel--pautado { background-image: linear-gradient(90deg, transparent 2.1rem, var(--mat-margem) 2.1rem, var(--mat-margem) calc(2.1rem + 1px), transparent calc(2.1rem + 1px)), repeating-linear-gradient(to bottom, transparent 0 1.55rem, var(--mat-pauta) 1.55rem calc(1.55rem + 1px)), var(--mat-grao); }
+.papel :where(h2, h3, h4, strong, dd, th) { color: var(--mat-impressao); }
+.papel :where(dt, .nota, small) { color: var(--mat-impressao-suave); }
+
+/* A tinta de quem escreve à mão: só valores curtos (uma nota, uma data, uma rubrica). */
+.manuscrito { font-family: var(--font-hand); font-weight: 600; color: var(--mat-caneta); letter-spacing: 0.01em; }
+.manuscrito--vermelho { color: var(--mat-caneta-vermelha); }
+/* O carimbo: tinta que não pega por igual, levemente torto — texto de verdade (o que ele diz é o que o motor sabe). */
+.carimbo { display: inline-grid; justify-items: center; gap: 0; padding: 4px 10px; border: 2px solid currentColor; border-radius: 6px; color: var(--mat-carimbo); font-family: var(--font-sans); font-size: var(--type-meta); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1.3; transform: rotate(-4deg); opacity: 0.82; mix-blend-mode: multiply; mask-image: radial-gradient(circle at 30% 40%, #000 60%, rgba(0, 0, 0, 0.72) 100%); }
+:root[data-tema='escuro'] .carimbo { mix-blend-mode: normal; }
+/* A rubrica: um traço SVG original sobre a linha de assinatura, e o cargo embaixo. */
+.rubrica { display: inline-grid; justify-items: center; gap: 2px; min-width: 9rem; }
+.rubrica svg { width: 8.5rem; height: 2.2rem; color: var(--mat-caneta); overflow: visible; }
+.rubrica__linha { width: 100%; border-top: 1px solid var(--mat-impressao-suave); padding-top: 2px; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--mat-impressao-suave); text-align: center; }
+/* O campo de formulário: rótulo impresso, valor sobre a linha pontilhada. */
+.campo-impresso { display: grid; gap: 0; min-width: 0; }
+.campo-impresso dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--mat-impressao-suave); }
+.campo-impresso dd { margin: 0; padding: 1px 0 2px; border-bottom: 1px dotted var(--mat-impressao-suave); overflow-wrap: anywhere; }
+
+/* ============================================================ O boletim em papel (VIS-02) */
+/* O boletim de objetos.css ganha a folha: o cabeçalho de escola (o brasão, o timbre), a tabela impressa, os números à
+   mão, o carimbo e a rubrica no pé. Só o que muda está aqui (o layout responsivo continua o de objetos.css). */
+.boletim.papel { border-top: 0; background-color: var(--mat-papel); }
+.boletim.papel.papel--antigo { background-color: var(--mat-papel-antigo); }
+.boletim.papel .boletim__cabeca { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-1) var(--space-3); border-bottom: 2px solid var(--mat-impressao); }
+.boletim__brasao { grid-row: span 2; display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 2px double var(--mat-impressao-suave); font-family: var(--font-serif); font-weight: 700; font-size: var(--type-lead); color: var(--mat-impressao-suave); }
+.boletim[data-rede='privada'] .boletim__brasao { border-radius: 8px 8px 50% 50%; }
+.boletim__timbre { min-width: 0; }
+.boletim.papel .boletim__escola { color: var(--mat-impressao); letter-spacing: 0.14em; }
+.boletim__rede { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--mat-impressao-suave); }
+.boletim.papel .boletim__titulo { grid-column: 1 / -1; font-variant: small-caps; letter-spacing: 0.04em; }
+.boletim.papel .boletim__ficha { grid-column: 1 / -1; }
+.boletim.papel .boletim__tabela th, .boletim.papel .boletim__tabela td { border-bottom-color: var(--mat-borda); }
+.boletim.papel .boletim__tabela thead th { color: var(--mat-impressao-suave); border-bottom: 2px solid var(--mat-impressao); }
+.boletim__nota { font-size: 1.7rem; line-height: 1; display: inline-block; transform: rotate(-2deg); }
+.boletim.papel .boletim__dominio strong.boletim__nota, .boletim.papel .boletim__rodape dd strong.boletim__nota { font-size: 1.7rem; color: var(--mat-caneta); }
+.boletim.papel .boletim__dominio strong.manuscrito--vermelho, .boletim.papel .boletim__rodape dd strong.manuscrito--vermelho { color: var(--mat-caneta-vermelha); }
+.boletim.papel .boletim__linha:nth-child(even) .boletim__nota { transform: rotate(1.5deg); }
+.boletim.papel .boletim__rodape { background: transparent; border: 1px solid var(--mat-borda); border-radius: 0; }
+.boletim.papel .boletim__observacoes { border-left-color: var(--mat-margem); }
+.boletim.papel .boletim__causa { color: var(--mat-impressao-suave); }
+.boletim__fecho { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); }
+.boletim__fecho .boletim__legenda { margin: 0; flex: 1 1 22rem; max-width: 60ch; }
+.boletim__autenticacao { display: flex; align-items: flex-end; gap: var(--space-4); flex: 0 0 auto; }

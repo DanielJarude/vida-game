@@ -25,7 +25,8 @@ import { disponibilidade } from '../../motor/acoes';
 import { DE_FORMACAO } from '../../motor/sistemas/formacao';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { custoDaRotina, descricaoDaRotina, terapiaPublica, DE_ESTUDOS, ROTINAS, atividadeExiste, modeloRotina, type CategoriaAtividade, type ModeloRotina } from '../../motor/sistemas/rotinas';
-import { estimuloCognitivo, estimuloFisico, palavraAprendizado, palavraCondicionamento } from '../../motor/sistemas/pessoa';
+import { estimuloCognitivo, estimuloFisico, palavraAprendizado } from '../../motor/sistemas/pessoa';
+import { palavraDoAtributo } from '../atributos';
 import { dose, folegoDaSemana } from '../../motor/sistemas/semana';
 import { frentesDaVida, leituraDaFrente } from '../../motor/sistemas/frentes';
 import { atividadesParaVoce } from '../../motor/sistemas/relevancia';
@@ -490,7 +491,7 @@ function Comecar({ vida, agir, custo, filtro = () => true }: { vida: Vida; agir:
  */
 function efeitoNoCorpo(vida: Vida, id: string): string {
   if (estimuloFisico(vida).fontes.some(f => f.id === id) && ['academia', 'corrida', 'bico'].includes(id)) {
-    return `Condicionamento: ${palavraCondicionamento(vida.corpo.forma)}.${id === 'academia' ? ' Treina o corpo — não ensina um esporte.' : ''}`;
+    return `Físico: ${palavraDoAtributo(vida, 'fisico')}.${id === 'academia' ? ' Treina o corpo — não ensina um esporte.' : ''}`;
   }
   if (estimuloCognitivo(vida).fontes.some(f => f.id === id) && ['leitura', 'xadrez'].includes(id)) {
     return `Aprendizado: ${palavraAprendizado(vida.mente.cognicao)}. Sobe devagar, com os anos.`;

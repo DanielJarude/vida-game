@@ -107,6 +107,17 @@ export function pisoDeForma(i: number): number {
   return i < 10 ? 48 : i < 15 ? Math.round((48 - (i - 9) * (16 / 6)) * 10) / 10 : i < 50 ? 32 : i < 70 ? 25 : 18;
 }
 
+/**
+ * REWORK 9.6 · ATR-01: o corpo de cada um, sem treino — o piso do dia a dia deslocado pela predisposição física. Na
+ * infância, a predisposição aparece inteira (a criança forte e a franzina); depois dos 15, o que conta é o treino, e a
+ * predisposição só desloca um pouco (e muda o quanto o treino rende, abaixo). Amplitude: 30 até os 10, caindo até 12
+ * aos 15.
+ */
+export function amplitudeDaPredisposicaoFisica(i: number): number {
+  return i < 10 ? 30 : i < 15 ? Math.round((30 - (i - 9) * 3.6) * 10) / 10 : 12;
+}
+export const pisoDaPessoa = (v: Vida, i = idade(v)) => pisoDeForma(i) + predisposicao(v, 'fisica') * amplitudeDaPredisposicaoFisica(i);
+
 /** O piso está caindo por causa da idade (o fim da infância), nesta idade? */
 export const infanciaFicandoParaTras = (i: number) => i >= 10 && i < 15;
 
@@ -158,7 +169,7 @@ export function fatoresCondicionamento(v: Vida): Fator[] {
 export function alvoCondicionamento(v: Vida): number {
   const i = idade(v);
   const soma = fatoresCondicionamento(v).reduce((s, f) => s + f.efeito, 0);
-  return clamp(Math.round(pisoDeForma(i) + soma), 5, tetoDeForma(i));
+  return clamp(Math.round(pisoDaPessoa(v, i) + soma), 5, tetoDeForma(i));
 }
 
 /**
@@ -190,7 +201,7 @@ export function desenvolverCondicionamento(v: Vida, r: Rng): void {
  * aquisição de matérias e ofícios de estudo — nunca de esporte ou arte.
  */
 const CARGA_COGNITIVA: Record<string, number> = { leitura: 1, xadrez: 0.35, clube_ciencias: 0.3, programacao: 0.25, escrever: 0.2, cursinho: 0.25, estudar_concurso: 0.2 };
-const NOME_COGNITIVA: Record<string, string> = { leitura: 'ler com regularidade', xadrez: 'o xadrez', clube_ciencias: 'o clube de ciências', programacao: 'programar', escrever: 'escrever', cursinho: 'o cursinho', estudar_concurso: 'o estudo para concurso', curso: 'a faculdade' };
+const NOME_COGNITIVA: Record<string, string> = { leitura: 'ler com regularidade', xadrez: 'o xadrez', clube_ciencias: 'o clube de ciências', programacao: 'programar', escrever: 'escrever', cursinho: 'o cursinho', estudar_concurso: 'o estudo para concurso', curso: 'a faculdade', escola: 'a escola' };
 
 export function estimuloCognitivo(v: Vida): Estimulo {
   const fontes: Estimulo['fontes'] = [];
@@ -200,6 +211,10 @@ export function estimuloCognitivo(v: Vida): Estimulo {
   }
   const m = v.educacao.matricula;
   if (m && !m.trancado) fontes.push({ id: 'curso', texto: NOME_COGNITIVA.curso, carga: 0.5 });
+  // REWORK 9.6 · ATR-01: a escola também exercita a cabeça (pouco por ano: a inteligência sobe devagar, com teto). A
+  // dedicação aos estudos conta um pouco mais.
+  const b = v.educacao.basica;
+  if (b && !v.educacao.evadiu && idade(v) >= 7) fontes.push({ id: 'escola', texto: NOME_COGNITIVA.escola, carga: v.educacao.postura === 'dedicada' ? 0.35 : v.educacao.postura === 'relaxada' ? 0.15 : 0.25 });
   return { total: fontes.reduce((s, f) => s + f.carga, 0), fontes: fontes.sort((a, b) => b.carga - a.carga) };
 }
 
@@ -281,7 +296,8 @@ export function desenvolverPessoa(v: Vida, r: Rng): void {
 
 export type DimensaoPessoal = 'condicionamento' | 'aparencia' | 'aprendizado';
 
-export const NOME_PESSOAL: Record<DimensaoPessoal, string> = { condicionamento: 'Condicionamento', aparencia: 'Aparência', aprendizado: 'Aprendizado' };
+// REWORK 9.6: os nomes dos atributos fundamentais (as mesmas fontes: forma, aparência, cognição).
+export const NOME_PESSOAL: Record<DimensaoPessoal, string> = { condicionamento: 'Físico', aparencia: 'Beleza', aprendizado: 'Inteligência' };
 
 /**
  * As faixas de cada dimensão (do pior para o melhor) e a palavra de cada faixa — UMA fonte para a palavra e para o

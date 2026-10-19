@@ -69,12 +69,17 @@ describe('Condicionamento — a frase', () => {
     v.corpo.forma = 70;
     v.mente.historico = [{ t: v.t - 24, humor: 60, cabeca: 30, saude: 80, forma: 78, cognicao: 50, aparencia: 55 }];
     const { container } = render(<main><Voce vida={v} agir={() => true} irPara={() => {}} abrirPessoa={() => {}} /></main>);
-    const causas = [...container.querySelectorAll('.pessoal__causas')].map(x => x.textContent ?? '');
-    const cond = causas.find(c => /treino de base/.test(c));
-    expect(cond).toBeDefined();
-    expect(cond).toMatch(/^O que pesa: .+\. O que segura: o treino de base de futebol/);
-    for (const c of causas) expect(c).not.toMatch(/[;+−]/);
+    // REWORK 9.6: o corpo é o atributo Físico, na ficha de atributos — as causas em duas listas inteiras (o que pesa, o
+    // que segura), frases sem sinais soltos, e a queda medida dita (a seta e quanto caiu, desde quando).
+    const fisico = container.querySelector('[data-atributo="fisico"]')!;
+    const listas = [...fisico.querySelectorAll('.atributo__causas > div')].map(x => x.textContent ?? '');
+    const pesa = listas.find(t => t.startsWith('Tem pesado'))!;
+    const segura = listas.find(t => t.startsWith('Tem ajudado'))!;
+    expect(pesa).toBeDefined();
+    expect(segura).toMatch(/o treino de base de futebol/);
+    for (const li of fisico.querySelectorAll('.atributo__causas li')) expect(li.textContent).not.toMatch(/[;+−]/);
     expect(container.querySelector('.pessoal__sinal')).toBeNull();
-    expect(container.textContent).toMatch(/vem piorando/);
+    expect(fisico.classList.contains('atributo--desce')).toBe(true);
+    expect(fisico.querySelector('.atributo__variacao--desce')!.textContent).toMatch(/^−?-?\d+ desde \d{4}$/);
   });
 });

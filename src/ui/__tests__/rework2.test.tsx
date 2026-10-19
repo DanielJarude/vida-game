@@ -45,14 +45,15 @@ describe('Você ↔ Tempo livre: o condicionamento é um só', () => {
     for (let k = 0; k < 2; k++) { v = avancarAno(v).vida; v.momento = null; }
     const palavra = palavraCondicionamento(v.corpo.forma);
     render(<main><Voce vida={v} agir={() => true} irPara={nada} abrirPessoa={nada} /></main>);
-    const bloco = screen.getByRole('region', { name: 'Corpo e aprendizado' });
-    expect(within(bloco).getByText('Condicionamento')).toBeTruthy();
+    // REWORK 9.6: o condicionamento é o atributo Físico, na ficha de atributos (com a causa: a academia).
+    const bloco = screen.getByRole('region', { name: 'Atributos' }).querySelector('[data-atributo="fisico"]') as HTMLElement;
+    expect(within(bloco).getByText('Físico')).toBeTruthy();
     expect(within(bloco).getByText(palavra)).toBeTruthy();
     expect(within(bloco).getByText(/a academia/)).toBeTruthy();
-    expect(screen.getByText('Bem-estar')).toBeTruthy();
+    expect(screen.getByText('Felicidade')).toBeTruthy();
     cleanup();
     render(<main><Tempo vida={v} agir={() => true} irPara={nada} /></main>);
-    expect(screen.getByText(new RegExp(`Condicionamento: ${palavra}\\.`))).toBeTruthy();
+    expect(screen.getByText(new RegExp(`Físico: ${palavra}\\.`))).toBeTruthy();
     expect(screen.getByText(/não ensina um esporte/)).toBeTruthy();
   });
 });

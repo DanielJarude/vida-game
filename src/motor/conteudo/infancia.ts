@@ -7,6 +7,7 @@
  * aparecem quando a criança já age por conta própria.
  */
 
+import { machucarNaBriga } from '../sistemas/lesoes';
 import { fatoFebre, fatoPrimeiroDia, narrarFebre, narrarPrimeiroDia } from './narracao';
 import { nomeDePet } from '../sistemas/mercado';
 import { dinheiro as moeda } from '../texto';
@@ -314,7 +315,7 @@ export const INFANCIA: Conteudo[] = [
     texto: c => `${c.p.irmao.nome} pegou suas coisas sem pedir de novo — e estragou uma delas.`,
     opcoes: [
       { id: 'brigar', texto: 'Partir para cima', comportamento: { impulsividade: 2 },
-        resolver: c => ({ texto: 'Virou briga de verdade. Os dois ficaram de castigo.', memoria: `Saiu no tapa com ${c.p.irmao.nome} por causa de uma coisa estragada.`, efeito: () => { tensao(c, 'irmao', 25); prox(c, 'irmao', -4); } }) },
+        resolver: c => ({ texto: 'Virou briga de verdade. Os dois ficaram de castigo.', memoria: `Saiu no tapa com ${c.p.irmao.nome} por causa de uma coisa estragada.`, efeito: () => { tensao(c, 'irmao', 25); prox(c, 'irmao', -4); if (c.idade >= 10) machucarNaBriga(c.v, c.r, 1); } }) },
       { id: 'conversar', texto: 'Cobrar, mas sem briga', comportamento: { disciplina: 1, empatia: 1 },
         resolver: c => ({ texto: `${c.p.irmao.nome} bufou, mas prometeu pagar de volta. Não pagou.`, memoria: null, efeito: () => tensao(c, 'irmao', 5) }) },
       { id: 'reclamar', texto: 'Ir reclamar com os adultos', resolver: c => ({ texto: `${c.p.irmao.nome} levou bronca e passou uma semana sem falar com você.`, memoria: null, efeito: () => tensao(c, 'irmao', 10) }) }

@@ -39,8 +39,8 @@ export function palavra(v: Vida, d: Dimensao): string {
   return d === 'humor' ? palavraHumor(v.mente.felicidade) : d === 'cabeca' ? palavraEstresse(v.mente.estresse) : palavraSaude(v.corpo.saude);
 }
 
-/** "Bem-estar" é o humor (`mente.felicidade`): a mesma fonte, o nome que a tela usa. */
-export const NOME_DIMENSAO: Record<Dimensao, string> = { humor: 'Bem-estar', cabeca: 'Cabeça', saude: 'Saúde' };
+/** O humor é a FELICIDADE (`mente.felicidade`) — REWORK 9.6: o nome do atributo em todas as telas (antes, "Bem-estar"). */
+export const NOME_DIMENSAO: Record<Dimensao, string> = { humor: 'Felicidade', cabeca: 'Cabeça', saude: 'Saúde' };
 
 export function palavraTendencia(t: Tendencia): string | undefined {
   return t === 'melhorando' ? 'vem melhorando' : t === 'piorando' ? 'vem piorando' : t === 'estavel' ? 'estável' : undefined;
@@ -244,6 +244,7 @@ export function sinaisDaVida(v: Vida): Sinal[] {
   const pessoais: DimensaoPessoal[] = [...(i >= 6 ? ['condicionamento' as const] : []), ...(i >= 7 ? ['aprendizado' as const] : []), ...(i >= 14 ? ['aparencia' as const] : [])];
   return [
     ...dims.map(d => ({ id: d, nome: NOME_DIMENSAO[d], palavra: palavra(v, d), nivel: nivel(v, d), tendencia: tendencia(v, d) })),
-    ...pessoais.map(d => ({ id: d, nome: d === 'condicionamento' ? 'Corpo' : NOME_PESSOAL[d], palavra: d === 'condicionamento' ? palavraCondicionamento(valorPessoal(v, d)) : d === 'aparencia' ? palavraAparencia(valorPessoal(v, d)) : palavraAprendizado(valorPessoal(v, d)), nivel: nivelPessoal(v, d), tendencia: tendenciaPessoal(v, d) }))
+    // REWORK 9.6: os nomes dos atributos (Físico, Inteligência, Beleza).
+    ...pessoais.map(d => ({ id: d, nome: d === 'condicionamento' ? 'Físico' : d === 'aprendizado' ? 'Inteligência' : 'Beleza', palavra: d === 'condicionamento' ? palavraCondicionamento(valorPessoal(v, d)) : d === 'aparencia' ? palavraAparencia(valorPessoal(v, d)) : palavraAprendizado(valorPessoal(v, d)), nivel: nivelPessoal(v, d), tendencia: tendenciaPessoal(v, d) }))
   ];
 }

@@ -52,6 +52,10 @@ function avancar(n: number) {
   resolverMomentos();
 }
 
+
+/** REWORK 9.6: Caminhos abre na página inicial; o trabalho e os estudos são divisões dela. */
+const divisao = (nome: string) => fireEvent.click(within(screen.getByRole('navigation', { name: 'Divisões de Caminhos' })).getByRole('button', { name: nome }));
+
 describe('interface', () => {
   it('nasce, vive, decide e registra na Linha da Vida', () => {
     render(<App />);
@@ -112,6 +116,7 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
+    divisao('Trabalho');
     if (!screen.queryByRole('button', { name: /Pedir aumento/ })) fireEvent.click(screen.getByRole('button', { name: /Mais ações/ }));
     fireEvent.click(screen.getByRole('button', { name: /Pedir aumento/ }));
     const dialogo = screen.getByRole('dialog');
@@ -129,6 +134,7 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
+    divisao('Estudos');
     expect(screen.getByText(/\(trancado\)/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Voltar ao curso/ }));
     expect(screen.queryByText(/\(trancado\)/)).toBeNull();
@@ -209,11 +215,12 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
+    divisao('Trabalho');
     // Estrada e próximo passo, em frases — nunca "nível 2" ou "sênior" por conta do número interno (Caminhos · Agora).
     expect(within(screen.getByRole('main')).getAllByText(/anos em escritório|Começando em escritório|Um ano em escritório/).length).toBeGreaterThan(0);
     expect(within(screen.getByRole('main')).queryByText(/nível \d/i)).toBeNull();
-    // REWORK 9.5 · UX-07: só a parte aberta de Caminhos é desenhada — as portas moram em Oportunidades.
-    fireEvent.click(screen.getByRole('tab', { name: 'Oportunidades' }));
+    // REWORK 9.5 · UX-07: só a parte aberta de Caminhos é desenhada — as portas moram nas vagas (REWORK 9.6: Trabalho · Vagas).
+    fireEvent.click(screen.getByRole('tab', { name: 'Vagas' }));
     const main = screen.getByRole('main');
     expect(within(main).getByText('Portas de trabalho')).toBeTruthy();
     expect(within(main).getByText(/pode indicar você/)).toBeTruthy();
@@ -289,7 +296,8 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
-    fireEvent.click(screen.getByRole('tab', { name: 'Oportunidades' }));
+    divisao('Trabalho');
+    fireEvent.click(screen.getByRole('tab', { name: 'Vagas' }));
     // REWORK 4: a vaga é um resumo escaneável; o botão está no detalhe (abre ao tocar).
     for (const b of Array.from(screen.getByRole('main').querySelectorAll('.vaga-resumo'))) fireEvent.click(b);
     fireEvent.click(within(screen.getByRole('main')).getAllByRole('button', { name: /Candidatar-se/ })[0]);

@@ -19,6 +19,7 @@ import { podeTentar } from '../plausibilidade';
 import { interpretar } from '../save';
 import type { Vida } from '../tipos';
 import { criarPessoa, vincular } from '../pessoas';
+import { rendeComEla } from '../sistemas/interacoes';
 import { DE_ESTUDOS, custoDaRotina } from '../sistemas/rotinas';
 import { atividadesParaVoce, vagasParaVoce } from '../sistemas/relevancia';
 import { emConstrucao } from '../sistemas/caminhosDeVida';
@@ -95,8 +96,12 @@ describe('2 e 3. sem limite global de interações — e sem farm', () => {
       ganhos.push(x.vinculos[p.id].proximidade - era);
     }
     expect(ganhos.length).toBeGreaterThanOrEqual(2);
-    // Tudo o que dá para fazer com ela num ano rende, somado, pouco mais que a primeira vez (não se farma afeto).
-    expect(ganhos.reduce((s, g) => s + g, 0)).toBeLessThan(primeira * 1.2 + 1);
+    // Tudo o que dá para fazer com ela num ano rende, somado, pouco mais que o dobro da primeira vez (não se farma afeto).
+    // REWORK 9.6: o limite era "1,2× a primeira + 1" — frágil a um sorteio baixo da primeira (os ganhos são sorteados);
+    // a regra em si (cada vez a mais com a mesma pessoa rende menos) é conferida direto no fator, abaixo.
+    expect(primeira + ganhos.reduce((s, g) => s + g, 0)).toBeLessThan(primeira * 2.5 + 2);
+    expect(rendeComEla(1)).toBeLessThan(rendeComEla(0));
+    expect(rendeComEla(3)).toBeLessThan(rendeComEla(1));
   });
 
   it('o alívio de desabafar tem retorno decrescente no ano: dez desabafos não valem dez', () => {

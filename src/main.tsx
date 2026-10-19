@@ -16,6 +16,8 @@ import './ui/cotidiano.css';
 import './ui/organizada.css';
 // REWORK 9.5: a vida em objetos (a agenda, o boletim, a pasta, o álbum, o diário, a ficha, os papéis da casa).
 import './ui/objetos.css';
+// REWORK 9.6: os registros da pessoa (o anúncio de emprego, a ficha de atributos, o boletim em papel, o currículo).
+import './ui/registros.css';
 
 iniciarTema();
 

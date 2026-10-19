@@ -10,6 +10,7 @@
 
 import { redeDeSaude } from './saude';
 import { causaDaMortePet, riscoDoPet } from './pets';
+import { predisposicao } from './predisposicao';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { Condicao, CondicaoNpc, Pessoa, Vida } from '../tipos';
@@ -107,7 +108,8 @@ const MODELOS: ModeloCondicao[] = [
 export const modeloCondicao = (id: string) => MODELOS.find(m => m.id === id);
 
 /** A chance de a condição surgir neste ano para o protagonista. */
-export const riscoNoAno = (v: Vida, m: ModeloCondicao, i = idade(v)) => m.risco(fatoresDoProtagonista(v), i);
+// REWORK 9.6 · ATR-01: a constituição muda um pouco o risco das doenças do corpo (±25%); as da cabeça, não.
+export const riscoNoAno = (v: Vida, m: ModeloCondicao, i = idade(v)) => m.risco(fatoresDoProtagonista(v), i) * (m.id === 'depressao' || m.id === 'ansiedade' ? 1 : 1 - predisposicao(v, 'saude') * 0.25);
 
 /** Envelhecimento e condições do ano. Devolve se algo marcante aconteceu. */
 export function processarCorpo(v: Vida, r: Rng): void {

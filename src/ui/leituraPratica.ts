@@ -21,7 +21,8 @@ import { modeloRotina, nivelDa, nivelModelo, custoDaRotina, type ModeloRotina } 
 import { modeloFrente, MATERIAS } from '../motor/dados/frentes';
 import { anosDePratica, estagioDaFrente, leituraDaFrente } from '../motor/sistemas/frentes';
 import { BEM_ESTAR } from '../motor/sistemas/estado';
-import { estimuloCognitivo, estimuloFisico, nivelPessoal, palavraAprendizado, palavraCondicionamento } from '../motor/sistemas/pessoa';
+import { estimuloCognitivo, estimuloFisico, nivelPessoal } from '../motor/sistemas/pessoa';
+import { palavraDoAtributo } from './atributos';
 import { trajetoria } from './estadoPessoal';
 import { coisasDaVida, coisasDaLoja } from '../motor/sistemas/coisas';
 import { coisa, type Coisa, type LojaDeCoisas } from '../motor/dados/coisas';
@@ -132,11 +133,11 @@ export function leituraDaPratica(v: Vida, r: Rotina, daFormacao = false): Leitur
   else if (be.cabeca < 0) efeitos.push({ id: 'cabeca', texto: 'alivia o estresse', tom: 'bom' });
   else if (be.cabeca >= 8) efeitos.push({ id: 'cabeca', texto: 'pesa no estresse', tom: 'pesa' });
   if (be.humor > 0) efeitos.push({ id: 'humor', texto: be.humor >= 5 ? 'faz bem ao humor' : 'dá ânimo', tom: 'bom' });
-  if (fisico) efeitos.push({ id: 'corpo', texto: `conta como treino para o corpo (condicionamento: ${palavraCondicionamento(v.corpo.forma)})`, tom: 'bom' });
-  if (cognitivo) efeitos.push({ id: 'mente', texto: `exercita a cabeça (aprendizado: ${palavraAprendizado(v.mente.cognicao)})`, tom: 'bom' });
+  if (fisico) efeitos.push({ id: 'corpo', texto: `conta como treino para o corpo (físico: ${palavraDoAtributo(v, 'fisico')})`, tom: 'bom' });
+  if (cognitivo) efeitos.push({ id: 'mente', texto: `exercita a cabeça (inteligência: ${palavraDoAtributo(v, 'inteligencia')})`, tom: 'bom' });
   const pessoal: LeituraPratica['pessoal'] = principal ? undefined
-    : fisico ? { d: 'condicionamento', nome: 'Condicionamento', nivel: nivelPessoal(v, 'condicionamento'), palavra: palavraCondicionamento(v.corpo.forma), pontos: trajetoria(v, 'forma') }
-      : cognitivo ? { d: 'aprendizado', nome: 'Aprendizado', nivel: nivelPessoal(v, 'aprendizado'), palavra: palavraAprendizado(v.mente.cognicao), pontos: trajetoria(v, 'cognicao') } : undefined;
+    : fisico ? { d: 'condicionamento', nome: 'Físico', nivel: nivelPessoal(v, 'condicionamento'), palavra: palavraDoAtributo(v, 'fisico'), pontos: trajetoria(v, 'forma') }
+      : cognitivo ? { d: 'aprendizado', nome: 'Inteligência', nivel: nivelPessoal(v, 'aprendizado'), palavra: palavraDoAtributo(v, 'inteligencia'), pontos: trajetoria(v, 'cognicao') } : undefined;
   const renda = m.renda?.(v, n) ?? 0;
   if (renda > 0) efeitos.push({ id: 'renda', texto: 'rende um dinheiro por mês', tom: 'bom' });
   efeitos.push({ id: 'semana', texto: `ocupa a semana ${dose(nm.tempo)}`, tom: 'neutro' });

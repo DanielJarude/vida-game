@@ -117,7 +117,6 @@ describe('Fase B · o boletim e as fichas', () => {
 
 /* =============================================================== Fase C/D — Caminhos, Vida, História */
 
-import { fireEvent } from '@testing-library/react';
 import { adulto } from '../../motor/__tests__/cenarios';
 import { curso } from '../../motor/dados/cursos';
 import { contratar } from '../../motor/sistemas/trabalho';
@@ -126,7 +125,7 @@ import { executar } from '../../motor/acoes';
 import { PaginaCaminhos } from '../jogo/CaminhosDaVida';
 import { VidaConcreta } from '../jogo/VidaConcreta';
 import { RetratoDaVida, mudancasRecentes } from '../jogo/RetratoDaVida';
-import type { ParteCaminhos } from '../navegacao';
+import type { DivisaoCaminhos, ParteCaminhos } from '../navegacao';
 
 /** 17 anos, técnico concluído, sem escola e sem emprego: procurando o primeiro trabalho. */
 const tecnico = () => transacao(adulto(17, { semente: 29 }), x => {
@@ -136,10 +135,12 @@ const tecnico = () => transacao(adulto(17, { semente: 29 }), x => {
   x.educacao.concluidos.push({ cursoId: tc.id, nome: tc.nome, nivel: tc.nivel, area: tc.area, tFim: x.t - 6, instituicao: 'a escola técnica' });
   x.momento = null;
 }).vida;
-const caminhos = (v: Vida, parte: ParteCaminhos) => render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={nada} parte={parte} irParte={nada} /></main>);
+const caminhos = (v: Vida, parte: ParteCaminhos, divisao: DivisaoCaminhos = 'trabalho') => render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={nada} divisao={divisao} parte={parte} irParte={nada} /></main>);
 
+// REWORK 9.6 · UX-09/10: o que o REWORK 9.5 agrupava dentro do Trabalho (a vida pública, as outras trajetórias) virou
+// divisão de Caminhos. Os mesmos cenários: as vagas primeiro; a política existe — no lugar dela, nunca misturada.
 describe('Cenário 6 · Caminhos aos 17, com técnico e procurando emprego', () => {
-  it('em Agora, as vagas vêm primeiro; a vida pública fica a um toque, agrupada', () => {
+  it('em Trabalho · Agora, as vagas vêm primeiro; nada de política no meio', () => {
     caminhos(tecnico(), 'agora');
     const acoes = screen.getByRole('list', { name: 'O que dá para fazer agora' });
     expect(within(acoes).getAllByRole('button')[0].textContent).toMatch(/vagas/i);
@@ -148,23 +149,28 @@ describe('Cenário 6 · Caminhos aos 17, com técnico e procurando emprego', () 
     expect(document.querySelectorAll('[role=tabpanel]')).toHaveLength(1);
   });
 
-  it('aos 20, procurando: as ações políticas existem, mas ficam na seção "Vida pública", abaixo das vagas', () => {
+  it('aos 20, procurando: as ações políticas existem — em Vida pública; o Trabalho só aponta para lá', () => {
     const v = transacao(adulto(20, { semente: 33 }), x => { x.trabalho.atual = undefined; x.educacao.basica = undefined; x.educacao.matricula = undefined; x.momento = null; }).vida;
     caminhos(v, 'agora');
-    const publica = document.querySelector('details.pasta-secao');
-    expect(publica, 'a vida pública aparece agrupada').toBeTruthy();
-    expect(publica!.textContent).toMatch(/partido|bandeira|comunidade|concurso/i);
     const principais = screen.getByRole('list', { name: 'O que dá para fazer agora' });
     expect(principais.textContent).not.toMatch(/partido|bandeira/i);
     expect(within(principais).getAllByRole('button')[0].textContent).toMatch(/vagas/i);
+    expect(screen.getByRole('button', { name: /Ir para Vida pública/ })).toBeTruthy();
+    cleanup();
+    caminhos(v, 'agora', 'publica');
+    expect(screen.getByRole('list', { name: 'O que dá para fazer na vida pública' }).textContent).toMatch(/partido|bandeira|comunidade|concurso/i);
   });
 
-  it('em Oportunidades, as pastas mantêm tudo acessível: profissões, vida pública, outras trajetórias', () => {
+  it('as pastas e as divisões mantêm tudo acessível: profissões e negócio em Trabalho, serviço público em Vida pública, esporte em Outros caminhos', () => {
     caminhos(tecnico(), 'oportunidades');
-    expect(screen.getByRole('radio', { name: 'Profissões', checked: true })).toBeTruthy();
-    fireEvent.click(screen.getByRole('radio', { name: 'Vida pública' }));
+    // aos 17, a procura de trabalho tem uma pasta só (Profissões): as vagas, sem o seletor; nada de vida pública aqui
+    expect(document.querySelectorAll('.vaga-resumo').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('radio', { name: 'Vida pública' })).toBeNull();
+    cleanup();
+    caminhos(tecnico(), 'agora', 'publica');
     expect(screen.getByRole('heading', { name: 'Serviço público' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('radio', { name: 'Outras trajetórias' }));
+    cleanup();
+    caminhos(tecnico(), 'agora', 'outros');
     expect(screen.getByRole('heading', { name: 'Esporte' })).toBeTruthy();
     // cada caminho é uma ficha curta: o "como começa" abre quando pedido
     expect(document.querySelector('.caminho .caminho__mais summary')?.textContent).toMatch(/Como essa vida costuma começar/);

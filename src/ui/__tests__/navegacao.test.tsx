@@ -14,7 +14,7 @@ import { salvar } from '../../motor/save';
 import { contratar } from '../../motor/sistemas/trabalho';
 import { ocupacao } from '../../motor/dados/ocupacoes';
 import type { Vida } from '../../motor/tipos';
-import { AREAS, MAPA_DE_INTENCOES, SECOES_CAMINHOS, SECOES_TEMPO, SECOES_VIDA, rotuloDoLugar, type Lugar } from '../navegacao';
+import { AREAS, DIVISOES_CAMINHOS, MAPA_DE_INTENCOES, PARTES_DA_DIVISAO, SECOES_TEMPO, SECOES_VIDA, rotuloDoLugar, type Lugar } from '../navegacao';
 import { Estudos } from '../jogo/Estudos';
 import { Voce } from '../jogo/Voce';
 import { VidaConcreta } from '../jogo/VidaConcreta';
@@ -50,8 +50,9 @@ function ir(l: Lugar): void {
   if (l.secao) fireEvent.click(screen.getByRole('tab', { name: SECOES_VIDA.find(s => s.id === l.secao)!.rotulo }));
   // FIX pós-REWORK 4: as abas de Tempo livre (REWORK 9: Minha Semana).
   if (l.aba) fireEvent.click(screen.getByRole('tab', { name: SECOES_TEMPO.find(s => s.id === l.aba)!.rotulo }));
-  // REWORK 9: as partes de Caminhos.
-  if (l.parte) fireEvent.click(screen.getByRole('tab', { name: SECOES_CAMINHOS.find(s => s.id === l.parte)!.rotulo }));
+  // REWORK 9.6: Caminhos → a divisão → a parte (Estudos e Trabalho têm partes; Vida pública e Outros caminhos, não).
+  if (l.divisao) fireEvent.click(within(screen.getByRole('navigation', { name: 'Divisões de Caminhos' })).getByRole('button', { name: DIVISOES_CAMINHOS.find(d => d.id === l.divisao)!.rotulo }));
+  if (l.parte && (l.divisao === 'estudos' || l.divisao === 'trabalho')) fireEvent.click(screen.getByRole('tab', { name: PARTES_DA_DIVISAO[l.divisao].find(s => s.id === l.parte)!.rotulo }));
 }
 /** O que está À VISTA no destino: em Caminhos, o cabeçalho e a aba aberta (as outras ficam no documento, escondidas). */
 function visivel(l: Lugar): string {
@@ -82,11 +83,14 @@ describe('as seis áreas são estáveis (não mudam de lugar com a idade) — RE
     });
   }
 
-  it('criança: em Caminhos, a escola vem primeiro — e o trabalho explica (quem sustenta a casa, quando vira possibilidade)', () => {
+  it('criança: em Caminhos, os estudos vêm primeiro — e o trabalho explica (quem sustenta a casa, quando vira possibilidade)', () => {
     abrirJogo(vida(8));
-    ir({ area: 'caminhos', parte: 'agora' });
-    const lados = [...document.querySelectorAll('.caminhos__painel--ativo [data-lado]')].map(x => x.getAttribute('data-lado'));
-    expect(lados).toEqual(['formacao', 'trabalho']);
+    ir({ area: 'caminhos' });
+    // REWORK 9.6: a página inicial põe as entradas na ordem da fase da vida (nenhuma some).
+    const entradas = [...document.querySelectorAll('.entrada-caminho')].map(x => x.className.replace(/.*entrada-caminho--/, ''));
+    expect(entradas[0]).toBe('estudos');
+    expect(entradas).toHaveLength(4);
+    ir({ area: 'caminhos', divisao: 'trabalho', parte: 'agora' });
     expect(screen.getByText(/Quem sustenta a casa/)).toBeTruthy();
     expect(screen.getByText(/Antes dos 14 anos, trabalhar é proibido/)).toBeTruthy();
   });
@@ -95,7 +99,7 @@ describe('as seis áreas são estáveis (não mudam de lugar com a idade) — RE
 describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliques de verdade)', () => {
   const esperado: Record<string, RegExp> = {
     estudar: /Formação/, atividade_escolar: /O que dá para fazer aqui|Sem estudar agora|caminhos possíveis/, faculdade: /Cursos|cursos|Ao seu alcance|Explorar formações/,
-    falar_mae: /Família/, namoro: /Conhecer alguém/, emprego: /Procurar outro caminho|Vagas/, negocio: /Procurar outro caminho/,
+    falar_mae: /Família/, namoro: /Conhecer alguém/, emprego: /Procurar trabalho|Vagas/, negocio: /Procurar trabalho/,
     futebol: /Cuidar de si|Esporte|Corpo/, carro: /Concessionária/,
     // FIX pós-REWORK 4: as intenções novas (e as que não tinham o que conferir) levam a um lugar que mostra o que promete.
     hobby: /Explorar outras atividades|Arte|Leitura/, sair: /Com quem|Sair e ver gente/, estresse: /O que está pesando/, viajar: /Viagens e experiências/,
@@ -108,7 +112,9 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     historico_escolar: /Sua formação|Sua história na formação|Ensino médio|ensino médio/, familia_aconteceu: /Família/,
     // REWORK 7.5: as intenções das interfaces do cotidiano.
     agenda: /A agenda da semana/, dedicacao: /A agenda da semana/, celular: /Tela inicial|Instagram/, homenagear: /Em memória|Quem se foi|Família/,
-    agradecer: /Família|Amigos|Perto|Gente da sua vida/, triste: /pesa|Cabeça|Como você está/, aparencia: /História/, profissional: /A sua situação agora|Procurar outro caminho/
+    agradecer: /Família|Amigos|Perto|Gente da sua vida/, triste: /pesa|Cabeça|Como você está/, aparencia: /História/, profissional: /A sua situação agora|Procurar outro caminho/,
+    // REWORK 9.6: as divisões de Caminhos.
+    concurso: /Concursos|Carreiras públicas/, carreira_esporte: /Esporte, arte, universidade/, boletim: /Boletim|O ano letivo|Ainda não há o que medir/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {
     const v = vida(30, x => { adulta(x); x.moradia = { tipo: 'aluguel', municipioId: x.moradia.municipioId, modeloId: 'apto_1q', aluguel: 1300, padrao: 3, tInicio: x.t }; for (const vin of Object.values(x.vinculos)) vin.convivio = vin.convivio.filter(c => c !== 'casa'); });

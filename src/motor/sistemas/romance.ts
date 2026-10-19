@@ -25,6 +25,7 @@
 
 import { registroCivilDe } from '../mundo/locais';
 import { comecarVidaEmComum, separarVidaMaterial } from './partilha';
+import { pesoDaAparenciaPara } from './predisposicao';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { EstagioRomance, Genero, Pessoa, Romance, Vida, Vinculo } from '../tipos';
@@ -79,7 +80,8 @@ export function podeTerRomance(v: Vida, p: Pessoa, vin: Vinculo): boolean {
 /** O quanto a pessoa se interessa pelo jogador, de saída. */
 export function interesseInicial(v: Vida, p: Pessoa): number {
   const c = compatibilidade(v, p);
-  const aparencia = (v.corpo.aparencia - 50) / 2;
+  // REWORK 9.6: o quanto a aparência pesa depende de quem olha (`pesoDaAparenciaPara`) — gosto não é padrão único.
+  const aparencia = (v.corpo.aparencia - 50) / 2 * pesoDaAparenciaPara(p.id);
   const i = idade(v);
   const ip = idadePessoa(v, p);
   const difIdade = Math.abs(i - ip);

@@ -118,7 +118,8 @@ describe('atividade: começar → praticar → evoluir → a tela diz o que o mo
     expect(l.principal).toBeUndefined();
     expect(l.pessoal?.d).toBe('condicionamento');
     render(<main><Voce vida={v} agir={() => true} irPara={nada} abrirPessoa={nada} /></main>);
-    expect(within(screen.getByRole('region', { name: 'Corpo e aprendizado' })).getByText(l.pessoal!.palavra)).toBeTruthy();
+    // REWORK 9.6: o corpo é o atributo Físico, na ficha de atributos — a mesma palavra.
+    expect(within(screen.getByRole('region', { name: 'Atributos' }).querySelector('[data-atributo="fisico"]') as HTMLElement).getByText(l.pessoal!.palavra)).toBeTruthy();
   });
 });
 
@@ -210,6 +211,8 @@ describe('carreira: trabalhar → sair → o emprego entra na trajetória', () =
   it('pedir demissão leva o emprego para "Por onde você passou" — com o ano e o lugar', () => {
     let v = vida(28, x => { x.trabalho.atual = undefined; x.trabalho.historico = []; contratar(x, criarRng(3), ocupacao('vendedor')); x.financas.conta = 30000; });
     v = anos(v, 2);
+    // REWORK 9.6: a pré-condição dita (com as sementes deslocadas, a vendedora já podia ter saído nesses dois anos).
+    if (!v.trabalho.atual) { contratar(v, criarRng(4), ocupacao('vendedor')); v.trabalho.atual!.tInicio = v.t - 24; }
     const emp = v.trabalho.atual!;
     v = executar(v, { tipo: 'pedir_demissao' }).vida;
     v.momento = null;

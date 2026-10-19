@@ -24,16 +24,25 @@ export type Area = 'linha' | 'voce' | 'pessoas' | 'caminhos' | 'tempo' | 'vida';
 export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'pertences' | 'cidade' | 'viagens';
 /** As abas de Minha Semana: a agenda primeiro; depois "quero fazer algo físico", "um hobby", "sair, ver gente", "o celular". */
 export type SecaoTempo = 'semana' | 'corpo' | 'atividades' | 'gente' | 'redes';
-/** As partes de Caminhos: o que ocupa a vida agora, como venho me desenvolvendo, o que está ao alcance, por onde passei. */
+/**
+ * REWORK 9.6 · UX-09/10 — as DIVISÕES de Caminhos: uma página inicial curta (a situação, o próximo passo, as entradas)
+ * e quatro experiências que não se misturam. Estudos (a escola, o boletim, os cursos, o histórico acadêmico); Trabalho
+ * (o emprego, as vagas, as candidaturas, o negócio, o histórico profissional); Vida pública (concursos, política,
+ * serviço público); Outros caminhos (esporte, arte, a universidade como carreira, os projetos).
+ */
+export type DivisaoCaminhos = 'inicio' | 'estudos' | 'trabalho' | 'publica' | 'outros';
+/** As partes de Estudos e de Trabalho: o que ocupa agora, como venho me saindo, o que está ao alcance, por onde passei. */
 export type ParteCaminhos = 'agora' | 'desenvolvimento' | 'oportunidades' | 'historico';
 
 /** Um destino: uma área, uma seção de Vida, uma aba de Minha Semana, uma parte de Caminhos — ou um nome antigo que continua aceito. */
-export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio';
+export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio' | 'vida_publica' | 'outros_caminhos' | 'inicio_caminhos';
 
 export interface Lugar {
   area: Area;
   secao?: SecaoVida;
   aba?: SecaoTempo;
+  /** Em Caminhos, a divisão (ausente: a que estava aberta — ou a inicial). */
+  divisao?: DivisaoCaminhos;
   parte?: ParteCaminhos;
   /** Em Caminhos, qual dos dois lados o destino quer à vista (a formação ou o trabalho). */
   foco?: 'formacao' | 'trabalho';
@@ -45,10 +54,14 @@ const DE_TEMPO = new Set<string>(['semana', 'corpo', 'atividades', 'gente', 'red
 const DE_VIDA = new Set<string>(['casa', 'dinheiro', 'compras', 'pertences', 'cidade', 'viagens']);
 const DE_CAMINHOS = new Set<string>(['agora', 'desenvolvimento', 'oportunidades', 'historico']);
 export function resolverDestino(d: Aba): Lugar {
-  if (d === 'estudos' || d === 'formacao') return { area: 'caminhos', parte: 'agora', foco: 'formacao' };
-  if (d === 'trabalho') return { area: 'caminhos', parte: 'agora', foco: 'trabalho' };
-  if (d === 'cursos') return { area: 'caminhos', parte: 'oportunidades', foco: 'formacao' };
-  if (d === 'vagas' || d === 'concursos' || d === 'negocio') return { area: 'caminhos', parte: 'oportunidades', foco: 'trabalho', explorar: d };
+  if (d === 'estudos' || d === 'formacao') return { area: 'caminhos', divisao: 'estudos', parte: 'agora', foco: 'formacao' };
+  if (d === 'trabalho') return { area: 'caminhos', divisao: 'trabalho', parte: 'agora', foco: 'trabalho' };
+  if (d === 'cursos') return { area: 'caminhos', divisao: 'estudos', parte: 'oportunidades', foco: 'formacao' };
+  if (d === 'vagas' || d === 'negocio') return { area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades', foco: 'trabalho', explorar: d };
+  // Os concursos são vida pública (antes, uma pasta da procura de emprego).
+  if (d === 'concursos' || d === 'vida_publica') return { area: 'caminhos', divisao: 'publica' };
+  if (d === 'outros_caminhos') return { area: 'caminhos', divisao: 'outros' };
+  if (d === 'inicio_caminhos') return { area: 'caminhos', divisao: 'inicio' };
   if (DE_VIDA.has(d)) return { area: 'vida', secao: d as SecaoVida };
   if (DE_TEMPO.has(d)) return { area: 'tempo', aba: d as SecaoTempo };
   if (DE_CAMINHOS.has(d)) return { area: 'caminhos', parte: d as ParteCaminhos };
@@ -62,6 +75,30 @@ export const SECOES_TEMPO: { id: SecaoTempo; rotulo: string; oque: string }[] = 
   { id: 'gente', rotulo: 'Sair e ver gente', oque: 'Comunidade, noite, família, voluntariado — e com quem fazer' },
   { id: 'redes', rotulo: 'Celular', oque: 'As redes sociais: Instagram, TikTok, YouTube, X, Facebook, Twitch, OnlyFans' }
 ];
+
+export const DIVISOES_CAMINHOS: { id: DivisaoCaminhos; rotulo: string; oque: string }[] = [
+  { id: 'inicio', rotulo: 'Início', oque: 'A situação de agora, o próximo passo e as entradas de cada caminho' },
+  { id: 'estudos', rotulo: 'Estudos', oque: 'Escola, boletim, cursos, técnico, faculdade, qualificações, histórico acadêmico, preparação para provas' },
+  { id: 'trabalho', rotulo: 'Trabalho', oque: 'O emprego de agora, vagas, candidaturas, promoções, experiência, o próprio negócio, histórico profissional' },
+  { id: 'publica', rotulo: 'Vida pública', oque: 'Concursos, política, serviço público, farda' },
+  { id: 'outros', rotulo: 'Outros caminhos', oque: 'Esporte, arte, a universidade como carreira, os projetos' }
+];
+
+/** Os rótulos das partes, em cada divisão (a mesma estrutura, o nome de cada lugar). */
+export const PARTES_DA_DIVISAO: Record<'estudos' | 'trabalho', { id: ParteCaminhos; rotulo: string; oque: string }[]> = {
+  estudos: [
+    { id: 'agora', rotulo: 'Agora', oque: 'A escola ou o curso de agora, o que dá para fazer lá, a dedicação' },
+    { id: 'desenvolvimento', rotulo: 'Boletim', oque: 'Como você vem se saindo: as matérias, a nota, a frequência' },
+    { id: 'oportunidades', rotulo: 'Cursos', oque: 'O que está ao alcance: cursos, técnico, faculdade, pós, a preparação para provas' },
+    { id: 'historico', rotulo: 'Histórico', oque: 'As escolas, os diplomas, o que ficou' }
+  ],
+  trabalho: [
+    { id: 'agora', rotulo: 'Agora', oque: 'O trabalho de agora (ou a procura), o dia a dia, o que corre em paralelo' },
+    { id: 'desenvolvimento', rotulo: 'Desempenho', oque: 'O desempenho, o salário, o que você está construindo, os retornos das tentativas' },
+    { id: 'oportunidades', rotulo: 'Vagas', oque: 'Vagas, candidaturas, trabalhar por conta, abrir um negócio' },
+    { id: 'historico', rotulo: 'Currículo', oque: 'Por onde você passou: empregos, promoções, os momentos da carreira' }
+  ]
+};
 
 export const SECOES_CAMINHOS: { id: ParteCaminhos; rotulo: string; oque: string }[] = [
   { id: 'agora', rotulo: 'Agora', oque: 'O que ocupa a sua vida agora: a escola, o curso, o trabalho, a carreira — e o que dá para fazer neles' },
@@ -96,6 +133,11 @@ export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
 export const rotuloDoLugar = (l: Lugar) => {
   const a = AREAS.find(x => x.id === l.area)!.rotulo;
   if (l.aba) return `${a} · ${SECOES_TEMPO.find(x => x.id === l.aba)!.rotulo}`;
+  if (l.divisao && l.divisao !== 'inicio') {
+    const div = DIVISOES_CAMINHOS.find(x => x.id === l.divisao)!.rotulo;
+    const parte = l.parte && (l.divisao === 'estudos' || l.divisao === 'trabalho') ? PARTES_DA_DIVISAO[l.divisao].find(x => x.id === l.parte)!.rotulo : undefined;
+    return parte && parte !== 'Agora' ? `${a} · ${div} · ${parte}` : `${a} · ${div}`;
+  }
   if (l.parte) return `${a} · ${SECOES_CAMINHOS.find(x => x.id === l.parte)!.rotulo}`;
   if (!l.secao) return a;
   return `${a} · ${SECOES_VIDA.find(x => x.id === l.secao)!.rotulo}`;
@@ -109,17 +151,17 @@ export const rotuloDoLugar = (l: Lugar) => {
 export interface Intencao { id: string; quero: string; lugar: Lugar; la: string }
 
 export const MAPA_DE_INTENCOES: Intencao[] = [
-  { id: 'estudar', quero: 'Estudar, ver a escola, a faculdade', lugar: { area: 'caminhos', parte: 'agora' }, la: 'a escola ou o curso, as atividades de lá (os cursos possíveis estão em Oportunidades)' },
-  { id: 'atividade_escolar', quero: 'Entrar numa atividade da escola ou da faculdade', lugar: { area: 'caminhos', parte: 'agora' }, la: '"O que dá para fazer aqui"' },
-  { id: 'faculdade', quero: 'Fazer faculdade, técnico, pós', lugar: { area: 'caminhos', parte: 'oportunidades' }, la: 'a preparação e os cursos' },
+  { id: 'estudar', quero: 'Estudar, ver a escola, a faculdade', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'agora' }, la: 'a escola ou o curso, as atividades de lá (os cursos possíveis estão em Cursos)' },
+  { id: 'atividade_escolar', quero: 'Entrar numa atividade da escola ou da faculdade', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'agora' }, la: '"O que dá para fazer aqui"' },
+  { id: 'faculdade', quero: 'Fazer faculdade, técnico, pós', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'oportunidades' }, la: 'a preparação e os cursos' },
   { id: 'falar_mae', quero: 'Falar com a mãe, com a família', lugar: { area: 'pessoas' }, la: 'o rosto de quem você quer' },
   { id: 'namoro', quero: 'Procurar alguém para namorar', lugar: { area: 'pessoas' }, la: '"Conhecer alguém"' },
   // FIX pós-playtest humano: da amizade ao romance — na ficha, "Algo mais".
   { id: 'romance_amigo', quero: 'Tentar transformar uma amizade em romance', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Algo mais" (demonstrar interesse — a resposta é dela)' },
   { id: 'fazer_junto', quero: 'Fazer algo com quem eu amo, com o meu filho, com um amigo', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Fazer juntos" (cinema, jantar, parque, ensinar, viajar)' },
-  { id: 'agir_trabalho', quero: 'Agir no trabalho: um projeto, a chefia, o treino de atleta', lugar: { area: 'caminhos', parte: 'agora' }, la: '"No dia a dia do trabalho"' },
-  { id: 'emprego', quero: 'Procurar emprego, ver a profissão', lugar: { area: 'caminhos', parte: 'oportunidades' }, la: 'as vagas, os concursos, as portas abertas' },
-  { id: 'negocio', quero: 'Abrir um negócio', lugar: { area: 'caminhos', parte: 'oportunidades' }, la: '"Outras possibilidades": abrir um negócio' },
+  { id: 'agir_trabalho', quero: 'Agir no trabalho: um projeto, a chefia, o treino de atleta', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'agora' }, la: '"No dia a dia do trabalho"' },
+  { id: 'emprego', quero: 'Procurar emprego, ver a profissão', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades' }, la: 'as vagas e as portas abertas (os concursos ficam em Vida pública)' },
+  { id: 'negocio', quero: 'Abrir um negócio', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades' }, la: 'a pasta "Negócio próprio"' },
   { id: 'futebol', quero: 'Jogar futebol, treinar, fazer algo físico', lugar: { area: 'tempo', aba: 'corpo' }, la: 'esportes, academia, corrida (o time da escola fica em Caminhos)' },
   { id: 'hobby', quero: 'Praticar um hobby: música, desenho, leitura', lugar: { area: 'tempo', aba: 'atividades' }, la: 'as atividades por tipo' },
   { id: 'sair', quero: 'Sair, ver gente, fazer algo com alguém', lugar: { area: 'tempo', aba: 'gente' }, la: 'o que fazer com quem — e as atividades com gente' },
@@ -145,10 +187,10 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'violao', quero: 'Começar a tocar violão (ou outro instrumento)', lugar: { area: 'tempo', aba: 'atividades' }, la: '"Tocar um instrumento" — e o violão, nas lojas de Vida · Compras' },
   { id: 'condicionamento', quero: 'Melhorar o condicionamento', lugar: { area: 'tempo', aba: 'corpo' }, la: 'academia, corrida, um esporte (Você mostra como o corpo está)' },
   { id: 'praticas', quero: 'Ver o que eu pratico e como venho evoluindo', lugar: { area: 'tempo', aba: 'semana' }, la: '"O que você pratica": um toque abre a história de cada atividade' },
-  { id: 'carreira', quero: 'Ver a minha carreira', lugar: { area: 'caminhos', parte: 'historico' }, la: 'a situação em Agora; "Por onde você passou" em Histórico' },
+  { id: 'carreira', quero: 'Ver a minha carreira', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'historico' }, la: 'a situação em Agora; "Por onde você passou" em Currículo' },
   { id: 'quanto_ganho', quero: 'Saber quanto ganho e quanto gasto', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês: o que entra, o que sai, o que sobra' },
   { id: 'em_casa', quero: 'Ver o que tenho em casa', lugar: { area: 'vida', secao: 'casa' }, la: '"O que há em casa" (usar e vender, em Patrimônio)' },
-  { id: 'historico_escolar', quero: 'Ver o meu histórico escolar', lugar: { area: 'caminhos', parte: 'historico' }, la: 'a formação que já é sua e a história de cada escola' },
+  { id: 'historico_escolar', quero: 'Ver o meu histórico escolar', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'historico' }, la: 'a formação que já é sua e a história de cada escola' },
   { id: 'familia_aconteceu', quero: 'Saber o que aconteceu com a minha família', lugar: { area: 'pessoas' }, la: '"Pedem atenção", a ficha de cada um — e "Enquanto isso", depois de cada ano' },
   // REWORK 7.5 — as intenções do playtest das interfaces do cotidiano.
   { id: 'agenda', quero: 'Consultar a minha semana, a agenda', lugar: { area: 'tempo', aba: 'semana' }, la: 'a agenda: cada compromisso no seu horário, os conflitos, o tempo livre' },
@@ -158,5 +200,9 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'agradecer', quero: 'Agradecer a alguém por uma ajuda', lugar: { area: 'pessoas' }, la: 'a ficha da pessoa, "Conversar": só aparece pelo que ela fez de verdade' },
   { id: 'triste', quero: 'Saber por que ainda estou triste', lugar: { area: 'voce' }, la: '"Como você está": o que pesa (o luto que se acalma, um acontecimento recente) e o que ajuda' },
   { id: 'aparencia', quero: 'Mudar a aparência do jogo, as cores', lugar: { area: 'linha' }, la: 'o Menu (a marca VIDA, no alto): "Aparência", com as quatro paletas' },
-  { id: 'profissional', quero: 'Ver as minhas informações profissionais', lugar: { area: 'caminhos', parte: 'agora' }, la: 'o ofício, a situação agora; a trajetória em Histórico' }
+  { id: 'profissional', quero: 'Ver as minhas informações profissionais', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'agora' }, la: 'o ofício, a situação agora; a trajetória em Currículo' },
+  // REWORK 9.6 · UX-09/10: as divisões novas de Caminhos.
+  { id: 'concurso', quero: 'Prestar concurso, entrar na política', lugar: { area: 'caminhos', divisao: 'publica' }, la: 'os editais abertos, o preparo, a política, as carreiras de farda' },
+  { id: 'carreira_esporte', quero: 'Seguir carreira no esporte ou na arte', lugar: { area: 'caminhos', divisao: 'outros' }, la: 'as peneiras, as seletivas, a banda, o grupo — e como cada caminho começa' },
+  { id: 'boletim', quero: 'Ver o meu boletim, as minhas notas', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'desenvolvimento' }, la: 'o boletim: as matérias, a nota, a frequência' }
 ];

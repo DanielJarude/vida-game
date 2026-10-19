@@ -23,6 +23,13 @@
  * REWORK 9.5 · UX-07: só a parte aberta é desenhada (antes, as quatro ficavam no documento e o CSS escondia três —
  * 15 a 25 ms a mais em cada toque). A navegação por intenção (`navegacao`) aponta para a parte certa; nenhuma ação
  * depende de outra parte estar desenhada para existir no motor.
+ *
+ * REWORK 9.6 · UX-09/10: a página misturava, em cada parte, a escola, as vagas, os concursos, a política e o esporte.
+ * Agora Caminhos tem uma PÁGINA INICIAL curta (a situação, o próximo passo, as entradas — na ordem que a fase da vida
+ * pede, sem esconder nenhuma) e quatro DIVISÕES que não se misturam: Estudos e Trabalho (cada um com as suas partes:
+ * agora, desempenho, oportunidades, histórico), Vida pública e Outros caminhos. O que cruza as divisões vira LIGAÇÃO
+ * (o técnico concluído abre vagas em Trabalho; a vaga mora em Trabalho, não no boletim) — nunca a mesma ação em dois
+ * lugares. Só a divisão aberta (e a parte aberta) é desenhada.
  */
 
 import type { Vida } from '../../motor/tipos';
@@ -37,14 +44,31 @@ import { negocioAberto } from '../../motor/sistemas/negocio';
 import { nomeDaMatricula, rotuloSerie } from '../../motor/sistemas/escola';
 import { instituicaoAtual } from '../../motor/sistemas/formacao';
 import { navegarAbas } from '../comum';
-import { SECOES_CAMINHOS, type Aba, type ParteCaminhos } from '../navegacao';
-import { Estudos, PortasAbertas } from './Estudos';
+import { DIVISOES_CAMINHOS, PARTES_DA_DIVISAO, type Aba, type DivisaoCaminhos, type ParteCaminhos } from '../navegacao';
+import { Estudos } from './Estudos';
 import { Trabalho, TrabalhoAindaNao } from './Trabalho';
 import { DesenvolvimentoReal } from './Progresso';
 import { ResumoDaRotina } from './Rotina';
+import { OutrosCaminhosDaVida, VidaPublica } from './DivisoesCaminhos';
+import { leituraPolitica, naPolitica } from '../../motor/sistemas/politica';
+import { editaisAbertos } from '../../motor/sistemas/concurso';
+import { elegibilidade } from '../../motor/sistemas/trabalho';
+import { podeTentar } from '../../motor/plausibilidade';
+import { proximoPasso } from '../../motor/sistemas/trabalho';
+import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
+import { rotuloEscolaridade } from '../../motor/sistemas/escola';
+import { palavraDesempenho } from '../apresentar';
 
 /** Uma coisa que ocupa a vida agora (a situação atual, em uma linha). */
 export interface Ocupacao { id: string; lado: 'formacao' | 'trabalho'; rotulo: string; detalhe?: string }
+
+/** A divisão de Caminhos onde mora cada coisa que ocupa a vida (a base é esporte; o mandato, vida pública). */
+export function divisaoDaOcupacao(o: Ocupacao, v: Vida): Exclude<DivisaoCaminhos, 'inicio'> {
+  if (o.lado === 'formacao') return o.id === 'concurso' ? 'publica' : 'estudos';
+  if (o.id === 'base') return 'outros';
+  if (o.id === 'trabalho' && modoDoTrabalho(v) === 'politica') return 'publica';
+  return 'trabalho';
+}
 
 /** O que ocupa a vida agora — tudo o que acontece ao mesmo tempo, dos dois lados. Lido do estado, nada inventado. */
 export function situacaoAtual(v: Vida): Ocupacao[] {
@@ -103,6 +127,73 @@ export function faseDosCaminhos(v: Vida): string {
   return estuda ? 'Trabalhando e estudando' : 'A vida de trabalho';
 }
 
+/** O que cada divisão diz de você agora, numa linha (a ficha da página inicial e o subtítulo da divisão). */
+export function estadoDaDivisao(v: Vida, d: Exclude<DivisaoCaminhos, 'inicio'>): string {
+  const i = idade(v);
+  const modo = modoDoTrabalho(v);
+  if (d === 'estudos') {
+    const b = v.educacao.basica, m = v.educacao.matricula;
+    if (b && !v.educacao.evadiu) return `${rotuloSerie(b)} · desempenho ${palavraDesempenho(b.desempenho)}`;
+    if (m) return `${nomeDaMatricula(v, m)}${m.trancado ? ' · trancado' : ''}`;
+    if (i < 4) return 'Antes da escola';
+    return v.educacao.concluidos.length || v.educacao.escolaridade !== 'nenhuma' ? `Formação: ${rotuloEscolaridade(v, v.educacao.escolaridade)} — cursos ao alcance` : 'Sem estudar agora — cursos ao alcance';
+  }
+  if (d === 'trabalho') {
+    if (i < 14 && !v.trabalho.historico.length) return 'Trabalho só a partir dos 14 (como aprendiz)';
+    const e = v.trabalho.atual;
+    if (modo === 'preso') return 'Cumprindo pena';
+    if (e && modo !== 'politica') { const oc = ocupacaoOuNula(e.ocupacaoId); return `${oc ? cap(nomeOcupacao(v, oc)) : 'Trabalhando'} · desde ${anoDe(e.tInicio)}`; }
+    if (modo === 'negocio') return negocioAberto(v)?.nome ?? 'O próprio negócio';
+    if (modo === 'procurando') return 'Procurando trabalho — as vagas estão aqui';
+    if (modo === 'aposentado') return 'Aposentadoria';
+    return 'Sem trabalho agora — vagas, por conta, negócio';
+  }
+  if (d === 'publica') {
+    if (i < 16) return 'Concursos e política, a partir dos 16';
+    const pol = naPolitica(v) ? leituraPolitica(v) : undefined;
+    if (pol) return pol.titulo;
+    if (modo === 'servidor') return 'No serviço público';
+    const estudando = v.rotinas.some(r => r.id === 'estudar_concurso');
+    const n = i >= 17 ? editaisAbertos(v).filter(oc => podeTentar(elegibilidade(v, oc))).length : 0;
+    return [estudando ? 'Estudando para concurso' : '', n ? `${n} ${n === 1 ? 'edital aberto' : 'editais abertos'} para você` : 'Nenhum edital para você este ano'].filter(Boolean).join(' · ');
+  }
+  const esp = v.caminhos.esporte;
+  const portas = oportunidadesAbertas(v).filter(o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)).length;
+  const partes = [
+    esp?.fase === 'base' ? `Na base ${doClube(esp.clube)}` : esp?.fase === 'profissional' ? 'Atleta profissional' : '',
+    v.caminhos.arte?.ativo ? v.caminhos.arte.nome : '',
+    portas ? `${portas} ${portas === 1 ? 'porta aberta' : 'portas abertas'}` : ''
+  ].filter(Boolean);
+  return partes.length ? partes.join(' · ') : 'Esporte, arte, universidade: como cada um começa';
+}
+
+/** A ordem das entradas na página inicial: a fase da vida decide o que vem primeiro; nenhuma some. */
+export function ordemDasDivisoes(v: Vida): Exclude<DivisaoCaminhos, 'inicio'>[] {
+  const i = idade(v);
+  const modo = modoDoTrabalho(v);
+  const estuda = (!!v.educacao.basica && !v.educacao.evadiu) || !!v.educacao.matricula;
+  if (modo === 'politica' || modo === 'servidor' || (naPolitica(v) && !v.trabalho.atual)) return ['publica', 'trabalho', 'estudos', 'outros'];
+  if (modo === 'base' || modo === 'atleta' || modo === 'artista' || v.caminhos.esporte?.fase === 'base') return ['outros', estuda ? 'estudos' : 'trabalho', estuda ? 'trabalho' : 'estudos', 'publica'];
+  if (i < 14) return ['estudos', 'outros', 'trabalho', 'publica'];
+  if (estuda && !v.trabalho.atual) return ['estudos', 'trabalho', 'outros', 'publica'];
+  return ['trabalho', 'estudos', 'publica', 'outros'];
+}
+
+/** O próximo passo que mais importa agora (um, com o lugar onde se dá) — lido do motor, nunca inventado. */
+export function proximoNosCaminhos(v: Vida): { texto: string; divisao: Exclude<DivisaoCaminhos, 'inicio'>; parte?: ParteCaminhos } | undefined {
+  const modo = modoDoTrabalho(v);
+  if (modo === 'procurando') return { texto: 'Procurar trabalho: as vagas ao seu alcance, com o que cada uma pede.', divisao: 'trabalho', parte: 'oportunidades' };
+  const pp = proximoPasso(v);
+  if (pp) return { texto: pp.resumo, divisao: 'trabalho', parte: 'agora' };
+  const b = v.educacao.basica;
+  if (b && !v.educacao.evadiu) return { texto: `${rotuloSerie(b)}: o boletim diz como vão as matérias.`, divisao: 'estudos', parte: 'desenvolvimento' };
+  const m = v.educacao.matricula;
+  if (m && !m.trancado) return { texto: `${nomeDaMatricula(v, m)}: ${m.mesesRestantes <= 12 ? 'o último ano' : `faltam uns ${Math.ceil(m.mesesRestantes / 12)} anos`}.`, divisao: 'estudos', parte: 'agora' };
+  return undefined;
+}
+
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 const VAZIO: Record<ParteCaminhos, string> = {
   agora: 'Nada ocupa a vida agora.',
   desenvolvimento: 'Ainda não há o que medir: o desenvolvimento aparece quando há escola, curso, trabalho ou um caminho em construção.',
@@ -112,57 +203,129 @@ const VAZIO: Record<ParteCaminhos, string> = {
 
 interface Props {
   vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; abrirPessoa?: (id: string) => void;
+  divisao?: DivisaoCaminhos; irDivisao?: (d: DivisaoCaminhos, p?: ParteCaminhos) => void;
   parte: ParteCaminhos; irParte: (p: ParteCaminhos) => void;
   explorar?: string; aoExplorar?: (a: string) => void;
 }
 
-export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, parte, irParte, explorar, aoExplorar }: Props) {
+export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'inicio', irDivisao = () => {}, parte, irParte, explorar, aoExplorar }: Props) {
   const i = idade(vida);
-  const agora = situacaoAtual(vida);
-  const lados = ordemDosLados(vida);
-  const temTrabalho = i >= 14 || vida.trabalho.historico.length > 0;
-  const lado = (l: 'formacao' | 'trabalho', p: ParteCaminhos) => {
-    if (l === 'formacao') return <Estudos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} parte={p} />;
-    if (!temTrabalho) return p === 'agora' ? <TrabalhoAindaNao vida={vida} irPara={irPara} compacto /> : null;
-    return <Trabalho vida={vida} agir={agir} irPara={irPara} parte={p} explorar={explorar} aoExplorar={aoExplorar} />;
-  };
+  const rotulo = DIVISOES_CAMINHOS.find(x => x.id === divisao)!.rotulo;
   return (
-    <div className="pagina-caminhos">
-      <header className="folio folio--caminhos">
-        <p className="folio__kicker"><span className="folio__area">Caminhos</span> · {SECOES_CAMINHOS.find(x => x.id === parte)!.rotulo.toLowerCase()}</p>
-        <h1 className="folio__titulo">{faseDosCaminhos(vida)}</h1>
-        <ul className="situacao-atual" aria-label="O que ocupa a sua vida agora">
-          {agora.map(x => (
-            <li key={x.id} className={`situacao-atual__item situacao-atual__item--${x.lado}`} data-ocupacao={x.id}>
-              <span className="situacao-atual__lado">{x.lado === 'formacao' ? 'Formação' : 'Trabalho'}</span>
-              <span className="situacao-atual__rotulo">{x.rotulo.charAt(0).toUpperCase() + x.rotulo.slice(1)}</span>
-              {x.detalhe && <span className="situacao-atual__detalhe">{x.detalhe}</span>}
-            </li>
-          ))}
-        </ul>
-        {/* REWORK 9.5 · ROT-01: o estudo e o trabalho vivem na mesma semana — a mesma leitura da rotina de Minha Semana. */}
-        {parte === 'agora' && i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
-      </header>
-      <nav className="subnav subnav--caminhos" aria-label="Partes de Caminhos">
-        <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
-          {SECOES_CAMINHOS.map(x => (
-            <li key={x.id} role="presentation">
-              <button type="button" role="tab" id={`subnav-caminhos-${x.id}`} aria-selected={parte === x.id} tabIndex={parte === x.id ? 0 : -1} aria-controls={parte === x.id ? `caminhos-${x.id}` : undefined} className={`subnav__item${parte === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => irParte(x.id)} title={x.oque}>{x.rotulo}</button>
+    <div className={`pagina-caminhos pagina-caminhos--${divisao}`}>
+      <nav className="divisoes-caminhos" aria-label="Divisões de Caminhos">
+        <ul className="divisoes-caminhos__lista">
+          {DIVISOES_CAMINHOS.map(x => (
+            <li key={x.id}>
+              <button type="button" className={`divisoes-caminhos__item${divisao === x.id ? ' divisoes-caminhos__item--ativa' : ''}`} aria-current={divisao === x.id ? 'page' : undefined} onClick={() => irDivisao(x.id)} title={x.oque}>{x.rotulo}</button>
             </li>
           ))}
         </ul>
       </nav>
-      {SECOES_CAMINHOS.filter(x => x.id === parte).map(x => (
-        <div key={x.id} role="tabpanel" id={`caminhos-${x.id}`} aria-labelledby={`subnav-caminhos-${x.id}`} className={`caminhos__painel caminhos__painel--${x.id} caminhos__painel--ativo`} data-ativo="sim">
-          {/* PROG-01: o que se mede no estudo e no trabalho, ano a ano (as notas, as matérias, o desempenho, o salário). */}
-          {x.id === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} />}
-          {/* As portas que nascem do que se pratica (a peneira, a seletiva, a banda, o grupo) são caminho também: aparecem aqui
-              (e continuam na semana, onde a prática mora). */}
-          {x.id === 'oportunidades' && <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />}
-          {lados.map(l => <div key={l} className={`lado-caminho lado-caminho--${l}`} data-lado={l}>{lado(l, x.id)}</div>)}
-          <p className="caminhos__vazio nota">{VAZIO[x.id]}</p>
-        </div>
-      ))}
+      {divisao === 'inicio'
+        ? <InicioCaminhos vida={vida} irDivisao={irDivisao} irPara={irPara} />
+        : (
+          <header className="folio folio--caminhos folio--divisao">
+            <p className="folio__kicker"><span className="folio__area">Caminhos</span> · {rotulo.toLowerCase()}</p>
+            <h1 className="folio__titulo">{rotulo}</h1>
+            <p className="folio__lede">{estadoDaDivisao(vida, divisao)}</p>
+            {divisao === 'estudos' && parte === 'agora' && i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
+          </header>
+        )}
+      {(divisao === 'estudos' || divisao === 'trabalho') && (
+        <>
+          <nav className="subnav subnav--caminhos" aria-label={`Partes de ${rotulo}`}>
+            <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
+              {PARTES_DA_DIVISAO[divisao].map(x => (
+                <li key={x.id} role="presentation">
+                  <button type="button" role="tab" id={`subnav-caminhos-${x.id}`} aria-selected={parte === x.id} tabIndex={parte === x.id ? 0 : -1} aria-controls={parte === x.id ? `caminhos-${x.id}` : undefined} className={`subnav__item${parte === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => irParte(x.id)} title={x.oque}>{x.rotulo}</button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div role="tabpanel" id={`caminhos-${parte}`} aria-labelledby={`subnav-caminhos-${parte}`} className={`caminhos__painel caminhos__painel--${parte} caminhos__painel--ativo`} data-ativo="sim" data-divisao={divisao}>
+            {divisao === 'estudos' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="estudos" />}
+            {divisao === 'trabalho' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="trabalho" />}
+            {divisao === 'estudos'
+              ? <div className="lado-caminho lado-caminho--formacao" data-lado="formacao"><Estudos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} parte={parte} divisao /></div>
+              : <div className="lado-caminho lado-caminho--trabalho" data-lado="trabalho">{i >= 14 || vida.trabalho.historico.length > 0
+                ? <Trabalho vida={vida} agir={agir} irPara={irPara} parte={parte} explorar={explorar} aoExplorar={aoExplorar} divisao />
+                : parte === 'agora' ? <TrabalhoAindaNao vida={vida} irPara={irPara} compacto /> : null}</div>}
+            <p className="caminhos__vazio nota">{VAZIO[parte]}</p>
+            <LigacoesDaDivisao vida={vida} divisao={divisao} irPara={irPara} />
+          </div>
+        </>
+      )}
+      {divisao === 'publica' && <div className="caminhos__painel caminhos__painel--publica caminhos__painel--ativo" data-divisao="publica"><VidaPublica vida={vida} agir={agir} irPara={irPara} /></div>}
+      {divisao === 'outros' && <div className="caminhos__painel caminhos__painel--outros caminhos__painel--ativo" data-divisao="outros"><OutrosCaminhosDaVida vida={vida} agir={agir} irPara={irPara} /></div>}
     </div>
   );
+}
+
+/**
+ * A PÁGINA INICIAL de Caminhos: o que ocupa a vida agora (cada coisa leva à sua divisão), o próximo passo que mais
+ * importa e as quatro entradas, na ordem da fase da vida. Não lista as oportunidades do mundo: cada divisão as tem.
+ */
+function InicioCaminhos({ vida, irDivisao, irPara }: { vida: Vida; irDivisao: (d: DivisaoCaminhos, p?: ParteCaminhos) => void; irPara: (a: Aba) => void }) {
+  const i = idade(vida);
+  const agora = situacaoAtual(vida);
+  const prox = proximoNosCaminhos(vida);
+  const ordem = ordemDasDivisoes(vida);
+  return (
+    <>
+      <header className="folio folio--caminhos">
+        <p className="folio__kicker"><span className="folio__area">Caminhos</span> · início</p>
+        <h1 className="folio__titulo">{faseDosCaminhos(vida)}</h1>
+        <ul className="situacao-atual" aria-label="O que ocupa a sua vida agora">
+          {agora.map(x => {
+            const d = divisaoDaOcupacao(x, vida);
+            return (
+              <li key={x.id} className={`situacao-atual__item situacao-atual__item--${x.lado}`} data-ocupacao={x.id}>
+                <button type="button" className="situacao-atual__ir" onClick={() => irDivisao(d, 'agora')} disabled={x.id === 'nada'}>
+                  <span className="situacao-atual__lado">{DIVISOES_CAMINHOS.find(y => y.id === d)!.rotulo}</span>
+                  <span className="situacao-atual__rotulo">{cap(x.rotulo)}</span>
+                  {x.detalhe && <span className="situacao-atual__detalhe">{x.detalhe}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
+      </header>
+      {prox && (
+        <section className="proximo-caminho" aria-labelledby="titulo-proximo-caminho">
+          <h2 id="titulo-proximo-caminho" className="proximo-caminho__rotulo">O próximo passo</h2>
+          <p className="proximo-caminho__texto">{prox.texto}</p>
+          <button type="button" className="link proximo-caminho__ir" onClick={() => irDivisao(prox.divisao, prox.parte)}>Ver em {DIVISOES_CAMINHOS.find(y => y.id === prox.divisao)!.rotulo} →</button>
+        </section>
+      )}
+      <ul className="entradas-caminhos" aria-label="Os caminhos">
+        {ordem.map(d => {
+          const x = DIVISOES_CAMINHOS.find(y => y.id === d)!;
+          return (
+            <li key={d} className={`entrada-caminho entrada-caminho--${d}`}>
+              <button type="button" className="entrada-caminho__botao" onClick={() => irDivisao(d)}>
+                <span className="entrada-caminho__nome">{x.rotulo}</span>
+                <span className="entrada-caminho__estado">{estadoDaDivisao(vida, d)}</span>
+                <span className="entrada-caminho__oque">{x.oque}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+/** O que cruza as divisões, como ligação (nunca a mesma ação duas vezes): o curso que abre vagas, a vaga que pede curso. */
+function LigacoesDaDivisao({ vida, divisao, irPara }: { vida: Vida; divisao: 'estudos' | 'trabalho'; irPara: (a: Aba) => void }) {
+  const i = idade(vida);
+  const ultimo = [...vida.educacao.concluidos].sort((a, b) => b.tFim - a.tFim)[0];
+  const recente = ultimo && vida.t - ultimo.tFim <= 24 && ultimo.nivel !== 'livre';
+  if (divisao === 'estudos') {
+    if (!recente || i < 14) return null;
+    return <p className="ligacao-caminho"><span>{cap(ultimo.nome)} concluído: as vagas que pedem essa formação estão em Trabalho.</span> <button type="button" className="link" onClick={() => irPara('vagas')}>Ver as vagas →</button></p>;
+  }
+  if (i < 15) return null;
+  return <p className="ligacao-caminho"><span>Faltou formação para uma vaga? Os cursos estão em Estudos; concursos, em Vida pública.</span> <button type="button" className="link" onClick={() => irPara('cursos')}>Ver os cursos →</button></p>;
 }

@@ -233,7 +233,8 @@ describe('tokens: uma fonte só, contraste e foco', () => {
     const nav = screen.getAllByRole('navigation', { name: 'Áreas' })[0];
     fireEvent.click(within(nav).getByRole('button', { name: 'Você' }));
     expect(within(nav).getByRole('button', { name: 'Você' }).getAttribute('aria-current')).toBe('page');
-    const resumos = document.querySelectorAll('.estado-bloco > summary');
+    // REWORK 9.6: os atributos (e a cabeça) abrem com o teclado — cada um é um <details> com <summary>.
+    const resumos = document.querySelectorAll('.estado-bloco > summary, .atributo__dobra > summary');
     expect(resumos.length).toBeGreaterThanOrEqual(2);
     expect(VIDA_CSS).toMatch(/body \{[^}]*overflow-x: hidden/);
   });

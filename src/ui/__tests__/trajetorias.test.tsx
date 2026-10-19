@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { App, precarregar } from '../App';
 import { criarRng } from '../../motor/rng';
 import { criarVida } from '../../motor/criacao';
@@ -28,6 +28,8 @@ function abrirTrabalho(): void {
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
   fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
+  // REWORK 9.6: Caminhos abre na página inicial; o trabalho é uma divisão dela.
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'Divisões de Caminhos' })).getByRole('button', { name: 'Trabalho' }));
 }
 
 beforeEach(() => { localStorage.clear(); window.scrollTo = () => {}; window.confirm = () => true; });

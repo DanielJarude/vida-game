@@ -39,6 +39,8 @@ function opcaoLesao(cuidado: CuidadoLesao) {
     texto: (c: Ctx) => {
       const l = lesaoAtiva(c.v)!.lesao;
       const pro = l.origem === 'profissional';
+      // REWORK 9.6: o machucado de uma briga — procurar atendimento ou deixar para lá.
+      if (l.origem === 'briga') return cuidado === 'repouso' ? 'Ficar em casa uns dias e esperar passar' : cuidado === 'fisio' ? 'Procurar atendimento e seguir o tratamento' : cuidado === 'cirurgia' ? 'Operar' : 'Não procurar ninguém e seguir a vida';
       return cuidado === 'repouso' ? (pro ? 'Parar e deixar o corpo recuperar (o departamento médico cuida)' : 'Parar e deixar o corpo se recuperar')
         : cuidado === 'fisio' ? (pro ? 'Fazer a reabilitação completa com a fisioterapia do clube' : 'Fazer fisioterapia')
           : cuidado === 'cirurgia' ? 'Operar'
@@ -51,7 +53,7 @@ function opcaoLesao(cuidado: CuidadoLesao) {
       const custo = custoDoCuidado(c.v, l, cuidado);
       const prazo = prazoDoCuidado(l, cuidado, false);
       const sus = custo > 0 ? ` Pelo bolso, uns ${fmt(custo)}; ${redeDeSaude(c.v).pelo}, de graça e mais demorado (${mesesTexto(prazoDoCuidado(l, cuidado, true))}).` : l.origem === 'profissional' ? ' O clube paga.' : c.v.financas.planoDeSaude ? ' O plano cobre.' : '';
-      if (cuidado === 'sacrificio') return `Continua ${l.origem === 'profissional' ? 'jogando' : 'treinando'} — rende menos, a saúde sente, e pode piorar.`;
+      if (cuidado === 'sacrificio') return l.origem === 'briga' ? 'Sem atendimento: às vezes passa; às vezes piora, e a saúde sente.' : `Continua ${l.origem === 'profissional' ? 'jogando' : 'treinando'} — rende menos, a saúde sente, e pode piorar.`;
       if (cuidado === 'repouso') return `Volta em uns ${mesesTexto(prazo)}. Sem custo; o condicionamento cai no meio do caminho.${l.gravidade >= 3 ? ' Numa lesão assim, só repouso demora mais.' : ''}`;
       if (cuidado === 'fisio') return `Volta em uns ${mesesTexto(prazo)}, perdendo menos condicionamento.${sus}`;
       return `Volta em uns ${mesesTexto(prazo)}, e a chance de a lesão voltar diminui.${sus}`;

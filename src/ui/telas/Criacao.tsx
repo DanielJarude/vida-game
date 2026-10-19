@@ -1,6 +1,6 @@
 /** Nascer: o jogador escolhe o que uma pessoa não escolhe — e o resto é sorte. */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ControleVida } from '../useVida';
 import type { Classe, Genero, Visual } from '../../motor/tipos';
 import { municipio } from '../../motor/dados/lugares';
@@ -14,6 +14,9 @@ import { Retrato } from '../avatar/Retrato';
 import { texturaDe } from '../avatar/cabelos';
 import { BARBAS, TIPOS_DE_CABELO } from '../../motor/dados/estilo';
 import { Escolha } from '../comum';
+import { paisesVivenciaveis } from '../../motor/mundo/registro';
+import { ATRIBUTOS, type Atributo } from '../../motor/sistemas/predisposicao';
+import { AO_NASCER, NOME_ATRIBUTO, O_QUE_E } from '../atributos';
 
 const ROTULO_CABELO: Record<string, string> = {
   raspado: 'Raspado', curto: 'Curto', curto_lado: 'Curto de lado', ondulado: 'Ondulado', crespo_curto: 'Crespo curto', cacheado: 'Cacheado',
@@ -25,18 +28,34 @@ const COR_CABELO: Record<string, string> = { preto: '#1c1917', castanho_escuro: 
 const COR_OLHO: Record<string, string> = { castanho_escuro: '#2f1d14', castanho: '#553620', mel: '#86662b', verde: '#56764a', azul: '#4b75a0' };
 
 const aleatorio = () => criarRng(Math.floor(Math.random() * 2 ** 31));
-const novaSemente = () => Math.floor(Math.random() * (2 ** 31 - 2)) + 1;
+
+/**
+ * REWORK 9.6 · NASC-01: o formulário NASCE sorteado (antes começava sempre em "Mulher · Salvador": valores fixos no
+ * estado inicial da tela, não um viés do sorteio). O mesmo sorteio do "Tudo ao acaso" — o mundo, o gênero meio a meio,
+ * o nome do lugar e da família, a aparência dos pais.
+ */
+function sortearFormulario(r = aleatorio()) {
+  const n = sortearNascimento(r);
+  const vis = visualAleatorio(r, n.genero);
+  let cabelo = vis.cabelo;
+  try { cabelo = corteCoerente(r, n.genero, previaDoNascimento({ nome: n.nome, sobrenome: n.sobrenome, genero: n.genero, municipioId: n.municipioId, visual: vis, herdarCores: true, semente: n.semente }).eu.textura, vis.cabelo); } catch { /* fica o sorteado */ }
+  return { ...n, visual: { ...vis, cabelo } };
+}
 
 export function Criacao({ c }: { c: ControleVida }) {
-  const [genero, setGenero] = useState<Genero>('feminino');
+  const [inicial] = useState(() => sortearFormulario());
+  const [genero, setGenero] = useState<Genero>(inicial.genero);
   const [tratamento, setTratamento] = useState<Genero>('nao_binario');
   const [podeGestar, setPodeGestar] = useState(false);
-  const [nome, setNome] = useState(() => sortearNome(aleatorio(), 'feminino', 2026));
-  const [sobrenome, setSobrenome] = useState(() => sortearSobrenome(aleatorio()));
-  const [cidade, setCidade] = useState('salvador-ba');
+  const [nome, setNome] = useState(inicial.nome);
+  const [sobrenome, setSobrenome] = useState(inicial.sobrenome);
+  const [cidade, setCidade] = useState(inicial.municipioId);
   // O nome sugerido é do lugar onde se nasce: trocar de país sugere outro (a não ser que o jogador já tenha escrito o seu).
   const [nomeEscrito, setNomeEscrito] = useState(false);
+  // O jogador já mexeu em algo? (o sorteio inicial só se refaz, quando o mundo inteiro chega, se ninguém tocou nele)
+  const tocado = useRef(false);
   const mudarCidade = (id: string) => {
+    tocado.current = true;
     const antes = municipio(cidade).pais;
     setCidade(id);
     const m = municipio(id);
@@ -47,10 +66,13 @@ export function Criacao({ c }: { c: ControleVida }) {
     }
   };
   const [classe, setClasse] = useState<Classe | 'sorte'>('sorte');
-  const [visual, setVisual] = useState<Visual>(() => visualAleatorio(aleatorio(), 'feminino'));
+  const [visual, setVisual] = useState<Visual>(inicial.visual);
   const [heranca, setHeranca] = useState(true);
   // A semente do nascimento é da tela: a prévia (o bebê e os pais) é o MESMO nascimento que "Nascer" vai criar.
-  const [semente, setSemente] = useState(novaSemente);
+  const [semente, setSemente] = useState(inicial.semente);
+  // REWORK 9.6 · ATR-01: os atributos iniciais — ao acaso (da semente) ou escolhidos um a um, sem orçamento de pontos.
+  const [modoAtributos, setModoAtributos] = useState<'acaso' | 'escolher'>('acaso');
+  const [atributos, setAtributos] = useState<Record<Atributo, number> | null>(null);
   const opcoes = {
     nome: nome.trim() || 'Ana', sobrenome: sobrenome.trim() || 'Silva', genero, municipioId: cidade,
     classe: classe === 'sorte' ? undefined : classe,
@@ -58,41 +80,63 @@ export function Criacao({ c }: { c: ControleVida }) {
     tratamento: genero === 'nao_binario' ? tratamento : undefined,
     visual,
     herdarCores: heranca,
-    semente
+    semente,
+    atributos: modoAtributos === 'escolher' && atributos ? atributos : undefined
   };
   const previa = useMemo(() => {
     try { return previaDoNascimento(opcoes); } catch { return null; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente]);
+  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente, modoAtributos, atributos]);
   const visualDoBebe = previa?.eu ?? visual;
+
+  // O mundo inteiro chega depois da tela (os pacotes de países): se o sorteio inicial só pôde escolher entre os países
+  // que já estavam aqui e ninguém mexeu no formulário, sorteia de novo — agora no mundo.
+  useEffect(() => {
+    let vivo = true;
+    const antes = paisesVivenciaveis().length;
+    carregarMundo().catch(() => undefined).then(() => {
+      if (!vivo || tocado.current || paisesVivenciaveis().length <= antes) return;
+      const f = sortearFormulario();
+      setGenero(f.genero); setNome(f.nome); setSobrenome(f.sobrenome); setCidade(f.municipioId); setVisual(f.visual); setSemente(f.semente);
+    });
+    return () => { vivo = false; };
+  }, []);
 
   const cabelos = genero === 'masculino' ? CABELOS_M : genero === 'feminino' ? CABELOS_F : [...new Set([...CABELOS_N, ...CABELOS_M, ...CABELOS_F])];
 
   const trocarGenero = (g: Genero) => {
+    tocado.current = true;
     setGenero(g);
     if (!nomeEscrito) { const m = municipio(cidade); setNome(sortearNome(aleatorio(), g, 2026, m.pais, m.uf)); }
     const v = visualAleatorio(aleatorio(), g);
     setVisual(atual => ({ ...atual, cabelo: v.cabelo, barba: g === 'masculino' ? v.barba : undefined }));
   };
-  // Tudo ao acaso é o MUNDO (os pacotes de países chegam antes do sorteio; sem eles, o que já está aqui).
+  // Tudo ao acaso é o MUNDO (os pacotes de países chegam antes do sorteio; sem eles, o que já está aqui) — e é TUDO:
+  // a identidade, a origem, a família, a aparência e os atributos (os escolhidos voltam ao acaso). Nenhum campo
+  // escondido fica com o valor de antes.
   const tudoAleatorio = async () => {
+    tocado.current = true;
     try { await carregarMundo(); } catch { /* sem rede e sem cache: sorteia entre os países que já chegaram */ }
-    const r = aleatorio();
-    const n = sortearNascimento(r);
-    const vis = visualAleatorio(r, n.genero);
-    const base = { ...opcoes, nome: n.nome, sobrenome: n.sobrenome, genero: n.genero, municipioId: n.municipioId, classe: undefined, podeGestar: undefined, tratamento: undefined, visual: vis, herdarCores: true, semente: n.semente };
-    // O corte que combina com o cabelo que veio dos pais (trocar o corte não muda o nascimento).
-    let cabelo = vis.cabelo;
-    try { cabelo = corteCoerente(r, n.genero, previaDoNascimento(base).eu.textura, vis.cabelo); } catch { /* fica o sorteado */ }
-    setGenero(n.genero);
-    setNome(n.nome);
-    setSobrenome(n.sobrenome);
+    const f = sortearFormulario();
+    setGenero(f.genero);
+    setNome(f.nome);
+    setSobrenome(f.sobrenome);
     setNomeEscrito(false);
-    setCidade(n.municipioId);
+    setCidade(f.municipioId);
     setClasse('sorte');
-    setVisual({ ...vis, cabelo });
+    setVisual(f.visual);
     setHeranca(true);
-    setSemente(n.semente);
+    setSemente(f.semente);
+    setTratamento('nao_binario');
+    setPodeGestar(false);
+    setModoAtributos('acaso');
+    setAtributos(null);
+  };
+  const escolherAtributos = (m: 'acaso' | 'escolher') => {
+    tocado.current = true;
+    // Escolher começa dos valores que o acaso deu a esta pessoa (o jogador ajusta a partir deles).
+    if (m === 'escolher' && !atributos && previa?.atributos) setAtributos(previa.atributos);
+    setModoAtributos(m);
   };
   const nascer = () => c.nascer(opcoes);
 
@@ -143,11 +187,11 @@ export function Criacao({ c }: { c: ControleVida }) {
           <div className="campos-linha">
             <label className="campo">
               <span className="campo__rotulo">Nome</span>
-              <input value={nome} onChange={e => { setNome(e.target.value); setNomeEscrito(true); }} maxLength={30} autoComplete="off" />
+              <input value={nome} onChange={e => { setNome(e.target.value); setNomeEscrito(true); tocado.current = true; }} maxLength={30} autoComplete="off" />
             </label>
             <label className="campo">
               <span className="campo__rotulo">Sobrenome</span>
-              <input value={sobrenome} onChange={e => { setSobrenome(e.target.value); setNomeEscrito(true); }} maxLength={30} autoComplete="off" />
+              <input value={sobrenome} onChange={e => { setSobrenome(e.target.value); setNomeEscrito(true); tocado.current = true; }} maxLength={30} autoComplete="off" />
             </label>
           </div>
           <fieldset className="campo">
@@ -157,7 +201,7 @@ export function Criacao({ c }: { c: ControleVida }) {
           <p className="nota">{notaDoLugar(cidade)}</p>
           <fieldset className="campo">
             <legend className="campo__rotulo">Família em que você nasce</legend>
-            <Escolha rotulo="Classe social" valor={classe} aoMudar={setClasse} opcoes={[
+            <Escolha rotulo="Classe social" valor={classe} aoMudar={x => { tocado.current = true; setClasse(x); }} opcoes={[
               { id: 'sorte', rotulo: 'Deixar ao acaso' }, { id: 'vulneravel', rotulo: 'Pobre' }, { id: 'trabalhadora', rotulo: 'Trabalhadora' },
               { id: 'media_baixa', rotulo: 'Média baixa' }, { id: 'media', rotulo: 'Média' }, { id: 'alta', rotulo: 'Rica' }
             ]} />
@@ -206,6 +250,28 @@ export function Criacao({ c }: { c: ControleVida }) {
                 </select>
               </label>
             )}
+          </fieldset>
+
+          <fieldset className="campo atributos-iniciais">
+            <legend className="campo__rotulo">Atributos iniciais</legend>
+            <Escolha rotulo="Atributos iniciais" valor={modoAtributos} aoMudar={escolherAtributos} opcoes={[{ id: 'acaso', rotulo: 'Ao acaso' }, { id: 'escolher', rotulo: 'Escolher' }]} />
+            <p className="nota">{modoAtributos === 'acaso' ? 'Cada pessoa nasce diferente. Estes são os de quem vai nascer agora — e são ponto de partida: a vida (treino, estudo, cuidados, o que acontecer) muda cada um.' : 'Escolha livremente, sem orçamento de pontos. São ponto de partida e predisposição; a vida muda cada um. “Tudo ao acaso” volta a sortear também os atributos.'}</p>
+            <ul className="atributos-iniciais__lista">
+              {ATRIBUTOS.map(a => {
+                const valor = (modoAtributos === 'escolher' && atributos ? atributos[a] : previa?.atributos?.[a]) ?? 50;
+                return (
+                  <li key={a} className="atributo-inicial" data-atributo={a}>
+                    <label className="atributo-inicial__cabeca" htmlFor={`atributo-${a}`}>
+                      <span className="atributo-inicial__nome">{NOME_ATRIBUTO[a]}</span>
+                      <output className="atributo-inicial__valor" htmlFor={`atributo-${a}`}>{valor}</output>
+                    </label>
+                    <input id={`atributo-${a}`} type="range" min={0} max={100} step={1} value={valor} disabled={modoAtributos === 'acaso'} aria-describedby={`atributo-${a}-oque`}
+                      onChange={e => { tocado.current = true; const x = Number(e.target.value); setAtributos(at => ({ ...(at ?? previa?.atributos ?? { saude: 86, fisico: 50, felicidade: 72, beleza: 55, inteligencia: 55 }), [a]: x })); }} />
+                    <p id={`atributo-${a}-oque`} className="atributo-inicial__oque">{O_QUE_E[a]} <span className="atributo-inicial__nascer">Ao nascer: {AO_NASCER[a].charAt(0).toLowerCase() + AO_NASCER[a].slice(1)}</span></p>
+                  </li>
+                );
+              })}
+            </ul>
           </fieldset>
 
           <button type="submit" className="botao botao--principal criacao__nascer">Nascer</button>

@@ -74,18 +74,10 @@
 .bloco-vagas + .bloco-vagas { margin-top: var(--space-6); }
 .bloco-vagas__titulo { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: 600; color: var(--text-primary); padding-bottom: var(--space-2); border-bottom: 1px solid var(--rule-strong); }
 .bloco-vagas__dica { font-size: var(--type-caption); color: var(--text-muted); margin: var(--space-2) 0 0; }
-.vaga-camada { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: start; padding: var(--space-4) 0; border-bottom: 1px solid var(--rule); }
-.vaga-camada__nome { font-family: var(--font-serif); font-size: var(--type-subheading); font-weight: 500; color: var(--text-primary); }
-.vaga-camada__modelo { display: block; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom); font-weight: 600; margin-top: 2px; }
-.vaga-camada__meta { display: block; font-size: var(--type-caption); color: var(--text-muted); margin-top: 2px; }
-.vaga-camada__porque { display: block; font-family: var(--font-serif); font-style: italic; color: var(--text-secondary); margin-top: var(--space-1); }
-.vaga-camada__aviso { display: block; font-size: var(--type-caption); color: var(--warning); margin-top: var(--space-1); }
-.vaga-camada > .acao { align-items: flex-end; }
-@media (max-width: 560px) {
-  .vaga-camada { grid-template-columns: minmax(0, 1fr); }
-  .vaga-camada > .acao { align-items: flex-start; }
-}
-
+/* REWORK 9.6 · UX-08: aqui morava uma grade de duas colunas (`.vaga-camada`, de um desenho anterior ao REWORK 4) que,
+   carregada com Caminhos, punha o anúncio aberto numa coluna `auto` ao lado do resumo: com um aviso longo, a coluna do
+   resumo ia a zero e cargo, salário, compatibilidade e avisos se sobrepunham. A vaga é desenhada em vivida.css (o
+   resumo) e objetos.css (o anúncio), numa coluna só. */
 .perfil-vaga { margin-top: var(--space-2); }
 .perfil-vaga__palavra { font-size: var(--type-caption); color: var(--text-primary); }
 .perfil-vaga__rotulo { color: var(--text-muted); }

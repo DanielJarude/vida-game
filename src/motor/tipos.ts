@@ -511,8 +511,8 @@ export interface Lesao {
   tFim: number;
   /** O que a pessoa decidiu fazer (ausente: ainda não decidiu). */
   cuidado?: CuidadoLesao;
-  /** Onde aconteceu: em jogo/treino de atleta, na prática amadora, no trabalho. */
-  origem: 'profissional' | 'pratica' | 'trabalho';
+  /** Onde aconteceu: em jogo/treino de atleta, na prática amadora, no trabalho — ou numa briga (REWORK 9.6). */
+  origem: 'profissional' | 'pratica' | 'trabalho' | 'briga';
   /** Quantas vezes piorou por jogar/treinar em cima. */
   recaidas?: number;
 }
@@ -564,6 +564,13 @@ export interface Predisposicoes {
   cognitiva: number;
   fisica: number;
   artistica: number;
+  /**
+   * REWORK 9.6 · ATR-01: a CONSTITUIÇÃO (−1..1) — o quanto o corpo tende a se manter saudável e a se recuperar: desloca
+   * a saúde de referência de cada idade e, um pouco, o risco das doenças. Ausente (saves anteriores) = 0, neutra.
+   */
+  saude?: number;
+  /** REWORK 9.6 · ATR-01: o TEMPERAMENTO (−1..1) — o ponto de equilíbrio da felicidade, sem os fatores da vida. Ausente = 0. */
+  animo?: number;
 }
 
 /* -------------------------------------------------------------- Personalidade */

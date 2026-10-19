@@ -43,7 +43,7 @@ import { RetratoDaVida } from '../jogo/RetratoDaVida';
 import { fechamentoDoAno, rotinaDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
-import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
+import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type DivisaoCaminhos, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
 
 export type { Aba };
 
@@ -64,7 +64,10 @@ export function Jogo({ c }: { c: ControleVida }) {
   const [lugar, setLugar] = useState<Lugar>({ area: 'linha' });
   const [secao, setSecao] = useState<SecaoVida>('casa');
   const [abaTempo, setAbaTempo] = useState<SecaoTempo>('semana');
-  const [parte, setParte] = useState<ParteCaminhos>('agora');
+  // REWORK 9.6: Caminhos lembra a divisão aberta e a parte aberta de cada divisão (voltar é voltar para onde estava).
+  const [divisao, setDivisao] = useState<DivisaoCaminhos>('inicio');
+  const [partes, setPartes] = useState<Record<'estudos' | 'trabalho', ParteCaminhos>>({ estudos: 'agora', trabalho: 'agora' });
+  const parte = divisao === 'estudos' || divisao === 'trabalho' ? partes[divisao] : 'agora';
   const [explorar, setExplorar] = useState<string | undefined>(undefined);
   const foco = useRef<'formacao' | 'trabalho' | undefined>(undefined);
   const [menu, setMenu] = useState(false);
@@ -75,12 +78,20 @@ export function Jogo({ c }: { c: ControleVida }) {
   const irLugar = (l: Lugar) => {
     if (l.secao) setSecao(l.secao);
     if (l.aba) setAbaTempo(l.aba);
-    if (l.parte) setParte(l.parte);
+    if (l.area === 'caminhos') {
+      // Um destino antigo que só diz a parte (sem a divisão) cai no lado que pede — ou no trabalho.
+      const d = l.divisao ?? (l.parte && divisao !== 'estudos' && divisao !== 'trabalho' ? (l.foco === 'formacao' ? 'estudos' : 'trabalho') : undefined);
+      if (d) setDivisao(d);
+      const alvo = d ?? divisao;
+      if (l.parte && (alvo === 'estudos' || alvo === 'trabalho')) setPartes(p => ({ ...p, [alvo]: l.parte! }));
+    }
     if (l.explorar) setExplorar(l.explorar);
     foco.current = l.foco;
     setLugar(l);
   };
   const ir = (d: Aba) => irLugar(resolverDestino(d));
+  // Tocar em Caminhos estando em Caminhos volta à página inicial dele; vindo de outra área, abre onde estava.
+  const irArea = (a: Area) => { if (a === 'caminhos' && area === 'caminhos') irLugar({ area: 'caminhos', divisao: 'inicio' }); else ir(a); };
   const focar = (id: string | null) => { setPessoaAberta(id); c.focarPessoa(id); };
   const abrirPessoa = (id: string | null) => { focar(id); if (id) ir('pessoas'); };
 
@@ -89,7 +100,7 @@ export function Jogo({ c }: { c: ControleVida }) {
     // Em Caminhos, um destino que pede um lado (a formação, o trabalho) leva a ele; o resto começa no alto.
     const lado = foco.current && area === 'caminhos' ? document.querySelector(`.caminhos__painel--ativo [data-lado="${foco.current}"]`) : null;
     if (lado && lado.previousElementSibling) lado.scrollIntoView?.({ block: 'start' }); else window.scrollTo?.({ top: 0 });
-  }, [area, secao, abaTempo, parte]);
+  }, [area, secao, abaTempo, parte, divisao]);
   // REWORK 6: depois de viver um ano, a tela vai para a Linha da Vida e mostra O ANO QUE PASSOU — sem jogar o jogador
   // no começo da página nem obrigá-lo a reler a biografia. Se o alto da página já cabe na janela junto com o ano, fica
   // no alto (vê-se também como você está); se não cabe (celular), desce direto até o ano.
@@ -122,7 +133,7 @@ export function Jogo({ c }: { c: ControleVida }) {
         <button type="button" className="marca" onClick={() => setMenu(true)} aria-label="Menu">VIDA</button>
         <nav className="abas" aria-label="Áreas">
           {AREAS.map(a => (
-            <button key={a.id} type="button" className={`aba aba--${a.id}${area === a.id ? ' aba--ativa' : ''}`} aria-label={a.rotulo} aria-current={area === a.id ? 'page' : undefined} onClick={() => ir(a.id)}>
+            <button key={a.id} type="button" className={`aba aba--${a.id}${area === a.id ? ' aba--ativa' : ''}`} aria-label={a.rotulo} aria-current={area === a.id ? 'page' : undefined} onClick={() => irArea(a.id)}>
               <Icone d={a.icone} /><span>{a.rotulo}</span>
             </button>
           ))}
@@ -141,7 +152,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           {area === 'linha' && <><RetratoDaVida vida={vida} irPara={ir} abrirPessoa={abrirPessoa} />{c.marcaAno > 0 && <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} abrirPessoa={abrirPessoa} /></>}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
-          {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parte} irParte={p => irLugar({ area: 'caminhos', parte: p })} explorar={explorar} aoExplorar={setExplorar} />}
+          {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} divisao={divisao} irDivisao={(d, p) => irLugar({ area: 'caminhos', divisao: d, parte: p })} parte={parte} irParte={p => irLugar({ area: 'caminhos', divisao, parte: p })} explorar={explorar} aoExplorar={setExplorar} />}
           {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} aba={abaTempo} irAba={a => ir(a)} abrirPessoa={abrirPessoa} />}
           {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
           {/* FIX pós-playtest humano: "Viver mais um ano" é "terminei o que queria fazer neste ano" — mora no FIM da
@@ -161,7 +172,7 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       <nav className={`barra barra--${AREAS.length}`} aria-label="Áreas">
         {AREAS.map(a => (
-          <button key={a.id} type="button" className={`barra__item barra__item--${a.id}${area === a.id ? ' barra__item--ativo' : ''}`} aria-current={area === a.id ? 'page' : undefined} onClick={() => ir(a.id)}>
+          <button key={a.id} type="button" className={`barra__item barra__item--${a.id}${area === a.id ? ' barra__item--ativo' : ''}`} aria-current={area === a.id ? 'page' : undefined} onClick={() => irArea(a.id)}>
             <Icone d={a.icone} /><span>{a.curto}</span>
           </button>
         ))}

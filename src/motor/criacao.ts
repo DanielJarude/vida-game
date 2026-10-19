@@ -8,6 +8,7 @@
  */
 
 import { derivarPredisposicoes } from './sistemas/pessoa';
+import { predisposicoesDosAtributos, type Atributo } from './sistemas/predisposicao';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 import { caminhosVazios } from './sistemas/marcas';
 import { criarRng, rngDe, type Rng } from './rng';
@@ -44,6 +45,12 @@ export interface OpcoesCriacao {
   herdarCores?: boolean;
   semente: number;
   ano?: number;
+  /**
+   * REWORK 9.6 · ATR-01: os cinco atributos escolhidos na tela Nascer (0..100). Ausente = ao acaso (da semente). Com
+   * eles, a vida nasce EXATAMENTE com esses valores, e a predisposição de cada um sai deles; o resto do nascimento (a
+   * família, a cidade, a aparência) é o mesmo da mesma semente ao acaso.
+   */
+  atributos?: Record<Atributo, number>;
 }
 
 /**
@@ -68,15 +75,24 @@ export function sortearNascimento(r: Rng, ano = 2026): NascimentoSorteado {
 
 /** A prévia de quem nasce: o MESMO nascimento que `criarVida` fará com estas opções (o bebê e os pais), para a tela
  *  mostrar de onde os traços vêm. Não guarda nada. */
-export function previaDoNascimento(o: OpcoesCriacao): { eu: Visual; mae?: Visual; pai?: Visual } {
+export function previaDoNascimento(o: OpcoesCriacao): { eu: Visual; mae?: Visual; pai?: Visual; atributos: Record<Atributo, number> } {
   const v = criarVida(o);
   const de = (k: string) => Object.entries(v.vinculos).find(([, x]) => x.parentesco === k)?.[0];
   const mae = de('mae'), pai = de('pai');
-  return { eu: v.eu.visual, mae: mae ? v.pessoas[mae].visual : undefined, pai: pai ? v.pessoas[pai].visual : undefined };
+  // REWORK 9.6: os atributos com que esta vida nasce (o que a tela Nascer mostra é o que será gravado).
+  const atributos = { saude: v.corpo.saude, fisico: v.corpo.forma, felicidade: v.mente.felicidade, beleza: v.corpo.aparencia, inteligencia: v.mente.cognicao };
+  return { eu: v.eu.visual, mae: mae ? v.pessoas[mae].visual : undefined, pai: pai ? v.pessoas[pai].visual : undefined, atributos };
 }
 /** O corte que combina com a textura que veio dos pais (o acaso não põe "black" em cabelo liso). */
 export function corteCoerente(r: Rng, genero: Genero, textura: string | undefined, atual: string): string {
   return textura ? estiloPara(r, genero, textura) : atual;
+}
+
+function hashUnit(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
+  return (h >>> 0) / 4294967296;
 }
 
 const CLASSES: Classe[] = ['vulneravel', 'trabalhadora', 'media_baixa', 'media', 'alta'];
@@ -160,7 +176,24 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const paisNatal = municipio(o.municipioId).pais;
   const perfil = perfilDoPais(paisNatal);
   // Predisposições: da semente, sem gastar o gerador (a vida criada é a mesma de antes, com elas guardadas).
-  const pred = derivarPredisposicoes(id);
+  // Escolhidas na tela Nascer, as que os atributos implicam (a artística continua da semente).
+  const pred = { ...derivarPredisposicoes(id), ...(o.atributos ? predisposicoesDosAtributos(o.atributos) : {}) };
+  // Os sorteios do corpo saem do gerador SEMPRE, na mesma ordem de antes (o visual, a saúde, a aparência, a cabeça):
+  // escolher os atributos não muda a família sorteada.
+  const visual0 = o.visual ?? visualAleatorio(r, o.genero);
+  const ruidoSaude = r.normal(), ruidoAparencia = r.normal(), ruidoCognicao = r.normal();
+  // REWORK 9.6 · NASC/ATR: ao acaso, cada pessoa nasce diferente — a constituição, o corpo e o temperamento abrem o
+  // leque (antes, todo bebê tinha felicidade 75 e físico entre 44 e 56). Um nascimento frágil (prematuro, uma
+  // complicação) é raro: ~2%, da semente.
+  const fragil = hashUnit(`${id}:fragil`) < 0.02;
+  const acaso = {
+    saude: Math.round(Math.max(30, Math.min(99, 86 + (pred.saude ?? 0) * 8 + ruidoSaude * 4 - (classe === 'vulneravel' ? 4 : 0) - (fragil ? 26 : 0)))),
+    fisico: Math.round(50 + pred.fisica * 30),
+    felicidade: Math.round(72 + (pred.animo ?? 0) * 14),
+    beleza: Math.round(55 + ruidoAparencia * 12),
+    inteligencia: Math.max(15, Math.min(95, Math.round(55 + pred.cognitiva * 10 + ruidoCognicao * 9)))
+  };
+  const at = o.atributos ? Object.fromEntries(Object.entries(o.atributos).map(([k, x]) => [k, Math.round(Math.max(0, Math.min(100, x)))])) as Record<Atributo, number> : acaso;
   const v: Vida = {
     versao: 20,
     id,
@@ -175,23 +208,23 @@ export function criarVida(o: OpcoesCriacao): Vida {
       municipioNatal: o.municipioId,
       // Nasce da terra e dos pais, que são daqui (a família de origem é do lugar onde a vida começa).
       nacionalidades: nacionalidadesAoNascer(paisNatal, [paisNatal]),
-      visual: o.visual ?? visualAleatorio(r, o.genero),
+      visual: visual0,
       tratamento: o.genero === 'nao_binario' ? o.tratamento ?? 'nao_binario' : undefined
     },
     corpo: {
-      saude: Math.round(88 + r.normal() * 5 - (classe === 'vulneravel' ? 4 : 0)),
-      forma: Math.round(50 + pred.fisica * 6),
-      aparencia: Math.round(55 + r.normal() * 12),
+      saude: at.saude,
+      forma: at.fisico,
+      aparencia: at.beleza,
       aparenciaBase: 0,
       condicoes: [],
       habitos: { fuma: false, bebe: 'nao', sedentario: false },
       podeGestar
     },
     mente: {
-      felicidade: 75,
+      felicidade: at.felicidade,
       estresse: 8,
       // A facilidade de aprender nasce perto da predisposição cognitiva (e o resto é acaso).
-      cognicao: Math.max(15, Math.min(95, Math.round(55 + pred.cognitiva * 10 + r.normal() * 9))),
+      cognicao: at.inteligencia,
       abalos: [],
       historico: []
     },

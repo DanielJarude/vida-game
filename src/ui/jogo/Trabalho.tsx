@@ -19,7 +19,7 @@ import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';
 import { nomeDoRegistro, previdenciaDaVida, textoLocal } from '../../motor/mundo/locais';
 import { useMemo, useRef, useState } from 'react';
-import type { Vida } from '../../motor/tipos';
+import type { Devolutiva, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
@@ -27,7 +27,7 @@ import { anoDe } from '../../motor/tempo';
 import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, ocupacaoOuNula, type Ocupacao } from '../../motor/dados/ocupacoes';
 import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
-import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, proximoPasso, ROTULO_MODELO, temOrganizacao } from '../../motor/sistemas/trabalho';
+import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, porContaPropria, proximoPasso, requisitosDaVaga, ROTULO_MODELO, temOrganizacao } from '../../motor/sistemas/trabalho';
 import { verbosDoOficio } from '../../motor/sistemas/noOficio';
 import { acoesDasTrajetorias, acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
 import { acoesDoNegocio } from '../../motor/sistemas/gestao';
@@ -37,7 +37,7 @@ import { leituraPolitica, naPolitica, nomeDaBandeira } from '../../motor/sistema
 import { escadaMilitar, perspectivasMilitares } from '../../motor/sistemas/militar';
 import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from '../../motor/sistemas/concurso';
 import { caminhosPossiveis, emConstrucao, type CaminhoPossivel } from '../../motor/sistemas/caminhosDeVida';
-import { perfilParaVaga } from '../../motor/sistemas/empregabilidade';
+import { perfilParaVaga, type PerfilVaga } from '../../motor/sistemas/empregabilidade';
 import { BlocoDeVagas, CaminhosPossiveis, EmConstrucao, PerfilDaVaga, ProximoPassoPainel } from './Caminhos';
 import { vagasEmCamadas, type Vaga } from '../../motor/sistemas/relevancia';
 import type { Relevante } from '../../motor/sistemas/relevancia';
@@ -105,6 +105,9 @@ const KICKER: Partial<Record<ModoTrabalho, string>> = {
   aposentado: 'depois do trabalho', pausa: 'cuidando', preso: 'a pena', estudante: 'antes do trabalho', base: 'a base', crianca: 'ainda não'
 };
 
+/** Uma ação que é vida pública (a política, o caminho dos concursos): mora na divisão Vida pública (REWORK 9.6). */
+export const ehAcaoPublica = (x: AcaoProfissional) => x.id.startsWith('pol_') || x.id === 'concursos';
+
 /**
  * O TRABALHO como um lado de Caminhos (REWORK 9). Sem `parte`, a página inteira (como antes); com `parte`, só o que é
  * dela: AGORA (o ofício, a situação, os painéis de cada carreira, o dia a dia, o que corre em paralelo, a trajetória),
@@ -113,8 +116,11 @@ const KICKER: Partial<Record<ModoTrabalho, string>> = {
  * momentos, por onde passou). `explorar`/`aoExplorar`: a aba da procura, que Caminhos guarda (um passo em Agora pode
  * apontar para os concursos em Oportunidades).
  */
-export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExplorar }: Props & { parte?: ParteCaminhos; explorar?: string; aoExplorar?: (a: string) => void }) {
+export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExplorar, divisao }: Props & { parte?: ParteCaminhos; explorar?: string; aoExplorar?: (a: string) => void; divisao?: boolean }) {
   const em = (p: ParteCaminhos) => !parte || parte === p;
+  // REWORK 9.6 · UX-09/10: como DIVISÃO de Caminhos, o Trabalho é só trabalho — a vida pública (concursos, política) e
+  // os outros caminhos (esporte, arte) têm a sua própria divisão; aqui ficam ligações para lá, nunca as mesmas ações.
+  const div = !!divisao;
   const modo = modoDoTrabalho(vida);
   const l = leituraDoTrabalho(vida);
   const [explorarLocal, setExplorar] = useState(modo === 'procurando');
@@ -126,10 +132,14 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
   // Em Caminhos, cada aba é um Trabalho: só calcula o que a aba mostra (as ações do dia a dia, em Agora; o que está
   // em construção, em Desenvolvimento).
   const acoes = useMemo(() => (em('agora') ? acoesDoTrabalho(vida, disponibilidade) : { agora: [], mais: [], saidas: [] }), [vida, parte]);
-  const construindo = useMemo(() => (em('desenvolvimento') ? emConstrucao(vida, disponibilidade) : []), [vida, parte]);
+  const construindo = useMemo(() => (em('desenvolvimento') && !div ? emConstrucao(vida, disponibilidade) : []), [vida, parte, div]);
   const ir = (d: string) => {
     // Os passos de um caminho apontam para a procura (e uma aba dela) ou para outra área.
     const abaDe: Record<string, string> = { explorar: 'vagas', concursos: 'concursos', negocio: 'negocio', caminhos: 'caminhos' };
+    // Na divisão, os concursos e os outros caminhos moram nas suas divisões.
+    if (div && d === 'concursos') { irPara('concursos'); return; }
+    if (div && d === 'caminhos') { irPara('outros_caminhos'); return; }
+    if (div && abaDe[d] && parte !== 'oportunidades') { setAba(abaDe[d]); irPara(d === 'negocio' ? 'negocio' : 'vagas'); return; }
     if (abaDe[d]) {
       setAba(abaDe[d]); setExplorar(true);
       // Em Caminhos, a procura mora na aba Oportunidades: o passo leva até lá.
@@ -181,21 +191,28 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {(modo === 'autonomo' || modo === 'informal' || modo === 'plataforma' || modo === 'artista') && <PainelFreguesia vida={vida} />}
         {(modo === 'rural' || modo === 'pesca') && <PainelCampo vida={vida} />}
         {modo === 'atleta' && <PainelAtleta vida={vida} />}
-        {modo === 'base' && <PainelBase vida={vida} />}
+        {modo === 'base' && !div && <PainelBase vida={vida} />}
+        {modo === 'base' && div && <p className="ligacao-caminho"><span>A base, os treinos e a peneira estão em Outros caminhos.</span> <button type="button" className="link" onClick={() => irPara('outros_caminhos')}>Ir para Outros caminhos →</button></p>}
         {modo === 'militar' && <PainelFarda vida={vida} />}
         {(modo === 'servidor' || modo === 'docente') && <PainelCarreiraPublica vida={vida} />}
         {(modo === 'empregado' || modo === 'saude' || modo === 'seguranca' || modo === 'aprendiz' || modo === 'estagio' || modo === 'formacao') && <PainelEstrada vida={vida} />}
-        {pol && modo === 'politica' && <PainelPolitico vida={vida} principal />}
+        {pol && modo === 'politica' && !div && <PainelPolitico vida={vida} principal />}
+        {pol && modo === 'politica' && div && <p className="ligacao-caminho"><span>O mandato, a agenda política e as eleições estão em Vida pública.</span> <button type="button" className="link" onClick={() => irPara('vida_publica')}>Ir para Vida pública →</button></p>}
         {e && empregoAcademico(vida) === e && <PainelAcademia vida={vida} />}
 
         <NoDiaADia vida={vida} agir={agir} />
         {/* REWORK 9.5 · UX-07: a hierarquia segue a situação. Quem procura emprego vê as vagas primeiro; a política e os
             concursos (vida pública) continuam a um toque, agrupados — a não ser que a vida pública SEJA a situação. */}
         {(() => {
-          const publicaPrincipal = modo === 'politica' || modo === 'servidor';
-          const ehPublica = (x: AcaoProfissional) => x.id.startsWith('pol_') || x.id === 'concursos';
-          const principais = publicaPrincipal ? acoes.agora : acoes.agora.filter(x => !ehPublica(x));
-          const publicas = publicaPrincipal ? [] : acoes.agora.filter(ehPublica);
+          const publicaPrincipal = !div && (modo === 'politica' || modo === 'servidor');
+          const principais = publicaPrincipal ? acoes.agora : acoes.agora.filter(x => !ehAcaoPublica(x));
+          const publicas = publicaPrincipal ? [] : acoes.agora.filter(ehAcaoPublica);
+          if (div) return (
+            <>
+              {principais.length > 0 && <AcoesVivas acoes={principais as AcaoProfissional[]} agir={agir} ir={ir} rotulo="O que dá para fazer agora" />}
+              {publicas.length > 0 && <p className="ligacao-caminho"><span>Concursos e política ficam em Vida pública.</span> <button type="button" className="link" onClick={() => irPara('vida_publica')}>Ir para Vida pública →</button></p>}
+            </>
+          );
           return (
             <>
               {principais.length > 0 && <AcoesVivas acoes={principais as AcaoProfissional[]} agir={agir} ir={ir} rotulo="O que dá para fazer agora" />}
@@ -208,27 +225,27 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
             </>
           );
         })()}
-        {(acoes.mais.length > 0 || acoes.saidas.length > 0) && <Mais mais={acoes.mais} saidas={acoes.saidas} agir={agir} ir={ir} />}
+        {(acoes.mais.length > 0 || acoes.saidas.length > 0) && <Mais mais={div ? acoes.mais.filter(x => !ehAcaoPublica(x)) : acoes.mais} saidas={acoes.saidas} agir={agir} ir={ir} />}
         {modo === 'crianca' && <p className="vazio">Trabalho é proibido antes dos 14. O trabalho agora é crescer.</p>}
       </section>}
 
       {em('desenvolvimento') && !preso && modo !== 'crianca' && <EmConstrucao vida={vida} lista={construindo} agir={agir} ir={ir} />}
 
-      {em('agora') && <EmParalelo vida={vida} agir={agir} irPara={irPara} modo={modo} />}
+      {em('agora') && <EmParalelo vida={vida} agir={agir} irPara={irPara} modo={modo} divisao={div} />}
 
       {em('oportunidades') && !preso && <PortasAbertas vida={vida} agir={agir} filtro={ehPortaDeTrabalho} titulo="Portas de trabalho" />}
 
       {em('oportunidades') && !preso && modo !== 'crianca' && (
         <div ref={explorarRef} id="explorar">
-          <OutrasPossibilidades vida={vida} agir={agir} aberto={explorar} alternar={() => setExplorar(x => !x)} irPara={irPara} aba={aba} setAba={setAba} ir={ir} fixo={parte === 'oportunidades'} />
+          <OutrasPossibilidades vida={vida} agir={agir} aberto={explorar} alternar={() => setExplorar(x => !x)} irPara={irPara} aba={aba} setAba={setAba} ir={ir} fixo={parte === 'oportunidades'} divisao={div} />
         </div>
       )}
-      {em('desenvolvimento') && <Devolutivas vida={vida} />}
+      {em('desenvolvimento') && <Devolutivas vida={vida} tipos={div ? ['entrevista'] : undefined} />}
       {em('oportunidades') && <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => !/^(selecao|vestibular):/.test(o.id)} />}
       {em('agora') && <Trajetorias vida={vida} />}
-      {em('historico') && <CurriculoArtistico vida={vida} agir={agir} />}
-      {em('historico') && <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta' || parte === 'historico'} />}
-      {em('historico') && <CarreiraComoTecnico vida={vida} />}
+      {em('historico') && !div && <CurriculoArtistico vida={vida} agir={agir} />}
+      {em('historico') && (!div || modo === 'atleta') && <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta' || parte === 'historico'} />}
+      {em('historico') && !div && <CarreiraComoTecnico vida={vida} />}
       {em('historico') && <MomentosDaCarreira vida={vida} />}
       {em('historico') && (vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <PorOndePassou vida={vida} />}
     </div>
@@ -407,7 +424,7 @@ function PainelCampo({ vida }: { vida: Vida }) {
 
 const CLUBES_REAIS = 'Clubes reais; peneiras, contratos, divisões e resultados são simulação do jogo.';
 
-function PainelAtleta({ vida }: { vida: Vida }) {
+export function PainelAtleta({ vida }: { vida: Vida }) {
   const es = vida.caminhos.esporte!;
   const i = idade(vida);
   const auge = augeDe(vida, es);
@@ -459,7 +476,7 @@ function PainelAtleta({ vida }: { vida: Vida }) {
 }
 
 /** A base: ainda não é emprego — é formação, com rotina de atleta. */
-function PainelBase({ vida }: { vida: Vida }) {
+export function PainelBase({ vida }: { vida: Vida }) {
   const es = vida.caminhos.esporte;
   if (!es || es.fase !== 'base') return null;
   const categoria = categoriaDaBase(vida, es);
@@ -592,7 +609,7 @@ function Clima({ vida }: { vida: Vida }) {
   );
 }
 
-function PainelPolitico({ vida, principal }: { vida: Vida; principal: boolean }) {
+export function PainelPolitico({ vida, principal }: { vida: Vida; principal: boolean }) {
   const l = leituraPolitica(vida)!;
   const p = vida.caminhos.politica;
   const m = p?.mandato;
@@ -678,17 +695,18 @@ function PainelForagido({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
 /* ============================================================ Em paralelo */
 
 /** O que corre ao lado do trabalho principal: nada disso se perde num campo escondido. */
-function EmParalelo({ vida, agir, irPara, modo }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; modo: ModoTrabalho }) {
+function EmParalelo({ vida, agir, irPara, modo, divisao }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; modo: ModoTrabalho; divisao?: boolean }) {
   const n = negocioAberto(vida);
   // Sem outro trabalho, o negócio já é a situação de agora (não aparece duas vezes).
   const negocioParalelo = n && !donoIntegral(vida) && modo !== 'negocio' ? n : undefined;
-  const base = vida.caminhos.esporte?.fase === 'base' && modo !== 'base';
-  const pol = !!leituraPolitica(vida) && naPolitica(vida) && modo !== 'politica';
-  const arte = !!vida.caminhos.arte?.ativo && modo !== 'artista';
+  // Na divisão Trabalho, a base e o grupo moram em Outros caminhos; a política, em Vida pública.
+  const base = !divisao && vida.caminhos.esporte?.fase === 'base' && modo !== 'base';
+  const pol = !divisao && !!leituraPolitica(vida) && naPolitica(vida) && modo !== 'politica';
+  const arte = !divisao && !!vida.caminhos.arte?.ativo && modo !== 'artista';
   const renda = vida.rotinas.map(r => modeloRotina(r.id)).filter(m => m?.categoria === 'renda');
   const porFora = leituraDoEnvolvimento(vida);
   // As outras trajetórias (a paralela, o grupo de fora, as pausadas), cada uma com as próprias ações — nunca misturadas às do trabalho principal.
-  const grupos = acoesDasTrajetorias(vida, disponibilidade);
+  const grupos = acoesDasTrajetorias(vida, disponibilidade).filter(g => !divisao || g.id !== 'grupo');
   const grupoArte = grupos.find(g => g.id === 'grupo');
   if (!negocioParalelo && !base && !pol && !arte && !renda.length && !porFora && !grupos.length) return null;
   const acoesNeg = negocioParalelo ? separarNegocio(acoesDoNegocio(vida, disponibilidade)) : undefined;
@@ -737,23 +755,23 @@ function separarNegocio(lista: AcaoProfissional[]): { agora: AcaoProfissional[];
 
 /* ================================================== Outras possibilidades */
 
-function OutrasPossibilidades({ vida, agir, aberto, alternar, irPara, aba, setAba, ir, fixo }: { vida: Vida; agir: (a: Acao) => boolean; aberto: boolean; alternar: () => void; irPara: (a: Aba) => void; aba: string; setAba: (a: string) => void; ir: (d: string) => void; fixo?: boolean }) {
+function OutrasPossibilidades({ vida, agir, aberto, alternar, irPara, aba, setAba, ir, fixo, divisao }: { vida: Vida; agir: (a: Acao) => boolean; aberto: boolean; alternar: () => void; irPara: (a: Aba) => void; aba: string; setAba: (a: string) => void; ir: (d: string) => void; fixo?: boolean; divisao?: boolean }) {
   const i = idade(vida);
   // REWORK 9.5 · UX-07: a procura em pastas — Profissões, Vida pública, Negócio próprio, Outras trajetórias (os estudos
   // são o outro lado de Caminhos). Os ids ficam os de antes: a navegação por intenção ('vagas', 'concursos', 'negocio')
   // continua a cair na pasta certa.
   const abas = [
     { id: 'vagas', rotulo: 'Profissões' },
-    ...(i >= 16 && !vida.justica?.prisao ? [{ id: 'concursos', rotulo: 'Vida pública' }] : []),
+    ...(i >= 16 && !vida.justica?.prisao && !divisao ? [{ id: 'concursos', rotulo: 'Vida pública' }] : []),
     ...(i >= 18 ? [{ id: 'negocio', rotulo: 'Negócio próprio' }] : []),
-    ...(i >= 14 ? [{ id: 'caminhos', rotulo: 'Outras trajetórias' }] : [])
+    ...(i >= 14 && !divisao ? [{ id: 'caminhos', rotulo: 'Outras trajetórias' }] : [])
   ];
   const atual = abas.some(x => x.id === aba) ? aba : 'vagas';
   return (
     <section className="explorar-trabalho camada camada--explorar" aria-labelledby="titulo-explorar">
       {/* Em Caminhos · Oportunidades, a procura é o assunto da aba: aberta, sem botão de recolher. */}
       {fixo
-        ? <h2 id="titulo-explorar" className="explorar-trabalho__titulo explorar-trabalho__titulo--fixo"><span>Procurar outro caminho</span><span className="explorar-trabalho__sub">profissões, vida pública, o próprio negócio, outras trajetórias</span></h2>
+        ? <h2 id="titulo-explorar" className="explorar-trabalho__titulo explorar-trabalho__titulo--fixo"><span>{divisao ? 'Procurar trabalho' : 'Procurar outro caminho'}</span><span className="explorar-trabalho__sub">{divisao ? 'vagas de emprego, trabalhar por conta, abrir o próprio negócio' : 'profissões, vida pública, o próprio negócio, outras trajetórias'}</span></h2>
         : (
           <button type="button" id="titulo-explorar" className="explorar-trabalho__titulo" aria-expanded={aberto} onClick={alternar}>
             <span>Procurar outro caminho</span><span className="explorar-trabalho__sub">profissões, vida pública, o próprio negócio, outras trajetórias</span>
@@ -761,6 +779,7 @@ function OutrasPossibilidades({ vida, agir, aberto, alternar, irPara, aba, setAb
         )}
       {aberto && (
         <div className="explorar-trabalho__corpo">
+          {divisao && <p className="ligacao-caminho"><span>Concursos ficam em Vida pública; esporte e arte, em Outros caminhos; cursos, em Estudos.</span></p>}
           {abas.length > 1 && <Escolha rotulo="O que procurar" valor={atual} aoMudar={setAba} opcoes={abas} />}
           {atual === 'vagas' && <><Vagas vida={vida} agir={agir} /><OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} ids={['por_conta']} titulo="Por conta própria" /></>}
           {atual === 'concursos' && <>{i >= 17 && <Concursos vida={vida} agir={agir} irPara={irPara} />}<OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} ids={['publico', 'forcas', 'seguranca', 'politica']} titulo="Carreiras públicas e política" /></>}
@@ -784,38 +803,107 @@ function avisoDeConflito(vida: Vida, oc: Ocupacao): string | undefined {
 const TEXTO_BOTAO: Record<string, string> = { por_conta: 'Começar por conta própria', emprego: 'Candidatar-se' };
 
 /**
- * Uma vaga numa camada (REWORK 4): ESCANEÁVEL primeiro — o cargo, quem contrata (uma organização com nome, do lugar
- * e do setor), o setor e a cidade, o salário, a compatibilidade numa palavra. A profundidade (por que combina, o que
- * falta, a jornada, o conflito com o que você já tem, o botão) abre quando se quer: "profundidade não é mostrar toda a
- * profundidade ao mesmo tempo".
+ * O estado de uma candidatura (REWORK 9.6 · UX-08): candidatar-se não é ser contratado. Lido do estado — as ações do
+ * ano, a entrevista aberta, a devolutiva da seleção, o emprego de agora. Nada inventado.
+ */
+export type EstadoDaVaga = 'pode' | 'conflito' | 'nao_atende' | 'enviada' | 'andamento' | 'contratado' | 'recusado';
+export function estadoDaVaga(vida: Vida, oc: Ocupacao, aviso?: string): { estado: EstadoDaVaga; texto: string } {
+  const e = vida.trabalho.atual;
+  const tentou = vida.anoAtual.acoes.includes(`candidatura:${oc.id}`);
+  const devolutiva = [...vida.caminhos.devolutivas].reverse().find(d => d.ocupacaoId === oc.id && d.tipo === 'entrevista' && vida.t - d.t < 12);
+  if (e?.ocupacaoId === oc.id) return { estado: 'contratado', texto: `Contratad${vida.eu.genero === 'feminino' ? 'a' : 'o'} — começou em ${anoDe(e.tInicio)}.` };
+  if (tentou && vida.momento?.situacaoId === 'trab_entrevista') return { estado: 'andamento', texto: 'Seleção em andamento: a entrevista está acontecendo agora.' };
+  if (tentou && devolutiva && !devolutiva.passou) return { estado: 'recusado', texto: `Não foi desta vez. ${devolutiva.texto}` };
+  if (tentou) return { estado: 'enviada', texto: porContaPropria(oc) ? 'Você já tentou começar neste ano.' : 'Candidatura enviada neste ano.' };
+  const d = disponibilidade(vida, { tipo: 'candidatar', ocupacaoId: oc.id });
+  if (!podeTentar(d)) return { estado: 'nao_atende', texto: d.motivo ?? 'Não atende aos requisitos agora.' };
+  const conta = porContaPropria(oc);
+  if (aviso) return { estado: 'conflito', texto: conta ? 'Pode começar — mas há um conflito, dito abaixo.' : 'Pode se candidatar — mas há um conflito, dito abaixo.' };
+  return { estado: 'pode', texto: conta ? 'Pode começar quando quiser.' : d.grau === 'improvavel' ? 'Pode se candidatar, com pouca chance.' : 'Pode se candidatar.' };
+}
+
+const ROTULO_ESTADO_VAGA: Record<EstadoDaVaga, string> = { pode: 'Aberta para você', conflito: 'Aberta, com conflito', nao_atende: 'Não atende aos requisitos', enviada: 'Candidatura enviada', andamento: 'Seleção em andamento', contratado: 'Contratado', recusado: 'Recusado' };
+
+/**
+ * O ANÚNCIO de uma vaga (REWORK 9.6 · UX-08): um documento, lido de cima para baixo — o cargo, quem contrata, onde, a
+ * remuneração e as condições, os requisitos (um por linha, com o que você tem), o seu currículo diante dela, os
+ * conflitos, os próximos passos e a ação. Uma coluna só, no fluxo do texto: nada posicionado por cima de nada.
+ */
+export function FichaDaVaga({ vida, oc, motivo, perfil, agir, id }: { vida: Vida; oc: Ocupacao; motivo?: string; perfil?: PerfilVaga; agir: (a: Acao) => boolean; id?: string }) {
+  const modelo = modeloDeTrabalho(oc);
+  const org = temOrganizacao(oc) ? vagaDaOrganizacao(vida.moradia.municipioId, oc.setor, oc.id, anoDe(vida.t)) : undefined;
+  const aviso = avisoDeConflito(vida, oc);
+  const est = estadoDaVaga(vida, oc, aviso);
+  const reqs = requisitosDaVaga(vida, oc);
+  const jornada = [oc.carga === 'parcial' ? 'meio período' : 'período integral', oc.jornada === 'plantao' ? 'plantões (noites e fins de semana)' : oc.jornada === 'longa' ? 'jornada longa' : oc.jornada === 'fora' ? 'dias fora de casa' : ''].filter(Boolean).join(' · ');
+  const passos = modelo === 'por_conta'
+    ? ['Você começa a atender quando quiser — sem entrevista.', 'A freguesia é que decide: no começo, pouca.']
+    : ['A candidatura leva a uma entrevista, logo em seguida.', 'Na entrevista, você escolhe como se apresentar.', 'Passou: começa no emprego. Não passou: a seleção diz o que pesou.'];
+  return (
+    <article className={`anuncio anuncio--${est.estado}`} aria-labelledby={id}>
+      <header className="anuncio__cabeca">
+        <p className="anuncio__tipo">{modelo === 'por_conta' ? 'Trabalho por conta própria' : 'Vaga de emprego'} · {ROTULO_SETOR[oc.setor]}</p>
+        <h4 id={id} className="anuncio__cargo">{cap(nomeOcupacao(vida, oc))}</h4>
+        {org && <p className="anuncio__org">{org.nome}</p>}
+        <p className="anuncio__lugar">{nomeLugar(vida.moradia.municipioId)}</p>
+      </header>
+      <dl className="anuncio__condicoes">
+        <div><dt>Remuneração</dt><dd>{modelo === 'por_conta' ? `por volta de ${dinheiroCurto(oc.salario)} por mês, conforme a freguesia` : `${dinheiroCurto(oc.salario)} por mês`}</dd></div>
+        <div><dt>Contrato</dt><dd>{ROTULO_MODELO[modelo].explica}</dd></div>
+        <div><dt>Jornada</dt><dd>{jornada}</dd></div>
+      </dl>
+      <section className="anuncio__bloco" aria-label="Requisitos">
+        <h5 className="anuncio__rotulo">Requisitos</h5>
+        {reqs.length
+          ? <ul className="anuncio__requisitos">{reqs.map((r, k) => <li key={k} className={r.ok ? 'anuncio__req anuncio__req--ok' : 'anuncio__req anuncio__req--falta'}><span aria-hidden>{r.ok ? '✓' : '✗'}</span><span className="sr-only">{r.ok ? 'Atende: ' : 'Falta: '}</span>{r.texto}</li>)}</ul>
+          : <p className="anuncio__texto">Sem exigência de formação ou experiência.</p>}
+      </section>
+      {(perfil || motivo) && (
+        <section className="anuncio__bloco" aria-label="Compatibilidade">
+          <h5 className="anuncio__rotulo">Você diante da vaga</h5>
+          {motivo && <p className="anuncio__texto anuncio__texto--porque">{motivo}</p>}
+          {perfil && <PerfilDaVaga perfil={perfil} />}
+        </section>
+      )}
+      {aviso && (
+        <section className="anuncio__bloco anuncio__bloco--aviso" aria-label="Conflitos">
+          <h5 className="anuncio__rotulo">Conflitos</h5>
+          <p className="anuncio__texto">{aviso}</p>
+        </section>
+      )}
+      <section className="anuncio__bloco" aria-label="Próximos passos">
+        <h5 className="anuncio__rotulo">Próximos passos</h5>
+        <ol className="anuncio__passos">{passos.map((p, k) => <li key={k}>{p}</li>)}</ol>
+      </section>
+      <footer className="anuncio__rodape">
+        <p className={`anuncio__estado anuncio__estado--${est.estado}`}><strong>{ROTULO_ESTADO_VAGA[est.estado]}.</strong> {est.texto}</p>
+        {est.estado !== 'contratado' && est.estado !== 'andamento' && <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={modelo !== 'por_conta'}>{TEXTO_BOTAO[modelo] ?? 'Candidatar-se'}</BotaoAcao>}
+      </footer>
+    </article>
+  );
+}
+
+/**
+ * Uma vaga numa camada (REWORK 4): ESCANEÁVEL primeiro — o cargo, quem contrata, o setor e a cidade, o salário, a
+ * compatibilidade numa palavra. Aberta, o ANÚNCIO inteiro (REWORK 9.6), sempre abaixo do resumo, na mesma coluna.
  */
 function VagaNaCamada({ vida, x, agir }: { vida: Vida; x: Relevante<Vaga>; agir: (a: Acao) => boolean }) {
   const [aberta, setAberta] = useState(false);
   const oc = x.item.oc;
   const modelo = modeloDeTrabalho(oc);
-  const aviso = avisoDeConflito(vida, oc);
   const org = temOrganizacao(oc) ? vagaDaOrganizacao(vida.moradia.municipioId, oc.setor, oc.id, anoDe(vida.t)) : undefined;
   const quem = org ? org.nome : modelo === 'por_conta' ? 'por conta própria' : ROTULO_MODELO[modelo].curto;
   const compat = x.item.perfil?.compatibilidade ?? 1;
   return (
     <li className={`vaga-camada vaga-camada--c${compat}${aberta ? ' vaga-camada--aberta' : ''}`}>
       <button type="button" className="vaga-resumo" aria-expanded={aberta} onClick={() => setAberta(a => !a)}>
-        <span className="vaga-resumo__cargo">{nomeOcupacao(vida, oc).charAt(0).toUpperCase() + nomeOcupacao(vida, oc).slice(1)}</span>
+        <span className="vaga-resumo__cargo">{cap(nomeOcupacao(vida, oc))}</span>
         <span className="vaga-resumo__org">{org ? `${quem} · ${ROTULO_MODELO[modelo].curto}` : quem}</span>
         <span className="vaga-resumo__meta">{ROTULO_SETOR[oc.setor]} · {nomeLugar(vida.moradia.municipioId)}{oc.carga === 'parcial' ? ' · meio período' : ''}</span>
         <span className="vaga-resumo__salario">{modelo === 'por_conta' ? `~${dinheiroCurto(oc.salario)}` : dinheiroCurto(oc.salario)}</span>
         <span className={`vaga-resumo__compat vaga-resumo__compat--${compat}`}>{x.item.perfil?.palavra ?? '—'}</span>
       </button>
-      {aberta && (
-        <div className="vaga-camada__detalhe">
-          <span className="vaga-camada__modelo">{ROTULO_MODELO[modelo].curto}{oc.jornada === 'plantao' ? ' · plantões' : oc.jornada === 'longa' ? ' · jornada longa' : oc.jornada === 'fora' ? ' · dias fora de casa' : ''}</span>
-          <span className="vaga-camada__porque">{x.motivo}</span>
-          {x.item.perfil && <PerfilDaVaga perfil={x.item.perfil} />}
-          {x.item.d.motivo && x.item.d.grau !== 'permitido' && <span className="vaga-camada__aviso">{x.item.d.motivo}</span>}
-          {aviso && <span className="vaga-camada__aviso"><span aria-hidden>! </span>{aviso}</span>}
-          <BotaoAcao vida={vida} acao={{ tipo: 'candidatar', ocupacaoId: oc.id }} agir={agir} mostrarChance={modelo !== 'por_conta'}>{TEXTO_BOTAO[modelo] ?? 'Candidatar-se'}</BotaoAcao>
-        </div>
-      )}
+      {aberta && <div className="vaga-camada__detalhe"><FichaDaVaga vida={vida} oc={oc} motivo={x.motivo} perfil={x.item.perfil} agir={agir} id={`anuncio-${oc.id}`} /></div>}
     </li>
   );
 }
@@ -889,6 +977,7 @@ function CatalogoDeVagas({ vida, agir, atual }: { vida: Vida; agir: (a: Acao) =>
           <p><strong>Como se entra:</strong> {f.entrada}.</p>
           {acima.length > 0 && <p><strong>Para onde leva:</strong> {acima.join(', ')}.</p>}
           {f.degraus.length > 0 && <p><strong>Como se cresce:</strong> {f.degraus.join(' → ')}.</p>}
+          {(() => { const reqs = requisitosDaVaga(vida, oc); return reqs.length > 0 && <ul className="anuncio__requisitos" aria-label="Requisitos">{reqs.map((r, k) => <li key={k} className={r.ok ? 'anuncio__req anuncio__req--ok' : 'anuncio__req anuncio__req--falta'}><span aria-hidden>{r.ok ? '✓' : '✗'}</span><span className="sr-only">{r.ok ? 'Atende: ' : 'Falta: '}</span>{r.texto}</li>)}</ul>; })()}
           {perfil && <PerfilDaVaga perfil={perfil} />}
           {aviso && <p className="nota nota--atencao"><span aria-hidden>! </span>{aviso}</p>}
         </div>
@@ -900,7 +989,7 @@ function CatalogoDeVagas({ vida, agir, atual }: { vida: Vida; agir: (a: Acao) =>
 }
 
 
-function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }) {
+export function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }) {
   const editais = editaisAbertos(vida).map(oc => ({ oc, d: elegibilidade(vida, oc) })).filter(x => podeTentar(x.d));
   const c = vida.caminhos.concurso;
   const estudando = vida.rotinas.some(r => r.id === 'estudar_concurso');
@@ -909,7 +998,7 @@ function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => bool
     <div className="explorar-bloco">
       <p className="dica">{estudando ? `Você estuda para concurso${c.meses >= 12 ? ` — o equivalente a ${anos} ${anos === 1 ? 'ano' : 'anos'} de estudo firme` : ''}${c.foco ? `, dirigido para ${NOME_FOCO[c.foco]}` : ', sem uma área'}.` : c.meses >= 6 ? 'Você não estuda agora: o preparo esfria a cada ano parado.' : 'Concurso pede preparo: sem estudo, é quase loteria.'} Aprovado não é empossado: se a posse significar largar alguma coisa, a vida pergunta.</p>
       {/* A preparação (começar, o ritmo, a área, parar) mora nos estudos de agora; aqui, os editais e o preparo de cada um. */}
-      <button type="button" className="botao botao--secundario" onClick={() => irPara('estudos')}>{estudando ? 'A preparação, nos estudos (Caminhos · Agora)' : 'Começar a estudar (Caminhos · Agora)'} <span aria-hidden>→</span></button>
+      <button type="button" className="botao botao--secundario" onClick={() => irPara('estudos')}>{estudando ? 'A preparação, em Caminhos · Estudos' : 'Começar a estudar, em Caminhos · Estudos'} <span aria-hidden>→</span></button>
       {editais.length === 0 && <p className="vazio">Nenhum edital aberto que caiba no seu perfil este ano. Os concursos abrem em anos diferentes.</p>}
       <ul className="lista-vagas">
         {editais.map(({ oc }) => {
@@ -960,7 +1049,7 @@ function Negocios({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
 }
 
 /** Por onde se começa cada vida diferente — só as da pasta aberta (`ids`), em fichas compactas. */
-function OutrosCaminhos({ vida, agir, irPara, ir, ids, titulo, estudar }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; ir: (d: string) => void; ids: CaminhoPossivel['id'][]; titulo: string; estudar?: boolean }) {
+export function OutrosCaminhos({ vida, agir, irPara, ir, ids, titulo, estudar }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; ir: (d: string) => void; ids: CaminhoPossivel['id'][]; titulo: string; estudar?: boolean }) {
   const lista = useMemo(() => caminhosPossiveis(vida, disponibilidade).filter(c => ids.includes(c.id)), [vida, ids.join()]);
   return (
     <>
@@ -978,8 +1067,8 @@ function OutrosCaminhos({ vida, agir, irPara, ir, ids, titulo, estudar }: { vida
 
 /* ============================================================ Trajetória */
 
-function Devolutivas({ vida }: { vida: Vida }) {
-  const lista = vida.caminhos.devolutivas.filter(d => !d.passou && vida.t - d.t <= 36).slice(-3).reverse();
+export function Devolutivas({ vida, tipos }: { vida: Vida; tipos?: Devolutiva['tipo'][] }) {
+  const lista = vida.caminhos.devolutivas.filter(d => !d.passou && vida.t - d.t <= 36 && (!tipos || tipos.includes(d.tipo))).slice(-3).reverse();
   if (!lista.length) return null;
   return (
     <Secao titulo="O que ficou das últimas tentativas">
@@ -1024,7 +1113,7 @@ function Trajetorias({ vida }: { vida: Vida }) {
 }
 
 /** O currículo artístico: os trabalhos feitos (fictícios, do universo desta vida) — fica depois que a carreira pausa. */
-function CurriculoArtistico({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+export function CurriculoArtistico({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const c = leituraDoCurriculo(vida);
   const obras = vida.caminhos.obras ?? [];
   if (!c.linhas.length && !obras.length) return null;
@@ -1047,7 +1136,7 @@ function CurriculoArtistico({ vida, agir }: { vida: Vida; agir: (a: Acao) => boo
  * papel), acessos, prêmios, seleção, marcos — e o histórico por clube. Fica
  * depois que a carreira acaba. A Linha da Vida tem os marcos; aqui, o detalhe.
  */
-function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolean }) {
+export function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolean }) {
   // Todas as carreiras esportivas da pessoa (a de agora e as que acabaram antes de uma nova começar).
   const carreiras = carreirasEsportivas(vida).filter(c => c.fase !== 'base' && (c.temporadas?.length ?? 0) > 0);
   const p = leituraDoPalmares(vida);
@@ -1089,7 +1178,7 @@ function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolean }) {
  * títulos e a tabela passagem a passagem. Mora ao lado da carreira de
  * jogador — as duas trajetórias, cada uma com a sua tabela.
  */
-function CarreiraComoTecnico({ vida }: { vida: Vida }) {
+export function CarreiraComoTecnico({ vida }: { vida: Vida }) {
   const c = vida.caminhos.tecnico;
   if (!c || !c.passagens.length) return null;
   const atual = passagemAtual(vida);

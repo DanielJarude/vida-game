@@ -106,18 +106,18 @@
 @media (max-width: 480px) { .carga__medidor { grid-template-columns: 60px 1fr 84px; gap: var(--space-2); } }
 
 /* ---------------------------------------------------------- Vagas: um mercado, não um relatório */
-.vaga-camada { list-style: none; border-bottom: 1px solid var(--rule); }
-.vaga-resumo { display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'cargo salario' 'org compat' 'meta compat'; gap: 2px var(--space-3); width: 100%; text-align: left; padding: var(--space-3) var(--space-2); border-radius: var(--radius-md); min-height: var(--touch-target); }
+.vaga-camada { display: block; list-style: none; border-bottom: 1px solid var(--rule); min-width: 0; }
+.vaga-resumo { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'cargo salario' 'org compat' 'meta compat'; gap: 2px var(--space-3); width: 100%; text-align: left; padding: var(--space-3) var(--space-2); border-radius: var(--radius-md); min-height: var(--touch-target); }
 .vaga-resumo:hover { background: var(--surface); }
-.vaga-resumo__cargo { grid-area: cargo; font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); }
-.vaga-resumo__org { grid-area: org; font-size: var(--type-caption); color: var(--tom-trabalho); font-weight: 600; }
-.vaga-resumo__meta { grid-area: meta; font-size: var(--type-caption); color: var(--text-muted); }
+.vaga-resumo__cargo { grid-area: cargo; min-width: 0; overflow-wrap: anywhere; font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); }
+.vaga-resumo__org { grid-area: org; min-width: 0; overflow-wrap: anywhere; font-size: var(--type-caption); color: var(--tom-trabalho); font-weight: 600; }
+.vaga-resumo__meta { grid-area: meta; min-width: 0; overflow-wrap: anywhere; font-size: var(--type-caption); color: var(--text-muted); }
 .vaga-resumo__salario { grid-area: salario; font-family: var(--font-serif); color: var(--text-primary); text-align: right; white-space: nowrap; }
 .vaga-resumo__compat { grid-area: compat; align-self: center; justify-self: end; font-size: var(--type-meta); text-transform: uppercase; letter-spacing: var(--tracking-meta); padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--text-secondary); white-space: nowrap; }
 .vaga-resumo__compat--3 { background: color-mix(in oklab, var(--pig-folha) 22%, transparent); color: var(--pig-folha); }
 .vaga-resumo__compat--2 { background: color-mix(in oklab, var(--pig-ipe) 18%, transparent); color: var(--pig-ipe); }
 .vaga-resumo__compat--0 { color: var(--text-faint); }
-.vaga-camada__detalhe { display: flex; flex-direction: column; gap: var(--space-2); padding: 0 var(--space-2) var(--space-3); }
+.vaga-camada__detalhe { display: block; padding: 0 0 var(--space-4); min-width: 0; }
 .vaga-acima { display: grid; gap: 2px; padding: var(--space-2) var(--space-2); border-bottom: 1px dashed var(--rule); opacity: 0.85; }
 .vaga-acima strong { font-family: var(--font-serif); font-weight: 400; color: var(--text-secondary); }
 

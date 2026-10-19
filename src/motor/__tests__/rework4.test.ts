@@ -152,7 +152,7 @@ describe('carga: faculdade + trabalho é tentável — e cobra', () => {
   });
   it('estresse alto por anos: conta, vira biografia, e só pesa na morte com o corpo vulnerável', () => {
     let v = copia();
-    v = transacao(v, x => { for (let k = 0; k < 3; k++) { x.mente.estresse = 85; x.t += 12; processarEstresseProlongado(x); } }).vida;
+    v = transacao(v, x => { x.mente.estresseAlto = undefined; x.corpo.condicoes = []; x.corpo.saude = Math.max(x.corpo.saude, 70); for (let k = 0; k < 3; k++) { x.mente.estresse = 85; x.t += 12; processarEstresseProlongado(x); } }).vida;
     expect(v.mente.estresseAlto?.anos).toBe(3);
     expect(v.biografia.some(e => /Três anos seguidos com a cabeça no limite/.test(e.texto))).toBe(true);
     expect(fatorDoEstresseProlongado(v)).toBe(1);

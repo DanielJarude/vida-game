@@ -47,6 +47,7 @@ import { bloqueio, type Veredito } from '../plausibilidade';
 import { contribui, liquido, salarioLocal } from './renda';
 import { em, nivelEsc, rotuloEscolaridade, temEscolaridade } from './escola';
 import { habilidade, praticar } from './frentes';
+import { modeloFrente } from '../dados/frentes';
 import { marcar } from './marcas';
 import { chanceNoConcurso, editalAberto } from './concurso';
 import { flex, ge } from '../texto';
@@ -252,6 +253,46 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   return { grau: chance < 0.25 ? 'improvavel' : 'permitido', chance };
 }
 
+/**
+ * REWORK 9.6 · UX-08: os requisitos de uma vaga, UM POR LINHA, cada um com o que a vida tem diante dele — o anúncio
+ * que a tela desenha. As mesmas contas de `elegibilidade` (que para no primeiro que falta); nada que a ocupação não
+ * peça aparece aqui.
+ */
+export function requisitosDaVaga(v: Vida, oc: Ocupacao): { texto: string; ok: boolean }[] {
+  const out: { texto: string; ok: boolean }[] = [];
+  const i = idade(v);
+  if (oc.idadeMin > 16) out.push({ texto: `A partir de ${oc.idadeMin} anos`, ok: i >= oc.idadeMin });
+  if (oc.idadeMaxIngresso) out.push({ texto: `Até ${oc.idadeMaxIngresso} anos para entrar`, ok: i <= oc.idadeMaxIngresso });
+  if (oc.matriculado === 'basica') out.push({ texto: 'Estar na escola (ou com o médio concluído)', ok: !!v.educacao.basica || temEscolaridade(v, 'medio') });
+  if (oc.matriculado === 'superior') { const m = v.educacao.matricula; out.push({ texto: 'Estar cursando uma graduação', ok: !!m && !m.trancado && cursoOuNulo(m.cursoId)?.nivel === 'superior' }); }
+  if (oc.matriculado === 'qualquer') out.push({ texto: 'Estar estudando', ok: !!v.educacao.matricula || (!!v.educacao.basica && i >= 16) });
+  if (oc.escolaridade) out.push({ texto: cap(rotuloEscolaridade(v, oc.escolaridade)), ok: temEscolaridade(v, oc.escolaridade) });
+  if (oc.area) {
+    const n = oc.nivelCurso;
+    const nivelTxt = n === 'livre' ? 'Curso de qualificação' : n === 'tecnico' ? 'Técnico ou superior' : n === 'superior' ? 'Graduação' : n === 'residencia' ? 'Residência' : n === 'doutorado' ? 'Doutorado' : 'Formação';
+    const alternativa = !!oc.habilidade?.ouFormacao && habilidade(v, oc.habilidade.dominio) >= oc.habilidade.minimo;
+    out.push({ texto: `${nivelTxt} em ${oc.area.map(a => ROTULO_AREA[a]).join(' ou ')}${oc.habilidade?.ouFormacao ? ' (ou portfólio que mostre o ofício)' : ''}`, ok: temFormacaoPara(v, oc) || alternativa || (!!oc.matriculado && cursandoNaArea(v, oc)) });
+  }
+  if (oc.habilidade && !oc.habilidade.ouFormacao) out.push({ texto: `Saber ${modeloFrente(oc.habilidade.dominio)?.nome ?? oc.habilidade.dominio} o bastante para viver disso`, ok: habilidade(v, oc.habilidade.dominio) >= oc.habilidade.minimo });
+  { const titulo = faltaTituloPara(v, oc); if (titulo) out.push({ texto: titulo.replace(/\.$/, ''), ok: false }); }
+  if (oc.licenca && oc.licenca !== 'cnh') out.push({ texto: `Registro profissional (${nomeDoRegistro(v, oc.licenca)})`, ok: v.trabalho.licencas.includes(oc.licenca) });
+  if (oc.licenca === 'cnh') out.push({ texto: 'Carteira de motorista', ok: v.trabalho.licencas.includes('cnh') });
+  if (oc.veiculo) {
+    const bens = v.financas.bens.filter(b => b.tipo === 'veiculo' && veiculoUtil(b));
+    const tem = (c: string) => bens.some(b => categoriaDoVeiculo(b) === c);
+    out.push({ texto: oc.veiculo === 'carro' ? 'Carro próprio' : oc.veiculo === 'moto_ou_bike' ? 'Moto ou bicicleta própria' : 'Carro ou moto própria', ok: oc.veiculo === 'carro' ? tem('carro') : oc.veiculo === 'moto_ou_bike' ? tem('moto') || tem('bicicleta') : tem('carro') || tem('moto') });
+  }
+  if (oc.experiencia) {
+    const tit = oc.nivel <= 4 ? titulacaoNaTrilha(v, oc) : { meses: 0 };
+    const exp = (oc.nivel >= 4 ? (v.trabalho.experiencia[oc.trilha] ?? 0) : experienciaNaTrilha(v, oc.trilha)) + tit.meses;
+    out.push({ texto: `${cap(anosTxt(oc.experiencia))} de experiência na área (você tem ${anosTxt(exp)})`, ok: exp >= oc.experiencia });
+  }
+  if (oc.forma) out.push({ texto: 'Teste físico e inspeção de saúde', ok: v.corpo.forma >= oc.forma && v.corpo.saude >= 55 && !v.corpo.condicoes.some(c => c.cronica && c.gravidade >= 2) });
+  if (oc.idoneidade) out.push({ texto: 'Ficha limpa (investigação social)', ok: !antecedenteAdulto(v) });
+  return out;
+}
+
+
 const MOTIVO_HABILIDADE: Partial<Record<Dominio, string>> = {
   musica: 'Ainda não toca bem o bastante para alguém pagar por isso.',
   desenho: 'Ainda não desenha o bastante para viver disso.',
@@ -294,11 +335,18 @@ export function anosTxt(meses: number): string {
   return a === 1 ? '1 ano' : `${a} anos`;
 }
 
+const SETORES_DE_RACIOCINIO = new Set(['tecnologia', 'saude', 'juridico', 'engenharia', 'financas', 'educacao', 'administrativo', 'comunicacao']);
+const SETORES_DE_PRESENCA = new Set(['comercio', 'beleza', 'comunicacao', 'criativo']);
+const SETORES_DE_CORPO = new Set(['construcao', 'agro', 'logistica', 'seguranca', 'esporte', 'manutencao']);
+
 function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   const i = idade(v);
   let c = 0.52;
-  c += (v.mente.cognicao - 50) / 450;
-  c += (v.corpo.aparencia - 50) / 600;
+  // REWORK 9.6 · ATR-01: cada atributo pesa só onde a vaga pede (antes, inteligência e aparência pesavam em todas):
+  // raciocínio nos setores de raciocínio, presença no atendimento e no palco, corpo no trabalho de corpo.
+  c += (v.mente.cognicao - 50) * (SETORES_DE_RACIOCINIO.has(oc.setor) ? 1 / 300 : 1 / 900);
+  if (SETORES_DE_PRESENCA.has(oc.setor)) c += (v.corpo.aparencia - 50) / 500;
+  if (SETORES_DE_CORPO.has(oc.setor)) c += (v.corpo.forma - 50) / 500;
   c += v.personalidade.tracos.sociabilidade / 600;
   c -= oc.nivel * 0.035;
   // Mais estrada do que pedem e um ofício bem aprendido contam.

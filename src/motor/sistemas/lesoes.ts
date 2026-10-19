@@ -34,6 +34,13 @@ const PARTES: Record<1 | 2 | 3, string[]> = {
   3: ['o ligamento do joelho rompido', 'uma fratura na perna', 'o tendão de Aquiles rompido']
 };
 
+/** O que uma briga deixa no corpo (REWORK 9.6): do roxo que passa ao osso que precisa de cuidado. */
+const PARTES_BRIGA: Record<1 | 2 | 3, string[]> = {
+  1: ['um corte no supercílio', 'a mão inchada', 'um olho roxo', 'uma pancada nas costelas'],
+  2: ['o nariz quebrado', 'uma costela trincada', 'um dedo da mão fraturado', 'um corte fundo que precisou de pontos'],
+  3: ['o maxilar fraturado', 'uma fratura no braço', 'uma pancada forte na cabeça']
+};
+
 /** O nome da lesão, em palavras (é o que a tela Você e a Linha da Vida mostram). */
 export const nomeDaLesao = (l: Lesao) => l.parte;
 
@@ -53,13 +60,13 @@ export function lesionar(v: Vida, r: Rng, gravidade: 1 | 2 | 3, origem: Lesao['o
     v.fatos['lesao_decidir'] = v.t;
     return atual;
   }
-  const parte = r.pick(PARTES[gravidade]);
+  const parte = r.pick((origem === 'briga' ? PARTES_BRIGA : PARTES)[gravidade]);
   const lesao: Lesao = { parte, gravidade, tFim: v.t + MESES_BASE[gravidade], origem };
   const cond: Condicao = { id: 'lesao', nome: parte, tInicio: v.t, cronica: false, gravidade, tratando: false, diagnosticada: true, tDiagnostico: v.t, lesao };
   v.corpo.condicoes.push(cond);
   v.fatos['lesao_decidir'] = v.t;
   v.fatos['lesoes_total'] = (v.fatos['lesoes_total'] ?? 0) + 1;
-  const onde = origem === 'profissional' ? (gravidade >= 3 ? 'num lance de jogo' : 'num treino') : origem === 'trabalho' ? 'no trabalho' : 'jogando';
+  const onde = origem === 'profissional' ? (gravidade >= 3 ? 'num lance de jogo' : 'num treino') : origem === 'trabalho' ? 'no trabalho' : origem === 'briga' ? 'na briga' : 'jogando';
   const texto = gravidade >= 3 ? `Sofreu uma lesão grave ${onde}: ${parte}.` : gravidade === 2 ? `Machucou-se ${onde}: ${parte}. Coisa de meses.` : `Sentiu ${parte} ${onde}.`;
   escrever(v, { texto, relevancia: gravidade >= 2 ? 'biografia' : 'cotidiano', tema: 'saude', tom: 'ruim' });
   if (gravidade >= 3) marcar(v, 'fracasso', texto, 2);
@@ -156,7 +163,7 @@ export function processarLesoes(v: Vida, r: Rng): void {
       c.tratando = false;
       v.fatos['lesao_decidir'] = v.t;
       v.corpo.saude = clamp(v.corpo.saude - 3);
-      escrever(v, { texto: `Jogar em cima da lesão cobrou: ${l.parte} piorou.`, relevancia: 'biografia', tema: 'saude', tom: 'ruim' });
+      escrever(v, { texto: l.origem === 'briga' ? `Sem cuidado, ${l.parte} piorou.` : `Jogar em cima da lesão cobrou: ${l.parte} piorou.`, relevancia: 'biografia', tema: 'saude', tom: 'ruim' });
       abalar(v, 'a lesão que piorou', -5, 5);
       return;
     }
@@ -172,11 +179,32 @@ export function processarLesoes(v: Vida, r: Rng): void {
   v.fatos['lesao_curada'] = v.t;
   v.fatos['lesao_curada_meses'] = Math.min(meses, 24);
   if (l.gravidade >= 2) {
-    const texto = `Voltou ${l.origem === 'profissional' ? 'a jogar' : 'a treinar'} depois de ${meses} ${meses === 1 ? 'mês' : 'meses'} por causa d${/^[ao] /.test(l.parte) ? l.parte.slice(0, 1) + ' ' + l.parte.slice(2) : 'a lesão'}.`;
+    const texto = l.origem === 'briga' ? `Depois de ${meses} ${meses === 1 ? 'mês' : 'meses'}, ${l.parte} sarou.` : `Voltou ${l.origem === 'profissional' ? 'a jogar' : 'a treinar'} depois de ${meses} ${meses === 1 ? 'mês' : 'meses'} por causa d${/^[ao] /.test(l.parte) ? l.parte.slice(0, 1) + ' ' + l.parte.slice(2) : 'a lesão'}.`;
     escrever(v, { texto: l.cuidado === 'cirurgia' && l.gravidade >= 3 ? `${texto} A cirurgia e a recuperação deram certo.` : texto, relevancia: l.gravidade >= 3 ? 'biografia' : 'cotidiano', tema: 'saude', tom: 'bom' });
   }
   // Lesão grave mal cuidada deixa marca no corpo (o joelho que nunca mais foi o mesmo).
   if (l.gravidade >= 3 && (l.recaidas ?? 0) >= 1 && idade(v) >= 25) marcarFato(v, 'sequela_lesao');
+}
+
+/**
+ * REWORK 9.6 · ATR-01 — o que uma briga faz com o corpo: nem toda briga machuca, e nenhuma machuca igual. A
+ * intensidade (1 empurra-empurra · 2 briga de verdade · 3 violência séria) e o físico de quem brigou mudam a chance e
+ * a gravidade; a saúde sente na hora (pouco, num roxo; bastante, numa fratura); uma lesão de verdade abre a mesma
+ * decisão de cuidado das outras (repousar, procurar atendimento, operar — ou deixar para lá), com recuperação e risco
+ * de sequela. Devolve a lesão, quando houve.
+ */
+export function machucarNaBriga(v: Vida, r: Rng, intensidade: 1 | 2 | 3): Condicao | undefined {
+  const fisico = (v.corpo.forma - 50) / 100;
+  const chance = clamp([0, 0.18, 0.45, 0.8][intensidade] - fisico * 0.3, 0.05, 0.9);
+  if (!r.chance(chance)) {
+    v.corpo.saude = clamp(v.corpo.saude - (intensidade >= 2 ? 1 : 0));
+    return undefined;
+  }
+  const sorte = r.next() + (intensidade - 2) * 0.3 - fisico * 0.2;
+  const g: 1 | 2 | 3 = sorte > 0.92 ? 3 : sorte > 0.6 ? 2 : 1;
+  v.corpo.saude = clamp(v.corpo.saude - (g === 3 ? 8 : g === 2 ? 4 : 2));
+  marcarFato(v, 'machucou_em_briga');
+  return lesionar(v, r, g, 'briga');
 }
 
 /** A decisão ainda está por tomar (abre `sau_lesao`). */

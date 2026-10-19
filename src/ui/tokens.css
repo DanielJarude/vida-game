@@ -75,7 +75,8 @@
     'Inter', ui-sans-serif, system-ui, -apple-system,
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-display: var(--font-serif);
-  --font-hand: var(--font-serif);
+  /* REWORK 9.6: a letra à mão — só em valores curtos dos documentos (notas, rubricas, anotações de uma linha). */
+  --font-hand: 'Caveat', 'Segoe Print', 'Bradley Hand', 'Comic Neue', cursive;
 
   /* Escala: o título contextual é grande de verdade; o rótulo, pequeno de verdade. */
   /* REWORK 7: o título contextual voltou ao tamanho de leitura (era 3,2 rem: um cartaz que empurrava as ações). */

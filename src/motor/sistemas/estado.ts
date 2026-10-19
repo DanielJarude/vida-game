@@ -23,6 +23,7 @@
  */
 
 import { textoLocal } from '../mundo/locais';
+import { predisposicao } from './predisposicao';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { abalar, type Abalo } from './abalo';
 import { filhos, idade, idadePessoa, moraCom, parceiro, vinculosVivos } from '../nucleo';
@@ -267,6 +268,10 @@ export function fatoresHumor(v: Vida): Fator[] {
   const atrito = atritoEmCasa(v);
   if (atrito.soma > 0) out.push({ id: 'atrito', texto: `o clima em casa com ${atrito.nome}`, efeito: -Math.min(10, atrito.soma / 8), pessoaId: atrito.pessoaId });
   if (v.mente.estresse > 50) out.push({ id: 'cabeca', texto: 'a cabeça cheia', efeito: -(v.mente.estresse - 50) / 4 });
+  // REWORK 9.6 · ATR-01: o TEMPERAMENTO — o ponto de equilíbrio de cada um (±7). Não é destino: as relações, o trabalho,
+  // o luto e o resto da lista continuam pesando mais.
+  const animo = predisposicao(v, 'animo');
+  if (Math.abs(animo) >= 0.15) out.push({ id: 'temperamento', texto: animo > 0 ? 'um temperamento que tende a ver o lado bom' : 'um temperamento que tende ao lado mais pesado das coisas', efeito: animo * 7 });
   out.push(...fatoresDeAtividades(v, 'humor'));
   return out.filter(f => Math.abs(f.efeito) >= 0.5);
 }
@@ -369,6 +374,11 @@ export function fatoresSaude(v: Vida): Fator[] {
     : i < 50 ? (80 - c.saude) * 0.07 - 0.3
     : i < 65 ? (76 - c.saude) * 0.05 - 0.3
     : i < 80 ? -0.75 : -1.4;
+  // REWORK 9.6 · ATR-01: a CONSTITUIÇÃO desloca a saúde de referência de cada idade (±6) — quem nasce forte tende a se
+  // manter (e a se recuperar) acima; quem nasce frágil, abaixo. Dita como causa própria, separada da idade.
+  const cons = predisposicao(v, 'saude');
+  const taxa = i < 18 ? 0.25 : i < 35 ? 0.12 : i < 50 ? 0.07 : i < 65 ? 0.05 : 0.04;
+  if (Math.abs(cons) >= 0.15) out.push({ id: 'constituicao', texto: cons > 0 ? 'uma constituição forte' : 'uma constituição frágil', efeito: cons * 6 * taxa });
   out.push({ id: 'idade', texto: idadeDelta >= 0 ? (i < 35 ? 'um corpo jovem, que se recupera' : 'o corpo, que ainda se recupera') : i >= 65 ? 'a idade' : i < 35 ? 'uma fase de saúde acima do comum, que tende a voltar ao normal' : 'os anos, que começam a cobrar', efeito: idadeDelta });
   const forma = (c.forma - 45) / 70;
   out.push({ id: 'forma', texto: forma >= 0 ? 'se mexer com frequência' : 'o corpo parado', efeito: forma });

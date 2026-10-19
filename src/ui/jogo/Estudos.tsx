@@ -96,7 +96,7 @@ export const ehPortaDeTrabalho = (o: Oportunidade) => areaDaPorta(o) === 'trabal
  * portas, a preparação, os cursos) e HISTÓRICO (a formação que já é sua, o que ficou, a história de cada escola).
  * Cada seção pertence a uma parte só: nada se repete entre as abas, nada some.
  */
-export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { parte?: ParteCaminhos }) {
+export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { parte?: ParteCaminhos; divisao?: boolean }) {
   const em = (p: ParteCaminhos) => !parte || parte === p;
   const i = idade(vida);
   const e = vida.educacao;
@@ -522,7 +522,7 @@ function EstudoParaConcurso({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
           <p className="nota">Estudo dirigido rende mais nos editais daquela área; mudar de área não apaga o que se estudou. A sua estrada (a farda para a polícia, o Direito para tribunal, Contábeis para o fiscal) também pesa.</p>
         </div>
       )}
-      {irPara && (rot || c.meses >= 6) && <button type="button" className="link rotina__ir" onClick={() => irPara('oportunidades')}>Os editais e o preparo de cada um, em Caminhos · Oportunidades →</button>}
+      {irPara && (rot || c.meses >= 6) && <button type="button" className="link rotina__ir" onClick={() => irPara('concursos')}>Os editais e o preparo de cada um, em Caminhos · Vida pública →</button>}
     </div>
   );
 }

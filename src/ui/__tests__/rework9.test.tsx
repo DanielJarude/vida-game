@@ -94,14 +94,18 @@ describe('Fase A · Caminhos une Formação e Trabalho sem perder ação nenhuma
         b.unmount();
       }
       // REWORK 9.5 · UX-07: só a parte aberta é desenhada — o que existe em Caminhos é a soma das quatro partes.
+      // REWORK 9.6 · UX-09/10: e das divisões — Estudos e Trabalho (com as quatro partes), Vida pública, Outros caminhos.
       const depois = new Set<string>();
-      for (const parte of ['agora', 'desenvolvimento', 'oportunidades', 'historico'] as const) {
-        const c = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} parte={parte} irParte={() => {}} /></main>);
-        botoes(c.container).forEach(x => depois.add(x));
-        c.unmount();
+      for (const divisao of ['inicio', 'estudos', 'trabalho', 'publica', 'outros'] as const) {
+        for (const parte of (divisao === 'estudos' || divisao === 'trabalho' ? ['agora', 'desenvolvimento', 'oportunidades', 'historico'] as const : ['agora'] as const)) {
+          const c = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} divisao={divisao} parte={parte} irParte={() => {}} /></main>);
+          botoes(c.container).forEach(x => depois.add(x));
+          c.unmount();
+        }
       }
-      // O que muda de nome por causa da navegação nova (o destino mudou, a ação é a mesma).
-      const renomeados = /Formação|em Trabalho|Procurar outro caminho|Tempo livre/;
+      // O que muda de nome por causa da navegação nova (o destino mudou, a ação é a mesma). As pastas "Vida pública" e
+      // "Outras trajetórias" da procura viraram divisões de Caminhos (os mesmos editais e caminhos, lá).
+      const renomeados = /Formação|em Trabalho|Procurar outro caminho|Tempo livre|^Vida pública$|^Outras trajetórias$|^Profissões$|Caminhos · Agora|Caminhos · Oportunidades/;
       const faltando = [...antes].filter(x => !depois.has(x) && !renomeados.test(x));
       expect(faltando, nome).toEqual([]);
     });
@@ -119,10 +123,13 @@ describe('Fase A · Caminhos une Formação e Trabalho sem perder ação nenhuma
   });
 
   it('os destinos antigos continuam chegando ao lugar novo', () => {
-    expect(resolverDestino('formacao')).toMatchObject({ area: 'caminhos', parte: 'agora', foco: 'formacao' });
-    expect(resolverDestino('estudos')).toMatchObject({ area: 'caminhos', foco: 'formacao' });
-    expect(resolverDestino('trabalho')).toMatchObject({ area: 'caminhos', parte: 'agora', foco: 'trabalho' });
-    expect(resolverDestino('concursos')).toMatchObject({ area: 'caminhos', parte: 'oportunidades', explorar: 'concursos' });
+    expect(resolverDestino('formacao')).toMatchObject({ area: 'caminhos', divisao: 'estudos', parte: 'agora', foco: 'formacao' });
+    expect(resolverDestino('estudos')).toMatchObject({ area: 'caminhos', divisao: 'estudos', foco: 'formacao' });
+    expect(resolverDestino('trabalho')).toMatchObject({ area: 'caminhos', divisao: 'trabalho', parte: 'agora', foco: 'trabalho' });
+    // REWORK 9.6: os concursos são vida pública (antes, uma pasta da procura de emprego).
+    expect(resolverDestino('concursos')).toMatchObject({ area: 'caminhos', divisao: 'publica' });
+    expect(resolverDestino('vagas')).toMatchObject({ area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades', explorar: 'vagas' });
+    expect(resolverDestino('cursos')).toMatchObject({ area: 'caminhos', divisao: 'estudos', parte: 'oportunidades' });
     expect(resolverDestino('viagens')).toMatchObject({ area: 'vida', secao: 'viagens' });
     expect(AREAS.map(a => a.rotulo)).toEqual(['História', 'Você', 'Pessoas', 'Caminhos', 'Minha Semana', 'Vida']);
     // Toda intenção aponta para uma área que existe.

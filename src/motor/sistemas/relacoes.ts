@@ -19,6 +19,7 @@
  * encontro → química → continuar ou encerrar → (saindo) → exclusividade.
  */
 
+import { pesoDaAparenciaPara } from './predisposicao';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { ContextoDaRelacao, Pessoa, Vida, Vinculo } from '../tipos';
@@ -136,7 +137,7 @@ export function encontroDoApp(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): { resul
   const comp = compatibilidade(v, p);
   // O segundo encontro (depois de um "talvez") decide: ou engata, ou acaba ali.
   const segundo = c.quimica !== undefined;
-  const quimica = clamp(Math.round(48 + comp * 26 + (v.corpo.aparencia - 50) / 6 + v.personalidade.tracos.sociabilidade / 12 - (v.mente.estresse - 50) / 10 + r.normal() * 12 + (segundo ? (c.quimica! - 50) * 0.4 : 0)));
+  const quimica = clamp(Math.round(48 + comp * 26 + (v.corpo.aparencia - 50) / 6 * pesoDaAparenciaPara(p.id) + v.personalidade.tracos.sociabilidade / 12 - (v.mente.estresse - 50) / 10 + r.normal() * 12 + (segundo ? (c.quimica! - 50) * 0.4 : 0)));
   c.quimica = quimica;
   c.etapa = 'encontro';
   if (vin.romance) vin.romance.tEstagio = v.t;

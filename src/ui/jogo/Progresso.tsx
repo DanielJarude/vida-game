@@ -120,23 +120,26 @@ function NotaComHistoria({ vida, qual }: { vida: Vida; qual: 'escola' | 'curso' 
  * Caminhos · Desenvolvimento: o que se mede no estudo e no trabalho, ano a ano — a nota, as matérias, o desempenho e
  * o salário no ofício, as frentes que o ofício e o esporte usam.
  */
-export function DesenvolvimentoReal({ vida }: { vida: Vida }) {
-  const e = vida.trabalho.atual;
+export function DesenvolvimentoReal({ vida, lado }: { vida: Vida; lado?: 'estudos' | 'trabalho' | 'esporte' }) {
+  // REWORK 9.6 · UX-09/10: cada divisão de Caminhos mede o que é seu — Estudos, o boletim e o curso; Trabalho, o
+  // desempenho, o salário e o que o ofício pede; Outros caminhos, o que o esporte pede. Sem `lado`, tudo (como antes).
+  const ver = (l: 'estudos' | 'trabalho' | 'esporte') => !lado || lado === l;
+  const e = ver('trabalho') ? vida.trabalho.atual : undefined;
   const oc = e ? ocupacaoOuNula(e.ocupacaoId) : undefined;
   const t = evolucaoDoTrabalho(vida);
   const doOficio: Dominio[] = [];
   if (oc?.habilidade) doOficio.push(oc.habilidade.dominio);
   if (oc?.modalidade) doOficio.push(oc.modalidade as Dominio);
-  const esporte = vida.caminhos.esporte;
+  const esporte = ver('esporte') ? vida.caminhos.esporte : undefined;
   if (esporte && !doOficio.includes(esporte.modalidade)) doOficio.push(esporte.modalidade);
-  const estuda = (vida.educacao.basica && !vida.educacao.evadiu) || vida.educacao.matricula;
+  const estuda = ver('estudos') && ((vida.educacao.basica && !vida.educacao.evadiu) || vida.educacao.matricula);
   if (!estuda && !e && !doOficio.length) return null;
   return (
     <section className="desenvolvimento-real" aria-label="Ano a ano">
-      <h2 className="secao-fio">Ano a ano: o que mudou e por quê</h2>
+      <h2 className="secao-fio">{lado === 'estudos' ? 'O ano letivo: o que mudou e por quê' : lado === 'esporte' ? 'O esporte, ano a ano' : 'Ano a ano: o que mudou e por quê'}</h2>
       {/* REWORK 9.5 · UX-04: a escola é o boletim (as matérias, a nota, a frequência, a dedicação) — uma lista só. */}
-      {vida.educacao.basica && !vida.educacao.evadiu && <Boletim vida={vida} />}
-      {vida.educacao.matricula && !vida.educacao.matricula.trancado && <NotaComHistoria vida={vida} qual="curso" />}
+      {estuda && vida.educacao.basica && !vida.educacao.evadiu && <Boletim vida={vida} />}
+      {estuda && vida.educacao.matricula && !vida.educacao.matricula.trancado && <NotaComHistoria vida={vida} qual="curso" />}
       {e && t.desempenho && (
         <p className="evolucao-ano__nota" data-nota="trabalho" data-agora={t.desempenho[1]}>
           <span className="evolucao-ano__nome">O desempenho no trabalho</span>{' '}

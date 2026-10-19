@@ -574,7 +574,7 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     const tp = v.personalidade.tracos;
     const morto: Pessoa = {
       id: oldId, nome: v.eu.nome, sobrenome: v.eu.sobrenome, genero: v.eu.genero, tNasc: v.eu.tNasc, vivo: false, tMorte, causaMorte: v.morte!.causa,
-      temperamento: { extroversao: tp.sociabilidade / 100, afabilidade: tp.empatia / 100, responsabilidade: tp.disciplina / 100, abertura: tp.coragem / 100, estabilidade: -tp.impulsividade / 100 },
+      temperamento: { extroversao: tp.sociabilidade / 100, afabilidade: tp.empatia / 100, responsabilidade: tp.disciplina / 100, abertura: tp.coragem / 100, estabilidade: (-tp.impulsividade / 100) || 0 },
       ...(ocMorto ? { ocupacao: v.eu.genero === 'feminino' ? ocMorto.nome[1] : ocMorto.nome[0], ocupacaoId: ocMorto.id } : {}),
       renda: 0, municipioId: v.moradia.municipioId, saude: 0, visual: structuredClone(v.eu.visual),
       // FIX pós-playtest humano: quem morreu deixa os GENES (os netos herdam o nariz de nascença, não o operado).

@@ -1,5 +1,6 @@
 /** Adolescência (12–17). */
 
+import { machucarNaBriga } from '../sistemas/lesoes';
 import { dinheiro as moeda } from '../texto';
 import type { Conteudo } from './base';
 import * as P from './papeis';
@@ -112,7 +113,7 @@ export const ADOLESCENCIA: Conteudo[] = [
     texto: c => `Na saída, ${c.p.rival.nome} esbarra em você de propósito e derruba seu material na poça. Tem gente olhando.`,
     opcoes: [
       { id: 'revidar', texto: 'Empurrar de volta', comportamento: { impulsividade: 1, coragem: 1 },
-        resolver: c => ({ texto: `Virou briga de rolar no chão. Os dois foram suspensos por dois dias.`, memoria: `Brigou com ${c.p.rival.nome} na saída da escola e foi suspens${c.g('o', 'a', 'e')}.`, efeito: () => { tensao(c, 'rival', 40); prox(c, 'rival', -15); } }) },
+        resolver: c => ({ texto: `Virou briga de rolar no chão. Os dois foram suspensos por dois dias.`, memoria: `Brigou com ${c.p.rival.nome} na saída da escola e foi suspens${c.g('o', 'a', 'e')}.`, efeito: () => { tensao(c, 'rival', 40); prox(c, 'rival', -15); machucarNaBriga(c.v, c.r, 2); } }) },
       { id: 'ignorar', texto: 'Juntar as coisas e ir embora', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Você juntou o caderno molhado e foi embora sem olhar para trás.', memoria: null, efeito: () => { tensao(c, 'rival', 10); estresse(c, 3); } }) },
       { id: 'enfrentar', texto: 'Encarar e perguntar qual é o problema', comportamento: { coragem: 1 },

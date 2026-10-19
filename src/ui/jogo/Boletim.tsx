@@ -9,6 +9,12 @@
  *
  * Nada é decorativo: o motor não tem nota por matéria, então o boletim não inventa uma — mostra o domínio e diz a
  * diferença. Substitui as duas listas de matérias que Caminhos repetia ("Como você está se saindo" e "As matérias").
+ *
+ * REWORK 9.6 · VIS-02: o boletim é uma FOLHA — papel com grão, cabeçalho impresso da escola, os campos do aluno sobre
+ * a linha pontilhada, a tabela impressa e os números PREENCHIDOS À MÃO (caneta azul; vermelha quando a matéria está
+ * abaixo do esperado para a série), o carimbo da secretaria com o ano e a rubrica da coordenação. O carimbo e a rubrica
+ * são enfeite de papel, sem dado inventado: dizem só o ano e o que o documento é. A época muda o papel (antes de 2000,
+ * amarelado; a escola pública e a particular, a cor do brasão).
  */
 
 import type { Vida } from '../../motor/tipos';
@@ -40,16 +46,22 @@ export function Boletim({ vida }: { vida: Vida }) {
   const rotina = [...ev].reverse().find(f => f.rotina?.postura)?.rotina;
   const anos = ev.filter(f => f.escola !== undefined).slice(-6);
   const idTitulo = 'titulo-boletim';
+  const ano = anoDe(vida.t);
+  const escola = inst?.nome ?? (b.rede === 'privada' ? 'Escola particular' : 'Escola pública');
   return (
-    <section className="boletim" aria-labelledby={idTitulo}>
+    <section className={`boletim papel${ano < 2000 ? ' papel--antigo' : ''}`} aria-labelledby={idTitulo} data-rede={b.rede} data-epoca={ano < 2000 ? 'antiga' : 'atual'}>
       <header className="boletim__cabeca">
-        <p className="boletim__escola">{inst?.nome ?? (b.rede === 'privada' ? 'Escola particular' : 'Escola pública')}</p>
+        <span className="boletim__brasao" aria-hidden>{escola.replace(/^(Escola|Colégio|Colegio|Instituto|Centro)( (Estadual|Municipal|Federal|de))*\s*/i, '').charAt(0).toUpperCase() || 'E'}</span>
+        <div className="boletim__timbre">
+          <p className="boletim__escola">{escola}</p>
+          <p className="boletim__rede">{b.rede === 'privada' ? 'Ensino particular' : 'Rede pública de ensino'} · {ano}</p>
+        </div>
         <h2 id={idTitulo} className="boletim__titulo">Boletim escolar</h2>
         <dl className="boletim__ficha">
-          <div><dt>Aluno</dt><dd>{vida.eu.nome} {vida.eu.sobrenome}</dd></div>
-          <div><dt>Série</dt><dd>{cap(rotuloSerie(b))}{b.eja ? ' (EJA)' : ''}</dd></div>
-          <div><dt>Ano letivo</dt><dd>{anoDe(vida.t)}</dd></div>
-          <div><dt>Rede</dt><dd>{b.rede === 'privada' ? 'particular' : 'pública'}</dd></div>
+          <div className="campo-impresso"><dt>Aluno</dt><dd>{vida.eu.nome} {vida.eu.sobrenome}</dd></div>
+          <div className="campo-impresso"><dt>Série</dt><dd>{cap(rotuloSerie(b))}{b.eja ? ' (EJA)' : ''}</dd></div>
+          <div className="campo-impresso"><dt>Ano letivo</dt><dd>{ano}</dd></div>
+          <div className="campo-impresso"><dt>Rede</dt><dd>{b.rede === 'privada' ? 'particular' : 'pública'}</dd></div>
         </dl>
       </header>
 
@@ -67,7 +79,7 @@ export function Boletim({ vida }: { vida: Vida }) {
             return (
               <tr key={d} className={`boletim__linha boletim__linha--${direcao}${d === forte ? ' boletim__linha--forte' : d === fraca ? ' boletim__linha--fraca' : ''}`} data-frente={d}>
                 <th scope="row" className="boletim__materia">{cap(NOME_MATERIA[d])}</th>
-                <td className="boletim__dominio" data-rotulo="Domínio"><span className="boletim__celula"><strong data-agora={e.agora}>{num(e.agora)}</strong>{r.esperado !== undefined && <span className="boletim__esperado"> esperado ~{num(r.esperado)}</span>}</span></td>
+                <td className="boletim__dominio" data-rotulo="Domínio"><span className="boletim__celula"><strong data-agora={e.agora} className={`manuscrito boletim__nota${r.relacao === 'abaixo' ? ' manuscrito--vermelho' : ''}`}>{num(e.agora)}</strong>{r.esperado !== undefined && <span className="boletim__esperado"> esperado ~{num(r.esperado)}</span>}</span></td>
                 <td className="boletim__ano" data-rotulo="No ano"><span className="boletim__celula">
                   {e.antes !== undefined ? <span className={`boletim__delta boletim__delta--${direcao}`}>{num(e.antes)} → {num(e.agora)} ({sinal(e.delta ?? 0)})</span> : <span className="boletim__delta boletim__delta--nova">primeiro ano registrado</span>}
                   {causa.length > 0 && (
@@ -87,7 +99,7 @@ export function Boletim({ vida }: { vida: Vida }) {
         {nota.agora !== undefined && (
           <div data-nota="escola" data-agora={nota.agora}>
             <dt>Desempenho do ano</dt>
-            <dd><strong>{nota.agora}</strong>/100 · {palavraDesempenho(nota.agora)}{dNota !== undefined && <span className={`boletim__delta boletim__delta--${dNota >= 3 ? 'subiu' : dNota <= -3 ? 'caiu' : 'parou'}`}> ({sinal(dNota)} no ano)</span>}</dd>
+            <dd><strong className={`manuscrito boletim__nota${nota.agora < 50 ? ' manuscrito--vermelho' : ''}`}>{nota.agora}</strong>/100 · {palavraDesempenho(nota.agora)}{dNota !== undefined && <span className={`boletim__delta boletim__delta--${dNota >= 3 ? 'subiu' : dNota <= -3 ? 'caiu' : 'parou'}`}> ({sinal(dNota)} no ano)</span>}</dd>
           </div>
         )}
         <div data-frequencia={Math.round(freq * 100)}>
@@ -112,7 +124,16 @@ export function Boletim({ vida }: { vida: Vida }) {
         </div>
       )}
 
-      <p className="boletim__legenda nota">O domínio é o que você sabe de cada matéria; o desempenho do ano tem outras causas também (a frequência, a dedicação, a casa, o ano que você teve).</p>
+      <div className="boletim__fecho">
+        <p className="boletim__legenda nota">O domínio é o que você sabe de cada matéria; o desempenho do ano tem outras causas também (a frequência, a dedicação, a casa, o ano que você teve).</p>
+        <div className="boletim__autenticacao" aria-hidden>
+          <span className="carimbo"><span>Secretaria</span><span>{ano}</span></span>
+          <span className="rubrica">
+            <svg viewBox="0 0 140 36" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 26c6-14 12-20 15-17s-7 18-2 17 9-16 14-15-3 14 2 13 6-9 10-10 1 8 5 8 8-12 12-11-2 9 3 9c6 0 11-6 18-7 9-1 16 2 26-3" /><path d="M40 31c22-3 46-3 70-6" opacity=".6" /></svg>
+            <span className="rubrica__linha">Coordenação</span>
+          </span>
+        </div>
+      </div>
 
       {anos.length >= 2 && (
         <details className="boletim__historico">

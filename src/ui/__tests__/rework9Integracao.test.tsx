@@ -81,11 +81,15 @@ describe('Cenário A — estudante e futebol', () => {
     expect((v.evolucao ?? []).some(f => (f.causas?.futebol ?? []).some(([fonte, x]) => fonte === 'rotina:futebol' && x > 0))).toBe(true);
     // Conheceu gente pela atividade.
     expect(Object.values(v.vinculos).some(x => (x.ambiente ?? '').startsWith('rotina:futebol') && x.tInicio >= t0)).toBe(true);
-    // A peneira aparece em Caminhos · Oportunidades.
+    // A peneira aparece em Caminhos · Outros caminhos (REWORK 9.6: a divisão do esporte e da arte) — e a página inicial aponta para lá.
     expect(peneira).toBe(true);
     const porta = v.caminhos.oportunidades.find(o => o.tipo === 'peneira')!;
-    const c = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} parte="oportunidades" irParte={() => {}} /></main>);
-    expect(c.container.querySelector('.caminhos__painel--oportunidades')!.textContent).toContain(porta.titulo);
+    const c = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} divisao="outros" parte="agora" irParte={() => {}} /></main>);
+    expect(c.container.querySelector('.caminhos__painel--outros')!.textContent).toContain(porta.titulo);
+    c.unmount();
+    const ini = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} divisao="inicio" parte="agora" irParte={() => {}} /></main>);
+    expect(ini.container.querySelector('.entrada-caminho--outros')!.textContent).toMatch(/porta aberta|portas abertas/);
+    ini.unmount();
     c.unmount();
     // Você mostra a mudança, com a causa.
     const w = render(<main><Voce vida={v} agir={() => true} irPara={() => {}} abrirPessoa={() => {}} /></main>);
@@ -122,8 +126,15 @@ describe('Cenário B — trabalho e faculdade', () => {
     const lados = situacaoAtual(v).map(x => x.lado);
     expect(lados).toContain('trabalho');
     expect(lados).toContain('formacao');
-    render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} parte="agora" irParte={() => {}} /></main>);
-    expect(document.querySelectorAll('.caminhos__painel--agora [data-lado]').length).toBe(2);
+    // REWORK 9.6: a página inicial mostra os dois (cada um leva à sua divisão); cada divisão mostra só o seu.
+    const ini = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} divisao="inicio" parte="agora" irParte={() => {}} /></main>);
+    expect([...ini.container.querySelectorAll('.situacao-atual__lado')].map(x => x.textContent)).toEqual(expect.arrayContaining(['Estudos', 'Trabalho']));
+    ini.unmount();
+    for (const [divisao, lado] of [['estudos', 'formacao'], ['trabalho', 'trabalho']] as const) {
+      const d = render(<main><PaginaCaminhos vida={v} agir={() => true} irPara={() => {}} divisao={divisao} parte="agora" irParte={() => {}} /></main>);
+      expect([...d.container.querySelectorAll('.caminhos__painel--agora [data-lado]')].map(x => x.getAttribute('data-lado'))).toEqual([lado]);
+      d.unmount();
+    }
     // A biografia registra o marco (o ano de trabalho e estudo segue).
     const depois = ano(v);
     expect(depois.educacao.matricula!.mesesRestantes).toBeLessThan(40);

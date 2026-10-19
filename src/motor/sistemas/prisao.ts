@@ -17,6 +17,7 @@
  * Os sorteios são derivados (`rngDe`): nada aqui mexe no acaso do resto da vida.
  */
 
+import { machucarNaBriga } from './lesoes';
 import { clamp, rngDe } from '../rng';
 import type { Pessoa, Vida } from '../tipos';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
@@ -242,7 +243,8 @@ export function executarPrisao(v: Vida, oque: OquePrisao): { texto: string; tom:
     case 'briga_enfrentar': {
       p!.pendente = undefined;
       ajustarDisciplina(v, -20);
-      v.corpo.saude = clamp(v.corpo.saude - r.int(3, 10));
+      // REWORK 9.6: a briga machuca de verdade (ou não) — e o machucado tem cuidado, recuperação e sequela.
+      machucarNaBriga(v, r, 2);
       if (r.chance(0.5)) { p!.tFim += 3; escrever(v, { texto: 'Uma briga no pátio rendeu falta disciplinar e meses a mais de regime fechado.', relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' }); if (p!.regime === 'semiaberto') p!.regime = 'fechado'; return { texto: 'A briga durou segundos; o castigo, semanas de isolamento. Falta grave no prontuário, e a progressão ficou mais longe.', tom: 'ruim' }; }
       return { texto: 'Você não baixou a cabeça. Os agentes separaram antes de piorar — e o pavilhão entendeu o recado. A disciplina anotou.', tom: 'neutro' };
     }
@@ -316,7 +318,7 @@ export function processarPrisao(v: Vida): void {
   // A situação do ano passado que ficou sem resposta: o pavilhão decide por você.
   if (p.pendente && v.t - (p.tPendente ?? v.t) >= 12) {
     if (p.pendente === 'faccao') { p.faccao = 'recusou'; }
-    else if (p.pendente === 'briga') { ajustarDisciplina(v, -8); v.corpo.saude = clamp(v.corpo.saude - 4); }
+    else if (p.pendente === 'briga') { ajustarDisciplina(v, -8); machucarNaBriga(v, r, 2); }
     p.pendente = undefined;
   }
   const remiu = (v.fatos['remicao_estudo'] !== undefined ? 3 : 0) + (v.fatos['remicao_trabalho'] !== undefined ? 3 : 0);
