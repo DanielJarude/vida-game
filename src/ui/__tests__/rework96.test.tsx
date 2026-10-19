@@ -202,3 +202,38 @@ describe('Fase C · Você: a ficha dos cinco atributos', () => {
     expect(screen.queryByText('Bem-estar')).toBeNull();
   });
 });
+
+describe('Fase D · VIS-02 — os documentos', () => {
+  it('o boletim é uma folha: notas à mão (os números do motor, nunca inventados), carimbo e rubrica como enfeite sem dado', () => {
+    let v = adulto(10, { semente: 12 });
+    v = transacao(v, x => { x.momento = null; }).vida;
+    if (!v.educacao.basica) return;
+    pagina(v, 'estudos', 'desenvolvimento');
+    const b = document.querySelector('.boletim')!;
+    expect(b.classList.contains('papel')).toBe(true);
+    const notas = [...b.querySelectorAll('.boletim__dominio .manuscrito')];
+    expect(notas.length).toBeGreaterThan(0);
+    for (const n of notas) expect(Number(n.textContent!.replace(',', '.'))).toBeCloseTo(Number(n.getAttribute('data-agora')), 0);
+    // o carimbo e a rubrica dizem só o ano e o que o documento é — e são escondidos dos leitores de tela
+    expect(b.querySelector('.boletim__autenticacao')!.getAttribute('aria-hidden')).toBe('true');
+    expect(b.querySelector('.carimbo')!.textContent).toMatch(/Secretaria\d{4}/);
+  });
+
+  it('a formação concluída é certificado; a carreira, currículo; a saúde, prontuário', () => {
+    const t = tecnico();
+    pagina(t, 'estudos', 'historico');
+    expect(document.querySelector('.certificado')!.textContent).toMatch(/Técnico em Informática/);
+    cleanup();
+    const v = transacao(adulto(40, { semente: 51 }), x => { x.momento = null; x.corpo.condicoes = [{ id: 'hipertensao', nome: 'pressão alta', tInicio: x.t, cronica: true, gravidade: 2, tratando: true }]; }).vida;
+    render(<main><Voce vida={v} agir={() => true} irPara={nada} abrirPessoa={nada} /></main>);
+    expect(document.querySelector('.prontuario')!.textContent).toMatch(/Prontuário.*pressão alta/is);
+  });
+
+  it('o material tem a versão de cada luz (os tokens do papel e da caneta mudam no escuro) e a letra à mão é local (offline)', () => {
+    const css = readFileSync(join(__dirname, '..', 'registros.css'), 'utf8');
+    expect(css).toMatch(/:root\[data-tema='escuro'\][^{]*\{[^}]*--mat-papel:[^}]*--mat-caneta:/s);
+    const fontes = readFileSync(join(__dirname, '..', 'fontes.css'), 'utf8');
+    expect(fontes).toMatch(/font-family: 'Caveat';[^}]*@fontsource-variable\/caveat\/files/s);
+    expect(fontes).not.toMatch(/fonts\.googleapis/);
+  });
+});

@@ -106,7 +106,9 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       )}
 
       {(sinais.length > 0 || condicoes.length > 0) && (
-        <div id="voce-saude" className="voce-saude">
+        <div id="voce-saude" className="voce-saude prontuario papel papel--sem-dobra">
+          {/* REWORK 9.6 · VIS-02: a saúde como PRONTUÁRIO — a folha da ficha médica, o que o corpo sinaliza e o que tem nome. */}
+          <p className="prontuario__cabeca"><span>Prontuário</span><span>{vida.eu.nome} {vida.eu.sobrenome} · {i} anos</span></p>
           {sinais.length > 0 && (
             <section className="voce-condicoes voce-sinais" aria-label="Sinais do corpo">
               <h2 className="voce-subtitulo">O corpo tem dado sinais</h2>

@@ -354,9 +354,15 @@ function Formacao({ vida }: { vida: Vida }) {
   if (!lista.length) return null;
   return (
     <Secao titulo="Sua formação">
-      <ul className="formacao-lista">
+      {/* REWORK 9.6 · VIS-02: cada formação concluída é um CERTIFICADO — a folha com moldura, o nível, o nome do curso,
+          a instituição e o ano de conclusão (os dados do motor; nada de nota ou carga horária inventada). */}
+      <ul className="formacao-lista certificados">
         {lista.map((c, k) => (
-          <li key={k}><span className="formacao-lista__ano">{anoDe(c.tFim)}</span><span className="formacao-lista__nome">{c.nome}<span className="formacao-lista__nivel">{NIVEL_CREDENCIAL[c.nivel] ?? c.nivel} · {c.instituicao}</span></span></li>
+          <li key={k} className={`certificado papel papel--sem-dobra certificado--${c.nivel}`}>
+            <span className="certificado__tipo">{c.nivel === 'livre' ? 'Certificado' : c.nivel === 'tecnico' ? 'Diploma de técnico' : c.nivel === 'superior' ? 'Diploma' : 'Certificado de pós-graduação'}</span>
+            <span className="formacao-lista__nome certificado__nome">{c.nome}<span className="formacao-lista__nivel">{NIVEL_CREDENCIAL[c.nivel] ?? c.nivel} · {c.instituicao}</span></span>
+            <span className="formacao-lista__ano certificado__ano">concluído em <span className="manuscrito">{anoDe(c.tFim)}</span></span>
+          </li>
         ))}
       </ul>
     </Secao>

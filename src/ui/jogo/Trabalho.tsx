@@ -818,7 +818,7 @@ export function estadoDaVaga(vida: Vida, oc: Ocupacao, aviso?: string): { estado
   const d = disponibilidade(vida, { tipo: 'candidatar', ocupacaoId: oc.id });
   if (!podeTentar(d)) return { estado: 'nao_atende', texto: d.motivo ?? 'Não atende aos requisitos agora.' };
   const conta = porContaPropria(oc);
-  if (aviso) return { estado: 'conflito', texto: conta ? 'Pode começar — mas há um conflito, dito abaixo.' : 'Pode se candidatar — mas há um conflito, dito abaixo.' };
+  if (aviso) return { estado: 'conflito', texto: conta ? 'Pode começar — mas há um conflito, dito acima.' : 'Pode se candidatar — mas há um conflito, dito acima.' };
   return { estado: 'pode', texto: conta ? 'Pode começar quando quiser.' : d.grau === 'improvavel' ? 'Pode se candidatar, com pouca chance.' : 'Pode se candidatar.' };
 }
 
@@ -1146,6 +1146,10 @@ export function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolea
   const futebol = carreiras.some(c => c.modalidade === 'futebol');
   return (
     <Secao titulo={es?.fase === 'encerrada' ? 'A carreira no esporte (encerrada)' : 'A carreira no esporte'} recolhivel aberta={aberta}>
+      {/* REWORK 9.6 · VIS-02: a FICHA DO ATLETA — o registro de quem joga (o resumo de cada carreira, títulos, finais,
+          prêmios, a seleção). As competições em si são do REWORK 10. */}
+      <div className="ficha-atleta papel papel--sem-dobra">
+      <p className="ficha-atleta__cabeca"><span>Ficha do atleta</span><span>{vida.eu.nome} {vida.eu.sobrenome}</span></p>
       {carreiras.map((c, k) => <p key={k} className="painel__frase">{carreiras.length > 1 ? `${(NOME_MOD[c.modalidade] ?? c.modalidade).replace(/^./, x => x.toUpperCase())}: ` : ''}{resumoDaCarreira(c)}{p.titulos.length && carreiras.length === 1 ? ` · ${p.titulos.length} ${p.titulos.length === 1 ? 'conquista' : 'conquistas'}` : ''}.</p>)}
       {p.titulos.length > 0 && <div className="palmares__grupo"><h4>Títulos e acessos</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.titulos.slice().reverse().map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="taca" /><span>{x}</span></li>)}</ul></div>}
       {p.finais.length > 0 && <div className="palmares__grupo"><h4>Finais</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.finais.slice().reverse().slice(0, 10).map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="final" /><span>{x}</span></li>)}</ul></div>}
@@ -1168,6 +1172,7 @@ export function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolea
         );
       })}
       {futebol && <p className="nota">{CLUBES_REAIS}</p>}
+      </div>
     </Secao>
   );
 }
@@ -1252,13 +1257,22 @@ function PorOndePassou({ vida }: { vida: Vida }) {
   const marcos = vida.caminhos.marcas.filter(m => m.peso === 3 || (m.peso >= 2 && DE_CARREIRA.has(m.tipo))).slice(-10);
   return (
     <Secao titulo="Por onde você passou" recolhivel aberta={t.historico.length + marcos.length > 0}>
+      {/* REWORK 9.6 · VIS-02: o CURRÍCULO — a folha com o nome, a idade, a cidade e a formação no alto (os dados da vida),
+          a experiência embaixo. O texto é o mesmo de antes; o documento é que é outro. */}
+      <div className="curriculo papel">
+      <header className="curriculo__cabeca">
+        <p className="curriculo__nome">{vida.eu.nome} {vida.eu.sobrenome}</p>
+        <p className="curriculo__dados">{idade(vida)} anos · {nomeLugar(vida.moradia.municipioId)}{vida.educacao.concluidos.length ? ` · ${[...vida.educacao.concluidos].sort((a, b) => b.tFim - a.tFim)[0].nome}` : ''}</p>
+        <p className="curriculo__rotulo">Experiência profissional</p>
+      </header>
       {/* REWORK 7: um percurso só — os empregos (de quando a quando, onde) e os marcos que mudaram o rumo, do mais recente
           ao mais antigo; o trabalho de agora no alto. */}
       <Percurso rotulo="A trajetória profissional" mostrar={6} passos={passosDaCarreira(vida, marcos)} />
       {/* As áreas da carreira, em fases: a mudança não apaga a anterior. */}
       {trajetoriaDeAreas(vida).length > 0 && <p className="nota">Áreas: {trajetoriaDeAreas(vida).map(f => `${f.area} (${anoDe(f.tInicio)}${f.tFim !== undefined ? `–${anoDe(f.tFim)}` : '–hoje'})`).join(' → ')}.</p>}
       {trilhas.length > 0 && <p className="nota">Estrada: {trilhas.map(([tr, m]) => `${Math.floor(m / 12)} ${Math.floor(m / 12) === 1 ? 'ano' : 'anos'} em ${ROTULO_TRILHA[tr] ?? tr}`).join(' · ')}.</p>}
-      <p className="nota">{previdenciaDaVida(vida).nome}: {Math.floor(t.contribuicao / 12)} anos de contribuição.{t.licencas.length ? ` Registros: ${t.licencas.map(l => (l === 'cnh' ? habilitacaoDaVida(vida).regra.nome : nomeDoRegistro(vida, l))).join(', ')}.` : ''}</p>
+      <p className="nota">{previdenciaDaVida(vida).nome}: {Math.floor(t.contribuicao / 12)} {Math.floor(t.contribuicao / 12) === 1 ? 'ano' : 'anos'} de contribuição.{t.licencas.length ? ` Registros: ${t.licencas.map(l => (l === 'cnh' ? habilitacaoDaVida(vida).regra.nome : nomeDoRegistro(vida, l))).join(', ')}.` : ''}</p>
+      </div>
     </Secao>
   );
 }

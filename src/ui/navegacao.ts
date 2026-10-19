@@ -6,10 +6,11 @@
  *   História       o que aconteceu (a Linha da Vida, as trajetórias, o ano que passou)
  *   Você           quem eu sou: corpo, cabeça, aparência, habilidades
  *   Pessoas        com quem vivo e me relaciono
- *   Caminhos       estudos, trabalho e trajetória — UMA página (antes, Formação e
- *                  Trabalho eram duas áreas): a situação agora, o desenvolvimento,
- *                  as oportunidades e o histórico, com a formação e o trabalho
- *                  lado a lado (a ordem segue a fase da vida)
+ *   Caminhos       estudos, trabalho e trajetória — UMA área (antes, Formação e
+ *                  Trabalho eram duas). REWORK 9.6: uma página inicial curta e
+ *                  quatro divisões que não se misturam — Estudos e Trabalho (cada
+ *                  um com agora, desempenho, oportunidades e histórico), Vida
+ *                  pública e Outros caminhos
  *   Minha Semana   como organizo o tempo: a agenda, o corpo, os hobbies, sair, o celular
  *   Vida           a vida concreta: casa, dinheiro, compras, pertences, cidade, viagens
  *
