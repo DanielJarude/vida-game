@@ -59,6 +59,10 @@
 .boletim__materia { font-weight: var(--weight-semibold); color: var(--text-primary); }
 .boletim__linha--forte .boletim__materia::after { content: ' ★'; color: var(--bom); font-weight: 400; }
 .boletim__dominio strong { font-size: var(--type-lead); color: var(--text-primary); }
+/* REWORK 9.7 · EDU-04: a nota do ano (à mão) e o conhecimento (impresso, discreto) são colunas diferentes. */
+.boletim__nota-materia strong { font-size: var(--type-lead); color: var(--text-primary); }
+.boletim__conhecimento { color: var(--text-secondary); font-weight: var(--weight-semibold); }
+.boletim__tabela thead small { font-weight: 400; letter-spacing: 0; text-transform: none; }
 .boletim__esperado, .boletim__relacao { font-size: var(--type-caption); color: var(--text-muted); }
 .boletim__esperado { display: block; }
 .boletim__delta { color: var(--text-secondary); }

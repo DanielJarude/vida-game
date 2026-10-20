@@ -216,7 +216,9 @@ export function leituraDaFrente(v: Vida, d: Dominio): string {
   if (apt >= 0.35 && anos <= 1) return `${cap(m.facilidade)}, e está só no começo.`;
   if (apt >= 0.35 && f.habilidade < 40 && f.meses < 24) return `${cap(m.facilidade)}, mas pratica pouco.`;
   if (apt <= -0.3 && f.habilidade >= 45) return `${cap(base)} — foi na raça, não no dom.`;
-  const tempo = anos >= 2 ? ` Há ${anos} anos.` : '';
+  // REWORK 9.7 · UX-12: "Faz das melhores redações da turma. Há 7 anos." — o tempo solto não dizia de quê. Nas matérias da
+  // escola, o tempo é o da própria escola (não se diz); no resto, é o tempo de prática.
+  const tempo = anos >= 2 && !MATERIAS.includes(d) ? ` Pratica há ${anos} anos.` : '';
   // Destaque entre amadores ≠ nível de base: no esporte, a frase diz as duas réguas (a mesma que a peneira usa).
   if (m.categoria === 'esporte' && e >= 3 && !v.caminhos.esporte) {
     const n = nivelTecnico(f.habilidade);

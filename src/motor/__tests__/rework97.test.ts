@@ -464,3 +464,23 @@ describe('Hashes · a mistura final onde o viés aparecia', () => {
     expect(trocas).toBeGreaterThan(6);
   });
 });
+
+/* ================================================================ Fase C — o motor anual */
+
+import { morreEsteAno } from '../sistemas/corpo';
+import { criarRng } from '../rng';
+
+describe('Motor · a saúde no zero não dura anos', () => {
+  it('aos 60, com saúde 0, o risco do ano passa de 30% (antes: ~11% — vidas de anos em saúde zero)', () => {
+    const v = transacao(adulto(60, { semente: 94 }), x => { x.corpo.saude = 0; x.corpo.condicoes = []; }).vida;
+    const r = criarRng(7);
+    let mortes = 0;
+    for (let k = 0; k < 2000; k++) if (morreEsteAno(v, r)) mortes++;
+    expect(mortes / 2000).toBeGreaterThan(0.3);
+    // e a saúde boa não muda: o mesmo risco de antes
+    const sao = transacao(v, x => { x.corpo.saude = 80; }).vida;
+    let m2 = 0;
+    for (let k = 0; k < 2000; k++) if (morreEsteAno(sao, r)) m2++;
+    expect(m2 / 2000).toBeLessThan(0.02);
+  });
+});

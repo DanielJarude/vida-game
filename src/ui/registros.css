@@ -222,8 +222,10 @@
 .boletim.papel .boletim__tabela th, .boletim.papel .boletim__tabela td { border-bottom-color: var(--mat-borda); }
 .boletim.papel .boletim__tabela thead th { color: var(--mat-impressao-suave); border-bottom: 2px solid var(--mat-impressao); }
 .boletim__nota { font-size: 1.7rem; line-height: 1; display: inline-block; transform: rotate(-2deg); }
-.boletim.papel .boletim__dominio strong.boletim__nota, .boletim.papel .boletim__rodape dd strong.boletim__nota { font-size: 1.7rem; color: var(--mat-caneta); }
-.boletim.papel .boletim__dominio strong.manuscrito--vermelho, .boletim.papel .boletim__rodape dd strong.manuscrito--vermelho { color: var(--mat-caneta-vermelha); }
+.boletim.papel .boletim__nota-materia strong.boletim__nota, .boletim.papel .boletim__rodape dd strong.boletim__nota { font-size: 1.7rem; color: var(--mat-caneta); }
+/* REWORK 9.7: a média do ano à mão, girada, encostava no texto ("14de 20"). */
+.boletim.papel .boletim__rodape dd strong.boletim__nota { margin-right: 0.3em; }
+.boletim.papel .boletim__nota-materia strong.manuscrito--vermelho, .boletim.papel .boletim__rodape dd strong.manuscrito--vermelho { color: var(--mat-caneta-vermelha); }
 .boletim.papel .boletim__linha:nth-child(even) .boletim__nota { transform: rotate(1.5deg); }
 .boletim.papel .boletim__rodape { background: transparent; border: 1px solid var(--mat-borda); border-radius: 0; }
 .boletim.papel .boletim__observacoes { border-left-color: var(--mat-margem); }

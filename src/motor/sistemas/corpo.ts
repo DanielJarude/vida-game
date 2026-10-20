@@ -198,7 +198,10 @@ function riscoBase(i: number, saude: number, masculino: boolean, condicoes: { id
     if (c.id === 'hipertensao') fatorCondicoes *= c.tratando ? 1.15 : 1.6;
     if (c.id === 'diabetes') fatorCondicoes *= c.tratando ? 1.25 : 1.8;
   }
-  return (gompertz + infantil) * fatorSaude * fatorCondicoes + externas;
+  // REWORK 9.7: a saúde quase no zero é um corpo que não aguenta mais — antes, aos 60 com saúde 0, o risco era ~11% ao
+  // ano, e havia vidas inteiras de anos com saúde zero. Abaixo de 15, o risco cresce também por fora da idade.
+  const fragilidade = saude < 15 ? (15 - saude) * 0.015 : 0;
+  return (gompertz + infantil) * fatorSaude * fatorCondicoes + externas + fragilidade;
 }
 
 export function causaDaMorte(r: Rng, i: number, masculino: boolean, condicoes: string[]): string {
