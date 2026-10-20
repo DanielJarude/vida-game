@@ -43,7 +43,9 @@ export const NOME_FUNCAO_VOLEI: Record<FuncaoVolei, string> = { libero: 'líbero
  * um quarto de levantadores, um terço de ponteiros, e os mais altos no oposto
  * e no meio de rede.
  */
-const REGUA_VOLEI: Record<'m' | 'f', [number, number, number, number]> = { m: [159, 171, 185, 193], f: [148, 159, 171, 178] };
+// REWORK 9.7: recalibrada para a estatura corrigida (desvio de ~8 cm, não ~14) nos mesmos percentis de antes — líbero
+// ~12%, levantador ~24%, ponteiro ~37%, oposto ~15%, central ~12%.
+const REGUA_VOLEI: Record<'m' | 'f', [number, number, number, number]> = { m: [167, 173, 181, 186], f: [155, 161, 167, 171] };
 export function funcaoVolei(v: Vida): FuncaoVolei {
   const [lib, lev, pon, opo] = REGUA_VOLEI[ge(v) === 'feminino' ? 'f' : 'm'];
   const a = estaturaAdulta(v) + (hash(`${v.id}:volei`) - 0.5) * 3;

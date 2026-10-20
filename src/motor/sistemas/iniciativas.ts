@@ -33,6 +33,7 @@ import { compatibilidade } from './social';
 import { mesesProcurando } from './intencao';
 import { discutir } from './lacos';
 import { rngDe } from '../rng';
+import { pesoDaAparenciaPara } from './predisposicao';
 
 const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const o = (p: Pessoa) => flex(p.genero, 'o', 'a', 'e');
@@ -361,7 +362,9 @@ function novaIniciativa(v: Vida, r: Rng): void {
         && v.eu.atracao && atraiGenero(v.eu.atracao, p.genero) && atraiGenero(p.atracao, v.eu.genero) && !p.parceiroId && podeTerRomance(v, p, vin)
         && v.fatos[`recusa_romance_${p.id}`] === undefined) {
         const comp = compatibilidade(v, p);
-        if (comp > 0.1) lista.push({ p, vin, tipo: 'interesse', peso: 0.35 + comp * 0.6 + (v.corpo.aparencia - 55) / 100, texto: `${p.nome} anda procurando você mais do que o normal — e deixou claro que está interessad${o(p)}.` });
+        // REWORK 9.7 · ATR-02: a aparência pesa pelo gosto de quem olha (`pesoDaAparenciaPara`), como em todo o romance —
+        // antes, sem o gosto: 4,5× mais interesse para a aparência 85 do que para a 25, e peso negativo abaixo de 10.
+        if (comp > 0.1) lista.push({ p, vin, tipo: 'interesse', peso: Math.max(0.05, 0.35 + comp * 0.6 + (v.corpo.aparencia - 55) / 200 * pesoDaAparenciaPara(p.id)), texto: `${p.nome} anda procurando você mais do que o normal — e deixou claro que está interessad${o(p)}.` });
       }
       // Um colega que gosta de você dá o primeiro passo (um café, ficar depois do treino). Não é amizade ainda: é a chance.
       const gestoRecente = vin.aproximacao !== undefined && v.t - vin.aproximacao <= 24;

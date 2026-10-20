@@ -206,7 +206,7 @@ export const INFANCIA: Conteudo[] = [
     opcoes: [
       { id: 'copiar', texto: 'Copiar as respostas', comportamento: { impulsividade: 1, disciplina: -1 },
         resolver: c => c.r.chance(0.3)
-          ? { texto: 'A professora viu. Zero para os dois e bilhete para casa.', memoria: `Foi pego colando na prova com ${c.p.colega.nome}.`.replace('pego', c.g('pego', 'pega', 'pegue')), tom: 'ruim', efeito: () => { estresse(c, 6); prox(c, 'colega', 4); if (c.v.educacao.basica) c.v.educacao.basica.desempenho -= 5; } }
+          ? { texto: 'A professora viu. Zero para os dois e bilhete para casa.', memoria: `Foi pego colando na prova com ${c.p.colega.nome}.`.replace('pego', c.g('pego', 'pega', 'pegue')), tom: 'ruim', efeito: () => { estresse(c, 6); prox(c, 'colega', 4); if (c.v.educacao.basica) c.v.educacao.basica.desempenho = Math.max(5, Math.min(100, c.v.educacao.basica.desempenho - 5)); } }
           : { texto: 'Ninguém percebeu. A nota veio boa.', memoria: null, efeito: () => prox(c, 'colega', 4) } },
       { id: 'recusar', texto: 'Olhar para a própria prova', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Você fez a prova sozinh' + c.g('o', 'a', 'e') + '. A nota foi a sua nota.', memoria: null }) },

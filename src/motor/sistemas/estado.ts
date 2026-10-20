@@ -30,7 +30,7 @@ import { filhos, idade, idadePessoa, moraCom, parceiro, vinculosVivos } from '..
 import { listaNatural } from '../texto';
 import { modeloCondicao } from './corpo';
 import { modeloRotina, nivelDa } from './rotinas';
-import { semana } from './semana';
+import { encaixe, estudaAgora, semana } from './semana';
 import { papelDe } from './vinculos';
 import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';
 import { faseDoLuto, pesoDoLuto } from './luto';
@@ -221,7 +221,9 @@ export function fatoresHumor(v: Vida): Fator[] {
   const rede = apoios(v);
   const somaRede = rede.reduce((s, a) => s + a.peso, 0);
   if (somaRede > 0) out.push({ id: 'rede', texto: `gente por perto: ${listaNatural(rede.slice(0, 2).map(a => a.p.nome))}`, efeito: Math.min(12, somaRede * 3), pessoaId: rede[0].p.id });
-  const saude = (v.corpo.saude - 60) / 5;
+  // REWORK 9.7 · ATR-02: a saúde que pesa no humor é a comparada com o que se espera na idade — depois dos 60, a régua
+  // desce (aos 75, 51). Antes, 60 fixo: todo idoso com a saúde da idade carregava −2 a −4 de humor só por envelhecer.
+  const saude = (v.corpo.saude - (i <= 60 ? 60 : Math.max(45, 60 - (i - 60) * 0.6))) / 5;
   if (Math.abs(saude) >= 1) out.push({ id: 'saude', texto: saude > 0 ? 'o corpo em dia' : 'a saúde, que tem cobrado', efeito: saude });
   const par = parceiro(v);
   if (par?.vin.romance) {
@@ -326,6 +328,19 @@ export function fatoresCabeca(v: Vida): Fator[] {
   else if (s.apertada) out.push({ id: 'semana_apertada', texto: 'quase nada da semana sobra para você', efeito: 6 });
   // REWORK 9.5: a criança sente menos na cabeça o que passa (os pais seguram a rotina) — sente no cansaço.
   if (s.atividades > 0.01) out.push({ id: 'semana', texto: 'uma rotina de atividades exigente demais', efeito: Math.round(s.atividades * 23 * (i < 12 ? 0.5 : 1)) });
+  // REWORK 9.7 · BAL-01: o tempo livre vale alguma coisa. Antes, só o excesso da semana pesava — e tudo o que só gastava
+  // tempo livre (estudar com dedicação, o integral, o treino a sério da criança) saía de graça. A semana com folga de
+  // verdade alivia a cabeça; a dedicação aos estudos pesa um pouco (horas de estudo em casa), e estudar só o mínimo
+  // alivia um pouco (com o preço na nota e nas matérias).
+  if (s.fixos <= 0.01 && !s.apertada && s.atividades <= 0.01) {
+    const folga = encaixe(v, 0).folga;
+    if (folga >= 1) out.push({ id: 'descanso', texto: 'tempo livre de verdade na semana', efeito: -3 });
+    else if (folga >= 0.4) out.push({ id: 'descanso', texto: 'algum tempo livre na semana', efeito: -1 });
+  }
+  if (estudaAgora(v) && !v.justica?.prisao) {
+    if (v.educacao.postura === 'dedicada') out.push({ id: 'dedicacao', texto: 'as horas de estudo em casa', efeito: 3 });
+    else if (v.educacao.postura === 'relaxada') out.push({ id: 'dedicacao', texto: 'estudar só o mínimo', efeito: -2 });
+  }
   const pequenos = vinculosVivos(v).filter(x => x.vin.parentesco === 'filho' && x.vin.convivio.includes('casa') && idadePessoa(v, x.p) < 4).length;
   if (pequenos) out.push({ id: 'bebe', texto: pequenos === 1 ? 'as noites curtas com uma criança pequena' : 'as noites curtas com crianças pequenas', efeito: Math.min(10, pequenos * 6) });
   const cuidar = semana(v).fixos.find(f => f.id === 'cuidar');

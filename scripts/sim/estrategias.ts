@@ -61,6 +61,9 @@ const PERFIS: Perfil[] = [
   { nome: 'gastador', rotinas: ['sair_noite', 'academia'], postura: 'relaxada', estudo: 'baixo', trilhas: ['comercio', 'administrativo', 'beleza'], social: 3, romance: true, filhos: true, estilo: 'folgado', poupa: false, preferencias: ['festao', 'praia', 'entrar', 'emprestar', 'confianca', 'particular', 'privada'], saiDeCasaAos: 20 },
   { nome: 'infiel', rotinas: ['sair_noite', 'academia'], postura: 'normal', estudo: 'medio', trilhas: ['comercio', 'administrativo'], social: 3, romance: true, filhos: true, estilo: 'confortavel', poupa: false, preferencias: ['trair', 'negar', 'adiar', 'chamar', 'aceitar', 'cafe', 'festa', 'ofender'], saiDeCasaAos: 21 },
   { nome: 'desatento', rotinas: ['videogame'], postura: 'normal', estudo: 'medio', trilhas: ['administrativo', 'ti', 'comercio'], social: 0, romance: true, filhos: true, estilo: 'modesto', poupa: true, preferencias: ['sim', 'chamar', 'fase', 'trabalho', 'rotina', 'nao', 'ignorar', 'aceitar'], saiDeCasaAos: 24 },
+  // REWORK 9.7: o esportista (futebol a sério desde os 6, pede teste e aceita peneira e contrato) e o aleatório.
+  { nome: 'esportista', rotinas: ['futebol'], postura: 'normal', estudo: 'medio', trilhas: ['comercio', 'administrativo'], social: 2, romance: true, filhos: true, estilo: 'modesto', poupa: false, preferencias: ['arriscar', 'ir', 'assinar', 'renovar', 'tentar', 'aceitar', 'seguir', 'insistir'], saiDeCasaAos: 22 },
+  { nome: 'aleatorio', rotinas: [], postura: 'normal', estudo: 'medio', trilhas: [], social: 2, romance: true, filhos: true, estilo: 'modesto', poupa: false, preferencias: [], saiDeCasaAos: 23 },
   { nome: 'ascensao', rotinas: ['estudar_concurso', 'ingles'], postura: 'dedicada', estudo: 'alto', trilhas: ['publico', 'ti', 'administrativo', 'enfermagem', 'direito'], social: 1, romance: true, filhos: true, estilo: 'apertado', poupa: true, preferencias: ['enem', 'ficar', 'preparo', 'aceitar', 'cartorio', 'recusar', 'desligar', 'publica', 'sus'], saiDeCasaAos: 25 }
 ];
 
@@ -75,6 +78,20 @@ export function estrategia(nome: string): Estrategia {
       const i = idade(v);
       const out: Acao[] = [];
       if (p.nome === 'passivo') return out;
+      if (p.nome === 'esportista' && i >= 6) {
+        const fut = v.rotinas.find(x => x.id === 'futebol');
+        if ((!fut || (fut.nivel ?? 1) < 2) && tenta(v, { tipo: 'rotina', id: 'futebol', ativa: true, nivel: 2 })) out.push({ tipo: 'rotina', id: 'futebol', ativa: true, nivel: 2 });
+        const pedir: Acao = { tipo: 'perseguir', oque: 'pedir_teste', valor: 'futebol' };
+        if (tenta(v, pedir)) out.push(pedir);
+        for (const o of v.caminhos.oportunidades) if ((o.tipo === 'peneira' || o.tipo === 'convite') && (o.dominio === 'futebol' || o.ocupacaoId === 'jogador_futebol') && tenta(v, { tipo: 'oportunidade', id: o.id, aceitar: true })) out.push({ tipo: 'oportunidade', id: o.id, aceitar: true });
+      }
+      if (p.nome === 'aleatorio') {
+        const ids = ['futebol', 'leitura', 'academia', 'ingles', 'musica', 'videogame', 'sair_noite', 'voluntariado', 'natacao', 'xadrez'];
+        const id = r.pick(ids);
+        if (r.chance(0.5) && tenta(v, { tipo: 'rotina', id, ativa: true })) out.push({ tipo: 'rotina', id, ativa: true });
+        else if (r.chance(0.3)) out.push({ tipo: 'rotina', id, ativa: false });
+        if (v.educacao.basica && r.chance(0.2)) out.push({ tipo: 'postura', valor: r.pick(['dedicada', 'normal', 'relaxada'] as const) });
+      }
       // Postura nos estudos
       if ((v.educacao.basica || v.educacao.matricula) && v.educacao.postura !== p.postura) out.push({ tipo: 'postura', valor: p.postura });
       // Rotinas

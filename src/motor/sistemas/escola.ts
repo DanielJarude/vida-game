@@ -840,7 +840,9 @@ export function processarCurso(v: Vida, r: Rng, presenca = 1, estudo = 1, cansac
   if (atraso > 0) {
     escrever(v, { texto: `Reprovou em matérias de ${c.nome} e o curso ficou mais comprido.`, relevancia: 'cotidiano', tema: 'estudo', tom: 'ruim' });
   }
-  v.mente.cognicao = clamp(v.mente.cognicao + (c.nivel === 'tecnico' ? 1 : 2));
+  // REWORK 9.7 · ATR-02: a faculdade já exercita a inteligência pelo estímulo do ano (`pessoa.estimuloCognitivo`, com o
+  // teto e os retornos decrescentes). Antes, somava também +2 fixos por ano (+1 no técnico), por fora do teto: cinco
+  // anos de faculdade valiam +10, doze de escola +3 — e passar do teto zerava o que a leitura rendia depois.
   if (m.mesesRestantes <= 0) concluirCurso(v, r, m, c);
 }
 

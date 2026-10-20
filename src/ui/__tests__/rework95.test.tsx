@@ -193,10 +193,13 @@ describe('Cenário 8 · Vida: o que se compra continua conectado', () => {
 
 describe('Cenário 9 · uma mudança real aparece em Você e, quando é biográfica, no alto da História', () => {
   it('começar a trabalhar: a ficha de Você diz o trabalho; a História diz que mudou no último ano', () => {
-    let v = transacao(adulto(22, { semente: 14 }), x => { x.trabalho.atual = undefined; x.momento = null; }).vida;
+    // REWORK 9.7: semente 15 — na 14, a nova sequência de sorteios trouxe um corte de pessoal no primeiro ano (a taxa de
+    // demissão no primeiro ano é a mesma de antes: 13 × 11 em 200 vidas). A pré-condição agora é dita: continua empregada.
+    let v = transacao(adulto(22, { semente: 15 }), x => { x.trabalho.atual = undefined; x.momento = null; }).vida;
     v = avancarAno(v).vida; v.momento = null;
     v = transacao(v, (x, r) => { contratar(x, r, ocupacao('assistente_adm')); }).vida;
     v = avancarAno(v).vida; v.momento = null;
+    expect(v.trabalho.atual?.ocupacaoId).toBe('assistente_adm');
     expect(mudancasRecentes(v).some(t => /Começou a trabalhar/.test(t))).toBe(true);
     render(<main><RetratoDaVida vida={v} irPara={nada} abrirPessoa={nada} /></main>);
     const retrato = screen.getByRole('region', { name: 'A vida agora' });

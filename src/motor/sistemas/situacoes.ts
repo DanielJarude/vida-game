@@ -885,7 +885,7 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
     id: 'bas_minutos', trajetoria: 'basquete', peso: () => 1,
     cabe: v => esporteDe(v, 'basquete') && v.caminhos.esporte?.espaco === 'reserva',
     titulo: 'Poucos minutos',
-    texto: v => `Oito minutos por jogo, quase sempre no fim. ${estatura(v) >= 195 ? 'O técnico diz que falta força no garrafão.' : 'O técnico diz que falta defesa.'}`,
+    texto: v => `Oito minutos por jogo, quase sempre no fim. ${estatura(v) >= 189 ? 'O técnico diz que falta força no garrafão.' : 'O técnico diz que falta defesa.'}`,
     intencoes: [
       { id: 'cobrar', texto: 'Cobrar o técnico por mais minutos', dica: 'Pode render minutos — ou banco.', risco: 0.6, fatores: v => [nomeEsp(v), social(v)], desfechos: D('Ele ouviu e deu dez jogos de chance. Você aproveitou.', 'Ganhou uns minutos a mais.', 'A conversa esfriou o clima.', '"Então treina melhor." E mais banco.', { otimo: { confianca: 1 }, pessimo: { confianca: -1 } }) },
       { id: 'treinar', texto: 'Ficar depois do treino arremessando', dica: 'Devagar, sem garantia.', risco: 0.2, fatores: v => [disciplina(v), tecnicaEsp(v)], desfechos: D('Trezentos arremessos por dia. Na rotação dos playoffs, você entrou.', 'O arremesso melhorou um pouco.', 'Nada mudou na rotação.', 'O ombro reclamou do excesso.', { otimo: { confianca: 1, extra: (v, _d) => { const f = v.caminhos.frentes.basquete; if (f) f.habilidade = clamp(f.habilidade + 1); } }, pessimo: { extra: v => { v.corpo.saude = clamp(v.corpo.saude - 2); } } }) },

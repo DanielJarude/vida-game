@@ -21,7 +21,7 @@
 
 import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, hashMisturado } from '../rng';
 import type { CategoriaIlicita, Justica, Vida } from '../tipos';
 import { escrever, filhos, idade, lembrarCom, marcarFato, pais, parceiro, vinculosVivos } from '../nucleo';
 import { marcar } from './marcas';
@@ -233,7 +233,8 @@ function soltar(v: Vida, motivo: string): void {
   // Programas de egressos existem — nem sempre, nem em todo lugar.
   // Quem preparou a saída dentro (REWORK 5: o curso e a carta do programa) sai com a porta já aberta.
   if (!internacao && (preparou || r0(v) < 0.6)) {
-    novaOportunidade(v, { tipo: 'reinsercao', ocupacaoId: ['aux_limpeza', 'estoquista', 'ajudante_obras', 'cooperado_reciclagem', 'aux_cozinha'][Math.floor(r0(v) * 5)], meses: 24, chave: 'reinsercao', bonus: preparou ? 0.5 : 0.3, titulo: 'Um programa para quem saiu',
+    novaOportunidade(v, { tipo: 'reinsercao', // REWORK 9.7: o cargo sai de outro número (antes, o mesmo `r0 < 0,6` do teste: só os três primeiros eram possíveis).
+    ocupacaoId: ['aux_limpeza', 'estoquista', 'ajudante_obras', 'cooperado_reciclagem', 'aux_cozinha'][Math.floor(hashMisturado(`${v.id}:${v.t}:saida_oc`) * 5) % 5], meses: 24, chave: 'reinsercao', bonus: preparou ? 0.5 : 0.3, titulo: 'Um programa para quem saiu',
       texto: 'Um programa de apoio a egressos tem empresas parceiras que contratam quem cumpriu pena. Carteira assinada, salário de começo e ninguém perguntando duas vezes.' });
   }
 }

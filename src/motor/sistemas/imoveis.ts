@@ -12,6 +12,9 @@ import { escrever, filhos, idadePessoa, moraCom } from '../nucleo';
 import { modeloMoradia } from '../dados/bens';
 import { dinheiro as fmt } from '../texto';
 import { aluguelDe } from './mercado';
+import { converterEntrePaises } from '../mundo/moeda';
+import { paisDaCidade } from '../dados/lugares';
+import { paisDaVida } from '../mundo/vida';
 import type { AnoEconomico } from './economia';
 import { okDePagar } from './dinheiro';
 import type { Veredito } from '../plausibilidade';
@@ -36,7 +39,10 @@ export function processarImoveis(v: Vida, r: Rng, ec?: AnoEconomico): void {
     // Aluguel de quem aluga para terceiros acompanha o mercado; às vezes o imóvel fica vazio.
     if (b.alugadoPor) {
       const m = modeloMoradia(b.modeloId);
-      b.alugadoPor = Math.round(aluguelDe(v, m, b.municipioId) * (0.75 + b.estado / 400) * 0.9 / 10) * 10;
+      // REWORK 9.7 · ECO-01: o aluguel de um imóvel em outro país está nos preços de lá — convertido como o valor do imóvel
+      // foi convertido na mudança (antes, não: o rendimento de um apartamento em São Paulo ia de 4% a 9% ao mudar para os EUA).
+      const conv = converterEntrePaises(1, paisDaCidade(b.municipioId), paisDaVida(v));
+      b.alugadoPor = Math.round(aluguelDe(v, m, b.municipioId) * conv * (0.75 + b.estado / 400) * 0.9 / 10) * 10;
       if (r.chance(0.1)) {
         const meses = r.int(2, 5);
         v.financas.conta -= b.alugadoPor * meses;

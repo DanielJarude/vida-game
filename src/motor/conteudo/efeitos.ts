@@ -10,7 +10,9 @@ export const estresse = (c: Ctx, n: number) => { c.v.mente.estresse = clamp(c.v.
 export const saude = (c: Ctx, n: number) => { c.v.corpo.saude = clamp(c.v.corpo.saude + n); };
 export const forma = (c: Ctx, n: number) => { c.v.corpo.forma = clamp(c.v.corpo.forma + n); };
 export const cognicao = (c: Ctx, n: number) => { c.v.mente.cognicao = clamp(c.v.mente.cognicao + n); };
-export const dinheiro = (c: Ctx, n: number) => { c.v.financas.conta += n; };
+// REWORK 9.7 · ECO-01: um acontecimento não tira o que não existe (antes, um assalto de −1.500 com a conta zerada virava
+// "conta que ficou sem pagar" e nome sujo no ano seguinte, sem dívida nenhuma por trás).
+export const dinheiro = (c: Ctx, n: number) => { c.v.financas.conta += n >= 0 ? n : Math.max(n, -Math.max(0, c.v.financas.conta)); };
 export const fato = (c: Ctx, chave: string) => { if (c.v.fatos[chave] === undefined) c.v.fatos[chave] = c.v.t; };
 
 /** Muda a proximidade com a pessoa de um papel. */

@@ -23,7 +23,7 @@ import { rendaRelativa, salarioMinimoDoPais } from '../mundo/economia';
 import { paisDaVida } from '../mundo/vida';
 import { lancar } from './extrato';
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, hashMisturado } from '../rng';
 import type { CarreiraEsportiva, Dominio, Posicao, PropostaDeClube, Temporada, Vida } from '../tipos';
 import { escrever, idade, lembrarCom, marcarFato, pais, temFato } from '../nucleo';
 import { cidadesDoPais, municipio, municipioDoCodigo, MUNICIPIOS, paisDaCidade } from '../dados/lugares';
@@ -814,7 +814,8 @@ export function clubeAmador(v: Vida, d: Dominio, lugar: string): string {
   const uf = municipio(lugar).uf;
   const lista = clubesDoPais().filter(c => c.porte === 'regional' && municipio(c.cidade).uf === uf);
   const todos = lista.length ? lista : clubesDoPais().filter(c => c.porte === 'regional');
-  return todos[Math.floor(hash(`${v.id}:amador:${v.t}`) * todos.length) % todos.length].nome;
+  // REWORK 9.7: com a mistura final (sem ela, o mesmo clube voltava no ano seguinte quase metade das vezes).
+  return todos[Math.floor(hashMisturado(`${v.id}:amador:${v.t}`) * todos.length) % todos.length].nome;
 }
 
 /**

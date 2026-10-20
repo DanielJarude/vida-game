@@ -18,7 +18,7 @@
 import { nomeDaMateria } from '../mundo/materias';
 import { paisDaVida, perfilDaVida } from '../mundo/vida';
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, hashMisturado } from '../rng';
 import type { FocoConcurso, Vida } from '../tipos';
 import type { Ocupacao } from '../dados/ocupacoes';
 import { OCUPACOES, ocupacao } from '../dados/ocupacoes';
@@ -78,11 +78,6 @@ import { pesoDaProducao } from './academia';
 
 export const perfilConcurso = (id: string) => PERFIS[id] ?? PADRAO;
 
-function hash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return (h >>> 0) / 4294967295;
-}
 
 /** O edital deste cargo está aberto neste ano, para quem mora aqui? (Estável: o mundo, não a pessoa.) */
 export function editalAberto(v: Vida, oc: Ocupacao): boolean {
@@ -94,7 +89,8 @@ export function editalAberto(v: Vida, oc: Ocupacao): boolean {
   const m = municipio(v.moradia.municipioId);
   // O edital federal é do país onde se mora (no Brasil, a chave de sempre: 'BR').
   const onde = p.esfera === 'municipal' ? m.id : p.esfera === 'estadual' ? m.uf : paisDaVida(v);
-  return hash(`edital:${oc.id}:${onde}:${anoDe(v.t)}`) < p.frequencia;
+  // REWORK 9.7: com a mistura final — sem ela, o ano no fim da chave quase não mudava o número (edital aberto 10 anos seguidos).
+  return hashMisturado(`edital:${oc.id}:${onde}:${anoDe(v.t)}`) < p.frequencia;
 }
 
 /** Editais abertos agora (para a interface dizer "saiu o edital"). */

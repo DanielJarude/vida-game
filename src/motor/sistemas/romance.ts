@@ -199,7 +199,10 @@ export function processarRomance(v: Vida, r: Rng): void {
     if (v.mente.estresse > 65) alvo -= 6;
     if (v.personalidade.tracos.empatia > 20) alvo += 4;
     if (v.personalidade.tracos.impulsividade > 30) alvo -= 5;
-    if (anosJuntos > 4) alvo -= Math.min(16, 4 + (anosJuntos - 4) * 0.6);
+    // REWORK 9.7 · ATR-02: o desgaste dos anos chega a −16 — mas um casal que se cuida e sem tensão acumulada desgasta a
+    // metade (antes, igual: mesmo o casamento cuidado todo ano convergia para o meio aos 50, e a felicidade caía junto).
+    const cuidado = (cuidou || v.rotinas.some(x => x.id === 'tempo_familia')) && vin.tensao < 30;
+    if (anosJuntos > 4) alvo -= Math.min(cuidado ? 8 : 16, 4 + (anosJuntos - 4) * 0.6);
     alvo -= pequenos * 4;
     // Quem queria filhos e ouviu "nunca" carrega isso.
     if (v.fatos[`recusou_filhos_${p.id}`] !== undefined && p.querFilhos === 'sim') alvo -= 8;

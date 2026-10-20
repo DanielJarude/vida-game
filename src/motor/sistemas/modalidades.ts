@@ -22,16 +22,11 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, hashMisturado } from '../rng';
 import type { CarreiraEsportiva, Dominio, Temporada, Vida } from '../tipos';
 import { idade } from '../nucleo';
 import { ge } from '../texto';
 
-function hash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return (h >>> 0) / 4294967295;
-}
 
 /* ------------------------------------------------------------ Estatura */
 
@@ -43,7 +38,9 @@ export function estaturaAdulta(v: Vida): number {
   const f = ge(v) === 'feminino';
   const media = f ? 163 : 176;
   // Soma de uniformes ≈ normal: a maioria perto da média, poucos muito altos.
-  const z = (hash(`${v.id}:alt:a`) + hash(`${v.id}:alt:b`) + hash(`${v.id}:alt:c`) - 1.5) * 2;
+  // REWORK 9.7: as três parcelas com a mistura final — sem ela, andavam juntas (correlação 0,97): o desvio triplicava e
+  // 20% dos homens passavam de 1,90 m (o esperado é ~4%).
+  const z = (hashMisturado(`${v.id}:alt:a`) + hashMisturado(`${v.id}:alt:b`) + hashMisturado(`${v.id}:alt:c`) - 1.5) * 2;
   return Math.round(media + z * (f ? 7 : 8) + (v.predisposicoes?.fisica ?? 0) * 2);
 }
 
@@ -62,7 +59,9 @@ export const NOME_FUNCAO: Record<FuncaoBasquete, string> = { armador: 'armador',
 export function funcaoBasquete(v: Vida): FuncaoBasquete {
   const f = ge(v) === 'feminino';
   const a = estaturaAdulta(v);
-  return a >= (f ? 184 : 200) ? 'pivo' : a >= (f ? 174 : 189) ? 'ala' : 'armador';
+  // REWORK 9.7: as réguas acompanham a estatura corrigida (desvio de ~8 cm, não ~14): os mesmos percentis de antes
+  // (pivô ~5%, ala ~18% da população).
+  return a >= (f ? 175 : 189) ? 'pivo' : a >= (f ? 169 : 183) ? 'ala' : 'armador';
 }
 
 /**
@@ -72,7 +71,8 @@ export function funcaoBasquete(v: Vida): FuncaoBasquete {
  */
 export function vantagemDeEstatura(v: Vida): number {
   const f = ge(v) === 'feminino';
-  return clamp((estatura(v) - (f ? 170 : 184)) / 40, -0.3, 0.35);
+  // REWORK 9.7: o mesmo efeito por desvio da população de antes (a estatura passou a ter o espalhamento real).
+  return clamp((estatura(v) - (f ? 167 : 180)) / 22, -0.3, 0.35);
 }
 
 /* ------------------------------------------------------------ Divisões */

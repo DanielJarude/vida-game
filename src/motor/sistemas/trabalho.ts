@@ -44,7 +44,8 @@ import { economiaLocal, municipio, nivelDeOferta, nomeLugar, paisDaCidade } from
 import { ORDEM_NIVEL, ROTULO_AREA, cursoOuNulo } from '../dados/cursos';
 import { forcaDoSetor, sobraNaEpoca } from '../dados/mercado';
 import { bloqueio, type Veredito } from '../plausibilidade';
-import { contribui, liquido, salarioLocal } from './renda';
+import { contribui, liquido, remuneracaoDe, salarioLocal } from './renda';
+import { rendaPropriaMensal } from './dinheiro';
 import { em, nivelEsc, rotuloEscolaridade, temEscolaridade } from './escola';
 import { habilidade, praticar } from './frentes';
 import { modeloFrente } from '../dados/frentes';
@@ -814,7 +815,10 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
     const minimo = salarioMinimoDoPais(paisDaCidade(e.municipioId));
     const fgts = Math.round(e.salario * lei.rescisao.mesesPorAno * anos);
     const sd = lei.seguroDesemprego;
-    const seguro = sd ? Math.round(Math.min(minimo * 1.48, Math.max(minimo, e.salario * sd.reposicao)) * (anos >= 2 ? sd.meses + 1 : Math.max(1, sd.meses - 1))) : 0;
+    // REWORK 9.7 · ECO-01: as parcelas acompanham o tempo de casa (antes, um ano de emprego em Portugal dava 11 meses de
+    // seguro de uma vez, mesmo para quem era contratado no mês seguinte), e o piso é o da parcela, não um mínimo inteiro.
+    const parcelas = sd ? Math.min(sd.meses, Math.max(1, Math.round(anos * 1.5))) : 0;
+    const seguro = sd ? Math.round(Math.min(minimo * 1.48, Math.max(minimo * 0.6, e.salario * sd.reposicao)) * parcelas) : 0;
     v.financas.conta += fgts + seguro;
     if (fgts + seguro > 0) lancar(v, `Rescisão: ${[fgts > 0 ? lei.rescisao.nome : '', seguro > 0 ? 'seguro-desemprego' : ''].filter(Boolean).join(' e ')}`, 'renda', fgts + seguro);
     const motivo = e.desempenho < 35 ? 'O desempenho vinha caindo.' : epoca > 0.2 && r.chance(0.6) ? 'A função vinha sendo automatizada.' : '';
@@ -823,6 +827,10 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   } else {
     escrever(v, { texto: `O trabalho como ${nome} minguou até acabar.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
   }
+  // REWORK 9.7 · ECO-01: a demissão acontece no fechamento do trabalho, antes das contas do ano — o salário dos meses
+  // trabalhados nesse ano não entrava (o texto dizia "depois de 1 ano", e a conta, nada). Em média, meio ano.
+  const meses = Math.min(6, Math.max(0, v.t - e.tInicio));
+  if (meses > 0) { const pago = Math.round(remuneracaoDe(e).liquido * meses); v.financas.conta += pago; lancar(v, 'Salário até a demissão', 'renda', pago); }
   encerrarEmprego(v, 'demissão');
   abalar(v, 'a demissão', -10, 12);
   return true;
@@ -1143,7 +1151,10 @@ export function valorAposentadoria(v: Vida): number {
   const media = salarios.length ? salarios.reduce((s, x) => s + x, 0) / salarios.length : piso;
   const anos = Math.floor(t.contribuicao / 12);
   const minimo = prev.anos[v.eu.genero === 'feminino' ? 1 : 0];
-  const pct = Math.min(1, prev.reposicao + Math.max(0, anos - minimo) * 0.02);
+  // REWORK 9.7 · ECO-01: o acréscimo de 2% por ano além do mínimo é a regra do INSS. Aplicado em todo país — com
+  // mínimos de 1 a 5 anos (França, Alemanha) —, a reposição batia 100% e a aposentadoria passava do salário líquido da
+  // ativa (1,8× na Alemanha). Fora do Brasil, o tempo a mais pesa pouco (a reposição do país já é a da carreira).
+  const pct = Math.min(1, prev.reposicao + Math.max(0, anos - minimo) * (pais === 'BR' ? 0.02 : 0.005));
   const teto = parametrosFiscais(pais).teto;
   return Math.round(clamp(media * pct, piso, Number.isFinite(teto) ? Math.max(piso, teto) : Math.max(piso, media)));
 }
@@ -1190,6 +1201,11 @@ function aposentadoriaAutomatica(v: Vida): void {
   if (v.trabalho.aposentadoria || i < 65) return;
   if (podeAposentar(v).grau === 'permitido') return; // essa é escolha do jogador
   if (!temFato(v, 'bpc')) {
+    // REWORK 9.7 · ECO-01: a assistência é para quem não tem como se manter (antes, sem teste: BPC com R$ 1 milhão na
+    // conta). Renda própria baixa e pouco patrimônio guardado.
+    const minimo = salarioMinimoDoPais(paisDaVida(v));
+    const guardado = Math.max(0, v.financas.conta) + v.financas.investimentos.reduce((s, a) => s + a.valor, 0);
+    if (rendaPropriaMensal(v) > minimo * 0.5 || guardado > minimo * 60) return;
     marcarFato(v, 'bpc');
     // A assistência para o idoso sem contribuição: no Brasil, o BPC (um salário mínimo); fora, a do perfil do país, ou
     // uma pensão assistencial genérica (abstração declarada: 70% do mínimo).

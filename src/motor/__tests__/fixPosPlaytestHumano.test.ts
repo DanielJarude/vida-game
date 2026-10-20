@@ -346,6 +346,9 @@ describe('E — da amizade ao romance: dá para tentar, e a resposta não é gar
     for (let k = 0; k < 24; k++) {
       let v = adulto(27, { semente: 51, genero: 'masculino' });
       v.rng = (v.rng + k * 7919) >>> 0;
+      // REWORK 9.7: a amiga muda a cada volta (o id dela, e com ele o temperamento) — "depende da outra pessoa". Antes, o id
+      // era sempre o mesmo e só o acaso do dia variava: o teste dependia de qual amiga a semente sorteava.
+      v.seq += k * 5;
       const { p } = amigaDe(v, 72, 'homens');
       v = executar(v, { tipo: 'pessoa', pessoaId: p.id, interacao: 'demonstrar_interesse' }).vida;
       const rom = v.vinculos[p.id].romance;

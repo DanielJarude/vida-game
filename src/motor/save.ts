@@ -103,7 +103,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') normalizarRework75(r.vida);
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); }
   return r;
 }
 
@@ -1548,6 +1548,19 @@ function validarRework75(d: Record<string, unknown>): string | null {
  * de `tMorte` (o motor contava até o fim do ano: "morreu aos 76" na história de vocês, "aos 75" na ficha). Só se
  * corrige o número quando ele é exatamente o do erro (um a mais que a idade verdadeira) — nada mais é reescrito.
  */
+/**
+ * REWORK 9.7 · NPC-02: os irmãos de partida não sabiam de quem eram filhos (`genitores`): a herança real os deixava de
+ * fora e a história de saúde da família não chegava a eles. Ganham os pais da vida — os mesmos do jogador.
+ */
+export function normalizarRework97(v: Vida): void {
+  const pais = Object.entries(v.vinculos ?? {}).filter(([, x]) => x.parentesco === 'mae' || x.parentesco === 'pai').map(([id]) => id).filter(id => v.pessoas?.[id]);
+  if (!pais.length) return;
+  for (const [id, x] of Object.entries(v.vinculos ?? {})) {
+    const p = v.pessoas?.[id];
+    if (x.parentesco === 'irmao' && p && !p.genitores?.length) p.genitores = [...pais];
+  }
+}
+
 export function normalizarRework75(v: Vida): void {
   for (const p of Object.values(v.pessoas ?? {})) {
     if (p.vivo || p.tMorte === undefined) continue;

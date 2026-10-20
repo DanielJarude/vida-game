@@ -203,8 +203,10 @@ describe('F · a trajetória militar registra os marcos reais', () => {
     }).vida;
     v = recarregar(v);
     const tr = trajetoriasDaVida(v).find(t => t.area === 'militar')!;
-    expect(tr.realizacoes.some(x => /^Ingresso: soldado/.test(x))).toBe(true);
-    expect(tr.realizacoes.some(x => /^Deu baixa do Exército em \d{4}, com o certificado de reservista/.test(x))).toBe(true);
+    expect(tr.realizacoes.some(x => /^Ingresso: (soldado|marinheiro|recruta)/.test(x))).toBe(true);
+    // REWORK 9.7: a Força do serviço inicial é a de perto (o litoral puxa para a Marinha); antes, o hash sem mistura dava
+    // quase sempre a mesma resposta — e o teste dependia dela.
+    expect(tr.realizacoes.some(x => /^Deu baixa d[ao] (Exército|Marinha|Aeronáutica) em \d{4}, com o certificado de reservista/.test(x))).toBe(true);
     expect(tr.realizacoes.some(x => /^Engajou: 8 anos/.test(x))).toBe(true);
     expect(tr.realizacoes.length).toBeLessThanOrEqual(4);
   });

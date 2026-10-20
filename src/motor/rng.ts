@@ -71,6 +71,22 @@ export function sementeAleatoria(): number {
 export const clamp = (v: number, min = 0, max = 100) => Math.max(min, Math.min(max, v));
 
 /**
+ * REWORK 9.7 · a mistura final (avalanche, do murmur3) para um FNV-1a. Sem ela, chaves que só mudam no fim ("…:2057",
+ * "…:2058"; "…:alt:a", "…:alt:b") dão números quase iguais: o edital abria por décadas seguidas, as três parcelas da
+ * altura andavam juntas (o desvio triplicava). A mesma que `rural` usa desde o REWORK 7.5.
+ */
+export function misturar(h: number): number {
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return h >>> 0;
+}
+/** FNV-1a de um texto com a mistura final, em [0, 1]. */
+export function hashMisturado(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return misturar(h) / 4294967295;
+}
+
+/**
  * Um gerador DERIVADO: semente tirada de partes estáveis (o id da vida, o
  * sistema, o instante). Os sistemas do REWORK 3 sorteiam por aqui para não
  * mexer na sequência do gerador principal — a mesma semente com os mesmos

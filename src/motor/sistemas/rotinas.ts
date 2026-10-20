@@ -18,7 +18,8 @@ import { praticandoPor } from './progressao';
 import { paisCorrente } from '../mundo/moeda';
 import { bonusDaAtividade } from './coisas';
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
+import { lesaoAtiva, lesionar } from './lesoes';
 import type { Dominio, Rotina, Traco, Vida } from '../tipos';
 import { escrever, filhos, idade, marcarFato, temFato, parceiro, parentes, somarExperiencia } from '../nucleo';
 import { bloqueio, type Veredito } from '../plausibilidade';
@@ -792,6 +793,13 @@ export function processarRotinas(v: Vida, r: Rng, presenca: Record<string, numbe
     // REWORK 9: a agenda — as vezes que não têm horário (ou que outro compromisso atravessa) não acontecem.
     const vezes = presenca[rot.id] ?? 1;
     const peso = (n === 1 ? 0.5 : n === 2 ? 1 : 1.6) * vezes;
+    // REWORK 9.7 · BAL-01: o esporte amador também machuca (antes, só a base e o profissional se lesionavam: treinar a
+    // sério na infância não tinha custo nenhum). Pouco, e quase sempre leve: ~1–3% ao ano por atividade, a metade na
+    // criança; a lesão é a de sempre (a decisão de cuidado, a recuperação). Sorteio derivado: não mexe na vida.
+    if (m.categoria === 'esporte' && vezes > 0 && v.caminhos.esporte?.fase !== 'base' && v.caminhos.esporte?.fase !== 'profissional' && !lesaoAtiva(v)) {
+      const rl = rngDe(v.id, 'lesao_pratica', v.t, rot.id);
+      if (rl.chance(0.012 * nm.tempo * (n >= 2 ? 1.5 : 1) * vezes * (i < 12 ? 0.5 : 1))) lesionar(v, rl, rl.chance(0.15) ? 2 : 1, 'pratica');
+    }
     if (m.pratica) {
       for (const [d, w] of Object.entries(m.pratica) as [Dominio, number][]) {
         // O que se tem em casa (o instrumento, o notebook, a câmera) faz a mesma hora render mais (`coisas`).

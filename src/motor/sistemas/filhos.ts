@@ -89,7 +89,8 @@ function hash(s: string): number {
 export function garantirVida(p: Pessoa): NonNullable<Pessoa['vida']> {
   if (!p.vida) {
     p.vida = {
-      aptidao: Math.round((hash(p.id + 'apt') * 2 - 1) * 0.5 * 100) / 100,
+      // REWORK 9.7: `+ 0` tira o −0 (o arredondamento de um negativo pequeno), que o JSON grava como 0 — o save não voltava igual.
+      aptidao: Math.round((hash(p.id + 'apt') * 2 - 1) * 0.5 * 100) / 100 + 0,
       escolaridade: 'fundamental',
       experiencia: 0,
       trajetoria: []
@@ -559,6 +560,20 @@ export function ocupacaoDeAdulto(p: Pessoa, escolaridade: string, i: number): Oc
  * casa, a tela e o orçamento passam a concordar). Promoção não vem por
  * idade: vem de tempo no cargo, experiência e aptidão.
  */
+/**
+ * REWORK 9.7 · NPC-02: um adulto que passa a trabalhar ganha um CARGO de verdade — pelo que estudou, no país onde mora —,
+ * com o nome e a renda dele, juntos. Antes, conhecidos ganhavam uma renda de 1.500 a 8.000 (em qualquer moeda) sem
+ * cargo, e irmãos ganhavam um cargo da lista da classe sem olhar a escolaridade (auditor fiscal sem faculdade).
+ */
+export function empregarAdulto(v: Vida, p: Pessoa, i = idadePessoa(v, p)): boolean {
+  const oc = ocupacaoDeAdulto(p, garantirVidaEm(v, p).escolaridade, i);
+  if (!oc) return false;
+  p.ocupacaoId = oc.id;
+  p.ocupacao = nomeOc(p, oc);
+  p.renda = liquido(salarioLocal(oc, p.municipioId), oc.contrato, paisDaCidade(p.municipioId));
+  return true;
+}
+
 export function carreiraDeAdulto(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, cota: Cota, doJogador: boolean): 'perdeu' | 'arrumou' | undefined {
   const i = idadePessoa(v, p);
   if (i < 18 || p.especie) return undefined;

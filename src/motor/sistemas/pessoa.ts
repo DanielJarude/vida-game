@@ -113,21 +113,26 @@ export function pisoDeForma(i: number): number {
  * predisposição só desloca um pouco (e muda o quanto o treino rende, abaixo). Amplitude: 30 até os 10, caindo até 12
  * aos 15.
  */
+// REWORK 9.7 · ATR-02: a amplitude adulta era 12 e o termo da predisposição no treino ±6 — com o mesmo treino, o físico
+// escolhido 20 e o 85 terminavam 36 pontos longe (mais do que sem treino nenhum, 24): a predisposição pesava mais que
+// o treino, ao contrário do que esta conta promete. Agora 7 e ±4.
 export function amplitudeDaPredisposicaoFisica(i: number): number {
-  return i < 10 ? 30 : i < 15 ? Math.round((30 - (i - 9) * 3.6) * 10) / 10 : 12;
+  return i < 10 ? 30 : i < 15 ? Math.round((30 - (i - 9) * 4.6) * 10) / 10 : 7;
 }
 export const pisoDaPessoa = (v: Vida, i = idade(v)) => pisoDeForma(i) + predisposicao(v, 'fisica') * amplitudeDaPredisposicaoFisica(i);
 
 /** O piso está caindo por causa da idade (o fim da infância), nesta idade? */
 export const infanciaFicandoParaTras = (i: number) => i >= 10 && i < 15;
 
+// REWORK 9.7 · ATR-02: a criança que joga bola duas vezes por semana chegava a 97 (o teto do atleta adulto) aos 10.
+// O corpo da criança tem o seu teto (88) e responde menos ao treino (0,6) do que o do adolescente.
 function tetoDeForma(i: number): number {
-  return i < 30 ? 97 : Math.max(50, Math.round(97 - (i - 30) * 0.6));
+  return i < 14 ? 88 : i < 30 ? 97 : Math.max(50, Math.round(97 - (i - 30) * 0.6));
 }
 
 function fatorIdadeTreino(i: number): number {
   // O corpo responde cada vez mais ao treino na adolescência (rampa, sem degrau aos 14).
-  return i < 10 ? 0.8 : i < 14 ? 0.8 + (i - 9) * 0.04 : i <= 35 ? 1 : i < 50 ? 0.9 : i < 65 ? 0.8 : 0.65;
+  return i < 10 ? 0.6 : i < 14 ? 0.6 + (i - 9) * 0.08 : i <= 35 ? 1 : i < 50 ? 0.9 : i < 65 ? 0.8 : 0.65;
 }
 
 /**
@@ -147,7 +152,7 @@ export function fatoresCondicionamento(v: Vida): Fator[] {
     const ft = fatorDeTreino(v);
     const comLesao = ft < 0.95 && est.fontes.some(f => !NAO_E_TREINO.has(f.id) && f.id !== 'farda' && f.id !== 'obra') ? (ft <= 0.6 ? ' (bem reduzido pela lesão)' : ' (reduzido pela lesão)') : '';
     out.push({ id: 'treino', texto: (nomes.length > 1 ? `${nomes[0]} e ${nomes[1]}` : nomes[0]) + comLesao, efeito: efetivo(est.total) * 40 * fatorIdadeTreino(i) });
-    if (Math.abs(fis) >= 0.25) out.push({ id: 'predisposicao', texto: fis > 0 ? 'um corpo que responde rápido ao treino' : 'um corpo que custa a responder ao treino', efeito: fis * 6 * Math.min(1, est.total) });
+    if (Math.abs(fis) >= 0.25) out.push({ id: 'predisposicao', texto: fis > 0 ? 'um corpo que responde rápido ao treino' : 'um corpo que custa a responder ao treino', efeito: fis * 4 * Math.min(1, est.total) });
   }
   if (i >= 14) {
     if (c.habitos.fuma) out.push({ id: 'fuma', texto: 'o cigarro', efeito: -6 });

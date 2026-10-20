@@ -30,6 +30,8 @@ import { contaAtiva, fecharBalanco } from '../sistemas/redesBase';
 import { IDADE_AMADOR, fatorDaIdadeAmadora } from '../sistemas/esporte';
 import { competicaoDe } from '../sistemas/palmares';
 import { perfilDoPais } from '../mundo/registro';
+import { cidadesDoPais } from '../dados/lugares';
+import { salarioMinimoDoPais } from '../mundo/economia';
 
 const resolver = (v: Vida): Vida => {
   for (let k = 0; k < 12 && v.momento && !v.morte; k++) {
@@ -325,5 +327,140 @@ describe('P0 · a agenda do estágio de meio período com curso técnico (estour
       expect(trabalho!.turno).not.toBe(curso!.turno);
       expect(() => avancarAno(v)).not.toThrow();
     }
+  });
+});
+
+/* ================================================================ Fase B — balanceamento */
+
+import { fatoresCabeca } from '../sistemas/estado';
+import { encaixe, cargaDaAtividade } from '../sistemas/semana';
+import { valorAposentadoria } from '../sistemas/trabalho';
+import { normalizarRework97 } from '../save';
+import { empregarAdulto } from '../sistemas/filhos';
+import { estaturaAdulta } from '../sistemas/modalidades';
+import { editalAberto } from '../sistemas/concurso';
+import { ocupacao } from '../dados/ocupacoes';
+import { pessoaNova } from './cenarios';
+import { tetoDeAprendizado } from '../sistemas/pessoa';
+
+describe('ROT-04 · a semana da criança', () => {
+  it('aos 9, com futebol (a sério), arte marcial e dança, a natação ainda cabe — com o preço dito; uma quinta coisa, não', () => {
+    const v = transacao(viverAte(nova({ semente: 19, municipioId: 'sao-paulo-sp' }), 9), x => {
+      x.rotinas = [{ id: 'futebol', tInicio: x.t - 12, nivel: 2 }, { id: 'lutas', tInicio: x.t - 12, nivel: 1 }, { id: 'danca', tInicio: x.t - 12, nivel: 1 }];
+      x.educacao.postura = 'normal'; x.agenda = undefined; x.momento = null; x.financas.conta = 50000;
+    }).vida;
+    const nat = encaixe(v, cargaDaAtividade('natacao', 1, 9).carga, 'natacao');
+    expect(nat.possivel).toBe(true);
+    expect(['cheia', 'sobrecarregada']).toContain(nat.faixa);
+    // a aula da criança é de uma hora: pesa 2/3 da de adulto
+    expect(cargaDaAtividade('futebol', 2, 9).carga).toBeLessThan(cargaDaAtividade('futebol', 2, 30).carga);
+    const com = transacao(v, x => { x.rotinas.push({ id: 'natacao', tInicio: x.t, nivel: 1 }); }).vida;
+    expect(encaixe(com, cargaDaAtividade('ingles', 1, 9).carga + 0.5, 'ingles').possivel).toBe(false);
+  });
+});
+
+describe('BAL-01 · o tempo livre vale alguma coisa; a dedicação custa alguma coisa', () => {
+  it('a semana com folga de verdade alivia a cabeça; estudar com dedicação pesa um pouco; estudar o mínimo alivia', () => {
+    const base = transacao(viverAte(nova({ semente: 23 }), 12), x => { x.rotinas = []; x.momento = null; }).vida;
+    const ids = (v: Vida) => fatoresCabeca(v).map(f => f.id);
+    const ded = transacao(base, x => { x.educacao.postura = 'dedicada'; }).vida;
+    const rel = transacao(base, x => { x.educacao.postura = 'relaxada'; }).vida;
+    expect(fatoresCabeca(ded).find(f => f.id === 'dedicacao')!.efeito).toBeGreaterThan(0);
+    expect(fatoresCabeca(rel).find(f => f.id === 'dedicacao')!.efeito).toBeLessThan(0);
+    expect(ids(rel)).toContain('descanso');
+  });
+});
+
+describe('ATR-02 · os atributos', () => {
+  it('a faculdade não empurra a inteligência por fora do teto (antes: +2 fixos por ano)', () => {
+    let v = transacao(adulto(20, { semente: 61 }), x => {
+      x.mente.cognicao = tetoDeAprendizado(x);
+      x.educacao.basica = undefined;
+      x.educacao.matricula = { cursoId: 'administracao', instituicao: 'a faculdade', rede: 'privada', modalidade: 'presencial', tInicio: x.t - 12, mesesRestantes: 36, mensalidade: 0, desempenho: 60, trancado: false, municipioId: x.moradia.municipioId };
+      x.momento = null;
+    }).vida;
+    const teto = tetoDeAprendizado(v);
+    for (let k = 0; k < 3; k++) v = resolver(avancarAno(v).vida);
+    expect(v.mente.cognicao).toBeLessThanOrEqual(teto + 1.5);
+  });
+
+  it('a predisposição física desloca, não decide: o mesmo treino, 20 × 85, fica a menos de 25 pontos', () => {
+    const treina = (fis: number) => {
+      let v = nova({ semente: 71, atributos: { saude: 85, fisico: fis, felicidade: 70, beleza: 50, inteligencia: 50 } });
+      v = viverAte(v, 25);
+      v = transacao(v, x => { x.rotinas = x.rotinas.filter(r => r.id !== 'academia'); x.rotinas.push({ id: 'academia', tInicio: x.t, nivel: 2 }); x.momento = null; }).vida;
+      for (let k = 0; k < 8; k++) v = transacao(resolver(avancarAno(v).vida), x => { if (!x.rotinas.some(r => r.id === 'academia')) x.rotinas.push({ id: 'academia', tInicio: x.t, nivel: 2 }); }).vida;
+      return v.corpo.forma;
+    };
+    expect(Math.abs(treina(85) - treina(20))).toBeLessThan(25);
+  }, 400000);
+});
+
+describe('NPC-02 · as pessoas do mundo', () => {
+  it('os irmãos de partida são filhos dos mesmos pais; o save antigo ganha isso ao carregar', () => {
+    for (let s = 0; s < 8; s++) {
+      const v = nova({ semente: 400 + s * 3, municipioId: 'recife-pe' });
+      const pais = Object.entries(v.vinculos).filter(([, x]) => x.parentesco === 'mae' || x.parentesco === 'pai').map(([id]) => id);
+      for (const [id, x] of Object.entries(v.vinculos)) if (x.parentesco === 'irmao') for (const p of pais) expect(v.pessoas[id].genitores).toContain(p);
+      const velho = transacao(v, x => { for (const [id, y] of Object.entries(x.vinculos)) if (y.parentesco === 'irmao') x.pessoas[id].genitores = undefined; }).vida;
+      normalizarRework97(velho);
+      for (const [id, x] of Object.entries(velho.vinculos)) if (x.parentesco === 'irmao') expect(velho.pessoas[id].genitores?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('quem não estudou não ganha cargo de formação superior', () => {
+    const v = adulto(30, { semente: 81 });
+    for (let k = 0; k < 40; k++) {
+      const p = pessoaNova(v, 25 + (k % 20), k % 2 ? 'masculino' : 'feminino');
+      p.vida = { ...(p.vida ?? {}), escolaridade: 'fundamental' } as never;
+      if (empregarAdulto(v, p)) {
+        const oc = ocupacao(p.ocupacaoId!);
+        expect(oc.escolaridade).not.toBe('superior');
+        expect(oc.concurso).toBeFalsy();
+        expect(p.renda).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe('ECO-01 · o dinheiro', () => {
+  it('fora do Brasil, a aposentadoria não passa a reposição do país por anos a mais (antes: 100% em França e Alemanha)', () => {
+    const v = transacao(adulto(65, { semente: 91 }), x => {
+      x.trabalho.contribuicao = 40 * 12;
+      x.trabalho.historico = [{ ocupacaoId: 'assistente_adm', empregador: 'x', contrato: 'clt', salario: 9000, tInicio: x.t - 480, tFim: x.t - 1 } as never];
+      x.trabalho.atual = undefined;
+    }).vida;
+    // No Brasil, 40 anos dão o acréscimo do INSS (0,6 + 2% por ano além do mínimo, até 100%, limitado ao teto).
+    expect(valorAposentadoria(v)).toBeGreaterThan(8000);
+    // Na Alemanha, a reposição do país, com pouco acréscimo: nunca o salário inteiro.
+    const de = cidadesDoPais('DE')[0].id;
+    const alemao = transacao(v, x => { x.moradia.municipioId = de; for (const h of x.trabalho.historico) h.municipioId = de; }).vida;
+    const prev = perfilDoPais('DE').trabalho.previdencia;
+    expect(valorAposentadoria(alemao)).toBeLessThanOrEqual(Math.max(salarioMinimoDoPais('DE'), 9000 * Math.min(1, prev.reposicao + (40 - prev.anos[0]) * 0.005) + 1));
+  });
+
+  it('um acontecimento não tira dinheiro que não existe', async () => {
+    const { dinheiro } = await import('../conteudo/efeitos');
+    const v = transacao(adulto(20, { semente: 92 }), x => { x.financas.conta = 300; }).vida;
+    const n = transacao(v, x => { dinheiro({ v: x } as never, -1500); }).vida;
+    expect(n.financas.conta).toBe(0);
+  });
+});
+
+describe('Hashes · a mistura final onde o viés aparecia', () => {
+  it('a estatura tem o espalhamento de uma população (antes: desvio triplicado, 20% dos homens acima de 1,90 m)', () => {
+    const alturas: number[] = [];
+    for (let k = 0; k < 600; k++) alturas.push(estaturaAdulta({ id: `v${k}`, eu: { genero: 'masculino' }, predisposicoes: { fisica: 0 } } as never));
+    const altos = alturas.filter(x => x >= 190).length / alturas.length;
+    expect(altos).toBeLessThan(0.1);
+    expect(alturas.filter(x => x <= 160).length / alturas.length).toBeLessThan(0.08);
+  });
+
+  it('o edital não abre por décadas seguidas: nos anos seguidos, abre e fecha', () => {
+    const v = adulto(30, { semente: 93, municipioId: 'recife-pe' });
+    const oc = ocupacao('guarda_municipal');
+    let trocas = 0, antes: boolean | undefined;
+    for (let a = 0; a < 40; a++) { const x = editalAberto(transacao(v, y => { y.t += a * 12; }).vida, oc); if (antes !== undefined && x !== antes) trocas++; antes = x; }
+    expect(trocas).toBeGreaterThan(6);
   });
 });

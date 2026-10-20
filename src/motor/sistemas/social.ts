@@ -22,7 +22,7 @@ import { cidadesDoPais, municipio, paisDaCidade } from '../dados/lugares';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { flex } from '../texto';
 import { rngDe } from '../rng';
-import { carreiraDeAdulto } from './filhos';
+import { carreiraDeAdulto, empregarAdulto } from './filhos';
 import { registrarFase } from './relacoes';
 import { ehAmizade, romper } from './lacos';
 
@@ -353,10 +353,10 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
       const res = carreiraDeAdulto(v, rngDe(v.id, 'carreira', p.id, v.t), p, vin, cota, romance);
       if (res === 'perdeu' && romance) v.mente.estresse = clamp(v.mente.estresse + 6);
     } else if (i >= 18 && (p.ocupacao === 'estudante' || (!p.ocupacao && p.renda === 0))) {
-      if (r.chance(i >= 23 ? 0.6 : 0.3)) {
+      if (r.chance(i >= 23 ? 0.6 : 0.3) && !empregarAdulto(v, p, i)) {
         const nivel = hash(p.id) ; // cada pessoa tem sua sorte, estável
         p.renda = Math.round((1500 + nivel * 6500 + (i >= 30 ? 1500 : 0)) / 10) * 10;
-        p.ocupacao = undefined;
+        p.ocupacao = undefined; p.ocupacaoId = undefined;
       }
     } else if (p.renda > 0 && i < 65 && r.chance(0.05)) {
       p.renda = 0;
@@ -364,8 +364,11 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
       // O cargo acompanha a renda: quem perdeu o trabalho não segue "empregado" no cabeçalho.
       if (p.ocupacaoId || (p.ocupacao && p.ocupacao !== 'estudante')) { p.ocupacao = flex(p.genero, 'desempregado', 'desempregada', 'desempregade'); p.ocupacaoId = undefined; }
     } else if (p.renda === 0 && i >= 18 && i < 65 && r.chance(0.5)) {
-      p.renda = Math.round((1500 + hash(p.id) * 6500) / 10) * 10;
-      if (p.ocupacao?.startsWith('desempregad')) p.ocupacao = undefined;
+      if (!empregarAdulto(v, p, i)) {
+        p.renda = Math.round((1500 + hash(p.id) * 6500) / 10) * 10;
+        if (p.ocupacao?.startsWith('desempregad')) p.ocupacao = undefined;
+        p.ocupacaoId = undefined;
+      }
     } else if (i >= 65 && p.renda > 0 && r.chance(0.3)) {
       p.renda = Math.max(1620, Math.round(p.renda * 0.7));
       p.ocupacao = p.genero === 'feminino' ? 'aposentada' : 'aposentado';

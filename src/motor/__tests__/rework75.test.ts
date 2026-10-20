@@ -141,8 +141,11 @@ describe('conversar, passar um tempo, carinho: situações, não rodízio de fra
   it('passar o tempo não vira marco toda vez (cinco anos de tardes: no máximo dois marcos novos)', () => {
     let v = adulto(30, { semente: 43 });
     const p = amigaDe(v);
+    // REWORK 9.7: a pré-condição dita — a vida da amiga não tem marcos próprios no período (já casada, com saúde): o que
+    // se mede são as tardes. Antes, dependia de a semente não sortear o casamento ou uma internação dela.
+    const par = pessoaNova(v, 31, 'masculino'); p.parceiroId = par.id; par.parceiroId = p.id; p.saude = 95;
     const antes = v.vinculos[p.id].historia.length;
-    for (let k = 0; k < 5; k++) { v = fazer(v, p.id, 'tempo').vida; v = umAno(v); }
+    for (let k = 0; k < 5; k++) { v = transacao(fazer(v, p.id, 'tempo').vida, x => { x.pessoas[p.id].saude = 95; }).vida; v = umAno(v); }
     expect(v.vinculos[p.id].historia.length - antes).toBeLessThanOrEqual(2);
   });
 

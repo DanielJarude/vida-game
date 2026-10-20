@@ -33,7 +33,7 @@ import { ajudaMensalDaFamilia, apoioEmCasa, apoioPossivel, cambioDaFamilia, cont
 import { custoDoEstudo } from './custoDoEstudo';
 import { rendaDoPalcoParalelo } from './palco';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
-import { remuneracaoDe } from './renda';
+import { irpf, mesesPagos, remuneracaoDe } from './renda';
 import { fazCursinho } from './vestibular';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -138,7 +138,14 @@ function entradasProprias(v: Vida): LinhaRazao[] {
   if (rede > 0) out.push({ rotulo: 'Publicidade e parcerias na rede', valor: rede, grupo: 'renda', de: 'eu' });
   const imagem = rendaDeImagem(v);
   if (imagem > 0) out.push({ rotulo: 'Patrocínio e publicidade', valor: imagem, grupo: 'renda', de: 'eu' });
-  if (v.trabalho.aposentadoria) out.push({ rotulo: temFato(v, 'bpc') ? rotuloAssistencia(v) : 'Aposentadoria', valor: Math.round(v.trabalho.aposentadoria.beneficio * 13 / 12), grupo: 'renda', de: 'governo' });
+  // REWORK 9.7 · ECO-01: o benefício cai líquido do imposto de renda do país (sem contribuição) e com os meses que o país
+  // paga (13 no Brasil, 14 em Portugal, 12 onde não há) — antes, bruto e ×13/12 em todo lugar.
+  if (v.trabalho.aposentadoria) {
+    const pais = paisDaVida(v);
+    const b = v.trabalho.aposentadoria.beneficio;
+    const bpc = temFato(v, 'bpc');
+    out.push({ rotulo: bpc ? rotuloAssistencia(v) : 'Aposentadoria', valor: Math.round((bpc ? b : b - irpf(b, pais)) * mesesPagos('servidor', pais) / 12), grupo: 'renda', de: 'governo' });
+  }
   const m = v.educacao.matricula;
   if (m && !m.trancado) {
     const bolsa = curso(m.cursoId).bolsa;

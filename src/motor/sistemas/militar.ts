@@ -30,7 +30,7 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, hashMisturado } from '../rng';
 import type { CarreiraMilitar, Emprego, Especialidade, Forca, Vida } from '../tipos';
 import { escrever, idade, marcarFato, parceiro, temFato, somarExperiencia } from '../nucleo';
 import { ocupacao, type Ocupacao } from '../dados/ocupacoes';
@@ -105,7 +105,7 @@ function hash(s: string): number {
 export function forcaProvavel(v: Vida): Forca {
   if (v.caminhos.militar) return v.caminhos.militar.forca;
   const aqui = v.moradia.municipioId;
-  const x = hash(`${v.id}:forca:${anoDe(v.t)}`);
+  const x = hashMisturado(`${v.id}:forca:${anoDe(v.t)}`);
   const mar = GUARNICOES.marinha.includes(aqui) || (pertoDaAgua(aqui) && municipio(aqui).capital);
   const ar = GUARNICOES.aeronautica.includes(aqui);
   if (mar && x < 0.35) return 'marinha';

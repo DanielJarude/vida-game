@@ -36,6 +36,8 @@ import { chefiaAtual, temChefia } from './profissao';
 import { emRecessao } from '../nucleo';
 import { economiaLocal } from '../dados/lugares';
 import { dinheiro } from '../texto';
+import { ocupacao } from '../dados/ocupacoes';
+import { liquido, salarioLocal } from './renda';
 
 /** O que marca, na Linha da Vida, que foi o mundo (e não o jogador) quem fez acontecer. */
 const MUNDO = 'mundo';
@@ -115,6 +117,8 @@ function anoNoTrabalho(v: Vida, r: Rng, pode: () => boolean, conta: () => void):
     if (antigo) { v.vinculos[antigo.id].ambiente = undefined; antigo.ocupacao = flexo(antigo, 'gestor em outra empresa', 'gestora em outra empresa'); }
     const novo = criarPessoa(v, r, { idade: r.int(32, 56), municipioId: v.moradia.municipioId, ocupacao: '' });
     novo.ocupacao = flexo(novo, 'gestor', 'gestora');
+    // REWORK 9.7 · NPC-02: quem chefia ganha o que um gestor ganha (antes, renda 0 para sempre).
+    novo.renda = liquido(salarioLocal(ocupacao('coordenador_adm'), novo.municipioId), 'clt', paisDaCidade(novo.municipioId));
     const vin = vincular(v, novo, { origem: 'trabalho', proximidade: 22, confianca: 25, estagio: 'colega', convivio: ['trabalho'] });
     vin.ambiente = chave;
     const exigente = novo.temperamento.afabilidade < 0;
@@ -179,9 +183,13 @@ function acontecerCom(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): boolean {
     return true;
   }
   // Um amigo abre um negócio (a vida dele muda de rumo — e a sua cidade ganha um endereço).
-  if (amigo && ip >= 26 && ip <= 60 && !p.ocupacao?.startsWith('dono') && r.chance(0.025)) {
+  // REWORK 9.7 · NPC-02: só quem trabalha "larga o emprego" para abrir um negócio — e o negócio vira o cargo e a renda
+  // dele (antes, só o rótulo mudava: "dono de uma empresa de software" com o cargo de manicure e renda zero).
+  if (amigo && ip >= 26 && ip <= 60 && p.renda > 0 && !p.ocupacao?.startsWith('dono') && !p.ocupacao?.startsWith('aposentad') && p.ocupacao !== 'estudante' && r.chance(0.025)) {
     const ramo = r.pick(['uma lanchonete', 'uma oficina', 'um salão', 'uma loja de roupas', 'uma padaria', 'um estúdio de tatuagem', 'uma pequena empresa de software', 'uma academia de bairro']);
     p.ocupacao = flexo(p, `dono de ${ramo}`, `dona de ${ramo}`);
+    p.ocupacaoId = 'dono_comercio';
+    p.renda = liquido(salarioLocal(ocupacao('dono_comercio'), p.municipioId, 0.7 + r.next() * 0.6), 'autonomo', paisDaCidade(p.municipioId));
     garantirVida(p).trajetoria.push({ t: v.t, texto: `Abriu ${ramo}.`, tipo: 'trabalho' });
     noticia(v, 'pessoas', `${p.nome} largou o emprego e abriu ${ramo}${p.municipioId === v.moradia.municipioId ? ' — você foi à inauguração' : ''}.`, { pessoas: [p.id] });
     if (p.municipioId === v.moradia.municipioId && perto) lembrarCom(v, p.id, `A inauguração de ${ramo.replace(/^uma? /, 'a ')} de ${p.nome}.`, 'ritual', 1);

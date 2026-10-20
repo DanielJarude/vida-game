@@ -47,7 +47,7 @@ export const O_QUE_MOVE: Record<Atributo, string> = {
   saude: 'Hábitos (cigarro, bebida, movimento), a cabeça no limite, as doenças e o tratamento, as lesões e o cuidado escolhido, a idade, a constituição.',
   fisico: 'O treino da semana (esporte, academia, corrida, trabalho pesado), as lesões, o cigarro, a idade, a predisposição física.',
   felicidade: 'As relações, a família, o trabalho e os estudos, as conquistas, o luto, o lazer, o dinheiro apertado (ou folgado), o temperamento.',
-  beleza: 'Os traços de nascença, o corpo em forma, a saúde, o cansaço, o cuidado (e o dinheiro para ele), o estilo, os anos.',
+  beleza: 'Os traços de nascença, o corpo em forma, a saúde, o cansaço, o cuidado (e o dinheiro para ele), os procedimentos estéticos, os anos.',
   inteligencia: 'Ler, estudar, a escola e a faculdade, xadrez e programação — devagar, com teto — e, muito tarde, a idade.'
 };
 

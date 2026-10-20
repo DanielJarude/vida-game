@@ -43,7 +43,7 @@ export const MATURIDADE: Conteudo[] = [
     titulo: 'Tempo',
     texto: () => 'Aposentadoria trouxe uma coisa que faltou a vida inteira: tempo. A universidade aberta à terceira idade abriu inscrições.',
     opcoes: [
-      { id: 'sim', texto: 'Se inscrever', comportamento: { disciplina: 1 }, resolver: c => ({ texto: 'Às terças e quintas, sala de aula de novo — a mais velha da turma não é você.'.replace('a mais velha da turma não é você', `você não é ${c.g('o mais velho', 'a mais velha')} da turma`), memoria: 'Voltou a estudar na universidade aberta à terceira idade.', efeito: () => { c.v.mente.cognicao += 3; feliz(c, 5); fato(c, 'unati'); } }) },
+      { id: 'sim', texto: 'Se inscrever', comportamento: { disciplina: 1 }, resolver: c => ({ texto: 'Às terças e quintas, sala de aula de novo — a mais velha da turma não é você.'.replace('a mais velha da turma não é você', `você não é ${c.g('o mais velho', 'a mais velha')} da turma`), memoria: 'Voltou a estudar na universidade aberta à terceira idade.', efeito: () => { c.v.mente.cognicao = Math.min(100, c.v.mente.cognicao + 3); feliz(c, 5); fato(c, 'unati'); } }) },
       { id: 'nao', texto: 'Deixar para lá', resolver: () => ({ texto: 'O folheto ficou na geladeira.', memoria: null }) }
     ]
   },

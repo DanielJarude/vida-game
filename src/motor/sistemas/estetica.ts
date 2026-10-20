@@ -151,18 +151,20 @@ export function fazerProcedimento(v: Vida, r: Rng, id: IdProcedimento, clinica: 
   const nome = p.nome.toLowerCase();
   let texto: string;
   if (resultado === 'satisfatorio') {
-    v.corpo.aparencia = clamp(v.corpo.aparencia + 4); v.mente.felicidade = clamp(v.mente.felicidade + 5);
+    // REWORK 9.7 · ATR-02: o efeito no humor vem só do abalo (antes, também direto: +10 em vez de +5). E o resultado
+    // fica — a referência da aparência sobe junto (antes, o desenvolvimento anual puxava de volta em ~4 anos).
+    v.corpo.aparencia = clamp(v.corpo.aparencia + 4);
+    v.corpo.aparenciaBase = clamp((v.corpo.aparenciaBase ?? v.corpo.aparencia - 4) + 3);
     abalar(v, `o rosto novo no espelho`, 5, -2);
     texto = `${revisao ? 'A revisão deu certo. ' : ''}${p.recuperacao ? `${p.recuperacao === 1 ? 'Um mês' : `${p.recuperacao} meses`} de inchaço e paciência — e depois, ` : ''}o espelho devolveu o que você queria. Você se pegou olhando duas vezes.`;
   } else if (resultado === 'neutro') {
     v.corpo.aparencia = clamp(v.corpo.aparencia + 1);
     texto = `Ficou bem feito — e mais discreto do que você imaginava. Quem não sabia não reparou. Você reparou: valeu, mas não mudou a vida.`;
   } else if (resultado === 'abaixo') {
-    v.mente.felicidade = clamp(v.mente.felicidade - 6); v.mente.estresse = clamp(v.mente.estresse + 5);
     abalar(v, `o resultado da ${nome}`, -5, 4);
     texto = `Desinchou e não era aquilo. Não ficou feio — ficou outro. ${c.mao < 0.6 ? 'Na clínica, disseram que "é assim mesmo".' : 'O cirurgião ouviu e falou em revisão.'} Dá para revisar, pagando metade.`;
   } else {
-    v.corpo.saude = clamp(v.corpo.saude - (8 + r.int(0, 6))); v.mente.estresse = clamp(v.mente.estresse + 10); v.mente.felicidade = clamp(v.mente.felicidade - 8);
+    v.corpo.saude = clamp(v.corpo.saude - (8 + r.int(0, 6)));
     abalar(v, `a complicação da ${nome}`, -7, 8);
     texto = `Complicação: ${r.pick(['uma infecção que pediu antibiótico e mais um mês em casa', 'um hematoma que voltou para a mesa de cirurgia', 'uma cicatrização difícil, devagar, com curativo todo dia'])}. ${resultado === 'complicacao' && c.mao >= 0.7 ? 'A clínica acompanhou de perto.' : 'Você passou mais tempo no telefone com a clínica do que gostaria.'} Passou — e a saúde sentiu.`;
   }

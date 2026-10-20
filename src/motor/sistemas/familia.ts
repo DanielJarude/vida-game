@@ -15,7 +15,7 @@ import { sobrenomeDeQuemNasce } from '../dados/nomes';
 import { anosNoPais, nacionalidadesDaPessoa, nacionalidadesDaVida, nacionalidadesDoBebe } from '../mundo/vida';
 import type { Rng } from '../rng';
 import { paisDaCidade } from '../dados/lugares';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { Pessoa, Processo, Vida } from '../tipos';
 import {
   emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, temFato, vinculosVivos
@@ -34,7 +34,7 @@ import { dinheiro as fmt } from '../texto';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { sortearNome } from '../dados/nomes';
 import { registrarMortes } from './luto';
-import { garantirVida } from './filhos';
+import { empregarAdulto, garantirVida } from './filhos';
 import { abalar } from './abalo';
 import { lancar } from './extrato';
 
@@ -69,7 +69,13 @@ function heranca(v: Vida, r: Rng, falecido: Pessoa): void {
   if (falecido.posses || v.origem.reservaDe === falecido.id) { herancaReal(v, falecido, conjugeVivo ? v.pessoas[falecido.parceiroId!] : undefined); return; }
   if (conjugeVivo) return; // o cônjuge fica com a casa; a herança vem depois
   const classe = v.origem.classe;
-  const guardado = { vulneravel: 0, trabalhadora: 6000, media_baixa: 25000, media: 110000, alta: 900000 }[classe] * (0.4 + r.next());
+  const tabela = { vulneravel: 0, trabalhadora: 6000, media_baixa: 25000, media: 110000, alta: 900000 }[classe] * (0.4 + r.next());
+  // REWORK 9.7 · ECO-01: quando a casa de origem tem uma reserva acompanhada (`origem.reserva`, que cresceu e encolheu
+  // com a vida da família, e que os pedidos de ajuda gastaram), é ELA que se herda. Antes, a reserva sumia quando não
+  // restava ninguém e uma quantia da tabela da classe aparecia no lugar (dinheiro destruído e criado).
+  const reservaReal = Math.max(0, v.origem.reserva ?? 0);
+  const guardado = reservaReal > 0 ? reservaReal : tabela;
+  if (reservaReal > 0) v.origem.reserva = 0;
   const temCasa = r.chance({ vulneravel: 0.3, trabalhadora: 0.55, media_baixa: 0.7, media: 0.8, alta: 0.95 }[classe]);
   const modelo = modeloMoradia({ vulneravel: 'casa_simples', trabalhadora: 'casa_simples', media_baixa: 'casa_2q', media: 'casa_3q', alta: 'casa_grande' }[classe]);
   const valorCasa = temCasa ? Math.round(precoDeImovel(v, modelo, falecido.municipioId) * 0.85 / 1000) * 1000 : 0;
@@ -172,7 +178,11 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       p.aperto = { tipo: 'doenca', t: v.t };
       if (v.vinculos[p.id].proximidade >= 40) escrever(v, { texto: `${capital(seuSua(p, rotuloDeFamilia(v, p)))} ${p.nome} ficou internad${flex(p.genero, 'o', 'a', 'e')} por uns dias. Voltou para casa mais devagar.`, relevancia: 'cotidiano', tema: 'familia', tom: 'ruim', pessoas: [p.id] });
     }
-    if (v.vinculos[p.id].parentesco === 'avo') continue;
+    if (v.vinculos[p.id].parentesco === 'avo') {
+      // REWORK 9.7 · NPC-02: os avós também se aposentam (antes, o `continue` vinha antes: avó de 84 bancária).
+      if (p.ocupacao && p.renda > 0 && !p.ocupacao.startsWith('aposentad') && ip >= (p.genero === 'feminino' ? 62 : 65)) { p.ocupacao = flex(p.genero, 'aposentado', 'aposentada'); p.renda = Math.max(1620, Math.round(p.renda * 0.7)); }
+      continue;
+    }
     // Aposentadoria dos pais
     if (p.ocupacao && !p.ocupacao.startsWith('aposentad') && ip >= (p.genero === 'feminino' ? 62 : 65) && r.chance(0.6)) {
       p.ocupacao = flex(p.genero, 'aposentado', 'aposentada');
@@ -208,6 +218,16 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
         if (i < 25 && moraComFamiliaDeOrigem(v)) escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} arrumou trabalho de novo, como ${p.ocupacao}.`, relevancia: 'cotidiano', tema: 'familia', pessoas: [p.id] });
       }
     }
+  }
+
+  // REWORK 9.7 · NPC-02: os outros parentes adultos também envelhecem no trabalho — se aposentam, e o primo adulto
+  // trabalha (antes: tia de 88 pescando, primos de 40 sem trabalho nem renda). Sorteio derivado (não mexe na vida).
+  for (const { p, vin } of vinculosVivos(v)) {
+    if (p.especie || !['irmao', 'meio_irmao', 'tio', 'primo'].includes(vin.parentesco ?? '')) continue;
+    const ip = idadePessoa(v, p);
+    const rp = rngDe(v.id, 'parente', p.id, v.t);
+    if (ip >= (p.genero === 'feminino' ? 62 : 65) && p.renda > 0 && !p.ocupacao?.startsWith('aposentad') && rp.chance(0.5)) { p.ocupacao = flex(p.genero, 'aposentado', 'aposentada'); p.ocupacaoId = undefined; p.renda = Math.max(1620, Math.round(p.renda * 0.7)); }
+    else if (vin.parentesco === 'primo' && ip >= 20 && ip < 62 && p.renda === 0 && (!p.ocupacao || p.ocupacao === 'estudante') && rp.chance(0.4)) empregarAdulto(v, p, ip);
   }
 
   // Separação dos pais
@@ -258,8 +278,11 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     const ii = idadePessoa(v, irmao);
     if (ii < 18) { irmao.ocupacao = ii >= 4 ? 'estudante' : undefined; continue; }
     if (irmao.ocupacao === 'estudante' && ii >= 18) {
-      const oc = ocupacao(r.pick(ocupacoesDaClasse(v.origem.classe, paisDaCidade(irmao.municipioId))));
-      if (oc.idadeMin <= ii) { irmao.ocupacao = irmao.genero === 'feminino' ? oc.nome[1] : oc.nome[0]; irmao.renda = liquido(salarioLocal(oc, irmao.municipioId), oc.contrato, paisDaCidade(irmao.municipioId)); }
+      // REWORK 9.7 · NPC-02: o cargo pelo que estudou (`empregarAdulto`); antes, um da lista da classe sem olhar a escola.
+      if (!empregarAdulto(v, irmao, ii)) {
+        const oc = ocupacao(r.pick(ocupacoesDaClasse(v.origem.classe, paisDaCidade(irmao.municipioId))));
+        if (oc.idadeMin <= ii && !oc.escolaridade && !oc.concurso) { irmao.ocupacaoId = oc.id; irmao.ocupacao = irmao.genero === 'feminino' ? oc.nome[1] : oc.nome[0]; irmao.renda = liquido(salarioLocal(oc, irmao.municipioId), oc.contrato, paisDaCidade(irmao.municipioId)); }
+      }
     }
     const vin = v.vinculos[irmao.id];
     vidaDoIrmao(v, r, irmao, ii);

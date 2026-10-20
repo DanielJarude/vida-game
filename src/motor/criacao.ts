@@ -7,6 +7,7 @@
  * cachorro no quintal. Tudo isso é coerente com a classe e o lugar.
  */
 
+import { CURSOS } from './dados/cursos';
 import { derivarPredisposicoes } from './sistemas/pessoa';
 import { predisposicoesDosAtributos, type Atributo } from './sistemas/predisposicao';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
@@ -150,6 +151,13 @@ function empregarPai(v: Vida, r: Rng, p: Pessoa, classe: Classe, municipioId: st
   p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
   p.ocupacaoId = oc.id;
   p.renda = liquido(bruto, oc.contrato, paisDaCidade(municipioId));
+  // REWORK 9.7 · NPC-02: quem já chega no jogo exercendo um ofício de formação (a médica, o dentista, o analista
+  // judiciário) tem a formação dele — antes, sem `formacao`, a ficha e a carreira dos NPCs não concordavam com o cargo.
+  if (!p.formacao && (oc.area || oc.escolaridade === 'superior')) {
+    const nivel = oc.nivelCurso ?? (oc.escolaridade === 'superior' ? 'superior' : undefined);
+    const c = CURSOS.find(x => (!oc.area || oc.area.includes(x.area)) && (!nivel || x.nivel === nivel)) ?? (oc.area ? CURSOS.find(x => oc.area!.includes(x.area)) : undefined);
+    if (c) p.formacao = c.id;
+  }
 }
 
 /** O plano de saúde da casa ao nascer: depende do sistema do país (onde o público atende todos, quase ninguém paga; onde a saúde é de seguro, quase todos têm um). */
@@ -356,6 +364,9 @@ export function criarVida(o: OpcoesCriacao): Vida {
     const g: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
     const irmao = criarPessoa(v, r, { genero: g, idade: idadeIrmao, municipioId: cidade, sobrenome: sob, visual: visualHerdado(r, g, geneticaDe(mae), geneticaDe(pai), ancFilhos), familia: { ancestralidade: ancFilhos, tradicao: v.eu.tradicao } });
     irmao.ocupacao = idadeIrmao >= 4 ? 'estudante' : undefined;
+    // REWORK 9.7 · NPC-02: o irmão é filho dos mesmos pais (antes, só os irmãos nascidos depois sabiam: a herança real,
+    // que procura os herdeiros por `genitores`, deixava os irmãos de partida de fora).
+    irmao.genitores = pai ? [mae.id, pai.id] : [mae.id];
     irmaosCriados.push(irmao);
     vincular(v, irmao, { parentesco: 'irmao', origem: 'familia', proximidade: r.int(60, 80), convivio: ['casa'] });
   }

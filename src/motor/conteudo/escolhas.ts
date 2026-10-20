@@ -178,9 +178,9 @@ export const ESCOLHAS: Conteudo[] = [
     texto: c => `${c.p.amigo.nome} está no portão chamando para jogar bola na rua. O dever de matemática está pela metade, e amanhã tem prova.`,
     opcoes: [
       { id: 'dever', texto: 'Terminar o dever primeiro', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: `Quando você saiu, o jogo estava acabando. Deu tempo de uma partida.`, memoria: null, efeito: () => { if (c.v.educacao.basica) c.v.educacao.basica.desempenho += 4; } }) },
+        resolver: c => ({ texto: `Quando você saiu, o jogo estava acabando. Deu tempo de uma partida.`, memoria: null, efeito: () => { if (c.v.educacao.basica) c.v.educacao.basica.desempenho = Math.max(5, Math.min(100, c.v.educacao.basica.desempenho + 4)); } }) },
       { id: 'rua', texto: 'Ir para a rua', comportamento: { sociabilidade: 1, impulsividade: 1 },
-        resolver: c => ({ texto: 'Voltou suad' + c.g('o', 'a', 'e') + ', com o joelho ralado e a prova do dia seguinte pela frente.', memoria: null, efeito: () => { prox(c, 'amigo', 6); if (c.v.educacao.basica) c.v.educacao.basica.desempenho -= 4; feliz(c, 3); } }) }
+        resolver: c => ({ texto: 'Voltou suad' + c.g('o', 'a', 'e') + ', com o joelho ralado e a prova do dia seguinte pela frente.', memoria: null, efeito: () => { prox(c, 'amigo', 6); if (c.v.educacao.basica) c.v.educacao.basica.desempenho = Math.max(5, Math.min(100, c.v.educacao.basica.desempenho - 4)); feliz(c, 3); } }) }
     ]
   },
   {
@@ -191,7 +191,7 @@ export const ESCOLHAS: Conteudo[] = [
     texto: c => `A professora mandou um bilhete sobre suas notas, que precisa voltar assinado por ${c.p.adulto.nome}. A assinatura ${gp(c, 'adulto', 'dele', 'dela', 'delu')} é fácil de imitar.`,
     opcoes: [
       { id: 'entregar', texto: c => `Entregar o bilhete para ${c.p.adulto.nome}`, comportamento: { coragem: 1 },
-        resolver: c => ({ texto: `${c.p.adulto.nome} leu, suspirou e disse que ia olhar seu caderno todo dia. Olhou.`, memoria: null, efeito: () => { if (c.v.educacao.basica) c.v.educacao.basica.desempenho += 5; } }) },
+        resolver: c => ({ texto: `${c.p.adulto.nome} leu, suspirou e disse que ia olhar seu caderno todo dia. Olhou.`, memoria: null, efeito: () => { if (c.v.educacao.basica) c.v.educacao.basica.desempenho = Math.max(5, Math.min(100, c.v.educacao.basica.desempenho + 5)); } }) },
       { id: 'falsificar', texto: 'Assinar você mesmo', comportamento: { impulsividade: 1, coragem: -1 },
         resolver: c => c.r.chance(0.5)
           ? { texto: `A professora ligou para casa. ${c.p.adulto.nome} descobriu tudo de uma vez.`, memoria: `Falsificou a assinatura de ${c.p.adulto.nome} num bilhete da escola e foi ${c.g('pego', 'pega', 'pegue')}.`, tom: 'ruim', efeito: () => { tensao(c, 'adulto', 30); prox(c, 'adulto', -6); } }
