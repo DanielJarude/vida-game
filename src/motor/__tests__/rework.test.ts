@@ -337,8 +337,12 @@ describe('esporte perseguível: pedir o teste, saber a técnica, ver o progresso
   });
 
   it('o teste respeita a janela das bases e o intervalo entre tentativas', () => {
+    // REWORK 9.7 · FUT-02: depois da janela da base, o pedido é o teste do time adulto de um clube pequeno (antes, aos 21,
+    // "a janela das bases vai até os 17" e nenhuma porta); depois dos 30, nenhum clube testa.
     const v = atleta(21, 'futebol', 70, 3);
-    expect(disponibilidade(v, P('pedir_teste', 'futebol')).motivo).toMatch(/janela/);
+    expect(podeTentar(disponibilidade(v, P('pedir_teste', 'futebol')))).toBe(true);
+    const velho = atleta(31, 'futebol', 80, 3);
+    expect(disponibilidade(velho, P('pedir_teste', 'futebol')).motivo).toMatch(/Depois dos 30/);
     const w = atleta(15, 'futebol', 70, 3);
     w.caminhos.ultimas['peneira_futebol'] = w.t - 3;
     expect(disponibilidade(w, P('pedir_teste', 'futebol')).motivo).toMatch(/um ano entre/);

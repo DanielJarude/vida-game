@@ -70,7 +70,7 @@ export function fotografarEvolucao(v: Vida): void {
   const foto: FotoDoAno = {
     t: v.t, frentes,
     ...(Object.keys(causas).length ? { causas } : {}),
-    ...(v.educacao.basica && !v.educacao.evadiu ? { escola: v.educacao.basica.desempenho } : {}),
+    ...(v.educacao.basica && !v.educacao.evadiu ? { escola: v.educacao.basica.desempenho, ...(v.educacao.basica.notas ? { notas: v.educacao.basica.notas } : {}) } : {}),
     ...(v.educacao.matricula && !v.educacao.matricula.trancado ? { curso: v.educacao.matricula.desempenho } : {}),
     ...(e ? { trabalho: { ocupacaoId: e.ocupacaoId, desempenho: Math.round(e.desempenho), salario: e.salario } } : {}),
     ...(v.caminhos.esporte?.fase === 'profissional' ? { esporte: { reputacao: v.caminhos.esporte.reputacao ?? 0, nivel: v.caminhos.esporte.nivel } } : {})

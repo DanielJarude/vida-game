@@ -369,8 +369,11 @@ export function fatoresSaude(v: Vida): Fator[] {
   const i = idade(v);
   const c = v.corpo;
   const out: Fator[] = [];
-  const idadeDelta = i < 18 ? (90 - c.saude) * 0.25
-    : i < 35 ? (84 - c.saude) * 0.12
+  // REWORK 9.7 · SAU-01: as referências da juventude eram 90 e 84 — somadas à melhor constituição e ao melhor físico,
+  // o teto que o corpo alcançava era 96–99: Saúde 100 não existia nem para a criança atleta de constituição forte.
+  // Agora 92 e 87, e a constituição pesa ±8: o melhor caso chega a 100 (raro), o comum fica 2–3 pontos acima de antes.
+  const idadeDelta = i < 18 ? (92 - c.saude) * 0.25
+    : i < 35 ? (87 - c.saude) * 0.12
     : i < 50 ? (80 - c.saude) * 0.07 - 0.3
     : i < 65 ? (76 - c.saude) * 0.05 - 0.3
     : i < 80 ? -0.75 : -1.4;
@@ -378,7 +381,7 @@ export function fatoresSaude(v: Vida): Fator[] {
   // manter (e a se recuperar) acima; quem nasce frágil, abaixo. Dita como causa própria, separada da idade.
   const cons = predisposicao(v, 'saude');
   const taxa = i < 18 ? 0.25 : i < 35 ? 0.12 : i < 50 ? 0.07 : i < 65 ? 0.05 : 0.04;
-  if (Math.abs(cons) >= 0.15) out.push({ id: 'constituicao', texto: cons > 0 ? 'uma constituição forte' : 'uma constituição frágil', efeito: cons * 6 * taxa });
+  if (Math.abs(cons) >= 0.15) out.push({ id: 'constituicao', texto: cons > 0 ? 'uma constituição forte' : 'uma constituição frágil', efeito: cons * 8 * taxa });
   out.push({ id: 'idade', texto: idadeDelta >= 0 ? (i < 35 ? 'um corpo jovem, que se recupera' : 'o corpo, que ainda se recupera') : i >= 65 ? 'a idade' : i < 35 ? 'uma fase de saúde acima do comum, que tende a voltar ao normal' : 'os anos, que começam a cobrar', efeito: idadeDelta });
   const forma = (c.forma - 45) / 70;
   out.push({ id: 'forma', texto: forma >= 0 ? 'se mexer com frequência' : 'o corpo parado', efeito: forma });

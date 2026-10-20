@@ -190,6 +190,11 @@ export interface PerfilEducacional {
   cotas: boolean;
   /** Faculdade privada é um caminho comum. */
   privadaComum: boolean;
+  /**
+   * REWORK 9.7 · EDU-04: a escala do boletim da escola básica — a nota mais alta, a de aprovação e as casas decimais
+   * (Portugal e França dão de 0 a 20; os EUA e o Canadá, em percentual). Ausente: de 0 a 10, aprovação 5, uma casa.
+   */
+  notas?: { max: number; aprovacao: number; casas: 0 | 1 };
 }
 
 /** Os cargos eletivos do jogo, na estrutura de cada país. */

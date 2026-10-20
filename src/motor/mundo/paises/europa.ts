@@ -162,7 +162,8 @@ const PORTUGAL: PerfilDePais = {
     // Contingente prioritário (2% das vagas) para beneficiários do escalão A
     // da ação social escolar (DGES, desde 2023).
     cotas: true,
-    privadaComum: false // ~17% dos inscritos no superior estão no privado (DGEEC)
+    privadaComum: false, // ~17% dos inscritos no superior estão no privado (DGEEC)
+    notas: { max: 20, aprovacao: 10, casas: 0 }
   },
   politica: {
     sistema: 'república semipresidencialista unitária, com regiões autónomas nos Açores e na Madeira',
@@ -720,7 +721,8 @@ const FRANCA: PerfilDePais = {
     bolsa: { nome: 'bolsa sobre critérios sociais (CROUS)', teto: 0.45 },
     // Lei ORE (2018): taxa mínima de bolsistas do liceu em cada formação no Parcoursup.
     cotas: true,
-    privadaComum: false // ~26% dos estudantes do superior no privado (MESR, 2024), sobretudo escolas de comércio
+    privadaComum: false, // ~26% dos estudantes do superior no privado (MESR, 2024), sobretudo escolas de comércio
+    notas: { max: 20, aprovacao: 10, casas: 1 }
   },
   politica: {
     sistema: 'república semipresidencialista unitária',

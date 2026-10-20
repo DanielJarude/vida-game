@@ -211,9 +211,15 @@ describe('Fase D · VIS-02 — os documentos', () => {
     pagina(v, 'estudos', 'desenvolvimento');
     const b = document.querySelector('.boletim')!;
     expect(b.classList.contains('papel')).toBe(true);
-    const notas = [...b.querySelectorAll('.boletim__dominio .manuscrito')];
+    // REWORK 9.7 · EDU-04: à mão vai a NOTA do ano (do motor, na escala do país); o domínio é impresso, noutra coluna.
+    const notas = [...b.querySelectorAll('.boletim__nota-materia .manuscrito')];
     expect(notas.length).toBeGreaterThan(0);
-    for (const n of notas) expect(Number(n.textContent!.replace(',', '.'))).toBeCloseTo(Number(n.getAttribute('data-agora')), 0);
+    for (const n of notas) {
+      const x = Number(n.textContent!.replace(',', '.'));
+      expect(x).toBeCloseTo(Number(n.getAttribute('data-nota-materia')), 0);
+      expect(x).toBeLessThanOrEqual(10);
+    }
+    expect(b.querySelectorAll('.boletim__dominio .manuscrito').length).toBe(0);
     // o carimbo e a rubrica dizem só o ano e o que o documento é — e são escondidos dos leitores de tela
     expect(b.querySelector('.boletim__autenticacao')!.getAttribute('aria-hidden')).toBe('true');
     expect(b.querySelector('.carimbo')!.textContent).toMatch(/Secretaria\d{4}/);

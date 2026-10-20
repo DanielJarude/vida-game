@@ -742,7 +742,7 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   // entra com o preço dito; só "além" (não há horas — ou, criança, a semana dela não comporta) bloqueia, com o porquê.
   // REWORK 9.5: o que pesa é a EXIGÊNCIA (`cargaDaAtividade`), não o número de atividades — um livro por mês não cobra
   // o que cobra um treino.
-  const extra = cargaDaAtividade(id, nivel).carga - (atual ? cargaDaAtividade(id, nivelDa(atual)).carga : 0);
+  const extra = cargaDaAtividade(id, nivel, idade(v)).carga - (atual ? cargaDaAtividade(id, nivelDa(atual), idade(v)).carga : 0);
   const enc = encaixe(v, extra, id);
   // O horário vem antes: sem dia e hora livres, não há o que pesar (a terapia também precisa de uma hora na semana).
   const hor = horarioDaAtividade?.(v, id, nivel);

@@ -246,6 +246,9 @@ export function fecharTemporadaDaLiga(v: Vida, pais: string, ano: number, clube:
     const { fechada, troca } = regrasDeAcesso(pais);
     if (!fechada) {
       const n = antes;
+      // REWORK 9.7 · FUT-01: o campeão registrado da divisão é o clube da vida quando ele terminou em primeiro (antes, a
+      // tabela já jogada guardava outro campeão para a mesma divisão e o mesmo ano).
+      if (n >= 2 && colocacao === 1 && liga.ultima?.ano === ano) liga.ultima.campeoes[n as Nivel] = clube;
       if (n === 1 ? colocacao <= 2 && troca[0] > 0 : n < 4 && colocacao <= troca[n - 1]) fixar(liga, clube, n + 1, pais);
       else if (n >= 2 && colocacao > VAGAS_POR_DIVISAO - troca[n - 2]) fixar(liga, clube, n - 1, pais);
     }

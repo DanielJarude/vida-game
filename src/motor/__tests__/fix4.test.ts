@@ -744,6 +744,8 @@ describe('achados da auditoria independente do FIX #4', () => {
     const v = adulto(40, { semente: 31, municipioId });
     v.financas.conta = 300000;
     return transacao(v, (x, r) => {
+      // REWORK 9.7: a pré-condição dita — a vida mora na cidade do salão (a semente, sozinha, pode ter mudado de cidade).
+      x.moradia.municipioId = municipioId;
       const t = NEGOCIOS.find(k => k.id === 'salao')!;
       for (const tr of t.trilhas) x.trabalho.experiencia[tr] = 200;
       const n = abrirNegocio(x, r, 'salao', { modo: 'guardado', dedicacao: 'integral' });

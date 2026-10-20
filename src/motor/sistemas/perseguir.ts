@@ -30,7 +30,7 @@ import { recursosDaFamilia } from './origem';
 import { estudarMateria, podeEstudarMateria } from './vestibular';
 import { preparoDaPos } from './escola';
 import type { Materia } from '../dados/cursos';
-import { etapaNaBase, MODALIDADES, NOME_MOD, nomeDeClube, ondeTreina } from './esporte';
+import { barraDeTitular, clubeAmador, etapaNaBase, IDADE_AMADOR, MODALIDADES, MODALIDADES_AMADORAS, NOME_MOD, nomeDeClube, ondeTreina } from './esporte';
 import { capitalDoEstado } from './escola';
 import { municipio } from '../dados/lugares';
 import { doClube, noClube } from '../dados/clubes';
@@ -57,7 +57,11 @@ const MINIMO_GRUPO: Partial<Record<Dominio, number>> = { musica: 40, teatro: 38,
 
 /* ------------------------------------------------------------ Esporte */
 
-/** A janela de idade de uma base (a mesma em que a peneira chega sozinha, um ano mais larga para quem pede). */
+/**
+ * A janela de idade de uma base (a mesma em que a peneira chega sozinha). REWORK 9.7 · FUT-02: depois dela, quem pede
+ * um teste numa modalidade com time adulto amador pede o teste do TIME DE CIMA de um clube pequeno (até `IDADE_AMADOR`)
+ * — a régua é a de quem joga o estadual, não a de uma base. Antes, depois dos 17 não havia pedido possível.
+ */
 // O tênis escolhe cedo (as academias formam desde os 10); o basquete aceita quem cresceu tarde.
 export const janelaDaBase = (d: Dominio): [number, number] => (d === 'futebol' ? [11, 17] : d === 'tenis' ? [10, 16] : [12, 19]);
 /** Quantos testes numa modalidade (a vida inteira): quem pede também não vive de peneira. */
@@ -80,7 +84,7 @@ function podePedirTeste(v: Vida, valor?: string): Veredito {
   if (etapa === 'convidado' || etapa === 'decidindo') return bloqueio('impossivel', 'Você já passou na peneira: o clube chamou, falta responder ao convite.');
   const [ini, fim] = janelaDaBase(d);
   if (i < ini) return bloqueio('requisito', `As bases de ${NOME_MOD[d]} testam a partir dos ${ini} anos.`);
-  if (i > fim) return bloqueio('requisito', `A janela das bases de ${NOME_MOD[d]} vai até os ${fim} anos: depois disso, quase ninguém é chamado sem já ter carreira.`);
+  if (i > fim) return podePedirTesteAdulto(v, d);
   if ((v.fatos[`peneiras_${d}`] ?? 0) >= LIMITE_TESTES) return bloqueio('incompativel', `Já foram ${LIMITE_TESTES} testes em ${NOME_MOD[d]}: os clubes da região já conhecem o seu jogo.`);
   // O próprio pedido tem o seu relógio (o atalho do "quase" vale para quem o clube chama, não para pedir de novo no mesmo mês).
   const pedido = v.fatos[`peneira_pedida_${d}`];
@@ -93,6 +97,45 @@ function podePedirTeste(v: Vida, valor?: string): Veredito {
   return PERMITIDO;
 }
 
+/** Quantos testes no time de cima alguém pede na vida (os clubes pequenos de uma região são poucos). */
+export const LIMITE_TESTES_ADULTO = 2;
+
+/** REWORK 9.7 · FUT-02: o teste pedido no time de cima de um clube pequeno, depois da idade da base. */
+function podePedirTesteAdulto(v: Vida, d: Dominio): Veredito {
+  const i = idade(v);
+  const [, fim] = janelaDaBase(d);
+  if (!MODALIDADES_AMADORAS.includes(d)) return bloqueio('requisito', `A janela das bases de ${NOME_MOD[d]} vai até os ${fim} anos, e ${NOME_MOD[d]} não tem time adulto amador que leve ao profissional: o caminho é o circuito, desde o juvenil.`);
+  if (i > IDADE_AMADOR[1]) return bloqueio('requisito', `Depois dos ${IDADE_AMADOR[1]}, nenhum clube testa quem não tem carreira — o ${NOME_MOD[d]} continua, no amador e por gosto.`);
+  // Os testes da base contam também: quem já fez quatro peneiras e mais um teste adulto é conhecido de todo clube da região.
+  const feitos = (v.fatos[`testes_amador_${d}`] ?? 0) + (v.fatos[`peneiras_${d}`] ?? 0);
+  if ((v.fatos[`testes_amador_${d}`] ?? 0) >= LIMITE_TESTES_ADULTO || feitos >= LIMITE_TESTES + 1) return bloqueio('incompativel', `Já foram ${feitos} testes em ${NOME_MOD[d]}: os clubes da região já conhecem o seu jogo.`);
+  const ultima = v.caminhos.ultimas[`amador_${d}`];
+  if (ultima !== undefined && v.t - ultima < 12) return bloqueio('incompativel', `O último teste foi em ${anoDe(ultima)}: os clubes pedem um ano entre uma tentativa e outra.`);
+  const barra = barraDeTitular(d, 1);
+  if (habilidade(v, d) < barra - 10) return bloqueio('requisito', `Depois da idade da base, o teste é no time de cima de um clube pequeno: pede jogar perto do nível de quem disputa o estadual. A sua técnica ainda está longe disso — o amador da cidade é onde ela cresce.`);
+  if (v.caminhos.oportunidades.some(o => o.atividade === 'amador' && o.dominio === d)) return bloqueio('incompativel', 'Já há um teste marcado para você: está entre as portas abertas.');
+  return PERMITIDO;
+}
+
+function pedirTesteAdulto(v: Vida, r: Rng, d: Dominio): { texto?: string; decisao?: string } {
+  const lugar = ondeTreina(v, d);
+  const clube = clubeAmador(v, d, lugar);
+  v.fatos[`testes_amador_${d}`] = (v.fatos[`testes_amador_${d}`] ?? 0) + 1;
+  v.caminhos.ultimas[`amador_${d}`] = v.t;
+  const op = novaOportunidade(v, {
+    tipo: d === 'futebol' ? 'peneira' : 'seletiva', dominio: d, municipioId: lugar, meses: 12, chave: `amador_${d}`, atividade: 'amador',
+    titulo: `Teste ${noClube(clube)}`,
+    texto: `Você pediu uma semana de treino com o time de cima ${doClube(clube)}${lugar !== v.moradia.municipioId ? `, de ${municipio(lugar).nome}` : ''}. Não é a base: é o elenco adulto de um clube pequeno, e ${idade(v) >= 25 ? 'a idade conta contra' : 'ninguém indicou'} — é o seu jogo que vai falar.`,
+    bonus: -0.1
+  });
+  if (!op) return { texto: 'Já há um teste marcado.' };
+  const res = aceitarOportunidade(v, r, op.id);
+  const pr = v.caminhos.processo;
+  // Pedido, sem ninguém indicar, para um elenco quase sempre fechado: pesa mais contra do que o pedido na base.
+  if (pr?.tipo === 'peneira') { pr.via = 'amador'; pr.bonus = -0.1; pr.lugar = clube; }
+  return { decisao: res.decisao };
+}
+
 /** O lugar do teste pedido: o clube da cidade (ou o da região) ou um clube grande da capital, que exige mais. */
 function lugarDoTeste(v: Vida, d: Dominio, grande: boolean): string {
   return grande ? capitalDoEstado(v.moradia.municipioId) : ondeTreina(v, d);
@@ -101,6 +144,7 @@ function lugarDoTeste(v: Vida, d: Dominio, grande: boolean): string {
 function pedirTeste(v: Vida, r: Rng, valor?: string): { texto?: string; decisao?: string } {
   const [modalidade, onde] = (valor ?? '').split(':');
   const d = (MODALIDADES.includes(modalidade as Dominio) ? modalidade : modalidadeSeria(v)) as Dominio;
+  if (idade(v) > janelaDaBase(d)[1]) return pedirTesteAdulto(v, r, d);
   const grande = onde === 'grande';
   const lugar = lugarDoTeste(v, d, grande);
   const clube = nomeDeClube(lugar, `${v.id}:pedido:${idade(v)}:${grande ? 'g' : 'p'}`, d);

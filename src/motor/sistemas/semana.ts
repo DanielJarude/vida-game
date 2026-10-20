@@ -74,7 +74,12 @@ const INTENSIDADE_DE: Record<string, { carga: number; mental: number }> = {
 const EM_CASA = new Set(['leitura', 'videogame', 'escrever', 'desenho', 'terapia', 'criar_conteudo', 'tempo_familia', 'cozinhar', 'programacao', 'ajudar_familia']);
 /** A logística de sair de casa para cada vez (ir, voltar, trocar de roupa, depender de horário alheio). */
 const LOGISTICA = 0.1;
-export function cargaDaAtividade(id: string, nivel: number): { carga: number; mental: number; tempo: number } {
+/**
+ * REWORK 9.7 · ROT-04: a aula de esporte da criança (até 11 anos, sem ser a sério) dura uma hora, não uma hora e meia —
+ * e a agenda e a exigência leem a mesma duração (antes, a agenda punha 90 minutos e a exigência ignorava a duração).
+ */
+export const aulaCurtaDaCrianca = (id: string, nivel: number, idadeDe?: number) => idadeDe !== undefined && idadeDe < 12 && nivel <= 2 && modeloRotina(id)?.categoria === 'esporte';
+export function cargaDaAtividade(id: string, nivel: number, idadeDe?: number): { carga: number; mental: number; tempo: number } {
   const mo = modeloRotina(id);
   if (!mo) return { carga: 0, mental: 0, tempo: 0 };
   const tempo = nivelModelo(mo, nivel).tempo;
@@ -82,7 +87,8 @@ export function cargaDaAtividade(id: string, nivel: number): { carga: number; me
   // O nível a sério (a base, a equipe de competição, o ensaio de verdade) cobra mais por vez, além de ser mais vezes.
   const serio = nivel >= 3 ? 1.1 : 1;
   const fora = EM_CASA.has(id) ? 0 : LOGISTICA;
-  return { carga: Math.round(tempo * (k.carga * serio + fora) * 100) / 100, mental: k.mental, tempo };
+  const duracao = aulaCurtaDaCrianca(id, nivel, idadeDe) ? 2 / 3 : 1;
+  return { carga: Math.round(tempo * (k.carga * serio * duracao + fora) * 100) / 100, mental: k.mental, tempo };
 }
 
 /** REWORK 9.5 · ROT-03 — o estudo em casa que a postura escolhida pede (dedicação = horas de verdade na semana). */
@@ -192,7 +198,7 @@ export function semana(v: Vida): Semana {
   const rotinas: Compromisso[] = v.rotinas.map(r => {
     const mo = modeloRotina(r.id);
     const n = mo ? nivelModelo(mo, nivelDa(r)) : undefined;
-    const c = cargaDaAtividade(r.id, nivelDa(r));
+    const c = cargaDaAtividade(r.id, nivelDa(r), i);
     return { id: r.id, rotulo: mo ? (mo.niveis.length > 1 ? `${mo.nome} — ${n!.rotulo.toLowerCase()}` : mo.nome) : r.id, peso: c.carga, tempo: c.tempo, mental: c.mental, tipo: 'rotina' as const };
   });
   const ocupado = rotinas.reduce((s, x) => s + x.peso, 0);
@@ -247,7 +253,11 @@ export function cabeNaSemana(v: Vida, extra: number, ignorar?: string): { cabe: 
 export const TETO_HUMANO = 1.55;
 /** O teto pela idade: criança não "se sobrecarrega" por escolha (os pais não levam a três coisas por dia) — a semana
  *  dela pode encher, não estourar. Do pré-adolescente em diante, o teto humano. */
-const tetoDa = (i: number, base: number) => (i < 12 ? base + 0.75 : base * TETO_HUMANO);
+// REWORK 9.7 · ROT-04: o teto da criança era base + 0,75 — exatamente onde a semana "cheia" acaba: a faixa
+// "sobrecarregada" não existia para ela, e a 3ª atividade de uma criança de 9 anos sem compromisso nenhum era recusada
+// (~6 h de esporte por semana). Agora há meio pedaço de "sobrecarregada", com o custo de sempre (o treino rende menos,
+// a nota cai, a cabeça pesa): quatro aulas de uma hora cabem com o preço dito; a quinta, não.
+const tetoDa = (i: number, base: number) => (i < 12 ? base + 1.25 : base * TETO_HUMANO);
 export function cargaHumana(v: Vida, extra: number): { possivel: boolean; aperta: boolean } {
   const e = encaixe(v, extra);
   return { possivel: e.possivel, aperta: e.faixa !== 'folgada' && e.faixa !== 'ocupada' };

@@ -119,7 +119,9 @@ export function avaliarPeneira(v: Vida, r: Rng, d: Dominio, municipioId: string,
   const ajustes = ETAPAS_PENEIRA.map(e => e.opcoes.find(o => o.id === notas[e.id])?.ajuste(a) ?? 0);
   const abordagem = ajustes.reduce((s, x) => s + x, 0) / ajustes.length;
   const i = idade(v);
-  const idadeAjuste = amador ? (i >= 24 ? -0.1 : 0) : futebol(d) ? (i <= 12 ? -0.05 : i >= 17 ? -0.15 : 0) : i >= 18 ? -0.1 : 0;
+  // REWORK 9.7 · FUT-02: no teste do time de cima, a idade pesa aos poucos depois dos 21 (antes: −0,1 de uma vez aos 24,
+  // e a porta fechava aos 24).
+  const idadeAjuste = amador ? (i <= 21 ? 0 : -Math.min(0.22, (i - 21) * 0.05)) : futebol(d) ? (i <= 12 ? -0.05 : i >= 17 ? -0.15 : 0) : i >= 18 ? -0.1 : 0;
   const concorrencia = !amador && estruturaEsportiva(municipioId) >= 2 ? 0.06 : 0;
   const dia = r.normal() * 0.14;
   const pontos = 0.5 * a.tecnica + 0.14 * fisico + 0.14 * a.leitura + 0.06 * a.nervos + 0.18 * abordagem + idadeAjuste + bonus + dia;

@@ -10,7 +10,7 @@
  * disponível em Tarauacá.
  */
 
-import { esperadoNaSerie } from '../dados/frentes';
+import { esperadoNaSerie, MATERIAS } from '../dados/frentes';
 import { nomeDaMateria } from '../mundo/materias';
 import { quemOferece } from './ensinoTecnico';
 import { fraseDeConclusao } from './composicao';
@@ -159,6 +159,46 @@ export function calcularDesempenho(v: Vida, r: Rng, bonusRede: number, materias?
   return clamp(Math.round(base + r.normal() * 6), 5, 100);
 }
 
+/* ------------------------------------------------- As notas do boletim */
+
+/**
+ * REWORK 9.7 · EDU-04 — a NOTA e o CONHECIMENTO são variáveis diferentes. O domínio de uma matéria (`frentes`, 0..100)
+ * é o que se sabe e cresce com os anos; a nota do boletim é o desempenho daquele ano naquela matéria, numa escala
+ * fechada (0..10 aqui; a tela converte para a do país). Antes, o boletim escrevia à mão o domínio na coluna da nota — e
+ * a "nota" de quem tinha 7 anos era 6 e a de quem tinha 16, 45: parecia crescer sem fim, só por envelhecer.
+ *
+ * A nota parte do desempenho do ano (`calcularDesempenho`, que já compara o que se sabe com o que a SÉRIE pede — a
+ * régua sobe com a série, então saber mais aos 16 não dá nota maior por si) e se desloca pela matéria: a forte acima, a
+ * fraca abaixo, sem passar de ±2 pontos da média. O acaso de cada matéria vem de um gerador derivado (não mexe na
+ * sequência da vida).
+ */
+export const ESCALA_PADRAO: NonNullable<ReturnType<typeof educacaoDaVida>['notas']> = { max: 10, aprovacao: 5, casas: 1 };
+export const escalaDeNotas = (v: Vida) => educacaoDaVida(v).notas ?? ESCALA_PADRAO;
+
+/** O desempenho do ano (0..100) na escala 0..10 do boletim: 40 → 5, 50 → 6, 70 → 8, 90 ou mais → 10. */
+export const notaDoDesempenho = (d: number) => clamp(Math.round(d + 10) / 10, 0, 10);
+
+/** Uma nota 0..10 na escala do país onde se estuda (o número, já arredondado nas casas da escala). */
+export function notaNaEscala(v: Vida, nota10: number): number {
+  const e = escalaDeNotas(v);
+  const x = clamp(nota10, 0, 10) * e.max / 10;
+  const f = e.casas ? 10 : 1;
+  return Math.round(x * f) / f;
+}
+
+/** As notas de cada matéria no ano que fecha (0..10). */
+export function notasDoAno(v: Vida, desempenho: number): NonNullable<EscolaBasica['notas']> {
+  const r = rngDe(v.id, 'notas', v.t);
+  const media = Math.max(1, mediaEscolar(v));
+  const out: NonNullable<EscolaBasica['notas']> = {};
+  for (const m of MATERIAS) {
+    if (!v.caminhos.frentes[m]) continue;
+    const desvio = clamp((habilidade(v, m) / media - 1) * 30, -20, 20);
+    out[m as Materia] = notaDoDesempenho(desempenho + desvio + r.normal() * 3);
+  }
+  return out;
+}
+
 /* ------------------------------------------------------ Educação básica */
 
 /** `presenca` (REWORK 9): quanto das aulas acontece de fato (a agenda: o turno que outro compromisso atravessa vira falta). */
@@ -219,6 +259,7 @@ export function processarEscola(v: Vida, r: Rng, presenca = 1, estudo = 1, cansa
   estudarMaterias(v, r, (b.rede === 'privada' ? 1.12 : 1) * (b.etapa === 'fundamental1' ? 0.85 : 1) * (0.4 + 0.6 * presenca), estudo);
   if (b.integrado) { const c = cursoOuNulo(b.integrado); if (c?.pratica) for (const [dd, w] of Object.entries(c.pratica) as [Dominio, number][]) praticar(v, r, dd, w * 0.8, 1.1); }
   b.desempenho = calcularDesempenho(v, r, b.rede === 'privada' ? 6 : 0, undefined, presenca, estudo, cansaco);
+  b.notas = notasDoAno(v, b.desempenho);
   if (b.rede === 'privada' && b.etapa === 'medio') marcarFato(v, 'estudou_privada');
   // A matéria difícil às vezes vira recuperação — textura, não tragédia.
   if (b.etapa !== 'fundamental1' && b.desempenho >= 38) {

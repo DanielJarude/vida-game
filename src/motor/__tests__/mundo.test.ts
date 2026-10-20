@@ -195,14 +195,17 @@ describe('famílias que atravessam países', () => {
   it('11/12. pai brasileiro → filha que migrou → neto nascido no exterior: a sucessão segue com o país de cada um, e a herança não duplica', () => {
     // Pai em Uberaba, filha adulta morando em Buenos Aires (argentina por naturalização não; brasileira que mora lá).
     let v = adultaEm('uberaba-mg', 31);
+    let idDaFilha = '';
     v = transacao(v, x => {
       const { p: filha } = comFilho(x, 32, { genero: 'feminino' });
+      idDaFilha = filha.id;
       filha.municipioId = maior('AR');
       filha.municipioNatal = 'uberaba-mg';
       filha.posses = { dinheiro: 10000, bens: [], historia: [] };
       x.financas.conta = 200000;
     }).vida;
-    const filha = Object.values(v.pessoas).find(p => p.genitores?.includes('eu'))!;
+    // REWORK 9.7: a filha é a criada aqui (a vida pode já ter outros filhos — a semente decide).
+    const filha = v.pessoas[idDaFilha];
     // O pai morre.
     v = transacao(v, x => { x.morte = { t: x.t, causa: 'infarto' }; }).vida;
     const partilha = partilhar(v);

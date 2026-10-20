@@ -827,6 +827,9 @@ function descoberta(v: Vida, pl: Plataforma, c: ContaSocial, r: Rng, chance: num
 
 /** O ano das redes: quem some perde gente; quem é famoso ganha; o comprado pode ser descoberto; a rede paga e pune. */
 export function processarRedes(v: Vida): void {
+  // REWORK 9.7 · SOC-01: o acontecimento público recente que explica um salto (um título, uma convocação, uma eleição).
+  const acontecimento = acontecimentosDoNome(v, v.t - 24, v.t).pop();
+  let chegaramPeloNome = 0, antesDoAno = 0;
   for (const c of contasAtivas(v)) {
     if (!ehPlataforma(c.plataforma)) continue;
     const pl = PLATAFORMAS[c.plataforma];
@@ -860,8 +863,10 @@ export function processarRedes(v: Vida): void {
     // publicação: 40 mil → mais de meio milhão sem um post). Agora, o nome define o PÚBLICO POSSÍVEL nesta rede, e a
     // conta se aproxima dele: devagar quando está parada; mais depressa quando publica; e com um impulso proporcional
     // quando o nome CRESCEU neste ano (um título, um papel, uma eleição — o motivo fica no balanço).
-    const ganhoNome = exposicaoDoAno(pl.id, real, b.famaInicio ?? fama, fama, noAno, r.next());
-    if (ganhoNome > 0) mudarPublico(c, ganhoNome, 'exposicao', v.t, motivoDoNome(v, b.famaInicio ?? fama, fama));
+    // REWORK 9.7 · SOC-01: o impulso agora tem o tamanho da conta, a menos que um acontecimento público o explique.
+    const ganhoNome = exposicaoDoAno(pl.id, real, b.famaInicio ?? fama, fama, noAno, r.next(), !!acontecimento);
+    if (ganhoNome > 0) mudarPublico(c, ganhoNome, 'exposicao', v.t, motivoDoNome(v, b.famaInicio ?? fama, fama, ganhoNome > real * 0.5 ? acontecimento : undefined));
+    chegaramPeloNome += ganhoNome; antesDoAno += real;
     // O comprado pode ser descoberto (algumas redes caçam mais).
     if (c.comprados) {
       const chance = pl.deteccao + (c.comprados / Math.max(1, c.seguidores)) * 0.4 + fama / 200;
@@ -884,6 +889,12 @@ export function processarRedes(v: Vida): void {
     marcosDeSeguidores(v, pl, c);
     fecharBalanco(c, v.t, fama);
   }
+  // Um salto de público não passa calado: uma linha na vida, com a causa (todas as redes numa frase só).
+  if (chegaramPeloNome >= 20000 && chegaramPeloNome >= antesDoAno) {
+    const quantos = `${seguidoresEmPalavras(chegaramPeloNome)} pessoas passaram a seguir você nas redes`;
+    const texto = acontecimento ? `${acontecimento.replace(/\.?$/, '.')} Desde então, ${quantos}.` : `O nome correu ${porOrigem(v) || 'fora das redes'}: ${quantos}.`;
+    escrever(v, { texto, relevancia: 'biografia', tema: 'amizade', tom: 'bom' });
+  }
 }
 
 /** O peso de cada rede para o público que um nome conhecido atrai (quem procura uma pessoa famosa procura onde?). */
@@ -901,19 +912,35 @@ export const publicoDoNome = (pl: PlataformaId, fama: number) => (fama <= 25 ? 0
  * mais rápido quando publica — e ganha um impulso proporcional ao quanto o nome CRESCEU no ano. Nunca passa do que
  * falta para o público possível: a conta não cresce sozinha para sempre.
  */
-export function exposicaoDoAno(pl: PlataformaId, real: number, famaAntes: number, famaAgora: number, noAno: number, sorte: number): number {
+export function exposicaoDoAno(pl: PlataformaId, real: number, famaAntes: number, famaAgora: number, noAno: number, sorte: number, acontecimento = true): number {
   const falta = Math.max(0, publicoDoNome(pl, famaAgora) - real);
   if (!falta) return 0;
   const ritmo = noAno === 0 ? 0.02 : noAno < 3 ? 0.06 : 0.12;
   const subiu = Math.max(0, publicoDoNome(pl, famaAgora) - publicoDoNome(pl, famaAntes));
-  return Math.round(Math.min(falta, (falta * ritmo + subiu * 0.12) * (0.8 + sorte * 0.4)));
+  // REWORK 9.7 · SOC-01: o impulso era um número absoluto (a curva do nome é quadrática: notoriedade 65 → 83 valia
+  // ~250 mil no Instagram), igual para a conta de 40 mil e a de 4 milhões, com ou sem publicação — e chegava pela
+  // inércia, um ano depois do motivo, sem nome. Sem um acontecimento público recente, ele cabe no tamanho da conta
+  // (no máximo 30% dela parada, 80% publicando pouco, 150% publicando sempre). Com o acontecimento, o salto é livre — e
+  // o motivo leva o nome dele.
+  const impulso = acontecimento ? subiu * 0.12 : Math.min(subiu * 0.12, Math.max(5000, real * (noAno === 0 ? 0.3 : noAno < 3 ? 0.8 : 1.5)));
+  return Math.round(Math.min(falta, (falta * ritmo + impulso) * (0.8 + sorte * 0.4)));
 }
 
 /** O motivo da exposição, pelo que o motor sabe: a notoriedade (de quanto a quanto, por quê) e os marcos do ano. */
-function motivoDoNome(v: Vida, antes: number, agora: number): string {
+function motivoDoNome(v: Vida, antes: number, agora: number, acontecimento?: string): string {
   const por = porOrigem(v);
   const a = Math.round(antes), d = Math.round(agora);
-  return d - a >= 3 ? `o nome cresceu no ano (notoriedade ${a} → ${d}${por ? `, ${por}` : ''})` : `quem procura o seu nome (notoriedade ${d}${por ? `, ${por}` : ''})`;
+  const depois = acontecimento ? `; antes, ${acontecimento.replace(/\.$/, '').replace(/^./, c => c.toLowerCase())}` : '';
+  return d - a >= 3 ? `o nome cresceu no ano (notoriedade ${a} → ${d}${por ? `, ${por}` : ''}${depois})` : `quem procura o seu nome (notoriedade ${d}${por ? `, ${por}` : ''}${depois})`;
+}
+
+/**
+ * REWORK 9.7 · SOC-01: os acontecimentos PÚBLICOS de um período — os marcos e as entradas de biografia do trabalho e do
+ * lazer (o título, a convocação, a eleição, a estreia, o show). Antes, o balanço mostrava os dois últimos marcos de
+ * qualquer tema ("Procurou ajuda para parar de apostar" como a razão de 300 mil seguidores).
+ */
+export function acontecimentosDoNome(v: Vida, desde: number, ate: number): string[] {
+  return v.biografia.filter(e => e.t >= desde && e.t <= ate && (e.relevancia === 'marco' || e.relevancia === 'biografia') && (e.tema === 'trabalho' || e.tema === 'lazer')).slice(-2).map(e => e.texto);
 }
 
 /**
@@ -940,7 +967,8 @@ export function leituraDoBalanco(v: Vida, c: ContaSocial, qual: 'ultimo' | 'aber
 
 /** Os marcos do período de um balanço (o que aconteceu de fato na vida — a tela mostra ao lado da exposição). */
 export function marcosDoPeriodo(v: Vida, desde: number, ate: number): string[] {
-  return v.biografia.filter(e => e.t >= desde && e.t <= ate && e.relevancia === 'marco' && e.tema !== 'amizade').slice(-2).map(e => e.texto);
+  // O nome cresce com inércia: o motivo pode ter sido no ano anterior ao balanço.
+  return acontecimentosDoNome(v, desde - 12, ate);
 }
 
 /* ------------------------------------------------------------- Leitura */

@@ -28,7 +28,7 @@ import { podeTentar } from '../plausibilidade';
 import { idade } from '../nucleo';
 import { ocupacao, OCUPACOES } from '../dados/ocupacoes';
 import { habilidade } from './frentes';
-import { aEquipe, categoriaDaBase, contratoDaBase, conviteDaBase, etapaNaBase, MODALIDADES, NOME_MOD } from './esporte';
+import { aEquipe, barraDeTitular, categoriaDaBase, contratoDaBase, conviteDaBase, etapaNaBase, IDADE_AMADOR, MODALIDADES, MODALIDADES_AMADORAS, NOME_MOD } from './esporte';
 import { oClube } from '../dados/clubes';
 import { lerTecnica } from './peneira';
 import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from './concurso';
@@ -130,6 +130,21 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
         if (t.nivel < 4 && pode(fund) && (pediuTecnica || !podeTentar(veredito))) return { rotulo: 'Entrar num programa de fundamentos, com treinador (dura o próximo ano)', acao: fund, porque: 'A técnica é o que a peneira mais pesa — e é o que este treino trabalha.' };
         return podeTentar(veredito) ? { rotulo: 'Pedir um teste num clube', acao: pedir, porque: t.nivel >= 3 ? 'O nível já permite tentar.' : 'Dá para tentar — sabendo que ainda falta técnica.' } : { rotulo: 'Treinar mais antes do próximo teste', ir: 'tempo', porque: veredito.motivo };
       })()
+    });
+  } else if (etapa === 'fora' && d && MODALIDADES_AMADORAS.includes(d) && (!es || es.fase === 'encerrada') && i > janelaDaBase(d)[1] && i <= IDADE_AMADOR[1]) {
+    // REWORK 9.7 · FUT-02: depois da idade da base, a porta é o time de cima de um clube pequeno — mais estreita a cada
+    // ano depois dos 24, e só para quem joga no nível de quem disputa o estadual.
+    const t = lerTecnica(v, d);
+    const pedir = P('pedir_teste', d);
+    const veredito = disp(v, pedir);
+    const barra = barraDeTitular(d, 1);
+    out.push({
+      id: 'esporte', titulo: `Chegar ao time adulto de um clube pequeno (${NOME_MOD[d]})`,
+      onde: `A técnica está "${t.palavra}". Depois da idade da base, quem chega ao profissional chega pelo amador: jogando bem o bastante para um clube pequeno querer no elenco adulto.`,
+      progresso: t.desde ?? t.ano,
+      falta: [habilidade(v, d) < barra - 1 ? 'Técnica: o nível de quem joga o estadual — treinar a sério e competir no amador.' : '', v.corpo.forma < 60 ? 'Físico: o elenco adulto cobra fôlego de jogo inteiro.' : '',
+        i > 24 ? `Idade: aos ${i}, cada ano pesa no olhar de quem contrata — até uns ${IDADE_AMADOR[1]}, ainda há quem teste.` : ''].filter(Boolean),
+      proximo: podeTentar(veredito) ? { rotulo: 'Pedir um teste num time adulto', acao: pedir, porque: 'Uma semana de treino com o elenco: é o seu jogo que vai falar.' } : { rotulo: 'Treinar e jogar o amador', ir: 'tempo', porque: veredito.motivo }
     });
   }
 
@@ -253,9 +268,9 @@ export function caminhosPossiveis(v: Vida, disp: Disp): CaminhoPossivel[] {
     out.push({
       id: 'esporte', titulo: 'Esporte',
       como: 'Treino a sério desde cedo → um teste num clube (peneira ou seletiva) → a base → o contrato. Quase ninguém chega; quem se prepara ainda jogando tem para onde ir.',
-      agora: etapa === 'convidado' || etapa === 'decidindo' ? 'Você passou na peneira: o clube chamou.' : dentro ? 'Você está num clube.' : i > fim ? `A janela das bases já passou (vai até uns ${fim} anos). O esporte segue como treino, arbitragem, preparação física, escolinha.` : d ? `Você treina ${NOME_MOD[d]}: a técnica está "${lerTecnica(v, d).palavra}".` : 'Começa escolhendo uma modalidade e treinando a sério (Tempo livre).',
-      estado: dentro ? 'aqui' : i > fim ? 'fora' : pode(pedir) ? 'pronto' : 'preparar',
-      passo: etapa === 'convidado' ? { rotulo: 'Responder ao convite do clube', acao: P('responder_convite') } : dentro ? undefined : pode(pedir) ? { rotulo: 'Pedir um teste num clube', acao: pedir } : i <= fim ? { rotulo: d ? 'Treinar mais' : 'Começar a treinar', ir: 'tempo', porque: disp(v, pedir).motivo } : undefined
+      agora: etapa === 'convidado' || etapa === 'decidindo' ? 'Você passou na peneira: o clube chamou.' : dentro ? 'Você está num clube.' : i > fim && d && MODALIDADES_AMADORAS.includes(d) && i <= IDADE_AMADOR[1] ? `A janela das bases já passou (vai até uns ${fim} anos), mas o amador continua sendo porta: um teste no time adulto de um clube pequeno, para quem joga no nível do estadual (até uns ${IDADE_AMADOR[1]}).` : i > fim ? `A janela das bases já passou (vai até uns ${fim} anos). O esporte segue como treino, arbitragem, preparação física, escolinha.` : d ? `Você treina ${NOME_MOD[d]}: a técnica está "${lerTecnica(v, d).palavra}".` : 'Começa escolhendo uma modalidade e treinando a sério (Tempo livre).',
+      estado: dentro ? 'aqui' : pode(pedir) ? 'pronto' : i > fim && !(d && MODALIDADES_AMADORAS.includes(d) && i <= IDADE_AMADOR[1]) ? 'fora' : 'preparar',
+      passo: etapa === 'convidado' ? { rotulo: 'Responder ao convite do clube', acao: P('responder_convite') } : dentro ? undefined : pode(pedir) ? { rotulo: i > fim ? 'Pedir um teste num time adulto' : 'Pedir um teste num clube', acao: pedir } : i <= fim || (d && MODALIDADES_AMADORAS.includes(d) && i <= IDADE_AMADOR[1]) ? { rotulo: d ? 'Treinar mais' : 'Começar a treinar', ir: 'tempo', porque: disp(v, pedir).motivo } : undefined
     });
   }
   // Arte.

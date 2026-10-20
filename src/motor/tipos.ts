@@ -604,6 +604,12 @@ export interface EscolaBasica {
   /** FIX pós-playtest humano: a escola técnica onde o integrado acontece (`ensinoTecnico`, chave estável da cidade). */
   integradoInst?: string;
   desempenho: number;  // 0..100
+  /**
+   * REWORK 9.7 · EDU-04: a nota de cada matéria no boletim do ano, de 0 a 10 (a tela converte para a escala do país).
+   * É o desempenho DAQUELE ano na matéria — não o que se sabe dela (o domínio, `caminhos.frentes`, outra escala que
+   * cresce com a vida). Sobe e cai de um ano para o outro. Saves antigos não têm: ganham no próximo ano letivo.
+   */
+  notas?: Partial<Record<'exatas' | 'linguagens' | 'ciencias' | 'humanas', number>>;
   reprovacoes: number;
   /** Na EJA (Educação de Jovens e Adultos): quem passou da idade da série estuda por etapas, à noite. */
   eja?: boolean;
@@ -2433,6 +2439,8 @@ export interface FotoDoAno {
   /** Por frente: [fonte, quanto] (a escola, `rotina:futebol`, o trabalho, `acao:oficio`, `sem_pratica`, a idade). */
   causas?: Partial<Record<Dominio, [string, number][]>>;
   escola?: number;
+  /** REWORK 9.7 · EDU-04: as notas do boletim daquele ano (0..10), quando havia. */
+  notas?: EscolaBasica['notas'];
   curso?: number;
   trabalho?: { ocupacaoId: string; desempenho: number; salario: number };
   esporte?: { reputacao: number; nivel: number };

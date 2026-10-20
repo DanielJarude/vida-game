@@ -750,16 +750,21 @@ export function processarEsporte(v: Vida, r: Rng): void {
     }
   }
 
-  // O campeonato amador (17–23): a porta tardia. Quem treina a sério e joga competição de adulto pode ser visto —
+  // O campeonato amador: a porta tardia. Quem treina a sério e joga competição de adulto pode ser visto —
   // não por ter começado tarde, mas pelo que joga hoje. A régua é a do time de cima de um clube pequeno, não a da base.
-  if (mod && MODALIDADES_AMADORAS.includes(mod.d) && i >= 17 && i <= 24 && mod.nivel >= 2 && etapaNaBase(v) === 'fora' && (!e || e.fase === 'encerrada') && !temFato(v, 'atleta_profissional')) {
+  // REWORK 9.7 · FUT-02: a porta fechava aos 24 e nunca reabria para quem já tinha sido profissional (dispensado aos
+  // 22, sem clube aos 25: nenhuma porta). Agora vai até os 30 (`IDADE_AMADOR`), cada vez mais estreita com a idade, e
+  // o ex-profissional sem clube volta a ser visto pelo que joga. A técnica continua sendo a régua.
+  if (mod && MODALIDADES_AMADORAS.includes(mod.d) && i >= 17 && i <= IDADE_AMADOR[1] && mod.nivel >= 2 && etapaNaBase(v) === 'fora' && (!e || e.fase === 'encerrada')) {
     const h = habilidade(v, mod.d);
     const testes = v.fatos[`testes_amador_${mod.d}`] ?? 0;
     const ultima = v.caminhos.ultimas[`amador_${mod.d}`];
     // Só quem já joga acima do que o estadual pede chama atenção (a régua de titular de um clube pequeno, não a de uma base).
-    if (h >= barraDeTitular(mod.d, 1) - 1 && testes < 2 && (ultima === undefined || v.t - ultima >= 24) && !v.caminhos.oportunidades.some(o => o.atividade === 'amador')) {
+    // Depois dos 24, ser visto sem pedir pede jogar claramente acima do estadual (não só no limite dele).
+    if (h >= barraDeTitular(mod.d, 1) - 1 + (i > 24 ? 4 : 0) && testes < 2 && (ultima === undefined || v.t - ultima >= 24) && !v.caminhos.oportunidades.some(o => o.atividade === 'amador')) {
       // Poucos são vistos: o auxiliar não vai a todo jogo, e o time de cima de um clube pequeno quase sempre já está fechado.
-      const chance = clamp((h - barraDeTitular(mod.d, 1) + 2) / 36, 0, 0.25) * (mod.nivel >= 3 ? 1 : 0.7) * (0.7 + estruturaEsportiva(v.moradia.municipioId) * 0.15);
+      // Depois dos 24, cada ano a menos de carreira pela frente pesa no olhar de quem contrata.
+      const chance = clamp((h - barraDeTitular(mod.d, 1) + 2) / 36, 0, 0.25) * (mod.nivel >= 3 ? 1 : 0.7) * (0.7 + estruturaEsportiva(v.moradia.municipioId) * 0.15) * fatorDaIdadeAmadora(i);
       if (r.chance(chance)) {
         const lugar = ondeTreina(v, mod.d);
         const clube = clubeAmador(v, mod.d, lugar);
@@ -795,9 +800,16 @@ export function processarEsporte(v: Vida, r: Rng): void {
  * tênis também não (não há "time de cima": o caminho é o ranking, desde o juvenil).
  */
 export const MODALIDADES_AMADORAS: Dominio[] = ['futebol', 'basquete', 'volei', 'atletismo', 'lutas'];
+/** REWORK 9.7 · FUT-02: a idade da porta amadora (o teste no time de cima de um clube pequeno). */
+export const IDADE_AMADOR: [number, number] = [17, 30];
+/**
+ * O quanto a idade estreita a porta amadora (ser visto sem pedir): inteira até os 24; depois, pouco mais da metade e
+ * menos a cada ano (aos 30, 10%). Antes, fechava de uma vez aos 24.
+ */
+export const fatorDaIdadeAmadora = (i: number) => (i <= 24 ? 1 : Math.max(0.1, 0.6 - (i - 25) * 0.1));
 
 /** O clube pequeno que olha o campeonato amador: no futebol, um clube regional do estado; nos outros, a equipe da cidade. */
-function clubeAmador(v: Vida, d: Dominio, lugar: string): string {
+export function clubeAmador(v: Vida, d: Dominio, lugar: string): string {
   if (d !== 'futebol') return equipeDaModalidade(d, lugar);
   const uf = municipio(lugar).uf;
   const lista = clubesDoPais().filter(c => c.porte === 'regional' && municipio(c.cidade).uf === uf);

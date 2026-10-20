@@ -82,7 +82,7 @@ function autonomoPossivel(c: Ctx) {
 export const CAMINHOS: Conteudo[] = [
   /* ============================================================= ESPORTE */
   {
-    id: 'esp_peneira', tipo: 'decisao', idade: [10, 24], tema: 'lazer', manual: true, repetir: 0,
+    id: 'esp_peneira', tipo: 'decisao', idade: [10, 31], tema: 'lazer', manual: true, repetir: 0,
     titulo: c => {
       const pr = c.v.caminhos.processo;
       const nome = pr?.via === 'amador' ? 'O teste no time de cima' : mod(c) === 'futebol' ? 'A peneira' : 'A seletiva';
@@ -141,7 +141,7 @@ export const CAMINHOS: Conteudo[] = [
     ]
   },
   {
-    id: 'esp_contrato', tipo: 'decisao', idade: [16, 24], tema: 'trabalho', manual: true, repetir: 0,
+    id: 'esp_contrato', tipo: 'decisao', idade: [16, 31], tema: 'trabalho', manual: true, repetir: 0,
     titulo: c => (c.v.caminhos.esporte?.modalidade === 'tenis' ? 'Virar profissional' : 'O contrato'),
     texto: c => c.v.caminhos.esporte?.modalidade === 'tenis' ? `Não há papel para assinar: é decidir jogar o circuito como profissional. Sem salário — o que entra é prêmio, e o treinador, as viagens e o hotel passam a ser seus. ${c.v.educacao.basica ? 'A escola ainda não acabou.' : c.v.educacao.matricula ? 'A faculdade teria de esperar.' : ''}` : `Um papel de três páginas: salário, prazo, multa. ${c.v.educacao.basica ? 'A escola ainda não acabou.' : c.v.educacao.matricula ? 'A faculdade teria de esperar.' : ''} Quase ninguém que começou com você chegou até aqui.`,
     opcoes: [
@@ -194,7 +194,7 @@ export const CAMINHOS: Conteudo[] = [
     texto: c => `${cap(oClube(c.v.caminhos.esporte!.clube))} mandou embora ${c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade] && c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade]! > 1 ? 'de novo' : ''} metade da categoria. Você estava na metade. Os colegas de escola não entendem direito o que acabou.`,
     opcoes: [
       { id: 'tentar', texto: 'Treinar mais e tentar outro clube', comportamento: { disciplina: 1 },
-        disponivel: c => ((c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade] ?? 0) < 3 && idade(c.v) <= 18 ? true : 'Já não há idade nem peneira para isso.'),
+        disponivel: c => ((c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade] ?? 0) < 3 && idade(c.v) <= 18 ? true : 'Já não há idade para outra base: o caminho, agora, é jogar bem no amador e pedir um teste num time adulto.'),
         resolver: c => ({ texto: 'Você voltou para o treino na semana seguinte. Ninguém mandou.', memoria: 'Foi dispensado e decidiu tentar de novo.'.replace('dispensado', c.g('dispensado', 'dispensada', 'dispensade')), efeito: () => { const e = c.v.caminhos.esporte!; delete c.v.caminhos.ultimas[`peneira_${e.modalidade}`]; c.v.caminhos.esporte = undefined; const rot = c.v.rotinas.find(x => x.id === e.modalidade); if (rot) rot.nivel = 2; } }) },
       { id: 'gosto', texto: 'Continuar jogando por gosto',
         resolver: () => ({ texto: 'A bola voltou a ser de fim de semana. Doeu menos do que parecia.', memoria: null }) },

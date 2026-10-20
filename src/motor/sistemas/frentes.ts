@@ -67,7 +67,9 @@ function fatorIdade(d: Dominio, i: number): number {
   if (i < a) return i < a - 3 ? 0.35 : 0.7;
   if (i <= b) return 1.15;
   const passou = i - b;
-  return Math.max(0.35, 1 - passou * (m.categoria === 'esporte' ? 0.05 : 0.018));
+  // REWORK 9.7 · FUT-02: no esporte, o adulto aprendia a 60% aos 25 e a 35% aos 30 (quem começava aos 20 chegava aos
+  // 30 com técnica 38, treinando a sério). O adulto aprende mais devagar, não quase nada: 72% aos 25, 55% aos 30.
+  return m.categoria === 'esporte' ? Math.max(0.5, 1 - passou * 0.035) : Math.max(0.35, 1 - passou * 0.018);
 }
 
 /**

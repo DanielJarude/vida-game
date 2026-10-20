@@ -195,12 +195,20 @@ describe('esporte', () => {
 
   it('9 e 10. virar profissional é raro, tentar é comum — e quem fracassa segue com as outras rotas', () => {
     let tentaram = 0, profissionais = 0, pelaBase = 0, dispensadosComRota = 0, dispensados = 0;
+    const tardios: number[] = [];
     for (let s = 1; s <= 40; s++) {
       const x = vidaDeAtleta(s * 7);
       // Uma vida que acabou na adolescência (a violência urbana também existe no jogo) não diz nada sobre a rota depois do sonho.
       if (x.morte && idade(x) < 18) continue;
       if (Object.keys(x.fatos).some(k => k.startsWith('peneiras_'))) tentaram++;
-      if (x.fatos['atleta_profissional']) { profissionais++; if (![...(x.caminhos.carreirasEsportivas ?? []), x.caminhos.esporte].some(c => c?.origem === 'amador')) pelaBase++; }
+      if (x.fatos['atleta_profissional']) {
+        profissionais++;
+        const carreiras = [...(x.caminhos.carreirasEsportivas ?? []), x.caminhos.esporte];
+        if (!carreiras.some(c => c?.origem === 'amador')) pelaBase++;
+        // A técnica de quem entrou pela porta amadora depois dos 24 (a do auge, registrada na frente).
+        const tarde = carreiras.find(c => c?.origem === 'amador' && Math.floor((c.tInicio - x.eu.tNasc) / 12) > 24);
+        if (tarde) tardios.push(x.caminhos.frentes.futebol?.auge ?? 0);
+      }
       if (x.fatos['dispensado_base'] || x.caminhos.marcas.some(m => m.tipo === 'fracasso')) {
         dispensados++;
         // Depois do sonho, a vida continua: escola concluída ou trabalho, e vagas comuns abertas.
@@ -220,7 +228,12 @@ describe('esporte', () => {
     // as 40 vidas e a proporção oscila em volta da paridade (medido: 4 × 4 sem o mundo vivo, 4 × 6 com ele). O que o
     // desenho afirma — e o que se testa — é que a porta amadora é EXCEÇÃO entre quem tenta, como a base.
     expect(profissionais - pelaBase).toBeLessThanOrEqual(Math.max(2, tentaram * 0.25));
-    expect(tentaram).toBeGreaterThan(profissionais * 3);
+    // REWORK 9.7 · FUT-02: a porta amadora fechava de uma vez aos 24 — nesta amostra (40 vidas que treinam a sério desde os
+    // 6 e aceitam toda oferta), duas com técnica 83–84 (acima do titular da Série B) ficavam de fora só pela idade. Abertas
+    // até os 30 (cada vez mais estreitas), a proporção passa de 11/35 para 13/35: o limite deste teste passou de 1/3 para
+    // 40% de quem tenta, e o que se afirma em troca é que a entrada tardia é só de quem joga como poucos.
+    expect(profissionais).toBeLessThanOrEqual(tentaram * 0.4);
+    for (const t of tardios) expect(t).toBeGreaterThanOrEqual(80);
     expect(dispensadosComRota).toBe(dispensados);
   }, 300000);
 });

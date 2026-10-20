@@ -7,8 +7,10 @@
  * do ano inteiro: o desempenho (a "nota"), a frequência (as aulas que a agenda deixou acontecer), a dedicação e o que de
  * fato aconteceu dela, e a situação. O histórico, quando pedido, é a fotografia de cada ano fechado.
  *
- * Nada é decorativo: o motor não tem nota por matéria, então o boletim não inventa uma — mostra o domínio e diz a
- * diferença. Substitui as duas listas de matérias que Caminhos repetia ("Como você está se saindo" e "As matérias").
+ * Nada é decorativo. REWORK 9.7 · EDU-04: a nota e o conhecimento são colunas diferentes. A NOTA (à mão) é a do motor
+ * para aquele ano e aquela matéria (`escola.notasDoAno`), na escala do país; o CONHECIMENTO (impresso) é o domínio, que
+ * cresce com a vida e tem a sua própria régua (o esperado para a série). Antes, o domínio ia escrito à mão na coluna da
+ * nota — e parecia uma nota que crescia sem fim. Substitui as duas listas de matérias que Caminhos repetia ("Como você está se saindo" e "As matérias").
  *
  * REWORK 9.6 · VIS-02: o boletim é uma FOLHA — papel com grão, cabeçalho impresso da escola, os campos do aluno sobre
  * a linha pontilhada, a tabela impressa e os números PREENCHIDOS À MÃO (caneta azul; vermelha quando a matéria está
@@ -21,7 +23,7 @@ import type { Vida } from '../../motor/tipos';
 import { MATERIAS, PALAVRA_DA_RELACAO } from '../../motor/dados/frentes';
 import { estagioDaFrente, leituraDaFrente, materiasExtremas } from '../../motor/sistemas/frentes';
 import { evolucaoDaFrente, evolucaoDaNota } from '../../motor/sistemas/progressao';
-import { NOME_MATERIA, rotuloSerie } from '../../motor/sistemas/escola';
+import { escalaDeNotas, NOME_MATERIA, notaDoDesempenho, notaNaEscala, rotuloSerie } from '../../motor/sistemas/escola';
 import { instituicaoAtual } from '../../motor/sistemas/formacao';
 import { presencaNaEscola } from '../../motor/sistemas/agenda';
 import { anoDe } from '../../motor/tempo';
@@ -48,6 +50,9 @@ export function Boletim({ vida }: { vida: Vida }) {
   const idTitulo = 'titulo-boletim';
   const ano = anoDe(vida.t);
   const escola = inst?.nome ?? (b.rede === 'privada' ? 'Escola particular' : 'Escola pública');
+  const escala = escalaDeNotas(vida);
+  const fmt = (n10: number) => { const x = notaNaEscala(vida, n10); return escala.casas ? num(x).replace(/^(\d+)$/, '$1,0') : String(x); };
+  const abaixo = (n10: number) => notaNaEscala(vida, n10) < escala.aprovacao;
   return (
     <section className={`boletim papel${ano < 2000 ? ' papel--antigo' : ''}`} aria-labelledby={idTitulo} data-rede={b.rede} data-epoca={ano < 2000 ? 'antiga' : 'atual'}>
       <header className="boletim__cabeca">
@@ -66,9 +71,9 @@ export function Boletim({ vida }: { vida: Vida }) {
       </header>
 
       <table className="boletim__tabela">
-        <caption className="sr-only">Matérias: domínio, evolução no ano e lugar diante da série</caption>
+        <caption className="sr-only">Matérias: a nota do ano (de 0 a {escala.max}), o conhecimento, a evolução no ano e o lugar diante da série</caption>
         <thead>
-          <tr><th scope="col">Matéria</th><th scope="col">Domínio</th><th scope="col">No ano</th><th scope="col">Diante da série</th></tr>
+          <tr><th scope="col">Matéria</th><th scope="col">Nota <small>(0–{escala.max})</small></th><th scope="col">Conhecimento</th><th scope="col">No ano</th><th scope="col">Diante da série</th></tr>
         </thead>
         <tbody>
           {materias.map(d => {
@@ -76,10 +81,12 @@ export function Boletim({ vida }: { vida: Vida }) {
             const r = estagioDaFrente(vida, d, e.agora);
             const direcao = e.delta === undefined ? 'nova' : e.delta >= 0.5 ? 'subiu' : e.delta <= -0.5 ? 'caiu' : 'parou';
             const causa = e.causas.filter(([, x]) => Math.abs(x) >= 0.1);
+            const n = b.notas?.[d as keyof NonNullable<typeof b.notas>];
             return (
               <tr key={d} className={`boletim__linha boletim__linha--${direcao}${d === forte ? ' boletim__linha--forte' : d === fraca ? ' boletim__linha--fraca' : ''}`} data-frente={d}>
                 <th scope="row" className="boletim__materia">{cap(NOME_MATERIA[d])}</th>
-                <td className="boletim__dominio" data-rotulo="Domínio"><span className="boletim__celula"><strong data-agora={e.agora} className={`manuscrito boletim__nota${r.relacao === 'abaixo' ? ' manuscrito--vermelho' : ''}`}>{num(e.agora)}</strong>{r.esperado !== undefined && <span className="boletim__esperado"> esperado ~{num(r.esperado)}</span>}</span></td>
+                <td className="boletim__nota-materia" data-rotulo="Nota">{n !== undefined ? <strong data-nota-materia={n} className={`manuscrito boletim__nota${abaixo(n) ? ' manuscrito--vermelho' : ''}`}>{fmt(n)}</strong> : <span className="boletim__esperado">no fim do ano</span>}</td>
+                <td className="boletim__dominio" data-rotulo="Conhecimento"><span className="boletim__celula"><span data-agora={e.agora} className="boletim__conhecimento">{num(e.agora)}</span>{r.esperado !== undefined && <span className="boletim__esperado"> esperado na série ~{num(r.esperado)}</span>}</span></td>
                 <td className="boletim__ano" data-rotulo="No ano"><span className="boletim__celula">
                   {e.antes !== undefined ? <span className={`boletim__delta boletim__delta--${direcao}`}>{num(e.antes)} → {num(e.agora)} ({sinal(e.delta ?? 0)})</span> : <span className="boletim__delta boletim__delta--nova">primeiro ano registrado</span>}
                   {causa.length > 0 && (
@@ -98,8 +105,8 @@ export function Boletim({ vida }: { vida: Vida }) {
       <dl className="boletim__rodape">
         {nota.agora !== undefined && (
           <div data-nota="escola" data-agora={nota.agora}>
-            <dt>Desempenho do ano</dt>
-            <dd><strong className={`manuscrito boletim__nota${nota.agora < 50 ? ' manuscrito--vermelho' : ''}`}>{nota.agora}</strong>/100 · {palavraDesempenho(nota.agora)}{dNota !== undefined && <span className={`boletim__delta boletim__delta--${dNota >= 3 ? 'subiu' : dNota <= -3 ? 'caiu' : 'parou'}`}> ({sinal(dNota)} no ano)</span>}</dd>
+            <dt>Média do ano</dt>
+            <dd><strong className={`manuscrito boletim__nota${abaixo(notaDoDesempenho(nota.agora)) ? ' manuscrito--vermelho' : ''}`}>{fmt(notaDoDesempenho(nota.agora))}</strong> de {escala.max} · {palavraDesempenho(nota.agora)}{dNota !== undefined && <span className={`boletim__delta boletim__delta--${dNota >= 3 ? 'subiu' : dNota <= -3 ? 'caiu' : 'parou'}`}> ({dNota >= 3 ? 'subiu' : dNota <= -3 ? 'caiu' : 'quase igual'} no ano: era {fmt(notaDoDesempenho(nota.antes!))})</span>}</dd>
           </div>
         )}
         <div data-frequencia={Math.round(freq * 100)}>
@@ -125,7 +132,7 @@ export function Boletim({ vida }: { vida: Vida }) {
       )}
 
       <div className="boletim__fecho">
-        <p className="boletim__legenda nota">O domínio é o que você sabe de cada matéria; o desempenho do ano tem outras causas também (a frequência, a dedicação, a casa, o ano que você teve).</p>
+        <p className="boletim__legenda nota">A nota é o desempenho deste ano (aprovação a partir de {escala.aprovacao}) e pode subir ou cair no próximo. O conhecimento é o que você sabe de cada matéria: cresce com a vida e se compara ao que a série pede. A nota tem outras causas também (a frequência, a dedicação, a casa, o ano que você teve).</p>
         <div className="boletim__autenticacao" aria-hidden>
           <span className="carimbo"><span>Secretaria</span><span>{ano}</span></span>
           <span className="rubrica">
@@ -139,14 +146,14 @@ export function Boletim({ vida }: { vida: Vida }) {
         <details className="boletim__historico">
           <summary>Histórico: os anos anteriores</summary>
           <table className="boletim__tabela boletim__tabela--historico">
-            <caption className="sr-only">Domínio de cada matéria e desempenho, ano a ano</caption>
-            <thead><tr><th scope="col">Ano</th>{materias.map(d => <th key={d} scope="col">{cap(NOME_MATERIA[d])}</th>)}<th scope="col">Desempenho</th></tr></thead>
+            <caption className="sr-only">A nota de cada matéria e a média, ano a ano</caption>
+            <thead><tr><th scope="col">Ano</th>{materias.map(d => <th key={d} scope="col">{cap(NOME_MATERIA[d])}</th>)}<th scope="col">Média</th></tr></thead>
             <tbody>
               {anos.map(f => (
                 <tr key={f.t}>
                   <th scope="row">{anoDe(f.t - 6)}</th>
-                  {materias.map(d => <td key={d} data-rotulo={cap(NOME_MATERIA[d])}>{f.frentes[d] !== undefined ? num(f.frentes[d]!) : '—'}</td>)}
-                  <td data-rotulo="Desempenho">{f.escola}</td>
+                  {materias.map(d => { const x = f.notas?.[d as keyof NonNullable<typeof f.notas>]; return <td key={d} data-rotulo={cap(NOME_MATERIA[d])}>{x !== undefined ? fmt(x) : '—'}</td>; })}
+                  <td data-rotulo="Média">{fmt(notaDoDesempenho(f.escola!))}</td>
                 </tr>
               ))}
             </tbody>

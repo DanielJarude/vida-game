@@ -14,6 +14,7 @@
  * o build real: `scripts/pwa/offline.mjs`.
  */
 
+import { paisDaCidade } from '../dados/lugares';
 import { describe, expect, it } from 'vitest';
 import { criarVida } from '../criacao';
 import { disponibilidade, executar } from '../acoes';
@@ -80,19 +81,23 @@ describe('transversal: Brasil → EUA → a geração seguinte', () => {
     expect(rotuloDe(v, v.pessoas[amigaId], v.vinculos[amigaId])).toMatch(/amiga/);
 
     // 6. Um filho nascido nos EUA: americano pelo solo, brasileiro pelo sangue.
+    let idDoFilho = '';
     v = transacao(v, x => {
       const { p } = comFilho(x, 2, { genero: 'masculino' });
+      idDoFilho = p.id;
       p.municipioNatal = 'us:chicago';
       p.nacionalidades = nacionalidadesDoBebe('us:chicago', [nacionalidadesDaVida(x)], 10);
       x.financas.conta = 400000;
     }).vida;
-    const filho = Object.values(v.pessoas).find(p => p.genitores?.includes('eu'))!;
+    // REWORK 9.7: o filho é o criado aqui (a vida pode ter outros filhos — a semente decide).
+    const filho = v.pessoas[idDoFilho];
     expect(filho.nacionalidades).toEqual(expect.arrayContaining(['US', 'BR']));
 
     // 7. Morre; a herança é pela lei de onde morava; o filho continua.
     v = viverAte(v, 52);
     entrarNaVida(v);
-    const aindaNosEua = paisDaVida(v) === 'US';
+    // REWORK 9.7: o filho continua de onde ELE mora — adulto, ele pode ter emigrado por conta própria (a semente decide).
+    const aindaNosEua = paisDaVida(v) === 'US' && paisDaCidade(v.pessoas[idDoFilho].municipioId ?? v.moradia.municipioId) === 'US';
     v = transacao(v, x => { x.morte = { t: x.t, causa: 'infarto' }; }).vida;
     const partilha = partilhar(v);
     expect(partilha.quinhoes.some(q => q.pessoaId === filho.id)).toBe(true);

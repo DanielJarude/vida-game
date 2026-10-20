@@ -177,11 +177,17 @@ describe('SOC-01 · o público tem causa, e a conta fecha', () => {
 
   it('crescimento extraordinário continua possível — quando o nome cresce de verdade, e o motivo fica registrado', () => {
     const v0 = famosa(45);
-    const v = avancarAno(transacao(v0, x => { x.notoriedade = { valor: 80, pico: 80, t: x.t, fonte: 'arte', origens: { arte: 80 } }; x.caminhos.obras = []; }).vida).vida;
+    // REWORK 9.7 · SOC-01: o salto legítimo pede um acontecimento público (aqui, a estreia), e o motivo leva o nome dele.
+    // Sem acontecimento nenhum, a notoriedade que sobe sozinha só traz o que cabe no tamanho da conta (rework97).
+    const v = avancarAno(transacao(v0, x => {
+      x.notoriedade = { valor: 80, pico: 80, t: x.t, fonte: 'arte', origens: { arte: 80 } }; x.caminhos.obras = [];
+      x.biografia.push({ id: 'estreia', t: x.t - 2, texto: 'Estreou como protagonista de uma série nacional.', relevancia: 'marco', tema: 'trabalho' } as never);
+    }).vida).vida;
     const b = contaAtiva(v, 'instagram')!.anos!.slice(-1)[0];
     expect(fimDoBalanco(b)).toBe(b.fim);
     expect(b.exposicao).toBeGreaterThan(100000);
     expect((b.motivos ?? []).some(m => /o nome cresceu no ano/.test(m))).toBe(true);
+    expect((b.motivos ?? []).some(m => /protagonista/.test(m))).toBe(true);
     // Proporcional: nunca passa do público que o nome possível traz.
     expect(b.fim!).toBeLessThanOrEqual(publicoDoNome('instagram', Math.max(b.famaFim ?? 0, 80)) + 40000);
   });

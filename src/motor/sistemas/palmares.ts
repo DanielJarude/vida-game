@@ -84,7 +84,9 @@ export function avaliarTemporada(e: CarreiraEsportiva, t: Temporada): { indice: 
 }
 
 /** O nome da competição de uma temporada (no universo do jogo). */
-export const competicaoDe = (d: Dominio, nivel: number) => (d === 'futebol' ? divisaoDoNivel(nivel) : divisaoDe(d, nivel).replace(/ —.*$/, '').replace(/ \(acesso\)$/, ''));
+// REWORK 9.7 · FUT-01: o nome da competição é o do país do CLUBE (antes, o do contexto da vida — uma temporada no
+// exterior podia levar o nome de uma divisão de outro país).
+export const competicaoDe = (d: Dominio, nivel: number, pais?: string) => (d === 'futebol' ? divisaoDoNivel(nivel, pais) : divisaoDe(d, nivel, pais).replace(/ —.*$/, '').replace(/ \(acesso\)$/, ''));
 export { daCompeticao };
 
 
@@ -100,7 +102,7 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   if (e.modalidade === 'tenis') return;
   const g = ge(v);
   const futebol = e.modalidade === 'futebol';
-  const comp = competicaoDe(e.modalidade, t.nivel);
+  const comp = competicaoDe(e.modalidade, t.nivel, paisDaCidade(e.municipioId));
   const ava = avaliarTemporada(e, t);
   const linha = linhaDaTemporada(v, t).split(' · ').slice(2).join(', ');
   const anteriores = (e.temporadas ?? []).slice(0, -1);
@@ -154,14 +156,14 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
       : t.nivel < 4 && t.colocacao <= (t.nivel === 1 ? 2 : 4) ? 1 : t.nivel >= 2 && t.colocacao >= 17 ? -1 : 0;
     if (mov === 1 && e.nivel === t.nivel) {
       e.nivel = (t.nivel + 1) as 1 | 2 | 3 | 4;
-      const para = competicaoDe(e.modalidade, e.nivel);
+      const para = competicaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId));
       const texto = `Acesso: ${futebol ? oClube(e.clube) : 'a equipe'} subiu para ${aCompeticao(para)}${ava.participacao >= 0.5 ? ', com você entre os titulares' : ''}.`;
       registrarConquista(v, { tipo: 'acesso', modalidade: e.modalidade, ano: t.ano, competicao: para, clube: t.clube, papel: ava.participacao >= 0.5 ? 'protagonista' : 'elenco', texto: `Acesso para ${aCompeticao(para)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
       escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
       e.reputacao = clamp((e.reputacao ?? 30) + 1);
     } else if (mov === -1 && e.nivel === t.nivel) {
       e.nivel = (t.nivel - 1) as 1 | 2 | 3 | 4;
-      const para = competicaoDe(e.modalidade, e.nivel);
+      const para = competicaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId));
       registrarConquista(v, { tipo: 'rebaixamento', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: `Rebaixamento ${daCompeticao(comp)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
       escrever(v, { texto: `${futebol ? cap(oClube(e.clube)) : 'A equipe'} caiu: a próxima temporada é ${para === 'campeonato estadual' ? 'só no estadual' : daCompeticao(para).replace(/^do /, 'no ').replace(/^da /, 'na ').replace(/^das /, 'nas ')}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       abalar(v, 'o rebaixamento do clube', -5, 3);
@@ -181,7 +183,7 @@ export function premiosDaTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   if (t.nivel < 2 || e.modalidade === 'tenis' || t.partidas === 0) return [];
   const g = ge(v);
   const coletivo = perfilDe(e.modalidade).coletivo;
-  const comp = competicaoDe(e.modalidade, t.nivel);
+  const comp = competicaoDe(e.modalidade, t.nivel, paisDaCidade(e.municipioId));
   const ganhos: { texto: string; peso: 1 | 2 | 3; rep: number }[] = [];
   // As vagas são poucas e a concorrência é a liga inteira: estar entre os elegíveis não é ganhar.
   const vaga = (p: number) => r.chance(p);

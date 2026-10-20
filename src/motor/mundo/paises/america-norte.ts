@@ -138,7 +138,8 @@ export const ESTADOS_UNIDOS: PerfilDePais = {
     credito: { nome: 'empréstimo estudantil federal (Direct Loan)' },
     // Ação afirmativa por raça vedada (SFFA v. Harvard, 2023); não há cotas legais por renda/escola.
     cotas: false,
-    privadaComum: true
+    privadaComum: true,
+    notas: { max: 100, aprovacao: 60, casas: 0 }
   },
   politica: {
     sistema: 'república presidencialista federal',
@@ -406,7 +407,8 @@ export const CANADA: PerfilDePais = {
     bolsa: { nome: 'Canada Student Grant', teto: 1.5 },
     credito: { nome: 'Canada Student Loan' },
     cotas: false,
-    privadaComum: false
+    privadaComum: false,
+    notas: { max: 100, aprovacao: 50, casas: 0 }
   },
   politica: {
     sistema: 'monarquia constitucional parlamentarista federal',

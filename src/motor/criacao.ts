@@ -187,7 +187,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
   // complicação) é raro: ~2%, da semente.
   const fragil = hashUnit(`${id}:fragil`) < 0.02;
   const acaso = {
-    saude: Math.round(Math.max(30, Math.min(99, 86 + (pred.saude ?? 0) * 8 + ruidoSaude * 4 - (classe === 'vulneravel' ? 4 : 0) - (fragil ? 26 : 0)))),
+    saude: Math.round(Math.max(30, Math.min(100, 86 + (pred.saude ?? 0) * 8 + ruidoSaude * 4 - (classe === 'vulneravel' ? 4 : 0) - (fragil ? 26 : 0)))),
     fisico: Math.round(50 + pred.fisica * 30),
     felicidade: Math.round(72 + (pred.animo ?? 0) * 14),
     beleza: Math.round(55 + ruidoAparencia * 12),

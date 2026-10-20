@@ -33,7 +33,7 @@ import { curso, cursoOuNulo } from '../dados/cursos';
 import { animal } from '../dados/animais';
 import { listaNatural } from '../texto';
 import { modeloRotina, nivelDa, nivelModelo, registrarHorarioDaAtividade, type CategoriaAtividade } from './rotinas';
-import { encaixe, estudaAgora, type FaixaDaSemana } from './semana';
+import { aulaCurtaDaCrianca, encaixe, estudaAgora, type FaixaDaSemana } from './semana';
 import { semanaDaPolitica } from './politica';
 import { deslocamento } from './transporte';
 import { rngDe } from '../rng';
@@ -168,7 +168,15 @@ export function blocosDoTrabalho(v: Vida, hip?: TrabalhoHipotetico): Bloco[] {
   if (oc?.jornada === 'longa') return [{ ...base, id: 'trabalho', rotulo: rot, detalhe: 'jornada longa', dias: UTEIS, inicio: h(7), fim: h(19) }, { ...base, id: 'trabalho_sab', rotulo: `${rot} — sábado`, dias: [5], inicio: h(7), fim: h(12) }];
   if (carga === 'parcial') {
     const turnos: Turno[] = idade(v) >= 18 ? ['manha', 'tarde', 'noite'] : ['manha', 'tarde'];
-    const t = hip?.turno ?? v.agenda?.turnos?.trabalho ?? turnoQueCabe(v, turnos, HORAS_DO_TRABALHO, ['escola', 'curso']) ?? 'manha';
+    // REWORK 9.7 · P0: o meio período procura o turno contra o curso, e o curso (sem turno guardado) procura o seu contra
+    // o trabalho — uma volta sem fim (estágio de meio período + curso técnico: estouro de pilha no ano). Na volta, o
+    // trabalho fica com o turno padrão; o curso se encaixa em volta dele, e o trabalho, em volta do curso.
+    const livre = !hip?.turno && !v.agenda?.turnos?.trabalho && !resolvendoTurnoDoTrabalho;
+    let t: Turno = hip?.turno ?? v.agenda?.turnos?.trabalho ?? 'manha';
+    if (livre) {
+      resolvendoTurnoDoTrabalho = true;
+      try { t = turnoQueCabe(v, turnos, HORAS_DO_TRABALHO, ['escola', 'curso']) ?? 'manha'; } finally { resolvendoTurnoDoTrabalho = false; }
+    }
     const [i0, i1] = HORAS_DO_TRABALHO[t];
     return [{ ...base, id: 'trabalho', rotulo: rot, detalhe: 'meio período', dias: UTEIS, inicio: i0, fim: i1, turno: t, turnos, fonteDoTurno: 'trabalho' }];
   }
@@ -177,6 +185,8 @@ export function blocosDoTrabalho(v: Vida, hip?: TrabalhoHipotetico): Bloco[] {
   if (!hip && v.trabalho.horasExtras) out.push({ ...base, id: 'horas_extras', rotulo: 'Horas extras', dias: UTEIS, inicio: fim, fim: fim + h(2) });
   return out;
 }
+
+let resolvendoTurnoDoTrabalho = false;
 
 /** O primeiro turno que não bate com a escola nem com o curso de agora (o encaixe automático do meio período). */
 function turnoQueCabe(v: Vida, turnos: Turno[], horas: Record<Turno, [number, number]>, contra: OrigemDoBloco[]): Turno | undefined {
@@ -356,7 +366,7 @@ function encaixar(v: Vida, ocupados: Bloco[], cat: CategoriaAtividade, vezes: nu
 }
 
 /** A duração de uma sessão da atividade (minutos). */
-export function duracaoDa(id: string, cat: CategoriaAtividade): number { return DURACAO_DE[id] ?? DURACAO[cat]; }
+export function duracaoDa(id: string, cat: CategoriaAtividade, idadeDe?: number, nivel = 1): number { return aulaCurtaDaCrianca(id, nivel, idadeDe) ? 60 : DURACAO_DE[id] ?? DURACAO[cat]; }
 
 /* ------------------------------------------------------------ A agenda */
 
@@ -395,7 +405,7 @@ export function agendaDaSemana(v: Vida, o: { trabalho?: TrabalhoHipotetico; turn
     const m = modeloRotina(r.id);
     if (!m) continue;
     const n = nivelModelo(m, nivelDa(r));
-    atividades.push({ id: r.id, rotulo: m.niveis.length > 1 ? `${m.nome} — ${n.rotulo.toLowerCase()}` : m.nome, cat: m.categoria, vezes: vezesPorSemana(n.tempo), dur: duracaoDa(r.id, m.categoria), origem: 'rotina' });
+    atividades.push({ id: r.id, rotulo: m.niveis.length > 1 ? `${m.nome} — ${n.rotulo.toLowerCase()}` : m.nome, cat: m.categoria, vezes: vezesPorSemana(n.tempo), dur: duracaoDa(r.id, m.categoria, idade(sobre), nivelDa(r)), origem: 'rotina' });
   }
   const ead = fixos.find(b => b.id === 'curso_ead');
   if (ead) atividades.push({ id: 'curso_ead', rotulo: ead.rotulo, cat: 'estudo', vezes: 3, dur: 120, origem: 'curso' });
@@ -523,7 +533,7 @@ export function validarLugar(v: Vida, id: string, dias: Dia[], inicio: number): 
   const m = r ? modeloRotina(r.id) : undefined;
   const estudo = id === 'estudo_casa' && temEstudoEmCasa(v);
   if (!m && id !== 'curso_ead' && !estudo) return 'Essa atividade não está na sua semana.';
-  const dur = m ? duracaoDa(id, m.categoria) : estudo ? duracaoDoEstudo(idade(v)) : 120;
+  const dur = m ? duracaoDa(id, m.categoria, idade(v), r ? nivelDa(r) : 1) : estudo ? duracaoDoEstudo(idade(v)) : 120;
   // A dedicação diz quantas vezes; o lugar diz quando. Mudar quantas vezes é mudar a dedicação (outro comando).
   const vezes = r && m ? vezesPorSemana(nivelModelo(m, nivelDa(r)).tempo) : estudo ? VEZES_DO_ESTUDO : 3;
   if (dias.length !== vezes) return `Do jeito que está, isso é ${vezes === 1 ? 'uma vez' : `${vezes} vezes`} por semana: escolha ${vezes === 1 ? 'um dia' : `${vezes} dias`} (ou mude a dedicação).`;
@@ -781,7 +791,7 @@ export function horarioDaAtividade(v: Vida, id: string, nivel: number): HorarioD
   // O que a atividade nova tiraria das outras (o encaixe automático reacomoda; o que não couber vira conflito).
   const perdem = depois.conflitos.filter(c => c.tipo === 'sem_horario' && c.perde !== id && !antes.conflitos.some(x => x.id === c.id));
   const i = idade(v);
-  const dur = duracaoDa(id, m.categoria);
+  const dur = duracaoDa(id, m.categoria, i, nivel);
   const janela = i < 12 ? 'até as 19h30 (criança não treina mais tarde)' : i < 16 ? 'até as 21h30' : '';
   const ocupam = listaNatural([...new Set(antes.blocos.filter(b => b.origem !== 'trajeto' && b.ref !== id).sort((a, b) => (b.fim - b.inicio) * b.dias.length - (a.fim - a.inicio) * a.dias.length).map(b => b.rotulo.replace(/ — .*/, '').replace(/ \(.*\)$/, '').toLowerCase()))].slice(0, 3));
   if (cabem === 0) return { vezes, cabem, motivo: `Horário incompatível: ${m.nome.toLowerCase()} pede ${vezes === 1 ? 'uma vez' : `${vezes} vezes`} de ${dur >= 60 ? `${dur / 60}h`.replace('.', ',').replace(',5h', 'h30') : `${dur} min`} por semana, e não há horário livre${janela ? ` ${janela}` : ''}${ocupam ? `: ${ocupam} ocupam os dias` : ''}.` };
