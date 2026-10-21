@@ -10,7 +10,7 @@ import type { Conteudo, Ctx } from './base';
 import { clamp } from '../rng';
 import type { CuidadoLesao, Posicao } from '../tipos';
 import { escrever, idade, lembrarCom } from '../nucleo';
-import { estresse } from './efeitos';
+import { estresse, local } from './efeitos';
 import { custa } from './efeitos';
 import { pagar } from '../sistemas/dinheiro';
 import { custoDoCuidado, cuidarDaLesao, lesaoAtiva, lesaoPorDecidir, prazoDoCuidado } from '../sistemas/lesoes';
@@ -122,9 +122,9 @@ export const INTEGRACAO: Conteudo[] = [
         resolver: c => ({ texto: 'Você aliviou o trabalho. A conta do mês ficou mais curta; o dia, mais comprido.', memoria: null, efeito: () => { mudarRitmo(c.v, 'leve'); estresse(c, -6); } })
       },
       {
-        id: 'descansar', texto: 'Tirar férias de verdade, longe de tudo', disponivel: c => (idade(c.v) < 18 ? false : custa(c, 2500)),
-        consequencia: () => `Uns ${fmt(2500)}. Alivia agora; a semana continua a mesma na volta.`,
-        resolver: c => ({ texto: 'Dez dias sem relógio. Na volta, a pilha de coisas estava lá — mas você também.', memoria: null, efeito: () => { pagar(c.v, 2500); estresse(c, -14); abalar(c.v, 'as férias', 4, -8); if (c.v.mente.sobrecarga) c.v.mente.sobrecarga.anos = Math.max(0, c.v.mente.sobrecarga.anos - 1); } })
+        id: 'descansar', texto: 'Tirar férias de verdade, longe de tudo', disponivel: c => (idade(c.v) < 18 ? false : custa(c, local(c, 2500))),
+        consequencia: c => `Uns ${fmt(local(c, 2500))}. Alivia agora; a semana continua a mesma na volta.`,
+        resolver: c => ({ texto: 'Dez dias sem relógio. Na volta, a pilha de coisas estava lá — mas você também.', memoria: null, efeito: () => { pagar(c.v, local(c, 2500)); estresse(c, -14); abalar(c.v, 'as férias', 4, -8); if (c.v.mente.sobrecarga) c.v.mente.sobrecarga.anos = Math.max(0, c.v.mente.sobrecarga.anos - 1); } })
       },
       {
         id: 'seguir', texto: 'Seguir assim', comportamento: { disciplina: 1, impulsividade: 1 },

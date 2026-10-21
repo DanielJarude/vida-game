@@ -21,6 +21,7 @@
 import { ehEspecialidadeMedica } from './dados/especialidades';
 import { derivarPredisposicoes } from './sistemas/pessoa';
 import { posicaoSugerida } from './sistemas/esporte';
+import { fixarEstatura } from './sistemas/modalidades';
 import { alvoDaNotoriedade } from './sistemas/notoriedade';
 import type { Financas,
   Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, TabelaEmCurso, Tema, Vida, Vinculo
@@ -103,7 +104,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 

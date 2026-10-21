@@ -4,6 +4,13 @@ import { clamp } from '../rng';
 import type { Ctx } from './base';
 import { capacidade } from '../sistemas/dinheiro';
 import { dinheiro as fmt } from '../texto';
+import { economiaLocal } from '../dados/lugares';
+
+/**
+ * REWORK 10 · ECO-02: um valor do conteúdo (escrito em reais de uma cidade média brasileira) no custo de vida de onde se
+ * mora — não é câmbio: é o que a mesma coisa (a viagem, a diarista, o curso) custa ali, na moeda dali.
+ */
+export const local = (c: Ctx, x: number) => Math.max(10, Math.round(x * economiaLocal(c.v.moradia.municipioId).custo / 10) * 10);
 
 export const feliz = (c: Ctx, n: number) => { c.v.mente.felicidade = clamp(c.v.mente.felicidade + n); };
 export const estresse = (c: Ctx, n: number) => { c.v.mente.estresse = clamp(c.v.mente.estresse + n); };

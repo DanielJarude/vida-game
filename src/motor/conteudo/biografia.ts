@@ -22,7 +22,7 @@ import { dinheiro as moeda } from '../texto';
 import type { Conteudo, Ctx } from './base';
 import type { Dominio, Imovel, Pessoa, Vida, Vinculo } from '../tipos';
 import * as P from './papeis';
-import { custa, dinheiro, envolvimento, estresse, feliz, prox, tensao } from './efeitos';
+import { custa, dinheiro, envolvimento, estresse, feliz, prox, tensao, local } from './efeitos';
 import { clamp } from '../rng';
 import { idadePessoa, lembrarCom, temFato, vinculosVivos } from '../nucleo';
 import { flex, listaNatural } from '../texto';
@@ -383,7 +383,7 @@ export const BIOGRAFIA: Conteudo[] = [
               feito(c, `bio_casamento_${c.p.filho.id}`);
               prox(c, 'filho', 6); mexer(c.v, g.id, { prox: 7 });
               lembrarCom(c.v, c.p.filho.id, cartorio ? 'Você fez o discurso no casamento.' : 'Você juntou as duas famílias num almoço.', 'ritual', 2);
-              if (!cartorio) dinheiro(c, -400);
+              if (!cartorio) dinheiro(c, -local(c, 400));
             }
           };
         }
@@ -530,14 +530,14 @@ export const BIOGRAFIA: Conteudo[] = [
       },
       {
         id: 'terapia', texto: 'Admitir a distância e procurar terapia de casal', comportamento: { empatia: 1 },
-        disponivel: c => { const vin = c.v.vinculos[c.p.par.id]; return vin.tensao >= 30 || (vin.romance?.envolvimento ?? 50) < 55 || crisesDoCasal(vin) >= 2 ? custa(c, 2400, 'Não há dinheiro para as sessões.') : false; },
-        consequencia: c => `Doze sessões, ${fmt(2400)}. ${c.v.vinculos[c.p.par.id].confianca >= 50 ? 'Com a confiança que existe, tende a aproximar.' : 'A confiança está baixa: ajuda, mas devagar.'}`,
+        disponivel: c => { const vin = c.v.vinculos[c.p.par.id]; return vin.tensao >= 30 || (vin.romance?.envolvimento ?? 50) < 55 || crisesDoCasal(vin) >= 2 ? custa(c, local(c, 2400), 'Não há dinheiro para as sessões.') : false; },
+        consequencia: c => `Doze sessões, ${fmt(local(c, 2400))}. ${c.v.vinculos[c.p.par.id].confianca >= 50 ? 'Com a confiança que existe, tende a aproximar.' : 'A confiança está baixa: ajuda, mas devagar.'}`,
         resolver: c => {
           const conf = c.v.vinculos[c.p.par.id].confianca >= 50;
           return {
             texto: conf ? `Na sexta sessão, ${c.p.par.nome} disse uma coisa que você nunca tinha ouvido. Voltaram para casa de mãos dadas.` : `As sessões foram duras. Algumas terminaram em silêncio no carro. Mas continuaram indo.`,
             memoria: `Fez terapia de casal com ${c.p.par.nome} quando os filhos saíram de casa.`,
-            efeito: () => { pagar(c.v, 2400); tensao(c, 'par', -15); envolvimento(c, 'par', conf ? 10 : 4); lembrarCom(c.v, c.p.par.id, 'Fizeram terapia de casal.', 'reconciliacao', 2); }
+            efeito: () => { pagar(c.v, local(c, 2400)); tensao(c, 'par', -15); envolvimento(c, 'par', conf ? 10 : 4); lembrarCom(c.v, c.p.par.id, 'Fizeram terapia de casal.', 'reconciliacao', 2); }
           };
         }
       },
@@ -749,7 +749,7 @@ export const BIOGRAFIA: Conteudo[] = [
           return {
             texto: `${c.p.par.nome} escreveu os votos num guardanapo e leu tremendo. Você leu os seus de cor.`,
             memoria: `Renovou os votos com ${c.p.par.nome} ${m === 50 ? 'nas bodas de ouro' : 'nas bodas de prata'}.`, tom: 'bom', relevancia: 'marco',
-            efeito: () => { feito(c, `bodas_${c.p.par.id}_${m}`); dinheiro(c, -800); envolvimento(c, 'par', 10); tensao(c, 'par', -10); lembrarCom(c.v, c.p.par.id, m === 50 ? 'Renovaram os votos nas bodas de ouro.' : 'Renovaram os votos nas bodas de prata.', 'casamento', 3); }
+            efeito: () => { feito(c, `bodas_${c.p.par.id}_${m}`); dinheiro(c, -local(c, 800)); envolvimento(c, 'par', 10); tensao(c, 'par', -10); lembrarCom(c.v, c.p.par.id, m === 50 ? 'Renovaram os votos nas bodas de ouro.' : 'Renovaram os votos nas bodas de prata.', 'casamento', 3); }
           };
         }
       },
@@ -761,7 +761,7 @@ export const BIOGRAFIA: Conteudo[] = [
           return {
             texto: `O restaurante de sempre, a mesa do canto. ${c.p.par.nome} pediu o mesmo prato de ${m === 50 ? 'cinquenta' : 'vinte e cinco'} anos atrás.`,
             memoria: `${m === 50 ? 'Bodas de ouro' : 'Bodas de prata'} com ${c.p.par.nome}, num jantar a dois.`,
-            efeito: () => { feito(c, `bodas_${c.p.par.id}_${m}`); dinheiro(c, -300); envolvimento(c, 'par', 4); lembrarCom(c.v, c.p.par.id, m === 50 ? 'Bodas de ouro.' : 'Bodas de prata.', 'casamento', 3); }
+            efeito: () => { feito(c, `bodas_${c.p.par.id}_${m}`); dinheiro(c, -local(c, 300)); envolvimento(c, 'par', 4); lembrarCom(c.v, c.p.par.id, m === 50 ? 'Bodas de ouro.' : 'Bodas de prata.', 'casamento', 3); }
           };
         }
       }
@@ -794,17 +794,17 @@ export const BIOGRAFIA: Conteudo[] = [
         resolver: c => ({
           texto: `Você passou a guardar os exames numa pasta azul. O cardiologista já sabe o seu nome.`,
           memoria: `Passou a acompanhar ${c.p.genitor.nome} nas consultas.`,
-          efeito: () => { c.p.genitor.saude = clamp(c.p.genitor.saude + 5); prox(c, 'genitor', 8); estresse(c, 3); if (c.p.genitor.municipioId !== c.v.moradia.municipioId) dinheiro(c, -1500); lembrarCom(c.v, c.p.genitor.id, 'Você passou a ir junto nas consultas.', 'apoio', 2); }
+          efeito: () => { c.p.genitor.saude = clamp(c.p.genitor.saude + 5); prox(c, 'genitor', 8); estresse(c, 3); if (c.p.genitor.municipioId !== c.v.moradia.municipioId) dinheiro(c, -local(c, 1500)); lembrarCom(c.v, c.p.genitor.id, 'Você passou a ir junto nas consultas.', 'apoio', 2); }
         })
       },
       {
         id: 'cuidadora', texto: 'Pagar uma cuidadora algumas horas por dia', comportamento: { generosidade: 1 },
-        disponivel: c => custa(c, 14000, 'Não há dinheiro guardado para um ano de cuidadora.'),
-        consequencia: c => `Cerca de ${fmt(14000)} por ano. ${c.p.genitor.nome} fica menos só e mais segur${o(c.p.genitor)}; sua rotina não muda.`,
+        disponivel: c => custa(c, local(c, 14000), 'Não há dinheiro guardado para um ano de cuidadora.'),
+        consequencia: c => `Cerca de ${fmt(local(c, 14000))} por ano. ${c.p.genitor.nome} fica menos só e mais segur${o(c.p.genitor)}; sua rotina não muda.`,
         resolver: c => ({
           texto: `A cuidadora chega às oito e sai às duas. ${c.p.genitor.nome} reclamou na primeira semana e na segunda já contava a vida para ela.`,
           memoria: `Contratou uma cuidadora para ${c.p.genitor.nome}.`,
-          efeito: () => { pagar(c.v, 14000); c.p.genitor.saude = clamp(c.p.genitor.saude + 7); prox(c, 'genitor', 4); lembrarCom(c.v, c.p.genitor.id, 'Você pagou uma cuidadora.', 'apoio', 2); }
+          efeito: () => { pagar(c.v, local(c, 14000)); c.p.genitor.saude = clamp(c.p.genitor.saude + 7); prox(c, 'genitor', 4); lembrarCom(c.v, c.p.genitor.id, 'Você pagou uma cuidadora.', 'apoio', 2); }
         })
       },
       {
@@ -879,7 +879,7 @@ export const BIOGRAFIA: Conteudo[] = [
           return {
             texto: tenso ? `${c.p.irmao.nome} abriu a porta surpres${o(c.p.irmao)}. O café durou duas horas; o assunto difícil apareceu no fim, e ficou pela metade.` : `Vocês passaram a tarde vendo fotos antigas. ${c.p.irmao.nome} lembrava de coisas que você tinha esquecido.`,
             memoria: `Depois da morte dos pais, foi ver ${c.p.irmao.nome}.`,
-            efeito: () => { tensao(c, 'irmao', tenso ? -12 : -5); prox(c, 'irmao', tenso ? 8 : 10); if (c.p.irmao.municipioId !== c.v.moradia.municipioId) dinheiro(c, -1200); lembrarCom(c.v, c.p.irmao.id, 'Você veio sem motivo, depois que os pais se foram.', 'reconciliacao', 2); }
+            efeito: () => { tensao(c, 'irmao', tenso ? -12 : -5); prox(c, 'irmao', tenso ? 8 : 10); if (c.p.irmao.municipioId !== c.v.moradia.municipioId) dinheiro(c, -local(c, 1200)); lembrarCom(c.v, c.p.irmao.id, 'Você veio sem motivo, depois que os pais se foram.', 'reconciliacao', 2); }
           };
         }
       },
@@ -893,7 +893,7 @@ export const BIOGRAFIA: Conteudo[] = [
           return {
             texto: `${vieram.length ? `${listaNatural(vieram.map(x => x.nome))} ${vieram.length > 1 ? 'vieram' : 'veio'}` : 'Ninguém confirmou; você fez o almoço mesmo assim'}. Alguém trouxe a receita de ${ultimoGenitorMorto(c.v)!.nome}.`,
             memoria: 'Passou a reunir os irmãos no aniversário dos pais.',
-            efeito: () => { dinheiro(c, -500); for (const x of vieram) { mexer(c.v, x.id, { prox: 6, tensao: -6 }); lembrarCom(c.v, x.id, 'Almoço dos irmãos, no aniversário dos pais.', 'ritual', 2); } }
+            efeito: () => { dinheiro(c, -local(c, 500)); for (const x of vieram) { mexer(c.v, x.id, { prox: 6, tensao: -6 }); lembrarCom(c.v, x.id, 'Almoço dos irmãos, no aniversário dos pais.', 'ritual', 2); } }
           };
         }
       },
@@ -958,7 +958,7 @@ export const BIOGRAFIA: Conteudo[] = [
         resolver: c => ({
           texto: `Vieram onze. Metade você só reconheceu pela risada. ${c.p.amigo.nome} fez o brinde.`,
           memoria: `Organizou com ${c.p.amigo.nome} um reencontro da turma de ${descricaoOrigem(c.v, c.v.vinculos[c.p.amigo.id]).replace(/^(n[oa]s?|por|pela) /, '')}.`, tom: 'bom',
-          efeito: () => { feito(c, `bio_amizade_${c.p.amigo.id}_${marcoDaAmizade(c.v, c.v.vinculos[c.p.amigo.id])}`); dinheiro(c, -300); prox(c, 'amigo', 10); feliz(c, 3); lembrarCom(c.v, c.p.amigo.id, 'Juntaram a turma antiga, décadas depois.', 'ritual', 2); }
+          efeito: () => { feito(c, `bio_amizade_${c.p.amigo.id}_${marcoDaAmizade(c.v, c.v.vinculos[c.p.amigo.id])}`); dinheiro(c, -local(c, 300)); prox(c, 'amigo', 10); feliz(c, 3); lembrarCom(c.v, c.p.amigo.id, 'Juntaram a turma antiga, décadas depois.', 'ritual', 2); }
         })
       },
       {
@@ -997,12 +997,12 @@ export const BIOGRAFIA: Conteudo[] = [
     opcoes: [
       {
         id: 'visitar', texto: c => `Ir visitar ${c.p.amigo.nome}`, comportamento: { sociabilidade: 1 },
-        disponivel: c => custa(c, 2000, 'Não há dinheiro guardado para a viagem.'),
-        consequencia: () => `Passagem e uns dias fora (cerca de ${fmt(2000)}). A amizade volta a ter presença.`,
+        disponivel: c => custa(c, local(c, 2000), 'Não há dinheiro guardado para a viagem.'),
+        consequencia: c => `Passagem e uns dias fora (cerca de ${fmt(local(c, 2000))}). A amizade volta a ter presença.`,
         resolver: c => ({
           texto: `${c.p.amigo.nome} foi buscar você na rodoviária e mostrou a cidade como se fosse ${dele(c.p.amigo)}. É.`,
           memoria: `Foi visitar ${c.p.amigo.nome} em ${cidadeDe(c.p.amigo.municipioId)}.`, tom: 'bom',
-          efeito: () => { feito(c, `bio_amigo_longe_${c.p.amigo.id}`); pagar(c.v, 2000); prox(c, 'amigo', 18); lembrarCom(c.v, c.p.amigo.id, 'Você foi visitar, anos depois da mudança.', 'amizade', 2); }
+          efeito: () => { feito(c, `bio_amigo_longe_${c.p.amigo.id}`); pagar(c.v, local(c, 2000)); prox(c, 'amigo', 18); lembrarCom(c.v, c.p.amigo.id, 'Você foi visitar, anos depois da mudança.', 'amizade', 2); }
         })
       },
       {
@@ -1149,15 +1149,15 @@ export const BIOGRAFIA: Conteudo[] = [
       },
       {
         id: 'atualizar', texto: 'Fazer uma atualização, para não ficar para trás', comportamento: { disciplina: 1 },
-        disponivel: c => custa(c, 1800, 'Não há dinheiro guardado para o curso.'),
-        consequencia: () => `Um curso de ${fmt(1800)}; o desempenho no trabalho sobe.`,
+        disponivel: c => custa(c, local(c, 1800), 'Não há dinheiro guardado para o curso.'),
+        consequencia: c => `Um curso de ${fmt(local(c, 1800))}; o desempenho no trabalho sobe.`,
         resolver: c => {
           const m = marcoDeCarreira(c.v);
           if (!m) return { texto: 'A vida mudou antes da conversa; o assunto ficou para depois.', memoria: null };
           return {
             texto: 'Aula aos sábados, com gente vinte anos mais nova. Você era quem mais perguntava.',
             memoria: null,
-            efeito: () => { c.v.fatos[`bio_carreira_${m.trilha}_${m.anos}`] = c.v.t; pagar(c.v, 1800); const e = c.v.trabalho.atual; if (e) { e.tAtualizacao = c.v.t; e.desempenho = clamp(e.desempenho + 6); } }
+            efeito: () => { c.v.fatos[`bio_carreira_${m.trilha}_${m.anos}`] = c.v.t; pagar(c.v, local(c, 1800)); const e = c.v.trabalho.atual; if (e) { e.tAtualizacao = c.v.t; e.desempenho = clamp(e.desempenho + 6); } }
           };
         }
       },
@@ -1372,14 +1372,14 @@ export const BIOGRAFIA: Conteudo[] = [
       },
       {
         id: 'manter', texto: 'Manter como está e cuidar dela',
-        disponivel: c => custa(c, 4000, 'Não há dinheiro guardado para a manutenção.'),
-        consequencia: () => `Uma manutenção de ${fmt(4000)} agora; a casa fica de pé, fechada, esperando.`,
+        disponivel: c => custa(c, local(c, 4000), 'Não há dinheiro guardado para a manutenção.'),
+        consequencia: c => `Uma manutenção de ${fmt(local(c, 4000))} agora; a casa fica de pé, fechada, esperando.`,
         resolver: c => {
           const b = casaHerdadaParada(c.v)!;
           return {
             texto: 'Pintura, telhado revisado, a luz religada. Você deixou as fotos na parede.',
             memoria: null,
-            efeito: () => { feito(c, `bio_casa_herdada_${b.id}`); pagar(c.v, 4000); b.estado = clamp(b.estado + 18); b.tManutencao = c.v.t; (b.historia ??= []).push({ t: c.v.t, texto: 'Manutenção para manter a casa de pé.' }); }
+            efeito: () => { feito(c, `bio_casa_herdada_${b.id}`); pagar(c.v, local(c, 4000)); b.estado = clamp(b.estado + 18); b.tManutencao = c.v.t; (b.historia ??= []).push({ t: c.v.t, texto: 'Manutenção para manter a casa de pé.' }); }
           };
         }
       }

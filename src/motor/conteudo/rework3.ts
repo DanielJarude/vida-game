@@ -12,7 +12,7 @@ import { educacaoDaVida } from '../mundo/vida';
 import type { Conteudo, Ctx } from './base';
 import { clamp, rngDe } from '../rng';
 import { idade, lembrarCom, temFato } from '../nucleo';
-import { fato, feliz, estresse, prox, tensao } from './efeitos';
+import { fato, feliz, estresse, prox, tensao, local } from './efeitos';
 import { genitorEmCasa } from './papeis';
 import { cursoOuNulo, CURSOS } from '../dados/cursos';
 import { OCUPACOES } from '../dados/ocupacoes';
@@ -59,7 +59,7 @@ export const REWORK3: Conteudo[] = [
     id: 'inf_excursao', tipo: 'decisao', idade: [8, 13], tema: 'escola', prioritario: true, repetir: 3,
     quando: c => !!c.v.educacao.basica && moraComFamiliaDeOrigem(c.v) && recursosDaFamilia(c.v).folga <= 2 && !c.v.biografia.some(b => /excursão da escola/.test(b.texto) && c.v.t - b.t < 48) && asVezes(c, 'inf_excursao', 0.14),
     titulo: 'A excursão da escola',
-    texto: c => `A turma vai ${c.r.pick(['ao museu da capital', 'ao zoológico', 'a um parque de ciências', 'ao teatro, na cidade vizinha'])}. O bilhete pede ${fmt(120)} — ônibus, entrada e lanche. Em casa, o dinheiro anda ${recursosDaFamilia(c.v).folga === 0 ? 'no limite' : 'contado'}.`,
+    texto: c => `A turma vai ${c.r.pick(['ao museu da capital', 'ao zoológico', 'a um parque de ciências', 'ao teatro, na cidade vizinha'])}. O bilhete pede ${fmt(local(c, 120))} — ônibus, entrada e lanche. Em casa, o dinheiro anda ${recursosDaFamilia(c.v).folga === 0 ? 'no limite' : 'contado'}.`,
     papeis: { quem: genitorEmCasa },
     opcoes: [
       { id: 'pedir', texto: c => `Pedir a ${c.p.quem?.nome ?? 'quem cuida de você'} mesmo assim`,
@@ -67,7 +67,7 @@ export const REWORK3: Conteudo[] = [
           const rec = recursosDaFamilia(c.v);
           const deu = rec.folga >= 1 || (c.v.origem.reserva ?? 0) >= 300;
           return deu
-            ? { texto: `${c.p.quem?.nome ?? 'Em casa'} deu um jeito. Você voltou falando da excursão por uma semana.`, memoria: 'Foi à excursão da escola — em casa, deram um jeito.', relevancia: 'cotidiano', tom: 'bom', efeito: () => { c.v.origem.reserva = Math.max(0, (c.v.origem.reserva ?? 0) - 120); feliz(c, 4); prox(c, 'quem', 3); } }
+            ? { texto: `${c.p.quem?.nome ?? 'Em casa'} deu um jeito. Você voltou falando da excursão por uma semana.`, memoria: 'Foi à excursão da escola — em casa, deram um jeito.', relevancia: 'cotidiano', tom: 'bom', efeito: () => { c.v.origem.reserva = Math.max(0, (c.v.origem.reserva ?? 0) - local(c, 120)); feliz(c, 4); prox(c, 'quem', 3); } }
             : { texto: 'Não tinha como. Você ficou na escola com a turma que também não foi.', memoria: 'Não foi à excursão da escola: não havia como pagar.', relevancia: 'cotidiano', tom: 'ruim', efeito: () => feliz(c, -3) };
         } },
       { id: 'rifa', texto: 'Juntar o dinheiro vendendo rifa na rua', comportamento: { disciplina: 1, independencia: 1 },

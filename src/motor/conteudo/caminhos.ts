@@ -17,7 +17,7 @@ import { pesoNaSelecaoDoIf, registrarVivencia } from '../sistemas/formacao';
 import { pagar as pagarGuardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx, Resultado } from './base';
 import * as P from './papeis';
-import { estresse, fato, feliz, custa } from './efeitos';
+import { estresse, fato, feliz, custa, local } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
 import { portaAmadora } from '../sistemas/perfisEsportivos';
 import { conviteDaBase, encerrarCarreira, entrarPeloAmador, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
@@ -386,8 +386,8 @@ export const CAMINHOS: Conteudo[] = [
       { id: 'fechar', texto: c => (presencaDe(c.v.caminhos.negocio!) === 'online' ? 'Tirar a loja do ar' : 'Fechar'),
         resolver: c => ({ texto: presencaDe(c.v.caminhos.negocio!) === 'online' ? 'Você tirou a loja do ar numa terça-feira à noite.' : presencaDe(c.v.caminhos.negocio!) === 'rua' ? 'Você baixou a porta de ferro pela última vez numa terça-feira.' : 'Você avisou os últimos clientes e encerrou as atividades.', memoria: null, efeito: () => { const dono = !!donoIntegral(c.v); fecharNegocio(c.v, 'o movimento não pagou as contas'); if (dono) encerrarEmprego(c.v, 'fechou o negócio'); estresse(c, 6); } }) },
       { id: 'insistir', texto: 'Insistir, com o dinheiro guardado', comportamento: { disciplina: 1 },
-        disponivel: c => custa(c, 5000, 'Não há dinheiro guardado para isso.'),
-        resolver: c => ({ texto: 'Você pôs mais dinheiro e mais horas. O movimento reagiu um pouco.', memoria: null, efeito: () => { pagarGuardado(c.v, 5000); const n = c.v.caminhos.negocio!; n.clientela = clamp(n.clientela + 16); if (donoIntegral(c.v)) c.v.trabalho.atual!.clientela = n.clientela; n.anosNoVermelho = 0; estresse(c, 8); } }) },
+        disponivel: c => custa(c, local(c, 5000), 'Não há dinheiro guardado para isso.'),
+        resolver: c => ({ texto: 'Você pôs mais dinheiro e mais horas. O movimento reagiu um pouco.', memoria: null, efeito: () => { pagarGuardado(c.v, local(c, 5000)); const n = c.v.caminhos.negocio!; n.clientela = clamp(n.clientela + 16); if (donoIntegral(c.v)) c.v.trabalho.atual!.clientela = n.clientela; n.anosNoVermelho = 0; estresse(c, 8); } }) },
       { id: 'mudar', texto: 'Mudar o jeito de vender', comportamento: { coragem: 1 },
         resolver: c => {
           const n = c.v.caminhos.negocio!;

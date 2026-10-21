@@ -13,7 +13,7 @@ import { nomeDePet } from '../sistemas/mercado';
 import { dinheiro as moeda } from '../texto';
 import type { Conteudo } from './base';
 import * as P from './papeis';
-import { art, dinheiro, estresse, fato, feliz, forma, gp, prox, saude, tensao } from './efeitos';
+import { art, dinheiro, estresse, fato, feliz, forma, gp, prox, saude, tensao, local } from './efeitos';
 import { idadePessoa } from '../nucleo';
 import { cidadesGrandesLonge, temFesta } from './local';
 import { paisDaVida } from '../mundo/vida';
@@ -233,14 +233,14 @@ export const INFANCIA: Conteudo[] = [
   {
     id: 'inf_dinheiro_achado', tipo: 'decisao', idade: [7, 13], tema: 'infancia',
     titulo: 'A nota no chão',
-    texto: () => `Voltando da escola, você acha dinheiro dobrado na calçada, na frente de uma padaria: ${moeda(50)}.`,
+    texto: c => `Voltando da escola, você acha dinheiro dobrado na calçada, na frente de uma padaria: ${moeda(local(c, 50))}.`,
     opcoes: [
-      { id: 'guardar', texto: 'Guardar no bolso', resolver: c => ({ texto: `${moeda(50)} inteiros, só seus.`, memoria: null, efeito: () => dinheiro(c, 50) }) },
+      { id: 'guardar', texto: 'Guardar no bolso', resolver: c => ({ texto: `${moeda(local(c, 50))} inteiros, só seus.`, memoria: null, efeito: () => dinheiro(c, local(c, 50)) }) },
       { id: 'padaria', texto: 'Perguntar na padaria se alguém perdeu', comportamento: { generosidade: 1, empatia: 1 },
         resolver: c => c.r.chance(0.5)
-          ? { texto: 'Uma senhora na fila tinha acabado de perder o troco. Agradeceu com um sonho de padaria.', memoria: `Devolveu ${moeda(50)} achados na calçada para a dona, uma senhora da fila da padaria.` }
-          : { texto: 'Ninguém reclamou a nota. O padeiro disse para você ficar com ela.', memoria: null, efeito: () => dinheiro(c, 50) } },
-      { id: 'casa', texto: 'Levar para casa e contar', resolver: c => ({ texto: 'Em casa, decidiram que era seu — mas metade ia para o cofrinho.', memoria: null, efeito: () => dinheiro(c, 25) }) }
+          ? { texto: 'Uma senhora na fila tinha acabado de perder o troco. Agradeceu com um sonho de padaria.', memoria: `Devolveu ${moeda(local(c, 50))} achados na calçada para a dona, uma senhora da fila da padaria.` }
+          : { texto: 'Ninguém reclamou a nota. O padeiro disse para você ficar com ela.', memoria: null, efeito: () => dinheiro(c, local(c, 50)) } },
+      { id: 'casa', texto: 'Levar para casa e contar', resolver: c => ({ texto: 'Em casa, decidiram que era seu — mas metade ia para o cofrinho.', memoria: null, efeito: () => dinheiro(c, local(c, 25)) }) }
     ]
   },
   {
@@ -330,7 +330,7 @@ export const INFANCIA: Conteudo[] = [
   {
     id: 'inf_enchente', tipo: 'acontecimento', idade: [3, 70], tema: 'lugar',
     quando: c => ['vulneravel', 'trabalhadora'].includes(c.v.origem.classe) && c.v.moradia.padrao <= 2 && c.v.moradia.tipo !== 'propria',
-    narrar: c => ({ texto: 'Uma chuva de verão alagou a rua e a água entrou em casa. O sofá e a geladeira foram para o lixo.', relevancia: 'biografia', tom: 'ruim', efeito: () => { estresse(c, 8); if (c.idade >= 18 && c.v.moradia.tipo !== 'pais') dinheiro(c, -2500); } })
+    narrar: c => ({ texto: 'Uma chuva de verão alagou a rua e a água entrou em casa. O sofá e a geladeira foram para o lixo.', relevancia: 'biografia', tom: 'ruim', efeito: () => { estresse(c, 8); if (c.idade >= 18 && c.v.moradia.tipo !== 'pais') dinheiro(c, -local(c, 2500)); } })
   }
 ];
 

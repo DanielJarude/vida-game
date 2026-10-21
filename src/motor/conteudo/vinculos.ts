@@ -13,14 +13,14 @@ import { mudarAgora } from '../sistemas/processos';
 import { economiaLocal, grandesCentros, municipio } from '../dados/lugares';
 import { cidadesDaVida } from './local';
 import * as P from './papeis';
-import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao, custa } from './efeitos';
+import { dinheiro, envolvimento, estresse, fato, feliz, gp, prox, saude, tensao, custa, local } from './efeitos';
 import { idadePessoa, lembrarCom, temFato } from '../nucleo';
 import { anoDe } from '../tempo';
 import { criarPessoa, vincular } from '../pessoas';
 import { disponivel } from '../sistemas/dinheiro';
 
 /** Festa no salão: quem escolheu viver confortável e tem como pagar. */
-const festaGrande = (c: Ctx) => (c.v.financas.estilo === 'confortavel' || c.v.financas.estilo === 'folgado') && disponivel(c.v) > 3000;
+const festaGrande = (c: Ctx) => (c.v.financas.estilo === 'confortavel' || c.v.financas.estilo === 'folgado') && disponivel(c.v) > local(c, 3000);
 
 const cursoDoFilho = (c: Ctx) => curso(CURSOS_NPC[c.v.fatos[`fil_curso_${c.p.filho.id}`] ?? 0] ?? 'administracao').nome;
 const mensalidadeFilho = (c: Ctx) => {
@@ -39,8 +39,8 @@ export const VINCULOS: Conteudo[] = [
     opcoes: [
       { id: 'dividir', texto: 'Fazer uma divisão de tarefas e cumprir', comportamento: { empatia: 1, disciplina: 1 },
         resolver: c => ({ texto: 'Uma lista na geladeira. Nas primeiras semanas, cumprida à risca.', memoria: null, efeito: () => { envolvimento(c, 'pessoa', 10); tensao(c, 'pessoa', -15); } }) },
-      { id: 'faxineira', texto: 'Propor pagar uma diarista', disponivel: c => custa(c, 3000, 'Não cabe no orçamento.'),
-        resolver: c => ({ texto: 'A diarista passou a vir às sextas. A briga mudou de assunto.', memoria: null, efeito: () => { dinheiro(c, -2400); envolvimento(c, 'pessoa', 4); } }) },
+      { id: 'faxineira', texto: 'Propor pagar uma diarista', disponivel: c => custa(c, local(c, 3000), 'Não cabe no orçamento.'),
+        resolver: c => ({ texto: 'A diarista passou a vir às sextas. A briga mudou de assunto.', memoria: null, efeito: () => { dinheiro(c, -local(c, 2400)); envolvimento(c, 'pessoa', 4); } }) },
       { id: 'discordar', texto: 'Dizer que não é bem assim', comportamento: { empatia: -1 },
         resolver: c => ({ texto: `${c.p.pessoa.nome} não respondeu. Lavou a louça batendo os pratos.`, memoria: null, efeito: () => { tensao(c, 'pessoa', 20); envolvimento(c, 'pessoa', -8); } }) }
     ]
@@ -144,8 +144,8 @@ export const VINCULOS: Conteudo[] = [
     opcoes: [
       { id: 'sentar', texto: 'Sentar para estudar junto todas as noites', comportamento: { familia: 1, disciplina: 1 },
         resolver: c => ({ texto: 'Um mês de tabuada e redação na mesa da cozinha. As notas subiram.', memoria: null, lembrar: ['filho', 'Um boletim vermelho, um mês estudando juntos, notas que subiram.'], efeito: () => { prox(c, 'filho', 8); estresse(c, 4); if (c.p.filho.vida) c.p.filho.vida.aptidao = Math.min(1, c.p.filho.vida.aptidao + 0.05); } }) },
-      { id: 'reforco', texto: 'Pagar aula de reforço', disponivel: c => custa(c, 1500, 'Não sobra dinheiro para isso.'),
-        resolver: c => ({ texto: 'Duas vezes por semana, uma professora aposentada do bairro.', memoria: null, efeito: () => dinheiro(c, -1500) }) },
+      { id: 'reforco', texto: 'Pagar aula de reforço', disponivel: c => custa(c, local(c, 1500), 'Não sobra dinheiro para isso.'),
+        resolver: c => ({ texto: 'Duas vezes por semana, uma professora aposentada do bairro.', memoria: null, efeito: () => dinheiro(c, -local(c, 1500)) }) },
       { id: 'conversar', texto: 'Perguntar o que está acontecendo', comportamento: { empatia: 1 },
         resolver: c => ({ texto: `${c.p.filho.nome} demorou, mas contou que não estava enxergando o quadro. Precisava de óculos.`, memoria: null, lembrar: ['filho', 'Descobriram juntos que o problema na escola era de óculos.'], efeito: () => prox(c, 'filho', 6) }) },
       { id: 'castigo', texto: 'Castigo até melhorar', comportamento: { disciplina: 1 },
@@ -181,8 +181,8 @@ export const VINCULOS: Conteudo[] = [
     opcoes: [
       { id: 'sim', texto: 'Abrir a porta', comportamento: { familia: 2 },
         resolver: c => ({ texto: 'O quarto antigo virou quarto de novo. Os meses viraram um ano e meio.', memoria: `${c.p.filho.nome} voltou a morar com você por um tempo.`, lembrar: ['filho', 'Voltou para casa depois de perder o emprego.', 'casa'], efeito: () => { const vin = c.v.vinculos[c.p.filho.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); c.p.filho.municipioId = c.v.moradia.municipioId; delete c.v.fatos[`saiu_de_casa_${c.p.filho.id}`]; prox(c, 'filho', 10); vin.confianca = Math.min(100, vin.confianca + 8); } }) },
-      { id: 'dinheiro', texto: 'Ajudar com o aluguel por uns meses', disponivel: c => custa(c, 5000, 'Não há dinheiro para isso.'), comportamento: { generosidade: 1 },
-        resolver: c => ({ texto: 'Três meses de aluguel pagos. Foi o tempo de arrumar outro emprego.', memoria: null, lembrar: ['filho', 'Você pagou o aluguel num aperto.', 'apoio'], efeito: () => { dinheiro(c, -5000); prox(c, 'filho', 6); } }) },
+      { id: 'dinheiro', texto: 'Ajudar com o aluguel por uns meses', disponivel: c => custa(c, local(c, 5000), 'Não há dinheiro para isso.'), comportamento: { generosidade: 1 },
+        resolver: c => ({ texto: 'Três meses de aluguel pagos. Foi o tempo de arrumar outro emprego.', memoria: null, lembrar: ['filho', 'Você pagou o aluguel num aperto.', 'apoio'], efeito: () => { dinheiro(c, -local(c, 5000)); prox(c, 'filho', 6); } }) },
       { id: 'nao', texto: 'Dizer que é hora de se virar', comportamento: { independencia: 1 },
         resolver: c => ({ texto: `${c.p.filho.nome} foi dividir apartamento com um amigo. Demorou a ligar de novo.`, memoria: null, lembrar: ['filho', 'Pediu para voltar para casa; você disse não.', 'conflito'], efeito: () => { prox(c, 'filho', -12); tensao(c, 'filho', 15); } }) }
     ]
@@ -216,12 +216,12 @@ export const VINCULOS: Conteudo[] = [
   {
     id: 'ami_viagem', tipo: 'decisao', idade: [18, 70], tema: 'amizade', repetir: 5,
     papeis: { amigo: P.amigo },
-    quando: c => disponivel(c.v) > 1500,
+    quando: c => disponivel(c.v) > local(c, 1500),
     titulo: 'A viagem da turma',
-    texto: c => `${c.p.amigo.nome} está organizando uma viagem da turma antiga: feriado prolongado, casa alugada na praia, cada um paga uns ${moeda(900)}.`,
+    texto: c => `${c.p.amigo.nome} está organizando uma viagem da turma antiga: feriado prolongado, casa alugada na praia, cada um paga uns ${moeda(local(c, 900))}.`,
     opcoes: [
       { id: 'ir', texto: 'Ir', comportamento: { sociabilidade: 1 },
-        resolver: c => ({ texto: 'Três dias de sol, violão e história antiga repetida até a exaustão.', memoria: `Viajou com a turma de ${c.p.amigo.nome} num feriado.`, efeito: () => { dinheiro(c, -900); prox(c, 'amigo', 10); feliz(c, 6); estresse(c, -8); for (const a of P.amigo(c.v).slice(0, 3)) { const vin = c.v.vinculos[a.id]; vin.proximidade = Math.min(100, vin.proximidade + 4); vin.tUltimoContato = c.v.t; } } }) },
+        resolver: c => ({ texto: 'Três dias de sol, violão e história antiga repetida até a exaustão.', memoria: `Viajou com a turma de ${c.p.amigo.nome} num feriado.`, efeito: () => { dinheiro(c, -local(c, 900)); prox(c, 'amigo', 10); feliz(c, 6); estresse(c, -8); for (const a of P.amigo(c.v).slice(0, 3)) { const vin = c.v.vinculos[a.id]; vin.proximidade = Math.min(100, vin.proximidade + 4); vin.tUltimoContato = c.v.t; } } }) },
       { id: 'nao', texto: 'Ficar desta vez', resolver: c => ({ texto: 'As fotos no grupo pareciam ótimas.', memoria: null, efeito: () => prox(c, 'amigo', -3) }) }
     ]
   },

@@ -1,0 +1,49 @@
+/**
+ * REWORK 10 · NPC-03 — QUEM ESTÁ NA VIDA DE QUEM VOCÊ CONHECE. O cônjuge de um irmão, a namorada de um filho, os pais
+ * da sua parceria, o outro pai de um neto: gente sem vínculo direto com você — `processarMortes` percorre os vínculos e
+ * não passava por elas, que ficavam vivas para sempre. Aqui elas envelhecem e morrem pelo mesmo corpo de NPC
+ * (`corpo.processarCorpoDePessoa`), e a perda chega a quem você conhece: a parceria acaba, o luto fica na pessoa
+ * (o "estar junto" abre), e a história de vocês dois lembra.
+ *
+ * Só entra quem está ligado a alguém vivo da sua vida (a parceria ou a filiação de um vínculo): o resto do mundo não
+ * pesa no ano. O sorteio é derivado (da pessoa e do ano): não mexe no gerador da vida.
+ */
+import type { Pessoa, Vida } from '../tipos';
+import { rngDe } from '../rng';
+import { escrever, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
+import { processarCorpoDePessoa } from './corpo';
+import { flex } from '../texto';
+
+/** Os indiretos vivos de agora, cada um com a pessoa da sua vida a quem está ligado (e como). */
+export function indiretos(v: Vida): { q: Pessoa; de: Pessoa; como: 'parceria' | 'genitor' }[] {
+  const out: { q: Pessoa; de: Pessoa; como: 'parceria' | 'genitor' }[] = [];
+  const vistos = new Set<string>();
+  for (const { p } of vinculosVivos(v)) {
+    if (p.especie) continue;
+    const par = p.parceiroId ? v.pessoas[p.parceiroId] : undefined;
+    if (par?.vivo && !v.vinculos[par.id] && !vistos.has(par.id)) { vistos.add(par.id); out.push({ q: par, de: p, como: 'parceria' }); }
+    for (const g of p.genitores ?? []) {
+      const q = v.pessoas[g];
+      if (q?.vivo && !q.especie && !v.vinculos[q.id] && !vistos.has(q.id)) { vistos.add(q.id); out.push({ q, de: p, como: 'genitor' }); }
+    }
+  }
+  return out;
+}
+
+export function processarIndiretos(v: Vida): void {
+  for (const { q, de, como } of indiretos(v)) {
+    const causa = processarCorpoDePessoa(v, rngDe(v.id, 'indireto', q.id, v.t), q, false);
+    if (!causa) continue;
+    const anos = idadePessoa(v, q);
+    q.vivo = false;
+    q.tMorte = v.t;
+    q.causaMorte = causa;
+    if (como === 'parceria') { de.parceiroId = undefined; q.parceiroId = undefined; }
+    de.aperto = { tipo: 'luto', t: v.t };
+    const rotulo = como === 'parceria' ? flex(q.genero, 'o companheiro', 'a companheira', 'e companheire') : flex(q.genero, 'o pai', 'a mãe', 'e genitore');
+    const vin = v.vinculos[de.id];
+    const perto = (vin?.proximidade ?? 0) >= 55 || !!vin?.romance;
+    escrever(v, { texto: `${q.nome}, ${rotulo} de ${de.nome}, morreu aos ${anos} anos.${perto ? ` ${de.nome} ficou muito abalad${flex(de.genero, 'o', 'a', 'e')}.` : ''}`, relevancia: perto ? 'biografia' : 'cotidiano', tema: 'familia', pessoas: [de.id] });
+    lembrarCom(v, de.id, como === 'parceria' ? `Perdeu ${q.nome}.` : `Perdeu ${flex(q.genero, 'o pai', 'a mãe', 'e genitore')}, ${q.nome}.`, 'perda', 2);
+  }
+}

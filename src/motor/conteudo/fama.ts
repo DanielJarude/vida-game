@@ -9,6 +9,7 @@
  */
 
 import { dinheiroCurto as moedaCurta } from '../texto';
+import { local } from './efeitos';
 import type { Conteudo, Ctx } from './base';
 import { clamp } from '../rng';
 import { dinheiro as fmt } from '../texto';
@@ -64,9 +65,9 @@ export const FAMA: Conteudo[] = [
     texto: c => `Uma mensagem chegou por um conhecido da sua cidade natal: uma família ${porOrigem(c.v) ? `que acompanha você ${porOrigem(c.v)}` : 'que conhece o seu nome'} precisa pagar um tratamento, e o filho pediu para conhecer você.`,
     opcoes: [
       { id: 'pagar', texto: 'Ajudar com o tratamento',
-        disponivel: c => (disponivel(c.v) >= 8000 ? true : 'Não há dinheiro para isso agora.'),
-        consequencia: () => `Uns ${moedaCurta(8000)}.`,
-        resolver: c => ({ texto: 'O tratamento começou no mês seguinte. A mãe mandou um áudio que você ouviu três vezes.', memoria: 'Pagou o tratamento de um menino que pediu para conhecer você.', relevancia: 'biografia', tom: 'bom', efeito: () => { pagar(c.v, 8000); c.v.mente.felicidade = clamp(c.v.mente.felicidade + 5); c.v.fatos['vis_boa'] = c.v.t; } }) },
+        disponivel: c => (disponivel(c.v) >= local(c, 8000) ? true : 'Não há dinheiro para isso agora.'),
+        consequencia: c => `Uns ${moedaCurta(local(c, 8000))}.`,
+        resolver: c => ({ texto: 'O tratamento começou no mês seguinte. A mãe mandou um áudio que você ouviu três vezes.', memoria: 'Pagou o tratamento de um menino que pediu para conhecer você.', relevancia: 'biografia', tom: 'bom', efeito: () => { pagar(c.v, local(c, 8000)); c.v.mente.felicidade = clamp(c.v.mente.felicidade + 5); c.v.fatos['vis_boa'] = c.v.t; } }) },
       { id: 'visitar', texto: 'Visitar o menino',
         resolver: c => ({ texto: 'Uma tarde no hospital, camisa autografada, um sorriso que você não esquece.', memoria: 'Visitou no hospital um menino que tinha pedido para conhecer você.', relevancia: 'biografia', tom: 'bom', efeito: () => { c.v.mente.felicidade = clamp(c.v.mente.felicidade + 4); c.v.fatos['vis_boa'] = c.v.t; } }) },
       { id: 'recusar', texto: 'Agradecer e dizer que não pode',
@@ -85,8 +86,8 @@ export const FAMA: Conteudo[] = [
       { id: 'ignorar', texto: 'Não responder', comportamento: { independencia: 1 },
         resolver: c => { const passou = c.r.chance(0.55); return { texto: passou ? 'Em duas semanas, ninguém lembrava.' : 'O silêncio foi lido como confirmação, por um tempo.', memoria: null, tom: passou ? 'neutro' : 'ruim', efeito: () => { if (!passou) c.v.fatos['vis_polemica'] = c.v.t; c.v.mente.estresse = clamp(c.v.mente.estresse + 3); } }; } },
       { id: 'processar', texto: 'Processar quem publicou',
-        consequencia: () => `Advogado: uns ${fmt(12000)}. Demora.`,
-        resolver: c => ({ texto: 'O processo correu devagar. A retratação saiu meses depois, menor que o estrago — mas saiu.', memoria: 'Processou um perfil que publicou um boato sobre você — e ganhou a retratação.', relevancia: 'biografia', tom: 'neutro', efeito: () => { pagar(c.v, 12000); c.v.mente.estresse = clamp(c.v.mente.estresse + 4); } }) }
+        consequencia: c => `Advogado: uns ${fmt(local(c, 12000))}. Demora.`,
+        resolver: c => ({ texto: 'O processo correu devagar. A retratação saiu meses depois, menor que o estrago — mas saiu.', memoria: 'Processou um perfil que publicou um boato sobre você — e ganhou a retratação.', relevancia: 'biografia', tom: 'neutro', efeito: () => { pagar(c.v, local(c, 12000)); c.v.mente.estresse = clamp(c.v.mente.estresse + 4); } }) }
     ]
   },
   {

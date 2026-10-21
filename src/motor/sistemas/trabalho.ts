@@ -818,9 +818,12 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
     // REWORK 9.7 · ECO-01: as parcelas acompanham o tempo de casa (antes, um ano de emprego em Portugal dava 11 meses de
     // seguro de uma vez, mesmo para quem era contratado no mês seguinte), e o piso é o da parcela, não um mínimo inteiro.
     const parcelas = sd ? Math.min(sd.meses, Math.max(1, Math.round(anos * 1.5))) : 0;
-    const seguro = sd ? Math.round(Math.min(minimo * 1.48, Math.max(minimo * 0.6, e.salario * sd.reposicao)) * parcelas) : 0;
-    v.financas.conta += fgts + seguro;
-    if (fgts + seguro > 0) lancar(v, `Rescisão: ${[fgts > 0 ? lei.rescisao.nome : '', seguro > 0 ? 'seguro-desemprego' : ''].filter(Boolean).join(' e ')}`, 'renda', fgts + seguro);
+    const parcela = sd ? Math.round(Math.min(minimo * 1.48, Math.max(minimo * 0.6, e.salario * sd.reposicao))) : 0;
+    v.financas.conta += fgts;
+    if (fgts > 0) lancar(v, `Rescisão: ${lei.rescisao.nome}`, 'renda', fgts);
+    // REWORK 10 · ECO-03: o seguro vem em parcelas mensais, a partir do mês seguinte à demissão (que cai, em média, no
+    // meio do ano — o mesmo meio ano do salário abaixo); quem paga as parcelas é `seguroDesemprego`, a cada ano.
+    if (parcela > 0 && parcelas > 0) v.trabalho.seguroDesemprego = { parcela, restantes: parcelas, total: parcelas, tProxima: v.t - Math.min(6, Math.max(0, v.t - e.tInicio)) + 1 };
     const motivo = e.desempenho < 35 ? 'O desempenho vinha caindo.' : epoca > 0.2 && r.chance(0.6) ? 'A função vinha sendo automatizada.' : '';
     escrever(v, { texto: e.desempenho < 35 ? `Foi ${flex(ge(v), 'demitido', 'demitida')} de ${e.empregador}, onde era ${nome}. ${motivo}` : `Foi ${flex(ge(v), 'demitido', 'demitida')} num corte de pessoal ${em(e.empregador)}, depois de ${tempo}.${motivo ? ' ' + motivo : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', `${flex(ge(v), 'Demitido', 'Demitida', 'Demitide')} de ${e.empregador} depois de ${anos} ${anos === 1 ? 'ano' : 'anos'}.`, anos >= 5 ? 3 : 2, { trilha: oc.trilha, ocupacaoId: oc.id });

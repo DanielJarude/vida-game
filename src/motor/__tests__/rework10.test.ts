@@ -956,3 +956,135 @@ describe('EVT-03 · os ecos', () => {
     expect(parcelado.financas.dividas.some(d => d.descricao === 'A dívida de fiador')).toBe(true);
   });
 });
+
+/* =========================================================== Fase G · pendências dos reworks anteriores */
+import { estatura, estaturaAdulta } from '../sistemas/modalidades';
+import { processarSeguroDesemprego } from '../sistemas/seguroDesemprego';
+import { indiretos, processarIndiretos } from '../sistemas/indiretos';
+import { extratoAberto } from '../sistemas/extrato';
+import { cidadesDoPais } from '../dados/lugares';
+import { local } from '../conteudo/efeitos';
+
+const reabrir = (v: Vida): Vida => { const x = interpretar(JSON.stringify(v)); if (x.tipo !== 'ok') throw new Error('save'); return x.vida; };
+
+describe('SAVE-01 · a estatura estabelecida não muda', () => {
+  it('a altura que a Linha da Vida já disse (a seletiva mede na entrada) é a que fica, ao abrir o save', () => {
+    const v = em(cenas()[1], x => {
+      x.corpo.estaturaAdulta = undefined;
+      x.biografia.push({ id: 'b-sel', t: x.t - 12, idade: 14, texto: 'O técnico viu você no torneio da escola e chamou para a seletiva da equipe de base do Sport. Medem a altura na entrada (1,71 m, a sua) — e depois é quadra.', relevancia: 'biografia', tema: 'lazer' });
+    });
+    const w = reabrir(v);
+    expect(w.corpo.estaturaAdulta).toBe(Math.round(171 / (0.68 + (14 - 6) / 11 * 0.32)));
+    expect(estatura(em(w, x => { x.eu.tNasc = x.t - 14 * 12; }))).toBe(171);
+  });
+
+  it('o adulto sem nada escrito: abrir o save não muda nada (ida e volta idêntica); o ano guarda a de agora, e depois nada a muda', () => {
+    const v = em(cenas()[2], x => { x.corpo.estaturaAdulta = undefined; });
+    const antes = estaturaAdulta(v);
+    expect(reabrir(v).corpo.estaturaAdulta).toBeUndefined();
+    const w = avancarAno(reabrir(v)).vida;
+    expect(w.corpo.estaturaAdulta).toBe(antes);
+    const mexida = em(w, x => { x.predisposicoes = { ...x.predisposicoes!, fisica: (x.predisposicoes?.fisica ?? 0) + 3 }; });
+    expect(estaturaAdulta(mexida)).toBe(antes);
+  });
+
+  it('a criança não fica com a altura presa: ela fixa aos 17, pelo ano', () => {
+    const k = em(cenas()[0], x => { x.corpo.estaturaAdulta = undefined; });
+    expect(reabrir(k).corpo.estaturaAdulta).toBeUndefined();
+    const aos17 = em(k, x => { x.eu.tNasc = x.t - 16 * 12 - 11; });
+    expect(avancarAno(aos17).vida.corpo.estaturaAdulta).toBeGreaterThan(140);
+  });
+});
+
+describe('ECO-02 · os valores do conteúdo no custo de vida de onde se mora', () => {
+  it('o mesmo pedido custa outra coisa em outra cidade; a cidade média brasileira fica perto do valor escrito', () => {
+    const v = cenas()[2];
+    const ctx = (municipioId: string) => ({ v: em(v, x => { x.moradia.municipioId = municipioId; }) }) as unknown as Parameters<typeof local>[0];
+    const valores = ['recife-pe', 'sao-paulo-sp', cidadesDoPais('US')[0].id, cidadesDoPais('NG')[0].id].map(m => local(ctx(m), 2000));
+    expect(new Set(valores).size).toBe(4);
+    expect(valores[0]).toBeGreaterThan(1000);
+    expect(valores[0]).toBeLessThan(3000);
+  });
+});
+
+describe('ECO-03 · o seguro-desemprego em parcelas', () => {
+  const comSeguro = (parcelas: number, tProxima: (t: number) => number) =>
+    em(cenas()[2], x => { x.trabalho.atual = undefined; x.trabalho.seguroDesemprego = { parcela: 1500, restantes: parcelas, total: parcelas, tProxima: tProxima(x.t) }; x.financas.extratoAberto = undefined; });
+
+  it('entram só as parcelas cujos meses já passaram, cada lote no extrato; o resto fica para o ano seguinte', () => {
+    const v = comSeguro(10, t => t - 5);
+    const antes = v.financas.conta;
+    const w = em(v, x => processarSeguroDesemprego(x));
+    expect(w.financas.conta - antes).toBe(6 * 1500);
+    expect(w.trabalho.seguroDesemprego!.restantes).toBe(4);
+    expect(extratoAberto(w).linhas.some(l => /Seguro-desemprego: 6 parcelas/.test(l.rotulo))).toBe(true);
+    const fim = em(w, x => { x.t += 12; processarSeguroDesemprego(x); });
+    expect(fim.financas.conta - antes).toBe(10 * 1500);
+    expect(fim.trabalho.seguroDesemprego).toBeUndefined();
+  });
+
+  it('um emprego formal novo encerra o benefício (as parcelas depois da contratação não vêm); o bico não encerra', () => {
+    const v = comSeguro(10, t => t - 11);
+    const formal = em(v, (x, r) => { contratar(x, r, ocupacao('vendedor')); x.trabalho.atual!.tInicio = x.t - 8; });
+    const antes = formal.financas.conta;
+    const w = em(formal, x => processarSeguroDesemprego(x));
+    expect(w.financas.conta - antes).toBe(4 * 1500);
+    expect(w.trabalho.seguroDesemprego).toBeUndefined();
+    expect(w.biografia.some(e => /seguro-desemprego parou: 4 de 10/.test(e.texto))).toBe(true);
+    const bico = em(v, (x, r) => { contratar(x, r, ocupacao('entregador_app')); x.trabalho.atual!.tInicio = x.t - 8; });
+    const pagoNoBico = em(bico, x => processarSeguroDesemprego(x));
+    expect(pagoNoBico.financas.conta - bico.financas.conta).toBe(10 * 1500);
+    expect(pagoNoBico.trabalho.seguroDesemprego).toBeUndefined();
+  });
+
+  it('a demissão de verdade (na França, até 18 meses) paga a rescisão de uma vez e deixa as parcelas para os meses seguintes', () => {
+    let v = em(adulto(35, { semente: 35, municipioId: cidadesDoPais('FR')[0].id }), (x, r) => { contratar(x, r, ocupacao('vendedor')); x.trabalho.atual!.tInicio = x.t - 60; });
+    for (let k = 0; k < 30 && v.trabalho.atual && !v.morte; k++) { v = em(v, x => { x.trabalho.atual!.desempenho = 5; }); v = resolver(avancarAno(v).vida); }
+    expect(v.trabalho.atual).toBeUndefined();
+    const s = v.trabalho.seguroDesemprego!;
+    expect(s.total).toBeGreaterThan(6);
+    expect(s.restantes).toBe(s.total - 6);
+  });
+});
+
+describe('NPC-03 · quem está na vida de quem você conhece também envelhece e morre', () => {
+  function comCunhado(idadeDele: number, saude: number) {
+    let ids = { irmao: '', cunhado: '', solto: '' };
+    const v = em(cenas()[2], x => {
+      const irmao = Object.values(x.vinculos).find(w => w.parentesco === 'irmao')!;
+      const ir = x.pessoas[irmao.pessoaId];
+      const cun = pessoaNova(x, idadeDele, 'feminino', { saude });
+      ir.parceiroId = cun.id; cun.parceiroId = ir.id;
+      irmao.proximidade = 70;
+      const solto = pessoaNova(x, idadeDele, 'masculino', { saude });
+      ids = { irmao: ir.id, cunhado: cun.id, solto: solto.id };
+    });
+    return { v, ids };
+  }
+
+  it('a cunhada (sem vínculo com você) entra na conta; quem não está ligado a ninguém da sua vida, não', () => {
+    const { v, ids } = comCunhado(70, 60);
+    const lista = indiretos(v).map(x => x.q.id);
+    expect(lista).toContain(ids.cunhado);
+    expect(lista).not.toContain(ids.solto);
+  });
+
+  it('ela morre de velhice; a perda chega ao irmão (a parceria acaba, o luto, a lembrança) e à Linha da Vida', () => {
+    let { v, ids } = comCunhado(96, 8);
+    for (let k = 0; k < 30 && v.pessoas[ids.cunhado].vivo; k++) v = em(v, x => { x.t += 12; processarIndiretos(x); });
+    const ir = v.pessoas[ids.irmao];
+    expect(v.pessoas[ids.cunhado].vivo).toBe(false);
+    expect(ir.parceiroId).toBeUndefined();
+    expect(ir.aperto?.tipo).toBe('luto');
+    expect(v.vinculos[ids.irmao].historia.some(h => h.tipo === 'perda' && h.texto.includes(v.pessoas[ids.cunhado].nome))).toBe(true);
+    expect(v.biografia.some(e => e.texto.includes(`${v.pessoas[ids.cunhado].nome}, a companheira de ${ir.nome}, morreu`))).toBe(true);
+    expect(v.pessoas[ids.solto].vivo).toBe(true);
+  });
+
+  it('o sorteio é derivado: o gerador da vida não anda (a mesma vida com e sem a passagem segue igual)', () => {
+    const { v } = comCunhado(70, 60);
+    const a = transacao(v, (x, r) => { processarIndiretos(x); return r.next(); });
+    const b = transacao(v, (_x, r) => r.next());
+    expect(a.vida.rng).toBe(b.vida.rng);
+  });
+});

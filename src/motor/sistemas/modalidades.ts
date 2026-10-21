@@ -31,10 +31,33 @@ import { ge } from '../texto';
 /* ------------------------------------------------------------ Estatura */
 
 /**
- * A estatura adulta (cm), da semente da pessoa e da predisposição física —
- * determinística, sem estado. Antes dos 16, cresce até ela.
+ * A estatura adulta (cm). REWORK 10 · SAVE-01: uma vez estabelecida (dita por escrito na seletiva, ou aos 17), fica
+ * guardada em `corpo.estaturaAdulta` — uma mudança na fórmula (como a do 9.7) não muda mais a altura de quem já existe.
+ * Antes disso, sai da semente da pessoa e da predisposição física (determinística). Antes dos 17, cresce até ela.
  */
 export function estaturaAdulta(v: Vida): number {
+  return v.corpo?.estaturaAdulta ?? estaturaDaSemente(v);
+}
+
+const crescimento = (i: number) => (i >= 17 ? 1 : i <= 6 ? 0.68 : 0.68 + (i - 6) / 11 * 0.32);
+const DITA_NA_SELETIVA = /Medem a altura na entrada \((\d),(\d\d) m, a sua\)/;
+
+/**
+ * Guarda a estatura adulta quando ela fica estabelecida: a que a Linha da Vida já disse (a seletiva mede na entrada —
+ * vale o que está escrito, de qualquer versão) ou, sem isso, a da fórmula de agora a partir dos 17. Ao abrir um save, só
+ * a que está escrita (`soDita`: abrir e salvar sem jogar devolve o mesmo save); a do adulto, no ano seguinte — o mesmo
+ * valor. Não faz nada depois da primeira vez.
+ */
+export function fixarEstatura(v: Vida, soDita = false): void {
+  if (v.corpo.estaturaAdulta !== undefined) return;
+  const dita = v.biografia.find(e => DITA_NA_SELETIVA.test(e.texto));
+  if (dita) {
+    const m = DITA_NA_SELETIVA.exec(dita.texto)!;
+    v.corpo.estaturaAdulta = Math.round((Number(m[1]) * 100 + Number(m[2])) / crescimento(dita.idade));
+  } else if (!soDita && idade(v) >= 17) v.corpo.estaturaAdulta = estaturaDaSemente(v);
+}
+
+function estaturaDaSemente(v: Vida): number {
   const f = ge(v) === 'feminino';
   const media = f ? 163 : 176;
   // Soma de uniformes ≈ normal: a maioria perto da média, poucos muito altos.
@@ -46,8 +69,7 @@ export function estaturaAdulta(v: Vida): number {
 
 export function estatura(v: Vida): number {
   const i = idade(v);
-  const cresce = i >= 17 ? 1 : i <= 6 ? 0.68 : 0.68 + (i - 6) / 11 * 0.32;
-  return Math.round(estaturaAdulta(v) * cresce);
+  return Math.round(estaturaAdulta(v) * crescimento(i));
 }
 
 export const estaturaEmPalavras = (cm: number) => `${Math.floor(cm / 100)},${String(cm % 100).padStart(2, '0')} m`;

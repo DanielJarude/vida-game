@@ -17,7 +17,7 @@ import { disponivel as guardado, pagar as pagarGuardado, parcelaPrice, rendaProp
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { iniciarPausa, podeReduzir } from '../sistemas/pausa';
-import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao, custa } from './efeitos';
+import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao, custa, local } from './efeitos';
 import { idade, idadePessoa, lembrarCom, marcarFato, temFato } from '../nucleo';
 import { deslocamento } from '../sistemas/transporte';
 import { iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
@@ -209,8 +209,8 @@ export const SISTEMICOS: Conteudo[] = [
     titulo: 'A conversa',
     texto: c => `As brigas com ${c.p.pessoa.nome} viraram rotina${c.v.financas.negativado ? ', quase sempre sobre dinheiro' : ''}. Hoje ${c.p.pessoa.genero === 'feminino' ? 'ela' : 'ele'} disse que não aguenta mais do jeito que está.`,
     opcoes: [
-      { id: 'terapia', texto: 'Propor terapia de casal', disponivel: c => custa(c, 2000, 'Sem dinheiro para terapia de casal agora.'), comportamento: { empatia: 1, familia: 1 },
-        resolver: c => ({ texto: 'Foram meses de sessões difíceis. Algumas coisas melhoraram.', memoria: `Fez terapia de casal com ${c.p.pessoa.nome}.`, efeito: () => { dinheiro(c, -2400); tensao(c, 'pessoa', -35); envolvimento(c, 'pessoa', 12); } }) },
+      { id: 'terapia', texto: 'Propor terapia de casal', disponivel: c => custa(c, local(c, 2000), 'Sem dinheiro para terapia de casal agora.'), comportamento: { empatia: 1, familia: 1 },
+        resolver: c => ({ texto: 'Foram meses de sessões difíceis. Algumas coisas melhoraram.', memoria: `Fez terapia de casal com ${c.p.pessoa.nome}.`, efeito: () => { dinheiro(c, -local(c, 2400)); tensao(c, 'pessoa', -35); envolvimento(c, 'pessoa', 12); } }) },
       { id: 'ouvir', texto: 'Ouvir, sem se defender', comportamento: { empatia: 2 },
         resolver: c => ({ texto: `Você ouviu tudo. ${c.p.pessoa.nome} chorou, e depois vocês conversaram até de madrugada.`, memoria: null, efeito: () => { tensao(c, 'pessoa', -20); envolvimento(c, 'pessoa', 8); } }) },
       { id: 'rebater', texto: 'Rebater cada acusação', comportamento: { impulsividade: 1, empatia: -1 },

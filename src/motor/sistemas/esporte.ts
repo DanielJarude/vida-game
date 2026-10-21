@@ -901,7 +901,11 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
   }
   // Contrato profissional: só para quem segue evoluindo.
   const { idade: idadeContrato, tecnica: limiar } = contratoDaBase(e.modalidade);
-  if (i >= idadeContrato[0] && i <= idadeContrato[1] && h >= limiar && r.chance(clamp((h - limiar + 2) / 16, 0.08, 0.6))) {
+  // REWORK 10 · FUT-03: no futebol, quem chega ao fim da base QUASE lá (até 5 pontos abaixo da régua) também pode ter
+  // contrato — curto, de divisão de baixo (o clube do tamanho do jogo dele, `profissionalizar`). Antes, abaixo da régua,
+  // a porta era nenhuma: o bom jogador de 76 aos 20 só tinha a dispensa. A chance é pequena e cresce com a técnica.
+  const quaseLa = e.modalidade === 'futebol' && i >= idadeContrato[1] - 1 && i <= idadeContrato[1] && h < limiar && h >= limiar - 5;
+  if (i >= idadeContrato[0] && i <= idadeContrato[1] && (h >= limiar ? r.chance(clamp((h - limiar + 2) / 16, 0.08, 0.6)) : quaseLa && r.chance(clamp((h - limiar + 6) / 30, 0.03, 0.2)))) {
     // O tenista sem ranking não entra direto nos torneios grandes: começa no nacional ou na entrada internacional.
     const nivel = e.modalidade === 'tenis' ? circuitoDeEstreia(h) : nivelPelaHabilidade(h);
     novaOportunidade(v, {
@@ -913,7 +917,9 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
     return;
   }
   // Dispensa: o destino da maioria.
-  const risco = clamp(0.4 - (h - 72) / 40 + e.lesoes * 0.05 + (i > idadeContrato[1] ? 0.5 : 0) + faltas * 0.35, 0.1, 0.95);
+  // REWORK 10 · FUT-03: a dispensa olha mais para o nível — o fraco sai mais cedo, o bom fica mais (antes, quem tinha 75
+  // saía um ano em cada três, e quase nenhum bom jogador chegava à idade do contrato).
+  const risco = clamp(0.38 - (h - 72) / 28 + e.lesoes * 0.05 + (i > idadeContrato[1] ? 0.5 : 0) + faltas * 0.35, 0.1, 0.95);
   if (anos >= 1 && r.chance(risco)) encerrarCarreira(v, e, 'dispensa');
 }
 

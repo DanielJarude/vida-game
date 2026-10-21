@@ -10,7 +10,7 @@ import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { lembrarCom } from '../nucleo';
-import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
+import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao, local } from './efeitos';
 import { idadePessoa, temFato } from '../nucleo';
 import { encerrarEmprego } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
@@ -67,12 +67,12 @@ export const ESCOLHAS: Conteudo[] = [
     papeis: { quem: P.qualquer(P.amigo, P.genteDe('trabalho')) },
     quando: c => !temFato(c.v, 'aposta_online'),
     titulo: 'O aplicativo',
-    texto: c => `${c.p.quem.nome} mostra no celular: apostou ${moeda(20)} num jogo de futebol e ganhou ${moeda(300)}. "É só ter cabeça", diz, e manda um link com bônus de cadastro.`,
+    texto: c => `${c.p.quem.nome} mostra no celular: apostou ${moeda(local(c, 20))} num jogo de futebol e ganhou ${moeda(local(c, 300))}. "É só ter cabeça", diz, e manda um link com bônus de cadastro.`,
     opcoes: [
       { id: 'apostar', texto: 'Baixar e apostar um pouco', comportamento: { impulsividade: 2 },
         resolver: c => {
           const vicia = c.r.chance(0.3 + Math.max(0, c.v.personalidade.tracos.impulsividade) / 150);
-          return { texto: vicia ? 'Ganhou nas primeiras. Depois, foi apostando para recuperar.' : `Perdeu ${moeda(50)} em uma semana e desinstalou.`, memoria: vicia ? 'Começou a apostar em bets pelo celular.' : null, tom: vicia ? 'ruim' : 'neutro', efeito: () => { if (vicia) fato(c, 'aposta_online'); else dinheiro(c, -50); } };
+          return { texto: vicia ? 'Ganhou nas primeiras. Depois, foi apostando para recuperar.' : `Perdeu ${moeda(local(c, 50))} em uma semana e desinstalou.`, memoria: vicia ? 'Começou a apostar em bets pelo celular.' : null, tom: vicia ? 'ruim' : 'neutro', efeito: () => { if (vicia) fato(c, 'aposta_online'); else dinheiro(c, -local(c, 50)); } };
         } },
       { id: 'nao', texto: 'Recusar', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você guardou o celular.', memoria: null }) }
     ]
@@ -146,12 +146,12 @@ export const ESCOLHAS: Conteudo[] = [
         resolver: c => {
           const pego = c.r.chance(0.3);
           return {
-            texto: pego ? `Meses depois, ${cotidiano(c.v).policiaFederal ?? 'a polícia'} bateu na porta às seis da manhã.` : `${moedaCurta(20000)} em dinheiro vivo, guardados numa caixa de sapato.`,
+            texto: pego ? `Meses depois, ${cotidiano(c.v).policiaFederal ?? 'a polícia'} bateu na porta às seis da manhã.` : `${moedaCurta(local(c, 20000))} em dinheiro vivo, guardados numa caixa de sapato.`,
             memoria: pego ? 'Foi investigad' + c.g('o', 'a', 'e') + ' por corrupção e perdeu o cargo.' : null,
             relevancia: pego ? 'marco' : undefined, tom: pego ? 'ruim' : undefined,
             // REWORK 10 · CRI-01: a propina não é um episódio solto — pego, vira processo (`justica`, categoria corrupção);
             // não pego, vira um caminho (o envelope do mês seguinte, a exposição que cresce: `ilicito`, `margem`).
-            efeito: () => { if (pego) { encerrarEmprego(c.v, 'demitido por corrupção'); estresse(c, 25); fato(c, 'processado_corrupcao'); abrirProcesso(c.v, c.r, 'corrupcao'); } else { dinheiro(c, 20000); entrar(c.v, 'corrupcao', undefined, c.r); } }
+            efeito: () => { if (pego) { encerrarEmprego(c.v, 'demitido por corrupção'); estresse(c, 25); fato(c, 'processado_corrupcao'); abrirProcesso(c.v, c.r, 'corrupcao'); } else { dinheiro(c, local(c, 20000)); entrar(c.v, 'corrupcao', undefined, c.r); } }
           };
         } }
     ]
@@ -266,13 +266,13 @@ export const ESCOLHAS: Conteudo[] = [
     id: 'mat_excursao', tipo: 'decisao', idade: [60, 88], tema: 'lazer', repetir: 4,
     quando: c => guardado(c.v) > 2000,
     titulo: 'A excursão',
-    texto: c => `O grupo do bairro está fechando uma excursão de ônibus para ${c.r.pick(destinosDeExcursao(c.v))}. Quatro dias, ${moeda(1500)}.`,
+    texto: c => `O grupo do bairro está fechando uma excursão de ônibus para ${c.r.pick(destinosDeExcursao(c.v))}. Quatro dias, ${moeda(local(c, 1500))}.`,
     opcoes: [
       { id: 'ir', texto: 'Ir', resolver: c => {
         const p = criarPessoa(c.v, c.r, { idade: c.r.int(58, 80), municipioId: c.v.moradia.municipioId });
         const vin = vincular(c.v, p, { origem: 'rotina', proximidade: 38, estagio: 'colega' });
         vin.historia.push({ t: c.v.t, texto: 'Dividiram o banco do ônibus numa excursão.' });
-        return { texto: `Quatro dias de ônibus, cantoria e foto em frente a tudo. Você dividiu o banco com ${p.nome}.`, memoria: `Foi numa excursão com o grupo do bairro e conheceu ${p.nome}.`, efeito: () => { dinheiro(c, -1500); feliz(c, 8); } };
+        return { texto: `Quatro dias de ônibus, cantoria e foto em frente a tudo. Você dividiu o banco com ${p.nome}.`, memoria: `Foi numa excursão com o grupo do bairro e conheceu ${p.nome}.`, efeito: () => { dinheiro(c, -local(c, 1500)); feliz(c, 8); } };
       } },
       { id: 'nao', texto: 'Ficar', resolver: () => ({ texto: 'As fotos chegaram pelo grupo.', memoria: null }) }
     ]

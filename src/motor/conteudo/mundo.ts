@@ -10,7 +10,7 @@ import { perfilDe } from '../sistemas/perfisEsportivos';
 import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
-import { dinheiro, estresse, fato, feliz, gp, prox, tensao, custa } from './efeitos';
+import { dinheiro, estresse, fato, feliz, gp, prox, tensao, custa, local } from './efeitos';
 import { emRecessao, idadePessoa, temFato } from '../nucleo';
 import { entrouEmCrise, saiuDaCrise } from '../sistemas/economia';
 import { municipio } from '../dados/lugares';
@@ -196,7 +196,7 @@ export const MUNDO: Conteudo[] = [
     texto: c => `${c.p.amigo.nome} chama para os quatro dias de bloco. Você também tem a opção de viajar para o interior e descansar.`,
     opcoes: [
       { id: 'bloco', texto: 'Cair no bloco', comportamento: { sociabilidade: 1 },
-        resolver: c => ({ texto: 'Quatro dias de fantasia improvisada, marchinha e pé inchado.', memoria: null, efeito: () => { prox(c, 'amigo', 8); feliz(c, 5); dinheiro(c, -300); } }) },
+        resolver: c => ({ texto: 'Quatro dias de fantasia improvisada, marchinha e pé inchado.', memoria: null, efeito: () => { prox(c, 'amigo', 8); feliz(c, 5); dinheiro(c, -local(c, 300)); } }) },
       { id: 'descanso', texto: 'Descansar longe da folia', resolver: c => ({ texto: 'Rede, silêncio e cidade vazia.', memoria: null, efeito: () => estresse(c, -6) }) }
     ]
   },
@@ -257,10 +257,10 @@ export const MUNDO: Conteudo[] = [
     id: 'ado_show', tipo: 'decisao', idade: [14, 19], tema: 'lazer', repetir: 3,
     papeis: { amigo: P.amigo, adulto: P.genitorEmCasa },
     titulo: 'O show',
-    texto: c => `A banda preferida de ${c.p.amigo.nome} vai tocar na cidade. O ingresso custa ${moeda(180)} e você tem ${moeda(Math.max(0, c.v.financas.conta))}.`,
+    texto: c => `A banda preferida de ${c.p.amigo.nome} vai tocar na cidade. O ingresso custa ${moeda(local(c, 180))} e você tem ${moeda(Math.max(0, c.v.financas.conta))}.`,
     opcoes: [
-      { id: 'juntar', texto: 'Juntar o dinheiro e ir', disponivel: c => custa(c, 180, 'Você não tem esse dinheiro.'),
-        resolver: c => ({ texto: 'Grade da frente, garganta rouca, celular sem bateria.', memoria: `Foi ao show com ${c.p.amigo.nome}.`, efeito: () => { dinheiro(c, -180); prox(c, 'amigo', 8); feliz(c, 6); } }) },
+      { id: 'juntar', texto: 'Juntar o dinheiro e ir', disponivel: c => custa(c, local(c, 180), 'Você não tem esse dinheiro.'),
+        resolver: c => ({ texto: 'Grade da frente, garganta rouca, celular sem bateria.', memoria: `Foi ao show com ${c.p.amigo.nome}.`, efeito: () => { dinheiro(c, -local(c, 180)); prox(c, 'amigo', 8); feliz(c, 6); } }) },
       { id: 'pedir', texto: c => `Pedir o dinheiro para ${c.p.adulto.nome}`, resolver: c => c.v.origem.classe === 'vulneravel' || c.r.chance(0.4)
         ? { texto: `${c.p.adulto.nome} disse que não dava. Você viu o show pelos stories.`, memoria: null }
         : { texto: `${c.p.adulto.nome} deu o dinheiro, com a condição de você arrumar o quarto por um mês.`, memoria: null, efeito: () => { prox(c, 'amigo', 8); feliz(c, 5); } } },
@@ -289,14 +289,14 @@ export const MUNDO: Conteudo[] = [
     id: 'jov_tcc', tipo: 'decisao', idade: [18, 85], tema: 'estudo',
     quando: c => !!c.v.educacao.matricula && c.v.educacao.matricula.mesesRestantes <= 12 && curso(c.v.educacao.matricula.cursoId).nivel === 'superior',
     titulo: 'O TCC',
-    texto: () => `Faltam dois meses para entregar o TCC e você escreveu três páginas. Um conhecido diz que "resolve" o trabalho inteiro por ${moeda(1500)}.`,
+    texto: c => `Faltam dois meses para entregar o TCC e você escreveu três páginas. Um conhecido diz que "resolve" o trabalho inteiro por ${moeda(local(c, 1500))}.`,
     opcoes: [
       { id: 'escrever', texto: 'Virar as noites e escrever', comportamento: { disciplina: 2 },
         resolver: c => ({ texto: 'Dois meses de café e madrugada. A banca aprovou com elogios a um capítulo.', memoria: null, efeito: () => estresse(c, 8) }) },
       { id: 'comprar', texto: 'Pagar para fazerem', comportamento: { impulsividade: 1, disciplina: -1 },
         resolver: c => c.r.chance(0.25)
-          ? { texto: 'O programa antiplágio da faculdade pegou. Reprovação no TCC e um semestre a mais.', memoria: 'Comprou um TCC pronto e foi pego pelo antiplágio.'.replace('pego', c.g('pego', 'pega', 'pegue')), tom: 'ruim', efeito: () => { dinheiro(c, -1500); if (c.v.educacao.matricula) c.v.educacao.matricula.mesesRestantes += 6; } }
-          : { texto: 'Você decorou o trabalho para a apresentação. Passou.', memoria: null, efeito: () => dinheiro(c, -1500) } },
+          ? { texto: 'O programa antiplágio da faculdade pegou. Reprovação no TCC e um semestre a mais.', memoria: 'Comprou um TCC pronto e foi pego pelo antiplágio.'.replace('pego', c.g('pego', 'pega', 'pegue')), tom: 'ruim', efeito: () => { dinheiro(c, -local(c, 1500)); if (c.v.educacao.matricula) c.v.educacao.matricula.mesesRestantes += 6; } }
+          : { texto: 'Você decorou o trabalho para a apresentação. Passou.', memoria: null, efeito: () => dinheiro(c, -local(c, 1500)) } },
       { id: 'adiar', texto: 'Pedir para adiar a entrega', resolver: c => ({ texto: 'O orientador concedeu mais um semestre.', memoria: null, efeito: () => { if (c.v.educacao.matricula) c.v.educacao.matricula.mesesRestantes += 6; } }) }
     ]
   },
@@ -341,9 +341,9 @@ export const MUNDO: Conteudo[] = [
     texto: () => 'A casa está pedindo reforma: banheiro velho, pintura descascando, a cozinha que nunca foi como você queria.',
     opcoes: [
       { id: 'grande', texto: 'Reforma completa', comportamento: { impulsividade: 1 },
-        resolver: c => ({ texto: 'Quatro meses de poeira, pedreiro que sumiu na metade e uma casa que parece outra.', memoria: 'Reformou a casa inteira.', efeito: () => { dinheiro(c, -35000); const im = c.v.financas.bens.find(b => b.id === c.v.moradia.imovelId); if (im) { im.valor = Math.round(im.valor * 1.08); im.estado = 100; } feliz(c, 5); } }) },
+        resolver: c => ({ texto: 'Quatro meses de poeira, pedreiro que sumiu na metade e uma casa que parece outra.', memoria: 'Reformou a casa inteira.', efeito: () => { dinheiro(c, -local(c, 35000)); const im = c.v.financas.bens.find(b => b.id === c.v.moradia.imovelId); if (im) { im.valor = Math.round(im.valor * 1.08); im.estado = 100; } feliz(c, 5); } }) },
       { id: 'pequena', texto: 'Só o necessário', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: 'Banheiro novo e pintura. O resto fica para depois.', memoria: null, efeito: () => { dinheiro(c, -9000); const im = c.v.financas.bens.find(b => b.id === c.v.moradia.imovelId); if (im) im.estado = Math.min(100, im.estado + 30); } }) },
+        resolver: c => ({ texto: 'Banheiro novo e pintura. O resto fica para depois.', memoria: null, efeito: () => { dinheiro(c, -local(c, 9000)); const im = c.v.financas.bens.find(b => b.id === c.v.moradia.imovelId); if (im) im.estado = Math.min(100, im.estado + 30); } }) },
       { id: 'nada', texto: 'Deixar como está', resolver: () => ({ texto: 'A casa continuou do jeito que estava.', memoria: null }) }
     ]
   },
@@ -370,8 +370,8 @@ export const MUNDO: Conteudo[] = [
     opcoes: [
       { id: 'sim', texto: 'Arrumar o sofá e ouvir', comportamento: { empatia: 1, generosidade: 1 },
         resolver: c => ({ texto: `"Só hoje" virou três semanas. ${c.p.amigo.nome} nunca esqueceu.`, memoria: `Abrigou ${c.p.amigo.nome} no sofá durante a separação.`, efeito: () => { prox(c, 'amigo', 15); c.p.amigo.parceiroId = undefined; for (const par of P.conjuge(c.v)) { const vin = c.v.vinculos[par.id]; vin.tensao = Math.min(100, vin.tensao + 8); } }, lembrar: ['amigo', 'Você abriu a porta quando precisou.'] }) },
-      { id: 'hotel', texto: 'Ajudar a pagar uma pousada', disponivel: c => custa(c, 800, 'Não sobra dinheiro.'),
-        resolver: c => ({ texto: 'Você pagou três diárias numa pousada perto.', memoria: null, efeito: () => { dinheiro(c, -600); prox(c, 'amigo', 6); c.p.amigo.parceiroId = undefined; } }) },
+      { id: 'hotel', texto: 'Ajudar a pagar uma pousada', disponivel: c => custa(c, local(c, 800), 'Não sobra dinheiro.'),
+        resolver: c => ({ texto: 'Você pagou três diárias numa pousada perto.', memoria: null, efeito: () => { dinheiro(c, -local(c, 600)); prox(c, 'amigo', 6); c.p.amigo.parceiroId = undefined; } }) },
       { id: 'nao', texto: 'Dizer que hoje não dá', resolver: c => ({ texto: `${c.p.amigo.nome} disse que entendia e foi para a casa de um primo.`, memoria: null, efeito: () => { prox(c, 'amigo', -8); c.p.amigo.parceiroId = undefined; } }) }
     ]
   }

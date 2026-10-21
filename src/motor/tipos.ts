@@ -527,6 +527,8 @@ export interface Corpo {
   habitos: { fuma: boolean; bebe: 'nao' | 'social' | 'muito'; sedentario: boolean };
   /** Pode gestar (definido pelo corpo, não pelo gênero). */
   podeGestar: boolean;
+  /** REWORK 10 · SAVE-01: a estatura adulta (cm), guardada quando fica estabelecida (`modalidades.fixarEstatura`). Opcional. */
+  estaturaAdulta?: number;
 }
 
 export interface Mente {
@@ -830,6 +832,11 @@ export interface Trabalho {
   /** Horas extras neste ano (escolha). */
   horasExtras: boolean;
   desempregadoDesde?: number;
+  /**
+   * REWORK 10 · ECO-03: o seguro-desemprego em parcelas mensais (antes, vinha inteiro no dia da demissão). `tProxima` é o
+   * mês da próxima parcela; um emprego formal novo encerra as que faltam (`sistemas/seguroDesemprego`). Opcional.
+   */
+  seguroDesemprego?: { parcela: number; restantes: number; total: number; tProxima: number };
   /**
    * A INTENÇÃO profissional declarada de quem está sem trabalho — que não é a
    * ocupação (sem emprego) nem a situação econômica (o patrimônio): voltar a

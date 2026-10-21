@@ -4,7 +4,7 @@ import { machucarNaBriga } from '../sistemas/lesoes';
 import { dinheiro as moeda } from '../texto';
 import type { Conteudo } from './base';
 import * as P from './papeis';
-import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao } from './efeitos';
+import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao, local } from './efeitos';
 import { idadePessoa, temFato } from '../nucleo';
 import { deslocamento } from '../sistemas/transporte';
 import { municipio } from '../dados/lugares';
@@ -84,7 +84,7 @@ export const ADOLESCENCIA: Conteudo[] = [
     texto: c => `${c.p.conhecido.nome} arrumou um bico para você nos fins de semana: ajudar numa ${c.r.pick(['barraca de feira', 'lanchonete', 'loja de conserto de celular', 'festa infantil'])}. Paga pouco, em dinheiro vivo.`,
     opcoes: [
       { id: 'aceitar', texto: 'Aceitar', comportamento: { independencia: 1, disciplina: 1 },
-        resolver: c => ({ texto: 'Os sábados passaram a ser de trabalho. O primeiro dinheiro foi quase todo numa roupa.', memoria: 'O primeiro dinheiro veio de um bico nos fins de semana.', efeito: () => { dinheiro(c, 1800); fato(c, 'bico_adolescente'); estresse(c, 3); } }) },
+        resolver: c => ({ texto: 'Os sábados passaram a ser de trabalho. O primeiro dinheiro foi quase todo numa roupa.', memoria: 'O primeiro dinheiro veio de um bico nos fins de semana.', efeito: () => { dinheiro(c, local(c, 1800)); fato(c, 'bico_adolescente'); estresse(c, 3); } }) },
       { id: 'recusar', texto: 'Recusar e manter os fins de semana', resolver: () => ({ texto: 'Os sábados continuaram seus.', memoria: null }) }
     ]
   },
@@ -96,7 +96,7 @@ export const ADOLESCENCIA: Conteudo[] = [
         ? c.r.pick(['Mais um celular levado na rua. Você passou a andar com um aparelho velho só para isso.', deslocamento(c.v)?.modo === 'carro' ? 'Outro assalto, dessa vez no sinal fechado, com o vidro aberto.' : deslocamento(c.v)?.modo === 'moto' ? 'Outro assalto, dessa vez parado no sinal, em cima da moto.' : 'Outro assalto, dessa vez dentro do ônibus.', 'Levaram sua carteira num arrastão perto do terminal.'])
         : c.idade < 18 ? 'Foi assaltad' + c.g('o', 'a', 'e') + ' no ponto de ônibus voltando da escola. Levaram o celular.' : 'Levaram seu celular num assalto rápido, à luz do dia, numa esquina movimentada.',
       relevancia: 'biografia', tom: 'ruim',
-      efeito: () => { estresse(c, 8); if (c.idade >= 18) dinheiro(c, -1500); }
+      efeito: () => { estresse(c, 8); if (c.idade >= 18) dinheiro(c, -local(c, 1500)); }
     })
   },
   {

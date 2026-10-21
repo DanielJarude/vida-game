@@ -61,7 +61,11 @@ const TODAS = [
   ['apostas-niquel', 'posses', 'Vida', 'secao:Apostas', 'aba:Caça-níquel', 're:^Girar'],
   // Fase C/D: a ficha com conflito e a tela à margem
   ['pessoas-conflito', 'briga', 'Pessoas', 'ficha'],
-  ['caminhos-margem', 'presa', 'Caminhos', 'div:Outros caminhos']
+  ['caminhos-margem', 'presa', 'Caminhos', 'div:Outros caminhos'],
+  // Fases F e G: uma situação nova de quatro respostas, o seguro-desemprego em parcelas, o balanço de quem aposta
+  ['evento-novo', 'evento', 'História'],
+  ['caminhos-seguro', 'seguro', 'Caminhos', 'div:Trabalho'],
+  ['apostas-balanco', 'apostadora', 'Vida', 'secao:Apostas']
 ];
 const so = process.env.CENAS?.split(',');
 const cenas = so ? TODAS.filter(c => so.includes(c[0])) : TODAS;

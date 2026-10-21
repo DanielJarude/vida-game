@@ -10,7 +10,7 @@
 
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
-import { envolvimento, estresse, prox, tensao } from './efeitos';
+import { envolvimento, estresse, prox, tensao, local } from './efeitos';
 import { idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
 import { flex } from '../texto';
 import { lacoCom, oLaco, paisDe } from '../sistemas/rede';
@@ -250,7 +250,7 @@ export const REDE: Conteudo[] = [
           efeito: () => {
             const vin = c.v.vinculos[c.p.viuvo.id];
             vin.proximidade = Math.min(100, vin.proximidade + 8); vin.tUltimoContato = c.v.t;
-            if (c.p.viuvo.municipioId !== c.v.moradia.municipioId) c.v.financas.conta -= 1200;
+            if (c.p.viuvo.municipioId !== c.v.moradia.municipioId) c.v.financas.conta -= local(c, 1200);
             if (!c.v.rotinas.some(r => r.id === 'tempo_familia')) c.v.rotinas.push({ id: 'tempo_familia', tInicio: c.v.t });
             lembrarCom(c.v, c.p.viuvo.id, 'Você passou a vir mais depois da viuvez.', 'apoio', 2);
             if (c.p.viuvo.aperto) c.p.viuvo.aperto.t -= 6;

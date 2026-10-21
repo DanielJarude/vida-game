@@ -6,7 +6,7 @@
  */
 
 import type { Conteudo, Ctx } from './base';
-import { estresse, feliz } from './efeitos';
+import { estresse, feliz, local } from './efeitos';
 import { marcarFato, parceiro } from '../nucleo';
 import { parar, moita } from '../sistemas/ilicito';
 import { machucarNaBriga } from '../sistemas/lesoes';
@@ -70,7 +70,7 @@ export const MARGEM: Conteudo[] = [
     texto: () => 'Uma conta que não fechou, uma acusação atravessada: alguém do grupo acha que você ficou com o que não era seu.',
     opcoes: [
       { id: 'ceder', texto: 'Pagar a diferença e encerrar o assunto', comportamento: { disciplina: 1 },
-        disponivel: c => (disponivel(c.v) >= 1000 ? true : 'Não há dinheiro para pagar a diferença.'),
+        disponivel: c => (disponivel(c.v) >= local(c, 1000) ? true : 'Não há dinheiro para pagar a diferença.'),
         resolver: c => ({ texto: 'Você pagou. O assunto morreu ali — e ficou a impressão de que você paga quando apertam.', memoria: null, efeito: () => { pagar(c.v, Math.min(disponivel(c.v), Math.round(env(c).ganhos * 0.08))); env(c).reputacao = clamp((env(c).reputacao ?? 0) - 4); } }) },
       { id: 'enfrentar', texto: 'Enfrentar', comportamento: { coragem: 2, impulsividade: 1 },
         resolver: c => {

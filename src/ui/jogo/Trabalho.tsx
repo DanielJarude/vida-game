@@ -53,7 +53,7 @@ import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { divisaoDoNivel, doClube } from '../../motor/dados/clubes';
 import { nomeLugar, paisDaCidade } from '../../motor/dados/lugares';
 import { augeDe, carreirasEsportivas, categoriaDaBase, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
-import { capitalizar as cap } from '../../motor/texto';
+import { capitalizar as cap, dinheiro as fmtDinheiro } from '../../motor/texto';
 import { circuitoPeloRanking, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
 import { categoriaDeLuta, funcaoVolei, NOME_FUNCAO_VOLEI, provaDe } from '../../motor/sistemas/provas';
 import { lesaoAtiva } from '../../motor/sistemas/lesoes';
@@ -185,6 +185,8 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {preso && <PainelDaPena vida={vida} agir={agir} />}
         {foragido(vida) && <PainelForagido vida={vida} agir={agir} />}
         {modo === 'pausa' && <p className="nota-grande">{leituraDaPausa(vida)}</p>}
+        {/* REWORK 10 · ECO-03: o seguro-desemprego vem em parcelas — quantas faltam, de quanto, e o que as encerra. */}
+        {vida.trabalho.seguroDesemprego && <p className="nota-grande">Seguro-desemprego: faltam {vida.trabalho.seguroDesemprego.restantes} de {vida.trabalho.seguroDesemprego.total} parcelas de {fmtDinheiro(vida.trabalho.seguroDesemprego.parcela)}, uma por mês. Um emprego formal encerra as que faltarem; um bico, não.</p>}
         {modo === 'negocio' && <PainelNegocio vida={vida} />}
         {modo === 'negocio' && negocioAberto(vida) && <Renomear vida={vida} agir={agir} alvo="negocio" atual={negocioAberto(vida)!.nome} rotulo={`Dar outro nome a ${negocioAberto(vida)!.nome}`} />}
         {modo === 'artista' && vida.caminhos.arte?.ativo && <Renomear vida={vida} agir={agir} alvo="grupo" atual={vida.caminhos.arte.nome} rotulo={`Dar outro nome a ${vida.caminhos.arte.nome}`} />}

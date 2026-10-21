@@ -85,6 +85,9 @@ import { processarTribunal } from './sistemas/tribunal';
 import { processarMargem } from './sistemas/margem';
 import { processarApostas } from './sistemas/apostas';
 import { processarEcos } from './sistemas/ecos';
+import { processarIndiretos } from './sistemas/indiretos';
+import { processarSeguroDesemprego } from './sistemas/seguroDesemprego';
+import { fixarEstatura } from './sistemas/modalidades';
 
 export interface ResumoDoAno {
   idade: number;
@@ -126,6 +129,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarPets(v, r);
   processarCoisas(v);
   processarMortes(v, r);
+  processarIndiretos(v);
   processarFamiliaDeOrigem(v, r);
   // A casa de onde a pessoa veio: a folga real, a reserva que cresce ou se gasta, a família que pode precisar.
   processarOrigem(v);
@@ -208,8 +212,10 @@ function viverAno(v: Vida, r: Rng): void {
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);
   // REWORK 10 · JOG-01: a mão esquecida na mesa, e o jogo que virou assunto (antes das contas do ano).
+  processarSeguroDesemprego(v);
   processarApostas(v);
   processarEcos(v);
+  fixarEstatura(v);
   processarDinheiro(v, r, ec);
   processarObrigacoes(v);
   // A primeira vez que as contas foram todas suas (a transição, não uma data): `independencia`.

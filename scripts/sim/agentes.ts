@@ -9,6 +9,10 @@
  *                       renda, vive no modesto (aperta quando o mês não fecha), guarda o que
  *                       passa de seis meses de despesa, mata o cartão com o guardado,
  *                       renegocia, adianta empréstimo, aposenta quando pode.
+ *   (REWORK 10, §20)  — trabalhador, criminoso, financeiro, equilibrado, arriscado: os perfis que faltavam
+ *                       (o acadêmico é o `estudioso`; o atleta, o `esportista`; o familiar, o social e o
+ *                       aleatório já existiam). Escolhem por preferência e, sem preferência, ao acaso — nunca
+ *                       "a primeira opção".
  *   (outros nomes)    — as estratégias do simulador geral (`estrategias.ts`).
  */
 
@@ -21,6 +25,7 @@ import { OCUPACOES } from '../../src/motor/dados/ocupacoes';
 import type { Rng } from '../../src/motor/rng';
 import type { Momento, Vida } from '../../src/motor/tipos';
 import { estrategia } from './estrategias';
+import { valoresDeAposta } from '../../src/motor/sistemas/apostas';
 
 const tenta = (v: Vida, a: Acao) => podeTentar(disponibilidade(v, a));
 
@@ -87,7 +92,76 @@ const prudente: Agente = {
   }
 };
 
+/** Decide pela lista de preferências; sem nenhuma delas disponível, ao acaso entre as livres (não "a primeira"). */
+const porPreferencia = (pref: string[]) => (_v: Vida, m: Momento, r: Rng) => {
+  const livres = m.opcoes.filter(o => !o.bloqueio);
+  for (const p of pref) { const o = livres.find(x => x.id === p || x.id.startsWith(p)); if (o) return o.id; }
+  return r.pick(livres.length ? livres : m.opcoes).id;
+};
+
+/** O trabalhador: a vida de quem trabalha e guarda (o prudente), pede aumento, faz hora extra, assume o que errou. */
+const trabalhador: Agente = {
+  decidir: porPreferencia(['aceitar', 'assumir', 'dados', 'fazer', 'trabalhar', 'treinar', 'entregas', 'negociar', 'recusar', 'guardar', 'publica']),
+  agir: (v, r) => {
+    const out = prudente.agir(v, r);
+    if (v.trabalho.atual && idade(v) < 64) { if (tenta(v, { tipo: 'pedir_aumento' })) out.push({ tipo: 'pedir_aumento' }); if (r.chance(0.5) && tenta(v, { tipo: 'horas_extras' })) out.push({ tipo: 'horas_extras' }); }
+    return out;
+  }
+};
+
+/** O criminoso: a vida comum por fora; dentro, aceita o que oferecem por fora e segue fundo (o "carreira" de `crime10`). */
+const PREF_CRIME = ['aceitar', 'fundo', 'seguir', 'participar', 'enfrentar', 'advogado', 'particular', 'recorrer', 'pagar', 'antigos', 'esconder', 'culpar', 'revidar'];
+const criminoso: Agente = {
+  decidir: (v, m, r) => /^(ilic|jus|pri|trab_propina|ilic10)/.test(m.situacaoId) ? porPreferencia(PREF_CRIME)(v, m, r) : porPreferencia(['esconder', 'culpar', 'enfrentar', 'celular', 'revidar', 'entrar', 'clicar'])(v, m, r),
+  agir: (v, r) => prudente.agir(v, r)
+};
+
+/** O financeiro: guarda muito e investe em renda variável; recusa gastos, aceita sociedade só com folga. */
+const financeiro: Agente = {
+  decidir: porPreferencia(['orcamento', 'guardar', 'negociar', 'recusar', 'metade', 'ligar', 'tentar', 'nao', 'publica', 'sus']),
+  agir: (v, r) => {
+    const out = prudente.agir(v, r).filter(a => a.tipo !== 'investir');
+    if (idade(v) >= 18 && !moraComFamiliaDeOrigem(v)) {
+      const despesa = Math.max(1, orcamento(v).despesa);
+      const sobra = v.financas.conta - despesa * 4;
+      if (sobra > 1000) out.push({ tipo: 'investir', destino: r.chance(0.6) ? 'acoes' : 'pos_fixado', valor: Math.round(sobra) });
+    }
+    return out;
+  }
+};
+
+/** O equilibrado: um pouco de tudo — a rotina do social, o dinheiro do prudente, respostas que conversam. */
+const SOCIAL = estrategia('social');
+const equilibrado: Agente = {
+  decidir: porPreferencia(['conversar', 'meio', 'negociar', 'ritual', 'orcamento', 'visitas', 'uma', 'ouvir', 'aconselhar', 'convencer', 'adaptar', 'poupar', 'medico', 'assumir', 'particular']),
+  agir: (v, r) => {
+    const dinheiro = new Set(['investir', 'estilo', 'resgatar', 'amortizar', 'renegociar']);
+    return [...SOCIAL.agir(v, r).filter(a => !dinheiro.has(a.tipo)), ...prudente.agir(v, r).filter(a => dinheiro.has(a.tipo))];
+  }
+};
+
+/** O arriscado: o impulsivo de sempre, e o cassino — o caça-níquel e a roleta com uma parte da conta, todo ano. */
+const IMPULSIVO = estrategia('impulsivo');
+const arriscado: Agente = {
+  decidir: porPreferencia(['entrar', 'jogar', 'enfrentar', 'clicar', 'emprestar', 'assinar', 'ir', 'escondido', 'revidar', 'continuar', 'proposta', 'bater']),
+  agir: (v, r) => {
+    const out = IMPULSIVO.agir(v, r);
+    if (idade(v) >= 18 && v.financas.conta > 300) {
+      const valores = valoresDeAposta(v);
+      const valor = valores.filter(x => x <= v.financas.conta * 0.05).pop() ?? valores[0];
+      for (let k = 0; k < 6; k++) out.push({ tipo: 'aposta', op: { jogo: 'niquel', valor } });
+      for (let k = 0; k < 4; k++) out.push({ tipo: 'aposta', op: { jogo: 'roleta', apostas: [{ tipo: r.pick(['vermelho', 'preto', 'par', 'impar'] as const), valor }] } });
+    }
+    return out;
+  }
+};
+
 export function agente(nome: string): Agente {
+  if (nome === 'trabalhador') return trabalhador;
+  if (nome === 'criminoso') return criminoso;
+  if (nome === 'financeiro') return financeiro;
+  if (nome === 'equilibrado') return equilibrado;
+  if (nome === 'arriscado') return arriscado;
   if (nome === 'primeira') return primeira;
   if (nome === 'primeira_trabalha') return primeiraTrabalha;
   if (nome === 'prudente') return prudente;
