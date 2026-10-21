@@ -45,12 +45,16 @@ const ROTULO_DO_FIO: Record<FioDaHistoria, string> = { tudo: 'Tudo', estudos: 'E
 const MARCAS_DE_CONQUISTA = new Set(['conquista', 'aprovacao', 'formacao', 'promocao', 'profissional', 'estreia', 'eleicao', 'lideranca', 'ingresso', 'primeiro_emprego', 'negocio_aberto']);
 
 /** Quantos anos aparecem de cada vez (o resto abre a pedido). */
-export const ANOS_POR_VEZ = 20;
+export const ANOS_POR_VEZ = 12;
 
-export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: number; abrirPessoa?: (id: string) => void }) {
+/**
+ * REWORK 10 · UX-13: `compacta` — a Linha da Vida no "Agora" da História: só os últimos anos (os que marcaram), sem os
+ * controles de leitura, e o caminho para a biografia inteira (a parte "Biografia"). A biografia completa é a mesma peça.
+ */
+export function LinhaDaVida({ vida, marca, abrirPessoa, compacta }: { vida: Vida; marca: number; abrirPessoa?: (id: string) => void; compacta?: { anos: number; aoVerTudo: () => void } }) {
   const [doComeco, setDoComeco] = useState(false);
   const [discreto, setDiscreto] = useState(true);
-  const [limite, setLimite] = useState(ANOS_POR_VEZ);
+  const [limite, setLimite] = useState(compacta?.anos ?? ANOS_POR_VEZ);
   const [fio, setFio] = useState<FioDaHistoria>('tudo');
   const anos = useMemo(() => {
     const todos = anosDaBiografia(vida, discreto);
@@ -68,7 +72,8 @@ export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: n
   const comRosto = useMemo(() => new Set(visiveis.flatMap(a => a.entradas).filter(e => e.relevancia !== 'cotidiano' && DE_GENTE.has(e.tema) && e.pessoas?.length).slice(0, ROSTOS_NA_PAGINA).map(e => e.id)), [visiveis]);
 
   return (
-    <div className="linha-da-vida">
+    <div className={`linha-da-vida${compacta ? ' linha-da-vida--compacta' : ''}`}>
+      {!compacta && <>
       <div className="linha-da-vida__controles" role="group" aria-label="Como ler a biografia">
         <button type="button" className="chip" aria-pressed={doComeco} onClick={() => { setDoComeco(d => !d); setLimite(ANOS_POR_VEZ); }}>
           {doComeco ? 'Mais recente primeiro' : 'Ler do começo'}
@@ -80,6 +85,7 @@ export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: n
       <div className="linha-da-vida__fios" role="group" aria-label="Ver a história por um fio">
         {(Object.keys(ROTULO_DO_FIO) as FioDaHistoria[]).map(f => <button key={f} type="button" className="chip" aria-pressed={fio === f} onClick={() => { setFio(f); setLimite(ANOS_POR_VEZ); }}>{ROTULO_DO_FIO[f]}</button>)}
       </div>
+      </>}
       {fio === 'conquistas' && <Conquistas vida={vida} />}
       <ol className={`anos${fio === 'conquistas' ? ' anos--oculto' : ''}`}>
         {visiveis.map((a, k) => {
@@ -113,7 +119,12 @@ export function LinhaDaVida({ vida, marca, abrirPessoa }: { vida: Vida; marca: n
           );
         })}
       </ol>
-      {faltam > 0 && fio !== 'conquistas' && (
+      {compacta && faltam > 0 && (
+        <button type="button" className="botao botao--secundario linha-da-vida__mais" onClick={compacta.aoVerTudo}>
+          Ler a biografia inteira <span className="linha-da-vida__faltam">({ordem.length} {ordem.length === 1 ? 'ano' : 'anos'} com história)</span>
+        </button>
+      )}
+      {!compacta && faltam > 0 && fio !== 'conquistas' && (
         <button type="button" className="botao botao--secundario linha-da-vida__mais" onClick={() => setLimite(l => l + ANOS_POR_VEZ)}>
           {doComeco ? 'Continuar lendo' : 'Ver anos anteriores'} <span className="linha-da-vida__faltam">({faltam} {faltam === 1 ? 'ano' : 'anos'} com história)</span>
         </button>

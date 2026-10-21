@@ -286,3 +286,82 @@ export function Valor({ valor, className }: { valor: number; className?: string 
     </button>
   );
 }
+
+/* ------------------------------------------------------------ REWORK 10 · Fase B: a organização de cada área */
+
+export interface ItemDeSubnav<T extends string> { id: T; rotulo: string; oque?: string; conta?: number }
+
+/**
+ * As partes de uma área (o mesmo padrão de abas de Pessoas, Minha Semana e Vida: `role=tablist`, setas do teclado). A
+ * parte aberta é guardada por quem chama (o Jogo), para voltar à área ser voltar para onde se estava.
+ */
+export function Subnav<T extends string>({ rotulo, itens, atual, aoMudar, prefixo, classe }: { rotulo: string; itens: ItemDeSubnav<T>[]; atual: T; aoMudar: (id: T) => void; prefixo: string; classe?: string }) {
+  return (
+    <nav className={`subnav${classe ? ` ${classe}` : ''}`} aria-label={rotulo}>
+      <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
+        {itens.map(x => (
+          <li key={x.id} role="presentation">
+            <button type="button" role="tab" id={`${prefixo}-aba-${x.id}`} aria-selected={atual === x.id} aria-controls={atual === x.id ? `${prefixo}-painel` : undefined} tabIndex={atual === x.id ? 0 : -1}
+              className={`subnav__item${atual === x.id ? ' subnav__item--ativo' : ''}`} onClick={() => aoMudar(x.id)} title={x.oque}>
+              {x.rotulo}{x.conta !== undefined && x.conta > 0 ? <span className="subnav__conta">{x.conta}</span> : null}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+export interface FatoDaArea { rotulo: string; valor: ReactNode; tom?: 'bom' | 'ruim' }
+
+/**
+ * A CABEÇA DE UMA ÁREA (REWORK 10 · UX-13): toda área responde, no alto e na mesma ordem, às cinco perguntas — onde estou
+ * (a área e a parte), qual é a minha situação (o título e dois a quatro fatos), o que aconteceu há pouco (o mais recente
+ * da Linha da Vida naquele assunto) e qual é o próximo passo (um só, levando ao lugar dele). O que dá para fazer vem
+ * logo abaixo, agrupado. Nada de painel: é a folha de rosto da área.
+ */
+export function CabecaDaArea({ area, kicker, titulo, fatos, recente, proximo, retrato }: {
+  area: string; kicker?: ReactNode; titulo: ReactNode; fatos?: FatoDaArea[];
+  recente?: { quando: string; texto: string }; proximo?: { texto: string; rotulo?: string; ir?: () => void }; retrato?: ReactNode;
+}) {
+  return (
+    <header className={`cabeca-area${retrato ? ' cabeca-area--com-retrato' : ''}`}>
+      {retrato && <div className="cabeca-area__retrato">{retrato}</div>}
+      <div className="cabeca-area__texto">
+        <p className="folio__kicker"><span className="folio__area">{area}</span>{kicker ? <> · {kicker}</> : null}</p>
+        <h1 className="cabeca-area__titulo">{titulo}</h1>
+        {fatos && fatos.length > 0 && (
+          <dl className="cabeca-area__fatos">
+            {fatos.map(f => <div key={f.rotulo} className={f.tom ? `cabeca-area__fato--${f.tom}` : undefined}><dt>{f.rotulo}</dt><dd>{f.valor}</dd></div>)}
+          </dl>
+        )}
+      </div>
+      {(recente || proximo) && (
+        <div className="cabeca-area__rodape">
+          {recente && <p className="cabeca-area__recente"><span className="cabeca-area__rotulo">Há pouco</span><span className="cabeca-area__quando">{recente.quando}</span> {recente.texto}</p>}
+          {proximo && (
+            <p className="cabeca-area__proximo">
+              <span className="cabeca-area__rotulo">Próximo passo</span>
+              <span>{proximo.texto}</span>
+              {proximo.ir && <button type="button" className="link cabeca-area__ir" onClick={proximo.ir}>{proximo.rotulo ?? 'Ir'} →</button>}
+            </p>
+          )}
+        </div>
+      )}
+    </header>
+  );
+}
+
+/** A tela é estreita (o painel "Agora" do lado não aparece)? Sem `matchMedia` (os testes), é larga: nada se duplica. */
+export function useEstreito(limite = 1180): boolean {
+  const consulta = `(max-width: ${limite}px)`;
+  const [estreito, setEstreito] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(consulta).matches);
+  useEffect(() => {
+    const m = typeof window !== 'undefined' ? window.matchMedia?.(consulta) : undefined;
+    if (!m) return undefined;
+    const mudou = () => setEstreito(m.matches);
+    m.addEventListener?.('change', mudou);
+    return () => m.removeEventListener?.('change', mudou);
+  }, [consulta]);
+  return estreito;
+}

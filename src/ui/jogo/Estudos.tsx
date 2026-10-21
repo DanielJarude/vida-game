@@ -120,9 +120,11 @@ export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { pa
       {em('agora') && <TrajetoriaDeEstudo vida={vida} />}
       {em('desenvolvimento') && <ComoVai vida={vida} />}
       {em('oportunidades') && <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'estudos'} titulo="Ao seu alcance agora" />}
-      {em('agora') && inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
-      {em('agora') && inst && <NoAnoLetivo vida={vida} agir={agir} />}
+      {/* REWORK 10 · UX-13: primeiro o que é seu agora (onde, turno, custo, a dedicação), depois o que fazer no ano letivo,
+          e por último o lugar (a gente e as atividades) — antes, o curso e a escolha da dedicação ficavam no fim. */}
       {em('agora') && <Estudo vida={vida} agir={agir} />}
+      {em('agora') && inst && <NoAnoLetivo vida={vida} agir={agir} />}
+      {em('agora') && inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
       {em('oportunidades') && i >= 14 && <Preparacao vida={vida} agir={agir} irPara={irPara} />}
       {em('oportunidades') && <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => /^(selecao|vestibular):/.test(o.id)} />}
       {em('oportunidades') && i >= 15 && <Cursos vida={vida} agir={agir} />}
@@ -177,8 +179,10 @@ function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Aca
         </ul>
       )}
       {i >= 7 && atividades.length > 0 && (
-        <>
-          <h3 className="subtitulo">O que dá para fazer aqui</h3>
+        <details className="o-lugar__mais" open={atividades.some(m => vida.rotinas.some(r => r.id === m.id))}>
+          <summary className="subtitulo o-lugar__mais-titulo"><span>O que dá para fazer aqui</span><span className="ficha__categoria-conta">{atividades.length}</span></summary>
+          {/* O aviso da semana (cabe, mas aperta) é o mesmo para todas: dito uma vez, não debaixo de cada uma. */}
+          {(() => { const d = atividades.map(m => disponibilidade(vida, { tipo: 'rotina', id: m.id, ativa: true, nivel: 1 })).find(x => podeTentar(x) && x.motivo); return d ? <p className="acao__aviso">{d.motivo}</p> : null; })()}
           <ul className="o-lugar__atividades">
             {atividades.map(m => {
               const faz = vida.rotinas.some(r => r.id === m.id);
@@ -191,13 +195,13 @@ function OLugar({ vida, agir, abrirPessoa, irPara }: { vida: Vida; agir: (a: Aca
                   <div className="atividade-formacao__texto"><strong>{m.nome}</strong><span>{estado ? `Agora: ${estado}.` : descricaoDaRotina(vida, m)}</span>{ultimo && <span className="nota">{anoDe(ultimo.t)} · {ultimo.texto}</span>}</div>
                   {faz
                     ? <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: false }} agir={agir} variante="discreto">Parar</BotaoAcao>
-                    : <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir} variante="secundario">Entrar</BotaoAcao>}
+                    : <BotaoAcao vida={vida} acao={{ tipo: 'rotina', id: m.id, ativa: true, nivel: 1 }} agir={agir} variante="secundario" semAviso>Entrar</BotaoAcao>}
                 </li>
               );
             })}
           </ul>
           <p className="nota">Cada atividade ocupa parte da semana (veja em <button type="button" className="link" onClick={() => irPara?.('tempo')}>Minha Semana</button>).</p>
-        </>
+        </details>
       )}
     </section>
   );

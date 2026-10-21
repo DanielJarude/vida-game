@@ -178,15 +178,8 @@ button.entrada__rosto:hover { color: var(--text-primary); background: var(--veu-
 /* ------------------------------------------------------ A ficha de uma pessoa (REWORK 7) */
 /* O retrato de uma relação: no celular, uma coluna (quem é → como estão → conviver → a memória); a partir de 761 px,
    duas — o retrato e a memória à esquerda, conviver à direita, sempre à mão. */
-.ficha--relacao { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'topo' 'retrato' 'conviver' 'memoria'; gap: var(--space-4); }
-.ficha--relacao > .ficha__topo { grid-area: topo; }
-.ficha--relacao > .ficha__retrato-relacao { grid-area: retrato; }
-.ficha--relacao > .ficha__conviver { grid-area: conviver; }
-.ficha--relacao > .ficha__memoria { grid-area: memoria; }
-@media (min-width: 761px) {
-  .ficha--relacao { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-areas: 'topo conviver' 'retrato conviver' 'memoria conviver'; column-gap: var(--space-6); align-items: start; }
-  .ficha--relacao > .ficha__conviver { position: sticky; top: 0; }
-}
+/* REWORK 10 · UX-14: a ficha em três partes (Agora · Vocês dois · Quem é), uma de cada vez, numa coluna só. */
+.ficha--relacao { display: flex; flex-direction: column; gap: var(--space-4); }
 .ficha__identidade { min-width: 0; }
 .ficha__retrato-relacao, .ficha__memoria { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .ficha__conviver { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--veu-1); }
@@ -203,7 +196,7 @@ button.entrada__rosto:hover { color: var(--text-primary); background: var(--veu-
 .laco__item--ruim { border-top-color: color-mix(in oklab, var(--danger) 60%, transparent); }
 .laco__rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
 .laco__palavra { font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); overflow-wrap: anywhere; }
-.ficha__memoria .ficha__historia h3 { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.ficha__parte .ficha__historia h3 { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
 .ficha--relacao { --tom-cat: var(--tom-pessoas); }
 
 /* ------------------------------------------------------------- Formação (REWORK 7) */

@@ -44,6 +44,7 @@ import { negocioAberto } from '../../motor/sistemas/negocio';
 import { nomeDaMatricula, rotuloSerie } from '../../motor/sistemas/escola';
 import { instituicaoAtual } from '../../motor/sistemas/formacao';
 import { navegarAbas } from '../comum';
+import { recenteDe, TEMAS_CAMINHOS } from '../area';
 import { DIVISOES_CAMINHOS, PARTES_DA_DIVISAO, type Aba, type DivisaoCaminhos, type ParteCaminhos } from '../navegacao';
 import { Estudos } from './Estudos';
 import { Trabalho, TrabalhoAindaNao } from './Trabalho';
@@ -291,6 +292,8 @@ function InicioCaminhos({ vida, irDivisao, irPara }: { vida: Vida; irDivisao: (d
           })}
         </ul>
         {i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
+        {/* REWORK 10 · UX-13: o que aconteceu há pouco nos estudos e no trabalho (a mesma leitura da cabeça das outras áreas). */}
+        {(() => { const r = recenteDe(vida, TEMAS_CAMINHOS); return r ? <p className="cabeca-area__recente caminhos__recente"><span className="cabeca-area__rotulo">Há pouco</span><span className="cabeca-area__quando">{r.quando}</span> {r.texto}</p> : null; })()}
       </header>
       {prox && (
         <section className="proximo-caminho" aria-labelledby="titulo-proximo-caminho">

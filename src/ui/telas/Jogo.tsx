@@ -17,7 +17,7 @@
 import { noticiasDoAno, type Noticia } from '../../motor/sistemas/mundoVivo';
 import { BaixarApp } from './BaixarApp';
 import { SeletorTema } from '../SeletorTema';
-import { Folha } from '../comum';
+import { Folha, useEstreito } from '../comum';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -30,16 +30,15 @@ import { entrarNaVida } from '../../motor/mundo/vida';
 import { seguranca } from '../../motor/sistemas/dinheiro';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
-import { LinhaDaVida } from '../jogo/LinhaDaVida';
+import { Historia, type ParteHistoria } from '../jogo/Historia';
 import { Momento, Resultado } from '../jogo/Momento';
-import { Pessoas } from '../jogo/Pessoas';
+import { Pessoas, type PartePessoas } from '../jogo/Pessoas';
 import { areaDaPorta } from '../jogo/Estudos';
-import { Voce } from '../jogo/Voce';
+import { Voce, type ParteVoce } from '../jogo/Voce';
 import { PaginaCaminhos } from '../jogo/CaminhosDaVida';
 import { VidaConcreta } from '../jogo/VidaConcreta';
 import { expressaoDe, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
-import { RetratoDaVida } from '../jogo/RetratoDaVida';
 import { fechamentoDoAno, rotinaDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
@@ -72,6 +71,11 @@ export function Jogo({ c }: { c: ControleVida }) {
   const foco = useRef<'formacao' | 'trabalho' | undefined>(undefined);
   const [menu, setMenu] = useState(false);
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
+  // REWORK 10 · UX-13: a parte aberta de cada área fica aqui — voltar à área é voltar para onde se estava.
+  const [parteHistoria, setParteHistoria] = useState<ParteHistoria>('agora');
+  const [parteVoce, setParteVoce] = useState<ParteVoce>('resumo');
+  const [partePessoas, setPartePessoas] = useState<PartePessoas>('circulo');
+  const estreito = useEstreito();
   const conteudo = useRef<HTMLElement>(null);
   const fecharMenu = useCallback(() => setMenu(false), []);
   const area = lugar.area;
@@ -86,6 +90,8 @@ export function Jogo({ c }: { c: ControleVida }) {
       if (l.parte && (alvo === 'estudos' || alvo === 'trabalho')) setPartes(p => ({ ...p, [alvo]: l.parte! }));
     }
     if (l.explorar) setExplorar(l.explorar);
+    if (l.voce) setParteVoce(l.voce);
+    if (l.historia) setParteHistoria(l.historia);
     foco.current = l.foco;
     setLugar(l);
   };
@@ -100,12 +106,12 @@ export function Jogo({ c }: { c: ControleVida }) {
     // Em Caminhos, um destino que pede um lado (a formação, o trabalho) leva a ele; o resto começa no alto.
     const lado = foco.current && area === 'caminhos' ? document.querySelector(`.caminhos__painel--ativo [data-lado="${foco.current}"]`) : null;
     if (lado && lado.previousElementSibling) lado.scrollIntoView?.({ block: 'start' }); else window.scrollTo?.({ top: 0 });
-  }, [area, secao, abaTempo, parte, divisao]);
+  }, [area, secao, abaTempo, parte, divisao, parteHistoria, parteVoce, partePessoas]);
   // REWORK 6: depois de viver um ano, a tela vai para a Linha da Vida e mostra O ANO QUE PASSOU — sem jogar o jogador
   // no começo da página nem obrigá-lo a reler a biografia. Se o alto da página já cabe na janela junto com o ano, fica
   // no alto (vê-se também como você está); se não cabe (celular), desce direto até o ano.
   const rolouAte = useRef(0);
-  useEffect(() => { if (c.marcaAno > 0) setLugar({ area: 'linha' }); }, [c.marcaAno]);
+  useEffect(() => { if (c.marcaAno > 0) { setLugar({ area: 'linha' }); setParteHistoria('agora'); } }, [c.marcaAno]);
   // A rolagem espera as decisões e o resultado do ano fecharem (com a folha aberta, a página está travada).
   const livre = !vida.momento && !c.resultado;
   useEffect(() => {
@@ -149,9 +155,11 @@ export function Jogo({ c }: { c: ControleVida }) {
 
       <div className={`palco palco--${area}`}>
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
-          {area === 'linha' && <><RetratoDaVida vida={vida} irPara={ir} abrirPessoa={abrirPessoa} />{c.marcaAno > 0 && <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} />}<LinhaDaVida vida={vida} marca={c.marcaAno} abrirPessoa={abrirPessoa} /></>}
-          {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} />}
-          {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} />}
+          {area === 'linha' && <Historia vida={vida} marca={c.marcaAno} parte={parteHistoria} irParte={setParteHistoria} irPara={ir} abrirPessoa={abrirPessoa}
+            anoQuePassou={c.marcaAno > 0 ? <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} /> : undefined}
+            pedeVoce={estreito ? <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} /> : undefined} />}
+          {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parteVoce} irParte={setParteVoce} />}
+          {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} parte={partePessoas} irParte={setPartePessoas} />}
           {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} divisao={divisao} irDivisao={(d, p) => irLugar({ area: 'caminhos', divisao: d, parte: p })} parte={parte} irParte={p => irLugar({ area: 'caminhos', divisao, parte: p })} explorar={explorar} aoExplorar={setExplorar} />}
           {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} aba={abaTempo} irAba={a => ir(a)} abrirPessoa={abrirPessoa} />}
           {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}

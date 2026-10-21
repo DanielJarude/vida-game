@@ -36,7 +36,8 @@ import { deslocamento, NOME_MODO, semTrajeto, tempoEmPalavras } from '../../moto
 import { idade } from '../../motor/nucleo';
 import { listaNatural } from '../../motor/texto';
 import { podeTentar } from '../../motor/plausibilidade';
-import { BotaoAcao, Folio, navegarAbas, Secao, Vazio } from '../comum';
+import { BotaoAcao, CabecaDaArea, Folio, navegarAbas, Secao, Vazio } from '../comum';
+import { recenteDe, TEMAS_SEMANA } from '../area';
 import { dinheiroCurto } from '../apresentar';
 import { areaDaPorta, PortasAbertas } from './Estudos';
 import type { Aba } from '../navegacao';
@@ -275,7 +276,18 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
   const ir = (a: Aba) => (irPara ? irPara(a) : DE_TEMPO.has(a) ? trocar(a as SecaoTempo) : undefined);
   return (
     <div className={`tempo tempo--${aba}`}>
-      <Folio kicker={<><span className="folio__area">Minha Semana</span> · {SECOES_TEMPO.find(x => x.id === aba)!.rotulo.toLowerCase()}</>} titulo={tituloDaRotina(av)} />
+      {/* REWORK 10 · UX-13: a cabeça da área — a situação da semana em três fatos, o que aconteceu há pouco e o próximo passo. */}
+      <CabecaDaArea area="Minha Semana" kicker={SECOES_TEMPO.find(x => x.id === aba)!.rotulo.toLowerCase()} titulo={tituloDaRotina(av)}
+        fatos={[
+          { rotulo: 'A semana', valor: av.exigencia.palavra, tom: av.exigencia.faixa === 'alem' || av.exigencia.faixa === 'sobrecarregada' ? 'ruim' : undefined },
+          ...(i >= 10 ? [{ rotulo: 'A cabeça', valor: `${av.cabeca.nivel}${av.cabeca.tendencia === 'subindo' ? ' (subindo)' : ''}`, tom: av.cabeca.nivel === 'alto' || av.cabeca.nivel === 'no limite' ? 'ruim' as const : undefined }] : []),
+          { rotulo: 'Atividades', valor: ativas.length ? `${ativas.length} na semana` : 'nenhuma fixa' },
+          ...(av.horarios.conflitos ? [{ rotulo: 'Conflitos de horário', valor: String(av.horarios.conflitos), tom: 'ruim' as const }] : [])
+        ]}
+        recente={recenteDe(vida, TEMAS_SEMANA)}
+        proximo={av.horarios.conflitos ? { texto: 'Há compromisso batendo com compromisso: a agenda mostra as saídas.', rotulo: 'Ver a agenda', ir: () => { trocar('semana'); document.getElementById('titulo-semana')?.scrollIntoView?.({ block: 'start' }); } }
+          : av.exigencia.faixa === 'alem' || av.exigencia.faixa === 'sobrecarregada' ? { texto: 'A semana passa do que se aguenta: diminuir ou largar algo devolve o fôlego.', rotulo: 'O que você pratica', ir: () => { trocar('semana'); document.getElementById('titulo-praticas')?.scrollIntoView?.({ block: 'start' }); } }
+          : !ativas.length && i >= 6 ? { texto: 'Nada fixo na semana: dá para começar algo.', rotulo: 'Ver hobbies', ir: () => trocar('atividades') } : undefined} />
       <nav className="subnav" aria-label="Seções de Minha Semana">
         <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
           {abas.map(x => (
@@ -346,7 +358,7 @@ function AtividadesAtivas({ vida, agir, irPara, ativas, titulo, vazio, abrirPess
   }).filter((x): x is NonNullable<typeof x> => !!x);
   const aberto = lista.find(x => x.l.id === aberta);
   return (
-    <Secao titulo={titulo}>
+    <Secao titulo={titulo} id="titulo-praticas">
       {lista.length === 0 && <Vazio>{vazio}</Vazio>}
       <ul className="praticas">
         {lista.map(x => <CartaoPratica key={x.l.id} vida={vida} l={x.l} agir={agir} irPara={irPara} abrir={() => setAberta(x.l.id)} leitura={x.leitura || undefined} />)}

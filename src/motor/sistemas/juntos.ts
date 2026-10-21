@@ -307,22 +307,43 @@ export const INTERACOES_JUNTOS: Interacao[] = [
   }
 ];
 
-/** O grupo de cada interação na ficha: fazer junto, conversar, cuidar e ajudar, a relação (a ordem da tela). */
-export type GrupoDeInteracao = 'juntos' | 'conversar' | 'cuidar' | 'romance' | 'relacao';
-const GRUPOS: Record<string, GrupoDeInteracao> = {
-  // Fazer junto: o que se FAZ (não o que se diz).
-  cinema: 'juntos', jantar_fora: 'juntos', show: 'juntos', estadio: 'juntos', parque: 'juntos', ensinar: 'juntos', cozinhar_junto: 'juntos', caminhar_junto: 'juntos',
-  fim_de_semana: 'juntos', aniversario: 'juntos', jantar_romantico: 'juntos', tempo: 'juntos', visitar: 'juntos', sair_juntos: 'juntos', passear: 'juntos',
-  brincar: 'juntos', ler: 'juntos', treinar_junto: 'juntos', visitar_par: 'juntos', app_encontro: 'juntos', comemorar: 'juntos', intimidade: 'juntos',
-  // Conversar.
-  conversar: 'conversar', desabafar: 'conversar', aconselhar: 'conversar', ligar: 'conversar', ligar_par: 'conversar', duvidas: 'conversar', conselho_futuro: 'conversar',
-  perguntar_vida: 'conversar', elogiar: 'conversar', pedir_conselho: 'conversar', ex_conversar: 'conversar', app_conversar: 'conversar',
-  // FIX pós-playtest humano: o que pode virar romance tem lugar próprio na ficha ("Algo mais").
-  flertar: 'romance', declarar: 'romance', demonstrar_interesse: 'romance', convidar: 'romance',
-  carinho: 'conversar', agradecer: 'conversar', futuro_casal: 'conversar', dinheiro_casal: 'conversar', agradecer_professor: 'conversar', conhecer: 'conversar', futuro: 'conversar',
-  // Cuidar e ajudar.
-  cuidar: 'cuidar', apoiar: 'cuidar', dinheiro: 'cuidar', medico: 'cuidar', estudos: 'cuidar', escola: 'cuidar', incentivar: 'cuidar', limite: 'cuidar',
-  pedir_ajuda_criancas: 'cuidar', ex_filhos: 'cuidar', chamado_sim: 'cuidar', chamado_nao: 'cuidar'
+/**
+ * REWORK 10 · UX-14 — a categoria de cada interação na ficha. Antes eram cinco gavetas genéricas (fazer juntos,
+ * conversar, cuidar, "algo mais", "a relação"); agora são as situações de uma relação, na ordem da tela, e a ficha só
+ * mostra as que têm o que fazer com aquela pessoa, naquela idade, naquele momento.
+ */
+export type GrupoDeInteracao = 'conversar' | 'conviver' | 'afeto' | 'planos' | 'resolver' | 'confrontar' | 'familia' | 'romance' | 'decisoes';
+export const ROTULO_DO_GRUPO: Record<GrupoDeInteracao, string> = {
+  conversar: 'Conversar', conviver: 'Conviver', afeto: 'Demonstrar afeto', planos: 'Construir planos', resolver: 'Resolver conflitos',
+  confrontar: 'Confrontar', familia: 'Família e cuidado', romance: 'Romance', decisoes: 'Decisões importantes'
 };
-/** O resto (aproximar, pedir em namoro, casar, terminar, desculpas, discordar, afastar...) é a relação em si. */
-export const grupoDaInteracao = (id: string): GrupoDeInteracao => GRUPOS[id] ?? 'relacao';
+export const ORDEM_DOS_GRUPOS: GrupoDeInteracao[] = ['conversar', 'conviver', 'afeto', 'familia', 'planos', 'romance', 'resolver', 'confrontar', 'decisoes'];
+const GRUPOS: Record<string, GrupoDeInteracao> = {
+  // Conversar: o que se diz (e se escuta).
+  conversar: 'conversar', desabafar: 'conversar', aconselhar: 'conversar', ligar: 'conversar', ligar_par: 'conversar', duvidas: 'conversar', conselho_futuro: 'conversar',
+  perguntar_vida: 'conversar', pedir_conselho: 'conversar', ex_conversar: 'conversar', app_conversar: 'conversar', agradecer: 'conversar', agradecer_professor: 'conversar',
+  apoiar: 'conversar', por_fora: 'conversar', futuro: 'conversar', distancia: 'conversar',
+  // Conviver: o que se FAZ junto.
+  cinema: 'conviver', jantar_fora: 'conviver', show: 'conviver', estadio: 'conviver', parque: 'conviver', ensinar: 'conviver', cozinhar_junto: 'conviver', caminhar_junto: 'conviver',
+  fim_de_semana: 'conviver', tempo: 'conviver', visitar: 'conviver', sair_juntos: 'conviver', passear: 'conviver', treinar_junto: 'conviver', visitar_par: 'conviver',
+  app_encontro: 'conviver', brincar: 'conviver', ler: 'conviver',
+  // Demonstrar afeto.
+  carinho: 'afeto', elogiar: 'afeto', intimidade: 'afeto', aniversario: 'afeto', comemorar: 'afeto', jantar_romantico: 'afeto', aproximar: 'afeto', aprofundar: 'afeto',
+  // Família e cuidado: os filhos, a saúde, o dinheiro de quem precisa, o ex com quem se cria um filho.
+  cuidar: 'familia', dinheiro: 'familia', medico: 'familia', estudos: 'familia', escola: 'familia', incentivar: 'familia', limite: 'familia',
+  pedir_ajuda_criancas: 'familia', ex_filhos: 'familia', conhecer: 'familia',
+  // Construir planos (a dois).
+  futuro_casal: 'planos', dinheiro_casal: 'planos', planejar_filhos: 'planos', evitar_filhos: 'planos',
+  // Romance: o que pode virar (ou é) um romance.
+  flertar: 'romance', declarar: 'romance', demonstrar_interesse: 'romance', convidar: 'romance', pedir_namoro: 'romance', encerrar_caso: 'romance',
+  // Resolver conflitos.
+  desculpas: 'resolver', reconciliar: 'resolver', reaproximar: 'resolver', contar_verdade: 'resolver', ex_amizade: 'resolver',
+  // Confrontar.
+  discordar: 'confrontar', cobrar: 'confrontar', provocar: 'confrontar', afastar: 'confrontar', encerrar_amizade: 'confrontar',
+  // Decisões importantes.
+  morar_junto: 'decisoes', pedir_casamento: 'decisoes', terminar: 'decisoes',
+  chamado_sim: 'conversar', chamado_nao: 'conversar'
+};
+export const grupoDaInteracao = (id: string): GrupoDeInteracao => GRUPOS[id] ?? 'conversar';
+/** Para os módulos que trazem interações novas (REWORK 10 · REL-01/03): cada uma declara a sua categoria. */
+export function registrarGrupo(id: string, g: GrupoDeInteracao): void { GRUPOS[id] = g; }

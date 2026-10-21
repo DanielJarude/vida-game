@@ -49,6 +49,10 @@ export interface Lugar {
   foco?: 'formacao' | 'trabalho';
   /** Em Caminhos · Oportunidades, o que procurar (vagas, concursos, negócio). */
   explorar?: 'vagas' | 'concursos' | 'negocio';
+  /** REWORK 10 · UX-13: em Você, a parte do retrato (Resumo, Saúde, Habilidades, Aparência, No mundo). */
+  voce?: 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'mundo';
+  /** REWORK 10: na História, a parte (o Agora ou a Biografia). */
+  historia?: 'agora' | 'biografia';
 }
 
 const DE_TEMPO = new Set<string>(['semana', 'corpo', 'atividades', 'gente', 'redes']);
@@ -174,14 +178,14 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'mudar_cidade', quero: 'Mudar de cidade', lugar: { area: 'vida', secao: 'cidade' }, la: '"Mudar de cidade"' },
   { id: 'mudar_pais', quero: 'Mudar de país, estudar ou trabalhar fora', lugar: { area: 'vida', secao: 'cidade' }, la: '"Mudar de país": o motivo, o país (com a porta de cada um), a cidade' },
   { id: 'custo_de_vida', quero: 'Saber quanto custa viver aqui', lugar: { area: 'vida', secao: 'cidade' }, la: 'a moeda, o custo do mês, o salário mínimo, a saúde' },
-  { id: 'nacionalidade', quero: 'Onde nasci, minha nacionalidade, onde moro', lugar: { area: 'voce' }, la: '"No mundo"' },
+  { id: 'nacionalidade', quero: 'Onde nasci, minha nacionalidade, onde moro', lugar: { area: 'voce', voce: 'mundo' }, la: 'Você · "No mundo"' },
   { id: 'pertences', quero: 'Usar o que é meu: tocar o violão, jogar, fotografar', lugar: { area: 'vida', secao: 'pertences' }, la: 'cada coisa sua, com o que dá para fazer com ela' },
   { id: 'rede', quero: 'Postar no Instagram, crescer no YouTube, as redes sociais', lugar: { area: 'tempo', aba: 'redes' }, la: 'cada plataforma: postar, crescer, monetizar, apagar a conta' },
   { id: 'usar_carro', quero: 'Usar o meu carro, a moto, a bicicleta', lugar: { area: 'vida', secao: 'pertences' }, la: 'o veículo, com o que dá para fazer com ele' },
   { id: 'dinheiro', quero: 'Ver meu dinheiro, pedir ajuda à família', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês, o que é seu, a família' },
-  { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce' }, la: '"Aparência e estilo"' },
+  { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce', voce: 'aparencia' }, la: 'Você · "Aparência e estilo"' },
   { id: 'cirurgia', quero: 'Fazer uma cirurgia plástica (nariz, orelhas, cabelo, lifting)', lugar: { area: 'vida', secao: 'compras' }, la: '"Você": a clínica de cirurgia plástica' },
-  { id: 'saude', quero: 'Cuidar da saúde, da cabeça', lugar: { area: 'voce' }, la: 'humor, cabeça e saúde' },
+  { id: 'saude', quero: 'Cuidar da saúde, da cabeça', lugar: { area: 'voce', voce: 'resumo' }, la: 'Você · Resumo: humor, cabeça e saúde (e o prontuário, em Saúde)' },
   { id: 'historia', quero: 'Acompanhar a minha história', lugar: { area: 'linha' }, la: 'a biografia, ano a ano' },
   // REWORK 7: os testes de intenção do playtest — cada um com um lugar previsível (e conferido por `navegacao.test`).
   { id: 'sair_amigo', quero: 'Sair com um amigo', lugar: { area: 'pessoas' }, la: 'o rosto do amigo: "Fazer juntos"' },
@@ -199,7 +203,7 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'celular', quero: 'Abrir o celular, o Instagram, publicar um vídeo', lugar: { area: 'tempo', aba: 'redes' }, la: 'o celular: um app por rede, a tela inicial com o que chegou' },
   { id: 'homenagear', quero: 'Homenagear alguém que morreu, ir ao velório, visitar o túmulo', lugar: { area: 'pessoas' }, la: '"Em memória" (ou "Quem se foi"): a ficha da pessoa, "Lembrar de…"' },
   { id: 'agradecer', quero: 'Agradecer a alguém por uma ajuda', lugar: { area: 'pessoas' }, la: 'a ficha da pessoa, "Conversar": só aparece pelo que ela fez de verdade' },
-  { id: 'triste', quero: 'Saber por que ainda estou triste', lugar: { area: 'voce' }, la: '"Como você está": o que pesa (o luto que se acalma, um acontecimento recente) e o que ajuda' },
+  { id: 'triste', quero: 'Saber por que ainda estou triste', lugar: { area: 'voce', voce: 'resumo' }, la: 'Você · Resumo, "Como você está": o que pesa (o luto que se acalma, um acontecimento recente) e o que ajuda' },
   { id: 'aparencia', quero: 'Mudar a aparência do jogo, as cores', lugar: { area: 'linha' }, la: 'o Menu (a marca VIDA, no alto): "Aparência", com as quatro paletas' },
   { id: 'profissional', quero: 'Ver as minhas informações profissionais', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'agora' }, la: 'o ofício, a situação agora; a trajetória em Currículo' },
   // REWORK 9.6 · UX-09/10: as divisões novas de Caminhos.

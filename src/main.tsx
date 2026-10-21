@@ -18,6 +18,8 @@ import './ui/organizada.css';
 import './ui/objetos.css';
 // REWORK 9.6: os registros da pessoa (o anúncio de emprego, a ficha de atributos, o boletim em papel, o currículo).
 import './ui/registros.css';
+// REWORK 10: a cabeça das áreas, as partes, o álbum de relações, a ficha da pessoa (e os sistemas novos).
+import './ui/possibilidades.css';
 
 iniciarTema();
 

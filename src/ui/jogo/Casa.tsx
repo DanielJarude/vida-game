@@ -198,6 +198,10 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
           </div>
         </div>
       )}
+      {/* REWORK 10 · UX-13: o que se faz com o bem (usar, revisar, alugar, renegociar, vender) fica a um toque — o
+          inventário se lê como inventário (o objeto, o estado, quanto vale), não como uma parede de botões. */}
+      <details className="objeto__fazer">
+      <summary className="objeto__fazer-titulo">{b.tipo === 'imovel' ? 'O que fazer com o imóvel' : `O que fazer com ${b.titulo.split(' ')[0]}`}</summary>
       {b.tipo === 'veiculo' && <UsosDoVeiculo vida={vida} agir={agir} bemId={b.id} />}
       <div className="grupo-acoes grupo-acoes--linha objeto__acoes">
         {b.tipo === 'veiculo' && <BotaoAcao vida={vida} acao={{ tipo: 'veiculo', bemId: b.id, oque: 'revisao' }} agir={agir} variante="discreto" ocultarBloqueado>Fazer a revisão</BotaoAcao>}
@@ -217,6 +221,7 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
           <BotaoAcao vida={vida} acao={{ tipo: 'amortizar', dividaId: f.dividaId, valor }} agir={agir} variante="discreto" aoAgir={() => setValor(0)}>Amortizar</BotaoAcao>
         </div>
       )}
+      </details>
       {b.historia.length > 0 && (
         <details className="detalhes objeto__historia">
           <summary>A história {b.tipo === 'imovel' ? 'da casa' : 'dele'}</summary>

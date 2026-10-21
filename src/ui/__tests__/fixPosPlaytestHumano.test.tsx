@@ -82,10 +82,12 @@ describe('Pessoas: a ficha entende quem é a pessoa', () => {
     for (const x of Object.values(v.vinculos)) if (x.romance) x.romance = undefined;
   };
 
-  // REWORK 7: o resto, por tipo, deixou de ser gavetas fechadas (<details>) e virou ABAS de convivência — uma à vista
-  // por vez, todas na página (nada some). O teste continua cobrando o mesmo: o "agora" primeiro (até três), o resto
-  // agrupado e recolhido, "Algo mais" com a amizade e a ação lá dentro.
-  it('"o que faz sentido agora" vem primeiro; o resto, por tipo, recolhido (nada some) — e há "Algo mais" com a amizade', () => {
+  // REWORK 7: o resto, por tipo, deixou de ser gavetas fechadas (<details>) e virou ABAS de convivência.
+  // REWORK 10 · UX-14: as abas genéricas (fazer juntos, conversar, cuidar, "algo mais", "a relação") viraram as SITUAÇÕES
+  // de uma relação (conversar, conviver, demonstrar afeto, família, planos, romance, resolver, confrontar, decisões), cada
+  // uma uma gaveta com a contagem — só as que têm o que fazer com esta pessoa. O que se cobra continua o mesmo: o "agora"
+  // primeiro (até três), o resto agrupado e recolhido (nada some), e o romance com a ação lá dentro.
+  it('"o que faz sentido agora" vem primeiro; o resto, por situação, recolhido (nada some) — e há "Romance" com a amizade', () => {
     const v = vida(29, comAmiga);
     const id = Object.values(v.vinculos).find(x => x.estagio === 'amigo_proximo' && v.pessoas[x.pessoaId].nome)!.pessoaId;
     render(<Ligado v0={v} tela={(vv, agir) => <Pessoas vida={vv} agir={agir} aberta={id} abrir={() => {}} />} />);
@@ -93,16 +95,16 @@ describe('Pessoas: a ficha entende quem é a pessoa', () => {
     const agora = within(ficha).getByText('O que faz sentido agora').closest('.ficha__agora') as HTMLElement;
     expect(within(agora).getAllByRole('button').length).toBeGreaterThan(0);
     expect(within(agora).getAllByRole('button').length).toBeLessThanOrEqual(3);
-    const abas = within(ficha).getAllByRole('tab');
-    const paineis = [...ficha.querySelectorAll('[role="tabpanel"].ficha__grupo')];
-    expect(abas.length).toBeGreaterThanOrEqual(3);
-    expect(paineis.length).toBe(abas.length);
-    expect(paineis.filter(g => !g.classList.contains('abas-locais__painel--fora')).length).toBe(1);
-    const algoMais = within(ficha).getByRole('tab', { name: /Algo mais/ });
-    fireEvent.click(algoMais);
-    expect(algoMais.getAttribute('aria-selected')).toBe('true');
-    expect(ficha.querySelector(`#${algoMais.getAttribute('aria-controls')}`)!.classList.contains('abas-locais__painel--fora')).toBe(false);
-    expect(within(ficha).getByRole('button', { name: /Demonstrar interesse/ })).toBeTruthy();
+    const gavetas = [...ficha.querySelectorAll<HTMLDetailsElement>('details.ficha__categoria')];
+    expect(gavetas.length).toBeGreaterThanOrEqual(3);
+    // Recolhidas: com o "agora" à vista, nenhuma abre sozinha.
+    expect(gavetas.filter(g => g.open).length).toBe(0);
+    const romance = gavetas.find(g => /^Romance/.test(g.querySelector('summary')!.textContent ?? ''))!;
+    expect(romance).toBeTruthy();
+    expect(within(romance).getByRole('button', { name: /Demonstrar interesse/ })).toBeTruthy();
+    // E cada ação aparece uma vez só (o "agora" não se repete numa gaveta).
+    const rotulos = [...ficha.querySelectorAll('.ficha__acoes button.botao')].map(b => b.textContent);
+    expect(new Set(rotulos).size).toBe(rotulos.length);
   });
 
   it('ir ao cinema com o amigo abre uma cena com título — não só um aviso de número', () => {

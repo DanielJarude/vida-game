@@ -87,7 +87,9 @@ describe('Redes sociais: criar, postar, apagar — o clique muda a vida', () => 
 });
 
 describe('a ficha da pessoa: o que FAZER com ela vem primeiro, por tipo', () => {
-  it('com a parceria: "Fazer juntos" (jantar, cozinhar, show), depois conversar e a relação', () => {
+  // REWORK 10 · UX-14: "Fazer juntos" virou "Conviver" (os programas) e "Demonstrar afeto" (o jantar a dois); "A relação"
+  // virou "Decisões importantes" (terminar, a adoção) e "Construir planos" (o futuro, os filhos, o dinheiro do casal).
+  it('com a parceria: "Conviver" e "Demonstrar afeto" (jantar, cozinhar, show), depois conversar e as decisões da relação', () => {
     const v = vida(30, x => {
       adulta(x);
       const p = criarPessoa(x, criarRng(9), { idade: 31, genero: 'masculino', municipioId: x.moradia.municipioId });
@@ -97,10 +99,10 @@ describe('a ficha da pessoa: o que FAZER com ela vem primeiro, por tipo', () => 
     const parId = Object.values(v.vinculos).find(x => x.romance)!.pessoaId;
     render(<Ligado v0={v} tela={(vv, agir) => <Pessoas vida={vv} agir={agir} aberta={parId} abrir={() => {}} />} />);
     const ficha = screen.getByRole('dialog');
-    expect(within(ficha).getByText('Fazer juntos')).toBeTruthy();
+    expect(within(ficha).getByText('Conviver')).toBeTruthy();
     expect(within(ficha).getByRole('button', { name: /jantar com reserva/ })).toBeTruthy();
     expect(within(ficha).getByRole('button', { name: /Cozinhar com/ })).toBeTruthy();
-    expect(within(ficha).getByText('A relação')).toBeTruthy();
+    expect(within(ficha).getByText('Decisões importantes')).toBeTruthy();
   });
 });
 

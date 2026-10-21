@@ -1,0 +1,95 @@
+/*
+ * REWORK 10 — UMA VIDA DE POSSIBILIDADES.
+ * Fase B (UX-13/14): a cabeça de cada área, as partes (abas) que dividem as páginas longas, o álbum de relações e a
+ * ficha da pessoa em três partes. Classes novas (nenhuma redefine uma raiz de outro arquivo).
+ */
+
+/* ------------------------------------------------------------ A cabeça da área: onde · situação · há pouco · próximo */
+.cabeca-area { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); padding: var(--space-1) 0 var(--space-4); margin-bottom: var(--space-4); border-bottom: 1px solid var(--rule); }
+.cabeca-area--com-retrato { grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-4); }
+.cabeca-area--com-retrato .cabeca-area__rodape { grid-column: 1 / -1; }
+.cabeca-area__retrato .retrato { border-radius: 50%; }
+.cabeca-area__titulo { font-size: var(--type-hero); line-height: 1.12; letter-spacing: var(--tracking-tight); font-weight: 500; color: var(--text-primary); overflow-wrap: anywhere; text-wrap: balance; }
+.cabeca-area__fatos { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: var(--space-3) 0 0; }
+.cabeca-area__fatos > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cabeca-area__fatos dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.cabeca-area__fatos dd { margin: 0; font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); overflow-wrap: anywhere; }
+.cabeca-area__fato--ruim dd { color: var(--danger); }
+.cabeca-area__fato--bom dd { color: var(--success); }
+.cabeca-area__rodape { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--veu-1); }
+.cabeca-area__recente, .cabeca-area__proximo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--space-2); font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-secondary); line-height: var(--leading-snug); margin: 0; }
+.cabeca-area__rotulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tom); font-weight: var(--weight-semibold); }
+.cabeca-area__quando { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-muted); }
+.cabeca-area__ir { min-height: var(--touch-target); font-family: var(--font-sans); font-weight: var(--weight-semibold); }
+
+.subnav__conta { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: var(--space-2); padding: 0 6px; border-radius: var(--radius-pill); font-size: var(--type-meta); background: var(--veu-2); color: var(--text-secondary); }
+.subnav__item--ativo .subnav__conta { background: color-mix(in oklab, var(--fundo) 25%, transparent); color: var(--fundo); }
+
+/* ------------------------------------------------------------ História: Agora × Biografia */
+.historia__recente { margin-top: var(--space-6); }
+.pede-voce { margin: var(--space-4) 0; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--veu-1); }
+.pede-voce .painel-agora__titulo:first-of-type { margin-top: var(--space-2); }
+.linha-da-vida--compacta .anos { margin-top: var(--space-2); }
+
+/* ------------------------------------------------------------ Pessoas: o álbum */
+.album__filtros { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0; }
+.chip__conta { margin-left: var(--space-2); font-variant-numeric: tabular-nums; opacity: 0.8; }
+.figurinhas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+.figurinha { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 4px; width: 100%; height: 100%; padding: var(--space-3) var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--superficie-topo); box-shadow: inset 0 0 0 1px var(--fio), var(--sombra-1, 0 1px 2px rgb(0 0 0 / 0.06)); text-align: center; min-width: 0; }
+.figurinha:hover { box-shadow: inset 0 0 0 1.5px var(--tom-pessoas); }
+.figurinha .retrato { border-radius: 50%; }
+.figurinha__nome { font-family: var(--font-serif); font-size: var(--type-body); color: var(--text-primary); font-weight: 500; overflow-wrap: anywhere; }
+.figurinha__papel { font-size: var(--type-caption); color: var(--tom-pessoas); overflow-wrap: anywhere; }
+.figurinha__prox { font-size: var(--type-caption); color: var(--text-muted); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+.figurinha__marca { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--danger); }
+.figurinha--fria .figurinha__marca { color: var(--text-muted); }
+.figurinha--tensa { box-shadow: inset 0 0 0 1.5px var(--danger-line); }
+.figurinha--falecida { opacity: 0.85; }
+.figurinha .barra-relacao { width: 72%; }
+.album--filtro { margin-bottom: var(--space-6); }
+@media (max-width: 760px) {
+  .figurinhas { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .pessoas .nucleo { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .pessoas .cartao-pessoa { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; padding: var(--space-3) var(--space-2); }
+  .pessoas .cartao-pessoa .retrato { grid-row: auto; width: 64px; height: 64px; }
+  .pessoas .cartao-pessoa .barra-relacao { width: 72%; }
+  .pessoas .cartao-pessoa__leitura { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: var(--type-caption); }
+}
+
+/* ------------------------------------------------------------ A ficha da pessoa: três partes, as ações por situação */
+.ficha__partes { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--fio); overflow-x: auto; scrollbar-width: none; }
+.ficha__partes::-webkit-scrollbar { display: none; }
+.ficha__parte-aba { min-height: var(--touch-target); padding: 0 var(--space-4); font-weight: var(--weight-medium); color: var(--text-secondary); white-space: nowrap; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.ficha__parte-aba:hover { color: var(--text-primary); }
+.ficha__parte-aba--ativa { color: var(--text-primary); box-shadow: inset 0 -3px 0 var(--tom-pessoas); font-weight: var(--weight-semibold); }
+.ficha__parte { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.ficha__parte--fora { display: none; }
+.ficha__parte--agora .ficha__conviver { margin-top: var(--space-2); }
+.ficha__conflito { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--danger-wash); border-left: 3px solid var(--danger-line); }
+.ficha__conflito--ruptura { border-left-color: var(--danger); }
+.ficha__conflito-titulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--danger); margin: 0 0 4px; }
+.ficha__conflito-texto { font-family: var(--font-serif); color: var(--text-primary); margin: 0; line-height: var(--leading-snug); }
+.ficha__categorias { display: flex; flex-direction: column; gap: var(--space-2); }
+.ficha__categoria { border-radius: var(--radius-md); background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio); }
+.ficha__categoria > .grupo-acoes { padding: 0 var(--space-3) var(--space-3); }
+.ficha__categoria-titulo { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--touch-target); padding: 0 var(--space-3); cursor: pointer; font-weight: var(--weight-semibold); color: var(--text-primary); list-style: none; }
+.ficha__categoria-titulo::-webkit-details-marker { display: none; }
+.ficha__categoria-titulo::after { content: '›'; font-size: 1.3em; color: var(--text-muted); transition: transform 0.15s; }
+.ficha__categoria[open] > .ficha__categoria-titulo::after { transform: rotate(90deg); }
+.ficha__categoria-conta { margin-left: auto; font-size: var(--type-caption); font-weight: var(--weight-medium); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ficha__categoria--confrontar .ficha__categoria-titulo, .ficha__grupo--confrontar > .ficha__categoria-titulo { color: var(--danger); }
+.ficha__momentos-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-family: var(--font-serif); }
+.ficha__momentos-lista li { padding-left: var(--space-3); border-left: 2px solid color-mix(in oklab, var(--tom-pessoas) 55%, transparent); }
+
+/* ------------------------------------------------------------ Vida: o inventário e as lojas */
+.objeto__fazer { border-top: 1px solid var(--fio); padding-top: var(--space-2); }
+.objeto__fazer-titulo { min-height: var(--touch-target); display: flex; align-items: center; cursor: pointer; font-weight: var(--weight-semibold); color: var(--tom-casa); }
+.objeto__fazer[open] > .objeto__fazer-titulo { margin-bottom: var(--space-2); }
+@media (max-width: 760px) {
+  .vitrines__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .vitrine .vitrine__oque { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
+.o-lugar__mais > summary { display: flex; align-items: center; min-height: var(--touch-target); cursor: pointer; }
+.o-lugar__mais[open] > summary { margin-bottom: var(--space-2); }
+.voce__parte--fora { display: none; }
+.caminhos__recente { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--veu-1); }

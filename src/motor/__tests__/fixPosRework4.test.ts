@@ -376,7 +376,9 @@ describe('relações: há coisas concretas para FAZER com cada pessoa — e a pe
     let v = copia(); v.financas.conta = 20000;
     const { p } = comParceiro(v, { estagio: 'casamento' });
     const lista = interacoesPara(v, p.id);
-    const juntos = lista.filter(x => grupoDaInteracao(x.id) === 'juntos').map(x => x.id);
+    // REWORK 10 · UX-14: o grupo "fazer juntos" virou as situações da relação — os programas moram em "Conviver", e o
+    // jantar romântico em "Demonstrar afeto". O que se cobra é o mesmo: os programas concretos estão lá.
+    const juntos = lista.filter(x => grupoDaInteracao(x.id) === 'conviver' || grupoDaInteracao(x.id) === 'afeto').map(x => x.id);
     expect(juntos).toEqual(expect.arrayContaining(['jantar_romantico', 'cozinhar_junto', 'caminhar_junto', 'show']));
     const conta = v.financas.conta;
     v = ok(v, { tipo: 'pessoa', pessoaId: p.id, interacao: 'jantar_romantico' });

@@ -26,7 +26,12 @@ import { independencia } from '../../motor/sistemas/independencia';
 import { contribuicaoEsperada, leituraDaOrigem, MOTIVOS_DE_AJUDA, necessidadeDe, ROTULO_MOTIVO, principal } from '../../motor/sistemas/origem';
 import { rendaPropriaMensal } from '../../motor/sistemas/dinheiro';
 import { AUTONOMIA } from '../../motor/sistemas/autonomia';
-import { BotaoAcao, navegarAbas, Secao } from '../comum';
+import { BotaoAcao, CabecaDaArea, navegarAbas, Secao } from '../comum';
+import { recenteDe, TEMAS_VIDA } from '../area';
+import { ondeMora } from '../apresentar';
+import { nomeLugar } from '../../motor/dados/lugares';
+import { balanco, seguranca } from '../../motor/sistemas/dinheiro';
+import { leituraDaSeguranca } from '../leituraMaterial';
 import { Lar, OQueTem, ViverACasa } from './Casa';
 import { ODinheiro } from './Dinheiro';
 import { Cidade } from './Cidade';
@@ -43,6 +48,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
   const i = idade(vida);
   return (
     <div className={`vida-concreta vida-concreta--${secao} material`}>
+      <CabecaVida vida={vida} secao={secao} irSecao={irSecao} />
       <nav className="subnav" aria-label="Seções de Vida">
         <ul role="tablist" className="subnav__lista" onKeyDown={navegarAbas}>
           {SECOES_VIDA.map(s => (
@@ -77,7 +83,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'pertences' && (
           <div className="patrimonio">
             {i >= 12 && <OQueTem vida={vida} agir={agir} abrir={setLugar} />}
-            <Pertences vida={vida} agir={agir} abrir={setLugar} />
+            <Pertences vida={vida} agir={agir} abrir={setLugar} semVeiculos={i >= 12} />
           </div>
         )}
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
@@ -86,6 +92,30 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
       </div>
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
     </div>
+  );
+}
+
+/**
+ * REWORK 10 · UX-13 — a cabeça de Vida: onde mora, como está o dinheiro e o que é seu (o líquido), o que mudou há pouco
+ * na casa e no dinheiro, e o próximo passo quando o dinheiro aperta (ou quando sair de casa já cabe).
+ */
+function CabecaVida({ vida, secao, irSecao }: { vida: Vida; secao: SecaoVida; irSecao: (s: SecaoVida) => void }) {
+  const i = idade(vida);
+  const seg = leituraDaSeguranca(vida);
+  const nivel = seguranca(vida).nivel;
+  const aperta = i >= 18 && (nivel === 'no_vermelho' || nivel === 'apertado');
+  const liquido = i >= 12 ? balanco(vida).liquido : 0;
+  const emCasaDosPais = vida.moradia.tipo === 'pais' || vida.moradia.tipo === 'parente';
+  return (
+    <CabecaDaArea area="Vida" kicker={SECOES_VIDA.find(x => x.id === secao)!.rotulo.toLowerCase()} titulo={`${ondeMora(vida).charAt(0).toUpperCase()}${ondeMora(vida).slice(1)}, em ${nomeLugar(vida.moradia.municipioId)}`}
+      fatos={[
+        ...(i >= 8 ? [{ rotulo: 'O dinheiro', valor: seg.palavra, tom: aperta ? 'ruim' as const : undefined }] : []),
+        ...(i >= 12 && liquido !== 0 ? [{ rotulo: 'O que é seu', valor: dinheiroCurto(liquido), tom: liquido < 0 ? 'ruim' as const : undefined }] : []),
+        ...(i >= 16 ? [{ rotulo: 'Quem paga a casa', valor: independencia(vida).palavra }] : [])
+      ]}
+      recente={recenteDe(vida, TEMAS_VIDA)}
+      proximo={aperta && secao !== 'dinheiro' ? { texto: 'O mês não fecha: o extrato diz para onde vai o dinheiro e o que dá para cortar.', rotulo: 'Ver o dinheiro', ir: () => irSecao('dinheiro') }
+        : emCasaDosPais && i >= 18 && rendaPropriaMensal(vida) > 0 && secao !== 'casa' ? { texto: 'Com renda própria, dá para pensar em sair de casa.', rotulo: 'Ver a casa', ir: () => irSecao('casa') } : undefined} />
   );
 }
 

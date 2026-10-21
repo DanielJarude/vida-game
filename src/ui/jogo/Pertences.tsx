@@ -29,15 +29,16 @@ import { dinheiroCurto } from '../leituraMaterial';
 import { DesenhoObjeto } from './material/Objetos';
 import type { QualLugar } from './material/Lugares';
 
-interface Props { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) => void }
+interface Props { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) => void; /** REWORK 10: os veículos já aparecem no balanço (Patrimônio): não repetir. */ semVeiculos?: boolean }
 
 const ESTADO = (e: number) => (e >= 80 ? 'nova' : e >= 50 ? 'boa' : e >= 25 ? 'gasta' : 'no fim');
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export function Pertences({ vida, agir, abrir }: Props) {
+export function Pertences({ vida, agir, abrir, semVeiculos }: Props) {
+  const [todos, setTodos] = useState(false);
   const lista = coisasDaVida(vida);
-  const veiculos = vida.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo');
-  if (!lista.length && !veiculos.length) return (
+  const veiculos = semVeiculos ? [] : vida.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo');
+  if (!lista.length && !veiculos.length) return semVeiculos && vida.financas.bens.some(b => b.tipo === 'veiculo') ? null : (
     <Secao titulo="Pertences">
       <p className="nota">{idade(vida) >= 10 ? 'Nada seu ainda — um instrumento, um notebook, uma câmera, uma bola boa, uma bicicleta.' : 'O que é seu, por enquanto, quem compra são os adultos da casa.'} {idade(vida) >= 10 && <button type="button" className="link" onClick={() => abrir('eletronicos')}>As lojas</button>}</p>
     </Secao>
@@ -53,7 +54,8 @@ export function Pertences({ vida, agir, abrir }: Props) {
       )}
       {ativos.length > 0 && (
         <Secao titulo="Para usar">
-          <ul className="pertences__lista">{ativos.map(t => <Pertence key={t.id} vida={vida} agir={agir} t={t} />)}</ul>
+          <ul className="pertences__lista">{(todos ? ativos : ativos.slice(0, 4)).map(t => <Pertence key={t.id} vida={vida} agir={agir} t={t} />)}</ul>
+          {ativos.length > 4 && <button type="button" className="dobra__botao" aria-expanded={todos} onClick={() => setTodos(x => !x)}>{todos ? 'Recolher' : `Todas as coisas para usar (${ativos.length})`}</button>}
         </Secao>
       )}
       {passivos.length > 0 && (

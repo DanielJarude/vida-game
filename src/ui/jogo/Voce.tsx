@@ -26,7 +26,8 @@ import { ResumoDaRotina } from './Rotina';
 import { evolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { MATERIAS } from '../../motor/dados/frentes';
 import { Retrato } from '../avatar/Retrato';
-import { BotaoAcao, Vazio } from '../comum';
+import { BotaoAcao, Subnav, Vazio } from '../comum';
+import { useState } from 'react';
 import { frentesDaVida } from '../../motor/sistemas/frentes';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
@@ -43,9 +44,21 @@ import type { Aba } from '../navegacao';
 
 export type Destino = Aba;
 
-interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void }
+/**
+ * REWORK 10 · UX-13 — Você em partes. A página única (5 a 7 telas no celular) virou cinco partes, uma de cada vez, com o
+ * rosto e o momento sempre no alto: o Resumo (os atributos, a cabeça, a semana, o dinheiro), a Saúde (o prontuário),
+ * as Habilidades (e o seu jeito), a Aparência e o Mundo (o nome público, os lugares, o que construiu, a família de antes).
+ * O índice de âncoras (que só rolava a página) deu lugar às abas; a parte aberta é guardada pelo Jogo.
+ */
+export type ParteVoce = 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'mundo';
 
-export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
+interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void; parte?: ParteVoce; irParte?: (p: ParteVoce) => void }
+
+export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irParte }: Props) {
+  const [parteLocal, setParteLocal] = useState<ParteVoce>('resumo');
+  const parte = parteDeFora ?? parteLocal;
+  const irA = (p: ParteVoce) => { setParteLocal(p); irParte?.(p); };
+  const fora = (p: ParteVoce) => `voce__parte voce__parte--${p}${parte === p ? '' : ' voce__parte--fora'}`;
   const i = idade(vida);
   // A cabeça (o estresse) continua uma leitura própria; humor e saúde são atributos, na ficha.
   const dims: Dimensao[] = i >= 10 ? ['cabeca'] : [];
@@ -70,17 +83,17 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
         </div>
       </section>
 
-      {/* REWORK 9: o retrato em partes — um índice curto leva a cada uma (a página é longa numa vida longa). */}
-      <nav className="voce-indice" aria-label="Partes do retrato">
-        <a href="#voce-atributos">Atributos</a>
-        {leituras.length > 0 && <a href="#voce-agora">A cabeça</a>}
-        <a href="#voce-sabe">O que sabe fazer</a>
-        {tracos.length > 0 && <a href="#titulo-jeito">O seu jeito</a>}
-        {(sinais.length > 0 || condicoes.length > 0) && <a href="#voce-saude">Saúde</a>}
-        <a href="#voce-aparencia">Aparência</a>
-        <a href="#voce-mundo">No mundo</a>
-      </nav>
+      <Subnav rotulo="Partes do retrato" prefixo="voce" atual={parte} aoMudar={irA} classe="subnav--voce" itens={[
+        { id: 'resumo', rotulo: 'Resumo', oque: 'Os atributos, a cabeça, a semana e o dinheiro' },
+        { id: 'saude', rotulo: 'Saúde', oque: 'O prontuário: o que o corpo sinaliza e o que tem nome', conta: sinais.length + condicoes.length },
+        { id: 'habilidades', rotulo: 'Habilidades', oque: 'No que você é bom e o seu jeito' },
+        { id: 'aparencia', rotulo: 'Aparência', oque: 'O visual e o estilo' },
+        { id: 'mundo', rotulo: 'No mundo', oque: 'O nome público, os lugares, o que construiu, a família' }
+      ]} />
 
+      {/* As cinco partes ficam na página (a de fora só não aparece): nada é desmontado ao trocar, nada some. */}
+      <div role="tabpanel" id="voce-painel" aria-labelledby={`voce-aba-${parte}`} className={`voce__partes voce__partes--${parte}`}>
+      <div className={fora('resumo')}>
       <FichaDeAtributos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />
       {leituras.length > 0 && (
         <div id="voce-agora" className={`estados estados--${leituras.length}`}>
@@ -89,12 +102,23 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
       )}
       {/* REWORK 9.5 · ROT-01: a cabeça e o corpo vivem a mesma semana — a mesma leitura da rotina de Minha Semana. */}
       {i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
+      {i >= 8 && (
+        <section className="voce-dinheiro" aria-label="O dinheiro">
+          <button type="button" className="voce-dinheiro__ir" onClick={() => irPara('dinheiro')}>
+            <span className="rotulo-pequeno">O dinheiro</span>
+            <strong>{leituraDaSeguranca(vida).palavra}</strong>
+            <span className="nota">o mês, o que é seu e o que deve — em Vida · Dinheiro →</span>
+          </button>
+        </section>
+      )}
+      </div>
 
 
       {/* REWORK 7: o que a pessoa SABE FAZER, com os degraus de cada habilidade (a mesma escada da ficha da prática) —
           e, ao lado, os jeitos de nascença que o motor guarda. Antes eram linhas de texto soltas. */}
       {/* REWORK 9.5 · UX-03: uma ficha por habilidade (o nível, a frase, o que mudou no ano e por quê, o histórico) — antes
           eram duas listas das mesmas frentes (os degraus e o "ano a ano"). */}
+      <div className={fora('habilidades')}>
       <div id="voce-sabe"><Habilidades vida={vida} irPara={irPara} /></div>
 
       {tracos.length > 0 && (
@@ -104,7 +128,15 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
           <p className="voce-tracos">Quem convive diz que você é {tracos.join(', ').replace(/, ([^,]*)$/, ' e $1')} — é o que suas escolhas têm mostrado.</p>
         </section>
       )}
+      </div>
 
+      <div className={fora('saude')}>
+      {!(sinais.length > 0 || condicoes.length > 0) && (
+        <div id="voce-saude" className="voce-saude prontuario papel papel--sem-dobra">
+          <p className="prontuario__cabeca"><span>Prontuário</span><span>{vida.eu.nome} {vida.eu.sobrenome} · {i} anos</span></p>
+          <p className="nota">Nenhum sinal do corpo, nenhuma condição com nome. A saúde de agora, com as causas, está no Resumo (Atributos · Saúde).</p>
+        </div>
+      )}
       {(sinais.length > 0 || condicoes.length > 0) && (
         <div id="voce-saude" className="voce-saude prontuario papel papel--sem-dobra">
           {/* REWORK 9.6 · VIS-02: a saúde como PRONTUÁRIO — a folha da ficha médica, o que o corpo sinaliza e o que tem nome. */}
@@ -136,22 +168,17 @@ export function Voce({ vida, agir, irPara, abrirPessoa }: Props) {
         </div>
       )}
 
-      <div id="voce-aparencia"><AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} /></div>
+      </div>
 
-      {i >= 8 && (
-        <section className="voce-dinheiro" aria-label="O dinheiro">
-          <button type="button" className="voce-dinheiro__ir" onClick={() => irPara('dinheiro')}>
-            <span className="rotulo-pequeno">O dinheiro</span>
-            <strong>{leituraDaSeguranca(vida).palavra}</strong>
-            <span className="nota">o mês, o que é seu e o que deve — em Vida · Dinheiro →</span>
-          </button>
-        </section>
-      )}
+      <div className={fora('aparencia')} id="voce-aparencia"><AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} /></div>
 
+      <div className={fora('mundo')}>
       <OSeuNome vida={vida} agir={agir} />
       <div id="voce-mundo"><QuemNoMundo vida={vida} agir={agir} /></div>
       {i >= 14 && <OQueConstruiu vida={vida} />}
       <Linhagem vida={vida} />
+      </div>
+      </div>
     </div>
   );
 }
