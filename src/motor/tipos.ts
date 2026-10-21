@@ -2209,7 +2209,10 @@ export interface VidaRural {
  * Envolvimento com atividade ilegal. O jogo trabalha com oportunidade →
  * decisão → risco → consequência; nada aqui descreve como fazer.
  */
-export type CategoriaIlicita = 'pequenos' | 'patrimonial' | 'fraude' | 'mercado' | 'grupo';
+/** REWORK 10 · CRI-01: `corrupcao` — o desvio de quem tem cargo (a propina, a obra superfaturada), outra porta, outra gente. */
+export type CategoriaIlicita = 'pequenos' | 'patrimonial' | 'fraude' | 'mercado' | 'grupo' | 'corrupcao';
+/** REWORK 10: o que pode virar processo — o envolvimento com o ilícito e o que se faz a alguém (a agressão, a ameaça). */
+export type CategoriaDoProcesso = CategoriaIlicita | 'violencia';
 
 export interface Envolvimento {
   categoria: CategoriaIlicita;
@@ -2232,6 +2235,18 @@ export interface Envolvimento {
    * contra a pessoa esfria (parar, a moita).
    */
   investigado?: number;
+  /**
+   * REWORK 10 · CRI-01 — a trajetória (não uma barra): a confiança que o meio deposita em você (0..100: os trabalhos
+   * maiores só chegam a quem tem), os contatos (as pessoas do caminho, além de quem abriu a porta), os trabalhos maiores
+   * já feitos, os atritos com o grupo, e a saída negociada (o que se pagou para sair sem pressão). Todos opcionais.
+   */
+  reputacao?: number;
+  contatos?: string[];
+  trabalhos?: number;
+  atritos?: number;
+  saidaNegociada?: number;
+  /** Quem procurou ajuda para sair (a família, um programa) — e quando. */
+  ajuda?: number;
 }
 
 /* ------------------------------------------------------------- Vida política */
@@ -2558,9 +2573,22 @@ export interface Linhagem {
  * simulador jurídico; é o que muda a vida de quem passa por isso.
  */
 export interface Justica {
-  antecedentes: { t: number; categoria: CategoriaIlicita; desfecho: 'socioeducativa' | 'alternativa' | 'prisao' | 'absolvicao'; anos?: number }[];
-  /** Processo em andamento (a sentença sai em `tJulgamento`). */
-  processo?: { tInicio: number; tJulgamento: number; categoria: CategoriaIlicita; defesa: 'publica' | 'particular' };
+  /**
+   * REWORK 10: `acordo` — o processo terminou num acordo que não vira condenação (o acordo de não persecução brasileiro,
+   * a conformidade com pena leve): a ficha registra, mas não pesa como condenação. `multa`: a multa penal paga.
+   * `reabilitado`: a reabilitação criminal (o registro sai de circulação, depois dos anos que a lei do país pede).
+   */
+  antecedentes: { t: number; categoria: CategoriaDoProcesso; desfecho: 'socioeducativa' | 'alternativa' | 'prisao' | 'absolvicao' | 'acordo'; anos?: number; multa?: number; reabilitado?: number }[];
+  /**
+   * Processo em andamento (a sentença sai em `tJulgamento`). REWORK 10 · CRI-01: a força das provas (0..100), a defesa
+   * escolhida pelo jogador, o acordo oferecido (e a resposta), a fiança arbitrada, quem assumiu e quem cooperou.
+   */
+  processo?: {
+    tInicio: number; tJulgamento: number; categoria: CategoriaDoProcesso; defesa: 'publica' | 'particular';
+    provas?: number; defesaEscolhida?: boolean; acordo?: { t: number; aceito?: boolean; recusado?: boolean }; fianca?: number; assumiu?: boolean; cooperou?: boolean;
+  };
+  /** REWORK 10: o recurso contra a condenação, com a resposta em `tFim`. */
+  recurso?: { t: number; tFim: number };
   /**
    * Pena de prisão em cumprimento. REWORK 5 (a prisão como camada jogável, `sistemas/prisao`): a pena da sentença em meses,
    * a disciplina (0..100), o que já foi remido, a facção (aceita ou recusada), a situação do pavilhão à espera de resposta,

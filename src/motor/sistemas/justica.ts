@@ -22,7 +22,7 @@
 import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
 import { clamp, hashMisturado } from '../rng';
-import type { CategoriaIlicita, Justica, Vida } from '../tipos';
+import type { CategoriaDoProcesso, Justica, Vida } from '../tipos';
 import { escrever, filhos, idade, lembrarCom, marcarFato, pais, parceiro, vinculosVivos } from '../nucleo';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
@@ -38,6 +38,15 @@ import { registrarQuemApareceu } from './rede';
 
 export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedentes: [] });
 
+/**
+ * REWORK 10 · CRI-01 — o processo como caminho (as provas, a defesa escolhida, o acordo, a fiança, a colaboração, o
+ * recurso, o perfil penal do país) mora em `tribunal`, num pacote acima deste: ao carregar, ele se registra aqui. Sem
+ * ele, a sentença de antes.
+ */
+export interface Tribunal { aoAbrir: (v: Vida, r: Rng) => void; sentenciar: (v: Vida, r: Rng) => void }
+let tribunal: Tribunal | undefined;
+export function registrarTribunal(t: Tribunal): void { tribunal = t; }
+
 /** Condenação na vida adulta (o que a investigação social de um concurso encontra). */
 export const antecedenteAdulto = (v: Vida) => !!v.justica?.antecedentes.some(a => a.desfecho === 'prisao' || a.desfecho === 'alternativa');
 export const reincidente = (v: Vida) => (v.justica?.antecedentes.filter(a => a.desfecho === 'prisao' || a.desfecho === 'alternativa').length ?? 0) >= 1;
@@ -52,8 +61,9 @@ export const presoFechado = (v: Vida) => v.justica?.prisao?.regime === 'fechado'
 export function penaDeAntecedentes(v: Vida): number {
   const j = v.justica;
   if (!j) return 0;
-  const conden = j.antecedentes.filter(a => a.desfecho === 'prisao' || a.desfecho === 'alternativa');
-  if (!conden.length) return 0;
+  // REWORK 10: a reabilitação tira o registro de circulação (pesa pouco; não some da memória de quem viu).
+  const conden = j.antecedentes.filter(a => (a.desfecho === 'prisao' || a.desfecho === 'alternativa') && a.reabilitado === undefined);
+  if (!conden.length) return j.antecedentes.some(a => a.reabilitado !== undefined) ? 0.15 : 0;
   const ultima = Math.max(...conden.map(a => a.t), j.tSaida ?? 0);
   const anos = (v.t - ultima) / 12;
   const base = conden.some(a => a.desfecho === 'prisao') ? 0.2 : 0.1;
@@ -63,8 +73,10 @@ export function penaDeAntecedentes(v: Vida): number {
   return base * tempo * reconstruiu * (conden.length > 1 ? 1.4 : 1);
 }
 
-const NOME_CATEGORIA: Record<CategoriaIlicita, string> = {
-  pequenos: 'coisas erradas com a turma', patrimonial: 'receptação de mercadoria de origem ilegal', fraude: 'fraude', mercado: 'comércio ilegal', grupo: 'envolvimento com um grupo criminoso'
+const NOME_CATEGORIA: Record<CategoriaDoProcesso, string> = {
+  pequenos: 'coisas erradas com a turma', patrimonial: 'receptação de mercadoria de origem ilegal', fraude: 'fraude', mercado: 'comércio ilegal', grupo: 'envolvimento com um grupo criminoso',
+  // REWORK 10: o que se faz a alguém (a agressão, a ameaça) e o desvio de quem tem cargo.
+  violencia: 'agressão', corrupcao: 'corrupção'
 };
 
 /* ------------------------------------------------------------- Descoberta */
@@ -74,7 +86,7 @@ const NOME_CATEGORIA: Record<CategoriaIlicita, string> = {
  * processo, com a defesa que der para pagar; nos casos mais graves, a
  * espera pode ser presa.
  */
-export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaIlicita): void {
+export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): void {
   const j = garantirJustica(v);
   const i = idade(v);
   const env = v.caminhos.envolvimento;
@@ -91,9 +103,10 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaIlicita): voi
     escrever(v, { texto: `A fraude veio à tona. Saiu ${e.empregador.replace(/^(uma|a) /, 'da ').replace(/^(um|o) /, 'do ')} por justa causa, sem acerto — e com um processo pela frente.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', 'Demitido por justa causa: a fraude foi descoberta.'.replace('Demitido', flex(ge(v), 'Demitido', 'Demitida', 'Demitide')), 3);
   } else {
-    escrever(v, { texto: `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder a um processo por ${NOME_CATEGORIA[categoria]}.${particular ? ' Um advogado particular assumiu a defesa, pago com o que havia guardado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `${categoria === 'violencia' ? 'A ocorrência virou processo: passou a responder' : `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder`} a um processo por ${NOME_CATEGORIA[categoria]}.${particular ? ' Um advogado particular assumiu a defesa, pago com o que havia guardado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
   }
   marcarFato(v, 'respondeu_processo');
+  tribunal?.aoAbrir(v, r);
   // Processo é registro público: para quem tem nome, vira notícia.
   registrarAssuntoDaJustica(v, 'processo');
   abalar(v, 'o processo na Justiça', -10, 14);
@@ -107,7 +120,7 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaIlicita): voi
   }
 }
 
-function medidaSocioeducativa(v: Vida, r: Rng, categoria: CategoriaIlicita): void {
+function medidaSocioeducativa(v: Vida, r: Rng, categoria: CategoriaDoProcesso): void {
   const j = garantirJustica(v);
   const internacao = categoria === 'grupo' && r.chance(0.4);
   j.antecedentes.push({ t: v.t, categoria, desfecho: 'socioeducativa' });
@@ -151,7 +164,7 @@ function sentenca(v: Vida, r: Rng): void {
     abalar(v, 'a condenação', -8, 10);
     return;
   }
-  const anos = Math.round(({ pequenos: 1, patrimonial: 2, fraude: 3, mercado: 5, grupo: 7 }[cat] + r.int(0, 2)) * (rein ? 1.5 : 1));
+  const anos = Math.round(({ pequenos: 1, patrimonial: 2, fraude: 3, mercado: 5, grupo: 7, violencia: 1, corrupcao: 3 }[cat] + r.int(0, 2)) * (rein ? 1.5 : 1));
   j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'prisao', anos });
   // O regime fecha por uma parte da pena e depois abre (Lei de Execução Penal: progressão).
   const fechado = Math.round(anos * 12 * (rein ? 0.45 : 0.3));
@@ -168,7 +181,7 @@ function sentenca(v: Vida, r: Rng): void {
 
 /* ---------------------------------------------------------------- Prisão */
 
-function prender(v: Vida, tFim: number, regime: 'fechado' | 'semiaberto', motivo: 'preventiva' | 'pena' | 'internacao'): void {
+export function prender(v: Vida, tFim: number, regime: 'fechado' | 'semiaberto', motivo: 'preventiva' | 'pena' | 'internacao'): void {
   const j = garantirJustica(v);
   const ja = !!j.prisao;
   j.prisao = { tInicio: j.prisao?.tInicio ?? v.t, tFim, regime };
@@ -199,13 +212,15 @@ function prender(v: Vida, tFim: number, regime: 'fechado' | 'semiaberto', motivo
   if (visitas) escrever(v, { texto: visitas, relevancia: 'biografia', tema: 'familia' });
 }
 
-function soltar(v: Vida, motivo: string): void {
+export function soltar(v: Vida, motivo: string): void {
   const j = v.justica!;
   const anos = Math.max(1, Math.round((v.t - (j.prisao?.tInicio ?? v.t)) / 12));
   const preparou = j.prisao?.preparouSaida !== undefined;
   const internacao = idade(v) < 19 && v.fatos['internado'] !== undefined && !v.fatos['esteve_preso'];
   j.prisao = undefined;
   j.tSaida = v.t;
+  // REWORK 10: a remição é DESTA pena (antes, só uma das saídas apagava — e uma prisão futura começava com ela pronta).
+  for (const k of ['remicao_decidida', 'remicao_estudo', 'remicao_trabalho']) delete v.fatos[k];
   // Onde morar ao sair: quem ainda está lá. Senão, a família de origem; senão, um lugar cedido.
   const par = parceiro(v);
   if (par && par.p.municipioId === v.moradia.municipioId && v.moradia.tipo !== 'cedida') {
@@ -252,7 +267,7 @@ function r0(v: Vida): number {
 export function processarJustica(v: Vida, r: Rng): void {
   const j = v.justica;
   if (!j) return;
-  if (j.processo && v.t >= j.processo.tJulgamento) sentenca(v, r);
+  if (j.processo && v.t >= j.processo.tJulgamento) (tribunal ? tribunal.sentenciar : sentenca)(v, r);
   if (j.alternativa && v.t >= j.alternativa.tFim) {
     j.alternativa = undefined;
     escrever(v, { texto: 'Terminou de cumprir a pena alternativa. A última assinatura no fórum foi numa quinta-feira.', relevancia: 'biografia', tema: 'trabalho' });

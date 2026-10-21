@@ -531,6 +531,9 @@ describe('retomar uma atividade; a casa da família; o curso largado', () => {
   });
   it('a casa herdada, fechada: alugar dá renda', () => {
     const v = base(55);
+    // REWORK 10: a pré-condição dita — a casa do teste é a única herdada (a vida da semente passou a herdar uma casa
+    // própria depois que o ano ganhou o convívio: as relações mudam o rumo das vidas com a mesma semente).
+    v.financas.bens = v.financas.bens.filter(b => !(b.tipo === 'imovel' && b.herdado));
     v.financas.bens.push({ id: 'h1', tipo: 'imovel', modeloId: 'casa_2q', nome: 'casa da família', valor: 250000, tCompra: v.t - 24, municipioId: v.moradia.municipioId, estado: 45, herdado: true, dono: 'eu', historia: [{ t: v.t - 24, texto: 'Herdada de Joana.' }] });
     const m = abrir('bio_casa_da_familia', v);
     expect(m.texto).toContain('Herdada de Joana');

@@ -32,6 +32,10 @@ import { compatibilidade } from './social';
 import { ehDescendente } from './vinculos';
 import { estadoDaRelacao } from './lacos';
 import { viverCena, type ProgramaDeCena } from './microcenas';
+import { efeitoDoPrograma, PERFIS, recusaDoConvite, type PerfilDePrograma } from './convivio';
+
+/** O convite recusado: nada é pago, nada é vivido — o motivo é da pessoa (`convivio.recusaDoConvite`). */
+const recusou = (c: CtxI, programa: string, titulo: string) => { const x = recusaDoConvite(c, programa); return x ? { resultado: x, titulo: `${titulo} com ${c.p.nome}` } : undefined; };
 
 /**
  * FIX pós-playtest humano: cada programa é também uma CENA (`microcenas`) — o que mora aqui é o lugar (o que se vê,
@@ -102,9 +106,7 @@ const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const Ele = (p: Pessoa) => flex(p.genero, 'Ele', 'Ela', 'Elu');
 const afeto = (c: CtxI, n: number) => { c.vin.proximidade = clamp(Math.round(c.vin.proximidade + n)); };
 const confiar = (c: CtxI, n: number) => { c.vin.confianca = clamp(Math.round(c.vin.confianca + n)); };
-const acalmar = (c: CtxI, n: number) => { c.vin.tensao = clamp(Math.round(c.vin.tensao - n)); };
 const presente = (c: CtxI, n: number) => { c.vin.presenca = clamp(Math.round((c.vin.presenca ?? 30) + n)); };
-const envolver = (c: CtxI, n: number) => { if (c.vin.romance) c.vin.romance.envolvimento = clamp(Math.round(c.vin.romance.envolvimento + n)); };
 const cabeca = (c: CtxI, n: number) => { c.v.mente.estresse = clamp(c.v.mente.estresse + n); };
 const humor = (c: CtxI, n: number) => { c.v.mente.felicidade = clamp(c.v.mente.felicidade + n); };
 /** O preço local de um programa (por pessoa, unidade do motor). */
@@ -116,16 +118,10 @@ const costume = (c: CtxI, n: number, quando: number, texto: string) => { if (n =
  * Como foi: a afinidade, o jeito da pessoa, o estado da relação e a sorte decidem. Devolve 'otimo' | 'bom' | 'morno' |
  * 'ruim' — e cada programa escreve o seu texto para cada caso.
  */
-function comoFoi(c: CtxI, r: Rng, bonus = 0): 'otimo' | 'bom' | 'morno' | 'ruim' {
-  const x = compatibilidade(c.v, c.p) * 0.25 + c.p.temperamento.afabilidade * 0.15 - c.vin.tensao / 260 + bonus + (r.next() - 0.5) * 0.9;
+function comoFoi(c: CtxI, r: Rng, bonus = 0, perfil?: PerfilDePrograma): 'otimo' | 'bom' | 'morno' | 'ruim' {
+  // REWORK 10 · REL-01: o perfil do programa — para quem é (a afinidade) e o quanto arrisca (o show é uma aposta; o cinema, não).
+  const x = compatibilidade(c.v, c.p) * 0.25 + c.p.temperamento.afabilidade * 0.15 - c.vin.tensao / 260 + bonus + (perfil?.afinidade(c.p) ?? 0) + (r.next() - 0.5) * 0.9 * (perfil?.risco ?? 1);
   return x > 0.38 ? 'otimo' : x > 0 ? 'bom' : x > -0.3 ? 'morno' : 'ruim';
-}
-/** O efeito de "como foi" na relação (a mesma régua para todo programa). */
-function efeito(c: CtxI, foi: ReturnType<typeof comoFoi>, base: number): void {
-  if (foi === 'otimo') { afeto(c, base + 3); confiar(c, 2); acalmar(c, 4); envolver(c, 4); }
-  else if (foi === 'bom') { afeto(c, base); acalmar(c, 2); envolver(c, 2); }
-  else if (foi === 'morno') afeto(c, Math.round(base / 3));
-  else { c.vin.tensao = clamp(c.vin.tensao + 4); }
 }
 const pagarPrograma = (c: CtxI, custo: number) => { if (custo > 0) pagar(c.v, custo); };
 
@@ -152,9 +148,10 @@ export const INTERACOES_JUNTOS: Interacao[] = [
     disponivel: c => vereditoDePagar(c.v, preco(c, CUSTO.cinema * 2), 'Os ingressos custam uns'),
     rotulo: c => (crianca(c) && c.ip <= 11 ? `Levar ${c.p.nome} ao cinema` : `Ir ao cinema com ${c.p.nome}`),
     executar: (c, r) => {
+      const nao = recusou(c, 'cinema', 'Cinema'); if (nao) return nao;
       pagarPrograma(c, preco(c, CUSTO.cinema * 2));
-      const n = conta(c, 'cinema'); const foi = comoFoi(c, r);
-      efeito(c, foi, 4); humor(c, 2);
+      const n = conta(c, 'cinema'); const foi = comoFoi(c, r, 0, PERFIS.cinema);
+      efeitoDoPrograma(c, foi, 4, PERFIS.cinema.foco, 'o cinema'); humor(c, 2);
       if (c.papel === 'colega' || c.papel === 'conhecido') c.vin.aproximacao = c.v.t;
       costume(c, n, 3, `O cinema com ${c.p.nome} virou costume.`);
       return cena(c, foi, { ...P.cinema, infantil: crianca(c) }, n);
@@ -166,9 +163,10 @@ export const INTERACOES_JUNTOS: Interacao[] = [
     disponivel: c => vereditoDePagar(c.v, preco(c, CUSTO.jantar), 'O jantar custa uns'),
     rotulo: c => (c.papel === 'genitor' || c.papel === 'avo' ? `Levar ${c.p.nome} para jantar fora, por sua conta` : `Jantar fora com ${c.p.nome}`),
     executar: (c, r) => {
+      const nao = recusou(c, 'jantar', 'Jantar'); if (nao) return nao;
       pagarPrograma(c, preco(c, CUSTO.jantar));
-      const n = conta(c, 'jantar'); const foi = comoFoi(c, r, 0.1);
-      efeito(c, foi, 5); confiar(c, 1);
+      const n = conta(c, 'jantar'); const foi = comoFoi(c, r, 0.1, PERFIS.jantar);
+      efeitoDoPrograma(c, foi, 5, PERFIS.jantar.foco, 'o jantar');
       costume(c, n, 3, `Os jantares com ${c.p.nome} viraram coisa de vocês.`);
       const pais = c.papel === 'genitor' || c.papel === 'avo';
       return cena(c, foi, pais ? { ...P.jantar, alto: x => `${x} pediu o mais barato do cardápio e você trocou pelo melhor. Contou para todo mundo depois.` } : P.jantar, n);
@@ -180,11 +178,12 @@ export const INTERACOES_JUNTOS: Interacao[] = [
     disponivel: c => vereditoDePagar(c.v, preco(c, CUSTO.show * 2), 'Os ingressos custam uns'),
     rotulo: c => `Ir a um show com ${c.p.nome}`,
     executar: (c, r) => {
+      const nao = recusou(c, 'show', 'Show'); if (nao) return nao;
       pagarPrograma(c, preco(c, CUSTO.show * 2));
       const n = conta(c, 'show');
       const musica = habilidade(c.v, 'musica') >= 20 ? 0.15 : 0;
-      const foi = comoFoi(c, r, 0.15 + musica);
-      efeito(c, foi, 6); humor(c, 3); cabeca(c, -2);
+      const foi = comoFoi(c, r, 0.1 + musica, PERFIS.show);
+      efeitoDoPrograma(c, foi, 6, PERFIS.show.foco, 'o show'); humor(c, foi === 'otimo' ? 5 : foi === 'ruim' ? -1 : 2); cabeca(c, foi === 'ruim' ? 1 : -3);
       if (n === 1 && foi === 'otimo') lembrarCom(c.v, c.p.id, `O show que vocês viram juntos.`, 'ritual', 2);
       return cena(c, foi, P.show, n);
     }
@@ -196,9 +195,10 @@ export const INTERACOES_JUNTOS: Interacao[] = [
     disponivel: c => vereditoDePagar(c.v, preco(c, CUSTO.estadio * 2), 'Os ingressos custam uns'),
     rotulo: c => (c.papel === 'filho' && c.ip <= 12 ? `Levar ${c.p.nome} ao primeiro jogo no estádio` : `Ver um jogo no estádio com ${c.p.nome}`),
     executar: (c, r) => {
+      const nao = recusou(c, 'estadio', 'Estádio'); if (nao) return nao;
       pagarPrograma(c, preco(c, CUSTO.estadio * 2));
-      const n = conta(c, 'estadio'); const foi = comoFoi(c, r, 0.1);
-      efeito(c, foi, 5); humor(c, 2);
+      const n = conta(c, 'estadio'); const foi = comoFoi(c, r, 0.1, PERFIS.estadio);
+      efeitoDoPrograma(c, foi, 5, PERFIS.estadio.foco, 'o jogo'); humor(c, 2);
       if (n === 1 && c.papel === 'filho' && c.ip <= 12) { lembrarCom(c.v, c.p.id, `O primeiro jogo de ${c.p.nome} no estádio foi com você.`, 'ritual', 3); }
       costume(c, n, 3, `Ir ao estádio virou programa de vocês.`);
       // O placar é do jogo, não da relação: um sorteio próprio (sempre consumido, como antes).
@@ -243,8 +243,8 @@ export const INTERACOES_JUNTOS: Interacao[] = [
     quando: c => humano(c) && c.casa && c.ip >= 6 && c.eu >= 12 && !rompido(c),
     rotulo: c => (crianca(c) && c.ip <= 12 ? `Fazer um bolo com ${c.p.nome}` : `Cozinhar com ${c.p.nome}`),
     executar: (c, r) => {
-      const n = conta(c, 'cozinhar'); const foi = comoFoi(c, r, 0.1);
-      efeito(c, foi, 4); presente(c, 5);
+      const n = conta(c, 'cozinhar'); const foi = comoFoi(c, r, 0.1, PERFIS.cozinhar);
+      efeitoDoPrograma(c, foi, 4, PERFIS.cozinhar.foco, 'a cozinha');
       praticar(c.v, r, 'cozinha', 0.15, 1);
       costume(c, n, 3, `Cozinhar junto virou coisa de vocês.`);
       return cena(c, foi, { ...P.cozinhar, infantil: crianca(c) }, n);
@@ -255,8 +255,8 @@ export const INTERACOES_JUNTOS: Interacao[] = [
     quando: c => humano(c) && perto(c) && c.ip >= 12 && c.eu >= 14 && !rompido(c) && (proximo(c)),
     rotulo: c => (c.ip >= 65 ? `Uma caminhada leve com ${c.p.nome}` : `Caminhar (ou correr) com ${c.p.nome}`),
     executar: (c, r) => {
-      const n = conta(c, 'caminhar'); const foi = comoFoi(c, r, 0.05);
-      efeito(c, foi, 3); cabeca(c, -3);
+      const n = conta(c, 'caminhar'); const foi = comoFoi(c, r, 0.05, PERFIS.caminhar);
+      efeitoDoPrograma(c, foi, 3, PERFIS.caminhar.foco, 'a caminhada'); cabeca(c, -3);
       c.v.corpo.forma = clamp(c.v.corpo.forma + 1);
       costume(c, n, 4, `As caminhadas com ${c.p.nome} viraram costume.`);
       return cena(c, foi, P.caminhar, n);
@@ -268,9 +268,10 @@ export const INTERACOES_JUNTOS: Interacao[] = [
     disponivel: c => vereditoDePagar(c.v, preco(c, CUSTO.fim_de_semana * 2), 'Um fim de semana fora custa uns'),
     rotulo: c => `Um fim de semana fora com ${c.p.nome}`,
     executar: (c, r) => {
+      const nao = recusou(c, 'fim_de_semana', 'Fim de semana'); if (nao) return nao;
       pagarPrograma(c, preco(c, CUSTO.fim_de_semana * 2));
-      const foi = comoFoi(c, r, 0.2);
-      efeito(c, foi, 9); cabeca(c, -5); humor(c, 3);
+      const foi = comoFoi(c, r, 0.2, PERFIS.fim_de_semana);
+      efeitoDoPrograma(c, foi, 9, PERFIS.fim_de_semana.foco, 'o fim de semana fora'); cabeca(c, -5); humor(c, 3);
       if (foi !== 'ruim') lembrarCom(c.v, c.p.id, `Um fim de semana fora, só vocês.`, 'ritual', 2);
       return cena(c, foi, P.fim_de_semana, conta(c, 'fim_de_semana'));
     }
@@ -299,8 +300,8 @@ export const INTERACOES_JUNTOS: Interacao[] = [
     rotulo: c => `Um jantar com reserva, só vocês (${c.p.nome})`,
     executar: (c, r) => {
       pagarPrograma(c, preco(c, CUSTO.romantico));
-      const n = conta(c, 'romantico'); const foi = comoFoi(c, r, 0.2);
-      efeito(c, foi, 4); envolver(c, foi === 'otimo' ? 6 : 3);
+      const n = conta(c, 'romantico'); const foi = comoFoi(c, r, 0.2, PERFIS.romantico);
+      efeitoDoPrograma(c, foi, 4, PERFIS.romantico.foco, 'o jantar a dois');
       costume(c, n, 3, `Os jantares de vocês dois nunca saíram da agenda.`);
       return cena(c, foi, P.romantico, n);
     }

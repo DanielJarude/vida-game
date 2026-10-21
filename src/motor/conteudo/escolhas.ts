@@ -3,6 +3,8 @@
  * o cigarro experimentado aos 15 pode virar o maço de todo dia aos 40.
  */
 
+import { abrirProcesso } from '../sistemas/justica';
+import { entrar } from '../sistemas/ilicito';
 import { dinheiro as moeda, dinheiroCurto as moedaCurta } from '../texto';
 import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo } from './base';
@@ -147,7 +149,9 @@ export const ESCOLHAS: Conteudo[] = [
             texto: pego ? `Meses depois, ${cotidiano(c.v).policiaFederal ?? 'a polícia'} bateu na porta às seis da manhã.` : `${moedaCurta(20000)} em dinheiro vivo, guardados numa caixa de sapato.`,
             memoria: pego ? 'Foi investigad' + c.g('o', 'a', 'e') + ' por corrupção e perdeu o cargo.' : null,
             relevancia: pego ? 'marco' : undefined, tom: pego ? 'ruim' : undefined,
-            efeito: () => { if (pego) { encerrarEmprego(c.v, 'demitido por corrupção'); estresse(c, 25); fato(c, 'processado_corrupcao'); dinheiro(c, -15000); } else dinheiro(c, 20000); }
+            // REWORK 10 · CRI-01: a propina não é um episódio solto — pego, vira processo (`justica`, categoria corrupção);
+            // não pego, vira um caminho (o envelope do mês seguinte, a exposição que cresce: `ilicito`, `margem`).
+            efeito: () => { if (pego) { encerrarEmprego(c.v, 'demitido por corrupção'); estresse(c, 25); fato(c, 'processado_corrupcao'); abrirProcesso(c.v, c.r, 'corrupcao'); } else { dinheiro(c, 20000); entrar(c.v, 'corrupcao', undefined, c.r); } }
           };
         } }
     ]

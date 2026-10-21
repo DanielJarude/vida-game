@@ -219,3 +219,257 @@ describe('ROT-05 · a bolsa de atleta', () => {
     expect(c.doEstudante + c.daFamilia).toBe(Math.round(v.educacao.matricula!.mensalidade * 0.5));
   });
 });
+
+/* ================================================================ Fase C · as relações (§16) */
+
+import { comParceiro, pessoaNova } from './cenarios';
+import { vincular } from '../pessoas';
+import { forcaDaRelacao } from '../sistemas/lacos';
+import { brigaFisica, escalar, marcoAfetivo, PERFIS, processarConvivio, recusaDoConvite, tardesDoAno, vereditoDeTempo } from '../sistemas/convivio';
+import { ctxPessoa, disponibilidadeInteracao } from '../sistemas/interacoes';
+import { disponibilidade } from '../acoes';
+import { podeTentar } from '../plausibilidade';
+import type { Pessoa } from '../tipos';
+
+/** A mesma vida com outra semente (fora da transação: ela grava o estado do gerador de volta no fim). */
+const comRng = (v: Vida, k: number): Vida => ({ ...structuredClone(v), rng: Math.imul(k + 1, 2654435761) >>> 0 });
+/** Executa a interação com sementes diferentes até `ok` (ou desiste): devolve a vida e o resultado. */
+function ate(v: Vida, pessoaId: string, interacao: string, ok: (w: Vida) => boolean, n = 60): { v: Vida; res: string; achou: boolean } {
+  for (let k = 0; k < n; k++) {
+    const out = executar(comRng(v, k), { tipo: 'pessoa', pessoaId, interacao });
+    if (ok(out.vida)) return { v: out.vida, res: out.resultado ?? out.aviso?.texto ?? '', achou: true };
+  }
+  return { v, res: '', achou: false };
+}
+function saindoCom(env: number, i = 26, tensao = 5): { v: Vida; id: string } {
+  let id = '';
+  const v = em(adulto(i, { semente: 41 }), x => {
+    const p = pessoaNova(x, i + 1, 'masculino', { atracao: 'mulheres' });
+    const vin = vincular(x, p, { origem: 'romance', proximidade: 55 });
+    vin.tInicio = x.t - 30;
+    vin.tensao = tensao;
+    vin.romance = { estagio: 'saindo', tEstagio: x.t - 12, tInicio: x.t - 24, envolvimento: env };
+    x.eu.atracao = 'homens';
+    id = p.id;
+  });
+  return { v, id };
+}
+
+describe('REL-02 · namoro e casamento como marcos afetivos', () => {
+  it('namoro aceito: a barra sobe de verdade (afeto, confiança, envolvimento) e o começo vira momento importante', () => {
+    const { v, id } = saindoCom(92);
+    const antes = forcaDaRelacao(v, v.vinculos[id]);
+    const { v: w, achou } = ate(v, id, 'pedir_namoro', x => x.vinculos[id].romance?.estagio === 'namoro');
+    expect(achou).toBe(true);
+    const vin = w.vinculos[id];
+    expect(forcaDaRelacao(w, vin) - antes).toBeGreaterThanOrEqual(6);
+    expect(vin.historia.some(h => h.texto === 'Começaram a namorar.' && h.peso === 3)).toBe(true);
+    expect(w.fatos[`marco_namoro_${id}`]).toBeDefined();
+  });
+
+  it('namoro recusado: o motivo é dito, fica guardado e o pedido não volta logo', () => {
+    const { v, id } = saindoCom(30);
+    const { v: w, res, achou } = ate(v, id, 'pedir_namoro', x => x.fatos[`recusa_namoro_${id}`] !== undefined);
+    expect(achou).toBe(true);
+    expect(res).toMatch(/não sente o mesmo|cedo|como estão|não quer/);
+    const d = disponibilidadeInteracao(transacao(w, x => { x.anoAtual.acoes = []; }).vida, id, 'pedir_namoro');
+    expect(podeTentar(d)).toBe(false);
+    expect(d.motivo).toMatch(/há pouco|insistir/);
+  });
+
+  it('o mesmo sim pesa menos numa relação com traição e brigas — e não apaga a tensão', () => {
+    const limpa = em(adulto(30, { semente: 42 }), x => { comParceiro(x, { estagio: 'namoro', anos: 3 }); });
+    const pesada = em(adulto(30, { semente: 42 }), x => {
+      const { vin } = comParceiro(x, { estagio: 'namoro', anos: 3 });
+      vin.tensao = 50;
+      vin.historia.push({ t: x.t - 12, texto: 'A traição.', tipo: 'traicao', peso: 3 }, { t: x.t - 6, texto: 'A briga.', tipo: 'conflito', peso: 2 });
+    });
+    const ganho = (v: Vida) => {
+      const id = Object.values(v.vinculos).find(x => x.romance)!.pessoaId;
+      let frase: string | undefined; let d = 0; let tensaoDepois = 0;
+      em(v, x => { const vin = x.vinculos[id]; const a = vin.proximidade; frase = marcoAfetivo(x, x.pessoas[id], vin, 'casamento'); d = vin.proximidade - a; tensaoDepois = vin.tensao; });
+      return { d, frase, tensaoDepois, tensaoAntes: v.vinculos[id].tensao };
+    };
+    const a = ganho(limpa), b = ganho(pesada);
+    expect(a.d).toBeGreaterThan(b.d);
+    expect(b.frase).toMatch(/não apagou/);
+    expect(b.tensaoDepois).toBe(b.tensaoAntes);
+  });
+
+  it('casamento recusado com as coisas ruins: vira conversa sobre expectativas, e o pedido fica bloqueado com o porquê', () => {
+    let id = '';
+    const v = em(adulto(32, { semente: 43 }), x => { const c = comParceiro(x, { estagio: 'morando_junto', anos: 4 }); c.vin.tensao = 60; c.vin.romance!.envolvimento = 55; id = c.p.id; });
+    const { v: w, res, achou } = ate(v, id, 'pedir_casamento', x => x.fatos[`recusa_noivado_${id}`] !== undefined);
+    expect(achou).toBe(true);
+    expect(res).toMatch(/espera|como estão|não quer casar/);
+    expect(podeTentar(disponibilidadeInteracao(transacao(w, x => { x.anoAtual.acoes = []; }).vida, id, 'pedir_casamento'))).toBe(false);
+  });
+
+  it('casamento aceito: o noivado e o casamento aproximam, e as memórias atravessam o save', () => {
+    let id = '';
+    const v = em(adulto(32, { semente: 44 }), x => { const c = comParceiro(x, { estagio: 'morando_junto', anos: 4 }); c.vin.romance!.envolvimento = 95; c.vin.tensao = 0; id = c.p.id; });
+    const { v: noivos, achou } = ate(v, id, 'pedir_casamento', x => x.fatos[`noivado_${id}`] !== undefined);
+    expect(achou).toBe(true);
+    let w = transacao(noivos, x => { x.fatos[`noivado_${id}`] = x.t - 12; x.anoAtual.acoes = []; }).vida;
+    w = executar(w, { tipo: 'pessoa', pessoaId: id, interacao: 'marcar_casamento' }).vida;
+    expect(w.momento?.situacaoId).toBe('rom_casamento');
+    const prox = w.vinculos[id].proximidade;
+    w = executar(w, { tipo: 'decidir', opcaoId: 'cartorio' }).vida;
+    expect(w.vinculos[id].romance?.estagio).toBe('casamento');
+    expect(w.vinculos[id].proximidade).toBeGreaterThan(prox);
+    const lido = interpretar(JSON.stringify(w));
+    expect(lido.tipo).toBe('ok');
+    if (lido.tipo === 'ok') {
+      expect(lido.vida.vinculos[id].historia.some(h => h.texto === 'Ficaram noivos.')).toBe(true);
+      expect(lido.vida.vinculos[id].historia.some(h => h.tipo === 'casamento')).toBe(true);
+      expect(lido.vida.fatos[`marco_casamento_${id}`]).toBeDefined();
+    }
+  });
+});
+
+/** Um amigo com o temperamento dado (para a escada do conflito). A vida-base é feita uma vez (viver 30 anos é caro). */
+let BASE30: string | undefined;
+function amigo(t: Partial<Pessoa['temperamento']>, tensao = 20, k = 0): { v: Vida; id: string } {
+  BASE30 ??= JSON.stringify(adulto(30, { semente: 45 }));
+  let id = '';
+  const v = em(JSON.parse(BASE30) as Vida, x => {
+    x.seq += k * 13;
+    const p = pessoaNova(x, 30, 'masculino');
+    p.temperamento = { extroversao: 0, afabilidade: 0, responsabilidade: 0, abertura: 0, estabilidade: 0, ...t };
+    const vin = vincular(x, p, { origem: 'escola', proximidade: 60, estagio: 'amigo' });
+    vin.tensao = tensao;
+    id = p.id;
+  });
+  return { v, id };
+}
+const degraus = (t: Partial<Pessoa['temperamento']>, tensao: number, peso: 1 | 2 | 3) => {
+  const conta: Record<string, number> = {};
+  const { v, id } = amigo(t, tensao);
+  for (let k = 0; k < 300; k++) {
+    em(v, x => { const c = ctxPessoa(x, id)!; const d = escalar(c, peso, 'teste', { ...criarRng(k + 1) } as ReturnType<typeof criarRng>); conta[d] = (conta[d] ?? 0) + 1; });
+  }
+  return conta;
+};
+
+describe('REL-03 · conflitos: a escada sobe, desce, termina', () => {
+  it('discussão leve com quem é calmo quase nunca vira conflito sério; ofensa com quem tem pavio curto, sim', () => {
+    const calmo = degraus({ estabilidade: 0.9, afabilidade: 0.8 }, 10, 1);
+    const quente = degraus({ estabilidade: -0.8, afabilidade: -0.6 }, 60, 2);
+    const serio = (c: Record<string, number>) => (c.conflito_serio ?? 0) + (c.ruptura ?? 0) + (c.agressao ?? 0);
+    expect(serio(calmo)).toBeLessThan(25);
+    expect((calmo.acalmou ?? 0) + (calmo.desentendimento ?? 0)).toBeGreaterThan(220);
+    expect(serio(quente)).toBeGreaterThan(serio(calmo) * 3);
+  });
+
+  it('a mentira evita a briga agora e pode ser descoberta depois (confiança despenca, a pessoa cobra) — ou nunca', () => {
+    let descobertas = 0, nunca = 0;
+    for (let k = 0; k < 12; k++) {
+      const { v, id } = amigo({}, 45, k);
+      // (o sorteio do ano é da vida e do mês: amigos iguais no mesmo mês teriam o mesmo destino — cada um começa num mês)
+      let w = executar(transacao(v, x => { x.t += k; }).vida, { tipo: 'pessoa', pessoaId: id, interacao: 'mentir' }).vida;
+      const confAntes = w.vinculos[id].confianca;
+      expect(w.vinculos[id].tensao).toBeLessThan(45);
+      let descobriu = false;
+      for (let a = 1; a <= 10 && !descobriu; a++) { w = transacao(w, x => { x.t += 12; processarConvivio(x); }).vida; descobriu = w.fatos[`mentira_descoberta_${id}`] !== undefined; }
+      if (!descobriu) { nunca++; continue; }
+      descobertas++;
+      expect(w.vinculos[id].confianca).toBeLessThan(confAntes);
+      expect(w.vinculos[id].historia.some(h => h.tipo === 'traicao' && /mentira/.test(h.texto))).toBe(true);
+    }
+    expect(descobertas).toBeGreaterThan(3);
+    expect(nunca).toBeGreaterThan(0);
+  });
+
+  it('agressão: pode não haver lesão — ou haver, com atendimento (a lesão é uma condição), e a denúncia vira processo', () => {
+    let semLesao = false, comLesao = false, processo = false, voceMachucado = false;
+    for (let k = 0; k < 80; k++) {
+      const { v, id } = amigo({}, 70, k);
+      em(v, x => {
+        x.vinculos[id].conflito = { t: x.t, assunto: 'dinheiro', gravidade: 3, quem: 'outro' };
+        const antes = x.pessoas[id].saude;
+        const out = brigaFisica(ctxPessoa(x, id)!, criarRng(k + 3), 'eu');
+        if (out.lesaoDela === 0) semLesao = true;
+        if (out.lesaoDela >= 2) { comLesao = true; expect(x.pessoas[id].saude).toBeLessThan(antes); }
+        if (out.lesaoSua > 0) { voceMachucado = true; expect(x.corpo.condicoes.some(c => !!c.lesao)).toBe(true); }
+        if (out.denuncia) { processo = true; expect(!!x.justica?.processo || (x.justica?.antecedentes.length ?? 0) > 0).toBe(true); }
+        expect(x.vinculos[id].confianca).toBeLessThan(60);
+      });
+    }
+    expect(semLesao && comLesao && processo && voceMachucado).toBe(true);
+  });
+
+  it('agredir não aparece sem conflito (não é opção à toa)', () => {
+    const { v, id } = amigo({}, 5);
+    expect(ctxPessoa(v, id) && podeTentar(disponibilidade(v, { tipo: 'pessoa', pessoaId: id, interacao: 'agredir' }))).toBe(false);
+  });
+
+  it('a briga antiga esfria, afasta — ou a pessoa toma a iniciativa de fazer as pazes', () => {
+    const vistos = new Set<string>();
+    for (let k = 0; k < 40; k++) {
+      const { v, id } = amigo({ afabilidade: k % 2 ? 0.8 : -0.5, estabilidade: 0 }, 60, k);
+      const w = transacao(v, x => { x.t += 12 * (k + 1); x.vinculos[id].conflito = { t: x.t - 30, assunto: 'política', gravidade: 2, quem: 'eu' }; x.vinculos[id].proximidade = 30; processarConvivio(x); }).vida;
+      const vin = w.vinculos[id];
+      if (vin.chamado?.tipo === 'desculpas') vistos.add('iniciativa');
+      else if (vin.estagio === 'afastado') vistos.add('afastou');
+      else if (!vin.conflito) vistos.add('esfriou');
+    }
+    expect(vistos.has('iniciativa')).toBe(true);
+    expect(vistos.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it('separação: o fim fica na história com peso; reconciliar é possível depois (a porta não fecha para sempre)', () => {
+    let id = '';
+    const v = em(adulto(35, { semente: 46 }), x => { id = comParceiro(x, { estagio: 'casamento', anos: 6 }).p.id; });
+    const w = executar(v, { tipo: 'pessoa', pessoaId: id, interacao: 'terminar' }).vida;
+    expect(w.vinculos[id].romance?.estagio).toBe('ex');
+    expect(w.vinculos[id].historia.some(h => (h.peso ?? 1) >= 3 && h.tipo === 'conflito')).toBe(true);
+  });
+});
+
+describe('NPC-04 e REL-01 · a outra pessoa decide; os programas são diferentes', () => {
+  it('o convite pode ser recusado (com o motivo dela) — e nada é cobrado', () => {
+    let recusados = 0;
+    for (let k = 0; k < 60; k++) {
+      const { v, id } = amigo({ extroversao: -0.8 }, 50, k);
+      const c = ctxPessoa(v, id)!;
+      const motivo = recusaDoConvite(c, 'show');
+      if (!motivo) continue;
+      recusados++;
+      expect(motivo.length).toBeGreaterThan(20);
+      const w = transacao(v, x => { x.financas.conta = 5000; }).vida;
+      const out = executar(w, { tipo: 'pessoa', pessoaId: id, interacao: 'show' });
+      if (out.vida.anoAtual.acoes.includes(`pessoa:show:${id}`) && out.resultado === motivo) expect(out.vida.financas.conta).toBe(5000);
+    }
+    expect(recusados).toBeGreaterThan(5);
+  });
+
+  it('cinema e show não dão o mesmo: o show varia muito mais (a noite da vida ou o tédio); o cinema acalma mais', () => {
+    const efeitos = (prog: 'cinema' | 'show') => {
+      const dp: number[] = []; const dt: number[] = [];
+      for (let k = 0; k < 160; k++) {
+        const { v, id } = amigo({ extroversao: 0.2, afabilidade: 0.2 }, 30, k);
+        const w = transacao(comRng(v, k), x => { x.financas.conta = 9000; for (const key of Object.keys(x.fatos)) if (key.startsWith('convite')) delete x.fatos[key]; }).vida;
+        const out = executar(w, { tipo: 'pessoa', pessoaId: id, interacao: prog });
+        if (out.vida.financas.conta === 9000) continue; // recusou
+        dp.push(out.vida.vinculos[id].proximidade - v.vinculos[id].proximidade);
+        dt.push(v.vinculos[id].tensao - out.vida.vinculos[id].tensao);
+      }
+      const media = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+      const dp2 = media(dp.map(x => (x - media(dp)) ** 2));
+      return { varProx: dp2, calma: media(dt), n: dp.length };
+    };
+    const cin = efeitos('cinema'), sho = efeitos('show');
+    expect(cin.n).toBeGreaterThan(80); expect(sho.n).toBeGreaterThan(80);
+    expect(sho.varProx).toBeGreaterThan(cin.varProx * 1.3);
+    expect(cin.calma).toBeGreaterThan(sho.calma);
+    expect(PERFIS.show.risco).toBeGreaterThan(PERFIS.cinema.risco);
+  });
+
+  it('o tempo do ano acaba: com a semana cheia, a viagem não cabe — mas uma conversa sempre cabe', () => {
+    const { v } = amigo({}, 10);
+    const cheio = transacao(v, x => { const n = Math.ceil(tardesDoAno(x)); for (let k = 0; k < n; k++) x.anoAtual.acoes.push(`pessoa:cinema:x${k}`); }).vida;
+    expect(podeTentar(vereditoDeTempo(cheio, 'viajar_juntos'))).toBe(false);
+    expect(vereditoDeTempo(cheio, 'viajar_juntos').motivo).toMatch(/Falta tempo/);
+    expect(podeTentar(vereditoDeTempo(cheio, 'conversar'))).toBe(true);
+  });
+});

@@ -43,9 +43,11 @@ import { mesesProcurando, patrimonioPagaAVida } from './intencao';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
-  pequenos: [120, 250, 400], patrimonial: [700, 1400, 2400], fraude: [1500, 3200, 5500], mercado: [1100, 2600, 4800], grupo: [2000, 3600, 5600]
+  pequenos: [120, 250, 400], patrimonial: [700, 1400, 2400], fraude: [1500, 3200, 5500], mercado: [1100, 2600, 4800], grupo: [2000, 3600, 5600],
+  // REWORK 10: a propina de quem tem cargo — mais dinheiro, e a exposição de quem tem nome num papel.
+  corrupcao: [2500, 5000, 9000]
 };
-const EXPOSICAO: Record<CategoriaIlicita, number> = { pequenos: 14, patrimonial: 14, fraude: 12, mercado: 18, grupo: 24 };
+const EXPOSICAO: Record<CategoriaIlicita, number> = { pequenos: 14, patrimonial: 14, fraude: 12, mercado: 18, grupo: 24, corrupcao: 13 };
 const DESCOBERTA: Record<1 | 2 | 3, number> = { 1: 0.3, 2: 0.42, 3: 0.52 };
 
 export const ativo = (v: Vida) => { const e = v.caminhos.envolvimento; return !!e && e.parou === undefined; };
@@ -104,7 +106,12 @@ export function chanceDeProposta(v: Vida): number {
 export function categoriaPara(v: Vida, r: Rng): CategoriaIlicita {
   const i = idade(v);
   if (i < 18) return 'pequenos';
-  if (temAcesso(v) && (r.chance(0.7) || seguranca(v).nivel === 'no_vermelho')) return 'fraude';
+  if (temAcesso(v) && (r.chance(0.7) || seguranca(v).nivel === 'no_vermelho')) {
+    // REWORK 10 · CRI-01: quem tem cargo público (ou assina obra, fiscaliza, julga) é chamado para a corrupção; quem mexe
+    // no dinheiro de uma empresa, para a fraude. Gente com dinheiro também erra — de outro jeito.
+    const oc = v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.ocupacaoId) : undefined;
+    return oc && ['publico', 'fiscal', 'judiciario'].includes(oc.trilha) ? 'corrupcao' : 'fraude';
+  }
   if (v.caminhos.envolvimento?.categoria === 'mercado' || v.caminhos.envolvimento?.categoria === 'grupo') return 'mercado';
   return r.chance(nivelDeOferta(v.moradia.municipioId) >= 2 || v.moradia.padrao <= 2 ? 0.45 : 0.25) ? 'mercado' : 'patrimonial';
 }
@@ -183,7 +190,7 @@ export function processarIlicito(v: Vida, r: Rng): void {
   }
 }
 
-export const CATEGORIAS: CategoriaIlicita[] = ['pequenos', 'patrimonial', 'fraude', 'mercado', 'grupo'];
+export const CATEGORIAS: CategoriaIlicita[] = ['pequenos', 'patrimonial', 'fraude', 'mercado', 'grupo', 'corrupcao'];
 
 function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   if (preso(v)) return;

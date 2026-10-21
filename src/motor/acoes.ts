@@ -93,6 +93,8 @@ import { disponibilidadeRede, executarRede, type OpRede } from './sistemas/redes
 import { disponibilidadeOficio, executarOficio, type OqueOficio } from './sistemas/noOficio';
 // FIX pós-REWORK 4: os verbos do ano letivo (estudar para a prova, a festa, o projeto, colar): `naFormacao`.
 import { disponibilidadeFormacao, executarFormacao, type OqueFormacao } from './sistemas/naFormacao';
+import { reacaoDaParceriaAMudanca } from './sistemas/convivio';
+import { disponibilidadeMargem, executarMargem, type OqueMargem } from './sistemas/margem';
 import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
@@ -235,7 +237,9 @@ export type Acao =
   /** Usar a própria visibilidade (entrevista, causa, evento, publicidade, privacidade, projeto, política): `visibilidade`. */
   | { tipo: 'visibilidade'; oque: UsoDaVisibilidade }
   /** REWORK 9: a agenda da semana — o turno do que tem turno, o lugar (dias e hora) de cada atividade: `agenda`. */
-  | { tipo: 'agenda'; op: OpAgenda };
+  | { tipo: 'agenda'; op: OpAgenda }
+  /** REWORK 10 · CRI-01: a vida à margem e o processo (procurar ajuda, negociar a saída, assumir, cooperar, a defesa, a reabilitação). */
+  | { tipo: 'margem'; oque: OqueMargem };
 
 
 const TITULO_CUIDADO: Record<TipoCuidado, string> = { descansar: 'Uns dias de descanso', consulta: 'No médico', parar_fumar: 'Parar de fumar', beber_menos: 'Beber menos' };
@@ -288,6 +292,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return podeTentar(depois) ? { grau: 'permitido', motivo: `Tira ${fmt(d.resgate.valor)} das aplicações.` } : depois;
     }
     case 'agenda': return disponibilidadeDaAgenda(v, a.op);
+    case 'margem': return disponibilidadeMargem(v, a.oque);
     case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
     case 'oportunidade': {
       const o = v.caminhos.oportunidades.find(x => x.id === a.id);
@@ -766,6 +771,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
   const i = idade(v);
   switch (a.tipo) {
     case 'agenda': return ok(executarNaAgenda(v, a.op));
+    case 'margem': return { resultado: executarMargem(v, r, a.oque), titulo: a.oque === 'reabilitacao' ? 'A reabilitação' : a.oque === 'procurar_ajuda' ? 'Pedir ajuda' : 'O processo' };
     case 'prisao': { const x = executarPrisao(v, a.oque); return a.oque === 'conviver' || a.oque === 'visitas' || a.oque === 'fugir' ? { resultado: x.texto, titulo: a.oque === 'fugir' ? 'A fuga' : a.oque === 'visitas' ? 'Dia de visita' : 'No pavilhão' } : ok(x.texto, x.tom); }
     case 'resgatar_e': {
       const d = disponibilidade(v, a.acao);
@@ -1013,14 +1019,17 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const custo = custoDeMudanca(v.moradia.municipioId, a.municipioId);
       pagarTudo(v, custo);
       mudarAgora(v, a.municipioId, '');
-      return ok(`Mudança para ${nomeLugar(a.municipioId)} feita.`);
+      // REWORK 10 · REL-01: a parceria que vem junto — combinado antes (`convivio.conversar_mudanca`), ou não.
+      const par = reacaoDaParceriaAMudanca(v);
+      return ok(`Mudança para ${nomeLugar(a.municipioId)} feita.${par ? ` ${par}` : ''}`);
     }
     case 'migrar': {
       // Falta na conta: as aplicações cobrem antes (a disponibilidade já perguntou).
       const av = avaliarMigracao(v, a.municipioId, a.motivo);
       if (v.financas.conta < av.custo) pagarTudo(v, 0);
       migrar(v, r, a.municipioId, a.motivo);
-      return { resultado: v.biografia[v.biografia.length - 1]?.texto, titulo: `A vida ${noPais(paisDaCidade(a.municipioId))}` };
+      const par = reacaoDaParceriaAMudanca(v);
+      return { resultado: `${v.biografia[v.biografia.length - 1]?.texto ?? ''}${par ? ` ${par}` : ''}`, titulo: `A vida ${noPais(paisDaCidade(a.municipioId))}` };
     }
     case 'naturalizar': pedirNaturalizacao(v); return ok('Pedido feito: a resposta sai em um ano.', 'neutro');
     case 'comprar_veiculo': {

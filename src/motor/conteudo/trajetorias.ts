@@ -58,13 +58,15 @@ const CENA: Record<CategoriaIlicita, (c: Ctx) => string> = {
   fraude: c => {
     const e = c.v.trabalho.atual;
     return `${e ? `No trabalho, ${naCasa(e.empregador)},` : 'No negócio,'} apareceu um jeito de fazer dinheiro sumir sem que ninguém perceba tão cedo. ${quem(c) ? `${quem(c)!.nome} insinuou que já faz isso há anos.` : 'Ninguém ofereceu: a brecha está ali, e você viu.'} As contas de casa estão ${c.v.financas.negativado ? 'atrasadas' : 'apertadas'}.`;
-  }
+  },
+  // REWORK 10 · CRI-01: a corrupção — quem tem uma assinatura que vale dinheiro.
+  corrupcao: c => `${quem(c)?.nome ?? 'Alguém de fora'} quer que um papel ande mais depressa — ou que um número feche de outro jeito. Em troca, um envelope todo mês. ${c.v.trabalho.atual ? 'No seu cargo, a sua assinatura vale isso.' : ''} Ninguém fala a palavra; todo mundo sabe o nome que ela tem.`
 };
 
 function aceitar(c: Ctx, cat: CategoriaIlicita): Resultado {
   return {
     texto: cat === 'fraude' ? 'Da primeira vez, a mão tremeu. Da segunda, menos.' : 'O dinheiro veio rápido, em notas. Veio junto uma coisa que não sai do estômago.',
-    memoria: cat === 'pequenos' ? 'Foi junto com a turma fazer o que não devia.' : cat === 'fraude' ? 'Entrou num esquema de fraude.' : 'Aceitou entrar num esquema ilegal.',
+    memoria: cat === 'pequenos' ? 'Foi junto com a turma fazer o que não devia.' : cat === 'fraude' ? 'Entrou num esquema de fraude.' : cat === 'corrupcao' ? 'Aceitou a primeira propina.' : 'Aceitou entrar num esquema ilegal.',
     relevancia: 'marco', tom: 'ruim',
     efeito: () => { entrar(c.v, cat, quem(c)?.id, c.r); if (quem(c)) lembrarCom(c.v, quem(c)!.id, 'Entraram juntos no esquema.', 'antigo', 2); }
   };

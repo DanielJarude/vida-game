@@ -80,6 +80,9 @@ import { processarVidaEstudantil } from './sistemas/vidaEstudantil';
 import { processarEstresseProlongado } from './sistemas/estresseProlongado';
 import { processarConhecimento } from './sistemas/conhecimento';
 import { processarBolsaDeAtleta } from './sistemas/naFormacao';
+import { processarConvivio } from './sistemas/convivio';
+import { processarTribunal } from './sistemas/tribunal';
+import { processarMargem } from './sistemas/margem';
 
 export interface ResumoDoAno {
   idade: number;
@@ -137,6 +140,8 @@ function viverAno(v: Vida, r: Rng): void {
   // REWORK 10 · ROT-05: a bolsa de atleta se mantém treinando e indo bem no curso (ou acaba).
   processarBolsaDeAtleta(v);
   processarOab(v, r);
+  // REWORK 10 · CRI-01: o processo como caminho (o acordo que a acusação oferece, a resposta do recurso).
+  processarTribunal(v, r);
   processarJustica(v, r);
   processarPrisao(v);
   praticandoPor('trabalho', () => processarTrabalho(v, r));
@@ -184,6 +189,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarRomance(v, r);
   // As outras pessoas também agem: pedem, convidam, cobram, aparecem — e o silêncio do ano passado responde.
   processarIniciativas(v, r);
+  // REWORK 10 · Fase C: o que se fez com as pessoas volta (a mentira descoberta, o segredo que vaza, a briga que esfria).
+  processarConvivio(v);
   processarExposicao(v, r);
   surgirInteresse(v, r);
   processarConcepcao(v, r);
@@ -194,6 +201,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarOportunidades(v, r);
   processarMundoVivo(v);
   processarIlicito(v, r);
+  // REWORK 10 · CRI-01: a trajetória à margem (a confiança do meio, os trabalhos maiores, os atritos, o cerco).
+  processarMargem(v);
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);
   processarDinheiro(v, r, ec);

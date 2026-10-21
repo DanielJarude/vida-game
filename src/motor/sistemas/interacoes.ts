@@ -39,7 +39,8 @@ import { ativo as envolvimentoAtivo, proporPorFora, sabeQueAndaNisso } from './i
 import { contextoDaRelacao, conversarNoApp, encontroDoApp, etapaDoApp, pesoDoContexto, registrarFase } from './relacoes';
 import { executarDesculpas, INTERACOES_DE_CONFLITO } from './conflitos';
 import { INTERACOES_VIVIDAS } from './gestos';
-import { INTERACOES_JUNTOS } from './juntos';
+import { INTERACOES_JUNTOS, registrarGrupo } from './juntos';
+import { GRUPOS_DO_CONVIVIO, INTERACOES_DE_CONVIVIO, marcoAfetivo, naoQuerCasar, recusaAfetiva, vereditoDeTempo, vereditoDoPedido } from './convivio';
 import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
 import { estadoDaRelacao } from './lacos';
 import { aAgradecer, agradecer, companhiaAgradecivel, conversar as textoDaConversa, demonstrarCarinho, passarTempo, rotuloAgradecer } from './conversas';
@@ -719,7 +720,7 @@ export const INTERACOES: Interacao[] = [
       const atual = parceiro(c.v);
       if (atual && atual.p.id !== c.p.id) return bloqueio('incompativel', `Você está com ${atual.p.nome}. Para namorar ${c.p.nome}, seria preciso terminar antes.`);
       if (c.v.t - c.vin.romance!.tEstagio < 3) return bloqueio('requisito', 'Cedo demais.');
-      return PERMITIDO;
+      return vereditoDoPedido(c.v, c.p, 'namoro');
     },
     rotulo: () => 'Pedir em namoro',
     executar: (c, r) => {
@@ -730,12 +731,13 @@ export const INTERACOES: Interacao[] = [
       if (r.chance(clamp((rom.envolvimento - 30) / 45 * casual, 0.05, 0.95))) {
         mudarEstagio(c.v, c.vin, 'namoro');
         escrever(c.v, { texto: `Começou a namorar ${c.p.nome}.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id], evento: { tipo: 'namoro', pessoaId: c.p.id, peso: 40 } });
-        lembrarCom(c.v, c.p.id, 'Começaram a namorar.', 'romance', 2);
-        return { resultado: `${c.p.nome} disse sim antes de você terminar a frase.` };
+        lembrarCom(c.v, c.p.id, 'Começaram a namorar.', 'romance', 3);
+        // REWORK 10 · REL-02: o compromisso novo aproxima de verdade (sem apagar o que houve).
+        const pesa = marcoAfetivo(c.v, c.p, c.vin, 'namoro');
+        return { resultado: `${c.p.nome} disse sim antes de você terminar a frase.${pesa ? ` ${pesa}` : ''}` };
       }
-      envolver(c, -8);
-      if (busca === 'casual') return { resultado: `${c.p.nome} gosta do que vocês têm — e disse, com franqueza, que não quer namorar agora.${motivoDoNao(c, 'busca')}` };
-      return { resultado: `${c.p.nome} disse que ainda não está pront${o(c.p)} para isso.` };
+      if (busca === 'casual') { envolver(c, -8); c.v.fatos[`recusa_namoro_${c.p.id}`] = c.v.t; c.v.fatos[`motivo_recusa_namoro_${c.p.id}`] = 4; return { resultado: `${c.p.nome} gosta do que vocês têm — e disse, com franqueza, que não quer namorar agora.${motivoDoNao(c, 'busca')}` }; }
+      return { resultado: recusaAfetiva(c.v, c.p, c.vin, 'namoro') };
     }
   },
   {
@@ -977,7 +979,7 @@ export const INTERACOES: Interacao[] = [
       if (c.eu < 18 || c.ip < 18) return bloqueio('ilegal', 'Os dois precisam ser maiores de idade.');
       if (c.v.t - c.vin.romance!.tEstagio < 12) return bloqueio('requisito', 'Namoram há pouco tempo.');
       if (c.longe) return bloqueio('requisito', `Vocês moram em cidades diferentes: antes, decidir onde (conversar com ${c.p.nome} sobre a distância).`);
-      return PERMITIDO;
+      return vereditoDoPedido(c.v, c.p, 'morar');
     },
     rotulo: () => 'Propor morar junto',
     executar: (c, r) => {
@@ -987,10 +989,10 @@ export const INTERACOES: Interacao[] = [
         morarJuntos(c.v, c.p);
         escrever(c.v, { texto: `Foi morar com ${c.p.nome}.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id], evento: { tipo: 'uniao', pessoaId: c.p.id, peso: 55 } });
         lembrarCom(c.v, c.p.id, 'Foram morar juntos.', 'casa', 3);
-        return { resultado: `${c.p.nome} topou. A primeira compra da casa nova foi um jogo de panelas.` };
+        const pesa = marcoAfetivo(c.v, c.p, c.vin, 'morar');
+        return { resultado: `${c.p.nome} topou. A primeira compra da casa nova foi um jogo de panelas.${pesa ? ` ${pesa}` : ''}` };
       }
-      envolver(c, -6);
-      return { resultado: `${c.p.nome} achou cedo demais.` };
+      return { resultado: recusaAfetiva(c.v, c.p, c.vin, 'morar') };
     }
   },
   {
@@ -1000,21 +1002,22 @@ export const INTERACOES: Interacao[] = [
       if (c.eu < 18 || c.ip < 18) return bloqueio('ilegal', 'Casamento exige maioridade (16 com autorização dos pais, na lei; no jogo, 18).');
       if (c.v.t - (c.vin.romance!.tInicio ?? c.vin.tInicio) < 18) return bloqueio('requisito', 'Estão juntos há pouco tempo.');
       if (c.v.fatos[`noivado_${c.p.id}`] !== undefined) return bloqueio('incompativel', 'Vocês já estão noivos.');
-      return PERMITIDO;
+      return vereditoDoPedido(c.v, c.p, 'noivado');
     },
     rotulo: () => 'Pedir em casamento',
     executar: (c, r) => {
       const rom = c.vin.romance!;
-      if (r.chance(clamp((rom.envolvimento - 40) / 35, 0.05, 0.95))) {
+      // REWORK 10 · NPC-04: há quem não queira casar (com ninguém) — o sim dessa pessoa é raro, por mais que ame.
+      const resistencia = naoQuerCasar(c.p) ? 0.35 : 1;
+      if (r.chance(clamp((rom.envolvimento - 40) / 35 * resistencia - c.vin.tensao / 300, 0.03, 0.95))) {
         marcarFato(c.v, `noivado_${c.p.id}`);
         escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento. A resposta foi sim.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id] });
-        lembrarCom(c.v, c.p.id, 'Ficaram noivos.', 'romance', 2);
-        return { resultado: `Sim. ${c.p.nome} chorou, você chorou, o garçom bateu palmas.` };
+        lembrarCom(c.v, c.p.id, 'Ficaram noivos.', 'romance', 3);
+        const pesa = marcoAfetivo(c.v, c.p, c.vin, 'noivado');
+        return { resultado: `Sim. ${c.p.nome} chorou, você chorou, o garçom bateu palmas.${pesa ? ` ${pesa}` : ''}` };
       }
-      envolver(c, -15);
-      c.vin.tensao = clamp(c.vin.tensao + 25);
       escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento e ouviu um não.`, relevancia: 'biografia', tema: 'amor', tom: 'ruim', escolha: true, pessoas: [c.p.id] });
-      return { resultado: `${c.p.nome} ficou em silêncio por muito tempo. Depois disse que não.` };
+      return { resultado: recusaAfetiva(c.v, c.p, c.vin, 'noivado') };
     }
   },
   {
@@ -1086,7 +1089,9 @@ export const INTERACOES: Interacao[] = [
   // REWORK 4: perguntar da vida (o fato, não a frase), elogiar, pedir conselho, pedir ajuda com as crianças (`gestos`).
   ...INTERACOES_VIVIDAS,
   // FIX pós-REWORK 4: programas concretos (cinema, jantar, show, parque, ensinar, cozinhar...): `juntos`.
-  ...INTERACOES_JUNTOS
+  ...INTERACOES_JUNTOS,
+  // REWORK 10 · Fase C: conversar, conviver, decidir, confrontar, reparar (`convivio`).
+  ...INTERACOES_DE_CONVIVIO
 ];
 
 /* ------------------------------------------------------- Aproximação */
@@ -1508,6 +1513,7 @@ function ouve(c: CtxI): boolean {
 /* -------------------------------------------------------------- Interface */
 
 const porId = new Map(INTERACOES.map(x => [x.id, x]));
+for (const [id, g] of Object.entries(GRUPOS_DO_CONVIVIO)) registrarGrupo(id, g);
 
 const PESO_VARIANTE = { principal: 3, secundario: 2, discreto: 1, perigo: 0 } as const;
 
@@ -1574,6 +1580,8 @@ export function disponibilidadeInteracao(v: Vida, id: string, interacao: string)
     const outra = socialDoAno(v).map(a => a.split(':')).find(([, i, quem]) => ROMANTICAS.has(i) && quem !== id && ['interesse', 'saindo'].includes(v.vinculos[quem]?.romance?.estagio ?? ''));
     if (outra && !parceiro(v)) return bloqueio('incompativel', `Você já está vendo no que dá com ${v.pessoas[outra[2]]?.nome ?? 'outra pessoa'}.`);
   }
+  // REWORK 10 · BAL-03: o tempo do ano com as pessoas (uma conversa sempre cabe; uma viagem, nem sempre).
+  if (!REACOES.has(interacao)) { const t = vereditoDeTempo(v, interacao); if (t.grau !== 'permitido') return t; }
   return def.disponivel ? def.disponivel(c) : PERMITIDO;
 }
 

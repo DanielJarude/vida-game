@@ -6,6 +6,7 @@
  * existe porque um bebê nasceu.
  */
 
+import { marcoAfetivo } from '../sistemas/convivio';
 import { perfilDaVida } from '../mundo/vida';
 import { capitalizar } from '../texto';
 import { educacaoDaVida, paisDaVida } from '../mundo/vida';
@@ -183,7 +184,7 @@ export const SISTEMICOS: Conteudo[] = [
     texto: c => `No meio de um jantar comum, ${c.p.pessoa.nome} ficou em silêncio, tirou uma caixinha do bolso e perguntou se você quer casar.`,
     opcoes: [
       { id: 'sim', texto: 'Sim', comportamento: { familia: 1 },
-        resolver: c => ({ texto: 'Sim. O resto da noite foi ligação para a família.', memoria: `Ficou noiv${c.g('o', 'a', 'e')} de ${c.p.pessoa.nome}.`, relevancia: 'marco', tom: 'bom', efeito: () => { marcarFato(c.v, `noivado_${c.p.pessoa.id}`); envolvimento(c, 'pessoa', 10); feliz(c, 10); } }) },
+        resolver: c => ({ texto: 'Sim. O resto da noite foi ligação para a família.', memoria: `Ficou noiv${c.g('o', 'a', 'e')} de ${c.p.pessoa.nome}.`, relevancia: 'marco', tom: 'bom', efeito: () => { marcarFato(c.v, `noivado_${c.p.pessoa.id}`); envolvimento(c, 'pessoa', 10); feliz(c, 10); marcoAfetivo(c.v, c.p.pessoa, c.v.vinculos[c.p.pessoa.id], 'noivado'); } }) },
       { id: 'nao_agora', texto: 'Dizer que ainda não é a hora', resolver: c => ({ texto: `${c.p.pessoa.nome} guardou a caixinha. A noite acabou cedo.`, memoria: `Recusou o pedido de casamento de ${c.p.pessoa.nome}.`, tom: 'ruim', efeito: () => { envolvimento(c, 'pessoa', -18); tensao(c, 'pessoa', 20); } }) }
     ]
   },
@@ -438,6 +439,8 @@ function casar(c: Ctx, custo: number): void {
   }
   feliz(c, 12);
   lembrarCom(c.v, p.id, 'Casaram-se.', 'casamento', 3);
+  // REWORK 10 · REL-02: o casamento aproxima de verdade — sem apagar o que a relação carrega.
+  marcoAfetivo(c.v, p, vin, 'casamento');
   for (const g of [...P.genitor(c.v), ...P.irmao(c.v)]) if (c.v.vinculos[g.id].proximidade >= 40) lembrarCom(c.v, g.id, `Esteve no seu casamento com ${p.nome}.`, 'casamento', 1);
 }
 

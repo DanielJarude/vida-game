@@ -35,6 +35,7 @@ import { rotuloDe } from '../apresentar';
 import { circulos, comoEsta, etiqueta, ondeEsta, quemE, sinaisSociais, situacaoAfetiva, vidaPropria, type Par, type TipoDeSinal } from '../leitura';
 import { BotaoAcao, CabecaDaArea, Escolha, Folha, navegarAbas, Percurso, Secao, Subnav, Vazio } from '../comum';
 import { recenteDe, TEMAS_PESSOAS } from '../area';
+import { tardesDoAno, tardesUsadas } from '../../motor/sistemas/convivio';
 import { Retrato, type Expressao } from '../avatar/Retrato';
 import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
 import { leituraDaOrigem } from '../../motor/sistemas/origem';
@@ -112,7 +113,9 @@ export function Pessoas({ vida, agir, aberta, abrir, parte: parteDeFora, irParte
         fatos={[
           ...(i >= 14 ? [{ rotulo: 'No amor', valor: afeto || (par ? par.p.nome : 'sem ninguém agora') }] : []),
           { rotulo: 'Em casa', valor: c.nucleo.filter(x => x.vin.convivio.includes('casa')).map(x => x.p.nome).filter(Boolean).slice(0, 3).join(', ') || (moraComPais ? 'com a família' : 'ninguém') },
-          ...(conflitos ? [{ rotulo: 'Em conflito', valor: `${conflitos} ${conflitos === 1 ? 'pessoa' : 'pessoas'}`, tom: 'ruim' as const }] : [])
+          ...(conflitos ? [{ rotulo: 'Em conflito', valor: `${conflitos} ${conflitos === 1 ? 'pessoa' : 'pessoas'}`, tom: 'ruim' as const }] : []),
+          // REWORK 10 · BAL-03: o tempo do ano para as pessoas (programas gastam tardes; conversas, quase nada).
+          ...(i >= 10 ? [(() => { const sobra = Math.max(0, Math.round(tardesDoAno(vida) - tardesUsadas(vida))); return { rotulo: 'Tempo para as pessoas', valor: sobra >= 1 ? `${sobra} ${sobra === 1 ? 'tarde livre' : 'tardes livres'} no ano` : 'o ano já foi gasto', tom: sobra < 3 ? 'ruim' as const : undefined }; })()] : [])
         ]}
         recente={recenteDe(vida, TEMAS_PESSOAS)}
         proximo={primeiro ? undefined : i >= 15 && !par && !vida.justica?.prisao ? { texto: 'Ninguém pedindo nada. Dá para procurar alguém, se quiser.', rotulo: 'Conhecer alguém', ir: () => document.getElementById('conhecer-alguem')?.scrollIntoView?.({ block: 'start' }) } : undefined} />
