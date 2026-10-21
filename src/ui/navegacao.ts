@@ -22,7 +22,7 @@
  */
 
 export type Area = 'linha' | 'voce' | 'pessoas' | 'caminhos' | 'tempo' | 'vida';
-export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'pertences' | 'cidade' | 'viagens';
+export type SecaoVida = 'casa' | 'dinheiro' | 'compras' | 'pertences' | 'cidade' | 'viagens' | 'apostas';
 /** As abas de Minha Semana: a agenda primeiro; depois "quero fazer algo físico", "um hobby", "sair, ver gente", "o celular". */
 export type SecaoTempo = 'semana' | 'corpo' | 'atividades' | 'gente' | 'redes';
 /**
@@ -56,7 +56,7 @@ export interface Lugar {
 }
 
 const DE_TEMPO = new Set<string>(['semana', 'corpo', 'atividades', 'gente', 'redes']);
-const DE_VIDA = new Set<string>(['casa', 'dinheiro', 'compras', 'pertences', 'cidade', 'viagens']);
+const DE_VIDA = new Set<string>(['casa', 'dinheiro', 'compras', 'pertences', 'cidade', 'viagens', 'apostas']);
 const DE_CAMINHOS = new Set<string>(['agora', 'desenvolvimento', 'oportunidades', 'historico']);
 export function resolverDestino(d: Aba): Lugar {
   if (d === 'estudos' || d === 'formacao') return { area: 'caminhos', divisao: 'estudos', parte: 'agora', foco: 'formacao' };
@@ -132,7 +132,9 @@ export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'pertences', rotulo: 'Patrimônio', oque: 'O que é seu: imóveis, veículos, aplicações e objetos — o estado, usar, vender' },
   { id: 'cidade', rotulo: 'Cidade', oque: 'Onde você vive, quanto custa viver aqui, o trajeto, mudar de cidade ou de país' },
   // REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram do tempo livre para Vida.
-  { id: 'viagens', rotulo: 'Viagens', oque: 'Viagens e experiências: destino, duração, com quem' }
+  { id: 'viagens', rotulo: 'Viagens', oque: 'Viagens e experiências: destino, duração, com quem' },
+  // REWORK 10 · JOG-01: a loteria e o cassino, com o dinheiro do jogo (carregados sob demanda).
+  { id: 'apostas', rotulo: 'Apostas', oque: 'Loteria, blackjack, roleta e caça-níquel — só com o dinheiro do jogo, para maiores de idade' }
 ];
 
 export const rotuloDoLugar = (l: Lugar) => {
@@ -183,6 +185,7 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'rede', quero: 'Postar no Instagram, crescer no YouTube, as redes sociais', lugar: { area: 'tempo', aba: 'redes' }, la: 'cada plataforma: postar, crescer, monetizar, apagar a conta' },
   { id: 'usar_carro', quero: 'Usar o meu carro, a moto, a bicicleta', lugar: { area: 'vida', secao: 'pertences' }, la: 'o veículo, com o que dá para fazer com ele' },
   { id: 'dinheiro', quero: 'Ver meu dinheiro, pedir ajuda à família', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês, o que é seu, a família' },
+  { id: 'apostar', quero: 'Jogar na loteria, no cassino', lugar: { area: 'vida', secao: 'apostas' }, la: 'Vida · Apostas: loteria, blackjack, roleta, caça-níquel' },
   { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce', voce: 'aparencia' }, la: 'Você · "Aparência e estilo"' },
   { id: 'cirurgia', quero: 'Fazer uma cirurgia plástica (nariz, orelhas, cabelo, lifting)', lugar: { area: 'vida', secao: 'compras' }, la: '"Você": a clínica de cirurgia plástica' },
   { id: 'saude', quero: 'Cuidar da saúde, da cabeça', lugar: { area: 'voce', voce: 'resumo' }, la: 'Você · Resumo: humor, cabeça e saúde (e o prontuário, em Saúde)' },

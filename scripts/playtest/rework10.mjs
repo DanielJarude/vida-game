@@ -53,7 +53,15 @@ const TODAS = [
   ['vida-cidade', 'empregado', 'Vida', 'secao:Cidade'],
   ['vida-viagens', 'empregado', 'Vida', 'secao:Viagens'],
   ['momento', 'decisao', 'História'],
-  ['criacao', 'empregado', 'criacao']
+  ['criacao', 'empregado', 'criacao'],
+  // Fase E: as mesas (com uma rodada jogada: o resultado é o que aparece)
+  ['apostas-loteria', 'posses', 'Vida', 'secao:Apostas', 're:Escolher ao acaso', 're:Comprar e conferir'],
+  ['apostas-blackjack', 'posses', 'Vida', 'secao:Apostas', 'aba:Blackjack', 're:^Apostar'],
+  ['apostas-roleta', 'posses', 'Vida', 'secao:Apostas', 'aba:Roleta', 're:^Vermelho$', 're:Apostar no', 're:Girar a roda'],
+  ['apostas-niquel', 'posses', 'Vida', 'secao:Apostas', 'aba:Caça-níquel', 're:^Girar'],
+  // Fase C/D: a ficha com conflito e a tela à margem
+  ['pessoas-conflito', 'briga', 'Pessoas', 'ficha'],
+  ['caminhos-margem', 'presa', 'Caminhos', 'div:Outros caminhos']
 ];
 const so = process.env.CENAS?.split(',');
 const cenas = so ? TODAS.filter(c => so.includes(c[0])) : TODAS;
@@ -215,6 +223,8 @@ for (const [nome, sv, area, ...passos] of cenas) {
           const r = p.locator('.pessoa--falecida').first(); if (await r.count()) { await r.click(); await p.waitForTimeout(350); } else notas.push(`${rot}: sem quem se foi para abrir`);
         } else if (passo.startsWith('rede:')) {
           const r = p.locator('.plataforma', { hasText: passo.slice(5) }).first(); if (await r.count()) { await r.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem rede ${passo}`);
+        } else if (passo.startsWith('re:')) {
+          const r = p.getByRole('button', { name: new RegExp(passo.slice(3)) }).locator('visible=true').first(); if (await r.count() && await r.isEnabled()) { await r.click(); await p.waitForTimeout(passo.includes('Girar') ? 2600 : 500); } else notas.push(`${rot}: sem botão (ou desabilitado) ${passo}`);
         } else if (passo.startsWith('botao:')) {
           const r = p.getByRole('button', { name: passo.slice(6), exact: true }).locator('visible=true').first(); if (await r.count()) { await r.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem botão ${passo}`);
         } else if (passo === 'bloco') {

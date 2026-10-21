@@ -83,6 +83,7 @@ import { processarBolsaDeAtleta } from './sistemas/naFormacao';
 import { processarConvivio } from './sistemas/convivio';
 import { processarTribunal } from './sistemas/tribunal';
 import { processarMargem } from './sistemas/margem';
+import { processarApostas } from './sistemas/apostas';
 
 export interface ResumoDoAno {
   idade: number;
@@ -205,6 +206,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarMargem(v);
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);
+  // REWORK 10 · JOG-01: a mão esquecida na mesa, e o jogo que virou assunto (antes das contas do ano).
+  processarApostas(v);
   processarDinheiro(v, r, ec);
   processarObrigacoes(v);
   // A primeira vez que as contas foram todas suas (a transição, não uma data): `independencia`.

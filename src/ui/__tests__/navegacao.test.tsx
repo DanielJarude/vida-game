@@ -114,6 +114,8 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     agenda: /A agenda da semana/, dedicacao: /A agenda da semana/, celular: /Tela inicial|Instagram/, homenagear: /Em memória|Quem se foi|Família/,
     agradecer: /Família|Amigos|Perto|Gente da sua vida/, triste: /pesa|Cabeça|Como você está/, aparencia: /História/, profissional: /A sua situação agora|Procurar outro caminho/,
     // REWORK 9.6: as divisões de Caminhos.
+    // REWORK 10: as apostas (o pacote dos jogos chega sob demanda — o teste vê a tela ou o "carregando" dela).
+    apostar: /Loteria|Carregando/,
     concurso: /Concursos|Carreiras públicas/, carreira_esporte: /Esporte, arte, universidade/, boletim: /Boletim|O ano letivo|Ainda não há o que medir/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {

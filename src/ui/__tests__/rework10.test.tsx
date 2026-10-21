@@ -111,3 +111,36 @@ describe('CRI-01 · À margem e a Justiça', () => {
     expect(within(ficha).getByRole('button', { name: /Assumir o que fez/ })).toBeTruthy();
   });
 });
+
+import { Apostas } from '../jogo/Apostas';
+
+describe('JOG-01 · as mesas', () => {
+  it('a loteria: seis números marcados, a compra manda a ação com os números; as regras dizem as chances', () => {
+    const v = transacao(base(), x => { x.financas.conta = 5000; }).vida;
+    const agir = vi.fn(() => true);
+    render(<main><Apostas vida={v} agir={agir} /></main>);
+    const grade = screen.getByRole('group', { name: 'Escolha seis números' });
+    for (const n of ['03', '08', '15', '22', '31', '40']) fireEvent.click(within(grade).getByRole('button', { name: n }));
+    fireEvent.click(screen.getByRole('button', { name: /Comprar e conferir/ }));
+    expect(agir).toHaveBeenCalledWith({ tipo: 'aposta', op: { jogo: 'loteria', numeros: [3, 8, 15, 22, 31, 40] } });
+    expect(screen.getByText(/devolve 41,3%/)).toBeTruthy();
+  });
+
+  it('o blackjack: com a mão na mesa, só pedir, parar e dobrar (não há botão de divisão sem regra); a carta da banca fica virada', () => {
+    const v = transacao(base(), x => { x.financas.conta = 5000; x.apostas = { ultimas: [], ano: { t: x.t, apostado: 100, recebido: 0 }, total: { apostado: 100, recebido: 0 }, mao: { aposta: 100, voce: [{ v: 5, n: 'copas' }, { v: 6, n: 'paus' }], banca: [{ v: 10, n: 'ouros' }, { v: 7, n: 'espadas' }], baralho: [{ v: 2, n: 'copas' }], t: x.t } }; }).vida;
+    render(<main><Apostas vida={v} agir={() => true} /></main>);
+    fireEvent.click(screen.getByRole('tab', { name: 'Blackjack' }));
+    expect(screen.getByRole('button', { name: 'Pedir carta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Dobrar/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Dividir|Seguro/ })).toBeNull();
+    expect(screen.getByLabelText('carta virada')).toBeTruthy();
+  });
+
+  it('menor de idade não vê mesa nenhuma', () => {
+    const v = transacao(base(), x => { x.eu.tNasc = x.t - 15 * 12; }).vida;
+    render(<main><Apostas vida={v} agir={() => true} /></main>);
+    expect(screen.getByText(/maior de idade/)).toBeTruthy();
+    expect(screen.queryByRole('tab')).toBeNull();
+  });
+});

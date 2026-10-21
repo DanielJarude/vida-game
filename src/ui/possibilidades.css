@@ -103,3 +103,71 @@
 .margem__cabeca { display: flex; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--fio); padding-bottom: var(--space-2); margin: 0; }
 .margem__antecedentes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--type-body); }
 .margem__ano { font-variant-numeric: tabular-nums; color: var(--text-muted); margin-right: var(--space-2); }
+
+/* ------------------------------------------------------------ Fase E: as apostas (loteria, blackjack, roleta, caça-níquel) */
+:root { --roleta-verde: #1f7a4d; --roleta-vermelho: #b8322d; --roleta-preto: #22262c; --roleta-fio: #e8dfc9; --roleta-centro: #6b4a2b;
+  --niquel-folha: #6f9a4a; --niquel-sino: #e0b13c; --niquel-estrela: #f0c94b; --niquel-moeda: #d9a441; --niquel-raposa: #d7743a; --niquel-traco: #2b2620; --feltro: #1f5d43; }
+.apostas { display: flex; flex-direction: column; gap: var(--space-4); }
+.apostas__cabeca { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--veu-1); }
+.apostas__aviso { margin: 0; font-family: var(--font-serif); color: var(--text-primary); }
+.apostas__fichas { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.apostas__controle > summary, .regras > summary { min-height: var(--touch-target); display: flex; align-items: center; cursor: pointer; font-weight: var(--weight-semibold); color: var(--text-secondary); }
+.regras { border-top: 1px solid var(--fio); padding-top: var(--space-2); font-size: var(--type-caption); }
+.regras ul { margin: 0; padding-left: var(--space-4); display: flex; flex-direction: column; gap: 4px; }
+.regras__tabela { border-collapse: collapse; margin: var(--space-2) 0; font-variant-numeric: tabular-nums; }
+.regras__tabela th, .regras__tabela td { text-align: left; padding: 4px var(--space-3) 4px 0; border-bottom: 1px solid var(--fio); }
+.resultado-aposta { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--superficie-topo); box-shadow: inset 0 0 0 1px var(--fio-forte); font-family: var(--font-serif); color: var(--text-primary); }
+.resultado-aposta__rotulo { font-family: var(--font-sans); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); margin: 0 0 var(--space-2); }
+.fichas-aposta { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ficha-aposta { display: inline-flex; align-items: center; justify-content: center; min-width: var(--touch-target); min-height: var(--touch-target); padding: 0 var(--space-3); border-radius: var(--radius-pill); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; background: var(--superficie); box-shadow: inset 0 0 0 2px var(--fio-forte); color: var(--text-primary); }
+.ficha-aposta--escolhida { box-shadow: inset 0 0 0 3px var(--acao); background: color-mix(in oklab, var(--acao) 12%, var(--superficie)); }
+/* a loteria */
+.bilhete { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.bilhete__cabeca { display: flex; justify-content: space-between; margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--text-muted); }
+.bilhete__grade { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.bilhete__numero { min-height: 36px; border-radius: var(--radius-sm); font-variant-numeric: tabular-nums; font-size: var(--type-caption); color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--fio-forte); background: var(--superficie); }
+.bilhete__numero--sorteado { box-shadow: inset 0 0 0 2px var(--acao); }
+.bilhete__numero--marcado { background: var(--tinta); color: var(--fundo); box-shadow: none; }
+.loteria__bolas { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.loteria__bola { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: var(--weight-semibold); font-family: var(--font-sans); background: radial-gradient(circle at 35% 30%, #fff, #f0e6cf); color: #2b2620; box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); animation: bola-cai 0.4s both; }
+.loteria__bola:nth-child(2) { animation-delay: 0.1s; } .loteria__bola:nth-child(3) { animation-delay: 0.2s; } .loteria__bola:nth-child(4) { animation-delay: 0.3s; } .loteria__bola:nth-child(5) { animation-delay: 0.4s; } .loteria__bola:nth-child(6) { animation-delay: 0.5s; }
+@keyframes bola-cai { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* a mesa (blackjack) */
+.mesa { display: flex; flex-direction: column; gap: var(--space-3); }
+.mesa__feltro { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-lg); background-color: var(--feltro); background-image: radial-gradient(ellipse at center, color-mix(in oklab, var(--feltro) 85%, white), var(--feltro)); color: #f4efe2; min-height: 220px; }
+.mesa__rotulo { margin: 0 0 var(--space-2); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-semibold); color: #e9e2cf; }
+.mesa__cartas { display: flex; flex-wrap: wrap; gap: var(--space-2); min-height: 76px; }
+.carta { width: 52px; height: 74px; border-radius: 6px; background: #fbf8f0; color: #22262c; display: flex; flex-direction: column; justify-content: space-between; padding: 4px 6px; box-shadow: 0 2px 4px rgb(0 0 0 / 0.3); font-family: var(--font-sans); animation: carta-chega 0.25s both; }
+.carta--vermelha { color: #b8322d; }
+.carta__valor { font-weight: 700; font-size: 1.05rem; }
+.carta__naipe { align-self: flex-end; font-size: 1.3rem; }
+.carta--virada { background: repeating-linear-gradient(45deg, #7a2a2a 0 6px, #8e3434 6px 12px); }
+@keyframes carta-chega { from { transform: translateY(-8px) rotate(-3deg); opacity: 0; } to { transform: none; opacity: 1; } }
+/* a roleta */
+.roleta { display: grid; grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.roda { width: 100%; max-width: 280px; height: auto; }
+.roda__giro { transform-origin: 0 0; transform: rotate(var(--angulo)); animation: roda-gira 2.4s cubic-bezier(0.18, 0.7, 0.2, 1) both; }
+@keyframes roda-gira { from { transform: rotate(0deg); } to { transform: rotate(var(--angulo)); } }
+.roda__numero { font-size: 7px; fill: #fff; font-family: var(--font-sans); font-weight: 600; }
+.roda__ponteiro { fill: var(--acao); }
+.roleta__mesa { display: flex; flex-direction: column; gap: var(--space-3); }
+.roleta__fora { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.roleta__aposta { min-height: var(--touch-target); border-radius: var(--radius-sm); font-weight: var(--weight-medium); background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio-forte); color: var(--text-primary); }
+.roleta__aposta--vermelho { background: var(--roleta-vermelho); color: #fff; box-shadow: none; }
+.roleta__aposta--preto { background: var(--roleta-preto); color: #fff; box-shadow: none; }
+.roleta__numero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
+.roleta__numero input { width: 6rem; }
+/* o caça-níquel */
+.niquel { padding: var(--space-4); border-radius: var(--radius-lg); background-color: #5e2f15; background-image: linear-gradient(#7b3f1d, #4d2611); color: #f8e9c9; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.niquel__nome { margin: 0; font-family: var(--font-serif); font-size: var(--type-heading); letter-spacing: 0.04em; }
+.niquel__janela { display: grid; grid-template-columns: repeat(3, 72px); gap: var(--space-2); padding: var(--space-2); border-radius: var(--radius-md); background: #f8f2e2; }
+.niquel__rolo { height: 72px; display: grid; place-items: center; border-radius: var(--radius-sm); background: #fffdf6; box-shadow: inset 0 0 6px rgb(0 0 0 / 0.15); animation: rolo-para 0.6s var(--atraso) both; }
+.simbolo { width: 52px; height: 52px; }
+@keyframes rolo-para { 0% { transform: translateY(-30px); opacity: 0.2; } 70% { transform: translateY(4px); opacity: 1; } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .roda__giro, .niquel__rolo, .carta, .loteria__bola { animation: none; } }
+@media (max-width: 760px) {
+  .roleta { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .roleta__mesa { width: 100%; }
+  .bilhete__grade { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .bilhete__numero { min-height: 40px; }
+}

@@ -95,6 +95,7 @@ import { disponibilidadeOficio, executarOficio, type OqueOficio } from './sistem
 import { disponibilidadeFormacao, executarFormacao, type OqueFormacao } from './sistemas/naFormacao';
 import { reacaoDaParceriaAMudanca } from './sistemas/convivio';
 import { disponibilidadeMargem, executarMargem, type OqueMargem } from './sistemas/margem';
+import { disponibilidadeAposta, executarAposta, type OpAposta } from './sistemas/apostas';
 import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
@@ -239,7 +240,9 @@ export type Acao =
   /** REWORK 9: a agenda da semana — o turno do que tem turno, o lugar (dias e hora) de cada atividade: `agenda`. */
   | { tipo: 'agenda'; op: OpAgenda }
   /** REWORK 10 · CRI-01: a vida à margem e o processo (procurar ajuda, negociar a saída, assumir, cooperar, a defesa, a reabilitação). */
-  | { tipo: 'margem'; oque: OqueMargem };
+  | { tipo: 'margem'; oque: OqueMargem }
+  /** REWORK 10 · JOG-01: loteria, roleta, caça-níquel e blackjack — só com o dinheiro do jogo (`apostas`). */
+  | { tipo: 'aposta'; op: OpAposta };
 
 
 const TITULO_CUIDADO: Record<TipoCuidado, string> = { descansar: 'Uns dias de descanso', consulta: 'No médico', parar_fumar: 'Parar de fumar', beber_menos: 'Beber menos' };
@@ -293,6 +296,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'agenda': return disponibilidadeDaAgenda(v, a.op);
     case 'margem': return disponibilidadeMargem(v, a.oque);
+    case 'aposta': return disponibilidadeAposta(v, a.op);
     case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
     case 'oportunidade': {
       const o = v.caminhos.oportunidades.find(x => x.id === a.id);
@@ -760,6 +764,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'formacao': return ['Na escola e na faculdade', 'escolha'];
     case 'decidir': return ['Decisões do ano', 'escolha'];
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
+    case 'aposta': return ['Apostas (loteria e cassino)', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
 }
@@ -771,6 +776,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
   const i = idade(v);
   switch (a.tipo) {
     case 'agenda': return ok(executarNaAgenda(v, a.op));
+    case 'aposta': { const res = executarAposta(v, r, a.op); if (a.op.jogo === 'controle') return ok(a.op.oque === 'autoexcluir' ? 'Fora das apostas por um ano: a mesa fica fechada para você.' : v.apostas?.limiteAnual ? 'Limite de perda do ano: definido.' : 'O limite saiu.'); return res ? ok(res.texto, res.recebido > res.apostado ? 'bom' : res.recebido < res.apostado ? 'ruim' : 'neutro') : ok('A mão continua: pedir ou parar?'); }
     case 'margem': return { resultado: executarMargem(v, r, a.oque), titulo: a.oque === 'reabilitacao' ? 'A reabilitação' : a.oque === 'procurar_ajuda' ? 'Pedir ajuda' : 'O processo' };
     case 'prisao': { const x = executarPrisao(v, a.oque); return a.oque === 'conviver' || a.oque === 'visitas' || a.oque === 'fugir' ? { resultado: x.texto, titulo: a.oque === 'fugir' ? 'A fuga' : a.oque === 'visitas' ? 'Dia de visita' : 'No pavilhão' } : ok(x.texto, x.tom); }
     case 'resgatar_e': {

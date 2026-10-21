@@ -2451,6 +2451,8 @@ export interface Vida {
   agenda?: AgendaGuardada;
   /** REWORK 9 · PROG-01: a fotografia de cada ano (os últimos oito): o que andou e por quê (`sistemas/progressao`). */
   evolucao?: FotoDoAno[];
+  /** REWORK 10 · JOG-01: as apostas (loteria, blackjack, roleta, caça-níquel), só com o dinheiro do jogo. Ausente: nunca apostou. */
+  apostas?: EstadoDasApostas;
 }
 
 /** Um ano fotografado: só as frentes que mudaram, as causas que pesaram, as notas, o trabalho, o esporte. */
@@ -2470,6 +2472,36 @@ export interface FotoDoAno {
   rotina?: { faixa: string; estresse: number; conflitos: number; postura?: 'dedicada' | 'normal' | 'relaxada'; estudo?: number };
 }
 
+
+/* ------------------------------------------------------------------- Apostas (REWORK 10 · JOG-01, `sistemas/apostas`) */
+
+export type TipoDeApostaNaRoleta = 'vermelho' | 'preto' | 'par' | 'impar' | 'baixo' | 'alto' | 'duzia1' | 'duzia2' | 'duzia3' | 'numero';
+export interface ApostaNaRoleta { tipo: TipoDeApostaNaRoleta; valor: number; numero?: number }
+export type Simbolo = 'folha' | 'sino' | 'estrela' | 'moeda' | 'raposa';
+export type Naipe = 'copas' | 'ouros' | 'espadas' | 'paus';
+export interface Carta { v: number; n: Naipe }
+export interface MaoDeBlackjack { aposta: number; voce: Carta[]; banca: Carta[]; baralho: Carta[]; dobrou?: boolean; t: number }
+export type JogoDeAzar = 'loteria' | 'blackjack' | 'roleta' | 'niquel';
+export interface ResultadoDeAposta {
+  jogo: JogoDeAzar; t: number; apostado: number; recebido: number; texto: string;
+  /** O que a tela mostra: os números sorteados, a casa da roleta, os símbolos dos rolos, as mãos do blackjack. */
+  sorteio?: number[]; acertos?: number; casa?: number; rolos?: Simbolo[]; voce?: Carta[]; banca?: Carta[];
+}
+export interface EstadoDasApostas {
+  /** A mão de blackjack em andamento (sobrevive a sair da tela e a recarregar). */
+  mao?: MaoDeBlackjack;
+  /** As últimas rodadas (a tela mostra; as dez mais recentes). */
+  ultimas: ResultadoDeAposta[];
+  /** O ano corrente: quanto se apostou e quanto voltou. */
+  ano: { t: number; apostado: number; recebido: number };
+  /** O balanço da vida inteira. */
+  total: { apostado: number; recebido: number };
+  /** Anos seguidos perdendo muito (para o assunto da vida, não para uma "dependência"). */
+  anosPesados?: number;
+  /** A autoexclusão pedida (sem apostar até `ate`) e o limite do ano que a pessoa se deu. */
+  autoexclusao?: number;
+  limiteAnual?: number;
+}
 
 /* ------------------------------------------------------------------- Agenda (REWORK 9) */
 

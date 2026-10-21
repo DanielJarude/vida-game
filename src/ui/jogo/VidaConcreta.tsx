@@ -40,6 +40,10 @@ import { dinheiroCurto } from '../leituraMaterial';
 import { SECOES_VIDA, type Aba, type SecaoVida } from '../navegacao';
 import { Experiencias } from './Tempo';
 import '../material.css';
+import { sobDemanda } from '../util/sobDemanda';
+
+/** REWORK 10 · JOG-01: os jogos num pacote à parte (só carregam quando se abre a seção; o service worker guarda para o offline). */
+const Apostas = sobDemanda(() => import('./Apostas').then(m => m.Apostas));
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; secao: SecaoVida; irSecao: (s: SecaoVida) => void; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }
 
@@ -89,6 +93,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
         {/* REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram de Tempo livre. */}
         {secao === 'viagens' && (i >= 12 ? <Experiencias vida={vida} agir={agir} /> : <p className="nota">Viajar, por enquanto, é com a família — quando ela decide ir.</p>)}
+        {secao === 'apostas' && <Apostas vida={vida} agir={agir} />}
       </div>
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
     </div>

@@ -642,3 +642,156 @@ describe('CRI-01 · o processo: absolvição, condenação, prisão, acordo, fia
     if (lido.tipo === 'ok') expect(JSON.stringify(lido.vida)).toBe(JSON.stringify(v));
   });
 });
+
+/* ================================================================ Fase E · os jogos (§18) */
+
+import {
+  chanceLoteria, ehBlackjack, estrategiaBasica, jogarNiquel, jogarRoleta, apostarBlackjack, pedirCarta, dobrar, parar as pararBJ, LOTERIA, PAGA_ROLETA, rtpLoteria, rtpNiquel, sortearLoteria,
+  valorDaMao, VERMELHOS, acertaNaRoleta, premioDaLinha, ROLO, type OpAposta
+} from '../sistemas/apostas';
+import type { ApostaNaRoleta, Carta } from '../tipos';
+
+const C = (v: number, n: Carta['n'] = 'copas'): Carta => ({ v, n });
+const rica = () => em(pessoa28(), x => { x.financas.conta = 1e9; x.apostas = undefined; });
+const ap = (v: Vida, op: OpAposta) => executar(v, { tipo: 'aposta', op });
+
+describe('JOG-01 · blackjack', () => {
+  it('o valor das mãos: ás 11 ou 1, figuras 10, o blackjack só nas duas primeiras', () => {
+    expect(valorDaMao([C(1), C(13)]).total).toBe(21);
+    expect(ehBlackjack([C(1), C(12)])).toBe(true);
+    expect(ehBlackjack([C(7), C(7), C(7)])).toBe(false);
+    expect(valorDaMao([C(1), C(1), C(9)]).total).toBe(21);
+    expect(valorDaMao([C(1), C(6)])).toEqual({ total: 17, macia: true });
+    expect(valorDaMao([C(1), C(6), C(10)])).toEqual({ total: 17, macia: false });
+    expect(valorDaMao([C(10), C(9), C(5)]).total).toBe(24);
+  });
+
+  it('milhares de mãos com a estratégia básica: a banca para no 17, o saldo bate com as rodadas, a casa fica com ~1%', () => {
+    // (as funções da mesa direto numa vida só: 3.000 transações copiariam a vida inteira 3.000 vezes)
+    const v = rica();
+    const rr = criarRng(2026);
+    const inicio = v.financas.conta;
+    let apostado = 0, recebido = 0, bjs = 0, empates = 0, estouros = 0;
+    for (let k = 0; k < 3000; k++) {
+      let r = apostarBlackjack(v, rr, 100);
+      for (let g = 0; g < 12 && !r && v.apostas?.mao; g++) {
+        const m = v.apostas.mao;
+        const d = estrategiaBasica(m.voce, m.banca[0]);
+        r = d === 'dobrar' && m.voce.length === 2 ? dobrar(v) : d === 'pedir' ? pedirCarta(v) : pararBJ(v);
+      }
+      r = r ?? v.apostas!.ultimas[0];
+      apostado += r.apostado; recebido += r.recebido;
+      if (r.recebido === r.apostado * 2.5) bjs++;
+      if (r.recebido === r.apostado) empates++;
+      const vb = valorDaMao(r.banca!).total, vv = valorDaMao(r.voce!).total;
+      if (vv > 21) estouros++;
+      if (vv <= 21 && !ehBlackjack(r.voce!) && !ehBlackjack(r.banca!)) expect(vb).toBeGreaterThanOrEqual(17);
+      expect([0, 1, 2, 2.5]).toContain(r.recebido / r.apostado);
+    }
+    expect(v.financas.conta - inicio).toBeCloseTo(recebido - apostado, 4);
+    const vantagem = (apostado - recebido) / apostado;
+    expect(vantagem).toBeGreaterThan(-0.04);
+    expect(vantagem).toBeLessThan(0.05);
+    expect(bjs / 3000).toBeGreaterThan(0.03); expect(bjs / 3000).toBeLessThan(0.07);
+    expect(empates).toBeGreaterThan(0);
+    expect(estouros).toBeGreaterThan(0);
+  });
+
+  it('dobrar só nas duas primeiras; não se aposta mais do que há na conta; a mão sobrevive ao save e se perde se o ano andar', () => {
+    let v = em(pessoa28(), x => { x.financas.conta = 150; x.apostas = undefined; });
+    expect(podeTentar(disponibilidade(v, { tipo: 'aposta', op: { jogo: 'blackjack', oque: 'apostar', valor: 200 } }))).toBe(false);
+    for (let k = 0; k < 20; k++) {
+      const w = ap(comRng(v, k), { jogo: 'blackjack', oque: 'apostar', valor: 100 }).vida;
+      if (!w.apostas?.mao) continue;
+      // Conta 50: dobrar pede mais 100 — não dá.
+      expect(podeTentar(disponibilidade(w, { tipo: 'aposta', op: { jogo: 'blackjack', oque: 'dobrar' } }))).toBe(false);
+      const lido = interpretar(JSON.stringify(w));
+      expect(lido.tipo).toBe('ok');
+      if (lido.tipo === 'ok') expect(lido.vida.apostas?.mao?.voce).toEqual(w.apostas.mao.voce);
+      v = avancarAno(w).vida;
+      expect(v.apostas?.mao).toBeUndefined();
+      expect(v.apostas!.ultimas.some(x => /ficou na mesa/.test(x.texto))).toBe(true);
+      break;
+    }
+  });
+});
+
+describe('JOG-01 · roleta, loteria e caça-níquel: as contas certas', () => {
+  it('roleta europeia: 37 casas com frequência uniforme; pagamentos 1:1, 2:1, 35:1; o zero perde as de fora; RTP ~97,3%', () => {
+    const v = rica();
+    const rr = criarRng(37);
+    const freq = new Array(37).fill(0);
+    let apostado = 0, recebido = 0;
+    for (let k = 0; k < 7400; k++) {
+      const apostas: ApostaNaRoleta[] = [{ tipo: 'vermelho', valor: 10 }, { tipo: 'numero', valor: 10, numero: 17 }, { tipo: 'duzia2', valor: 10 }];
+      const r = jogarRoleta(v, rr, apostas);
+      freq[r.casa!]++;
+      apostado += r.apostado; recebido += r.recebido;
+      const esperado = apostas.filter(a => acertaNaRoleta(a, r.casa!)).reduce((s, a) => s + a.valor * PAGA_ROLETA[a.tipo], 0);
+      expect(r.recebido).toBe(esperado);
+    }
+    const qui = freq.reduce((s, f) => s + (f - 200) ** 2 / 200, 0);
+    expect(qui).toBeLessThan(70); // 36 graus de liberdade: p≈0,001 em ~67
+    expect(recebido / apostado).toBeGreaterThan(0.9); expect(recebido / apostado).toBeLessThan(1.05);
+    expect(acertaNaRoleta({ tipo: 'vermelho', valor: 1 }, 0)).toBe(false);
+    expect(acertaNaRoleta({ tipo: 'numero', valor: 1, numero: 0 }, 0)).toBe(true);
+    expect(VERMELHOS.size).toBe(18);
+  });
+
+  it('loteria: as chances exatas somam 1, o retorno é 41,3%, o sorteio tem seis números distintos de 1 a 40, e o bilhete paga o que diz', () => {
+    expect([0, 1, 2, 3, 4, 5, 6].reduce((s, k) => s + chanceLoteria(k), 0)).toBeCloseTo(1, 10);
+    expect(rtpLoteria()).toBeCloseTo(0.4131, 3);
+    for (let k = 0; k < 200; k++) { const s = sortearLoteria(criarRng(k)); expect(new Set(s).size).toBe(6); expect(s.every(n => n >= 1 && n <= 40)).toBe(true); }
+    let v = rica();
+    let tres = 0;
+    for (let k = 0; k < 600; k++) {
+      v = ap(v, { jogo: 'loteria', numeros: [3, 8, 15, 22, 31, 40] }).vida;
+      const r = v.apostas!.ultimas[0];
+      expect(r.acertos).toBe([3, 8, 15, 22, 31, 40].filter(n => r.sorteio!.includes(n)).length);
+      expect(r.recebido).toBe((LOTERIA.premio[r.acertos!] ?? 0) * r.apostado);
+      if (r.acertos === 3) tres++;
+    }
+    expect(tres).toBeGreaterThan(6); expect(tres).toBeLessThan(40); // ~3,1% de 600 ≈ 19
+    expect(podeTentar(disponibilidade(v, { tipo: 'aposta', op: { jogo: 'loteria', numeros: [1, 2, 3] } }))).toBe(false);
+  });
+
+  it('caça-níquel: o retorno exato é 91,99%; os rolos saem na proporção das posições; nada muda com o saldo (sem quase-vitória fabricada)', () => {
+    expect(rtpNiquel()).toBeCloseTo(30144 / 32768, 10);
+    const cont: Record<string, number> = {};
+    let pobre = 0, rico = 0;
+    const r1 = criarRng(1), r2 = criarRng(1);
+    const a = em(pessoa28(), x => { x.financas.conta = 1e9; }), b = em(pessoa28(), x => { x.financas.conta = 20; });
+    for (let k = 0; k < 16000; k++) {
+      const x = jogarNiquel(a, r1, 10);
+      for (const s of x.rolos!) cont[s] = (cont[s] ?? 0) + 1;
+      rico += x.recebido;
+      pobre += jogarNiquel(b, r2, 10).recebido;
+    }
+    for (const s of Object.keys(ROLO) as (keyof typeof ROLO)[]) expect(cont[s] / 48000).toBeCloseTo(ROLO[s] / 32, 1);
+    expect(rico).toBe(pobre); // a mesma sequência dá o mesmo — o saldo não muda o sorteio
+    expect(rico / 160000).toBeGreaterThan(0.8); expect(rico / 160000).toBeLessThan(1.05);
+    expect(premioDaLinha(['raposa', 'raposa', 'folha'])).toBe(10);
+    expect(premioDaLinha(['folha', 'raposa', 'raposa'])).toBe(0);
+  });
+
+  it('as regras do lugar e do bolso: menor de idade não aposta; onde é proibido, não existe; autoexclusão e limite valem', () => {
+    const jovem = em(pessoa28(), x => { x.eu.tNasc = x.t - 16 * 12; });
+    expect(podeTentar(disponibilidade(jovem, { tipo: 'aposta', op: { jogo: 'niquel', valor: 10 } }))).toBe(false);
+    let v = rica();
+    v = ap(v, { jogo: 'controle', oque: 'autoexcluir' }).vida;
+    expect(podeTentar(disponibilidade(v, { tipo: 'aposta', op: { jogo: 'niquel', valor: 10 } }))).toBe(false);
+    expect(disponibilidade(v, { tipo: 'aposta', op: { jogo: 'niquel', valor: 10 } }).motivo).toMatch(/autoexclusão/);
+  });
+
+  it('o jogo que vira assunto: dois anos perdendo muito abrem a conversa; jogar uma vez não abre nada', () => {
+    let uma = rica();
+    uma = ap(uma, { jogo: 'niquel', valor: 10 }).vida;
+    uma = avancarAno(uma).vida;
+    expect(uma.fatos['apo_conversa']).toBeUndefined();
+    // Dois anos seguidos perdendo mais de um quarto da renda (o livro do ano, como a mesa o deixa).
+    let pesado = em(pessoa28(), x => { x.financas.conta = 5e6; x.apostas = { ultimas: [], ano: { t: x.t, apostado: 60000, recebido: 1000 }, total: { apostado: 60000, recebido: 1000 } }; });
+    pesado = transacao(avancarAno(pesado).vida, x => { x.momento = null; x.apostas!.ano = { t: x.t, apostado: 60000, recebido: 1000 }; }).vida;
+    pesado = avancarAno(pesado).vida;
+    expect(pesado.fatos['apo_conversa']).toBeDefined();
+  });
+});
