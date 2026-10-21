@@ -1,5 +1,6 @@
 /** Seletores de papel: quem, da vida real do jogador, pode estar numa cena. */
 
+import { hashMisturado } from '../rng';
 import type { Papel } from './base';
 import type { Convivio, Parentesco, Pessoa, Vida } from '../tipos';
 import { idadePessoa, vinculosVivos } from '../nucleo';
@@ -83,3 +84,10 @@ export const qualquer = (...papeis: Papel[]): Papel => v => {
 
 export const comIdade = (papel: Papel, min: number, max = 200): Papel => (v: Vida) =>
   papel(v).filter(p => idadePessoa(v, p) >= min && idadePessoa(v, p) <= max);
+
+/**
+ * REWORK 10 — um papel que NÃO sorteia: os candidatos numa ordem estável do ano (um embaralhamento pelo hash da pessoa e
+ * do mês), e o conteúdo fica com o primeiro. Os acontecimentos novos usam isto para não mexer na sequência do gerador
+ * principal (as vidas que já existiam não mudam de rumo só porque um acontecimento novo passou a olhar para elas).
+ */
+export const fixo = (sel: Papel): Papel => Object.assign((v: Vida) => [...sel(v)].sort((a, b) => hashMisturado(`${a.id}:${v.t}`) - hashMisturado(`${b.id}:${v.t}`)), { fixo: true });

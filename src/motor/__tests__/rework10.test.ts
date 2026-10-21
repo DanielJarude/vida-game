@@ -795,3 +795,164 @@ describe('JOG-01 · roleta, loteria e caça-níquel: as contas certas', () => {
     expect(pesado.fatos['apo_conversa']).toBeDefined();
   });
 });
+
+/* =========================================================== EVT-01/02/03 · acontecimentos e ecos */
+import { ACONTECIMENTOS_10 } from '../conteudo/acontecimentos10';
+import { abrirDecisao, preparar, candidatos } from '../conteudo/motor';
+import type { Decisao } from '../conteudo/base';
+import { nova, viverAte } from './ajuda';
+import { comFilho, comNeto, comParente } from './cenarios';
+import { ecoAberto, processarEcos, registrarEco } from '../sistemas/ecos';
+import { economiaLocal } from '../dados/lugares';
+import { aposentar } from '../sistemas/trabalho';
+
+/** O que uma resposta muda na vida (sem a biografia: o texto é sempre diferente, e não conta como consequência). */
+function pegada(v: Vida): string {
+  const f = v.financas;
+  return JSON.stringify({
+    conta: f.conta, dividas: f.dividas.map(d => d.saldo), mente: v.mente, saude: v.corpo.saude, forma: v.corpo.forma, cond: v.corpo.condicoes.length,
+    vin: Object.fromEntries(Object.entries(v.vinculos).map(([k, w]) => [k, [w.proximidade, w.tensao, w.confianca, w.romance?.envolvimento, w.convivio.join()]])),
+    ecos: v.ecos, mat: v.educacao.matricula, bas: v.educacao.basica?.desempenho, job: v.trabalho.atual && [v.trabalho.atual.ocupacaoId, v.trabalho.atual.salario, v.trabalho.atual.desempenho, v.trabalho.atual.municipioId],
+    casa: [v.moradia.municipioId, v.moradia.aluguel], fatos: Object.keys(v.fatos).sort(), rotinas: v.rotinas.map(x => x.id), ops: v.caminhos.oportunidades.length,
+    frentes: Object.fromEntries(Object.entries(v.caminhos.frentes).map(([k, x]) => [k, Math.round(x.habilidade * 10)])), not: v.notoriedade?.valor, esp: v.caminhos.esporte?.espaco,
+    marcas: v.caminhos.marcas.length
+  });
+}
+
+let CENAS: string | undefined;
+function cenas(): Vida[] {
+  CENAS ??= JSON.stringify((() => {
+    const out: Vida[] = [];
+    const k9 = viverAte(nova({ semente: 31, municipioId: 'recife-pe' }), 9); k9.momento = null; out.push(k9);
+    const t15 = viverAte(nova({ semente: 32, municipioId: 'recife-pe' }), 15); t15.momento = null; out.push(t15);
+    out.push(em(adulto(36, { semente: 33 }), (x, r) => {
+      contratar(x, r, ocupacao('vendedor')); x.trabalho.atual!.desempenho = 70; x.trabalho.atual!.tInicio = x.trabalho.atual!.tPosto = x.t - 48; x.trabalho.experiencia.comercio = 48; x.financas.conta = 80000;
+      const par = comParceiro(x, { estagio: 'casamento', anos: 8 }); par.vin.romance!.envolvimento = 55;
+      comFilho(x, 12, { outroId: par.p.id }); comParente(x, 'irmao', 38); const mae = comParente(x, 'mae', 68, 'feminino'); mae.p.saude = 40;
+      const am = pessoaNova(x, 36); vincular(x, am, { origem: 'escola', proximidade: 75, estagio: 'amigo_proximo' });
+      const col = pessoaNova(x, 41); vincular(x, col, { origem: 'trabalho', proximidade: 40, convivio: ['trabalho'] });
+    }));
+    // A faculdade particular com a base do clube (o esporte e o estudo juntos): uma com nota alta, outra no aperto.
+    const facul = resolver(em(naBase(19), x => { propor(x, r, curso(x, 'direito', 'privada')); }));
+    out.push(em(facul, x => { x.educacao.matricula!.desempenho = 78; x.caminhos.esporte!.tFase = x.t - 24; x.financas.conta = 20000; }));
+    out.push(em(facul, x => { x.educacao.matricula!.desempenho = 40; x.educacao.matricula!.tInicio = x.t - 18; x.financas.conta = 0; }));
+    out.push(em(adulto(72, { semente: 34 }), x => {
+      aposentar(x); x.financas.conta = 60000; x.corpo.saude = 45;
+      const f = comFilho(x, 44, { casa: false }); comNeto(x, f.p, 7);
+    }));
+    return out;
+  })());
+  return JSON.parse(CENAS) as Vida[];
+}
+
+describe('EVT-01 · os acontecimentos novos', () => {
+  it('ids únicos; todo papel é fixo (não gasta o gerador do ano); toda decisão tem ≥ 2 respostas com ids distintos', () => {
+    const ids = ACONTECIMENTOS_10.map(c => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.length).toBeGreaterThanOrEqual(60);
+    for (const c of ACONTECIMENTOS_10) {
+      for (const sel of Object.values(c.papeis ?? {})) expect((sel as { fixo?: boolean }).fixo, c.id).toBe(true);
+      if (c.tipo !== 'decisao') continue;
+      expect(c.opcoes.length, c.id).toBeGreaterThanOrEqual(2);
+      expect(new Set(c.opcoes.map(o => o.id)).size, c.id).toBe(c.opcoes.length);
+    }
+  });
+
+  it('cada fase recebe os seus: a criança não vê evento de trabalho; o adulto não vê o recreio', () => {
+    const [k9, , a36] = cenas();
+    const de = (v: Vida) => candidatos(v, criarRng(1), c => ACONTECIMENTOS_10.includes(c)).map(x => x.c.id);
+    expect(de(k9).some(id => id.startsWith('inf10_'))).toBe(true);
+    expect(de(k9).some(id => /^(trab|cas|din|fam)10_/.test(id))).toBe(false);
+    expect(de(a36).some(id => /^(trab|cas|fam)10_/.test(id))).toBe(true);
+    expect(de(a36).some(id => /^(inf|esc|ado)10_/.test(id))).toBe(false);
+  });
+});
+
+describe('EVT-02 · respostas com consequências distintas', () => {
+  it('em toda decisão que a cena abre, cada resposta disponível deixa uma pegada diferente na vida', () => {
+    let testadas = 0;
+    const iguais: string[] = [], vistas = new Set<string>();
+    for (const base of cenas()) {
+      for (const c of ACONTECIMENTOS_10) {
+        if (c.tipo !== 'decisao') continue;
+        let aberta: Vida | undefined;
+        const w = transacao(base, (x, r) => { const ctx = preparar(c, x, r); if (ctx) abrirDecisao(x, c as Decisao, ctx); });
+        if (w.vida.momento?.situacaoId === c.id) aberta = w.vida;
+        if (!aberta) continue;
+        const ops = aberta.momento!.opcoes.filter(o => !o.bloqueio);
+        if (ops.length < 2) continue;
+        testadas++; vistas.add(c.id);
+        const marcas = ops.map(o => pegada(executar(aberta!, { tipo: 'decidir', opcaoId: o.id }).vida));
+        if (new Set(marcas).size !== marcas.length) iguais.push(`${c.id}: ${ops.map((o, i) => `${o.id}#${marcas.indexOf(marcas[i])}`).join(' ')}`);
+      }
+    }
+    expect(iguais).toEqual([]);
+    expect(testadas).toBeGreaterThanOrEqual(35);
+    // As fases todas: a escola, a faculdade (com bolsa e aperto), o esporte, o trabalho, a família, a velhice.
+    for (const id of ['esc10_projeto', 'fac10_bolsa', 'fac10_aperto', 'fac10_mudar', 'esp10_tecnico', 'esp10_dor', 'trab10_promocao', 'trab10_erro', 'fam10_diagnostico', 'vel10_netos']) expect(vistas, id).toContain(id);
+  });
+
+  it('a promoção aceita sobe de cargo pela escada da ocupação (o mesmo caminho da promoção do ano)', () => {
+    const v = cenas()[2];
+    const c = ACONTECIMENTOS_10.find(x => x.id === 'trab10_promocao') as Decisao;
+    const w = transacao(v, (x, r) => { const ctx = preparar(c, x, r)!; abrirDecisao(x, c, ctx); }).vida;
+    const antes = w.trabalho.atual!;
+    const depois = executar(w, { tipo: 'decidir', opcaoId: 'aceitar' }).vida.trabalho.atual!;
+    expect(depois.ocupacaoId).not.toBe(antes.ocupacaoId);
+    expect(depois.salario).toBeGreaterThan(antes.salario);
+  });
+
+  it('a transferência aceita muda de cidade, de fato (a casa e o trabalho)', () => {
+    const v = cenas()[2];
+    const c = ACONTECIMENTOS_10.find(x => x.id === 'trab10_transferencia') as Decisao;
+    const w = transacao(v, (x, r) => { const ctx = preparar(c, x, r)!; abrirDecisao(x, c, ctx); }).vida;
+    const d = executar(w, { tipo: 'decidir', opcaoId: 'ir' }).vida;
+    expect(d.moradia.municipioId).not.toBe(v.moradia.municipioId);
+    expect(d.trabalho.atual!.municipioId).toBe(d.moradia.municipioId);
+  });
+
+  it('os valores são do custo de vida de onde se mora (ECO-02): o mesmo pedido custa outra coisa em outro país', () => {
+    const c = ACONTECIMENTOS_10.find(x => x.id === 'ami10_emprestimo') as Decisao;
+    const valor = (municipioId: string) => {
+      const v = em(cenas()[2], x => { x.moradia.municipioId = municipioId; });
+      const w = transacao(v, (x, r) => { const ctx = preparar(c, x, r)!; abrirDecisao(x, c, ctx); }).vida;
+      return { texto: w.momento!.texto, custo: economiaLocal(municipioId).custo };
+    };
+    const a = valor('recife-pe'), b = valor('sao-paulo-sp');
+    expect(a.custo).not.toBe(b.custo);
+    expect(a.texto).not.toBe(b.texto);
+  });
+});
+
+describe('EVT-03 · os ecos', () => {
+  it('um favor guardado volta quando a vida aperta — dentro da janela, uma vez só', () => {
+    let v = cenas()[2];
+    const amigoId = Object.values(v.vinculos).find(w => w.estagio === 'amigo_proximo')!.pessoaId;
+    v = em(v, x => { registrarEco(x, 'favor', { pessoaId: amigoId, valor: 2000, de: 2, ate: 10 }); });
+    const c = ACONTECIMENTOS_10.find(x => x.id === 'eco10_favor')!;
+    const semAperto = (x: Vida) => preparar(c, x, criarRng(1));
+    const apertado = (x: Vida) => em(x, y => { y.trabalho.atual = undefined; y.trabalho.desempregadoDesde = y.t - 12; });
+    expect(semAperto(apertado(v))).toBeNull();                   // a janela ainda não abriu
+    const depois = em(v, x => { x.t += 3 * 12; });
+    expect(semAperto(depois)).toBeNull();                         // abriu, mas a vida não precisa
+    const w = apertado(depois);
+    expect(ecoAberto(w, 'favor')).toBeTruthy();
+    const aberta = transacao(w, (x, r) => { abrirDecisao(x, c as Decisao, preparar(c, x, r)!); }).vida;
+    const fim = executar(aberta, { tipo: 'decidir', opcaoId: 'aceitar' }).vida;
+    expect(fim.caminhos.oportunidades.some(o => o.pessoaId === amigoId && o.tipo === 'indicacao')).toBe(true);
+    expect(ecoAberto(fim, 'favor')).toBeUndefined();              // voltou: não volta de novo
+    const passou = em(v, x => { x.t += 11 * 12; processarEcos(x); });
+    expect(ecoAberto(apertado(passou), 'favor')).toBeUndefined(); // passada a janela, some sem barulho
+  });
+
+  it('o fiador: assinar por um parente irresponsável pode trazer a conta anos depois; pagar sai da conta', () => {
+    const v = em(cenas()[2], x => { const irmao = Object.values(x.vinculos).find(w => w.parentesco === 'irmao')!; registrarEco(x, 'fiador', { pessoaId: irmao.pessoaId, valor: 6000, de: 1, ate: 4 }); x.t += 12; });
+    const c = ACONTECIMENTOS_10.find(x => x.id === 'eco10_fiador') as Decisao;
+    const aberta = transacao(v, (x, r) => { abrirDecisao(x, c, preparar(c, x, r)!); }).vida;
+    expect(aberta.momento!.texto).toMatch(/fiador/);
+    const pago = executar(aberta, { tipo: 'decidir', opcaoId: 'pagar' }).vida;
+    expect(pago.financas.conta).toBe(aberta.financas.conta - 6000);
+    const parcelado = executar(aberta, { tipo: 'decidir', opcaoId: 'negociar' }).vida;
+    expect(parcelado.financas.dividas.some(d => d.descricao === 'A dívida de fiador')).toBe(true);
+  });
+});

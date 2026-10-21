@@ -93,7 +93,10 @@ function comCarro(v: Vida, anos = 10, estado = 50): string {
 
 describe('dinheiro pessoal não é dinheiro da casa', () => {
   it('uma criança de família rica não tem o dinheiro dos pais: o orçamento dela é a mesada; a renda da casa é contexto', () => {
-    const v = viverAte(nova({ semente: 31, classe: 'alta' }), 10);
+    // Pré-condição dita (REWORK 10: o catálogo maior muda o sorteio das vidas com semente): uma casa rica COM renda dentro
+    // de casa — sem isso (os pais separados, quem ficou sem trabalho), não há "renda da casa" a comparar com a mesada.
+    let s = 31, v = viverAte(nova({ semente: s, classe: 'alta' }), 10);
+    while ((orcamento(v).daCasa?.renda ?? 0) === 0 && s < 60) v = viverAte(nova({ semente: ++s, classe: 'alta' }), 10);
     const o = orcamento(v);
     expect(o.arranjo).toBe('familia');
     expect(o.entradas.every(l => l.de === 'familia' || l.de === 'eu')).toBe(true);

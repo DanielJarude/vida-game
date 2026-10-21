@@ -301,6 +301,8 @@ describe('D — fazer algo junto é uma cena, não uma barra', () => {
         const prog = ['cinema', 'jantar_fora', 'caminhar_junto'][ano % 3];
         const r = executar(v, { tipo: 'pessoa', pessoaId: p.id, interacao: prog });
         v = r.vida;
+        // REWORK 10 (NPC-04): o convite pode ser recusado (a agenda dela, o gosto) — sem programa, sem cena; segue o ano.
+        if (!v.vinculos[p.id].cenas?.length) { v.t += 12; v.anoAtual = { acoes: [] }; continue; }
         const ult = v.vinculos[p.id].cenas!.slice(-1)[0].split(".")[0];
         if (ult === 'revelacao') { achouRevelacao = true; expect(v.vinculos[p.id].sabe?.length).toBeGreaterThan(0); }
         if (ult === 'lembranca') { achouLembranca = true; expect(r.resultado).toContain(municipio(p.municipioNatal!).nome); }

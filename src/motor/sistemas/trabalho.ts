@@ -912,14 +912,17 @@ export const ROTULO_MODELO: Record<ModeloDeTrabalho, { curto: string; explica: s
   mandato: { curto: 'mandato', explica: 'Só por eleição.' }
 };
 
+/** O próximo degrau que esta pessoa pode subir agora no emprego de agora (ou nenhum). REWORK 10: também a decisão da promoção. */
+export function proximoDegrau(v: Vida, e: Emprego, oc: Ocupacao): Ocupacao | undefined {
+  const acima = degrausAcima(oc).filter(x => x.id !== oc.id);
+  // Servidor não vira empregado de empresa por "promoção": a carreira dele é o plano de carreira.
+  return acima.find(x => (e.contrato !== 'servidor' || x.contrato === 'servidor') && (elegibilidade(v, x, 'promocao').grau === 'permitido' || elegibilidade(v, x, 'promocao').grau === 'improvavel'));
+}
+
 function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): void {
   const anosNoPosto = (v.t - tPosto) / 12;
-  const acima = degrausAcima(oc).filter(x => x.id !== oc.id);
-  if (!acima.length) return;
-  // Servidor não vira empregado de empresa por "promoção": a carreira dele é o plano de carreira.
-  const possiveis = acima.filter(x => (e.contrato !== 'servidor' || x.contrato === 'servidor') && (elegibilidade(v, x, 'promocao').grau === 'permitido' || elegibilidade(v, x, 'promocao').grau === 'improvavel'));
-  if (!possiveis.length) return;
-  const proximo = possiveis[0];
+  const proximo = proximoDegrau(v, e, oc);
+  if (!proximo) return;
   let chance: number;
   if (oc.promocao === 'antiguidade') {
     if (anosNoPosto < (oc.anosNoPosto ?? 5) || e.desempenho < 40) return;
@@ -933,6 +936,11 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
     if (emRecessao(v)) chance *= 0.4;
   }
   if (!r.chance(chance)) return;
+  subirDeCargo(v, e, oc, proximo, anosNoPosto);
+}
+
+/** Sobe um degrau (o salário, o posto, o marco) — a promoção do ano e a aceita numa decisão (REWORK 10). */
+export function subirDeCargo(v: Vida, e: Emprego, oc: Ocupacao, proximo: Ocupacao, anosNoPosto = (v.t - (e.tPosto ?? e.tInicio)) / 12): void {
   const anterior = nomeOcupacao(v, oc);
   const salarioAntigo = e.salario;
   registrarPosto(v, e);

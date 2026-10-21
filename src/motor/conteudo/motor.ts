@@ -39,7 +39,8 @@ export function preparar(c: Conteudo, v: Vida, r: Rng): Ctx | null {
       const usados = new Set(Object.values(p).map(x => x.id));
       const candidatos = sel(v).filter(x => !usados.has(x.id));
       if (candidatos.length === 0) return null;
-      p[nome] = r.pick(candidatos);
+      // REWORK 10: um papel `fixo` (`papeis.fixo`) já vem na ordem certa — escolher o primeiro não gasta o gerador do ano.
+      p[nome] = (sel as { fixo?: boolean }).fixo ? candidatos[0] : r.pick(candidatos);
     }
   }
   const ctx = contexto(v, r, p);
