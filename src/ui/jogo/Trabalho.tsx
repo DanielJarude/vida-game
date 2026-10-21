@@ -739,6 +739,7 @@ function EmParalelo({ vida, agir, irPara, modo, divisao }: { vida: Vida; agir: (
           <p className="por-fora__titulo">Por fora</p>
           <p>{porFora}</p>
           <BotaoAcao vida={vida} acao={{ tipo: 'parar_por_fora' }} agir={agir} variante="secundario" ocultarBloqueado>Largar isso de vez</BotaoAcao>
+          <button type="button" className="link" onClick={() => irPara('outros_caminhos')}>A trajetória inteira, o risco e as saídas — em Outros caminhos →</button>
         </section>
       )}
     </section>

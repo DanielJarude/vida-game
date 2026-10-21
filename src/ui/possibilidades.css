@@ -93,3 +93,13 @@
 .o-lugar__mais[open] > summary { margin-bottom: var(--space-2); }
 .voce__parte--fora { display: none; }
 .caminhos__recente { margin-top: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--veu-1); }
+
+/* ------------------------------------------------------------ Fase D: à margem e a Justiça */
+.margem { display: flex; flex-direction: column; gap: var(--space-4); }
+.margem__caminho, .margem__ficha { display: flex; flex-direction: column; gap: var(--space-2); }
+.margem__titulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.margem__linhas { margin: 0; padding-left: var(--space-4); display: flex; flex-direction: column; gap: 4px; font-family: var(--font-serif); color: var(--text-primary); line-height: var(--leading-snug); }
+.margem__processo { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); }
+.margem__cabeca { display: flex; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--fio); padding-bottom: var(--space-2); margin: 0; }
+.margem__antecedentes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--type-body); }
+.margem__ano { font-variant-numeric: tabular-nums; color: var(--text-muted); margin-right: var(--space-2); }

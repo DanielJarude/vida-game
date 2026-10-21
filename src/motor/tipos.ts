@@ -2470,6 +2470,7 @@ export interface FotoDoAno {
   rotina?: { faixa: string; estresse: number; conflitos: number; postura?: 'dedicada' | 'normal' | 'relaxada'; estudo?: number };
 }
 
+
 /* ------------------------------------------------------------------- Agenda (REWORK 9) */
 
 /** Dia da semana: 0 segunda … 6 domingo. */

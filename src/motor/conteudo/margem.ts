@@ -20,8 +20,8 @@ import { economiaLocal } from '../dados/lugares';
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] === c.v.t;
 const env = (c: Ctx) => c.v.caminhos.envolvimento!;
 const proc = (c: Ctx) => c.v.justica!.processo!;
-/** O dinheiro de um trabalho maior (o dobro a triplo de meio ano do nível de agora), na moeda de onde se vive. */
-const ganhoGrande = (c: Ctx) => Math.round((1500 + env(c).nivel * 1800) * 6 * economiaLocal(c.v.moradia.municipioId).custo / 100) * 100;
+/** O dinheiro de um trabalho maior (uns meses de renda de uma vez), no custo de onde se vive. */
+const ganhoGrande = (c: Ctx) => Math.round((1000 + env(c).nivel * 1100) * 6 * economiaLocal(c.v.moradia.municipioId).custo / 100) * 100;
 const naoPreso = (c: Ctx) => !c.v.justica?.prisao;
 
 export const MARGEM: Conteudo[] = [

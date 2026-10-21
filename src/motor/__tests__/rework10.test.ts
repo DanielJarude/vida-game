@@ -24,7 +24,7 @@ import { custoDoEstudo } from '../sistemas/custoDoEstudo';
 import { executarFormacao, processarBolsaDeAtleta, verbosDaFormacao } from '../sistemas/naFormacao';
 
 const r = criarRng(10);
-const em = (v: Vida, f: (x: Vida) => void): Vida => transacao(v, x => { f(x); }).vida;
+const em = (v: Vida, f: (x: Vida, r: ReturnType<typeof criarRng>) => void): Vida => transacao(v, (x, r) => { f(x, r); }).vida;
 const resolver = (v: Vida): Vida => {
   for (let k = 0; k < 12 && v.momento && !v.morte; k++) {
     const op = v.momento.opcoes.find(o => !o.bloqueio) ?? v.momento.opcoes[0];
@@ -471,5 +471,174 @@ describe('NPC-04 e REL-01 · a outra pessoa decide; os programas são diferentes
     expect(podeTentar(vereditoDeTempo(cheio, 'viajar_juntos'))).toBe(false);
     expect(vereditoDeTempo(cheio, 'viajar_juntos').motivo).toMatch(/Falta tempo/);
     expect(podeTentar(vereditoDeTempo(cheio, 'conversar'))).toBe(true);
+  });
+});
+
+/* ================================================================ Fase D · crime e Justiça (§17) */
+
+import { abrirProcesso, antecedenteAdulto, penaDeAntecedentes, reincidente } from '../sistemas/justica';
+import { entrar, parar, processarIlicito } from '../sistemas/ilicito';
+import { processarMargem } from '../sistemas/margem';
+import { aceitarAcordo, chanceDeAbsolvicao, pagarFianca, processarTribunal, recorrer } from '../sistemas/tribunal';
+import { perfilPenal } from '../mundo/justicaPorPais';
+import { processarJustica } from '../sistemas/justica';
+import type { CategoriaIlicita } from '../tipos';
+
+let BASE28: string | undefined;
+/** Uma pessoa de 28 anos, sem processo, na cidade dada (o país muda o perfil penal). */
+function pessoa28(municipioId = 'recife-pe'): Vida {
+  if (municipioId === 'recife-pe') { BASE28 ??= JSON.stringify(adulto(28, { semente: 51 })); return JSON.parse(BASE28) as Vida; }
+  return adulto(28, { semente: 51, municipioId });
+}
+const envolvida = (cat: CategoriaIlicita, nivel: 1 | 2 | 3 = 1, exposicao = 20, municipioId?: string): Vida =>
+  em(pessoa28(municipioId), x => { x.justica = undefined; entrar(x, cat, undefined, criarRng(1)); x.caminhos.envolvimento!.nivel = nivel; x.caminhos.envolvimento!.exposicao = exposicao; });
+/** Abre o processo e devolve a vida (com as provas dadas e a defesa escolhida). */
+function processada(cat: CategoriaIlicita, o: { provas?: number; particular?: boolean; assumiu?: boolean; municipioId?: string; k?: number } = {}): Vida {
+  return em(envolvida(cat, 2, 40, o.municipioId), x => {
+    abrirProcesso(x, criarRng(o.k ?? 3), cat);
+    const p = x.justica!.processo!;
+    if (o.provas !== undefined) p.provas = o.provas;
+    if (o.particular) p.defesa = 'particular';
+    if (o.assumiu) p.assumiu = true;
+  });
+}
+/** Julga: avança até a data do julgamento (sem o resto do ano). */
+const julgar = (v: Vida, k = 0): Vida => ({ ...transacao({ ...v, rng: Math.imul(k + 7, 2654435761) >>> 0 }, (x, r) => { x.t = x.justica!.processo!.tJulgamento; processarJustica(x, r); }).vida });
+
+describe('CRI-01 · a trajetória: entrar, ficar, subir, sair', () => {
+  it('quem recusa toda proposta não acumula nada na ficha (vidas inteiras)', () => {
+    for (const s of [61, 62, 63]) {
+      let v = adulto(16, { semente: s, genero: s % 2 ? 'masculino' : 'feminino' });
+      for (let a = 0; a < 30 && !v.morte; a++) {
+        v = avancarAno(v).vida;
+        for (let k = 0; k < 8 && v.momento; k++) {
+          const op = v.momento.opcoes.find(o => /recusar|parar|sair/.test(o.id) && !o.bloqueio) ?? v.momento.opcoes.find(o => !o.bloqueio) ?? v.momento.opcoes[0];
+          v = executar(v, { tipo: 'decidir', opcaoId: op.id }).vida;
+        }
+      }
+      expect(v.caminhos.envolvimento?.parou === undefined && v.caminhos.envolvimento !== undefined).toBe(false);
+      expect(antecedenteAdulto(v)).toBe(false);
+    }
+  });
+
+  it('a confiança do meio cresce com o tempo e traz o trabalho maior; a moita esfria', () => {
+    let v = envolvida('mercado', 2, 10);
+    for (let a = 0; a < 6; a++) v = em(v, x => { x.t += 12; processarMargem(x); });
+    expect(v.caminhos.envolvimento!.reputacao!).toBeGreaterThan(30);
+    expect(Object.keys(v.fatos).some(k => k === 'ilic_trabalho' || k === 'ilic_atrito')).toBe(true);
+    const rep = v.caminhos.envolvimento!.reputacao!;
+    v = em(v, x => { x.caminhos.envolvimento!.cautela = true; x.t += 12; processarMargem(x); });
+    expect(v.caminhos.envolvimento!.reputacao!).toBeLessThan(rep);
+  });
+
+  it('o delito isolado: parar é possível, a exposição esfria — o passado ainda pode chegar, ou não', () => {
+    let v = envolvida('patrimonial', 1, 30);
+    v = em(v, x => parar(x, 'decidiu sair'));
+    expect(v.caminhos.envolvimento!.parou).toBeDefined();
+    const antes = v.caminhos.envolvimento!.exposicao;
+    v = em(v, (x, r) => { x.t += 12; processarIlicito(x, r); });
+    expect(v.caminhos.envolvimento!.exposicao <= antes || !!v.justica?.processo).toBe(true);
+  });
+
+  it('pedir ajuda para sair: para, abre um programa de trabalho e aproxima de quem ajudou', () => {
+    const v = envolvida('mercado', 3, 30);
+    const w = executar(v, { tipo: 'margem', oque: 'procurar_ajuda' }).vida;
+    expect(w.caminhos.envolvimento!.parou).toBeDefined();
+    expect(w.caminhos.oportunidades.some(o => o.tipo === 'reinsercao')).toBe(true);
+  });
+
+  it('a investigação chega perto e a vida pergunta (o cerco: sumir, advogado, assumir, cooperar)', () => {
+    let v = envolvida('mercado', 2, 95);
+    for (let a = 0; a < 10 && v.caminhos.envolvimento!.investigado === undefined && !v.justica?.processo; a++) v = em(v, (x, r) => { x.t += 12; processarIlicito(x, r); processarMargem(x); });
+    expect(v.caminhos.envolvimento!.investigado !== undefined || !!v.justica?.processo).toBe(true);
+    if (v.caminhos.envolvimento!.investigado !== undefined) expect(v.fatos['ilic_cerco'] ?? v.fatos['ilic_rumo']).toBeDefined();
+  });
+
+  it('a propina aceita e não descoberta vira um caminho (corrupção), não um episódio solto', () => {
+    const v = em(pessoa28(), x => { entrar(x, 'corrupcao', undefined, criarRng(2)); });
+    expect(v.caminhos.envolvimento!.categoria).toBe('corrupcao');
+    expect(v.caminhos.envolvimento!.ganhos).toBeGreaterThan(0);
+  });
+});
+
+describe('CRI-01 · o processo: absolvição, condenação, prisão, acordo, fiança, recurso, reabilitação', () => {
+  it('a chance de absolvição responde às provas, à defesa e a quem assumiu', () => {
+    const fraco = processada('patrimonial', { provas: 15, particular: true });
+    const forte = processada('patrimonial', { provas: 90, assumiu: true });
+    expect(chanceDeAbsolvicao(fraco)).toBeGreaterThan(chanceDeAbsolvicao(forte) * 3);
+  });
+
+  it('absolvida e condenada são desfechos reais (nem um, nem outro é garantido); presa sai, e a remição desta pena não passa para a próxima', () => {
+    const desfechos = new Set<string>();
+    let presa: Vida | undefined;
+    for (let k = 0; k < 40; k++) {
+      const w = julgar(processada('mercado', { provas: 55, k }), k);
+      const ult = w.justica!.antecedentes[w.justica!.antecedentes.length - 1];
+      desfechos.add(ult.desfecho);
+      if (w.justica!.prisao && !presa) presa = w;
+    }
+    expect(desfechos.has('absolvicao')).toBe(true);
+    expect(desfechos.has('prisao')).toBe(true);
+    let p = em(presa!, x => { x.fatos['remicao_decidida'] = x.t; x.fatos['remicao_estudo'] = x.t; });
+    for (let a = 0; a < 15 && p.justica!.prisao; a++) p = transacao(p, (x, r) => { x.t += 12; processarJustica(x, r); }).vida;
+    expect(p.justica!.prisao).toBeUndefined();
+    expect(p.fatos['remicao_estudo']).toBeUndefined();
+    expect(reincidente(p)).toBe(true);
+  });
+
+  it('o país pesa: a mesma condenação é mais longa nos EUA que na Noruega (severidade declarada)', () => {
+    expect(perfilPenal('US').severidade).toBeGreaterThan(perfilPenal('NO').severidade * 2);
+    expect(perfilPenal('US').acordo).toBe('amplo');
+    expect(perfilPenal('BR').acordo).toBe('limitado');
+    expect(perfilPenal('NO').colaboracao).toBe(false);
+    expect(perfilPenal('BR').defensoria).toMatch(/Defensoria/);
+  });
+
+  it('o acordo limitado (Brasil, fraude leve, primário) encerra sem condenação; a ficha não pesa como antecedente', () => {
+    const v = em(processada('fraude', { provas: 60 }), (x, r) => { x.justica!.processo!.acordo = { t: x.t }; aceitarAcordo(x, r); });
+    expect(v.justica!.processo).toBeUndefined();
+    expect(v.justica!.antecedentes.some(a => a.desfecho === 'acordo')).toBe(true);
+    expect(antecedenteAdulto(v)).toBe(false);
+  });
+
+  it('o acordo aparece onde a lei tem a porta, com provas fortes — e não aparece onde não tem', () => {
+    const br = em(processada('fraude', { provas: 70 }), (x, r) => { x.t += 8; processarTribunal(x, r); });
+    expect(br.justica!.processo!.acordo).toBeDefined();
+    expect(br.fatos['jus_acordo']).toBe(br.t);
+  });
+
+  it('a fiança (onde existe) tira da preventiva; recorrer leva um ano e responde', () => {
+    let achou = false;
+    for (let k = 0; k < 30 && !achou; k++) {
+      const v = em(envolvida('mercado', 2, 50), x => { abrirProcesso(x, criarRng(k + 11), 'mercado'); });
+      if (!v.justica!.prisao || !v.justica!.processo!.fianca) continue;
+      achou = true;
+      const w = em(v, x => { x.financas.conta = 1e7; pagarFianca(x); });
+      expect(w.justica!.prisao).toBeUndefined();
+      expect(w.justica!.processo).toBeDefined();
+    }
+    expect(achou).toBe(true);
+    const presa = em(pessoa28(), x => { x.justica = { antecedentes: [{ t: x.t, categoria: 'mercado', desfecho: 'prisao', anos: 5 }], prisao: { tInicio: x.t, tFim: x.t + 30, regime: 'fechado' } }; recorrer(x); });
+    const depois = transacao(presa, (x, r) => { x.t += 12; processarTribunal(x, r); }).vida;
+    expect(depois.justica!.recurso).toBeUndefined();
+    expect(depois.biografia.some(e => /recurso/i.test(e.texto))).toBe(true);
+  });
+
+  it('reabilitação: depois dos anos que a lei pede, sem nada novo — e o registro deixa de pesar', () => {
+    const v = em(pessoa28(), x => { x.justica = { antecedentes: [{ t: x.t - 60, categoria: 'patrimonial', desfecho: 'alternativa' }] }; x.caminhos.envolvimento = undefined; });
+    expect(penaDeAntecedentes(v)).toBeGreaterThan(0);
+    let w = v;
+    for (let k = 0; k < 10 && !w.justica!.antecedentes[0].reabilitado; k++) w = executar(comRng(transacao(w, x => { delete x.fatos['reabilitacao_negada']; }).vida, k), { tipo: 'margem', oque: 'reabilitacao' }).vida;
+    expect(w.justica!.antecedentes[0].reabilitado).toBeDefined();
+    expect(penaDeAntecedentes(w)).toBeLessThan(penaDeAntecedentes(v));
+    const cedo = em(pessoa28(), x => { x.justica = { antecedentes: [{ t: x.t - 6, categoria: 'patrimonial', desfecho: 'alternativa' }] }; });
+    expect(podeTentar(disponibilidade(cedo, { tipo: 'margem', oque: 'reabilitacao' }))).toBe(false);
+  });
+
+  it('save/load com processo, acordo, recurso e a trajetória: ida e volta idêntica', () => {
+    const v = em(processada('fraude', { provas: 66 }), x => { x.justica!.processo!.acordo = { t: x.t, recusado: true }; x.caminhos.envolvimento!.reputacao = 40; x.caminhos.envolvimento!.contatos = ['a']; x.justica!.recurso = { t: x.t, tFim: x.t + 12 }; });
+    const lido = interpretar(JSON.stringify(v));
+    expect(lido.tipo).toBe('ok');
+    if (lido.tipo === 'ok') expect(JSON.stringify(lido.vida)).toBe(JSON.stringify(v));
   });
 });

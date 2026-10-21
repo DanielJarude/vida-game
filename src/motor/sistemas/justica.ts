@@ -63,7 +63,7 @@ export function penaDeAntecedentes(v: Vida): number {
   if (!j) return 0;
   // REWORK 10: a reabilitação tira o registro de circulação (pesa pouco; não some da memória de quem viu).
   const conden = j.antecedentes.filter(a => (a.desfecho === 'prisao' || a.desfecho === 'alternativa') && a.reabilitado === undefined);
-  if (!conden.length) return j.antecedentes.some(a => a.reabilitado !== undefined) ? 0.15 : 0;
+  if (!conden.length) return 0;
   const ultima = Math.max(...conden.map(a => a.t), j.tSaida ?? 0);
   const anos = (v.t - ultima) / 12;
   const base = conden.some(a => a.desfecho === 'prisao') ? 0.2 : 0.1;
@@ -106,7 +106,6 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
     escrever(v, { texto: `${categoria === 'violencia' ? 'A ocorrência virou processo: passou a responder' : `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder`} a um processo por ${NOME_CATEGORIA[categoria]}.${particular ? ' Um advogado particular assumiu a defesa, pago com o que havia guardado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
   }
   marcarFato(v, 'respondeu_processo');
-  tribunal?.aoAbrir(v, r);
   // Processo é registro público: para quem tem nome, vira notícia.
   registrarAssuntoDaJustica(v, 'processo');
   abalar(v, 'o processo na Justiça', -10, 14);
@@ -118,6 +117,8 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
   if (r.chance(graves * (particular ? 0.6 : 1))) {
     prender(v, j.processo.tJulgamento, 'fechado', 'preventiva');
   }
+  // REWORK 10: as provas, a defesa a escolher, a fiança de quem ficou preso (`tribunal`) — depois de decidida a espera.
+  tribunal?.aoAbrir(v, r);
 }
 
 function medidaSocioeducativa(v: Vida, r: Rng, categoria: CategoriaDoProcesso): void {

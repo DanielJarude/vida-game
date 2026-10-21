@@ -43,9 +43,11 @@ import { mesesProcurando, patrimonioPagaAVida } from './intencao';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
-  pequenos: [120, 250, 400], patrimonial: [700, 1400, 2400], fraude: [1500, 3200, 5500], mercado: [1100, 2600, 4800], grupo: [2000, 3600, 5600],
+  // REWORK 10 · BAL-03: a tabela caiu ~20% (a simulação de trajetórias `crime10` mostrava o caminho rendendo mais, na
+  // mediana, que uma vida comum — mesmo com a prisão e o confisco).
+  pequenos: [100, 200, 320], patrimonial: [560, 1100, 1900], fraude: [1200, 2500, 4400], mercado: [880, 2000, 3800], grupo: [1600, 2900, 4500],
   // REWORK 10: a propina de quem tem cargo — mais dinheiro, e a exposição de quem tem nome num papel.
-  corrupcao: [2500, 5000, 9000]
+  corrupcao: [2000, 4000, 7000]
 };
 const EXPOSICAO: Record<CategoriaIlicita, number> = { pequenos: 14, patrimonial: 14, fraude: 12, mercado: 18, grupo: 24, corrupcao: 13 };
 const DESCOBERTA: Record<1 | 2 | 3, number> = { 1: 0.3, 2: 0.42, 3: 0.52 };
@@ -208,7 +210,9 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   }
   const renda = RENDA[env.categoria][env.nivel - 1];
   const ganho = Math.round(renda * 12 * (0.6 + r.next() * 0.8) * (env.cautela ? 0.5 : 1) / 100) * 100;
-  v.financas.conta += ganho;
+  // O dinheiro de fora vai como vem: uma parte some no próprio caminho (quem cobra para não ver, o que se perde, o que
+  // se gasta para não aparecer). Os ganhos registram o bruto (é o que a Justiça cobra de volta).
+  v.financas.conta += Math.round(ganho * 0.65);
   env.ganhos += ganho;
   // A exposição cresce com o que se faz — menos para quem já aprendeu a não aparecer (os anos no caminho),
   // e bem menos na moita (que também deixa esfriar o que já se sabia).

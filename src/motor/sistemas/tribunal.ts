@@ -116,6 +116,31 @@ export function multaPenal(v: Vida, dias: number): number {
   return Math.max(preco(v, 400), Math.round(rendaDia * dias * 0.6 / 10) * 10);
 }
 
+/**
+ * O que entrou por fora não fica (a perda do produto do crime; na fraude e na corrupção, a reparação do dano): a Justiça
+ * manda devolver uma parte do que se ganhou — do que há na conta e nas aplicações; o que faltar vira dívida, em
+ * parcelas. É o que impede o caminho de ser, no fim, a melhor maneira de enriquecer. A agressão não tem "ganho".
+ */
+export function confiscar(v: Vida, fracao: number, oque: string): number {
+  const env = v.caminhos.envolvimento;
+  if (!env) return 0;
+  const jaDevolvido = v.fatos['confiscado_total'] ?? 0;
+  const devido = Math.round(Math.max(0, env.ganhos - jaDevolvido) * fracao / 100) * 100;
+  if (devido <= 0) return 0;
+  const tem = Math.max(0, disponivel(v));
+  const paga = Math.min(tem, devido);
+  if (paga > 0) pagar(v, paga);
+  const falta = devido - paga;
+  if (falta > 0) {
+    const prazo = 60;
+    v.financas.dividas.push({ id: `confisco${v.seq++}`, tipo: 'acordo', saldo: falta, jurosMes: 0.004, parcela: Math.ceil(falta / prazo), descricao: oque, tInicio: v.t, prazo });
+  }
+  v.fatos['confiscado_total'] = jaDevolvido + devido;
+  escrever(v, { texto: `${oque}: ${dinheiro(devido)}${falta > 0 ? ` — ${dinheiro(paga)} na hora e o resto em parcelas` : ''}.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
+  return devido;
+}
+const NOME_DO_CONFISCO = (cat: string) => (cat === 'fraude' || cat === 'corrupcao' ? 'A Justiça mandou reparar o dano (devolver o que foi desviado)' : 'A Justiça confiscou o que entrou por fora');
+
 function sentenciar(v: Vida, r: Rng): void {
   const j = v.justica!;
   const p = j.processo!;
@@ -142,6 +167,7 @@ function sentenciar(v: Vida, r: Rng): void {
       pagar(v, Math.min(multa, Math.max(0, disponivel(v))));
       j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'alternativa', multa });
       if (!perfil.multa) j.alternativa = { tFim: v.t + r.int(6, 12) };
+      if (cat !== 'violencia') confiscar(v, 0.8, NOME_DO_CONFISCO(cat));
       escrever(v, { texto: `Condenad${flex(g, 'o', 'a', 'e')}: uma multa de ${dinheiro(multa)}${perfil.multa ? '' : ' e alguns meses de serviço à comunidade'}. A ficha, agora, existe.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
       marcar(v, 'fracasso', 'Condenação a multa.', 2);
       abalar(v, 'a condenação', -6, 8);
@@ -150,6 +176,7 @@ function sentenciar(v: Vida, r: Rng): void {
     const meses = r.int(10, 24);
     j.alternativa = { tFim: v.t + meses };
     j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'alternativa' });
+    if ((cat as string) !== 'violencia') confiscar(v, 0.8, NOME_DO_CONFISCO(cat));
     escrever(v, { texto: `Condenad${flex(g, 'o', 'a', 'e')} a pena alternativa: prestação de serviços à comunidade por ${Math.round(meses / 12) || 1} ano${meses >= 18 ? 's' : ''}, em liberdade. A ficha, agora, existe.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'fracasso', 'Condenação a pena alternativa.', 3);
     abalar(v, 'a condenação', -8, 10);
@@ -157,6 +184,7 @@ function sentenciar(v: Vida, r: Rng): void {
   }
   const anos = Math.max(1, Math.round(anosBrutos));
   j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'prisao', anos });
+  if (cat !== 'violencia') confiscar(v, 0.9, NOME_DO_CONFISCO(cat));
   const fechado = Math.round(anos * 12 * (rein ? 0.45 : 0.3));
   const inicio = presoAntes ? presoAntes.tInicio : v.t;
   const fim = Math.max(v.t + 6, inicio + fechado);
@@ -226,6 +254,8 @@ export function aceitarAcordo(v: Vida, r: Rng): string {
   j.processo = undefined;
   const g = ge(v);
   const leve = LEVE.has(p.categoria) || p.categoria === 'fraude';
+  // Todo acordo começa por reparar o dano (devolver parte do que entrou por fora).
+  if ((p.categoria as string) !== 'violencia') confiscar(v, 0.6, 'O acordo pediu a reparação do dano');
   if (perfil.acordo === 'limitado' && leve && !reincidente(v)) {
     const multa = multaPenal(v, r.int(20, 60));
     pagar(v, Math.min(multa, Math.max(0, disponivel(v))));

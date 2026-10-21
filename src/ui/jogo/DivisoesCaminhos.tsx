@@ -24,6 +24,7 @@ import type { Aba } from '../navegacao';
 import { EmConstrucao } from './Caminhos';
 import { PortasAbertas } from './Estudos';
 import { DesenvolvimentoReal } from './Progresso';
+import { AMargem } from './Margem';
 import { CarreiraComoTecnico, CarreiraNoEsporte, Concursos, CurriculoArtistico, Devolutivas, OutrosCaminhos, PainelBase, PainelPolitico, ehAcaoPublica } from './Trabalho';
 
 /** Para onde vai cada passo de um caminho (as divisões novas no lugar das abas da procura de antes). */
@@ -71,6 +72,8 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
   const arte = vida.caminhos.arte;
   return (
     <div className="divisao divisao--outros">
+      {/* REWORK 10 · CRI-01: a vida à margem e a Justiça (só para quem tem o que ver nisso). */}
+      <AMargem vida={vida} agir={agir} />
       <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />
       {esp?.fase === 'base' && (
         <section className="divisao__secao paralelo" aria-label="A base">
