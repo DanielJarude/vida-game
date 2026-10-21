@@ -709,7 +709,8 @@ export const palavraDaReputacao = (x: number, modalidade: Dominio = 'futebol') =
 
 /* ------------------------------------------------------------ O ano */
 
-export function processarEsporte(v: Vida, r: Rng): void {
+/** `presenca`: quanto de cada atividade aconteceu na agenda do ano (`agenda.agendaDaSemana(v).presenca`). */
+export function processarEsporte(v: Vida, r: Rng, presenca: Record<string, number> = {}): void {
   const i = idade(v);
   const e = v.caminhos.esporte;
   const mod = modalidadePrincipal(v);
@@ -789,7 +790,7 @@ export function processarEsporte(v: Vida, r: Rng): void {
     v.fatos[`tec_${x.id}`] = agora;
   }
   if (!e) return;
-  if (e.fase === 'base') anoNaBase(v, r, e);
+  if (e.fase === 'base') anoNaBase(v, r, e, presenca[e.modalidade] ?? 1);
   else if (e.fase === 'profissional') anoProfissional(v, r, e);
 }
 
@@ -870,10 +871,14 @@ export function entrarNaBase(v: Vida, d: Dominio, municipioId: string, clube: st
   for (const p of pais(v)) lembrarCom(v, p.id, `${d === 'futebol' ? 'A base' : 'A equipe'} ${doClube(clube)}.`, 'escola', 2);
 }
 
-function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
+function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
   const i = idade(v);
   const h = habilidade(v, e.modalidade);
   const anos = (v.t - e.tFase) / 12;
+  // REWORK 10 · ROT-05: quem concilia a base com a faculdade ou o trabalho e perde treinos (a agenda diz quantos) é visto
+  // faltando — o treino que não aconteceu não treinou (`rotinas`), e a comissão repara: a dispensa fica mais provável.
+  const faltas = Math.max(0, 1 - presenca);
+  if (faltas >= 0.1) escrever(v, { texto: `Perdeu ${faltas >= 0.5 ? 'metade ou mais' : 'parte'} dos treinos ${doClube(e.clube)} no ano: a semana não deixou. A comissão técnica reparou.`, relevancia: 'cotidiano', tema: 'lazer', tom: 'ruim' });
   // Rotina dura: a escola sente, a família sente se é longe.
   if (v.educacao.basica) v.educacao.basica.desempenho = clamp(v.educacao.basica.desempenho - 5);
   if (e.municipioId !== v.moradia.municipioId) for (const p of pais(v)) { const vin = v.vinculos[p.id]; if (vin) vin.proximidade = clamp(vin.proximidade - 2); }
@@ -908,7 +913,7 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva): void {
     return;
   }
   // Dispensa: o destino da maioria.
-  const risco = clamp(0.4 - (h - 72) / 40 + e.lesoes * 0.05 + (i > idadeContrato[1] ? 0.5 : 0), 0.1, 0.95);
+  const risco = clamp(0.4 - (h - 72) / 40 + e.lesoes * 0.05 + (i > idadeContrato[1] ? 0.5 : 0) + faltas * 0.35, 0.1, 0.95);
   if (anos >= 1 && r.chance(risco)) encerrarCarreira(v, e, 'dispensa');
 }
 

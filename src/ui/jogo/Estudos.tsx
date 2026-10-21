@@ -34,7 +34,7 @@ import { alvosDoEnem, cursosAgrupados, cursosParaVoce, pontuarCursos } from '../
 import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
 import type { Aba, ParteCaminhos } from '../navegacao';
-import { analisarEntrada } from '../../motor/sistemas/compromissos';
+import { analisarEntrada, notaDaBaseCom } from '../../motor/sistemas/compromissos';
 import { custoDoEstudo } from '../../motor/sistemas/custoDoEstudo';
 import { historiaDaFormacao } from '../../motor/sistemas/vidaEstudantil';
 import { novaMatricula } from '../../motor/sistemas/escola';
@@ -597,7 +597,7 @@ function Estudo({ vida, agir }: Props) {
           <Linha rotulo="Turno" valor={m.modalidade === 'ead' ? 'no seu tempo' : curso(m.cursoId).carga === 'integral' ? 'período integral (com emprego, a semana passa muito do que cabe)' : 'à noite (cabe com trabalho)'} />
           {/* O custo pela mesma fonte do extrato e dos acontecimentos (`custoDoEstudo`): a tela não diz uma coisa e o mês outra. */}
           {(() => { const ce = custoDoEstudo(vida, m); if (!ce) return null; const credito = educacaoDaVida(vida).credito?.nome ?? 'crédito estudantil';
-            return <Linha rotulo="Custo" valor={ce.regime === 'gratuita' ? 'sem mensalidade' : ce.regime === 'bolsa_integral' ? 'bolsa integral: nada a pagar' : ce.regime === 'credito' ? `${dinheiroCurto(m.mensalidade)}/mês, pelo ${credito.replace(/^(o|a) /, '')}: paga depois de formado` : ce.daFamilia > 0 ? `${dinheiroCurto(m.mensalidade)}/mês · a família põe ${dinheiroCurto(ce.daFamilia)}` : `${dinheiroCurto(m.mensalidade)}/mês`} />; })()}
+            return <Linha rotulo="Custo" valor={ce.regime === 'gratuita' ? 'sem mensalidade' : ce.regime === 'bolsa_integral' ? (m.bolsaAtleta ? 'bolsa de atleta integral: nada a pagar' : 'bolsa integral: nada a pagar') : ce.bolsa ? `${dinheiroCurto(Math.round(m.mensalidade * (1 - ce.bolsa)))}/mês, com a bolsa de atleta de ${Math.round(ce.bolsa * 100)}%${ce.daFamilia > 0 ? ` · a família põe ${dinheiroCurto(ce.daFamilia)}` : ''}` : ce.regime === 'credito' ? `${dinheiroCurto(m.mensalidade)}/mês, pelo ${credito.replace(/^(o|a) /, '')}: paga depois de formado` : ce.daFamilia > 0 ? `${dinheiroCurto(m.mensalidade)}/mês · a família põe ${dinheiroCurto(ce.daFamilia)}` : `${dinheiroCurto(m.mensalidade)}/mês`} />; })()}
         </>
       )}
       {e.evadiu && !b && <p className="nota">{`Você largou a escola. Dá para voltar pelo ${textoLocal(vida, 'supletivo').replace(/^(o|a) /, '')}.`}</p>}
@@ -673,7 +673,7 @@ function Cursos({ vida, agir }: Props) {
                 {/* Estudar em outra cidade é mudar: o que fica para trás é dito antes de tentar. */}
                 {o.modalidade !== 'ead' && o.municipioId !== vida.moradia.municipioId && (() => { const efeitos = consequenciasDaMudanca(vida, o.municipioId); return efeitos.length ? <ul className="via__consequencias">{efeitos.map((x, k) => <li key={k}>{x}</li>)}</ul> : null; })()}
                 {/* O que a matrícula conflitaria (o trabalho do dia inteiro, a base): dito antes; se passar, a vida pergunta. */}
-                {(() => { const c = analisarEntrada(vida, novaMatricula(vida, o)); return c.length ? <span className="via__obs">{c.map(x => `${x.motivo}: ${x.impede ? 'não dá agora' : 'se passar, a vida pergunta o que fazer'}.`).join(' ')}</span> : null; })()}
+                {(() => { const nova = novaMatricula(vida, o); const c = analisarEntrada(vida, nova); const base = notaDaBaseCom(vida, nova); return c.length ? <span className="via__obs">{c.map(x => `${x.motivo}: ${x.impede ? 'não dá agora' : 'se passar, a vida pergunta o que fazer'}.`).join(' ')}</span> : base ? <span className="via__obs">{base}</span> : null; })()}
               </div>
               <BotaoAcao vida={vida} acao={{ tipo: 'matricular', indice }} agir={agir} mostrarChance>Tentar</BotaoAcao>
             </div>

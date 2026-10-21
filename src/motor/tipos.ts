@@ -625,6 +625,12 @@ export interface Matricula {
   mesesRestantes: number;
   mensalidade: number;
   financiamento?: 'fies' | 'prouni';
+  /**
+   * REWORK 10 · ROT-05: a bolsa de atleta da instituição (particular): parte da mensalidade (`fracao`, 0..1) em troca de
+   * representar a faculdade nas competições. Mantém-se treinando a modalidade e sem ir mal no curso; um ano fora das
+   * condições é aviso (`aviso`), dois, a bolsa acaba (`naFormacao.processarBolsaDeAtleta`). Ausente: não tem.
+   */
+  bolsaAtleta?: { modalidade: Dominio; fracao: number; tInicio: number; aviso?: number };
   desempenho: number;
   trancado: boolean;
   /** Quando trancou (a instituição cancela depois de quatro anos). */

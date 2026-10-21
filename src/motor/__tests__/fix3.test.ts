@@ -87,8 +87,13 @@ const petDe = (v: Vida, especie: Especie, idadeAnos = 0, origem: 'abrigo' | 'loj
 /* ============================================================ Conflitos de trajetória */
 
 describe('conflitos de trajetória: o jogo pergunta', () => {
+  // REWORK 10 · ROT-05: estes casos usavam Direito (meio período) — e afirmavam que a base SEMPRE conflita com a faculdade,
+  // que era o bug relatado (a base como ocupação exclusiva). Direito de manhã e o treino à tarde cabem (rework10.test). O
+  // conflito de verdade é com o curso em período integral: a premissa passou a ser Medicina, sem afrouxar o que se afirma
+  // (a pergunta abre, cada plano diz a consequência, trancar entra na Linha da Vida com o motivo). Integral não tem plano
+  // de conciliar: são dois planos (trancar e recusar), não três.
   it('1. faculdade × base de futebol: a pergunta abre, cada plano diz o que acontece, e trancar vai para a Linha da Vida com o motivo', () => {
-    const v0 = em(adulto(19), x => matricular(x, 'direito'));
+    const v0 = em(adulto(19), x => matricular(x, 'medicina'));
     const { v, res } = proporEAbrir(v0, { tipo: 'base', dominio: 'futebol', municipioId: v0.moradia.municipioId, clube: 'Bahia' });
     expect(res).toBe('pendente');
     expect(v.momento?.situacaoId).toBe('comp_conflito');
@@ -96,24 +101,24 @@ describe('conflitos de trajetória: o jogo pergunta', () => {
     expect(v.educacao.matricula?.trancado).toBe(false);
     expect(v.caminhos.esporte).toBeUndefined();
     const planos = v.momento!.opcoes;
-    expect(planos.length).toBeGreaterThanOrEqual(3);
+    expect(planos.length).toBeGreaterThanOrEqual(2);
     expect(planos.every(o => o.detalhe && o.detalhe.length > 5)).toBe(true); // consequência dita antes
     expect(planos.some(o => /Recusar/.test(o.texto))).toBe(true);
     const trancar = planos.find(o => /trancar/.test(o.texto))!;
     const depois = decidir(v, trancar.id).vida;
     expect(depois.educacao.matricula?.trancado).toBe(true);
     expect(depois.caminhos.esporte?.fase).toBe('base');
-    expect(textosBio(depois)).toMatch(/Trancou Direito para entrar na base do Bahia/);
+    expect(textosBio(depois)).toMatch(/Trancou Medicina para entrar na base do Bahia/);
   });
 
   it('1b. recusar a base mantém a faculdade e registra a recusa como escolha', () => {
-    const v0 = em(adulto(19), x => matricular(x, 'direito'));
+    const v0 = em(adulto(19), x => matricular(x, 'medicina'));
     const { v } = proporEAbrir(v0, { tipo: 'base', dominio: 'futebol', municipioId: v0.moradia.municipioId, clube: 'Bahia' });
     const recusa = v.momento!.opcoes.find(o => /Recusar/.test(o.texto))!;
     const d = decidir(v, recusa.id).vida;
     expect(d.educacao.matricula?.trancado).toBe(false);
     expect(d.caminhos.esporte).toBeUndefined();
-    expect(d.biografia.slice(-1)[0]?.texto).toMatch(/Recusou a base do Bahia para não largar Direito/);
+    expect(d.biografia.slice(-1)[0]?.texto).toMatch(/Recusou a base do Bahia para não largar Medicina/);
   });
 
   it('2. trabalho × abrir empresa: manter o emprego (negócio paralelo) ou largar (negócio principal) — nunca troca sozinho', () => {
@@ -165,7 +170,7 @@ describe('conflitos de trajetória: o jogo pergunta', () => {
   });
 
   it('3e. a pergunta pendente não se perde num ano novo, nem prende a vida num laço', () => {
-    const v0 = em(adulto(19), x => matricular(x, 'direito'));
+    const v0 = em(adulto(19), x => matricular(x, 'medicina'));
     let v = em(v0, x => { propor(x, r, { tipo: 'base', dominio: 'futebol', municipioId: x.moradia.municipioId, clube: 'Bahia' }); });
     expect(v.momento).toBeNull();
     v = avancarAno(v).vida;
@@ -617,7 +622,7 @@ describe('achados da segunda auditoria independente', () => {
   });
 
   it('A5. importar uma escolha pendente malformada é recusado, sem travar o jogo', () => {
-    const v = em(adulto(20), x => { matricular(x, 'direito'); propor(x, r, { tipo: 'base', dominio: 'futebol', municipioId: x.moradia.municipioId, clube: 'Bahia' }); });
+    const v = em(adulto(20), x => { matricular(x, 'medicina'); propor(x, r, { tipo: 'base', dominio: 'futebol', municipioId: x.moradia.municipioId, clube: 'Bahia' }); });
     const semConsequencias = JSON.parse(JSON.stringify(v)); delete semConsequencias.caminhos.pendente.planos[0].consequencias;
     const tipoDesconhecido = JSON.parse(JSON.stringify(v)); tipoDesconhecido.caminhos.pendente.novo = { tipo: 'nave_espacial' };
     const ocupacaoDesconhecida = JSON.parse(JSON.stringify(v)); ocupacaoDesconhecida.caminhos.pendente.novo = { tipo: 'emprego', ocupacaoId: 'astronauta_lunar', via: 'concurso' };

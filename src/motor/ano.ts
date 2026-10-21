@@ -79,6 +79,7 @@ import { processarRedes } from './sistemas/redes';
 import { processarVidaEstudantil } from './sistemas/vidaEstudantil';
 import { processarEstresseProlongado } from './sistemas/estresseProlongado';
 import { processarConhecimento } from './sistemas/conhecimento';
+import { processarBolsaDeAtleta } from './sistemas/naFormacao';
 
 export interface ResumoDoAno {
   idade: number;
@@ -133,6 +134,8 @@ function viverAno(v: Vida, r: Rng): void {
   const cansaco = cansacoNosEstudos(v);
   praticandoPor('escola', () => processarEscola(v, r, presencaNaEscola(v, semanaDoAno), estudoDoAno, cansaco));
   praticandoPor('curso', () => processarCurso(v, r, presencaNoCurso(v, semanaDoAno), estudoDoAno, cansaco));
+  // REWORK 10 · ROT-05: a bolsa de atleta se mantém treinando e indo bem no curso (ou acaba).
+  processarBolsaDeAtleta(v);
   processarOab(v, r);
   processarJustica(v, r);
   processarPrisao(v);
@@ -164,7 +167,7 @@ function viverAno(v: Vida, r: Rng): void {
   praticandoPor('escola', () => processarVidaEstudantil(v));
   processarConcursos(v, r);
   efetivarMudancaMilitar(v);
-  praticandoPor('treino', () => processarEsporte(v, r));
+  praticandoPor('treino', () => processarEsporte(v, r, agendaDoAno.presenca));
   // O banco: a temporada de quem dirige um time (clube real, jogos, pressão, contrato, propostas) — `tecnico`.
   processarTecnico(v, r);
   // A lesão volta (ou piora) depois da temporada que ela atravessou.

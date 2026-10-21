@@ -48,7 +48,7 @@ import { leituraDaPausa } from '../../motor/sistemas/pausa';
 import { leituraDoEnvolvimento } from '../../motor/sistemas/ilicito';
 import { leituraRural } from '../../motor/sistemas/rural';
 import { leituraDaOrigem, responsaveis } from '../../motor/sistemas/origem';
-import { analisarEntrada } from '../../motor/sistemas/compromissos';
+import { analisarEntrada, notaDaBaseCom } from '../../motor/sistemas/compromissos';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { divisaoDoNivel, doClube } from '../../motor/dados/clubes';
 import { nomeLugar, paisDaCidade } from '../../motor/dados/lugares';
@@ -865,6 +865,7 @@ export function FichaDaVaga({ vida, oc, motivo, perfil, agir, id }: { vida: Vida
           {perfil && <PerfilDaVaga perfil={perfil} />}
         </section>
       )}
+      {!aviso && (() => { const base = notaDaBaseCom(vida, { tipo: 'emprego', ocupacaoId: oc.id, via: 'curriculo' }); return base ? <section className="anuncio__bloco" aria-label="Com a base"><h5 className="anuncio__rotulo">Com a base</h5><p className="anuncio__texto">{base}</p></section> : null; })()}
       {aviso && (
         <section className="anuncio__bloco anuncio__bloco--aviso" aria-label="Conflitos">
           <h5 className="anuncio__rotulo">Conflitos</h5>

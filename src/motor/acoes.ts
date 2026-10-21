@@ -882,7 +882,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (!res.entrou) { v.fatos[`tentou_${o.curso.id}_${Math.floor(v.t / 12)}`] = v.t; return { resultado: res.texto }; }
       // Aprovado: a matrícula entra pelo mesmo caminho de tudo que chega — se não cabe com o trabalho, a vida pergunta antes.
       const situacao = propor(v, r, novaMatricula(v, o));
-      return { resultado: situacao === 'pendente' ? `${res.texto} Mas ${o.curso.carga === 'integral' && o.modalidade === 'presencial' ? 'o curso é em período integral' : 'o curso é em outra cidade'}: junto com o que você já tem, é preciso escolher o que fazer.` : res.texto };
+      // REWORK 10 · ROT-05: o porquê de verdade (o horário do treino, o lugar, o descanso) — não um "integral ou outra cidade" genérico.
+      const porque = v.caminhos.pendente?.conflitos[0];
+      return { resultado: situacao === 'pendente' ? `${res.texto} Mas ${porque ? `${porque.charAt(0).toLowerCase()}${porque.slice(1)}` : 'junto com o que você já tem, não cabe tudo'}: é preciso escolher o que fazer.` : res.texto };
     }
     case 'trancar':
       v.educacao.matricula!.trancado = true;

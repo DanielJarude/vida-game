@@ -32,10 +32,14 @@ export interface CustoDoEstudo {
   daFamilia: number;
   /** O que sai do bolso de quem estuda, por mês. */
   doEstudante: number;
+  /** REWORK 10: a parte da mensalidade que a bolsa de atleta cobre (0..1), quando há. */
+  bolsa?: number;
 }
 
 export function regimeDaMatricula(m: Matricula): RegimeDoEstudo {
   if (m.financiamento === 'prouni') return 'bolsa_integral';
+  // REWORK 10 · ROT-05: a bolsa de atleta inteira cobre a mensalidade; a parcial desconta (abaixo).
+  if (m.bolsaAtleta && m.bolsaAtleta.fracao >= 1 && m.mensalidade > 0) return 'bolsa_integral';
   if (m.financiamento === 'fies') return 'credito';
   return m.mensalidade > 0 ? 'paga' : 'gratuita';
 }
@@ -45,6 +49,7 @@ export function custoDoEstudo(v: Vida, m: Matricula | undefined = v.educacao.mat
   if (!m || m.trancado) return null;
   const regime = regimeDaMatricula(m);
   if (regime !== 'paga') return { regime, mensalidade: m.mensalidade, daFamilia: 0, doEstudante: 0 };
-  const daFamilia = Math.min(m.mensalidade, familiaPagaEstudo(v));
-  return { regime, mensalidade: m.mensalidade, daFamilia, doEstudante: m.mensalidade - daFamilia };
+  const devida = Math.round(m.mensalidade * (1 - Math.min(1, m.bolsaAtleta?.fracao ?? 0)));
+  const daFamilia = Math.min(devida, familiaPagaEstudo(v));
+  return { regime, mensalidade: m.mensalidade, daFamilia, doEstudante: devida - daFamilia, ...(m.bolsaAtleta ? { bolsa: m.bolsaAtleta.fracao } : {}) };
 }

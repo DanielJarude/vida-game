@@ -32,11 +32,13 @@ import { flex } from '../texto';
 import { economiaLocal } from '../dados/lugares';
 import { curso } from '../dados/cursos';
 import { instituicaoAtual, professorDe, registrarNaFormacao } from './formacao';
-import { materiasExtremas, praticar } from './frentes';
+import { habilidade, materiasExtremas, praticar } from './frentes';
 import { pagar, vereditoDePagar } from './dinheiro';
 import { marcar } from './marcas';
+import { MODALIDADES, NOME_MOD } from './esporte';
+import { nivelDa } from './rotinas';
 
-export type OqueFormacao = 'estudar' | 'professor' | 'festa' | 'matar' | 'colar' | 'grupo' | 'projeto' | 'congresso';
+export type OqueFormacao = 'estudar' | 'professor' | 'festa' | 'matar' | 'colar' | 'grupo' | 'projeto' | 'congresso' | 'bolsa_atleta';
 export interface VerboDaFormacao { oque: OqueFormacao; rotulo: string; porque: string; risco?: boolean }
 
 /** O nome da matéria, da fonte única (`mundo/materias`). */
@@ -81,8 +83,53 @@ export function verbosDaFormacao(v: Vida): VerboDaFormacao[] {
     add({ oque: 'projeto', rotulo: 'Procurar um professor para um projeto', porque: 'O caminho da pesquisa (e de uma carta de recomendação) começa assim.' });
     add({ oque: 'congresso', rotulo: 'Ir a um congresso ou feira da área', porque: `Uns ${preco(v, 400)}: contatos, ideias, a área de perto.` });
   }
+  // REWORK 10 · ROT-05: quem treina a sério pode pedir a bolsa de atleta da faculdade particular.
+  if (fac && podePedirBolsaDeAtleta(v)) add({ oque: 'bolsa_atleta', rotulo: 'Pedir uma bolsa de atleta à faculdade', porque: `Quem treina a sério pode representar a faculdade nas competições em troca de desconto na mensalidade. Para manter, é seguir treinando e não ir mal no curso.` });
   if (i >= 11) add({ oque: 'colar', rotulo: 'Colar na prova', porque: 'Pode dar certo. Se pegarem, a nota zera — e a história fica.', risco: true });
   return out;
+}
+
+/* ------------------------------------------------------------ REWORK 10 · ROT-05: a bolsa de atleta */
+
+/** O esporte que a pessoa treina a sério agora (a base, o contrato, ou a modalidade em nível 2+) e a técnica nele. */
+export function esporteASerio(v: Vida): { d: Dominio; h: number } | undefined {
+  const es = v.caminhos.esporte;
+  const ds = new Set<Dominio>();
+  if (es && (es.fase === 'base' || es.fase === 'profissional')) ds.add(es.modalidade);
+  for (const r of v.rotinas) if (MODALIDADES.includes(r.id as Dominio) && nivelDa(r) >= 2) ds.add(r.id as Dominio);
+  const lista = [...ds].map(d => ({ d, h: habilidade(v, d) })).sort((a, b) => b.h - a.h);
+  return lista[0];
+}
+
+/** A bolsa é da faculdade particular, presencial, paga, sem outro financiamento; para quem treina a sério (técnica ≥ 45). */
+function podePedirBolsaDeAtleta(v: Vida): boolean {
+  const m = v.educacao.matricula;
+  if (!m || m.trancado || m.rede !== 'privada' || m.modalidade !== 'presencial' || m.mensalidade <= 0 || m.financiamento || m.bolsaAtleta) return false;
+  if (idade(v) > 30) return false;
+  const e = esporteASerio(v);
+  return !!e && e.h >= 45;
+}
+
+/**
+ * A manutenção, uma vez por ano: segue treinando a modalidade e o desempenho no curso não caiu abaixo de 40? Um ano
+ * fora das condições é aviso; o segundo seguido, a bolsa acaba — e a mensalidade volta inteira.
+ */
+export function processarBolsaDeAtleta(v: Vida): void {
+  const m = v.educacao.matricula;
+  const b = m?.bolsaAtleta;
+  if (!m || !b || m.trancado) return;
+  const es = v.caminhos.esporte;
+  const treina = (es?.modalidade === b.modalidade && (es.fase === 'base' || es.fase === 'profissional')) || v.rotinas.some(r => r.id === b.modalidade && nivelDa(r) >= 2);
+  const nota = m.desempenho >= 40;
+  if (treina && nota) { b.aviso = undefined; return; }
+  const porque = !treina ? `sem treinar ${NOME_MOD[b.modalidade] ?? 'a modalidade'} a sério` : 'com o desempenho no curso abaixo do que a bolsa pede';
+  if (!b.aviso) {
+    b.aviso = v.t;
+    escrever(v, { texto: `A faculdade avisou: ${porque}, a bolsa de atleta fica por um fio — mais um ano assim e ela acaba.`, relevancia: 'biografia', tema: 'estudo', tom: 'ruim' });
+    return;
+  }
+  m.bolsaAtleta = undefined;
+  escrever(v, { texto: `Perdeu a bolsa de atleta da faculdade (${porque}): a mensalidade voltou inteira.`, relevancia: 'marco', tema: 'estudo', tom: 'ruim' });
 }
 
 export function disponibilidadeFormacao(v: Vida, oque: OqueFormacao): Veredito {
@@ -176,6 +223,21 @@ export function executarFormacao(v: Vida, r: Rng, oque: OqueFormacao): string {
       marcar(v, 'conquista', texto, 2);
       escrever(v, { texto, relevancia: 'biografia', tema: 'estudo', tom: 'bom', escolha: true });
       return `${texto} Um laboratório, uma mesa num canto, um problema que ninguém ainda resolveu.`;
+    }
+    case 'bolsa_atleta': {
+      const e = esporteASerio(v)!;
+      const m = v.educacao.matricula!;
+      const nome = NOME_MOD[e.d] ?? 'esporte';
+      // A comissão de esportes olha a técnica (e um pouco do dia): a bolsa é disputada.
+      if (!r.chance(clamp((e.h - 45) / 35, 0.08, 0.85))) return `A comissão de esportes da faculdade viu os seus números de ${nome} e não abriu vaga de bolsa neste ano. Dá para tentar de novo no próximo.`;
+      const fracao = e.h >= 75 ? 1 : e.h >= 60 ? 0.5 : 0.3;
+      m.bolsaAtleta = { modalidade: e.d, fracao, tInicio: v.t };
+      const quanto = fracao >= 1 ? 'integral' : `de ${Math.round(fracao * 100)}%`;
+      const texto = `Ganhou uma bolsa de atleta ${quanto} na faculdade, para jogar ${nome} pela instituição.`;
+      registrar('atividade', texto);
+      marcar(v, 'conquista', texto, 2, { dominio: e.d });
+      escrever(v, { texto, relevancia: 'marco', tema: 'estudo', tom: 'bom', escolha: true });
+      return `${texto} Em troca: as competições universitárias, treinar de verdade e não ir mal nas matérias — senão, a bolsa acaba.`;
     }
     case 'congresso': {
       pagar(v, preco(v, 400));

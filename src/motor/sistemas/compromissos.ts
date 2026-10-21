@@ -179,11 +179,87 @@ function conflitoComCidade(v: Vida, municipioId: string, oque: string): Conflito
   return { com: 'cidade', rotulo: `a vida em ${municipio(v.moradia.municipioId).nome}`, motivo: `${cap(oque)} é presencial em ${destino} — e você mora em ${municipio(v.moradia.municipioId).nome}`, alternativas: [{ larga: 'mudar', texto: `se mudar para ${destino}`, consequencia: `Você se muda para ${destino}: casa nova, custo de mudança, e o que é de lugar fixo aqui fica para trás.` }] };
 }
 
-function conflitoComBase(v: Vida): ConflitoDeEntrada | undefined {
+/**
+ * REWORK 10 · ROT-05 — a base junto com a faculdade e o trabalho. Antes, estar numa base era ocupação EXCLUSIVA: todo
+ * emprego e todo curso presencial perguntavam "deixar a base?", e só isso — mesmo a faculdade à noite, com o treino à
+ * tarde. Agora a resposta é a conta da agenda (`agenda.baseComONovo`, registrada aqui ao carregar): os horários do clube,
+ * o lugar (o alojamento é noutra cidade?), o turno que deixa o treino acontecer e o descanso da semana. Cabe: entra, sem
+ * pergunta. Cabe apertado (alguns treinos se perdem, ou a semana passa do que se aguenta): a pergunta tem o plano de
+ * conciliar, com o preço dito. Não cabe: diz por quê — o horário, o lugar, o descanso.
+ */
+export type AnaliseDaBase = (v: Vida, novo: NovoCompromisso) => { vezes: number; cabem: number; turno?: Turno; faixa: string; ocupam?: string; quando: string } | undefined;
+let analiseDaBase: AnaliseDaBase | undefined;
+export function registrarAnaliseDaBase(f: AnaliseDaBase): void { analiseDaBase = f; }
+export const leituraDaBaseCom = (v: Vida, novo: NovoCompromisso) => analiseDaBase?.(v, novo);
+
+function deixarABase(v: Vida): Alternativa {
+  const es = v.caminhos.esporte!;
+  const equipe = es.modalidade === 'futebol' ? 'a base' : 'a equipe';
+  return { larga: 'base', texto: `deixar ${equipe} ${doClube(es.clube)}`, consequencia: `O sonho de viver do ${NOME_MOD[es.modalidade] ?? 'esporte'} fica para trás; ${NOME_MOD[es.modalidade] ?? 'o esporte'} volta a ser por gosto.` };
+}
+
+function conflitoComBase(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada | undefined {
   const es = v.caminhos.esporte;
   if (es?.fase !== 'base') return undefined;
   const equipe = es.modalidade === 'futebol' ? 'a base' : 'a equipe';
-  return { com: 'base', rotulo: `${equipe} ${doClube(es.clube)}`, motivo: `${cap(equipe)} ${doClube(es.clube)} treina quase todo dia`, alternativas: [{ larga: 'base', texto: `deixar ${equipe} ${doClube(es.clube)}`, consequencia: `O sonho de viver do ${NOME_MOD[es.modalidade] ?? 'esporte'} fica para trás; ${NOME_MOD[es.modalidade] ?? 'o esporte'} volta a ser por gosto.` }] };
+  const rotulo = `${equipe} ${doClube(es.clube)}`;
+  const deixar = deixarABase(v);
+  // O negócio de dono, o quartel: tomam o dia inteiro, todos os dias — a regra de sempre.
+  if (novo.tipo !== 'curso' && novo.tipo !== 'emprego') return { com: 'base', rotulo, motivo: `${cap(equipe)} ${doClube(es.clube)} treina quase todo dia`, alternativas: [deixar] };
+  if (novo.tipo === 'curso' && novo.modalidade === 'ead') return undefined;
+  // O LUGAR: quem treina longe de casa fica no alojamento durante a semana.
+  const alojamento = !!es.municipioId && es.municipioId !== v.moradia.municipioId;
+  const ondeTreina = es.municipioId ? municipio(es.municipioId).nome : '';
+  if (alojamento && novo.tipo === 'curso' && novo.municipioId !== es.municipioId)
+    return { com: 'base', rotulo, motivo: `${cap(equipe)} ${doClube(es.clube)} treina em ${ondeTreina}, onde você fica no alojamento durante a semana — e o curso é presencial em ${municipio(novo.municipioId).nome}`, alternativas: [deixar] };
+  if (alojamento && novo.tipo === 'emprego')
+    return { com: 'base', rotulo, motivo: `Durante a semana você fica no alojamento ${doClube(es.clube)}, em ${ondeTreina}: o trabalho é em ${municipio(v.moradia.municipioId).nome}`, alternativas: [deixar] };
+  const a = analiseDaBase?.(v, novo);
+  // Sem a agenda carregada (só o pacote de baixo), a resposta conservadora de antes.
+  if (!a) return { com: 'base', rotulo, motivo: `${cap(equipe)} ${doClube(es.clube)} treina quase todo dia`, alternativas: [deixar] };
+  const oQue = novo.tipo === 'curso' ? (curso(novo.cursoId).nivel === 'superior' ? 'a faculdade' : 'o curso') : 'o trabalho';
+  const folga = a.faixa === 'folgada' || a.faixa === 'ocupada' || a.faixa === 'cheia';
+  if (a.cabem >= a.vezes && folga) return undefined;
+  const treinos = `${a.cabem === 0 ? 'nenhum' : `só ${a.cabem}`} dos ${a.vezes} treinos da semana`;
+  // Não cabe: metade ou mais dos treinos sem horário, ou a semana além do que um corpo aguenta.
+  if (a.faixa === 'alem' || a.cabem * 2 < a.vezes) {
+    const motivo = a.faixa === 'alem' && a.cabem >= a.vezes
+      ? `Descanso insuficiente: ${equipe} ${doClube(es.clube)} (treino quase todo dia), ${oQue} e o que você já tem passam do que uma pessoa aguenta numa semana`
+      : `Horário incompatível: ${equipe} ${doClube(es.clube)} treina ${a.quando}, e com ${oQue} ${treinos} ${a.cabem === 1 ? 'acha' : 'acham'} horário${a.ocupam ? ` (${a.ocupam} ocupam esses horários)` : ''}`;
+    return { com: 'base', rotulo, motivo, alternativas: [deixar] };
+  }
+  // Cabe apertado: dá para tentar — com o preço dito.
+  const perde = a.cabem < a.vezes;
+  const motivo = perde
+    ? `${cap(equipe)} ${doClube(es.clube)} treina ${a.quando}: com ${oQue}, ${treinos} ${a.cabem === 1 ? 'acha' : 'acham'} horário${a.ocupam ? ` (${a.ocupam} ocupam os outros)` : ''}`
+    : `${cap(equipe)} ${doClube(es.clube)}, ${oQue} e o que você já tem cabem nos horários — mas a semana passa do que se aguenta descansando`;
+  const consequencia = perde
+    ? `Treina nas vezes que sobram. O treinador repara em quem falta: a técnica anda menos e a vaga na base fica mais arriscada.`
+    : `Treino, ${oQue === 'o trabalho' ? 'expediente' : 'aula'} e descanso curto: dá para tentar — o cansaço, o estresse e o rendimento cobram.`;
+  return { com: 'base', rotulo, motivo, alternativas: [deixar, { conciliar: true, texto: `seguir n${equipe} ${doClube(es.clube)}, tentando dar conta de tudo`, consequencia }] };
+}
+
+const PALAVRA_DO_TURNO: Record<Turno, string> = { manha: 'manhã', tarde: 'tarde', noite: 'noite', integral: 'dia inteiro' };
+/** Dito antes de tentar: o curso ou o trabalho cabe junto com a base (e em que turno o treino deixa). */
+export function notaDaBaseCom(v: Vida, novo: NovoCompromisso): string | undefined {
+  const es = v.caminhos.esporte;
+  if (es?.fase !== 'base' || (novo.tipo !== 'curso' && novo.tipo !== 'emprego')) return undefined;
+  if (novo.tipo === 'curso' && novo.modalidade === 'ead') return undefined;
+  if (analisarEntrada(v, novo).some(c => c.com === 'base')) return undefined;
+  const a = analiseDaBase?.(v, novo);
+  if (!a) return undefined;
+  const equipe = es.modalidade === 'futebol' ? 'a base' : 'a equipe';
+  const oQue = novo.tipo === 'curso' ? 'as aulas' : 'o trabalho';
+  return `Cabe junto com ${equipe} ${doClube(es.clube)}: os ${a.vezes} treinos da semana acham horário${a.turno ? `, com ${oQue} no turno da ${PALAVRA_DO_TURNO[a.turno]}` : ''}.`;
+}
+
+/** A entrada que aconteceu ao lado da base guarda o turno em que o treino cabe (a conta acima o escolheu). */
+function guardarTurnoAoLadoDaBase(v: Vida, novo: NovoCompromisso, a = v.caminhos.esporte?.fase === 'base' ? analiseDaBase?.(v, novo) : undefined): void {
+  if (!a?.turno) return;
+  const fonte = novo.tipo === 'curso' ? 'curso' : novo.tipo === 'emprego' ? 'trabalho' : undefined;
+  if (!fonte) return;
+  const ag = (v.agenda ??= {});
+  (ag.turnos ??= {})[fonte] = a.turno;
 }
 
 function conflitoComNegocioParalelo(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada | undefined {
@@ -205,11 +281,20 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntra
   const cursoLeve = novo.tipo === 'curso' && (novo.modalidade === 'ead' || (curso(novo.cursoId).carga !== 'integral' && novo.municipioId === v.moradia.municipioId));
   if (noServicoInicial(v) && novo.tipo !== 'servico_militar' && !cursoLeve) return [{ com: 'servico', rotulo: 'o serviço militar', motivo: 'Durante o serviço militar inicial, o quartel não libera: são doze meses obrigatórios', alternativas: [], impede: true }];
   switch (novo.tipo) {
-    case 'base':
-      push(conflitoComCurso(v, novo, true, novo.municipioId));
-      push(conflitoComEmprego(v, novo));
+    case 'base': {
+      // REWORK 10 · ROT-05: entrar na base com o curso ou o trabalho que já existem — a mesma conta de horário, lugar e
+      // descanso. O curso noturno na cidade do clube e o meio período no contraturno cabem; o resto pergunta, como antes.
+      const a = analiseDaBase?.(v, novo);
+      const cabe = !!a && a.cabem >= a.vezes && (a.faixa === 'folgada' || a.faixa === 'ocupada' || a.faixa === 'cheia');
+      const m = cursoEmAndamento(v);
+      const cursoCabe = cabe && (!m || m.modalidade === 'ead' || (m.municipioId === novo.municipioId && cursoOuNulo(m.cursoId)?.carga !== 'integral'));
+      const e = v.trabalho.atual;
+      const empregoCabe = cabe && novo.municipioId === v.moradia.municipioId && !!e && !ehDono(v) && !noServicoInicial(v) && e.contrato !== 'eletivo' && !ocupacaoOuNula(e.ocupacaoId)?.jornada;
+      if (!cursoCabe) push(conflitoComCurso(v, novo, true, novo.municipioId));
+      if (!empregoCabe) push(conflitoComEmprego(v, novo));
       push(conflitoComNegocioParalelo(v, novo));
       break;
+    }
     case 'contrato_esporte':
       push(conflitoComCurso(v, novo, true));
       push(conflitoComEmprego(v, novo));
@@ -220,7 +305,7 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntra
       const m = cursoEmAndamento(v);
       const cursoIntegral = !!m && cursoOuNulo(m.cursoId)?.carga === 'integral';
       push(conflitoComCurso(v, novo, pesado && cursoIntegral, oc.formacaoInicial ? '__longe__' : undefined));
-      push(conflitoComBase(v));
+      push(conflitoComBase(v, novo));
       push(conflitoComEmprego(v, novo));
       // REWORK 9: o horário — a escola, as atividades da semana. Os conflitos grandes (o curso integral, outro
       // emprego) já foram ditos acima; aqui, o que o expediente novo atravessa na agenda.
@@ -229,7 +314,7 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntra
     }
     case 'negocio':
       push(conflitoComEmprego(v, novo));
-      push(conflitoComBase(v));
+      push(conflitoComBase(v, novo));
       break;
     case 'dedicar_negocio': {
       const e = v.trabalho.atual;
@@ -238,7 +323,7 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntra
         out.push({ com: 'emprego', rotulo: `o trabalho de ${nome}`, motivo: `Você trabalha como ${nome}`, alternativas: [{ larga: 'emprego', texto: `deixar o trabalho de ${nome}`, consequencia: `O salário de ${nome} acaba; o negócio passa a pagar a sua retirada.` }] });
       }
       push(conflitoComCurso(v, novo, true));
-      push(conflitoComBase(v));
+      push(conflitoComBase(v, novo));
       break;
     }
     case 'curso': {
@@ -266,7 +351,7 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntra
           }
         }
       }
-      if (presencial) push(conflitoComBase(v));
+      if (presencial) push(conflitoComBase(v, novo));
       if (outraCidade) push(conflitoComCidade(v, novo.municipioId, c.nivel === 'superior' ? `a faculdade de ${c.nome}` : c.nome));
       break;
     }
@@ -281,7 +366,7 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntra
           out.push(base);
         }
       }
-      push(conflitoComBase(v));
+      push(conflitoComBase(v, novo));
       push(conflitoComNegocioParalelo(v, novo));
       if (ehDono(v)) {
         const n = negocioAberto(v)!;
@@ -381,7 +466,7 @@ export function propor(v: Vida, r: Rng, novo: NovoCompromisso): 'feito' | 'pende
     if (v.momento?.situacaoId === 'comp_conflito') v.momento = null;
   }
   const conflitos = analisarEntrada(v, novo);
-  if (!conflitos.length) { aplicarNovo(v, r, novo, false, []); return 'feito'; }
+  if (!conflitos.length) { const a = v.caminhos.esporte?.fase === 'base' ? analiseDaBase?.(v, novo) : undefined; aplicarNovo(v, r, novo, false, []); guardarTurnoAoLadoDaBase(v, novo, a); return 'feito'; }
   const d = descreverOferta(v, novo);
   if (v.caminhos.pendente && v.caminhos.pendente.t === v.t) {
     // Duas ofertas que não cabem no mesmo ano: a segunda passa, e fica dito por quê.
@@ -416,7 +501,9 @@ export function resolverPendente(v: Vida, r: Rng, k: number): string {
     return `${impede.motivo}.`;
   }
   for (const id of plano.larga) largar(v, id, motivo, p.novo);
+  const daBase = v.caminhos.esporte?.fase === 'base' ? analiseDaBase?.(v, p.novo) : undefined;
   aplicarNovo(v, r, p.novo, plano.larga.includes('negocio_nas_horas_vagas'), plano.larga);
+  guardarTurnoAoLadoDaBase(v, p.novo, daBase);
   if (plano.conciliar) v.fatos['conciliando'] = v.t;
   return plano.consequencias.join(' ');
 }

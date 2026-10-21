@@ -27,7 +27,7 @@
  * o desempenho do ano).
  */
 
-import type { Dia, LugarNaAgenda, Turno, Vida } from '../tipos';
+import type { Dia, LugarNaAgenda, NovoCompromisso, Turno, Vida } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, moraCom, vinculosVivos } from '../nucleo';
 import { curso, cursoOuNulo } from '../dados/cursos';
 import { animal } from '../dados/animais';
@@ -37,7 +37,7 @@ import { aulaCurtaDaCrianca, encaixe, estudaAgora, type FaixaDaSemana } from './
 import { semanaDaPolitica } from './politica';
 import { deslocamento } from './transporte';
 import { rngDe } from '../rng';
-import { registrarAnaliseDeHorario, type Alternativa, type ConflitoDeEntrada } from './compromissos';
+import { registrarAnaliseDaBase, registrarAnaliseDeHorario, type Alternativa, type ConflitoDeEntrada } from './compromissos';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 
@@ -339,10 +339,10 @@ const ultimaHora = (i: number) => (i < 12 ? h(19, 30) : i < 16 ? h(21, 30) : h(2
  * Encaixa uma atividade: o primeiro horário (da preferência dela) livre nos dias do padrão; se nenhum padrão
  * inteiro couber, dia a dia — e o que não couber de jeito nenhum fica de fora (e vira conflito).
  */
-function encaixar(v: Vida, ocupados: Bloco[], cat: CategoriaAtividade, vezes: number, dur: number, id: string): { dias: Dia[]; inicio: number }[] {
+function encaixar(v: Vida, ocupados: Bloco[], cat: CategoriaAtividade, vezes: number, dur: number, id: string, doClube?: number[]): { dias: Dia[]; inicio: number }[] {
   const i = idade(v);
   const limite = ultimaHora(i);
-  const horas = HORARIOS[cat].filter(x => x + dur <= limite && (i >= 12 || x >= h(8)));
+  const horas = (doClube ?? HORARIOS[cat]).filter(x => x + dur <= limite && (i >= 12 || x >= h(8)));
   const todos = padraoDeDias(vezes, DO_FIM_DE_SEMANA.has(cat));
   const k0 = giro(id) % todos.length;
   const padroes = [...todos.slice(k0), ...todos.slice(0, k0)];
@@ -351,7 +351,8 @@ function encaixar(v: Vida, ocupados: Bloco[], cat: CategoriaAtividade, vezes: nu
   const usados: { dias: Dia[]; inicio: number }[] = [];
   const diasJa = new Set<Dia>();
   const ordem: Dia[] = [...padroes[0], ...TODOS.filter(d => !padroes[0].includes(d))];
-  const extras = [...horas, ...[h(8), h(10), h(13), h(15), h(16), h(20), h(21)].filter(x => x + dur <= limite && !horas.includes(x) && (i >= 12 || x >= h(13)))];
+  // O treino do clube só acontece nos horários do clube (`horariosDoClube`): não há "dia a dia" fora deles.
+  const extras = doClube ? horas : [...horas, ...[h(8), h(10), h(13), h(15), h(16), h(20), h(21)].filter(x => x + dur <= limite && !horas.includes(x) && (i >= 12 || x >= h(13)))];
   for (const d of ordem) {
     // (conta os DIAS, não os grupos: dias no mesmo horário viram um grupo só)
     if (diasJa.size >= vezes) break;
@@ -363,6 +364,21 @@ function encaixar(v: Vida, ocupados: Bloco[], cat: CategoriaAtividade, vezes: nu
     if (mesmo) mesmo.dias = [...mesmo.dias, d].sort() as Dia[]; else usados.push({ dias: [d], inicio: ini });
   }
   return usados;
+}
+
+/**
+ * REWORK 10 · ROT-05 — o treino de quem está numa base (ou numa equipe de competição) tem os horários do CLUBE, não os
+ * de quem treina. A base de formação treina de dia, no contraturno da escola (o clube formador organiza o treino para o
+ * atleta estudar): à tarde, ou de manhã para quem estuda à tarde — e nunca à noite. O time de cima de um clube pequeno (a
+ * porta amadora, `esporte.entrarPeloAmador`) treina à noite, depois do expediente de quem trabalha. É isso que decide se
+ * a faculdade e o trabalho cabem junto com a base — e não uma regra de "ocupado".
+ */
+export const HORARIOS_DA_BASE = [h(14), h(15), h(8), h(9), h(16)];
+export const HORARIOS_DO_AMADOR = [h(19), h(18, 30), h(20), h(18)];
+export function horariosDoClube(v: Vida, id: string): number[] | undefined {
+  const es = v.caminhos.esporte;
+  if (es?.fase !== 'base' || es.modalidade !== id) return undefined;
+  return es.origem === 'amador' ? HORARIOS_DO_AMADOR : HORARIOS_DA_BASE;
 }
 
 /** A duração de uma sessão da atividade (minutos). */
@@ -435,7 +451,7 @@ export function agendaDaSemana(v: Vida, o: { trabalho?: TrabalhoHipotetico; turn
       ocupados.push(b);
       continue;
     }
-    const lugaresAchados = encaixar(sobre, ocupados, x.cat, x.vezes, x.dur, x.id);
+    const lugaresAchados = encaixar(sobre, ocupados, x.cat, x.vezes, x.dur, x.id, x.origem === 'rotina' ? horariosDoClube(sobre, x.id) : undefined);
     const vezes = lugaresAchados.reduce((s, l) => s + l.dias.length, 0);
     for (const [k, l] of lugaresAchados.entries()) {
       const b: Bloco = { ...base, id: k === 0 ? x.id : `${x.id}#${k}`, dias: l.dias, inicio: l.inicio, fim: l.inicio + x.dur };
@@ -754,7 +770,9 @@ function conflitoDeHorario(v: Vida, ocupacaoId: string): ConflitoDeEntrada | und
     if (idade(v) >= 15) alternativas.push({ larga: 'escola', texto: 'largar a escola', consequencia: 'A escola sai da vida: o diploma fica para depois (dá para voltar, no supletivo).' });
     alternativas.push({ conciliar: true, texto: 'tentar dar conta dos dois', consequencia: 'As aulas que o trabalho atravessa viram falta: as notas e o aprendizado sentem.' });
   }
-  for (const c of imp.novos.filter(x => x.perde !== 'escola')) {
+  // REWORK 10 · ROT-05: o treino da base não é "uma atividade" que se larga ou remarca — é o clube (`compromissos`).
+  const daBase = v.caminhos.esporte?.fase === 'base' ? v.caminhos.esporte.modalidade : undefined;
+  for (const c of imp.novos.filter(x => x.perde !== 'escola' && x.perde !== daBase)) {
     const b = imp.com.blocos.find(x => x.id === c.perde || x.ref === c.perde);
     const rot = v.rotinas.find(x => x.id === c.perde);
     if (!b || !rot) continue;
@@ -859,6 +877,79 @@ export function resultadoDaPostura(v: Vida): string {
   return b.length ? `Este ano, estudo em primeiro lugar: ${b.map(quando).join('; ')}.` : 'Este ano, estudo em primeiro lugar — mas a semana não tem horário livre para isso.';
 }
 
+/* ------------------------------------------------------------ REWORK 10 · ROT-05: a base junto com o resto */
+
+/** O que pesa a semana com o compromisso novo no lugar (uma vida hipotética: nada é gravado). */
+function vidaCom(v: Vida, novo: NovoCompromisso): Vida {
+  switch (novo.tipo) {
+    case 'base': {
+      const rotinas = [...v.rotinas.filter(r => r.id !== novo.dominio), { id: novo.dominio, nivel: 3 as const, tInicio: v.t }];
+      const esporte = { modalidade: novo.dominio, fase: 'base' as const, clube: novo.clube, nivel: 1 as const, tInicio: v.t, tFase: v.t, lesoes: 0, municipioId: novo.municipioId };
+      return { ...v, rotinas, caminhos: { ...v.caminhos, esporte } } as Vida;
+    }
+    case 'curso': {
+      const matricula = { cursoId: novo.cursoId, instituicao: novo.instituicao, rede: novo.rede, modalidade: novo.modalidade, tInicio: v.t, mesesRestantes: 12, mensalidade: novo.mensalidade, desempenho: 60, trancado: false, municipioId: novo.municipioId };
+      return { ...v, educacao: { ...v.educacao, matricula } } as Vida;
+    }
+    case 'emprego': {
+      const oc = ocupacao(novo.ocupacaoId);
+      const atual = { ...(v.trabalho.atual ?? {}), ocupacaoId: oc.id, carga: oc.carga, contrato: 'clt', reduzida: undefined, formacaoAte: undefined };
+      return { ...v, trabalho: { ...v.trabalho, atual, horasExtras: false } } as Vida;
+    }
+    default: return v;
+  }
+}
+
+export interface BaseComONovo {
+  /** Treinos da base por semana, e quantos acham horário com o compromisso novo. */
+  vezes: number;
+  cabem: number;
+  /** O turno do curso (ou do meio período) em que o treino mais cabe — o que a entrada guarda na agenda. */
+  turno?: Turno;
+  /** A semana com tudo junto (a exigência: o descanso que sobra). */
+  faixa: FaixaDaSemana;
+  /** O que ocupa os horários do treino (em palavras), quando não cabem todos. */
+  ocupam?: string;
+  /** Os horários do clube, em palavras. */
+  quando: string;
+}
+
+/**
+ * Cabe a base junto com o compromisso novo (ou o novo junto com a base)? A mesma agenda do ano, com o novo no lugar: os
+ * treinos que acham horário nos horários do clube, o turno do curso ou do meio período que mais deixa o treino acontecer
+ * e a semana inteira (o descanso). Nada de "você já está ocupado": a resposta é a conta.
+ */
+export function baseComONovo(v: Vida, novo: NovoCompromisso): BaseComONovo | undefined {
+  const hip = vidaCom(v, novo);
+  const es = hip.caminhos.esporte;
+  if (es?.fase !== 'base') return undefined;
+  const m = modeloRotina(es.modalidade);
+  if (!m) return undefined;
+  const vezes = vezesPorSemana(nivelModelo(m, 3).tempo);
+  const horas = horariosDoClube(hip, es.modalidade) ?? HORARIOS_DA_BASE;
+  const quando = es.origem === 'amador' ? 'à noite, depois do expediente' : 'de dia, no contraturno (à tarde, ou de manhã)';
+  // Os turnos possíveis do que tem turno: o curso de meio período presencial, o trabalho de meio período.
+  let fonte: FonteDeTurno | undefined;
+  let turnos: Turno[] = [];
+  if (novo.tipo === 'curso' && novo.modalidade === 'presencial' && curso(novo.cursoId).carga !== 'integral' && novo.cursoId !== 'residencia') { fonte = 'curso'; turnos = ['manha', 'tarde', 'noite']; }
+  if (novo.tipo === 'emprego' && ocupacao(novo.ocupacaoId).carga === 'parcial' && !ocupacao(novo.ocupacaoId).jornada) { fonte = 'trabalho'; turnos = idade(v) >= 18 ? ['manha', 'tarde', 'noite'] : ['manha', 'tarde']; }
+  const ler = (t?: Turno) => {
+    const a = agendaDaSemana(hip, fonte && t ? { turnos: { [fonte]: t } } : {});
+    return { a, cabem: Math.round((a.presenca[es.modalidade] ?? 1) * vezes), t };
+  };
+  const leituras = turnos.length ? turnos.map(ler) : [ler()];
+  // O melhor turno: o que deixa mais treinos; empatando, o que a pessoa já tinha (ou o primeiro).
+  const melhor = leituras.reduce((a, b) => (b.cabem > a.cabem ? b : a));
+  const faixa = encaixe(hip, 0).faixa;
+  let ocupam: string | undefined;
+  if (melhor.cabem < vezes) {
+    const janela = (b: Bloco) => b.dias.some(d => d <= 4) && horas.some(x => b.inicio < x + 90 && x < b.fim);
+    ocupam = listaNatural([...new Set(melhor.a.blocos.filter(b => b.origem !== 'trajeto' && b.origem !== 'rotina' && janela(b)).map(b => b.rotulo.replace(/ — .*/, '').replace(/ \(.*\)$/, '').toLowerCase()))].slice(0, 3)) || undefined;
+  }
+  return { vezes, cabem: melhor.cabem, ...(melhor.t ? { turno: melhor.t } : {}), faixa, ...(ocupam ? { ocupam } : {}), quando };
+}
+
 // A regra mora aqui (num pacote acima de `compromissos` e de `rotinas`): ao carregar, a agenda se registra lá.
+registrarAnaliseDaBase(baseComONovo);
 registrarAnaliseDeHorario(conflitoDeHorario);
 registrarHorarioDaAtividade(horarioDaAtividade);
