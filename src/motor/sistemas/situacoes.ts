@@ -30,6 +30,7 @@
  * Linha da Vida.
  */
 
+import { desgastar } from './desgastePolitico';
 import { dinheiroCurto as moedaCurta } from '../texto';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
@@ -47,6 +48,8 @@ import { registrarNoMandato, NOME_PRIORIDADE } from './politica';
 import { novaOportunidade } from './oportunidades';
 import { lesionar } from './lesoes';
 import { especialidadeMedica } from './medicina';
+import { criarPessoa, vincular } from '../pessoas';
+import { lembrarCom } from '../nucleo';
 import { habilidade } from './frentes';
 import { barraDaDivisao, nomePosicao, OCUPACOES_DE_ATLETA } from './esporte';
 import { climaDe, mexerNoClima } from './profissao';
@@ -164,8 +167,10 @@ export function situacaoAberta(v: Vida): { m: ModeloSituacao; d: Dados } | undef
 /** O texto da cena — e, quando o tema volta anos depois, a lembrança do que aconteceu da outra vez. */
 export function textoDaSituacao(v: Vida, m: ModeloSituacao, d: Dados): string {
   const corpo = m.texto(v, d);
-  if (d._antes === undefined || !m.retorno) return corpo;
+  if (d._antes === undefined) return corpo;
   const antes = [...(v.caminhos.situacoes ?? [])].reverse().find(x => x.id === m.id);
+  // REWORK 10.5 · EVT-07: a cena que volta diz que volta (antes, só as que tinham um texto de retorno próprio).
+  if (!m.retorno) return antes ? `De novo, como em ${d._antes} (da outra vez: ${antes.texto.charAt(0).toLowerCase()}${antes.texto.slice(1).replace(/\.$/, '')}). ${corpo}` : corpo;
   return antes ? `${m.retorno(v, d, antes)} ${corpo}` : corpo;
 }
 
@@ -198,6 +203,12 @@ export function trajetoriaDeSituacao(v: Vida): Trajetoria | undefined {
   if (m === 'emprego' || m === 'servico_publico') return 'emprego';
   return undefined;
 }
+
+/**
+ * REWORK 10.5 · CAR-13: as cenas de set, teste de elenco e campanha são de quem ATUA. O mercado 'arte' inteiro (músico,
+ * bailarina, escritor) caía na trajetória 'cena' e recebia "Conflito no set" e "a décima tomada".
+ */
+export const atua = (v: Vida) => { const e = v.trabalho.atual; return !!e && (ocupacaoOuNula(e.ocupacaoId)?.trilha === 'cena'); };
 
 /** A vida política ativa fora do mandato: filiado, com base, candidato, ou entre um mandato e outro. */
 const politicaAtiva = (v: Vida) => { const p = v.caminhos.politica; return !!p && p.fase !== 'encerrada' && !p.mandato && (!!p.partido || p.apoio >= 25 || p.historico.length > 0); };
@@ -299,8 +310,12 @@ export function candidatosDoAno(v: Vida, tr: Trajetoria): { m: ModeloSituacao; p
     const irmao = ultima(x => x.id !== m.id && temaDe(x.id) === tema);
     if (irmao && v.t - irmao.t < 24) continue;
     // O nunca vivido pesa mais; o que voltou há muito tempo, quase como novo.
-    const novidade = mesmo ? 1 + Math.min(1, (v.t - mesmo.t) / 120) * 0.4 : 1.5;
-    out.push({ m, peso: (m.peso?.(v) ?? 1) * novidade });
+    // REWORK 10.5 · EVT-05: na mesma vida, a cena que já aconteceu quase não volta enquanto houver outra possível (a que
+    // tem contexto próprio — o lance, o caso — volta mais, porque cada vez é outra; a cena fixa, quase nunca). E a que
+    // apareceu nas duas vidas anteriores pesa menos (`memoriaDeVidas`).
+    const novidade = mesmo ? (m.contexto ? 0.5 : 0.12) * (1 + Math.min(1, (v.t - mesmo.t) / 120) * 0.4) : 1.5;
+    const deOutraVida = v.memoriaDeVidas?.includes(m.id) ? 0.45 : 1;
+    out.push({ m, peso: (m.peso?.(v) ?? 1) * novidade * deOutraVida });
   }
   return out;
 }
@@ -369,7 +384,7 @@ function aplicar(v: Vida, tr: Trajetoria, ef: Efeitos, d: Dados, desfecho: Desfe
   if (ef.confianca) v.fatos['esp_treinador_ok'] = ef.confianca > 0 ? v.t : v.t - 24;
   const t = v.caminhos.esporte?.temporadas?.slice(-1)[0];
   if (ef.apoio && v.caminhos.politica) v.caminhos.politica.apoio = clamp(v.caminhos.politica.apoio + ef.apoio);
-  if (ef.desgaste && v.caminhos.politica) v.caminhos.politica.desgaste = clamp(v.caminhos.politica.desgaste + ef.desgaste);
+  if (ef.desgaste && v.caminhos.politica) desgastar(v.caminhos.politica, ef.desgaste, v.caminhos.politica.mandato ? 'mandato' : 'exposicao');
   if (t && tr === 'futebol') { if (ef.gols) t.gols += ef.gols; if (ef.assistencias) t.assistencias += ef.assistencias; if (ef.defesa && t.defesa !== undefined) t.defesa += ef.defesa; }
   if (ef.dinheiro) { const n = tr === 'negocio' ? negocioAtivo(v) : undefined; if (n) n.caixa = (n.caixa ?? 0) + ef.dinheiro; else v.financas.conta += ef.dinheiro; }
   // O feito no emprego (o caso que virou aula, o projeto que virou referência) entra no desempenho dos próximos anos.
@@ -715,18 +730,12 @@ const MODELOS_PROFISSOES: ModeloSituacao[] = [
       { id: 'ambicioso', texto: 'Mandar o ambicioso', dica: 'Muito dinheiro — e muita concorrência.', risco: 0.65, fatores: v => [competencia(v), F('produção', (vidaAcademica(v).publicacoes - 6) / 20)], desfechos: D('Aprovado. O laboratório ganhou equipamento e bolsas.', 'Aprovado com corte no orçamento.', 'Não aprovado — "mérito, mas sem recurso".', 'Não aprovado, e o seguro também não foi mandado. Um ano no aperto.', { otimo: { extra: v => { vidaAcademica(v).financiamentos += 1; registrarProducao(v, { tipo: 'financiamento', titulo: 'Um edital de pesquisa', detalhe: 'verba para o laboratório' }); } }, bom: { extra: v => { vidaAcademica(v).financiamentos += 1; registrarProducao(v, { tipo: 'financiamento', titulo: 'Um edital de pesquisa', detalhe: 'verba para o laboratório' }); } } }, { otimo: 'Ganhou um edital grande de pesquisa e montou o laboratório que queria.' }) },
       { id: 'seguro', texto: 'Mandar o seguro', dica: 'Mais chance, menos mudança.', risco: 0.15, fatores: v => [competencia(v)], desfechos: D('Aprovado e elogiado.', 'Aprovado.', 'Ficou na lista de espera.', 'Não aprovado.', { otimo: { extra: v => { vidaAcademica(v).financiamentos += 1; registrarProducao(v, { tipo: 'financiamento', titulo: 'Um edital de pesquisa', detalhe: 'verba para o laboratório' }); } }, bom: { extra: v => { vidaAcademica(v).financiamentos += 1; registrarProducao(v, { tipo: 'financiamento', titulo: 'Um edital de pesquisa', detalhe: 'verba para o laboratório' }); } } }) }
     ] },
-  { id: 'cena_dificil', trajetoria: 'cena', cabe: () => true,
+  { id: 'cena_dificil', trajetoria: 'cena', cabe: atua,
     titulo: 'A cena difícil', texto: () => 'A cena mais difícil do trabalho: a décima tomada não saiu, e a equipe olha o relógio.',
     intencoes: [
       { id: 'repetir', texto: 'Pedir mais uma e repetir até sair', dica: 'Desgasta todo mundo; às vezes sai a melhor.', risco: 0.4, fatores: v => [disciplina(v), F('técnica', (habilidade(v, 'teatro') - 60) / 40)], desfechos: D('A décima primeira foi a que entrou no corte — e a que todo mundo comentou.', 'Saiu, na décima segunda.', 'Saiu, mas ninguém ficou contente.', 'A diretora encerrou o dia; a cena foi cortada do roteiro.') },
       { id: 'improvisar', texto: 'Improvisar', dica: 'Pode virar a melhor cena. Pode virar bronca.', risco: 0.65, fatores: v => [coragem(v), F('técnica', (habilidade(v, 'teatro') - 60) / 40), leitura(v)], desfechos: D('O improviso virou a cena que o público lembra.', 'A diretora gostou de uma parte.', 'Não usaram.', '"Não é o seu filme." O clima no set pesou.', { otimo: { noto: 1 }, pessimo: { clima: -6 } }, { otimo: 'Um improviso seu virou a cena mais lembrada de um trabalho.' }) },
       { id: 'direcao', texto: 'Pedir uma conversa com a direção', dica: 'Ajuda quem sabe ouvir.', risco: 0.2, fatores: v => [social(v), leitura(v)], desfechos: D('Cinco minutos de conversa destravaram tudo.', 'Uma indicação simples resolveu.', 'A conversa não ajudou.', 'A diretora achou que você estava discutindo o roteiro.') }
-    ] },
-  { id: 'cena_conflito', trajetoria: 'cena', cabe: () => true,
-    titulo: 'Conflito no set', texto: () => 'Um colega de elenco vive atrasando, mudando falas, provocando. Hoje, a provocação foi com você.',
-    intencoes: [
-      { id: 'enfrentar', texto: 'Enfrentar ali mesmo', dica: 'Resolve rápido — ou vira história de bastidor.', risco: 0.6, fatores: v => [coragem(v), cabeca(v)], desfechos: D('O colega recuou, e o set agradeceu em silêncio.', 'A conversa foi dura, e funcionou.', 'Virou uma tarde inteira de clima ruim.', 'A briga vazou para a imprensa.', { pessimo: { imagem: 'polemica' } }) },
-      { id: 'produtora', texto: 'Levar à produção', dica: 'O caminho formal.', risco: 0.2, fatores: v => [social(v), clima(v)], desfechos: D('A produção conversou com ele. Mudou.', 'Foi registrado.', 'Nada mudou.', 'A produção achou que o problema era você.') }
     ] },
   { id: 'neg_cliente', trajetoria: 'negocio', cabe: () => true,
     titulo: 'Um cliente grande', texto: () => 'Um cliente grande quer fechar um pedido que dobraria o mês — com desconto de trinta por cento e prazo de noventa dias.',
@@ -766,7 +775,7 @@ const MODELOS_PROFISSOES: ModeloSituacao[] = [
       { id: 'apontar', texto: 'Apontar o problema com clareza', dica: 'O certo — e o orientador dele vai lembrar.', risco: 0.45, fatores: v => [coragem(v), competencia(v), social(v)], desfechos: D('A crítica foi tão precisa que o próprio orientador agradeceu: a tese saiu melhor.', 'Aprovado com correções que você pediu.', 'O orientador saiu da sala sem falar com você.', 'Meses depois, o seu projeto voltou com um parecer duro — e você sabe de quem.', { otimo: { nome: 2 }, pessimo: { estresse: 6, nome: -1 } }, { otimo: 'Numa banca de doutorado, apontou um problema sério com tanta precisão que a tese saiu melhor.' }) },
       { id: 'suave', texto: 'Aprovar e sugerir ajustes por escrito', dica: 'Paz na sala. A tese fica como está.', risco: 0.15, fatores: v => [social(v)], desfechos: D('Os ajustes por escrito foram feitos com cuidado.', 'Aprovado.', 'Um colega de banca disse em voz alta o que você não disse.', 'O problema apareceu depois, num artigo — com o seu nome na ata da banca.', { otimo: { nome: 0 }, bom: { nome: 0 }, pessimo: { nome: -2 } }) }
     ] },
-  { id: 'cena_teste', trajetoria: 'cena', peso: () => 1, cabe: v => idade(v) <= 60,
+  { id: 'cena_teste', trajetoria: 'cena', peso: () => 1, cabe: v => atua(v) && idade(v) <= 60,
     titulo: 'O teste', texto: () => 'Um teste para um papel grande numa produção de peso. A cena do teste chegou na véspera, e o papel pede algo que você nunca fez.',
     intencoes: [
       { id: 'preparar', texto: 'Virar a noite preparando', dica: 'Chega pronto — e cansado.', risco: 0.35, fatores: v => [disciplina(v), F('técnica', (habilidade(v, 'teatro') - 60) / 40)], desfechos: D('A diretora de elenco pediu para repetir — e repetiu sorrindo. O seu nome ficou na lista curta.', 'Fez um teste sólido.', 'O cansaço apareceu na segunda leitura.', 'A cabeça travou no meio do texto.', { otimo: { nome: 3 }, ruim: { estresse: 5 }, pessimo: { estresse: 7 } }) },
@@ -787,13 +796,13 @@ const MODELOS_PROFISSOES: ModeloSituacao[] = [
       { id: 'conversar', texto: 'Escrever para o autor primeiro', dica: 'Elegante. Pode virar desculpa — ou silêncio.', risco: 0.3, fatores: v => [social(v), leitura(v)], desfechos: D('O autor pediu desculpas e propôs um trabalho conjunto.', 'O autor corrigiu discretamente.', 'Nenhuma resposta.', 'A resposta foi atravessada, com cópia para o seu chefe.', { otimo: { nome: 1, feito: 1 }, pessimo: { clima: -4 } }) },
       { id: 'deixar', texto: 'Deixar para lá', dica: 'Paz. E o parágrafo continua sendo dele.', risco: 0.1, fatores: () => [], desfechos: D('Ninguém leu o artigo mesmo.', 'Ficou por isso.', 'Viu o parágrafo citado como dele numa tese.', 'O parágrafo virou referência — com o nome dele.', { ruim: { estresse: 3 }, pessimo: { estresse: 5 } }) }
     ] },
-  { id: 'cena_campanha', trajetoria: 'cena', peso: () => 0.9, cabe: v => idade(v) >= 20,
+  { id: 'cena_campanha', trajetoria: 'cena', peso: () => 0.9, cabe: v => atua(v) && idade(v) >= 20,
     titulo: 'A campanha e a peça', texto: () => 'No mesmo mês: uma campanha publicitária que paga o ano, e uma peça pequena, autoral, que não paga quase nada — e que você queria fazer há tempo.',
     intencoes: [
       { id: 'campanha', texto: 'Fazer a campanha', dica: 'O dinheiro do ano. O rosto fica associado a um produto.', risco: 0.2, fatores: v => [F('nome', 0.1), disciplina(v)], desfechos: D('A campanha pagou o ano e ainda rendeu outra.', 'Pagou o ano.', 'Pagou — e o rosto virou "o da propaganda".', 'A marca se meteu numa polêmica, e o seu rosto estava nela.', { otimo: { dinheiro: 30000 }, bom: { dinheiro: 22000 }, ruim: { dinheiro: 18000 }, pessimo: { dinheiro: 15000, imagem: 'polemica' } }) },
       { id: 'peca', texto: 'Fazer a peça', dica: 'Pouco dinheiro. É o trabalho que você queria.', risco: 0.45, fatores: v => [F('técnica', (habilidade(v, 'teatro') - 60) / 40), coragem(v)], desfechos: D('A peça pequena virou o assunto da cena — e uma crítica que você guardou.', 'Uma temporada bonita, de casa cheia no fim.', 'Pouco público, muito aprendizado.', 'A peça fechou na segunda semana.', { otimo: { nome: 4, noto: 1, humor: 6 }, bom: { nome: 2, humor: 4 }, ruim: { humor: 2 }, pessimo: { estresse: 4 } }, { otimo: 'Trocou uma campanha que pagava o ano por uma peça pequena — e a peça virou assunto.' }) }
     ] },
-  { id: 'cena_critica', trajetoria: 'cena', peso: () => 0.8, cabe: v => idade(v) >= 22,
+  { id: 'cena_critica', trajetoria: 'cena', peso: () => 0.8, cabe: v => atua(v) && idade(v) >= 22,
     titulo: 'A crítica', texto: () => 'Saiu uma crítica dura do seu último trabalho. Uma frase sobre você está sendo compartilhada.',
     intencoes: [
       { id: 'responder', texto: 'Responder em público', dica: 'Pode virar debate. Pode virar briga.', risco: 0.6, fatores: v => [social(v), cabeca(v), coragem(v)], desfechos: D('A resposta, bem-humorada, rendeu mais que a crítica.', 'Ficou empatado.', 'Pareceu ressentimento.', 'Virou briga — e a briga ficou mais famosa que o trabalho.', { otimo: { noto: 1, nome: 1 }, pessimo: { imagem: 'polemica', estresse: 5 } }) },
@@ -1569,7 +1578,158 @@ const MODELOS_OFICIO: ModeloSituacao[] = [
 const SO_COM_VINCULO = new Set(['seg_ocorrencia', 'seg_colega', 'doc_coordenacao', 'bal_processo']);
 const MODELOS_OFICIO_AUTONOMO: ModeloSituacao[] = MODELOS_OFICIO.filter(m => !SO_COM_VINCULO.has(m.id)).map(m => ({ ...m, id: `${m.id}_conta`, trajetoria: 'autonomo' as const }));
 
-export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO];
+/* ------------------------------------------------------------ REWORK 10.5 · EVT-05 / EVT-07 — a arte com nome e memória */
+
+/*
+ * Antes, a atuação tinha cinco cenas (e a música, a dança e a escrita pegavam as do set): numa carreira de 30 anos, o
+ * "Conflito no set" voltava três vezes, igual, sem colega, sem produção, sem lembrar da outra vez. Agora cada arte tem
+ * as suas cenas; o conflito tem a produção (a de agora ou a última), o colega (que fica na sua vida, com a história) e
+ * o motivo — e, quando é a mesma pessoa de novo, a cena sabe.
+ */
+const musico = (v: Vida) => { const e = v.trabalho.atual; const tr = e ? ocupacaoOuNula(e.ocupacaoId)?.trilha : undefined; return tr === 'musica' || tr === 'orquestra'; };
+const dancarino = (v: Vida) => { const e = v.trabalho.atual; return !!e && ocupacaoOuNula(e.ocupacaoId)?.trilha === 'danca'; };
+const anosDeOficio = (v: Vida) => { const e = v.trabalho.atual; return e ? (v.t - e.tInicio) / 12 : 0; };
+const tecnicaDe = (v: Vida, d: 'teatro' | 'musica' | 'danca') => F('técnica', (habilidade(v, d) - 60) / 40);
+const nomeArte = (v: Vida) => F('o nome', ((v.notoriedade?.valor ?? 0) - 30) / 150);
+
+/** A produção de agora (ou a última do currículo) e um colega dela, com nome — criado na hora, se preciso (gerador próprio). */
+function contextoDeSet(v: Vida, motivos: string[]): Dados {
+  const producao = (v.caminhos.audiovisual?.contratos ?? []).filter(c => c.status === 'em_producao').slice(-1)[0];
+  const ultimo = (v.caminhos.curriculo ?? []).filter(x => ['teatro', 'serie', 'novela', 'filme', 'curta'].includes(x.tipo)).slice(-1)[0];
+  const titulo = producao?.titulo ?? ultimo?.titulo ?? 'a montagem nova';
+  const tipo = producao?.tipo ?? ultimo?.tipo ?? 'teatro';
+  const r = rngDe(v.id, 'set', v.t, titulo);
+  const doElenco = Object.values(v.vinculos).filter(x => v.pessoas[x.pessoaId]?.vivo && !x.parentesco && !x.romance && /^at(or|riz)$/.test(v.pessoas[x.pessoaId].ocupacao ?? '') && v.t - x.tInicio <= 120);
+  let p = producao?.pessoaId && v.pessoas[producao.pessoaId]?.vivo && /^at(or|riz)$/.test(v.pessoas[producao.pessoaId].ocupacao ?? '') ? v.pessoas[producao.pessoaId] : doElenco.length ? v.pessoas[r.pick(doElenco).pessoaId] : undefined;
+  if (!p) {
+    p = criarPessoa(v, r, { genero: r.chance(0.5) ? 'masculino' : 'feminino', idade: Math.max(20, idade(v) + r.int(-8, 8)), municipioId: v.moradia.municipioId });
+    p.ocupacao = p.genero === 'feminino' ? 'atriz' : 'ator';
+    p.ocupacaoId = 'ator';
+    vincular(v, p, { origem: 'trabalho', estagio: 'colega', proximidade: 25, convivio: [] });
+  }
+  return { titulo, tipo, colega: p.id, nome: p.nome, motivo: r.pick(motivos), lugar: tipo === 'teatro' ? 'o ensaio' : 'o set' };
+}
+const doColega = (v: Vida, d: Dados, f: (vin: NonNullable<Vida['vinculos'][string]>) => void) => { const vin = v.vinculos[String(d.colega)]; if (vin) f(vin); };
+
+const MODELOS_ARTE: ModeloSituacao[] = [
+  { id: 'cena_conflito', trajetoria: 'cena', tema: 'cena_gente', recarga: 8, cabe: atua,
+    contexto: v => contextoDeSet(v, ['atrasos e falas mudadas na hora', 'a disputa pelo destaque nas cenas que vocês dividem', 'provocações na frente da equipe', 'críticas à sua interpretação na frente da direção']),
+    titulo: (_v, d) => `Conflito ${d.lugar === 'o ensaio' ? 'no ensaio' : 'no set'} de "${d.titulo}"`,
+    texto: (_v, d) => `${d.nome}, do elenco de "${d.titulo}", e você vêm se estranhando: ${d.motivo}. Hoje, a provocação foi com você, e ${d.lugar} inteiro viu.`,
+    retorno: (v, d) => (v.vinculos[String(d.colega)]?.historia.some(h => /Brigaram (no set|no ensaio)/.test(h.texto)) ? `Não é a primeira vez com ${d.nome}.` : `Não é a primeira vez que um colega de elenco passa do ponto (a outra foi em ${d._antes}).`),
+    intencoes: [
+      { id: 'enfrentar', texto: 'Enfrentar ali mesmo', dica: 'Resolve rápido — ou vira história de bastidor.', risco: 0.6, fatores: v => [coragem(v), cabeca(v)],
+        desfechos: D('O colega recuou, e o set agradeceu em silêncio.', 'A conversa foi dura, e funcionou.', 'Virou uma tarde inteira de clima ruim.', 'A briga vazou para a imprensa.', {
+          otimo: { extra: (v, d) => doColega(v, d, vin => { vin.tensao = clamp(vin.tensao + 10); lembrarCom(v, String(d.colega), `Brigaram no set de "${d.titulo}" — e ${d.nome} recuou.`, 'conflito', 1); }) },
+          ruim: { extra: (v, d) => doColega(v, d, vin => { vin.tensao = clamp(vin.tensao + 25); vin.conflito = { t: v.t, assunto: `o set de "${d.titulo}"`, gravidade: 2, quem: 'eu' }; lembrarCom(v, String(d.colega), `Brigaram no set de "${d.titulo}".`, 'conflito', 2); }) },
+          pessimo: { imagem: 'polemica', extra: (v, d) => doColega(v, d, vin => { vin.tensao = clamp(vin.tensao + 35); vin.conflito = { t: v.t, assunto: `a briga no set de "${d.titulo}"`, gravidade: 3, quem: 'eu' }; lembrarCom(v, String(d.colega), `Brigaram no set de "${d.titulo}" — e a briga saiu nos jornais.`, 'conflito', 3); }) }
+        }) },
+      { id: 'produtora', texto: 'Levar à produção', dica: 'O caminho formal.', risco: 0.2, fatores: v => [social(v), clima(v)],
+        desfechos: D('A produção conversou com o colega. Mudou.', 'Foi registrado.', 'Nada mudou.', 'A produção achou que o problema era você.', {
+          bom: { extra: (v, d) => doColega(v, d, vin => { vin.tensao = clamp(vin.tensao + 8); }) },
+          pessimo: { clima: -6, extra: (v, d) => doColega(v, d, vin => { vin.tensao = clamp(vin.tensao + 15); lembrarCom(v, String(d.colega), `Levou à produção o que acontecia no set de "${d.titulo}".`, 'conflito', 1); }) }
+        }) },
+      { id: 'conversar', texto: (_v, d) => `Chamar ${d.nome} para conversar a sós`, dica: 'Pode virar parceria de cena. Pode não dar em nada.', risco: 0.35, fatores: v => [social(v), F('paciência', v.personalidade.tracos.empatia / 300)],
+        desfechos: D('A conversa virou parceria: as cenas de vocês ficaram as melhores do trabalho.', 'Fizeram as pazes de trabalho.', 'Educado na frente, igual por trás.', 'A conversa piorou tudo.', {
+          otimo: { extra: (v, d) => doColega(v, d, vin => { vin.tensao = 0; vin.proximidade = clamp(vin.proximidade + 15); vin.conflito = undefined; lembrarCom(v, String(d.colega), `Viraram parceiros de cena em "${d.titulo}".`, 'amizade', 2); }) },
+          bom: { extra: (v, d) => doColega(v, d, vin => { vin.tensao = clamp(vin.tensao - 10); vin.proximidade = clamp(vin.proximidade + 5); }) },
+          pessimo: { extra: (v, d) => doColega(v, d, vin => { vin.tensao = clamp(vin.tensao + 25); vin.conflito = { t: v.t, assunto: `"${d.titulo}"`, gravidade: 2, quem: 'outro' }; }) }
+        }, { otimo: 'Uma briga de bastidor virou a melhor parceria de cena de um trabalho.' }) }
+    ] },
+  { id: 'cena_roteiro', trajetoria: 'cena', tema: 'cena_texto', peso: () => 0.9, cabe: atua,
+    contexto: v => contextoDeSet(v, ['corte de orçamento', 'uma pesquisa de audiência', 'a direção nova']),
+    titulo: (_v, d) => `O texto de "${d.titulo}" mudou`,
+    texto: (_v, d) => `Por causa de ${d.motivo}, o texto de "${d.titulo}" foi reescrito — e a sua personagem perdeu as melhores cenas.`,
+    intencoes: [
+      { id: 'aceitar', texto: 'Aceitar e fazer o melhor do que sobrou', dica: 'Profissional. E pequeno.', risco: 0.25, fatores: v => [disciplina(v), tecnicaDe(v, 'teatro')], desfechos: D('Do pouco que sobrou, você fez a cena que todo mundo comentou.', 'Fez o trabalho, sem brilho e sem queixa.', 'Passou despercebido.', 'A personagem sumiu no meio da história.', { otimo: { noto: 1 } }, { otimo: 'Com a personagem cortada, fez a cena mais comentada do trabalho.' }) },
+      { id: 'negociar', texto: 'Pedir uma conversa com quem escreve', dica: 'Às vezes devolvem uma cena.', risco: 0.4, fatores: v => [social(v), nomeArte(v)], desfechos: D('A autora ouviu e escreveu uma cena nova para você.', 'Voltou uma cena das cortadas.', 'Ouviram, e nada mudou.', 'Ficou com fama de "ator que reclama do texto".', { pessimo: { clima: -5 } }) },
+      { id: 'sair', texto: 'Pedir para sair do trabalho', dica: 'O nome agradece ou paga.', risco: 0.6, fatores: v => [coragem(v), nomeArte(v)], desfechos: D('Saiu — e a produção maior que viu tudo chamou você no mês seguinte.', 'Saiu sem barulho.', 'Saiu, e o mercado comentou.', 'Saiu, e duas produções deixaram de chamar.', { otimo: { nome: 3 }, pessimo: { nome: -3 } }) }
+    ] },
+  { id: 'cena_intima', trajetoria: 'cena', tema: 'cena_limite', peso: () => 0.6, recarga: 10, cabe: v => atua(v) && idade(v) >= 18,
+    titulo: 'A cena que não estava combinada', texto: () => 'No dia da gravação, a direção quer uma cena mais exposta do que o combinado no contrato. Ninguém mencionou preparação.',
+    intencoes: [
+      { id: 'coordenacao', texto: 'Pedir preparação e o que foi combinado por escrito', dica: 'O certo. Atrasa o dia.', risco: 0.2, fatores: v => [coragem(v), social(v)], desfechos: D('A produção chamou uma coordenação de cena: o dia atrasou, e a cena saiu bem — do jeito combinado.', 'Gravaram o combinado.', 'Gravaram o combinado, com cara feia.', 'Disseram que você "complica" — e a direção ficou com isso.', { otimo: { humor: 4 }, pessimo: { clima: -6 } }, { otimo: 'Exigiu preparação e o que estava no contrato numa cena difícil — e a produção respeitou.' }) },
+      { id: 'recusar', texto: 'Recusar a mudança', dica: 'O limite é seu.', risco: 0.3, fatores: v => [coragem(v), nomeArte(v)], desfechos: D('A cena foi refeita do jeito combinado — e outras atrizes e atores agradeceram depois.', 'Fizeram do jeito combinado.', 'O clima pesou até o fim do trabalho.', 'Cortaram a sua participação no restante.', { pessimo: { nome: -2 } }) },
+      { id: 'fazer', texto: 'Fazer como pedem', dica: 'Resolve o dia. Pode pesar depois.', risco: 0.45, fatores: v => [tecnicaDe(v, 'teatro')], desfechos: D('A cena ficou forte, e você não se arrependeu.', 'A cena entrou.', 'A cena entrou — e você saiu mal do set.', 'A cena entrou, e você passou meses pensando nela.', { ruim: { estresse: 6, humor: -3 }, pessimo: { estresse: 10, humor: -6 } }) }
+    ] },
+  { id: 'cena_tipo', trajetoria: 'cena', tema: 'cena_rumo', peso: () => 0.8, cabe: v => atua(v) && (v.caminhos.curriculo ?? []).length >= 5,
+    titulo: 'Sempre o mesmo papel', texto: v => `Mais uma proposta para ${v.eu.genero === 'feminino' ? 'a mesma mulher' : 'o mesmo homem'} de sempre: o papel que o mercado decidiu que é seu.`,
+    intencoes: [
+      { id: 'aceitar', texto: 'Aceitar: paga as contas', dica: 'Seguro. O rótulo fica.', risco: 0.15, fatores: v => [disciplina(v)], desfechos: D('Fez de novo — e fez melhor do que nunca.', 'Mais um trabalho.', 'O rótulo ficou mais grudado.', 'Uma crítica chamou de "previsível".', { otimo: { dinheiro: 6000 }, bom: { dinheiro: 4000 } }) },
+      { id: 'esperar', texto: 'Recusar e esperar algo diferente', dica: 'Pode não vir.', risco: 0.55, fatores: v => [nomeArte(v), coragem(v)], desfechos: D('Veio um papel que ninguém imaginava para você — e funcionou.', 'Veio, mais tarde, um papel diferente.', 'Um ano mais magro.', 'Nada veio, e o dinheiro apertou.', { otimo: { nome: 3, noto: 1 }, ruim: { dinheiro: -3000 }, pessimo: { dinheiro: -6000, estresse: 5 } }, { otimo: 'Recusou o papel de sempre — e o diferente que veio depois mudou a carreira.' }) },
+      { id: 'teste', texto: 'Pedir para fazer teste para outro papel na mesma produção', dica: 'Mostrar o que ninguém pediu.', risco: 0.45, fatores: v => [tecnicaDe(v, 'teatro'), social(v)], desfechos: D('Ganhou o outro papel — e a produção.', 'Ficou com o papel de sempre, mas com mais cenas.', 'Não deram o teste.', 'Ficou com fama de difícil.', { otimo: { nome: 3 } }) }
+    ] },
+  { id: 'cena_entrevista', trajetoria: 'cena', tema: 'cena_publico', peso: () => 0.8, cabe: v => atua(v) && (v.notoriedade?.valor ?? 0) >= 25,
+    titulo: 'A pergunta da entrevista', texto: () => 'No meio de uma entrevista de divulgação, a apresentadora muda de assunto e pergunta sobre a sua vida pessoal — ao vivo.',
+    intencoes: [
+      { id: 'responder', texto: 'Responder com franqueza', dica: 'Aproxima o público. Expõe.', risco: 0.5, fatores: v => [social(v), cabeca(v)], desfechos: D('A resposta virou o trecho mais compartilhado da semana — com carinho.', 'O público gostou da franqueza.', 'Virou assunto mais do que você queria.', 'A frase foi tirada de contexto e virou polêmica.', { otimo: { noto: 2, imagem: 'boa' }, pessimo: { imagem: 'polemica', estresse: 6 } }) },
+      { id: 'desviar', texto: 'Desviar com humor', dica: 'Elegante, se sair bem.', risco: 0.35, fatores: v => [social(v), F('presença', (habilidade(v, 'teatro') - 60) / 80)], desfechos: D('A resposta engraçada virou meme do bom.', 'Desviou bem.', 'Ficou um silêncio esquisito.', 'O desvio pareceu arrogância.', { otimo: { noto: 1, imagem: 'boa' }, pessimo: { imagem: 'polemica' } }) },
+      { id: 'encerrar', texto: 'Dizer que não fala disso', dica: 'Limite claro. Pode parecer frio.', risco: 0.2, fatores: v => [coragem(v)], desfechos: D('O limite foi respeitado — e elogiado.', 'Seguiram para o trabalho.', 'Comentaram que você é "fechado".', 'Disseram que você foi grosseiro ao vivo.', { pessimo: { imagem: 'polemica' } }) }
+    ] },
+  { id: 'cena_estreia', trajetoria: 'cena', tema: 'cena_palco', peso: () => 0.9, cabe: atua,
+    contexto: v => contextoDeSet(v, ['a casa cheia', 'a crítica na plateia', 'a família na primeira fila']),
+    titulo: (_v, d) => `A estreia de "${d.titulo}"`, texto: (_v, d) => `Noite de estreia de "${d.titulo}", com ${d.motivo}. Dez minutos antes de entrar, a garganta fecha.`,
+    intencoes: [
+      { id: 'ritual', texto: 'Fazer o ritual de sempre e entrar', dica: 'O corpo sabe o caminho.', risco: 0.25, fatores: v => [disciplina(v), cabeca(v)], desfechos: D('A melhor apresentação da sua vida, segundo quem viu.', 'Uma estreia firme.', 'Tropeçou num texto; ninguém percebeu, você sim.', 'Um branco no meio da cena principal.', { otimo: { noto: 1 } }, { otimo: 'Fez a melhor estreia da carreira — segundo quem viu.' }) },
+      { id: 'arriscar', texto: 'Mudar a marcação no impulso', dica: 'Ou vira a noite, ou vira bronca.', risco: 0.65, fatores: v => [coragem(v), tecnicaDe(v, 'teatro')], desfechos: D('O impulso virou a cena da noite — e ficou na temporada.', 'Funcionou.', 'O elenco ficou perdido por um minuto.', 'Atrapalhou a cena de um colega, que não perdoou.', { otimo: { noto: 1, nome: 3 } }) }
+    ] },
+  { id: 'cena_mentoria', trajetoria: 'cena', tema: 'cena_gente', peso: () => 0.8, cabe: v => atua(v) && anosDeOficio(v) >= 12,
+    titulo: 'Quem está começando', texto: () => 'Um ator jovem do elenco, talentoso e perdido, pede para você ver o trabalho dele antes do teste mais importante da vida.',
+    intencoes: [
+      { id: 'ajudar', texto: 'Passar as tardes ensaiando com ele', dica: 'Tempo seu. Um nome a mais no mundo.', risco: 0.2, fatores: v => [social(v), tecnicaDe(v, 'teatro')], desfechos: D('Ele passou — e, no discurso de um prêmio anos depois, disse o seu nome.', 'Ele passou no teste.', 'Ele não passou, mas agradeceu.', 'Ele não passou e sumiu.', { otimo: { humor: 6, nome: 2 } }, { otimo: 'Ajudou um ator que começava — e ouviu o próprio nome no discurso dele, anos depois.' }) },
+      { id: 'indicar', texto: 'Indicar para um agente conhecido', dica: 'Rápido. A porta abre; o resto é dele.', risco: 0.3, fatores: v => [nomeArte(v)], desfechos: D('O agente adorou e agradeceu a indicação.', 'Indicado.', 'O agente nem respondeu.', 'O agente achou que você indicou mal.', {}) },
+      { id: 'nao', texto: 'Dizer que não tem tempo', dica: 'Verdade, às vezes.', risco: 0.1, fatores: () => [], desfechos: D('Ele entendeu.', 'Seguiu a vida.', 'Ele ficou chateado.', 'Ele contou para o elenco.', {}) }
+    ] },
+  { id: 'cena_dirigir', trajetoria: 'cena', tema: 'cena_rumo', peso: () => 0.7, recarga: 12, cabe: v => atua(v) && anosDeOficio(v) >= 15,
+    titulo: 'Um convite para dirigir', texto: () => 'Uma companhia convida você para dirigir a próxima montagem: menos dinheiro que atuar, outra cadeira, outro medo.',
+    intencoes: [
+      { id: 'aceitar', texto: 'Aceitar e dirigir', dica: 'Um ano inteiro de outra coisa.', risco: 0.5, fatores: v => [lideranca(v), tecnicaDe(v, 'teatro')], desfechos: D('A montagem foi a mais elogiada da temporada — e a crítica descobriu uma diretora (ou um diretor) que não esperava.', 'Uma montagem honesta.', 'O elenco não comprou a sua ideia.', 'A montagem fechou antes do previsto.', { otimo: { nome: 4, noto: 1 }, pessimo: { dinheiro: -4000 } }, { otimo: 'Dirigiu pela primeira vez — e a montagem foi a mais elogiada da temporada.' }) },
+      { id: 'codirigir', texto: 'Dividir a direção com alguém de confiança', dica: 'Menos risco, menos seu.', risco: 0.3, fatores: v => [social(v), lideranca(v)], desfechos: D('Funcionou tanto que viraram dupla.', 'Uma boa experiência.', 'As duas visões brigaram.', 'Terminaram sem se falar.', {}) },
+      { id: 'recusar', texto: 'Recusar: o seu lugar é em cena', dica: 'Sem risco.', risco: 0.1, fatores: () => [], desfechos: D('Ficou em cena e fez um ano bonito.', 'Recusado.', 'Viu outra pessoa dirigir e pensou "eu faria".', 'A companhia não chamou mais.', {}) }
+    ] },
+  { id: 'cena_exclusividade', trajetoria: 'cena', tema: 'cena_rumo', peso: () => 0.6, recarga: 12, cabe: v => atua(v) && (v.notoriedade?.valor ?? 0) >= 35,
+    titulo: 'O contrato de exclusividade', texto: () => 'Uma emissora oferece um contrato de exclusividade por três anos: salário fixo, e só trabalhar com ela.',
+    intencoes: [
+      { id: 'assinar', texto: 'Assinar', dica: 'Estabilidade. A emissora escolhe os papéis.', risco: 0.2, fatores: v => [nomeArte(v)], desfechos: D('Três anos de bons papéis e conta em dia.', 'Estabilidade.', 'Papéis menores do que esperava, presos ao contrato.', 'A emissora encostou você na geladeira.', { otimo: { dinheiro: 30000 }, bom: { dinheiro: 20000 }, ruim: { dinheiro: 15000, humor: -3 }, pessimo: { dinheiro: 15000, nome: -3 } }) },
+      { id: 'recusar', texto: 'Recusar e seguir livre', dica: 'Liberdade e incerteza.', risco: 0.45, fatores: v => [nomeArte(v), coragem(v)], desfechos: D('Livre, fez o filme que mudou tudo.', 'Seguiu livre.', 'Um ano de pouco trabalho.', 'A emissora não chamou mais.', { otimo: { nome: 3 }, ruim: { dinheiro: -3000 } }) }
+    ] },
+  /* A música */
+  { id: 'mus_casa_vazia', trajetoria: 'cena', tema: 'mus_palco', cabe: musico,
+    titulo: 'A casa vazia', texto: () => 'O show estava marcado havia meses. Na hora de subir, vinte pessoas numa casa para trezentas.',
+    intencoes: [
+      { id: 'tocar', texto: 'Tocar como se estivesse lotado', dica: 'Quem veio vai lembrar.', risco: 0.3, fatores: v => [tecnicaDe(v, 'musica'), disciplina(v)], desfechos: D('Os vinte filmaram tudo — e o vídeo correu.', 'Um show bonito para quem veio.', 'O cachê não pagou a banda.', 'A casa não chamou de novo.', { otimo: { noto: 1 }, ruim: { dinheiro: -1500 }, pessimo: { dinheiro: -1500 } }) },
+      { id: 'roda', texto: 'Descer do palco e tocar no meio do público', dica: 'Íntimo. Ou estranho.', risco: 0.5, fatores: v => [coragem(v), social(v)], desfechos: D('Virou a noite mais lembrada da turnê.', 'Foi bonito.', 'Ficou esquisito.', 'O som não funcionou longe do palco.', {}) },
+      { id: 'cancelar', texto: 'Cancelar e remarcar', dica: 'Poupa a banda. Queima a data.', risco: 0.2, fatores: v => [social(v)], desfechos: D('A data nova lotou.', 'Remarcado.', 'A casa reclamou.', 'A casa cobrou multa.', { pessimo: { dinheiro: -2000 } }) }
+    ] },
+  { id: 'mus_parceria', trajetoria: 'cena', tema: 'mus_gente', cabe: musico,
+    titulo: 'A parceria', texto: () => 'Um artista mais conhecido chama você para uma música juntos — com a condição de ficar com a maior parte dos direitos.',
+    intencoes: [
+      { id: 'aceitar', texto: 'Aceitar as condições', dica: 'Visibilidade agora, pouco dinheiro depois.', risco: 0.35, fatores: v => [tecnicaDe(v, 'musica')], desfechos: D('A música estourou — e o seu nome foi junto.', 'A parceria trouxe público novo.', 'A música passou em branco.', 'Ele levou o crédito inteiro na imprensa.', { otimo: { noto: 2, nome: 3 } }, { otimo: 'Uma parceria com um nome conhecido estourou — e levou o seu junto.' }) },
+      { id: 'negociar', texto: 'Negociar os direitos', dica: 'Pode perder a parceria.', risco: 0.5, fatores: v => [coragem(v), social(v)], desfechos: D('Ele topou dividir meio a meio.', 'Um acordo melhor.', 'Ele desistiu da parceria.', 'Ele desistiu e falou mal de você no meio.', {}) },
+      { id: 'recusar', texto: 'Recusar', dica: 'A música continua sua.', risco: 0.1, fatores: () => [], desfechos: D('Você gravou sozinho — e foi bem.', 'Seguiu o seu caminho.', 'Viu a vaga ir para outro.', 'O outro estourou com a vaga que era sua.', {}) }
+    ] },
+  { id: 'mus_gravadora', trajetoria: 'cena', tema: 'mus_rumo', peso: () => 0.8, recarga: 10, cabe: v => musico(v) && (v.caminhos.obras ?? []).length >= 1,
+    titulo: 'A gravadora', texto: () => 'Uma gravadora oferece contrato: lançamento grande, adiantamento — e a palavra final sobre o repertório.',
+    intencoes: [
+      { id: 'assinar', texto: 'Assinar', dica: 'Estrutura e controle deles.', risco: 0.4, fatores: v => [nomeArte(v), tecnicaDe(v, 'musica')], desfechos: D('O disco chegou a lugares que você nunca alcançaria sozinho.', 'Um lançamento bem cuidado.', 'Mudaram o repertório inteiro.', 'O disco ficou na gaveta da gravadora.', { otimo: { noto: 2, dinheiro: 15000 }, bom: { dinheiro: 10000 }, pessimo: { humor: -6 } }) },
+      { id: 'independente', texto: 'Seguir independente', dica: 'Tudo seu: o controle e a conta.', risco: 0.3, fatores: v => [disciplina(v), tecnicaDe(v, 'musica')], desfechos: D('Independente, o disco achou o público dele — e o dinheiro ficou com você.', 'Seguiu do seu jeito.', 'Faltou estrutura para o lançamento.', 'O dinheiro acabou antes do disco.', { ruim: { dinheiro: -3000 }, pessimo: { dinheiro: -6000 } }) }
+    ] },
+  /* A dança */
+  { id: 'dan_coreografo', trajetoria: 'cena', tema: 'dan_gente', cabe: dancarino,
+    titulo: 'O coreógrafo novo', texto: () => 'A companhia trocou de coreógrafo, e o novo não gosta do seu jeito de dançar. Os ensaios viraram correção pública.',
+    intencoes: [
+      { id: 'adaptar', texto: 'Se adaptar ao estilo dele', dica: 'Aprender dói.', risco: 0.3, fatores: v => [disciplina(v), tecnicaDe(v, 'danca')], desfechos: D('No fim da temporada, ele escolheu você para o solo.', 'Encontrou um meio-termo.', 'O corpo reclamou do estilo novo.', 'Ele tirou você do elenco principal.', { otimo: { nome: 3 }, ruim: { estresse: 5 } }) },
+      { id: 'conversar', texto: 'Pedir uma conversa', dica: 'Ou ele ouve, ou anota.', risco: 0.4, fatores: v => [social(v), coragem(v)], desfechos: D('Ele ouviu, e passou a usar o seu jeito na coreografia.', 'Ficou mais leve.', 'Nada mudou.', 'Ele achou que era desafio.', {}) }
+    ] },
+  { id: 'dan_lesao', trajetoria: 'cena', tema: 'dan_corpo', peso: () => 0.8, cabe: v => dancarino(v) && idade(v) >= 22,
+    titulo: 'A dor antes da estreia', texto: () => 'Uma dor no tornozelo há uma semana. A estreia é sábado, e não há substituto ensaiado.',
+    intencoes: [
+      { id: 'dancar', texto: 'Dançar assim mesmo', dica: 'A noite é sua. O corpo cobra.', risco: 0.6, fatores: v => [F('corpo', (v.corpo.forma - 65) / 70), cabeca(v)], desfechos: D('Dançou a noite inteira e só sentiu no dia seguinte.', 'Segurou.', 'Errou uma sequência por causa da dor.', 'O tornozelo não aguentou no meio do espetáculo.', { pessimo: { extra: v => { v.corpo.saude = clamp(v.corpo.saude - 8); v.corpo.forma = clamp(v.corpo.forma - 8); } } }) },
+      { id: 'parar', texto: 'Avisar e não dançar', dica: 'O corpo agradece; a companhia, nem sempre.', risco: 0.2, fatores: v => [social(v)], desfechos: D('A companhia ajustou o espetáculo e esperou você voltar.', 'Uma noite fora.', 'Outra pessoa ficou com o papel por um tempo.', 'Outra pessoa ficou com o papel de vez.', { pessimo: { nome: -3 } }) }
+    ] }
+];
+
+export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE];
 
 /** As situações vividas, para a tela (as mais recentes primeiro). */
 export function momentosDaCarreira(v: Vida, n = 8): { ano: number; texto: string; desfecho: Desfecho; intencao: string }[] {

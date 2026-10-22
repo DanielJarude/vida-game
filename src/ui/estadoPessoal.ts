@@ -124,11 +124,13 @@ export function momentoAtual(v: Vida): string {
 
 /** O estado pede atenção? (Para o painel "Agora" — um sinal, não uma tarefa.) */
 export function sinalPessoal(v: Vida): string | undefined {
+  // REWORK 10.5 · SAU-02: o sinal do corpo vale para a criança também (o caminho dela é pedir aos responsáveis).
+  if (idade(v) >= 4 && idade(v) < 10 && v.corpo.condicoes.some(c => c.diagnosticada === false || (c.cronica && !c.tratando))) return 'O corpo tem dado sinais.';
   if (idade(v) < 10) return undefined;
   if (v.mente.estresse >= 60) return 'A cabeça anda cheia.';
   if (v.mente.felicidade < 40) return 'Você anda para baixo.';
-  if (v.corpo.condicoes.some(c => c.diagnosticada === false) && idade(v) >= 14) return 'O corpo tem dado sinais.';
-  if (v.corpo.condicoes.some(c => c.cronica && !c.tratando) && idade(v) >= 18) return 'Uma condição de saúde sem tratamento.';
+  if (v.corpo.condicoes.some(c => c.diagnosticada === false)) return 'O corpo tem dado sinais.';
+  if (v.corpo.condicoes.some(c => c.cronica && !c.tratando)) return 'Uma condição de saúde sem tratamento.';
   if (v.corpo.saude < 45) return 'A saúde tem pedido atenção.';
   return undefined;
 }
@@ -248,3 +250,6 @@ export function sinaisDaVida(v: Vida): Sinal[] {
     ...pessoais.map(d => ({ id: d, nome: d === 'condicionamento' ? 'Físico' : d === 'aprendizado' ? 'Inteligência' : 'Beleza', palavra: d === 'condicionamento' ? palavraCondicionamento(valorPessoal(v, d)) : d === 'aparencia' ? palavraAparencia(valorPessoal(v, d)) : palavraAprendizado(valorPessoal(v, d)), nivel: nivelPessoal(v, d), tendencia: tendenciaPessoal(v, d) }))
   ];
 }
+
+/** REWORK 10.5 · SAU-02: o sinal pessoal de agora é de saúde (o destino é o prontuário, com o médico — não o Resumo). */
+export const sinalDeSaude = (v: Vida) => { const s = sinalPessoal(v); return !!s && /corpo|saúde/.test(s); };

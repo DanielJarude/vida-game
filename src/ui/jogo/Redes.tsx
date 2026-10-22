@@ -184,7 +184,7 @@ function NumerosDaConta({ vida, id }: { vida: Vida; id: PlataformaId }) {
       <BalancoDoPublico vida={vida} conta={c} publico={pl.publico[1]} />
       {anos.length > 1 && (
         <ol className="numeros-rede__anos" aria-label={`${pl.publico[1]} no fim de cada ano`}>
-          {anos.map(b => <li key={b.desde}><span className="numeros-rede__ano">{anoDe(b.ate ?? b.desde)}</span> <strong>{seguidoresEmPalavras(b.fim ?? 0)}</strong></li>)}
+          {anos.map(b => <li key={b.desde}><span className="numeros-rede__ano">{anoDe(b.desde)}</span> <strong>{seguidoresEmPalavras(b.fim ?? 0)}</strong></li>)}
         </ol>
       )}
       {t && (
@@ -296,6 +296,7 @@ export function BalancoDoPublico({ vida, conta, publico }: { vida: Vida; conta: 
     <section className="balanco-publico" aria-label="De onde veio o público">
       <h4 className="plataforma-painel__sub">O público em {b.ano}</h4>
       <p className="balanco-publico__de-para"><span>{seguidoresEmPalavras(b.inicio)}</span> <span aria-hidden>→</span><span className="sr-only">para</span> <strong>{seguidoresEmPalavras(b.fim)}</strong> {publico}</p>
+      <p className="nota balanco-publico__posts">{b.publicacoes === 0 ? 'Nenhuma publicação no ano.' : `${b.publicacoes} ${b.publicacoes === 1 ? 'publicação' : 'publicações'} no ano.`}</p>
       {b.linhas.length === 0
         ? <p className="nota">Ninguém chegou, ninguém foi embora.</p>
         : (

@@ -23,6 +23,7 @@
  * no acaso do resto da vida.
  */
 
+import { procuraComoSeNada } from './magoas';
 import { clamp, rngDe, type Rng } from '../rng';
 import type { Dominio, Entrada, Pessoa, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
@@ -231,7 +232,8 @@ function acontecerCom(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): boolean {
     return true;
   }
   // Um amigo distante dá notícia sozinho (sem pedir nada): a amizade de longe também vive.
-  if (amigo && p.municipioId !== v.moradia.municipioId && vin.proximidade >= 40 && v.t - vin.tUltimoContato >= 24 && r.chance(0.12)) {
+  // REWORK 10.5 · REL-07: quem está brigado, magoado, rompido ou bloqueado não manda "lembrei de você" do nada.
+  if (amigo && p.municipioId !== v.moradia.municipioId && vin.proximidade >= 40 && v.t - vin.tUltimoContato >= 24 && procuraComoSeNada(v, vin) && r.chance(0.12)) {
     vin.tUltimoContato = v.t;
     vin.proximidade = clamp(vin.proximidade + 3);
     noticia(v, 'pessoas', `${p.nome} mandou mensagem do nada, de ${municipio(p.municipioId).nome}: uma foto antiga de vocês, e "lembrei de você". Conversaram até tarde.`, { pessoas: [p.id], tom: 'bom' });

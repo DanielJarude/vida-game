@@ -31,12 +31,12 @@ export type SecaoTempo = 'semana' | 'corpo' | 'atividades' | 'gente' | 'redes';
  * (o emprego, as vagas, as candidaturas, o negócio, o histórico profissional); Vida pública (concursos, política,
  * serviço público); Outros caminhos (esporte, arte, a universidade como carreira, os projetos).
  */
-export type DivisaoCaminhos = 'inicio' | 'estudos' | 'trabalho' | 'publica' | 'outros';
+export type DivisaoCaminhos = 'inicio' | 'estudos' | 'trabalho' | 'publica' | 'outros' | 'submundo';
 /** As partes de Estudos e de Trabalho: o que ocupa agora, como venho me saindo, o que está ao alcance, por onde passei. */
 export type ParteCaminhos = 'agora' | 'desenvolvimento' | 'oportunidades' | 'historico';
 
 /** Um destino: uma área, uma seção de Vida, uma aba de Minha Semana, uma parte de Caminhos — ou um nome antigo que continua aceito. */
-export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio' | 'vida_publica' | 'outros_caminhos' | 'inicio_caminhos';
+export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio' | 'vida_publica' | 'outros_caminhos' | 'inicio_caminhos' | 'prontuario' | 'submundo';
 
 export interface Lugar {
   area: Area;
@@ -67,6 +67,10 @@ export function resolverDestino(d: Aba): Lugar {
   if (d === 'concursos' || d === 'vida_publica') return { area: 'caminhos', divisao: 'publica' };
   if (d === 'outros_caminhos') return { area: 'caminhos', divisao: 'outros' };
   if (d === 'inicio_caminhos') return { area: 'caminhos', divisao: 'inicio' };
+  // REWORK 10.5 · CRI-02: o crime que existe (a trajetória, os contatos, o processo, a ficha) tem porta própria.
+  if (d === 'submundo') return { area: 'caminhos', divisao: 'submundo' };
+  // REWORK 10.5 · SAU-02: o prontuário (Você · Saúde) — onde se procura o médico, não o Resumo dos atributos.
+  if (d === 'prontuario') return { area: 'voce', voce: 'saude' };
   if (DE_VIDA.has(d)) return { area: 'vida', secao: d as SecaoVida };
   if (DE_TEMPO.has(d)) return { area: 'tempo', aba: d as SecaoTempo };
   if (DE_CAMINHOS.has(d)) return { area: 'caminhos', parte: d as ParteCaminhos };
@@ -86,7 +90,9 @@ export const DIVISOES_CAMINHOS: { id: DivisaoCaminhos; rotulo: string; oque: str
   { id: 'estudos', rotulo: 'Estudos', oque: 'Escola, boletim, cursos, técnico, faculdade, qualificações, histórico acadêmico, preparação para provas' },
   { id: 'trabalho', rotulo: 'Trabalho', oque: 'O emprego de agora, vagas, candidaturas, promoções, experiência, o próprio negócio, histórico profissional' },
   { id: 'publica', rotulo: 'Vida pública', oque: 'Concursos, política, serviço público, farda' },
-  { id: 'outros', rotulo: 'Outros caminhos', oque: 'Esporte, arte, a universidade como carreira, os projetos' }
+  { id: 'outros', rotulo: 'Outros caminhos', oque: 'Esporte, arte, a universidade como carreira, os projetos' },
+  // REWORK 10.5 · CRI-02: antes, a vida à margem era a primeira seção de "Outros caminhos" (e só para quem já estava nela).
+  { id: 'submundo', rotulo: 'Submundo', oque: 'O crime: o que você faz por fora, quem sabe o seu nome, a confiança do meio, investigações, processos, a ficha' }
 ];
 
 /** Os rótulos das partes, em cada divisão (a mesma estrutura, o nome de cada lugar). */
@@ -137,8 +143,12 @@ export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'apostas', rotulo: 'Apostas', oque: 'Loteria, blackjack, roleta e caça-níquel — só com o dinheiro do jogo, para maiores de idade' }
 ];
 
+const PARTE_VOCE: Record<NonNullable<Lugar['voce']>, string> = { resumo: 'Resumo', saude: 'Saúde', habilidades: 'Habilidades', aparencia: 'Aparência', mundo: 'No mundo' };
 export const rotuloDoLugar = (l: Lugar) => {
   const a = AREAS.find(x => x.id === l.area)!.rotulo;
+  // REWORK 10.5 · UX-20: o destino diz a parte (antes, "Você" — e o jogador caía no Resumo procurando o médico).
+  if (l.voce) return `${a} · ${PARTE_VOCE[l.voce]}`;
+  if (l.historia) return `${a} · ${l.historia === 'agora' ? 'Agora' : 'Biografia'}`;
   if (l.aba) return `${a} · ${SECOES_TEMPO.find(x => x.id === l.aba)!.rotulo}`;
   if (l.divisao && l.divisao !== 'inicio') {
     const div = DIVISOES_CAMINHOS.find(x => x.id === l.divisao)!.rotulo;
@@ -155,7 +165,13 @@ export const rotuloDoLugar = (l: Lugar) => {
  * (a área e, em Vida, a seção) e diz o que procurar lá. É o teste mental
  * da navegação, escrito — e usado pelo menu e pelos testes.
  */
-export interface Intencao { id: string; quero: string; lugar: Lugar; la: string }
+export interface Intencao {
+  id: string; quero: string; lugar: Lugar; la: string;
+  /** REWORK 10.5 · UX-20: outras palavras que levam aqui ("médico", "sintoma", "consulta"…). */
+  chaves?: string;
+  /** Fazer algo, ver uma informação ou acompanhar um problema (a busca mostra a diferença). Ausente: deduzido do verbo. */
+  tipo?: 'fazer' | 'ver' | 'acompanhar';
+}
 
 export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'estudar', quero: 'Estudar, ver a escola, a faculdade', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'agora' }, la: 'a escola ou o curso, as atividades de lá (os cursos possíveis estão em Cursos)' },
@@ -188,7 +204,12 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'apostar', quero: 'Jogar na loteria, no cassino', lugar: { area: 'vida', secao: 'apostas' }, la: 'Vida · Apostas: loteria, blackjack, roleta, caça-níquel' },
   { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce', voce: 'aparencia' }, la: 'Você · "Aparência e estilo"' },
   { id: 'cirurgia', quero: 'Fazer uma cirurgia plástica (nariz, orelhas, cabelo, lifting)', lugar: { area: 'vida', secao: 'compras' }, la: '"Você": a clínica de cirurgia plástica' },
-  { id: 'saude', quero: 'Cuidar da saúde, da cabeça', lugar: { area: 'voce', voce: 'resumo' }, la: 'Você · Resumo: humor, cabeça e saúde (e o prontuário, em Saúde)' },
+  // REWORK 10.5 · SAU-02 / UX-20: "saúde" e "cuidar" levam ao atendimento (o prontuário, com o médico), não aos atributos.
+  { id: 'saude', quero: 'Ir ao médico (consulta, exames), cuidar da saúde', lugar: { area: 'voce', voce: 'saude' }, la: 'Você · Saúde: o prontuário, os sinais do corpo e "Procurar atendimento médico" (criança: pedir aos responsáveis)', chaves: 'medico consulta sintoma sinal doenca exame hospital posto pediatra remedio dor diagnostico check-up cuidar atendimento', tipo: 'fazer' },
+  { id: 'tratamento', quero: 'Acompanhar um tratamento, uma condição de saúde', lugar: { area: 'voce', voce: 'saude' }, la: 'Você · Saúde: o que tem nome, o tratamento, a fila', chaves: 'tratamento condicao cancer pressao diabetes fila remedio acompanhamento', tipo: 'acompanhar' },
+  { id: 'cabeca', quero: 'Cuidar da cabeça, do estresse e do humor', lugar: { area: 'voce', voce: 'resumo' }, la: 'Você · Resumo: a cabeça e o humor, o que pesa e o que ajuda (terapia, descanso)', chaves: 'estresse ansiedade terapia psicologo humor triste cansado', tipo: 'fazer' },
+  { id: 'atributos', quero: 'Ver os meus atributos (saúde, físico, felicidade, beleza, inteligência)', lugar: { area: 'voce', voce: 'resumo' }, la: 'Você · Resumo: a ficha dos cinco atributos, com as causas', chaves: 'atributo saude fisico felicidade beleza inteligencia', tipo: 'ver' },
+  { id: 'cuidar_de_alguem', quero: 'Cuidar de alguém da família que adoeceu', lugar: { area: 'pessoas' }, la: 'a ficha da pessoa: "Família e cuidado" (acompanhar a consulta, ajudar, visitar)', chaves: 'cuidar doente pai mae filho avo hospital visitar', tipo: 'fazer' },
   { id: 'historia', quero: 'Acompanhar a minha história', lugar: { area: 'linha' }, la: 'a biografia, ano a ano' },
   // REWORK 7: os testes de intenção do playtest — cada um com um lugar previsível (e conferido por `navegacao.test`).
   { id: 'sair_amigo', quero: 'Sair com um amigo', lugar: { area: 'pessoas' }, la: 'o rosto do amigo: "Fazer juntos"' },
@@ -212,5 +233,34 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   // REWORK 9.6 · UX-09/10: as divisões novas de Caminhos.
   { id: 'concurso', quero: 'Prestar concurso, entrar na política', lugar: { area: 'caminhos', divisao: 'publica' }, la: 'os editais abertos, o preparo, a política, as carreiras de farda' },
   { id: 'carreira_esporte', quero: 'Seguir carreira no esporte ou na arte', lugar: { area: 'caminhos', divisao: 'outros' }, la: 'as peneiras, as seletivas, a banda, o grupo — e como cada caminho começa' },
+  { id: 'submundo', quero: 'Entrar para o crime, ver o processo e os antecedentes', lugar: { area: 'caminhos', divisao: 'submundo' }, la: 'Caminhos · Submundo: a situação, os contatos, o risco, o processo e a ficha', chaves: 'crime ilegal esquema por fora policia processo prisao antecedentes advogado submundo', tipo: 'fazer' },
   { id: 'boletim', quero: 'Ver o meu boletim, as minhas notas', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'desenvolvimento' }, la: 'o boletim: as matérias, a nota, a frequência' }
 ];
+
+/** O que a intenção é: fazer algo, ver uma informação, acompanhar um problema (dito ou deduzido do verbo). */
+export function tipoDaIntencao(x: Intencao): 'fazer' | 'ver' | 'acompanhar' {
+  if (x.tipo) return x.tipo;
+  return /^(Ver|Saber|Consultar|Entender|Onde)/.test(x.quero) ? 'ver' : /^Acompanhar/.test(x.quero) ? 'acompanhar' : 'fazer';
+}
+
+/**
+ * REWORK 10.5 · UX-20 — a busca de "onde fica": todas as palavras precisam aparecer (no que se quer, nas palavras-chave,
+ * no "lá" ou no destino), e o que bate no PEDIDO vem antes do que só bate na explicação. Antes, era um "contém" em ordem
+ * fixa: "saúde" trazia primeiro o custo de vida (porque a explicação dele terminava em "a saúde").
+ */
+export function buscarIntencoes(busca: string): Intencao[] {
+  const sem = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const palavras = sem(busca.trim()).split(/\s+/).filter(Boolean);
+  if (!palavras.length) return MAPA_DE_INTENCOES;
+  const pontos = (x: Intencao) => {
+    const quero = sem(x.quero), chaves = sem(x.chaves ?? ''), la = sem(x.la), onde = sem(rotuloDoLugar(x.lugar));
+    let p = 0;
+    for (const w of palavras) {
+      const k = quero.includes(w) ? 4 : chaves.includes(w) ? 3 : onde.includes(w) ? 1.5 : la.includes(w) ? 1 : 0;
+      if (!k) return 0;
+      p += k;
+    }
+    return p + (tipoDaIntencao(x) === 'fazer' ? 0.2 : 0);
+  };
+  return MAPA_DE_INTENCOES.map(x => ({ x, p: pontos(x) })).filter(y => y.p > 0).sort((a, b) => b.p - a.p).map(y => y.x);
+}

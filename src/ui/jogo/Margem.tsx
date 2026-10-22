@@ -19,6 +19,18 @@ import { dinheiroCurto } from '../leituraMaterial';
 const NOME: Record<string, string> = { pequenos: 'coisas erradas com a turma', patrimonial: 'receptação', fraude: 'fraude', mercado: 'comércio ilegal', grupo: 'grupo criminoso', corrupcao: 'corrupção', violencia: 'agressão' };
 const DESFECHO: Record<string, string> = { socioeducativa: 'medida socioeducativa (não é ficha de adulto)', alternativa: 'condenação, pena alternativa', prisao: 'condenação, prisão', absolvicao: 'absolvição', acordo: 'acordo (sem condenação)' };
 
+/** REWORK 10.5 · CRI-02: a situação no Submundo, numa linha (a entrada da página inicial e o subtítulo da divisão). */
+export function situacaoNoSubmundo(v: Vida): string {
+  const env = v.caminhos.envolvimento;
+  if (v.justica?.prisao) return 'Cumprindo pena';
+  if (v.justica?.foragido) return 'Foragido da Justiça';
+  if (v.justica?.processo) return 'Respondendo a um processo';
+  if (env && env.parou === undefined) return `Por fora: ${NOME[env.categoria] ?? 'um esquema'} — ${(env.reputacao ?? 0) >= 60 ? 'de confiança no meio' : (env.reputacao ?? 0) >= 30 ? 'já confiam em você' : 'ainda gente de fora'}`;
+  if ((v.justica?.antecedentes.length ?? 0) > 0) return 'Fora disso, com antecedentes';
+  if (env) return 'Fora disso — o passado ainda pode chegar';
+  return 'Nenhum envolvimento';
+}
+
 /** Há o que mostrar? (quem nunca teve nada com isso não vê a tela). */
 export const temMargem = (v: Vida) => !!v.caminhos.envolvimento || !!v.justica?.processo || (v.justica?.antecedentes.length ?? 0) > 0 || !!v.justica?.alternativa;
 

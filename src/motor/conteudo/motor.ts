@@ -9,6 +9,7 @@ import { contexto, txt, type Acontecimento, type Conteudo, type Ctx, type Decisa
 import { entradaDaMorte, escrever, idade, lembrarCom, novoId } from '../nucleo';
 import { CATALOGO } from './catalogo';
 import { aplicarPersonalidade } from '../personalidade';
+import { rngDe } from '../rng';
 
 const POR_ID = new Map<string, Conteudo>();
 function indice(): Map<string, Conteudo> {
@@ -46,12 +47,16 @@ export function preparar(c: Conteudo, v: Vida, r: Rng): Ctx | null {
   const ctx = contexto(v, r, p);
   ctx.vezes = v.ocorrencias.filter(o => o.id === c.id).length;
   if (c.quando && !c.quando(ctx)) return null;
+  // REWORK 10.5 · EVT-05: o marco garantido de parte das vidas ("a primeira palavra") que as duas vidas anteriores já
+  // tiveram aparece em metade das vezes (sorteio derivado: a sequência da vida não muda).
+  if (c.garantido && v.memoriaDeVidas?.includes(c.id) && !rngDe(v.id, 'memoria_vidas', c.id).chance(0.5)) return null;
   return ctx;
 }
 
 function peso(c: Conteudo, ctx: Ctx): number {
-  if (c.peso === undefined) return 1;
-  return typeof c.peso === 'number' ? c.peso : c.peso(ctx);
+  const base = c.peso === undefined ? 1 : typeof c.peso === 'number' ? c.peso : c.peso(ctx);
+  // REWORK 10.5 · EVT-05: o que as duas vidas anteriores viveram pesa menos (a variedade entre vidas consecutivas).
+  return ctx.v.memoriaDeVidas?.includes(c.id) ? base * 0.45 : base;
 }
 
 export function candidatos(v: Vida, r: Rng, filtro: (c: Conteudo) => boolean): { c: Conteudo; ctx: Ctx }[] {

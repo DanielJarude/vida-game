@@ -24,6 +24,7 @@
  * mais que um congresso), não pela ordem em que aconteceu.
  */
 
+import { textoDoPremio } from './producoes';
 import type { CarreiraEsportiva, ConquistaEsportiva, Dominio, Emprego, Vida } from '../tipos';
 import { ehElite } from '../dados/clubes';
 import { anoDe } from '../tempo';
@@ -149,14 +150,15 @@ function trajetoriaDeAtuacao(v: Vida): TrajetoriaDaVida | undefined {
   const r: Realizacao[] = [];
   const primeiroProt = ord.find(x => /protagonista/.test(x.papel) && x.tipo !== 'publicidade');
   if (primeiroProt) r.push({ texto: `Primeiro papel de protagonista: "${primeiroProt.titulo}" (${TIPO_AV[primeiroProt.tipo]}, ${anoDe(primeiroProt.t)})`, peso: 7 });
-  for (const x of itens.filter(y => y.premio)) r.push({ texto: x.premio!.venceu ? `Venceu ${x.premio!.nome} por "${x.titulo}" (${anoDe(x.t)})` : `Indicação ${x.premio!.nome.replace(/^o /, 'ao ')} por "${x.titulo}" (${anoDe(x.t)})`, peso: x.premio!.venceu ? 9 : 5 });
+  // REWORK 10.5 · CAR-09: o prêmio com nome, categoria, edição e obra (quando o registro tem; os antigos, como eram).
+  for (const x of itens.filter(y => y.premio)) r.push({ texto: x.premio!.categoria ? `${x.premio!.venceu ? 'Venceu' : 'Indicação'}: ${textoDoPremio({ ...x.premio!, obra: x.premio!.obra ?? x.titulo })}` : x.premio!.venceu ? `Venceu ${x.premio!.nome} por "${x.titulo}" (${anoDe(x.t)})` : `Indicação ${x.premio!.nome.replace(/^o /, 'ao ')} por "${x.titulo}" (${anoDe(x.t)})`, peso: x.premio!.venceu ? 9 : 5 });
   for (const x of itens.filter(y => y.repercussao === 3)) r.push({ texto: `"${x.titulo}" (${TIPO_AV[x.tipo]}, ${anoDe(x.t)}), ${x.papel}: o trabalho marcou`, peso: 6 + (/protagonista/.test(x.papel) ? 1 : 0) });
   const pessoas = [...new Set(itens.map(x => x.pessoaId).filter((id): id is string => !!id && !!v.pessoas[id]))].slice(0, 6).map(id => `${v.pessoas[id].nome}${v.pessoas[id].ocupacao ? ` (${v.pessoas[id].ocupacao})` : ''}`);
   const partes = [tv && `${tv} na TV e no streaming`, cinema && `${cinema} no cinema`, palco && `${palco} no teatro`, conta(['publicidade']) && `${conta(['publicidade'])} em publicidade`].filter(Boolean) as string[];
   return {
     id: 'atuacao', area: 'atuacao', titulo: 'Atuação', periodo: periodo(de, ate, ativa), de, ate, ativa,
     resumo: `${itens.length} ${itens.length === 1 ? 'trabalho' : 'trabalhos'}${partes.length ? ` — ${listaNatural(partes)}` : ''}${protag.length ? `; ${protag.length} como protagonista` : ''}.`,
-    realizacoes: top(r), reconhecimento: itens.filter(x => x.premio).map(x => `${anoDe(x.t)} · ${x.premio!.venceu ? 'Venceu' : 'Indicação:'} ${x.premio!.nome} ("${x.titulo}")`),
+    realizacoes: top(r), reconhecimento: itens.filter(x => x.premio).map(x => `${anoDe(x.t)} · ${x.premio!.venceu ? 'Venceu' : 'Indicação:'} ${x.premio!.categoria ? textoDoPremio({ ...x.premio!, obra: x.premio!.obra ?? x.titulo }) : `${x.premio!.nome} ("${x.titulo}")`}`),
     detalhe: [
       { titulo: 'Trabalhos', linhas: [...ord].reverse().map(x => `${anoDe(x.t)} · "${x.titulo}" — ${TIPO_AV[x.tipo]} — ${x.papel}${x.onde ? ` (${x.onde})` : ''} · ${REP[x.repercussao]}${x.premio ? ` · ${x.premio.venceu ? 'prêmio' : 'indicação'}` : ''}`) },
       ...(pessoas.length ? [{ titulo: 'Gente que ficou desses trabalhos', linhas: pessoas }] : [])
@@ -172,9 +174,12 @@ function trajetoriaArtistica(v: Vida, d: Dominio): TrajetoriaDaVida | undefined 
   const projetos = v.caminhos.marcas.filter(m => m.dominio === d && (m.tipo === 'ingresso' || m.tipo === 'abandono'));
   const premiado = d === 'escrita' && v.fatos['premio_literario'] !== undefined;
   if (!obras.length && !palcos.length && !shows.length && !premiado && !projetos.length) return undefined;
-  const ts = [...obras.map(o => o.t), ...palcos.map(p => (p.ano - anoDe(0)) * 12), ...shows.map(x => x.t), ...projetos.map(m => m.t)].sort((a, b) => a - b);
+  // REWORK 10.5 · EVT-08: o prêmio literário e o começo da escrita também datam a trajetória. Antes, quem só tinha o
+  // prêmio (sem livro) tinha a trajetória "desde" o ANO ATUAL — "escrita desde 2068" com o prêmio de 2067.
+  const desdeEscrita = d === 'escrita' ? v.rotinas.find(x => x.id === 'escrever')?.tInicio : undefined;
+  const ts = [...obras.map(o => o.t), ...palcos.map(p => (p.ano - anoDe(0)) * 12), ...shows.map(x => x.t), ...projetos.map(m => m.t), ...(premiado ? [v.fatos['premio_literario']!] : []), ...(desdeEscrita !== undefined ? [desdeEscrita] : [])].sort((a, b) => a - b);
   const de = anoDe(ts[0] ?? v.t);
-  const ultimo = ts[ts.length - 1] ?? v.t;
+  const ultimo = Math.max(ts[ts.length - 1] ?? v.t, desdeEscrita !== undefined ? v.t : -Infinity);
   const ativa = (v.caminhos.arte?.ativo && v.caminhos.arte.linguagem === d) || v.t - ultimo <= 24;
   const ate = ativa ? undefined : anoDe(ultimo);
   const r: Realizacao[] = [];

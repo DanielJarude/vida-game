@@ -23,13 +23,13 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { AgenteArtistico, ContratoAV, ItemCurriculo, Vida } from '../tipos';
 import { escrever, idade, lembrarCom, novoId } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { habilidade } from './frentes';
 import { marcar } from './marcas';
-import { crescerPublico, linguagemEmCena, pesoDoCurriculo, registrarNoCurriculo, trabalhaComArte } from './cena';
+import { CASAS, crescerPublico, linguagemEmCena, papelPelaTrajetoria, pesoDoCurriculo, prestigioArtistico, registrarNoCurriculo, trabalhaComArte } from './cena';
 import { nivelDeOferta } from '../dados/lugares';
 import { dinheiro as fmt } from '../texto';
 import { anoDe } from '../tempo';
@@ -37,7 +37,8 @@ import { criarPessoa, vincular } from '../pessoas';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { encerrarEmprego } from './trabalho';
 import { pausarAtual, podePausar, TRILHAS_ARTISTICAS } from './paralelas';
-import { nomePor } from './notoriedade';
+import { nomePor, somarAoNome } from './notoriedade';
+import { continuacaoPossivel, fichaDaProducao, PESO_DO_PREMIO, premioDoTrabalho, textoDoPremio, tituloNovo } from './producoes';
 
 /* ------------------------------------------------------------ Estado */
 
@@ -99,9 +100,13 @@ export function cacheAudiovisual(v: Vida, o: { tipo: ItemCurriculo['tipo']; port
 /* ------------------------------------------------------------ Propostas */
 
 /** O teste deu certo: a produção manda a proposta (não é pagamento na hora — é contrato a aceitar). */
-export function novaProposta(v: Vida, o: { tipo: ItemCurriculo['tipo']; porte: 0 | 1 | 2 | 3; papel: string; casa: string; titulo: string; pessoaId?: string }): ContratoAV {
+export function novaProposta(v: Vida, o: { tipo: ItemCurriculo['tipo']; porte: 0 | 1 | 2 | 3; papel: string; casa: string; titulo: string; pessoaId?: string; convite?: boolean; continuacaoDe?: string }): ContratoAV {
   const c = cacheAudiovisual(v, o);
-  const x: ContratoAV = { id: novoId(v, 'av'), tipo: o.tipo, titulo: o.titulo, casa: o.casa, papel: o.papel, porte: o.porte, meses: DURACAO[o.tipo] ?? 1, integral: integralDe(o.tipo, o.porte), bruto: c.bruto, comissao: c.comissao, despesas: c.despesas, status: 'proposta', tProposta: v.t, pessoaId: o.pessoaId };
+  const id = novoId(v, 'av');
+  // REWORK 10.5 · CAR-06: a ficha da produção (gênero, sinopse, a personagem) — fictícia, estável pelo id.
+  const ficha = fichaDaProducao(v, o.tipo, o.titulo, id);
+  const x: ContratoAV = { id, tipo: o.tipo, titulo: o.titulo, casa: o.casa, papel: o.papel, porte: o.porte, meses: DURACAO[o.tipo] ?? 1, integral: integralDe(o.tipo, o.porte), bruto: c.bruto, comissao: c.comissao, despesas: c.despesas, status: 'proposta', tProposta: v.t, pessoaId: o.pessoaId,
+    ...(ficha.genero ? { genero: ficha.genero } : {}), ...(ficha.sinopse ? { sinopse: ficha.sinopse } : {}), ...(ficha.personagem ? { personagem: ficha.personagem } : {}), ...(o.convite ? { convite: true } : {}), ...(o.continuacaoDe ? { continuacaoDe: o.continuacaoDe } : {}) };
   const lista = audiovisual(v).contratos;
   lista.push(x);
   if (lista.length > LIMITE_CONTRATOS) lista.splice(0, lista.length - LIMITE_CONTRATOS);
@@ -113,6 +118,14 @@ const NOME_TIPO: Partial<Record<ItemCurriculo['tipo'], string>> = { teatro: 'a m
 /** "no curta", "na novela" (a preposição contraída com o artigo). */
 export const emTipo = (tipo: ItemCurriculo['tipo']) => (NOME_TIPO[tipo] ?? `o ${tipo}`).replace(/^o /, 'no ').replace(/^a /, 'na ');
 export const descricaoDoContrato = (c: ContratoAV) => `${c.papel} ${emTipo(c.tipo)} "${c.titulo}", de ${c.casa}`;
+/** REWORK 10.5 · CAR-06: o que o trabalho pode fazer pela carreira (dito antes de aceitar, sem garantir nada). */
+export function impactoDoContrato(c: ContratoAV): string {
+  const imp = /protagonista/.test(c.papel) ? 3 : /destaque|participação/.test(c.papel) ? 2 : /coadjuvante/.test(c.papel) ? 1 : 0;
+  const x = imp + c.porte;
+  return x >= 5 ? 'pode mudar a carreira — se a obra repercutir' : x >= 3 ? 'um trabalho que aparece: nome e currículo' : x >= 2 ? 'mais uma linha forte no currículo' : 'experiência e contatos; pouca visibilidade';
+}
+export const NOME_DO_TIPO: Partial<Record<ItemCurriculo['tipo'], string>> = { teatro: 'peça de teatro', curta: 'curta-metragem', serie: 'série', novela: 'novela', filme: 'longa-metragem', publicidade: 'comercial' };
+
 export const contaDoContrato = (c: ContratoAV) => `${fmt(c.bruto)} bruto${c.comissao ? ` − ${fmt(c.comissao)} do agente` : ''}${c.despesas ? ` − ${fmt(c.despesas)} de despesas` : ''} = ${fmt(liquidoDe(c))} líquido`;
 
 /** O trabalho principal que uma produção integral atropelaria (de dia inteiro, fora da arte). */
@@ -220,19 +233,21 @@ export function concluirProducao(v: Vida, c: ContratoAV, r: Rng | undefined): vo
   const protagonista = /protagonista/.test(c.papel);
   const primeiroProtagonista = protagonista && !(v.caminhos.curriculo ?? []).some(x => /protagonista/.test(x.papel) && ['serie', 'novela', 'filme', 'curta', 'teatro'].includes(x.tipo));
   // A indicação (fictícia, do universo desta vida): só para o trabalho que repercutiu, e mais para quem carregou a produção.
-  const premio = indicacaoDoTrabalho(v, c, repercussao, r);
-  const item = registrarNoCurriculo(v, { tipo: c.tipo, titulo: c.titulo, papel: c.papel, onde: c.casa, repercussao, cache: c.bruto, pessoaId: c.pessoaId, ...(premio ? { premio } : {}) });
-  void item;
+  // REWORK 10.5 · CAR-09: com o nome da premiação, a categoria (a da obra e do papel), a edição e a obra.
+  const premio = premioDoTrabalho(v, c, repercussao, h, r);
+  registrarNoCurriculo(v, { tipo: c.tipo, titulo: c.titulo, papel: c.papel, onde: c.casa, repercussao, cache: c.bruto, pessoaId: c.pessoaId, producaoId: c.id, porte: c.porte, ...(c.genero ? { genero: c.genero } : {}), ...(c.personagem ? { personagem: c.personagem } : {}), ...(c.continuacaoDe ? { continuacaoDe: c.continuacaoDe } : {}), ...(premio ? { premio } : {}) });
   if (primeiroProtagonista && repercussao >= 1) {
     const texto = `O primeiro papel de protagonista: "${c.titulo}" (${NOME_TIPO_AV[c.tipo] ?? c.tipo}).`;
     escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'conquista', texto, 3, { dominio: 'teatro' });
   }
   if (premio) {
-    const texto = premio.venceu ? `Ganhou ${premio.nome} por "${c.titulo}".` : `Indicação ${premio.nome.replace(/^o /, 'ao ')} por "${c.titulo}".`;
+    const texto = premio.venceu ? `Ganhou: ${textoDoPremio(premio)}.` : `Indicação: ${textoDoPremio(premio)}.`;
     escrever(v, { texto, relevancia: premio.venceu ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'conquista', texto, premio.venceu ? 3 : 2, { dominio: 'teatro' });
-    if (premio.venceu && v.notoriedade) { v.notoriedade.valor = clamp(v.notoriedade.valor + 4); v.notoriedade.pico = Math.max(v.notoriedade.pico, v.notoriedade.valor); }
+    // REWORK 10.5 · FAM-03: o prêmio põe o nome na frente do público na medida do alcance dele (o da cidade não é o
+    // internacional) — e vale também para quem ainda não tinha nome (antes, só somava a quem já tinha notoriedade).
+    if (premio.venceu) somarAoNome(v, 'arte', PESO_DO_PREMIO[premio.alcance ?? 'local']);
   }
   crescerPublico(v, [1, 3, 7, 12][repercussao] * (1 + c.porte * 0.5));
   if (c.pessoaId && v.pessoas[c.pessoaId]?.vivo) lembrarCom(v, c.pessoaId, `"${c.titulo}", juntos.`, 'trabalho', 1);
@@ -243,22 +258,10 @@ export function concluirProducao(v: Vida, c: ContratoAV, r: Rng | undefined): vo
 }
 
 const NOME_TIPO_AV: Partial<Record<ItemCurriculo['tipo'], string>> = { serie: 'série', novela: 'novela', filme: 'filme', curta: 'curta', teatro: 'teatro', publicidade: 'publicidade' };
-const PREMIO_AV: Partial<Record<ItemCurriculo['tipo'], string>> = { filme: 'o prêmio de interpretação de um festival de cinema', curta: 'o prêmio de interpretação de um festival de curtas', serie: 'o prêmio da crítica de televisão', novela: 'o prêmio da crítica de televisão', teatro: 'o prêmio de teatro da cidade' };
-
-/** A indicação (e, mais raro, o prêmio) que um trabalho pode render: nasce da repercussão, do papel e do porte — e do ano. */
-function indicacaoDoTrabalho(v: Vida, c: ContratoAV, repercussao: number, r: Rng | undefined): { nome: string; venceu: boolean } | undefined {
-  const nome = PREMIO_AV[c.tipo];
-  if (!nome || repercussao < 2 || !r) return undefined;
-  const papel = /protagonista/.test(c.papel) ? 1 : /destaque|coadjuv/.test(c.papel) ? 0.6 : 0.25;
-  if (!r.chance(clamp((repercussao - 1) * 0.22 * papel + c.porte * 0.03, 0, 0.6))) return undefined;
-  const venceu = r.chance(clamp(0.18 + (habilidade(v, linguagemEmCena(v) ?? 'teatro') - 70) / 100 + (repercussao === 3 ? 0.12 : 0), 0.05, 0.5));
-  return { nome, venceu };
-}
-
 /** O ano do audiovisual: produções que acabam, propostas que vencem. */
 export function processarAudiovisual(v: Vida, r: Rng): void {
   const a = v.caminhos.audiovisual;
-  if (!a) return;
+  if (!a) { conviteDireto(v); return; }
   for (const c of a.contratos) {
     if (c.status === 'em_producao' && c.tFim !== undefined && v.t >= c.tFim) concluirProducao(v, c, r);
     else if (c.status === 'proposta' && v.t - c.tProposta >= 12) {
@@ -268,6 +271,35 @@ export function processarAudiovisual(v: Vida, r: Rng): void {
   }
   // Uma produção integral pesa na semana e na cabeça enquanto dura.
   if (emProducao(v).some(c => c.integral)) v.mente.estresse = clamp(v.mente.estresse + 4);
+  conviteDireto(v);
+}
+
+/**
+ * REWORK 10.5 · CAR-14 / FAM-04 — o CONVITE DIRETO: quem tem prestígio e nome é chamado sem teste (antes, toda proposta
+ * nascia de um teste do próprio jogador — a atriz premiada fazia fila com quem começava). O porte, o papel e a
+ * continuação (a temporada nova da série que repercutiu, a sequência) seguem a trajetória; nada garante sucesso nem
+ * cachê maior. Sorteio próprio: a sequência do ano não muda.
+ */
+function conviteDireto(v: Vida): void {
+  const e = v.trabalho.atual;
+  if (!e || ocupacaoOuNula(e.ocupacaoId)?.trilha !== 'cena' || v.justica?.prisao) return;
+  if (propostasAbertas(v).length || emProducao(v).some(c => c.integral)) return;
+  const r = rngDe(v.id, 'convite_av', v.t);
+  const pres = prestigioArtistico(v);
+  const noto = nomePor(v, 'arte');
+  if (!r.chance(clamp(-0.05 + pres * 0.6 + noto / 200, 0, 0.6))) return;
+  const cont = continuacaoPossivel(v, ['serie', 'filme', 'teatro'], r);
+  if (cont) {
+    const p = novaProposta(v, { tipo: cont.de.tipo, porte: (cont.de.porte ?? 2), papel: cont.de.papel, casa: cont.de.onde ?? r.pick(CASAS[cont.de.tipo]), titulo: cont.titulo, convite: true, continuacaoDe: cont.de.producaoId ?? cont.de.titulo });
+    escrever(v, { texto: `Chamaram de volta: ${descricaoDoContrato(p)} — a continuação de "${cont.de.titulo}" (${anoDe(cont.de.t)}), com o mesmo papel. ${contaDoContrato(p)}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+    return;
+  }
+  const porte = Math.min(porteMaximoDoTeste(v), pres >= 0.6 ? 3 : pres >= 0.35 ? 2 : 1) as 0 | 1 | 2 | 3;
+  const tipos: ItemCurriculo['tipo'][][] = [['teatro', 'curta'], ['teatro', 'curta', 'serie'], ['serie', 'filme', 'teatro'], ['novela', 'filme', 'serie']];
+  const tipo = r.pick(tipos[porte]);
+  const papel = papelPelaTrajetoria(v, r, habilidade(v, 'teatro'), [52, 60, 68, 74][porte]);
+  const p = novaProposta(v, { tipo, porte, papel, casa: r.pick(CASAS[tipo]), titulo: tituloNovo(v, tipo, 'convite'), convite: true });
+  escrever(v, { texto: `Um convite direto, sem teste: ${descricaoDoContrato(p)}. ${contaDoContrato(p)}.`, relevancia: porte >= 2 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: 'bom' });
 }
 
 /** O conflito resolvido pela pessoa: pausar o trabalho, deixá-lo, ou recusar a produção. */

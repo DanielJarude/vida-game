@@ -20,6 +20,7 @@
  * por ano, e a convivência continua mantendo quem está perto.
  */
 
+import { procuraComoSeNada, registrarTentativa } from './magoas';
 import { registrarAjudaDada, responsaveis } from './origem';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -159,6 +160,8 @@ export function responderChamado(v: Vida, _r: Rng, p: Pessoa, vin: Vinculo, sim:
     }
     case 'desculpas': {
       // A pessoa veio pedir desculpas pela briga que foi dela. Aceitar fecha o conflito (e, depois de uma ruptura, reabre a porta).
+      // REWORK 10.5 · REL-07: a tentativa fica na memória da mágoa (de quem, e como terminou).
+      registrarTentativa(vin, v.t, 'outro', sim ? 'aceita' : 'recusada');
       if (!sim) { atrito(vin, 4); v.fatos[`desculpas_recusou_${p.id}`] = v.t; return { resultado: `${p.nome} disse que entendia, e que a porta fica aberta.`, titulo: tituloP }; }
       atrito(vin, -26); confiar(vin, 4); afeto(vin, 5);
       vin.conflito = undefined;
@@ -169,6 +172,7 @@ export function responderChamado(v: Vida, _r: Rng, p: Pessoa, vin: Vinculo, sim:
     }
     case 'cobranca': {
       // A pessoa traz a briga: ouvir pode resolver; encerrar o assunto deixa a ferida aberta.
+      if (!sim && vin.magoa) registrarTentativa(vin, v.t, 'outro', 'recusada');
       if (!sim) { atrito(vin, 10); afeto(vin, -4); vin.conflito = { t: v.t, assunto: ch.assunto ?? 'o que ficou', gravidade: 2, quem: 'outro' }; lembrarCom(v, p.id, `Quis falar sobre ${ch.assunto ?? 'o que ficou'}; você encerrou o assunto.`, 'conflito', 1); return { resultado: `${p.nome} ficou em silêncio. Depois, mandou um "tá bom" seco.`, titulo: tituloP }; }
       const d = discutir(v, rngDe(v.id, 'cobranca', p.id, v.t), p, vin, 2, ch.assunto ?? 'o que ficou');
       return { resultado: d === 'resolveu' ? `Foi difícil de ouvir, e você ouviu. No fim, ${p.nome} disse que fazia tempo que precisava ter dito.` : d === 'desconforto' ? 'Cada um disse a sua parte. Não ficou resolvido, mas ficou dito.' : d === 'ruptura' ? `A conversa virou briga e terminou com uma porta batendo. ${p.nome} disse que não dá mais.` : `A conversa virou briga. Cada um saiu com a sua razão.`, titulo: tituloP };
@@ -297,7 +301,7 @@ function apoioEspontaneo(v: Vida, r: Rng): void {
   if (temFato(v, chave) || (v.fatos['apoio_recebido_t'] !== undefined && v.t - v.fatos['apoio_recebido_t'] < 24)) return;
   const candidatos = vinculosVivos(v).filter(({ p, vin }) => {
     const papel = papelDe(p, vin);
-    return !vin.chamado && (papel === 'parceiro' || importante(v, p, vin, papel)) && idadePessoa(v, p) >= 14 && vin.tensao < 45;
+    return !vin.chamado && (papel === 'parceiro' || importante(v, p, vin, papel)) && idadePessoa(v, p) >= 14 && vin.tensao < 45 && procuraComoSeNada(v, vin);
   });
   const quem = r.weighted(candidatos, ({ p, vin }) => (vin.proximidade / 30) * (1 + p.temperamento.afabilidade * 0.6));
   if (!quem || !r.chance(0.45 + quem.p.temperamento.afabilidade * 0.15)) return;
@@ -340,6 +344,19 @@ function novaIniciativa(v: Vida, r: Rng): void {
       if (conf.quem === 'outro' && t.afabilidade > -0.1 && v.fatos[`desculpas_recusou_${p.id}`] === undefined) { lista.push({ p, vin, tipo: 'desculpas', peso: 1.4 + t.afabilidade, texto: `${p.nome} procurou você para pedir desculpas pela briga sobre ${conf.assunto}.` }); continue; }
       if (conf.quem === 'eu' && vin.proximidade >= 30 && t.estabilidade > -0.4) { lista.push({ p, vin, tipo: 'cobranca', peso: 0.9 + Math.max(0, t.extroversao) * 0.5, texto: `${p.nome} disse que precisa falar sobre ${conf.assunto}.`, assunto: conf.assunto }); continue; }
     }
+    // REWORK 10.5 · REL-07: a briga que esfriou no clima mas não na memória. Quem está magoado não aparece com conversa
+    // de sempre: tenta resolver (se tem jeito para isso e ainda gosta) — ou fica em silêncio.
+    const m = vin.magoa;
+    if (m && m.ressentimento >= 25 && !conf && !vin.ruptura && eu >= 12 && ip >= 12) {
+      const t = p.temperamento;
+      const ultima = m.tentativas?.[m.tentativas.length - 1];
+      const podeTentar = !ultima || v.t - ultima.t >= 24;
+      if (podeTentar && m.quem === 'outro' && t.afabilidade > 0 && v.fatos[`desculpas_recusou_${p.id}`] === undefined) { lista.push({ p, vin, tipo: 'desculpas', peso: 0.8 + t.afabilidade, texto: `${p.nome} procurou você: disse que ainda pensa em ${m.motivo} e que queria pedir desculpas direito.` }); continue; }
+      if (podeTentar && m.quem === 'eu' && vin.proximidade >= 35 && t.estabilidade > -0.2) { lista.push({ p, vin, tipo: 'cobranca', peso: 0.7, texto: `${p.nome} disse que ${m.motivo} ainda não desceu — e que quer conversar sobre isso.`, assunto: m.motivo }); continue; }
+      continue;
+    }
+    // Rompidos, bloqueados ou em conflito sem nada a dizer sobre ele: nada de "sumiu, hein?".
+    if (!procuraComoSeNada(v, vin) && !(vin.estagio === 'ex_amigo' && vin.ruptura)) continue;
     // O ex-amigo que reaparece anos depois da ruptura (uma mensagem, um "lembrei de você").
     if (vin.estagio === 'ex_amigo' && vin.ruptura && v.t - vin.ruptura.t >= 60 && v.fatos[`reaparecer_nao_${p.id}`] === undefined && eu >= 16) {
       lista.push({ p, vin, tipo: 'reaparecer', peso: 0.5 + Math.max(0, p.temperamento.afabilidade) * 0.6, texto: `${p.nome} mandou mensagem depois de ${Math.round((v.t - vin.ruptura.t) / 12)} anos sem se falarem: "lembrei de você hoje".` });

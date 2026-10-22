@@ -11,7 +11,10 @@
  * público não vem. Nada disso impede de tocar no casamento da filha aos 60.
  */
 
+import { somarAoNome } from './notoriedade';
+import { municipio } from '../dados/lugares';
 import type { Rng } from '../rng';
+import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { clamp } from '../rng';
 import type { Dominio, Obra, ProjetoArtistico, Vida } from '../tipos';
 import { amigos, escrever, idade, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
@@ -85,9 +88,13 @@ export function processarArte(v: Vida, r: Rng): void {
   // Escrita: um prêmio, um livro.
   if (v.rotinas.some(x => x.id === 'escrever') && habilidade(v, 'escrita') >= 70 && !temFato(v, 'premio_literario') && r.chance(0.08)) {
     marcarFato(v, 'premio_literario');
-    const texto = 'Um conto ganhou um concurso literário. Saiu numa antologia com o nome inteiro na capa.';
+    // REWORK 10.5 · EVT-06: o prêmio com nome e ano (do concurso fictício da região), avisado no ano que passou — e um
+    // pouco de nome (o leitor do jornal da cidade conhece o conto).
+    const concurso = `o concurso literário de ${municipio(v.moradia.municipioId).nome}`;
+    const texto = `Um conto seu venceu ${concurso}. Saiu numa antologia com o nome inteiro na capa.`;
     escrever(v, { texto, relevancia: 'marco', tema: 'lazer', tom: 'bom' });
     marcar(v, 'conquista', texto, 3, { dominio: 'escrita' });
+    somarAoNome(v, 'arte', 2);
     if (habilidade(v, 'escrita') >= 74) novaOportunidade(v, { tipo: 'convite', ocupacaoId: 'escritor', meses: 24, chave: 'livro', titulo: 'Um livro', texto: 'Uma editora pequena leu o conto e quer publicar um livro seu. Paga pouco. Mas é um livro.' });
   }
 }
@@ -138,7 +145,11 @@ function anoDoProjeto(v: Vida, r: Rng, p: ProjetoArtistico): void {
   // Um convite para viver disso: raro, e só para quem construiu.
   const oc = p.linguagem === 'musica' ? 'musico_profissional' : p.linguagem === 'teatro' ? (p.publico >= 80 && h >= 75 && cena > 1.2 ? 'ator_reconhecido' : 'ator') : 'bailarino';
   const minimoH = p.linguagem === 'musica' ? 78 : p.linguagem === 'teatro' ? 68 : 78;
-  if (h >= minimoH && p.publico >= (p.linguagem === 'teatro' ? 58 : 72) && v.trabalho.atual?.ocupacaoId !== oc && !(p.linguagem === 'danca' && i > 27)
+  // REWORK 10.5 · CAR-12: quem já vive disso no mesmo degrau (ou acima) não recebe o convite de entrada da própria
+  // carreira — a atriz conhecida não é "chamada para a próxima montagem, com cachê" como quem começa.
+  const atualOc = v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.ocupacaoId) : undefined;
+  const jaVive = !!atualOc && atualOc.trilha === ocupacaoOuNula(oc)?.trilha && atualOc.nivel >= (ocupacaoOuNula(oc)?.nivel ?? 0);
+  if (h >= minimoH && !jaVive && p.publico >= (p.linguagem === 'teatro' ? 58 : 72) && v.trabalho.atual?.ocupacaoId !== oc && !(p.linguagem === 'danca' && i > 27)
     && (v.caminhos.ultimas['convite_arte'] === undefined || v.t - v.caminhos.ultimas['convite_arte'] >= 36) && r.chance(clamp((p.publico - 66) / 300 + (h - minimoH) / 350, 0.01, 0.045))) {
     novaOportunidade(v, {
       tipo: 'convite', ocupacaoId: oc, dominio: p.linguagem, meses: 12, chave: 'convite_arte',
@@ -178,6 +189,8 @@ const ARTES: Dominio[] = ['musica', 'teatro', 'danca', 'desenho', 'escrita', 'fo
 export function linguagemDaCarreira(v: Vida): Dominio {
   if (v.caminhos.arte?.ativo) return v.caminhos.arte.linguagem;
   const trilha = v.trabalho.atual?.ocupacaoId ?? '';
+  // REWORK 10.5 · CAR-13: o ator é do teatro (o id 'ator' não contém 'teatro' — caía na arte mais praticada, e o ator "lançava um disco").
+  if (/^ator/.test(trilha)) return 'teatro';
   const pelo = ARTES.find(d => trilha.includes(d === 'musica' ? 'music' : d === 'fotografia' ? 'fotog' : d));
   return pelo ?? [...ARTES].sort((a, b) => habilidade(v, b) - habilidade(v, a))[0];
 }
@@ -211,7 +224,9 @@ export function lancarObra(v: Vida, r: Rng): Obra {
   if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + [1, 4, 8, 14][recepcao]);
   const quem = p?.ativo ? ` com ${p.nome}` : '';
   const oque = d === 'musica' ? `o disco "${titulo}"` : d === 'teatro' ? `a peça "${titulo}"` : d === 'danca' ? `o espetáculo "${titulo}"` : d === 'escrita' ? `o livro "${titulo}"` : `"${titulo}"`;
-  const texto = recepcao === 3 ? `Lançou ${oque}${quem} — e ele marcou: crítica, público, gente cantando junto em cidade onde você nunca tinha ido.`
+  // REWORK 10.5 · CAR-13: o que "marcou" diz de cada arte (antes, a peça e o livro também tinham "gente cantando junto").
+  const marcou = d === 'musica' ? 'gente cantando junto em cidade onde você nunca tinha ido' : d === 'teatro' || d === 'danca' ? 'sessões lotadas, temporada estendida, gente voltando para ver de novo' : d === 'escrita' ? 'resenhas, leitores escrevendo para você, uma segunda tiragem' : 'gente parando para ver, convite de galeria de fora';
+  const texto = recepcao === 3 ? `Lançou ${oque}${quem} — e ${d === 'teatro' ? 'ela' : 'ele'} marcou: crítica, público, ${marcou}.`
     : recepcao === 2 ? `Lançou ${oque}${quem}. Repercutiu: saiu na imprensa da região, apareceu convite de fora.`
       : recepcao === 1 ? `Lançou ${oque}${quem}. Achou o seu público, pequeno e fiel.`
         : `Lançou ${oque}${quem}. Quem conhecia gostou; o resto nem ficou sabendo.`;

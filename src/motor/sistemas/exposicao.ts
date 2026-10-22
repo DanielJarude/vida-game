@@ -12,6 +12,7 @@
  * aprovação) — e a resposta é do jogador (`pol_escandalo`).
  */
 
+import { desgastar } from './desgastePolitico';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Segredo, Vida } from '../tipos';
@@ -111,7 +112,7 @@ export function tornarPublico(v: Vida, s: Segredo): void {
   if (p && naPolitica(v)) {
     const peso = s.tipo === 'caso' ? 1 : 1.6;
     p.escandalo = { t: v.t, tipo: s.tipo };
-    p.desgaste = clamp(p.desgaste + Math.round(14 * peso));
+    desgastar(p, Math.round(14 * peso), 'escandalo');
     p.apoio = clamp(p.apoio - Math.round(7 * peso));
     if (p.mandato) p.mandato.aprovacao = clamp(p.mandato.aprovacao - Math.round(9 * peso));
     v.fatos['pol_escandalo'] = v.t;

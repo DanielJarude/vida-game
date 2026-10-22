@@ -11,6 +11,8 @@
  * antes de dormir entra na história dos dois. Nada disso vira número na tela.
  */
 
+import { aplicarDimensoes, GRUPOS_DE_AFETO, INTERACOES_DE_AFETO } from './afetos';
+import { registrarTentativa, sincronizarMagoa } from './magoas';
 import { interacaoNaPrisao } from './prisao';
 import { dinheiro as moeda } from '../texto';
 import type { Rng } from '../rng';
@@ -686,7 +688,9 @@ export const INTERACOES: Interacao[] = [
     quando: c => {
       if (!humano(c) || c.vin.parentesco || c.eu < 13 || c.ip < 13) return false;
       const rom = c.vin.romance;
-      if (parceiro(c.v)) return !rom || rom.estagio === 'interesse' || (rom.estagio === 'ex' && rom.fim !== 'morte');
+      // REWORK 10.5 · UX-14 / REL-06: com parceria, o convite é para quem você poderia querer (o gênero, quem não está
+      // comprometido à vista) — antes, aparecia para qualquer um e a tela o escondia (a categoria Romance abria vazia).
+      if (parceiro(c.v)) return (!rom || rom.estagio === 'interesse' || (rom.estagio === 'ex' && rom.fim !== 'morte')) && (!c.v.eu.atracao || atraiGenero(c.v.eu.atracao, c.p.genero)) && !(c.p.parceiroId && c.vin.proximidade >= 35) && c.eu >= 16 && c.ip >= 16;
       if (!iniciativaPossivel(c) || c.longe) return false;
       // No aplicativo, o caminho é o dele: conversar, marcar o encontro (`app_conversar`, `app_encontro`).
       if (etapaDoApp(c.v, c.vin) === 'match' || etapaDoApp(c.v, c.vin) === 'conversa') return false;
@@ -698,7 +702,7 @@ export const INTERACOES: Interacao[] = [
     disponivel: c => disponibilidadeConvite(c),
     variante: 'secundario',
     prioridade: c => (c.vin.romance?.estagio === 'interesse' ? 4 : c.vin.romance?.estagio === 'ex' ? 0.8 : 2),
-    rotulo: c => (parceiro(c.v) ? `Chamar ${c.p.nome} para sair, escondido` : c.vin.romance?.estagio === 'ex' ? `Tentar de novo com ${c.p.nome}` : c.eu < 18 ? `Chamar ${c.p.nome} para sair depois da aula` : `Chamar ${c.p.nome} para sair`),
+    rotulo: c => (parceiro(c.v) ? (parceiro(c.v)!.vin.romance?.acordo === 'aberto' ? `Chamar ${c.p.nome} para sair (vocês combinaram que pode)` : `Chamar ${c.p.nome} para sair, escondido`) : c.vin.romance?.estagio === 'ex' ? `Tentar de novo com ${c.p.nome}` : c.eu < 18 ? `Chamar ${c.p.nome} para sair depois da aula` : `Chamar ${c.p.nome} para sair`),
     executar: (c, r) => {
       const traicao = !!parceiro(c.v);
       if (!c.v.eu.atracao) c.v.eu.atracao = c.p.genero === 'masculino' ? 'homens' : c.p.genero === 'feminino' ? 'mulheres' : 'ambos';
@@ -708,7 +712,7 @@ export const INTERACOES: Interacao[] = [
           return { resultado: `${c.p.nome} agradeceu o convite e disse que prefere deixar as coisas como estão.` };
         }
         iniciarCaso(c.v, c.p, c.vin);
-        return { resultado: `${c.p.nome} topou. Ninguém mais sabe.` };
+        return { resultado: parceiro(c.v)?.vin.romance?.acordo === 'aberto' ? `${c.p.nome} topou — e sabe do combinado de vocês.` : `${c.p.nome} topou. Ninguém mais sabe.` };
       }
       return responderConvite(c, r);
     }
@@ -1091,7 +1095,9 @@ export const INTERACOES: Interacao[] = [
   // FIX pós-REWORK 4: programas concretos (cinema, jantar, show, parque, ensinar, cozinhar...): `juntos`.
   ...INTERACOES_JUNTOS,
   // REWORK 10 · Fase C: conversar, conviver, decidir, confrontar, reparar (`convivio`).
-  ...INTERACOES_DE_CONVIVIO
+  ...INTERACOES_DE_CONVIVIO,
+  // REWORK 10.5 · REL-06: o flerte estando com alguém, o acordo aberto (e voltar a ser só os dois).
+  ...INTERACOES_DE_AFETO
 ];
 
 /* ------------------------------------------------------- Aproximação */
@@ -1242,6 +1248,7 @@ function disponibilidadeConvite(c: CtxI): Veredito {
     if (c.p.parceiroId) return bloqueio('impossivel', `${c.p.nome} está com outra pessoa.`);
     return bloqueio('impossivel', 'Não vai rolar.');
   }
+  if (parceiro(c.v)?.vin.romance?.acordo === 'aberto') return { grau: 'permitido', motivo: 'Dentro do combinado: vocês abriram a relação.', chance: chanceConvite(c) };
   return { grau: 'irregular', motivo: 'Você está num relacionamento. Seria traição.', chance: chanceConvite(c) };
 }
 
@@ -1514,6 +1521,7 @@ function ouve(c: CtxI): boolean {
 
 const porId = new Map(INTERACOES.map(x => [x.id, x]));
 for (const [id, g] of Object.entries(GRUPOS_DO_CONVIVIO)) registrarGrupo(id, g);
+for (const [id, g] of Object.entries(GRUPOS_DE_AFETO)) registrarGrupo(id, g);
 
 const PESO_VARIANTE = { principal: 3, secundario: 2, discreto: 1, perigo: 0 } as const;
 
@@ -1591,12 +1599,24 @@ export function executarInteracao(v: Vida, r: Rng, id: string, interacao: string
   const reacao = REACOES.has(interacao);
   const fPessoa = reacao ? 1 : rendeComEla(vezesComEla(v, id));
   const fVoce = reacao ? 1 : rendeParaVoce(socialDoAno(v).length);
-  const antes = { prox: c.vin.proximidade, conf: c.vin.confianca, pres: c.vin.presenca, env: c.vin.romance?.envolvimento, hum: v.mente.felicidade, cab: v.mente.estresse, abalos: v.mente.abalos?.length ?? 0 };
+  const antes = { prox: c.vin.proximidade, conf: c.vin.confianca, pres: c.vin.presenca, env: c.vin.romance?.envolvimento, hum: v.mente.felicidade, cab: v.mente.estresse, abalos: v.mente.abalos?.length ?? 0, conflito: c.vin.conflito, ruptura: c.vin.ruptura };
   v.anoAtual.acoes.push(`pessoa:${interacao}:${id}`);
   c.vin.tUltimoContato = v.t;
   const out = def.executar(c, r);
   // Retornos decrescentes: só os GANHOS encolhem (o que custa, custa inteiro).
   const vin = v.vinculos[id];
+  // REWORK 10.5 · REL-07: o conflito novo vira mágoa (que esfria devagar); a tentativa de reparar fica registrada, com o
+  // resultado (aceita = o conflito ou a ruptura fechou agora).
+  if (vin) {
+    if (REPARADORAS.has(interacao) && (antes.conflito || antes.ruptura || vin.magoa)) {
+      sincronizarMagoa(vin);
+      const fechou = (!!antes.conflito && !vin.conflito) || (!!antes.ruptura && vin.reconciliacao === v.t);
+      registrarTentativa(vin, v.t, 'eu', fechou ? 'aceita' : 'recusada');
+    }
+    sincronizarMagoa(vin);
+    // REWORK 10.5 · REL-09: a intimidade e o compromisso (conversar de verdade aproxima por dentro; os planos amarram).
+    aplicarDimensoes(vin, interacao, fPessoa);
+  }
   const encolhe = (depois: number, era: number | undefined, f: number) => (era !== undefined && depois > era ? Math.round(era + (depois - era) * f) : depois);
   if (vin && fPessoa < 1) {
     vin.proximidade = encolhe(vin.proximidade, antes.prox, fPessoa);
@@ -1612,6 +1632,9 @@ export function executarInteracao(v: Vida, r: Rng, id: string, interacao: string
   if (def.destaque && out.resultado && !out.titulo) out.titulo = c.p.nome;
   return out;
 }
+
+/** As interações que tentam reparar (pedir desculpas, reconciliar, reconhecer o erro, reconstruir a confiança). */
+const REPARADORAS = new Set(['desculpas', 'reconciliar', 'reparar_dano', 'reconhecer_erro', 'reconstruir_confianca', 'reaproximar']);
 
 export const rotuloInteracao = (v: Vida, id: string, interacao: string) => {
   const c = ctxPessoa(v, id);
@@ -1630,7 +1653,10 @@ export function prioridadesDaFicha(v: Vida, id: string): { ids: string[]; porque
   const c = ctxPessoa(v, id);
   if (!c || !c.p.vivo) return { ids: [] };
   const lista = interacoesPara(v, id).filter(x => !REACOES.has(x.id) && x.variante !== 'perigo');
-  const pode = (x: Interacao) => { const d = disponibilidadeInteracao(v, id, x.id); return d.grau === 'permitido' || d.grau === 'improvavel'; };
+  // REWORK 10.5 · UX-15: o que já foi feito neste ano CONTINUA no lugar (aparece como feito), em vez de ceder a vaga ao
+  // próximo da fila — antes, cada interação empurrava uma ação nova para "O que faz sentido agora" e a feita caía nas
+  // categorias: as duas listas pareciam crescer a cada toque.
+  const pode = (x: Interacao) => { if (v.anoAtual.acoes.includes(`pessoa:${x.id}:${id}`)) return true; const d = disponibilidadeInteracao(v, id, x.id); return d.grau === 'permitido' || d.grau === 'improvavel'; };
   const disponiveis = lista.filter(pode);
   const tem = new Set(disponiveis.map(x => x.id));
   const nome = c.p.nome;

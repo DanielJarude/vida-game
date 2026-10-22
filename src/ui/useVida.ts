@@ -117,7 +117,7 @@ export function useVida() {
   /** Aplica uma vida nova: salva, trata a morte. */
   const aplicar = useCallback((nova: Vida) => {
     if (!motor || !persist) return;
-    const { registrarVidaPassada, lerEstatisticas, idade, nomeLugar, descricaoEmprego, patrimonio, anoDe, paisDaCidade } = motor;
+    const { registrarVidaPassada, lerEstatisticas, idade, nomeLugar, descricaoEmprego, patrimonio, anoDe, paisDaCidade, vistosDaVida } = motor;
     setVida(nova);
     if (nova.morte) {
       // Sucessão: a vida que terminou fica salva até o jogador decidir (encerrar ou continuar a família) —
@@ -128,7 +128,7 @@ export function useVida() {
       const g = gaveta(persist.estatisticas());
       registrarVidaPassada({
         id: nova.id, nome: `${nova.eu.nome} ${nova.eu.sobrenome}`, idadeMorte: idade(nova), lugar: nomeLugar(nova.moradia.municipioId),
-        profissao: e ? descricaoEmprego(nova).split(' · ')[0] : '—', patrimonio: patrimonio(nova), causa: nova.morte.causa, ano: anoDe(nova.t), pais: paisDaCidade(nova.moradia.municipioId)
+        profissao: e ? descricaoEmprego(nova).split(' · ')[0] : '—', patrimonio: patrimonio(nova), causa: nova.morte.causa, ano: anoDe(nova.t), pais: paisDaCidade(nova.moradia.municipioId), vistos: vistosDaVida(nova)
       }, g);
       if (g.bruto !== null) void persist.salvarEstatisticas(g.bruto);
       setEstatisticas(lerEstatisticas(g));
@@ -140,12 +140,14 @@ export function useVida() {
 
   const nascer = useCallback((o: Omit<OpcoesCriacao, 'semente'> & { semente?: number }) => {
     if (!motor) return;
-    const v = motor.criarVida({ ...o, semente: o.semente ?? Math.floor(Math.random() * 2 ** 31) });
+    // REWORK 10.5 · EVT-05: a vida nova lembra do que as duas anteriores viveram (para não repetir as mesmas cenas).
+    const memoria = estatisticas ? motor.memoriaDasUltimasVidas(estatisticas) : [];
+    const v = motor.criarVida({ ...o, semente: o.semente ?? Math.floor(Math.random() * 2 ** 31), ...(memoria.length ? { memoria } : {}) });
     setMarcaAno(0);
     aplicar(v);
     setTela('jogo');
     sound.playSuccess();
-  }, [aplicar, motor]);
+  }, [aplicar, motor, estatisticas]);
 
   const continuar = useCallback(() => {
     if (!motor || !persist) return;

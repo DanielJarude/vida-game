@@ -14,6 +14,7 @@ import { esperadoNaSerie, MATERIAS } from '../dados/frentes';
 import { nomeDaMateria } from '../mundo/materias';
 import { quemOferece } from './ensinoTecnico';
 import { fraseDeConclusao } from './composicao';
+import { disciplinasDoAno, gradeDoCurso, registrarAnoLetivo, registrosDoCurso } from './historicoAcademico';
 import { falaALingua, perfilDaVida } from '../mundo/vida';
 import { textoLocal } from '../mundo/locais';
 import { paisCorrente } from '../mundo/moeda';
@@ -275,6 +276,14 @@ export function processarEscola(v: Vida, r: Rng, presenca = 1, estudo = 1, cansa
   }
   // Reprovação: nunca no 1º ano (progressão continuada), mais comum no fundamental II e médio. Na EJA, rara (as etapas são mais curtas).
   const reprova = b.serie > 1 && (b.eja ? b.desempenho < 26 && r.chance(0.3) : b.desempenho < 38 && r.chance(b.desempenho < 28 ? 0.7 : 0.35));
+  // REWORK 10.5 · EDU-05: o ano letivo fechado vira registro permanente (antes, o último ano do médio nem chegava à
+  // fotografia do ano: a escola acabava antes dela, e o boletim sumia com `basica`).
+  registrarAnoLetivo(v, {
+    nivel: 'escola', instituicao: instituicaoAtual(v)?.nome ?? (b.rede === 'privada' ? 'Escola particular' : 'Escola pública'),
+    rotulo: `${rotuloSerie(b)}${b.eja ? ' (EJA)' : ''}`, pais: paisDaVida(v),
+    disciplinas: (Object.entries(b.notas ?? {}) as [string, number][]).map(([m, n]) => ({ nome: NOME_MATERIA[m] ?? m, nota: n, situacao: n >= 5 ? 'aprovada' as const : 'reprovada' as const })),
+    situacao: reprova ? 'reprovado' : b.etapa === 'medio' && b.serie >= 3 ? 'concluido' : 'aprovado'
+  });
   if (reprova) {
     b.reprovacoes += 1;
     escrever(v, {
@@ -375,6 +384,7 @@ export function trocarDeSistemaEscolar(v: Vida, dePais: string, paraPais: string
 export function largarEscola(v: Vida): void {
   const b = v.educacao.basica;
   if (!b) return;
+  if (b.etapa !== 'creche' && b.etapa !== 'pre') registrarAnoLetivo(v, { nivel: 'escola', instituicao: instituicaoAtual(v)?.nome ?? (b.rede === 'privada' ? 'Escola particular' : 'Escola pública'), rotulo: rotuloSerie(b), pais: paisDaVida(v), disciplinas: [], situacao: 'abandonado' });
   v.educacao.evadiu = true;
   v.educacao.basica = undefined;
   escrever(v, { texto: `Largou a escola no ${rotuloSerie(b)}.`, relevancia: 'marco', tema: 'escola', tom: 'ruim', escolha: true });
@@ -823,6 +833,7 @@ export function processarCurso(v: Vida, r: Rng, presenca = 1, estudo = 1, cansac
   if (!m) return;
   if (m.trancado) {
     if (v.t - (m.tTrancou ?? v.t) >= 48) {
+      fecharNoHistorico(v, m, 'cancelado');
       v.educacao.matricula = undefined;
       escrever(v, { texto: `Depois de quatro anos trancada, a matrícula em ${curso(m.cursoId).nome} foi cancelada pela instituição.`, relevancia: 'biografia', tema: 'estudo', tom: 'ruim' });
     }
@@ -837,8 +848,21 @@ export function processarCurso(v: Vida, r: Rng, presenca = 1, estudo = 1, cansac
   let atraso = 0;
   if (m.desempenho < 35 && r.chance(0.6)) atraso = 6;
   m.mesesRestantes -= Math.min(12, m.mesesRestantes + atraso) - atraso;
+  // REWORK 10.5 · EDU-05: o ano do curso vira histórico — as disciplinas (da grade da área), as notas, os créditos, a
+  // situação. A nota acompanha o que o curso decidiu acima: quem atrasou reprovou disciplinas; quem não, passou em todas.
+  const anoDoCurso = registrosDoCurso(v, m.cursoId, m.tInicio).filter(x => x.disciplinas.length).length + 1;
+  const totalDeAnos = Math.max(1, Math.ceil(c.meses / 12));
+  const disciplinas = disciplinasDoAno(v, gradeDoCurso(m.area ?? c.area, c.nivel), anoDoCurso, totalDeAnos, m.desempenho, atraso > 0);
+  const reprovadas = disciplinas.filter(d => d.situacao === 'reprovada');
+  if (reprovadas.length) m.reprovacoes = (m.reprovacoes ?? 0) + reprovadas.length;
+  registrarAnoLetivo(v, {
+    nivel: c.nivel, instituicao: m.instituicao, cursoId: c.id, tInicioCurso: m.tInicio, pais: paisDaVida(v),
+    rotulo: c.meses <= 12 ? nomeDaMatricula(v, m) : `${anoDoCurso}º ano de ${nomeDaMatricula(v, m)}`,
+    disciplinas, situacao: m.mesesRestantes <= 0 ? 'concluido' : reprovadas.length ? 'reprovado' : 'aprovado'
+  });
   if (atraso > 0) {
-    escrever(v, { texto: `Reprovou em matérias de ${c.nome} e o curso ficou mais comprido.`, relevancia: 'cotidiano', tema: 'estudo', tom: 'ruim' });
+    const quais = reprovadas.map(d => d.nome);
+    escrever(v, { texto: `Reprovou em ${quais.length === 1 ? quais[0] : `${quais.slice(0, -1).join(', ')} e ${quais[quais.length - 1]}`} (${c.nome}) e o curso ficou mais comprido.`, relevancia: 'cotidiano', tema: 'estudo', tom: 'ruim' });
   }
   // REWORK 9.7 · ATR-02: a faculdade já exercita a inteligência pelo estímulo do ano (`pessoa.estimuloCognitivo`, com o
   // teto e os retornos decrescentes). Antes, somava também +2 fixos por ano (+1 no técnico), por fora do teto: cinco
@@ -929,4 +953,11 @@ export function processarOab(v: Vida, r: Rng): void {
   } else if (des === 0) {
     escrever(v, { texto: `Reprovou na primeira tentativa ${de(textoLocal(v, 'exameDaOrdem'), 'd')}.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
   }
+}
+
+/** REWORK 10.5 · EDU-05: a matrícula que fecha sem formatura (trancada, abandonada, cancelada) fica no histórico. */
+export function fecharNoHistorico(v: Vida, m: Matricula, situacao: 'trancado' | 'abandonado' | 'cancelado'): void {
+  const c = cursoOuNulo(m.cursoId);
+  if (!c) return;
+  registrarAnoLetivo(v, { nivel: c.nivel, instituicao: m.instituicao, cursoId: c.id, tInicioCurso: m.tInicio, pais: paisDaVida(v), rotulo: nomeDaMatricula(v, m), disciplinas: [], situacao });
 }

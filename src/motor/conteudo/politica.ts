@@ -7,6 +7,7 @@
  * franqueza, atalho) — nunca sobre o que defender ideologicamente.
  */
 
+import { aliviar, desgastar } from '../sistemas/desgastePolitico';
 import { paisDaVida } from '../mundo/vida';
 import { podeTentar } from '../plausibilidade';
 import type { Conteudo, Ctx, Resultado } from './base';
@@ -231,7 +232,7 @@ export const POLITICA: Conteudo[] = [
       { id: 'desculpas', texto: 'Vir a público e pedir desculpas', comportamento: { coragem: 1 },
         consequencia: () => 'Assumir diminui o peso na próxima eleição — e expõe ainda mais a vida de quem está perto.',
         resolver: c => ({ texto: 'Você leu uma nota curta, sem se esconder atrás de advogado. A repercussão foi grande — e depois foi diminuindo.', memoria: 'Pediu desculpas em público.', relevancia: 'biografia',
-          efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; p.desgaste = clamp(p.desgaste - 6); const par = parceiro(c.v); if (p.escandalo!.tipo === 'caso' && par) par.vin.tensao = clamp(par.vin.tensao + 6); } }) },
+          efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; aliviar(p, 6, ['escandalo']); const par = parceiro(c.v); if (p.escandalo!.tipo === 'caso' && par) par.vin.tensao = clamp(par.vin.tensao + 6); } }) },
       // Uma prisão não se nega: é registro público.
       { id: 'negar', texto: 'Negar tudo', comportamento: { empatia: -1 }, disponivel: c => pol(c).escandalo!.tipo !== 'prisao',
         consequencia: () => 'Se colar, passa; se não colar, pesa mais na próxima eleição do que o próprio fato.',
@@ -242,7 +243,7 @@ export const POLITICA: Conteudo[] = [
         resolver: c => ({ texto: 'Você não deu entrevista nenhuma. Em duas semanas, o assunto era outro — até a campanha.', memoria: null, efeito: () => { pol(c).escandalo!.resposta = 'silencio'; } }) },
       { id: 'renunciar', texto: c => `Renunciar ao mandato de ${pol(c).mandato ? nomeCargo(c.v, pol(c).mandato!.cargo) : ''}`, disponivel: c => (pol(c).mandato ? true : false),
         consequencia: () => 'O cargo acaba agora; o desgaste diminui, e a volta, se vier, é mais adiante.',
-        resolver: c => ({ texto: 'Você entregou a carta de renúncia numa sexta-feira à tarde.', memoria: null, efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; renunciar(c.v, 'depois do escândalo'); voltarAoTrabalho(c.v, 'depois da renúncia'); p.desgaste = clamp(p.desgaste - 8); } }) }
+        resolver: c => ({ texto: 'Você entregou a carta de renúncia numa sexta-feira à tarde.', memoria: null, efeito: () => { const p = pol(c); p.escandalo!.resposta = 'desculpas'; renunciar(c.v, 'depois do escândalo'); voltarAoTrabalho(c.v, 'depois da renúncia'); aliviar(p, 8, ['escandalo', 'mandato']); } }) }
     ]
   },
   {
@@ -306,12 +307,12 @@ export const POLITICA: Conteudo[] = [
       { id: 'rua_redes', texto: 'Redes e vídeos', disponivel: c => etapa(c) === 2,
         resolver: c => ({ texto: 'Um vídeo por dia, uma live por semana, comentário respondido de madrugada.', memoria: null, reabrir: true, efeito: () => { passo(c, x => { x.rua = 'redes'; }, 4 + (pol(c).reputacao > 50 ? 4 : 0)); estresse(c, 3); } }) },
       { id: 'rua_aliancas', texto: 'Alianças com lideranças da região', disponivel: c => etapa(c) === 2,
-        resolver: c => ({ texto: 'Almoços, telefonemas, fotos com quem tem voto. Cada apoio veio com um pedido.', memoria: null, reabrir: true, efeito: () => { const p = pol(c); p.desgaste = clamp(p.desgaste + 5); p.apoio = clamp(p.apoio + 5); criarAliado(c.v, c.r); passo(c, x => { x.rua = 'aliancas'; }, 7); } }) },
+        resolver: c => ({ texto: 'Almoços, telefonemas, fotos com quem tem voto. Cada apoio veio com um pedido.', memoria: null, reabrir: true, efeito: () => { const p = pol(c); desgastar(p, 5, 'campanha'); p.apoio = clamp(p.apoio + 5); criarAliado(c.v, c.r); passo(c, x => { x.rua = 'aliancas'; }, 7); } }) },
       // Etapa 3: o tom.
       { id: 'tom_propostas', texto: 'Falar das propostas', disponivel: c => etapa(c) === 3,
         resolver: c => ({ texto: 'No debate, você falou de rua, posto e creche, com número na mão. Não viralizou; convenceu.', memoria: null, efeito: () => passo(c, x => { x.tom = 'propostas'; }, 3 + (pol(c).prioridade ? 2 : 0)) }) },
       { id: 'tom_ataques', texto: 'Partir para cima do adversário', comportamento: { impulsividade: 1 }, disponivel: c => etapa(c) === 3,
-        resolver: c => { const deu = c.r.chance(0.5); return { texto: deu ? 'O ataque colou: o adversário passou o resto da campanha se explicando.' : 'O ataque voltou contra você: o assunto da semana virou o seu tom.', memoria: null, tom: deu ? 'bom' : 'ruim', efeito: () => { pol(c).desgaste = clamp(pol(c).desgaste + 6); passo(c, x => { x.tom = 'ataques'; }, deu ? 7 : -6); } }; } },
+        resolver: c => { const deu = c.r.chance(0.5); return { texto: deu ? 'O ataque colou: o adversário passou o resto da campanha se explicando.' : 'O ataque voltou contra você: o assunto da semana virou o seu tom.', memoria: null, tom: deu ? 'bom' : 'ruim', efeito: () => { desgastar(pol(c), 6, 'campanha'); passo(c, x => { x.tom = 'ataques'; }, deu ? 7 : -6); } }; } },
       { id: 'tom_cautela', texto: 'Evitar polêmica e não errar', disponivel: c => etapa(c) === 3,
         resolver: c => ({ texto: 'Você não errou. Também não marcou.', memoria: null, efeito: () => passo(c, x => { x.tom = 'cautela'; }, 1) }) }
     ]
@@ -342,9 +343,9 @@ export const POLITICA: Conteudo[] = [
     texto: c => `${c.p.aliado ? c.p.aliado.nome : 'Uma liderança do partido'} topa trazer gente para o seu lado. Em troca, quer ouvir o que você oferece.`,
     opcoes: [
       { id: 'pauta', texto: 'Prometer apoio a uma pauta do grupo',
-        resolver: c => ({ texto: 'Apertaram as mãos. Agora a pauta deles também é sua.', memoria: null, efeito: () => { const p = pol(c); p.apoio = clamp(p.apoio + 8); p.desgaste = clamp(p.desgaste + 3); } }) },
+        resolver: c => ({ texto: 'Apertaram as mãos. Agora a pauta deles também é sua.', memoria: null, efeito: () => { const p = pol(c); p.apoio = clamp(p.apoio + 8); desgastar(p, 3, 'campanha'); } }) },
       { id: 'espaco', texto: 'Prometer espaço na equipe, se der certo', comportamento: { impulsividade: 1 },
-        resolver: c => ({ texto: 'Um nome para um cargo, se você ganhar. A conta chega depois.', memoria: null, efeito: () => { const p = pol(c); p.apoio = clamp(p.apoio + 11); p.desgaste = clamp(p.desgaste + 5); c.v.fatos['pol_divida'] = c.v.t; } }) },
+        resolver: c => ({ texto: 'Um nome para um cargo, se você ganhar. A conta chega depois.', memoria: null, efeito: () => { const p = pol(c); p.apoio = clamp(p.apoio + 11); desgastar(p, 5, 'promessas'); c.v.fatos['pol_divida'] = c.v.t; } }) },
       { id: 'nada', texto: 'Recusar barganhas: apoio só pelo trabalho', comportamento: { independencia: 1 },
         resolver: c => ({ texto: 'Ouviram com respeito. Alguns vieram mesmo assim.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio + 2); } }) }
     ]
@@ -420,7 +421,7 @@ export const POLITICA: Conteudo[] = [
         resolver: c => ({ texto: 'O almoço acabou antes da sobremesa. Na próxima eleição, esse apoio não vem.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio - 8); delete c.v.fatos['pol_empresario']; delete c.v.fatos['pol_divida']; } }) },
       { id: 'pagar', texto: 'Pagar a conta', comportamento: { impulsividade: 1, generosidade: -1 },
         resolver: c => ({ texto: 'Você cumpriu o combinado. Ninguém viu. Por enquanto.', memoria: null, efeito: () => { pol(c).apoio = clamp(pol(c).apoio + 4); c.v.fatos['pol_risco'] = c.v.t; delete c.v.fatos['pol_empresario']; delete c.v.fatos['pol_divida']; } }) },
-      { id: 'enrolar', texto: 'Enrolar', resolver: c => ({ texto: 'Você disse que ia ver. A cobrança volta.', memoria: null, efeito: () => { pol(c).desgaste = clamp(pol(c).desgaste + 3); } }) }
+      { id: 'enrolar', texto: 'Enrolar', resolver: c => ({ texto: 'Você disse que ia ver. A cobrança volta.', memoria: null, efeito: () => { desgastar(pol(c), 3, 'promessas'); } }) }
     ]
   },
   {
@@ -432,9 +433,9 @@ export const POLITICA: Conteudo[] = [
       { id: 'vender', texto: 'Vender o negócio e encerrar a dúvida',
         resolver: c => ({ texto: 'Você vendeu. Doeu menos do que parecia.', memoria: null, efeito: () => { const n = c.v.caminhos.negocio!; const valor = valorDoNegocio(c.v, n); c.v.financas.conta += valor + Math.max(0, n.caixa ?? 0); n.caixa = 0; n.estado = 'fechado'; n.tFim = c.v.t; n.passivo = undefined; n.equipe = []; escrever(c.v, { texto: `Vendeu ${n.nome} por ${fmt(valor)} para afastar qualquer conflito com o mandato.`, relevancia: 'marco', tema: 'trabalho', escolha: true }); marcar(c.v, 'negocio_fechado', `Vendeu ${n.nome} durante o mandato.`, 2); if (c.v.caminhos.politica?.anterior) c.v.caminhos.politica.anterior.negocio = undefined; } }) },
       { id: 'explicar', texto: 'Explicar publicamente, com os documentos', comportamento: { coragem: 1 },
-        resolver: c => ({ texto: 'Você mostrou os papéis. A maioria acreditou.', memoria: null, efeito: () => { pol(c).desgaste = clamp(pol(c).desgaste + 2); } }) },
+        resolver: c => ({ texto: 'Você mostrou os papéis. A maioria acreditou.', memoria: null, efeito: () => { desgastar(pol(c), 2, 'escandalo'); } }) },
       { id: 'ignorar', texto: 'Não responder',
-        resolver: c => ({ texto: 'A pergunta continuou no ar — e virou a pergunta de outros jornais.', memoria: null, efeito: () => { pol(c).desgaste = clamp(pol(c).desgaste + 6); if (c.v.caminhos.politica!.mandato) c.v.caminhos.politica!.mandato.aprovacao = clamp(c.v.caminhos.politica!.mandato.aprovacao - 3); } }) }
+        resolver: c => ({ texto: 'A pergunta continuou no ar — e virou a pergunta de outros jornais.', memoria: null, efeito: () => { desgastar(pol(c), 6, 'escandalo'); if (c.v.caminhos.politica!.mandato) c.v.caminhos.politica!.mandato.aprovacao = clamp(c.v.caminhos.politica!.mandato.aprovacao - 3); } }) }
     ]
   },
   {
@@ -502,7 +503,7 @@ function fecharCrise(c: Ctx, aprovacao: number, desgaste: number, cabeca: number
   registrarMomento(c.v, { id: `pol_crise_${tipo}`, t: c.v.t, trajetoria: 'politica', intencao: como.charAt(0).toUpperCase() + como.slice(1), desfecho: aprovacao >= 5 ? 'otimo' : aprovacao >= 1 ? 'bom' : aprovacao > -4 ? 'ruim' : 'pessimo', texto: memoria ?? `${nome.charAt(0).toUpperCase()}${nome.slice(1)}: ${como}; ${saiu}.` });
   if (memoria) escrever(c.v, { texto: memoria.endsWith('.') ? memoria : `${memoria}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
   m.crise = undefined;
-  p.desgaste = clamp(p.desgaste + desgaste);
+  desgastar(p, desgaste, 'mandato');
   estresse(c, cabeca);
   if (aprovacao >= 5) abalar(c.v, 'a crise bem resolvida', 3, 0);
   if (aprovacao <= -4) abalar(c.v, 'a crise que saiu mal', -3, 3);

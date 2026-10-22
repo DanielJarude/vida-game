@@ -1,0 +1,68 @@
+/* REWORK 10.5 — coerência, interfaces, fama e consequências. As peças novas (classes próprias; nenhuma redefine raiz de
+   outro arquivo). */
+
+/* ============================================================ O histórico acadêmico (EDU-05) */
+.historico-academico__vazio { margin: 0; color: var(--text-secondary); }
+.historico-academico--lista { margin: var(--space-4) 0; }
+.historico-academico__grupo { margin: var(--space-3) 0 var(--space-1); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.historico-academico__anos { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.historico-academico__item { border-bottom: 1px solid var(--fio); min-width: 0; }
+.historico-academico__linha { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) auto; gap: var(--space-2); align-items: baseline; min-height: var(--touch-target); padding: var(--space-1) 0; cursor: default; }
+.historico-academico__item summary.historico-academico__linha { cursor: pointer; list-style: none; }
+.historico-academico__item summary::-webkit-details-marker { display: none; }
+.historico-academico__ano { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: var(--type-caption); }
+.historico-academico__rotulo { min-width: 0; overflow-wrap: anywhere; color: var(--text-primary); font-weight: var(--weight-semibold); }
+.historico-academico__rotulo small { font-weight: 400; color: var(--text-muted); }
+.historico-academico__situacao { font-size: var(--type-caption); color: var(--text-secondary); text-align: right; }
+.historico-academico__situacao--reprovado, .historico-academico__situacao--abandonado, .historico-academico__situacao--cancelado { color: var(--ruim); }
+.historico-academico__situacao--concluido { color: var(--bom); }
+.historico-academico__baixa { color: var(--ruim); }
+.historico-academico__disciplinas { list-style: none; margin: 0 0 var(--space-2) 3.5rem; padding: 0; display: grid; gap: 2px; font-size: var(--type-caption); color: var(--text-secondary); }
+.historico-academico__disciplinas li { display: flex; justify-content: space-between; gap: var(--space-2); }
+@media (max-width: 480px) {
+  .historico-academico__linha { grid-template-columns: 3rem minmax(0, 1fr); }
+  .historico-academico__situacao { grid-column: 2; text-align: left; }
+  .historico-academico__disciplinas { margin-left: 3rem; }
+}
+
+/* ============================================================ O atendimento médico (SAU-02) e a busca (UX-20) */
+.atendimento-medico { margin: var(--space-4) 0 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); border-left: 4px solid color-mix(in oklab, var(--ruim) 55%, var(--fio)); }
+.atendimento-medico[data-atendimento='rotina'] { border-left-color: var(--fio); }
+.atendimento-medico .grupo-acoes { margin: var(--space-2) 0; }
+.onde-fica__tipo { font-weight: 400; font-size: var(--type-caption); color: var(--text-muted); }
+.onde-fica__tipo--fazer { color: var(--acao, var(--text-secondary)); }
+
+/* ============================================================ A ficha da pessoa: categorias honestas (UX-14/UX-15) */
+.ficha__categoria-conta--zero { opacity: 0.7; }
+.ficha__categoria-vazia, .ficha__categoria-feitas { margin: var(--space-1) 0; font-size: var(--type-caption); color: var(--text-muted); line-height: 1.45; }
+
+/* ============================================================ Submundo (CRI-02) */
+.submundo__pesa { margin: var(--space-2) 0 0; padding-left: 1.1rem; display: grid; gap: 4px; color: var(--text-secondary); font-size: var(--type-caption); line-height: 1.45; }
+.submundo__situacao p { margin: 0; color: var(--text-secondary); }
+
+/* ============================================================ A carreira de atuação (UX-19) */
+.painel-cena__titulo { margin: var(--space-3) 0 var(--space-1); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); font-weight: var(--weight-semibold); }
+.painel-cena__titulo:first-child { margin-top: 0; }
+.painel-cena__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.painel-cena__lista li { min-width: 0; overflow-wrap: anywhere; }
+
+/* ============================================================ Os estados da relação (REL-07) */
+.ficha__estados { margin: var(--space-2) 0; }
+.ficha__estados-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ficha__estado-chip { font-size: var(--type-caption); padding: 2px 10px; border-radius: var(--radius-pill); background: color-mix(in oklab, var(--ruim) 12%, var(--superficie)); color: var(--text-primary); box-shadow: 0 0 0 1px color-mix(in oklab, var(--ruim) 30%, var(--fio)); }
+.ficha__estado-chip--reconciliando { background: color-mix(in oklab, var(--bom) 12%, var(--superficie)); box-shadow: 0 0 0 1px color-mix(in oklab, var(--bom) 30%, var(--fio)); }
+.ficha__estado-chip--afastados { background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); color: var(--text-secondary); }
+.ficha__magoa { margin: var(--space-1) 0 0; font-size: var(--type-caption); color: var(--text-secondary); line-height: 1.5; }
+.painel-cena__propostas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.ficha-papel { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: color-mix(in oklab, var(--superficie) 92%, var(--fio)); box-shadow: 0 0 0 1px var(--fio); min-width: 0; }
+.ficha-papel__titulo { margin: 0 0 var(--space-1); overflow-wrap: anywhere; }
+.ficha-papel__selo { font-size: var(--type-caption); color: var(--text-muted); }
+.ficha-papel__dados { display: grid; gap: 2px; margin: 0; }
+.ficha-papel__dados div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: var(--space-2); }
+.ficha-papel__dados dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.ficha-papel__dados dd { margin: 0; color: var(--text-secondary); font-size: var(--type-caption); overflow-wrap: anywhere; }
+@media (max-width: 420px) { .ficha-papel__dados div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+
+/* ============================================================ As conquistas do ano (EVT-06) */
+.fechamento--conquistas .temporada { border-left: 4px solid color-mix(in oklab, var(--bom) 55%, var(--fio)); }
+.conquista-do-ano::before { content: '★ '; color: var(--bom); }

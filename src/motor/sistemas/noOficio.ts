@@ -70,7 +70,8 @@ export function verbosDoOficio(v: Vida): VerboDoOficio[] {
     if (col) add({ oque: 'colega', rotulo: `Ajudar ${col.nome}, que anda enrolad${flex(col.genero, 'o', 'a', 'e')}`, porque: 'O clima da equipe e uma amizade de trabalho.' });
     add({ oque: 'capacitacao', rotulo: 'Fazer uma capacitação (curso da empresa)', porque: 'O desempenho sobe devagar — e o próximo passo pede.' });
   }
-  if (POR_CONTA.has(modo) && e.clientela !== undefined) {
+  // REWORK 10.5 · CAR-13: quem atua não "divulga no bairro" nem atende "o cliente exigente" (o vocabulário da freguesia).
+  if (POR_CONTA.has(modo) && e.clientela !== undefined && ocupacaoOuNula(e.ocupacaoId)?.trilha !== 'cena') {
     add({ oque: 'divulgar', rotulo: contaAtiva(v, 'instagram') ? 'Divulgar o trabalho (no boca a boca e no Instagram)' : 'Divulgar o trabalho no bairro', porque: `Uns ${preco(v, 250)} em material; cliente novo vem de quem ouviu falar.` });
     add({ oque: 'caprichar', rotulo: 'Caprichar num trabalho difícil (o cliente exigente)', porque: 'Cliente exigente satisfeito indica outros. Cansa.' });
   }

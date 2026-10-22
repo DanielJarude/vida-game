@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { custoDaConsulta, custoDoTratamento, estadoDoPet, infoPet } from '../../motor/sistemas/pets';
 import { dinheiroCurto } from '../leituraMaterial';
 import type { Atracao, Marco, Pessoa, Vida, Vinculo } from '../../motor/tipos';
-import type { Acao } from '../../motor/acoes';
+import { disponibilidade, type Acao } from '../../motor/acoes';
 import { idade, idadePessoa, jeitoDe, parceiro } from '../../motor/nucleo';
 import { nomeLugar } from '../../motor/dados/lugares';
 import { flex } from '../../motor/texto';
@@ -37,10 +37,12 @@ import { BotaoAcao, CabecaDaArea, Escolha, Folha, navegarAbas, Percurso, Secao, 
 import { recenteDe, TEMAS_PESSOAS } from '../area';
 import { tardesDoAno, tardesUsadas } from '../../motor/sistemas/convivio';
 import { Retrato, type Expressao } from '../avatar/Retrato';
-import { contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
+import { buscasPossiveisNoAno, contextosDeBusca, ROTULO_BUSCA } from '../../motor/sistemas/busca';
 import { leituraDaOrigem } from '../../motor/sistemas/origem';
 import { trajetoriaDaRelacao } from '../../motor/sistemas/relacoes';
 import { estadoDaRelacao, forcaDaRelacao } from '../../motor/sistemas/lacos';
+import { estadosContextuais, fraseDaMagoa, type EstadoContextual } from '../../motor/sistemas/magoas';
+import { dimensoesEmPalavras } from '../../motor/sistemas/afetos';
 import { fraseDoSaber, pendentes, saberes } from '../../motor/sistemas/conhecimento';
 import { presentesDados, presentesPara } from '../../motor/sistemas/presentes';
 import { contasAtivas } from '../../motor/sistemas/redesBase';
@@ -321,22 +323,23 @@ function ConhecerAlguem({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
   if (i < 15 || parceiro(vida) || vida.justica?.prisao) return null;
   const ctxs = contextosDeBusca(vida);
   const opcoesAtracao: { id: Atracao; rotulo: string }[] = [{ id: 'mulheres', rotulo: 'Mulheres' }, { id: 'homens', rotulo: 'Homens' }, { id: 'ambos', rotulo: 'Qualquer gênero' }];
-  const feita = vida.anoAtual.acoes.some(a => a.startsWith('buscar:'));
+  const feitas = vida.anoAtual.acoes.filter(a => a.startsWith('buscar:')).length;
+  const limite = buscasPossiveisNoAno(vida);
   return (
     <Secao titulo="Conhecer alguém" recolhivel aberta={i >= 18}>
-      <p className="nota">Procurar alguém é uma escolha sua; o interesse é da outra pessoa. Às vezes aparece alguém, às vezes não — uma vez por ano.</p>
+      <p className="nota">Procurar alguém é uma escolha sua; o interesse é da outra pessoa. Às vezes aparece alguém, às vezes não. Cada lugar uma vez no ano — e quantas vezes cabe, a sua semana diz (este ano, até {limite}).</p>
       {!vida.eu.atracao && (
         <div className="campo">
           <span className="campo__rotulo">Antes: por quem você se interessa</span>
           <Escolha rotulo="Por quem você se interessa" opcoes={opcoesAtracao} valor={undefined as unknown as Atracao} aoMudar={valor => agir({ tipo: 'atracao', valor })} />
         </div>
       )}
-      {vida.eu.atracao && !feita && (
+      {vida.eu.atracao && feitas < limite && (
         <div className="grupo-acoes">
           {ctxs.map(x => <BotaoAcao key={x} vida={vida} acao={{ tipo: 'conhecer_alguem', contexto: x }} agir={agir} variante="discreto">{ROTULO_BUSCA[x]}</BotaoAcao>)}
         </div>
       )}
-      {feita && <p className="nota">Você já procurou este ano.</p>}
+      {feitas >= limite && <p className="nota">Este ano já foram {feitas} tentativas: a semana não tem mais noites livres para isso.</p>}
     </Secao>
   );
 }
@@ -408,9 +411,14 @@ function lacoEmPalavras(vin: Vinculo): { id: string; rotulo: string; palavra: st
   return [
     { id: 'afeto', rotulo: 'Afeto', palavra: p >= 75 ? 'muito próximos' : p >= 55 ? 'próximos' : p >= 35 ? 'cordiais' : p >= 15 ? 'distantes' : 'quase estranhos', tom: p >= 55 ? 'bom' : p >= 35 ? 'neutro' : 'ruim' },
     { id: 'confianca', rotulo: 'Confiança', palavra: c >= 75 ? 'total' : c >= 55 ? 'firme' : c >= 35 ? 'com reservas' : 'abalada', tom: c >= 55 ? 'bom' : c >= 35 ? 'neutro' : 'ruim' },
-    { id: 'atrito', rotulo: 'Atrito', palavra: t >= 55 ? 'muito' : t >= 30 ? 'algum' : t >= 12 ? 'pouco' : 'nenhum', tom: t >= 55 ? 'ruim' : t >= 30 ? 'neutro' : 'bom' }
+    { id: 'atrito', rotulo: 'Atrito', palavra: t >= 55 ? 'muito' : t >= 30 ? 'algum' : t >= 12 ? 'pouco' : 'nenhum', tom: t >= 55 ? 'ruim' : t >= 30 ? 'neutro' : 'bom' },
+    // REWORK 10.5 · REL-09: a intimidade (o quanto se contam) e o compromisso (o quanto a vida está amarrada), quando existem.
+    ...dimensoesEmPalavras(vin)
   ];
 }
+
+const o_a = (p: Pessoa) => (p.genero === 'feminino' ? 'a' : p.genero === 'masculino' ? 'o' : 'e');
+const rotuloEstadoContextual = (x: EstadoContextual, p: Pessoa) => ({ brigados: 'brigados', magoada: `magoad${o_a(p)} com você`, deve_desculpas: 'deve um pedido de desculpas', confianca_abalada: 'confiança abalada', medo: 'você tem medo', afastados: 'afastados', rompidos: 'rompidos', bloqueado: 'contato bloqueado', reconciliando: 'tentando se reconciliar' } as const)[x];
 
 const ROTULO_ESTADO: Partial<Record<ReturnType<typeof estadoDaRelacao>, string>> = { aproximando: 'se aproximando', esfriando: 'esfriando', tensao: 'com tensão', conflito: 'em conflito', afastado: 'afastados', rompido: 'rompidos', reconciliacao: 'se reconciliando' };
 
@@ -454,16 +462,25 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   const pri = p.vivo ? prioridadesDaFicha(vida, p.id) : { ids: [] as string[], porque: undefined as string | undefined };
   const agoraIds = new Set(pri.ids);
   // REWORK 10 · UX-14: as ações por categoria (as situações de uma relação), só as que existem para esta pessoa agora.
+  // REWORK 10.5 · UX-14/UX-15: o contador é o que DÁ para fazer agora (antes, contava também o que a tela escondia — o
+  // convite impossível de Romance, a adoção — e a categoria abria vazia). O impossível não entra; o que já foi feito
+  // neste ano vira uma linha ("Já neste ano"), não um botão cinza a mais em cada interação; o que existe mas não dá
+  // agora aparece com o motivo, e a categoria só com isso diz que não há o que fazer agora.
+  const veredito = (id: string) => disponibilidade(vida, { tipo: 'pessoa', pessoaId: p.id, interacao: id });
+  const feitaNoAno = (id: string) => vida.anoAtual.acoes.includes(`pessoa:${id}:${p.id}`);
   const grupos = ORDEM_DOS_GRUPOS.map(id => {
-    const lista = acoes.filter(x => x.id !== 'chamado_sim' && x.id !== 'chamado_nao' && grupoDaInteracao(x.id) === id && !agoraIds.has(x.id));
+    const todas = acoes.filter(x => x.id !== 'chamado_sim' && x.id !== 'chamado_nao' && grupoDaInteracao(x.id) === id && !agoraIds.has(x.id) && veredito(x.id).grau !== 'impossivel');
+    const feitas = todas.filter(x => feitaNoAno(x.id));
+    const lista = todas.filter(x => !feitaNoAno(x.id));
+    const podem = lista.filter(x => podeTentar(veredito(x.id))).length;
     const extra = id === 'conviver' ? usosComEla : [];
-    const adocao = id === 'decisoes' && papel === 'parceiro' && idade(vida) >= 18;
-    return { id, rotulo: ROTULO_DO_GRUPO[id], lista, extra, adocao, n: lista.length + extra.length + (adocao ? 1 : 0) };
-  }).filter(g => g.n > 0);
+    const adocao = id === 'decisoes' && papel === 'parceiro' && idade(vida) >= 18 && disponibilidade(vida, { tipo: 'adotar' }).grau !== 'impossivel';
+    const n = podem + extra.length + (adocao && podeTentar(disponibilidade(vida, { tipo: 'adotar' })) ? 1 : 0);
+    return { id, rotulo: ROTULO_DO_GRUPO[id], lista, feitas, extra, adocao, n, existe: lista.length + feitas.length + extra.length + (adocao ? 1 : 0) };
+  }).filter(g => g.existe > 0);
   const [parte, setParte] = useState<'agora' | 'voces' | 'quem'>('agora');
   const botao = (x: { id: string; variante?: 'principal' | 'secundario' | 'discreto' | 'perigo'; chance?: boolean }, destaque = false) => (
-    <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={destaque ? 'principal' : x.variante === 'principal' ? 'secundario' : x.variante} mostrarChance={x.chance}
-      ocultarImpossivel={x.id === 'convidar'}>
+    <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={destaque ? 'principal' : x.variante === 'principal' ? 'secundario' : x.variante} mostrarChance={x.chance}>
       {rotuloInteracao(vida, p.id, x.id)}
     </BotaoAcao>
   );
@@ -508,6 +525,19 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
               {lacoEmPalavras(vin).map(x => <li key={x.id} className={`laco__item laco__item--${x.tom}`}><span className="laco__rotulo">{x.rotulo}</span><span className="laco__palavra">{x.palavra}</span></li>)}
             </ul>
           )}
+          {/* REWORK 10.5 · REL-07: os estados de agora (podem ser vários: brigados e magoados; afastados e com a confiança abalada)
+              e o que ficou da briga — o motivo, há quanto tempo, quem tentou reparar e como terminou. */}
+          {p.vivo && !p.especie && (() => {
+            const estados = estadosContextuais(vida, vin);
+            const magoa = fraseDaMagoa(vida, vin, p);
+            if (!estados.length && !magoa) return null;
+            return (
+              <div className="ficha__estados" aria-label="O estado da relação">
+                {estados.length > 0 && <ul className="ficha__estados-lista">{estados.map(x => <li key={x} className={`ficha__estado-chip ficha__estado-chip--${x}`}>{rotuloEstadoContextual(x, p)}</li>)}</ul>}
+                {magoa && <p className="ficha__magoa">{magoa}</p>}
+              </div>
+            );
+          })()}
           {conflito && (
             <div className={`ficha__conflito ficha__conflito--${conflito.grau}`} role="note" aria-label="Conflito pendente">
               <p className="ficha__conflito-titulo">{conflito.titulo}</p>
@@ -543,11 +573,13 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
                     <div className="ficha__categorias" aria-label="Tudo o que dá para fazer, por situação" role="group">
                       {grupos.map((g, k) => (
                         <details key={g.id} className={`ficha__categoria ficha__grupo ficha__grupo--${g.id}`} open={k === 0 && !pri.ids.length}>
-                          <summary className="ficha__categoria-titulo">{g.rotulo}<span className="ficha__categoria-conta">{g.n}</span></summary>
+                          <summary className="ficha__categoria-titulo">{g.rotulo}<span className={`ficha__categoria-conta${g.n ? '' : ' ficha__categoria-conta--zero'}`} aria-label={g.n ? `${g.n} ${g.n === 1 ? 'ação possível' : 'ações possíveis'} agora` : 'nada possível agora'}>{g.n || '—'}</span></summary>
+                          {g.n === 0 && <p className="ficha__categoria-vazia">{g.feitas.length && !g.lista.length ? 'O que dava para fazer aqui você já fez neste ano.' : 'Nada disso dá para fazer agora — o motivo está em cada uma.'}</p>}
+                          {g.feitas.length > 0 && <p className="ficha__categoria-feitas">Já neste ano: {g.feitas.map(x => rotuloInteracao(vida, p.id, x.id)).join(' · ')}.</p>}
                           <div className="grupo-acoes">
                             {g.lista.map(x => botao(x))}
                             {g.extra.map(x => <BotaoAcao key={`${x.t.id}:${x.uso.id}`} vida={vida} acao={{ tipo: 'usar_coisa', coisaTidaId: x.t.id, uso: x.uso.id, pessoaId: p.id }} agir={agir} variante="secundario">{(x.uso.rotuloCom ?? x.uso.rotulo).replace('{nome}', p.nome)}</BotaoAcao>)}
-                            {g.adocao && <BotaoAcao vida={vida} acao={{ tipo: 'adotar' }} agir={agir} variante="discreto" ocultarImpossivel>Entrar juntos com um pedido de adoção</BotaoAcao>}
+                            {g.adocao && <BotaoAcao vida={vida} acao={{ tipo: 'adotar' }} agir={agir} variante="discreto">Entrar juntos com um pedido de adoção</BotaoAcao>}
                           </div>
                         </details>
                       ))}

@@ -16,7 +16,7 @@
 
 import { agenteDe, cacheAudiovisual, contaDoContrato, intervaloDeTestes, novaProposta, porteMaximoDoTeste } from './audiovisual';
 import type { Rng } from '../rng';
-import { clamp, rngDe } from '../rng';
+import { clamp } from '../rng';
 import type { Dominio, ItemCurriculo, Oportunidade, Vida } from '../tipos';
 import { escrever, idade, lembrarCom } from '../nucleo';
 import { habilidade, praticar } from './frentes';
@@ -33,6 +33,7 @@ import { dinheiro as fmt } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { capitalDoEstado } from './escola';
 import { nomePor } from './notoriedade';
+import { textoDoPremio, tituloNovo } from './producoes';
 
 export const LINGUAGENS_DE_CENA: Dominio[] = ['teatro', 'musica', 'danca'];
 const TRILHA_DA: Partial<Record<Dominio, string[]>> = { teatro: ['cena'], musica: ['musica', 'orquestra'], danca: ['danca'] };
@@ -78,26 +79,46 @@ export function pesoDoCurriculo(v: Vida): number {
   return clamp(s / 22, 0, 1);
 }
 
+/**
+ * REWORK 10.5 · CAR-14 / FAM-04 — o PRESTÍGIO de quem atua (0..1): o que a carreira construiu — o currículo, os prêmios
+ * e as indicações, os anos vivendo disso e o nome. Não é a fama (uma atriz respeitada pode ser pouco conhecida); é o
+ * que faz as produções chamarem para papéis maiores (e, com nome, sem teste).
+ */
+export function prestigioArtistico(v: Vida): number {
+  const cv = v.caminhos.curriculo ?? [];
+  const venceu = cv.filter(x => x.premio?.venceu).length;
+  const indicado = cv.filter(x => x.premio && !x.premio.venceu).length;
+  const empregos: { ocupacaoId: string; tInicio: number; tFim?: number }[] = [...v.trabalho.historico, ...(v.trabalho.atual ? [v.trabalho.atual] : [])];
+  const anos = empregos.filter(e => ocupacaoOuNula(e.ocupacaoId)?.trilha === 'cena').reduce((s, e) => s + ((e.tFim ?? v.t) - e.tInicio) / 12, 0);
+  return clamp(pesoDoCurriculo(v) * 0.5 + Math.min(0.3, venceu * 0.12) + Math.min(0.12, indicado * 0.04) + Math.min(0.2, anos / 40) + nomePor(v, 'arte') / 250, 0, 1);
+}
+
+/** O papel que um teste (ou um convite) oferece: a folga de técnica sobre o que a produção pede, mais o prestígio. */
+export function papelPelaTrajetoria(v: Vida, r: Rng, h: number, exige: number): string {
+  const pres = prestigioArtistico(v);
+  const folga = h - exige + pres * 30;
+  // Antes: protagonista só nas produções pequenas (nas grandes, no máximo "papel de destaque"), e o nome e os prêmios não
+  // contavam — o ator premiado de 30 anos de carreira seguia recebendo "coadjuvante" e "elenco de apoio".
+  if (folga >= 16 && r.chance(0.3 + pres * 0.4)) return 'protagonista';
+  if (folga >= 8 && r.chance(0.45)) return pres >= 0.55 && r.chance(0.3) ? 'participação especial' : 'papel de destaque';
+  return folga >= 0 ? 'coadjuvante' : 'elenco de apoio';
+}
+
 /** O currículo em palavras (a régua das devolutivas). */
 export const PALAVRA_CURRICULO = ['sem trabalhos ainda', 'alguns trabalhos', 'um currículo', 'um currículo sólido', 'um currículo de peso'] as const;
 export const nivelDoCurriculo = (x: number) => (x < 0.08 ? 0 : x < 0.25 ? 1 : x < 0.5 ? 2 : x < 0.75 ? 3 : 4);
 
 /* ------------------------------------------------------------ Nomes fictícios */
 
-const TITULOS_PECA = ['O Quarto de Cima', 'Vento Norte', 'A Última Festa', 'Rua das Palmeiras', 'Os Dias Contados', 'Casa de Farinha', 'Travessia Noturna', 'O Peso das Coisas', 'Mar de Dentro', 'Retrato de Família'];
-const TITULOS_TELA = ['Horizonte Partido', 'Os Herdeiros da Serra', 'Pelas Margens', 'Rota 116', 'A Cidade Acorda', 'Fronteira Sul', 'Laços de Maré', 'O Contador de Histórias', 'Sol de Inverno', 'Terra Vermelha'];
-const PRODUTOS = ['uma rede de farmácias', 'um banco digital', 'uma marca de refrigerante', 'um supermercado da região', 'uma loja de eletrodomésticos', 'uma operadora de celular'];
 export const CASAS: Record<ItemCurriculo['tipo'], string[]> = {
   teatro: ['um teatro do centro', 'uma sala independente', 'o teatro municipal'], festival: ['um festival da capital'], publicidade: ['uma agência de publicidade'],
   curta: ['uma produtora independente'], serie: ['uma plataforma de streaming', 'um canal por assinatura'], novela: ['uma emissora de TV aberta'], filme: ['uma produtora de cinema'],
   show: ['uma casa de shows'], espetaculo: ['uma companhia de dança'], edital: ['um edital de cultura']
 };
 
+/** REWORK 10.5 · CAR-11: um título que esta carreira ainda não viveu (`producoes.tituloNovo`). */
 export function tituloFicticio(v: Vida, tipo: ItemCurriculo['tipo'], salt: string): string {
-  const r = rngDe(v.id, 'titulo', tipo, v.t, salt, v.caminhos.curriculo?.length ?? 0);
-  if (tipo === 'publicidade') return `Comercial de ${r.pick(PRODUTOS)}`;
-  if (tipo === 'serie' || tipo === 'novela' || tipo === 'filme' || tipo === 'curta') return r.pick(TITULOS_TELA);
-  return r.pick(TITULOS_PECA);
+  return tituloNovo(v, tipo, salt);
 }
 
 /* -------------------------------------------------------- Apresentar-se */
@@ -231,7 +252,7 @@ export function executarCena(v: Vida, r: Rng, oque: OqueCena): { texto: string; 
       const onde = r.pick(CASAS[tipo]);
       const nomeTipo = { teatro: 'a montagem', curta: 'o curta', serie: 'a série', novela: 'a novela', filme: 'o filme', festival: 'o festival', publicidade: 'o comercial', show: 'o show', espetaculo: 'o espetáculo', edital: 'o projeto' }[tipo];
       if (r.chance(chance)) {
-        const papel = h >= exige + 12 && r.chance(0.3) ? (porte >= 2 ? 'papel de destaque' : 'protagonista') : h >= exige ? 'coadjuvante' : 'elenco de apoio';
+        const papel = papelPelaTrajetoria(v, r, h, exige);
         // Alguém da produção fica na vida (a diretora, um colega de elenco): contato que pode chamar de novo.
         const contato = criarPessoa(v, r, { genero: r.chance(0.5) ? 'masculino' : 'feminino', idade: Math.max(20, idade(v) + r.int(-6, 15)), municipioId: v.moradia.municipioId });
         contato.ocupacao = r.chance(0.5) ? (contato.genero === 'feminino' ? 'diretora' : 'diretor') : (contato.genero === 'feminino' ? 'atriz' : 'ator');
@@ -313,6 +334,6 @@ export function leituraDoCurriculo(v: Vida): { linhas: string[]; palavra: string
   const REP = ['', ' · teve público', ' · repercutiu', ' · marcou'];
   return {
     palavra: PALAVRA_CURRICULO[nivelDoCurriculo(pesoDoCurriculo(v))],
-    linhas: itens.slice(0, 12).map(x => `${anoDe(x.t)} — ${x.titulo} — ${NOME[x.tipo]}${x.papel ? ` — ${x.papel}` : ''}${REP[x.repercussao]}`)
+    linhas: itens.slice(0, 12).map(x => `${anoDe(x.t)} — ${x.titulo} — ${NOME[x.tipo]}${x.genero ? ` (${x.genero})` : ''}${x.papel ? ` — ${x.papel}` : ''}${x.personagem ? `, como ${x.personagem}` : ''}${REP[x.repercussao]}${x.premio ? ` · ${x.premio.venceu ? 'prêmio' : 'indicação'}: ${textoDoPremio(x.premio)}` : ''}`)
   };
 }

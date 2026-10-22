@@ -47,9 +47,11 @@ export function disponibilidadeCuidado(v: Vida, c: TipoCuidado): Veredito {
       return PERMITIDO;
     }
     case 'consulta':
-      // Adolescente com um sinal de saúde mental pode pedir ajuda (a família, a escola, o posto): o atendimento é público e gratuito.
-      if (i >= 12 && i < 14 && v.corpo.condicoes.some(c => MENTAIS.has(c.id) && semNome(c))) return PERMITIDO;
-      if (i < 14) return bloqueio('impossivel', 'Quem leva ao médico são os adultos da casa.');
+      // REWORK 10.5 · SAU-02: a criança também tem caminho — contar em casa e pedir para ir ao médico; quem leva são os
+      // responsáveis. Antes, abaixo dos 14 a porta não existia (o prontuário recomendava um médico que ninguém podia procurar).
+      if (i < 4) return bloqueio('impossivel', 'Nessa idade, quem percebe e leva ao pediatra são os adultos da casa.');
+      // Sem nada pedindo atenção, a consulta de rotina da criança é a família que marca (não um pedido dela).
+      if (i < 14 && !v.corpo.condicoes.some(c => semNome(c) || (c.cronica && !c.tratando))) return bloqueio('incompativel', 'Sem nenhum sinal no corpo, a consulta de rotina é a família que marca — o pediatra vê você uma vez por ano.');
       return PERMITIDO;
     case 'parar_fumar':
       return v.corpo.habitos.fuma ? PERMITIDO : bloqueio('impossivel', 'Você não fuma.');
@@ -103,10 +105,19 @@ function consulta(v: Vida, r: Rng): SaidaCuidado {
     }
     if (v.financas.planoDeSaude) { sinal.tratando = true; return { resultado: `${texto} O plano cobriu o tratamento, que começou logo.` }; }
     if (i >= 18 && !v.processos.some(p => p.tipo === 'tratamento')) return { resultado: texto, decisao: 'sau_tratamento' };
+    // REWORK 10.5 · SAU-02: o menor diagnosticado é tratado pelos responsáveis (antes, o diagnóstico vinha e o tratamento
+    // não: o menor que procurou ficava pior do que o que não procurou, porque a família só tratava o que não tinha nome).
+    if (i < 18) { sinal.tratando = true; return { resultado: `${texto} ${quemLeva(v)} acompanhou, e o tratamento começou ${redeDeSaude(v).pelo}.` }; }
     return { resultado: texto };
   }
-  if (sinal) return { resultado: `O médico ouviu sobre ${SINAIS[sinal.id] ?? 'o incômodo'} e pediu exames. Nada fechado ainda: voltar no ano que vem, se não passar.` };
+  if (sinal) {
+    // A incerteza é real: os exames nem sempre fecham na primeira consulta. A procura fica registrada (a demora daqui
+    // em diante não é descuido) e a próxima consulta pode fechar.
+    sinal.procurou ??= v.t;
+    return { resultado: `${i < 14 ? `${quemLeva(v)} levou ao médico, que` : 'O médico'} ouviu sobre ${SINAIS[sinal.id] ?? 'o incômodo'} e pediu exames. Nada fechado ainda: voltar no ano que vem, se não passar.` };
+  }
   const semTratar = v.corpo.condicoes.find(x => x.cronica && !x.tratando);
+  if (semTratar && i < 18) { semTratar.tratando = true; return { resultado: `${quemLeva(v)} acompanhou a consulta: o tratamento de ${semTratar.nome} começou ${redeDeSaude(v).pelo}.` }; }
   if (semTratar && i >= 18) {
     if (v.processos.some(p => p.tipo === 'tratamento')) return { resultado: `O médico olhou o encaminhamento: a fila ${redeDeSaude(v).do} para ${semTratar.nome} continua andando. Mandou não parar de se cuidar enquanto isso.` };
     return { decisao: 'sau_tratamento' };
@@ -131,6 +142,15 @@ function consulta(v: Vida, r: Rng): SaidaCuidado {
   if (contra.length) return { resultado: `Os exames não mostraram nada novo. O médico foi direto sobre o resto: ${listaNatural(contra.map(f => f.texto))}. Disse que isso pesa mais com os anos.` };
   if (tratando.length) return { resultado: `Acompanhamento em dia: ${listaNatural(tratando.map(x => x.nome))} sob controle. O médico pediu para não largar o remédio.` };
   return { resultado: i < 30 ? 'Exames em ordem. O médico disse que, nessa idade, o melhor remédio é não parar de se mexer.' : 'Exames em ordem. O médico disse para continuar assim e voltar no ano que vem.' };
+}
+
+/** Quem leva o menor ao médico: a mãe, o pai, a avó — quem mora junto; sem ninguém, "a família". */
+function quemLeva(v: Vida): string {
+  for (const par of ['mae', 'pai', 'madrasta', 'padrasto', 'avo'] as const) {
+    const vin = Object.values(v.vinculos).find(x => x.parentesco === par && v.pessoas[x.pessoaId]?.vivo);
+    if (vin) { const p = v.pessoas[vin.pessoaId]; return par === 'mae' ? 'A mãe' : par === 'pai' ? 'O pai' : par === 'madrasta' ? 'A madrasta' : par === 'padrasto' ? 'O padrasto' : p.genero === 'feminino' ? 'A avó' : 'O avô'; }
+  }
+  return 'A família';
 }
 
 function pararDeFumar(v: Vida, r: Rng): SaidaCuidado {
@@ -189,8 +209,13 @@ const pode = (v: Vida, a: Acao, disp: (v: Vida, a: Acao) => Veredito) => podeTen
 export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vida, a: Acao) => Veredito): Sugestao[] {
   const i = idade(v);
   const out: Sugestao[] = [];
-  if (i < 12) return out;
   const junto = (a: Acao) => pode(v, a, disp);
+  // REWORK 10.5 · SAU-02: a criança com um sinal no corpo tem o caminho dela — contar em casa e pedir o médico.
+  if (i < 12) {
+    const sinal = d === 'saude' ? v.corpo.condicoes.find(c => semNome(c) || (c.cronica && !c.tratando)) : undefined;
+    if (sinal && junto({ tipo: 'cuidar', cuidado: 'consulta' })) out.push({ id: 'consulta', texto: 'Contar em casa e pedir para ir ao médico', motivo: semNome(sinal) ? `O corpo tem dado sinais: ${SINAIS[sinal.id] ?? 'um incômodo que não passa'}. Quem leva são os adultos da casa.` : `${sinal.nome} está sem tratamento.`, acao: { tipo: 'cuidar', cuidado: 'consulta' } });
+    return out;
+  }
 
   if (d === 'cabeca') {
     const f = fatoresCabeca(v);
@@ -254,7 +279,7 @@ export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vi
   const sinal = v.corpo.condicoes.find(semNome);
   const semTratar = v.corpo.condicoes.some(x => x.cronica && !x.tratando && !semNome(x));
   if (v.corpo.saude >= 80 && !sinal && !semTratar && !pesa('fuma') && !pesa('bebe') && !(pesa('forma') && i >= 30)) return out;
-  if (junto({ tipo: 'cuidar', cuidado: 'consulta' })) out.push({ id: 'consulta', texto: sinal ? 'Ir ao médico ver o que é' : semTratar ? 'Ir ao médico tratar' : 'Ir ao médico, fazer um check-up', motivo: sinal ? `O corpo tem dado sinais: ${SINAIS[sinal.id] ?? 'um incômodo que não passa'}.` : semTratar ? 'Tem uma condição sem tratamento.' : undefined, acao: { tipo: 'cuidar', cuidado: 'consulta' } });
+  if (junto({ tipo: 'cuidar', cuidado: 'consulta' })) out.push({ id: 'consulta', texto: sinal ? (i < 18 ? 'Contar em casa e ir ao médico ver o que é' : 'Ir ao médico ver o que é') : semTratar ? 'Ir ao médico tratar' : 'Ir ao médico, fazer um check-up', motivo: sinal ? `O corpo tem dado sinais: ${SINAIS[sinal.id] ?? 'um incômodo que não passa'}.` : semTratar ? 'Tem uma condição sem tratamento.' : undefined, acao: { tipo: 'cuidar', cuidado: 'consulta' } });
   if (pesa('fuma') && junto({ tipo: 'cuidar', cuidado: 'parar_fumar' })) out.push({ id: 'parar_fumar', texto: 'Tentar parar de fumar', acao: { tipo: 'cuidar', cuidado: 'parar_fumar' } });
   if (pesa('bebe') && junto({ tipo: 'cuidar', cuidado: 'beber_menos' })) out.push({ id: 'beber_menos', texto: 'Tentar beber menos', acao: { tipo: 'cuidar', cuidado: 'beber_menos' } });
   if (pesa('forma') && i >= 14) {

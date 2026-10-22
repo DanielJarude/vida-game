@@ -16,6 +16,7 @@
  * privacidade alivia — `pesoDaExposicao`).
  */
 
+import { desgastar } from './desgastePolitico';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Prioridade, Vida } from '../tipos';
@@ -151,7 +152,7 @@ export function usarVisibilidade(v: Vida, r: Rng, id: UsoDaVisibilidade): { text
         p.reputacao = clamp(p.reputacao + 3);
         return { texto: 'Muita gente sabia quem você era; pouca entendeu o que você propõe. Ficou um começo de conversa.', tom: 'neutro' };
       }
-      p.desgaste = clamp(p.desgaste + 5);
+      desgastar(p, 5, 'exposicao');
       escrever(v, { texto: `Tentou usar a visibilidade ${porOrigem(v)} na política e o público estranhou.`.replace('  ', ' '), relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       return { texto: origem === 'esporte' ? '"Jogador querendo ser político": a frase pegou. Conhecer você não fez ninguém confiar nas suas propostas.' : origem === 'arte' ? 'Disseram que era palco, não proposta. O nome atraiu curiosos, não apoio.' : 'O público ouviu e não se convenceu.', tom: 'ruim' };
     }
@@ -179,7 +180,7 @@ export function apoiarCausa(v: Vida, r: Rng, id: string): { texto: string; tom: 
   const oportunismo = !!p && naPolitica(v) && v.t - p.tInicio < 12 && !compativel;
   v.mente.felicidade = clamp(v.mente.felicidade + 4);
   if (oportunismo && r.chance(0.45)) {
-    p!.desgaste = clamp(p!.desgaste + 4);
+    desgastar(p!, 4, 'exposicao');
     return { texto: 'Chamaram de oportunismo: candidato novo abraçando qualquer causa. Doeu — e ensinou.', tom: 'ruim', memoria: `Apoiou publicamente ${causa?.nome ?? 'uma causa'} — e foi acusado de oportunismo.` };
   }
   v.fatos['vis_boa'] = v.t;

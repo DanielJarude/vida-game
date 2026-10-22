@@ -110,7 +110,9 @@ describe('Fase A · UX-08 — a vaga é um anúncio legível', () => {
 describe('Fase A · UX-09/10 — Caminhos: uma página inicial e quatro divisões', () => {
   it('a página inicial mostra a situação, o próximo passo e as quatro entradas — sem listar vagas nem editais', () => {
     pagina(tecnico(), 'inicio');
-    expect(document.querySelectorAll('.entrada-caminho')).toHaveLength(4);
+    // REWORK 10.5 · CRI-02: a partir dos 14, a quinta entrada é o Submundo (a porta clara para o crime existente).
+    expect(document.querySelectorAll('.entrada-caminho')).toHaveLength(5);
+    expect(document.querySelector('.entrada-caminho--submundo')).toBeTruthy();
     expect(screen.getByRole('region', { name: 'O próximo passo' }).textContent).toMatch(/Procurar trabalho/);
     expect(document.querySelector('.vaga-resumo')).toBeNull();
     expect(document.querySelector('.boletim')).toBeNull();
@@ -119,9 +121,13 @@ describe('Fase A · UX-09/10 — Caminhos: uma página inicial e quatro divisõe
   it('a ordem das entradas segue a fase da vida, e nenhuma some', () => {
     const t = tecnico();
     expect(ordemDasDivisoes(t)[0]).toBe('trabalho');
-    expect([...ordemDasDivisoes(t)].sort()).toEqual(['estudos', 'outros', 'publica', 'trabalho']);
+    // REWORK 10.5 · CRI-02: o Submundo entra no fim (sem envolvimento, não é a situação de agora)…
+    expect([...ordemDasDivisoes(t)].sort()).toEqual(['estudos', 'outros', 'publica', 'submundo', 'trabalho']);
+    expect(ordemDasDivisoes(t).slice(-1)[0]).toBe('submundo');
     const crianca = transacao(adulto(9, { semente: 4 }), x => { x.momento = null; }).vida;
     expect(ordemDasDivisoes(crianca)[0]).toBe('estudos');
+    // …e a criança sem nada com isso não o vê.
+    expect(ordemDasDivisoes(crianca)).not.toContain('submundo');
     expect(proximoNosCaminhos(crianca)?.divisao).toBe('estudos');
   });
 

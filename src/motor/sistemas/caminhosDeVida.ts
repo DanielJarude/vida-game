@@ -27,7 +27,7 @@ import type { Veredito } from '../plausibilidade';
 import { podeTentar } from '../plausibilidade';
 import { idade } from '../nucleo';
 import { ocupacao, OCUPACOES } from '../dados/ocupacoes';
-import { habilidade } from './frentes';
+import { estagioDaFrente, habilidade } from './frentes';
 import { aEquipe, barraDeTitular, categoriaDaBase, contratoDaBase, conviteDaBase, etapaNaBase, IDADE_AMADOR, MODALIDADES, MODALIDADES_AMADORAS, NOME_MOD } from './esporte';
 import { oClube } from '../dados/clubes';
 import { lerTecnica } from './peneira';
@@ -68,8 +68,10 @@ export interface CaminhoEmConstrucao {
 type Disp = (v: Vida, a: Acao) => Veredito;
 const P = (oque: string, valor?: string) => ({ tipo: 'perseguir', oque, valor } as unknown as Acao);
 
-const ARTE_PALAVRA = (h: number) => (h < 40 ? 'começando' : h < 55 ? 'toca com outras pessoas' : h < 68 ? 'bom o bastante para palco' : h < 78 ? 'de nível profissional' : 'de primeira linha');
+// REWORK 10.5 · CAR-13: a palavra do estágio é a de CADA arte (`estagioDaFrente`) — antes, uma régua só, com a frase da
+// música ("toca com outras pessoas") para o teatro e a dança, e o artigo errado ("Na teatro").
 const NOME_ARTE: Partial<Record<Dominio, string>> = { musica: 'música', teatro: 'teatro', danca: 'dança' };
+const NA_ARTE: Partial<Record<Dominio, string>> = { musica: 'Na música', teatro: 'No teatro', danca: 'Na dança' };
 const ACADEMIA = ['pesquisador', 'professor_univ', 'pesquisador_instituto', 'professor_faculdade', 'coordenador_curso'];
 
 /** O que esta vida está construindo agora, e o próximo passo de cada coisa. */
@@ -175,7 +177,7 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
     const publico = p ? (p.publico < 15 ? 'quase ninguém conhece ainda' : p.publico < 40 ? 'já tem quem vá ver' : p.publico < 65 ? 'público fiel na cidade' : 'gente de fora já conhece') : undefined;
     out.push({
       id: 'arte', titulo: `Viver de ${NOME_ARTE[a]}`,
-      onde: `Na ${NOME_ARTE[a]}, você está "${ARTE_PALAVRA(habilidade(v, a))}".${p ? ` ${p.nome}: ${publico}.` : ' Ainda sem grupo.'}`,
+      onde: `${NA_ARTE[a]}, você ${estagioDaFrente(v, a).palavra}.${p ? ` ${p.nome}: ${publico}.` : ' Ainda sem grupo.'}`,
       falta: [p ? (p.publico < 40 ? `Público (${PALAVRA_PUBLICO[nivelDePublico(p.publico)]}): apresentar-se, um edital de cultura, testes de elenco e trabalhos pequenos constroem o currículo e o público.` : 'O convite para viver disso costuma vir com o público grande.') : 'Um grupo: é no palco com outras pessoas que o público começa (e dá para se apresentar sozinho, também).', habilidade(v, a) < 55 ? 'Técnica de palco: prática firme.' : '', `Currículo: ${leituraDoCurriculo(v).palavra}.`].filter(Boolean),
       proximo: !p && pode(montar) ? { rotulo: a === 'musica' ? 'Montar uma banda' : 'Montar um grupo', acao: montar }
         : p && pode(P('mostrar_trabalho')) ? { rotulo: a === 'musica' ? 'Mandar o material para produtores e festivais' : 'Fazer uma audição numa companhia', acao: P('mostrar_trabalho'), porque: 'É pedir para ser visto: o parecer diz o que faltou.' }

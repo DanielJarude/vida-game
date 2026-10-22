@@ -23,6 +23,7 @@
  * e o que aconteceu sozinho não leva rótulo (é a vida acontecendo). O cotidiano solto vira uma linha de miudezas.
  */
 
+import { MARCAS_DE_CONQUISTA } from '../../motor/sistemas/fechamento';
 import { useMemo, useState } from 'react';
 import type { Entrada, Vida } from '../../motor/tipos';
 import { idadePessoa } from '../../motor/nucleo';
@@ -42,7 +43,6 @@ const TEMAS_DO_FIO: Record<Exclude<FioDaHistoria, 'tudo' | 'conquistas'>, Entrad
   lugares: ['lugar', 'casa', 'lazer'], saude: ['saude']
 };
 const ROTULO_DO_FIO: Record<FioDaHistoria, string> = { tudo: 'Tudo', estudos: 'Estudos', trabalho: 'Trabalho', pessoas: 'Pessoas', lugares: 'Lugares e lazer', saude: 'Saúde', conquistas: 'Conquistas' };
-const MARCAS_DE_CONQUISTA = new Set(['conquista', 'aprovacao', 'formacao', 'promocao', 'profissional', 'estreia', 'eleicao', 'lideranca', 'ingresso', 'primeiro_emprego', 'negocio_aberto']);
 
 /** Quantos anos aparecem de cada vez (o resto abre a pedido). */
 export const ANOS_POR_VEZ = 12;

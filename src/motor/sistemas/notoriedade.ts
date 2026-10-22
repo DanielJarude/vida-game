@@ -30,6 +30,8 @@ import { nomeDaRede } from './redesBase';
 const TRILHAS_DE_NOME = new Set(['cena', 'musica', 'danca', 'conteudo', 'literatura']);
 
 const FAIXAS = [10, 30, 55, 78];
+/** O alcance de cada tipo de obra (quantas pessoas ficam sabendo de um trabalho que repercutiu). */
+const ALCANCE_DO_TIPO: Partial<Record<string, number>> = { teatro: 0.6, festival: 0.5, curta: 0.5, publicidade: 0.6, espetaculo: 0.6, show: 0.7, filme: 1.1, serie: 1, novela: 1.3, edital: 0.3 };
 const PALAVRAS = ['anônimo', 'conhecido localmente', 'reconhecido', 'famoso', 'muito famoso'];
 
 export const faixaDaNotoriedade = (x: number) => FAIXAS.filter(f => x >= f).length;
@@ -78,7 +80,9 @@ export function candidatosDaNotoriedade(v: Vida): { valor: number; fonte: FonteD
     const base = x!.clientela ?? (oc.nivel >= 5 ? 70 : 40);
     return Math.max(m, base * (x === v.trabalho.paralela ? 0.3 : 0.45));
   }, 0);
-  const trabalhos = (v.caminhos.curriculo ?? []).filter(x => v.t - x.t <= 60).reduce((s2, x) => s2 + (x.repercussao >= 3 ? 10 : x.repercussao === 2 ? 4 : 0) + (['novela', 'filme', 'serie'].includes(x.tipo) ? 3 : 0), 0);
+  // REWORK 10.5 · FAM-03: o mesmo "marcou" não vale o mesmo numa sala independente e numa novela das nove — o alcance do
+  // tipo de obra e o porte da produção pesam (antes: +10 por item que marcou, +3 se fosse tela, qualquer que fosse).
+  const trabalhos = (v.caminhos.curriculo ?? []).filter(x => v.t - x.t <= 60).reduce((s2, x) => s2 + (x.repercussao >= 3 ? 10 : x.repercussao === 2 ? 4 : x.repercussao === 1 ? 0.5 : 0) * (ALCANCE_DO_TIPO[x.tipo] ?? 0.6) * [0.6, 1, 1.4, 1.8][x.porte ?? 1] + (['novela', 'filme', 'serie'].includes(x.tipo) ? 2 : 0), 0);
   // O legado da obra: o que marcou de verdade continua sendo lembrado (menos que o trabalho em curso).
   const legadoArte = Math.min(16, (v.caminhos.obras ?? []).filter(o => o.recepcao >= 3).length * 5 + (v.caminhos.curriculo ?? []).filter(x => x.repercussao >= 3).length * 3);
   const artista = Math.max(a?.ativo ? a.publico * 0.62 : 0, freguesia, legadoArte) + Math.min(24, marcou) + Math.min(18, trabalhos);
@@ -97,6 +101,17 @@ export function candidatosDaNotoriedade(v: Vida): { valor: number; fonte: FonteD
   const rede = nomeDaRede(v);
   if (rede > 0) cands.push({ valor: rede, fonte: 'rede' });
   return cands.map(c => ({ valor: clamp(c.valor), fonte: c.fonte }));
+}
+
+/**
+ * REWORK 10.5 · FAM-03: um acontecimento que põe o nome na frente do público de uma vez (o prêmio, a entrevista) —
+ * na medida dele, e também para quem ainda não tinha nome (cria a notoriedade com a fonte).
+ */
+export function somarAoNome(v: Vida, fonte: FonteDoNome, quanto: number): void {
+  const n = (v.notoriedade ??= { valor: 0, pico: 0, t: v.t, fonte });
+  n.valor = clamp(n.valor + quanto);
+  n.pico = Math.max(n.pico, n.valor);
+  n.origens = { ...(n.origens ?? {}), [fonte]: Math.max(n.origens?.[fonte] ?? 0, n.valor) };
 }
 
 /** O que o público conheceria de você HOJE, pela vida que você tem (antes da inércia). */

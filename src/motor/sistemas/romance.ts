@@ -221,8 +221,12 @@ export function processarRomance(v: Vida, r: Rng): void {
       ? clamp(Math.round(vin.proximidade * 0.8 + Math.min(rom.envolvimento, 50) * 0.2))
       : clamp(Math.round(vin.proximidade * 0.6 + rom.envolvimento * 0.4));
     vin.tensao = Math.round(vin.tensao * 0.7);
-    // Confiança se constrói devagar, quando não há motivo para quebrá-la.
-    if (vin.tensao < 40) vin.confianca = clamp(Math.round(vin.confianca + (85 - vin.confianca) * 0.06));
+    // Confiança se constrói devagar, quando não há motivo para quebrá-la. REWORK 10.5 · REL-09: e não volta ao máximo
+    // por si só — uma traição dos últimos anos e a mágoa que ainda pesa baixam o teto (antes, todo casal sem tensão
+    // chegava a 85 com o tempo, inclusive depois de um caso descoberto: "Confiança: total").
+    const traicaoRecente = vin.historia.some(h => h.tipo === 'traicao' && v.t - h.t <= 180);
+    const teto = 85 - (traicaoRecente ? 35 : 0) - Math.round((vin.magoa?.ressentimento ?? 0) / 3);
+    if (vin.tensao < 40 && vin.confianca < teto) vin.confianca = clamp(Math.round(vin.confianca + (teto - vin.confianca) * 0.06));
     vin.tUltimoContato = v.t;
     // Guardar um segredo pesa em quem guarda. Um caso que acabou há anos vai
     // ficando para trás — o segredo continua existindo, mas pesa menos.
@@ -379,6 +383,13 @@ function dividirVida(v: Vida, p: Pessoa, era: string): void {
 export function iniciarCaso(v: Vida, p: Pessoa, vin: Vinculo): void {
   const par = parceiro(v);
   const env = vin.romance?.envolvimento ?? interesseInicial(v, p);
+  // REWORK 10.5 · REL-06: num acordo aberto, sair com outra pessoa é o combinado — não é segredo nem traição.
+  if (par?.vin.romance?.acordo === 'aberto') {
+    vin.romance = { estagio: 'saindo', tEstagio: v.t, tInicio: v.t, envolvimento: Math.max(50, env), secreto: true };
+    lembrarCom(v, p.id, 'Começaram a sair, dentro do combinado.', 'romance', 2);
+    escrever(v, { texto: `Começou a sair com ${p.nome} — dentro do combinado com ${par.p.nome}.`, relevancia: 'biografia', tema: 'amor', escolha: true, pessoas: [p.id, par.p.id] });
+    return;
+  }
   vin.romance = { estagio: 'saindo', tEstagio: v.t, tInicio: v.t, envolvimento: Math.max(50, env), secreto: true };
   if (par?.vin.romance) par.vin.romance.segredo = { pessoaId: p.id, t: v.t };
   // Um segredo: por ora, só os dois sabem (`sistemas/exposicao`).
@@ -396,7 +407,8 @@ export function iniciarCaso(v: Vida, p: Pessoa, vin: Vinculo): void {
 function processarCaso(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): void {
   const rom = vin.romance!;
   const par = parceiro(v);
-  if (!par || !par.vin.romance?.segredo) {
+  const combinado = par?.vin.romance?.acordo === 'aberto';
+  if (!par || (!par.vin.romance?.segredo && !combinado)) {
     // Sem relação principal (terminou, morreu): deixa de ser segredo.
     rom.secreto = undefined;
     return;
@@ -415,6 +427,8 @@ function processarCaso(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): void {
     lembrarCom(v, p.id, 'O caso acabou.', 'conflito', 1);
     return;
   }
+  // Num acordo aberto, não há o que descobrir.
+  if (combinado) return;
   // Descoberta: quanto mais tempo, mais descuido; o mesmo trabalho, mais olhos.
   const risco = 0.15 + Math.min(0.25, (meses / 12) * 0.06)
     + (vin.convivio.includes('trabalho') ? 0.05 : 0)

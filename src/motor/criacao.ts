@@ -52,6 +52,8 @@ export interface OpcoesCriacao {
    * família, a cidade, a aparência) é o mesmo da mesma semente ao acaso.
    */
   atributos?: Record<Atributo, number>;
+  /** REWORK 10.5 · EVT-05: o que as duas vidas anteriores viveram (ids de acontecimentos e cenas) — pesa menos nesta. */
+  memoria?: string[];
 }
 
 /**
@@ -265,6 +267,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     biografia: [],
     momento: null,
     ocorrencias: [],
+    ...(o.memoria?.length ? { memoriaDeVidas: [...new Set(o.memoria)].slice(0, 200) } : {}),
     anoAtual: { acoes: [] },
     luto: [],
     caminhos: caminhosVazios()

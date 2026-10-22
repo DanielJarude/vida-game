@@ -11,6 +11,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
+import { leituraDaFama } from '../../motor/sistemas/fama';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { QuemNoMundo } from './Mundo';
 import { imagemPublica, leituraDoNome } from '../../motor/sistemas/notoriedade';
@@ -26,7 +27,7 @@ import { ResumoDaRotina } from './Rotina';
 import { evolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { MATERIAS } from '../../motor/dados/frentes';
 import { Retrato } from '../avatar/Retrato';
-import { BotaoAcao, Subnav, Vazio } from '../comum';
+import { BotaoAcao, Dado, Subnav, Vazio } from '../comum';
 import { useState } from 'react';
 import { frentesDaVida } from '../../motor/sistemas/frentes';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
@@ -148,8 +149,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
                 {sinais.map(x => <li key={x.id}><strong>{x.texto.charAt(0).toUpperCase() + x.texto.slice(1)}</strong><span>desde {anoDe(x.desde)}</span></li>)}
               </ul>
               <p className="nota">Ainda sem nome. Ir ao médico é o que dá diagnóstico — e tratamento. Ignorar também é escolha: às vezes passa, às vezes o corpo cobra depois.</p>
-              {i >= 12 && <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="secundario" ocultarImpossivel>{i < 18 ? 'Pedir ajuda: contar em casa ou na escola e ir ao posto de saúde' : 'Ir ao médico ver o que é'}</BotaoAcao></div>}
-              {i < 18 && <p className="nota">{redeDeSaude(vida).sistema === 'seguro' ? 'O pediatra do plano (ou a clínica comunitária, para quem não tem) atende — e, quando precisa, encaminha para acompanhamento.' : `No posto de saúde (${redeDeSaude(vida).nome}), o atendimento é de graça — e, quando precisa, encaminha para acompanhamento.`}</p>}
+              <AtendimentoMedico vida={vida} agir={agir} sinais={sinais.length} />
             </section>
           )}
           {condicoes.length > 0 && (
@@ -167,6 +167,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
           )}
         </div>
       )}
+      {/* Com sinais, o atendimento mora junto deles (acima); sem sinais, é a entrada de sempre. */}
+      {sinais.length === 0 && <AtendimentoMedico vida={vida} agir={agir} sinais={0} />}
 
       </div>
 
@@ -180,6 +182,29 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * REWORK 10.5 · SAU-02 — o atendimento médico como entrada própria, sempre no prontuário (nunca escondida): procurar o
+ * médico (a criança pede aos responsáveis), onde se é atendido (a rede do país, o plano), e — quando não dá — o porquê
+ * escrito. Antes, abaixo dos 12 anos o botão nem existia e, dos 12 aos 13, sumia sem explicação.
+ */
+function AtendimentoMedico({ vida, agir, sinais }: { vida: Vida; agir: Props['agir']; sinais: number }) {
+  const i = idade(vida);
+  const rede = redeDeSaude(vida);
+  const semTratar = vida.corpo.condicoes.some(c => c.cronica && !c.tratando && c.diagnosticada !== false);
+  const pede = sinais > 0 || semTratar;
+  const rotulo = i < 14 ? (pede ? 'Contar em casa e pedir para ir ao médico' : 'Pedir aos responsáveis uma consulta') : i < 18 ? (pede ? 'Contar em casa e ir ao médico ver o que é' : 'Ir ao médico (com a família)') : sinais > 0 ? 'Ir ao médico ver o que é' : semTratar ? 'Procurar atendimento médico e tratar' : 'Fazer um check-up';
+  return (
+    <section className="atendimento-medico" aria-labelledby="titulo-atendimento" data-atendimento={pede ? 'pede' : 'rotina'}>
+      <h2 id="titulo-atendimento" className="voce-subtitulo">Atendimento médico</h2>
+      <p className="nota">{pede ? (sinais > 0 ? 'O corpo tem dado sinais: o caminho é a consulta, os exames e, se precisar, o tratamento.' : 'Há uma condição sem tratamento: a consulta é o primeiro passo.') : 'Nada pedindo atenção agora. Uma consulta de rotina pega cedo o que o corpo ainda não mostrou.'}</p>
+      <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante={pede ? 'principal' : 'secundario'}>{rotulo}</BotaoAcao></div>
+      <p className="nota">{i < 18
+        ? (rede.sistema === 'seguro' ? 'Quem leva são os adultos da casa: o pediatra do plano (ou a clínica comunitária, para quem não tem). Diagnosticado, o tratamento começa com eles.' : `Quem leva são os adultos da casa: no posto de saúde (${rede.nome}), de graça. Diagnosticado, o tratamento começa com eles.`)
+        : vida.financas.planoDeSaude ? 'Pelo plano de saúde: consulta, exames e tratamento sem fila.' : rede.sistema === 'seguro' ? 'Sem plano, a clínica comunitária atende; o tratamento pode custar caro.' : `${rede.o.charAt(0).toUpperCase() + rede.o.slice(1)} atende de graça; o tratamento pode ter fila.`}</p>
+    </section>
   );
 }
 
@@ -258,13 +283,24 @@ function Estado({ l, vida, agir, irPara, abrirPessoa }: { l: LeituraDimensao; vi
  */
 function OSeuNome({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const nome = leituraDoNome(vida);
-  if (!nome || nome.valor < 15) return null;
+  const f = leituraDaFama(vida);
+  // REWORK 10.5 · FAM-01: o reconhecimento do público, o prestígio no meio, o alcance e a influência digital são coisas
+  // diferentes — a ficha diz cada uma (quem é respeitado no meio sem ser famoso também tem o que ver aqui).
+  const temAlgo = (nome && nome.valor >= 15) || f.prestigio.valor >= 12 || !!f.digital;
+  if (!temAlgo) return null;
   return (
     <section className="visibilidade" aria-labelledby="titulo-visibilidade">
       <h2 id="titulo-visibilidade" className="secao-fio">O seu nome</h2>
-      <p className="nota">Para o público: {nome.frase}. O que você faz com isso muda a imagem, a cabeça — e, às vezes, nada.</p>
+      <dl className="dados fama-ficha">
+        <Dado rotulo="Reconhecimento público">{f.reconhecimento.palavra}{nome && nome.valor >= 10 ? ` ${nome.por}` : ''}</Dado>
+        <Dado rotulo="Prestígio profissional">{f.prestigio.palavra}{f.prestigio.por && f.prestigio.valor >= 12 ? ` (${f.prestigio.por})` : ''}</Dado>
+        <Dado rotulo="Alcance">{f.alcance === 'ninguém' ? 'só quem convive com você' : `o nome chega a ${f.alcance}`}</Dado>
+        {f.digital && <Dado rotulo="Nas redes">{f.digital.palavra} · {f.digital.credibilidade}</Dado>}
+        {f.imagem && <Dado rotulo="Imagem">{f.imagem}</Dado>}
+      </dl>
+      {nome && nome.valor >= 15 && <p className="nota">Para o público: {nome.frase}. O que você faz com isso muda a imagem, a cabeça — e, às vezes, nada.</p>}
       <ul className="experiencias__lista">
-        {USOS.filter(u => disponibilidade(vida, { tipo: 'visibilidade', oque: u.id }).grau !== 'impossivel').map(u => (
+        {(nome?.valor ?? 0) >= 15 && USOS.filter(u => disponibilidade(vida, { tipo: 'visibilidade', oque: u.id }).grau !== 'impossivel').map(u => (
           <li key={u.id} className="experiencia">
             <span className="experiencia__texto"><strong>{u.rotulo}</strong><span>{u.descricao}</span></span>
             <BotaoAcao vida={vida} acao={{ tipo: 'visibilidade', oque: u.id }} agir={agir} variante="discreto">{u.id === 'privacidade' ? 'Recolher-se' : 'Fazer'}</BotaoAcao>

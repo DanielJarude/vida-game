@@ -48,6 +48,7 @@ import { estimativaParaCurso, fazCursinho, mesesDePreparo, objetivoCurso, PALAVR
 import { objetivosAtivos } from '../../motor/sistemas/objetivos';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import type { Objetivo } from '../../motor/tipos';
+import { HistoricoEscolar } from './HistoricoAcademico';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }
 
@@ -118,7 +119,8 @@ export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { pa
           que dá para fazer nele), DEPOIS (as portas, a preparação, os cursos) e, por último, o HISTÓRICO (a
           formação que já é sua, o que ficou, a história de cada escola) — antes, a história vinha antes do agora. */}
       {em('agora') && <TrajetoriaDeEstudo vida={vida} />}
-      {em('desenvolvimento') && <ComoVai vida={vida} />}
+      {/* REWORK 10.5 · EDU-05: no curso, o "como vai" é o histórico acadêmico (em Desenvolvimento, pelo `DesenvolvimentoReal`). */}
+      {em('desenvolvimento') && !parte && <ComoVai vida={vida} />}
       {em('oportunidades') && <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'estudos'} titulo="Ao seu alcance agora" />}
       {/* REWORK 10 · UX-13: primeiro o que é seu agora (onde, turno, custo, a dedicação), depois o que fazer no ano letivo,
           e por último o lugar (a gente e as atividades) — antes, o curso e a escolha da dedicação ficavam no fim. */}
@@ -129,6 +131,7 @@ export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { pa
       {em('oportunidades') && <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => /^(selecao|vestibular):/.test(o.id)} />}
       {em('oportunidades') && i >= 15 && <Cursos vida={vida} agir={agir} />}
       {em('historico') && <Formacao vida={vida} />}
+      {em('historico') && <HistoricoEscolar vida={vida} />}
       {em('historico') && <OQueFicou vida={vida} />}
       {em('agora') && i < 14 && !vida.educacao.basica && <p className="vazio">Por enquanto, o estudo é crescer.</p>}
     </div>

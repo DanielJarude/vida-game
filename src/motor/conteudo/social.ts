@@ -7,6 +7,7 @@
  * jogador; a das outras pessoas, delas.
  */
 
+import { procuraComoSeNada } from '../sistemas/magoas';
 import { textoLocal } from '../mundo/locais';
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
@@ -280,7 +281,7 @@ export const SOCIAL: Conteudo[] = [
     papeis: {
       amigo: v => vinculosVivos(v).filter(x => !x.vin.parentesco && !x.vin.romance && !x.p.especie && x.vin.historia.some(h => (h.peso ?? 1) >= 2)
         && (x.vin.estagio === 'afastado' || x.vin.proximidade < 45) && v.t - x.vin.tUltimoContato >= 36 && idadePessoa(v, x.p) >= 18
-        && !x.vin.historia.some(h => h.tipo === 'reconciliacao' && v.t - h.t < 180)).map(x => x.p)
+        && !x.vin.historia.some(h => h.tipo === 'reconciliacao' && v.t - h.t < 180) && procuraComoSeNada(v, x.vin)).map(x => x.p)
     },
     titulo: c => c.p.amigo.nome,
     texto: c => `Uma mensagem de ${c.p.amigo.nome}, depois de anos: "Lembrei de você hoje, ${c.r.pick(['passando na frente da escola', 'ouvindo aquela música', 'vendo uma foto antiga'])}. Tudo bem por aí?"`,

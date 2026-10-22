@@ -7,6 +7,7 @@
  * existiam para outro rumo. Anos tranquilos continuam permitidos.
  */
 
+import { procuraComoSeNada } from '../sistemas/magoas';
 import { regrasDaVida } from '../mundo/regras';
 import { educacaoDaVida } from '../mundo/vida';
 import type { Conteudo, Ctx } from './base';
@@ -185,10 +186,10 @@ export const REWORK3: Conteudo[] = [
     id: 'form_professor_lembra', tipo: 'acontecimento', idade: [22, 50], tema: 'estudo', prioritario: true, repetir: 0,
     quando: c => {
       if (!asVezes(c, 'form_professor_lembra', 0.06)) return false;
-      return Object.values(c.v.vinculos).some(x => x.formacao && x.formacao.papel !== 'colega' && x.formacao.tFim !== undefined && c.v.t - x.formacao.tFim >= 48 && c.v.pessoas[x.pessoaId]?.vivo && x.proximidade >= 30);
+      return Object.values(c.v.vinculos).some(x => x.formacao && x.formacao.papel !== 'colega' && x.formacao.tFim !== undefined && c.v.t - x.formacao.tFim >= 48 && c.v.pessoas[x.pessoaId]?.vivo && x.proximidade >= 30 && procuraComoSeNada(c.v, x));
     },
     narrar: c => {
-      const x = Object.values(c.v.vinculos).find(y => y.formacao && y.formacao.papel !== 'colega' && y.formacao.tFim !== undefined && c.v.t - y.formacao.tFim >= 48 && c.v.pessoas[y.pessoaId]?.vivo && y.proximidade >= 30)!;
+      const x = Object.values(c.v.vinculos).find(y => y.formacao && y.formacao.papel !== 'colega' && y.formacao.tFim !== undefined && c.v.t - y.formacao.tFim >= 48 && c.v.pessoas[y.pessoaId]?.vivo && y.proximidade >= 30 && procuraComoSeNada(c.v, y))!;
       const p = c.v.pessoas[x.pessoaId];
       const anos = Math.floor((c.v.t - x.formacao!.tFim!) / 12);
       const papel = x.formacao!.papel === 'orientador' ? flex(p.genero, 'seu orientador', 'sua orientadora', 'sue orientadore') : flex(p.genero, 'seu professor', 'sua professora', 'sue professore');

@@ -26,7 +26,7 @@ import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro,
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import { abrirDecisao, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
-import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula } from './sistemas/escola';
+import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula, fecharNoHistorico } from './sistemas/escola';
 import { eDasForcas, aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria } from './sistemas/trabalho';
 import { disponibilidadePerseguir, executarPerseguir, type AcaoPerseguirCmd } from './sistemas/perseguir';
 import { inscrever, leituraDoPreparo } from './sistemas/concurso';
@@ -777,7 +777,12 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
   switch (a.tipo) {
     case 'agenda': return ok(executarNaAgenda(v, a.op));
     case 'aposta': { const res = executarAposta(v, r, a.op); if (a.op.jogo === 'controle') return ok(a.op.oque === 'autoexcluir' ? 'Fora das apostas por um ano: a mesa fica fechada para você.' : v.apostas?.limiteAnual ? 'Limite de perda do ano: definido.' : 'O limite saiu.'); return res ? ok(res.texto, res.recebido > res.apostado ? 'bom' : res.recebido < res.apostado ? 'ruim' : 'neutro') : ok('A mão continua: pedir ou parar?'); }
-    case 'margem': return { resultado: executarMargem(v, r, a.oque), titulo: a.oque === 'reabilitacao' ? 'A reabilitação' : a.oque === 'procurar_ajuda' ? 'Pedir ajuda' : 'O processo' };
+    case 'margem': {
+      const resultado = executarMargem(v, r, a.oque);
+      // REWORK 10.5 · CRI-02: quem procura o contato recebe a proposta na hora (a mesma decisão de quando ela vem sozinha).
+      if (a.oque === 'procurar_contato') { const d = conteudoPorId('ilic_proposta'); if (d && d.tipo === 'decisao') { const ctx = preparar(d, v, r); if (ctx) abrirDecisao(v, d, ctx); } }
+      return { resultado, titulo: a.oque === 'reabilitacao' ? 'A reabilitação' : a.oque === 'procurar_ajuda' ? 'Pedir ajuda' : a.oque === 'procurar_contato' ? 'Um contato' : 'O processo' };
+    }
     case 'prisao': { const x = executarPrisao(v, a.oque); return a.oque === 'conviver' || a.oque === 'visitas' || a.oque === 'fugir' ? { resultado: x.texto, titulo: a.oque === 'fugir' ? 'A fuga' : a.oque === 'visitas' ? 'Dia de visita' : 'No pavilhão' } : ok(x.texto, x.tom); }
     case 'resgatar_e': {
       const d = disponibilidade(v, a.acao);
@@ -899,6 +904,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return { resultado: situacao === 'pendente' ? `${res.texto} Mas ${porque ? `${porque.charAt(0).toLowerCase()}${porque.slice(1)}` : 'junto com o que você já tem, não cabe tudo'}: é preciso escolher o que fazer.` : res.texto };
     }
     case 'trancar':
+      fecharNoHistorico(v, v.educacao.matricula!, 'trancado');
       v.educacao.matricula!.trancado = true;
       v.educacao.matricula!.tTrancou = v.t;
       escrever(v, { texto: 'Trancou a matrícula da faculdade.', relevancia: 'biografia', tema: 'estudo', escolha: true });
@@ -910,6 +916,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'abandonar_curso': {
       const m = v.educacao.matricula!;
+      fecharNoHistorico(v, m, 'abandonado');
       v.educacao.matricula = undefined;
       escrever(v, { texto: `Abandonou o curso de ${conteudoCurso(m.cursoId)}.`, relevancia: 'marco', tema: 'estudo', tom: 'ruim', escolha: true });
       return ok('Curso abandonado.');

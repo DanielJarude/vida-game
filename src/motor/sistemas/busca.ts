@@ -1,7 +1,7 @@
 /**
  * "Quero conhecer alguém": a busca ativa, sem virar aplicativo de encontros.
  *
- *   INTENÇÃO     o jogador escolhe procurar (uma vez por ano)
+ *   INTENÇÃO     o jogador escolhe procurar (cada lugar uma vez no ano; quantas vezes, a rotina diz — REWORK 10.5)
  *   → CONTEXTO   onde: os amigos apresentam, a atividade da semana, o
  *                trabalho ou a faculdade, sair à noite, um aplicativo
  *   → PESSOA     às vezes aparece alguém; às vezes ninguém (é válido)
@@ -40,7 +40,20 @@ export const ROTULO_BUSCA: Record<ContextoBusca, string> = {
 };
 
 const CUSTO_NOITE = 150;
-const feitaNoAno = (v: Vida) => v.anoAtual.acoes.some(a => a.startsWith('buscar:'));
+/** As buscas deste ano (cada uma em um lugar). */
+const buscasDoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('buscar:'));
+
+/**
+ * REWORK 10.5 · REL-08 — quantas vezes no ano dá para sair procurando alguém: não é um limite arbitrário de uma, é a
+ * rotina. Quem tem a semana cheia (trabalho integral E estudo, ou a semana já pesada) tem menos noites; quem é sociável
+ * e tem tempo, mais. Cada lugar uma vez no ano (o mesmo aplicativo de novo não é uma busca nova), e quem já procurou
+ * muito acha menos (o círculo é o mesmo, o cansaço também).
+ */
+export function buscasPossiveisNoAno(v: Vida): number {
+  const cheia = (v.trabalho.atual?.carga === 'integral' ? 1 : 0) + (v.educacao.matricula && !v.educacao.matricula.trancado ? 1 : 0) + (v.mente.estresse >= 65 ? 1 : 0);
+  const social = v.personalidade.tracos.sociabilidade >= 3 ? 1 : 0;
+  return clamp(3 + social - cheia, 1, 4);
+}
 
 function amigosNaCidade(v: Vida) {
   return vinculosVivos(v).filter(x => !x.p.especie && (x.vin.estagio === 'amigo' || x.vin.estagio === 'amigo_proximo') && x.p.municipioId === v.moradia.municipioId);
@@ -66,7 +79,9 @@ export function disponibilidadeBusca(v: Vida, ctx: ContextoBusca): Veredito {
   const conversa = vinculosVivos(v).find(x => x.vin.romance?.estagio === 'interesse' && etapaDoApp(v, x.vin) && x.vin.contexto?.etapa !== 'encerrado');
   if (conversa) return bloqueio('incompativel', `Você está conversando com ${conversa.p.nome} pelo aplicativo: o próximo passo é com ${flex(conversa.p.genero, 'ele', 'ela', 'elu')}.`);
   if (!v.eu.atracao) return bloqueio('requisito', 'Diga antes por quem você se interessa (logo abaixo).');
-  if (feitaNoAno(v)) return bloqueio('incompativel', 'Você já procurou este ano. A vida também precisa de tempo.');
+  const feitas = buscasDoAno(v);
+  if (feitas.includes(`buscar:${ctx}`)) return bloqueio('incompativel', 'Você já tentou por aqui este ano. Outro lugar, talvez.');
+  if (feitas.length >= buscasPossiveisNoAno(v)) return bloqueio('incompativel', `Este ano já foram ${feitas.length} tentativas: a semana não tem mais noites livres para isso.`);
   switch (ctx) {
     case 'amigos': return amigosNaCidade(v).length ? PERMITIDO : bloqueio('requisito', 'Precisa de amigos por perto para apresentarem alguém.');
     case 'atividade': return atividadeSocial(v) ? PERMITIDO : bloqueio('requisito', 'Nenhuma atividade da semana põe você no meio de gente.');
@@ -104,7 +119,9 @@ export function buscarAlguem(v: Vida, r: Rng, ctx: ContextoBusca): SaidaBusca {
   if (ctx === 'noite') v.financas.conta -= CUSTO_NOITE;
   const cidade = nivelDeOferta(v.moradia.municipioId);
   const soc = v.personalidade.tracos.sociabilidade;
-  let acha = MOD[ctx].acha + soc / 250 + (v.mente.felicidade - 50) / 300 - (i >= 45 ? 0.1 : 0);
+  // REWORK 10.5 · REL-08: a segunda e a terceira busca do ano rendem menos (o mesmo círculo, o mesmo cansaço).
+  const antes = buscasDoAno(v).length - 1;
+  let acha = MOD[ctx].acha + soc / 250 + (v.mente.felicidade - 50) / 300 - (i >= 45 ? 0.1 : 0) - antes * 0.08;
   if (ctx === 'app' && cidade < 1) acha -= 0.18;
   if (!r.chance(clamp(acha, 0.12, 0.85))) {
     const frase = ctx === 'app' ? 'Muitas conversas começaram e pararam no "oi, tudo bem?". Ninguém especial desta vez.'

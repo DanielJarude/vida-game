@@ -743,7 +743,7 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   if (e.clientela >= 70 && !temFato(v, `clientela_firme_${oc.id}`)) {
     marcarFato(v, `clientela_firme_${oc.id}`);
     // Quem vive de palco, de obra ou de projeto não tem "freguesia": tem convites (a frase é a do ofício).
-    const deConvite = ['criativo', 'comunicacao'].includes(oc.setor) || ['ator', 'musico', 'artista', 'escritor'].some(x => oc.trilha.includes(x));
+    const deConvite = ['criativo', 'comunicacao'].includes(oc.setor) || ['cena', 'musica', 'danca', 'literatura', 'conteudo', 'orquestra'].includes(oc.trilha);
     escrever(v, { texto: deConvite ? `Os convites passaram a vir sozinhos: já não falta trabalho como ${nomeOcupacao(v, oc)}.` : `A freguesia firmou: já não falta trabalho como ${nomeOcupacao(v, oc)}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
   }
   return false;

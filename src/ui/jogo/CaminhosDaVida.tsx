@@ -50,7 +50,8 @@ import { Estudos } from './Estudos';
 import { Trabalho, TrabalhoAindaNao } from './Trabalho';
 import { DesenvolvimentoReal } from './Progresso';
 import { ResumoDaRotina } from './Rotina';
-import { OutrosCaminhosDaVida, VidaPublica } from './DivisoesCaminhos';
+import { OutrosCaminhosDaVida, Submundo, VidaPublica } from './DivisoesCaminhos';
+import { situacaoNoSubmundo, temMargem } from './Margem';
 import { leituraPolitica, naPolitica } from '../../motor/sistemas/politica';
 import { editaisAbertos } from '../../motor/sistemas/concurso';
 import { elegibilidade } from '../../motor/sistemas/trabalho';
@@ -66,6 +67,7 @@ export interface Ocupacao { id: string; lado: 'formacao' | 'trabalho'; rotulo: s
 /** A divisão de Caminhos onde mora cada coisa que ocupa a vida (a base é esporte; o mandato, vida pública). */
 export function divisaoDaOcupacao(o: Ocupacao, v: Vida): Exclude<DivisaoCaminhos, 'inicio'> {
   if (o.lado === 'formacao') return o.id === 'concurso' ? 'publica' : 'estudos';
+  if (o.id === 'pena' || o.id === 'por_fora') return 'submundo';
   if (o.id === 'base') return 'outros';
   if (o.id === 'trabalho' && modoDoTrabalho(v) === 'politica') return 'publica';
   return 'trabalho';
@@ -97,6 +99,7 @@ export function situacaoAtual(v: Vida): Ocupacao[] {
   if (modo === 'aposentado') out.push({ id: 'aposentadoria', lado: 'trabalho', rotulo: 'Aposentado' + (v.eu.genero === 'feminino' ? 'a' : '') });
   if (modo === 'pausa') out.push({ id: 'pausa', lado: 'trabalho', rotulo: 'Uma pausa no trabalho' });
   if (modo === 'preso') out.push({ id: 'pena', lado: 'trabalho', rotulo: 'Cumprindo pena' });
+  if (v.caminhos.envolvimento && v.caminhos.envolvimento.parou === undefined && modo !== 'preso') out.push({ id: 'por_fora', lado: 'trabalho', rotulo: 'Por fora', detalhe: 'a vida à margem' });
   if (!out.length) out.push({ id: 'nada', lado: i < 14 ? 'formacao' : 'trabalho', rotulo: i < 4 ? 'Crescendo' : i < 14 ? 'Fora da escola' : 'Sem estudo nem trabalho agora' });
   return out;
 }
@@ -158,6 +161,7 @@ export function estadoDaDivisao(v: Vida, d: Exclude<DivisaoCaminhos, 'inicio'>):
     const n = i >= 17 ? editaisAbertos(v).filter(oc => podeTentar(elegibilidade(v, oc))).length : 0;
     return [estudando ? 'Estudando para concurso' : '', n ? `${n} ${n === 1 ? 'edital aberto' : 'editais abertos'} para você` : 'Nenhum edital para você este ano'].filter(Boolean).join(' · ');
   }
+  if (d === 'submundo') return situacaoNoSubmundo(v);
   const esp = v.caminhos.esporte;
   const portas = oportunidadesAbertas(v).filter(o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)).length;
   const partes = [
@@ -170,6 +174,17 @@ export function estadoDaDivisao(v: Vida, d: Exclude<DivisaoCaminhos, 'inicio'>):
 
 /** A ordem das entradas na página inicial: a fase da vida decide o que vem primeiro; nenhuma some. */
 export function ordemDasDivisoes(v: Vida): Exclude<DivisaoCaminhos, 'inicio'>[] {
+  const base = ordemDasDivisoesBase(v);
+  if (!submundoVisivel(v)) return base;
+  // O Submundo vem primeiro quando é a situação (a pena, a investigação, o que se faz por fora); senão, por último.
+  const urgente = !!v.justica?.prisao || !!v.justica?.processo || (!!v.caminhos.envolvimento && v.caminhos.envolvimento.parou === undefined);
+  return urgente ? ['submundo', ...base] : [...base, 'submundo'];
+}
+
+/** REWORK 10.5 · CRI-02: o Submundo aparece a partir dos 14 (ou para quem já tem algo com isso). */
+export const submundoVisivel = (v: Vida) => idade(v) >= 14 || temMargem(v);
+
+function ordemDasDivisoesBase(v: Vida): Exclude<DivisaoCaminhos, 'inicio' | 'submundo'>[] {
   const i = idade(v);
   const modo = modoDoTrabalho(v);
   const estuda = (!!v.educacao.basica && !v.educacao.evadiu) || !!v.educacao.matricula;
@@ -216,7 +231,7 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
     <div className={`pagina-caminhos pagina-caminhos--${divisao}`}>
       <nav className="divisoes-caminhos" aria-label="Divisões de Caminhos">
         <ul className="divisoes-caminhos__lista">
-          {DIVISOES_CAMINHOS.map(x => (
+          {DIVISOES_CAMINHOS.filter(x => x.id !== 'submundo' || submundoVisivel(vida) || divisao === 'submundo').map(x => (
             <li key={x.id}>
               <button type="button" className={`divisoes-caminhos__item${divisao === x.id ? ' divisoes-caminhos__item--ativa' : ''}`} aria-current={divisao === x.id ? 'page' : undefined} onClick={() => irDivisao(x.id)} title={x.oque}>{x.rotulo}</button>
             </li>
@@ -259,6 +274,7 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
       )}
       {divisao === 'publica' && <div className="caminhos__painel caminhos__painel--publica caminhos__painel--ativo" data-divisao="publica"><VidaPublica vida={vida} agir={agir} irPara={irPara} /></div>}
       {divisao === 'outros' && <div className="caminhos__painel caminhos__painel--outros caminhos__painel--ativo" data-divisao="outros"><OutrosCaminhosDaVida vida={vida} agir={agir} irPara={irPara} /></div>}
+      {divisao === 'submundo' && <div className="caminhos__painel caminhos__painel--submundo caminhos__painel--ativo" data-divisao="submundo"><Submundo vida={vida} agir={agir} irPara={irPara} /></div>}
     </div>
   );
 }

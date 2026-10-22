@@ -21,7 +21,7 @@ import type { Rng } from '../rng';
 import type { Vida } from '../tipos';
 import { idade, lembrarCom, marcarFato, pais, vinculosVivos } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
-import { ativo, parar } from './ilicito';
+import { abrirAPorta, ativo, parar } from './ilicito';
 import { abalar } from './abalo';
 import { disponivel, pagar, vereditoDePagar } from './dinheiro';
 import { economiaLocal } from '../dados/lugares';
@@ -53,7 +53,7 @@ export function processarMargem(v: Vida): void {
 
 /* ---------------------------------------------------------------- As ações da tela */
 
-export type OqueMargem = 'procurar_ajuda' | 'negociar_saida' | 'assumir' | 'cooperar' | 'advogado' | 'reabilitacao';
+export type OqueMargem = 'procurar_ajuda' | 'negociar_saida' | 'assumir' | 'cooperar' | 'advogado' | 'reabilitacao' | 'procurar_contato';
 
 /** O preço de sair sem pendência: o que o grupo diz que você deve (o que ganhou pesa). */
 export const precoDaSaida = (v: Vida) => Math.round(clamp((v.caminhos.envolvimento?.ganhos ?? 0) * 0.15, preco(v, 4000), preco(v, 60000)) / 100) * 100;
@@ -73,6 +73,13 @@ export function disponibilidadeMargem(v: Vida, oque: OqueMargem): Veredito {
     case 'cooperar': return v.justica?.processo?.cooperou ? bloqueio('incompativel', 'Você já colaborou.') : vereditoDeCooperar(v);
     case 'advogado': return vereditoDoAdvogado(v);
     case 'reabilitacao': return vereditoDaReabilitacao(v);
+    case 'procurar_contato':
+      if (idade(v) < 16) return bloqueio('impossivel', 'Cedo demais para isso.');
+      if (v.justica?.prisao) return bloqueio('impossivel', 'Na prisão, o que se procura é a saída.');
+      if (ativo(v)) return bloqueio('incompativel', 'Você já está nisso.');
+      if (v.momento) return bloqueio('incompativel', 'Há uma decisão esperando antes.');
+      if (v.fatos['procurou_contato'] !== undefined && v.t - v.fatos['procurou_contato'] < 12) return bloqueio('incompativel', 'Você já procurou este ano.');
+      return { grau: 'irregular', motivo: 'É crime. Alguém vai aparecer com uma proposta — aceitar ou não continua sendo escolha sua, e a conta chega.' };
   }
 }
 
@@ -103,6 +110,10 @@ export function executarMargem(v: Vida, r: Rng, oque: OqueMargem): string {
     case 'cooperar': { const t = cooperar(v); if (ativo(v)) parar(v, 'colaborou com a investigação'); return t; }
     case 'advogado': return contratarAdvogado(v);
     case 'reabilitacao': return pedirReabilitacao(v, r);
+    case 'procurar_contato':
+      v.fatos['procurou_contato'] = v.t;
+      abrirAPorta(v, r);
+      return 'Você deu a entender, para as pessoas certas, que estava disposto. Não demorou para alguém aparecer.';
   }
 }
 

@@ -175,7 +175,16 @@ export function processarIlicito(v: Vida, r: Rng): void {
   perceber(v);
   const env = v.caminhos.envolvimento;
   if (env) anoEnvolvido(v, r, env);
-  if (!ativo(v) && !v.momento && r.chance(chanceDeProposta(v))) {
+  if (!ativo(v) && !v.momento && r.chance(chanceDeProposta(v))) abrirAPorta(v, r);
+}
+
+/**
+ * A porta: a categoria que a vida oferece, quem chega com a conversa (alguém que já está por perto, ou um conhecido
+ * novo do bairro) — e a decisão `ilic_proposta` fica de hoje. REWORK 10.5 · CRI-02: a mesma porta serve a quem a
+ * procura (Caminhos · Submundo, "procurar um contato"): o jogo não fica esperando o acaso para deixar a pessoa errar.
+ */
+export function abrirAPorta(v: Vida, r: Rng): void {
+  {
     const cat = categoriaPara(v, r);
     let contato = contatoPossivel(v);
     if (!contato && cat !== 'fraude') {

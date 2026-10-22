@@ -340,6 +340,13 @@ export interface Romance {
   segredo?: { pessoaId: string; t: number };
   /** Quem ouviu a declaração pediu um tempo para pensar (desde quando). A resposta é dela. */
   pediuTempo?: number;
+  /**
+   * REWORK 10.5 · REL-06: o acordo do casal. Ausente = exclusivo (o padrão: sair com outra pessoa é traição). 'aberto' =
+   * os dois combinaram que podem (consentido — não é infidelidade; e o combinado pode ser desfeito).
+   */
+  acordo?: 'aberto';
+  /** REWORK 10.5 · REL-06: a parceria (NPC) teve alguém fora do combinado: quando começou e quando você soube. */
+  infiel?: { t: number; descoberto?: number };
 }
 
 /** Um marco da história compartilhada. Só o que importa — nunca "um ano normal". */
@@ -440,6 +447,31 @@ export interface Vinculo {
   digital?: { mensagem?: number; reacao?: number; segue?: boolean; seguidor?: boolean; bloqueado?: number };
   /** FIX pós-playtest humano: os TIPOS das últimas 4 microcenas com esta pessoa (antirrepetição — ids curtos, nunca texto). */
   cenas?: string[];
+  /**
+   * REWORK 10.5 · REL-07: a MÁGOA que fica depois do conflito (`sistemas/magoas`) — o motivo, a gravidade, quem causou,
+   * o ressentimento (0..100, que esfria DEVAGAR: a tensão do dia a dia esfria rápido, a mágoa não) e as tentativas de
+   * reparação (de quem, quando, como terminou). Não substitui afeto e confiança: dá para se amar e estar magoado.
+   */
+  magoa?: Magoa;
+  /**
+   * REWORK 10.5 · REL-09: dimensões que o afeto sozinho não diz. INTIMIDADE (0..100): o quanto vocês se contam — sobe
+   * conversando de verdade (desabafar, um segredo, o futuro), quase nada com cinema e jantar; esfria sem contato.
+   * COMPROMISSO (0..100): o quanto a vida de vocês está amarrada — os planos, o dinheiro junto, o namoro, a casa, o
+   * casamento. Ausentes em saves antigos (a tela os omite até a primeira vez que mudam).
+   */
+  intimidade?: number;
+  compromisso?: number;
+}
+
+/** REWORK 10.5 · REL-07: o que ficou de um conflito (ver `Vinculo.magoa`). */
+export interface Magoa {
+  t: number;
+  motivo: string;
+  gravidade: 1 | 2 | 3;
+  /** Quem causou: 'eu' = o protagonista (a pessoa está magoada com você); 'outro' = a pessoa (ela deve um pedido de desculpas). */
+  quem: 'eu' | 'outro';
+  ressentimento: number;
+  tentativas?: { t: number; quem: 'eu' | 'outro'; resultado: 'aceita' | 'recusada' | 'sem_resposta' }[];
 }
 
 /** Um fato que o protagonista sabe sobre alguém: a chave, quando soube, o valor de então. */
@@ -491,6 +523,11 @@ export interface Condicao {
   tDiagnostico?: number;
   /** Descoberta tarde (depois de anos de sinais): o tratamento rende menos. */
   tarde?: boolean;
+  /**
+   * REWORK 10.5 · SAU-02: a primeira vez que a pessoa procurou atendimento por este sinal (e os exames ainda não
+   * fecharam). O "tarde" conta até aqui: quem procurou cedo não é culpado da demora do diagnóstico.
+   */
+  procurou?: number;
   /**
    * Uma lesão (do esporte, do trabalho, de um tombo): aguda, com prazo de
    * recuperação que depende do CUIDADO escolhido. Enquanto dura, pesa na
@@ -634,6 +671,8 @@ export interface Matricula {
    */
   bolsaAtleta?: { modalidade: Dominio; fracao: number; tInicio: number; aviso?: number };
   desempenho: number;
+  /** REWORK 10.5 · EDU-05: disciplinas reprovadas no curso (cada uma atrasa; muitas, o curso pode ser cancelado). */
+  reprovacoes?: number;
   trancado: boolean;
   /** Quando trancou (a instituição cancela depois de quatro anos). */
   tTrancou?: number;
@@ -648,12 +687,35 @@ export interface Matricula {
   especialidade?: EspecialidadeMedica;
 }
 
+/**
+ * REWORK 10.5 · EDU-05: um ano letivo FECHADO (`sistemas/historicoAcademico`): a série da escola ou o ano do curso, as
+ * disciplinas com a nota (0..10; a tela converte para a escala do país), a média e a situação. Permanente (até 40).
+ */
+export interface RegistroAcademico {
+  /** Quando o ano letivo fechou. */
+  t: number;
+  nivel: 'escola' | NivelCurso;
+  instituicao: string;
+  /** "5º ano do fundamental", "2º ano de Direito". */
+  rotulo: string;
+  cursoId?: string;
+  /** A matrícula a que o registro pertence (o `tInicio` dela): separa duas passagens pelo mesmo curso. */
+  tInicioCurso?: number;
+  disciplinas: { nome: string; nota: number; situacao?: 'aprovada' | 'reprovada' }[];
+  media?: number;
+  situacao: 'aprovado' | 'reprovado' | 'concluido' | 'trancado' | 'abandonado' | 'cancelado' | 'cursando';
+  /** O país onde se estudou (a escala de notas é a de lá). */
+  pais?: string;
+}
+
 /** REWORK 4: um momento da história da formação (`sistemas/vidaEstudantil`): o que se consulta anos depois. */
 export interface MarcoDeFormacao { t: number; idade: number; instituicao: string; tipo: string; texto: string }
 
 export interface Educacao {
   /** REWORK 4: a história de dentro da formação — momentos de cada escola e curso, na ordem (até 60). Opcional. */
   trajetoria?: MarcoDeFormacao[];
+  /** REWORK 10.5 · EDU-05: os anos letivos fechados, da escola à pós (permanente; ausente em saves antigos). */
+  historicoAcademico?: RegistroAcademico[];
   escolaridade: Escolaridade;
   basica?: EscolaBasica;
   /** Largou a escola básica sem concluir. */
@@ -1818,6 +1880,13 @@ export interface ContratoAV {
   tFim?: number;
   pessoaId?: string;
   negociado?: boolean;
+  /** REWORK 10.5 · CAR-06: a ficha da produção (fictícia): gênero, sinopse, a personagem — e se veio de convite direto. */
+  genero?: string;
+  sinopse?: string;
+  personagem?: string;
+  convite?: boolean;
+  /** REWORK 10.5 · CAR-11: a continuação de uma produção que a carreira fez (a temporada, a sequência, a remontagem). */
+  continuacaoDe?: string;
 }
 
 export interface ItemCurriculo {
@@ -1835,8 +1904,18 @@ export interface ItemCurriculo {
   cache?: number;
   /** Alguém que se conheceu ali (diretora, colega de elenco). */
   pessoaId?: string;
-  /** Indicação ou prêmio (fictício, do universo desta vida) pelo trabalho. */
-  premio?: { nome: string; venceu: boolean };
+  /**
+   * Indicação ou prêmio (fictício, do universo desta vida) pelo trabalho. REWORK 10.5 · CAR-09: com a categoria (a da
+   * obra e do papel), a edição (o ano), a obra e o alcance da premiação.
+   */
+  premio?: { nome: string; venceu: boolean; categoria?: string; edicao?: number; obra?: string; alcance?: 'local' | 'nacional' | 'internacional' };
+  /** REWORK 10.5 · CAR-11: a identidade estável da produção (o id do contrato) e de qual ela é continuação. */
+  producaoId?: string;
+  continuacaoDe?: string;
+  /** REWORK 10.5 · CAR-06: o porte, o gênero e a personagem (a ficha do papel). */
+  porte?: 0 | 1 | 2 | 3;
+  genero?: string;
+  personagem?: string;
 }
 
 /** A carreira acadêmica como vida: não é só o cargo — é o que se pesquisa, quem se orienta, o que se publica. */
@@ -2291,6 +2370,8 @@ export interface VidaPolitica {
   apoio: number;
   /** Desgaste acumulado (crises, promessas, anos de cargo executivo), 0..100. */
   desgaste: number;
+  /** REWORK 10.5 · POL-04: de onde vem o desgaste (a soma nunca passa dele; o que sobra é de antes do registro). */
+  causasDesgaste?: Partial<Record<'exposicao' | 'campanha' | 'mandato' | 'promessas' | 'derrota' | 'escandalo' | 'partido', number>>;
   /** A bandeira (fora do cargo) ou a prioridade do mandato. */
   prioridade?: Prioridade;
   /** A campanha em curso (registrada; resultado na apuração). */
@@ -2417,6 +2498,12 @@ export interface Vida {
   biografia: Entrada[];
   momento: Momento | null;
   ocorrencias: Ocorrencia[];
+  /**
+   * REWORK 10.5 · EVT-05: os acontecimentos e as cenas de carreira que apareceram nas DUAS VIDAS ANTERIORES deste
+   * aparelho (ids, no máximo 200): pesam menos no sorteio desta. Ausente: a vida não lembra de outras (saves antigos,
+   * a primeira vida, os testes).
+   */
+  memoriaDeVidas?: string[];
   /** O que já foi feito neste ano de vida (ações pontuais). */
   anoAtual: { acoes: string[] };
   /** Perdas recentes, ainda sendo atravessadas. */

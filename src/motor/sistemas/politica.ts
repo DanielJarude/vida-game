@@ -33,6 +33,7 @@
  *   campanha ou slogan real; eleições, crises e escândalos são simulação.
  */
 
+import { aliviar, causasDoDesgaste, desgastar, esfriarNoAno } from './desgastePolitico';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Acao } from '../acoes';
@@ -313,7 +314,7 @@ export function leituraPolitica(v: Vida): LeituraPolitica | undefined {
   const passados = (p.partidos ?? []).filter(x => x.tFim !== undefined);
   return {
     ...base,
-    desgaste: p.desgaste < 15 ? 'pouco' : p.desgaste < 35 ? 'algum' : p.desgaste < 60 ? 'bastante' : 'muito',
+    desgaste: `${p.desgaste < 15 ? 'pouco' : p.desgaste < 35 ? 'algum' : p.desgaste < 60 ? 'bastante' : 'muito'}${causasDoDesgaste(p).length ? ` — vem de ${causasDoDesgaste(p).map(x => x.texto).join('; ')}. Ajuda: ${causasDoDesgaste(p).map(x => x.ajuda).join('; ')}` : ''}`,
     estrutura: p.partido ? ['diretório grande na cidade', 'diretório médio na cidade', 'diretório pequeno na cidade'][v.fatos['pol_partido_porte'] ?? 1] : undefined,
     publico: leituraDoNome(v)?.frase ?? `${flex(ge(v), 'anônimo', 'anônima', 'anônime')} fora da política`,
     noPartido: p.partido && !p.indicacaoMilitar ? palavraPartidaria(basePartidaria(v)) : undefined,
@@ -491,7 +492,7 @@ export function perderMandatoPorPrisao(v: Vida, motivo: 'preventiva' | 'pena'): 
   if (!p) return;
   p.campanha = undefined;
   p.posse = undefined;
-  p.desgaste = clamp(p.desgaste + 30);
+  desgastar(p, 30, 'escandalo');
   p.apoio = clamp(p.apoio - 20);
   const m = p.mandato;
   if (!m) return;
@@ -554,7 +555,7 @@ export function trocarDePartido(v: Vida, r: Rng, nova: string | undefined, porte
   if (nova) { p.partidos.push({ sigla: nova, tInicio: v.t }); v.fatos['pol_partido_porte'] = porte; }
   else delete v.fatos['pol_partido_porte'];
   p.apoio = Math.round(clamp(p.apoio - (3 + p.apoio * 0.1)));
-  p.desgaste = clamp(p.desgaste + 4);
+  desgastar(p, 4, 'partido');
   v.anoAtual.acoes.push('pol_troca');
   const al = aliado(v);
   if (al && v.vinculos[al.id]) { v.vinculos[al.id].proximidade = clamp(v.vinculos[al.id].proximidade - 12); lembrarCom(v, al.id, `Você saiu ${doPartido(antes)}.`, 'distancia', 2); }
@@ -886,7 +887,7 @@ export function renunciar(v: Vida, motivo: string): void {
   p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'renunciou', ...resumoDoMandato(p) });
   p.mandato = undefined;
   p.consecutivos = 0;
-  p.desgaste = clamp(p.desgaste + 10);
+  desgastar(p, 10, 'mandato');
   if (v.trabalho.atual?.contrato === 'eletivo') encerrarEmprego(v, 'renúncia ao mandato');
   const texto = `Renunciou ao mandato de ${nomeCargo(v, m.cargo)} ${motivo}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', escolha: true });
@@ -1031,7 +1032,7 @@ export function processarPolitica(v: Vida, r: Rng): void {
     p.apoio = Math.round(clamp(p.apoio + ((p.apoio + m.aprovacao) / 2 - p.apoio) * 0.25));
     p.reputacao = clamp(p.reputacao + (c.escopo === 'estado' ? 1.5 : 0.5));
     // O cargo desgasta; entregar algo concreto desgasta menos.
-    p.desgaste = clamp(p.desgaste + (c.executivo ? 3 : 2.5) - (m.feito > 0 ? 1.5 : 0));
+    desgastar(p, (c.executivo ? 3 : 2.5) - (m.feito > 0 ? 1.5 : 0), 'mandato');
     // O mandato cobra do bolso: contribuição ao partido, a base que se mantém, as viagens, os pedidos de ajuda que chegam à porta.
     const subsidio = v.trabalho.atual?.contrato === 'eletivo' ? v.trabalho.atual.salario : ocupacao(m.cargo).salario;
     const custo = Math.round(subsidio * 12 * (0.18 + (c.escopo === 'municipio' ? 0 : 0.1)) / 100) * 100;
@@ -1053,8 +1054,10 @@ export function processarPolitica(v: Vida, r: Rng): void {
     const ativo = v.anoAtual.acoes.includes('pol_comunidade') || v.rotinas.some(x => x.id === 'voluntariado');
     p.apoio = Math.round(clamp(p.apoio + (ativo ? 1 + socia * 0.5 : -1.5) + (v.fatos['pol_quer'] !== undefined && v.t - v.fatos['pol_quer'] <= 24 ? 1 : 0)));
     p.reputacao = Math.round(clamp(p.reputacao + (ativo ? 0.5 + socia / 4 : -0.5)));
-    p.desgaste = clamp(p.desgaste - 3);
   }
+  // REWORK 10.5 · POL-04: o desgaste esfria pela causa (a exposição passa logo; o mandato, devagar; a campanha, depois
+  // da eleição) — também para quem está no cargo ou em campanha (antes, nesses casos, nunca descia).
+  esfriarNoAno(p, { emMandato: !!p.mandato, entregou: (p.mandato?.feito ?? 0) > 0, emCampanha: !!p.campanha || p.fase === 'candidato', nasBases: v.anoAtual.acoes.includes('pol_comunidade') || v.anoAtual.acoes.includes('pol_bases') });
   // A janela de uma eleição: a vida pergunta (conteúdo `pol_eleicao`).
   const e = eleicaoNaJanela(v);
   if (e && !p.campanha && !p.posse && p.partido && (p.fase !== 'mandato' || (p.mandato && (mandatoAcabaNaEleicao(p.mandato, e.ano) || cargoNoPais(p.mandato.cargo).tipo !== e.tipo)))) {
@@ -1088,7 +1091,7 @@ function processarRiscoPolitico(v: Vida, r: Rng): void {
   if (v.t - t0 > 60) { delete v.fatos['pol_risco']; return; }
   if (!r.chance(0.22)) return;
   delete v.fatos['pol_risco'];
-  p.desgaste = clamp(p.desgaste + 30);
+  desgastar(p, 30, 'escandalo');
   p.apoio = clamp(p.apoio - 20);
   p.inelegivelAte = v.t + 96;
   const m = p.mandato;
@@ -1143,7 +1146,9 @@ export function semanaDaPolitica(v: Vida): { rotulo: string; peso: number } | un
  * vista; nunca um valor vazio. `prioridade`: trabalhar a prioridade do
  * mandato no ano (só quando ela existe).
  */
-export type OquePolitica = 'aproximar' | 'filiar' | 'indicacao' | 'comunidade' | 'bandeira' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar' | 'trocar_partido';
+export type OquePolitica = 'aproximar' | 'filiar' | 'indicacao' | 'comunidade' | 'bandeira' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar' | 'trocar_partido'
+  // REWORK 10.5 · POL-04: as respostas ao desgaste.
+  | 'bases' | 'recolher' | 'propostas' | 'paz_partido' | 'afastar' | 'responder';
 export type AcaoPoliticaCmd = { tipo: 'politica'; oque: OquePolitica; valor?: string };
 
 export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
@@ -1194,6 +1199,7 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
       return v.anoAtual.acoes.includes('pol_negociar') ? bloqueio('incompativel', 'As conversas deste ano já aconteceram.') : PERMITIDO;
     case 'candidatura': {
       if (!p?.partido) return bloqueio('requisito', 'Sem partido, não há candidatura.');
+      if (v.fatos['pol_afastado'] !== undefined && v.t - v.fatos['pol_afastado'] < 12) return bloqueio('incompativel', 'Você se afastou da política há pouco: a volta precisa de um tempo.');
       if (p.campanha || p.posse) return bloqueio('impossivel', 'A candidatura já está registrada.');
       const e = eleicaoNaJanela(v);
       if (e) return cargosDaEleicao(v).some(x => podeTentar(x.veredito)) ? PERMITIDO : bloqueio('requisito', cargosDaEleicao(v)[0]?.veredito.motivo ?? 'Nenhum cargo desta eleição cabe agora.');
@@ -1201,6 +1207,15 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
     }
     case 'crise': return p?.mandato?.crise ? PERMITIDO : bloqueio('impossivel', 'Não há crise aberta.');
     case 'deixar': return naPolitica(v) && fase !== 'candidato' ? PERMITIDO : bloqueio('impossivel', fase === 'candidato' ? 'A campanha está na rua: é esperar a apuração.' : 'Não se aplica.');
+    case 'bases': case 'recolher': case 'propostas': case 'paz_partido': case 'afastar': case 'responder': {
+      if (!p || !naPolitica(v)) return bloqueio('impossivel', 'Não se aplica.');
+      if (p.desgaste < 10) return bloqueio('incompativel', 'O desgaste está baixo: não há o que recuperar agora.');
+      if (v.anoAtual.acoes.includes('pol_desgaste')) return bloqueio('incompativel', 'Uma frente de recuperação por ano: a outra fica para o ano que vem.');
+      if (a.oque === 'paz_partido' && !p.partido) return bloqueio('impossivel', 'Sem partido, não há briga partidária para resolver.');
+      if (a.oque === 'responder' && !(p.causasDesgaste?.escandalo || p.causasDesgaste?.exposicao || p.escandalo)) return bloqueio('incompativel', 'Não há crítica pública para responder agora.');
+      if (a.oque === 'afastar' && (p.campanha || fase === 'candidato')) return bloqueio('incompativel', 'Com a campanha na rua, não dá para sumir.');
+      return a.oque === 'responder' || a.oque === 'afastar' ? { grau: 'improvavel', motivo: a.oque === 'afastar' ? 'O desgaste cai — e o nome e a base também.' : 'Pode limpar a imagem; pode reacender o assunto.' } : PERMITIDO;
+    }
   }
   return bloqueio('impossivel', 'Não se aplica.');
 }
@@ -1257,8 +1272,70 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
     case 'crise': return { decisao: 'pol_crise' };
     case 'deixar': return { decisao: 'pol_deixar' };
     case 'trocar_partido': return { decisao: 'pol_troca_partido' };
+    case 'bases': case 'recolher': case 'propostas': case 'paz_partido': case 'afastar': case 'responder': return recuperar(v, r, p!, a.oque);
   }
   return {};
+}
+
+/**
+ * REWORK 10.5 · POL-04 — as respostas ao desgaste, cada uma para uma causa, com custo e risco (uma por ano):
+ * voltar às bases (o mandato, as promessas, a derrota; custa a semana), reduzir a exposição (a fadiga; o nome esfria
+ * junto), renovar as propostas (as promessas; pode não colar), resolver o conflito no partido (pode virar racha),
+ * afastar-se por um tempo (alivia muito; a base e o nome caem, e a pré-candidatura espera), responder às críticas (o
+ * escândalo e a exposição; pode limpar ou reacender).
+ */
+function recuperar(v: Vida, r: Rng, p: VidaPolitica, oque: 'bases' | 'recolher' | 'propostas' | 'paz_partido' | 'afastar' | 'responder'): SaidaPolitica {
+  v.anoAtual.acoes.push('pol_desgaste');
+  const soc = v.personalidade.tracos.sociabilidade;
+  const antes = Math.round(p.desgaste);
+  let texto: string;
+  let tom: 'bom' | 'ruim' | 'neutro' = 'bom';
+  switch (oque) {
+    case 'bases': {
+      v.anoAtual.acoes.push('pol_bases');
+      const x = aliviar(p, 8 + Math.max(0, soc) / 20, ['mandato', 'promessas', 'derrota', 'campanha']);
+      p.apoio = clamp(p.apoio + 2);
+      v.mente.estresse = clamp(v.mente.estresse + 3);
+      texto = x >= 4 ? 'Meses de bairro em bairro, sem câmera: a cobrança virou conversa, e a base voltou a confiar.' : 'Voltou às bases; o que pesa, porém, não era a distância delas.';
+      break;
+    }
+    case 'recolher': {
+      const x = aliviar(p, 12, ['exposicao']);
+      p.reputacao = clamp(p.reputacao - 2);
+      texto = x >= 4 ? 'Menos post, menos entrevista, menos briga: em alguns meses, ninguém mais falava do seu nome com cansaço.' : 'Sumiu dos holofotes — mas o que pesava não era a exposição.';
+      if (x < 4) tom = 'neutro';
+      break;
+    }
+    case 'propostas': {
+      if (r.chance(0.55 + (p.mandato?.feito ?? 0) * 0.03)) { aliviar(p, 10, ['promessas', 'campanha']); p.reputacao = clamp(p.reputacao + 1); texto = 'As propostas novas, com prazo e número, convenceram: a cobrança mudou de tom.'; }
+      else { desgastar(p, 2, 'promessas'); tom = 'ruim'; texto = 'As propostas novas soaram como mais promessas. A cobrança continuou.'; }
+      break;
+    }
+    case 'paz_partido': {
+      if (r.chance(0.5 + Math.max(0, soc) / 200)) { aliviar(p, 10, ['partido']); texto = 'Uma série de reuniões longas, e o diretório voltou a falar a mesma língua.'; }
+      else { desgastar(p, 3, 'partido'); tom = 'ruim'; texto = 'A conversa virou racha: metade do diretório saiu falando mal de você.'; }
+      break;
+    }
+    case 'afastar': {
+      aliviar(p, Math.round(p.desgaste * 0.35));
+      p.reputacao = clamp(p.reputacao - 8);
+      p.apoio = clamp(p.apoio - 6);
+      v.fatos['pol_afastado'] = v.t;
+      delete v.fatos['pol_quer'];
+      texto = 'Um tempo longe da política: o desgaste baixou — e com ele, o nome e a base. A volta vai ser outra conversa.';
+      tom = 'neutro';
+      break;
+    }
+    case 'responder': {
+      const coragem = v.personalidade.tracos.coragem;
+      if (r.chance(0.45 + Math.max(0, soc + coragem) / 300)) { aliviar(p, 9, ['escandalo', 'exposicao']); if (p.mandato) p.mandato.aprovacao = clamp(p.mandato.aprovacao + 2); texto = 'Respondeu ponto por ponto, sem fugir: parte da crítica perdeu força.'; }
+      else { desgastar(p, 5, 'exposicao'); tom = 'ruim'; texto = 'A resposta reacendeu o assunto: o que estava esfriando voltou à capa.'; }
+      break;
+    }
+  }
+  const depois = Math.round(p.desgaste);
+  escrever(v, { texto, relevancia: 'cotidiano', tema: 'trabalho', escolha: true, tom: tom === 'neutro' ? undefined : tom });
+  return { texto: `${texto} (Desgaste: ${antes === depois ? 'o mesmo' : depois < antes ? 'menor' : 'maior'}.)`, tom };
 }
 
 /** Militar em serviço ativo (Forças, PM, bombeiros): não se filia, e se candidata por indicação. */
@@ -1308,6 +1385,17 @@ export function acoesPoliticas(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
     const partidoPesou = ultima?.fatores?.some(k => (k.id === 'partido' || k.id === 'mare') && k.valor <= -2);
     const regra = regraDaTroca(v);
     add({ id: 'pol_trocar_partido', rotulo: 'Trocar de partido', porque: regra.como === 'janela' ? 'É a janela partidária.' : partidoPesou ? 'Na última eleição, o partido pesou contra.' : undefined, acao: A('trocar_partido'), peso: regra.como === 'janela' || partidoPesou ? 4 : 1 });
+  }
+  // REWORK 10.5 · POL-04: com desgaste, as respostas a ele — a de cada causa em destaque (de onde ele vem está no painel).
+  if (p.desgaste >= 15) {
+    const causa = causasDoDesgaste(p)[0]?.causa;
+    const peso = (alvo: string[]) => (causa && alvo.includes(causa) ? 7 : 2);
+    add({ id: 'pol_bases', rotulo: 'Voltar às bases', porque: 'Alivia o peso do cargo, das promessas e da derrota. Custa a semana.', acao: A('bases'), peso: peso(['mandato', 'promessas', 'derrota', 'campanha']) });
+    add({ id: 'pol_recolher', rotulo: 'Reduzir a exposição por um tempo', porque: 'Passa a fadiga de exposição; o nome esfria junto.', acao: A('recolher'), peso: peso(['exposicao']) });
+    add({ id: 'pol_propostas', rotulo: 'Renovar as propostas', porque: 'Para quem cobra o que não veio. Pode não colar.', acao: A('propostas'), peso: peso(['promessas']) });
+    if (p.partido) add({ id: 'pol_paz', rotulo: 'Resolver o conflito no partido', porque: 'Pode virar racha.', acao: A('paz_partido'), peso: peso(['partido']) });
+    add({ id: 'pol_responder', rotulo: 'Responder às críticas', porque: 'Pode limpar a imagem — ou reacender o assunto.', acao: A('responder'), peso: peso(['escandalo']) });
+    add({ id: 'pol_afastar', rotulo: 'Afastar-se da política por um tempo', porque: 'O desgaste cai muito; o nome e a base também.', acao: A('afastar'), peso: p.desgaste >= 60 ? 4 : 1 });
   }
   add({ id: 'pol_deixar', rotulo: m ? 'Renunciar ou encerrar a vida pública' : 'Deixar a vida política', acao: A('deixar'), peso: 0, saida: true });
   return out;

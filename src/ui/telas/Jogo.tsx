@@ -37,12 +37,12 @@ import { areaDaPorta } from '../jogo/Estudos';
 import { Voce, type ParteVoce } from '../jogo/Voce';
 import { PaginaCaminhos } from '../jogo/CaminhosDaVida';
 import { VidaConcreta } from '../jogo/VidaConcreta';
-import { expressaoDe, sinalPessoal } from '../estadoPessoal';
+import { expressaoDe, sinalDeSaude, sinalPessoal } from '../estadoPessoal';
 import { Fim } from './Fim';
-import { fechamentoDoAno, rotinaDoAno } from '../../motor/sistemas/fechamento';
+import { conquistasDoAno, fechamentoDoAno, rotinaDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
-import { AREAS, MAPA_DE_INTENCOES, resolverDestino, rotuloDoLugar, type Aba, type Area, type DivisaoCaminhos, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
+import { AREAS, buscarIntencoes, resolverDestino, rotuloDoLugar, tipoDaIntencao, type Aba, type Area, type DivisaoCaminhos, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
 
 export type { Aba };
 
@@ -228,11 +228,18 @@ function EnquantoIsso({ vida, desde, abrirPessoa }: { vida: Vida; desde: number;
 function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number; abrirPessoa: (id: string) => void }) {
   const temFechamento = fechamentoDoAno(vida).length > 0;
   const temNoticias = noticiasDoAno(vida, desde).length > 0;
+  const conquistas = conquistasDoAno(vida);
   // REWORK 9.5: a rotina que o ano teve (a fotografia do ano) — só quando há o que dizer.
   const rotina = rotinaDoAno(vida);
-  if (!temFechamento && !temNoticias && !rotina) return null;
+  if (!temFechamento && !temNoticias && !rotina && !conquistas.length) return null;
   return (
     <div className="ano-que-passou" id="ano-que-passou">
+      {/* REWORK 10.5 · EVT-06: a conquista do ano vem primeiro (antes, só na Linha da Vida, para quem procurasse). */}
+      {conquistas.length > 0 && (
+        <section className="fechamento fechamento--conquistas" aria-label="As conquistas do ano">
+          <div className="temporada"><p className="temporada__titulo">{conquistas.length === 1 ? 'A conquista do ano' : 'As conquistas do ano'}</p>{conquistas.map((l, k) => <p key={k} className="temporada__linha conquista-do-ano">{l}</p>)}</div>
+        </section>
+      )}
       {temFechamento && <FechamentoDoAno vida={vida} />}
       {rotina && (
         <section className="fechamento fechamento--rotina" aria-label="A rotina do ano">
@@ -283,7 +290,7 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
   return (
     <div className="painel-agora">
       {pessoal && area !== 'voce' && (
-        <button type="button" className="agora-voce" onClick={() => irPara('voce')}>
+        <button type="button" className="agora-voce" onClick={() => irPara(sinalDeSaude(vida) ? 'prontuario' : 'voce')}>
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={34} rotulo="Você" expressao={expressaoDe(vida)} />
           <span>{pessoal}</span>
         </button>
@@ -358,13 +365,13 @@ function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: 
   );
 }
 
+const ROTULO_TIPO = { fazer: 'fazer', ver: 'ver', acompanhar: 'acompanhar' } as const;
+
 /** "Eu quero fazer X. Onde eu começo?" — o mapa de intenções (`navegacao`), com o caminho de cada uma. */
 function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
   // REWORK 7: com quarenta intenções, procurar é mais rápido que rolar ("violão", "salário", "mãe").
   const [busca, setBusca] = useState('');
-  const sem = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const termo = sem(busca.trim());
-  const lista = MAPA_DE_INTENCOES.filter(x => !termo || sem(`${x.quero} ${x.la} ${rotuloDoLugar(x.lugar)}`).includes(termo));
+  const lista = buscarIntencoes(busca);
   return (
     <section className="onde-fica" aria-labelledby="onde-fica-titulo">
       <h2 id="onde-fica-titulo" className="subtitulo">Onde fica cada coisa</h2>
@@ -377,7 +384,7 @@ function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
         {lista.map(x => (
           <li key={x.id}>
             <button type="button" className="onde-fica__item" onClick={() => ir(x.lugar)}>
-              <span className="onde-fica__quero">{x.quero}</span>
+              <span className="onde-fica__quero">{x.quero}{busca.trim() && <span className={`onde-fica__tipo onde-fica__tipo--${tipoDaIntencao(x)}`}> · {ROTULO_TIPO[tipoDaIntencao(x)]}</span>}</span>
               <span className="onde-fica__onde">{rotuloDoLugar(x.lugar)} <span aria-hidden>→</span></span>
             </button>
           </li>

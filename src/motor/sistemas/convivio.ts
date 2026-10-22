@@ -24,6 +24,7 @@
  * Nada disso vira número na tela: a ficha lê o laço em palavras e a história dos dois.
  */
 
+import { firmarCompromisso } from './afetos';
 import type { Rng } from '../rng';
 import { clamp, hashMisturado, rngDe } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
@@ -205,6 +206,8 @@ export function marcoAfetivo(v: Vida, p: Pessoa, vin: Vinculo, tipo: MarcoAfetiv
   if (rom) rom.envolvimento = clamp(Math.round(rom.envolvimento + ganho * 0.5));
   v.mente.felicidade = clamp(Math.round(v.mente.felicidade + 3 + ganho * 0.4));
   marcarFato(v, `marco_${tipo}_${p.id}`);
+  // REWORK 10.5 · REL-09: o marco firma o COMPROMISSO (o que amarra a vida) — a confiança continua a que foi construída.
+  firmarCompromisso(vin, tipo);
   if (problemas >= 0.35) return tipo === 'casamento' || tipo === 'noivado'
     ? `O sim não apagou o que houve: ${vin.historia.some(h => h.tipo === 'traicao') ? 'a traição' : 'as brigas'} continua${vin.historia.some(h => h.tipo === 'traicao') ? '' : 'm'} entre vocês.`
     : 'O que andava pesando entre vocês continua lá.';
@@ -314,8 +317,16 @@ export function escalar(c: CtxI, peso: 1 | 2 | 3, assunto: string, r: Rng): Degr
   if (!vin.conflito || vin.conflito.gravidade < g) vin.conflito = { t: v.t, assunto, gravidade: g, quem: 'eu' };
   if (g >= 2) lembrarCom(v, p.id, g === 3 ? `Um conflito sério por causa de ${assunto}.` : `Discutiram por causa de ${assunto}.`, 'conflito', g === 3 ? 3 : 2);
   if (d === 'ruptura') romper(v, p, vin, `Romperam depois de uma briga por causa de ${assunto}.`, 'outro');
+  // REWORK 10.5 · REL-10: a agressão da outra pessoa ACONTECE (antes, a escada dizia "partiu para cima de você" e nada
+  // seguia: nenhuma lesão, nenhum registro — e o "cortar relações depois da agressão" nunca abria).
+  if (d === 'agressao') {
+    v.fatos[`agressao_dela_${p.id}`] = v.t;
+    BRIGA.set(v, brigaFisica(c, r, 'outro').texto);
+  }
   return d;
 }
+/** O desfecho da agressão que a escada acabou de produzir (a frase do degrau o conta). */
+const BRIGA = new WeakMap<Vida, string>();
 
 /** O que a escada virou, em palavras (para a resposta da ação). */
 export function fraseDoDegrau(c: CtxI, d: DegrauDoConflito): string {
@@ -327,7 +338,7 @@ export function fraseDoDegrau(c: CtxI, d: DegrauDoConflito): string {
     discussao: `Virou discussão: vozes altas, coisas ditas que não se desdizem tão fácil.`,
     conflito_serio: `Virou um conflito sério. ${ele.charAt(0).toUpperCase() + ele.slice(1)} saiu batendo a porta.`,
     ruptura: `${n} disse que acabou. Não quer mais falar com você.`,
-    agressao: `${n} perdeu o controle e partiu para cima de você.`
+    agressao: BRIGA.get(c.v) ?? `${n} perdeu o controle e partiu para cima de você.`
   }[d];
 }
 
@@ -355,10 +366,14 @@ export function brigaFisica(c: CtxI, r: Rng, quemComecou: 'eu' | 'outro'): Desfe
   }
   const minha = machucarNaBriga(v, r, quemComecou === 'outro' ? 2 : lesaoDela >= 2 ? 1 : 2);
   const lesaoSua = (minha ? minha.lesao?.gravidade ?? 1 : 0) as 0 | 1 | 2 | 3;
-  // A relação: não sai inteira.
-  vin.tensao = clamp(Math.max(vin.tensao, 80));
-  vin.confianca = clamp(vin.confianca - 25);
-  vin.proximidade = clamp(vin.proximidade - 15);
+  // A relação: não sai inteira — e o tamanho do estrago acompanha o da briga (REWORK 10.5 · REL-10: antes, o mesmo
+  // −25 de confiança para um empurrão e para uma fratura).
+  const peso = Math.max(lesaoDela, lesaoSua);
+  vin.tensao = clamp(Math.max(vin.tensao, 60 + peso * 10));
+  vin.confianca = clamp(vin.confianca - 12 - peso * 6);
+  vin.proximidade = clamp(vin.proximidade - 8 - peso * 4);
+  // Quem apanhou fica com medo de quem bateu (a distância vira proteção, não birra).
+  if (quemComecou === 'outro') { v.fatos[`medo_${p.id}`] = v.t; abalar(v, `o medo de ${p.nome}`, -4 - peso * 2, 6 + peso * 3); }
   vin.conflito = { t: v.t, assunto: 'a briga física', gravidade: 3, quem: quemComecou };
   lembrarCom(v, p.id, quemComecou === 'eu' ? 'O dia em que você partiu para a briga.' : `O dia em que ${p.nome} partiu para cima de você.`, 'conflito', 3);
   marcarFato(v, `agressao_${p.id}`);

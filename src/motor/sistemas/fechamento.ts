@@ -55,6 +55,21 @@ export function fechamentoDoAno(v: Vida): Fechamento[] {
   return out;
 }
 
+/** O que conta como conquista (o mesmo critério da sala de troféus da Linha da Vida). */
+export const MARCAS_DE_CONQUISTA = new Set(['conquista', 'aprovacao', 'formacao', 'promocao', 'profissional', 'estreia', 'eleicao', 'lideranca', 'ingresso', 'primeiro_emprego', 'negocio_aberto']);
+
+/**
+ * REWORK 10.5 · EVT-06 — AS CONQUISTAS DO ANO: o prêmio, a promoção, a formatura, a aprovação, a estreia — o que pesou
+ * (peso 2 ou 3) e aconteceu no ano que fechou. Antes, um concurso literário ganho só aparecia procurando na Linha da
+ * Vida. Hierarquia: a decisão obrigatória abre por cima; a conquista vem no alto do ano que passou; o resultado das
+ * carreiras, logo abaixo; o cotidiano, na biografia.
+ */
+export function conquistasDoAno(v: Vida): string[] {
+  const vistos = new Set<string>();
+  return v.caminhos.marcas.filter(m => MARCAS_DE_CONQUISTA.has(m.tipo) && m.peso >= 2 && m.t > v.t - 12 && m.t <= v.t)
+    .sort((a, b) => b.peso - a.peso).map(m => m.texto).filter(t => (vistos.has(t) ? false : (vistos.add(t), true))).slice(0, 4);
+}
+
 const PESO_DA_SEMANA: Record<string, string> = { folgada: 'leve', ocupada: 'movimentada', cheia: 'exigente', sobrecarregada: 'pesada', alem: 'além do que se aguenta' };
 
 /**

@@ -40,7 +40,7 @@ import { mudarAgora } from './processos';
 import { modeloRotina } from './rotinas';
 import { largarEscola } from './escola';
 import type { Turno } from '../tipos';
-import { entrarComoParalela, moverParaParalela, novaViraPrincipal, pausadaDe, pausarAtual, podeConciliar, podePausar, retomarPausada } from './paralelas';
+import { entrarComoParalela, moverParaParalela, novaViraPrincipal, pausadaDe, pausarAtual, podeConciliar, podePausar, retomarPausada, TRILHAS_ARTISTICAS } from './paralelas';
 
 /**
  * Vias em que a pessoa JÁ escolheu trocar, sabendo antes o que perdia: a
@@ -144,6 +144,11 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada |
   // Convite, bolsa, indicação, concurso, retorno: ninguém escolheu ainda o que fazer com o trabalho de agora — pergunta.
   if (novo.tipo === 'emprego' && VIAS_DE_TROCA_ESCOLHIDA.has(novo.via)) return undefined;
   if (novo.tipo === 'emprego' && novo.ocupacaoId === e.ocupacaoId && novo.via !== VIA_CURSO) return undefined;
+  // REWORK 10.5 · CAR-12: na mesma carreira artística (de ator a ator conhecido, de músico a músico profissional), o
+  // convite é um degrau dela — não um emprego concorrente. Antes, o ator conhecido ouvia "Você trabalha como ator
+  // conhecido, o dia inteiro: deixar o trabalho / pausar a carreira" diante de um papel. O conflito real de agenda
+  // (duas produções integrais) é do contrato (`audiovisual.conflitoDoContrato`), não da profissão.
+  if (novo.tipo === 'emprego' && novo.via !== VIA_CURSO && mesmaCarreiraArtistica(e.ocupacaoId, novo.ocupacaoId)) return undefined;
   if (novo.tipo === 'servico_militar') return undefined; // o emprego fica guardado (lei), não é conflito
   if (novo.tipo === 'negocio') {
     return {
@@ -170,6 +175,12 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada |
     }
   }
   return { com: 'emprego', rotulo: `o trabalho de ${nome}`, motivo: `Você trabalha como ${nome}${e.carga === 'integral' ? ', o dia inteiro' : ''}`, alternativas };
+}
+
+/** Duas ocupações da mesma trilha artística (a identidade profissional é uma só; muda o degrau). */
+export function mesmaCarreiraArtistica(a: string, b: string): boolean {
+  const x = ocupacaoOuNula(a), y = ocupacaoOuNula(b);
+  return !!x && !!y && x.trilha === y.trilha && TRILHAS_ARTISTICAS.has(x.trilha);
 }
 
 /** Um curso presencial em outra cidade: ninguém muda de cidade sem dizer que sim. */

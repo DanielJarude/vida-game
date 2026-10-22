@@ -15,11 +15,12 @@ import { MATERIAS, modeloFrente, PALAVRA_DA_RELACAO } from '../../motor/dados/fr
 import { estagioDaFrente } from '../../motor/sistemas/frentes';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { NOME_MATERIA } from '../../motor/sistemas/escola';
-import { evolucaoDaFrente, evolucaoDaNota, evolucaoDoTrabalho, type EvolucaoDaFrente } from '../../motor/sistemas/progressao';
+import { evolucaoDaFrente, evolucaoDoTrabalho, type EvolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
 import { dinheiroCurto } from '../apresentar';
 import { anoDe } from '../../motor/tempo';
 import { Boletim } from './Boletim';
+import { HistoricoDoCurso } from './HistoricoAcademico';
 
 /** De onde veio, em palavras (a fonte que o motor registrou). */
 export function nomeDaFonte(f: string): string {
@@ -101,21 +102,6 @@ export function Progressao({ vida, dominios, titulo, vazio }: { vida: Vida; domi
   );
 }
 
-/** A nota (o desempenho da escola ou do curso): antes → agora, e a trajetória. */
-function NotaComHistoria({ vida, qual }: { vida: Vida; qual: 'escola' | 'curso' }) {
-  const n = evolucaoDaNota(vida, qual);
-  if (n.agora === undefined) return null;
-  const d = n.antes !== undefined ? n.agora - n.antes : undefined;
-  return (
-    <p className="evolucao-ano__nota" data-nota={qual} data-agora={n.agora}>
-      <span className="evolucao-ano__nome">{qual === 'escola' ? 'A nota do ano' : 'O desempenho no curso'}</span>{' '}
-      {n.antes !== undefined && <>{n.antes} → </>}<strong>{n.agora}</strong>
-      {d !== undefined && <span className={`evolucao-ano__delta evolucao-ano__delta--${d >= 3 ? 'subiu' : d <= -3 ? 'caiu' : 'parou'}`}> ({sinal(d)})</span>}
-      <Trajetoria serie={n.serie} rotulo={qual === 'escola' ? 'A nota, ano a ano' : 'O desempenho, ano a ano'} />
-    </p>
-  );
-}
-
 /**
  * Caminhos · Desenvolvimento: o que se mede no estudo e no trabalho, ano a ano — a nota, as matérias, o desempenho e
  * o salário no ofício, as frentes que o ofício e o esporte usam.
@@ -139,7 +125,8 @@ export function DesenvolvimentoReal({ vida, lado }: { vida: Vida; lado?: 'estudo
       <h2 className="secao-fio">{lado === 'estudos' ? 'O ano letivo: o que mudou e por quê' : lado === 'esporte' ? 'O esporte, ano a ano' : 'Ano a ano: o que mudou e por quê'}</h2>
       {/* REWORK 9.5 · UX-04: a escola é o boletim (as matérias, a nota, a frequência, a dedicação) — uma lista só. */}
       {estuda && vida.educacao.basica && !vida.educacao.evadiu && <Boletim vida={vida} />}
-      {estuda && vida.educacao.matricula && !vida.educacao.matricula.trancado && <NotaComHistoria vida={vida} qual="curso" />}
+      {/* REWORK 10.5 · EDU-05: no curso, o histórico acadêmico (as disciplinas, as notas, os créditos) — não um número de 0 a 100. */}
+      {estuda && vida.educacao.matricula && <HistoricoDoCurso vida={vida} />}
       {e && t.desempenho && (
         <p className="evolucao-ano__nota" data-nota="trabalho" data-agora={t.desempenho[1]}>
           <span className="evolucao-ano__nome">O desempenho no trabalho</span>{' '}

@@ -1396,6 +1396,19 @@ export interface VidaPassada {
   ano: number;
   /** O país onde morreu (o patrimônio é contado na moeda de lá). Ausente: o Brasil. */
   pais?: string;
+  /** REWORK 10.5 · EVT-05: os acontecimentos e cenas que esta vida viveu (ids, até 120) — a memória entre vidas. */
+  vistos?: string[];
+}
+
+/** REWORK 10.5 · EVT-05: o que uma vida viveu (as decisões e acontecimentos, as cenas de carreira), para a próxima lembrar. */
+export function vistosDaVida(v: Vida): string[] {
+  const ids = [...v.ocorrencias.map(o => o.id), ...(v.caminhos.situacoes ?? []).map(x => x.id)];
+  return [...new Set(ids)].slice(-120);
+}
+
+/** A memória das duas vidas anteriores (para nascer de novo com variedade). */
+export function memoriaDasUltimasVidas(e: Estatisticas): string[] {
+  return [...new Set(e.historico.slice(0, 2).flatMap(x => x.vistos ?? []))].slice(0, 200);
 }
 
 export interface Estatisticas {
@@ -1417,7 +1430,7 @@ export function lerEstatisticas(s: Armazenamento | null = armazenamentoPadrao())
       totalAnosVividos: num(d.totalAnosVividos, 0, 0, 1e9),
       maiorIdade: num(d.maiorIdade, 0, 0, 200),
       maiorPatrimonio: num(d.maiorPatrimonio, 0, -1e12, 1e12),
-      historico: Array.isArray(d.historico) ? d.historico.slice(0, 50) : Array.isArray(d.historicoVidas)
+      historico: Array.isArray(d.historico) ? d.historico.slice(0, 50).map((x: VidaPassada) => (x && Array.isArray(x.vistos) ? { ...x, vistos: x.vistos.filter(y => typeof y === 'string').slice(0, 120) } : x)) : Array.isArray(d.historicoVidas)
         ? d.historicoVidas.slice(0, 50).map((x: Antigo) => ({ id: String(x.id), nome: String(x.nome), idadeMorte: num(x.idadeMorte, 0, 0, 200), lugar: `${x.cidade}, ${x.estado}`, profissao: String(x.profissao ?? ''), patrimonio: num(x.patrimonio, 0, -1e12, 1e12), causa: String(x.causaMorte ?? ''), ano: 0 }))
         : []
     };
@@ -1432,7 +1445,8 @@ export function registrarVidaPassada(p: VidaPassada, s: Armazenamento | null = a
   e.totalAnosVividos += p.idadeMorte;
   e.maiorIdade = Math.max(e.maiorIdade, p.idadeMorte);
   e.maiorPatrimonio = Math.max(e.maiorPatrimonio, p.patrimonio);
-  e.historico = [p, ...e.historico].slice(0, 50);
+  // REWORK 10.5 · EVT-05: a memória do que se viveu fica só nas três vidas mais recentes (o resto do histórico, sem ela).
+  e.historico = [p, ...e.historico].slice(0, 50).map((x, k) => (k < 3 || !x.vistos ? x : { ...x, vistos: undefined }));
   try { s?.setItem(CHAVE_ESTATISTICAS, JSON.stringify(e)); } catch { /* sem espaço */ }
 }
 

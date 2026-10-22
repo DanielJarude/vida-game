@@ -23,7 +23,7 @@ import type { Devolutiva, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
-import { anoDe } from '../../motor/tempo';
+import { anoDe, mesDe } from '../../motor/tempo';
 import { OCUPACOES, ROTULO_SETOR, ROTULO_TRILHA, ocupacao, ocupacaoOuNula, type Ocupacao } from '../../motor/dados/ocupacoes';
 import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
@@ -73,6 +73,7 @@ import { ehPortaDeTrabalho, ObjetivosEmCurso, PortasAbertas } from './Estudos';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
 import { leituraDasTrajetorias } from '../../motor/sistemas/paralelas';
 import { leituraDoCurriculo } from '../../motor/sistemas/cena';
+import { contaDoContrato, impactoDoContrato, NOME_DO_TIPO } from '../../motor/sistemas/audiovisual';
 import { empregoAcademico, leituraAcademica } from '../../motor/sistemas/academia';
 import type { Aba, ParteCaminhos } from '../navegacao';
 import { areaProfissional } from '../../motor/dados/areasProfissionais';
@@ -190,7 +191,9 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {modo === 'negocio' && <PainelNegocio vida={vida} />}
         {modo === 'negocio' && negocioAberto(vida) && <Renomear vida={vida} agir={agir} alvo="negocio" atual={negocioAberto(vida)!.nome} rotulo={`Dar outro nome a ${negocioAberto(vida)!.nome}`} />}
         {modo === 'artista' && vida.caminhos.arte?.ativo && <Renomear vida={vida} agir={agir} alvo="grupo" atual={vida.caminhos.arte.nome} rotulo={`Dar outro nome a ${vida.caminhos.arte.nome}`} />}
-        {(modo === 'autonomo' || modo === 'informal' || modo === 'plataforma' || modo === 'artista') && <PainelFreguesia vida={vida} />}
+        {/* REWORK 10.5 · UX-19: a atuação tem um painel só, do primeiro teste ao ator conhecido (antes: a freguesia do autônomo, e depois a escada de cargos do empregado). */}
+        {modo === 'artista' && e && ocupacaoOuNula(e.ocupacaoId)?.trilha === 'cena' ? <PainelCena vida={vida} />
+          : (modo === 'autonomo' || modo === 'informal' || modo === 'plataforma' || modo === 'artista') && <PainelFreguesia vida={vida} />}
         {(modo === 'rural' || modo === 'pesca') && <PainelCampo vida={vida} />}
         {modo === 'atleta' && <PainelAtleta vida={vida} />}
         {modo === 'base' && !div && <PainelBase vida={vida} />}
@@ -237,6 +240,9 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
 
       {em('oportunidades') && !preso && <PortasAbertas vida={vida} agir={agir} filtro={ehPortaDeTrabalho} titulo="Portas de trabalho" />}
 
+      {/* REWORK 10.5 · UX-17: o que está em andamento vem antes do que está aberto (a candidatura enviada, o concurso
+          esperando o resultado, a seleção em curso) — antes, ficava espalhado pelo estado de cada vaga. */}
+      {em('oportunidades') && !preso && <CandidaturasEmAndamento vida={vida} />}
       {em('oportunidades') && !preso && modo !== 'crianca' && (
         <div ref={explorarRef} id="explorar">
           <OutrasPossibilidades vida={vida} agir={agir} aberto={explorar} alternar={() => setExplorar(x => !x)} irPara={irPara} aba={aba} setAba={setAba} ir={ir} fixo={parte === 'oportunidades'} divisao={div} />
@@ -253,6 +259,25 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
     </div>
   );
 }
+
+/** REWORK 10.5 · UX-17: as candidaturas e seleções em andamento, numa lista só (com quando sai o resultado). */
+function CandidaturasEmAndamento({ vida }: { vida: Vida }) {
+  const concursos = vida.trabalho.candidaturas;
+  const vagas = vida.anoAtual.acoes.filter(a => a.startsWith('candidatura:')).map(a => ocupacaoOuNula(a.split(':')[1])).filter((x): x is Ocupacao => !!x && !concursos.some(c => c.ocupacaoId === x.id));
+  const processo = vida.caminhos.processo?.tipo === 'entrevista' ? vida.caminhos.processo : undefined;
+  if (!concursos.length && !vagas.length && !processo) return null;
+  return (
+    <section className="candidaturas" aria-labelledby="titulo-candidaturas">
+      <h2 id="titulo-candidaturas" className="secao-fio">Em andamento</h2>
+      <ul className="candidaturas__lista">
+        {processo && <li><strong>Seleção{processo.lugar ? ` em ${processo.lugar}` : ''}</strong> <span className="nota">etapa {processo.atual + 1} de {processo.etapas.length}</span></li>}
+        {concursos.map(c => { const oc = ocupacaoOuNula(c.ocupacaoId); return <li key={c.id}><strong>{c.concurso ? 'Concurso' : 'Candidatura'}: {oc ? nomeOcupacao(vida, oc) : c.ocupacaoId}</strong> <span className="nota">resultado em {MESES_CURTOS[mesDe(c.tResultado)]} de {anoDe(c.tResultado)}</span></li>; })}
+        {vagas.map(oc => { const st = estadoDaVaga(vida, oc); return <li key={oc.id}><strong>{cap(nomeOcupacao(vida, oc))}</strong> <span className="nota">{ROTULO_ESTADO_VAGA[st.estado]} — {st.texto}</span></li>; })}
+      </ul>
+    </section>
+  );
+}
+const MESES_CURTOS = ['jan.', 'fev.', 'mar.', 'abr.', 'maio', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
 
 /**
  * FIX pós-REWORK 4: o miúdo que faz uma carreira por dentro (`noOficio`) — o projeto difícil, a chefia, o colega, a
@@ -387,6 +412,61 @@ function PainelFreguesia({ vida }: { vida: Vida }) {
       </dl>
       {vida.caminhos.palco && <PalcoDoAno vida={vida} />}
       <p className="nota">{estradaNaArea(vida)}</p>
+    </section>
+  );
+}
+
+/**
+ * REWORK 10.5 · UX-19 — A CARREIRA DE ATUAÇÃO, sempre na mesma ordem: o resumo (o degrau, o nome, os prêmios, o
+ * currículo), o que está em produção, as propostas, o agente e o dinheiro do ano. A carreira cresce (o degrau muda, as
+ * produções crescem), mas a tela continua a mesma — não parece outro sistema quando o ator vira ator conhecido.
+ */
+function PainelCena({ vida }: { vida: Vida }) {
+  const e = vida.trabalho.atual!;
+  const oc = ocupacao(e.ocupacaoId);
+  const av = vida.caminhos.audiovisual;
+  const producao = (av?.contratos ?? []).filter(c => c.status === 'em_producao');
+  const propostas = (av?.contratos ?? []).filter(c => c.status === 'proposta');
+  const premios = (vida.caminhos.curriculo ?? []).filter(x => x.premio?.venceu).length;
+  const indicacoes = (vida.caminhos.curriculo ?? []).filter(x => x.premio && !x.premio.venceu).length;
+  const cv = leituraDoCurriculo(vida);
+  const nome = leituraDoNome(vida);
+  const anos = Math.max(0, Math.floor((vida.t - e.tInicio) / 12));
+  return (
+    <section className="painel painel--cena" aria-label="A carreira de atuação">
+      <h3 className="painel-cena__titulo">A carreira</h3>
+      <dl className="dados">
+        <Dado rotulo="Hoje">{cap(nomeOcupacao(vida, oc))}{anos ? `, há ${anos} ${anos === 1 ? 'ano' : 'anos'}` : ''}</Dado>
+        <Dado rotulo="Currículo">{cv.palavra} · {(vida.caminhos.curriculo ?? []).length} {(vida.caminhos.curriculo ?? []).length === 1 ? 'trabalho' : 'trabalhos'}</Dado>
+        <Dado rotulo="Para o público">{nome ? nome.palavra : 'ainda pouco conhecido'}</Dado>
+        <Dado rotulo="Prêmios">{premios ? `${premios} ${premios === 1 ? 'prêmio' : 'prêmios'}` : 'nenhum ainda'}{indicacoes ? ` · ${indicacoes} ${indicacoes === 1 ? 'indicação' : 'indicações'}` : ''}</Dado>
+        <Dado rotulo="Agente">{av?.agente ? `${av.agente.nome} · ${['', 'agência pequena', 'agência média', 'agência grande'][av.agente.rede]}, ${Math.round(av.agente.comissao * 100)}%` : 'sem agente (testes menores, sem comissão)'}</Dado>
+      </dl>
+      <h3 className="painel-cena__titulo">Em produção</h3>
+      {producao.length ? (
+        <ul className="painel-cena__lista">{producao.map(c => <li key={c.id}><strong>"{c.titulo}"</strong> <span className="nota">{c.papel} · {c.casa} · até {anoDe(c.tFim ?? vida.t)}</span></li>)}</ul>
+      ) : <p className="nota">Nada em produção agora.</p>}
+      <h3 className="painel-cena__titulo">Propostas</h3>
+      {propostas.length ? (
+        <ul className="painel-cena__propostas">
+          {propostas.map(c => (
+            <li key={c.id} className="ficha-papel" data-proposta={c.id}>
+              <p className="ficha-papel__titulo"><strong>"{c.titulo}"</strong>{c.convite ? <span className="ficha-papel__selo"> convite direto</span> : null}{c.continuacaoDe ? <span className="ficha-papel__selo"> continuação</span> : null}</p>
+              <dl className="ficha-papel__dados">
+                <div><dt>Produção</dt><dd>{NOME_DO_TIPO[c.tipo] ?? c.tipo}{c.genero ? ` · ${c.genero}` : ''} · {c.casa}</dd></div>
+                {c.sinopse && <div><dt>Sinopse</dt><dd>{c.sinopse}</dd></div>}
+                <div><dt>O papel</dt><dd>{c.papel}{c.personagem ? ` — ${c.personagem}` : ''}</dd></div>
+                <div><dt>Tempo</dt><dd>{c.meses ? `${c.meses} ${c.meses === 1 ? 'mês' : 'meses'}${c.integral ? ', dedicação integral' : ', em parte da semana'}` : 'um dia de gravação'}</dd></div>
+                <div><dt>Cachê</dt><dd>{contaDoContrato(c)}</dd></div>
+                <div><dt>Na carreira</dt><dd>{impactoDoContrato(c)}</dd></div>
+              </dl>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="nota">Nenhuma proposta aberta. Testes de elenco (e, com nome e prêmios, convites diretos) trazem as próximas.</p>}
+      {propostas.length > 0 && <p className="nota">Aceitar, pedir mais ou recusar: em "O que dá para fazer agora".</p>}
+      <h3 className="painel-cena__titulo">O dinheiro</h3>
+      {vida.caminhos.palco ? <PalcoDoAno vida={vida} /> : <p className="nota">Ainda sem um ano de trabalhos contados.</p>}
     </section>
   );
 }
@@ -644,7 +724,7 @@ export function PainelPolitico({ vida, principal }: { vida: Vida; principal: boo
  * REWORK 5 — A PENA COMO CAMADA PRÓPRIA: a situação (regime, tempo cumprido, saída prevista, disciplina, benefícios), o
  * que o pavilhão pede agora (com as respostas), e a rotina de dentro. Tudo lido de `leituraDaPena` (a fonte única).
  */
-function PainelDaPena({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+export function PainelDaPena({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const l = leituraDaPena(vida);
   const t = situacaoNaJustica(vida);
   if (!l) return t ? <section className="painel painel--pena" aria-label="A pena"><p className="painel__frase">{t}</p></section> : null;
@@ -685,7 +765,7 @@ function PainelDaPena({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   );
 }
 
-function PainelForagido({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+export function PainelForagido({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   return (
     <section className="painel painel--pena pena pena--foragido" aria-label="Foragido">
       <p className="painel__frase">{situacaoDeForagido(vida)}</p>
@@ -741,7 +821,7 @@ function EmParalelo({ vida, agir, irPara, modo, divisao }: { vida: Vida; agir: (
           <p className="por-fora__titulo">Por fora</p>
           <p>{porFora}</p>
           <BotaoAcao vida={vida} acao={{ tipo: 'parar_por_fora' }} agir={agir} variante="secundario" ocultarBloqueado>Largar isso de vez</BotaoAcao>
-          <button type="button" className="link" onClick={() => irPara('outros_caminhos')}>A trajetória inteira, o risco e as saídas — em Outros caminhos →</button>
+          <button type="button" className="link" onClick={() => irPara('submundo')}>A trajetória inteira, o risco e as saídas — no Submundo →</button>
         </section>
       )}
     </section>

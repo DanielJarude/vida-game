@@ -83,7 +83,7 @@ export function RetratoDaVida({ vida, irPara, abrirPessoa }: { vida: Vida; irPar
         {criticos.length > 0 && (
           <p className="retrato-vida__alerta" role="status">
             <span aria-hidden>! </span>{criticos.map(s => `${s.nome}: ${s.palavra}`).join(' · ')}.{' '}
-            <button type="button" className="link" onClick={() => irPara('voce')}>Por quê, e o que fazer →</button>
+            <button type="button" className="link" onClick={() => irPara(criticos.some(x => x.id === 'saude') ? 'prontuario' : 'voce')}>Por quê, e o que fazer →</button>
           </p>
         )}
         {mudou.length > 0 && (

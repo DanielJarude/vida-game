@@ -162,7 +162,13 @@ export function viverCena(c: CtxI, foi: ComoFoi, prog: ProgramaDeCena, n: number
   // A noite comum também não repete a mesma variação das últimas cenas (guardada na marca: "comum.1").
   const usadas = new Set(marcas(c.vin).filter(x => x.startsWith('comum.')).map(x => Number(x.split('.')[1])));
   const livres = prog.comum.map((_x, k) => k).filter(k => !usadas.has(k));
-  const variacao = tipo === 'comum' ? (livres.length ? livres[(n + r.int(0, 2)) % livres.length] : n % prog.comum.length) : 0;
+  // REWORK 10.5 · EVT-05: a memória das cenas guarda poucas marcas; a variação comum gira a partir da última usada (assim
+  // nenhuma volta antes de todas terem passado, mesmo quando a marca antiga já saiu da memória).
+  const ultimaComum = [...marcas(c.vin)].reverse().find(x => x.startsWith('comum.'));
+  // Sem a marca na memória, o próprio número de vezes que fizeram o programa gira a variação (o sorteio antigo continua
+  // sendo feito: a sequência do gerador da cena não muda).
+  if (tipo === 'comum' && livres.length) r.int(0, 2);
+  const variacao = tipo === 'comum' ? (ultimaComum ? (Number(ultimaComum.split('.')[1]) + 1) % prog.comum.length : livres.length ? livres[n % livres.length] : n % prog.comum.length) : 0;
   // A discussão também não repete a mesma (o motivo de cada uma fica na marca: "discordaram.2").
   const discordiasUsadas = new Set(marcas(c.vin).filter(x => x.startsWith('discordaram.')).map(x => Number(x.split('.')[1])));
   const discordiasLivres = (prog.discordia ?? []).map((_x, k) => k).filter(k => !discordiasUsadas.has(k));

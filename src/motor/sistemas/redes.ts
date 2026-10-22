@@ -34,6 +34,7 @@
  * (`rngDe`): a rede não mexe no acaso do resto da vida.
  */
 
+import { desgastar } from './desgastePolitico';
 import type { ContaSocial, Pessoa, PlataformaId, Publicacao, TemaPublicacao, Vida } from '../tipos';
 import { PERMITIDO, bloqueio, type Veredito } from '../plausibilidade';
 import { clamp, rngDe, type Rng } from '../rng';
@@ -558,7 +559,7 @@ function polemica(v: Vida, pl: Plataforma, c: ContaSocial, pub: Publicacao, reag
   // Quem tem mandato (ou quer ter): a base gosta da briga; o desgaste sobe.
   const pol = v.caminhos.politica;
   if (pol && pol.fase !== 'encerrada' && (pub.tema === 'politica' || pub.tema === 'opiniao')) {
-    pol.apoio = clamp(pol.apoio + 1); pol.desgaste = clamp(pol.desgaste + 4);
+    pol.apoio = clamp(pol.apoio + 1); desgastar(pol, 4, 'exposicao');
     out.push('A base aplaudiu; o adversário guardou o print.');
   }
   // O atleta que rebate a torcida: a torcida não esquece.
@@ -804,7 +805,7 @@ function descoberta(v: Vida, pl: Plataforma, c: ContaSocial, r: Rng, chance: num
     c.descobriram = [...ja, 'trabalho'];
     escrever(v, { texto: `O trabalho descobriu a conta no ${pl.nome}.${imagem ? ' A conversa com a chefia foi longa — e o clima não voltou a ser o mesmo.' : ' Uns riram, outros fingiram não saber.'}`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     const pol = v.caminhos.politica;
-    if (pol && pol.fase !== 'encerrada') pol.desgaste = clamp(pol.desgaste + 12);
+    if (pol && pol.fase !== 'encerrada') desgastar(pol, 12, 'escandalo');
     return 'O trabalho descobriu.';
   }
   const quem = candidatos[0];
@@ -828,6 +829,8 @@ function descoberta(v: Vida, pl: Plataforma, c: ContaSocial, r: Rng, chance: num
 /** O ano das redes: quem some perde gente; quem é famoso ganha; o comprado pode ser descoberto; a rede paga e pune. */
 export function processarRedes(v: Vida): void {
   // REWORK 9.7 · SOC-01: o acontecimento público recente que explica um salto (um título, uma convocação, uma eleição).
+  // REWORK 10.5 · FAM-02: do período do balanço (e do ano antes, pela inércia do nome) — nunca a linha que a própria
+  // notoriedade escreve ("Ficou famosa..."), que antes destravava o teto todo ano para quem já era famoso.
   const acontecimento = acontecimentosDoNome(v, v.t - 24, v.t).pop();
   let chegaramPeloNome = 0, antesDoAno = 0;
   for (const c of contasAtivas(v)) {
@@ -852,11 +855,13 @@ export function processarRedes(v: Vida): void {
     // A rede esquece (mais quem sumiu); quem publica com constância ganha um pouco por isso.
     mudarPublico(c, real * pl.esquece[noAno === 0 ? 0 : 1], 'perdas', v.t, noAno === 0 ? 'um ano sem publicar' : undefined);
     if (noAno === 0) { c.credibilidade = clamp(c.credibilidade - 2); c.engajamento = clamp((c.engajamento ?? 50) - 8); }
-    else mudarPublico(c, real * 0.01 * Math.min(6, noAno) * saturacaoDoPublico(real), 'organico', v.t);
+    else mudarPublico(c, real * 0.01 * Math.min(6, noAno) * saturacaoDoPublico(real), 'organico', v.t, 'publicar com constância');
     // Quem faz da criação de conteúdo uma atividade da semana (`rotinas: criar_conteudo`) publica sem o jogador clicar
     // em cada vídeo: o ano de trabalho aparece no público das redes de criador.
     const criando = v.rotinas.find(x => x.id === 'criar_conteudo');
-    if (criando && DE_CRIADOR.includes(pl.id)) mudarPublico(c, pl.piso * pl.conversao * 8 * (criando.nivel ?? 1) * (0.6 + r.next() * 0.8) * (1 + real / 20000 * saturacaoDoPublico(real)), 'publicacoes', v.t, 'a rotina de criar conteúdo');
+    // REWORK 10.5 · FAM-02: é o trabalho da semana, não uma publicação contada — entra como "sem publicação específica",
+    // com o motivo (antes, contava como "pelas publicações" num ano de zero publicações).
+    if (criando && DE_CRIADOR.includes(pl.id)) mudarPublico(c, pl.piso * pl.conversao * 8 * (criando.nivel ?? 1) * (0.6 + r.next() * 0.8) * (1 + real / 20000 * saturacaoDoPublico(real)), 'organico', v.t, 'a rotina de criar conteúdo');
     // YouTube: o catálogo continua sendo visto (quem ensina de verdade cresce devagar e não para).
     if (pl.id === 'youtube' && t.publicacoes >= 5) mudarPublico(c, Math.min(t.publicacoes, 80) * (8 + real * 0.0008 * saturacaoDoPublico(real)) * (0.6 + r.next() * 0.8), 'organico', v.t, 'o catálogo de vídeos');
     // REWORK 9 · SOC-01: o nome fora da rede. Antes, a fama somava um número fixo por ano (sem limite, com ou sem
@@ -915,6 +920,21 @@ export const publicoDoNome = (pl: PlataformaId, fama: number) => (fama <= 25 ? 0
 export function exposicaoDoAno(pl: PlataformaId, real: number, famaAntes: number, famaAgora: number, noAno: number, sorte: number, acontecimento = true): number {
   const falta = Math.max(0, publicoDoNome(pl, famaAgora) - real);
   if (!falta) return 0;
+  const subiu = Math.max(0, publicoDoNome(pl, famaAgora) - publicoDoNome(pl, famaAntes));
+  // REWORK 10.5 · FAM-02: o nome PARADO (a notoriedade igual à do ano passado) não traz centenas de milhares por ano.
+  // Antes, a conta se aproximava 12% ao ano de um público possível de milhões (notoriedade 90 → ~4 milhões no
+  // Instagram): +465 mil "pela notoriedade" num ano sem publicação nenhuma. Agora o nome parado traz pouco e satura com
+  // o tamanho da conta (uns 2% dela parada, 6% publicando); o salto só vem quando o nome CRESCEU — e o grande, só com um
+  // acontecimento público que o explique.
+  const passivo = Math.min(falta * (noAno === 0 ? 0.01 : noAno < 3 ? 0.03 : 0.05), real * (noAno === 0 ? 0.02 : 0.06) + 3000);
+  const cresceu = famaAgora - famaAntes >= 2;
+  const impulso = !cresceu ? 0 : acontecimento ? Math.min(subiu * 0.15, Math.max(200000, real * 1.2)) : Math.min(subiu * 0.12, Math.max(5000, real * (noAno === 0 ? 0.15 : 0.4)));
+  return Math.round(Math.min(falta, (passivo + impulso) * (0.8 + sorte * 0.4)));
+}
+/** Antes do REWORK 10.5 (mantida só para comparação nas simulações de fama). */
+export function exposicaoDoAnoAntiga(pl: PlataformaId, real: number, famaAntes: number, famaAgora: number, noAno: number, sorte: number, acontecimento = true): number {
+  const falta = Math.max(0, publicoDoNome(pl, famaAgora) - real);
+  if (!falta) return 0;
   const ritmo = noAno === 0 ? 0.02 : noAno < 3 ? 0.06 : 0.12;
   const subiu = Math.max(0, publicoDoNome(pl, famaAgora) - publicoDoNome(pl, famaAntes));
   // REWORK 9.7 · SOC-01: o impulso era um número absoluto (a curva do nome é quadrática: notoriedade 65 → 83 valia
@@ -940,8 +960,10 @@ function motivoDoNome(v: Vida, antes: number, agora: number, acontecimento?: str
  * qualquer tema ("Procurou ajuda para parar de apostar" como a razão de 300 mil seguidores).
  */
 export function acontecimentosDoNome(v: Vida, desde: number, ate: number): string[] {
-  return v.biografia.filter(e => e.t >= desde && e.t <= ate && (e.relevancia === 'marco' || e.relevancia === 'biografia') && (e.tema === 'trabalho' || e.tema === 'lazer')).slice(-2).map(e => e.texto);
+  return v.biografia.filter(e => e.t >= desde && e.t <= ate && (e.relevancia === 'marco' || e.relevancia === 'biografia') && (e.tema === 'trabalho' || e.tema === 'lazer') && !DA_PROPRIA_NOTORIEDADE.test(e.texto)).slice(-2).map(e => e.texto);
 }
+/** As linhas que a notoriedade escreve sobre si mesma (consequência do nome, nunca a causa dele). */
+const DA_PROPRIA_NOTORIEDADE = /^(Virou um nome que o país|Ficou famos|Passou a ser reconhecid|O nome saiu das manchetes)/;
 
 /**
  * O balanço em leitura (a tela e o teste leem daqui): as parcelas que existiram, com o sinal, e as causas que o motor
@@ -949,20 +971,23 @@ export function acontecimentosDoNome(v: Vida, desde: number, ate: number): strin
  * fechado), nada — a tela não inventa uma explicação para o que aconteceu antes do registro.
  */
 export interface LinhaDoBalanco { id: 'organico' | 'publicacoes' | 'exposicao' | 'comprados' | 'perdas'; rotulo: string; valor: number; motivos: string[] }
-export function leituraDoBalanco(v: Vida, c: ContaSocial, qual: 'ultimo' | 'aberto' = 'ultimo'): { ano: number; inicio: number; fim: number; linhas: LinhaDoBalanco[]; fecha: boolean; marcos: string[] } | undefined {
+export function leituraDoBalanco(v: Vida, c: ContaSocial, qual: 'ultimo' | 'aberto' = 'ultimo'): { ano: number; inicio: number; fim: number; linhas: LinhaDoBalanco[]; publicacoes: number; fecha: boolean; marcos: string[] } | undefined {
   const b = qual === 'aberto' ? c.balanco : c.anos?.[c.anos.length - 1];
   if (!b) return undefined;
   const fim = b.fim ?? c.seguidores;
   const motivos = b.motivos ?? [];
   const deTipo = (re: RegExp) => motivos.filter(m => re.test(m));
   const linhas: LinhaDoBalanco[] = ([
-    { id: 'organico', rotulo: 'sem publicação específica', valor: b.organico, motivos: deTipo(/catálogo/) },
-    { id: 'publicacoes', rotulo: 'pelas publicações', valor: b.publicacoes, motivos: deTipo(/colaboração|campanha|provocação|rotina/) },
+    { id: 'organico', rotulo: 'sem publicação específica', valor: b.organico, motivos: deTipo(/catálogo|rotina|constância/) },
+    { id: 'publicacoes', rotulo: 'pelas publicações', valor: b.publicacoes, motivos: deTipo(/colaboração|campanha|provocação|viral|publicaç/) },
     { id: 'exposicao', rotulo: 'pelo nome, fora da rede', valor: b.exposicao, motivos: deTipo(/nome|compartilhou|respondeu|antes da conta/) },
     { id: 'comprados', rotulo: 'comprados', valor: b.comprados, motivos: [] },
     { id: 'perdas', rotulo: 'foram embora', valor: -b.perdas, motivos: deTipo(/sem publicar|compra descoberta/) }
   ] as LinhaDoBalanco[]).filter(x => x.valor !== 0);
-  return { ano: anoDe(b.ate ?? v.t), inicio: b.inicio, fim, linhas, fecha: b.inicio + b.organico + b.publicacoes + b.exposicao + b.comprados - b.perdas === fim, marcos: b.exposicao > 0 ? marcosDoPeriodo(v, b.desde, b.ate ?? v.t) : [] };
+  // REWORK 10.5 · FAM-02: o ano do balanço é o ano em que as publicações e os acontecimentos dele aconteceram (o
+  // balanço fecha no começo do ano seguinte — e era rotulado com ele: "zero publicações" no ano que tinha as três).
+  const publicacoes = c.publicacoes.filter(p => !p.apagada && p.t >= b.desde && (b.ate === undefined || p.t < b.ate)).length;
+  return { ano: anoDe(b.desde), inicio: b.inicio, fim, linhas, publicacoes, fecha: b.inicio + b.organico + b.publicacoes + b.exposicao + b.comprados - b.perdas === fim, marcos: b.exposicao > 0 ? marcosDoPeriodo(v, b.desde, b.ate ?? v.t) : [] };
 }
 
 /** Os marcos do período de um balanço (o que aconteceu de fato na vida — a tela mostra ao lado da exposição). */

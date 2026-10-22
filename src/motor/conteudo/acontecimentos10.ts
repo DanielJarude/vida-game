@@ -12,6 +12,7 @@
  * custo de vida de onde se mora (`economiaLocal`), nunca reais fixos; a opção que fala de mudança muda de fato.
  */
 
+import { procuraComoSeNada } from '../sistemas/magoas';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { fixo } from './papeis';
@@ -363,7 +364,9 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'ami10_reencontro', tipo: 'decisao', idade: [20, 90], tema: 'amizade', repetir: 5,
-    papeis: { antigo: fixo(v => vinculosVivos(v).filter(x => !x.p.especie && !x.vin.parentesco && !x.vin.romance && (x.vin.estagio === 'afastado' || x.vin.estagio === 'ex_amigo') && v.t - x.vin.tUltimoContato >= 48).map(x => x.p)) },
+    papeis: { antigo: fixo(v => vinculosVivos(v).filter(x => !x.p.especie && !x.vin.parentesco && !x.vin.romance && (x.vin.estagio === 'afastado' || x.vin.estagio === 'ex_amigo') && v.t - x.vin.tUltimoContato >= 48
+      // REWORK 10.5 · REL-07: o "lembrei de você" não vem de quem ainda está brigado ou magoado; depois de uma ruptura, só anos depois.
+      && (procuraComoSeNada(v, x.vin) || (!!x.vin.ruptura && v.t - x.vin.ruptura.t >= 60 && (x.vin.magoa?.ressentimento ?? 0) < 25 && x.vin.digital?.bloqueado === undefined))).map(x => x.p)) },
     titulo: 'Quem reapareceu',
     texto: c => `${nome(c, 'antigo')} mandou mensagem depois de anos: "lembrei de você hoje".`,
     opcoes: [

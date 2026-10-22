@@ -88,6 +88,8 @@ import { processarEcos } from './sistemas/ecos';
 import { processarIndiretos } from './sistemas/indiretos';
 import { processarSeguroDesemprego } from './sistemas/seguroDesemprego';
 import { fixarEstatura } from './sistemas/modalidades';
+import { processarMagoas } from './sistemas/magoas';
+import { processarAfetos } from './sistemas/afetos';
 
 export interface ResumoDoAno {
   idade: number;
@@ -188,11 +190,15 @@ function viverAno(v: Vida, r: Rng): void {
   // A carreira, às vezes, produz um momento (o lance, o caso difícil, o crédito roubado): a escolha vem na fase de conteúdo.
   praticandoPor('acontecimento', () => processarSituacoes(v, r));
   processarProcessos(v, r);
+  // REWORK 10.5 · REL-07: o que ficou das brigas (antes de a tensão e o conflito esfriarem no ano social).
+  processarMagoas(v);
   recalcularConvivio(v);
   conhecerGente(v, r);
   envelhecerConhecidos(v, r);
   processarSocial(v, r);
   processarRomance(v, r);
+  // REWORK 10.5 · REL-06: a parceria também pode sair do combinado (e você pode descobrir); a intimidade esfria sem contato.
+  processarAfetos(v);
   // As outras pessoas também agem: pedem, convidam, cobram, aparecem — e o silêncio do ano passado responde.
   processarIniciativas(v, r);
   // REWORK 10 · Fase C: o que se fez com as pessoas volta (a mentira descoberta, o segredo que vaza, a briga que esfria).

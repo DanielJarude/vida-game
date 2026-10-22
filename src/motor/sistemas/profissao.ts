@@ -31,7 +31,7 @@ import { previdenciaDaVida, textoLocal } from '../mundo/locais';
 import { perfilDoPais, temPerfil } from '../mundo/registro';
 import { perfilDaVida } from '../mundo/vida';
 import { especialidadeMedica } from './medicina';
-import { agenteDe, conflitoDoContrato, contaDoContrato, descricaoDoContrato, emProducao, propostasAbertas, redeAlcancavel } from './audiovisual';
+import { agenteDe, conflitoDoContrato, contaDoContrato, descricaoDoContrato, emProducao, impactoDoContrato, NOME_DO_TIPO, propostasAbertas, redeAlcancavel } from './audiovisual';
 import { OCUPACOES_DE_ATLETA } from './esporte';
 import { mercadoEsportivo, perfilDe } from './perfisEsportivos';
 import type { Rng } from '../rng';
@@ -112,7 +112,9 @@ export function modoDoTrabalho(v: Vida): ModoTrabalho {
   if (oc.id === 'produtor_rural') return 'rural';
   if (oc.id === 'pescador') return 'pesca';
   if (f.progressao === 'docente' || f.progressao === 'academica') return 'docente';
-  if (f.progressao === 'arte' && e.clientela !== undefined) return 'artista';
+  // REWORK 10.5 · UX-19: a atuação é UMA carreira — o ator e o ator conhecido têm o mesmo painel (antes, o conhecido, sem
+  // freguesia, caía em 'empregado': escada de cargos vazia, chefia, "curso da empresa" — e sem testes nem propostas).
+  if (f.progressao === 'arte' && (e.clientela !== undefined || oc.trilha === 'cena')) return 'artista';
   if (e.contrato === 'servidor') return 'servidor';
   if (f.progressao === 'saude' && e.clientela === undefined) return 'saude';
   if (e.contrato === 'informal') return 'informal';
@@ -144,7 +146,7 @@ export function rotulosDoRitmo(v: Vida): { puxado: string; leve: string; normal:
     const leve = (n?.equipe?.length ?? 0) > 0 ? 'Deixar mais com a equipe' : 'Trabalhar menos horas';
     return { puxado, leve, normal: 'Voltar ao horário de sempre', sobre: 'Dono presente puxa o movimento; dono exausto erra.' };
   }
-  if (m === 'artista') return { puxado: 'Aceitar todo trabalho que aparecer', leve: 'Guardar tempo para a própria obra (menos trabalhos pagos)', normal: 'Voltar ao ritmo de sempre', sobre: 'Todo convite paga conta; nem todo convite faz obra.', sobreLeve: 'Recusa parte dos trabalhos pagos: a renda cai (uns 18%) e a freguesia cresce mais devagar; a semana fica mais leve, a prática rende mais e a próxima obra sai mais cuidada.' };
+  if (m === 'artista') return { puxado: 'Aceitar todo trabalho que aparecer', leve: 'Guardar tempo para a própria obra (menos trabalhos pagos)', normal: 'Voltar ao ritmo de sempre', sobre: 'Todo convite paga conta; nem todo convite faz obra.', sobreLeve: 'Recusa parte dos trabalhos pagos: a renda cai (uns 18%) e os convites crescem mais devagar; a semana fica mais leve, a prática rende mais e a próxima obra sai mais cuidada.' };
   if (m === 'rural') return { puxado: 'Plantar mais, de sol a sol', leve: 'Diminuir a área', normal: 'Voltar ao tamanho de sempre', sobre: 'Mais área, mais colheita — e mais corpo cansado.' };
   if (m === 'pesca') return { puxado: 'Sair mais para pescar', leve: 'Pescar menos', normal: 'Voltar às saídas de sempre', sobre: 'Mais saída, mais peixe — e mais madrugada.' };
   return { puxado: 'Aceitar todo serviço (agenda cheia)', leve: 'Deixar a agenda mais leve', normal: 'Voltar à agenda de sempre', sobre: 'Agenda cheia rende e cansa; agenda leve sobra tempo e falta dinheiro.' };
@@ -585,7 +587,8 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
   if (n) for (const x of acoesDoNegocio(v, disp)) lista.push(x);
 
   /* ---------------------------------------------- Por conta própria */
-  if (POR_CONTA.has(modo) || modo === 'artista') {
+  // REWORK 10.5 · CAR-13: quem atua não tem "freguesia" nem "estrutura" — o cachê é do contrato (e o agente negocia).
+  if (POR_CONTA.has(modo) || (modo === 'artista' && oc.trilha !== 'cena')) {
     const c = e.clientela ?? 0;
     if (c >= 62 && e.preco !== 'alto') add({ id: 'preco_alto', rotulo: 'Cobrar mais', porque: 'A agenda está cheia.', acao: P('preco', { valor: 'alto' }), peso: 5 });
     if (c < 28 && e.preco !== 'baixo') add({ id: 'preco_baixo', rotulo: 'Baixar o preço', porque: 'A freguesia anda pouca.', acao: P('preco', { valor: 'baixo' }), peso: 4 });
@@ -670,7 +673,9 @@ function acoesArtisticas(v: Vida, i: number): AcaoProfissional[] {
     const AV = (oque: string, valor?: string): Acao => ({ tipo: 'perseguir', oque, valor } as unknown as Acao);
     for (const c of propostasAbertas(v)) {
       const conflito = conflitoDoContrato(v, c);
-      out.push({ id: `av_aceitar_${c.id}`, rotulo: `Aceitar: ${descricaoDoContrato(c)}`, porque: `${c.meses ? `${c.meses} ${c.meses === 1 ? 'mês' : 'meses'}${c.integral ? ', dedicação integral' : ''} · ` : ''}${contaDoContrato(c)}.${conflito ? ` Não cabe com o trabalho de ${conflito}: aceitar abre a pergunta do que fazer com ele.` : ''}`, acao: AV('aceitar_contrato', c.id), peso: 9 });
+      // REWORK 10.5 · CAR-06: a ficha do papel no próprio porquê (gênero, a personagem, a sinopse) — antes, título, papel, tempo e cachê.
+      const ficha = [c.genero ? `${NOME_DO_TIPO[c.tipo] ?? c.tipo} · ${c.genero}` : undefined, c.personagem ? `a personagem: ${c.personagem}` : undefined].filter(Boolean).join(' · ');
+      out.push({ id: `av_aceitar_${c.id}`, rotulo: `Aceitar: ${descricaoDoContrato(c)}`, porque: `${ficha ? `${ficha}. ` : ''}${c.sinopse ? `${c.sinopse} ` : ''}${c.meses ? `${c.meses} ${c.meses === 1 ? 'mês' : 'meses'}${c.integral ? ', dedicação integral' : ''} · ` : ''}${contaDoContrato(c)}. ${impactoDoContrato(c).charAt(0).toUpperCase() + impactoDoContrato(c).slice(1)}.${conflito ? ` Não cabe com o trabalho de ${conflito}: aceitar abre a pergunta do que fazer com ele.` : ''}`, acao: AV('aceitar_contrato', c.id), peso: 9 });
       out.push({ id: `av_negociar_${c.id}`, rotulo: `Pedir mais pelo papel em "${c.titulo}"`, porque: agenteDe(v) ? 'O agente negocia; se a produção não subir, pode chamar outra pessoa.' : 'Sem agente, é você quem pede — e a produção pode chamar a segunda opção.', acao: AV('negociar_contrato', c.id), peso: 5 });
       out.push({ id: `av_recusar_${c.id}`, rotulo: `Recusar o papel em "${c.titulo}"`, acao: AV('recusar_contrato', c.id), peso: 1 });
     }

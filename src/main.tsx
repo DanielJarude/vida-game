@@ -20,6 +20,8 @@ import './ui/objetos.css';
 import './ui/registros.css';
 // REWORK 10: a cabeça das áreas, as partes, o álbum de relações, a ficha da pessoa (e os sistemas novos).
 import './ui/possibilidades.css';
+// REWORK 10.5: o histórico acadêmico, o atendimento médico, o Submundo, a fama explicada (coerência e consequências).
+import './ui/coerencia.css';
 
 iniciarTema();
 

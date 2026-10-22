@@ -88,8 +88,10 @@ export function pesoDaSaudeNoTrabalho(v: Vida): number {
 /** Dá nome à condição (no consultório ou no susto). Tarde: depois de anos de sinais (câncer: um ano). */
 export function diagnosticar(v: Vida, c: Condicao, _como: 'consulta' | 'susto' | 'checkup'): boolean {
   if (diagnosticada(c)) return false;
-  const anos = (v.t - c.tInicio) / 12;
+  // REWORK 10.5 · SAU-02: a demora conta até a primeira procura (os exames que não fecharam não são descuido).
+  const anos = (Math.min(v.t, c.procurou ?? v.t) - c.tInicio) / 12;
   c.diagnosticada = true;
+  delete c.procurou;
   c.tDiagnostico = v.t;
   c.tarde = c.id === 'cancer' ? anos >= 1 : anos >= 3;
   v.fatos[`diagnostico_${c.id}`] = v.t;
