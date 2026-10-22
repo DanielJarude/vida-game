@@ -12,7 +12,7 @@
 | commit | conteúdo |
 |---|---|
 | `e9d9681` | Fases A–I: estabilização, navegação de Caminhos, oportunidades acionáveis, pedidos da criança, agenda íntegra, eventos e treinos coerentes, notas de atualização, chunk `motor-oficio` |
-| (seguinte) | Fase F completa (sem "curso integral + emprego integral", reconciliação na hora em que algo entra), simulação de coerência, auditoria visual, montagens e este relatório |
+| `2b44caa` | Fase F completa (sem "curso integral + emprego integral", reconciliação na hora em que algo entra), simulação de coerência, auditoria visual, montagens e este relatório |
 
 ## 2. Linha de base (`cbb4373`, medida nesta sessão)
 
