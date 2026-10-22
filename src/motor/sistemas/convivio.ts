@@ -36,7 +36,7 @@ import { encaixe } from './semana';
 import { discutir, estadoDaRelacao, romper } from './lacos';
 import { machucarNaBriga } from './lesoes';
 import { abalar } from './abalo';
-import { flex } from '../texto';
+import { flex, comPreposicao } from '../texto';
 import { terminar } from './romance';
 import { abrirProcesso } from './justica';
 import { pagar, vereditoDePagar } from './dinheiro';
@@ -315,8 +315,8 @@ export function escalar(c: CtxI, peso: 1 | 2 | 3, assunto: string, r: Rng): Degr
   vin.proximidade = clamp(vin.proximidade - 2 - g * 2);
   if (g >= 2) vin.confianca = clamp(vin.confianca - 2 - g * 2);
   if (!vin.conflito || vin.conflito.gravidade < g) vin.conflito = { t: v.t, assunto, gravidade: g, quem: 'eu' };
-  if (g >= 2) lembrarCom(v, p.id, g === 3 ? `Um conflito sério por causa de ${assunto}.` : `Discutiram por causa de ${assunto}.`, 'conflito', g === 3 ? 3 : 2);
-  if (d === 'ruptura') romper(v, p, vin, `Romperam depois de uma briga por causa de ${assunto}.`, 'outro');
+  if (g >= 2) lembrarCom(v, p.id, g === 3 ? `Um conflito sério por causa ${comPreposicao('de', assunto)}.` : `Discutiram por causa ${comPreposicao('de', assunto)}.`, 'conflito', g === 3 ? 3 : 2);
+  if (d === 'ruptura') romper(v, p, vin, `Romperam depois de uma briga por causa ${comPreposicao('de', assunto)}.`, 'outro');
   // REWORK 10.5 · REL-10: a agressão da outra pessoa ACONTECE (antes, a escada dizia "partiu para cima de você" e nada
   // seguia: nenhuma lesão, nenhum registro — e o "cortar relações depois da agressão" nunca abria).
   if (d === 'agressao') {
@@ -370,7 +370,8 @@ export function brigaFisica(c: CtxI, r: Rng, quemComecou: 'eu' | 'outro'): Desfe
   // −25 de confiança para um empurrão e para uma fratura).
   const peso = Math.max(lesaoDela, lesaoSua);
   vin.tensao = clamp(Math.max(vin.tensao, 60 + peso * 10));
-  vin.confianca = clamp(vin.confianca - 12 - peso * 6);
+  // Quem partiu para a briga perde mais (a violência nunca sai barata para quem a começa).
+  vin.confianca = clamp(vin.confianca - (quemComecou === 'eu' ? 20 + peso * 5 : 12 + peso * 6));
   vin.proximidade = clamp(vin.proximidade - 8 - peso * 4);
   // Quem apanhou fica com medo de quem bateu (a distância vira proteção, não birra).
   if (quemComecou === 'outro') { v.fatos[`medo_${p.id}`] = v.t; abalar(v, `o medo de ${p.nome}`, -4 - peso * 2, 6 + peso * 3); }
@@ -846,14 +847,14 @@ export function processarConvivio(v: Vida): void {
     if (c && v.t - c.t >= 24 && estadoDaRelacao(v, vin) !== 'rompido') {
       const t = p.temperamento;
       if (!vin.chamado && t.afabilidade > 0.25 && r.chance(0.35)) {
-        vin.chamado = { tipo: 'desculpas', t: v.t, texto: `${p.nome} procurou você: disse que sente falta, e que a briga por causa de ${c.assunto} não vale o que custou.`, assunto: c.assunto };
+        vin.chamado = { tipo: 'desculpas', t: v.t, texto: `${p.nome} procurou você: disse que sente falta, e que a briga por causa ${comPreposicao('de', c.assunto)} não vale o que custou.`, assunto: c.assunto };
       } else if (!vin.parentesco && !vin.romance && vin.proximidade < 35 && vin.tensao >= 55 && r.chance(0.4)) {
         vin.estagio = 'afastado'; vin.distancia = v.t; vin.conflito = undefined;
         lembrarCom(v, id, `${p.nome} se afastou depois da briga.`, 'distancia', 2);
-        escrever(v, { texto: `${p.nome} se afastou depois da briga por causa de ${c.assunto}.`, relevancia: 'cotidiano', tema: 'amizade', tom: 'ruim', pessoas: [id] });
+        escrever(v, { texto: `${p.nome} se afastou depois da briga por causa ${comPreposicao('de', c.assunto)}.`, relevancia: 'cotidiano', tema: 'amizade', tom: 'ruim', pessoas: [id] });
       } else if (r.chance(0.3 + t.estabilidade * 0.2)) {
         vin.conflito = undefined; vin.tensao = clamp(vin.tensao - 12);
-        lembrarCom(v, id, `O tempo esfriou a briga por causa de ${c.assunto}.`, 'reconciliacao', 1);
+        lembrarCom(v, id, `O tempo esfriou a briga por causa ${comPreposicao('de', c.assunto)}.`, 'reconciliacao', 1);
       }
     }
     // As finanças juntas: quem tem cobre o mês de quem aperta — e o dinheiro vira assunto dos dois.

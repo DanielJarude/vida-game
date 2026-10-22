@@ -90,6 +90,7 @@ import { processarSeguroDesemprego } from './sistemas/seguroDesemprego';
 import { fixarEstatura } from './sistemas/modalidades';
 import { processarMagoas } from './sistemas/magoas';
 import { processarAfetos } from './sistemas/afetos';
+import { presenteDeAniversario } from './sistemas/dinheiroDaCrianca';
 
 export interface ResumoDoAno {
   idade: number;
@@ -135,6 +136,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarFamiliaDeOrigem(v, r);
   // A casa de onde a pessoa veio: a folga real, a reserva que cresce ou se gasta, a família que pode precisar.
   processarOrigem(v);
+  // REWORK 10.5 · ECO-04: o aniversário com os avós por perto, às vezes, vem com dinheiro no envelope.
+  presenteDeAniversario(v);
   // Quem mudou de país: a adaptação, a língua, a naturalização (`migracao`). Quem nunca saiu não passa por aqui.
   processarMundo(v, r);
   // REWORK 9: a semana do ano em horários — o que acontece de fato (as aulas atravessadas viram falta; as atividades

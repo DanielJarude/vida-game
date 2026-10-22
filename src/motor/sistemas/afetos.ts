@@ -178,6 +178,7 @@ export function processarAfetos(v: Vida): void {
   if (!par || par.p.especie || !par.vin.romance) return;
   const { p, vin } = par;
   const rom = vin.romance!;
+  if (rom.infiel?.respondido !== undefined && v.t - rom.infiel.respondido >= 36) delete rom.infiel;
   if (rom.infiel && !rom.infiel.descoberto) {
     const mesmaCasa = vin.convivio.includes('casa');
     if (r.chance(mesmaCasa ? 0.4 : 0.25)) { rom.infiel.descoberto = v.t; v.fatos[`infiel_descoberto:${p.id}`] = v.t; descobrirInfidelidade(v, p, vin); }

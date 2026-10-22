@@ -385,6 +385,9 @@ describe('REL-03 · conflitos: a escada sobe, desce, termina', () => {
     for (let k = 0; k < 80; k++) {
       const { v, id } = amigo({}, 70, k);
       em(v, x => {
+        // Pré-condição dita (REWORK 10.5): a lesão depende do corpo de quem bate; a vida-base destes testes mudou de caminho
+        // (o humor dos primeiros anos), e a forma dela aos 30 ficou baixa demais para a briga machucar alguém de verdade.
+        x.corpo.forma = 70;
         x.vinculos[id].conflito = { t: x.t, assunto: 'dinheiro', gravidade: 3, quem: 'outro' };
         const antes = x.pessoas[id].saude;
         const out = brigaFisica(ctxPessoa(x, id)!, criarRng(k + 3), 'eu');
@@ -928,7 +931,8 @@ describe('EVT-03 · os ecos', () => {
   it('um favor guardado volta quando a vida aperta — dentro da janela, uma vez só', () => {
     let v = cenas()[2];
     const amigoId = Object.values(v.vinculos).find(w => w.estagio === 'amigo_proximo')!.pessoaId;
-    v = em(v, x => { registrarEco(x, 'favor', { pessoaId: amigoId, valor: 2000, de: 2, ate: 10 }); });
+    // Pré-condição dita (REWORK 10.5): a vida desta cena não pode já estar no aperto (é o que o teste provoca depois).
+    v = em(v, x => { registrarEco(x, 'favor', { pessoaId: amigoId, valor: 2000, de: 2, ate: 10 }); x.financas.conta = Math.max(x.financas.conta, 20000); x.financas.dividas = []; x.moradia.atraso = 0; });
     const c = ACONTECIMENTOS_10.find(x => x.id === 'eco10_favor')!;
     const semAperto = (x: Vida) => preparar(c, x, criarRng(1));
     const apertado = (x: Vida) => em(x, y => { y.trabalho.atual = undefined; y.trabalho.desempregadoDesde = y.t - 12; });

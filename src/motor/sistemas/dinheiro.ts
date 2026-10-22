@@ -207,8 +207,9 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
     const rendaCasa = rendaDosOutros(v);
     const daCasa = { renda: Math.round(rendaCasa), porPessoa: Math.round(rendaCasa / (moraCom(v).length + 1)), quem };
     if (i < 18) {
-      // A criança e o adolescente gastam quase tudo o que têm: lanche, saída, figurinha.
-      if (mesada > 0) sai('Lanches, saídas e miudezas', mesada * 0.85, 'lazer');
+      // A criança e o adolescente gastam boa parte do que têm: lanche, saída, figurinha. REWORK 10.5 · ECO-04: e guardam
+      // um pouco (antes, 85% sumia — um tabuleiro levava cinco anos de mesada).
+      if (mesada > 0) sai('Lanches, saídas e miudezas', mesada * 0.6, 'lazer');
       if (propria > 0) sai('O que você gasta com o que ganha', propria * 0.6, 'lazer');
       return fechar(v, arranjo, entradas, saidas, daCasa);
     }

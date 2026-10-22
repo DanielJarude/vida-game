@@ -10,7 +10,7 @@ import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { ATRIBUTOS, predisposicao, valorDoAtributo, type Atributo } from '../../motor/sistemas/predisposicao';
 import { leituraDoEstado } from '../../motor/sistemas/estado';
-import { aparenciaBase, causasDoCondicionamento, fatoresAparencia, fatoresAprendizado } from '../../motor/sistemas/pessoa';
+import { aparenciaBase, causasDoCondicionamento, fatoresAparencia, fatoresAprendizado, pisoDeForma } from '../../motor/sistemas/pessoa';
 import { anoDe } from '../../motor/tempo';
 import { BotaoAcao } from '../comum';
 import { CONSEQUENCIAS, NOME_ATRIBUTO, O_QUE_E, O_QUE_MOVE, palavraDoAtributo } from '../atributos';
@@ -41,6 +41,20 @@ export function causasDoAtributo(v: Vida, a: Atributo): { aFavor: string[]; cont
 }
 
 /** A predisposição de cada atributo, em palavras (nunca o número interno). */
+/**
+ * REWORK 10.5 · BAL-03 — a média de quem tem a mesma idade (a marca na régua). A régua é de 0 a 100 para todas as
+ * idades: um físico 37 aos 15 sem treino é o comum da idade, não "começar mal"; a marca diz isso (medida em
+ * `scripts/sim/atributos105.ts`, uma população ao acaso, sem treino nem cuidado especial).
+ */
+export function mediaDaIdade(v: Vida, a: Atributo): number {
+  const i = idade(v);
+  if (a === 'saude') return i < 18 ? 89 : i < 40 ? 82 : i < 60 ? 74 : i < 75 ? 64 : 55;
+  if (a === 'fisico') return Math.round(pisoDeForma(i) + (i >= 15 && i < 50 ? 6 : 0));
+  if (a === 'felicidade') return i < 6 ? 69 : i < 18 ? 65 : 58;
+  if (a === 'beleza') return i < 14 ? 56 : i < 45 ? 55 : 50;
+  return i < 8 ? 56 : i < 18 ? 58 : 60;
+}
+
 export function predisposicaoEmPalavras(v: Vida, a: Atributo): string {
   const faixa = (x: number, forte: string, fraca: string, comum: string) => (x >= 0.3 ? forte : x <= -0.3 ? fraca : comum);
   if (a === 'saude') return faixa(predisposicao(v, 'saude'), 'uma constituição forte', 'uma constituição frágil', 'uma constituição comum');
@@ -86,7 +100,7 @@ function LinhaDoAtributo({ vida, a, agir, irPara, abrirPessoa }: { vida: Vida; a
         <summary className="atributo__resumo">
           <span className="atributo__nome">{NOME_ATRIBUTO[a]}</span>
           <span className="atributo__valor" aria-label={`${NOME_ATRIBUTO[a]}: ${valor} de 100`}>{valor}</span>
-          <span className="atributo__regua" aria-hidden><span style={{ width: `${Math.max(2, Math.min(100, valor))}%` }} /></span>
+          <span className="atributo__regua" aria-hidden><span style={{ width: `${Math.max(2, Math.min(100, valor))}%` }} /><i className="atributo__media" style={{ left: `${mediaDaIdade(vida, a)}%` }} /></span>
           <span className="atributo__palavra">{palavra}</span>
           {varia && tendencia !== 'estavel' && <span className={`atributo__variacao atributo__variacao--${tendencia}`}>{varia.dif > 0 ? `+${varia.dif}` : `−${-varia.dif}`} desde {anoDe(varia.desde)}</span>}
         </summary>
@@ -96,6 +110,7 @@ function LinhaDoAtributo({ vida, a, agir, irPara, abrirPessoa }: { vida: Vida; a
             <div><dt>Agora</dt><dd>{valor} — {palavra}</dd></div>
             <div><dt>Mudança recente</dt><dd>{varia ? (varia.dif === 0 ? `igual desde ${anoDe(varia.desde)}` : `${varia.dif > 0 ? `+${varia.dif}` : `−${-varia.dif}`} desde ${anoDe(varia.desde)}`) : 'ainda sem registro anterior'}</dd></div>
             <div><dt>De nascença</dt><dd>{predisposicaoEmPalavras(vida, a)}</dd></div>
+            <div><dt>Na sua idade</dt><dd>a média é uns {mediaDaIdade(vida, a)} (a marca na régua){valor >= mediaDaIdade(vida, a) + 8 ? ' — você está acima' : valor <= mediaDaIdade(vida, a) - 8 ? ' — você está abaixo' : ' — você está na média'}</dd></div>
           </dl>
           {(causas.aFavor.length > 0 || causas.contra.length > 0) ? (
             <div className="atributo__causas">

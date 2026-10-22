@@ -23,7 +23,7 @@ import { clamp, rngDe, type Rng } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import type { CtxI } from './interacoes';
 import { escrever, idadePessoa, lembrarCom, marcarCena, vinculosVivos } from '../nucleo';
-import { flex } from '../texto';
+import { comPreposicao, flex } from '../texto';
 import { municipio, existeMunicipio } from '../dados/lugares';
 import { fraseDoSaber, pendentes, revelar, saberes } from './conhecimento';
 import { atraiGenero, interesseInicial, regraDeIdade } from './romance';
@@ -202,10 +202,10 @@ export function viverCena(c: CtxI, foi: ComoFoi, prog: ProgramaDeCena, n: number
     case 'conversa_seria': {
       confiar(c, 4); afeto(c, 2);
       const assunto = assuntoSerio(c);
-      if (c.vin.historia.filter(h => h.tipo === 'apoio').length < 3) lembrarCom(c.v, c.p.id, `${cap(prog.depois)}, ${nome} falou de ${assunto}. Você ouviu.`, 'apoio', 1);
+      if (c.vin.historia.filter(h => h.tipo === 'apoio').length < 3) lembrarCom(c.v, c.p.id, `${cap(prog.depois)}, ${nome} falou ${comPreposicao('de', assunto)}. Você ouviu.`, 'apoio', 1);
       return { tipo, titulo, texto: r.chance(0.5)
-        ? `${cap(prog.depois)}, ${nome} ficou quiet${flex(c.p.genero, 'o', 'a', 'e')} um tempo — e acabou falando de ${assunto}. Você mais ouviu do que falou. ${Ele(c.p)} agradeceu na despedida.`
-        : `O programa era o de menos: ${prog.depois}, a conversa foi parar em ${assunto}. ${nome} disse que não falava disso com quase ninguém.` };
+        ? `${cap(prog.depois)}, ${nome} ficou quiet${flex(c.p.genero, 'o', 'a', 'e')} um tempo — e acabou falando ${comPreposicao('de', assunto)}. Você mais ouviu do que falou. ${Ele(c.p)} agradeceu na despedida.`
+        : `O programa era o de menos: ${prog.depois}, a conversa foi parar ${comPreposicao('em', assunto)}. ${nome} disse que não falava disso com quase ninguém.` };
     }
     case 'revelacao': {
       const k = falta[0];
@@ -241,7 +241,14 @@ export function viverCena(c: CtxI, foi: ComoFoi, prog: ProgramaDeCena, n: number
     case 'distante': {
       // A distância é notada: fica um incômodo (pequeno) — e a vontade de perguntar de novo.
       tensao(c, 2);
-      return { tipo, titulo, texto: r.chance(0.5) ? `${nome} estava em outro lugar: o celular na mão, a cabeça longe. Você perguntou se estava tudo bem; ${ele(c.p)} disse que sim. Não parecia.` : `${nome} chegou atrasad${flex(c.p.genero, 'o', 'a', 'e')}, respondeu tudo com uma palavra e foi embora cedo. Alguma coisa está acontecendo — e não foi hoje que ${ele(c.p)} contou.` };
+      // REWORK 10.5 · EVT-05: as variações giram (antes, cara ou coroa entre duas — a mesma noite distante voltava).
+      r.chance(0.5);
+      const DISTANTE = [
+        `${nome} estava em outro lugar: o celular na mão, a cabeça longe. Você perguntou se estava tudo bem; ${ele(c.p)} disse que sim. Não parecia.`,
+        `${nome} chegou atrasad${flex(c.p.genero, 'o', 'a', 'e')}, respondeu tudo com uma palavra e foi embora cedo. Alguma coisa está acontecendo — e não foi hoje que ${ele(c.p)} contou.`,
+        `${nome} riu nas horas certas, mas não estava ali. Na despedida, um abraço mais demorado do que o normal — e nenhuma explicação.`
+      ];
+      return { tipo, titulo, texto: DISTANTE[n % DISTANTE.length] };
     }
     case 'piada': {
       afeto(c, 3);

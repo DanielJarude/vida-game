@@ -196,7 +196,8 @@ export function mesadaDaFamilia(v: Vida): number {
   if (i < 8 || i >= 18 || !moraComFamiliaDeOrigem(v)) return 0;
   const rec = recursosDaFamilia(v);
   const base = [0, 25, 60, 150, 400][rec.folga];
-  return Math.round(base * Math.min(1, (i - 6) / 10));
+  // REWORK 10.5 · ECO-04: no custo de vida de onde se mora (antes, reais de uma cidade média brasileira em qualquer país).
+  return Math.round(base * Math.min(1, (i - 6) / 10) * economiaLocal(v.moradia.municipioId).custo);
 }
 
 /** Parte da renda que quem trabalha e mora com a família põe em casa — pelo que a casa precisa, não pela classe. */

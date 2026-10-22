@@ -9,7 +9,7 @@
  *   UX-20   a busca de "onde fica" leva ao médico, não aos atributos
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { precarregar } from '../App';
 import { criarRng } from '../../motor/rng';
 import { transacao } from '../../motor/nucleo';
@@ -133,5 +133,78 @@ describe('UX-20 · a busca de "onde fica"', () => {
     }
     expect(rotuloDoLugar({ area: 'voce', voce: 'saude' })).toBe('Você · Saúde');
     expect(resolverDestino('prontuario')).toEqual({ area: 'voce', voce: 'saude' });
+  });
+});
+
+import { PaginaCaminhos } from '../jogo/CaminhosDaVida';
+import { Trabalho } from '../jogo/Trabalho';
+import { VidaConcreta } from '../jogo/VidaConcreta';
+import { contratar } from '../../motor/sistemas/trabalho';
+import { ocupacao } from '../../motor/dados/ocupacoes';
+import { novaProposta } from '../../motor/sistemas/audiovisual';
+import { marcar } from '../../motor/sistemas/marcas';
+import { conquistasDoAno } from '../../motor/sistemas/fechamento';
+
+describe('CRI-02 · Caminhos → Submundo', () => {
+  it('o adulto vê a divisão Submundo, com a situação, a porta e o que pesa — sem ensinar nada', () => {
+    const v = adulto(25, { semente: 3 });
+    render(<main><PaginaCaminhos vida={v} agir={nada} irPara={() => {}} divisao="submundo" parte="agora" irParte={() => {}} /></main>);
+    expect(document.querySelector('.divisoes-caminhos')!.textContent).toContain('Submundo');
+    const painel = document.querySelector('[data-divisao="submundo"]')!;
+    expect(painel.textContent).toMatch(/Nenhum envolvimento/);
+    expect(within(painel as HTMLElement).getByRole('button', { name: /Procurar um contato/ })).toBeTruthy();
+  });
+  it('a criança não vê a divisão', () => {
+    const v = viverAte(nova({ semente: 8 }), 9);
+    render(<main><PaginaCaminhos vida={v} agir={nada} irPara={() => {}} divisao="inicio" parte="agora" irParte={() => {}} /></main>);
+    expect(document.querySelector('.divisoes-caminhos')!.textContent).not.toContain('Submundo');
+  });
+});
+
+describe('UX-19 / CAR-06 · a carreira de atuação, sempre no mesmo painel, e a ficha do papel', () => {
+  for (const oc of ['ator', 'ator_reconhecido'] as const) {
+    it(`${oc}: resumo, produção, propostas (com a ficha) e dinheiro — sem "freguesia" nem escada de cargos`, () => {
+      const v = em(adulto(34, { semente: 21 }), x => {
+        x.educacao.matricula = undefined; x.trabalho.atual = undefined;
+        contratar(x, criarRng(2), ocupacao(oc), 'convite');
+        x.caminhos.frentes.teatro = { interesse: 90, meses: 200, habilidade: 78, tInicio: x.t - 200, tUltimo: x.t, retomadas: 0, auge: 78 };
+        novaProposta(x, { tipo: 'filme', porte: 2, papel: 'protagonista', casa: 'uma produtora de cinema', titulo: 'A Ilha Calada' });
+      });
+      render(<main><Trabalho vida={v} agir={nada} irPara={() => {}} parte="agora" divisao /></main>);
+      const painel = screen.getByRole('region', { name: 'A carreira de atuação' });
+      for (const t of ['A carreira', 'Em produção', 'Propostas', 'O dinheiro']) expect(painel.textContent).toContain(t);
+      const ficha = painel.querySelector('[data-proposta]')!;
+      expect(ficha.textContent).toMatch(/Sinopse/);
+      expect(ficha.textContent).toMatch(/Na carreira/);
+      expect(document.body.textContent).not.toMatch(/Freguesia|Almoçar com a chefia|curso da empresa/);
+    });
+  }
+});
+
+describe('FAM-01 · o nome em partes', () => {
+  it('Você · No mundo: reconhecimento, prestígio, alcance e redes — coisas diferentes', () => {
+    const v = em(adulto(40, { semente: 31 }), x => { x.notoriedade = { valor: 62, pico: 62, t: x.t, fonte: 'arte' }; });
+    render(<main><Voce vida={v} agir={nada} irPara={() => {}} abrirPessoa={() => {}} parte="mundo" /></main>);
+    const sec = document.querySelector('.fama-ficha')!;
+    for (const t of ['Reconhecimento público', 'Prestígio profissional', 'Alcance']) expect(sec.textContent).toContain(t);
+  });
+});
+
+describe('ECO-04 · o dinheiro da criança', () => {
+  it('aos 9: o cofrinho, pedir aos responsáveis, tarefas pagas, brigadeiros — e comprar o que é da idade com o que guardou', () => {
+    const v = em(viverAte(nova({ semente: 12 }), 9), x => { x.financas.conta = 2000; });
+    render(<main><VidaConcreta vida={v} agir={nada} secao="dinheiro" irSecao={() => {}} irPara={() => {}} abrirPessoa={() => {}} /></main>);
+    expect(screen.getByRole('button', { name: /Pedir dinheiro aos responsáveis/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /brigadeiros/ })).toBeTruthy();
+    cleanup();
+    render(<main><VidaConcreta vida={v} agir={nada} secao="compras" irSecao={() => {}} irPara={() => {}} abrirPessoa={() => {}} /></main>);
+    expect(screen.getByText('Com o seu dinheiro')).toBeTruthy();
+  });
+});
+
+describe('EVT-06 · a conquista do ano', () => {
+  it('a conquista registrada no ano entra no fechamento (e a tela a mostra no alto do ano que passou)', () => {
+    const v = em(adulto(28, { semente: 41 }), x => { marcar(x, 'conquista', 'Venceu o Festival Internacional do Atlântico.', 3); });
+    expect(conquistasDoAno(v)[0]).toMatch(/Atlântico/);
   });
 });

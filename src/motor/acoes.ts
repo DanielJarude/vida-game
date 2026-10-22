@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { disponibilidadeCrianca, executarCrianca, type OqueCrianca } from './sistemas/dinheiroDaCrianca';
 import { praticandoPor } from './sistemas/progressao';
 import { disponibilidadeDaAgenda, disponibilidadeDaPostura, executarNaAgenda, limparAgenda, resultadoDaPostura, type OpAgenda } from './sistemas/agenda';
 import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistemas/memoria';
@@ -241,6 +242,8 @@ export type Acao =
   | { tipo: 'agenda'; op: OpAgenda }
   /** REWORK 10 · CRI-01: a vida à margem e o processo (procurar ajuda, negociar a saída, assumir, cooperar, a defesa, a reabilitação). */
   | { tipo: 'margem'; oque: OqueMargem }
+  /** REWORK 10.5 · ECO-04: o dinheiro da criança (pedir aos responsáveis, brigadeiros com a família, tarefas pagas). */
+  | { tipo: 'crianca'; oque: OqueCrianca }
   /** REWORK 10 · JOG-01: loteria, roleta, caça-níquel e blackjack — só com o dinheiro do jogo (`apostas`). */
   | { tipo: 'aposta'; op: OpAposta };
 
@@ -296,6 +299,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'agenda': return disponibilidadeDaAgenda(v, a.op);
     case 'margem': return disponibilidadeMargem(v, a.oque);
+    case 'crianca': return disponibilidadeCrianca(v, a.oque);
     case 'aposta': return disponibilidadeAposta(v, a.op);
     case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
     case 'oportunidade': {
@@ -777,6 +781,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
   switch (a.tipo) {
     case 'agenda': return ok(executarNaAgenda(v, a.op));
     case 'aposta': { const res = executarAposta(v, r, a.op); if (a.op.jogo === 'controle') return ok(a.op.oque === 'autoexcluir' ? 'Fora das apostas por um ano: a mesa fica fechada para você.' : v.apostas?.limiteAnual ? 'Limite de perda do ano: definido.' : 'O limite saiu.'); return res ? ok(res.texto, res.recebido > res.apostado ? 'bom' : res.recebido < res.apostado ? 'ruim' : 'neutro') : ok('A mão continua: pedir ou parar?'); }
+    case 'crianca': { const x = executarCrianca(v, r, a.oque); return ok(x.texto, x.tom); }
     case 'margem': {
       const resultado = executarMargem(v, r, a.oque);
       // REWORK 10.5 · CRI-02: quem procura o contato recebe a proposta na hora (a mesma decisão de quando ela vem sozinha).

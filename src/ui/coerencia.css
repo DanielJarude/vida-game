@@ -66,3 +66,6 @@
 /* ============================================================ As conquistas do ano (EVT-06) */
 .fechamento--conquistas .temporada { border-left: 4px solid color-mix(in oklab, var(--bom) 55%, var(--fio)); }
 .conquista-do-ano::before { content: '★ '; color: var(--bom); }
+
+/* ============================================================ A média da idade na régua dos atributos (BAL-03) */
+.atributo__regua .atributo__media { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--text-primary); opacity: 0.55; }

@@ -23,6 +23,7 @@
  * história, a gravidade e o que já aconteceu antes (`discutir`, `desculpar`).
  */
 
+import { comPreposicao } from '../texto';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
@@ -86,7 +87,7 @@ export function forcaDaRelacao(v: Vida, vin: Vinculo): number {
 export function porqueDaRelacao(v: Vida, vin: Vinculo): string | undefined {
   const e = estadoDaRelacao(v, vin);
   if (e === 'rompido' && vin.ruptura) return vin.ruptura.porque;
-  if (e === 'conflito' && vin.conflito) return `Discutiram por causa de ${vin.conflito.assunto}.`;
+  if (e === 'conflito' && vin.conflito) return `Discutiram por causa ${comPreposicao('de', vin.conflito.assunto)}.`;
   const h = [...vin.historia].reverse();
   if (e === 'reconciliacao') return h.find(x => x.tipo === 'reconciliacao')?.texto;
   if (e === 'afastado' || e === 'esfriando') return h.find(x => x.tipo === 'distancia' || x.tipo === 'conflito')?.texto;
@@ -141,8 +142,8 @@ export function discutir(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, gravidade: 1 
     vin.tensao = clamp(vin.tensao + 22 + gravidade * 5);
     vin.proximidade = clamp(vin.proximidade - 4 - gravidade * 2);
     vin.conflito = { t: v.t, assunto, gravidade, quem: 'eu' };
-    lembrarCom(v, p.id, `Brigaram por causa de ${assunto}.`, 'conflito', gravidade >= 2 ? 2 : 1);
-    if (d === 'ruptura') romper(v, p, vin, `A amizade acabou numa briga por causa de ${assunto}.`, 'ambos');
+    lembrarCom(v, p.id, `Brigaram por causa ${comPreposicao('de', assunto)}.`, 'conflito', gravidade >= 2 ? 2 : 1);
+    if (d === 'ruptura') romper(v, p, vin, `A amizade acabou numa briga por causa ${comPreposicao('de', assunto)}.`, 'ambos');
   }
   return d;
 }

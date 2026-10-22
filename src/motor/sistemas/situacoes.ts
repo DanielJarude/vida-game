@@ -31,7 +31,7 @@
  */
 
 import { desgastar } from './desgastePolitico';
-import { dinheiroCurto as moedaCurta } from '../texto';
+import { dinheiroCurto as moedaCurta, comPreposicao } from '../texto';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { Posicao, RegistroDeSituacao, Vida } from '../tipos';
@@ -313,7 +313,7 @@ export function candidatosDoAno(v: Vida, tr: Trajetoria): { m: ModeloSituacao; p
     // REWORK 10.5 · EVT-05: na mesma vida, a cena que já aconteceu quase não volta enquanto houver outra possível (a que
     // tem contexto próprio — o lance, o caso — volta mais, porque cada vez é outra; a cena fixa, quase nunca). E a que
     // apareceu nas duas vidas anteriores pesa menos (`memoriaDeVidas`).
-    const novidade = mesmo ? (m.contexto ? 0.5 : 0.12) * (1 + Math.min(1, (v.t - mesmo.t) / 120) * 0.4) : 1.5;
+    const novidade = mesmo ? (m.contexto && tr !== 'cena' ? 0.5 : 0.12) * (1 + Math.min(1, (v.t - mesmo.t) / 120) * 0.4) : 1.5;
     const deOutraVida = v.memoriaDeVidas?.includes(m.id) ? 0.45 : 1;
     out.push({ m, peso: (m.peso?.(v) ?? 1) * novidade * deOutraVida });
   }
@@ -1350,7 +1350,7 @@ const MODELOS_POLITICA_BASE: ModeloSituacao[] = [
   { id: 'pol_bairro', trajetoria: 'politica', tema: 'base', peso: () => 1.2, cabe: v => foraDoMandato(v),
     contexto: (_v, r) => ({ pauta: r.pick(['a rua que alaga toda chuva', 'o posto de saúde que fechou à tarde', 'a linha de ônibus que deixou de passar', 'a creche sem vaga']) }),
     titulo: 'A associação lotou',
-    texto: (_v, d) => `A reunião da associação do bairro lotou por causa de ${d.pauta}. Todo mundo olha para você: querem saber o que vai ser feito.`,
+    texto: (_v, d) => `A reunião da associação do bairro lotou por causa ${comPreposicao('de', String(d.pauta))}. Todo mundo olha para você: querem saber o que vai ser feito.`,
     retorno: (_v, _d, antes) => `Outra reunião cheia. Em ${anoDe(antes.t)}, ${antes.desfecho === 'otimo' || antes.desfecho === 'bom' ? 'o bairro saiu de lá com você' : 'o bairro saiu de lá desconfiado'}.`,
     intencoes: [
       { id: 'levar', texto: 'Levar a pauta à prefeitura, com abaixo-assinado', dica: 'O caminho formal. Demora — e fica registrado.', risco: 0.3, fatores: v => [social(v), base(v), capital(v)],

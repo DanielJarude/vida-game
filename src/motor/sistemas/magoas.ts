@@ -13,6 +13,7 @@
  * Só importa tipos e o `clamp`: é da camada de base (o ano, as interações, as iniciativas e as telas a leem).
  */
 
+import { comPreposicao } from '../texto';
 import { clamp } from '../rng';
 import type { Magoa, Pessoa, Vida, Vinculo } from '../tipos';
 
@@ -106,5 +107,5 @@ export function fraseDaMagoa(v: Vida, vin: Vinculo, p: Pessoa): string | undefin
   const peso = m.ressentimento >= 60 ? 'ainda dói muito' : m.ressentimento >= 30 ? 'ainda pesa' : 'pesa pouco, mas não sumiu';
   const ult = m.tentativas?.[m.tentativas.length - 1];
   const tentativa = ult ? ` ${ult.quem === 'eu' ? 'Você tentou reparar' : `${nome} tentou reparar`} ${ult.resultado === 'aceita' ? 'e foi aceito' : ult.resultado === 'recusada' ? 'e não foi aceito' : 'e ficou sem resposta'}.` : m.quem === 'eu' ? ' Ninguém tentou consertar ainda.' : '';
-  return `${m.quem === 'eu' ? `${nome} ficou magoad${o} com você` : `Você ficou com ${nome} atravessad${o} na garganta`} por ${m.motivo} (${quando}): ${peso}.${tentativa}`;
+  return `${m.quem === 'eu' ? `${nome} ficou magoad${o} com você` : `Você ficou com ${nome} atravessad${o} na garganta`} ${comPreposicao('por', m.motivo)} (${quando}): ${peso}.${tentativa}`;
 }

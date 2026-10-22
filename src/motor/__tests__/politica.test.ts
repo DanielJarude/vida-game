@@ -125,7 +125,9 @@ describe('1. entrada pela vida comunitária', () => {
 describe('2 e 3. candidatura: derrota (não é fim de jogo) e vitória', () => {
   it('derrota: vira história, a profissão continua, a trajetória segue entre mandatos', () => {
     let v = politico(adulto(34), 10, 8);
-    v = transacao(v, x => { contratar(x, criarRng(1), ocupacao('vendedor')); }).vida;
+    // Pré-condição dita (REWORK 10.5): quem segue no meio depois de perder (o voluntariado na semana) — a vida-base mudou
+    // de caminho (o humor dos primeiros anos) e deixou de ter atividade na comunidade, e o nome esfria no mesmo ano.
+    v = transacao(v, x => { contratar(x, criarRng(1), ocupacao('vendedor')); x.rotinas.push({ id: 'voluntariado', nivel: 1, tInicio: x.t }); }).vida;
     v = ateAJanela(v, 'municipal');
     v = candidatar(v, 'vereador');
     v = apurar(v, 'perde');

@@ -78,3 +78,14 @@ export const dinheiroCurto = (v: number): string => formatarDinheiroCurto(v);
 export function capitalizar(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+/**
+ * REWORK 10.5 · UX-21: a preposição contraída com o artigo do que vem depois ("de" + "a família" = "da família";
+ * "em" + "o trabalho" = "no trabalho"). Sem artigo, a preposição fica solta ("de uma fase difícil").
+ */
+export function comPreposicao(p: 'de' | 'em' | 'por', s: string): string {
+  const m = /^(o|a|os|as) /.exec(s);
+  if (!m) return `${p} ${s}`;
+  const art = m[1];
+  return `${p === 'de' ? 'd' : p === 'em' ? 'n' : 'pel'}${art} ${s.slice(m[0].length)}`;
+}

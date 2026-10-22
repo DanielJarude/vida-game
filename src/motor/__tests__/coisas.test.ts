@@ -39,9 +39,15 @@ describe('comprar', () => {
   });
 
   it('idade e casa: criança não compra; quem mora com a família não decide os eletrodomésticos — mas compra o violão com o próprio dinheiro', () => {
-    let v = viverAte(nova({ semente: 42 }), 9);
+    // REWORK 10.5 · ECO-04: antes dos 8, quem compra são os adultos da casa; dos 8 aos 11, o que é da idade dá para
+    // comprar com o dinheiro guardado (com a família junto) — a premissa antiga ("criança não compra nada antes dos 12")
+    // era o problema relatado. A máquina de lavar (da casa) continua não sendo decisão dela.
+    let v = viverAte(nova({ semente: 42 }), 6);
     v = transacao(v, x => { x.financas.conta = 5000; x.momento = null; }).vida;
     expect(disponibilidade(v, { tipo: 'comprar_coisa', coisaId: 'violao' }).grau).toBe('impossivel');
+    v = viverAte(v, 9);
+    v = transacao(v, x => { x.financas.conta = 5000; x.momento = null; }).vida;
+    expect(disponibilidade(v, { tipo: 'comprar_coisa', coisaId: 'maquina_lavar' }).grau).toBe('impossivel');
     v = viverAte(v, 14);
     v = transacao(v, x => { x.financas.conta = 5000; x.momento = null; }).vida;
     expect(['pais', 'parente']).toContain(v.moradia.tipo);

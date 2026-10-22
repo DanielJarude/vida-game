@@ -77,7 +77,10 @@ export function disponibilidadeComprarCoisa(v: Vida, id: string): Veredito {
   if (!c) return bloqueio('impossivel', 'Isso não existe na loja.');
   const i = idade(v);
   if (i < (c.idadeMin ?? 12)) return bloqueio('impossivel', i < 12 ? 'Com essa idade, quem compra são os adultos da casa.' : `A partir dos ${c.idadeMin} anos.`);
-  const a = autonomia(v, 'compra_pessoal');
+  // REWORK 10.5 · ECO-04: dos 8 aos 11, o que é próprio da idade (o violino, a chuteira, o tabuleiro) dá para comprar com
+  // o dinheiro guardado — com a família junto. Antes, a loja abria aos 10 e o motor só deixava aos 12.
+  const crianca = i >= 8 && i < 12 && (c.idadeMin ?? 12) <= i;
+  const a = crianca ? PERMITIDO : autonomia(v, 'compra_pessoal');
   if (a.grau !== 'permitido') return a;
   if (v.justica?.prisao) return bloqueio('incompativel', 'Na prisão, não.');
   // Os móveis e os eletrodomésticos da casa da família são da família (e decisão dos adultos dela).

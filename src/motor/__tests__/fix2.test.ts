@@ -345,7 +345,16 @@ describe('estado pessoal: causas como fonte única', () => {
     v = transacao(v, x => { x.educacao.matricula = undefined; }).vida;
     const alvo = alvoCabeca(v);
     expect(alvo).toBeLessThan(alto);
-    v = avancarAno(v).vida; if (v.momento) v = responder(v);
+    // Pré-condição (REWORK 10.5): o ano do alívio sem um luto. Com a vida-base de agora, morre alguém próximo
+    // exatamente nesse ano, e a cabeça pesa por outra causa; o mesmo ano segue então com outro sorteio — o que se
+    // testa é o alívio da semana, não a falta de lutos.
+    const aliviada = v;
+    for (let tentativa = 0; tentativa < 5; tentativa++) {
+      v = { ...structuredClone(aliviada), rng: (aliviada.rng + tentativa * 7919) >>> 0 };
+      v = avancarAno(v).vida; if (v.momento) v = responder(v);
+      if (!fatoresCabeca(v).some(f => f.id === 'luto')) break;
+    }
+    expect(fatoresCabeca(v).some(f => f.id === 'luto')).toBe(false);
     expect(v.mente.estresse).toBeLessThan(alto);
     // Um ano não basta (comparado ao alvo do próprio ano: a vida material também muda — uma reserva que cresce alivia).
     expect(v.mente.estresse).toBeGreaterThan(Math.min(alvo, alvoCabeca(v)));

@@ -257,6 +257,11 @@ export function processarMilitar(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): voi
   }
 
   // Movimentação: de tempos em tempos, outra cidade. (Um aviso que não virou decisão expira.)
+  // O pedido atendido num ano em que a vida já estava ocupada (um luto, outra decisão) não se perde: volta a ser pedido.
+  if (v.fatos['mil_transferencia'] !== undefined && v.t - v.fatos['mil_transferencia'] >= 12 && v.fatos['mil_foi_pedido'] === v.fatos['mil_transferencia'] && v.fatos['mil_destino'] !== undefined) {
+    v.fatos['mil_pedido_destino'] = v.fatos['mil_destino'];
+    delete v.fatos['mil_destino'];
+  }
   for (const k of ['mil_transferencia', 'mil_curso_oferta']) if (v.fatos[k] !== undefined && v.t - v.fatos[k] >= 12) delete v.fatos[k];
   // Um pedido de movimentação (para perto da família) às vezes é atendido — e a vida pergunta de novo.
   const pedido = v.fatos['mil_pedido_destino'];

@@ -18,7 +18,8 @@ export const ACONTECIMENTOS_105: Conteudo[] = [
     // REL-06: a parceria teve alguém fora do combinado — e você descobriu (`afetos.processarAfetos`).
     id: 'rom105_infiel', tipo: 'decisao', idade: [18, 100], tema: 'amor', prioritario: true, prioridade: 8, repetir: 0,
     papeis: { par: fixo(v => { const x = parceiro(v); return x ? [x.p] : []; }) },
-    quando: c => c.v.fatos[`infiel_descoberto:${c.p.par.id}`] === c.v.t,
+    // Fica esperando até ser respondida (um ano ocupado por outra decisão não apaga o que você descobriu).
+    quando: c => { const inf = c.v.vinculos[c.p.par.id]?.romance?.infiel; return !!inf?.descoberto && inf.respondido === undefined; },
     titulo: 'O que você descobriu',
     texto: c => `Uma mensagem que não era para você ver, um nome repetido demais, uma desculpa que não fechava: ${c.p.par.nome} tem outra pessoa. ${ela(c.p.par.genero).charAt(0).toUpperCase() + ela(c.p.par.genero).slice(1)} ainda não sabe que você sabe.`,
     opcoes: [
@@ -28,6 +29,7 @@ export const ACONTECIMENTOS_105: Conteudo[] = [
           const vin = c.v.vinculos[c.p.par.id];
           const rom = vin.romance;
           const fica = clamp(((rom?.envolvimento ?? 50) - 30) / 100 + c.p.par.temperamento.afabilidade * 0.15, 0.1, 0.75);
+          if (rom?.infiel) rom.infiel.respondido = c.v.t;
           sincronizarMagoa(vin);
           if (c.r.chance(fica)) {
             if (rom) { delete rom.infiel; rom.envolvimento = clamp(rom.envolvimento + 4); }
@@ -45,6 +47,7 @@ export const ACONTECIMENTOS_105: Conteudo[] = [
           const rom = vin.romance;
           const aceita = clamp(((rom?.envolvimento ?? 50) - 25) / 90 + c.p.par.temperamento.responsabilidade * 0.1, 0.1, 0.8);
           sincronizarMagoa(vin);
+          if (rom?.infiel) rom.infiel.respondido = c.v.t;
           if (c.r.chance(aceita)) {
             if (rom) delete rom.infiel;
             vin.tensao = clamp(vin.tensao + 5);
@@ -67,6 +70,7 @@ export const ACONTECIMENTOS_105: Conteudo[] = [
         id: 'calar', texto: 'Não dizer nada, por enquanto',
         resolver: c => {
           const vin = c.v.vinculos[c.p.par.id];
+          if (vin.romance?.infiel) vin.romance.infiel.respondido = c.v.t;
           c.v.mente.estresse = clamp(c.v.mente.estresse + 10);
           c.v.mente.felicidade = clamp(c.v.mente.felicidade - 6);
           sincronizarMagoa(vin);

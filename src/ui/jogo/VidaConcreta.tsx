@@ -77,6 +77,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'dinheiro' && (
           <div className="casa">
             {i >= 8 ? <ODinheiro vida={vida} agir={agir} irParaCasa={() => irSecao('casa')} /> : <p className="nota">Dinheiro, por enquanto, é assunto dos adultos da casa. O seu é o do cofrinho.</p>}
+            {i >= 6 && i < 16 && <DinheiroDaCrianca vida={vida} agir={agir} irCompras={() => irSecao('compras')} />}
             <AFamilia vida={vida} agir={agir} abrirPessoa={abrirPessoa} />
             {i >= 12 && <p className="nota">Os bens, o aplicado e o balanço do que é seu estão em <button type="button" className="link" onClick={() => irSecao('pertences')}>Patrimônio →</button></p>}
           </div>
@@ -189,6 +190,26 @@ function Independencia({ vida, agir, irSecao }: { vida: Vida; agir: (a: Acao) =>
       {mudanca && i >= 18 && (
         <p className="nota">Sair de casa pede {dinheiroCurto(mudanca.valor)} a mais do que você tem ({mudanca.texto}). <button type="button" className="link" onClick={() => irSecao('dinheiro')}>Pedir ajuda à família, em Dinheiro →</button></p>
       )}
+    </Secao>
+  );
+}
+
+/* ------------------------------------------------------------- O dinheiro da criança (REWORK 10.5 · ECO-04) */
+
+/**
+ * O que a criança pode fazer com e por dinheiro — sempre pela família: pedir, ganhar com uma tarefa ou com brigadeiros
+ * (um adulto ajudando), guardar e, com o que guardou, comprar o que é da idade (a chuteira, o tabuleiro, o violino).
+ */
+function DinheiroDaCrianca({ vida, agir, irCompras }: { vida: Vida; agir: (a: Acao) => boolean; irCompras: () => void }) {
+  return (
+    <Secao titulo="O seu dinheiro">
+      <p className="nota">No cofrinho: <strong>{dinheiroCurto(Math.max(0, vida.financas.conta))}</strong>. Com o que guardar, dá para comprar o que é da sua idade — com a família junto.</p>
+      <div className="grupo-acoes">
+        <BotaoAcao vida={vida} acao={{ tipo: 'crianca', oque: 'pedir' }} agir={agir} variante="secundario">Pedir dinheiro aos responsáveis</BotaoAcao>
+        <BotaoAcao vida={vida} acao={{ tipo: 'crianca', oque: 'tarefas' }} agir={agir} variante="discreto">Combinar tarefas de casa pagas</BotaoAcao>
+        <BotaoAcao vida={vida} acao={{ tipo: 'crianca', oque: 'brigadeiro' }} agir={agir} variante="discreto">Vender brigadeiros (com um adulto ajudando)</BotaoAcao>
+      </div>
+      {idade(vida) >= 8 && <button type="button" className="link" onClick={irCompras}>Ver o que dá para comprar →</button>}
     </Secao>
   );
 }

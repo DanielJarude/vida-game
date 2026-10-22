@@ -538,13 +538,15 @@ describe('farda e serviço público: transferência e remoção com família no 
     v = executar(v, P('movimentacao')).vida;
     expect(v.momento?.situacaoId).toBe('mil_movimentacao');
     v = executar(v, { tipo: 'decidir', opcaoId: 'pedir' }).vida;
-    // Seis anos de vida de verdade: se a vida acaba antes (uma morte sorteada aos 30 e poucos), a mesma situação
-    // segue com outro sorteio — o que se testa é o pedido virar transferência, não a sobrevivência.
+    // Oito anos de vida de verdade (eram seis): desde o REWORK 10.5, o pedido atendido num ano já ocupado por outra
+    // decisão (um luto) não se perde — volta no ano seguinte —, e com a vida-base de agora é o que acontece aos 36.
+    // Se a vida acaba antes (uma morte sorteada aos 30 e poucos), a mesma situação segue com outro sorteio — o que se
+    // testa é o pedido virar transferência, não a sobrevivência.
     const pedido = v;
     let foi = false;
     for (let tentativa = 0; tentativa < 5 && !foi; tentativa++) {
       v = { ...structuredClone(pedido), rng: (pedido.rng + tentativa * 7919) >>> 0 };
-      for (let k = 0; k < 6 && !foi && !v.morte; k++) {
+      for (let k = 0; k < 8 && !foi && !v.morte; k++) {
         v = avancarAno(v).vida;
         while (v.momento && !v.morte) { if (v.momento.situacaoId === 'mil_transferencia') { v = responder(v, 'familia'); foi = v.moradia.municipioId === 'porto-alegre-rs'; } else v = responder(v); }
       }

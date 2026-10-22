@@ -346,7 +346,7 @@ export interface Romance {
    */
   acordo?: 'aberto';
   /** REWORK 10.5 · REL-06: a parceria (NPC) teve alguém fora do combinado: quando começou e quando você soube. */
-  infiel?: { t: number; descoberto?: number };
+  infiel?: { t: number; descoberto?: number; respondido?: number };
 }
 
 /** Um marco da história compartilhada. Só o que importa — nunca "um ano normal". */

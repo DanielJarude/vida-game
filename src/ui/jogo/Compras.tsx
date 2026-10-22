@@ -17,11 +17,12 @@
 
 import { useMemo, type ReactNode } from 'react';
 import type { Vida } from '../../motor/tipos';
-import type { Acao } from '../../motor/acoes';
+import { disponibilidade, type Acao } from '../../motor/acoes';
+import { podeTentar } from '../../motor/plausibilidade';
 import { idade, idadePessoa } from '../../motor/nucleo';
 import { AUTONOMIA } from '../../motor/sistemas/autonomia';
 import { coisasDaVida, coisasDaLoja, precoDaCoisa, temLojaNaCidade } from '../../motor/sistemas/coisas';
-import { coisa, NOME_LOJA, type LojaDeCoisas } from '../../motor/dados/coisas';
+import { coisa, COISAS, NOME_LOJA, type LojaDeCoisas } from '../../motor/dados/coisas';
 import { animaisDoAbrigo, lojaNaCidade, ofertasDeImoveis, ofertasDeVeiculos, type LojaDeVeiculo } from '../../motor/sistemas/mercado';
 import { disponivel, seguranca } from '../../motor/sistemas/dinheiro';
 import { formaDaVersao, modeloVeiculo, versaoVeiculo } from '../../motor/dados/bens';
@@ -169,13 +170,13 @@ function CartaoVitrine({ x, i, abrir }: { x: Vitrine; i: number; abrir: (l: Qual
 export function Compras({ vida, agir, abrir }: Props) {
   const i = idade(vida);
   const grupos = useMemo(() => vitrines(vida), [vida]);
-  if (i < 10) return <ComprasDaCrianca vida={vida} grupos={grupos} />;
+  if (i < 10) return <ComprasDaCrianca vida={vida} grupos={grupos} agir={agir} />;
   const seg = seguranca(vida);
   const hab = habilitacaoDaVida(vida);
   return (
     <div className="compras">
       <header className="folio folio--compras">
-        <p className="folio__kicker"><span className="folio__area">Vida · Compras</span>{i >= 12 ? <> · na conta: <strong>{dinheiroCurto(Math.max(0, vida.financas.conta))}</strong>{i >= 18 ? ` · ${leituraDaSeguranca(vida).palavra.toLowerCase()}` : ''}</> : null}</p>
+        <p className="folio__kicker"><span className="folio__area">Vida · Compras</span>{i >= 8 ? <> · {i < 12 ? 'no cofrinho' : 'na conta'}: <strong>{dinheiroCurto(Math.max(0, vida.financas.conta))}</strong>{i >= 18 ? ` · ${leituraDaSeguranca(vida).palavra.toLowerCase()}` : ''}</> : null}</p>
         <h1 className="folio__titulo">{i < 12 ? 'Quase tudo ainda vem dos adultos da casa' : i < 18 ? 'O que dá para comprar com o seu dinheiro' : seg.nivel === 'no_vermelho' || seg.nivel === 'apertado' ? 'O dinheiro está curto: olhe antes de comprar' : 'O que esta cidade tem para a sua vida'}</h1>
       </header>
       {grupos.map(g => {
@@ -212,7 +213,7 @@ export function Compras({ vida, agir, abrir }: Props) {
  * Antes dos 10: a casa de onde as coisas vêm — quem paga, como anda o dinheiro de casa, o que já é seu — e, recolhido,
  * quando cada lugar se abre. Nenhuma vitrine de portas fechadas.
  */
-function ComprasDaCrianca({ vida, grupos }: { vida: Vida; grupos: ReturnType<typeof vitrines> }) {
+function ComprasDaCrianca({ vida, grupos, agir }: { vida: Vida; grupos: ReturnType<typeof vitrines>; agir: (a: Acao) => boolean }) {
   const quem = responsaveis(vida).filter(x => x.p.vivo);
   const meus = coisasDaVida(vida);
   const lugares = grupos.flatMap(g => g.lugares).filter(x => x.idadeMin > 0).sort((a, b) => a.idadeMin - b.idadeMin);
@@ -240,6 +241,18 @@ function ComprasDaCrianca({ vida, grupos }: { vida: Vida; grupos: ReturnType<typ
           <ul className="vitrines__seus">{meus.map(t => { const c = coisa(t.coisaId); const x = varianteDe(t); return c ? <li key={t.id}><DesenhoObjeto coisaId={t.coisaId} cor={x.cor} tamanho={56} rotulo={c.nome} /><span>{cap(c.nome)}</span></li> : null; })}</ul>
         ) : <p className="vazio">Por enquanto, o que é seu cabe numa gaveta: os brinquedos, o material da escola.</p>}
       </section>
+      {/* REWORK 10.5 · ECO-04: dos 8 anos, o que é da idade dá para comprar com o dinheiro guardado (com a família junto):
+          só aparece o que dá de fato — nenhuma vitrine de portas fechadas. */}
+      {idade(vida) >= 8 && (() => {
+        const daIdade = COISAS.filter(c => (c.idadeMin ?? 12) <= idade(vida) && podeTentar(disponibilidade(vida, { tipo: 'comprar_coisa', coisaId: c.id })));
+        return (
+          <section className="vitrines" aria-labelledby="com-o-seu-dinheiro">
+            <h2 id="com-o-seu-dinheiro" className="vitrines__titulo">Com o seu dinheiro</h2>
+            <p className="nota">No cofrinho: {dinheiroCurto(Math.max(0, vida.financas.conta))}. {daIdade.length ? 'Dá para comprar, com a família junto:' : 'Ainda não dá para nada da sua idade — guardando, chega lá (a mesada, um presente, uma tarefa paga).'}</p>
+            {daIdade.length > 0 && <div className="grupo-acoes">{daIdade.slice(0, 4).map(c => <BotaoAcao key={c.id} vida={vida} acao={{ tipo: 'comprar_coisa', coisaId: c.id }} agir={agir} variante="discreto" ocultarBloqueado>{`${cap(c.nome)} (${dinheiroCurto(precoDaCoisa(vida, c.id))})`}</BotaoAcao>)}</div>}
+          </section>
+        );
+      })()}
       <Secao titulo="Quando cada lugar se abre" recolhivel aberta={false}>
         <ul className="vitrines__idades">
           {porIdade.map(a => (

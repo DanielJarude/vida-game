@@ -17,7 +17,7 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import { escrever, lembrarCom } from '../nucleo';
 import { bloqueio, PERMITIDO } from '../plausibilidade';
-import { flex } from '../texto';
+import { flex, comPreposicao } from '../texto';
 import type { CtxI, Interacao, Saida } from './interacoes';
 import { assuntoDaDiscussao, desculpar, discutir, ehAmizade, estadoDaRelacao, reconciliar, romper, type DesfechoDaDiscussao } from './lacos';
 
@@ -38,7 +38,7 @@ const marcar = (c: CtxI, chave: string) => { c.v.fatos[`${chave}_${c.p.id}`] = c
 function contar(c: CtxI, d: DesfechoDaDiscussao, assunto: string, cobrou: boolean): Saida {
   const tema = c.vin.parentesco ? 'familia' : c.vin.romance ? 'amor' : 'amizade';
   if (d === 'ruptura' || d === 'briga') {
-    escrever(c.v, { texto: d === 'ruptura' ? `Brigou feio com ${c.p.nome} por causa de ${assunto}. A amizade acabou ali.` : `Brigou com ${c.p.nome} por causa de ${assunto}.`, relevancia: d === 'ruptura' ? 'biografia' : 'cotidiano', tema, tom: 'ruim', escolha: true, pessoas: [c.p.id] });
+    escrever(c.v, { texto: d === 'ruptura' ? `Brigou feio com ${c.p.nome} por causa ${comPreposicao('de', assunto)}. A amizade acabou ali.` : `Brigou com ${c.p.nome} por causa ${comPreposicao('de', assunto)}.`, relevancia: d === 'ruptura' ? 'biografia' : 'cotidiano', tema, tom: 'ruim', escolha: true, pessoas: [c.p.id] });
   }
   const resultado = d === 'resolveu'
     ? (cobrou ? `Você disse o que incomodava. ${c.p.nome} ouviu, explicou o lado ${flex(c.p.genero, 'dele', 'dela', 'delu')} — e no fim os dois sabiam onde estavam.` : `Vocês discordaram de verdade, e ninguém saiu menor da conversa. ${cap(ele(c))} respeitou você mais por ter dito.`)

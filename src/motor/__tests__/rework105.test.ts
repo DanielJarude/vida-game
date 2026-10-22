@@ -43,6 +43,11 @@ import type { ContratoAV } from '../tipos';
 import { causasDoDesgaste, desgastar, esfriarNoAno } from '../sistemas/desgastePolitico';
 import { acoesPoliticas } from '../sistemas/politica';
 import { marcar } from '../sistemas/marcas';
+import { indiceDaGuarnicao, MUNIC_POR_INDICE, processarMilitar } from '../sistemas/militar';
+import { abalar } from '../sistemas/abalo';
+import { mesadaDaFamilia } from '../sistemas/origem';
+import { fatoresHumor } from '../sistemas/estado';
+import { comPreposicao } from '../texto';
 import { conquistasDoAno } from '../sistemas/fechamento';
 import { trajetoriasDaVida } from '../sistemas/legado';
 import { creditosDoCurso, disciplinasDoAno, gradeDoCurso, historicoDe, registrosDoCurso } from '../sistemas/historicoAcademico';
@@ -374,7 +379,7 @@ describe('REL-06 · infidelidade, relações paralelas e acordos', () => {
 describe('REL-09 · intimidade, compromisso — e o casamento não dá confiança máxima', () => {
   it('desabafar aproxima por dentro muito mais que um cinema', () => {
     let id = '';
-    const v = em(adulto(30, { semente: 241 }), x => { const p = pessoaNova(x, 30, 'feminino'); const vin = vincular(x, p, { origem: 'escola', proximidade: 65, estagio: 'amigo_proximo' }); vin.confianca = 60; id = p.id; });
+    const v = em(adulto(30, { semente: 241 }), x => { x.financas.conta = 5000; abalar(x, 'um ano difícil', -8, 9); const p = pessoaNova(x, 30, 'feminino'); const vin = vincular(x, p, { origem: 'escola', proximidade: 65, estagio: 'amigo_proximo' }); vin.confianca = 60; id = p.id; });
     const a = executar(v, { tipo: 'pessoa', pessoaId: id, interacao: 'desabafar' }).vida.vinculos[id];
     const b = executar(v, { tipo: 'pessoa', pessoaId: id, interacao: 'cinema' }).vida.vinculos[id];
     expect(a.intimidade ?? 0).toBeGreaterThan(b.intimidade ?? 0);
@@ -612,5 +617,59 @@ describe('EVT-06 / EVT-08 · conquistas avisadas e cronologia', () => {
     const v = em(adulto(40, { semente: 952 }), x => { x.fatos['premio_literario'] = x.t - 24; x.rotinas.push({ id: 'escrever', nivel: 2, tInicio: x.t - 60 }); });
     const t = trajetoriasDaVida(v).find(x => x.id === 'arte:escrita')!;
     expect(t.de).toBeLessThanOrEqual(anoDe(v.t - 60));
+  });
+});
+
+describe('ECO-04 · o dinheiro da criança', () => {
+  it('pedir aos responsáveis, tarefas pagas, brigadeiros (com um adulto) — uma vez por ano cada; e comprar o que é da idade', () => {
+    let v = em(viverAte(nova({ semente: 1201, municipioId: 'recife-pe' }), 9), x => { x.financas.conta = 0; });
+    expect(disponibilidade(v, { tipo: 'crianca', oque: 'tarefas' }).grau).toBe('permitido');
+    v = executar(v, { tipo: 'crianca', oque: 'tarefas' }).vida;
+    expect(v.financas.conta).toBeGreaterThan(0);
+    expect(disponibilidade(v, { tipo: 'crianca', oque: 'tarefas' }).grau).toBe('incompativel');
+    v = executar(v, { tipo: 'crianca', oque: 'brigadeiro' }).vida;
+    v = executar(v, { tipo: 'crianca', oque: 'pedir' }).vida;
+    v = em(v, x => { x.financas.conta = 5000; });
+    expect(disponibilidade(v, { tipo: 'comprar_coisa', coisaId: 'violao' }).grau).toBe('permitido');
+    expect(disponibilidade(viverAte(nova({ semente: 1202 }), 5), { tipo: 'crianca', oque: 'brigadeiro' }).grau).toBe('impossivel');
+  });
+  it('a mesada é do custo de vida de onde se mora, e parte dela fica guardada', () => {
+    const recife = em(viverAte(nova({ semente: 1203, municipioId: 'recife-pe' }), 12), x => { x.origem.reserva = 1e6; });
+    expect(mesadaDaFamilia(recife)).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('BAL-03 · o começo da vida', () => {
+  it('o bebê bem cuidado tem o equilíbrio do humor perto de onde nasceu (antes, um terço "caía" no primeiro ano)', () => {
+    const bebe = viverAte(nova({ semente: 1301 }), 1);
+    expect(fatoresHumor(bebe).some(f => f.id === 'infancia')).toBe(true);
+    expect(fatoresHumor(viverAte(nova({ semente: 1302 }), 7)).some(f => f.id === 'infancia')).toBe(false);
+  });
+});
+
+describe('UX-21 · a preposição contraída', () => {
+  it('"de a família" vira "da família"; sem artigo, fica solta', () => {
+    expect(comPreposicao('de', 'a família')).toBe('da família');
+    expect(comPreposicao('em', 'o trabalho')).toBe('no trabalho');
+    expect(comPreposicao('por', 'o dinheiro emprestado')).toBe('pelo dinheiro emprestado');
+    expect(comPreposicao('de', 'uma fase difícil')).toBe('de uma fase difícil');
+  });
+});
+
+describe('Movimentação militar · o pedido que caiu num ano ocupado', () => {
+  it('a transferência pedida e não respondida (um luto ocupou o ano) volta a ser pedido — não vira outra cidade ao acaso', () => {
+    for (let s = 0; s < 12; s++) {
+      const v = em(adulto(34, { semente: 1400 + s, municipioId: 'porto-alegre-rs' }), x => {
+        x.educacao.matricula = undefined; x.trabalho.atual = undefined;
+        contratar(x, criarRng(3), ocupacao('sargento'), 'concurso');
+        const m = x.caminhos.militar!;
+        m.forca = 'exercito'; m.guarnicao = 'manaus-am'; m.tGuarnicao = x.t - 60;
+        const pedido = indiceDaGuarnicao('porto-alegre-rs');
+        x.fatos['mil_transferencia'] = x.t - 12; x.fatos['mil_foi_pedido'] = x.t - 12; x.fatos['mil_destino'] = pedido;
+        processarMilitar(x, criarRng(90 + s), x.trabalho.atual!, ocupacao('sargento'));
+      });
+      const destino = v.fatos['mil_transferencia'] === v.t ? v.fatos['mil_destino'] : v.fatos['mil_pedido_destino'];
+      expect(MUNIC_POR_INDICE(destino ?? -1)).toBe('porto-alegre-rs');
+    }
   });
 });

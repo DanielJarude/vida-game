@@ -221,6 +221,10 @@ export function fatoresHumor(v: Vida): Fator[] {
   const rede = apoios(v);
   const somaRede = rede.reduce((s, a) => s + a.peso, 0);
   if (somaRede > 0) out.push({ id: 'rede', texto: `gente por perto: ${listaNatural(rede.slice(0, 2).map(a => a.p.nome))}`, efeito: Math.min(12, somaRede * 3), pessoaId: rede[0].p.id });
+  // REWORK 10.5 · BAL-03: o bebê bem cuidado é, em geral, contente — o equilíbrio do humor na infância
+  // considera isso (antes, o bebê nascia com 72 e o próprio motor o puxava para ~63: um terço dos bebês "caía" no
+  // primeiro ano, e a ficha mostrava a felicidade descendo sem motivo). Só com alguém da casa por perto.
+  if (i < 4 && rede.some(a => a.vin.convivio.includes('casa') && a.vin.proximidade >= 50)) out.push({ id: 'infancia', texto: 'uma infância cuidada', efeito: i < 3 ? 8 : 4 });
   // REWORK 9.7 · ATR-02: a saúde que pesa no humor é a comparada com o que se espera na idade — depois dos 60, a régua
   // desce (aos 75, 51). Antes, 60 fixo: todo idoso com a saúde da idade carregava −2 a −4 de humor só por envelhecer.
   const saude = (v.corpo.saude - (i <= 60 ? 60 : Math.max(45, 60 - (i - 60) * 0.6))) / 5;

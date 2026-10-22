@@ -624,7 +624,8 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
     texto: c => `O contrato vence e o dono quer subir o aluguel em 15%: de ${fmt(c.v.moradia.aluguel)} para ${fmt(Math.round(c.v.moradia.aluguel * 1.15))}.`,
     opcoes: [
       { id: 'negociar', texto: 'Negociar (você paga em dia há anos)', comportamento: { coragem: 1 },
-        resolver: c => { const ok = c.r.chance(0.6); return { texto: ok ? 'Fecharam em 6%. O dono gosta de inquilino que paga em dia.' : 'O dono não baixou nada.', memoria: null, efeito: () => { c.v.moradia.aluguel = Math.round(c.v.moradia.aluguel * (ok ? 1.06 : 1.15)); } }; } },
+        // REWORK 10.5 · EVT-07: a negociação que não dá certo não é igual a aceitar — baixa pouco, e o desgaste com o dono fica.
+        resolver: c => { const ok = c.r.chance(0.6); return { texto: ok ? 'Fecharam em 6%. O dono gosta de inquilino que paga em dia.' : 'O dono baixou quase nada (12%) — e ficou um clima de cobrança a cada mês.', memoria: null, efeito: () => { c.v.moradia.aluguel = Math.round(c.v.moradia.aluguel * (ok ? 1.06 : 1.12)); if (!ok) { c.v.mente.estresse = clamp(c.v.mente.estresse + 3); c.v.fatos['dono_cobra'] = c.v.t; } } }; } },
       { id: 'aceitar', texto: 'Aceitar', resolver: c => ({ texto: 'Mais caro, mas sem mudança.', memoria: null, efeito: () => { c.v.moradia.aluguel = Math.round(c.v.moradia.aluguel * 1.15); } }) },
       { id: 'procurar', texto: 'Procurar outro lugar (em Vida · Casa)', resolver: c => ({ texto: 'Você começou a olhar anúncios. A decisão é sua, na imobiliária.', memoria: null, efeito: () => { c.v.moradia.aluguel = Math.round(c.v.moradia.aluguel * 1.15); c.v.fatos['procurando_casa'] = c.v.t; } }) }
     ]

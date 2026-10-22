@@ -377,6 +377,9 @@ describe('E — da amizade ao romance: dá para tentar, e a resposta não é gar
     for (let k = 0; k < 40; k++) {
       let v = adulto(27, { semente: 51, genero: 'masculino' });
       v.rng = (v.rng + k * 7919) >>> 0;
+      // Pré-condição dita (REWORK 10.5): o teste é sobre o que vem DEPOIS da reciprocidade; a vida-base mudou de caminho
+      // (o humor dos primeiros anos) e ficou com pouca chance de ser correspondida — a aparência é a de quem tem chance.
+      v.corpo.aparencia = Math.max(v.corpo.aparencia, 75);
       const { p } = amigaDe(v, 75, 'homens');
       v = executar(v, { tipo: 'pessoa', pessoaId: p.id, interacao: 'demonstrar_interesse' }).vida;
       const rom = v.vinculos[p.id].romance;

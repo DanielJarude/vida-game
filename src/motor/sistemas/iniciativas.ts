@@ -27,7 +27,7 @@ import { clamp } from '../rng';
 import type { Chamado, Pessoa, TipoChamado, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { abalar } from './abalo';
-import { flex } from '../texto';
+import { flex, comPreposicao } from '../texto';
 import { papelDe, vinculoReal, type Papel } from './vinculos';
 import { atraiGenero, podeTerRomance } from './romance';
 import { compatibilidade } from './social';
@@ -351,7 +351,7 @@ function novaIniciativa(v: Vida, r: Rng): void {
       const t = p.temperamento;
       const ultima = m.tentativas?.[m.tentativas.length - 1];
       const podeTentar = !ultima || v.t - ultima.t >= 24;
-      if (podeTentar && m.quem === 'outro' && t.afabilidade > 0 && v.fatos[`desculpas_recusou_${p.id}`] === undefined) { lista.push({ p, vin, tipo: 'desculpas', peso: 0.8 + t.afabilidade, texto: `${p.nome} procurou você: disse que ainda pensa em ${m.motivo} e que queria pedir desculpas direito.` }); continue; }
+      if (podeTentar && m.quem === 'outro' && t.afabilidade > 0 && v.fatos[`desculpas_recusou_${p.id}`] === undefined) { lista.push({ p, vin, tipo: 'desculpas', peso: 0.8 + t.afabilidade, texto: `${p.nome} procurou você: disse que ainda pensa ${comPreposicao('em', m.motivo)} e que queria pedir desculpas direito.` }); continue; }
       if (podeTentar && m.quem === 'eu' && vin.proximidade >= 35 && t.estabilidade > -0.2) { lista.push({ p, vin, tipo: 'cobranca', peso: 0.7, texto: `${p.nome} disse que ${m.motivo} ainda não desceu — e que quer conversar sobre isso.`, assunto: m.motivo }); continue; }
       continue;
     }
