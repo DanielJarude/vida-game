@@ -305,7 +305,9 @@ describe('Fase B · a agenda da semana: horários reais, conflitos reais, conseq
     const conflitos = analisarEntrada(v, { tipo: 'emprego', ocupacaoId: 'atendente', via: 'oportunidade' });
     const c = conflitos.find(x => x.com === 'agenda');
     expect(c?.alternativas.some(a => a.larga === 'turno_escola:noite')).toBe(true);
-    expect(c?.alternativas.some(a => a.conciliar)).toBe(true);
+    // REWORK 10.6 · AGE-01: "tentar dar conta dos dois" deixou de existir — ninguém fica em dois compromissos presenciais
+    // obrigatórios ao mesmo tempo. O que segue (a presença cobrada) continua valendo para o que chega sem passar pela agenda.
+    expect(c?.alternativas.some(a => a.conciliar)).toBe(false);
     const comTrabalho = transacao(v, (x, r) => { contratar(x, r, ocupacao('atendente')); }).vida;
     const p = presencaNaEscola(comTrabalho);
     expect(p).toBeLessThan(0.5);

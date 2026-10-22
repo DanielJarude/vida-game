@@ -147,8 +147,8 @@ function anoDoProjeto(v: Vida, r: Rng, p: ProjetoArtistico): void {
   const minimoH = p.linguagem === 'musica' ? 78 : p.linguagem === 'teatro' ? 68 : 78;
   // REWORK 10.5 · CAR-12: quem já vive disso no mesmo degrau (ou acima) não recebe o convite de entrada da própria
   // carreira — a atriz conhecida não é "chamada para a próxima montagem, com cachê" como quem começa.
-  const atualOc = v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.ocupacaoId) : undefined;
-  const jaVive = !!atualOc && atualOc.trilha === ocupacaoOuNula(oc)?.trilha && atualOc.nivel >= (ocupacaoOuNula(oc)?.nivel ?? 0);
+  // REWORK 10.6 · CAR-15: a trajetória paralela também conta (antes, o ator em paralelo recebia o convite de entrada de novo).
+  const jaVive = [v.trabalho.atual, v.trabalho.paralela].some(e => { const x = e ? ocupacaoOuNula(e.ocupacaoId) : undefined; return !!x && x.trilha === ocupacaoOuNula(oc)?.trilha && x.nivel >= (ocupacaoOuNula(oc)?.nivel ?? 0); });
   if (h >= minimoH && !jaVive && p.publico >= (p.linguagem === 'teatro' ? 58 : 72) && v.trabalho.atual?.ocupacaoId !== oc && !(p.linguagem === 'danca' && i > 27)
     && (v.caminhos.ultimas['convite_arte'] === undefined || v.t - v.caminhos.ultimas['convite_arte'] >= 36) && r.chance(clamp((p.publico - 66) / 300 + (h - minimoH) / 350, 0.01, 0.045))) {
     novaOportunidade(v, {

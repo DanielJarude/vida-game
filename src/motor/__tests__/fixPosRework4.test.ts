@@ -354,6 +354,8 @@ describe('estresse: um indicador humano, com o porquê, o que ajuda e consequên
   it('estresse no limite cobra no ano: o desempenho cai e a casa sente (a tela avisa antes)', () => {
     const v = pesada();
     v.mente.estresse = 85;
+    // Pré-condição dita (REWORK 10.6): o ano no limite é o primeiro — a vida sorteada pode já trazer anos de estresse alto.
+    v.mente.estresseAlto = undefined;
     const l = leituraDoEstresse(v);
     expect(l.nivel).toBe('no limite');
     expect(l.riscos.join(' ')).toMatch(/desempenho|brigas/);

@@ -64,7 +64,7 @@ import { historicoDaCarreira, perfilDe, resumoDaCarreira, semVinculo } from '../
 import { comoAcabou, linhaDoTecnico, passagemAtual, periodoDaPassagem, resumoDaPassagem, resumoDoTecnico } from '../../motor/sistemas/tecnico';
 import { momentosDaCarreira } from '../../motor/sistemas/situacoes';
 import { podeTentar } from '../../motor/plausibilidade';
-import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Medidor, Percurso, Renomear, Secao, type Passo } from '../comum';
+import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Linha, Medidor, Percurso, Renomear, Secao, type Passo } from '../comum';
 import { EmblemaDoOficio } from './Emblemas';
 import { Retrato } from '../avatar/Retrato';
 import { idadePessoa } from '../../motor/nucleo';
@@ -168,6 +168,9 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         </div>
       </header>}
 
+      {/* REWORK 10.6 · C3: as ações principais do trabalho, logo no alto (procurar ou mudar, as candidaturas, a carreira,
+          as outras possibilidades) — antes, "procurar emprego" exigia saber que a procura morava na terceira aba. */}
+      {parte === 'agora' && div && !preso && modo !== 'crianca' && <AcoesPrincipaisDoTrabalho vida={vida} irPara={irPara} />}
       {em('agora') && <section className="camada camada--agora" aria-labelledby="camada-agora">
         <h2 id="camada-agora" className="camada__titulo">A sua situação agora</h2>
         {(e || modo === 'negocio') && modo !== 'politica' && (
@@ -251,9 +254,12 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
       {em('desenvolvimento') && <Devolutivas vida={vida} tipos={div ? ['entrevista'] : undefined} />}
       {em('oportunidades') && <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => !/^(selecao|vestibular):/.test(o.id)} />}
       {em('agora') && <Trajetorias vida={vida} />}
-      {em('historico') && !div && <CurriculoArtistico vida={vida} agir={agir} />}
+      {/* REWORK 10.6 · C3: Minha carreira — a experiência, os projetos e o reconhecimento de quem já tem uma (antes, na
+          divisão, o currículo artístico e a carreira de técnico não apareciam aqui). */}
+      {parte === 'historico' && <ExperienciaNaCarreira vida={vida} />}
+      {em('historico') && (!div || modo === 'artista') && <CurriculoArtistico vida={vida} agir={agir} />}
       {em('historico') && (!div || modo === 'atleta') && <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta' || parte === 'historico'} />}
-      {em('historico') && !div && <CarreiraComoTecnico vida={vida} />}
+      {em('historico') && <CarreiraComoTecnico vida={vida} />}
       {em('historico') && <MomentosDaCarreira vida={vida} />}
       {em('historico') && (vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <PorOndePassou vida={vida} />}
     </div>
@@ -261,6 +267,52 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
 }
 
 /** REWORK 10.5 · UX-17: as candidaturas e seleções em andamento, numa lista só (com quando sai o resultado). */
+/**
+ * REWORK 10.6 · C3 — as ações principais do trabalho: procurar (ou mudar de) trabalho, as candidaturas e entrevistas, a
+ * minha carreira e as outras possibilidades. O rótulo segue a vida: quem tem carreira não lê "procurar o primeiro emprego".
+ */
+function AcoesPrincipaisDoTrabalho({ vida, irPara }: { vida: Vida; irPara: (a: Aba) => void }) {
+  const e = vida.trabalho.atual;
+  const modo = modoDoTrabalho(vida);
+  const enviadas = vida.anoAtual.acoes.filter(x => x.startsWith('candidatura:')).length + vida.trabalho.candidaturas.length;
+  const carreira = !!e && !['aprendiz', 'estagio'].includes(e.contrato);
+  const acoes: { id: string; rotulo: string; destino: Aba; nota?: string }[] = [
+    { id: 'vagas', rotulo: e ? 'Mudar de trabalho: ver vagas' : vida.trabalho.historico.length ? 'Procurar trabalho' : 'Procurar o primeiro trabalho', destino: 'vagas', nota: e && (modo === 'atleta' || modo === 'artista') ? 'a carreira continua sua — mudar é escolha' : undefined },
+    { id: 'candidaturas', rotulo: 'Candidaturas e entrevistas', destino: 'vagas', nota: enviadas ? `${enviadas} em andamento` : 'nenhuma em andamento' },
+    { id: 'carreira', rotulo: 'Minha carreira', destino: 'minha_carreira', nota: carreira ? 'experiência, currículo, projetos, reconhecimento' : 'o currículo, por onde você passou' },
+    { id: 'outras', rotulo: 'Outras possibilidades', destino: 'negocio', nota: 'por conta, um negócio, um trabalho em paralelo' }
+  ];
+  return (
+    <ul className="acoes-principais acoes-principais--trabalho" aria-label="Ações principais do trabalho">
+      {acoes.map(a => (
+        <li key={a.id}>
+          <button type="button" className="acao-principal" data-acao-principal={a.id} onClick={() => irPara(a.destino)}>
+            <span className="acao-principal__rotulo">{a.rotulo}</span>
+            {a.nota && <span className="acao-principal__nota">{a.nota}</span>}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A experiência que a carreira acumulou: o trabalho de agora e desde quando, os anos por área, o que já se fez. */
+function ExperienciaNaCarreira({ vida }: { vida: Vida }) {
+  const e = vida.trabalho.atual;
+  const exp = Object.entries(vida.trabalho.experiencia ?? {}).filter(([, m]) => m >= 12).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  if (!e && !exp.length && !vida.trabalho.historico.length) return null;
+  const anos = (m: number) => { const a = Math.floor(m / 12); return `${a} ${a === 1 ? 'ano' : 'anos'}`; };
+  return (
+    <section className="experiencia-carreira" aria-labelledby="titulo-experiencia" data-painel="minha-carreira">
+      <h2 id="titulo-experiencia" className="secao-fio">A experiência</h2>
+      {e && <Linha rotulo="Agora" valor={`${cap(nomeOcupacao(vida, ocupacao(e.ocupacaoId)))}, desde ${anoDe(e.tInicio)}`} />}
+      {vida.trabalho.paralela && <Linha rotulo="Em paralelo" valor={cap(nomeOcupacao(vida, ocupacao(vida.trabalho.paralela.ocupacaoId)))} />}
+      {exp.map(([trilha, m]) => <Linha key={trilha} rotulo={ROTULO_TRILHA[trilha] ? cap(ROTULO_TRILHA[trilha]) : trilha} valor={anos(m)} />)}
+      <Linha rotulo="Trabalhos" valor={String(vida.trabalho.historico.length + (e ? 1 : 0))} />
+    </section>
+  );
+}
+
 function CandidaturasEmAndamento({ vida }: { vida: Vida }) {
   const concursos = vida.trabalho.candidaturas;
   const vagas = vida.anoAtual.acoes.filter(a => a.startsWith('candidatura:')).map(a => ocupacaoOuNula(a.split(':')[1])).filter((x): x is Ocupacao => !!x && !concursos.some(c => c.ocupacaoId === x.id));

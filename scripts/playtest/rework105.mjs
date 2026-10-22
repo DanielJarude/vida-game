@@ -221,7 +221,9 @@ for (const [nome, sv, area, ...passos] of cenas) {
         } else if (passo.startsWith('aba:') || passo.startsWith('secao:')) {
           const nomeAba = passo.slice(passo.indexOf(':') + 1);
           // (no build da base, "Patrimônio" ainda se chamava "Pertences")
-          let t = p.getByRole('tab', { name: nomeAba, exact: true }).first();
+          // REWORK 10.6 · A2: a aba pode trazer um contador ("Saúde 1"): o nome é o começo, e o número é opcional.
+          const comContador = new RegExp(`^${nomeAba.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s+\\d+)?$`);
+          let t = p.getByRole('tab', { name: comContador }).first();
           if (!(await t.count()) && nomeAba === 'Patrimônio') t = p.getByRole('tab', { name: 'Pertences', exact: true }).first();
           if (await t.count()) { await t.click(); await p.waitForTimeout(300); } else notas.push(`${rot}: sem aba ${nomeAba}`);
         }

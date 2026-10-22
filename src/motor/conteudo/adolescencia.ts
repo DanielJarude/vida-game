@@ -79,7 +79,7 @@ export const ADOLESCENCIA: Conteudo[] = [
   {
     id: 'ado_primeiro_trabalho', tipo: 'decisao', idade: [14, 17], tema: 'trabalho',
     papeis: { conhecido: P.qualquer(P.tioOuPrimo, P.genitor, P.amigo) },
-    quando: c => !c.v.trabalho.atual && ['vulneravel', 'trabalhadora', 'media_baixa'].includes(c.v.origem.classe),
+    quando: c => !c.v.trabalho.atual && c.v.caminhos.esporte?.fase !== 'base' && ['vulneravel', 'trabalhadora', 'media_baixa'].includes(c.v.origem.classe),
     titulo: 'Um trocado',
     texto: c => `${c.p.conhecido.nome} arrumou um bico para você nos fins de semana: ajudar numa ${c.r.pick(['barraca de feira', 'lanchonete', 'loja de conserto de celular', 'festa infantil'])}. Paga pouco, em dinheiro vivo.`,
     opcoes: [

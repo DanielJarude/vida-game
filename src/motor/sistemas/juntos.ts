@@ -33,6 +33,9 @@ import { ehDescendente } from './vinculos';
 import { estadoDaRelacao } from './lacos';
 import { viverCena, type ProgramaDeCena } from './microcenas';
 import { efeitoDoPrograma, PERFIS, recusaDoConvite, type PerfilDePrograma } from './convivio';
+import { adultoPaga, respostaDoResponsavel } from './pedidosDaCrianca';
+import { responsaveis } from './origem';
+import { PERMITIDO } from '../plausibilidade';
 
 /** O convite recusado: nada é pago, nada é vivido — o motivo é da pessoa (`convivio.recusaDoConvite`). */
 const recusou = (c: CtxI, programa: string, titulo: string) => { const x = recusaDoConvite(c, programa); return x ? { resultado: x, titulo: `${titulo} com ${c.p.nome}` } : undefined; };
@@ -139,17 +142,33 @@ const LICOES: Licao[] = [
 ];
 const licaoPara = (c: CtxI): Licao | undefined => LICOES.find(l => c.ip >= l.de && c.ip <= l.ate && l.pode(c) && c.v.fatos[`ensinou:${l.id}:${c.p.id}`] === undefined);
 
+/**
+ * REWORK 10.6 · INF-01: a criança não paga o programa — pede ao adulto que a leve (quem paga é ele, se topar). Antes, a
+ * criança de 10 anos via "Os ingressos custam uns 240" com 193 no cofrinho. E sem um adulto, certos programas nem
+ * existem nessa idade (o estádio antes dos 14, o cinema antes dos 12 — com um amigo da mesma idade, não).
+ */
+const pedeAoAdulto = (c: CtxI) => c.eu < 16 && responsaveis(c.v).some(x => x.p.id === c.p.id);
+const comAdulto = (c: CtxI, aPartirDe: number) => c.eu >= aPartirDe || pedeAoAdulto(c) || (c.ip >= 18 && c.vin.parentesco !== undefined);
+const pagaOuPede = (c: CtxI, valor: number, rotulo: string) => (pedeAoAdulto(c) ? PERMITIDO : vereditoDePagar(c.v, valor, rotulo));
+/** O adulto responde ao pedido (o dinheiro da casa, o tempo, a relação): não é recusa da relação — é a resposta dele. */
+const respostaDoAdulto = (c: CtxI, r: Rng, valor: number, titulo: string) => {
+  const res = respostaDoResponsavel(c.v, r, { p: c.p, vin: c.vin }, valor, { programa: true });
+  if (!res.sim) return { resultado: res.texto, titulo: `${titulo} com ${c.p.nome}` };
+  adultoPaga(c.p, valor);
+  return undefined;
+};
+
 const CUSTO = { cinema: 45, jantar: 160, show: 220, estadio: 90, fim_de_semana: 900, festa: 900, almoco: 320, romantico: 380 };
 
 export const INTERACOES_JUNTOS: Interacao[] = [
   {
     id: 'cinema',
-    quando: c => humano(c) && !romance(c) && !rompido(c) && perto(c) && c.eu >= 9 && c.ip >= 6 && (proximo(c) || c.papel === 'colega' && c.eu >= 12),
-    disponivel: c => vereditoDePagar(c.v, preco(c, CUSTO.cinema * 2), 'Os ingressos custam uns'),
-    rotulo: c => (crianca(c) && c.ip <= 11 ? `Levar ${c.p.nome} ao cinema` : `Ir ao cinema com ${c.p.nome}`),
+    quando: c => humano(c) && !romance(c) && !rompido(c) && perto(c) && c.eu >= 9 && c.ip >= 6 && (proximo(c) || c.papel === 'colega' && c.eu >= 12) && comAdulto(c, 12),
+    disponivel: c => pagaOuPede(c, preco(c, CUSTO.cinema * 2), 'Os ingressos custam uns'),
+    rotulo: c => (pedeAoAdulto(c) ? `Pedir a ${c.p.nome} para levar você ao cinema` : crianca(c) && c.ip <= 11 ? `Levar ${c.p.nome} ao cinema` : `Ir ao cinema com ${c.p.nome}`),
     executar: (c, r) => {
-      const nao = recusou(c, 'cinema', 'Cinema'); if (nao) return nao;
-      pagarPrograma(c, preco(c, CUSTO.cinema * 2));
+      if (pedeAoAdulto(c)) { const nao = respostaDoAdulto(c, r, preco(c, CUSTO.cinema * 2), 'Cinema'); if (nao) return nao; }
+      else { const nao = recusou(c, 'cinema', 'Cinema'); if (nao) return nao; pagarPrograma(c, preco(c, CUSTO.cinema * 2)); }
       const n = conta(c, 'cinema'); const foi = comoFoi(c, r, 0, PERFIS.cinema);
       efeitoDoPrograma(c, foi, 4, PERFIS.cinema.foco, 'o cinema'); humor(c, 2);
       if (c.papel === 'colega' || c.papel === 'conhecido') c.vin.aproximacao = c.v.t;
@@ -191,12 +210,12 @@ export const INTERACOES_JUNTOS: Interacao[] = [
   {
     id: 'estadio',
     quando: c => humano(c) && !romance(c) && !rompido(c) && perto(c) && c.eu >= 10 && c.ip >= 6 && (c.papel === 'filho' || c.papel === 'genitor' || c.papel === 'irmao' || c.papel === 'amigo' || c.papel === 'amigo_proximo' || c.papel === 'neto' || c.papel === 'avo')
-      && (habilidade(c.v, 'futebol') >= 15 || c.v.rotinas.some(x => x.id === 'futebol') || c.vin.habitos?.['estadio'] !== undefined || c.p.genero === c.v.eu.genero),
-    disponivel: c => vereditoDePagar(c.v, preco(c, CUSTO.estadio * 2), 'Os ingressos custam uns'),
-    rotulo: c => (c.papel === 'filho' && c.ip <= 12 ? `Levar ${c.p.nome} ao primeiro jogo no estádio` : `Ver um jogo no estádio com ${c.p.nome}`),
+      && (habilidade(c.v, 'futebol') >= 15 || c.v.rotinas.some(x => x.id === 'futebol') || c.vin.habitos?.['estadio'] !== undefined || c.p.genero === c.v.eu.genero) && comAdulto(c, 14),
+    disponivel: c => pagaOuPede(c, preco(c, CUSTO.estadio * 2), 'Os ingressos custam uns'),
+    rotulo: c => (pedeAoAdulto(c) ? `Pedir a ${c.p.nome} para levar você ao estádio` : c.papel === 'filho' && c.ip <= 12 ? `Levar ${c.p.nome} ao primeiro jogo no estádio` : `Ver um jogo no estádio com ${c.p.nome}`),
     executar: (c, r) => {
-      const nao = recusou(c, 'estadio', 'Estádio'); if (nao) return nao;
-      pagarPrograma(c, preco(c, CUSTO.estadio * 2));
+      if (pedeAoAdulto(c)) { const nao = respostaDoAdulto(c, r, preco(c, CUSTO.estadio * 2), 'Estádio'); if (nao) return nao; }
+      else { const nao = recusou(c, 'estadio', 'Estádio'); if (nao) return nao; pagarPrograma(c, preco(c, CUSTO.estadio * 2)); }
       const n = conta(c, 'estadio'); const foi = comoFoi(c, r, 0.1, PERFIS.estadio);
       efeitoDoPrograma(c, foi, 5, PERFIS.estadio.foco, 'o jogo'); humor(c, 2);
       if (n === 1 && c.papel === 'filho' && c.ip <= 12) { lembrarCom(c.v, c.p.id, `O primeiro jogo de ${c.p.nome} no estádio foi com você.`, 'ritual', 3); }

@@ -1,0 +1,69 @@
+/* REWORK 10.6 — uma vida ao seu alcance. As peças novas (classes próprias; nenhuma redefine raiz de outro arquivo):
+   as ações principais das divisões, a entrada da faculdade, a vaga aprovada, o convite aberto, o pedido da criança, o
+   tratamento, as notas de atualização. Só tokens das quatro paletas (nenhuma cor solta). */
+
+/* ============================================================ As ações principais (Estudos, Trabalho) */
+.minha-formacao { margin: var(--space-3) 0 var(--space-4); }
+.minha-formacao__ficha { display: grid; gap: 2px; margin-bottom: var(--space-3); }
+.acoes-principais { list-style: none; margin: 0 0 var(--space-4); padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11.5rem), 1fr)); gap: var(--space-2); }
+.acoes-principais li { min-width: 0; }
+.acao-principal { width: 100%; height: 100%; min-height: var(--touch-target); display: grid; gap: 2px; align-content: start; text-align: left; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: var(--superficie); color: var(--text-primary); box-shadow: 0 0 0 1px var(--fio); border-left: 4px solid var(--acao, var(--fio)); cursor: pointer; font: inherit; }
+.acao-principal:hover { background: color-mix(in oklab, var(--acao, var(--fio)) 7%, var(--superficie)); }
+.acao-principal:focus-visible { outline: 2px solid var(--acao, var(--text-primary)); outline-offset: 2px; }
+.acao-principal__rotulo { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.acao-principal__nota { font-size: var(--type-caption); color: var(--text-secondary); line-height: 1.4; overflow-wrap: anywhere; }
+
+/* ============================================================ Entrar na faculdade, bolsas, a vaga aprovada */
+.entrar-faculdade, .bolsas-auxilios { margin: var(--space-2) 0 var(--space-4); }
+.entrar-faculdade__passos { margin: 0 0 var(--space-3); padding-left: 1.3rem; display: grid; gap: 4px; color: var(--text-secondary); line-height: 1.45; }
+.entrar-faculdade__passos strong { color: var(--text-primary); }
+.entrar-faculdade__situacao { display: grid; gap: 2px; margin-bottom: var(--space-2); }
+.bolsas-auxilios__lista { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: grid; gap: var(--space-2); }
+.bolsas-auxilios__lista li { display: grid; gap: 2px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); min-width: 0; overflow-wrap: anywhere; }
+.bolsas-auxilios__lista li > span:not(.nota) { color: var(--text-secondary); font-size: var(--type-caption); }
+.vaga-aprovada { margin: var(--space-3) 0; padding: var(--space-3); border-radius: var(--radius-md); }
+.vaga-aprovada__passos { list-style: none; margin: var(--space-1) 0 var(--space-2); padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.vaga-aprovada__passos li { font-size: var(--type-caption); padding: 2px 10px; border-radius: var(--radius-pill); box-shadow: 0 0 0 1px var(--fio); color: var(--text-secondary); }
+.vaga-aprovada__passos li.feito { background: color-mix(in oklab, var(--bom) 14%, var(--superficie)); color: var(--text-primary); }
+.vaga-aprovada__passos li.agora { background: color-mix(in oklab, var(--acao, var(--fio)) 16%, var(--superficie)); color: var(--text-primary); font-weight: var(--weight-semibold); }
+
+/* ============================================================ O convite aberto (UX-23) */
+.detalhe-convite { display: grid; gap: var(--space-2); min-width: 0; }
+.detalhe-convite__quem { display: flex; align-items: center; gap: var(--space-2); min-width: 0; overflow-wrap: anywhere; }
+.detalhe-convite__titulo { margin: 0; font-size: var(--type-title, 1.25rem); line-height: 1.25; overflow-wrap: anywhere; }
+.detalhe-convite p { margin: 0; line-height: 1.5; }
+.detalhe-convite__muda ul { margin: var(--space-1) 0 0; padding-left: 1.1rem; display: grid; gap: 4px; color: var(--text-secondary); font-size: var(--type-caption); line-height: 1.45; }
+
+/* ============================================================ O pedido da criança (INF-02) */
+.oferta__comprar { display: grid; gap: var(--space-1); justify-items: start; min-width: 0; }
+.pedido-compra { display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-2); border-radius: var(--radius-sm); background: color-mix(in oklab, var(--superficie) 92%, var(--fio)); box-shadow: 0 0 0 1px var(--fio); }
+.pedido-compra__conta { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: 0; }
+.pedido-compra__conta div { display: grid; }
+.pedido-compra__conta dt { font-size: var(--type-caption); color: var(--text-muted); }
+.pedido-compra__conta dd { margin: 0; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.pedido-compra__quem { display: flex; align-items: center; gap: var(--space-1); font-size: var(--type-caption); color: var(--text-secondary); }
+.pedido-compra__quem select { min-height: var(--touch-target); font: inherit; color: var(--text-primary); background: var(--superficie); border: 1px solid var(--fio); border-radius: var(--radius-sm); padding: 0 var(--space-2); }
+.pedidos-crianca { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.pedidos-crianca__item { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--space-2); align-items: start; }
+.pedidos-crianca__texto { display: grid; gap: var(--space-1); min-width: 0; }
+
+/* ============================================================ O tratamento (P4), o conflito da semana, a carreira */
+.tratamento { margin-top: var(--space-1); display: grid; gap: var(--space-1); justify-items: start; }
+.tratamento__confirmar { display: grid; gap: var(--space-1); }
+.agora-conflito strong { color: var(--ruim); }
+.em-andamento { margin-bottom: var(--space-4); }
+.desgaste-politico__causas { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: grid; gap: var(--space-1); }
+.desgaste-politico__causas li { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.experiencia-carreira { display: grid; gap: 2px; margin: var(--space-2) 0 var(--space-4); }
+
+/* ============================================================ As notas de atualização (UX-24) */
+.novidades { display: grid; gap: var(--space-2); }
+.novidades__titulo { font-family: var(--font-display, inherit); }
+.novidades__versao { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.novidades__subtitulo { margin: var(--space-2) 0 var(--space-1); font-size: var(--type-body, 1rem); }
+.novidades__lista { margin: 0; padding-left: 1.1rem; display: grid; gap: 6px; line-height: 1.5; color: var(--text-secondary); }
+.novidades__antes summary { cursor: pointer; min-height: var(--touch-target); display: flex; align-items: center; color: var(--text-secondary); }
+
+/* ============================================================ De onde vem o dinheiro da criança (INF-03) */
+.origem-do-dinheiro { margin: var(--space-1) 0 var(--space-2); padding-left: 1.1rem; display: grid; gap: 4px; font-size: var(--type-caption); color: var(--text-secondary); line-height: 1.45; }
+.origem-do-dinheiro strong { color: var(--text-primary); }

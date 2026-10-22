@@ -201,7 +201,7 @@ function podeMostrar(v: Vida): Veredito {
   if (!p?.ativo) return bloqueio('requisito', 'Mostrar o trabalho a um produtor pede um grupo em atividade (uma banda, um grupo de teatro ou de dança).');
   const oc = PRO_ARTE[p.linguagem];
   if (!oc) return bloqueio('impossivel', 'Não se aplica.');
-  if (v.trabalho.atual?.ocupacaoId === oc) return bloqueio('impossivel', 'Você já vive disso.');
+  if (v.trabalho.atual?.ocupacaoId === oc || v.trabalho.paralela?.ocupacaoId === oc) return bloqueio('impossivel', 'Você já vive disso.');
   if (p.linguagem === 'danca' && idade(v) > 27) return bloqueio('requisito', 'As companhias profissionais de dança fazem audição até uns 27 anos.');
   if (p.publico < 15) return bloqueio('requisito', `${p.nome} ainda não tem público: quem contrata quer ver gente na plateia. Apresentar-se (uma temporada curta, um show) e um edital de cultura constroem esse público.`);
   const ultima = v.fatos['arte_mostrou'];

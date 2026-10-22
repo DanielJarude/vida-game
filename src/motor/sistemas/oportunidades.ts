@@ -67,6 +67,8 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   const i = idade(v);
   // Portas que expiraram (ou deixaram de fazer sentido).
   // (Também as que deixaram de caber na trajetória — inclusive as que um save antigo trouxe: `mercados.oportunidadeCoerente`.)
+  // REWORK 10.6 · D3: o convite de alguém que passou sem resposta fica dito (uma linha) — e sai das portas abertas.
+  for (const o of v.caminhos.oportunidades) if (o.tFim <= v.t && o.pessoaId && v.pessoas[o.pessoaId]?.vivo) escrever(v, { texto: `O convite de ${v.pessoas[o.pessoaId].nome} passou sem resposta (${o.titulo.charAt(0).toLowerCase()}${o.titulo.slice(1)}).`, relevancia: 'cotidiano', tema: 'trabalho', pessoas: [o.pessoaId] });
   v.caminhos.oportunidades = v.caminhos.oportunidades.filter(o => o.tFim > v.t && (!o.pessoaId || v.pessoas[o.pessoaId]?.vivo) && oportunidadeCoerente(v, o) === true);
   if (v.morte) return;
   const b = v.educacao.basica;
@@ -429,6 +431,8 @@ export const municipioPorIndice = (n: number) => municipioDoCodigo(n);
 export const municipioIndice = municipioIndex;
 
 export function recusarOportunidade(v: Vida, id: string): void {
+  const o = v.caminhos.oportunidades.find(x => x.id === id);
+  if (o?.pessoaId && v.pessoas[o.pessoaId]?.vivo) escrever(v, { texto: `Recusou o convite de ${v.pessoas[o.pessoaId].nome}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true, pessoas: [o.pessoaId] });
   v.caminhos.oportunidades = v.caminhos.oportunidades.filter(x => x.id !== id);
 }
 

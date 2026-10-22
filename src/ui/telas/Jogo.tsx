@@ -71,6 +71,8 @@ export function Jogo({ c }: { c: ControleVida }) {
   const foco = useRef<'formacao' | 'trabalho' | undefined>(undefined);
   const [menu, setMenu] = useState(false);
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
+  // REWORK 10.6 · UX-23: o convite aberto por cima da página (fechar devolve o jogador exatamente onde estava).
+  const [convite, setConvite] = useState<string | null>(null);
   // REWORK 10 · UX-13: a parte aberta de cada área fica aqui — voltar à área é voltar para onde se estava.
   const [parteHistoria, setParteHistoria] = useState<ParteHistoria>('agora');
   const [parteVoce, setParteVoce] = useState<ParteVoce>('resumo');
@@ -89,7 +91,8 @@ export function Jogo({ c }: { c: ControleVida }) {
       const alvo = d ?? divisao;
       if (l.parte && (alvo === 'estudos' || alvo === 'trabalho')) setPartes(p => ({ ...p, [alvo]: l.parte! }));
     }
-    if (l.explorar) setExplorar(l.explorar);
+    // REWORK 10.6: o "explorar" (a faculdade, as bolsas, as vagas) vale para o destino que o pediu; trocar de parte o limpa.
+    if (l.area === 'caminhos' || l.explorar) setExplorar(l.explorar);
     if (l.voce) setParteVoce(l.voce);
     if (l.historia) setParteHistoria(l.historia);
     foco.current = l.foco;
@@ -157,7 +160,7 @@ export function Jogo({ c }: { c: ControleVida }) {
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
           {area === 'linha' && <Historia vida={vida} marca={c.marcaAno} parte={parteHistoria} irParte={setParteHistoria} irPara={ir} abrirPessoa={abrirPessoa}
             anoQuePassou={c.marcaAno > 0 ? <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} /> : undefined}
-            pedeVoce={estreito ? <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} /> : undefined} />}
+            pedeVoce={estreito ? <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} /> : undefined} />}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parteVoce} irParte={setParteVoce} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} parte={partePessoas} irParte={setPartePessoas} />}
           {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} divisao={divisao} irDivisao={(d, p) => irLugar({ area: 'caminhos', divisao: d, parte: p })} parte={parte} irParte={p => irLugar({ area: 'caminhos', divisao, parte: p })} explorar={explorar} aoExplorar={setExplorar} />}
@@ -174,7 +177,7 @@ export function Jogo({ c }: { c: ControleVida }) {
         </main>
 
         <aside className="agora" aria-label="Agora">
-          <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} />
+          <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} />
         </aside>
       </div>
 
@@ -189,6 +192,7 @@ export function Jogo({ c }: { c: ControleVida }) {
       {vida.momento && <Momento vida={vida} agir={c.agir} />}
       {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} mudancas={c.resultado.mudancas} />}
       {menu && <Menu c={c} aoFechar={fecharMenu} ir={l => { irLugar(l); setMenu(false); }} />}
+      {convite && !vida.momento && <DetalheDaOportunidade vida={vida} id={convite} agir={c.agir} aoFechar={() => setConvite(null)} abrirPessoa={abrirPessoa} />}
     </div>
   );
 }
@@ -272,7 +276,7 @@ export function FechamentoDoAno({ vida }: { vida: Vida }) {
  * com você, quem precisa de você, as portas abertas (levando para a área
  * certa), o que está em andamento; o dinheiro só quando aperta.
  */
-function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }) {
+function Agora({ vida, area, irPara, abrirPessoa, abrirConvite }: { vida: Vida; area: Area; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void; abrirConvite?: (id: string) => void }) {
   const casa = emCasa(vida);
   const pessoal = sinalPessoal(vida);
   // Só o urgente atravessa as áreas; a vida social normal mora em Pessoas (FIX pós-REWORK 2).
@@ -320,11 +324,21 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
           </ul>
         </>
       )}
-      {portas.length > 0 && (
+      {/* REWORK 10.6 · AGE-01: dois compromissos no mesmo horário pedem atenção (e a agenda diz as saídas). */}
+      {conflitoObrigatorio(vida) && area !== 'tempo' && (
+        <button type="button" className="agora-dinheiro agora-conflito" onClick={() => irPara('semana')}>
+          <span className="agora-dinheiro__rotulo">A semana</span>
+          <strong>Conflito de horário</strong>
+        </button>
+      )}
+      {(portas.length > 0 || (vida.educacao.aprovacao && vida.educacao.aprovacao.tAte > vida.t)) && (
         <>
           <h2 className="painel-agora__titulo painel-agora__titulo--rumo">Portas abertas</h2>
           <ul className="agora-sinais">
-            {portas.map(o => { const area = areaDaPorta(o); return <li key={o.id}><button type="button" className="agora-sinal agora-sinal--porta" onClick={() => irPara(area === 'tempo' ? 'semana' : 'oportunidades')}>{o.titulo}<span className="agora-sinal__prazo"> · até {anoDe(o.tFim)}</span></button></li>; })}
+            {/* REWORK 10.6 · UX-23: o toque abre ESTE convite (quem chamou, o prazo, o que muda, as respostas) — antes, ia para
+                uma aba genérica, e o convite de estudo (o projeto do professor) nem aparecia lá. */}
+            {portas.map(o => <li key={o.id}><button type="button" className="agora-sinal agora-sinal--porta" data-porta={o.id} onClick={() => (abrirConvite ? abrirConvite(o.id) : irPara(areaDaPorta(o) === 'estudos' ? 'cursos' : areaDaPorta(o) === 'tempo' ? 'outros_caminhos' : 'vagas'))}>{o.titulo}<span className="agora-sinal__prazo"> · até {anoDe(o.tFim)}</span></button></li>)}
+            {vida.educacao.aprovacao && vida.educacao.aprovacao.tAte > vida.t && <li><button type="button" className="agora-sinal agora-sinal--porta" onClick={() => irPara('cursos')}>Vaga aprovada: confirmar a matrícula<span className="agora-sinal__prazo"> · até {anoDe(vida.educacao.aprovacao.tAte)}</span></button></li>}
           </ul>
         </>
       )}
@@ -347,11 +361,14 @@ function Agora({ vida, area, irPara, abrirPessoa }: { vida: Vida; area: Area; ir
 }
 
 function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: (l: Lugar) => void }) {
+  const [notas, setNotas] = useState(false);
+  if (notas) return <Novidades aoFechar={() => setNotas(false)} historico />;
   return (
     // REWORK 6.5: a folha comum (prende o foco, fecha com Esc, devolve o foco a quem abriu) — antes, uma cópia sem teclado.
     <Folha titulo="VIDA" rotulo="Menu" aoFechar={aoFechar}>
         <div className="menu">
           <SeletorTema />
+          <button type="button" className="botao botao--secundario" onClick={() => setNotas(true)}>Novidades da atualização</button>
           <p className="nota">Sua vida é salva a cada passo, neste navegador. Para continuar em outro aparelho, exporte a vida num arquivo e importe lá.</p>
           <button type="button" className="botao botao--secundario" onClick={() => c.exportar()}>Exportar esta vida (arquivo)</button>
           <BaixarApp compacto />
@@ -399,6 +416,12 @@ function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
  * substitui a vida atual depois de confirmar.
  */
 import { ImportarVida } from './ImportarVida';
+import { Novidades } from '../janelaDeNovidades';
 import { Tempo } from '../jogo/Tempo';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
+import { DetalheDaOportunidade } from '../jogo/Alcance';
+import { agendaDaSemana } from '../../motor/sistemas/agenda';
+
+/** Um conflito entre compromissos obrigatórios (o trabalho em cima da aula), não uma atividade que perde uma vez. */
+const conflitoObrigatorio = (v: Vida) => !!(v.educacao.basica || v.educacao.matricula) && !!v.trabalho.atual && agendaDaSemana(v).conflitos.some(c => c.tipo === 'sobreposicao' && (c.perde === 'escola' || c.perde === 'curso') && (c.ocupa ?? '').startsWith('trabalho'));
 export { ImportarVida };

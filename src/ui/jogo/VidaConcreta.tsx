@@ -23,7 +23,7 @@ import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { independencia } from '../../motor/sistemas/independencia';
-import { contribuicaoEsperada, leituraDaOrigem, MOTIVOS_DE_AJUDA, necessidadeDe, ROTULO_MOTIVO, principal } from '../../motor/sistemas/origem';
+import { contribuicaoEsperada, leituraDaOrigem, MOTIVOS_DE_AJUDA, necessidadeDe, ROTULO_MOTIVO, principal, mesadaDaFamilia, recursosDaFamilia } from '../../motor/sistemas/origem';
 import { rendaPropriaMensal } from '../../motor/sistemas/dinheiro';
 import { AUTONOMIA } from '../../motor/sistemas/autonomia';
 import { BotaoAcao, CabecaDaArea, navegarAbas, Secao } from '../comum';
@@ -204,6 +204,14 @@ function DinheiroDaCrianca({ vida, agir, irCompras }: { vida: Vida; agir: (a: Ac
   return (
     <Secao titulo="O seu dinheiro">
       <p className="nota">No cofrinho: <strong>{dinheiroCurto(Math.max(0, vida.financas.conta))}</strong>. Com o que guardar, dá para comprar o que é da sua idade — com a família junto.</p>
+      {/* REWORK 10.6 · INF-03: de onde vem o dinheiro (e com que frequência): o que é seu, o que é da casa. */}
+      <ul className="origem-do-dinheiro" aria-label="De onde vem o seu dinheiro">
+        {mesadaDaFamilia(vida) > 0 ? <li><strong>Mesada</strong> · {dinheiroCurto(mesadaDaFamilia(vida))} todo mês, da família (uns 40% sobram para guardar; o resto vai em lanche e miudezas)</li> : <li><strong>Mesada</strong> · {idade(vida) < 8 ? 'a partir dos 8 anos' : 'a casa não tem folga para mesada agora'}</li>}
+        <li><strong>Pedir aos responsáveis</strong> · uma vez por ano{vida.anoAtual.acoes.includes('crianca:pedir') ? ' (já pedido este ano)' : ''}; para algo da loja, o pedido é na própria loja</li>
+        <li><strong>Tarefas pagas e brigadeiros</strong> · uma vez por ano cada, sempre com um adulto</li>
+        <li><strong>Presentes</strong> · no aniversário, às vezes (os avós)</li>
+        <li><strong>O dinheiro da casa</strong> · {['está no limite', 'está apertado', 'dá para o mês', 'sobra um pouco', 'sobra bastante'][recursosDaFamilia(vida).folga] ?? 'é da família'} — é dos adultos, não seu</li>
+      </ul>
       <div className="grupo-acoes">
         <BotaoAcao vida={vida} acao={{ tipo: 'crianca', oque: 'pedir' }} agir={agir} variante="secundario">Pedir dinheiro aos responsáveis</BotaoAcao>
         <BotaoAcao vida={vida} acao={{ tipo: 'crianca', oque: 'tarefas' }} agir={agir} variante="discreto">Combinar tarefas de casa pagas</BotaoAcao>

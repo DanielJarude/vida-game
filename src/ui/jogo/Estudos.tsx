@@ -37,7 +37,7 @@ import type { Aba, ParteCaminhos } from '../navegacao';
 import { analisarEntrada, notaDaBaseCom } from '../../motor/sistemas/compromissos';
 import { custoDoEstudo } from '../../motor/sistemas/custoDoEstudo';
 import { historiaDaFormacao } from '../../motor/sistemas/vidaEstudantil';
-import { novaMatricula } from '../../motor/sistemas/escola';
+import { novaMatricula, opcoesDeCurso as opcoesDosCursos } from '../../motor/sistemas/escola';
 import { descricaoDaRotina, modeloRotina, nivelDa, nivelModelo } from '../../motor/sistemas/rotinas';
 import { NOME_FOCO } from '../../motor/sistemas/concurso';
 import type { FocoConcurso } from '../../motor/tipos';
@@ -97,7 +97,7 @@ export const ehPortaDeTrabalho = (o: Oportunidade) => areaDaPorta(o) === 'trabal
  * portas, a preparação, os cursos) e HISTÓRICO (a formação que já é sua, o que ficou, a história de cada escola).
  * Cada seção pertence a uma parte só: nada se repete entre as abas, nada some.
  */
-export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { parte?: ParteCaminhos; divisao?: boolean }) {
+export function Estudos({ vida, agir, irPara, abrirPessoa, parte, explorar, aoExplorar }: Props & { parte?: ParteCaminhos; divisao?: boolean; explorar?: string; aoExplorar?: (a: string | undefined) => void }) {
   const em = (p: ParteCaminhos) => !parte || parte === p;
   const i = idade(vida);
   const e = vida.educacao;
@@ -107,7 +107,7 @@ export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { pa
   return (
     <div className="estudos rumo">
       {!parte && <Folio kicker={<><span className="folio__area">Formação</span> · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</>} titulo={titulo} lede={lede} />}
-      {parte === 'agora' && (
+      {parte === 'agora' && i < 6 && (
         <header className="lado-caminho__cabeca">
           {/* O título (a série, o curso) já está na situação, no alto de Caminhos, e no caminho logo abaixo: aqui, o lado e o como vai. */}
           <h2 className="lado-caminho__kicker">Formação · {inst ? inst.rotulo : i < 4 ? 'ainda não' : 'caminhos possíveis'}</h2>
@@ -118,6 +118,12 @@ export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { pa
       {/* REWORK 7 — três camadas: AGORA (o caminho até aqui e o próximo passo, como você está se saindo, o lugar e o
           que dá para fazer nele), DEPOIS (as portas, a preparação, os cursos) e, por último, o HISTÓRICO (a
           formação que já é sua, o que ficou, a história de cada escola) — antes, a história vinha antes do agora. */}
+      {/* REWORK 10.6 · C2: primeiro a situação (a formação, o próximo marco) e as ações principais — antes, "entrar na
+          faculdade" morava dentro de um catálogo na terceira aba, depois de rolar a preparação. */}
+      {parte === 'agora' && <MinhaFormacao vida={vida} irPara={irPara} />}
+      {(parte === 'agora' || parte === 'oportunidades') && <VagaAprovada vida={vida} agir={agir} />}
+      {parte === 'oportunidades' && explorar === 'faculdade' && <EntrarNaFaculdade vida={vida} agir={agir} voltar={() => aoExplorar?.(undefined)} irBolsas={() => aoExplorar?.('bolsas')} />}
+      {parte === 'oportunidades' && explorar === 'bolsas' && <BolsasEAuxilios vida={vida} voltar={() => aoExplorar?.(undefined)} irFaculdade={() => aoExplorar?.('faculdade')} />}
       {em('agora') && <TrajetoriaDeEstudo vida={vida} />}
       {/* REWORK 10.5 · EDU-05: no curso, o "como vai" é o histórico acadêmico (em Desenvolvimento, pelo `DesenvolvimentoReal`). */}
       {em('desenvolvimento') && !parte && <ComoVai vida={vida} />}
@@ -129,7 +135,7 @@ export function Estudos({ vida, agir, irPara, abrirPessoa, parte }: Props & { pa
       {em('agora') && inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
       {em('oportunidades') && i >= 14 && <Preparacao vida={vida} agir={agir} irPara={irPara} />}
       {em('oportunidades') && <ObjetivosEmCurso vida={vida} agir={agir} filtro={o => /^(selecao|vestibular):/.test(o.id)} />}
-      {em('oportunidades') && i >= 15 && <Cursos vida={vida} agir={agir} />}
+      {em('oportunidades') && i >= 15 && explorar !== 'faculdade' && <Cursos vida={vida} agir={agir} />}
       {em('historico') && <Formacao vida={vida} />}
       {em('historico') && <HistoricoEscolar vida={vida} />}
       {em('historico') && <OQueFicou vida={vida} />}
@@ -640,7 +646,7 @@ function grupoDoCurso(cc: { nivel: string; area: string }, formado: boolean, are
   return { grupo: 'cursos livres e preparação', ordemGrupo: 8 };
 }
 
-function Cursos({ vida, agir }: Props) {
+function Cursos({ vida, agir, soFaculdade }: Props & { soFaculdade?: boolean }) {
   const { para } = useMemo(() => cursosParaVoce(vida), [vida]);
   const todos = useMemo(() => cursosAgrupados(vida), [vida]);
   const sugestao = new Map(para.map(x => [x.item.curso.id, x.motivo]));
@@ -648,7 +654,7 @@ function Cursos({ vida, agir }: Props) {
   const formado = vida.educacao.concluidos.some(c => c.nivel === 'superior');
   const areasFormadas = new Set(vida.educacao.concluidos.filter(c => c.nivel === 'superior').map(c => c.area));
   if (vida.educacao.matricula && !vida.educacao.matricula.trancado) return <Secao titulo="Outra formação"><p className="nota">Um curso de cada vez: quando este terminar (ou for trancado), o catálogo volta a abrir aqui.</p></Secao>;
-  const itens: ItemCatalogo[] = todos.map(c => {
+  const itens: ItemCatalogo[] = todos.filter(c => !soFaculdade || c.curso.nivel === 'superior').map(c => {
     const cc = c.curso;
     const vias = [...c.opcoes].sort((a, b) => Number(podeTentar(b.o.veredito)) - Number(podeTentar(a.o.veredito)) || (b.o.veredito.chance ?? 0) - (a.o.veredito.chance ?? 0)).slice(0, 4);
     const melhor = vias[0]?.o;
@@ -682,13 +688,16 @@ function Cursos({ vida, agir }: Props) {
                 {/* O que a matrícula conflitaria (o trabalho do dia inteiro, a base): dito antes; se passar, a vida pergunta. */}
                 {(() => { const nova = novaMatricula(vida, o); const c = analisarEntrada(vida, nova); const base = notaDaBaseCom(vida, nova); return c.length ? <span className="via__obs">{c.map(x => `${x.motivo}: ${x.impede ? 'não dá agora' : 'se passar, a vida pergunta o que fazer'}.`).join(' ')}</span> : base ? <span className="via__obs">{base}</span> : null; })()}
               </div>
-              <BotaoAcao vida={vida} acao={{ tipo: 'matricular', indice }} agir={agir} mostrarChance>Tentar</BotaoAcao>
+              <BotaoAcao vida={vida} acao={{ tipo: 'matricular', indice, etapa: 'candidatar' }} agir={agir} mostrarChance>{cc.nivel === 'livre' ? 'Inscrever-se' : 'Candidatar-se'}</BotaoAcao>
             </div>
           ))}
         </div>
       )
     };
   });
+  // REWORK 10.6 · C2: na entrada da faculdade, a lista inteira de graduações (com o que cada uma pede, mesmo as que ainda
+  // não estão ao alcance — o jogador vê como chegar lá), sem o resto do catálogo.
+  if (soFaculdade) return <Catalogo itens={itens} rotulo="Faculdades" dicaBusca="direito, medicina, engenharia, pedagogia…" vazio="Nenhuma graduação com esse filtro." porGrupo={8} todosInicial />;
   return (
     <>
       {para.length > 0 && (
@@ -708,5 +717,152 @@ function Cursos({ vida, agir }: Props) {
         <Catalogo itens={itens} rotulo="Cursos" dicaBusca="enfermagem, direito, solda, técnico, mestrado…" tipos={[{ id: 'oficio', rotulo: 'Ofício' }, { id: 'tecnico', rotulo: 'Técnico' }, { id: 'superior', rotulo: 'Faculdade' }, { id: 'pos', rotulo: 'Pós' }]} vazio="Nenhum curso com esse filtro." porGrupo={6} />
       </Secao>
     </>
+  );
+}
+
+
+/* ------------------------------------------------- REWORK 10.6 · C2 — a formação ao alcance */
+
+/** O próximo marco da formação (o que vem a seguir, lido do estado — nunca inventado). */
+export function proximoMarcoDaFormacao(vida: Vida): string | undefined {
+  const e = vida.educacao, i = idade(vida);
+  const b = e.basica, m = e.matricula;
+  if (b && !e.evadiu) {
+    if (b.etapa === 'medio') return b.serie >= 3 ? `A conclusão ${educacaoDaVida(vida).medio.do} no fim deste ano — e a porta da faculdade.` : `O ${b.serie + 1}º ano ${educacaoDaVida(vida).medio.do}; a faculdade vem depois da conclusão.`;
+    if (b.etapa === 'fundamental2' && b.serie >= 9) return `O ${educacaoDaVida(vida).medio.nome ?? 'ensino médio'} no ano que vem.`;
+    return 'A próxima série, no ano que vem.';
+  }
+  if (m) return m.trancado ? 'O curso está trancado: dá para voltar quando quiser.' : `A formatura, ${m.mesesRestantes <= 12 ? 'no fim deste ano' : `em uns ${Math.ceil(m.mesesRestantes / 12)} anos`}.`;
+  if (e.aprovacao && e.aprovacao.tAte > vida.t) return `Confirmar a matrícula em ${e.aprovacao.nome}.`;
+  if (i >= 17 && e.escolaridade === 'medio') return 'Entrar na faculdade, num curso técnico — ou seguir para o trabalho.';
+  return undefined;
+}
+
+/**
+ * "Minha formação": a escolaridade, a instituição, o curso ou a etapa, o desempenho e o próximo marco — e as AÇÕES
+ * PRINCIPAIS (entrar na faculdade, fazer cursos, bolsas e auxílios, o histórico acadêmico), cada uma com o porquê
+ * quando ainda não dá. Nada fica escondido por não estar ao alcance: diz-se o que falta.
+ */
+function MinhaFormacao({ vida, irPara }: { vida: Vida; irPara?: (a: Aba) => void }) {
+  const i = idade(vida);
+  if (i < 6 || !irPara) return null;
+  const e = vida.educacao;
+  const inst = instituicaoAtual(vida);
+  const m = e.matricula;
+  const prox = proximoMarcoDaFormacao(vida);
+  const emFaculdade = !!m && cursoOuNulo(m.cursoId)?.nivel === 'superior';
+  const medio = e.escolaridade !== 'nenhuma' && (e.concluidos.length > 0 || ['medio', 'superior', 'pos'].includes(e.escolaridade));
+  const faltaMedio = !medio && !emFaculdade;
+  const acoes: { id: string; rotulo: string; destino: Aba; nota?: string }[] = [
+    { id: 'faculdade', rotulo: emFaculdade ? 'Minha faculdade' : 'Entrar na faculdade', destino: emFaculdade ? 'desenvolvimento' : 'faculdade', nota: emFaculdade ? 'as disciplinas, as notas, o que falta para formar' : faltaMedio ? `pede ${educacaoDaVida(vida).medio.completo} — veja já os cursos e o que cada um pede` : undefined },
+    { id: 'cursos', rotulo: 'Fazer cursos', destino: 'cursos', nota: i < 15 ? 'cursos técnicos e de qualificação a partir dos 15' : undefined },
+    { id: 'bolsas', rotulo: 'Bolsas e auxílios', destino: 'bolsas' },
+    { id: 'historico', rotulo: 'Histórico acadêmico', destino: 'historico_academico' }
+  ];
+  return (
+    <section className="minha-formacao" aria-labelledby="titulo-minha-formacao" data-painel="minha-formacao">
+      <h2 id="titulo-minha-formacao" className="secao-fio">Minha formação</h2>
+      <div className="minha-formacao__ficha">
+        <Linha rotulo="Escolaridade" valor={rotuloEscolaridade(vida, e.escolaridade)} />
+        {(inst || m) && <Linha rotulo="Onde" valor={m ? m.instituicao : inst!.nome} />}
+        {e.basica && !e.evadiu && <Linha rotulo="Etapa" valor={rotuloSerie(e.basica)} />}
+        {m && <Linha rotulo="Curso" valor={`${nomeDaMatricula(vida, m)}${m.trancado ? ' · trancado' : ''}`} />}
+        {(e.basica || m) && <Linha rotulo="Desempenho" valor={palavraDesempenho((e.basica && !e.evadiu ? e.basica.desempenho : m?.desempenho) ?? 50)} />}
+        {prox && <Linha rotulo="Próximo marco" valor={prox} />}
+      </div>
+      <ul className="acoes-principais" aria-label="Ações principais dos estudos">
+        {acoes.map(a => (
+          <li key={a.id}>
+            <button type="button" className="acao-principal" data-acao-principal={a.id} onClick={() => irPara(a.destino)}>
+              <span className="acao-principal__rotulo">{a.rotulo}</span>
+              {a.nota && <span className="acao-principal__nota">{a.nota}</span>}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** A vaga conquistada esperando a confirmação: a matrícula é um passo próprio (com o que ela pede, dito antes). */
+function VagaAprovada({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const ap = vida.educacao.aprovacao;
+  if (!ap || ap.tAte <= vida.t) return null;
+  const c = cursoOuNulo(ap.novo.cursoId);
+  const conflitos = analisarEntrada(vida, ap.novo);
+  return (
+    <section className="vaga-aprovada papel" aria-labelledby="titulo-vaga-aprovada" data-vaga-aprovada>
+      <h2 id="titulo-vaga-aprovada" className="secao-fio">Candidatura aprovada · falta a matrícula</h2>
+      <p><strong>{ap.nome}</strong></p>
+      <ul className="vaga-aprovada__passos" aria-label="Os passos">
+        <li className="feito">Candidatura</li><li className="feito">Aprovação</li><li className="agora">Matrícula</li>
+      </ul>
+      <Linha rotulo="Duração" valor={c ? (c.meses >= 24 ? `${c.meses / 12} anos` : `${c.meses} meses`) : '—'} />
+      <Linha rotulo="Turno" valor={ap.novo.modalidade === 'ead' ? 'a distância, no seu tempo' : c?.carga === 'integral' ? 'período integral' : 'à noite (ou no turno que couber)'} />
+      <Linha rotulo="Custo" valor={ap.novo.mensalidade > 0 ? `${dinheiroCurto(ap.novo.mensalidade)}/mês` : 'sem mensalidade'} />
+      <Linha rotulo="Vale até" valor={String(anoDe(ap.tAte))} />
+      {conflitos.length > 0 && <p className="nota">{conflitos.map(x => `${x.motivo}: ${x.impede ? 'não dá agora' : 'ao confirmar, a vida pergunta o que fazer'}.`).join(' ')}</p>}
+      <div className="grupo-acoes grupo-acoes--linha">
+        <BotaoAcao vida={vida} acao={{ tipo: 'confirmar_matricula' }} agir={agir} variante="principal">Confirmar a matrícula</BotaoAcao>
+        <BotaoAcao vida={vida} acao={{ tipo: 'confirmar_matricula', recusar: true }} agir={agir} variante="discreto">Abrir mão da vaga</BotaoAcao>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * ENTRAR NA FACULDADE (REWORK 10.6 · C2): o caminho inteiro num lugar — o que a faculdade pede (e o que você tem), os
+ * três passos (candidatura, resultado, matrícula), as graduações com requisitos, custos, duração e as vias de cada uma
+ * (pública, particular, bolsa, a distância), e a ligação para as bolsas e os auxílios.
+ */
+function EntrarNaFaculdade({ vida, agir, voltar, irBolsas }: { vida: Vida; agir: (a: Acao) => boolean; voltar: () => void; irBolsas: () => void }) {
+  const ed = educacaoDaVida(vida);
+  const e = vida.educacao;
+  const medio = ['medio', 'superior', 'pos'].includes(e.escolaridade);
+  const nota = melhorNotaRecente(vida);
+  const emCurso = e.matricula && !e.matricula.trancado;
+  return (
+    <section className="entrar-faculdade" aria-labelledby="titulo-entrar-faculdade" data-fluxo="faculdade">
+      <h2 id="titulo-entrar-faculdade" className="secao-fio">Entrar na faculdade</h2>
+      <ol className="entrar-faculdade__passos" aria-label="Como funciona">
+        <li><strong>Escolher o curso</strong> — o que pede, quanto custa, quanto dura, onde.</li>
+        <li><strong>Candidatar-se</strong> — {ed.aberto ? 'a matrícula na pública é aberta a quem concluiu o ensino' : ed.prova ? `com a nota ${ed.do} (ou a seleção da particular)` : 'pela candidatura (as notas do último ano)'}.</li>
+        <li><strong>Resultado</strong> — aprovado, a vaga fica reservada até o ano seguinte.</li>
+        <li><strong>Confirmar a matrícula</strong> — sabendo o turno, o custo e o que muda na semana.</li>
+      </ol>
+      <div className="entrar-faculdade__situacao">
+        <Linha rotulo="Requisito" valor={medio ? `${ed.medio.completo.charAt(0).toUpperCase()}${ed.medio.completo.slice(1)}: ok` : `Pede ${ed.medio.completo} — ${e.basica ? `você está no ${rotuloSerie(e.basica)}` : 'você ainda não concluiu'}`} tom={medio ? 'bom' : 'ruim'} />
+        {!ed.aberto && <Linha rotulo={`Nota ${ed.do}`} valor={nota > 0 ? `${nota}${temCota(vida) ? ' · você concorre por cota' : ''}` : `ainda sem nota — ${idade(vida) >= 15 ? `${ed.acao.toLowerCase()} em Minha formação` : 'a partir dos 15'}`} />}
+      </div>
+      {emCurso && <p className="nota">Você já está cursando {nomeDaMatricula(vida, e.matricula!)}: um curso de cada vez. A lista abaixo mostra o que dá para fazer depois.</p>}
+      <p className="nota"><button type="button" className="link" onClick={irBolsas}>Bolsas e auxílios para estudar →</button> · <button type="button" className="link" onClick={voltar}>Ver todos os cursos (técnico, qualificação, pós) →</button></p>
+      {idade(vida) >= 15 ? <Cursos vida={vida} agir={agir} soFaculdade /> : <p className="nota">As graduações aparecem aqui a partir dos 15 anos, com o que cada uma pede.</p>}
+    </section>
+  );
+}
+
+/** BOLSAS E AUXÍLIOS: o que existe no país onde se mora (bolsa, crédito, cota, a bolsa de atleta) e o que está ao seu alcance. */
+function BolsasEAuxilios({ vida, voltar, irFaculdade }: { vida: Vida; voltar: () => void; irFaculdade: () => void }) {
+  const ed = educacaoDaVida(vida);
+  const ops = useMemo(() => (idade(vida) >= 15 ? opcoesDosCursos(vida) : []), [vida]);
+  const alcance = (via: string) => new Set(ops.filter(o => o.via === via && podeTentar(o.veredito)).map(o => o.curso.id)).size;
+  const portas = oportunidadesAbertas(vida).filter(o => o.tipo === 'bolsa');
+  const itens: { nome: string; oque: string; voce: string }[] = [];
+  if (ed.publicaDiferida || ed.aberto) itens.push({ nome: 'Universidade pública', oque: ed.aberto ? 'matrícula aberta a quem concluiu o ensino' : ed.publicaDiferida ? 'a mensalidade é paga depois de formado' : 'sem mensalidade', voce: `${alcance('selecao_publica') + alcance('sisu')} cursos ao seu alcance agora` });
+  else itens.push({ nome: 'Universidade pública', oque: 'sem mensalidade, por nota', voce: `${alcance('sisu') + alcance('selecao_publica')} cursos ao seu alcance agora` });
+  if (ed.bolsa) itens.push({ nome: ed.bolsa.nome, oque: 'bolsa na particular, para quem estudou em escola pública e tem renda baixa', voce: alcance('prouni') ? `${alcance('prouni')} cursos ao seu alcance` : 'nada ao seu alcance agora (a renda, a escola ou a nota não batem)' });
+  if (ed.credito) itens.push({ nome: ed.credito.nome, oque: 'crédito para a mensalidade: paga depois de formado', voce: alcance('fies') ? `${alcance('fies')} cursos ao seu alcance` : 'nada ao seu alcance agora' });
+  if (ed.cotas) itens.push({ nome: 'Cotas', oque: 'vagas reservadas para quem estudou em escola pública com renda baixa', voce: temCota(vida) ? 'você concorre por cota' : 'você não se encaixa agora' });
+  if (vida.caminhos.esporte?.fase) itens.push({ nome: 'Bolsa de atleta', oque: 'desconto (ou bolsa integral) para quem compete pela faculdade', voce: 'aparece nas vias de cada curso quando a faculdade tem time' });
+  return (
+    <section className="bolsas-auxilios" aria-labelledby="titulo-bolsas" data-fluxo="bolsas">
+      <h2 id="titulo-bolsas" className="secao-fio">Bolsas e auxílios</h2>
+      <ul className="bolsas-auxilios__lista">
+        {itens.map(x => <li key={x.nome}><strong>{x.nome}</strong><span>{x.oque}</span><span className="nota">{x.voce}</span></li>)}
+      </ul>
+      {portas.length > 0 && <p className="nota">{portas.length === 1 ? 'Há uma bolsa oferecida a você' : `Há ${portas.length} bolsas oferecidas a você`} em "Portas abertas", logo abaixo.</p>}
+      {idade(vida) < 15 && <p className="nota">As vias de cada curso (e quais bolsas valem para você) aparecem a partir dos 15 anos.</p>}
+      <p className="nota"><button type="button" className="link" onClick={irFaculdade}>Ver as faculdades, com as vias de cada uma →</button> · <button type="button" className="link" onClick={voltar}>Todos os cursos →</button></p>
+    </section>
   );
 }

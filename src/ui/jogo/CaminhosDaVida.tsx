@@ -221,7 +221,7 @@ interface Props {
   vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void; abrirPessoa?: (id: string) => void;
   divisao?: DivisaoCaminhos; irDivisao?: (d: DivisaoCaminhos, p?: ParteCaminhos) => void;
   parte: ParteCaminhos; irParte: (p: ParteCaminhos) => void;
-  explorar?: string; aoExplorar?: (a: string) => void;
+  explorar?: string; aoExplorar?: (a: string | undefined) => void;
 }
 
 export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'inicio', irDivisao = () => {}, parte, irParte, explorar, aoExplorar }: Props) {
@@ -263,7 +263,7 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
             {divisao === 'estudos' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="estudos" />}
             {divisao === 'trabalho' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="trabalho" />}
             {divisao === 'estudos'
-              ? <div className="lado-caminho lado-caminho--formacao" data-lado="formacao"><Estudos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} parte={parte} divisao /></div>
+              ? <div className="lado-caminho lado-caminho--formacao" data-lado="formacao"><Estudos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} parte={parte} divisao explorar={explorar} aoExplorar={aoExplorar} /></div>
               : <div className="lado-caminho lado-caminho--trabalho" data-lado="trabalho">{i >= 14 || vida.trabalho.historico.length > 0
                 ? <Trabalho vida={vida} agir={agir} irPara={irPara} parte={parte} explorar={explorar} aoExplorar={aoExplorar} divisao />
                 : parte === 'agora' ? <TrabalhoAindaNao vida={vida} irPara={irPara} compacto /> : null}</div>}

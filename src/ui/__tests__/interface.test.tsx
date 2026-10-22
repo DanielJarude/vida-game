@@ -220,7 +220,7 @@ describe('interface', () => {
     expect(within(screen.getByRole('main')).getAllByText(/anos em escritório|Começando em escritório|Um ano em escritório/).length).toBeGreaterThan(0);
     expect(within(screen.getByRole('main')).queryByText(/nível \d/i)).toBeNull();
     // REWORK 9.5 · UX-07: só a parte aberta de Caminhos é desenhada — as portas moram nas vagas (REWORK 9.6: Trabalho · Vagas).
-    fireEvent.click(screen.getByRole('tab', { name: 'Vagas' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Procurar trabalho' })); // REWORK 10.6 · C3: "Vagas" virou "Procurar trabalho"
     const main = screen.getByRole('main');
     expect(within(main).getByText('Portas de trabalho')).toBeTruthy();
     expect(within(main).getByText(/pode indicar você/)).toBeTruthy();
@@ -297,7 +297,7 @@ describe('interface', () => {
     resolverMomentos();
     fireEvent.click(screen.getAllByRole('button', { name: 'Caminhos' })[0]);
     divisao('Trabalho');
-    fireEvent.click(screen.getByRole('tab', { name: 'Vagas' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Procurar trabalho' })); // REWORK 10.6 · C3: "Vagas" virou "Procurar trabalho"
     // REWORK 4: a vaga é um resumo escaneável; o botão está no detalhe (abre ao tocar).
     for (const b of Array.from(screen.getByRole('main').querySelectorAll('.vaga-resumo'))) fireEvent.click(b);
     fireEvent.click(within(screen.getByRole('main')).getAllByRole('button', { name: /Candidatar-se/ })[0]);

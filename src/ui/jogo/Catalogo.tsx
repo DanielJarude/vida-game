@@ -44,16 +44,18 @@ export interface ItemCatalogo {
 
 const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export function Catalogo({ itens, rotulo, tipos, vazio, porGrupo = 4, dicaBusca }: {
+export function Catalogo({ itens, rotulo, tipos, vazio, porGrupo = 4, dicaBusca, todosInicial = false }: {
   itens: ItemCatalogo[];
   rotulo: string;
   tipos?: { id: string; rotulo: string }[];
   vazio?: ReactNode;
   porGrupo?: number;
   dicaBusca?: string;
+  /** REWORK 10.6 · B5: começa mostrando também o que ainda não está ao alcance (com o porquê) — a entrada da faculdade. */
+  todosInicial?: boolean;
 }) {
   const [busca, setBusca] = useState('');
-  const [todos, setTodos] = useState(false);
+  const [todos, setTodos] = useState(todosInicial);
   const [tipo, setTipo] = useState<string | null>(null);
   const [aberto, setAberto] = useState<string | null>(null);
   const [grupos, setGrupos] = useState<Set<string>>(new Set());

@@ -15,6 +15,7 @@
  * os das ofertas do motor (`mercado`, `coisas`), os bloqueios os de `autonomia`.
  */
 
+import { PedidoDeCompra } from './Alcance';
 import { useMemo, type ReactNode } from 'react';
 import type { Vida } from '../../motor/tipos';
 import { disponibilidade, type Acao } from '../../motor/acoes';
@@ -253,6 +254,24 @@ function ComprasDaCrianca({ vida, grupos, agir }: { vida: Vida; grupos: ReturnTy
           </section>
         );
       })()}
+      {/* REWORK 10.6 · INF-02: o que é da idade e o cofrinho não paga vira pedido aos adultos — com o produto escolhido. */}
+      {quem.length > 0 && idade(vida) >= 4 && (() => {
+        const pedir = COISAS.filter(c => !c.daCasa && (c.idadeMin ?? 12) <= idade(vida) + 4 && !temCoisaDe(meus, c.id) && !podeTentar(disponibilidade(vida, { tipo: 'comprar_coisa', coisaId: c.id })) && disponibilidade(vida, { tipo: 'pedir_compra', coisaId: c.id }).grau !== 'impossivel').slice(0, 6);
+        if (!pedir.length) return null;
+        return (
+          <section className="vitrines" aria-labelledby="pedir-aos-adultos">
+            <h2 id="pedir-aos-adultos" className="vitrines__titulo">Pedir aos adultos</h2>
+            <ul className="pedidos-crianca">
+              {pedir.map(c => (
+                <li key={c.id} className="pedidos-crianca__item">
+                  <DesenhoObjeto coisaId={c.id} tamanho={48} rotulo={c.nome} />
+                  <span className="pedidos-crianca__texto"><strong>{cap(c.nome)}</strong><PedidoDeCompra vida={vida} coisaId={c.id} agir={agir} /></span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })()}
       <Secao titulo="Quando cada lugar se abre" recolhivel aberta={false}>
         <ul className="vitrines__idades">
           {porIdade.map(a => (
@@ -266,3 +285,5 @@ function ComprasDaCrianca({ vida, grupos, agir }: { vida: Vida; grupos: ReturnTy
     </div>
   );
 }
+
+const temCoisaDe = (meus: { coisaId: string }[], id: string) => meus.some(t => t.coisaId === id);

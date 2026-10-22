@@ -29,6 +29,7 @@ import { praticar, habilidade } from './frentes';
 import { marcar } from './marcas';
 import { lesaoAtiva } from './lesoes';
 import { contaAtiva } from './redesBase';
+import { posicaoDe } from './esporte';
 
 export type OqueOficio =
   | 'projeto' | 'chefia' | 'colega' | 'capacitacao'
@@ -76,12 +77,13 @@ export function verbosDoOficio(v: Vida): VerboDoOficio[] {
     add({ oque: 'caprichar', rotulo: 'Caprichar num trabalho difícil (o cliente exigente)', porque: 'Cliente exigente satisfeito indica outros. Cansa.' });
   }
   if (modo === 'atleta' && v.caminhos.esporte?.fase === 'profissional') {
-    const es = v.caminhos.esporte;
-    const futebol = es.modalidade === 'futebol';
     if (!TREINOS.some(t => feito(v, t))) {
-      add({ oque: 'treino_finalizacao', rotulo: futebol ? 'Treino extra: finalização' : 'Treino extra: técnica', porque: 'Depois do treino, sozinho: a técnica sobe.' });
-      add({ oque: 'treino_fisico', rotulo: 'Treino extra: físico', porque: 'O corpo aguenta mais — e o risco de lesão sobe um pouco.' });
-      add({ oque: 'treino_tatico', rotulo: 'Treino extra: tático, com a comissão', porque: 'Entender o jogo; o treinador repara.' });
+      // REWORK 10.6 · FUT-05: o treino técnico é o da FUNÇÃO (antes, o goleiro recebia "finalização"). O efeito é dito e
+      // é real: a técnica sobe e a temporada sente — nas defesas de quem defende, nos gols e passes de quem ataca.
+      const t = treinoTecnico(v);
+      add({ oque: 'treino_finalizacao', rotulo: t.rotulo, porque: t.porque });
+      add({ oque: 'treino_fisico', rotulo: 'Treino extra: físico', porque: 'O condicionamento sobe (a nota da temporada sente) — e o risco de lesão do ano sobe um pouco.' });
+      add({ oque: 'treino_tatico', rotulo: 'Treino extra: tático, com a comissão', porque: 'Entender o jogo: a nota da temporada e o nome com o treinador sobem um pouco.' });
     }
     add({ oque: 'video', rotulo: 'Estudar os adversários em vídeo', porque: 'Chega ao jogo sabendo o que vem.' });
     const l = lesaoAtiva(v);
@@ -89,6 +91,17 @@ export function verbosDoOficio(v: Vida): VerboDoOficio[] {
     if ((v.notoriedade?.valor ?? 0) >= 10) add({ oque: 'torcida', rotulo: 'Atender a torcida na saída do treino', porque: 'Foto, autógrafo, conversa: o nome agradece.' });
   }
   return out;
+}
+
+/** O treino técnico extra da função: o goleiro, a defesa, o meio, o ataque (no futebol); a técnica, nos outros esportes. */
+export function treinoTecnico(v: Vida): { rotulo: string; porque: string; feito: string } {
+  const es = v.caminhos.esporte;
+  if (!es || es.modalidade !== 'futebol') return { rotulo: 'Treino extra: técnica', porque: 'Depois do treino, sozinho: a técnica sobe, e a temporada sente.', feito: 'Uma hora a mais repetindo o gesto até sair sem pensar.' };
+  const pos = posicaoDe(v, es);
+  if (pos === 'goleiro') return { rotulo: 'Treino extra de goleiro: reflexos, saídas e um contra um', porque: 'Com o preparador de goleiros, depois do treino: a técnica sobe e as defesas da temporada sentem.', feito: 'Cem bolas no ângulo, saídas do gol, reposição com a mão e com o pé. No fim, nem as de perto passavam.' };
+  if (pos === 'zagueiro' || pos === 'lateral' || pos === 'volante') return { rotulo: 'Treino extra: marcação, antecipação e jogo aéreo', porque: 'Depois do treino: a técnica sobe e os desarmes da temporada sentem.', feito: 'Bola alçada na área, um contra um no corredor, antecipação. O cabeceio saiu firme no fim.' };
+  if (pos === 'meia') return { rotulo: 'Treino extra: passe e visão de jogo', porque: 'Depois do treino: a técnica sobe e as assistências da temporada sentem.', feito: 'Passe de primeira, inversão, a bola enfiada no espaço. O último saiu na medida.' };
+  return { rotulo: 'Treino extra: finalização', porque: 'Depois do treino, sozinho: a técnica sobe e os gols da temporada sentem.', feito: 'Duzentos chutes depois que todo mundo foi embora. Os últimos entraram todos.' };
 }
 
 export function disponibilidadeOficio(v: Vida, oque: OqueOficio): Veredito {
@@ -161,10 +174,11 @@ export function executarOficio(v: Vida, r: Rng, oque: OqueOficio): string {
     case 'treino_finalizacao': case 'treino_tatico': case 'treino_fisico': {
       const es = v.caminhos.esporte!;
       estresse(3);
+      // O treino do ano fica marcado: a temporada lê (`esporte.fecharTemporada`, `riscoDoTreinoExtra`).
       if (oque === 'treino_fisico') { v.corpo.forma = clamp(v.corpo.forma + 4); praticar(v, r, es.modalidade, 0.1, 1); v.fatos['oficio:fisico'] = v.t; }
-      else praticar(v, r, es.modalidade, oque === 'treino_finalizacao' ? 0.35 : 0.25, 1.1);
+      else { praticar(v, r, es.modalidade, oque === 'treino_finalizacao' ? 0.35 : 0.25, 1.1); v.fatos[oque === 'treino_finalizacao' ? 'oficio:tecnico' : 'oficio:tatico'] = v.t; }
       if (oque === 'treino_tatico') es.reputacao = clamp((es.reputacao ?? 40) + 1);
-      return oque === 'treino_fisico' ? 'Academia antes do treino, tiro de cem metros depois. O corpo reclamou — e respondeu.' : oque === 'treino_tatico' ? 'Uma hora a mais com a comissão, prancheta na mão. O treinador passou a te chamar para explicar o posicionamento.' : 'Duzentos chutes depois que todo mundo foi embora. Os últimos entraram todos.';
+      return oque === 'treino_fisico' ? 'Academia antes do treino, tiro de cem metros depois. O corpo reclamou — e respondeu.' : oque === 'treino_tatico' ? 'Uma hora a mais com a comissão, prancheta na mão. O treinador passou a te chamar para explicar o posicionamento.' : treinoTecnico(v).feito;
     }
     case 'video': {
       const es = v.caminhos.esporte!;

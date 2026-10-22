@@ -14,7 +14,7 @@ import { paisCorrente } from '../mundo/moeda';
 import { sobrenomeDeQuemNasce } from '../dados/nomes';
 import { anosNoPais, nacionalidadesDaPessoa, nacionalidadesDaVida, nacionalidadesDoBebe } from '../mundo/vida';
 import type { Rng } from '../rng';
-import { paisDaCidade } from '../dados/lugares';
+import { economiaLocal, paisDaCidade } from '../dados/lugares';
 import { clamp, rngDe } from '../rng';
 import type { Pessoa, Processo, Vida } from '../tipos';
 import {
@@ -69,7 +69,8 @@ function heranca(v: Vida, r: Rng, falecido: Pessoa): void {
   if (falecido.posses || v.origem.reservaDe === falecido.id) { herancaReal(v, falecido, conjugeVivo ? v.pessoas[falecido.parceiroId!] : undefined); return; }
   if (conjugeVivo) return; // o cônjuge fica com a casa; a herança vem depois
   const classe = v.origem.classe;
-  const tabela = { vulneravel: 0, trabalhadora: 6000, media_baixa: 25000, media: 110000, alta: 900000 }[classe] * (0.4 + r.next());
+  // REWORK 10.6 · P8: a tabela é de referência; o patrimônio deixado acompanha o custo de vida de onde a família vivia.
+  const tabela = { vulneravel: 0, trabalhadora: 6000, media_baixa: 25000, media: 110000, alta: 900000 }[classe] * (0.4 + r.next()) * economiaLocal(v.moradia.municipioId).custo;
   // REWORK 9.7 · ECO-01: quando a casa de origem tem uma reserva acompanhada (`origem.reserva`, que cresceu e encolheu
   // com a vida da família, e que os pedidos de ajuda gastaram), é ELA que se herda. Antes, a reserva sumia quando não
   // restava ninguém e uma quantia da tabela da classe aparecia no lugar (dinheiro destruído e criado).

@@ -178,7 +178,8 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'ado10_bico', tipo: 'decisao', peso: 2, idade: [15, 17], tema: 'trabalho', repetir: 2,
-    quando: c => !emprego(c) && livre(c),
+    // REWORK 10.6 · EVT-09: quem treina na base não tem fim de semana livre para bico.
+    quando: c => !emprego(c) && livre(c) && c.v.caminhos.esporte?.fase !== 'base',
     titulo: 'Um bico no fim de semana',
     texto: () => 'Um vizinho precisa de alguém para ajudar no fim de semana — entregas, estoque, o que aparecer.',
     opcoes: [
@@ -506,7 +507,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
     id: 'fil10_volta', tipo: 'decisao', peso: 2, idade: [45, 90], tema: 'filhos', repetir: 6,
     papeis: { filho: fixo(v => P.filho(22, 40)(v).filter(f => !v.vinculos[f.id]?.convivio.includes('casa') && (f.renda ?? 0) === 0)) },
     titulo: 'A volta para casa',
-    texto: c => `${nome(c, 'filho')} perdeu o emprego e perguntou se pode voltar a morar com você por um tempo.`,
+    texto: c => `${nome(c, 'filho')} está sem trabalho nem renda e perguntou se pode voltar a morar com você por um tempo.`,
     opcoes: [
       { id: 'aceitar', texto: 'Aceitar', comportamento: { familia: 2 },
         resolver: c => ({ texto: 'O quarto antigo voltou a ter dono. A casa ficou mais cheia — e mais barulhenta.', memoria: `${nome(c, 'filho')} voltou a morar em casa.`, efeito: () => { const vin = c.v.vinculos[c.p.filho.id]; if (!vin.convivio.includes('casa')) vin.convivio.push('casa'); prox(c, 'filho', 6); estresse(c, 3); } }) },

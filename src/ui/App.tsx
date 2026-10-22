@@ -1,4 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { deveMostrarNovidades, marcarNovidadesVistas } from './novidades';
+import { Novidades } from './janelaDeNovidades';
 import { useVida } from './useVida';
 import { Inicio } from './telas/Inicio';
 import { sobDemanda } from './util/sobDemanda';
@@ -10,6 +12,7 @@ const Criacao = sobDemanda(() => import('./telas/Criacao').then(m => m.Criacao))
 const Jogo = sobDemanda(() => import('./telas/Jogo').then(m => m.Jogo));
 const Vidas = sobDemanda(() => import('./telas/Vidas').then(m => m.Vidas));
 
+
 /** Busca tudo o que a vida vai pedir (o motor e as telas) — logo depois da primeira tela. */
 export function precarregar(): Promise<unknown> {
   return Promise.all([carregarMotor(), Criacao.precarregar(), Jogo.precarregar(), Vidas.precarregar()]);
@@ -18,12 +21,16 @@ export function precarregar(): Promise<unknown> {
 export function App() {
   const c = useVida();
   useEffect(() => { void precarregar(); }, []);
+  const [novidades, setNovidades] = useState(deveMostrarNovidades);
+  // Nunca por cima de uma decisão, de um resultado ou da criação: espera a vida ficar livre.
+  const ocupado = c.tela === 'criacao' || (c.tela === 'jogo' && (!!c.vida?.momento || !!c.resultado));
   return (
     <div className="app">
       {c.tela === 'inicio' && <Inicio c={c} />}
       {c.tela === 'criacao' && <Criacao c={c} />}
       {c.tela === 'jogo' && c.vida && <Jogo c={c} />}
       {c.tela === 'vidas' && <Vidas c={c} />}
+      {novidades && !ocupado && <Novidades aoFechar={() => { marcarNovidadesVistas(); setNovidades(false); }} />}
       <AvisoAtualizacao />
       <div className="avisos" aria-live="polite">
         {c.aviso && <p key={c.aviso.id} className={`aviso aviso--${c.aviso.tom}`}>{c.aviso.quem && <strong className="aviso__quem">{c.aviso.quem}</strong>}{c.aviso.texto}</p>}

@@ -406,11 +406,34 @@ const PRESENTE_DO_SABER = /^(Tem \S+ filhos?|Não tem filhos|Trabalha como|Está
 const RITUAL = (m: Marco) => m.tipo === 'ritual';
 
 /** O laço em palavras (REWORK 7): afeto, confiança e atrito — os números do vínculo, lidos, nunca mostrados. */
-function lacoEmPalavras(vin: Vinculo): { id: string; rotulo: string; palavra: string; tom: 'bom' | 'neutro' | 'ruim' }[] {
-  const p = vin.proximidade, c = vin.confianca, t = vin.tensao;
+/**
+ * REWORK 10.6 · A1 (P1 do 10.5) — a confiança lida com a HISTÓRIA, não só com o número. Quem se acabou de conhecer tem
+ * pouca confiança porque ela ainda não foi construída — antes, todo conhecido novo (que nasce com uns 25–30) aparecia
+ * como "abalada", como se algo a tivesse quebrado. Agora: rompida (houve ruptura), ressentida (a mágoa ainda pesa),
+ * abalada (você quebrou: mágoa causada por você, traição, briga), com motivo para desconfiar (foi a pessoa quem quebrou),
+ * esfriada (a distância de anos) — e, sem nada disso, "ainda se formando" (laço novo) ou "pouca" (laço antigo e raso).
+ */
+export function confiancaEmPalavras(vin: Vinculo, agora: number): { palavra: string; tom: 'bom' | 'neutro' | 'ruim' } {
+  const c = vin.confianca;
+  if (c >= 75) return { palavra: 'total', tom: 'bom' };
+  if (c >= 55) return { palavra: 'firme', tom: 'bom' };
+  const recente = (t: number) => agora - t <= 120;
+  if (vin.ruptura && !vin.reconciliacao) return { palavra: 'rompida', tom: 'ruim' };
+  if (vin.magoa && vin.magoa.ressentimento >= 50) return { palavra: 'ressentida', tom: 'ruim' };
+  const traicao = vin.historia.filter(h => h.tipo === 'traicao' && recente(h.t));
+  const brigas = vin.historia.some(h => h.tipo === 'conflito' && recente(h.t)) || !!vin.conflito;
+  const causouOutro = vin.magoa?.quem === 'outro' || vin.conflito?.quem === 'outro' || traicao.some(h => h.de === 'ela');
+  if (c < 35 && (vin.magoa || brigas || traicao.length)) return causouOutro ? { palavra: 'com motivo para desconfiar', tom: 'ruim' } : { palavra: 'abalada', tom: 'ruim' };
+  if (c >= 35) return { palavra: vin.magoa || traicao.length ? 'com reservas, depois do que houve' : 'com reservas', tom: 'neutro' };
+  if (vin.historia.some(h => h.tipo === 'distancia')) return { palavra: 'esfriada pela distância', tom: 'neutro' };
+  return { palavra: agora - vin.tInicio <= 36 ? 'ainda se formando' : 'pouca', tom: 'neutro' };
+}
+
+function lacoEmPalavras(vin: Vinculo, agora: number): { id: string; rotulo: string; palavra: string; tom: 'bom' | 'neutro' | 'ruim' }[] {
+  const p = vin.proximidade, t = vin.tensao;
   return [
     { id: 'afeto', rotulo: 'Afeto', palavra: p >= 75 ? 'muito próximos' : p >= 55 ? 'próximos' : p >= 35 ? 'cordiais' : p >= 15 ? 'distantes' : 'quase estranhos', tom: p >= 55 ? 'bom' : p >= 35 ? 'neutro' : 'ruim' },
-    { id: 'confianca', rotulo: 'Confiança', palavra: c >= 75 ? 'total' : c >= 55 ? 'firme' : c >= 35 ? 'com reservas' : 'abalada', tom: c >= 55 ? 'bom' : c >= 35 ? 'neutro' : 'ruim' },
+    { id: 'confianca', rotulo: 'Confiança', ...confiancaEmPalavras(vin, agora) },
     { id: 'atrito', rotulo: 'Atrito', palavra: t >= 55 ? 'muito' : t >= 30 ? 'algum' : t >= 12 ? 'pouco' : 'nenhum', tom: t >= 55 ? 'ruim' : t >= 30 ? 'neutro' : 'bom' },
     // REWORK 10.5 · REL-09: a intimidade (o quanto se contam) e o compromisso (o quanto a vida está amarrada), quando existem.
     ...dimensoesEmPalavras(vin)
@@ -522,7 +545,7 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
         <div role="tabpanel" id="ficha-painel-parte-agora" aria-labelledby="ficha-parte-agora" className={`ficha__parte ficha__parte--agora${fora('agora')}`}>
           {p.vivo && !p.especie && (
             <ul className="laco" aria-label="Como está o laço">
-              {lacoEmPalavras(vin).map(x => <li key={x.id} className={`laco__item laco__item--${x.tom}`}><span className="laco__rotulo">{x.rotulo}</span><span className="laco__palavra">{x.palavra}</span></li>)}
+              {lacoEmPalavras(vin, vida.t).map(x => <li key={x.id} className={`laco__item laco__item--${x.tom}`}><span className="laco__rotulo">{x.rotulo}</span><span className="laco__palavra">{x.palavra}</span></li>)}
             </ul>
           )}
           {/* REWORK 10.5 · REL-07: os estados de agora (podem ser vários: brigados e magoados; afastados e com a confiança abalada)

@@ -18,6 +18,7 @@ import { disponibilidade } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { acoesDasTrajetorias, acoesDoTrabalho, modoDoTrabalho, type AcaoProfissional } from '../../motor/sistemas/profissao';
 import { leituraPolitica, naPolitica } from '../../motor/sistemas/politica';
+import { causasDoDesgaste } from '../../motor/sistemas/desgastePolitico';
 import { emConstrucao } from '../../motor/sistemas/caminhosDeVida';
 import { AcoesVivas } from '../comum';
 import type { Aba } from '../navegacao';
@@ -27,7 +28,7 @@ import { DesenvolvimentoReal } from './Progresso';
 import { AMargem, temMargem } from './Margem';
 import { BotaoAcao } from '../comum';
 import { foragido } from '../../motor/sistemas/prisao';
-import { CarreiraComoTecnico, CarreiraNoEsporte, Concursos, CurriculoArtistico, Devolutivas, OutrosCaminhos, PainelBase, PainelDaPena, PainelForagido, PainelPolitico, ehAcaoPublica } from './Trabalho';
+import { CarreiraComoTecnico, CarreiraNoEsporte, Concursos, CurriculoArtistico, Devolutivas, OutrosCaminhos, PainelAtleta, PainelBase, PainelDaPena, PainelForagido, PainelPolitico, ehAcaoPublica } from './Trabalho';
 
 /** Para onde vai cada passo de um caminho (as divisões novas no lugar das abas da procura de antes). */
 function irDoPasso(irPara: (a: Aba) => void) {
@@ -48,7 +49,18 @@ export function VidaPublica({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
   return (
     <div className="divisao divisao--publica">
       {pol && <PainelPolitico vida={vida} principal={modo === 'politica'} />}
-      {(acoes.agora.length > 0 || acoes.mais.length > 0) && <AcoesVivas acoes={[...acoes.agora, ...acoes.mais] as AcaoProfissional[]} agir={agir} ir={ir} rotulo="O que dá para fazer na vida pública" />}
+      {/* REWORK 10.6 · C5: o desgaste com as causas e o caminho direto para as respostas (antes, só "Desgaste: bastante"). */}
+      {pol && vida.caminhos.politica && vida.caminhos.politica.desgaste >= 15 && (() => {
+        const causas = causasDoDesgaste(vida.caminhos.politica);
+        return (
+          <section className="divisao__secao desgaste-politico" aria-labelledby="titulo-desgaste" data-desgaste>
+            <h2 id="titulo-desgaste" className="secao-fio">O desgaste: de onde vem e o que fazer</h2>
+            {causas.length ? <ul className="desgaste-politico__causas">{causas.map(c => <li key={c.causa}><strong>{c.texto}</strong><span className="nota">{c.ajuda}</span></li>)}</ul> : <p className="nota">Um desgaste que já vinha de antes, sem causa registrada: esfria com o tempo.</p>}
+            <p className="nota"><a className="link" href="#acoes-vida-publica">Ver as respostas possíveis ↓</a></p>
+          </section>
+        );
+      })()}
+      {(acoes.agora.length > 0 || acoes.mais.length > 0) && <div id="acoes-vida-publica"><AcoesVivas acoes={[...acoes.agora, ...acoes.mais] as AcaoProfissional[]} agir={agir} ir={ir} rotulo="O que dá para fazer na vida pública" /></div>}
       <EmConstrucao vida={vida} lista={construindo} agir={agir} ir={ir} />
       {i >= 17 && !preso && (
         <section className="divisao__secao" aria-labelledby="titulo-editais">
@@ -72,8 +84,17 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
   const construindo = useMemo(() => emConstrucao(vida, disponibilidade).filter(c => c.id === 'esporte' || c.id === 'arte' || c.id === 'academia'), [vida]);
   const grupo = useMemo(() => acoesDasTrajetorias(vida, disponibilidade).find(g => g.id === 'grupo'), [vida]);
   const arte = vida.caminhos.arte;
+  // REWORK 10.6 · C4: a carreira já começada vem primeiro, como "Em andamento" — nunca no meio das portas de quem começa.
+  const emAndamento = esp?.fase === 'profissional' || (modo === 'artista' && !!vida.trabalho.atual);
   return (
     <div className="divisao divisao--outros">
+      {emAndamento && (
+        <section className="divisao__secao em-andamento" aria-labelledby="titulo-em-andamento" data-em-andamento>
+          <h2 id="titulo-em-andamento" className="secao-fio">Em andamento</h2>
+          {esp?.fase === 'profissional' ? <PainelAtleta vida={vida} /> : <p className="nota-grande">A sua carreira artística segue: os trabalhos, as propostas e o dinheiro estão em Trabalho · Meu trabalho; o currículo, logo abaixo.</p>}
+          <p className="ligacao-caminho"><span>{esp?.fase === 'profissional' ? 'O contrato, os treinos extras e o dia a dia do clube estão em Trabalho · Meu trabalho.' : 'As propostas e as produções estão em Trabalho · Meu trabalho.'}</span> <button type="button" className="link" onClick={() => irPara('trabalho')}>Ir para Meu trabalho →</button></p>
+        </section>
+      )}
       <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />
       {esp?.fase === 'base' && (
         <section className="divisao__secao paralelo" aria-label="A base">

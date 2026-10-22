@@ -7,6 +7,8 @@
  */
 
 import { disponibilidadeCrianca, executarCrianca, type OqueCrianca } from './sistemas/dinheiroDaCrianca';
+import { disponibilidadePedidoDeCompra, executarPedidoDeCompra } from './sistemas/pedidosDaCrianca';
+import { pararTratamento, podeParaTratamento } from './sistemas/saude';
 import { praticandoPor } from './sistemas/progressao';
 import { disponibilidadeDaAgenda, disponibilidadeDaPostura, executarNaAgenda, limparAgenda, resultadoDaPostura, type OpAgenda } from './sistemas/agenda';
 import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistemas/memoria';
@@ -27,7 +29,8 @@ import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro,
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import { abrirDecisao, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
-import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula, fecharNoHistorico } from './sistemas/escola';
+import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula, fecharNoHistorico, nomeDaMatricula } from './sistemas/escola';
+import { anoDe } from './tempo';
 import { eDasForcas, aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, podeAposentar, porContaPropria } from './sistemas/trabalho';
 import { disponibilidadePerseguir, executarPerseguir, type AcaoPerseguirCmd } from './sistemas/perseguir';
 import { inscrever, leituraDoPreparo } from './sistemas/concurso';
@@ -70,7 +73,7 @@ import { disponibilidadeProfissao, executarProfissao, type AcaoProfissaoCmd } fr
 import { NEGOCIOS } from './sistemas/negocio';
 import { disponibilidadePolitica, executarPolitica, type AcaoPoliticaCmd } from './sistemas/politica';
 import { abrirConflitoPendente } from './conteudo/compromissos';
-import { noServicoInicial, propor } from './sistemas/compromissos';
+import { horarioQueImpede, noServicoInicial, propor } from './sistemas/compromissos';
 import { definirObjetivo, podeDefinirObjetivo } from './sistemas/vestibular';
 import { buscarAlguem, disponibilidadeBusca, type ContextoBusca } from './sistemas/busca';
 import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, type MotivoDeAjuda } from './sistemas/origem';
@@ -116,7 +119,9 @@ export type Acao =
   | { tipo: 'abrir_negocio'; negocio: string }
   | { tipo: 'postura'; valor: Vida['educacao']['postura'] }
   | { tipo: 'enem' }
-  | { tipo: 'matricular'; indice: number }
+  | { tipo: 'matricular'; indice: number; /** REWORK 10.6 · C2: 'candidatar' só concorre — aprovada, a vaga espera a confirmação. */ etapa?: 'candidatar' }
+  /** REWORK 10.6 · C2: confirmar (ou recusar) a matrícula da vaga conquistada. */
+  | { tipo: 'confirmar_matricula'; recusar?: boolean }
   | { tipo: 'trancar' }
   | { tipo: 'destrancar' }
   | { tipo: 'abandonar_curso' }
@@ -244,6 +249,10 @@ export type Acao =
   | { tipo: 'margem'; oque: OqueMargem }
   /** REWORK 10.5 · ECO-04: o dinheiro da criança (pedir aos responsáveis, brigadeiros com a família, tarefas pagas). */
   | { tipo: 'crianca'; oque: OqueCrianca }
+  /** REWORK 10.6 · INF-02: pedir aos responsáveis para comprar algo da loja (inteiro, ou completando o que se tem). */
+  | { tipo: 'pedir_compra'; coisaId: string; completar?: boolean; responsavelId?: string }
+  /** REWORK 10.6 · P4: parar um tratamento (o risco é dito antes; a consequência depende da condição). */
+  | { tipo: 'parar_tratamento'; condicaoId: string }
   /** REWORK 10 · JOG-01: loteria, roleta, caça-níquel e blackjack — só com o dinheiro do jogo (`apostas`). */
   | { tipo: 'aposta'; op: OpAposta };
 
@@ -300,6 +309,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'agenda': return disponibilidadeDaAgenda(v, a.op);
     case 'margem': return disponibilidadeMargem(v, a.oque);
     case 'crianca': return disponibilidadeCrianca(v, a.oque);
+    case 'pedir_compra': return disponibilidadePedidoDeCompra(v, a.coisaId, !!a.completar, a.responsavelId);
+    case 'parar_tratamento': return podeParaTratamento(v, a.condicaoId);
     case 'aposta': return disponibilidadeAposta(v, a.op);
     case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
     case 'oportunidade': {
@@ -329,9 +340,16 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'enem': return podeFazerEnem(v);
     case 'objetivo_estudo': return podeDefinirObjetivo(v, a.cursoId);
     case 'conhecer_alguem': return disponibilidadeBusca(v, a.contexto);
+    case 'confirmar_matricula': {
+      const ap = v.educacao.aprovacao;
+      if (!ap || ap.tAte <= v.t) return bloqueio('incompativel', 'Não há vaga esperando confirmação.');
+      if (!a.recusar && v.educacao.matricula && !v.educacao.matricula.trancado) return bloqueio('incompativel', `Já está cursando ${nomeDaMatricula(v, v.educacao.matricula)}: um curso de cada vez.`);
+      return PERMITIDO;
+    }
     case 'matricular': {
       const o = opcoesDeCurso(v)[a.indice];
       if (!o) return bloqueio('impossivel', 'Opção inválida.');
+      if (a.etapa === 'candidatar' && v.educacao.aprovacao && v.educacao.aprovacao.tAte > v.t) return bloqueio('incompativel', `Há uma vaga esperando a sua confirmação: ${v.educacao.aprovacao.nome}.`);
       if (v.fatos[`tentou_${o.curso.id}_${Math.floor(v.t / 12)}`] !== undefined) return bloqueio('incompativel', 'Você já tentou este curso neste ano.');
       if (o.municipioId !== v.moradia.municipioId) { const preso = presoALugar(v); if (preso) return preso; }
       return o.veredito;
@@ -356,7 +374,11 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (!oc) return bloqueio('impossivel', 'Vaga desconhecida.');
       if (!porContaPropria(oc) && v.anoAtual.acoes.filter(x => x.startsWith('candidatura:')).length >= LIMITE_CANDIDATURAS) return bloqueio('incompativel', 'Já foram três processos seletivos neste ano.');
       if (jaFez(v, `candidatura:${oc.id}`)) return bloqueio('incompativel', 'Você já tentou esta vaga neste ano.');
-      return elegibilidade(v, oc);
+      const el = elegibilidade(v, oc);
+      if (!podeTentar(el) || oc.concurso) return el;
+      // REWORK 10.6 · AGE-01: o expediente que cai em cima da aula, sem turno que resolva, não se confirma.
+      const h = horarioQueImpede(v, oc.id);
+      return h ? bloqueio('incompativel', `${h.motivo}. Nenhum turno resolve: só uma vaga em outro horário (ou de meio período) cabe com a escola.`) : el;
     }
     case 'pedir_demissao': {
       const e = v.trabalho.atual;
@@ -782,6 +804,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'agenda': return ok(executarNaAgenda(v, a.op));
     case 'aposta': { const res = executarAposta(v, r, a.op); if (a.op.jogo === 'controle') return ok(a.op.oque === 'autoexcluir' ? 'Fora das apostas por um ano: a mesa fica fechada para você.' : v.apostas?.limiteAnual ? 'Limite de perda do ano: definido.' : 'O limite saiu.'); return res ? ok(res.texto, res.recebido > res.apostado ? 'bom' : res.recebido < res.apostado ? 'ruim' : 'neutro') : ok('A mão continua: pedir ou parar?'); }
     case 'crianca': { const x = executarCrianca(v, r, a.oque); return ok(x.texto, x.tom); }
+    case 'pedir_compra': { const x = executarPedidoDeCompra(v, r, a.coisaId, !!a.completar, a.responsavelId); return { resultado: x.texto, titulo: 'O pedido' }; }
+    case 'parar_tratamento': return ok(pararTratamento(v, a.condicaoId), 'ruim');
     case 'margem': {
       const resultado = executarMargem(v, r, a.oque);
       // REWORK 10.5 · CRI-02: quem procura o contato recebe a proposta na hora (a mesma decisão de quando ela vem sozinha).
@@ -898,10 +922,26 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const out = buscarAlguem(v, r, a.contexto);
       return { resultado: out.resultado, titulo: out.titulo ?? 'Conhecer alguém', pessoaId: out.pessoaId };
     }
+    case 'confirmar_matricula': {
+      const ap = v.educacao.aprovacao!;
+      v.educacao.aprovacao = undefined;
+      if (a.recusar) { escrever(v, { texto: `Abriu mão da vaga em ${ap.nome}.`, relevancia: 'cotidiano', tema: 'estudo', escolha: true }); return ok('Vaga recusada.'); }
+      const situacao = propor(v, r, ap.novo);
+      const porque = v.caminhos.pendente?.conflitos[0];
+      return { resultado: situacao === 'pendente' ? `Matrícula em ${ap.nome}: ${porque ? `${porque.charAt(0).toLowerCase()}${porque.slice(1)}` : 'junto com o que você já tem, não cabe tudo'} — é preciso escolher o que fazer.` : `Matrícula confirmada: ${ap.nome}. As aulas começam já.`, titulo: 'Matrícula' };
+    }
     case 'matricular': {
       const o: OpcaoCurso = opcoesDeCurso(v)[a.indice];
       const res = tentarIngresso(v, r, o);
-      if (!res.entrou) { v.fatos[`tentou_${o.curso.id}_${Math.floor(v.t / 12)}`] = v.t; return { resultado: res.texto }; }
+      if (!res.entrou) { v.fatos[`tentou_${o.curso.id}_${Math.floor(v.t / 12)}`] = v.t; return { resultado: res.texto, titulo: 'Resultado da candidatura' }; }
+      // REWORK 10.6 · C2: candidatar-se, ser aprovado e matricular-se são passos diferentes. Aprovada, a vaga é reservada
+      // até o próximo ano: a matrícula é confirmada (ou recusada) em Caminhos · Estudos, sabendo o que ela pede.
+      if (a.etapa === 'candidatar') {
+        const novo = novaMatricula(v, o);
+        v.educacao.aprovacao = { novo, nome: `${o.curso.nome}, ${novo.instituicao}`, t: v.t, tAte: v.t + 12 };
+        escrever(v, { texto: res.texto, relevancia: 'biografia', tema: 'estudo', tom: 'bom' });
+        return { resultado: `${res.texto} A vaga está reservada até ${anoDe(v.t + 12)}: falta confirmar a matrícula (Caminhos · Estudos).`, titulo: 'Resultado da candidatura' };
+      }
       // Aprovado: a matrícula entra pelo mesmo caminho de tudo que chega — se não cabe com o trabalho, a vida pergunta antes.
       const situacao = propor(v, r, novaMatricula(v, o));
       // REWORK 10 · ROT-05: o porquê de verdade (o horário do treino, o lugar, o descanso) — não um "integral ou outra cidade" genérico.

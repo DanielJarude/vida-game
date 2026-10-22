@@ -35,6 +35,7 @@ import { novaOportunidade } from './oportunidades';
 import { registrarAssuntoDaJustica } from './exposicao';
 import { perderMandatoPorPrisao, voltarAoTrabalho } from './politica';
 import { registrarQuemApareceu } from './rede';
+import { economiaLocal } from '../dados/lugares';
 
 export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedentes: [] });
 
@@ -297,7 +298,8 @@ export function processarJustica(v: Vida, r: Rng): void {
   if (v.fatos['remicao_estudo'] !== undefined || v.fatos['remicao_trabalho'] !== undefined) {
     const meses = (v.fatos['remicao_estudo'] !== undefined ? 3 : 0) + (v.fatos['remicao_trabalho'] !== undefined ? 3 : 0);
     p.tFim = Math.max(v.t, p.tFim - meses);
-    if (v.fatos['remicao_trabalho'] !== undefined) v.financas.conta += 3200; // o pecúlio de quem trabalhou dentro
+    // O pecúlio de quem trabalhou dentro (REWORK 10.6 · P8: no custo de vida do lugar, não em reais fixos).
+    if (v.fatos['remicao_trabalho'] !== undefined) v.financas.conta += Math.round(3200 * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
     if (v.fatos['remicao_estudo'] !== undefined) v.mente.cognicao = clamp(v.mente.cognicao + 1);
   }
   // A progressão pede o tempo E o comportamento (REWORK 5: a disciplina de `prisao`).

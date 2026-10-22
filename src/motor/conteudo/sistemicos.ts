@@ -15,6 +15,25 @@ import { cotidiano, previdencia, registroCivil } from './local';
 import { dinheiro as moeda } from '../texto';
 import { disponivel as guardado, pagar as pagarGuardado, parcelaPrice, rendaPropriaMensal } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
+import type { Vida } from '../tipos';
+import { ocupacaoOuNula } from '../dados/ocupacoes';
+import { nomeOcupacao } from '../sistemas/trabalho';
+
+/**
+ * REWORK 10.6 · EVT-09: a carreira que a pessoa já tem quando o médio acaba (o atleta profissional, a base de um clube, o
+ * emprego de verdade, a arte que paga) — com as palavras do evento. Aprendiz, estágio e bico não são carreira: quem só
+ * tem isso continua recebendo a pergunta de quem está começando.
+ */
+export function carreiraNoFimDoMedio(v: Vida): { agora: string; a: string; pergunta: string; priorizar: string; formacao: string; renda: boolean } | undefined {
+  const es = v.caminhos.esporte;
+  if (es?.fase === 'profissional') return { agora: 'você já é atleta profissional', a: 'ao esporte', pergunta: 'Treino de manhã e de tarde, jogo no fim de semana: o que fazer com os estudos?', priorizar: 'Priorizar a carreira no esporte', formacao: 'Uma formação ligada ao esporte (educação física, gestão esportiva)', renda: true };
+  if (es?.fase === 'base') return { agora: 'você treina na base de um clube', a: 'à base, ao sonho do esporte', pergunta: 'Os colegas falam de faculdade e emprego; a base pede tudo. O que fazer com os estudos?', priorizar: 'Seguir com tudo na base', formacao: 'Uma formação ligada ao esporte (educação física, gestão esportiva)', renda: false };
+  const e = v.trabalho.atual;
+  const oc = e ? ocupacaoOuNula(e.ocupacaoId) : undefined;
+  if (!e || !oc || ['aprendiz', 'estagio'].includes(e.contrato) || e.carga === 'parcial' || e.contrato === 'informal') return undefined;
+  const nome = nomeOcupacao(v, oc);
+  return { agora: `você já trabalha como ${nome}`, a: `ao trabalho de ${nome}`, pergunta: 'O que fazer com os estudos, junto com o trabalho?', priorizar: `Seguir no trabalho de ${nome}`, formacao: `Um curso na área (técnico ou superior), que some ao trabalho de ${nome}`, renda: true };
+}
 import * as P from './papeis';
 import { iniciarPausa, podeReduzir } from '../sistemas/pausa';
 import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao, custa, local } from './efeitos';
@@ -281,7 +300,8 @@ export const SISTEMICOS: Conteudo[] = [
   /* ======================================================= ESCOLA E FUTURO */
   {
     id: 'esc_fim_do_medio', tipo: 'decisao', idade: [16, 20], tema: 'estudo', garantido: true, biografica: true,
-    quando: c => temFato(c.v, 'concluiu_medio') && c.v.fatos['concluiu_medio'] === c.v.t,
+    // REWORK 10.6 · EVT-09: só para quem ainda não tem uma carreira (quem tem recebe `esc_fim_do_medio_carreira`).
+    quando: c => temFato(c.v, 'concluiu_medio') && c.v.fatos['concluiu_medio'] === c.v.t && !carreiraNoFimDoMedio(c.v),
     titulo: 'E agora?',
     texto: c => `${capitalizar(educacaoDaVida(c.v).medio.o)} acabou. ${P.genitor(c.v)[0] ? `${P.genitor(c.v)[0].nome} quer saber o que você vai fazer. ` : ''}Os colegas se dividem entre ${educacaoDaVida(c.v).nome}, emprego e não saber.`,
     opcoes: [
@@ -294,6 +314,31 @@ export const SISTEMICOS: Conteudo[] = [
       { id: 'tecnico', texto: 'Fazer um curso técnico ou aprender um ofício', resolver: c => ({ texto: 'Você foi pesquisar os cursos técnicos e de qualificação da cidade.', memoria: null, efeito: () => fato(c, 'plano_tecnico') }) },
       { id: 'concurso', texto: 'Estudar para concurso', disponivel: c => (idade(c.v) >= 17 && perfilDaVida(c.v).trabalho.concurso ? true : false),
         resolver: c => ({ texto: 'Apostila na mesa da cozinha, videoaula no celular. O próximo edital é o alvo.', memoria: 'Terminou o médio decidid' + c.g('o', 'a', 'e') + ' a estudar para concurso.', efeito: () => { fato(c, 'plano_concurso'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 2 }); } }) }
+    ]
+  },
+  {
+    // REWORK 10.6 · EVT-09 — o fim do médio de quem JÁ tem uma carreira. Antes, o jogador profissional de futebol, com
+    // salário alto, ouvia "Os colegas se dividem entre faculdade, emprego e não saber" e a opção "Arrumar um emprego". A
+    // pergunta continua (o que fazer com os estudos?), mas a partir da vida que existe: priorizar a carreira, estudar de
+    // um jeito que caiba nela, uma formação ligada ao que já se faz, cuidar do dinheiro, deixar para depois — e mudar de
+    // rumo continua possível (ninguém é obrigado a seguir no que tem).
+    id: 'esc_fim_do_medio_carreira', tipo: 'decisao', idade: [16, 22], tema: 'estudo', garantido: true, biografica: true,
+    quando: c => temFato(c.v, 'concluiu_medio') && c.v.fatos['concluiu_medio'] === c.v.t && !!carreiraNoFimDoMedio(c.v),
+    titulo: 'E os estudos, agora?',
+    texto: c => {
+      const k = carreiraNoFimDoMedio(c.v)!;
+      return `${capitalizar(educacaoDaVida(c.v).medio.o)} acabou — e a vida já tem um rumo: ${k.agora}. ${P.genitor(c.v)[0] ? `${P.genitor(c.v)[0].nome} pergunta se você vai parar de estudar. ` : ''}${k.pergunta}`;
+    },
+    opcoes: [
+      { id: 'carreira', texto: c => carreiraNoFimDoMedio(c.v)!.priorizar, resolver: c => ({ texto: 'A carreira fica em primeiro lugar. Os estudos esperam — a porta não fecha.', memoria: `Terminou o médio com a vida dedicada ${carreiraNoFimDoMedio(c.v)!.a}.`, efeito: () => fato(c, 'plano_carreira') }) },
+      { id: 'faculdade', texto: c => (educacaoDaVida(c.v).aberto ? 'Fazer a matrícula numa faculdade que caiba na rotina (noite ou a distância)' : `Fazer ${educacaoDaVida(c.v).o} e tentar uma faculdade à noite ou a distância`), resolver: c => {
+        const pode = podeFazerEnem(c.v).grau === 'permitido';
+        return { texto: `${pode ? (educacaoDaVida(c.v).prova ? 'A inscrição foi feita. ' : 'As notas do último ano foram para a candidatura. ') : ''}O curso vai ter de caber nos horários que você já tem: noite ou a distância (Caminhos · Estudos · Entrar na faculdade).`, memoria: null, efeito: () => { fato(c, 'plano_faculdade'); if (pode) fazerEnem(c.v, c.r); } };
+      } },
+      { id: 'formacao', texto: c => carreiraNoFimDoMedio(c.v)!.formacao, resolver: c => ({ texto: 'Você foi ver os cursos ligados ao que já faz: dá para começar quando a rotina deixar.', memoria: null, efeito: () => fato(c, 'plano_formacao_da_area') }) },
+      { id: 'dinheiro', texto: 'Planejar o futuro do dinheiro (a carreira não dura para sempre)', disponivel: c => (carreiraNoFimDoMedio(c.v)!.renda ? true : false), resolver: c => ({ texto: 'Uma conversa sobre guardar parte do que entra e não gastar como se fosse durar sempre. A cabeça ficou mais leve.', memoria: 'Terminou o médio pensando no dinheiro de depois da carreira.', efeito: () => { fato(c, 'plano_financeiro'); estresse(c, -3); } }) },
+      { id: 'outro', texto: 'Procurar outro trabalho, outro rumo', resolver: c => ({ texto: 'Você começou a olhar outras possibilidades: as vagas estão em Caminhos · Trabalho.', memoria: null, efeito: () => fato(c, 'plano_trabalho') }) },
+      { id: 'depois', texto: 'Decidir depois', resolver: () => ({ texto: 'Nada precisa ser decidido agora.', memoria: null }) }
     ]
   },
   {

@@ -85,7 +85,7 @@ import { processarTribunal } from './sistemas/tribunal';
 import { processarMargem } from './sistemas/margem';
 import { processarApostas } from './sistemas/apostas';
 import { processarEcos } from './sistemas/ecos';
-import { processarIndiretos } from './sistemas/indiretos';
+import { processarDistantes, processarIndiretos } from './sistemas/indiretos';
 import { processarSeguroDesemprego } from './sistemas/seguroDesemprego';
 import { fixarEstatura } from './sistemas/modalidades';
 import { processarMagoas } from './sistemas/magoas';
@@ -133,6 +133,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarCoisas(v);
   processarMortes(v, r);
   processarIndiretos(v);
+  processarDistantes(v);
   processarFamiliaDeOrigem(v, r);
   // A casa de onde a pessoa veio: a folga real, a reserva que cresce ou se gasta, a família que pode precisar.
   processarOrigem(v);

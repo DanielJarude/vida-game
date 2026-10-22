@@ -94,6 +94,18 @@ export function comprarCoisa(v: Vida, id: string): string {
   const c = coisa(id)!;
   const preco = precoDaCoisa(v, id);
   pagar(v, preco);
+  receberCoisa(v, id, preco);
+  const online = temLojaNaCidade(v, c.loja) ? '' : ' Veio pela internet: na cidade não há loja disso.';
+  // REWORK 7: a concordância da frase ("A estante de livros é sua", "Os livros são seus") — e o nome que já traz o
+  // artigo ("uma estante de livros") não ganha outro na frente ("A uma estante…").
+  const nome = /^(um|uma) /.test(c.nome) ? c.nome.replace(/^um /, 'o ').replace(/^uma /, 'a ') : `${c.artigo} ${c.nome}`;
+  const seu = c.artigo === 'a' ? 'é sua' : c.artigo === 'os' ? 'são seus' : c.artigo === 'as' ? 'são suas' : 'é seu';
+  return `${cap(nome)} ${seu} agora, por ${fmt(preco)}.${online} ${efeitoEmPalavras(v, c)}`.trim();
+}
+
+/** A coisa passa a ser sua (comprada por você, ou dada — REWORK 10.6: o adulto que compra para a criança). */
+export function receberCoisa(v: Vida, id: string, preco: number, dada = false): CoisaTida {
+  const c = coisa(id)!;
   const nova: CoisaTida = { id: novoId(v, 'cs'), coisaId: id, t: v.t, preco, estado: 100 };
   // A cor e o acabamento desta coisa (o violão de madeira escura, a raquete vermelha): da compra para sempre.
   const vs = variantesDaCoisa(id);
@@ -102,13 +114,8 @@ export function comprarCoisa(v: Vida, id: string): string {
   (v.financas.coisas ??= []).push(nova);
   // Só o que marca vai para a Linha da Vida (o primeiro instrumento, o primeiro computador, o piano); o resto é compra.
   const marca = c.loja === 'instrumentos' || id === 'computador' || id === 'notebook' || preco >= 8000;
-  if (marca) escrever(v, { texto: `Comprou ${/^(um|uma) /.test(c.nome) ? c.nome : `${c.artigo} ${c.nome}`}.`, relevancia: c.loja === 'instrumentos' || id === 'piano' ? 'biografia' : 'cotidiano', tema: c.loja === 'instrumentos' ? 'lazer' : 'casa', escolha: true });
-  const online = temLojaNaCidade(v, c.loja) ? '' : ' Veio pela internet: na cidade não há loja disso.';
-  // REWORK 7: a concordância da frase ("A estante de livros é sua", "Os livros são seus") — e o nome que já traz o
-  // artigo ("uma estante de livros") não ganha outro na frente ("A uma estante…").
-  const nome = /^(um|uma) /.test(c.nome) ? c.nome.replace(/^um /, 'o ').replace(/^uma /, 'a ') : `${c.artigo} ${c.nome}`;
-  const seu = c.artigo === 'a' ? 'é sua' : c.artigo === 'os' ? 'são seus' : c.artigo === 'as' ? 'são suas' : 'é seu';
-  return `${cap(nome)} ${seu} agora, por ${fmt(preco)}.${online} ${efeitoEmPalavras(v, c)}`.trim();
+  if (marca && !dada) escrever(v, { texto: `Comprou ${/^(um|uma) /.test(c.nome) ? c.nome : `${c.artigo} ${c.nome}`}.`, relevancia: c.loja === 'instrumentos' || id === 'piano' ? 'biografia' : 'cotidiano', tema: c.loja === 'instrumentos' ? 'lazer' : 'casa', escolha: true });
+  return nova;
 }
 
 /* ------------------------------------------------------------- Vender */

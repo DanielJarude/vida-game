@@ -461,8 +461,40 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
       v.fatos['mudancas_de_carreira'] = (v.fatos['mudancas_de_carreira'] ?? 0) + 1;
     }
   }
+  // REWORK 10.6 · CAR-15: o degrau novo de uma carreira que já corria em paralelo (ator → ator conhecido) é a mesma carreira.
+  unificarCarreiraArtistica(v);
   if (oc.concurso && !oc.duracao) marcar(v, 'aprovacao', porConcursoAqui(v, oc) ? `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso: ${nomeOcupacao(v, oc)}.` : `${flex(ge(v), 'Selecionado', 'Selecionada', 'Selecionade')} para o serviço público: ${nomeOcupacao(v, oc)}.`, 3, { trilha: oc.trilha, ocupacaoId: oc.id });
   return e;
+}
+
+/** Trilhas artísticas (a obra, o público, a agenda por projeto). */
+export const TRILHAS_ARTISTICAS = new Set(['cena', 'musica', 'danca', 'literatura', 'conteudo', 'ilustracao', 'imagem', 'orquestra']);
+/** Quanto do trabalho uma trajetória paralela rende (ela recebe parte da semana, não a semana inteira). */
+export const FATOR_PARALELA = 0.45;
+
+/**
+ * REWORK 10.6 · CAR-15 — UMA carreira artística, não duas. O playtest mostrou "Ator" como trabalho principal e "Ator
+ * conhecido" como trajetória paralela, cada um com a sua renda — o mesmo ofício pago duas vezes, com o currículo partido
+ * em dois. Nascia de portas que olhavam só o trabalho principal (o convite da arte, a vaga, a proposta) enquanto o outro
+ * degrau da mesma carreira estava na paralela. Aqui as duas fichas viram uma: fica o degrau mais alto (o reconhecimento é
+ * da carreira), a contagem começa no início mais antigo, e a outra ficha vai para o histórico — nada do que se fez some.
+ */
+export function unificarCarreiraArtistica(v: Vida): boolean {
+  const t = v.trabalho;
+  const a = t.atual, p = t.paralela;
+  if (!a || !p) return false;
+  const oa = ocupacaoOuNula(a.ocupacaoId), op = ocupacaoOuNula(p.ocupacaoId);
+  if (!oa || !op || oa.trilha !== op.trilha || !TRILHAS_ARTISTICAS.has(oa.trilha)) return false;
+  const inicio = Math.min(a.tInicio, p.tInicio);
+  const sobe = op.nivel > oa.nivel;
+  const fica = sobe ? { ...p, carga: op.carga, salario: Math.round(p.salario / FATOR_PARALELA / 10) * 10 } : { ...a };
+  const sai = sobe ? a : p;
+  t.historico.push({ ...sai, tFim: v.t, motivo: 'a mesma carreira, unificada' });
+  t.atual = { ...fica, tInicio: inicio };
+  t.paralela = undefined;
+  const nome = nomeOcupacao(v, sobe ? op : oa);
+  escrever(v, { texto: `A carreira artística virou uma só: ${nome}, desde ${anoDe(inicio)} — o que corria em paralelo era o mesmo ofício.`, relevancia: 'cotidiano', tema: 'trabalho' });
+  return true;
 }
 
 /** Este cargo entra por concurso no país onde a pessoa mora? (No Brasil, sim; onde o perfil diz que não, é seleção.) */

@@ -51,7 +51,7 @@ import { especialidadeMedica } from './medicina';
 import { criarPessoa, vincular } from '../pessoas';
 import { lembrarCom } from '../nucleo';
 import { habilidade } from './frentes';
-import { barraDaDivisao, nomePosicao, OCUPACOES_DE_ATLETA } from './esporte';
+import { barraDaDivisao, nomePosicao, OCUPACOES_DE_ATLETA, posicaoDe } from './esporte';
 import { climaDe, mexerNoClima } from './profissao';
 import { negocioAtivo } from './negocio';
 import { empregoAcademico, publicarArtigo, registrarProducao, vidaAcademica } from './academia';
@@ -60,6 +60,7 @@ import { marcar } from './marcas';
 import { competicaoDe, daCompeticao, registrarConquista } from './palmares';
 import { anoDe } from '../tempo';
 import { OCUPACAO_TECNICO, decidirFinal, deixarOClube, demitirDoComando, passagemAtual, trabalhoDoTecnico } from './tecnico';
+import { economiaLocal } from '../dados/lugares';
 
 export type Trajetoria = 'futebol' | 'basquete' | 'tenis' | 'atleta' | 'tecnico' | 'medicina' | 'academia' | 'cena' | 'negocio' | 'autonomo' | 'emprego' | 'militar' | 'politica' | 'rural' | 'universidade';
 export type Desfecho = RegistroDeSituacao['desfecho'];
@@ -386,7 +387,9 @@ function aplicar(v: Vida, tr: Trajetoria, ef: Efeitos, d: Dados, desfecho: Desfe
   if (ef.apoio && v.caminhos.politica) v.caminhos.politica.apoio = clamp(v.caminhos.politica.apoio + ef.apoio);
   if (ef.desgaste && v.caminhos.politica) desgastar(v.caminhos.politica, ef.desgaste, v.caminhos.politica.mandato ? 'mandato' : 'exposicao');
   if (t && tr === 'futebol') { if (ef.gols) t.gols += ef.gols; if (ef.assistencias) t.assistencias += ef.assistencias; if (ef.defesa && t.defesa !== undefined) t.defesa += ef.defesa; }
-  if (ef.dinheiro) { const n = tr === 'negocio' ? negocioAtivo(v) : undefined; if (n) n.caixa = (n.caixa ?? 0) + ef.dinheiro; else v.financas.conta += ef.dinheiro; }
+  // REWORK 10.6 · P8: os valores das situações estão no custo de vida de referência; aqui viram o custo de onde se vive
+  // (antes, entravam crus: a mesma oficina custava o mesmo em São Paulo, no sertão e em Lisboa).
+  if (ef.dinheiro) { const x = noCustoDaqui(v, ef.dinheiro); const n = tr === 'negocio' ? negocioAtivo(v) : undefined; if (n) n.caixa = (n.caixa ?? 0) + x; else v.financas.conta += x; }
   // O feito no emprego (o caso que virou aula, o projeto que virou referência) entra no desempenho dos próximos anos.
   if (ef.feito && e) e.feitos = Math.max(0, (e.feitos ?? 0) + ef.feito);
   // "Então fica no banco": a vaga só volta pela técnica, quando a temporada recalcular o espaço.
@@ -419,7 +422,8 @@ const nomeFut = (v: Vida) => F('nome no elenco', ((v.caminhos.esporte?.reputacao
 /* ------------------------------------------------------------ Futebol */
 
 const fut = (v: Vida) => trajetoriaDeSituacao(v) === 'futebol';
-const posDe = (v: Vida): Posicao => v.caminhos.esporte?.posicao ?? 'meia';
+// REWORK 10.6 · FUT-05: a mesma posição que a temporada usa (antes, o padrão daqui era 'meia', e o da temporada, outro).
+const posDe = (v: Vida): Posicao => (v.caminhos.esporte ? posicaoDe(v, v.caminhos.esporte) : 'meia');
 const CONSTRUCAO: Posicao[] = ['volante', 'meia', 'lateral', 'zagueiro'];
 const ATAQUE: Posicao[] = ['atacante', 'ponta'];
 const contextoDeJogo = (v: Vida, r: Rng): Dados => {
@@ -1125,7 +1129,9 @@ const MODELOS_POLITICA: ModeloSituacao[] = [
 const ru = (v: Vida) => v.caminhos.rural!;
 const noCampo = (v: Vida) => trajetoriaDeSituacao(v) === 'rural';
 const anosNoCampo = (v: Vida) => F('anos de lida', Math.min(15, (v.t - ru(v).tInicio) / 12) / 20 - 0.2);
-const caixa = (v: Vida, quanto: number) => F('caixa', v.financas.conta >= quanto ? 0.15 : -0.3);
+const caixa = (v: Vida, quanto: number) => F('caixa', v.financas.conta >= noCustoDaqui(v, quanto) ? 0.15 : -0.3);
+/** REWORK 10.6 · P8: um valor de referência no custo de vida de onde se vive. */
+const noCustoDaqui = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
 
 const MODELOS_RURAL: ModeloSituacao[] = [
   { id: 'rur_venda', trajetoria: 'rural', peso: () => 1.2, cabe: v => noCampo(v),

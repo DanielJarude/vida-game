@@ -398,7 +398,8 @@ export const ADULTO: Conteudo[] = [
   /* =================================================== LAZER E O MUNDO */
   {
     id: 'adu_ferias', tipo: 'decisao', idade: [18, 80], tema: 'lazer', repetir: 3,
-    quando: c => c.v.financas.conta > 2500 && c.v.moradia.tipo !== 'pais' || (c.v.moradia.tipo === 'pais' && c.v.financas.conta > 4000),
+    // REWORK 10.6 · EVT-09: o atleta em temporada e quem está num mandato não têm "uns dias de folga" sobrando assim.
+    quando: c => (c.v.financas.conta > 2500 && c.v.moradia.tipo !== 'pais' || (c.v.moradia.tipo === 'pais' && c.v.financas.conta > 4000)) && c.v.caminhos.esporte?.fase !== 'profissional' && c.v.trabalho.atual?.contrato !== 'eletivo',
     titulo: 'Férias',
     texto: c => `Pela primeira vez em muito tempo, sobraram uns dias de folga${P.parceiro(c.v)[0] ? ` junto com ${P.parceiro(c.v)[0].nome}` : ''} e algum dinheiro na conta.`,
     opcoes: [
@@ -422,7 +423,8 @@ export const ADULTO: Conteudo[] = [
   {
     id: 'adu_negocio_proprio', tipo: 'decisao', idade: [23, 60], tema: 'trabalho', repetir: 10,
     papeis: { socio: P.qualquer(P.amigo, P.irmao) },
-    quando: c => !c.v.caminhos.negocio || c.v.caminhos.negocio.estado === 'fechado',
+    // REWORK 10.6 · EVT-09: "trabalhar junto" no balcão não é proposta para o atleta profissional, nem para quem está num mandato ou na farda.
+    quando: c => (!c.v.caminhos.negocio || c.v.caminhos.negocio.estado === 'fechado') && c.v.caminhos.esporte?.fase !== 'profissional' && !['eletivo', 'militar'].includes(c.v.trabalho.atual?.contrato ?? ''),
     titulo: 'O negócio',
     texto: c => { const t = tipoDoSocio(c); return `${c.p.socio.nome} quer abrir ${t.nome} e chama você para sócio${c.g('', 'a', 'e')}: entrar com uns ${moedaCurta(t.capital * 0.5)} e trabalhar junto. ${c.p.socio.nome} entende do ramo; você entraria com o dinheiro e o braço.`; },
     opcoes: [

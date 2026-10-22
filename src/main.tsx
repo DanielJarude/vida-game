@@ -22,6 +22,8 @@ import './ui/registros.css';
 import './ui/possibilidades.css';
 // REWORK 10.5: o histórico acadêmico, o atendimento médico, o Submundo, a fama explicada (coerência e consequências).
 import './ui/coerencia.css';
+// REWORK 10.6: uma vida ao seu alcance (as ações principais, a faculdade, o convite aberto, o pedido da criança, as novidades).
+import './ui/alcance.css';
 
 iniciarTema();
 

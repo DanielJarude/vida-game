@@ -47,3 +47,29 @@ export function processarIndiretos(v: Vida): void {
     lembrarCom(v, de.id, como === 'parceria' ? `Perdeu ${q.nome}.` : `Perdeu ${flex(q.genero, 'o pai', 'a mãe', 'e genitore')}, ${q.nome}.`, 'perda', 2);
   }
 }
+
+/**
+ * REWORK 10.6 · P8 — O RESTO DO MUNDO TAMBÉM ENVELHECE. Quem não tem vínculo com você nem está ligado a alguém da sua vida
+ * (o colega de um emprego antigo que saiu da lista, o filho de um conhecido, a família de quem já morreu) ficava vivo
+ * para sempre: o mundo acumulava gente imortal. Aqui, uma conta leve por ano (a mortalidade pela idade, sem o corpo
+ * detalhado de quem importa): sem notícia — não há ninguém da sua vida para quem isso seja perda —, mas a pessoa deixa
+ * de existir para os registros e os acontecimentos (ninguém liga de um morto). Sorteio derivado: não mexe na vida.
+ */
+export function processarDistantes(v: Vida): number {
+  const ligados = new Set([...indiretos(v).map(x => x.q.id), ...v.caminhos.oportunidades.map(o => o.pessoaId).filter((x): x is string => !!x)]);
+  let mortes = 0;
+  for (const p of Object.values(v.pessoas)) {
+    if (!p.vivo || p.especie || v.vinculos[p.id] || ligados.has(p.id)) continue;
+    const anos = idadePessoa(v, p);
+    // Uma curva de mortalidade simples (Gompertz): quase nada na juventude, ~1% aos 60, ~6% aos 80, quase certo aos 105.
+    const q = anos < 1 ? 0.004 : Math.min(0.6, 0.0004 + 0.00005 * Math.exp(0.088 * anos));
+    if (!rngDe(v.id, 'distante', p.id, v.t).chance(q)) continue;
+    p.vivo = false;
+    p.tMorte = v.t;
+    p.causaMorte = anos >= 80 ? 'causas naturais' : 'uma doença';
+    const par = p.parceiroId ? v.pessoas[p.parceiroId] : undefined;
+    if (par && par.parceiroId === p.id && !v.vinculos[par.id]) par.parceiroId = undefined;
+    mortes++;
+  }
+  return mortes;
+}

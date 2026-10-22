@@ -158,7 +158,9 @@ function empregarPai(v: Vida, r: Rng, p: Pessoa, classe: Classe, municipioId: st
   if (!p.formacao && (oc.area || oc.escolaridade === 'superior')) {
     const nivel = oc.nivelCurso ?? (oc.escolaridade === 'superior' ? 'superior' : undefined);
     const c = CURSOS.find(x => (!oc.area || oc.area.includes(x.area)) && (!nivel || x.nivel === nivel)) ?? (oc.area ? CURSOS.find(x => oc.area!.includes(x.area)) : undefined);
-    if (c) p.formacao = c.id;
+    // REWORK 10.6: o NOME do curso (como o tipo pede e como os filhos guardam) — antes, o id ('eng_civil'), que nenhuma
+    // leitura reconhecia (a ficha, a herança da área, a coerência entre formação e cargo).
+    if (c) p.formacao = c.nome;
   }
 }
 

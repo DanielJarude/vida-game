@@ -596,6 +596,7 @@ const TEMA_DO_CONFLITO = (perde: string): 'escola' | 'trabalho' | 'lazer' => (pe
  */
 export function processarAgenda(v: Vida): Agenda {
   limparAgenda(v);
+  reconciliarObrigacoes(v);
   const a = agendaDaSemana(v);
   const avisados = new Set(v.agenda?.avisados ?? []);
   const pesam = a.conflitos.filter(c => c.perda >= 0.2);
@@ -608,6 +609,46 @@ export function processarAgenda(v: Vida): Agenda {
   limparAgenda(v);
   // A mesma semana serve às atividades do ano (as escolhas guardadas não mudam a semana: só as notas mudaram).
   return a;
+}
+
+/**
+ * REWORK 10.6 · AGE-01 / F6 — a RECONCILIAÇÃO: dois compromissos presenciais obrigatórios no mesmo horário (o trabalho
+ * em cima da escola ou do curso) não ficam assim de um ano para o outro. Acontecia por um turno guardado que ficou velho
+ * (o aprendiz da manhã que passou ao médio, cujo turno padrão é a manhã), por contratações que não passavam pela agenda
+ * e por saves antigos que aceitaram "dar conta dos dois". Procura primeiro um turno do trabalho (meio período) que tire o
+ * conflito, depois um turno da escola ou do curso; achando, muda e DIZ (nada se reorganiza em silêncio, e nenhum contrato
+ * se perde). Não achando, o conflito continua visível na agenda, com as saídas — e as horas que batem não contam (a aula
+ * atravessada é falta: ninguém ganha pelas duas coisas).
+ */
+export function reconciliarObrigacoes(v: Vida): string | undefined {
+  const fixos = blocosFixos(v);
+  const presenciais = fixos.filter(b => !b.movel && b.obrigatorio && (b.origem === 'escola' || b.origem === 'curso'));
+  const trabalho = fixos.filter(b => !b.movel && b.origem === 'trabalho');
+  const bate = (bs: Bloco[]) => bs.some(b => presenciais.some(p => p.id !== b.id && sobrepoe(b, p)));
+  if (!presenciais.length || !trabalho.length || !bate(trabalho)) return undefined;
+  const tentar = (fonte: FonteDeTurno, turnos: Turno[] | undefined, atual?: Turno): string | undefined => {
+    for (const t of turnos ?? []) {
+      if (t === atual) continue;
+      const a = agendaDaSemana(v, { turnos: { [fonte]: t } });
+      if (a.conflitos.some(c => c.tipo === 'sobreposicao' && ['escola', 'curso'].includes(c.perde) && (c.ocupa ?? '').startsWith('trabalho'))) continue;
+      if (a.conflitos.some(c => c.tipo === 'sobreposicao' && c.perde.startsWith('trabalho'))) continue;
+      ((v.agenda ??= {}).turnos ??= {})[fonte] = t;
+      const nome = fonte === 'escola' ? 'a escola' : fonte === 'curso' ? 'o curso' : 'o trabalho';
+      const texto = `O trabalho e ${fonte === 'trabalho' ? 'as aulas' : nome} batiam no mesmo horário: ${nome} passou para o turno da ${PALAVRA_TURNO[t]} — assim os dois cabem na semana.`;
+      escrever(v, { texto, relevancia: 'cotidiano', tema: fonte === 'trabalho' ? 'trabalho' : 'escola' });
+      return texto;
+    }
+    return undefined;
+  };
+  const tb = trabalho.find(b => b.fonteDoTurno === 'trabalho');
+  const r1 = tb ? tentar('trabalho', tb.turnos, tb.turno) : undefined;
+  if (r1) return r1;
+  for (const p of presenciais) {
+    if (!p.fonteDoTurno) continue;
+    const r = tentar(p.fonteDoTurno, p.turnos, p.turno);
+    if (r) return r;
+  }
+  return undefined;
 }
 
 /* ------------------------------------------------------------ As ações */
@@ -767,8 +808,12 @@ function conflitoDeHorario(v: Vida, ocupacaoId: string): ConflitoDeEntrada | und
   const escola = imp.novos.find(c => c.perde === 'escola');
   if (escola) {
     for (const t of turnosDaEscolaSemConflito(v, hip)) alternativas.push({ larga: `turno_escola:${t}`, texto: `passar a escola para o turno da ${PALAVRA_TURNO[t]}`, consequencia: `A escola vai para o turno da ${PALAVRA_TURNO[t]}; o trabalho fica com o horário dele.` });
-    if (idade(v) >= 15) alternativas.push({ larga: 'escola', texto: 'largar a escola', consequencia: 'A escola sai da vida: o diploma fica para depois (dá para voltar, no supletivo).' });
-    alternativas.push({ conciliar: true, texto: 'tentar dar conta dos dois', consequencia: 'As aulas que o trabalho atravessa viram falta: as notas e o aprendizado sentem.' });
+    // O aprendiz e o estagiário só existem estudando (o contrato pede a matrícula): largar a escola não é saída para eles.
+    if (idade(v) >= 15 && oc.contrato !== 'aprendiz' && oc.contrato !== 'estagio') alternativas.push({ larga: 'escola', texto: 'largar a escola', consequencia: 'A escola sai da vida: o diploma fica para depois (dá para voltar, no supletivo).' });
+    // REWORK 10.6 · AGE-01: ninguém está em dois compromissos presenciais obrigatórios ao mesmo tempo. Antes, "tentar dar
+    // conta dos dois" aceitava o expediente em cima da aula (escola 7h–12h e trabalho 8h–12h, de segunda a sexta) — até
+    // para o aprendiz, cujo contrato existe justamente para caber com a escola. Sem turno que resolva, o trabalho não entra.
+    if (!alternativas.length) return { com: 'agenda', rotulo: 'a escola', motivo: escola.texto.replace(/\.$/, ''), alternativas: [], impede: true };
   }
   // REWORK 10 · ROT-05: o treino da base não é "uma atividade" que se larga ou remarca — é o clube (`compromissos`).
   const daBase = v.caminhos.esporte?.fase === 'base' ? v.caminhos.esporte.modalidade : undefined;

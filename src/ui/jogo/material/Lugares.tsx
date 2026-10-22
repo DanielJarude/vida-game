@@ -6,6 +6,8 @@
  * fica o orçamento, confirmar — sem oito telas.
  */
 
+import { PedidoDeCompra } from '../Alcance';
+import { dependeDosResponsaveis } from '../../../motor/sistemas/pedidosDaCrianca';
 import { CLINICAS, PROCEDIMENTOS, emRecuperacao, precoDoProcedimento, revisavel, riscoDe, type Clinica } from '../../../motor/sistemas/estetica';
 import { municipio } from '../../../motor/dados/lugares';
 import { atividadesQueAjuda, coisasDaLoja, efeitoEmPalavras, precoDaCoisa, temCoisa, temLojaNaCidade } from '../../../motor/sistemas/coisas';
@@ -167,7 +169,13 @@ function LojaDeCoisasDaVida({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) 
                 {rendeEmMim.length > 0 && <span className="oferta__para-voce">Para o que você pratica: {rendeEmMim.map(x => `${x.nome.toLowerCase()} rende +${x.quanto}%`).join('; ')}.</span>}
               </span>
               {temCoisa(vida, c.id) ? <span className="loja-estilo__seu"><span className="nota">É seu.</span></span>
-                : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_coisa', coisaId: c.id }} agir={agir} variante="secundario" ocultarImpossivel>Comprar</BotaoAcao>}
+                : (
+                  <span className="oferta__comprar">
+                    <BotaoAcao vida={vida} acao={{ tipo: 'comprar_coisa', coisaId: c.id }} agir={agir} variante="secundario" ocultarImpossivel>Comprar</BotaoAcao>
+                    {/* REWORK 10.6 · INF-02: quem depende dos adultos e não alcança o preço pede — com este produto, aqui mesmo. */}
+                    {dependeDosResponsaveis(vida) && !podeTentar(disponibilidade(vida, { tipo: 'comprar_coisa', coisaId: c.id })) && <PedidoDeCompra vida={vida} coisaId={c.id} agir={agir} />}
+                  </span>
+                )}
             </li>
           );
         })}

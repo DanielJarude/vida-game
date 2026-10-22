@@ -16,7 +16,9 @@
  */
 
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
+import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
+import { anoDe } from '../tempo';
 import type { Condicao, Vida } from '../tipos';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
 import { perfilDaVida } from '../mundo/vida';
@@ -166,7 +168,8 @@ export function evoluirCondicoes(v: Vida, r: Rng): void {
       }
       continue;
     }
-    if (!cond.tratando) continue;
+    if (!cond.tratando) { cobrarAbandono(v, cond); continue; }
+    cond.tTratamento ??= v.t;
     const tratandoHa = cond.tDiagnostico !== undefined ? (v.t - cond.tDiagnostico) / 12 : anos;
     // Câncer tratado: remissão possível depois de um ano de tratamento (descoberto tarde, menos).
     if (cond.id === 'cancer' && tratandoHa >= 1 && r.chance(cond.tarde ? 0.14 : 0.32)) {
@@ -186,6 +189,69 @@ export function evoluirCondicoes(v: Vida, r: Rng): void {
       escrever(v, { texto: cond.id === 'hipertensao' ? 'A pressão ficou controlada com o remédio de todo dia.' : 'O diabetes ficou sob controle: remédio, dieta, exame a cada seis meses.', relevancia: 'biografia', tema: 'saude', tom: 'bom' });
     }
   }
+}
+
+/* ------------------------------------------------------------ REWORK 10.6 · P4 — parar o tratamento */
+
+/** O que parar costuma trazer, por condição (dito ANTES de parar, e cobrado depois — nunca uma punição igual para tudo). */
+const ABANDONO: Record<string, { risco: string; chance: number; saude: number; cobra: string }> = {
+  cancer: { risco: 'Interromper o tratamento do câncer pode deixar a doença avançar — e a volta fica mais difícil.', chance: 0.4, saude: 9, cobra: 'O câncer, sem tratamento, voltou a avançar: os exames pioraram.' },
+  hipertensao: { risco: 'Sem o remédio, a pressão volta a subir: risco de crise e, com os anos, de um susto mais sério.', chance: 0.18, saude: 5, cobra: 'Sem o remédio, a pressão subiu de novo: uma crise levou ao pronto-socorro.' },
+  diabetes: { risco: 'Sem remédio e acompanhamento, o açúcar sai do controle: mal-estar, internação, complicações com o tempo.', chance: 0.18, saude: 5, cobra: 'Sem acompanhamento, o diabetes saiu do controle: um mal-estar forte, uns dias internado.' },
+  coluna: { risco: 'Sem a fisioterapia, a dor nas costas tende a voltar.', chance: 0.22, saude: 3, cobra: 'A dor nas costas voltou forte, do jeito de antes da fisioterapia.' },
+  depressao: { risco: 'Parar o acompanhamento pode trazer os sintomas de volta, aos poucos.', chance: 0.25, saude: 2, cobra: 'Sem o acompanhamento, a tristeza voltou a pesar nos dias.' },
+  ansiedade: { risco: 'Parar o acompanhamento pode trazer as crises de volta.', chance: 0.25, saude: 2, cobra: 'Sem o acompanhamento, as crises voltaram.' }
+};
+const ABANDONO_GERAL = { risco: 'Sem o tratamento, a condição pode piorar — e o corpo cobra depois.', chance: 0.15, saude: 3, cobra: 'Sem o tratamento, a condição piorou.' };
+const abandonoDe = (id: string) => ABANDONO[id] ?? ABANDONO_GERAL;
+
+/** Dá para parar este tratamento? (é escolha de adulto; o de uma criança, os responsáveis decidem) */
+export function podeParaTratamento(v: Vida, condicaoId: string): Veredito {
+  const cond = v.corpo.condicoes.find(c => c.id === condicaoId);
+  if (!cond || cond.lesao || !cond.cronica) return bloqueio('impossivel', 'Não há esse tratamento.');
+  if (!cond.tratando) return bloqueio('incompativel', 'Esse tratamento já não está acontecendo.');
+  if (idade(v) < 18) return bloqueio('ilegal', 'O tratamento de uma criança ou adolescente quem decide são os responsáveis.');
+  return PERMITIDO;
+}
+
+/** O risco de parar, em palavras — com o peso da gravidade e da adesão até aqui. */
+export function riscoDeParar(v: Vida, cond: Condicao): string {
+  const a = abandonoDe(cond.id);
+  const meses = cond.tTratamento !== undefined ? v.t - cond.tTratamento : 0;
+  const peso = cond.gravidade >= 3 ? ' A condição é grave: o risco é maior.' : '';
+  const volta = cond.id === 'cancer' ? ' Retomar depois é possível, procurando atendimento de novo.' : ' Dá para retomar depois, procurando atendimento de novo.';
+  return `${a.risco}${peso}${meses >= 24 && cond.id !== 'cancer' ? ' Os anos de tratamento ajudam a segurar um pouco.' : ''}${volta}`;
+}
+
+/** Para o tratamento: registra quando e depois de quanto tempo (a adesão), e diz o que pode vir. */
+export function pararTratamento(v: Vida, condicaoId: string): string {
+  const cond = v.corpo.condicoes.find(c => c.id === condicaoId)!;
+  const meses = cond.tTratamento !== undefined ? Math.max(0, v.t - cond.tTratamento) : 0;
+  cond.tratando = false;
+  cond.abandono = { t: v.t, meses, vezes: (cond.abandono?.vezes ?? 0) + 1 };
+  cond.tTratamento = undefined;
+  escrever(v, { texto: `Parou o tratamento ${cond.id === 'depressao' || cond.id === 'ansiedade' ? 'da' : 'de'} ${cond.nome}${meses >= 12 ? `, depois de ${Math.round(meses / 12)} ${Math.round(meses / 12) === 1 ? 'ano' : 'anos'} tratando` : ''}.`, relevancia: 'biografia', tema: 'saude', tom: 'ruim', escolha: true });
+  return `Tratamento parado. ${abandonoDe(cond.id).risco}`;
+}
+
+/**
+ * O corpo cobra o tratamento parado — conforme a condição, a gravidade, o tempo sem acompanhamento e a adesão anterior
+ * (anos tratando seguram um pouco; parar de novo pesa mais). No máximo uma cobrança a cada dois anos, dita na Linha da
+ * Vida como consequência de ter parado (o jogador sabe por quê). Retomar (a consulta, o tratamento) encerra a cobrança.
+ */
+function cobrarAbandono(v: Vida, cond: Condicao): void {
+  const ab = cond.abandono;
+  if (!ab || cond.diagnosticada === false || !cond.cronica) return;
+  if (ab.cobrou !== undefined && v.t - ab.cobrou < 24) return;
+  const a = abandonoDe(cond.id);
+  const anos = (v.t - ab.t) / 12;
+  const chance = a.chance * (0.7 + cond.gravidade * 0.15) * (anos >= 1 ? 1 : 0.5) * (ab.meses >= 24 ? 0.75 : 1) * (ab.vezes >= 2 ? 1.25 : 1);
+  if (!rngDe(v.id, `abandono:${cond.id}`, v.t).chance(chance)) return;
+  ab.cobrou = v.t;
+  v.corpo.saude = clamp(v.corpo.saude - a.saude);
+  if (MENTAIS.has(cond.id)) { v.mente.felicidade = clamp(v.mente.felicidade - 6); v.mente.estresse = clamp(v.mente.estresse + 6); }
+  if (cond.id === 'cancer') { cond.gravidade = Math.min(3, cond.gravidade + 1); cond.tarde = true; }
+  escrever(v, { texto: `${a.cobra} (O tratamento estava parado desde ${anoDe(ab.t)}; dá para retomar procurando atendimento.)`, relevancia: cond.id === 'cancer' ? 'marco' : 'biografia', tema: 'saude', tom: 'ruim' });
 }
 
 /** Plano de saúde: o check-up anual pega cedo parte do que ainda não tem nome. */

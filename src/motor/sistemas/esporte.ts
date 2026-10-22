@@ -560,6 +560,10 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   // No basquete, a estatura é parte do jogo (o garrafão): ajuda o pivô, cobra mais técnica do armador baixo.
   const corpo = e.modalidade === 'basquete' ? vantagemDeEstatura(v) * 2.4 : 0;
   let nota = 6 + (h - barraDaDivisao(e.modalidade, e.nivel)) / 4 + (v.corpo.forma - 70) / 22 + corpo - passou * (futebol && pos === 'goleiro' ? 0.18 : 0.3) * desgaste - (sacrificio ? 0.9 : 0) + r.normal() * 0.6;
+  // REWORK 10.6 · FUT-05: o treino extra do ano (a função, o tático) aparece na temporada — não só na técnica geral.
+  const treinou = (k: string) => v.fatos[`oficio:${k}`] !== undefined && v.t - v.fatos[`oficio:${k}`] < 12;
+  if (treinou('tecnico')) nota += 0.25;
+  if (treinou('tatico')) nota += 0.15;
   nota = Math.round(clamp(nota, 2.5, 9.6) * 10) / 10;
   // Nos outros esportes, a temporada é um calendário de competições; o que conta são os pódios.
   const max = jogosDaTemporada(e.modalidade, e.nivel);
@@ -567,9 +571,10 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   const partidas = Math.max(0, Math.round(max * disp * (e.espaco === 'titular' ? 0.92 : 0.45) * (0.9 + r.next() * 0.15)));
   const titular = Math.min(partidas, Math.round(partidas * (e.espaco === 'titular' ? 0.88 : 0.3)));
   const peso = (titular + (partidas - titular) * 0.35) * Math.max(0.25, nota / 6.5);
-  const gols = Math.round(peso * (futebol ? GOL[pos] : clamp((nota - 5) / 8, 0.02, 0.5)) * (0.75 + r.next() * 0.5));
-  const assistencias = futebol ? Math.round(peso * ASSIST[pos] * (0.75 + r.next() * 0.5)) : 0;
-  const defesa = futebol && (pos === 'goleiro' || pos === 'zagueiro' || pos === 'lateral' || pos === 'volante') ? Math.round(peso * DEFESA[pos] * (0.8 + r.next() * 0.4)) : undefined;
+  const funcao = treinou('tecnico') ? 1.1 : 1;
+  const gols = Math.round(peso * (futebol ? GOL[pos] : clamp((nota - 5) / 8, 0.02, 0.5)) * (0.75 + r.next() * 0.5) * (futebol && (pos === 'ponta' || pos === 'atacante') ? funcao : 1));
+  const assistencias = futebol ? Math.round(peso * ASSIST[pos] * (0.75 + r.next() * 0.5) * (pos === 'meia' ? funcao : 1)) : 0;
+  const defesa = futebol && (pos === 'goleiro' || pos === 'zagueiro' || pos === 'lateral' || pos === 'volante') ? Math.round(peso * DEFESA[pos] * (0.8 + r.next() * 0.4) * funcao) : undefined;
   // Onde o time terminou: a força do clube na divisão, a sua temporada, e o resto do elenco.
   const forcaClube = (forcaDoClube(e.clube, paisDaCidade(e.municipioId)) - e.nivel) * 3;
   // Nas modalidades individuais com equipe (natação, atletismo, luta), a colocação é a do atleta na prova que importa — não a do time.
@@ -1032,7 +1037,7 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   if (e.doping && r.chance(0.24)) { flagrado(v, e); return; }
   // Lesões: mais prováveis com a idade, o treino forçado, a posição, a semana sem descanso — e jogando machucado.
   const atual = lesaoAtiva(v);
-  const lesao = (0.07 + Math.max(0, i - 26) * 0.012) * (forcar ? 1.6 : preservar ? 0.6 : 1) * (e.doping ? 1.3 : 1) * (e.modalidade === 'futebol' ? RISCO_POSICAO[pos] : RISCO_MODALIDADE[e.modalidade] ?? 1) * fatorDeRiscoFisico(v) * (atual?.lesao.cuidado === 'sacrificio' ? 1.4 : 1);
+  const lesao = (0.07 + Math.max(0, i - 26) * 0.012) * (forcar ? 1.6 : preservar ? 0.6 : 1) * (e.doping ? 1.3 : 1) * (e.modalidade === 'futebol' ? RISCO_POSICAO[pos] : RISCO_MODALIDADE[e.modalidade] ?? 1) * fatorDeRiscoFisico(v) * (atual?.lesao.cuidado === 'sacrificio' ? 1.4 : 1) * (v.fatos['oficio:fisico'] !== undefined && v.t - v.fatos['oficio:fisico'] < 12 ? 1.15 : 1);
   if ((!atual || atual.lesao.cuidado === 'sacrificio') && r.chance(lesao)) {
     e.lesoes += 1;
     const x = r.next();

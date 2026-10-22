@@ -36,7 +36,9 @@ export type DivisaoCaminhos = 'inicio' | 'estudos' | 'trabalho' | 'publica' | 'o
 export type ParteCaminhos = 'agora' | 'desenvolvimento' | 'oportunidades' | 'historico';
 
 /** Um destino: uma área, uma seção de Vida, uma aba de Minha Semana, uma parte de Caminhos — ou um nome antigo que continua aceito. */
-export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio' | 'vida_publica' | 'outros_caminhos' | 'inicio_caminhos' | 'prontuario' | 'submundo';
+export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio' | 'vida_publica' | 'outros_caminhos' | 'inicio_caminhos' | 'prontuario' | 'submundo'
+  /** REWORK 10.6 · C2/C3: os destinos das ações principais (entrar na faculdade, as bolsas, o histórico acadêmico, a carreira). */
+  | 'faculdade' | 'bolsas' | 'historico_academico' | 'minha_carreira' | 'conquistas';
 
 export interface Lugar {
   area: Area;
@@ -48,7 +50,7 @@ export interface Lugar {
   /** Em Caminhos, qual dos dois lados o destino quer à vista (a formação ou o trabalho). */
   foco?: 'formacao' | 'trabalho';
   /** Em Caminhos · Oportunidades, o que procurar (vagas, concursos, negócio). */
-  explorar?: 'vagas' | 'concursos' | 'negocio';
+  explorar?: 'vagas' | 'concursos' | 'negocio' | 'faculdade' | 'bolsas';
   /** REWORK 10 · UX-13: em Você, a parte do retrato (Resumo, Saúde, Habilidades, Aparência, No mundo). */
   voce?: 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'mundo';
   /** REWORK 10: na História, a parte (o Agora ou a Biografia). */
@@ -62,6 +64,12 @@ export function resolverDestino(d: Aba): Lugar {
   if (d === 'estudos' || d === 'formacao') return { area: 'caminhos', divisao: 'estudos', parte: 'agora', foco: 'formacao' };
   if (d === 'trabalho') return { area: 'caminhos', divisao: 'trabalho', parte: 'agora', foco: 'trabalho' };
   if (d === 'cursos') return { area: 'caminhos', divisao: 'estudos', parte: 'oportunidades', foco: 'formacao' };
+  // REWORK 10.6 · C2: "Entrar na faculdade" e "Bolsas e auxílios" abrem direto o lugar (Caminhos · Estudos · Cursos e faculdade).
+  if (d === 'faculdade' || d === 'bolsas') return { area: 'caminhos', divisao: 'estudos', parte: 'oportunidades', foco: 'formacao', explorar: d };
+  if (d === 'historico_academico') return { area: 'caminhos', divisao: 'estudos', parte: 'historico', foco: 'formacao' };
+  if (d === 'minha_carreira') return { area: 'caminhos', divisao: 'trabalho', parte: 'historico', foco: 'trabalho' };
+  // REWORK 10.6 · J1: as conquistas moram na História (a biografia, com os marcos).
+  if (d === 'conquistas') return { area: 'linha', historia: 'biografia' };
   if (d === 'vagas' || d === 'negocio') return { area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades', foco: 'trabalho', explorar: d };
   // Os concursos são vida pública (antes, uma pasta da procura de emprego).
   if (d === 'concursos' || d === 'vida_publica') return { area: 'caminhos', divisao: 'publica' };
@@ -98,16 +106,18 @@ export const DIVISOES_CAMINHOS: { id: DivisaoCaminhos; rotulo: string; oque: str
 /** Os rótulos das partes, em cada divisão (a mesma estrutura, o nome de cada lugar). */
 export const PARTES_DA_DIVISAO: Record<'estudos' | 'trabalho', { id: ParteCaminhos; rotulo: string; oque: string }[]> = {
   estudos: [
-    { id: 'agora', rotulo: 'Agora', oque: 'A escola ou o curso de agora, o que dá para fazer lá, a dedicação' },
+    // REWORK 10.6 · C2: os nomes dizem o que o jogador procura ("Cursos e faculdade", não só "Cursos").
+    { id: 'agora', rotulo: 'Minha formação', oque: 'A formação de agora (escola, curso, faculdade), o próximo marco e as ações principais' },
     { id: 'desenvolvimento', rotulo: 'Boletim', oque: 'Como você vem se saindo: as matérias, a nota, a frequência' },
-    { id: 'oportunidades', rotulo: 'Cursos', oque: 'O que está ao alcance: cursos, técnico, faculdade, pós, a preparação para provas' },
-    { id: 'historico', rotulo: 'Histórico', oque: 'As escolas, os diplomas, o que ficou' }
+    { id: 'oportunidades', rotulo: 'Cursos e faculdade', oque: 'Entrar na faculdade, cursos, técnico, pós, bolsas e auxílios, a preparação para provas' },
+    { id: 'historico', rotulo: 'Histórico', oque: 'O histórico acadêmico: as escolas, as disciplinas e notas, os diplomas' }
   ],
   trabalho: [
-    { id: 'agora', rotulo: 'Agora', oque: 'O trabalho de agora (ou a procura), o dia a dia, o que corre em paralelo' },
+    // REWORK 10.6 · C3: meu trabalho, procurar trabalho, minha carreira (e o desempenho de agora).
+    { id: 'agora', rotulo: 'Meu trabalho', oque: 'O trabalho de agora (ou a procura), o dia a dia, o que corre em paralelo' },
     { id: 'desenvolvimento', rotulo: 'Desempenho', oque: 'O desempenho, o salário, o que você está construindo, os retornos das tentativas' },
-    { id: 'oportunidades', rotulo: 'Vagas', oque: 'Vagas, candidaturas, trabalhar por conta, abrir um negócio' },
-    { id: 'historico', rotulo: 'Currículo', oque: 'Por onde você passou: empregos, promoções, os momentos da carreira' }
+    { id: 'oportunidades', rotulo: 'Procurar trabalho', oque: 'Vagas, candidaturas, entrevistas, trabalhar por conta, abrir um negócio' },
+    { id: 'historico', rotulo: 'Minha carreira', oque: 'A experiência, o currículo, as promoções, os projetos e o reconhecimento' }
   ]
 };
 
@@ -176,14 +186,19 @@ export interface Intencao {
 export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'estudar', quero: 'Estudar, ver a escola, a faculdade', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'agora' }, la: 'a escola ou o curso, as atividades de lá (os cursos possíveis estão em Cursos)' },
   { id: 'atividade_escolar', quero: 'Entrar numa atividade da escola ou da faculdade', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'agora' }, la: '"O que dá para fazer aqui"' },
-  { id: 'faculdade', quero: 'Fazer faculdade, técnico, pós', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'oportunidades' }, la: 'a preparação e os cursos' },
+  { id: 'faculdade', quero: 'Entrar na faculdade (graduação)', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'oportunidades', explorar: 'faculdade' }, la: '"Entrar na faculdade": os cursos, o que cada um pede, quanto custa, as bolsas — candidatar-se e confirmar a matrícula', chaves: 'faculdade universidade graduacao vestibular enem sisu matricula curso superior', tipo: 'fazer' },
+  { id: 'cursos', quero: 'Fazer um curso técnico, de qualificação ou uma pós', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'oportunidades' }, la: 'os cursos ao alcance, a preparação para provas', chaves: 'tecnico qualificacao pos mestrado doutorado curso livre', tipo: 'fazer' },
+  { id: 'bolsa', quero: 'Conseguir bolsa, crédito ou auxílio para estudar', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'oportunidades', explorar: 'bolsas' }, la: '"Bolsas e auxílios": o que existe aqui e o que está ao seu alcance', chaves: 'bolsa prouni fies credito auxilio cota financiamento', tipo: 'fazer' },
+  { id: 'convite', quero: 'Responder a um convite, uma proposta com prazo', lugar: { area: 'linha' }, la: 'o painel "Portas abertas" (ao lado; no celular, no alto da História): um toque abre o convite, com quem chamou, o prazo e o que muda', chaves: 'convite proposta projeto porta prazo oportunidade chamou', tipo: 'acompanhar' },
+  { id: 'pedir_compra', quero: 'Pedir aos responsáveis para comprar algo (criança)', lugar: { area: 'vida', secao: 'compras' }, la: 'a loja: o preço, o que você tem, o que falta — "Pedir para comprar" ou "Pedir ajuda para completar"', chaves: 'pedir comprar mesada pai mae responsavel dinheiro crianca brinquedo chuteira', tipo: 'fazer' },
+  { id: 'conquistas', quero: 'Ver as minhas conquistas e marcos', lugar: { area: 'linha', historia: 'biografia' }, la: 'História · Biografia: os marcos ano a ano (e "A conquista do ano" depois de cada ano)', chaves: 'conquista premio marco titulo medalha', tipo: 'ver' },
   { id: 'falar_mae', quero: 'Falar com a mãe, com a família', lugar: { area: 'pessoas' }, la: 'o rosto de quem você quer' },
   { id: 'namoro', quero: 'Procurar alguém para namorar', lugar: { area: 'pessoas' }, la: '"Conhecer alguém"' },
   // FIX pós-playtest humano: da amizade ao romance — na ficha, "Algo mais".
   { id: 'romance_amigo', quero: 'Tentar transformar uma amizade em romance', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Algo mais" (demonstrar interesse — a resposta é dela)' },
   { id: 'fazer_junto', quero: 'Fazer algo com quem eu amo, com o meu filho, com um amigo', lugar: { area: 'pessoas' }, la: 'o rosto da pessoa: "Fazer juntos" (cinema, jantar, parque, ensinar, viajar)' },
   { id: 'agir_trabalho', quero: 'Agir no trabalho: um projeto, a chefia, o treino de atleta', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'agora' }, la: '"No dia a dia do trabalho"' },
-  { id: 'emprego', quero: 'Procurar emprego, ver a profissão', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades' }, la: 'as vagas e as portas abertas (os concursos ficam em Vida pública)' },
+  { id: 'emprego', quero: 'Procurar emprego, mudar de trabalho', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades' }, la: 'Caminhos · Trabalho · Procurar trabalho: as vagas, o que cada uma pede, as candidaturas (os concursos ficam em Vida pública)', chaves: 'emprego vaga trabalho curriculo entrevista candidatura', tipo: 'fazer' },
   { id: 'negocio', quero: 'Abrir um negócio', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades' }, la: 'a pasta "Negócio próprio"' },
   { id: 'futebol', quero: 'Jogar futebol, treinar, fazer algo físico', lugar: { area: 'tempo', aba: 'corpo' }, la: 'esportes, academia, corrida (o time da escola fica em Caminhos)' },
   { id: 'hobby', quero: 'Praticar um hobby: música, desenho, leitura', lugar: { area: 'tempo', aba: 'atividades' }, la: 'as atividades por tipo' },
@@ -206,7 +221,7 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'cirurgia', quero: 'Fazer uma cirurgia plástica (nariz, orelhas, cabelo, lifting)', lugar: { area: 'vida', secao: 'compras' }, la: '"Você": a clínica de cirurgia plástica' },
   // REWORK 10.5 · SAU-02 / UX-20: "saúde" e "cuidar" levam ao atendimento (o prontuário, com o médico), não aos atributos.
   { id: 'saude', quero: 'Ir ao médico (consulta, exames), cuidar da saúde', lugar: { area: 'voce', voce: 'saude' }, la: 'Você · Saúde: o prontuário, os sinais do corpo e "Procurar atendimento médico" (criança: pedir aos responsáveis)', chaves: 'medico consulta sintoma sinal doenca exame hospital posto pediatra remedio dor diagnostico check-up cuidar atendimento', tipo: 'fazer' },
-  { id: 'tratamento', quero: 'Acompanhar um tratamento, uma condição de saúde', lugar: { area: 'voce', voce: 'saude' }, la: 'Você · Saúde: o que tem nome, o tratamento, a fila', chaves: 'tratamento condicao cancer pressao diabetes fila remedio acompanhamento', tipo: 'acompanhar' },
+  { id: 'tratamento', quero: 'Acompanhar um tratamento, uma condição de saúde', lugar: { area: 'voce', voce: 'saude' }, la: 'Você · Saúde: o que tem nome, o tratamento, a fila — parar (com o risco dito antes) ou retomar', chaves: 'tratamento condicao cancer pressao diabetes fila remedio acompanhamento parar retomar abandonar', tipo: 'acompanhar' },
   { id: 'cabeca', quero: 'Cuidar da cabeça, do estresse e do humor', lugar: { area: 'voce', voce: 'resumo' }, la: 'Você · Resumo: a cabeça e o humor, o que pesa e o que ajuda (terapia, descanso)', chaves: 'estresse ansiedade terapia psicologo humor triste cansado', tipo: 'fazer' },
   { id: 'atributos', quero: 'Ver os meus atributos (saúde, físico, felicidade, beleza, inteligência)', lugar: { area: 'voce', voce: 'resumo' }, la: 'Você · Resumo: a ficha dos cinco atributos, com as causas', chaves: 'atributo saude fisico felicidade beleza inteligencia', tipo: 'ver' },
   { id: 'cuidar_de_alguem', quero: 'Cuidar de alguém da família que adoeceu', lugar: { area: 'pessoas' }, la: 'a ficha da pessoa: "Família e cuidado" (acompanhar a consulta, ajudar, visitar)', chaves: 'cuidar doente pai mae filho avo hospital visitar', tipo: 'fazer' },

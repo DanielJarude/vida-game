@@ -96,7 +96,7 @@ export const REWORK3: Conteudo[] = [
   {
     // A adolescência numa casa apertada: um trabalho que ajude — sem largar a escola, se der.
     id: 'adol_ajudar_contas', tipo: 'decisao', idade: [15, 17], tema: 'familia', prioritario: true, repetir: 0,
-    quando: c => moraComFamiliaDeOrigem(c.v) && !c.v.trabalho.atual && recursosDaFamilia(c.v).folga <= 1 && asVezes(c, 'adol_ajudar_contas', 0.3),
+    quando: c => moraComFamiliaDeOrigem(c.v) && !c.v.trabalho.atual && c.v.caminhos.esporte?.fase !== 'base' && recursosDaFamilia(c.v).folga <= 1 && asVezes(c, 'adol_ajudar_contas', 0.3),
     titulo: 'Uma ajuda nas contas',
     texto: c => `${c.p.quem?.nome ?? 'Em casa'} perguntou, sem jeito, se você não conseguiria alguma coisa para ajudar. ${c.v.educacao.basica ? cotidiano(c.v).aprendiz ?? 'A escola tem vagas de aprendiz: meio período, com contrato, sem largar os estudos.' : ''}`,
     papeis: { quem: genitorEmCasa },

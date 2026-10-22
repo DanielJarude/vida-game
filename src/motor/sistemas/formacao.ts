@@ -390,6 +390,12 @@ export function criarProfessor(v: Vida, inst: Instituicao, papel: 'professor' | 
  * alguém da vida, com uma porta); o convite dele é oferecido uma vez.
  */
 export function processarFormacao(v: Vida): void {
+  // REWORK 10.6 · C2: a vaga conquistada e não confirmada passa — e fica dito (nunca uma matrícula fantasma).
+  const ap = v.educacao.aprovacao;
+  if (ap && (ap.tAte <= v.t || v.educacao.matricula?.cursoId === ap.novo.cursoId)) {
+    if (!v.educacao.matricula || v.educacao.matricula.cursoId !== ap.novo.cursoId) escrever(v, { texto: `A vaga em ${ap.nome} não foi confirmada e passou.`, relevancia: 'cotidiano', tema: 'estudo' });
+    v.educacao.aprovacao = undefined;
+  }
   const inst = ajustarAoLugarDeFormacao(v);
   if (!inst || inst.tipo === 'infantil' || inst.tipo === 'livre') return;
   formacaoDoAno(v, inst);

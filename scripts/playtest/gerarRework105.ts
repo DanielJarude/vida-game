@@ -42,7 +42,11 @@ async function principal() {
   await carregarMundo();
   const fac = (semente: number) => em(adulto(18, { semente, municipioId: 'recife-pe' }), x => { x.educacao.matricula = undefined; x.trabalho.atual = undefined; efetivarMatricula(x, { tipo: 'curso', cursoId: 'direito', via: 'sisu', modalidade: 'presencial', rede: 'publica', mensalidade: 0, municipioId: x.moradia.municipioId, instituicao: 'Universidade Federal de Pernambuco' }); });
   salvar('universitario', viver(fac(1051), 2));
-  salvar('formado', viverAte(nova({ semente: 1052, municipioId: 'recife-pe' }), 24));
+  // REWORK 10.6 · A2: o formado precisa ter FEITO faculdade (antes, a vida sorteada era passiva e nunca entrava): matriculado
+  // aos 18 em Direito e vivido até concluir — e o script falha alto se não concluir (nada de cena que finge).
+  const formado = viver(fac(1052), 6);
+  if (!formado.educacao.concluidos.some(c => c.cursoId === 'direito')) throw new Error('formado: a faculdade não foi concluída');
+  salvar('formado', formado);
   salvar('sintoma8', em(viverAte(nova({ semente: 1053, municipioId: 'sao-paulo-sp' }), 8), x => { x.corpo.condicoes.push({ id: 'diabetes', nome: 'diabetes', tInicio: x.t - 10, cronica: true, gravidade: 2, tratando: false, diagnosticada: false }); }));
   salvar('magoada', em(adulto(30, { semente: 1054 }), x => {
     const p = pessoaNova(x, 31, 'feminino');

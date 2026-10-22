@@ -11,6 +11,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
+import { TratamentoEmCurso } from './Alcance';
 import { leituraDaFama } from '../../motor/sistemas/fama';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { QuemNoMundo } from './Mundo';
@@ -159,7 +160,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
                 {condicoes.map(c => (
                   <li key={c.id}>
                     <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</strong>
-                    <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? `na fila ${redeDeSaude(vida).do}` : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}{c.tarde ? ' · descoberto tarde' : ''}</span>
+                    <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? `na fila ${redeDeSaude(vida).do}` : c.abandono ? 'tratamento parado' : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}{c.tarde ? ' · descoberto tarde' : ''}</span>
+                    <TratamentoEmCurso vida={vida} c={c} agir={agir} />
                   </li>
                 ))}
               </ul>

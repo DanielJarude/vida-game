@@ -127,6 +127,15 @@ export type AnaliseDeHorario = (v: Vida, ocupacaoId: string) => ConflitoDeEntrad
 let analiseDeHorario: AnaliseDeHorario | undefined;
 export function registrarAnaliseDeHorario(f: AnaliseDeHorario): void { analiseDeHorario = f; }
 const conflitoDeHorario = (v: Vida, ocupacaoId: string) => analiseDeHorario?.(v, ocupacaoId);
+/**
+ * REWORK 10.6 · AGE-01: o horário que IMPEDE (o expediente em cima da aula, sem turno que resolva) — dito antes de se
+ * candidatar, não depois de aprovado. Só para quem está na escola: é o único compromisso que não se troca por outro.
+ */
+export function horarioQueImpede(v: Vida, ocupacaoId: string): ConflitoDeEntrada | undefined {
+  if (!v.educacao.basica || v.educacao.evadiu) return undefined;
+  const c = conflitoDeHorario(v, ocupacaoId);
+  return c?.impede ? c : undefined;
+}
 
 function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada | undefined {
   const e = v.trabalho.atual;

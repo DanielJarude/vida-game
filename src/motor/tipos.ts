@@ -529,6 +529,13 @@ export interface Condicao {
    */
   procurou?: number;
   /**
+   * REWORK 10.6 · P4: o tratamento que a pessoa parou — quando, depois de quantos meses tratando (a adesão anterior), quantas
+   * vezes já parou e a última vez que o corpo cobrou por isso. Volta a valer o tratamento: o registro fica (a história).
+   */
+  abandono?: { t: number; meses: number; vezes: number; cobrou?: number };
+  /** REWORK 10.6 · P4: quando o tratamento de agora começou (para medir a adesão de quem parar). */
+  tTratamento?: number;
+  /**
    * Uma lesão (do esporte, do trabalho, de um tombo): aguda, com prazo de
    * recuperação que depende do CUIDADO escolhido. Enquanto dura, pesa na
    * saúde, no condicionamento, no treino e na disponibilidade (`sistemas/lesoes`).
@@ -721,6 +728,11 @@ export interface Educacao {
   /** Largou a escola básica sem concluir. */
   evadiu: boolean;
   matricula?: Matricula;
+  /**
+   * REWORK 10.6 · C2: a vaga conquistada que ainda espera a confirmação da matrícula (candidatar-se não é se matricular).
+   * Vale até `tAte`; sem confirmação, passa — e fica dito.
+   */
+  aprovacao?: { novo: Extract<NovoCompromisso, { tipo: 'curso' }>; nome: string; t: number; tAte: number };
   concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean; /** O desempenho ao se formar (0..100): o histórico que a seleção da pós lê. */ desempenho?: number; /** A especialidade da residência médica (da pessoa: vai para todo emprego). */ especialidade?: EspecialidadeMedica }[];
   /**
    * As notas do exame de ingresso (o nome do campo é histórico: é o exame do

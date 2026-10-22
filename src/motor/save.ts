@@ -29,7 +29,7 @@ import type { Financas,
 import { anoDe, tDe, idadeEm } from './tempo';
 import { existeMunicipio, municipioPorNome, MUNICIPIOS } from './dados/lugares';
 import { existePais } from './mundo/registro';
-import { cursoOuNulo } from './dados/cursos';
+import { CURSOS, cursoOuNulo } from './dados/cursos';
 import { ocupacaoOuNula } from './dados/ocupacoes';
 import { modeloVeiculo, VEICULO_ANTIGO } from './dados/bens';
 import { economiaInicial } from './sistemas/economia';
@@ -44,6 +44,7 @@ import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 import { atribuirVersoesAosVeiculos } from './sistemas/versoesVeiculo';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 import { normalizarRedes } from './sistemas/redesBase';
+import { unificarCarreiraArtistica } from './sistemas/trabalho';
 
 export const VERSAO_SAVE = 20;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
@@ -104,7 +105,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1574,6 +1575,18 @@ export function normalizarRework97(v: Vida): void {
     const p = v.pessoas?.[id];
     if (x.parentesco === 'irmao' && p && !p.genitores?.length) p.genitores = [...pais];
   }
+}
+
+/**
+ * REWORK 10.6 · CAR-15: a vida salva com a mesma carreira artística em duas fichas (o ator principal e o ator conhecido
+ * em paralelo, cada um com a sua renda) abre com uma só — o degrau mais alto, desde o início mais antigo; a outra ficha
+ * vai para o histórico. Nada do currículo some. (A agenda com dois compromissos no mesmo horário se reconcilia no ano
+ * seguinte, dita na Linha da Vida — `agenda.reconciliarObrigacoes`; até lá, a agenda mostra o conflito com as saídas.)
+ */
+export function normalizarRework106(v: Vida): void {
+  if (v.trabalho?.atual && v.trabalho.paralela) unificarCarreiraArtistica(v);
+  // A formação dos parentes de partida guardada pelo id do curso ('eng_civil') vira o nome, como em todo o resto.
+  for (const p of Object.values(v.pessoas ?? {})) { if (!p.formacao || CURSOS.some(c => c.nome === p.formacao)) continue; const c = CURSOS.find(x => x.id === p.formacao); if (c) p.formacao = c.nome; }
 }
 
 export function normalizarRework75(v: Vida): void {

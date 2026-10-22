@@ -28,13 +28,11 @@ import { encerrarEmprego, nomeOcupacao, rendaDeClientela } from './trabalho';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { anoDe } from '../tempo';
 
-/** Trilhas artísticas (a obra, o público, a agenda por projeto). */
-export const TRILHAS_ARTISTICAS = new Set(['cena', 'musica', 'danca', 'literatura', 'conteudo', 'ilustracao', 'imagem', 'orquestra']);
+export { TRILHAS_ARTISTICAS, FATOR_PARALELA } from './trabalho';
+import { FATOR_PARALELA, TRILHAS_ARTISTICAS, unificarCarreiraArtistica } from './trabalho';
 /** Trilhas acadêmicas (a pesquisa, a docência superior). */
 export const TRILHAS_ACADEMICAS = new Set(['academia', 'pesquisa', 'docencia_superior']);
 
-/** Quanto do trabalho uma trajetória paralela rende (ela recebe parte da semana, não a semana inteira). */
-export const FATOR_PARALELA = 0.45;
 /** A licença sem remuneração de um servidor espera por um tempo limitado (simplificado: três anos). */
 export const MESES_LICENCA = 36;
 
@@ -60,6 +58,8 @@ export function podeConciliar(v: Vida, novo: Ocupacao): boolean {
   if (!e || v.trabalho.paralela) return false;
   const oc = ocupacaoOuNula(e.ocupacaoId);
   if (!oc || oc.id === novo.id) return false;
+  // REWORK 10.6 · CAR-15: dois degraus da mesma carreira artística não são duas trajetórias (o ator e o ator conhecido).
+  if (oc.trilha === novo.trilha && TRILHAS_ARTISTICAS.has(oc.trilha)) return false;
   const fechado = (x: Ocupacao, c: string) => ['militar', 'eletivo', 'estagio', 'aprendiz'].includes(c) || !!x.formacaoInicial || x.jornada === 'fora' || x.trilha === 'atleta';
   if (fechado(oc, e.contrato) || fechado(novo, novo.contrato)) return false;
   if (e.formacaoAte) return false;
@@ -231,6 +231,7 @@ export function processarParalelas(v: Vida, _r?: Rng): void {
   // A licença que venceu sem volta: o cargo acaba (a pergunta foi feita um ano antes — `par_licenca`).
   const lista = t.pausadas ?? [];
   for (let k = lista.length - 1; k >= 0; k--) if (lista[k].licenca && lista[k].licenca!.tAte <= v.t) encerrarPausada(v, k, 'a licença acabou sem volta', false);
+  unificarCarreiraArtistica(v);
   // Uma paralela não sobrevive sem principal: vira o trabalho de todo dia.
   if (!t.atual && t.paralela) {
     const p = t.paralela;
