@@ -37,7 +37,7 @@ import { aulaCurtaDaCrianca, encaixe, estudaAgora, type FaixaDaSemana } from './
 import { semanaDaPolitica } from './politica';
 import { deslocamento } from './transporte';
 import { rngDe } from '../rng';
-import { registrarAnaliseDaBase, registrarAnaliseDeHorario, type Alternativa, type ConflitoDeEntrada } from './compromissos';
+import { registrarAnaliseDaBase, registrarAnaliseDeHorario, registrarReconciliacao, type Alternativa, type ConflitoDeEntrada } from './compromissos';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 
@@ -997,4 +997,5 @@ export function baseComONovo(v: Vida, novo: NovoCompromisso): BaseComONovo | und
 // A regra mora aqui (num pacote acima de `compromissos` e de `rotinas`): ao carregar, a agenda se registra lá.
 registrarAnaliseDaBase(baseComONovo);
 registrarAnaliseDeHorario(conflitoDeHorario);
+registrarReconciliacao(reconciliarObrigacoes);
 registrarHorarioDaAtividade(horarioDaAtividade);

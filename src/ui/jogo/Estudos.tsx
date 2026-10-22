@@ -825,10 +825,10 @@ function EntrarNaFaculdade({ vida, agir, voltar, irBolsas }: { vida: Vida; agir:
     <section className="entrar-faculdade" aria-labelledby="titulo-entrar-faculdade" data-fluxo="faculdade">
       <h2 id="titulo-entrar-faculdade" className="secao-fio">Entrar na faculdade</h2>
       <ol className="entrar-faculdade__passos" aria-label="Como funciona">
-        <li><strong>Escolher o curso</strong> — o que pede, quanto custa, quanto dura, onde.</li>
-        <li><strong>Candidatar-se</strong> — {ed.aberto ? 'a matrícula na pública é aberta a quem concluiu o ensino' : ed.prova ? `com a nota ${ed.do} (ou a seleção da particular)` : 'pela candidatura (as notas do último ano)'}.</li>
-        <li><strong>Resultado</strong> — aprovado, a vaga fica reservada até o ano seguinte.</li>
-        <li><strong>Confirmar a matrícula</strong> — sabendo o turno, o custo e o que muda na semana.</li>
+        <li><strong>Escolher o curso</strong><span>o que pede, custo, duração</span></li>
+        <li><strong>Candidatar-se</strong><span>{ed.aberto ? 'matrícula aberta na pública' : ed.prova ? `com a nota ${ed.do}` : 'pelas notas do último ano'}</span></li>
+        <li><strong>Resultado</strong><span>aprovado, a vaga fica reservada</span></li>
+        <li><strong>Confirmar a matrícula</strong><span>o turno, o custo, a semana</span></li>
       </ol>
       <div className="entrar-faculdade__situacao">
         <Linha rotulo="Requisito" valor={medio ? `${ed.medio.completo.charAt(0).toUpperCase()}${ed.medio.completo.slice(1)}: ok` : `Pede ${ed.medio.completo} — ${e.basica ? `você está no ${rotuloSerie(e.basica)}` : 'você ainda não concluiu'}`} tom={medio ? 'bom' : 'ruim'} />

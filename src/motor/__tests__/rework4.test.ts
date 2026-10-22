@@ -139,12 +139,12 @@ describe('compatibilidade profissional: direta, relacionada', () => {
 /* ============================================================== Partes 13–15 — carga */
 
 describe('carga: faculdade + trabalho é tentável — e cobra', () => {
-  it('curso integral com emprego integral tem o plano de tentar os dois, com o preço dito', () => {
+  it('curso integral com emprego integral: o conflito é dito, e "tentar os dois" não existe mais (REWORK 10.6 · AGE-01)', () => {
     const v = transacao(copia(), (x, r) => { x.educacao.matricula = undefined; contratar(x, r, ocupacao('atendente')); }).vida;
     const c = analisarEntrada(v, { tipo: 'curso', cursoId: 'eng_civil', via: 'privada', modalidade: 'presencial', rede: 'privada', mensalidade: 1500, municipioId: v.moradia.municipioId, instituicao: 'uma faculdade' });
-    const tentar = c.flatMap(x => x.alternativas).find(a => a.conciliar);
-    expect(tentar).toBeDefined();
-    expect(tentar!.consequencia).toMatch(/estresse|descanso/);
+    expect(c.length).toBeGreaterThan(0);
+    // Antes (REWORK 4), havia o plano de conciliar — os dois das 8h às 17h. Agora: deixar o trabalho ou não fazer o curso.
+    expect(c.flatMap(x => x.alternativas).find(a => a.conciliar)).toBeUndefined();
   });
   it('o teto humano existe: cinco empregos integrais não cabem em vida nenhuma', () => {
     expect(cargaHumana(copia(), 7.5).possivel).toBe(false);

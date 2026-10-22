@@ -15,8 +15,12 @@
 
 /* ============================================================ Entrar na faculdade, bolsas, a vaga aprovada */
 .entrar-faculdade, .bolsas-auxilios { margin: var(--space-2) 0 var(--space-4); }
-.entrar-faculdade__passos { margin: 0 0 var(--space-3); padding-left: 1.3rem; display: grid; gap: 4px; color: var(--text-secondary); line-height: 1.45; }
-.entrar-faculdade__passos strong { color: var(--text-primary); }
+.entrar-faculdade__passos { list-style: none; counter-reset: passo; margin: 0 0 var(--space-3); padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.entrar-faculdade__passos li { counter-increment: passo; display: grid; gap: 2px; padding: var(--space-1) var(--space-2); border-top: 3px solid var(--fio); min-width: 0; overflow-wrap: anywhere; }
+.entrar-faculdade__passos li::before { content: counter(passo); font-size: var(--type-meta); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.entrar-faculdade__passos strong { color: var(--text-primary); font-size: var(--type-caption); }
+.entrar-faculdade__passos span { color: var(--text-secondary); font-size: var(--type-caption); line-height: 1.35; }
+@media (max-width: 640px) { .entrar-faculdade__passos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .entrar-faculdade__situacao { display: grid; gap: 2px; margin-bottom: var(--space-2); }
 .bolsas-auxilios__lista { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: grid; gap: var(--space-2); }
 .bolsas-auxilios__lista li { display: grid; gap: 2px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); min-width: 0; overflow-wrap: anywhere; }
@@ -48,7 +52,7 @@
 .pedidos-crianca__texto { display: grid; gap: var(--space-1); min-width: 0; }
 
 /* ============================================================ O tratamento (P4), o conflito da semana, a carreira */
-.tratamento { margin-top: var(--space-1); display: grid; gap: var(--space-1); justify-items: start; }
+.tratamento { margin: var(--space-2) 0 0; display: grid; gap: var(--space-1); justify-items: start; text-align: left; font-family: var(--font-sans); }
 .tratamento__confirmar { display: grid; gap: var(--space-1); }
 .agora-conflito strong { color: var(--ruim); }
 .em-andamento { margin-bottom: var(--space-4); }

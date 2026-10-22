@@ -142,7 +142,7 @@ export function TratamentoEmCurso({ vida, c, agir }: { vida: Vida; c: Condicao; 
     if (!c.abandono) return null;
     return (
       <div className="tratamento tratamento--parado" data-tratamento={c.id}>
-        <p className="nota">Tratamento parado desde {anoDe(c.abandono.t)}. Sem ele, o corpo pode cobrar: {riscoDeParar(vida, c).split('. ')[0].toLowerCase()}.</p>
+        <p className="nota">{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}: tratamento parado desde {anoDe(c.abandono.t)}. Sem ele, o corpo pode cobrar: {riscoDeParar(vida, c).split('. ')[0].toLowerCase()}.</p>
         <BotaoAcao vida={vida} acao={{ tipo: 'cuidar', cuidado: 'consulta' }} agir={agir} variante="secundario">Retomar o tratamento (procurar atendimento)</BotaoAcao>
       </div>
     );
@@ -152,7 +152,7 @@ export function TratamentoEmCurso({ vida, c, agir }: { vida: Vida; c: Condicao; 
   return (
     <div className="tratamento" data-tratamento={c.id}>
       {!confirmar
-        ? <button type="button" className="botao botao--discreto" onClick={() => setConfirmar(true)} disabled={!podeTentar(pode)}>Parar o tratamento…</button>
+        ? <button type="button" className="botao botao--discreto" onClick={() => setConfirmar(true)} disabled={!podeTentar(pode)}>{`Parar o tratamento (${c.nome})…`}</button>
         : (
           <div className="tratamento__confirmar" role="group" aria-label={`Parar o tratamento de ${c.nome}`}>
             <p className="nota nota--atencao">{riscoDeParar(vida, c)}</p>

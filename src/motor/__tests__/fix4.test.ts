@@ -583,10 +583,9 @@ describe('curso integral × trabalho integral passa por propor()', () => {
     expect(vida.educacao.matricula).toBeUndefined();
     expect(p.planos.map(x => x.texto)).toEqual(expect.arrayContaining([expect.stringMatching(/^Matricular-se e deixar o trabalho de/), 'Não fazer a matrícula']));
     for (const pl of p.planos) expect(pl.consequencias.length).toBeGreaterThan(0);
-    // REWORK 4: tentar os dois passou a ser possível (gente de verdade faz) — e o plano diz o preço antes.
-    const tentar = p.planos.find(pl => pl.conciliar);
-    expect(tentar).toBeDefined();
-    expect(tentar!.consequencias.join(' ')).toMatch(/estresse|descanso/);
+    // REWORK 10.6 · AGE-01: o REWORK 4 deixava "tentar os dois" (curso e emprego, ambos das 8h às 17h). Dois compromissos
+    // presenciais obrigatórios no mesmo horário deixaram de existir: não há plano de conciliar aqui.
+    expect(p.planos.find(pl => pl.conciliar)).toBeUndefined();
   });
 
   it('escolher estudar deixa o emprego com o motivo; recusar mantém o emprego e registra', () => {
@@ -609,7 +608,8 @@ describe('curso integral × trabalho integral passa por propor()', () => {
     const meio = trabalhando('parcial');
     const c = analisarEntrada(meio, integral(meio));
     expect(c.length).toBe(1);
-    expect(c[0].alternativas.some(a => a.conciliar)).toBe(true);
+    // REWORK 10.6 · AGE-01: o meio período (manhã ou tarde) cai dentro do curso integral — sem plano de conciliar.
+    expect(c[0].alternativas.some(a => a.conciliar)).toBe(false);
   });
 
   it('pela ação de matrícula: aprovado, a pergunta abre na hora (não é a semana que acusa depois)', () => {

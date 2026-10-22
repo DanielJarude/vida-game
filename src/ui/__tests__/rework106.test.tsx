@@ -148,7 +148,7 @@ describe('K4 · parar o tratamento', () => {
     abrirJogo(v);
     area('Você');
     fireEvent.click(screen.getByRole('tab', { name: /Saúde/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Parar o tratamento…' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Parar o tratamento \(hipertensão\)…$/ }));
     expect(document.body.textContent).toMatch(/pressão volta a subir/);
     fireEvent.click(screen.getByRole('button', { name: 'Parar mesmo assim' }));
     expect(document.body.textContent).toMatch(/tratamento parado/);

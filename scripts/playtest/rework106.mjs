@@ -28,13 +28,13 @@ const TODAS = [
   ['outros-goleiro', 'goleiro', 'Caminhos', 'div:Outros caminhos'],
   ['trabalho-goleiro', 'goleiro', 'Caminhos', 'div:Trabalho'],
   ['publica-desgaste', 'militante', 'Caminhos', 'div:Vida pública'],
-  ['convite', 'convite', 'História', 'clique:[data-porta]'],
-  ['crianca-loja', 'crianca10', 'Vida', 'secao:Compras', 'clique:.vitrine__abrir:not([disabled])'],
+  ['convite', 'convite', 'História', 'clique:.agora-sinal--porta:has-text("Francisco")'],
+  ['crianca-loja', 'crianca10', 'Vida', 'secao:Compras', 'clique:.vitrine__abrir:has-text("Chuteira")'],
   ['crianca-pequena-compras', 'crianca7', 'Vida', 'secao:Compras'],
   ['crianca-dinheiro', 'crianca10', 'Vida', 'secao:Dinheiro'],
-  ['saude-tratamento', 'tratando', 'Você', 'aba:Saúde', 'botao:Parar o tratamento…'],
+  ['saude-tratamento', 'tratando', 'Você', 'aba:Saúde', 'botao:Parar o tratamento (hipertensão)…'],
   ['agenda-conflito', 'conflito', 'Minha Semana'],
-  ['novidades', 'empregada', 'História'],
+  ['novidades', 'empregada', 'novidades'],
   ['menu-busca-faculdade', 'formada-medio', 'História', 'menu', 'busca:faculdade']
 ];
 const so = process.env.CENAS?.split(',');
@@ -156,7 +156,11 @@ for (const [nome, sv, area, ...passos] of cenas) {
     await p.evaluate(([s, t, nv]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', nv); if (s) localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [sv ? save(sv) : null, tema, nome.startsWith('novidades') ? '10.5' : '10.6']);
     await p.goto(URL);
     await p.waitForTimeout(300);
-    if (area === 'fim') {
+    if (area === 'novidades') {
+      // As notas abrem sozinhas, já na tela inicial, para quem jogava a versão anterior.
+      await p.getByRole('dialog', { name: 'Novidades da atualização' }).waitFor({ timeout: 10000 });
+      await p.waitForTimeout(300);
+    } else if (area === 'fim') {
       await p.getByRole('button', { name: /legado|Continuar/ }).first().click();
       await p.waitForTimeout(500);
     } else if (area === 'criacao') {
@@ -241,7 +245,7 @@ for (const [nome, sv, area, ...passos] of cenas) {
     if (w >= 1440 || w === 390) { const cb = await p.evaluate(contrasteBaixo); if (cb.length) problemas.push(`${rot}: contraste < 3: ${cb.join(' | ')}`); }
     const sob = await p.evaluate(sobreposicoes);
     if (sob.length) problemas.push(`${rot}: texto sobre texto: ${sob.join(' | ')}`);
-    if (sv && area !== 'fim' && area !== 'criacao' && !passos.includes('menu') && !(await p.locator('.folha').count())) {
+    if (sv && area !== 'fim' && area !== 'criacao' && area !== 'novidades' && !passos.includes('menu') && !(await p.locator('.folha').count())) {
       const av = await p.evaluate(() => {
         const bt = document.querySelector('.avancar__botao'); if (!bt) return 'ausente';
         const r = bt.getBoundingClientRect(); const h = window.innerHeight;

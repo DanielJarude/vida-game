@@ -161,10 +161,11 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
                   <li key={c.id}>
                     <strong>{c.nome.charAt(0).toUpperCase() + c.nome.slice(1)}</strong>
                     <span>{c.tratando ? 'em tratamento' : vida.processos.some(p => p.tipo === 'tratamento' && p.condicaoId === c.id) ? `na fila ${redeDeSaude(vida).do}` : c.abandono ? 'tratamento parado' : c.cronica ? 'sem tratamento' : 'passando'}{c.cronica ? '' : ' · deve passar'}{c.tarde ? ' · descoberto tarde' : ''}</span>
-                    <TratamentoEmCurso vida={vida} c={c} agir={agir} />
                   </li>
                 ))}
               </ul>
+              {/* REWORK 10.6 · P4: parar (com o risco antes) ou retomar — abaixo da lista, uma linha por condição. */}
+              {condicoes.map(c => <TratamentoEmCurso key={`tr-${c.id}`} vida={vida} c={c} agir={agir} />)}
             </section>
           )}
         </div>

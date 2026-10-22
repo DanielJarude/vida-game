@@ -34,7 +34,6 @@ import { fem, negocioFeminino, presencaDe, socioVivo, abrirNegocio, dedicarAoNeg
 import { marcar } from './marcas';
 import { incorporarAoServico } from './militar';
 import { tDe } from '../tempo';
-import { cargaHumana } from './semana';
 import { efetivarMatricula } from './escola';
 import { mudarAgora } from './processos';
 import { modeloRotina } from './rotinas';
@@ -109,10 +108,9 @@ function conflitoComCurso(v: Vida, novo: NovoCompromisso, pesado: boolean, munic
   const nomeC = c.nivel === 'superior' ? `a faculdade de ${c.nome}` : `o curso de ${c.nome}`;
   const alternativas: Alternativa[] = [{ larga: 'curso', texto: `trancar ${nomeC}`, consequencia: `${cap(nomeC)} fica trancad${c.nivel === 'superior' ? 'a' : 'o'}: a vaga espera até quatro anos.` }];
   if (!integral && !outraCidade && novo.tipo !== 'servico_militar') alternativas.push({ conciliar: true, texto: 'tentar dar conta dos dois', consequencia: `${cap(nomeC)} continua à noite. A semana passa do que cabe: a cabeça e as notas sentem.` });
-  // REWORK 4: curso integral + emprego também é tentável (gente de verdade faz) — até o teto humano da semana. O preço
-  // é dito antes e cobrado depois: estresse, notas, sobrecarga, saúde.
-  else if (integral && !outraCidade && novo.tipo === 'emprego' && municipioDoNovo !== '__longe__' && cargaHumana(v, ocupacao(novo.ocupacaoId).carga === 'integral' ? 1.5 : 0.75).possivel)
-    alternativas.push({ conciliar: true, texto: 'tentar dar conta dos dois', consequencia: `${cap(nomeC)} segue em período integral, e o trabalho também: aula de dia, trabalho no resto, estudo de madrugada. Dá para tentar — o descanso some, o estresse sobe, as notas e a saúde cobram.` });
+  // REWORK 10.6 · AGE-01: o REWORK 4 deixava tentar curso integral + emprego ("aula de dia, trabalho no resto") — na agenda,
+  // os dois das 8h às 17h, de segunda a sexta. Dois compromissos presenciais obrigatórios ao mesmo tempo não existem:
+  // com o curso integral, o emprego de dia não entra (trancar o curso, recusar, ou procurar trabalho à noite/fim de semana).
   if (!integral && !outraCidade && novo.tipo === 'servico_militar') alternativas.push({ conciliar: true, texto: 'seguir estudando à noite', consequencia: 'Quartel de dia, aula à noite. A semana fica no limite.' });
   const motivo = municipioDoNovo === '__longe__' ? `O curso de formação é em regime de internato, longe: ${nomeC} não tem como seguir` : outraCidade ? `${cap(nomeC)} é presencial em ${municipio(m.municipioId).nome}` : integral ? `${cap(nomeC)} é em período integral` : `${cap(nomeC)} ocupa as noites`;
   return { com: 'curso', rotulo: nomeC, motivo, alternativas };
@@ -126,6 +124,9 @@ function conflitoComCurso(v: Vida, novo: NovoCompromisso, pesado: boolean, munic
 export type AnaliseDeHorario = (v: Vida, ocupacaoId: string) => ConflitoDeEntrada | undefined;
 let analiseDeHorario: AnaliseDeHorario | undefined;
 export function registrarAnaliseDeHorario(f: AnaliseDeHorario): void { analiseDeHorario = f; }
+/** REWORK 10.6 · AGE-01: a reconciliação da agenda (registrada por `agenda`, que mora acima) — logo depois de algo entrar. */
+let reconciliacao: ((v: Vida) => unknown) | undefined;
+export function registrarReconciliacao(f: (v: Vida) => unknown): void { reconciliacao = f; }
 const conflitoDeHorario = (v: Vida, ocupacaoId: string) => analiseDeHorario?.(v, ocupacaoId);
 /**
  * REWORK 10.6 · AGE-01: o horário que IMPEDE (o expediente em cima da aula, sem turno que resolva) — dito antes de se
@@ -362,11 +363,8 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntra
           const conf = conflitoComEmprego(v, { tipo: 'emprego', ocupacaoId: e.ocupacaoId, via: VIA_CURSO });
           if (conf) {
             conf.motivo = outraCidade ? `${conf.motivo}, em ${municipio(v.moradia.municipioId).nome} — e o curso é em ${municipio(novo.municipioId).nome}` : `${conf.motivo}; ${c.nivel === 'superior' ? 'a faculdade' : 'o curso'} de ${c.nome} é em período integral`;
-            // Meio período ao lado de um curso integral é apertado, mas possível: aí há o plano de tentar os dois.
-            if (!outraCidade && e.carga === 'parcial') conf.alternativas.push({ conciliar: true, texto: 'tentar dar conta dos dois', consequencia: 'O trabalho segue em meio período. A semana passa do que cabe: a cabeça e as notas sentem.' });
-            // REWORK 4: emprego integral + faculdade integral: possível de tentar (até o teto humano), com o custo dito.
-            else if (!outraCidade && e.carga === 'integral' && !e.formacaoAte && oc?.jornada !== 'fora' && cargaHumana(v, 1.5).possivel)
-              conf.alternativas.push({ conciliar: true, texto: 'tentar dar conta dos dois', consequencia: 'O trabalho segue em tempo integral e a faculdade também. Dá para tentar — o descanso some, o estresse sobe, as notas e a saúde cobram.' });
+            // REWORK 10.6 · AGE-01: sem "tentar dar conta dos dois" com o curso integral — o meio período (manhã ou tarde) e o
+            // emprego de dia caem dentro das 8h–17h do curso. Antes, o REWORK 4 aceitava (a agenda acusava falta o ano todo).
             out.push(conf);
           }
         }
@@ -486,7 +484,7 @@ export function propor(v: Vida, r: Rng, novo: NovoCompromisso): 'feito' | 'pende
     if (v.momento?.situacaoId === 'comp_conflito') v.momento = null;
   }
   const conflitos = analisarEntrada(v, novo);
-  if (!conflitos.length) { const a = v.caminhos.esporte?.fase === 'base' ? analiseDaBase?.(v, novo) : undefined; aplicarNovo(v, r, novo, false, []); guardarTurnoAoLadoDaBase(v, novo, a); return 'feito'; }
+  if (!conflitos.length) { const a = v.caminhos.esporte?.fase === 'base' ? analiseDaBase?.(v, novo) : undefined; aplicarNovo(v, r, novo, false, []); guardarTurnoAoLadoDaBase(v, novo, a); reconciliacao?.(v); return 'feito'; }
   const d = descreverOferta(v, novo);
   if (v.caminhos.pendente && v.caminhos.pendente.t === v.t) {
     // Duas ofertas que não cabem no mesmo ano: a segunda passa, e fica dito por quê.
@@ -523,6 +521,8 @@ export function resolverPendente(v: Vida, r: Rng, k: number): string {
   for (const id of plano.larga) largar(v, id, motivo, p.novo);
   const daBase = v.caminhos.esporte?.fase === 'base' ? analiseDaBase?.(v, p.novo) : undefined;
   aplicarNovo(v, r, p.novo, plano.larga.includes('negocio_nas_horas_vagas'), plano.larga);
+  // O que entrou com a escola ou o curso no mesmo horário (o quartel aos 18, com o médio de manhã) se ajeita na hora — e fica dito.
+  reconciliacao?.(v);
   guardarTurnoAoLadoDaBase(v, p.novo, daBase);
   if (plano.conciliar) v.fatos['conciliando'] = v.t;
   return plano.consequencias.join(' ');
