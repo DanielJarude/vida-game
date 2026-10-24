@@ -196,7 +196,10 @@ describe('esporte', () => {
   it('9 e 10. virar profissional é raro, tentar é comum — e quem fracassa segue com as outras rotas', () => {
     let tentaram = 0, profissionais = 0, pelaBase = 0, dispensadosComRota = 0, dispensados = 0;
     const tardios: number[] = [];
-    for (let s = 1; s <= 40; s++) {
+    // REWORK 11: 120 vidas (eram 40). Com 40, a proporção amadora oscilava com qualquer mudança que reembaralhasse as vidas
+    // (a infância nova bastava: 6 → 8 → 10 amadores, para um teto de 8,5); medido em 120: base 20/111, REWORK 11 25/109 —
+    // os mesmos limites, uma amostra que não depende da sorte (≈ 50 s).
+    for (let s = 1; s <= 120; s++) {
       const x = vidaDeAtleta(s * 7);
       // Uma vida que acabou na adolescência (a violência urbana também existe no jogo) não diz nada sobre a rota depois do sonho.
       if (x.morte && idade(x) < 18) continue;
