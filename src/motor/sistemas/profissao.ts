@@ -604,7 +604,7 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
   // REWORK 10.5 · CAR-13: quem atua não tem "freguesia" nem "estrutura" — o cachê é do contrato (e o agente negocia).
   // REWORK 11 · MUS-10 / COR-04: nem quem toca, dança ou escreve tem "freguesia" (preço de tabela, estrutura de atendimento):
   // o que muda a renda é o cachê da data, a obra e a agenda.
-  if (modo === 'artista' && ARTE_DE_OFICIO.has(oc.trilha) && e.contrato === 'autonomo' && !e.mei) add({ id: 'mei', rotulo: 'Formalizar como MEI', porque: 'Nota fiscal para o contratante, INSS contando.', acao: { tipo: 'mei' }, peso: 1 });
+  if (modo === 'artista' && ARTE_DE_OFICIO.has(oc.trilha) && oc.trilha !== 'cena' && e.contrato === 'autonomo' && !e.mei) add({ id: 'mei', rotulo: 'Formalizar como MEI', porque: 'Nota fiscal para o contratante, INSS contando.', acao: { tipo: 'mei' }, peso: 1 });
   if (POR_CONTA.has(modo) || (modo === 'artista' && !ARTE_DE_OFICIO.has(oc.trilha))) {
     const c = e.clientela ?? 0;
     if (c >= 62 && e.preco !== 'alto') add({ id: 'preco_alto', rotulo: 'Cobrar mais', porque: 'A agenda está cheia.', acao: P('preco', { valor: 'alto' }), peso: 5 });

@@ -213,7 +213,9 @@ describe('palco: valor contratado ≠ renda do artista', () => {
     const topo = cacheDeApresentacao(musico({ hab: 95, publico: 98, noto: 97 }), 'musica');
     expect(topo).toBeGreaterThan(500000);
     const famoso = cacheDeApresentacao(musico({ hab: 85, publico: 75, noto: 70 }), 'musica');
-    expect(famoso).toBeGreaterThan(100000);
+    // REWORK 11 · ATR-03/MUS-01: a curva do cachê ficou mais baixa no meio (o público 75 é "gente de fora já conhece", não
+    // estádio) e a técnica soma no máximo +3 ao alcance: ~R$ 65 mil contratados por show (antes, > R$ 100 mil).
+    expect(famoso).toBeGreaterThan(50000);
     expect(famoso).toBeLessThan(topo);
   });
   it('a carreira é irregular: o mesmo artista tem anos muito diferentes', () => {

@@ -2357,6 +2357,10 @@ export interface Envolvimento {
   saidaNegociada?: number;
   /** Quem procurou ajuda para sair (a família, um programa) — e quando. */
   ajuda?: number;
+  /** REWORK 11 · SUB-02: quantos anos ativos não renderam nada (o crime não é salário). */
+  anosSecos?: number;
+  /** REWORK 11 · SUB-03: contatos que traíram (falaram o seu nome para quem não devia). */
+  traicoes?: number;
 }
 
 /* ------------------------------------------------------------- Vida política */

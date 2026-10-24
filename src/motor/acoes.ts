@@ -410,6 +410,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'cuidar': return disponibilidadeCuidado(v, a.cuidado);
     case 'pedir_aumento':
       if (!v.trabalho.atual || v.trabalho.atual.contrato === 'informal' || v.trabalho.atual.contrato === 'autonomo') return bloqueio('incompativel', 'Não há a quem pedir.');
+      // REWORK 11 · POL-03: o subsídio de quem tem mandato é fixado em lei pela casa (e não se negocia com "a chefia").
+      if (v.trabalho.atual.contrato === 'eletivo') return bloqueio('impossivel', 'O subsídio do mandato é fixado em lei pela casa legislativa: não se negocia.');
       if (['servidor', 'militar'].includes(v.trabalho.atual.contrato)) return bloqueio('incompativel', 'No serviço público, o salário é o da carreira: sobe com a progressão, não com conversa.');
       if (['aprendiz', 'estagio'].includes(v.trabalho.atual.contrato)) return bloqueio('incompativel', 'Bolsa de estágio e salário de aprendiz são fixos no contrato.');
       if (v.t - v.trabalho.atual.tInicio < 12) return bloqueio('requisito', 'Espere completar um ano no cargo.');

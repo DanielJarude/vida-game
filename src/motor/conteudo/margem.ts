@@ -9,6 +9,7 @@ import type { Conteudo, Ctx } from './base';
 import { estresse, feliz, local } from './efeitos';
 import { marcarFato, parceiro } from '../nucleo';
 import { parar, moita } from '../sistemas/ilicito';
+import { novoContatoDoCaminho } from '../sistemas/margem';
 import { machucarNaBriga } from '../sistemas/lesoes';
 import { pagar, disponivel } from '../sistemas/dinheiro';
 import { abrirProcesso } from '../sistemas/justica';
@@ -44,7 +45,8 @@ export const MARGEM: Conteudo[] = [
               e.trabalhos = (e.trabalhos ?? 0) + 1;
               e.exposicao = clamp(e.exposicao + (deuErrado ? 22 : 12));
               if (deuErrado) { machucarNaBriga(c.v, c.r, 2); e.reputacao = clamp((e.reputacao ?? 0) - 6); }
-              else { const g = ganhoGrande(c); c.v.financas.conta += g; e.ganhos += g; e.reputacao = clamp((e.reputacao ?? 0) + 12); }
+              // REWORK 11 · SUB-03: quem fez o trabalho maior junto passa a conhecer você (mais um contato do caminho).
+              else { const g = ganhoGrande(c); c.v.financas.conta += g; e.ganhos += g; e.reputacao = clamp((e.reputacao ?? 0) + 12); novoContatoDoCaminho(c.v); }
             }
           };
         } },

@@ -61,7 +61,22 @@ function temAcesso(v: Vida): boolean {
   if (!e) return false;
   const oc = ocupacaoOuNula(e.ocupacaoId);
   if (!oc) return false;
-  return ['financas', 'contabil', 'publico', 'fiscal', 'judiciario'].includes(oc.trilha) || (['administrativo', 'logistica'].includes(oc.trilha) && oc.nivel >= 2) || (oc.trilha === 'comercio' && oc.nivel >= 3);
+  // REWORK 11 · POL-06: o mandato também dá acesso (a emenda, a licitação, o cargo para indicar) — antes, a trilha
+  // `politica` ficava de fora e o mandatário nunca recebia a porta da corrupção.
+  return ['financas', 'contabil', 'publico', 'fiscal', 'judiciario', 'politica'].includes(oc.trilha) || (['administrativo', 'logistica'].includes(oc.trilha) && oc.nivel >= 2) || (oc.trilha === 'comercio' && oc.nivel >= 3);
+}
+
+/** REWORK 11 · SUB-03: os contatos do caminho que ainda estão vivos e soltos (o preso e o morto não trazem trabalho). */
+export function contatosVivos(v: Vida): number {
+  const env = v.caminhos.envolvimento;
+  if (!env) return 0;
+  const ids = new Set([...(env.contatos ?? []), ...(env.contatoId ? [env.contatoId] : [])]);
+  return [...ids].filter(id => v.pessoas[id]?.vivo).length;
+}
+
+/** REWORK 11 · SUB-02: a chance de um ano ativo não render nada (15–25%, conforme a confiança do meio, os contatos e a conjuntura). */
+export function chanceDeAnoSeco(v: Vida, env: Envolvimento): number {
+  return clamp(0.21 - (env.reputacao ?? 0) / 600 - contatosVivos(v) * 0.01 + (v.economia?.fase === 'crise' ? 0.04 : 0) + (env.cautela ? 0.03 : 0), 0.14, 0.26);
 }
 
 /** Quem, da vida real do jogador, poderia trazer a proposta. */
@@ -112,7 +127,7 @@ export function categoriaPara(v: Vida, r: Rng): CategoriaIlicita {
     // REWORK 10 · CRI-01: quem tem cargo público (ou assina obra, fiscaliza, julga) é chamado para a corrupção; quem mexe
     // no dinheiro de uma empresa, para a fraude. Gente com dinheiro também erra — de outro jeito.
     const oc = v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.ocupacaoId) : undefined;
-    return oc && ['publico', 'fiscal', 'judiciario'].includes(oc.trilha) ? 'corrupcao' : 'fraude';
+    return oc && ['publico', 'fiscal', 'judiciario', 'politica'].includes(oc.trilha) ? 'corrupcao' : 'fraude';
   }
   if (v.caminhos.envolvimento?.categoria === 'mercado' || v.caminhos.envolvimento?.categoria === 'grupo') return 'mercado';
   return r.chance(nivelDeOferta(v.moradia.municipioId) >= 2 || v.moradia.padrao <= 2 ? 0.45 : 0.25) ? 'mercado' : 'patrimonial';
@@ -218,15 +233,32 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
     return;
   }
   const renda = RENDA[env.categoria][env.nivel - 1];
-  const ganho = Math.round(renda * 12 * (0.6 + r.next() * 0.8) * (env.cautela ? 0.5 : 1) / 100) * 100;
+  // REWORK 11 · SUB-02/03: o crime não é salário. Há anos que dão errado (nada entra — e, para quem está fundo, ainda
+  // custa: a dívida com o grupo, o que se perdeu); os CONTATOS vivos do caminho trazem mais trabalho e alguma proteção.
+  // Sorteio próprio (a sequência do ano não muda).
+  const ra = rngDe(v.id, 'ilic_ano', v.t);
+  const vivos = contatosVivos(v);
+  const seco = ra.chance(chanceDeAnoSeco(v, env));
+  const fatorContatos = 1 + Math.min(0.2, vivos * 0.05);
+  const bruto = Math.round(renda * 12 * (0.6 + r.next() * 0.8) * (env.cautela ? 0.5 : 1) * fatorContatos / 100) * 100;
+  const ganho = seco ? 0 : bruto;
   // O dinheiro de fora vai como vem: uma parte some no próprio caminho (quem cobra para não ver, o que se perde, o que
   // se gasta para não aparecer). Os ganhos registram o bruto (é o que a Justiça cobra de volta).
   v.financas.conta += Math.round(ganho * 0.65);
   env.ganhos += ganho;
+  env.anosSecos = (env.anosSecos ?? 0) + (seco ? 1 : 0);
+  if (seco) {
+    const perda = env.nivel >= 2 ? Math.round(renda * 12 * (0.08 + ra.next() * 0.1) / 100) * 100 : 0;
+    v.financas.conta -= perda;
+    if (env.nivel >= 2 && (env.categoria === 'mercado' || env.categoria === 'grupo')) env.atritos = (env.atritos ?? 0) + 1;
+    escrever(v, { texto: perda ? 'Um ano em que o que se fazia por fora não rendeu nada — e ainda deixou uma conta a acertar com quem estava junto.' : 'Um ano em que o que se fazia por fora não rendeu nada.', relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
+  }
   // A exposição cresce com o que se faz — menos para quem já aprendeu a não aparecer (os anos no caminho),
   // e bem menos na moita (que também deixa esfriar o que já se sabia).
   const anos = (v.t - env.tInicio) / 12;
-  const cresce = Math.max(3, EXPOSICAO[env.categoria] + (env.nivel - 1) * 6 + (reincidente(v) ? 6 : 0) - Math.min(6, anos * 1.2));
+  // Quem tem mandato é mais vigiado; os contatos de confiança cobrem um pouco (até 3 pontos ao ano).
+  const visado = env.categoria === 'corrupcao' && v.caminhos.politica?.mandato ? 5 : 0;
+  const cresce = Math.max(3, EXPOSICAO[env.categoria] + (env.nivel - 1) * 6 + (reincidente(v) ? 6 : 0) + visado - Math.min(6, anos * 1.2) - Math.min(3, vivos));
   env.exposicao = clamp(env.cautela ? env.exposicao * 0.85 + cresce * 0.35 : env.exposicao + cresce);
   // A cabeça de quem vive com medo de ser descoberto; a casa que desconfia.
   abalar(v, 'o que se faz por fora', 0, 4 + env.nivel * 2);
