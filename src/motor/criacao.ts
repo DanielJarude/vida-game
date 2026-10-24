@@ -269,7 +269,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     biografia: [],
     momento: null,
     ocorrencias: [],
-    ...(o.memoria?.length ? { memoriaDeVidas: [...new Set(o.memoria)].slice(0, 200) } : {}),
+    ...(o.memoria?.length ? { memoriaDeVidas: [...new Set(o.memoria)].slice(0, 300) } : {}),
     anoAtual: { acoes: [] },
     luto: [],
     caminhos: caminhosVazios()

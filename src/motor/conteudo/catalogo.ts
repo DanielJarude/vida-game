@@ -17,6 +17,7 @@ import { MARGEM } from './margem';
 import { POSSIBILIDADES } from './possibilidades';
 import { ACONTECIMENTOS_10 } from './acontecimentos10';
 import { ACONTECIMENTOS_105 } from './acontecimentos105';
+import { ACONTECIMENTOS_INFANCIA } from './acontecimentosinfancia';
 import { PROFISSAO } from './profissao';
 import { POLITICA } from './politica';
 import { COMPROMISSOS } from './compromissos';
@@ -34,4 +35,4 @@ import { SITUACOES } from './situacoes';
 import { TECNICO } from './tecnico';
 import { VIVIDA } from './vivida';
 
-export const CATALOGO: readonly Conteudo[] = [...SITUACOES, ...TECNICO, ...FAMA, ...REWORK3, ...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...CARREIRAS, ...AUTOESCOLA, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA, ...VIVIDA, ...MARGEM, ...POSSIBILIDADES, ...ACONTECIMENTOS_10, ...ACONTECIMENTOS_105];
+export const CATALOGO: readonly Conteudo[] = [...SITUACOES, ...TECNICO, ...FAMA, ...REWORK3, ...INTEGRACAO, ...OFICIOS_CONTEUDO, ...COMPROMISSOS, ...CARREIRAS, ...AUTOESCOLA, ...NEGOCIOS_CONTEUDO, ...BENS, ...SISTEMICOS, ...SOCIAL, ...REDE, ...CAMINHOS, ...TRAJETORIAS, ...PROFISSAO, ...POLITICA, ...MATERIAL, ...DESAFIOS, ...INFANCIA, ...PRIMEIROS, ...ADOLESCENCIA, ...ADULTO, ...MATURIDADE, ...VINCULOS, ...ESCOLHAS, ...MUNDO, ...BIOGRAFIA, ...VIVIDA, ...MARGEM, ...POSSIBILIDADES, ...ACONTECIMENTOS_10, ...ACONTECIMENTOS_105, ...ACONTECIMENTOS_INFANCIA];

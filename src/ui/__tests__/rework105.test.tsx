@@ -69,7 +69,10 @@ describe('SAU-02 · o atendimento médico no prontuário', () => {
   });
 
   it('o adulto sem sinal nenhum também encontra o médico (check-up)', () => {
-    render(<main><Voce vida={adulto(40, { semente: 3 })} agir={nada} irPara={() => {}} abrirPessoa={() => {}} parte="saude" /></main>);
+    // REWORK 11 · Fase F: "sem sinal nenhum" é a premissa do teste — dita no cenário (com a infância nova, a semente 3
+    // chega aos 40 com um incômodo sem nome, e o botão vira "ver o que é").
+    const semSinal = adulto(40, { semente: 3 }); semSinal.corpo.condicoes = [];
+    render(<main><Voce vida={semSinal} agir={nada} irPara={() => {}} abrirPessoa={() => {}} parte="saude" /></main>);
     expect(within(document.querySelector('[data-atendimento]') as HTMLElement).getByRole('button', { name: /check-up|atendimento médico/i })).toBeTruthy();
   });
 });

@@ -13,6 +13,7 @@ import { rngDe } from '../rng';
 import { escrever, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
 import { processarCorpoDePessoa } from './corpo';
 import { flex } from '../texto';
+import { citadosEmRegistrosVivos, esquecerMorto } from './citacoes';
 
 /** Os indiretos vivos de agora, cada um com a pessoa da sua vida a quem está ligado (e como). */
 export function indiretos(v: Vida): { q: Pessoa; de: Pessoa; como: 'parceria' | 'genitor' }[] {
@@ -56,7 +57,8 @@ export function processarIndiretos(v: Vida): void {
  * de existir para os registros e os acontecimentos (ninguém liga de um morto). Sorteio derivado: não mexe na vida.
  */
 export function processarDistantes(v: Vida): number {
-  const ligados = new Set([...indiretos(v).map(x => x.q.id), ...v.caminhos.oportunidades.map(o => o.pessoaId).filter((x): x is string => !!x)]);
+  // REWORK 11 · NPC-11.2: quem um registro em curso cita (a proposta, a produção, o agente) também está ligado.
+  const ligados = new Set([...indiretos(v).map(x => x.q.id), ...v.caminhos.oportunidades.map(o => o.pessoaId).filter((x): x is string => !!x), ...citadosEmRegistrosVivos(v)]);
   let mortes = 0;
   for (const p of Object.values(v.pessoas)) {
     if (!p.vivo || p.especie || v.vinculos[p.id] || ligados.has(p.id)) continue;
@@ -67,6 +69,7 @@ export function processarDistantes(v: Vida): number {
     p.vivo = false;
     p.tMorte = v.t;
     p.causaMorte = anos >= 80 ? 'causas naturais' : 'uma doença';
+    esquecerMorto(v, p.id);
     const par = p.parceiroId ? v.pessoas[p.parceiroId] : undefined;
     if (par && par.parceiroId === p.id && !v.vinculos[par.id]) par.parceiroId = undefined;
     mortes++;

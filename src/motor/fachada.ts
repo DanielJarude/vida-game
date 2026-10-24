@@ -7,7 +7,7 @@
 export { criarVida, type OpcoesCriacao } from './criacao';
 export { avancarAno } from './ano';
 export { executar } from './acoes';
-export { apagarSave, exportarVida, importarVida, ler, lerEstatisticas, memoriaDasUltimasVidas, registrarVidaPassada, salvar, vistosDaVida } from './save';
+export { apagarSave, exportarVida, importarVida, ler, lerEstatisticas, memoriaDasUltimasVidas, registrarVidaPassada, registrarVidaRecomecada, salvar, vistosDaVida } from './save';
 export { idade } from './nucleo';
 export { patrimonio } from './sistemas/dinheiro';
 export { nomeLugar, paisDaCidade } from './dados/lugares';

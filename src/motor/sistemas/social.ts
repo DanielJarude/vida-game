@@ -310,6 +310,9 @@ export function processarSocial(v: Vida, r: Rng): void {
         linhas.push({ prioridade: 2, fazer: () => {
           escrever(v, { texto: textoNovaAmizade(v, p, onde), relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id], evento: { tipo: 'amizade', pessoaId: p.id, peso: 20 } });
           lembrarCom(v, p.id, `Viraram amigos ${onde}.`, 'amizade', 2);
+          // REWORK 11 · NPC-11.1: a amizade que nasceu só da convivência ganha o costume que a fez (antes, 11% das
+          // amizades não tinham nada vivido junto além do "viraram amigos": a ficha ficava vazia de verdade).
+          if (!vin.historia.some(h => h.tipo !== 'inicio' && h.tipo !== 'amizade' && !/anos de amizade/.test(h.texto))) lembrarCom(v, p.id, costumeDaAmizade(v, vin, p.id), 'ritual', 1);
         } });
       } else if (depois === 'amigo' && antes === 'afastado') {
         linhas.push({ prioridade: 2, fazer: () => { escrever(v, { texto: `A amizade com ${p.nome} voltou a ser o que era.`, relevancia: 'biografia', tema: 'amizade', tom: 'bom', pessoas: [p.id], evento: { tipo: 'reconciliacao', pessoaId: p.id, peso: 20 } }); lembrarCom(v, p.id, 'A amizade voltou.', 'reconciliacao', 2); } });
@@ -401,12 +404,63 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
   }
 }
 
-export function descricaoOrigem(_v: Vida, vin: Vinculo): string {
+/* --------------------------------------------- REWORK 11 · NPC-11.1: a origem que o motor conhece, em palavras certas */
+
+const OCUPACOES_DE_ATLETA = new Set(['jogador_futebol', 'atleta', 'jogador_basquete', 'tenista']);
+const ESPORTE_DA_ROTINA: Record<string, string> = { futebol: 'futebol', time_escola: 'futebol', volei: 'volei', basquete: 'basquete', tenis: 'tenis', natacao: 'natacao', atletismo: 'atletismo', lutas: 'lutas' };
+
+/** O emprego de um ambiente `trabalho:<empregador>:<tInicio>` (o de agora, o paralelo ou um do histórico). */
+function empregoDoAmbiente(v: Vida, a: string) {
+  const resto = a.slice('trabalho:'.length);
+  const k = resto.lastIndexOf(':');
+  const emp = k >= 0 ? resto.slice(0, k) : resto;
+  const t = k >= 0 ? Number(resto.slice(k + 1)) : NaN;
+  return [v.trabalho.atual, v.trabalho.paralela, ...v.trabalho.historico].find(e => e && e.empregador === emp && (Number.isNaN(t) || e.tInicio === t));
+}
+
+/**
+ * O companheiro de time de quem foi atleta profissional: 'atual' (o clube de agora) ou 'ex'. Não é "do trabalho": o
+ * vestiário tem nome próprio.
+ */
+export function colegaDeEquipe(v: Vida, vin: Vinculo): 'atual' | 'ex' | undefined {
+  const a = vin.ambiente ?? '';
+  if (!a.startsWith('trabalho:')) return undefined;
+  const e = empregoDoAmbiente(v, a);
+  if (!e || !OCUPACOES_DE_ATLETA.has(e.ocupacaoId)) return undefined;
+  return e === v.trabalho.atual ? 'atual' : 'ex';
+}
+
+/** Em que fase de um esporte você estava num instante: na base, no profissional — ou fora de qualquer carreira dele. */
+function faseNoEsporte(v: Vida, d: string, t: number): 'base' | 'profissional' | undefined {
+  const cs = [...(v.caminhos.carreirasEsportivas ?? []), ...(v.caminhos.esporte ? [v.caminhos.esporte] : [])].filter(c => c.modalidade === d && c.tInicio <= t && (c.tFim === undefined || c.tFim >= t));
+  const c = cs[cs.length - 1];
+  if (!c) return undefined;
+  return c.fase === 'base' || (c.fase === 'encerrada' && !(c.temporadas?.length)) || t < c.tFase ? 'base' : 'profissional';
+}
+
+export function descricaoOrigem(v: Vida, vin: Vinculo): string {
   const a = vin.ambiente ?? '';
   if (a.startsWith('escola:')) return a.includes(':medio') ? 'no ensino médio' : a.includes(':infantil') ? 'na escolinha' : 'na escola';
   if (a.startsWith('faculdade:')) return 'na faculdade';
-  if (a.startsWith('trabalho:')) return 'no trabalho';
-  if (a.startsWith('rotina:')) return ROTINAS_SOCIAIS[a.split(':')[1]]?.onde ?? 'por aí';
+  if (a.startsWith('trabalho:')) {
+    // REWORK 11 · NPC-11.1: o companheiro do clube não é "do trabalho".
+    const e = colegaDeEquipe(v, vin) ? empregoDoAmbiente(v, a) : undefined;
+    if (e) return e.ocupacaoId === 'tenista' ? 'no circuito' : e.ocupacaoId === 'atleta' ? 'na equipe' : 'no time';
+    return 'no trabalho';
+  }
+  if (a.startsWith('rotina:')) {
+    // REWORK 11 · NPC-11.1: "no futebol" diz o lugar, não a origem real: a base do clube, a pelada de quem já era
+    // profissional, o time do bairro.
+    const id = a.split(':')[1];
+    const d = ESPORTE_DA_ROTINA[id];
+    if (d && id !== 'time_escola') {
+      const fase = faseNoEsporte(v, d, vin.tInicio);
+      if (fase === 'base') return 'na base';
+      if (fase === 'profissional') return d === 'futebol' ? 'na pelada, fora do clube' : 'nos treinos por fora';
+      if ((v.rotinas.find(r => r.id === id)?.nivel ?? 0) === 1) return d === 'futebol' ? 'no time do bairro' : 'na equipe do bairro';
+    }
+    return ROTINAS_SOCIAIS[id]?.onde ?? 'por aí';
+  }
   if (a.startsWith('vizinhanca:')) return 'na rua de casa';
   // A origem romântica (o app, a noite, a viagem) é contexto — dita como foi, não como "amigos em comum".
   const via = vin.contexto?.via;
@@ -425,6 +479,17 @@ export function descricaoOrigem(_v: Vida, vin: Vinculo): string {
 }
 
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+
+/** O costume que faz uma amizade de convivência (sorteio derivado: não mexe no gerador do ano). */
+function costumeDaAmizade(v: Vida, vin: Vinculo, id: string): string {
+  const a = vin.ambiente ?? '';
+  const xs = a.startsWith('escola:') ? ['O caminho de volta da escola, juntos.', 'O recreio dividido.', 'O trabalho em dupla que virou costume.']
+    : a.startsWith('faculdade:') ? ['O grupo de estudos antes das provas.', 'O almoço no bandejão.', 'As caronas depois da aula.']
+      : a.startsWith('trabalho:') ? (colegaDeEquipe(v, vin) ? ['A conversa no fim dos treinos.', 'As viagens para os jogos fora de casa.'] : ['O café do meio da tarde.', 'O almoço de sexta.', 'A carona na volta do trabalho.'])
+        : a.startsWith('rotina:') ? ['A conversa depois do treino.', 'A carona na volta.', 'O lanche depois, sempre no mesmo lugar.']
+          : ['As conversas na calçada.', 'Os fins de tarde, sem combinar.'];
+  return rngDe(v.id, 'costume_amizade', id).pick(xs);
+}
 
 function textoNovaAmizade(v: Vida, p: Pessoa, onde: string): string {
   const i = idade(v);

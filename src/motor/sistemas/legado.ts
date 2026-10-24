@@ -25,7 +25,7 @@
  */
 
 import { textoDoPremio } from './producoes';
-import type { CarreiraEsportiva, ConquistaEsportiva, Dominio, Emprego, Vida } from '../tipos';
+import type { CarreiraEsportiva, ConquistaEsportiva, Dominio, Emprego, RegistroDeSituacao, Vida } from '../tipos';
 import { ehElite } from '../dados/clubes';
 import { anoDe } from '../tempo';
 import { aSelecao, nivelDaCompeticao, oClube } from '../dados/clubes';
@@ -122,7 +122,7 @@ function trajetoriaEsportiva(v: Vida, e: CarreiraEsportiva, k: number): Trajetor
     ...(pal.some(c => c.tipo === 'final') ? [{ titulo: 'Finais', linhas: pal.filter(c => c.tipo === 'final').map(c => `${c.ano} · ${c.texto}`).reverse() }] : []),
     ...(reconhecimento.length ? [{ titulo: 'Prêmios e representação do país', linhas: reconhecimento }] : []),
     ...(e.selecao?.torneios.length ? [{ titulo: 'Pelo país', linhas: e.selecao.torneios.map(x => `${x.ano} · ${cap(x.nome.replace(/^(o|a|os) /, ''))}: ${x.campanha}`).reverse() }] : []),
-    ...((() => { const m = (v.caminhos.situacoes ?? []).filter(x => x.trajetoria === (e.modalidade === 'futebol' || e.modalidade === 'basquete' || e.modalidade === 'tenis' ? e.modalidade : 'atleta') && (x.desfecho === 'otimo' || x.desfecho === 'pessimo')); return m.length ? [{ titulo: 'Momentos', linhas: m.slice(-6).reverse().map(x => `${anoDe(x.t)} · ${x.texto}`) }] : []; })())
+    ...blocoDeMomentos(v, x => x.trajetoria === (e.modalidade === 'futebol' || e.modalidade === 'basquete' || e.modalidade === 'tenis' ? e.modalidade : 'atleta') && (!ts.length || (anoDe(x.t) >= ts[0].ano - 1 && anoDe(x.t) <= ts[ts.length - 1].ano + 1)))
   ];
   const marcantes = realizacoes.reduce((a, r) => a + r.peso, 0);
   return {
@@ -136,6 +136,20 @@ function trajetoriaEsportiva(v: Vida, e: CarreiraEsportiva, k: number): Trajetor
 
 const TIPO_AV: Record<string, string> = { teatro: 'teatro', festival: 'festival', publicidade: 'publicidade', curta: 'curta', serie: 'série', novela: 'novela', filme: 'filme', show: 'show', espetaculo: 'espetáculo', edital: 'edital' };
 const REP = ['passou em branco', 'teve público', 'repercutiu', 'marcou'];
+
+/**
+ * REWORK 11 · CAR-11.9: o bloco "Momentos" de uma trajetória — TODOS os desfechos (antes, só o ótimo e o péssimo, no
+ * máximo 6: o atleta via 1,2 dos 2,9 momentos que viveu), os mais recentes primeiro, com o tom marcado.
+ */
+const LIMITE_MOMENTOS = 14;
+function blocoDeMomentos(v: Vida, filtro: (x: RegistroDeSituacao) => boolean): DetalheTrajetoria[] {
+  const m = (v.caminhos.situacoes ?? []).filter(filtro);
+  if (!m.length) return [];
+  const tom = (x: RegistroDeSituacao) => (x.desfecho === 'otimo' ? ' (marcou)' : x.desfecho === 'pessimo' ? ' (custou caro)' : '');
+  const linhas = m.slice(-LIMITE_MOMENTOS).reverse().map(x => `${anoDe(x.t)} · ${x.texto.replace(/\.$/, '')}${tom(x)}.`);
+  if (m.length > LIMITE_MOMENTOS) linhas.push(`E mais ${m.length - LIMITE_MOMENTOS} de antes.`);
+  return [{ titulo: 'Momentos', linhas }];
+}
 
 function trajetoriaDeAtuacao(v: Vida): TrajetoriaDaVida | undefined {
   const itens = (v.caminhos.curriculo ?? []).filter(x => ['teatro', 'festival', 'publicidade', 'curta', 'serie', 'novela', 'filme', 'edital'].includes(x.tipo));
@@ -153,7 +167,8 @@ function trajetoriaDeAtuacao(v: Vida): TrajetoriaDaVida | undefined {
   // REWORK 10.5 · CAR-09: o prêmio com nome, categoria, edição e obra (quando o registro tem; os antigos, como eram).
   for (const x of itens.filter(y => y.premio)) r.push({ texto: x.premio!.categoria ? `${x.premio!.venceu ? 'Venceu' : 'Indicação'}: ${textoDoPremio({ ...x.premio!, obra: x.premio!.obra ?? x.titulo })}` : x.premio!.venceu ? `Venceu ${x.premio!.nome} por "${x.titulo}" (${anoDe(x.t)})` : `Indicação ${x.premio!.nome.replace(/^o /, 'ao ')} por "${x.titulo}" (${anoDe(x.t)})`, peso: x.premio!.venceu ? 9 : 5 });
   for (const x of itens.filter(y => y.repercussao === 3)) r.push({ texto: `"${x.titulo}" (${TIPO_AV[x.tipo]}, ${anoDe(x.t)}), ${x.papel}: o trabalho marcou`, peso: 6 + (/protagonista/.test(x.papel) ? 1 : 0) });
-  const pessoas = [...new Set(itens.map(x => x.pessoaId).filter((id): id is string => !!id && !!v.pessoas[id]))].slice(0, 6).map(id => `${v.pessoas[id].nome}${v.pessoas[id].ocupacao ? ` (${v.pessoas[id].ocupacao})` : ''}`);
+  // REWORK 11 · NPC-11.2: quem já morreu aparece como memória (com o ano), não como alguém de agora.
+  const pessoas = [...new Set(itens.map(x => x.pessoaId).filter((id): id is string => !!id && !!v.pessoas[id]))].slice(0, 6).map(id => { const p = v.pessoas[id]; return `${p.nome}${p.ocupacao ? ` (${p.ocupacao})` : ''}${p.vivo ? '' : ` — morreu${p.tMorte !== undefined ? ` em ${anoDe(p.tMorte)}` : ''}`}`; });
   const partes = [tv && `${tv} na TV e no streaming`, cinema && `${cinema} no cinema`, palco && `${palco} no teatro`, conta(['publicidade']) && `${conta(['publicidade'])} em publicidade`].filter(Boolean) as string[];
   return {
     id: 'atuacao', area: 'atuacao', titulo: 'Atuação', periodo: periodo(de, ate, ativa), de, ate, ativa,
@@ -161,7 +176,8 @@ function trajetoriaDeAtuacao(v: Vida): TrajetoriaDaVida | undefined {
     realizacoes: top(r), reconhecimento: itens.filter(x => x.premio).map(x => `${anoDe(x.t)} · ${x.premio!.venceu ? 'Venceu' : 'Indicação:'} ${x.premio!.categoria ? textoDoPremio({ ...x.premio!, obra: x.premio!.obra ?? x.titulo }) : `${x.premio!.nome} ("${x.titulo}")`}`),
     detalhe: [
       { titulo: 'Trabalhos', linhas: [...ord].reverse().map(x => `${anoDe(x.t)} · "${x.titulo}" — ${TIPO_AV[x.tipo]} — ${x.papel}${x.onde ? ` (${x.onde})` : ''} · ${REP[x.repercussao]}${x.premio ? ` · ${x.premio.venceu ? 'prêmio' : 'indicação'}` : ''}`) },
-      ...(pessoas.length ? [{ titulo: 'Gente que ficou desses trabalhos', linhas: pessoas }] : [])
+      ...(pessoas.length ? [{ titulo: 'Gente que ficou desses trabalhos', linhas: pessoas }] : []),
+      ...blocoDeMomentos(v, x => x.trajetoria === 'cena' && x.id.startsWith('cena_'))
     ],
     peso: itens.length * 2 + r.reduce((a, x) => a + x.peso, 0) + (ate ?? anoDe(v.t)) - de
   };
@@ -202,7 +218,9 @@ function trajetoriaArtistica(v: Vida, d: Dominio): TrajetoriaDaVida | undefined 
     detalhe: [
       ...(obras.length ? [{ titulo: d === 'musica' ? 'Discos' : d === 'escrita' ? 'Livros' : 'Obras', linhas: [...obras].reverse().map(o => `${anoDe(o.t)} · "${o.titulo}" · ${REP[o.recepcao]}${o.premio ? ` · ${o.premio.venceu ? 'prêmio' : 'indicação'}` : ''}`) }] : []),
       ...(palcos.length ? [{ titulo: 'Anos de palco', linhas: [...palcos].reverse().slice(0, 15).map(p => `${p.ano} · ${p.apresentacoes} ${p.apresentacoes === 1 ? 'apresentação' : 'apresentações'}`) }] : []),
-      ...(projetos.length ? [{ titulo: 'Grupos', linhas: projetos.map(m => `${anoDe(m.t)} · ${m.texto}`) }] : [])
+      ...(projetos.length ? [{ titulo: 'Grupos', linhas: projetos.map(m => `${anoDe(m.t)} · ${m.texto}`) }] : []),
+      // REWORK 11 · CAR-11.9: os momentos da música (mus_*) e da dança (dan_*) também ficam na trajetória.
+      ...(d === 'musica' || d === 'danca' ? blocoDeMomentos(v, x => x.trajetoria === 'cena' && x.id.startsWith(d === 'musica' ? 'mus_' : 'dan_')) : [])
     ],
     peso: obras.length * 4 + palcos.length * 2 + r.reduce((a, x) => a + x.peso, 0)
   };

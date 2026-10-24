@@ -827,7 +827,10 @@ function cenas(): Vida[] {
   CENAS ??= JSON.stringify((() => {
     const out: Vida[] = [];
     const k9 = viverAte(nova({ semente: 31, municipioId: 'recife-pe' }), 9); k9.momento = null; out.push(k9);
-    const t15 = viverAte(nova({ semente: 32, municipioId: 'recife-pe' }), 15); t15.momento = null; out.push(t15);
+    const t15 = viverAte(nova({ semente: 32, municipioId: 'recife-pe' }), 15); t15.momento = null;
+    // REWORK 11 · Fase F: com a infância nova (`acontecimentosinfancia`), esta semente já viveu o projeto da escola aos 15 —
+    // a cena mede as respostas, então começa sem os acontecimentos do REWORK 10 já vistos.
+    t15.ocorrencias = t15.ocorrencias.filter(o => !/^(inf|esc|ado)10_/.test(o.id)); out.push(t15);
     out.push(em(adulto(36, { semente: 33 }), (x, r) => {
       contratar(x, r, ocupacao('vendedor')); x.trabalho.atual!.desempenho = 70; x.trabalho.atual!.tInicio = x.trabalho.atual!.tPosto = x.t - 48; x.trabalho.experiencia.comercio = 48; x.financas.conta = 80000;
       const par = comParceiro(x, { estagio: 'casamento', anos: 8 }); par.vin.romance!.envolvimento = 55;
@@ -1042,7 +1045,9 @@ describe('ECO-03 · o seguro-desemprego em parcelas', () => {
   });
 
   it('a demissão de verdade (na França, até 18 meses) paga a rescisão de uma vez e deixa as parcelas para os meses seguintes', () => {
-    let v = em(adulto(35, { semente: 35, municipioId: cidadesDoPais('FR')[0].id }), (x, r) => { contratar(x, r, ocupacao('vendedor')); x.trabalho.atual!.tInicio = x.t - 60; });
+    // REWORK 11 · Fase F: com a infância nova, a semente 35 aceita uma proposta de outra cidade antes da demissão (um ano
+    // de casa: sem direito ao benefício). A 36 mede o que o teste quer: a demissão depois de anos no mesmo emprego.
+    let v = em(adulto(35, { semente: 36, municipioId: cidadesDoPais('FR')[0].id }), (x, r) => { contratar(x, r, ocupacao('vendedor')); x.trabalho.atual!.tInicio = x.t - 60; });
     for (let k = 0; k < 30 && v.trabalho.atual && !v.morte; k++) { v = em(v, x => { x.trabalho.atual!.desempenho = 5; }); v = resolver(avancarAno(v).vida); }
     expect(v.trabalho.atual).toBeUndefined();
     const s = v.trabalho.seguroDesemprego!;

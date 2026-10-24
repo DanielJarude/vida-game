@@ -20,9 +20,9 @@ export type TipoDeEco = 'favor' | 'mentor' | 'recusou' | 'fiador' | 'investiu' |
 export type Eco = NonNullable<Vida['ecos']>[number];
 
 /** Guarda um eco (no máximo 24 vivos; o mais antigo sai). */
-export function registrarEco(v: Vida, tipo: TipoDeEco, o: { pessoaId?: string; valor?: number; texto?: string; de?: number; ate?: number } = {}): void {
+export function registrarEco(v: Vida, tipo: TipoDeEco, o: { pessoaId?: string; valor?: number; texto?: string; de?: number; ate?: number; empregador?: string; cursoId?: string } = {}): void {
   const lista = (v.ecos ??= []);
-  lista.push({ tipo, t: v.t, volta: v.t + (o.de ?? 2) * 12, ate: v.t + (o.ate ?? 12) * 12, ...(o.pessoaId ? { pessoaId: o.pessoaId } : {}), ...(o.valor !== undefined ? { valor: o.valor } : {}), ...(o.texto ? { texto: o.texto } : {}) });
+  lista.push({ tipo, t: v.t, volta: v.t + (o.de ?? 2) * 12, ate: v.t + (o.ate ?? 12) * 12, ...(o.pessoaId ? { pessoaId: o.pessoaId } : {}), ...(o.valor !== undefined ? { valor: o.valor } : {}), ...(o.texto ? { texto: o.texto } : {}), ...(o.empregador ? { empregador: o.empregador } : {}), ...(o.cursoId ? { cursoId: o.cursoId } : {}) });
   if (lista.length > 24) lista.splice(0, lista.length - 24);
 }
 

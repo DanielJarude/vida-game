@@ -23,7 +23,7 @@ import { escrever, idade, lembrarCom, parceiro, vinculosVivos, foraDaParceria } 
 import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidade';
 import { criarPessoa, vincular } from '../pessoas';
 import { acordoConsentido, interesseInicial, podeTerRomance } from './romance';
-import { compatibilidade, ROTINAS_SOCIAIS } from './social';
+import { ambientesAtuais, compatibilidade, ROTINAS_SOCIAIS } from './social';
 import { nivelDeOferta } from '../dados/lugares';
 import { vereditoDePagar } from './dinheiro';
 import { flex } from '../texto';
@@ -61,6 +61,8 @@ function amigosNaCidade(v: Vida) {
 function atividadeSocial(v: Vida) {
   return v.rotinas.find(r => ROTINAS_SOCIAIS[r.id]);
 }
+/** REWORK 11 · NPC-11.1: a chave do ambiente de hoje (o trabalho, a faculdade, a escola) — o mesmo que `conhecerGente` grava. */
+const ambienteDoDiaADia = (v: Vida, tipo: string) => ambientesAtuais(v).find(a => a.tipo === tipo)?.chave;
 function diaADia(v: Vida): string | undefined {
   if (v.educacao.matricula && !v.educacao.matricula.trancado && v.educacao.matricula.modalidade === 'presencial') return 'faculdade';
   if (v.trabalho.atual && v.trabalho.atual.contrato !== 'informal') return 'trabalho';
@@ -150,6 +152,12 @@ export function buscarAlguem(v: Vida, r: Rng, ctx: ContextoBusca): SaidaBusca {
   const origem = ctx === 'app' ? 'online' : ctx === 'amigos' ? 'apresentado' : ctx === 'atividade' ? 'rotina' : ctx === 'noite' ? 'apresentado' : diaADia(v) === 'trabalho' ? 'trabalho' : diaADia(v) === 'faculdade' ? 'faculdade' : 'escola';
   const vin = vincular(v, p, { origem, proximidade: r.int(18, 28), estagio: 'conhecido' });
   if (rot) { vin.ambiente = `rotina:${rot.id}:${v.moradia.municipioId}`; vin.convivio = ['rotina']; }
+  // REWORK 11 · NPC-11.1: quem se conhece "no trabalho" (na faculdade, na escola) está MESMO lá — o ambiente de hoje vai
+  // junto (antes, a pessoa ficava "do trabalho" sem dividir o trabalho: "Vocês se conheceram no trabalho" e nada mais).
+  else if (origem === 'trabalho' || origem === 'faculdade' || origem === 'escola') {
+    const amb = ambienteDoDiaADia(v, origem);
+    if (amb) { vin.ambiente = amb; vin.convivio = [origem]; }
+  }
   // O contexto da relação nasce aqui (a origem): no app, quem aparece está procurando alguém — e o perfil diz o quê.
   vin.contexto = novoContexto(ctx === 'app' ? 'app' : ctx === 'amigos' ? 'amigos' : ctx === 'noite' ? 'noite' : ctx === 'atividade' ? 'atividade' : diaADia(v) === 'trabalho' ? 'trabalho' : diaADia(v) === 'faculdade' ? 'faculdade' : 'escola', ctx === 'app' ? { busca: buscaDoPerfil(v, p, r), etapa: 'match' } : {});
   registrarFase(v, vin, 'conhecido');

@@ -67,7 +67,7 @@ import { leituraDoPalmares, palmaresDe } from '../../motor/sistemas/palmares';
 import { celulaDoHistorico, GlifoConquista, GlifoDaLinha } from '../iconesConquista';
 import { historicoDaCarreira, perfilDe, resumoDaCarreira, semVinculo } from '../../motor/sistemas/perfisEsportivos';
 import { comoAcabou, linhaDoTecnico, passagemAtual, periodoDaPassagem, resumoDaPassagem, resumoDoTecnico } from '../../motor/sistemas/tecnico';
-import { momentosDaCarreira } from '../../motor/sistemas/situacoes';
+import { momentosPorCarreira } from '../../motor/sistemas/situacoes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { AcoesVivas, BotaoAcao, Dado, Escolha, Folio, Linha, Medidor, Percurso, Renomear, Secao, type Passo } from '../comum';
 import { EmblemaDoOficio } from './Emblemas';
@@ -1417,14 +1417,34 @@ export function CarreiraComoTecnico({ vida }: { vida: Vida }) {
   );
 }
 
-/** Os momentos da carreira (as situações vividas): a intenção, o que aconteceu. Nem todo ano tem um. */
+/**
+ * Os momentos da carreira, POR CARREIRA (REWORK 11 · CAR-11.9): a de agora primeiro, as anteriores depois. Cada uma
+ * mistura, em ordem, os marcos automáticos (estreia, transferência, título), as consequências (as cenas que lembram de
+ * algo anterior) e as decisões vividas. Antes: as 8 últimas situações de todas as trajetórias misturadas.
+ */
+const POR_CARREIRA = 12;
 function MomentosDaCarreira({ vida }: { vida: Vida }) {
-  const xs = momentosDaCarreira(vida, 8);
-  if (!xs.length) return null;
+  const grupos = momentosPorCarreira(vida);
+  const [todos, setTodos] = useState<Record<string, boolean>>({});
+  if (!grupos.length) return null;
+  const varias = grupos.length > 1;
   return (
     <Secao titulo="Momentos da carreira" recolhivel aberta={false}>
-      <ul className="momentos-carreira">{xs.map((x, k) => <li key={k} className={`momento--${x.desfecho}`}><span className="momentos-carreira__ano">{x.ano}</span><span><em>{x.intencao}.</em> {x.texto}</span></li>)}</ul>
-      <p className="nota">A escolha é sua; o que acontece depende do que você construiu — e do dia.</p>
+      {grupos.map(g => {
+        const xs = todos[g.trajetoria] ? g.itens : g.itens.slice(0, POR_CARREIRA);
+        return (
+          <div key={g.trajetoria} className="palmares__grupo">
+            {varias && <h4>{g.titulo}{g.atual ? '' : ' · carreira anterior'}</h4>}
+            <ul className="momentos-carreira">{xs.map((x, k) => (
+              <li key={k} className={x.desfecho ? `momento--${x.desfecho}` : 'momento--bom'}>
+                <span className="momentos-carreira__ano">{x.ano}</span>
+                <span>{x.tipo === 'marco' ? <span className="nota">marco · </span> : x.tipo === 'consequencia' ? <span className="nota">consequência · </span> : null}{x.intencao && x.tipo !== 'marco' ? <em>{x.intencao.replace(/[.!?]$/, '')}. </em> : null}{x.texto}</span>
+              </li>))}</ul>
+            {g.itens.length > POR_CARREIRA && !todos[g.trajetoria] && <button type="button" className="botao botao--discreto" onClick={() => setTodos(t => ({ ...t, [g.trajetoria]: true }))}>Ver os {g.itens.length} momentos</button>}
+          </div>
+        );
+      })}
+      <p className="nota">A escolha é sua; o que acontece depende do que você construiu — e do dia. Os marcos (estreia, transferências, títulos) o motor registra sozinho.</p>
     </Secao>
   );
 }

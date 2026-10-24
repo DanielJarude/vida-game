@@ -276,12 +276,20 @@ export function useVida() {
   }, [vida, aplicar, avisar, motor]);
 
   const recomecar = useCallback(() => {
+    // REWORK 11 · EVT-11.1: a vida abandonada (a partir dos 3 anos) entra na memória entre vidas — antes, só a morte
+    // gravava o que se viveu, e quem recomeçava depois da infância via a mesma infância de novo.
+    if (motor && persist && vida && !vida.morte && motor.idade(vida) >= 3) {
+      const g = gaveta(persist.estatisticas());
+      motor.registrarVidaRecomecada(motor.vistosDaVida(vida), g);
+      if (g.bruto !== null) void persist.salvarEstatisticas(g.bruto);
+      setEstatisticas(motor.lerEstatisticas(g));
+    }
     apagarSave();
     setVida(null);
     setSalva(null);
     setResultado(null);
     setTela('inicio');
-  }, [apagarSave]);
+  }, [apagarSave, motor, persist, vida]);
 
   return {
     pronto: !!motor && carregado, estatisticas,

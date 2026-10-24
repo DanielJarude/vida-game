@@ -211,7 +211,9 @@ describe('FUT-02 · o futebol depois dos 20', () => {
   });
 
   it('o profissional aos 19 continua até os 30 (a carreira não termina por idade aos 20)', () => {
-    let v = transacao(adulto(19, { municipioId: 'belem-pa', semente: 12, genero: 'masculino' }), x => {
+    // REWORK 11 · Fase F: com a infância nova, a semente 12 morre num acidente de trânsito aos 21 (não é o fim da
+    // carreira por idade, que é o que o teste guarda). A 13 vive a década inteira.
+    let v = transacao(adulto(19, { municipioId: 'belem-pa', semente: 13, genero: 'masculino' }), x => {
       x.caminhos.esporte = { modalidade: 'futebol', fase: 'profissional', clube: 'Remo', nivel: 3, tInicio: x.t - 24, tFase: x.t - 6, lesoes: 0, municipioId: 'belem-pa', reputacao: 55, espaco: 'titular', contratoAte: x.t + 48, posicao: 'meia', temporadas: [] };
       x.trabalho.atual = { ocupacaoId: 'jogador_futebol', empregador: 'o Remo', contrato: 'clt', salario: 15000, tInicio: x.t - 6, desempenho: 70, municipioId: 'belem-pa', carga: 'integral' };
       x.caminhos.frentes.futebol = { interesse: 90, meses: 200, habilidade: 84, tInicio: x.t - 200, tUltimo: x.t, retomadas: 0, auge: 84 };

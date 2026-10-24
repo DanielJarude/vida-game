@@ -24,6 +24,7 @@ import { escrever, idade, idadePessoa, lembrarCom, marcarFato, vinculosVivos, fo
 import { flex, ge, listaNatural, rotuloParentesco } from '../texto';
 import { MESES, anoDe, mesDe } from '../tempo';
 import { descricaoOrigem } from './social';
+import { esquecerMorto } from './citacoes';
 import { filhosEmComum, importancia, papelDe } from './vinculos';
 import { redeDeApoio } from './estado';
 import { abalar } from './abalo';
@@ -106,6 +107,8 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
     p.vivo = false;
     p.tMorte = v.t - r.int(0, 11);
     p.causaMorte = causa;
+    // REWORK 11 · NPC-11.2: a proposta, a produção e o agente deixam de citar quem morreu.
+    esquecerMorto(v, p.id);
     const nivel = nivelDaPerda(peso);
 
     // A casa e o estado civil mudam.

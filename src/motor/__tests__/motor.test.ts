@@ -202,7 +202,9 @@ describe('família', () => {
   });
 
   it('quem não pode gestar não tenta ter filho biológico com quem também não pode', () => {
-    const v = viverAte(nova({ genero: 'masculino', semente: 55 }), 25);
+    // REWORK 11 · Fase F: com a infância nova, a semente 55 morre num acidente antes dos 25 (a vida acabou: tudo
+    // 'impossível'). A 56 chega aos 25, que é o que o teste precisa.
+    const v = viverAte(nova({ genero: 'masculino', semente: 56 }), 25);
     for (const { vin } of vinculosVivos(v)) if (vin.romance) vin.romance = undefined;
     const r = criarRng(3);
     const par = criarPessoa(v, r, { idade: 26, genero: 'masculino', municipioId: v.moradia.municipioId });
