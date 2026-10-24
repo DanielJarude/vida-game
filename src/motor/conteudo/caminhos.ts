@@ -22,6 +22,7 @@ import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa
 import { portaAmadora } from '../sistemas/perfisEsportivos';
 import { conviteDaBase, encerrarCarreira, entrarPeloAmador, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
 import { dinheiro as fmt } from '../texto';
+import { TRILHAS_ARTISTICAS } from '../sistemas/paralelas';
 import { conflitoDoContrato, contaDoContrato, descricaoDoContrato, podePausar as podePausarAV, resolverConflitoAV } from '../sistemas/audiovisual';
 import { avaliarPeneira, ETAPAS_PENEIRA, falaDoTreinador, lerTecnica } from '../sistemas/peneira';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
@@ -429,7 +430,7 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_curso_empresa', tipo: 'acontecimento', idade: [20, 58], tema: 'trabalho', repetir: 7,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && !TRILHAS_ARTISTICAS.has(ocupacao(e.ocupacaoId).trilha) && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5); },
     narrar: c => {
       const oc = ocupacao(c.v.trabalho.atual!.ocupacaoId);
       return { texto: c.r.pick([`A empresa pagou um curso de atualização em ${ROTULO_TRILHA[oc.trilha] ?? 'na área'}. Três semanas de aula à noite.`, 'Veio uma certificação nova obrigatória; a turma inteira estudou junta nas sextas.', 'Um sistema novo chegou ao trabalho. Quem aprendeu primeiro virou referência.']), relevancia: 'cotidiano', efeito: () => { const e = c.v.trabalho.atual!; e.desempenho = clamp(e.desempenho + 4); } };
@@ -437,12 +438,13 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'aut_cliente_grande', tipo: 'acontecimento', idade: [20, 75], tema: 'trabalho', repetir: 6, peso: 2,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && (e.clientela ?? 0) >= 45; },
+    // REWORK 11 · ATR-08: artista não tem "cliente grande" (o trabalho grande dele é a produção, o show, a obra).
+    quando: c => { const e = c.v.trabalho.atual; return !!e && (e.clientela ?? 0) >= 45 && !TRILHAS_ARTISTICAS.has(ocupacao(e.ocupacaoId).trilha); },
     narrar: c => ({ texto: c.r.pick(['Um cliente grande fechou com você e indicou outros três.', 'Um mês de agenda cheia por causa de um único cliente satisfeito que falou bem de você.', 'Apareceu um trabalho grande, desses que pagam o ano. Deu conta.']), relevancia: 'biografia', tom: 'bom', efeito: () => { const e = c.v.trabalho.atual!; e.clientela = clamp((e.clientela ?? 40) + 6); c.v.financas.conta += Math.round(e.salario * 1.5); } })
   },
   {
     id: 'aut_mes_fraco', tipo: 'acontecimento', idade: [20, 75], tema: 'trabalho', repetir: 5,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela !== undefined && (e.clientela < 35 || c.r.chance(0.3)); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.clientela !== undefined && !TRILHAS_ARTISTICAS.has(ocupacao(e.ocupacaoId).trilha) && (e.clientela < 35 || c.r.chance(0.3)); },
     narrar: c => ({ texto: c.r.pick(['Três meses fracos seguidos. Você aprendeu a guardar dinheiro nos meses bons.', 'Um cliente antigo sumiu sem pagar.', 'Apareceu gente nova fazendo o mesmo serviço, cobrando mais barato.']), relevancia: 'cotidiano', tom: 'ruim', efeito: () => { const e = c.v.trabalho.atual!; e.clientela = clamp((e.clientela ?? 30) - 5); } })
   },
   {

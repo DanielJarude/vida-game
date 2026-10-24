@@ -32,6 +32,7 @@ import { rendaDaRede } from './redesBase';
 import { ajudaMensalDaFamilia, apoioEmCasa, apoioPossivel, cambioDaFamilia, contribuicaoEmCasa, familiaPagaCursinho, mesadaDaFamilia, responsaveis } from './origem';
 import { custoDoEstudo } from './custoDoEstudo';
 import { rendaDoPalcoParalelo } from './palco';
+import { rendaDeDireitos } from './musica';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { irpf, mesesPagos, remuneracaoDe } from './renda';
 import { fazCursinho } from './vestibular';
@@ -138,6 +139,9 @@ function entradasProprias(v: Vida): LinhaRazao[] {
   if (rede > 0) out.push({ rotulo: 'Publicidade e parcerias na rede', valor: rede, grupo: 'renda', de: 'eu' });
   const imagem = rendaDeImagem(v);
   if (imagem > 0) out.push({ rotulo: 'Patrocínio e publicidade', valor: imagem, grupo: 'renda', de: 'eu' });
+  // REWORK 11 · MUS-03: os direitos das obras lançadas (o catálogo que ainda toca, que ainda vende) — pouco, e decaindo.
+  const direitos = rendaDeDireitos(v);
+  if (direitos > 0) out.push({ rotulo: 'Direitos de obras lançadas', valor: direitos, grupo: 'renda', de: 'eu' });
   // REWORK 9.7 · ECO-01: o benefício cai líquido do imposto de renda do país (sem contribuição) e com os meses que o país
   // paga (13 no Brasil, 14 em Portugal, 12 onde não há) — antes, bruto e ×13/12 em todo lugar.
   if (v.trabalho.aposentadoria) {

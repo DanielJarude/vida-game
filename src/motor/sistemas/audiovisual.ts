@@ -35,7 +35,7 @@ import { dinheiro as fmt } from '../texto';
 import { anoDe } from '../tempo';
 import { criarPessoa, vincular } from '../pessoas';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
-import { encerrarEmprego } from './trabalho';
+import { encerrarEmprego, registrarPosto } from './trabalho';
 import { pausarAtual, podePausar, TRILHAS_ARTISTICAS } from './paralelas';
 import { nomePor, somarAoNome } from './notoriedade';
 import { continuacaoPossivel, fichaDaProducao, PESO_DO_PREMIO, premioDoTrabalho, textoDoPremio, tituloNovo } from './producoes';
@@ -229,14 +229,19 @@ export function concluirProducao(v: Vida, c: ContratoAV, r: Rng | undefined): vo
   const h = habilidade(v, linguagemEmCena(v) ?? 'teatro');
   const sorte = r ? r.normal() * 0.12 : 0;
   const q = h / 100 * 0.5 + c.porte * 0.08 + (/protagonista|destaque/.test(c.papel) ? 0.08 : 0) + sorte;
+  // REWORK 11 · ATR-06: duas recepções. A da CRÍTICA (`repercussao`: o ofício, o papel, a produção — é o que os prêmios e o
+  // prestígio leem) e a do PÚBLICO (`publico`: o tamanho da produção, o nome de quem está nela, o gênero e o acaso do
+  // lançamento — é o que mexe no nome, no público e no que as produções pagam depois). Uma peça elogiada pode ficar
+  // vazia; uma novela popular pode apanhar da crítica. Sorteio próprio para o público (a sequência do ano não muda).
   const repercussao: ItemCurriculo['repercussao'] = q >= 0.72 ? 3 : q >= 0.58 ? 2 : q >= 0.42 ? 1 : 0;
+  const publico = recepcaoDoPublico(v, c);
   const protagonista = /protagonista/.test(c.papel);
   const primeiroProtagonista = protagonista && !(v.caminhos.curriculo ?? []).some(x => /protagonista/.test(x.papel) && ['serie', 'novela', 'filme', 'curta', 'teatro'].includes(x.tipo));
   // A indicação (fictícia, do universo desta vida): só para o trabalho que repercutiu, e mais para quem carregou a produção.
   // REWORK 10.5 · CAR-09: com o nome da premiação, a categoria (a da obra e do papel), a edição e a obra.
   const premio = premioDoTrabalho(v, c, repercussao, h, r);
-  registrarNoCurriculo(v, { tipo: c.tipo, titulo: c.titulo, papel: c.papel, onde: c.casa, repercussao, cache: c.bruto, pessoaId: c.pessoaId, producaoId: c.id, porte: c.porte, ...(c.genero ? { genero: c.genero } : {}), ...(c.personagem ? { personagem: c.personagem } : {}), ...(c.continuacaoDe ? { continuacaoDe: c.continuacaoDe } : {}), ...(premio ? { premio } : {}) });
-  if (primeiroProtagonista && repercussao >= 1) {
+  registrarNoCurriculo(v, { tipo: c.tipo, titulo: c.titulo, papel: c.papel, onde: c.casa, repercussao, publico, cache: c.bruto, pessoaId: c.pessoaId, producaoId: c.id, porte: c.porte, ...(c.genero ? { genero: c.genero } : {}), ...(c.personagem ? { personagem: c.personagem } : {}), ...(c.continuacaoDe ? { continuacaoDe: c.continuacaoDe } : {}), ...(premio ? { premio } : {}) });
+  if (primeiroProtagonista && Math.max(repercussao, publico) >= 1) {
     const texto = `O primeiro papel de protagonista: "${c.titulo}" (${NOME_TIPO_AV[c.tipo] ?? c.tipo}).`;
     escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'conquista', texto, 3, { dominio: 'teatro' });
@@ -249,12 +254,35 @@ export function concluirProducao(v: Vida, c: ContratoAV, r: Rng | undefined): vo
     // internacional) — e vale também para quem ainda não tinha nome (antes, só somava a quem já tinha notoriedade).
     if (premio.venceu) somarAoNome(v, 'arte', PESO_DO_PREMIO[premio.alcance ?? 'local']);
   }
-  crescerPublico(v, [1, 3, 7, 12][repercussao] * (1 + c.porte * 0.5));
+  // O público mexe no público (e no nome); a crítica, no prestígio (o currículo e os prêmios).
+  crescerPublico(v, [1, 3, 7, 12][publico] * (1 + c.porte * 0.5));
   if (c.pessoaId && v.pessoas[c.pessoaId]?.vivo) lembrarCom(v, c.pessoaId, `"${c.titulo}", juntos.`, 'trabalho', 1);
-  const efeito = repercussao >= 3 ? 'foi assunto por semanas; o seu nome apareceu nas críticas' : repercussao === 2 ? 'repercutiu; outras produções perguntaram por você' : repercussao === 1 ? 'teve público; mais uma linha forte no currículo' : 'passou sem muito barulho — mas está no currículo';
-  const texto = `Terminou ${descricaoDoContrato(c)}: ${efeito}. ${contaDoContrato(c)}.`;
-  escrever(v, { texto, relevancia: repercussao >= 2 || c.porte >= 2 ? 'marco' : 'biografia', tema: 'trabalho', tom: repercussao >= 1 ? 'bom' : undefined });
-  if (repercussao >= 2) { marcar(v, 'conquista', texto, repercussao >= 3 ? 3 : 2, { dominio: 'teatro' }); v.fatos['av_repercutiu'] = v.t; }
+  const texto = `Terminou ${descricaoDoContrato(c)}: ${textoDaRecepcao(repercussao, publico)}. ${contaDoContrato(c)}.`;
+  const melhor = Math.max(repercussao, publico);
+  escrever(v, { texto, relevancia: melhor >= 2 || c.porte >= 2 ? 'marco' : 'biografia', tema: 'trabalho', tom: melhor >= 1 ? 'bom' : undefined });
+  if (melhor >= 2) { marcar(v, 'conquista', texto, melhor >= 3 ? 3 : 2, { dominio: 'teatro' }); }
+  // O trabalho que o PÚBLICO viu abre o degrau dos testes seguintes (as produções chamam quem dá audiência).
+  if (publico >= 2) v.fatos['av_repercutiu'] = v.t;
+  if (repercussao >= 2 && publico <= 1) v.fatos['av_cult'] = v.t;
+}
+
+/** REWORK 11 · ATR-06: a recepção do público (0..3), do tamanho da produção, do nome e do acaso — independente da crítica. */
+export function recepcaoDoPublico(v: Vida, c: Pick<ContratoAV, 'id' | 'tipo' | 'porte' | 'papel'>): 0 | 1 | 2 | 3 {
+  const r = rngDe(v.id, 'av_publico', c.id);
+  const alcance = ({ novela: 0.16, serie: 0.1, filme: 0.06, publicidade: 0.04, teatro: -0.02, curta: -0.06 } as Partial<Record<string, number>>)[c.tipo] ?? 0;
+  const q = 0.22 + c.porte * 0.09 + alcance + nomePor(v, 'arte') / 400 + (/protagonista/.test(c.papel) ? 0.05 : 0) + r.normal() * 0.17;
+  return q >= 0.66 ? 3 : q >= 0.5 ? 2 : q >= 0.32 ? 1 : 0;
+}
+
+/** As duas recepções em palavras: o que a crítica disse e o que o público fez (as duas podem discordar). */
+export function textoDaRecepcao(critica: number, publico: number): string {
+  if (critica >= 2 && publico <= 1) return `a crítica ${critica >= 3 ? 'saudou como um dos trabalhos do ano' : 'elogiou'} — e o público não veio: virou um trabalho de culto, de pouca bilheteria`;
+  if (publico >= 2 && critica <= 1) return `o público ${publico >= 3 ? 'lotou e não parou de comentar' : 'gostou e foi ver'} — a crítica ${critica === 0 ? 'torceu o nariz' : 'achou correto, sem mais'}`;
+  if (critica >= 3 && publico >= 3) return 'foi assunto por semanas: crítica e público juntos, e o seu nome apareceu nas críticas';
+  if (critica >= 2 && publico >= 2) return 'repercutiu na crítica e no público; outras produções perguntaram por você';
+  if (critica === 1 && publico === 1) return 'teve público e críticas honestas; mais uma linha forte no currículo';
+  if (critica === 0 && publico === 0) return 'passou sem muito barulho, de crítica e de público — mas está no currículo';
+  return publico >= 1 ? 'teve algum público; a crítica quase não falou' : 'a crítica registrou; o público passou longe';
 }
 
 const NOME_TIPO_AV: Partial<Record<ItemCurriculo['tipo'], string>> = { serie: 'série', novela: 'novela', filme: 'filme', curta: 'curta', teatro: 'teatro', publicidade: 'publicidade' };
@@ -271,7 +299,33 @@ export function processarAudiovisual(v: Vida, r: Rng): void {
   }
   // Uma produção integral pesa na semana e na cabeça enquanto dura.
   if (emProducao(v).some(c => c.integral)) v.mente.estresse = clamp(v.mente.estresse + 4);
+  degrauPorPrestigio(v);
   conviteDireto(v);
+}
+
+/**
+ * REWORK 11 · ATR-07 — o degrau ator → ator conhecido vem do PRESTÍGIO da carreira (o currículo, os prêmios, os anos, o
+ * nome), não da freguesia (antes: clientela ≥ 75 por cinco anos; 0 de 30 atores ativos chegavam lá). O degrau não é
+ * salário: muda o porte dos testes e dos convites diretos e o modo como as produções tratam a pessoa. Sorteio próprio.
+ */
+export function degrauPorPrestigio(v: Vida): boolean {
+  const e = v.trabalho.atual;
+  if (!e || e.ocupacaoId !== 'ator' || v.justica?.prisao) return false;
+  if (v.t - e.tInicio < 36) return false;
+  const pres = prestigioArtistico(v);
+  // O meio reconhece quem tem um trabalho que a crítica ou o público destacou (não só quem acumulou linhas no currículo).
+  const destaque = (v.caminhos.curriculo ?? []).some(x => x.premio || Math.max(x.repercussao, x.publico ?? 0) >= 3);
+  if (pres < 0.66 || !destaque || nomePor(v, 'arte') < 30 || habilidade(v, 'teatro') < 74) return false;
+  if (!rngDe(v.id, 'av_degrau', v.t).chance(clamp(0.06 + (pres - 0.66) * 1, 0, 0.35))) return false;
+  const oc = ocupacaoOuNula('ator_reconhecido');
+  if (!oc) return false;
+  registrarPosto(v, e);
+  e.ocupacaoId = oc.id;
+  e.tPosto = v.t;
+  const texto = `Passou a ser ${v.eu.genero === 'feminino' ? 'uma atriz conhecida' : 'um ator conhecido'} no meio: as produções chamam pelo nome, e os testes são para papéis maiores.`;
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+  marcar(v, 'promocao', texto, 3, { trilha: 'cena', ocupacaoId: oc.id });
+  return true;
 }
 
 /**

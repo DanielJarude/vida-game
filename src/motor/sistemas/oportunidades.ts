@@ -30,7 +30,7 @@ import { municipio, nivelDeOferta } from '../dados/lugares';
 import { forcaDoSetor } from '../dados/mercado';
 import { habilidade } from './frentes';
 import { marcar } from './marcas';
-import { elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPropria, semOcupacao } from './trabalho';
+import { elegibilidade, experienciaNaTrilha, nomeOcupacao, porContaPropria, semOcupacao, TRILHAS_ARTISTICAS } from './trabalho';
 import { mediaEscolar } from './frentes';
 import { modeloRotina, podeComecarRotina } from './rotinas';
 import { semana } from './semana';
@@ -40,7 +40,7 @@ import { rngDe } from '../rng';
 import { podeTentar } from '../plausibilidade';
 import { conviteDoProfessor, exColegasDaArea, ofereceAqui } from './formacao';
 import { flex, ge } from '../texto';
-import { apresentarNoFestival } from './cena';
+import { apresentarNoFestival, viveDoOficio } from './cena';
 import { mercadoDoTrabalho, oportunidadeCoerente } from './mercados';
 
 export const LIMITE_OPORTUNIDADES = 4;
@@ -57,6 +57,19 @@ export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: s
   return op;
 }
 
+/**
+ * REWORK 11 · MUS-09: um convite para uma carreira em que a pessoa já está no mesmo degrau (ou acima) — gerado antes de
+ * ela ser contratada por outra porta — deixou de ser porta: sai na virada (antes ficava até 24 meses, e aceitar
+ * rebaixava). Mudar de trilha (outra especialização) continua sendo porta.
+ */
+export function conviteObsoleto(v: Vida, o: Pick<Oportunidade, 'tipo' | 'ocupacaoId'>): boolean {
+  if (o.tipo !== 'convite' || !o.ocupacaoId) return false;
+  const alvo = ocupacaoOuNula(o.ocupacaoId);
+  // Só nas carreiras artísticas (o convite de outra especialidade médica, no mesmo degrau, é mudança real de rumo).
+  if (!alvo || !TRILHAS_ARTISTICAS.has(alvo.trilha)) return false;
+  return [v.trabalho.atual, v.trabalho.paralela].some(e => { const oc = e ? ocupacaoOuNula(e.ocupacaoId) : undefined; return !!oc && oc.trilha === alvo.trilha && oc.nivel >= alvo.nivel; });
+}
+
 const podeGerar = (v: Vida, chave: string, anos: number) => v.caminhos.ultimas[chave] === undefined || v.t - v.caminhos.ultimas[chave] >= anos * 12;
 const semTrabalho = (v: Vida) => semOcupacao(v);
 const trabalhoFraco = (v: Vida) => !!v.trabalho.atual && (['informal', 'temporario'].includes(v.trabalho.atual.contrato) || (ocupacaoOuNula(v.trabalho.atual.ocupacaoId)?.nivel ?? 0) <= 1);
@@ -69,7 +82,7 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   // (Também as que deixaram de caber na trajetória — inclusive as que um save antigo trouxe: `mercados.oportunidadeCoerente`.)
   // REWORK 10.6 · D3: o convite de alguém que passou sem resposta fica dito (uma linha) — e sai das portas abertas.
   for (const o of v.caminhos.oportunidades) if (o.tFim <= v.t && o.pessoaId && v.pessoas[o.pessoaId]?.vivo) escrever(v, { texto: `O convite de ${v.pessoas[o.pessoaId].nome} passou sem resposta (${o.titulo.charAt(0).toLowerCase()}${o.titulo.slice(1)}).`, relevancia: 'cotidiano', tema: 'trabalho', pessoas: [o.pessoaId] });
-  v.caminhos.oportunidades = v.caminhos.oportunidades.filter(o => o.tFim > v.t && (!o.pessoaId || v.pessoas[o.pessoaId]?.vivo) && oportunidadeCoerente(v, o) === true);
+  v.caminhos.oportunidades = v.caminhos.oportunidades.filter(o => o.tFim > v.t && (!o.pessoaId || v.pessoas[o.pessoaId]?.vivo) && oportunidadeCoerente(v, o) === true && !conviteObsoleto(v, o));
   if (v.morte) return;
   const b = v.educacao.basica;
   const m = v.educacao.matricula;
@@ -140,7 +153,9 @@ export function processarOportunidades(v: Vida, r: Rng): void {
       ['fotografia', 'freelas', 56, 'Uma amiga quer que você fotografe o casamento dela — e paga.'],
       ['programacao', 'freelas', 58, 'Um comerciante do bairro quer um site e ouviu dizer que você sabe fazer.']
     ];
-    const possiveis = oficios.filter(([d, rot, min]) => habilidade(v, d) >= min && !v.rotinas.some(x => x.id === rot) && podeComecarRotina(v, rot).grau !== 'requisito');
+    // REWORK 11 · MUS-05: o "dono do bar ouviu você tocar" não é porta para quem já vive de música (107 vezes em 600
+    // anos-músico), nem o freela de arte para quem já é designer: quem já vive do ofício não "começa a receber pedidos".
+    const possiveis = oficios.filter(([d, rot, min]) => habilidade(v, d) >= min && !v.rotinas.some(x => x.id === rot) && podeComecarRotina(v, rot).grau !== 'requisito' && !viveDoOficio(v, d));
     if (possiveis.length && r.chance(0.22)) {
       const [d, rot, , texto] = r.pick(possiveis);
       novaOportunidade(v, { tipo: 'clientela', dominio: d, meses: 12, chave: 'clientela', titulo: 'Começaram a pedir', texto, ocupacaoId: undefined, bonus: undefined });

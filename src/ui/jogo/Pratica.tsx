@@ -21,6 +21,7 @@ import { podeTentar } from '../../motor/plausibilidade';
 import { disponibilidadeUsarCoisa, varianteDe } from '../../motor/sistemas/pertences';
 import { precoDaCoisa } from '../../motor/sistemas/coisas';
 import { ultimaDevolutiva } from '../../motor/sistemas/devolutivas';
+import { viveDoOficio } from '../../motor/sistemas/cena';
 import { BotaoAcao, Degraus, Folha, Percurso } from '../comum';
 import { dinheiroCurto, rotuloDe } from '../apresentar';
 import { Retrato } from '../avatar/Retrato';
@@ -93,7 +94,8 @@ export function FichaPratica({ vida, l, agir, aoFechar, irPara, abrirPessoa }: P
   const peneira = ultimaDevolutiva(vida, 'peneira', 36);
   const fundamentos = p && MODS_ESPORTE.includes(p.d) && !l.daFormacao;
   const usos = l.coisas.flatMap(({ t }) => usosDaCoisa(t.coisaId).filter(u => !u.com && podeTentar(disponibilidadeUsarCoisa(vida, t.id, u.id))).map(u => ({ t, u }))).slice(0, 3);
-  const carreira = (l.categoria === 'arte' || l.categoria === 'esporte') && p && p.estagio >= 3 && !vida.caminhos.esporte && !vida.caminhos.arte?.ativo;
+  // REWORK 11 · MUS-06: "tentar viver disso" não aparece para quem já vive disso (o ator e o músico profissionais).
+  const carreira = (l.categoria === 'arte' || l.categoria === 'esporte') && p && p.estagio >= 3 && !vida.caminhos.esporte && !vida.caminhos.arte?.ativo && !(l.categoria === 'arte' && viveDoOficio(vida, p.d));
   const ir = (a: Aba) => { aoFechar(); irPara?.(a); };
   return (
     <Folha rotulo={l.nome} aoFechar={aoFechar} largura="larga">

@@ -569,6 +569,11 @@ export function rendaDeClientela(v: Vida, oc: Ocupacao, clientela: number, e?: E
   return Math.round(ref * (0.4 + clientela / 100 * 1.05) * fatorDeFreguesia(e) / 10) * 10;
 }
 
+/** REWORK 11 · ATR-01: o teto do que os trabalhos miúdos de quem atua rendem por mês (a tabela do lugar, com o ritmo). */
+export function tetoDosTrabalhosMiudos(v: Vida, oc: Ocupacao): number {
+  return Math.round(salarioLocal(oc, v.moradia.municipioId) / 10) * 10;
+}
+
 /* ---------------------------------------------------------- Trabalho → ofício */
 
 const PRATICA_DO_TRABALHO: Record<string, Partial<Record<Dominio, number>>> = {
@@ -765,6 +770,9 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   e.clientela = Math.round(clamp((e.clientela ?? 20) + delta, 0, 100));
   // Quem vive do palco não ganha pela tabela de freguesia: a renda sai da agenda do ano (`palco`).
   if (!trabalhoDePalco(v)) e.salario = rendaDeClientela(v, oc, e.clientela, e);
+  // REWORK 11 · ATR-01: o "salário" de quem atua são os trabalhos miúdos (aula, leitura, dublagem, locução), com teto na
+  // tabela; a renda de verdade é o cachê de cada produção (`audiovisual`).
+  if (oc.trilha === 'cena') e.salario = Math.min(e.salario, tetoDosTrabalhosMiudos(v, oc));
   if (e.clientela <= 6 && v.t - e.tInicio >= 24) {
     escrever(v, { texto: `O trabalho como ${nomeOcupacao(v, oc)} foi minguando até não pagar mais as contas.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', `Parou de trabalhar como ${nomeOcupacao(v, oc)}: faltou freguesia.`, 2, { trilha: oc.trilha, ocupacaoId: oc.id });

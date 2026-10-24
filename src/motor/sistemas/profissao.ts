@@ -989,7 +989,8 @@ export function executarProfissao(v: Vida, r: Rng, a: AcaoProfissaoCmd): SaidaPr
       pagar(v, custo);
       v.fatos['arte_lancou'] = v.t;
       const o = lancarObra(v, r);
-      return { texto: o.recepcao >= 2 ? 'O trabalho pegou.' : o.recepcao === 1 ? 'Saiu — e achou o seu público.' : 'Saiu. Pouca gente viu — por enquanto.', tom: o.recepcao >= 2 ? 'bom' : 'neutro' };
+      const pub = o.comercial ?? o.recepcao;
+      return { texto: o.recepcao >= 2 && pub <= 1 ? 'A crítica gostou; o público, por enquanto, não veio.' : pub >= 2 && o.recepcao <= 1 ? 'O público pegou — a crítica, nem tanto.' : pub >= 2 ? 'O trabalho pegou.' : pub === 1 ? 'Saiu — e achou o seu público.' : 'Saiu. Pouca gente viu — por enquanto.', tom: Math.max(pub, o.recepcao) >= 2 ? 'bom' : 'neutro' };
     }
     case 'estrada': v.fatos['arte_estrada'] = v.t; return { decisao: 'arte_estrada' };
     case 'academia': return executarAcademia(v, r, (a.valor as OqueAcademia) ?? 'projeto');

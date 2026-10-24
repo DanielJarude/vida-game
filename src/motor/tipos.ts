@@ -1857,6 +1857,11 @@ export interface Obra {
   renda: number;
   /** Indicação ou prêmio (fictício, do universo desta vida) que a obra recebeu. */
   premio?: { nome: string; venceu: boolean };
+  /**
+   * REWORK 11 · ATR-06: a recepção do PÚBLICO (vendas, plays, bilheteria), separada da crítica (`recepcao`, que segue
+   * sendo a nota da crítica e é o que os prêmios leem). Saves de antes: ausente = igual à `recepcao`.
+   */
+  comercial?: 0 | 1 | 2 | 3;
 }
 
 /** Um trabalho no currículo artístico (projetos são fictícios, do universo desta vida). */
@@ -1910,8 +1915,10 @@ export interface ItemCurriculo {
   papel: string;
   /** A casa, a produtora, o grupo (fictícios ou genéricos). */
   onde?: string;
-  /** 0 passou em branco · 1 teve público · 2 repercutiu · 3 marcou. */
+  /** 0 passou em branco · 1 teve público · 2 repercutiu · 3 marcou. (REWORK 11: a nota da CRÍTICA — o prestígio e os prêmios.) */
   repercussao: 0 | 1 | 2 | 3;
+  /** REWORK 11 · ATR-06: a recepção do PÚBLICO (audiência, bilheteria) — o nome e a demanda. Ausente = igual à `repercussao`. */
+  publico?: 0 | 1 | 2 | 3;
   /** Cachê (reais). */
   cache?: number;
   /** Alguém que se conheceu ali (diretora, colega de elenco). */
@@ -2206,6 +2213,11 @@ export interface Caminhos {
   carreirasEsportivas?: CarreiraEsportiva[];
   /** Os anos de palco (o histórico de `palco`, que guarda só o último). */
   palcos?: { ano: number; linguagem: Dominio; apresentacoes: number; bruto: number }[];
+  /**
+   * REWORK 11 · MUS-02: o papel na música, quando escolhido (carreira solo, integrante de banda, instrumentista contratado
+   * por outros artistas, compositor). Ausente: deduzido do estado (`musica.papelNaMusica`).
+   */
+  papelMusica?: 'solo' | 'banda' | 'contratado' | 'compositor';
   /** A situação de carreira deste ano, esperando a escolha (o contexto fica guardado: o texto não muda no reload). */
   situacao?: SituacaoAberta;
   /** As situações de carreira vividas: a intenção escolhida e o que aconteceu (memória da vida profissional). */

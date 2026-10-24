@@ -43,7 +43,7 @@ import { marcar } from './marcas';
 import { anoDe } from '../tempo';
 import { propor } from './compromissos';
 import { flex, ge } from '../texto';
-import { disponibilidadeCena, executarCena, type OqueCena } from './cena';
+import { disponibilidadeCena, executarCena, trabalhaComArte, type OqueCena } from './cena';
 import { disponibilidadePrepararResidencia, prepararResidencia } from './medicina';
 import { disponibilidadeAV, executarAV, type OqueAV } from './audiovisual';
 
@@ -201,7 +201,9 @@ function podeMostrar(v: Vida): Veredito {
   if (!p?.ativo) return bloqueio('requisito', 'Mostrar o trabalho a um produtor pede um grupo em atividade (uma banda, um grupo de teatro ou de dança).');
   const oc = PRO_ARTE[p.linguagem];
   if (!oc) return bloqueio('impossivel', 'Não se aplica.');
-  if (v.trabalho.atual?.ocupacaoId === oc || v.trabalho.paralela?.ocupacaoId === oc) return bloqueio('impossivel', 'Você já vive disso.');
+  // REWORK 11 · MUS-08: pela carreira (a trilha), não pelo id exato — o ator conhecido "mostrava" e recebia o convite de
+  // ator (rebaixamento). Quem já vive disso sobe pelo prestígio e pelos convites da própria carreira.
+  if (trabalhaComArte(v, p.linguagem)) return bloqueio('impossivel', 'Você já vive disso: o próximo degrau vem do trabalho que repercute, não de mandar material.');
   if (p.linguagem === 'danca' && idade(v) > 27) return bloqueio('requisito', 'As companhias profissionais de dança fazem audição até uns 27 anos.');
   if (p.publico < 15) return bloqueio('requisito', `${p.nome} ainda não tem público: quem contrata quer ver gente na plateia. Apresentar-se (uma temporada curta, um show) e um edital de cultura constroem esse público.`);
   const ultima = v.fatos['arte_mostrou'];
