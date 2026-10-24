@@ -297,7 +297,7 @@ function sonhoParaTras(v: Vida): { d?: Dominio; texto: string; t: number; destin
     return { d: es.modalidade, texto: `O clube dispensou você${es.nivel >= 3 ? ' quando o profissional parecia perto' : ''}`, t: es.tFim, destino: destinoDoSonho(v, es.modalidade, es.tFim) };
   }
   const m = [...v.caminhos.marcas].reverse().find(x => (x.tipo === 'abandono' || x.tipo === 'fracasso') && x.dominio && DOMINIOS_DE_SONHO.includes(x.dominio));
-  return m ? { d: m.dominio, texto: m.texto.replace(/\.$/, '').replace(/\. O sonho de viver d[oa] .* ficou para trás$/, ''), t: m.t, destino: destinoDoSonho(v, m.dominio!, m.t) } : undefined;
+  return m ? { d: m.dominio, texto: m.texto.replace(/\.$/, '').replace(/\. O sonho de viver d[oa] .* ficou para trás$/, '').replace(/, aos \d+$/, ''), t: m.t, destino: destinoDoSonho(v, m.dominio!, m.t) } : undefined;
 }
 /** O que a cena diz depois do fato — a virada, quando houve. */
 function depoisDoSonho(v: Vida, s: NonNullable<ReturnType<typeof sonhoParaTras>>): string {
