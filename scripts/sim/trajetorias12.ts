@@ -53,7 +53,7 @@ function comecar(p: Perfil, s: number): Vida {
   try { contratar(v, criarRng(s), ocupacao(oc)); } catch { contratar(v, criarRng(s), ocupacao('assistente_adm')); }
   v.trabalho.licencas.push('cnh');
   v.financas.dividas = []; v.financas.negativado = false;
-  v.financas.conta = { baixa: 3000, media: 30000, alta: 150000, imobiliario: 400000, empreendedor: 600000, paralelo: 2_500_000, endividado: 20000, muito_rico: 60_000_000 }[p];
+  v.financas.conta = { baixa: 3000, media: 30000, alta: 150000, imobiliario: 400000, empreendedor: 900000, paralelo: 2_500_000, endividado: 20000, muito_rico: 60_000_000 }[p];
   return v;
 }
 
@@ -98,6 +98,9 @@ function politica(p: Perfil, v: Vida, ano: number): Vida {
     }
     const museu = empresasAtivas(v).find(e => e.tipo === 'museu');
     if (museu?.estado === 'em_crise') v = tenta(v, { tipo: 'empresa', empresaId: museu.id, decisao: 'aportar' });
+    // O mecenas presente: reforma de tempos em tempos e uma exposição a cada três anos (o museu largado definha).
+    if (museu && ano % 4 === 3) v = tenta(v, { tipo: 'empresa', empresaId: museu.id, decisao: 'melhorar' });
+    if (museu && ano % 3 === 1) v = tenta(v, { tipo: 'empresa', empresaId: museu.id, decisao: 'exposicao' });
     if (v.financas.conta > 2_000_000) v = tenta(v, { tipo: 'investir', destino: 'pos_fixado', valor: Math.round(v.financas.conta - 1_000_000) });
   }
   return v;

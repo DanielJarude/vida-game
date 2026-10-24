@@ -63,7 +63,8 @@ export function doRamo(v: Vida, tipo: TipoEmpresa): boolean {
 export function competenciaDaGestao(v: Vida, e: Empresa): number {
   if (e.gestao.quem === 'contratada') return e.gestao.competencia ?? 50;
   const anos = Math.min(10, (v.t - e.gestao.tInicio) / 12);
-  return clamp(42 + anos * 3 + (doRamo(v, e.tipo) ? 12 : 0) + (v.caminhos.negocio ? 6 : 0), 0, 88);
+  // Quem toca aprende com os anos — até um teto: a pessoa tem outra profissão (e quem não é do ramo para mais cedo).
+  return clamp(40 + anos * 2.5 + (doRamo(v, e.tipo) ? 10 : 0) + (v.caminhos.negocio ? 5 : 0), 0, doRamo(v, e.tipo) ? 76 : 66);
 }
 
 /** A competência do gestor só aparece com o tempo (a tela diz em palavras, nunca em número). */
@@ -296,9 +297,14 @@ function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
   }
   // A qualidade se gasta devagar (a manutenção de rotina já está nos custos); quem toca bem segura, quem toca mal deixa cair.
   // A reputação caminha para o que a casa entrega (a qualidade e a gestão) — não sobe para sempre só porque o tempo passa.
-  e.qualidade = clamp(Math.round(e.qualidade - 1 + (competenciaDaGestao(v, e) - 55) / 20));
-  const alvo = e.qualidade * 0.85 + (competenciaDaGestao(v, e) - 50) / 4;
+  e.qualidade = clamp(Math.round(e.qualidade - 1.5 + (competenciaDaGestao(v, e) - 55) / 25));
+  const alvo = Math.min(82, e.qualidade * 0.85 + (competenciaDaGestao(v, e) - 50) / 4);
   e.reputacao = clamp(Math.round(e.reputacao + (alvo - e.reputacao) * 0.25 + r.normal() * 4));
+  // A concorrência: de tempos em tempos abre alguém igual perto (ou o bairro muda) — o público some por uns anos.
+  if (e.estado === 'operando' && r.chance(e.tipo === 'museu' || e.tipo === 'zoologico' ? 0.04 : 0.12)) {
+    e.reputacao = clamp(e.reputacao - r.int(8, 18));
+    nota = nota ?? (e.tipo === 'museu' || e.tipo === 'zoologico' ? 'Uma atração nova na cidade dividiu o público.' : 'Abriu um concorrente parecido perto: parte do público foi experimentar.');
+  }
   e.ativos = Math.round(e.ativos * 0.93);
   if (e.acervo) e.acervo.conservacao = clamp(Math.round(e.acervo.conservacao - 2 + (e.caixa > 0 ? 1 : -2)));
   if (e.zoo) zooNoAno(v, e, r);

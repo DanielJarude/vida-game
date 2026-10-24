@@ -86,3 +86,12 @@
   .antes-de-decidir dl > div { grid-template-columns: 1fr; gap: 0; }
   .pat-empresa__cabeca { flex-direction: column; }
 }
+
+/* REWORK 12 · QA: o motivo da oferta (laranja-claro) ficava abaixo de 3:1 sobre o cartão cinza no claro a 390 px. */
+.ofertas .oferta__motivo { color: var(--accent) !important; }
+
+/* REWORK 12 · QA: alvos de toque de 44 px no celular — o "Vender…" das peças e empresas e os seletores das lojas. */
+.pat .link--discreto { min-height: 44px; display: inline-flex; align-items: center; }
+@media (max-width: 420px) {
+  .lugar-folha .escolha__item { min-height: 44px; }
+}

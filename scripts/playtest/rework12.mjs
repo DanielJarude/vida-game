@@ -23,7 +23,7 @@ const TODAS = [
   ['garagem-guardado*', 'r12-guardado', 'Vida', 'aba:Patrimônio', 'aba:Garagem'],
   ['loja-relojoaria*', 'r12-rica', 'Vida', 'aba:Compras', 'clique:.vitrine__abrir:has-text("Relojoaria")'],
   ['loja-colecionador', 'r12-rica', 'Vida', 'aba:Compras', 'clique:.vitrine__abrir:has-text("colecionador")'],
-  ['imovel-antes*', 'r12-rica', 'Vida', 'aba:Compras', 'clique:.vitrine__abrir:has-text("Imobiliária")', 'botao:Comprar', 'clique:.oferta--casa', 'clique:.marcar input']
+  ['imovel-antes*', 'r12-rica', 'Vida', 'aba:Compras', 'clique:.vitrine__abrir:has-text("Imobiliária")', 'radio:Comprar', 'clique:.oferta--casa', 'clique:.marcar input', 'ver:.antes-de-decidir']
 ].map(([n, ...r]) => [n.replace('*', ''), n.endsWith('*'), ...r]);
 const so = process.env.CENAS?.split(',');
 const cenas = so ? TODAS.filter(c => so.includes(c[0])) : TODAS;
