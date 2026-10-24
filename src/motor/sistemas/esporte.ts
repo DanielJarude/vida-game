@@ -17,13 +17,13 @@
  * atletismo e lutas usam a mesma estrutura, com seletivas e equipes.
  */
 
-import { paisCorrente } from '../mundo/moeda';
+import { converterEntrePaises, paisCorrente } from '../mundo/moeda';
 import { PAIS_PADRAO } from '../mundo/registro';
 import { rendaRelativa, salarioMinimoDoPais } from '../mundo/economia';
 import { paisDaVida } from '../mundo/vida';
 import { lancar } from './extrato';
 import type { Rng } from '../rng';
-import { clamp, hashMisturado } from '../rng';
+import { clamp, hashMisturado, rngDe } from '../rng';
 import type { CarreiraEsportiva, Dominio, Posicao, PropostaDeClube, Temporada, Vida } from '../tipos';
 import { escrever, idade, lembrarCom, marcarFato, pais, temFato } from '../nucleo';
 import { cidadesDoPais, municipio, municipioDoCodigo, MUNICIPIOS, paisDaCidade } from '../dados/lugares';
@@ -47,7 +47,10 @@ import { CIRCUITO_TENIS, custoDoCircuito, custoJuvenilTenis, DIVISAO_BASQUETE, e
 import { recursosDaFamilia } from './origem';
 import { mudarAgora } from './processos';
 import { registrarTemporada, registrarConquista } from './palmares';
-import { clubesNaDivisao, divisaoDoClube, forcaDoClube } from './ligas';
+import { clubesNaDivisao, colocacaoNaTabela, divisaoDoClube } from './ligas';
+import { copaContinental, copaNacional, idDaLiga, nomeDaCompeticao } from './competicoes';
+import { desvio, efeitoNaNota, envelhecerAtributos, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
+import { avancarLicenca } from './oficioDoTecnico';
 import { processarSelecao } from './selecao';
 import { nomePor } from './notoriedade';
 import { daPorta, individualComEquipe, perfilDe, portaAmadora, semVinculo } from './perfisEsportivos';
@@ -395,8 +398,10 @@ export function taxaDeTransferencia(v: Vida, e: CarreiraEsportiva, p: Pick<Propo
  * empregador. A mudança de cidade (se houver) é de quem chama — para a
  * cidade da proposta (`p.municipioId`).
  */
-export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube): void {
+export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube, luvasDepois = false): void {
   if (p.origem === 'emprestimo') { emprestar(v, e, p); return; }
+  e.ultimoClube = undefined;
+  if (e.capitao && e.capitao.clube !== p.clube) e.capitao = undefined;
   const de = e.clube;
   e.clube = p.clube;
   // REWORK 9: se o clube subiu ou caiu desde a proposta, a divisão é a de agora (a tabela do país).
@@ -407,8 +412,12 @@ export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube
   e.emprestimo = undefined;
   e.clausulaTitular = p.espaco === 'reserva' && p.salarioTitular > p.salario ? p.salarioTitular : undefined;
   // As luvas são suas; a taxa é do clube que vendeu (fica na história da carreira, não na sua conta).
-  if (p.luvas) v.financas.conta += p.luvas;
-  if (p.taxa && de !== p.clube) (e.transferencias ??= []).push({ t: v.t, de, para: p.clube, taxa: p.taxa });
+  // REWORK 11 · ESP-11.5: as luvas estão na moeda do clube que contrata. Quem muda de país recebe DEPOIS da mudança
+  // (`creditarLuvas`, chamado por quem muda a vida de lugar): antes, entravam na conta e a migração as convertia de
+  // novo (−24% do Brasil à Espanha, +41% da Itália ao Brasil).
+  if (p.luvas && !luvasDepois) creditarLuvas(v, p);
+  // A taxa guarda o país do comprador: a moeda em que foi paga (a ficha mostra nela, não na de hoje).
+  if (p.taxa && de !== p.clube) (e.transferencias ??= []).push({ t: v.t, de, para: p.clube, taxa: p.taxa, pais: paisDaCidade(p.municipioId) });
   if (e.transferencias && e.transferencias.length > 12) e.transferencias.splice(0, e.transferencias.length - 12);
   if (e.modalidade === 'futebol' || perfilDe(e.modalidade).estrutura === 'clube') e.municipioId = p.municipioId;
   const emp = v.trabalho.atual;
@@ -416,6 +425,17 @@ export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube
     emp.empregador = vivePremiacao(e.modalidade) ? emp.empregador : oClube(p.clube);
     emp.salario = p.espaco === 'titular' ? p.salarioTitular : p.salario;
   }
+}
+
+/**
+ * As luvas da assinatura, na conta: no valor da moeda do clube (se a vida já está no país do clube, o número é o da
+ * proposta; se não está — a família ficou, a mudança não aconteceu —, convertido pelo câmbio), com linha no extrato.
+ */
+export function creditarLuvas(v: Vida, p: PropostaDeClube): void {
+  if (!p.luvas) return;
+  const x = Math.round(converterEntrePaises(p.luvas, paisDaCidade(p.municipioId), paisDaVida(v)));
+  v.financas.conta += x;
+  lancar(v, `Luvas da assinatura com ${oClube(p.clube)}`, 'renda', x);
 }
 
 /** A equipe de uma modalidade coletiva numa cidade (nome descritivo, do universo do jogo — não uma marca). */
@@ -559,39 +579,69 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   const desgaste = e.foco === 'preservar' ? 0.7 : e.foco === 'forcar' ? 1.25 : 1;
   // No basquete, a estatura é parte do jogo (o garrafão): ajuda o pivô, cobra mais técnica do armador baixo.
   const corpo = e.modalidade === 'basquete' ? vantagemDeEstatura(v) * 2.4 : 0;
-  let nota = 6 + (h - barraDaDivisao(e.modalidade, e.nivel)) / 4 + (v.corpo.forma - 70) / 22 + corpo - passou * (futebol && pos === 'goleiro' ? 0.18 : 0.3) * desgaste - (sacrificio ? 0.9 : 0) + r.normal() * 0.6;
-  // REWORK 10.6 · FUT-05: o treino extra do ano (a função, o tático) aparece na temporada — não só na técnica geral.
-  const treinou = (k: string) => v.fatos[`oficio:${k}`] !== undefined && v.t - v.fatos[`oficio:${k}`] < 12;
-  if (treinou('tecnico')) nota += 0.25;
-  if (treinou('tatico')) nota += 0.15;
+  // REWORK 11 · ESP-11.2: o perfil da técnica na posição (futebol) ou na função (basquete) — entra na nota e na produção.
+  // (Substitui o bônus fixo do treino do ano do REWORK 10.6: o treino da função sobe os atributos dela, e é isso que a
+  // temporada lê.)
+  const funcaoB = e.modalidade === 'basquete' ? funcaoBasquete(v) : undefined;
+  const perfil = perfilDeAtributos(v, e, h, futebol ? pos : undefined, funcaoB);
+  const dv = (id: AtributoId) => desvio(perfil, id, h);
+  let nota = 6 + (h - barraDaDivisao(e.modalidade, e.nivel)) / 4 + (v.corpo.forma - 70) / 22 + corpo + efeitoNaNota(perfil, h) - passou * (futebol && pos === 'goleiro' ? 0.18 : 0.3) * desgaste - (sacrificio ? 0.9 : 0) + r.normal() * 0.6;
   nota = Math.round(clamp(nota, 2.5, 9.6) * 10) / 10;
   // Nos outros esportes, a temporada é um calendário de competições; o que conta são os pódios.
   const max = jogosDaTemporada(e.modalidade, e.nivel);
   const disp = (12 - fora) / 12;
-  const partidas = Math.max(0, Math.round(max * disp * (e.espaco === 'titular' ? 0.92 : 0.45) * (0.9 + r.next() * 0.15)));
+  // A resistência do meio-campo segura o ano inteiro em campo (e quem cansa sai antes).
+  const folego = futebol ? 1 + clamp(dv('resistencia'), -10, 10) * 0.004 : 1;
+  const partidas = Math.max(0, Math.min(max, Math.round(max * disp * (e.espaco === 'titular' ? 0.92 : 0.45) * (0.9 + r.next() * 0.15) * folego)));
   const titular = Math.min(partidas, Math.round(partidas * (e.espaco === 'titular' ? 0.88 : 0.3)));
   const peso = (titular + (partidas - titular) * 0.35) * Math.max(0.25, nota / 6.5);
-  const funcao = treinou('tecnico') ? 1.1 : 1;
-  const gols = Math.round(peso * (futebol ? GOL[pos] : clamp((nota - 5) / 8, 0.02, 0.5)) * (0.75 + r.next() * 0.5) * (futebol && (pos === 'ponta' || pos === 'atacante') ? funcao : 1));
-  const assistencias = futebol ? Math.round(peso * ASSIST[pos] * (0.75 + r.next() * 0.5) * (pos === 'meia' ? funcao : 1)) : 0;
-  const defesa = futebol && (pos === 'goleiro' || pos === 'zagueiro' || pos === 'lateral' || pos === 'volante') ? Math.round(peso * DEFESA[pos] * (0.8 + r.next() * 0.4) * funcao) : undefined;
-  // Onde o time terminou: a força do clube na divisão, a sua temporada, e o resto do elenco.
-  const forcaClube = (forcaDoClube(e.clube, paisDaCidade(e.municipioId)) - e.nivel) * 3;
+  const fGol = futebol ? clamp(1 + dv('finalizacao') * 0.025 + dv('movimentacao') * 0.01 + dv('velocidade') * 0.008 + dv('aereo') * 0.03, 0.5, 1.7) : 1;
+  const fAst = futebol ? clamp(1 + dv('passe') * 0.015 + dv('visao') * 0.015 + dv('velocidade') * 0.005 + dv('pes') * 0.02, 0.5, 1.7) : 1;
+  const fDef = clamp(1 + dv('marcacao') * 0.012 + dv('antecipacao') * 0.01, 0.5, 1.6);
+  const gols = Math.round(peso * (futebol ? GOL[pos] : clamp((nota - 5) / 8, 0.02, 0.5)) * (0.75 + r.next() * 0.5) * fGol);
+  const assistencias = futebol ? Math.round(peso * ASSIST[pos] * (0.75 + r.next() * 0.5) * fAst) : 0;
+  const desarmes = futebol && (pos === 'zagueiro' || pos === 'lateral' || pos === 'volante') ? Math.round(peso * DEFESA[pos] * (0.8 + r.next() * 0.4) * fDef) : undefined;
   // Nas modalidades individuais com equipe (natação, atletismo, luta), a colocação é a do atleta na prova que importa — não a do time.
   const individual = individualComEquipe(e.modalidade);
+  // REWORK 11 · ESP-11.1: onde o time terminou sai da MESMA tabela do país (`ligas.colocacaoNaTabela`: a força do clube
+  // pela régua do mundo + a contribuição de quem joga). Antes, `11 − (porte − divisão)·3 − nota + ruído`: um grande na
+  // elite terminava em 11º na média (13% de rebaixamento), e o mesmo clube, no mundo, brigava pelo título.
+  // Basquete e vôlei não têm catálogo de equipes: a equipe joga com a força média da divisão (antes, a de um clube de
+  // acesso — 66% de rebaixamento na elite).
+  const ajuste = contribuicaoNaTemporada(nota, titular, partidas, max);
+  const pais = paisDaCidade(e.municipioId);
+  const ano = anoDe(v.t - 6);
   const colocacao = individual
     ? Math.round(clamp(9 - (nota - 5) * 2.2 + r.normal() * 1.2, 1, 12))
-    : Math.round(clamp(11 - forcaClube - (nota - 6) * (e.espaco === 'titular' ? 1.6 : 0.6) + r.normal() * 4, 1, 20));
-  const t: Temporada = { ano: anoDe(v.t - 6), clube: e.clube, nivel: e.nivel, posicao: e.modalidade === 'futebol' ? pos : undefined, partidas, titular: individual ? partidas : titular, gols, assistencias, defesa, nota, colocacao, mesesFora: fora, ...(e.emprestimo ? { emprestado: e.emprestimo.clube } : {}) };
+    : futebol
+      ? colocacaoNaTabela(v, pais, ano, e.clube, e.nivel, ajuste, r.normal())
+      : Math.round(clamp(11 - ajuste * 4 + r.normal() * 4, 1, 20));
+  const t: Temporada = { ano, clube: e.clube, nivel: e.nivel, posicao: e.modalidade === 'futebol' ? pos : undefined, partidas, titular: individual ? partidas : titular, gols, assistencias, defesa: desarmes, nota, colocacao, mesesFora: fora, pais, ...(futebol ? { competicaoId: idDaLiga(pais, e.nivel) } : {}), ...(e.emprestimo ? { emprestado: e.emprestimo.clube } : {}) };
+  // REWORK 11 · ESP-11.3: as copas do ano (a nacional; a continental, para quem se classificou na temporada anterior),
+  // jogadas fase a fase com a mesma força do clube na liga e a mesma contribuição de quem joga.
+  if (futebol) {
+    const copas = [copaNacional(v, pais, ano, e.clube, e.nivel, ajuste), copaContinental(v, pais, ano, e.clube, ajuste)].filter(c => !!c);
+    if (copas.length) t.copas = copas.map(c => ({ id: c!.id, fase: c!.fase, jogos: Math.round(c!.jogos * (e.espaco === 'titular' ? disp : 0.3 * disp)), ...(c!.final ? { final: `contra ${c!.final.adversario.startsWith('um') ? c!.final.adversario : oClube(c!.final.adversario)}, ${c!.final.placar}` } : {}) }));
+  }
+  // O goleiro: os jogos sem sofrer gol saem dos gols que o time sofre (a colocação diz o time; o reflexo, o
+  // posicionamento e as saídas do goleiro, o quanto passa com ele em campo) — jogo a jogo.
+  if (futebol && pos === 'goleiro') {
+    const jogos = titular + Math.round((partidas - titular) * 0.25);
+    const lambda = golsContraPorJogo(colocacao, e.nivel) * Math.exp(-(dv('reflexos') * 0.012 + dv('posicionamento') * 0.01 + dv('saidas') * 0.006 + (nota - 6) * 0.04));
+    let zeros = 0, sofridos = 0;
+    for (let k = 0; k < jogos; k++) { const g = poisson(lambda, r.next()); sofridos += g; if (g === 0) zeros++; }
+    t.semSofrerGol = zeros; t.golsSofridos = sofridos;
+  }
   if (e.modalidade === 'basquete') {
-    // Por jogo, com o perfil da função: o pivô pega rebote, o armador distribui, o ala pontua.
-    const fn = funcaoBasquete(v);
+    // Por jogo, com o perfil da função: o pivô pega rebote, o armador distribui, o ala pontua (e os atributos dizem quanto).
+    const fn = funcaoB!;
     t.funcao = fn;
     const minutos = e.espaco === 'titular' ? 1 : 0.45;
     const q = clamp((nota - 3.5) / 5, 0.1, 1.4) * minutos;
-    t.pontos = Math.round((fn === 'ala' ? 15 : fn === 'pivo' ? 12 : 11) * q * (0.85 + r.next() * 0.3) * 10) / 10;
-    t.rebotes = Math.round((fn === 'pivo' ? 9 : fn === 'ala' ? 5 : 3) * q * (0.85 + r.next() * 0.3) * 10) / 10;
-    t.assistencias = Math.round((fn === 'armador' ? 6.5 : fn === 'ala' ? 2.5 : 1.5) * q * (0.85 + r.next() * 0.3) * 10) / 10;
+    const f = (id: AtributoId) => clamp(1 + dv(id) * 0.02, 0.6, 1.5);
+    t.pontos = Math.round((fn === 'ala' ? 15 : fn === 'pivo' ? 12 : 11) * q * (0.85 + r.next() * 0.3) * f('arremesso') * 10) / 10;
+    t.rebotes = Math.round((fn === 'pivo' ? 9 : fn === 'ala' ? 5 : 3) * q * (0.85 + r.next() * 0.3) * f('rebote') * 10) / 10;
+    t.assistencias = Math.round((fn === 'armador' ? 6.5 : fn === 'ala' ? 2.5 : 1.5) * q * (0.85 + r.next() * 0.3) * f('passe') * 10) / 10;
     t.gols = 0;
   }
   if (e.modalidade === 'tenis') jogarCircuito(v, r, e, t, nota);
@@ -601,6 +651,9 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   if (e.modalidade === 'natacao' || e.modalidade === 'atletismo') jogarProvas(v, r, e, t, nota, h);
   if (e.modalidade === 'lutas') jogarLutas(v, r, t, nota);
   if (futebol) t.minutos = Math.round(titular * (78 + r.next() * 10) + (partidas - titular) * (18 + r.next() * 10));
+  // REWORK 11 · ESP-11.6: os lances que os momentos do ano somaram entram AQUI (antes do palmarés, dos prêmios, da
+  // biografia e dos totais) — e a final nacional vencida numa prova individual faz da temporada um título.
+  aplicarLances(e, t, individual);
   (e.temporadas ??= []).push(t);
   // REWORK 5: os totais da carreira não se perdem quando a lista de temporadas corta as mais antigas.
   const tot = (e.totais ??= { temporadas: 0, partidas: 0, gols: 0, assistencias: 0, minutos: 0 });
@@ -612,7 +665,52 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   const alvoRep = clamp((nota - 4.3) * 14 + (e.nivel - 1) * 6 + participacao * 10);
   e.reputacao = Math.round(clamp((e.reputacao ?? 30) * 0.55 + alvoRep * 0.45));
   if (e.modalidade === 'tenis') t.ranking = rankingPorPontos(t.pontosRanking ?? 0);
+  // O perfil envelhece com o ano (o que não se treina esfria; depois do auge, o corpo dá lugar à leitura).
+  if (futebol || e.modalidade === 'basquete') envelhecerAtributos(e, i, augeDe(v, e));
   return t;
+}
+
+/**
+ * REWORK 11 · ESP-11.1 — a contribuição de quem joga para o time, em pontos de força da tabela (a mesma escala de
+ * `ligas.forcaNaLiga`): a temporada (a nota contra a divisão) × o quanto jogou (os jogos começando jogando; quem entra no
+ * fim conta um terço; meses fora por lesão já tiraram jogos). Um titular de nota 8 o ano todo vale ~+0,6 (≈ 2 posições);
+ * o reserva que quase não joga, quase nada — nos dois sentidos.
+ */
+export function contribuicaoNaTemporada(nota: number, titular: number, partidas: number, max: number): number {
+  if (!max) return 0;
+  const participacao = clamp((titular + (partidas - titular) * 0.35) / max, 0, 1);
+  return Math.round(clamp((nota - 6) * participacao * 0.32, -1.2, 1.2) * 100) / 100;
+}
+
+/** Os gols que o time sofre por jogo, pela colocação (o campeão sofre pouco; o lanterna, muito) — o placar do time. */
+export const golsContraPorJogo = (colocacao: number, nivel: number) => (nivel === 1 ? 0.95 + (Math.min(12, colocacao) - 1) * 0.07 : 0.72 + (Math.min(20, colocacao) - 1) * 0.048);
+
+/** Um sorteio de Poisson por inversão (um número do gerador por jogo: menos gols esperados nunca dão mais gols). */
+function poisson(lambda: number, u: number): number {
+  let k = 0, p = Math.exp(-lambda), s = p;
+  while (u > s && k < 12) { k++; p *= lambda / k; s += p; }
+  return k;
+}
+
+/** Os jogos sem sofrer gol de uma temporada (o campo novo; nos saves antigos, o `defesa` do goleiro). */
+export const semSofrerGolDe = (t: Temporada): number | undefined => t.semSofrerGol ?? (t.posicao === 'goleiro' ? t.defesa : undefined);
+/** Os desarmes de uma temporada (nunca os jogos sem sofrer gol do goleiro). */
+export const desarmesDe = (t: Temporada): number | undefined => (t.posicao === 'goleiro' ? undefined : t.defesa);
+
+/** REWORK 11 · ESP-11.6: os lances guardados pelos momentos do ano entram na temporada que está fechando. */
+function aplicarLances(e: CarreiraEsportiva, t: Temporada, individual: boolean): void {
+  const l = e.lances;
+  if (!l) return;
+  e.lances = undefined;
+  t.gols += l.gols ?? 0;
+  t.assistencias += l.assistencias ?? 0;
+  if (l.semSofrerGol && t.semSofrerGol !== undefined) t.semSofrerGol = Math.min(t.titular, t.semSofrerGol + l.semSofrerGol);
+  // A final nacional das provas individuais: o pódio soma; o ouro faz da temporada um título (a colocação é do atleta).
+  if (individual && (l.podios || l.ouro)) {
+    if (t.prova) { t.prova.podios += (l.podios ?? 0) + (l.ouro ?? 0); t.prova.finais = Math.max(1, t.prova.finais); t.prova.vitorias += l.ouro ?? 0; }
+    else if (t.luta) { t.luta.podios += (l.podios ?? 0) + (l.ouro ?? 0); t.luta.titulos += l.ouro ?? 0; }
+    t.colocacao = l.ouro ? 1 : Math.min(t.colocacao, 3);
+  }
 }
 
 /* ------------------------------------------------------------ Tênis: o ano, torneio a torneio */
@@ -673,10 +771,12 @@ function jogarCircuito(_v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, not
 /** A temporada em uma linha (tela, resumo do ano, Linha da Vida). */
 export function linhaDaTemporada(_v: Vida, t: Temporada, modalidade?: Dominio): string {
   const d = modalidade ?? _v.caminhos.esporte?.modalidade;
-  if (t.pontos !== undefined) return `${cap(divisaoDe('basquete', t.nivel))} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'} · ${String(t.pontos).replace('.', ',')} pontos, ${String(t.rebotes ?? 0).replace('.', ',')} rebotes e ${String(t.assistencias).replace('.', ',')} assistências por jogo${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
+  // REWORK 11 · ESP-11.5: a liga é a do país do clube NAQUELA temporada (antes, a do país de hoje: "2051 Cruzeiro: Primera División").
+  const pais = paisDaTemporada(_v, t, d);
+  if (t.pontos !== undefined) return `${cap(divisaoDe('basquete', t.nivel, pais))} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'} · ${String(t.pontos).replace('.', ',')} pontos, ${String(t.rebotes ?? 0).replace('.', ',')} rebotes e ${String(t.assistencias).replace('.', ',')} assistências por jogo${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
   if (t.vitorias !== undefined) return `${cap(CIRCUITO_TENIS[t.nivel])} · ${t.partidas} torneios · ${t.vitorias} vitórias e ${t.derrotas ?? 0} derrotas${t.titulos ? ` · ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}${(t.finais ?? 0) > (t.titulos ?? 0) ? ` · ${(t.finais ?? 0) - (t.titulos ?? 0)} ${(t.finais ?? 0) - (t.titulos ?? 0) === 1 ? 'final perdida' : 'finais perdidas'}` : ''}${t.ranking ? ` · ranking ${t.ranking}º` : ''}${t.premio !== undefined ? ` · prêmios de ${dinheiro(t.premio)}, custos de ${dinheiro(t.custos ?? 0)}` : ''}${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
   const fora = t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : '';
-  if (!t.posicao && d === 'volei') return `${cap(divisaoDe('volei', t.nivel))} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}, ${t.titular} como titular${t.volei && t.funcao ? ` · ${NOME_FUNCAO_VOLEI[t.funcao as FuncaoVolei] ?? t.funcao}: ${numeroDaFuncao(t)}` : ''}${fora}`;
+  if (!t.posicao && d === 'volei') return `${cap(divisaoDe('volei', t.nivel, pais))} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}, ${t.titular} como titular${t.volei && t.funcao ? ` · ${NOME_FUNCAO_VOLEI[t.funcao as FuncaoVolei] ?? t.funcao}: ${numeroDaFuncao(t)}` : ''}${fora}`;
   const nivelInd = cap(['', 'competições regionais', 'circuito nacional de acesso', 'circuito nacional', 'elite nacional'][t.nivel]);
   if (!t.posicao && t.prova) {
     const x = t.prova;
@@ -688,16 +788,31 @@ export function linhaDaTemporada(_v: Vida, t: Temporada, modalidade?: Dominio): 
     return `${nivelInd} · ${x.categoria} · ${t.partidas} ${t.partidas === 1 ? 'evento' : 'eventos'} · ${x.lutas} ${x.lutas === 1 ? 'luta' : 'lutas'}: ${x.vitorias} ${x.vitorias === 1 ? 'vitória' : 'vitórias'}${x.antesDoTempo ? ` (${x.antesDoTempo} antes do tempo)` : ''}, ${x.derrotas} ${x.derrotas === 1 ? 'derrota' : 'derrotas'}${x.titulos ? ` · ${x.titulos} ${x.titulos === 1 ? 'título' : 'títulos'}` : ''}${x.podios > x.titulos ? ` · ${x.podios} ${x.podios === 1 ? 'pódio' : 'pódios'}` : ''}${fora}`;
   }
   if (!t.posicao) return `${nivelInd} · ${t.partidas} ${t.partidas === 1 ? 'competição' : 'competições'} · ${podiosDe(t)} ${podiosDe(t) === 1 ? 'pódio' : 'pódios'}${t.colocacao <= 8 ? ` · melhor colocação: ${t.colocacao}º` : ''}${fora}`;
-  const div = divisaoDoNivel(t.nivel);
+  const div = divisaoDoNivel(t.nivel, pais);
   const partes = [`${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}`, `${t.titular} como titular`, ...(t.minutos ? [`${t.minutos.toLocaleString('pt-BR')} minutos`] : [])];
-  if (t.posicao === 'goleiro') partes.push(`${t.defesa ?? 0} sem sofrer gol`);
+  if (t.posicao === 'goleiro') { partes.push(`${semSofrerGolDe(t) ?? 0} sem sofrer gol`); if (t.golsSofridos !== undefined) partes.push(`${t.golsSofridos} ${t.golsSofridos === 1 ? 'gol sofrido' : 'gols sofridos'}`); }
   else {
     if (t.gols || t.posicao === 'atacante' || t.posicao === 'ponta' || t.posicao === 'meia') partes.push(`${t.gols} ${t.gols === 1 ? 'gol' : 'gols'}`);
     if (t.assistencias || t.posicao === 'meia' || t.posicao === 'ponta') partes.push(`${t.assistencias} ${t.assistencias === 1 ? 'assistência' : 'assistências'}`);
-    if (t.defesa !== undefined) partes.push(`${t.defesa} desarmes`);
+    if (desarmesDe(t) !== undefined) partes.push(`${desarmesDe(t)} desarmes`);
   }
   if (t.mesesFora >= 2) partes.push(`${t.mesesFora} meses fora por lesão`);
+  // REWORK 11 · ESP-11.3: as copas do ano, até onde se foi.
+  for (const c of t.copas ?? []) partes.push(`${nomeDaCompeticao(c.id)}: ${c.fase}`);
   return `${cap(div)} · ${t.colocacao}º lugar · ${partes.join(' · ')}`;
+}
+
+/**
+ * O país de uma temporada: o que ela guardou (REWORK 11); nos saves de antes, o do clube no catálogo — e, se o nome
+ * existe em mais de um país ou não é do catálogo, o do clube de agora.
+ */
+export function paisDaTemporada(v: Vida, t: Temporada, d?: Dominio): string {
+  if (t.pais) return t.pais;
+  const e = carreirasEsportivas(v).find(x => x.temporadas?.includes(t)) ?? v.caminhos.esporte;
+  const aqui = e ? paisDaCidade(e.municipioId) : paisCorrente();
+  if ((d ?? e?.modalidade) !== 'futebol') return aqui;
+  const c = clubePorNome(t.clube, aqui);
+  return c ? paisDaCidade(c.cidade) : aqui;
 }
 
 /** A temporada em uma palavra (o que o clube e o mercado leram). */
@@ -716,6 +831,7 @@ export const palavraDaReputacao = (x: number, modalidade: Dominio = 'futebol') =
 
 /** `presenca`: quanto de cada atividade aconteceu na agenda do ano (`agenda.agendaDaSemana(v).presenca`). */
 export function processarEsporte(v: Vida, r: Rng, presenca: Record<string, number> = {}): void {
+  avancarLicenca(v);
   const i = idade(v);
   const e = v.caminhos.esporte;
   const mod = modalidadePrincipal(v);
@@ -938,9 +1054,10 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
     const emp = contratar(v, r, oc, 'oportunidade');
     emp.empregador = e.modalidade === 'tenis' ? 'por conta própria (o circuito)' : oClube(p?.clube ?? e.clube);
     if (p) {
-      transferirPara(v, e, p);
+      transferirPara(v, e, p, true);
       // O clube é de outra cidade: a vida vai junto (quem mora na casa também — a mesma regra de toda mudança).
       if (p.municipioId !== v.moradia.municipioId) { emp.municipioId = p.municipioId; mudarAgora(v, p.municipioId, `para jogar ${noClube(p.clube)}`); }
+      creditarLuvas(v, p);
     }
     else { e.nivel = e.modalidade === 'futebol' ? divisaoDoClube(v, e.clube, paisDaCidade(e.municipioId)) : Math.max(1, Math.min(4, nivel)) as 1 | 2 | 3 | 4; e.espaco = 'reserva'; assinarContrato(v, e, 12); }
     const texto = e.modalidade === 'futebol' ? `Voltou a jogar: assinou com ${oClube(e.clube)}, aos ${idade(v)}.` : `Voltou a competir, aos ${idade(v)}.`;
@@ -1021,7 +1138,11 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
       if (v.t - desde >= 12) { delete v.fatos['esp_sem_clube']; encerrarCarreira(v, e, 'sem_contrato'); }
       return;
     }
-    e.fase = 'encerrada'; e.tFim = v.t; e.motivoFim = e.motivoFim ?? 'escolha'; return;
+    // REWORK 11 · sem clube (A1 item 4): outro trabalho no lugar do contrato é o fim da carreira — com biografia, marca e
+    // o fato de "sem clube" resolvido (antes: a fase mudava à mão, sem texto).
+    delete v.fatos['esp_sem_clube'];
+    encerrarCarreira(v, e, 'escolha');
+    return;
   }
   const pos = posicaoDe(v, e);
   const forcar = e.foco === 'forcar';
@@ -1052,6 +1173,7 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   const nomeClube = e.modalidade === 'futebol' ? cap(e.clube) : 'A equipe';
   // A temporada no palmarés: título (e o papel nele), acesso ou rebaixamento, prêmios pela posição, marcos — e a seleção, que observa.
   registrarTemporada(v, r, e, t);
+  capitaniaDoClube(v, e, t);
   processarSelecao(v, r, e, t);
   // O empréstimo: no fim do prazo, a volta ao clube detentor — ou o clube de agora quer ficar com você (a resposta é sua).
   if (e.emprestimo) {
@@ -1098,10 +1220,7 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
       assinarContrato(v, e, 12, 1, true);
       escrever(v, { texto: `O contrato venceu sem conversa, e ${oClube(e.clube)} prorrogou por mais um ano.`, relevancia: 'cotidiano', tema: 'trabalho' });
     } else {
-      v.fatos['esp_sem_clube'] = v.t;
-      e.espaco = undefined;
-      e.contratoAte = undefined;
-      encerrarEmprego(v, 'fim do contrato');
+      ficarSemClube(v, e);
       escrever(v, { texto: `O contrato com ${oClube(e.clube)} acabou e não foi renovado. ${cap(semVinculo(e.modalidade))}, esperando proposta.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       return;
     }
@@ -1198,6 +1317,69 @@ function flagrado(v: Vida, e: CarreiraEsportiva): void {
   marcarFato(v, 'suspenso_doping');
   abalar(v, 'a suspensão por doping', -14, 14);
   for (const p of pais(v)) { const vin = v.vinculos[p.id]; if (vin) vin.confianca = clamp(vin.confianca - 8); }
+}
+
+/**
+ * REWORK 11 · sem clube — o contrato acabou e ninguém renovou: o emprego acaba, a carreira não. A marca explícita
+ * (`ultimoClube`) diz que não há clube agora (nenhuma tela mostra o antigo como atual); o mercado parte de lá.
+ */
+export function ficarSemClube(v: Vida, e: CarreiraEsportiva): void {
+  v.fatos['esp_sem_clube'] = v.t;
+  e.ultimoClube = { clube: e.clube, municipioId: e.municipioId, nivel: e.nivel, ate: v.t };
+  e.espaco = undefined;
+  e.contratoAte = undefined;
+  e.capitao = undefined;
+  if (v.trabalho.atual && OCUPACOES_DE_ATLETA.includes(v.trabalho.atual.ocupacaoId)) encerrarEmprego(v, 'fim do contrato');
+}
+
+/** O último clube de quem está sem clube agora (a marca explícita; nos saves de antes, o clube guardado). */
+export function ultimoClubeDe(e: CarreiraEsportiva): { clube: string; municipioId: string; nivel: number; ate: number } | undefined {
+  if (e.ultimoClube) return e.ultimoClube;
+  return e.fase === 'profissional' && e.contratoAte === undefined && e.espaco === undefined && e.modalidade !== 'tenis' ? { clube: e.clube, municipioId: e.municipioId, nivel: e.nivel, ate: e.tFase } : undefined;
+}
+
+/** O clube de AGORA (nada, para quem está sem clube ou suspenso): o que as telas mostram como atual. */
+export function clubeAtual(v: Vida, e: CarreiraEsportiva): string | undefined {
+  if (e.fase !== 'profissional' || e.ultimoClube || (e.suspensoAte !== undefined && v.t < e.suspensoAte)) return undefined;
+  if (!v.trabalho.atual || !OCUPACOES_DE_ATLETA.includes(v.trabalho.atual.ocupacaoId)) return undefined;
+  return e.clube;
+}
+
+/**
+ * Procurar clube sem clube (a ação do atleta): o empresário liga. Se o mercado ainda quer (pela última temporada e
+ * pelo nome), vem uma proposta concreta — de divisão igual ou menor — e a decisão da porta (`volta_clube`); se não,
+ * nada, e a frase diz por quê.
+ */
+export function procurarClube(v: Vida, r: Rng): { texto: string; proposta?: PropostaDeClube } {
+  const e = v.caminhos.esporte!;
+  const oferta = nivelQueOMercadoOferece(v, e);
+  const chance = clamp((valorDeMercado(v, e) - 15) / 55, 0.1, 0.85);
+  if (oferta < 1 || !r.chance(chance)) return { texto: oferta < 1 ? 'O empresário ligou para meia dúzia de clubes. Ninguém quis: a última temporada e a idade pesaram.' : 'Duas sondagens, nenhuma proposta. O empresário pediu mais um tempo.' };
+  e.proposta = undefined;
+  const nivel = Math.max(1, Math.min(4, oferta, e.nivel)) as 1 | 2 | 3 | 4;
+  const p = criarProposta(v, e, nivel, 'sem_clube');
+  if (!p) return { texto: 'Uma sondagem, sem número. Ficou para depois.' };
+  delete v.fatos['esp_sem_clube'];
+  novaOportunidade(v, { tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'volta_clube', titulo: 'Um clube ligou', texto: `${e.modalidade === 'futebol' ? `${cap(oClube(p.clube))}, de ${municipio(p.municipioId).nome},` : 'Uma equipe'} fez proposta (${divisaoDe(e.modalidade, p.nivel, paisDaCidade(p.municipioId))}). Contrato curto, salário de quem volta.`, bonus: nivel });
+  return { texto: `O telefone tocou: ${e.modalidade === 'futebol' ? oClube(p.clube) : 'uma equipe'} quer você. A proposta está nas suas portas.`, proposta: p };
+}
+
+/**
+ * REWORK 11 · ESP-11.6 — capitão do clube: quem é titular há anos no mesmo clube, com nome e idade de liderar, um dia
+ * recebe a braçadeira (o sorteio é da vida, não do gerador principal). Sai ao trocar de clube ou ficar sem clube.
+ */
+function capitaniaDoClube(v: Vida, e: CarreiraEsportiva, t: Temporada): void {
+  if (e.capitao && e.capitao.clube === e.clube) { t.capitao = true; return; }
+  if (!perfilDe(e.modalidade).coletivo || e.espaco !== 'titular' || idade(v) < 25 || (e.reputacao ?? 0) < 55) return;
+  const seguidas = [...(e.temporadas ?? [])].reverse().findIndex(x => x.clube !== e.clube);
+  if ((seguidas === -1 ? (e.temporadas ?? []).length : seguidas) < 3) return;
+  if (rngDe(v.id, 'capitao', e.clube, t.ano).next() >= 0.3) return;
+  e.capitao = { clube: e.clube, desde: v.t };
+  t.capitao = true;
+  const texto = `${flex(ge(v), 'Capitão', 'Capitã', 'Capitão')} ${doClube(e.clube)}: a braçadeira veio depois de ${seguidas === -1 ? (e.temporadas ?? []).length : seguidas} temporadas no clube.`;
+  escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+  registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: t.ano, competicao: 'capitania', clube: e.clube, texto: `${flex(ge(v), 'Capitão', 'Capitã', 'Capitão')} ${doClube(e.clube)}` });
+  e.reputacao = clamp((e.reputacao ?? 30) + 1);
 }
 
 export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNullable<CarreiraEsportiva['motivoFim']>): void {

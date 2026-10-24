@@ -45,8 +45,13 @@ export function precosDoPais(pais: string): number {
 /** Quanto um valor do motor vale em outro país, atravessando pelo câmbio de mercado. */
 export function converterEntrePaises(valor: number, de: string, para: string): number {
   if (de === para) return valor;
+  // REWORK 11 · ESP-11.5: na MESMA moeda (o euro da Espanha e o da Itália), o dinheiro não muda de valor: o mesmo
+  // número de euros lá e cá (antes, um resíduo de arredondamento dos índices de preços).
+  if (moedaDoPais(de) === moedaDoPais(para)) return valor * fatorDoPais(de) / fatorDoPais(para);
   return valor * precosDoPais(de) / precosDoPais(para);
 }
+/** Os dois países usam a mesma moeda (o euro, o dólar americano...). */
+export const mesmaMoeda = (a: string, b: string) => a === b || moedaDoPais(a) === moedaDoPais(b);
 
 /** Valor do motor → moeda local. */
 export const emMoedaLocal = (valor: number, pais = corrente) => valor * fatorDoPais(pais);

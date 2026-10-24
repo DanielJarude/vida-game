@@ -35,7 +35,7 @@ import type { Migracao, MotivoMigracao, Veiculo, Vida } from '../tipos';
 import { escrever, idade, marcarFato, moraCom, vinculosVivos } from '../nucleo';
 import { cidadesDoPais, economiaLocal, municipio, paisDaCidade, existeMunicipio, type Municipio } from '../dados/lugares';
 import { blocosDoPais, circulaLivre, linguasDaPessoa, nacionalidadesDaPessoa, nacionalidadesDaVida, paisDaVida, paisNatal } from '../mundo/vida';
-import { converterEntrePaises } from '../mundo/moeda';
+import { converterEntrePaises, mesmaMoeda } from '../mundo/moeda';
 import { aoPais, noPais, paisDoCatalogo, paraPais, paisesVivenciaveis, perfilDoPais, temPerfil, nomeDoPais, doPais } from '../mundo/registro';
 import { rendaRelativa } from '../mundo/economia';
 import { anosParaNaturalizar, regraDeCidadania } from '../mundo/cidadania';
@@ -232,7 +232,8 @@ export function migrar(v: Vida, r: Rng, destinoId: string, motivo: MotivoMigraca
   const k = av.fatorCambio;
   const antes = patrimonio(v);
   redenominar(v, k);
-  const remessa = Math.round(Math.max(0, f.conta) * 0.015);
+  // REWORK 11 · ESP-11.5: entre dois países da mesma moeda não há câmbio — nem a remessa de 1,5%.
+  const remessa = mesmaMoeda(paisDaCidade(origemId), pais) ? 0 : Math.round(Math.max(0, f.conta) * 0.015);
   f.conta -= remessa;
   lancar(v, 'Câmbio e remessa do dinheiro', 'despesa', -remessa);
 
