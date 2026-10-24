@@ -102,6 +102,7 @@ import { reacaoDaParceriaAMudanca } from './sistemas/convivio';
 import { disponibilidadeMargem, executarMargem, type OqueMargem } from './sistemas/margem';
 import { disponibilidadeSubmundo, executarSubmundo, type OqueSubmundo } from './sistemas/submundo';
 import { NOME_DO_RAMO } from './sistemas/ramos';
+import { disponibilidadeAlianca, executarAlianca, type OqueAlianca } from './sistemas/aliancas';
 import { disponibilidadeAposta, executarAposta, type OpAposta } from './sistemas/apostas';
 import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
 
@@ -256,6 +257,8 @@ export type Acao =
   | { tipo: 'margem'; oque: OqueMargem }
   /** REWORK 11.5 · SUB-15: as ações de cada ramo do Submundo (o serviço, o lote, a tarefa do grupo, a encomenda, o acerto, a denúncia). */
   | { tipo: 'submundo'; oque: OqueSubmundo; ramo?: Ramo; pessoaId?: string }
+  /** REWORK 11.5 · POL-05: as alianças e as promessas (formar, cumprir, romper, pedir apoio, prometer na campanha). */
+  | { tipo: 'alianca'; oque: OqueAlianca; id?: string }
   /** REWORK 10.5 · ECO-04: o dinheiro da criança (pedir aos responsáveis, brigadeiros com a família, tarefas pagas). */
   | { tipo: 'crianca'; oque: OqueCrianca }
   /** REWORK 10.6 · INF-02: pedir aos responsáveis para comprar algo da loja (inteiro, ou completando o que se tem). */
@@ -320,6 +323,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'agenda': return disponibilidadeDaAgenda(v, a.op);
     case 'margem': return disponibilidadeMargem(v, a.oque);
     case 'submundo': return disponibilidadeSubmundo(v, a.oque, a.ramo, a.pessoaId);
+    case 'alianca': return disponibilidadeAlianca(v, a.oque, a.id);
     case 'crianca': return disponibilidadeCrianca(v, a.oque);
     case 'pedir_compra': return disponibilidadePedidoDeCompra(v, a.coisaId, !!a.completar, a.responsavelId);
     case 'pedir_veiculo': {
@@ -857,6 +861,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return { resultado: `${quem.p.nome} topou: a ${m.nome} é sua.`, titulo: 'O pedido' };
     }
     case 'parar_tratamento': return ok(pararTratamento(v, a.condicaoId), 'ruim');
+    case 'alianca': return { resultado: executarAlianca(v, a.oque, a.id), titulo: a.oque === 'prometer' ? 'A promessa' : 'A aliança' };
     case 'submundo': {
       const x = executarSubmundo(v, r, a.oque, a.ramo, a.pessoaId);
       // O que a ação desencadeou agora (o parceiro pego depois do serviço que deu errado) vira a pergunta na hora.

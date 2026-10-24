@@ -440,6 +440,11 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
       evento: { tipo: 'gravidez', pessoaId: outro?.id, peso: 50 }
     });
     marcarFato(v, `gravidez_descoberta_${g.id}`);
+    // REWORK 11.5 · REL-21: a gravidez de um caso, de quem tem parceria e ainda não foi descoberto — para a parceria, o
+    // filho é DELA (ninguém conta a verdade por ela). A verdade biológica fica em `genitores`; quem sabe, em `origemSabida`.
+    const par = parceiro(v);
+    const doCaso = !!outro && !!v.vinculos[outro.id]?.romance?.secreto;
+    if (g.gestanteId === 'eu' && doCaso && par && par.p.id !== outro!.id && v.fatos[`caso_descoberto:${outro!.id}`] === undefined) g.reconhecidoId = par.p.id;
     if (outro && v.vinculos[outro.id]) {
       lembrarCom(v, outro.id, g.planejada ? 'O teste deu positivo, depois de tentarem.' : 'Uma gravidez que não estava nos planos.', 'filho', 2, g.tConcepcao + 2);
       if (v.vinculos[outro.id].romance) v.vinculos[outro.id].romance!.planoFilhos = 'evitando';
@@ -479,6 +484,7 @@ export function processarGestacoes(v: Vida, r: Rng): Pessoa | null {
   vinBebe.tInicio = g.tParto;
   vinBebe.presenca = moraComigo ? 50 : 15;
   bebe.genitores = ['eu', ...(outro ? [outro.id] : [])];
+  if (g.reconhecidoId && v.pessoas[g.reconhecidoId]?.vivo) { bebe.reconhecidoPor = g.reconhecidoId; bebe.origemSabida = ['eu', ...(outro ? [outro.id] : [])]; }
   garantirVida(bebe);
   v.fatos[`outro_genitor_${bebe.id}`] = outro ? 1 : 0;
   if (g.gestanteId === 'eu') v.corpo.saude = clamp(v.corpo.saude - 3);
@@ -491,7 +497,8 @@ export function registrarNascimento(v: Vida, bebe: Pessoa, nome: string): void {
   bebe.municipioNatal ??= v.moradia.municipioId;
   const mes = MESES[mesDe(bebe.tNasc)];
   const primeiro = filhos(v).filter(f => f.id !== bebe.id).length === 0;
-  const outroId = bebe.genitores?.find(x => x !== 'eu');
+  // REWORK 11.5 · REL-21: o registro diz quem a família conhece como o outro genitor (a parceria que reconhece).
+  const outroId = bebe.reconhecidoPor ?? bebe.genitores?.find(x => x !== 'eu');
   const outro = outroId ? v.pessoas[outroId] : undefined;
   escrever(v, {
     t: bebe.tNasc,
@@ -502,6 +509,9 @@ export function registrarNascimento(v: Vida, bebe: Pessoa, nome: string): void {
   // Os pais do jogador viram avós: isso também é história deles com você.
   for (const x of vinculosVivos(v)) if (x.vin.parentesco === 'mae' || x.vin.parentesco === 'pai') lembrarCom(v, x.p.id, primeiro ? `Viraram avós: nasceu ${nome}.` : `Nasceu ${nome}, mais um neto.`, 'filho', primeiro ? 2 : 1, bebe.tNasc);
   lembrarCom(v, bebe.id, `Nasceu em ${mes} de ${Math.floor(bebe.tNasc / 12)}${outro ? `, ${flex(bebe.genero, 'filho seu', 'filha sua', 'filhe sue')} e de ${outro.nome}` : ''}. Você tinha ${idade(v)} anos.`, 'inicio', 3, bebe.tNasc);
+  // REWORK 11.5 · REL-22: no trio, a terceira pessoa também cria — e lembra.
+  const trio = v.trisal;
+  if (trio) for (const id of [trio.a, trio.b]) if (id !== outroId && v.pessoas[id]?.vivo && v.vinculos[id]) lembrarCom(v, id, `Nasceu ${nome} — uma criança criada pelos três.`, 'filho', 2, bebe.tNasc);
   if (outro && v.vinculos[outro.id]) lembrarCom(v, outro.id, `Nasceu ${nome}, ${primeiro ? 'o primeiro filho de vocês' : 'mais um filho de vocês'}.`.replace('o primeiro filho', flex(bebe.genero, 'o primeiro filho', 'a primeira filha', 'e primeire filhe')), 'filho', 3, bebe.tNasc);
   abalar(v, `o nascimento de ${nome}`, 12, 0);
 }
@@ -517,3 +527,21 @@ function criarNomeBebe(r: Rng, g: 'masculino' | 'feminino', ano: number): string
   return sortearNome(r, g, ano, paisCorrente());
 }
 
+
+/**
+ * REWORK 11.5 · REL-21 — a dúvida sobre quem é o pai ou a mãe: a parceria que reconhece a criança pode passar a
+ * desconfiar (raramente por acaso; muito mais quando o caso vem à tona). A dúvida vira a decisão `rel115_paternidade`.
+ * Ninguém fica sabendo da verdade sem uma causa (o caso descoberto, a semelhança, a conversa).
+ */
+export function processarPaternidade(v: Vida): void {
+  for (const f of filhos(v)) {
+    const quem = f.reconhecidoPor;
+    if (!quem || !v.pessoas[quem]?.vivo || (f.origemSabida ?? []).includes(quem)) continue;
+    if (v.fatos[`paternidade_duvida:${f.id}`] !== undefined && v.t - v.fatos[`paternidade_duvida:${f.id}`] < 36) continue;
+    const bio = f.genitores?.find(x => x !== 'eu');
+    const casoVeio = bio !== undefined && v.fatos[`caso_descoberto:${bio}`] !== undefined;
+    const negou = v.fatos[`negou_paternidade_${f.id}`] !== undefined;
+    const chance = (casoVeio ? 0.45 : 0.02) + (negou ? 0.15 : 0);
+    if (rngDe(v.id, 'paternidade', f.id, v.t).chance(chance)) { v.fatos[`paternidade_duvida:${f.id}`] = v.t; v.fatos['paternidade_duvida'] = v.t; return; }
+  }
+}

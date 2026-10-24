@@ -88,7 +88,9 @@ export function cacheAudiovisual(v: Vida, o: { tipo: ItemCurriculo['tipo']; port
   const ag = agenteDe(v);
   const negociacao = (1 + (ag ? ag.rede * 0.06 : 0)) * (o.negociado ? 1.1 : 1);
   // O extraordinário: protagonista de produção grande, com nome de verdade.
-  const estrela = o.porte >= 3 && PAPEL(o.papel) >= 2 && noto >= 60 ? 1 + (noto - 60) / 80 : 1;
+  // REWORK 11.5 · ART-01: a estrela existe (nenhum ator ativo chegava a R$ 1 mi num ano): quem tem nome e pega o papel
+  // principal de uma produção grande recebe como estrela — raro, porque juntar as duas coisas é raro.
+  const estrela = o.porte >= 3 && PAPEL(o.papel) >= 2 && noto >= 48 ? 1 + (noto - 48) / 30 : 1;
   const mercado = nivelDeOferta(v.moradia.municipioId) >= 3 ? 1.05 : 0.95;
   const bruto = Math.round((BASE_TIPO[o.tipo] ?? 3000) * PORTE[o.porte] * PAPEL(o.papel) * nome * casa * orcamento * negociacao * estrela * mercado / 100) * 100;
   // Arredondado a dez reais (a cem, o agente de um trabalho pequeno não levava nada).
@@ -315,9 +317,11 @@ export function degrauPorPrestigio(v: Vida): boolean {
   if (v.t - e.tInicio < 36) return false;
   const pres = prestigioArtistico(v);
   // O meio reconhece quem tem um trabalho que a crítica ou o público destacou (não só quem acumulou linhas no currículo).
-  const destaque = (v.caminhos.curriculo ?? []).some(x => x.premio || Math.max(x.repercussao, x.publico ?? 0) >= 3);
-  if (pres < 0.66 || !destaque || nomePor(v, 'arte') < 30 || habilidade(v, 'teatro') < 74) return false;
-  if (!rngDe(v.id, 'av_degrau', v.t).chance(clamp(0.04 + (pres - 0.66) * 0.5, 0, 0.18))) return false;
+  // REWORK 11.5 · ART-01: o degrau ficou mais raro (25 de 30 atores ativos chegavam a "conhecido" em 20 anos): pede um
+  // trabalho que o público ou a crítica destacaram de verdade, mais prestígio, e a chance anual é menor.
+  const destaque = (v.caminhos.curriculo ?? []).some(x => x.premio || Math.max(x.repercussao, x.publico ?? 0) >= 4);
+  if (pres < 0.7 || !destaque || nomePor(v, 'arte') < 34 || habilidade(v, 'teatro') < 76) return false;
+  if (!rngDe(v.id, 'av_degrau', v.t).chance(clamp(0.02 + (pres - 0.7) * 0.35, 0, 0.1))) return false;
   const oc = ocupacaoOuNula('ator_reconhecido');
   if (!oc) return false;
   registrarPosto(v, e);

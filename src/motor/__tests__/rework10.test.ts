@@ -13,7 +13,7 @@ import { avancarAno } from '../ano';
 import { executar } from '../acoes';
 import { transacao } from '../nucleo';
 import { criarRng } from '../rng';
-import { interpretar } from '../save';
+import { normalizarRework115, interpretar } from '../save';
 import type { NovoCompromisso, Vida } from '../tipos';
 import { analisarEntrada, notaDaBaseCom, propor } from '../sistemas/compromissos';
 import { agendaDaSemana, baseComONovo, sobrepoe } from '../sistemas/agenda';
@@ -238,7 +238,9 @@ const comRng = (v: Vida, k: number): Vida => ({ ...structuredClone(v), rng: Math
 /** Executa a interação com sementes diferentes até `ok` (ou desiste): devolve a vida e o resultado. */
 function ate(v: Vida, pessoaId: string, interacao: string, ok: (w: Vida) => boolean, n = 60): { v: Vida; res: string; achou: boolean } {
   for (let k = 0; k < n; k++) {
-    const out = executar(comRng(v, k), { tipo: 'pessoa', pessoaId, interacao });
+    let out = executar(comRng(v, k), { tipo: 'pessoa', pessoaId, interacao });
+    // REWORK 11.5 · REL-20: o pedido de casamento é uma cena (onde → que anel): o teste escolhe o jantar, sem anel.
+    if (out.vida.momento?.situacaoId === 'rel115_pedido') { out = executar(out.vida, { tipo: 'decidir', opcaoId: 'jantar' }); out = executar(out.vida, { tipo: 'decidir', opcaoId: 'sem_anel' }); }
     if (ok(out.vida)) return { v: out.vida, res: out.resultado ?? out.aviso?.texto ?? '', achou: true };
   }
   return { v, res: '', achou: false };
@@ -322,7 +324,8 @@ describe('REL-02 · namoro e casamento como marcos afetivos', () => {
     const lido = interpretar(JSON.stringify(w));
     expect(lido.tipo).toBe('ok');
     if (lido.tipo === 'ok') {
-      expect(lido.vida.vinculos[id].historia.some(h => h.texto === 'Ficaram noivos.')).toBe(true);
+      // REWORK 11.5 · REL-20: a memória do noivado diz como foi o pedido ("Ficaram noivos, com um anel...").
+      expect(lido.vida.vinculos[id].historia.some(h => h.texto.startsWith('Ficaram noivos'))).toBe(true);
       expect(lido.vida.vinculos[id].historia.some(h => h.tipo === 'casamento')).toBe(true);
       expect(lido.vida.fatos[`marco_casamento_${id}`]).toBeDefined();
     }
@@ -641,7 +644,9 @@ describe('CRI-01 · o processo: absolvição, condenação, prisão, acordo, fia
   });
 
   it('save/load com processo, acordo, recurso e a trajetória: ida e volta idêntica', () => {
-    const v = em(processada('fraude', { provas: 66 }), x => { x.justica!.processo!.acordo = { t: x.t, recusado: true }; x.caminhos.envolvimento!.reputacao = 40; x.caminhos.envolvimento!.contatos = ['a']; x.justica!.recurso = { t: x.t, tFim: x.t + 12 }; });
+    // REWORK 11.5: o envolvimento montado à mão não tem os ramos (o save de antes os ganha ao abrir, `normalizarRework115`):
+    // o estado de partida já passa pela mesma normalização, e a ida e volta continua idêntica.
+    const v = em(processada('fraude', { provas: 66 }), x => { x.justica!.processo!.acordo = { t: x.t, recusado: true }; x.caminhos.envolvimento!.reputacao = 40; x.caminhos.envolvimento!.contatos = ['a']; x.justica!.recurso = { t: x.t, tFim: x.t + 12 }; normalizarRework115(x); });
     const lido = interpretar(JSON.stringify(v));
     expect(lido.tipo).toBe('ok');
     if (lido.tipo === 'ok') expect(JSON.stringify(lido.vida)).toBe(JSON.stringify(v));

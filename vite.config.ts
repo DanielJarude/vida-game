@@ -116,7 +116,7 @@ export default defineConfig({
           // (a margem, os acontecimentos do REWORK 10) e as peças que todo conteúdo usa (a base, os efeitos, os papéis, os
           // textos locais) vão para um pacote próprio, ABAIXO dos textos: eles só importam sistemas e dados; os textos os
           // importam. Sem ciclo, e o pacote dos textos volta a ter folga sem aumentar o limite.
-          if (/[\\/]src[\\/]motor[\\/]conteudo[\\/](base|efeitos|papeis|local|margem|submundo|possibilidades|acontecimentos[a-z0-9]*)\.ts/.test(id)) return 'motor-acontecimentos';
+          if (/[\\/]src[\\/]motor[\\/]conteudo[\\/](base|efeitos|papeis|local|margem|submundo|aliancas|possibilidades|acontecimentos[a-z0-9]*)\.ts/.test(id)) return 'motor-acontecimentos';
           if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria|gestos|pertences|presentes|vidaEstudantil|estetica|conversas|conflitos)\.ts)/.test(id)) return 'motor-textos';
           if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
           // REWORK 3: o que só a camada de cima usa (salvar, nascer, as ações de cuidado, de estilo, de busca, a

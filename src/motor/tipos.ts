@@ -67,6 +67,12 @@ export interface Pessoa {
   pet?: InfoPet;
   /** Pai e mãe (ids; `'eu'` é o jogador). Mantém a árvore da família coerente entre gerações. */
   genitores?: string[];
+  /**
+   * REWORK 11.5 · REL-21: quem RECONHECE a criança como filha (a parceria que acha que é o outro genitor), quando não é
+   * quem está em `genitores` (a verdade biológica, que a herança lê). `origemSabida`: quem sabe a verdade.
+   */
+  reconhecidoPor?: string;
+  origemSabida?: string[];
   /** Um momento difícil pelo qual a pessoa está passando (abre "estar junto" como ação). */
   aperto?: Aperto;
   /** REWORK 5 (mundo vivo): quantos filhos a pessoa teve fora da família do jogador (o amigo que virou pai). */
@@ -355,7 +361,8 @@ export interface Romance {
   /** REWORK 11 · REL-11.3: como terminou (quando `ex`): quem terminou e se houve traição. */
   porque?: { quem: 'jogador' | 'ela'; motivo?: 'traicao' };
   /** REWORK 11 · REL-16: o noivado como estado (desde quando) e o casamento planejado (quando houver). */
-  noivado?: { t: number; plano?: PlanoDeCasamento };
+  /** REWORK 11.5 · REL-20: `anel` e `lugar` — como foi o pedido (a cena escolhida; a biografia e o casamento lembram). */
+  noivado?: { t: number; plano?: PlanoDeCasamento; anel?: 'simples' | 'classico' | 'caro' | 'nenhum'; lugar?: 'casa' | 'jantar' | 'publico' };
 }
 
 /** REWORK 11 · REL-16: o casamento planejado (`sistemas/casamento`). Os custos saem dos preços locais na hora. */
@@ -1325,7 +1332,7 @@ export interface ApoioFamiliar {
 /* ---------------------------------------------------------------- Processos */
 
 export type Processo =
-  | { tipo: 'gestacao'; id: string; tConcepcao: number; tParto: number; gestanteId: string; outroId?: string; descoberta: boolean; planejada: boolean }
+  | { tipo: 'gestacao'; id: string; tConcepcao: number; tParto: number; gestanteId: string; outroId?: string; descoberta: boolean; planejada: boolean; /** REWORK 11.5 · REL-21: a parceria que acha que é o outro genitor (a gravidez de um caso que ela não sabe). */ reconhecidoId?: string }
   | { tipo: 'adocao'; id: string; tInicio: number; tFim: number; parceiroId?: string }
   | { tipo: 'mudanca'; id: string; tEfetiva: number; destinoId: string; motivo: string }
   | { tipo: 'tratamento'; id: string; condicaoId: string; tFim: number; rede: 'sus' | 'particular' }
@@ -1936,6 +1943,8 @@ export interface Palco {
   custos: number;
   /** O que ficou para o artista no ano (antes do imposto pessoal). */
   artista: number;
+  /** REWORK 11.5 · ART-02: os freelas do ano de quem vive de música (aulas, gravações para outros, estúdio), no ano. */
+  freelas?: number;
 }
 
 /** Um trabalho artístico que saiu para o mundo (disco, peça, exposição, livro, série de fotos). */
@@ -2636,6 +2645,41 @@ export interface VidaPolitica {
   /** Inelegível até (Ficha Limpa, abstrato). */
   inelegivelAte?: number;
   tFim?: number;
+  /** REWORK 11.5 · POL-05: as alianças (com gente e com memória) e as promessas, cobradas no prazo (`sistemas/aliancas`). */
+  aliancas?: AliancaPolitica[];
+  promessas?: PromessaPolitica[];
+  /** REWORK 11.5 · POL-05: o pedido de um aliado neste ano (a decisão `pol_alianca_pedido` lê). */
+  pedido?: { aliancaId: string; t: number };
+}
+
+/** REWORK 11.5 · POL-05: uma aliança política — uma pessoa de um grupo, a confiança, os favores e o rompimento. */
+export interface AliancaPolitica {
+  id: string;
+  pessoaId: string;
+  /** O grupo que a pessoa representa ("a bancada do comércio", "as lideranças dos bairros"). */
+  grupo: string;
+  confianca: number;
+  desde: number;
+  /** Favores: positivo, o aliado deve a você; negativo, você deve a ele. */
+  favores: number;
+  rompida?: number;
+  /** Quem rompeu. */
+  porQuem?: 'voce' | 'aliado';
+}
+
+/** REWORK 11.5 · POL-05: uma promessa — de campanha (ao eleitor) ou a um aliado — com prazo. */
+export interface PromessaPolitica {
+  id: string;
+  t: number;
+  texto: string;
+  origem: 'campanha' | 'alianca';
+  aliancaId?: string;
+  /** Até quando (instante). */
+  prazo: number;
+  /** As entregas do mandato no dia da promessa (a de campanha é cumprida com entregas a mais). */
+  feitoAntes?: number;
+  cumprida?: number;
+  quebrada?: number;
 }
 
 /* ---------------------------------------------------------------------- Vida */
@@ -2734,6 +2778,11 @@ export interface Vida {
    * por ano). Cada uma é conferida de novo antes de abrir — o que a escolha anterior desfez não aparece. Ausente: vazia.
    */
   fila?: DecisaoNaFila[];
+  /**
+   * REWORK 11.5 · REL-22: uma relação entre TRÊS adultos (a parceria principal e o namoro paralelo do poliamor, que
+   * também se relacionam): a harmonia entre os dois, os ciúmes, a casa, o dinheiro. Ausente: não há trio.
+   */
+  trisal?: { a: string; b: string; desde: number; harmonia: number; ciumes: number; moram: boolean; financas: 'separadas' | 'conjuntas'; conversa?: number; crise?: number };
   ocorrencias: Ocorrencia[];
   /**
    * REWORK 10.5 · EVT-05: os acontecimentos e as cenas de carreira que apareceram nas DUAS VIDAS ANTERIORES deste

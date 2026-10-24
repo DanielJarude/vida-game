@@ -1002,30 +1002,17 @@ export const INTERACOES: Interacao[] = [
       return vereditoDoPedido(c.v, c.p, 'noivado');
     },
     rotulo: () => 'Pedir em casamento',
+    // REWORK 11.5 · REL-20: o pedido é uma CENA (onde, com que anel), não um botão: abre a decisão `rel115_pedido`, e a
+    // resposta sai de `responderAoPedido` com o que foi escolhido.
+    destaque: true,
     executar: (c, r) => {
-      const rom = c.vin.romance!;
-      // REWORK 10 · NPC-04: há quem não queira casar (com ninguém) — o sim dessa pessoa é raro, por mais que ame.
-      const resistencia = naoQuerCasar(c.p) ? 0.35 : 1;
-      const chance = clamp((rom.envolvimento - 40) / 35 * resistencia - c.vin.tensao / 300, 0.03, 0.95);
-      const x = r.next();
-      if (x < chance) {
-        ficarNoivos(c.v, c.vin);
-        escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento. A resposta foi sim.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id] });
-        lembrarCom(c.v, c.p.id, 'Ficaram noivos.', 'romance', 3);
-        const pesa = marcoAfetivo(c.v, c.p, c.vin, 'noivado');
-        return { resultado: `Sim. ${c.p.nome} chorou, você chorou, o garçom bateu palmas.${pesa ? ` ${pesa}` : ''}` };
-      }
-      // REWORK 11 · REL-16: entre o sim e o não, o "preciso pensar" (quem gosta, mas não está pronto): sem briga, com espera.
-      if (x < chance + 0.2 && !naoQuerCasar(c.p) && rom.envolvimento >= 50 && c.vin.tensao < 40) {
-        c.v.fatos[`pedido_adiado_${c.p.id}`] = c.v.t;
-        lembrarCom(c.v, c.p.id, `Você pediu ${c.p.nome} em casamento; ${ele(c.p)} pediu um tempo para pensar.`, 'romance', 2);
-        escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento. A resposta foi "preciso pensar".`, relevancia: 'biografia', tema: 'amor', escolha: true, pessoas: [c.p.id] });
-        return { resultado: `${c.p.nome} segurou a sua mão, emocionad${o(c.p)}, e pediu um tempo — não é não; é "ainda não sei". Dá para perguntar de novo daqui a um ano.` };
-      }
-      escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento e ouviu um não.`, relevancia: 'biografia', tema: 'amor', tom: 'ruim', escolha: true, pessoas: [c.p.id] });
-      return { resultado: recusaAfetiva(c.v, c.p, c.vin, 'noivado') };
+      void r;
+      delete c.v.fatos['pedido_lugar'];
+      c.v.fatos['pedido_cena'] = c.v.t;
+      return { resultado: `Você decidiu pedir ${c.p.nome} em casamento. Falta decidir como.`, decisao: 'rel115_pedido', papeis: { pessoa: c.p.id } };
     }
   },
+
   {
     id: 'terminar', variante: 'perigo',
     quando: c => parceriaAtiva(c) || c.papel === 'saindo',
@@ -1694,3 +1681,33 @@ export function prioridadesDaFicha(v: Vida, id: string): { ids: string[]; porque
   return { ids: ids.slice(0, 3), porque };
 }
 const ehDescendenteOuCrianca = (c: CtxI) => ['filho', 'neto', 'bisneto'].includes(c.papel) || ((c.papel === 'irmao' || c.papel === 'parente') && c.eu - c.ip >= 8);
+
+/**
+ * REWORK 11.5 · REL-20 — a resposta ao pedido de casamento (a mesma conta de antes: o envolvimento, a tensão, quem não
+ * quer casar), com o que a CENA somou (`bonus`: o lugar e o anel que combinam — ou não — com quem recebe o pedido) e o
+ * detalhe do anel na memória.
+ */
+export function responderAoPedido(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, bonus: number, detalhe = ''): Saida {
+  const c = { v, p, vin } as CtxI;
+  const rom = vin.romance!;
+  // REWORK 10 · NPC-04: há quem não queira casar (com ninguém) — o sim dessa pessoa é raro, por mais que ame.
+  const resistencia = naoQuerCasar(p) ? 0.35 : 1;
+  const chance = clamp((rom.envolvimento - 40) / 35 * resistencia - vin.tensao / 300 + bonus, 0.03, 0.95);
+  const x = r.next();
+      if (x < chance) {
+        ficarNoivos(c.v, c.vin);
+        escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento. A resposta foi sim.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id] });
+        lembrarCom(c.v, c.p.id, `Ficaram noivos${detalhe}.`, 'romance', 3);
+        const pesa = marcoAfetivo(c.v, c.p, c.vin, 'noivado');
+        return { resultado: `Sim. ${c.p.nome} chorou, você chorou, o garçom bateu palmas.${pesa ? ` ${pesa}` : ''}` };
+      }
+      // REWORK 11 · REL-16: entre o sim e o não, o "preciso pensar" (quem gosta, mas não está pronto): sem briga, com espera.
+      if (x < chance + 0.2 && !naoQuerCasar(c.p) && rom.envolvimento >= 50 && c.vin.tensao < 40) {
+        c.v.fatos[`pedido_adiado_${c.p.id}`] = c.v.t;
+        lembrarCom(c.v, c.p.id, `Você pediu ${c.p.nome} em casamento; ${ele(c.p)} pediu um tempo para pensar.`, 'romance', 2);
+        escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento. A resposta foi "preciso pensar".`, relevancia: 'biografia', tema: 'amor', escolha: true, pessoas: [c.p.id] });
+        return { resultado: `${c.p.nome} segurou a sua mão, emocionad${o(c.p)}, e pediu um tempo — não é não; é "ainda não sei". Dá para perguntar de novo daqui a um ano.` };
+      }
+      escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento e ouviu um não.`, relevancia: 'biografia', tema: 'amor', tom: 'ruim', escolha: true, pessoas: [c.p.id] });
+      return { resultado: recusaAfetiva(c.v, c.p, c.vin, 'noivado') };
+}

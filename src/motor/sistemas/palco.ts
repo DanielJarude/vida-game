@@ -29,6 +29,9 @@ import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { anoDe } from '../tempo';
 import { nomePor } from './notoriedade';
 import { papelNaMusica } from './musica';
+import { economiaLocal } from '../dados/lugares';
+
+const custoLocal = (v: Vida) => economiaLocal(v.moradia.municipioId).custo;
 
 export const LINGUAGENS_DE_PALCO: Dominio[] = ['musica', 'teatro', 'danca'];
 /**
@@ -95,7 +98,9 @@ export function cacheDeApresentacao(v: Vida, d: Dominio): number {
   // REWORK 11 · ATR-03: a curva começa mais baixo (a banda com público fiel na cidade cobra uns poucos milhares, não R$ 20
   // mil por show) e ganhou teto por linguagem. O topo continua raro e perto do milhão no show de música; teatro e dança
   // têm teto de sala.
-  const bruto = 330 * Math.exp(x / 16) * (x > 72 ? Math.exp((x - 72) / 15) : 1) * (ESCALA[d] ?? 0.3);
+  // REWORK 11.5 · ART-03: a cauda do topo começa um pouco mais acima (17% dos músicos ativos tinham um ano de R$ 1 mi;
+  // o grande sucesso continua possível, mais raro).
+  const bruto = 330 * Math.exp(x / 16) * (x > 75 ? Math.exp((x - 75) / 14) : 1) * (ESCALA[d] ?? 0.3);
   return Math.round(Math.min(TETO_DA_APRESENTACAO[d] ?? 25_000, bruto) / 100) * 100;
 }
 
@@ -136,8 +141,16 @@ export function temporadaDePalco(v: Vida, r: Rng): Palco | undefined {
   // O ano no palco entra na história (o `palco` guarda só o último; o histórico de shows e temporadas fica aqui).
   if (apresentacoes > 0) { (v.caminhos.palcos ??= []).push({ ano: palco.ano, linguagem: d, apresentacoes, bruto }); if (v.caminhos.palcos.length > 60) v.caminhos.palcos.splice(0, v.caminhos.palcos.length - 60); }
   // Quem vive do palco: a renda do trabalho É o que o palco deixou (média do ano, variável).
+  // REWORK 11.5 · ART-02: quem vive de música não vive só do palco — há as aulas, as gravações para outros artistas, o
+  // estúdio (o que o músico parado tinha era ~R$ 6 mil no ano). Pela técnica, no custo do lugar, e menos quando a agenda
+  // de shows come o tempo. Trabalho intermitente: varia com o ano.
+  if (d === 'musica' && trabalhoDePalco(v)) {
+    const h = habilidade(v, 'musica');
+    const tempo = 1 - Math.min(0.75, apresentacoes / 110);
+    palco.freelas = Math.round(clamp((h - 35) * 45, 250, 2800) * 12 * tempo * (0.6 + r.next() * 0.7) * (custoLocal(v) / 100) / 100) * 100;
+  }
   const e = v.trabalho.atual;
-  if (e && trabalhoDePalco(v)) e.salario = Math.max(0, Math.round(palco.artista / 12 / 10) * 10);
+  if (e && trabalhoDePalco(v)) e.salario = Math.max(0, Math.round((palco.artista + (palco.freelas ?? 0)) / 12 / 10) * 10);
   return palco;
 }
 

@@ -33,6 +33,7 @@
  *   campanha ou slogan real; eleições, crises e escândalos são simulação.
  */
 
+import { fatorDasAliancas, liderancaRompida } from './aliancas';
 import { aliviar, causasDoDesgaste, desgastar, esfriarNoAno } from './desgastePolitico';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -626,7 +627,7 @@ export function registrarCandidatura(v: Vida, cargo: CargoEletivo, tEleicao: num
  * número pesou.
  */
 export interface FatorEleitoral { id: IdFator; valor: number }
-export type IdFator = 'base' | 'nome' | 'campanha' | 'desgaste' | 'mandato' | 'segundo_mandato' | 'experiencia' | 'partido' | 'crise' | 'mare' | 'disputa' | 'escandalo' | 'troca';
+export type IdFator = 'base' | 'nome' | 'campanha' | 'desgaste' | 'mandato' | 'segundo_mandato' | 'experiencia' | 'partido' | 'crise' | 'mare' | 'disputa' | 'escandalo' | 'troca' | 'aliancas' | 'promessas' | 'rompimento';
 
 export function fatoresDaEleicao(v: Vida, cargo: CargoEletivo, tEleicao: number, notaSuposta?: number): { fatores: FatorEleitoral[]; x: number; chance: number } {
   const p = v.caminhos.politica!;
@@ -659,6 +660,11 @@ export function fatoresDaEleicao(v: Vida, cargo: CargoEletivo, tEleicao: number,
   // Partido novo: parte do eleitor votava na legenda, e desconfia de quem troca.
   const ultimaTroca = (p.partidos ?? []).filter(x => x.tFim !== undefined).sort((a, b) => b.tFim! - a.tFim!)[0];
   if (ultimaTroca && tEleicao - ultimaTroca.tFim! <= 30) add('troca', -3);
+  // REWORK 11.5 · POL-05: as alianças de confiança, as promessas cobradas e o rompimento recente (`aliancas`).
+  const al = fatorDasAliancas(p, tEleicao);
+  add('aliancas', al.aliancas);
+  add('promessas', al.promessas);
+  add('rompimento', al.rompimento);
   // O mundo, não o jogador: a maré do partido naquela eleição, naquela cidade.
   add('mare', sorteDoPartido(v, Math.floor(tEleicao / 12)));
   add('disputa', -dificuldade(v, cargo));
@@ -725,6 +731,9 @@ function palavraDoFator(v: Vida, id: IdFator, valor: number, cargo: CargoEletivo
     case 'crise': return 'a crise econômica, que cai no colo de quem governa';
     case 'escandalo': return p.escandalo?.tipo === 'caso' ? 'o caso que veio a público' : p.escandalo?.tipo === 'prisao' ? 'a prisão, que todo mundo soube' : 'o processo que veio a público';
     case 'troca': return 'a troca recente de partido';
+    case 'aliancas': return 'as alianças que você construiu';
+    case 'promessas': return valor >= 0 ? 'as promessas que você cumpriu' : 'as promessas que ficaram pelo caminho';
+    case 'rompimento': return 'a aliança que você rompeu há pouco';
     case 'mare': return valor >= 0 ? `uma eleição boa para ${oPartidoDe(p.partido)}` : `uma eleição ruim para ${oPartidoDe(p.partido)}`;
     case 'disputa': return cargo === 'vereador' ? `muitos candidatos por vaga ${lugar}` : `a disputa por ${nomeCargo(v, cargo)} ${lugar}`;
   }
@@ -1353,7 +1362,8 @@ export function militarDaAtiva(v: Vida): boolean {
 
 /** Uma liderança do meio político (gente que já existe na vida, ou alguém novo). */
 export function aliado(v: Vida): Pessoa | undefined {
-  return vinculosVivos(v).find(x => !x.p.especie && x.p.ocupacao === 'liderança política')?.p;
+  // REWORK 11.5 · POL-05: a liderança de uma aliança rompida não é mais "o aliado".
+  return vinculosVivos(v).find(x => !x.p.especie && x.p.ocupacao === 'liderança política' && !liderancaRompida(v, x.p.id))?.p;
 }
 
 export function criarAliado(v: Vida, r: Rng): Pessoa {

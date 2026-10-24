@@ -23,6 +23,7 @@ import { escrever, lembrarCom, parceiro } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { flex } from '../texto';
 import { acordoConsentido, atraiGenero, desfazerNoivado, estaNoivo, interesseInicial, mudarEstagio, romanceAdolescente } from './romance';
+import { pais } from '../nucleo';
 import { compatibilidade } from './social';
 import { conceberPorEncontro, gestacaoEmCurso, podemConceber } from './familia';
 import { abalar } from './abalo';
@@ -116,6 +117,31 @@ function reacaoNegativa(c: CtxI, peso: number, oque: string): string {
 }
 
 const INTERACOES_DE_EX: Interacao[] = [
+  // REWORK 11.5 · REL-23: o atalho de bloquear, na ficha do ex (antes, só o ex bloqueava): corta o contato — a mensagem, a
+  // rede, a iniciativa dele — por cinco anos, ou até você desfazer.
+  {
+    id: 'ex_bloquear', variante: 'perigo',
+    quando: c => exAtivo(c) && !cortado(c),
+    rotulo: c => `Bloquear ${c.p.nome}`,
+    executar: c => {
+      c.vin.distancia = c.v.t;
+      if (c.vin.digital) c.vin.digital.bloqueado = c.v.t;
+      c.v.fatos[`voce_bloqueou_ex_${c.p.id}`] = c.v.t;
+      lembrarCom(c.v, c.p.id, `Você bloqueou ${c.p.nome}.`, 'distancia', 2);
+      return { resultado: `Bloqueado. ${c.p.nome} não chega mais até você — nem por mensagem, nem pela rede.` };
+    }
+  },
+  {
+    id: 'ex_desbloquear', variante: 'discreto',
+    quando: c => exAtivo(c) && cortado(c) && c.v.fatos[`voce_bloqueou_ex_${c.p.id}`] !== undefined,
+    rotulo: c => `Desbloquear ${c.p.nome}`,
+    executar: c => {
+      c.vin.distancia = undefined;
+      if (c.vin.digital) delete c.vin.digital.bloqueado;
+      delete c.v.fatos[`voce_bloqueou_ex_${c.p.id}`];
+      return { resultado: `Desbloqueado. Se ${c.p.nome} quiser falar, agora pode.` };
+    }
+  },
   {
     id: 'ex_mensagem',
     quando: c => exDisponivel(c),
@@ -245,6 +271,131 @@ const INTERACOES_DE_POLIAMOR: Interacao[] = [
   }
 ];
 
+/* ============================================================ REWORK 11.5 · REL-22: o trio */
+
+/*
+ * O poliamor do REWORK 11 eram dois romances que nunca se encontravam. O TRIO é uma relação a três: as duas pessoas
+ * também se relacionam (a harmonia entre elas — o jeito de cada uma —, os ciúmes que nascem da diferença de atenção),
+ * podem morar juntas, juntar ou não o dinheiro, criar filhos juntas, e o trio pode entrar em crise e se desfazer. Só
+ * com o consentimento das duas (a abertura, o que sentem por você, a afinidade entre elas). Nem todo poliamor vira trio.
+ */
+export const trioDe = (v: Vida) => { const t = v.trisal; return t && v.pessoas[t.a]?.vivo && v.pessoas[t.b]?.vivo ? t : undefined; };
+const noTrio = (c: CtxI) => { const t = trioDe(c.v); return !!t && (t.a === c.p.id || t.b === c.p.id); };
+/** A afinidade entre as duas pessoas do trio (o jeito de cada uma): 0..1. */
+export function afinidadeDoTrio(a: Pessoa, b: Pessoa): number {
+  const d = Math.abs(a.temperamento.extroversao - b.temperamento.extroversao) + Math.abs(a.temperamento.estabilidade - b.temperamento.estabilidade);
+  return clamp(0.55 - d * 0.2 + (a.temperamento.afabilidade + b.temperamento.afabilidade) * 0.15, 0, 1);
+}
+const chanceDoTrio = (v: Vida, a: Pessoa, b: Pessoa) => clamp(0.15 + (a.temperamento.abertura + b.temperamento.abertura) * 0.2 + afinidadeDoTrio(a, b) * 0.45 + ((v.vinculos[b.id]?.romance?.envolvimento ?? 50) - 50) / 200, 0.05, 0.8);
+
+const INTERACOES_DO_TRIO: Interacao[] = [
+  {
+    id: 'propor_trio', variante: 'secundario', chance: true,
+    quando: c => c.papel === 'caso' && !!c.vin.romance?.paralelo && c.vin.romance.estagio === 'namoro' && parceiro(c.v)?.vin.romance?.acordo === 'poliamor' && !trioDe(c.v),
+    disponivel: c => {
+      const ok = principalConsente(c.v);
+      if (ok.grau !== 'permitido') return ok;
+      if (c.v.fatos[`trio_proposto_${c.p.id}`] !== undefined && c.v.t - c.v.fatos[`trio_proposto_${c.p.id}`] < 24) return bloqueio('incompativel', 'A conversa sobre os três já aconteceu há pouco.');
+      return { grau: 'improvavel', motivo: `Um trio pede que ${parceiro(c.v)!.p.nome} e ${c.p.nome} também se queiram — não só a você.`, chance: chanceDoTrio(c.v, parceiro(c.v)!.p, c.p) };
+    },
+    rotulo: c => `Propor um trio com ${parceiro(c.v)?.p.nome ?? 'a parceria'} e ${c.p.nome}`,
+    executar: c => {
+      const par = parceiro(c.v)!;
+      c.v.fatos[`trio_proposto_${c.p.id}`] = c.v.t;
+      if (!rngDe(c.v.id, 'trio', c.p.id, c.v.t).chance(chanceDoTrio(c.v, par.p, c.p))) {
+        return { resultado: `${par.p.nome} e ${c.p.nome} se conheceram melhor e foram sinceros: gostam de você, não querem ser um trio. Os dois vínculos seguem como estavam.` };
+      }
+      c.v.trisal = { a: par.p.id, b: c.p.id, desde: c.v.t, harmonia: Math.round(40 + afinidadeDoTrio(par.p, c.p) * 40), ciumes: 10, moram: false, financas: 'separadas' };
+      lembrarCom(c.v, par.p.id, `Vocês viraram um trio, com ${c.p.nome}.`, 'romance', 3);
+      lembrarCom(c.v, c.p.id, `Vocês viraram um trio, com ${par.p.nome}.`, 'romance', 3);
+      // Nem todo mundo da família entende.
+      for (const x of pais(c.v)) { const vin = c.v.vinculos[x.id]; if (vin && x.temperamento.abertura < 0) vin.tensao = clamp(vin.tensao + 6); }
+      escrever(c.v, { texto: `Você, ${par.p.nome} e ${c.p.nome} viraram um trio — os três de acordo.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [par.p.id, c.p.id] });
+      return { resultado: `Os três de acordo. ${par.p.nome} e ${c.p.nome} combinaram as primeiras regras da casa antes de você chegar com o jantar.` };
+    }
+  },
+  {
+    id: 'trio_morar', variante: 'secundario',
+    quando: c => noTrio(c) && !trioDe(c.v)!.moram,
+    disponivel: c => (parceiro(c.v)?.vin.convivio.includes('casa') ? PERMITIDO : bloqueio('requisito', 'Primeiro, a casa com a parceria principal.')),
+    rotulo: () => 'Morarem os três juntos',
+    executar: c => {
+      const t = trioDe(c.v)!;
+      t.moram = true;
+      for (const id of [t.a, t.b]) { const vin = c.v.vinculos[id]; if (vin && !vin.convivio.includes('casa')) vin.convivio.push('casa'); }
+      // A casa junta aproxima — e põe à prova: quem é reservado sente o espaço menor.
+      t.harmonia = clamp(t.harmonia + (afinidadeDoTrio(c.v.pessoas[t.a], c.v.pessoas[t.b]) >= 0.5 ? 6 : -6));
+      escrever(c.v, { texto: `Os três foram morar juntos.`, relevancia: 'marco', tema: 'amor', escolha: true, pessoas: [t.a, t.b] });
+      return { resultado: 'Uma casa, três chaves, uma escala de louça discutida por uma hora inteira.' };
+    }
+  },
+  {
+    id: 'trio_dinheiro', variante: 'discreto',
+    quando: c => noTrio(c) && trioDe(c.v)!.moram,
+    rotulo: c => (trioDe(c.v)!.financas === 'conjuntas' ? 'Separar de novo as contas da casa' : 'Juntar as contas da casa (os três)'),
+    executar: c => {
+      const t = trioDe(c.v)!;
+      t.financas = t.financas === 'conjuntas' ? 'separadas' : 'conjuntas';
+      return { resultado: t.financas === 'conjuntas' ? 'As contas da casa viraram dos três: cada um põe uma parte do que ganha.' : 'Cada um volta a cuidar do próprio dinheiro; a casa se divide em três.' };
+    }
+  },
+  {
+    id: 'trio_conversa', variante: 'principal',
+    quando: c => noTrio(c),
+    disponivel: c => (trioDe(c.v)!.conversa === c.v.t ? bloqueio('incompativel', 'A conversa dos três já aconteceu neste ano.') : PERMITIDO),
+    rotulo: () => 'Sentar os três e rever o combinado',
+    executar: c => {
+      const t = trioDe(c.v)!;
+      t.conversa = c.v.t;
+      t.ciumes = clamp(t.ciumes - 15);
+      t.harmonia = clamp(t.harmonia + 5);
+      return { resultado: `${c.v.pessoas[t.a].nome} falou do que incomodava; ${c.v.pessoas[t.b].nome}, do que faltava. Saíram com um combinado novo — e mais leves.` };
+    }
+  },
+  {
+    id: 'trio_desfazer', variante: 'perigo',
+    quando: c => noTrio(c),
+    rotulo: () => 'Desfazer o trio (os dois vínculos continuam)',
+    executar: c => {
+      const t = trioDe(c.v)!;
+      desfazerTrio(c.v, 'vocês decidiram que funcionava melhor a dois, cada um');
+      return { resultado: `O trio acabou; o que você tem com ${c.v.pessoas[t.a].nome} e com ${c.v.pessoas[t.b].nome} continua — cada um do seu jeito.` };
+    }
+  }
+];
+
+export function desfazerTrio(v: Vida, porque: string): void {
+  const t = v.trisal;
+  if (!t) return;
+  delete v.trisal;
+  const b = v.vinculos[t.b];
+  if (t.moram && b) b.convivio = b.convivio.filter(x => x !== 'casa');
+  escrever(v, { texto: `O trio se desfez: ${porque}.`, relevancia: 'biografia', tema: 'amor', tom: 'ruim', pessoas: [t.a, t.b].filter(id => v.pessoas[id]) });
+}
+
+/**
+ * O ano do trio: a harmonia entre as duas pessoas anda para a afinidade delas; os ciúmes crescem com a diferença de
+ * atenção e baixam com a conversa; a casa junta pesa nos reservados; as contas conjuntas dividem a casa; a harmonia que
+ * acaba abre a crise (`rel115_trio_crise`).
+ */
+export function processarTrio(v: Vida): void {
+  const t = v.trisal;
+  if (!t) return;
+  const ra = v.vinculos[t.a]?.romance, rb = v.vinculos[t.b]?.romance;
+  if (!trioDe(v) || !ra || !rb || ra.estagio === 'ex' || rb.estagio === 'ex' || ra.acordo !== 'poliamor') { desfazerTrio(v, 'o que unia os três não existe mais'); return; }
+  const A = v.pessoas[t.a], B = v.pessoas[t.b];
+  const alvo = 30 + afinidadeDoTrio(A, B) * 55 - t.ciumes * 0.3;
+  t.harmonia = clamp(Math.round(t.harmonia * 0.7 + alvo * 0.3));
+  t.ciumes = clamp(Math.round(t.ciumes * 0.8 + Math.abs(ra.envolvimento - rb.envolvimento) * 0.35 + (t.moram ? 3 : 0)));
+  const r = rngDe(v.id, 'trio_ano', v.t);
+  if (t.ciumes >= 30 && r.chance(0.4)) {
+    for (const id of [t.a, t.b]) { const vin = v.vinculos[id]; if (vin) vin.tensao = clamp(vin.tensao + 6); }
+    escrever(v, { texto: `Uma noite de ciúmes entre ${A.nome} e ${B.nome}: cada um achando que o outro tinha mais de você.`, relevancia: 'cotidiano', tema: 'amor', tom: 'ruim', pessoas: [t.a, t.b] });
+  }
+  if (t.moram && t.financas === 'conjuntas') v.financas.conta += Math.round(((A.renda ?? 0) + (B.renda ?? 0)) * 12 * 0.12 / 10) * 10;
+  if (t.harmonia < 18 && (t.crise === undefined || v.t - t.crise >= 24)) { t.crise = v.t; v.fatos['trio_crise'] = v.t; }
+}
+
 /** A outra pessoa aceita ser o segundo vínculo (o envolvimento dela, a abertura, a afinidade). */
 function chanceParalelo(c: CtxI): number {
   const rom = c.vin.romance;
@@ -268,13 +419,15 @@ export const INTERACOES_ADULTAS: Interacao[] = [
     executar: c => noite(c, false)
   },
   ...INTERACOES_DE_EX,
-  ...INTERACOES_DE_POLIAMOR
+  ...INTERACOES_DE_POLIAMOR,
+  ...INTERACOES_DO_TRIO
 ];
 
 export const GRUPOS_ADULTOS = {
   intimidade: 'afeto', intimidade_sem_protecao: 'afeto',
-  ex_mensagem: 'conversar', ex_elogiar: 'conversar', ex_reaproximar: 'romance', ex_encontro_casual: 'romance', ex_provocar: 'confrontar', ex_insultar: 'confrontar',
-  namorar_paralelo: 'romance', desfazer_noivado: 'decisoes'
+  ex_bloquear: 'decisoes', ex_desbloquear: 'decisoes', ex_mensagem: 'conversar', ex_elogiar: 'conversar', ex_reaproximar: 'romance', ex_encontro_casual: 'romance', ex_provocar: 'confrontar', ex_insultar: 'confrontar',
+  namorar_paralelo: 'romance', desfazer_noivado: 'decisoes',
+  propor_trio: 'romance', trio_morar: 'decisoes', trio_dinheiro: 'decisoes', trio_conversa: 'conversar', trio_desfazer: 'decisoes'
 } as const;
 
 void o;

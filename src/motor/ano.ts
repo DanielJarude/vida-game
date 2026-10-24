@@ -26,7 +26,7 @@ import { processarOrigem } from './sistemas/origem';
 import { processarFormacao } from './sistemas/formacao';
 import { processarIndependencia } from './sistemas/independencia';
 import { processarEstilo } from './sistemas/estilo';
-import { processarFamiliaDeOrigem, processarConcepcao, processarGestacoes, processarMortes } from './sistemas/familia';
+import { processarFamiliaDeOrigem, processarConcepcao, processarGestacoes, processarMortes, processarPaternidade } from './sistemas/familia';
 import { processarDescendentes, processarPartosDaFamilia } from './sistemas/filhos';
 import { processarLuto } from './sistemas/luto';
 import { alvoCabeca, alvoHumor, registrarEstado } from './sistemas/estado';
@@ -83,6 +83,8 @@ import { processarBolsaDeAtleta } from './sistemas/naFormacao';
 import { processarConvivio } from './sistemas/convivio';
 import { processarTribunal } from './sistemas/tribunal';
 import { processarSubmundo } from './sistemas/submundo';
+import { processarTrio } from './sistemas/afetosAdultos';
+import { processarAliancas } from './sistemas/aliancas';
 import { processarTreinadorDeGoleiros } from './sistemas/treinadorDeGoleiros';
 import { processarMargem } from './sistemas/margem';
 import { processarApostas } from './sistemas/apostas';
@@ -169,6 +171,8 @@ function viverAno(v: Vida, r: Rng): void {
   praticandoPor('obra', () => tempoParaAObra(v));
   praticandoPor('trabalho', () => processarProfissao(v, r));
   processarPolitica(v, r);
+  // REWORK 11.5 · POL-05: as alianças e as promessas (os prazos que vencem, o aliado que pede ou rompe).
+  processarAliancas(v);
   processarTransformacao(v);
   processarRural(v, r);
   processarPausa(v);
@@ -207,6 +211,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarRomance(v, r);
   // REWORK 10.5 · REL-06: a parceria também pode sair do combinado (e você pode descobrir); a intimidade esfria sem contato.
   processarAfetos(v);
+  // REWORK 11.5 · REL-22: o trio (a harmonia entre as duas pessoas, os ciúmes, a casa, o dinheiro, a crise).
+  processarTrio(v);
   // As outras pessoas também agem: pedem, convidam, cobram, aparecem — e o silêncio do ano passado responde.
   processarIniciativas(v, r);
   // REWORK 10 · Fase C: o que se fez com as pessoas volta (a mentira descoberta, o segredo que vaza, a briga que esfria).
@@ -215,6 +221,8 @@ function viverAno(v: Vida, r: Rng): void {
   surgirInteresse(v, r);
   processarConcepcao(v, r);
   processarGestacoes(v, r);
+  // REWORK 11.5 · REL-21: a dúvida sobre a origem de um filho (quem reconhece × quem é), quando há causa.
+  processarPaternidade(v);
   processarPartosDaFamilia(v, r);
   processarDescendentes(v, r);
   recalcularConvivio(v);
