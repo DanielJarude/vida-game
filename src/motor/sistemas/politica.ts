@@ -681,7 +681,7 @@ export function dificuldade(v: Vida, cargo: CargoEletivo): number {
   // REWORK 11 · POL-04: os cargos de cima são disputados por quem já tem nome e máquina (incumbentes, ex-prefeitos de
   // capital, a coligação do governo): o político de carreira ganhava 89% das vezes para deputado federal e 82% para
   // governador. Agora derrota é comum — e a força da trajetória ainda decide quem tem chance.
-  return { vereador: 38 + tam * 6, prefeito: 50 + tam * 8, deputado_estadual: 53, deputado_federal: 70, senador: 80, governador: 79 }[cargo];
+  return { vereador: 38 + tam * 6, prefeito: 50 + tam * 8, deputado_estadual: 53, deputado_federal: 70, senador: 77, governador: 76 }[cargo];
 }
 
 /** Um número do ano e do partido (a força do partido naquela eleição): o mundo, não o jogador. */
