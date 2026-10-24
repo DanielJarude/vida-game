@@ -68,7 +68,9 @@ export type OpRede =
   | { oque: 'apagar_publicacao'; plataforma?: PlataformaId; id: string }
   | { oque: 'apagar_conta'; plataforma?: PlataformaId }
   | { oque: 'monetizar'; plataforma?: PlataformaId }
-  | { oque: 'comprar'; plataforma?: PlataformaId; pacote: 0 | 1 | 2 };
+  | { oque: 'comprar'; plataforma?: PlataformaId; pacote: 0 | 1 | 2 }
+  /** REWORK 11 · SOC-11: recorrer da suspensão ou do banimento (uma vez por punição). */
+  | { oque: 'recorrer'; plataforma?: PlataformaId };
 
 export const PACOTES = [{ n: 1000, custo: 150, perde: 12 }, { n: 10000, custo: 1200, perde: 22 }, { n: 50000, custo: 5000, perde: 32 }] as const;
 const custoLocal = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
@@ -254,14 +256,18 @@ export function disponibilidadeRede(v: Vida, op: OpRede): Veredito {
   }
   const pl = plat(op);
   const c = contaAtiva(v, pl.id);
+  const guardada = v.redes?.contas[pl.id];
+  if (op.oque === 'recorrer') return disponibilidadeRecurso(v, pl, guardada);
   if (op.oque === 'criar') {
     if (i < pl.idadeMin) return bloqueio('ilegal', `${pl.nome} é a partir dos ${pl.idadeMin} anos.`);
     if (c) return bloqueio('incompativel', `Você já tem uma conta no ${pl.nome}.`);
+    // REWORK 11 · SOC-11: banida é banida — uma conta nova nessa plataforma, só depois de cinco anos.
+    if (guardada?.banida !== undefined && v.t - guardada.banida < BANIMENTO_MESES) return bloqueio('incompativel', `A ${pl.nome} baniu você em ${anoDe(guardada.banida)}${guardada.motivoPunicao ? ` (${guardada.motivoPunicao})` : ''}: uma conta nova, só a partir de ${anoDe(guardada.banida + BANIMENTO_MESES)}.`);
     if (v.redes?.contas[pl.id]?.apagada !== undefined && v.t - v.redes.contas[pl.id].apagada! < 12) return bloqueio('incompativel', 'Você apagou essa conta há pouco. Espere um tempo para começar outra.');
     return PERMITIDO;
   }
   if (!c) return bloqueio('impossivel', `Você não tem conta no ${pl.nome}.`);
-  if (suspensa(v, c) && op.oque !== 'apagar_conta' && op.oque !== 'apagar_publicacao') return bloqueio('incompativel', `A conta está suspensa até o ano que vem: a ${pl.nome} puniu as denúncias.`);
+  if (suspensa(v, c) && op.oque !== 'apagar_conta' && op.oque !== 'apagar_publicacao') return bloqueio('incompativel', `A conta está suspensa até ${anoDe(c.suspensaAte!)}: a ${pl.nome} puniu as denúncias${c.motivoPunicao ? ` (${c.motivoPunicao})` : ''}.`);
   switch (op.oque) {
     case 'publicar': {
       if (!conteudosPossiveis(v, pl.id).some(t => t.tema === op.tema)) return bloqueio('impossivel', 'Não há o que mostrar disso agora.');
@@ -330,6 +336,7 @@ export function executarRede(v: Vida, op: OpRede): string {
   if (op.oque === 'seguir' || op.oque === 'deixar' || op.oque === 'bloquear' || op.oque === 'desbloquear') return pessoaNaRede(v, op);
   const pl = plat(op);
   if (op.oque === 'criar') return criar(v, pl);
+  if (op.oque === 'recorrer') return recorrer(v, pl, v.redes!.contas[pl.id]);
   const c = contaAtiva(v, pl.id)!;
   switch (op.oque) {
     case 'publicar': return publicar(v, pl, c, op.tema, !!op.promover);
@@ -548,6 +555,11 @@ function polemica(v: Vida, pl: Plataforma, c: ContaSocial, pub: Publicacao, reag
   const ganho = Math.min(Math.round(extra * pl.conversao * 0.3), Math.round(publicoReal(c) * 0.04) + pl.piso);
   mudarPublico(c, ganho, 'publicacoes', v.t); pub.novos += ganho;
   const alvo = reagiram.concat(seguidoresConhecidos(v, pl.id)).filter(p => !v.vinculos[p.id]?.romance).sort((a, b) => a.temperamento.afabilidade - b.temperamento.afabilidade)[0];
+  // REWORK 11 · SOC-11: a briga pode virar denúncia — e a denúncia, advertência, com o motivo dito (nunca do nada): mais
+  // na conta que já tem fama de briguenta e na resposta dura à torcida. Sorteio próprio: o resto do post não muda.
+  const mod = rngDe(v.id, 'moderacao', v.t, pub.id);
+  const chanceDenuncia = ((c.toxicidade ?? 0) >= 40 ? 0.3 : 0.08) + (pub.tema === 'rebater' ? 0.12 : 0) + (pub.tema === 'politica' ? 0.05 : 0);
+  if (mod.chance(chanceDenuncia)) out.push(`A publicação foi denunciada. ${advertir(v, pl, c, pub.tema === 'politica' ? 'briga política denunciada' : pub.tema === 'rebater' ? 'ataque à torcida denunciado' : 'publicação que virou briga, denunciada')}`);
   if (alvo && r.chance(0.6)) {
     const vin = v.vinculos[alvo.id];
     vin.tensao = clamp(vin.tensao + 14);
@@ -590,6 +602,18 @@ function efeitosNaVida(v: Vida, pl: Plataforma, c: ContaSocial, pub: Publicacao,
     if (arte?.ativo && ganho > 0) { arte.publico = clamp(arte.publico + ganho); out.push('Gente nova chegou ao trabalho de vocês pela rede.'); }
     const neg = v.caminhos.negocio;
     if (neg && neg.estado !== 'fechado' && pub.novos >= 30 && r.chance(0.5)) out.push('Clientes novos disseram que viram na rede.');
+  }
+  // REWORK 11 · SOC-11: a repercussão no trabalho e em casa (sorteio próprio: o resto do post não muda).
+  const rep = rngDe(v.id, 'repercussao', v.t, pub.id);
+  if (e && pub.tema === 'conquista' && rep.chance(0.35)) { e.clima = clamp((e.clima ?? 50) + 2); out.push('No trabalho, o pessoal comentou a conquista — a chefia também viu.'); }
+  if (e && oc && pub.tema === 'trabalho' && pub.viral && !SIGILO.has(oc.setor) && !SIGILO.has(oc.trilha)) {
+    if (rep.chance(0.5)) { e.clima = clamp((e.clima ?? 50) + 3); out.push('A empresa repostou o vídeo: virou, por uma semana, a cara do lugar.'); }
+    else { e.clima = clamp((e.clima ?? 50) - 3); out.push('A empresa pediu para tirar o vídeo do ar: exposição demais.'); }
+  }
+  if ((pub.tema === 'opiniao' || pub.tema === 'politica') && pub.polemica && e && rep.chance(0.15)) { e.clima = clamp((e.clima ?? 50) - 3); out.push('Um cliente do trabalho viu a briga e comentou com a chefia.'); }
+  if (pub.tema === 'familia' && pub.viral) {
+    const filhoPequeno = Object.values(v.vinculos).find(x => x.parentesco === 'filho' && v.pessoas[x.pessoaId] && idadePessoa(v, v.pessoas[x.pessoaId]) < 12);
+    if (filhoPequeno) { const par = parceiro(v); if (par) { par.vin.tensao = clamp(par.vin.tensao + 6); out.push(`${par.p.nome} não gostou de ver a criança rodando a internet.`); } }
   }
   if (pub.tema === 'musica' || pub.tema === 'arte' || pub.tema === 'tutorial') v.fatos['audiencia'] = clamp((v.fatos['audiencia'] ?? 0) + Math.min(6, 1 + pub.novos / 500));
   if (pub.tema === 'familia') {
@@ -679,15 +703,7 @@ function trollar(v: Vida, pl: Plataforma, c: ContaSocial, alvo: string): string 
     out.push(`A provocação pegou: ${seguidoresEmPalavras(ganho)} ${pl.publico[1]} novos — do tipo que gosta de briga.`);
   } else if (x < 0.55) out.push('Ninguém deu muita bola. Ficou só a sensação.');
   // A denúncia: a rede pune quem acumula.
-  if (r.chance(0.18 + (c.toxicidade ?? 0) / 300)) {
-    c.advertencias = (c.advertencias ?? 0) + 1;
-    if (c.advertencias >= 3) {
-      c.suspensaAte = v.t + 12;
-      c.advertencias = 0;
-      escrever(v, { texto: `A conta no ${pl.nome} foi suspensa por um ano depois de denúncias.`, relevancia: publicoReal(c) >= 10000 ? 'biografia' : 'cotidiano', tema: 'amizade', tom: 'ruim' });
-      out.push(`Denunciaram. Foi a terceira: a ${pl.nome} suspendeu a conta por um ano.`);
-    } else out.push(`Denunciaram: a ${pl.nome} mandou uma advertência (${c.advertencias} de 3).`);
-  }
+  if (r.chance(0.18 + (c.toxicidade ?? 0) / 300)) out.push(`Denunciaram. ${advertir(v, pl, c, alvo === 'celebridade' ? 'ataque a uma pessoa pública' : alvo === 'estranho' ? 'provocação nos comentários' : 'provocação a uma pessoa da sua vida')}`);
   if (alvo === 'celebridade') {
     v.mente.estresse = clamp(v.mente.estresse + 3);
     out.push('Os fãs vieram em bando. O celular não parou — e não era coisa boa.');
@@ -703,6 +719,61 @@ function trollar(v: Vida, pl: Plataforma, c: ContaSocial, alvo: string): string 
   // O chefe também está lá.
   if (v.trabalho.atual && alvo !== 'estranho' && r.chance(0.12)) { v.trabalho.atual.clima = clamp((v.trabalho.atual.clima ?? 50) - 5); out.push('Alguém do trabalho mostrou o print para a chefia.'); }
   return out.join(' ');
+}
+
+/* ------------------------------------------------------------- Moderação (REWORK 11 · SOC-11) */
+
+/** Banida: uma conta nova nessa plataforma, só depois de cinco anos. */
+export const BANIMENTO_MESES = 60;
+const SUSPENSOES_ATE_BANIR = 3;
+
+/**
+ * A ÚNICA porta da punição: uma advertência pelo MOTIVO dito (a denúncia de uma briga, a compra descoberta); três
+ * advertências suspendem a conta por um ano; a terceira suspensão bane — a conta é apagada pela rede (`apagada`, como
+ * quando você apaga: a renda zera sozinha em `rendaDaConta`) e não pode ser recriada por cinco anos. Devolve o texto.
+ */
+export function advertir(v: Vida, pl: Plataforma, c: ContaSocial, motivo: string): string {
+  c.advertencias = (c.advertencias ?? 0) + 1;
+  c.motivoPunicao = motivo;
+  if (c.advertencias < 3) return `A ${pl.nome} mandou uma advertência por ${motivo} (${c.advertencias} de 3).`;
+  c.advertencias = 0;
+  c.suspensoes = (c.suspensoes ?? 0) + 1;
+  if (c.suspensoes >= SUSPENSOES_ATE_BANIR) {
+    c.banida = v.t; c.apagada = v.t; c.suspensaAte = undefined; c.recurso = undefined;
+    escrever(v, { texto: `A conta no ${pl.nome} foi banida de vez (${motivo}), depois de ${c.suspensoes} suspensões.${c.monetizada !== undefined ? ' A renda dela acabou junto.' : ''}`, relevancia: 'biografia', tema: 'amizade', tom: 'ruim' });
+    return `Foi a terceira suspensão: a ${pl.nome} baniu a conta de vez (${motivo}).${c.monetizada !== undefined ? ' A renda acabou junto.' : ''}`;
+  }
+  c.suspensaAte = v.t + 12; c.recurso = undefined;
+  escrever(v, { texto: `A conta no ${pl.nome} foi suspensa por um ano (${motivo}).`, relevancia: publicoReal(c) >= 10000 ? 'biografia' : 'cotidiano', tema: 'amizade', tom: 'ruim' });
+  return `Foi a terceira advertência: a ${pl.nome} suspendeu a conta por um ano (${motivo}). Mais ${SUSPENSOES_ATE_BANIR - c.suspensoes} ${SUSPENSOES_ATE_BANIR - c.suspensoes === 1 ? 'suspensão' : 'suspensões'} e a conta é banida.`;
+}
+
+/** Recorrer cabe uma vez por punição: da suspensão em curso, ou do banimento no primeiro ano. */
+function disponibilidadeRecurso(v: Vida, pl: Plataforma, c: ContaSocial | undefined): Veredito {
+  if (!c) return bloqueio('impossivel', `Você não tem conta no ${pl.nome}.`);
+  const banida = c.banida !== undefined && c.apagada !== undefined;
+  if (!banida && !suspensa(v, c)) return bloqueio('impossivel', 'Não há punição de que recorrer.');
+  if (c.recurso !== undefined) return bloqueio('incompativel', 'O recurso já foi pedido — e respondido.');
+  if (banida && v.t - c.banida! > 12) return bloqueio('incompativel', 'O prazo para recorrer do banimento passou.');
+  return { grau: 'improvavel', motivo: 'A análise olha o histórico da conta: quem acumula brigas raramente convence.', chance: chanceDoRecurso(c, banida) };
+}
+const chanceDoRecurso = (c: ContaSocial, banida: boolean) => {
+  const toxica = (c.toxicidade ?? 0) >= 40;
+  const compra = c.motivoPunicao === 'seguidores comprados';
+  return banida ? (toxica || compra ? 0.03 : 0.15) : (toxica || compra ? 0.1 : 0.35);
+};
+
+function recorrer(v: Vida, pl: Plataforma, c: ContaSocial): string {
+  const banida = c.banida !== undefined && c.apagada !== undefined;
+  c.recurso = v.t;
+  if (!rngDe(v.id, 'recurso', v.t, pl.id).chance(chanceDoRecurso(c, banida))) return `A ${pl.nome} manteve a ${banida ? 'decisão: a conta continua banida' : 'suspensão'}. A resposta veio pronta, assinada por ninguém.`;
+  if (banida) {
+    c.apagada = undefined; c.banida = undefined; c.suspensoes = SUSPENSOES_ATE_BANIR - 1;
+    escrever(v, { texto: `A ${pl.nome} aceitou o recurso e devolveu a conta banida.`, relevancia: 'cotidiano', tema: 'amizade', tom: 'bom' });
+    return `Recurso aceito: a conta voltou, com os ${seguidoresEmPalavras(c.seguidores)} ${pl.publico[1]} — e qualquer nova suspensão bane de vez.`;
+  }
+  c.suspensaAte = undefined;
+  return 'Recurso aceito: a suspensão caiu. A conta voltou a funcionar — com o aviso guardado.';
 }
 
 /** Uma campanha paga para a conta: público legítimo, que depende do que a conta tem para mostrar. */
@@ -879,9 +950,10 @@ export function processarRedes(v: Vida): void {
         mudarPublico(c, c.comprados, 'perdas', v.t, 'a compra descoberta');
         c.comprados = 0;
         c.credibilidade = clamp(c.credibilidade - 20);
-        c.advertencias = (c.advertencias ?? 0) + 1;
         if (c.monetizada !== undefined && c.credibilidade < 40) c.monetizada = undefined;
         escrever(v, { texto: `Descobriram que parte dos seus ${pl.publico[1]} no ${pl.nome} era comprada. Os prints rodaram mais do que qualquer publicação sua.`, relevancia: 'biografia', tema: 'amizade', tom: 'ruim' });
+        advertir(v, pl, c, 'seguidores comprados');
+        if (c.apagada !== undefined) continue;
       }
     } else if (c.credibilidade < 70) c.credibilidade = clamp(c.credibilidade + 3);
     if (pl.id === 'onlyfans') descoberta(v, pl, c, r, Math.min(0.35, 0.08 + Math.log10(real + 1) * 0.05));

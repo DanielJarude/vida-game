@@ -254,6 +254,9 @@ describe('o celular', () => {
     expect(within(celular).getByRole('tab', { name: /OnlyFans/ }).textContent).toMatch(/a partir dos 18/);
     fireEvent.click(within(celular).getByRole('button', { name: 'Criar uma conta no Instagram' }));
     fireEvent.click(within(screen.getByRole('region', { name: 'Seu celular' })).getAllByRole('button').find(b => b.closest('.plataforma-painel__temas') && !(b as HTMLButtonElement).disabled)!);
+    // REWORK 11 · SOC-11: publicar é em passos (o tipo → configurar → confirmar); a ação no fim é a mesma.
+    fireEvent.click(within(screen.getByRole('region', { name: 'Seu celular' })).getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'Seu celular' })).getByRole('button', { name: 'Publicar' }));
     const post = atual.redes!.contas.instagram.publicacoes[0];
     expect(post).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Voltar para a tela inicial/ }));
