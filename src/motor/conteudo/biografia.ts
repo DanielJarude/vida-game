@@ -33,6 +33,7 @@ import { disponivel as guardado, pagar } from '../sistemas/dinheiro';
 import { moraComFamiliaDeOrigem } from '../sistemas/domicilio';
 import { mesmaCidade, moraJunto, filhosEmComum } from '../sistemas/vinculos';
 import { cidadeDe, descricaoOrigem } from '../sistemas/social';
+import { destinoDoSonho, passadoProfissional, viradaDoSonho, type DestinoDoSonho } from '../sistemas/premissas';
 import { casaPropria, executarImovel, valorDeVendaImovel } from '../sistemas/imoveis';
 import { modeloMoradia } from '../dados/bens';
 import { aluguelDe, precoDeImovel } from '../sistemas/mercado';
@@ -285,13 +286,31 @@ const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jog
 const ROTINA_DO_DOMINIO: Partial<Record<Dominio, string>> = { escrita: 'escrever', cozinha: 'cozinhar', idiomas: 'ingles' };
 const rotinaDe = (d: Dominio) => { const id = ROTINA_DO_DOMINIO[d] ?? d; return modeloRotina(id) ? id : undefined; };
 
-function sonhoParaTras(v: Vida): { d?: Dominio; texto: string; t: number } | undefined {
+/**
+ * REWORK 11 · EVT-11.7: o sonho e o que veio DEPOIS dele (`premissas.destinoDoSonho`). Antes, a dispensa aos 14 abria
+ * "o sonho que ficou para trás" para quem depois jogou 20 temporadas e foi à Copa. Agora a cena diz a virada: o fracasso
+ * superado (virou profissão), o sonho transformado (virou ensino, banco), o retomado — e só o abandonado é lamento.
+ */
+function sonhoParaTras(v: Vida): { d?: Dominio; texto: string; t: number; destino: DestinoDoSonho } | undefined {
   const es = v.caminhos.esporte;
   if (es?.fase === 'encerrada' && es.motivoFim === 'dispensa' && es.tFim !== undefined) {
-    return { d: es.modalidade, texto: `O clube dispensou você${es.nivel >= 3 ? ' quando o profissional parecia perto' : ''}`, t: es.tFim };
+    return { d: es.modalidade, texto: `O clube dispensou você${es.nivel >= 3 ? ' quando o profissional parecia perto' : ''}`, t: es.tFim, destino: destinoDoSonho(v, es.modalidade, es.tFim) };
   }
   const m = [...v.caminhos.marcas].reverse().find(x => (x.tipo === 'abandono' || x.tipo === 'fracasso') && x.dominio && DOMINIOS_DE_SONHO.includes(x.dominio));
-  return m ? { d: m.dominio, texto: m.texto.replace(/\.$/, ''), t: m.t } : undefined;
+  return m ? { d: m.dominio, texto: m.texto.replace(/\.$/, '').replace(/\. O sonho de viver d[oa] .* ficou para trás$/, ''), t: m.t, destino: destinoDoSonho(v, m.dominio!, m.t) } : undefined;
+}
+/** O que a cena diz depois do fato — a virada, quando houve. */
+function depoisDoSonho(v: Vida, s: NonNullable<ReturnType<typeof sonhoParaTras>>): string {
+  const anos = anosDesde(v, s.t);
+  const verbo = s.d && VERBO[s.d];
+  if (s.destino === 'abandonado') return `${anos} anos depois, ${verbo ? `você ainda sabe como é ${verbo}` : 'a lembrança ainda aparece'}.`;
+  if (s.destino === 'realizado') {
+    const x = viradaDoSonho(v, s.d!, s.t);
+    const feito = x.temporadas ? `vieram ${x.temporadas} ${x.temporadas === 1 ? 'temporada' : 'temporadas'} no profissional` : x.obras ? `vieram ${x.obras} ${x.obras === 1 ? 'trabalho lançado' : 'trabalhos lançados'}` : 'você viveu disso';
+    return `Disseram que não dava. Depois, ${feito}${x.titulo ? ` — ${minusc(x.titulo)}` : ''}. O fracasso daquele dia virou o começo da história que você conta.`;
+  }
+  if (s.destino === 'transformado') return `Não virou a profissão que você sonhava — virou outra: ensinar, ${s.d === 'futebol' ? 'o banco, ' : ''}o lado de quem forma. ${anos} anos depois, o sonho mudou de forma, não de lugar.`;
+  return `Anos depois, você voltou a ${verbo ?? 'praticar'}, do seu jeito. O sonho não ficou inteiro para trás.`;
 }
 
 /* ----------------------------------------------------- Atividade abandonada */
@@ -1083,22 +1102,22 @@ export const BIOGRAFIA: Conteudo[] = [
   {
     id: 'bio_sonho_para_tras', tipo: 'decisao', idade: [45, 55], tema: 'lazer', prioritario: true, prioridade: 1,
     quando: c => { const s = sonhoParaTras(c.v); return !!s && c.v.t - s.t >= 120; },
-    titulo: 'O sonho que ficou para trás',
+    titulo: c => ({ abandonado: 'O sonho que ficou para trás', realizado: 'O dia em que disseram que não', transformado: 'O sonho que mudou de forma', retomado: 'O sonho que voltou' })[sonhoParaTras(c.v)!.destino],
     texto: c => {
       const s = sonhoParaTras(c.v)!;
-      return `${s.texto} — foi em ${anoDe(s.t)}, aos ${idadeEm(c.v.eu.tNasc, s.t)}. ${anosDesde(c.v, s.t)} anos depois, ${s.d && VERBO[s.d] ? `você ainda sabe como é ${VERBO[s.d]}` : 'a lembrança ainda aparece'}.`;
+      return `${s.texto} — foi em ${anoDe(s.t)}, aos ${idadeEm(c.v.eu.tNasc, s.t)}. ${depoisDoSonho(c.v, s)}`;
     },
     opcoes: [
       {
         id: 'voltar', texto: c => { const d = sonhoParaTras(c.v)!.d; return d && VERBO[d] ? `Voltar a ${VERBO[d]}, por prazer` : 'Voltar, por prazer'; }, comportamento: { coragem: 1 },
-        disponivel: c => { const d = sonhoParaTras(c.v)!.d; const r = d && rotinaDe(d); return r ? rotinaCabe(c.v, r) : false; },
+        disponivel: c => { const d = sonhoParaTras(c.v)!.d; const r = d && rotinaDe(d); return r && !c.v.rotinas.some(x => x.id === r) ? rotinaCabe(c.v, r) : false; },
         consequencia: () => 'Entra na sua semana, no ritmo mais leve. Sem clube, sem peneira: só pelo gosto.',
         resolver: c => {
           const s = sonhoParaTras(c.v)!;
           const r = rotinaDe(s.d!)!;
           return {
             texto: 'Na primeira vez, o corpo reclamou. Na terceira, a cabeça esqueceu de reclamar.',
-            memoria: `Aos ${c.idade}, voltou a ${VERBO[s.d!]}, anos depois de desistir do sonho.`, tom: 'bom',
+            memoria: s.destino === 'abandonado' ? `Aos ${c.idade}, voltou a ${VERBO[s.d!]}, anos depois de desistir do sonho.` : `Aos ${c.idade}, voltou a ${VERBO[s.d!]} só por prazer — sem ninguém para dizer que não dava.`, tom: 'bom',
             efeito: () => { comecarRotina(c.v, r); const f = c.v.caminhos.frentes[s.d!]; if (f) f.interesse = clamp(f.interesse + 20); marcar(c.v, 'retomada', `Voltou a ${VERBO[s.d!]}, por prazer.`, 2, { dominio: s.d }); feliz(c, 3); }
           };
         }
@@ -1108,15 +1127,15 @@ export const BIOGRAFIA: Conteudo[] = [
         disponivel: c => rotinaCabe(c.v, 'voluntariado'),
         consequencia: () => 'Uma parte da semana com crianças que têm o sonho que você teve.',
         resolver: c => ({
-          texto: 'O projeto do bairro tinha vinte crianças e nenhum adulto que soubesse ensinar. Agora tem.',
-          memoria: 'Passou a ensinar, como voluntário, o que um dia quis fazer da vida.'.replace('voluntário', c.g('voluntário', 'voluntária', 'voluntárie')),
+          texto: sonhoParaTras(c.v)!.destino === 'realizado' ? 'O projeto do bairro tinha vinte crianças, e uma delas tinha acabado de ser dispensada. Você contou a sua história.' : 'O projeto do bairro tinha vinte crianças e nenhum adulto que soubesse ensinar. Agora tem.',
+          memoria: (sonhoParaTras(c.v)!.destino === 'realizado' ? 'Passou a ensinar, como voluntário, crianças que ouvem "não" como você ouviu um dia.' : 'Passou a ensinar, como voluntário, o que um dia quis fazer da vida.').replace('voluntário', c.g('voluntário', 'voluntária', 'voluntárie')),
           efeito: () => { comecarRotina(c.v, 'voluntariado'); feliz(c, 3); }
         })
       },
       {
         id: 'guardar', texto: 'Guardar como uma história',
         consequencia: () => 'Nada muda; fica a história para contar.',
-        resolver: () => ({ texto: 'Você contou a história no almoço de domingo. Pela primeira vez, rindo.', memoria: null })
+        resolver: c => ({ texto: sonhoParaTras(c.v)!.destino === 'realizado' ? 'Você contou a história no almoço de domingo — a do dia em que disseram que não. Todo mundo já sabia o fim.' : 'Você contou a história no almoço de domingo. Pela primeira vez, rindo.', memoria: null })
       }
     ]
   },
@@ -1300,7 +1319,9 @@ export const BIOGRAFIA: Conteudo[] = [
     texto: c => {
       const x = atividadeParada(c.v)!;
       const estreia = c.v.caminhos.marcas.find(m => m.dominio === x.d && (m.tipo === 'destaque' || m.tipo === 'conquista' || m.tipo === 'estreia'));
-      return `Faz ${x.anos} anos que você não para para ${VERBO[x.d] ?? 'praticar'}. ${x.auge >= 60 ? 'Houve um tempo em que você era dos bons por aí' : 'Você chegou a fazer isso bem'}${estreia ? ` — ${minusc(estreia.texto).replace(/\.$/, '')}` : ''}. ${ocasiaoDeRetomar(c.v)}`;
+      // REWORK 11 · EVT-11.7: a quem viveu disso (o ex-profissional, o campeão), a cena diz a carreira — não "era dos bons por aí".
+      const pro = passadoProfissional(c.v, x.d);
+      return `Faz ${x.anos} anos que você não para para ${VERBO[x.d] ?? 'praticar'}. ${pro ?? (x.auge >= 60 ? 'Houve um tempo em que você era dos bons por aí' : 'Você chegou a fazer isso bem')}${!pro && estreia ? ` — ${minusc(estreia.texto).replace(/\.$/, '')}` : ''}. ${ocasiaoDeRetomar(c.v)}`;
     },
     opcoes: [
       {

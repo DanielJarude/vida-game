@@ -34,6 +34,7 @@ import { cidadeLonge } from './local';
 import { reconciliar } from '../sistemas/lacos';
 import { diagnosticar, registrarDiagnostico } from '../sistemas/saude';
 import { registrarEco, ecoAberto, ecoVoltou, pessoaDoEco } from '../sistemas/ecos';
+import { premissaVale } from '../sistemas/premissas';
 import { reacaoDaParceriaAMudanca } from '../sistemas/convivio';
 import { lesionar, machucarNaBriga } from '../sistemas/lesoes';
 import { dinheiro as fmt } from '../texto';
@@ -251,7 +252,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
     opcoes: [
       { id: 'mudar', texto: 'Largar e tentar outro curso no próximo processo', comportamento: { coragem: 1 },
         consequencia: () => 'O curso acaba agora; o próximo começa do zero (a escolha volta em Caminhos · Estudos).',
-        resolver: c => ({ texto: 'Você largou. Ficou um alívio e uma pergunta: e agora?', memoria: `Largou ${curso(c.v.educacao.matricula!.cursoId).nome} para tentar outro curso.`, relevancia: 'marco', efeito: () => { registrarEco(c.v, 'mudou_de_curso', { texto: curso(c.v.educacao.matricula!.cursoId).nome, de: 3, ate: 10 }); c.v.educacao.matricula = undefined; estresse(c, -8); } }) },
+        resolver: c => ({ texto: 'Você largou. Ficou um alívio e uma pergunta: e agora?', memoria: `Largou ${curso(c.v.educacao.matricula!.cursoId).nome} para tentar outro curso.`, relevancia: 'marco', efeito: () => { registrarEco(c.v, 'mudou_de_curso', { texto: curso(c.v.educacao.matricula!.cursoId).nome, cursoId: c.v.educacao.matricula!.cursoId, de: 3, ate: 10 }); c.v.educacao.matricula = undefined; estresse(c, -8); } }) },
       { id: 'insistir', texto: 'Insistir: mais um semestre com outra postura', comportamento: { disciplina: 2 },
         resolver: c => ({ texto: 'Você mudou o horário de estudo, sentou na frente. O semestre foi difícil — e melhor.', memoria: null, efeito: () => { subirNota(c, 7); estresse(c, 6); } }) },
       { id: 'trancar', texto: 'Trancar um semestre para pensar', resolver: c => ({ texto: 'Um semestre fora para entender o que se quer. O curso espera.', memoria: null, efeito: () => { const m = c.v.educacao.matricula!; m.trancado = true; m.tTrancou = c.v.t; estresse(c, -5); } }) }
@@ -268,10 +269,10 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
       { id: 'aceitar', texto: 'Aceitar', comportamento: { coragem: 1 },
         resolver: c => ({ texto: 'Mesa nova, gente nova respondendo a você, e o telefone tocando depois das seis.', memoria: null, efeito: () => { const e = emprego(c)!; const oc = ocupacao(e.ocupacaoId); const p = proximoDegrau(c.v, e, oc); if (p) subirDeCargo(c.v, e, oc, p); estresse(c, 5); } }) },
       { id: 'negociar', texto: 'Aceitar se o salário vier maior', comportamento: { coragem: 1 },
-        resolver: c => { const ok = c.r.chance(clamp((emprego(c)!.desempenho - 55) / 50, 0.15, 0.7)); return { texto: ok ? 'Toparam. O salário veio acima do que ofereceram.' : 'Não toparam o valor. A vaga foi para outra pessoa — e ficou um clima.', memoria: null, efeito: () => { const e = emprego(c)!; const oc = ocupacao(e.ocupacaoId); if (ok) { const p = proximoDegrau(c.v, e, oc); if (p) { subirDeCargo(c.v, e, oc, p); e.salario = Math.round(e.salario * 1.06 / 10) * 10; } } else { e.desempenho = clamp(e.desempenho - 3); registrarEco(c.v, 'recusou', { texto: 'a promoção', de: 3, ate: 8 }); } } }; } },
+        resolver: c => { const ok = c.r.chance(clamp((emprego(c)!.desempenho - 55) / 50, 0.15, 0.7)); return { texto: ok ? 'Toparam. O salário veio acima do que ofereceram.' : 'Não toparam o valor. A vaga foi para outra pessoa — e ficou um clima.', memoria: null, efeito: () => { const e = emprego(c)!; const oc = ocupacao(e.ocupacaoId); if (ok) { const p = proximoDegrau(c.v, e, oc); if (p) { subirDeCargo(c.v, e, oc, p); e.salario = Math.round(e.salario * 1.06 / 10) * 10; } } else { e.desempenho = clamp(e.desempenho - 3); registrarEco(c.v, 'recusou', { texto: 'a promoção', de: 3, ate: 8, empregador: emprego(c)?.empregador }); } } }; } },
       { id: 'recusar', texto: 'Recusar: a vida de agora está boa', comportamento: { familia: 1 },
         consequencia: () => 'Fica tudo como está — e a escolha fica na lembrança da empresa.',
-        resolver: c => ({ texto: 'Você agradeceu e ficou onde estava. Sobrou tempo; sobrou também a pergunta.', memoria: 'Recusou uma promoção.', efeito: () => { registrarEco(c.v, 'recusou', { texto: 'a promoção', de: 3, ate: 8 }); estresse(c, -3); } }) }
+        resolver: c => ({ texto: 'Você agradeceu e ficou onde estava. Sobrou tempo; sobrou também a pergunta.', memoria: 'Recusou uma promoção.', efeito: () => { registrarEco(c.v, 'recusou', { texto: 'a promoção', de: 3, ate: 8, empregador: emprego(c)?.empregador }); estresse(c, -3); } }) }
     ]
   },
   {
@@ -312,9 +313,9 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
         consequencia: () => 'Muda de cidade (e quem mora com você vai junto, por vontade ou não).',
         resolver: c => { const destino = cidadeLonge(c.v, 'sao-paulo-sp'); return { texto: 'Caixas, uma cidade estranha, um escritório novo. O salário veio maior; o resto, aos poucos.', memoria: 'Aceitou uma transferência para outra cidade.', relevancia: 'marco', efeito: () => { const e = emprego(c)!; if (destino !== c.v.moradia.municipioId) { e.municipioId = destino; mudarAgora(c.v, destino, 'pela transferência do trabalho'); const par = reacaoDaParceriaAMudanca(c.v); if (par) escrever(c.v, { texto: par, relevancia: 'cotidiano', tema: 'amor' }); } e.salario = Math.round(e.salario * 1.15 / 10) * 10; estresse(c, 6); } }; } },
       { id: 'remoto', texto: 'Propor trabalhar daqui, viajando quando precisar', comportamento: { coragem: 1 },
-        resolver: c => { const ok = c.r.chance(0.35); return { texto: ok ? 'Aceitaram: uma semana por mês lá, o resto daqui.' : 'Não aceitaram. A vaga foi para outra pessoa.', memoria: null, efeito: () => { const e = emprego(c)!; if (ok) { e.salario = Math.round(e.salario * 1.07 / 10) * 10; estresse(c, 4); } else registrarEco(c.v, 'recusou', { texto: 'a transferência', de: 3, ate: 8 }); } }; } },
+        resolver: c => { const ok = c.r.chance(0.35); return { texto: ok ? 'Aceitaram: uma semana por mês lá, o resto daqui.' : 'Não aceitaram. A vaga foi para outra pessoa.', memoria: null, efeito: () => { const e = emprego(c)!; if (ok) { e.salario = Math.round(e.salario * 1.07 / 10) * 10; estresse(c, 4); } else registrarEco(c.v, 'recusou', { texto: 'a transferência', de: 3, ate: 8, empregador: emprego(c)?.empregador }); } }; } },
       { id: 'ficar', texto: 'Recusar e ficar', comportamento: { familia: 1 },
-        resolver: c => ({ texto: 'Você ficou. Aqui está a sua gente.', memoria: null, efeito: () => { registrarEco(c.v, 'recusou', { texto: 'a transferência', de: 3, ate: 8 }); feliz(c, 1); } }) }
+        resolver: c => ({ texto: 'Você ficou. Aqui está a sua gente.', memoria: null, efeito: () => { registrarEco(c.v, 'recusou', { texto: 'a transferência', de: 3, ate: 8, empregador: emprego(c)?.empregador }); feliz(c, 1); } }) }
     ]
   },
 
@@ -861,7 +862,8 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'eco10_recusou', tipo: 'acontecimento', idade: [25, 75], tema: 'trabalho', prioritario: true, repetir: 0,
-    quando: c => !!ecoAberto(c.v, 'recusou') && !!emprego(c),
+    // REWORK 11 · EVT-11.7: "o colega hoje é a sua chefia" só no MESMO empregador da recusa, e sem promoção depois.
+    quando: c => { const e = ecoAberto(c.v, 'recusou'); return !!e && !!emprego(c) && premissaVale(c.v, { tipo: 'eco_recusou', eco: e }); },
     narrar: c => { const e = ecoAberto(c.v, 'recusou')!; return { texto: `${e.texto === 'a transferência' ? 'A unidade nova, a que você recusou, virou a maior da empresa.' : 'A vaga que você recusou foi para um colega — que hoje é a sua chefia.'} Às vezes você pensa no caminho que não foi; às vezes, no que ficou.`, relevancia: 'biografia',
       efeito: () => { ecoVoltou(c.v, e); estresse(c, 3); } }; }
   },
@@ -898,7 +900,8 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'eco10_mudou_de_curso', tipo: 'acontecimento', idade: [20, 45], tema: 'estudo', prioritario: true, repetir: 0,
-    quando: c => !!ecoAberto(c.v, 'mudou_de_curso') && (!!emprego(c) || naFaculdade(c)),
+    // REWORK 11 · EVT-11.7: "a decisão de sair hoje parece lúcida" só se o curso novo existe e não foi largado também.
+    quando: c => { const e = ecoAberto(c.v, 'mudou_de_curso'); return !!e && (!!emprego(c) || naFaculdade(c)) && premissaVale(c.v, { tipo: 'eco_curso', eco: e }); },
     narrar: c => { const e = ecoAberto(c.v, 'mudou_de_curso')!; return { texto: `Às vezes você lembra de ${e.texto ?? 'o curso que largou'}. A decisão de sair, que pareceu fracasso, hoje parece a mais lúcida que tomou.`, relevancia: 'biografia', tom: 'bom',
       efeito: () => { ecoVoltou(c.v, e); feliz(c, 4); estresse(c, -3); } }; }
   }

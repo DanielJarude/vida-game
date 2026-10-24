@@ -2560,7 +2560,9 @@ export interface Vida {
   /** REWORK 10 · JOG-01: as apostas (loteria, blackjack, roleta, caça-níquel), só com o dinheiro do jogo. Ausente: nunca apostou. */
   apostas?: EstadoDasApostas;
   /** REWORK 10 · EVT-02: o que uma escolha deixou para depois (`sistemas/ecos`). Ausente: nada pendente. */
-  ecos?: { tipo: 'favor' | 'mentor' | 'recusou' | 'fiador' | 'investiu' | 'denunciou' | 'mudou_de_curso' | 'cuidou'; t: number; volta: number; ate: number; pessoaId?: string; valor?: number; voltou?: number; texto?: string }[];
+  ecos?: { tipo: 'favor' | 'mentor' | 'recusou' | 'fiador' | 'investiu' | 'denunciou' | 'mudou_de_curso' | 'cuidou'; t: number; volta: number; ate: number; pessoaId?: string; valor?: number; voltou?: number; texto?: string;
+    /** REWORK 11 · EVT-11.7: onde a premissa do eco foi vivida — o empregador da recusa, o curso largado (`premissas`). */
+    empregador?: string; cursoId?: string }[];
 }
 
 /** Um ano fotografado: só as frentes que mudaram, as causas que pesaram, as notas, o trabalho, o esporte. */
