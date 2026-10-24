@@ -55,9 +55,9 @@ describe('ROT-11.1 · a jornada de cada ofício é plausível', () => {
 });
 
 describe('ROT-11.2 · o cuidado com o bicho e com a casa não cria conflito artificial', () => {
-  it('o gato de quem trabalha à noite procura outro horário (não às 21h por cima do show)', () => {
+  it('a calopsita de quem trabalha à noite procura outro horário (não às 21h por cima do show; o gato não pede bloco)', () => {
     let v = comEmprego('musico_profissional');
-    v = em(v, x => { adotarPet(x, criarRng(1), { especie: 'gato', nome: 'Sunny', genero: 'feminino', idade: 2, porte: 'pequeno', jeito: 'calma', historia: '' }, 'abrigo'); });
+    v = em(v, x => { adotarPet(x, criarRng(1), { especie: 'calopsita', nome: 'Sunny', genero: 'feminino', idade: 2, porte: 'pequeno', jeito: 'calma', historia: '' }, 'abrigo'); });
     const pets = blocosFixos(v).find(b => b.id === 'pets');
     expect(pets).toBeDefined();
     const trabalho = blocosFixos(v).filter(b => b.origem === 'trabalho');
