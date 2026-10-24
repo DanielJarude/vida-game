@@ -85,9 +85,16 @@ outros filhos vivos. O save é serializado e lido de novo, como se estivesse par
 
 ## 8. Commit final
 
-Ver o histórico da branch `claude/rework12.05-sucessao-menores` (commit "REWORK 12.05 · continuidade familiar de menores").
+`8b3204b` — REWORK 12.05 · continuidade familiar de menores (código + testes + este relatório). Este preenchimento das
+seções 8–9 é um commit só de documentação, por cima dele.
 
 ## 9. Publicação
 
-Ver a seção de entrega na conversa (push, `main` e a branch de produção `claude/fix-pos-rework3-playtest`, depois o
-smoke test).
+- `main` e `claude/fix-pos-rework3-playtest` eram `cd460a7` (= produção) e foram avançadas em fast-forward para
+  `8b3204b`, sem force push.
+- O push da branch de desenvolvimento gerou só preview (`claude-rework12-05-sucessao.vida-game.pages.dev`); o smoke test
+  passou ali antes da promoção.
+- Cloudflare Pages: check "Deploy successful" em `8b3204b`. vida-game.pages.dev serve `index-B-gj3KK-.js` e
+  `motor-textos-Dnx7daHR.js`, byte-idênticos ao build local de `8b3204b`.
+- Smoke test em produção (Playwright, 390 claro, 360 escuro, 1440): com a fixture de René e Frankie, o cartão de Frankie
+  vem habilitado e "Continuar como Frankie" abre o jogo em "Frankie, 15 anos · Sydney, Austrália".
