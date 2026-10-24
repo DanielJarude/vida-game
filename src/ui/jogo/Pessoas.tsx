@@ -52,6 +52,9 @@ import { descricaoOrigem } from '../../motor/sistemas/social';
 import { saudeConhecida } from '../../motor/sistemas/corpo';
 import { gestosDeMemoria, memoriasRecentes } from '../../motor/sistemas/memoria';
 import { faseDoLuto } from '../../motor/sistemas/luto';
+import { LuaDeMel, PlanejarCasamento } from './Casamento';
+import { acordoConsentido } from '../../motor/sistemas/romance';
+import { contextosDeAmizade, ROTULO_AMIZADE } from '../../motor/sistemas/busca';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void; parte?: PartePessoas; irParte?: (p: PartePessoas) => void }
 
@@ -320,14 +323,20 @@ function Dobra({ rotulo, children }: { rotulo: string; children: React.ReactNode
  */
 function ConhecerAlguem({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const i = idade(vida);
-  if (i < 15 || parceiro(vida) || vida.justica?.prisao) return null;
+  if (i < 10 || vida.justica?.prisao) return null;
+  const par = parceiro(vida);
+  // REWORK 11 · REL-11.1: fazer amizades é para todo mundo, com ou sem parceria (não é traição). A busca romântica com
+  // parceria: dentro do combinado (acordo aberto/poliamor) — ou, num relacionamento exclusivo, recolhida e dita como o que é.
+  const amizade = <FazerAmizades vida={vida} agir={agir} />;
+  if (i < 15 || (par && i < 18)) return amizade;
+  const combinado = !!par && acordoConsentido(par.vin.romance);
   const ctxs = contextosDeBusca(vida);
   const opcoesAtracao: { id: Atracao; rotulo: string }[] = [{ id: 'mulheres', rotulo: 'Mulheres' }, { id: 'homens', rotulo: 'Homens' }, { id: 'ambos', rotulo: 'Qualquer gênero' }];
   const feitas = vida.anoAtual.acoes.filter(a => a.startsWith('buscar:')).length;
   const limite = buscasPossiveisNoAno(vida);
-  return (
-    <Secao titulo="Conhecer alguém" recolhivel aberta={i >= 18}>
-      <p className="nota">Procurar alguém é uma escolha sua; o interesse é da outra pessoa. Às vezes aparece alguém, às vezes não. Cada lugar uma vez no ano — e quantas vezes cabe, a sua semana diz (este ano, até {limite}).</p>
+  const romantico = (
+    <>
+      <p className="nota">{par ? (combinado ? `Dentro do combinado com ${par.p.nome}: procurar alguém não é segredo.` : `Você está com ${par.p.nome}, num relacionamento exclusivo: procurar alguém seria traição — e ${flex(par.p.genero, 'ele', 'ela', 'elu')} pode perceber.`) : 'Procurar alguém é uma escolha sua; o interesse é da outra pessoa.'} Às vezes aparece alguém, às vezes não. Cada lugar uma vez no ano — e quantas vezes cabe, a sua semana diz (este ano, até {limite}).</p>
       {!vida.eu.atracao && (
         <div className="campo">
           <span className="campo__rotulo">Antes: por quem você se interessa</span>
@@ -340,6 +349,28 @@ function ConhecerAlguem({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
         </div>
       )}
       {feitas >= limite && <p className="nota">Este ano já foram {feitas} tentativas: a semana não tem mais noites livres para isso.</p>}
+    </>
+  );
+  return (
+    <>
+      {amizade}
+      <Secao titulo={par && !combinado ? 'Procurar alguém por fora' : 'Conhecer alguém'} recolhivel aberta={i >= 18 && !par}>
+        {romantico}
+      </Secao>
+    </>
+  );
+}
+
+/** REWORK 11 · REL-11.1: fazer amizades (não romance), em qualquer estado civil: a pessoa que aparece fica como conhecida. */
+function FazerAmizades({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const ctxs = contextosDeAmizade(vida);
+  if (!ctxs.length) return null;
+  return (
+    <Secao titulo="Fazer amizades" recolhivel aberta={false}>
+      <p className="nota">Gente nova para conversar, sem segundas intenções — com ou sem alguém na sua vida. Se vira amizade, o tempo e o que fizerem juntos dizem.</p>
+      <div className="grupo-acoes">
+        {ctxs.map(x => <BotaoAcao key={x} vida={vida} acao={{ tipo: 'fazer_amizade', contexto: x }} agir={agir} variante="discreto">{ROTULO_AMIZADE[x]}</BotaoAcao>)}
+      </div>
     </Secao>
   );
 }
@@ -568,6 +599,8 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
             </div>
           )}
           {ultima && <p className="ficha__ultima"><span className="ficha__ano">{anoDe(ultima.t)}</span> {ultima.texto}</p>}
+          {p.vivo && papel === 'parceiro' && <PlanejarCasamento vida={vida} p={p} vin={vin} agir={agir} />}
+          {p.vivo && papel === 'parceiro' && vin.romance?.estagio === 'casamento' && <LuaDeMel vida={vida} agir={agir} />}
           {esperando && gest && <p className="ficha__nota">Um bebê a caminho — o parto é previsto para {MESES[mesDe(gest.tParto)]} de {anoDe(gest.tParto)}.</p>}
           {p.vivo && p.especie && <FichaPet vida={vida} agir={agir} p={p} />}
           {!p.vivo && <EmMemoria vida={vida} p={p} agir={agir} />}

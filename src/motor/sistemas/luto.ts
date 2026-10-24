@@ -112,6 +112,7 @@ export function registrarMortes(v: Vida, r: Rng, mortes: { p: Pessoa; vin: Vincu
     if (vin.romance && vin.romance.estagio !== 'ex') {
       vin.romance.fim = 'morte';
       vin.romance.secreto = undefined;
+      vin.romance.paralelo = undefined;
     }
     vin.convivio = [];
     lembrarCom(v, p.id, `Morreu, aos ${idadePessoa(v, p)} anos.`, 'perda', 3, p.tMorte);

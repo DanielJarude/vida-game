@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { catalogoDeViagem, companhiasDeViagem, custoDaExperiencia, type GrupoDeViagem } from '../../motor/sistemas/experiencias';
+import { luaDeMelPendente } from '../../motor/sistemas/casamento';
 import { listaNatural } from '../../motor/texto';
 import { BotaoAcao } from '../comum';
 import { dinheiroCurto } from '../apresentar';
@@ -32,10 +33,12 @@ function Seta() {
   return <svg className="viagem__seta" viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>;
 }
 
-export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id: 'viagem_pais' | 'viagem_exterior'; agir: (a: Acao) => boolean; aoConcluir?: () => void }) {
+export function EscolherViagem({ vida, id, agir, aoConcluir, luaDeMel }: { vida: Vida; id: 'viagem_pais' | 'viagem_exterior'; agir: (a: Acao) => boolean; aoConcluir?: () => void; luaDeMel?: boolean }) {
   const cat = catalogoDeViagem(vida, id);
   const [sel, setSel] = useState<{ grupo?: string; lugar?: string; duracao?: string; quem?: string }>({});
-  const companhias = companhiasDeViagem(vida);
+  // REWORK 11 · REL-16: na lua de mel, a companhia é o casal (a mesma viagem, os mesmos preços — `luaDeMel` na ação).
+  const par = luaDeMel ? luaDeMelPendente(vida) : undefined;
+  const companhias = par ? [{ id: 'lua', rotulo: `Com ${par.nome} (lua de mel)`, pessoas: [par] }] : companhiasDeViagem(vida);
   const titulo = useRef<HTMLHeadingElement>(null);
   const primeiraVez = useRef(true);
 
@@ -147,7 +150,7 @@ export function EscolherViagem({ vida, id, agir, aoConcluir }: { vida: Vida; id:
           <ul className="viagem__efeitos">{previsaoDaViagem(vida, duracao.dias, companhiaEscolhida.id).map((x, k) => <li key={k}>{x}</li>)}</ul>
           <p className="nota">{companhiaEscolhida.pessoas.length ? `Vão você e ${listaNatural(companhiaEscolhida.pessoas.map(p => p.nome))}: o preço já conta todo mundo.` : 'Vai só você.'} {fora ? 'Passagem de ida e volta, hospedagem e o dia a dia lá.' : 'O transporte daqui até lá, hospedagem e o dia a dia.'}</p>
           <p className="viagem__total"><span>Ao todo, uns</span> <strong>{dinheiroCurto(custoFinal)}</strong></p>
-          <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id, escolha: escolhaFinal }} agir={agir} variante="principal" aoAgir={aoConcluir}>Confirmar a viagem</BotaoAcao>
+          <BotaoAcao vida={vida} acao={{ tipo: 'experiencia', id, escolha: escolhaFinal, ...(par ? { luaDeMel: true as const } : {}) }} agir={agir} variante="principal" aoAgir={aoConcluir}>{par ? 'Confirmar a lua de mel' : 'Confirmar a viagem'}</BotaoAcao>
         </div>
       )}
     </div>

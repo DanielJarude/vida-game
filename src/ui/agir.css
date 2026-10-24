@@ -150,3 +150,20 @@ details.ficha__grupo .grupo-acoes { padding-bottom: var(--space-2); }
 @media (max-width: 480px) { .oferta.oferta--objeto { grid-template-columns: 72px minmax(0, 1fr); } .oferta--objeto .oferta__objeto { width: 72px; } .oferta.oferta--objeto > :last-child { grid-column: 1 / -1; } }
 .ficha__grupo .grupo-acoes { flex-direction: row; flex-wrap: wrap; }
 .ficha__grupo--romance .ficha__subtitulo { color: var(--tom-pessoas); }
+
+/* REWORK 11 · REL-16: o planejamento do casamento e a lua de mel (na ficha da parceria). */
+.casamento { display: grid; gap: var(--space-3); margin: var(--space-4) 0; padding-top: var(--space-3); border-top: 1px solid var(--border-subtle, currentColor); }
+.casamento .escolha { flex-wrap: wrap; }
+.casamento__conta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; }
+.casamento__conta div { display: flex; flex-direction: column; min-width: 0; }
+.casamento__conta dt { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.casamento__conta dd { margin: 0; overflow-wrap: anywhere; }
+
+/* REWORK 11 · SOC-11: o fluxo de publicar (passos) e os rótulos do público (hoje / fim do ano). */
+.fluxo-post { display: grid; gap: var(--space-3); }
+.fluxo-post__passos { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; font-size: var(--type-meta); color: var(--text-muted); }
+.fluxo-post__passos [aria-current='step'] { color: inherit; font-weight: 600; }
+.fluxo-post__opcoes { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.fluxo-post__opcao { display: grid; gap: 2px; width: 100%; min-height: 44px; text-align: left; }
+.fluxo-post__dica { font-size: var(--type-meta); color: var(--text-muted); }
+.numeros-rede__ano--agora { font-weight: 600; }
