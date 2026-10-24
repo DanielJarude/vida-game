@@ -277,6 +277,12 @@ export function blocosFixos(v: Vida, o: { semTrabalho?: boolean; trabalho?: Trab
       out.push({ id: 'negocio_sab', origem: 'negocio', rotulo: `${n.nome} (sábado)`, dias: [5], inicio: h(8), fim: h(13), obrigatorio: true, movel: false });
     }
   }
+  // REWORK 12: a empresa administrada pela própria pessoa: duas noites e a manhã de sábado.
+  for (const e of v.financas.empresas ?? []) {
+    if (e.estado === 'encerrada' || e.papel === 'investidor' || e.gestao.quem !== 'propria') continue;
+    out.push({ id: `empresa_${e.id}`, origem: 'negocio', rotulo: `${e.nome} (a gestão)`, dias: [1, 3], inicio: h(19), fim: h(21), obrigatorio: true, movel: false });
+    out.push({ id: `empresa_${e.id}_sab`, origem: 'negocio', rotulo: `${e.nome} (sábado)`, dias: [5], inicio: h(9), fim: h(12), obrigatorio: true, movel: false });
+  }
   const pol = semanaDaPolitica(v);
   if (pol) {
     out.push({ id: 'politica', origem: 'politica', rotulo: pol.rotulo, dias: [1, 3], inicio: h(19), fim: h(21, 30), obrigatorio: true, movel: false });

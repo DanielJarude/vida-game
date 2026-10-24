@@ -61,6 +61,8 @@ import { fotografar, processarDinheiro } from './sistemas/dinheiro';
 import { avancarEconomia } from './sistemas/economia';
 import { processarVeiculos } from './sistemas/veiculos';
 import { processarImoveis } from './sistemas/imoveis';
+import { processarColecao } from './sistemas/colecao';
+import { processarEmpresas } from './sistemas/empresas';
 import { processarPets } from './sistemas/pets';
 import { processarObrigacoes } from './sistemas/obrigacoes';
 import { calcularHeranca } from './sistemas/partilha';
@@ -235,6 +237,9 @@ function viverAno(v: Vida, r: Rng): void {
   processarSubmundo(v);
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);
+  // REWORK 12: a coleção (o mercado das peças) e as empresas (o ano de cada uma; a distribuição cai na conta).
+  processarColecao(v, r);
+  processarEmpresas(v, r);
   // REWORK 10 · JOG-01: a mão esquecida na mesa, e o jogo que virou assunto (antes das contas do ano).
   processarSeguroDesemprego(v);
   processarApostas(v);

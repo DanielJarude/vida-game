@@ -1087,6 +1087,11 @@ export interface Veiculo {
   /** REWORK 4: a cor deste veículo (da compra para sempre). Saves antigos: derivada do id. */
   cor?: string;
   corNome?: string;
+  /**
+   * REWORK 12: onde o veículo está, quando não está com a pessoa (o município). Ausente = com a pessoa, na cidade
+   * onde ela mora. Numa mudança de país, o carro fica guardado na cidade de antes — não some, não é vendido à força.
+   */
+  local?: string;
 }
 
 export interface Imovel {
@@ -1110,6 +1115,15 @@ export interface Imovel {
   dono?: 'eu' | 'casal';
   /** Herdado (não comprado). */
   herdado?: boolean;
+  /**
+   * REWORK 12: quem cuida do aluguel. `imobiliaria` (o padrão de sempre: cobra a taxa, acha inquilino, segura
+   * o calote) ou `propria` (sem taxa — e a vacância, o inquilino que atrasa e a dor de cabeça são seus).
+   */
+  administracao?: 'imobiliaria' | 'propria';
+  /** REWORK 12: o inquilino parou de pagar (meses sem receber). Ausente = em dia. */
+  calote?: number;
+  /** REWORK 12: o quanto o bairro é disputado (o índice da oferta: 1 = um bairro comum). Ausente nos saves antigos. */
+  indiceBairro?: number;
 }
 
 export type Bem = Veiculo | Imovel;
@@ -1194,6 +1208,137 @@ export interface Financas {
   extrato?: ExtratoDoAno;
   /** O extrato em aberto, desde o último fechamento (escolhas, acontecimentos e o fechamento do ano que vem). */
   extratoAberto?: ExtratoDoAno;
+  /** REWORK 12: os objetos de coleção (arte, relógios, joias, antiguidades, memorabilia) — `sistemas/colecao`. */
+  colecao?: Colecionavel[];
+  /** REWORK 12: as empresas de que a pessoa é dona, sócia ou investidora (além do trabalho) — `sistemas/empresas`. */
+  empresas?: Empresa[];
+  /** REWORK 12: o veículo principal (o do dia a dia, quando há mais de um). Ausente = o sistema escolhe. */
+  veiculoPrincipal?: string;
+}
+
+/* ---------------------------------------------------- REWORK 12 · coleção */
+
+export type CategoriaColecao = 'arte' | 'relogio' | 'joia' | 'antiguidade' | 'memorabilia';
+export type RaridadeColecao = 'comum' | 'incomum' | 'rara' | 'unica';
+/**
+ * De onde a peça veio — é a procedência que sustenta o valor. Peça sem procedência vale como peça sem
+ * procedência (uma camisa "da final" comprada na calçada vale o que vale uma réplica), não como a lenda.
+ */
+export type ProcedenciaColecao = 'loja' | 'galeria' | 'leilao' | 'antiquario' | 'herdada' | 'propria' | 'presente' | 'sem_procedencia';
+
+/** Uma peça de coleção. Valor ESTIMADO: só a venda diz o que ela vale de fato. */
+export interface Colecionavel {
+  id: string;
+  /** A peça do catálogo (`dados/colecionaveis`) — ou um id gerado para a peça única (a camisa da sua própria final). */
+  pecaId: string;
+  nome: string;
+  categoria: CategoriaColecao;
+  raridade: RaridadeColecao;
+  procedencia: ProcedenciaColecao;
+  /** Com certificado (laudo, nota da galeria, lote do leilão, carta do clube). Sem ele, a peça vale bem menos. */
+  certificado: boolean;
+  /** 0..100. */
+  estado: number;
+  valor: number;
+  precoPago: number;
+  tCompra: number;
+  /** De onde vem a história da peça ("a camisa do Flamengo na final de 2031", "o relógio do avô"). */
+  detalhe?: string;
+  /** Importa por quem foi (herdada, presente, a da sua carreira): não se vende por qualquer preço. */
+  afeto?: string;
+  historia?: EpisodioBem[];
+  /** Cedida ao museu de que a pessoa é dona (em exposição, segue sendo dela). */
+  emprestadaA?: string;
+}
+
+/* ---------------------------------------------------- REWORK 12 · empresas */
+
+export type TipoEmpresa = 'restaurante' | 'clinica' | 'academia' | 'estudio' | 'hotel' | 'loja' | 'museu' | 'zoologico';
+/** O que a pessoa É na empresa: dona (toda), sócia (uma parte, com voz) ou investidora (parte pequena, sem gestão). */
+export type PapelNaEmpresa = 'dono' | 'socio' | 'investidor';
+export type PrecoEmpresa = 'popular' | 'medio' | 'alto';
+
+/** Quem toca o dia a dia: a pessoa (horas da semana) ou alguém contratado (salário, e um resultado que varia). */
+export interface GestaoEmpresa {
+  quem: 'propria' | 'contratada';
+  /** Gestor contratado: nome e competência (0..100, que só aparece com o tempo). */
+  nome?: string;
+  competencia?: number;
+  salario?: number;
+  tInicio: number;
+}
+
+/**
+ * Uma empresa da pessoa, separada da conta dela: o caixa é da empresa; o lucro só vira dinheiro seu quando é
+ * distribuído (e só na parte que é sua). O valor da participação entra no patrimônio uma vez — não somado de novo
+ * aos ativos da empresa.
+ */
+export interface Empresa {
+  id: string;
+  tipo: TipoEmpresa;
+  nome: string;
+  municipioId: string;
+  tInicio: number;
+  papel: PapelNaEmpresa;
+  /** A parte que é sua (0..1). */
+  parte: number;
+  /** O que a pessoa pôs (abertura, compra, aportes) — a base de custo. */
+  investido: number;
+  /** O caixa da empresa (não é o seu dinheiro). Negativo = a empresa deve (cheque especial da empresa). */
+  caixa: number;
+  /** O que foi feito em instalações (o valor dos ativos da empresa, que se desgasta). */
+  ativos: number;
+  /** Porte: capacidade relativa (1 = a unidade de partida; uma unidade nova soma). */
+  unidades: number;
+  /** 0..100: instalações, cuidado, o que se entrega. */
+  qualidade: number;
+  /** 0..100: o que se fala. */
+  reputacao: number;
+  /** Quantas pessoas trabalham (sem contar a gestão). */
+  equipe: number;
+  preco: PrecoEmpresa;
+  gestao: GestaoEmpresa;
+  /** Reinvestir tudo ou distribuir o que passa de uma reserva. */
+  distribuir: boolean;
+  /** O último ano, para a tela e para quem quiser comprar. */
+  ultimo?: AnoDeEmpresa;
+  /**
+   * O valor da empresa INTEIRA hoje (o que um comprador pagaria; nunca abaixo de zero: a responsabilidade é
+   * limitada). É ele — vezes a parte — que entra no patrimônio, e ele já contém o caixa e as instalações.
+   */
+  avaliacao?: number;
+  /** Academia: os alunos matriculados (a carteira que se renova com a evasão). */
+  carteira?: number;
+  /** O sócio (o nome; a parte dele é 1 − parte). */
+  socio?: string;
+  /** Resultado (lucro ou prejuízo) dos últimos anos. */
+  historico?: number[];
+  /** Anos seguidos com o caixa no vermelho (a falência pede tempo, não um ano ruim). */
+  anosNoVermelho: number;
+  estado: 'abrindo' | 'operando' | 'em_crise' | 'interditada' | 'encerrada';
+  tFim?: number;
+  /** Museu: o acervo (valor estimado), o estado de conservação (0..100) e a exposição em cartaz. */
+  acervo?: { valor: number; conservacao: number; pecas: number; exposicao?: string; tExposicao?: number };
+  /** Zoológico: o bem-estar dos animais (0..100), os recintos, a licença e a última fiscalização. */
+  zoo?: { bemEstar: number; recintos: number; especies: number; licenca: boolean; tFiscalizacao?: number; conservacao: boolean };
+  historia?: EpisodioBem[];
+}
+
+/** Um ano de uma empresa, em números (o que se mostra; o caixa já mudou). */
+export interface AnoDeEmpresa {
+  t: number;
+  /** Clientes, visitantes, hóspedes, pacientes, alunos (no ano). */
+  publico: number;
+  receita: number;
+  custos: number;
+  /** Patrocínio, convênios, incentivo (museu, zoológico). */
+  apoio?: number;
+  imposto: number;
+  resultado: number;
+  /** O que foi distribuído aos donos (o total; a sua parte é × parte). */
+  distribuido: number;
+  /** Uma linha do que marcou o ano. */
+  nota?: string;
 }
 
 /** O que move dinheiro, para o extrato: renda e despesa do mês a mês, o que se põe e se tira das aplicações, e o resto. */

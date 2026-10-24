@@ -21,6 +21,14 @@ import { corConcordada, corDoVeiculo } from '../dados/pertences';
 import { dinheiro as fmt } from '../texto';
 import { abalar } from './abalo';
 import { okDePagar } from './dinheiro';
+import { indiceClassicos, precoNovoNoPais, valorDeClassico } from './mercado';
+import { fatorDeImportado, importaUsados, tributoDeImportados } from './precos';
+import { converterEntrePaises } from '../mundo/moeda';
+import { municipio, paisDaCidade } from '../dados/lugares';
+import { paisDaVida } from '../mundo/vida';
+import { nomeDoPais } from '../mundo/registro';
+
+const nomeDoMunicipio = (id: string) => municipio(id).nome;
 import type { Veredito } from '../plausibilidade';
 
 /** Dá para usar (não está parado nem quebrado de vez). */
@@ -46,6 +54,37 @@ export const nomeComCor = (b: { id: string; versaoId?: string; modeloId: string;
 
 /** Quanto custa um igual zero quilômetro (a versão, senão a classe). */
 export const precoNovoDoVeiculo = (b: { modeloId: string; versaoId?: string }) => versaoVeiculo(b.versaoId)?.preco ?? modeloVeiculo(b.modeloId).preco;
+
+/** REWORK 12: onde o veículo está (a cidade): onde a pessoa mora, ou onde ficou guardado. */
+export const ondeEsta = (v: Vida, b: Veiculo) => b.local ?? v.moradia.municipioId;
+/** REWORK 12: guardado longe (em outra cidade ou país): não leva ninguém a lugar nenhum até ser trazido. */
+export const guardadoLonge = (v: Vida, b: Veiculo) => !!b.local && b.local !== v.moradia.municipioId;
+
+/**
+ * REWORK 12: o preço de um igual, zero, no mercado de onde o veículo está — nos preços de onde a vida está. O
+ * Corolla nos Estados Unidos vale o Corolla de lá (não o daqui com o imposto brasileiro).
+ */
+export function precoNovoLocal(v: Vida, b: { modeloId: string; versaoId?: string; local?: string }): number {
+  const onde = b.local ?? v.moradia.municipioId;
+  return precoNovoNoPais({ preco: precoNovoDoVeiculo(b) }, onde) * converterEntrePaises(1, paisDaCidade(onde), paisDaVida(v));
+}
+
+/**
+ * REWORK 12: o que o veículo vale hoje no mercado. O comum deprecia pela idade e pelo estado. O clássico segue o
+ * mercado de clássicos e o estado (pode subir, pode cair). A edição limitada deprecia pouco e, com o tempo, anda
+ * com o mercado de colecionador — sem garantia nenhuma.
+ */
+export function valorDeMercadoDoVeiculo(v: Vida, b: Veiculo): number {
+  const m = modeloVeiculo(b.modeloId);
+  const onde = ondeEsta(v, b);
+  const conv = converterEntrePaises(1, paisDaCidade(onde), paisDaVida(v));
+  if (m.segmento === 'classico') return Math.round(valorDeClassico(v, precoNovoDoVeiculo(b), b.estado, onde) * conv / 100) * 100;
+  const novo = precoNovoLocal(v, b);
+  const anos = anosDoVeiculo(v, b);
+  const lim = versaoVeiculo(b.versaoId)?.limitada;
+  const dep = lim ? Math.max(0.72, depreciacao(m, anos)) * (anos >= 5 ? Math.pow(indiceClassicos(v.economia?.semente ?? 1, anoDe(v.t)), 0.8) : 1) : depreciacao(m, anos);
+  return Math.round(novo * dep * (0.8 + b.estado / 500) / 100) * 100;
+}
 
 /** Combustível e manutenção básica por mês (a versão ajusta a classe). */
 export const usoMensalDoVeiculo = (b: { modeloId: string; versaoId?: string }) => versaoVeiculo(b.versaoId)?.usoMensal ?? modeloVeiculo(b.modeloId).usoMensal;
@@ -123,11 +162,13 @@ export function processarVeiculos(v: Vida, r: Rng): void {
   for (const b of veiculos(v)) {
     const m = modeloVeiculo(b.modeloId);
     const anos = anosDoVeiculo(v, b);
-    const novo = precoNovoDoVeiculo(b);
-    // Vale o que um igual, da mesma idade e estado, vale no mercado.
-    b.valor = Math.round(novo * depreciacao(m, anos) * (0.8 + b.estado / 500) / 100) * 100;
+    const novo = precoNovoLocal(v, b);
+    // Vale o que um igual, da mesma idade e estado, vale no mercado (REWORK 12: no mercado de onde ele está).
+    b.valor = valorDeMercadoDoVeiculo(v, b);
     const revisado = b.tRevisao !== undefined && v.t - b.tRevisao <= 12;
-    if (!b.parado) b.estado = clamp(Math.round(b.estado - (m.categoria === 'bicicleta' ? 4 : 5) - (anos > 8 ? 2 : 0) + (revisado ? 3 : 0) + r.normal()));
+    // O clássico roda pouco (é passeio de domingo): gasta devagar.
+    const gasto = m.segmento === 'classico' ? 2 : (m.categoria === 'bicicleta' ? 4 : 5) + (anos > 8 ? 2 : 0);
+    if (!b.parado) b.estado = clamp(Math.round(b.estado - gasto + (revisado ? 3 : 0) + r.normal()));
     else b.estado = clamp(b.estado - 1);
 
     if (b.problema) {
@@ -177,7 +218,35 @@ export const gv = (b: Veiculo, masc: string, fem: string) => (textoVeiculo(b).st
 
 /* ------------------------------------------------------------- Ações */
 
-export type AcaoVeiculo = 'consertar' | 'adiar' | 'revisao' | 'parar' | 'usar';
+export type AcaoVeiculo = 'consertar' | 'adiar' | 'revisao' | 'parar' | 'usar' | 'trazer' | 'principal' | 'restaurar';
+
+/**
+ * REWORK 12: trazer um veículo guardado em outro lugar para onde a pessoa mora. Na mesma país, o caminhão-cegonha
+ * (ou a própria estrada). De outro país: o frete (o navio, o voo de traslado do avião), a nacionalização (a
+ * diferença de imposto entre os dois países, sobre o valor do usado) — e o país pode simplesmente não deixar
+ * (o Brasil só aceita carro usado importado se for de coleção, com 30 anos ou mais).
+ */
+export function custoDeTrazer(v: Vida, b: Veiculo): { custo: number; bloqueio?: string; internacional: boolean } {
+  const de = paisDaCidade(ondeEsta(v, b));
+  const para = paisDaVida(v);
+  const m = modeloVeiculo(b.modeloId);
+  const c = Math.sqrt(economiaLocal(v.moradia.municipioId).custo);
+  if (de === para) {
+    const custo = m.categoria === 'bicicleta' ? 150 : m.categoria === 'aeronave' ? b.valor * 0.008 + 6000 : m.categoria === 'embarcacao' ? b.valor * 0.03 + 4000 : b.valor * 0.012 + (m.categoria === 'moto' ? 900 : 2600);
+    return { custo: Math.round(custo * c / 100) * 100, internacional: false };
+  }
+  const regra = importaUsados(para);
+  const anos = anosDoVeiculo(v, b);
+  if (m.categoria !== 'bicicleta' && (regra === false || (regra === 'colecao' && anos < 30))) {
+    return { custo: 0, internacional: true, bloqueio: regra === 'colecao' ? `${nomeDoPais(para)} não deixa entrar veículo usado importado — só de coleção, com 30 anos ou mais.` : `${nomeDoPais(para)} não deixa entrar veículo usado importado.` };
+  }
+  const frete = m.categoria === 'bicicleta' ? 400 : m.categoria === 'aeronave' ? b.valor * 0.03 + 25000 : m.categoria === 'embarcacao' ? b.valor * 0.07 + 20000 : b.valor * 0.03 + (m.categoria === 'moto' ? 4500 : 9000);
+  const imposto = Math.max(0, tributoDeImportados(para) / tributoDeImportados(de) - 1) * b.valor * 0.8 + b.valor * 0.04;
+  return { custo: Math.round((frete * c + (m.categoria === 'bicicleta' ? 0 : imposto)) / 100) * 100, internacional: true };
+}
+
+/** REWORK 12: restaurar um clássico — caro, e o valor que volta não é garantido (o mercado é que diz). */
+export const custoDeRestaurar = (v: Vida, b: Veiculo) => Math.round(precoNovoDoVeiculo(b) * fatorDeImportado(paisDaCidade(ondeEsta(v, b)), 0.6) * 0.3 * Math.max(0.2, (95 - b.estado) / 50) / 100) * 100;
 
 export function disponibilidadeVeiculo(v: Vida, b: Veiculo | undefined, oque: AcaoVeiculo): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
   if (!b) return { ok: false, motivo: 'Veículo não encontrado.' };
@@ -200,8 +269,25 @@ export function disponibilidadeVeiculo(v: Vida, b: Veiculo | undefined, oque: Ac
     case 'parar': return b.parado ? { ok: false, motivo: 'Já está parado.' } : { ok: true };
     case 'usar':
       if (!b.parado) return { ok: false, motivo: 'Já está em uso.' };
+      if (guardadoLonge(v, b)) return { ok: false, motivo: 'Está guardado em outra cidade: primeiro, trazer.' };
       if ((b.problema?.gravidade ?? 0) >= 3) return { ok: false, motivo: 'Precisa de conserto antes de voltar a rodar.' };
       return { ok: true };
+    case 'trazer': {
+      if (!guardadoLonge(v, b)) return { ok: false, motivo: 'Já está com você.' };
+      const t = custoDeTrazer(v, b);
+      if (t.bloqueio) return { ok: false, motivo: t.bloqueio };
+      return okDePagar(v, t.custo, t.internacional ? 'O frete e a nacionalização custam' : 'Trazer custa');
+    }
+    case 'principal':
+      if (v.financas.veiculoPrincipal === b.id) return { ok: false, motivo: 'Já é o principal.' };
+      if (guardadoLonge(v, b)) return { ok: false, motivo: 'Está guardado longe.' };
+      if (['embarcacao', 'aeronave'].includes(modeloVeiculo(b.modeloId).categoria)) return { ok: false, motivo: 'Não é veículo do dia a dia.' };
+      return veiculos(v).filter(x => !['embarcacao', 'aeronave'].includes(modeloVeiculo(x.modeloId).categoria)).length > 1 ? { ok: true } : { ok: false, motivo: 'É o único.' };
+    case 'restaurar':
+      if (modeloVeiculo(b.modeloId).segmento !== 'classico') return { ok: false, motivo: 'Restauração é coisa de clássico.' };
+      if (b.estado >= 88) return { ok: false, motivo: 'Já está impecável.' };
+      if (b.problema) return { ok: false, motivo: 'Primeiro, o conserto.' };
+      return okDePagar(v, custoDeRestaurar(v, b), 'A restauração custa');
   }
 }
 
@@ -236,12 +322,36 @@ export function executarVeiculo(v: Vida, b: Veiculo, oque: AcaoVeiculo): string 
     case 'usar':
       b.parado = false;
       return `${cap(textoVeiculo(b))} voltou a rodar.`;
+    case 'trazer': {
+      const t = custoDeTrazer(v, b);
+      v.financas.conta -= t.custo;
+      const de = ondeEsta(v, b);
+      b.local = undefined;
+      b.parado = false;
+      (b.historia ??= []).push({ t: v.t, texto: `Trazid${gv(b, 'o', 'a')} de ${nomeDoMunicipio(de)}${t.internacional ? ', com frete e nacionalização' : ''} (${fmt(t.custo)}).` });
+      return `${cap(textoVeiculo(b))} chegou${t.internacional ? ', nacionalizad' + gv(b, 'o', 'a') : ''}. ${fmt(t.custo)} ${t.internacional ? 'entre frete, documentos e imposto' : 'de transporte'}.`;
+    }
+    case 'principal':
+      v.financas.veiculoPrincipal = b.id;
+      return `${cap(textoVeiculo(b))} passa a ser ${gv(b, 'o', 'a')} do dia a dia.`;
+    case 'restaurar': {
+      const custo = custoDeRestaurar(v, b);
+      v.financas.conta -= custo;
+      b.estado = 94;
+      b.tRevisao = v.t;
+      (b.historia ??= []).push({ t: v.t, texto: `Restaurad${gv(b, 'o', 'a')} (${fmt(custo)}).` });
+      return `Meses de oficina, peça garimpada, pintura refeita: ${textoVeiculo(b)} está como saiu da fábrica. O quanto isso vale, o mercado diz (${fmt(custo)}).`;
+    }
   }
 }
 
 /** Quanto se consegue vendendo hoje (menos o conserto pendente; financiado, o banco recebe primeiro). */
-export function valorDeVenda(b: Veiculo): number {
-  return Math.max(0, Math.round((b.valor * 0.92 - (b.problema ? b.problema.custo * 0.8 : 0)) / 100) * 100);
+export function valorDeVenda(b: Veiculo, v?: Vida): number {
+  // REWORK 12: o clássico e o exótico vendem com a comissão da garagem (mais cara); de longe, vende-se pior.
+  const m = modeloVeiculo(b.modeloId);
+  const k = m.segmento ? 0.88 : 0.92;
+  const longe = v && guardadoLonge(v, b) ? 0.92 : 1;
+  return Math.max(0, Math.round((b.valor * k * longe - (b.problema ? b.problema.custo * 0.8 : 0)) / 100) * 100);
 }
 
 /** Descrição do estado em palavras. */

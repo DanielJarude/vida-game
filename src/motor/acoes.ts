@@ -106,6 +106,9 @@ import { disponibilidadeAlianca, executarAlianca, type OqueAlianca } from './sis
 import { disponibilidadeTatica, mudarTatica, type EstiloDeJogo } from './sistemas/tecnico';
 import { disponibilidadeAposta, executarAposta, type OpAposta } from './sistemas/apostas';
 import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
+import { comprarColecao, disponibilidadeComprarColecao, disponibilidadeVenderColecao, venderColecao, type ModoDeVenda } from './sistemas/colecao';
+import { abrirEmpresa, cederAoMuseu, comprarParticipacao, decidirEmpresa, disponibilidadeEmpresa, empresa, ofertasDeParticipacao, planoDeAbertura, type DecisaoEmpresa } from './sistemas/empresas';
+import type { TipoEmpresa } from './tipos';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -198,6 +201,18 @@ export type Acao =
   | { tipo: 'atracao'; valor?: Vida['eu']['atracao'] }
   /** Formalizar o trabalho informal como MEI. */
   | { tipo: 'mei' }
+  /** REWORK 12: comprar uma peça de coleção (loja, galeria, antiquário, memorabilia, leilão). */
+  | { tipo: 'colecao_comprar'; ofertaId: string }
+  /** REWORK 12: vender uma peça: rápido (para um comerciante) ou em leilão (comissão e acaso). */
+  | { tipo: 'colecao_vender'; pecaId: string; modo: ModoDeVenda }
+  /** REWORK 12: ceder uma peça da coleção ao seu museu (continua sua). */
+  | { tipo: 'colecao_ceder'; pecaId: string; empresaId: string }
+  /** REWORK 12: abrir uma empresa (sozinho ou com um sócio), sem largar a profissão. */
+  | { tipo: 'empresa_abrir'; empresa: TipoEmpresa; comSocio: boolean }
+  /** REWORK 12: uma decisão numa empresa sua. */
+  | { tipo: 'empresa'; empresaId: string; decisao: DecisaoEmpresa }
+  /** REWORK 12: comprar uma participação (investidor) numa empresa à venda. */
+  | { tipo: 'participacao'; ofertaId: string }
   /** Pagar (ou parar de pagar) o INSS como facultativo durante uma pausa de cuidado. */
   | { tipo: 'facultativo'; ativo: boolean }
   /** Como ir ao trabalho e ao estudo (`auto`: o jeito mais rápido que se tem). */
@@ -499,7 +514,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (!b) return bloqueio('impossivel', 'Bem não encontrado.');
       if (i < maioridade(v)) return bloqueio('ilegal', 'Exige maioridade.');
       const d = v.financas.dividas.find(x => x.bemId === b.id);
-      const vale = b.tipo === 'veiculo' ? valorDeVenda(b) : valorDeVendaImovel(b);
+      const vale = b.tipo === 'veiculo' ? valorDeVenda(b, v) : valorDeVendaImovel(b);
       if (d && d.saldo > vale + disponivel(v)) return bloqueio('requisito', `A venda (${fmt(vale)}) não cobre o que falta do financiamento (${fmt(d.saldo)}).`);
       return PERMITIDO;
     }
@@ -557,6 +572,29 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return PERMITIDO;
     }
     case 'atracao': return i >= 13 ? PERMITIDO : bloqueio('impossivel', 'Ainda é cedo para isso.');
+    case 'colecao_comprar': return deOk(disponibilidadeComprarColecao(v, a.ofertaId));
+    case 'colecao_vender': return i < 18 ? bloqueio('ilegal', 'Exige maioridade.') : deOk(disponibilidadeVenderColecao(v, a.pecaId, a.modo));
+    case 'colecao_ceder': {
+      const e = empresa(v, a.empresaId);
+      const c = (v.financas.colecao ?? []).find(x => x.id === a.pecaId);
+      if (!e || e.estado === 'encerrada' || !e.acervo || e.papel === 'investidor') return bloqueio('impossivel', 'Só para um museu seu.');
+      if (!c) return bloqueio('impossivel', 'Peça não encontrada.');
+      if (c.emprestadaA) return bloqueio('incompativel', 'Já está em exposição.');
+      return PERMITIDO;
+    }
+    case 'empresa_abrir': {
+      const p = planoDeAbertura(v, a.empresa, a.comSocio);
+      if (!p.disponivel) return bloqueio(i < 18 ? 'ilegal' : 'requisito', p.motivo!);
+      if (v.anoAtual.acoes.includes('abriu_empresa')) return bloqueio('incompativel', 'Uma empresa nova por ano já é muito.');
+      return vereditoDePagar(v, p.capitalDaPessoa, a.comSocio ? 'A sua metade do capital é' : 'O capital para abrir é');
+    }
+    case 'empresa': return deOk(disponibilidadeEmpresa(v, empresa(v, a.empresaId), a.decisao));
+    case 'participacao': {
+      const o = ofertasDeParticipacao(v).find(x => x.id === a.ofertaId);
+      if (!o) return bloqueio('impossivel', 'Essa participação já foi vendida.');
+      if (v.anoAtual.acoes.includes(`participacao:${a.ofertaId}`)) return bloqueio('incompativel', 'Já é sua.');
+      return vereditoDePagar(v, o.preco, `${Math.round(o.parte * 100)}% custam`);
+    }
     case 'mei': {
       const e = v.trabalho.atual;
       // O regime simplificado é do país (no Brasil, o MEI); onde não existe, a ação não existe.
@@ -708,8 +746,14 @@ export interface Condicoes {
 function rendaParaCredito(v: Vida): number {
   const par = parceiro(v);
   const junto = par && v.vinculos[par.p.id].convivio.includes('casa');
-  return rendaPropriaMensal(v) + (junto ? par!.p.renda : 0);
+  // REWORK 12: o banco conta só 70% do aluguel que a pessoa recebe (vacância, calote) — antes, contava inteiro, e
+  // cada imóvel alugado financiava o próximo.
+  const alugueis = v.financas.bens.reduce((s, b) => s + (b.tipo === 'imovel' && b.alugadoPor && !b.calote ? b.alugadoPor : 0), 0);
+  return rendaPropriaMensal(v) - alugueis * 0.3 + (junto ? par!.p.renda : 0);
 }
+
+/** REWORK 12: quantos financiamentos de imóvel um banco aceita ao mesmo tempo (o terceiro já é investidor alavancado). */
+export const MAX_FINANCIAMENTOS_IMOVEL = 2;
 
 /** Condições para comprar um imóvel: entrada, prazo, parcela, peso no orçamento. */
 export function condicoesImovel(v: Vida, preco: number, financiar: boolean, entrada?: number, prazoAnos?: number): Condicoes {
@@ -732,8 +776,9 @@ export function condicoesImovel(v: Vida, preco: number, financiar: boolean, entr
   const out = { ...base, entrada: ent, financiado, parcela, meses, jurosMes, peso, total: ent + custos + parcela * meses };
   if (v.financas.negativado) return { ...out, veredito: bloqueio('requisito', `${textoLocal(v, 'comNomeSujo')}, nenhum banco financia.`) };
   if (prazoMaximo < 5) return { ...out, veredito: bloqueio('requisito', 'Nenhum banco financia com esse prazo na sua idade.') };
+  if (v.financas.dividas.filter(d => d.tipo === 'financiamento_imovel' && d.saldo > 0).length >= MAX_FINANCIAMENTOS_IMOVEL) return { ...out, veredito: bloqueio('requisito', `Já há ${MAX_FINANCIAMENTOS_IMOVEL} financiamentos de imóvel em aberto: o banco só financia outro quando um deles for quitado.`) };
   if (renda <= 0) return { ...out, veredito: bloqueio('requisito', 'Sem renda comprovada, não há financiamento.') };
-  if (peso > 0.3) return { ...out, veredito: bloqueio('requisito', `A parcela (${fmt(parcela)}) passaria de 30% da renda${renda !== rendaPropriaMensal(v) ? ' de vocês' : ''}.`) };
+  if (peso > 0.3) return { ...out, veredito: bloqueio('requisito', `A parcela (${fmt(parcela)}) passaria de 30% da renda${parceiro(v) && v.vinculos[parceiro(v)!.p.id].convivio.includes('casa') ? ' de vocês' : ''}.`) };
   if (comprometimento(v, parcela) > 0.45) return { ...out, veredito: bloqueio('requisito', 'Somada às parcelas que você já tem, não cabe na renda.') };
   // O dinheiro por último: a entrada existe (conta, ou aplicações que o jogador pode tirar)?
   return { ...out, veredito: vereditoDePagar(v, ent + custos, `A entrada, com ${fmt(custos)} de escritura, é`) };
@@ -830,6 +875,8 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'decidir': return ['Decisões do ano', 'escolha'];
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
     case 'aposta': return ['Apostas (loteria e cassino)', 'escolha'];
+    case 'colecao_comprar': case 'colecao_vender': case 'colecao_ceder': return ['Coleção: compra e venda de peças', 'escolha'];
+    case 'empresa_abrir': case 'empresa': case 'participacao': return ['Empresas: capital, aportes e vendas', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
 }
@@ -1105,6 +1152,12 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'aposentar':
       if (v.trabalho.atual && eDasForcas(ocupacao(v.trabalho.atual.ocupacaoId))) { irParaReserva(v, 'pedido'); return ok('Transferência para a reserva concedida.', 'bom'); }
       aposentar(v); return ok('Aposentadoria concedida.', 'bom');
+    case 'colecao_comprar': return ok(comprarColecao(v, a.ofertaId), 'bom');
+    case 'colecao_vender': return ok(venderColecao(v, r, a.pecaId, a.modo));
+    case 'colecao_ceder': return ok(cederAoMuseu(v, empresa(v, a.empresaId)!, a.pecaId), 'bom');
+    case 'empresa_abrir': { v.anoAtual.acoes.push('abriu_empresa'); return { resultado: abrirEmpresa(v, a.empresa, a.comSocio), titulo: 'Uma empresa sua' }; }
+    case 'empresa': { const e = empresa(v, a.empresaId)!; return { resultado: decidirEmpresa(v, e, a.decisao), titulo: e.nome }; }
+    case 'participacao': return ok(comprarParticipacao(v, a.ofertaId), 'bom');
     case 'mei': { const antes = temFato(v, 'formalizou_mei'); formalizar(v); escrever(v, { texto: antes ? `Abriu um MEI de novo, agora como ${nomeOcupacao(v, ocupacao(v.trabalho.atual!.ocupacaoId))}.` : 'Formalizou o trabalho como MEI: CNPJ, nota fiscal e a guia do mês.', relevancia: 'biografia', tema: 'trabalho', escolha: true }); return ok('Agora é MEI: uma guia por mês, tempo de INSS contando.', 'bom'); }
     case 'deslocamento': {
       const antes = deslocamento(v)!;
@@ -1208,7 +1261,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (financiou) v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'financiamento_imovel', saldo: cond.financiado, jurosMes: cond.jurosMes, parcela: cond.parcela, bemId: id, descricao: `Financiamento ${m.casa ? 'da casa' : 'do apartamento'}${cond.social ? ' (programa habitacional)' : ''}`, tInicio: v.t, prazo: cond.meses });
       const casal = arranjoDaCasa(v) === 'casados';
       const alugadoPor = a.morar ? undefined : Math.round(o.aluguel * 0.9 / 10) * 10;
-      v.financas.bens.push({ id, tipo: 'imovel', modeloId: m.id, nome: m.nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, municipioId: v.moradia.municipioId, estado: o.estado === 'novo' ? 100 : o.estado === 'bom' ? 82 : 55, bairro: o.bairro, alugadoPor, dono: casal ? 'casal' : 'eu', tManutencao: v.t, historia: [{ t: v.t, texto: `Comprado ${financiou ? `com ${fmt(cond.entrada)} de entrada, financiado em ${Math.round(cond.meses / 12)} anos` : 'à vista'}, por ${fmt(o.preco)}.` }] });
+      v.financas.bens.push({ id, tipo: 'imovel', modeloId: m.id, nome: m.nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, municipioId: v.moradia.municipioId, estado: o.estado === 'novo' ? 100 : o.estado === 'bom' ? 82 : 55, bairro: o.bairro, indiceBairro: o.indiceBairro, alugadoPor, dono: casal ? 'casal' : 'eu', tManutencao: v.t, historia: [{ t: v.t, texto: `Comprado ${financiou ? `com ${fmt(cond.entrada)} de entrada, financiado em ${Math.round(cond.meses / 12)} anos` : 'à vista'}, por ${fmt(o.preco)}.` }] });
       if (o.estado === 'reforma') v.financas.bens[v.financas.bens.length - 1].problema = { id: `pb${v.seq++}`, texto: 'a reforma que já vinha com ele', custo: Math.round(o.preco * 0.08 / 100) * 100, desde: v.t, gravidade: 2, adiado: 0 };
       const primeira = !v.financas.bens.some(b => b.tipo === 'imovel' && b.id !== id && !b.herdado) && !temFato(v, 'comprou_imovel');
       marcarFato(v, 'comprou_imovel');
@@ -1220,7 +1273,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'vender_bem': {
       const b = v.financas.bens.find(x => x.id === a.bemId)!;
       const divida = v.financas.dividas.find(d => d.bemId === b.id);
-      const bruto = b.tipo === 'veiculo' ? valorDeVenda(b) : valorDeVendaImovel(b);
+      const bruto = b.tipo === 'veiculo' ? valorDeVenda(b, v) : valorDeVendaImovel(b);
+      if (v.financas.veiculoPrincipal === b.id) v.financas.veiculoPrincipal = undefined;
       const liquido = bruto - (divida?.saldo ?? 0);
       v.financas.conta += liquido;
       if (v.financas.conta < 0) pagarTudo(v, 0);

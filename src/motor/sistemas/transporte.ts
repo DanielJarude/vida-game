@@ -29,6 +29,7 @@ import { idade } from '../nucleo';
 import { municipio, economiaLocal, type PerfilUrbano } from '../dados/lugares';
 import { tipoNegocio } from '../dados/negocios';
 import { categoriaDoVeiculo, nomeDoVeiculo, veiculoUtil } from './veiculos';
+import { modeloVeiculo } from '../dados/bens';
 
 export type Modo = 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro';
 
@@ -123,8 +124,10 @@ export function opcoesDeDeslocamento(v: Vida): OpcaoDeslocamento[] {
   const c = economiaLocal(v.moradia.municipioId).custo;
   const out: OpcaoDeslocamento[] = [];
   const vistos = new Set<Modo>();
-  // O melhor veículo de cada tipo (o mais valioso: é o que a pessoa usa).
-  for (const { b, modo } of veiculosQueLevam(v).sort((a, b2) => b2.b.valor - a.b.valor)) {
+  // O melhor veículo de cada tipo (o mais valioso: é o que a pessoa usa). REWORK 12: o principal, quando a pessoa
+  // escolheu um, vem antes; o clássico e o superesportivo não viram carro do dia a dia sem essa escolha.
+  const prioridade = (b: Veiculo) => (b.id === v.financas.veiculoPrincipal ? 2 : modeloVeiculo(b.modeloId).segmento ? -1 : 0);
+  for (const { b, modo } of veiculosQueLevam(v).sort((a, b2) => prioridade(b2.b) - prioridade(a.b) || b2.b.valor - a.b.valor)) {
     const min = tabela[modo];
     if (min === null || vistos.has(modo)) continue;
     vistos.add(modo);

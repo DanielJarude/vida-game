@@ -139,6 +139,10 @@ export default defineConfig({
           // as situações de carreira): vai para um pacote próprio ENTRE os sistemas e quem os chama. Sem ciclo (nenhum módulo
           // dos sistemas os importa) e sem aumentar o limite.
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](profissao|caminhosDeVida|migracao|fechamento|habilitacoes)\.ts/.test(id)) return 'motor-oficio';
+          // REWORK 12: o patrimônio novo (a coleção, as empresas) num pacote próprio, ENTRE os sistemas e quem os chama
+          // (o ano, as ações, os acontecimentos, as telas). Importam só os sistemas e a base: sem ciclo, e o pacote dos
+          // textos (o mais apertado) não cresce.
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](colecao|empresas)\.ts/.test(id)) return 'motor-patrimonio';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           // Pacote pré-América do Sul: a CAMADA DE BASE — os sistemas-folha que só importam os catálogos e uns aos outros
           // (núcleo, texto, tempo, mercado, origem, rede, notoriedade, economia...) — vai com os catálogos, embaixo de

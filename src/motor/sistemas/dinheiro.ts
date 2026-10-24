@@ -155,7 +155,8 @@ function entradasProprias(v: Vida): LinhaRazao[] {
     const bolsa = curso(m.cursoId).bolsa;
     if (bolsa) out.push({ rotulo: 'Bolsa de estudos', valor: bolsa, grupo: 'renda', de: 'governo' });
   }
-  for (const b of v.financas.bens) if (b.tipo === 'imovel' && b.alugadoPor) out.push({ rotulo: `Aluguel recebido (${b.nome})`, valor: b.alugadoPor, grupo: 'renda', de: 'patrimonio' });
+  // REWORK 12: o inquilino que parou de pagar não paga (o aluguel volta quando o calote se resolve).
+  for (const b of v.financas.bens) if (b.tipo === 'imovel' && b.alugadoPor && !b.calote) out.push({ rotulo: `Aluguel recebido (${b.nome})`, valor: b.alugadoPor, grupo: 'renda', de: 'patrimonio' });
   const dasAplicacoes = rendaDasAplicacoes(v);
   if (dasAplicacoes > 0) out.push({ rotulo: 'Dividendos e aluguéis de fundos', valor: dasAplicacoes, grupo: 'renda', de: 'patrimonio' });
   return out;
@@ -359,6 +360,9 @@ function comuns(v: Vida, sai: (r: string, x: number, g: LinhaRazao['grupo']) => 
     if (p && p.vivo && p.estudo?.paga === 'familia') sai(`Faculdade de ${p.nome}`, valor, 'filhos');
   }
   for (const l of custosDoTrabalho(v)) sai(l.rotulo, l.valor, 'outros');
+  // REWORK 12: o que o patrimônio custa todo mês além da casa e dos veículos (o imóvel de investimento, a guarda da
+  // coleção) — cada módulo diz o seu (`PATRIMONIO_NO_MES`), e só aparece para quem é dono (não a criança na casa dos pais).
+  if (!naFamilia || i >= 18) for (const fn of PATRIMONIO_NO_MES) for (const l of fn(v, c)) sai(l.rotulo, l.valor, 'moradia');
   if (v.fatos['aposta_online'] !== undefined && i >= 18) sai('Apostas', Math.max(300, Math.min(2500, rendaPropriaMensal(v) * 0.15)), 'lazer');
   if (naFamilia && i >= 18) sai('Animais: ração, vacina, areia', custoDosPets(v, c, 'eu'), 'animais');
   for (const d of f.dividas) if (d.parcela > 0 && d.saldo > 0) sai(d.descricao, Math.min(d.parcela, d.saldo), 'dividas');
@@ -382,6 +386,9 @@ export function saldoMensal(v: Vida): { renda: number; despesa: number; linhas: 
 export const rendasMensais = (v: Vida) => orcamento(v).entradas;
 export const despesasMensais = (v: Vida, estilo?: EstiloDeVida) => orcamento(v, estilo).saidas;
 
+/** REWORK 12: custos mensais do patrimônio (preenchido pelos módulos de imóveis e de coleção). */
+export const PATRIMONIO_NO_MES: ((v: Vida, c: number) => { rotulo: string; valor: number }[])[] = [];
+
 /** Custo mensal de uma rotina (preenchido pelo módulo de rotinas, que conhece os níveis). */
 export const CUSTO_ROTINA: { de: (v: Vida, r: Rotina) => number; rotulo: (r: Rotina) => string } = { de: () => 0, rotulo: r => r.id };
 
@@ -394,6 +401,10 @@ export interface Balanco {
   veiculos: number;
   /** O que está no caixa do próprio negócio (não é conta sua, mas é seu). */
   negocio: number;
+  /** REWORK 12: a coleção (o valor estimado das peças). */
+  colecao: number;
+  /** REWORK 12: as participações em empresas (a avaliação × a sua parte — o caixa delas já está dentro). */
+  empresas: number;
   ativos: number;
   /** Financiamentos: obrigações presas a um bem. */
   financiamentos: number;
@@ -419,9 +430,11 @@ export function balanco(v: Vida): Balanco {
   const atrasado = f.dividas.reduce((s, d) => s + (d.atraso ?? 0) * d.parcela, 0) + (v.moradia.atraso ?? 0) * v.moradia.aluguel;
   const n = v.caminhos?.negocio;
   const negocio = n && n.estado !== 'fechado' ? Math.max(0, Math.round(n.caixa ?? 0)) : 0;
-  const ativos = Math.max(0, conta) + aplicacoes + imoveis + veiculos + negocio;
+  const colecao = Math.round((f.colecao ?? []).reduce((s, c) => s + c.valor, 0));
+  const empresas = Math.round((f.empresas ?? []).reduce((s, e) => s + (e.estado === 'encerrada' ? 0 : Math.max(0, e.avaliacao ?? 0) * e.parte), 0));
+  const ativos = Math.max(0, conta) + aplicacoes + imoveis + veiculos + negocio + colecao + empresas;
   const obrigacoes = Math.round(financiamentos + emprestimos + cartao + (v.moradia.atraso ?? 0) * v.moradia.aluguel + Math.max(0, -conta));
-  return { conta, aplicacoes, imoveis, veiculos, negocio, ativos, financiamentos, emprestimos, cartao, atrasado: Math.round(atrasado), obrigacoes, liquido: Math.round(ativos - obrigacoes) };
+  return { conta, aplicacoes, imoveis, veiculos, negocio, colecao, empresas, ativos, financiamentos, emprestimos, cartao, atrasado: Math.round(atrasado), obrigacoes, liquido: Math.round(ativos - obrigacoes) };
 }
 
 export const patrimonio = (v: Vida) => balanco(v).liquido;

@@ -109,6 +109,18 @@ export interface PerfilEconomico {
   classes: Record<Classe, number>;
   /** A moradia em relação ao resto dos preços (1 = a relação brasileira). */
   moradia: number;
+  /**
+   * REWORK 12: o rendimento bruto típico do aluguel numa capital do país (aluguel de um ano ÷ preço do imóvel).
+   * Ausente = derivado da moradia (mercado mais caro, rendimento mais comprimido).
+   */
+  rendimentoAluguel?: number;
+  /**
+   * REWORK 12: quanto o país carrega no preço de um bem que se compra no mercado mundial (carro, relógio): impostos,
+   * importação, margem (1 = o preço mundial; o Brasil, 1,35). Ausente = a média da região.
+   */
+  tributoImportados?: number;
+  /** REWORK 12: o país deixa importar carro usado? (O Brasil, só de coleção, com 30 anos ou mais.) Ausente = deixa. */
+  importaUsados?: boolean | 'colecao';
   /** Salário mínimo mensal, em MOEDA LOCAL (ausente: o país não tem um nacional; o piso vira o de mercado). */
   salarioMinimo?: number;
   /** Fatia do trabalho que é informal (0..1): pesa na chance de um emprego formal. */

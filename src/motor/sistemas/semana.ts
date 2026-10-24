@@ -150,6 +150,11 @@ export function semana(v: Vida): Semana {
     const ajuda = (n.equipe?.length ?? 0) > 0 || !!n.socioId;
     fixos.push({ id: 'negocio', rotulo: n.passivo ? `${n.nome} (de longe)` : `${n.nome} (nas horas vagas)`, peso: n.passivo ? 0.25 : ajuda ? 0.5 : 0.75, tipo: 'trabalho' });
   }
+  // REWORK 12: a empresa que a própria pessoa administra (a de gestor contratado não pede a semana).
+  for (const e of v.financas.empresas ?? []) {
+    if (e.estado === 'encerrada' || e.papel === 'investidor' || e.gestao.quem !== 'propria') continue;
+    fixos.push({ id: `empresa_${e.id}`, rotulo: `${e.nome} (a gestão)`, peso: 0.4 + 0.1 * Math.min(3, e.unidades - 1), tipo: 'trabalho' });
+  }
   const pol = semanaDaPolitica(v);
   if (pol) fixos.push({ id: 'politica', rotulo: pol.rotulo, peso: pol.peso, tipo: 'trabalho' });
   const b = v.educacao.basica;
