@@ -1507,7 +1507,16 @@ export interface Oportunidade {
   bonus?: number;
   /** O convite é para uma atividade (a rotina que começa ao aceitar): a olimpíada, a iniciação científica. */
   atividade?: string;
+  /**
+   * REWORK 11 · Fase B: o que a porta É para a carreira de agora (`indicacoes.naturezaDaOportunidade`): uma vaga de
+   * emprego, uma mudança de carreira, uma atividade por conta, um trabalho ocasional. Opcional: sem o campo (saves
+   * antigos), a natureza é deduzida do tipo e da ocupação.
+   */
+  natureza?: NaturezaDaOportunidade;
 }
+
+/** REWORK 11 · Fase B — a natureza de uma oportunidade de trabalho (o rótulo e as consequências que a tela diz antes). */
+export type NaturezaDaOportunidade = 'emprego' | 'mudanca_carreira' | 'por_conta' | 'ocasional' | 'sociedade' | 'investimento' | 'propria';
 
 /** Carreira esportiva: base, profissional, encerrada. */
 export interface CarreiraEsportiva {
@@ -2230,12 +2239,26 @@ export interface Caminhos {
 export type NovoCompromisso =
   | { tipo: 'base'; dominio: Dominio; municipioId: string; clube: string }
   | { tipo: 'contrato_esporte'; nivel: number }
-  | { tipo: 'emprego'; ocupacaoId: string; via: string; texto?: string; bonus?: number; extra?: 'rural_familia' | 'rural_arrendada' | 'arte'; pessoaId?: string; /** Retomar uma trajetória pausada (índice em `trabalho.pausadas`). */ retoma?: number }
+  | { tipo: 'emprego'; ocupacaoId: string; via: string; texto?: string; bonus?: number; extra?: 'rural_familia' | 'rural_arrendada' | 'arte'; pessoaId?: string; /** Retomar uma trajetória pausada (índice em `trabalho.pausadas`). */ retoma?: number;
+    /** REWORK 11 · Fase B: a troca do trabalho de agora já foi decidida (o acontecimento que contrata disse): não se pergunta de novo. Opcional. */
+    substitui?: boolean;
+    /** REWORK 11 · Fase B: o que a contratação ajusta no emprego novo (guardado com a pergunta). Opcional. */
+    ajuste?: AjusteDeEmprego }
   | { tipo: 'negocio'; negocioId: string; modo: 'guardado' | 'pequeno' | 'emprestimo' | 'socio'; socioId?: string }
   | { tipo: 'dedicar_negocio' }
   | { tipo: 'servico_militar' }
   /** Aprovado num curso (ou voltando a um trancado): a matrícula só entra depois de caber no resto da vida. */
   | { tipo: 'curso'; cursoId: string; via: string; modalidade: 'presencial' | 'ead'; rede: 'publica' | 'privada'; mensalidade: number; municipioId: string; instituicao: string; destrancar?: boolean; /** A especialidade de uma residência médica. */ especialidade?: EspecialidadeMedica };
+
+/** REWORK 11 · Fase B — o ajuste de uma contratação fora da vaga comum (`compromissos.contratarComAnalise`). */
+export interface AjusteDeEmprego {
+  posAposentadoria?: boolean;
+  especialidade?: string;
+  /** Freguesia que já vem junto (os clientes antigos de quem passa a trabalhar por conta). */
+  clientelaMais?: number;
+  /** O salário mínimo combinado (a proposta que trouxe a mudança). */
+  salarioMinimo?: number;
+}
 
 /** Um plano possível diante do conflito: o que se larga, o que se tenta conciliar. */
 export interface PlanoDeConflito {

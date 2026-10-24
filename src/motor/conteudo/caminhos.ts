@@ -28,11 +28,11 @@ import { registrarDevolutiva } from '../sistemas/devolutivas';
 import { abalar } from '../sistemas/abalo';
 import { MODS, MODS_ARTE, municipioIndice, municipioPorIndice, novaOportunidade } from '../sistemas/oportunidades';
 import { criarProjeto } from '../sistemas/arte';
-import { contratar, degrausAcima, elegibilidade, encerrarEmprego, experienciaNaTrilha, horizonte, nomeOcupacao, porContaPropria, semOcupacao, textoDeContratacao } from '../sistemas/trabalho';
+import { degrausAcima, elegibilidade, encerrarEmprego, experienciaNaTrilha, horizonte, nomeOcupacao, porContaPropria, semOcupacao, textoDeContratacao } from '../sistemas/trabalho';
 import { OCUPACOES, comissaoDe, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { curso } from '../dados/cursos';
 import { capitalDoEstado } from '../sistemas/escola';
-import { analisarEntrada, propor } from '../sistemas/compromissos';
+import { analisarEntrada, contratacaoDoEvento, propor } from '../sistemas/compromissos';
 import { temEmpresa, temOrgao } from '../sistemas/situacaoProfissional';
 import { listaNatural } from '../texto';
 import { doClube, oClube } from '../dados/clubes';
@@ -211,15 +211,15 @@ export const CAMINHOS: Conteudo[] = [
     opcoes: [
       { id: 'treinador', texto: 'Treinar crianças numa escolinha',
         disponivel: c => (elegibilidade(c.v, ocupacao('treinador_escolinha')).grau === 'permitido' ? true : 'Ainda não dá.'),
-        resolver: c => ({ texto: 'Na primeira aula, um menino perguntou se você já tinha jogado na TV.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('treinador_escolinha'), 'transicao'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('treinador_escolinha'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
+        resolver: c => ({ memoria: null, ...contratacaoDoEvento(c.v, c.r, ocupacao('treinador_escolinha'), 'transicao', 'Na primeira aula, um menino perguntou se você já tinha jogado na TV.', { depois: e => { escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('treinador_escolinha'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) }) },
       { id: 'comissao', texto: 'Aceitar o convite para a comissão técnica',
         // A comissão é a do esporte que se jogou (o auxiliar de vôlei não entra no banco de um time de futebol).
         disponivel: c => { const aux = c.v.caminhos.esporte && comissaoDe(c.v.caminhos.esporte.modalidade).auxiliar; return !!aux && (c.v.caminhos.esporte?.nivel ?? 1) >= 3 && idade(c.v) >= ocupacao(aux).idadeMin; },
-        resolver: c => ({ texto: 'Do outro lado da linha lateral, o jogo parece outro.', memoria: null, efeito: () => { const aux = ocupacao(comissaoDe(c.v.caminhos.esporte!.modalidade).auxiliar!); const e = contratar(c.v, c.r, aux, 'oportunidade'); escrever(c.v, { texto: textoDeContratacao(c.v, aux, e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
+        resolver: c => { const aux = ocupacao(comissaoDe(c.v.caminhos.esporte!.modalidade).auxiliar!); return { memoria: null, ...contratacaoDoEvento(c.v, c.r, aux, 'oportunidade', 'Do outro lado da linha lateral, o jogo parece outro.', { depois: e => { escrever(c.v, { texto: textoDeContratacao(c.v, aux, e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) }; } },
       { id: 'preparo', texto: 'Trabalhar na preparação física de um clube', disponivel: c => (elegibilidade(c.v, ocupacao('preparador_fisico')).grau === 'permitido' ? true : false),
-        resolver: c => ({ texto: 'Agora é você quem cobra o treino dos outros.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('preparador_fisico'), 'transicao'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('preparador_fisico'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
+        resolver: c => ({ memoria: null, ...contratacaoDoEvento(c.v, c.r, ocupacao('preparador_fisico'), 'transicao', 'Agora é você quem cobra o treino dos outros.', { depois: e => { escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('preparador_fisico'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) }) },
       { id: 'lutas', texto: 'Abrir turmas de luta', disponivel: c => (c.v.caminhos.esporte?.modalidade === 'lutas' && elegibilidade(c.v, ocupacao('instrutor_lutas')).grau === 'permitido' ? true : false),
-        resolver: c => ({ texto: 'Tatame alugado, turma das seis e das oito.', memoria: null, efeito: () => { const e = contratar(c.v, c.r, ocupacao('instrutor_lutas'), 'transicao'); escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('instrutor_lutas'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) },
+        resolver: c => ({ memoria: null, ...contratacaoDoEvento(c.v, c.r, ocupacao('instrutor_lutas'), 'transicao', 'Tatame alugado, turma das seis e das oito.', { depois: e => { escrever(c.v, { texto: textoDeContratacao(c.v, ocupacao('instrutor_lutas'), e), relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); } }) }) },
       { id: 'estudar', texto: 'Voltar a estudar',
         resolver: c => ({ texto: 'Você foi atrás dos cursos. Sentar numa carteira de novo pareceu estranho.', memoria: 'Depois do esporte, decidiu voltar a estudar.', efeito: () => fato(c, 'plano_estudar') }) },
       { id: 'recomecar', texto: 'Recomeçar em outra coisa, sem pressa', resolver: () => ({ texto: 'Você tirou um tempo. Depois, veria.', memoria: null }) }
@@ -359,14 +359,14 @@ export const CAMINHOS: Conteudo[] = [
     texto: c => `Currículo enviado para tudo quanto é lugar. ${c.v.rotinas.some(r => r.id === 'bico') ? 'Os bicos seguram parte das contas.' : 'As contas chegam do mesmo jeito.'} ${parceiro(c.v) ? `${parceiro(c.v)!.p.nome} pergunta, com cuidado, o que você pensa fazer.` : ''}`,
     opcoes: [
       { id: 'qualquer', texto: 'Aceitar o que aparecer', disponivel: c => (melhorEntrada(c) ? true : 'Nem isso apareceu por aqui.'),
-        resolver: c => { const oc = melhorEntrada(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: `Você aceitou a primeira vaga que disse sim: ${nomeOcupacao(c.v, oc)}.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'necessidade'); escrever(c.v, { texto: `${textoDeContratacao(c.v, oc, e)} Abaixo do que esperava, acima de nada.`, relevancia: 'marco', tema: 'trabalho' }); } }; } },
+        resolver: c => { const oc = melhorEntrada(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { memoria: null, ...contratacaoDoEvento(c.v, c.r, oc, 'necessidade', `Você aceitou a primeira vaga que disse sim: ${nomeOcupacao(c.v, oc)}.`, { depois: e => { escrever(c.v, { texto: `${textoDeContratacao(c.v, oc, e)} Abaixo do que esperava, acima de nada.`, relevancia: 'marco', tema: 'trabalho' }); } }) }; } },
       { id: 'estudar', texto: 'Voltar a estudar', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Um curso técnico, uma qualificação, uma faculdade à noite: você foi ver o que cabia.', memoria: 'Desempregado, decidiu voltar a estudar.'.replace('Desempregado', c.g('Desempregado', 'Desempregada', 'Desempregade')), efeito: () => fato(c, 'plano_estudar') }) },
       { id: 'cidade', texto: 'Tentar a vida numa cidade maior', comportamento: { coragem: 1 },
         disponivel: c => (nivelDeOferta(c.v.moradia.municipioId) >= 2 ? false : custa(c, custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)), 'Não há dinheiro nem para a mudança.')),
         resolver: c => ({ texto: 'Uma mala, um endereço de conhecido, a rodoviária de madrugada.', memoria: null, efeito: () => { const d = capitalDoEstado(c.v.moradia.municipioId); c.v.financas.conta -= custoDeMudanca(c.v.moradia.municipioId, d); mudarAgora(c.v, d, 'atrás de trabalho'); marcar(c.v, 'mudanca_cidade', `Mudou-se para ${municipio(d).nome} atrás de trabalho.`, 2); marcarFato(c.v, 'mudou_por_trabalho'); } }) },
       { id: 'conta', texto: 'Trabalhar por conta', disponivel: c => (autonomoPossivel(c) ? true : false),
-        resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: `Você imprimiu uns cartões e avisou todo mundo: ${nomeOcupacao(c.v, oc)}, atende em casa.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'por_conta'); escrever(c.v, { texto: textoDeContratacao(c.v, oc, e), relevancia: 'marco', tema: 'trabalho' }); } }; } },
+        resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { memoria: null, ...contratacaoDoEvento(c.v, c.r, oc, 'por_conta', `Você imprimiu uns cartões e avisou todo mundo: ${nomeOcupacao(c.v, oc)}, atende em casa.`, { depois: e => { escrever(c.v, { texto: textoDeContratacao(c.v, oc, e), relevancia: 'marco', tema: 'trabalho' }); } }) }; } },
       { id: 'procurar', texto: 'Continuar procurando', resolver: () => ({ texto: 'Mais um mês de currículo. Mais um.', memoria: null }) },
       // Quem tem como viver do que juntou pode parar de procurar — a escolha fica dita, e a procura deixa de pesar.
       { id: 'parar', texto: 'Parar de procurar e viver do que juntou', disponivel: c => (podeTentar(podeDeclararIntencao(c.v, 'nao_procurar')) ? true : false),
@@ -469,7 +469,7 @@ export const CAMINHOS: Conteudo[] = [
       { id: 'voluntario', texto: 'Oferecer o que sabe como voluntário', comportamento: { generosidade: 1 },
         resolver: c => ({ texto: 'A associação do bairro aceitou na hora. Tinha fila de coisas para fazer.', memoria: null, efeito: () => { if (!c.v.rotinas.some(r => r.id === 'voluntariado')) c.v.rotinas.push({ id: 'voluntariado', tInicio: c.v.t, nivel: 1 }); } }) },
       { id: 'conta', texto: 'Continuar trabalhando por conta', disponivel: c => (autonomoPossivel(c) ? true : false),
-        resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { texto: 'Aposentado no papel; na agenda, nem tanto.'.replace('Aposentado', c.g('Aposentado', 'Aposentada', 'Aposentade')), memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'aposentado'); e.posAposentadoria = true; escrever(c.v, { texto: `Depois de aposentar, seguiu trabalhando por conta como ${nomeOcupacao(c.v, oc)}.`, relevancia: 'biografia', tema: 'trabalho' }); } }; } },
+        resolver: c => { const oc = autonomoPossivel(c); if (!oc) return { texto: 'Quando você foi atrás, o cenário já era outro. Ficou para depois.', memoria: null }; return { memoria: null, ...contratacaoDoEvento(c.v, c.r, oc, 'aposentado', 'Aposentado no papel; na agenda, nem tanto.'.replace('Aposentado', c.g('Aposentado', 'Aposentada', 'Aposentade')), { ajuste: { posAposentadoria: true }, depois: () => { escrever(c.v, { texto: `Depois de aposentar, seguiu trabalhando por conta como ${nomeOcupacao(c.v, oc)}.`, relevancia: 'biografia', tema: 'trabalho' }); } }) }; } },
       { id: 'descansar', texto: 'Descansar, sem plano', resolver: c => ({ texto: 'Café sem pressa, jornal inteiro, cochilo depois do almoço. Por enquanto, basta.', memoria: null, efeito: () => feliz(c, 3) }) }
     ]
   }

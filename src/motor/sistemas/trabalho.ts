@@ -62,6 +62,7 @@ import { familiaDaTrilha } from '../dados/carreiras';
 import { aoEntrarNasForcas, aoFormarNasForcas, horizonteMilitar, processarMilitar, proximoPassoMilitar } from './militar';
 import { climaDe, deltaDeFreguesia, fatorDeFreguesia, fatorJornada, ritmoDe } from './ritmo';
 import { mesesProcurando, procurandoTrabalho } from './intencao';
+import { contratarComAnalise } from './compromissos';
 
 export const nomeOcupacao = (v: Vida, oc: Ocupacao) => nomeDoPosto(oc.id, v.caminhos?.militar?.forca, ge(v) === 'feminino') ?? (ge(v) === 'feminino' ? oc.nome[1] : oc.nome[0]);
 export const nomeOcupacaoId = (v: Vida, id: string) => nomeOcupacao(v, ocupacao(id));
@@ -675,8 +676,10 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     const efetiva = e.desempenho >= 60 && i >= 18 && ['permitido', 'improvavel'].includes(elegibilidade(v, ocupacao('aux_adm')).grau) && r.chance(0.45);
     encerrarEmprego(v, 'fim do contrato de aprendiz');
     if (efetiva) {
-      contratar(v, r, ocupacao('aux_adm'), 'efetivacao');
-      escrever(v, { texto: `O contrato de aprendiz acabou e a empresa ${flex(ge(v), 'o', 'a')} efetivou como auxiliar administrativ${flex(ge(v), 'o', 'a')}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+      // REWORK 11 · Fase B: a efetivação passa pela mesma conta de uma vaga (o curso integral, a base, a agenda): cabendo,
+      // entra; não cabendo, a vida pergunta — nunca um contrato em cima da faculdade do dia inteiro.
+      const res = contratarComAnalise(v, r, ocupacao('aux_adm'), 'efetivacao', { texto: `O contrato de aprendiz acabou e a empresa quer efetivar você como auxiliar administrativ${flex(ge(v), 'o', 'a')}.` });
+      if (res.resultado === 'feito') escrever(v, { texto: `O contrato de aprendiz acabou e a empresa ${flex(ge(v), 'o', 'a')} efetivou como auxiliar administrativ${flex(ge(v), 'o', 'a')}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     } else {
       escrever(v, { texto: `O contrato de ${regrasDaVida(v).trabalho.aprendiz?.nome ?? 'aprendiz'} chegou ao fim.`, relevancia: 'biografia', tema: 'trabalho' });
     }
@@ -688,8 +691,8 @@ export function processarTrabalho(v: Vida, r: Rng): void {
     const proximo = OCUPACOES.find(x => x.trilha === oc.trilha && x.nivel >= 1 && x.nivel <= 3 && !x.concurso && !x.entrada && elegibilidade(v, x).grau === 'permitido');
     encerrarEmprego(v, 'fim do estágio');
     if (proximo && e.desempenho >= 55 && r.chance(0.5)) {
-      const novo = contratar(v, r, proximo, 'estagio');
-      escrever(v, { texto: `O estágio acabou em contratação: ${nomeOcupacao(v, proximo)} em ${novo.empregador}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+      const res = contratarComAnalise(v, r, proximo, 'estagio', { texto: `O estágio acabou em convite: ${nomeOcupacao(v, proximo)}.` });
+      if (res.emprego) escrever(v, { texto: `O estágio acabou em contratação: ${nomeOcupacao(v, proximo)} em ${res.emprego.empregador}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     } else {
       escrever(v, { texto: 'O estágio terminou junto com o curso, sem efetivação.', relevancia: 'biografia', tema: 'trabalho' });
     }

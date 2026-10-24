@@ -14,7 +14,7 @@ import type { Rng } from '../rng';
 import type { Vida } from '../tipos';
 import { OCUPACOES, ocupacao, ocupacaoOuNula, type Ocupacao, type Setor } from '../dados/ocupacoes';
 import { propor } from '../sistemas/compromissos';
-import { contratar, elegibilidade, nomeOcupacao, tetoSalarial, textoDeContratacao } from '../sistemas/trabalho';
+import { elegibilidade, nomeOcupacao, tetoSalarial } from '../sistemas/trabalho';
 import { avaliar, ctxEntrevista, escolherPerguntas, notaDaResposta, perguntaPorId, reacao, type Pergunta } from '../sistemas/entrevista';
 import { registrarDevolutiva } from '../sistemas/devolutivas';
 import { motivoDaRejeicao, PALAVRA_COMPATIBILIDADE, perfilParaVaga } from '../sistemas/empregabilidade';
@@ -45,8 +45,11 @@ function legado(c: Ctx, bonus: number): Resultado {
   if (!oc) return { texto: 'A vaga já tinha sido preenchida.', memoria: null, tom: 'ruim' };
   const base = elegibilidade(c.v, oc).chance ?? 0.4;
   if (c.r.chance(clamp(base + bonus + porta, 0.03, 0.95))) {
-    const e = contratar(c.v, c.r, oc, via);
-    return { texto: `Ligaram dois dias depois: a vaga é sua. ${cap(nomeOcupacao(c.v, oc))} ${naCasa(e.empregador)}, ${moeda(e.salario)} por mês.`, memoria: textoDeContratacao(c.v, oc, e), tom: 'bom', relevancia: 'marco' };
+    // REWORK 11 · Fase B: a vaga da entrevista antiga também passa pela conta de conflitos (como a entrevista em etapas).
+    const saiu = propor(c.v, c.r, { tipo: 'emprego', ocupacaoId: oc.id, via, texto: `A vaga de ${nomeOcupacao(c.v, oc)} é sua.` });
+    const e = c.v.trabalho.atual;
+    if (saiu === 'feito' && e?.ocupacaoId === oc.id) return { texto: `Ligaram dois dias depois: a vaga é sua. ${cap(nomeOcupacao(c.v, oc))} ${naCasa(e.empregador)}, ${moeda(e.salario)} por mês.`, memoria: null, tom: 'bom', relevancia: 'marco' };
+    return { texto: 'Ligaram dois dias depois: a vaga é sua.', memoria: null, tom: 'bom' };
   }
   return { texto: 'O e-mail veio educado: "decidimos seguir com outro candidato".', memoria: null, tom: 'ruim' };
 }
