@@ -270,8 +270,8 @@ export function executarCena(v: Vida, r: Rng, oque: OqueCena): { texto: string; 
       const tipo = r.pick(tipos[porte]);
       const exige = [52, 60, 68, 74][porte];
       // REWORK 11 · ATR-04: o teste reprova mais (73% de aprovação era fácil demais), sobretudo no começo: cada porte tem
-      // mais concorrência; a técnica sobre o que a produção pede, o currículo e o prestígio pesam; o teto é 60%.
-      const chance = clamp(0.2 + (h - exige) / 65 + cv * 0.12 + prestigioArtistico(v) * 0.15 - porte * 0.04, 0.03, 0.6);
+      // mais concorrência; a técnica sobre o que a produção pede, o currículo e o prestígio pesam; o teto é 55%.
+      const chance = clamp(0.12 + (h - exige) / 80 + cv * 0.1 + prestigioArtistico(v) * 0.12 - porte * 0.06, 0.03, 0.55);
       const titulo = tituloFicticio(v, tipo, 'audicao');
       const onde = r.pick(CASAS[tipo]);
       const nomeTipo = { teatro: 'a montagem', curta: 'o curta', serie: 'a série', novela: 'a novela', filme: 'o filme', festival: 'o festival', publicidade: 'o comercial', show: 'o show', espetaculo: 'o espetáculo', edital: 'o projeto' }[tipo];

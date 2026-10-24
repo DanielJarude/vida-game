@@ -316,7 +316,7 @@ export function degrauPorPrestigio(v: Vida): boolean {
   // O meio reconhece quem tem um trabalho que a crítica ou o público destacou (não só quem acumulou linhas no currículo).
   const destaque = (v.caminhos.curriculo ?? []).some(x => x.premio || Math.max(x.repercussao, x.publico ?? 0) >= 3);
   if (pres < 0.66 || !destaque || nomePor(v, 'arte') < 30 || habilidade(v, 'teatro') < 74) return false;
-  if (!rngDe(v.id, 'av_degrau', v.t).chance(clamp(0.06 + (pres - 0.66) * 1, 0, 0.35))) return false;
+  if (!rngDe(v.id, 'av_degrau', v.t).chance(clamp(0.04 + (pres - 0.66) * 0.5, 0, 0.18))) return false;
   const oc = ocupacaoOuNula('ator_reconhecido');
   if (!oc) return false;
   registrarPosto(v, e);
