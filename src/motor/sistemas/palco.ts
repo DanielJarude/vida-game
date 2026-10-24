@@ -147,7 +147,7 @@ export function temporadaDePalco(v: Vida, r: Rng): Palco | undefined {
   if (d === 'musica' && trabalhoDePalco(v)) {
     const h = habilidade(v, 'musica');
     const tempo = 1 - Math.min(0.75, apresentacoes / 110);
-    palco.freelas = Math.round(clamp((h - 35) * 45, 250, 2800) * 12 * tempo * (0.6 + r.next() * 0.7) * (custoLocal(v) / 100) / 100) * 100;
+    palco.freelas = Math.round(clamp((h - 35) * 35, 200, 2200) * 12 * tempo * (0.6 + r.next() * 0.7) * custoLocal(v) / 100) * 100;
   }
   const e = v.trabalho.atual;
   if (e && trabalhoDePalco(v)) e.salario = Math.max(0, Math.round((palco.artista + (palco.freelas ?? 0)) / 12 / 10) * 10);
