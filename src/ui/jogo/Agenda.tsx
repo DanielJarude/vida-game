@@ -130,7 +130,8 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; agir: 
                 {doDia.map(b => {
                   const c = conflitoDe(b.id);
                   const perdeAqui = c && c.dias.includes(d) && c.tipo === 'sobreposicao';
-                  const curto = b.fim - b.inicio < 60;
+                  // REWORK 11 · QA (D3): o bloco de 1 h não cabe em duas linhas (nome e horas) — vai em uma, como os curtos.
+                  const curto = b.fim - b.inicio <= 60;
                   return (
                     <button key={`${b.id}${d}`} type="button" data-bloco={b.id}
                       className={`bloco-agenda bloco-agenda--${FAMILIA[b.origem]}${b.movel ? ' bloco-agenda--movel' : ''}${perdeAqui ? ' bloco-agenda--conflito' : ''}${b.alternado ? ' bloco-agenda--alternado' : ''}${curto ? ' bloco-agenda--curto' : ''}${aberto === b.id ? ' bloco-agenda--aberto' : ''}`}

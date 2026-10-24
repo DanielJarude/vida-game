@@ -178,8 +178,13 @@ try {
   if (temCriar) {
     await criar.click();
     await p.waitForTimeout(150);
+    // REWORK 11 · SOC-11: publicar é em passos — o tipo, configurar ("Continuar") e confirmar (o verbo da rede).
     const post = p.locator('.plataforma-painel__temas button:not([disabled])').first();
-    if (await post.count()) { await post.click(); await p.waitForTimeout(150); }
+    if (await post.count()) {
+      await post.click(); await p.waitForTimeout(150);
+      await p.locator('.fluxo-post button', { hasText: 'Continuar' }).first().click(); await p.waitForTimeout(150);
+      await p.locator('.fluxo-post .botao--principal').first().click(); await p.waitForTimeout(150);
+    }
     const sr = await saveEstavel();
     const conta = sr ? JSON.parse(sr).redes?.contas?.instagram : undefined;
     checar('offline: a conta existe e publicou (no save)', !!conta && conta.publicacoes.length >= 1, conta ? `@${conta.arroba}, ${conta.seguidores} seguidores, ${conta.publicacoes.length} publicação` : 'sem conta');

@@ -171,9 +171,11 @@ function LojaDeCoisasDaVida({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) 
               {temCoisa(vida, c.id) ? <span className="loja-estilo__seu"><span className="nota">É seu.</span></span>
                 : (
                   <span className="oferta__comprar">
-                    <BotaoAcao vida={vida} acao={{ tipo: 'comprar_coisa', coisaId: c.id }} agir={agir} variante="secundario" ocultarImpossivel>Comprar</BotaoAcao>
-                    {/* REWORK 10.6 · INF-02: quem depende dos adultos e não alcança o preço pede — com este produto, aqui mesmo. */}
-                    {dependeDosResponsaveis(vida) && !podeTentar(disponibilidade(vida, { tipo: 'comprar_coisa', coisaId: c.id })) && <PedidoDeCompra vida={vida} coisaId={c.id} agir={agir} />}
+                    {/* REWORK 10.6 · INF-02: quem depende dos adultos e não alcança o preço pede — com este produto, aqui mesmo.
+                        REWORK 11 · QA (D5): o pedido já diz o preço e o cofrinho; o "Comprar" apagado ao lado repetia a conta. */}
+                    {dependeDosResponsaveis(vida) && !podeTentar(disponibilidade(vida, { tipo: 'comprar_coisa', coisaId: c.id }))
+                      ? <PedidoDeCompra vida={vida} coisaId={c.id} agir={agir} />
+                      : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_coisa', coisaId: c.id }} agir={agir} variante="secundario" ocultarImpossivel>Comprar</BotaoAcao>}
                   </span>
                 )}
             </li>

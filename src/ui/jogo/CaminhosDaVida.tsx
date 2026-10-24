@@ -153,6 +153,8 @@ export function estadoDaDivisao(v: Vida, d: Exclude<DivisaoCaminhos, 'inicio'>):
     const e = v.trabalho.atual;
     if (modo === 'preso') return 'Cumprindo pena';
     if (e && modo !== 'politica') { const oc = ocupacaoOuNula(e.ocupacaoId); return `${oc ? cap(nomeOcupacao(v, oc)) : 'Trabalhando'} · desde ${anoDe(e.tInicio)}`; }
+    // REWORK 11 · QA (D1): no mandato, o trabalho É o cargo — não "Sem trabalho agora".
+    if (e && modo === 'politica') { const oc = ocupacaoOuNula(e.ocupacaoId); return `${oc ? cap(nomeOcupacao(v, oc)) : 'No mandato'} · mandato desde ${anoDe(e.tInicio)}`; }
     const sp = situacaoProfissional(v);
     if (!e && sp.semVinculo) return [cap(sp.rotulo), sp.detalhe].filter(Boolean).join(' · ');
     if (modo === 'negocio') return negocioAberto(v)?.nome ?? 'O próprio negócio';

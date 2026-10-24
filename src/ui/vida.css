@@ -71,7 +71,8 @@ details summary { cursor: pointer; }
 /* ------------------------------------------------------------------ Botões */
 .botao {
   display: inline-flex; max-width: 100%; align-items: center; justify-content: center; gap: var(--space-2);
-  min-height: var(--touch-target); padding: 0 var(--space-4); border-radius: var(--radius-md);
+  /* REWORK 11 · QA (D4): o respiro em cima e embaixo só aparece no botão de duas linhas (o de uma fica na altura mínima). */
+  min-height: var(--touch-target); padding: var(--space-1) var(--space-4); border-radius: var(--radius-md);
   font-weight: var(--weight-medium); font-size: var(--type-body); text-align: left;
   transition: background var(--motion-fast) var(--ease-out), color var(--motion-fast), box-shadow var(--motion-fast);
 }

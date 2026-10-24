@@ -291,9 +291,12 @@ function AcoesPrincipaisDoTrabalho({ vida, irPara }: { vida: Vida; irPara: (a: A
   const carreira = !!e && !['aprendiz', 'estagio'].includes(e.contrato);
   const sp = situacaoProfissional(vida);
   const semVinculo = !e && sp.semVinculo;
+  // REWORK 11 · QA (D6): para a carreira especial (atleta, comissão técnica, artista, mandato), o emprego comum é outra
+  // escolha — "Mudar de trabalho" e "Candidaturas" não são o centro da tela (as candidaturas só aparecem se houver).
+  const especial = modo === 'atleta' || modo === 'artista' || modo === 'tecnico' || modo === 'politica';
   const acoes: { id: string; rotulo: string; destino: Aba; nota?: string }[] = [
-    { id: 'vagas', rotulo: e ? 'Mudar de trabalho: ver vagas' : semVinculo ? 'Ver outros trabalhos' : vida.trabalho.historico.length ? 'Procurar trabalho' : 'Procurar o primeiro trabalho', destino: 'vagas', nota: semVinculo ? 'a carreira continua sua — outro trabalho é escolha, e a vida pergunta antes' : e && (modo === 'atleta' || modo === 'artista') ? 'a carreira continua sua — mudar é escolha' : undefined },
-    { id: 'candidaturas', rotulo: 'Candidaturas e entrevistas', destino: 'vagas', nota: enviadas ? `${enviadas} em andamento` : 'nenhuma em andamento' },
+    { id: 'vagas', rotulo: e && !especial ? 'Mudar de trabalho: ver vagas' : e || semVinculo ? 'Ver outros trabalhos' : vida.trabalho.historico.length ? 'Procurar trabalho' : 'Procurar o primeiro trabalho', destino: 'vagas', nota: semVinculo ? 'a carreira continua sua — outro trabalho é escolha, e a vida pergunta antes' : e && especial ? (modo === 'politica' ? 'o mandato continua — outro trabalho é escolha' : 'a carreira continua sua — mudar é escolha') : undefined },
+    ...(especial && !enviadas ? [] : [{ id: 'candidaturas', rotulo: 'Candidaturas e entrevistas', destino: 'vagas' as Aba, nota: enviadas ? `${enviadas} em andamento` : 'nenhuma em andamento' }]),
     { id: 'carreira', rotulo: 'Minha carreira', destino: 'minha_carreira', nota: carreira ? 'experiência, currículo, projetos, reconhecimento' : 'o currículo, por onde você passou' },
     { id: 'outras', rotulo: 'Outras possibilidades', destino: 'negocio', nota: 'por conta, um negócio, um trabalho em paralelo' }
   ];

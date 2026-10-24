@@ -422,7 +422,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         <div><dt>Renda</dt><dd>{l.renda > 0 ? `${dinheiroCurto(l.renda)}/mês` : c.monetizada !== undefined ? 'monetizada (sem renda agora)' : 'não monetizada'}</dd></div>
         {l.verificacao && <div><dt>Selo</dt><dd>{l.verificacao}</dd></div>}
       </dl>
-      {l.suspensa && <p className="nota nota--ruim"><span aria-hidden>! </span>A conta está suspensa até {anoDe(c.suspensaAte!)}: a {pl.nome} puniu as denúncias{c.motivoPunicao ? ` (${c.motivoPunicao})` : ''}. Até lá, nada de publicar.{(c.suspensoes ?? 0) >= 2 ? ' Mais uma suspensão e a conta é banida.' : ''}</p>}
+      {l.suspensa && <p className="nota nota--ruim"><span aria-hidden>! </span>A conta está suspensa até {anoDe(c.suspensaAte!)}: o {pl.nome} puniu as denúncias{c.motivoPunicao ? ` (${c.motivoPunicao})` : ''}. Até lá, nada de publicar.{(c.suspensoes ?? 0) >= 2 ? ' Mais uma suspensão e a conta é banida.' : ''}</p>}
       {l.suspensa && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'recorrer', plataforma: id } }} agir={agir} variante="discreto" mostrarChance ocultarImpossivel>Recorrer da suspensão</BotaoAcao>}
       {l.toxica && !l.suspensa && <p className="nota nota--atencao">A conta ficou com fama de briguenta: menos gente quer ser marcada por você, e a próxima denúncia pesa.</p>}
       {(c.advertencias ?? 0) > 0 && !l.suspensa && <p className="nota">Advertências: {c.advertencias} de 3{c.motivoPunicao ? ` — a última por ${c.motivoPunicao}` : ''}.{(c.suspensoes ?? 0) > 0 ? ` A conta já foi suspensa ${c.suspensoes === 1 ? 'uma vez' : `${c.suspensoes} vezes`}; na terceira suspensão, é banida.` : ''}</p>}
@@ -433,7 +433,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
       <h4 className="plataforma-painel__sub">{pl.verbo}</h4>
       <p className="nota">{l.noAno >= LIMITE_DO_ANO ? 'O ano já teve publicação demais.' : l.noAno >= 3 ? `Já foram ${l.noAno} neste ano: cada nova alcança um pouco menos.` : 'O que a sua vida tem para mostrar agora:'}</p>
       {avisoComum && <p className="acao__aviso app-tela__aviso">{avisoComum}</p>}
-      <FluxoPublicar key={`${id}:${l.noAno}`} vida={vida} agir={agir} id={id} conteudos={conteudos} promover={promover} setPromover={setPromover} />
+      <FluxoPublicar key={`${id}:${l.noAno}`} vida={vida} agir={agir} id={id} conteudos={conteudos} promover={promover} setPromover={setPromover} motivoComum={avisoComum} />
       </div>
 
       <div className={painel('feed')} role="tabpanel" aria-label="Feed">
@@ -472,8 +472,8 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
             {c.monetizada === undefined && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'monetizar', plataforma: id } }} agir={agir} variante="secundario">{`Monetizar (${pl.monetiza.como})`}</BotaoAcao>}
             {id !== 'onlyfans' && PACOTES.map((pk, k) => <BotaoAcao key={k} vida={vida} acao={{ tipo: 'rede', op: { oque: 'comprar', plataforma: id, pacote: k as 0 | 1 | 2 } }} agir={agir} variante="discreto">{`Comprar ${seguidoresEmPalavras(pk.n)} ${pl.publico[1]} (${dinheiroCurto(custoDoPacote(vida, k as 0 | 1 | 2))})`}</BotaoAcao>)}
           </div>
-          {pl.verificacao === 'notoriedade' && <p className="nota">A verificação não é um clique: a {pl.nome} olha se você é de interesse público (o nome, ou um público grande e de verdade). A resposta sai na virada do ano.</p>}
-          {id !== 'onlyfans' && <p className="nota">Público comprado infla o número, não as curtidas: o engajamento cai, a credibilidade cai — e a {pl.nome} pode descobrir.</p>}
+          {pl.verificacao === 'notoriedade' && <p className="nota">A verificação não é um clique: o {pl.nome} olha se você é de interesse público (o nome, ou um público grande e de verdade). A resposta sai na virada do ano.</p>}
+          {id !== 'onlyfans' && <p className="nota">Público comprado infla o número, não as curtidas: o engajamento cai, a credibilidade cai — e o {pl.nome} pode descobrir.</p>}
           {!apagar
             ? <button type="button" className="botao botao--perigo" onClick={() => setApagar(true)}>Apagar a conta…</button>
             : (
@@ -498,7 +498,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
  * que a vida, a idade, o trabalho e esta rede oferecem — `conteudosPossiveis`), CONFIGURAR (impulsionar, com o preço; o
  * risco dito) e CONFIRMAR. A ação é a de sempre (`rede · publicar`): nenhuma função antiga se perdeu.
  */
-function FluxoPublicar({ vida, agir, id, conteudos, promover, setPromover, aoPublicar }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; conteudos: Conteudo[]; promover: boolean; setPromover: (x: boolean) => void; aoPublicar?: () => void }) {
+function FluxoPublicar({ vida, agir, id, conteudos, promover, setPromover, aoPublicar, motivoComum }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; conteudos: Conteudo[]; promover: boolean; setPromover: (x: boolean) => void; aoPublicar?: () => void; motivoComum?: string }) {
   const [tema, setTema] = useState<TemaPublicacao | null>(null);
   const [passo, setPasso] = useState<'tipo' | 'configurar' | 'confirmar'>('tipo');
   const pl = PLATAFORMAS[id];
@@ -518,7 +518,7 @@ function FluxoPublicar({ vida, agir, id, conteudos, promover, setPromover, aoPub
                 <button type="button" className={`botao botao--${arriscado(t.tema) ? 'discreto' : 'secundario'} fluxo-post__opcao`} disabled={!pode} onClick={() => { setTema(t.tema); setPasso('configurar'); }}>
                   <span><TemaDesenho tema={t.tema} tamanho={18} /> {t.rotulo}</span>
                   {t.dica && <span className="fluxo-post__dica">{t.dica}</span>}
-                  {!pode && d.motivo && <span className="fluxo-post__dica">{d.motivo}</span>}
+                  {!pode && d.motivo && d.motivo !== motivoComum && <span className="fluxo-post__dica">{d.motivo}</span>}
                 </button>
               </li>
             );

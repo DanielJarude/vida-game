@@ -262,12 +262,12 @@ export function disponibilidadeRede(v: Vida, op: OpRede): Veredito {
     if (i < pl.idadeMin) return bloqueio('ilegal', `${pl.nome} é a partir dos ${pl.idadeMin} anos.`);
     if (c) return bloqueio('incompativel', `Você já tem uma conta no ${pl.nome}.`);
     // REWORK 11 · SOC-11: banida é banida — uma conta nova nessa plataforma, só depois de cinco anos.
-    if (guardada?.banida !== undefined && v.t - guardada.banida < BANIMENTO_MESES) return bloqueio('incompativel', `A ${pl.nome} baniu você em ${anoDe(guardada.banida)}${guardada.motivoPunicao ? ` (${guardada.motivoPunicao})` : ''}: uma conta nova, só a partir de ${anoDe(guardada.banida + BANIMENTO_MESES)}.`);
+    if (guardada?.banida !== undefined && v.t - guardada.banida < BANIMENTO_MESES) return bloqueio('incompativel', `O ${pl.nome} baniu você em ${anoDe(guardada.banida)}${guardada.motivoPunicao ? ` (${guardada.motivoPunicao})` : ''}: uma conta nova, só a partir de ${anoDe(guardada.banida + BANIMENTO_MESES)}.`);
     if (v.redes?.contas[pl.id]?.apagada !== undefined && v.t - v.redes.contas[pl.id].apagada! < 12) return bloqueio('incompativel', 'Você apagou essa conta há pouco. Espere um tempo para começar outra.');
     return PERMITIDO;
   }
   if (!c) return bloqueio('impossivel', `Você não tem conta no ${pl.nome}.`);
-  if (suspensa(v, c) && op.oque !== 'apagar_conta' && op.oque !== 'apagar_publicacao') return bloqueio('incompativel', `A conta está suspensa até ${anoDe(c.suspensaAte!)}: a ${pl.nome} puniu as denúncias${c.motivoPunicao ? ` (${c.motivoPunicao})` : ''}.`);
+  if (suspensa(v, c) && op.oque !== 'apagar_conta' && op.oque !== 'apagar_publicacao') return bloqueio('incompativel', `A conta está suspensa até ${anoDe(c.suspensaAte!)}: o ${pl.nome} puniu as denúncias${c.motivoPunicao ? ` (${c.motivoPunicao})` : ''}.`);
   switch (op.oque) {
     case 'publicar': {
       if (!conteudosPossiveis(v, pl.id).some(t => t.tema === op.tema)) return bloqueio('impossivel', 'Não há o que mostrar disso agora.');
@@ -735,17 +735,17 @@ const SUSPENSOES_ATE_BANIR = 3;
 export function advertir(v: Vida, pl: Plataforma, c: ContaSocial, motivo: string): string {
   c.advertencias = (c.advertencias ?? 0) + 1;
   c.motivoPunicao = motivo;
-  if (c.advertencias < 3) return `A ${pl.nome} mandou uma advertência por ${motivo} (${c.advertencias} de 3).`;
+  if (c.advertencias < 3) return `O ${pl.nome} mandou uma advertência por ${motivo} (${c.advertencias} de 3).`;
   c.advertencias = 0;
   c.suspensoes = (c.suspensoes ?? 0) + 1;
   if (c.suspensoes >= SUSPENSOES_ATE_BANIR) {
     c.banida = v.t; c.apagada = v.t; c.suspensaAte = undefined; c.recurso = undefined;
     escrever(v, { texto: `A conta no ${pl.nome} foi banida de vez (${motivo}), depois de ${c.suspensoes} suspensões.${c.monetizada !== undefined ? ' A renda dela acabou junto.' : ''}`, relevancia: 'biografia', tema: 'amizade', tom: 'ruim' });
-    return `Foi a terceira suspensão: a ${pl.nome} baniu a conta de vez (${motivo}).${c.monetizada !== undefined ? ' A renda acabou junto.' : ''}`;
+    return `Foi a terceira suspensão: o ${pl.nome} baniu a conta de vez (${motivo}).${c.monetizada !== undefined ? ' A renda acabou junto.' : ''}`;
   }
   c.suspensaAte = v.t + 12; c.recurso = undefined;
   escrever(v, { texto: `A conta no ${pl.nome} foi suspensa por um ano (${motivo}).`, relevancia: publicoReal(c) >= 10000 ? 'biografia' : 'cotidiano', tema: 'amizade', tom: 'ruim' });
-  return `Foi a terceira advertência: a ${pl.nome} suspendeu a conta por um ano (${motivo}). Mais ${SUSPENSOES_ATE_BANIR - c.suspensoes} ${SUSPENSOES_ATE_BANIR - c.suspensoes === 1 ? 'suspensão' : 'suspensões'} e a conta é banida.`;
+  return `Foi a terceira advertência: o ${pl.nome} suspendeu a conta por um ano (${motivo}). Mais ${SUSPENSOES_ATE_BANIR - c.suspensoes} ${SUSPENSOES_ATE_BANIR - c.suspensoes === 1 ? 'suspensão' : 'suspensões'} e a conta é banida.`;
 }
 
 /** Recorrer cabe uma vez por punição: da suspensão em curso, ou do banimento no primeiro ano. */
@@ -766,10 +766,10 @@ const chanceDoRecurso = (c: ContaSocial, banida: boolean) => {
 function recorrer(v: Vida, pl: Plataforma, c: ContaSocial): string {
   const banida = c.banida !== undefined && c.apagada !== undefined;
   c.recurso = v.t;
-  if (!rngDe(v.id, 'recurso', v.t, pl.id).chance(chanceDoRecurso(c, banida))) return `A ${pl.nome} manteve a ${banida ? 'decisão: a conta continua banida' : 'suspensão'}. A resposta veio pronta, assinada por ninguém.`;
+  if (!rngDe(v.id, 'recurso', v.t, pl.id).chance(chanceDoRecurso(c, banida))) return `O ${pl.nome} manteve a ${banida ? 'decisão: a conta continua banida' : 'suspensão'}. A resposta veio pronta, assinada por ninguém.`;
   if (banida) {
     c.apagada = undefined; c.banida = undefined; c.suspensoes = SUSPENSOES_ATE_BANIR - 1;
-    escrever(v, { texto: `A ${pl.nome} aceitou o recurso e devolveu a conta banida.`, relevancia: 'cotidiano', tema: 'amizade', tom: 'bom' });
+    escrever(v, { texto: `O ${pl.nome} aceitou o recurso e devolveu a conta banida.`, relevancia: 'cotidiano', tema: 'amizade', tom: 'bom' });
     return `Recurso aceito: a conta voltou, com os ${seguidoresEmPalavras(c.seguidores)} ${pl.publico[1]} — e qualquer nova suspensão bane de vez.`;
   }
   c.suspensaAte = undefined;
