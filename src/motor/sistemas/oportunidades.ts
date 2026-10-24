@@ -124,7 +124,8 @@ export function processarOportunidades(v: Vida, r: Rng): void {
         return oc ? [{ quem: x.p, oc, nota: pontuarIndicacao(v, oc) + (x === sorteado ? 0.6 : 0) + x.vin.proximidade / 100 + rr.next() * 0.4 }] : [];
       });
       const daArea = opcoes.filter(c => distanciaDaCarreira(v, c.oc) < LIMIAR_MUDANCA);
-      const lista = !especial ? opcoes : daArea.length ? daArea : rr.chance(0.35) ? opcoes : [];
+      // A frequência de antes fica: só há indicação quando o conhecido sorteado tem o que indicar (a pontuação escolhe QUAL).
+      const lista = !opcoes.some(c => c.quem === sorteado.p) ? [] : !especial ? opcoes : daArea.length ? daArea : rr.chance(0.35) ? opcoes : [];
       const melhor = lista.sort((a, b) => b.nota - a.nota)[0];
       if (melhor) {
         const { quem, oc } = melhor;

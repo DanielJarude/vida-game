@@ -688,7 +688,7 @@ function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: bool
         e = entrarComoParalela(v, contratar(v, r, oc, novo.via));
         v.trabalho.atual = guardado;
         v.trabalho.desempregadoDesde = undefined;
-      } else e = contratar(v, r, oc, novo.via);
+      } else { fimDaCarreiraDeAtletaPor(v, oc); e = contratar(v, r, oc, novo.via); }
       aplicarAjuste(e, novo.ajuste);
       if (novo.extra === 'rural_familia' || novo.extra === 'rural_arrendada') iniciarRural(v, novo.extra === 'rural_familia' ? 'familia' : 'arrendada');
       if (novo.extra === 'arte') {
@@ -720,6 +720,19 @@ function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: bool
       return;
     }
   }
+}
+
+/**
+ * REWORK 11 · Fase B — um trabalho principal que não é de atleta encerra a carreira de atleta AGORA, com o registro de
+ * sempre (`esporte.encerrarCarreira`: a marca, a biografia, o convite para a comissão de quem se preparou). Antes, o
+ * emprego novo entrava e a carreira acabava na virada do ano, sem uma linha (`esporte`, o ramo de quem tem outro
+ * trabalho). Quem chega aqui já escolheu: pela tela de vagas (que avisa) ou pela pergunta (que diz que encerra).
+ */
+function fimDaCarreiraDeAtletaPor(v: Vida, oc: Ocupacao): void {
+  const es = v.caminhos.esporte;
+  if (es?.fase !== 'profissional' || OCUPACOES_DE_ATLETA.includes(oc.id)) return;
+  delete v.fatos['esp_sem_clube'];
+  encerrarCarreira(v, es, 'escolha');
 }
 
 /* ===================================================== Contratar fora de `propor` */
@@ -756,6 +769,7 @@ export function contratarComAnalise(v: Vida, r: Rng, oc: Ocupacao, via: string, 
   const novo: NovoCompromisso = { tipo: 'emprego', ocupacaoId: oc.id, via, texto: o.texto, substitui: o.substitui ?? true, ...(o.ajuste ? { ajuste: o.ajuste } : {}) };
   const grandes = analisarEntrada(v, novo).filter(c => c.com !== 'agenda' || c.impede);
   if (!grandes.length) {
+    fimDaCarreiraDeAtletaPor(v, oc);
     const e = contratar(v, r, oc, via);
     aplicarAjuste(e, o.ajuste);
     reconciliacao?.(v);
