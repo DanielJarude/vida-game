@@ -316,6 +316,35 @@ export function blocosFixos(v: Vida, o: { semTrabalho?: boolean; trabalho?: Trab
     const dias = b.dias.filter(d => !choca.some(x => x.dias.includes(d)));
     out[k] = { ...b, dias, detalhe: `nos outros dias, ${adulto.nome} cobre` };
   }
+  // Sem outro adulto em casa, o cuidado se encaixa em volta do trabalho (e do trajeto): a mãe que sai da loja às 19h dá
+  // o jantar às 19h30, e a manhã da criança acaba quando é hora de sair — ninguém "perde" a criança por meia hora que o
+  // motor inventou. O trabalho que entra pela noite (o show) ou começa de madrugada continua sendo um choque de verdade.
+  if (!adulto) for (let k = 0; k < out.length; k++) {
+    const b = out[k];
+    if (b.origem !== 'filhos' && b.id !== 'cuidar') continue;
+    const fixos = out.filter(x => (x.origem === 'trabalho' || x.origem === 'trajeto') && sobrepoe(x, b));
+    if (!fixos.length) continue;
+    if (b.inicio >= h(12)) {
+      if (fixos.some(x => x.fim > h(20, 30))) continue;
+      const inicio = Math.max(...fixos.map(x => x.fim));
+      out[k] = { ...b, inicio, fim: Math.min(FECHA, Math.max(b.fim, inicio + 60)), detalhe: 'depois do trabalho' };
+    } else {
+      // A manhã, dia a dia: acaba quando é hora de sair; onde não sobra meia hora antes (o trajeto começa às 6h), a
+      // criança sai junto — a creche ou a escola fica no caminho — e esse dia não tem bloco à parte.
+      const porFim = new Map<number, Dia[]>();
+      const junto: Dia[] = [];
+      for (const d of b.dias) {
+        const doDia = fixos.filter(x => x.dias.includes(d));
+        const fim = doDia.length ? Math.min(b.fim, ...doDia.map(x => x.inicio)) : b.fim;
+        if (fim - 30 < ABRE) { junto.push(d); continue; }
+        porFim.set(fim, [...(porFim.get(fim) ?? []), d]);
+      }
+      const detalhe = junto.length ? 'nos dias de sair cedo, vai junto no caminho (creche ou escola)' : 'antes de sair';
+      const novos = [...porFim].map(([fim, dias], j) => ({ ...b, id: j ? `${b.id}_${j}` : b.id, dias, inicio: Math.max(ABRE, fim - (b.fim - b.inicio)), fim, detalhe }));
+      out.splice(k, 1, ...novos);
+      k += novos.length - 1;
+    }
+  }
   for (let k = out.length - 1; k >= 0; k--) if ((out[k].origem === 'filhos' || out[k].id === 'cuidar') && !out[k].dias.length) out.splice(k, 1);
   if (i >= 18) {
     // REWORK 11 · ROT-11.2: o bicho tem janela, não hora marcada. O passeio e a comida procuram o primeiro horário livre

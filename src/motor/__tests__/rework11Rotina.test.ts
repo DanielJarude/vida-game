@@ -83,6 +83,24 @@ describe('ROT-11.2 · o cuidado com o bicho e com a casa não cria conflito arti
   });
 });
 
+describe('ROT-11.2 · sozinho com os filhos', () => {
+  it('quem sai da loja às 19h e mora só com a criança cuida dela depois do trabalho — sem a meia hora de conflito inventada', () => {
+    let v = comEmprego('gerente_loja');
+    v = em(v, x => { comFilho(x, 4); });
+    const noite = blocosFixos(v).find(b => b.id === 'filhos_pequenos')!;
+    const fimDoTrabalho = Math.max(...blocosFixos(v).filter(b => b.origem === 'trabalho' || b.origem === 'trajeto').filter(b => b.dias.includes(0) && b.fim <= 21 * 60).map(b => b.fim));
+    expect(noite.inicio).toBeGreaterThanOrEqual(fimDoTrabalho);
+    expect(noite.fim - noite.inicio).toBeGreaterThanOrEqual(60);
+    expect(agendaDaSemana(v).conflitos.some(c => c.perde.startsWith('filhos'))).toBe(false);
+  });
+
+  it('o show que entra pela noite continua sendo um choque de verdade para quem está sozinho com a criança', () => {
+    let v = comEmprego('musico_profissional');
+    v = em(v, x => { comFilho(x, 3); });
+    expect(blocosFixos(v).find(b => b.id === 'filhos_pequenos')!.inicio).toBe(18 * 60 + 30);
+  });
+});
+
 describe('ROT-11.3 · estresse, realização e felicidade com causas reais', () => {
   it('mudanças de país em sequência e por transferência pesam menos que a primeira, sozinha', () => {
     const v = adulto(30, { semente: 31 });
