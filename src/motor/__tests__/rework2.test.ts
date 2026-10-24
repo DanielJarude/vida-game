@@ -397,7 +397,10 @@ describe('10. busca ativa de relacionamento → encontro → resultado → persi
     const p = criarPessoa(v, criarRng(4), { idade: 27, genero: 'feminino', municipioId: v.moradia.municipioId });
     const vin = vincular(v, p, { origem: 'romance', proximidade: 70, convivio: ['casa'] });
     vin.romance = { estagio: 'namoro', tEstagio: v.t - 12, envolvimento: 70 };
-    expect(tenta(v, { tipo: 'conhecer_alguem', contexto: 'app' })).toBe(false);
+    // REWORK 11 · REL-11.1: com parceria exclusiva, procurar alguém deixou de ser impossível — é escolha dita como traição.
+    const d = disponibilidade(v, { tipo: 'conhecer_alguem', contexto: 'app' });
+    expect(d.grau).toBe('irregular');
+    expect(d.motivo).toMatch(/traição/);
   });
 });
 
