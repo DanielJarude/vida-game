@@ -841,6 +841,8 @@ export type Contrato = 'aprendiz' | 'estagio' | 'clt' | 'servidor' | 'informal' 
 export interface Emprego {
   /** REWORK 4: a organização (`Vida.organizacoes`) onde se trabalha, quando tem nome. */
   orgId?: string;
+  /** REWORK 11 · ESP-11.7: o clube concreto de quem trabalha numa comissão técnica (o nome, como no catálogo). */
+  clube?: string;
   ocupacaoId: string;
   empregador: string;
   contrato: Contrato;
@@ -1575,7 +1577,8 @@ export interface CarreiraEsportiva {
   temporadas?: Temporada[];
   /** REWORK 5: os números da carreira INTEIRA (as temporadas guardam só as 30 últimas) e as transferências com taxa. */
   totais?: { temporadas: number; partidas: number; gols: number; assistencias: number; minutos: number };
-  transferencias?: { t: number; de: string; para: string; taxa: number }[];
+  /** A taxa é na moeda (no poder de compra) do país do clube comprador — `pais` (REWORK 11 · ESP-11.5; ausente: saves antigos). */
+  transferencias?: { t: number; de: string; para: string; taxa: number; pais?: string }[];
   /** O salário do contrato atual (fonte única: `esporte.salarioDoContrato`). */
   salarioContrato?: number;
   /**
@@ -1597,6 +1600,24 @@ export interface CarreiraEsportiva {
    * ao detentor — ou o clube atual compra, se houver proposta aceita.
    */
   emprestimo?: { clube: string; municipioId: string; nivel: 1 | 2 | 3 | 4; desde: number; ate: number };
+  /**
+   * REWORK 11 · ESP-11.2: o que a carreira fez de cada atributo da posição/função (o desvio em relação à técnica, ±14;
+   * `atributosEsportivos`). Ausente (saves antigos): o atributo é a técnica ± o traço de nascença.
+   */
+  atributos?: Partial<Record<string, number>>;
+  /**
+   * REWORK 11 · ESP-11.6: os lances que os momentos do ano somaram (o gol da virada, a defesa no fim) — entram na
+   * temporada EM CURSO, antes do palmarés e dos prêmios dela (`fecharTemporada`), nunca na que já fechou.
+   */
+  lances?: { gols?: number; assistencias?: number; semSofrerGol?: number; podios?: number; ouro?: number };
+  /**
+   * REWORK 11 · sem clube: a marca EXPLÍCITA de "sem clube" (o contrato acabou e ninguém renovou) e o último clube.
+   * Presente = sem clube agora: `clube`/`municipioId`/`nivel` continuam guardando o último vínculo (de onde o mercado
+   * parte), mas nenhuma tela os mostra como atuais (`esporte.clubeAtual`). Sai ao assinar com alguém.
+   */
+  ultimoClube?: { clube: string; municipioId: string; nivel: 1 | 2 | 3 | 4; ate: number };
+  /** REWORK 11 · ESP-11.6: capitão do clube (o clube e desde quando; sai ao trocar de clube). */
+  capitao?: { clube: string; desde: number };
 }
 
 /** Uma proposta concreta de clube (ou de empréstimo): o que se viu é o que se assina. */
@@ -1714,7 +1735,8 @@ export interface PassagemDeTecnico {
   /** Ajuste de força do elenco para a próxima temporada (reforços, preparação, titulares poupados). */
   ajuste?: number;
   /** A decisão (a final do estadual) que ficou para o momento — ou para o sorteio neutro, se o ano não a mostrar. */
-  decisao?: { competicao: string; adversario: string; forca: number; ano: number; t: number };
+  /** `unica` (REWORK 11 · ESP-11.8): final em jogo único (a copa nacional de fora do Brasil); sem ela, ida e volta. */
+  decisao?: { competicao: string; adversario: string; forca: number; ano: number; t: number; unica?: boolean };
   /** Quando renovou pela última vez (o momento da renovação lê isto). */
   tRenovacao?: number;
   /** A passagem começou no meio da temporada (o clube em crise demitiu o técnico e chamou você): de onde se pegou o time. */
@@ -1751,6 +1773,8 @@ export interface TemporadaDeTecnico {
   colocacao?: number;
   /** O estadual: até onde foi. */
   estadual?: 'campeão' | 'vice' | 'semifinal' | 'primeira fase';
+  /** REWORK 11 · ESP-11.8: fora do Brasil, a copa nacional (id estável de `competicoes`) e até onde foi. */
+  copa?: { id: string; fase: FaseDeCopa };
   titulos?: string[];
   acesso?: boolean;
   rebaixamento?: boolean;
@@ -1796,9 +1820,16 @@ export interface ConquistaEsportiva {
   papel?: 'protagonista' | 'elenco';
   /** O texto curto, como a carreira mostra. */
   texto: string;
+  /** REWORK 11 · ESP-11.3: a competição pelo id estável (`competicoes.CompeticaoId`); o nome é apresentação. */
+  competicaoId?: string;
+  /** REWORK 11 · ESP-11.6: um id estável por conquista (a galeria de troféus lê por ele). Só nos títulos. */
+  trofeuId?: string;
 }
 
 export type Posicao = 'goleiro' | 'lateral' | 'zagueiro' | 'volante' | 'meia' | 'ponta' | 'atacante';
+
+/** A fase alcançada numa copa (mata-mata): até onde se foi. */
+export type FaseDeCopa = 'primeira fase' | 'oitavas' | 'quartas' | 'semifinal' | 'vice' | 'campeão';
 
 /** Uma temporada fechada: poucos números, com consequência. */
 export interface Temporada {
@@ -1810,8 +1841,21 @@ export interface Temporada {
   titular: number;
   gols: number;
   assistencias: number;
-  /** Goleiro: jogos sem sofrer gol. Defensor: desarmes/cortes decisivos (abstrato). */
+  /**
+   * Defensor: desarmes/cortes decisivos (abstrato). Goleiro, nos saves antigos: jogos sem sofrer gol — desde o
+   * REWORK 11 (ESP-11.1) o goleiro usa `semSofrerGol`/`golsSofridos` (leitura: `esporte.semSofrerGolDe`).
+   */
   defesa?: number;
+  /** REWORK 11 · ESP-11.1 — goleiro: jogos sem sofrer gol e gols sofridos nos jogos dele (do placar do time). */
+  semSofrerGol?: number;
+  golsSofridos?: number;
+  /** REWORK 11 · ESP-11.5: o país do clube naquela temporada (a liga e a moeda daquele ano) e a liga pelo id estável. */
+  pais?: string;
+  competicaoId?: string;
+  /** REWORK 11 · ESP-11.3: as copas do ano (copa nacional, continental de clubes): o id e a fase alcançada. */
+  copas?: { id: string; fase: FaseDeCopa; jogos: number; final?: string }[];
+  /** REWORK 11 · ESP-11.6: foi capitão do clube nesta temporada. */
+  capitao?: boolean;
   /** A nota da temporada, 0..10 (o que o clube e o mercado leram). */
   nota: number;
   /** Onde o time terminou (1 = campeão). */
@@ -2178,10 +2222,16 @@ export interface LigaDoPais {
   /** A última temporada já jogada (a divisão guardada vale para a seguinte). */
   ano: number;
   div: Record<string, 1 | 2 | 3 | 4>;
-  ultima?: { ano: number; campeoes: Partial<Record<1 | 2 | 3 | 4, string>>; subiram: string[]; cairam: string[] };
+  /** `classificados` (REWORK 11 · ESP-11.3): os clubes da elite que terminaram nas vagas da copa continental do ano seguinte. */
+  ultima?: { ano: number; campeoes: Partial<Record<1 | 2 | 3 | 4, string>>; subiram: string[]; cairam: string[]; classificados?: string[] };
 }
 
 export interface Caminhos {
+  /**
+   * REWORK 11 · ESP-11.7: a licença de treinador (C=1, B=2, A=3, Pro=4) — da pessoa, não do emprego (vale de um clube
+   * para o outro); `emCurso`: o nível que está sendo cursado e quando termina (`oficioDoTecnico`).
+   */
+  licencaDeTreinador?: { nivel: number; t: number; emCurso?: { nivel: 1 | 2 | 3 | 4; ate: number } };
   /** REWORK 9: as ligas de futebol dos países onde a vida jogou ou dirigiu (opcional; nasce quando se precisa). */
   ligas?: Record<string, LigaDoPais>;
   /** REWORK 9 · PROG-01: o que cada frente andou, por fonte, desde o último fechamento de ano (zera na fotografia). */

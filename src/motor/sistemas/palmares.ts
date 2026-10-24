@@ -31,7 +31,8 @@ import { abalar } from './abalo';
 import { divisaoDoNivel, doClube, noClube, oClube } from '../dados/clubes';
 import { paisDaCidade } from '../dados/lugares';
 import { fecharTemporadaDaLiga } from './ligas';
-import { ASSIST, carreirasEsportivas, DEFESA, divisaoDe, GOL, jogosDaTemporada, linhaDaTemporada, NOME_MOD, nomePosicao } from './esporte';
+import { ASSIST, carreirasEsportivas, DEFESA, desarmesDe, divisaoDe, GOL, jogosDaTemporada, linhaDaTemporada, NOME_MOD, nomePosicao, semSofrerGolDe } from './esporte';
+import { aCompeticaoId, daCompeticaoId, faseDoClubeEmPalavras, idDaLiga, nomeDaCompeticao, trofeuIdDe } from './competicoes';
 import { aCompeticao, avaliarPelaModalidade, daCompeticao, individualComEquipe, lideresDaTemporada, perfilDe } from './perfisEsportivos';
 import { formatarMarca, naProva, podiosDe } from './provas';
 
@@ -44,7 +45,8 @@ export function registrarConquista(v: Vida, c: Omit<ConquistaEsportiva, 't'>): C
   const lista = (v.caminhos.palmares ??= []);
   const ja = lista.find(x => x.tipo === c.tipo && x.competicao === c.competicao && x.ano === c.ano && x.clube === c.clube && x.texto === c.texto);
   if (ja) return ja;
-  const x: ConquistaEsportiva = { ...c, t: v.t };
+  // REWORK 11 · ESP-11.6: todo título tem um id estável de troféu (a competição pelo id, quando há; senão, pelo nome).
+  const x: ConquistaEsportiva = { ...c, t: v.t, ...(c.tipo === 'titulo' && !c.trofeuId ? { trofeuId: trofeuIdDe(c.competicaoId ?? c.competicao, c.ano, c.clube) } : {}) };
   lista.push(x);
   if (lista.length > 120) lista.splice(0, lista.length - 120);
   return x;
@@ -69,7 +71,7 @@ export function avaliarTemporada(e: CarreiraEsportiva, t: Temporada): { indice: 
   if (e.modalidade === 'futebol' && t.posicao && je >= 1) {
     const p: Posicao = t.posicao;
     const r = (x: number, taxa: number) => (taxa > 0 ? x / (je * taxa) : 0);
-    const def = r(t.defesa ?? 0, DEFESA[p]), gol = r(t.gols, GOL[p]), ast = r(t.assistencias, ASSIST[p]);
+    const def = r((p === 'goleiro' ? semSofrerGolDe(t) : desarmesDe(t)) ?? 0, DEFESA[p]), gol = r(t.gols, GOL[p]), ast = r(t.assistencias, ASSIST[p]);
     producao = p === 'goleiro' ? def
       : p === 'zagueiro' ? def * 0.8 + gol * 0.1 + ast * 0.1
         : p === 'volante' ? def * 0.7 + ast * 0.2 + gol * 0.1
@@ -102,7 +104,9 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   if (e.modalidade === 'tenis') return;
   const g = ge(v);
   const futebol = e.modalidade === 'futebol';
-  const comp = competicaoDe(e.modalidade, t.nivel, paisDaCidade(e.municipioId));
+  const paisT = t.pais ?? paisDaCidade(e.municipioId);
+  const comp = competicaoDe(e.modalidade, t.nivel, paisT);
+  const compId = futebol ? t.competicaoId ?? idDaLiga(paisT, t.nivel) : undefined;
   const ava = avaliarTemporada(e, t);
   const linha = linhaDaTemporada(v, t).split(' · ').slice(2).join(', ');
   const anteriores = (e.temporadas ?? []).slice(0, -1);
@@ -119,7 +123,7 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   }
   if (t.nivel === 4 && !anteriores.some(x => x.nivel === 4)) {
     registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: `Estreia na elite: ${comp}` });
-    escrever(v, { texto: futebol ? `A primeira temporada na ${divisaoDoNivel(4)}, com ${oClube(e.clube)}: ${t.partidas} jogos.` : `A primeira temporada na elite da modalidade: ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: futebol ? `A primeira temporada na ${divisaoDoNivel(4, paisT)}, com ${oClube(e.clube)}: ${t.partidas} jogos.` : `A primeira temporada na elite da modalidade: ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
   }
 
   // O título: o do clube — e o seu papel nele.
@@ -135,7 +139,7 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
     e.reputacao = clamp((e.reputacao ?? 30) + 1 + Math.floor(t.nivel / 2));
   } else if (t.colocacao === 1 && t.partidas > 0) {
     const protagonista = ava.participacao >= 0.5;
-    registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, papel: protagonista ? 'protagonista' : 'elenco', texto: `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${daCompeticao(comp)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
+    registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano: t.ano, competicao: comp, competicaoId: compId, clube: t.clube, papel: protagonista ? 'protagonista' : 'elenco', texto: `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${daCompeticao(comp)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
     const campeao = flex(g, 'Campeão', 'Campeã', 'Campeão');
     const texto = protagonista
       ? `${campeao} ${daCompeticao(comp)}${futebol ? ` com ${oClube(e.clube)}` : ' com a equipe'}: ${linha}.`
@@ -152,25 +156,53 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   // e os outros clubes do catálogo jogando a mesma temporada. Nos outros esportes de clube, a regra de sempre.
   if (perfilDe(e.modalidade).estrutura === 'clube') {
     const mov = futebol
-      ? fecharTemporadaDaLiga(v, paisDaCidade(e.municipioId), t.ano, t.clube, t.nivel, t.colocacao)
+      ? fecharTemporadaDaLiga(v, paisT, t.ano, t.clube, t.nivel, t.colocacao)
       : t.nivel < 4 && t.colocacao <= (t.nivel === 1 ? 2 : 4) ? 1 : t.nivel >= 2 && t.colocacao >= 17 ? -1 : 0;
     if (mov === 1 && e.nivel === t.nivel) {
       e.nivel = (t.nivel + 1) as 1 | 2 | 3 | 4;
-      const para = competicaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId));
+      const para = competicaoDe(e.modalidade, e.nivel, paisT);
       const texto = `Acesso: ${futebol ? oClube(e.clube) : 'a equipe'} subiu para ${aCompeticao(para)}${ava.participacao >= 0.5 ? ', com você entre os titulares' : ''}.`;
       registrarConquista(v, { tipo: 'acesso', modalidade: e.modalidade, ano: t.ano, competicao: para, clube: t.clube, papel: ava.participacao >= 0.5 ? 'protagonista' : 'elenco', texto: `Acesso para ${aCompeticao(para)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
       escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
       e.reputacao = clamp((e.reputacao ?? 30) + 1);
     } else if (mov === -1 && e.nivel === t.nivel) {
       e.nivel = (t.nivel - 1) as 1 | 2 | 3 | 4;
-      const para = competicaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId));
+      const para = competicaoDe(e.modalidade, e.nivel, paisT);
       registrarConquista(v, { tipo: 'rebaixamento', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: `Rebaixamento ${daCompeticao(comp)}${futebol ? ` com ${oClube(t.clube)}` : ''}` });
       escrever(v, { texto: `${futebol ? cap(oClube(e.clube)) : 'A equipe'} caiu: a próxima temporada é ${para === 'campeonato estadual' ? 'só no estadual' : daCompeticao(para).replace(/^do /, 'no ').replace(/^da /, 'na ').replace(/^das /, 'nas ')}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       abalar(v, 'o rebaixamento do clube', -5, 3);
     }
   }
 
+  registrarCopas(v, e, t);
   premiosDaTemporada(v, r, e, t, ava);
+}
+
+/**
+ * REWORK 11 · ESP-11.3: as copas do ano no palmarés — o título (com o id da competição e do troféu), a final perdida,
+ * e a campanha que vira biografia (semifinal em diante). A conquista improvável (um clube de divisão de baixo campeão
+ * da copa nacional; a continental) repercute mais no nome.
+ */
+function registrarCopas(v: Vida, e: CarreiraEsportiva, t: Temporada): void {
+  const g = ge(v);
+  for (const c of t.copas ?? []) {
+    const nome = nomeDaCompeticao(c.id);
+    const continental = c.id.startsWith('cont:');
+    if (c.fase === 'campeão') {
+      const protagonista = c.jogos >= 3;
+      const texto = `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${daCompeticaoId(c.id)} com ${oClube(t.clube)}`;
+      registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano: t.ano, competicao: nome, competicaoId: c.id, clube: t.clube, papel: protagonista ? 'protagonista' : 'elenco', texto });
+      const zebra = !continental && t.nivel <= 2;
+      escrever(v, { texto: `${texto} (${t.ano})${c.final ? `: a final foi ${c.final}` : ''}${zebra ? ' — um time de divisão de baixo campeão, e o país inteiro falou disso' : ''}.`, relevancia: continental || zebra || t.nivel >= 4 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+      if (protagonista) marcar(v, 'conquista', `${texto} (${t.ano}).`, continental || zebra ? 3 : 2, { dominio: e.modalidade });
+      e.reputacao = clamp((e.reputacao ?? 30) + (protagonista ? (continental ? 4 : 2) + (zebra ? 4 : 0) : 0));
+    } else if (c.fase === 'vice') {
+      registrarConquista(v, { tipo: 'final', modalidade: e.modalidade, ano: t.ano, competicao: nome, competicaoId: c.id, clube: t.clube, texto: `Final ${daCompeticaoId(c.id)} com ${oClube(t.clube)}${c.final ? ` (${c.final})` : ''}` });
+      escrever(v, { texto: `${cap(aCompeticaoId(c.id))} ${t.ano}: ${oClube(t.clube)} ${faseDoClubeEmPalavras(c.fase)}${c.final ? ` (${c.final})` : ''}.`, relevancia: 'biografia', tema: 'trabalho' });
+    } else if (c.fase === 'semifinal' || (continental && c.fase === 'quartas')) {
+      escrever(v, { texto: `${cap(aCompeticaoId(c.id))} ${t.ano}: ${oClube(t.clube)} ${faseDoClubeEmPalavras(c.fase)}.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    }
+  }
 }
 
 /**
@@ -183,7 +215,7 @@ export function premiosDaTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   if (t.nivel < 2 || e.modalidade === 'tenis' || t.partidas === 0) return [];
   const g = ge(v);
   const coletivo = perfilDe(e.modalidade).coletivo;
-  const comp = competicaoDe(e.modalidade, t.nivel, paisDaCidade(e.municipioId));
+  const comp = competicaoDe(e.modalidade, t.nivel, t.pais ?? paisDaCidade(e.municipioId));
   const ganhos: { texto: string; peso: 1 | 2 | 3; rep: number }[] = [];
   // As vagas são poucas e a concorrência é a liga inteira: estar entre os elegíveis não é ganhar.
   const vaga = (p: number) => r.chance(p);
@@ -218,7 +250,7 @@ export function historicoPorClube(e: CarreiraEsportiva): { clube: string; de: nu
   for (const t of e.temporadas ?? []) {
     const ult = out[out.length - 1];
     const x = ult && ult.clube === t.clube ? ult : (out.push({ clube: t.clube, de: t.ano, ate: t.ano, jogos: 0, titular: 0, gols: 0, assistencias: 0, defesa: 0, temporadas: 0 }), out[out.length - 1]);
-    x.ate = t.ano; x.jogos += t.partidas; x.titular += t.titular; x.gols += t.gols; x.assistencias += t.pontos !== undefined ? 0 : t.assistencias; x.defesa += t.defesa ?? 0; x.temporadas += 1;
+    x.ate = t.ano; x.jogos += t.partidas; x.titular += t.titular; x.gols += t.gols; x.assistencias += t.pontos !== undefined ? 0 : t.assistencias; x.defesa += (t.posicao === 'goleiro' ? semSofrerGolDe(t) : desarmesDe(t)) ?? 0; x.temporadas += 1;
   }
   return out;
 }

@@ -6,13 +6,14 @@
  */
 
 import type { Conteudo, Ctx } from './base';
-import { municipio } from '../dados/lugares';
+import { municipio, paisDaCidade } from '../dados/lugares';
 import { aSelecao, divisaoDoNivel, doClube, oClube } from '../dados/clubes';
 import { dinheiro, flex, ge } from '../texto';
 import { aceitarPropostaDeTecnico, passagemAtual, propostaDeTecnico, recusarPropostaDeTecnico } from '../sistemas/tecnico';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const divisao = (n: number) => { const d = divisaoDoNivel(n); return d.startsWith('campeonato') ? `o ${d}` : d.startsWith('divisões') ? `as ${d}` : `a ${d}`; };
+// REWORK 11 · ESP-11.5: a divisão é a do país do clube da proposta (antes, a do país onde se vive).
+const divisao = (n: number, pais?: string) => { const d = divisaoDoNivel(n, pais); return d.startsWith('campeonato') ? `o ${d}` : d.startsWith('divisões') || d.startsWith('ligas') ? `as ${d}` : `a ${d}`; };
 
 export const TECNICO: Conteudo[] = [
   {
@@ -32,9 +33,10 @@ export const TECNICO: Conteudo[] = [
       if (m) {
         const falta = m.rodadas - m.rodada;
         const situacao = m.posicao >= 17 ? 'na zona de rebaixamento' : m.posicao - m.esperada >= 8 ? 'muito abaixo do que o elenco promete' : 'abaixo do que o elenco promete';
-        return `${cap(oClube(p.clube))}, de ${d.nome}, demitiu o técnico depois de ${m.rodada} rodadas ${divisao(p.nivel).replace(/^(o|a|as) /, x => (x === 'o ' ? 'do ' : x === 'a ' ? 'da ' : 'das '))}: o time está em ${m.posicao}º lugar, com ${m.pontos[0]} pontos, ${situacao}. Querem você já, para as ${falta} rodadas que faltam e a temporada seguinte: ${dinheiro(p.salario)} por mês. Os números que contam são só os dos jogos que você dirigir.${longe}`;
+        return `${cap(oClube(p.clube))}, de ${d.nome}, demitiu o técnico depois de ${m.rodada} rodadas ${divisao(p.nivel, paisDaCidade(p.municipioId)).replace(/^(o|a|as) /, x => (x === 'o ' ? 'do ' : x === 'a ' ? 'da ' : 'das '))}: o time está em ${m.posicao}º lugar, com ${m.pontos[0]} pontos, ${situacao}. Querem você já, para as ${falta} rodadas que faltam e a temporada seguinte: ${dinheiro(p.salario)} por mês. Os números que contam são só os dos jogos que você dirigir.${longe}`;
       }
-      return `${cap(oClube(p.clube))}, de ${d.nome}, quer você como ${flex(g, 'técnico', 'técnica')}: ${divisao(p.nivel)}, contrato de ${Math.round(p.meses / 12)} anos, ${dinheiro(p.salario)} por mês.${atual ? ` ${p.nivel > atual.nivel ? 'Divisão acima da sua.' : p.nivel < atual.nivel ? 'Divisão abaixo da sua.' : 'A mesma divisão.'} Seria deixar ${oClube(atual.clube)}.` : ' Faz tempo que você está sem clube.'}${longe}`;
+      const primeira = !(c.v.caminhos.tecnico?.passagens.length);
+      return `${cap(oClube(p.clube))}, de ${d.nome}, quer você como ${flex(g, 'técnico', 'técnica')}: ${divisao(p.nivel, paisDaCidade(p.municipioId))}, contrato de ${Math.round(p.meses / 12)} anos, ${dinheiro(p.salario)} por mês.${atual ? ` ${p.nivel > atual.nivel ? 'Divisão acima da sua.' : p.nivel < atual.nivel ? 'Divisão abaixo da sua.' : 'A mesma divisão.'} Seria deixar ${oClube(atual.clube)}.` : primeira ? ` Seria a primeira vez como ${flex(g, 'técnico', 'técnica')} principal${c.v.trabalho.atual ? ' — e deixar a comissão onde você está' : ''}.` : ' Faz tempo que você está sem clube.'}${longe}`;
     },
     opcoes: [
       { id: 'aceitar', texto: c => (propostaDeTecnico(c.v)?.selecao ? 'Aceitar a seleção' : 'Aceitar'),

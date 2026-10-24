@@ -36,7 +36,7 @@
 import { nomeDoPais, paisDoCatalogo, perfilDoPais, temPerfil } from '../mundo/registro';
 import { nacionalidadesDaVida } from '../mundo/vida';
 import type { Rng } from '../rng';
-import { clamp, criarRng } from '../rng';
+import { clamp, criarRng, rngDe } from '../rng';
 import type { CarreiraEsportiva, Dominio, Posicao, Temporada, TrajetoriaNaSelecao, Vida } from '../tipos';
 import { NOME_MOD } from './esporte';
 import { perfilDe } from './perfisEsportivos';
@@ -46,6 +46,7 @@ import { flex, ge } from '../texto';
 import { marcar } from './marcas';
 import { lesaoAtiva } from './lesoes';
 import { avaliarTemporada, conquistasRecentes, registrarConquista } from './palmares';
+import { aCompeticaoId, campanhaDaSelecao, idDaSelecao, torneioDeSelecoes } from './competicoes';
 
 /** O país da seleção da pessoa (a da nacionalidade; depois da primeira convocação, a que ela escolheu). */
 export const paisEsportivo = (v: Vida): string => v.caminhos.esporte?.selecao?.pais ?? nacionalidadesDaVida(v)[0];
@@ -214,7 +215,7 @@ export function processarSelecao(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tempo
     registrarConquista(v, { tipo: 'selecao', modalidade: e.modalidade, ano: t.ano, competicao: 'seleção', texto: e.modalidade === 'futebol' ? 'Estreia pela seleção' : `Estreia ${nac.naSelecao.replace(/^na /, 'pela ')}` });
   }
   // O torneio do ano (no universo do jogo): cada modalidade tem o seu calendário.
-  const torneio = torneioDoAno(e.modalidade, t.ano);
+  const torneio = torneioDoAno(e.modalidade, t.ano, paisEsportivo(v));
   if (torneio) { if (individual && e.modalidade !== 'tenis') disputarProva(v, r, e, sel, t.ano, torneio, x - CONVOCACAO); else disputarTorneio(v, r, e, sel, t.ano, torneio, titular); }
   // A braçadeira: para quem é titular há tempo, com muitos jogos e a idade de liderar.
   if (!individual && !sel.capitao && titular && sel.jogos >= 30 && idade(v) >= 26 && (e.reputacao ?? 0) >= 70 && r.chance(0.25)) {
@@ -232,7 +233,10 @@ export function processarSelecao(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tempo
  * todo ano; as individuais, o mundial nos anos ímpares e os jogos
  * multiesportivos a cada quatro anos.
  */
-export function torneioDoAno(d: Dominio, ano: number): string | undefined {
+export function torneioDoAno(d: Dominio, ano: number, pais?: string): string | undefined {
+  // REWORK 11 · ESP-11.4: no futebol, o torneio tem nome (a Copa do Mundo; a Copa América, a Eurocopa — o da confederação
+  // do país: `competicoes`). Sem país (as vidas de antes), o nome genérico de sempre.
+  if (d === 'futebol' && pais) { const id = torneioDeSelecoes(pais, ano); return id ? aCompeticaoId(id) : undefined; }
   if (d === 'futebol') return ano % 4 === 2 ? 'o torneio mundial de seleções' : ano % 4 === 0 ? 'o torneio continental de seleções' : undefined;
   if (d === 'tenis') return 'a competição mundial por equipes';
   if (d === 'basquete' || d === 'volei') return ano % 4 === 0 ? 'os jogos multiesportivos mundiais' : ano % 4 === 2 ? 'o campeonato mundial' : ano % 4 === 3 ? 'o campeonato continental' : undefined;
@@ -249,6 +253,7 @@ function disputarProva(v: Vida, r: Rng, e: CarreiraEsportiva, sel: TrajetoriaNaS
   const k = forca >= 0.85 ? 4 : forca >= 0.72 ? 3 : forca >= 0.6 ? 2 : forca >= 0.4 ? 1 : 0;
   const campanha = ['eliminação nas eliminatórias', 'semifinal', 'final', 'medalha de bronze', 'medalha de prata', 'medalha de ouro'][k + (k === 4 && r.chance(0.35) ? 1 : 0)];
   sel.torneios.push({ ano, nome, campanha, jogos: k >= 2 ? 3 : k + 1 });
+  sel.jogos += k >= 2 ? 3 : k + 1;
   const medalha = /^medalha/.test(campanha);
   if (medalha) sel.medalhas = (sel.medalhas ?? 0) + 1;
   const nac = representacaoDe(v, e.modalidade);
@@ -262,18 +267,18 @@ const FASES = ['caiu na fase de grupos', 'caiu nas oitavas', 'caiu nas quartas',
 
 function disputarTorneio(v: Vida, r: Rng, e: CarreiraEsportiva, sel: TrajetoriaNaSelecao, ano: number, nome: string, titular: boolean): void {
   // A campanha é da seleção (o mundo), com um pouco de quem joga: ninguém ganha torneio sozinho.
-  const mundial = nome.includes('mundial') || nome.includes('multiesportivos');
-  // A força do país em cada modalidade (no universo do jogo): a campanha é da seleção, não só de quem joga.
-  const pesos = e.modalidade === 'futebol' || e.modalidade === 'volei'
-    ? (mundial ? [0.15, 0.25, 0.27, 0.13, 0.08, 0.12] : [0.12, 0, 0.3, 0.25, 0.13, 0.2])
-    : e.modalidade === 'tenis' ? [0.4, 0.3, 0.17, 0.08, 0.03, 0.02]
-      : mundial ? [0.3, 0.3, 0.22, 0.1, 0.05, 0.03] : [0.15, 0, 0.35, 0.28, 0.12, 0.1];
-  if (titular) { pesos[5] += 0.02; pesos[0] -= 0.02; }
-  let x = r.next(), k = 0;
-  for (; k < pesos.length - 1; k++) { x -= pesos[k]; if (x <= 0) break; }
-  const jogos = [3, 4, 5, 6, 7, 7][k] ?? 3;
-  const jogou = titular ? jogos : Math.round(jogos * 0.3);
+  const mundial = nome.includes('mundial') || nome.includes('multiesportivos') || nome === 'a Copa do Mundo';
+  // REWORK 11 · ESP-11.4: a campanha é JOGADA (grupos e mata-mata) com a força do país na modalidade (antes, um sorteio
+  // de fase com pesos fixos: o Brasil e San Marino com a mesma chance de título). O acaso é da vida e do ano.
+  const pais = sel.pais ?? paisEsportivo(v);
+  const id = e.modalidade === 'futebol' ? torneioDeSelecoes(pais, ano) ?? idDaSelecao('mundial') : `sel:${e.modalidade}:${mundial ? 'mundial' : 'continental'}`;
+  void r;
+  const camp = campanhaDaSelecao(rngDe(v.id, 'torneio_selecao', e.modalidade, ano), id, pais, titular ? 0.12 : 0.03, e.modalidade);
+  const k = ['primeira fase', 'oitavas', 'quartas', 'semifinal', 'vice', 'campeão'].indexOf(camp.fase);
+  const jogou = titular ? camp.jogos : Math.round(camp.jogos * 0.3);
   sel.torneios.push({ ano, nome, campanha: FASES[k], jogos: jogou });
+  // Os jogos do torneio também são jogos pela seleção (antes, ficavam só no torneio: "N jogos" contava menos que o vivido).
+  sel.jogos += jogou;
   const g = ge(v);
   const nac = representacaoDe(v, e.modalidade);
   const campea = k === 5;
@@ -282,6 +287,6 @@ function disputarTorneio(v: Vida, r: Rng, e: CarreiraEsportiva, sel: TrajetoriaN
     : `Disputou ${nome} com ${nac.selecao}${titular ? ', como titular' : ''}: a ${e.modalidade === 'tenis' ? 'equipe' : 'seleção'} ${FASES[k]}.`;
   escrever(v, { texto, relevancia: campea || mundial ? 'marco' : 'biografia', tema: 'trabalho', tom: campea ? 'bom' : k >= 3 ? undefined : 'ruim' });
   const de = (n: string) => n.replace(/^o /, 'do ').replace(/^a /, 'da ').replace(/^os /, 'dos ');
-  registrarConquista(v, { tipo: 'selecao', modalidade: e.modalidade, ano, competicao: nome, papel: titular ? 'protagonista' : 'elenco', texto: campea ? `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${de(nome)}` : `${nome.charAt(0).toUpperCase() + nome.slice(1)}: a ${e.modalidade === 'tenis' ? 'equipe' : 'seleção'} ${FASES[k]}` });
+  registrarConquista(v, { tipo: 'selecao', modalidade: e.modalidade, ano, competicao: nome, competicaoId: id, papel: titular ? 'protagonista' : 'elenco', texto: campea ? `${flex(g, 'Campeão', 'Campeã', 'Campeão')} ${de(nome)}` : `${nome.charAt(0).toUpperCase() + nome.slice(1)}: a ${e.modalidade === 'tenis' ? 'equipe' : 'seleção'} ${FASES[k]}` });
   if (campea) { marcar(v, 'conquista', texto, 3, { dominio: e.modalidade }); e.reputacao = clamp((e.reputacao ?? 30) + 3); }
 }

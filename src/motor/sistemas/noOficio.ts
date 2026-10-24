@@ -31,6 +31,8 @@ import { lesaoAtiva } from './lesoes';
 import { contaAtiva } from './redesBase';
 import { posicaoDe } from './esporte';
 import { temChefia, temEmpresa, temOrgao } from './situacaoProfissional';
+import { treinarAtributos } from './atributosEsportivos';
+import { funcaoBasquete } from './modalidades';
 
 export type OqueOficio =
   | 'projeto' | 'chefia' | 'colega' | 'capacitacao'
@@ -182,6 +184,9 @@ export function executarOficio(v: Vida, r: Rng, oque: OqueOficio): string {
       if (oque === 'treino_fisico') { v.corpo.forma = clamp(v.corpo.forma + 4); praticar(v, r, es.modalidade, 0.1, 1); v.fatos['oficio:fisico'] = v.t; }
       else { praticar(v, r, es.modalidade, oque === 'treino_finalizacao' ? 0.35 : 0.25, 1.1); v.fatos[oque === 'treino_finalizacao' ? 'oficio:tecnico' : 'oficio:tatico'] = v.t; }
       if (oque === 'treino_tatico') es.reputacao = clamp((es.reputacao ?? 40) + 1);
+      // REWORK 11 · ESP-11.2: o que o treino treina é o que sobe — os atributos da posição (o reflexo e a saída do goleiro,
+      // a finalização do atacante, o passe do meia), que a temporada lê na nota e na produção.
+      treinarAtributos(es, es.modalidade === 'futebol' ? posicaoDe(v, es) : undefined, es.modalidade === 'basquete' ? funcaoBasquete(v) : undefined, oque === 'treino_fisico' ? 'fisico' : oque === 'treino_tatico' ? 'tatico' : 'tecnico');
       return oque === 'treino_fisico' ? 'Academia antes do treino, tiro de cem metros depois. O corpo reclamou — e respondeu.' : oque === 'treino_tatico' ? 'Uma hora a mais com a comissão, prancheta na mão. O treinador passou a te chamar para explicar o posicionamento.' : treinoTecnico(v).feito;
     }
     case 'video': {

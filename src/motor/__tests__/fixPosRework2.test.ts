@@ -390,7 +390,8 @@ describe('futebol profissional: uma carreira jogável', () => {
     v.caminhos.esporte!.posicao = 'goleiro';
     const g = fecharTemporada(clone(v), criarRng(4), clone(v).caminhos.esporte!);
     expect(g.gols).toBe(0);
-    expect(g.defesa).toBeDefined();
+    // REWORK 11 · ESP-11.1: o goleiro conta os jogos sem sofrer gol em `semSofrerGol` (o `defesa` é só dos desarmes).
+    expect(g.semSofrerGol).toBeDefined();
     expect(linhaDaTemporada(v, g)).toMatch(/sem sofrer gol/);
     let golsA = 0; let golsZ = 0;
     for (let s = 1; s <= 12; s++) {

@@ -48,6 +48,10 @@ function tecnico(o: { exAtleta?: boolean } = {}): Vida {
     x.trabalho.experiencia['treino'] = 48;
     contratar(x, r, ocupacao('tecnico_futebol'), 'oportunidade');
     processarTecnico(x, r);
+    // REWORK 11 · ESP-11.7: o primeiro comando fora da cidade é uma PROPOSTA (antes, assumia e mudava de cidade sem
+    // perguntar): o técnico do teste aceita — e a temporada é jogada.
+    const pr = x.caminhos.tecnico?.proposta;
+    if (!passagemAtual(x) && pr) { aceitarPropostaDeTecnico(x, r, pr.id); processarTecnico(x, r); }
     x.momento = null;
   }).vida;
 }
@@ -151,7 +155,8 @@ describe('demissão, clube novo, proposta executada como mostrada', () => {
       const antes = t.jogos;
       p.decisao = { competicao: 'campeonato estadual', adversario: 'Náutico', forca: 0, ano: t.ano, t: x.t };
       t.estadual = 'vice';
-      expect(decidirFinal(x, criarRng(1), 'otimo')).toBe(true);
+      // REWORK 11 · ESP-11.8: a final devolve também o placar que o texto do momento conta.
+      expect(decidirFinal(x, criarRng(1), 'otimo')?.venceu).toBe(true);
       expect(t.jogos).toBe(antes + 2);
       expect(t.v + t.e + t.d).toBe(t.jogos);
       expect(t.estadual).toBe('campeão');

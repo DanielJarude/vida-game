@@ -20,14 +20,15 @@
 
 import { ehEspecialidadeMedica } from './dados/especialidades';
 import { derivarPredisposicoes } from './sistemas/pessoa';
-import { posicaoSugerida } from './sistemas/esporte';
+import { OCUPACOES_DE_ATLETA, posicaoSugerida } from './sistemas/esporte';
+import { clubePorNome } from './dados/clubes';
 import { fixarEstatura } from './sistemas/modalidades';
 import { alvoDaNotoriedade } from './sistemas/notoriedade';
 import type { Financas,
   Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, TabelaEmCurso, Tema, Vida, Vinculo
 } from './tipos';
 import { anoDe, tDe, idadeEm } from './tempo';
-import { existeMunicipio, municipioPorNome, MUNICIPIOS } from './dados/lugares';
+import { existeMunicipio, municipioPorNome, MUNICIPIOS, paisDaCidade } from './dados/lugares';
 import { existePais } from './mundo/registro';
 import { CURSOS, cursoOuNulo } from './dados/cursos';
 import { ocupacaoOuNula } from './dados/ocupacoes';
@@ -105,7 +106,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1605,6 +1606,27 @@ export function normalizarRework11Relacoes(v: Vida): void {
     const rom = v.vinculos?.[k.slice('noivado_'.length)]?.romance;
     if (!rom || rom.estagio === 'casamento' || rom.estagio === 'ex') { delete v.fatos[k]; if (rom) delete rom.noivado; continue; }
     rom.noivado ??= { t: v.fatos[k] };
+  }
+}
+
+/**
+ * REWORK 11 · Fase C (esportes) — as vidas salvas antes: (1) cada temporada ganha o país em que foi jogada (pelo clube
+ * no catálogo; senão, o do clube de agora) — a liga certa no histórico depois de transferências entre países; (2) cada
+ * taxa de transferência, o país do comprador (a moeda); (3) o atleta que estava sem clube (o contrato acabou, nenhuma
+ * renovação) ganha a marca explícita de "sem clube" com o último clube. Só campos opcionais; nada é reescrito.
+ */
+export function normalizarRework11Esportes(v: Vida): void {
+  const cs = [v.caminhos?.esporte, ...(v.caminhos?.carreirasEsportivas ?? [])].filter((x): x is NonNullable<typeof x> => !!x);
+  for (const e of cs) {
+    const aqui = existeMunicipio(e.municipioId) ? paisDaCidade(e.municipioId) : 'BR';
+    for (const t of e.temporadas ?? []) {
+      if (t.pais) continue;
+      const c = e.modalidade === 'futebol' ? clubePorNome(t.clube, aqui) : undefined;
+      t.pais = c ? paisDaCidade(c.cidade) : aqui;
+    }
+    for (const x of e.transferencias ?? []) { if (x.pais) continue; const c = clubePorNome(x.para, aqui); x.pais = c ? paisDaCidade(c.cidade) : aqui; }
+    const atleta = !!v.trabalho?.atual && OCUPACOES_DE_ATLETA.includes(v.trabalho.atual.ocupacaoId);
+    if (e === v.caminhos.esporte && e.fase === 'profissional' && !atleta && !e.ultimoClube && v.fatos?.['esp_sem_clube'] !== undefined) e.ultimoClube = { clube: e.clube, municipioId: e.municipioId, nivel: e.nivel, ate: v.fatos['esp_sem_clube'] };
   }
 }
 

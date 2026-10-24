@@ -42,7 +42,7 @@ import { doClube, noClube, oClube, peloClube } from '../dados/clubes';
 import { cursoOuNulo } from '../dados/cursos';
 import { OCUPACOES } from '../dados/ocupacoes';
 import { estatura, funcaoBasquete, vantagemDeEstatura } from './modalidades';
-import { categoriaDeLuta, funcaoVolei, naProva, provaDe } from './provas';
+import { categoriaDeLuta, funcaoVolei, provaDe } from './provas';
 import { NOME_MOD } from './esporte';
 import { registrarNoMandato, NOME_PRIORIDADE } from './politica';
 import { novaOportunidade } from './oportunidades';
@@ -57,7 +57,7 @@ import { negocioAtivo } from './negocio';
 import { empregoAcademico, publicarArtigo, registrarProducao, vidaAcademica } from './academia';
 import { mercadoDoTrabalho } from './mercados';
 import { marcar } from './marcas';
-import { competicaoDe, daCompeticao, registrarConquista } from './palmares';
+import { daCompeticao, registrarConquista } from './palmares';
 import { anoDe } from '../tempo';
 import { OCUPACAO_TECNICO, decidirFinal, deixarOClube, demitirDoComando, passagemAtual, trabalhoDoTecnico } from './tecnico';
 import { economiaLocal } from '../dados/lugares';
@@ -386,7 +386,16 @@ function aplicar(v: Vida, tr: Trajetoria, ef: Efeitos, d: Dados, desfecho: Desfe
   const t = v.caminhos.esporte?.temporadas?.slice(-1)[0];
   if (ef.apoio && v.caminhos.politica) v.caminhos.politica.apoio = clamp(v.caminhos.politica.apoio + ef.apoio);
   if (ef.desgaste && v.caminhos.politica) desgastar(v.caminhos.politica, ef.desgaste, v.caminhos.politica.mandato ? 'mandato' : 'exposicao');
-  if (t && tr === 'futebol') { if (ef.gols) t.gols += ef.gols; if (ef.assistencias) t.assistencias += ef.assistencias; if (ef.defesa && t.defesa !== undefined) t.defesa += ef.defesa; }
+  // REWORK 11 · ESP-11.6: o lance do momento (o gol, a assistência, o jogo sem sofrer gol) é da temporada EM CURSO — entra
+  // nela quando fecha, antes do palmarés, dos prêmios e dos totais (antes, mudava a temporada já fechada e premiada).
+  const es0 = v.caminhos.esporte;
+  if (es0?.fase === 'profissional' && tr === 'futebol' && (ef.gols || ef.assistencias || ef.defesa)) {
+    const l = (es0.lances ??= {});
+    if (ef.gols) l.gols = (l.gols ?? 0) + ef.gols;
+    if (ef.assistencias) l.assistencias = (l.assistencias ?? 0) + ef.assistencias;
+    if (ef.defesa && es0.posicao === 'goleiro') l.semSofrerGol = (l.semSofrerGol ?? 0) + ef.defesa;
+  }
+  void t;
   // REWORK 10.6 · P8: os valores das situações estão no custo de vida de referência; aqui viram o custo de onde se vive
   // (antes, entravam crus: a mesma oficina custava o mesmo em São Paulo, no sertão e em Lisboa).
   if (ef.dinheiro) { const x = noCustoDaqui(v, ef.dinheiro); const n = tr === 'negocio' ? negocioAtivo(v) : undefined; if (n) n.caixa = (n.caixa ?? 0) + x; else v.financas.conta += x; }
@@ -399,7 +408,8 @@ function aplicar(v: Vida, tr: Trajetoria, ef: Efeitos, d: Dados, desfecho: Desfe
     if (ef.pressao) pt.pressao = clamp(pt.pressao + ef.pressao);
     if (ef.vestiario) pt.vestiario = clamp(pt.vestiario + ef.vestiario);
     if (ef.ajuste) pt.ajuste = clamp((pt.ajuste ?? 0) + ef.ajuste, -4, 4);
-    if (pt.decisao && d.final !== undefined) decidirFinal(v, r, desfecho);
+    // REWORK 11 · ESP-11.8: a final jogada devolve o placar — e o texto do desfecho é montado com ele.
+    if (pt.decisao && d.final !== undefined) { const f = decidirFinal(v, r, desfecho); if (f) d._placar = f.placar; }
   }
   ef.extra?.(v, d);
 }
@@ -1032,19 +1042,13 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
  * texto que a temporada campeã teria — se ela ainda não era.
  */
 function finalNacional(v: Vida, ouro: boolean): void {
+  // REWORK 11 · ESP-11.6: a final é da temporada EM CURSO. O pódio e o ouro entram nela quando fecha
+  // (`esporte.fecharTemporada`), antes do palmarés — que registra o título com a colocação que a temporada teve. Antes, o
+  // ouro reescrevia a colocação da temporada já fechada (depois do acesso e do rebaixamento decididos).
   const es = v.caminhos.esporte;
-  const t = es?.temporadas?.slice(-1)[0];
-  if (!es || !t) return;
-  if (t.prova) { t.prova.podios += 1; t.prova.finais = Math.max(1, t.prova.finais); if (ouro) t.prova.vitorias += 1; }
-  else if (t.luta) { t.luta.podios += 1; if (ouro) t.luta.titulos += 1; }
-  else t.gols += 1;
-  if (!ouro) { t.colocacao = Math.min(t.colocacao, 3); return; }
-  if (t.colocacao === 1) return;
-  t.colocacao = 1;
-  const comp = competicaoDe(es.modalidade, t.nivel);
-  const onde = t.prova ? ` ${naProva(t.prova.nome)}` : t.luta ? `, na categoria ${t.luta.categoria}` : '';
-  registrarConquista(v, { tipo: 'titulo', modalidade: es.modalidade, ano: t.ano, competicao: comp, clube: t.clube, papel: 'protagonista', texto: `${flex(ge(v), 'Campeão', 'Campeã', 'Campeão')} ${daCompeticao(comp)} de ${NOME_MOD[es.modalidade] ?? es.modalidade}${onde}` });
-  es.reputacao = clamp((es.reputacao ?? 30) + 1 + Math.floor(t.nivel / 2));
+  if (!es || es.fase !== 'profissional') return;
+  const l = (es.lances ??= {});
+  if (ouro) l.ouro = (l.ouro ?? 0) + 1; else l.podios = (l.podios ?? 0) + 1;
 }
 
 /** Um sorteio estável para a lesão que um desfecho causa (o desfecho já foi sorteado; a gravidade é dele). */
@@ -1227,6 +1231,10 @@ const trabalhoF = (v: Vida) => F('trabalho no banco', trabalhoDoTecnico(v) / 6);
 const vestiarioF = (v: Vida) => F('vestiário', (pt(v).vestiario - 50) / 70);
 const nomeTec = (v: Vida) => F('nome de técnico', ((v.caminhos.tecnico?.reputacao ?? 30) - 50) / 120);
 const clubeT = (v: Vida) => oClube(pt(v).clube);
+/** O desfecho da final com o placar que o motor jogou (`tecnico.decidirFinal`). */
+const fimDaFinal = (frase: string) => (_v: Vida, d: Dados) => `${frase}${d._placar ? ` ${String(d._placar)}` : ''}`;
+/** "o estadual", "a Coppa Italia" — o torneio da final. */
+const aFinalDe = (d: Dados) => { const n = String(d.competicao ?? 'campeonato estadual'); return n === 'campeonato estadual' ? 'o estadual' : /^(copa nacional)$/.test(n) ? 'a copa nacional' : `a ${n}`; };
 const capT = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const DT = (otimo: string | ((v: Vida, d: Dados) => string), bom: string | ((v: Vida, d: Dados) => string), ruim: string | ((v: Vida, d: Dados) => string), pessimo: string | ((v: Vida, d: Dados) => string), ef: Partial<Record<Desfecho, Efeitos>>, mem: Partial<Record<Desfecho, string | ((v: Vida, d: Dados) => string)>> = {}): Record<Desfecho, DesfechoModelo> => ({
   otimo: { texto: otimo, efeitos: { humor: 3, ...ef.otimo }, memoria: mem.otimo },
@@ -1334,17 +1342,18 @@ const MODELOS_TECNICO: ModeloSituacao[] = [
         desfechos: DT('Saiu com dignidade: a entrevista de despedida foi elogiada.', 'Entregou o cargo.', 'Entregou o cargo; a multa ficou para os advogados.', 'Entregou o cargo, e o clube disse que já ia demitir.', { otimo: { nome: 1, extra: v => deixarOClube(v, 'saiu') }, bom: { extra: v => deixarOClube(v, 'saiu') }, ruim: { extra: v => deixarOClube(v, 'saiu') }, pessimo: { nome: -1, extra: v => deixarOClube(v, 'saiu') } }, { otimo: v => `Entregou o cargo ${doClube(pt(v).clube)} antes da demissão — e saiu com a palavra.` }) }
     ] },
   { id: 'tec_final', trajetoria: 'tecnico', tema: 'decisao', recarga: 1, peso: () => 6, cabe: v => noBanco(v) && !!pt(v).decisao,
-    contexto: v => ({ final: 1, adversario: pt(v).decisao!.adversario, forca: pt(v).decisao!.forca }),
+    contexto: v => ({ final: 1, adversario: pt(v).decisao!.adversario, forca: pt(v).decisao!.forca, competicao: pt(v).decisao!.competicao, unica: pt(v).decisao!.unica ? 1 : 0 }),
     titulo: 'A final',
-    texto: (v, d) => `Final do estadual: ${clubeT(v)} contra ${oClube(String(d.adversario)).replace(/^o um /, 'um ')}, ida e volta. ${Number(d.forca) >= 1.5 ? 'O favorito é você.' : Number(d.forca) <= -1.5 ? 'O favorito é o outro lado.' : 'Ninguém é favorito.'}`,
+    // REWORK 11 · ESP-11.8: o nome do torneio é o do país (o estadual só no Brasil), e o desfecho conta o placar jogado.
+    texto: (v, d) => `Final ${daCompeticao(String(d.competicao ?? 'campeonato estadual'))}: ${clubeT(v)} contra ${oClube(String(d.adversario)).replace(/^o um /, 'um ')}, ${Number(d.unica) ? 'jogo único' : 'ida e volta'}. ${Number(d.forca) >= 1.5 ? 'O favorito é você.' : Number(d.forca) <= -1.5 ? 'O favorito é o outro lado.' : 'Ninguém é favorito.'}`,
     retorno: (_v, _d, antes) => `Outra final. A de ${anoDe(antes.t)} ${antes.desfecho === 'otimo' || antes.desfecho === 'bom' ? 'terminou em título' : 'terminou com o vice'}.`,
     intencoes: [
       { id: 'atacar', texto: 'Ir para cima desde o jogo de ida', dica: 'Resolver cedo — ou se expor.', risco: 0.6, fatores: (v, d) => [F('força do time', Number(d.forca) / 5), trabalhoF(v), coragem(v)],
-        desfechos: DT('Duas vitórias, a taça erguida no seu estádio.', 'Vitória na ida, empate na volta: campeão.', 'O time se expôs e pagou: vice.', 'Duas derrotas. A torcida vaiou a volta olímpica do rival.', { otimo: { nome: 2, vestiario: 6 }, bom: { nome: 1, vestiario: 3 }, ruim: { vestiario: -3 }, pessimo: { vestiario: -6 } }, { otimo: v => `Ganhou o estadual com ${clubeT(v)} vencendo os dois jogos da final.` }) },
+        desfechos: DT(fimDaFinal('O time foi para cima desde o primeiro minuto — e a taça veio.'), fimDaFinal('Campeão.'), fimDaFinal('O time se expôs e pagou: vice.'), fimDaFinal('A torcida viu a volta olímpica do rival.'), { otimo: { nome: 2, vestiario: 6 }, bom: { nome: 1, vestiario: 3 }, ruim: { vestiario: -3 }, pessimo: { vestiario: -6 } }, { otimo: (v, d) => `Ganhou ${aFinalDe(d)} com ${clubeT(v)} ${Number(d.unica) ? 'vencendo a final' : 'vencendo os dois jogos da final'}.` }) },
       { id: 'estudar', texto: 'Estudar o adversário e jogar no erro dele', dica: 'Pede leitura. Pode virar uma final de empates.', risco: 0.3, fatores: (v, d) => [F('força do time', Number(d.forca) / 5), leitura(v), trabalhoF(v)],
-        desfechos: DT('O plano anulou o adversário: campeão sem sustos.', 'Um gol de bola parada decidiu: campeão.', 'O plano segurou a ida e não resistiu à volta: vice.', 'O plano ruiu no primeiro gol deles: vice.', { otimo: { nome: 2, vestiario: 4 }, bom: { nome: 1 }, ruim: {}, pessimo: { vestiario: -4 } }) },
+        desfechos: DT(fimDaFinal('O plano anulou o adversário: campeão.'), fimDaFinal('O plano funcionou o bastante: campeão.'), fimDaFinal('O plano segurou um tempo e não resistiu: vice.'), fimDaFinal('O plano ruiu: vice.'), { otimo: { nome: 2, vestiario: 4 }, bom: { nome: 1 }, ruim: {}, pessimo: { vestiario: -4 } }) },
       { id: 'grupo', texto: 'Apostar no vestiário: grupo fechado e preleção', dica: 'Final se ganha também na cabeça.', risco: 0.45, fatores: (v, d) => [F('força do time', Number(d.forca) / 5), vestiarioF(v), lideranca(v)],
-        desfechos: DT('O time jogou como quem não aceitava perder. Campeão.', 'Na raça, campeão.', 'O grupo deu tudo e não deu: vice.', 'O grupo travou no jogo grande: vice.', { otimo: { nome: 2, vestiario: 8 }, bom: { vestiario: 4 }, ruim: {}, pessimo: { vestiario: -5 } }) }
+        desfechos: DT(fimDaFinal('O time jogou como quem não aceitava perder. Campeão.'), fimDaFinal('Na raça, campeão.'), fimDaFinal('O grupo deu tudo e não deu: vice.'), fimDaFinal('O grupo travou no jogo grande: vice.'), { otimo: { nome: 2, vestiario: 8 }, bom: { vestiario: 4 }, ruim: {}, pessimo: { vestiario: -5 } }) }
     ] }
 ];
 

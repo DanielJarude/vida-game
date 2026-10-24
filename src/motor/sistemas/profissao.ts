@@ -32,7 +32,8 @@ import { perfilDoPais, temPerfil } from '../mundo/registro';
 import { perfilDaVida } from '../mundo/vida';
 import { especialidadeMedica } from './medicina';
 import { agenteDe, conflitoDoContrato, contaDoContrato, descricaoDoContrato, emProducao, impactoDoContrato, NOME_DO_TIPO, propostasAbertas, redeAlcancavel } from './audiovisual';
-import { OCUPACOES_DE_ATLETA } from './esporte';
+import { OCUPACOES_DE_ATLETA, procurarClube, ultimoClubeDe } from './esporte';
+import { disponibilidadeBanco, executarBanco, naComissaoTecnica, verbosDoBanco, type OqueBanco } from './oficioDoTecnico';
 import { mercadoEsportivo, perfilDe } from './perfisEsportivos';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -79,6 +80,8 @@ export type ModoTrabalho =
   | 'formacao' | 'aprendiz' | 'estagio'
   | 'empregado' | 'servidor' | 'docente' | 'saude' | 'seguranca' | 'militar'
   | 'negocio' | 'autonomo' | 'informal' | 'plataforma' | 'rural' | 'pesca' | 'artista' | 'atleta'
+  /** REWORK 11 · ESP-11.7: a comissão técnica de clube (auxiliar, técnico, preparador): o ofício do banco, sem chefia de empresa. */
+  | 'tecnico'
   /** Mandato, campanha sem outro trabalho, eleito à espera da posse. */
   | 'politica';
 
@@ -93,6 +96,9 @@ export function modoDoTrabalho(v: Vida): ModoTrabalho {
     if (v.trabalho.pausa) return 'pausa';
     if (v.trabalho.aposentadoria) return 'aposentado';
     if (v.caminhos.esporte?.fase === 'base') return 'base';
+    // REWORK 11 · sem clube: o atleta profissional sem contrato continua atleta (sem clube, esperando proposta) — não
+    // "procurando emprego". A carreira só acaba quando ele encerra (ou o mercado encerra por ele).
+    if (v.caminhos.esporte?.fase === 'profissional') return 'atleta';
     if (i < 18 && (v.educacao.basica || v.educacao.matricula)) return 'estudante';
     // Sem emprego, mas com um negócio aberto: é dono (nas horas vagas ou afastado), não alguém procurando trabalho.
     if (negocioAberto(v) && i >= 18) return 'negocio';
@@ -107,6 +113,7 @@ export function modoDoTrabalho(v: Vida): ModoTrabalho {
   if (e.contrato === 'estagio') return 'estagio';
   if (donoIntegral(v)) return 'negocio';
   if (oc.trilha === 'atleta') return 'atleta';
+  if (naComissaoTecnica(e)) return 'tecnico';
   if (eDasForcas(oc)) return 'militar';
   if (f.progressao === 'seguranca') return 'seguranca';
   if (oc.id === 'produtor_rural') return 'rural';
@@ -356,6 +363,14 @@ export function leituraDoTrabalho(v: Vida): LeituraTrabalho {
     else if (modo === 'preso') { titulo = 'Cumprindo pena'; frases.push('O trabalho possível é o da unidade.'); }
     else if (modo === 'pausa') { titulo = flex(g, 'Cuidando', 'Cuidando'); frases.push('Fora do trabalho pago, por um tempo, para cuidar.'); }
     else if (modo === 'aposentado' && t.aposentadoria) { titulo = flex(g, 'Aposentado', 'Aposentada', 'Aposentade'); frases.push(`${fmt(t.aposentadoria.beneficio)} por mês, desde ${anoDe(t.aposentadoria.t)}.`); }
+    else if (modo === 'atleta' && v.caminhos.esporte) {
+      const es = v.caminhos.esporte;
+      const u = ultimoClubeDe(es);
+      const nomeAtleta = es.modalidade === 'futebol' ? flex(g, 'Jogador', 'Jogadora') : 'Atleta';
+      titulo = es.suspensoAte !== undefined && v.t < es.suspensoAte ? `${nomeAtleta} profissional, suspens${flex(g, 'o', 'a')}` : `${nomeAtleta} profissional sem clube`;
+      frases.push(es.suspensoAte !== undefined && v.t < es.suspensoAte ? `Suspens${flex(g, 'o', 'a')} até ${anoDe(es.suspensoAte)}: sem jogar, sem contrato.` : `${u ? `Último clube: ${u.clube} (até ${anoDe(u.ate)}). ` : ''}Treinando por conta, esperando proposta — o mercado responde pelo que você jogou.`);
+      return { modo, titulo, frases, onde: u ? `Sem clube (último: ${u.clube})` : 'Sem clube', vinculo: 'sem contrato' };
+    }
     else if (modo === 'base' && v.caminhos.esporte) { titulo = `Na base ${doClube(v.caminhos.esporte.clube)}`; frases.push('Treino quase todo dia. Quase ninguém da base vira profissional — e quem vira, vira cedo.'); }
     else if (modo === 'estudante') { titulo = 'Estudando'; { const lei = regrasDaVida(v).trabalho; frases.push(idade(v) < lei.minima && lei.aprendiz ? `Antes dos ${lei.minima}, só como ${lei.aprendiz.nome}.` : 'Dá para começar como aprendiz ou estagiário, sem largar a escola.'); } }
     else if (modo === 'negocio') {
@@ -441,7 +456,9 @@ export type OqueProfissao =
   | OqueGestao
   | 'ritmo' | 'promocao' | 'estrutura' | 'preco'
   | 'contratar' | 'demitir' | 'ampliar' | 'unidade' | 'retirar' | 'estrategia' | 'socio' | 'vender' | 'fechar'
-  | 'foco' | 'treinador' | 'mercado' | 'pendurar' | 'pos_carreira'
+  | 'foco' | 'treinador' | 'mercado' | 'pendurar' | 'pos_carreira' | 'procurar_clube'
+  /** A comissão técnica: licença, análise, elenco, diretoria (`oficioDoTecnico`; o verbo em `valor`). */
+  | 'banco'
   | 'movimentacao' | 'remocao'
   | 'cooperativa' | 'investir_terra' | 'diversificar' | 'sucessao'
   | 'lancar' | 'estrada'
@@ -515,6 +532,14 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
       const n = negocioAberto(v)!;
       for (const x of acoesDoNegocio(v, disp)) lista.push(x.id === 'dedicacao' && !n.passivo ? { ...x, peso: Math.max(x.peso, 6), porque: x.porque ?? 'Sem outro trabalho, o negócio pode ser o trabalho de todo dia — com retirada.' } : x);
       add({ id: 'outras', rotulo: 'Ver outras oportunidades de trabalho', porque: 'Um emprego ao lado do negócio também é possível.', ir: 'explorar', peso: 1 });
+      return separar(lista);
+    }
+    if (modo === 'atleta') {
+      const es = v.caminhos.esporte!;
+      const suspenso = es.suspensoAte !== undefined && v.t < es.suspensoAte;
+      if (!suspenso) add({ id: 'procurar_clube', rotulo: 'Pedir ao empresário para procurar um clube', porque: 'Uma divisão menor também é campo: quem joga é visto.', acao: P('procurar_clube'), peso: 8 });
+      add({ id: 'outra_coisa', rotulo: 'Trabalhar com outra coisa', porque: 'Aceitar outro trabalho encerra a carreira de atleta.', ir: 'explorar', peso: 1 });
+      add({ id: 'pendurar', rotulo: 'Encerrar a carreira', acao: P('pendurar'), peso: 0, saida: true });
       return separar(lista);
     }
     if (modo === 'estudante' || modo === 'base') {
@@ -637,6 +662,9 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     }
   }
 
+  /* ---------------------------------------------- Comissão técnica (REWORK 11 · ESP-11.7) */
+  if (modo === 'tecnico') for (const b of verbosDoBanco(v)) add({ id: `banco_${b.oque}`, rotulo: b.rotulo, porque: b.porque, acao: P('banco', { valor: b.oque }), peso: b.peso });
+
   /* ---------------------------------------------- Forças e segurança */
   if (modo === 'militar') {
     const m = v.caminhos.militar;
@@ -650,7 +678,7 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
     const cuidaAlguem = pequenos || vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && ['mae', 'pai', 'avo', 'sogro'].includes(x.vin.parentesco ?? '') && idadePessoa(v, x.p) >= 75);
     add({ id: 'reduzir', rotulo: 'Reduzir a jornada para cuidar da família', porque: cuidaAlguem ? 'Quem mora com você precisa de tempo.' : undefined, acao: { tipo: 'cuidar_da_casa', intensidade: 'parcial' }, peso: cuidaAlguem ? 4 : 0 });
   }
-  if (!n && modo !== 'atleta' && modo !== 'politica') add({ id: 'sair', rotulo: e.clientela !== undefined ? 'Parar com esse trabalho' : eDasForcas(oc) ? 'Deixar a Força' : e.contrato === 'servidor' ? 'Pedir exoneração' : 'Pedir demissão', acao: { tipo: 'pedir_demissao' }, peso: 0, saida: true });
+  if (!n && modo !== 'atleta' && modo !== 'politica') add({ id: 'sair', rotulo: modo === 'tecnico' ? 'Deixar a comissão técnica' : e.clientela !== undefined ? 'Parar com esse trabalho' : eDasForcas(oc) ? 'Deixar a Força' : e.contrato === 'servidor' ? 'Pedir exoneração' : 'Pedir demissão', acao: { tipo: 'pedir_demissao' }, peso: 0, saida: true });
   return separar(lista);
 }
 
@@ -844,7 +872,10 @@ export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito
     // O tenista não tem banco nem clube que o negocie: o treinador é dele, e o ranking decide o circuito.
     case 'treinador': return v.caminhos.esporte?.modalidade === 'tenis' ? bloqueio('impossivel', 'No tênis, o treinador é seu: não há banco nem escalação.') : ESPORTISTA(v) ? (v.anoAtual.acoes.includes('treinador') ? bloqueio('incompativel', 'Você já conversou com o treinador neste ano.') : PERMITIDO) : semTrabalho;
     case 'mercado': return v.caminhos.esporte?.modalidade === 'tenis' ? bloqueio('impossivel', 'No tênis não há clube: o ranking decide onde se joga.') : ESPORTISTA(v) ? (v.anoAtual.acoes.includes('mercado') ? bloqueio('incompativel', 'O empresário já está procurando.') : PERMITIDO) : semTrabalho;
-    case 'pendurar': return ESPORTISTA(v) ? PERMITIDO : semTrabalho;
+    // REWORK 11 · sem clube: encerrar a carreira não pede contrato (o atleta sem clube também pendura as chuteiras).
+    case 'pendurar': return v.caminhos.esporte?.fase === 'profissional' ? PERMITIDO : semTrabalho;
+    case 'procurar_clube': { const es = v.caminhos.esporte; if (es?.fase !== 'profissional' || v.trabalho.atual || (es.suspensoAte !== undefined && v.t < es.suspensoAte)) return semTrabalho; return v.anoAtual.acoes.includes('procurar_clube') ? bloqueio('incompativel', 'O empresário já está ligando para os clubes neste ano.') : PERMITIDO; }
+    case 'banco': return disponibilidadeBanco(v, (a.valor as OqueBanco) ?? 'analise');
     case 'pos_carreira': return ESPORTISTA(v) && !temFato(v, 'pos_carreira') ? PERMITIDO : semTrabalho;
     case 'movimentacao': {
       const m = v.caminhos.militar;
@@ -954,6 +985,8 @@ export function executarProfissao(v: Vida, r: Rng, a: AcaoProfissaoCmd): SaidaPr
     case 'treinador': v.anoAtual.acoes.push('treinador'); return { decisao: 'esp_treinador' };
     case 'mercado': v.anoAtual.acoes.push('mercado'); return { decisao: 'esp_mercado' };
     case 'pendurar': return { decisao: 'esp_pendurar' };
+    case 'procurar_clube': { v.anoAtual.acoes.push('procurar_clube'); const x = procurarClube(v, r); return { texto: x.texto, tom: x.proposta ? 'bom' : 'ruim' }; }
+    case 'banco': return { texto: executarBanco(v, r, (a.valor as OqueBanco) ?? 'analise'), tom: 'neutro' };
     case 'pos_carreira': return { decisao: 'esp_pos' };
     case 'movimentacao': { const alvo = alvoDaMovimentacao(v); if (alvo) v.fatos['mil_pedido_alvo'] = indiceDaGuarnicao(alvo); return { decisao: 'mil_movimentacao' }; }
     case 'remocao': return { decisao: 'pub_remocao' };

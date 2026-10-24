@@ -20,6 +20,7 @@ import * as P from './papeis';
 import { estresse, fato, feliz, custa, local } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
 import { portaAmadora } from '../sistemas/perfisEsportivos';
+import { semVocabularioCorporativo } from '../sistemas/oficioDoTecnico';
 import { conviteDaBase, encerrarCarreira, entrarPeloAmador, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
 import { dinheiro as fmt } from '../texto';
 import { conflitoDoContrato, contaDoContrato, descricaoDoContrato, podePausar as podePausarAV, resolverConflitoAV } from '../sistemas/audiovisual';
@@ -431,9 +432,10 @@ export const CAMINHOS: Conteudo[] = [
   {
     id: 'car_curso_empresa', tipo: 'acontecimento', idade: [20, 58], tema: 'trabalho', repetir: 7,
     // REWORK 11 · Fase B: "a empresa" só onde há empresa (`temEmpresa`): no serviço público é o órgão; na farda, a
-    // corporação; o clube do técnico e a companhia do artista não entram. (A condição nova vem depois do sorteio: a
-    // sequência de números de quem já recebia o acontecimento não muda.)
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5) && (temEmpresa(e) || temOrgao(e)); },
+    // corporação; a companhia do artista não entra. ESP-11.7: nem o atleta nem a comissão técnica de clube (o curso
+    // deles é a licença). (A condição de empresa vem depois do sorteio: a sequência de números de quem já recebia o
+    // acontecimento não muda.)
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && !semVocabularioCorporativo(e) && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5) && (temEmpresa(e) || temOrgao(e)); },
     narrar: c => {
       const e = c.v.trabalho.atual!;
       const oc = ocupacao(e.ocupacaoId);

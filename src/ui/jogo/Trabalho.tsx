@@ -53,7 +53,11 @@ import { analisarEntrada, notaDaBaseCom } from '../../motor/sistemas/compromisso
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { divisaoDoNivel, doClube } from '../../motor/dados/clubes';
 import { nomeLugar, paisDaCidade } from '../../motor/dados/lugares';
-import { augeDe, carreirasEsportivas, categoriaDaBase, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao } from '../../motor/sistemas/esporte';
+import { augeDe, carreirasEsportivas, categoriaDaBase, clubeAtual, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao, posicaoDe, ultimoClubeDe } from '../../motor/sistemas/esporte';
+import { NOME_ATRIBUTO, perfilDeAtributos } from '../../motor/sistemas/atributosEsportivos';
+import { NIVEIS_DE_LICENCA, licencaDe } from '../../motor/sistemas/oficioDoTecnico';
+import { formatarDinheiroCurto } from '../../motor/mundo/moeda';
+import { habilidade } from '../../motor/sistemas/frentes';
 import { capitalizar as cap, dinheiro as fmtDinheiro } from '../../motor/texto';
 import { circuitoPeloRanking, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
 import { categoriaDeLuta, funcaoVolei, NOME_FUNCAO_VOLEI, provaDe } from '../../motor/sistemas/provas';
@@ -102,7 +106,7 @@ const NOME_FAMILIA: Record<string, string> = {
 
 const KICKER: Partial<Record<ModoTrabalho, string>> = {
   negocio: 'o próprio negócio', autonomo: 'por conta própria', informal: 'por conta, na rua', plataforma: 'sem chefe, sem piso', rural: 'a terra', pesca: 'a água',
-  artista: 'a obra', atleta: 'o esporte', militar: 'a farda', seguranca: 'a segurança pública', servidor: 'o serviço público', docente: 'a sala de aula', saude: 'o cuidado',
+  artista: 'a obra', atleta: 'o esporte', tecnico: 'o banco', militar: 'a farda', seguranca: 'a segurança pública', servidor: 'o serviço público', docente: 'a sala de aula', saude: 'o cuidado',
   empregado: 'com carteira', politica: 'a vida pública', formacao: 'a formação', aprendiz: 'o primeiro trabalho', estagio: 'o estágio', procurando: 'a procura', sem_procurar: 'por escolha',
   aposentado: 'depois do trabalho', pausa: 'cuidando', preso: 'a pena', estudante: 'antes do trabalho', base: 'a base', crianca: 'ainda não'
 };
@@ -207,6 +211,7 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
           : (modo === 'autonomo' || modo === 'informal' || modo === 'plataforma' || modo === 'artista') && <PainelFreguesia vida={vida} />}
         {(modo === 'rural' || modo === 'pesca') && <PainelCampo vida={vida} />}
         {(modo === 'atleta' || espSemClube) && <PainelAtleta vida={vida} />}
+        {modo === 'tecnico' && <PainelComissao vida={vida} />}
         {modo === 'base' && !div && <PainelBase vida={vida} />}
         {modo === 'base' && div && <p className="ligacao-caminho"><span>A base, os treinos e a peneira estão em Outros caminhos.</span> <button type="button" className="link" onClick={() => irPara('outros_caminhos')}>Ir para Outros caminhos →</button></p>}
         {modo === 'militar' && <PainelFarda vida={vida} />}
@@ -587,6 +592,10 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
   const individual = perfilDe(es.modalidade).estrutura === 'equipe';
   // O que define a pessoa na modalidade: a posição, a função (e a estatura), a prova, a categoria.
   const prova = individual ? provaDe(vida, es.modalidade) : undefined;
+  // REWORK 11: sem clube, o placar diz "sem clube" e o último clube — nunca o antigo como atual.
+  const atual = clubeAtual(vida, es);
+  const ultimo = atual ? undefined : ultimoClubeDe(es);
+  const atributos = es.modalidade === 'futebol' || es.modalidade === 'basquete' ? perfilDeAtributos(vida, es, habilidade(vida, es.modalidade), es.modalidade === 'futebol' ? posicaoDe(vida, es) : undefined, es.modalidade === 'basquete' ? funcaoBasquete(vida) : undefined) : [];
   const papel = es.modalidade === 'basquete' ? ` · ${NOME_FUNCAO[funcaoBasquete(vida)]}, ${estaturaEmPalavras(estatura(vida))}`
     : es.modalidade === 'volei' ? ` · ${NOME_FUNCAO_VOLEI[funcaoVolei(vida)]}, ${estaturaEmPalavras(estatura(vida))}`
       : es.modalidade === 'lutas' ? ` · categoria ${categoriaDeLuta(vida)}` : prova ? ` · ${prova.nome}` : '';
@@ -594,8 +603,9 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
     <section className="painel painel--atleta" aria-label="A carreira no esporte">
       <div className="placar">
         <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{tenis ? 'No circuito' : es.espaco === 'titular' ? 'Titular' : es.espaco === 'reserva' ? 'Reserva' : cap(semVinculo(es.modalidade))}</span>
-        <span className="placar__clube">{tenis ? `ranking ${t?.ranking ?? '—'}º` : comContrato ? es.clube : sp.ultimoOnde ? `último clube: ${sp.ultimoOnde.nome}` : 'sem clube'}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}{papel}</span>
+        <span className="placar__clube">{tenis ? `ranking ${t?.ranking ?? '—'}º` : comContrato ? es.clube : ultimo ? `sem clube · último: ${ultimo.clube} (até ${anoDe(ultimo.ate)})` : sp.ultimoOnde ? `último clube: ${sp.ultimoOnde.nome}` : 'sem clube'}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}{papel}</span>
       </div>
+      {atributos.length > 0 && <p className="nota atributos-da-posicao">Na {es.modalidade === 'futebol' ? 'posição' : 'função'}: {atributos.map(a => `${NOME_ATRIBUTO[a.id]} ${Math.round(a.valor)}`).join(' · ')} <small>(o perfil da técnica: pesa na nota e no que a temporada produz)</small></p>}
       {t && (
         <div className="temporada" aria-label="A última temporada">
           <p className="temporada__titulo">Temporada {t.ano} — {t.clube}</p>
@@ -604,10 +614,10 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
         </div>
       )}
       {es.totais && es.totais.temporadas >= 2 && !tenis && !individual && (
-        <p className="nota carreira-totais">Na carreira: {es.totais.temporadas} temporadas · {es.totais.partidas} jogos{es.modalidade === 'futebol' ? ` · ${es.totais.gols} gols · ${es.totais.assistencias} assistências · ${es.totais.minutos.toLocaleString('pt-BR')} minutos` : ''}{es.transferencias?.length ? ` · ${es.transferencias.length} ${es.transferencias.length === 1 ? 'transferência' : 'transferências'} (a maior: ${dinheiroCurto(Math.max(...es.transferencias.map(x => x.taxa)))} entre os clubes)` : ''}</p>
+        <p className="nota carreira-totais">Na carreira: {es.totais.temporadas} temporadas · {es.totais.partidas} jogos{es.modalidade === 'futebol' ? ` · ${es.totais.gols} gols · ${es.totais.assistencias} assistências · ${es.totais.minutos.toLocaleString('pt-BR')} minutos` : ''}{es.transferencias?.length ? (() => { const m = [...es.transferencias].sort((a, b) => b.taxa - a.taxa)[0]; return ` · ${es.transferencias.length} ${es.transferencias.length === 1 ? 'transferência' : 'transferências'} (a maior: ${m.pais ? formatarDinheiroCurto(m.taxa, m.pais) : dinheiroCurto(m.taxa)} entre os clubes, ${m.de} → ${m.para})`; })() : ''}</p>
       )}
       <dl className="dados">
-        <Dado rotulo={tenis ? 'Circuito' : comContrato ? 'Divisão (no jogo)' : 'Última divisão'}>{divisaoDe(es.modalidade, es.nivel)}</Dado>
+        <Dado rotulo={tenis ? 'Circuito' : comContrato ? 'Divisão (no jogo)' : 'Última divisão'}>{divisaoDe(es.modalidade, es.nivel, paisDaCidade(es.municipioId))}</Dado>
         {tenis
           ? <Dado rotulo="Renda">{salarioDoClube !== undefined ? <>premiação: uns {dinheiroCurto(salarioDoClube)}/mês (a média do último ano), sem salário; treinador e viagens por sua conta</> : 'sem premiação agora: fora do circuito'}</Dado>
           : comContrato
@@ -633,6 +643,24 @@ function fraseSemVinculo(sp: SituacaoProfissional): string {
   if (sp.carreira === 'esporte') return `${d}A carreira continua sua: sem contrato, não há salário de clube — o que vier (um clube, ou o fim da carreira) aparece aqui.`;
   if (sp.carreira === 'tecnico') return `${d}A carreira de técnico continua: proposta de clube ainda pode chegar — anos demais sem banco a encerram.`;
   return `${d}A carreira continua em pausa: voltar é retorno, não recomeço.`;
+}
+
+/** REWORK 11 · ESP-11.7 — a comissão técnica: o clube (concreto), a licença de treinador, o comando (se houver). */
+export function PainelComissao({ vida }: { vida: Vida }) {
+  const e = vida.trabalho.atual;
+  if (!e) return null;
+  const p = passagemAtual(vida);
+  const l = licencaDe(vida);
+  return (
+    <section className="painel painel--comissao" aria-label="A comissão técnica">
+      <dl className="dados">
+        <Dado rotulo="Clube">{e.clube ?? e.empregador}{p && !p.selecao ? ` · ${divisaoDoNivel(p.nivel, paisDaCidade(p.municipioId))}` : ''}</Dado>
+        <Dado rotulo="Licença de treinador">{l?.nivel ? `licença ${NIVEIS_DE_LICENCA[l.nivel]}` : 'nenhuma ainda'}{l?.emCurso ? ` · cursando a ${NIVEIS_DE_LICENCA[l.emCurso.nivel]} (até ${anoDe(l.emCurso.ate)})` : ''}</Dado>
+        {p && <Dado rotulo="O vestiário">{p.vestiario >= 65 ? 'fechado com você' : p.vestiario >= 45 ? 'sem queixas' : 'dividido'}</Dado>}
+        {p && <Dado rotulo="A diretoria">{p.pressao >= 70 ? 'o cargo balança' : p.pressao >= 50 ? 'cobrando' : 'tranquila'}</Dado>}
+      </dl>
+    </section>
+  );
 }
 
 /** A base: ainda não é emprego — é formação, com rotina de atleta. */

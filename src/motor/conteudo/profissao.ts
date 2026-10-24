@@ -16,7 +16,7 @@
 
 import { noPais, perfilDoPais } from '../mundo/registro';
 import { linguasDaPessoa, paisDaVida, paisNatal } from '../mundo/vida';
-import { converterEntrePaises, formatarDinheiro } from '../mundo/moeda';
+import { converterEntrePaises, formatarDinheiro, mesmaMoeda } from '../mundo/moeda';
 import { divisaoDe, OCUPACOES_DE_ATLETA } from '../sistemas/esporte';
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, PropostaDeClube, Vida } from '../tipos';
@@ -38,7 +38,7 @@ import { novaOportunidade } from '../sistemas/oportunidades';
 import { mudarAgora } from '../sistemas/processos';
 import { marcar } from '../sistemas/marcas';
 import { abalar } from '../sistemas/abalo';
-import { assinarContrato, augeDe, barraDeTitular, criarProposta, prazoDeContrato, propostaNaMesa, salarioDaRenovacao, clubeQuerRenovar, encerrarCarreira, nivelQueOMercadoOferece, palavraDaNota, transferirPara, valorDeMercado, voltarDoEmprestimo } from '../sistemas/esporte';
+import { assinarContrato, augeDe, barraDeTitular, creditarLuvas, criarProposta, ficarSemClube, prazoDeContrato, propostaNaMesa, salarioDaRenovacao, clubeQuerRenovar, encerrarCarreira, nivelQueOMercadoOferece, palavraDaNota, transferirPara, valorDeMercado, voltarDoEmprestimo } from '../sistemas/esporte';
 import { aoClube, divisaoDoNivel, doClube, noClube, oClube } from '../dados/clubes';
 import { alcanceNoPalco, cacheDeApresentacao, linguagemDePalco, parteDosCustos } from '../sistemas/palco';
 import { habilidade } from '../sistemas/frentes';
@@ -364,7 +364,9 @@ export const PROFISSAO: Conteudo[] = [
   {
     // O contrato vence: o clube diz se quer; o mercado diz para onde dá para ir. Ninguém se aposenta por fazer aniversário.
     id: 'esp_renovacao', tipo: 'decisao', idade: [17, 50], tema: 'trabalho', prioritario: true, prioridade: 4, repetir: 1,
-    quando: c => deHoje(c, 'esp_renovacao') && c.v.caminhos.esporte?.fase === 'profissional' && OCUPACOES_DE_ATLETA.includes(c.v.trabalho.atual?.ocupacaoId ?? ''),
+    // REWORK 11 (A1 item 7): vale enquanto o contrato estiver vencido — antes, só no mês em que o ano marcou, e 39% dos
+    // vencimentos passavam sem a conversa (o salário de um contrato vencido corria mais um ano).
+    quando: c => { const es = c.v.caminhos.esporte; return es?.fase === 'profissional' && es.contratoAte !== undefined && c.v.t >= es.contratoAte && OCUPACOES_DE_ATLETA.includes(c.v.trabalho.atual?.ocupacaoId ?? ''); },
     titulo: 'O contrato vence',
     texto: c => {
       const es = c.v.caminhos.esporte!;
@@ -379,7 +381,7 @@ export const PROFISSAO: Conteudo[] = [
       { id: 'renovar', texto: 'Renovar', disponivel: c => (clubeQuerRenovar(c.v, c.v.caminhos.esporte!) ? true : false),
         consequencia: c => { const es = c.v.caminhos.esporte!; return `Salário do novo contrato: ${fmt(salarioDaRenovacao(c.v, es))} por mês (bruto), ${prazoDeContrato(es, es.espaco === 'titular' ? 36 : 24) / 12 === 1 ? 'um ano' : es.espaco === 'titular' ? 'três anos' : 'dois anos'}.`; },
         resolver: c => ({ texto: mercadoEsportivo(c.v.caminhos.esporte!.modalidade).assinatura, memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; assinarContrato(c.v, es, es.espaco === 'titular' ? 36 : 24, 1, true); } }) },
-      { id: 'descer', texto: c => { const p = propostaNaMesa(c.v)!; return c.v.caminhos.esporte?.modalidade === 'futebol' ? `Aceitar a proposta ${doClube(p.clube)} (${divisaoDe('futebol', p.nivel)})` : `Aceitar a proposta de uma equipe ${p.nivel === 1 ? 'regional' : 'de nível menor'}`; },
+      { id: 'descer', texto: c => { const p = propostaNaMesa(c.v)!; return c.v.caminhos.esporte?.modalidade === 'futebol' ? `Aceitar a proposta ${doClube(p.clube)} (${divisaoDe('futebol', p.nivel, paisDaCidade(p.municipioId))})` : `Aceitar a proposta de uma equipe ${p.nivel === 1 ? 'regional' : 'de nível menor'}`; },
         disponivel: c => { const es = c.v.caminhos.esporte!; const p = propostaNaMesa(c.v); return p && p.nivel < es.nivel ? true : false; },
         consequencia: c => consequenciaDaProposta(c, propostaNaMesa(c.v)!),
         resolver: c => ({ texto: mercadoEsportivo(c.v.caminhos.esporte!.modalidade).descer, memoria: null, efeito: () => aceitarProposta(c, propostaNaMesa(c.v)!) }) },
@@ -487,12 +489,12 @@ export const PROFISSAO: Conteudo[] = [
       const quem = es.modalidade === 'futebol' ? `${cap(oClube(p.clube))}, de ${d.nome}${lá !== paisDaVida(c.v) ? `, ${noPais(lá)}` : ''},` : p.nivel > es.nivel ? 'Uma equipe maior' : 'Uma equipe de nível menor';
       const anos = p.meses >= 24 ? `${Math.round(p.meses / 12)} anos` : 'um ano';
       const comeco = p.origem === 'emprestimo'
-        ? `Sem minutos no time, ${oClube(es.clube)} quer emprestar você por ${p.meses >= 12 ? 'um ano' : `${p.meses} meses`}: ${quem.replace(/,$/, '')} quer você para jogar (${divisaoDe(es.modalidade, p.nivel)}). O contrato continua ${doClube(es.clube)}; no fim, a volta.`
+        ? `Sem minutos no time, ${oClube(es.clube)} quer emprestar você por ${p.meses >= 12 ? 'um ano' : `${p.meses} meses`}: ${quem.replace(/,$/, '')} quer você para jogar (${divisaoDe(es.modalidade, p.nivel, paisDaCidade(p.municipioId))}). O contrato continua ${doClube(es.clube)}; no fim, a volta.`
         : p.origem === 'compra'
           ? `O empréstimo acaba. ${cap(oClube(es.clube))} quer ficar com você de vez: contrato de ${anos}${es.emprestimo ? ` — e ${oClube(es.emprestimo.clube)} topa negociar` : ''}. Se não, é a volta ${es.emprestimo ? aoClube(es.emprestimo.clube) : 'ao clube de origem'}.`
           : p.origem === 'liberacao'
-        ? `Sem espaço ${mercadoEsportivo(es.modalidade).time}, ${oClube(es.clube)} quer liberar você. ${quem} topa: ${divisaoDe(es.modalidade, p.nivel)}, contrato de ${anos}, lugar entre os titulares.`
-        : `${quem} quer você: ${es.modalidade === 'futebol' ? divisaoDoNivel(p.nivel, lá) : divisaoDe(es.modalidade, p.nivel)}${p.nivel > es.nivel ? ', divisão acima' : p.nivel < es.nivel ? ', divisão abaixo' : ''}, contrato de ${anos}${p.espaco === 'reserva' ? ', para brigar por posição' : ', para jogar'}.`;
+        ? `Sem espaço ${mercadoEsportivo(es.modalidade).time}, ${oClube(es.clube)} quer liberar você. ${quem} topa: ${divisaoDe(es.modalidade, p.nivel, paisDaCidade(p.municipioId))}, contrato de ${anos}, lugar entre os titulares.`
+        : `${quem} quer você: ${es.modalidade === 'futebol' ? divisaoDoNivel(p.nivel, lá) : divisaoDe(es.modalidade, p.nivel, paisDaCidade(p.municipioId))}${p.nivel > es.nivel ? ', divisão acima' : p.nivel < es.nivel ? ', divisão abaixo' : ''}, contrato de ${anos}${p.espaco === 'reserva' ? ', para brigar por posição' : ', para jogar'}.`;
       return `${comeco}${d.id !== c.v.moradia.municipioId ? ` A mudança seria para ${d.nome}.` : ''} ${comFamilia(c.v) && d.id !== c.v.moradia.municipioId ? 'A família iria junto — ou não.' : ''}`.trim();
     },
     opcoes: [
@@ -596,11 +598,8 @@ function textoDaVenda(c: Ctx): string {
 
 /** Sem clube, esperando proposta: a carreira não acabou — mas o salário, sim. O mercado responde no ano que vem. */
 function semClube(c: Ctx): void {
-  c.v.fatos['esp_sem_clube'] = c.v.t;
-  encerrarEmprego(c.v, 'fim do contrato');
-  const es = c.v.caminhos.esporte!;
-  es.espaco = undefined;
-  es.contratoAte = undefined;
+  // REWORK 11: a marca explícita de "sem clube" (o último clube guardado; nenhuma tela o mostra como atual).
+  ficarSemClube(c.v, c.v.caminhos.esporte!);
 }
 
 /**
@@ -614,7 +613,7 @@ function aceitarProposta(c: Ctx, p: PropostaDeClube, juntos = true): void {
   const subiu = p.nivel > es.nivel;
   const dono = es.clube;
   const daOrigem = es.emprestimo?.clube;
-  transferirPara(c.v, es, p);
+  transferirPara(c.v, es, p, true);
   const texto = p.origem === 'emprestimo' ? `Emprestado ${aoClube(p.clube)} por ${p.meses >= 12 ? 'um ano' : `${p.meses} meses`}; o contrato continua ${doClube(dono)}.`
     : p.origem === 'compra' ? `Ficou de vez ${noClube(p.clube)}${daOrigem ? `, que comprou o contrato ${doClube(daOrigem)}` : ''}.`
       : p.origem === 'liberacao' ? `Sem espaço no time, foi jogar ${noClube(p.clube)}.` : paisDaCidade(p.municipioId) !== paisDaVida(c.v) ? `Transferiu-se para ${oClube(p.clube)}, ${noPais(paisDaCidade(p.municipioId))}${paisDaCidade(p.municipioId) === paisNatal(c.v) ? ' — de volta ao futebol de casa' : ''}.` : subiu ? `Transferiu-se para ${oClube(p.clube)}.` : `Mudou de clube: ${oClube(p.clube)}.`;
@@ -622,6 +621,8 @@ function aceitarProposta(c: Ctx, p: PropostaDeClube, juntos = true): void {
   escrever(c.v, { texto: es.modalidade === 'futebol' || p.origem === 'emprestimo' || p.origem === 'compra' ? texto : subiu ? `Subiu de nível: foi para ${oClube(p.clube)} — um calendário mais duro.` : `Mudou de equipe: ${oClube(p.clube)}, um nível abaixo.`, relevancia: 'biografia', tema: 'trabalho', tom: subiu ? 'bom' : undefined, escolha: true });
   marcar(c.v, subiu ? 'promocao' : 'mudanca_carreira', texto, subiu && p.nivel >= 3 ? 3 : 2, { dominio: es.modalidade });
   if (p.municipioId !== c.v.moradia.municipioId) mudarComOTrabalho(c, p.municipioId, juntos, `para jogar ${noClube(p.clube)}`);
+  // REWORK 11 · ESP-11.5: as luvas entram DEPOIS da mudança (na moeda de lá, sem a conversão da migração).
+  if (p.origem !== 'emprestimo') creditarLuvas(c.v, p);
 }
 
 /** Recusar tira a proposta da mesa. Se o contrato já venceu, recusar não é ficar: o clube decide se ainda quer (como no "testar o mercado"). */
@@ -648,7 +649,9 @@ function consequenciaDaProposta(c: Ctx, p: PropostaDeClube): string {
   // nas duas moedas, e que aceitar é mudar de país (`migracao`, pela porta do esporte).
   const lá = paisDaCidade(p.municipioId);
   const fora = lá !== paisDaVida(c.v);
-  const f = (x: number) => (fora ? `${formatarDinheiro(x, lá)} (uns ${fmt(converterEntrePaises(x, lá, paisDaVida(c.v)))} daqui)` : fmt(x));
+  // REWORK 11 · ESP-11.5: "(uns … daqui)" e "outra moeda" só quando a moeda muda (da Espanha à Itália, é o mesmo euro).
+  const outraMoeda = fora && !mesmaMoeda(lá, paisDaVida(c.v));
+  const f = (x: number) => (outraMoeda ? `${formatarDinheiro(x, lá)} (uns ${fmt(converterEntrePaises(x, lá, paisDaVida(c.v)))} daqui)` : formatarDinheiro(x, lá));
   const sal = p.espaco === 'reserva' && p.salarioTitular > p.salario
     ? `Salário de ${f(p.salario)} por mês para começar (${f(p.salarioTitular)} se ganhar a posição), contrato de ${anos}. Clube maior, briga por posição.`
     : `Salário de ${f(p.espaco === 'titular' ? p.salarioTitular : p.salario)} por mês, contrato de ${anos}${p.espaco === 'titular' ? ', e chance real de jogar' : ''}.`;
@@ -662,7 +665,7 @@ function consequenciaDaProposta(c: Ctx, p: PropostaDeClube): string {
     const lingua = perfilDoPais(lá).idiomas[0];
     const mesmaLingua = linguasDaPessoa(c.v).includes(lingua);
     const juntos = comFamilia(c.v) ? ' Quem mora com você vai junto.' : '';
-    return `${sal}${extra} Seria mudar de país: ${municipio(p.municipioId).nome}, ${noPais(lá)} — ${mesmaLingua ? 'a mesma língua' : `outra língua (${lingua})`}, outra moeda; o clube cuida do visto.${juntos}`;
+    return `${sal}${extra} Seria mudar de país: ${municipio(p.municipioId).nome}, ${noPais(lá)} — ${mesmaLingua ? 'a mesma língua' : `outra língua (${lingua})`}, ${outraMoeda ? 'outra moeda' : 'a mesma moeda'}; o clube cuida do visto.${juntos}`;
   }
   return p.municipioId !== c.v.moradia.municipioId ? `${sal}${extra} Mudança para ${municipio(p.municipioId).nome}: quem mora com você vai junto.` : `${sal}${extra}`;
 }

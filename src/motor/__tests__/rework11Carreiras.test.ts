@@ -99,9 +99,9 @@ describe('CAR-11.1 · situacaoProfissional: uma leitura só, coerente', () => {
 
   it('funciona com o campo novo da Fase C (o clube atual limpo, o último guardado à parte)', () => {
     const v = semClube(futebolista());
-    const es = v.caminhos.esporte! as CarreiraEsportiva & { ultimoClube?: string };
+    const es = v.caminhos.esporte!;
     es.clube = '';
-    es.ultimoClube = 'Sport';
+    es.ultimoClube = { clube: 'Sport', municipioId: es.municipioId, nivel: es.nivel, ate: v.t - 2 };
     expect(situacaoProfissional(v).ultimoOnde?.nome).toBe('Sport');
     expect(situacaoProfissional(recarregar(v)).semVinculo).toBe(true);
   });
