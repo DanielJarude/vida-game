@@ -44,7 +44,7 @@ import { estrategiaPadrao, tipoNegocio } from './dados/negocios';
 import { atribuirVersoesAosVeiculos } from './sistemas/versoesVeiculo';
 import { bairroDeOrigem, reservaInicial } from './sistemas/origem';
 import { normalizarRedes } from './sistemas/redesBase';
-import { unificarCarreiraArtistica } from './sistemas/trabalho';
+import { FATOR_PARALELA, tetoDosTrabalhosMiudos, unificarCarreiraArtistica } from './sistemas/trabalho';
 
 export const VERSAO_SAVE = 20;
 export const CHAVE_SAVE = 'VIDA_GAME_SAVE_V1';
@@ -105,7 +105,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Artes(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1587,6 +1587,24 @@ export function normalizarRework106(v: Vida): void {
   if (v.trabalho?.atual && v.trabalho.paralela) unificarCarreiraArtistica(v);
   // A formação dos parentes de partida guardada pelo id do curso ('eng_civil') vira o nome, como em todo o resto.
   for (const p of Object.values(v.pessoas ?? {})) { if (!p.formacao || CURSOS.some(c => c.nome === p.formacao)) continue; const c = CURSOS.find(x => x.id === p.formacao); if (c) p.formacao = c.nome; }
+}
+
+/**
+ * REWORK 11 · ATR-01: o ator salvo com o "salário" de palco (a temporada que virava salário, até milhões por ano) abre
+ * com o salário dos trabalhos miúdos (com teto na tabela do lugar); o cachê de cada produção segue sendo a renda. O
+ * último ano de palco do ator (sem grupo de teatro ativo) não vira "shows e apresentações" por fora.
+ */
+export function normalizarRework11Artes(v: Vida): void {
+  const t = v.trabalho;
+  if (!t) return;
+  for (const e of [t.atual, t.paralela]) {
+    const oc = e ? ocupacaoOuNula(e.ocupacaoId) : undefined;
+    if (!e || !oc || oc.trilha !== 'cena' || !v.moradia) continue;
+    const teto = tetoDosTrabalhosMiudos(v, oc) * (e === t.paralela ? FATOR_PARALELA : 1);
+    if (e.salario > teto) e.salario = Math.round(teto / 10) * 10;
+  }
+  const atuaSemGrupo = [t.atual, t.paralela].some(e => e && ocupacaoOuNula(e.ocupacaoId)?.trilha === 'cena') && !(v.caminhos?.arte?.ativo && v.caminhos.arte.linguagem === 'teatro');
+  if (atuaSemGrupo && v.caminhos?.palco?.linguagem === 'teatro') delete v.caminhos.palco;
 }
 
 export function normalizarRework75(v: Vida): void {
