@@ -33,6 +33,7 @@ import { OCUPACOES, comissaoDe, ocupacao, ROTULO_TRILHA } from '../dados/ocupaco
 import { curso } from '../dados/cursos';
 import { capitalDoEstado } from '../sistemas/escola';
 import { analisarEntrada, propor } from '../sistemas/compromissos';
+import { temEmpresa, temOrgao } from '../sistemas/situacaoProfissional';
 import { listaNatural } from '../texto';
 import { doClube, oClube } from '../dados/clubes';
 
@@ -429,10 +430,15 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_curso_empresa', tipo: 'acontecimento', idade: [20, 58], tema: 'trabalho', repetir: 7,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5); },
+    // REWORK 11 · Fase B: "a empresa" só onde há empresa (`temEmpresa`): no serviço público é o órgão; na farda, a
+    // corporação; o clube do técnico e a companhia do artista não entram. (A condição nova vem depois do sorteio: a
+    // sequência de números de quem já recebia o acontecimento não muda.)
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5) && (temEmpresa(e) || temOrgao(e)); },
     narrar: c => {
-      const oc = ocupacao(c.v.trabalho.atual!.ocupacaoId);
-      return { texto: c.r.pick([`A empresa pagou um curso de atualização em ${ROTULO_TRILHA[oc.trilha] ?? 'na área'}. Três semanas de aula à noite.`, 'Veio uma certificação nova obrigatória; a turma inteira estudou junta nas sextas.', 'Um sistema novo chegou ao trabalho. Quem aprendeu primeiro virou referência.']), relevancia: 'cotidiano', efeito: () => { const e = c.v.trabalho.atual!; e.desempenho = clamp(e.desempenho + 4); } };
+      const e = c.v.trabalho.atual!;
+      const oc = ocupacao(e.ocupacaoId);
+      const quem = temEmpresa(e) ? 'A empresa pagou' : e.contrato === 'militar' ? 'A corporação mandou a turma para' : 'O órgão ofereceu';
+      return { texto: c.r.pick([`${quem} um curso de atualização em ${ROTULO_TRILHA[oc.trilha] ?? 'na área'}. Três semanas de aula à noite.`, 'Veio uma certificação nova obrigatória; a turma inteira estudou junta nas sextas.', 'Um sistema novo chegou ao trabalho. Quem aprendeu primeiro virou referência.']), relevancia: 'cotidiano', efeito: () => { const e = c.v.trabalho.atual!; e.desempenho = clamp(e.desempenho + 4); } };
     }
   },
   {

@@ -30,6 +30,7 @@ import { marcar } from './marcas';
 import { lesaoAtiva } from './lesoes';
 import { contaAtiva } from './redesBase';
 import { posicaoDe } from './esporte';
+import { temChefia, temEmpresa, temOrgao } from './situacaoProfissional';
 
 export type OqueOficio =
   | 'projeto' | 'chefia' | 'colega' | 'capacitacao'
@@ -64,12 +65,15 @@ export function verbosDoOficio(v: Vida): VerboDoOficio[] {
   const modo = modoDoTrabalho(v);
   const out: VerboDoOficio[] = [];
   const add = (x: VerboDoOficio) => { if (!feito(v, x.oque)) out.push(x); };
-  if (COM_CHEFIA.has(modo)) {
+  // REWORK 11 · Fase B: o modo não basta — o sócio de advocacia, o escritor, o árbitro e o professor particular caem
+  // em 'empregado'/'docente' sem ter chefia. Os verbos de chefia pedem chefia de verdade (`temChefia`), e o curso é "da
+  // empresa" só onde há empresa (`temEmpresa`); no serviço público, do órgão; na farda, da corporação.
+  if (COM_CHEFIA.has(modo) && temChefia(e)) {
     add({ oque: 'projeto', rotulo: modo === 'docente' ? 'Assumir a turma mais difícil da escola' : modo === 'saude' ? 'Pegar os casos mais difíceis do plantão' : 'Assumir um projeto difícil', porque: 'Se der certo, o desempenho e o nome sobem; se der errado, cobra. E pesa no estresse.' });
     add({ oque: 'chefia', rotulo: 'Almoçar com a chefia', porque: 'Ser lembrado quando a vaga de cima abrir.' });
     const col = colegaDeTrabalho(v);
     if (col) add({ oque: 'colega', rotulo: `Ajudar ${col.nome}, que anda enrolad${flex(col.genero, 'o', 'a', 'e')}`, porque: 'O clima da equipe e uma amizade de trabalho.' });
-    add({ oque: 'capacitacao', rotulo: 'Fazer uma capacitação (curso da empresa)', porque: 'O desempenho sobe devagar — e o próximo passo pede.' });
+    add({ oque: 'capacitacao', rotulo: temEmpresa(e) ? 'Fazer uma capacitação (curso da empresa)' : temOrgao(e) ? (e.contrato === 'militar' ? 'Fazer um curso de capacitação da corporação' : 'Fazer uma capacitação (curso do órgão)') : 'Fazer uma capacitação na área', porque: 'O desempenho sobe devagar — e o próximo passo pede.' });
   }
   // REWORK 10.5 · CAR-13: quem atua não "divulga no bairro" nem atende "o cliente exigente" (o vocabulário da freguesia).
   if (POR_CONTA.has(modo) && e.clientela !== undefined && ocupacaoOuNula(e.ocupacaoId)?.trilha !== 'cena') {
