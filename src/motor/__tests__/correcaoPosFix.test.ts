@@ -204,7 +204,8 @@ describe('palco: valor contratado ≠ renda do artista', () => {
       if (!p.apresentacoes) continue;
       expect(p.artista).toBeLessThan(p.bruto);
       expect(p.custos).toBe(p.bruto - p.artista);
-      expect(v.trabalho.atual!.salario).toBe(Math.round(p.artista / 12 / 10) * 10);
+      // REWORK 11.5 · ART-02: quem vive de música soma ao palco os freelas do ano (aulas, gravações, estúdio).
+      expect(v.trabalho.atual!.salario).toBe(Math.round((p.artista + (p.freelas ?? 0)) / 12 / 10) * 10);
       expect(leituraDoTrabalho(v).renda).toMatch(/conforme os trabalhos/);
     }
   });
