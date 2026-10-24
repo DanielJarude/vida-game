@@ -62,6 +62,7 @@ import { aplicarPersonalidade } from '../personalidade';
 import type { AcaoProfissional } from './profissao';
 import { registrarQuemApareceu } from './rede';
 import { leituraDoNome, porOrigem } from './notoriedade';
+import { ACOES_DO_CARGO, disponibilidadeDoCargo, executarDoCargo, rotuloDoCargo } from './mandato';
 
 /* ================================================================ Catálogo */
 
@@ -677,7 +678,10 @@ export function dificuldade(v: Vida, cargo: CargoEletivo): number {
   const porte = municipio(v.moradia.municipioId).perfil;
   const tam = porte === 'metropole' ? 2 : porte === 'capital' ? 1.4 : porte === 'metropolitana' ? 1 : 0;
   // Muito mais candidatos do que vagas: a maioria perde (vereador em cidade pequena é o degrau mais alcançável).
-  return { vereador: 38 + tam * 6, prefeito: 50 + tam * 8, deputado_estadual: 50, deputado_federal: 58, senador: 74, governador: 72 }[cargo];
+  // REWORK 11 · POL-04: os cargos de cima são disputados por quem já tem nome e máquina (incumbentes, ex-prefeitos de
+  // capital, a coligação do governo): o político de carreira ganhava 89% das vezes para deputado federal e 82% para
+  // governador. Agora derrota é comum — e a força da trajetória ainda decide quem tem chance.
+  return { vereador: 38 + tam * 6, prefeito: 50 + tam * 8, deputado_estadual: 53, deputado_federal: 70, senador: 77, governador: 76 }[cargo];
 }
 
 /** Um número do ano e do partido (a força do partido naquela eleição): o mundo, não o jogador. */
@@ -1148,7 +1152,9 @@ export function semanaDaPolitica(v: Vida): { rotulo: string; peso: number } | un
  */
 export type OquePolitica = 'aproximar' | 'filiar' | 'indicacao' | 'comunidade' | 'bandeira' | 'prioridade' | 'negociar' | 'candidatura' | 'crise' | 'deixar' | 'trocar_partido'
   // REWORK 10.5 · POL-04: as respostas ao desgaste.
-  | 'bases' | 'recolher' | 'propostas' | 'paz_partido' | 'afastar' | 'responder';
+  | 'bases' | 'recolher' | 'propostas' | 'paz_partido' | 'afastar' | 'responder'
+  // REWORK 11 · POL-02: as ações do cargo (`mandato`), com o id no `valor`.
+  | 'cargo';
 export type AcaoPoliticaCmd = { tipo: 'politica'; oque: OquePolitica; valor?: string };
 
 export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
@@ -1206,6 +1212,7 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
       return v.fatos['pol_quer'] !== undefined && v.t - v.fatos['pol_quer'] < 12 ? bloqueio('incompativel', 'A pré-candidatura já está na rua.') : PERMITIDO;
     }
     case 'crise': return p?.mandato?.crise ? PERMITIDO : bloqueio('impossivel', 'Não há crise aberta.');
+    case 'cargo': return disponibilidadeDoCargo(v, a.valor);
     case 'deixar': return naPolitica(v) && fase !== 'candidato' ? PERMITIDO : bloqueio('impossivel', fase === 'candidato' ? 'A campanha está na rua: é esperar a apuração.' : 'Não se aplica.');
     case 'bases': case 'recolher': case 'propostas': case 'paz_partido': case 'afastar': case 'responder': {
       if (!p || !naPolitica(v)) return bloqueio('impossivel', 'Não se aplica.');
@@ -1270,6 +1277,7 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
       return { texto: `Pré-candidatura na rua. A eleição de ${proximaEleicao(v.t).ano} é o horizonte.` };
     }
     case 'crise': return { decisao: 'pol_crise' };
+    case 'cargo': return executarDoCargo(v, r, a.valor ?? '');
     case 'deixar': return { decisao: 'pol_deixar' };
     case 'trocar_partido': return { decisao: 'pol_troca_partido' };
     case 'bases': case 'recolher': case 'propostas': case 'paz_partido': case 'afastar': case 'responder': return recuperar(v, r, p!, a.oque);
@@ -1371,6 +1379,8 @@ export function acoesPoliticas(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   if (m?.crise) add({ id: 'pol_crise', rotulo: 'Responder à crise', porque: 'Todo mundo espera uma palavra sua.', acao: A('crise'), peso: 10 });
   if (m && p.prioridade) add({ id: 'pol_prioridade', rotulo: `Trabalhar a prioridade: ${NOME_PRIORIDADE[p.prioridade]}`, porque: m.feito === 0 ? 'Sem nada para mostrar, a aprovação cai.' : undefined, acao: A('prioridade'), peso: m.feito === 0 ? 8 : 5 });
   if (m && !p.prioridade) add({ id: 'pol_bandeira', rotulo: 'Escolher a prioridade do mandato', porque: 'Sem prioridade, o mandato não tem o que mostrar.', acao: A('bandeira'), peso: 9 });
+  // REWORK 11 · POL-02: o que este cargo faz (o vereador legisla e fiscaliza; o prefeito monta o governo e executa).
+  if (m) for (const id of ACOES_DO_CARGO[m.cargo] ?? []) { const t = rotuloDoCargo(v, id); add({ id: `pol_cargo_${id}`, rotulo: t.rotulo, porque: t.porque, acao: A('cargo', id), peso: id === 'projeto_lei' || id === 'orcamento' ? 5 : 3 }); }
   add({ id: 'pol_comunidade', rotulo: 'Conversar com a comunidade', porque: m && m.aprovacao < 45 ? 'A rua anda reclamando.' : p.apoio < 30 ? 'A base ainda é pequena.' : undefined, acao: A('comunidade'), peso: m ? (m.aprovacao < 45 ? 7 : 4) : 6 });
   if (!p.partido || p.indicacaoMilitar) add({ id: 'pol_filiar', rotulo: 'Filiar-se a um partido', porque: 'Sem partido, não há candidatura.', acao: A('filiar'), peso: p.apoio >= 20 ? 7 : 4 });
   // Farda: não se filia, mas um partido pode escolher em convenção (TSE) — o requisito vem com a ação que o cumpre.

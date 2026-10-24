@@ -72,20 +72,26 @@ export function candidatosDaNotoriedade(v: Vida): { valor: number; fonte: FonteD
   }
   const a = v.caminhos.arte;
   const obras = (v.caminhos.obras ?? []).filter(o => v.t - o.t <= 60);
-  const marcou = obras.reduce((s, o) => s + (o.recepcao >= 3 ? 12 : o.recepcao === 2 ? 5 : 0), 0);
+  // REWORK 11 · ATR-06: o nome vem do que o PÚBLICO viu (a crítica dá prestígio e prêmio, não fama). Saves de antes: a nota única.
+  const pub = (o: { recepcao: number; comercial?: number }) => o.comercial ?? o.recepcao;
+  const marcou = obras.reduce((s, o) => s + (pub(o) >= 3 ? 12 : pub(o) === 2 ? 5 : 0), 0);
   // O trabalho artístico (principal ou em paralelo) e o currículo recente também dão nome — não só o grupo.
   const freguesia = [v.trabalho.atual, v.trabalho.paralela].reduce((m, x) => {
     const oc = x ? ocupacaoOuNula(x.ocupacaoId) : undefined;
     if (!oc || !TRILHAS_DE_NOME.has(oc.trilha)) return m;
-    const base = x!.clientela ?? (oc.nivel >= 5 ? 70 : 40);
-    return Math.max(m, base * (x === v.trabalho.paralela ? 0.3 : 0.45));
+    // REWORK 11 · ATR-02: a freguesia (ter o emprego, a agenda cheia) dá um nome LOCAL, com teto — o nome grande vem da
+    // obra e do público. Antes (clientela × 0,45, sem teto) o ator parado chegava a notoriedade 45 sozinho, e o nome
+    // alimentava o cachê exponencial e o patrocínio.
+    const base = x!.clientela ?? (oc.nivel >= 5 ? 40 : 25);
+    return Math.max(m, Math.min(15, base * (x === v.trabalho.paralela ? 0.15 : 0.2)));
   }, 0);
   // REWORK 10.5 · FAM-03: o mesmo "marcou" não vale o mesmo numa sala independente e numa novela das nove — o alcance do
   // tipo de obra e o porte da produção pesam (antes: +10 por item que marcou, +3 se fosse tela, qualquer que fosse).
-  const trabalhos = (v.caminhos.curriculo ?? []).filter(x => v.t - x.t <= 60).reduce((s2, x) => s2 + (x.repercussao >= 3 ? 10 : x.repercussao === 2 ? 4 : x.repercussao === 1 ? 0.5 : 0) * (ALCANCE_DO_TIPO[x.tipo] ?? 0.6) * [0.6, 1, 1.4, 1.8][x.porte ?? 1] + (['novela', 'filme', 'serie'].includes(x.tipo) ? 2 : 0), 0);
+  const trabalhos = (v.caminhos.curriculo ?? []).filter(x => v.t - x.t <= 60).reduce((s2, x) => { const k = x.publico ?? x.repercussao; return s2 + (k >= 3 ? 10 : k === 2 ? 4 : k === 1 ? 0.5 : 0) * (ALCANCE_DO_TIPO[x.tipo] ?? 0.6) * [0.6, 1, 1.4, 1.8][x.porte ?? 1] + (['novela', 'filme', 'serie'].includes(x.tipo) ? 2 : 0); }, 0);
   // O legado da obra: o que marcou de verdade continua sendo lembrado (menos que o trabalho em curso).
-  const legadoArte = Math.min(16, (v.caminhos.obras ?? []).filter(o => o.recepcao >= 3).length * 5 + (v.caminhos.curriculo ?? []).filter(x => x.repercussao >= 3).length * 3);
-  const artista = Math.max(a?.ativo ? a.publico * 0.62 : 0, freguesia, legadoArte) + Math.min(24, marcou) + Math.min(18, trabalhos);
+  const legadoArte = Math.min(16, (v.caminhos.obras ?? []).filter(o => pub(o) >= 3).length * 5 + (v.caminhos.curriculo ?? []).filter(x => (x.publico ?? x.repercussao) >= 3).length * 3);
+  // REWORK 11 · ATR-02: o que marcou soma menos (24 → 16; 18 → 12): a banda de público fiel na cidade virava "famosa" no país.
+  const artista = Math.max(a?.ativo ? a.publico * 0.62 : 0, freguesia, legadoArte) + Math.min(16, marcou) + Math.min(12, trabalhos);
   if (artista > 0) cands.push({ valor: artista, fonte: 'arte' });
   const p = v.caminhos.politica;
   if (p && p.fase !== 'encerrada') {
@@ -231,7 +237,9 @@ export function rendaDeImagem(v: Vida): number {
   // O esporte de alto nível paga imagem mais do que o palco paga publicidade (o palco tem cachê próprio: `palco`).
   // A imagem (como o público vê quem já é conhecido) mexe um pouco no que as marcas pagam.
   const im = imagemPublica(v);
-  return Math.round(((x - 30) ** 2) * (fonte === 'esporte' ? 22 : 11) * (im?.fator ?? 1) / 100) * 100;
+  // REWORK 11 · ATR-01: a publicidade de quem é conhecido pela arte caiu (×11 → ×6): era a segunda maior renda do ator
+  // (R$ 488 mil/ano na mediana do 10º ano), por cima do cachê e da bilheteria. O muito famoso ainda vende — e bem.
+  return Math.round(((x - 30) ** 2) * (fonte === 'esporte' ? 22 : 6) * (im?.fator ?? 1) / 100) * 100;
 }
 
 /* ------------------------------------------------------------ Imagem pública */

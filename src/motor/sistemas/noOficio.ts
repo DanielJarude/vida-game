@@ -37,12 +37,23 @@ import { funcaoBasquete } from './modalidades';
 export type OqueOficio =
   | 'projeto' | 'chefia' | 'colega' | 'capacitacao'
   | 'divulgar' | 'caprichar'
+  /** REWORK 11 · MUS-10: o miúdo de quem vive de arte — ensaiar (a música, o papel, a coreografia, o capítulo). */
+  | 'ensaio'
   | 'treino_finalizacao' | 'treino_fisico' | 'treino_tatico' | 'video' | 'fisio' | 'torcida';
 
 export interface VerboDoOficio { oque: OqueOficio; rotulo: string; porque: string }
 
 const COM_CHEFIA = new Set<ModoTrabalho>(['empregado', 'servidor', 'docente', 'saude', 'seguranca', 'militar', 'estagio', 'aprendiz']);
 const POR_CONTA = new Set<ModoTrabalho>(['autonomo', 'informal', 'plataforma', 'artista']);
+/** REWORK 11 · MUS-10: o verbo do ofício de cada arte (o ensaio de cada uma, dito com as palavras dela). */
+const ARTE_DO_VERBO: Record<string, { d: Dominio; ensaio: string; porque: string; bom: string; fraco: string }> = {
+  musica: { d: 'musica', ensaio: 'Ensaiar o repertório novo', porque: 'Técnica e show mais redondo; cansa.', bom: 'Três semanas de ensaio puxado: as músicas novas entraram no show sem tropeço.', fraco: 'O ensaio patinou: a música nova ainda não está pronta para o palco.' },
+  orquestra: { d: 'musica', ensaio: 'Estudar a parte da próxima temporada', porque: 'A estante sente quem chega preparado.', bom: 'Chegou ao primeiro ensaio da temporada com a parte limpa; o spalla notou.', fraco: 'A passagem difícil ainda escapa; vai ser estudo em casa até a estreia.' },
+  cena: { d: 'teatro', ensaio: 'Trabalhar o papel com um preparador', porque: 'A cena fica mais firme; custa horas.', bom: 'O preparador destravou a personagem: a cena difícil saiu inteira no ensaio.', fraco: 'Horas de preparação, e a personagem ainda não veio.' },
+  danca: { d: 'danca', ensaio: 'Ensaiar a coreografia nova além do horário', porque: 'O corpo aprende; o corpo cansa.', bom: 'A sequência mais difícil da coreografia passou a sair limpa.', fraco: 'O corpo não respondeu esta semana; a sequência ainda falha.' },
+  literatura: { d: 'escrita', ensaio: 'Fechar-se para escrever (dias sem interrupção)', porque: 'O livro anda; a vida em volta espera.', bom: 'Uma semana de escrita sem interrupção: um capítulo inteiro de pé.', fraco: 'Dias diante da página; quase tudo foi para o lixo.' }
+};
+
 const chave = (v: Vida, oque: OqueOficio) => `oficio:${oque}:${Math.floor(v.t / 12)}`;
 const feito = (v: Vida, oque: OqueOficio) => v.fatos[chave(v, oque)] !== undefined;
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
@@ -78,9 +89,15 @@ export function verbosDoOficio(v: Vida): VerboDoOficio[] {
     add({ oque: 'capacitacao', rotulo: temEmpresa(e) ? 'Fazer uma capacitação (curso da empresa)' : temOrgao(e) ? (e.contrato === 'militar' ? 'Fazer um curso de capacitação da corporação' : 'Fazer uma capacitação (curso do órgão)') : 'Fazer uma capacitação na área', porque: 'O desempenho sobe devagar — e o próximo passo pede.' });
   }
   // REWORK 10.5 · CAR-13: quem atua não "divulga no bairro" nem atende "o cliente exigente" (o vocabulário da freguesia).
-  if (POR_CONTA.has(modo) && e.clientela !== undefined && ocupacaoOuNula(e.ocupacaoId)?.trilha !== 'cena') {
+  // REWORK 11 · MUS-10: nem quem toca, dança ou escreve "divulga no bairro" ou atende "o cliente exigente".
+  const arte = modo === 'artista' ? ARTE_DO_VERBO[ocupacaoOuNula(e.ocupacaoId)?.trilha ?? ''] : undefined;
+  if (POR_CONTA.has(modo) && e.clientela !== undefined && ocupacaoOuNula(e.ocupacaoId)?.trilha !== 'cena' && !arte) {
     add({ oque: 'divulgar', rotulo: contaAtiva(v, 'instagram') ? 'Divulgar o trabalho (no boca a boca e no Instagram)' : 'Divulgar o trabalho no bairro', porque: `Uns ${preco(v, 250)} em material; cliente novo vem de quem ouviu falar.` });
     add({ oque: 'caprichar', rotulo: 'Caprichar num trabalho difícil (o cliente exigente)', porque: 'Cliente exigente satisfeito indica outros. Cansa.' });
+  }
+  if (arte) {
+    add({ oque: 'ensaio', rotulo: arte.ensaio, porque: arte.porque });
+    if (arte.d === 'musica' && e.clientela !== undefined) add({ oque: 'divulgar', rotulo: contaAtiva(v, 'instagram') ? 'Divulgar o próximo show nas redes' : 'Divulgar o próximo show (cartaz, rádio da cidade)', porque: `Uns ${preco(v, 250)} em material; o público novo vem de quem ficou sabendo.` });
   }
   if (modo === 'atleta' && v.caminhos.esporte?.fase === 'profissional') {
     if (!TREINOS.some(t => feito(v, t))) {
@@ -163,11 +180,23 @@ export function executarOficio(v: Vida, r: Rng, oque: OqueOficio): string {
       if (d) praticar(v, r, d, 0.2, 1);
       return 'Quarenta horas de curso, um certificado — e uma ou outra coisa que você usou já na semana seguinte.';
     }
+    case 'ensaio': {
+      const a = ARTE_DO_VERBO[oc?.trilha ?? ''];
+      const d = a?.d ?? 'musica';
+      estresse(2);
+      praticar(v, r, d, 0.3, 1.1);
+      // O ensaio que rende fica marcado: a próxima estreia/temporada sai mais preparada (o currículo e o público sentem).
+      const rendeu = r.chance(0.55 + (v.personalidade.tracos.disciplina ?? 0) / 300);
+      if (rendeu && e.clientela !== undefined) e.clientela = clamp(e.clientela + 2);
+      if (rendeu && v.caminhos.arte?.ativo) v.caminhos.arte.publico = clamp(v.caminhos.arte.publico + 1);
+      return rendeu ? a?.bom ?? 'O ensaio rendeu.' : a?.fraco ?? 'O ensaio não rendeu como devia.';
+    }
     case 'divulgar': {
       pagar(v, preco(v, 250));
       const insta = contaAtiva(v, 'instagram');
       const ganho = Math.round((3 + r.next() * 5) * (insta ? 1.4 : 1));
       e.clientela = clamp((e.clientela ?? 30) + ganho);
+      if (modoDoTrabalho(v) === 'artista') return insta ? `O post do show circulou: ${ganho >= 6 ? 'casa cheia na data seguinte' : 'gente nova apareceu'}.` : `Cartaz na casa, nota na rádio da cidade: ${ganho >= 6 ? 'casa cheia na data seguinte' : 'gente nova apareceu'}.`;
       return insta ? `Panfleto na padaria e post no Instagram: ${ganho >= 6 ? 'a agenda encheu nas semanas seguintes' : 'apareceram uns clientes novos'}.` : `Panfleto na padaria, cartão no mercado: ${ganho >= 6 ? 'o telefone tocou mais do que o normal' : 'apareceram uns clientes novos'}.`;
     }
     case 'caprichar': {

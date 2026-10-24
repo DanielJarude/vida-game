@@ -69,6 +69,7 @@ import { NEGOCIOS } from '../dados/negocios';
 import { disponibilidadeAcademia, executarAcademia, linhaDePesquisa, OCUPACOES_ACADEMICAS, type OqueAcademia } from './academia';
 import { linguagemEmCena, trabalhaComArte } from './cena';
 import { TRILHAS_ARTISTICAS } from './paralelas';
+import { disponibilidadePapelMusica, mudarPapelMusica, NOME_DO_PAPEL, PAPEIS_DA_MUSICA, papelNaMusica, PORQUE_DO_PAPEL, type PapelMusica } from './musica';
 
 
 /* ================================================================== Modo */
@@ -121,7 +122,10 @@ export function modoDoTrabalho(v: Vida): ModoTrabalho {
   if (f.progressao === 'docente' || f.progressao === 'academica') return 'docente';
   // REWORK 10.5 · UX-19: a atuação é UMA carreira — o ator e o ator conhecido têm o mesmo painel (antes, o conhecido, sem
   // freguesia, caía em 'empregado': escada de cargos vazia, chefia, "curso da empresa" — e sem testes nem propostas).
-  if (f.progressao === 'arte' && (e.clientela !== undefined || oc.trilha === 'cena')) return 'artista';
+  // REWORK 11 · COR-01..03: o palco e a escrita são ofício de artista mesmo sem freguesia — a bailarina CLT de companhia,
+  // o músico concursado da orquestra, o escritor (antes: 'empregado'/'servidor', com "Pedir aumento", horas extras,
+  // "curso da empresa" e almoço com a chefia, e nenhuma audição, ensaio ou estreia).
+  if (f.progressao === 'arte' && (e.clientela !== undefined || ARTE_DE_OFICIO.has(oc.trilha))) return 'artista';
   if (e.contrato === 'servidor') return 'servidor';
   if (f.progressao === 'saude' && e.clientela === undefined) return 'saude';
   if (e.contrato === 'informal') return 'informal';
@@ -129,6 +133,9 @@ export function modoDoTrabalho(v: Vida): ModoTrabalho {
   if (e.clientela !== undefined) return 'autonomo';
   return 'empregado';
 }
+
+/** REWORK 11: as trilhas em que o trabalho é ofício de artista (palco e escrita), qualquer que seja o contrato. */
+export const ARTE_DE_OFICIO = new Set(['cena', 'danca', 'musica', 'orquestra', 'literatura']);
 
 /** Há chefia e equipe (e, portanto, clima). */
 export const temChefia = (v: Vida) => comChefia(v.trabalho.atual);
@@ -138,7 +145,12 @@ export const temChefia = (v: Vida) => comChefia(v.trabalho.atual);
 const RITMO_SALARIO = new Set<ModoTrabalho>(['docente', 'saude']);
 const RITMO_CLIENTELA = new Set<ModoTrabalho>(['autonomo', 'informal', 'plataforma', 'artista', 'rural', 'pesca', 'negocio']);
 
-export const temRitmo = (v: Vida) => { const m = modoDoTrabalho(v); return RITMO_SALARIO.has(m) || RITMO_CLIENTELA.has(m); };
+export const temRitmo = (v: Vida) => {
+  const m = modoDoTrabalho(v);
+  // REWORK 11: a bailarina da companhia e o músico da orquestra têm a escala da casa (não "aceitam todo trabalho").
+  if (m === 'artista' && v.trabalho.atual?.clientela === undefined && v.trabalho.atual?.contrato !== 'autonomo') return false;
+  return RITMO_SALARIO.has(m) || RITMO_CLIENTELA.has(m);
+};
 
 /** As palavras do ritmo, no idioma de cada trabalho. */
 export function rotulosDoRitmo(v: Vida): { puxado: string; leve: string; normal: string; sobre: string; sobreLeve?: string } {
@@ -462,6 +474,8 @@ export type OqueProfissao =
   | 'movimentacao' | 'remocao'
   | 'cooperativa' | 'investir_terra' | 'diversificar' | 'sucessao'
   | 'lancar' | 'estrada'
+  /** REWORK 11 · MUS-02: o papel na música (`musica`). */
+  | 'papel_musica'
   /** A vida acadêmica: projeto, orientação, colaboração, financiamento (`academia`). */
   | 'academia';
 
@@ -613,7 +627,10 @@ export function acoesDoTrabalho(v: Vida, disp: Disp): { agora: AcaoProfissional[
 
   /* ---------------------------------------------- Por conta própria */
   // REWORK 10.5 · CAR-13: quem atua não tem "freguesia" nem "estrutura" — o cachê é do contrato (e o agente negocia).
-  if (POR_CONTA.has(modo) || (modo === 'artista' && oc.trilha !== 'cena')) {
+  // REWORK 11 · MUS-10 / COR-04: nem quem toca, dança ou escreve tem "freguesia" (preço de tabela, estrutura de atendimento):
+  // o que muda a renda é o cachê da data, a obra e a agenda.
+  if (modo === 'artista' && ARTE_DE_OFICIO.has(oc.trilha) && oc.trilha !== 'cena' && e.contrato === 'autonomo' && !e.mei) add({ id: 'mei', rotulo: 'Formalizar como MEI', porque: 'Nota fiscal para o contratante, INSS contando.', acao: { tipo: 'mei' }, peso: 1 });
+  if (POR_CONTA.has(modo) || (modo === 'artista' && !ARTE_DE_OFICIO.has(oc.trilha))) {
     const c = e.clientela ?? 0;
     if (c >= 62 && e.preco !== 'alto') add({ id: 'preco_alto', rotulo: 'Cobrar mais', porque: 'A agenda está cheia.', acao: P('preco', { valor: 'alto' }), peso: 5 });
     if (c < 28 && e.preco !== 'baixo') add({ id: 'preco_baixo', rotulo: 'Baixar o preço', porque: 'A freguesia anda pouca.', acao: P('preco', { valor: 'baixo' }), peso: 4 });
@@ -687,10 +704,11 @@ function acoesArtisticas(v: Vida, i: number): AcaoProfissional[] {
   const P = (oque: OqueProfissao): Acao => ({ tipo: 'profissao', oque } as unknown as Acao);
   const Q = (oque: string): Acao => ({ tipo: 'perseguir', oque } as unknown as Acao);
   const oc = v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.ocupacaoId) : undefined;
-  const musica = v.caminhos.arte?.linguagem === 'musica' || oc?.trilha === 'musica' || v.trabalho.paralela?.ocupacaoId === 'musico_profissional';
+  const musica = v.caminhos.arte?.linguagem === 'musica' || oc?.trilha === 'musica' || oc?.trilha === 'orquestra' || v.trabalho.paralela?.ocupacaoId === 'musico_profissional';
   const teatro = linguagemEmCena(v) === 'teatro' || linguagemEmCena(v) === 'danca';
+  const escrita = oc?.trilha === 'literatura';
   const out: AcaoProfissional[] = [
-    { id: 'lancar', rotulo: musica ? 'Gravar e lançar um trabalho' : 'Estrear um trabalho novo (obra própria)', porque: `Custa uns ${fmt(custoLancar(v))}; obra na rua é o que faz o público crescer — e pode passar em branco.`, acao: P('lancar'), peso: 4 },
+    { id: 'lancar', rotulo: musica ? 'Gravar e lançar um trabalho' : escrita ? 'Publicar um livro novo' : 'Estrear um trabalho novo (obra própria)', porque: `Custa uns ${fmt(custoLancar(v))}; obra na rua é o que faz o público crescer — e pode passar em branco.`, acao: P('lancar'), peso: 4 },
     { id: 'estrada', rotulo: 'Cair na estrada (uma turnê)', porque: 'Público novo, dinheiro incerto, casa longe.', acao: P('estrada'), peso: 2 },
     { id: 'apresentar', rotulo: musica ? 'Fazer um show numa casa pequena' : 'Apresentar-se: uma temporada curta', porque: 'Público e currículo, devagar. A bilheteria pode não pagar a sala.', acao: Q('apresentar'), peso: 3 },
     { id: 'edital', rotulo: 'Inscrever um projeto num edital de cultura', porque: 'Verba para montar; o parecer diz o que pesou.', acao: Q('edital'), peso: 3 }
@@ -713,6 +731,13 @@ function acoesArtisticas(v: Vida, i: number): AcaoProfissional[] {
     else out.push({ id: 'av_agente', rotulo: 'Procurar um agente', porque: `Uma agência abre testes maiores (TV, cinema), marca mais testes e negocia; cobra de 10% a 20% de cada cachê. Hoje o currículo alcança ${['', 'uma agência pequena', 'uma agência média', 'uma agência grande'][redeAlcancavel(v)]}.`, acao: AV('buscar_agente'), peso: 3 });
   }
   if (i >= 14) out.push({ id: 'pequeno', rotulo: musica ? 'Tocar em festas e casamentos (cachê)' : 'Pegar um trabalho pequeno (publicidade, figuração)', porque: 'Paga pouco, mas paga — e entra no currículo.', acao: Q('trabalho_pequeno'), peso: 2 });
+  // REWORK 11 · MUS-02: o papel na música (solo, banda, contratado por outros artistas, compositor) — muda a agenda e a renda.
+  if (musica && oc?.trilha !== 'orquestra') {
+    const atual = papelNaMusica(v);
+    for (const p of PAPEIS_DA_MUSICA) if (p !== atual) out.push({ id: `papel_${p}`, rotulo: p === 'contratado' ? 'Tocar contratado por outros artistas' : p === 'compositor' ? 'Viver mais de compor (os direitos das músicas)' : p === 'banda' ? 'Pôr a banda na frente' : 'Assumir a carreira solo', porque: `${atual ? `Hoje: ${NOME_DO_PAPEL[atual]}. ` : ''}${PORQUE_DO_PAPEL[p]}`, acao: { tipo: 'profissao', oque: 'papel_musica', valor: p } as unknown as Acao, peso: 1 });
+  }
+  // O músico da orquestra muda de casa por concurso (não por "procurar outra vaga").
+  if (oc?.trilha === 'orquestra') out.push({ id: 'concurso_orquestra', rotulo: 'Fazer a audição de outra orquestra', porque: 'Outra orquestra é outro concurso: banca, prova de repertório, lista de espera.', ir: 'explorar', peso: 2 });
   return out;
 }
 
@@ -919,6 +944,7 @@ export function disponibilidadeProfissao(v: Vida, a: AcaoProfissaoCmd): Veredito
       if (v.fatos['arte_lancou'] !== undefined && v.t - v.fatos['arte_lancou'] < 24) return bloqueio('incompativel', 'O último trabalho saiu há pouco; o próximo leva tempo.');
       return vereditoDePagar(v, custoLancar(v), 'Gravar, imprimir, montar: uns');
     }
+    case 'papel_musica': return disponibilidadePapelMusica(v, a.valor);
     case 'estrada': {
       if (!(modo === 'artista' || v.caminhos.arte?.ativo || trabalhaComArte(v))) return semTrabalho;
       if (publicoDoArtista(v) < 25) return bloqueio('requisito', 'Ainda falta público para uma turnê pagar.');
@@ -1022,9 +1048,11 @@ export function executarProfissao(v: Vida, r: Rng, a: AcaoProfissaoCmd): SaidaPr
       pagar(v, custo);
       v.fatos['arte_lancou'] = v.t;
       const o = lancarObra(v, r);
-      return { texto: o.recepcao >= 2 ? 'O trabalho pegou.' : o.recepcao === 1 ? 'Saiu — e achou o seu público.' : 'Saiu. Pouca gente viu — por enquanto.', tom: o.recepcao >= 2 ? 'bom' : 'neutro' };
+      const pub = o.comercial ?? o.recepcao;
+      return { texto: o.recepcao >= 2 && pub <= 1 ? 'A crítica gostou; o público, por enquanto, não veio.' : pub >= 2 && o.recepcao <= 1 ? 'O público pegou — a crítica, nem tanto.' : pub >= 2 ? 'O trabalho pegou.' : pub === 1 ? 'Saiu — e achou o seu público.' : 'Saiu. Pouca gente viu — por enquanto.', tom: Math.max(pub, o.recepcao) >= 2 ? 'bom' : 'neutro' };
     }
     case 'estrada': v.fatos['arte_estrada'] = v.t; return { decisao: 'arte_estrada' };
+    case 'papel_musica': return { texto: mudarPapelMusica(v, a.valor as PapelMusica), tom: 'neutro' };
     case 'academia': return executarAcademia(v, r, (a.valor as OqueAcademia) ?? 'projeto');
   }
     return {};

@@ -19,9 +19,10 @@
 import { clamp, rngDe } from '../rng';
 import type { Rng } from '../rng';
 import type { Vida } from '../tipos';
-import { idade, lembrarCom, marcarFato, pais, vinculosVivos } from '../nucleo';
+import { escrever, idade, lembrarCom, marcarFato, pais, vinculosVivos } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
-import { abrirAPorta, ativo, parar } from './ilicito';
+import { abrirAPorta, ativo, contatosVivos, parar } from './ilicito';
+import { criarPessoa, vincular } from '../pessoas';
 import { abalar } from './abalo';
 import { disponivel, pagar, vereditoDePagar } from './dinheiro';
 import { economiaLocal } from '../dados/lugares';
@@ -46,9 +47,41 @@ export function processarMargem(v: Vida): void {
   // A cada tanto, uma das três perguntas do caminho (só uma por ano; o rumo de `ilicito` tem prioridade).
   if (v.fatos['ilic_rumo'] === v.t || v.fatos['ilic_cerco'] === v.t) return;
   if (env.investigado === v.t) { v.fatos['ilic_cerco'] = v.t; return; }
+  // REWORK 11 · SUB-03: os contatos contam. Quem tem a confiança do meio conhece gente nova do caminho; um contato pode
+  // falar demais (a traição sobe a exposição — e ele sai da sua lista); o trabalho maior só chega por um contato vivo.
+  const vivos = contatosVivos(v);
+  if ((env.reputacao ?? 0) >= 30 && cs.length < 6 && r.chance(0.18)) novoContatoDoCaminho(v);
+  if (vivos >= 1 && r.chance(Math.min(0.1, 0.02 * vivos + (env.atritos ?? 0) * 0.015))) { traicao(v); return; }
   const ultimo = v.fatos['ilic_trabalho'] ?? env.tInicio;
-  if ((env.reputacao ?? 0) >= 25 && v.t - ultimo >= 18 && !env.cautela && r.chance(0.55)) { v.fatos['ilic_trabalho'] = v.t; return; }
+  if ((env.reputacao ?? 0) >= 25 && vivos >= 1 && v.t - ultimo >= 18 && !env.cautela && r.chance(0.45 + Math.min(0.2, vivos * 0.05))) { v.fatos['ilic_trabalho'] = v.t; return; }
   if (env.nivel >= 2 && (env.categoria === 'mercado' || env.categoria === 'grupo') && r.chance(0.2 + (env.atritos ?? 0) * 0.05)) v.fatos['ilic_atrito'] = v.t;
+}
+
+/** Alguém novo do caminho passou a conhecer você (gente da vida, com nome — nunca um método). */
+export function novoContatoDoCaminho(v: Vida): void {
+  const env = v.caminhos.envolvimento;
+  if (!env) return;
+  const r = rngDe(v.id, 'contato_caminho', v.t, env.contatos?.length ?? 0);
+  const p = criarPessoa(v, r, { genero: r.chance(0.65) ? 'masculino' : 'feminino', idade: Math.max(18, idade(v) + r.int(-6, 12)), municipioId: v.moradia.municipioId });
+  p.temperamento.responsabilidade = -0.55;
+  vincular(v, p, { origem: 'vizinhanca', estagio: 'conhecido', proximidade: 25, convivio: [] });
+  (env.contatos ??= []).push(p.id);
+}
+
+/** Um contato falou o seu nome para quem não devia: a exposição sobe, e ele sai da lista. */
+function traicao(v: Vida): void {
+  const env = v.caminhos.envolvimento!;
+  const ids = [...new Set([...(env.contatos ?? []), ...(env.contatoId ? [env.contatoId] : [])])].filter(id => v.pessoas[id]?.vivo);
+  const id = rngDe(v.id, 'traicao', v.t).pick(ids);
+  env.exposicao = clamp(env.exposicao + 15);
+  env.traicoes = (env.traicoes ?? 0) + 1;
+  env.contatos = (env.contatos ?? []).filter(x => x !== id);
+  if (env.contatoId === id) env.contatoId = undefined;
+  const vin = v.vinculos[id];
+  if (vin) { vin.confianca = clamp(vin.confianca - 30); vin.tensao = clamp(vin.tensao + 25); }
+  lembrarCom(v, id, `${v.pessoas[id].nome} falou o seu nome para quem não devia.`, 'conflito', 2);
+  escrever(v, { texto: `${v.pessoas[id].nome}, do caminho, falou o seu nome para quem não devia. Mais gente sabe agora.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim', pessoas: [id] });
+  abalar(v, 'a traição', -4, 8);
 }
 
 /* ---------------------------------------------------------------- As ações da tela */
@@ -126,7 +159,8 @@ export function leituraDaMargem(v: Vida): { titulo: string; linhas: string[] } |
   const linhas = [
     `${anos <= 0 ? 'Menos de um ano' : `${anos} ${anos === 1 ? 'ano' : 'anos'}`} no caminho${env.parou !== undefined ? `, até ${Math.floor(env.parou / 12)}` : ''}; os trabalhos maiores: ${env.trabalhos ?? 0}.`,
     `No meio, ${rep >= 60 ? 'você é de confiança: os trabalhos grandes chegam até você' : rep >= 30 ? 'já confiam em você para mais do que o básico' : 'você ainda é gente de fora'}.`,
-    `${(env.contatos?.length ?? 0) > 1 ? `${env.contatos!.length} pessoas do caminho sabem o seu nome` : 'Uma pessoa do caminho sabe o seu nome'}.`,
+    `${contatosVivos(v) > 1 ? `${contatosVivos(v)} pessoas do caminho sabem o seu nome — é por elas que o trabalho chega` : contatosVivos(v) === 1 ? 'Uma pessoa do caminho sabe o seu nome' : 'Ninguém do caminho, hoje, responde por você: o trabalho maior não chega'}${env.traicoes ? `; ${env.traicoes === 1 ? 'uma já falou' : `${env.traicoes} já falaram`} demais` : ''}.`,
+    ...(env.anosSecos ? [`${env.anosSecos === 1 ? 'Um ano' : `${env.anosSecos} anos`} em que não entrou nada.`] : []),
     env.investigado !== undefined ? 'Há uma investigação em andamento.' : env.exposicao < 25 ? 'Por enquanto, pouca gente sabe.' : env.exposicao < 55 ? 'Gente demais já sabe.' : 'É questão de tempo até alguém chegar.',
     ...(env.saidaNegociada !== undefined ? ['A saída foi negociada: não há pendência com o grupo.'] : v.fatos['pressao_grupo'] !== undefined ? ['O grupo não aceitou bem a sua saída.'] : [])
   ];

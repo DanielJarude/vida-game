@@ -23,7 +23,7 @@ import { habilidade, praticar } from './frentes';
 import { marcar } from './marcas';
 import { registrarDevolutiva } from './devolutivas';
 import { novaOportunidade } from './oportunidades';
-import { cacheDeApresentacao } from './palco';
+import { cacheDeApresentacao, subirPublico } from './palco';
 import { lancarObra } from './arte';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { municipio, nivelDeOferta } from '../dados/lugares';
@@ -59,6 +59,27 @@ export function trabalhaComArte(v: Vida, d?: Dominio): boolean {
     const tr = e ? ocupacaoOuNula(e.ocupacaoId)?.trilha : undefined;
     return !!tr && (d ? !!TRILHA_DA[d]?.includes(tr) : LINGUAGENS_DE_CENA.some(x => TRILHA_DA[x]?.includes(tr)));
   });
+}
+
+/**
+ * REWORK 11 · MUS-05..09 — já vive DESTE ofício (o trabalho principal ou o paralelo é desta arte, ou pede esta mesma
+ * habilidade): as portas de "viver disso" não se abrem para quem já vive disso. Vale também para os ofícios fora do palco
+ * (o designer não recebe "alguém perguntou quanto você cobraria por uma arte").
+ */
+export function viveDoOficio(v: Vida, d: Dominio): boolean {
+  if (trabalhaComArte(v, d)) return true;
+  return [v.trabalho.atual, v.trabalho.paralela].some(e => !!e && ocupacaoOuNula(e.ocupacaoId)?.habilidade?.dominio === d);
+}
+
+/**
+ * O degrau de agora na carreira desta arte (0 = não vive dela): o convite de entrada a quem já está no mesmo degrau
+ * (ou acima) é um convite obsoleto; o de um degrau acima é PROMOÇÃO (e diz isso).
+ */
+export function degrauNaArte(v: Vida, d: Dominio): number {
+  return [v.trabalho.atual, v.trabalho.paralela].reduce((m, e) => {
+    const oc = e ? ocupacaoOuNula(e.ocupacaoId) : undefined;
+    return oc && TRILHA_DA[d]?.includes(oc.trilha) ? Math.max(m, oc.nivel) : m;
+  }, 0);
 }
 
 /* ------------------------------------------------------------- Currículo */
@@ -174,8 +195,9 @@ export function publicoAgora(v: Vida): number {
 
 export function crescerPublico(v: Vida, quanto: number): void {
   const p = v.caminhos.arte;
-  if (p?.ativo) p.publico = Math.round(clamp(p.publico + quanto, 0, 100));
-  for (const e of [v.trabalho.atual, v.trabalho.paralela]) if (e?.clientela !== undefined && trabalhaComArte(v)) e.clientela = Math.round(clamp(e.clientela + quanto * 0.6, 0, 100));
+  // REWORK 11 · MUS-01: com folga decrescente (`palco.subirPublico`) — o público grande cresce devagar.
+  if (p?.ativo) p.publico = Math.round(subirPublico(p.publico, quanto));
+  for (const e of [v.trabalho.atual, v.trabalho.paralela]) if (e?.clientela !== undefined && trabalhaComArte(v)) e.clientela = Math.round(subirPublico(e.clientela, quanto * 0.6));
 }
 
 export function executarCena(v: Vida, r: Rng, oque: OqueCena): { texto: string; tom: 'bom' | 'ruim' | 'neutro' } {
@@ -247,7 +269,9 @@ export function executarCena(v: Vida, r: Rng, oque: OqueCena): { texto: string; 
       const tipos: ItemCurriculo['tipo'][][] = [['teatro', 'curta'], ['teatro', 'curta', 'serie'], ['serie', 'filme', 'teatro'], ['novela', 'filme', 'serie']];
       const tipo = r.pick(tipos[porte]);
       const exige = [52, 60, 68, 74][porte];
-      const chance = clamp(0.3 + (h - exige) / 70 + cv * 0.15, 0.04, 0.7);
+      // REWORK 11 · ATR-04: o teste reprova mais (73% de aprovação era fácil demais), sobretudo no começo: cada porte tem
+      // mais concorrência; a técnica sobre o que a produção pede, o currículo e o prestígio pesam; o teto é 55%.
+      const chance = clamp(0.12 + (h - exige) / 80 + cv * 0.1 + prestigioArtistico(v) * 0.12 - porte * 0.06, 0.03, 0.55);
       const titulo = tituloFicticio(v, tipo, 'audicao');
       const onde = r.pick(CASAS[tipo]);
       const nomeTipo = { teatro: 'a montagem', curta: 'o curta', serie: 'a série', novela: 'a novela', filme: 'o filme', festival: 'o festival', publicidade: 'o comercial', show: 'o show', espetaculo: 'o espetáculo', edital: 'o projeto' }[tipo];

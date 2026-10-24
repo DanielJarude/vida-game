@@ -11,11 +11,11 @@
  * público não vem. Nada disso impede de tocar no casamento da filha aos 60.
  */
 
-import { somarAoNome } from './notoriedade';
+import { nomePor, somarAoNome } from './notoriedade';
 import { municipio } from '../dados/lugares';
 import type { Rng } from '../rng';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { Dominio, Obra, ProjetoArtistico, Vida } from '../tipos';
 import { amigos, escrever, idade, lembrarCom, marcarFato, temFato, vinculosVivos } from '../nucleo';
 import { forcaDoSetor } from '../dados/mercado';
@@ -25,7 +25,8 @@ import { novaOportunidade } from './oportunidades';
 import { anoDe } from '../tempo';
 import { flex, ge } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
-import { temporadaDePalco } from './palco';
+import { subirPublico, temporadaDePalco } from './palco';
+import { degrauNaArte } from './cena';
 
 const LINGUAGENS: Dominio[] = ['musica', 'teatro', 'danca'];
 
@@ -127,7 +128,9 @@ function anoDoProjeto(v: Vida, r: Rng, p: ProjetoArtistico): void {
   const cena = forcaDoSetor(v.moradia.municipioId, 'criativo', anoDe(v.t));
   const n = ensaiando?.nivel ?? 0;
   // Público cresce devagar e cansa de quem para.
-  const delta = n === 0 ? -8 : (h - 50) / 10 + (n >= 3 ? 2 : 0) + (cena - 1) * 6 + v.personalidade.tracos.sociabilidade / 50 + r.normal() * 4 - p.publico / 14;
+  // REWORK 11 · MUS-01: a técnica ajuda até um ponto (antes, sem teto: quem praticava muito tinha público de equilíbrio
+  // perto de 80 — e o cachê exponencial ia junto); e o público esquece mais depressa quem não renova (÷10, antes ÷14).
+  const delta = n === 0 ? -8 : Math.min(2.5, (h - 50) / 12) + (n >= 3 ? 2 : 0) + (cena - 1) * 4 + v.personalidade.tracos.sociabilidade / 50 + r.normal() * 4 - p.publico / 9;
   p.publico = Math.round(clamp(p.publico + delta, 0, 100));
   // Marcos de quem insiste.
   if (p.publico >= 20 && !temFato(v, `show_pago_${p.nome}`) && r.chance(0.5)) {
@@ -148,13 +151,18 @@ function anoDoProjeto(v: Vida, r: Rng, p: ProjetoArtistico): void {
   // REWORK 10.5 · CAR-12: quem já vive disso no mesmo degrau (ou acima) não recebe o convite de entrada da própria
   // carreira — a atriz conhecida não é "chamada para a próxima montagem, com cachê" como quem começa.
   // REWORK 10.6 · CAR-15: a trajetória paralela também conta (antes, o ator em paralelo recebia o convite de entrada de novo).
-  const jaVive = [v.trabalho.atual, v.trabalho.paralela].some(e => { const x = e ? ocupacaoOuNula(e.ocupacaoId) : undefined; return !!x && x.trilha === ocupacaoOuNula(oc)?.trilha && x.nivel >= (ocupacaoOuNula(oc)?.nivel ?? 0); });
+  // REWORK 11 · MUS-07: pela ARTE, não pela trilha exata (o músico de orquestra recebia "Um convite para viver de música").
+  const degrau = degrauNaArte(v, p.linguagem);
+  const jaVive = degrau >= (ocupacaoOuNula(oc)?.nivel ?? 0);
+  const promocao = degrau > 0 && !jaVive;
   if (h >= minimoH && !jaVive && p.publico >= (p.linguagem === 'teatro' ? 58 : 72) && v.trabalho.atual?.ocupacaoId !== oc && !(p.linguagem === 'danca' && i > 27)
     && (v.caminhos.ultimas['convite_arte'] === undefined || v.t - v.caminhos.ultimas['convite_arte'] >= 36) && r.chance(clamp((p.publico - 66) / 300 + (h - minimoH) / 350, 0.01, 0.045))) {
     novaOportunidade(v, {
       tipo: 'convite', ocupacaoId: oc, dominio: p.linguagem, meses: 12, chave: 'convite_arte',
-      titulo: p.linguagem === 'musica' ? 'Um convite para viver de música' : p.linguagem === 'teatro' ? 'Um papel' : 'Uma audição',
-      texto: p.linguagem === 'musica' ? `Um produtor viu ${p.nome} e propôs agenda cheia de shows: dá para largar o resto e viver disso — com o risco de sempre.` : p.linguagem === 'teatro' ? (oc === 'ator_reconhecido' ? 'Um diretor de elenco viu a peça e chamou para um teste de novela.' : 'Uma companhia profissional chamou para a próxima montagem, com cachê.') : 'Uma companhia profissional abriu audição e o seu nome foi indicado.'
+      titulo: promocao ? (p.linguagem === 'musica' ? 'Palcos maiores' : 'Um degrau acima') : p.linguagem === 'musica' ? 'Um convite para viver de música' : p.linguagem === 'teatro' ? 'Um papel' : 'Uma audição',
+      texto: promocao && p.linguagem === 'musica' ? `Um produtor viu ${p.nome} e quer levar a banda para palcos maiores: agenda cheia, outra escala de shows — com o risco de sempre.`
+        : promocao ? 'Uma companhia maior viu o trabalho do grupo e chamou para um degrau acima na carreira.'
+        : p.linguagem === 'musica' ? `Um produtor viu ${p.nome} e propôs agenda cheia de shows: dá para largar o resto e viver disso — com o risco de sempre.` : p.linguagem === 'teatro' ? (oc === 'ator_reconhecido' ? 'Um diretor de elenco viu a peça e chamou para um teste de novela.' : 'Uma companhia profissional chamou para a próxima montagem, com cachê.') : 'Uma companhia profissional abriu audição e o seu nome foi indicado.'
     });
   }
   // O grupo acaba: gente cresce, muda, cansa.
@@ -209,29 +217,38 @@ export function lancarObra(v: Vida, r: Rng): Obra {
   const cuidada = v.trabalho.atual?.ritmo === 'leve' && v.trabalho.atual.clientela !== undefined ? 0.05 : 0;
   const q = habilidade(v, d) / 100 * 0.62 + publico / 100 * 0.25 + (v.predisposicoes?.artistica ?? 0) * 0.08 + cuidada + r.normal() * 0.13;
   const recepcao: Obra['recepcao'] = q >= 0.66 ? 3 : q >= 0.52 ? 2 : q >= 0.38 ? 1 : 0;
+  // REWORK 11 · ATR-06: a recepção do PÚBLICO (vendas, plays, ingressos) é outra conta: o público que já existe, o nome,
+  // um pouco do ofício e muito acaso (sorteio próprio). A crítica (`recepcao`) dá prestígio e prêmio; o público, a renda.
+  const rp = rngDe(v.id, 'obra_publico', v.t, v.caminhos.obras?.length ?? 0);
+  const qp = publico / 100 * 0.3 + habilidade(v, d) / 100 * 0.12 + nomePor(v, 'arte') / 600 + rp.normal() * 0.17;
+  const comercial: Obra['recepcao'] = qp >= 0.6 ? 3 : qp >= 0.45 ? 2 : qp >= 0.28 ? 1 : 0;
   const lista = TITULOS[d] ?? TITULOS.musica!;
   const titulo = lista[((v.caminhos.obras?.length ?? 0) + Math.floor(v.t / 12)) % lista.length];
-  const renda = Math.round([0, 1500, 6000, 22000][recepcao] * Math.max(0.4, publico / 50) / 100) * 100;
+  const renda = Math.round([0, 1500, 6000, 22000][comercial] * Math.max(0.4, publico / 50) / 100) * 100;
   // A obra que marcou pode ser indicada (fictício, do universo desta vida): um prêmio da música independente, um prêmio literário.
   const nomePremio = d === 'musica' ? 'o prêmio da música independente' : d === 'escrita' ? 'um prêmio literário nacional' : d === 'teatro' ? 'o prêmio de teatro da cidade' : d === 'danca' ? 'o prêmio de dança da cidade' : 'o salão de artes da região';
   const premio = recepcao >= 3 && r.chance(0.45) ? { nome: nomePremio, venceu: r.chance(0.35) } : undefined;
-  const o: Obra = { t: v.t, titulo, linguagem: d, recepcao, renda, ...(premio ? { premio } : {}) };
+  const o: Obra = { t: v.t, titulo, linguagem: d, recepcao, comercial, renda, ...(premio ? { premio } : {}) };
   (v.caminhos.obras ??= []).push(o);
   if (v.caminhos.obras.length > 20) v.caminhos.obras.splice(0, v.caminhos.obras.length - 20);
   v.financas.conta += renda;
-  if (p?.ativo) p.publico = clamp(p.publico + [2, 6, 12, 20][recepcao]);
+  if (p?.ativo) p.publico = Math.round(subirPublico(p.publico, [2, 6, 12, 20][comercial]));
   const e = v.trabalho.atual;
-  if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + [1, 4, 8, 14][recepcao]);
+  if (e?.clientela !== undefined) e.clientela = Math.round(subirPublico(e.clientela, [1, 4, 8, 14][comercial]));
   const quem = p?.ativo ? ` com ${p.nome}` : '';
   const oque = d === 'musica' ? `o disco "${titulo}"` : d === 'teatro' ? `a peça "${titulo}"` : d === 'danca' ? `o espetáculo "${titulo}"` : d === 'escrita' ? `o livro "${titulo}"` : `"${titulo}"`;
   // REWORK 10.5 · CAR-13: o que "marcou" diz de cada arte (antes, a peça e o livro também tinham "gente cantando junto").
   const marcou = d === 'musica' ? 'gente cantando junto em cidade onde você nunca tinha ido' : d === 'teatro' || d === 'danca' ? 'sessões lotadas, temporada estendida, gente voltando para ver de novo' : d === 'escrita' ? 'resenhas, leitores escrevendo para você, uma segunda tiragem' : 'gente parando para ver, convite de galeria de fora';
-  const texto = recepcao === 3 ? `Lançou ${oque}${quem} — e ${d === 'teatro' ? 'ela' : 'ele'} marcou: crítica, público, ${marcou}.`
-    : recepcao === 2 ? `Lançou ${oque}${quem}. Repercutiu: saiu na imprensa da região, apareceu convite de fora.`
-      : recepcao === 1 ? `Lançou ${oque}${quem}. Achou o seu público, pequeno e fiel.`
-        : `Lançou ${oque}${quem}. Quem conhecia gostou; o resto nem ficou sabendo.`;
-  escrever(v, { texto, relevancia: recepcao >= 3 ? 'marco' : recepcao >= 1 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: recepcao >= 2 ? 'bom' : undefined, escolha: true });
-  if (recepcao >= 2) marcar(v, 'conquista', texto, recepcao >= 3 ? 3 : 2, { dominio: d });
+  const ela = d === 'teatro' || d === 'fotografia' ? 'ela' : 'ele';
+  const texto = recepcao >= 3 && comercial >= 3 ? `Lançou ${oque}${quem} — e ${ela} marcou: crítica, público, ${marcou}.`
+    : recepcao >= 2 && comercial <= 1 ? `Lançou ${oque}${quem}. A crítica ${recepcao >= 3 ? 'pôs entre os melhores do ano' : 'elogiou'}; ${comercial === 0 ? 'quase ninguém foi atrás' : 'o público ficou pequeno'} — e o dinheiro também.`
+      : comercial >= 2 && recepcao <= 1 ? `Lançou ${oque}${quem}. ${comercial >= 3 ? `O público abraçou: ${marcou}` : 'O público gostou e espalhou'} — a crítica ${recepcao === 0 ? 'torceu o nariz' : 'achou correto, sem mais'}.`
+        : Math.max(recepcao, comercial) >= 2 ? `Lançou ${oque}${quem}. Repercutiu: saiu na imprensa da região, apareceu convite de fora.`
+          : comercial === 1 ? `Lançou ${oque}${quem}. Achou o seu público, pequeno e fiel.`
+            : `Lançou ${oque}${quem}. Quem conhecia gostou; o resto nem ficou sabendo.`;
+  const melhor = Math.max(recepcao, comercial);
+  escrever(v, { texto, relevancia: melhor >= 3 ? 'marco' : melhor >= 1 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: melhor >= 2 ? 'bom' : undefined, escolha: true });
+  if (melhor >= 2) marcar(v, 'conquista', texto, melhor >= 3 ? 3 : 2, { dominio: d });
   if (premio) {
     const tp = premio.venceu ? `Ganhou ${premio.nome} com ${oque}.` : `${oque.charAt(0).toUpperCase()}${oque.slice(1)} foi ${d === 'escrita' ? 'finalista de' : 'indicado a'} ${premio.nome.replace(/^o /, '')}.`;
     escrever(v, { texto: tp, relevancia: premio.venceu ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });

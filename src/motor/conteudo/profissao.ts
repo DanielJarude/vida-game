@@ -40,7 +40,7 @@ import { marcar } from '../sistemas/marcas';
 import { abalar } from '../sistemas/abalo';
 import { assinarContrato, augeDe, barraDeTitular, creditarLuvas, criarProposta, ficarSemClube, prazoDeContrato, propostaNaMesa, salarioDaRenovacao, clubeQuerRenovar, encerrarCarreira, nivelQueOMercadoOferece, palavraDaNota, transferirPara, valorDeMercado, voltarDoEmprestimo } from '../sistemas/esporte';
 import { aoClube, divisaoDoNivel, doClube, noClube, oClube } from '../dados/clubes';
-import { alcanceNoPalco, cacheDeApresentacao, linguagemDePalco, parteDosCustos } from '../sistemas/palco';
+import { alcanceNoPalco, cacheDeApresentacao, datasEsperadas, linguagemDePalco, parteDosCustos, subirPublico } from '../sistemas/palco';
 import { habilidade } from '../sistemas/frentes';
 import { arrendamentoMensal } from '../sistemas/rural';
 import { MUNIC_POR_INDICE } from '../sistemas/militar';
@@ -707,13 +707,19 @@ function estrada(c: Ctx, deu: boolean, peso: number): void {
   // A turnê pela mesma conta do palco: datas × valor contratado × bilheteria, menos o que a estrada custa (`palco`).
   const d = linguagemDePalco(v) ?? v.caminhos.arte?.linguagem ?? 'musica';
   const x = alcanceNoPalco(v, d);
-  const datas = 20 * peso;
-  const bruto = datas * cacheDeApresentacao(v, d) * (deu ? 0.75 : 0.35);
+  // REWORK 11 · MUS-01: a turnê concentra as datas do ano (um pouco mais que a agenda normal desse alcance), não soma 20 datas
+  // a mais por cima dela — e a temporada de palco do ano desconta as datas que a estrada já pagou.
+  const datas = Math.round(clamp(datasEsperadas(v, d) * 1.15, 4, 20) * peso);
+  const bruto = datas * cacheDeApresentacao(v, d) * (deu ? 0.65 : 0.35);
   const valor = Math.round((bruto * (1 - parteDosCustos(x)) - (deu ? 0 : 2500 * peso)) / 100) * 100;
   v.financas.conta += valor;
-  if (v.caminhos.arte?.ativo) v.caminhos.arte.publico = clamp(v.caminhos.arte.publico + (deu ? 12 : 5) * peso);
+  // REWORK 11 · MUS-01: as datas da turnê são datas DO ANO — a temporada de palco desconta (antes, somava 20 datas pagas
+  // por fora da agenda: ~R$ 4,8 mi a cada dois anos).
+  v.fatos['estrada_t'] = v.t;
+  v.fatos['estrada_datas'] = datas;
+  if (v.caminhos.arte?.ativo) v.caminhos.arte.publico = Math.round(subirPublico(v.caminhos.arte.publico, (deu ? 8 : 3) * peso));
   const e = v.trabalho.atual;
-  if (e?.clientela !== undefined) e.clientela = clamp(e.clientela + (deu ? 8 : 3) * peso);
+  if (e?.clientela !== undefined) e.clientela = Math.round(subirPublico(e.clientela, (deu ? 8 : 3) * peso));
   v.mente.estresse = clamp(v.mente.estresse + 6 * peso);
   const par = parceiro(v);
   if (par && par.vin.convivio.includes('casa')) par.vin.tensao = clamp(par.vin.tensao + 6 * peso);
