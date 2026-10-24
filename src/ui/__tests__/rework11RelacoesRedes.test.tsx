@@ -65,8 +65,8 @@ describe('SOC-11 · publicar em passos', () => {
     render(<Ligado v0={v0} tela={(v, agir) => <RedesSociais vida={v} agir={agir} />} />);
     fireEvent.click(screen.getByRole('button', { name: /Voltar para a tela inicial/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Publicar' }));
-    expect(screen.getByText('Publicar onde?')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /^X/ }));
+    const onde = screen.getByText('Publicar onde?').parentElement!;
+    fireEvent.click(within(onde).getByRole('button', { name: /^X/ }));
     expect(screen.getByText('1. O quê')).toBeTruthy();
   });
 });

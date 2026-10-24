@@ -127,12 +127,14 @@ export function executarCasamento(v: Vida, pessoaId: string, o: OpCasamento): st
   const plano = vin.romance!.noivado!.plano!;
   const custo = custoDoCasamento(v, plano);
   const { parcelou, parcela } = casar(v, p, custo, `${LOCAIS[plano.local].rotulo.toLowerCase()}, com ${plano.convidados} convidados`);
+  // Sem lua de mel no plano, o sinal não fica (a viagem do ano segue a regra de sempre).
+  if (!plano.luaDeMel) delete v.fatos[`lua_de_mel_pendente_${p.id}`];
   if (plano.discorda) {
     vin.tensao = clamp(vin.tensao + 10);
-    lembrarCom(v, p.id, 'Casaram do seu jeito — não do jeito que ela queria.'.replace('ela', flex(p.genero, 'ele', 'ela', 'elu')), 'conflito', 1);
+    lembrarCom(v, p.id, `Casaram do seu jeito — não do jeito que ${flex(p.genero, 'ele', 'ela', 'elu')} queria.`, 'conflito', 1);
   }
   const onde = plano.local === 'cartorio' ? `n${registroCivilDe(v).slice(1)}` : LOCAIS[plano.local].rotulo.charAt(0).toLowerCase() + LOCAIS[plano.local].rotulo.slice(1);
-  return `Casaram-se ${onde}, com ${plano.convidados} convidados.${parcelou ? ` A sua parte que faltou virou ${PRAZO_DA_FESTA} parcelas de ${moeda(parcela)}.` : ''}${plano.discorda ? ` ${p.nome} sorriu nas fotos; a conversa sobre como foi fica para depois.` : ''}${plano.luaDeMel ? ' A lua de mel espera em Tempo livre (uma viagem, quando quiserem).' : ''}`;
+  return `Casaram-se ${onde}, com ${plano.convidados} convidados.${parcelou ? ` A sua parte que faltou virou ${PRAZO_DA_FESTA} parcelas de ${moeda(parcela)}.` : ''}${plano.discorda ? ` ${p.nome} sorriu nas fotos; a conversa sobre como foi fica para depois.` : ''}${plano.luaDeMel ? ` A lua de mel espera na ficha de ${p.nome}, em Pessoas (uma viagem a dois, dentro de um ano).` : ''}`;
 }
 
 /* ------------------------------------------------------------------ A cerimônia (também a do conteúdo `rom_casamento`) */
