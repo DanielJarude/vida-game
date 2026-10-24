@@ -150,3 +150,12 @@ export function chanceDeFalha(env: Envolvimento, ramo: Ramo, escala: 1 | 2 | 3, 
   const pratica = e ? e.experiencia / 100 : 0;
   return clamp(PERFIL[ramo].falha * (0.6 + escala * 0.35) - pratica * 0.16 - (parceiroDeConfianca ? 0.05 : 0) + (env.cautela ? -0.03 : 0), 0.05, 0.7);
 }
+
+/** O ganho do ano do envolvimento, repartido pelos ramos ativos (pelo peso de cada um): o que cada frente rendeu. */
+export function creditarRamos(env: Envolvimento, ganho: number): void {
+  const ativos = ramosAtivos(env);
+  if (!ativos.length || ganho <= 0) return;
+  const pesos = ativos.map(r => pesoDoRamo(env, r));
+  const soma = pesos.reduce((a, b) => a + b, 0);
+  ativos.forEach((r, k) => { env.especializacoes![r]!.ganhos += Math.round(ganho * pesos[k] / soma / 100) * 100; });
+}

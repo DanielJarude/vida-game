@@ -15,6 +15,8 @@
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { BotaoAcao } from '../comum';
+import { disponibilidade } from '../../motor/acoes';
+import { podeTentar } from '../../motor/plausibilidade';
 import { anoDe } from '../../motor/tempo';
 import { dinheiroCurto } from '../leituraMaterial';
 import { hashMisturado } from '../../motor/rng';
@@ -157,11 +159,14 @@ export function PranchetaDoTecnico({ vida, agir }: { vida: Vida; agir: (a: Acao)
               </div>
             </div>
           </div>
-          <div className="grupo-acoes prancheta__estrategias" role="group" aria-label="A estratégia">
-            {(['ofensivo', 'equilibrado', 'defensivo'] as EstiloDeJogo[]).map(x => (
-              <BotaoAcao key={x} vida={vida} acao={{ tipo: 'tatica', estilo: x }} agir={agir} variante={x === estilo ? 'principal' : 'secundario'} semAviso>{`${FORMACAO_DO_ESTILO[x]} (${x})`}</BotaoAcao>
-            ))}
+          {/* A estratégia como um seletor de três posições: a atual marcada; o motivo de não poder mudar, dito uma vez. */}
+          <div className="escolha prancheta__estrategias" role="group" aria-label="A estratégia">
+            {(['ofensivo', 'equilibrado', 'defensivo'] as EstiloDeJogo[]).map(x => {
+              const d = disponibilidade(vida, { tipo: 'tatica', estilo: x });
+              return <button key={x} type="button" className="chip" aria-pressed={x === estilo} disabled={x !== estilo && !podeTentar(d)} onClick={() => { if (x !== estilo) agir({ tipo: 'tatica', estilo: x }); }}>{`${FORMACAO_DO_ESTILO[x]} (${x})`}</button>;
+            })}
           </div>
+          {vida.fatos['tec_tatica'] === vida.t && <p className="carreira-especial__nota">A estratégia já mudou nesta temporada: mudar de novo confundiria o vestiário.</p>}
           <dl className="placar-da-temporada__numeros">
             <div><dt>Vestiário</dt><dd>{p.vestiario >= 65 ? 'fechado com você' : p.vestiario >= 45 ? 'sem queixas' : 'dividido'}</dd></div>
             <div><dt>Diretoria</dt><dd>{p.pressao >= 70 ? 'o cargo balança' : p.pressao >= 50 ? 'cobrando' : 'confiante'}</dd></div>
@@ -200,12 +205,7 @@ export function ClaqueteDoAtor({ vida }: { vida: Vida }) {
         <span className="claquete__topo" />
         <span className="claquete__texto">{producao.length ? `"${producao[0].titulo}"` : 'Entre trabalhos'}</span>
       </div>
-      <dl className="placar-da-temporada__numeros">
-        <div><dt>Em produção</dt><dd>{producao.length || 'nada'}</dd></div>
-        <div><dt>Propostas</dt><dd>{propostas || 'nenhuma'}</dd></div>
-        <div><dt>Trabalhos</dt><dd>{cv.length}</dd></div>
-        <div><dt>Prêmios</dt><dd>{premios || 'nenhum'}</dd></div>
-      </dl>
+      <p className="carreira-especial__sub">{producao.length ? `Em cena: ${producao[0].papel}, de ${producao[0].casa}` : propostas ? `${propostas} ${propostas === 1 ? 'proposta' : 'propostas'} esperando resposta` : cv.length ? 'Entre um trabalho e outro: os testes trazem o próximo' : 'O primeiro trabalho ainda está por vir'}{premios ? ` · ${premios} ${premios === 1 ? 'prêmio' : 'prêmios'}` : ''}</p>
       {ultimo && <p className="carreira-especial__nota">O último trabalho: "{ultimo.titulo}" ({ultimo.papel}). Crítica: {NOTA[ultimo.repercussao]} · público: {NOTA[ultimo.publico ?? ultimo.repercussao]}{ultimo.cache ? ` · cachê de ${dinheiroCurto(ultimo.cache)}` : ''}.</p>}
     </section>
   );
@@ -229,12 +229,14 @@ export function PalcoDoMusico({ vida }: { vida: Vida }) {
         <path d="M80 0 L54 26 L66 26 Z" className="ribalta__luz" />
         <circle cx="50" cy="20" r="4" className="ribalta__voce" />
       </svg>
-      <dl className="placar-da-temporada__numeros">
-        <div><dt>Na música</dt><dd>{papel ? PAPEL[papel] : '—'}</dd></div>
-        <div><dt>Shows em {p?.ano ?? '—'}</dt><dd>{p ? p.apresentacoes : '—'}</dd></div>
-        <div><dt>O que ficou</dt><dd>{p ? dinheiroCurto(p.artista + (p.freelas ?? 0)) : '—'}</dd></div>
-        <div><dt>Direitos</dt><dd>{direitos ? `${dinheiroCurto(direitos)}/mês` : 'nenhum'}</dd></div>
-      </dl>
+      {p ? (
+        <dl className="placar-da-temporada__numeros">
+          <div><dt>Na música</dt><dd>{papel ? PAPEL[papel] : 'por conta própria'}</dd></div>
+          <div><dt>Shows em {p.ano}</dt><dd>{p.apresentacoes}</dd></div>
+          <div><dt>O que ficou</dt><dd>{dinheiroCurto(p.artista + (p.freelas ?? 0))}</dd></div>
+          <div><dt>Direitos</dt><dd>{direitos ? `${dinheiroCurto(direitos)}/mês` : 'nenhum'}</dd></div>
+        </dl>
+      ) : <p className="carreira-especial__sub">{papel ? cap(PAPEL[papel]) : 'Por conta própria'} · o primeiro ano de shows ainda está sendo vivido.</p>}
       {p?.freelas ? <p className="carreira-especial__nota">Além dos shows, aulas e gravações para outros artistas: {dinheiroCurto(p.freelas)} no ano.</p> : null}
       {obras.length > 0 && (
         <div>

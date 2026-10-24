@@ -24,6 +24,9 @@ import { anoDe } from '../tempo';
 
 export const GRUPOS = ['a bancada do comércio', 'as lideranças dos bairros', 'o grupo do sindicato', 'a ala jovem do partido', 'os vereadores do interior', 'o movimento pela saúde', 'as associações de produtores', 'o grupo dos servidores'];
 
+/** "de" + o artigo do grupo: "da bancada", "das lideranças", "do movimento", "dos vereadores". */
+export const deGrupo = (g: string) => g.replace(/^(a|as|o|os) /, (_m, art) => `d${art} `);
+
 export const aliancasAtivas = (p: VidaPolitica | undefined) => (p?.aliancas ?? []).filter(a => a.rompida === undefined);
 export const promessasEmAberto = (p: VidaPolitica | undefined) => (p?.promessas ?? []).filter(x => x.cumprida === undefined && x.quebrada === undefined);
 
@@ -84,8 +87,8 @@ export function executarAlianca(v: Vida, oque: OqueAlianca, id?: string): string
       const a: AliancaPolitica = { id: novoId(v, 'al'), pessoaId: pessoa.id, grupo, confianca: 45, desde: v.t, favores: 0 };
       (p.aliancas ??= []).push(a);
       p.apoio = clamp(p.apoio + 4);
-      prometer(v, { texto: `apoiar a pauta de ${grupo} (${pessoa.nome})`, origem: 'alianca', aliancaId: a.id, prazo: v.t + 24 });
-      escrever(v, { texto: `Fechou uma aliança com ${pessoa.nome}, de ${grupo}. Em troca, prometeu apoiar a pauta deles.`, relevancia: 'biografia', tema: 'trabalho', escolha: true, pessoas: [pessoa.id] });
+      prometer(v, { texto: `apoiar a pauta ${deGrupo(grupo)} (${pessoa.nome})`, origem: 'alianca', aliancaId: a.id, prazo: v.t + 24 });
+      escrever(v, { texto: `Fechou uma aliança com ${pessoa.nome}, ${deGrupo(grupo)}. Em troca, prometeu apoiar a pauta deles.`, relevancia: 'biografia', tema: 'trabalho', escolha: true, pessoas: [pessoa.id] });
       return `${pessoa.nome} trouxe o apoio de ${grupo}. O compromisso ficou dito: dois anos para mostrar que você cumpre.`;
     }
     case 'cumprir': {
@@ -184,8 +187,8 @@ export function responderPedido(v: Vida, como: 'atender' | 'adiar' | 'recusar'):
   if (!x) return '';
   const { a, nome } = x;
   delete p.pedido;
-  if (como === 'atender') { a.confianca = clamp(a.confianca + 12); a.favores++; desgastar(p, 2, 'promessas'); return `Você pôs o seu nome na pauta de ${a.grupo}. ${nome} vai lembrar — e parte da rua também.`; }
-  if (como === 'adiar') { prometer(v, { texto: `apoiar o pedido de ${a.grupo} (${nome})`, origem: 'alianca', aliancaId: a.id, prazo: v.t + 12 }); return `"No ano que vem." ${nome} aceitou — e anotou.`; }
+  if (como === 'atender') { a.confianca = clamp(a.confianca + 12); a.favores++; desgastar(p, 2, 'promessas'); return `Você pôs o seu nome na pauta ${deGrupo(a.grupo)}. ${nome} vai lembrar — e parte da rua também.`; }
+  if (como === 'adiar') { prometer(v, { texto: `apoiar o pedido ${deGrupo(a.grupo)} (${nome})`, origem: 'alianca', aliancaId: a.id, prazo: v.t + 12 }); return `"No ano que vem." ${nome} aceitou — e anotou.`; }
   a.confianca = clamp(a.confianca - 20); a.favores--;
   return `Você disse que não. ${nome} não discutiu; só ficou mais frio.`;
 }

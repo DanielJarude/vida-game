@@ -9,8 +9,9 @@ import type { Dominio, MarcaCaminho, TipoMarcaCaminho, Vida } from '../tipos';
 
 export const LIMITE_MARCAS = 80;
 
-export function marcar(v: Vida, tipo: TipoMarcaCaminho, texto: string, peso: 1 | 2 | 3, extra: { dominio?: Dominio; trilha?: string; ocupacaoId?: string; pessoaId?: string } = {}): void {
-  const m: MarcaCaminho = { t: v.t, tipo, texto, peso, ...extra };
+export function marcar(v: Vida, tipo: TipoMarcaCaminho, texto: string, peso: 1 | 2 | 3, extra: { dominio?: Dominio; trilha?: string; ocupacaoId?: string; pessoaId?: string; /** REWORK 11.5 · REG-01: a data do que se marca (a da temporada), quando não é hoje. */ t?: number } = {}): void {
+  const { t: quando, ...resto } = extra;
+  const m: MarcaCaminho = { t: quando ?? v.t, tipo, texto, peso, ...resto };
   const lista = v.caminhos.marcas;
   if (lista.some(x => x.tipo === tipo && x.texto === texto && Math.abs(x.t - v.t) < 12)) return;
   lista.push(m);

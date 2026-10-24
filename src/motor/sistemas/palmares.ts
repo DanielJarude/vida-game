@@ -144,7 +144,7 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
     registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, papel: 'protagonista', texto });
     const doAno = t.prova ? `a melhor marca do ano, ${formatarMarca(t.prova.unidade, t.prova.marca)}${t.prova.recorde ? ' (recorde pessoal)' : ''}` : t.luta ? `${t.luta.vitorias} ${t.luta.vitorias === 1 ? 'vitória' : 'vitórias'} e ${t.luta.derrotas} ${t.luta.derrotas === 1 ? 'derrota' : 'derrotas'} no ano` : `${podiosDe(t)} ${podiosDe(t) === 1 ? 'pódio' : 'pódios'} na temporada`;
     escrever(v, { t: tDaTemporada(v, t.ano), texto: `${texto} (${t.ano}): ${doAno}.`, relevancia: t.nivel >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
-    marcar(v, 'conquista', texto, t.nivel >= 3 ? 3 : 2, { dominio: e.modalidade });
+    marcar(v, 'conquista', texto, t.nivel >= 3 ? 3 : 2, { dominio: e.modalidade, t: tDaTemporada(v, t.ano) });
     e.reputacao = clamp((e.reputacao ?? 30) + 1 + Math.floor(t.nivel / 2));
   } else if (t.colocacao === 1 && t.partidas > 0) {
     const protagonista = ava.participacao >= 0.5;
@@ -154,7 +154,7 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
       ? `${campeao} ${daCompeticao(comp)}${futebol ? ` com ${oClube(e.clube)}` : ' com a equipe'}: ${linha}.`
       : `${campeao} ${daCompeticao(comp)}${futebol ? ` com ${oClube(e.clube)}` : ' com a equipe'}, como parte do elenco: ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}, ${t.titular} como ${flex(g, 'titular', 'titular')}.`;
     escrever(v, { t: tDaTemporada(v, t.ano), texto, relevancia: protagonista && t.nivel >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
-    if (protagonista) marcar(v, 'conquista', texto, t.nivel >= 3 ? 3 : 2, { dominio: e.modalidade });
+    if (protagonista) marcar(v, 'conquista', texto, t.nivel >= 3 ? 3 : 2, { dominio: e.modalidade, t: tDaTemporada(v, t.ano) });
     e.reputacao = clamp((e.reputacao ?? 30) + (protagonista ? 1 + Math.floor(t.nivel / 2) : 0));
   } else if (t.nota >= 8.2) {
     escrever(v, { t: tDaTemporada(v, t.ano), texto: `Temporada de destaque ${futebol ? noClube(e.clube) : 'na equipe'}: ${linha}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
@@ -203,7 +203,7 @@ function registrarCopas(v: Vida, e: CarreiraEsportiva, t: Temporada): void {
       registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano: t.ano, competicao: nome, competicaoId: c.id, clube: t.clube, papel: protagonista ? 'protagonista' : 'elenco', texto });
       const zebra = !continental && t.nivel <= 2;
       escrever(v, { t: tDaTemporada(v, t.ano), texto: `${texto} (${t.ano})${c.final ? `: a final foi ${c.final}` : ''}${zebra ? ' — um time de divisão de baixo campeão, e o país inteiro falou disso' : ''}.`, relevancia: continental || zebra || t.nivel >= 4 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
-      if (protagonista) marcar(v, 'conquista', `${texto} (${t.ano}).`, continental || zebra ? 3 : 2, { dominio: e.modalidade });
+      if (protagonista) marcar(v, 'conquista', `${texto} (${t.ano}).`, continental || zebra ? 3 : 2, { dominio: e.modalidade, t: tDaTemporada(v, t.ano) });
       e.reputacao = clamp((e.reputacao ?? 30) + (protagonista ? (continental ? 4 : 2) + (zebra ? 4 : 0) : 0));
     } else if (c.fase === 'vice') {
       registrarConquista(v, { tipo: 'final', modalidade: e.modalidade, ano: t.ano, competicao: nome, competicaoId: c.id, clube: t.clube, texto: `Final ${daCompeticaoId(c.id)} com ${oClube(t.clube)}${c.final ? ` (${c.final})` : ''}` });
@@ -245,7 +245,7 @@ export function premiosDaTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   for (const x of ganhos) {
     registrarConquista(v, { tipo: 'premio', modalidade: e.modalidade, ano: t.ano, competicao: comp, clube: t.clube, texto: x.texto });
     escrever(v, { t: tDaTemporada(v, t.ano), texto: `${x.texto} (${t.ano}).`, relevancia: x.peso >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
-    marcar(v, 'conquista', `${x.texto} (${t.ano}).`, x.peso, { dominio: e.modalidade });
+    marcar(v, 'conquista', `${x.texto} (${t.ano}).`, x.peso, { dominio: e.modalidade, t: tDaTemporada(v, t.ano) });
     e.reputacao = clamp((e.reputacao ?? 30) + x.rep);
   }
   return ganhos.map(x => x.texto);

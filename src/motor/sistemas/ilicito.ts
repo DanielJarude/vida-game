@@ -40,7 +40,7 @@ import { marcar } from './marcas';
 import { flex, ge } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { mesesProcurando, patrimonioPagaAVida } from './intencao';
-import { exposicaoDosRamos, fatorDosRamos, garantirRamos, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
+import { creditarRamos, exposicaoDosRamos, fatorDosRamos, garantirRamos, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
@@ -254,6 +254,8 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   // se gasta para não aparecer). Os ganhos registram o bruto (é o que a Justiça cobra de volta).
   v.financas.conta += Math.round(ganho * 0.65);
   env.ganhos += ganho;
+  // REWORK 11.5: o que entrou no ano também é de cada frente (a tela do dossiê diz quanto cada uma rendeu).
+  creditarRamos(env, ganho);
   env.anosSecos = (env.anosSecos ?? 0) + (seco ? 1 : 0);
   if (seco) {
     const perda = env.nivel >= 2 ? Math.round(renda * 12 * (0.08 + ra.next() * 0.1) / 100) * 100 : 0;
