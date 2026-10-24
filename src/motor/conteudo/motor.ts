@@ -57,7 +57,9 @@ export function preparar(c: Conteudo, v: Vida, r: Rng): Ctx | null {
 function peso(c: Conteudo, ctx: Ctx): number {
   const base = c.peso === undefined ? 1 : typeof c.peso === 'number' ? c.peso : c.peso(ctx);
   // REWORK 10.5 · EVT-05: o que as duas vidas anteriores viveram pesa menos (a variedade entre vidas consecutivas).
-  return ctx.v.memoriaDeVidas?.includes(c.id) ? base * 0.45 : base;
+  // REWORK 11 · EVT-11.1: na infância (onde a repetição entre vidas mais se sente), o que as vidas anteriores viram pesa
+  // ainda menos — a variedade nova da infância (`acontecimentosinfancia`) ganha a vez.
+  return ctx.v.memoriaDeVidas?.includes(c.id) ? base * (c.idade[1] <= 12 ? 0.3 : 0.45) : base;
 }
 
 export function candidatos(v: Vida, r: Rng, filtro: (c: Conteudo) => boolean): { c: Conteudo; ctx: Ctx }[] {

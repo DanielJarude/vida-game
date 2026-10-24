@@ -1397,19 +1397,45 @@ export interface VidaPassada {
   ano: number;
   /** O país onde morreu (o patrimônio é contado na moeda de lá). Ausente: o Brasil. */
   pais?: string;
-  /** REWORK 10.5 · EVT-05: os acontecimentos e cenas que esta vida viveu (ids, até 120) — a memória entre vidas. */
+  /** REWORK 10.5 · EVT-05: os acontecimentos e cenas que esta vida viveu (ids, até 200) — a memória entre vidas. */
   vistos?: string[];
 }
 
-/** REWORK 10.5 · EVT-05: o que uma vida viveu (as decisões e acontecimentos, as cenas de carreira), para a próxima lembrar. */
+/** REWORK 11 · EVT-11.1: o teto da memória de uma vida (era 120, cortado do lado errado). */
+export const LIMITE_VISTOS = 200;
+
+/**
+ * REWORK 10.5 · EVT-05: o que uma vida viveu (as decisões e acontecimentos, as cenas de carreira), para a próxima lembrar.
+ * REWORK 11 · EVT-11.1: a INFÂNCIA vem primeiro e nunca é cortada (é onde a repetição entre vidas se sente: "a primeira
+ * palavra", "o passarinho"); o resto entra do mais recente para trás até o teto. Antes, `slice(-120)` sobre os ids em
+ * ordem de primeira ocorrência: numa vida longa, os primeiros a sair eram justamente os da infância.
+ */
 export function vistosDaVida(v: Vida): string[] {
-  const ids = [...v.ocorrencias.map(o => o.id), ...(v.caminhos.situacoes ?? []).map(x => x.id)];
-  return [...new Set(ids)].slice(-120);
+  const infancia = [...new Set(v.ocorrencias.filter(o => o.idade <= 12).map(o => o.id))];
+  const ja = new Set(infancia);
+  const resto = [...new Set([...v.ocorrencias.filter(o => o.idade > 12).map(o => o.id), ...(v.caminhos.situacoes ?? []).map(x => x.id)])].filter(id => !ja.has(id));
+  const cabe = Math.max(0, LIMITE_VISTOS - infancia.length);
+  return [...infancia, ...(cabe ? resto.slice(-cabe) : [])].slice(0, LIMITE_VISTOS);
 }
 
-/** A memória das duas vidas anteriores (para nascer de novo com variedade). */
+/**
+ * A memória das duas vidas anteriores (para nascer de novo com variedade) — e, REWORK 11 · EVT-11.1, a da vida que foi
+ * RECOMEÇADA (abandonada antes de terminar): quem recomeça depois da infância não volta a ver "a primeira palavra" com a
+ * mesma chance de quem nunca jogou.
+ */
 export function memoriaDasUltimasVidas(e: Estatisticas): string[] {
-  return [...new Set(e.historico.slice(0, 2).flatMap(x => x.vistos ?? []))].slice(0, 200);
+  return [...new Set([...(e.recomecadas ?? []).slice(0, 2).flatMap(x => x.vistos), ...e.historico.slice(0, 2).flatMap(x => x.vistos ?? [])])].slice(0, 300);
+}
+
+/**
+ * REWORK 11 · EVT-11.1: a vida recomeçada (o jogador apagou para começar outra) entra na memória entre vidas — só na
+ * memória (não conta como vida jogada, nem nos recordes). As duas mais recentes.
+ */
+export function registrarVidaRecomecada(vistos: string[], s: Armazenamento | null = armazenamentoPadrao()): void {
+  if (!vistos.length) return;
+  const e = lerEstatisticas(s);
+  e.recomecadas = [{ vistos: vistos.slice(0, LIMITE_VISTOS) }, ...(e.recomecadas ?? [])].slice(0, 2);
+  try { s?.setItem(CHAVE_ESTATISTICAS, JSON.stringify(e)); } catch { /* sem espaço */ }
 }
 
 export interface Estatisticas {
@@ -1418,6 +1444,8 @@ export interface Estatisticas {
   maiorIdade: number;
   maiorPatrimonio: number;
   historico: VidaPassada[];
+  /** REWORK 11 · EVT-11.1: o que as vidas recomeçadas (abandonadas) viram — só para a memória entre vidas (até 2). */
+  recomecadas?: { vistos: string[] }[];
 }
 
 export function lerEstatisticas(s: Armazenamento | null = armazenamentoPadrao()): Estatisticas {
@@ -1431,7 +1459,8 @@ export function lerEstatisticas(s: Armazenamento | null = armazenamentoPadrao())
       totalAnosVividos: num(d.totalAnosVividos, 0, 0, 1e9),
       maiorIdade: num(d.maiorIdade, 0, 0, 200),
       maiorPatrimonio: num(d.maiorPatrimonio, 0, -1e12, 1e12),
-      historico: Array.isArray(d.historico) ? d.historico.slice(0, 50).map((x: VidaPassada) => (x && Array.isArray(x.vistos) ? { ...x, vistos: x.vistos.filter(y => typeof y === 'string').slice(0, 120) } : x)) : Array.isArray(d.historicoVidas)
+      ...(Array.isArray(d.recomecadas) ? { recomecadas: d.recomecadas.filter((x: { vistos?: unknown }) => x && Array.isArray(x.vistos)).slice(0, 2).map((x: { vistos: unknown[] }) => ({ vistos: x.vistos.filter((y): y is string => typeof y === 'string').slice(0, LIMITE_VISTOS) })) } : {}),
+      historico: Array.isArray(d.historico) ? d.historico.slice(0, 50).map((x: VidaPassada) => (x && Array.isArray(x.vistos) ? { ...x, vistos: x.vistos.filter(y => typeof y === 'string').slice(0, LIMITE_VISTOS) } : x)) : Array.isArray(d.historicoVidas)
         ? d.historicoVidas.slice(0, 50).map((x: Antigo) => ({ id: String(x.id), nome: String(x.nome), idadeMorte: num(x.idadeMorte, 0, 0, 200), lugar: `${x.cidade}, ${x.estado}`, profissao: String(x.profissao ?? ''), patrimonio: num(x.patrimonio, 0, -1e12, 1e12), causa: String(x.causaMorte ?? ''), ano: 0 }))
         : []
     };
@@ -1448,6 +1477,8 @@ export function registrarVidaPassada(p: VidaPassada, s: Armazenamento | null = a
   e.maiorPatrimonio = Math.max(e.maiorPatrimonio, p.patrimonio);
   // REWORK 10.5 · EVT-05: a memória do que se viveu fica só nas três vidas mais recentes (o resto do histórico, sem ela).
   e.historico = [p, ...e.historico].slice(0, 50).map((x, k) => (k < 3 || !x.vistos ? x : { ...x, vistos: undefined }));
+  // A vida recomeçada mais antiga sai da memória quando uma vida termina (fica só a mais recente, se houver).
+  if (e.recomecadas?.length) e.recomecadas = e.recomecadas.slice(0, 1);
   try { s?.setItem(CHAVE_ESTATISTICAS, JSON.stringify(e)); } catch { /* sem espaço */ }
 }
 
