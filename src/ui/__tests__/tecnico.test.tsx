@@ -38,8 +38,10 @@ function exJogadorTecnico(): Vida {
     x.t += 24;
     x.trabalho.experiencia['treino'] = 48;
     contratar(x, criarRng(3), ocupacao('tecnico_futebol'), 'oportunidade');
-    for (let k = 0; k < 4; k++) { const r = criarRng(60 + k); processarTecnico(x, r); if (passagemAtual(x)?.decisao) passagemAtual(x)!.decisao = undefined; x.t += 12; }
-    if (!passagemAtual(x)) { contratar(x, criarRng(9), ocupacao('tecnico_futebol'), 'oportunidade'); processarTecnico(x, criarRng(10)); }
+    // REWORK 11 · ESP-11.7: o comando fora da cidade chega como proposta — o técnico do teste aceita as que vierem.
+    const aceitar = (r: ReturnType<typeof criarRng>) => { const pr = x.caminhos.tecnico?.proposta; if (!passagemAtual(x) && pr) { aceitarPropostaDeTecnico(x, r, pr.id); processarTecnico(x, r); } };
+    for (let k = 0; k < 4; k++) { const r = criarRng(60 + k); processarTecnico(x, r); aceitar(r); if (passagemAtual(x)?.decisao) passagemAtual(x)!.decisao = undefined; x.t += 12; }
+    if (!passagemAtual(x)) { contratar(x, criarRng(9), ocupacao('tecnico_futebol'), 'oportunidade'); processarTecnico(x, criarRng(10)); aceitar(criarRng(11)); }
     x.momento = null;
   }).vida;
 }

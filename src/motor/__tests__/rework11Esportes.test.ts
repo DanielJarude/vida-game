@@ -318,8 +318,8 @@ describe('ESP-11.6 · os momentos entram na temporada em curso', () => {
     v = transacao(v, x => { x.caminhos.esporte!.lances = { gols: 2, assistencias: 1 }; }).vida;
     expect(v.caminhos.esporte!.temporadas!.slice(-1)[0]).toEqual(fechada);
     const semLance = transacao(v, x => { x.caminhos.esporte!.lances = undefined; }).vida;
-    const a = transacao(v, (x, r) => fecharTemporada(x, criarRng(7), x.caminhos.esporte!)).vida;
-    const b = transacao(semLance, (x, r) => fecharTemporada(x, criarRng(7), x.caminhos.esporte!)).vida;
+    const a = transacao(v, x => fecharTemporada(x, criarRng(7), x.caminhos.esporte!)).vida;
+    const b = transacao(semLance, x => fecharTemporada(x, criarRng(7), x.caminhos.esporte!)).vida;
     const ta = a.caminhos.esporte!.temporadas!.slice(-1)[0], tb = b.caminhos.esporte!.temporadas!.slice(-1)[0];
     expect(ta.gols - tb.gols).toBe(2);
     expect(a.caminhos.esporte!.totais!.gols - b.caminhos.esporte!.totais!.gols).toBe(2);
@@ -434,7 +434,7 @@ describe('ESP-11.7 · a comissão técnica', () => {
     expect(verbosDoOficio(v).map(x => x.oque)).not.toEqual(expect.arrayContaining(['chefia', 'capacitacao']));
     // "A empresa pagou um curso" não cabe.
     const curso = conteudoPorId('car_curso_empresa')!;
-    expect(transacao(v, (x, r) => curso.quando!(contexto(x, criarRng(1)))).valor).toBe(false);
+    expect(transacao(v, x => curso.quando!(contexto(x, criarRng(1)))).valor).toBe(false);
     // A licença: paga, cursa, conclui — e pesa no trabalho do técnico.
     const antes = transacao(v, x => trabalhoDoTecnico(x)).valor;
     v = transacao(v, x => { x.financas.conta = 1e6; }).vida;
