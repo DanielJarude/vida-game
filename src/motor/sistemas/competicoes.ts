@@ -72,8 +72,10 @@ export function torneioDeSelecoes(pais: string, ano: number): CompeticaoId | und
  */
 export function partidaDeCopa(r: Rng, dif: number): 'v' | 'e' | 'd' {
   const x = dif * 3;
-  const pE = 0.28 - 0.1 * Math.min(1, Math.abs(x) / 8);
-  const pV = (1 - pE) / (1 + Math.exp(-x / 3.5));
+  // No mata-mata contra um time muito mais fraco, o favorito quase sempre passa (o empate fica raro); entre iguais, é
+  // a moeda de sempre.
+  const pE = 0.28 - 0.18 * Math.min(1, Math.abs(x) / 10);
+  const pV = (1 - pE) / (1 + Math.exp(-x / 3));
   const u = r.next();
   return u < pV ? 'v' : u < pV + pE ? 'e' : 'd';
 }
@@ -94,7 +96,8 @@ export function sortearAdversarioDeCopa(r: Rng, lista: { nome: string; forca: nu
 }
 function adversario(r: Rng, lista: { nome: string; forca: number }[], k: number, ja: Set<string>, anonimo: () => { nome: string; forca: number }): { nome: string; forca: number } {
   const livres = lista.filter(x => !ja.has(x.nome));
-  if (!livres.length || r.chance(Math.max(0, 0.55 - k * 0.18))) return anonimo();
+  // Uma copa nacional tem dezenas de times fora do catálogo: nas primeiras fases, quase sempre um deles.
+  if (!livres.length || r.chance([0.8, 0.6, 0.35, 0.15, 0.05][k] ?? 0)) return anonimo();
   const pesos = livres.map(x => Math.exp(x.forca * k * 0.7));
   let u = r.next() * pesos.reduce((s, p) => s + p, 0);
   for (let i = 0; i < livres.length; i++) { u -= pesos[i]; if (u <= 0) return livres[i]; }

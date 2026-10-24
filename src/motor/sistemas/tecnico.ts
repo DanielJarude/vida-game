@@ -47,7 +47,7 @@ import { mudarAgora } from './processos';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube, forcaNaLiga } from './ligas';
-import { aCompeticaoId, campanhaDaSelecao, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes } from './competicoes';
+import { aCompeticaoId, campanhaDaSelecao, partidaDeCopa, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes } from './competicoes';
 import { pesoDaLicenca, vestiarioDeExAtleta } from './oficioDoTecnico';
 import { rngDe } from '../rng';
 
@@ -217,9 +217,14 @@ function iniciarComando(v: Vida, r: Rng): boolean {
   c.tFim = undefined;
   // O primeiro clube: quem nunca dirigiu começa embaixo; o nome do ex-jogador abre a porta de um clube maior, não a da elite.
   const emp = v.trabalho.atual!;
-  // REWORK 11 · ESP-11.7: promovido na comissão de um clube concreto, o comando é NESSE clube (sem mudança de cidade).
-  const daComissao = emp.postos?.some(x => x.ocupacaoId === 'auxiliar_tecnico') && emp.clube ? clubePorNome(emp.clube, paisDaCidade(emp.municipioId)) : undefined;
-  if (daComissao) {
+  // REWORK 11 · ESP-11.7: o emprego já é de um clube concreto (a comissão onde se trabalhava e foi promovido, ou o clube
+  // que contratou): o comando é NESSE clube, sem mudança de cidade. Antes, sorteava-se outro clube, às vezes noutro
+  // estado, e a vida mudava junto sem pergunta.
+  const promovido = !!emp.postos?.some(x => x.ocupacaoId === 'auxiliar_tecnico');
+  const daComissao = emp.clube ? clubePorNome(emp.clube, paisDaCidade(emp.municipioId)) : undefined;
+  // Quem nunca dirigiu começa embaixo: o clube que contratou direto só vale se a divisão dele cabe no nome (o auxiliar
+  // promovido, sim, assume o clube onde já trabalhava).
+  if (daComissao && (promovido || divisaoDe(v, daComissao) <= nivelPeloNome(c.reputacao) + 1)) {
     const n = divisaoDe(v, daComissao);
     assumir(v, r, c, { id: `tec_${v.t}_ini`, clube: daComissao.nome, municipioId: daComissao.cidade, nivel: n, meses: 24, salario: salarioDeTecnico(daComissao.nome, n, c.reputacao), t: v.t, validaAte: v.t, origem: 'mercado' }, true, true);
     return true;
@@ -229,6 +234,12 @@ function iniciarComando(v: Vida, r: Rng): boolean {
   const nivel = nivelPeloNome(c.reputacao);
   const ultimoClube = es.map(x => x!.clube).find(n => !!clubePorNome(n) && divisaoDe(v, clubePorNome(n)!) === nivel);
   const clube = ultimoClube && r.chance(0.35) ? clubePorNome(ultimoClube)! : escolherClube(v, r, nivel);
+  // Um clube da própria cidade: é só assumir (ninguém muda de casa).
+  if (clube.cidade === v.moradia.municipioId) {
+    const n = divisaoDe(v, clube);
+    assumir(v, r, c, { id: `tec_${v.t}_ini`, clube: clube.nome, municipioId: clube.cidade, nivel: n, meses: 24, salario: salarioDeTecnico(clube.nome, n, c.reputacao), t: v.t, validaAte: v.t, origem: 'mercado' }, true, true);
+    return true;
+  }
   if (!c.proposta) {
     c.proposta = { id: `tec_${v.t}_ini`, clube: clube.nome, municipioId: clube.cidade, nivel: divisaoDe(v, clube), meses: 24, salario: salarioDeTecnico(clube.nome, divisaoDe(v, clube), c.reputacao), t: v.t, validaAte: v.t + 11, origem: 'mercado' };
     c.convites = (c.convites ?? 0) + 1;
@@ -479,7 +490,7 @@ function copaDoTecnico(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecni
   for (let k = 0; k < 4; k++) {
     const a = sortearAdversarioDeCopa(r, lista.map(x => ({ nome: x.nome, forca: x.forca / 3 })), k, ja, () => ({ nome: '', forca: 1 + r.next() }));
     ja.add(a.nome);
-    const res = partida(r, minha - a.forca * 3 + 0.5, c.estilo);
+    const res = partidaDeCopa(r, (minha - a.forca * 3 + 0.5) / 3);
     conta(res);
     const passou = res === 'v' || (res === 'e' && r.chance(Math.min(0.65, Math.max(0.35, 0.5 + (minha - a.forca * 3) * 0.02))));
     if (!passou) { t.copa.fase = fases[k]; break; }

@@ -24,7 +24,7 @@ import { ocupacao } from '../dados/ocupacoes';
 import { garantirFrente } from '../sistemas/frentes';
 import { entrarNaBase, profissionalizar } from '../sistemas/esporte';
 import { entrarNaPolitica } from '../sistemas/politica';
-import { processarTecnico } from '../sistemas/tecnico';
+import { aceitarPropostaDeTecnico, passagemAtual, processarTecnico } from '../sistemas/tecnico';
 import { abrirDecisao, conteudoPorId } from '../conteudo/motor';
 import { contexto } from '../conteudo/base';
 import { executar } from '../acoes';
@@ -67,7 +67,8 @@ const abrir = (v: Vida, id: string): Vida => transacao(v, (x, r) => { const d = 
 
 describe('elegibilidade: cada carreira com a sua trajetória de momentos', () => {
   it('o técnico no comando vive momentos de técnico (não de "emprego"); a política antes do mandato tem cenas', () => {
-    const t = transacao(trinta(), (x, r) => { x.trabalho.atual = undefined; x.trabalho.experiencia['treino'] = 48; contratar(x, r, ocupacao('tecnico_futebol'), 'oportunidade'); processarTecnico(x, r); }).vida;
+    // REWORK 11 · ESP-11.7: o primeiro comando fora da cidade chega como proposta (aceita aqui).
+    const t = transacao(trinta(), (x, r) => { x.trabalho.atual = undefined; x.trabalho.experiencia['treino'] = 48; contratar(x, r, ocupacao('tecnico_futebol'), 'oportunidade'); processarTecnico(x, r); const pr = x.caminhos.tecnico?.proposta; if (!passagemAtual(x) && pr) { aceitarPropostaDeTecnico(x, r, pr.id); processarTecnico(x, r); } }).vida;
     expect(trajetoriaDeSituacao(t)).toBe('tecnico');
     expect(candidatosDoAno(t, 'tecnico').every(c => c.m.trajetoria === 'tecnico')).toBe(true);
     const p = transacao(trinta(), (x, r) => { contratar(x, r, ocupacao('analista_adm'), 'curriculo'); entrarNaPolitica(x, 'comunidade', 1); x.caminhos.politica!.partido = 'PRT'; }).vida;
